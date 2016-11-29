@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r42819 -->
+<!-- Original revision: r49606 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -55,6 +55,30 @@
 			<div id="txtfrontfeaturelink">
 			  &#187;<a href="&base;/about.html" title="詳しくはこちら">詳しくはこちら</a>
 			</div> <!-- TXTFRONTFEATURELINK -->
+
+			<div id="txtfrontjournalblock">
+			  <br/>&#187;
+			  <span
+			    id="txtfrontjournallink">
+			    <a
+			      href="http://www.freebsdjournal.com/"
+			        title="&os;&nbsp;Journal">&os;&nbsp;Journal</a>
+			    を入手
+			  </span> <!-- TXTFRONTJOURNALLINK -->
+			</div> <!-- TXTFRONTJOURNALBLOCK -->
+
+				  <!-- IMPORTANT NOTICES -->
+				  <!--
+				  <div
+				    style="width:640px; margin: 16px 16px 16px 32px; auto">
+
+				    <h2>ANNOUNCEMENT: [header]</h2>
+
+				    <p align="justify">[text]</p>
+				  </div>
+				  -->
+				  <!-- END IMPORTANT NOTICES -->
+
 		    </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
 
@@ -74,17 +98,24 @@
 			  <h2><a href="&base;/releases/">最新リリース</a></h2>
 			  <ul id="frontreleaseslist">
 			    <li>プロダクション:&nbsp;<a
-				href="&u.rel.announce;">&rel.current;</a></li>
-			    <li>レガシー: <a
-				href="&u.rel2.announce;">&rel2.current;</a></li>
-			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
+				href="&u.rel.announce;">&rel.current;</a>,
+					<a
+				href="&u.rel0.announce;">&rel0.current;</a>,
+					<a
+				href="&u.rel1.announce;">&rel1.current;</a>,
+					<a
+				href="&u.rel2.announce;">&rel2.current;</a>,
+					<a
+				href="&u.rel3.announce;">&rel3.current;</a></li>
+			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 			    <li>次回予定: <a
-				href="&base;/where.html#helptest">&betarel.current;-&betarel.vers;</a></li>
+				href="&u.betarel.schedule;">&betarel.current;</a></li>
 			    </xsl:if>
-			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
+			    <xsl:if test="'&beta2.upcoming;' != 'IGNORE'">
 			    <li>次回予定: <a
-				href="&base;/where.html#helptest">&betarel2.current;-&betarel2.vers;</a></li>
+				href="&u.betarel2.schedule;">&betarel2.current;</a></li>
 			    </xsl:if>
+					<li><a href="&base;/security/security.html#sup">サポートライフサイクル</a></li>
 			  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
@@ -122,8 +153,11 @@
 			  <li>
 			    <a href="&enbase;/ru/" title="ロシア語">ru</a>
 			  </li>
-			  <li class="last-child">
+			  <li>
 			    <a href="&enbase;/zh_CN/" title="中国語 (簡体字)">zh_CN</a>
+			  </li>
+			  <li class="last-child">
+			    <a href="&enbase;/zh_TW/" title="中国語 (繁体字)">zh_TW</a>
 			  </li>
 			</ul>
 		      </div> <!-- LANGUAGENAV -->
@@ -150,7 +184,7 @@
 			      <a href="&base;/community/mailinglists.html" title="メーリングリスト">メーリングリスト</a>
 			    </li>
 			    <li>
-			      <a href="&base;/support/bugreports.html" title="バグの報告">バグの報告</a>
+			      <a href="&base;/support/bugreports.html" title="障害報告">障害報告</a>
 			    </li>
 			    <li>
 			      <a href="&enbase;/doc/&url.doc.langcode;/books/faq/index.html" title="FAQ">FAQ</a>
@@ -312,7 +346,7 @@
 	The mark FreeBSD is a registered trademark of The FreeBSD
 	Foundation and is used by The FreeBSD Project with the
 	permission of <a
-	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The
+	  href="https://www.freebsdfoundation.org/documents/Guidelines.shtml">The
 	FreeBSD Foundation</a>.
 	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>

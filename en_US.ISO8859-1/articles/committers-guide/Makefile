@@ -13,6 +13,10 @@ INSTALL_ONLY_COMPRESSED?=
 
 SRCS=	article.xml
 
+IMAGES_LIB=	callouts/1.png
+IMAGES_LIB+=	callouts/2.png
+IMAGES_LIB+=	callouts/3.png
+
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..
 

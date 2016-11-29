@@ -26,7 +26,7 @@ pre a:visited { color: #220000; }
 #
 # Files MUST be fully qualified and MUST start with this path.
 #
-$messagepath = "/usr/local/www/db/text/";
+$messagepath = "/usr/local/www/mailindex/archive/";
 $messagepathcurrent = "/usr/local/www/mid/archive/";
 $ftparchive = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/mailing-lists/archive';
 
@@ -238,27 +238,8 @@ sub strip_url
 sub AddAnchors
 {
     my ($text) = @_;
-    my $cvsweb = 'http://cvsweb.FreeBSD.org';
 
     $text =~ s/(http|https|ftp)(:[\S]*?\/?)(\W?\s)/sprintf("<a href=\"%s\">%s<\/a>$3", &strip_url("$1$2"), "$1$2", $3)/egoi;
-
-    if ($text =~ /Revision\s+Changes\s+Path/) {
-
-	
-	# match revsion and file name
-	#   1.10      +2 -2      ports/audio/xmradio/Makefile
-	# ->
-	#  cvsweb.cgi/ports/audio/xmradio/Makefile.diff?r1=1.9&r2=r.10
-	#
-	$text =~ s!([\d.]+\.)(\d+)              # revision
-		   (\s+[+-]\d+\s+[+-]\d+\s+)    # +- stuff
-	           ([a-zA-Z\d_:.+/-]+)          # filename
-		  !"$1$2" eq "1.1" ?
-		    sprintf("%s%s%s<a href=\"$cvsweb/%s\">%s</a>", $1, $2, $3, $4, $4) :
-		    sprintf("%s%s%s<a href=\"$cvsweb/%s.diff?r1=%s%s&r2=%s%s\">%s</a>",
-			    $1, $2, $3, $4, $1, $2 - 1, $1, $2, $4)!gex;
-    }
-
 
     return $text;
 }

@@ -6,7 +6,7 @@
 <!--
      $FreeBSD$
      $FreeBSDde$
-     basiert auf: 41116
+     basiert auf: 49606
 -->
 
 <xsl:stylesheet version="1.0"
@@ -39,39 +39,46 @@
 		<div id="frontfeatureleft">
 			<div id="frontfeaturecontent">
 				<h1>
-				  Auf BSD UNIX&reg; basierend
+				  The &os; Project
 				</h1>
 				<p>FreeBSD&reg; ist ein modernes Betriebssystem für
 				  Server, Desktops und eingebettete Systeme, das auf
 				  zahlreichen <a
 				  href="&base;/platforms/index.html">Plattformen</a>
-				  läuft.  Der Quellcode von FreeBSD wird seit
-				  mehr als 30 Jahren kontinuierlich weiterentwickelt,
-				  verbessert und optimiert.  Das System wird
-				  von einer <a
+				  läuft.  Der Quellcode von FreeBSD wird von einer <a
 				  href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">
-				  großen Entwicklergruppe</a> gepflegt und erweitert.
-				  FreeBSD bietet Ihnen leistungsfähige
-				  und beeindruckende Netzwerk- und
-				  Sicherheitsfunktionen und eine exzellente
-				  Performance und wird deswegen beispielsweise von
-				  einigen der größten <a
+				  großen Entwicklergruppe</a> seit mehr als 30 Jahren
+				  kontinuierlich weiterentwickelt, verbessert und
+				  optimiert.  Seine leistungsfähigen und
+				  beeindruckenden Netzwerk-, Sicherheits- und
+				  Speicherfunktionen machen &os; zum Betriebssystem
+				  der Wahl für einige der größten <a
 				  href="&enbase;/doc/&url.doc.langcode;/books/handbook/nutshell.html#introduction-nutshell-users">
-				  Internet-Seiten</a> und von zahlreichen Anbietern
-				  eingebetteter Netzwerk- und Speichergeräte
-				  eingesetzt.</p>
+				  Internet-Seiten</a> und für zahlreiche Anbieter
+				  eingebetteter Netzwerk- und Speichergeräte.</p>
 
 				  <div id="txtfrontfeaturelink"> »<a
 				    href="&base;/about.html" title="Learn More">Mehr Informationen</a>
 				  </div> <!-- TXTFRONTFEATURELINK -->
-			</div> <!-- FRONTFEATURECONTENT -->
-		</div> <!-- FRONTFEATURELEFT -->
+
+				  <div id="txtfrontjournalblock">
+				    <br/>&#187;
+				    <span
+				     id="txtfrontjournallink">
+				      Lesen Sie das <a
+				       href="http://www.freebsdjournal.com/"
+				       title="&os;&nbsp;Journal">&os;&nbsp;Journal</a>!
+				    </span> <!-- TXTFRONTJOURNALLINK -->
+				  </div> <!-- TXTFRONTJOURNALBLOCK -->
+
+			  </div> <!-- FRONTFEATURECONTENT -->
+		  </div> <!-- FRONTFEATURELEFT -->
 
 		<div id="frontfeaturemiddle">
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div>&nbsp;</div>&nbsp;</div>
 				<div class="frontgetcontent">
-				  <a href="&base;/where.html">FreeBSD beziehen</a>
+				  <a href="&base;/where.html">Download FreeBSD</a>
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div>&nbsp;</div>&nbsp;</div>
 			</div> <!-- frontgetroundbox -->
@@ -81,23 +88,23 @@
 				  <h2><a href="&base;/releases/">AKTUELLE VERSIONEN</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>
-					  Produktion:&nbsp;<a href="&u.rel.announce;">&rel.current;</a>
+					  Produktion:&nbsp;<a href="&u.rel.announce;">&rel.current;</a>,
+					  <a href="&u.rel0.announce;">&rel0.current;</a>,
+					  <a href="&u.rel1.announce;">&rel1.current;</a>,
+					  <a href="&u.rel2.announce;">&rel2.current;</a>,
+					  <a href="&u.rel3.announce;">&rel3.current;</a>
 					</li>
-					<li>
-					  Produktion (alt):&nbsp;<a href="&u.rel2.announce;">&rel2.current;</a>
-					</li>
-			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
-					  <li>
-					    Test:&nbsp;<a href="&base;/where.html#helptest">
-					      &betarel.current;-&betarel.vers;</a>
-					  </li>
+			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
+					<li>Test:&nbsp;<a
+				href="&u.betarel.schedule;">&betarel.current;</a></li>
 			    </xsl:if>
-			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
-					  <li>
-					    Test:&nbsp;<a href="&base;/where.html#helptest">
-					      &betarel2.current;-&betarel2.vers;</a>
-					  </li>
+			    <xsl:if test="'&beta2.upcoming;' != 'IGNORE'">
+					<li>Test:&nbsp;<a
+				href="&u.betarel2.schedule;">&betarel2.current;</a></li>
 			    </xsl:if>
+					<li><a
+					  href="&base;/security/security.html#sup">Unterstützte
+					  FreeBSD-Versionen</a></li>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
@@ -134,9 +141,12 @@
 				  <li>
 					<a href="&enbase;/ru/" title="Russisch">ru</a>
 				  </li>
-				  <li class="last-child">
+				  <li>
 					<a href="&enbase;/zh_CN/" title="Chinesisch (vereinfacht)">zh_CN</a>
 				  </li>
+				  <li class="last-child">
+					<a href="&enbase;/zh_TW/" title="Chinesisch (traditionell)">zh_TW</a>
+				  </li>				  
 				</ul>
 			</div> <!-- LANGUAGENAV -->
 
@@ -162,8 +172,8 @@
 					  <a href="&base;/community/mailinglists.html" title="Mailinglisten">Mailinglisten</a>
 					</li>
 					<li>
-					  <a href="&base;/support/bugreports.html" title="Einen Fehler melden">
-					    Einen Fehler melden</a>
+					  <a href="&base;/support/bugreports.html" title="Ein Problem melden">
+					    Ein Problem melden</a>
 					</li>
 					<li>
 					  <a href="&enbase;/doc/&url.doc.langcode;/books/faq/index.html" title="FAQ">FAQ</a>
@@ -324,7 +334,7 @@
 	Die Marke FreeBSD ist eine eingetragene Marke der FreeBSD
 	Foundation und wird vom FreeBSD Project mit freundlicher Genehmigung
 	der <a
-	href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">
+	href="https://www.freebsdfoundation.org/documents/Guidelines.shtml">
 	FreeBSD Foundation</a> verwendet.
 	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>

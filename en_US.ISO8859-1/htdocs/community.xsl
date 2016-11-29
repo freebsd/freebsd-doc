@@ -30,7 +30,7 @@
 	      <p>There are more than one hundred <a
 		href="&base;/community/mailinglists.html">mailing
 		lists</a>, dozens of web-based <a
-		  href="http://forums.FreeBSD.org/">forums</a>, and
+		  href="https://forums.FreeBSD.org/">forums</a>, and
 		several <a
 		href="&base;/community/newsgroups.html">newsgroups</a>
 		available.  There are over <xsl:value-of
@@ -42,15 +42,12 @@
 		unique countries around the world.  There is also an
 		active <a href="&base;/community/irc.html">IRC</a>
 		community.  Many developers also maintain <a
-		href="http://planet.freebsdish.org">blogs</a> about
+		href="https://planet.freebsd.org">blogs</a> about
 	      	their &os; work.  Developers and key contributors
 		also maintain a <a
 		  href="http://wiki.FreeBSD.org/">wiki</a>, which
 		contains information about &os; development
-		and related projects.  You can also find &os; represented
-		on a variety of different <a
-		href="&base;/community/social.html">social
-		networking</a> sites.</p>
+		and related projects.</p>
 
 	      <p>Last year there were <xsl:value-of
 	        select="count(/events/event[number(enddate/year) =
@@ -67,7 +64,7 @@
 		<a href="&base;/events/events.html">events
 		page</a>.  There are dozens of videos from past events
 		on the <a
-		href="http://www.youtube.com/bsdconferences">BSD
+		href="//www.youtube.com/bsdconferences">BSD
 		Conferences</a> channel on YouTube.</p>
 
 <!-- The Latest Videos section is placed inside an invisible block, which
@@ -81,19 +78,19 @@
     <span style="color:#676767;font-size:11px;margin:10px;padding:4px;">Loading...</span>
   </div>
 
-  <script src="http://www.google.com/uds/api?file=uds.js&amp;v=1.0&amp;source=uds-vbw"
+  <script src="//www.google.com/uds/api?file=uds.js&amp;v=1.0&amp;source=uds-vbw"
     type="text/javascript"></script>
   <style type="text/css">
-    @import url("http://www.google.com/uds/css/gsearch.css");
+    @import url("//www.google.com/uds/css/gsearch.css");
   </style>
   <!-- Video Bar Code and Stylesheet -->
   <script type="text/javascript">
     window._uds_vbw_donotrepair = true;
   </script>
-  <script src="http://www.google.com/uds/solutions/videobar/gsvideobar.js?mode=new"
+  <script src="//www.google.com/uds/solutions/videobar/gsvideobar.js?mode=new"
     type="text/javascript"></script>
   <style type="text/css">
-    @import url("http://www.google.com/uds/solutions/videobar/gsvideobar.css");
+    @import url("//www.google.com/uds/solutions/videobar/gsvideobar.css");
   </style>
 
   <style type="text/css">
@@ -145,8 +142,8 @@
 
 		<li>There are hundreds of videos from conferences,
 		screencasts, and demonstrations relating to <a
-		href="http://www.youtube.com/results?search_query=freebsd&amp;search_type=&amp;aq=f">FreeBSD</a>
-		on <a href="http://www.youtube.com">YouTube</a>.  In particular, there is a new <a href="http://www.youtube.com/bsdconferences">BSD Conferences</a> channel with full length 1 hour taped presentations from FreeBSD technical conferences.</li>
+		href="//www.youtube.com/results?search_query=freebsd&amp;search_type=&amp;aq=f">FreeBSD</a>
+		on <a href="//www.youtube.com">YouTube</a>.  In particular, there is a new <a href="http://www.youtube.com/bsdconferences">BSD Conferences</a> channel with full length 1 hour taped presentations from FreeBSD technical conferences.</li>
 
 		<li>There is a <a
 		href="http://www.facebook.com/home.php#/group.php?gid=2204657214">FreeBSD
@@ -154,10 +151,11 @@
 		href="http://www.facebook.com">Facebook</a> and a <a href="http://www.linkedin.com/groups?gid=47628">FreeBSD Group</a> on <a href="http://www.linkedin.com">LinkedIn</a>.</li>
 
 		<li>You can follow
-		<a href="http://twitter.com/freebsdblogs">@freebsdblogs</a>,
-		<a href="http://twitter.com/freebsd">@freebsd</a>, or
-		<a href="http://twitter.com/bsdevents">@bsdevents</a>
-		on <a href="http://twitter.com">Twitter</a>.</li>
+		<a href="https://twitter.com/freebsd">@freebsd</a>,
+		<a href="https://twitter.com/freebsdhelp">@freebsdhelp</a>,
+		<a href="https://twitter.com/freebsdblogs">@freebsdblogs</a>, or
+		<a href="https://twitter.com/bsdevents">@bsdevents</a>
+		on <a href="https://twitter.com">Twitter</a>.</li>
 	      </ul>
   </xsl:template>
 </xsl:stylesheet>

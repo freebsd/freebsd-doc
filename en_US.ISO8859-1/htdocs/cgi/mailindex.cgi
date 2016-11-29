@@ -42,10 +42,10 @@ my $up = 0;
 $| = 1;
 
 # mail archive location
-$maildir = '/g/mail/archive';
+$maildir = '/home/mail/archive';
 
 # mailindex program
-$mailindex = '/usr/local/www/mid/bin/mailindex';
+$mailindex = '/usr/local/www/mailindex/bin/mailindex';
 
 
 $query = new CGI();
@@ -82,7 +82,7 @@ sub file_not_exists {
 }
 
 if ($file =~ s%^archive/%%) {
-    $maildir = '/g/www/db/text';
+    $maildir = '/usr/local/www/mailindex/archive';
     &file_not_exists("$maildir/$file") if (! -f "$maildir/$file");
 } elsif ($file =~ s%^current/%% && $file =~ /^freebsd-|^cvs-/) {
     &file_not_exists("$file") if (! -f "$maildir/$file");

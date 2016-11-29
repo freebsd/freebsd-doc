@@ -147,7 +147,7 @@
     <programlisting>    struct cam_sim *sim;
 
     if(( sim = cam_sim_alloc(action_func, poll_func, driver_name,
-            softc, unit, max_dev_transactions,
+            softc, unit, mtx, max_dev_transactions,
             max_tagged_dev_transactions, devq) )==NULL) {
         cam_simq_free(devq);
         error; /* some code to handle the error */
@@ -217,8 +217,15 @@
 
       <listitem>
 	<para>unit - the controller unit number, for example
-	  for controller <quote>wds0</quote> this number will be
+	  for controller <quote>mps0</quote> this number will be
 	  0</para>
+      </listitem>
+
+      <listitem>
+	<para>mtx - Lock associated with this SIM. For SIMs that don't
+	know about locking, pass in Giant. For SIMs that do, pass in
+	the lock used to guard this SIM's data structures. This lock
+	will be held when xxx_action and xxx_poll are called.</para>
       </listitem>
 
       <listitem>
@@ -248,7 +255,7 @@
     <para>Finally we register the SCSI buses associated with our SCSI
       adapter<indexterm><primary>SCSI</primary><secondary>adapter</secondary></indexterm>:</para>
 
-    <programlisting>    if(xpt_bus_register(sim, bus_number) != CAM_SUCCESS) {
+    <programlisting>    if(xpt_bus_register(sim, softc, bus_number) != CAM_SUCCESS) {
         cam_sim_free(sim, /*free_devq*/ TRUE);
         error; /* some code to handle the error */
     }</programlisting>
@@ -505,6 +512,11 @@
 	  back to CAM).  This flag is not used anywhere in the CAM
 	  code now, so its purpose is purely diagnostic.</para>
       </listitem>
+
+      <listitem>
+	<para><emphasis>CAM_QOS_VALID</emphasis> - The QOS data
+	  is now valid.</para>
+      </listitem>
     </itemizedlist>
 
     <para>The function <function>xxx_action()</function> is not
@@ -728,27 +740,14 @@
 	  CCB or pointed to, in the latter case the pointer may be
 	  physical or virtual.  Since the hardware commonly needs
 	  physical address we always convert the address to the
-	  physical one.</para>
+	  physical one, typically using the busdma API.</para>
 
-	<para>A NOT-QUITE RELATED NOTE: Normally this is done by a
-	  call to <function>vtophys()</function>, but for the PCI
-	  device (which account for most of the SCSI controllers now)
-	  drivers' portability to the Alpha architecture the
-	  conversion must be done by <function>vtobus()</function>
-	  instead due to special Alpha quirks.  [IMHO it would be much
-	  better to have two separate functions,
-	  <function>vtop()</function> and
-	  <function>ptobus()</function> then
-	  <function>vtobus()</function> would be a simple
-	  superposition of them.]  In case if a physical address is
+	<para>In case if a physical address is
 	  requested it is OK to return the CCB with the status
 	  <errorname>CAM_REQ_INVALID</errorname>, the current drivers
-	  do that.  But it is also possible to compile the
-	  Alpha-specific piece of code, as in this example (there
-	  should be a more direct way to do that, without conditional
-	  compilation in the drivers).  If necessary a physical
-	  address can be also converted or mapped back to a virtual
-	  address but with big pain, so we do not do that.</para>
+	  do that.  If necessary a physical address can be also
+	  converted or mapped back to a virtual address but with
+	  big pain, so we do not do that.</para>
 
 	<programlisting>    if(ccb_h-&gt;flags &amp; CAM_CDB_POINTER) {
         /* CDB is a pointer */
@@ -757,11 +756,7 @@
             hcb-&gt;cmd = vtobus(csio-&gt;cdb_io.cdb_ptr);
         } else {
             /* CDB pointer is physical */
-#if defined(__alpha__)
-            hcb-&gt;cmd = csio-&gt;cdb_io.cdb_ptr | alpha_XXX_dmamap_or ;
-#else
             hcb-&gt;cmd = csio-&gt;cdb_io.cdb_ptr ;
-#endif
         }
     } else {
         /* CDB is in the ccb (buffer) */

@@ -2,14 +2,10 @@
 # $FreeBSDes: doc/es_ES.ISO8859-1/articles/Makefile,v 1.3 2004/10/09 02:01:17 jesusr Exp $
 
 SUBDIR =
-SUBDIR+= casestudy-argentina.com
 SUBDIR+= contributing
-SUBDIR+= cvs-freebsd
 SUBDIR+= explaining-bsd
-SUBDIR+= fbsd-from-scratch
 SUBDIR+= fdp-es
-SUBDIR+= laptop
-SUBDIR+= linux-comparison
+SUBDIR+= leap-seconds
 SUBDIR+= linux-users
 SUBDIR+= mailing-list-faq
 SUBDIR+= nanobsd

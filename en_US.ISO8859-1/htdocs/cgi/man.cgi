@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2011 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 1996-2016 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -48,9 +48,11 @@ use constant HAS_FREEBSD_CGI_STYLE => eval { require "./cgi-style.pl"; };
 
 package main;
 
+alarm(10);
+
 $debug        = 2;
 $www{'title'} = 'FreeBSD Man Pages';
-$www{'home'}  = 'http://www.FreeBSD.org';
+$www{'home'}  = 'https://www.FreeBSD.org';
 $www{'head'}  = $www{'title'};
 
 #$command{'man'} = '/usr/bin/man';    # 8Bit clean man
@@ -148,19 +150,32 @@ $sectionpath = {
     'OpenBSD 5.1' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 5.2' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 5.3' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 5.4' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 5.5' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 5.6' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 5.7' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 5.8' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 
     'CentOS Linux/i386 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS Linux/i386 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
     'CentOS Linux/i386 5.3' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
     'CentOS Linux/i386 5.4' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
     'CentOS Linux/i386 5.5' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
-    'CentOS Linux/amd64 5.6' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
-    'CentOS Linux/amd64 5.7' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
-    'CentOS Linux/amd64 5.8' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
-    'CentOS Linux/amd64 6.0' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
-    'CentOS Linux/amd64 6.1' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
-    'CentOS Linux/amd64 6.2' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
-    'CentOS Linux/amd64 6.3' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 5.6' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 5.7' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 5.8' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 5.9' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 5.10' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 5.11' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 6.0' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 6.1' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 6.2' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 6.3' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 6.4' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 6.5' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 6.6' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 7.0' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3t:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:n' },
+    'CentOS 7.1' => { 'path' => '0p:1:1p:2:3:3p:3t:4:5:6:7:8:9:n' },
 
     'SuSE Linux/i386 4.3'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
     'SuSE Linux/i386 5.0'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
@@ -207,13 +222,29 @@ foreach my $os ( keys %$sectionpath ) {
 );
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 9.2-RELEASE';
+# this should be the latest "release and ports"
+$manPathDefault = 'FreeBSD 10.3-RELEASE and Ports';
 
 %manPath = (
+    'FreeBSD 11.0-RELEASE and Ports',
+"$manLocalDir/FreeBSD-11.0-RELEASE/man:$manLocalDir/FreeBSD-11.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-11.0-RELEASE/man:$manLocalDir/FreeBSD-ports-11.0-RELEASE/misc",
+    'FreeBSD 10.3-RELEASE and Ports',
+"$manLocalDir/FreeBSD-10.3-RELEASE/man:$manLocalDir/FreeBSD-10.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-10.3-RELEASE/man:$manLocalDir/FreeBSD-ports-10.3-RELEASE/misc",
+    'FreeBSD 10.2-RELEASE and Ports',
+"$manLocalDir/FreeBSD-10.2-RELEASE/man:$manLocalDir/FreeBSD-10.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-10.2-RELEASE/man:$manLocalDir/FreeBSD-ports-10.2-RELEASE/misc",
+    'FreeBSD 10.1-RELEASE and Ports',
+"$manLocalDir/FreeBSD-10.1-RELEASE/man:$manLocalDir/FreeBSD-10.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-10.1-RELEASE/man:$manLocalDir/FreeBSD-ports-10.1-RELEASE/misc",
+    'FreeBSD 10.0-RELEASE and Ports',
+"$manLocalDir/FreeBSD-10.0-RELEASE/man:$manLocalDir/FreeBSD-10.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-10.0-RELEASE/man:$manLocalDir/FreeBSD-ports-10.0-RELEASE/misc",
+
+    'FreeBSD 9.3-RELEASE and Ports',
+"$manLocalDir/FreeBSD-9.3-RELEASE/man:$manLocalDir/FreeBSD-9.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-9.3-RELEASE/man:$manLocalDir/FreeBSD-ports-9.3-RELEASE/misc",
+    'FreeBSD 9.2-RELEASE and Ports',
+"$manLocalDir/FreeBSD-9.2-RELEASE/man:$manLocalDir/FreeBSD-9.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-9.2-RELEASE/man:$manLocalDir/FreeBSD-ports-9.2-RELEASE/misc",
     'FreeBSD 9.0-RELEASE and Ports',
 "$manLocalDir/FreeBSD-9.0-RELEASE/man:$manLocalDir/FreeBSD-9.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-9.0-RELEASE/man:$manLocalDir/FreeBSD-ports-9.0-RELEASE/lib-perl5-perl-5.12.4-man:$manLocalDir/FreeBSD-ports-9.0-RELEASE/misc",
     'FreeBSD 8.4-RELEASE and Ports',
-"$manLocalDir/FreeBSD-8.4-RELEASE/man:$manLocalDir/FreeBSD-8.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-8.4-RELEASE",
+"$manLocalDir/FreeBSD-8.4-RELEASE/man:$manLocalDir/FreeBSD-8.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-8.4-RELEASE/man:$manLocalDir/FreeBSD-ports-8.4-RELEASE/misc",
     'FreeBSD 8.3-RELEASE and Ports',
 "$manLocalDir/FreeBSD-8.3-RELEASE/man:$manLocalDir/FreeBSD-8.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-8.3-RELEASE",
     'FreeBSD 8.2-RELEASE and Ports',
@@ -229,18 +260,52 @@ $manPathDefault = 'FreeBSD 9.2-RELEASE';
     'FreeBSD 6.4-RELEASE and Ports',
 "$manLocalDir/FreeBSD-6.4-RELEASE/man:$manLocalDir/FreeBSD-6.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-6.2-RELEASE",
 
-    'FreeBSD Ports', "$manLocalDir/FreeBSD-ports",
-    'FreeBSD 10-current',
-"$manLocalDir/FreeBSD-10-current/man:$manLocalDir/FreeBSD-10-current/openssl/man",
+    'FreeBSD 12-current',
+"$manLocalDir/FreeBSD-12-current/man:$manLocalDir/FreeBSD-12-current/openssl/man",
 
-    'FreeBSD 9.1-stable',
-"$manLocalDir/FreeBSD-9.1-stable/man:$manLocalDir/FreeBSD-9.1-stable/openssl/man",
+    'FreeBSD 11-current',
+"$manLocalDir/FreeBSD-11-current/man:$manLocalDir/FreeBSD-11-current/openssl/man",
+
+    'FreeBSD 11.0-RELEASE',
+"$manLocalDir/FreeBSD-11.0-RELEASE/man:$manLocalDir/FreeBSD-11.0-RELEASE/openssl/man",
+
+    'FreeBSD 10.3-RELEASE',
+"$manLocalDir/FreeBSD-10.3-RELEASE/man:$manLocalDir/FreeBSD-10.3-RELEASE/openssl/man",
+    'FreeBSD 10.2-RELEASE',
+"$manLocalDir/FreeBSD-10.2-RELEASE/man:$manLocalDir/FreeBSD-10.2-RELEASE/openssl/man",
+    'FreeBSD 10.1-RELEASE',
+"$manLocalDir/FreeBSD-10.1-RELEASE/man:$manLocalDir/FreeBSD-10.1-RELEASE/openssl/man",
+    'FreeBSD 10.0-RELEASE',
+"$manLocalDir/FreeBSD-10.0-RELEASE/man:$manLocalDir/FreeBSD-10.0-RELEASE/openssl/man",
+
+    'FreeBSD 11.0-stable',
+"$manLocalDir/FreeBSD-11.0-stable/man:$manLocalDir/FreeBSD-11.0-stable/openssl/man",
+
+    'FreeBSD 10.3-stable',
+"$manLocalDir/FreeBSD-10.3-stable/man:$manLocalDir/FreeBSD-10.3-stable/openssl/man",
+
+    'FreeBSD 10.2-stable',
+"$manLocalDir/FreeBSD-10.2-stable/man:$manLocalDir/FreeBSD-10.2-stable/openssl/man",
+
+    'FreeBSD Ports 11.0-RELEASE', "$manLocalDir/FreeBSD-ports-11.0-RELEASE/man:$manLocalDir/FreeBSD-ports-11.0-RELEASE/misc",
+    'FreeBSD Ports 10.3-RELEASE', "$manLocalDir/FreeBSD-ports-10.3-RELEASE/man:$manLocalDir/FreeBSD-ports-10.3-RELEASE/misc",
+    'FreeBSD Ports 10.2-RELEASE', "$manLocalDir/FreeBSD-ports-10.2-RELEASE/man:$manLocalDir/FreeBSD-ports-10.2-RELEASE/misc",
+    'FreeBSD Ports 10.1-RELEASE', "$manLocalDir/FreeBSD-ports-10.1-RELEASE/man:$manLocalDir/FreeBSD-ports-10.1-RELEASE/misc",
+    'FreeBSD Ports 10.0-RELEASE', "$manLocalDir/FreeBSD-ports-10.0-RELEASE/man:$manLocalDir/FreeBSD-ports-10.0-RELEASE/misc",
+
+    'FreeBSD 9.3-RELEASE',
+"$manLocalDir/FreeBSD-9.3-RELEASE/man:$manLocalDir/FreeBSD-9.3-RELEASE/openssl/man",
+    'FreeBSD 9.3-stable',
+"$manLocalDir/FreeBSD-9.3-stable/man:$manLocalDir/FreeBSD-9.3-stable/openssl/man",
     'FreeBSD 9.2-RELEASE',
 "$manLocalDir/FreeBSD-9.2-RELEASE/man:$manLocalDir/FreeBSD-9.2-RELEASE/openssl/man",
     'FreeBSD 9.1-RELEASE',
 "$manLocalDir/FreeBSD-9.1-RELEASE/man:$manLocalDir/FreeBSD-9.1-RELEASE/openssl/man",
     'FreeBSD 9.0-RELEASE',
 "$manLocalDir/FreeBSD-9.0-RELEASE/man:$manLocalDir/FreeBSD-9.0-RELEASE/openssl/man",
+
+    'FreeBSD Ports 9.3-RELEASE', "$manLocalDir/FreeBSD-ports-9.3-RELEASE/man:$manLocalDir/FreeBSD-ports-9.3-RELEASE/misc",
+    'FreeBSD Ports 9.2-RELEASE', "$manLocalDir/FreeBSD-ports-9.2-RELEASE/man:$manLocalDir/FreeBSD-ports-9.2-RELEASE/misc",
     'FreeBSD Ports 9.0-RELEASE', "$manLocalDir/FreeBSD-ports-9.0-RELEASE/man:$manLocalDir/FreeBSD-ports-9.0-RELEASE/lib-perl5-perl-5.12.4-man:$manLocalDir/FreeBSD-ports-9.0-RELEASE/misc",
 
     'FreeBSD 8.4-stable',
@@ -251,15 +316,75 @@ $manPathDefault = 'FreeBSD 9.2-RELEASE';
 "$manLocalDir/FreeBSD-8.3-RELEASE/man:$manLocalDir/FreeBSD-8.3-RELEASE/openssl/man",
     'FreeBSD 8.2-RELEASE',
 "$manLocalDir/FreeBSD-8.2-RELEASE/man:$manLocalDir/FreeBSD-8.2-RELEASE/openssl/man",
-    'FreeBSD Ports 8.2-RELEASE', "$manLocalDir/FreeBSD-ports-8.2-RELEASE",
+#    'FreeBSD Ports 8.2-RELEASE', "$manLocalDir/FreeBSD-ports-8.2-RELEASE",
 
     'FreeBSD 8.1-RELEASE',
 "$manLocalDir/FreeBSD-8.1-RELEASE/man:$manLocalDir/FreeBSD-8.1-RELEASE/openssl/man",
     'FreeBSD 8.0-RELEASE',
 "$manLocalDir/FreeBSD-8.0-RELEASE/man:$manLocalDir/FreeBSD-8.0-RELEASE/openssl/man",
 
+    'FreeBSD Ports 8.4-RELEASE', "$manLocalDir/FreeBSD-ports-8.4-RELEASE/man:$manLocalDir/FreeBSD-ports-8.4-RELEASE/misc",
     'FreeBSD Ports 8.1-RELEASE', "$manLocalDir/FreeBSD-ports-8.1-RELEASE",
     'FreeBSD Ports 8.0-RELEASE', "$manLocalDir/FreeBSD-ports-8.0-RELEASE",
+
+    'FreeBSD Ports 2.2.8-RELEASE', "$manLocalDir/FreeBSD-ports-2.2.8-RELEASE/man:$manLocalDir/FreeBSD-ports-2.2.8-RELEASE/misc",
+    'FreeBSD Ports 3.4-RELEASE', "$manLocalDir/FreeBSD-ports-3.4-RELEASE/man:$manLocalDir/FreeBSD-ports-3.4-RELEASE/misc",
+    'FreeBSD Ports 3.5-RELEASE', "$manLocalDir/FreeBSD-ports-3.5-RELEASE/man:$manLocalDir/FreeBSD-ports-3.5-RELEASE/misc",
+    'FreeBSD Ports 3.5.1-RELEASE', "$manLocalDir/FreeBSD-ports-3.5.1-RELEASE/man:$manLocalDir/FreeBSD-ports-3.5.1-RELEASE/misc",
+    'FreeBSD Ports 4.1.1-RELEASE', "$manLocalDir/FreeBSD-ports-4.1.1-RELEASE/man:$manLocalDir/FreeBSD-ports-4.1.1-RELEASE/misc",
+    'FreeBSD Ports 4.10-RELEASE', "$manLocalDir/FreeBSD-ports-4.10-RELEASE/man:$manLocalDir/FreeBSD-ports-4.10-RELEASE/misc",
+    'FreeBSD Ports 4.11-RELEASE', "$manLocalDir/FreeBSD-ports-4.11-RELEASE/man:$manLocalDir/FreeBSD-ports-4.11-RELEASE/misc",
+    'FreeBSD Ports 4.2-RELEASE', "$manLocalDir/FreeBSD-ports-4.2-RELEASE/man:$manLocalDir/FreeBSD-ports-4.2-RELEASE/misc",
+    'FreeBSD Ports 4.3-RELEASE', "$manLocalDir/FreeBSD-ports-4.3-RELEASE/man:$manLocalDir/FreeBSD-ports-4.3-RELEASE/misc",
+    'FreeBSD Ports 4.5-RELEASE', "$manLocalDir/FreeBSD-ports-4.5-RELEASE/man:$manLocalDir/FreeBSD-ports-4.5-RELEASE/misc",
+    'FreeBSD Ports 4.6-RELEASE', "$manLocalDir/FreeBSD-ports-4.6-RELEASE/man:$manLocalDir/FreeBSD-ports-4.6-RELEASE/misc",
+    'FreeBSD Ports 4.6.2-RELEASE', "$manLocalDir/FreeBSD-ports-4.6.2-RELEASE/man:$manLocalDir/FreeBSD-ports-4.6.2-RELEASE/misc",
+    'FreeBSD Ports 4.8-RELEASE', "$manLocalDir/FreeBSD-ports-4.8-RELEASE/man:$manLocalDir/FreeBSD-ports-4.8-RELEASE/misc",
+    'FreeBSD Ports 4.9-RELEASE', "$manLocalDir/FreeBSD-ports-4.9-RELEASE/man:$manLocalDir/FreeBSD-ports-4.9-RELEASE/misc",
+    'FreeBSD Ports 5.2-RELEASE', "$manLocalDir/FreeBSD-ports-5.2-RELEASE/man:$manLocalDir/FreeBSD-ports-5.2-RELEASE/misc",
+    'FreeBSD Ports 5.2.1-RELEASE', "$manLocalDir/FreeBSD-ports-5.2.1-RELEASE/man:$manLocalDir/FreeBSD-ports-5.2.1-RELEASE/misc",
+    'FreeBSD Ports 5.3-RELEASE', "$manLocalDir/FreeBSD-ports-5.3-RELEASE/man:$manLocalDir/FreeBSD-ports-5.3-RELEASE/misc",
+    'FreeBSD Ports 5.4-RELEASE', "$manLocalDir/FreeBSD-ports-5.4-RELEASE/man:$manLocalDir/FreeBSD-ports-5.4-RELEASE/misc",
+    'FreeBSD Ports 5.5-RELEASE', "$manLocalDir/FreeBSD-ports-5.5-RELEASE/man:$manLocalDir/FreeBSD-ports-5.5-RELEASE/misc",
+    'FreeBSD Ports 6.0-RELEASE', "$manLocalDir/FreeBSD-ports-6.0-RELEASE/man:$manLocalDir/FreeBSD-ports-6.0-RELEASE/misc",
+    'FreeBSD Ports 6.3-RELEASE', "$manLocalDir/FreeBSD-ports-6.3-RELEASE/man:$manLocalDir/FreeBSD-ports-6.3-RELEASE/misc",
+    'FreeBSD Ports 6.4-RELEASE', "$manLocalDir/FreeBSD-ports-6.4-RELEASE/man:$manLocalDir/FreeBSD-ports-6.4-RELEASE/misc",
+    'FreeBSD Ports 7.1-RELEASE', "$manLocalDir/FreeBSD-ports-7.1-RELEASE/man:$manLocalDir/FreeBSD-ports-7.1-RELEASE/misc",
+    'FreeBSD Ports 7.2-RELEASE', "$manLocalDir/FreeBSD-ports-7.2-RELEASE/man:$manLocalDir/FreeBSD-ports-7.2-RELEASE/misc",
+    'FreeBSD Ports 7.4-RELEASE', "$manLocalDir/FreeBSD-ports-7.4-RELEASE/man:$manLocalDir/FreeBSD-ports-7.4-RELEASE/misc",
+    'FreeBSD Ports 8.2-RELEASE', "$manLocalDir/FreeBSD-ports-8.2-RELEASE/man:$manLocalDir/FreeBSD-ports-8.2-RELEASE/misc",
+    'FreeBSD Ports 8.3-RELEASE', "$manLocalDir/FreeBSD-ports-8.3-RELEASE/man:$manLocalDir/FreeBSD-ports-8.3-RELEASE/misc",
+    'FreeBSD Ports 9.1-RELEASE', "$manLocalDir/FreeBSD-ports-9.1-RELEASE/man:$manLocalDir/FreeBSD-ports-9.1-RELEASE/misc",
+
+    'FreeBSD 2.2.8-RELEASE and Ports', "$manLocalDir/FreeBSD-2.2.8-RELEASE/man:$manLocalDir/FreeBSD-2.2.8-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-2.2.8-RELEASE/man:$manLocalDir/FreeBSD-ports-2.2.8-RELEASE/misc",
+    'FreeBSD 3.4-RELEASE and Ports', "$manLocalDir/FreeBSD-3.4-RELEASE/man:$manLocalDir/FreeBSD-3.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-3.4-RELEASE/man:$manLocalDir/FreeBSD-ports-3.4-RELEASE/misc",
+    'FreeBSD 3.5-RELEASE and Ports', "$manLocalDir/FreeBSD-3.5-RELEASE/man:$manLocalDir/FreeBSD-3.5-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-3.5-RELEASE/man:$manLocalDir/FreeBSD-ports-3.5-RELEASE/misc",
+    'FreeBSD 3.5.1-RELEASE and Ports', "$manLocalDir/FreeBSD-3.5.1-RELEASE/man:$manLocalDir/FreeBSD-3.5.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-3.5.1-RELEASE/man:$manLocalDir/FreeBSD-ports-3.5.1-RELEASE/misc",
+    'FreeBSD 4.1.1-RELEASE and Ports', "$manLocalDir/FreeBSD-4.1.1-RELEASE/man:$manLocalDir/FreeBSD-4.1.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-4.1.1-RELEASE/man:$manLocalDir/FreeBSD-ports-4.1.1-RELEASE/misc",
+    'FreeBSD 4.10-RELEASE and Ports', "$manLocalDir/FreeBSD-4.10-RELEASE/man:$manLocalDir/FreeBSD-4.10-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-4.10-RELEASE/man:$manLocalDir/FreeBSD-ports-4.10-RELEASE/misc",
+    'FreeBSD 4.11-RELEASE and Ports', "$manLocalDir/FreeBSD-4.11-RELEASE/man:$manLocalDir/FreeBSD-4.11-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-4.11-RELEASE/man:$manLocalDir/FreeBSD-ports-4.11-RELEASE/misc",
+    'FreeBSD 4.2-RELEASE and Ports', "$manLocalDir/FreeBSD-4.2-RELEASE/man:$manLocalDir/FreeBSD-4.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-4.2-RELEASE/man:$manLocalDir/FreeBSD-ports-4.2-RELEASE/misc",
+    'FreeBSD 4.3-RELEASE and Ports', "$manLocalDir/FreeBSD-4.3-RELEASE/man:$manLocalDir/FreeBSD-4.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-4.3-RELEASE/man:$manLocalDir/FreeBSD-ports-4.3-RELEASE/misc",
+    'FreeBSD 4.5-RELEASE and Ports', "$manLocalDir/FreeBSD-4.5-RELEASE/man:$manLocalDir/FreeBSD-4.5-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-4.5-RELEASE/man:$manLocalDir/FreeBSD-ports-4.5-RELEASE/misc",
+    'FreeBSD 4.6-RELEASE and Ports', "$manLocalDir/FreeBSD-4.6-RELEASE/man:$manLocalDir/FreeBSD-4.6-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-4.6-RELEASE/man:$manLocalDir/FreeBSD-ports-4.6-RELEASE/misc",
+    'FreeBSD 4.6.2-RELEASE and Ports', "$manLocalDir/FreeBSD-4.6.2-RELEASE/man:$manLocalDir/FreeBSD-4.6.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-4.6.2-RELEASE/man:$manLocalDir/FreeBSD-ports-4.6.2-RELEASE/misc",
+    'FreeBSD 4.8-RELEASE and Ports', "$manLocalDir/FreeBSD-4.8-RELEASE/man:$manLocalDir/FreeBSD-4.8-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-4.8-RELEASE/man:$manLocalDir/FreeBSD-ports-4.8-RELEASE/misc",
+    'FreeBSD 4.9-RELEASE and Ports', "$manLocalDir/FreeBSD-4.9-RELEASE/man:$manLocalDir/FreeBSD-4.9-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-4.9-RELEASE/man:$manLocalDir/FreeBSD-ports-4.9-RELEASE/misc",
+    'FreeBSD 5.2-RELEASE and Ports', "$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.2-RELEASE/man:$manLocalDir/FreeBSD-ports-5.2-RELEASE/misc",
+    'FreeBSD 5.2.1-RELEASE and Ports', "$manLocalDir/FreeBSD-5.2.1-RELEASE/man:$manLocalDir/FreeBSD-5.2.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.2.1-RELEASE/man:$manLocalDir/FreeBSD-ports-5.2.1-RELEASE/misc",
+    'FreeBSD 5.3-RELEASE and Ports', "$manLocalDir/FreeBSD-5.3-RELEASE/man:$manLocalDir/FreeBSD-5.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.3-RELEASE/man:$manLocalDir/FreeBSD-ports-5.3-RELEASE/misc",
+    'FreeBSD 5.4-RELEASE and Ports', "$manLocalDir/FreeBSD-5.4-RELEASE/man:$manLocalDir/FreeBSD-5.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.4-RELEASE/man:$manLocalDir/FreeBSD-ports-5.4-RELEASE/misc",
+    'FreeBSD 5.5-RELEASE and Ports', "$manLocalDir/FreeBSD-5.5-RELEASE/man:$manLocalDir/FreeBSD-5.5-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.5-RELEASE/man:$manLocalDir/FreeBSD-ports-5.5-RELEASE/misc",
+    'FreeBSD 6.0-RELEASE and Ports', "$manLocalDir/FreeBSD-6.0-RELEASE/man:$manLocalDir/FreeBSD-6.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-6.0-RELEASE/man:$manLocalDir/FreeBSD-ports-6.0-RELEASE/misc",
+    'FreeBSD 6.3-RELEASE and Ports', "$manLocalDir/FreeBSD-6.3-RELEASE/man:$manLocalDir/FreeBSD-6.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-6.3-RELEASE/man:$manLocalDir/FreeBSD-ports-6.3-RELEASE/misc",
+    'FreeBSD 6.4-RELEASE and Ports', "$manLocalDir/FreeBSD-6.4-RELEASE/man:$manLocalDir/FreeBSD-6.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-6.4-RELEASE/man:$manLocalDir/FreeBSD-ports-6.4-RELEASE/misc",
+    'FreeBSD 7.1-RELEASE and Ports', "$manLocalDir/FreeBSD-7.1-RELEASE/man:$manLocalDir/FreeBSD-7.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-7.1-RELEASE/man:$manLocalDir/FreeBSD-ports-7.1-RELEASE/misc",
+    'FreeBSD 7.2-RELEASE and Ports', "$manLocalDir/FreeBSD-7.2-RELEASE/man:$manLocalDir/FreeBSD-7.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-7.2-RELEASE/man:$manLocalDir/FreeBSD-ports-7.2-RELEASE/misc",
+    'FreeBSD 7.4-RELEASE and Ports', "$manLocalDir/FreeBSD-7.4-RELEASE/man:$manLocalDir/FreeBSD-7.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-7.4-RELEASE/man:$manLocalDir/FreeBSD-ports-7.4-RELEASE/misc",
+    'FreeBSD 8.2-RELEASE and Ports', "$manLocalDir/FreeBSD-8.2-RELEASE/man:$manLocalDir/FreeBSD-8.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-8.2-RELEASE/man:$manLocalDir/FreeBSD-ports-8.2-RELEASE/misc",
+    'FreeBSD 8.3-RELEASE and Ports', "$manLocalDir/FreeBSD-8.3-RELEASE/man:$manLocalDir/FreeBSD-8.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-8.3-RELEASE/man:$manLocalDir/FreeBSD-ports-8.3-RELEASE/misc",
+    'FreeBSD 9.1-RELEASE and Ports', "$manLocalDir/FreeBSD-9.1-RELEASE/man:$manLocalDir/FreeBSD-9.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-9.1-RELEASE/man:$manLocalDir/FreeBSD-ports-9.1-RELEASE/misc",
+
 
     'FreeBSD 7.4-stable',
 "$manLocalDir/FreeBSD-7.4-RELEASE/man:$manLocalDir/FreeBSD-7.4-RELEASE/openssl/man",
@@ -275,7 +400,7 @@ $manPathDefault = 'FreeBSD 9.2-RELEASE';
 "$manLocalDir/FreeBSD-7.2-RELEASE/man:$manLocalDir/FreeBSD-7.2-RELEASE/openssl/man",
     'FreeBSD 7.1-RELEASE',
 "$manLocalDir/FreeBSD-7.1-RELEASE/man:$manLocalDir/FreeBSD-7.1-RELEASE/openssl/man",
-    'FreeBSD Ports 7.1-RELEASE', "$manLocalDir/FreeBSD-ports-7.1-RELEASE",
+#    'FreeBSD Ports 7.1-RELEASE', "$manLocalDir/FreeBSD-ports-7.1-RELEASE",
 
     'FreeBSD 7.0-RELEASE',
 "$manLocalDir/FreeBSD-7.0-RELEASE/man:$manLocalDir/FreeBSD-7.0-RELEASE/openssl/man",
@@ -389,6 +514,11 @@ $manPathDefault = 'FreeBSD 9.2-RELEASE';
     'OpenBSD 5.1', "$manLocalDir/OpenBSD-5.1",
     'OpenBSD 5.2', "$manLocalDir/OpenBSD-5.2",
     'OpenBSD 5.3', "$manLocalDir/OpenBSD-5.3",
+    'OpenBSD 5.4', "$manLocalDir/OpenBSD-5.4",
+    'OpenBSD 5.5', "$manLocalDir/OpenBSD-5.5",
+    'OpenBSD 5.6', "$manLocalDir/OpenBSD-5.6",
+    'OpenBSD 5.7', "$manLocalDir/OpenBSD-5.7",
+    'OpenBSD 5.8', "$manLocalDir/OpenBSD-5.8",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
     'NetBSD 1.0',   "$manLocalDir/NetBSD-1.0",
@@ -420,6 +550,8 @@ $manPathDefault = 'FreeBSD 9.2-RELEASE';
     'NetBSD 5.0',   "$manLocalDir/NetBSD-5.0",
     'NetBSD 5.1',   "$manLocalDir/NetBSD-5.1",
     'NetBSD 6.0',   "$manLocalDir/NetBSD-6.0",
+    'NetBSD 6.1.5', "$manLocalDir/NetBSD-6.1.5",
+    'NetBSD 7.0',   "$manLocalDir/NetBSD-7.0",
 
     '2.8 BSD',      "$manLocalDir/2.8BSD",
     '2.9.1 BSD',    "$manLocalDir/2.9.1BSD",
@@ -448,13 +580,21 @@ $manPathDefault = 'FreeBSD 9.2-RELEASE';
     'CentOS Linux/i386 4.8', "$manLocalDir/CentOS-4.8",
     'CentOS Linux/i386 5.4', "$manLocalDir/CentOS-5.4",
     'CentOS Linux/i386 5.5', "$manLocalDir/CentOS-5.5",
-    'CentOS Linux/amd64 5.6', "$manLocalDir/CentOS-5.6",
-    'CentOS Linux/amd64 5.7', "$manLocalDir/CentOS-5.7",
-    'CentOS Linux/amd64 5.8', "$manLocalDir/CentOS-5.8",
-    'CentOS Linux/amd64 6.0', "$manLocalDir/CentOS-6.0",
-    'CentOS Linux/amd64 6.1', "$manLocalDir/CentOS-6.1",
-    'CentOS Linux/amd64 6.2', "$manLocalDir/CentOS-6.2",
-    'CentOS Linux/amd64 6.3', "$manLocalDir/CentOS-6.3",
+    'CentOS 5.6', "$manLocalDir/CentOS-5.6",
+    'CentOS 5.7', "$manLocalDir/CentOS-5.7",
+    'CentOS 5.8', "$manLocalDir/CentOS-5.8",
+    'CentOS 5.9', "$manLocalDir/CentOS-5.9",
+    'CentOS 5.10', "$manLocalDir/CentOS-5.10",
+    'CentOS 5.11', "$manLocalDir/CentOS-5.11",
+    'CentOS 6.0', "$manLocalDir/CentOS-6.0",
+    'CentOS 6.1', "$manLocalDir/CentOS-6.1",
+    'CentOS 6.2', "$manLocalDir/CentOS-6.2",
+    'CentOS 6.3', "$manLocalDir/CentOS-6.3",
+    'CentOS 6.4', "$manLocalDir/CentOS-6.4",
+    'CentOS 6.5', "$manLocalDir/CentOS-6.5",
+    'CentOS 6.6', "$manLocalDir/CentOS-6.6",
+    'CentOS 7.0', "$manLocalDir/CentOS-7.0",
+    'CentOS 7.1', "$manLocalDir/CentOS-7.1",
 
     'SuSE Linux/i386 4.3',  "$manLocalDir/SuSE-4.3-i386",
     'SuSE Linux/i386 5.0',  "$manLocalDir/SuSE-5.0-i386",
@@ -483,6 +623,14 @@ $manPathDefault = 'FreeBSD 9.2-RELEASE';
     'SuSE Linux/i386 11.3', "$manLocalDir/SuSE-11.3",
 
     'SuSE Linux/i386 ES 10 SP1', "$manLocalDir/SLES-10-SP1-i386",
+
+    'Debian 2.2.7', "$manLocalDir/Debian-2.2r7/man:$manLocalDir/Debian-2.2r7/misc",
+    'Debian 3.1.8', "$manLocalDir/Debian-31r8/man:$manLocalDir/Debian-31r8/misc",
+    'Debian 4.0.9', "$manLocalDir/Debian-40r9/man:$manLocalDir/Debian-40r9/misc",
+    'Debian 5.0.10', "$manLocalDir/Debian-5.0.10/man:$manLocalDir/Debian-5.0.10/misc",
+    'Debian 6.0.10', "$manLocalDir/Debian-6.0.10/man:$manLocalDir/Debian-6.0.10/misc",
+    'Debian 7.8.0', "$manLocalDir/Debian-7.8.0/man:$manLocalDir/Debian-7.8.0/misc",
+    'Debian 8.1.0', "$manLocalDir/Debian-8.1.0/man:$manLocalDir/Debian-8.1.0/misc",
 
     'HP-UX 11.22', "$manLocalDir/HP-UX-11.22",
     'HP-UX 11.20', "$manLocalDir/HP-UX-11.20",
@@ -590,13 +738,22 @@ my %valid_arch = map { $_ => 1 }
 my $default_arch = 'i386';
 
 my %arch = ( 
+'FreeBSD 11.0-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
+'FreeBSD 10.3-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
+'FreeBSD 10.2-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
+'FreeBSD 10.1-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
+'FreeBSD 10.0-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
+'FreeBSD 9.3-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 9.2-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 9.1-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 9.0-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
+'FreeBSD 8.4-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 8.3-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 8.2-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'NetBSD 5.1' => { 'arch' => [qw/acorn26 acorn32 alpha amiga arc atari cobalt dreamcast evbarm evbmips evbppc hp300 hp700 hpcarm hpcmips hpcsh i386 mac68k macppc mvme68k pmax prep sgimips sparc sparc64 sun2 sun3 vax x68k/] } ,
 'NetBSD 6.0' => { 'arch' => [qw/acorn26 acorn32 alpha amiga arc atari cobalt dreamcast evbarm evbmips evbppc hp300 hp700 hpcarm hpcmips hpcsh i386 mac68k macppc mvme68k pmax prep sgimips sparc sparc64 sun2 sun3 vax x68k/] } ,
+'NetBSD 6.1.5' => { 'arch' => [qw/acorn26 acorn32 algor alpha amd64 amiga arc atari bebox cats cesfic cobalt dreamcast emips evbarm evbmips evbppc evbsh3 hp300 hp700 hpcarm hpcmips hpcsh i386 ibmnws luna68k mac68k macppc mipsco mmeye mvme68k mvmeppc netwinder news68k newsmips next68k ofppc pmax prep sandpoint sbmips sgimips shark sparc sparc64 sun2 sun3 vax x68k x86/] } ,
+'NetBSD 7.0' => { 'arch' => [qw/acorn26 acorn32 algor alpha amd64 amiga arc atari bebox cats cesfic cobalt dreamcast emips evbarm evbmips evbppc evbsh3 hp300 hp700 hpcarm hpcmips hpcsh i386 ibmnws luna68k mac68k macppc mipsco mmeye mvme68k mvmeppc netwinder news68k newsmips next68k ofppc pmax prep sandpoint sbmips sgimips shark sparc sparc64 sun2 sun3 vax x68k x86/] } ,
 'OpenBSD 4.7' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
 'OpenBSD 4.8' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
 'OpenBSD 4.9' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
@@ -604,6 +761,11 @@ my %arch = (
 'OpenBSD 5.1' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
 'OpenBSD 5.2' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
 'OpenBSD 5.3' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
+'OpenBSD 5.4' => { 'arch' => [qw/alpha amd64 armish aviion beagle hp300 hppa hppa64 i386 landisk loongson luna88k macppc mvme68k mvme88k octeon sgi socppc sparc sparc64 vax zaurus/] }, 
+'OpenBSD 5.5' => { 'arch' => [qw/alpha amd64 armish armv7 aviion hp300 hppa hppa64 i386 landisk loongson luna88k macppc mvme68k mvme88k octeon sgi socppc sparc sparc64 vax zaurus/] }, 
+'OpenBSD 5.6' => { 'arch' => [qw/alpha amd64 armish armv7 aviion hppa hppa64 i386 landisk loongson luna88k macppc octeon sgi socppc sparc sparc64 vax zaurus/] }, 
+'OpenBSD 5.7' => { 'arch' => [qw/alpha amd64 armish armv7 aviion hppa hppa64 i386 landisk loongson luna88k macppc octeon sgi socppc sparc sparc64 vax zaurus/] }, 
+'OpenBSD 5.8' => { 'arch' => [qw/alpha amd64 armish armv7 aviion hppa hppa64 i386 landisk loongson luna88k macppc octeon sgi socppc sparc sparc64 vax zaurus/] }, 
 );
 
 # delete not existing releases
@@ -624,29 +786,33 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 9.2-RELEASE',
-    'freebsd-release', 'FreeBSD 9.2-RELEASE',
+    'freebsd',         'FreeBSD 11.0-RELEASE',
+    'freebsd-release', 'FreeBSD 11.0-RELEASE',
 
-    'freebsd-stable',  'FreeBSD 9.1-stable',
-    'freebsd-stable9', 'FreeBSD 9.1-stable',
-    'freebsd-stable8', 'FreeBSD 8.3-stable',
+    'freebsd-stable',  'FreeBSD 10.3-stable',
+    'freebsd-stable11', 'FreeBSD 11.0-stable',
+    'freebsd-stable10', 'FreeBSD 10.3-stable',
+    'freebsd-stable9', 'FreeBSD 9.3-stable',
+    'freebsd-stable8', 'FreeBSD 8.4-stable',
     'freebsd-stable7', 'FreeBSD 7.4-stable',
     'freebsd-stable6', 'FreeBSD 6.4-stable',
 
-    'freebsd-current',       'FreeBSD 10-current',
-    'freebsd-release-ports', 'FreeBSD 9.0-RELEASE and Ports',
+    'freebsd-current',       'FreeBSD 12-current',
+    'freebsd-release-ports', 'FreeBSD 11.0-RELEASE and Ports',
+    'freebsd-ports', 'FreeBSD Ports 11.0-RELEASE',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat Linux/i386 9',
-    'centos',     'CentOS Linux/amd64 6.3',
     'suse',       'SuSE Linux/i386 11.3',
-    'linux',      'SuSE Linux/i386 11.3',
+    'debian',     'Debian 7.7.0',
+    'centos',     'CentOS 7.1',
+    'linux',      'Debian 7.7.0',
     'darwin',     'Darwin 8.0.1/ppc',
     'opendarwin', 'OpenDarwin 7.2.1',
     'macosx',     'Darwin 8.0.1/ppc',
 
-    'netbsd',        'NetBSD 6.0',
-    'openbsd',       'OpenBSD 5.3',
+    'netbsd',        'NetBSD 7.0',
+    'openbsd',       'OpenBSD 5.8',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
     'x11',           'X11R7.4',
@@ -737,7 +903,7 @@ $sections = join( "|", @sections );    # sections regexp
 $mailto                    = 'wosch@FreeBSD.org';
 $mailtoURL                 = 'http://wolfram.schneider.org';
 $mailtoURL                 = "mailto:$mailto" if !$mailtoURL;
-$full_url                  = 'http://www.freebsd.org/cgi/man.cgi';
+$full_url                  = 'https://www.freebsd.org/cgi/man.cgi';
 $want_to_link_to_this_page = 1;
 
 &secure_env;
@@ -775,8 +941,8 @@ sub html_header {
     my $html_meta = q|
 <meta name="robots" content="nofollow" />
 <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />
-<link rel="search" type="application/opensearchdescription+xml" href="http://www.freebsd.org/search/opensearch/man.xml" title="FreeBSD Manpages" />
-<link rel="search" type="application/opensearchdescription+xml" href="http://www.freebsd.org/search/opensearch/man-freebsd-release-ports.xml" title="FreeBSD + Ports Manpages" />
+<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/search/opensearch/man.xml" title="FreeBSD Manpages" />
+<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/search/opensearch/man-freebsd-release-ports.xml" title="FreeBSD + Ports Manpages" />
 <style type="text/css">
 <!--
 b { color: #996600; }
@@ -1581,9 +1747,8 @@ ETX
 ETX
 
     my @format = ('html');
-    push( @format, ( 'pdf', 'ps' ) ) if !$no_pdf_output{$manpath};
-    push( @format, ( 'latin1', 'ascii' ) )
-      ;    # you need a 8 bit clean man, e.g. jp-man
+    push( @format, ( 'pdf' ) ) if !$no_pdf_output{$manpath};
+    push( @format, ( 'ascii' ) );
 
     foreach (@format) {
         print qq{<option value="$_">$_</option>\n};
@@ -1628,7 +1793,7 @@ sub faq {
       '$FreeBSD$';
     return qq{\
 <pre>
-Copyright (c) 1996-2012 <a href="$mailtoURL">Wolfram Schneider</a>
+Copyright (c) 1996-2016 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE
@@ -1643,20 +1808,20 @@ This script has the revsion: $id
 Copyright (c) for man pages by OS vendors.
 <p/>
 <a href="ftp://ftp.2bsd.com">2.11 BSD</a>,
-<a href="http://www.hp.com">HP</a>,
-<a href="http://www.freebsd.org">FreeBSD</a>,
-<a href="http://www.cs.vu.nl/~ast/minix.html">Minix</a>,
-<a href="http://www.netbsd.org">NetBSD</a>,
-<a href="http://www.openbsd.org">OpenBSD</a>,
+<a href="https://www.hp.com">HP</a>,
+<a href="https://www.freebsd.org">FreeBSD</a>,
+<a href="http://www.minix3.org">Minix</a>,
+<a href="https://www.netbsd.org">NetBSD</a>,
+<a href="https://www.openbsd.org">OpenBSD</a>,
 <a href="http://plan9.bell-labs.com/plan9/">Plan 9</a>,
-<a href="http://www.redhat.com">Red Hat</a>,
-<a href="http://slackware.com">Slackware Linux</a>,
-<a href="http://www.sun.com">SunOS</a>,
-<a href="http://www.suse.com">SuSE</a>,
+<a href="https://www.redhat.com">Red Hat</a>,
+<a href="https://www.slackware.com">Slackware Linux</a>,
+<a href="https://www.sun.com">SunOS</a>,
+<a href="https://www.suse.com">SuSE</a>,
 <a href="http://www.digital.com">ULTRIX</a>,
-<a href="ftp://elib.zib.de/pub/netlib/att/cs/v7man">Unix Seventh Edition</a>,
+<a href="http://www.plan9.bell-labs.com/7thEdMan/">Unix Seventh Edition</a>,
 <a href="http://www.xfree86.org">XFree86</a>,
-<a href="http://www.x.org">X11R6</a>
+<a href="https://www.x.org">X11R6</a>
 
 <h2>FAQ</h2>
 <ul>
@@ -1666,9 +1831,9 @@ macros like `appeared in NetBSD version 1.2' are not supported.</li>
 <li>Some OSs provide only formatted manual pages (catpages), e.g., NetBSD
 and OpenBSD. In this case it is not possible to create Postscript
 and troff output.</li>
-<li>The <a href="http://svnweb.freebsd.org/base/head/share/misc/bsd-family-tree?view=markup">
+<li>The <a href="https://svnweb.freebsd.org/base/head/share/misc/bsd-family-tree?view=markup">
 Unix family tree, BSD part</a>.</li>
-<li>The <a href="http://www.freebsd.org/cgi/ports.cgi">
+<li>The <a href="https://www.freebsd.org/cgi/ports.cgi">
 FreeBSD Ports Changes</a> script.</li>
 <li>Copyright (c) and download for man pages by 
 OS vendors</li>
@@ -1677,8 +1842,8 @@ OS vendors</li>
 <h2>Shortcuts for FreeBSD manual pages</h2>
 
 <ul>
-<li>which manpage: <a href="http://man.freebsd.org/which">http://man.freebsd.org/which</a></li>
-<li>socket(2) manpage: <a href="http://man.freebsd.org/socket/2">http://man.freebsd.org/socket/2</a></li>
+<li>which manpage: <a href="https://man.freebsd.org/which">https://man.freebsd.org/which</a></li>
+<li>socket(2) manpage: <a href="https://man.freebsd.org/socket/2">https://man.freebsd.org/socket/2</a></li>
 </ul>
 
 <p />
@@ -1728,7 +1893,7 @@ sections.
 sub faq_output {
     my $base = $BASE;
     $base =~ s,[^/]*$,,;
-    $base = 'http://www.freebsd.org/cgi/';    # XXX
+    $base = 'https://www.freebsd.org/cgi/';    # XXX
 
     &http_header("text/html");
     print &html_header( "FreeBSD manual page help", $base ) . "<h1>",

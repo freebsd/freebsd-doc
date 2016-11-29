@@ -1,6 +1,6 @@
 # $FreeBSD$
-# $FreeBSDde: de-www/security/Makefile,v 1.7 2008/03/01 17:12:05 jkois Exp $
-# basiert auf: 1.16
+# $FreeBSDde$
+# basiert auf: r46904
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,7 +10,9 @@
 .endif
 
 DOCS=	charter.xml
+DOCS+=  reporting.xml
 DOCS+=	security.xml
+DOCS+=  unsupported.xml
 
 INDEXLINK=	security.html
 

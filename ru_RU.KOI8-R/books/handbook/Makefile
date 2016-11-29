@@ -9,26 +9,6 @@
 # Build the FreeBSD Handbook.
 #
 
-# ------------------------------------------------------------------------
-#
-# Handbook-specific variables
-#
-#      WITH_PGPKEYS    The print version of the handbook only prints PGP
-#                      fingerprints by default.  If you would like for the
-#                      entire key to be displayed, then set this variable.
-#                      This option has no affect on the HTML formats.
-#
-# Handbook-specific targets
-#
-#       pgpkeyring      This target will read the contents of
-#                       pgpkeys/chapter.xml and will extract all of
-#                       the pgpkeys to standard out.  This output can then
-#                       be redirected into a file and distributed as a
-#                       public keyring of FreeBSD developers that can
-#                       easily be imported into PGP/GPG.
-#
-# ------------------------------------------------------------------------
-
 .PATH: ${.CURDIR}/../../share/xml/glossary
 
 MAINTAINER=phantom@FreeBSD.org
@@ -228,7 +208,6 @@ SRCS+=	preface/preface.xml
 SRCS+=	printing/chapter.xml
 SRCS+=	security/chapter.xml
 SRCS+=	serialcomms/chapter.xml
-SRCS+=	users/chapter.xml
 SRCS+=	x11/chapter.xml
 
 # Entities
@@ -242,16 +221,6 @@ CHAPTERS?=	${SRCS:M*chapter.xml}
 XMLFLAGS+=	${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+=	-i chap.freebsd-glossary
 
-pgpkeyring: pgpkeys/chapter.xml
-	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
-
-#
-# Handbook-specific variables
-#
-.if defined(WITH_PGPKEYS)
-JADEFLAGS+=    -V withpgpkeys
-.endif
-
 url_relprEFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..
 
@@ -261,8 +230,6 @@ DOC_PREFIX?=	${.CURDIR}/../../..
 XMLDOCS=	lastmod:::mirrors.lastmod.inc \
 		mirrors-ftp-index:::mirrors.xml.ftp.index.inc \
 		mirrors-ftp:::mirrors.xml.ftp.inc \
-		mirrors-cvsup-index:::mirrors.xml.cvsup.index.inc \
-		mirrors-cvsup:::mirrors.xml.cvsup.inc \
 		eresources-index:::eresources.xml.www.index.inc \
 		eresources:::eresources.xml.www.inc
 DEPENDSET.DEFAULT=	transtable mirror
@@ -276,12 +243,6 @@ PARAMS.mirrors-ftp-index+=	--param 'type' "'ftp'" \
 PARAMS.mirrors-ftp+=	--param 'type' "'ftp'" \
 			--param 'proto' "'ftp'" \
 			--param 'target' "'handbook/mirrors/chapter.xml'"
-PARAMS.mirrors-cvsup-index+=	--param 'type' "'cvsup'" \
-				--param 'proto' "'cvsup'" \
-				--param 'target' "'index'"
-PARAMS.mirrors-cvsup+=	--param 'type' "'cvsup'" \
-			--param 'proto' "'cvsup'" \
-			--param 'target' "'handbook/mirrors/chapter.xml'"
 PARAMS.eresources-index+=	--param 'type' "'www'" \
 				--param 'proto' "'http'" \
 				--param 'target' "'index'"
@@ -292,8 +253,6 @@ PARAMS.eresources+=	--param 'type' "'www'" \
 SRCS+=		mirrors.lastmod.inc \
 		mirrors.xml.ftp.inc \
 		mirrors.xml.ftp.index.inc \
-		mirrors.xml.cvsup.inc \
-		mirrors.xml.cvsup.index.inc \
 		eresources.xml.www.inc \
 		eresources.xml.www.index.inc
 

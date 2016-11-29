@@ -1,0 +1,475 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V5.0-Based Extension//EN"
+	"http://www.FreeBSD.org/XML/share/xml/freebsd50.dtd">
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD Chinese (Traditional) Documentation Project
+
+     Original Revision: 1.5
+
+-->
+<article xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:lang="zh_tw">
+  <info><title>遠端安裝 &os; 作業系統而不必接 Remote Console</title>
+    
+
+    <author><personname><firstname>Daniel</firstname><surname>Gerzo</surname></personname><affiliation>
+	<address><email>danger@FreeBSD.org</email></address>
+      </affiliation></author>
+
+    <legalnotice xml:id="trademarks" role="trademarks">
+      &tm-attrib.freebsd;
+      &tm-attrib.general;
+    </legalnotice>
+
+    <copyright>
+      <year>2008</year>
+      <holder>The &os; Documentation Project</holder>
+    </copyright>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <releaseinfo>$FreeBSD$</releaseinfo>
+
+    <abstract>
+      <para>本文介紹如何在沒辦法連到遠端 console 的機器做 &os; 遠端安裝。
+	本文構想來自於作者與 &a.mm; 的合作成果，
+	以及 &a.pjd; 所投注的諸多心血。</para>
+    </abstract>
+  </info>
+
+  <sect1 xml:id="background">
+    <title>緣起</title>
+
+    <para>世上有許多 server hosting provider，但其中有官方支援 &os;
+      則不是相當多。  他們通常會在所提供的機器上有 &linux; distribution
+      的安裝支援。</para>
+
+    <para>有些會讓您可選擇喜好的 &linux; distribution 來裝，
+      像這種情況就可以試著安裝 &os;。  而有些則是會提供救急用的系統，
+      這種也可以用來安裝 &os;。</para>
+
+    <para>本文介紹這些遠端基本安裝 &os; 的方式，以及 RAID-1 與
+      <application>ZFS</application> 設定步驟。</para>
+  </sect1>
+
+  <sect1 xml:id="intro">
+    <title>介紹</title>
+
+    <para>茲摘錄一下本文的目的以及闡述這邊所涵蓋的東西。
+      對於無官方支援 &os; 的代管服務(colocation)用戶而言，
+      本文中所介紹到的指令會相當有用。</para>
+
+    <procedure>
+      <step>
+	<para>正如先前 <link linkend="background">緣起</link> 所提到的，許多名聲還不賴的
+	  server hosting 公司會提供一些救急用系統，可以透過
+	  <acronym>LAN</acronym> 方式開機，也可以透過
+	  <application>SSH</application> 方式進行管理。  通常會有該加值服務，
+	  以讓他們的客戶可以連進來修復有問題的作業系統。
+	  本節之後將介紹如何透過救急系統來安裝 &os;。</para>
+	<!-- XXXTR: Solaris has a restore command, something like
+	  sysrestore, FreeBSD Should have one too. -->
+      </step>
+
+      <step>
+	<para>下一節會介紹如何在本機設定以及打造最小巧的 &os; ——
+	  該版最後會在遠端機器上透過 ramdisk 方式啟動，並以
+	  <application>sysinstall</application> 從 <acronym>FTP</acronym>
+	  mirror 站來安裝完整的 &os; 作業系統。</para>
+      </step>
+
+      <step>
+	<para>本文其餘部分將介紹安裝程序，以及 <application>ZFS</application>
+	  檔案系統的設定。</para>
+      </step>
+    </procedure>
+
+    <sect2 xml:id="requirements">
+      <title>需求</title>
+
+      <para>為了成功完成遠端安裝，必須要有：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>要有可以上網的作業系統，並且 <application>SSH</application>
+	    可以連線。</para>
+	</listitem>
+
+	<listitem>
+	  <para>瞭解 &os; 的安裝程序</para>
+	</listitem>
+
+	<listitem>
+	  <para>熟悉如何使用 &man.sysinstall.8;</para>
+	</listitem>
+
+	<listitem>
+	  <para>有 &os; 安裝光碟片或者 <acronym>ISO</acronym> image 檔</para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="preparation">
+    <title>準備 - <application>mfsBSD</application></title>
+
+    <para>在裝 &os; 之前，要先打造最小化的 &os; 作業系統 image 檔，
+      以便可以從硬碟上開機。  如此一來，新的系統就可以透過網路來操作，
+      而剩下來的安裝部分即可不必透過 console。</para>
+
+    <para>而 <application>mfsBSD</application> 這套工具就是用來打造小型的
+      &os; image 檔。  <application>mfsBSD</application> (名字其中
+      <quote>mfs</quote> 就是 <quote>memory file system</quote>)所建造出來的
+      整套系統會透過 ramdisk 方式來運作。  由於此一特色，硬碟的部分就不受限，
+      因此可以用來安裝完整的 &os; 作業系統。  <application>mfsBSD</application>
+      的首頁位於 <uri xlink:href="http://people.freebsd.org/~mm/mfsbsd/">http://people.freebsd.org/~mm/mfsbsd/</uri>，
+      其中連結有該工具的最新 release 部分。</para>
+
+    <para>請注意：<application>mfsBSD</application> 內部運作方式的細節，不
+      在本文介紹範圍之內。  若對這方面有興趣的讀者，可至
+      <application>mfsBSD</application> 官網查閱相關文件。</para>
+
+    <para>首先下載最新的 <application>mfsBSD</application> 並解壓縮之，
+      然後切到解壓縮後的工作目錄，也就是 <application>mfsBSD</application>
+      script 檔所在處：</para>
+
+    <screen>&prompt.root; <userinput>fetch http://people.freebsd.org/~mm/mfsbsd/mfsbsd-latest.tar.gz</userinput>
+&prompt.root; <userinput>tar xvzf mfsbsd-1.0-beta1.tar.gz</userinput>
+&prompt.root; <userinput>cd mfsbsd-1.0-beta1/</userinput></screen>
+
+    <sect2 xml:id="mfsbsd-config">
+      <title>設定 <application>mfsBSD</application></title>
+
+      <para>在將 <application>mfsBSD</application> 開機之前，
+	有幾個重要設定要先設妥。  此時最重要的設定，很明顯就是網路設定。
+	到底網路怎麼設最好，則取決於所處的網路環境，
+	以及該網路卡會以哪一種驅動程式載入而定。  我們將會看到
+	<application>mfsBSD</application> 如何在任何網路情況下進行設定。</para>
+
+      <para>另一件重要事就是設定 <systemitem class="username">root</systemitem> 密碼。
+	這點可以透過 <filename>conf/rootpw.conf</filename> 來完成。
+	請切記：該檔密碼是以明文方式存放，因此不建議放真正平常有在用的密碼。
+	然而這密碼只是臨時密碼而已，可以在之後開機時再做更換。</para>
+
+      <sect3>
+	<title>設定網路(<filename>conf/interfaces.conf</filename> 方式)</title>
+
+	<para>若對要裝的機器網卡為何還不知道是哪一款，但可以善加利用
+	  <application>mfsBSD</application> 的自動偵測功能。
+	  <application>mfsBSD</application> 的開機 script 會根據網卡的 MAC
+	  位址範圍來偵測正確的驅動程式，像是下列的
+	  <filename>conf/interfaces.conf</filename> 設定內容：</para>
+
+	<programlisting>initconf_interfaces="ext1"
+initconf_mac_ext1="00:00:00:00:00:00"
+initconf_ip_ext1="192.168.0.2"
+initconf_netmask_ext1="255.255.255.0"</programlisting>
+
+	<para>別忘了在 <filename>conf/rc.conf</filename> 內要加上
+	  <literal>defaultrouter</literal> 的相關設定：</para>
+
+	<programlisting>defaultrouter="192.168.0.1"</programlisting>
+      </sect3>
+
+      <sect3>
+	<title>設定網路(<filename>conf/rc.conf</filename> 方式)</title>
+
+	<para>若已經知道網卡是哪一種，那麼要設定網路的話直接改
+	  <filename>conf/rc.conf</filename> 會比較方便。
+	  該檔設定語法與 &os; 標準的 &man.rc.conf.5; 是一致的。</para>
+
+	<para>舉個例子，若知道該機器網卡是用 &man.re.4;，那麼就在
+	  <filename>conf/rc.conf</filename> 做下列類似設定：</para>
+
+	<programlisting>defaultrouter="192.168.0.1"
+ifconfig_re0="inet 192.168.0.2 netmask 255.255.255.0"</programlisting>
+      </sect3>
+    </sect2>
+
+    <sect2 xml:id="mfsbsd-build">
+      <title>打造 <application>mfsBSD</application> image</title>
+
+      <para>打造 <application>mfsBSD</application>
+	image 檔的過程相當簡單。</para>
+
+      <para>首先是把 &os; 安裝光碟或者安裝用的 <acronym>ISO</acronym> image
+	檔丟到 <filename>/cdrom</filename>。
+	為維持所有例子的一致，本文假設都是用 &os; 7.0-RELEASE
+	<acronym>ISO</acronym>。  而把 ISO image 檔掛載到 <filename>/cdrom</filename> 目錄相當簡單，
+	就是用 &man.mdconfig.8;：</para>
+
+      <screen>&prompt.root; <userinput>mdconfig -a -t vnode -u 10 -f 7.0-RELEASE-amd64-disc1.iso</userinput>
+&prompt.root; <userinput>mount_cd9660 /dev/md10 /cdrom</userinput></screen>
+
+      <para>接著就開始打造可開機的 <application>mfsBSD</application>
+	image：</para>
+
+      <screen>&prompt.root; <userinput>make BASE=/cdrom/7.0-RELEASE</userinput></screen>
+
+      <note>
+	<para>上述的 <command>make</command> 指令要在
+	  <application>mfsBSD</application> 的最上層目錄執行，比方說 <filename>~/mfsbsd-1.0-beta1/</filename>。</para>
+      </note>
+    </sect2>
+
+    <sect2>
+      <title><application>mfsBSD</application> 開動</title>
+
+      <para>現在 <application>mfsBSD</application> image 已經備妥，
+	要上傳到遠端機器的救急系統或者預先安裝的 &linux; distribution。
+	要完成這工作最適合的工具就是 <application>scp</application>：</para>
+
+      <screen>&prompt.root; <userinput>scp disk.img root@192.168.0.2:.</userinput></screen>
+
+      <para>為了能順利啟動 <application>mfsBSD</application> image，
+	要把檔案放在欲安裝機器的第一顆(可開機)硬碟上。
+	假設例子的第一顆開機硬碟代號為 <filename>sda</filename>，
+	那麼作法就類似下面這樣：</para>
+
+      <screen>&prompt.root; <userinput>dd if=/root/disk.img of=/dev/sda bs=1m</userinput></screen>
+
+      <para>若一切順利，該 image 檔現在應該會在第一顆硬碟的
+	<acronym>MBR</acronym> 磁區並可以開始進行重開機了。  可以用
+	&man.ping.8; 工具來檢測該機器開機完畢與否。  一旦 ping 到之後，
+	就可以透過 &man.ssh.1; 連進去，並且用 <systemitem class="username">root</systemitem>
+	以及剛設定的密碼登入。</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="installation">
+    <title>&os; 作業系統的安裝</title>
+
+    <para>現在 <application>mfsBSD</application> 已順利啟動，並且應該可以透過
+      &man.ssh.1; 方式來連。  本節將介紹如何建立 slice 分割、設定
+      <application>gmirror</application> 以作 RAID-1、如何以
+      <application>sysinstall</application> 來安裝 &os;
+      作業系統的最小化安裝。</para>
+
+    <sect2>
+      <title>準備硬碟</title>
+
+      <para>首先要作的是配置硬碟空間給 &os;，像是建立 slice 跟分割區。
+	很明顯地，目前在跑的作業系統是載入到系統記憶體內執行，
+	因此要對硬碟配置並無任何問題。  這些工作可以用
+	<application>sysinstall</application> 或者以 &man.fdisk.8; 搭配
+	&man.bsdlabel.8; 來完成。</para>
+
+      <para>首先先把各硬碟都先清空。  請對各硬碟作下列指令：</para>
+
+      <screen>&prompt.root; <userinput>dd if=/dev/zero of=/dev/ad0 count=2</userinput></screen>
+
+      <para>接著，以您慣用的工具來建立 slice 以及設定 label。  通常會建議以
+	的 <application>sysinstall</application> 工具來作會比較輕鬆，
+	或者是強而又不太會出槌的文字介面 &unix; 標準工具(像是 &man.fdisk.8;,
+	&man.bsdlabel.8;)，這部分稍後也會一併介紹。  前者部分在 &os; Handbook
+	的 <link xlink:href="&url.books.handbook;/install-steps.html">安裝
+	&os;</link> 章節有相當詳盡的介紹，所以這邊主要要介紹的是如何建立
+	RAID-1 系統以及 <application>ZFS</application>。
+	這邊會介紹建立以 &man.gmirror.8; 做成的小型 mirrored 檔案系統：
+	<filename>/</filename> (根目錄), <filename>/usr</filename> 以及 <filename>/var</filename>，而硬碟的其餘剩餘空間則通通以
+	&man.zpool.8; 做成 <application>ZFS</application> 的 mirrored 檔案系統
+	。  請注意：必須要先把 &os; 作業系統裝好並開完機後，才能進行設定
+	<application>ZFS</application> 檔案系統。</para>
+
+      <para>下面的例子會介紹如何建立 slice 以及 label、在每個分割區上啟用
+	&man.gmirror.8;、如何在每個 mirrored 分割區上建立
+	<application>UFS2</application> 檔案系統：</para>
+
+      <screen>&prompt.root; <userinput>fdisk -BI /dev/ad0</userinput> <co xml:id="fdisk"/>
+&prompt.root; <userinput>fdisk -BI /dev/ad1</userinput>
+&prompt.root; <userinput>bsdlabel -wB /dev/ad0s1</userinput> <co xml:id="bsdlabel-writing"/>
+&prompt.root; <userinput>bsdlabel -wB /dev/ad1s1</userinput>
+&prompt.root; <userinput>bsdlabel -e /dev/ad0s1</userinput> <co xml:id="bsdlabel-editing"/>
+&prompt.root; <userinput>bsdlabel /dev/ad0s1 &gt; /tmp/bsdlabel.txt &amp;&amp; bsdlabel -R /dev/ad1s1 /tmp/bsdlabel.txt</userinput> <co xml:id="bsdlabel-restore"/>
+&prompt.root; <userinput>gmirror label root /dev/ad[01]s1a</userinput> <co xml:id="gmirror1"/>
+&prompt.root; <userinput>gmirror label var /dev/ad[01]s1d</userinput>
+&prompt.root; <userinput>gmirror label usr /dev/ad[01]s1e</userinput>
+&prompt.root; <userinput>gmirror label -F swap /dev/ad[01]s1b</userinput> <co xml:id="gmirror2"/>
+&prompt.root; <userinput>newfs /dev/mirror/root</userinput> <co xml:id="newfs"/>
+&prompt.root; <userinput>newfs /dev/mirror/var</userinput>
+&prompt.root; <userinput>newfs /dev/mirror/usr</userinput></screen>
+
+      <calloutlist>
+	<callout arearefs="fdisk">
+	  <para>對該硬碟建立 slice 並且在第零軌處將開機表作初始。
+	    請對該機器所有硬碟都作此一動作。</para>
+	</callout>
+
+	<callout arearefs="bsdlabel-writing">
+	  <para>對各硬碟寫入 label 以及 bootstrap 碼。</para>
+	</callout>
+
+	<callout arearefs="bsdlabel-editing">
+	  <para>現在手動修改該硬碟的 label，至於如何建立分割區(partitions)
+	    請參閱 &man.bsdlabel.8; 說明。
+	    分割區分別建立：<literal>a</literal> 是給 <filename>/</filename> (根目錄)，
+	    <literal>b</literal> 給 swap，
+	    <literal>d</literal> 給 <filename>/var</filename>，
+	    <literal>e</literal> 給 <filename>/usr</filename>，
+	    最後，會在稍後步驟把 <literal>f</literal> 給
+	    <application>ZFS</application> 使用。</para>
+	</callout>
+
+	<callout arearefs="bsdlabel-restore">
+	  <para>把剛剛的 label 設定先匯出，再匯入到第二顆硬碟上，
+		如此一來兩邊的硬碟 label 設定就會同樣。</para>
+	</callout>
+
+	<callout arearefs="gmirror1">
+	  <para>在各分割區上啟用 &man.gmirror.8;</para>
+	</callout>
+
+	<callout arearefs="gmirror2">
+	  <para>請注意：<option>-F</option> 選項是用在 swap 上。
+	    這參數會讓 &man.gmirror.8; 認為該硬體是處於可靠狀態，
+	    即使發生電源故障或系統當掉，也不會去同步。</para>
+	</callout>
+
+	<callout arearefs="newfs">
+	  <para>在各個有做 mirror 的分割區上建立 <application>UFS2</application>
+	    檔案系統</para>
+        </callout>
+      </calloutlist>
+    </sect2>
+
+    <sect2>
+      <title>系統安裝</title>
+
+      <para>這裡是最重要的一環，
+	本節介紹實際上如何在先前一節所做好的硬碟安裝最小化的 &os;，
+	為了完成此一目標，所有檔案系統都必須掛載妥當，才能讓
+	<application>sysinstall</application> 可以把 &os; 裝到硬碟內：</para>
+
+      <screen>&prompt.root; <userinput>mount /dev/mirror/root /mnt</userinput>
+&prompt.root; <userinput>mkdir /mnt/var /mnt/usr</userinput>
+&prompt.root; <userinput>mount /dev/mirror/var /mnt/var</userinput>
+&prompt.root; <userinput>mount /dev/mirror/usr /mnt/usr</userinput></screen>
+
+      <para>做完上述動作之後，請執行 &man.sysinstall.8;。  請從主選單中選擇
+	<guimenuitem>Custom</guimenuitem> 安裝，選
+	<guimenuitem>Options</guimenuitem> 按 <keycap>Enter</keycap>。
+	然後以方向鍵移動到 <literal>Install Root</literal> 處，按
+	<keycap>Space</keycap> 鍵然後改為 <filename>/mnt</filename>，再按 <keycap>Enter</keycap>
+	鍵以將修改值存起來，然後按 <keycap>q</keycap> 鍵即可離開這個
+	<guimenuitem>Options</guimenuitem> 畫面。</para>
+
+      <warning>
+	<para>請注意：本步驟極為重要，若忽略的話那麼
+	  <application>sysinstall</application> 就沒辦法安裝 &os;。</para>
+      </warning>
+
+      <para>接著選 <guimenuitem>Distributions</guimenuitem>，然後移動游標到
+	<option>Minimal</option> 處，按 <keycap>Space</keycap> 鍵。
+	本文之所以介紹最小化安裝是為了要節省網路流量，因為系統安裝是透過
+	<application>ftp</application> 方式來進行。  要離開本畫面，請選
+	<option>Exit</option> 即可。</para>
+
+      <note>
+	<para>至於 <guimenuitem>Partition</guimenuitem> 及
+	  <guimenuitem>Label</guimenuitem> 步驟則可略過，
+	  因為這些目前已經都設定完畢了。</para>
+      </note>
+
+      <para>在 <guimenuitem>Media</guimenuitem> 選單中請選
+	<option>FTP</option>。  請選最近的 mirror 站，並且讓
+	<application>sysinstall</application> 假設網路已經設妥。
+	接下來就會回到 <guimenuitem>Custom</guimenuitem> 選單。</para>
+
+      <para>最後，按下 <guimenuitem>Commit</guimenuitem> 即可開始進行安裝。
+	完成安裝後，即可離開 <application>sysinstall</application>。</para>
+    </sect2>
+
+    <sect2>
+      <title>後續安裝步驟</title>
+
+      <para>此時 &os; 作業系統應該已經裝完，然而還有些後續流程要做。
+	必須要做一些後續設定，才能讓 &os; 可以開機跟登入。</para>
+
+      <para>現在必須要用 &man.chroot.8; 以切到剛剛新裝好的系統內。
+	指令如下：</para>
+
+      <screen>&prompt.root; <userinput>chroot /mnt</userinput></screen>
+
+      <para>然後再打下列指令以繼續完成：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>把 <literal>GENERIC</literal> kernel 複製到
+	    <filename>/boot/kernel</filename>
+	    目錄：</para>
+
+	  <screen>&prompt.root; <userinput>cp -Rp /boot/GENERIC/* /boot/kernel</userinput></screen>
+	</listitem>
+
+	<listitem>
+	  <para>建立 <filename>/etc/rc.conf</filename>,
+	    <filename>/etc/resolv.conf</filename> 及
+	    <filename>/etc/fstab</filename> 檔案。  別忘了，要記得在
+	    <filename>/etc/rc.conf</filename> 檔設相關網路設定，以及把
+	    <application>sshd</application> 啟用。  此外，
+	    <filename>/etc/fstab</filename> 檔應該會長像下面這樣：</para>
+
+	  <programlisting># Device                Mountpoint      FStype  Options         Dump    Pass#
+/dev/mirror/swap        none            swap    sw              0       0
+/dev/mirror/root        /               ufs     rw              1       1
+/dev/mirror/usr         /usr            ufs     rw              2       2
+/dev/mirror/var         /var            ufs     rw              2       2
+/dev/cd0                /cdrom          cd9660  ro,noauto       0       0</programlisting>
+	</listitem>
+
+	<listitem>
+	  <para>新增 <filename>/boot/loader.conf</filename> 檔，
+	    並且內容填入下列：</para>
+
+	  <programlisting>geom_mirror_load="YES"
+zfs_load="YES"</programlisting>
+	</listitem>
+
+	<listitem>
+	  <para>執行下列指令，以在下次開機時啟用 <application>ZFS</application>
+	    ：</para>
+
+	  <screen>&prompt.root; <userinput>echo 'zfs_enable="YES"' &gt;&gt; /etc/rc.conf </userinput></screen>
+	</listitem>
+
+	<listitem>
+	  <para>使用 &man.adduser.8; 工具來新增其他使用者帳號。  別忘了，
+	    至少要有一個帳號得加入 <systemitem class="groupname">wheel</systemitem> 群組，
+	    才能在重開機後以該帳號切換為 root。</para>
+	</listitem>
+
+	<listitem>
+	  <para>再次檢查上述相關的設定，是否有遺漏或打錯。</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>現在該系統終於可以重開機了，請用 &man.reboot.8;
+	指令以重開機。</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="zfs">
+    <title>ZFS</title>
+
+    <para>系統重開機完畢之後，應該就可以登入了。  歡迎使用全新的 &os; 安裝方式，
+      完全透過遠端而不必接上 remote console！</para>
+
+    <para>接下來只剩要調整 &man.zpool.8; 以及建立 &man.zfs.8; 檔案系統而已。
+      <application>ZFS</application> 的建立及管理是相當淺顯易懂。  首先，
+      建立 mirrored pool：</para>
+
+    <screen>&prompt.root; <userinput>zpool create tank mirror /dev/ad[01]s1f</userinput></screen>
+
+    <para>接著，建立檔案系統：</para>
+
+    <screen>&prompt.root; <userinput>zfs create tank/ports</userinput>
+&prompt.root; <userinput>zfs create tank/src</userinput>
+&prompt.root; <userinput>zfs set compression=gzip tank/ports</userinput>
+&prompt.root; <userinput>zfs set compression=on tank/src</userinput>
+&prompt.root; <userinput>zfs set mountpoint=/usr/ports tank/ports</userinput>
+&prompt.root; <userinput>zfs set mountpoint=/usr/src tank/src</userinput></screen>
+
+    <para>一切就是這樣簡單。  若對 &os; 上的 <application>ZFS</application>
+      細節部分有興趣，請參閱 &os; Wiki 上的 <link xlink:href="http://wiki.freebsd.org/ZFS">ZFS</link> 一節說明。</para>
+  </sect1>
+</article>

@@ -7,26 +7,6 @@
 # Build the FreeBSD Handbook.
 #
 
-# ------------------------------------------------------------------------
-#
-# Handbook-specific variables
-#
-#	WITH_PGPKEYS	The print version of the handbook only prints PGP
-#			fingerprints by default.  If you would like for the
-#			entire key to be displayed, then set this variable.
-#			This option has no affect on the HTML formats.
-#
-# Handbook-specific targets
-#
-#       pgpkeyring      This target will read the contents of
-#                       pgpkeys/chapter.xml and will extract all of
-#                       the pgpkeys to standard out.  This output can then
-#                       be redirected into a file and distributed as a
-#                       public keyring of FreeBSD developers that can
-#                       easily be imported into PGP/GPG.
-#
-# ------------------------------------------------------------------------
-
 MAINTAINER=blackend@FreeBSD.org
 
 DOC?= book
@@ -41,6 +21,50 @@ IMAGES+= advanced-networking/isdn-twisted-pair.eps
 IMAGES+= advanced-networking/natd.eps
 IMAGES+= advanced-networking/net-routing.pic
 IMAGES_EN+= advanced-networking/static-routes.pic
+IMAGES_EN+= bsdinstall/bsdinstall-adduser1.png
+IMAGES_EN+= bsdinstall/bsdinstall-adduser2.png
+IMAGES_EN+= bsdinstall/bsdinstall-adduser3.png
+IMAGES_EN+= bsdinstall/bsdinstall-boot-loader-menu.png
+IMAGES_EN+= bsdinstall/bsdinstall-choose-mode.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-components.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-hostname.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-keymap.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-services.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-crashdump.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4-dhcp.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4-static.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv6.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv6-static.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-slaac.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-ipv4-dns.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-wireless-accesspoints.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-wireless-scan.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-wireless-wpa2setup.png
+IMAGES_EN+= bsdinstall/bsdinstall-distfile-extracting.png
+IMAGES_EN+= bsdinstall/bsdinstall-distfile-fetching.png
+IMAGES_EN+= bsdinstall/bsdinstall-distfile-verifying.png
+IMAGES_EN+= bsdinstall/bsdinstall-final-confirmation.png
+IMAGES_EN+= bsdinstall/bsdinstall-finalconfiguration.png
+IMAGES_EN+= bsdinstall/bsdinstall-final-modification-shell.png
+IMAGES_EN+= bsdinstall/bsdinstall-keymap-select-default.png
+IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
+IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
+IMAGES_EN+= bsdinstall/bsdinstall-netinstall-mirrorselect.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-entire-part.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-guided-disk.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-guided-manual.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-manual-addpart.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-manual-create.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-manual-partscheme.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-review.png
+IMAGES_EN+= bsdinstall/bsdinstall-post-root-passwd.png
+IMAGES_EN+= bsdinstall/bsdinstall-set-clock-local-utc.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-confirm.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-country.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-region.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-zone.png
 IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
@@ -181,6 +205,7 @@ IMAGES_LIB+= callouts/15.png
 # XML content
 SRCS+= audit/chapter.xml
 SRCS+= book.xml
+SRCS+= bsdinstall/chapter.xml
 SRCS+= colophon.xml
 SRCS+= dtrace/chapter.xml
 SRCS+= advanced-networking/chapter.xml
@@ -227,16 +252,6 @@ CHAPTERS?= ${SRCS:M*chapter.xml}
 
 XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+= -i chap.freebsd-glossary
-
-pgpkeyring: pgpkeys/chapter.xml
-	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
-
-#
-# Handbook-specific variables
-#
-.if defined(WITH_PGPKEYS)
-JADEFLAGS+=	-V withpgpkeys
-.endif
 
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..

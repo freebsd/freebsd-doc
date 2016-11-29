@@ -3,11 +3,10 @@
 				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: r39141 -->
+<!-- Original revision: r48667 -->
 
 <xsl:stylesheet version="1.0"
-  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-  xmlns="http://www.w3.org/1999/xhtml">
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:import href="http://www.FreeBSD.org/XML/share/xml/libcommon.xsl"/>
 
@@ -71,8 +70,8 @@
   <xsl:template name="html-usergroups-list-header">
     <p>FreeBSD は広く使われており、世界中にたくさんのユーザグループがあります。</p>
     <p>このリストに載っていないユーザグループをご存知でしたら、
-      ぜひ、<a href="http://www.freebsd.org/ja/send-pr.html">障害報告</a
-	> の www カテゴリを使って以下の情報をお知らせください。</p>
+      ぜひ、<a href="https://www.FreeBSD.org/support/bugreports.html">障害報告</a>
+      の Documentation->Website カテゴリを使って以下の情報をお知らせください。</p>
     <ol>
       <li>ユーザグループのウェブサイトの URL</li>
       <li>訪問者とウェブサイトの管理のために、担当者の連絡先のメールアドレス</li>
@@ -82,10 +81,10 @@
     <p>報告は HTML 形式でお願いします。
       FreeBSD のポリシーから、
       活発なユーザグループの活動の公開は好ましいことです。
-      近くにユーザグループがなければ、ぜひ <a
+      近くにユーザグループがなければ、<a
 	href="http://bsd.meetup.com/">http://bsd.meetup.com/</a>
-      を使って近所にいる興味を持っている個人を見つけ、
-      ユーザグループを作ってください。</p>
+      を使って近所にいる興味を持っている個人を見つけてください。
+      そして、あなた自身のユーザグループを作ってください!</p>
 
     <h3>地域</h3>
   </xsl:template>
@@ -97,15 +96,16 @@
 
     <p>FreeBSD は急速に発展を続けるオペレーティングシステムなので、
       最新の進歩について行くのが面倒になる時がありますよね。
-      情報通になるために、このページを定期的にチェックするようにしましょう。また、
-      <a href="http://lists.freebsd.org/mailman/listinfo/freebsd-announce">freebsd-announce
-	メーリングリスト</a> や <a href="&base;/news/rss.xml">RSS フィード</a>
-      を購読したいという方もいるかもしれませんね。</p>
+      情報通になるために、このページを定期的にチェックするようにしましょう。
+      ニュースは、
+      <a href="https://lists.freebsd.org/mailman/listinfo/freebsd-announce">freebsd-announce
+	メーリングリスト</a> および
+      <a href="&base;/news/rss.xml">RSS フィード</a>
+      でもアナウンスされます。</p>
 
     <p>それぞれのプロジェクトの最新情報は、次の各ウェブページをご覧ください。</p>
 
     <ul>
-      <li><a href="&base;/java/newsflash.html">&java; on FreeBSD</a></li>
       <li><a href="http://freebsd.kde.org/">KDE on FreeBSD</a></li>
       <li><a href="&enbase;/gnome/newsflash.html">GNOME on FreeBSD</a></li>
     </ul>
@@ -114,9 +114,9 @@
       <a href="&base;/releases/index.html">リリース情報</a>
       のページをご覧ください。</p>
 
-    <p>FreeBSD セキュリティ情報やセキュリティ勧告の一覧については、
+    <p>FreeBSD セキュリティ情報やセキュリティ勧告の一覧は、
       <a href="&base;/security/">セキュリティ情報</a>
-      のページをご覧ください。</p>
+      ページにあります。</p>
   </xsl:template>
 
   <!-- template: "html-news-list-newsflash-homelink" -->
@@ -145,10 +145,9 @@
 
   <!-- template: "html-news-list-press-preface" -->
   <xsl:template name="html-news-list-press-preface">
-    <p>ここに載っていない FreeBSD に関連したニュース記事をご存じなら、
-      我々がここに載せられるように詳細を
-      <a href="mailto:www@freebsd.org">www@FreeBSD.org</a> まで
-      (英語で) 送ってください。</p>
+    <p>FreeBSD に関連したニュース記事の詳細を <a
+	href="mailto:freebsd-doc@FreeBSD.org">freebsd-doc@FreeBSD.org</a>
+      まで (英語で) 送ってください。</p>
   </xsl:template>
 
   <!-- template: "html-press-make-olditems-list" -->
@@ -177,11 +176,10 @@
   </xsl:template>
 
   <xsl:template name="html-events-list-preface">
-    <p>ここに載っていない FreeBSD に関連したイベントや、
-      FreeBSD ユーザが興味をもちそうなイベントをご存じなら、
-      我々がここに載せられるように詳細を
-      <a href="mailto:www@freebsd.org">www@FreeBSD.org</a> まで
-      (英語で) 送ってください。</p>
+    <p>ここに掲載されていない FreeBSD に関連したイベントや、
+      FreeBSD ユーザが興味をもちそうなイベント詳細をご存知でしたら、
+      <a href="mailto:freebsd-doc@FreeBSD.org">freebsd-doc@FreeBSD.org</a>
+      まで (英語で) 送ってください。</p>
 
     <p>iCalendar 形式に対応したスケジュール管理ソフトウェアを使っているなら、
       ここに載っているすべてのイベントを集めた

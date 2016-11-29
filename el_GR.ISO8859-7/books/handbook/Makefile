@@ -4,28 +4,9 @@
 # Μορφοποίηση του Εγχειριδίου του FreeBSD
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/Makefile
-# %SRCID%	1.119
+# %SRCID%	43126
 #
 
-# ------------------------------------------------------------------------
-#
-# Μεταβλητές σχετικές με το Εγχειρίδιο
-#
-#       WITH_PGPKEYS    Η εκτυπώσιμη μορφή του εγχειριδίου περιέχει κανονικά
-#                       μόνο τα fingerprints από τα PGP κλειδιά.  Αν θέλετε
-#                       να εκτυπώνονται ολόκληρα τα κλειδιά, τότε αυτή η
-#                       μεταβλητή πρέπει να είναι 'defined'.  Αυτή η επιλογή
-#                       δεν επηρεάζει σε τίποτα τις μορφές HTML.
-#
-# Make targets μόνο για το Εγχειρίδιο
-#
-#       pgpkeyring      This target will read the contents of
-#                       pgpkeys/chapter.xml and will extract all of
-#                       the pgpkeys to standard out.  This output can then
-#                       be redirected into a file and distributed as a
-#                       public keyring of FreeBSD developers that can
-#                       easily be imported into PGP/GPG.
-#
 # ------------------------------------------------------------------------
 #
 # Για να προσθέσετε ένα νέο κεφάλαιο στο Εγχειρίδιο:
@@ -50,6 +31,7 @@ IMAGES_EN = advanced-networking/isdn-bus.eps
 IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
+IMAGES_EN+= advanced-networking/pxe-nfs.png
 IMAGES_EN+= advanced-networking/static-routes.pic
 IMAGES_EN+= bsdinstall/bsdinstall-adduser1.png
 IMAGES_EN+= bsdinstall/bsdinstall-adduser2.png
@@ -179,13 +161,6 @@ IMAGES_EN+= security/ipsec-network.pic
 IMAGES_EN+= security/ipsec-crypt-pkt.pic
 IMAGES_EN+= security/ipsec-encap-pkt.pic
 IMAGES_EN+= security/ipsec-out-pkt.pic
-IMAGES_EN+= vinum/vinum-concat.pic
-IMAGES_EN+= vinum/vinum-mirrored-vol.pic
-IMAGES_EN+= vinum/vinum-raid10-vol.pic
-IMAGES_EN+= vinum/vinum-raid5-org.pic
-IMAGES_EN+= vinum/vinum-simple-vol.pic
-IMAGES_EN+= vinum/vinum-striped-vol.pic
-IMAGES_EN+= vinum/vinum-striped.pic
 IMAGES_EN+= virtualization/parallels-freebsd1.png
 IMAGES_EN+= virtualization/parallels-freebsd2.png
 IMAGES_EN+= virtualization/parallels-freebsd3.png
@@ -283,8 +258,8 @@ SRCS+= preface/preface.xml
 SRCS+= printing/chapter.xml
 SRCS+= security/chapter.xml
 SRCS+= serialcomms/chapter.xml
+# Users chapter stays in the Greek Build until merged with basics
 SRCS+= users/chapter.xml
-SRCS+= vinum/chapter.xml
 SRCS+= virtualization/chapter.xml
 SRCS+= x11/chapter.xml
 
@@ -299,16 +274,6 @@ CHAPTERS?= ${SRCS:M*chapter.xml}
 XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+= -i chap.freebsd-glossary
 
-pgpkeyring: pgpkeys/chapter.xml
-	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
-
-#
-# Handbook-specific variables
-#
-.if defined(WITH_PGPKEYS)
-JADEFLAGS+=	-V withpgpkeys
-.endif
-
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..
 
@@ -316,12 +281,12 @@ DOC_PREFIX?=	${.CURDIR}/../../..
 # rules generating lists of mirror site from XML database.
 #
 XMLDOCS=	lastmod:::mirrors.lastmod.inc \
-		mirrors-ftp:::mirrors.xml.ftp.inc \
 		mirrors-ftp-index:::mirrors.xml.ftp.index.inc \
-		mirrors-cvsup:::mirrors.xml.cvsup.inc \
+		mirrors-ftp:::mirrors.xml.ftp.inc \
 		mirrors-cvsup-index:::mirrors.xml.cvsup.index.inc \
-		eresources:::eresources.xml.www.inc \
-		eresources-index:::eresources.xml.www.index.inc
+		mirrors-cvsup:::mirrors.xml.cvsup.inc \
+		eresources-index:::eresources.xml.www.index.inc \
+		eresources:::eresources.xml.www.inc
 DEPENDSET.DEFAULT=	transtable mirror
 XSLT.DEFAULT=		${XSL_MIRRORS}
 XML.DEFAULT=		${XML_MIRRORS}

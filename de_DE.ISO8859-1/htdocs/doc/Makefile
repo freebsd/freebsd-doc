@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-www/doc/Makefile,v 1.2 2006/10/19 19:26:01 jkois Exp $
-# basiert auf: 1.9
+# $FreeBSDde$
+# basiert auf: r44174
 #
 # Build the FreeBSD documentation *outside* of the www tree, and install it
 # in to the right place as necessary.

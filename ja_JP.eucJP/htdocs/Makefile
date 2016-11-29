@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r41060
+# Original revision: r46611
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -17,7 +17,6 @@ DOCS+= applications.xml
 #DOCS+= art.xml
 DOCS+= docs.xml
 DOCS+= features.xml
-DOCS+= internet.xml
 #DOCS+= logo.xml
 DOCS+= mailto.xml
 #DOCS+= privacy.xml
@@ -27,6 +26,7 @@ DOCS+= send-pr.xml
 DOCS+= support.xml
 DOCS+= where.xml
 #DOCS+= 4xx.xml
+#DOCS+= 5xx.xml
 
 # Japanese-only file
 DOCS+= jabout.xml
@@ -45,9 +45,7 @@ DEPENDSET.community=usergroups events
 # These will be directly installed.
 
 #DATA=	favicon.ico
-DATA+=	freebsd.css
 #DATA+=	google6bb24ed0b804d5e9.html
-#DATA+=	index.css
 #DATA+=	robots.txt
 
 # Subdirectories
@@ -62,7 +60,6 @@ SUBDIR+= docs
 #SUBDIR+= donations
 SUBDIR+= events
 #SUBDIR+= gnome
-SUBDIR+= handbook
 SUBDIR+= internal
 #SUBDIR+= ipv6
 SUBDIR+= java

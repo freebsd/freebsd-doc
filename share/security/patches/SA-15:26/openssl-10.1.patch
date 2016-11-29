@@ -1,0 +1,99 @@
+Index: crypto/openssl/crypto/asn1/tasn_dec.c
+===================================================================
+--- crypto/openssl/crypto/asn1/tasn_dec.c	(revision 291751)
++++ crypto/openssl/crypto/asn1/tasn_dec.c	(working copy)
+@@ -169,6 +169,8 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, const unsi
+ 	int otag;
+ 	int ret = 0;
+ 	ASN1_VALUE **pchptr, *ptmpval;
++	int combine = aclass & ASN1_TFLG_COMBINE;
++	aclass &= ~ASN1_TFLG_COMBINE;
+ 	if (!pval)
+ 		return 0;
+ 	if (aux && aux->asn1_cb)
+@@ -534,7 +536,8 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, const unsi
+ 	auxerr:
+ 	ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_AUX_ERROR);
+ 	err:
+-	ASN1_item_ex_free(pval, it);
++	if (combine == 0)
++		ASN1_item_ex_free(pval, it);
+ 	if (errtt)
+ 		ERR_add_error_data(4, "Field=", errtt->field_name,
+ 					", Type=", it->sname);
+@@ -762,7 +765,7 @@ static int asn1_template_noexp_d2i(ASN1_VALUE **va
+ 		{
+ 		/* Nothing special */
+ 		ret = ASN1_item_ex_d2i(val, &p, len, ASN1_ITEM_ptr(tt->item),
+-							-1, 0, opt, ctx);
++							-1, tt->flags & ASN1_TFLG_COMBINE, opt, ctx);
+ 		if (!ret)
+ 			{
+ 			ASN1err(ASN1_F_ASN1_TEMPLATE_NOEXP_D2I,
+Index: crypto/openssl/crypto/rsa/rsa_ameth.c
+===================================================================
+--- crypto/openssl/crypto/rsa/rsa_ameth.c	(revision 291751)
++++ crypto/openssl/crypto/rsa/rsa_ameth.c	(working copy)
+@@ -287,7 +287,7 @@ static RSA_PSS_PARAMS *rsa_pss_decode(const X509_A
+ 		{
+ 		ASN1_TYPE *param = pss->maskGenAlgorithm->parameter;
+ 		if (OBJ_obj2nid(pss->maskGenAlgorithm->algorithm) == NID_mgf1
+-			&& param->type == V_ASN1_SEQUENCE)
++			&& param && param->type == V_ASN1_SEQUENCE)
+ 			{
+ 			p = param->value.sequence->data;
+ 			plen = param->value.sequence->length;
+Index: crypto/openssl/ssl/s3_clnt.c
+===================================================================
+--- crypto/openssl/ssl/s3_clnt.c	(revision 291751)
++++ crypto/openssl/ssl/s3_clnt.c	(working copy)
+@@ -1360,8 +1360,6 @@ int ssl3_get_key_exchange(SSL *s)
+ #ifndef OPENSSL_NO_PSK
+ 	if (alg_k & SSL_kPSK)
+ 		{
+-		char tmp_id_hint[PSK_MAX_IDENTITY_LEN+1];
+-
+ 		param_len = 2;
+ 		if (param_len > n)
+ 			{
+@@ -1390,16 +1388,8 @@ int ssl3_get_key_exchange(SSL *s)
+ 			}
+ 		param_len += i;
+ 
+-		/* If received PSK identity hint contains NULL
+-		 * characters, the hint is truncated from the first
+-		 * NULL. p may not be ending with NULL, so create a
+-		 * NULL-terminated string. */
+-		memcpy(tmp_id_hint, p, i);
+-		memset(tmp_id_hint+i, 0, PSK_MAX_IDENTITY_LEN+1-i);
+-		if (s->ctx->psk_identity_hint != NULL)
+-			OPENSSL_free(s->ctx->psk_identity_hint);
+-		s->ctx->psk_identity_hint = BUF_strdup(tmp_id_hint);
+-		if (s->ctx->psk_identity_hint == NULL)
++		s->session->psk_identity_hint = BUF_strndup((char *)p, i);
++		if (s->session->psk_identity_hint == NULL)
+ 			{
+ 			al=SSL_AD_HANDSHAKE_FAILURE;
+ 			SSLerr(SSL_F_SSL3_GET_KEY_EXCHANGE, ERR_R_MALLOC_FAILURE);
+@@ -3009,7 +2999,7 @@ int ssl3_send_client_key_exchange(SSL *s)
+ 				}
+ 
+ 			memset(identity, 0, sizeof(identity));
+-			psk_len = s->psk_client_callback(s, s->ctx->psk_identity_hint,
++			psk_len = s->psk_client_callback(s, s->session->psk_identity_hint,
+ 				identity, sizeof(identity) - 1,
+ 				psk_or_pre_ms, sizeof(psk_or_pre_ms));
+ 			if (psk_len > PSK_MAX_PSK_LEN)
+Index: crypto/openssl/ssl/s3_srvr.c
+===================================================================
+--- crypto/openssl/ssl/s3_srvr.c	(revision 291751)
++++ crypto/openssl/ssl/s3_srvr.c	(working copy)
+@@ -2827,7 +2827,7 @@ int ssl3_get_client_key_exchange(SSL *s)
+ 
+ 			if (s->session->psk_identity != NULL)
+ 				OPENSSL_free(s->session->psk_identity);
+-			s->session->psk_identity = BUF_strdup((char *)p);
++			s->session->psk_identity = BUF_strndup((char *)p, i);
+ 			if (s->session->psk_identity == NULL)
+ 				{
+ 				SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,

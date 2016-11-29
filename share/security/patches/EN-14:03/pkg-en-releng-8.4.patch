@@ -1,0 +1,232 @@
+Index: etc/Makefile
+===================================================================
+--- etc/Makefile	(revision 265457)
++++ etc/Makefile	(working copy)
+@@ -172,6 +172,7 @@ distribution:
+ 	${_+_}cd ${.CURDIR}/devd; ${MAKE} install
+ 	${_+_}cd ${.CURDIR}/gss; ${MAKE} install
+ 	${_+_}cd ${.CURDIR}/periodic; ${MAKE} install
++	${_+_}cd ${.CURDIR}/pkg; ${MAKE} install
+ 	${_+_}cd ${.CURDIR}/rc.d; ${MAKE} install
+ 	${_+_}cd ${.CURDIR}/../gnu/usr.bin/send-pr; ${MAKE} etc-gnats-freefall
+ 	${_+_}cd ${.CURDIR}/../share/termcap; ${MAKE} etc-termcap
+Index: etc/mtree/BSD.root.dist
+===================================================================
+--- etc/mtree/BSD.root.dist	(revision 265457)
++++ etc/mtree/BSD.root.dist	(working copy)
+@@ -52,6 +52,8 @@
+             weekly
+             ..
+         ..
++        pkg
++        ..
+         ppp
+         ..
+         rc.d
+Index: etc/mtree/BSD.usr.dist
+===================================================================
+--- etc/mtree/BSD.usr.dist	(revision 265457)
++++ etc/mtree/BSD.usr.dist	(working copy)
+@@ -340,6 +340,14 @@
+         ..
+         info
+         ..
++        keys
++            pkg
++                revoked
++                ..
++                trusted
++                ..
++            ..
++        ..
+         locale
+             UTF-8
+             ..
+Index: etc/pkg/FreeBSD.conf
+===================================================================
+--- etc/pkg/FreeBSD.conf	(revision 0)
++++ etc/pkg/FreeBSD.conf	(working copy)
+@@ -0,0 +1,16 @@
++# $FreeBSD$
++#
++# To disable this repository, instead of modifying or removing this file,
++# create a /usr/local/etc/pkg/repos/FreeBSD.conf file:
++#
++#   mkdir -p /usr/local/etc/pkg/repos
++#   echo "FreeBSD: { enabled: no }" > /usr/local/etc/pkg/repos/FreeBSD.conf
++#
++
++FreeBSD: {
++  url: "pkg+http://pkg.FreeBSD.org/${ABI}/latest",
++  mirror_type: "srv",
++  signature_type: "fingerprints",
++  fingerprints: "/usr/share/keys/pkg",
++  enabled: yes
++}
+Index: etc/pkg/Makefile
+===================================================================
+--- etc/pkg/Makefile	(revision 0)
++++ etc/pkg/Makefile	(working copy)
+@@ -0,0 +1,10 @@
++# $FreeBSD$
++
++NO_OBJ=
++
++FILES=	FreeBSD.conf
++
++FILESDIR=	/etc/pkg
++FILESMODE=	644
++
++.include <bsd.prog.mk>
+Index: share/Makefile
+===================================================================
+--- share/Makefile	(revision 265457)
++++ share/Makefile	(working copy)
+@@ -9,6 +9,7 @@ SUBDIR=	${_colldef} \
+ 	${_dict} \
+ 	${_doc} \
+ 	${_examples} \
++	keys \
+ 	${_man} \
+ 	${_me} \
+ 	misc \
+Index: share/keys/Makefile
+===================================================================
+--- share/keys/Makefile	(revision 0)
++++ share/keys/Makefile	(working copy)
+@@ -0,0 +1,5 @@
++# $FreeBSD$
++
++SUBDIR= pkg
++
++.include <bsd.subdir.mk>
+Index: share/keys/pkg/Makefile
+===================================================================
+--- share/keys/pkg/Makefile	(revision 0)
++++ share/keys/pkg/Makefile	(working copy)
+@@ -0,0 +1,5 @@
++# $FreeBSD$
++
++SUBDIR=	trusted
++
++.include <bsd.subdir.mk>
+Index: share/keys/pkg/trusted/Makefile
+===================================================================
+--- share/keys/pkg/trusted/Makefile	(revision 0)
++++ share/keys/pkg/trusted/Makefile	(working copy)
+@@ -0,0 +1,10 @@
++# $FreeBSD$
++
++NO_OBJ=
++
++FILES=	pkg.freebsd.org.2013102301
++
++FILESDIR=	/usr/share/keys/pkg/trusted
++FILESMODE=	644
++
++.include <bsd.prog.mk>
+Index: share/keys/pkg/trusted/pkg.freebsd.org.2013102301
+===================================================================
+--- share/keys/pkg/trusted/pkg.freebsd.org.2013102301	(revision 0)
++++ share/keys/pkg/trusted/pkg.freebsd.org.2013102301	(working copy)
+@@ -0,0 +1,4 @@
++# $FreeBSD$
++
++function: "sha256"
++fingerprint: "b0170035af3acc5f3f3ae1859dc717101b4e6c1d0a794ad554928ca0cbb2f438"
+Index: share/man/man7/hier.7
+===================================================================
+--- share/man/man7/hier.7	(revision 265457)
++++ share/man/man7/hier.7	(working copy)
+@@ -32,7 +32,7 @@
+ .\"	@(#)hier.7	8.1 (Berkeley) 6/5/93
+ .\" $FreeBSD$
+ .\"
+-.Dd May 25, 2008
++.Dd October 29, 2013
+ .Dt HIER 7
+ .Os
+ .Sh NAME
+@@ -546,6 +546,16 @@ ASCII text files used by various games
+ device description file for device name
+ .It Pa info/
+ GNU Info hypertext system
++.It Pa keys/
++known trusted and revoked keys.
++.Bl -tag -width ".Pa keys/pkg/" -compact
++.It Pa keys/pkg/
++fingerprints for
++.Xr pkg 7
++and
++.Xr pkg 8
++.El
++.Pp
+ .It Pa locale/
+ localization files;
+ see
+Index: usr.sbin/pkg/pkg.c
+===================================================================
+--- usr.sbin/pkg/pkg.c	(revision 265457)
++++ usr.sbin/pkg/pkg.c	(working copy)
+@@ -284,13 +284,10 @@ bootstrap_pkg(void)
+ {
+ 	struct url *u;
+ 	FILE *remote;
+-	FILE *config;
+-	char *site;
+ 	struct dns_srvinfo *mirrors, *current;
+ 	/* To store _https._tcp. + hostname + \0 */
+ 	char zone[MAXHOSTNAMELEN + 13];
+ 	char url[MAXPATHLEN];
+-	char conf[MAXPATHLEN];
+ 	char abi[BUFSIZ];
+ 	char tmppkg[MAXPATHLEN];
+ 	char buf[10240];
+@@ -306,7 +303,6 @@ bootstrap_pkg(void)
+ 	max_retry = 3;
+ 	ret = -1;
+ 	remote = NULL;
+-	config = NULL;
+ 	current = mirrors = NULL;
+ 
+ 	printf("Bootstrapping pkg please wait\n");
+@@ -387,26 +383,6 @@ bootstrap_pkg(void)
+ 	if ((ret = extract_pkg_static(fd, pkgstatic, MAXPATHLEN)) == 0)
+ 		ret = install_pkg_static(pkgstatic, tmppkg);
+ 
+-	snprintf(conf, MAXPATHLEN, "%s/etc/pkg.conf",
+-	    getenv("LOCALBASE") ? getenv("LOCALBASE") : _LOCALBASE);
+-
+-	if (access(conf, R_OK) == -1) {
+-		site = strrchr(url, '/');
+-		if (site == NULL)
+-			goto cleanup;
+-		site[0] = '\0';
+-		site = strrchr(url, '/');
+-		if (site == NULL)
+-			goto cleanup;
+-		site[0] = '\0';
+-
+-		config = fopen(conf, "w+");
+-		if (config == NULL)
+-			goto cleanup;
+-		fprintf(config, "packagesite: %s\n", url);
+-		fclose(config);
+-	}
+-
+ 	goto cleanup;
+ 
+ fetchfail:
+@@ -423,7 +399,11 @@ cleanup:
+ 
+ static const char confirmation_message[] =
+ "The package management tool is not yet installed on your system.\n"
+-"Do you want to fetch and install it now? [y/N]: ";
++"The mechanism for doing this is not secure on FreeBSD 8. To securely install\n"
++"pkg(8), use ports from a portsnap checkout:\n"
++"  # portsnap fetch extract\n"
++"  # make -C /usr/ports/ports-mgmt/pkg install clean\n"
++"Do you still want to fetch and install it now? [y/N]: ";
+ 
+ static int
+ pkg_query_yes_no(void)

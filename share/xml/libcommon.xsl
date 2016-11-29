@@ -9,7 +9,6 @@
   xmlns:date="http://exslt.org/dates-and-times"
   xmlns:str="http://exslt.org/strings"
   extension-element-prefixes="date str"
-  xmlns="http://www.w3.org/1999/xhtml"
   exclude-result-prefixes="date cvs">
 
   <xsl:import href="./transtable-common.xsl" />
@@ -243,8 +242,8 @@
     <p>FreeBSD's widespread popularity has spawned a number of user groups
       around the world.</p>
     <p>If you know of a FreeBSD user group not listed here,
-      please fill out a <a href="http://www.freebsd.org/send-pr.html">
-	problem report</a> for category www with the following information:</p>
+      please fill out a <a href="https://www.FreeBSD.org/support/bugreports.html">
+	problem report</a> in category Documentation->Website with the following information:</p>
     <ol>
       <li>A URL for the user group's website.</li>
       <li>An email contact address of a human in charge,
@@ -254,11 +253,11 @@
 
     <p>Submissions should be in HTML. In keeping with the spirit of
       FreeBSD, we prefer user groups that are active and which conduct
-      their business in public.  If you can't find a group near you,
-      please consider finding other interested individuals near you
-      through <a
-      href="http://bsd.meetup.com/">http://bsd.meetup.com/</a> and
-      forming your own user group.</p>
+      their business in public.  If there is no local group,
+      <a
+      href="http://bsd.meetup.com/">http://bsd.meetup.com/</a> can
+      be used to locate interested individuals near by.  Consider
+      forming your own user group!</p>
 
     <h3>Regions:</h3>
   </xsl:template>
@@ -454,16 +453,14 @@
 
     <p>FreeBSD is a rapidly developing operating system.  Keeping up on
       the latest developments can be a chore!  To keep on top of things,
-      be sure and check this page periodically.  Also, you may wish to
-      subscribe to the
-      <a href="http://lists.freebsd.org/mailman/listinfo/freebsd-announce">freebsd-announce
-	mailing list</a> or the <a href="rss.xml">RSS feed</a>.</p>
+      check this page periodically.  News is also announced on the
+      <a href="https://lists.FreeBSD.org/mailman/listinfo/freebsd-announce">freebsd-announce
+	mailing list</a> and the <a href="rss.xml">RSS feed</a>.</p>
 
     <p>The following projects have their own news pages, which should
       be checked for project specific updates.</p>
 
     <ul>
-      <li><a href="&base;/java/newsflash.html">&java; on FreeBSD</a></li>
       <li><a href="http://freebsd.kde.org/">KDE on FreeBSD</a></li>
       <li><a href="&base;/gnome/newsflash.html">GNOME on FreeBSD</a></li>
     </ul>
@@ -472,8 +469,8 @@
       see the <a href="&base;/releases/index.html">Release Information</a>
       page.</p>
 
-    <p>For FreeBSD security information and a list of available
-      Security Advisories, please refer to the
+    <p>FreeBSD security information and a list of available
+      Security Advisories are available on the
       <a href="&base;/security/">Security Information</a> page.</p>
   </xsl:template>
 
@@ -484,19 +481,18 @@
 
   <!-- template: "html-news-list-press-preface" -->
   <xsl:template name="html-news-list-press-preface">
-    <p>If you know of any news stories featuring FreeBSD that we have not
-      listed here, please send details to
-      <a href="mailto:www@FreeBSD.org">www@FreeBSD.org</a> so that we can
-      include them.</p>
+    <p>Please send details of any news stories featuring FreeBSD
+      to <a
+	href="mailto:freebsd-doc@FreeBSD.org">freebsd-doc@FreeBSD.org</a>.</p>
   </xsl:template>
 
   <xsl:template name="html-events-list-preface">
-    <p>If you know of any FreeBSD related events, or events that
-      are of interest for FreeBSD users, which are not listed
-      here, please send details to <a href="mailto:www@FreeBSD.org"
-	>www@FreeBSD.org</a>, so they can be included.</p>
+    <p>Please send details of any FreeBSD related events or events that
+      are of interest for FreeBSD users which are not listed here
+      to <a href="mailto:freebsd-doc@FreeBSD.org"
+	>freebsd-doc@FreeBSD.org</a>.</p>
 
-    <p>Users with organisational software that understands the
+    <p>Users with organizational software that uses the
       iCalendar format can subscribe to the
       <a href="&base;/events/events.ics">FreeBSD events calendar</a>
       which contains all of the events listed here.</p>
@@ -784,7 +780,6 @@
           <xsl:with-param name="items" select="document($advisories.xml)//advisory" />
           <xsl:with-param name="itemtype" select="'Advisory'" />
           <xsl:with-param name="prefix" select="'&ftpbase;'" />
-          <xsl:with-param name="prefixold" select="'&ftpbaseold;'" />
         </xsl:call-template>
       </xsl:when>
 
@@ -793,7 +788,6 @@
 	  <xsl:with-param name="items" select="document($advisories.xml)//notice" />
 	  <xsl:with-param name="itemtype" select="'Errata Notice'" />
 	  <xsl:with-param name="prefix" select="'&ftpbaseerrata;'" />
-	  <xsl:with-param name="prefixold" select="'&ftpbaseerrata;'" />
 	</xsl:call-template>
       </xsl:when>
     </xsl:choose>
@@ -809,7 +803,7 @@
     <xsl:param name="prefixold" select="''" />
 
     <xsl:if test="$items">
-      <table>
+      <table xmlns="http://www.w3.org/1999/xhtml">
         <tr><th>Date</th><th><xsl:value-of select='$itemtype' /> name</th></tr>
         <xsl:for-each select="$items">
           <xsl:variable name="year" select="../../../name" />
@@ -829,12 +823,6 @@
 	      </xsl:when>
 	      <xsl:when test="@omithref='yes'">
 		<xsl:value-of select="name" />
-	      </xsl:when>
-	      <xsl:when test="name/@role='old'">
-		<a><xsl:attribute name="href">
-		    <xsl:value-of select="concat($prefixold, name, '.asc')" />
-		  </xsl:attribute>
-		  <xsl:value-of select="concat(name, '.asc')" /></a>
 	      </xsl:when>
 	      <xsl:otherwise>
 		<a><xsl:attribute name="href">
@@ -867,7 +855,7 @@
 
     <xsl:choose>
       <xsl:when test="$type = 'advisory'">
-	<xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 3]">
+	<xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 4]">
 	  <xsl:variable name="year" select="../../../name" />
           <xsl:variable name="month" select="../../name" />
           <xsl:variable name="day" select="../name" />
@@ -976,7 +964,7 @@
                 xmlns="http://my.netscape.com/rdf/simple/0.9/">
     <channel>
       <title>FreeBSD Security Advisories</title>
-      <link>http://www.FreeBSD.org/security/</link>
+      <link>https://www.FreeBSD.org/security/</link>
       <description>Security advisories published from the FreeBSD Project</description>
     </channel>
   </xsl:template>
@@ -1031,7 +1019,7 @@
     <xsl:param name="advisories.xml" select="''" />
 
     <xsl:variable name="title">FreeBSD Security Advisories</xsl:variable>
-    <xsl:variable name="link">http://www.FreeBSD.org/security/</xsl:variable>
+    <xsl:variable name="link">https://www.FreeBSD.org/security/</xsl:variable>
 
     <title><xsl:value-of select="$title" /></title>
     <link><xsl:value-of select="$link" /></link>
@@ -1042,7 +1030,7 @@
     <docs>http://blogs.law.harvard.edu/tech/rss</docs>
     <ttl>120</ttl>
     <image>
-      <url>http://www.FreeBSD.org/logo/logo-full.png</url>
+      <url>https://www.FreeBSD.org/logo/logo-full.png</url>
       <title><xsl:value-of select="$title" /></title>
       <link><xsl:value-of select="$link" /></link>
     </image>
@@ -1065,7 +1053,7 @@
 	<title><xsl:value-of select="name"/></title>
 	<xsl:choose>
 	  <xsl:when test="@omithref = 'yes'">
-	    <link>http://www.FreeBSD.org/security</link>
+	    <link>https://www.FreeBSD.org/security</link>
 	  </xsl:when>
 	  <xsl:otherwise>
 	    <link><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></link>
@@ -1111,7 +1099,7 @@
     <xsl:param name="notices.xml" select="''" />
 
     <xsl:variable name="title">FreeBSD Errata Notices</xsl:variable>
-    <xsl:variable name="link">http://www.FreeBSD.org/security/</xsl:variable>
+    <xsl:variable name="link">https://www.FreeBSD.org/security/</xsl:variable>
 
     <title><xsl:value-of select="$title" /></title>
     <link><xsl:value-of select="$link" /></link>
@@ -1122,11 +1110,11 @@
     <docs>http://blogs.law.harvard.edu/tech/rss</docs>
     <ttl>120</ttl>
     <image>
-      <url>http://www.FreeBSD.org/logo/logo-full.png</url>
+      <url>https://www.FreeBSD.org/logo/logo-full.png</url>
       <title><xsl:value-of select="$title" /></title>
       <link><xsl:value-of select="$link" /></link>
     </image>
-    <atom:link rel="self" type="application/rss+xml">
+    <atom:link type="application/rss+xml">
       <xsl:attribute name="href">
         <xsl:value-of select="$link" /><xsl:text>rss.xml</xsl:text>
       </xsl:attribute>
@@ -1145,7 +1133,7 @@
 	<title><xsl:value-of select="name"/></title>
 	<xsl:choose>
 	  <xsl:when test="@omithref = 'yes'">
-	    <link>http://www.FreeBSD.org/security</link>
+	    <link>https://www.FreeBSD.org/security</link>
 	  </xsl:when>
 	  <xsl:otherwise>
 	    <link><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></link>
@@ -1165,13 +1153,13 @@
   </xsl:template>
 
   <!-- template: "html-index-news-project-items"
-       pulls in the 5 most recent project items -->
+       pulls in the 6 most recent project items -->
 
   <xsl:template name="html-index-news-project-items">
     <xsl:param name="news.project.xml-master" select="'none'" />
     <xsl:param name="news.project.xml" select="'none'" />
 
-    <xsl:for-each select="document($news.project.xml-master)/descendant::day[position() &lt; 5]">
+    <xsl:for-each select="document($news.project.xml-master)/descendant::day[position() &lt;= 6]">
       <xsl:variable name="year" select="ancestor::year/name" />
       <xsl:variable name="month" select="ancestor::month/name" />
       <xsl:variable name="day" select="name" />
@@ -1197,6 +1185,10 @@
 	    </span><br />
 	    <a>
 	      <xsl:attribute name="href">
+		<xsl:choose>
+		  <xsl:when test="$news.project.xml = $news.project.xml-master">&enbase;/</xsl:when>
+		  <xsl:otherwise>&base;/</xsl:otherwise>
+		</xsl:choose>
 		<xsl:text>news/newsflash.html#</xsl:text>
 		<xsl:call-template name="html-news-generate-anchor">
 		  <xsl:with-param name="label" select="'event'" />
@@ -1275,13 +1267,13 @@
   </xsl:template>
 
   <!-- template: "html-index-news-press-items"
-       pulls in the 5 most recent press items -->
+       pulls in the 6 most recent press items -->
 
   <xsl:template name="html-index-news-press-items">
     <xsl:param name="news.press.xml-master" select="'none'" />
     <xsl:param name="news.press.xml" select="''" />
 
-    <xsl:for-each select="document($news.press.xml-master)/descendant::story[position() &lt;= 5]">
+    <xsl:for-each select="document($news.press.xml-master)/descendant::story[position() &lt;= 6]">
       <xsl:variable name="year" select="../../name" />
       <xsl:variable name="month" select="../name" />
       <xsl:variable name="day" select="../name" />
@@ -1311,6 +1303,10 @@
       </span><br />
       <a>
 	<xsl:attribute name="href">
+	  <xsl:choose>
+	    <xsl:when test="$news.press.xml = $news.press.xml-master">&enbase;/</xsl:when>
+	    <xsl:otherwise>&base;/</xsl:otherwise>
+	  </xsl:choose>
 	  <xsl:text>news/press.html#</xsl:text>
 	  <xsl:call-template name="html-news-generate-anchor">
 	    <xsl:with-param name="label" select="'story'" />
@@ -1429,7 +1425,7 @@
       <a>
         <xsl:attribute name="href">
 	  <xsl:choose>
-	    <xsl:when test="$events.xml = 'none'">&enbase;/</xsl:when>
+	    <xsl:when test="$events.xml = $events.xml-master">&enbase;/</xsl:when>
 	    <xsl:otherwise>&base;/</xsl:otherwise>
 	  </xsl:choose>
 	  <xsl:text>events/#</xsl:text>

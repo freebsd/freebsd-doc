@@ -1,0 +1,147 @@
+Index: crypto/openssl/crypto/bn/bn.h
+===================================================================
+--- crypto/openssl/crypto/bn/bn.h	(revision 264251)
++++ crypto/openssl/crypto/bn/bn.h	(working copy)
+@@ -511,6 +511,8 @@ BIGNUM *BN_mod_inverse(BIGNUM *ret,
+ BIGNUM *BN_mod_sqrt(BIGNUM *ret,
+ 	const BIGNUM *a, const BIGNUM *n,BN_CTX *ctx);
+ 
++void	BN_consttime_swap(BN_ULONG swap, BIGNUM *a, BIGNUM *b, int nwords);
++
+ /* Deprecated versions */
+ #ifndef OPENSSL_NO_DEPRECATED
+ BIGNUM *BN_generate_prime(BIGNUM *ret,int bits,int safe,
+@@ -740,11 +742,20 @@ int RAND_pseudo_bytes(unsigned char *buf,int num);
+ 
+ #define bn_fix_top(a)		bn_check_top(a)
+ 
++#define bn_check_size(bn, bits) bn_wcheck_size(bn, ((bits+BN_BITS2-1))/BN_BITS2)
++#define bn_wcheck_size(bn, words) \
++	do { \
++		const BIGNUM *_bnum2 = (bn); \
++		assert(words <= (_bnum2)->dmax && words >= (_bnum2)->top); \
++	} while(0)
++
+ #else /* !BN_DEBUG */
+ 
+ #define bn_pollute(a)
+ #define bn_check_top(a)
+ #define bn_fix_top(a)		bn_correct_top(a)
++#define bn_check_size(bn, bits)
++#define bn_wcheck_size(bn, words)
+ 
+ #endif
+ 
+Index: crypto/openssl/crypto/bn/bn_lib.c
+===================================================================
+--- crypto/openssl/crypto/bn/bn_lib.c	(revision 264251)
++++ crypto/openssl/crypto/bn/bn_lib.c	(working copy)
+@@ -824,3 +824,55 @@ int bn_cmp_part_words(const BN_ULONG *a, const BN_
+ 		}
+ 	return bn_cmp_words(a,b,cl);
+ 	}
++
++/* 
++ * Constant-time conditional swap of a and b.  
++ * a and b are swapped if condition is not 0.  The code assumes that at most one bit of condition is set.
++ * nwords is the number of words to swap.  The code assumes that at least nwords are allocated in both a and b,
++ * and that no more than nwords are used by either a or b.
++ * a and b cannot be the same number
++ */
++void BN_consttime_swap(BN_ULONG condition, BIGNUM *a, BIGNUM *b, int nwords)
++	{
++	BN_ULONG t;
++	int i;
++
++	bn_wcheck_size(a, nwords);
++	bn_wcheck_size(b, nwords);
++
++	assert(a != b);
++	assert((condition & (condition - 1)) == 0);
++	assert(sizeof(BN_ULONG) >= sizeof(int));
++
++	condition = ((condition - 1) >> (BN_BITS2 - 1)) - 1;
++
++	t = (a->top^b->top) & condition;
++	a->top ^= t;
++	b->top ^= t;
++
++#define BN_CONSTTIME_SWAP(ind) \
++	do { \
++		t = (a->d[ind] ^ b->d[ind]) & condition; \
++		a->d[ind] ^= t; \
++		b->d[ind] ^= t; \
++	} while (0)
++
++
++	switch (nwords) {
++	default:
++		for (i = 10; i < nwords; i++) 
++			BN_CONSTTIME_SWAP(i);
++		/* Fallthrough */
++	case 10: BN_CONSTTIME_SWAP(9); /* Fallthrough */
++	case 9: BN_CONSTTIME_SWAP(8); /* Fallthrough */
++	case 8: BN_CONSTTIME_SWAP(7); /* Fallthrough */
++	case 7: BN_CONSTTIME_SWAP(6); /* Fallthrough */
++	case 6: BN_CONSTTIME_SWAP(5); /* Fallthrough */
++	case 5: BN_CONSTTIME_SWAP(4); /* Fallthrough */
++	case 4: BN_CONSTTIME_SWAP(3); /* Fallthrough */
++	case 3: BN_CONSTTIME_SWAP(2); /* Fallthrough */
++	case 2: BN_CONSTTIME_SWAP(1); /* Fallthrough */
++	case 1: BN_CONSTTIME_SWAP(0);
++	}
++#undef BN_CONSTTIME_SWAP
++}
+Index: crypto/openssl/crypto/ec/ec2_mult.c
+===================================================================
+--- crypto/openssl/crypto/ec/ec2_mult.c	(revision 264251)
++++ crypto/openssl/crypto/ec/ec2_mult.c	(working copy)
+@@ -208,9 +208,12 @@ static int gf2m_Mxy(const EC_GROUP *group, const B
+ 
+ /* Computes scalar*point and stores the result in r.
+  * point can not equal r.
+- * Uses algorithm 2P of
++ * Uses a modified algorithm 2P of
+  *     Lopex, J. and Dahab, R.  "Fast multiplication on elliptic curves over 
+  *     GF(2^m) without precomputation".
++ *
++ * To protect against side-channel attack the function uses constant time
++ * swap avoiding conditional branches.
+  */
+ static int ec_GF2m_montgomery_point_multiply(const EC_GROUP *group, EC_POINT *r, const BIGNUM *scalar,
+ 	const EC_POINT *point, BN_CTX *ctx)
+@@ -244,6 +247,11 @@ static int ec_GF2m_montgomery_point_multiply(const
+ 	x2 = &r->X;
+ 	z2 = &r->Y;
+ 
++	bn_wexpand(x1, group->field.top);
++	bn_wexpand(z1, group->field.top);
++	bn_wexpand(x2, group->field.top);
++	bn_wexpand(z2, group->field.top);
++
+ 	if (!BN_GF2m_mod_arr(x1, &point->X, group->poly)) goto err; /* x1 = x */
+ 	if (!BN_one(z1)) goto err; /* z1 = 1 */
+ 	if (!group->meth->field_sqr(group, z2, x1, ctx)) goto err; /* z2 = x1^2 = x^2 */
+@@ -266,16 +274,12 @@ static int ec_GF2m_montgomery_point_multiply(const
+ 		{
+ 		for (; j >= 0; j--)
+ 			{
+-			if (scalar->d[i] & mask)
+-				{
+-				if (!gf2m_Madd(group, &point->X, x1, z1, x2, z2, ctx)) goto err;
+-				if (!gf2m_Mdouble(group, x2, z2, ctx)) goto err;
+-				}
+-			else
+-				{
+-				if (!gf2m_Madd(group, &point->X, x2, z2, x1, z1, ctx)) goto err;
+-				if (!gf2m_Mdouble(group, x1, z1, ctx)) goto err;
+-				}
++			BN_consttime_swap(scalar->d[i] & mask, x1, x2, group->field.top);
++			BN_consttime_swap(scalar->d[i] & mask, z1, z2, group->field.top);
++			if (!gf2m_Madd(group, &point->X, x2, z2, x1, z1, ctx)) goto err;
++			if (!gf2m_Mdouble(group, x1, z1, ctx)) goto err;
++			BN_consttime_swap(scalar->d[i] & mask, x1, x2, group->field.top);
++			BN_consttime_swap(scalar->d[i] & mask, z1, z2, group->field.top);
+ 			mask >>= 1;
+ 			}
+ 		j = BN_BITS2 - 1;

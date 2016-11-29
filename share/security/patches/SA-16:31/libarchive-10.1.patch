@@ -1,0 +1,1270 @@
+--- contrib/libarchive/libarchive/archive_read_disk_entry_from_file.c.orig
++++ contrib/libarchive/libarchive/archive_read_disk_entry_from_file.c
+@@ -409,9 +409,7 @@
+ {
+ 	const char	*accpath;
+ 	acl_t		 acl;
+-#if HAVE_ACL_IS_TRIVIAL_NP
+ 	int		r;
+-#endif
+ 
+ 	accpath = archive_entry_sourcepath(entry);
+ 	if (accpath == NULL)
+@@ -443,9 +441,13 @@
+ 	}
+ #endif
+ 	if (acl != NULL) {
+-		translate_acl(a, entry, acl, ARCHIVE_ENTRY_ACL_TYPE_NFS4);
++		r = translate_acl(a, entry, acl, ARCHIVE_ENTRY_ACL_TYPE_NFS4);
+ 		acl_free(acl);
+-		return (ARCHIVE_OK);
++		if (r != ARCHIVE_OK) {
++			archive_set_error(&a->archive, errno,
++			    "Couldn't translate NFSv4 ACLs: %s", accpath);
++		}
++		return (r);
+ 	}
+ 
+ 	/* Retrieve access ACL from file. */
+@@ -464,18 +466,29 @@
+ 	else
+ 		acl = acl_get_file(accpath, ACL_TYPE_ACCESS);
+ 	if (acl != NULL) {
+-		translate_acl(a, entry, acl,
++		r = translate_acl(a, entry, acl,
+ 		    ARCHIVE_ENTRY_ACL_TYPE_ACCESS);
+ 		acl_free(acl);
++		if (r != ARCHIVE_OK) {
++			archive_set_error(&a->archive, errno,
++			    "Couldn't translate access ACLs: %s", accpath);
++			return (r);
++		}
+ 	}
+ 
+ 	/* Only directories can have default ACLs. */
+ 	if (S_ISDIR(archive_entry_mode(entry))) {
+ 		acl = acl_get_file(accpath, ACL_TYPE_DEFAULT);
+ 		if (acl != NULL) {
+-			translate_acl(a, entry, acl,
++			r = translate_acl(a, entry, acl,
+ 			    ARCHIVE_ENTRY_ACL_TYPE_DEFAULT);
+ 			acl_free(acl);
++			if (r != ARCHIVE_OK) {
++				archive_set_error(&a->archive, errno,
++				    "Couldn't translate default ACLs: %s",
++				    accpath);
++				return (r);
++			}
+ 		}
+ 	}
+ 	return (ARCHIVE_OK);
+@@ -536,7 +549,11 @@
+ 	// FreeBSD "brands" ACLs as POSIX.1e or NFSv4
+ 	// Make sure the "brand" on this ACL is consistent
+ 	// with the default_entry_acl_type bits provided.
+-	acl_get_brand_np(acl, &brand);
++	if (acl_get_brand_np(acl, &brand) != 0) {
++		archive_set_error(&a->archive, errno,
++		    "Failed to read ACL brand");
++		return (ARCHIVE_WARN);
++	}
+ 	switch (brand) {
+ 	case ACL_BRAND_POSIX:
+ 		switch (default_entry_acl_type) {
+@@ -544,30 +561,42 @@
+ 		case ARCHIVE_ENTRY_ACL_TYPE_DEFAULT:
+ 			break;
+ 		default:
+-			// XXX set warning message?
+-			return ARCHIVE_FAILED;
++			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
++			    "Invalid ACL entry type for POSIX.1e ACL");
++			return (ARCHIVE_WARN);
+ 		}
+ 		break;
+ 	case ACL_BRAND_NFS4:
+ 		if (default_entry_acl_type & ~ARCHIVE_ENTRY_ACL_TYPE_NFS4) {
+-			// XXX set warning message?
+-			return ARCHIVE_FAILED;
++			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
++			    "Invalid ACL entry type for NFSv4 ACL");
++			return (ARCHIVE_WARN);
+ 		}
+ 		break;
+ 	default:
+-		// XXX set warning message?
+-		return ARCHIVE_FAILED;
++		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
++		    "Unknown ACL brand");
++		return (ARCHIVE_WARN);
+ 		break;
+ 	}
+ 
+ 
+ 	s = acl_get_entry(acl, ACL_FIRST_ENTRY, &acl_entry);
++	if (s == -1) {
++		archive_set_error(&a->archive, errno,
++		    "Failed to get first ACL entry");
++		return (ARCHIVE_WARN);
++	}
+ 	while (s == 1) {
+ 		ae_id = -1;
+ 		ae_name = NULL;
+ 		ae_perm = 0;
+ 
+-		acl_get_tag_type(acl_entry, &acl_tag);
++		if (acl_get_tag_type(acl_entry, &acl_tag) != 0) {
++			archive_set_error(&a->archive, errno,
++			    "Failed to get ACL tag type");
++			return (ARCHIVE_WARN);
++		}
+ 		switch (acl_tag) {
+ 		case ACL_USER:
+ 			ae_id = (int)*(uid_t *)acl_get_qualifier(acl_entry);
+@@ -600,12 +629,17 @@
+ 			continue;
+ 		}
+ 
+-		// XXX acl type maps to allow/deny/audit/YYYY bits
+-		// XXX acl_get_entry_type_np on FreeBSD returns EINVAL for
+-		// non-NFSv4 ACLs
++		// XXX acl_type maps to allow/deny/audit/YYYY bits
+ 		entry_acl_type = default_entry_acl_type;
+-		r = acl_get_entry_type_np(acl_entry, &acl_type);
+-		if (r == 0) {
++		if (default_entry_acl_type & ARCHIVE_ENTRY_ACL_TYPE_NFS4) {
++			/*
++			 * acl_get_entry_type_np() falis with non-NFSv4 ACLs
++			 */
++			if (acl_get_entry_type_np(acl_entry, &acl_type) != 0) {
++				archive_set_error(&a->archive, errno, "Failed "
++				    "to get ACL type from a NFSv4 ACL entry");
++				return (ARCHIVE_WARN);
++			}
+ 			switch (acl_type) {
+ 			case ACL_ENTRY_TYPE_ALLOW:
+ 				entry_acl_type = ARCHIVE_ENTRY_ACL_TYPE_ALLOW;
+@@ -619,28 +653,52 @@
+ 			case ACL_ENTRY_TYPE_ALARM:
+ 				entry_acl_type = ARCHIVE_ENTRY_ACL_TYPE_ALARM;
+ 				break;
++			default:
++				archive_set_error(&a->archive, errno,
++				    "Invalid NFSv4 ACL entry type");
++				return (ARCHIVE_WARN);
+ 			}
+-		}
+-
+-		/*
+-		 * Libarchive stores "flag" (NFSv4 inheritance bits)
+-		 * in the ae_perm bitmap.
+-		 */
+-		acl_get_flagset_np(acl_entry, &acl_flagset);
+-                for (i = 0; i < (int)(sizeof(acl_inherit_map) / sizeof(acl_inherit_map[0])); ++i) {
+-			if (acl_get_flag_np(acl_flagset,
+-					    acl_inherit_map[i].platform_inherit))
+-				ae_perm |= acl_inherit_map[i].archive_inherit;
+ 
+-                }
++			/*
++			 * Libarchive stores "flag" (NFSv4 inheritance bits)
++			 * in the ae_perm bitmap.
++			 *
++			 * acl_get_flagset_np() fails with non-NFSv4 ACLs
++			 */
++			if (acl_get_flagset_np(acl_entry, &acl_flagset) != 0) {
++				archive_set_error(&a->archive, errno,
++				    "Failed to get flagset from a NFSv4 ACL entry");
++				return (ARCHIVE_WARN);
++			}
++	                for (i = 0; i < (int)(sizeof(acl_inherit_map) / sizeof(acl_inherit_map[0])); ++i) {
++				r = acl_get_flag_np(acl_flagset,
++				    acl_inherit_map[i].platform_inherit);
++				if (r == -1) {
++					archive_set_error(&a->archive, errno,
++					    "Failed to check flag in a NFSv4 "
++					    "ACL flagset");
++					return (ARCHIVE_WARN);
++				} else if (r)
++					ae_perm |= acl_inherit_map[i].archive_inherit;
++                	}
++		}
+ 
+-		acl_get_permset(acl_entry, &acl_permset);
+-                for (i = 0; i < (int)(sizeof(acl_perm_map) / sizeof(acl_perm_map[0])); ++i) {
++		if (acl_get_permset(acl_entry, &acl_permset) != 0) {
++			archive_set_error(&a->archive, errno,
++			    "Failed to get ACL permission set");
++			return (ARCHIVE_WARN);
++		}
++		for (i = 0; i < (int)(sizeof(acl_perm_map) / sizeof(acl_perm_map[0])); ++i) {
+ 			/*
+ 			 * acl_get_perm() is spelled differently on different
+ 			 * platforms; see above.
+ 			 */
+-			if (ACL_GET_PERM(acl_permset, acl_perm_map[i].platform_perm))
++			r = ACL_GET_PERM(acl_permset, acl_perm_map[i].platform_perm);
++			if (r == -1) {
++				archive_set_error(&a->archive, errno,
++				    "Failed to check permission in an ACL permission set");
++				return (ARCHIVE_WARN);
++			} else if (r)
+ 				ae_perm |= acl_perm_map[i].archive_perm;
+ 		}
+ 
+@@ -649,6 +707,11 @@
+ 					    ae_id, ae_name);
+ 
+ 		s = acl_get_entry(acl, ACL_NEXT_ENTRY, &acl_entry);
++		if (s == -1) {
++			archive_set_error(&a->archive, errno,
++			    "Failed to get next ACL entry");
++			return (ARCHIVE_WARN);
++		}
+ 	}
+ 	return (ARCHIVE_OK);
+ }
+--- contrib/libarchive/libarchive/archive_read_support_format_tar.c.orig
++++ contrib/libarchive/libarchive/archive_read_support_format_tar.c
+@@ -136,6 +136,7 @@
+ 	int64_t			 entry_padding;
+ 	int64_t 		 entry_bytes_unconsumed;
+ 	int64_t			 realsize;
++	int			 sparse_allowed;
+ 	struct sparse_block	*sparse_list;
+ 	struct sparse_block	*sparse_last;
+ 	int64_t			 sparse_offset;
+@@ -1216,6 +1217,14 @@
+ 		 * sparse information in the extended area.
+ 		 */
+ 		/* FALLTHROUGH */
++	case '0':
++		/*
++		 * Enable sparse file "read" support only for regular
++		 * files and explicit GNU sparse files.  However, we
++		 * don't allow non-standard file types to be sparse.
++		 */
++		tar->sparse_allowed = 1;
++		/* FALLTHROUGH */
+ 	default: /* Regular file  and non-standard types */
+ 		/*
+ 		 * Per POSIX: non-recognized types should always be
+@@ -1675,6 +1684,14 @@
+ #endif
+ 	switch (key[0]) {
+ 	case 'G':
++		/* Reject GNU.sparse.* headers on non-regular files. */
++		if (strncmp(key, "GNU.sparse", 10) == 0 &&
++		    !tar->sparse_allowed) {
++			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
++			    "Non-regular file cannot be sparse");
++			return (ARCHIVE_FATAL);
++		}
++
+ 		/* GNU "0.0" sparse pax format. */
+ 		if (strcmp(key, "GNU.sparse.numblocks") == 0) {
+ 			tar->sparse_offset = -1;
+--- contrib/libarchive/libarchive/archive_write_disk_acl.c.orig
++++ contrib/libarchive/libarchive/archive_write_disk_acl.c
+@@ -131,6 +131,7 @@
+ 	acl_entry_t	 acl_entry;
+ 	acl_permset_t	 acl_permset;
+ 	acl_flagset_t	 acl_flagset;
++	int		 r;
+ 	int		 ret;
+ 	int		 ae_type, ae_permset, ae_tag, ae_id;
+ 	uid_t		 ae_uid;
+@@ -144,9 +145,19 @@
+ 	if (entries == 0)
+ 		return (ARCHIVE_OK);
+ 	acl = acl_init(entries);
++	if (acl == (acl_t)NULL) {
++		archive_set_error(a, errno,
++		    "Failed to initialize ACL working storage");
++		return (ARCHIVE_FAILED);
++	}
+ 	while (archive_acl_next(a, abstract_acl, ae_requested_type, &ae_type,
+ 		   &ae_permset, &ae_tag, &ae_id, &ae_name) == ARCHIVE_OK) {
+-		acl_create_entry(&acl, &acl_entry);
++		if (acl_create_entry(&acl, &acl_entry) != 0) {
++			archive_set_error(a, errno,
++			    "Failed to create a new ACL entry");
++			ret = ARCHIVE_FAILED;
++			goto exit_free;
++		}
+ 
+ 		switch (ae_tag) {
+ 		case ARCHIVE_ENTRY_ACL_USER:
+@@ -175,47 +186,95 @@
+ 			acl_set_tag_type(acl_entry, ACL_EVERYONE);
+ 			break;
+ 		default:
+-			/* XXX */
+-			break;
++			archive_set_error(a, ARCHIVE_ERRNO_MISC,
++			    "Unknown ACL tag");
++			ret = ARCHIVE_FAILED;
++			goto exit_free;
+ 		}
+ 
++		r = 0;
+ 		switch (ae_type) {
+ 		case ARCHIVE_ENTRY_ACL_TYPE_ALLOW:
+-			acl_set_entry_type_np(acl_entry, ACL_ENTRY_TYPE_ALLOW);
++			r = acl_set_entry_type_np(acl_entry, ACL_ENTRY_TYPE_ALLOW);
+ 			break;
+ 		case ARCHIVE_ENTRY_ACL_TYPE_DENY:
+-			acl_set_entry_type_np(acl_entry, ACL_ENTRY_TYPE_DENY);
++			r = acl_set_entry_type_np(acl_entry, ACL_ENTRY_TYPE_DENY);
+ 			break;
+ 		case ARCHIVE_ENTRY_ACL_TYPE_AUDIT:
+-			acl_set_entry_type_np(acl_entry, ACL_ENTRY_TYPE_AUDIT);
++			r = acl_set_entry_type_np(acl_entry, ACL_ENTRY_TYPE_AUDIT);
+ 			break;
+ 		case ARCHIVE_ENTRY_ACL_TYPE_ALARM:
+-			acl_set_entry_type_np(acl_entry, ACL_ENTRY_TYPE_ALARM);
++			r = acl_set_entry_type_np(acl_entry, ACL_ENTRY_TYPE_ALARM);
+ 			break;
+ 		case ARCHIVE_ENTRY_ACL_TYPE_ACCESS:
+ 		case ARCHIVE_ENTRY_ACL_TYPE_DEFAULT:
+ 			// These don't translate directly into the system ACL.
+ 			break;
+ 		default:
+-			// XXX error handling here.
+-			break;
++			archive_set_error(a, ARCHIVE_ERRNO_MISC,
++			    "Unknown ACL entry type");
++			ret = ARCHIVE_FAILED;
++			goto exit_free;
++		}
++		if (r != 0) {
++			archive_set_error(a, errno,
++			    "Failed to set ACL entry type");
++			ret = ARCHIVE_FAILED;
++			goto exit_free;
+ 		}
+ 
+-		acl_get_permset(acl_entry, &acl_permset);
+-		acl_clear_perms(acl_permset);
++		if (acl_get_permset(acl_entry, &acl_permset) != 0) {
++			archive_set_error(a, errno,
++			    "Failed to get ACL permission set");
++			ret = ARCHIVE_FAILED;
++			goto exit_free;
++		}
++		if (acl_clear_perms(acl_permset) != 0) {
++			archive_set_error(a, errno,
++			    "Failed to clear ACL permissions");
++			ret = ARCHIVE_FAILED;
++			goto exit_free;
++		}
+ 
+ 		for (i = 0; i < (int)(sizeof(acl_perm_map) / sizeof(acl_perm_map[0])); ++i) {
+ 			if (ae_permset & acl_perm_map[i].archive_perm)
+-				acl_add_perm(acl_permset,
+-					     acl_perm_map[i].platform_perm);
++				if (acl_add_perm(acl_permset,
++				    acl_perm_map[i].platform_perm) != 0) {
++					archive_set_error(a, errno,
++					    "Failed to add ACL permission");
++					ret = ARCHIVE_FAILED;
++					goto exit_free;
++				}
+ 		}
+ 
+ 		acl_get_flagset_np(acl_entry, &acl_flagset);
+-		acl_clear_flags_np(acl_flagset);
+-		for (i = 0; i < (int)(sizeof(acl_inherit_map) / sizeof(acl_inherit_map[0])); ++i) {
+-			if (ae_permset & acl_inherit_map[i].archive_inherit)
+-				acl_add_flag_np(acl_flagset,
+-						acl_inherit_map[i].platform_inherit);
++		if (acl_type == ACL_TYPE_NFS4) {
++			/*
++			 * acl_get_flagset_np() fails with non-NFSv4 ACLs
++			 */
++			if (acl_get_flagset_np(acl_entry, &acl_flagset) != 0) {
++				archive_set_error(a, errno,
++				    "Failed to get flagset from an NFSv4 ACL entry");
++				ret = ARCHIVE_FAILED;
++				goto exit_free;
++			}
++			if (acl_clear_flags_np(acl_flagset) != 0) {
++				archive_set_error(a, errno,
++				    "Failed to clear flags from an NFSv4 ACL flagset");
++				ret = ARCHIVE_FAILED;
++				goto exit_free;
++			}
++			for (i = 0; i < (int)(sizeof(acl_inherit_map) / sizeof(acl_inherit_map[0])); ++i) {
++				if (ae_permset & acl_inherit_map[i].archive_inherit) {
++					if (acl_add_flag_np(acl_flagset,
++							acl_inherit_map[i].platform_inherit) != 0) {
++						archive_set_error(a, errno,
++						    "Failed to add flag to NFSv4 ACL flagset");
++						ret = ARCHIVE_FAILED;
++						goto exit_free;
++					}
++				}
++			}
+ 		}
+ 	}
+ 
+@@ -243,6 +302,7 @@
+ 		ret = ARCHIVE_WARN;
+ 	}
+ #endif
++exit_free:
+ 	acl_free(acl);
+ 	return (ret);
+ }
+--- contrib/libarchive/libarchive/archive_write_disk_posix.c.orig
++++ contrib/libarchive/libarchive/archive_write_disk_posix.c
+@@ -140,7 +140,17 @@
+ #define O_BINARY 0
+ #endif
+ #ifndef O_CLOEXEC
+-#define O_CLOEXEC	0
++#define O_CLOEXEC 0
++#endif
++
++/* Ignore non-int O_NOFOLLOW constant. */
++/* gnulib's fcntl.h does this on AIX, but it seems practical everywhere */
++#if defined O_NOFOLLOW && !(INT_MIN <= O_NOFOLLOW && O_NOFOLLOW <= INT_MAX)
++#undef O_NOFOLLOW
++#endif
++
++#ifndef O_NOFOLLOW
++#define O_NOFOLLOW 0
+ #endif
+ 
+ struct fixup_entry {
+@@ -326,12 +336,14 @@
+ 
+ #define HFS_BLOCKS(s)	((s) >> 12)
+ 
++static int	check_symlinks_fsobj(char *path, int *error_number, struct archive_string *error_string, int flags);
+ static int	check_symlinks(struct archive_write_disk *);
+ static int	create_filesystem_object(struct archive_write_disk *);
+ static struct fixup_entry *current_fixup(struct archive_write_disk *, const char *pathname);
+ #if defined(HAVE_FCHDIR) && defined(PATH_MAX)
+ static void	edit_deep_directories(struct archive_write_disk *ad);
+ #endif
++static int	cleanup_pathname_fsobj(char *path, int *error_number, struct archive_string *error_string, int flags);
+ static int	cleanup_pathname(struct archive_write_disk *);
+ static int	create_dir(struct archive_write_disk *, char *);
+ static int	create_parent_dir(struct archive_write_disk *, char *);
+@@ -1791,7 +1803,7 @@
+ 	char *tail = a->name;
+ 
+ 	/* If path is short, avoid the open() below. */
+-	if (strlen(tail) <= PATH_MAX)
++	if (strlen(tail) < PATH_MAX)
+ 		return;
+ 
+ 	/* Try to record our starting dir. */
+@@ -1801,7 +1813,7 @@
+ 		return;
+ 
+ 	/* As long as the path is too long... */
+-	while (strlen(tail) > PATH_MAX) {
++	while (strlen(tail) >= PATH_MAX) {
+ 		/* Locate a dir prefix shorter than PATH_MAX. */
+ 		tail += PATH_MAX - 8;
+ 		while (tail > a->name && *tail != '/')
+@@ -1996,6 +2008,10 @@
+ 	const char *linkname;
+ 	mode_t final_mode, mode;
+ 	int r;
++	/* these for check_symlinks_fsobj */
++	char *linkname_copy;	/* non-const copy of linkname */
++	struct archive_string error_string;
++	int error_number;
+ 
+ 	/* We identify hard/symlinks according to the link names. */
+ 	/* Since link(2) and symlink(2) don't handle modes, we're done here. */
+@@ -2004,6 +2020,27 @@
+ #if !HAVE_LINK
+ 		return (EPERM);
+ #else
++		archive_string_init(&error_string);
++		linkname_copy = strdup(linkname);
++		if (linkname_copy == NULL) {
++		    return (EPERM);
++		}
++		/* TODO: consider using the cleaned-up path as the link target? */
++		r = cleanup_pathname_fsobj(linkname_copy, &error_number, &error_string, a->flags);
++		if (r != ARCHIVE_OK) {
++			archive_set_error(&a->archive, error_number, "%s", error_string.s);
++			free(linkname_copy);
++			/* EPERM is more appropriate than error_number for our callers */
++			return (EPERM);
++		}
++		r = check_symlinks_fsobj(linkname_copy, &error_number, &error_string, a->flags);
++		if (r != ARCHIVE_OK) {
++			archive_set_error(&a->archive, error_number, "%s", error_string.s);
++			free(linkname_copy);
++			/* EPERM is more appropriate than error_number for our callers */
++			return (EPERM);
++		}
++		free(linkname_copy);
+ 		r = link(linkname, a->name) ? errno : 0;
+ 		/*
+ 		 * New cpio and pax formats allow hardlink entries
+@@ -2022,7 +2059,7 @@
+ 			a->deferred = 0;
+ 		} else if (r == 0 && a->filesize > 0) {
+ 			a->fd = open(a->name,
+-				     O_WRONLY | O_TRUNC | O_BINARY | O_CLOEXEC);
++				     O_WRONLY | O_TRUNC | O_BINARY | O_CLOEXEC | O_NOFOLLOW);
+ 			__archive_ensure_cloexec_flag(a->fd);
+ 			if (a->fd < 0)
+ 				r = errno;
+@@ -2332,110 +2369,233 @@
+ 	return (a->current_fixup);
+ }
+ 
+-/* TODO: Make this work. */
+-/*
+- * TODO: The deep-directory support bypasses this; disable deep directory
+- * support if we're doing symlink checks.
+- */
+ /*
+  * TODO: Someday, integrate this with the deep dir support; they both
+  * scan the path and both can be optimized by comparing against other
+  * recent paths.
+  */
+ /* TODO: Extend this to support symlinks on Windows Vista and later. */
++
++/*
++ * Checks the given path to see if any elements along it are symlinks.  Returns
++ * ARCHIVE_OK if there are none, otherwise puts an error in errmsg.
++ */
+ static int
+-check_symlinks(struct archive_write_disk *a)
++check_symlinks_fsobj(char *path, int *error_number, struct archive_string *error_string, int flags)
+ {
+ #if !defined(HAVE_LSTAT)
+ 	/* Platform doesn't have lstat, so we can't look for symlinks. */
+-	(void)a; /* UNUSED */
++	(void)path; /* UNUSED */
++	(void)error_number; /* UNUSED */
++	(void)error_string; /* UNUSED */
++	(void)flags; /* UNUSED */
+ 	return (ARCHIVE_OK);
+ #else
+-	char *pn;
++	int res = ARCHIVE_OK;
++	char *tail;
++	char *head;
++	int last;
+ 	char c;
+ 	int r;
+ 	struct stat st;
++	int restore_pwd;
++
++	/* Nothing to do here if name is empty */
++	if(path[0] == '\0')
++	    return (ARCHIVE_OK);
+ 
+ 	/*
+ 	 * Guard against symlink tricks.  Reject any archive entry whose
+ 	 * destination would be altered by a symlink.
++	 *
++	 * Walk the filename in chunks separated by '/'.  For each segment:
++	 *  - if it doesn't exist, continue
++	 *  - if it's symlink, abort or remove it
++	 *  - if it's a directory and it's not the last chunk, cd into it
++	 * As we go:
++	 *  head points to the current (relative) path
++	 *  tail points to the temporary \0 terminating the segment we're currently examining
++	 *  c holds what used to be in *tail
++	 *  last is 1 if this is the last tail
++	 */
++	restore_pwd = open(".", O_RDONLY | O_BINARY | O_CLOEXEC);
++	__archive_ensure_cloexec_flag(restore_pwd);
++	if (restore_pwd < 0)
++		return (ARCHIVE_FATAL);
++	head = path;
++	tail = path;
++	last = 0;
++	/* TODO: reintroduce a safe cache here? */
++	/* Skip the root directory if the path is absolute. */
++	if(tail == path && tail[0] == '/')
++		++tail;
++	/* Keep going until we've checked the entire name.
++	 * head, tail, path all alias the same string, which is
++	 * temporarily zeroed at tail, so be careful restoring the
++	 * stashed (c=tail[0]) for error messages.
++	 * Exiting the loop with break is okay; continue is not.
+ 	 */
+-	/* Whatever we checked last time doesn't need to be re-checked. */
+-	pn = a->name;
+-	if (archive_strlen(&(a->path_safe)) > 0) {
+-		char *p = a->path_safe.s;
+-		while ((*pn != '\0') && (*p == *pn))
+-			++p, ++pn;
+-	}
+-	c = pn[0];
+-	/* Keep going until we've checked the entire name. */
+-	while (pn[0] != '\0' && (pn[0] != '/' || pn[1] != '\0')) {
++	while (!last) {
++		/* Skip the separator we just consumed, plus any adjacent ones */
++		while (*tail == '/')
++		    ++tail;
+ 		/* Skip the next path element. */
+-		while (*pn != '\0' && *pn != '/')
+-			++pn;
+-		c = pn[0];
+-		pn[0] = '\0';
++		while (*tail != '\0' && *tail != '/')
++			++tail;
++		/* is this the last path component? */
++		last = (tail[0] == '\0') || (tail[0] == '/' && tail[1] == '\0');
++		/* temporarily truncate the string here */
++		c = tail[0];
++		tail[0] = '\0';
+ 		/* Check that we haven't hit a symlink. */
+-		r = lstat(a->name, &st);
++		r = lstat(head, &st);
+ 		if (r != 0) {
++			tail[0] = c;
+ 			/* We've hit a dir that doesn't exist; stop now. */
+-			if (errno == ENOENT)
++			if (errno == ENOENT) {
+ 				break;
++			} else {
++				/* Treat any other error as fatal - best to be paranoid here
++				 * Note: This effectively disables deep directory
++				 * support when security checks are enabled.
++				 * Otherwise, very long pathnames that trigger
++				 * an error here could evade the sandbox.
++				 * TODO: We could do better, but it would probably
++				 * require merging the symlink checks with the
++				 * deep-directory editing. */
++				if (error_number) *error_number = errno;
++				if (error_string)
++					archive_string_sprintf(error_string,
++							"Could not stat %s",
++							path);
++				res = ARCHIVE_FAILED;
++				break;
++			}
++		} else if (S_ISDIR(st.st_mode)) {
++			if (!last) {
++				if (chdir(head) != 0) {
++					tail[0] = c;
++					if (error_number) *error_number = errno;
++					if (error_string)
++						archive_string_sprintf(error_string,
++								"Could not chdir %s",
++								path);
++					res = (ARCHIVE_FATAL);
++					break;
++				}
++				/* Our view is now from inside this dir: */
++				head = tail + 1;
++			}
+ 		} else if (S_ISLNK(st.st_mode)) {
+-			if (c == '\0') {
++			if (last) {
+ 				/*
+ 				 * Last element is symlink; remove it
+ 				 * so we can overwrite it with the
+ 				 * item being extracted.
+ 				 */
+-				if (unlink(a->name)) {
+-					archive_set_error(&a->archive, errno,
+-					    "Could not remove symlink %s",
+-					    a->name);
+-					pn[0] = c;
+-					return (ARCHIVE_FAILED);
++				if (unlink(head)) {
++					tail[0] = c;
++					if (error_number) *error_number = errno;
++					if (error_string)
++						archive_string_sprintf(error_string,
++								"Could not remove symlink %s",
++								path);
++					res = ARCHIVE_FAILED;
++					break;
+ 				}
+-				a->pst = NULL;
+ 				/*
+ 				 * Even if we did remove it, a warning
+ 				 * is in order.  The warning is silly,
+ 				 * though, if we're just replacing one
+ 				 * symlink with another symlink.
+ 				 */
+-				if (!S_ISLNK(a->mode)) {
+-					archive_set_error(&a->archive, 0,
+-					    "Removing symlink %s",
+-					    a->name);
++				tail[0] = c;
++				/* FIXME:  not sure how important this is to restore
++				if (!S_ISLNK(path)) {
++					if (error_number) *error_number = 0;
++					if (error_string)
++						archive_string_sprintf(error_string,
++								"Removing symlink %s",
++								path);
+ 				}
++				*/
+ 				/* Symlink gone.  No more problem! */
+-				pn[0] = c;
+-				return (0);
+-			} else if (a->flags & ARCHIVE_EXTRACT_UNLINK) {
++				res = ARCHIVE_OK;
++				break;
++			} else if (flags & ARCHIVE_EXTRACT_UNLINK) {
+ 				/* User asked us to remove problems. */
+-				if (unlink(a->name) != 0) {
+-					archive_set_error(&a->archive, 0,
+-					    "Cannot remove intervening symlink %s",
+-					    a->name);
+-					pn[0] = c;
+-					return (ARCHIVE_FAILED);
++				if (unlink(head) != 0) {
++					tail[0] = c;
++					if (error_number) *error_number = 0;
++					if (error_string)
++						archive_string_sprintf(error_string,
++								"Cannot remove intervening symlink %s",
++								path);
++					res = ARCHIVE_FAILED;
++					break;
+ 				}
+-				a->pst = NULL;
++				tail[0] = c;
+ 			} else {
+-				archive_set_error(&a->archive, 0,
+-				    "Cannot extract through symlink %s",
+-				    a->name);
+-				pn[0] = c;
+-				return (ARCHIVE_FAILED);
++				tail[0] = c;
++				if (error_number) *error_number = 0;
++				if (error_string)
++					archive_string_sprintf(error_string,
++							"Cannot extract through symlink %s",
++							path);
++				res = ARCHIVE_FAILED;
++				break;
+ 			}
+ 		}
++		/* be sure to always maintain this */
++		tail[0] = c;
++		if (tail[0] != '\0')
++			tail++; /* Advance to the next segment. */
+ 	}
+-	pn[0] = c;
+-	/* We've checked and/or cleaned the whole path, so remember it. */
+-	archive_strcpy(&a->path_safe, a->name);
+-	return (ARCHIVE_OK);
++	/* Catches loop exits via break */
++	tail[0] = c;
++#ifdef HAVE_FCHDIR
++	/* If we changed directory above, restore it here. */
++	if (restore_pwd >= 0) {
++		r = fchdir(restore_pwd);
++		if (r != 0) {
++			if(error_number) *error_number = errno;
++			if(error_string)
++				archive_string_sprintf(error_string,
++						"chdir() failure");
++		}
++		close(restore_pwd);
++		restore_pwd = -1;
++		if (r != 0) {
++			res = (ARCHIVE_FATAL);
++		}
++	}
++#endif
++	/* TODO: reintroduce a safe cache here? */
++	return res;
+ #endif
+ }
+ 
++/*
++ * Check a->name for symlinks, returning ARCHIVE_OK if its clean, otherwise
++ * calls archive_set_error and returns ARCHIVE_{FATAL,FAILED}
++ */
++static int
++check_symlinks(struct archive_write_disk *a)
++{
++	struct archive_string error_string;
++	int error_number;
++	int rc;
++	archive_string_init(&error_string);
++	rc = check_symlinks_fsobj(a->name, &error_number, &error_string, a->flags);
++	if (rc != ARCHIVE_OK) {
++		archive_set_error(&a->archive, error_number, "%s", error_string.s);
++	}
++	archive_string_free(&error_string);
++	a->pst = NULL;	/* to be safe */
++	return rc;
++}
++
++
+ #if defined(__CYGWIN__)
+ /*
+  * 1. Convert a path separator from '\' to '/' .
+@@ -2509,15 +2669,17 @@
+  * is set) if the path is absolute.
+  */
+ static int
+-cleanup_pathname(struct archive_write_disk *a)
++cleanup_pathname_fsobj(char *path, int *error_number, struct archive_string *error_string, int flags)
+ {
+ 	char *dest, *src;
+ 	char separator = '\0';
+ 
+-	dest = src = a->name;
++	dest = src = path;
+ 	if (*src == '\0') {
+-		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+-		    "Invalid empty pathname");
++		if (error_number) *error_number = ARCHIVE_ERRNO_MISC;
++		if (error_string)
++		    archive_string_sprintf(error_string,
++			    "Invalid empty pathname");
+ 		return (ARCHIVE_FAILED);
+ 	}
+ 
+@@ -2526,9 +2688,11 @@
+ #endif
+ 	/* Skip leading '/'. */
+ 	if (*src == '/') {
+-		if (a->flags & ARCHIVE_EXTRACT_SECURE_NOABSOLUTEPATHS) {
+-			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+-			                  "Path is absolute");
++		if (flags & ARCHIVE_EXTRACT_SECURE_NOABSOLUTEPATHS) {
++			if (error_number) *error_number = ARCHIVE_ERRNO_MISC;
++			if (error_string)
++			    archive_string_sprintf(error_string,
++				    "Path is absolute");
+ 			return (ARCHIVE_FAILED);
+ 		}
+ 
+@@ -2555,10 +2719,11 @@
+ 			} else if (src[1] == '.') {
+ 				if (src[2] == '/' || src[2] == '\0') {
+ 					/* Conditionally warn about '..' */
+-					if (a->flags & ARCHIVE_EXTRACT_SECURE_NODOTDOT) {
+-						archive_set_error(&a->archive,
+-						    ARCHIVE_ERRNO_MISC,
+-						    "Path contains '..'");
++					if (flags & ARCHIVE_EXTRACT_SECURE_NODOTDOT) {
++						if (error_number) *error_number = ARCHIVE_ERRNO_MISC;
++						if (error_string)
++						    archive_string_sprintf(error_string,
++							    "Path contains '..'");
+ 						return (ARCHIVE_FAILED);
+ 					}
+ 				}
+@@ -2589,7 +2754,7 @@
+ 	 * We've just copied zero or more path elements, not including the
+ 	 * final '/'.
+ 	 */
+-	if (dest == a->name) {
++	if (dest == path) {
+ 		/*
+ 		 * Nothing got copied.  The path must have been something
+ 		 * like '.' or '/' or './' or '/././././/./'.
+@@ -2604,6 +2769,21 @@
+ 	return (ARCHIVE_OK);
+ }
+ 
++static int
++cleanup_pathname(struct archive_write_disk *a)
++{
++	struct archive_string error_string;
++	int error_number;
++	int rc;
++	archive_string_init(&error_string);
++	rc = cleanup_pathname_fsobj(a->name, &error_number, &error_string, a->flags);
++	if (rc != ARCHIVE_OK) {
++		archive_set_error(&a->archive, error_number, "%s", error_string.s);
++	}
++	archive_string_free(&error_string);
++	return rc;
++}
++
+ /*
+  * Create the parent directory of the specified path, assuming path
+  * is already in mutable storage.
+--- contrib/libarchive/libarchive/test/main.c.orig
++++ contrib/libarchive/libarchive/test/main.c
+@@ -1396,6 +1396,31 @@
+ 	return (0);
+ }
+ 
++/* Verify mode of 'pathname'. */
++int
++assertion_file_mode(const char *file, int line, const char *pathname, int expected_mode)
++{
++	int mode;
++	int r;
++
++	assertion_count(file, line);
++#if defined(_WIN32) && !defined(__CYGWIN__)
++	failure_start(file, line, "assertFileMode not yet implemented for Windows");
++#else
++	{
++		struct stat st;
++		r = lstat(pathname, &st);
++		mode = (int)(st.st_mode & 0777);
++	}
++	if (r == 0 && mode == expected_mode)
++		return (1);
++	failure_start(file, line, "File %s has mode %o, expected %o",
++	    pathname, mode, expected_mode);
++#endif
++	failure_finish(NULL);
++	return (0);
++}
++
+ /* Assert that 'pathname' is a dir.  If mode >= 0, verify that too. */
+ int
+ assertion_is_dir(const char *file, int line, const char *pathname, int mode)
+--- contrib/libarchive/libarchive/test/test.h.orig
++++ contrib/libarchive/libarchive/test/test.h
+@@ -176,6 +176,8 @@
+   assertion_file_nlinks(__FILE__, __LINE__, pathname, nlinks)
+ #define assertFileSize(pathname, size)  \
+   assertion_file_size(__FILE__, __LINE__, pathname, size)
++#define assertFileMode(pathname, mode)  \
++  assertion_file_mode(__FILE__, __LINE__, pathname, mode)
+ #define assertTextFileContents(text, pathname) \
+   assertion_text_file_contents(__FILE__, __LINE__, text, pathname)
+ #define assertFileContainsLinesAnyOrder(pathname, lines)	\
+@@ -239,6 +241,7 @@
+ int assertion_file_nlinks(const char *, int, const char *, int);
+ int assertion_file_not_exists(const char *, int, const char *);
+ int assertion_file_size(const char *, int, const char *, long);
++int assertion_file_mode(const char *, int, const char *, int);
+ int assertion_is_dir(const char *, int, const char *, int);
+ int assertion_is_hardlink(const char *, int, const char *, const char *);
+ int assertion_is_not_hardlink(const char *, int, const char *, const char *);
+--- /dev/null
++++ contrib/libarchive/libarchive/test/test_write_disk_secure744.c
+@@ -0,0 +1,95 @@
++/*-
++ * Copyright (c) 2003-2007,2016 Tim Kientzle
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#include "test.h"
++__FBSDID("$FreeBSD$");
++
++#define UMASK 022
++
++/*
++ * Github Issue #744 describes a bug in the sandboxing code that
++ * causes very long pathnames to not get checked for symlinks.
++ */
++
++DEFINE_TEST(test_write_disk_secure744)
++{
++#if defined(_WIN32) && !defined(__CYGWIN__)
++	skipping("archive_write_disk security checks not supported on Windows");
++#else
++	struct archive *a;
++	struct archive_entry *ae;
++	size_t buff_size = 8192;
++	char *buff = malloc(buff_size);
++	char *p = buff;
++	int n = 0;
++	int t;
++
++	assert(buff != NULL);
++
++	/* Start with a known umask. */
++	assertUmask(UMASK);
++
++	/* Create an archive_write_disk object. */
++	assert((a = archive_write_disk_new()) != NULL);
++	archive_write_disk_set_options(a, ARCHIVE_EXTRACT_SECURE_SYMLINKS);
++
++	while (p + 500 < buff + buff_size) {
++		memset(p, 'x', 100);
++		p += 100;
++		p[0] = '\0';
++
++		buff[0] = ((n / 1000) % 10) + '0';
++		buff[1] = ((n / 100) % 10)+ '0';
++		buff[2] = ((n / 10) % 10)+ '0';
++		buff[3] = ((n / 1) % 10)+ '0';
++		buff[4] = '_';
++		++n;
++
++		/* Create a symlink pointing to the testworkdir */
++		assert((ae = archive_entry_new()) != NULL);
++		archive_entry_copy_pathname(ae, buff);
++		archive_entry_set_mode(ae, S_IFREG | 0777);
++		archive_entry_copy_symlink(ae, testworkdir);
++		assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
++		archive_entry_free(ae);
++
++		*p++ = '/';
++		sprintf(p, "target%d", n);
++
++		/* Try to create a file through the symlink, should fail. */
++		assert((ae = archive_entry_new()) != NULL);
++		archive_entry_copy_pathname(ae, buff);
++		archive_entry_set_mode(ae, S_IFDIR | 0777);
++
++		t = archive_write_header(a, ae);
++		archive_entry_free(ae);
++		failure("Attempt to create target%d via %d-character symlink should have failed", n, (int)strlen(buff));
++		if(!assertEqualInt(ARCHIVE_FAILED, t)) {
++			break;
++		}
++	}
++	archive_free(a);
++	free(buff);
++#endif
++}
+--- /dev/null
++++ contrib/libarchive/libarchive/test/test_write_disk_secure745.c
+@@ -0,0 +1,79 @@
++/*-
++ * Copyright (c) 2003-2007,2016 Tim Kientzle
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#include "test.h"
++__FBSDID("$FreeBSD$");
++
++#define UMASK 022
++
++/*
++ * Github Issue #745 describes a bug in the sandboxing code that
++ * allows one to use a symlink to edit the permissions on a file or
++ * directory outside of the sandbox.
++ */
++
++DEFINE_TEST(test_write_disk_secure745)
++{
++#if defined(_WIN32) && !defined(__CYGWIN__)
++	skipping("archive_write_disk security checks not supported on Windows");
++#else
++	struct archive *a;
++	struct archive_entry *ae;
++
++	/* Start with a known umask. */
++	assertUmask(UMASK);
++
++	/* Create an archive_write_disk object. */
++	assert((a = archive_write_disk_new()) != NULL);
++	archive_write_disk_set_options(a, ARCHIVE_EXTRACT_SECURE_SYMLINKS);
++
++	/* The target dir:  The one we're going to try to change permission on */
++	assertMakeDir("target", 0700);
++
++	/* The sandbox dir we're going to run inside of. */
++	assertMakeDir("sandbox", 0700);
++	assertChdir("sandbox");
++
++	/* Create a symlink pointing to the target directory */
++	assert((ae = archive_entry_new()) != NULL);
++	archive_entry_copy_pathname(ae, "sym");
++	archive_entry_set_mode(ae, AE_IFLNK | 0777);
++	archive_entry_copy_symlink(ae, "../target");
++	assert(0 == archive_write_header(a, ae));
++	archive_entry_free(ae);
++
++	/* Try to alter the target dir through the symlink; this should fail. */
++	assert((ae = archive_entry_new()) != NULL);
++	archive_entry_copy_pathname(ae, "sym");
++	archive_entry_set_mode(ae, S_IFDIR | 0777);
++	assert(0 == archive_write_header(a, ae));
++	archive_entry_free(ae);
++
++	/* Permission of target dir should not have changed. */
++	assertFileMode("../target", 0700);
++
++	assert(0 == archive_write_close(a));
++	archive_write_free(a);
++#endif
++}
+--- /dev/null
++++ contrib/libarchive/libarchive/test/test_write_disk_secure746.c
+@@ -0,0 +1,129 @@
++/*-
++ * Copyright (c) 2003-2007,2016 Tim Kientzle
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#include "test.h"
++__FBSDID("$FreeBSD$");
++
++#define UMASK 022
++
++/*
++ * Github Issue #746 describes a problem in which hardlink targets are
++ * not adequately checked and can be used to modify entries outside of
++ * the sandbox.
++ */
++
++/*
++ * Verify that ARCHIVE_EXTRACT_SECURE_NODOTDOT disallows '..' in hardlink
++ * targets.
++ */
++DEFINE_TEST(test_write_disk_secure746a)
++{
++#if defined(_WIN32) && !defined(__CYGWIN__)
++	skipping("archive_write_disk security checks not supported on Windows");
++#else
++	struct archive *a;
++	struct archive_entry *ae;
++
++	/* Start with a known umask. */
++	assertUmask(UMASK);
++
++	/* The target directory we're going to try to affect. */
++	assertMakeDir("target", 0700);
++	assertMakeFile("target/foo", 0700, "unmodified");
++
++	/* The sandbox dir we're going to work within. */
++	assertMakeDir("sandbox", 0700);
++	assertChdir("sandbox");
++
++	/* Create an archive_write_disk object. */
++	assert((a = archive_write_disk_new()) != NULL);
++	archive_write_disk_set_options(a, ARCHIVE_EXTRACT_SECURE_NODOTDOT);
++
++	/* Attempt to hardlink to the target directory. */
++	assert((ae = archive_entry_new()) != NULL);
++	archive_entry_copy_pathname(ae, "bar");
++	archive_entry_set_mode(ae, AE_IFREG | 0777);
++	archive_entry_set_size(ae, 8);
++	archive_entry_copy_hardlink(ae, "../target/foo");
++	assertEqualInt(ARCHIVE_FAILED, archive_write_header(a, ae));
++	assertEqualInt(ARCHIVE_FATAL, archive_write_data(a, "modified", 8));
++	archive_entry_free(ae);
++
++	/* Verify that target file contents are unchanged. */
++	assertTextFileContents("unmodified", "../target/foo");
++#endif
++}
++
++/*
++ * Verify that ARCHIVE_EXTRACT_SECURE_NOSYMLINK disallows symlinks in hardlink
++ * targets.
++ */
++DEFINE_TEST(test_write_disk_secure746b)
++{
++#if defined(_WIN32) && !defined(__CYGWIN__)
++	skipping("archive_write_disk security checks not supported on Windows");
++#else
++	struct archive *a;
++	struct archive_entry *ae;
++
++	/* Start with a known umask. */
++	assertUmask(UMASK);
++
++	/* The target directory we're going to try to affect. */
++	assertMakeDir("target", 0700);
++	assertMakeFile("target/foo", 0700, "unmodified");
++
++	/* The sandbox dir we're going to work within. */
++	assertMakeDir("sandbox", 0700);
++	assertChdir("sandbox");
++
++	/* Create an archive_write_disk object. */
++	assert((a = archive_write_disk_new()) != NULL);
++	archive_write_disk_set_options(a, ARCHIVE_EXTRACT_SECURE_SYMLINKS);
++
++	/* Create a symlink to the target directory. */
++	assert((ae = archive_entry_new()) != NULL);
++	archive_entry_copy_pathname(ae, "symlink");
++	archive_entry_set_mode(ae, AE_IFLNK | 0777);
++	archive_entry_copy_symlink(ae, "../target");
++	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
++	archive_entry_free(ae);
++
++	/* Attempt to hardlink to the target directory via the symlink. */
++	assert((ae = archive_entry_new()) != NULL);
++	archive_entry_copy_pathname(ae, "bar");
++	archive_entry_set_mode(ae, AE_IFREG | 0777);
++	archive_entry_set_size(ae, 8);
++	archive_entry_copy_hardlink(ae, "symlink/foo");
++	assertEqualIntA(a, ARCHIVE_FAILED, archive_write_header(a, ae));
++	assertEqualIntA(a, ARCHIVE_FATAL, archive_write_data(a, "modified", 8));
++	archive_entry_free(ae);
++
++	/* Verify that target file contents are unchanged. */
++	assertTextFileContents("unmodified", "../target/foo");
++
++	assertEqualIntA(a, ARCHIVE_FATAL, archive_write_close(a));
++	archive_write_free(a);
++#endif
++}
+--- lib/libarchive/test/Makefile.orig
++++ lib/libarchive/test/Makefile
+@@ -175,6 +175,9 @@
+ 	test_write_disk_no_hfs_compression.c	\
+ 	test_write_disk_perms.c			\
+ 	test_write_disk_secure.c		\
++	test_write_disk_secure744.c		\
++	test_write_disk_secure745.c		\
++	test_write_disk_secure746.c		\
+ 	test_write_disk_sparse.c		\
+ 	test_write_disk_symlink.c		\
+ 	test_write_disk_times.c			\

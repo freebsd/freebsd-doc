@@ -1,0 +1,692 @@
+Index: crypto/openssl/crypto/bn/bn_print.c
+===================================================================
+--- crypto/openssl/crypto/bn/bn_print.c	(revision 284286)
++++ crypto/openssl/crypto/bn/bn_print.c	(working copy)
+@@ -71,6 +71,12 @@ char *BN_bn2hex(const BIGNUM *a)
+ 	char *buf;
+ 	char *p;
+ 
++	if (a->neg && BN_is_zero(a)) {
++	    /* "-0" == 3 bytes including NULL terminator */
++	    buf = OPENSSL_malloc(3);
++	} else {
++	    buf = OPENSSL_malloc(a->top * BN_BYTES * 2 + 2);
++	}
+ 	buf=(char *)OPENSSL_malloc(a->top*BN_BYTES*2+2);
+ 	if (buf == NULL)
+ 		{
+Index: crypto/openssl/crypto/cms/cms_smime.c
+===================================================================
+--- crypto/openssl/crypto/cms/cms_smime.c	(revision 284286)
++++ crypto/openssl/crypto/cms/cms_smime.c	(working copy)
+@@ -141,7 +141,7 @@ static void do_free_upto(BIO *f, BIO *upto)
+ 			BIO_free(f);
+ 			f = tbio;
+ 			}
+-		while (f != upto);
++		while (f && f != upto);
+ 		}
+ 	else
+ 		BIO_free_all(f);
+Index: crypto/openssl/crypto/ec/ec2_smpl.c
+===================================================================
+--- crypto/openssl/crypto/ec/ec2_smpl.c	(revision 284286)
++++ crypto/openssl/crypto/ec/ec2_smpl.c	(working copy)
+@@ -657,7 +657,8 @@ int ec_GF2m_simple_oct2point(const EC_GROUP *group
+ 		if (!EC_POINT_set_affine_coordinates_GF2m(group, point, x, y, ctx)) goto err;
+ 		}
+ 	
+-	if (!EC_POINT_is_on_curve(group, point, ctx)) /* test required by X9.62 */
++	/* test required by X9.62 */
++	if (EC_POINT_is_on_curve(group, point, ctx) <= 0)
+ 		{
+ 		ECerr(EC_F_EC_GF2M_SIMPLE_OCT2POINT, EC_R_POINT_IS_NOT_ON_CURVE);
+ 		goto err;
+Index: crypto/openssl/crypto/ec/ec_check.c
+===================================================================
+--- crypto/openssl/crypto/ec/ec_check.c	(revision 284286)
++++ crypto/openssl/crypto/ec/ec_check.c	(working copy)
+@@ -88,7 +88,7 @@ int EC_GROUP_check(const EC_GROUP *group, BN_CTX *
+ 		ECerr(EC_F_EC_GROUP_CHECK, EC_R_UNDEFINED_GENERATOR);
+ 		goto err;
+ 		}
+-	if (!EC_POINT_is_on_curve(group, group->generator, ctx))
++	if (EC_POINT_is_on_curve(group, group->generator, ctx) <= 0)
+ 		{
+ 		ECerr(EC_F_EC_GROUP_CHECK, EC_R_POINT_IS_NOT_ON_CURVE);
+ 		goto err;
+Index: crypto/openssl/crypto/ec/ec_key.c
+===================================================================
+--- crypto/openssl/crypto/ec/ec_key.c	(revision 284286)
++++ crypto/openssl/crypto/ec/ec_key.c	(working copy)
+@@ -316,7 +316,7 @@ int EC_KEY_check_key(const EC_KEY *eckey)
+ 		goto err;
+ 
+ 	/* testing whether the pub_key is on the elliptic curve */
+-	if (!EC_POINT_is_on_curve(eckey->group, eckey->pub_key, ctx))
++	if (EC_POINT_is_on_curve(eckey->group, eckey->pub_key, ctx) <= 0)
+ 		{
+ 		ECerr(EC_F_EC_KEY_CHECK_KEY, EC_R_POINT_IS_NOT_ON_CURVE);
+ 		goto err;
+Index: crypto/openssl/crypto/ec/ec_lib.c
+===================================================================
+--- crypto/openssl/crypto/ec/ec_lib.c	(revision 284286)
++++ crypto/openssl/crypto/ec/ec_lib.c	(working copy)
+@@ -1040,7 +1040,15 @@ int EC_POINT_is_at_infinity(const EC_GROUP *group,
+ 	}
+ 
+ 
+-int EC_POINT_is_on_curve(const EC_GROUP *group, const EC_POINT *point, BN_CTX *ctx)
++/*
++ * Check whether an EC_POINT is on the curve or not. Note that the return
++ * value for this function should NOT be treated as a boolean. Return values:
++ *  1: The point is on the curve
++ *  0: The point is not on the curve
++ * -1: An error occurred
++ */
++int EC_POINT_is_on_curve(const EC_GROUP *group, const EC_POINT *point,
++                         BN_CTX *ctx)
+ 	{
+ 	if (group->meth->is_on_curve == 0)
+ 		{
+Index: crypto/openssl/crypto/ec/ecp_smpl.c
+===================================================================
+--- crypto/openssl/crypto/ec/ecp_smpl.c	(revision 284286)
++++ crypto/openssl/crypto/ec/ecp_smpl.c	(working copy)
+@@ -983,7 +983,8 @@ int ec_GFp_simple_oct2point(const EC_GROUP *group,
+ 		if (!EC_POINT_set_affine_coordinates_GFp(group, point, x, y, ctx)) goto err;
+ 		}
+ 	
+-	if (!EC_POINT_is_on_curve(group, point, ctx)) /* test required by X9.62 */
++	/* test required by X9.62 */
++	if (EC_POINT_is_on_curve(group, point, ctx) <= 0)
+ 		{
+ 		ECerr(EC_F_EC_GFP_SIMPLE_OCT2POINT, EC_R_POINT_IS_NOT_ON_CURVE);
+ 		goto err;
+Index: crypto/openssl/crypto/ec/ectest.c
+===================================================================
+--- crypto/openssl/crypto/ec/ectest.c	(revision 284286)
++++ crypto/openssl/crypto/ec/ectest.c	(working copy)
+@@ -267,7 +267,7 @@ void prime_field_tests()
+ 
+ 	if (!BN_hex2bn(&x, "D")) ABORT;
+ 	if (!EC_POINT_set_compressed_coordinates_GFp(group, Q, x, 1, ctx)) ABORT;
+-	if (!EC_POINT_is_on_curve(group, Q, ctx))
++	if (EC_POINT_is_on_curve(group, Q, ctx) <= 0)
+ 		{
+ 		if (!EC_POINT_get_affine_coordinates_GFp(group, Q, x, y, ctx)) ABORT;
+ 		fprintf(stderr, "Point is not on curve: x = 0x");
+@@ -363,7 +363,7 @@ void prime_field_tests()
+ 	if (!BN_hex2bn(&x, "4A96B5688EF573284664698968C38BB913CBFC82")) ABORT;
+ 	if (!BN_hex2bn(&y, "23a628553168947d59dcc912042351377ac5fb32")) ABORT;
+ 	if (!EC_POINT_set_affine_coordinates_GFp(group, P, x, y, ctx)) ABORT;
+-	if (!EC_POINT_is_on_curve(group, P, ctx)) ABORT;
++	if (EC_POINT_is_on_curve(group, P, ctx) <= 0) ABORT;
+ 	if (!BN_hex2bn(&z, "0100000000000000000001F4C8F927AED3CA752257")) ABORT;
+ 	if (!EC_GROUP_set_generator(group, P, z, BN_value_one())) ABORT;
+ 
+@@ -407,7 +407,7 @@ void prime_field_tests()
+ 
+ 	if (!BN_hex2bn(&x, "188DA80EB03090F67CBF20EB43A18800F4FF0AFD82FF1012")) ABORT;
+ 	if (!EC_POINT_set_compressed_coordinates_GFp(group, P, x, 1, ctx)) ABORT;
+-	if (!EC_POINT_is_on_curve(group, P, ctx)) ABORT;
++	if (EC_POINT_is_on_curve(group, P, ctx) <= 0) ABORT;
+ 	if (!BN_hex2bn(&z, "FFFFFFFFFFFFFFFFFFFFFFFF99DEF836146BC9B1B4D22831")) ABORT;
+ 	if (!EC_GROUP_set_generator(group, P, z, BN_value_one())) ABORT;
+ 
+@@ -453,7 +453,7 @@ void prime_field_tests()
+ 
+ 	if (!BN_hex2bn(&x, "B70E0CBD6BB4BF7F321390B94A03C1D356C21122343280D6115C1D21")) ABORT;
+ 	if (!EC_POINT_set_compressed_coordinates_GFp(group, P, x, 0, ctx)) ABORT;
+-	if (!EC_POINT_is_on_curve(group, P, ctx)) ABORT;
++	if (EC_POINT_is_on_curve(group, P, ctx) <= 0) ABORT;
+ 	if (!BN_hex2bn(&z, "FFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D")) ABORT;
+ 	if (!EC_GROUP_set_generator(group, P, z, BN_value_one())) ABORT;
+ 
+@@ -499,7 +499,7 @@ void prime_field_tests()
+ 
+ 	if (!BN_hex2bn(&x, "6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296")) ABORT;
+ 	if (!EC_POINT_set_compressed_coordinates_GFp(group, P, x, 1, ctx)) ABORT;
+-	if (!EC_POINT_is_on_curve(group, P, ctx)) ABORT;
++	if (EC_POINT_is_on_curve(group, P, ctx) <= 0) ABORT;
+ 	if (!BN_hex2bn(&z, "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E"
+ 		"84F3B9CAC2FC632551")) ABORT;
+ 	if (!EC_GROUP_set_generator(group, P, z, BN_value_one())) ABORT;
+@@ -550,7 +550,7 @@ void prime_field_tests()
+ 	if (!BN_hex2bn(&x, "AA87CA22BE8B05378EB1C71EF320AD746E1D3B628BA79B"
+ 		"9859F741E082542A385502F25DBF55296C3A545E3872760AB7")) ABORT;
+ 	if (!EC_POINT_set_compressed_coordinates_GFp(group, P, x, 1, ctx)) ABORT;
+-	if (!EC_POINT_is_on_curve(group, P, ctx)) ABORT;
++	if (EC_POINT_is_on_curve(group, P, ctx) <= 0) ABORT;
+ 	if (!BN_hex2bn(&z, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+ 		"FFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973")) ABORT;
+ 	if (!EC_GROUP_set_generator(group, P, z, BN_value_one())) ABORT;
+@@ -606,7 +606,7 @@ void prime_field_tests()
+ 		"B521F828AF606B4D3DBAA14B5E77EFE75928FE1DC127A2FFA8DE3348B"
+ 		"3C1856A429BF97E7E31C2E5BD66")) ABORT;
+ 	if (!EC_POINT_set_compressed_coordinates_GFp(group, P, x, 0, ctx)) ABORT;
+-	if (!EC_POINT_is_on_curve(group, P, ctx)) ABORT;
++	if (EC_POINT_is_on_curve(group, P, ctx) <= 0) ABORT;
+ 	if (!BN_hex2bn(&z, "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+ 		"FFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5"
+ 		"C9B8899C47AEBB6FB71E91386409")) ABORT;
+@@ -651,7 +651,7 @@ void prime_field_tests()
+ 	if (!EC_POINT_copy(Q, P)) ABORT;
+ 	if (EC_POINT_is_at_infinity(group, Q)) ABORT;
+ 	if (!EC_POINT_dbl(group, P, P, ctx)) ABORT;
+-	if (!EC_POINT_is_on_curve(group, P, ctx)) ABORT;
++	if (EC_POINT_is_on_curve(group, P, ctx) <= 0) ABORT;
+ 	if (!EC_POINT_invert(group, Q, ctx)) ABORT; /* P = -2Q */
+ 
+ 	if (!EC_POINT_add(group, R, P, Q, ctx)) ABORT;
+@@ -764,7 +764,7 @@ void prime_field_tests()
+ #define CHAR2_CURVE_TEST_INTERNAL(_name, _p, _a, _b, _x, _y, _y_bit, _order, _cof, _degree, _variable) \
+ 	if (!BN_hex2bn(&x, _x)) ABORT; \
+ 	if (!EC_POINT_set_compressed_coordinates_GF2m(group, P, x, _y_bit, ctx)) ABORT; \
+-	if (!EC_POINT_is_on_curve(group, P, ctx)) ABORT; \
++        if (EC_POINT_is_on_curve(group, P, ctx) <= 0) ABORT; \
+ 	if (!BN_hex2bn(&z, _order)) ABORT; \
+ 	if (!BN_hex2bn(&cof, _cof)) ABORT; \
+ 	if (!EC_GROUP_set_generator(group, P, z, cof)) ABORT; \
+@@ -782,7 +782,7 @@ void prime_field_tests()
+ 	if (!BN_hex2bn(&x, _x)) ABORT; \
+ 	if (!BN_hex2bn(&y, _y)) ABORT; \
+ 	if (!EC_POINT_set_affine_coordinates_GF2m(group, P, x, y, ctx)) ABORT; \
+-	if (!EC_POINT_is_on_curve(group, P, ctx)) ABORT; \
++        if (EC_POINT_is_on_curve(group, P, ctx) <= 0) ABORT; \
+ 	if (!BN_hex2bn(&z, _order)) ABORT; \
+ 	if (!BN_hex2bn(&cof, _cof)) ABORT; \
+ 	if (!EC_GROUP_set_generator(group, P, z, cof)) ABORT; \
+@@ -895,7 +895,7 @@ void char2_field_tests()
+ 	if (!BN_hex2bn(&y, "8")) ABORT;
+ 	if (!EC_POINT_set_affine_coordinates_GF2m(group, Q, x, y, ctx)) ABORT;
+ #endif
+-	if (!EC_POINT_is_on_curve(group, Q, ctx))
++	if (EC_POINT_is_on_curve(group, Q, ctx) <= 0)
+ 		{
+ /* Change test based on whether binary point compression is enabled or not. */
+ #ifdef OPENSSL_EC_BIN_PT_COMP
+@@ -1134,7 +1134,7 @@ void char2_field_tests()
+ 	if (!EC_POINT_copy(Q, P)) ABORT;
+ 	if (EC_POINT_is_at_infinity(group, Q)) ABORT;
+ 	if (!EC_POINT_dbl(group, P, P, ctx)) ABORT;
+-	if (!EC_POINT_is_on_curve(group, P, ctx)) ABORT;
++	if (EC_POINT_is_on_curve(group, P, ctx) <= 0) ABORT;
+ 	if (!EC_POINT_invert(group, Q, ctx)) ABORT; /* P = -2Q */
+ 
+ 	if (!EC_POINT_add(group, R, P, Q, ctx)) ABORT;
+Index: crypto/openssl/crypto/objects/obj_dat.c
+===================================================================
+--- crypto/openssl/crypto/objects/obj_dat.c	(revision 284286)
++++ crypto/openssl/crypto/objects/obj_dat.c	(working copy)
+@@ -377,6 +377,9 @@ int OBJ_obj2nid(const ASN1_OBJECT *a)
+ 	if (a->nid != 0)
+ 		return(a->nid);
+ 
++	if (a->length == 0)
++	    return NID_undef;
++
+ 	if (added != NULL)
+ 		{
+ 		ad.type=ADDED_DATA;
+Index: crypto/openssl/crypto/pkcs7/pk7_doit.c
+===================================================================
+--- crypto/openssl/crypto/pkcs7/pk7_doit.c	(revision 284286)
++++ crypto/openssl/crypto/pkcs7/pk7_doit.c	(working copy)
+@@ -410,6 +410,12 @@ BIO *PKCS7_dataDecode(PKCS7 *p7, EVP_PKEY *pkey, B
+ 	        goto err;
+ 		}
+ 
++    /* Detached content must be supplied via in_bio instead. */
++    if (data_body == NULL && in_bio == NULL) {
++        PKCS7err(PKCS7_F_PKCS7_DATADECODE, PKCS7_R_NO_CONTENT);
++        goto err;
++    }
++
+ 	/* We will be checking the signature */
+ 	if (md_sk != NULL)
+ 		{
+@@ -587,12 +593,9 @@ BIO *PKCS7_dataDecode(PKCS7 *p7, EVP_PKEY *pkey, B
+ 		}
+ 
+ #if 1
+-	if (PKCS7_is_detached(p7) || (in_bio != NULL))
+-		{
+-		bio=in_bio;
+-		}
+-	else 
+-		{
++	if (in_bio != NULL) {
++		bio = in_bio;
++	} else {
+ #if 0
+ 		bio=BIO_new(BIO_s_mem());
+ 		/* We need to set this so that when we have read all
+Index: crypto/openssl/crypto/x509/x509_vfy.c
+===================================================================
+--- crypto/openssl/crypto/x509/x509_vfy.c	(revision 284286)
++++ crypto/openssl/crypto/x509/x509_vfy.c	(working copy)
+@@ -1040,82 +1040,120 @@ int X509_cmp_current_time(ASN1_TIME *ctm)
+ }
+ 
+ int X509_cmp_time(ASN1_TIME *ctm, time_t *cmp_time)
+-	{
++{
+ 	char *str;
+ 	ASN1_TIME atm;
+ 	long offset;
+-	char buff1[24],buff2[24],*p;
+-	int i,j;
++    char buff1[24], buff2[24], *p;
++    int i, j, remaining;
+ 
+-	p=buff1;
+-	i=ctm->length;
+-	str=(char *)ctm->data;
+-	if (ctm->type == V_ASN1_UTCTIME)
+-		{
+-		if ((i < 11) || (i > 17)) return 0;
+-		memcpy(p,str,10);
+-		p+=10;
+-		str+=10;
++    p = buff1;
++    remaining = ctm->length;
++    str = (char *)ctm->data;
++    /*
++     * Note that the following (historical) code allows much more slack in the
++     * time format than RFC5280. In RFC5280, the representation is fixed:
++     * UTCTime: YYMMDDHHMMSSZ
++     * GeneralizedTime: YYYYMMDDHHMMSSZ
++     */
++    if (ctm->type == V_ASN1_UTCTIME) {
++        /* YYMMDDHHMM[SS]Z or YYMMDDHHMM[SS](+-)hhmm */
++        int min_length = sizeof("YYMMDDHHMMZ") - 1;
++        int max_length = sizeof("YYMMDDHHMMSS+hhmm") - 1;
++        if (remaining < min_length || remaining > max_length)
++            return 0;
++        memcpy(p, str, 10);
++        p += 10;
++        str += 10;
++        remaining -= 10;
++    } else {
++        /* YYYYMMDDHHMM[SS[.fff]]Z or YYYYMMDDHHMM[SS[.f[f[f]]]](+-)hhmm */
++        int min_length = sizeof("YYYYMMDDHHMMZ") - 1;
++        int max_length = sizeof("YYYYMMDDHHMMSS.fff+hhmm") - 1;
++        if (remaining < min_length || remaining > max_length)
++            return 0;
++        memcpy(p, str, 12);
++        p += 12;
++        str += 12;
++        remaining -= 12;
+ 		}
+-	else
+-		{
+-		if (i < 13) return 0;
+-		memcpy(p,str,12);
+-		p+=12;
+-		str+=12;
+-		}
+ 
+-	if ((*str == 'Z') || (*str == '-') || (*str == '+'))
+-		{ *(p++)='0'; *(p++)='0'; }
+-	else
+-		{ 
+-		*(p++)= *(str++);
+-		*(p++)= *(str++);
+-		/* Skip any fractional seconds... */
+-		if (*str == '.')
+-			{
++    if ((*str == 'Z') || (*str == '-') || (*str == '+')) {
++        *(p++) = '0';
++        *(p++) = '0';
++    } else {
++        /* SS (seconds) */
++        if (remaining < 2)
++            return 0;
++        *(p++) = *(str++);
++        *(p++) = *(str++);
++        remaining -= 2;
++        /*
++         * Skip any (up to three) fractional seconds...
++         * TODO(emilia): in RFC5280, fractional seconds are forbidden.
++         * Can we just kill them altogether?
++         */
++        if (remaining && *str == '.') {
+ 			str++;
+-			while ((*str >= '0') && (*str <= '9')) str++;
++            remaining--;
++            for (i = 0; i < 3 && remaining; i++, str++, remaining--) {
++                if (*str < '0' || *str > '9')
++                    break;
+ 			}
+-		
+ 		}
+-	*(p++)='Z';
+-	*(p++)='\0';
+ 
+-	if (*str == 'Z')
+-		offset=0;
+-	else
+-		{
++    }
++    *(p++) = 'Z';
++    *(p++) = '\0';
++
++    /* We now need either a terminating 'Z' or an offset. */
++    if (!remaining)
++        return 0;
++    if (*str == 'Z') {
++        if (remaining != 1)
++            return 0;
++        offset = 0;
++    } else {
++        /* (+-)HHMM */
+ 		if ((*str != '+') && (*str != '-'))
+ 			return 0;
+-		offset=((str[1]-'0')*10+(str[2]-'0'))*60;
+-		offset+=(str[3]-'0')*10+(str[4]-'0');
++        /* Historical behaviour: the (+-)hhmm offset is forbidden in RFC5280. */
++        if (remaining != 5)
++            return 0;
++        if (str[1] < '0' || str[1] > '9' || str[2] < '0' || str[2] > '9' ||
++            str[3] < '0' || str[3] > '9' || str[4] < '0' || str[4] > '9')
++            return 0;
++        offset = ((str[1] - '0') * 10 + (str[2] - '0')) * 60;
++        offset += (str[3] - '0') * 10 + (str[4] - '0');
+ 		if (*str == '-')
+-			offset= -offset;
++            offset = -offset;
+ 		}
+-	atm.type=ctm->type;
+-	atm.length=sizeof(buff2);
+-	atm.data=(unsigned char *)buff2;
++    atm.type = ctm->type;
++    atm.length = sizeof(buff2);
++    atm.data = (unsigned char *)buff2;
+ 
+-	if (X509_time_adj(&atm, offset*60, cmp_time) == NULL)
++    if (X509_time_adj(&atm, offset * 60, cmp_time) == NULL)
+ 		return 0;
+ 
+-	if (ctm->type == V_ASN1_UTCTIME)
+-		{
+-		i=(buff1[0]-'0')*10+(buff1[1]-'0');
+-		if (i < 50) i+=100; /* cf. RFC 2459 */
+-		j=(buff2[0]-'0')*10+(buff2[1]-'0');
+-		if (j < 50) j+=100;
++    if (ctm->type == V_ASN1_UTCTIME) {
++        i = (buff1[0] - '0') * 10 + (buff1[1] - '0');
++        if (i < 50)
++            i += 100;           /* cf. RFC 2459 */
++        j = (buff2[0] - '0') * 10 + (buff2[1] - '0');
++        if (j < 50)
++            j += 100;
+ 
+-		if (i < j) return -1;
+-		if (i > j) return 1;
++        if (i < j)
++            return -1;
++        if (i > j)
++            return 1;
+ 		}
+-	i=strcmp(buff1,buff2);
++    i = strcmp(buff1, buff2);
+ 	if (i == 0) /* wait a second then return younger :-) */
+ 		return -1;
+ 	else
+ 		return i;
+-	}
++}
+ 
+ ASN1_TIME *X509_gmtime_adj(ASN1_TIME *s, long adj)
+ {
+Index: crypto/openssl/ssl/d1_lib.c
+===================================================================
+--- crypto/openssl/ssl/d1_lib.c	(revision 284286)
++++ crypto/openssl/ssl/d1_lib.c	(working copy)
+@@ -507,6 +507,9 @@ int dtls1_listen(SSL *s, struct sockaddr *client)
+ 	{
+ 	int ret;
+ 
++	/* Ensure there is no state left over from a previous invocation */
++	SSL_clear(s);
++
+ 	SSL_set_options(s, SSL_OP_COOKIE_EXCHANGE);
+ 	s->d1->listen = 1;
+ 
+Index: crypto/openssl/ssl/s3_clnt.c
+===================================================================
+--- crypto/openssl/ssl/s3_clnt.c	(revision 284286)
++++ crypto/openssl/ssl/s3_clnt.c	(working copy)
+@@ -1805,6 +1805,38 @@ int ssl3_get_new_session_ticket(SSL *s)
+ 		}
+ 
+ 	p=d=(unsigned char *)s->init_msg;
++
++    if (s->session->session_id_length > 0) {
++        int i = s->session_ctx->session_cache_mode;
++        SSL_SESSION *new_sess;
++        /*
++         * We reused an existing session, so we need to replace it with a new
++         * one
++         */
++        if (i & SSL_SESS_CACHE_CLIENT) {
++            /*
++             * Remove the old session from the cache
++             */
++            if (i & SSL_SESS_CACHE_NO_INTERNAL_STORE) {
++                if (s->session_ctx->remove_session_cb != NULL)
++                    s->session_ctx->remove_session_cb(s->session_ctx,
++                                                      s->session);
++            } else {
++                /* We carry on if this fails */
++                SSL_CTX_remove_session(s->session_ctx, s->session);
++            }
++        }
++
++        if ((new_sess = ssl_session_dup(s->session, 0)) == 0) {
++            al = SSL_AD_INTERNAL_ERROR;
++            SSLerr(SSL_F_SSL3_GET_NEW_SESSION_TICKET, ERR_R_MALLOC_FAILURE);
++            goto f_err;
++        }
++
++        SSL_SESSION_free(s->session);
++        s->session = new_sess;
++    }
++
+ 	n2l(p, s->session->tlsext_tick_lifetime_hint);
+ 	n2s(p, ticklen);
+ 	/* ticket_lifetime_hint + ticket_length + ticket */
+Index: crypto/openssl/ssl/s3_srvr.c
+===================================================================
+--- crypto/openssl/ssl/s3_srvr.c	(revision 284286)
++++ crypto/openssl/ssl/s3_srvr.c	(working copy)
+@@ -2012,6 +2012,7 @@ int ssl3_get_client_key_exchange(SSL *s)
+ 		int                     padl, outl;
+ 		krb5_timestamp		authtime = 0;
+ 		krb5_ticket_times	ttimes;
++        int kerr = 0;
+ 
+ 		EVP_CIPHER_CTX_init(&ciph_ctx);
+ 
+@@ -2124,19 +2125,22 @@ int ssl3_get_client_key_exchange(SSL *s)
+ 			{
+ 			SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,
+ 				SSL_R_DECRYPTION_FAILED);
+-			goto err;
++            kerr = 1;
++            goto kclean;
+ 			}
+ 		if (outl > SSL_MAX_MASTER_KEY_LENGTH)
+ 			{
+ 			SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,
+ 				SSL_R_DATA_LENGTH_TOO_LONG);
+-			goto err;
++            kerr = 1;
++            goto kclean;
+ 			}
+ 		if (!EVP_DecryptFinal_ex(&ciph_ctx,&(pms[outl]),&padl))
+ 			{
+ 			SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,
+ 				SSL_R_DECRYPTION_FAILED);
+-			goto err;
++            kerr = 1;
++            goto kclean;
+ 			}
+ 		outl += padl;
+ 		if (outl > SSL_MAX_MASTER_KEY_LENGTH)
+@@ -2143,7 +2147,8 @@ int ssl3_get_client_key_exchange(SSL *s)
+ 			{
+ 			SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,
+ 				SSL_R_DATA_LENGTH_TOO_LONG);
+-			goto err;
++            kerr = 1;
++            goto kclean;
+ 			}
+ 		if (!((pms[0] == (s->client_version>>8)) && (pms[1] == (s->client_version & 0xff))))
+ 		    {
+@@ -2159,7 +2164,8 @@ int ssl3_get_client_key_exchange(SSL *s)
+ 		        {
+ 			SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,
+ 			       SSL_AD_DECODE_ERROR);
+-			goto err;
++                kerr = 1;
++                goto kclean;
+ 			}
+ 		    }
+ 
+@@ -2185,8 +2191,12 @@ int ssl3_get_client_key_exchange(SSL *s)
+                 **  kssl_ctx = kssl_ctx_free(kssl_ctx);
+                 **  if (s->kssl_ctx)  s->kssl_ctx = NULL;
+                 */
+-                }
+-	else
++
++ kclean:
++        OPENSSL_cleanse(pms, sizeof(pms));
++        if (kerr)
++            goto err;
++    } else
+ #endif	/* OPENSSL_NO_KRB5 */
+ 
+ #ifndef OPENSSL_NO_ECDH
+Index: crypto/openssl/ssl/ssl.h
+===================================================================
+--- crypto/openssl/ssl/ssl.h	(revision 284286)
++++ crypto/openssl/ssl/ssl.h	(working copy)
+@@ -1851,6 +1851,7 @@ void ERR_load_SSL_strings(void);
+ #define SSL_F_SSL_READ					 223
+ #define SSL_F_SSL_RSA_PRIVATE_DECRYPT			 187
+ #define SSL_F_SSL_RSA_PUBLIC_ENCRYPT			 188
++#define SSL_F_SSL_SESSION_DUP				 348
+ #define SSL_F_SSL_SESSION_NEW				 189
+ #define SSL_F_SSL_SESSION_PRINT_FP			 190
+ #define SSL_F_SSL_SESS_CERT_NEW				 225
+Index: crypto/openssl/ssl/ssl_err.c
+===================================================================
+--- crypto/openssl/ssl/ssl_err.c	(revision 284286)
++++ crypto/openssl/ssl/ssl_err.c	(working copy)
+@@ -233,6 +233,7 @@ static ERR_STRING_DATA SSL_str_functs[]=
+ {ERR_FUNC(SSL_F_SSL_READ),	"SSL_read"},
+ {ERR_FUNC(SSL_F_SSL_RSA_PRIVATE_DECRYPT),	"SSL_RSA_PRIVATE_DECRYPT"},
+ {ERR_FUNC(SSL_F_SSL_RSA_PUBLIC_ENCRYPT),	"SSL_RSA_PUBLIC_ENCRYPT"},
++{ERR_FUNC(SSL_F_SSL_SESSION_DUP),		"ssl_session_dup"},
+ {ERR_FUNC(SSL_F_SSL_SESSION_NEW),	"SSL_SESSION_new"},
+ {ERR_FUNC(SSL_F_SSL_SESSION_PRINT_FP),	"SSL_SESSION_print_fp"},
+ {ERR_FUNC(SSL_F_SSL_SESS_CERT_NEW),	"SSL_SESS_CERT_NEW"},
+Index: crypto/openssl/ssl/ssl_locl.h
+===================================================================
+--- crypto/openssl/ssl/ssl_locl.h	(revision 284286)
++++ crypto/openssl/ssl/ssl_locl.h	(working copy)
+@@ -731,6 +731,7 @@ void ssl_sess_cert_free(SESS_CERT *sc);
+ int ssl_set_peer_cert_type(SESS_CERT *c, int type);
+ int ssl_get_new_session(SSL *s, int session);
+ int ssl_get_prev_session(SSL *s, unsigned char *session,int len, const unsigned char *limit);
++SSL_SESSION *ssl_session_dup(SSL_SESSION *src, int ticket);
+ int ssl_cipher_id_cmp(const SSL_CIPHER *a,const SSL_CIPHER *b);
+ int ssl_cipher_ptr_id_cmp(const SSL_CIPHER * const *ap,
+ 			const SSL_CIPHER * const *bp);
+Index: crypto/openssl/ssl/ssl_sess.c
+===================================================================
+--- crypto/openssl/ssl/ssl_sess.c	(revision 284286)
++++ crypto/openssl/ssl/ssl_sess.c	(working copy)
+@@ -132,6 +132,79 @@ SSL_SESSION *SSL_SESSION_new(void)
+ 	return(ss);
+ 	}
+ 
++/*
++ * Create a new SSL_SESSION and duplicate the contents of |src| into it. If
++ * ticket == 0 then no ticket information is duplicated, otherwise it is.
++ */
++SSL_SESSION *ssl_session_dup(SSL_SESSION *src, int ticket)
++{
++    SSL_SESSION *dest;
++
++    dest = OPENSSL_malloc(sizeof(*src));
++    if (dest == NULL) {
++        goto err;
++    }
++    memcpy(dest, src, sizeof(*dest));
++
++    /*
++     * Set the various pointers to NULL so that we can call SSL_SESSION_free in
++     * the case of an error whilst halfway through constructing dest
++     */
++    dest->ciphers = NULL;
++#ifndef OPENSSL_NO_TLSEXT
++    dest->tlsext_hostname = NULL;
++#endif
++    dest->tlsext_tick = NULL;
++    memset(&dest->ex_data, 0, sizeof(dest->ex_data));
++
++    /* We deliberately don't copy the prev and next pointers */
++    dest->prev = NULL;
++    dest->next = NULL;
++
++    dest->references = 1;
++
++    if (src->sess_cert != NULL)
++        CRYPTO_add(&src->sess_cert->references, 1, CRYPTO_LOCK_SSL_SESS_CERT);
++
++    if (src->peer != NULL)
++        CRYPTO_add(&src->peer->references, 1, CRYPTO_LOCK_X509);
++
++    if(src->ciphers != NULL) {
++        dest->ciphers = sk_SSL_CIPHER_dup(src->ciphers);
++        if (dest->ciphers == NULL)
++            goto err;
++    }
++
++    if (!CRYPTO_dup_ex_data(CRYPTO_EX_INDEX_SSL_SESSION,
++                                            &dest->ex_data, &src->ex_data)) {
++        goto err;
++    }
++
++#ifndef OPENSSL_NO_TLSEXT
++    if (src->tlsext_hostname) {
++        dest->tlsext_hostname = BUF_strdup(src->tlsext_hostname);
++        if (dest->tlsext_hostname == NULL) {
++            goto err;
++        }
++    }
++#endif
++
++    if (ticket != 0) {
++        dest->tlsext_tick = BUF_memdup(src->tlsext_tick, src->tlsext_ticklen);
++        if(dest->tlsext_tick == NULL)
++            goto err;
++    } else {
++        dest->tlsext_tick_lifetime_hint = 0;
++        dest->tlsext_ticklen = 0;
++    }
++
++    return dest;
++err:
++    SSLerr(SSL_F_SSL_SESSION_DUP, ERR_R_MALLOC_FAILURE);
++    SSL_SESSION_free(dest);
++    return NULL;
++}
++
+ const unsigned char *SSL_SESSION_get_id(const SSL_SESSION *s, unsigned int *len)
+ 	{
+ 	if(len)

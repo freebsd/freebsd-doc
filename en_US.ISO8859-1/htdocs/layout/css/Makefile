@@ -7,14 +7,13 @@
 .include "../Makefile.inc"
 .endif
 
-DATA=	cvsweb.css
+DATA=
 DATA+=	fixed.css
 DATA+=	fixed_large.css
 DATA+=	global.css
 DATA+=	iefixes.css
 DATA+=	layout.css
 DATA+=	navigation.css
-DATA+=	query-pr.css
 DATA+=	table.css
 DATA+=	text.css
 

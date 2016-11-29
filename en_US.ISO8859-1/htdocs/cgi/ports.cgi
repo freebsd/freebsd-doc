@@ -61,10 +61,6 @@ sub init_variables {
 
     # 'ftp://ftp.FreeBSD.org/pub/FreeBSD/branches/-current/ports';
 
-    # URL of ports tree for download
-    $remotePrefixFtpDownload = 'http://cvsweb.FreeBSD.org/ports';
-    $remoteSuffixFtpDownload = '%s.tar.gz?tarball=1';
-
     # where to get -current packages
     local ($p)        = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/i386';
     local ($palpha)   = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/alpha';
@@ -137,12 +133,6 @@ sub init_variables {
 
     # security
     $ENV{'PATH'} = '/bin:/usr/bin';
-
-    # ports download sources script
-    $pds = 'pds.cgi';
-
-    # make plain text URLs clickable cgi script
-    $url = 'url.cgi';
 
     # extension type for packages
     $packageExt = 'tbz';
@@ -254,10 +244,10 @@ sub readindex {
         chop;
 
         @tmp            = split(/\|/);
-        $var{"$tmp[4]"} = $_;
+        $var{"$tmp[1]"} = $_;
         @s              = split( /\s+/, $tmp[6] );
         foreach (@s) {
-            $msec{"$tmp[4],$_"} = 1;
+            $msec{"$tmp[1],$_"} = 1;
         }
     }
     close C;
@@ -339,16 +329,6 @@ sub out {
     $pathB =~ s/^$localPrefix/ports/o;
 
     $path         =~ s/^$localPrefix/$remotePrefixFtp/o;
-    $pathDownload =~ s/^$localPrefix/$remotePrefixFtpDownload/o;
-    if ($remoteSuffixFtpDownload) {
-        if ( substr( $remoteSuffixFtpDownload, 0, 2 ) eq '%s' ) {
-            $pathDownload =~ m,([^/]+)$,;
-            $pathDownload .= "/$1" . substr( $remoteSuffixFtpDownload, 2 );
-        }
-        else {
-            $pathDownload .= $remoteSuffixFtpDownload;
-        }
-    }
     $descfile =~ s/^$localPrefix/$remotePrefixFtp/o;
     $version = &encode_url($version);
 
@@ -478,10 +458,10 @@ Search for:
     %d = (
         'name',       'Package Name',     'all',      'All',
         'maintainer', 'Maintainer',       'text',     'Description',
-        'pkgdescr',   'Long Description', 'requires', 'Requires',
+        'requires', 'Requires',
     );
 
-    foreach ( 'all', 'name', 'text', 'pkgdescr', 'maintainer', 'requires' ) {
+    foreach ( 'all', 'name', 'text', 'maintainer', 'requires' ) {
         print "<option"
           . ( ( $_ eq $stype ) ? ' selected="selected" ' : ' ' )
           . qq{value="$_">}
@@ -605,15 +585,6 @@ if ( $path_info eq "/source" ) {
     open( R, $0 ) || do { print "ick!\n"; &exit; };
     while (<R>) { print }
     close R;
-    &exit;
-}
-
-# Full text search in ports/<category>/port>/pkg-descr
-if ( $stype eq 'pkgdescr' ) {
-    local ($url) =
-      'http://www.FreeBSD.org/cgi/search.cgi?source=pkgdescr&max=25';
-    $query =~ s/\s+/+/g;
-    print "Location: $url&words=$query\n\n";
     &exit;
 }
 

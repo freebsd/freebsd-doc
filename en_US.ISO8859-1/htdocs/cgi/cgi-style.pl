@@ -14,15 +14,15 @@ if (!defined($hsty_base)) {
     # However, if we aren't running as a cgi, or if we're
     # running on cgi, hub, docs or people, use the absolute home path.
     if (!defined($ENV{'HTTP_HOST'}) ||
-	$ENV{'HTTP_HOST'} =~ /(cgi|hub|docs|people).freebsd.org/i) {
+	$ENV{'HTTP_HOST'} =~ /(cgi|hub|docs|people|mailarchive.ysv).freebsd.org/i) {
 
-	$hsty_base = 'http://www.FreeBSD.org'
+	$hsty_base = '//www.FreeBSD.org'
     } else {
 	$hsty_base = '..';
     }
 }
 if (!defined($hsty_email)) {
-    $hsty_email = 'www@FreeBSD.org';
+    $hsty_email = 'Contact';
 }
 if (!defined($hsty_author)) {
     $hsty_author = "<a href='$hsty_base/mailto.html'>$hsty_email</a>";
@@ -64,32 +64,37 @@ $i_topbar = qq`
             <div id="headerlogoright">
               <h2 class="blockhide">Peripheral Links</h2>
 
-              <div id="searchnav">
-                <ul id="searchnavlist">
-                  <li><a href="$hsty_base/donations/"
-                  title="Donate">Donate</a></li>
-
-                  <li class="last-child"><a href="$hsty_base/mailto.html"
-                  title="Contact">Contact</a></li>
-                </ul>
-              </div>
+	      <div class="frontdonateroundbox">
+		<div class="frontdonatetop">
+		  <div>
+		    <b style="display: none;">.</b>
+		  </div>
+		</div>
+		<div class="frontdonatecontent">
+		  <a href="https://www.FreeBSDFoundation.org/donate/">Donate to FreeBSD</a>
+		</div>
+		<div class="frontdonatebot">
+		  <div>
+		    <b style="display: none;">.</b>
+		  </div>
+		</div>
+	      </div>
 
               <div id="search">
-                <form
-                action="http://www.FreeBSD.org/cgi/search.cgi"
-                method="get">
-                  <div>
-                    <h2 class="blockhide"><label
-                    for="words">Search</label></h2>
-                    <input type="hidden" name="max"
-                    value="25" /><input type="hidden" name="source"
-                    value="www" /><input id="words" name="words"
-                    type="text" size="20" maxlength="255"
-                    onfocus="if( this.value==this.defaultValue ) this.value='';"
-                     value="Search" />&nbsp;<input id="submit"
-                    name="submit" type="submit" value="Search" />
-                  </div>
-                </form>
+		<form method="get" id="search" action="https://duckduckgo.com/">
+		  <h2 class="blockhide"><label for="words">Search</label></h2>
+		  <input type="hidden" name="sites" value="www.FreeBSD.org,docs.FreeBSD.org,lists.FreeBSD.org,wiki.FreeBSD.org,forums.FreeBSD.org" />
+		  <input type="hidden" name="ka" value="v" />
+		  <input type="hidden" name="kt" value="v" />
+		  <input type="hidden" name="kh" value="1" />
+		  <input type="hidden" name="kj" value="r2" />
+		  <input id="words" name="q" type="text" size="20"
+		    maxlength="255"
+		    onfocus="if( this.value==this.defaultValue ) this.value='';"
+		    value="Search" />
+		  <span>&nbsp;</span>
+		  <input id="submit" name="submit" type="submit" value="Search" />
+		</form>
               </div>
             </div>
           </div>
@@ -127,7 +132,7 @@ $i_topbar = qq`
 		  <li><a href="$hsty_base/doc/en_US.ISO8859-1/books/developers-handbook">Developer's Handbook</a></li>
 		  <li><a href="$hsty_base/cgi/man.cgi">Manual Pages</a></li>
 		  <li><a href="$hsty_base/doc/en_US.ISO8859-1/books/fdp-primer">Documentation Project Primer</a></li>
-		  <li><a href="$hsty_base/docs/books.html/">All Books and Articles</a></li>
+		  <li><a href="$hsty_base/docs/books.html">All Books and Articles</a></li>
 		</ul>
 	      </li>
 	    </ul>
@@ -135,7 +140,7 @@ $i_topbar = qq`
 	      <li><a href="$hsty_base/community.html">Community</a>
 		<ul>
 		  <li><a href="$hsty_base/community/mailinglists.html">Mailing Lists</a></li>
-		  <li><a href="http://forums.freebsd.org">Forums</a></li>
+		  <li><a href="https://forums.FreeBSD.org">Forums</a></li>
 		  <li><a href="$hsty_base/usergroups.html">User Groups</a></li>
 		  <li><a href="$hsty_base/events/events.html">Events</a></li>
 		</ul>
@@ -145,8 +150,8 @@ $i_topbar = qq`
 	      <li><a href="$hsty_base/projects/index.html">Developers</a>
 		<ul>
 		  <li><a href="$hsty_base/projects/ideas/ideas.html">Project Ideas</a></li>
-		  <li><a href="http://svnweb.FreeBSD.org">SVN Repository</a></li>
-		  <li><a href="http://p4web.FreeBSD.org">Perforce Repository</a></li>
+		  <li><a href="//svnweb.FreeBSD.org">SVN Repository</a></li>
+		  <li><a href="//p4web.FreeBSD.org">Perforce Repository</a></li>
 		</ul>
 	      </li>
 	    </ul>
@@ -154,16 +159,16 @@ $i_topbar = qq`
 	      <li><a href="$hsty_base/support.html">Support</a>
 		<ul>
 		  <li><a href="$hsty_base/commercial/commercial.html">Vendors</a></li>
-		  <li><a href="http://security.FreeBSD.org/">Security Information</a></li>
-		  <li><a href="$hsty_base/cgi/query-pr-summary.cgi">Bug Reports</a></li>
-		  <li><a href="$hsty_base/send-pr.html">Submit Bug-report</a></li>
+		  <li><a href="//security.FreeBSD.org/">Security Information</a></li>
+		  <li><a href="https://bugs.freebsd.org/search/">Bug Reports</a></li>
+		  <li><a href="$hsty_base/support.html">Submit Bug-report</a></li>
 		</ul>
 	      </li>
 	    </ul>
 	    <ul>
-	      <li><a href="http://www.freebsdfoundation.org/">Foundation</a>
+	      <li><a href="//www.freebsdfoundation.org/">Foundation</a>
 		<ul>
-		  <li><a href="http://www.freebsdfoundation.org/donate/">Donate</a></li>
+		  <li><a href="//www.freebsdfoundation.org/donate/">Donate</a></li>
 		</ul>
 	      </li>
 	    </ul>
@@ -233,7 +238,7 @@ sub html_footer {
     return qq`
 	</div>
         <div id="footer">
-          <a href="$hsty_base/copyright/">Legal Notices</a> | &copy; 1995-2013
+          <a href="$hsty_base/copyright/">Legal Notices</a> | &copy; 1995-2016
           The FreeBSD Project. All rights reserved.<br />
 	  <address>$hsty_author<br />$hsty_date</address>
         </div>

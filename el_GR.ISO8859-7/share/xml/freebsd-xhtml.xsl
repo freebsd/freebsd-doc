@@ -7,6 +7,14 @@
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
                 exclude-result-prefixes="#default">
 
+  <xsl:param name="local.l10n.xml" select="document('')"/>
+  <i18n xmlns="http://docbook.sourceforge.net/xmlns/l10n/1.0">
+    <l:l10n xmlns:l="http://docbook.sourceforge.net/xmlns/l10n/1.0" language="el">
+      <l:gentext key="Lastmodified" text="Τελευταία τροποποίηση"/>
+      <l:gentext key="on" text="στις"/>
+    </l:l10n>
+  </i18n>
+
   <xsl:template name="user.footer.navigation">
     <p align="center"><small>Αυτό το κείμενο, και άλλα κείμενα, μπορεί να βρεθεί στο
     <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/">ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/</a></small></p>

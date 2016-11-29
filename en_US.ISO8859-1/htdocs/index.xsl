@@ -39,7 +39,7 @@
 
 				<p>&os; is an advanced computer
 				  operating system used to power
-				  modern servers, desktops and
+				  modern servers, desktops, and
 				  embedded
 				  <a href="&base;/platforms/">platforms</a>.
 				  A large
@@ -47,7 +47,7 @@
 				  href="&base;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">community</a>
 				  has continually developed it for
 				  more than thirty years. Its advanced
-				  networking, security and storage
+				  networking, security, and storage
 				  features have made &os; the platform
 				  of choice for many of the
 				  <a href="&base;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#introduction-nutshell-users">busiest web sites</a>
@@ -60,6 +60,28 @@
 				  href="&base;/about.html"
 				  title="Learn More">Learn More</a>
 				  </div> <!-- TXTFRONTFEATURELINK -->
+
+				  <div id="txtfrontjournalblock">
+				    <br/>&#187;
+				    <span
+				     id="txtfrontjournallink">
+				      Get the <a
+				       href="http://www.freebsdjournal.com/"
+				       title="&os;&nbsp;Journal">&os;&nbsp;Journal</a>
+				    </span> <!-- TXTFRONTJOURNALLINK -->
+				  </div> <!-- TXTFRONTJOURNALBLOCK -->
+
+				  <!-- IMPORTANT NOTICES -->
+				  <!--
+				  <div
+				    style="width:640px; margin: 16px 16px 16px 32px; auto">
+
+				    <h2>ANNOUNCEMENT: [header]</h2>
+
+				    <p align="justify">[text]</p>
+				  </div>
+				  -->
+				  <!-- END IMPORTANT NOTICES -->
 
 			  </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
@@ -78,17 +100,24 @@
 				  <h2><a href="&base;/releases/">LATEST RELEASES</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>Production:&nbsp;<a
-				href="&u.rel.announce;">&rel.current;</a></li>
-					<li>Legacy: <a
-				href="&u.rel2.announce;">&rel2.current;</a></li>
-			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
+				href="&u.rel.announce;">&rel.current;</a>,
+					<a
+				href="&u.rel0.announce;">&rel0.current;</a>,
+					<a
+				href="&u.rel1.announce;">&rel1.current;</a>,
+					<a
+				href="&u.rel2.announce;">&rel2.current;</a>,
+					<a
+				href="&u.rel3.announce;">&rel3.current;</a></li>
+			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 					<li>Upcoming: <a
-				href="&base;/where.html#helptest">&betarel.current;-&betarel.vers;</a></li>
+				href="&u.betarel.schedule;">&betarel.current;</a></li>
 			    </xsl:if>
-			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
+			    <xsl:if test="'&beta2.upcoming;' != 'IGNORE'">
 					<li>Upcoming: <a
-				href="&base;/where.html#helptest">&betarel2.current;-&betarel2.vers;</a></li>
+				href="&u.betarel2.schedule;">&betarel2.current;</a></li>
 			    </xsl:if>
+					<li><a href="&base;/security/security.html#sup">Support Lifecycle</a></li>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
@@ -125,8 +154,11 @@
 				  <li>
 					<a href="&base;/ru/" title="Russian">ru</a>
 				  </li>
-				  <li class="last-child">
+				  <li>
 					<a href="&base;/zh_CN/" title="Chinese (Simplified)">zh_CN</a>
+				  </li>
+				  <li class="last-child">
+					<a href="&base;/zh_TW/" title="Chinese (Traditional)">zh_TW</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
@@ -153,7 +185,7 @@
 					  <a href="&base;/community/mailinglists.html" title="Mailing Lists">Mailing Lists</a>
 					</li>
 					<li>
-					  <a href="&base;/support/bugreports.html" title="Report a Bug">Report a Bug</a>
+					  <a href="&base;/support/bugreports.html" title="Reporting Problems">Reporting Problems</a>
 					</li>
 					<li>
 					  <a href="&base;/doc/en_US.ISO8859-1/books/faq/index.html" title="FAQ">FAQ</a>
@@ -313,7 +345,7 @@
 	The mark FreeBSD is a registered trademark of The FreeBSD
 	Foundation and is used by The FreeBSD Project with the
 	permission of <a
-	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The
+	  href="https://www.freebsdfoundation.org/documents/Guidelines.shtml">The
 	FreeBSD Foundation</a>.
 	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>

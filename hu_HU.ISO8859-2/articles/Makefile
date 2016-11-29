@@ -8,12 +8,9 @@
 
 MAINTAINER=	gabor@FreeBSD.org
 
-SUBDIR =	compiz-fusion
 SUBDIR+=	cups
 SUBDIR+=	explaining-bsd
 SUBDIR+=	gjournal-desktop
-SUBDIR+=	laptop
-SUBDIR+=	linux-comparison
 SUBDIR+=	linux-users
 
 DOC_PREFIX?= ${.CURDIR}/../..

@@ -6,11 +6,10 @@
 #       basiert auf:  1.42
 
 SUBDIR = contributing
-SUBDIR+= contributing-ports
 SUBDIR+= explaining-bsd
 SUBDIR+= freebsd-update-server
-SUBDIR+= laptop
-SUBDIR+= linux-comparison
+SUBDIR+= leap-seconds 
+SUBDIR+= linux-users
 SUBDIR+= nanobsd
 SUBDIR+= new-users
 SUBDIR+= port-mentor-guidelines

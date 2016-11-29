@@ -28,7 +28,7 @@ word_on_line () {
 	sed -E 's/^[[:digit:]]*:<\\!ENTITY man[.]([-[:alnum:].]*)[.][[:digit:]]* \".*$$/\1/'`;
 }
 
-if [ X$3 = X ]; then
+if [ -z "$3" ]; then
     echo "usage: $0 file name section";
     exit 2;
 fi
@@ -40,14 +40,14 @@ k=`echo $n | sed 's/_/./g'`;
 
 firstline=`grep -n "^<\\!ENTITY man[.][-[:alnum:].]*[.]$s \"" $i | \
     head -1 | cut -d: -f1`;
-if [ "X$firstline" = "X" ]; then
+if [ -z "$firstline" ]; then
     echo "Can't find first line of section $s.";
     exit 2;
 fi
 echo "First line of section $s is $firstline.";
 lastline=`grep -n "^<\\!ENTITY man[.][-[:alnum:].]*[.]$s \"" $i | \
     tail -1 | cut -d: -f1`;
-if [ "X$lastline" = "X" ]; then
+if [ -z "$lastline" ]; then
     echo "Can't find last line of section $s.";
     exit 2;
 fi
@@ -75,7 +75,7 @@ while [ $u -ge $l ]; do
     fi
 done;
 
-t="<!ENTITY man.$k.$s \"<citerefentry/<refentrytitle/$n/<manvolnum/$s//\">";
+t="<!ENTITY man.$k.$s \"<citerefentry xmlns='http://docbook.org/ns/docbook'><refentrytitle>$n</refentrytitle><manvolnum>$s</manvolnum></citerefentry>\">";
 echo "Inserting line $l:";
 echo $t;
 echo -n "Last chance to interrupt (or press enter to continue)> ";

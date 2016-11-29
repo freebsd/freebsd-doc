@@ -1,0 +1,787 @@
+--- crypto/openssl/crypto/bn/bn_print.c.orig
++++ crypto/openssl/crypto/bn/bn_print.c
+@@ -111,6 +111,7 @@
+     char *p;
+     BIGNUM *t = NULL;
+     BN_ULONG *bn_data = NULL, *lp;
++    int bn_data_num;
+ 
+     /*-
+      * get an upper bound for the length of the decimal integer
+@@ -120,8 +121,8 @@
+      */
+     i = BN_num_bits(a) * 3;
+     num = (i / 10 + i / 1000 + 1) + 1;
+-    bn_data =
+-        (BN_ULONG *)OPENSSL_malloc((num / BN_DEC_NUM + 1) * sizeof(BN_ULONG));
++    bn_data_num = num / BN_DEC_NUM + 1;
++    bn_data = OPENSSL_malloc(bn_data_num * sizeof(BN_ULONG));
+     buf = (char *)OPENSSL_malloc(num + 3);
+     if ((buf == NULL) || (bn_data == NULL)) {
+         BNerr(BN_F_BN_BN2DEC, ERR_R_MALLOC_FAILURE);
+@@ -143,7 +144,11 @@
+         i = 0;
+         while (!BN_is_zero(t)) {
+             *lp = BN_div_word(t, BN_DEC_CONV);
++            if (*lp == (BN_ULONG)-1)
++                goto err;
+             lp++;
++            if (lp - bn_data >= bn_data_num)
++                goto err;
+         }
+         lp--;
+         /*
+--- crypto/openssl/crypto/dsa/dsa_ossl.c.orig
++++ crypto/openssl/crypto/dsa/dsa_ossl.c
+@@ -247,11 +247,13 @@
+     do
+         if (!BN_rand_range(&k, dsa->q))
+             goto err;
+-    while (BN_is_zero(&k)) ;
++    while (BN_is_zero(&k));
++
+     if ((dsa->flags & DSA_FLAG_NO_EXP_CONSTTIME) == 0) {
+         BN_set_flags(&k, BN_FLG_CONSTTIME);
+     }
+ 
++
+     if (dsa->flags & DSA_FLAG_CACHE_MONT_P) {
+         if (!BN_MONT_CTX_set_locked(&dsa->method_mont_p,
+                                     CRYPTO_LOCK_DSA, dsa->p, ctx))
+@@ -264,6 +266,8 @@
+         if (!BN_copy(&kq, &k))
+             goto err;
+ 
++        BN_set_flags(&kq, BN_FLG_CONSTTIME);
++
+         /*
+          * We do not want timing information to leak the length of k, so we
+          * compute g^k using an equivalent exponent of fixed length. (This
+@@ -282,6 +286,7 @@
+     } else {
+         K = &k;
+     }
++
+     DSA_BN_MOD_EXP(goto err, dsa, r, dsa->g, K, dsa->p, ctx,
+                    dsa->method_mont_p);
+     if (!BN_mod(r, r, dsa->q, ctx))
+--- crypto/openssl/crypto/mdc2/mdc2dgst.c.orig
++++ crypto/openssl/crypto/mdc2/mdc2dgst.c
+@@ -91,7 +91,7 @@
+ 
+     i = c->num;
+     if (i != 0) {
+-        if (i + len < MDC2_BLOCK) {
++        if (len < MDC2_BLOCK - i) {
+             /* partial block */
+             memcpy(&(c->data[i]), in, len);
+             c->num += (int)len;
+--- crypto/openssl/crypto/ts/ts_lib.c.orig
++++ crypto/openssl/crypto/ts/ts_lib.c
+@@ -90,9 +90,8 @@
+ {
+     char obj_txt[128];
+ 
+-    int len = OBJ_obj2txt(obj_txt, sizeof(obj_txt), obj, 0);
+-    BIO_write(bio, obj_txt, len);
+-    BIO_write(bio, "\n", 1);
++    OBJ_obj2txt(obj_txt, sizeof(obj_txt), obj, 0);
++    BIO_printf(bio, "%s\n", obj_txt);
+ 
+     return 1;
+ }
+--- crypto/openssl/ssl/d1_both.c.orig
++++ crypto/openssl/ssl/d1_both.c
+@@ -614,12 +614,24 @@
+     int al;
+ 
+     *ok = 0;
+-    item = pqueue_peek(s->d1->buffered_messages);
+-    if (item == NULL)
+-        return 0;
++    do {
++        item = pqueue_peek(s->d1->buffered_messages);
++        if (item == NULL)
++            return 0;
+ 
+-    frag = (hm_fragment *)item->data;
++        frag = (hm_fragment *)item->data;
+ 
++        if (frag->msg_header.seq < s->d1->handshake_read_seq) {
++            /* This is a stale message that has been buffered so clear it */
++            pqueue_pop(s->d1->buffered_messages);
++            dtls1_hm_fragment_free(frag);
++            pitem_free(item);
++            item = NULL;
++            frag = NULL;
++        }
++    } while (item == NULL);
++
++
+     /* Don't return if reassembly still in progress */
+     if (frag->reassembly != NULL)
+         return 0;
+@@ -1416,18 +1428,6 @@
+     return ret;
+ }
+ 
+-/* call this function when the buffered messages are no longer needed */
+-void dtls1_clear_record_buffer(SSL *s)
+-{
+-    pitem *item;
+-
+-    for (item = pqueue_pop(s->d1->sent_messages);
+-         item != NULL; item = pqueue_pop(s->d1->sent_messages)) {
+-        dtls1_hm_fragment_free((hm_fragment *)item->data);
+-        pitem_free(item);
+-    }
+-}
+-
+ unsigned char *dtls1_set_message_header(SSL *s, unsigned char *p,
+                                         unsigned char mt, unsigned long len,
+                                         unsigned long frag_off,
+--- crypto/openssl/ssl/d1_clnt.c.orig
++++ crypto/openssl/ssl/d1_clnt.c
+@@ -751,6 +751,7 @@
+             /* done with handshaking */
+             s->d1->handshake_read_seq = 0;
+             s->d1->next_handshake_write_seq = 0;
++            dtls1_clear_received_buffer(s);
+             goto end;
+             /* break; */
+ 
+--- crypto/openssl/ssl/d1_lib.c.orig
++++ crypto/openssl/ssl/d1_lib.c
+@@ -144,7 +144,6 @@
+ static void dtls1_clear_queues(SSL *s)
+ {
+     pitem *item = NULL;
+-    hm_fragment *frag = NULL;
+     DTLS1_RECORD_DATA *rdata;
+ 
+     while ((item = pqueue_pop(s->d1->unprocessed_rcds.q)) != NULL) {
+@@ -165,28 +164,44 @@
+         pitem_free(item);
+     }
+ 
++    while ((item = pqueue_pop(s->d1->buffered_app_data.q)) != NULL) {
++        rdata = (DTLS1_RECORD_DATA *)item->data;
++        if (rdata->rbuf.buf) {
++            OPENSSL_free(rdata->rbuf.buf);
++        }
++        OPENSSL_free(item->data);
++        pitem_free(item);
++    }
++
++    dtls1_clear_received_buffer(s);
++    dtls1_clear_sent_buffer(s);
++}
++
++void dtls1_clear_received_buffer(SSL *s)
++{
++    pitem *item = NULL;
++    hm_fragment *frag = NULL;
++
+     while ((item = pqueue_pop(s->d1->buffered_messages)) != NULL) {
+         frag = (hm_fragment *)item->data;
+         dtls1_hm_fragment_free(frag);
+         pitem_free(item);
+     }
++}
+ 
++void dtls1_clear_sent_buffer(SSL *s)
++{
++    pitem *item = NULL;
++    hm_fragment *frag = NULL;
++
+     while ((item = pqueue_pop(s->d1->sent_messages)) != NULL) {
+         frag = (hm_fragment *)item->data;
+         dtls1_hm_fragment_free(frag);
+         pitem_free(item);
+     }
+-
+-    while ((item = pqueue_pop(s->d1->buffered_app_data.q)) != NULL) {
+-        rdata = (DTLS1_RECORD_DATA *)item->data;
+-        if (rdata->rbuf.buf) {
+-            OPENSSL_free(rdata->rbuf.buf);
+-        }
+-        OPENSSL_free(item->data);
+-        pitem_free(item);
+-    }
+ }
+ 
++
+ void dtls1_free(SSL *s)
+ {
+     ssl3_free(s);
+@@ -420,7 +435,7 @@
+     BIO_ctrl(SSL_get_rbio(s), BIO_CTRL_DGRAM_SET_NEXT_TIMEOUT, 0,
+              &(s->d1->next_timeout));
+     /* Clear retransmission buffer */
+-    dtls1_clear_record_buffer(s);
++    dtls1_clear_sent_buffer(s);
+ }
+ 
+ int dtls1_check_timeout_num(SSL *s)
+--- crypto/openssl/ssl/d1_pkt.c.orig
++++ crypto/openssl/ssl/d1_pkt.c
+@@ -194,7 +194,7 @@
+ #endif
+ static int dtls1_buffer_record(SSL *s, record_pqueue *q,
+                                unsigned char *priority);
+-static int dtls1_process_record(SSL *s);
++static int dtls1_process_record(SSL *s, DTLS1_BITMAP *bitmap);
+ 
+ /* copy buffered record into SSL structure */
+ static int dtls1_copy_record(SSL *s, pitem *item)
+@@ -319,21 +319,70 @@
+ static int dtls1_process_buffered_records(SSL *s)
+ {
+     pitem *item;
++    SSL3_BUFFER *rb;
++    SSL3_RECORD *rr;
++    DTLS1_BITMAP *bitmap;
++    unsigned int is_next_epoch;
++    int replayok = 1;
+ 
+     item = pqueue_peek(s->d1->unprocessed_rcds.q);
+     if (item) {
+         /* Check if epoch is current. */
+         if (s->d1->unprocessed_rcds.epoch != s->d1->r_epoch)
+-            return (1);         /* Nothing to do. */
++            return 1;         /* Nothing to do. */
+ 
++        rr = &s->s3->rrec;
++        rb = &s->s3->rbuf;
++
++        if (rb->left > 0) {
++            /*
++             * We've still got data from the current packet to read. There could
++             * be a record from the new epoch in it - so don't overwrite it
++             * with the unprocessed records yet (we'll do it when we've
++             * finished reading the current packet).
++             */
++            return 1;
++        }
++
++
+         /* Process all the records. */
+         while (pqueue_peek(s->d1->unprocessed_rcds.q)) {
+             dtls1_get_unprocessed_record(s);
+-            if (!dtls1_process_record(s))
+-                return (0);
++            bitmap = dtls1_get_bitmap(s, rr, &is_next_epoch);
++            if (bitmap == NULL) {
++                /*
++                 * Should not happen. This will only ever be NULL when the
++                 * current record is from a different epoch. But that cannot
++                 * be the case because we already checked the epoch above
++                 */
++                 SSLerr(SSL_F_DTLS1_PROCESS_BUFFERED_RECORDS,
++                        ERR_R_INTERNAL_ERROR);
++                 return 0;
++            }
++#ifndef OPENSSL_NO_SCTP
++            /* Only do replay check if no SCTP bio */
++            if (!BIO_dgram_is_sctp(SSL_get_rbio(s)))
++#endif
++            {
++                /*
++                 * Check whether this is a repeat, or aged record. We did this
++                 * check once already when we first received the record - but
++                 * we might have updated the window since then due to
++                 * records we subsequently processed.
++                 */
++                replayok = dtls1_record_replay_check(s, bitmap);
++            }
++
++            if (!replayok || !dtls1_process_record(s, bitmap)) {
++                /* dump this record */
++                rr->length = 0;
++                s->packet_length = 0;
++                continue;
++            }
++
+             if (dtls1_buffer_record(s, &(s->d1->processed_rcds),
+                                     s->s3->rrec.seq_num) < 0)
+-                return -1;
++                return 0;
+         }
+     }
+ 
+@@ -344,7 +393,7 @@
+     s->d1->processed_rcds.epoch = s->d1->r_epoch;
+     s->d1->unprocessed_rcds.epoch = s->d1->r_epoch + 1;
+ 
+-    return (1);
++    return 1;
+ }
+ 
+ #if 0
+@@ -391,7 +440,7 @@
+ 
+ #endif
+ 
+-static int dtls1_process_record(SSL *s)
++static int dtls1_process_record(SSL *s, DTLS1_BITMAP *bitmap)
+ {
+     int i, al;
+     int enc_err;
+@@ -551,6 +600,10 @@
+ 
+     /* we have pulled in a full packet so zero things */
+     s->packet_length = 0;
++
++    /* Mark receipt of record. */
++    dtls1_record_bitmap_update(s, bitmap);
++
+     return (1);
+ 
+  f_err:
+@@ -581,11 +634,12 @@
+ 
+     rr = &(s->s3->rrec);
+ 
++ again:
+     /*
+      * The epoch may have changed.  If so, process all the pending records.
+      * This is a non-blocking operation.
+      */
+-    if (dtls1_process_buffered_records(s) < 0)
++    if (!dtls1_process_buffered_records(s))
+         return -1;
+ 
+     /* if we're renegotiating, then there may be buffered records */
+@@ -593,7 +647,6 @@
+         return 1;
+ 
+     /* get something from the wire */
+- again:
+     /* check if we have the header */
+     if ((s->rstate != SSL_ST_READ_BODY) ||
+         (s->packet_length < DTLS1_RT_HEADER_LENGTH)) {
+@@ -717,8 +770,6 @@
+             if (dtls1_buffer_record
+                 (s, &(s->d1->unprocessed_rcds), rr->seq_num) < 0)
+                 return -1;
+-            /* Mark receipt of record. */
+-            dtls1_record_bitmap_update(s, bitmap);
+         }
+         rr->length = 0;
+         s->packet_length = 0;
+@@ -725,12 +776,11 @@
+         goto again;
+     }
+ 
+-    if (!dtls1_process_record(s)) {
++    if (!dtls1_process_record(s, bitmap)) {
+         rr->length = 0;
+         s->packet_length = 0;   /* dump this record */
+         goto again;             /* get another record */
+     }
+-    dtls1_record_bitmap_update(s, bitmap); /* Mark receipt of record. */
+ 
+     return (1);
+ 
+@@ -1814,8 +1864,13 @@
+     if (rr->epoch == s->d1->r_epoch)
+         return &s->d1->bitmap;
+ 
+-    /* Only HM and ALERT messages can be from the next epoch */
++    /*
++     * Only HM and ALERT messages can be from the next epoch and only if we
++     * have already processed all of the unprocessed records from the last
++     * epoch
++     */
+     else if (rr->epoch == (unsigned long)(s->d1->r_epoch + 1) &&
++             s->d1->unprocessed_rcds.epoch != s->d1->r_epoch &&
+              (rr->type == SSL3_RT_HANDSHAKE || rr->type == SSL3_RT_ALERT)) {
+         *is_next_epoch = 1;
+         return &s->d1->next_bitmap;
+@@ -1894,6 +1949,12 @@
+         s->d1->r_epoch++;
+         memcpy(&(s->d1->bitmap), &(s->d1->next_bitmap), sizeof(DTLS1_BITMAP));
+         memset(&(s->d1->next_bitmap), 0x00, sizeof(DTLS1_BITMAP));
++
++        /*
++         * We must not use any buffered messages received from the previous
++         * epoch
++         */
++        dtls1_clear_received_buffer(s);
+     } else {
+         seq = s->s3->write_sequence;
+         memcpy(s->d1->last_write_sequence, seq,
+--- crypto/openssl/ssl/d1_srvr.c.orig
++++ crypto/openssl/ssl/d1_srvr.c
+@@ -295,7 +295,7 @@
+         case SSL3_ST_SW_HELLO_REQ_B:
+ 
+             s->shutdown = 0;
+-            dtls1_clear_record_buffer(s);
++            dtls1_clear_sent_buffer(s);
+             dtls1_start_timer(s);
+             ret = dtls1_send_hello_request(s);
+             if (ret <= 0)
+@@ -866,6 +866,7 @@
+             /* next message is server hello */
+             s->d1->handshake_write_seq = 0;
+             s->d1->next_handshake_write_seq = 0;
++            dtls1_clear_received_buffer(s);
+             goto end;
+             /* break; */
+ 
+--- crypto/openssl/ssl/s3_clnt.c.orig
++++ crypto/openssl/ssl/s3_clnt.c
+@@ -1143,6 +1143,12 @@
+         goto f_err;
+     }
+     for (nc = 0; nc < llen;) {
++        if (nc + 3 > llen) {
++            al = SSL_AD_DECODE_ERROR;
++            SSLerr(SSL_F_SSL3_GET_SERVER_CERTIFICATE,
++                   SSL_R_CERT_LENGTH_MISMATCH);
++            goto f_err;
++        }
+         n2l3(p, l);
+         if ((l + nc + 3) > llen) {
+             al = SSL_AD_DECODE_ERROR;
+@@ -2072,6 +2078,11 @@
+     }
+ 
+     for (nc = 0; nc < llen;) {
++        if (nc + 2 > llen) {
++            ssl3_send_alert(s, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
++            SSLerr(SSL_F_SSL3_GET_CERTIFICATE_REQUEST, SSL_R_CA_DN_TOO_LONG);
++            goto err;
++        }
+         n2s(p, l);
+         if ((l + nc + 2) > llen) {
+             if ((s->options & SSL_OP_NETSCAPE_CA_DN_BUG))
+--- crypto/openssl/ssl/s3_srvr.c.orig
++++ crypto/openssl/ssl/s3_srvr.c
+@@ -1040,7 +1040,7 @@
+ 
+         session_length = *(p + SSL3_RANDOM_SIZE);
+ 
+-        if (p + SSL3_RANDOM_SIZE + session_length + 1 >= d + n) {
++        if (SSL3_RANDOM_SIZE + session_length + 1 >= (d + n) - p) {
+             al = SSL_AD_DECODE_ERROR;
+             SSLerr(SSL_F_SSL3_GET_CLIENT_HELLO, SSL_R_LENGTH_TOO_SHORT);
+             goto f_err;
+@@ -1058,7 +1058,7 @@
+     /* get the session-id */
+     j = *(p++);
+ 
+-    if (p + j > d + n) {
++    if ((d + n) - p < j) {
+         al = SSL_AD_DECODE_ERROR;
+         SSLerr(SSL_F_SSL3_GET_CLIENT_HELLO, SSL_R_LENGTH_TOO_SHORT);
+         goto f_err;
+@@ -1114,7 +1114,7 @@
+ 
+     if (s->version == DTLS1_VERSION || s->version == DTLS1_BAD_VER) {
+         /* cookie stuff */
+-        if (p + 1 > d + n) {
++        if ((d + n) - p < 1) {
+             al = SSL_AD_DECODE_ERROR;
+             SSLerr(SSL_F_SSL3_GET_CLIENT_HELLO, SSL_R_LENGTH_TOO_SHORT);
+             goto f_err;
+@@ -1121,7 +1121,7 @@
+         }
+         cookie_len = *(p++);
+ 
+-        if (p + cookie_len > d + n) {
++        if ((d + n ) - p < cookie_len) {
+             al = SSL_AD_DECODE_ERROR;
+             SSLerr(SSL_F_SSL3_GET_CLIENT_HELLO, SSL_R_LENGTH_TOO_SHORT);
+             goto f_err;
+@@ -1166,7 +1166,7 @@
+         p += cookie_len;
+     }
+ 
+-    if (p + 2 > d + n) {
++    if ((d + n ) - p < 2) {
+         al = SSL_AD_DECODE_ERROR;
+         SSLerr(SSL_F_SSL3_GET_CLIENT_HELLO, SSL_R_LENGTH_TOO_SHORT);
+         goto f_err;
+@@ -1180,7 +1180,7 @@
+     }
+ 
+     /* i bytes of cipher data + 1 byte for compression length later */
+-    if ((p + i + 1) > (d + n)) {
++    if ((d + n) - p < i + 1) {
+         /* not enough data */
+         al = SSL_AD_DECODE_ERROR;
+         SSLerr(SSL_F_SSL3_GET_CLIENT_HELLO, SSL_R_LENGTH_MISMATCH);
+@@ -1246,7 +1246,7 @@
+ 
+     /* compression */
+     i = *(p++);
+-    if ((p + i) > (d + n)) {
++    if ((d + n) - p < i) {
+         /* not enough data */
+         al = SSL_AD_DECODE_ERROR;
+         SSLerr(SSL_F_SSL3_GET_CLIENT_HELLO, SSL_R_LENGTH_MISMATCH);
+@@ -3237,6 +3237,12 @@
+         goto f_err;
+     }
+     for (nc = 0; nc < llen;) {
++        if (nc + 3 > llen) {
++            al = SSL_AD_DECODE_ERROR;
++            SSLerr(SSL_F_SSL3_GET_CLIENT_CERTIFICATE,
++                   SSL_R_CERT_LENGTH_MISMATCH);
++            goto f_err;
++        }
+         n2l3(p, l);
+         if ((l + nc + 3) > llen) {
+             al = SSL_AD_DECODE_ERROR;
+--- crypto/openssl/ssl/ssl.h.orig
++++ crypto/openssl/ssl/ssl.h
+@@ -2256,6 +2256,7 @@
+ # define SSL_F_DTLS1_HEARTBEAT                            305
+ # define SSL_F_DTLS1_OUTPUT_CERT_CHAIN                    255
+ # define SSL_F_DTLS1_PREPROCESS_FRAGMENT                  288
++# define SSL_F_DTLS1_PROCESS_BUFFERED_RECORDS             424
+ # define SSL_F_DTLS1_PROCESS_OUT_OF_SEQ_MESSAGE           256
+ # define SSL_F_DTLS1_PROCESS_RECORD                       257
+ # define SSL_F_DTLS1_READ_BYTES                           258
+--- crypto/openssl/ssl/ssl_err.c.orig
++++ crypto/openssl/ssl/ssl_err.c
+@@ -1,6 +1,6 @@
+ /* ssl/ssl_err.c */
+ /* ====================================================================
+- * Copyright (c) 1999-2011 The OpenSSL Project.  All rights reserved.
++ * Copyright (c) 1999-2016 The OpenSSL Project.  All rights reserved.
+  *
+  * Redistribution and use in source and binary forms, with or without
+  * modification, are permitted provided that the following conditions
+@@ -93,6 +93,8 @@
+     {ERR_FUNC(SSL_F_DTLS1_HEARTBEAT), "DTLS1_HEARTBEAT"},
+     {ERR_FUNC(SSL_F_DTLS1_OUTPUT_CERT_CHAIN), "DTLS1_OUTPUT_CERT_CHAIN"},
+     {ERR_FUNC(SSL_F_DTLS1_PREPROCESS_FRAGMENT), "DTLS1_PREPROCESS_FRAGMENT"},
++    {ERR_FUNC(SSL_F_DTLS1_PROCESS_BUFFERED_RECORDS),
++     "DTLS1_PROCESS_BUFFERED_RECORDS"},
+     {ERR_FUNC(SSL_F_DTLS1_PROCESS_OUT_OF_SEQ_MESSAGE),
+      "DTLS1_PROCESS_OUT_OF_SEQ_MESSAGE"},
+     {ERR_FUNC(SSL_F_DTLS1_PROCESS_RECORD), "DTLS1_PROCESS_RECORD"},
+--- crypto/openssl/ssl/ssl_locl.h.orig
++++ crypto/openssl/ssl/ssl_locl.h
+@@ -1025,7 +1025,8 @@
+                              unsigned long frag_off, int *found);
+ int dtls1_get_queue_priority(unsigned short seq, int is_ccs);
+ int dtls1_retransmit_buffered_messages(SSL *s);
+-void dtls1_clear_record_buffer(SSL *s);
++void dtls1_clear_received_buffer(SSL *s);
++void dtls1_clear_sent_buffer(SSL *s);
+ void dtls1_get_message_header(unsigned char *data,
+                               struct hm_header_st *msg_hdr);
+ void dtls1_get_ccs_header(unsigned char *data, struct ccs_header_st *ccs_hdr);
+--- crypto/openssl/ssl/ssl_sess.c.orig
++++ crypto/openssl/ssl/ssl_sess.c
+@@ -602,7 +602,7 @@
+     int r;
+ #endif
+ 
+-    if (session_id + len > limit) {
++    if (limit - session_id < len) {
+         fatal = 1;
+         goto err;
+     }
+--- crypto/openssl/ssl/t1_lib.c.orig
++++ crypto/openssl/ssl/t1_lib.c
+@@ -942,11 +942,11 @@
+         0x02, 0x03,             /* SHA-1/ECDSA */
+     };
+ 
+-    if (data >= (limit - 2))
++    if (limit - data <= 2)
+         return;
+     data += 2;
+ 
+-    if (data > (limit - 4))
++    if (limit - data < 4)
+         return;
+     n2s(data, type);
+     n2s(data, size);
+@@ -954,7 +954,7 @@
+     if (type != TLSEXT_TYPE_server_name)
+         return;
+ 
+-    if (data + size > limit)
++    if (limit - data < size)
+         return;
+     data += size;
+ 
+@@ -962,7 +962,7 @@
+         const size_t len1 = sizeof(kSafariExtensionsBlock);
+         const size_t len2 = sizeof(kSafariTLS12ExtensionsBlock);
+ 
+-        if (data + len1 + len2 != limit)
++        if (limit - data != (int)(len1 + len2))
+             return;
+         if (memcmp(data, kSafariExtensionsBlock, len1) != 0)
+             return;
+@@ -971,7 +971,7 @@
+     } else {
+         const size_t len = sizeof(kSafariExtensionsBlock);
+ 
+-        if (data + len != limit)
++        if (limit - data != (int)(len))
+             return;
+         if (memcmp(data, kSafariExtensionsBlock, len) != 0)
+             return;
+@@ -1019,19 +1019,19 @@
+     if (data == limit)
+         goto ri_check;
+ 
+-    if (data > (limit - 2))
++    if (limit - data < 2)
+         goto err;
+ 
+     n2s(data, len);
+ 
+-    if (data + len != limit)
++    if (limit - data != len)
+         goto err;
+ 
+-    while (data <= (limit - 4)) {
++    while (limit - data >= 4) {
+         n2s(data, type);
+         n2s(data, size);
+ 
+-        if (data + size > (limit))
++        if (limit - data < size)
+             goto err;
+ # if 0
+         fprintf(stderr, "Received extension type %d size %d\n", type, size);
+@@ -1284,6 +1284,23 @@
+                 size -= 2;
+                 if (dsize > size)
+                     goto err;
++
++                /*
++                 * We remove any OCSP_RESPIDs from a previous handshake
++                 * to prevent unbounded memory growth - CVE-2016-6304
++                 */
++                sk_OCSP_RESPID_pop_free(s->tlsext_ocsp_ids,
++                                        OCSP_RESPID_free);
++                if (dsize > 0) {
++                    s->tlsext_ocsp_ids = sk_OCSP_RESPID_new_null();
++                    if (s->tlsext_ocsp_ids == NULL) {
++                        *al = SSL_AD_INTERNAL_ERROR;
++                        return 0;
++                    }
++                } else {
++                    s->tlsext_ocsp_ids = NULL;
++                }
++
+                 while (dsize > 0) {
+                     OCSP_RESPID *id;
+                     int idsize;
+@@ -1303,13 +1320,6 @@
+                         OCSP_RESPID_free(id);
+                         goto err;
+                     }
+-                    if (!s->tlsext_ocsp_ids
+-                        && !(s->tlsext_ocsp_ids =
+-                             sk_OCSP_RESPID_new_null())) {
+-                        OCSP_RESPID_free(id);
+-                        *al = SSL_AD_INTERNAL_ERROR;
+-                        return 0;
+-                    }
+                     if (!sk_OCSP_RESPID_push(s->tlsext_ocsp_ids, id)) {
+                         OCSP_RESPID_free(id);
+                         *al = SSL_AD_INTERNAL_ERROR;
+@@ -1460,20 +1470,20 @@
+                              SSL_TLSEXT_HB_DONT_SEND_REQUESTS);
+ # endif
+ 
+-    if (data >= (d + n - 2))
++    if ((d + n) - data <= 2)
+         goto ri_check;
+ 
+     n2s(data, length);
+-    if (data + length != d + n) {
++    if ((d + n) - data != length) {
+         *al = SSL_AD_DECODE_ERROR;
+         return 0;
+     }
+ 
+-    while (data <= (d + n - 4)) {
++    while ((d + n) - data >= 4) {
+         n2s(data, type);
+         n2s(data, size);
+ 
+-        if (data + size > (d + n))
++        if ((d + n) - data < size)
+             goto ri_check;
+ 
+         if (s->tlsext_debug_cb)
+@@ -2179,29 +2189,33 @@
+     /* Skip past DTLS cookie */
+     if (s->version == DTLS1_VERSION || s->version == DTLS1_BAD_VER) {
+         i = *(p++);
++
++        if (limit - p <= i)
++            return -1;
++
+         p += i;
+-        if (p >= limit)
+-            return -1;
+     }
+     /* Skip past cipher list */
+     n2s(p, i);
++    if (limit - p <= i)
++        return -1;
+     p += i;
+-    if (p >= limit)
+-        return -1;
++
+     /* Skip past compression algorithm list */
+     i = *(p++);
++    if (limit - p < i)
++        return -1;
+     p += i;
+-    if (p > limit)
+-        return -1;
++
+     /* Now at start of extensions */
+-    if ((p + 2) >= limit)
++    if (limit - p <= 2)
+         return 0;
+     n2s(p, i);
+-    while ((p + 4) <= limit) {
++    while (limit - p >= 4) {
+         unsigned short type, size;
+         n2s(p, type);
+         n2s(p, size);
+-        if (p + size > limit)
++        if (limit - p < size)
+             return 0;
+         if (type == TLSEXT_TYPE_session_ticket) {
+             int r;
+@@ -2269,9 +2283,7 @@
+     HMAC_CTX hctx;
+     EVP_CIPHER_CTX ctx;
+     SSL_CTX *tctx = s->initial_ctx;
+-    /* Need at least keyname + iv + some encrypted data */
+-    if (eticklen < 48)
+-        return 2;
++
+     /* Initialize session ticket encryption and HMAC contexts */
+     HMAC_CTX_init(&hctx);
+     EVP_CIPHER_CTX_init(&ctx);
+@@ -2305,6 +2317,13 @@
+     if (mlen < 0) {
+         goto err;
+     }
++    /* Sanity check ticket length: must exceed keyname + IV + HMAC */
++    if (eticklen <= 16 + EVP_CIPHER_CTX_iv_length(&ctx) + mlen) {
++        HMAC_CTX_cleanup(&hctx);
++        EVP_CIPHER_CTX_cleanup(&ctx);
++        return 2;
++    }
++
+     eticklen -= mlen;
+     /* Check HMAC of encrypted ticket */
+     if (HMAC_Update(&hctx, etick, eticklen) <= 0

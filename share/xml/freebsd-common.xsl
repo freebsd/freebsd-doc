@@ -11,6 +11,11 @@
 
   <!-- Global customisation -->
 
+  <!-- Generate link for revnumber -->
+  <xsl:template match="db:revnumber">
+    <xsl:call-template name="svnref.genlink"/>
+  </xsl:template>
+
   <!-- Redefine variables, and replace templates as necessary here -->
   <xsl:template match="db:buildtarget|db:command">
     <xsl:call-template name="inline.monoseq"/>
@@ -20,8 +25,8 @@
     <xsl:param name="repo" select="'base'"/>
     <xsl:param name="rev"/>
 
-    <xsl:value-of select="concat('http://svnweb.freebsd.org/', $repo,
-      '?view=revision&amp;revision=', $rev)"/>
+    <xsl:value-of select="concat('https://svnweb.freebsd.org/changeset/',
+      $repo, '/', $rev)"/>
   </xsl:template>
 
   <xsl:param name="toc.section.depth" select="1"/>
@@ -48,7 +53,7 @@
     <xsl:variable name="pubdate">
       <xsl:choose>
 	<xsl:when test="contains(., '$FreeBSD')">
-	  <xsl:value-of select="str:split(., ' ')[4]"/>
+	  <xsl:value-of select="$latestrevision.timestamp"/>
 	</xsl:when>
 
         <xsl:otherwise>
@@ -59,7 +64,7 @@
 
     <xsl:variable name="committer">
       <xsl:if test="contains(., '$FreeBSD')">
-	<xsl:value-of select="str:split(., ' ')[6]"/>
+	<xsl:value-of select="$latestrevision.committer"/>
       </xsl:if>
     </xsl:variable>
 
@@ -86,7 +91,7 @@
   <xsl:template name="svnref.genlink"/>
 
   <xsl:template name="titlepage.releaseinfo">
-    <xsl:variable name="rev" select="str:split(., ' ')[3]"/>
+    <xsl:variable name="rev" select="$latestrevision.number"/>
 
     <xsl:call-template name="gentext">
       <xsl:with-param name="key" select="'Revision'"/>

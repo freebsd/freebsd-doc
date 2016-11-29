@@ -7,7 +7,7 @@
 
 <!-- $FreeBSD$ -->
 <!-- $FreeBSDde$ -->
-<!-- basiert auf: r40558 -->
+<!-- basiert auf: r49284 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -28,13 +28,11 @@
   </xsl:template>
 
   <xsl:template name="process.contentwrap">
-	      <p>&os; wird von einer aktiven Gemeinschaft
-		unterstützt.</p>
 
 	      <p>Es gibt mehr als 100 <a
 		href="&base;/community/mailinglists.html">
 		Mailinglisten</a>, dutzende <a
-		href="http://forums.FreeBSD.org/">Foren</a> sowie
+		href="https://forums.FreeBSD.org/">Foren</a> sowie
 		diverse <a
 		href="&base;/community/newsgroups.html">Newsgroups</a>.
 		Dazu kommen mehr als 86 <!-- <xsl:value-of
@@ -46,20 +44,18 @@
 		Zusätzlich existiert eine aktive <a
 		href="&base;/community/irc.html">IRC</a>-Gemeinde.
 		Viele Entwickler betreiben auch <a
-		href="http://planet.freebsdish.org">Blogs</a>, in denen
+		href="https://planet.freebsd.org">Blogs</a>, in denen
 		sie über ihre Arbeit an FreeBSD berichten.
 		Außerdem betreiben die &os;-Entwickler gemeinsam mit
 		einigen der wichtigsten Unterstützer ein <a
-		href="http://wiki.FreeBSD.org/">Wiki</a>, das Informationen
+		href="https://wiki.FreeBSD.org/">Wiki</a>, das Informationen
 		zur &os;-Entwicklung und zu diversen Projekten
-		enthält.  Weiters ist &os; auch in verschiedenen <a
-		href="&enbase;/community/social.html">Sozialen
-		Netzwerken</a> vertreten.</p>
+		enthält.</p>
 
 	      <p>Letztes Jahr gab es insgesamt 9 <!-- <xsl:value-of
 	        select="count(/events/event[number(enddate/year) =
 	        (number($curdate.year) -1)])" />-->
-		&os;-Veranstaltungen in 9 <!--<xsl:value-of
+		&os;-Veranstaltungen in 7 <!--<xsl:value-of
 		select="count(/events/event[(number(enddate/year) =
 		(number($curdate.year) -1)) and (generate-id() =
 		generate-id(key('last-year-event-by-country',
@@ -71,7 +67,7 @@
 		href="&enbase;/events/events.html">Veranstaltungen</a>
 		verfügbar.  Und nicht zuletzt gibt es dutzende
 		Videos im Youtube-Channel <a
-		href="http://www.youtube.com/bsdconferences">BSD
+		href="//www.youtube.com/bsdconferences">BSD
 		Conferences</a>.</p>
 
 <!-- The Latest Videos section is placed inside an invisible block, which
@@ -85,19 +81,19 @@
     <span style="color:#676767;font-size:11px;margin:10px;padding:4px;">Loading...</span>
   </div>
 
-  <script src="http://www.google.com/uds/api?file=uds.js&amp;v=1.0&amp;source=uds-vbw"
+  <script src="//www.google.com/uds/api?file=uds.js&amp;v=1.0&amp;source=uds-vbw"
     type="text/javascript"></script>
   <style type="text/css">
-    @import url("http://www.google.com/uds/css/gsearch.css");
+    @import url("//www.google.com/uds/css/gsearch.css");
   </style>
   <!-- Video Bar Code and Stylesheet -->
   <script type="text/javascript">
     window._uds_vbw_donotrepair = true;
   </script>
-  <script src="http://www.google.com/uds/solutions/videobar/gsvideobar.js?mode=new"
+  <script src="//www.google.com/uds/solutions/videobar/gsvideobar.js?mode=new"
     type="text/javascript"></script>
   <style type="text/css">
-    @import url("http://www.google.com/uds/solutions/videobar/gsvideobar.css");
+    @import url("//www.google.com/uds/solutions/videobar/gsvideobar.css");
   </style>
 
   <style type="text/css">
@@ -131,6 +127,49 @@
     GSearch.setOnLoadCallback(LoadVideoBar);
   </script>
 
-	      </div> <!-- Latest Videos -->
+              </div> <!-- Latest Videos -->
+	      <h2>Soziale Netzwerke</h2>
+
+	      <p>&os; ist auf diversen sozialen Netzwerken vertreten.</p>
+
+	      <ul>
+		<li>Tausende Nutzer von <a
+		  href="http://del.icio.us">del.icio.us</a> haben nahezu
+		  30000 verschiedene Webseiten mit dem Tag '<a
+		  href="http://del.icio.us/tag/freebsd">freebsd</a>'
+		  markiert.</li>
+
+		<li>Es gibt tausende Photos von Usergroup-Treffen,
+		  Konferenzen und Hackatons, die auf <a
+		  href="http://www.flickr.com">flickr</a> mit dem
+		  Tag '<a
+		  href="http://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
+		  versehen wurden.</li>
+
+		<li>Auf <a href="http://www.youtube.com">YouTube</a>
+		  existieren hunderte Videos von Konferenzen,
+		  Präsentatitionen und Vorträgen, die sich auf <a
+		  href="http://www.youtube.com/results?search_query=freebsd&amp;search_type=&amp;aq=f">FreeBSD</a>
+		  beziehen.  Weiters gibt es den Channel <a
+		  href="http://www.youtube.com/bsdconferences">BSD Conferences</a>,
+		  über den Sie komplette Präsentationen von
+		  FreeBSD-Konferenzen verfolgen/ansehen können.</li>
+
+		<li>Auf <a href="http://www.facebook.com">Facebook</a>
+		  gibt es die <a
+		  href="http://www.facebook.com/home.php#/group.php?gid=2204657214">FreeBSD
+		  Users Group</a>, auf <a
+		  href="http://www.linkedin.com">LinkedIn</a> die <a
+		  href="http://www.linkedin.com/groups?gid=47628">FreeBSD Group</a>.</li>
+
+		<li>Auf <a href="https://twitter.com">Twitter</a>
+		  können Sie beispielsweise
+		  <a href="https://twitter.com/freebsd">@freebsd</a>,
+		  <a href="https://twitter.com/freebsdhelp">@freebsdhelp</a>,
+		  <a href="https://twitter.com/freebsdblogs">@freebsdblogs</a>
+		  oder 
+		  <a href="https://twitter.com/bsdevents">@bsdevents</a>
+		  folgen.</li>
+	      </ul>
   </xsl:template>
 </xsl:stylesheet>

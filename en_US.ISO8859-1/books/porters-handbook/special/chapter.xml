@@ -1,0 +1,5455 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!--
+     The FreeBSD Documentation Project
+
+     $FreeBSD$
+-->
+<chapter xmlns="http://docbook.org/ns/docbook"
+  xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0"
+  xml:id="special">
+
+  <title>Special Considerations</title>
+
+  <para>This section explains the most common things to consider when
+    creating a port.</para>
+
+  <sect1 xml:id="staging">
+    <title>Staging</title>
+
+    <para><filename>bsd.port.mk</filename> expects ports to work
+      with a <quote>stage directory</quote>.  This means that a port
+      must not install files directly to the regular destination
+      directories (that is, under <varname>PREFIX</varname>, for
+      example) but instead into a separate directory from which the
+      package is then built.  In many cases, this does not require
+      root privileges, making it possible to build packages as an
+      unprivileged user.  With staging, the port is built and
+      installed into the stage directory,
+      <varname>STAGEDIR</varname>.  A package is created from the
+      stage directory and then installed on the system.  Automake
+      tools refer to this concept as <varname>DESTDIR</varname>, but
+      in &os;, <varname>DESTDIR</varname> has a different meaning
+      (see <xref linkend="porting-prefix"/>).</para>
+
+    <note>
+      <para>No port <emphasis>really</emphasis> needs to be root.  It
+	can mostly be avoided by using <link
+	  linkend="uses-uidfix"><literal>USES=uidfix</literal></link>.
+	If the port still runs commands like &man.chown.8;,
+	&man.chgrp.1;, or forces owner or group with &man.install.1;
+	then use <link
+	  linkend="uses-fakeroot"><literal>USES=fakeroot</literal></link>
+	to fake those calls.  Some patching of the port's
+	<filename>Makefiles</filename> will be needed.</para>
+    </note>
+
+    <para>Meta ports, or ports that do not install files themselves
+      but only depend on other ports, must avoid needlessly
+      extracting the &man.mtree.8; to the stage directory.  This is
+      the basic directory layout of the package, and these empty
+      directories will be seen as orphans.  To prevent
+      &man.mtree.8; extraction, add this line:</para>
+
+    <programlisting>NO_MTREE=	yes</programlisting>
+
+    <tip>
+      <para>Metaports should use <link
+	  linkend="uses-metaport"><literal>USES=metaport</literal></link>.
+	It sets up defaults for ports that do not fetch, build, or
+	install anything.</para>
+    </tip>
+
+    <para>Staging is enabled by prepending
+      <varname>STAGEDIR</varname> to paths used in the
+      <buildtarget>pre-install</buildtarget>,
+      <buildtarget>do-install</buildtarget>, and
+      <buildtarget>post-install</buildtarget> targets (see the
+      examples through the book).  Typically, this includes
+      <varname>PREFIX</varname>, <varname>ETCDIR</varname>,
+      <varname>DATADIR</varname>, <varname>EXAMPLESDIR</varname>,
+      <varname>MANPREFIX</varname>, <varname>DOCSDIR</varname>, and
+      so on.  Directories should be created as part of the
+      <buildtarget>post-install</buildtarget> target.  Avoid using
+      absolute paths whenever possible.</para>
+
+    <para>When creating a symlink, <varname>STAGEDIR</varname>
+      is prepended to the target path only.  For
+      example:</para>
+
+    <programlisting>${LN} -sf <replaceable>libfoo.so.42</replaceable> ${STAGEDIR}${PREFIX}/lib/<replaceable>libfoo.so</replaceable></programlisting>
+
+    <para>The source path
+      <filename>${PREFIX}/lib/<replaceable>libfoo.so.42</replaceable></filename>
+      looks fine but could, in fact, be incorrect.  Absolute paths can
+      point to a wrong location, like when a remote file system has
+      been mounted with <acronym>NFS</acronym> under a non-root mount
+      point.  Relative paths are less fragile, and often much
+      shorter.</para>
+
+    <para>Ports that install kernel modules must prepend
+      <varname>STAGEDIR</varname> to their destination, by default
+      <filename>/boot/modules</filename>.</para>
+  </sect1>
+
+  <sect1 xml:id="bundled-libs">
+    <title>Bundled Libraries</title>
+
+    <para>This section explains why bundled dependencies are
+      considered bad and what to do about them.</para>
+
+    <sect2 xml:id="bundled-libs-why-bad">
+      <title>Why Bundled Libraries Are Bad</title>
+
+      <para>Some software requires the porter to locate third-party
+	libraries and add the required dependencies to the port.
+	Other software bundles all necessary libraries into the
+	distribution file.  The second approach seems easier at
+	first, but there are some serious drawbacks:</para>
+
+      <para>This list is loosely based on the <link
+	  xlink:href="https://fedoraproject.org/wiki/Packaging:No_Bundled_Libraries">Fedora</link>
+	and <link
+	  xlink:href="http://wiki.gentoo.org/wiki/Why_not_bundle_dependencies">Gentoo</link>
+	wikis, both licensed under the <link
+	  xlink:href="http://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA
+	  3.0</link> license.</para>
+
+      <variablelist>
+	<varlistentry>
+	  <term>Security</term>
+
+	  <listitem>
+	    <para>If vulnerabilities are found in the upstream library
+	      and fixed there, they might not be fixed in the library
+	      bundled with the port.  One reason could be that the
+	      author is not aware of the problem.  This means that the
+	      porter must fix them, or upgrade to a non-vulnerable
+	      version, and send a patch to the author.  This all takes
+	      time, which results in software being vulnerable longer
+	      than necessary.  This in turn makes it harder to
+	      coordinate a fix without unnecessarily leaking
+	      information about the vulnerability.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>Bugs</term>
+
+	  <listitem>
+	    <para>This problem is similar to the problem with security
+	      in the last paragraph, but generally less severe.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>Forking</term>
+
+	  <listitem>
+	    <para>It is easier for the author to fork the upstream
+	      library once it is bundled.  While convenient on first
+	      sight, it means that the code diverges from upstream
+	      making it harder to address security or other problems
+	      with the software.  A reason for this is that patching
+	      becomes harder.</para>
+
+	    <para>Another problem of forking is that because code
+	      diverges from upstream, bugs get solved over and over
+	      again instead of just once at a central location.  This
+	      defeats the idea of open source software in the first
+	      place.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>Symbol collision</term>
+
+	  <listitem>
+	    <para>When a library is installed on the system, it might
+	      collide with the bundled version.  This can cause
+	      immediate errors at compile or link time.  It can also
+	      cause errors when running the program which might be
+	      harder to track down.  The latter problem could be
+	      caused because the versions of the two libraries are
+	      incompatible.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>Licensing</term>
+
+	  <listitem>
+	    <para>When bundling projects from different sources,
+	      license issues can arise more easily, especially when
+	      licenses are incompatible.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>Waste of resources</term>
+
+	  <listitem>
+	    <para>Bundled libraries waste resources on several levels.
+	      It takes longer to build the actual application,
+	      especially if these libraries are already present on the
+	      system.  At run-time, they can take up unnecessary
+	      memory when the system-wide library is already loaded by
+	      one program and the bundled library is loaded by another
+	      program.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>Waste of effort</term>
+
+	  <listitem>
+	    <para>When a library needs patches for &os;, these patches
+	      have to be duplicated again in the bundled library.
+	      This wastes developer time because the patches might not
+	      apply cleanly.  It can also be hard to notice that these
+	      patches are required in the first place.</para>
+	  </listitem>
+	</varlistentry>
+      </variablelist>
+    </sect2>
+
+    <sect2 xml:id="bundled-libs-practices">
+      <title>What to do About Bundled Libraries</title>
+
+      <para>Whenever possible, use the unbundled version of the
+	library by adding a <varname>LIB_DEPENDS</varname> to the
+	port.  If such a port does not exist yet, consider creating
+	it.</para>
+
+      <para>Only use bundled libraries if the upstream has a
+	good track record on security and using unbundled versions
+	leads to overly complex patches.</para>
+
+      <note>
+	<para>In some very special cases, for example emulators, like
+	  <application>Wine</application>, a port has to bundle
+	  libraries, because they are in a different architecture, or
+	  they have been modified to fit the software's use.  In that
+	  case, those libraries should not be exposed to other ports
+	  for linking.  Add <literal>BUNDLE_LIBS=yes</literal> to the
+	  port's <filename>Makefile</filename>.  This will tell
+	  &man.pkg.8; to not compute provided libraries.  Always ask
+	  the &a.portmgr; before adding this to a port.</para>
+      </note>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="porting-shlibs">
+    <title>Shared Libraries</title>
+
+    <para>If the port installs one or more shared libraries, define
+      a <varname>USE_LDCONFIG</varname> make variable, which will
+      instruct a <filename>bsd.port.mk</filename> to run
+      <literal>&dollar;{LDCONFIG} -m</literal> on the directory
+      where the new library is installed (usually
+      <filename>PREFIX/lib</filename>) during
+      <buildtarget>post-install</buildtarget> target to register it
+      into the shared library cache.  This variable, when defined,
+      will also facilitate addition of an appropriate
+      <literal>@exec /sbin/ldconfig -m</literal> and
+      <literal>@unexec /sbin/ldconfig -R</literal> pair into
+      <filename>pkg-plist</filename>, so that a user who
+      installed the package can start using the shared library
+      immediately and de-installation will not cause the system to
+      still believe the library is there.</para>
+
+    <programlisting>USE_LDCONFIG=	yes</programlisting>
+
+    <para>The default directory can be overridden by
+      setting <varname>USE_LDCONFIG</varname> to a list of
+      directories into which shared libraries are to be installed.
+      For example, if the port installs shared libraries into
+      <filename>PREFIX/lib/foo</filename> and
+      <filename>PREFIX/lib/bar</filename>
+      use this in
+      <filename>Makefile</filename>:</para>
+
+    <programlisting>USE_LDCONFIG=	${PREFIX}/lib/foo ${PREFIX}/lib/bar</programlisting>
+
+    <para>Please double-check, often this is not necessary at all or
+      can be avoided through <literal>-rpath</literal> or setting
+      <envar>LD_RUN_PATH</envar> during linking (see
+      <package role="port">lang/moscow_ml</package> for an
+      example), or through a shell-wrapper which sets
+      <varname>LD_LIBRARY_PATH</varname> before invoking the binary,
+      like <package role="port">www/seamonkey</package>
+      does.</para>
+
+    <para>When installing 32-bit libraries on 64-bit system, use
+      <varname>USE_LDCONFIG32</varname> instead.</para>
+
+    <para>If the software uses <link
+	linkend="using-autotools">autotools</link>, and specifically
+      <command>libtool</command>, add <link
+	linkend="uses-libtool"><literal>USES=libtool</literal></link>.</para>
+
+    <para>When the major library version number increments in the
+      update to the new port version, all other ports that link to
+      the affected library must have their
+      <varname>PORTREVISION</varname> incremented, to force
+      recompilation with the new library version.</para>
+  </sect1>
+
+  <sect1 xml:id="porting-restrictions">
+    <title>Ports with Distribution Restrictions or Legal
+      Concerns</title>
+
+    <para>Licenses vary, and some of them place restrictions on how
+      the application can be packaged, whether it can be sold for
+      profit, and so on.</para>
+
+    <important>
+      <para>It is the responsibility of a porter to read the
+	licensing terms of the software and make sure that the
+	&os; project will not be held accountable for violating
+	them by redistributing the source or compiled binaries
+	either via FTP/HTTP or CD-ROM.  If in doubt, please contact
+	the &a.ports;.</para>
+    </important>
+
+    <para>In situations like this, the variables described in the
+      next sections can be set.</para>
+
+    <sect2 xml:id="porting-restrictions-no_package">
+      <title><varname>NO_PACKAGE</varname></title>
+
+      <para>This variable indicates that we may not generate a
+	binary package of the application.  For instance, the
+	license may disallow binary redistribution, or it may
+	prohibit distribution of packages created from patched
+	sources.</para>
+
+      <para>However, the port's <varname>DISTFILES</varname> may be
+	freely mirrored on FTP/HTTP.  They may also be distributed
+	on a CD-ROM (or similar media) unless
+	<varname>NO_CDROM</varname> is set as well.</para>
+
+      <para>If the
+	binary package is not generally useful, and the application
+	must always be compiled from the source code, use
+	<varname>NO_PACKAGE</varname>.  For
+	example, if the application has configuration information
+	that is site specific hard coded into it at compile time,
+	set <varname>NO_PACKAGE</varname>.</para>
+
+      <para>Set <varname>NO_PACKAGE</varname> to a string
+	describing the reason why the package cannot be
+	generated.</para>
+    </sect2>
+
+    <sect2 xml:id="porting-restrictions-no_cdrom">
+      <title><varname>NO_CDROM</varname></title>
+
+      <para>This variable alone indicates that, although we are
+	allowed to generate binary packages, we may put neither
+	those packages nor the port's <varname>DISTFILES</varname>
+	onto a CD-ROM (or similar media) for resale.  However, the
+	binary packages and the port's <varname>DISTFILES</varname>
+	will still be available via FTP/HTTP.</para>
+
+      <para> If this variable is set along with
+	<varname>NO_PACKAGE</varname>, then only the port's
+	<varname>DISTFILES</varname> will be available, and only via
+	FTP/HTTP.</para>
+
+      <para>Set <varname>NO_CDROM</varname> to a string
+	describing the reason why the port cannot be redistributed
+	on CD-ROM.  For instance, use this if the port's
+	license is for <quote>non-commercial</quote> use
+	only.</para>
+    </sect2>
+
+    <sect2 xml:id="porting-restrictions-nofetchfiles">
+      <title><varname>NOFETCHFILES</varname></title>
+
+      <para>Files defined in <varname>NOFETCHFILES</varname>
+	are not fetchable from any of
+	<varname>MASTER_SITES</varname>.  An example of such a file
+	is when the file is supplied on CD-ROM by the vendor.</para>
+
+      <para>Tools which check for the availability of these files
+	on <varname>MASTER_SITES</varname> have to ignore these
+	files and not report about them.</para>
+    </sect2>
+
+    <sect2 xml:id="porting-restrictions-restricted">
+      <title><varname>RESTRICTED</varname></title>
+
+      <para>Set this variable alone if the application's license
+	permits neither mirroring the application's
+	<varname>DISTFILES</varname> nor distributing the binary
+	package in any way.</para>
+
+      <para>Do not set <varname>NO_CDROM</varname> or
+	<varname>NO_PACKAGE</varname> along with
+	<varname>RESTRICTED</varname>, since the latter variable
+	implies the former ones.</para>
+
+      <para>Set <varname>RESTRICTED</varname> to a string
+	describing the reason why the port cannot be redistributed.
+	Typically, this indicates that the port contains proprietary
+	software and that the user will need to manually download
+	the <varname>DISTFILES</varname>, possibly after registering
+	for the software or agreeing to accept the terms of an
+	<acronym>EULA</acronym>.</para>
+    </sect2>
+
+    <sect2 xml:id="porting-restrictions-restricted_files">
+      <title><varname>RESTRICTED_FILES</varname></title>
+
+      <para>When <varname>RESTRICTED</varname> or
+	<varname>NO_CDROM</varname> is set, this variable defaults
+	to <literal>${DISTFILES} ${PATCHFILES}</literal>, otherwise
+	it is empty.  If only some of the distribution files are
+	restricted, then set this variable to list them.</para>
+
+    </sect2>
+
+    <sect2 xml:id="porting-restrictions-legal_text">
+      <title><varname>LEGAL_TEXT</varname></title>
+
+      <para>If the port has legal concerns not addressed by the
+	above variables, set <varname>LEGAL_TEXT</varname>
+	to a string explaining the concern.  For
+	example, if special permission was obtained for &os; to
+	redistribute the binary, this variable must indicate
+	so.</para>
+    </sect2>
+
+    <sect2 xml:id="porting-restrictions-legal">
+      <title><filename>/usr/ports/LEGAL</filename> and
+	<varname>LEGAL</varname></title>
+
+      <para>A port which sets any of the above variables must also
+	be added to <filename>/usr/ports/LEGAL</filename>.  The
+	first column is a glob which matches the restricted
+	distfiles.  The second column is the port's origin.  The
+	third column is the output of
+	<command>make -VLEGAL</command>.</para>
+    </sect2>
+
+    <sect2 xml:id="porting-restrictions-examples">
+      <title>Examples</title>
+
+      <para>The preferred way to state "the distfiles for this port
+	must be fetched manually" is as follows:</para>
+
+      <programlisting>.if !exists(${DISTDIR}/${DISTNAME}${EXTRACT_SUFX})
+IGNORE=	may not be redistributed because of licensing reasons. Please visit <replaceable>some-website</replaceable> to accept their license and download ${DISTFILES} into ${DISTDIR}
+.endif</programlisting>
+
+      <para>This both informs the user, and sets the proper metadata
+	on the user's machine for use by automated programs.</para>
+
+      <para>Note that this stanza must be preceded by an inclusion
+	of <filename>bsd.port.pre.mk</filename>.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="building">
+    <title>Building Mechanisms</title>
+
+    <sect2 xml:id="parallel-builds">
+      <title>Building Ports in Parallel</title>
+
+      <para>The &os; ports framework supports parallel building
+	using multiple <command>make</command> sub-processes, which
+	allows <acronym>SMP</acronym> systems to utilize all of
+	their available <acronym>CPU</acronym> power, allowing port
+	builds to be faster and more effective.</para>
+
+      <para>This is achieved by passing <varname>-jX</varname> flag
+	to &man.make.1; running on vendor code.  This is the default
+	build behavior of ports.  Unfortunately, not all ports
+	handle parallel building well and it may be required to
+	explicitly disable this feature by adding the
+	<literal>MAKE_JOBS_UNSAFE=yes</literal> variable.  It is
+	used when a port is known to be broken with
+	<varname>-jX</varname>.</para>
+    </sect2>
+
+    <sect2 xml:id="using-make">
+      <title><command>make</command>, <command>gmake</command>,
+	<command>fmake</command>, and <command>imake</command></title>
+
+      <para>Several differing <literal>make</literal>
+	implementations exist.  Ported software often requires a
+	particular implementation, like <acronym>GNU</acronym>
+	<command>make</command>, known in &os; as
+	<command>gmake</command>, or <command>fmake</command>, the
+	legacy &os; <command>make</command>.</para>
+
+      <para>If the port uses <application>GNU make</application>,
+	add <literal>gmake</literal> to <literal>USES</literal>.  If
+	the legacy &os; <command>make</command> is needed, add
+	<literal>fmake</literal> there.</para>
+
+      <para><varname>MAKE_CMD</varname> can be used to reference the
+	specific command configured by the <literal>USES</literal>
+	setting in the port's <filename>Makefile</filename>.  In
+	rare cases when more than one <literal>make</literal>
+	implementation is listed in <literal>USES</literal>, the
+	variables <varname>GMAKE</varname> (for the
+	<acronym>GNU</acronym> version) or <varname>FMAKE</varname>
+	(for the legacy &os; version) are available.
+	Only use <varname>MAKE_CMD</varname> within the
+	application <filename>Makefile</filename>s in
+	<varname>WRKSRC</varname> to call the
+	<command>make</command> implementation expected by the
+	ported software.</para>
+
+      <para>If the port is an X application that uses
+	<application>imake</application> to create
+	<filename>Makefile</filename>s from
+	<filename>Imakefile</filename>s, set <literal>USES=
+	  imake</literal>..  See the <link
+	  linkend="uses-imake"><literal>USES=imake</literal></link>
+	section of <xref linkend="uses"/> for more details.</para>
+
+      <para>If the port's source <filename>Makefile</filename> has
+	something other than <buildtarget>all</buildtarget> as the
+	main build target, set <varname>ALL_TARGET</varname>
+	accordingly.  The same goes for
+	<buildtarget>install</buildtarget> and
+	<varname>INSTALL_TARGET</varname>.</para>
+    </sect2>
+
+    <sect2 xml:id="using-configure">
+      <title><command>configure</command> Script</title>
+
+      <para>If the port uses the <command>configure</command>
+	script to generate <filename>Makefile</filename> from
+	<filename>Makefile.in</filename>, set
+	<literal>GNU_CONFIGURE=yes</literal>.  To give
+	extra arguments to the <command>configure</command> script
+	(the default argument is <literal>--prefix=&dollar;{PREFIX}
+	  --infodir=&dollar;{PREFIX}/&dollar;{INFO_PATH}
+	  --mandir=&dollar;{MANPREFIX}/man
+	  --build=&dollar;{CONFIGURE_TARGET}</literal>), set those
+	extra arguments in <varname>CONFIGURE_ARGS</varname>.  Extra
+	environment variables can be passed using
+	<varname>CONFIGURE_ENV</varname>.</para>
+
+      <table frame="none" xml:id="using-configure-variables">
+	<title>Variables for Ports That Use
+	  <command>configure</command></title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Variable</entry>
+	      <entry>Means</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><varname>GNU_CONFIGURE</varname></entry>
+	      <entry>The port uses <command>configure</command>
+		script to prepare build.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>HAS_CONFIGURE</varname></entry>
+	      <entry>Same as <varname>GNU_CONFIGURE</varname>,
+		except default configure target is not added to
+		<varname>CONFIGURE_ARGS</varname>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>CONFIGURE_ARGS</varname></entry>
+	      <entry>Additional arguments passed to
+		<command>configure</command> script.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>CONFIGURE_ENV</varname></entry>
+	      <entry>Additional environment variables to be set
+		for <command>configure</command> script run.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>CONFIGURE_TARGET</varname></entry>
+	      <entry>Override default configure target.  Default
+		value is
+		<literal>&dollar;{MACHINE_ARCH}-portbld-freebsd&dollar;{OSREL}</literal>.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+    </sect2>
+
+    <sect2 xml:id="using-cmake">
+      <title>Using <command>cmake</command></title>
+
+      <para>For ports that use <application>CMake</application>,
+	define <literal>USES= cmake</literal>, or
+	<literal>USES= cmake:outsource</literal> to build in a
+	separate directory (see below).</para>
+
+      <table frame="none" xml:id="using-cmake-variables">
+	<title>Variables for Ports That Use
+	  <command>cmake</command></title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Variable</entry>
+	      <entry>Means</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><varname>CMAKE_ARGS</varname></entry>
+	      <entry>Port specific <application>CMake</application>
+		flags to be passed to the <command>cmake</command>
+		binary.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>CMAKE_BUILD_TYPE</varname></entry>
+	      <entry>Type of build (<application>CMake</application>
+		predefined build profiles).  Default is
+		<literal>Release</literal>, or
+		<literal>Debug</literal> if
+		<varname>WITH_DEBUG</varname> is set.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>CMAKE_ENV</varname></entry>
+	      <entry>Environment variables to be set for the
+		<command>cmake</command> binary.  Default is
+		<literal>&dollar;{CONFIGURE_ENV}</literal>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>CMAKE_SOURCE_PATH</varname></entry>
+	      <entry>Path to the source directory.  Default is
+		<literal>&dollar;{WRKSRC}</literal>.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <table frame="none" xml:id="using-cmake-user-variables">
+	<title>Variables the Users Can Define for
+	  <command>cmake</command> Builds</title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Variable</entry>
+	      <entry>Means</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><varname>CMAKE_VERBOSE</varname></entry>
+	      <entry>Enable verbose build output.  Default not set,
+		unless <varname>BATCH</varname> or
+		<varname>PACKAGE_BUILDING</varname> are set.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>CMAKE_NOCOLOR</varname></entry>
+	      <entry>Disables color build output.  Default not set,
+		unless <varname>BATCH</varname> or
+		<varname>PACKAGE_BUILDING</varname> are set.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <para><application>CMake</application> supports these
+	build profiles: <literal>Debug</literal>,
+	<literal>Release</literal>,
+	<literal>RelWithDebInfo</literal> and
+	<literal>MinSizeRel</literal>.  <literal>Debug</literal> and
+	<literal>Release</literal> profiles respect system
+	<literal>*FLAGS</literal>, <literal>RelWithDebInfo</literal>
+	and <literal>MinSizeRel</literal> will set
+	<varname>CFLAGS</varname> to <literal>-O2 -g</literal> and
+	<literal>-Os -DNDEBUG</literal> correspondingly.  The
+	lower-cased value of <varname>CMAKE_BUILD_TYPE</varname> is
+	exported to <varname>PLIST_SUB</varname> and must be
+	used if the port installs
+	<filename><replaceable>*</replaceable>.cmake</filename>
+	depending on the build type (see
+	<package role="port">deskutils/strigi</package> for an
+	example).  Please note that some projects may define their own
+	build profiles and/or force particular build type by setting
+	<literal>CMAKE_BUILD_TYPE</literal> in
+	<filename>CMakeLists.txt</filename>.  To make a port for such
+	a project respect <varname>CFLAGS</varname> and
+	<varname>WITH_DEBUG</varname>, the
+	<literal>CMAKE_BUILD_TYPE</literal> definitions must be
+	removed from those files.</para>
+
+      <para>Most <application>CMake</application>-based projects
+	support an out-of-source method of building.  The
+	out-of-source build for a port can be requested by using the
+	<literal>:outsource</literal> suffix.  When enabled,
+	<varname>CONFIGURE_WRKSRC</varname>,
+	<varname>BUILD_WRKSRC</varname> and
+	<varname>INSTALL_WRKSRC</varname> will be set to
+	<literal>&dollar;{WRKDIR}/.build</literal> and this
+	directory will be used to keep all files generated during
+	configuration and build stages, leaving the source directory
+	intact.</para>
+
+      <example xml:id="using-cmake-example">
+	<title><literal>USES= cmake</literal> Example</title>
+
+	<para>This snippet demonstrates the use of
+	  <application>CMake</application> for a port.
+	  <varname>CMAKE_SOURCE_PATH</varname> is not usually
+	  required, but can be set when the sources are not located
+	  in the top directory, or if only a subset of the project
+	  is intended to be built by the port.</para>
+
+	<programlisting>USES=			cmake:outsource
+CMAKE_SOURCE_PATH=	&dollar;{WRKSRC}/subproject</programlisting>
+      </example>
+    </sect2>
+
+    <sect2 xml:id="using-scons">
+      <title>Using <command>scons</command></title>
+
+      <para>If the port uses <application>SCons</application>,
+	define <literal>USE_SCONS=yes</literal>.</para>
+
+      <table frame="none" xml:id="using-scons-variables">
+	<title>Variables for Ports That Use
+	  <command>scons</command></title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Variable</entry>
+	      <entry>Means</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><varname>SCONS_ARGS</varname></entry>
+	      <entry>Port specific SCons flags passed to the SCons
+		environment.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>SCONS_BUILDENV</varname></entry>
+	      <entry>Variables to be set in system
+		environment.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>SCONS_ENV</varname></entry>
+	      <entry>Variables to be set in SCons
+		environment.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>SCONS_TARGET</varname></entry>
+	      <entry>Last argument passed to SCons, similar to
+		<varname>MAKE_TARGET</varname>.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <para>To make third party <filename>SConstruct</filename>
+	respect everything that is passed to SCons in
+	<varname>SCONS_ENV</varname> (that is, most importantly,
+	<varname>CC/CXX/CFLAGS/CXXFLAGS</varname>), patch
+	<filename>SConstruct</filename> so build
+	<literal>Environment</literal> is constructed like
+	this:</para>
+
+      <programlisting>env = Environment(**ARGUMENTS)</programlisting>
+
+      <para>It may be then modified with
+	<literal>env.Append</literal> and
+	<literal>env.Replace</literal>.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="using-autotools">
+    <title>Using GNU Autotools</title>
+
+    <sect2 xml:id="using-autotools-introduction">
+      <title>Introduction</title>
+
+      <para>The various GNU autotools provide an abstraction
+	mechanism for building a piece of software over a wide
+	variety of operating systems and machine architectures.
+	Within the Ports Collection, an individual port can make use
+	of these tools via a simple construct:</para>
+
+      <programlisting>USE_AUTOTOOLS=	<replaceable>tool</replaceable>[:env] ...</programlisting>
+
+      <para>At the time of writing, <replaceable>tool</replaceable>
+	can be one of <literal>autoconf</literal>,
+	<literal>autoheader</literal>, <literal>automake</literal>,
+	<literal>aclocal</literal>, <literal>libtoolize</literal>.
+	It can also be one the older
+	legacy of <literal>autoconf213</literal>,
+	<literal>autoheader213</literal>,
+	<literal>automake14</literal>,
+	<literal>aclocal14</literal>.</para>
+
+      <para><replaceable>env</replaceable> is used to specify that the
+	environmental variables are needed.  It also adds a build
+	dependency on the tool.  The relevant tool is
+	<emphasis>not</emphasis> ran as part of the
+	<buildtarget>run-autotools</buildtarget> target.</para>
+
+      <para>Multiple tools can be specified at once, either by
+	including them all on a single line, or using the
+	<literal>+=</literal> Makefile construct.</para>
+    </sect2>
+
+    <sect2 xml:id="using-libtool">
+      <title><command>libtool</command> and
+	<command>libtoolize</command></title>
+
+      <para>Ports shipping with their own copy of libtool (search for
+	a file named ltmain.sh) need to have
+	<literal>USES=libtool</literal>.  If a port has
+	<literal>USE_AUTOTOOLS=libtoolize</literal> it probably also
+	needs <literal>USES=libtool</literal>.  See the <link
+	  linkend="uses-libtool">USES=libtool</link> section in <xref
+	  linkend="uses"/> for more details.</para>
+
+    </sect2>
+
+    <sect2 xml:id="using-libltdl">
+      <title><filename>libltdl.so</filename></title>
+
+      <para>Some ports make use of the <filename>libltdl.so</filename>
+	library package, which is part of the
+	<command>libtool</command> suite.  Use of this library does
+	not automatically necessitate the use of
+	<command>libtool</command> itself.  If the port needs
+	<filename>libltdl.so</filename>, add a dependency on
+	it:</para>
+
+      <programlisting>LIB_DEPENDS=	libltdl.so:devel/libltdl</programlisting>
+    </sect2>
+
+    <sect2 xml:id="using-autoconf">
+      <title><command>autoconf</command> and
+	<command>autoheader</command></title>
+
+      <para>Some ports do not contain a configure script, but do
+	contain an autoconf template in
+	<filename>configure.ac</filename>.  Use these
+	assignments to let <command>autoconf</command>
+	create the configure script, and also have
+	<command>autoheader</command> create template headers for
+	use by the configure script.</para>
+
+      <programlisting>USE_AUTOTOOLS=	autoconf[:env]</programlisting>
+
+      <para>and</para>
+
+      <programlisting>USE_AUTOTOOLS=	autoheader</programlisting>
+
+      <para>which also implies the use of
+	<literal>autoconf</literal>.</para>
+
+      <para>The additional optional variables
+	<varname>AUTOCONF_ARGS</varname> and
+	<varname>AUTOHEADER_ARGS</varname> can be overridden by the
+	port <filename>Makefile</filename> if specifically
+	requested.  Most ports are unlikely to need this.  See
+	<filename>bsd.autotools.mk</filename> for further
+	details.</para>
+    </sect2>
+
+    <sect2 xml:id="using-automake">
+      <title><command>automake</command> and
+	<command>aclocal</command></title>
+
+      <para>Some packages only contain
+	<filename>Makefile.am</filename>.  These have to be
+	converted into <filename>Makefile.in</filename> using
+	<command>automake</command>, and the further processed by
+	<command>configure</command> to generate an actual
+	<filename>Makefile</filename>.</para>
+
+      <para>Similarly, packages occasionally do not ship with
+	an included <filename>aclocal.m4</filename>, again
+	required to build the software.  This can be achieved with
+	<command>aclocal</command>, which scans
+	<filename>configure.ac</filename> or
+	<filename>configure.in</filename>.</para>
+
+      <para><command>aclocal</command> has a similar relationship to
+	<command>automake</command> as <command>autoheader</command>
+	does to <command>autoconf</command>, described in the
+	previous section.  <command>aclocal</command> implies the
+	use of <command>automake</command>, thus we have:</para>
+
+      <programlisting>USE_AUTOTOOLS=	automake[:<replaceable>env</replaceable>]</programlisting>
+
+      <para>and</para>
+
+      <programlisting>USE_AUTOTOOLS=	aclocal</programlisting>
+
+      <para>As with <command>autoconf</command> and
+	<command>autoheader</command>, both
+	<command>automake</command> and <command>aclocal</command>
+	have optional argument variables,
+	<varname>AUTOMAKE_ARGS</varname> and
+	<varname>ACLOCAL_ARGS</varname> respectively, which may be
+	overridden by the port <filename>Makefile</filename> if
+	required.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="using-gettext">
+    <title>Using GNU <literal>gettext</literal></title>
+
+    <sect2 xml:id="using-gettext-basic">
+      <title>Basic Usage</title>
+
+      <para>If the port requires <literal>gettext</literal>, set
+	<literal>USES= gettext</literal>, and the port will inherit
+	a dependency on <filename>libintl.so</filename> from
+	<package role="port">devel/gettext</package>.  Other
+	values for <literal>gettext</literal> usage are listed in
+	<link
+	  linkend="uses-gettext"><literal>USES=gettext</literal></link>.</para>
+
+      <para>A rather common case is a port using
+	<literal>gettext</literal> and <command>configure</command>.
+	Generally, GNU <command>configure</command> should be able
+	to locate <literal>gettext</literal> automatically.</para>
+
+      <programlisting>USES=	gettext
+GNU_CONFIGURE=	yes</programlisting>
+
+      <para>If it ever fails to, hints at the location of
+	<literal>gettext</literal> can be passed in
+	<envar>CPPFLAGS</envar> and <envar>LDFLAGS</envar> as
+	follows:</para>
+
+      <programlisting>USES=	gettext
+CPPFLAGS+=	-I${LOCALBASE}/include
+LDFLAGS+=	-L${LOCALBASE}/lib
+
+GNU_CONFIGURE=	yes</programlisting>
+    </sect2>
+
+    <sect2 xml:id="using-gettext-optional">
+      <title>Optional Usage</title>
+
+      <para>Some software products allow for disabling
+	<acronym>NLS</acronym>.  For example, through passing
+	<option>--disable-nls</option> to
+	<command>configure</command>.  In that case, the port must use
+	<literal>gettext</literal> conditionally, depending on the
+	status of the <literal>NLS</literal> option.  For ports of low
+	to medium complexity, use this idiom:</para>
+
+      <programlisting>GNU_CONFIGURE=		yes
+
+OPTIONS_DEFINE=		NLS
+OPTIONS_SUB=		yes
+
+NLS_USES=		gettext
+NLS_CONFIGURE_ENABLE=	nls
+
+.include &lt;bsd.port.mk&gt;</programlisting>
+
+      <para>Or using the older way of using options:</para>
+
+      <programlisting>GNU_CONFIGURE=		yes
+
+OPTIONS_DEFINE=		NLS
+
+.include &lt;bsd.port.options.mk&gt;
+
+.if ${PORT_OPTIONS:MNLS}
+USES+=			gettext
+PLIST_SUB+=		NLS=""
+.else
+CONFIGURE_ARGS+=	--disable-nls
+PLIST_SUB+=		NLS="@comment "
+.endif
+
+.include &lt;bsd.port.mk&gt;</programlisting>
+
+      <para>The next item on the to-do list is to arrange so that
+	the message catalog files are included in the packing list
+	conditionally.  The <filename>Makefile</filename> part of
+	this task is already provided by the idiom.  It is explained
+	in the section on <link linkend="plist-sub">advanced
+	  <filename>pkg-plist</filename> practices</link>.  In a
+	nutshell, each occurrence of <literal>%%NLS%%</literal> in
+	<filename>pkg-plist</filename> will be replaced by
+	<quote><literal>@comment&nbsp;</literal></quote> if NLS is
+	disabled, or by a null string if NLS is enabled.
+	Consequently, the lines prefixed by
+	<literal>%%NLS%%</literal> will become mere comments in the
+	final packing list if NLS is off; otherwise the prefix will
+	be just left out.  Then insert
+	<literal>%%NLS%%</literal> before each path to a message
+	catalog file in <filename>pkg-plist</filename>.  For
+	example:</para>
+
+      <programlisting>%%NLS%%share/locale/fr/LC_MESSAGES/foobar.mo
+%%NLS%%share/locale/no/LC_MESSAGES/foobar.mo</programlisting>
+
+      <para>In high complexity cases, more advanced techniques
+	may be needed, such as
+	<link linkend="plist-dynamic">dynamic packing list
+	  generation</link>.</para>
+    </sect2>
+
+    <sect2 xml:id="using-gettext-catalog-directories">
+      <title>Handling Message Catalog Directories</title>
+
+      <para>There is a point to note about installing message
+	catalog files.  The target directories for them, which
+	reside under
+	<filename>LOCALBASE/share/locale</filename>,
+	must not be created and removed by a port.  The most
+	popular languages have their respective directories listed
+	in
+	<filename>PORTSDIR/Templates/BSD.local.dist</filename>.
+	The directories for many other languages are governed by the
+	<package role="port">devel/gettext</package> port.
+	Consult its <filename>pkg-plist</filename> and see whether
+	the port is going to install a message catalog file for a
+	unique language.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="using-perl">
+    <title>Using <application>Perl</application></title>
+
+    <para>If <varname>MASTER_SITES</varname> is set to
+      <literal>CPAN</literal>, the correct subdirectory is usually
+      selected automatically.  If the default subdirectory is wrong,
+      <literal>CPAN/Module</literal> can be used to change it.
+      <varname>MASTER_SITES</varname> can also be set to the old
+      <varname>MASTER_SITE_PERL_CPAN</varname>, then the preferred
+      value of <varname>MASTER_SITE_SUBDIR</varname> is the
+      top-level hierarchy name.  For example, the recommended value
+      for <literal>p5-Module-Name</literal> is
+      <literal>Module</literal>.  The top-level hierarchy can be
+      examined at <link
+	xlink:href="http://cpan.org/modules/by-module/">cpan.org</link>.
+      This keeps the port working when the author of the module
+      changes.</para>
+
+    <para>The exception to this rule is when the relevant directory
+      does not exist or the distfile does not exist in that
+      directory.  In such case, using author's id as
+      <varname>MASTER_SITE_SUBDIR</varname> is allowed.
+      The <literal>CPAN:AUTHOR</literal> macro can be used, which will
+      be translated to the hashed author directory.  For example,
+      <literal>CPAN:AUTHOR</literal> will be converted to
+      <literal>authors/id/A/AU/AUTHOR</literal>.</para>
+
+    <para>When a port needs <application>Perl</application> support,
+      it must set <literal>USES=perl5</literal> with the optional
+      <varname>USE_PERL5</varname> described in <link
+	linkend="uses-perl5">the perl5 USES description</link>.</para>
+
+    <table frame="none" xml:id="using-perl-variables">
+      <title>Read-Only Variables for Ports That Use
+	<application>Perl</application></title>
+
+      <tgroup cols="2">
+	<thead>
+	  <row>
+	    <entry>Read only variables</entry>
+	    <entry>Means</entry>
+	  </row>
+	</thead>
+
+	<tbody>
+	  <row>
+	    <entry><varname>PERL</varname></entry>
+	    <entry>The full path of the Perl 5 interpreter,
+	      either in the system or installed from a port, but
+	      without the version number.  Use this when the software
+	      needs the path to the <application>Perl</application>
+	      interpreter.  To replace
+	      <quote><literal>#!</literal></quote>lines in scripts,
+	      use <link
+		linkend="uses-shebangfix">USES=shebangfix</link>.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>PERL_VERSION</varname></entry>
+	    <entry>The full version of Perl installed (for example,
+	      <literal>5.8.9</literal>).</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>PERL_LEVEL</varname></entry>
+	    <entry>The installed Perl version as
+	      an integer of the form <literal>MNNNPP</literal>
+	      (for example, <literal>500809</literal>).</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>PERL_ARCH</varname></entry>
+	    <entry>Where Perl stores architecture
+	      dependent libraries.  Defaults to
+	      <literal>${ARCH}-freebsd</literal>.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>PERL_PORT</varname></entry>
+	    <entry>Name of the Perl port that is installed (for
+	      example, <literal>perl5</literal>).</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>SITE_PERL</varname></entry>
+	    <entry>Directory name where site specific
+	      Perl packages go.  This value is
+	      added to <varname>PLIST_SUB</varname>.</entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+
+    <note>
+      <para>Ports of Perl modules which do not have an official
+	website must link to <systemitem>cpan.org</systemitem> in
+	the WWW line of <filename>pkg-descr</filename>.  The
+	preferred URL form is
+	<literal>http://search.cpan.org/dist/Module-Name/</literal>
+	(including the trailing slash).</para>
+    </note>
+
+    <note>
+      <para>Do not use <literal>${SITE_PERL}</literal> in dependency
+	declarations.  Doing so assumes that
+	<filename>perl5.mk</filename> has been included, which is
+	not always true.  Ports depending on this port will have
+	incorrect dependencies if this port's files move later in an
+	upgrade.  The right way to declare Perl module dependencies
+	is shown in the example below.</para>
+    </note>
+
+    <example xml:id="use-perl-dependency-example">
+      <title>Perl Dependency Example</title>
+
+      <programlisting>p5-IO-Tee&gt;=0.64:devel/p5-IO-Tee</programlisting>
+    </example>
+
+    <para>For Perl ports that install manual pages, the macro
+      <varname>PERL5_MAN3</varname> can be used
+      inside <filename>pkg-plist</filename>.  For example,</para>
+
+    <programlisting>lib/perl5/5.14/man/man3/AnyEvent::I3.3.gz</programlisting>
+
+    <para>can be replaced with</para>
+
+    <programlisting>%%PERL5_MAN3%%/AnyEvent::I3.3.gz</programlisting>
+
+    <note>
+      <para>There are no <varname>PERL5_MANx</varname> macros for the
+	other sections (<replaceable>x</replaceable> in
+	<literal>1</literal>, <literal>2</literal> and
+	<literal>4</literal> to <literal>9</literal>) because those
+	get installed in the regular directories.</para>
+    </note>
+  </sect1>
+
+  <sect1 xml:id="using-x11">
+    <title>Using X11</title>
+
+    <sect2 xml:id="x11-variables">
+      <title>X.Org Components</title>
+
+      <para>The X11 implementation available in The Ports Collection
+	is X.Org.  If the application depends on X components, set
+	<varname>USE_XORG</varname> to the list of required
+	components.  Available components, at the time of writing,
+	are:</para>
+
+      <para><literal>bigreqsproto compositeproto damageproto dmx
+	  dmxproto dri2proto dri3proto evieproto fixesproto
+	  fontcacheproto fontenc fontsproto fontutil glproto ice
+	  inputproto kbproto libfs oldx pciaccess pixman presentproto
+	  printproto randrproto recordproto renderproto resourceproto
+	  scrnsaverproto sm trapproto videoproto x11 xau xaw xaw6 xaw7
+	  xbitmaps xcb xcmiscproto xcomposite xcursor xdamage xdmcp
+	  xevie xext xextproto xf86bigfontproto xf86dgaproto
+	  xf86driproto xf86miscproto xf86rushproto xf86vidmodeproto
+	  xfixes xfont xfontcache xft xi xinerama xineramaproto
+	  xkbfile xkbui xmu xmuu xorg-macros xorg-server xp xpm
+	  xprintapputil xprintutil xproto xproxymngproto xrandr
+	  xrender xres xscrnsaver xshmfence xt xtrans xtrap xtst xv
+	  xvmc xxf86dga xxf86misc xxf86vm</literal>.</para>
+
+      <para>Always up-to-date list can be found in
+	<filename>/usr/ports/Mk/bsd.xorg.mk</filename>.</para>
+
+      <para>The Mesa Project is an effort to provide free OpenGL
+	implementation.  To specify a dependency on various
+	components of this project, use <varname>USE_GL</varname>.
+	Valid options are:
+	<literal>egl, gl, glesv2, glew, glu, glut, glw</literal> and
+	<literal>linux</literal>.  For backwards compatibility, the
+	value of <literal>yes</literal> maps to
+	<literal>glu</literal>.</para>
+
+      <example xml:id="use-xorg-example">
+	<title><varname>USE_XORG</varname> Example</title>
+
+	<programlisting>USE_XORG=	xrender xft xkbfile xt xaw
+USE_GL=		glu</programlisting>
+      </example>
+
+      <table frame="none" xml:id="using-xorg-variables">
+	<title>Variables for Ports That Use X</title>
+
+	<tgroup cols="2">
+	  <tbody>
+	    <row>
+	      <entry><varname>USES= imake</varname></entry>
+	      <entry>The port uses <command>imake</command>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>XMKMF</varname></entry>
+	      <entry>Set to the path of <command>xmkmf</command> if
+		not in the <envar>PATH</envar>.  Defaults to
+		<literal>xmkmf -a</literal>.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <example xml:id="using-x11-vars">
+	<title>Using X11-Related Variables</title>
+
+	<programlisting># Use some X11 libraries
+USE_XORG=	x11 xpm</programlisting>
+      </example>
+    </sect2>
+
+    <sect2 xml:id="x11-motif">
+      <title>Ports That Require Motif</title>
+
+      <para>If the port requires a Motif library, define
+	<varname>USES= motif</varname> in the
+	<filename>Makefile</filename>.  Default Motif implementation
+	is
+	<package role="port">x11-toolkits/open-motif</package>.
+	Users can choose
+	<package role="port">x11-toolkits/lesstif</package>
+	instead by setting <varname>WANT_LESSTIF</varname>
+	in their <filename>make.conf</filename>.</para>
+
+      <para><varname>MOTIFLIB</varname> will be set by
+	<filename>motif.mk</filename> to reference the
+	appropriate Motif library.  Please patch the source of the
+	port to use <literal>&dollar;{MOTIFLIB}</literal> wherever
+	the Motif library is referenced in the original
+	<filename>Makefile</filename> or
+	<filename>Imakefile</filename>.</para>
+
+      <para>There are two common cases:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>If the port refers to the Motif library as
+	    <literal>-lXm</literal> in its
+	    <filename>Makefile</filename> or
+	    <filename>Imakefile</filename>, substitute
+	    <literal>&dollar;{MOTIFLIB}</literal> for it.</para>
+	</listitem>
+
+	<listitem>
+	  <para>If the port uses <literal>XmClientLibs</literal> in
+	    its <filename>Imakefile</filename>, change it to
+	    <literal>&dollar;{MOTIFLIB} &dollar;{XTOOLLIB}
+	      &dollar;{XLIB}</literal>.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Note that <varname>MOTIFLIB</varname> (usually) expands
+	to <literal>-L/usr/local/lib -lXm -lXp</literal> or
+	<literal>/usr/local/lib/libXm.a</literal>, so there is no
+	need to add <literal>-L</literal> or <literal>-l</literal>
+	in front.</para>
+    </sect2>
+
+    <sect2 xml:id="x11-fonts">
+      <title>X11 Fonts</title>
+
+      <para>If the port installs fonts for the X Window System, put
+	them in
+	<filename>LOCALBASE/lib/X11/fonts/local</filename>.</para>
+    </sect2>
+
+    <sect2 xml:id="x11-fake-display">
+      <title>Getting a Fake <envar>DISPLAY</envar> with Xvfb</title>
+
+      <para>Some applications require a working X11 display for
+	compilation to succeed.  This pose a problem for machines
+	that operate headless.  When this variable is used,
+	the build infrastructure will start the virtual framebuffer
+	X server.  The working <envar>DISPLAY</envar> is then passed
+	to the build.  See <link
+	  linkend="uses-display"><literal>USES=display</literal></link>
+	for the possible arguments.</para>
+
+      <programlisting>USES=	display</programlisting>
+    </sect2>
+
+    <sect2 xml:id="desktop-entries">
+      <title>Desktop Entries</title>
+
+      <para>Desktop entries (<link
+	  xlink:href="http://standards.freedesktop.org/desktop-entry-spec/latest/">a
+	  Freedesktop standard</link>) provide a way to
+	automatically adjust desktop features when a new program is
+	installed, without requiring user intervention.  For
+	example, newly-installed programs automatically appear in
+	the application menus of compatible desktop environments.
+	Desktop entries originated in the
+	<application>GNOME</application> desktop environment, but
+	are now a standard and also work with
+	<application>KDE</application> and
+	<application>Xfce</application>.  This bit of automation
+	provides a real benefit to the user, and desktop entries are
+	encouraged for applications which can be used in a desktop
+	environment.</para>
+
+      <sect3 xml:id="desktop-entries-predefined">
+	<title>Using Predefined <filename>.desktop</filename>
+	  Files</title>
+
+	<para>Ports that include predefined
+	  <filename><replaceable>*</replaceable>.desktop</filename>
+	  must include those files in <filename>pkg-plist</filename>
+	  and install them in the
+	  <filename>&dollar;LOCALBASE/share/applications</filename>
+	  directory.  The <link
+	    linkend="install-macros"><varname>INSTALL_DATA</varname>
+	    macro</link> is useful for installing these
+	  files.</para>
+      </sect3>
+
+      <sect3 xml:id="updating-desktop-database">
+	<title>Updating Desktop Database</title>
+
+	<para>If a port has a MimeType entry in its
+	  <filename><replaceable>portname</replaceable>.desktop</filename>,
+	  the desktop database must be updated after install and
+	  deinstall.  To do this, define <varname>USES</varname>=
+	  desktop-file-utils.</para>
+      </sect3>
+
+      <sect3 xml:id="desktop-entries-macro">
+	<title>Creating Desktop Entries with
+	  <varname>DESKTOP_ENTRIES</varname></title>
+
+	<para>Desktop entries can be easily created for applications
+	  by using <varname>DESKTOP_ENTRIES</varname>.  A
+	  file named
+	  <filename><replaceable>name</replaceable>.desktop</filename>
+	  will be created, installed, and added to
+	  <filename>pkg-plist</filename> automatically.  Syntax
+	  is:</para>
+
+	<programlisting>DESKTOP_ENTRIES=	"NAME" "COMMENT" "ICON" "COMMAND" "CATEGORY" StartupNotify</programlisting>
+
+	<para>The list of possible categories is available on the
+	  <link
+	    xlink:href="http://standards.freedesktop.org/menu-spec/latest/apa.html">Freedesktop
+	    website</link>.  <varname>StartupNotify</varname>
+	  indicates whether the application is compatible with
+	  <emphasis>startup notifications</emphasis>.  These are
+	  typically a graphic indicator like a clock that appear at
+	  the mouse pointer, menu, or panel to give the user an
+	  indication when a program is starting.  A program that is
+	  compatible with startup notifications clears the indicator
+	  after it has started.  Programs that are not compatible
+	  with startup notifications would never clear the indicator
+	  (potentially confusing and infuriating the user), and
+	  must have <varname>StartupNotify</varname> set to
+	  <literal>false</literal> so the indicator is not shown at
+	  all.</para>
+
+	<para>Example:</para>
+
+	<programlisting>DESKTOP_ENTRIES=	"ToME" "Roguelike game based on JRR Tolkien's work" \
+			"${DATADIR}/xtra/graf/tome-128.png" \
+			"tome -v -g" "Application;Game;RolePlaying;" \
+			false</programlisting>
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="using-gnome">
+    <title>Using GNOME</title>
+
+    <sect2>
+      <title>Introduction</title>
+
+      <para>This chapter explains the <acronym>GNOME</acronym>
+	framework as used by ports.  The framework can be loosely
+	divided into the base components, <acronym>GNOME</acronym>
+	desktop components, and a few special macros that simplify the
+	work of port maintainers.</para>
+
+      <para>While developing a port or changing one, please set</para>
+
+      <programlisting>DEVELOPER=yes</programlisting>
+
+      <para>
+	in the environment or in <filename>/etc/make.conf</filename>.
+	This causes the ports framework to enable additional
+	checks.</para>
+    </sect2>
+
+    <sect2 xml:id="use-gnome">
+      <title>Using <varname>USE_GNOME</varname></title>
+
+      <para>Adding this variable to the port allows the use of
+	the macros and components defined in
+	<filename>bsd.gnome.mk</filename>.  The code in
+	<filename>bsd.gnome.mk</filename> adds the needed
+	build-time, run-time or library dependencies
+	or the handling of special files.
+	<acronym>GNOME</acronym> applications under &os; use the
+	<varname>USE_GNOME</varname> infrastructure.  Include all the
+	needed components as a space-separated list.  The
+	<varname>USE_GNOME</varname> components are divided into
+	these virtual lists: basic components, GNOME 3 components
+	and legacy components.  If the port needs only GTK3 libraries,
+	this is the shortest way to define it:</para>
+
+      <programlisting>USE_GNOME=	gtk30</programlisting>
+
+      <para><varname>USE_GNOME</varname> components automatically
+	add the dependencies they need.  Please see
+	<xref linkend="gnome-components"/> for an exhaustive
+	list of all <varname>USE_GNOME</varname> components and which
+	other components they imply and their dependencies.</para>
+
+      <para>Here is an example <filename>Makefile</filename> for a
+	GNOME port that uses many of the techniques outlined in this
+	document.  Please use it as a guide for creating new
+	ports.</para>
+
+      <programlisting># &dollar;FreeBSD&dollar;
+
+PORTNAME=	 regexxer
+PORTVERSION=	 0.10
+CATEGORIES=	 devel textproc gnome
+MASTER_SITES=	 GNOME
+
+MAINTAINER=	 kwm@FreeBSD.org
+COMMENT=	 Interactive tool for performing search and replace operations
+
+USES=		 gettext gmake pathfix pkgconfig tar:xz
+GNU_CONFIGURE=	yes
+USE_GNOME=	 gnomeprefix intlhack gtksourceviewmm3
+CPPFLAGS+=	 -I${LOCALBASE}/include
+LDFLAGS+=	 -L${LOCALBASE}/lib
+INSTALLS_ICONS= yes
+
+GLIB_SCHEMAS=	 org.regexxer.gschema.xml
+
+.include &lt;bsd.port.mk&gt;</programlisting>
+
+      <note>
+	<para>The <varname>USE_GNOME</varname> macro without any
+	  arguments does not add any dependencies to the port.
+	  <varname>USE_GNOME</varname> cannot be set after
+	  <filename>bsd.port.pre.mk</filename>.</para>
+      </note>
+    </sect2>
+
+    <sect2>
+      <title>Variables</title>
+
+      <para>This section explains which macros are available and how
+	they are used.  Like they are used in the above example.  The
+	<xref linkend="gnome-components"/> has a more in-depth
+	explanation.  <varname>USE_GNOME</varname> has to be set for
+	these macros to be of use.</para>
+
+      <variablelist>
+	<varlistentry>
+	  <term
+	    xml:id="gnome-icons"><varname>INSTALLS_ICONS</varname></term>
+
+	  <listitem>
+	    <para><application>GTK+</application> ports which install
+	      <application>Freedesktop</application>-style icons to
+	      <filename>${LOCALBASE}/share/icons</filename> should use
+	      this macro to ensure that the icons are cached and will
+	      display correctly.  The cache file is named
+	      <filename>icon-theme.cache</filename>.  Do not include
+	      that file in <filename>pkg-plist</filename>.  This macro
+	      handles that automatically.  This macro is not needed
+	      for <application>Qt</application>, which use a
+	      internal method.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term
+	    xml:id="gnome-glibschema"><varname>GLIB_SCHEMAS</varname></term>
+
+	  <listitem>
+	    <para>List of all the glib schema files the port installs.
+	      The macro will add the files to the port plist and
+	      handle the registration of these files on install and
+	      deinstall.</para>
+
+	    <para>The glib schema files are written in
+	      <acronym>XML</acronym> and end with the
+	      <filename>gschema.xml</filename> extension.  They are
+	      installed in the
+	      <filename>share/glib-2.0/schemas/</filename> directory.
+	      These schema files contain all application config values
+	      with there default settings.  The actual database used
+	      by the applications is built by
+	      <application>glib-compile-schema</application>, which is
+	      run by the <varname>GLIB_SCHEMAS</varname> macro.</para>
+
+	    <programlisting>GLIB_SCHEMAS=foo.gschema.xml</programlisting>
+
+	    <note>
+	      <para>Do not add glib schemas to the
+		<filename>pkg-plist</filename>.  If they are listed in
+		<filename>pkg-plist</filename>, they will not be
+		registered and the applications might not work
+		properly.</para>
+	    </note>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term
+	    xml:id="gnome-gconfschema"><varname>GCONF_SCHEMAS</varname></term>
+
+	  <listitem>
+	    <para>List all the gconf schema files.  The macro will add
+	      the schema files to the port plist and will handle their
+	      registration on install and deinstall.</para>
+
+	    <para>GConf is the <acronym>XML</acronym>-based database
+	      that virtually all GNOME applications use for storing
+	      their settings.  These files are installed into the
+	      <filename>etc/gconf/schemas</filename> directory.  This
+	      database is defined by installed schema files that are
+	      used to generate <filename>%gconf.xml</filename> key
+	      files.  For each schema file installed by the port,
+	      there be an entry in the
+	      <filename>Makefile</filename>:</para>
+
+	    <programlisting>GCONF_SCHEMAS=my_app.schemas my_app2.schemas my_app3.schemas</programlisting>
+
+	    <note>
+	      <para>Gconf schemas are listed in the
+		<varname>GCONF_SCHEMAS</varname> macro rather than
+		<filename>pkg-plist</filename>.  If they are listed in
+		<filename>pkg-plist</filename>, they will not be
+		registered and the applications might not work
+		properly.</para>
+	    </note>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term
+	    xml:id="gnome-omf"><varname>INSTALLS_OMF</varname></term>
+
+	  <listitem>
+	    <para>Open Source Metadata Framework
+	      (<acronym>OMF</acronym>) files are commonly used by
+	      GNOME 2 applications.  These files contain the
+	      application help file information, and require special
+	      processing by ScrollKeeper/rarian.  To properly register
+	      <acronym>OMF</acronym> files when installing GNOME
+	      applications from packages, make sure that
+	      <varname>omf</varname> files are listed in
+	      <varname>pkg-plist</varname> and that the port
+	      <filename>Makefile</filename> has
+	      <varname>INSTALLS_OMF</varname> defined:</para>
+
+	    <programlisting>INSTALLS_OMF=yes</programlisting>
+
+	    <para>When set, <filename>bsd.gnome.mk</filename>
+	      automatically scans <filename>pkg-plist</filename> and
+	      adds appropriate <literal>@exec</literal> and
+	      <literal>@unexec</literal> directives for each
+	      <filename>.omf</filename> to track in the
+	      <acronym>OMF</acronym> registration database.</para>
+	  </listitem>
+	</varlistentry>
+      </variablelist>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="gnome-components">
+    <title>GNOME Components</title>
+
+    <para>For further help with a GNOME port, look at some of the
+      <link
+	xlink:href="&url.base;/ports/gnome.html">existing
+	ports</link> for examples.  The
+      <link xlink:href="&url.base;/gnome/">&os; GNOME
+	page</link> has contact information if more help is
+      needed.  The components are divided into GNOME components
+      that are currently in use and legacy components.  If the
+      component supports argument, they are listed between
+      parenthesis in the description.  The first is the default.
+      "Both" is shown if the component defaults to adding to both
+      build and run dependencies.</para>
+
+    <table xml:id="gnome-components-list">
+      <title>GNOME Components</title>
+
+      <tgroup cols="3">
+	<thead>
+	  <row>
+	    <entry>Component</entry>
+	    <entry>Associated program</entry>
+	    <entry>Description</entry>
+	  </row>
+	</thead>
+
+	<tbody>
+	  <row>
+	    <entry><literal>atk</literal></entry>
+	    <entry>accessibility/atk</entry>
+	    <entry>Accessibility toolkit (ATK)</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>atkmm</literal></entry>
+	    <entry>accessibility/atkmm</entry>
+	    <entry>c++ bindings for atk</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>cairo</literal></entry>
+	    <entry>graphics/cairo</entry>
+	    <entry>Vector graphics library with cross-device output
+	      support</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>cairomm</literal></entry>
+	    <entry>graphics/cairomm</entry>
+	    <entry>c++ bindings for cairo</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>dconf</literal></entry>
+	    <entry>devel/dconf</entry>
+	    <entry>Configuration database system
+	      (both, build, run)</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>evolutiondataserver3</literal></entry>
+	    <entry>databases/evolution-data-server</entry>
+	    <entry>Data backends for the Evolution integrated
+	      mail/PIM suite</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gdkpixbuf2</literal></entry>
+	    <entry>graphics/gdk-pixbuf2</entry>
+	    <entry>Graphics library for GTK+</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>glib20</literal></entry>
+	    <entry>devel/glib20</entry>
+	    <entry>GNOME core library
+	      <literal>glib20</literal></entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>glibmm</literal></entry>
+	    <entry>devel/glibmm</entry>
+	    <entry>c++ bindings for glib20</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gnomecontrolcenter3</literal></entry>
+	    <entry>sysutils/gnome-control-center</entry>
+	    <entry>GNOME 3 Control Center</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gnomedesktop3</literal></entry>
+	    <entry>x11/gnome-desktop</entry>
+	    <entry>GNOME 3 desktop UI library</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gsound</literal></entry>
+	    <entry>audio/gsound</entry>
+	    <entry>GObject library for playing system sounds
+	      (both, build, run)</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gtk-update-icon-cache</literal></entry>
+	    <entry>graphics/gtk-update-icon-cache</entry>
+	    <entry>Gtk-update-icon-cache utility from the Gtk+
+	      toolkit</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gtk20</literal></entry>
+	    <entry>x11-toolkits/gtk20</entry>
+	    <entry>Gtk+ 2 toolkit</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gtk30</literal></entry>
+	    <entry>x11-toolkits/gtk30</entry>
+	    <entry>Gtk+ 3 toolkit</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gtkmm20</literal></entry>
+	    <entry>x11-toolkits/gtkmm20</entry>
+	    <entry>c++ bindings 2.0 for the gtk20 toolkit</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gtkmm24</literal></entry>
+	    <entry>x11-toolkits/gtkmm24</entry>
+	    <entry>c++ bindings 2.4 for the gtk20 toolkit</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gtkmm30</literal></entry>
+	    <entry>x11-toolkits/gtkmm30</entry>
+	    <entry>c++ bindings 3.0 for the gtk30 toolkit</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gtksourceview2</literal></entry>
+	    <entry>x11-toolkits/gtksourceview2</entry>
+	    <entry>Widget that adds syntax highlighting to
+	      GtkTextView</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gtksourceview3</literal></entry>
+	    <entry>x11-toolkits/gtksourceview3</entry>
+	    <entry>Text widget that adds syntax highlighting to
+	      the GtkTextView widget</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gtksourceviewmm3</literal></entry>
+	    <entry>x11-toolkits/gtksourceviewmm3</entry>
+	    <entry>c++ bindings for the gtksourceview3 library</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gvfs</literal></entry>
+	    <entry>devel/gvfs</entry>
+	    <entry>GNOME virtual file system</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>intltool</literal></entry>
+	    <entry>textproc/intltool</entry>
+	    <entry>Tool for internationalization (also see
+	      intlhack)</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>introspection</literal></entry>
+	    <entry>devel/gobject-introspection</entry>
+	    <entry>Basic introspection bindings and tools to
+	      generate introspection bindings.  Most of the time
+	      :build is enough, :both/:run is only need for
+	      applications that use introspection bindings.
+	      (both, build, run)</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libgda5</literal></entry>
+	    <entry>databases/libgda5</entry>
+	    <entry>Provides uniform access to different kinds of
+	      data sources</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libgda5-ui</literal></entry>
+	    <entry>databases/libgda5-ui</entry>
+	    <entry>UI library from the libgda5 library</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libgdamm5</literal></entry>
+	    <entry>databases/libgdamm5</entry>
+	    <entry>c++ bindings for the libgda5 library</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libgsf</literal></entry>
+	    <entry>devel/libgsf</entry>
+	    <entry>Extensible I/O abstraction for dealing with
+	      structured file formats</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>librsvg2</literal></entry>
+	    <entry>graphics/librsvg2</entry>
+	    <entry>Library for parsing and rendering SVG
+	      vector-graphic files</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libsigc++20</literal></entry>
+	    <entry>devel/libsigc++20</entry>
+	    <entry>Callback Framework for C++</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libxml++26</literal></entry>
+	    <entry>textproc/libxml++26</entry>
+	    <entry>c++ bindings for the libxml2 library</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libxml2</literal></entry>
+	    <entry>textproc/libxml2</entry>
+	    <entry>XML parser library (both, build, run)</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libxslt</literal></entry>
+	    <entry>textproc/libxslt</entry>
+	    <entry>XSLT C library (both, build, run)</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>metacity</literal></entry>
+	    <entry>x11-wm/metacity</entry>
+	    <entry>Window manager from GNOME</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>nautilus3</literal></entry>
+	    <entry>x11-fm/nautilus</entry>
+	    <entry>GNOME file manager</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>pango</literal></entry>
+	    <entry>x11-toolkits/pango</entry>
+	    <entry>Open-source framework for the layout and
+	      rendering of i18n text</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>pangomm</literal></entry>
+	    <entry>x11-toolkits/pangomm</entry>
+	    <entry>c++ bindings for the pango library</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>py3gobject3</literal></entry>
+	    <entry>devel/py3-gobject3</entry>
+	    <entry>Python 3, GObject 3.0 bindings</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>pygobject3</literal></entry>
+	    <entry>devel/py-gobject3</entry>
+	    <entry>Python 2, GObject 3.0 bindings</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>vte3</literal></entry>
+	    <entry>x11-toolkits/vte3</entry>
+	    <entry>Terminal widget with improved accessibility and
+	      I18N support</entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+
+    <table xml:id="gnome-components-macro">
+      <title>GNOME Macro Components</title>
+
+      <tgroup cols="2">
+	<thead>
+	  <row>
+	    <entry>Component</entry>
+	    <entry>Description</entry>
+	  </row>
+	</thead>
+
+	<tbody>
+	  <row>
+	    <entry><literal>gnomeprefix</literal></entry>
+	    <entry>Supply <buildtarget>configure</buildtarget> with
+	      some default locations.</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>intlhack</literal></entry>
+	    <entry>Same as intltool, but patches to make sure
+	      <filename>share/locale/</filename> is used.  Please
+	      only use when <literal>intltool</literal> alone is
+	      not enough.</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>referencehack</literal></entry>
+	    <entry>This macro is there to help splitting of the API or
+	      reference documentation into its own port.</entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+
+    <table xml:id="gnome-components-legacy">
+      <title>GNOME Legacy Components</title>
+
+      <tgroup cols="3">
+	<thead>
+	  <row>
+	    <entry>Component</entry>
+	    <entry>Associated program</entry>
+	    <entry>Description</entry>
+	  </row>
+	</thead>
+
+	<tbody>
+	  <row>
+	    <entry><literal>atspi</literal></entry>
+	    <entry>accessibility/at-spi</entry>
+	    <entry>Assistive Technology Service Provider
+	      Interface</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>esound</literal></entry>
+	    <entry>audio/esound</entry>
+	    <entry>Enlightenment sound package</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gal2</literal></entry>
+	    <entry>x11-toolkits/gal2</entry>
+	    <entry>Collection of widgets taken from GNOME 2
+	      gnumeric</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gconf2</literal></entry>
+	    <entry>devel/gconf2</entry>
+	    <entry>Configuration database system for GNOME 2</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gconfmm26</literal></entry>
+	    <entry>devel/gconfmm26</entry>
+	    <entry>c++ bindings for gconf2</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gdkpixbuf</literal></entry>
+	    <entry>graphics/gdk-pixbuf</entry>
+	    <entry>Graphics library for GTK+</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>glib12</literal></entry>
+	    <entry>devel/glib12</entry>
+	    <entry>glib 1.2 core library</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gnomedocutils</literal></entry>
+	    <entry>textproc/gnome-doc-utils</entry>
+	    <entry>GNOME doc utils</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gnomemimedata</literal></entry>
+	    <entry>misc/gnome-mime-data</entry>
+	    <entry>MIME and Application database for GNOME 2</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gnomesharp20</literal></entry>
+	    <entry>x11-toolkits/gnome-sharp20</entry>
+	    <entry>GNOME 2 interfaces for the .NET runtime</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gnomespeech</literal></entry>
+	    <entry>accessibility/gnome-speech</entry>
+	    <entry>GNOME 2 text-to-speech API</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gnomevfs2</literal></entry>
+	    <entry>devel/gnome-vfs</entry>
+	    <entry>GNOME 2 Virtual File System</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gtk12</literal></entry>
+	    <entry>x11-toolkits/gtk12</entry>
+	    <entry>Gtk+ 1.2 toolkit</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gtkhtml3</literal></entry>
+	    <entry>www/gtkhtml3</entry>
+	    <entry>Lightweight HTML rendering/printing/editing
+	      engine</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gtkhtml4</literal></entry>
+	    <entry>www/gtkhtml4</entry>
+	    <entry>Lightweight HTML rendering/printing/editing
+	      engine</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gtksharp20</literal></entry>
+	    <entry>x11-toolkits/gtk-sharp20</entry>
+	    <entry>GTK+ and GNOME 2 interfaces for the .NET
+	      runtime</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>gtksourceview</literal></entry>
+	    <entry>x11-toolkits/gtksourceview</entry>
+	    <entry>Widget that adds syntax highlighting to
+	      GtkTextView</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libartgpl2</literal></entry>
+	    <entry>graphics/libart_lgpl</entry>
+	    <entry>Library for high-performance 2D graphics</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libbonobo</literal></entry>
+	    <entry>devel/libbonobo</entry>
+	    <entry>Component and compound document system for
+	      GNOME 2</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libbonoboui</literal></entry>
+	    <entry>x11-toolkits/libbonoboui</entry>
+	    <entry>GUI frontend to the libbonobo component of
+	      GNOME 2</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libgda4</literal></entry>
+	    <entry>databases/libgda4</entry>
+	    <entry>Provides uniform access to different kinds of
+	      data sources</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libglade2</literal></entry>
+	    <entry>devel/libglade2</entry>
+	    <entry>GNOME 2 glade library</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libgnome</literal></entry>
+	    <entry>x11/libgnome</entry>
+	    <entry>Libraries for GNOME 2, a GNU desktop
+	      environment</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libgnomecanvas</literal></entry>
+	    <entry>graphics/libgnomecanvas</entry>
+	    <entry>Graphics library for GNOME 2</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libgnomekbd</literal></entry>
+	    <entry>x11/libgnomekbd</entry>
+	    <entry>GNOME 2 keyboard shared library</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libgnomeprint</literal></entry>
+	    <entry>print/libgnomeprint</entry>
+	    <entry>Gnome 2 print support library</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libgnomeprintui</literal></entry>
+	    <entry>x11-toolkits/libgnomeprintui</entry>
+	    <entry>Gnome 2 print support library</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libgnomeui</literal></entry>
+	    <entry>x11-toolkits/libgnomeui</entry>
+	    <entry>Libraries for the GNOME 2 GUI, a GNU desktop
+	      environment</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libgtkhtml</literal></entry>
+	    <entry>www/libgtkhtml</entry>
+	    <entry>Lightweight HTML rendering/printing/editing
+	      engine</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libgtksourceviewmm</literal></entry>
+	    <entry>x11-toolkits/libgtksourceviewmm</entry>
+	    <entry>c++ binding of GtkSourceView</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libidl</literal></entry>
+	    <entry>devel/libIDL</entry>
+	    <entry>Library for creating trees of CORBA IDL
+	      file</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libsigc++12</literal></entry>
+	    <entry>devel/libsigc++12</entry>
+	    <entry>Callback Framework for C++</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libwnck</literal></entry>
+	    <entry>x11-toolkits/libwnck</entry>
+	    <entry>Library used for writing pagers and
+	      taskslists</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>libwnck3</literal></entry>
+	    <entry>x11-toolkits/libwnck3</entry>
+	    <entry>Library used for writing pagers and
+	      taskslists</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>orbit2</literal></entry>
+	    <entry>devel/ORBit2</entry>
+	    <entry>High-performance CORBA ORB with support for the
+	      C language</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>pygnome2</literal></entry>
+	    <entry>x11-toolkits/py-gnome2</entry>
+	    <entry>Python bindings for GNOME 2</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>pygobject</literal></entry>
+	    <entry>devel/py-gobject</entry>
+	    <entry>Python 2, GObject 2.0 bindings</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>pygtk2</literal></entry>
+	    <entry>x11-toolkits/py-gtk2</entry>
+	    <entry>Set of Python bindings for GTK+</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>pygtksourceview</literal></entry>
+	    <entry>x11-toolkits/py-gtksourceview</entry>
+	    <entry>Python bindings for GtkSourceView 2</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>vte</literal></entry>
+	    <entry>x11-toolkits/vte</entry>
+	    <entry>Terminal widget with improved accessibility and
+	      I18N support</entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+
+    <table xml:id="gnome-components-deprecated">
+      <title>Deprecated Components: Do Not Use</title>
+
+      <tgroup cols="2">
+	<thead>
+	  <row>
+	    <entry>Component</entry>
+	    <entry>Description</entry>
+	  </row>
+	</thead>
+
+	<tbody>
+	  <row>
+	    <entry><literal>HAVE_GNOME</literal></entry>
+	    <entry>Deprecated, do not use.  Was used to check if a
+	      component was installed.  This was used for ports
+	      that did not have
+	      <literal>--enable</literal>/<literal>--disable</literal>
+	      switches for their configure script.  But the building
+	      of parts of a port without a implicit request is
+	      discouraged.</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>WANT_GNOME</literal></entry>
+	    <entry>Deprecated, do not use.  Was used by ports that
+	      needed <varname>USE_GNOME</varname> for optional
+	      dependencies, which where defined after
+	      <filename>bsd.port.pre.mk</filename>.  Since
+	      <varname>USE_GNOME</varname> can be used after the
+	      inclusion of <filename>bsd.port.options.mk</filename>,
+	      there is little need for this macro any more.</entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>pangox-compat</literal></entry>
+	    <entry><application>pangox-compat</application> has been
+	      deprecated and split off from the
+	      <application>pango</application> package.</entry>
+	  </row>
+
+	</tbody>
+      </tgroup>
+    </table>
+  </sect1>
+
+  <sect1 xml:id="using-qt">
+    <title>Using Qt</title>
+
+    <sect2 xml:id="qt-common">
+      <title>Ports That Require Qt</title>
+
+      <para>The Ports Collection provides support for Qt 4 and Qt 5
+	frameworks with
+	<varname>USE_QT<replaceable>x</replaceable></varname>,
+	where <replaceable>x</replaceable> is
+	<literal>4</literal> or <literal>5</literal>.
+	Set <varname>USE_QT<replaceable>x</replaceable></varname>
+	to the list of required Qt components (libraries,
+	tools, plugins).  The Qt 4 and Qt 5 frameworks are quite
+	similar.  The main difference is the set of supported
+	components.</para>
+
+      <para>The Qt framework exports a number of variables which can
+	be used by ports, some of them listed below:</para>
+
+      <table frame="none" xml:id="using-qt-variables">
+	<title>Variables Provided to Ports That Use Qt</title>
+
+	<tgroup cols="2">
+	  <tbody>
+	    <row>
+	      <entry><varname>QT_PREFIX</varname></entry>
+	      <entry>Set to the path where Qt was installed
+		(<literal>&dollar;{LOCALBASE}</literal>).</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>QMAKE</varname></entry>
+	      <entry>Full path to <command>qmake</command>
+		binary.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>LRELEASE</varname></entry>
+	      <entry>Full path to <command>lrelease</command>
+		utility.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>MOC</varname></entry>
+	      <entry>Full path to <command>moc</command>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>RCC</varname></entry>
+	      <entry>Full path to <command>rcc</command>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>UIC</varname></entry>
+	      <entry>Full path to <command>uic</command>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>QT_INCDIR</varname></entry>
+	      <entry>Qt include directory.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>QT_LIBDIR</varname></entry>
+	      <entry>Qt libraries path.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>QT_PLUGINDIR</varname></entry>
+	      <entry>Qt plugins path.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <para>When using the Qt framework, these
+	settings are deployed:</para>
+
+      <programlisting>CONFIGURE_ARGS+=	--with-qt-includes=${QT_INCDIR} \
+			--with-qt-libraries=${QT_LIBDIR} \
+			--with-extra-libs=${LOCALBASE}/lib \
+			--with-extra-includes=${LOCALBASE}/include
+
+CONFIGURE_ENV+=	QTDIR="${QT_PREFIX}" QMAKE="${QMAKE}" \
+		MOC="${MOC}" RCC="${RCC}" UIC="${UIC}" \
+		QMAKESPEC="${QMAKESPEC}"
+
+PLIST_SUB+=	QT_INCDIR=${QT_INCDIR_REL} \
+		QT_LIBDIR=${QT_LIBDIR_REL} \
+		QT_PLUGINDIR=${QT_PLUGINDIR_REL}</programlisting>
+
+      <para>Some configure scripts do not support the arguments above.
+	To suppress modification of<varname>CONFIGURE_ENV</varname>
+	and <varname>CONFIGURE_ARGS</varname>, set
+	<varname>QT_NONSTANDARD</varname>.</para>
+    </sect2>
+
+    <sect2 xml:id="qt-components">
+      <title>Component Selection</title>
+
+      <para>Individual Qt tool and library dependencies must be
+	specified in
+	<varname>USE_QT<replaceable>x</replaceable></varname>.
+	Every component can be suffixed with
+	<literal>_build</literal> or <literal>_run</literal>, the
+	suffix indicating whether the dependency on the component is
+	at buildtime or runtime.  If unsuffixed, the component will be
+	depended on at both build- and runtime.  Usually, library
+	components are specified unsuffixed, tool components
+	are mostly specified with the <literal>_build</literal> suffix
+	and plugin components are specified with the
+	<literal>_run</literal> suffix.  The most commonly used
+	components are listed below (all available components are
+	listed in <varname>_USE_QT_ALL</varname>,
+	<varname>_USE_QT4_ONLY</varname>, and
+	<varname>_USE_QT5_ONLY</varname> in
+	<filename>/usr/ports/Mk/bsd.qt.mk</filename>):</para>
+
+      <table frame="none" xml:id="using-qt-library-list">
+	<title>Available Qt Library Components</title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Name</entry>
+	      <entry>Description</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><literal>core</literal></entry>
+	      <entry>core library (Qt 5 only)</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>corelib</literal></entry>
+	      <entry>core library (Qt 4 only)</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>dbus</literal></entry>
+	      <entry>Qt DBus library</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>gui</literal></entry>
+	      <entry>graphical user interface library</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>network</literal></entry>
+	      <entry>network library</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>opengl</literal></entry>
+	      <entry>Qt OpenGL library</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>script</literal></entry>
+	      <entry>script library</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>sql</literal></entry>
+	      <entry>SQL library</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>testlib</literal></entry>
+	      <entry>unit testing library</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>webkit</literal></entry>
+	      <entry>Qt WebKit library</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>xml</literal></entry>
+	      <entry>Qt XML library</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <para>To determine the libraries an application
+	depends on, run <command>ldd</command> on the main
+	executable after a successful compilation.</para>
+
+      <table frame="none" xml:id="using-qt-tools-list">
+	<title>Available Qt Tool Components</title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Name</entry>
+	      <entry>Description</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><literal>qmake</literal></entry>
+	      <entry>Makefile generator/build utility</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>buildtools</literal></entry>
+	      <entry>build tools (<command>moc</command>,
+		<command>rcc</command>), needed for almost
+		every Qt application (Qt 5 only)</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>linguisttools</literal></entry>
+	      <entry>localization tools: <command>lrelease</command>,
+		<command>lupdate</command> (Qt 5 only)</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>linguist</literal></entry>
+	      <entry>localization tools: <command>lrelease</command>,
+		<command>lupdate</command> (Qt 4 only)</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>moc</literal></entry>
+	      <entry>meta object compiler, needed for almost
+		every Qt application at buildtime (Qt 4 only)</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>rcc</literal></entry>
+	      <entry>resource compiler, needed if the application
+		comes with <filename>*.rc</filename> or
+		<filename>*.qrc</filename> files (Qt 4 only)</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>uic</literal></entry>
+	      <entry>user interface compiler, needed if the
+		application comes with <filename>*.ui</filename>
+		files, in practice, every Qt
+		application with a GUI (Qt 4 only)</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <table frame="none" xml:id="using-qt-plugins-list">
+	<title>Available Qt Plugin Components</title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Name</entry>
+	      <entry>Description</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><literal>iconengines</literal></entry>
+	      <entry>SVG icon engine plugin, needed if the application
+		ships SVG icons (Qt 4 only)</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>imageformats</literal></entry>
+	      <entry>plugins for TGA, TIFF, and MNG
+		image formats</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <example xml:id="qt4-components-example">
+	<title>Selecting Qt 4 Components</title>
+
+	<para>In this example, the ported application uses the Qt 4
+	  graphical user interface library, the Qt 4 core library,
+	  all of the Qt 4 code generation tools and Qt 4's Makefile
+	  generator.  Since the <literal>gui</literal> library
+	  implies a dependency on the core library,
+	  <literal>corelib</literal> does not need to be specified.
+	  The Qt 4 code generation tools <literal>moc</literal>,
+	  <literal>uic</literal> and <literal>rcc</literal>, as well
+	  as the Makefile generator <literal>qmake</literal> are
+	  only needed at buildtime, thus they are specified with the
+	  <literal>_build</literal> suffix:</para>
+
+	<programlisting>USE_QT4=	gui moc_build qmake_build rcc_build uic_build</programlisting>
+      </example>
+    </sect2>
+
+    <sect2 xml:id="using-qmake">
+      <title>Using <command>qmake</command></title>
+
+
+      <para>If the application provides a
+	<application>qmake</application> project file
+	(<filename>*.pro</filename>), define
+	<literal>USES= qmake</literal> along with
+	<literal>USE_QT<replaceable>x</replaceable></literal>.  Note
+	that <literal>USES= qmake</literal> already implies a build
+	dependency on qmake, therefore the qmake component can be
+	omitted from
+	<literal>USE_QT<replaceable>x</replaceable></literal>.
+	Similar to <link
+	  linkend="using-cmake"><application>CMake</application></link>,
+	<application>qmake</application> supports out-of-source
+	builds, which can be enabled by specifying the
+	<literal>outsource</literal> argument (see <link
+	  linkend="using-qmake-example"><literal>USES= qmake</literal>
+	  example</link>).</para>
+
+      <table frame="none" xml:id="using-qmake-variables">
+	<title>Variables for Ports That Use
+	  <command>qmake</command></title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Variable</entry>
+	      <entry>Means</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><varname>QMAKE_ARGS</varname></entry>
+	      <entry>Port specific <application>qmake</application>
+		flags to be passed to the <command>qmake</command>
+		binary.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>QMAKE_ENV</varname></entry>
+	      <entry>Environment variables to be set for the
+		<command>qmake</command> binary.   The default is
+		<literal>&dollar;{CONFIGURE_ENV}</literal>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>QMAKE_SOURCE_PATH</varname></entry>
+
+	      <entry>Path to qmake project files
+		(<filename>.pro</filename>).  The default is
+		<literal>&dollar;{WRKSRC}</literal> if an
+		out-of-source build is requested, empty
+		otherwise.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <example xml:id="using-qmake-example">
+	<title><literal>USES= qmake</literal> Example</title>
+
+	<para>This snippet demonstrates the use of
+	  <application>qmake</application> for a Qt 4 port:</para>
+
+	<programlisting>USES=		qmake:outsource
+USE_QT4=	moc_build</programlisting>
+
+	<para>For a Qt 5 port:</para>
+	<programlisting>USES=		qmake:outsource
+USE_QT5=	buildtools_build</programlisting>
+      </example>
+
+      <para>Qt applications are often written to be cross-platform
+	and often X11/Unix is not the platform they are developed
+	on, which in turn leads to certain loose ends,
+	like:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para><emphasis>Missing additional include
+	      paths.</emphasis>  Many applications come with
+	    system tray icon support, but neglect to look for
+	    includes and/or libraries in the X11 directories.  To add
+	    directories to <command>qmake</command>'s
+	    include and library search paths via the command
+	    line, use:</para>
+
+	  <programlisting>QMAKE_ARGS+=	INCLUDEPATH+=${LOCALBASE}/include \
+		LIBS+=-L${LOCALBASE}/lib</programlisting>
+	</listitem>
+
+	<listitem>
+	  <para><emphasis>Bogus installation paths.</emphasis>
+	    Sometimes data such as icons or .desktop files are by
+	    default installed into directories which are not scanned
+	    by XDG-compatible applications.
+	    <package role="port">editors/texmaker</package> is
+	    an example for this - look at
+	    <filename>patch-texmaker.pro</filename> in the
+	    <filename>files</filename> directory of that port for a
+	    template on how to remedy this directly in the
+	    <command>qmake</command> project file.</para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="using-kde">
+    <title>Using KDE</title>
+
+    <sect2 xml:id="kde4-variables">
+      <title>KDE 4 Variable Definitions</title>
+
+      <para>If the application depends on KDE 4, set
+	<literal>USES+=kde:4</literal> and
+	<varname>USE_KDE</varname> to the list of required
+	components.  <literal>_build</literal> and
+	<literal>_run</literal> suffixes can be used to force
+	components dependency type (for example,
+	<literal>baseapps_run</literal>).  If no suffix is set, a
+	default dependency type will be used.  To force both types,
+	add the component twice with both suffixes (for example,
+	<literal>automoc4_build automoc4_run</literal>).  The most
+	commonly used components are listed below (up-to-date
+	components are documented at the top of
+	<filename>/usr/ports/Mk/bsd.kde4.mk</filename>):</para>
+
+      <table frame="none" xml:id="using-kde-components">
+	<title>Available KDE 4 Components</title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Name</entry>
+	      <entry>Description</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><literal>kdehier</literal></entry>
+	      <entry>Hierarchy of common KDE directories</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>kdelibs</literal></entry>
+	      <entry>KDE core libraries</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>kdeprefix</literal></entry>
+	      <entry>If set, port will be installed into
+		<literal>&dollar;{KDE_PREFIX}</literal></entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>automoc4</literal></entry>
+	      <entry>Build tool to automatically generate moc
+		files</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>akonadi</literal></entry>
+	      <entry>Storage server for KDE PIM data</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>soprano</literal></entry>
+	      <entry>Library for Resource Description Framework
+		(RDF)</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>strigi</literal></entry>
+	      <entry>Strigi desktop search library</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>libkcddb</literal></entry>
+	      <entry>KDE CDDB (compact disc database) library</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>libkcompactdisc</literal></entry>
+	      <entry>KDE library for interfacing with audio
+		CDs</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>libkdeedu</literal></entry>
+	      <entry>Libraries used by educational
+		applications</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>libkdcraw</literal></entry>
+	      <entry>KDE LibRaw library</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>libkexiv2</literal></entry>
+	      <entry>KDE Exiv2 library</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>libkipi</literal></entry>
+	      <entry>KDE Image Plugin Interface</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>libkonq</literal></entry>
+	      <entry>Konqueror core library</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>libksane</literal></entry>
+	      <entry>KDE SANE ("Scanner Access Now Easy")
+		library</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>pimlibs</literal></entry>
+	      <entry>Personal information management libraries</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>kate</literal></entry>
+	      <entry>Advanced text editor framework</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>marble</literal></entry>
+	      <entry>Virtual globe and world atlas</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>okular</literal></entry>
+	      <entry>Universal document viewer</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>korundum</literal></entry>
+	      <entry>KDE Ruby bindings</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>perlkde</literal></entry>
+	      <entry>KDE Perl bindings</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>pykde4</literal></entry>
+	      <entry>KDE Python bindings</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>pykdeuic4</literal></entry>
+	      <entry>PyKDE user interface compiler</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>smokekde</literal></entry>
+	      <entry>KDE SMOKE libraries</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <para>KDE 4 ports are installed into
+	<varname>KDE_PREFIX</varname>.  This is
+	achieved by specifying the <literal>kdeprefix</literal>
+	component, which overrides the default
+	<varname>PREFIX</varname>.  The ports, however, respect any
+	<varname>PREFIX</varname> set via the <envar>MAKEFLAGS</envar>
+	environment variable and/or <command>make</command>
+	arguments.  Currently <varname>KDE_PREFIX</varname>
+	is identical to the default <varname>PREFIX</varname>,
+	<literal>&dollar;{LOCALBASE}</literal>.</para>
+
+      <example xml:id="kde4-components-example">
+	<title><varname>USE_KDE</varname> Example</title>
+
+	<para>This is a simple example for a KDE 4 port.
+	  <literal>USES= cmake:outsource</literal> instructs the
+	  port to utilize <application>CMake</application>, a
+	  configuration tool widely used by KDE 4 projects (see
+	  <xref linkend="using-cmake"/> for detailed usage).
+	  <varname>USE_KDE</varname> brings dependency on KDE
+	  libraries and makes port using
+	  <command>automoc4</command> at build stage.
+	  Required KDE components and other dependencies can be
+	  determined through configure log.
+	  <varname>USE_KDE</varname> does not imply
+	  <varname>USE_QT4</varname>.  If a port requires some
+	  Qt 4 components, specify them in
+	  <varname>USE_QT4</varname>.</para>
+
+	<programlisting>USES=		cmake:outsource kde:4
+USE_KDE=	kdelibs kdeprefix automoc4
+USE_QT4=	moc_build qmake_build rcc_build uic_build</programlisting>
+      </example>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="using-java">
+    <title>Using Java</title>
+
+    <sect2 xml:id="java-variables">
+      <title>Variable Definitions</title>
+
+      <para>If the port needs a Java&trade; Development Kit
+	(<acronym>JDK</acronym>&trade;) to either build, run or even
+	extract the distfile, then define
+	<varname>USE_JAVA</varname>.</para>
+
+      <para>There are several <acronym>JDK</acronym>s in the ports
+	collection, from various vendors, and in several versions.  If
+	the port must use a particular version, specify it using the
+	<varname>JAVA_VERSION</varname> variable.
+	The most current version is
+	<package role="port">java/openjdk8</package>, with
+	<package role="port">java/openjdk6</package> and
+	<package role="port">java/openjdk7</package> also available.</para>
+
+      <table frame="none" xml:id="using-java-variables">
+	<title>Variables Which May be Set by Ports That Use
+	  Java</title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Variable</entry>
+	      <entry>Means</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><varname>USE_JAVA</varname></entry>
+	      <entry>Define for the remaining variables
+		to have any effect.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_VERSION</varname></entry>
+	      <entry>List of space-separated suitable Java versions
+		for the port.  An optional <literal>"+"</literal>
+		allows specifying a range of versions (allowed
+		values:
+		<literal>1.5[+] 1.6[+] 1.7[+]</literal>).</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_OS</varname></entry>
+	      <entry>List of space-separated suitable
+		<acronym>JDK</acronym> port operating systems for the
+		port (allowed values:
+		<literal>native linux</literal>).</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_VENDOR</varname></entry>
+	      <entry>List of space-separated suitable
+		<acronym>JDK</acronym> port vendors for the port
+		(allowed values:
+		<literal>freebsd bsdjava sun
+		  openjdk</literal>).</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_BUILD</varname></entry>
+	      <entry>When set, add the selected <acronym>JDK</acronym>
+		port to the build dependencies.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_RUN</varname></entry>
+	      <entry>When set, add the selected <acronym>JDK</acronym>
+		port to the run dependencies.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_EXTRACT</varname></entry>
+	      <entry>When set, add the selected <acronym>JDK</acronym>
+		port to the extract dependencies.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <para>Below is the list of all settings a port will receive
+	after setting <varname>USE_JAVA</varname>:</para>
+
+      <table frame="none" xml:id="using-java-variables2">
+	<title>Variables Provided to Ports That Use Java</title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Variable</entry>
+	      <entry>Value</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><varname>JAVA_PORT</varname></entry>
+	      <entry>The name of the <acronym>JDK</acronym> port (for
+		example, <literal>java/openjdk6</literal>).</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_PORT_VERSION</varname></entry>
+	      <entry>The full version of the <acronym>JDK</acronym>
+		port (for example, <literal>1.6.0</literal>).  Only
+		the first two digits of this version number are
+		needed, use
+		<varname>${JAVA_PORT_VERSION:C/^([0-9])\.([0-9])(.*)$/\1.\2/}</varname>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_PORT_OS</varname></entry>
+	      <entry>The operating system used by the
+		<acronym>JDK</acronym> port (for example,
+		<literal>'native'</literal>).</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_PORT_VENDOR</varname></entry>
+	      <entry>The vendor of the <acronym>JDK</acronym> port
+		(for example, <literal>'openjdk'</literal>).</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_PORT_OS_DESCRIPTION</varname></entry>
+	      <entry>Description of the operating system used by the
+		<acronym>JDK</acronym> port (for example,
+		<literal>'Native'</literal>).</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_PORT_VENDOR_DESCRIPTION</varname></entry>
+	      <entry>Description of the vendor of the
+		<acronym>JDK</acronym> port (for example,
+		<literal>'OpenJDK BSD Porting
+		  Team'</literal>).</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_HOME</varname></entry>
+	      <entry>Path to the installation directory of the
+		<acronym>JDK</acronym> (for example,
+		<filename>'/usr/local/openjdk6'</filename>).</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVAC</varname></entry>
+	      <entry>Path to the Java compiler to use (for example,
+		<filename>'/usr/local/openjdk6/bin/javac'</filename>).</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAR</varname></entry>
+	      <entry>Path to the <command>jar</command> tool to use
+		(for example,
+		<filename>'/usr/local/openjdk6/bin/jar'</filename>
+		or
+		<filename>'/usr/local/bin/fastjar'</filename>).</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>APPLETVIEWER</varname></entry>
+	      <entry>Path to the <command>appletviewer</command>
+		utility (for example,
+		<filename>'/usr/local/openjdk6/bin/appletviewer'</filename>).</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA</varname></entry>
+	      <entry>Path to the <command>java</command> executable.
+		Use this for executing Java programs (for example,
+		<filename>'/usr/local/openjdk6/bin/java'</filename>).</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVADOC</varname></entry>
+	      <entry>Path to the <command>javadoc</command> utility
+		program.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVAH</varname></entry>
+	      <entry>Path to the <command>javah</command>
+		program.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVAP</varname></entry>
+	      <entry>Path to the <command>javap</command>
+		program.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_KEYTOOL</varname></entry>
+	      <entry>Path to the <command>keytool</command> utility
+		program.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_N2A</varname></entry>
+	      <entry>Path to the <command>native2ascii</command>
+		tool.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_POLICYTOOL</varname></entry>
+	      <entry>Path to the <command>policytool</command>
+		program.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_SERIALVER</varname></entry>
+	      <entry>Path to the <command>serialver</command>
+		utility program.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>RMIC</varname></entry>
+	      <entry>Path to the RMI stub/skeleton generator,
+		<command>rmic</command>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>RMIREGISTRY</varname></entry>
+	      <entry>Path to the RMI registry program,
+		<command>rmiregistry</command>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>RMID</varname></entry>
+	      <entry>Path to the RMI daemon program
+		<command>rmid</command>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVA_CLASSES</varname></entry>
+	      <entry>Path to the archive that contains the
+		<acronym>JDK</acronym> class files,
+		<filename>${JAVA_HOME}/jre/lib/rt.jar</filename>.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <para>Use the <buildtarget>java-debug</buildtarget> make
+	target to get information for debugging the port.  It will
+	display the value of many of the previously listed
+	variables.</para>
+
+      <para>Additionally, these constants are defined so all
+	Java ports may be installed in a consistent way:</para>
+
+      <table frame="none" xml:id="using-java-constants">
+	<title>Constants Defined for Ports That Use Java</title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Constant</entry>
+	      <entry>Value</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><varname>JAVASHAREDIR</varname></entry>
+	      <entry>The base directory for everything related to
+		Java.  Default:
+		<filename>${PREFIX}/share/java</filename>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVAJARDIR</varname></entry>
+	      <entry>The directory where JAR files is
+		installed.  Default:
+		<filename>${JAVASHAREDIR}/classes</filename>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>JAVALIBDIR</varname></entry>
+	      <entry>The directory where JAR files installed by
+		other ports are located.  Default:
+		<filename>${LOCALBASE}/share/java/classes</filename>.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <para>The related entries are defined in both
+	<varname>PLIST_SUB</varname> (documented in
+	<xref linkend="plist-sub"/>) and
+	<varname>SUB_LIST</varname>.</para>
+    </sect2>
+
+    <sect2 xml:id="java-building-with-ant">
+      <title>Building with Ant</title>
+
+      <para>When the port is to be built using Apache Ant, it has to
+	define <varname>USE_ANT</varname>.  Ant is thus considered to
+	be the sub-make command.  When no
+	<buildtarget>do-build</buildtarget> target is defined by the
+	port, a default one will be set that runs Ant according to
+	<varname>MAKE_ENV</varname>, <varname>MAKE_ARGS</varname> and
+	<varname>ALL_TARGET</varname>.  This is similar to the
+	<literal>USES= gmake</literal> mechanism, which is documented
+	in <xref linkend="building"/>.</para>
+    </sect2>
+
+    <sect2 xml:id="java-best-practices">
+      <title>Best Practices</title>
+
+      <para>When porting a Java library, the port has to install
+	the JAR file(s) in <filename>${JAVAJARDIR}</filename>, and
+	everything else under
+	<filename>${JAVASHAREDIR}/${PORTNAME}</filename> (except for
+	the documentation, see below).  To reduce the packing file
+	size, reference the JAR file(s) directly in the
+	<filename>Makefile</filename>.  Use this statement (where
+	<filename><replaceable>myport</replaceable>.jar</filename> is
+	the name of the JAR file installed as part of the
+	port):</para>
+
+      <programlisting>PLIST_FILES+=	${JAVAJARDIR}/<replaceable>myport</replaceable>.jar</programlisting>
+
+      <para>When porting a Java application, the port usually
+	installs everything under a single directory (including its
+	JAR dependencies).  The use of
+	<filename>${JAVASHAREDIR}/${PORTNAME}</filename> is strongly
+	encouraged in this regard.  It is up the porter to decide
+	whether the port installs the additional JAR
+	dependencies under this directory or uses the
+	already installed ones (from
+	<filename>${JAVAJARDIR}</filename>).</para>
+
+      <para>When porting a &java; application that requires an
+	application server such as
+	<package role="port">www/tomcat7</package> to run the
+	service, it is quite common for a vendor to distribute a
+	<filename>.war</filename>.  A <filename>.war</filename>
+	is a Web application ARchive and is extracted when
+	called by the application.  Avoid adding a
+	<filename>.war</filename>
+	to <filename>pkg-plist</filename>.
+	It is not considered best practice.  An application server
+	will expand <application>war</application> archive, but not
+	clean it up properly if the port is removed.  A more
+	desirable way of working with this file is to extract the
+	archive, then install the files, and lastly add these files
+	to <filename>pkg-plist</filename>.</para>
+
+      <programlisting>TOMCATDIR=	${LOCALBASE}/apache-tomcat-7.0
+WEBAPPDIR=	myapplication
+
+post-extract:
+	@${MKDIR} ${WRKDIR}/${PORTDIRNAME}
+	@${TAR} xf ${WRKDIR}/myapplication.war -C ${WRKDIR}/${PORTDIRNAME}
+
+do-install:
+	cd ${WRKDIR} &amp;&amp; \
+	${INSTALL} -d -o ${WWWOWN} -g ${WWWGRP} ${TOMCATDIR}/webapps/${PORTDIRNAME}
+	cd ${WRKDIR}/${PORTDIRNAME} &amp;&amp; ${COPYTREE_SHARE} \* ${WEBAPPDIR}/${PORTDIRNAME}</programlisting>
+
+      <para>Regardless of the type of port (library or
+	application), the additional documentation is installed in the
+	<link linkend="install-documentation">same location</link> as
+	for any other port.  The JavaDoc tool is known to produce a
+	different set of files depending on the version of the
+	<acronym>JDK</acronym> that is used.  For ports that do not
+	enforce the use of a particular <acronym>JDK</acronym>, it is
+	therefore a complex task to specify the packing list
+	(<filename>pkg-plist</filename>).  This is one reason why
+	porters are strongly encouraged to use
+	<varname>PORTDOCS</varname>.  Moreover, even if the set of
+	files that will be generated by <command>javadoc</command> can
+	be predicted, the size of the resulting
+	<filename>pkg-plist</filename> advocates for the use of
+	<varname>PORTDOCS</varname>.</para>
+
+      <para>The default value for <varname>DATADIR</varname> is
+	<filename>${PREFIX}/share/${PORTNAME}</filename>.  It is a
+	good idea to override <varname>DATADIR</varname> to
+	<filename>${JAVASHAREDIR}/${PORTNAME}</filename> for Java
+	ports.  Indeed, <varname>DATADIR</varname> is automatically
+	added to <varname>PLIST_SUB</varname> (documented in
+	<xref linkend="plist-sub"/>) so use
+	<literal>%%DATADIR%%</literal> directly in
+	<filename>pkg-plist</filename>.</para>
+
+      <para>As for the choice of building Java ports from source or
+	directly installing them from a binary distribution, there
+	is no defined policy at the time of writing.  However,
+	people from the
+	<link xlink:href="http://www.freebsd.org/java/">&os; Java
+	  Project</link> encourage porters to have their ports
+	built from source whenever it is a trivial task.</para>
+
+      <para>All the features that have been presented in this
+	section are implemented in <filename>bsd.java.mk</filename>.
+	If the port needs more sophisticated
+	Java support, please first have a look at the <link
+	  xlink:href="http://svnweb.FreeBSD.org/ports/head/Mk/bsd.java.mk?view=log">bsd.java.mk
+	  <application>Subversion</application> log</link> as it
+	usually takes some time to document the latest features.
+	Then, if the needed support that is lacking would be
+	beneficial to many other Java ports, feel free to discuss it
+	on the &a.java;.</para>
+
+      <para>Although there is a <literal>java</literal> category for
+	PRs, it refers to the <acronym>JDK</acronym> porting effort
+	from the &os; Java project.  Therefore, submit the Java port
+	in the <literal>ports</literal> category as for any other
+	port, unless the issue is related to either a
+	<acronym>JDK</acronym> implementation or
+	<filename>bsd.java.mk</filename>.</para>
+
+      <para>Similarly, there is a defined policy regarding the
+	<varname>CATEGORIES</varname> of a Java port, which is
+	detailed in <xref linkend="makefile-categories"/>.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="using-php">
+    <title>Web Applications, Apache and PHP</title>
+
+    <sect2 xml:id="using-apache">
+      <title>Apache</title>
+
+      <table frame="none" xml:id="using-apache-variables">
+	<title>Variables for Ports That Use Apache</title>
+
+	<tgroup cols="2">
+	  <tbody>
+
+	    <row>
+	      <entry><varname>USE_APACHE</varname></entry>
+	      <entry>The port requires Apache.  Possible values:
+		<literal>yes</literal> (gets any version),
+		<literal>22</literal>, <literal>24</literal>,
+		<literal>22-24</literal>, <literal>22+</literal>,
+		etc.  The default APACHE version is
+		<literal>22</literal>.  More details are available
+		in <filename>ports/Mk/bsd.apache.mk</filename> and
+		at <link
+		  xlink:href="http://wiki.freebsd.org/Apache/">wiki.freebsd.org/Apache/</link>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>APXS</varname></entry>
+	      <entry>Full path to the <command>apxs</command>
+		binary.  Can be overridden in the port.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>HTTPD</varname></entry>
+	      <entry>Full path to the <command>httpd</command>
+		binary.  Can be overridden in the port.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>APACHE_VERSION</varname></entry>
+	      <entry>The version of present Apache installation
+		(read-only variable).  This variable is only
+		available after inclusion of
+		<filename>bsd.port.pre.mk</filename>.  Possible
+		values: <literal>22</literal>,
+		<literal>24</literal>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>APACHEMODDIR</varname></entry>
+	      <entry>Directory for Apache modules.  This variable is
+		automatically expanded in
+		<filename>pkg-plist</filename>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>APACHEINCLUDEDIR</varname></entry>
+	      <entry>Directory for Apache headers.  This variable is
+		automatically expanded in
+		<filename>pkg-plist</filename>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>APACHEETCDIR</varname></entry>
+	      <entry>Directory for Apache configuration files.  This
+		variable is automatically expanded in
+		<filename>pkg-plist</filename>.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <table frame="none" xml:id="using-apache-modules">
+	<title>Useful Variables for Porting Apache Modules</title>
+
+	<tgroup cols="2">
+	  <tbody>
+
+	    <row>
+	      <entry><varname>MODULENAME</varname></entry>
+	      <entry>Name of the module.  Default value is
+		<varname>PORTNAME</varname>.  Example:
+		<literal>mod_hello</literal></entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>SHORTMODNAME</varname></entry>
+	      <entry>Short name of the module.  Automatically
+		derived from <varname>MODULENAME</varname>, but can
+		be overridden.  Example:
+		<literal>hello</literal></entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>AP_FAST_BUILD</varname></entry>
+	      <entry>Use <command>apxs</command> to compile and
+		install the module.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>AP_GENPLIST</varname></entry>
+	      <entry>Also automatically creates a
+		<filename>pkg-plist</filename>.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>AP_INC</varname></entry>
+	      <entry>Adds a directory to a header search path during
+		compilation.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>AP_LIB</varname></entry>
+	      <entry>Adds a directory to a library search path
+		during compilation.</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>AP_EXTRAS</varname></entry>
+	      <entry>Additional flags to pass to
+		<command>apxs</command>.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+    </sect2>
+
+    <sect2 xml:id="web-apps">
+      <title>Web Applications</title>
+
+      <para>Web applications must be installed into
+	<filename>PREFIX/www/<replaceable>appname</replaceable></filename>.
+	This path is available both in
+	<filename>Makefile</filename> and in
+	<filename>pkg-plist</filename> as <varname>WWWDIR</varname>,
+	and the path relative to <varname>PREFIX</varname> is
+	available in <filename>Makefile</filename> as
+	<varname>WWWDIR_REL</varname>.</para>
+
+      <para>The user and group of web server process are available
+	as <varname>WWWOWN</varname> and <varname>WWWGRP</varname>,
+	in case the ownership of some files needs to be changed.  The
+	default values of both are <literal>www</literal>.  Use
+	<literal>WWWOWN?= myuser</literal> and <literal>WWWGRP?=
+	  mygroup</literal> if the port needs different values.  This
+	allows the user to override them easily.</para>
+
+      <important>
+	<para>Use <varname>WWWOWN</varname> and
+	  <varname>WWWGRP</varname> sparingly. Remember that every
+	  file the web server can write to is a security risk waiting
+	  to happen.</para>
+      </important>
+
+      <para>Do not depend on Apache unless the web app explicitly
+	needs Apache.  Respect that users may wish to run a web
+	application on a web server other than
+	<application>Apache</application>.</para>
+    </sect2>
+
+    <sect2 xml:id="php-variables">
+      <title>PHP</title>
+
+      <para><application>PHP</application> web applications declare
+	their dependency on it with <literal>USES=php</literal>.  See
+	<xref linkend="uses-php"/> for more information.</para>
+    </sect2>
+
+    <sect2 xml:id="php-pear">
+      <title>PEAR Modules</title>
+
+      <para>Porting PEAR modules is a very simple process.</para>
+
+      <para>Add <literal>USES=pear</literal> to the port's
+	<filename>Makefile</filename>.  The framework will install the
+	relevant files in the right places and automatically generate
+	the plist at install time.</para>
+
+      <example xml:id="pear-makefile">
+	<title>Example Makefile for PEAR Class</title>
+
+	<programlisting>PORTNAME=       Date
+PORTVERSION=	1.4.3
+CATEGORIES=	devel www pear
+
+MAINTAINER=	example@domain.com
+COMMENT=	PEAR Date and Time Zone Classes
+
+USES=	pear
+
+.include &lt;bsd.port.mk&gt;</programlisting>
+      </example>
+
+      <sect3 xml:id="php-horde">
+	<title><application>Horde</application> Modules</title>
+
+	<para>In the same way, porting
+	  <application>Horde</application> modules is a simple
+	  process.</para>
+
+	<para>Add <literal>USES=horde</literal> to the port's
+	  <filename>Makefile</filename>.  The framework will install
+	  the relevant files in the right places and automatically
+	  generate the plist at install time.</para>
+
+	<para>The <varname>USE_HORDE_BUILD</varname> and
+	  <varname>USE_HORDE_RUN</varname> variables can be used to
+	  add buildtime and runtime dependencies on other
+	  <application>Horde</application> modules.  See
+	  <filename>Mk/Uses/horde.mk</filename> for a complete list of
+	  available modules.</para>
+
+	<example xml:id="horde-Makefile">
+	  <title>Example Makefile for <application>Horde</application>
+	    Module</title>
+
+	  <programlisting>PORTNAME=	Horde_Core
+PORTVERSION=	2.14.0
+CATEGORIES=	devel www pear
+
+MAINTAINER=	horde@FreeBSD.org
+COMMENT=	Horde Core Framework libraries
+
+OPTIONS_DEFINE=	KOLAB SOCKETS
+KOLAB_DESC=	Enable Kolab server support
+SOCKETS_DESC=	Depend on sockets PHP extension
+
+USES=	horde
+USE_PHP=	session
+
+USE_HORDE_BUILD=	Horde_Role
+USE_HORDE_RUN=	Horde_Role Horde_History Horde_Pack \
+		Horde_Text_Filter Horde_View
+
+KOLAB_USE=	HORDE_RUN=Horde_Kolab_Server,Horde_Kolab_Session
+SOCKETS_USE=	PHP=sockets
+
+.include &lt;bsd.port.mk&gt;</programlisting>
+	</example>
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="using-python">
+    <title>Using Python</title>
+
+    <para>The Ports Collection supports parallel installation of
+      multiple Python versions.  Ports must use a
+      correct <command>python</command> interpreter, according to
+      the user-settable <varname>PYTHON_VERSION</varname>.
+      Most prominently, this means replacing the path to
+      <command>python</command> executable in scripts with the value
+      of <varname>PYTHON_CMD</varname>.</para>
+
+    <para>Ports that install files under
+      <varname>PYTHON_SITELIBDIR</varname> must use the
+      <literal>pyXY-</literal> package name prefix, so their package
+      name embeds the version of Python they are installed
+      into.</para>
+
+    <programlisting>PKGNAMEPREFIX=	${PYTHON_PKGNAMEPREFIX}</programlisting>
+
+    <table frame="none" xml:id="using-python-variables">
+      <title>Most Useful Variables for Ports That Use Python</title>
+
+      <tgroup cols="2">
+	<tbody>
+	  <row>
+	    <entry><varname>USES=python</varname></entry>
+	    <entry>The port needs Python.  The minimal required
+	      version can be specified with values such as
+	      <literal>2.7+</literal>.  Version ranges can also be
+	      specified by separating two version numbers with a dash:
+	      <literal>USES=python:3.2-3.3</literal></entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>USE_PYTHON=distutils</varname></entry>
+	    <entry>Use Python distutils for configuring, compiling,
+	      and installing.  This is required when the port comes
+	      with <filename>setup.py</filename>.  This overrides
+	      the <buildtarget>do-build</buildtarget> and
+	      <buildtarget>do-install</buildtarget> targets and may
+	      also override <buildtarget>do-configure</buildtarget>
+	      if <varname>GNU_CONFIGURE</varname> is not
+	      defined.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>USE_PYTHON=autoplist</varname></entry>
+	    <entry>Create the packaging list automatically.  This also
+	      requires <literal>USE_PYTHON=distutils</literal> to be
+	      set.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>USE_PYTHON=concurrent</varname></entry>
+	    <entry>The port will use an unique prefix, typically
+	      <literal>PYTHON_PKGNAMEPREFIX</literal> for certain
+	      directories, such as <literal>EXAMPLESDIR</literal> and
+	      <literal>DOCSDIR</literal> and also will append a
+	      suffix, the python version from
+	      <literal>PYTHON_VER</literal>, to binaries and scripts
+	      to be installed.  This allows ports to be installed for
+	      different Python versions at the same time, which
+	      otherwise would install conflicting files.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>PYTHON_PKGNAMEPREFIX</varname></entry>
+	    <entry>Used as a <varname>PKGNAMEPREFIX</varname> to
+	      distinguish packages for different Python versions.
+	      Example: <literal>py27-</literal></entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>PYTHON_SITELIBDIR</varname></entry>
+	    <entry>Location of the site-packages tree, that contains
+	      installation path of Python (usually
+	      <varname>LOCALBASE</varname>).
+	      <varname>PYTHON_SITELIBDIR</varname> can be
+	      very useful when installing Python modules.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>PYTHONPREFIX_SITELIBDIR</varname></entry>
+	    <entry>The PREFIX-clean variant of PYTHON_SITELIBDIR.
+	      Always use <literal>%%PYTHON_SITELIBDIR%%</literal> in
+	      <filename>pkg-plist</filename> when possible.  The
+	      default value of
+	      <literal>%%PYTHON_SITELIBDIR%%</literal> is
+	      <literal>lib/python%%PYTHON_VERSION%%/site-packages</literal></entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>PYTHON_CMD</varname></entry>
+	    <entry>Python interpreter command line, including
+	      version number.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>PYNUMERIC</varname></entry>
+	    <entry>Dependency line for numeric extension.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>PYNUMPY</varname></entry>
+	    <entry>Dependency line for the new numeric extension,
+	      numpy.  (PYNUMERIC is deprecated by upstream
+	      vendor).</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>PYXML</varname></entry>
+	    <entry>Dependency line for XML extension (not needed for
+	      Python 2.0 and higher as it is also in base
+	      distribution).</entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+
+    <para>A complete list of available variables can be found in
+      <filename>/usr/ports/Mk/Uses/python.mk</filename>.</para>
+
+    <example xml:id="python-Makefile">
+      <title>Makefile for a Simple <application>Python</application>
+	Module</title>
+
+      <programlisting>PORTNAME=	sample
+PORTVERSION=	1.2.3
+CATEGORIES=	devel
+
+MAINTAINER=	john@doe.tld
+COMMENT=	Python sample module
+
+USES=		python
+USE_PYTHON=	autoplist distutils
+
+.include &lt;bsd.port.mk&gt;</programlisting>
+    </example>
+
+    <para>Some Python applications claim to have
+      <varname>DESTDIR</varname> support (which would be required
+      for staging) but it is broken (Mailman up to 2.1.16, for
+      instance).  This can be worked around by recompiling the
+      scripts.  This can be done, for example, in the
+      <buildtarget>post-build</buildtarget> target.  Assuming the
+      Python scripts are supposed to reside in
+      <varname>PYTHONPREFIX_SITELIBDIR</varname> after installation,
+      this solution can be applied:</para>
+
+    <programlisting>(cd ${STAGEDIR}${PREFIX} \
+  &amp;&amp; ${PYTHON_CMD} ${PYTHON_LIBDIR}/compileall.py \
+   -d ${PREFIX} -f ${PYTHONPREFIX_SITELIBDIR:S;${PREFIX}/;;})</programlisting>
+
+    <para>This recompiles the sources with a path relative to the
+      stage directory, and prepends the value of
+      <varname>PREFIX</varname> to the file name recorded in the
+      byte-compiled output file by <literal>-d</literal>.
+      <literal>-f</literal> is required to force recompilation, and
+      the <literal>:S;${PREFIX}/;;</literal> strips prefixes from
+      the value of <varname>PYTHONPREFIX_SITELIBDIR</varname>
+      to make it relative to
+      <varname>PREFIX</varname>.</para>
+  </sect1>
+
+  <sect1 xml:id="using-tcl">
+    <title>Using <application>Tcl/Tk</application></title>
+
+    <para>The Ports Collection supports parallel installation of
+      multiple <application>Tcl/Tk</application> versions.  Ports
+      should try to support at least the default
+      <application>Tcl/Tk</application> version and higher with
+      <literal>USES=tcl</literal>.  It is possible to specify the
+      desired version of <command>tcl</command> by appending
+      <literal>:<replaceable>xx</replaceable></literal>, for example,
+      <literal>USES=tcl:85</literal>.</para>
+
+    <table frame="none" xml:id="using-tcl-variables">
+      <title>The Most Useful Read-Only Variables for Ports That Use
+	<application>Tcl/Tk</application></title>
+
+      <tgroup cols="2">
+	<tbody>
+	  <row>
+	    <entry><varname>TCL_VER</varname></entry>
+	    <entry> chosen major.minor version of
+	      <application>Tcl</application></entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>TCLSH</varname></entry>
+	    <entry> full path of the <application>Tcl</application>
+	      interpreter</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>TCL_LIBDIR</varname></entry>
+	    <entry> path of the <application>Tcl</application>
+	      libraries</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>TCL_INCLUDEDIR</varname></entry>
+	    <entry> path of the <application>Tcl</application> C
+	      header files</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>TK_VER</varname></entry>
+	    <entry> chosen major.minor version of
+	      <application>Tk</application></entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>WISH</varname></entry>
+	    <entry> full path of the <application>Tk</application>
+	      interpreter</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>TK_LIBDIR</varname></entry>
+	    <entry> path of the <application>Tk</application>
+	      libraries</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>TK_INCLUDEDIR</varname></entry>
+	    <entry> path of the <application>Tk</application> C header
+	      files</entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+
+    <para>See the <link
+	linkend="uses-tcl"><literal>USES=tcl</literal></link> and
+      <link linkend="uses-tk"><literal>USES=tk</literal></link> of
+      <xref linkend="uses-values"/> for a full description of those
+      variables.  A complete list of those variables is available in
+      <filename>/usr/ports/Mk/Uses/tcl.mk</filename>.</para>
+  </sect1>
+
+  <sect1 xml:id="using-emacs">
+    <title>Using Emacs</title>
+
+    <para>This section is yet to be written.</para>
+  </sect1>
+
+  <sect1 xml:id="using-ruby">
+    <title>Using Ruby</title>
+
+    <table frame="none" xml:id="using-ruby-variables">
+      <title>Useful Variables for Ports That Use Ruby</title>
+
+      <tgroup cols="2">
+	<thead>
+	  <row>
+	    <entry>Variable</entry>
+	    <entry>Description</entry>
+	  </row>
+	</thead>
+	<tbody>
+	  <row>
+	    <entry><varname>USE_RUBY</varname></entry>
+	    <entry>Adds build and run dependencies on Ruby.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>USE_RUBY_EXTCONF</varname></entry>
+	    <entry>The port uses <filename>extconf.rb</filename> to
+	      configure.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>USE_RUBY_SETUP</varname></entry>
+	    <entry>The port uses <filename>setup.rb</filename> to
+	      configure.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>RUBY_SETUP</varname></entry>
+	    <entry>Override the name of the setup script from
+	      <filename>setup.rb</filename>.  Another common value is
+	      <filename>install.rb</filename>.</entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+
+    <para>This table shows the selected variables available
+      to port authors via the ports infrastructure.  These variables
+      are used to install files into their proper locations.
+      Use them in <filename>pkg-plist</filename> as much as
+      possible.  Do not redefine these variables in the port.</para>
+
+    <table frame="none" xml:id="using-ruby-variables-ro">
+      <title>Selected Read-Only Variables for Ports That Use
+	Ruby</title>
+
+      <tgroup cols="3">
+	<thead>
+	  <row>
+	    <entry>Variable</entry>
+	    <entry>Description</entry>
+	    <entry>Example value</entry>
+	  </row>
+	</thead>
+	<tbody>
+
+	  <row>
+	    <entry><varname>RUBY_PKGNAMEPREFIX</varname></entry>
+	    <entry>Used as a <varname>PKGNAMEPREFIX</varname> to
+	      distinguish packages for different Ruby
+	      versions.</entry>
+	    <entry><literal>ruby19-</literal></entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>RUBY_VERSION</varname></entry>
+	    <entry>Full version of Ruby in the form of
+	      <literal>x.y.z[.p]</literal>.</entry>
+	    <entry><literal>1.9.3.484</literal></entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>RUBY_SITELIBDIR</varname></entry>
+	    <entry>Architecture independent libraries installation
+	      path.</entry>
+	    <entry><literal>/usr/local/lib/ruby/site_ruby/1.9</literal></entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>RUBY_SITEARCHLIBDIR</varname></entry>
+	    <entry>Architecture dependent libraries installation
+	      path.</entry>
+	    <entry><literal>/usr/local/lib/ruby/site_ruby/1.9/amd64-freebsd10</literal></entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>RUBY_MODDOCDIR</varname></entry>
+	    <entry>Module documentation installation path.</entry>
+	    <entry><literal>/usr/local/share/doc/ruby19/patsy</literal></entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>RUBY_MODEXAMPLESDIR</varname></entry>
+	    <entry>Module examples installation path.</entry>
+	    <entry><literal>/usr/local/share/examples/ruby19/patsy</literal></entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+
+    <para>A complete list of available variables can be found in
+      <filename>/usr/ports/Mk/bsd.ruby.mk</filename>.</para>
+  </sect1>
+
+  <sect1 xml:id="using-sdl">
+    <title>Using SDL</title>
+
+    <para><varname>USE_SDL</varname> is used to
+      autoconfigure the dependencies for ports which use an SDL
+      based library like <package role="port">devel/sdl12</package>
+      and <package role="port">graphics/sdl_image</package>.</para>
+
+    <para>These SDL libraries for version 1.2 are recognized:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>sdl: <package role="port">devel/sdl12</package></para>
+      </listitem>
+
+      <listitem>
+	<para>console: <package
+	    role="port">devel/sdl_console</package></para>
+      </listitem>
+
+      <listitem>
+	<para>gfx: <package
+	    role="port">graphics/sdl_gfx</package></para>
+      </listitem>
+
+      <listitem>
+	<para>image: <package
+	    role="port">graphics/sdl_image</package></para>
+      </listitem>
+
+      <listitem>
+	<para>mixer: <package
+	    role="port">audio/sdl_mixer</package></para>
+      </listitem>
+
+      <listitem>
+	<para>mm: <package role="port">devel/sdlmm</package></para>
+      </listitem>
+
+      <listitem>
+	<para>net: <package role="port">net/sdl_net</package></para>
+      </listitem>
+
+      <listitem>
+	<para>pango: <package
+	    role="port">x11-toolkits/sdl_pango</package></para>
+      </listitem>
+
+      <listitem>
+	<para>sound: <package
+	    role="port">audio/sdl_sound</package></para>
+      </listitem>
+
+      <listitem>
+	<para>ttf: <package
+	    role="port">graphics/sdl_ttf</package></para>
+      </listitem>
+    </itemizedlist>
+
+    <para>These SDL libraries for version 2.0 are recognized:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>sdl: <package role="port">devel/sdl20</package></para>
+      </listitem>
+
+      <listitem>
+	<para>gfx: <package
+	    role="port">graphics/sdl2_gfx</package></para>
+      </listitem>
+
+      <listitem>
+	<para>image: <package
+	    role="port">graphics/sdl2_image</package></para>
+      </listitem>
+
+      <listitem>
+	<para>mixer: <package
+	    role="port">audio/sdl2_mixer</package></para>
+      </listitem>
+
+      <listitem>
+	<para>net: <package
+	    role="port">net/sdl2_net</package></para>
+      </listitem>
+
+      <listitem>
+	<para>ttf: <package
+	    role="port">graphics/sdl2_ttf</package></para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Therefore, if a port has a dependency on
+      <package role="port">net/sdl_net</package> and
+      <package role="port">audio/sdl_mixer</package>,
+      the syntax will be:</para>
+
+    <programlisting>USE_SDL=	net mixer</programlisting>
+
+    <para>The dependency
+      <package role="port">devel/sdl12</package>, which is
+      required by <package role="port">net/sdl_net</package>
+      and <package role="port">audio/sdl_mixer</package>, is
+      automatically added as well.</para>
+
+    <para>Using <varname>USE_SDL</varname> with entries for
+      SDL 1.2, it will automatically:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Add a dependency on
+	  <application>sdl12-config</application> to
+	  <varname>BUILD_DEPENDS</varname></para>
+      </listitem>
+
+      <listitem>
+	<para>Add the variable <varname>SDL_CONFIG</varname> to
+	  <varname>CONFIGURE_ENV</varname></para>
+      </listitem>
+
+      <listitem>
+	<para>Add the dependencies of the selected libraries to
+	  <varname>LIB_DEPENDS</varname></para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Using <varname>USE_SDL</varname> with entries for
+      SDL 2.0, it will automatically:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Add a dependency on
+	  <application>sdl2-config</application> to
+	  <varname>BUILD_DEPENDS</varname></para>
+      </listitem>
+
+      <listitem>
+	<para>Add the variable <varname>SDL2_CONFIG</varname> to
+	  <varname>CONFIGURE_ENV</varname></para>
+      </listitem>
+
+      <listitem>
+	<para>Add the dependencies of the selected libraries to
+	  <varname>LIB_DEPENDS</varname></para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 xml:id="using-wx">
+    <title>Using <application>wxWidgets</application></title>
+
+    <para>This section describes the status of the
+      <application>wxWidgets</application> libraries in the ports
+      tree and its integration with the ports system.</para>
+
+    <sect2 xml:id="wx-introduction">
+      <title>Introduction</title>
+
+      <para>There are many versions of the
+	<application>wxWidgets</application> libraries which
+	conflict between them (install files under the same name).
+	In the ports tree this problem has been solved by installing
+	each version under a different name using version number
+	suffixes.</para>
+
+      <para>The obvious disadvantage of this is that each
+	application has to be modified to find the expected version.
+	Fortunately, most of the applications call the
+	<command>wx-config</command> script to determine the
+	necessary compiler and linker flags.  The script is named
+	differently for every available version.  Majority of
+	applications respect an environment variable, or accept a
+	configure argument, to specify which
+	<command>wx-config</command> script to call.  Otherwise they
+	have to be patched.</para>
+    </sect2>
+
+    <sect2 xml:id="wx-version">
+      <title>Version Selection</title>
+
+      <para>To make the port use a specific version of
+	<application>wxWidgets</application> there are two variables
+	available for defining (if only one is defined the other
+	will be set to a default value):</para>
+
+      <table xml:id="wx-ver-sel-table" frame="none">
+	<title>Variables to Select
+	  <application>wxWidgets</application> Versions</title>
+
+	<tgroup cols="3">
+	  <thead>
+	    <row>
+	      <entry>Variable</entry>
+	      <entry>Description</entry>
+	      <entry>Default value</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><varname>USE_WX</varname></entry>
+	      <entry>List of versions the port can use</entry>
+	      <entry>All available versions</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>USE_WX_NOT</varname></entry>
+	      <entry>List of versions the port cannot use</entry>
+	      <entry>None</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <para>The available
+	<application>wxWidgets</application> versions and the
+	corresponding ports in the tree are:</para>
+
+      <table frame="none" xml:id="wx-widgets-versions-table">
+	<title>Available <application>wxWidgets</application>
+	  Versions</title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Version</entry>
+	      <entry>Port</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><literal>2.4</literal></entry>
+	      <entry><package
+		  role="port">x11-toolkits/wxgtk24</package></entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>2.6</literal></entry>
+	      <entry><package
+		  role="port">x11-toolkits/wxgtk26</package></entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>2.8</literal></entry>
+	      <entry><package
+		  role="port">x11-toolkits/wxgtk28</package></entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <note>
+	<para>The versions starting from <literal>2.5</literal> also
+	  come in Unicode version and are installed by a slave port
+	  named like the normal one plus a
+	  <literal>-unicode</literal> suffix, but this can be
+	  handled with variables (see
+	  <xref linkend="wx-unicode"/>).</para>
+      </note>
+
+      <para>The variables in <xref linkend="wx-ver-sel-table"/> can
+	be set to one or more of these combinations
+	separated by spaces:</para>
+
+      <table frame="none" xml:id="wx-widgets-versions-specification">
+	<title><application>wxWidgets</application> Version
+	  Specifications</title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Description</entry>
+	      <entry>Example</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry>Single version</entry>
+	      <entry><literal>2.4</literal></entry>
+	    </row>
+
+	    <row>
+	      <entry>Ascending range</entry>
+	      <entry><literal>2.4+</literal></entry>
+	    </row>
+
+	    <row>
+	      <entry>Descending range</entry>
+	      <entry><literal>2.6-</literal></entry>
+	    </row>
+
+	    <row>
+	      <entry>Full range (must be ascending)</entry>
+	      <entry><literal>2.4-2.6</literal></entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <para>There are also some variables to select the preferred
+	versions from the available ones.  They can be set to a list
+	of versions, the first ones will have higher
+	priority.</para>
+
+      <table frame="none" xml:id="wx-widgets-preferred-version">
+	<title>Variables to Select Preferred
+	  <application>wxWidgets</application> Versions</title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Name</entry>
+	      <entry>Designed for</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><varname>WANT_WX_VER</varname></entry>
+	      <entry>the port</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>WITH_WX_VER</varname></entry>
+	      <entry>the user</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+    </sect2>
+
+    <sect2 xml:id="wx-components">
+      <title>Component Selection</title>
+
+      <para>There are other applications that, while not being
+	<application>wxWidgets</application> libraries, are related
+	to them.  These applications can be specified in
+	<varname>WX_COMPS</varname>.  These
+	components are available:</para>
+
+      <table frame="none" xml:id="wx-widgets-components-table">
+	<title>Available <application>wxWidgets</application>
+	  Components</title>
+
+	<tgroup cols="3">
+	  <thead>
+	    <row>
+	      <entry>Name</entry>
+	      <entry>Description</entry>
+	      <entry>Version restriction</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><literal>wx</literal></entry>
+	      <entry>main library</entry>
+	      <entry>none</entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>contrib</literal></entry>
+	      <entry>contributed libraries</entry>
+	      <entry><literal>none</literal></entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>python</literal></entry>
+	      <entry><application>wxPython</application>
+		(<application>Python</application> bindings)</entry>
+	      <entry><literal>2.4-2.6</literal></entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>mozilla</literal></entry>
+	      <entry><application>wxMozilla</application></entry>
+	      <entry><literal>2.4</literal></entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>svg</literal></entry>
+	      <entry><application>wxSVG</application></entry>
+	      <entry><literal>2.6</literal></entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <para>The dependency type can be selected for each component
+	by adding a suffix separated by a semicolon.  If not present
+	then a default type will be used (see
+	<xref linkend="wx-def-dep-types"/>).  These types
+	are available:</para>
+
+      <table frame="none" xml:id="wx-widgets-dependency-table">
+	<title>Available <application>wxWidgets</application>
+	  Dependency Types</title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Name</entry>
+	      <entry>Description</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><literal>build</literal></entry>
+	      <entry>Component is required for building, equivalent
+		to <varname>BUILD_DEPENDS</varname></entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>run</literal></entry>
+	      <entry>Component is required for running, equivalent
+		to <varname>RUN_DEPENDS</varname></entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>lib</literal></entry>
+	      <entry>Component is required for building and running,
+		equivalent to <varname>LIB_DEPENDS</varname></entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <para>The default values for the components are detailed in
+	this table:</para>
+
+      <table xml:id="wx-def-dep-types" frame="none">
+	<title>Default <application>wxWidgets</application>
+	  Dependency Types</title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Component</entry>
+	      <entry>Dependency type</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><literal>wx</literal></entry>
+	      <entry><literal>lib</literal></entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>contrib</literal></entry>
+	      <entry><literal>lib</literal></entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>python</literal></entry>
+	      <entry><literal>run</literal></entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>mozilla</literal></entry>
+	      <entry><literal>lib</literal></entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>svg</literal></entry>
+	      <entry><literal>lib</literal></entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <example xml:id="wx-components-example">
+	<title>Selecting <application>wxWidgets</application>
+	  Components</title>
+
+	<para>This fragment corresponds to a port which
+	  uses <application>wxWidgets</application> version
+	  <literal>2.4</literal> and its contributed
+	  libraries.</para>
+
+	<programlisting>USE_WX=		2.4
+WX_COMPS=	wx contrib</programlisting>
+      </example>
+    </sect2>
+
+    <sect2 xml:id="wx-unicode">
+      <title>Unicode</title>
+
+      <para>The <application>wxWidgets</application> library
+	supports Unicode since version <literal>2.5</literal>.  In
+	the ports tree both versions are available and can be
+	selected with these variables:</para>
+
+      <table xml:id="wx-unicode-var-table" frame="none">
+	<title>Variables to Select Unicode in
+	  <application>wxWidgets</application>
+	  Versions</title>
+
+	<tgroup cols="3">
+	  <thead>
+	    <row>
+	      <entry>Variable</entry>
+	      <entry>Description</entry>
+	      <entry>Designed for</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><varname>WX_UNICODE</varname></entry>
+	      <entry>The port works <emphasis>only</emphasis> with
+		the Unicode version</entry>
+	      <entry>the port</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>WANT_UNICODE</varname></entry>
+	      <entry>The port works with both versions but prefers
+		the Unicode one</entry>
+	      <entry>the port</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>WITH_UNICODE</varname></entry>
+	      <entry>The port will use the Unicode version</entry>
+	      <entry>the user</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>WITHOUT_UNICODE</varname></entry>
+	      <entry>The port will use the normal version if
+		supported (when <varname>WX_UNICODE</varname> is not
+		defined)</entry>
+	      <entry>the user</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <warning>
+	<para>Do not use <varname>WX_UNICODE</varname> for ports
+	  that can use both Unicode and normal versions.  If
+	  the port needs to use Unicode by default, define
+	  <varname>WANT_UNICODE</varname> instead.</para>
+      </warning>
+    </sect2>
+
+    <sect2 xml:id="wx-version-detection">
+      <title>Detecting Installed Versions</title>
+
+      <para>To detect an installed version, define
+	<varname>WANT_WX</varname>.  If it is not set to a
+	specific version then the components will have a version
+	suffix.  <varname>HAVE_WX</varname> will be
+	filled after detection.</para>
+
+      <example xml:id="wx-ver-det-example">
+	<title>Detecting Installed
+	  <application>wxWidgets</application> Versions and
+	  Components</title>
+
+	<para>This fragment can be used in a port that uses
+	  <application>wxWidgets</application> if it is installed,
+	  or an option is selected.</para>
+
+	<programlisting>WANT_WX=	yes
+
+.include &lt;bsd.port.pre.mk&gt;
+
+.if defined(WITH_WX) || !empty(PORT_OPTIONS:MWX) || !empty(HAVE_WX:Mwx-2.4)
+USE_WX=			2.4
+CONFIGURE_ARGS+=	--enable-wx
+.endif</programlisting>
+
+	<para>This fragment can be used in a port that
+	  enables <application>wxPython</application> support if it
+	  is installed or if an option is selected, in addition to
+	  <application>wxWidgets</application>, both version
+	  <literal>2.6</literal>.</para>
+
+	<programlisting>USE_WX=		2.6
+WX_COMPS=	wx
+WANT_WX=	2.6
+
+.include &lt;bsd.port.pre.mk&gt;
+
+.if defined(WITH_WXPYTHON) || !empty(PORT_OPTIONS:MWXPYTHON) || !empty(HAVE_WX:Mpython)
+WX_COMPS+=		python
+CONFIGURE_ARGS+=	--enable-wxpython
+.endif</programlisting>
+      </example>
+    </sect2>
+
+    <sect2 xml:id="wx-defined-variables">
+      <title>Defined Variables</title>
+
+      <para>These variables are available in the port (after
+	defining one from
+	<xref linkend="wx-ver-sel-table"/>).</para>
+
+      <table frame="none" xml:id="wx-widgets-variables">
+	<title>Variables Defined for Ports That Use
+	  <application>wxWidgets</application></title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Name</entry>
+	      <entry>Description</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><varname>WX_CONFIG</varname></entry>
+	      <entry>The path to the
+		<application>wxWidgets</application>
+		<command>wx-config</command> script (with different
+		name)</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>WXRC_CMD</varname></entry>
+	      <entry>The path to the
+		<application>wxWidgets</application>
+		<command>wxrc</command> program (with different
+		name)</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>WX_VERSION</varname></entry>
+	      <entry>The <application>wxWidgets</application>
+		version that is going to be used (for example,
+		<literal>2.6</literal>)</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>WX_UNICODE</varname></entry>
+	      <entry>If not defined but Unicode is going to be used
+		then it will be defined</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+    </sect2>
+
+    <sect2 xml:id="wx-premk">
+      <title>Processing in
+	<filename>bsd.port.pre.mk</filename></title>
+
+      <para>Define <varname>WX_PREMK</varname> to be able to use the
+	variables right after including
+	<filename>bsd.port.pre.mk</filename>.</para>
+
+      <important>
+	<para>When defining <varname>WX_PREMK</varname>, then the
+	  version, dependencies, components and defined variables
+	  will not change if modifying the
+	  <application>wxWidgets</application> port variables
+	  <emphasis>after</emphasis> including
+	  <filename>bsd.port.pre.mk</filename>.</para>
+      </important>
+
+      <example xml:id="wx-premk-example">
+	<title>Using <application>wxWidgets</application> Variables
+	  in Commands</title>
+
+	<para>This fragment illustrates the use of
+	  <varname>WX_PREMK</varname> by running the
+	  <command>wx-config</command> script to obtain the full
+	  version string, assign it to a variable and pass it to the
+	  program.</para>
+
+	<programlisting>USE_WX=		2.4
+WX_PREMK=	yes
+
+.include &lt;bsd.port.pre.mk&gt;
+
+.if exists(${WX_CONFIG})
+VER_STR!=	${WX_CONFIG} --release
+
+PLIST_SUB+=	VERSION="${VER_STR}"
+.endif</programlisting>
+      </example>
+
+      <note>
+	<para>The <application>wxWidgets</application> variables can
+	  be safely used in commands when they are inside targets
+	  without the need of <varname>WX_PREMK</varname>.</para>
+      </note>
+    </sect2>
+
+    <sect2 xml:id="wx-additional-config-args">
+      <title>Additional <command>configure</command>
+	Arguments</title>
+
+      <para>Some GNU <command>configure</command> scripts cannot
+	find <application>wxWidgets</application> with just the
+	<literal>WX_CONFIG</literal> environment variable set,
+	requiring additional arguments.
+	<varname>WX_CONF_ARGS</varname> can be used for
+	provide them.</para>
+
+      <table frame="none" xml:id="wx-conf-args-values">
+	<title>Legal Values for
+	  <varname>WX_CONF_ARGS</varname></title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Possible value</entry>
+	      <entry>Resulting argument</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><literal>absolute</literal></entry>
+	      <entry><literal>--with-wx-config=${WX_CONFIG}</literal></entry>
+	    </row>
+
+	    <row>
+	      <entry><literal>relative</literal></entry>
+	      <entry><literal>--with-wx=${LOCALBASE}
+		  --with-wx-config=${WX_CONFIG:T}</literal></entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="using-lua">
+    <title>Using <application>Lua</application></title>
+
+    <para>This section describes the status of the
+      <application>Lua</application> libraries in the ports tree and
+      its integration with the ports system.</para>
+
+    <sect2 xml:id="lua-introduction">
+      <title>Introduction</title>
+
+      <para>There are many versions of the
+	<application>Lua</application> libraries and corresponding
+	interpreters, which conflict between them (install files
+	under the same name).  In the ports tree this problem has
+	been solved by installing each version under a different
+	name using version number suffixes.</para>
+
+      <para>The obvious disadvantage of this is that each
+	application has to be modified to find the expected version.
+	But it can be solved by adding some additional flags to the
+	compiler and linker.</para>
+    </sect2>
+
+    <sect2 xml:id="lua-version">
+      <title>Version Selection</title>
+
+      <para>A port using <application>Lua</application> only needs to
+	have this line:</para>
+
+      <programlisting>USES=	lua</programlisting>
+
+      <para>If a specific version of Lua is needed, instructions on
+	how to select it are given in the <link
+	  linkend="uses-lua"><literal>USES=lua</literal></link> part
+	of <xref linkend="uses-values"/>.</para>
+    </sect2>
+
+    <sect2 xml:id="lua-defined-variables">
+      <title>Defined Variables</title>
+
+      <para>These variables are available in the port.</para>
+
+      <table frame="none" xml:id="using-lua-variables-ports">
+	<title>Variables Defined for Ports That Use
+	  <application>Lua</application></title>
+
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Name</entry>
+	      <entry>Description</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><varname>LUA_VER</varname></entry>
+	      <entry>The <application>Lua</application> version that
+		is going to be used (for example,
+		<literal>5.1</literal>)</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>LUA_VER_STR</varname></entry>
+	      <entry>The <application>Lua</application> version
+		without the dots (for example,
+		<literal>51</literal>)</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>LUA_PREFIX</varname></entry>
+	      <entry>The prefix where <application>Lua</application>
+		(and components) is installed</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>LUA_SUBDIR</varname></entry>
+	      <entry>The directory under
+		<filename>${PREFIX}/bin</filename>,
+		<filename>${PREFIX}/share</filename> and
+		<filename>${PREFIX}/lib</filename> where
+		<application>Lua</application> is installed</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>LUA_INCDIR</varname></entry>
+	      <entry>The directory where
+		<application>Lua</application> and
+		<application>tolua</application> header files are
+		installed</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>LUA_LIBDIR</varname></entry>
+	      <entry>The directory where
+		<application>Lua</application> and
+		<application>tolua</application> libraries are
+		installed</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>LUA_MODLIBDIR</varname></entry>
+	      <entry>The directory where
+		<application>Lua</application> module libraries
+		(<filename>.so</filename>) are installed</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>LUA_MODSHAREDIR</varname></entry>
+	      <entry>The directory where
+		<application>Lua</application> modules
+		(<filename>.lua</filename>) are installed</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>LUA_PKGNAMEPREFIX</varname></entry>
+	      <entry>The package name prefix used by
+		<application>Lua</application> modules</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>LUA_CMD</varname></entry>
+	      <entry>The path to the <application>Lua</application>
+		interpreter</entry>
+	    </row>
+
+	    <row>
+	      <entry><varname>LUAC_CMD</varname></entry>
+	      <entry>The path to the <application>Lua</application>
+		compiler</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="using-iconv">
+    <title>Using <command>iconv</command></title>
+
+    <para>After 2013-10-08 (<revnumber>254273</revnumber>),
+      &os;&nbsp; 10-CURRENT and newer versions have a native
+      <command>iconv</command> in the operating system.  On earlier
+      versions, <package role="port">converters/libiconv</package>
+      was used as a dependency.</para>
+
+    <para>For software that needs <command>iconv</command>, define
+      <literal>USES=iconv</literal>.  &os; versions before
+      10-CURRENT on 2013-08-13 (<revnumber>254273</revnumber>) do
+      not have a native <command>iconv</command>.  On these earlier
+      versions, a dependency on
+      <package role="port">converters/libiconv</package> will be
+      added automatically.</para>
+
+    <para>When a port defines <literal>USES=iconv</literal>, these
+      variables will be available:</para>
+
+    <informaltable frame="none" pgwide="0">
+      <tgroup cols="4">
+	<thead>
+	  <row>
+	    <entry>Variable name</entry>
+	    <entry>Purpose</entry>
+	    <entry>Value before &os;&nbsp;10-CURRENT
+	      <revnumber>254273</revnumber> (2013-08-13)</entry>
+	    <entry>Value after &os;&nbsp;10-CURRENT
+	      <revnumber>254273</revnumber> (2013-08-13)</entry>
+	  </row>
+	</thead>
+
+	<tbody>
+	  <row>
+	    <entry><varname>ICONV_CMD</varname></entry>
+	    <entry>Directory where the <command>iconv</command>
+	      binary resides</entry>
+	    <entry><literal>${LOCALBASE}/bin/iconv</literal></entry>
+	    <entry><filename>/usr/bin/iconv</filename></entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>ICONV_LIB</varname></entry>
+	    <entry><command>ld</command> argument to link to
+	      <filename>libiconv</filename> (if needed)</entry>
+	    <entry><literal>-liconv</literal></entry>
+	    <entry>(empty)</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>ICONV_PREFIX</varname></entry>
+	    <entry>Directory where the <command>iconv</command>
+	      implementation resides (useful for configure
+	      scripts)</entry>
+	    <entry><literal>${LOCALBASE}</literal></entry>
+	    <entry><filename>/usr</filename></entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>ICONV_CONFIGURE_ARG</varname></entry>
+	    <entry>Preconstructed configure argument for
+	      configure scripts</entry>
+	    <entry><literal>--with-libiconv-prefix=${LOCALBASE}</literal></entry>
+	    <entry>(empty)</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>ICONV_CONFIGURE_BASE</varname></entry>
+	    <entry>Preconstructed configure argument for
+	      configure scripts</entry>
+	    <entry><literal>--with-libiconv=${LOCALBASE}</literal></entry>
+	    <entry>(empty)</entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </informaltable>
+
+    <para>These two examples automatically populate the variables
+      with the correct value for systems using
+      <package role="port">converters/libiconv</package> or the
+      native <command>iconv</command> respectively:</para>
+
+    <example xml:id="iconv-simple-use">
+      <title>Simple <command>iconv</command> Usage</title>
+
+      <programlisting>USES=		iconv
+LDFLAGS+=	-L${LOCALBASE}/lib ${ICONV_LIB}</programlisting>
+    </example>
+
+    <example xml:id="iconv-configure-use">
+      <title><command>iconv</command> Usage with
+	<command>configure</command></title>
+
+      <programlisting>USES=		iconv
+CONFIGURE_ARGS+=${ICONV_CONFIGURE_ARG}</programlisting>
+    </example>
+
+    <para>As shown above, <varname>ICONV_LIB</varname> is empty when
+      a native <command>iconv</command> is present.  This can be
+      used to detect the native <command>iconv</command> and respond
+      appropriately.</para>
+
+    <para>Sometimes a program has an <command>ld</command> argument
+      or search path hardcoded in a <filename>Makefile</filename> or
+      configure script.  This approach can be used to solve that
+      problem:</para>
+
+    <example xml:id="iconv-reinplace">
+      <title>Fixing Hardcoded <literal>-liconv</literal></title>
+
+      <programlisting>USES=		iconv
+
+post-patch:
+	@${REINPLACE_CMD} -e 's/-liconv/${ICONV_LIB}/' ${WRKSRC}/Makefile</programlisting>
+    </example>
+
+    <para>In some cases it is necessary to set alternate values or
+      perform operations depending on whether there is a native
+      <command>iconv</command>.
+      <filename>bsd.port.pre.mk</filename> must be included before
+      testing the value of <varname>ICONV_LIB</varname>:</para>
+
+    <example xml:id="iconv-conditional">
+      <title>Checking for Native <command>iconv</command>
+	Availability</title>
+
+      <programlisting>USES=		iconv
+
+.include &lt;bsd.port.pre.mk&gt;
+
+post-patch:
+.if empty(ICONV_LIB)
+	# native iconv detected
+	@${REINPLACE_CMD} -e 's|iconv||' ${WRKSRC}/Config.sh
+.endif
+
+.include &lt;bsd.port.post.mk&gt;</programlisting>
+    </example>
+  </sect1>
+
+  <sect1 xml:id="using-xfce">
+    <title>Using Xfce</title>
+
+    <para>Ports that need <application>Xfce</application> libraries or
+      applications set <literal>USES=xfce</literal>.</para>
+
+    <para>Specific <application>Xfce</application> library and
+      application dependencies are set with values assigned to
+      <varname>USE_XFCE</varname>.  They are defined in
+      <filename>/usr/ports/Mk/Uses/xfce.mk</filename>.  The possible
+      values are:</para>
+
+    <variablelist>
+      <title>Values of <varname>USE_XFCE</varname></title>
+
+      <varlistentry>
+	<term>garcon</term>
+
+	<listitem>
+	  <para><package role="port">sysutils/garcon</package></para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>libexo</term>
+
+	<listitem>
+	  <para><package role="port">x11/libexo</package></para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+
+	<term>libgui</term>
+
+	<listitem>
+	  <para><package
+	      role="port">x11-toolkits/libxfce4gui</package></para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>libmenu</term>
+
+	<listitem>
+	  <para><package role="port">x11/libxfce4menu</package></para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>libutil</term>
+
+	<listitem>
+	  <para><package role="port">x11/libxfce4util</package></para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>panel</term>
+
+	<listitem>
+	  <para><package
+	      role="port">x11-wm/xfce4-panel</package></para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>thunar</term>
+
+	<listitem>
+	  <para><package role="port">x11-fm/thunar</package></para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>xfconf</term>
+
+	<listitem>
+	  <para><package role="port">x11/xfce4-conf</package></para>
+	</listitem>
+      </varlistentry>
+    </variablelist>
+
+    <example xml:id="use-xfce">
+      <title><varname>USES=xfce</varname> Example</title>
+
+      <programlisting>USES=		xfce
+USE_XFCE=	libmenu</programlisting>
+    </example>
+
+    <example xml:id="use-xfce-gtk3">
+      <title>Using Xfce's Own GTK3 Widgets</title>
+
+      <para>In this example, the ported application uses the
+	<application>GTK3</application>-specific widgets <package
+	  role="port">x11/libxfce4menu</package> and <package
+	  role="port">x11/xfce4-conf</package>.</para>
+
+      <programlisting>USES=		xfce:gtk3
+USE_XFCE=	libmenu xfconf</programlisting>
+    </example>
+
+    <tip>
+      <para><application>Xfce</application> components included this
+	way will automatically include any dependencies they need.  It
+	is no longer necessary to specify the entire list.  If the
+	port only needs <package
+	  role="port">x11-wm/xfce4-panel</package>, use:</para>
+
+      <programlisting>USES=		xfce
+USE_XFCE=	panel</programlisting>
+
+      <para>There is no need to list the components <package
+	  role="port">x11-wm/xfce4-panel</package> needs itself like
+	this:</para>
+
+      <programlisting>USES=		xfce
+USE_XFCE=	libexo libmenu libutil panel</programlisting>
+
+      <para>However, <application>Xfce</application> components and
+	non-<application>Xfce</application> dependencies of the port
+	must be included explicitly.  Do not count on an
+	<application>Xfce</application> component to provide a
+	sub-dependency other than itself for the main port.</para>
+    </tip>
+  </sect1>
+
+  <sect1 xml:id="using-mozilla">
+    <title>Using Mozilla</title>
+
+    <table frame="none" xml:id="using-mozilla-variables">
+      <title>Variables for Ports That Use Mozilla</title>
+
+      <tgroup cols="2">
+	<tbody>
+
+	  <row>
+	    <entry><varname>USE_GECKO</varname></entry>
+	    <entry>Gecko backend the port can handle.  Possible
+	      values: <literal>libxul</literal>
+	      (<filename>libxul.so</filename>),
+	      <literal>seamonkey</literal>
+	      (<filename>libgtkembedmoz.so</filename>, deprecated,
+	      must not be used any more).</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>USE_FIREFOX</varname></entry>
+	    <entry>The port requires Firefox as a runtime
+	      dependency.  Possible values: <literal>yes</literal>
+	      (get default version), <literal>40</literal>,
+	      <literal>36</literal>, <literal>35</literal>.  Default
+	      dependency is on version
+	      <literal>40</literal>.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>USE_FIREFOX_BUILD</varname></entry>
+	    <entry>The port requires Firefox as a buildtime
+	      dependency.  Possible values: see USE_FIREFOX.  This
+	      automatically sets USE_FIREFOX and assigns the same
+	      value.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>USE_SEAMONKEY</varname></entry>
+	    <entry>The port requires SeaMonkey as a runtime
+	      dependency.  Possible values: <literal>yes</literal>
+	      (get default version), <literal>20</literal>,
+	      <literal>11</literal> (deprecated, must not be used
+	      any more).  Default dependency is on version
+	      <literal>20</literal>.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>USE_SEAMONKEY_BUILD</varname></entry>
+	    <entry>The port requires SeaMonkey as a buildtime
+	      dependency.  Possible values: see USE_SEAMONKEY.  This
+	      automatically sets USE_SEAMONKEY and assigns the same
+	      value.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>USE_THUNDERBIRD</varname></entry>
+	    <entry>The port requires Thunderbird as a runtime
+	      dependency.  Possible values: <literal>yes</literal>
+	      (get default version), <literal>31</literal>,
+	      <literal>30</literal> (deprecated, must not be used
+	      any more).  Default dependency is on version
+	      <literal>31</literal>.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>USE_THUNDERBIRD_BUILD</varname></entry>
+	    <entry>The port requires Thunderbird as a buildtime
+	      dependency.  Possible values: see USE_THUNDERBIRD.
+	      This automatically sets USE_THUNDERBIRD and assigns
+	      the same value.</entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+
+    <para>A complete list of available variables can be found in
+      <filename>/usr/ports/Mk/bsd.gecko.mk</filename>.</para>
+  </sect1>
+
+  <sect1 xml:id="using-databases">
+    <title>Using Databases</title>
+
+    <table frame="none" xml:id="using-databases-variables">
+      <title>Variables for Ports Using Databases</title>
+
+      <tgroup cols="2">
+	<thead>
+	  <row>
+	    <entry>Variable</entry>
+	    <entry>Means</entry>
+	  </row>
+	</thead>
+
+	<tbody>
+	  <row>
+	    <entry><varname>USE_BDB</varname></entry>
+	    <entry>Obsolete.  Replaced by <link
+		linkend="uses-bdb"><literal>USES=bdb</literal></link></entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>USE_MYSQL</varname></entry>
+	    <entry>Obsolete.  Replaced by <link
+		linkend="uses-mysql"><literal>USES=mysql</literal></link></entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>USE_PGSQL</varname></entry>
+	    <entry>Obsolete.  Replaced by <link
+		linkend="uses-pgsql"><literal>USES=pgsql</literal></link>.</entry>
+	  </row>
+
+	  <row>
+	    <entry><varname>USE_SQLITE</varname></entry>
+	    <entry>Obsolete.  Replaced by <link
+		linkend="uses-sqlite"><literal>USES=sqlite</literal></link></entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+  </sect1>
+
+  <sect1 xml:id="rc-scripts">
+    <title>Starting and Stopping Services (<literal>rc</literal>
+      Scripts)</title>
+
+    <para><filename>rc.d</filename> scripts are used to start
+      services on system startup, and to give administrators a
+      standard way of stopping, starting and restarting the service.
+      Ports integrate into the system <filename>rc.d</filename>
+      framework.  Details on its usage can be found in <link
+	xlink:href="&url.books.handbook;/configtuning-rcd.html">the
+	rc.d Handbook chapter</link>.  Detailed explanation of
+      the available commands is provided in &man.rc.8; and
+      &man.rc.subr.8;.  Finally, there is
+      <link xlink:href="&url.articles.rc-scripting;">an
+	article</link> on practical aspects of
+      <filename>rc.d</filename> scripting.</para>
+
+    <para>With a mythical port called
+      <replaceable>doorman</replaceable>, which needs to start a
+      <replaceable>doormand</replaceable> daemon.  Add the following
+      to the <filename>Makefile</filename>:</para>
+
+    <programlisting>USE_RC_SUBR=	<replaceable>doormand</replaceable></programlisting>
+
+    <para>Multiple scripts may be listed and will be installed.
+      Scripts must be placed in the <filename>files</filename>
+      subdirectory and a <literal>.in</literal> suffix must be added
+      to their filename.  Standard <varname>SUB_LIST</varname>
+      expansions will be ran against this file.  Use of the
+      <literal>%%PREFIX%%</literal> and
+      <literal>%%LOCALBASE%%</literal> expansions is strongly
+      encouraged as well.  More on <varname>SUB_LIST</varname> in
+      <link linkend="using-sub-files">the relevant
+	section</link>.</para>
+
+    <para>As of &os;&nbsp;6.1-RELEASE, local
+      <filename>rc.d</filename> scripts (including those installed
+      by ports) are included in the overall &man.rcorder.8; of the
+      base system.</para>
+
+    <para>An example simple <filename>rc.d</filename> script to start
+      the doormand daemon:</para>
+
+    <programlisting>#!/bin/sh
+
+# &dollar;FreeBSD&dollar;
+#
+# PROVIDE: <replaceable>doormand</replaceable>
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+#
+# Add these lines to /etc/rc.conf.local or /etc/rc.conf
+# to enable this service:
+#
+# <replaceable>doormand</replaceable>_enable (bool):	Set to NO by default.
+#				Set it to YES to enable <replaceable>doormand</replaceable>.
+# <replaceable>doormand</replaceable>_config (path):	Set to %%PREFIX%%/etc/<replaceable>doormand/doormand.cf</replaceable>
+#				by default.
+
+. /etc/rc.subr
+
+name=<replaceable>doormand</replaceable>
+rcvar=<replaceable>doormand</replaceable>_enable
+
+load_rc_config $name
+
+: ${<replaceable>doormand</replaceable>_enable:="NO"}
+: ${<replaceable>doormand</replaceable>_config="%%PREFIX%%/etc/<replaceable>doormand/doormand.cf</replaceable>"}
+
+command=%%PREFIX%%/sbin/${name}
+pidfile=/var/run/${name}.pid
+
+command_args="<replaceable>-p $pidfile -f $doormand_config</replaceable>"
+
+run_rc_command "$1"</programlisting>
+
+    <para>Unless there is a very good reason to start the service
+      earlier, or it runs as a particular user (other than root), all
+      ports scripts must use:</para>
+
+    <programlisting>REQUIRE: LOGIN</programlisting>
+
+    <para>If the startup script launches a daemon that must be
+      shutdown, the following will trigger a stop of the service on
+      system shutdown:</para>
+
+    <programlisting>KEYWORD: shutdown</programlisting>
+
+    <para>If the script is not starting a persistent service this is
+      not necessary.</para>
+
+    <para>For optional configuration elements the &quot;=&quot;
+      style of default variable assignment is preferable to the
+      &quot;:=&quot; style here, since the former sets a default
+      value only if the variable is unset, and the latter sets one
+      if the variable is unset <emphasis>or</emphasis> null.  A user
+      might very well include something like:</para>
+
+    <programlisting><replaceable>doormand</replaceable>_flags=""</programlisting>
+
+    <para>in their <filename>rc.conf.local</filename>, and a
+      variable substitution using &quot;:=&quot; would
+      inappropriately override the user's intention.  The
+      <literal>_enable</literal> variable is not optional,
+      and must use the &quot;:&quot; for the default.</para>
+
+    <sect2 xml:id="rc-scripts-checklist">
+      <title>Pre-Commit Checklist</title>
+
+      <para>Before contributing a port with an
+	<filename>rc.d</filename> script, and more importantly,
+	before committing one, please consult this
+	checklist to be sure that it is ready.</para>
+
+      <para>The <package role="port">devel/rclint</package>
+	port can check for most of these, but it is not a
+	substitute for proper review.</para>
+
+      <procedure>
+	<step>
+	  <para>If this is a new file, does it have a
+	    <filename>.sh</filename> extension?  If so, that must be
+	    changed to just
+	    <filename><replaceable>file</replaceable>.in</filename>
+	    since <filename>rc.d</filename> files may not end with
+	    that extension.</para>
+	</step>
+
+	<step>
+	  <para>Does the file have a
+	    <literal>&dollar;FreeBSD&dollar;</literal> tag?</para>
+	</step>
+
+	<step>
+	  <para>Do the name of the file (minus
+	    <filename>.in</filename>), the
+	    <literal>PROVIDE</literal> line, and
+	    <literal>&dollar;</literal><replaceable>name</replaceable>
+	    all match?  The file name matching
+	    <literal>PROVIDE</literal> makes debugging easier,
+	    especially for &man.rcorder.8; issues.  Matching the
+	    file name and
+	    <literal>&dollar;</literal><replaceable>name</replaceable>
+	    makes it easier to figure out which variables are
+	    relevant in <filename>rc.conf[.local]</filename>.  It is
+	    also a policy
+	    for all new scripts, including those in the base
+	    system.</para>
+	</step>
+
+	<step>
+	  <para>Is the <literal>REQUIRE</literal> line set to
+	    <literal>LOGIN</literal>?  This is mandatory for scripts
+	    that run as a non-root user.  If it runs as root, is
+	    there a good reason for it to run prior to
+	    <literal>LOGIN</literal>?  If not, it must run after
+	    so that local scrips can be loosely grouped to a point in
+	    &man.rcorder.8; after most everything in the base is
+	    already running.</para>
+	</step>
+
+	<step>
+	  <para>Does the script start a persistent service?  If so,
+	    it must have <literal>KEYWORD:
+	      shutdown</literal>.</para>
+	</step>
+
+	<step>
+	  <para>Make sure there is no
+	    <literal>KEYWORD: &os;</literal> present.  This has
+	    not been necessary nor desirable for years.  It is also
+	    an indication that the new script was copy/pasted from
+	    an old script, so extra caution must be given to the
+	    review.</para>
+	</step>
+
+	<step>
+	  <para>If the script uses an interpreted language like
+	    <command>perl</command>, <command>python</command>, or
+	    <command>ruby</command>, make certain that
+	    <varname>command_interpreter</varname> is set
+	    appropriately, for example, for
+	    <application>Perl</application>, by adding
+	    <literal>PERL=${PERL}</literal> to
+	    <varname>SUB_LIST</varname> and using
+	    <literal>%%PERL%%</literal>.  Otherwise,</para>
+
+	  <screen>&prompt.root; <userinput>service <replaceable>name</replaceable> stop</userinput></screen>
+
+	  <para>will probably not work properly.  See
+	    &man.service.8; for more information.</para>
+	</step>
+
+	<step>
+	  <para>Have all occurrences of
+	    <filename>/usr/local</filename> been replaced with
+	    <literal>%%PREFIX%%</literal>?</para>
+	</step>
+
+	<step>
+	  <para>Do the default variable assignments come after
+	    <function>load_rc_config</function>?</para>
+	</step>
+
+	<step>
+	  <para>Are there default assignments to empty strings?
+	    They should be removed, but double-check that the option
+	    is documented in the comments at the top of the
+	    file.</para>
+	</step>
+
+	<step>
+	  <para>Are things that are set in variables actually used
+	    in the script?</para>
+	</step>
+
+	<step>
+	  <para>Are options listed in the default
+	    <replaceable>name</replaceable><varname>_flags</varname>
+	    things that are actually mandatory?  If so, they must
+	    be in <varname>command_args</varname>.  The
+	    <option>-d</option> option is a red flag (pardon the
+	    pun) here, since it is usually the option to
+	    &ldquo;daemonize&rdquo; the process, and therefore is
+	    actually mandatory.</para>
+	</step>
+
+	<step>
+	  <para><varname><replaceable>name</replaceable>_flags</varname>
+	    must never be included in
+	    <varname>command_args</varname> (and vice versa,
+	    although that error is less common).</para>
+	</step>
+
+	<step>
+	  <para>Does the script execute any code unconditionally?
+	    This is frowned on.  Usually these things must be
+	    dealt with through a
+	    <function>start_precmd</function>.</para>
+	</step>
+
+	<step>
+	  <para>All boolean tests must use the
+	    <function>checkyesno</function> function.  No
+	    hand-rolled tests for <literal>[Yy][Ee][Ss]</literal>,
+	    etc.</para>
+	</step>
+
+	<step>
+	  <para>If there is a loop (for example, waiting for
+	    something to start) does it have a counter to terminate
+	    the loop?  We do not want the boot to be stuck forever
+	    if there is an error.</para>
+	</step>
+
+	<step>
+	  <para>Does the script create files or directories that
+	    need specific permissions, for example, a
+	    <filename>pid</filename> that needs to be owned by
+	    the user that runs the process?  Rather than the
+	    traditional &man.touch.1;/&man.chown.8;/&man.chmod.1;
+	    routine, consider using &man.install.1; with the proper
+	    command line arguments to do the whole procedure with
+	    one step.</para>
+	</step>
+      </procedure>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="users-and-groups">
+    <title>Adding Users and Groups</title>
+
+    <para>Some ports require a particular user account to be present,
+      usually for daemons that run as that user.  For these ports,
+      choose a <emphasis>unique</emphasis> UID from 50 to 999 and
+      register it in <filename>ports/UIDs</filename> (for users) and
+      <filename>ports/GIDs</filename> (for groups).  The unique
+      identification should be the same for users and groups.</para>
+
+    <para>Please include a patch against these two files when
+      requiring a new user or group to be created for the
+      port.</para>
+
+    <para>Then use <varname>USERS</varname> and
+      <varname>GROUPS</varname> in
+      <filename>Makefile</filename>, and the user will be
+      automatically created when installing the port.</para>
+
+    <programlisting>USERS=	pulse
+GROUPS=	pulse pulse-access pulse-rt</programlisting>
+
+    <para>The current list of reserved UIDs and GIDs can be found
+      in <filename>ports/UIDs</filename> and
+      <filename>ports/GIDs</filename>.</para>
+  </sect1>
+
+  <sect1 xml:id="requiring-kernel-sources">
+    <title>Ports That Rely on Kernel Sources</title>
+
+    <para>Some ports (such as kernel loadable modules) need the
+      kernel source files so that the port can compile.  Here is the
+      correct way to determine if the user has them
+      installed:</para>
+
+    <programlisting>USES=	kmod</programlisting>
+
+    <para>Apart from this check, the <literal>kmod</literal> feature
+      takes care of most items that these ports need to take into
+      account.</para>
+  </sect1>
+</chapter>

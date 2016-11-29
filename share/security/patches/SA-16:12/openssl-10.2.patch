@@ -1,0 +1,2963 @@
+--- crypto/openssl/apps/s_server.c.orig
++++ crypto/openssl/apps/s_server.c
+@@ -416,6 +416,8 @@
+ static int MS_CALLBACK ssl_srp_server_param_cb(SSL *s, int *ad, void *arg)
+ {
+     srpsrvparm *p = (srpsrvparm *) arg;
++    int ret = SSL3_AL_FATAL;
++
+     if (p->login == NULL && p->user == NULL) {
+         p->login = SSL_get_srp_username(s);
+         BIO_printf(bio_err, "SRP username = \"%s\"\n", p->login);
+@@ -424,21 +426,25 @@
+ 
+     if (p->user == NULL) {
+         BIO_printf(bio_err, "User %s doesn't exist\n", p->login);
+-        return SSL3_AL_FATAL;
++        goto err;
+     }
++
+     if (SSL_set_srp_server_param
+         (s, p->user->N, p->user->g, p->user->s, p->user->v,
+          p->user->info) < 0) {
+         *ad = SSL_AD_INTERNAL_ERROR;
+-        return SSL3_AL_FATAL;
++        goto err;
+     }
+     BIO_printf(bio_err,
+                "SRP parameters set: username = \"%s\" info=\"%s\" \n",
+                p->login, p->user->info);
+-    /* need to check whether there are memory leaks */
++    ret = SSL_ERROR_NONE;
++
++err:
++    SRP_user_pwd_free(p->user);
+     p->user = NULL;
+     p->login = NULL;
+-    return SSL_ERROR_NONE;
++    return ret;
+ }
+ 
+ #endif
+@@ -2244,9 +2250,10 @@
+ #ifndef OPENSSL_NO_SRP
+                 while (SSL_get_error(con, k) == SSL_ERROR_WANT_X509_LOOKUP) {
+                     BIO_printf(bio_s_out, "LOOKUP renego during write\n");
++                    SRP_user_pwd_free(srp_callback_parm.user);
+                     srp_callback_parm.user =
+-                        SRP_VBASE_get_by_user(srp_callback_parm.vb,
+-                                              srp_callback_parm.login);
++                        SRP_VBASE_get1_by_user(srp_callback_parm.vb,
++                                               srp_callback_parm.login);
+                     if (srp_callback_parm.user)
+                         BIO_printf(bio_s_out, "LOOKUP done %s\n",
+                                    srp_callback_parm.user->info);
+@@ -2300,9 +2307,10 @@
+ #ifndef OPENSSL_NO_SRP
+                 while (SSL_get_error(con, i) == SSL_ERROR_WANT_X509_LOOKUP) {
+                     BIO_printf(bio_s_out, "LOOKUP renego during read\n");
++                    SRP_user_pwd_free(srp_callback_parm.user);
+                     srp_callback_parm.user =
+-                        SRP_VBASE_get_by_user(srp_callback_parm.vb,
+-                                              srp_callback_parm.login);
++                        SRP_VBASE_get1_by_user(srp_callback_parm.vb,
++                                               srp_callback_parm.login);
+                     if (srp_callback_parm.user)
+                         BIO_printf(bio_s_out, "LOOKUP done %s\n",
+                                    srp_callback_parm.user->info);
+@@ -2387,9 +2395,10 @@
+     while (i <= 0 && SSL_get_error(con, i) == SSL_ERROR_WANT_X509_LOOKUP) {
+         BIO_printf(bio_s_out, "LOOKUP during accept %s\n",
+                    srp_callback_parm.login);
++        SRP_user_pwd_free(srp_callback_parm.user);
+         srp_callback_parm.user =
+-            SRP_VBASE_get_by_user(srp_callback_parm.vb,
+-                                  srp_callback_parm.login);
++            SRP_VBASE_get1_by_user(srp_callback_parm.vb,
++                                   srp_callback_parm.login);
+         if (srp_callback_parm.user)
+             BIO_printf(bio_s_out, "LOOKUP done %s\n",
+                        srp_callback_parm.user->info);
+@@ -2616,9 +2625,10 @@
+                    && SSL_get_error(con, i) == SSL_ERROR_WANT_X509_LOOKUP) {
+                 BIO_printf(bio_s_out, "LOOKUP during accept %s\n",
+                            srp_callback_parm.login);
++                SRP_user_pwd_free(srp_callback_parm.user);
+                 srp_callback_parm.user =
+-                    SRP_VBASE_get_by_user(srp_callback_parm.vb,
+-                                          srp_callback_parm.login);
++                    SRP_VBASE_get1_by_user(srp_callback_parm.vb,
++                                           srp_callback_parm.login);
+                 if (srp_callback_parm.user)
+                     BIO_printf(bio_s_out, "LOOKUP done %s\n",
+                                srp_callback_parm.user->info);
+@@ -2654,6 +2664,22 @@
+                 goto err;
+             } else {
+                 BIO_printf(bio_s_out, "read R BLOCK\n");
++#ifndef OPENSSL_NO_SRP
++                if (BIO_should_io_special(io)
++                    && BIO_get_retry_reason(io) == BIO_RR_SSL_X509_LOOKUP) {
++                    BIO_printf(bio_s_out, "LOOKUP renego during read\n");
++                    SRP_user_pwd_free(srp_callback_parm.user);
++                    srp_callback_parm.user =
++                        SRP_VBASE_get1_by_user(srp_callback_parm.vb,
++                                               srp_callback_parm.login);
++                    if (srp_callback_parm.user)
++                        BIO_printf(bio_s_out, "LOOKUP done %s\n",
++                                   srp_callback_parm.user->info);
++                    else
++                        BIO_printf(bio_s_out, "LOOKUP not successful\n");
++                    continue;
++                }
++#endif
+ #if defined(OPENSSL_SYS_NETWARE)
+                 delay(1000);
+ #elif !defined(OPENSSL_SYS_MSDOS) && !defined(__DJGPP__)
+--- crypto/openssl/crypto/bio/b_print.c.orig
++++ crypto/openssl/crypto/bio/b_print.c
+@@ -125,16 +125,16 @@
+ # define LLONG long
+ #endif
+ 
+-static void fmtstr(char **, char **, size_t *, size_t *,
+-                   const char *, int, int, int);
+-static void fmtint(char **, char **, size_t *, size_t *,
+-                   LLONG, int, int, int, int);
+-static void fmtfp(char **, char **, size_t *, size_t *,
+-                  LDOUBLE, int, int, int);
+-static void doapr_outch(char **, char **, size_t *, size_t *, int);
+-static void _dopr(char **sbuffer, char **buffer,
+-                  size_t *maxlen, size_t *retlen, int *truncated,
+-                  const char *format, va_list args);
++static int fmtstr(char **, char **, size_t *, size_t *,
++                  const char *, int, int, int);
++static int fmtint(char **, char **, size_t *, size_t *,
++                  LLONG, int, int, int, int);
++static int fmtfp(char **, char **, size_t *, size_t *,
++                 LDOUBLE, int, int, int);
++static int doapr_outch(char **, char **, size_t *, size_t *, int);
++static int _dopr(char **sbuffer, char **buffer,
++                 size_t *maxlen, size_t *retlen, int *truncated,
++                 const char *format, va_list args);
+ 
+ /* format read states */
+ #define DP_S_DEFAULT    0
+@@ -165,7 +165,7 @@
+ #define char_to_int(p) (p - '0')
+ #define OSSL_MAX(p,q) ((p >= q) ? p : q)
+ 
+-static void
++static int
+ _dopr(char **sbuffer,
+       char **buffer,
+       size_t *maxlen,
+@@ -196,7 +196,8 @@
+             if (ch == '%')
+                 state = DP_S_FLAGS;
+             else
+-                doapr_outch(sbuffer, buffer, &currlen, maxlen, ch);
++                if(!doapr_outch(sbuffer, buffer, &currlen, maxlen, ch))
++                    return 0;
+             ch = *format++;
+             break;
+         case DP_S_FLAGS:
+@@ -302,8 +303,9 @@
+                     value = va_arg(args, int);
+                     break;
+                 }
+-                fmtint(sbuffer, buffer, &currlen, maxlen,
+-                       value, 10, min, max, flags);
++                if (!fmtint(sbuffer, buffer, &currlen, maxlen, value, 10, min,
++                            max, flags))
++                    return 0;
+                 break;
+             case 'X':
+                 flags |= DP_F_UP;
+@@ -326,9 +328,10 @@
+                     value = (LLONG) va_arg(args, unsigned int);
+                     break;
+                 }
+-                fmtint(sbuffer, buffer, &currlen, maxlen, value,
+-                       ch == 'o' ? 8 : (ch == 'u' ? 10 : 16),
+-                       min, max, flags);
++                if (!fmtint(sbuffer, buffer, &currlen, maxlen, value,
++                            ch == 'o' ? 8 : (ch == 'u' ? 10 : 16),
++                            min, max, flags))
++                    return 0;
+                 break;
+             case 'f':
+                 if (cflags == DP_C_LDOUBLE)
+@@ -335,8 +338,9 @@
+                     fvalue = va_arg(args, LDOUBLE);
+                 else
+                     fvalue = va_arg(args, double);
+-                fmtfp(sbuffer, buffer, &currlen, maxlen,
+-                      fvalue, min, max, flags);
++                if (!fmtfp(sbuffer, buffer, &currlen, maxlen, fvalue, min, max,
++                           flags))
++                    return 0;
+                 break;
+             case 'E':
+                 flags |= DP_F_UP;
+@@ -355,8 +359,9 @@
+                     fvalue = va_arg(args, double);
+                 break;
+             case 'c':
+-                doapr_outch(sbuffer, buffer, &currlen, maxlen,
+-                            va_arg(args, int));
++                if(!doapr_outch(sbuffer, buffer, &currlen, maxlen,
++                            va_arg(args, int)))
++                    return 0;
+                 break;
+             case 's':
+                 strvalue = va_arg(args, char *);
+@@ -366,13 +371,15 @@
+                     else
+                         max = *maxlen;
+                 }
+-                fmtstr(sbuffer, buffer, &currlen, maxlen, strvalue,
+-                       flags, min, max);
++                if (!fmtstr(sbuffer, buffer, &currlen, maxlen, strvalue,
++                            flags, min, max))
++                    return 0;
+                 break;
+             case 'p':
+                 value = (long)va_arg(args, void *);
+-                fmtint(sbuffer, buffer, &currlen, maxlen,
+-                       value, 16, min, max, flags | DP_F_NUM);
++                if (!fmtint(sbuffer, buffer, &currlen, maxlen,
++                            value, 16, min, max, flags | DP_F_NUM))
++                    return 0;
+                 break;
+             case 'n':          /* XXX */
+                 if (cflags == DP_C_SHORT) {
+@@ -394,7 +401,8 @@
+                 }
+                 break;
+             case '%':
+-                doapr_outch(sbuffer, buffer, &currlen, maxlen, ch);
++                if(!doapr_outch(sbuffer, buffer, &currlen, maxlen, ch))
++                    return 0;
+                 break;
+             case 'w':
+                 /* not supported yet, treat as next char */
+@@ -418,46 +426,56 @@
+     *truncated = (currlen > *maxlen - 1);
+     if (*truncated)
+         currlen = *maxlen - 1;
+-    doapr_outch(sbuffer, buffer, &currlen, maxlen, '\0');
++    if(!doapr_outch(sbuffer, buffer, &currlen, maxlen, '\0'))
++        return 0;
+     *retlen = currlen - 1;
+-    return;
++    return 1;
+ }
+ 
+-static void
++static int
+ fmtstr(char **sbuffer,
+        char **buffer,
+        size_t *currlen,
+        size_t *maxlen, const char *value, int flags, int min, int max)
+ {
+-    int padlen, strln;
++    int padlen;
++    size_t strln;
+     int cnt = 0;
+ 
+     if (value == 0)
+         value = "<NULL>";
+-    for (strln = 0; value[strln]; ++strln) ;
++
++    strln = strlen(value);
++    if (strln > INT_MAX)
++        strln = INT_MAX;
++
+     padlen = min - strln;
+-    if (padlen < 0)
++    if (min < 0 || padlen < 0)
+         padlen = 0;
+     if (flags & DP_F_MINUS)
+         padlen = -padlen;
+ 
+     while ((padlen > 0) && (cnt < max)) {
+-        doapr_outch(sbuffer, buffer, currlen, maxlen, ' ');
++        if(!doapr_outch(sbuffer, buffer, currlen, maxlen, ' '))
++            return 0;
+         --padlen;
+         ++cnt;
+     }
+     while (*value && (cnt < max)) {
+-        doapr_outch(sbuffer, buffer, currlen, maxlen, *value++);
++        if(!doapr_outch(sbuffer, buffer, currlen, maxlen, *value++))
++            return 0;
+         ++cnt;
+     }
+     while ((padlen < 0) && (cnt < max)) {
+-        doapr_outch(sbuffer, buffer, currlen, maxlen, ' ');
++        if(!doapr_outch(sbuffer, buffer, currlen, maxlen, ' '))
++            return 0;
+         ++padlen;
+         ++cnt;
+     }
++    return 1;
+ }
+ 
+-static void
++static int
+ fmtint(char **sbuffer,
+        char **buffer,
+        size_t *currlen,
+@@ -517,17 +535,20 @@
+ 
+     /* spaces */
+     while (spadlen > 0) {
+-        doapr_outch(sbuffer, buffer, currlen, maxlen, ' ');
++        if(!doapr_outch(sbuffer, buffer, currlen, maxlen, ' '))
++            return 0;
+         --spadlen;
+     }
+ 
+     /* sign */
+     if (signvalue)
+-        doapr_outch(sbuffer, buffer, currlen, maxlen, signvalue);
++        if(!doapr_outch(sbuffer, buffer, currlen, maxlen, signvalue))
++            return 0;
+ 
+     /* prefix */
+     while (*prefix) {
+-        doapr_outch(sbuffer, buffer, currlen, maxlen, *prefix);
++        if(!doapr_outch(sbuffer, buffer, currlen, maxlen, *prefix))
++            return 0;
+         prefix++;
+     }
+ 
+@@ -534,20 +555,24 @@
+     /* zeros */
+     if (zpadlen > 0) {
+         while (zpadlen > 0) {
+-            doapr_outch(sbuffer, buffer, currlen, maxlen, '0');
++            if(!doapr_outch(sbuffer, buffer, currlen, maxlen, '0'))
++                return 0;
+             --zpadlen;
+         }
+     }
+     /* digits */
+-    while (place > 0)
+-        doapr_outch(sbuffer, buffer, currlen, maxlen, convert[--place]);
++    while (place > 0) {
++        if (!doapr_outch(sbuffer, buffer, currlen, maxlen, convert[--place]))
++            return 0;
++    }
+ 
+     /* left justified spaces */
+     while (spadlen < 0) {
+-        doapr_outch(sbuffer, buffer, currlen, maxlen, ' ');
++        if (!doapr_outch(sbuffer, buffer, currlen, maxlen, ' '))
++            return 0;
+         ++spadlen;
+     }
+-    return;
++    return 1;
+ }
+ 
+ static LDOUBLE abs_val(LDOUBLE value)
+@@ -578,7 +603,7 @@
+     return intpart;
+ }
+ 
+-static void
++static int
+ fmtfp(char **sbuffer,
+       char **buffer,
+       size_t *currlen,
+@@ -657,24 +682,29 @@
+ 
+     if ((flags & DP_F_ZERO) && (padlen > 0)) {
+         if (signvalue) {
+-            doapr_outch(sbuffer, buffer, currlen, maxlen, signvalue);
++            if (!doapr_outch(sbuffer, buffer, currlen, maxlen, signvalue))
++                return 0;
+             --padlen;
+             signvalue = 0;
+         }
+         while (padlen > 0) {
+-            doapr_outch(sbuffer, buffer, currlen, maxlen, '0');
++            if (!doapr_outch(sbuffer, buffer, currlen, maxlen, '0'))
++                return 0;
+             --padlen;
+         }
+     }
+     while (padlen > 0) {
+-        doapr_outch(sbuffer, buffer, currlen, maxlen, ' ');
++        if (!doapr_outch(sbuffer, buffer, currlen, maxlen, ' '))
++            return 0;
+         --padlen;
+     }
+-    if (signvalue)
+-        doapr_outch(sbuffer, buffer, currlen, maxlen, signvalue);
++    if (signvalue && !doapr_outch(sbuffer, buffer, currlen, maxlen, signvalue))
++        return 0;
+ 
+-    while (iplace > 0)
+-        doapr_outch(sbuffer, buffer, currlen, maxlen, iconvert[--iplace]);
++    while (iplace > 0) {
++        if (!doapr_outch(sbuffer, buffer, currlen, maxlen, iconvert[--iplace]))
++            return 0;
++    }
+ 
+     /*
+      * Decimal point. This should probably use locale to find the correct
+@@ -681,23 +711,32 @@
+      * char to print out.
+      */
+     if (max > 0 || (flags & DP_F_NUM)) {
+-        doapr_outch(sbuffer, buffer, currlen, maxlen, '.');
++        if (!doapr_outch(sbuffer, buffer, currlen, maxlen, '.'))
++            return 0;
+ 
+-        while (fplace > 0)
+-            doapr_outch(sbuffer, buffer, currlen, maxlen, fconvert[--fplace]);
++        while (fplace > 0) {
++            if(!doapr_outch(sbuffer, buffer, currlen, maxlen,
++                            fconvert[--fplace]))
++                return 0;
++        }
+     }
+     while (zpadlen > 0) {
+-        doapr_outch(sbuffer, buffer, currlen, maxlen, '0');
++        if (!doapr_outch(sbuffer, buffer, currlen, maxlen, '0'))
++            return 0;
+         --zpadlen;
+     }
+ 
+     while (padlen < 0) {
+-        doapr_outch(sbuffer, buffer, currlen, maxlen, ' ');
++        if (!doapr_outch(sbuffer, buffer, currlen, maxlen, ' '))
++            return 0;
+         ++padlen;
+     }
++    return 1;
+ }
+ 
+-static void
++#define BUFFER_INC  1024
++
++static int
+ doapr_outch(char **sbuffer,
+             char **buffer, size_t *currlen, size_t *maxlen, int c)
+ {
+@@ -708,13 +747,14 @@
+     assert(*currlen <= *maxlen);
+ 
+     if (buffer && *currlen == *maxlen) {
+-        *maxlen += 1024;
++        if (*maxlen > INT_MAX - BUFFER_INC)
++            return 0;
++
++        *maxlen += BUFFER_INC;
+         if (*buffer == NULL) {
+             *buffer = OPENSSL_malloc(*maxlen);
+-            if (!*buffer) {
+-                /* Panic! Can't really do anything sensible. Just return */
+-                return;
+-            }
++            if (*buffer == NULL)
++                return 0;
+             if (*currlen > 0) {
+                 assert(*sbuffer != NULL);
+                 memcpy(*buffer, *sbuffer, *currlen);
+@@ -721,11 +761,11 @@
+             }
+             *sbuffer = NULL;
+         } else {
+-            *buffer = OPENSSL_realloc(*buffer, *maxlen);
+-            if (!*buffer) {
+-                /* Panic! Can't really do anything sensible. Just return */
+-                return;
+-            }
++            char *tmpbuf;
++            tmpbuf = OPENSSL_realloc(*buffer, *maxlen);
++            if (tmpbuf == NULL)
++                return 0;
++            *buffer = tmpbuf;
+         }
+     }
+ 
+@@ -736,7 +776,7 @@
+             (*buffer)[(*currlen)++] = (char)c;
+     }
+ 
+-    return;
++    return 1;
+ }
+ 
+ /***************************************************************************/
+@@ -768,7 +808,11 @@
+ 
+     dynbuf = NULL;
+     CRYPTO_push_info("doapr()");
+-    _dopr(&hugebufp, &dynbuf, &hugebufsize, &retlen, &ignored, format, args);
++    if (!_dopr(&hugebufp, &dynbuf, &hugebufsize, &retlen, &ignored, format,
++                args)) {
++        OPENSSL_free(dynbuf);
++        return -1;
++    }
+     if (dynbuf) {
+         ret = BIO_write(bio, dynbuf, (int)retlen);
+         OPENSSL_free(dynbuf);
+@@ -803,7 +847,8 @@
+     size_t retlen;
+     int truncated;
+ 
+-    _dopr(&buf, NULL, &n, &retlen, &truncated, format, args);
++    if(!_dopr(&buf, NULL, &n, &retlen, &truncated, format, args))
++        return -1;
+ 
+     if (truncated)
+         /*
+--- crypto/openssl/crypto/bn/asm/x86_64-mont5.pl.orig
++++ crypto/openssl/crypto/bn/asm/x86_64-mont5.pl
+@@ -66,7 +66,8 @@
+ .align	16
+ .Lmul_enter:
+ 	mov	${num}d,${num}d
+-	mov	`($win64?56:8)`(%rsp),%r10d	# load 7th argument
++	movd	`($win64?56:8)`(%rsp),%xmm5	# load 7th argument
++	lea	.Linc(%rip),%r10
+ 	push	%rbx
+ 	push	%rbp
+ 	push	%r12
+@@ -73,53 +74,105 @@
+ 	push	%r13
+ 	push	%r14
+ 	push	%r15
+-___
+-$code.=<<___ if ($win64);
+-	lea	-0x28(%rsp),%rsp
+-	movaps	%xmm6,(%rsp)
+-	movaps	%xmm7,0x10(%rsp)
++
+ .Lmul_alloca:
+-___
+-$code.=<<___;
+ 	mov	%rsp,%rax
+ 	lea	2($num),%r11
+ 	neg	%r11
+-	lea	(%rsp,%r11,8),%rsp	# tp=alloca(8*(num+2))
++	lea	-264(%rsp,%r11,8),%rsp	# tp=alloca(8*(num+2)+256+8)
+ 	and	\$-1024,%rsp		# minimize TLB usage
+ 
+ 	mov	%rax,8(%rsp,$num,8)	# tp[num+1]=%rsp
+ .Lmul_body:
+-	mov	$bp,%r12		# reassign $bp
++	lea	128($bp),%r12		# reassign $bp (+size optimization)
+ ___
+ 		$bp="%r12";
+ 		$STRIDE=2**5*8;		# 5 is "window size"
+ 		$N=$STRIDE/4;		# should match cache line size
+ $code.=<<___;
+-	mov	%r10,%r11
+-	shr	\$`log($N/8)/log(2)`,%r10
+-	and	\$`$N/8-1`,%r11
+-	not	%r10
+-	lea	.Lmagic_masks(%rip),%rax
+-	and	\$`2**5/($N/8)-1`,%r10	# 5 is "window size"
+-	lea	96($bp,%r11,8),$bp	# pointer within 1st cache line
+-	movq	0(%rax,%r10,8),%xmm4	# set of masks denoting which
+-	movq	8(%rax,%r10,8),%xmm5	# cache line contains element
+-	movq	16(%rax,%r10,8),%xmm6	# denoted by 7th argument
+-	movq	24(%rax,%r10,8),%xmm7
++	movdqa	0(%r10),%xmm0		# 00000001000000010000000000000000
++	movdqa	16(%r10),%xmm1		# 00000002000000020000000200000002
++	lea	24-112(%rsp,$num,8),%r10# place the mask after tp[num+3] (+ICache optimization)
++	and	\$-16,%r10
+ 
+-	movq	`0*$STRIDE/4-96`($bp),%xmm0
+-	movq	`1*$STRIDE/4-96`($bp),%xmm1
+-	pand	%xmm4,%xmm0
+-	movq	`2*$STRIDE/4-96`($bp),%xmm2
+-	pand	%xmm5,%xmm1
+-	movq	`3*$STRIDE/4-96`($bp),%xmm3
+-	pand	%xmm6,%xmm2
++	pshufd	\$0,%xmm5,%xmm5		# broadcast index
++	movdqa	%xmm1,%xmm4
++	movdqa	%xmm1,%xmm2
++___
++########################################################################
++# calculate mask by comparing 0..31 to index and save result to stack
++#
++$code.=<<___;
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0		# compare to 1,0
++	.byte	0x67
++	movdqa	%xmm4,%xmm3
++___
++for($k=0;$k<$STRIDE/16-4;$k+=4) {
++$code.=<<___;
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1		# compare to 3,2
++	movdqa	%xmm0,`16*($k+0)+112`(%r10)
++	movdqa	%xmm4,%xmm0
++
++	paddd	%xmm2,%xmm3
++	pcmpeqd	%xmm5,%xmm2		# compare to 5,4
++	movdqa	%xmm1,`16*($k+1)+112`(%r10)
++	movdqa	%xmm4,%xmm1
++
++	paddd	%xmm3,%xmm0
++	pcmpeqd	%xmm5,%xmm3		# compare to 7,6
++	movdqa	%xmm2,`16*($k+2)+112`(%r10)
++	movdqa	%xmm4,%xmm2
++
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0
++	movdqa	%xmm3,`16*($k+3)+112`(%r10)
++	movdqa	%xmm4,%xmm3
++___
++}
++$code.=<<___;				# last iteration can be optimized
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1
++	movdqa	%xmm0,`16*($k+0)+112`(%r10)
++
++	paddd	%xmm2,%xmm3
++	.byte	0x67
++	pcmpeqd	%xmm5,%xmm2
++	movdqa	%xmm1,`16*($k+1)+112`(%r10)
++
++	pcmpeqd	%xmm5,%xmm3
++	movdqa	%xmm2,`16*($k+2)+112`(%r10)
++	pand	`16*($k+0)-128`($bp),%xmm0	# while it's still in register
++
++	pand	`16*($k+1)-128`($bp),%xmm1
++	pand	`16*($k+2)-128`($bp),%xmm2
++	movdqa	%xmm3,`16*($k+3)+112`(%r10)
++	pand	`16*($k+3)-128`($bp),%xmm3
++	por	%xmm2,%xmm0
++	por	%xmm3,%xmm1
++___
++for($k=0;$k<$STRIDE/16-4;$k+=4) {
++$code.=<<___;
++	movdqa	`16*($k+0)-128`($bp),%xmm4
++	movdqa	`16*($k+1)-128`($bp),%xmm5
++	movdqa	`16*($k+2)-128`($bp),%xmm2
++	pand	`16*($k+0)+112`(%r10),%xmm4
++	movdqa	`16*($k+3)-128`($bp),%xmm3
++	pand	`16*($k+1)+112`(%r10),%xmm5
++	por	%xmm4,%xmm0
++	pand	`16*($k+2)+112`(%r10),%xmm2
++	por	%xmm5,%xmm1
++	pand	`16*($k+3)+112`(%r10),%xmm3
++	por	%xmm2,%xmm0
++	por	%xmm3,%xmm1
++___
++}
++$code.=<<___;
+ 	por	%xmm1,%xmm0
+-	pand	%xmm7,%xmm3
+-	por	%xmm2,%xmm0
++	pshufd	\$0x4e,%xmm0,%xmm1
++	por	%xmm1,%xmm0
+ 	lea	$STRIDE($bp),$bp
+-	por	%xmm3,%xmm0
+-
+ 	movq	%xmm0,$m0		# m0=bp[0]
+ 
+ 	mov	($n0),$n0		# pull n0[0] value
+@@ -128,29 +181,14 @@
+ 	xor	$i,$i			# i=0
+ 	xor	$j,$j			# j=0
+ 
+-	movq	`0*$STRIDE/4-96`($bp),%xmm0
+-	movq	`1*$STRIDE/4-96`($bp),%xmm1
+-	pand	%xmm4,%xmm0
+-	movq	`2*$STRIDE/4-96`($bp),%xmm2
+-	pand	%xmm5,%xmm1
+-
+ 	mov	$n0,$m1
+ 	mulq	$m0			# ap[0]*bp[0]
+ 	mov	%rax,$lo0
+ 	mov	($np),%rax
+ 
+-	movq	`3*$STRIDE/4-96`($bp),%xmm3
+-	pand	%xmm6,%xmm2
+-	por	%xmm1,%xmm0
+-	pand	%xmm7,%xmm3
+-
+ 	imulq	$lo0,$m1		# "tp[0]"*n0
+ 	mov	%rdx,$hi0
+ 
+-	por	%xmm2,%xmm0
+-	lea	$STRIDE($bp),$bp
+-	por	%xmm3,%xmm0
+-
+ 	mulq	$m1			# np[0]*m1
+ 	add	%rax,$lo0		# discarded
+ 	mov	8($ap),%rax
+@@ -183,8 +221,6 @@
+ 	cmp	$num,$j
+ 	jne	.L1st
+ 
+-	movq	%xmm0,$m0		# bp[1]
+-
+ 	add	%rax,$hi1
+ 	mov	($ap),%rax		# ap[0]
+ 	adc	\$0,%rdx
+@@ -204,33 +240,46 @@
+ 	jmp	.Louter
+ .align	16
+ .Louter:
++	lea	24+128(%rsp,$num,8),%rdx	# where 256-byte mask is (+size optimization)
++	and	\$-16,%rdx
++	pxor	%xmm4,%xmm4
++	pxor	%xmm5,%xmm5
++___
++for($k=0;$k<$STRIDE/16;$k+=4) {
++$code.=<<___;
++	movdqa	`16*($k+0)-128`($bp),%xmm0
++	movdqa	`16*($k+1)-128`($bp),%xmm1
++	movdqa	`16*($k+2)-128`($bp),%xmm2
++	movdqa	`16*($k+3)-128`($bp),%xmm3
++	pand	`16*($k+0)-128`(%rdx),%xmm0
++	pand	`16*($k+1)-128`(%rdx),%xmm1
++	por	%xmm0,%xmm4
++	pand	`16*($k+2)-128`(%rdx),%xmm2
++	por	%xmm1,%xmm5
++	pand	`16*($k+3)-128`(%rdx),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++___
++}
++$code.=<<___;
++	por	%xmm5,%xmm4
++	pshufd	\$0x4e,%xmm4,%xmm0
++	por	%xmm4,%xmm0
++	lea	$STRIDE($bp),$bp
++	movq	%xmm0,$m0		# m0=bp[i]
++
+ 	xor	$j,$j			# j=0
+ 	mov	$n0,$m1
+ 	mov	(%rsp),$lo0
+ 
+-	movq	`0*$STRIDE/4-96`($bp),%xmm0
+-	movq	`1*$STRIDE/4-96`($bp),%xmm1
+-	pand	%xmm4,%xmm0
+-	movq	`2*$STRIDE/4-96`($bp),%xmm2
+-	pand	%xmm5,%xmm1
+-
+ 	mulq	$m0			# ap[0]*bp[i]
+ 	add	%rax,$lo0		# ap[0]*bp[i]+tp[0]
+ 	mov	($np),%rax
+ 	adc	\$0,%rdx
+ 
+-	movq	`3*$STRIDE/4-96`($bp),%xmm3
+-	pand	%xmm6,%xmm2
+-	por	%xmm1,%xmm0
+-	pand	%xmm7,%xmm3
+-
+ 	imulq	$lo0,$m1		# tp[0]*n0
+ 	mov	%rdx,$hi0
+ 
+-	por	%xmm2,%xmm0
+-	lea	$STRIDE($bp),$bp
+-	por	%xmm3,%xmm0
+-
+ 	mulq	$m1			# np[0]*m1
+ 	add	%rax,$lo0		# discarded
+ 	mov	8($ap),%rax
+@@ -266,8 +315,6 @@
+ 	cmp	$num,$j
+ 	jne	.Linner
+ 
+-	movq	%xmm0,$m0		# bp[i+1]
+-
+ 	add	%rax,$hi1
+ 	mov	($ap),%rax		# ap[0]
+ 	adc	\$0,%rdx
+@@ -321,13 +368,7 @@
+ 
+ 	mov	8(%rsp,$num,8),%rsi	# restore %rsp
+ 	mov	\$1,%rax
+-___
+-$code.=<<___ if ($win64);
+-	movaps	(%rsi),%xmm6
+-	movaps	0x10(%rsi),%xmm7
+-	lea	0x28(%rsi),%rsi
+-___
+-$code.=<<___;
++
+ 	mov	(%rsi),%r15
+ 	mov	8(%rsi),%r14
+ 	mov	16(%rsi),%r13
+@@ -348,7 +389,8 @@
+ bn_mul4x_mont_gather5:
+ .Lmul4x_enter:
+ 	mov	${num}d,${num}d
+-	mov	`($win64?56:8)`(%rsp),%r10d	# load 7th argument
++	movd	`($win64?56:8)`(%rsp),%xmm5	# load 7th argument
++	lea	.Linc(%rip),%r10
+ 	push	%rbx
+ 	push	%rbp
+ 	push	%r12
+@@ -355,55 +397,108 @@
+ 	push	%r13
+ 	push	%r14
+ 	push	%r15
+-___
+-$code.=<<___ if ($win64);
+-	lea	-0x28(%rsp),%rsp
+-	movaps	%xmm6,(%rsp)
+-	movaps	%xmm7,0x10(%rsp)
++
+ .Lmul4x_alloca:
+-___
+-$code.=<<___;
+ 	mov	%rsp,%rax
+ 	lea	4($num),%r11
+ 	neg	%r11
+-	lea	(%rsp,%r11,8),%rsp	# tp=alloca(8*(num+4))
++	lea	-256(%rsp,%r11,8),%rsp	# tp=alloca(8*(num+4)+256)
+ 	and	\$-1024,%rsp		# minimize TLB usage
+ 
+ 	mov	%rax,8(%rsp,$num,8)	# tp[num+1]=%rsp
+ .Lmul4x_body:
+ 	mov	$rp,16(%rsp,$num,8)	# tp[num+2]=$rp
+-	mov	%rdx,%r12		# reassign $bp
++	lea	128(%rdx),%r12		# reassign $bp (+size optimization)
+ ___
+ 		$bp="%r12";
+ 		$STRIDE=2**5*8;		# 5 is "window size"
+ 		$N=$STRIDE/4;		# should match cache line size
+ $code.=<<___;
+-	mov	%r10,%r11
+-	shr	\$`log($N/8)/log(2)`,%r10
+-	and	\$`$N/8-1`,%r11
+-	not	%r10
+-	lea	.Lmagic_masks(%rip),%rax
+-	and	\$`2**5/($N/8)-1`,%r10	# 5 is "window size"
+-	lea	96($bp,%r11,8),$bp	# pointer within 1st cache line
+-	movq	0(%rax,%r10,8),%xmm4	# set of masks denoting which
+-	movq	8(%rax,%r10,8),%xmm5	# cache line contains element
+-	movq	16(%rax,%r10,8),%xmm6	# denoted by 7th argument
+-	movq	24(%rax,%r10,8),%xmm7
++	movdqa	0(%r10),%xmm0		# 00000001000000010000000000000000
++	movdqa	16(%r10),%xmm1		# 00000002000000020000000200000002
++	lea	32-112(%rsp,$num,8),%r10# place the mask after tp[num+4] (+ICache optimization)
+ 
+-	movq	`0*$STRIDE/4-96`($bp),%xmm0
+-	movq	`1*$STRIDE/4-96`($bp),%xmm1
+-	pand	%xmm4,%xmm0
+-	movq	`2*$STRIDE/4-96`($bp),%xmm2
+-	pand	%xmm5,%xmm1
+-	movq	`3*$STRIDE/4-96`($bp),%xmm3
+-	pand	%xmm6,%xmm2
++	pshufd	\$0,%xmm5,%xmm5		# broadcast index
++	movdqa	%xmm1,%xmm4
++	.byte	0x67,0x67
++	movdqa	%xmm1,%xmm2
++___
++########################################################################
++# calculate mask by comparing 0..31 to index and save result to stack
++#
++$code.=<<___;
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0		# compare to 1,0
++	.byte	0x67
++	movdqa	%xmm4,%xmm3
++___
++for($k=0;$k<$STRIDE/16-4;$k+=4) {
++$code.=<<___;
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1		# compare to 3,2
++	movdqa	%xmm0,`16*($k+0)+112`(%r10)
++	movdqa	%xmm4,%xmm0
++
++	paddd	%xmm2,%xmm3
++	pcmpeqd	%xmm5,%xmm2		# compare to 5,4
++	movdqa	%xmm1,`16*($k+1)+112`(%r10)
++	movdqa	%xmm4,%xmm1
++
++	paddd	%xmm3,%xmm0
++	pcmpeqd	%xmm5,%xmm3		# compare to 7,6
++	movdqa	%xmm2,`16*($k+2)+112`(%r10)
++	movdqa	%xmm4,%xmm2
++
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0
++	movdqa	%xmm3,`16*($k+3)+112`(%r10)
++	movdqa	%xmm4,%xmm3
++___
++}
++$code.=<<___;				# last iteration can be optimized
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1
++	movdqa	%xmm0,`16*($k+0)+112`(%r10)
++
++	paddd	%xmm2,%xmm3
++	.byte	0x67
++	pcmpeqd	%xmm5,%xmm2
++	movdqa	%xmm1,`16*($k+1)+112`(%r10)
++
++	pcmpeqd	%xmm5,%xmm3
++	movdqa	%xmm2,`16*($k+2)+112`(%r10)
++	pand	`16*($k+0)-128`($bp),%xmm0	# while it's still in register
++
++	pand	`16*($k+1)-128`($bp),%xmm1
++	pand	`16*($k+2)-128`($bp),%xmm2
++	movdqa	%xmm3,`16*($k+3)+112`(%r10)
++	pand	`16*($k+3)-128`($bp),%xmm3
++	por	%xmm2,%xmm0
++	por	%xmm3,%xmm1
++___
++for($k=0;$k<$STRIDE/16-4;$k+=4) {
++$code.=<<___;
++	movdqa	`16*($k+0)-128`($bp),%xmm4
++	movdqa	`16*($k+1)-128`($bp),%xmm5
++	movdqa	`16*($k+2)-128`($bp),%xmm2
++	pand	`16*($k+0)+112`(%r10),%xmm4
++	movdqa	`16*($k+3)-128`($bp),%xmm3
++	pand	`16*($k+1)+112`(%r10),%xmm5
++	por	%xmm4,%xmm0
++	pand	`16*($k+2)+112`(%r10),%xmm2
++	por	%xmm5,%xmm1
++	pand	`16*($k+3)+112`(%r10),%xmm3
++	por	%xmm2,%xmm0
++	por	%xmm3,%xmm1
++___
++}
++$code.=<<___;
+ 	por	%xmm1,%xmm0
+-	pand	%xmm7,%xmm3
+-	por	%xmm2,%xmm0
++	pshufd	\$0x4e,%xmm0,%xmm1
++	por	%xmm1,%xmm0
+ 	lea	$STRIDE($bp),$bp
+-	por	%xmm3,%xmm0
++	movq	%xmm0,$m0		# m0=bp[0]
+ 
+-	movq	%xmm0,$m0		# m0=bp[0]
+ 	mov	($n0),$n0		# pull n0[0] value
+ 	mov	($ap),%rax
+ 
+@@ -410,29 +505,14 @@
+ 	xor	$i,$i			# i=0
+ 	xor	$j,$j			# j=0
+ 
+-	movq	`0*$STRIDE/4-96`($bp),%xmm0
+-	movq	`1*$STRIDE/4-96`($bp),%xmm1
+-	pand	%xmm4,%xmm0
+-	movq	`2*$STRIDE/4-96`($bp),%xmm2
+-	pand	%xmm5,%xmm1
+-
+ 	mov	$n0,$m1
+ 	mulq	$m0			# ap[0]*bp[0]
+ 	mov	%rax,$A[0]
+ 	mov	($np),%rax
+ 
+-	movq	`3*$STRIDE/4-96`($bp),%xmm3
+-	pand	%xmm6,%xmm2
+-	por	%xmm1,%xmm0
+-	pand	%xmm7,%xmm3
+-
+ 	imulq	$A[0],$m1		# "tp[0]"*n0
+ 	mov	%rdx,$A[1]
+ 
+-	por	%xmm2,%xmm0
+-	lea	$STRIDE($bp),$bp
+-	por	%xmm3,%xmm0
+-
+ 	mulq	$m1			# np[0]*m1
+ 	add	%rax,$A[0]		# discarded
+ 	mov	8($ap),%rax
+@@ -550,8 +630,6 @@
+ 	mov	$N[1],-16(%rsp,$j,8)	# tp[j-1]
+ 	mov	%rdx,$N[0]
+ 
+-	movq	%xmm0,$m0		# bp[1]
+-
+ 	xor	$N[1],$N[1]
+ 	add	$A[0],$N[0]
+ 	adc	\$0,$N[1]
+@@ -561,12 +639,34 @@
+ 	lea	1($i),$i		# i++
+ .align	4
+ .Louter4x:
++	lea	32+128(%rsp,$num,8),%rdx	# where 256-byte mask is (+size optimization)
++	pxor	%xmm4,%xmm4
++	pxor	%xmm5,%xmm5
++___
++for($k=0;$k<$STRIDE/16;$k+=4) {
++$code.=<<___;
++	movdqa	`16*($k+0)-128`($bp),%xmm0
++	movdqa	`16*($k+1)-128`($bp),%xmm1
++	movdqa	`16*($k+2)-128`($bp),%xmm2
++	movdqa	`16*($k+3)-128`($bp),%xmm3
++	pand	`16*($k+0)-128`(%rdx),%xmm0
++	pand	`16*($k+1)-128`(%rdx),%xmm1
++	por	%xmm0,%xmm4
++	pand	`16*($k+2)-128`(%rdx),%xmm2
++	por	%xmm1,%xmm5
++	pand	`16*($k+3)-128`(%rdx),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++___
++}
++$code.=<<___;
++	por	%xmm5,%xmm4
++	pshufd	\$0x4e,%xmm4,%xmm0
++	por	%xmm4,%xmm0
++	lea	$STRIDE($bp),$bp
++	movq	%xmm0,$m0		# m0=bp[i]
++
+ 	xor	$j,$j			# j=0
+-	movq	`0*$STRIDE/4-96`($bp),%xmm0
+-	movq	`1*$STRIDE/4-96`($bp),%xmm1
+-	pand	%xmm4,%xmm0
+-	movq	`2*$STRIDE/4-96`($bp),%xmm2
+-	pand	%xmm5,%xmm1
+ 
+ 	mov	(%rsp),$A[0]
+ 	mov	$n0,$m1
+@@ -575,18 +675,9 @@
+ 	mov	($np),%rax
+ 	adc	\$0,%rdx
+ 
+-	movq	`3*$STRIDE/4-96`($bp),%xmm3
+-	pand	%xmm6,%xmm2
+-	por	%xmm1,%xmm0
+-	pand	%xmm7,%xmm3
+-
+ 	imulq	$A[0],$m1		# tp[0]*n0
+ 	mov	%rdx,$A[1]
+ 
+-	por	%xmm2,%xmm0
+-	lea	$STRIDE($bp),$bp
+-	por	%xmm3,%xmm0
+-
+ 	mulq	$m1			# np[0]*m1
+ 	add	%rax,$A[0]		# "$N[0]", discarded
+ 	mov	8($ap),%rax
+@@ -718,7 +809,6 @@
+ 	mov	$N[0],-24(%rsp,$j,8)	# tp[j-1]
+ 	mov	%rdx,$N[0]
+ 
+-	movq	%xmm0,$m0		# bp[i+1]
+ 	mov	$N[1],-16(%rsp,$j,8)	# tp[j-1]
+ 
+ 	xor	$N[1],$N[1]
+@@ -809,13 +899,7 @@
+ $code.=<<___;
+ 	mov	8(%rsp,$num,8),%rsi	# restore %rsp
+ 	mov	\$1,%rax
+-___
+-$code.=<<___ if ($win64);
+-	movaps	(%rsi),%xmm6
+-	movaps	0x10(%rsi),%xmm7
+-	lea	0x28(%rsi),%rsi
+-___
+-$code.=<<___;
++
+ 	mov	(%rsi),%r15
+ 	mov	8(%rsi),%r14
+ 	mov	16(%rsi),%r13
+@@ -830,8 +914,8 @@
+ }}}
+ 
+ {
+-my ($inp,$num,$tbl,$idx)=$win64?("%rcx","%rdx","%r8", "%r9") : # Win64 order
+-				("%rdi","%rsi","%rdx","%rcx"); # Unix order
++my ($inp,$num,$tbl,$idx)=$win64?("%rcx","%rdx","%r8", "%r9d") : # Win64 order
++				("%rdi","%rsi","%rdx","%ecx"); # Unix order
+ my $out=$inp;
+ my $STRIDE=2**5*8;
+ my $N=$STRIDE/4;
+@@ -859,53 +943,89 @@
+ .type	bn_gather5,\@abi-omnipotent
+ .align	16
+ bn_gather5:
+-___
+-$code.=<<___ if ($win64);
+-.LSEH_begin_bn_gather5:
++.LSEH_begin_bn_gather5:			# Win64 thing, but harmless in other cases
+ 	# I can't trust assembler to use specific encoding:-(
+-	.byte	0x48,0x83,0xec,0x28		#sub	\$0x28,%rsp
+-	.byte	0x0f,0x29,0x34,0x24		#movaps	%xmm6,(%rsp)
+-	.byte	0x0f,0x29,0x7c,0x24,0x10	#movdqa	%xmm7,0x10(%rsp)
++	.byte	0x4c,0x8d,0x14,0x24			# lea    (%rsp),%r10
++	.byte	0x48,0x81,0xec,0x08,0x01,0x00,0x00	# sub	$0x108,%rsp
++	lea	.Linc(%rip),%rax
++	and	\$-16,%rsp		# shouldn't be formally required
++
++	movd	$idx,%xmm5
++	movdqa	0(%rax),%xmm0		# 00000001000000010000000000000000
++	movdqa	16(%rax),%xmm1		# 00000002000000020000000200000002
++	lea	128($tbl),%r11		# size optimization
++	lea	128(%rsp),%rax		# size optimization
++
++	pshufd	\$0,%xmm5,%xmm5		# broadcast $idx
++	movdqa	%xmm1,%xmm4
++	movdqa	%xmm1,%xmm2
+ ___
++########################################################################
++# calculate mask by comparing 0..31 to $idx and save result to stack
++#
++for($i=0;$i<$STRIDE/16;$i+=4) {
+ $code.=<<___;
+-	mov	$idx,%r11
+-	shr	\$`log($N/8)/log(2)`,$idx
+-	and	\$`$N/8-1`,%r11
+-	not	$idx
+-	lea	.Lmagic_masks(%rip),%rax
+-	and	\$`2**5/($N/8)-1`,$idx	# 5 is "window size"
+-	lea	96($tbl,%r11,8),$tbl	# pointer within 1st cache line
+-	movq	0(%rax,$idx,8),%xmm4	# set of masks denoting which
+-	movq	8(%rax,$idx,8),%xmm5	# cache line contains element
+-	movq	16(%rax,$idx,8),%xmm6	# denoted by 7th argument
+-	movq	24(%rax,$idx,8),%xmm7
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0		# compare to 1,0
++___
++$code.=<<___	if ($i);
++	movdqa	%xmm3,`16*($i-1)-128`(%rax)
++___
++$code.=<<___;
++	movdqa	%xmm4,%xmm3
++
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1		# compare to 3,2
++	movdqa	%xmm0,`16*($i+0)-128`(%rax)
++	movdqa	%xmm4,%xmm0
++
++	paddd	%xmm2,%xmm3
++	pcmpeqd	%xmm5,%xmm2		# compare to 5,4
++	movdqa	%xmm1,`16*($i+1)-128`(%rax)
++	movdqa	%xmm4,%xmm1
++
++	paddd	%xmm3,%xmm0
++	pcmpeqd	%xmm5,%xmm3		# compare to 7,6
++	movdqa	%xmm2,`16*($i+2)-128`(%rax)
++	movdqa	%xmm4,%xmm2
++___
++}
++$code.=<<___;
++	movdqa	%xmm3,`16*($i-1)-128`(%rax)
+ 	jmp	.Lgather
+-.align	16
++
++.align	32
+ .Lgather:
+-	movq	`0*$STRIDE/4-96`($tbl),%xmm0
+-	movq	`1*$STRIDE/4-96`($tbl),%xmm1
+-	pand	%xmm4,%xmm0
+-	movq	`2*$STRIDE/4-96`($tbl),%xmm2
+-	pand	%xmm5,%xmm1
+-	movq	`3*$STRIDE/4-96`($tbl),%xmm3
+-	pand	%xmm6,%xmm2
+-	por	%xmm1,%xmm0
+-	pand	%xmm7,%xmm3
+-	por	%xmm2,%xmm0
+-	lea	$STRIDE($tbl),$tbl
+-	por	%xmm3,%xmm0
+-
++	pxor	%xmm4,%xmm4
++	pxor	%xmm5,%xmm5
++___
++for($i=0;$i<$STRIDE/16;$i+=4) {
++$code.=<<___;
++	movdqa	`16*($i+0)-128`(%r11),%xmm0
++	movdqa	`16*($i+1)-128`(%r11),%xmm1
++	movdqa	`16*($i+2)-128`(%r11),%xmm2
++	pand	`16*($i+0)-128`(%rax),%xmm0
++	movdqa	`16*($i+3)-128`(%r11),%xmm3
++	pand	`16*($i+1)-128`(%rax),%xmm1
++	por	%xmm0,%xmm4
++	pand	`16*($i+2)-128`(%rax),%xmm2
++	por	%xmm1,%xmm5
++	pand	`16*($i+3)-128`(%rax),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++___
++}
++$code.=<<___;
++	por	%xmm5,%xmm4
++	lea	$STRIDE(%r11),%r11
++	pshufd	\$0x4e,%xmm4,%xmm0
++	por	%xmm4,%xmm0
+ 	movq	%xmm0,($out)		# m0=bp[0]
+ 	lea	8($out),$out
+ 	sub	\$1,$num
+ 	jnz	.Lgather
+-___
+-$code.=<<___ if ($win64);
+-	movaps	(%rsp),%xmm6
+-	movaps	0x10(%rsp),%xmm7
+-	lea	0x28(%rsp),%rsp
+-___
+-$code.=<<___;
++
++	lea	(%r10),%rsp
+ 	ret
+ .LSEH_end_bn_gather5:
+ .size	bn_gather5,.-bn_gather5
+@@ -913,9 +1033,9 @@
+ }
+ $code.=<<___;
+ .align	64
+-.Lmagic_masks:
+-	.long	0,0, 0,0, 0,0, -1,-1
+-	.long	0,0, 0,0, 0,0,  0,0
++.Linc:
++	.long	0,0, 1,1
++	.long	2,2, 2,2
+ .asciz	"Montgomery Multiplication with scatter/gather for x86_64, CRYPTOGAMS by <appro\@openssl.org>"
+ ___
+ 
+@@ -954,7 +1074,7 @@
+ 	cmp	%r10,%rbx		# context->Rip<end of prologue label
+ 	jb	.Lcommon_seh_tail
+ 
+-	lea	`40+48`(%rax),%rax
++	lea	48(%rax),%rax
+ 
+ 	mov	4(%r11),%r10d		# HandlerData[1]
+ 	lea	(%rsi,%r10),%r10	# end of alloca label
+@@ -971,9 +1091,7 @@
+ 	mov	192($context),%r10	# pull $num
+ 	mov	8(%rax,%r10,8),%rax	# pull saved stack pointer
+ 
+-	movaps	(%rax),%xmm0
+-	movaps	16(%rax),%xmm1
+-	lea	`40+48`(%rax),%rax
++	lea	48(%rax),%rax
+ 
+ 	mov	-8(%rax),%rbx
+ 	mov	-16(%rax),%rbp
+@@ -987,8 +1105,6 @@
+ 	mov	%r13,224($context)	# restore context->R13
+ 	mov	%r14,232($context)	# restore context->R14
+ 	mov	%r15,240($context)	# restore context->R15
+-	movups	%xmm0,512($context)	# restore context->Xmm6
+-	movups	%xmm1,528($context)	# restore context->Xmm7
+ 
+ .Lcommon_seh_tail:
+ 	mov	8(%rax),%rdi
+@@ -1057,10 +1173,9 @@
+ 	.rva	.Lmul4x_alloca,.Lmul4x_body,.Lmul4x_epilogue	# HandlerData[]
+ .align	8
+ .LSEH_info_bn_gather5:
+-        .byte   0x01,0x0d,0x05,0x00
+-        .byte   0x0d,0x78,0x01,0x00	#movaps	0x10(rsp),xmm7
+-        .byte   0x08,0x68,0x00,0x00	#movaps	(rsp),xmm6
+-        .byte   0x04,0x42,0x00,0x00	#sub	rsp,0x28
++	.byte	0x01,0x0b,0x03,0x0a
++	.byte	0x0b,0x01,0x21,0x00	# sub	rsp,0x108
++	.byte	0x04,0xa3,0x00,0x00	# lea	r10,(rsp), set_frame r10
+ .align	8
+ ___
+ }
+--- crypto/openssl/crypto/bn/bn.h.orig
++++ crypto/openssl/crypto/bn/bn.h
+@@ -125,6 +125,7 @@
+ #ifndef HEADER_BN_H
+ # define HEADER_BN_H
+ 
++# include <limits.h>
+ # include <openssl/e_os2.h>
+ # ifndef OPENSSL_NO_FP_API
+ #  include <stdio.h>            /* FILE */
+@@ -739,8 +740,17 @@
+ 
+ /* library internal functions */
+ 
+-# define bn_expand(a,bits) ((((((bits+BN_BITS2-1))/BN_BITS2)) <= (a)->dmax)?\
+-        (a):bn_expand2((a),(bits+BN_BITS2-1)/BN_BITS2))
++# define bn_expand(a,bits) \
++    ( \
++        bits > (INT_MAX - BN_BITS2 + 1) ? \
++            NULL \
++        : \
++            (((bits+BN_BITS2-1)/BN_BITS2) <= (a)->dmax) ? \
++                (a) \
++            : \
++                bn_expand2((a),(bits+BN_BITS2-1)/BN_BITS2) \
++    )
++
+ # define bn_wexpand(a,words) (((words) <= (a)->dmax)?(a):bn_expand2((a),(words)))
+ BIGNUM *bn_expand2(BIGNUM *a, int words);
+ # ifndef OPENSSL_NO_DEPRECATED
+--- crypto/openssl/crypto/bn/bn_exp.c.orig
++++ crypto/openssl/crypto/bn/bn_exp.c
+@@ -110,6 +110,7 @@
+  */
+ 
+ #include "cryptlib.h"
++#include "constant_time_locl.h"
+ #include "bn_lcl.h"
+ 
+ #include <stdlib.h>
+@@ -535,15 +536,17 @@
+ 
+ static int MOD_EXP_CTIME_COPY_TO_PREBUF(const BIGNUM *b, int top,
+                                         unsigned char *buf, int idx,
+-                                        int width)
++                                        int window)
+ {
+-    size_t i, j;
++    int i, j;
++    int width = 1 << window;
++    BN_ULONG *table = (BN_ULONG *)buf;
+ 
+     if (top > b->top)
+         top = b->top;           /* this works because 'buf' is explicitly
+                                  * zeroed */
+-    for (i = 0, j = idx; i < top * sizeof b->d[0]; i++, j += width) {
+-        buf[j] = ((unsigned char *)b->d)[i];
++    for (i = 0, j = idx; i < top; i++, j += width) {
++        table[j] = b->d[i];
+     }
+ 
+     return 1;
+@@ -551,15 +554,51 @@
+ 
+ static int MOD_EXP_CTIME_COPY_FROM_PREBUF(BIGNUM *b, int top,
+                                           unsigned char *buf, int idx,
+-                                          int width)
++                                          int window)
+ {
+-    size_t i, j;
++    int i, j;
++    int width = 1 << window;
++    volatile BN_ULONG *table = (volatile BN_ULONG *)buf;
+ 
+     if (bn_wexpand(b, top) == NULL)
+         return 0;
+ 
+-    for (i = 0, j = idx; i < top * sizeof b->d[0]; i++, j += width) {
+-        ((unsigned char *)b->d)[i] = buf[j];
++    if (window <= 3) {
++        for (i = 0; i < top; i++, table += width) {
++            BN_ULONG acc = 0;
++
++            for (j = 0; j < width; j++) {
++                acc |= table[j] &
++                       ((BN_ULONG)0 - (constant_time_eq_int(j,idx)&1));
++            }
++
++            b->d[i] = acc;
++        }
++    } else {
++        int xstride = 1 << (window - 2);
++        BN_ULONG y0, y1, y2, y3;
++
++        i = idx >> (window - 2);        /* equivalent of idx / xstride */
++        idx &= xstride - 1;             /* equivalent of idx % xstride */
++
++        y0 = (BN_ULONG)0 - (constant_time_eq_int(i,0)&1);
++        y1 = (BN_ULONG)0 - (constant_time_eq_int(i,1)&1);
++        y2 = (BN_ULONG)0 - (constant_time_eq_int(i,2)&1);
++        y3 = (BN_ULONG)0 - (constant_time_eq_int(i,3)&1);
++
++        for (i = 0; i < top; i++, table += width) {
++            BN_ULONG acc = 0;
++
++            for (j = 0; j < xstride; j++) {
++                acc |= ( (table[j + 0 * xstride] & y0) |
++                         (table[j + 1 * xstride] & y1) |
++                         (table[j + 2 * xstride] & y2) |
++                         (table[j + 3 * xstride] & y3) )
++                       & ((BN_ULONG)0 - (constant_time_eq_int(j,idx)&1));
++            }
++
++            b->d[i] = acc;
++        }
+     }
+ 
+     b->top = top;
+@@ -782,9 +821,9 @@
+     } else
+ #endif
+     {
+-        if (!MOD_EXP_CTIME_COPY_TO_PREBUF(&tmp, top, powerbuf, 0, numPowers))
++        if (!MOD_EXP_CTIME_COPY_TO_PREBUF(&tmp, top, powerbuf, 0, window))
+             goto err;
+-        if (!MOD_EXP_CTIME_COPY_TO_PREBUF(&am, top, powerbuf, 1, numPowers))
++        if (!MOD_EXP_CTIME_COPY_TO_PREBUF(&am, top, powerbuf, 1, window))
+             goto err;
+ 
+         /*
+@@ -796,15 +835,15 @@
+         if (window > 1) {
+             if (!BN_mod_mul_montgomery(&tmp, &am, &am, mont, ctx))
+                 goto err;
+-            if (!MOD_EXP_CTIME_COPY_TO_PREBUF
+-                (&tmp, top, powerbuf, 2, numPowers))
++            if (!MOD_EXP_CTIME_COPY_TO_PREBUF(&tmp, top, powerbuf, 2,
++                                              window))
+                 goto err;
+             for (i = 3; i < numPowers; i++) {
+                 /* Calculate a^i = a^(i-1) * a */
+                 if (!BN_mod_mul_montgomery(&tmp, &am, &tmp, mont, ctx))
+                     goto err;
+-                if (!MOD_EXP_CTIME_COPY_TO_PREBUF
+-                    (&tmp, top, powerbuf, i, numPowers))
++                if (!MOD_EXP_CTIME_COPY_TO_PREBUF(&tmp, top, powerbuf, i,
++                                                  window))
+                     goto err;
+             }
+         }
+@@ -812,8 +851,8 @@
+         bits--;
+         for (wvalue = 0, i = bits % window; i >= 0; i--, bits--)
+             wvalue = (wvalue << 1) + BN_is_bit_set(p, bits);
+-        if (!MOD_EXP_CTIME_COPY_FROM_PREBUF
+-            (&tmp, top, powerbuf, wvalue, numPowers))
++        if (!MOD_EXP_CTIME_COPY_FROM_PREBUF(&tmp, top, powerbuf, wvalue,
++                                            window))
+             goto err;
+ 
+         /*
+@@ -833,8 +872,8 @@
+             /*
+              * Fetch the appropriate pre-computed value from the pre-buf
+              */
+-            if (!MOD_EXP_CTIME_COPY_FROM_PREBUF
+-                (&am, top, powerbuf, wvalue, numPowers))
++            if (!MOD_EXP_CTIME_COPY_FROM_PREBUF(&am, top, powerbuf, wvalue,
++                                                window))
+                 goto err;
+ 
+             /* Multiply the result into the intermediate result */
+--- crypto/openssl/crypto/bn/bn_print.c.orig
++++ crypto/openssl/crypto/bn/bn_print.c
+@@ -58,6 +58,7 @@
+ 
+ #include <stdio.h>
+ #include <ctype.h>
++#include <limits.h>
+ #include "cryptlib.h"
+ #include <openssl/buffer.h>
+ #include "bn_lcl.h"
+@@ -189,8 +190,12 @@
+         a++;
+     }
+ 
+-    for (i = 0; isxdigit((unsigned char)a[i]); i++) ;
++    for (i = 0; i <= (INT_MAX/4) && isxdigit((unsigned char)a[i]); i++)
++        continue;
+ 
++    if (i > INT_MAX/4)
++        goto err;
++
+     num = i + neg;
+     if (bn == NULL)
+         return (num);
+@@ -204,7 +209,7 @@
+         BN_zero(ret);
+     }
+ 
+-    /* i is the number of hex digests; */
++    /* i is the number of hex digits */
+     if (bn_expand(ret, i * 4) == NULL)
+         goto err;
+ 
+@@ -260,8 +265,12 @@
+         a++;
+     }
+ 
+-    for (i = 0; isdigit((unsigned char)a[i]); i++) ;
++    for (i = 0; i <= (INT_MAX/4) && isdigit((unsigned char)a[i]); i++)
++        continue;
+ 
++    if (i > INT_MAX/4)
++        goto err;
++
+     num = i + neg;
+     if (bn == NULL)
+         return (num);
+@@ -278,7 +287,7 @@
+         BN_zero(ret);
+     }
+ 
+-    /* i is the number of digests, a bit of an over expand; */
++    /* i is the number of digits, a bit of an over expand */
+     if (bn_expand(ret, i * 4) == NULL)
+         goto err;
+ 
+--- crypto/openssl/crypto/dsa/dsa_ameth.c.orig
++++ crypto/openssl/crypto/dsa/dsa_ameth.c
+@@ -191,6 +191,8 @@
+     STACK_OF(ASN1_TYPE) *ndsa = NULL;
+     DSA *dsa = NULL;
+ 
++    int ret = 0;
++
+     if (!PKCS8_pkey_get0(NULL, &p, &pklen, &palg, p8))
+         return 0;
+     X509_ALGOR_get0(NULL, &ptype, &pval, palg);
+@@ -262,23 +264,21 @@
+     }
+ 
+     EVP_PKEY_assign_DSA(pkey, dsa);
+-    BN_CTX_free(ctx);
+-    if (ndsa)
+-        sk_ASN1_TYPE_pop_free(ndsa, ASN1_TYPE_free);
+-    else
+-        ASN1_STRING_clear_free(privkey);
+ 
+-    return 1;
++    ret = 1;
++    goto done;
+ 
+  decerr:
+     DSAerr(DSA_F_DSA_PRIV_DECODE, EVP_R_DECODE_ERROR);
+  dsaerr:
++    DSA_free(dsa);
++ done:
+     BN_CTX_free(ctx);
+-    if (privkey)
++    if (ndsa)
++        sk_ASN1_TYPE_pop_free(ndsa, ASN1_TYPE_free);
++    else
+         ASN1_STRING_clear_free(privkey);
+-    sk_ASN1_TYPE_pop_free(ndsa, ASN1_TYPE_free);
+-    DSA_free(dsa);
+-    return 0;
++    return ret;
+ }
+ 
+ static int dsa_priv_encode(PKCS8_PRIV_KEY_INFO *p8, const EVP_PKEY *pkey)
+--- crypto/openssl/crypto/perlasm/x86_64-xlate.pl.orig
++++ crypto/openssl/crypto/perlasm/x86_64-xlate.pl
+@@ -121,7 +121,7 @@
+ 		$self->{sz} = "";
+ 	    } elsif ($self->{op} =~ /^v/) { # VEX
+ 		$self->{sz} = "";
+-	    } elsif ($self->{op} =~ /movq/ && $line =~ /%xmm/) {
++	    } elsif ($self->{op} =~ /mov[dq]/ && $line =~ /%xmm/) {
+ 		$self->{sz} = "";
+ 	    } elsif ($self->{op} =~ /([a-z]{3,})([qlwb])$/) {
+ 		$self->{op} = $1;
+--- crypto/openssl/crypto/srp/srp.h.orig
++++ crypto/openssl/crypto/srp/srp.h
+@@ -82,16 +82,21 @@
+ DECLARE_STACK_OF(SRP_gN_cache)
+ 
+ typedef struct SRP_user_pwd_st {
++    /* Owned by us. */
+     char *id;
+     BIGNUM *s;
+     BIGNUM *v;
++    /* Not owned by us. */
+     const BIGNUM *g;
+     const BIGNUM *N;
++    /* Owned by us. */
+     char *info;
+ } SRP_user_pwd;
+ 
+ DECLARE_STACK_OF(SRP_user_pwd)
+ 
++void SRP_user_pwd_free(SRP_user_pwd *user_pwd);
++
+ typedef struct SRP_VBASE_st {
+     STACK_OF(SRP_user_pwd) *users_pwd;
+     STACK_OF(SRP_gN_cache) *gN_cache;
+@@ -115,7 +120,12 @@
+ SRP_VBASE *SRP_VBASE_new(char *seed_key);
+ int SRP_VBASE_free(SRP_VBASE *vb);
+ int SRP_VBASE_init(SRP_VBASE *vb, char *verifier_file);
++
++/* This method ignores the configured seed and fails for an unknown user. */
+ SRP_user_pwd *SRP_VBASE_get_by_user(SRP_VBASE *vb, char *username);
++/* NOTE: unlike in SRP_VBASE_get_by_user, caller owns the returned pointer.*/
++SRP_user_pwd *SRP_VBASE_get1_by_user(SRP_VBASE *vb, char *username);
++
+ char *SRP_create_verifier(const char *user, const char *pass, char **salt,
+                           char **verifier, const char *N, const char *g);
+ int SRP_create_verifier_BN(const char *user, const char *pass, BIGNUM **salt,
+--- crypto/openssl/crypto/srp/srp_vfy.c.orig
++++ crypto/openssl/crypto/srp/srp_vfy.c
+@@ -185,7 +185,7 @@
+     return olddst;
+ }
+ 
+-static void SRP_user_pwd_free(SRP_user_pwd *user_pwd)
++void SRP_user_pwd_free(SRP_user_pwd *user_pwd)
+ {
+     if (user_pwd == NULL)
+         return;
+@@ -247,6 +247,24 @@
+     return (vinfo->s != NULL && vinfo->v != NULL);
+ }
+ 
++static SRP_user_pwd *srp_user_pwd_dup(SRP_user_pwd *src)
++{
++    SRP_user_pwd *ret;
++
++    if (src == NULL)
++        return NULL;
++    if ((ret = SRP_user_pwd_new()) == NULL)
++        return NULL;
++
++    SRP_user_pwd_set_gN(ret, src->g, src->N);
++    if (!SRP_user_pwd_set_ids(ret, src->id, src->info)
++        || !SRP_user_pwd_set_sv_BN(ret, BN_dup(src->s), BN_dup(src->v))) {
++            SRP_user_pwd_free(ret);
++            return NULL;
++    }
++    return ret;
++}
++
+ SRP_VBASE *SRP_VBASE_new(char *seed_key)
+ {
+     SRP_VBASE *vb = (SRP_VBASE *)OPENSSL_malloc(sizeof(SRP_VBASE));
+@@ -468,21 +486,50 @@
+ 
+ }
+ 
+-SRP_user_pwd *SRP_VBASE_get_by_user(SRP_VBASE *vb, char *username)
++static SRP_user_pwd *find_user(SRP_VBASE *vb, char *username)
+ {
+     int i;
+     SRP_user_pwd *user;
+-    unsigned char digv[SHA_DIGEST_LENGTH];
+-    unsigned char digs[SHA_DIGEST_LENGTH];
+-    EVP_MD_CTX ctxt;
+ 
+     if (vb == NULL)
+         return NULL;
++
+     for (i = 0; i < sk_SRP_user_pwd_num(vb->users_pwd); i++) {
+         user = sk_SRP_user_pwd_value(vb->users_pwd, i);
+         if (strcmp(user->id, username) == 0)
+             return user;
+     }
++
++    return NULL;
++}
++
++/*
++ * This method ignores the configured seed and fails for an unknown user.
++ * Ownership of the returned pointer is not released to the caller.
++ * In other words, caller must not free the result.
++ */
++SRP_user_pwd *SRP_VBASE_get_by_user(SRP_VBASE *vb, char *username)
++{
++    return find_user(vb, username);
++}
++
++/*
++ * Ownership of the returned pointer is released to the caller.
++ * In other words, caller must free the result once done.
++ */
++SRP_user_pwd *SRP_VBASE_get1_by_user(SRP_VBASE *vb, char *username)
++{
++    SRP_user_pwd *user;
++    unsigned char digv[SHA_DIGEST_LENGTH];
++    unsigned char digs[SHA_DIGEST_LENGTH];
++    EVP_MD_CTX ctxt;
++
++    if (vb == NULL)
++        return NULL;
++
++    if ((user = find_user(vb, username)) != NULL)
++        return srp_user_pwd_dup(user);
++
+     if ((vb->seed_key == NULL) ||
+         (vb->default_g == NULL) || (vb->default_N == NULL))
+         return NULL;
+--- crypto/openssl/ssl/s2_lib.c.orig
++++ crypto/openssl/ssl/s2_lib.c
+@@ -156,6 +156,7 @@
+      128,
+      },
+ 
++# if 0
+ /* RC4_128_EXPORT40_WITH_MD5 */
+     {
+      1,
+@@ -171,6 +172,7 @@
+      40,
+      128,
+      },
++# endif
+ 
+ /* RC2_128_CBC_WITH_MD5 */
+     {
+@@ -188,6 +190,7 @@
+      128,
+      },
+ 
++# if 0
+ /* RC2_128_CBC_EXPORT40_WITH_MD5 */
+     {
+      1,
+@@ -203,6 +206,7 @@
+      40,
+      128,
+      },
++# endif
+ 
+ # ifndef OPENSSL_NO_IDEA
+ /* IDEA_128_CBC_WITH_MD5 */
+@@ -222,6 +226,7 @@
+      },
+ # endif
+ 
++# if 0
+ /* DES_64_CBC_WITH_MD5 */
+     {
+      1,
+@@ -237,6 +242,7 @@
+      56,
+      56,
+      },
++# endif
+ 
+ /* DES_192_EDE3_CBC_WITH_MD5 */
+     {
+--- crypto/openssl/ssl/s3_lib.c.orig
++++ crypto/openssl/ssl/s3_lib.c
+@@ -203,6 +203,7 @@
+      },
+ 
+ /* Cipher 03 */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_RSA_RC4_40_MD5,
+@@ -217,6 +218,7 @@
+      40,
+      128,
+      },
++#endif
+ 
+ /* Cipher 04 */
+     {
+@@ -251,6 +253,7 @@
+      },
+ 
+ /* Cipher 06 */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_RSA_RC2_40_MD5,
+@@ -265,6 +268,7 @@
+      40,
+      128,
+      },
++#endif
+ 
+ /* Cipher 07 */
+ #ifndef OPENSSL_NO_IDEA
+@@ -285,6 +289,7 @@
+ #endif
+ 
+ /* Cipher 08 */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_RSA_DES_40_CBC_SHA,
+@@ -299,8 +304,10 @@
+      40,
+      56,
+      },
++#endif
+ 
+ /* Cipher 09 */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_RSA_DES_64_CBC_SHA,
+@@ -315,6 +322,7 @@
+      56,
+      56,
+      },
++#endif
+ 
+ /* Cipher 0A */
+     {
+@@ -334,6 +342,7 @@
+ 
+ /* The DH ciphers */
+ /* Cipher 0B */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      0,
+      SSL3_TXT_DH_DSS_DES_40_CBC_SHA,
+@@ -348,8 +357,10 @@
+      40,
+      56,
+      },
++#endif
+ 
+ /* Cipher 0C */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      0,                         /* not implemented (non-ephemeral DH) */
+      SSL3_TXT_DH_DSS_DES_64_CBC_SHA,
+@@ -364,6 +375,7 @@
+      56,
+      56,
+      },
++#endif
+ 
+ /* Cipher 0D */
+     {
+@@ -382,6 +394,7 @@
+      },
+ 
+ /* Cipher 0E */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      0,                         /* not implemented (non-ephemeral DH) */
+      SSL3_TXT_DH_RSA_DES_40_CBC_SHA,
+@@ -396,8 +409,10 @@
+      40,
+      56,
+      },
++#endif
+ 
+ /* Cipher 0F */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      0,                         /* not implemented (non-ephemeral DH) */
+      SSL3_TXT_DH_RSA_DES_64_CBC_SHA,
+@@ -412,6 +427,7 @@
+      56,
+      56,
+      },
++#endif
+ 
+ /* Cipher 10 */
+     {
+@@ -431,6 +447,7 @@
+ 
+ /* The Ephemeral DH ciphers */
+ /* Cipher 11 */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_EDH_DSS_DES_40_CBC_SHA,
+@@ -445,8 +462,10 @@
+      40,
+      56,
+      },
++#endif
+ 
+ /* Cipher 12 */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_EDH_DSS_DES_64_CBC_SHA,
+@@ -461,6 +480,7 @@
+      56,
+      56,
+      },
++#endif
+ 
+ /* Cipher 13 */
+     {
+@@ -479,6 +499,7 @@
+      },
+ 
+ /* Cipher 14 */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_EDH_RSA_DES_40_CBC_SHA,
+@@ -493,8 +514,10 @@
+      40,
+      56,
+      },
++#endif
+ 
+ /* Cipher 15 */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_EDH_RSA_DES_64_CBC_SHA,
+@@ -509,6 +532,7 @@
+      56,
+      56,
+      },
++#endif
+ 
+ /* Cipher 16 */
+     {
+@@ -527,6 +551,7 @@
+      },
+ 
+ /* Cipher 17 */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_ADH_RC4_40_MD5,
+@@ -541,6 +566,7 @@
+      40,
+      128,
+      },
++#endif
+ 
+ /* Cipher 18 */
+     {
+@@ -559,6 +585,7 @@
+      },
+ 
+ /* Cipher 19 */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_ADH_DES_40_CBC_SHA,
+@@ -573,8 +600,10 @@
+      40,
+      128,
+      },
++#endif
+ 
+ /* Cipher 1A */
++#ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_ADH_DES_64_CBC_SHA,
+@@ -589,6 +618,7 @@
+      56,
+      56,
+      },
++#endif
+ 
+ /* Cipher 1B */
+     {
+@@ -660,6 +690,7 @@
+ #ifndef OPENSSL_NO_KRB5
+ /* The Kerberos ciphers*/
+ /* Cipher 1E */
++# ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_KRB5_DES_64_CBC_SHA,
+@@ -674,6 +705,7 @@
+      56,
+      56,
+      },
++# endif
+ 
+ /* Cipher 1F */
+     {
+@@ -724,6 +756,7 @@
+      },
+ 
+ /* Cipher 22 */
++# ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_KRB5_DES_64_CBC_MD5,
+@@ -738,6 +771,7 @@
+      56,
+      56,
+      },
++# endif
+ 
+ /* Cipher 23 */
+     {
+@@ -788,6 +822,7 @@
+      },
+ 
+ /* Cipher 26 */
++# ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_KRB5_DES_40_CBC_SHA,
+@@ -802,8 +837,10 @@
+      40,
+      56,
+      },
++# endif
+ 
+ /* Cipher 27 */
++# ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_KRB5_RC2_40_CBC_SHA,
+@@ -818,8 +855,10 @@
+      40,
+      128,
+      },
++# endif
+ 
+ /* Cipher 28 */
++# ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_KRB5_RC4_40_SHA,
+@@ -834,8 +873,10 @@
+      40,
+      128,
+      },
++# endif
+ 
+ /* Cipher 29 */
++# ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_KRB5_DES_40_CBC_MD5,
+@@ -850,8 +891,10 @@
+      40,
+      56,
+      },
++# endif
+ 
+ /* Cipher 2A */
++# ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_KRB5_RC2_40_CBC_MD5,
+@@ -866,8 +909,10 @@
+      40,
+      128,
+      },
++# endif
+ 
+ /* Cipher 2B */
++# ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      SSL3_TXT_KRB5_RC4_40_MD5,
+@@ -882,6 +927,7 @@
+      40,
+      128,
+      },
++# endif
+ #endif                          /* OPENSSL_NO_KRB5 */
+ 
+ /* New AES ciphersuites */
+@@ -1305,6 +1351,7 @@
+ # endif
+ 
+     /* Cipher 62 */
++# ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      TLS1_TXT_RSA_EXPORT1024_WITH_DES_CBC_SHA,
+@@ -1319,8 +1366,10 @@
+      56,
+      56,
+      },
++# endif
+ 
+     /* Cipher 63 */
++# ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      TLS1_TXT_DHE_DSS_EXPORT1024_WITH_DES_CBC_SHA,
+@@ -1335,8 +1384,10 @@
+      56,
+      56,
+      },
++# endif
+ 
+     /* Cipher 64 */
++# ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      TLS1_TXT_RSA_EXPORT1024_WITH_RC4_56_SHA,
+@@ -1351,8 +1402,10 @@
+      56,
+      128,
+      },
++# endif
+ 
+     /* Cipher 65 */
++# ifndef OPENSSL_NO_WEAK_SSL_CIPHERS
+     {
+      1,
+      TLS1_TXT_DHE_DSS_EXPORT1024_WITH_RC4_56_SHA,
+@@ -1367,6 +1420,7 @@
+      56,
+      128,
+      },
++# endif
+ 
+     /* Cipher 66 */
+     {
+--- crypto/openssl/ssl/ssl_lib.c.orig
++++ crypto/openssl/ssl/ssl_lib.c
+@@ -1896,6 +1896,13 @@
+      */
+     ret->options |= SSL_OP_LEGACY_SERVER_CONNECT;
+ 
++    /*
++     * Disable SSLv2 by default, callers that want to enable SSLv2 will have to
++     * explicitly clear this option via either of SSL_CTX_clear_options() or
++     * SSL_clear_options().
++     */
++    ret->options |= SSL_OP_NO_SSLv2;
++
+     return (ret);
+  err:
+     SSLerr(SSL_F_SSL_CTX_NEW, ERR_R_MALLOC_FAILURE);
+--- crypto/openssl/util/libeay.num.orig
++++ crypto/openssl/util/libeay.num
+@@ -1807,6 +1807,8 @@
+ X509_REQ_digest                         2362	EXIST::FUNCTION:EVP
+ X509_CRL_digest                         2391	EXIST::FUNCTION:EVP
+ ASN1_STRING_clear_free                  2392	EXIST::FUNCTION:
++SRP_VBASE_get1_by_user                  2393	EXIST::FUNCTION:SRP
++SRP_user_pwd_free                       2394	EXIST::FUNCTION:SRP
+ d2i_ASN1_SET_OF_PKCS7                   2397	NOEXIST::FUNCTION:
+ X509_ALGOR_cmp                          2398	EXIST::FUNCTION:
+ EVP_CIPHER_CTX_set_key_length           2399	EXIST::FUNCTION:
+--- secure/lib/libcrypto/amd64/x86_64-mont5.S.orig
++++ secure/lib/libcrypto/amd64/x86_64-mont5.S
+@@ -14,7 +14,8 @@
+ .align	16
+ .Lmul_enter:
+ 	movl	%r9d,%r9d
+-	movl	8(%rsp),%r10d
++	movd	8(%rsp),%xmm5
++	leaq	.Linc(%rip),%r10
+ 	pushq	%rbx
+ 	pushq	%rbp
+ 	pushq	%r12
+@@ -21,40 +22,145 @@
+ 	pushq	%r13
+ 	pushq	%r14
+ 	pushq	%r15
++
++.Lmul_alloca:
+ 	movq	%rsp,%rax
+ 	leaq	2(%r9),%r11
+ 	negq	%r11
+-	leaq	(%rsp,%r11,8),%rsp
++	leaq	-264(%rsp,%r11,8),%rsp
+ 	andq	$-1024,%rsp
+ 
+ 	movq	%rax,8(%rsp,%r9,8)
+ .Lmul_body:
+-	movq	%rdx,%r12
+-	movq	%r10,%r11
+-	shrq	$3,%r10
+-	andq	$7,%r11
+-	notq	%r10
+-	leaq	.Lmagic_masks(%rip),%rax
+-	andq	$3,%r10
+-	leaq	96(%r12,%r11,8),%r12
+-	movq	0(%rax,%r10,8),%xmm4
+-	movq	8(%rax,%r10,8),%xmm5
+-	movq	16(%rax,%r10,8),%xmm6
+-	movq	24(%rax,%r10,8),%xmm7
++	leaq	128(%rdx),%r12
++	movdqa	0(%r10),%xmm0
++	movdqa	16(%r10),%xmm1
++	leaq	24-112(%rsp,%r9,8),%r10
++	andq	$-16,%r10
+ 
+-	movq	-96(%r12),%xmm0
+-	movq	-32(%r12),%xmm1
+-	pand	%xmm4,%xmm0
+-	movq	32(%r12),%xmm2
+-	pand	%xmm5,%xmm1
+-	movq	96(%r12),%xmm3
+-	pand	%xmm6,%xmm2
++	pshufd	$0,%xmm5,%xmm5
++	movdqa	%xmm1,%xmm4
++	movdqa	%xmm1,%xmm2
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0
++.byte	0x67
++	movdqa	%xmm4,%xmm3
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1
++	movdqa	%xmm0,112(%r10)
++	movdqa	%xmm4,%xmm0
++
++	paddd	%xmm2,%xmm3
++	pcmpeqd	%xmm5,%xmm2
++	movdqa	%xmm1,128(%r10)
++	movdqa	%xmm4,%xmm1
++
++	paddd	%xmm3,%xmm0
++	pcmpeqd	%xmm5,%xmm3
++	movdqa	%xmm2,144(%r10)
++	movdqa	%xmm4,%xmm2
++
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0
++	movdqa	%xmm3,160(%r10)
++	movdqa	%xmm4,%xmm3
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1
++	movdqa	%xmm0,176(%r10)
++	movdqa	%xmm4,%xmm0
++
++	paddd	%xmm2,%xmm3
++	pcmpeqd	%xmm5,%xmm2
++	movdqa	%xmm1,192(%r10)
++	movdqa	%xmm4,%xmm1
++
++	paddd	%xmm3,%xmm0
++	pcmpeqd	%xmm5,%xmm3
++	movdqa	%xmm2,208(%r10)
++	movdqa	%xmm4,%xmm2
++
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0
++	movdqa	%xmm3,224(%r10)
++	movdqa	%xmm4,%xmm3
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1
++	movdqa	%xmm0,240(%r10)
++	movdqa	%xmm4,%xmm0
++
++	paddd	%xmm2,%xmm3
++	pcmpeqd	%xmm5,%xmm2
++	movdqa	%xmm1,256(%r10)
++	movdqa	%xmm4,%xmm1
++
++	paddd	%xmm3,%xmm0
++	pcmpeqd	%xmm5,%xmm3
++	movdqa	%xmm2,272(%r10)
++	movdqa	%xmm4,%xmm2
++
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0
++	movdqa	%xmm3,288(%r10)
++	movdqa	%xmm4,%xmm3
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1
++	movdqa	%xmm0,304(%r10)
++
++	paddd	%xmm2,%xmm3
++.byte	0x67
++	pcmpeqd	%xmm5,%xmm2
++	movdqa	%xmm1,320(%r10)
++
++	pcmpeqd	%xmm5,%xmm3
++	movdqa	%xmm2,336(%r10)
++	pand	64(%r12),%xmm0
++
++	pand	80(%r12),%xmm1
++	pand	96(%r12),%xmm2
++	movdqa	%xmm3,352(%r10)
++	pand	112(%r12),%xmm3
++	por	%xmm2,%xmm0
++	por	%xmm3,%xmm1
++	movdqa	-128(%r12),%xmm4
++	movdqa	-112(%r12),%xmm5
++	movdqa	-96(%r12),%xmm2
++	pand	112(%r10),%xmm4
++	movdqa	-80(%r12),%xmm3
++	pand	128(%r10),%xmm5
++	por	%xmm4,%xmm0
++	pand	144(%r10),%xmm2
++	por	%xmm5,%xmm1
++	pand	160(%r10),%xmm3
++	por	%xmm2,%xmm0
++	por	%xmm3,%xmm1
++	movdqa	-64(%r12),%xmm4
++	movdqa	-48(%r12),%xmm5
++	movdqa	-32(%r12),%xmm2
++	pand	176(%r10),%xmm4
++	movdqa	-16(%r12),%xmm3
++	pand	192(%r10),%xmm5
++	por	%xmm4,%xmm0
++	pand	208(%r10),%xmm2
++	por	%xmm5,%xmm1
++	pand	224(%r10),%xmm3
++	por	%xmm2,%xmm0
++	por	%xmm3,%xmm1
++	movdqa	0(%r12),%xmm4
++	movdqa	16(%r12),%xmm5
++	movdqa	32(%r12),%xmm2
++	pand	240(%r10),%xmm4
++	movdqa	48(%r12),%xmm3
++	pand	256(%r10),%xmm5
++	por	%xmm4,%xmm0
++	pand	272(%r10),%xmm2
++	por	%xmm5,%xmm1
++	pand	288(%r10),%xmm3
++	por	%xmm2,%xmm0
++	por	%xmm3,%xmm1
+ 	por	%xmm1,%xmm0
+-	pand	%xmm7,%xmm3
+-	por	%xmm2,%xmm0
++	pshufd	$78,%xmm0,%xmm1
++	por	%xmm1,%xmm0
+ 	leaq	256(%r12),%r12
+-	por	%xmm3,%xmm0
+-
+ .byte	102,72,15,126,195
+ 
+ 	movq	(%r8),%r8
+@@ -63,29 +169,14 @@
+ 	xorq	%r14,%r14
+ 	xorq	%r15,%r15
+ 
+-	movq	-96(%r12),%xmm0
+-	movq	-32(%r12),%xmm1
+-	pand	%xmm4,%xmm0
+-	movq	32(%r12),%xmm2
+-	pand	%xmm5,%xmm1
+-
+ 	movq	%r8,%rbp
+ 	mulq	%rbx
+ 	movq	%rax,%r10
+ 	movq	(%rcx),%rax
+ 
+-	movq	96(%r12),%xmm3
+-	pand	%xmm6,%xmm2
+-	por	%xmm1,%xmm0
+-	pand	%xmm7,%xmm3
+-
+ 	imulq	%r10,%rbp
+ 	movq	%rdx,%r11
+ 
+-	por	%xmm2,%xmm0
+-	leaq	256(%r12),%r12
+-	por	%xmm3,%xmm0
+-
+ 	mulq	%rbp
+ 	addq	%rax,%r10
+ 	movq	8(%rsi),%rax
+@@ -118,8 +209,6 @@
+ 	cmpq	%r9,%r15
+ 	jne	.L1st
+ 
+-.byte	102,72,15,126,195
+-
+ 	addq	%rax,%r13
+ 	movq	(%rsi),%rax
+ 	adcq	$0,%rdx
+@@ -139,33 +228,76 @@
+ 	jmp	.Louter
+ .align	16
+ .Louter:
++	leaq	24+128(%rsp,%r9,8),%rdx
++	andq	$-16,%rdx
++	pxor	%xmm4,%xmm4
++	pxor	%xmm5,%xmm5
++	movdqa	-128(%r12),%xmm0
++	movdqa	-112(%r12),%xmm1
++	movdqa	-96(%r12),%xmm2
++	movdqa	-80(%r12),%xmm3
++	pand	-128(%rdx),%xmm0
++	pand	-112(%rdx),%xmm1
++	por	%xmm0,%xmm4
++	pand	-96(%rdx),%xmm2
++	por	%xmm1,%xmm5
++	pand	-80(%rdx),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++	movdqa	-64(%r12),%xmm0
++	movdqa	-48(%r12),%xmm1
++	movdqa	-32(%r12),%xmm2
++	movdqa	-16(%r12),%xmm3
++	pand	-64(%rdx),%xmm0
++	pand	-48(%rdx),%xmm1
++	por	%xmm0,%xmm4
++	pand	-32(%rdx),%xmm2
++	por	%xmm1,%xmm5
++	pand	-16(%rdx),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++	movdqa	0(%r12),%xmm0
++	movdqa	16(%r12),%xmm1
++	movdqa	32(%r12),%xmm2
++	movdqa	48(%r12),%xmm3
++	pand	0(%rdx),%xmm0
++	pand	16(%rdx),%xmm1
++	por	%xmm0,%xmm4
++	pand	32(%rdx),%xmm2
++	por	%xmm1,%xmm5
++	pand	48(%rdx),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++	movdqa	64(%r12),%xmm0
++	movdqa	80(%r12),%xmm1
++	movdqa	96(%r12),%xmm2
++	movdqa	112(%r12),%xmm3
++	pand	64(%rdx),%xmm0
++	pand	80(%rdx),%xmm1
++	por	%xmm0,%xmm4
++	pand	96(%rdx),%xmm2
++	por	%xmm1,%xmm5
++	pand	112(%rdx),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++	por	%xmm5,%xmm4
++	pshufd	$78,%xmm4,%xmm0
++	por	%xmm4,%xmm0
++	leaq	256(%r12),%r12
++.byte	102,72,15,126,195
++
+ 	xorq	%r15,%r15
+ 	movq	%r8,%rbp
+ 	movq	(%rsp),%r10
+ 
+-	movq	-96(%r12),%xmm0
+-	movq	-32(%r12),%xmm1
+-	pand	%xmm4,%xmm0
+-	movq	32(%r12),%xmm2
+-	pand	%xmm5,%xmm1
+-
+ 	mulq	%rbx
+ 	addq	%rax,%r10
+ 	movq	(%rcx),%rax
+ 	adcq	$0,%rdx
+ 
+-	movq	96(%r12),%xmm3
+-	pand	%xmm6,%xmm2
+-	por	%xmm1,%xmm0
+-	pand	%xmm7,%xmm3
+-
+ 	imulq	%r10,%rbp
+ 	movq	%rdx,%r11
+ 
+-	por	%xmm2,%xmm0
+-	leaq	256(%r12),%r12
+-	por	%xmm3,%xmm0
+-
+ 	mulq	%rbp
+ 	addq	%rax,%r10
+ 	movq	8(%rsi),%rax
+@@ -201,8 +333,6 @@
+ 	cmpq	%r9,%r15
+ 	jne	.Linner
+ 
+-.byte	102,72,15,126,195
+-
+ 	addq	%rax,%r13
+ 	movq	(%rsi),%rax
+ 	adcq	$0,%rdx
+@@ -256,6 +386,7 @@
+ 
+ 	movq	8(%rsp,%r9,8),%rsi
+ 	movq	$1,%rax
++
+ 	movq	(%rsi),%r15
+ 	movq	8(%rsi),%r14
+ 	movq	16(%rsi),%r13
+@@ -271,7 +402,8 @@
+ bn_mul4x_mont_gather5:
+ .Lmul4x_enter:
+ 	movl	%r9d,%r9d
+-	movl	8(%rsp),%r10d
++	movd	8(%rsp),%xmm5
++	leaq	.Linc(%rip),%r10
+ 	pushq	%rbx
+ 	pushq	%rbp
+ 	pushq	%r12
+@@ -278,42 +410,148 @@
+ 	pushq	%r13
+ 	pushq	%r14
+ 	pushq	%r15
++
++.Lmul4x_alloca:
+ 	movq	%rsp,%rax
+ 	leaq	4(%r9),%r11
+ 	negq	%r11
+-	leaq	(%rsp,%r11,8),%rsp
++	leaq	-256(%rsp,%r11,8),%rsp
+ 	andq	$-1024,%rsp
+ 
+ 	movq	%rax,8(%rsp,%r9,8)
+ .Lmul4x_body:
+ 	movq	%rdi,16(%rsp,%r9,8)
+-	movq	%rdx,%r12
+-	movq	%r10,%r11
+-	shrq	$3,%r10
+-	andq	$7,%r11
+-	notq	%r10
+-	leaq	.Lmagic_masks(%rip),%rax
+-	andq	$3,%r10
+-	leaq	96(%r12,%r11,8),%r12
+-	movq	0(%rax,%r10,8),%xmm4
+-	movq	8(%rax,%r10,8),%xmm5
+-	movq	16(%rax,%r10,8),%xmm6
+-	movq	24(%rax,%r10,8),%xmm7
++	leaq	128(%rdx),%r12
++	movdqa	0(%r10),%xmm0
++	movdqa	16(%r10),%xmm1
++	leaq	32-112(%rsp,%r9,8),%r10
+ 
+-	movq	-96(%r12),%xmm0
+-	movq	-32(%r12),%xmm1
+-	pand	%xmm4,%xmm0
+-	movq	32(%r12),%xmm2
+-	pand	%xmm5,%xmm1
+-	movq	96(%r12),%xmm3
+-	pand	%xmm6,%xmm2
++	pshufd	$0,%xmm5,%xmm5
++	movdqa	%xmm1,%xmm4
++.byte	0x67,0x67
++	movdqa	%xmm1,%xmm2
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0
++.byte	0x67
++	movdqa	%xmm4,%xmm3
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1
++	movdqa	%xmm0,112(%r10)
++	movdqa	%xmm4,%xmm0
++
++	paddd	%xmm2,%xmm3
++	pcmpeqd	%xmm5,%xmm2
++	movdqa	%xmm1,128(%r10)
++	movdqa	%xmm4,%xmm1
++
++	paddd	%xmm3,%xmm0
++	pcmpeqd	%xmm5,%xmm3
++	movdqa	%xmm2,144(%r10)
++	movdqa	%xmm4,%xmm2
++
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0
++	movdqa	%xmm3,160(%r10)
++	movdqa	%xmm4,%xmm3
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1
++	movdqa	%xmm0,176(%r10)
++	movdqa	%xmm4,%xmm0
++
++	paddd	%xmm2,%xmm3
++	pcmpeqd	%xmm5,%xmm2
++	movdqa	%xmm1,192(%r10)
++	movdqa	%xmm4,%xmm1
++
++	paddd	%xmm3,%xmm0
++	pcmpeqd	%xmm5,%xmm3
++	movdqa	%xmm2,208(%r10)
++	movdqa	%xmm4,%xmm2
++
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0
++	movdqa	%xmm3,224(%r10)
++	movdqa	%xmm4,%xmm3
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1
++	movdqa	%xmm0,240(%r10)
++	movdqa	%xmm4,%xmm0
++
++	paddd	%xmm2,%xmm3
++	pcmpeqd	%xmm5,%xmm2
++	movdqa	%xmm1,256(%r10)
++	movdqa	%xmm4,%xmm1
++
++	paddd	%xmm3,%xmm0
++	pcmpeqd	%xmm5,%xmm3
++	movdqa	%xmm2,272(%r10)
++	movdqa	%xmm4,%xmm2
++
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0
++	movdqa	%xmm3,288(%r10)
++	movdqa	%xmm4,%xmm3
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1
++	movdqa	%xmm0,304(%r10)
++
++	paddd	%xmm2,%xmm3
++.byte	0x67
++	pcmpeqd	%xmm5,%xmm2
++	movdqa	%xmm1,320(%r10)
++
++	pcmpeqd	%xmm5,%xmm3
++	movdqa	%xmm2,336(%r10)
++	pand	64(%r12),%xmm0
++
++	pand	80(%r12),%xmm1
++	pand	96(%r12),%xmm2
++	movdqa	%xmm3,352(%r10)
++	pand	112(%r12),%xmm3
++	por	%xmm2,%xmm0
++	por	%xmm3,%xmm1
++	movdqa	-128(%r12),%xmm4
++	movdqa	-112(%r12),%xmm5
++	movdqa	-96(%r12),%xmm2
++	pand	112(%r10),%xmm4
++	movdqa	-80(%r12),%xmm3
++	pand	128(%r10),%xmm5
++	por	%xmm4,%xmm0
++	pand	144(%r10),%xmm2
++	por	%xmm5,%xmm1
++	pand	160(%r10),%xmm3
++	por	%xmm2,%xmm0
++	por	%xmm3,%xmm1
++	movdqa	-64(%r12),%xmm4
++	movdqa	-48(%r12),%xmm5
++	movdqa	-32(%r12),%xmm2
++	pand	176(%r10),%xmm4
++	movdqa	-16(%r12),%xmm3
++	pand	192(%r10),%xmm5
++	por	%xmm4,%xmm0
++	pand	208(%r10),%xmm2
++	por	%xmm5,%xmm1
++	pand	224(%r10),%xmm3
++	por	%xmm2,%xmm0
++	por	%xmm3,%xmm1
++	movdqa	0(%r12),%xmm4
++	movdqa	16(%r12),%xmm5
++	movdqa	32(%r12),%xmm2
++	pand	240(%r10),%xmm4
++	movdqa	48(%r12),%xmm3
++	pand	256(%r10),%xmm5
++	por	%xmm4,%xmm0
++	pand	272(%r10),%xmm2
++	por	%xmm5,%xmm1
++	pand	288(%r10),%xmm3
++	por	%xmm2,%xmm0
++	por	%xmm3,%xmm1
+ 	por	%xmm1,%xmm0
+-	pand	%xmm7,%xmm3
+-	por	%xmm2,%xmm0
++	pshufd	$78,%xmm0,%xmm1
++	por	%xmm1,%xmm0
+ 	leaq	256(%r12),%r12
+-	por	%xmm3,%xmm0
++.byte	102,72,15,126,195
+ 
+-.byte	102,72,15,126,195
+ 	movq	(%r8),%r8
+ 	movq	(%rsi),%rax
+ 
+@@ -320,29 +558,14 @@
+ 	xorq	%r14,%r14
+ 	xorq	%r15,%r15
+ 
+-	movq	-96(%r12),%xmm0
+-	movq	-32(%r12),%xmm1
+-	pand	%xmm4,%xmm0
+-	movq	32(%r12),%xmm2
+-	pand	%xmm5,%xmm1
+-
+ 	movq	%r8,%rbp
+ 	mulq	%rbx
+ 	movq	%rax,%r10
+ 	movq	(%rcx),%rax
+ 
+-	movq	96(%r12),%xmm3
+-	pand	%xmm6,%xmm2
+-	por	%xmm1,%xmm0
+-	pand	%xmm7,%xmm3
+-
+ 	imulq	%r10,%rbp
+ 	movq	%rdx,%r11
+ 
+-	por	%xmm2,%xmm0
+-	leaq	256(%r12),%r12
+-	por	%xmm3,%xmm0
+-
+ 	mulq	%rbp
+ 	addq	%rax,%r10
+ 	movq	8(%rsi),%rax
+@@ -460,8 +683,6 @@
+ 	movq	%rdi,-16(%rsp,%r15,8)
+ 	movq	%rdx,%r13
+ 
+-.byte	102,72,15,126,195
+-
+ 	xorq	%rdi,%rdi
+ 	addq	%r10,%r13
+ 	adcq	$0,%rdi
+@@ -471,12 +692,64 @@
+ 	leaq	1(%r14),%r14
+ .align	4
+ .Louter4x:
++	leaq	32+128(%rsp,%r9,8),%rdx
++	pxor	%xmm4,%xmm4
++	pxor	%xmm5,%xmm5
++	movdqa	-128(%r12),%xmm0
++	movdqa	-112(%r12),%xmm1
++	movdqa	-96(%r12),%xmm2
++	movdqa	-80(%r12),%xmm3
++	pand	-128(%rdx),%xmm0
++	pand	-112(%rdx),%xmm1
++	por	%xmm0,%xmm4
++	pand	-96(%rdx),%xmm2
++	por	%xmm1,%xmm5
++	pand	-80(%rdx),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++	movdqa	-64(%r12),%xmm0
++	movdqa	-48(%r12),%xmm1
++	movdqa	-32(%r12),%xmm2
++	movdqa	-16(%r12),%xmm3
++	pand	-64(%rdx),%xmm0
++	pand	-48(%rdx),%xmm1
++	por	%xmm0,%xmm4
++	pand	-32(%rdx),%xmm2
++	por	%xmm1,%xmm5
++	pand	-16(%rdx),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++	movdqa	0(%r12),%xmm0
++	movdqa	16(%r12),%xmm1
++	movdqa	32(%r12),%xmm2
++	movdqa	48(%r12),%xmm3
++	pand	0(%rdx),%xmm0
++	pand	16(%rdx),%xmm1
++	por	%xmm0,%xmm4
++	pand	32(%rdx),%xmm2
++	por	%xmm1,%xmm5
++	pand	48(%rdx),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++	movdqa	64(%r12),%xmm0
++	movdqa	80(%r12),%xmm1
++	movdqa	96(%r12),%xmm2
++	movdqa	112(%r12),%xmm3
++	pand	64(%rdx),%xmm0
++	pand	80(%rdx),%xmm1
++	por	%xmm0,%xmm4
++	pand	96(%rdx),%xmm2
++	por	%xmm1,%xmm5
++	pand	112(%rdx),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++	por	%xmm5,%xmm4
++	pshufd	$78,%xmm4,%xmm0
++	por	%xmm4,%xmm0
++	leaq	256(%r12),%r12
++.byte	102,72,15,126,195
++
+ 	xorq	%r15,%r15
+-	movq	-96(%r12),%xmm0
+-	movq	-32(%r12),%xmm1
+-	pand	%xmm4,%xmm0
+-	movq	32(%r12),%xmm2
+-	pand	%xmm5,%xmm1
+ 
+ 	movq	(%rsp),%r10
+ 	movq	%r8,%rbp
+@@ -485,18 +758,9 @@
+ 	movq	(%rcx),%rax
+ 	adcq	$0,%rdx
+ 
+-	movq	96(%r12),%xmm3
+-	pand	%xmm6,%xmm2
+-	por	%xmm1,%xmm0
+-	pand	%xmm7,%xmm3
+-
+ 	imulq	%r10,%rbp
+ 	movq	%rdx,%r11
+ 
+-	por	%xmm2,%xmm0
+-	leaq	256(%r12),%r12
+-	por	%xmm3,%xmm0
+-
+ 	mulq	%rbp
+ 	addq	%rax,%r10
+ 	movq	8(%rsi),%rax
+@@ -628,7 +892,6 @@
+ 	movq	%r13,-24(%rsp,%r15,8)
+ 	movq	%rdx,%r13
+ 
+-.byte	102,72,15,126,195
+ 	movq	%rdi,-16(%rsp,%r15,8)
+ 
+ 	xorq	%rdi,%rdi
+@@ -712,6 +975,7 @@
+ 	movdqu	%xmm2,16(%rdi,%r14,1)
+ 	movq	8(%rsp,%r9,8),%rsi
+ 	movq	$1,%rax
++
+ 	movq	(%rsi),%r15
+ 	movq	8(%rsi),%r14
+ 	movq	16(%rsi),%r13
+@@ -744,42 +1008,167 @@
+ .type	bn_gather5,@function
+ .align	16
+ bn_gather5:
+-	movq	%rcx,%r11
+-	shrq	$3,%rcx
+-	andq	$7,%r11
+-	notq	%rcx
+-	leaq	.Lmagic_masks(%rip),%rax
+-	andq	$3,%rcx
+-	leaq	96(%rdx,%r11,8),%rdx
+-	movq	0(%rax,%rcx,8),%xmm4
+-	movq	8(%rax,%rcx,8),%xmm5
+-	movq	16(%rax,%rcx,8),%xmm6
+-	movq	24(%rax,%rcx,8),%xmm7
++.LSEH_begin_bn_gather5:
++
++.byte	0x4c,0x8d,0x14,0x24			
++.byte	0x48,0x81,0xec,0x08,0x01,0x00,0x00	
++	leaq	.Linc(%rip),%rax
++	andq	$-16,%rsp
++
++	movd	%ecx,%xmm5
++	movdqa	0(%rax),%xmm0
++	movdqa	16(%rax),%xmm1
++	leaq	128(%rdx),%r11
++	leaq	128(%rsp),%rax
++
++	pshufd	$0,%xmm5,%xmm5
++	movdqa	%xmm1,%xmm4
++	movdqa	%xmm1,%xmm2
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0
++	movdqa	%xmm4,%xmm3
++
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1
++	movdqa	%xmm0,-128(%rax)
++	movdqa	%xmm4,%xmm0
++
++	paddd	%xmm2,%xmm3
++	pcmpeqd	%xmm5,%xmm2
++	movdqa	%xmm1,-112(%rax)
++	movdqa	%xmm4,%xmm1
++
++	paddd	%xmm3,%xmm0
++	pcmpeqd	%xmm5,%xmm3
++	movdqa	%xmm2,-96(%rax)
++	movdqa	%xmm4,%xmm2
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0
++	movdqa	%xmm3,-80(%rax)
++	movdqa	%xmm4,%xmm3
++
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1
++	movdqa	%xmm0,-64(%rax)
++	movdqa	%xmm4,%xmm0
++
++	paddd	%xmm2,%xmm3
++	pcmpeqd	%xmm5,%xmm2
++	movdqa	%xmm1,-48(%rax)
++	movdqa	%xmm4,%xmm1
++
++	paddd	%xmm3,%xmm0
++	pcmpeqd	%xmm5,%xmm3
++	movdqa	%xmm2,-32(%rax)
++	movdqa	%xmm4,%xmm2
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0
++	movdqa	%xmm3,-16(%rax)
++	movdqa	%xmm4,%xmm3
++
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1
++	movdqa	%xmm0,0(%rax)
++	movdqa	%xmm4,%xmm0
++
++	paddd	%xmm2,%xmm3
++	pcmpeqd	%xmm5,%xmm2
++	movdqa	%xmm1,16(%rax)
++	movdqa	%xmm4,%xmm1
++
++	paddd	%xmm3,%xmm0
++	pcmpeqd	%xmm5,%xmm3
++	movdqa	%xmm2,32(%rax)
++	movdqa	%xmm4,%xmm2
++	paddd	%xmm0,%xmm1
++	pcmpeqd	%xmm5,%xmm0
++	movdqa	%xmm3,48(%rax)
++	movdqa	%xmm4,%xmm3
++
++	paddd	%xmm1,%xmm2
++	pcmpeqd	%xmm5,%xmm1
++	movdqa	%xmm0,64(%rax)
++	movdqa	%xmm4,%xmm0
++
++	paddd	%xmm2,%xmm3
++	pcmpeqd	%xmm5,%xmm2
++	movdqa	%xmm1,80(%rax)
++	movdqa	%xmm4,%xmm1
++
++	paddd	%xmm3,%xmm0
++	pcmpeqd	%xmm5,%xmm3
++	movdqa	%xmm2,96(%rax)
++	movdqa	%xmm4,%xmm2
++	movdqa	%xmm3,112(%rax)
+ 	jmp	.Lgather
+-.align	16
++
++.align	32
+ .Lgather:
+-	movq	-96(%rdx),%xmm0
+-	movq	-32(%rdx),%xmm1
+-	pand	%xmm4,%xmm0
+-	movq	32(%rdx),%xmm2
+-	pand	%xmm5,%xmm1
+-	movq	96(%rdx),%xmm3
+-	pand	%xmm6,%xmm2
+-	por	%xmm1,%xmm0
+-	pand	%xmm7,%xmm3
+-	por	%xmm2,%xmm0
+-	leaq	256(%rdx),%rdx
+-	por	%xmm3,%xmm0
+-
++	pxor	%xmm4,%xmm4
++	pxor	%xmm5,%xmm5
++	movdqa	-128(%r11),%xmm0
++	movdqa	-112(%r11),%xmm1
++	movdqa	-96(%r11),%xmm2
++	pand	-128(%rax),%xmm0
++	movdqa	-80(%r11),%xmm3
++	pand	-112(%rax),%xmm1
++	por	%xmm0,%xmm4
++	pand	-96(%rax),%xmm2
++	por	%xmm1,%xmm5
++	pand	-80(%rax),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++	movdqa	-64(%r11),%xmm0
++	movdqa	-48(%r11),%xmm1
++	movdqa	-32(%r11),%xmm2
++	pand	-64(%rax),%xmm0
++	movdqa	-16(%r11),%xmm3
++	pand	-48(%rax),%xmm1
++	por	%xmm0,%xmm4
++	pand	-32(%rax),%xmm2
++	por	%xmm1,%xmm5
++	pand	-16(%rax),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++	movdqa	0(%r11),%xmm0
++	movdqa	16(%r11),%xmm1
++	movdqa	32(%r11),%xmm2
++	pand	0(%rax),%xmm0
++	movdqa	48(%r11),%xmm3
++	pand	16(%rax),%xmm1
++	por	%xmm0,%xmm4
++	pand	32(%rax),%xmm2
++	por	%xmm1,%xmm5
++	pand	48(%rax),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++	movdqa	64(%r11),%xmm0
++	movdqa	80(%r11),%xmm1
++	movdqa	96(%r11),%xmm2
++	pand	64(%rax),%xmm0
++	movdqa	112(%r11),%xmm3
++	pand	80(%rax),%xmm1
++	por	%xmm0,%xmm4
++	pand	96(%rax),%xmm2
++	por	%xmm1,%xmm5
++	pand	112(%rax),%xmm3
++	por	%xmm2,%xmm4
++	por	%xmm3,%xmm5
++	por	%xmm5,%xmm4
++	leaq	256(%r11),%r11
++	pshufd	$78,%xmm4,%xmm0
++	por	%xmm4,%xmm0
+ 	movq	%xmm0,(%rdi)
+ 	leaq	8(%rdi),%rdi
+ 	subq	$1,%rsi
+ 	jnz	.Lgather
++
++	leaq	(%r10),%rsp
+ 	.byte	0xf3,0xc3
+ .LSEH_end_bn_gather5:
+ .size	bn_gather5,.-bn_gather5
+ .align	64
+-.Lmagic_masks:
+-.long	0,0, 0,0, 0,0, -1,-1
+-.long	0,0, 0,0, 0,0,  0,0
++.Linc:
++.long	0,0, 1,1
++.long	2,2, 2,2
+ .byte	77,111,110,116,103,111,109,101,114,121,32,77,117,108,116,105,112,108,105,99,97,116,105,111,110,32,119,105,116,104,32,115,99,97,116,116,101,114,47,103,97,116,104,101,114,32,102,111,114,32,120,56,54,95,54,52,44,32,67,82,89,80,84,79,71,65,77,83,32,98,121,32,60,97,112,112,114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0

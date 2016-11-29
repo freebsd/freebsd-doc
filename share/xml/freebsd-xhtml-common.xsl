@@ -21,7 +21,7 @@
   <xsl:param name="chunker.output.encoding" select="'&doc.html.charset;'"/>
   <xsl:param name="use.id.as.filename" select="1"/>
   <xsl:param name="html.stylesheet" select="'docbook.css'"/>
-  <xsl:param name="link.mailto.url" select="'doc@FreeBSD.org'"/>
+  <xsl:param name="link.mailto.url" select="'mailto:doc@FreeBSD.org'"/>
   <xsl:param name="callout.graphics.path" select="'./imagelib/callouts/'"/>
   <xsl:param name="citerefentry.link" select="1"/>
   <xsl:param name="admon.style"/>
@@ -44,6 +44,10 @@
       <l:gentext key="on" text="on"/>
     </l:l10n>
   </i18n>
+
+  <xsl:template name="user.head.content">
+    <script type="text/javascript" src="/layout/js/google.js" />
+  </xsl:template>
 
   <xsl:template name="user.footer.navigation">
     <p align="center"><small>All FreeBSD documents are available for download
@@ -84,6 +88,14 @@
       </xsl:choose>
       ]
     </div>
+  </xsl:template>
+
+  <xsl:template match="db:package">
+    <xsl:variable name="url" select="concat('http://www.freebsd.org/cgi/url.cgi?ports/', ., '/pkg-descr')"/>
+
+    <a class="package" href="{$url}">
+      <xsl:apply-templates/>
+    </a>
   </xsl:template>
 
   <!-- Customization to allow role="nolink" -->
@@ -200,15 +212,12 @@
     </a>
   </xsl:template>
 
-  <xsl:template match="db:revnumber">
-    <xsl:call-template name="svnref.genlink"/>
-  </xsl:template>
-
   <xsl:template name="generate.citerefentry.link">
     <xsl:text>http://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
     <xsl:value-of select="db:refentrytitle"/>
     <xsl:text>&amp;sektion=</xsl:text>
     <xsl:value-of select="db:manvolnum"/>
+    <xsl:text>&amp;manpath=freebsd-release-ports</xsl:text>
   </xsl:template>
 
   <xsl:template name="nongraphical.admonition">
@@ -255,7 +264,7 @@
   </xsl:template>
 
   <xsl:template name="titlepage.releaseinfo">
-    <xsl:variable name="rev" select="str:split(., ' ')[3]"/>
+    <xsl:variable name="rev" select="$latestrevision.number"/>
 
     <xsl:call-template name="gentext">
       <xsl:with-param name="key" select="'Revision'"/>

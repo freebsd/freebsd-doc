@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 # $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.67 2011/12/31 12:27:25 bcr Exp $
-# basiert auf: 1.119
+# basiert auf: r47275
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -29,11 +29,19 @@ IMAGES_EN = advanced-networking/isdn-bus.eps
 IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
+IMAGES_EN+= advanced-networking/pxe-nfs.png
 IMAGES_EN+= advanced-networking/static-routes.pic
+IMAGES_EN+= basics/disk-layout.eps
+IMAGES_EN+= basics/example-dir1.eps
+IMAGES_EN+= basics/example-dir2.eps
+IMAGES_EN+= basics/example-dir3.eps
+IMAGES_EN+= basics/example-dir4.eps
+IMAGES_EN+= basics/example-dir5.eps
 IMAGES_EN+= bsdinstall/bsdinstall-adduser1.png
 IMAGES_EN+= bsdinstall/bsdinstall-adduser2.png
 IMAGES_EN+= bsdinstall/bsdinstall-adduser3.png
 IMAGES_EN+= bsdinstall/bsdinstall-boot-loader-menu.png
+IMAGES_EN+= bsdinstall/bsdinstall-boot-options-menu.png
 IMAGES_EN+= bsdinstall/bsdinstall-choose-mode.png
 IMAGES_EN+= bsdinstall/bsdinstall-config-components.png
 IMAGES_EN+= bsdinstall/bsdinstall-config-hostname.png
@@ -57,10 +65,12 @@ IMAGES_EN+= bsdinstall/bsdinstall-distfile-verifying.png
 IMAGES_EN+= bsdinstall/bsdinstall-final-confirmation.png
 IMAGES_EN+= bsdinstall/bsdinstall-finalconfiguration.png
 IMAGES_EN+= bsdinstall/bsdinstall-final-modification-shell.png
+IMAGES_EN+= bsdinstall/bsdinstall-keymap-10.png
 IMAGES_EN+= bsdinstall/bsdinstall-keymap-select-default.png
 IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-mirrorselect.png
+IMAGES_EN+= bsdinstall/bsdinstall-newboot-loader-menu.png
 IMAGES_EN+= bsdinstall/bsdinstall-part-entire-part.png
 IMAGES_EN+= bsdinstall/bsdinstall-part-guided-disk.png
 IMAGES_EN+= bsdinstall/bsdinstall-part-guided-manual.png
@@ -74,77 +84,15 @@ IMAGES_EN+= bsdinstall/bsdinstall-timezone-confirm.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-country.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-region.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-zone.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-disk_info.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-disk_select.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-geli_password.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-menu.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-partmenu.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-vdev_invalid.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-vdev_type.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-warning.png
 IMAGES_EN+= geom/striping.pic
-IMAGES_EN+= install/adduser1.scr
-IMAGES_EN+= install/adduser2.scr
-IMAGES_EN+= install/adduser3.scr
-IMAGES_EN+= install/boot-loader-menu.scr
-IMAGES_EN+= install/boot-mgr.scr
-IMAGES_EN+= install/config-country.scr
-IMAGES_EN+= install/config-keymap.scr
-IMAGES_EN+= install/console-saver1.scr
-IMAGES_EN+= install/console-saver2.scr
-IMAGES_EN+= install/console-saver3.scr
-IMAGES_EN+= install/console-saver4.scr
-IMAGES_EN+= install/disklabel-auto.scr
-IMAGES_EN+= install/disklabel-ed1.scr
-IMAGES_EN+= install/disklabel-ed2.scr
-IMAGES_EN+= install/disklabel-fs.scr
-IMAGES_EN+= install/disklabel-root1.scr
-IMAGES_EN+= install/disklabel-root2.scr
-IMAGES_EN+= install/disklabel-root3.scr
-IMAGES_EN+= install/disk-layout.eps
-IMAGES_EN+= install/dist-set.scr
-IMAGES_EN+= install/dist-set2.scr
-IMAGES_EN+= install/docmenu1.scr
-IMAGES_EN+= install/ed0-conf.scr
-IMAGES_EN+= install/ed0-conf2.scr
-IMAGES_EN+= install/edit-inetd-conf.scr
-IMAGES_EN+= install/fdisk-drive1.scr
-IMAGES_EN+= install/fdisk-drive2.scr
-IMAGES_EN+= install/fdisk-edit1.scr
-IMAGES_EN+= install/fdisk-edit2.scr
-IMAGES_EN+= install/ftp-anon1.scr
-IMAGES_EN+= install/ftp-anon2.scr
-IMAGES_EN+= install/hdwrconf.scr
-IMAGES_EN+= install/keymap.scr
-IMAGES_EN+= install/main1.scr
-IMAGES_EN+= install/mainexit.scr
-IMAGES_EN+= install/main-std.scr
-IMAGES_EN+= install/main-options.scr
-IMAGES_EN+= install/main-doc.scr
-IMAGES_EN+= install/main-keymap.scr
-IMAGES_EN+= install/media.scr
-IMAGES_EN+= install/mouse1.scr
-IMAGES_EN+= install/mouse2.scr
-IMAGES_EN+= install/mouse3.scr
-IMAGES_EN+= install/mouse4.scr
-IMAGES_EN+= install/mouse5.scr
-IMAGES_EN+= install/mouse6.scr
-IMAGES_EN+= install/mta-main.scr
-IMAGES_EN+= install/net-config-menu1.scr
-IMAGES_EN+= install/net-config-menu2.scr
-IMAGES_EN+= install/nfs-server-edit.scr
-IMAGES_EN+= install/ntp-config.scr
-IMAGES_EN+= install/options.scr
-IMAGES_EN+= install/pkg-cat.scr
-IMAGES_EN+= install/pkg-confirm.scr
-IMAGES_EN+= install/pkg-install.scr
-IMAGES_EN+= install/pkg-sel.scr
-IMAGES_EN+= install/probstart.scr
-IMAGES_EN+= install/routed.scr
-IMAGES_EN+= install/security.scr
-IMAGES_EN+= install/sysinstall-exit.scr
-IMAGES_EN+= install/timezone1.scr
-IMAGES_EN+= install/timezone2.scr
-IMAGES_EN+= install/timezone3.scr
-IMAGES_EN+= install/userconfig.scr
-IMAGES_EN+= install/userconfig2.scr
-IMAGES_EN+= install/example-dir1.eps
-IMAGES_EN+= install/example-dir2.eps
-IMAGES_EN+= install/example-dir3.eps
-IMAGES_EN+= install/example-dir4.eps
-IMAGES_EN+= install/example-dir5.eps
 IMAGES_EN+= mail/mutt1.scr
 IMAGES_EN+= mail/mutt2.scr
 IMAGES_EN+= mail/mutt3.scr
@@ -157,13 +105,6 @@ IMAGES_EN+= security/ipsec-network.pic
 IMAGES_EN+= security/ipsec-crypt-pkt.pic
 IMAGES_EN+= security/ipsec-encap-pkt.pic
 IMAGES_EN+= security/ipsec-out-pkt.pic
-IMAGES_EN+= vinum/vinum-concat.pic
-IMAGES_EN+= vinum/vinum-mirrored-vol.pic
-IMAGES_EN+= vinum/vinum-raid10-vol.pic
-IMAGES_EN+= vinum/vinum-raid5-org.pic
-IMAGES_EN+= vinum/vinum-simple-vol.pic
-IMAGES_EN+= vinum/vinum-striped-vol.pic
-IMAGES_EN+= vinum/vinum-striped.pic
 IMAGES_EN+= virtualization/parallels-freebsd1.png
 IMAGES_EN+= virtualization/parallels-freebsd2.png
 IMAGES_EN+= virtualization/parallels-freebsd3.png
@@ -242,8 +183,8 @@ SRCS+= dtrace/chapter.xml
 SRCS+= eresources/chapter.xml
 SRCS+= filesystems/chapter.xml
 SRCS+= firewalls/chapter.xml
+SRCS+= zfs/chapter.xml
 SRCS+= geom/chapter.xml
-SRCS+= install/chapter.xml
 SRCS+= introduction/chapter.xml
 SRCS+= jails/chapter.xml
 SRCS+= kernelconfig/chapter.xml
@@ -261,8 +202,6 @@ SRCS+= preface/preface.xml
 SRCS+= printing/chapter.xml
 SRCS+= security/chapter.xml
 SRCS+= serialcomms/chapter.xml
-SRCS+= users/chapter.xml
-SRCS+= vinum/chapter.xml
 SRCS+= virtualization/chapter.xml
 SRCS+= x11/chapter.xml
 
@@ -275,9 +214,6 @@ CHAPTERS?= ${SRCS:M*chapter.xml}
 XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+= -i chap.freebsd-glossary
 
-pgpkeyring: pgpkeys/chapter.xml
-	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
-
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
 
@@ -287,8 +223,6 @@ DOC_PREFIX?= ${.CURDIR}/../../..
 XMLDOCS=	lastmod:::mirrors.lastmod.inc \
 		mirrors-ftp-index:::mirrors.xml.ftp.index.inc \
 		mirrors-ftp:::mirrors.xml.ftp.inc \
-		mirrors-cvsup-index:::mirrors.xml.cvsup.index.inc \
-		mirrors-cvsup:::mirrors.xml.cvsup.inc \
 		eresources-index:::eresources.xml.www.index.inc \
 		eresources:::eresources.xml.www.inc
 DEPENDSET.DEFAULT=	transtable mirror
@@ -302,12 +236,6 @@ PARAMS.mirrors-ftp-index+=	--param 'type' "'ftp'" \
 PARAMS.mirrors-ftp+=	--param 'type' "'ftp'" \
 			--param 'proto' "'ftp'" \
 			--param 'target' "'handbook/mirrors/chapter.xml'"
-PARAMS.mirrors-cvsup-index+=	--param 'type' "'cvsup'" \
-				--param 'proto' "'cvsup'" \
-				--param 'target' "'index'"
-PARAMS.mirrors-cvsup+=	--param 'type' "'cvsup'" \
-			--param 'proto' "'cvsup'" \
-			--param 'target' "'handbook/mirrors/chapter.xml'"
 PARAMS.eresources-index+=	--param 'type' "'www'" \
 				--param 'proto' "'http'" \
 				--param 'target' "'index'"
@@ -318,8 +246,6 @@ PARAMS.eresources+=	--param 'type' "'www'" \
 SRCS+=		mirrors.lastmod.inc \
 		mirrors.xml.ftp.inc \
 		mirrors.xml.ftp.index.inc \
-		mirrors.xml.cvsup.inc \
-		mirrors.xml.cvsup.index.inc \
 		eresources.xml.www.inc \
 		eresources.xml.www.index.inc
 

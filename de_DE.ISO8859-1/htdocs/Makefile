@@ -1,8 +1,8 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
 # $FreeBSD$
-# $FreeBSDde: de-www/Makefile,v 1.51 2011/06/13 21:33:54 jkois Exp $
-# basiert auf: 1.145
+# $FreeBSDde$
+# basiert auf: r46611
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -16,11 +16,9 @@
 DOCS= about.xml
 DOCS+= administration.xml
 DOCS+= applications.xml
-DOCS+= availability.xml
 DOCS+= art.xml
 DOCS+= docs.xml
 DOCS+= features.xml
-DOCS+= internet.xml
 DOCS+= logo.xml
 DOCS+= mailto.xml
 DOCS+= relnotes.xml
@@ -32,8 +30,6 @@ DOCS+= where.xml
 
 #DATA=	favicon.ico
 #DATA+=	robots.txt
-#DATA+=	freebsd.css
-#DATA+=	vendors.html
 
 # Subdirectories
 # XML
@@ -42,8 +38,6 @@ SUBDIR+= developers
 SUBDIR+= docproj
 SUBDIR+= docs
 SUBDIR+= news
-SUBDIR+= FAQ
-SUBDIR+= handbook
 SUBDIR+= ipv6
 SUBDIR+= java
 SUBDIR+= platforms
@@ -58,7 +52,7 @@ SUBDIR+= ports
 SUBDIR+= doc
 .endif
 .if defined(BUILD_RELNOTES)
-SUBDIR+= relnotes
+#SUBDIR+= relnotes
 .endif
 
 # Non-XML

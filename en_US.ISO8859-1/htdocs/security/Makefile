@@ -18,8 +18,10 @@ DOCS+=  notices.xml
 DOCS+=  reporting.xml
 DOCS+=  unsupported.xml
 
+.PHONY:		advisories.xml
 advisories.xml: advisories.html.inc
 
+.PHONY:		notices.xml
 notices.xml: notices.html.inc
 
 INDEXLINK=	security.html

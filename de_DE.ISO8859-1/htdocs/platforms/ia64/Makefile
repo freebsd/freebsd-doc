@@ -1,6 +1,6 @@
 # $FreeBSD$
-# $FreeBSDde: de-www/platforms/ia64/Makefile,v 1.5 2006/10/19 19:26:04 jkois Exp $
-# basiert auf: 1.6
+# $FreeBSDde$
+# basiert auf: r46616
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,7 +9,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	index.xml machines.xml refs.xml todo.xml
+DOCS=	index.xml machines.xml refs.xml
 #DATA=	i2inside.png mckinley-die.png merced-die.png montecito-die.png
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

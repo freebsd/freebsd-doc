@@ -77,7 +77,7 @@ sub MethGet {
 # MyURL
 # Returns a URL to the script
 sub MyURL  {
-  return  'http://' . $ENV{'SERVER_NAME'} .  $ENV{'SCRIPT_NAME'};
+  return  '//' . $ENV{'SERVER_NAME'} .  $ENV{'SCRIPT_NAME'};
 }
 # CgiError
 # Prints out an error message which containes appropriate headers,
@@ -107,16 +107,16 @@ sub CgiError {
 sub PrintVariables {
   local (%in) = @_;
   local ($old, $out, $output);
-  $old = $*;  $* =1;
+  #$old = $*;  $* =1;
   $output .=  "<DL COMPACT>";
   foreach $key (sort keys(%in)) {
     foreach (split("\0", $in{$key})) {
-      ($out = $_) =~ s/\n/<BR>/g;
+      ($out = $_) =~ s/\n/<BR>/gm;
       $output .=  "<DT><B>$key</B><DD><I>$out</I><BR>";
     }
   }
   $output .=  "</DL>";
-  $* = $old;
+  #$* = $old;
   return $output;
 }
 1;

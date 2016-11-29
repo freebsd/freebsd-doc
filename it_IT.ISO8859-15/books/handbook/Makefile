@@ -5,29 +5,6 @@
 # Crea il Manuale di FreeBSD.
 #
 
-# ------------------------------------------------------------------------
-#
-# Variabili specifiche del Manuale
-#
-#       WITH_PGPKEYS    La versione stampata del manuale riporta solo i
-#                       fingerprints PGP di base.  Se vuoi visualizzare
-#                       le chiavi intere, allora setta questa variabile.
-#                       Questa opzione non ha effetto sui formati HTML.
-#
-# Targets specifici del Manuale
-#
-#       pgpkeyring      Questo target leggerà il contenuto del file
-#                       pgpkeys/chapter.xml ad estrarrà tutte le chiavi
-#                       pgp sullo standard output.  Questo output può
-#                       quindi essere rediretto su un file e distribuito
-#                       come un keyring pubblico degli sviluppatori di
-#                       FreeBSD che può essere facilmente importato in
-#                       PGP/GPG.
-#
-# ------------------------------------------------------------------------
-
-.PATH: ${.CURDIR}/../../share/xml/glossary
-
 MAINTAINER= ale@FreeBSD.org
 
 DOC?= book
@@ -228,16 +205,6 @@ CHAPTERS?= ${SRCS:M*chapter.xml}
 
 XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+= -i chap.freebsd-glossary
-
-pgpkeyring: pgpkeys/chapter.xml
-	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
-
-#
-# Variabili specifiche del Manuale
-#
-.if defined(WITH_PGPKEYS)
-JADEFLAGS+=	-V withpgpkeys
-.endif
 
 URL_RELPREFIX?= ../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..

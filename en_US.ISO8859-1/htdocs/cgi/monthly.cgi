@@ -11,6 +11,7 @@ my $debug  = param("debug") || "";
 
 my $NumDevelopers = 3;
 my $NumLinks      = 4;
+my $NumSponsors   = 2;
 my $NumTasks      = 5;
 
 my @messages;
@@ -52,7 +53,7 @@ sub xmltext
 {
 	my($Indent, @Text) = @_;
 
-	my $Spaces = " " x ($Indent*3);
+	my $Spaces = " " x ($Indent*2);
 
 	return map { "$Spaces$_\n" } @Text;
 }
@@ -118,6 +119,21 @@ if ($Submit)
 		}
 	}
 
+	my @sponsors;
+	foreach my $Num (1..$NumSponsors)
+	{
+		my $sponsor = param("Sponsor$Num")  || "";
+		push(@hidden, hidden("Sponsor$Num"));
+
+		next unless $sponsor;
+		push(@sponsors, xml(1, "sponsor", "", xmltext(2, $sponsor)));
+	}
+
+	if (@sponsors)
+	{
+		push(@sponsors, "\n");
+	}
+
 	my @tasks;
 	foreach my $Num (1..$NumTasks)
 	{
@@ -149,6 +165,7 @@ if ($Submit)
             xml(1, "body",
                 xml(2, "p", "", xmltext(3, @info))),
             "\n",
+            @sponsors,
             xml(1, "help", "", @tasks),
         );
 	my $contents = join('', @contents);
@@ -180,6 +197,13 @@ foreach my $Num (1..$NumLinks)
 			td(textfield(-name => "Desc$Num",     -size => 20))));
 }
 
+my @SponsorTable;
+foreach my $Num (1..$NumSponsors)
+{
+	push(@SponsorTable,
+		 TR(td(textarea(-name => "Sponsor$Num", -rows => 1, -cols => 60))));
+}
+
 my @TaskTable;
 foreach my $Num (1..$NumTasks)
 {
@@ -200,7 +224,7 @@ print
 
    h3("Category:"),
    popup_menu(-name => "Category",
-       -values => ['proj', 'docs', 'kern', 'bin', 'arch', 'ports', 'vendor',
+       -values => ['proj', 'doc', 'kern', 'bin', 'arch', 'ports', 'vendor',
         'misc', 'soc', 'team'], -default => 'proj'),
 
    h3("Developers:"),
@@ -217,7 +241,7 @@ print
 					 "COLS"   => 2,
 					 "NOSAVE" => 1},
 					TR(td("Url"),
-					   td("Description (optional)")),
+					   td("Description")),
 					@LinksTable)),
 
    h3("Present status:"),
@@ -226,6 +250,13 @@ print
    blockquote(textarea(-name => "SubmittedInfo",
 					   -rows => 7,
 					   -cols => 60)),
+
+   h3("Sponsors (optional):"),
+   blockquote(table({"BORDER" => 0,
+					 "COLS"   => 1,
+					 "NOSAVE" => 1},
+					TR(td("Name")),
+					@SponsorTable)),
 
    h3("Open tasks (optional):"),
    blockquote(table({"BORDER" => 0,

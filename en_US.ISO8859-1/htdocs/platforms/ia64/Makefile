@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	index.xml machines.xml refs.xml todo.xml
+DOCS=	index.xml machines.xml refs.xml
 DATA=	i2inside.png mckinley-die.png merced-die.png montecito-die.png
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

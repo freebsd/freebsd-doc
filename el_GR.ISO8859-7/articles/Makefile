@@ -4,21 +4,17 @@
 # %SRCID%	1.39
 
 SUBDIR = bsdl-gpl
-SUBDIR+= compiz-fusion
 SUBDIR+= contributing
-SUBDIR+= cvs-freebsd
 SUBDIR+= explaining-bsd
 SUBDIR+= freebsd-questions
 SUBDIR+= gjournal-desktop
 SUBDIR+= greek-language-support
-SUBDIR+= laptop
 SUBDIR+= linux-users
 SUBDIR+= mailing-list-faq
 SUBDIR+= nanobsd
 SUBDIR+= new-users
 SUBDIR+= problem-reports
 SUBDIR+= releng
-SUBDIR+= releng-packages
 
 DOC_PREFIX?= ${.CURDIR}/../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

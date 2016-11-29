@@ -69,7 +69,7 @@ SUBDIR+= donations
 SUBDIR+= doc
 .endif
 .if defined(BUILD_RELNOTES)
-SUBDIR+= relnotes
+#SUBDIR+= relnotes
 .endif
 
 WEBDIR?=	data/fr

@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/porters-handbook/Makefile,v 1.7 2003/09/26 02:34:16 andy Exp $
 #
-# Original revision: r42686
+# Original revision: r43849
 #
 
 #
@@ -27,6 +27,21 @@ INSTALL_ONLY_COMPRESSED?=
 
 # XML content
 SRCS=  book.xml
+SRCS+= porting-why/chapter.xml
+SRCS+= new-port/chapter.xml
+SRCS+= quick-porting/chapter.xml
+SRCS+= slow-porting/chapter.xml
+SRCS+= makefiles/chapter.xml
+SRCS+= special/chapter.xml
+SRCS+= plist/chapter.xml
+SRCS+= pkg-files/chapter.xml
+SRCS+= testing/chapter.xml
+SRCS+= upgrading/chapter.xml
+SRCS+= security/chapter.xml
+SRCS+= porting-dads/chapter.xml
+SRCS+= porting-samplem/chapter.xml
+SRCS+= keeping-up/chapter.xml
+SRCS+= appendices/chapter.xml
 SRCS+= uses.xml
 SRCS+= versions.xml
 
@@ -54,5 +69,15 @@ IMAGES_LIB+=	callouts/20.png
 IMAGES_LIB+=	callouts/21.png
 
 DOC_PREFIX?= ${.CURDIR}/../../..
+
+# Entities
+SRCS+= chapters.ent
+
+SYMLINKS=       ${DESTDIR} index.html handbook.html
+
+# Turn on all the chapters.
+CHAPTERS?= ${SRCS:M*chapter.xml}
+
+XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

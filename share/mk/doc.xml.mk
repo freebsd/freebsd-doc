@@ -4,7 +4,6 @@
 XML_CATALOG_FILES=	file://${.OBJDIR}/catalog-cwd.xml \
 			file://${DOC_PREFIX}/${LANGCODE}/share/xml/catalog.xml \
 			file://${DOC_PREFIX}/share/xml/catalog.xml \
-			file://${DOC_PREFIX}/share/xml/catalog-common.xml \
 			file://${LOCALBASE}/share/xml/catalog
 .if defined(EXTRA_CATALOGS)
 XML_CATALOG_FILES+=	${EXTRA_CATALOGS}
@@ -31,7 +30,8 @@ _XML_INCLIST=	libcommon.l10n.xsl \
 		iso8879.ent \
 		l10n.ent \
 		release.ent \
-		release.l10n.ent
+		release.l10n.ent \
+		authors.ent
 .for F in ${_XML_INCLIST}
 .if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/${F})
 XML_INCLUDES+=	${DOC_PREFIX}/${LANGCODE}/share/xml/${F}
@@ -184,7 +184,7 @@ _PARAMS.events=		--param events.xml-master "'${XML_EVENTS_EVENTS_MASTER}'" \
 			--param events.xml "'${XML_EVENTS_EVENTS}'"
 XML_EVENTS_EVENTS_MASTER=${DOC_PREFIX}/share/xml/events.xml
 XML_EVENTS_EVENTS_MASTER_SUBFILES=
-.for Y in 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013
+.for Y in 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016
 XML_EVENTS_EVENTS_MASTER_SUBFILES+=	${DOC_PREFIX}/share/xml/events${Y}.xml
 .endfor
 .if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/events.xml)
@@ -193,7 +193,7 @@ XML_EVENTS_EVENTS=	${DOC_PREFIX}/${LANGCODE}/share/xml/events.xml
 XML_EVENTS_EVENTS=	${XML_EVENTS_EVENTS_MASTER}
 .endif
 XML_EVENTS_EVENTS_SUBFILES=
-.for Y in 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013
+.for Y in 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016
 .if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/events${Y}.xml)
 XML_EVENTS_EVENTS_SUBFILES+=	${DOC_PREFIX}/${LANGCODE}/share/xml/events${Y}.xml
 .endif
@@ -279,7 +279,7 @@ XML_NOTICES=		${DOC_PREFIX}/share/xml/notices.xml
 XSLTPROC_ENV+=	XML_CATALOG_FILES="${XML_CATALOG_FILES}"
 
 XSLTPROCOPTS=	${XSLTPROCFLAGS}
-XSLTPROCOPTS+=	--xinclude --nonet
+XSLTPROCOPTS+=	--xinclude --nonet --maxvars 20000
 .if defined(WWWFREEBSDORG)
 XSLTPROCOPTS+=	--param "html.header.script.google" "'INCLUDE'"
 .endif

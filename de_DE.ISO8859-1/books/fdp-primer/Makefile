@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 # $FreeBSDde$
-# basiert auf: r38826
+# basiert auf: r47339
 #
 # Build the FreeBSD Documentation Project Primer.
 #
@@ -22,17 +22,20 @@ INSTALL_ONLY_COMPRESSED?=
 # XML content
 SRCS=  book.xml
 SRCS+= overview/chapter.xml
-SRCS+= psgml-mode/chapter.xml
-SRCS+= see-also/chapter.xml
-SRCS+= sgml-markup/chapter.xml
-SRCS+= sgml-primer/chapter.xml
-SRCS+= stylesheets/chapter.xml
+SRCS+= tools/chapter.xml
+SRCS+= working-copy/chapter.xml
 SRCS+= structure/chapter.xml
 SRCS+= doc-build/chapter.xml
 SRCS+= the-website/chapter.xml
-SRCS+= tools/chapter.xml
+SRCS+= xml-primer/chapter.xml
+SRCS+= xhtml-markup/chapter.xml
+SRCS+= docbook-markup/chapter.xml
+SRCS+= stylesheets/chapter.xml
 SRCS+= translations/chapter.xml
+SRCS+= po-translations/chapter.xml
 SRCS+= writing-style/chapter.xml
+SRCS+= editor-config/chapter.xml
+SRCS+= see-also/chapter.xml
 
 SRCS+= examples/appendix.xml
 

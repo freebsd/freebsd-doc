@@ -15,7 +15,6 @@ DOCS+= applications.xml
 DOCS+= art.xml
 DOCS+= docs.xml
 DOCS+= features.xml
-DOCS+= internet.xml
 DOCS+= logo.xml
 DOCS+= mailto.xml
 DOCS+= privacy.xml
@@ -41,9 +40,7 @@ DEPENDSET.community=usergroups events
 # These will be directly installed.
 
 DATA=	favicon.ico
-DATA+=	freebsd.css
 DATA+=	google6bb24ed0b804d5e9.html
-DATA+=	index.css
 DATA+=	robots.txt
 
 # Subdirectories
@@ -58,7 +55,6 @@ SUBDIR+= docs
 SUBDIR+= donations
 SUBDIR+= events
 SUBDIR+= gnome
-SUBDIR+= handbook
 SUBDIR+= internal
 SUBDIR+= ipv6
 SUBDIR+= java
@@ -103,7 +99,7 @@ WEB_LANG=	da_DK.ISO8859-1 \
 		pt_BR.ISO8859-1 \
 		ru_RU.KOI8-R \
 		zh_CN.UTF-8 \
-		zh_TW.Big5
+		zh_TW.UTF-8
 .endif
 .if !defined(ENGLISH_ONLY) || empty(ENGLISH_ONLY)
 .for _D in ${WEB_LANG}

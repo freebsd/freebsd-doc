@@ -1,0 +1,485 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!--
+     The FreeBSD Documentation Project
+
+     $FreeBSD$
+-->
+<chapter xmlns="http://docbook.org/ns/docbook"
+  xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0"
+  xml:id="slow-porting">
+
+  <title>Slow Porting</title>
+
+  <para>Okay, so it was not that simple, and the port required some
+    modifications to get it to work.  In this section, we will
+    explain, step by step, how to modify it to get it to work with the
+    ports paradigm.</para>
+
+  <sect1 xml:id="slow-work">
+    <title>How Things Work</title>
+
+    <para>First, this is the sequence of events which occurs when the
+      user first types <command>make</command> in the port's
+      directory.  Having
+      <filename>bsd.port.mk</filename> in another window while
+      reading this really helps to understand it.</para>
+
+    <para>But do not worry, not many people understand exactly how
+      <filename>bsd.port.mk</filename> is working...
+      <!-- smiley --><emphasis>:-)</emphasis></para>
+
+    <procedure>
+      <step>
+	<para>The <buildtarget>fetch</buildtarget> target is run.  The
+	  <buildtarget>fetch</buildtarget> target is responsible for
+	  making sure that the tarball exists locally in
+	  <varname>DISTDIR</varname>.  If
+	  <buildtarget>fetch</buildtarget> cannot find the required
+	  files in <varname>DISTDIR</varname> it will look up the URL
+	  <varname>MASTER_SITES</varname>, which is set in the
+	  Makefile, as well as our FTP mirrors where we put distfiles
+	  as backup.  It will then attempt to fetch the named
+	  distribution file with <varname>FETCH</varname>, assuming
+	  that the requesting site has direct access to the Internet.
+	  If that succeeds, it will save the file in
+	  <varname>DISTDIR</varname> for future use and
+	  proceed.</para>
+      </step>
+
+      <step>
+	<para>The <buildtarget>extract</buildtarget> target is run.
+	  It looks for the port's distribution file (typically a
+	  <command>gzip</command>ped tarball) in
+	  <varname>DISTDIR</varname> and unpacks it into a temporary
+	  subdirectory specified by <varname>WRKDIR</varname>
+	  (defaults to <filename>work</filename>).</para>
+      </step>
+
+      <step>
+	<para>The <buildtarget>patch</buildtarget> target is run.
+	  First, any patches defined in <varname>PATCHFILES</varname>
+	  are applied.  Second, if any patch files named
+	  <filename>patch-<replaceable>*</replaceable></filename> are
+	  found in <varname>PATCHDIR</varname> (defaults to the
+	  <filename>files</filename> subdirectory), they are applied
+	  at this time in alphabetical order.</para>
+      </step>
+
+      <step>
+	<para>The <buildtarget>configure</buildtarget> target is run.
+	  This can do any one of many different things.</para>
+
+	<orderedlist>
+	  <listitem>
+	    <para>If it exists, <filename>scripts/configure</filename>
+	      is run.</para>
+	  </listitem>
+
+	  <listitem>
+	    <para>If <varname>HAS_CONFIGURE</varname> or
+	      <varname>GNU_CONFIGURE</varname> is set,
+	      <filename>WRKSRC/configure</filename> is run.</para>
+	  </listitem>
+	</orderedlist>
+      </step>
+
+      <step>
+	<para>The <buildtarget>build</buildtarget> target is run.
+	  This is responsible for descending into the port's private
+	  working directory (<varname>WRKSRC</varname>) and building
+	  it.</para>
+      </step>
+
+      <step>
+	<para>The <buildtarget>stage</buildtarget> target is run.
+	  This puts the final set of built files into a temporary
+	  directory (<varname>STAGEDIR</varname>, see
+	  <xref linkend="staging"/>).  The hierarchy of this directory
+	  mirrors that of the system on which the package will be
+	  installed.</para>
+      </step>
+
+      <step>
+	<para>The <buildtarget>package</buildtarget> target is run.
+	  This creates a package using the files from the temporary
+	  directory created during the
+	  <buildtarget>stage</buildtarget> target and the port's
+	  <filename>pkg-plist</filename>.</para>
+      </step>
+
+      <step>
+	<para>The <buildtarget>install</buildtarget> target is run.
+	  This installs the package created during the
+	  <buildtarget>package</buildtarget> target into the host
+	  system.</para>
+      </step>
+    </procedure>
+
+    <para>The above are the default actions.  In addition,
+      define targets
+      <buildtarget>pre-<replaceable>something</replaceable></buildtarget>
+      or
+      <buildtarget>post-<replaceable>something</replaceable></buildtarget>,
+      or put scripts with those names, in the
+      <filename>scripts</filename> subdirectory, and they will be
+      run before or after the default actions are done.</para>
+
+    <para>For example, if there is a
+      <buildtarget>post-extract</buildtarget> target defined in the
+      <filename>Makefile</filename>, and a file
+      <filename>pre-build</filename> in the
+      <filename>scripts</filename> subdirectory, the
+      <buildtarget>post-extract</buildtarget> target will be called
+      after the regular extraction actions, and
+      <filename>pre-build</filename> will be executed before
+      the default build rules are done.  It is recommended to
+      use <filename>Makefile</filename> targets if the actions are
+      simple enough, because it will be easier for someone to figure
+      out what kind of non-default action the port requires.</para>
+
+    <para>The default actions are done by the
+      <buildtarget>do-<replaceable>something</replaceable></buildtarget>
+      targets from <filename>bsd.port.mk</filename>.
+      For example, the commands to extract a port are in the target
+      <buildtarget>do-extract</buildtarget>.  If
+      the default target does not do the job right, redefine the
+      <buildtarget>do-<replaceable>something</replaceable></buildtarget>
+      target in the <filename>Makefile</filename>.</para>
+
+    <note>
+      <para>The <quote>main</quote> targets (for example,
+	<buildtarget>extract</buildtarget>,
+	<buildtarget>configure</buildtarget>, etc.) do nothing more
+	than make sure all the stages up to that one are completed and
+	call the real targets or scripts, and they are not intended to
+	be changed.  To fix the extraction, fix
+	<buildtarget>do-extract</buildtarget>, but never ever change
+	the way <buildtarget>extract</buildtarget> operates!
+	Additionally, the target
+	<buildtarget>post-deinstall</buildtarget> is invalid and is
+	not run by the ports infrastructure.</para>
+    </note>
+
+    <para>Now that what goes on when the user types <command>make
+	install</command> is better understood, let us go through the
+      recommended steps to create the perfect port.</para>
+  </sect1>
+
+  <sect1 xml:id="slow-sources">
+    <title>Getting the Original Sources</title>
+
+    <para>Get the original sources (normally) as a compressed tarball
+      (<filename>foo.tar.gz</filename> or
+      <filename><replaceable>foo</replaceable>.tar.bz2</filename>) and
+      copy it into <varname>DISTDIR</varname>.  Always use
+      <emphasis>mainstream</emphasis> sources when and where
+      possible.</para>
+
+    <para>Set the variable
+      <varname>MASTER_SITES</varname> to reflect where the original
+      tarball resides.  Shorthand definitions exist
+      for most mainstream sites in <filename>bsd.sites.mk</filename>.
+      Please use these sites&mdash;and the associated
+      definitions&mdash;if at all possible, to help avoid the problem
+      of having the same information repeated over again many times in
+      the source base.  As these sites tend to change over time, this
+      becomes a maintenance nightmare for everyone involved.  See
+      <xref linkend="makefile-master_sites"/> for details.</para>
+
+    <para>If there is no FTP/HTTP site that is well-connected to
+      the net, or can only find sites that have irritatingly
+      non-standard formats, put a copy on a reliable
+      FTP or HTTP server (for example, a home
+      page).</para>
+
+    <para>If a convenient and reliable place to put
+      the distfile cannot be found, we can <quote>house</quote> it ourselves on
+      <systemitem>ftp.FreeBSD.org</systemitem>; however, this is the
+      least-preferred solution.  The distfile must be placed into
+      <filename>~/public_distfiles/</filename> of someone's
+      <systemitem>freefall</systemitem> account.  Ask the person who
+      commits the port to do this.  This person will also set
+      <varname>MASTER_SITES</varname> to
+      <literal>LOCAL/<replaceable>username</replaceable></literal>
+      where <literal><replaceable>username</replaceable></literal> is
+      their &os; cluster login.</para>
+
+    <para>If the port's distfile changes all the time without any
+      kind of version update by the author, consider putting the
+      distfile on a home page and listing it as the first
+      <varname>MASTER_SITES</varname>.  Try to talk the
+      port author out of doing this; it really does help to establish
+      some kind of source code control.  Hosting a specific version will
+      prevent users from getting
+      <errorname>checksum mismatch</errorname> errors, and also reduce
+      the workload of maintainers of our FTP site.  Also, if there is
+      only one master site for the port, it is recommended to
+      house a backup on a home page and list it as the second
+      <varname>MASTER_SITES</varname>.</para>
+
+    <para>If the port requires additional patches that are
+      available on the Internet, fetch them too and put them in
+      <varname>DISTDIR</varname>.  Do not worry if they come from a
+      site other than where the main source tarball comes, we have a
+      way to handle these situations (see the description of <link
+	linkend="porting-patchfiles">PATCHFILES</link> below).</para>
+  </sect1>
+
+  <sect1 xml:id="slow-modifying">
+    <title>Modifying the Port</title>
+
+    <para>Unpack a copy of the tarball in a private directory and make
+      whatever changes are necessary to get the port to compile
+      properly under the current version of &os;.  Keep
+      <emphasis>careful track</emphasis> of steps, as they will be
+      needed to automate the process shortly.  Everything, including
+      the deletion, addition, or modification of files has to be
+      doable using an automated script or patch file when the port is
+      finished.</para>
+
+    <para>If the port requires significant user
+      interaction/customization to compile or install, take
+      a look at one of Larry Wall's classic
+      <application>Configure</application> scripts and perhaps do
+      something similar.  The goal of the new ports
+      collection is to make each port as <quote>plug-and-play</quote>
+      as possible for the end-user while using a minimum of disk
+      space.</para>
+
+    <note>
+      <para>Unless explicitly stated, patch files, scripts, and other
+	files created and contributed to the &os; ports
+	collection are assumed to be covered by the standard BSD
+	copyright conditions.</para>
+    </note>
+  </sect1>
+
+  <sect1 xml:id="slow-patch">
+    <title>Patching</title>
+
+    <para>In the preparation of the port, files that have been added
+      or changed can be recorded with &man.diff.1; for later feeding
+      to &man.patch.1;.  Doing this with a typical file involves
+      saving a copy of the original file before making any changes
+      using a <filename>.orig</filename> suffix.</para>
+
+    <screen>&prompt.user; <userinput>cp <replaceable>file</replaceable> <replaceable>file</replaceable>.orig</userinput></screen>
+
+    <para>After all changes have been made, <command>cd</command> back
+      to the port directory.  Use <command>make makepatch</command> to
+      generate updated patch files in the <filename>files</filename>
+      directory.</para>
+
+    <sect2 xml:id="slow-patch-rules">
+      <title>General Rules for Patching</title>
+
+      <para>Patch files are stored in <varname>PATCHDIR</varname>,
+	usually <filename>files/</filename>, from where they will be
+	automatically applied.  All patches must be relative to
+	<varname>WRKSRC</varname>.  Typically
+	<varname>WRKSRC</varname> is a subdirectory of
+	<varname>WRKDIR</varname>, the directory where the distfile is
+	extracted.  Use <command>make -V WRKSRC</command> to see the
+	actual path.  The patch names are to follow these
+	rules:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Avoid having more than one patch modify the same file.
+	    For example, having both
+	    <filename>patch-foobar.c</filename> and
+	    <filename>patch-foobar.c2</filename> making changes to
+	    <filename>${WRKSRC}/foobar.c</filename> makes them fragile
+	    and difficult to debug.</para>
+	</listitem>
+
+	<listitem>
+	  <para>When creating names for patch files, replace each
+	    underscore (<literal>_</literal>) with two underscores
+	    (<literal>__</literal>) and each slash
+	    (<literal>/</literal>) with one underscore
+	    (<literal>_</literal>).  For example, to patch a file
+	    named <filename>src/freeglut_joystick.c</filename>, name
+	    the corresponding patch
+	    <filename>patch-src_freeglut__joystick.c</filename>.  Do
+	    not name patches like <filename>patch-aa</filename> or
+	    <filename>patch-ab</filename>.  Always use the path and
+	    file name in patch names.  Using <command>make
+	      makepatch</command> automatically generates the correct
+	    names.</para>
+	</listitem>
+
+	<listitem>
+	  <para>A patch may modify multiple files if the changes are
+	    related and the patch is named appropriately.  For
+	    example,
+	    <filename>patch-add-missing-stdlib.h</filename>.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Only use characters <literal>[-+._a-zA-Z0-9]</literal>
+	    for naming patches.  In particular, <emphasis>do not use
+	      <literal>::</literal> as a path separator,</emphasis>
+	    use <literal>_</literal> instead.</para>
+	</listitem>
+      </itemizedlist>
+
+
+      <para>Minimize the amount of non-functional whitespace changes
+	in patches.  It is common in the Open Source world for
+	projects to share large amounts of a code base, but obey
+	different style and indenting rules.  When taking a working
+	piece of functionality from one project to fix similar areas
+	in another, please be careful: the resulting patch may be full
+	of non-functional changes.  It not only increases the size of
+	the ports repository but makes it hard to find out what
+	exactly caused the problem and what was changed at all.</para>
+
+      <para>If a file must be deleted, do it in the
+	<buildtarget>post-extract</buildtarget> target rather than as
+	part of the patch.</para>
+
+    </sect2>
+
+    <sect2 xml:id="slow-patch-manual">
+      <title>Manual Patch Generation</title>
+
+      <note>
+	<para>Manual patch creation is usually not necessary.
+	  Automatic patch generation as described earlier in this
+	  section is the preferred method.  However, manual patching
+	  may be required occasionally.</para>
+      </note>
+
+      <para>Patches are saved into files named
+	<filename>patch-*</filename> where
+	<replaceable>*</replaceable> indicates the pathname of the
+	file that is patched, such as
+	<filename>patch-Imakefile</filename> or
+	<filename>patch-src-config.h</filename>.</para>
+
+      <para>After the file has been modified, &man.diff.1; is used to
+	record the differences between the original and the modified
+	version.  <option>-u</option> causes &man.diff.1; to produce
+	<quote>unified</quote> diffs, the preferred form.</para>
+
+      <screen>&prompt.user; <userinput>diff -u <replaceable>file</replaceable>.orig <replaceable>file</replaceable> &gt; patch-<replaceable>pathname-file</replaceable></userinput></screen>
+
+      <para>When generating patches for new, added files,
+	<option>-N</option> is used to tell &man.diff.1; to treat the
+	non-existent original file as if it existed but was
+	empty:</para>
+
+      <screen>&prompt.user; <userinput>diff -u -N <replaceable>newfile</replaceable>.orig <replaceable>newfile</replaceable> &gt; patch-<replaceable>pathname-newfile</replaceable></userinput></screen>
+
+      <para>Do not add <literal>&dollar;FreeBSD&dollar;</literal> RCS
+	strings in patches.  When patches are added to the
+	<application>Subversion</application> repository with
+	<command>svn add</command>, the
+	<literal>fbsd:nokeywords</literal> property is set to
+	<literal>yes</literal> automatically so keywords in the patch
+	are not modified when committed.  The property can be added
+	manually with <command>svn propset fbsd:nokeywords yes
+	  <replaceable>files...</replaceable></command>.</para>
+
+      <para>Using the recurse (<option>-r</option>) option to
+	&man.diff.1; to generate patches is fine, but please look at
+	the resulting patches to make sure there is no unnecessary
+	junk in there.  In particular, diffs between two backup files,
+	<filename>Makefile</filename>s when the port uses
+	<command>Imake</command> or GNU <command>configure</command>,
+	etc., are unnecessary and have to be deleted.  If it was
+	necessary to edit <filename>configure.in</filename> and run
+	<command>autoconf</command> to regenerate
+	<command>configure</command>, do not take the diffs of
+	<command>configure</command> (it often grows to a few thousand
+	lines!).  Instead, define
+	<literal>USE_AUTOTOOLS=autoconf:261</literal> and take the
+	diffs of <filename>configure.in</filename>.</para>
+
+    </sect2>
+
+    <sect2 xml:id="slow-patch-automatic-replacements">
+      <title>Simple Automatic Replacements</title>
+
+      <para>Simple replacements can be performed directly from the
+	port <filename>Makefile</filename> using the in-place mode of
+	&man.sed.1;.  This is useful when changes use the value of a
+	variable:</para>
+
+      <programlisting>post-patch:
+	@${REINPLACE_CMD} -e 's|for Linux|for FreeBSD|g' ${WRKSRC}/README</programlisting>
+
+      <para>Quite often, software being ported uses the CR/LF
+	convention in source files.  This may cause problems with
+	further patching, compiler warnings, or script execution (like
+	<literal>/bin/sh^M not found</literal>.)  To quickly convert
+	all files from CR/LF to just LF, add this entry to the port
+	<filename>Makefile</filename>:</para>
+
+      <programlisting>USES=	dos2unix</programlisting>
+
+      <para>A list of specific files to convert can be given:</para>
+
+      <programlisting>USES=	dos2unix
+DOS2UNIX_FILES=	util.c util.h</programlisting>
+
+      <para>Use <varname>DOS2UNIX_REGEX</varname> to convert a group
+	of files across subdirectories.  Its argument is a
+	&man.find.1;-compatible regular expression.  More on the
+	format is in &man.re.format.7;.  This option is useful for
+	converting all files of a given extension.  For example,
+	convert all source code files, leaving binary files
+	intact:</para>
+
+      <programlisting>USES=	dos2unix
+DOS2UNIX_REGEX=	.*\.([ch]|cpp)</programlisting>
+
+      <para>A similar option is <varname>DOS2UNIX_GLOB</varname>,
+	which runs <command>find</command> for each element listed
+	in it.</para>
+
+      <programlisting>USES=	dos2unix
+DOS2UNIX_GLOB=	*.c *.cpp *.h</programlisting>
+
+
+      <para>The base directory for the conversion can be set.  This
+	is useful when there are multiple distfiles and several
+	contain files which require line-ending conversion.</para>
+
+      <programlisting>USES=	dos2unix
+DOS2UNIX_WRKSRC=	${WRKDIR}</programlisting>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="slow-configure">
+    <title>Configuring</title>
+
+    <para>Include any additional customization commands in the
+      <filename>configure</filename> script and save it in the
+      <filename>scripts</filename> subdirectory.  As mentioned above,
+      it is also possible do this with <filename>Makefile</filename> targets
+      and/or scripts with the name <filename>pre-configure</filename>
+      or <filename>post-configure</filename>.</para>
+  </sect1>
+
+  <sect1 xml:id="slow-user-input">
+    <title>Handling User Input</title>
+
+    <para>If the port requires user input to build, configure, or
+      install, set <varname>IS_INTERACTIVE</varname> in the
+      <filename>Makefile</filename>.  This will allow
+      <quote>overnight builds</quote> to skip it.  If the user
+      sets the variable <envar>BATCH</envar> in their environment (and
+      if the user sets the variable <envar>INTERACTIVE</envar>, then
+      <emphasis>only</emphasis> those ports requiring interaction are
+      built).  This will save a lot of wasted time on the set of
+      machines that continually build ports (see below).</para>
+
+    <para>It is also recommended that if there are reasonable default
+      answers to the questions,
+      <varname>PACKAGE_BUILDING</varname> be used to turn off the
+      interactive script when it is set.  This will allow us to build
+      the packages for CDROMs and FTP.</para>
+  </sect1>
+</chapter>

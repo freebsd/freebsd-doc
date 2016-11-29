@@ -38,31 +38,21 @@
 
     <p>For your convenience, we have divided our growing
       commercial listing into several sections. If your company
-      supports a FreeBSD-compatible product or service that should
+      supports a FreeBSD related product, service, consulting, or support that should
       be added to this page, please fill out a
-      <a href="http://www.FreeBSD.org/send-pr.html">problem report</a> for
-      category www.  Submissions should be in HTML and a medium-sized
-      paragraph in length.</p>
+      <a href="https://www.FreeBSD.org/support/bugreports.html">problem report</a> in
+      category Documentation->Website.  Submissions should contain a medium-sized
+      paragraph in length, describing your company.  Please note that the inclusion
+      of vendors in our list does not signify our endorsement of their products or
+      services by the FreeBSD Project.</p>
 
-    <xsl:choose>
-      <xsl:when test="$basename = 'software.html'">
-	<h2>Software Vendors</h2>
+    <h2><xsl:value-of select="$pagename" /></h2>
 
-	<p>This file has been divided into sub-categories for your
-	  convenience.	The following shortcuts will take you to the
-	  proper gallery entries.</p>
-
-      </xsl:when>
-      <xsl:when test="$basename = 'consult.html'">
-	<h2>Consulting Services</h2>
-
-	<p>This file has been divided into sub-categories for your convenience.
-	  The following shortcuts will take you to the proper gallery entries.</p>
-      </xsl:when>
-      <xsl:otherwise>
-	<h2><xsl:value-of select="$pagename" /></h2>
-      </xsl:otherwise>
-    </xsl:choose>
+    <xsl:if test="$basename = 'software.html' or $basename = 'consult.html'">
+      <p>This file has been divided into sub-categories for your
+        convenience.  The following shortcuts will take you to the
+        proper gallery entries.</p>
+    </xsl:if>
   </xsl:template>
 
   <xsl:template name="html-commercial-listing">

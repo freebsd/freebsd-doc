@@ -1,0 +1,401 @@
+Index: crypto/openssl/crypto/asn1/a_object.c
+===================================================================
+--- crypto/openssl/crypto/asn1/a_object.c	(revision 270128)
++++ crypto/openssl/crypto/asn1/a_object.c	(working copy)
+@@ -285,17 +285,29 @@ err:
+ 		ASN1_OBJECT_free(ret);
+ 	return(NULL);
+ }
++
+ ASN1_OBJECT *c2i_ASN1_OBJECT(ASN1_OBJECT **a, const unsigned char **pp,
+ 	     long len)
+ 	{
+ 	ASN1_OBJECT *ret=NULL;
+ 	const unsigned char *p;
+-	int i;
+-	/* Sanity check OID encoding: can't have leading 0x80 in
+-	 * subidentifiers, see: X.690 8.19.2
++	int i, length;
++
++	/* Sanity check OID encoding.
++	 * Need at least one content octet.
++	 * MSB must be clear in the last octet.
++	 * can't have leading 0x80 in subidentifiers, see: X.690 8.19.2
+ 	 */
+-	for (i = 0, p = *pp; i < len; i++, p++)
++	if (len <= 0 || len > INT_MAX || pp == NULL || (p = *pp) == NULL ||
++	    p[len - 1] & 0x80)
+ 		{
++		ASN1err(ASN1_F_C2I_ASN1_OBJECT,ASN1_R_INVALID_OBJECT_ENCODING);
++		return NULL;
++		}
++	/* Now 0 < len <= INT_MAX, so the cast is safe. */
++	length = (int)len;
++	for (i = 0; i < length; i++, p++)
++		{
+ 		if (*p == 0x80 && (!i || !(p[-1] & 0x80)))
+ 			{
+ 			ASN1err(ASN1_F_C2I_ASN1_OBJECT,ASN1_R_INVALID_OBJECT_ENCODING);
+@@ -313,20 +325,20 @@ ASN1_OBJECT *c2i_ASN1_OBJECT(ASN1_OBJECT **a, cons
+ 	else	ret=(*a);
+ 
+ 	p= *pp;
+-	if ((ret->data == NULL) || (ret->length < len))
++	if ((ret->data == NULL) || (ret->length < length))
+ 		{
+ 		if (ret->data != NULL) OPENSSL_free(ret->data);
+-		ret->data=(unsigned char *)OPENSSL_malloc(len ? (int)len : 1);
++		ret->data=(unsigned char *)OPENSSL_malloc(length);
+ 		ret->flags|=ASN1_OBJECT_FLAG_DYNAMIC_DATA;
+ 		if (ret->data == NULL)
+ 			{ i=ERR_R_MALLOC_FAILURE; goto err; }
+ 		}
+-	memcpy(ret->data,p,(int)len);
+-	ret->length=(int)len;
++	memcpy(ret->data,p,length);
++	ret->length=length;
+ 	ret->sn=NULL;
+ 	ret->ln=NULL;
+ 	/* ret->flags=ASN1_OBJECT_FLAG_DYNAMIC; we know it is dynamic */
+-	p+=len;
++	p+=length;
+ 
+ 	if (a != NULL) (*a)=ret;
+ 	*pp=p;
+Index: crypto/openssl/crypto/objects/obj_dat.c
+===================================================================
+--- crypto/openssl/crypto/objects/obj_dat.c	(revision 270128)
++++ crypto/openssl/crypto/objects/obj_dat.c	(working copy)
+@@ -444,12 +444,13 @@ int OBJ_obj2txt(char *buf, int buf_len, const ASN1
+ 	unsigned char *p;
+ 	char tbuf[DECIMAL_SIZE(i)+DECIMAL_SIZE(l)+2];
+ 
+-	if ((a == NULL) || (a->data == NULL)) {
+-		buf[0]='\0';
++	/* Ensure that, at every state, |buf| is NUL-terminated. */
++	if (buf && buf_len > 0)
++		buf[0] = '\0';
++
++	if ((a == NULL) || (a->data == NULL))
+ 		return(0);
+-	}
+ 
+-
+ 	if (!no_name && (nid=OBJ_obj2nid(a)) != NID_undef)
+ 		{
+ 		const char *s;
+@@ -527,9 +528,10 @@ int OBJ_obj2txt(char *buf, int buf_len, const ASN1
+ 				i=(int)(l/40);
+ 				l-=(long)(i*40);
+ 				}
+-			if (buf && (buf_len > 0))
++			if (buf && (buf_len > 1))
+ 				{
+ 				*buf++ = i + '0';
++				*buf = '\0';
+ 				buf_len--;
+ 				}
+ 			n++;
+@@ -544,9 +546,10 @@ int OBJ_obj2txt(char *buf, int buf_len, const ASN1
+ 			i = strlen(bndec);
+ 			if (buf)
+ 				{
+-				if (buf_len > 0)
++				if (buf_len > 1)
+ 					{
+ 					*buf++ = '.';
++					*buf = '\0';
+ 					buf_len--;
+ 					}
+ 				BUF_strlcpy(buf,bndec,buf_len);
+@@ -786,4 +789,3 @@ err:
+ 	OPENSSL_free(buf);
+ 	return(ok);
+ 	}
+-
+Index: crypto/openssl/ssl/d1_both.c
+===================================================================
+--- crypto/openssl/ssl/d1_both.c	(revision 270128)
++++ crypto/openssl/ssl/d1_both.c	(working copy)
+@@ -581,30 +581,33 @@ dtls1_retrieve_buffered_fragment(SSL *s, long max,
+ 		return 0;
+ 	}
+ 
++/* dtls1_max_handshake_message_len returns the maximum number of bytes
++ * permitted in a DTLS handshake message for |s|. The minimum is 16KB, but may
++ * be greater if the maximum certificate list size requires it. */
++static unsigned long dtls1_max_handshake_message_len(const SSL *s)
++	{
++	unsigned long max_len = DTLS1_HM_HEADER_LENGTH + SSL3_RT_MAX_ENCRYPTED_LENGTH;
++	if (max_len < (unsigned long)s->max_cert_list)
++		return s->max_cert_list;
++	return max_len;
++	}
+ 
+ static int
+-dtls1_reassemble_fragment(SSL *s, struct hm_header_st* msg_hdr, int *ok)
++dtls1_reassemble_fragment(SSL *s, const struct hm_header_st* msg_hdr, int *ok)
+ 	{
+ 	hm_fragment *frag = NULL;
+ 	pitem *item = NULL;
+ 	int i = -1, is_complete;
+ 	PQ_64BIT seq64;
+-	unsigned long frag_len = msg_hdr->frag_len, max_len;
++	unsigned long frag_len = msg_hdr->frag_len;
+ 
+-	if ((msg_hdr->frag_off+frag_len) > msg_hdr->msg_len)
++	if ((msg_hdr->frag_off+frag_len) > msg_hdr->msg_len ||
++	    msg_hdr->msg_len > dtls1_max_handshake_message_len(s))
+ 		goto err;
+ 
+-	/* Determine maximum allowed message size. Depends on (user set)
+-	 * maximum certificate length, but 16k is minimum.
+-	 */
+-	if (DTLS1_HM_HEADER_LENGTH + SSL3_RT_MAX_ENCRYPTED_LENGTH < s->max_cert_list)
+-		max_len = s->max_cert_list;
+-	else
+-		max_len = DTLS1_HM_HEADER_LENGTH + SSL3_RT_MAX_ENCRYPTED_LENGTH;
++	if (frag_len == 0)
++		return DTLS1_HM_FRAGMENT_RETRY;
+ 
+-	if ((msg_hdr->frag_off+frag_len) > max_len)
+-		goto err;
+-
+ 	/* Try to find item in queue */
+ 	pq_64bit_init(&seq64);
+ 	pq_64bit_assign_word(&seq64, msg_hdr->seq);
+@@ -633,7 +636,8 @@ static int
+ 
+ 
+ 	/* If message is already reassembled, this must be a
+-	 * retransmit and can be dropped.
++	 * retransmit and can be dropped. In this case item != NULL and so frag
++	 * does not need to be freed.
+ 	 */
+ 	if (frag->reassembly == NULL)
+ 		{
+@@ -653,7 +657,9 @@ static int
+ 	/* read the body of the fragment (header has already been read */
+ 	i = s->method->ssl_read_bytes(s,SSL3_RT_HANDSHAKE,
+ 		frag->fragment + msg_hdr->frag_off,frag_len,0);
+-	if (i<=0 || (unsigned long)i!=frag_len)
++	if ((unsigned long)i!=frag_len)
++		i=-1;
++	if (i<=0)
+ 		goto err;
+ 
+ 	RSMBLY_BITMASK_MARK(frag->reassembly, (long)msg_hdr->frag_off,
+@@ -681,14 +687,18 @@ static int
+ 			goto err;
+ 			}
+ 
+-		pqueue_insert(s->d1->buffered_messages, item);
++		item = pqueue_insert(s->d1->buffered_messages, item);
++		/* pqueue_insert fails iff a duplicate item is inserted.
++		 * However, |item| cannot be a duplicate. If it were,
++		 * |pqueue_find|, above, would have returned it and control
++		 * would never have reached this branch. */
++		OPENSSL_assert(item != NULL);
+ 		}
+ 
+ 	return DTLS1_HM_FRAGMENT_RETRY;
+ 
+ err:
+-	if (frag != NULL) dtls1_hm_fragment_free(frag);
+-	if (item != NULL) OPENSSL_free(item);
++	if (frag != NULL && item == NULL) dtls1_hm_fragment_free(frag);
+ 	*ok = 0;
+ 	return i;
+ 	}
+@@ -695,7 +705,7 @@ err:
+ 
+ 
+ static int
+-dtls1_process_out_of_seq_message(SSL *s, struct hm_header_st* msg_hdr, int *ok)
++dtls1_process_out_of_seq_message(SSL *s, const struct hm_header_st* msg_hdr, int *ok)
+ {
+ 	int i=-1;
+ 	hm_fragment *frag = NULL;
+@@ -715,7 +725,7 @@ static int
+ 	/* If we already have an entry and this one is a fragment,
+ 	 * don't discard it and rather try to reassemble it.
+ 	 */
+-	if (item != NULL && frag_len < msg_hdr->msg_len)
++	if (item != NULL && frag_len != msg_hdr->msg_len)
+ 		item = NULL;
+ 
+ 	/* Discard the message if sequence number was already there, is
+@@ -740,9 +750,12 @@ static int
+ 		}
+ 	else
+ 		{
+-		if (frag_len && frag_len < msg_hdr->msg_len)
++		if (frag_len != msg_hdr->msg_len)
+ 			return dtls1_reassemble_fragment(s, msg_hdr, ok);
+ 
++		if (frag_len > dtls1_max_handshake_message_len(s))
++			goto err;
++
+ 		frag = dtls1_hm_fragment_new(frag_len, 0);
+ 		if ( frag == NULL)
+ 			goto err;
+@@ -754,7 +767,9 @@ static int
+ 			/* read the body of the fragment (header has already been read) */
+ 			i = s->method->ssl_read_bytes(s,SSL3_RT_HANDSHAKE,
+ 				frag->fragment,frag_len,0);
+-			if (i<=0 || (unsigned long)i!=frag_len)
++			if ((unsigned long)i!=frag_len)
++				i = -1;
++			if (i<=0)
+ 				goto err;
+ 			}
+ 
+@@ -766,14 +781,21 @@ static int
+ 		if ( item == NULL)
+ 			goto err;
+ 
+-		pqueue_insert(s->d1->buffered_messages, item);
++		item = pqueue_insert(s->d1->buffered_messages, item);
++		/* pqueue_insert fails iff a duplicate item is inserted.
++		 * However, |item| cannot be a duplicate. If it were,
++		 * |pqueue_find|, above, would have returned it. Then, either
++		 * |frag_len| != |msg_hdr->msg_len| in which case |item| is set
++		 * to NULL and it will have been processed with
++		 * |dtls1_reassemble_fragment|, above, or the record will have
++		 * been discarded. */
++		OPENSSL_assert(item != NULL);
+ 		}
+ 
+ 	return DTLS1_HM_FRAGMENT_RETRY;
+ 
+ err:
+-	if ( frag != NULL) dtls1_hm_fragment_free(frag);
+-	if ( item != NULL) OPENSSL_free(item);
++	if (frag != NULL && item == NULL) dtls1_hm_fragment_free(frag);
+ 	*ok = 0;
+ 	return i;
+ 	}
+Index: crypto/openssl/ssl/d1_clnt.c
+===================================================================
+--- crypto/openssl/ssl/d1_clnt.c	(revision 270128)
++++ crypto/openssl/ssl/d1_clnt.c	(working copy)
+@@ -796,6 +796,13 @@ int dtls1_send_client_key_exchange(SSL *s)
+ 			RSA *rsa;
+ 			unsigned char tmp_buf[SSL_MAX_MASTER_KEY_LENGTH];
+ 
++			if (s->session->sess_cert == NULL)
++				{
++				/* We should always have a server certificate with SSL_kRSA. */
++				SSLerr(SSL_F_DTLS1_SEND_CLIENT_KEY_EXCHANGE,ERR_R_INTERNAL_ERROR);
++				goto err;
++				}
++
+ 			if (s->session->sess_cert->peer_rsa_tmp != NULL)
+ 				rsa=s->session->sess_cert->peer_rsa_tmp;
+ 			else
+@@ -986,6 +993,13 @@ int dtls1_send_client_key_exchange(SSL *s)
+ 			{
+ 			DH *dh_srvr,*dh_clnt;
+ 
++			if (s->session->sess_cert == NULL)
++				{
++				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_UNEXPECTED_MESSAGE);
++				SSLerr(SSL_F_DTLS1_SEND_CLIENT_KEY_EXCHANGE,SSL_R_UNEXPECTED_MESSAGE);
++				goto err;
++				}
++
+ 			if (s->session->sess_cert->peer_dh_tmp != NULL)
+ 				dh_srvr=s->session->sess_cert->peer_dh_tmp;
+ 			else
+@@ -1226,5 +1240,3 @@ int dtls1_send_client_certificate(SSL *s)
+ 	/* SSL3_ST_CW_CERT_D */
+ 	return(dtls1_do_write(s,SSL3_RT_HANDSHAKE));
+ 	}
+-
+-
+Index: crypto/openssl/ssl/s23_srvr.c
+===================================================================
+--- crypto/openssl/ssl/s23_srvr.c	(revision 270128)
++++ crypto/openssl/ssl/s23_srvr.c	(working copy)
+@@ -328,16 +328,12 @@ int ssl23_get_client_hello(SSL *s)
+ 			 * Client Hello message, this would be difficult, and we'd have
+ 			 * to read more records to find out.
+ 			 * No known SSL 3.0 client fragments ClientHello like this,
+-			 * so we simply assume TLS 1.0 to avoid protocol version downgrade
+-			 * attacks. */
++			 * so we simply reject such connections to avoid
++			 * protocol version downgrade attacks. */
+ 			if (p[3] == 0 && p[4] < 6)
+ 				{
+-#if 0
+ 				SSLerr(SSL_F_SSL23_GET_CLIENT_HELLO,SSL_R_RECORD_TOO_SMALL);
+ 				goto err;
+-#else
+-				v[1] = TLS1_VERSION_MINOR;
+-#endif
+ 				}
+ 			/* if major version number > 3 set minor to a value
+ 			 * which will use the highest version 3 we support.
+@@ -344,7 +340,7 @@ int ssl23_get_client_hello(SSL *s)
+ 			 * If TLS 2.0 ever appears we will need to revise
+ 			 * this....
+ 			 */
+-			else if (p[9] > SSL3_VERSION_MAJOR)
++			if (p[9] > SSL3_VERSION_MAJOR)
+ 				v[1]=0xff;
+ 			else
+ 				v[1]=p[10]; /* minor version according to client_version */
+@@ -412,6 +408,18 @@ int ssl23_get_client_hello(SSL *s)
+ 		v[0] = p[3]; /* == SSL3_VERSION_MAJOR */
+ 		v[1] = p[4];
+ 
++		/* An SSLv3/TLSv1 backwards-compatible CLIENT-HELLO in an SSLv2
++		 * header is sent directly on the wire, not wrapped as a TLS
++		 * record. It's format is:
++		 * Byte  Content
++		 * 0-1   msg_length
++		 * 2     msg_type
++		 * 3-4   version
++		 * 5-6   cipher_spec_length
++		 * 7-8   session_id_length
++		 * 9-10  challenge_length
++		 * ...   ...
++		 */
+ 		n=((p[0]&0x7f)<<8)|p[1];
+ 		if (n > (1024*4))
+ 			{
+@@ -418,8 +426,16 @@ int ssl23_get_client_hello(SSL *s)
+ 			SSLerr(SSL_F_SSL23_GET_CLIENT_HELLO,SSL_R_RECORD_TOO_LARGE);
+ 			goto err;
+ 			}
++		if (n < 9)
++			{
++			SSLerr(SSL_F_SSL23_GET_CLIENT_HELLO,SSL_R_RECORD_LENGTH_MISMATCH);
++			goto err;
++			}
+ 
+ 		j=ssl23_read_bytes(s,n+2);
++		/* We previously read 11 bytes, so if j > 0, we must have
++		 * j == n+2 == s->packet_length. We have at least 11 valid
++		 * packet bytes. */
+ 		if (j <= 0) return(j);
+ 
+ 		ssl3_finish_mac(s, s->packet+2, s->packet_length-2);
+Index: crypto/openssl/ssl/s3_clnt.c
+===================================================================
+--- crypto/openssl/ssl/s3_clnt.c	(revision 270128)
++++ crypto/openssl/ssl/s3_clnt.c	(working copy)
+@@ -1915,6 +1915,13 @@ int ssl3_send_client_key_exchange(SSL *s)
+ 			RSA *rsa;
+ 			unsigned char tmp_buf[SSL_MAX_MASTER_KEY_LENGTH];
+ 
++			if (s->session->sess_cert == NULL)
++				{
++				/* We should always have a server certificate with SSL_kRSA. */
++				SSLerr(SSL_F_SSL3_SEND_CLIENT_KEY_EXCHANGE,ERR_R_INTERNAL_ERROR);
++				goto err;
++				}
++
+ 			if (s->session->sess_cert->peer_rsa_tmp != NULL)
+ 				rsa=s->session->sess_cert->peer_rsa_tmp;
+ 			else

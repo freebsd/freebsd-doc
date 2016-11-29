@@ -3,7 +3,7 @@
 #
 # Article: Contributors to FreeBSD
 #
-# Original revision: 1.10
+# Original revision: r39631
 
 DOC?= article
 
@@ -22,6 +22,8 @@ SRCS+=	${ORGDIR}/contrib.additional.xml
 SRCS+=	${ORGDIR}/contrib.committers.xml
 SRCS+=	${ORGDIR}/contrib.corealumni.xml
 SRCS+=	${ORGDIR}/contrib.develalumni.xml
+SRCS+=	${ORGDIR}/contrib.develinmemoriam.xml
+SRCS+=	${ORGDIR}/contrib.portmgralumni.xml
 
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..

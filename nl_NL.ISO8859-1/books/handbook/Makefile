@@ -8,25 +8,6 @@
 #
 
 # ------------------------------------------------------------------------
-#
-# Handboekspecifieke variabelen
-#
-#	WITH_PGPKEYS	De gedrukte verie van het handboek geeft standaard
-#			alleen PGP vingerafdrukken weer.  Als het gewenst
-#			is dat de complete sleutel wordt weergegeven dan
-#			dient deze variabele insteld te worden.  De optie
-#			heeft geen invloed op de HTML formaten.
-#
-# Handboekspecifieke doelen
-#
-#       pgpkeyring      Dit doel leest de inhoud van pgpkeys/chapter.xml
-#			en schrijft dan alle PGP sleutels naar stdout.
-#			De uitvoer kan omgeleid worden naar een bestand
-#			en verspreid worden als een publieke sleutelring
-#			van FreeBSD ontwikkelaars die eenvoudig in
-#			PGP/GPG ingelezen kan worden.
-#
-# ------------------------------------------------------------------------
 # Om een nieuw hoofdstuk aan het Handboek toe te voegen:
 #
 # - Werk deze Makefile, chapters.ent en book.xml bij
@@ -290,16 +271,6 @@ CHAPTERS?= ${SRCS:M*chapter.xml}
 
 XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+= -i chap.freebsd-glossary
-
-pgpkeyring: pgpkeys/chapter.xml
-	@${XSLTPROC} ${XSLPGP} ${DOC}.parsed.xml
-
-#
-# Handboekspecifieke variablen
-#
-.if defined(WITH_PGPKEYS)
-JADEFLAGS+=	-V withpgpkeys
-.endif
 
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..

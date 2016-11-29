@@ -4,9 +4,9 @@
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:fo="http://www.w3.org/1999/XSL/Format"
-                xmlns:db="http://docbook.org/ns/docbook"
-                exclude-result-prefixes="db"
-                version="1.0">
+		xmlns:db="http://docbook.org/ns/docbook"
+		exclude-result-prefixes="db"
+		version="1.0">
 
   <!-- Pull in the base stylesheets -->
   <xsl:import href="http://docbook.sourceforge.net/release/xsl-ns/current/fo/docbook.xsl"/>
@@ -37,7 +37,7 @@
   <xsl:param name="fop1.extensions" select="1"/>
 
   <!-- Paper settings -->
-  <xsl:param name="paper.type">B5</xsl:param>
+  <xsl:param name="paper.type">A4</xsl:param>
   <xsl:param name="double.sided" select="1"/>
   <xsl:param name="force.blank.pages" select="1"/>
 
@@ -95,7 +95,7 @@
   <xsl:param name="default.image.width">300px</xsl:param>
   <xsl:template name="image.scalefit">1</xsl:template>
 
-  <!-- Hyphenation -->  
+  <!-- Hyphenation -->
   <xsl:param name="hyphenate">true</xsl:param>
   <xsl:param name="hyphenate.verbatim" select="1"/>
   <xsl:param name="hyphenate.verbatim.characters"> </xsl:param>
@@ -123,7 +123,7 @@
   <xsl:attribute name="space-before">6pt</xsl:attribute>
   <xsl:attribute name="space-after">36pt</xsl:attribute>
   </xsl:attribute-set>
-  
+
   <xsl:attribute-set name="section.title.level1.properties">
   <xsl:attribute name="font-size">14pt</xsl:attribute>
   <xsl:attribute name="space-before">24pt</xsl:attribute>
@@ -135,13 +135,13 @@
   <xsl:attribute name="space-before">12pt</xsl:attribute>
   <xsl:attribute name="space-after">6pt</xsl:attribute>
   </xsl:attribute-set>
-  
+
   <xsl:attribute-set name="section.title.level3.properties">
   <xsl:attribute name="font-size">10pt</xsl:attribute>
   <xsl:attribute name="space-before">6pt</xsl:attribute>
   <xsl:attribute name="space-after">3pt</xsl:attribute>
   </xsl:attribute-set>
-  
+
   <xsl:attribute-set name="section.title.properties">
   <xsl:attribute name="font-family">
   <xsl:value-of select="$title.fontset"></xsl:value-of>
@@ -151,7 +151,7 @@
   <xsl:attribute name="text-align">start</xsl:attribute>
   <xsl:attribute name="start-indent"><xsl:value-of select="$title.margin.left"></xsl:value-of></xsl:attribute>
   </xsl:attribute-set>
-  
+
   <xsl:attribute-set name="section.properties">
   <xsl:attribute name="font-size">9.5pt</xsl:attribute>
   <xsl:attribute name="line-height">12pt</xsl:attribute>
@@ -263,12 +263,12 @@
   <xsl:attribute-set name="list.item.spacing">
   <xsl:attribute name="space-before">6pt</xsl:attribute>
   </xsl:attribute-set>
-  
+
   <xsl:attribute-set name="list.block.spacing">
   <xsl:attribute name="space-before">6pt</xsl:attribute>
   <xsl:attribute name="space-after">6pt</xsl:attribute>
   </xsl:attribute-set>
-  
+
   <xsl:attribute-set name="list.block.properties">
   <xsl:attribute name="provisional-label-separation">0.2em</xsl:attribute>
   <xsl:attribute name="provisional-distance-between-starts">1.5em</xsl:attribute>
@@ -354,12 +354,12 @@
       <xsl:choose>
 	<xsl:when test="$placement = 'before' and local-name($object) != 'example'">
 	  <xsl:attribute name="keep-with-next.within-column">always</xsl:attribute>
-          <xsl:attribute name="space-before.minimum">12pt</xsl:attribute>
-          <xsl:attribute name="space-before.optimum">12pt</xsl:attribute>
-          <xsl:attribute name="space-before.maximum">12pt</xsl:attribute>
-          <xsl:attribute name="space-after.minimum">0</xsl:attribute>
-          <xsl:attribute name="space-after.optimum">0</xsl:attribute>
-          <xsl:attribute name="space-after.maximum">0</xsl:attribute>
+	  <xsl:attribute name="space-before.minimum">12pt</xsl:attribute>
+	  <xsl:attribute name="space-before.optimum">12pt</xsl:attribute>
+	  <xsl:attribute name="space-before.maximum">12pt</xsl:attribute>
+	  <xsl:attribute name="space-after.minimum">0</xsl:attribute>
+	  <xsl:attribute name="space-after.optimum">0</xsl:attribute>
+	  <xsl:attribute name="space-after.maximum">0</xsl:attribute>
 	</xsl:when>
 
 	<xsl:when test="$placement = 'after'">
@@ -388,13 +388,24 @@
     <xsl:variable name="xhref">
       <xsl:text>http://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
       <xsl:value-of select="db:refentrytitle"/>
-      <xsl:text>&#38;amp;sektion=</xsl:text>
+      <xsl:text>&amp;sektion=</xsl:text>
       <xsl:value-of select="db:manvolnum"/>
+      <xsl:text>&amp;manpath=freebsd-release-ports</xsl:text>
     </xsl:variable>
 
     <fo:basic-link external-destination="url({$xhref})">
       <fo:inline color="{$link.color}">
 	<xsl:value-of select="concat(db:refentrytitle, '(', db:manvolnum, ')')"/>
+      </fo:inline>
+    </fo:basic-link>
+  </xsl:template>
+
+  <xsl:template match="db:package">
+    <xsl:variable name="xhref" select="concat('http://www.freebsd.org/cgi/url.cgi?ports/', ., '/pkg-descr')"/>
+
+    <fo:basic-link external-destination="url({$xhref})">
+      <fo:inline color="{$link.color}">
+	<xsl:apply-templates/>
       </fo:inline>
     </fo:basic-link>
   </xsl:template>
@@ -427,7 +438,7 @@
       <xsl:when test="$pageclass = 'back' and $sequence='even' and $position='right' ">
 	<xsl:apply-templates select="."  mode="object.title.markup"/>
       </xsl:when>
-   
+
       <xsl:when test="$pageclass = 'index' and $sequence='odd' and $position='left' ">
 	<xsl:call-template name="gentext">
 	  <xsl:with-param name="key" select="$gentext-key"/>
@@ -439,20 +450,20 @@
 	  <xsl:with-param name="key" select="$gentext-key"/>
 	</xsl:call-template>
       </xsl:when>
-	  
+
       <xsl:when test="$sequence='odd' and $position='left'">
 	<xsl:if test="$pageclass != 'titlepage'">
 	  <xsl:apply-templates select="."  mode="object.title.markup"/>
 	</xsl:if>
       </xsl:when>
-	  
+
       <xsl:when test="$sequence='even' and $position='right'">
 	<xsl:if test="$pageclass != 'titlepage'">
-	  <fo:retrieve-marker 
+	  <fo:retrieve-marker
 	    retrieve-class-name="section.head.marker"
 	    retrieve-position="first-including-carryover"
 	    retrieve-boundary="page-sequence"/>
-        </xsl:if>
+	</xsl:if>
       </xsl:when>
     </xsl:choose>
   </fo:block>
@@ -470,7 +481,7 @@
       <xsl:when test="$sequence = 'odd' and $position='right'">
 	<fo:page-number/>
       </xsl:when>
-	  
+
       <xsl:when test="$sequence = 'even' and $position='left'">
 	<fo:page-number/>
       </xsl:when>
@@ -503,6 +514,51 @@
   <!-- Suppress list titles -->
   <xsl:template match="db:title" mode="list.title.mode"/>
 
+  <!-- Soft-hyphen workaround for verbatim hyphenation -->
+  <xsl:template name="hyphenate.verbatim">
+    <xsl:param name="content"/>
+    <xsl:variable name="apos" select='"&apos;"'/>
+    <xsl:variable name="head" select="substring($content, 1, 1)"/>
+    <xsl:variable name="tail" select="substring($content, 2)"/>
+    <xsl:variable name="next" select="substring($tail, 1, 1)"/>
+    <xsl:choose>
+      <!-- Place soft-hyphen after space or non-breakable space. -->
+      <xsl:when test="$next = '&#xA;' or $next = '' or $next = '&quot;' or
+	$next = '.' or $next = ',' or $next = '-' or $next = '/' or
+	$next = $apos or $next = ':' or $next = '!' or $next = '|' or
+	$next = '?' or $next = ')'">
+	<xsl:value-of select="$head"/>
+      </xsl:when>
+      <xsl:when test="($head = ' ' or $head = '&#160;') and $next != '.' and
+	$next != '}' and $next != ' ' and $next != '&#160;'">
+	<xsl:text>&#160;</xsl:text>
+	<xsl:text>&#x00AD;</xsl:text>
+      </xsl:when>
+      <xsl:when test="$head = '.' and translate($next, '0123456789', '') != ''">
+	<xsl:text>.</xsl:text>
+	<xsl:text>&#x00AD;</xsl:text>
+      </xsl:when>
+      <xsl:when test="$hyphenate.verbatim.characters != '' and
+	translate($head, $hyphenate.verbatim.characters, '') = '' and
+	translate($next, $hyphenate.verbatim.characters, '') != ''">
+	<xsl:value-of select="$head"/>
+	<xsl:text>&#x00AD;</xsl:text>
+      </xsl:when>
+      <xsl:when test="$next = '('">
+	<xsl:value-of select="$head"/>
+	<xsl:text>&#x00AD;</xsl:text>
+      </xsl:when>
+      <xsl:otherwise>
+	<xsl:value-of select="$head"/>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:if test="$tail">
+      <xsl:call-template name="hyphenate.verbatim">
+	<xsl:with-param name="content" select="$tail"/>
+      </xsl:call-template>
+    </xsl:if>
+  </xsl:template>
+
 <!--
 	TITLEPAGE TEMPLATES
 -->
@@ -519,7 +575,7 @@
 
     <fo:basic-link external-destination="url({$href})">
       <fo:inline color="blue">
-        <xsl:value-of select="$rev"/>
+	<xsl:value-of select="$rev"/>
       </fo:inline>
     </fo:basic-link>
   </xsl:template>

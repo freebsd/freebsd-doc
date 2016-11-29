@@ -12,6 +12,7 @@ DATA+=	logo-bw.png logo-bw-thumb.png
 DATA+=	logo-full.png logo-full-thumb.png
 DATA+=	logo-reverse.png logo-reverse-thumb.png
 DATA+=	logo-basic.ai logo-basic.svg logo-basic.png logo-basic-thumb.png
+DATA+=	logo-simple.svg
 DATA+=	postcard1.jpg postcard1-thumb.jpg
 DATA+=	postcard2.jpg postcard2-thumb.jpg
 DATA+=	postcard3.jpg postcard3-thumb.jpg

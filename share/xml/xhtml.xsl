@@ -42,7 +42,7 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=&xml.encoding;" />
 	<xsl:copy-of select="/xhtml:html/xhtml:head/xhtml:meta"/>
 	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon" />
-	<link rel="stylesheet" media="screen" href="&stylesheet;" type="text/css"/>
+	<link rel="stylesheet" media="screen,print" href="&stylesheet;" type="text/css"/>
 	<xsl:copy-of select="/xhtml:html/xhtml:head/xhtml:link"/>
 	<xsl:call-template name="process.rss.link"/>
 	&header1.googlejs;
@@ -51,43 +51,9 @@
       <body>
 	<div id="containerwrap">
 	  <div id="container">
-	    &header2.skipnav;
+	    &header2;
 
-	    <div id="headercontainer">
-	      <div id="header">
-
-		&header2.logo-red.label;
-
-		<div id="headerlogoleft">
-		  &header2.logo-red;
-		</div> <!-- HEADERLOGOLEFT -->
-
-		<div id="headerlogoright">
-		  &header2.donatebutton;
-
-		  &header2.searchnav.label;
-
-		  &header2.searchnav;
-
-		<div id="search">
-		  <form action="&cgibase;/search.cgi" method="get">
-		    <div>
-		      <h2 class="blockhide"><label for="words">&header2.word.search;</label></h2>
-
-		      &header2.searchinputs;
-		    </div>
-		  </form>
-		</div> <!-- SEARCH -->
-	      </div> <!-- HEADERLOGORIGHT -->
-	    </div> <!-- HEADER -->
-
-	    &header2.topnav.label;
-
-	    &header2.topnav;
-
-	  </div> <!-- HEADERCONTAINER -->
-
-	  <div id="content">
+	    <div id="content">
 	      <xsl:call-template name="process.content"/>
 	    </div> <!-- CONTENT -->
 
