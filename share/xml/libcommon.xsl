@@ -1056,10 +1056,10 @@
 	    <link>https://www.FreeBSD.org/security</link>
 	  </xsl:when>
 	  <xsl:otherwise>
-	    <link><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></link>
+	    <link><xsl:value-of select="concat('https:', '&ftpbase;', name, '.asc')" /></link>
 	  </xsl:otherwise>
 	</xsl:choose>
-        <guid><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></guid>
+        <guid><xsl:value-of select="concat('https:', '&ftpbase;', name, '.asc')" /></guid>
         <pubDate>
           <xsl:call-template name="misc-format-date-string">
             <xsl:with-param name="year" select="../../../name" />
@@ -1136,10 +1136,10 @@
 	    <link>https://www.FreeBSD.org/security</link>
 	  </xsl:when>
 	  <xsl:otherwise>
-	    <link><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></link>
+	    <link><xsl:value-of select="concat('https:', '&ftpbase;', name, '.asc')" /></link>
 	  </xsl:otherwise>
 	</xsl:choose>
-        <guid><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></guid>
+        <guid><xsl:value-of select="concat('https:', '&ftpbase;', name, '.asc')" /></guid>
         <pubDate>
           <xsl:call-template name="misc-format-date-string">
             <xsl:with-param name="year" select="../../../name" />
