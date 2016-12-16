@@ -97,7 +97,7 @@
 
 			<div id="frontreleases">
 			  <div id="frontreleasescontent" class="txtshortcuts">
-				  <h2><a href="&base;/releases/">LATEST RELEASES</a></h2>
+				  <h2><a href="&base;/releases/">Supported Releases</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>Production:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,
