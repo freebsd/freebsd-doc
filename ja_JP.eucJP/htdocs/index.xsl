@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r49606 -->
+<!-- Original revision: r49743 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -95,7 +95,7 @@
 
 			<div id="frontreleases">
 			  <div id="frontreleasescontent" class="txtshortcuts">
-			  <h2><a href="&base;/releases/">最新リリース</a></h2>
+			  <h2><a href="&base;/releases/">サポートされているリリース</a></h2>
 			  <ul id="frontreleaseslist">
 			    <li>プロダクション:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,
