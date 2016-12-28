@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r39545
+# Original revision: r47265
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
