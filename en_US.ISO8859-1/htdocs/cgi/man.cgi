@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2016 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 1996-2017 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -223,7 +223,7 @@ foreach my $os ( keys %$sectionpath ) {
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
 # this should be the latest "release and ports"
-$manPathDefault = 'FreeBSD 10.3-RELEASE and Ports';
+$manPathDefault = 'FreeBSD 11.0-RELEASE and Ports';
 
 %manPath = (
     'FreeBSD 11.0-RELEASE and Ports',
@@ -1793,7 +1793,7 @@ sub faq {
       '$FreeBSD$';
     return qq{\
 <pre>
-Copyright (c) 1996-2016 <a href="$mailtoURL">Wolfram Schneider</a>
+Copyright (c) 1996-2017 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE
