@@ -6,7 +6,7 @@
 <!--
      $FreeBSD$
      $FreeBSDde$
-     basiert auf: 49606
+     basiert auf: 49784
 -->
 
 <xsl:stylesheet version="1.0"
@@ -85,14 +85,11 @@
 
 			<div id="frontreleases">
 			  <div id="frontreleasescontent" class="txtshortcuts">
-				  <h2><a href="&base;/releases/">AKTUELLE VERSIONEN</a></h2>
+				  <h2><a href="&base;/releases/">Unterstützte Versionen:</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>
 					  Produktion:&nbsp;<a href="&u.rel.announce;">&rel.current;</a>,
-					  <a href="&u.rel0.announce;">&rel0.current;</a>,
-					  <a href="&u.rel1.announce;">&rel1.current;</a>,
-					  <a href="&u.rel2.announce;">&rel2.current;</a>,
-					  <a href="&u.rel3.announce;">&rel3.current;</a>
+					  <a href="&u.rel0.announce;">&rel0.current;</a>
 					</li>
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 					<li>Test:&nbsp;<a
@@ -103,8 +100,8 @@
 				href="&u.betarel2.schedule;">&betarel2.current;</a></li>
 			    </xsl:if>
 					<li><a
-					  href="&base;/security/security.html#sup">Unterstützte
-					  FreeBSD-Versionen</a></li>
+					  href="&base;/security/security.html#sup">FreeBSD
+					    Supportzyklus</a></li>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
