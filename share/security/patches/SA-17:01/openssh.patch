@@ -1,0 +1,170 @@
+--- crypto/openssh/serverloop.c.orig
++++ crypto/openssh/serverloop.c
+@@ -995,7 +995,7 @@
+ 
+ 	/* XXX fine grained permissions */
+ 	if ((options.allow_streamlocal_forwarding & FORWARD_LOCAL) != 0 &&
+-	    !no_port_forwarding_flag) {
++	    !no_port_forwarding_flag && use_privsep) {
+ 		c = channel_connect_to_path(target,
+ 		    "direct-streamlocal@openssh.com", "direct-streamlocal");
+ 	} else {
+@@ -1279,7 +1279,7 @@
+ 
+ 		/* check permissions */
+ 		if ((options.allow_streamlocal_forwarding & FORWARD_REMOTE) == 0
+-		    || no_port_forwarding_flag) {
++		    || no_port_forwarding_flag || !use_privsep) {
+ 			success = 0;
+ 			packet_send_debug("Server has disabled port forwarding.");
+ 		} else {
+--- crypto/openssh/ssh-agent.1.orig
++++ crypto/openssh/ssh-agent.1
+@@ -48,6 +48,7 @@
+ .Op Fl a Ar bind_address
+ .Op Fl E Ar fingerprint_hash
+ .Op Fl t Ar life
++.Op Fl P Ar pkcs11_whitelist
+ .Op Ar command Op Ar arg ...
+ .Nm ssh-agent
+ .Op Fl c | s
+@@ -122,6 +123,18 @@
+ Kill the current agent (given by the
+ .Ev SSH_AGENT_PID
+ environment variable).
++.It Fl P
++Specify a pattern-list of acceptable paths for PKCS#11 shared libraries
++that may be added using the
++.Fl s
++option to
++.Xr ssh-add 1 .
++The default is to allow loading PKCS#11 libraries from
++.Dq /usr/lib/*,/usr/local/lib/* .
++PKCS#11 libraries that do not match the whitelist will be refused.
++See PATTERNS in
++.Xr ssh_config 5
++for a description of pattern-list syntax.
+ .It Fl s
+ Generate Bourne shell commands on
+ .Dv stdout .
+--- crypto/openssh/ssh-agent.c.orig
++++ crypto/openssh/ssh-agent.c
+@@ -84,11 +84,16 @@
+ #include "misc.h"
+ #include "digest.h"
+ #include "ssherr.h"
++#include "match.h"
+ 
+ #ifdef ENABLE_PKCS11
+ #include "ssh-pkcs11.h"
+ #endif
+ 
++#ifndef DEFAULT_PKCS11_WHITELIST
++# define DEFAULT_PKCS11_WHITELIST "/usr/lib/*,/usr/local/lib/*"
++#endif
++
+ #if defined(HAVE_SYS_PRCTL_H)
+ #include <sys/prctl.h>	/* For prctl() and PR_SET_DUMPABLE */
+ #endif
+@@ -140,6 +145,9 @@
+ char socket_name[PATH_MAX];
+ char socket_dir[PATH_MAX];
+ 
++/* PKCS#11 path whitelist */
++static char *pkcs11_whitelist;
++
+ /* locking */
+ #define LOCK_SIZE	32
+ #define LOCK_SALT_SIZE	16
+@@ -761,7 +769,7 @@
+ static void
+ process_add_smartcard_key(SocketEntry *e)
+ {
+-	char *provider = NULL, *pin;
++	char *provider = NULL, *pin, canonical_provider[PATH_MAX];
+ 	int r, i, version, count = 0, success = 0, confirm = 0;
+ 	u_int seconds;
+ 	time_t death = 0;
+@@ -793,10 +801,21 @@
+ 			goto send;
+ 		}
+ 	}
++	if (realpath(provider, canonical_provider) == NULL) {
++		verbose("failed PKCS#11 add of \"%.100s\": realpath: %s",
++		    provider, strerror(errno));
++		goto send;
++	}
++	if (match_pattern_list(canonical_provider, pkcs11_whitelist, 0) != 1) {
++		verbose("refusing PKCS#11 add of \"%.100s\": "
++		    "provider not whitelisted", canonical_provider);
++		goto send;
++	}
++	debug("%s: add %.100s", __func__, canonical_provider);
+ 	if (lifetime && !death)
+ 		death = monotime() + lifetime;
+ 
+-	count = pkcs11_add_provider(provider, pin, &keys);
++	count = pkcs11_add_provider(canonical_provider, pin, &keys);
+ 	for (i = 0; i < count; i++) {
+ 		k = keys[i];
+ 		version = k->type == KEY_RSA1 ? 1 : 2;
+@@ -804,8 +823,8 @@
+ 		if (lookup_identity(k, version) == NULL) {
+ 			id = xcalloc(1, sizeof(Identity));
+ 			id->key = k;
+-			id->provider = xstrdup(provider);
+-			id->comment = xstrdup(provider); /* XXX */
++			id->provider = xstrdup(canonical_provider);
++			id->comment = xstrdup(canonical_provider); /* XXX */
+ 			id->death = death;
+ 			id->confirm = confirm;
+ 			TAILQ_INSERT_TAIL(&tab->idlist, id, next);
+@@ -1200,7 +1219,7 @@
+ {
+ 	fprintf(stderr,
+ 	    "usage: ssh-agent [-c | -s] [-Dd] [-a bind_address] [-E fingerprint_hash]\n"
+-	    "                 [-t life] [command [arg ...]]\n"
++	    "                 [-P pkcs11_whitelist] [-t life] [command [arg ...]]\n"
+ 	    "       ssh-agent [-c | -s] -k\n");
+ 	fprintf(stderr, "  -x          Exit when the last client disconnects.\n");
+ 	exit(1);
+@@ -1246,7 +1265,7 @@
+ 	__progname = ssh_get_progname(av[0]);
+ 	seed_rng();
+ 
+-	while ((ch = getopt(ac, av, "cDdksE:a:t:x")) != -1) {
++	while ((ch = getopt(ac, av, "cDdksE:a:P:t:x")) != -1) {
+ 		switch (ch) {
+ 		case 'E':
+ 			fingerprint_hash = ssh_digest_alg_by_name(optarg);
+@@ -1261,6 +1280,11 @@
+ 		case 'k':
+ 			k_flag++;
+ 			break;
++		case 'P':
++			if (pkcs11_whitelist != NULL)
++				fatal("-P option already specified");
++			pkcs11_whitelist = xstrdup(optarg);
++			break;
+ 		case 's':
+ 			if (c_flag)
+ 				usage();
+@@ -1298,6 +1322,9 @@
+ 	if (ac > 0 && (c_flag || k_flag || s_flag || d_flag || D_flag))
+ 		usage();
+ 
++	if (pkcs11_whitelist == NULL)
++		pkcs11_whitelist = xstrdup(DEFAULT_PKCS11_WHITELIST);
++
+ 	if (ac == 0 && !c_flag && !s_flag) {
+ 		shell = getenv("SHELL");
+ 		if (shell != NULL && (len = strlen(shell)) > 2 &&
+@@ -1445,7 +1472,7 @@
+ 	signal(SIGTERM, cleanup_handler);
+ 	nalloc = 0;
+ 
+-	if (pledge("stdio cpath unix id proc exec", NULL) == -1)
++	if (pledge("stdio rpath cpath unix id proc exec", NULL) == -1)
+ 		fatal("%s: pledge: %s", __progname, strerror(errno));
+ 	platform_pledge_agent();
+ 
