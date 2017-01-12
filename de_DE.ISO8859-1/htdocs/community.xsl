@@ -35,7 +35,7 @@
 		href="https://forums.FreeBSD.org/">Foren</a> sowie
 		diverse <a
 		href="&base;/community/newsgroups.html">Newsgroups</a>.
-		Dazu kommen mehr als 86 <!-- <xsl:value-of
+		Dazu kommen mehr als 87 <!-- <xsl:value-of
 		select="count(document($usergroups.xml)//entry)"
 		/><xsl:text> </xsl:text>--> <a
 		href="&enbase;/usergroups.html">User Groups</a> in
@@ -52,10 +52,10 @@
 		zur &os;-Entwicklung und zu diversen Projekten
 		enthält.</p>
 
-	      <p>Letztes Jahr gab es insgesamt 9 <!-- <xsl:value-of
+	      <p>Letztes Jahr gab es insgesamt 12 <!-- <xsl:value-of
 	        select="count(/events/event[number(enddate/year) =
 	        (number($curdate.year) -1)])" />-->
-		&os;-Veranstaltungen in 7 <!--<xsl:value-of
+		&os;-Veranstaltungen in 6 <!--<xsl:value-of
 		select="count(/events/event[(number(enddate/year) =
 		(number($curdate.year) -1)) and (generate-id() =
 		generate-id(key('last-year-event-by-country',
