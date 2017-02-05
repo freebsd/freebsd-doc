@@ -133,20 +133,6 @@
 				</ul>
 			</div> <!-- LANGUAGENAV -->
 
-			<div id="mirror">
-			  <form action="&cgibase;/mirror.cgi" method="get">
-				<div>
-				  <h2 class="blockhide"><label for="MIRRORSEL">Mirror</label></h2>
-				  <select id="mirrorsel" name="goto">
-					  <xsl:call-template name="html-index-mirrors-options-list">
-					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
-					  </xsl:call-template>
-				  </select>
-				</div> <!-- unnamed -->
-				<input type="submit" value="Go" />
-			  </form>
-			</div> <!-- MIRROR -->
-
 			<div id="frontshortcuts">
 			  <div id="frontshortcutscontent" class="txtshortcuts">
 				  <h2>SHORTCUTS</h2>
