@@ -95,7 +95,7 @@
 					<li>Production:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,
 					<a
-				href="&u.rel0.announce;">&rel0.current;</a>,
+				href="&u.rel0.announce;">&rel0.current;</a></li>
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 					<li>即將發佈: <a
 				href="&u.betarel.schedule;">&betarel.current;</a></li>
