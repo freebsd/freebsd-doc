@@ -127,8 +127,11 @@
 				  <li>
 					<a href="&base;/" title="English">en</a>
 				  </li>
-				  <li class="last-child">
+				  <li>
 					<a href="&base;/ja/" title="Japanese">ja</a>
+				  </li>
+				  <li class="last-child">
+					<a href="&base;/zh_TW/" title="Chinese (Traditional)">zh_TW</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
