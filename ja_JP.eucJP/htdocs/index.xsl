@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r49784 -->
+<!-- Original revision: r49941 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -127,48 +127,13 @@
 			    <a href="&enbase;/" title="英語">en</a>
 			  </li>
 			  <li>
-			    <a href="&enbase;/es/" title="スペイン語">es</a>
-			  </li>
-			  <li>
-			    <a href="&enbase;/fr/" title="フランス語">fr</a>
-			  </li>
-			  <li>
-			    <a href="&enbase;/hu/" title="ハンガリー語">hu</a>
-			  </li>
-			  <li>
-			    <a href="&enbase;/it/" title="イタリア語">it</a>
-			  </li>
-			  <li>
 			    <a href="&enbase;/ja/" title="日本語">ja</a>
-			  </li>
-			  <li>
-			    <a href="&enbase;/nl/" title="オランダ語">nl</a>
-			  </li>
-			  <li>
-			    <a href="&enbase;/ru/" title="ロシア語">ru</a>
-			  </li>
-			  <li>
-			    <a href="&enbase;/zh_CN/" title="中国語 (簡体字)">zh_CN</a>
 			  </li>
 			  <li class="last-child">
 			    <a href="&enbase;/zh_TW/" title="中国語 (繁体字)">zh_TW</a>
 			  </li>
 			</ul>
 		      </div> <!-- LANGUAGENAV -->
-
-		      <div id="mirror">
-			<form action="&cgibase;/mirror.cgi" method="get">
-			  <div>
-			    <h2 class="blockhide"><label for="MIRRORSEL">ミラーサイト</label></h2>
-			    <select id="mirrorsel" name="goto">
-			      <xsl:call-template name="html-index-mirrors-options-list">
-				<xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
-			      </xsl:call-template>
-			    </select>
-			  </div> <!-- unnamed -->
-			  <input type="submit" value="移動" />
-			</form>
-		      </div> <!-- MIRROR -->
 
 		      <div id="frontshortcuts">
 			<div id="frontshortcutscontent" class="txtshortcuts">
