@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r42778
+# Original revision: r48383
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -18,14 +18,10 @@ DOCS+=	cvsweb.xml
 #DOCS+=	summerofcode-2007.xml
 #DOCS+=	summerofcode-2008.xml
 
-#DATA=	2009-freebsd-gsoc-thumbnail.jpg
-#DATA+=	2009-freebsd-gsoc.pdf
-#DATA+=	2010-freebsd-gsoc-thumbnail.jpg
-#DATA+=	2010-freebsd-gsoc.pdf
-#DATA+=	2011-freebsd-gsoc-thumbnail.jpg
-#DATA+=	2011-freebsd-gsoc.pdf
-#DATA+=	2013-freebsd-gsoc-thumbnail.jpg
-#DATA+=	2013-freebsd-gsoc.pdf
+#DATA=	2016-freebsd-gsoc-thumbnail.png
+#DATA+=	2016-freebsd-gsoc.pdf
+#DATA+=	2016-freebsd-gsoc-poland-thumbnail.png
+#DATA+=	2016-freebsd-gsoc-poland.jpg
 
 INDEXLINK= projects.html
 
