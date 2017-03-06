@@ -121,28 +121,7 @@
 					<a href="&enbase;/" title="英語">en</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/es/" title="西語">es</a>
-				  </li>
-				  <li>
-					<a href="&enbase;/fr/" title="法語">fr</a>
-				  </li>
-				  <li>
-					<a href="&enbase;/hu/" title="匈牙利語">hu</a>
-				  </li>
-				  <li>
-					<a href="&enbase;/it/" title="義語">it</a>
-				  </li>
-				  <li>
 					<a href="&enbase;/ja/" title="日語">ja</a>
-				  </li>
-				  <li>
-					<a href="&enbase;/nl/" title="荷語">nl</a>
-				  </li>
-				  <li>
-					<a href="&enbase;/ru/" title="俄語">ru</a>
-				  </li>
-				  <li>
-					<a href="&enbase;/zh_CN/" title="中文 (簡體)">zh_CN</a>
 				  </li>
 				  <li class="last-child">
 					<a href="&enbase;/zh_TW/" title="中文 (繁體)">zh_TW</a>
