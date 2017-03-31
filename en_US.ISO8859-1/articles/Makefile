@@ -11,6 +11,7 @@ SUBDIR+= explaining-bsd
 SUBDIR+= filtering-bridges
 SUBDIR+= fonts
 SUBDIR+= freebsd-questions
+SUBDIR+= freebsd-releng
 SUBDIR+= freebsd-update-server
 SUBDIR+= geom-class
 SUBDIR+= gjournal-desktop
