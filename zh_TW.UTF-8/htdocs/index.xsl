@@ -38,7 +38,7 @@
 			<div id="frontfeaturecontent">
 				<h1> &os; 計劃</h1>
 
-				<p>&os; 是一個使用於現代伺服器，桌面與嵌入式 <a href="&enbase;/platforms/">平台</a> 的先進作業系統。
+				<p>&os; 是一個使用於現代伺服器，桌面與嵌入式 <a href="&base;/platforms/">平台</a> 的先進作業系統。
 				  由一群龐大的 
 				  <a
 				  href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">社群</a>
