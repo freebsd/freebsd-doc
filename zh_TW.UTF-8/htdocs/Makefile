@@ -33,6 +33,7 @@ PARAMS.usergroups=	--param pagename "'FreeBSD User Groups'"
 # XML
 SUBDIR+= docs
 SUBDIR+= news
+SUBDIR+= platforms
 
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+=	doc
