@@ -78,7 +78,7 @@
     </itemizedlist>
 
     <para>&os; has three firewalls built into the base system:
-      <application>PF</application>, <application>IPFW</application>,
+      <application>IPFW</application>, <application>PF</application>,
       and <application>IPFILTER</application>, also known as
       <application>IPF</application>.  &os; also provides two traffic
       shapers for controlling bandwidth usage: &man.altq.4; and
@@ -110,12 +110,12 @@
 
       <listitem>
 	<para>How to use and configure the
-	  <application>PF</application> firewall.</para>
+	  <application>IPFW</application> firewall.</para>
       </listitem>
 
       <listitem>
 	<para>How to use and configure the
-	  <application>IPFW</application> firewall.</para>
+	  <application>PF</application> firewall.</para>
       </listitem>
 
       <listitem>
@@ -272,6 +272,1040 @@
 	configuration from the local console rather than doing it
 	remotely over <application>ssh</application>.</para>
     </warning>
+  </sect1>
+
+  <sect1 xml:id="firewalls-ipfw">
+    <title><application>IPFW</application></title>
+
+    <indexterm>
+      <primary>firewall</primary>
+
+      <secondary>IPFW</secondary>
+    </indexterm>
+
+    <para><application>IPFW</application> is a stateful firewall
+      written for &os; which supports both <acronym>IPv4</acronym> and
+      <acronym>IPv6</acronym>.  It is comprised of several components:
+      the kernel firewall filter rule processor and its integrated
+      packet accounting facility, the logging facility,
+      <acronym>NAT</acronym>, the &man.dummynet.4; traffic shaper, a
+      forward facility, a bridge facility, and an ipstealth
+      facility.</para>
+
+    <para>&os; provides a sample ruleset in
+      <filename>/etc/rc.firewall</filename> which defines several
+      firewall types for common scenarios to assist novice users in
+      generating an appropriate ruleset.
+      <application>IPFW</application> provides a powerful syntax which
+      advanced users can use to craft customized rulesets that meet
+      the security requirements of a given environment.</para>
+
+    <para>This section describes how to enable
+      <application>IPFW</application>, provides an overview of its
+      rule syntax, and demonstrates several rulesets for common
+      configuration scenarios.</para>
+
+    <sect2 xml:id="firewalls-ipfw-enable">
+      <title>Enabling <application>IPFW</application></title>
+
+      <indexterm>
+	<primary><application>IPFW</application></primary>
+
+	<secondary>enabling</secondary>
+      </indexterm>
+
+      <para><application>IPFW</application> is included in the basic
+	&os; install as a kernel loadable module, meaning that a
+	custom kernel is not needed in order to enable
+	<application>IPFW</application>.</para>
+
+      <indexterm>
+	<primary>kernel options</primary>
+
+	<secondary>IPFIREWALL</secondary>
+      </indexterm>
+
+      <indexterm>
+	<primary>kernel options</primary>
+
+	<secondary>IPFIREWALL_VERBOSE</secondary>
+      </indexterm>
+
+      <indexterm>
+	<primary>kernel options</primary>
+
+	<secondary>IPFIREWALL_VERBOSE_LIMIT</secondary>
+      </indexterm>
+
+      <indexterm>
+	<primary><application>IPFW</application></primary>
+
+	<secondary>kernel options</secondary>
+      </indexterm>
+
+      <para>For those users who wish to statically compile
+	<application>IPFW</application> support into a custom kernel,
+	refer to the instructions in <xref linkend="kernelconfig"/>.
+	The following options are available for the
+	custom kernel configuration file:</para>
+
+      <programlisting>options    IPFIREWALL			# enables IPFW
+options    IPFIREWALL_VERBOSE		# enables logging for rules with log keyword
+options    IPFIREWALL_VERBOSE_LIMIT=5	# limits number of logged packets per-entry
+options    IPFIREWALL_DEFAULT_TO_ACCEPT # sets default policy to pass what is not explicitly denied
+options    IPDIVERT			# enables NAT</programlisting>
+
+      <para>To configure the system to enable
+	<application>IPFW</application> at boot time, add the
+	following entry to <filename>/etc/rc.conf</filename>:</para>
+
+      <programlisting>firewall_enable="YES"</programlisting>
+
+      <para>To use one of the default firewall types provided by &os;,
+	add another line which specifies the type:</para>
+
+      <programlisting>firewall_type="open"</programlisting>
+
+      <para>The available types are:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para><literal>open</literal>: passes all traffic.</para>
+	</listitem>
+	<listitem>
+	  <para><literal>client</literal>: protects only this
+	    machine.</para>
+	</listitem>
+	<listitem>
+	  <para><literal>simple</literal>: protects the whole
+	    network.</para>
+	</listitem>
+	<listitem>
+	  <para><literal>closed</literal>: entirely disables IP
+	    traffic except for the loopback interface.</para>
+	</listitem>
+	<listitem>
+	  <para><literal>workstation</literal>: protects only this
+	    machine using stateful rules.</para>
+	</listitem>
+	<listitem>
+	  <para><literal>UNKNOWN</literal>: disables the loading of
+	    firewall rules.</para>
+	</listitem>
+	<listitem>
+	  <para><filename><replaceable>filename</replaceable></filename>:
+	    full path of the file containing the firewall
+	    ruleset.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>If <literal>firewall_type</literal> is set to either
+	<literal>client</literal> or <literal>simple</literal>,
+	modify the default rules found in
+	<filename>/etc/rc.firewall</filename> to fit the
+	configuration of the system.</para>
+
+      <para>Note that the <literal>filename</literal> type is used to
+	load a custom ruleset.</para>
+
+      <para>An alternate way to load a custom ruleset is to set the
+	<literal>firewall_script</literal> variable to the absolute
+	path of an <emphasis>executable script</emphasis> that
+	includes <application>IPFW</application> commands.    The
+	examples used in this section assume that the
+	<literal>firewall_script</literal> is set to
+	<filename>/etc/ipfw.rules</filename>:</para>
+
+      <programlisting>firewall_script="/etc/ipfw.rules"</programlisting>
+
+      <para>To enable logging, include this line:</para>
+
+      <programlisting>firewall_logging="YES"</programlisting>
+
+      <para>There is no <filename>/etc/rc.conf</filename> variable to
+	set logging limits.  To limit the number of times a rule is
+	logged per connection attempt, specify the number using this
+	line in <filename>/etc/sysctl.conf</filename>:</para>
+
+      <programlisting>net.inet.ip.fw.verbose_limit=<replaceable>5</replaceable></programlisting>
+
+      <para>After saving the needed edits, start the firewall.  To
+	enable logging limits now, also set the
+	<command>sysctl</command> value specified above:</para>
+
+      <screen>&prompt.root; <userinput>service ipfw start</userinput>
+&prompt.root; <userinput>sysctl net.inet.ip.fw.verbose_limit=<replaceable>5</replaceable></userinput></screen>
+    </sect2>
+
+    <sect2 xml:id="firewalls-ipfw-rules">
+      <title><application>IPFW</application> Rule Syntax</title>
+
+      <indexterm>
+	<primary><application>IPFW</application></primary>
+
+	<secondary>rule processing order</secondary>
+      </indexterm>
+
+      <para>When a packet enters the <application>IPFW</application>
+	firewall, it is compared against the first rule in the ruleset
+	and progresses one rule at a time, moving from top to bottom
+	in sequence.  When the packet matches the selection parameters
+	of a rule, the rule's action is executed and the search of the
+	ruleset terminates for that packet.  This is referred to as
+	<quote>first match wins</quote>.  If the packet does not match
+	any of the rules, it gets caught by the mandatory
+	<application>IPFW</application> default rule number 65535,
+	which denies all packets and silently discards them.  However,
+	if the packet matches a rule that contains the
+	<literal>count</literal>, <literal>skipto</literal>, or
+	<literal>tee</literal> keywords, the search continues.  Refer
+	to &man.ipfw.8; for details on how these keywords affect rule
+	processing.</para>
+
+      <indexterm>
+	<primary><application>IPFW</application></primary>
+
+	<secondary>rule syntax</secondary>
+      </indexterm>
+
+      <para>When creating an
+	<application>IPFW</application> rule, keywords must be
+	written in the following order.  Some keywords are mandatory
+	while other keywords are optional.  The words shown in
+	uppercase represent a variable and the words shown in
+	lowercase must precede the variable that follows it.  The
+	<literal>#</literal> symbol is used to mark the start of a
+	comment and may appear at the end of a rule or on its own
+	line.  Blank lines are ignored.</para>
+
+      <para><replaceable>CMD RULE_NUMBER set SET_NUMBER ACTION log
+	  LOG_AMOUNT PROTO from SRC SRC_PORT to DST DST_PORT
+	  OPTIONS</replaceable></para>
+
+      <para>This section provides an overview of these keywords and
+	their options.  It is not an exhaustive list of every possible
+	option.  Refer to &man.ipfw.8; for a complete description of
+	the rule syntax that can be used when creating
+	<application>IPFW</application> rules.</para>
+
+      <variablelist>
+	<varlistentry>
+	  <term>CMD</term>
+	  <listitem>
+	    <para>Every rule must start with
+	      <parameter>ipfw add</parameter>.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>RULE_NUMBER</term>
+	  <listitem>
+	    <para>Each rule is associated with a number from
+	      <literal>1</literal> to
+	      <literal>65534</literal>.  The number is used to
+	      indicate the order of rule processing.  Multiple rules
+	      can have the same number, in which case they are applied
+	      according to the order in which they have been
+	      added.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>SET_NUMBER</term>
+	  <listitem>
+	    <para>Each rule is associated with a set number from
+	      <literal>0</literal> to <literal>31</literal>.
+	      Sets can be individually disabled or enabled, making it
+	      possible to quickly add or delete a set of rules.  If a
+	      SET_NUMBER is not specified, the rule will be added to
+	      set <literal>0</literal>.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>ACTION</term>
+	  <listitem>
+	    <para>A rule can be associated with one of the following
+	      actions.  The specified action will be executed when the
+	      packet matches the selection criterion of the
+	      rule.</para>
+
+	    <para><parameter>allow | accept | pass |
+		permit</parameter>: these keywords are equivalent and
+	      allow packets that match the rule.</para>
+
+	    <para><parameter>check-state</parameter>: checks the
+	      packet against the dynamic state table.  If a match is
+	      found, execute the action associated with the rule which
+	      generated this dynamic rule, otherwise move to the next
+	      rule.  A <literal>check-state</literal> rule does not
+	      have selection criterion.  If no
+	      <literal>check-state</literal> rule is present in the
+	      ruleset, the dynamic rules table is checked at the first
+	      <literal>keep-state</literal> or
+	      <literal>limit</literal> rule.</para>
+
+	    <para><parameter>count</parameter>: updates counters for
+	      all packets that match the rule.  The search continues
+	      with the next rule.</para>
+
+	    <para><parameter>deny | drop</parameter>: either word
+	      silently discards packets that match this rule.</para>
+
+	    <para>Additional actions are available.  Refer to
+	      &man.ipfw.8; for details.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>LOG_AMOUNT</term>
+	  <listitem>
+	    <para>When a packet matches a rule with the
+	      <literal>log</literal> keyword, a message will be logged
+	      to &man.syslogd.8; with a facility name of
+	      <literal>SECURITY</literal>.  Logging only occurs if the
+	      number of packets logged for that particular rule does
+	      not exceed a specified LOG_AMOUNT.  If no
+	      LOG_AMOUNT is specified, the limit is taken from the
+	      value of
+	      <varname>net.inet.ip.fw.verbose_limit</varname>.  A
+	      value of zero removes the logging limit.  Once the limit
+	      is reached, logging can be re-enabled by clearing the
+	      logging counter or the packet counter for that rule,
+	      using <command>ipfw resetlog</command>.</para>
+
+	    <note>
+	      <para>Logging is done after all other packet matching
+		conditions have been met, and before performing the
+		final action on the packet.  The administrator decides
+		which rules to enable logging on.</para>
+	    </note>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>PROTO</term>
+	  <listitem>
+	    <para>This optional value can be used to specify any
+	      protocol name or number found in
+	      <filename>/etc/protocols</filename>.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>SRC</term>
+	  <listitem>
+	    <para>The <literal>from</literal> keyword must be followed
+	      by the source address or a keyword that represents the
+	      source address.  An address can be represented by
+	      <literal>any</literal>, <literal>me</literal> (any
+	      address configured on an interface on this system),
+	      <literal>me6</literal>, (any <acronym>IPv6</acronym>
+	      address configured on an interface on this system), or
+	      <literal>table</literal> followed by the number of a
+	      lookup table which contains a list of addresses.  When
+	      specifying an <acronym>IP</acronym> address, it can be
+	      optionally followed by its <acronym>CIDR</acronym> mask
+	      or subnet mask.  For example,
+	      <literal>1.2.3.4/25</literal> or
+	      <literal>1.2.3.4:255.255.255.128</literal>.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>SRC_PORT</term>
+	  <listitem>
+	    <para>An optional source port can be specified using the
+	      port number or name from
+	      <filename>/etc/services</filename>.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>DST</term>
+	  <listitem>
+	    <para>The <literal>to</literal> keyword must be followed
+	      by the destination address or a keyword that represents
+	      the destination address.  The same keywords and
+	      addresses described in the SRC section can be used to
+	      describe the destination.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>DST_PORT</term>
+	  <listitem>
+	    <para>An optional destination port can be specified using
+	      the port number or name from
+	      <filename>/etc/services</filename>.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>OPTIONS</term>
+	  <listitem>
+	    <para>Several keywords can follow the source and
+	      destination.  As the name suggests, OPTIONS are
+	      optional.  Commonly used options include
+	      <literal>in</literal> or <literal>out</literal>, which
+	      specify the direction of packet flow,
+	      <literal>icmptypes</literal> followed by the type of
+	      <acronym>ICMP</acronym> message, and
+	      <literal>keep-state</literal>.</para>
+
+	    <para>When a <parameter>keep-state</parameter> rule is
+	      matched, the firewall will create a dynamic rule which
+	      matches bidirectional traffic between the source and
+	      destination addresses and ports using the same
+	      protocol.</para>
+
+	    <para>The dynamic rules facility is vulnerable to resource
+	      depletion from a SYN-flood attack which would open a
+	      huge number of dynamic rules.  To counter this type of
+	      attack with  <application>IPFW</application>, use
+	      <literal>limit</literal>.  This option limits the number
+	      of simultaneous sessions by checking the open dynamic
+	      rules, counting the number of times this rule and
+	      <acronym>IP</acronym> address combination occurred.  If
+	      this count is greater than the value specified by
+	      <literal>limit</literal>, the packet is
+	      discarded.</para>
+
+	    <para>Dozens of OPTIONS are available.  Refer to
+	      &man.ipfw.8; for a description of each available
+	      option.</para>
+	  </listitem>
+	</varlistentry>
+      </variablelist>
+    </sect2>
+
+    <sect2>
+      <title>Example Ruleset</title>
+
+      <para>This section demonstrates how to create an example
+	stateful firewall ruleset script named
+	<filename>/etc/ipfw.rules</filename>.  In this example, all
+	connection rules use <literal>in</literal> or
+	<literal>out</literal> to clarify the direction.  They also
+	use <literal>via</literal>
+	<replaceable>interface-name</replaceable> to specify
+	the interface the packet is traveling over.</para>
+
+      <note>
+	<para>When first creating or testing a firewall ruleset,
+	  consider temporarily setting this tunable:</para>
+
+	<programlisting>net.inet.ip.fw.default_to_accept="1"</programlisting>
+
+	<para>This sets the default policy of &man.ipfw.8; to be more
+	  permissive than the default <literal>deny ip from any to
+	    any</literal>, making it slightly more difficult to get
+	  locked out of the system right after a reboot.</para>
+      </note>
+
+      <para>The firewall script begins by indicating that it is a
+	Bourne shell script and flushes any existing rules.  It then
+	creates the <literal>cmd</literal> variable so that
+	<literal>ipfw add</literal> does not have to be typed at the
+	beginning of every rule.  It also defines the
+	<literal>pif</literal> variable which represents the name of
+	the interface that is attached to the Internet.</para>
+
+      <programlisting>#!/bin/sh
+# Flush out the list before we begin.
+ipfw -q -f flush
+
+# Set rules command prefix
+cmd="ipfw -q add"
+pif="dc0"     # interface name of NIC attached to Internet</programlisting>
+
+      <para>The first two rules allow all traffic on the trusted
+	internal interface and on the loopback interface:</para>
+
+      <programlisting># Change xl0 to LAN NIC interface name
+&dollar;cmd 00005 allow all from any to any via xl0
+
+# No restrictions on Loopback Interface
+&dollar;cmd 00010 allow all from any to any via lo0</programlisting>
+
+      <para>The next rule allows the packet through if it matches an
+	existing entry in the dynamic rules table:</para>
+
+      <programlisting>&dollar;cmd 00101 check-state</programlisting>
+
+      <para>The next set of rules defines which stateful connections
+	internal systems can create to hosts on the Internet:</para>
+
+      <programlisting># Allow access to public DNS
+# Replace x.x.x.x with the IP address of a public DNS server
+# and repeat for each DNS server in /etc/resolv.conf
+&dollar;cmd 00110 allow tcp from any to x.x.x.x 53 out via &dollar;pif setup keep-state
+&dollar;cmd 00111 allow udp from any to x.x.x.x 53 out via &dollar;pif keep-state
+
+# Allow access to ISP's DHCP server for cable/DSL configurations.
+# Use the first rule and check log for IP address.
+# Then, uncomment the second rule, input the IP address, and delete the first rule
+&dollar;cmd 00120 allow log udp from any to any 67 out via &dollar;pif keep-state
+#&dollar;cmd 00120 allow udp from any to x.x.x.x 67 out via &dollar;pif keep-state
+
+# Allow outbound HTTP and HTTPS connections
+&dollar;cmd 00200 allow tcp from any to any 80 out via &dollar;pif setup keep-state
+&dollar;cmd 00220 allow tcp from any to any 443 out via &dollar;pif setup keep-state
+
+# Allow outbound email connections
+&dollar;cmd 00230 allow tcp from any to any 25 out via &dollar;pif setup keep-state
+&dollar;cmd 00231 allow tcp from any to any 110 out via &dollar;pif setup keep-state
+
+# Allow outbound ping
+&dollar;cmd 00250 allow icmp from any to any out via &dollar;pif keep-state
+
+# Allow outbound NTP
+&dollar;cmd 00260 allow udp from any to any 123 out via &dollar;pif keep-state
+
+# Allow outbound SSH
+&dollar;cmd 00280 allow tcp from any to any 22 out via &dollar;pif setup keep-state
+
+# deny and log all other outbound connections
+&dollar;cmd 00299 deny log all from any to any out via &dollar;pif</programlisting>
+
+      <para>The next set of rules controls connections from Internet
+	hosts to the internal network.  It starts by denying packets
+	typically associated with attacks and then explicitly allows
+	specific types of connections.  All the authorized services
+	that originate from the Internet use <literal>limit</literal>
+	to prevent flooding.</para>
+
+      <programlisting># Deny all inbound traffic from non-routable reserved address spaces
+&dollar;cmd 00300 deny all from 192.168.0.0/16 to any in via &dollar;pif     #RFC 1918 private IP
+&dollar;cmd 00301 deny all from 172.16.0.0/12 to any in via &dollar;pif      #RFC 1918 private IP
+&dollar;cmd 00302 deny all from 10.0.0.0/8 to any in via &dollar;pif         #RFC 1918 private IP
+&dollar;cmd 00303 deny all from 127.0.0.0/8 to any in via &dollar;pif        #loopback
+&dollar;cmd 00304 deny all from 0.0.0.0/8 to any in via &dollar;pif          #loopback
+&dollar;cmd 00305 deny all from 169.254.0.0/16 to any in via &dollar;pif     #DHCP auto-config
+&dollar;cmd 00306 deny all from 192.0.2.0/24 to any in via &dollar;pif       #reserved for docs
+&dollar;cmd 00307 deny all from 204.152.64.0/23 to any in via &dollar;pif    #Sun cluster interconnect
+&dollar;cmd 00308 deny all from 224.0.0.0/3 to any in via &dollar;pif        #Class D &amp; E multicast
+
+# Deny public pings
+&dollar;cmd 00310 deny icmp from any to any in via &dollar;pif
+
+# Deny ident
+&dollar;cmd 00315 deny tcp from any to any 113 in via &dollar;pif
+
+# Deny all Netbios services.
+&dollar;cmd 00320 deny tcp from any to any 137 in via &dollar;pif
+&dollar;cmd 00321 deny tcp from any to any 138 in via &dollar;pif
+&dollar;cmd 00322 deny tcp from any to any 139 in via &dollar;pif
+&dollar;cmd 00323 deny tcp from any to any 81 in via &dollar;pif
+
+# Deny fragments
+&dollar;cmd 00330 deny all from any to any frag in via &dollar;pif
+
+# Deny ACK packets that did not match the dynamic rule table
+&dollar;cmd 00332 deny tcp from any to any established in via &dollar;pif
+
+# Allow traffic from ISP's DHCP server.
+# Replace x.x.x.x with the same IP address used in rule 00120.
+#&dollar;cmd 00360 allow udp from any to x.x.x.x 67 in via &dollar;pif keep-state
+
+# Allow HTTP connections to internal web server
+&dollar;cmd 00400 allow tcp from any to me 80 in via &dollar;pif setup limit src-addr 2
+
+# Allow inbound SSH connections
+&dollar;cmd 00410 allow tcp from any to me 22 in via &dollar;pif setup limit src-addr 2
+
+# Reject and log all other incoming connections
+&dollar;cmd 00499 deny log all from any to any in via &dollar;pif</programlisting>
+
+      <para>The last rule logs all packets that do not match any of
+	the rules in the ruleset:</para>
+
+      <programlisting># Everything else is denied and logged
+&dollar;cmd 00999 deny log all from any to any</programlisting>
+    </sect2>
+
+    <sect2 xml:id="network-natd">
+      <info>
+	<title>Configuring <acronym>NAT</acronym></title>
+
+	<authorgroup>
+	  <author>
+	    <personname>
+	      <firstname>Chern</firstname>
+	      <surname>Lee</surname>
+	    </personname>
+	    <contrib>Contributed by </contrib>
+	  </author>
+	</authorgroup>
+      </info>
+      <indexterm>
+	<primary>NAT</primary>
+
+	<secondary>and <application>IPFW</application></secondary>
+      </indexterm>
+
+      <para>&os;'s built-in <acronym>NAT</acronym> daemon,
+	&man.natd.8;, works in conjunction with
+	<application>IPFW</application> to provide network address
+	translation.  This can be used to provide an Internet
+	Connection Sharing solution so that several internal computers
+	can connect to the Internet using a single
+	<acronym>IP</acronym> address.</para>
+
+      <para>To do this, the &os; machine connected to the Internet
+	must act as a gateway.  This system must have two
+	<acronym>NIC</acronym>s, where one is connected to the
+	Internet and the other is connected to the internal
+	<acronym>LAN</acronym>.  Each machine connected to the
+	<acronym>LAN</acronym> should be assigned an
+	<acronym>IP</acronym> address in the private network space, as
+	defined by <link
+	  xlink:href="ftp://ftp.isi.edu/in-notes/rfc1918.txt">RFC
+	  1918</link>, and have the default gateway set to the
+	&man.natd.8; system's internal <acronym>IP</acronym>
+	address.</para>
+
+      <para>Some additional configuration is needed in order to
+	activate the <acronym>NAT</acronym> function of
+	<application>IPFW</application>.  If the system has a custom
+	kernel, the kernel configuration file needs to include
+	<literal>option IPDIVERT</literal> along with the other
+	<literal>IPFIREWALL</literal> options described in <xref
+	  linkend="firewalls-ipfw-enable"/>.</para>
+
+      <para>To enable <acronym>NAT</acronym> support at boot time, the
+	following must be in <filename>/etc/rc.conf</filename>:</para>
+
+      <programlisting>gateway_enable="YES"		# enables the gateway
+natd_enable="YES"		# enables <acronym>NAT</acronym>
+natd_interface="rl0"		# specify interface name of NIC attached to Internet
+natd_flags="-dynamic -m"	# -m = preserve port numbers; additional options are listed in &man.natd.8;</programlisting>
+
+      <note>
+	<para>It is also possible to specify a configuration file
+	  which contains the options to pass to &man.natd.8;:</para>
+
+	<programlisting>natd_flags="-f /etc/natd.conf"</programlisting>
+
+	<para>The specified file must contain a list of configuration
+	  options, one per line.  For example:</para>
+
+	<programlisting>redirect_port tcp 192.168.0.2:6667 6667
+redirect_port tcp 192.168.0.3:80 80</programlisting>
+
+	<para>For more information about this configuration file,
+	  consult &man.natd.8;.</para>
+      </note>
+
+      <para>Next, add the <acronym>NAT</acronym> rules to the firewall
+	ruleset.  When the rulest contains stateful rules, the
+	positioning of the <acronym>NAT</acronym> rules is critical
+	and the <literal>skipto</literal> action is used.  The
+	<literal>skipto</literal> action requires a rule number so
+	that it knows which rule to jump to.</para>
+
+      <para>The following example builds upon the firewall ruleset
+	shown in the previous section.  It adds some additional
+	entries and modifies some existing rules in order to configure
+	the firewall for <acronym>NAT</acronym>.  It starts by adding
+	some additional variables which represent the rule number to
+	skip to, the <literal>keep-state</literal> option, and a list
+	of <acronym>TCP</acronym> ports which will be used to reduce
+	the number of rules:</para>
+
+      <programlisting>#!/bin/sh
+ipfw -q -f flush
+cmd="ipfw -q add"
+skip="skipto 500"
+pif=dc0
+ks="keep-state"
+good_tcpo="22,25,37,53,80,443,110"</programlisting>
+
+      <para>The inbound <acronym>NAT</acronym> rule is inserted
+	<emphasis>after</emphasis> the two rules which allow all
+	traffic on the trusted internal interface and on the loopback
+	interface and <emphasis>before</emphasis> the
+	<literal>check-state</literal> rule.  It is important that the
+	rule number selected for this <acronym>NAT</acronym> rule, in
+	this example <literal>100</literal>, is higher than the first
+	two rules and lower than the <literal>check-state</literal>
+	rule:</para>
+
+      <programlisting>&dollar;cmd 005 allow all from any to any via xl0  # exclude LAN traffic
+&dollar;cmd 010 allow all from any to any via lo0  # exclude loopback traffic
+&dollar;cmd 100 divert natd ip from any to any in via &dollar;pif # NAT any inbound packets
+# Allow the packet through if it has an existing entry in the dynamic rules table
+&dollar;cmd 101 check-state</programlisting>
+
+      <para>The outbound rules are modified to replace the
+	<literal>allow</literal> action with the
+	<literal>&dollar;skip</literal> variable, indicating that rule
+	processing will continue at rule <literal>500</literal>.  The
+	seven <literal>tcp</literal> rules have been replaced by rule
+	<literal>125</literal> as the
+	<literal>&dollar;good_tcpo</literal> variable contains the
+	seven allowed outbound ports.</para>
+
+      <programlisting># Authorized outbound packets
+&dollar;cmd 120 &dollar;skip udp from any to x.x.x.x 53 out via &dollar;pif &dollar;ks
+&dollar;cmd 121 &dollar;skip udp from any to x.x.x.x 67 out via &dollar;pif &dollar;ks
+&dollar;cmd 125 &dollar;skip tcp from any to any &dollar;good_tcpo out via &dollar;pif setup &dollar;ks
+&dollar;cmd 130 &dollar;skip icmp from any to any out via &dollar;pif &dollar;ks</programlisting>
+
+      <para>The inbound rules remain the same, except for the very
+	last rule which removes the <literal> via $pif</literal> in
+	order to catch both inbound and outbound rules.  The
+	<acronym>NAT</acronym> rule must follow this last outbound
+	rule, must have a higher number than that last rule, and the
+	rule number must be referenced by the
+	<literal>skipto</literal> action.  In this ruleset, rule
+	number <literal>500</literal> diverts all packets which match
+	the outbound rules to &man.natd.8; for
+	<acronym>NAT</acronym> processing.  The next rule allows any
+	packet which has undergone <acronym>NAT</acronym> processing
+	to pass.</para>
+
+      <programlisting>&dollar;cmd 499 deny log all from any to any
+&dollar;cmd 500 divert natd ip from any to any out via &dollar;pif # skipto location for outbound stateful rules
+&dollar;cmd 510 allow ip from any to any</programlisting>
+
+      <para>In this example, rules <literal>100</literal>,
+	<literal>101</literal>, <literal>125</literal>,
+	<literal>500</literal>, and <literal>510</literal> control the
+	address translation of the outbound and inbound packets so
+	that the entries in the dynamic state table always register
+	the private <acronym>LAN</acronym> <acronym>IP</acronym>
+	address.</para>
+
+      <para>Consider an internal web browser which initializes a new
+	outbound <acronym>HTTP</acronym> session over port 80.  When
+	the first outbound packet enters the firewall, it does not
+	match rule <literal>100</literal> because it is headed out
+	rather than in.  It passes rule <literal>101</literal> because
+	this is the first packet and it has not been posted to the
+	dynamic state table yet.  The packet finally matches rule
+	<literal>125</literal> as it is outbound on an allowed port
+	and has a source <acronym>IP</acronym> address from the
+	internal <acronym>LAN</acronym>.  On matching this rule, two
+	actions take place.  First, the <literal>keep-state</literal>
+	action adds an entry to the dynamic state table and the
+	specified action, <literal>skipto rule 500</literal>, is
+	executed.  Next, the packet undergoes <acronym>NAT</acronym>
+	and is sent out to the Internet.  This packet makes its way to
+	the destination web server, where a response packet is
+	generated and sent back.  This new packet enters the top of
+	the ruleset.  It matches rule <literal>100</literal> and has
+	its destination <acronym>IP</acronym> address mapped back to
+	the original internal address.  It then is processed by the
+	<literal>check-state</literal> rule, is found in the table as
+	an existing session, and is released to the
+	<acronym>LAN</acronym>.</para>
+
+      <para>On the inbound side, the ruleset has to deny bad packets
+	and allow only authorized services.  A packet which matches an
+	inbound rule is posted to the dynamic state table and the
+	packet is released to the <acronym>LAN</acronym>.  The packet
+	generated as a response is recognized by the
+	<literal>check-state</literal> rule as belonging to an
+	existing session.  It is then sent to rule
+	<literal>500</literal> to undergo
+	<acronym>NAT</acronym> before being released to the outbound
+	interface.</para>
+
+      <sect3>
+	<title>Port Redirection</title>
+
+	<para>The drawback with &man.natd.8; is that the
+	  <acronym>LAN</acronym> clients are not accessible from the
+	  Internet.  Clients on the <acronym>LAN</acronym> can make
+	  outgoing connections to the world but cannot receive
+	  incoming ones.  This presents a problem if trying to run
+	  Internet services on one of the <acronym>LAN</acronym>
+	  client machines.  A simple way around this is to redirect
+	  selected Internet ports on the &man.natd.8; machine to a
+	  <acronym>LAN</acronym> client.</para>
+
+	<para>For example, an <acronym>IRC</acronym> server runs on
+	  client <systemitem>A</systemitem> and a web server runs on
+	  client <systemitem>B</systemitem>.  For this to work
+	  properly, connections received on ports 6667
+	  (<acronym>IRC</acronym>) and 80 (<acronym>HTTP</acronym>)
+	  must be redirected to the respective machines.</para>
+
+	<para>The syntax for <option>-redirect_port</option> is as
+	  follows:</para>
+
+	<programlisting>     -redirect_port proto targetIP:targetPORT[-targetPORT]
+                 [aliasIP:]aliasPORT[-aliasPORT]
+                 [remoteIP[:remotePORT[-remotePORT]]]</programlisting>
+
+	<para>In the above example, the argument should be:</para>
+
+	<programlisting>    -redirect_port tcp 192.168.0.2:6667 6667
+    -redirect_port tcp 192.168.0.3:80 80</programlisting>
+
+	<para>This redirects the proper <acronym>TCP</acronym> ports
+	  to the <acronym>LAN</acronym> client machines.</para>
+
+	<para>Port ranges over individual ports can be indicated with
+	  <option>-redirect_port</option>.  For example,
+	  <replaceable>tcp 192.168.0.2:2000-3000
+	    2000-3000</replaceable> would redirect all connections
+	  received on ports 2000 to 3000 to ports 2000 to 3000 on
+	  client <systemitem>A</systemitem>.</para>
+
+	<para>These options can be used when directly running
+	  &man.natd.8;, placed within the
+	  <literal>natd_flags=""</literal> option in
+	  <filename>/etc/rc.conf</filename>, or passed via a
+	  configuration file.</para>
+
+	<para>For further configuration options, consult
+	  &man.natd.8;</para>
+      </sect3>
+
+      <sect3>
+	<title>Address Redirection</title>
+
+	<indexterm>
+	  <primary>address redirection</primary>
+	</indexterm>
+
+	<para>Address redirection is useful if more than one
+	  <acronym>IP</acronym> address is available.  Each
+	  <acronym>LAN</acronym> client can be assigned its own
+	  external <acronym>IP</acronym> address by &man.natd.8;,
+	  which will then rewrite outgoing packets from the
+	  <acronym>LAN</acronym> clients with the proper external
+	  <acronym>IP</acronym> address and redirects all traffic
+	  incoming on that particular <acronym>IP</acronym> address
+	  back to the specific <acronym>LAN</acronym> client.  This is
+	  also known as static <acronym>NAT</acronym>.  For example,
+	  if <acronym>IP</acronym> addresses <systemitem
+	    class="ipaddress">128.1.1.1</systemitem>, <systemitem
+	    class="ipaddress">128.1.1.2</systemitem>, and <systemitem
+	    class="ipaddress">128.1.1.3</systemitem> are available,
+	  <systemitem class="ipaddress">128.1.1.1</systemitem> can be
+	  used as the &man.natd.8; machine's external
+	  <acronym>IP</acronym> address, while <systemitem
+	    class="ipaddress">128.1.1.2</systemitem> and <systemitem
+	    class="ipaddress">128.1.1.3</systemitem> are forwarded
+	  back to <acronym>LAN</acronym> clients
+	  <systemitem>A</systemitem> and
+	  <systemitem>B</systemitem>.</para>
+
+	<para>The <option>-redirect_address</option> syntax is as
+	  follows:</para>
+
+	<programlisting>-redirect_address localIP publicIP</programlisting>
+
+
+	<informaltable frame="none" pgwide="1">
+	  <tgroup cols="2">
+	    <tbody>
+	      <row>
+		<entry>localIP</entry>
+		<entry>The internal <acronym>IP</acronym> address of
+		  the <acronym>LAN</acronym> client.</entry>
+	      </row>
+
+	      <row>
+		<entry>publicIP</entry>
+		<entry>The external <acronym>IP</acronym> address
+		  corresponding to the <acronym>LAN</acronym>
+		  client.</entry>
+	      </row>
+	    </tbody>
+	  </tgroup>
+	</informaltable>
+
+	<para>In the example, this argument would read:</para>
+
+	<programlisting>-redirect_address 192.168.0.2 128.1.1.2
+-redirect_address 192.168.0.3 128.1.1.3</programlisting>
+
+	<para>Like <option>-redirect_port</option>, these arguments
+	  are placed within the <literal>natd_flags=""</literal>
+	  option of <filename>/etc/rc.conf</filename>, or passed via a
+	  configuration file.  With address redirection, there is no
+	  need for port redirection since all data received on a
+	  particular <acronym>IP</acronym> address is
+	  redirected.</para>
+
+	<para>The external <acronym>IP</acronym> addresses on the
+	  &man.natd.8; machine must be active and aliased to the
+	  external interface.  Refer to &man.rc.conf.5; for
+	  details.</para>
+      </sect3>
+    </sect2>
+
+    <sect2 xml:id="firewalls-ipfw-cmd">
+      <title>The <application>IPFW</application> Command</title>
+
+      <indexterm><primary><command>ipfw</command></primary></indexterm>
+
+      <para><command>ipfw</command> can be used to make manual,
+	single rule additions or deletions to the active firewall
+	while it is running.  The problem with using this method is
+	that all the changes are lost when the system reboots.  It is
+	recommended to instead write all the rules in a file and to
+	use that file to load the rules at boot time and to replace
+	the currently running firewall rules whenever that file
+	changes.</para>
+
+      <para><command>ipfw</command> is a useful way to display the
+	running firewall rules to the console screen.  The
+	<application>IPFW</application> accounting facility
+	dynamically creates a counter for each rule that counts each
+	packet that matches the rule.  During the process of testing a
+	rule, listing the rule with its counter is one way to
+	determine if the rule is functioning as expected.</para>
+
+      <para>To list all the running rules in sequence:</para>
+
+      <screen>&prompt.root; <userinput>ipfw list</userinput></screen>
+
+      <para>To list all the running rules with a time stamp of when
+	the last time the rule was matched:</para>
+
+      <screen>&prompt.root; <userinput>ipfw -t list</userinput></screen>
+
+      <para>The next example lists accounting information and the
+	packet count for matched rules along with the rules
+	themselves.  The first column is the rule number, followed by
+	the number of matched packets and bytes, followed by the rule
+	itself.</para>
+
+      <screen>&prompt.root; <userinput>ipfw -a list</userinput></screen>
+
+      <para>To list dynamic rules in addition to static rules:</para>
+
+      <screen>&prompt.root; <userinput>ipfw -d list</userinput></screen>
+
+      <para>To also show the expired dynamic rules:</para>
+
+      <screen>&prompt.root; <userinput>ipfw -d -e list</userinput></screen>
+
+      <para>To zero the counters:</para>
+
+      <screen>&prompt.root; <userinput>ipfw zero</userinput></screen>
+
+      <para>To zero the counters for just the rule with number
+	<replaceable>NUM</replaceable>:</para>
+
+      <screen>&prompt.root; <userinput>ipfw zero <replaceable>NUM</replaceable></userinput></screen>
+
+      <sect3>
+	<title>Logging Firewall Messages</title>
+
+	<indexterm>
+	  <primary><application>IPFW</application></primary>
+
+	  <secondary>logging</secondary>
+	</indexterm>
+
+	<para>Even with the logging facility enabled,
+	  <application>IPFW</application> will not generate any rule
+	  logging on its own.  The firewall administrator decides
+	  which rules in the ruleset will be logged, and adds the
+	  <literal>log</literal> keyword to those rules.  Normally
+	  only deny rules are logged.  It is customary to duplicate
+	  the <quote>ipfw default deny everything</quote> rule with
+	  the <literal>log</literal> keyword included as the last rule
+	  in the ruleset.  This way, it is possible to see all the
+	  packets that did not match any of the rules in the
+	  ruleset.</para>
+
+	<para>Logging is a two edged sword.  If one is not careful,
+	  an over abundance of log data or a DoS attack can fill the
+	  disk with log files.  Log messages are not only written to
+	  <application>syslogd</application>, but also are displayed
+	  on the root console screen and soon become annoying.</para>
+
+	<para>The <literal>IPFIREWALL_VERBOSE_LIMIT=5</literal>
+	  kernel option limits the number of consecutive messages
+	  sent to &man.syslogd.8;, concerning the packet matching of a
+	  given rule.  When this option is enabled in the kernel, the
+	  number of consecutive messages concerning a particular rule
+	  is capped at the number specified.  There is nothing to be
+	  gained from 200 identical log messages.  With this option
+	  set to five,
+	  five consecutive messages concerning a particular rule
+	  would be logged to <application>syslogd</application> and
+	  the remainder identical consecutive messages would be
+	  counted and posted to <application>syslogd</application>
+	  with a phrase like the following:</para>
+
+	<programlisting>last message repeated 45 times</programlisting>
+
+	<para>All logged packets messages are written by default to
+	  <filename>/var/log/security</filename>, which is
+	  defined in <filename>/etc/syslog.conf</filename>.</para>
+      </sect3>
+
+      <sect3 xml:id="firewalls-ipfw-rules-script">
+	<title>Building a Rule Script</title>
+
+	<para>Most experienced <application>IPFW</application> users
+	  create a file containing the rules and code them in a manner
+	  compatible with running them as a script.  The major benefit
+	  of doing this is the firewall rules can be refreshed in mass
+	  without the need of rebooting the system to activate them.
+	  This method is convenient in testing new rules as the
+	  procedure can be executed as many times as needed.  Being a
+	  script, symbolic substitution can be used for frequently
+	  used values to be substituted into multiple rules.</para>
+
+	<para>This example script is compatible with the syntax used
+	  by the &man.sh.1;,  &man.csh.1;, and &man.tcsh.1; shells.
+	  Symbolic substitution fields are prefixed with a dollar sign
+	  (&dollar;).  Symbolic fields do not have the &dollar;
+	  prefix.  The value to populate the symbolic field must be
+	  enclosed in double quotes ("").</para>
+
+	<para>Start the rules file like this:</para>
+
+	<programlisting>############### start of example ipfw rules script #############
+#
+ipfw -q -f flush       # Delete all rules
+# Set defaults
+oif="tun0"             # out interface
+odns="192.0.2.11"      # ISP's DNS server IP address
+cmd="ipfw -q add "     # build rule prefix
+ks="keep-state"        # just too lazy to key this each time
+&dollar;cmd 00500 check-state
+&dollar;cmd 00502 deny all from any to any frag
+&dollar;cmd 00501 deny tcp from any to any established
+&dollar;cmd 00600 allow tcp from any to any 80 out via &dollar;oif setup &dollar;ks
+&dollar;cmd 00610 allow tcp from any to &dollar;odns 53 out via &dollar;oif setup &dollar;ks
+&dollar;cmd 00611 allow udp from any to &dollar;odns 53 out via &dollar;oif &dollar;ks
+################### End of example ipfw rules script ############</programlisting>
+
+	<para>The rules are not important as the focus of this example
+	  is how the symbolic substitution fields are
+	  populated.</para>
+
+	<para>If the above example was in
+	  <filename>/etc/ipfw.rules</filename>, the rules could be
+	  reloaded by the following command:</para>
+
+	<screen>&prompt.root; <userinput>sh /etc/ipfw.rules</userinput></screen>
+
+	<para><filename>/etc/ipfw.rules</filename> can be located
+	  anywhere and the file can have any name.</para>
+
+	<para>The same thing could be accomplished by running these
+	  commands by hand:</para>
+
+	<screen>&prompt.root; <userinput>ipfw -q -f flush</userinput>
+&prompt.root; <userinput>ipfw -q add check-state</userinput>
+&prompt.root; <userinput>ipfw -q add deny all from any to any frag</userinput>
+&prompt.root; <userinput>ipfw -q add deny tcp from any to any established</userinput>
+&prompt.root; <userinput>ipfw -q add allow tcp from any to any 80 out via tun0 setup keep-state</userinput>
+&prompt.root; <userinput>ipfw -q add allow tcp from any to 192.0.2.11 53 out via tun0 setup keep-state</userinput>
+&prompt.root; <userinput>ipfw -q add 00611 allow udp from any to 192.0.2.11 53 out via tun0 keep-state</userinput></screen>
+      </sect3>
+    </sect2>
   </sect1>
 
   <sect1 xml:id="firewalls-pf">
@@ -1574,1040 +2608,6 @@ antispoof for $int_if</programlisting>
 
 block drop in quick on $ext_if from $martians to any
 block drop out quick on $ext_if from any to $martians</programlisting>
-      </sect3>
-    </sect2>
-  </sect1>
-
-  <sect1 xml:id="firewalls-ipfw">
-    <title><application>IPFW</application></title>
-
-    <indexterm>
-      <primary>firewall</primary>
-
-      <secondary>IPFW</secondary>
-    </indexterm>
-
-    <para><application>IPFW</application> is a stateful firewall
-      written for &os; which supports both <acronym>IPv4</acronym> and
-      <acronym>IPv6</acronym>.  It is comprised of several components:
-      the kernel firewall filter rule processor and its integrated
-      packet accounting facility, the logging facility,
-      <acronym>NAT</acronym>, the &man.dummynet.4; traffic shaper, a
-      forward facility, a bridge facility, and an ipstealth
-      facility.</para>
-
-    <para>&os; provides a sample ruleset in
-      <filename>/etc/rc.firewall</filename> which defines several
-      firewall types for common scenarios to assist novice users in
-      generating an appropriate ruleset.
-      <application>IPFW</application> provides a powerful syntax which
-      advanced users can use to craft customized rulesets that meet
-      the security requirements of a given environment.</para>
-
-    <para>This section describes how to enable
-      <application>IPFW</application>, provides an overview of its
-      rule syntax, and demonstrates several rulesets for common
-      configuration scenarios.</para>
-
-    <sect2 xml:id="firewalls-ipfw-enable">
-      <title>Enabling <application>IPFW</application></title>
-
-      <indexterm>
-	<primary><application>IPFW</application></primary>
-
-	<secondary>enabling</secondary>
-      </indexterm>
-
-      <para><application>IPFW</application> is included in the basic
-	&os; install as a kernel loadable module, meaning that a
-	custom kernel is not needed in order to enable
-	<application>IPFW</application>.</para>
-
-      <indexterm>
-	<primary>kernel options</primary>
-
-	<secondary>IPFIREWALL</secondary>
-      </indexterm>
-
-      <indexterm>
-	<primary>kernel options</primary>
-
-	<secondary>IPFIREWALL_VERBOSE</secondary>
-      </indexterm>
-
-      <indexterm>
-	<primary>kernel options</primary>
-
-	<secondary>IPFIREWALL_VERBOSE_LIMIT</secondary>
-      </indexterm>
-
-      <indexterm>
-	<primary><application>IPFW</application></primary>
-
-	<secondary>kernel options</secondary>
-      </indexterm>
-
-      <para>For those users who wish to statically compile
-	<application>IPFW</application> support into a custom kernel,
-	refer to the instructions in <xref linkend="kernelconfig"/>.
-	The following options are available for the
-	custom kernel configuration file:</para>
-
-      <programlisting>options    IPFIREWALL			# enables IPFW
-options    IPFIREWALL_VERBOSE		# enables logging for rules with log keyword
-options    IPFIREWALL_VERBOSE_LIMIT=5	# limits number of logged packets per-entry
-options    IPFIREWALL_DEFAULT_TO_ACCEPT # sets default policy to pass what is not explicitly denied
-options    IPDIVERT			# enables NAT</programlisting>
-
-      <para>To configure the system to enable
-	<application>IPFW</application> at boot time, add the
-	following entry to <filename>/etc/rc.conf</filename>:</para>
-
-      <programlisting>firewall_enable="YES"</programlisting>
-
-      <para>To use one of the default firewall types provided by &os;,
-	add another line which specifies the type:</para>
-
-      <programlisting>firewall_type="open"</programlisting>
-
-      <para>The available types are:</para>
-
-      <itemizedlist>
-	<listitem>
-	  <para><literal>open</literal>: passes all traffic.</para>
-	</listitem>
-	<listitem>
-	  <para><literal>client</literal>: protects only this
-	    machine.</para>
-	</listitem>
-	<listitem>
-	  <para><literal>simple</literal>: protects the whole
-	    network.</para>
-	</listitem>
-	<listitem>
-	  <para><literal>closed</literal>: entirely disables IP
-	    traffic except for the loopback interface.</para>
-	</listitem>
-	<listitem>
-	  <para><literal>workstation</literal>: protects only this
-	    machine using stateful rules.</para>
-	</listitem>
-	<listitem>
-	  <para><literal>UNKNOWN</literal>: disables the loading of
-	    firewall rules.</para>
-	</listitem>
-	<listitem>
-	  <para><filename><replaceable>filename</replaceable></filename>:
-	    full path of the file containing the firewall
-	    ruleset.</para>
-	</listitem>
-      </itemizedlist>
-
-      <para>If <literal>firewall_type</literal> is set to either
-	<literal>client</literal> or <literal>simple</literal>,
-	modify the default rules found in
-	<filename>/etc/rc.firewall</filename> to fit the
-	configuration of the system.</para>
-
-      <para>Note that the <literal>filename</literal> type is used to
-	load a custom ruleset.</para>
-
-      <para>An alternate way to load a custom ruleset is to set the
-	<literal>firewall_script</literal> variable to the absolute
-	path of an <emphasis>executable script</emphasis> that
-	includes <application>IPFW</application> commands.    The
-	examples used in this section assume that the
-	<literal>firewall_script</literal> is set to
-	<filename>/etc/ipfw.rules</filename>:</para>
-
-      <programlisting>firewall_script="/etc/ipfw.rules"</programlisting>
-
-      <para>To enable logging, include this line:</para>
-
-      <programlisting>firewall_logging="YES"</programlisting>
-
-      <para>There is no <filename>/etc/rc.conf</filename> variable to
-	set logging limits.  To limit the number of times a rule is
-	logged per connection attempt, specify the number using this
-	line in <filename>/etc/sysctl.conf</filename>:</para>
-
-      <programlisting>net.inet.ip.fw.verbose_limit=<replaceable>5</replaceable></programlisting>
-
-      <para>After saving the needed edits, start the firewall.  To
-	enable logging limits now, also set the
-	<command>sysctl</command> value specified above:</para>
-
-      <screen>&prompt.root; <userinput>service ipfw start</userinput>
-&prompt.root; <userinput>sysctl net.inet.ip.fw.verbose_limit=<replaceable>5</replaceable></userinput></screen>
-    </sect2>
-
-    <sect2 xml:id="firewalls-ipfw-rules">
-      <title><application>IPFW</application> Rule Syntax</title>
-
-      <indexterm>
-	<primary><application>IPFW</application></primary>
-
-	<secondary>rule processing order</secondary>
-      </indexterm>
-
-      <para>When a packet enters the <application>IPFW</application>
-	firewall, it is compared against the first rule in the ruleset
-	and progresses one rule at a time, moving from top to bottom
-	in sequence.  When the packet matches the selection parameters
-	of a rule, the rule's action is executed and the search of the
-	ruleset terminates for that packet.  This is referred to as
-	<quote>first match wins</quote>.  If the packet does not match
-	any of the rules, it gets caught by the mandatory
-	<application>IPFW</application> default rule number 65535,
-	which denies all packets and silently discards them.  However,
-	if the packet matches a rule that contains the
-	<literal>count</literal>, <literal>skipto</literal>, or
-	<literal>tee</literal> keywords, the search continues.  Refer
-	to &man.ipfw.8; for details on how these keywords affect rule
-	processing.</para>
-
-      <indexterm>
-	<primary><application>IPFW</application></primary>
-
-	<secondary>rule syntax</secondary>
-      </indexterm>
-
-      <para>When creating an
-	<application>IPFW</application> rule, keywords must be
-	written in the following order.  Some keywords are mandatory
-	while other keywords are optional.  The words shown in
-	uppercase represent a variable and the words shown in
-	lowercase must precede the variable that follows it.  The
-	<literal>#</literal> symbol is used to mark the start of a
-	comment and may appear at the end of a rule or on its own
-	line.  Blank lines are ignored.</para>
-
-      <para><replaceable>CMD RULE_NUMBER set SET_NUMBER ACTION log
-	  LOG_AMOUNT PROTO from SRC SRC_PORT to DST DST_PORT
-	  OPTIONS</replaceable></para>
-
-      <para>This section provides an overview of these keywords and
-	their options.  It is not an exhaustive list of every possible
-	option.  Refer to &man.ipfw.8; for a complete description of
-	the rule syntax that can be used when creating
-	<application>IPFW</application> rules.</para>
-
-      <variablelist>
-	<varlistentry>
-	  <term>CMD</term>
-	  <listitem>
-	    <para>Every rule must start with
-	      <parameter>ipfw add</parameter>.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>RULE_NUMBER</term>
-	  <listitem>
-	    <para>Each rule is associated with a number from
-	      <literal>1</literal> to
-	      <literal>65534</literal>.  The number is used to
-	      indicate the order of rule processing.  Multiple rules
-	      can have the same number, in which case they are applied
-	      according to the order in which they have been
-	      added.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>SET_NUMBER</term>
-	  <listitem>
-	    <para>Each rule is associated with a set number from
-	      <literal>0</literal> to <literal>31</literal>.
-	      Sets can be individually disabled or enabled, making it
-	      possible to quickly add or delete a set of rules.  If a
-	      SET_NUMBER is not specified, the rule will be added to
-	      set <literal>0</literal>.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>ACTION</term>
-	  <listitem>
-	    <para>A rule can be associated with one of the following
-	      actions.  The specified action will be executed when the
-	      packet matches the selection criterion of the
-	      rule.</para>
-
-	    <para><parameter>allow | accept | pass |
-		permit</parameter>: these keywords are equivalent and
-	      allow packets that match the rule.</para>
-
-	    <para><parameter>check-state</parameter>: checks the
-	      packet against the dynamic state table.  If a match is
-	      found, execute the action associated with the rule which
-	      generated this dynamic rule, otherwise move to the next
-	      rule.  A <literal>check-state</literal> rule does not
-	      have selection criterion.  If no
-	      <literal>check-state</literal> rule is present in the
-	      ruleset, the dynamic rules table is checked at the first
-	      <literal>keep-state</literal> or
-	      <literal>limit</literal> rule.</para>
-
-	    <para><parameter>count</parameter>: updates counters for
-	      all packets that match the rule.  The search continues
-	      with the next rule.</para>
-
-	    <para><parameter>deny | drop</parameter>: either word
-	      silently discards packets that match this rule.</para>
-
-	    <para>Additional actions are available.  Refer to
-	      &man.ipfw.8; for details.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>LOG_AMOUNT</term>
-	  <listitem>
-	    <para>When a packet matches a rule with the
-	      <literal>log</literal> keyword, a message will be logged
-	      to &man.syslogd.8; with a facility name of
-	      <literal>SECURITY</literal>.  Logging only occurs if the
-	      number of packets logged for that particular rule does
-	      not exceed a specified LOG_AMOUNT.  If no
-	      LOG_AMOUNT is specified, the limit is taken from the
-	      value of
-	      <varname>net.inet.ip.fw.verbose_limit</varname>.  A
-	      value of zero removes the logging limit.  Once the limit
-	      is reached, logging can be re-enabled by clearing the
-	      logging counter or the packet counter for that rule,
-	      using <command>ipfw resetlog</command>.</para>
-
-	    <note>
-	      <para>Logging is done after all other packet matching
-		conditions have been met, and before performing the
-		final action on the packet.  The administrator decides
-		which rules to enable logging on.</para>
-	    </note>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>PROTO</term>
-	  <listitem>
-	    <para>This optional value can be used to specify any
-	      protocol name or number found in
-	      <filename>/etc/protocols</filename>.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>SRC</term>
-	  <listitem>
-	    <para>The <literal>from</literal> keyword must be followed
-	      by the source address or a keyword that represents the
-	      source address.  An address can be represented by
-	      <literal>any</literal>, <literal>me</literal> (any
-	      address configured on an interface on this system),
-	      <literal>me6</literal>, (any <acronym>IPv6</acronym>
-	      address configured on an interface on this system), or
-	      <literal>table</literal> followed by the number of a
-	      lookup table which contains a list of addresses.  When
-	      specifying an <acronym>IP</acronym> address, it can be
-	      optionally followed by its <acronym>CIDR</acronym> mask
-	      or subnet mask.  For example,
-	      <literal>1.2.3.4/25</literal> or
-	      <literal>1.2.3.4:255.255.255.128</literal>.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>SRC_PORT</term>
-	  <listitem>
-	    <para>An optional source port can be specified using the
-	      port number or name from
-	      <filename>/etc/services</filename>.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>DST</term>
-	  <listitem>
-	    <para>The <literal>to</literal> keyword must be followed
-	      by the destination address or a keyword that represents
-	      the destination address.  The same keywords and
-	      addresses described in the SRC section can be used to
-	      describe the destination.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>DST_PORT</term>
-	  <listitem>
-	    <para>An optional destination port can be specified using
-	      the port number or name from
-	      <filename>/etc/services</filename>.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>OPTIONS</term>
-	  <listitem>
-	    <para>Several keywords can follow the source and
-	      destination.  As the name suggests, OPTIONS are
-	      optional.  Commonly used options include
-	      <literal>in</literal> or <literal>out</literal>, which
-	      specify the direction of packet flow,
-	      <literal>icmptypes</literal> followed by the type of
-	      <acronym>ICMP</acronym> message, and
-	      <literal>keep-state</literal>.</para>
-
-	    <para>When a <parameter>keep-state</parameter> rule is
-	      matched, the firewall will create a dynamic rule which
-	      matches bidirectional traffic between the source and
-	      destination addresses and ports using the same
-	      protocol.</para>
-
-	    <para>The dynamic rules facility is vulnerable to resource
-	      depletion from a SYN-flood attack which would open a
-	      huge number of dynamic rules.  To counter this type of
-	      attack with  <application>IPFW</application>, use
-	      <literal>limit</literal>.  This option limits the number
-	      of simultaneous sessions by checking the open dynamic
-	      rules, counting the number of times this rule and
-	      <acronym>IP</acronym> address combination occurred.  If
-	      this count is greater than the value specified by
-	      <literal>limit</literal>, the packet is
-	      discarded.</para>
-
-	    <para>Dozens of OPTIONS are available.  Refer to
-	      &man.ipfw.8; for a description of each available
-	      option.</para>
-	  </listitem>
-	</varlistentry>
-      </variablelist>
-    </sect2>
-
-    <sect2>
-      <title>Example Ruleset</title>
-
-      <para>This section demonstrates how to create an example
-	stateful firewall ruleset script named
-	<filename>/etc/ipfw.rules</filename>.  In this example, all
-	connection rules use <literal>in</literal> or
-	<literal>out</literal> to clarify the direction.  They also
-	use <literal>via</literal>
-	<replaceable>interface-name</replaceable> to specify
-	the interface the packet is traveling over.</para>
-
-      <note>
-	<para>When first creating or testing a firewall ruleset,
-	  consider temporarily setting this tunable:</para>
-
-	<programlisting>net.inet.ip.fw.default_to_accept="1"</programlisting>
-
-	<para>This sets the default policy of &man.ipfw.8; to be more
-	  permissive than the default <literal>deny ip from any to
-	    any</literal>, making it slightly more difficult to get
-	  locked out of the system right after a reboot.</para>
-      </note>
-
-      <para>The firewall script begins by indicating that it is a
-	Bourne shell script and flushes any existing rules.  It then
-	creates the <literal>cmd</literal> variable so that
-	<literal>ipfw add</literal> does not have to be typed at the
-	beginning of every rule.  It also defines the
-	<literal>pif</literal> variable which represents the name of
-	the interface that is attached to the Internet.</para>
-
-      <programlisting>#!/bin/sh
-# Flush out the list before we begin.
-ipfw -q -f flush
-
-# Set rules command prefix
-cmd="ipfw -q add"
-pif="dc0"     # interface name of NIC attached to Internet</programlisting>
-
-      <para>The first two rules allow all traffic on the trusted
-	internal interface and on the loopback interface:</para>
-
-      <programlisting># Change xl0 to LAN NIC interface name
-&dollar;cmd 00005 allow all from any to any via xl0
-
-# No restrictions on Loopback Interface
-&dollar;cmd 00010 allow all from any to any via lo0</programlisting>
-
-      <para>The next rule allows the packet through if it matches an
-	existing entry in the dynamic rules table:</para>
-
-      <programlisting>&dollar;cmd 00101 check-state</programlisting>
-
-      <para>The next set of rules defines which stateful connections
-	internal systems can create to hosts on the Internet:</para>
-
-      <programlisting># Allow access to public DNS
-# Replace x.x.x.x with the IP address of a public DNS server
-# and repeat for each DNS server in /etc/resolv.conf
-&dollar;cmd 00110 allow tcp from any to x.x.x.x 53 out via &dollar;pif setup keep-state
-&dollar;cmd 00111 allow udp from any to x.x.x.x 53 out via &dollar;pif keep-state
-
-# Allow access to ISP's DHCP server for cable/DSL configurations.
-# Use the first rule and check log for IP address.
-# Then, uncomment the second rule, input the IP address, and delete the first rule
-&dollar;cmd 00120 allow log udp from any to any 67 out via &dollar;pif keep-state
-#&dollar;cmd 00120 allow udp from any to x.x.x.x 67 out via &dollar;pif keep-state
-
-# Allow outbound HTTP and HTTPS connections
-&dollar;cmd 00200 allow tcp from any to any 80 out via &dollar;pif setup keep-state
-&dollar;cmd 00220 allow tcp from any to any 443 out via &dollar;pif setup keep-state
-
-# Allow outbound email connections
-&dollar;cmd 00230 allow tcp from any to any 25 out via &dollar;pif setup keep-state
-&dollar;cmd 00231 allow tcp from any to any 110 out via &dollar;pif setup keep-state
-
-# Allow outbound ping
-&dollar;cmd 00250 allow icmp from any to any out via &dollar;pif keep-state
-
-# Allow outbound NTP
-&dollar;cmd 00260 allow udp from any to any 123 out via &dollar;pif keep-state
-
-# Allow outbound SSH
-&dollar;cmd 00280 allow tcp from any to any 22 out via &dollar;pif setup keep-state
-
-# deny and log all other outbound connections
-&dollar;cmd 00299 deny log all from any to any out via &dollar;pif</programlisting>
-
-      <para>The next set of rules controls connections from Internet
-	hosts to the internal network.  It starts by denying packets
-	typically associated with attacks and then explicitly allows
-	specific types of connections.  All the authorized services
-	that originate from the Internet use <literal>limit</literal>
-	to prevent flooding.</para>
-
-      <programlisting># Deny all inbound traffic from non-routable reserved address spaces
-&dollar;cmd 00300 deny all from 192.168.0.0/16 to any in via &dollar;pif     #RFC 1918 private IP
-&dollar;cmd 00301 deny all from 172.16.0.0/12 to any in via &dollar;pif      #RFC 1918 private IP
-&dollar;cmd 00302 deny all from 10.0.0.0/8 to any in via &dollar;pif         #RFC 1918 private IP
-&dollar;cmd 00303 deny all from 127.0.0.0/8 to any in via &dollar;pif        #loopback
-&dollar;cmd 00304 deny all from 0.0.0.0/8 to any in via &dollar;pif          #loopback
-&dollar;cmd 00305 deny all from 169.254.0.0/16 to any in via &dollar;pif     #DHCP auto-config
-&dollar;cmd 00306 deny all from 192.0.2.0/24 to any in via &dollar;pif       #reserved for docs
-&dollar;cmd 00307 deny all from 204.152.64.0/23 to any in via &dollar;pif    #Sun cluster interconnect
-&dollar;cmd 00308 deny all from 224.0.0.0/3 to any in via &dollar;pif        #Class D &amp; E multicast
-
-# Deny public pings
-&dollar;cmd 00310 deny icmp from any to any in via &dollar;pif
-
-# Deny ident
-&dollar;cmd 00315 deny tcp from any to any 113 in via &dollar;pif
-
-# Deny all Netbios services.
-&dollar;cmd 00320 deny tcp from any to any 137 in via &dollar;pif
-&dollar;cmd 00321 deny tcp from any to any 138 in via &dollar;pif
-&dollar;cmd 00322 deny tcp from any to any 139 in via &dollar;pif
-&dollar;cmd 00323 deny tcp from any to any 81 in via &dollar;pif
-
-# Deny fragments
-&dollar;cmd 00330 deny all from any to any frag in via &dollar;pif
-
-# Deny ACK packets that did not match the dynamic rule table
-&dollar;cmd 00332 deny tcp from any to any established in via &dollar;pif
-
-# Allow traffic from ISP's DHCP server.
-# Replace x.x.x.x with the same IP address used in rule 00120.
-#&dollar;cmd 00360 allow udp from any to x.x.x.x 67 in via &dollar;pif keep-state
-
-# Allow HTTP connections to internal web server
-&dollar;cmd 00400 allow tcp from any to me 80 in via &dollar;pif setup limit src-addr 2
-
-# Allow inbound SSH connections
-&dollar;cmd 00410 allow tcp from any to me 22 in via &dollar;pif setup limit src-addr 2
-
-# Reject and log all other incoming connections
-&dollar;cmd 00499 deny log all from any to any in via &dollar;pif</programlisting>
-
-      <para>The last rule logs all packets that do not match any of
-	the rules in the ruleset:</para>
-
-      <programlisting># Everything else is denied and logged
-&dollar;cmd 00999 deny log all from any to any</programlisting>
-    </sect2>
-
-    <sect2 xml:id="network-natd">
-      <info>
-	<title>Configuring <acronym>NAT</acronym></title>
-
-	<authorgroup>
-	  <author>
-	    <personname>
-	      <firstname>Chern</firstname>
-	      <surname>Lee</surname>
-	    </personname>
-	    <contrib>Contributed by </contrib>
-	  </author>
-	</authorgroup>
-      </info>
-      <indexterm>
-	<primary>NAT</primary>
-
-	<secondary>and <application>IPFW</application></secondary>
-      </indexterm>
-
-      <para>&os;'s built-in <acronym>NAT</acronym> daemon,
-	&man.natd.8;, works in conjunction with
-	<application>IPFW</application> to provide network address
-	translation.  This can be used to provide an Internet
-	Connection Sharing solution so that several internal computers
-	can connect to the Internet using a single
-	<acronym>IP</acronym> address.</para>
-
-      <para>To do this, the &os; machine connected to the Internet
-	must act as a gateway.  This system must have two
-	<acronym>NIC</acronym>s, where one is connected to the
-	Internet and the other is connected to the internal
-	<acronym>LAN</acronym>.  Each machine connected to the
-	<acronym>LAN</acronym> should be assigned an
-	<acronym>IP</acronym> address in the private network space, as
-	defined by <link
-	  xlink:href="ftp://ftp.isi.edu/in-notes/rfc1918.txt">RFC
-	  1918</link>, and have the default gateway set to the
-	&man.natd.8; system's internal <acronym>IP</acronym>
-	address.</para>
-
-      <para>Some additional configuration is needed in order to
-	activate the <acronym>NAT</acronym> function of
-	<application>IPFW</application>.  If the system has a custom
-	kernel, the kernel configuration file needs to include
-	<literal>option IPDIVERT</literal> along with the other
-	<literal>IPFIREWALL</literal> options described in <xref
-	  linkend="firewalls-ipfw-enable"/>.</para>
-
-      <para>To enable <acronym>NAT</acronym> support at boot time, the
-	following must be in <filename>/etc/rc.conf</filename>:</para>
-
-      <programlisting>gateway_enable="YES"		# enables the gateway
-natd_enable="YES"		# enables <acronym>NAT</acronym>
-natd_interface="rl0"		# specify interface name of NIC attached to Internet
-natd_flags="-dynamic -m"	# -m = preserve port numbers; additional options are listed in &man.natd.8;</programlisting>
-
-      <note>
-	<para>It is also possible to specify a configuration file
-	  which contains the options to pass to &man.natd.8;:</para>
-
-	<programlisting>natd_flags="-f /etc/natd.conf"</programlisting>
-
-	<para>The specified file must contain a list of configuration
-	  options, one per line.  For example:</para>
-
-	<programlisting>redirect_port tcp 192.168.0.2:6667 6667
-redirect_port tcp 192.168.0.3:80 80</programlisting>
-
-	<para>For more information about this configuration file,
-	  consult &man.natd.8;.</para>
-      </note>
-
-      <para>Next, add the <acronym>NAT</acronym> rules to the firewall
-	ruleset.  When the rulest contains stateful rules, the
-	positioning of the <acronym>NAT</acronym> rules is critical
-	and the <literal>skipto</literal> action is used.  The
-	<literal>skipto</literal> action requires a rule number so
-	that it knows which rule to jump to.</para>
-
-      <para>The following example builds upon the firewall ruleset
-	shown in the previous section.  It adds some additional
-	entries and modifies some existing rules in order to configure
-	the firewall for <acronym>NAT</acronym>.  It starts by adding
-	some additional variables which represent the rule number to
-	skip to, the <literal>keep-state</literal> option, and a list
-	of <acronym>TCP</acronym> ports which will be used to reduce
-	the number of rules:</para>
-
-      <programlisting>#!/bin/sh
-ipfw -q -f flush
-cmd="ipfw -q add"
-skip="skipto 500"
-pif=dc0
-ks="keep-state"
-good_tcpo="22,25,37,53,80,443,110"</programlisting>
-
-      <para>The inbound <acronym>NAT</acronym> rule is inserted
-	<emphasis>after</emphasis> the two rules which allow all
-	traffic on the trusted internal interface and on the loopback
-	interface and <emphasis>before</emphasis> the
-	<literal>check-state</literal> rule.  It is important that the
-	rule number selected for this <acronym>NAT</acronym> rule, in
-	this example <literal>100</literal>, is higher than the first
-	two rules and lower than the <literal>check-state</literal>
-	rule:</para>
-
-      <programlisting>&dollar;cmd 005 allow all from any to any via xl0  # exclude LAN traffic
-&dollar;cmd 010 allow all from any to any via lo0  # exclude loopback traffic
-&dollar;cmd 100 divert natd ip from any to any in via &dollar;pif # NAT any inbound packets
-# Allow the packet through if it has an existing entry in the dynamic rules table
-&dollar;cmd 101 check-state</programlisting>
-
-      <para>The outbound rules are modified to replace the
-	<literal>allow</literal> action with the
-	<literal>&dollar;skip</literal> variable, indicating that rule
-	processing will continue at rule <literal>500</literal>.  The
-	seven <literal>tcp</literal> rules have been replaced by rule
-	<literal>125</literal> as the
-	<literal>&dollar;good_tcpo</literal> variable contains the
-	seven allowed outbound ports.</para>
-
-      <programlisting># Authorized outbound packets
-&dollar;cmd 120 &dollar;skip udp from any to x.x.x.x 53 out via &dollar;pif &dollar;ks
-&dollar;cmd 121 &dollar;skip udp from any to x.x.x.x 67 out via &dollar;pif &dollar;ks
-&dollar;cmd 125 &dollar;skip tcp from any to any &dollar;good_tcpo out via &dollar;pif setup &dollar;ks
-&dollar;cmd 130 &dollar;skip icmp from any to any out via &dollar;pif &dollar;ks</programlisting>
-
-      <para>The inbound rules remain the same, except for the very
-	last rule which removes the <literal> via $pif</literal> in
-	order to catch both inbound and outbound rules.  The
-	<acronym>NAT</acronym> rule must follow this last outbound
-	rule, must have a higher number than that last rule, and the
-	rule number must be referenced by the
-	<literal>skipto</literal> action.  In this ruleset, rule
-	number <literal>500</literal> diverts all packets which match
-	the outbound rules to &man.natd.8; for
-	<acronym>NAT</acronym> processing.  The next rule allows any
-	packet which has undergone <acronym>NAT</acronym> processing
-	to pass.</para>
-
-      <programlisting>&dollar;cmd 499 deny log all from any to any
-&dollar;cmd 500 divert natd ip from any to any out via &dollar;pif # skipto location for outbound stateful rules
-&dollar;cmd 510 allow ip from any to any</programlisting>
-
-      <para>In this example, rules <literal>100</literal>,
-	<literal>101</literal>, <literal>125</literal>,
-	<literal>500</literal>, and <literal>510</literal> control the
-	address translation of the outbound and inbound packets so
-	that the entries in the dynamic state table always register
-	the private <acronym>LAN</acronym> <acronym>IP</acronym>
-	address.</para>
-
-      <para>Consider an internal web browser which initializes a new
-	outbound <acronym>HTTP</acronym> session over port 80.  When
-	the first outbound packet enters the firewall, it does not
-	match rule <literal>100</literal> because it is headed out
-	rather than in.  It passes rule <literal>101</literal> because
-	this is the first packet and it has not been posted to the
-	dynamic state table yet.  The packet finally matches rule
-	<literal>125</literal> as it is outbound on an allowed port
-	and has a source <acronym>IP</acronym> address from the
-	internal <acronym>LAN</acronym>.  On matching this rule, two
-	actions take place.  First, the <literal>keep-state</literal>
-	action adds an entry to the dynamic state table and the
-	specified action, <literal>skipto rule 500</literal>, is
-	executed.  Next, the packet undergoes <acronym>NAT</acronym>
-	and is sent out to the Internet.  This packet makes its way to
-	the destination web server, where a response packet is
-	generated and sent back.  This new packet enters the top of
-	the ruleset.  It matches rule <literal>100</literal> and has
-	its destination <acronym>IP</acronym> address mapped back to
-	the original internal address.  It then is processed by the
-	<literal>check-state</literal> rule, is found in the table as
-	an existing session, and is released to the
-	<acronym>LAN</acronym>.</para>
-
-      <para>On the inbound side, the ruleset has to deny bad packets
-	and allow only authorized services.  A packet which matches an
-	inbound rule is posted to the dynamic state table and the
-	packet is released to the <acronym>LAN</acronym>.  The packet
-	generated as a response is recognized by the
-	<literal>check-state</literal> rule as belonging to an
-	existing session.  It is then sent to rule
-	<literal>500</literal> to undergo
-	<acronym>NAT</acronym> before being released to the outbound
-	interface.</para>
-
-      <sect3>
-	<title>Port Redirection</title>
-
-	<para>The drawback with &man.natd.8; is that the
-	  <acronym>LAN</acronym> clients are not accessible from the
-	  Internet.  Clients on the <acronym>LAN</acronym> can make
-	  outgoing connections to the world but cannot receive
-	  incoming ones.  This presents a problem if trying to run
-	  Internet services on one of the <acronym>LAN</acronym>
-	  client machines.  A simple way around this is to redirect
-	  selected Internet ports on the &man.natd.8; machine to a
-	  <acronym>LAN</acronym> client.</para>
-
-	<para>For example, an <acronym>IRC</acronym> server runs on
-	  client <systemitem>A</systemitem> and a web server runs on
-	  client <systemitem>B</systemitem>.  For this to work
-	  properly, connections received on ports 6667
-	  (<acronym>IRC</acronym>) and 80 (<acronym>HTTP</acronym>)
-	  must be redirected to the respective machines.</para>
-
-	<para>The syntax for <option>-redirect_port</option> is as
-	  follows:</para>
-
-	<programlisting>     -redirect_port proto targetIP:targetPORT[-targetPORT]
-                 [aliasIP:]aliasPORT[-aliasPORT]
-                 [remoteIP[:remotePORT[-remotePORT]]]</programlisting>
-
-	<para>In the above example, the argument should be:</para>
-
-	<programlisting>    -redirect_port tcp 192.168.0.2:6667 6667
-    -redirect_port tcp 192.168.0.3:80 80</programlisting>
-
-	<para>This redirects the proper <acronym>TCP</acronym> ports
-	  to the <acronym>LAN</acronym> client machines.</para>
-
-	<para>Port ranges over individual ports can be indicated with
-	  <option>-redirect_port</option>.  For example,
-	  <replaceable>tcp 192.168.0.2:2000-3000
-	    2000-3000</replaceable> would redirect all connections
-	  received on ports 2000 to 3000 to ports 2000 to 3000 on
-	  client <systemitem>A</systemitem>.</para>
-
-	<para>These options can be used when directly running
-	  &man.natd.8;, placed within the
-	  <literal>natd_flags=""</literal> option in
-	  <filename>/etc/rc.conf</filename>, or passed via a
-	  configuration file.</para>
-
-	<para>For further configuration options, consult
-	  &man.natd.8;</para>
-      </sect3>
-
-      <sect3>
-	<title>Address Redirection</title>
-
-	<indexterm>
-	  <primary>address redirection</primary>
-	</indexterm>
-
-	<para>Address redirection is useful if more than one
-	  <acronym>IP</acronym> address is available.  Each
-	  <acronym>LAN</acronym> client can be assigned its own
-	  external <acronym>IP</acronym> address by &man.natd.8;,
-	  which will then rewrite outgoing packets from the
-	  <acronym>LAN</acronym> clients with the proper external
-	  <acronym>IP</acronym> address and redirects all traffic
-	  incoming on that particular <acronym>IP</acronym> address
-	  back to the specific <acronym>LAN</acronym> client.  This is
-	  also known as static <acronym>NAT</acronym>.  For example,
-	  if <acronym>IP</acronym> addresses <systemitem
-	    class="ipaddress">128.1.1.1</systemitem>, <systemitem
-	    class="ipaddress">128.1.1.2</systemitem>, and <systemitem
-	    class="ipaddress">128.1.1.3</systemitem> are available,
-	  <systemitem class="ipaddress">128.1.1.1</systemitem> can be
-	  used as the &man.natd.8; machine's external
-	  <acronym>IP</acronym> address, while <systemitem
-	    class="ipaddress">128.1.1.2</systemitem> and <systemitem
-	    class="ipaddress">128.1.1.3</systemitem> are forwarded
-	  back to <acronym>LAN</acronym> clients
-	  <systemitem>A</systemitem> and
-	  <systemitem>B</systemitem>.</para>
-
-	<para>The <option>-redirect_address</option> syntax is as
-	  follows:</para>
-
-	<programlisting>-redirect_address localIP publicIP</programlisting>
-
-
-	<informaltable frame="none" pgwide="1">
-	  <tgroup cols="2">
-	    <tbody>
-	      <row>
-		<entry>localIP</entry>
-		<entry>The internal <acronym>IP</acronym> address of
-		  the <acronym>LAN</acronym> client.</entry>
-	      </row>
-
-	      <row>
-		<entry>publicIP</entry>
-		<entry>The external <acronym>IP</acronym> address
-		  corresponding to the <acronym>LAN</acronym>
-		  client.</entry>
-	      </row>
-	    </tbody>
-	  </tgroup>
-	</informaltable>
-
-	<para>In the example, this argument would read:</para>
-
-	<programlisting>-redirect_address 192.168.0.2 128.1.1.2
--redirect_address 192.168.0.3 128.1.1.3</programlisting>
-
-	<para>Like <option>-redirect_port</option>, these arguments
-	  are placed within the <literal>natd_flags=""</literal>
-	  option of <filename>/etc/rc.conf</filename>, or passed via a
-	  configuration file.  With address redirection, there is no
-	  need for port redirection since all data received on a
-	  particular <acronym>IP</acronym> address is
-	  redirected.</para>
-
-	<para>The external <acronym>IP</acronym> addresses on the
-	  &man.natd.8; machine must be active and aliased to the
-	  external interface.  Refer to &man.rc.conf.5; for
-	  details.</para>
-      </sect3>
-    </sect2>
-
-    <sect2 xml:id="firewalls-ipfw-cmd">
-      <title>The <application>IPFW</application> Command</title>
-
-      <indexterm><primary><command>ipfw</command></primary></indexterm>
-
-      <para><command>ipfw</command> can be used to make manual,
-	single rule additions or deletions to the active firewall
-	while it is running.  The problem with using this method is
-	that all the changes are lost when the system reboots.  It is
-	recommended to instead write all the rules in a file and to
-	use that file to load the rules at boot time and to replace
-	the currently running firewall rules whenever that file
-	changes.</para>
-
-      <para><command>ipfw</command> is a useful way to display the
-	running firewall rules to the console screen.  The
-	<application>IPFW</application> accounting facility
-	dynamically creates a counter for each rule that counts each
-	packet that matches the rule.  During the process of testing a
-	rule, listing the rule with its counter is one way to
-	determine if the rule is functioning as expected.</para>
-
-      <para>To list all the running rules in sequence:</para>
-
-      <screen>&prompt.root; <userinput>ipfw list</userinput></screen>
-
-      <para>To list all the running rules with a time stamp of when
-	the last time the rule was matched:</para>
-
-      <screen>&prompt.root; <userinput>ipfw -t list</userinput></screen>
-
-      <para>The next example lists accounting information and the
-	packet count for matched rules along with the rules
-	themselves.  The first column is the rule number, followed by
-	the number of matched packets and bytes, followed by the rule
-	itself.</para>
-
-      <screen>&prompt.root; <userinput>ipfw -a list</userinput></screen>
-
-      <para>To list dynamic rules in addition to static rules:</para>
-
-      <screen>&prompt.root; <userinput>ipfw -d list</userinput></screen>
-
-      <para>To also show the expired dynamic rules:</para>
-
-      <screen>&prompt.root; <userinput>ipfw -d -e list</userinput></screen>
-
-      <para>To zero the counters:</para>
-
-      <screen>&prompt.root; <userinput>ipfw zero</userinput></screen>
-
-      <para>To zero the counters for just the rule with number
-	<replaceable>NUM</replaceable>:</para>
-
-      <screen>&prompt.root; <userinput>ipfw zero <replaceable>NUM</replaceable></userinput></screen>
-
-      <sect3>
-	<title>Logging Firewall Messages</title>
-
-	<indexterm>
-	  <primary><application>IPFW</application></primary>
-
-	  <secondary>logging</secondary>
-	</indexterm>
-
-	<para>Even with the logging facility enabled,
-	  <application>IPFW</application> will not generate any rule
-	  logging on its own.  The firewall administrator decides
-	  which rules in the ruleset will be logged, and adds the
-	  <literal>log</literal> keyword to those rules.  Normally
-	  only deny rules are logged.  It is customary to duplicate
-	  the <quote>ipfw default deny everything</quote> rule with
-	  the <literal>log</literal> keyword included as the last rule
-	  in the ruleset.  This way, it is possible to see all the
-	  packets that did not match any of the rules in the
-	  ruleset.</para>
-
-	<para>Logging is a two edged sword.  If one is not careful,
-	  an over abundance of log data or a DoS attack can fill the
-	  disk with log files.  Log messages are not only written to
-	  <application>syslogd</application>, but also are displayed
-	  on the root console screen and soon become annoying.</para>
-
-	<para>The <literal>IPFIREWALL_VERBOSE_LIMIT=5</literal>
-	  kernel option limits the number of consecutive messages
-	  sent to &man.syslogd.8;, concerning the packet matching of a
-	  given rule.  When this option is enabled in the kernel, the
-	  number of consecutive messages concerning a particular rule
-	  is capped at the number specified.  There is nothing to be
-	  gained from 200 identical log messages.  With this option
-	  set to five,
-	  five consecutive messages concerning a particular rule
-	  would be logged to <application>syslogd</application> and
-	  the remainder identical consecutive messages would be
-	  counted and posted to <application>syslogd</application>
-	  with a phrase like the following:</para>
-
-	<programlisting>last message repeated 45 times</programlisting>
-
-	<para>All logged packets messages are written by default to
-	  <filename>/var/log/security</filename>, which is
-	  defined in <filename>/etc/syslog.conf</filename>.</para>
-      </sect3>
-
-      <sect3 xml:id="firewalls-ipfw-rules-script">
-	<title>Building a Rule Script</title>
-
-	<para>Most experienced <application>IPFW</application> users
-	  create a file containing the rules and code them in a manner
-	  compatible with running them as a script.  The major benefit
-	  of doing this is the firewall rules can be refreshed in mass
-	  without the need of rebooting the system to activate them.
-	  This method is convenient in testing new rules as the
-	  procedure can be executed as many times as needed.  Being a
-	  script, symbolic substitution can be used for frequently
-	  used values to be substituted into multiple rules.</para>
-
-	<para>This example script is compatible with the syntax used
-	  by the &man.sh.1;,  &man.csh.1;, and &man.tcsh.1; shells.
-	  Symbolic substitution fields are prefixed with a dollar sign
-	  (&dollar;).  Symbolic fields do not have the &dollar;
-	  prefix.  The value to populate the symbolic field must be
-	  enclosed in double quotes ("").</para>
-
-	<para>Start the rules file like this:</para>
-
-	<programlisting>############### start of example ipfw rules script #############
-#
-ipfw -q -f flush       # Delete all rules
-# Set defaults
-oif="tun0"             # out interface
-odns="192.0.2.11"      # ISP's DNS server IP address
-cmd="ipfw -q add "     # build rule prefix
-ks="keep-state"        # just too lazy to key this each time
-&dollar;cmd 00500 check-state
-&dollar;cmd 00502 deny all from any to any frag
-&dollar;cmd 00501 deny tcp from any to any established
-&dollar;cmd 00600 allow tcp from any to any 80 out via &dollar;oif setup &dollar;ks
-&dollar;cmd 00610 allow tcp from any to &dollar;odns 53 out via &dollar;oif setup &dollar;ks
-&dollar;cmd 00611 allow udp from any to &dollar;odns 53 out via &dollar;oif &dollar;ks
-################### End of example ipfw rules script ############</programlisting>
-
-	<para>The rules are not important as the focus of this example
-	  is how the symbolic substitution fields are
-	  populated.</para>
-
-	<para>If the above example was in
-	  <filename>/etc/ipfw.rules</filename>, the rules could be
-	  reloaded by the following command:</para>
-
-	<screen>&prompt.root; <userinput>sh /etc/ipfw.rules</userinput></screen>
-
-	<para><filename>/etc/ipfw.rules</filename> can be located
-	  anywhere and the file can have any name.</para>
-
-	<para>The same thing could be accomplished by running these
-	  commands by hand:</para>
-
-	<screen>&prompt.root; <userinput>ipfw -q -f flush</userinput>
-&prompt.root; <userinput>ipfw -q add check-state</userinput>
-&prompt.root; <userinput>ipfw -q add deny all from any to any frag</userinput>
-&prompt.root; <userinput>ipfw -q add deny tcp from any to any established</userinput>
-&prompt.root; <userinput>ipfw -q add allow tcp from any to any 80 out via tun0 setup keep-state</userinput>
-&prompt.root; <userinput>ipfw -q add allow tcp from any to 192.0.2.11 53 out via tun0 setup keep-state</userinput>
-&prompt.root; <userinput>ipfw -q add 00611 allow udp from any to 192.0.2.11 53 out via tun0 keep-state</userinput></screen>
       </sect3>
     </sect2>
   </sect1>
