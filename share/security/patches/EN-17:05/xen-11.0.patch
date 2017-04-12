@@ -1,0 +1,176 @@
+--- sys/dev/xen/blkfront/blkfront.c.orig
++++ sys/dev/xen/blkfront/blkfront.c
+@@ -1529,6 +1529,11 @@
+ {
+ 	struct xbd_softc *sc = device_get_softc(dev);
+ 
++	if (xen_suspend_cancelled) {
++		sc->xbd_state = XBD_STATE_CONNECTED;
++		return (0);
++	}
++
+ 	DPRINTK("xbd_resume: %s\n", xenbus_get_node(dev));
+ 
+ 	xbd_free(sc);
+--- sys/dev/xen/control/control.c.orig
++++ sys/dev/xen/control/control.c
+@@ -148,6 +148,7 @@
+ 
+ #include <xen/xenbus/xenbusvar.h>
+ 
++bool xen_suspend_cancelled;
+ /*--------------------------- Forward Declarations --------------------------*/
+ /** Function signature for shutdown event handlers. */
+ typedef	void (xctrl_shutdown_handler_t)(void);
+@@ -196,10 +197,11 @@
+ #ifdef SMP
+ 	cpuset_t cpu_suspend_map;
+ #endif
+-	int suspend_cancelled;
+ 
+ 	EVENTHANDLER_INVOKE(power_suspend_early);
++	xs_lock();
+ 	stop_all_proc();
++	xs_unlock();
+ 	EVENTHANDLER_INVOKE(power_suspend);
+ 
+ #ifdef EARLY_AP_STARTUP
+@@ -267,16 +269,20 @@
+ 	intr_suspend();
+ 	xen_hvm_suspend();
+ 
+-	suspend_cancelled = HYPERVISOR_suspend(0);
++	xen_suspend_cancelled = !!HYPERVISOR_suspend(0);
+ 
+-	xen_hvm_resume(suspend_cancelled != 0);
+-	intr_resume(suspend_cancelled != 0);
++	if (!xen_suspend_cancelled) {
++		xen_hvm_resume(false);
++	}
++	intr_resume(xen_suspend_cancelled != 0);
+ 	enable_intr();
+ 
+ 	/*
+ 	 * Reset grant table info.
+ 	 */
+-	gnttab_resume(NULL);
++	if (!xen_suspend_cancelled) {
++		gnttab_resume(NULL);
++	}
+ 
+ #ifdef SMP
+ 	if (!CPU_EMPTY(&cpu_suspend_map)) {
+--- sys/dev/xen/netfront/netfront.c.orig
++++ sys/dev/xen/netfront/netfront.c
+@@ -458,7 +458,21 @@
+ netfront_resume(device_t dev)
+ {
+ 	struct netfront_info *info = device_get_softc(dev);
++	u_int i;
+ 
++	if (xen_suspend_cancelled) {
++		for (i = 0; i < info->num_queues; i++) {
++			XN_RX_LOCK(&info->rxq[i]);
++			XN_TX_LOCK(&info->txq[i]);
++		}
++		netfront_carrier_on(info);
++		for (i = 0; i < info->num_queues; i++) {
++			XN_RX_UNLOCK(&info->rxq[i]);
++			XN_TX_UNLOCK(&info->txq[i]);
++		}
++		return (0);
++	}
++
+ 	netif_disconnect_backend(info);
+ 	return (0);
+ }
+--- sys/dev/xen/timer/timer.c.orig
++++ sys/dev/xen/timer/timer.c
+@@ -417,8 +417,20 @@
+ 	/* Register the timecounter. */
+ 	sc->tc.tc_name = "XENTIMER";
+ 	sc->tc.tc_quality = XENTIMER_QUALITY;
+-	sc->tc.tc_flags = TC_FLAGS_SUSPEND_SAFE;
+ 	/*
++	 * FIXME: due to the lack of ordering during resume, FreeBSD cannot
++	 * guarantee that the Xen PV timer is resumed before any other device
++	 * attempts to make use of it, so mark it as not safe for suspension
++	 * (ie: remove the TC_FLAGS_SUSPEND_SAFE flag).
++	 *
++	 * NB: This was not a problem in previous FreeBSD versions because the
++	 * timer was directly attached to the nexus, but it is an issue now
++	 * that the timer is attached to the xenpv bus, and thus resumed
++	 * later.
++	 *
++	 * sc->tc.tc_flags = TC_FLAGS_SUSPEND_SAFE;
++	 */
++    	/*
+ 	 * The underlying resolution is in nanoseconds, since the timer info
+ 	 * scales TSC frequencies using a fraction that represents time in
+ 	 * terms of nanoseconds.
+--- sys/dev/xen/xenstore/xenstore.c.orig
++++ sys/dev/xen/xenstore/xenstore.c
+@@ -1699,3 +1699,20 @@
+ 		sx_xunlock(&xs.xenwatch_mutex);
+ 	}
+ }
++
++void
++xs_lock(void)
++{
++
++	sx_xlock(&xs.request_mutex);
++	return;
++}
++
++void
++xs_unlock(void)
++{
++
++	sx_xunlock(&xs.request_mutex);
++	return;
++}
++
+--- sys/xen/xen-os.h.orig
++++ sys/xen/xen-os.h
+@@ -56,6 +56,8 @@
+ extern int xen_disable_pv_disks;
+ extern int xen_disable_pv_nics;
+ 
++extern bool xen_suspend_cancelled;
++
+ enum xen_domain_type {
+ 	XEN_NATIVE,             /* running on bare hardware    */
+ 	XEN_PV_DOMAIN,          /* running in a PV domain      */
+--- sys/xen/xenbus/xenbusb.c.orig
++++ sys/xen/xenbus/xenbusb.c
+@@ -791,6 +791,11 @@
+ 			if (device_get_state(kids[i]) == DS_NOTPRESENT)
+ 				continue;
+ 
++			if (xen_suspend_cancelled) {
++				DEVICE_RESUME(kids[i]);
++				continue;
++			}
++
+ 			ivars = device_get_ivars(kids[i]);
+ 
+ 			xs_unregister_watch(&ivars->xd_otherend_watch);
+--- sys/xen/xenstore/xenstorevar.h.orig
++++ sys/xen/xenstore/xenstorevar.h
+@@ -338,4 +338,15 @@
+  */
+ struct sbuf *xs_join(const char *, const char *);
+ 
++/**
++ * Lock the xenstore request mutex.
++ */
++void xs_lock(void);
++
++/**
++ * Unlock the xenstore request mutex.
++ */
++void xs_unlock(void);
++
+ #endif /* _XEN_XENSTORE_XENSTOREVAR_H */
++
