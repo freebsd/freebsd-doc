@@ -155,6 +155,9 @@ $sectionpath = {
     'OpenBSD 5.6' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 5.7' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 5.8' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 5.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 6.0' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 6.1' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 
     'CentOS Linux/i386 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS Linux/i386 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
@@ -519,6 +522,9 @@ $manPathDefault = 'FreeBSD 11.0-RELEASE and Ports';
     'OpenBSD 5.6', "$manLocalDir/OpenBSD-5.6",
     'OpenBSD 5.7', "$manLocalDir/OpenBSD-5.7",
     'OpenBSD 5.8', "$manLocalDir/OpenBSD-5.8",
+    'OpenBSD 5.9', "$manLocalDir/OpenBSD-5.9",
+    'OpenBSD 6.0', "$manLocalDir/OpenBSD-6.0",
+    'OpenBSD 6.1', "$manLocalDir/OpenBSD-6.1",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
     'NetBSD 1.0',   "$manLocalDir/NetBSD-1.0",
@@ -766,6 +772,9 @@ my %arch = (
 'OpenBSD 5.6' => { 'arch' => [qw/alpha amd64 armish armv7 aviion hppa hppa64 i386 landisk loongson luna88k macppc octeon sgi socppc sparc sparc64 vax zaurus/] }, 
 'OpenBSD 5.7' => { 'arch' => [qw/alpha amd64 armish armv7 aviion hppa hppa64 i386 landisk loongson luna88k macppc octeon sgi socppc sparc sparc64 vax zaurus/] }, 
 'OpenBSD 5.8' => { 'arch' => [qw/alpha amd64 armish armv7 aviion hppa hppa64 i386 landisk loongson luna88k macppc octeon sgi socppc sparc sparc64 vax zaurus/] }, 
+'OpenBSD 5.9' => { 'arch' => [qw/alpha amd64 armish armv7 hppa hppa64 i386 landisk loongson luna88k macppc octeon sgi socppc sparc sparc64 vax zaurus/] }, 
+'OpenBSD 6.0' => { 'arch' => [qw/alpha amd64 armish armv7 hppa i386 landisk loongson luna88k macppc octeon sgi socppc sparc sparc64 zaurus/] }, 
+'OpenBSD 6.1' => { 'arch' => [qw/alpha amd64 armv7 hppa i386 landisk loongson luna88k macppc octeon sgi socppc sparc64/] }, 
 );
 
 # delete not existing releases
@@ -812,7 +821,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'macosx',     'Darwin 8.0.1/ppc',
 
     'netbsd',        'NetBSD 7.0',
-    'openbsd',       'OpenBSD 5.8',
+    'openbsd',       'OpenBSD 6.1',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
     'x11',           'X11R7.4',
