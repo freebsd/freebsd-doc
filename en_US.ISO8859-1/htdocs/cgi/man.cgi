@@ -558,6 +558,7 @@ $manPathDefault = 'FreeBSD 11.0-RELEASE and Ports';
     'NetBSD 6.0',   "$manLocalDir/NetBSD-6.0",
     'NetBSD 6.1.5', "$manLocalDir/NetBSD-6.1.5",
     'NetBSD 7.0',   "$manLocalDir/NetBSD-7.0",
+    'NetBSD 7.1',   "$manLocalDir/NetBSD-7.1",
 
     '2.8 BSD',      "$manLocalDir/2.8BSD",
     '2.9.1 BSD',    "$manLocalDir/2.9.1BSD",
@@ -760,6 +761,7 @@ my %arch = (
 'NetBSD 6.0' => { 'arch' => [qw/acorn26 acorn32 alpha amiga arc atari cobalt dreamcast evbarm evbmips evbppc hp300 hp700 hpcarm hpcmips hpcsh i386 mac68k macppc mvme68k pmax prep sgimips sparc sparc64 sun2 sun3 vax x68k/] } ,
 'NetBSD 6.1.5' => { 'arch' => [qw/acorn26 acorn32 algor alpha amd64 amiga arc atari bebox cats cesfic cobalt dreamcast emips evbarm evbmips evbppc evbsh3 hp300 hp700 hpcarm hpcmips hpcsh i386 ibmnws luna68k mac68k macppc mipsco mmeye mvme68k mvmeppc netwinder news68k newsmips next68k ofppc pmax prep sandpoint sbmips sgimips shark sparc sparc64 sun2 sun3 vax x68k x86/] } ,
 'NetBSD 7.0' => { 'arch' => [qw/acorn26 acorn32 algor alpha amd64 amiga arc atari bebox cats cesfic cobalt dreamcast emips evbarm evbmips evbppc evbsh3 hp300 hp700 hpcarm hpcmips hpcsh i386 ibmnws luna68k mac68k macppc mipsco mmeye mvme68k mvmeppc netwinder news68k newsmips next68k ofppc pmax prep sandpoint sbmips sgimips shark sparc sparc64 sun2 sun3 vax x68k x86/] } ,
+'NetBSD 7.1' => { 'arch' => [qw/acorn26 acorn32 algor alpha amd64 amiga arc atari bebox cats cesfic cobalt dreamcast emips evbarm evbmips evbppc evbsh3 hp300 hpcarm hpcmips hpcsh hppa i386 ibmnws luna68k mac68k macppc mipsco mmeye mvme68k mvmeppc netwinder news68k newsmips next68k ofppc playstation2 pmax prep sandpoint sbmips sgimips shark sparc sparc64 sun2 sun3 vax x68k x86/] } ,
 'OpenBSD 4.7' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
 'OpenBSD 4.8' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
 'OpenBSD 4.9' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
@@ -820,7 +822,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'opendarwin', 'OpenDarwin 7.2.1',
     'macosx',     'Darwin 8.0.1/ppc',
 
-    'netbsd',        'NetBSD 7.0',
+    'netbsd',        'NetBSD 7.1',
     'openbsd',       'OpenBSD 6.1',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
