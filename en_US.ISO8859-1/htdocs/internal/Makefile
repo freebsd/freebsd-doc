@@ -8,6 +8,7 @@
 .endif
 
 DOCS= 	about.xml
+DOCS+=	associate.xml
 DOCS+=	bylaws.xml
 DOCS+=	clusteradm.xml
 DOCS+=	code-of-conduct.xml
