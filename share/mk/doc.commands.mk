@@ -42,6 +42,7 @@ XARGS?=		/usr/bin/xargs
 # Version control
 #
 GIT?=		/usr/local/bin/git
+SVN?=		/usr/local/bin/svn
 
 #
 # Compession and decompression

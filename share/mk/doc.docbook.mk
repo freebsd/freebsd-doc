@@ -100,15 +100,21 @@ LATESTREVISION!=cd ${.CURDIR} && ${GIT} log -1 --pretty=format:'\
 	--stringparam latestrevision.committer "%cn" \
 	--stringparam latestrevision.number "%h"' ${SRCS}
 .else
-# version numbers are expected to be in Subversion, but we cannot
-# require Subversion to be installed just to build the documents,
-# so use grep to find the version strings
-LATESTREVISION!=${GREP} -Ehos '\$$[F]reeBSD: ([^\$$ ]+ ){5}\$$' ${SRCS} | \
-		${AWK} '{ print \
-		  "--stringparam latestrevision.timestamp \""$$4" "$$5"\" " \
-		  "--stringparam latestrevision.committer \""$$6"\" " \
-		  "--stringparam latestrevision.number \""$$3"\" " \
-		}' | ${SORT} | ${TAIL} -n1
+# if using Subversion, get information from metadata
+# rather than embedded version strings
+.if exists(${DOC_PREFIX}/.svn) && exists(${SVN})
+LATESTREVISION!=cd ${.CURDIR} && ${SVN} info ${SRCS} 2>/dev/null | \
+		${AWK} 'BEGIN {	genfmt="--stringparam latestrevision."; \
+				timefmt=genfmt"timestamp \"%s %s\""; \
+				comtfmt=genfmt"committer \"%s\""; \
+				revnfmt=genfmt"number \"%u\""; \
+				fmt=timefmt" "comtfmt"\t\t"revnfmt"\n"; } \
+			/^Last Changed Author:/ { committer=$$4 } \
+		        /^Last Changed Rev:/    { number=$$4 } \
+		        /^Last Changed Date:/   { date=$$4; time=$$5; \
+				printf(fmt, date, time, committer, number) }' \
+		| ${SORT} | ${TAIL} -n1
+.endif
 .endif
 
 # if neither Subversion nor Git revision numbers are available, use
@@ -336,7 +342,7 @@ POSET_CMD=	${SED} -i '' -e '1s,^,\#${IDSTR1}${IDSTR2}\${.newline},' \
 			     -e 's,^\(\"Language-Team:.*\\n\"\),\1\${.newline}\"Language: ${PO_LANG}\\n\",' \
 			     -e 's,^\"Content-Type: text/plain; charset=.*\\n,\"Content-Type: text/plain; charset=${PO_CHARSET}\\n,'
 
-.if ${.TARGETS:Mpo} || ${.TARGETS:Mtran}
+.if ${.TARGETS:Mpo} || ${.TARGETS:Mtran} || ${.TARGETS:M${DOC}.translate.xml}
 
 MASTER_SRCS!=	${MAKE} -C ${EN_DIR} -V SRCS
 
