@@ -56,6 +56,12 @@ while [ "$x" != "$lastline" ]; do
     wol_l=$x;
     word_on_line;
     if [ "$last" ]; then
+	echo "${wol_w}" | grep -Eq "^[0-9]+:(<\!--| )"
+	skip=$?
+	if [ ${skip} -eq 0 ]; then
+	    last=
+	    continue
+	fi
 	if [ "$last" = "$wol_w" ]; then
 	    echo "Duplicate \"$last\" (l. $x).";
 	    exit 1;
