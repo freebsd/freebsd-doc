@@ -51,7 +51,7 @@ package main;
 alarm(10);
 
 $debug        = 2;
-$www{'title'} = 'FreeBSD Man Pages';
+$www{'title'} = 'FreeBSD Manual Pages';
 $www{'home'}  = 'https://www.FreeBSD.org';
 $www{'head'}  = $www{'title'};
 
@@ -1647,7 +1647,7 @@ sub encode_data {
 
 sub indexpage {
     &http_header("text/html");
-    print &html_header("$www{'title'}: Index Page") . "<h1>", $www{'head'},
+    print &html_header("$www{'title'}: Index Page") . "<h1><br/>", $www{'head'},
       "</h1>\n\n" . &intro;
     &formquery;
 
