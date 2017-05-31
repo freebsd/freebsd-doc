@@ -23,22 +23,16 @@ _BIGIRON?=	amd64 \
 		i386 \
 		powerpc \
 		powerpc-powerpc64 \
-		sparc64 \
-		arm64-aarch64
+		sparc64
 
 _VMS?=		amd64 \
-		i386 \
-		arm64-aarch64
+		i386
 
-_ARM?=		BANANAPI \
-		BEAGLEBONE \
-		CUBIEBOARD \
-		CUBIEBOARD2 \
+_ARM?=		BEAGLEBONE \
 		CUBOX-HUMMINGBOARD \
 		GUMSTIX \
 		PANDABOARD \
 		RPI-B \
-		RPI2 \
 		WANDBOARD
 
 .for CHECKSUM in SHA512 SHA256
