@@ -21,6 +21,7 @@ DOCS+=	hats.xml
 DOCS+=	i18n.xml
 DOCS+=	internal.xml
 DOCS+= 	machines.xml
+DOCS+=	members.xml
 DOCS+= 	mirror.xml
 DOCS+=	new-account.xml
 DOCS+=	policies.xml
