@@ -812,7 +812,6 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'freebsd-stable',  'FreeBSD 10.3-stable',
     'freebsd-stable11', 'FreeBSD 11.1-stable',
-    'freebsd-stable11', 'FreeBSD 11.0-stable',
     'freebsd-stable10', 'FreeBSD 10.3-stable',
     'freebsd-stable9', 'FreeBSD 9.3-stable',
     'freebsd-stable8', 'FreeBSD 8.4-stable',
