@@ -536,16 +536,10 @@ sub faq {
 <h2>Keywords</h2>
 <dl>
 <dt><b>Description</b><dd>A more detailed description.
-<dt><b>Download</b><dd>Download the ports directory.
-<dt><b>Package</b><dd>Download the pre-compiled software package.
 <dt><b>Changes</b><dd>Read the latest changes.
-<dt><b>Sources</b><dd>Links to all source files.
 </dl>
 
 <h2>Misc</h2>
-<p>
-Package download links point to the FreeBSD 6-STABLE
-version and <b>not</b> to the latest releases.</p>
 
 <p>
 The script ports.cgi use the file
