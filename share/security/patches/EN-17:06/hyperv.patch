@@ -1,0 +1,538 @@
+--- sys/cam/ata/ata_xpt.c.orig
++++ sys/cam/ata/ata_xpt.c
+@@ -40,6 +40,7 @@
+ #include <sys/interrupt.h>
+ #include <sys/sbuf.h>
+ 
++#include <sys/eventhandler.h>
+ #include <sys/lock.h>
+ #include <sys/mutex.h>
+ #include <sys/sysctl.h>
+@@ -827,6 +828,7 @@
+ 	{
+ 		struct ccb_pathinq cpi;
+ 		int16_t *ptr;
++		int veto = 0;
+ 
+ 		ident_buf = &softc->ident_data;
+ 		for (ptr = (int16_t *)ident_buf;
+@@ -833,6 +835,11 @@
+ 		     ptr < (int16_t *)ident_buf + sizeof(struct ata_params)/2; ptr++) {
+ 			*ptr = le16toh(*ptr);
+ 		}
++		EVENTHANDLER_INVOKE(ada_probe_veto, path, ident_buf, &veto);
++		if (veto) {
++			goto device_fail;
++		}
++
+ 		if (strncmp(ident_buf->model, "FX", 2) &&
+ 		    strncmp(ident_buf->model, "NEC", 3) &&
+ 		    strncmp(ident_buf->model, "Pioneer", 7) &&
+--- sys/conf/files.amd64.orig
++++ sys/conf/files.amd64
+@@ -262,7 +262,6 @@
+ dev/hyperv/netvsc/hv_net_vsc.c				optional	hyperv
+ dev/hyperv/netvsc/hv_netvsc_drv_freebsd.c		optional	hyperv
+ dev/hyperv/netvsc/hv_rndis_filter.c			optional	hyperv
+-dev/hyperv/stordisengage/hv_ata_pci_disengage.c		optional	hyperv
+ dev/hyperv/storvsc/hv_storvsc_drv_freebsd.c		optional	hyperv
+ dev/hyperv/utilities/hv_kvp.c				optional	hyperv
+ dev/hyperv/utilities/hv_util.c				optional	hyperv
+--- sys/conf/files.i386.orig
++++ sys/conf/files.i386
+@@ -240,7 +240,6 @@
+ dev/hyperv/netvsc/hv_net_vsc.c				optional	hyperv
+ dev/hyperv/netvsc/hv_netvsc_drv_freebsd.c		optional	hyperv
+ dev/hyperv/netvsc/hv_rndis_filter.c			optional	hyperv
+-dev/hyperv/stordisengage/hv_ata_pci_disengage.c		optional	hyperv
+ dev/hyperv/storvsc/hv_storvsc_drv_freebsd.c		optional	hyperv
+ dev/hyperv/utilities/hv_kvp.c				optional	hyperv
+ dev/hyperv/utilities/hv_util.c				optional	hyperv
+--- sys/dev/hyperv/include/hyperv.h.orig
++++ sys/dev/hyperv/include/hyperv.h
+@@ -124,6 +124,8 @@
+ 	 unsigned char data[16];
+ } __packed hv_guid;
+ 
++int snprintf_hv_guid(char *, size_t, const hv_guid *);
++
+ #define HV_NIC_GUID							\
+ 	.data = {0x63, 0x51, 0x61, 0xF8, 0x3E, 0xDF, 0xc5, 0x46,	\
+ 		0x91, 0x3F, 0xF2, 0xD2, 0xF9, 0x65, 0xED, 0x0E}
+--- sys/dev/hyperv/storvsc/hv_storvsc_drv_freebsd.c.orig
++++ sys/dev/hyperv/storvsc/hv_storvsc_drv_freebsd.c
+@@ -58,6 +58,7 @@
+ #include <sys/lock.h>
+ #include <sys/sema.h>
+ #include <sys/sglist.h>
++#include <sys/eventhandler.h>
+ #include <machine/bus.h>
+ #include <sys/bus_dma.h>
+ 
+@@ -198,6 +199,7 @@
+ 	 STORVSC_RINGBUFFER_SIZE}
+ };
+ 
++static eventhandler_tag storvsc_handler_tag;
+ /*
+  * Sense buffer size changed in win8; have a run-time
+  * variable to track the size we should use.
+@@ -818,6 +820,7 @@
+ 	 * because the fields will be used later in storvsc_io_done().
+ 	 */
+ 	request->vstor_packet.u.vm_srb.scsi_status = vm_srb->scsi_status;
++	request->vstor_packet.u.vm_srb.srb_status = vm_srb->srb_status;
+ 	request->vstor_packet.u.vm_srb.transfer_len = vm_srb->transfer_len;
+ 
+ 	if (((vm_srb->scsi_status & 0xFF) == SCSI_STATUS_CHECK_COND) &&
+@@ -966,20 +969,13 @@
+ static int
+ storvsc_probe(device_t dev)
+ {
+-	int ata_disk_enable = 0;
+ 	int ret	= ENXIO;
+ 	
+ 	switch (storvsc_get_storage_type(dev)) {
+ 	case DRIVER_BLKVSC:
+ 		if(bootverbose)
+-			device_printf(dev, "DRIVER_BLKVSC-Emulated ATA/IDE probe\n");
+-		if (!getenv_int("hw.ata.disk_enable", &ata_disk_enable)) {
+-			if(bootverbose)
+-				device_printf(dev,
+-					"Enlightened ATA/IDE detected\n");
+-			ret = BUS_PROBE_DEFAULT;
+-		} else if(bootverbose)
+-			device_printf(dev, "Emulated ATA/IDE set (hw.ata.disk_enable set)\n");
++			device_printf(dev, "Enlightened ATA/IDE detected\n");
++		ret = BUS_PROBE_DEFAULT;
+ 		break;
+ 	case DRIVER_STORVSC:
+ 		if(bootverbose)
+@@ -1967,28 +1963,17 @@
+ 	return(0);
+ }
+ 
+-/*
+- * SCSI Inquiry checks qualifier and type.
+- * If qualifier is 011b, means the device server is not capable
+- * of supporting a peripheral device on this logical unit, and
+- * the type should be set to 1Fh.
+- * 
+- * Return 1 if it is valid, 0 otherwise.
+- */
+-static inline int
+-is_inquiry_valid(const struct scsi_inquiry_data *inq_data)
++static uint32_t
++is_scsi_valid(const struct scsi_inquiry_data *inq_data)
+ {
+-	uint8_t type;
+-	if (SID_QUAL(inq_data) != SID_QUAL_LU_CONNECTED) {
+-		return (0);
+-	}
++	u_int8_t type;
+ 	type = SID_TYPE(inq_data);
+-	if (type == T_NODEVICE) {
++	if (type == T_NODEVICE)
+ 		return (0);
+-	}
++	if (SID_QUAL(inq_data) == SID_QUAL_BAD_LU)
++		return (0);
+ 	return (1);
+ }
+-
+ /**
+  * @brief completion function before returning to CAM
+  *
+@@ -2057,75 +2042,108 @@
+ 		callout_drain(&reqp->callout);
+ 	}
+ #endif
+-
+ 	ccb->ccb_h.status &= ~CAM_SIM_QUEUED;
+ 	ccb->ccb_h.status &= ~CAM_STATUS_MASK;
+ 	if (vm_srb->scsi_status == SCSI_STATUS_OK) {
+ 		const struct scsi_generic *cmd;
+-		/*
+-		 * Check whether the data for INQUIRY cmd is valid or
+-		 * not.  Windows 10 and Windows 2016 send all zero
+-		 * inquiry data to VM even for unpopulated slots.
+-		 */
+ 		cmd = (const struct scsi_generic *)
+ 		    ((ccb->ccb_h.flags & CAM_CDB_POINTER) ?
+ 		     csio->cdb_io.cdb_ptr : csio->cdb_io.cdb_bytes);
+-		if (cmd->opcode == INQUIRY) {
+-		    /*
+-		     * The host of Windows 10 or 2016 server will response
+-		     * the inquiry request with invalid data for unexisted device:
+-			[0x7f 0x0 0x5 0x2 0x1f ... ]
+-		     * But on windows 2012 R2, the response is:
+-			[0x7f 0x0 0x0 0x0 0x0 ]
+-		     * That is why here wants to validate the inquiry response.
+-		     * The validation will skip the INQUIRY whose response is short,
+-		     * which is less than SHORT_INQUIRY_LENGTH (36).
+-		     *
+-		     * For more information about INQUIRY, please refer to:
+-		     *  ftp://ftp.avc-pioneer.com/Mtfuji_7/Proposal/Jun09/INQUIRY.pdf
+-		     */
+-		    const struct scsi_inquiry_data *inq_data =
+-			(const struct scsi_inquiry_data *)csio->data_ptr;
+-		    uint8_t* resp_buf = (uint8_t*)csio->data_ptr;
+-		    /* Get the buffer length reported by host */
+-		    int resp_xfer_len = vm_srb->transfer_len;
+-		    /* Get the available buffer length */
+-		    int resp_buf_len = resp_xfer_len >= 5 ? resp_buf[4] + 5 : 0;
+-		    int data_len = (resp_buf_len < resp_xfer_len) ? resp_buf_len : resp_xfer_len;
+-		    if (data_len < SHORT_INQUIRY_LENGTH) {
+-			ccb->ccb_h.status |= CAM_REQ_CMP;
+-			if (bootverbose && data_len >= 5) {
+-				mtx_lock(&sc->hs_lock);
+-				xpt_print(ccb->ccb_h.path,
+-				    "storvsc skips the validation for short inquiry (%d)"
+-				    " [%x %x %x %x %x]\n",
+-				    data_len,resp_buf[0],resp_buf[1],resp_buf[2],
+-				    resp_buf[3],resp_buf[4]);
+-				mtx_unlock(&sc->hs_lock);
+-			}
+-		    } else if (is_inquiry_valid(inq_data) == 0) {
+-			ccb->ccb_h.status |= CAM_DEV_NOT_THERE;
+-			if (bootverbose && data_len >= 5) {
+-				mtx_lock(&sc->hs_lock);
+-				xpt_print(ccb->ccb_h.path,
+-				    "storvsc uninstalled invalid device"
+-				    " [%x %x %x %x %x]\n",
+-				resp_buf[0],resp_buf[1],resp_buf[2],resp_buf[3],resp_buf[4]);
+-				mtx_unlock(&sc->hs_lock);
+-			}
+-		    } else {
+-			ccb->ccb_h.status |= CAM_REQ_CMP;
++		if (vm_srb->srb_status != SRB_STATUS_SUCCESS) {
++			/*
++			 * If there are errors, for example, invalid LUN,
++			 * host will inform VM through SRB status.
++			 */
+ 			if (bootverbose) {
+-				mtx_lock(&sc->hs_lock);
+-				xpt_print(ccb->ccb_h.path,
+-				    "storvsc has passed inquiry response (%d) validation\n",
+-				    data_len);
+-				mtx_unlock(&sc->hs_lock);
++				if (vm_srb->srb_status == SRB_STATUS_INVALID_LUN) {
++					xpt_print(ccb->ccb_h.path,
++					    "invalid LUN %d for op: %s\n",
++					    vm_srb->lun,
++					    scsi_op_desc(cmd->opcode, NULL));
++				} else {
++					xpt_print(ccb->ccb_h.path,
++					    "Unknown SRB flag: %d for op: %s\n",
++					    vm_srb->srb_status,
++					    scsi_op_desc(cmd->opcode, NULL));
++				}
+ 			}
+-		    }
++
++			/*
++			 * XXX For a selection timeout, all of the LUNs
++			 * on the target will be gone.  It works for SCSI
++			 * disks, but does not work for IDE disks.
++			 *
++			 * For CAM_DEV_NOT_THERE, CAM will only get
++			 * rid of the device(s) specified by the path.
++			 */
++			if (storvsc_get_storage_type(sc->hs_dev->device) ==
++			    DRIVER_STORVSC)
++				ccb->ccb_h.status |= CAM_SEL_TIMEOUT;
++			else
++				ccb->ccb_h.status |= CAM_DEV_NOT_THERE;
+ 		} else {
+ 			ccb->ccb_h.status |= CAM_REQ_CMP;
+ 		}
++
++		if (cmd->opcode == INQUIRY &&
++		    vm_srb->srb_status == SRB_STATUS_SUCCESS) {
++			int resp_xfer_len, resp_buf_len, data_len;
++			struct scsi_inquiry_data *inq_data =
++			    (struct scsi_inquiry_data *)csio->data_ptr;
++			/* Get the buffer length reported by host */
++			resp_xfer_len = vm_srb->transfer_len;
++			uint8_t *resp_buf = (uint8_t *)csio->data_ptr;
++
++			/* Get the available buffer length */
++			resp_buf_len = resp_xfer_len >= 5 ? resp_buf[4] + 5 : 0;
++			data_len = (resp_buf_len < resp_xfer_len) ?
++			    resp_buf_len : resp_xfer_len;
++			if (bootverbose && data_len >= 5) {
++				xpt_print(ccb->ccb_h.path, "storvsc inquiry "
++				    "(%d) [%x %x %x %x %x ... ]\n", data_len,
++				    resp_buf[0], resp_buf[1], resp_buf[2],
++				    resp_buf[3], resp_buf[4]);
++			}
++			/*
++			 * XXX: Manually fix the wrong response returned from WS2012
++			 */
++			if (!is_scsi_valid(inq_data) &&
++			    (vmstor_proto_version == VMSTOR_PROTOCOL_VERSION_WIN8_1 ||
++			    vmstor_proto_version == VMSTOR_PROTOCOL_VERSION_WIN8 ||
++			    vmstor_proto_version == VMSTOR_PROTOCOL_VERSION_WIN7)) {
++				if (data_len >= 4 &&
++				    (resp_buf[2] == 0 || resp_buf[3] == 0)) {
++					resp_buf[2] = 5; // verion=5 means SPC-3
++					resp_buf[3] = 2; // resp fmt must be 2
++					if (bootverbose)
++						xpt_print(ccb->ccb_h.path,
++						    "fix version and resp fmt for 0x%x\n",
++						    vmstor_proto_version);
++				}
++			} else if (data_len >= SHORT_INQUIRY_LENGTH) {
++				char vendor[16];
++
++				cam_strvis(vendor, inq_data->vendor,
++				    sizeof(inq_data->vendor), sizeof(vendor));
++				/*
++				 * XXX: Upgrade SPC2 to SPC3 if host is WIN8 or
++				 * WIN2012 R2 in order to support UNMAP feature.
++				 */
++				if (!strncmp(vendor, "Msft", 4) &&
++				    SID_ANSI_REV(inq_data) == SCSI_REV_SPC2 &&
++				    (vmstor_proto_version ==
++				     VMSTOR_PROTOCOL_VERSION_WIN8_1 ||
++				     vmstor_proto_version ==
++				     VMSTOR_PROTOCOL_VERSION_WIN8)) {
++					inq_data->version = SCSI_REV_SPC3;
++					if (bootverbose) {
++						xpt_print(ccb->ccb_h.path,
++						    "storvsc upgrades "
++						    "SPC2 to SPC3\n");
++					}
++				}
++			}
++		}
+ 	} else {
+ 		mtx_lock(&sc->hs_lock);
+ 		xpt_print(ccb->ccb_h.path,
+@@ -2193,3 +2211,51 @@
+ 	return (DRIVER_UNKNOWN);
+ }
+ 
++#define	PCI_VENDOR_INTEL	0x8086
++#define	PCI_PRODUCT_PIIX4	0x7111
++
++static void
++storvsc_ada_probe_veto(void *arg __unused, struct cam_path *path,
++    struct ata_params *ident_buf __unused, int *veto)
++{
++	/*
++	 * Hyper-V should ignore ATA
++	 */
++	if (path->device->protocol == PROTO_ATA) {
++		struct ccb_pathinq cpi;
++
++		bzero(&cpi, sizeof(cpi));
++		xpt_setup_ccb(&cpi.ccb_h, path, CAM_PRIORITY_NONE);
++		cpi.ccb_h.func_code = XPT_PATH_INQ;
++		xpt_action((union ccb *)&cpi);
++		if (cpi.ccb_h.status == CAM_REQ_CMP &&
++		    cpi.hba_vendor == PCI_VENDOR_INTEL &&
++		    cpi.hba_device == PCI_PRODUCT_PIIX4) {
++			(*veto)++;
++			xpt_print(path,
++			    "Disable ATA for vendor: %x, device: %x\n",
++			    cpi.hba_vendor, cpi.hba_device);
++		}
++	}
++}
++
++static void
++storvsc_sysinit(void *arg __unused)
++{
++	if (vm_guest == VM_GUEST_HV) {
++		storvsc_handler_tag = EVENTHANDLER_REGISTER(ada_probe_veto,
++		    storvsc_ada_probe_veto, NULL, EVENTHANDLER_PRI_ANY);
++	}
++}
++SYSINIT(storvsc_sys_init, SI_SUB_DRIVERS, SI_ORDER_SECOND, storvsc_sysinit,
++    NULL);
++
++static void
++storvsc_sysuninit(void *arg __unused)
++{
++	if (storvsc_handler_tag != NULL) {
++		EVENTHANDLER_DEREGISTER(ada_probe_veto, storvsc_handler_tag);
++	}
++}
++SYSUNINIT(storvsc_sys_uninit, SI_SUB_DRIVERS, SI_ORDER_SECOND,
++    storvsc_sysuninit, NULL);
+--- sys/dev/hyperv/storvsc/hv_vstorage.h.orig
++++ sys/dev/hyperv/storvsc/hv_vstorage.h
+@@ -249,10 +249,10 @@
+ /**
+  * SRB Status Masks (can be combined with above status codes)
+  */
+-#define SRB_STATUS_QUEUE_FROZEN		0x40
+-#define SRB_STATUS_AUTOSENSE_VALID	0x80
++#define SRB_STATUS_QUEUE_FROZEN         0x40
++#define SRB_STATUS_AUTOSENSE_VALID      0x80
++#define SRB_STATUS_INVALID_LUN          0X20
+ 
+-
+ /**
+  *  Packet flags
+  */
+--- sys/dev/hyperv/utilities/hv_kvp.c.orig
++++ sys/dev/hyperv/utilities/hv_kvp.c
+@@ -311,28 +311,11 @@
+ {
+ 	int err_ip, err_subnet, err_gway, err_dns, err_adap;
+ 	int UNUSED_FLAG = 1;
+-	int guid_index;
+ 	struct hv_device *hv_dev;       /* GUID Data Structure */
+ 	hn_softc_t *sc;                 /* hn softc structure  */
+ 	char if_name[4];
+-	unsigned char guid_instance[40];
+-	char *guid_data = NULL;
+ 	char buf[39];
+ 
+-	struct guid_extract {
+-		char	a1[2];
+-		char	a2[2];
+-		char	a3[2];
+-		char	a4[2];
+-		char	b1[2];
+-		char	b2[2];
+-		char	c1[2];
+-		char	c2[2];
+-		char	d[4];
+-		char	e[12];
+-	};
+-
+-	struct guid_extract *id;
+ 	device_t *devs;
+ 	int devcnt;
+ 
+@@ -359,17 +342,7 @@
+ 			/* Trying to find GUID of Network Device */
+ 			hv_dev = sc->hn_dev_obj;
+ 
+-			for (guid_index = 0; guid_index < 16; guid_index++) {
+-				sprintf(&guid_instance[guid_index * 2], "%02x",
+-				    hv_dev->device_id.data[guid_index]);
+-			}
+-
+-			guid_data = (char *)guid_instance;
+-			id = (struct guid_extract *)guid_data;
+-			snprintf(buf, sizeof(buf), "{%.2s%.2s%.2s%.2s-%.2s%.2s-%.2s%.2s-%.4s-%s}",
+-			    id->a4, id->a3, id->a2, id->a1,
+-			    id->b2, id->b1, id->c2, id->c1, id->d, id->e);
+-			guid_data = NULL;
++			snprintf_hv_guid(buf, sizeof(buf), &hv_dev->device_id);
+ 			sprintf(if_name, "%s%d", "hn", device_get_unit(devs[devcnt]));
+ 
+ 			if (strncmp(buf, (char *)umsg->body.kvp_ip_val.adapter_id, 39) == 0) {
+--- sys/dev/hyperv/vmbus/hv_vmbus_drv_freebsd.c.orig
++++ sys/dev/hyperv/vmbus/hv_vmbus_drv_freebsd.c
+@@ -59,6 +59,7 @@
+ #include <sys/pcpu.h>
+ #include <machine/apicvar.h>
+ 
++#include <dev/hyperv/include/hyperv.h>
+ #include "hv_vmbus_priv.h"
+ 
+ #include <contrib/dev/acpica/include/acpi.h>
+@@ -298,6 +299,23 @@
+ 	return (ENOENT);
+ }
+ 
++static int
++vmbus_child_pnpinfo_str(device_t dev, device_t child, char *buf, size_t buflen)
++{
++	char guidbuf[40];
++	struct hv_device *dev_ctx = device_get_ivars(child);
++
++	strlcat(buf, "classid=", buflen);
++	snprintf_hv_guid(guidbuf, sizeof(guidbuf), &dev_ctx->class_id);
++	strlcat(buf, guidbuf, buflen);
++
++	strlcat(buf, " deviceid=", buflen);
++	snprintf_hv_guid(guidbuf, sizeof(guidbuf), &dev_ctx->device_id);
++	strlcat(buf, guidbuf, buflen);
++
++	return (0);
++}
++
+ struct hv_device*
+ hv_vmbus_child_device_create(
+ 	hv_guid		type,
+@@ -324,15 +342,17 @@
+ 	return (child_dev);
+ }
+ 
+-static void
+-print_dev_guid(struct hv_device *dev)
++int
++snprintf_hv_guid(char *buf, size_t sz, const hv_guid *guid)
+ {
+-	int i;
+-	unsigned char guid_name[100];
+-	for (i = 0; i < 32; i += 2)
+-		sprintf(&guid_name[i], "%02x", dev->class_id.data[i / 2]);
+-	if(bootverbose)
+-		printf("VMBUS: Class ID: %s\n", guid_name);
++	int cnt;
++	const unsigned char *d = guid->data;
++
++	cnt = snprintf(buf, sz,
++		"%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
++		d[3], d[2], d[1], d[0], d[5], d[4], d[7], d[6],
++		d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]);
++	return (cnt);
+ }
+ 
+ int
+@@ -341,9 +361,12 @@
+ 	device_t child;
+ 	int ret = 0;
+ 
+-	print_dev_guid(child_dev);
++	if (bootverbose) {
++		char name[40];
++		snprintf_hv_guid(name, sizeof(name), &child_dev->class_id);
++		printf("VMBUS: Class ID: %s\n", name);
++	}
+ 
+-
+ 	child = device_add_child(vmbus_devp, NULL, -1);
+ 	child_dev->device = child;
+ 	device_set_ivars(child, child_dev);
+@@ -747,6 +770,7 @@
+ 	DEVMETHOD(bus_print_child, bus_generic_print_child),
+ 	DEVMETHOD(bus_read_ivar, vmbus_read_ivar),
+ 	DEVMETHOD(bus_write_ivar, vmbus_write_ivar),
++	DEVMETHOD(bus_child_pnpinfo_str, vmbus_child_pnpinfo_str),
+ 
+ 	{ 0, 0 } };
+ 
+--- sys/sys/eventhandler.h.orig
++++ sys/sys/eventhandler.h
+@@ -283,4 +283,11 @@
+ EVENTHANDLER_DECLARE(register_framebuffer, register_framebuffer_fn);
+ EVENTHANDLER_DECLARE(unregister_framebuffer, unregister_framebuffer_fn);
+ 
++/* veto ada probing */
++struct cam_path;
++struct ata_params;
++typedef void (*ada_probe_veto_fn)(void *, struct cam_path *,
++    struct ata_params *, int *);
++EVENTHANDLER_DECLARE(ada_probe_veto, ada_probe_veto_fn);
++
+ #endif /* SYS_EVENTHANDLER_H */
+--- sys/x86/x86/intr_machdep.c.orig
++++ sys/x86/x86/intr_machdep.c
+@@ -535,6 +535,9 @@
+ 	if (mp_ncpus == 1)
+ 		return;
+ 
++	/* Does not work properly on Hyper-V. */
++	if (vm_guest == VM_GUEST_HV)
++		return;
+ 	/* Round-robin assign a CPU to each enabled source. */
+ 	mtx_lock(&intr_table_lock);
+ 	assign_cpu = 1;
