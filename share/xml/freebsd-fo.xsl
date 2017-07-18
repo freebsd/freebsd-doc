@@ -386,7 +386,7 @@
 
   <xsl:template match="db:citerefentry">
     <xsl:variable name="xhref">
-      <xsl:text>http://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
+      <xsl:text>https://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
       <xsl:value-of select="db:refentrytitle"/>
       <xsl:text>&amp;sektion=</xsl:text>
       <xsl:value-of select="db:manvolnum"/>
@@ -604,7 +604,7 @@
 
   <xsl:template match="db:citerefentry" mode="titlepage.mode">
     <xsl:variable name="xhref">
-      <xsl:text>http://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
+      <xsl:text>https://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
       <xsl:value-of select="db:refentrytitle"/>
       <xsl:text>&#38;amp;sektion=</xsl:text>
       <xsl:value-of select="db:manvolnum"/>
