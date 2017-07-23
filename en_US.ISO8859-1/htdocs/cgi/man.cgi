@@ -273,13 +273,13 @@ $manPathDefault = 'FreeBSD 11.0-RELEASE and Ports';
 
     'FreeBSD 11.1-stable',
 "$manLocalDir/FreeBSD-11.1-stable/man:$manLocalDir/FreeBSD-11.1-stable/openssl/man",
-
     'FreeBSD 11.1-RELEASE',
 "$manLocalDir/FreeBSD-11.1-RELEASE/man:$manLocalDir/FreeBSD-11.1-RELEASE/openssl/man",
-
     'FreeBSD 11.0-RELEASE',
 "$manLocalDir/FreeBSD-11.0-RELEASE/man:$manLocalDir/FreeBSD-11.0-RELEASE/openssl/man",
 
+    'FreeBSD 10.3-stable',
+"$manLocalDir/FreeBSD-10.3-stable/man:$manLocalDir/FreeBSD-10.3-stable/openssl/man",
     'FreeBSD 10.3-RELEASE',
 "$manLocalDir/FreeBSD-10.3-RELEASE/man:$manLocalDir/FreeBSD-10.3-RELEASE/openssl/man",
     'FreeBSD 10.2-RELEASE',
@@ -288,12 +288,6 @@ $manPathDefault = 'FreeBSD 11.0-RELEASE and Ports';
 "$manLocalDir/FreeBSD-10.1-RELEASE/man:$manLocalDir/FreeBSD-10.1-RELEASE/openssl/man",
     'FreeBSD 10.0-RELEASE',
 "$manLocalDir/FreeBSD-10.0-RELEASE/man:$manLocalDir/FreeBSD-10.0-RELEASE/openssl/man",
-
-    'FreeBSD 10.3-stable',
-"$manLocalDir/FreeBSD-10.3-stable/man:$manLocalDir/FreeBSD-10.3-stable/openssl/man",
-
-    'FreeBSD 10.2-stable',
-"$manLocalDir/FreeBSD-10.2-stable/man:$manLocalDir/FreeBSD-10.2-stable/openssl/man",
 
     'FreeBSD Ports 11.1-RELEASE', "$manLocalDir/FreeBSD-ports-11.1-RELEASE/man:$manLocalDir/FreeBSD-ports-11.1-RELEASE/misc",
     'FreeBSD Ports 11.0-RELEASE', "$manLocalDir/FreeBSD-ports-11.0-RELEASE/man:$manLocalDir/FreeBSD-ports-11.0-RELEASE/misc",
