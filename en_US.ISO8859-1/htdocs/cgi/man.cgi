@@ -330,16 +330,20 @@ $manPathDefault = 'FreeBSD 11.0-RELEASE and Ports';
     'FreeBSD Ports 4.5', "$manLocalDir/FreeBSD-ports-4.5-RELEASE/man:$manLocalDir/FreeBSD-ports-4.5-RELEASE/misc",
     'FreeBSD Ports 4.6', "$manLocalDir/FreeBSD-ports-4.6-RELEASE/man:$manLocalDir/FreeBSD-ports-4.6-RELEASE/misc",
     'FreeBSD Ports 4.6.2', "$manLocalDir/FreeBSD-ports-4.6.2-RELEASE/man:$manLocalDir/FreeBSD-ports-4.6.2-RELEASE/misc",
+    'FreeBSD Ports 4.7', "$manLocalDir/FreeBSD-ports-4.7-RELEASE",
     'FreeBSD Ports 4.8', "$manLocalDir/FreeBSD-ports-4.8-RELEASE/man:$manLocalDir/FreeBSD-ports-4.8-RELEASE/misc",
     'FreeBSD Ports 4.9', "$manLocalDir/FreeBSD-ports-4.9-RELEASE/man:$manLocalDir/FreeBSD-ports-4.9-RELEASE/misc",
+    'FreeBSD Ports 5.1', "$manLocalDir/FreeBSD-ports-5.1-RELEASE",
     'FreeBSD Ports 5.2', "$manLocalDir/FreeBSD-ports-5.2-RELEASE/man:$manLocalDir/FreeBSD-ports-5.2-RELEASE/misc",
     'FreeBSD Ports 5.2.1', "$manLocalDir/FreeBSD-ports-5.2.1-RELEASE/man:$manLocalDir/FreeBSD-ports-5.2.1-RELEASE/misc",
     'FreeBSD Ports 5.3', "$manLocalDir/FreeBSD-ports-5.3-RELEASE/man:$manLocalDir/FreeBSD-ports-5.3-RELEASE/misc",
     'FreeBSD Ports 5.4', "$manLocalDir/FreeBSD-ports-5.4-RELEASE/man:$manLocalDir/FreeBSD-ports-5.4-RELEASE/misc",
     'FreeBSD Ports 5.5', "$manLocalDir/FreeBSD-ports-5.5-RELEASE/man:$manLocalDir/FreeBSD-ports-5.5-RELEASE/misc",
     'FreeBSD Ports 6.0', "$manLocalDir/FreeBSD-ports-6.0-RELEASE/man:$manLocalDir/FreeBSD-ports-6.0-RELEASE/misc",
+    'FreeBSD Ports 6.2', "$manLocalDir/FreeBSD-ports-6.2-RELEASE",
     'FreeBSD Ports 6.3', "$manLocalDir/FreeBSD-ports-6.3-RELEASE/man:$manLocalDir/FreeBSD-ports-6.3-RELEASE/misc",
     'FreeBSD Ports 6.4', "$manLocalDir/FreeBSD-ports-6.4-RELEASE/man:$manLocalDir/FreeBSD-ports-6.4-RELEASE/misc",
+    'FreeBSD Ports 7.0', "$manLocalDir/FreeBSD-ports-7.0-RELEASE",
     'FreeBSD Ports 7.1', "$manLocalDir/FreeBSD-ports-7.1-RELEASE/man:$manLocalDir/FreeBSD-ports-7.1-RELEASE/misc",
     'FreeBSD Ports 7.2', "$manLocalDir/FreeBSD-ports-7.2-RELEASE/man:$manLocalDir/FreeBSD-ports-7.2-RELEASE/misc",
     'FreeBSD Ports 7.3', "$manLocalDir/FreeBSD-ports-7.3-RELEASE",
@@ -408,7 +412,6 @@ $manPathDefault = 'FreeBSD 11.0-RELEASE and Ports';
 
     'FreeBSD 7.0-RELEASE',
 "$manLocalDir/FreeBSD-7.0-RELEASE/man:$manLocalDir/FreeBSD-7.0-RELEASE/openssl/man",
-    'FreeBSD Ports 7.0', "$manLocalDir/FreeBSD-ports-7.0-RELEASE",
 
     'FreeBSD 6.4-stable', 
 "$manLocalDir/FreeBSD-6.4-stable/man:$manLocalDir/FreeBSD-6.4-stable/openssl/man",
@@ -419,7 +422,6 @@ $manPathDefault = 'FreeBSD 11.0-RELEASE and Ports';
 
     'FreeBSD 6.2-RELEASE',
 "$manLocalDir/FreeBSD-6.2-RELEASE/man:$manLocalDir/FreeBSD-6.2-RELEASE/openssl/man",
-    'FreeBSD Ports 6.2', "$manLocalDir/FreeBSD-ports-6.2-RELEASE",
 
     'FreeBSD 6.1-RELEASE',
 "$manLocalDir/FreeBSD-6.1-RELEASE/man:$manLocalDir/FreeBSD-6.1-RELEASE/openssl/man",
@@ -428,7 +430,6 @@ $manPathDefault = 'FreeBSD 11.0-RELEASE and Ports';
 
     'FreeBSD 5.5-RELEASE',
 "$manLocalDir/FreeBSD-5.5-RELEASE/man:$manLocalDir/FreeBSD-5.5-RELEASE/openssl/man",
-    'FreeBSD Ports 5.1', "$manLocalDir/FreeBSD-ports-5.1-RELEASE",
 
     'FreeBSD 5.4-RELEASE',
 "$manLocalDir/FreeBSD-5.4-RELEASE/man:$manLocalDir/FreeBSD-5.4-RELEASE/openssl/man",
@@ -444,7 +445,6 @@ $manPathDefault = 'FreeBSD 11.0-RELEASE and Ports';
 
     'FreeBSD 4.11-RELEASE',
 "$manLocalDir/FreeBSD-4.11-RELEASE/man:$manLocalDir/FreeBSD-4.11-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.11-RELEASE/perl/man",
-    'FreeBSD Ports 4.7', "$manLocalDir/FreeBSD-ports-4.7-RELEASE",
 
     'FreeBSD 4.10-RELEASE',
 "$manLocalDir/FreeBSD-4.10-RELEASE/man:$manLocalDir/FreeBSD-4.10-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.10-RELEASE/perl/man",
