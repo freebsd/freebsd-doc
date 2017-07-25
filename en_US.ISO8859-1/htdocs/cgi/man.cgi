@@ -744,7 +744,7 @@ my %no_pdf_output = map { $_ => 1 } @no_pdf_output;
 my %valid_arch = map { $_ => 1 }
   qw/acorn26 acorn32 algor alpha amd64 amiga arc arm arm26 arm32 armish atari aviion bebox cats cesfic cobalt dreamcast evbarm evbmips evbppc evbsh3 evbsh5 hp300 hp700 hpcarm hpcmips hpcsh hppa hppa64 i386 ibmnws landisk loongson luna68k luna88k mac68k macppc mipsco mmeye mvme68k mvme88k mvmeppc netwinder news68k newsmips next68k ofppc palm pc532 pegasos playstation2 pmax pmppc powerpc prep sandpoint sbmips sgi sgimips shark socppc sparc sparc64 sun2 sun3 sun3x tahoe vax walnut wgrisc x68k zaurus/;
 
-my $default_arch = 'i386';
+my $default_arch = 'amd64';
 
 my %arch = ( 
 'FreeBSD 11.1-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
