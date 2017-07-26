@@ -226,7 +226,7 @@ foreach my $os ( keys %$sectionpath ) {
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
 # this should be the latest "release and ports"
-$manPathDefault = 'FreeBSD 11.0-RELEASE and Ports';
+$manPathDefault = 'FreeBSD 11.1-RELEASE and Ports';
 
 %manPath = (
     # supported releases / stable / current 
