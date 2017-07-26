@@ -800,8 +800,8 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 11.0-RELEASE',
-    'freebsd-release', 'FreeBSD 11.0-RELEASE',
+    'freebsd',         'FreeBSD 11.1-RELEASE',
+    'freebsd-release', 'FreeBSD 11.1-RELEASE',
 
     'freebsd-stable',  'FreeBSD 10.3-stable',
     'freebsd-stable11', 'FreeBSD 11.1-stable',
