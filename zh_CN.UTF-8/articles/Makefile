@@ -6,6 +6,7 @@
 
 SUBDIR =
 SUBDIR+= contributing
+SUBDIR+= leap-seconds
 SUBDIR+= linux-users
 SUBDIR+= nanobsd
 SUBDIR+= rc-scripting
