@@ -33,6 +33,7 @@ SRCS+= upgrading/chapter.xml
 SRCS+= security/chapter.xml
 SRCS+= porting-dads/chapter.xml
 SRCS+= porting-samplem/chapter.xml
+SRCS+= order/chapter.xml
 SRCS+= keeping-up/chapter.xml
 SRCS+= uses/chapter.xml
 SRCS+= versions/chapter.xml
