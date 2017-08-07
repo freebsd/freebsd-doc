@@ -36,7 +36,7 @@
 
 		<div id="frontfeatureleft">
 			<div id="frontfeaturecontent">
-				<h1> &os; 計劃</h1>
+				<h1>&os; 計劃</h1>
 
 				<p>&os; 是一個使用於現代伺服器，桌面與嵌入式 <a href="&base;/platforms/">平台</a> 的先進作業系統。
 				  由一群龐大的 
@@ -57,8 +57,7 @@
 				  <div id="txtfrontjournalblock">
 				    <br/>&#187;
 				    <span
-				     id="txtfrontjournallink">
-				      立即取得 <a
+				     id="txtfrontjournallink">立即取得 <a
 				       href="http://www.freebsdjournal.com/"
 				       title="&os;&nbsp;Journal">&os;&nbsp;Journal</a>
 				    </span> <!-- TXTFRONTJOURNALLINK -->
@@ -75,7 +74,6 @@
 				  </div>
 				  -->
 				  <!-- END IMPORTANT NOTICES -->
-
 			  </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
 
@@ -134,16 +132,16 @@
 				  <h2>常用連結</h2>
 				  <ul id="frontshortcutslist">
 					<li>
-					  <a href="&enbase;/community/mailinglists.html" title="Mailing Lists">郵件論壇</a>
+					  <a href="&enbase;/community/mailinglists.html" title="郵件論壇">郵件論壇</a>
 					</li>
 					<li>
-					  <a href="&enbase;/support/bugreports.html" title="Reporting Problems">問題回報</a>
+					  <a href="&enbase;/support/bugreports.html" title="問題回報">問題回報</a>
 					</li>
 					<li>
 					  <a href="&enbase;/doc/en_US.ISO8859-1/books/faq/index.html" title="FAQ">FAQ</a>
 					</li>
 					<li>
-					  <a href="&enbase;/doc/zh_TW.UTF-8/books/handbook/index.html" title="Handbook">使用手冊</a>
+					  <a href="&enbase;/doc/zh_TW.UTF-8/books/handbook/index.html" title="使用手冊">使用手冊</a>
 					</li>
 					<li>
 					  <a href="&enbase;/ports/index.html" title="Ports">Ports</a>
