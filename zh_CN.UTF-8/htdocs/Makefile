@@ -76,7 +76,7 @@ SUBDIR+=	doc
 # # Non-XML
 # SUBDIR+= cgi
 # SUBDIR+= gifs
-SUBDIR+= layout
+# SUBDIR+= layout
 #SUBDIR+= logo
 
 WEBDIR?=	data/zh_CN
