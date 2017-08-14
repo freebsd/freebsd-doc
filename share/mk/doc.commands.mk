@@ -82,6 +82,7 @@ ITSTOOL?=	${PREFIX}/bin/itstool
 
 JING?=		${PREFIX}/bin/jing
 
+MSGATTRIB?=	${PREFIX}/bin/msgattrib
 MSGFMT?=	${PREFIX}/bin/msgfmt
 MSGMERGE?=	${PREFIX}/bin/msgmerge
 
