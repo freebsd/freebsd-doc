@@ -366,7 +366,8 @@ ${PO_LANG}.po:	${DOC}.translate.xml
 	@${ITSTOOL} -o ${PO_LANG}.po.tmp ${DOC}.translate.xml
 	@( if [ -f "${PO_LANG}.po" ]; then \
 		echo "${PO_LANG}.po exists, merging" ; \
-		${MSGMERGE} -o ${PO_LANG}.po.new ${PO_LANG}.po ${PO_LANG}.po.tmp ;\
+		${MSGMERGE} -o ${PO_LANG}.po.new ${PO_LANG}.po ${PO_LANG}.po.tmp ; \
+		${MSGATTRIB} --no-obsolete -o ${PO_LANG}.po.new ${PO_LANG}.po ; \
 		${MV} ${PO_LANG}.po.new ${PO_LANG}.po ; \
 		${RM} ${PO_LANG}.po.tmp ; \
 	  else \
