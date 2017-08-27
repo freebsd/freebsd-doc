@@ -1717,7 +1717,6 @@ sub formquery {
 Man Page or Keyword Search:
 <input value="$query" name="query" />
 <input type="submit" value="Submit" />
-<input type="reset" value="Reset" />
 <br />
 <input name="apropos" value="0" type="radio"$astring /> <a href="$BASE?query=man&amp;sektion=1&amp;apropos=0">Man</a>
 <select name="sektion">
