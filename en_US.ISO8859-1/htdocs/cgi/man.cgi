@@ -968,6 +968,8 @@ b { color: #996600; }
 i { color: #008000; }
 -->
 span.footer_links { font-size: small; }
+input, button { font-size: large; }
+input[name='query'] { text-align: right; }
 </style>
 |;
 
@@ -1718,13 +1720,14 @@ sub formquery {
     print <<ETX;
 <form method="get" action="$BASE">
 <!-- Manual Page or Keyword Search: -->
-<input value="$query" name="query" size="40" />
+<!-- &nbsp; &nbsp; &nbsp; -->
+<input value="$query" name="query" size="36" />
 <button type="submit" name="man" value="man">man</button>
 <button type="submit" name="apropos" value="1">apropos</button>
-<br />
-<select name="sektion">
+<br class="second_row" />
 ETX
 
+    print qq{<select name="sektion">\n};
     foreach $key ( sort keys %sectionName ) {
         print "<option"
           . ( ( $key eq $section ) ? ' selected="selected" ' : ' ' )
@@ -1742,6 +1745,7 @@ ETX
     }
 
     print qq{</select>\n};
+
     print qq{<select name="arch">\n};
     my @arch = exists $arch{$l} ? @{ $arch{$l}->{'arch'} } : $default_arch;
     unshift @arch, 'default';
