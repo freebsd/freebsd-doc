@@ -942,7 +942,7 @@ sub html_footer {
     my %args = @_;
 
     print
-qq{<a href="$BASE?manpath=$m">home</a> | <a href="$BASE/help.html">help</a> \n}
+qq{<span class="footer_links"><a href="$BASE?manpath=$m">home</a> | <a href="$BASE/help.html">help</a></span>\n}
       if !$args{'no_home_link'};
 
     if (cgi_style::HAS_FREEBSD_CGI_STYLE) {
@@ -967,6 +967,7 @@ sub html_header {
 b { color: #996600; }
 i { color: #008000; }
 -->
+span.footer_links { font-size: small; }
 </style>
 |;
 
@@ -1783,8 +1784,7 @@ ETX
 </form>
 
 <br/>
-<a href="$BASE?manpath=$m">home</a> |
-<a href="$BASE/help.html">help</a> 
+<span class="footer_links"><a href="$BASE?manpath=$m">home</a> | <a href="$BASE/help.html">help</a></span>
 <hr/>
 ETX
     0;
