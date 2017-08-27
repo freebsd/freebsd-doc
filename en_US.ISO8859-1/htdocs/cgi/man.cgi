@@ -1656,7 +1656,8 @@ sub encode_data {
 sub indexpage {
     &http_header("text/html");
     print &html_header("$www{'title'}: Index Page") . "<h1><br/>", $www{'head'},
-      "</h1>\n\n" . &intro;
+      "</h1>\n\n"; 
+    # print &intro;
     &formquery;
 
     local ($m) = ( $manpath ? $manpath : $manPathDefault );
