@@ -1717,9 +1717,9 @@ sub formquery {
 <form method="get" action="$BASE">
 Man Page or Keyword Search:
 <input value="$query" name="query" />
-<input type="submit" value="Submit" />
+<button type="submit" name="man" value="man">man</button>
+<button type="submit" name="apropos" value="1">apropos</button>
 <br />
-<input name="apropos" value="0" type="radio"$astring /> <a href="$BASE?query=man&amp;sektion=1&amp;apropos=0">Man</a>
 <select name="sektion">
 ETX
 
@@ -1767,7 +1767,6 @@ ETX
 
     print <<ETX;
 <br />
-<input name="apropos" value="1" type="radio"$bstring /> <a href="$BASE?query=apropos&amp;sektion=1&amp;apropos=0">Apropos</a> Keyword Search (all sections)
 <select name="format">
 ETX
 
