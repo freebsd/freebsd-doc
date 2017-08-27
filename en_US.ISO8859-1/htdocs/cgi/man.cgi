@@ -1725,7 +1725,7 @@ sub formquery {
 <!-- Manual Page or Keyword Search: -->
 <!-- &nbsp; &nbsp; &nbsp; -->
 <input id="query" value="$query" name="query" size="36" $autofocus />
-<button type="submit" name="man" value="man">man</button>
+<button type="submit" name="apropos" value="0">man</button>
 <button type="submit" name="apropos" value="1">apropos</button>
 <br class="second_row" />
 ETX
