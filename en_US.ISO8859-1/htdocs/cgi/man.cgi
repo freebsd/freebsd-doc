@@ -970,6 +970,7 @@ i { color: #008000; }
 span.footer_links { font-size: small; }
 input, button { font-size: large; }
 input[name='query'] { text-align: center; }
+span.space { font-size: xx-small; }
 </style>
 |;
 
@@ -1726,11 +1727,12 @@ sub formquery {
     print <<ETX;
 <form method="get" action="$BASE">
 <!-- Manual Page or Keyword Search: -->
-&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;
 <input id="query" value="$query" name="query" size="36" $autofocus />
 <button type="submit" name="apropos" value="0">man</button>
 <button type="submit" name="apropos" value="1">apropos</button>
-<br class="second_row" />
+<br/>
+<span class="space">&nbsp;</span><br/>
 &nbsp;&nbsp;
 ETX
 
