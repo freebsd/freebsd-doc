@@ -1297,7 +1297,10 @@ sub man {
     #print Dumper($sectionpath);
     #print "yy $section yy $manpath\n";
     if ( $name =~ /^\s*$/ ) {
-        print "Empty input, no man page given.\n";
+	print "</pre><hr/>";
+        print "Empty input. Please type a manual page and search again.\n";
+	print "<hr/>\n";
+        &html_footer;
         return;
     }
 
