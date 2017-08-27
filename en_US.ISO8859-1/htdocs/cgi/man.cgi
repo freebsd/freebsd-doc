@@ -968,16 +968,16 @@ b { color: #996600; }
 i { color: #008000; }
 -->
 span.footer_links { font-size: small; }
-input, button { font-size: large; }
-input[name='query'] { text-align: center; }
 span.space { font-size: xx-small; }
+form#man > input, form#man > button { font-size: large; }
+form#man > input[name='query'] { text-align: center; }
 
 @media only screen and (max-height: 640px), (max-width: 880px) {
 div#header, div#menu { display: none !important; }
 div#content { padding-top: 4.9em; }
-form > input, button { font-size: 200%; }
-form > button { font-size: 200%; }
-input[name='query'] { width: 12em; }
+form#man > input, button { font-size: 200%; }
+form#man > button { font-size: 200%; }
+form#man > input[name='query'] { width: 12em; }
 }
 </style>
 |;
@@ -1733,7 +1733,7 @@ sub formquery {
     my $autofocus = $query ? "" : "autofocus";
 
     print <<ETX;
-<form method="get" action="$BASE">
+<form id="man" method="get" action="$BASE">
 <!-- Manual Page or Keyword Search: -->
 &nbsp;&nbsp;
 <input id="query" value="$query" name="query" size="36" $autofocus />
