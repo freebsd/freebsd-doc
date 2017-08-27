@@ -969,7 +969,7 @@ i { color: #008000; }
 -->
 span.footer_links { font-size: small; }
 input, button { font-size: large; }
-input[name='query'] { text-align: right; }
+input[name='query'] { text-align: center; }
 </style>
 |;
 
@@ -1717,11 +1717,14 @@ sub formquery {
         $bstring = q{ checked="checked"};
     }
 
+    # set focus if the input field is empty 
+    my $autofocus = $query ? "" : "autofocus";
+
     print <<ETX;
 <form method="get" action="$BASE">
 <!-- Manual Page or Keyword Search: -->
 <!-- &nbsp; &nbsp; &nbsp; -->
-<input id="query" value="$query" name="query" size="36" autofocus />
+<input id="query" value="$query" name="query" size="36" $autofocus />
 <button type="submit" name="man" value="man">man</button>
 <button type="submit" name="apropos" value="1">apropos</button>
 <br class="second_row" />
