@@ -1726,11 +1726,12 @@ sub formquery {
     print <<ETX;
 <form method="get" action="$BASE">
 <!-- Manual Page or Keyword Search: -->
-<!-- &nbsp; &nbsp; &nbsp; -->
+&nbsp;&nbsp;&nbsp;
 <input id="query" value="$query" name="query" size="36" $autofocus />
 <button type="submit" name="apropos" value="0">man</button>
 <button type="submit" name="apropos" value="1">apropos</button>
 <br class="second_row" />
+&nbsp;&nbsp;
 ETX
 
     print qq{<select name="sektion">\n};
