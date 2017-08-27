@@ -929,6 +929,10 @@ $want_to_link_to_this_page = 1;
 $enable_include_links = 0;
 $enable_mailto_links  = 0;
 
+my $enable_section_indexes = 0;
+my $enable_intro = 0;
+
+
 #
 # end of config
 #######################################################################################
@@ -1657,18 +1661,22 @@ sub indexpage {
     local ($m) = ( $manpath ? $manpath : $manPathDefault );
     $m = &encode_url($m);
 
+    if ($enable_section_indexes) {
     print "<b><i>Section Indexes</i></b>:\n";
     foreach ( '1', '2', '3', '4', '5', '6', '7', '8', '9', 'n' ) {
         print qq{&#164; } if $_ ne '1';
         print
 qq{<a href="$BASE?query=($_)&amp;sektion=&amp;apropos=1&amp;manpath=$m&amp;title=Section%20$_Index">$_</a>\n};
     }
+    }
 
+    if ($enable_intro) {
     print "<br /><b><i>Explanations of Man Sections:</i></b>\n";
     foreach ( '1', '2', '3', '4', '5', '6', '7', '8', '9' ) {
         print qq{&#164; } if $_ ne '1';
         print
 qq{<a href="$BASE?query=intro&amp;sektion=$_&amp;apropos=0&amp;manpath=$m&amp;title=Introduction%20Section%20$_">intro($_)</a>\n};
+    }
     }
 
     if (0) {
@@ -1689,7 +1697,9 @@ qq{&#164; <a href="$BASE?query=$_&amp;sektion=&amp;apropos=1&amp;manpath=$m&amp;
 URL:  <a href="$BASE" target="_parent">$www{'home'}$BASE</a><br />
 ETX
 
-    print "<br />\n";
+    if ($enable_section_indexes || $enable_intro) {
+        print "<br />\n";
+    }
     &html_footer( 'no_home_link' => 1 );
 }
 
@@ -1773,9 +1783,10 @@ ETX
 Output format
 </form>
 
+<br/>
 <a href="$BASE?manpath=$m">home</a> |
 <a href="$BASE/help.html">help</a> 
-<hr />
+<hr/>
 ETX
     0;
 }
