@@ -1716,8 +1716,8 @@ sub formquery {
 
     print <<ETX;
 <form method="get" action="$BASE">
-Manual Page or Keyword Search:
-<input value="$query" name="query" />
+<!-- Manual Page or Keyword Search: -->
+<input value="$query" name="query" size="40" />
 <button type="submit" name="man" value="man">man</button>
 <button type="submit" name="apropos" value="1">apropos</button>
 <br />
