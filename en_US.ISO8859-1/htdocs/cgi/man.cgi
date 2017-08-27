@@ -971,6 +971,14 @@ span.footer_links { font-size: small; }
 input, button { font-size: large; }
 input[name='query'] { text-align: center; }
 span.space { font-size: xx-small; }
+
+@media only screen and (max-height: 640px), (max-width: 880px) {
+div#header, div#menu { display: none !important; }
+div#content { padding-top: 4.9em; }
+form > input, button { font-size: 200%; }
+form > button { font-size: 200%; }
+input[name='query'] { width: 12em; }
+}
 </style>
 |;
 
