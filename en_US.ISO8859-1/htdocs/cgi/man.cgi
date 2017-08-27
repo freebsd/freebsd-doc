@@ -916,7 +916,7 @@ $sections = join( "|", @sections );    # sections regexp
 # mailto - Author
 # webmaster - who run this service
 $mailto                    = 'wosch@FreeBSD.org';
-$mailtoURL                 = 'http://wolfram.schneider.org';
+$mailtoURL                 = 'https://wolfram.schneider.org';
 $mailtoURL                 = "mailto:$mailto" if !$mailtoURL;
 $full_url                  = 'https://www.freebsd.org/cgi/man.cgi';
 $want_to_link_to_this_page = 1;
@@ -1843,7 +1843,7 @@ Copyright (c) for man pages by OS vendors.
 <a href="https://www.suse.com">SuSE</a>,
 <a href="http://www.digital.com">ULTRIX</a>,
 <a href="http://www.plan9.bell-labs.com/7thEdMan/">Unix Seventh Edition</a>,
-<a href="http://www.xfree86.org">XFree86</a>,
+<a href="https://www.xfree86.org">XFree86</a>,
 <a href="https://www.x.org">X11R6</a>
 
 <h2>FAQ</h2>
