@@ -1792,8 +1792,10 @@ ETX
 
 <br/>
 <span class="footer_links"><a href="$BASE?manpath=$m">home</a> | <a href="$BASE/help.html">help</a></span>
-<hr/>
 ETX
+    if ($query) {
+	print "<hr/>\n";
+    }
     0;
 }
 
