@@ -1208,7 +1208,7 @@ sub apropos {
     if ( !$acounter ) {
         print "Sorry, no data found for `$query'.\n";
         print qq{You may look for other }
-          . qq{<a href="../../search/">FreeBSD Search Services</a>.\n};
+          . qq{<a href="../../search/">FreeBSD Search Services</a>.<br/><br/>\n};
     }
     &html_footer;
 }
