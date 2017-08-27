@@ -1841,7 +1841,7 @@ Copyright (c) for man pages by OS vendors.
 <a href="https://www.slackware.com">Slackware Linux</a>,
 <a href="https://www.sun.com">SunOS</a>,
 <a href="https://www.suse.com">SuSE</a>,
-<a href="http://www.digital.com">ULTRIX</a>,
+<a href="https://en.wikipedia.org/wiki/Ultrix">ULTRIX</a>,
 <a href="http://www.plan9.bell-labs.com/7thEdMan/">Unix Seventh Edition</a>,
 <a href="https://www.xfree86.org">XFree86</a>,
 <a href="https://www.x.org">X11R6</a>
