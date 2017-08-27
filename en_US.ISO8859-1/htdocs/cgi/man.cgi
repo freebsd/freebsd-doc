@@ -1721,7 +1721,7 @@ sub formquery {
 <form method="get" action="$BASE">
 <!-- Manual Page or Keyword Search: -->
 <!-- &nbsp; &nbsp; &nbsp; -->
-<input value="$query" name="query" size="36" autofocus />
+<input id="query" value="$query" name="query" size="36" autofocus />
 <button type="submit" name="man" value="man">man</button>
 <button type="submit" name="apropos" value="1">apropos</button>
 <br class="second_row" />
