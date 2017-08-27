@@ -1766,7 +1766,6 @@ ETX
     local ($m) = &encode_url($l);
 
     print <<ETX;
-<br />
 <select name="format">
 ETX
 
@@ -1780,7 +1779,6 @@ ETX
 
     print <<ETX;
 </select>
-Output format
 </form>
 
 <br/>
