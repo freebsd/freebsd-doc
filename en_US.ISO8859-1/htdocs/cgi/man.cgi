@@ -972,7 +972,7 @@ span.space { font-size: xx-small; }
 form#man > input, form#man > button { font-size: large; }
 form#man > input[name='query'] { text-align: center; }
 
-@media only screen and (max-height: 640px), (max-width: 880px) {
+@media only screen and (max-height: 640px), (max-width: 760px) {
 div#header, div#menu { display: none !important; }
 div#content { padding-top: 4.9em; }
 form#man > input, button { font-size: 200%; }
