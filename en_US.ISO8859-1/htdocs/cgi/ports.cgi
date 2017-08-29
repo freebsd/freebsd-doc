@@ -497,8 +497,6 @@ sub footer {
 };
 
 #print q{$FreeBSD$} . "<br />\n";
-    print qq{Please direct questions about this service to
-<i><a href="$mailtoURL">$mailto</a></i><br />\n};
     print qq{General questions about FreeBSD ports should be sent to }
       . qq{<a href="mailto:$mailtoList">}
       . qq{<i>$mailtoList</i></a><br />\n};
