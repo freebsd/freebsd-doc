@@ -89,6 +89,7 @@ $i_topbar = qq`
 		  <input type="hidden" name="kh" value="1" />
 		  <input type="hidden" name="kj" value="r2" />
 		  <input id="words" name="q" type="text" size="20"
+                    autocapitalize="none"
 		    maxlength="255"
 		    onfocus="if( this.value==this.defaultValue ) this.value='';"
 		    value="Search" />
