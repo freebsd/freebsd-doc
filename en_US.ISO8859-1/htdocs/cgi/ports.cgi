@@ -450,7 +450,7 @@ description about the port.
 
 <form method="get" action="$script_name">
 Search for:
-<input name="query" value="$query" />
+<input name="query" value="$query" type="text" autocapitalize="none" />
 <select name="stype">
 };
 
