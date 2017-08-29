@@ -1738,7 +1738,7 @@ sub formquery {
 <form id="man" method="get" action="$BASE">
 <!-- Manual Page or Keyword Search: -->
 <span class="spaces">&nbsp;&nbsp;</span>
-<input id="query" value="$query" name="query" size="36" $autofocus />
+<input type="text" id="query" value="$query" name="query" size="36" autocapitalize="none" $autofocus />
 <button type="submit" name="apropos" value="0">man</button>
 <button type="submit" name="apropos" value="1">apropos</button>
 <br/>
