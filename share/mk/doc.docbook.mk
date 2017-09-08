@@ -369,7 +369,7 @@ ${PO_LANG}.po:	${DOC}.translate.xml
 		${MSGMERGE} -o ${PO_LANG}.po.new ${PO_LANG}.po ${PO_LANG}.po.tmp ; \
 		${MSGATTRIB} --no-obsolete -o ${PO_LANG}.po.new ${PO_LANG}.po ; \
 		${MV} ${PO_LANG}.po.new ${PO_LANG}.po ; \
-		${RM} ${PO_LANG}.po.tmp ; \
+		${RM} ${PO_LANG}.po.tmp ${DOC}.translate.xml ; \
 	  else \
 	  	${ECHO} "${PO_LANG}.po created, please check and correct the settings in the header" ; \
 		${MV} ${PO_LANG}.po.tmp ${PO_LANG}.po ; \
