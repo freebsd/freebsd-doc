@@ -1644,25 +1644,14 @@ sub encode_data {
     s/\</\&lt\;/g;
     s/\>/\&gt\;/g;
 
-    s,((_\010[^_])+),($str = $1) =~ s/.\010//g; "<i>$str</i>";,ge;
-    s,((.\010.)+),($str = $1) =~ s/.\010//g; "<b>$str</b>";,ge;
+    # underline: _^H.^H(.)
+    s,((_\010[^_]\010.)+),($str = $1) =~ s/_\010..//g; "<I>$str</I>";,ge;
 
- #s,((_\010.)+),($str = $1) =~ s/.\010//g; "<i>$str</i>";,ge;
- #s,(.\010)+,$1,g;
- #if (!s,((.\010.)+\s+(.\010.)+),($str = $1) =~ s/.\010//g; "<b>$str</b>";,ge) {
- # s,(([^_]\010.)+),($str = $1) =~ s/[^_]\010//g; "<b>$str</b>";,ge;
- # s,(([_]\010.)+),($str = $1) =~ s/[_]\010//g; "<i>$str</i>";,ge;
- #}
- # Escape binary data except for ^H which we process below
- # \375 gets turned into the & for the entity reference
- #s/([^\010\012\015\032-\176])/sprintf('\375#%03d;',ord($1))/eg;
- # Process ^H sequences, we use \376 and \377 (already escaped
- # above) to stand in for < and > until those characters can
- # be properly escaped below.
- #s,\376[IB]\377_\376/[IB]\377,,g;
- #s/.[\b]//g;			# just do an erase for anything else
- # Now convert our magic chars into our tag markers
- #s/\375/\&/g; s/\376/</g; s/\377/>/g;
+    # italic:  _^H(.)
+    s,((_\010[^_])+),($str = $1) =~ s/.\010//g; "<i>$str</i>";,ge;
+
+    # bold: .^H(.) 
+    s,(([^_]\010.)+),($str = $1) =~ s/.\010//g; "<b>$str</b>";,ge;
 
     # cleanup all the rest
     s,.\010,,g;
