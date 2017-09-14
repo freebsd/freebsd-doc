@@ -84,7 +84,7 @@ sub file_not_exists {
 if ($file =~ s%^archive/%%) {
     $maildir = '/usr/local/www/mailindex/archive';
     &file_not_exists("$maildir/$file") if (! -f "$maildir/$file");
-} elsif ($file =~ s%^current/%% && $file =~ /^freebsd-|^cvs-/) {
+} elsif ($file =~ s%^current/%% && $file =~ /^(freebsd|cvs|svn|ctm|trustedbsd)-/) {
     &file_not_exists("$file") if (! -f "$maildir/$file");
     $up = 0;
 } else {
