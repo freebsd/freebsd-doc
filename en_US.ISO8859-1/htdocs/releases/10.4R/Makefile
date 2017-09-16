@@ -18,7 +18,8 @@ DOCS=	index.xml \
 DATA=	docbook.css \
 	hardware.html \
 	readme.html \
-	relnotes.html
+	relnotes.html \
+	signatures.html
 
 # PGP-signed checksums
 
