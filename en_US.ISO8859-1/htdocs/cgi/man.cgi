@@ -234,6 +234,8 @@ $manPathDefault = 'FreeBSD 11.1-RELEASE and Ports';
 "$manLocalDir/FreeBSD-11.1-RELEASE/man:$manLocalDir/FreeBSD-11.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-11.1-RELEASE/man:$manLocalDir/FreeBSD-ports-11.1-RELEASE/misc",
     'FreeBSD 11.0-RELEASE and Ports',
 "$manLocalDir/FreeBSD-11.0-RELEASE/man:$manLocalDir/FreeBSD-11.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-11.0-RELEASE/man:$manLocalDir/FreeBSD-ports-11.0-RELEASE/misc",
+    'FreeBSD 10.4-RELEASE and Ports',
+"$manLocalDir/FreeBSD-10.4-RELEASE/man:$manLocalDir/FreeBSD-10.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-10.4-RELEASE/man:$manLocalDir/FreeBSD-ports-10.4-RELEASE/misc",
     'FreeBSD 10.3-RELEASE and Ports',
 "$manLocalDir/FreeBSD-10.3-RELEASE/man:$manLocalDir/FreeBSD-10.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-10.3-RELEASE/man:$manLocalDir/FreeBSD-ports-10.3-RELEASE/misc",
     'FreeBSD 10.2-RELEASE and Ports',
@@ -276,8 +278,10 @@ $manPathDefault = 'FreeBSD 11.1-RELEASE and Ports';
     'FreeBSD 11.0-RELEASE',
 "$manLocalDir/FreeBSD-11.0-RELEASE/man:$manLocalDir/FreeBSD-11.0-RELEASE/openssl/man",
 
-    'FreeBSD 10.3-stable',
-"$manLocalDir/FreeBSD-10.3-stable/man:$manLocalDir/FreeBSD-10.3-stable/openssl/man",
+    'FreeBSD 10.4-stable',
+"$manLocalDir/FreeBSD-10.4-stable/man:$manLocalDir/FreeBSD-10.4-stable/openssl/man",
+    'FreeBSD 10.4-RELEASE',
+"$manLocalDir/FreeBSD-10.4-RELEASE/man:$manLocalDir/FreeBSD-10.4-RELEASE/openssl/man",
     'FreeBSD 10.3-RELEASE',
 "$manLocalDir/FreeBSD-10.3-RELEASE/man:$manLocalDir/FreeBSD-10.3-RELEASE/openssl/man",
     'FreeBSD 10.2-RELEASE',
@@ -358,6 +362,7 @@ $manPathDefault = 'FreeBSD 11.1-RELEASE and Ports';
     'FreeBSD Ports 10.1', "$manLocalDir/FreeBSD-ports-10.1-RELEASE/man:$manLocalDir/FreeBSD-ports-10.1-RELEASE/misc",
     'FreeBSD Ports 10.2', "$manLocalDir/FreeBSD-ports-10.2-RELEASE/man:$manLocalDir/FreeBSD-ports-10.2-RELEASE/misc",
     'FreeBSD Ports 10.3', "$manLocalDir/FreeBSD-ports-10.3-RELEASE/man:$manLocalDir/FreeBSD-ports-10.3-RELEASE/misc",
+    'FreeBSD Ports 10.4', "$manLocalDir/FreeBSD-ports-10.4-RELEASE/man:$manLocalDir/FreeBSD-ports-10.4-RELEASE/misc",
     'FreeBSD Ports 11.0', "$manLocalDir/FreeBSD-ports-11.0-RELEASE/man:$manLocalDir/FreeBSD-ports-11.0-RELEASE/misc",
     'FreeBSD Ports 11.1', "$manLocalDir/FreeBSD-ports-11.1-RELEASE/man:$manLocalDir/FreeBSD-ports-11.1-RELEASE/misc",
 
@@ -747,6 +752,7 @@ my %arch_names = ('default' => 'All Architectures');
 my %arch = ( 
 'FreeBSD 11.1-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 11.0-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
+'FreeBSD 10.4-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 10.3-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 10.2-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 10.1-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
@@ -804,7 +810,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-stable', 'FreeBSD 11.1-stable',
     'freebsd-stable11', 'FreeBSD 11.1-stable',
 
-    'freebsd-stable10', 'FreeBSD 10.3-stable',
+    'freebsd-stable10', 'FreeBSD 10.4-stable',
     'freebsd-stable9', 'FreeBSD 9.3-stable',
     'freebsd-stable8', 'FreeBSD 8.4-stable',
     'freebsd-stable7', 'FreeBSD 7.4-stable',
