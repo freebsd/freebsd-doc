@@ -16,6 +16,7 @@ DOCS=	index.xml \
 	schedule.xml
 
 DATA=	docbook.css \
+	errata.html \
 	hardware.html \
 	readme.html \
 	relnotes.html \
