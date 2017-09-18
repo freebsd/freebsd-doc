@@ -13,14 +13,14 @@ _BRANCH?=	RC1
 THISRELEASE?=	${_OS}-${_REVISION}-${_BRANCH}
 
 DOCS=	index.xml \
-	schedule.xml
+	schedule.xml \
+	signatures.xml
 
 DATA=	docbook.css \
 	errata.html \
 	hardware.html \
 	readme.html \
-	relnotes.html \
-	signatures.html
+	relnotes.html
 
 # PGP-signed checksums
 
