@@ -105,8 +105,10 @@ DOC_LOCAL_MK=	${DOC_PREFIX}/${LANGCODE}/share/mk/doc.local.mk
 # Subdirectory glue.
 .include "doc.subdir.mk"
 
-# parallel build for target "all"
+# parallel build for target "all" and "clean"
 NCPU?= 8
-p-all:
-	make -V SUBDIR | sed -E 's/[ ]+$$//' | tr " " "\n" | sed -E 's/^/make -C /' | tr '\n' '\0' | xargs -0 -n1 -P${NCPU} /bin/sh -c
+p-all p-clean:
+	make -V SUBDIR | sed -E 's/[ ]+$$//' | tr " " "\n" | \
+		sed -E 's/^/make -C /; s/$$/ ${.TARGET:S/^p-//}/' | \
+		tr '\n' '\0' | xargs -0 -n1 -P${NCPU} /bin/sh -c
 
