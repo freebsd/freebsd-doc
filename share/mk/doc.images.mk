@@ -102,15 +102,19 @@ EPS2PNM_RES?=	100
 ## If we want grayscale, convert with ppmtopgm before running through pnmtops
 .if defined(GREYSCALE_IMAGES)
 .scr.eps:
+	tmpfile=$$(mktemp ${.TARGET}.XXXXXXXX); \
 	${SCR2PNG} ${SCR2PNGOPTS} < ${.ALLSRC} | \
 		${PNGTOPNM} ${PNGTOPNMOPTS} | \
 		${PPMTOPGM} ${PPMTOPGMOPTS} | \
-		${PNMTOPS} ${PNMTOPSOPTS} > ${.TARGET}
+		${PNMTOPS} ${PNMTOPSOPTS} > $$tmpfile && \
+		${MV} -f $$tmpfile ${.TARGET}
 .else
 .scr.eps:
+	tmpfile=$$(mktemp ${.TARGET}.XXXXXXXX); \
 	${SCR2PNG} ${SCR2PNGOPTS} < ${.ALLSRC} | \
 		${PNGTOPNM} ${PNGTOPNMOPTS} | \
-		${PNMTOPS} ${PNMTOPSOPTS} > ${.TARGET}
+		${PNMTOPS} ${PNMTOPSOPTS} > $$tmpfile && \
+		${MV} -f $$tmpfile ${.TARGET}
 .endif
 
 # The .txt files need to have any trailing spaces trimmed from
@@ -126,7 +130,8 @@ EPS2PNM_RES?=	100
 		| ${PNMTOPNG} > ${.TARGET}
 
 .pic.ps:
-	${PIC2PS} ${.ALLSRC} > ${.TARGET}
+	tmpfile=$$(mktemp ${.TARGET}.XXXXXXXX); \
+	${PIC2PS} ${.ALLSRC} > $$tmpfile && ${MV} -f $$tmpfile ${.TARGET}
 
 # When ghostscript built with A4=yes is used, ps2epsi's paper size also
 # becomes the A4 size.  However, the ps2epsi fails to convert grops(1)
@@ -139,22 +144,24 @@ EPS2PNM_RES?=	100
 # must contain %%BoundingBox line which the "gs -sDEVICE=bbox" outputs
 # (the older versions calculated BBox directly in ps2epsi.ps).
 .ps.eps:
-	${PS2BBOX} ${PS2BBOXOPTS} ${.ALLSRC} > ${.TARGET} 2>&1
-	${SETENV} outfile=${.TARGET} ${PS2EPS} ${PS2EPSOPTS} < ${.ALLSRC} 1>&2
+	tmpfile=$$(mktemp ${.TARGET}.XXXXXXXX); \
+	${PS2BBOX} ${PS2BBOXOPTS} ${.ALLSRC} > $$tmpfile 2>&1; \
+	${SETENV} outfile=$$tmpfile ${PS2EPS} ${PS2EPSOPTS} < ${.ALLSRC} 1>&2; \
 	(echo "save countdictstack mark newpath /showpage {} def /setpagedevice {pop} def";\
 		echo "%%EndProlog";\
 		echo "%%Page: 1 1";\
 		echo "%%BeginDocument: ${.ALLSRC}";\
-	) >> ${.TARGET}
+	) >> $$tmpfile; \
 	${SED}	-e '/^%%BeginPreview:/,/^%%EndPreview[^!-~]*$$/d' \
 		-e '/^%!PS-Adobe/d' \
 		-e '/^%%[A-Za-z][A-Za-z]*[^!-~]*$$/d'\
-		-e '/^%%[A-Za-z][A-Za-z]*: /d' < ${.ALLSRC} >> ${.TARGET}
+		-e '/^%%[A-Za-z][A-Za-z]*: /d' < ${.ALLSRC} >> $$tmpfile; \
 	(echo "%%EndDocument";\
 		echo "%%Trailer";\
 		echo "cleartomark countdictstack exch sub { end } repeat restore";\
 		echo "%%EOF";\
-	) >> ${.TARGET}
+	) >> $$tmpfile; \
+	${MV} -f $$tmpfile ${.TARGET}
 
 # We can't use suffix rules to generate the rules to convert EPS to PNG and
 # PNG to EPS.  This is because a .png file can depend on a .eps file, and
