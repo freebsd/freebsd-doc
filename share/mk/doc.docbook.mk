@@ -846,3 +846,6 @@ ${LOCAL_CSS_SHEET}: ${CSS_SHEET}
 	${CAT} ${.CURDIR}/${CSS_SHEET_ADDITIONS} >> ${.TARGET}
 .endif
 .endif
+
+HTML.manifest: index.html
+
