@@ -33,22 +33,6 @@ DOCS+=	working-with-hats.xml
 
 INDEXLINK=	internal.html
 
-# build the list of personal homepages of FreeBSD developers only
-# on the main FreeBSD machines
-hostname!= hostname
-.if !empty(hostname:tl:M*.freebsd.org)
-DOCS+=	homepage.xml
-
-.if !make(install)
-.PHONY: homepage.inc
-.endif
-homepage.inc: homepage.pl
-	${PERL} ${.CURDIR}/homepage.pl > ${.TARGET}
-
-homepage.html:  homepage.inc
-CLEANFILES+=	homepage.inc
-.endif
-
 DATA+=	ssh-keys.asc
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
