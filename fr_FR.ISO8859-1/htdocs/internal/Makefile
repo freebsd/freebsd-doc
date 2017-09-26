@@ -28,20 +28,6 @@ DOCS+=	core-vote.xml
 
 INDEXLINK=	internal.html
 
-# build the list of personal homepages of FreeBSD developers only
-# on the main FreeBSD machines
-hostname!= hostname
-.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org" || ${hostname} == "www.freebsd.org"
-DOCS+=	homepage.xml
-.PHONY: homepage.inc
-
-homepage.inc: ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/internal/homepage.pl
-	${PERL} ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/internal/homepage.pl > ${.TARGET}
-
-homepage.html:  homepage.inc
-CLEANFILES+=	homepage.inc
-.endif
-
 # DATA+=	README.mirror ssh-keys.asc
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
