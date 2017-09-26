@@ -34,18 +34,6 @@ DATA+=	relnotes-i386.html
 DATA+=	relnotes-pc98.html
 DATA+=	relnotes-sparc64.html
 
-FETCHFILE= http://people.freebsd.org/~pho/stress/log/news.rdf
-FETCHCMD=  /usr/bin/fetch
-CLEANFILES+= news.rdf stress.html
-
 DATA+=	docbook.css
-
-news.rdf:
-	${FETCHCMD} ${FETCHFILE}
-
-stress.html: news.rdf stress.xsl
-	${XSLTPROC} stress.xsl news.rdf > stress.html
-
-todo.html: stress.html
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
