@@ -346,12 +346,16 @@ PARAMS.eresources+=	--param 'type' "'www'" \
 			--param 'proto' "'http'" \
 			--param 'target' "'handbook/eresources/chapter.xml'"
 
-SRCS+=		mirrors.lastmod.inc \
+EXTRAS=		mirrors.lastmod.inc \
 		mirrors.xml.ftp.inc \
 		mirrors.xml.ftp.index.inc \
 		mirrors.xml.cvsup.inc \
 		mirrors.xml.cvsup.index.inc \
 		eresources.xml.www.inc \
 		eresources.xml.www.index.inc
+
+XMLDOCS_NO_SRCS=YES
+CLEANFILES+= ${EXTRAS}
+index.html ${DOC}.html: ${EXTRAS}
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
