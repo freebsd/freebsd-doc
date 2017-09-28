@@ -338,7 +338,10 @@ NO_DATA.${_ID}=
 
 XSLTPROCOPTS.${_ID}?=	${XSLTPROCOPTS}
 GENDOCS+=	${TARGET.${_ID}}
+
+.if !defined(XMLDOCS_NO_SRCS) || empty(XMLDOCS_NO_SRCS)
 SRCS+=		${TARGET.${_ID}}
+.endif
 .if !defined(NO_DATA.${_ID}) || empty(NO_DATA.${_ID})
 DATA+=		${TARGET.${_ID}}
 .endif
