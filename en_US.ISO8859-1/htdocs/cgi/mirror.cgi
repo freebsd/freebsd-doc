@@ -3,13 +3,14 @@
 #
 # FreeBSD WWW mirror redirect
 #
+# $FreeBSD$
 
 use CGI;
 use strict;
 use warnings;
 
 my $debug      = 1;
-my $master_url = 'http://www.freebsd.org/';
+my $master_url = 'https://www.freebsd.org/';
 
 my $q = new CGI;
 my $url = $q->param('goto') || "";
