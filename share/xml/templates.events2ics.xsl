@@ -37,7 +37,7 @@
   exclude-result-prefixes="cvs">
   <xsl:import href="http://www.FreeBSD.org/XML/lang/share/xml/libcommon.xsl"/>
 
-  <xsl:variable name="freebsd-web-base" select="'http://www.FreeBSD.org'"/>
+  <xsl:variable name="freebsd-web-base" select="'https://www.FreeBSD.org'"/>
 
   <xsl:output method="text" encoding="&xml.encoding;"/>
   <xsl:strip-space elements="*"/>

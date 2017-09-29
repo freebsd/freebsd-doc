@@ -401,7 +401,7 @@
   </xsl:template>
 
   <xsl:template match="db:package">
-    <xsl:variable name="xhref" select="concat('http://www.freebsd.org/cgi/url.cgi?ports/', ., '/pkg-descr')"/>
+    <xsl:variable name="xhref" select="concat('https://www.freebsd.org/cgi/url.cgi?ports/', ., '/pkg-descr')"/>
 
     <fo:basic-link external-destination="url({$xhref})">
       <fo:inline color="{$link.color}">

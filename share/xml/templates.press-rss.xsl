@@ -2,7 +2,7 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd" [
 <!ENTITY title "FreeBSD in the Press">
-<!ENTITY link "http://www.FreeBSD.org/news/press.html">
+<!ENTITY link "https://www.FreeBSD.org/news/press.html">
 <!ENTITY email "freebsd-www">
 <!ENTITY realname "Webmaster Team">
 ]>
@@ -57,11 +57,11 @@
 	<docs>http://blogs.law.harvard.edu/tech/rss</docs>
 	<ttl>120</ttl>
 	<image>
-	  <url>http://www.FreeBSD.org/logo/logo-full.png</url>
+	  <url>https://www.FreeBSD.org/logo/logo-full.png</url>
 	  <title>&title;</title>
 	  <link>&link;</link>
 	</image>
-	<atom:link href="http://www.FreeBSD.org/news/press-rss.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://www.FreeBSD.org/news/press-rss.xml" rel="self" type="application/rss+xml" />
 
         <!-- Only include the last 10 stories -->
         <xsl:apply-templates select="descendant::story[position() &lt;= 10]"/>
@@ -84,7 +84,7 @@
     </xsl:param>
 
     <xsl:variable name="link">
-	<xsl:text>http://www.FreeBSD.org/news/press.html#</xsl:text>
+	<xsl:text>https://www.FreeBSD.org/news/press.html#</xsl:text>
 	<xsl:call-template name="html-news-generate-anchor">
 	  <xsl:with-param name="label" select="'story'" />
 	  <xsl:with-param name="year" select="$year" />
