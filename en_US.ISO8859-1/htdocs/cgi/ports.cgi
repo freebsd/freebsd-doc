@@ -36,7 +36,7 @@ require "./cgi-style.pl";
 $t_style = qq`<style type="text/css">
 h3 { font-size: 1.2em; border-bottom: thin solid black; }
 </style>
-<link rel="search" type="application/opensearchdescription+xml" href="http://www.freebsd.org/search/opensearch/ports.xml" title="FreeBSD Ports" />
+<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/search/opensearch/ports.xml" title="FreeBSD Ports" />
 `;
 
 sub init_variables {
@@ -547,7 +547,7 @@ two hours.</p>
 
 <p>
 You may also search the
-<a href="http://www.FreeBSD.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.</p>
+<a href="https://www.FreeBSD.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.</p>
 
 <p>
 <a href="$script_name">Back to the search engine</a></p>
