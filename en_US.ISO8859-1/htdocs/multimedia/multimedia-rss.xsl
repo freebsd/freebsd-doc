@@ -20,7 +20,7 @@
 
       <channel>
 	<title>&title;</title>
-	<link>http://www.freebsd.org/multimedia/multimedia.html</link>
+	<link>https://www.freebsd.org/multimedia/multimedia.html</link>
 	<description>FreeBSD Multimedia Resources</description>
 	<lastBuildDate><xsl:value-of select="date:date-time()"/></lastBuildDate>
 
