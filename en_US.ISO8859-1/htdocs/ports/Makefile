@@ -84,8 +84,8 @@ all install clean:
 beforeinstall:
 .else
 beforeinstall:
-	${SED} -i "" -e 's,href="growth,href="http://www.FreeBSD.org/ports/growth,' index.html
-	${SED} -i "" -e 's,href="growth,href="http://www.FreeBSD.org/ports/growth,' references.html
+	${SED} -i "" -e 's,href="growth,href="https://www.FreeBSD.org/ports/growth,' index.html
+	${SED} -i "" -e 's,href="growth,href="https://www.FreeBSD.org/ports/growth,' references.html
 .endif
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
