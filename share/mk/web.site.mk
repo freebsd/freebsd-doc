@@ -83,7 +83,7 @@ PORTSBASE?=	/usr
 #
 # URL where INDEX can be found (define NOPORTSNET to disable)
 #
-INDEXURI?=	http://www.FreeBSD.org/ports/INDEX-10
+INDEXURI?=	https://www.FreeBSD.org/ports/INDEX-10
 
 #
 # Instruct bsd.subdir.mk to NOT to process SUBDIR directive.  It is not
