@@ -18,6 +18,7 @@ DOCS=	index.xml \
 
 DATA=	docbook.css \
 	errata.html \
+	installation.html \
 	hardware.html \
 	readme.html \
 	relnotes.html
