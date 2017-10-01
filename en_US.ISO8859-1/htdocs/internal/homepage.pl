@@ -3,7 +3,7 @@
 # $FreeBSD$
 
 print "<?xml version='1.0' encoding='iso-8859-1'?>\n";
-print "<li><a href=\"http://people.FreeBSD.org/homepage.html\">FreeBSD Developer home page list</a></li>\n";
+print "<li><a href=\"https://people.FreeBSD.org/homepage.html\">FreeBSD Developer home page list</a></li>\n";
 exit 0;
 
 $homepagedir = 'public_html';
@@ -51,7 +51,7 @@ print "<?xml version='1.0' encoding='iso-8859-1'?>\n";
 foreach (sort @pages) {
 	($gcos, $login) = split(/:/);
 	($firstgecos, @gecos) = split(/,/, $gcos);
-	print qq{<li><a href="http://people.FreeBSD.org/~$login/">},
+	print qq{<li><a href="https://people.FreeBSD.org/~$login/">},
 	      $firstgecos, "</a> ", join(', ', @gecos), "</li>\n";
 }
 
