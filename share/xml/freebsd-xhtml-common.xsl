@@ -51,7 +51,7 @@
 
   <xsl:template name="user.footer.navigation">
     <p align="center"><small>All FreeBSD documents are available for download
-    at <a href="http://ftp.FreeBSD.org/pub/FreeBSD/doc/">http://ftp.FreeBSD.org/pub/FreeBSD/doc/</a></small></p>
+    at <a href="https://download.freebsd.org/ftp/doc/">https://download.freebsd.org/ftp/doc/</a></small></p>
 
     <p align="center"><small>Questions that are not answered by the
     <a href="https://www.FreeBSD.org/docs.html">documentation</a> may be

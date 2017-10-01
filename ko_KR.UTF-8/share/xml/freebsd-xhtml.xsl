@@ -16,7 +16,7 @@
     <p align="center"><small>모든 FreeBSD 문서는 
     <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/">ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/</a>
     에서 다운로드받으실 수 있습니다.</small></p>
-    <p align="center"><small><a href="http://ftp.freebsd.org/pub/FreeBSD/doc/ko_KR.UTF-8/">문서</a>를 읽고 궁금한
+    <p align="center"><small><a href="https://download.freebsd.org/ftp/doc/ko_KR.UTF-8/">문서</a>를 읽고 궁금한
     사항이 있으면 &lt;<a href="mailto:questions@FreeBSD.org">questions@FreeBSD.org</a>&gt;로
     질문을 보내 주세요.<br/>이 문서에 대한 질문은 &lt;<a
     href="mailto:doc@FreeBSD.org">doc@FreeBSD.org</a>&gt;로 보내 주세요.</small></p>
