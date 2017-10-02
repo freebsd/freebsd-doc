@@ -73,7 +73,7 @@ categories-alpha.xml: ${INDEX} categories categories.descriptions \
 	done
 	${PORTINDEX} ${INDEX} ${.CURDIR}
 
-install: all beforeinstall
+install: beforeinstall
 
 all install clean:
 	cd ${.CURDIR}; \
