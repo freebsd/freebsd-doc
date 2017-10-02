@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r50566 -->
+<!-- Original revision: r51023 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -130,6 +130,9 @@
 			  </li>
 			  <li>
 			    <a href="&enbase;/ja/" title="日本語">ja</a>
+			  </li>
+			  <li>
+			    <a href="&enbase;/zh_CN/" title="中国語 (簡体字)">zh_CN</a>
 			  </li>
 			  <li class="last-child">
 			    <a href="&enbase;/zh_TW/" title="中国語 (繁体字)">zh_TW</a>
