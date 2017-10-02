@@ -132,6 +132,9 @@
 				  <li>
 					<a href="&base;/ja/" title="Japanese">ja</a>
 				  </li>
+				  <li>
+					<a href="&base;/zh_CN/" title="Chinese (Simplified)">zh_CN</a>
+				  </li>
 				  <li class="last-child">
 					<a href="&base;/zh_TW/" title="Chinese (Traditional)">zh_TW</a>
 				  </li>
