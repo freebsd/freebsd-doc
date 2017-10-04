@@ -75,7 +75,7 @@ categories-alpha.xml: ${INDEX} categories categories.descriptions \
 	done
 	${PORTINDEX} ${INDEX} ${.CURDIR}
 
-install: beforeinstall
+install: Makefile.gen index.html references.html beforeinstall
 
 all install clean:
 	cd ${.CURDIR}; \
