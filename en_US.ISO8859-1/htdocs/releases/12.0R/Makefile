@@ -55,9 +55,7 @@ _ARM?=		BANANAPI \
 . endfor
 .endfor
 
-#_hardware?=	hardware
-_hardware=	# empty
-MAN4DIR=
+_hardware?=	hardware
 .if !defined(MAN4DIR) || empty(MAN4DIR)
 . if exists(${DOC_PREFIX}/../src/share/man/man4)
 MAN4DIR=	${DOC_PREFIX}/../src/share/man/man4
