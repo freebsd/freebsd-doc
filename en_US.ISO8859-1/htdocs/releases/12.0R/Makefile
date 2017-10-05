@@ -7,8 +7,6 @@
 .include "../Makefile.inc"
 .endif
 
-RELN_ROOT?=	${.CURDIR}
-
 _OS?=		FreeBSD
 _REVISION?=	12.0
 _BRANCH?=	RELEASE
@@ -53,64 +51,6 @@ _ARM?=		BANANAPI \
 . for _A in ${_ARM}
 #DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-arm-armv6-${_A}.asc
 . endfor
-.endfor
-
-_hardware?=	hardware
-.if !defined(MAN4DIR) || empty(MAN4DIR)
-. if exists(${DOC_PREFIX}/../src/share/man/man4)
-MAN4DIR=	${DOC_PREFIX}/../src/share/man/man4
-. elif exists(${DOC_PREFIX}/../share/man/man4)
-MAN4DIR=	${DOC_PREFIX}/../share/man/man4
-. elfi exists(${DOC_PREFIX}/../man/man4)
-MAN4DIR=	${DOC_PREFIX}/../man/man4
-. elif exists(${DOC_PREFIX}/../man4)
-MAN4DIR=	${DOC_PREFIX}/../man4
-. else
-.  warning "MAN4DIR not found.  Unable to build hardware.html"
-_hardware=	# empty
-. endif
-.endif
-
-D=		errata
-D+=		${_hardware}
-D+=		readme
-D+=		relnotes
-
-MAN4PAGES?=	${MAN4DIR}/*.4 ${MAN4DIR}/man4.*/*.4
-ARCHLIST?=	${.CURDIR}/../../share/misc/dev.archlist.txt
-CLEANFILES+=	dev-auto.ent
-
-MAN2HWNOTES_CMD=${.CURDIR}/../../share/misc/man2hwnotes.pl
-.if defined(HWNOTES_MI)
-MAN2HWNOTES_FLAGS=
-.else
-MAN2HWNOTES_FLAGS=	-c
-.endif
-
-dev-auto.ent: ${MAN4PAGES} ${ARCHLIST} ${MAN2HWNOTES_CMD} .PHONY
-	${PERL} ${MAN2HWNOTES_CMD} ${MAN2HWNOTES_FLAGS} -a ${ARCHLIST} -o ${.TARGET} ${MAN4PAGES}
-
-.ORDER:		all dev-auto.ent
-.ORDER:		all ${DOC}.html
-
-beforebuild:	dev-auto.ent
-
-beforeclean:
-.for _SD in ${D}
-	${MAKE} -C ${_SD} DOCINSTALLDIR=${DOCINSTALLDIR} clean
-.endfor
-
-beforeinstall:
-.for _SD in ${D}
-. if (${_SD:Mhardware} != "")
-	${MAKE} -B -C ${.CURDIR} dev-auto.ent
-. endif
-	${MAKE} -C ${_SD} DOCINSTALLDIR=${DOCINSTALLDIR} all
-.endfor
-
-afterinstall:
-.for _SD in ${D}
-	${MAKE} -C ${_SD} DOCINSTALLDIR=${DOCINSTALLDIR} install
 .endfor
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
