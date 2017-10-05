@@ -57,6 +57,7 @@ _ARM?=		BANANAPI \
 
 #_hardware?=	hardware
 _hardware=	# empty
+MAN4DIR=
 .if !defined(MAN4DIR) || empty(MAN4DIR)
 . if exists(${DOC_PREFIX}/../src/share/man/man4)
 MAN4DIR=	${DOC_PREFIX}/../src/share/man/man4
