@@ -105,7 +105,7 @@ beforeclean:
 beforeinstall:
 .for _SD in ${D}
 . if (${_SD:Mhardware} != "")
-	${MAKE} -C ${.CURDIR} dev-auto.ent
+	${MAKE} -B -C ${.CURDIR} dev-auto.ent
 . endif
 	${MAKE} -C ${_SD} DOCINSTALLDIR=${DOCINSTALLDIR} all
 .endfor
