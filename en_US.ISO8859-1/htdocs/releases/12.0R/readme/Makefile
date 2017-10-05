@@ -21,6 +21,13 @@ SRCS?=			readme.xml
 
 DATA+=			${DOC}.html
 
+beforeclean:
+CLEANFILES+=		${DOC}.html \
+			${DOC}.txt \
+			catalog-cwd.xml \
+			autogen.ent \
+			${DOC}.parsed.*
+
 install: ${DOC}.html
 	mkdir -p ${DOCINSTALLDIR}
 	${INSTALL_DOCS} ${DATA} ${DOCINSTALLDIR}
