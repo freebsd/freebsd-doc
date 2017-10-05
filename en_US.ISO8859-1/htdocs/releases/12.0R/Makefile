@@ -56,6 +56,8 @@ _ARM?=		BANANAPI \
 .endfor
 
 _hardware?=	hardware
+
+# The path used on build-web is 'src/share/man/man4'.
 .if !defined(MAN4DIR) || empty(MAN4DIR)
 . if exists(${DOC_PREFIX}/../src/share/man/man4)
 MAN4DIR=	${DOC_PREFIX}/../src/share/man/man4
@@ -89,9 +91,6 @@ MAN2HWNOTES_FLAGS=	-c
 
 dev-auto.ent:
 	${PERL} ${MAN2HWNOTES_CMD} ${MAN2HWNOTES_FLAGS} -a ${ARCHLIST} -o ${.TARGET} ${MAN4PAGES}
-
-#.ORDER:		all dev-auto.ent
-#.ORDER:		all ${DOC}.html
 
 beforebuild:	dev-auto.ent
 
