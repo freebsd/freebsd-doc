@@ -90,8 +90,8 @@ MAN2HWNOTES_FLAGS=	-c
 dev-auto.ent:
 	${PERL} ${MAN2HWNOTES_CMD} ${MAN2HWNOTES_FLAGS} -a ${ARCHLIST} -o ${.TARGET} ${MAN4PAGES}
 
-.ORDER:		all dev-auto.ent
-.ORDER:		all ${DOC}.html
+#.ORDER:		all dev-auto.ent
+#.ORDER:		all ${DOC}.html
 
 beforebuild:	dev-auto.ent
 
