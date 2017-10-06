@@ -17,7 +17,8 @@ pgpkeyring: keyring.xml
 	@${XSLTPROC} ${XSLTPROCOPTS} ${XSLPGP} keyring.xml
 
 pgpkeyring.txt:
-	@${MAKE} pgpkeyring >${.TARGET}
+	@${MAKE} pgpkeyring > ${.TARGET}.tmp
+	${MV} ${.TARGET}.tmp ${.TARGET}
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
 
