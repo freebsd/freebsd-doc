@@ -325,6 +325,9 @@ _PROGSUBDIR: .USE
 .endfor
 .endif
 
+# 'make obj' doesn't really work for the docs, disable it
+NO_OBJ?= YES
+
 .include <bsd.obj.mk>
 
 #
