@@ -99,6 +99,11 @@ DOC_LOCAL_MK=	${DOC_PREFIX}/${LANGCODE}/share/mk/doc.local.mk
 .if defined(DOC)
 .if ${DOCFORMAT} == "docbook"
 .include "doc.docbook.mk"
+
+.if !defined(DOCBOOK_DEPS_DISABLE) || ${DOCBOOK_DEPS_DISABLE} != "YES"
+.include "doc.docbook-dep.mk"
+.endif
+
 .endif
 .if ${DOCFORMAT} == "slides"
 .include "doc.slides.mk"
