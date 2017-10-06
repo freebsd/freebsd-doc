@@ -80,7 +80,9 @@ D+=		relnotes
 
 MAN4PAGES?=	${MAN4DIR}/*.4 ${MAN4DIR}/man4.*/*.4
 ARCHLIST?=	${.CURDIR}/../../share/misc/dev.archlist.txt
-CLEANFILES+=	dev-auto.ent
+CLEANFILES+=	dev-auto.ent \
+		index.html \
+		schedule.html
 
 MAN2HWNOTES_CMD=${.CURDIR}/../../share/misc/man2hwnotes.pl
 .if defined(HWNOTES_MI)
@@ -90,14 +92,14 @@ MAN2HWNOTES_FLAGS=	-c
 .endif
 
 dev-auto.ent:
-	${PERL} ${MAN2HWNOTES_CMD} ${MAN2HWNOTES_FLAGS} -a ${ARCHLIST} -o ${.TARGET} ${MAN4PAGES}
+	${PERL} ${MAN2HWNOTES_CMD} ${MAN2HWNOTES_FLAGS} -a ${ARCHLIST} -o ${.TARGET}.tmp ${MAN4PAGES}
+	${MV} ${.TARGET}.tmp ${.TARGET}
 
-beforebuild:	dev-auto.ent
-
+.if make(clean)
 beforeclean:
-.for _SD in ${D}
-	${MAKE} -C ${_SD} DOCINSTALLDIR=${DOCINSTALLDIR} clean
-.endfor
+SUBDIR+=	${D}
+.include "${DOC_PREFIX}/share/mk/doc.subdir.mk"
+.endif
 
 beforeinstall:
 .for _SD in ${D}
