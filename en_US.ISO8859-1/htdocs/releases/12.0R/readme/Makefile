@@ -21,7 +21,6 @@ SRCS?=			readme.xml
 
 DATA+=			${DOC}.html
 
-beforeclean:
 CLEANFILES+=		${DOC}.html \
 			${DOC}.txt \
 			catalog-cwd.xml \
