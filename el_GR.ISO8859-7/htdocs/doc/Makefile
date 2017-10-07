@@ -1,22 +1,10 @@
 #
 # $FreeBSD$
 #
-#
-# The FreeBSD Greek Documentation Project
-#
-# Build the FreeBSD documentation *outside* of the www tree, and install it
+# Build the FreeBSD documentation *outside* of the doc/ tree, and install it
 # in to the right place as necessary.
 #
-# This assumes that you have the www/ and doc/ trees checked out beside
-# one another -- this was always the case anyway, so there are no extra
-# requirements here.
-#
-# This file should be placed in the www/el/doc directory
-# (which should be created)
-#
-# %SOURCE%	en/doc/Makefile
-# %SRCID%	1.1
-#
+
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
@@ -24,29 +12,33 @@
 .include "../Makefile.inc"
 .endif
 
-all: all-all all-install
+_DOC_FORMATS?=	html-split html
+
+all: all-all 
+
 
 all-all:
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/${LANGCODE}; \
-		${MAKE} FORMATS="html-split html" \
-			INSTALL_COMPRESSED= all
-all-install:
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/${LANGCODE}; \
-		${MAKE} FORMATS="html-split html" DOCDIR=${.OBJDIR} \
-			INSTALL_COMPRESSED= install
-install clean:
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/${LANGCODE}; \
-		${MAKE} FORMATS="html-split html" DOCDIR=${DESTDIR}/data/doc \
-			INSTALL_COMPRESSED= ${.TARGET}
-.if make(clean)
-	${RM} -rf el*
-.endif
+	${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" all
+
+all-pgpkeyring:
+	${MAKE} -C ${DOC_PREFIX}/share/pgpkeys pgpkeyring.txt
+
+clean:
+	${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" DOCDIR=${DESTDIR}/data/doc clean
+
+# here are dragons
+install:
+	unset DESTDIR || true; \
+	  ${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" DOCDIR=${DESTDIR}/data/doc install
+	${CP} ${DOC_PREFIX}/share/pgpkeys/pgpkeyring.txt ${DESTDIR}/data/doc/pgpkeyring.txt
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
+.if ${LANGCODE} == en_US.ISO8859-1
+all: all-pgpkeyring
+.endif
 
+
+# XXX
 obj: _OBJUSE
 
 _OBJUSE: .USE
