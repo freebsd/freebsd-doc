@@ -6,7 +6,7 @@
 <!--
      $FreeBSD$
      $FreeBSDde$
-     basiert auf: 50566
+     basiert auf: 51033
 -->
 
 <xsl:stylesheet version="1.0"
@@ -90,7 +90,8 @@
 					<li>
 					  Produktion:&nbsp;<a href="&u.rel.announce;">&rel.current;</a>,
 					  <a href="&u.rel0.announce;">&rel0.current;</a>,
-					  <a href="&u.rel1.announce;">&rel1.current;</a>
+					  <a href="&u.rel1.announce;">&rel1.current;</a>,
+					  <a href="&u.rel2.announce;">&rel2.current;</a>
 					</li>
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 					<li>Test:&nbsp;<a
@@ -120,6 +121,9 @@
 				  </li>
 				  <li>
 					<a href="&enbase;/ja/" title="Japanisch">ja</a>
+				  </li>
+				  <li>
+					<a href="&enbase;/zh_CN/" title="Chinesisch (Vereinfacht)">zh_CN</a>
 				  </li>
 				  <li class="last-child">
 					<a href="&enbase;/zh_TW/" title="Chinesisch (traditionell)">zh_TW</a>
