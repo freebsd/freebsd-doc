@@ -14,7 +14,8 @@
 
 _DOC_FORMATS?=	html-split html
 
-all: all-all all-pgpkeyring
+all: all-all 
+
 
 all-all:
 	${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" all
@@ -32,6 +33,10 @@ install:
 	${CP} ${DOC_PREFIX}/share/pgpkeys/pgpkeyring.txt ${DESTDIR}/data/doc/pgpkeyring.txt
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
+.if ${LANGCODE} == en_US.ISO8859-1
+all: all-pgpkeyring
+.endif
+
 
 # XXX
 obj: _OBJUSE
