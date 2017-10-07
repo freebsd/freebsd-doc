@@ -300,6 +300,7 @@ _installlinks:
 		t=$$1; \
 		shift; \
 		${ECHO_CMD} $$t -\> $$l; \
+		${RM} -f $$t; \
 		${LN} -fs $$l $$t; \
 	done )
 .endif
