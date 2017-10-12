@@ -43,7 +43,7 @@ MASTER_SRCS!=	${MAKE} -C ${EN_DIR} -V SRCS
 
 ${DOC}.translate.xml:
 .if ${TRAN_DIR} == ${EN_DIR}
-	@${ECHO} "build PO file in a non-English dir, ignored"
+	@${ECHO} "Please build PO file only in a non-English dir, ignored"
 .else
 	# some SRCS files might need to be generated, make sure they exist
 	${MAKE} -C ${EN_DIR} ${MASTER_SRCS} > /dev/null
@@ -82,7 +82,7 @@ ${PO_LANG}.mo:	${PO_LANG}.po
 
 tran ${DOC}.xml:	${DOC}.translate.xml ${PO_LANG}.mo
 .if ${TRAN_DIR} == ${EN_DIR}
-	@${ECHO} "build translation in a non-English dir, ignored"
+	@${ECHO} "Please build translation only in a non-English dir, ignored"
 .else
 	${ITSTOOL} -l ${PO_LANG} -m ${PO_LANG}.mo -o ${DOC}.xml ${DOC}.translate.xml
 .endif
