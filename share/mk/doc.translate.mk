@@ -81,11 +81,11 @@ ${PO_LANG}.mo:	${PO_LANG}.po
 	@${MSGFMT} -o ${.TARGET} ${.ALLSRC}
 
 tran ${DOC}.xml:	${DOC}.translate.xml ${PO_LANG}.mo
-	@if [ "${TRAN_DIR}" = "${EN_DIR}" ]; then \
-		${ECHO} "build translation in a non-English dir" ; \
-		exit 1 ; \
-	 fi
+.if ${TRAN_DIR} == ${EN_DIR}
+	@${ECHO} "build translation in a non-English dir, ignored"
+.else
 	${ITSTOOL} -l ${PO_LANG} -m ${PO_LANG}.mo -o ${DOC}.xml ${DOC}.translate.xml
+.endif
 .endif
 
 
