@@ -14,7 +14,7 @@
 # 	=> ./releng-building.xml
 #
 
-.if ${.TARGETS} == "all"
+.if make(all)
 _DOCBOOK_DEPS_SYSTEM != for i in $$(egrep '<!ENTITY [^ ]+ SYSTEM "[^ ]+\.xml">' ${SRCS} | sed -E 's,.*"([^"]+)".*,\1,');do \
 			  if [ -e $$i ]; then \
 			    echo $i; \
