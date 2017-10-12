@@ -65,17 +65,17 @@ po: ${PO_LANG}.po
 
 ${PO_LANG}.po:	${DOC}.translate.xml
 	@${ITSTOOL} -o ${PO_LANG}.po.tmp ${DOC}.translate.xml
-	@( if [ -f "${PO_LANG}.po" ]; then \
-		echo "${PO_LANG}.po exists, merging" ; \
-		${MSGMERGE} -o ${PO_LANG}.po.new ${PO_LANG}.po ${PO_LANG}.po.tmp ; \
-		${MSGATTRIB} --no-obsolete -o ${PO_LANG}.po.new ${PO_LANG}.po ; \
-		${MV} ${PO_LANG}.po.new ${PO_LANG}.po ; \
-		${RM} ${PO_LANG}.po.tmp ${DOC}.translate.xml ; \
-	  else \
-	  	${ECHO} "${PO_LANG}.po created, please check and correct the settings in the header" ; \
-		${MV} ${PO_LANG}.po.tmp ${PO_LANG}.po ; \
-		${POSET_CMD} ${.TARGET} ; \
-	  fi )
+.if exists(${PO_LANG}.po)
+	echo "${PO_LANG}.po exists, merging"
+	${MSGMERGE} -o ${PO_LANG}.po.new ${PO_LANG}.po ${PO_LANG}.po.tmp
+	${MSGATTRIB} --no-obsolete -o ${PO_LANG}.po.new ${PO_LANG}.po
+	${MV} ${PO_LANG}.po.new ${PO_LANG}.po
+	${RM} ${PO_LANG}.po.tmp ${DOC}.translate.xml
+.else
+  	${ECHO} "${PO_LANG}.po created, please check and correct the settings in the header"
+	${MV} ${PO_LANG}.po.tmp ${PO_LANG}.po 
+	${POSET_CMD} ${.TARGET} 
+.endif
 
 ${PO_LANG}.mo:	${PO_LANG}.po
 	@${MSGFMT} -o ${.TARGET} ${.ALLSRC}
