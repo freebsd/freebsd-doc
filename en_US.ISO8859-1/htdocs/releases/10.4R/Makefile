@@ -29,6 +29,7 @@ DATA=	announce.asc \
 
 _BIGIRON?=	amd64 \
 		i386 \
+		ia64 \
 		powerpc \
 		powerpc-powerpc64 \
 		sparc64
