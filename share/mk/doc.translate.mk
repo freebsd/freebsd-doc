@@ -42,10 +42,9 @@ POSET_CMD=	${SED} -i '' -e '1s,^,\#${IDSTR1}${IDSTR2}\${.newline},' \
 MASTER_SRCS!=	${MAKE} -C ${EN_DIR} -V SRCS
 
 ${DOC}.translate.xml:
-	@if [ "${TRAN_DIR}" == "${EN_DIR}" ]; then \
-		${ECHO} "build PO file in a non-English dir" ; \
-		exit 1 ; \
-	 fi
+.if ${TRAN_DIR} == ${EN_DIR}
+	@${ECHO} "build PO file in a non-English dir, ignored"
+.else
 	# some SRCS files might need to be generated, make sure they exist
 	@${MAKE} -C ${EN_DIR} ${MASTER_SRCS} > /dev/null
 	# normalize the English original into a single file
@@ -54,9 +53,16 @@ ${DOC}.translate.xml:
 	@${PO_XMLLINT} --nsclean ${.TARGET}.tmp > ${.TARGET}
 	@${RM} ${.TARGET}.tmp
 	@${MAKE} -C ${EN_DIR} clean > /dev/null
+.endif
 
+.if ${TRAN_DIR} == ${EN_DIR}
+po:
+.else
 po: ${PO_LANG}.po
+.endif
+
 .PHONY:	po
+
 ${PO_LANG}.po:	${DOC}.translate.xml
 	@${ITSTOOL} -o ${PO_LANG}.po.tmp ${DOC}.translate.xml
 	@( if [ -f "${PO_LANG}.po" ]; then \
