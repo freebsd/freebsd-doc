@@ -66,7 +66,7 @@ po: ${PO_LANG}.po
 ${PO_LANG}.po:	${DOC}.translate.xml
 	${ITSTOOL} -o ${PO_LANG}.po.tmp ${DOC}.translate.xml
 .if exists(${PO_LANG}.po)
-	echo "${PO_LANG}.po exists, merging"
+	@${ECHO} "${PO_LANG}.po exists, merging"
 	${MSGMERGE} -o ${PO_LANG}.po.new ${PO_LANG}.po ${PO_LANG}.po.tmp
 	${MSGATTRIB} --no-obsolete -o ${PO_LANG}.po.new ${PO_LANG}.po
 	${MV} ${PO_LANG}.po.new ${PO_LANG}.po
