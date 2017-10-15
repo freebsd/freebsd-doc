@@ -115,7 +115,8 @@ DOC_LOCAL_MK=	${DOC_PREFIX}/${LANGCODE}/share/mk/doc.local.mk
 
 # parallel build for target "all" and "clean"
 NCPU?= ${.MAKE.JOBS}
-p-all p-clean:
+
+p-all p-clean p-po:
 	make -V SUBDIR | sed -E 's/[ ]+$$//' | tr " " "\n" | \
 		sed -E 's/^/make -C /; s/$$/ ${.TARGET:S/^p-//}/' | \
 		tr '\n' '\0' | xargs -0 -n1 -P${NCPU:S/^$$/8/} /bin/sh -c
