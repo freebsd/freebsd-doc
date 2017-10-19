@@ -1,0 +1,606 @@
+--- contrib/wpa/src/ap/wpa_auth.h.orig
++++ contrib/wpa/src/ap/wpa_auth.h
+@@ -247,6 +247,7 @@
+ int wpa_auth_get_pairwise(struct wpa_state_machine *sm);
+ int wpa_auth_sta_key_mgmt(struct wpa_state_machine *sm);
+ int wpa_auth_sta_wpa_version(struct wpa_state_machine *sm);
++int wpa_auth_sta_ft_tk_already_set(struct wpa_state_machine *sm);
+ int wpa_auth_sta_clear_pmksa(struct wpa_state_machine *sm,
+ 			     struct rsn_pmksa_cache_entry *entry);
+ struct rsn_pmksa_cache_entry *
+--- contrib/wpa/src/ap/wpa_auth.c.orig
++++ contrib/wpa/src/ap/wpa_auth.c
+@@ -1623,6 +1623,21 @@
+ }
+ 
+ 
++static int wpa_auth_sm_ptk_update(struct wpa_state_machine *sm)
++{
++	if (random_get_bytes(sm->ANonce, WPA_NONCE_LEN)) {
++		wpa_printf(MSG_ERROR,
++			   "WPA: Failed to get random data for ANonce");
++		sm->Disconnect = TRUE;
++		return -1;
++	}
++	wpa_hexdump(MSG_DEBUG, "WPA: Assign new ANonce", sm->ANonce,
++		    WPA_NONCE_LEN);
++	sm->TimeoutCtr = 0;
++	return 0;
++}
++
++
+ SM_STATE(WPA_PTK, INITPMK)
+ {
+ 	u8 msk[2 * PMK_LEN];
+@@ -2111,9 +2126,12 @@
+ 		SM_ENTER(WPA_PTK, AUTHENTICATION);
+ 	else if (sm->ReAuthenticationRequest)
+ 		SM_ENTER(WPA_PTK, AUTHENTICATION2);
+-	else if (sm->PTKRequest)
+-		SM_ENTER(WPA_PTK, PTKSTART);
+-	else switch (sm->wpa_ptk_state) {
++	else if (sm->PTKRequest) {
++		if (wpa_auth_sm_ptk_update(sm) < 0)
++			SM_ENTER(WPA_PTK, DISCONNECTED);
++		else
++			SM_ENTER(WPA_PTK, PTKSTART);
++	} else switch (sm->wpa_ptk_state) {
+ 	case WPA_PTK_INITIALIZE:
+ 		break;
+ 	case WPA_PTK_DISCONNECT:
+@@ -2866,6 +2884,14 @@
+ }
+ 
+ 
++int wpa_auth_sta_ft_tk_already_set(struct wpa_state_machine *sm)
++{
++	if (!sm || !wpa_key_mgmt_ft(sm->wpa_key_mgmt))
++		return 0;
++	return sm->tk_already_set;
++}
++
++
+ int wpa_auth_sta_clear_pmksa(struct wpa_state_machine *sm,
+ 			     struct rsn_pmksa_cache_entry *entry)
+ {
+--- contrib/wpa/src/ap/wpa_auth_ft.c.orig
++++ contrib/wpa/src/ap/wpa_auth_ft.c
+@@ -762,6 +762,14 @@
+ 		return;
+ 	}
+ 
++	if (sm->tk_already_set) {
++		/* Must avoid TK reconfiguration to prevent clearing of TX/RX
++		 * PN in the driver */
++		wpa_printf(MSG_DEBUG,
++			   "FT: Do not re-install same PTK to the driver");
++		return;
++	}
++
+ 	/* FIX: add STA entry to kernel/driver here? The set_key will fail
+ 	 * most likely without this.. At the moment, STA entry is added only
+ 	 * after association has been completed. This function will be called
+@@ -774,6 +782,7 @@
+ 
+ 	/* FIX: MLME-SetProtection.Request(TA, Tx_Rx) */
+ 	sm->pairwise_set = TRUE;
++	sm->tk_already_set = TRUE;
+ }
+ 
+ 
+@@ -887,6 +896,7 @@
+ 	wpa_hexdump(MSG_DEBUG, "FT: PTKName", ptk_name, WPA_PMK_NAME_LEN);
+ 
+ 	sm->pairwise = pairwise;
++	sm->tk_already_set = FALSE;
+ 	wpa_ft_install_ptk(sm);
+ 
+ 	buflen = 2 + sizeof(struct rsn_mdie) + 2 + sizeof(struct rsn_ftie) +
+--- contrib/wpa/src/ap/wpa_auth_i.h.orig
++++ contrib/wpa/src/ap/wpa_auth_i.h
+@@ -61,6 +61,7 @@
+ 	struct wpa_ptk PTK;
+ 	Boolean PTK_valid;
+ 	Boolean pairwise_set;
++	Boolean tk_already_set;
+ 	int keycount;
+ 	Boolean Pair;
+ 	struct wpa_key_replay_counter {
+--- contrib/wpa/src/common/wpa_common.h.orig
++++ contrib/wpa/src/common/wpa_common.h
+@@ -187,6 +187,17 @@
+ 	} u;
+ } STRUCT_PACKED;
+ 
++struct wpa_gtk {
++	u8 gtk[WPA_GTK_MAX_LEN];
++	size_t gtk_len;
++};
++
++#ifdef CONFIG_IEEE80211W
++struct wpa_igtk {
++	u8 igtk[WPA_IGTK_MAX_LEN];
++	size_t igtk_len;
++};
++#endif /* CONFIG_IEEE80211W */
+ 
+ /* WPA IE version 1
+  * 00-50-f2:1 (OUI:OUI type)
+--- contrib/wpa/src/rsn_supp/tdls.c.orig
++++ contrib/wpa/src/rsn_supp/tdls.c
+@@ -103,6 +103,7 @@
+ 		u8 tk[16]; /* TPK-TK; assuming only CCMP will be used */
+ 	} tpk;
+ 	int tpk_set;
++	int tk_set; /* TPK-TK configured to the driver */
+ 	int tpk_success;
+ 
+ 	struct tpk_timer {
+@@ -160,6 +161,20 @@
+ 	u8 rsc[6];
+ 	enum wpa_alg alg;
+ 
++	if (peer->tk_set) {
++		/*
++		 * This same TPK-TK has already been configured to the driver
++		 * and this new configuration attempt (likely due to an
++		 * unexpected retransmitted frame) would result in clearing
++		 * the TX/RX sequence number which can break security, so must
++		 * not allow that to happen.
++		 */
++		wpa_printf(MSG_INFO, "TDLS: TPK-TK for the peer " MACSTR
++			   " has already been configured to the driver - do not reconfigure",
++			   MAC2STR(peer->addr));
++		return -1;
++	}
++
+ 	os_memset(rsc, 0, 6);
+ 
+ 	switch (peer->cipher) {
+@@ -177,12 +192,15 @@
+ 		return -1;
+ 	}
+ 
++	wpa_printf(MSG_DEBUG, "TDLS: Configure pairwise key for peer " MACSTR,
++		   MAC2STR(peer->addr));
+ 	if (wpa_sm_set_key(sm, alg, peer->addr, -1, 1,
+ 			   rsc, sizeof(rsc), peer->tpk.tk, key_len) < 0) {
+ 		wpa_printf(MSG_WARNING, "TDLS: Failed to set TPK to the "
+ 			   "driver");
+ 		return -1;
+ 	}
++	peer->tk_set = 1;
+ 	return 0;
+ }
+ 
+@@ -613,7 +631,7 @@
+ 	peer->sm_tmr.buf = NULL;
+ 	peer->rsnie_i_len = peer->rsnie_p_len = 0;
+ 	peer->cipher = 0;
+-	peer->tpk_set = peer->tpk_success = 0;
++	peer->tk_set = peer->tpk_set = peer->tpk_success = 0;
+ 	os_memset(&peer->tpk, 0, sizeof(peer->tpk));
+ 	os_memset(peer->inonce, 0, WPA_NONCE_LEN);
+ 	os_memset(peer->rnonce, 0, WPA_NONCE_LEN);
+@@ -1002,6 +1020,7 @@
+ 		wpa_tdls_peer_free(sm, peer);
+ 		return -1;
+ 	}
++	peer->tk_set = 0; /* A new nonce results in a new TK */
+ 	wpa_hexdump(MSG_DEBUG, "TDLS: Initiator Nonce for TPK handshake",
+ 		    peer->inonce, WPA_NONCE_LEN);
+ 	os_memcpy(ftie->Snonce, peer->inonce, WPA_NONCE_LEN);
+@@ -1583,6 +1602,7 @@
+ 		wpa_tdls_peer_free(sm, peer);
+ 		goto error;
+ 	}
++	peer->tk_set = 0; /* A new nonce results in a new TK */
+ 
+ #if 0
+ 	/* get version info from RSNIE received from Peer */
+@@ -1710,6 +1730,14 @@
+ 			   "TPK M2: " MACSTR, MAC2STR(src_addr));
+ 		return -1;
+ 	}
++
++	if (peer->tpk_success) {
++		wpa_printf(MSG_INFO, "TDLS: Ignore incoming TPK M2 retry, from "
++			   MACSTR " as TPK M3 was already sent",
++			   MAC2STR(src_addr));
++		return 0;
++	}
++
+ 	wpa_tdls_tpk_retry_timeout_cancel(sm, peer, WLAN_TDLS_SETUP_REQUEST);
+ 
+ 	if (len < 3 + 2 + 1)
+--- contrib/wpa/src/rsn_supp/wpa.c.orig
++++ contrib/wpa/src/rsn_supp/wpa.c
+@@ -517,6 +517,12 @@
+ 	const u8 *key_rsc;
+ 	u8 null_rsc[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+ 
++	if (sm->ptk_installed) {
++		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
++			"WPA: Do not re-install same PTK to the driver");
++		return 0;
++	}
++
+ 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
+ 		"WPA: Installing PTK to the driver");
+ 
+@@ -553,6 +559,8 @@
+ 		return -1;
+ 	}
+ 
++	sm->ptk_installed = 1;
++
+ 	if (sm->wpa_ptk_rekey) {
+ 		eloop_cancel_timeout(wpa_sm_rekey_ptk, sm, NULL);
+ 		eloop_register_timeout(sm->wpa_ptk_rekey, 0, wpa_sm_rekey_ptk,
+@@ -601,11 +609,23 @@
+ 
+ static int wpa_supplicant_install_gtk(struct wpa_sm *sm,
+ 				      const struct wpa_gtk_data *gd,
+-				      const u8 *key_rsc)
++				      const u8 *key_rsc, int wnm_sleep)
+ {
+ 	const u8 *_gtk = gd->gtk;
+ 	u8 gtk_buf[32];
+ 
++	/* Detect possible key reinstallation */
++	if ((sm->gtk.gtk_len == (size_t) gd->gtk_len &&
++	     os_memcmp(sm->gtk.gtk, gd->gtk, sm->gtk.gtk_len) == 0) ||
++	    (sm->gtk_wnm_sleep.gtk_len == (size_t) gd->gtk_len &&
++	     os_memcmp(sm->gtk_wnm_sleep.gtk, gd->gtk,
++		       sm->gtk_wnm_sleep.gtk_len) == 0)) {
++		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
++			"WPA: Not reinstalling already in-use GTK to the driver (keyidx=%d tx=%d len=%d)",
++			gd->keyidx, gd->tx, gd->gtk_len);
++		return 0;
++	}
++
+ 	wpa_hexdump_key(MSG_DEBUG, "WPA: Group Key", gd->gtk, gd->gtk_len);
+ 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
+ 		"WPA: Installing GTK to the driver (keyidx=%d tx=%d len=%d)",
+@@ -637,6 +657,15 @@
+ 		return -1;
+ 	}
+ 
++	if (wnm_sleep) {
++		sm->gtk_wnm_sleep.gtk_len = gd->gtk_len;
++		os_memcpy(sm->gtk_wnm_sleep.gtk, gd->gtk,
++			  sm->gtk_wnm_sleep.gtk_len);
++	} else {
++		sm->gtk.gtk_len = gd->gtk_len;
++		os_memcpy(sm->gtk.gtk, gd->gtk, sm->gtk.gtk_len);
++	}
++
+ 	return 0;
+ }
+ 
+@@ -694,7 +723,7 @@
+ 	if (wpa_supplicant_check_group_cipher(sm, sm->group_cipher,
+ 					      gtk_len, gtk_len,
+ 					      &gd.key_rsc_len, &gd.alg) ||
+-	    wpa_supplicant_install_gtk(sm, &gd, key->key_rsc)) {
++	    wpa_supplicant_install_gtk(sm, &gd, key->key_rsc, 0)) {
+ 		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
+ 			"RSN: Failed to install GTK");
+ 		return -1;
+@@ -709,6 +738,57 @@
+ }
+ 
+ 
++#ifdef CONFIG_IEEE80211W
++static int wpa_supplicant_install_igtk(struct wpa_sm *sm,
++				       const struct wpa_igtk_kde *igtk,
++				       int wnm_sleep)
++{
++	size_t len = WPA_IGTK_LEN;
++	u16 keyidx = WPA_GET_LE16(igtk->keyid);
++
++	/* Detect possible key reinstallation */
++	if ((sm->igtk.igtk_len == len &&
++	     os_memcmp(sm->igtk.igtk, igtk->igtk, sm->igtk.igtk_len) == 0) ||
++	    (sm->igtk_wnm_sleep.igtk_len == len &&
++	     os_memcmp(sm->igtk_wnm_sleep.igtk, igtk->igtk,
++		       sm->igtk_wnm_sleep.igtk_len) == 0)) {
++		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
++			"WPA: Not reinstalling already in-use IGTK to the driver (keyidx=%d)",
++			keyidx);
++		return  0;
++	}
++
++	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
++		"WPA: IGTK keyid %d pn %02x%02x%02x%02x%02x%02x",
++		keyidx, MAC2STR(igtk->pn));
++	wpa_hexdump_key(MSG_DEBUG, "WPA: IGTK", igtk->igtk, len);
++	if (keyidx > 4095) {
++		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
++			"WPA: Invalid IGTK KeyID %d", keyidx);
++		return -1;
++	}
++	if (wpa_sm_set_key(sm, WPA_ALG_IGTK, broadcast_ether_addr,
++			   keyidx, 0, igtk->pn, sizeof(igtk->pn),
++			   igtk->igtk, WPA_IGTK_LEN) < 0) {
++		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
++			"WPA: Failed to configure IGTK to the driver");
++		return -1;
++	}
++
++	if (wnm_sleep) {
++		sm->igtk_wnm_sleep.igtk_len = len;
++		os_memcpy(sm->igtk_wnm_sleep.igtk, igtk->igtk,
++			  sm->igtk_wnm_sleep.igtk_len);
++	} else {
++		sm->igtk.igtk_len = len;
++		os_memcpy(sm->igtk.igtk, igtk->igtk, sm->igtk.igtk_len);
++	}
++
++	return 0;
++}
++#endif /* CONFIG_IEEE80211W */
++
++
+ static int ieee80211w_set_keys(struct wpa_sm *sm,
+ 			       struct wpa_eapol_ie_parse *ie)
+ {
+@@ -718,28 +798,12 @@
+ 
+ 	if (ie->igtk) {
+ 		const struct wpa_igtk_kde *igtk;
+-		u16 keyidx;
+ 		if (ie->igtk_len != sizeof(*igtk))
+ 			return -1;
++
+ 		igtk = (const struct wpa_igtk_kde *) ie->igtk;
+-		keyidx = WPA_GET_LE16(igtk->keyid);
+-		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: IGTK keyid %d "
+-			"pn %02x%02x%02x%02x%02x%02x",
+-			keyidx, MAC2STR(igtk->pn));
+-		wpa_hexdump_key(MSG_DEBUG, "WPA: IGTK",
+-				igtk->igtk, WPA_IGTK_LEN);
+-		if (keyidx > 4095) {
+-			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
+-				"WPA: Invalid IGTK KeyID %d", keyidx);
++		if (wpa_supplicant_install_igtk(sm, igtk, 0) < 0)
+ 			return -1;
+-		}
+-		if (wpa_sm_set_key(sm, WPA_ALG_IGTK, broadcast_ether_addr,
+-				   keyidx, 0, igtk->pn, sizeof(igtk->pn),
+-				   igtk->igtk, WPA_IGTK_LEN) < 0) {
+-			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
+-				"WPA: Failed to configure IGTK to the driver");
+-			return -1;
+-		}
+ 	}
+ 
+ 	return 0;
+@@ -1343,7 +1407,7 @@
+ 	if (ret)
+ 		goto failed;
+ 
+-	if (wpa_supplicant_install_gtk(sm, &gd, key->key_rsc) ||
++	if (wpa_supplicant_install_gtk(sm, &gd, key->key_rsc, 0) ||
+ 	    wpa_supplicant_send_2_of_2(sm, key, ver, key_info))
+ 		goto failed;
+ 
+@@ -2043,7 +2107,7 @@
+  */
+ void wpa_sm_notify_assoc(struct wpa_sm *sm, const u8 *bssid)
+ {
+-	int clear_ptk = 1;
++	int clear_keys = 1;
+ 
+ 	if (sm == NULL)
+ 		return;
+@@ -2069,18 +2133,24 @@
+ 		/* Prepare for the next transition */
+ 		wpa_ft_prepare_auth_request(sm, NULL);
+ 
+-		clear_ptk = 0;
++		clear_keys = 0;
+ 	}
+ #endif /* CONFIG_IEEE80211R */
+ 
+-	if (clear_ptk) {
++	if (clear_keys) {
+ 		/*
+ 		 * IEEE 802.11, 8.4.10: Delete PTK SA on (re)association if
+ 		 * this is not part of a Fast BSS Transition.
+ 		 */
+ 		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Clear old PTK");
+ 		sm->ptk_set = 0;
+ 		sm->tptk_set = 0;
++		os_memset(&sm->gtk, 0, sizeof(sm->gtk));
++		os_memset(&sm->gtk_wnm_sleep, 0, sizeof(sm->gtk_wnm_sleep));
++#ifdef CONFIG_IEEE80211W
++		os_memset(&sm->igtk, 0, sizeof(sm->igtk));
++		os_memset(&sm->igtk_wnm_sleep, 0, sizeof(sm->igtk_wnm_sleep));
++#endif /* CONFIG_IEEE80211W */
+ 	}
+ 
+ #ifdef CONFIG_TDLS
+@@ -2105,6 +2175,9 @@
+ #ifdef CONFIG_TDLS
+ 	wpa_tdls_disassoc(sm);
+ #endif /* CONFIG_TDLS */
++#ifdef CONFIG_IEEE80211R
++	sm->ft_reassoc_completed = 0;
++#endif /* CONFIG_IEEE80211R */
+ }
+ 
+ 
+@@ -2602,6 +2675,12 @@
+ 	os_memset(sm->pmk, 0, sizeof(sm->pmk));
+ 	os_memset(&sm->ptk, 0, sizeof(sm->ptk));
+ 	os_memset(&sm->tptk, 0, sizeof(sm->tptk));
++	os_memset(&sm->gtk, 0, sizeof(sm->gtk));
++	os_memset(&sm->gtk_wnm_sleep, 0, sizeof(sm->gtk_wnm_sleep));
++#ifdef CONFIG_IEEE80211W
++	os_memset(&sm->igtk, 0, sizeof(sm->igtk));
++	os_memset(&sm->igtk_wnm_sleep, 0, sizeof(sm->igtk_wnm_sleep));
++#endif /* CONFIG_IEEE80211W */
+ }
+ 
+ 
+@@ -2669,28 +2748,18 @@
+ 
+ 		wpa_hexdump_key(MSG_DEBUG, "Install GTK (WNM SLEEP)",
+ 				gd.gtk, gd.gtk_len);
+-		if (wpa_supplicant_install_gtk(sm, &gd, key_rsc)) {
++		if (wpa_supplicant_install_gtk(sm, &gd, key_rsc, 1)) {
+ 			wpa_printf(MSG_DEBUG, "Failed to install the GTK in "
+ 				   "WNM mode");
+ 			return -1;
+ 		}
+ #ifdef CONFIG_IEEE80211W
+ 	} else if (subelem_id == WNM_SLEEP_SUBELEM_IGTK) {
+-		os_memcpy(igd.keyid, buf + 2, 2);
+-		os_memcpy(igd.pn, buf + 4, 6);
++		const struct wpa_igtk_kde *igtk;
+ 
+-		keyidx = WPA_GET_LE16(igd.keyid);
+-		os_memcpy(igd.igtk, buf + 10, WPA_IGTK_LEN);
+-
+-		wpa_hexdump_key(MSG_DEBUG, "Install IGTK (WNM SLEEP)",
+-				igd.igtk, WPA_IGTK_LEN);
+-		if (wpa_sm_set_key(sm, WPA_ALG_IGTK, broadcast_ether_addr,
+-				   keyidx, 0, igd.pn, sizeof(igd.pn),
+-				   igd.igtk, WPA_IGTK_LEN) < 0) {
+-			wpa_printf(MSG_DEBUG, "Failed to install the IGTK in "
+-				   "WNM mode");
++		igtk = (const struct wpa_igtk_kde *) (buf + 2);
++		if (wpa_supplicant_install_igtk(sm, igtk, 1) < 0)
+ 			return -1;
+-		}
+ #endif /* CONFIG_IEEE80211W */
+ 	} else {
+ 		wpa_printf(MSG_DEBUG, "Unknown element id");
+--- contrib/wpa/src/rsn_supp/wpa_ft.c.orig
++++ contrib/wpa/src/rsn_supp/wpa_ft.c
+@@ -156,6 +156,7 @@
+ 	u16 capab;
+ 
+ 	sm->ft_completed = 0;
++	sm->ft_reassoc_completed = 0;
+ 
+ 	buf_len = 2 + sizeof(struct rsn_mdie) + 2 + sizeof(struct rsn_ftie) +
+ 		2 + sm->r0kh_id_len + ric_ies_len + 100;
+@@ -671,6 +672,11 @@
+ 		return -1;
+ 	}
+ 
++	if (sm->ft_reassoc_completed) {
++		wpa_printf(MSG_DEBUG, "FT: Reassociation has already been completed for this FT protocol instance - ignore unexpected retransmission");
++		return 0;
++	}
++
+ 	if (wpa_ft_parse_ies(ies, ies_len, &parse) < 0) {
+ 		wpa_printf(MSG_DEBUG, "FT: Failed to parse IEs");
+ 		return -1;
+@@ -769,6 +775,8 @@
+ 		return -1;
+ 	}
+ 
++	sm->ft_reassoc_completed = 1;
++
+ 	if (wpa_ft_process_gtk_subelem(sm, parse.gtk, parse.gtk_len) < 0)
+ 		return -1;
+ 
+--- contrib/wpa/src/rsn_supp/wpa_i.h.orig
++++ contrib/wpa/src/rsn_supp/wpa_i.h
+@@ -23,12 +23,19 @@
+ 	size_t pmk_len;
+ 	struct wpa_ptk ptk, tptk;
+ 	int ptk_set, tptk_set;
++	int ptk_installed;
+ 	u8 snonce[WPA_NONCE_LEN];
+ 	u8 anonce[WPA_NONCE_LEN]; /* ANonce from the last 1/4 msg */
+ 	int renew_snonce;
+ 	u8 rx_replay_counter[WPA_REPLAY_COUNTER_LEN];
+ 	int rx_replay_counter_set;
+ 	u8 request_counter[WPA_REPLAY_COUNTER_LEN];
++	struct wpa_gtk gtk;
++	struct wpa_gtk gtk_wnm_sleep;
++#ifdef CONFIG_IEEE80211W
++	struct wpa_igtk igtk;
++	struct wpa_igtk igtk_wnm_sleep;
++#endif /* CONFIG_IEEE80211W */
+ 
+ 	struct eapol_sm *eapol; /* EAPOL state machine from upper level code */
+ 
+@@ -115,6 +122,7 @@
+ 	size_t r0kh_id_len;
+ 	u8 r1kh_id[FT_R1KH_ID_LEN];
+ 	int ft_completed;
++	int ft_reassoc_completed;
+ 	int over_the_ds_in_progress;
+ 	u8 target_ap[ETH_ALEN]; /* over-the-DS target AP */
+ 	int set_ptk_after_assoc;
+--- contrib/wpa/wpa_supplicant/events.c.orig
++++ contrib/wpa/wpa_supplicant/events.c
+@@ -181,6 +181,7 @@
+ 	wpa_s->ap_ies_from_associnfo = 0;
+ 	wpa_s->current_ssid = NULL;
+ 	wpa_s->key_mgmt = 0;
++	wpa_s->wnmsleep_used = 0;
+ }
+ 
+ 
+--- contrib/wpa/wpa_supplicant/wnm_sta.c.orig
++++ contrib/wpa/wpa_supplicant/wnm_sta.c
+@@ -130,6 +130,8 @@
+ 	if (res < 0)
+ 		wpa_printf(MSG_DEBUG, "Failed to send WNM-Sleep Request "
+ 			   "(action=%d, intval=%d)", action, intval);
++	else
++		wpa_s->wnmsleep_used = 1;
+ 
+ 	os_free(wnmsleep_ie);
+ 	os_free(wnmtfs_ie);
+@@ -180,6 +182,12 @@
+ 	end = ptr + key_len_total;
+ 	wpa_hexdump_key(MSG_DEBUG, "WNM: Key Data", ptr, key_len_total);
+ 
++	if (key_len_total && !wpa_sm_pmf_enabled(wpa_s->wpa)) {
++		wpa_msg(wpa_s, MSG_INFO,
++			"WNM: Ignore Key Data in WNM-Sleep Mode Response - PMF not enabled");
++		return;
++	}
++
+ 	while (ptr + 1 < end) {
+ 		if (ptr + 2 + ptr[1] > end) {
+ 			wpa_printf(MSG_DEBUG, "WNM: Invalid Key Data element "
+@@ -239,6 +247,12 @@
+ 	u8 *tfsresp_ie_start = NULL;
+ 	u8 *tfsresp_ie_end = NULL;
+ 
++	if (!wpa_s->wnmsleep_used) {
++		wpa_printf(MSG_DEBUG,
++			   "WNM: Ignore WNM-Sleep Mode Response frame since WNM-Sleep Mode operation has not been requested");
++		return;
++	}
++
+ 	wpa_printf(MSG_DEBUG, "action=%d token = %d key_len_total = %d",
+ 		   frm[0], frm[1], key_len_total);
+ 	pos += 4 + key_len_total;
+@@ -269,6 +283,8 @@
+ 		return;
+ 	}
+ 
++	wpa_s->wnmsleep_used = 0;
++
+ 	if (wnmsleep_ie->status == WNM_STATUS_SLEEP_ACCEPT ||
+ 	    wnmsleep_ie->status == WNM_STATUS_SLEEP_EXIT_ACCEPT_GTK_UPDATE) {
+ 		wpa_printf(MSG_DEBUG, "Successfully recv WNM-Sleep Response "
+--- contrib/wpa/wpa_supplicant/wpa_supplicant_i.h.orig
++++ contrib/wpa/wpa_supplicant/wpa_supplicant_i.h
+@@ -478,6 +478,7 @@
+ 	struct os_time pending_eapol_rx_time;
+ 	u8 pending_eapol_rx_src[ETH_ALEN];
+ 	unsigned int last_eapol_matches_bssid:1;
++	unsigned int wnmsleep_used:1;
+ 
+ 	struct ibss_rsn *ibss_rsn;
+ 
