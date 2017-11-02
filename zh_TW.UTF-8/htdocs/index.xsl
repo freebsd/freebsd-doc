@@ -121,6 +121,9 @@
 				  <li>
 					<a href="&enbase;/ja/" title="日語">ja</a>
 				  </li>
+				  <li>
+					<a href="&enbase;/zh_CN/" title="中文 (簡體)">zh_CN</a>
+				  </li>
 				  <li class="last-child">
 					<a href="&enbase;/zh_TW/" title="中文 (繁體)">zh_TW</a>
 				  </li>
