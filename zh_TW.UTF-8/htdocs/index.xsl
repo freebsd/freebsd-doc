@@ -141,7 +141,7 @@
 					  <a href="&enbase;/support/bugreports.html" title="問題回報">問題回報</a>
 					</li>
 					<li>
-					  <a href="&enbase;/doc/en_US.ISO8859-1/books/faq/index.html" title="FAQ">FAQ</a>
+					  <a href="&enbase;/doc/zh_TW.UTF-8/books/faq/index.html" title="FAQ">FAQ</a>
 					</li>
 					<li>
 					  <a href="&enbase;/doc/zh_TW.UTF-8/books/handbook/index.html" title="使用手冊">使用手冊</a>
