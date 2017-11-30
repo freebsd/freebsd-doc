@@ -29,8 +29,8 @@
   <xsl:template name="process.contentwrap">
 	      <p>有超過一百個<a
 		href="&enbase;/community/mailinglists.html">郵件論壇</a>、數十個網頁版<a
-		  href="https://forums.FreeBSD.org/">論壇</a>和數個<a
-		href="&enbase;/community/newsgroups.html">newsgroups</a>。
+		  href="https://forums.FreeBSD.org/">論壇</a>和數個 <a
+		href="&enbase;/community/newsgroups.html">newsgroups</a> 。
 		有超過 <xsl:value-of
 		select="count(document($usergroups.xml)//entry)"
 		/><xsl:text> </xsl:text>個<a
@@ -56,9 +56,9 @@
 		<a href="&enbase;/events/rss.xml">RSS feed</a>
 		可以查看 <a href="&enbase;/events/events.html">近期活動
 		</a>頁面。有許多過往活動的影片
-		在 Youtube 的<a
+		在 Youtube 的 <a
 		href="//www.youtube.com/bsdconferences">BSD
-		Conferences</a>頻道。</p>
+		Conferences</a> 頻道。</p>
 
 <!-- The Latest Videos section is placed inside an invisible block, which
      is only made visible if the browser supports Javascript. -->
@@ -122,21 +122,21 @@
 
 	      <ul>
 
-	        <li>在<a href="http://del.icio.us">del.icio.us</a>
+	        <li>在 <a href="http://del.icio.us">del.icio.us</a>
 	        數千名使用者在近 30,000 個網頁中標記著 '<a
 	        href="http://del.icio.us/tag/freebsd">freebsd</a>' 標籤。</li>
 
-		<li><a href="http://www.flickr.com">flickr</a>有數千張愛用者組織、會議和黑客松的照片標記
+		<li><a href="http://www.flickr.com">flickr</a> 有數千張愛用者組織、會議和黑客松的照片標記
 		'<a
 		href="http://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
 		</li>
 
-		<li><a href="//www.youtube.com">YouTube</a>有數百個
+		<li><a href="//www.youtube.com">YouTube</a> 有數百個
 		<a
 		href="//www.youtube.com/results?search_query=freebsd&amp;search_type=&amp;aq=f">FreeBSD</a>
 		相關的會議、螢幕錄影或是範影片。特別是有一個新的 <a href="http://www.youtube.com/bsdconferences">BSD Conferences</a> 頻道有超過一個小時 FreeBSD 會議的演講影片。</li>
 
-		<li>有一個<a
+		<li>有一個 <a
 		href="http://www.facebook.com/home.php#/group.php?gid=2204657214">FreeBSD
 		Users Group</a> 在 <a
 		href="http://www.facebook.com">Facebook</a> 和一個 <a href="http://www.linkedin.com/groups?gid=47628">FreeBSD Group</a> 在 <a href="http://www.linkedin.com">LinkedIn</a>。</li>
