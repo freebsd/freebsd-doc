@@ -25,6 +25,7 @@ SRCS+= new-port/chapter.xml
 SRCS+= quick-porting/chapter.xml
 SRCS+= slow-porting/chapter.xml
 SRCS+= makefiles/chapter.xml
+SRCS+= flavors/chapter.xml
 SRCS+= special/chapter.xml
 SRCS+= plist/chapter.xml
 SRCS+= pkg-files/chapter.xml
