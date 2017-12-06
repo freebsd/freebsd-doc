@@ -32,9 +32,10 @@ install:
 	  ${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" DOCDIR=${DESTDIR}/data/doc install
 	${CP} ${DOC_PREFIX}/share/pgpkeys/pgpkeyring.txt ${DESTDIR}/data/doc/pgpkeyring.txt
 
+beforeinstall:
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
 .if ${LANGCODE} == en_US.ISO8859-1
-all: all-pgpkeyring
+	${MAKE} -C ${.CURDIR} all-pgpkeyring
 .endif
 
 
