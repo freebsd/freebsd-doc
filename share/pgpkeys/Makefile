@@ -7,6 +7,8 @@ XSLPGP=		http://www.FreeBSD.org/XML/share/xml/freebsd-pgpkeyring.xsl
 FILES=		pgpkeyring.txt
 CLEANFILES=	pgpkeyring.txt keyring.xml
 
+all:	keyring.xml pgpkeyring pgpkeyring.txt
+
 keyring.xml:	.PHONY
 	@${ECHO_CMD} "<?xml version='1.0' encoding='UTF-8'?>" > ${.TARGET}
 	@${ECHO_CMD} "<keyring>" >> ${.TARGET}
