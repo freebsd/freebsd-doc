@@ -58,7 +58,7 @@
 #
 
 # 'make obj' doesn't really work for the docs, disable it
-NO_OBJ?= YES
+#NO_OBJ?= YES
 
 # Document-specific defaults
 DOCFORMAT?=	docbook
