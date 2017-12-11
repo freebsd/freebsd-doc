@@ -21,7 +21,6 @@ IMAGES_EN+= orghierarchy.png
 IMAGES_EN+= orghierarchy2.png
 IMAGES_EN+= portsstatus.png
 IMAGES_EN+= proc-add-committer.png
-IMAGES_EN+= proc-add-cvsup.png
 IMAGES_EN+= proc-commit.png
 IMAGES_EN+= proc-contrib.png
 IMAGES_EN+= proc-elections.png
