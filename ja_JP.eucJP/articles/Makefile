@@ -31,7 +31,6 @@ SUBDIR+= leap-seconds
 #SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
 #SUBDIR+= rc-scripting
-#SUBDIR+= relaydelay
 #SUBDIR+= releng
 #SUBDIR+= remote-install
 #SUBDIR+= serial-uart
