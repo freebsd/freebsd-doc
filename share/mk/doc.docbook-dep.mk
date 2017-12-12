@@ -19,7 +19,7 @@ _DOCBOOK_DEPS_SYSTEM != for i in $$(egrep '<!ENTITY [^ ]+ SYSTEM "[^ ]+\.xml">' 
 			  if [ -e $$i ]; then \
 			    echo $i; \
 			  else \
-			    echo "Warning: dep file $$(pwd)/$$i does not exists" >&2; \
+			    echo "Warning: dep file $$(pwd)/$$i does not exist" >&2; \
 			  fi; \
 			done
 .endif
