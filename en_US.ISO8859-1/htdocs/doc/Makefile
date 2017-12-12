@@ -21,7 +21,7 @@ all-all:
 	${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" all
 
 all-pgpkeyring:
-	${MAKE} -C ${DOC_PREFIX}/share/pgpkeys pgpkeyring.txt
+	${MAKE} -C ${DOC_PREFIX}/share/pgpkeys all
 
 clean:
 	${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" DOCDIR=${DESTDIR}/data/doc clean
