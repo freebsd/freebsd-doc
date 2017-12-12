@@ -77,7 +77,7 @@ if ($file =~ m,^([0-9a-z/-]+|[0-9a-z/-]+\.[0-9a-z-]+)$,) {
 
 sub file_not_exists {
     my $file = shift;
-    print "File does not exists: $file\n";
+    print "File does not exist: $file\n";
     exit;
 }
 
