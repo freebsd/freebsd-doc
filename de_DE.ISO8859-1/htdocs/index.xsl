@@ -6,7 +6,7 @@
 <!--
      $FreeBSD$
      $FreeBSDde$
-     basiert auf: 51033
+     basiert auf: 51261
 -->
 
 <xsl:stylesheet version="1.0"
@@ -89,7 +89,6 @@
 				  <ul id="frontreleaseslist">
 					<li>
 					  Produktion:&nbsp;<a href="&u.rel.announce;">&rel.current;</a>,
-					  <a href="&u.rel0.announce;">&rel0.current;</a>,
 					  <a href="&u.rel1.announce;">&rel1.current;</a>,
 					  <a href="&u.rel2.announce;">&rel2.current;</a>
 					</li>
