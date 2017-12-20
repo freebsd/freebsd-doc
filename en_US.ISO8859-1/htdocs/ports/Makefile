@@ -19,9 +19,13 @@ ${INDEX}: ${PINDEX_OVERRIDE}
 ${INDEX}: $${PORTSBASE}/${PINDEX}
 	${CP} ${PORTSBASE}/${PINDEX} ${INDEX}
 .else
-${INDEX}:
+
+${INDEX}: ${INDEX}.bz2
+${INDEX}.bz2: .EXEC
 	${FETCH} ${FETCH_OPT} -o ${INDEX}.bz2 ${INDEXURI}.bz2
-	${BUNZIP2} ${INDEX}.bz2
+	if [ ! -e ${INDEX} -o ${INDEX}.bz2 -nt ${INDEX} ]; then \
+	  ${BUNZIP2} -dc ${INDEX}.bz2 > ${INDEX}.tmp && ${MV} -f ${INDEX}.tmp ${INDEX}; \
+	fi
 .endif
 
 HOSTNAME!= hostname
