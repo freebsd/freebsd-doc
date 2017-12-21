@@ -64,7 +64,7 @@
 		<a href="&base;/events/events.html">events
 		page</a>.  There are dozens of videos from past events
 		on the <a
-		href="//www.youtube.com/bsdconferences">BSD
+		href="https://www.youtube.com/bsdconferences">BSD
 		Conferences</a> channel on YouTube.</p>
 
 <!-- The Latest Videos section is placed inside an invisible block, which
@@ -129,12 +129,6 @@
 	        networks.</p>
 
 	      <ul>
-
-	        <li>Thousands of users have tagged nearly 30,000
-	        unique web pages with the '<a
-	        href="http://del.icio.us/tag/freebsd">freebsd</a>' tag
-	        on <a href="http://del.icio.us">del.icio.us</a>.</li>
-
 		<li>There are thousands of photos from user group
 		meetings, conferences, and hackathons tagged as '<a
 		href="http://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
@@ -142,19 +136,19 @@
 
 		<li>There are hundreds of videos from conferences,
 		screencasts, and demonstrations relating to <a
-		href="//www.youtube.com/results?search_query=freebsd&amp;search_type=&amp;aq=f">FreeBSD</a>
-		on <a href="//www.youtube.com">YouTube</a>.  In particular, there is a new <a href="http://www.youtube.com/bsdconferences">BSD Conferences</a> channel with full length 1 hour taped presentations from FreeBSD technical conferences.</li>
+		href="https://www.youtube.com/results?search_query=freebsd">&os;</a>
+		on <a href="https://www.youtube.com">YouTube</a>.  In particular, there is a new <a href="https://www.youtube.com/bsdconferences">BSD Conferences</a> channel with full length 1 hour taped presentations from FreeBSD technical conferences.</li>
 
 		<li>There is a <a
-		href="http://www.facebook.com/home.php#/group.php?gid=2204657214">FreeBSD
+		href="https://www.facebook.com/groups/FreeSBD/">FreeBSD
 		Users Group</a> on <a
-		href="http://www.facebook.com">Facebook</a> and a <a href="http://www.linkedin.com/groups?gid=47628">FreeBSD Group</a> on <a href="http://www.linkedin.com">LinkedIn</a>.</li>
+		href="https://www.facebook.com">Facebook</a> and a <a href="https://www.linkedin.com/groups?gid=47628">FreeBSD Group</a> on <a href="https://www.linkedin.com">LinkedIn</a>.</li>
 
 		<li>You can follow
 		<a href="https://twitter.com/freebsd">@freebsd</a>,
 		<a href="https://twitter.com/freebsdhelp">@freebsdhelp</a>,
 		<a href="https://twitter.com/freebsdblogs">@freebsdblogs</a>, or
-		<a href="https://twitter.com/bsdevents">@bsdevents</a>
+		<a href="https://twitter.com/freebsdcore">@freebsdcore</a>
 		on <a href="https://twitter.com">Twitter</a>.</li>
 	      </ul>
   </xsl:template>
