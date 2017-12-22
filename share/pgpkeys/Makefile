@@ -21,7 +21,7 @@ keyring.xml:	.PHONY
 pgpkeyring: keyring.xml
 	@${XSLTPROC} ${XSLTPROCOPTS} ${XSLPGP} keyring.xml
 
-pgpkeyring.txt:
+pgpkeyring.txt:	.PHONY
 	@${RM} -f ${.TARGET}.tmp || true
 	@${MAKE} -C ${.CURDIR} pgpkeyring > ${.TARGET}.tmp
 	${MV} ${.TARGET}.tmp ${.TARGET}
