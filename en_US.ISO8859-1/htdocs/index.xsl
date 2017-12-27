@@ -37,7 +37,7 @@
 			<div id="frontfeaturecontent">
 				<h1>The &os; Project</h1>
 
-				<p>&os; is an advanced computer
+				<p>&os; is an
 				  operating system used to power
 				  modern servers, desktops, and
 				  embedded
