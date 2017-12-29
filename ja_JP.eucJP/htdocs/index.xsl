@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r51261 -->
+<!-- Original revision: r51342 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -42,7 +42,7 @@
 
 			<p>&os; は、最新のサーバ、デスクトップおよび組み込み
 			  <a href="&base;/platforms/">プラットフォーム</a>
-			  用の高性能なオペレーティングシステムです。
+			  用のオペレーティングシステムです。
 			  多くの <a href="&enbase;/doc/ja_JP.eucJP/articles/contributors/staff-committers.html">コミュニティ</a>
 			  が 30 年以上にも渡って開発を続けています。
 			  高度なネットワーク、セキュリティ、
