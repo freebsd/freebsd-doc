@@ -239,7 +239,7 @@ sub html_footer {
     return qq`
 	</div>
         <div id="footer">
-          <a href="$hsty_base/copyright/">Legal Notices</a> | &copy; 1995-2017
+          <a href="$hsty_base/copyright/">Legal Notices</a> | &copy; 1995-2018
           The FreeBSD Project. All rights reserved.<br />
 	  <address>$hsty_author<br />$hsty_date</address>
         </div>
