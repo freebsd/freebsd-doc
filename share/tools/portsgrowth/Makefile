@@ -17,7 +17,10 @@ all:	${IMG}
 update:
 	sh getinfo.sh
 
-status.png:	ports.plt ports.log
+status.png:
+	${TOUCH} ${.TARGET}
+
+Xstatus.png:	ports.plt ports.log
 	${GNUPLOT} ports.plt
 	${PNGTOPNM} ports.png | ${PNMTOPNG} -i > ${IMG}
 	rm ports.png
