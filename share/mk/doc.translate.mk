@@ -43,16 +43,16 @@ MASTER_SRCS!=	${MAKE} -C ${EN_DIR} -V SRCS
 
 ${DOC}.translate.xml:
 .if ${TRAN_DIR} == ${EN_DIR}
-	@${ECHO} "Please build PO file only in a non-English dir, ignored"
+	@${ECHO} "Please build PO file only in a non-English directory, ignored"
 .else
 	# some SRCS files might need to be generated, make sure they exist
-	${MAKE} -C ${EN_DIR} ${MASTER_SRCS} > /dev/null
+	@${MAKE} -C ${EN_DIR} ${MASTER_SRCS} > /dev/null
 	# normalize the English original into a single file
-	${PO_XMLLINT} --nonet --noent --valid --xinclude ${MASTERDOC_EN} > ${.TARGET}.tmp
+	@${PO_XMLLINT} --nonet --noent --valid --xinclude ${MASTERDOC_EN} > ${.TARGET}.tmp
 	# remove redundant namespace attributes
-	${PO_XMLLINT} --nsclean ${.TARGET}.tmp > ${.TARGET}
-	${RM} ${.TARGET}.tmp
-	${MAKE} -C ${EN_DIR} clean > /dev/null
+	@${PO_XMLLINT} --nsclean ${.TARGET}.tmp > ${.TARGET}
+	@${RM} ${.TARGET}.tmp
+	@${MAKE} -C ${EN_DIR} clean > /dev/null
 .endif
 
 .if ${TRAN_DIR} == ${EN_DIR}
@@ -64,27 +64,27 @@ po: ${PO_LANG}.po
 .PHONY:	po
 
 ${PO_LANG}.po:	${DOC}.translate.xml
-	${ITSTOOL} -o ${PO_LANG}.po.tmp ${DOC}.translate.xml
+	@${ITSTOOL} -o ${PO_LANG}.po.tmp ${DOC}.translate.xml
 .if exists(${PO_LANG}.po)
 	@${ECHO} "${PO_LANG}.po exists, merging"
-	${MSGMERGE} -o ${PO_LANG}.po.new ${PO_LANG}.po ${PO_LANG}.po.tmp
-	${MSGATTRIB} --no-obsolete -o ${PO_LANG}.po.new ${PO_LANG}.po
-	${MV} ${PO_LANG}.po.new ${PO_LANG}.po
-	${RM} ${PO_LANG}.po.tmp ${DOC}.translate.xml
+	@${MSGMERGE} -o ${PO_LANG}.po.new ${PO_LANG}.po ${PO_LANG}.po.tmp
+	@${MSGATTRIB} --no-obsolete -o ${PO_LANG}.po.new ${PO_LANG}.po
+	@${MV} ${PO_LANG}.po.new ${PO_LANG}.po
+	@${RM} ${PO_LANG}.po.tmp
 .else
 	@${ECHO} "${PO_LANG}.po created, please check and correct the settings in the header"
-	${MV} ${PO_LANG}.po.tmp ${PO_LANG}.po 
-	${POSET_CMD} ${.TARGET} 
+	@${MV} ${PO_LANG}.po.tmp ${PO_LANG}.po
+	@${POSET_CMD} ${.TARGET}
 .endif
 
 ${PO_LANG}.mo:	${PO_LANG}.po
-	${MSGFMT} -o ${.TARGET} ${.ALLSRC}
+	@${MSGFMT} -o ${.TARGET} ${.ALLSRC}
 
 tran ${DOC}.xml:	${DOC}.translate.xml ${PO_LANG}.mo
 .if ${TRAN_DIR} == ${EN_DIR}
-	@${ECHO} "Please build translation only in a non-English dir, ignored"
+	@${ECHO} "Please build translation only in a non-English directory, ignored"
 .else
-	${ITSTOOL} -l ${PO_LANG} -m ${PO_LANG}.mo -o ${DOC}.xml ${DOC}.translate.xml
+	@${ITSTOOL} -l ${PO_LANG} -m ${PO_LANG}.mo -o ${DOC}.xml ${DOC}.translate.xml
 .endif
 .endif
 
