@@ -16,8 +16,8 @@ DOCS+=	summerofcode-2006.xml
 DOCS+=	summerofcode-2007.xml
 DOCS+=	summerofcode-2008.xml
 
-DATA=	2017-freebsd-gsoc-thumbnail.png
-DATA+=	2017-freebsd-gsoc.pdf
+DATA=	2018-freebsd-gsoc-thumbnail.png
+DATA+=	2018-freebsd-gsoc.pdf
 
 INDEXLINK= projects.html
 
