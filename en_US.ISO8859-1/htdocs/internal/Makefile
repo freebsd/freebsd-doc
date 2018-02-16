@@ -16,7 +16,6 @@ DOCS+= 	data.xml
 DOCS+= 	developer.xml
 DOCS+=	doceng.xml
 DOCS+=	expire-bits.xml
-DOCS+=	fortunes.xml
 DOCS+=	hats.xml
 DOCS+=	i18n.xml
 DOCS+=	internal.xml
