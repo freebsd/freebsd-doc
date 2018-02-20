@@ -112,8 +112,8 @@ for how to geting stuff -->
 		<h2>State of the port:</h2>
 
 		<p>GNOME, MATE, and Cinnamon for &os; are currently
-		  fully supported on 10.2, 10.1, and 10-STABLE while
-		  support for 9.3, 9-STABLE, and 11.0-CURRENT is provided
+		  fully supported on 11.1, 11-STABLE, and 10.4,
+		  while support for 12.0-CURRENT is provided
 		  on a best effort basis. <!-- xxx volunteer page needs
 		  updating. There is still
 		  <a href="docs/volunteer.html">plenty left to be done</a>!--></p>
@@ -129,10 +129,12 @@ for how to geting stuff -->
 		  <li><a href="http://www.gnome.org/">GNOME Project</a></li>
 		  <li><a href="http://news.gnome.org">GNOME Project news</a></li>
 		  <li><a href="http://developer.gnome.org">GNOME development platform</a></li>
+<!-- does not resolve as of 20161015
 		  <li><a href="http://www.gnomefiles.org">GTK+ software repository</a></li>
+-->
 		  <li><a href="http://planet.gnome.org">Planet GNOME (blogs)</a></li>
 		  <li><a href="http://mate-desktop.org/">MATE Project</a></li>
-		  <li><a href="http://cinnamon.linuxmint.com/">Cinnamon Project</a></li>
+		  <li><a href="https://github.com/linuxmint/Cinnamon">Cinnamon Project</a></li>
 		</ul>
 
 		<h2>Related Projects</h2>
