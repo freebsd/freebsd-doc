@@ -126,22 +126,19 @@ for how to geting stuff -->
 		<h2>Resources</h2>
 		<ul>
 		  <li><a href="https://wiki.freebsd.org/Gnome">FreeBSD GNOME's wiki page</a></li>
-		  <li><a href="http://www.gnome.org/">GNOME Project</a></li>
-		  <li><a href="http://news.gnome.org">GNOME Project news</a></li>
-		  <li><a href="http://developer.gnome.org">GNOME development platform</a></li>
-<!-- does not resolve as of 20161015
-		  <li><a href="http://www.gnomefiles.org">GTK+ software repository</a></li>
--->
+		  <li><a href="https://www.gnome.org/">GNOME Project</a></li>
+		  <li><a href="https://news.gnome.org">GNOME Project news</a></li>
+		  <li><a href="https://developer.gnome.org">GNOME development platform</a></li>
 		  <li><a href="http://planet.gnome.org">Planet GNOME (blogs)</a></li>
-		  <li><a href="http://mate-desktop.org/">MATE Project</a></li>
+		  <li><a href="https://mate-desktop.org/">MATE Project</a></li>
 		  <li><a href="https://github.com/linuxmint/Cinnamon">Cinnamon Project</a></li>
 		</ul>
 
 		<h2>Related Projects</h2>
 		<ul>
-		  <li><a href="http://www.kde.org/">KDE Project</a></li>
-		  <li><a href="http://freebsd.kde.org/">KDE on FreeBSD</a></li>
-		  <li><a href="http://www.xfce.org/">XFCE Project</a></li>
+		  <li><a href="https://www.kde.org/">KDE Project</a></li>
+		  <li><a href="https://freebsd.kde.org/">KDE on FreeBSD</a></li>
+		  <li><a href="https://www.xfce.org/">XFCE Project</a></li>
 		  <li><a href="https://wiki.freebsd.org/Xfce">XFCE on FreeBSD</a></li>
 		  <li><a href="http://www.opengroup.org/cde/">CDE</a></li>
 		</ul>
