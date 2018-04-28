@@ -6,7 +6,7 @@
 <!--
      $FreeBSD$
      $FreeBSDde$
-     basiert auf: 51261
+     basiert auf: 51342
 -->
 
 <xsl:stylesheet version="1.0"
@@ -41,7 +41,7 @@
 				<h1>
 				  The &os; Project
 				</h1>
-				<p>FreeBSD&reg; ist ein modernes Betriebssystem für
+				<p>FreeBSD&reg; ist ein Betriebssystem für
 				  Server, Desktops und eingebettete Systeme, das auf
 				  zahlreichen <a
 				  href="&base;/platforms/index.html">Plattformen</a>
