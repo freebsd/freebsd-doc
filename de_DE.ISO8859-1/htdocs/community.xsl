@@ -7,7 +7,7 @@
 
 <!-- $FreeBSD$ -->
 <!-- $FreeBSDde$ -->
-<!-- basiert auf: r49284 -->
+<!-- basiert auf: r51328 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -35,11 +35,11 @@
 		href="https://forums.FreeBSD.org/">Foren</a> sowie
 		diverse <a
 		href="&base;/community/newsgroups.html">Newsgroups</a>.
-		Dazu kommen mehr als 87 <!-- <xsl:value-of
+		Dazu kommen mehr als 91 <!-- <xsl:value-of
 		select="count(document($usergroups.xml)//entry)"
 		/><xsl:text> </xsl:text>--> <a
 		href="&enbase;/usergroups.html">User Groups</a> in
-		38 Ländern. <!--<xsl:value-of
+		40 Ländern. <!--<xsl:value-of
 		select="count(document($usergroups.xml)//country)" />-->
 		Zusätzlich existiert eine aktive <a
 		href="&base;/community/irc.html">IRC</a>-Gemeinde.
@@ -52,10 +52,10 @@
 		zur &os;-Entwicklung und zu diversen Projekten
 		enthält.</p>
 
-	      <p>Letztes Jahr gab es insgesamt 12 <!-- <xsl:value-of
+	      <p>Letztes Jahr gab es insgesamt 9 <!-- <xsl:value-of
 	        select="count(/events/event[number(enddate/year) =
 	        (number($curdate.year) -1)])" />-->
-		&os;-Veranstaltungen in 6 <!--<xsl:value-of
+		&os;-Veranstaltungen in 9 <!--<xsl:value-of
 		select="count(/events/event[(number(enddate/year) =
 		(number($curdate.year) -1)) and (generate-id() =
 		generate-id(key('last-year-event-by-country',
@@ -67,7 +67,7 @@
 		href="&enbase;/events/events.html">Veranstaltungen</a>
 		verfügbar.  Und nicht zuletzt gibt es dutzende
 		Videos im Youtube-Channel <a
-		href="//www.youtube.com/bsdconferences">BSD
+		href="https://www.youtube.com/bsdconferences">BSD
 		Conferences</a>.</p>
 
 <!-- The Latest Videos section is placed inside an invisible block, which
@@ -133,12 +133,6 @@
 	      <p>&os; ist auf diversen sozialen Netzwerken vertreten.</p>
 
 	      <ul>
-		<li>Tausende Nutzer von <a
-		  href="http://del.icio.us">del.icio.us</a> haben nahezu
-		  30000 verschiedene Webseiten mit dem Tag '<a
-		  href="http://del.icio.us/tag/freebsd">freebsd</a>'
-		  markiert.</li>
-
 		<li>Es gibt tausende Photos von Usergroup-Treffen,
 		  Konferenzen und Hackatons, die auf <a
 		  href="http://www.flickr.com">flickr</a> mit dem
@@ -146,21 +140,21 @@
 		  href="http://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
 		  versehen wurden.</li>
 
-		<li>Auf <a href="http://www.youtube.com">YouTube</a>
-		  existieren hunderte Videos von Konferenzen,
+		<li>Auf <a href="https://www.youtube.com">YouTube</a>
+		  gibt es hunderte Videos von Konferenzen,
 		  Präsentatitionen und Vorträgen, die sich auf <a
-		  href="http://www.youtube.com/results?search_query=freebsd&amp;search_type=&amp;aq=f">FreeBSD</a>
+		  href="https://www.youtube.com/results?search_query=freebsd">&os;</a>
 		  beziehen.  Weiters gibt es den Channel <a
-		  href="http://www.youtube.com/bsdconferences">BSD Conferences</a>,
+		  href="https://www.youtube.com/bsdconferences">BSD Conferences</a>,
 		  über den Sie komplette Präsentationen von
 		  FreeBSD-Konferenzen verfolgen/ansehen können.</li>
 
-		<li>Auf <a href="http://www.facebook.com">Facebook</a>
+		<li>Auf <a href="https://www.facebook.com">Facebook</a>
 		  gibt es die <a
-		  href="http://www.facebook.com/home.php#/group.php?gid=2204657214">FreeBSD
+		  href="https://www.facebook.com/home.php#/group.php?gid=2204657214">FreeBSD
 		  Users Group</a>, auf <a
-		  href="http://www.linkedin.com">LinkedIn</a> die <a
-		  href="http://www.linkedin.com/groups?gid=47628">FreeBSD Group</a>.</li>
+		  href="https://www.linkedin.com">LinkedIn</a> die <a
+		  href="https://www.linkedin.com/groups?gid=47628">FreeBSD Group</a>.</li>
 
 		<li>Auf <a href="https://twitter.com">Twitter</a>
 		  können Sie beispielsweise
@@ -168,7 +162,7 @@
 		  <a href="https://twitter.com/freebsdhelp">@freebsdhelp</a>,
 		  <a href="https://twitter.com/freebsdblogs">@freebsdblogs</a>
 		  oder 
-		  <a href="https://twitter.com/bsdevents">@bsdevents</a>
+		  <a href="https://twitter.com/freebsdcore">@freebsdcore</a>
 		  folgen.</li>
 	      </ul>
   </xsl:template>
