@@ -68,9 +68,9 @@ ${PO_LANG}.po:	${DOC}.translate.xml
 .if exists(${PO_LANG}.po)
 	@${ECHO} "${PO_LANG}.po exists, merging"
 	@${MSGMERGE} -o ${PO_LANG}.po.new ${PO_LANG}.po ${PO_LANG}.po.tmp
-	@${MSGATTRIB} --no-obsolete -o ${PO_LANG}.po.new ${PO_LANG}.po
-	@${MV} ${PO_LANG}.po.new ${PO_LANG}.po
-	@${RM} ${PO_LANG}.po.tmp
+	@${MSGATTRIB} --no-obsolete -o ${PO_LANG}.po.tmp ${PO_LANG}.po.new
+	@${RM} ${PO_LANG}.po.new
+	@${MV} ${PO_LANG}.po.tmp ${PO_LANG}.po
 .else
 	@${ECHO} "${PO_LANG}.po created, please check and correct the settings in the header"
 	@${MV} ${PO_LANG}.po.tmp ${PO_LANG}.po
