@@ -11,8 +11,6 @@ DOCS+= search.xml
 DOCS+= searchhints.xml
 DOCS+=	search-mid.xml
 
-SUBDIR+= opensearch
-
 INDEXLINK=	search.html
 
 XMLDOCS=	index-site:xsl:sitemap.xml
