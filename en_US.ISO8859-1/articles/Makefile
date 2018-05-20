@@ -24,7 +24,6 @@ SUBDIR+= linux-users
 SUBDIR+= mailing-list-faq
 SUBDIR+= nanobsd
 SUBDIR+= new-users
-SUBDIR+= p4-primer
 SUBDIR+= pam
 SUBDIR+= pgpkeys
 SUBDIR+= port-mentor-guidelines
