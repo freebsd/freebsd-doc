@@ -17,5 +17,6 @@ DATA+=	logo-red.png
 DATA+=	nav_rgt.png
 DATA+=	nav_tbl_btm.png
 DATA+=	nav_tbl_top.png
+DATA+=	25thanniversary.png
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
