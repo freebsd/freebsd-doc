@@ -1,5 +1,5 @@
 # $FreeBSD$
-# Original revision: r46482
+# Original revision: r51679
 
 SUBDIR =
 #SUBDIR+= bsdl-gpl
@@ -12,6 +12,7 @@ SUBDIR+= contributors
 #SUBDIR+= filtering-bridges
 SUBDIR+= fonts
 #SUBDIR+= freebsd-questions
+#SUBDIR+= freebsd-releng
 #SUBDIR+= freebsd-update-server
 #SUBDIR+= geom-class
 #SUBDIR+= gjournal-desktop
@@ -24,7 +25,6 @@ SUBDIR+= leap-seconds
 #SUBDIR+= mailing-list-faq
 #SUBDIR+= nanobsd
 #SUBDIR+= new-users
-#SUBDIR+= p4-primer
 #SUBDIR+= pam
 #SUBDIR+= pgpkeys
 #SUBDIR+= port-mentor-guidelines
