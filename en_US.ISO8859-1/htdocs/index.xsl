@@ -170,6 +170,22 @@
 			    </div> <!-- frontnewcontent -->
 			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontnewroundbox -->
+			<!-- 25th anniversary logo -->
+			<div class="frontfeaturecontent">
+			  <!-- XXX: target page not yet ready
+			  <a href="XXX TBD"
+			    title="&os; 25th Anniversary">
+			  -->
+			  <img
+			    src="&enbase;/layout/images/25thanniversary.png"
+			    style="margin-top: 5px;"
+			    width="167" height="88"
+			    alt="25th Anniversary Logo" />
+			  <!--
+			  </a>
+			  -->
+			</div>
+			<!-- end 25th anniversary logo -->
 		</div> <!-- FEATURERIGHT -->
 
             </div> <!-- FRONTFEATURECONTAINER -->
