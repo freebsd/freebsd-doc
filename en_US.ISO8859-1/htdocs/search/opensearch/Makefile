@@ -7,14 +7,17 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS+= search.xml
-DOCS+= searchhints.xml
-DOCS+=	search-mid.xml
+DOCS+= 		opensearch.xml
+INDEXLINK=	opensearch.html
 
-SUBDIR+= opensearch
+DATA=
+DATA+=	opensearch.js
 
-INDEXLINK=	search.html
+DATA+=	man.xml
+DATA+=	man-freebsd-release-ports.xml
+DATA+=	message-id.xml
 
-XMLDOCS=	index-site:xsl:sitemap.xml
+# external sites
+DATA+=	markmail.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
