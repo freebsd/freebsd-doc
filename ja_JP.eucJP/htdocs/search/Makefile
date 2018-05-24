@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r51664
+# Original revision: r51713
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,6 +12,8 @@
 DOCS+= search.xml
 DOCS+= searchhints.xml
 DOCS+= search-mid.xml
+
+#SUBDIR+= opensearch
 
 INDEXLINK=	search.html
 
