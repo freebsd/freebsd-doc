@@ -7,7 +7,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=   current.xml
 DOCS+=	doc-set.xml
 DOCS+=  submitting.xml
 DOCS+=  who.xml
