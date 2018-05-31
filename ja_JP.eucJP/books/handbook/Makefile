@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: r47683
+# Original revision: r51744
 #
 
 # ------------------------------------------------------------------------
@@ -203,6 +203,7 @@ SRCS+= preface/preface.xml
 SRCS+= printing/chapter.xml
 SRCS+= security/chapter.xml
 SRCS+= serialcomms/chapter.xml
+#SRCS+= usb-device-mode/chapter.xml
 SRCS+= users/chapter.xml
 #SRCS+= virtualization/chapter.xml
 SRCS+= x11/chapter.xml
