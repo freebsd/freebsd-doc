@@ -9,7 +9,7 @@
 
   <xsl:template name="user.footer.navigation">
     <p align="center"><small>本文書、および他の文書は
-    <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/">ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/</a>
+    <a href="https://download.freebsd.org/ftp/doc/">https://download.freebsd.org/ftp/doc/</a>
     からダウンロードできます。</small></p>
 
     <p align="center"><small>FreeBSD に関する質問がある場合には、
