@@ -6,7 +6,7 @@
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Simplified Chinese Documentation Project -->
-<!-- Original revision: r49485 -->
+<!-- Original revision: r51696 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -39,7 +39,7 @@
 			<div id="frontfeaturecontent">
 				<h1>&os; 项目</h1>
 
-				<p>&os; 是一个适用于现代服务器，桌面与嵌入式 <a href="&base;/platforms/">平台</a> 的先进操作系统。
+				<p>&os; 是一个适用于现代服务器，桌面与嵌入式 <a href="&base;/platforms/">平台</a> 的操作系统。
 				  由一个庞大的
 				  <a
 				  href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">开发人员团队</a>
@@ -90,12 +90,12 @@
 
 			<div id="frontreleases">
 			  <div id="frontreleasescontent" class="txtshortcuts">
-				  <h2><a href="&base;/releases/">最新版本</a></h2>
+				  <h2><a href="&base;/releases/">支持的版本</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>生产环境适用:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,
 					<a
-				href="&u.rel0.announce;">&rel0.current;</a></li>
+				href="&u.rel1.announce;">&rel1.current;</a></li>
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 					<li>即将发布: <a
 				href="&u.betarel.schedule;">&betarel.current;</a></li>
