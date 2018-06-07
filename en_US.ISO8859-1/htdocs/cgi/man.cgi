@@ -227,10 +227,12 @@ foreach my $os ( keys %$sectionpath ) {
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
 # this should be the latest "release and ports"
-$manPathDefault = 'FreeBSD 11.1-RELEASE and Ports';
+$manPathDefault = 'FreeBSD 11.2-RELEASE and Ports';
 
 %manPath = (
     # supported releases / stable / current 
+    'FreeBSD 11.2-RELEASE and Ports',
+"$manLocalDir/FreeBSD-11.2-RELEASE/man:$manLocalDir/FreeBSD-11.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-11.2-RELEASE/man:$manLocalDir/FreeBSD-ports-11.2-RELEASE/misc",
     'FreeBSD 11.1-RELEASE and Ports',
 "$manLocalDir/FreeBSD-11.1-RELEASE/man:$manLocalDir/FreeBSD-11.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-11.1-RELEASE/man:$manLocalDir/FreeBSD-ports-11.1-RELEASE/misc",
     'FreeBSD 11.0-RELEASE and Ports',
@@ -272,8 +274,10 @@ $manPathDefault = 'FreeBSD 11.1-RELEASE and Ports';
     'FreeBSD 12-current',
 "$manLocalDir/FreeBSD-12-current/man:$manLocalDir/FreeBSD-12-current/openssl/man",
 
-    'FreeBSD 11.1-stable',
-"$manLocalDir/FreeBSD-11.1-stable/man:$manLocalDir/FreeBSD-11.1-stable/openssl/man",
+    'FreeBSD 11.2-stable',
+"$manLocalDir/FreeBSD-11.2-stable/man:$manLocalDir/FreeBSD-11.2-stable/openssl/man",
+    'FreeBSD 11.2-RELEASE',
+"$manLocalDir/FreeBSD-11.2-RELEASE/man:$manLocalDir/FreeBSD-11.2-RELEASE/openssl/man",
     'FreeBSD 11.1-RELEASE',
 "$manLocalDir/FreeBSD-11.1-RELEASE/man:$manLocalDir/FreeBSD-11.1-RELEASE/openssl/man",
     'FreeBSD 11.0-RELEASE',
@@ -366,6 +370,7 @@ $manPathDefault = 'FreeBSD 11.1-RELEASE and Ports';
     'FreeBSD Ports 10.4', "$manLocalDir/FreeBSD-ports-10.4-RELEASE/man:$manLocalDir/FreeBSD-ports-10.4-RELEASE/misc",
     'FreeBSD Ports 11.0', "$manLocalDir/FreeBSD-ports-11.0-RELEASE/man:$manLocalDir/FreeBSD-ports-11.0-RELEASE/misc",
     'FreeBSD Ports 11.1', "$manLocalDir/FreeBSD-ports-11.1-RELEASE/man:$manLocalDir/FreeBSD-ports-11.1-RELEASE/misc",
+    'FreeBSD Ports 11.2', "$manLocalDir/FreeBSD-ports-11.2-RELEASE/man:$manLocalDir/FreeBSD-ports-11.2-RELEASE/misc",
 
 
     # FreeBSD Releases + Ports
@@ -752,6 +757,7 @@ my $default_arch = 'amd64';
 my %arch_names = ('default' => 'All Architectures');
 
 my %arch = ( 
+'FreeBSD 11.2-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64 aarch64/] } ,
 'FreeBSD 11.1-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64 aarch64/] } ,
 'FreeBSD 11.0-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64 aarch64/] } ,
 'FreeBSD 10.4-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
@@ -807,11 +813,11 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 11.1-RELEASE',
-    'freebsd-release', 'FreeBSD 11.1-RELEASE',
+    'freebsd',         'FreeBSD 11.2-RELEASE',
+    'freebsd-release', 'FreeBSD 11.2-RELEASE',
 
-    'freebsd-stable', 'FreeBSD 11.1-stable',
-    'freebsd-stable11', 'FreeBSD 11.1-stable',
+    'freebsd-stable', 'FreeBSD 11.2-stable',
+    'freebsd-stable11', 'FreeBSD 11.2-stable',
 
     'freebsd-stable10', 'FreeBSD 10.4-stable',
     'freebsd-stable9', 'FreeBSD 9.3-stable',
@@ -820,8 +826,8 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-stable6', 'FreeBSD 6.4-stable',
 
     'freebsd-current',       'FreeBSD 12-current',
-    'freebsd-release-ports', 'FreeBSD 11.0-RELEASE and Ports',
-    'freebsd-ports', 'FreeBSD Ports 11.0',
+    'freebsd-release-ports', 'FreeBSD 11.2-RELEASE and Ports',
+    'freebsd-ports', 'FreeBSD Ports 11.2',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat Linux/i386 9',
