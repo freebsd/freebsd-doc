@@ -9,6 +9,5 @@
 
 SUBDIR=		css
 SUBDIR+=	images
-SUBDIR+=	js
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
