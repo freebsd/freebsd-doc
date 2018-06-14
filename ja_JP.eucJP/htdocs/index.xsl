@@ -84,13 +84,13 @@
 
 		  <div id="frontfeaturemiddle">
 		      <div class="frontgetroundbox">
-			<div class="frontgettop"><div>&#160;</div>&#160;</div>
+			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 
 			<div class="frontgetcontent">
 			  <a href="&base;/where.html">&os; を入手する</a>
 			</div> <!-- frontgetcontent -->
 
-			<div class="frontgetbot"><div>&#160;</div>&#160;</div>
+			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 		      </div> <!-- frontgetroundbox -->
 
 			<div id="frontreleases">
@@ -162,11 +162,11 @@
 		      </div> <!-- FRONTSHORTCUTS -->
 
 		      <div class="frontnewroundbox">
-			<div class="frontnewtop"><div>&#160;</div>&#160;</div>
+			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
 			<div class="frontnewcontent">
-			  <a href="&base;/projects/newbies.html">FreeBSD が初めての方</a>
+			  <a href="&base;/projects/newbies.html">FreeBSD が初めてという方へ</a>
 			</div> <!-- frontnewcontent -->
-			<div class="frontnewbot"><div>&#160;</div>&#160;</div>
+			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
 		      </div> <!-- frontnewroundbox -->
 			<!-- 25th anniversary logo -->
 			<div class="frontfeaturecontent">
