@@ -33,7 +33,7 @@ if [ -z "${gpg}" -o ! -x "${gpg}" ] ; then
 	error "gpg does not seem to be installed"
 fi
 gpg() {
-	"${gpg}" \
+	LANG=C "${gpg}" \
 	    --display-charset utf-8 \
 	    --no-greeting \
 	    --no-secmem-warning \
