@@ -13,7 +13,8 @@ _BRANCH?=	RC3
 THISRELEASE?=	${_OS}-${_REVISION}-${_BRANCH}
 
 DOCS=	index.xml \
-	schedule.xml
+	schedule.xml \
+	signatures.xml
 
 DATA=	docbook.css \
 	hardware.html \
