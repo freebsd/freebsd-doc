@@ -8,7 +8,6 @@
 .endif
 
 DOCS+=		index.xml
-DOCS+=		ipv6only.xml
 DOCS+=		w6d.xml
 DOCS+=		w6l.xml
 DOCS+=		w6d-www-stats.xml
