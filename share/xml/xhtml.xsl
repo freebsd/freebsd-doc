@@ -49,7 +49,6 @@
       </head>
 
       <body>
-	&header1.googleiframe;
 	<div id="containerwrap">
 	  <div id="container">
 	    &header2;
