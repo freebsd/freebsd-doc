@@ -6,7 +6,7 @@
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Simplified Chinese Documentation Project -->
-<!-- Original revision: r51696 -->
+<!-- Original revision: r51914 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
