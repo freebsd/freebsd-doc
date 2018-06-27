@@ -9,16 +9,19 @@
 
 _OS?=		FreeBSD
 _REVISION?=	11.2
-_BRANCH?=	RC3
+_BRANCH?=	RELEASE
 THISRELEASE?=	${_OS}-${_REVISION}-${_BRANCH}
 
 DOCS=	index.xml \
 	schedule.xml \
-	signatures.xml
+	signatures.xml \
+	announce.xml
 
-DATA=	docbook.css \
+DATA=	announce.asc \
+	docbook.css \
 	errata.html \
 	hardware.html \
+	installation.html \
 	readme.html \
 	relnotes.html
 
