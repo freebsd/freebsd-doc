@@ -6,7 +6,7 @@
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Simplified Chinese Documentation Project -->
-<!-- Original Revision: r49284 -->
+<!-- Original Revision: r51328 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -54,7 +54,7 @@
 		<a href="&enbase;/events/events.html">活动页面</a> 上维护的
 		<a href="&enbase;/events/events.ics">日历</a> 和
 		<a href="&enbase;/events/rss.xml">RSS 源</a>。 在 YouTube 上的
-		<a href="//www.youtube.com/bsdconferences">BSD 会议</a>
+		<a href="https://www.youtube.com/bsdconferences">BSD 会议</a>
 		频道里有许多过去活动的视频。</p>
 
 <!-- The Latest Videos section is placed inside an invisible block, which
@@ -119,33 +119,28 @@
 
 	      <ul>
 
-		<li>上千名用户已经在 <a
-		href="http://del.icio.us">del.icio.us</a> 上给接近 30,000
-	        个不重复的网页加上了 '<a
-	        href="http://del.icio.us/tag/freebsd">freebsd</a>' 标签。</li>
-
 		<li>在 <a href="http://www.flickr.com">flickr</a> 上，
 		有上千张来自用户群组， 会议和黑客马拉松的照片被加上了 '<a
 		href="http://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
 		标签。</li>
 
-		<li>在 <a href="//www.youtube.com">YouTube</a> 上有上百段会议视频，
+		<li>在 <a href="https://www.youtube.com">YouTube</a> 上有上百段会议视频，
 		屏幕录像， 以及关于 <a
-		href="//www.youtube.com/results?search_query=freebsd&amp;search_type=&amp;aq=f">FreeBSD</a>
+		href="https://www.youtube.com/results?search_query=freebsd">FreeBSD</a>
 		的演示。 特别要提到的是， 有一个新的
-		<a href="http://www.youtube.com/bsdconferences">BSD 会议</a>
+		<a href="https://www.youtube.com/bsdconferences">BSD 会议</a>
 		频道， 其中包含了来自 FreeBSD 技术会议的各种一小时 FreeBSD 录制演讲。</li>
 
 		<li>在 <a href="http://www.facebook.com">Facebook</a> 上有一个
-		<a href="http://www.facebook.com/home.php#/group.php?gid=2204657214">FreeBSD
-		用户群组</a>， 在<a href="http://www.linkedin.com">LinkedIn</a> 上有一个
-		<a href="http://www.linkedin.com/groups?gid=47628">FreeBSD 群组</a>。</li>
+		<a href="https://www.facebook.com/groups/FreeSBD/">FreeBSD
+		用户群组</a>， 在<a href="https://www.linkedin.com">LinkedIn</a> 上有一个
+		<a href="https://www.linkedin.com/groups?gid=47628">FreeBSD 群组</a>。</li>
 
 		<li>您可以在 <a href="https://twitter.com">Twitter</a> 上关注
 		<a href="https://twitter.com/freebsd">@freebsd</a>，
 		<a href="https://twitter.com/freebsdhelp">@freebsdhelp</a>，
 		<a href="https://twitter.com/freebsdblogs">@freebsdblogs</a>， 以及
-		<a href="https://twitter.com/bsdevents">@bsdevents</a>。</li>
+		<a href="https://twitter.com/freebsdcore">@freebsdcore</a>。</li>
 	      </ul>
   </xsl:template>
 </xsl:stylesheet>
