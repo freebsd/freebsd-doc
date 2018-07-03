@@ -13,10 +13,8 @@
 DOCS=  about.xml
 DOCS+= applications.xml
 DOCS+= art.xml
-DOCS+= availability.xml
 DOCS+= docs.xml
 DOCS+= features.xml
-DOCS+= internet.xml
 DOCS+= logo.xml
 DOCS+= mailto.xml
 # DOCS+= publish.xml
