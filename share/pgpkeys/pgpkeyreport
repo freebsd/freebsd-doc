@@ -1,0 +1,196 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+# $FreeBSD$
+#
+# Generate a report showing all of the active FreeBSD developers and
+# all of the PGP keys registered, and whether those keys are still in
+# date.
+
+use File::Temp qw{tempdir};
+use POSIX qw{strftime};
+
+use constant {
+    SVNCOMMAND => '/usr/local/bin/svn',
+    SVNREPOURL => 'svn://svn.freebsd.org/',
+    REPOS      => [qw{base ports doc}],
+    SVNCONF    => 'svnadmin/conf',
+    PGPKEYPATH => 'head/share/pgpkeys',
+};
+
+$0 =~ s@.*/@@;
+
+sub svn_checkout($$$)
+{
+    my $repo = shift;
+    my $path = shift;
+    my $dest = shift;
+    my $output;
+
+    open SVN, "-|", SVNCOMMAND . " co " . SVNREPOURL . "$repo/$path $dest"
+      or die "$0: can't checkout $repo/$path -- $!\n";
+    while (<SVN>) {
+        $output .= $_;
+    }
+    close SVN;
+
+    return;
+}
+
+sub read_keys($)
+{
+    my $keyfile = shift;
+    my $pgp     = [];
+
+    open PGPKEY, "<$keyfile"
+      or die "$0: can't open $keyfile for reading -- $!";
+    while (<PGPKEY>) {
+        m@^pub\s+@
+          && do {
+            my @fields  = split /\s+/;
+            my $thiskey = {};
+
+            $thiskey->{keyid}   = $fields[1];
+            $thiskey->{created} = $fields[2];
+
+            # Remove the first three fields -- some times, that is all
+            # there are, and we don't want to read the creation date
+            # in place of the expiry date.
+
+            splice @fields, 0, 3;
+
+            if ( @fields && $fields[-1] =~ m/^([0-9-]{10})/ ) {
+                $thiskey->{expiry} = $1;
+            } else {
+                $thiskey->{expiry} = '';
+            }
+            push @{$pgp}, $thiskey;
+          };
+    }
+    close PGPKEY;
+
+    return $pgp;
+}
+
+sub scan_for_keys($$)
+{
+    my $developers = shift;
+    my $pgpkeydir  = shift;
+    my $name;
+
+    opendir( my $dh, $pgpkeydir )
+      or die "$0: couldn't open directory $pgpkeydir -- $!\n";
+    while ( my $f = readdir $dh ) {
+        next
+          unless $f =~ m/.key\Z/;
+        chomp $f;
+        ( $name = $f ) =~ s/.key//;
+
+        $developers->{$name}->{keys} = read_keys("$pgpkeydir/$f");
+    }
+    closedir $dh;
+
+    return $developers;
+}
+
+sub active_committers($$$)
+{
+    my $developers = shift;
+    my $repo       = shift;
+    my $path       = shift;
+    my $n;
+    my $r;
+
+    $repo =~ m/^(.)/;
+    $r = $1;
+
+    open ACCESS, "<$path" or die "$0: can't open access file for $repo -- $!\n";
+    while ( my $name = <ACCESS> ) {
+        next
+          if $name =~ m/^#/;
+
+        ($n) = split( /\s+/, $name );
+        chomp $n;
+
+        $developers->{$n}->{$repo} = $r;
+    }
+
+    return $developers;
+}
+
+sub is_expired($)
+{
+    my $date = shift;
+    my $year;
+    my $month;
+    my $day;
+    my $unixtime;
+    my $expired;
+
+    # Tri-state logic: we answer one of "yes", "no" or "dunno"
+    #
+    # Date is typically a string of form YYYY-MM-DD but we will accept
+    # any punctuation character as the field separator.
+
+    ( $year, $month, $day ) =
+      ( $date =~ m/^(\d{4})[[:punct:]](\d{2})[[:punct:]](\d{2})/ );
+
+    return "unknown"
+      unless $year && $month && $day;
+
+    $unixtime = strftime( "%s", 0, 0, 0, $day, $month - 1, $year - 1900 );
+
+    if ( $unixtime < $^T ) {
+        $expired = "expired";
+    } else {
+        $expired = "";
+    }
+
+    return $expired;
+}
+
+MAIN:
+{
+    my $workspace;
+    my $developers = {};
+
+    $workspace = tempdir( ".$0.XXXXXX", TMPDIR => 1, CLEANUP => 1 )
+      or die "$0: can't create temporary directory -- $!\n";
+
+    svn_checkout( 'doc', PGPKEYPATH, "$workspace/pgpkeys" );
+
+    $developers = scan_for_keys( $developers, "$workspace/pgpkeys" );
+
+    for my $repo ( @{&REPOS} ) {
+        svn_checkout( $repo, SVNCONF, "$workspace/${repo}-conf" );
+
+        $developers = active_committers( $developers, $repo,
+            "$workspace/${repo}-conf/access" );
+    }
+
+    printf "#%18s %-5s %-26s %-10s %-10s %s\n", 'username', 'bits', 'keyid',
+      'created', 'expired', 'state';
+
+    for my $d ( sort keys %{$developers} ) {
+        if ( !defined $developers->{$d}->{keys} ) {
+            printf "%19s %1s %1s %1s No PGP key\n", $d,
+              $developers->{$d}->{base}  // '-',
+              $developers->{$d}->{ports} // '-',
+              $developers->{$d}->{doc}   // '-';
+        }
+
+        for my $k ( @{ $developers->{$d}->{keys} } ) {
+            my $expired = is_expired( $k->{expiry} );
+
+            printf "%19s %1s %1s %1s %-26s %-10s %-10s %s\n", $d,
+              $developers->{$d}->{base}  // '-',
+              $developers->{$d}->{ports} // '-',
+              $developers->{$d}->{doc}   // '-',
+              $k->{keyid} // '', $k->{created} // '',
+              $k->{expiry} // '', $expired;
+        }
+    }
+
+}
