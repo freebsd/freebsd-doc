@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r45639 -->
+<!-- Original revision: r51978 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -34,9 +34,9 @@
 		      >メーリングリスト</a> の数は 100 を超えており、
 		  たくさんのウェブベースの
 		  <a href="https://forums.FreeBSD.org/">フォーラム</a> や、
-		  いくつもの <a href="&base;/community/newsgroups.html"
-		     >ニュースグループ</a> があります。
-		  世界
+		  いくつもの <a
+		    href="&enbase;/doc/ja_JP.eucJP/books/handbook/eresources-news.html">ニュースグループ</a>
+		  があります。世界
 		  <xsl:value-of
 		     select="count(document($usergroups.xml)//country)" />
 		  ヵ国に
@@ -48,7 +48,7 @@
 		  <a href="&base;/community/irc.html">IRC</a>
 		  のコミュニティも活発です。
 		  多くの開発者は、関連する &os; の情報を
-		  <a href="http://planet.freebsdish.org">ブログ</a>
+		  <a href="https://planet.freebsdish.org">ブログ</a>
 		  で紹介しています。
 		  また、開発者や活発な貢献者は、
 		  &os; の開発状況や関連プロジェクトの情報を
@@ -72,8 +72,8 @@
 		  <a href="&base;/events/rss.xml">RSS feed</a>
 		  を提供しています。
 		  過去に開催されたイベントに関する数多くのビデオが、
-		  YouTube の
-		  <a href="//www.youtube.com/bsdconferences">BSD
+		  YouTube の <a
+		href="https://www.youtube.com/bsdconferences">BSD
 		    Conferences</a> チャネルで公開されています。</p>
 
 <!-- The Latest Videos section is placed inside an invisible block, which
@@ -137,33 +137,35 @@
 	      <h2>ソーシャルネットワーク</h2>
 	      <p>&os; はさまざまなソーシャルネットワークで表現されています。</p>
 	      <ul>
-	        <li><a href="http://del.icio.us">del.icio.us</a> では、
-		何千ものユーザが、30,000 にもおよぶユニークなウェブページに '<a
-	        href="http://del.icio.us/tag/freebsd">freebsd</a>'
-		タグをつけています。</li>
-
 		<li><a href="http://www.flickr.com">flickr</a> では、
 		ユーザグループミーティング、
 		カンファレンスおよびハッカソンの数千もの写真に
 		'<a
 		href="http://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>' タグが付けられています。</li>
 
-		<li><a href="//www.youtube.com">YouTube</a> には、
+		<li><a href="https://www.youtube.com">YouTube</a> には、
 		何千もの <a
-		href="//www.youtube.com/results?search_query=freebsd&amp;search_type=&amp;aq=f">FreeBSD</a>
-		に関連したカンファレンス、スクリーンキャストおよびデモンストレーションのビデオがあります。
-		特に、新しい FreeBSD テクニカルカンファレンスの 1 時間規模のプレゼンテーションは、省略なく見ることができます。</li>
+		href="https://www.youtube.com/results?search_query=freebsd">&os;</a>
+		に関連したカンファレンス、
+		スクリーンキャストおよびデモンストレーションのビデオがあります。
+		特に、新しい
+		<a href="https://www.youtube.com/bsdconferences">BSD
+		Conferences</a> チャネルでは、
+		新しい FreeBSD テクニカルカンファレンスの
+		1 時間規模のプレゼンテーションを省略なく見ることができます。</li>
 
-		<li><a href="http://www.facebook.com">Facebook</a> には <a
-		href="http://www.facebook.com/home.php#/group.php?gid=2204657214">FreeBSD
-		Users Group</a>、<a href="http://www.linkedin.com">LinkedIn</a>
-		には <a href="http://www.linkedin.com/groups?gid=47628">FreeBSD Group</a> があります。</li>
+		<li><a href="https://www.facebook.com">Facebook</a> には <a
+		href="https://www.facebook.com/groups/FreeSBD/">FreeBSD
+		Users Group</a>,
+		<a href="https://www.linkedin.com">LinkedIn</a>	には
+		<a href="https://www.linkedin.com/groups?gid=47628">FreeBSD
+		Group</a> があります。</li>
 
 		<li><a href="https://twitter.com">Twitter</a> で
 		<a href="https://twitter.com/freebsd">@freebsd</a>,
 		<a href="https://twitter.com/freebsdhelp">@freebsdhelp</a>,
 		<a href="https://twitter.com/freebsdblogs">@freebsdblogs</a> または
-		<a href="https://twitter.com/bsdevents">@bsdevents</a>
+		<a href="https://twitter.com/freebsdcore">@freebsdcore</a>
 		をフォローしてください。</li>
 	      </ul>
   </xsl:template>
