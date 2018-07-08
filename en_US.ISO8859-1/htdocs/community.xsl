@@ -32,7 +32,7 @@
 		lists</a>, dozens of web-based <a
 		  href="https://forums.FreeBSD.org/">forums</a>, and
 		several <a
-		href="&base;/community/newsgroups.html">newsgroups</a>
+		href="&base;/doc/en_US.ISO8859-1/books/handbook/eresources-news.html">newsgroups</a>
 		available.  There are over <xsl:value-of
 		select="count(document($usergroups.xml)//entry)"
 		/><xsl:text> </xsl:text><a
