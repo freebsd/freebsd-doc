@@ -4,9 +4,10 @@
 .include "../Makefile.inc"
 .endif
 
-# The path used on build-web is 'src/share/man/man4'.
-.if make(all) && (!defined(MAN4DIR) || empty(MAN4DIR) || !exists(${MAN4DIR}))
-. warning "MAN4DIR not found.  Unable to build hardware.html"
+MAN4TMP!=	${MKTEMP} -d ${.CURDIR}/svn.XXXXXXXX
+MAN4DIR=	${MAN4TMP}
+.if exists(${MAN4DIR})
+	rm -rf ${MAN4DIR}
 .endif
 
 MAN4PAGES?=	${MAN4DIR}/*.4 ${MAN4DIR}/man4.*/*.4
@@ -19,14 +20,27 @@ MAN2HWNOTES_FLAGS=
 MAN2HWNOTES_FLAGS=	-c
 .endif
 
-DOC=			hardware
-FORMATS?=		html
+DOC?=			hardware
+FORMATS?=		html txt
 INSTALL_COMPRESSED?=	gz
 INSTALL_ONLY_COMPRESSED=
 
-hardware.parsed.xml: dev-auto.ent
-dev-auto.ent:
+CLEANDIRS+=	${.CURDIR}/svn.*
+
+.if ${.TARGET:M${DOC}.html}
+hardware.parsed.xml:	dev-auto.ent man4-rmsrc
+dev-auto.ent:	man4-src-checkout
 	${PERL} ${MAN2HWNOTES_CMD} ${MAN2HWNOTES_FLAGS} -a ${ARCHLIST} -o ${.TARGET} ${MAN4PAGES} || (rm -f ${.TARGET})
 CLEANFILES+=	dev-auto.ent
+.endif
+
+man4-src-checkout:
+	mkdir -p ${MAN4TMP}
+	${SVN} co svn://svn.freebsd.org/base/${SRCBRANCH}/share/man/man4 \
+		${MAN4TMP}
+
+man4-rmsrc:
+	@# Just in case.
+	rm -rf ${MAN4DIR} || true
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

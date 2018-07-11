@@ -15,6 +15,7 @@ FIND?=		/usr/bin/find
 GREP?=		/usr/bin/grep
 LN?=		/bin/ln
 MKDIR?=		/bin/mkdir
+MKTEMP?=	/usr/bin/mktemp
 MV?=		/bin/mv
 RM?=		/bin/rm
 ISPELL?=	ispell
