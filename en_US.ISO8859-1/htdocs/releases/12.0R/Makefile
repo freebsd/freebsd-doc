@@ -6,13 +6,11 @@
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
+.if exists(Makefile.inc)
+.include "Makefile.inc"
+.endif
 
 RELN_ROOT?=	${.CURDIR}
-
-_OS?=		FreeBSD
-_REVISION?=	12.0
-_BRANCH?=	RELEASE
-THISRELEASE?=	${_OS}-${_REVISION}-${_BRANCH}
 
 DOCS=	index.xml \
 	schedule.xml
@@ -21,8 +19,8 @@ DATA=	docbook.css
 
 SUBDIR=	errata readme relnotes
 
-.if defined(MAN4DIR) && !empty(MAN4DIR)
-SUBDIR+=	hardware
+.if exists(${SVN})
+SUBDIR+=hardware
 .endif
 
 # PGP-signed checksums
