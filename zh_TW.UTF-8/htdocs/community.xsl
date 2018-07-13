@@ -4,7 +4,7 @@
 <!ENTITY title "FreeBSD 社群">
 ]>
 
-<!-- $FreeBSD$ Original revision: r51978-->
+<!-- $FreeBSD$ Original revision: r52000 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -41,7 +41,7 @@
 		社群。許多開發者也有建立關於他們 &os; 開發工作的 <a
 		href="https://planet.freebsd.org">部落格</a>
 	      	開發者和主要貢獻者亦共同維護一個關於 &os; 開發和相關計畫資訊的 <a
-		  href="http://wiki.FreeBSD.org/">維基網站</a>。</p>
+		  href="https://wiki.FreeBSD.org/">維基網站</a>。</p>
 
 	      <p>去年有 <xsl:value-of
 	        select="count(/events/event[number(enddate/year) =
@@ -122,9 +122,9 @@
 
 	      <ul>
 
-		<li><a href="http://www.flickr.com">flickr</a> 有數千張愛用者組織、會議和黑客松的照片標記
+		<li><a href="https://www.flickr.com">flickr</a> 有數千張愛用者組織、會議和黑客松的照片標記
 		'<a
-		href="http://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
+		href="https://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
 		</li>
 
 		<li><a href="https://www.youtube.com">YouTube</a> 有數百個
