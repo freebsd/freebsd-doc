@@ -45,7 +45,7 @@
 		href="https://planet.freebsd.org">blogs</a> about
 	      	their &os; work.  Developers and key contributors
 		also maintain a <a
-		  href="http://wiki.FreeBSD.org/">wiki</a>, which
+		  href="https://wiki.FreeBSD.org/">wiki</a>, which
 		contains information about &os; development
 		and related projects.</p>
 
@@ -131,8 +131,8 @@
 	      <ul>
 		<li>There are thousands of photos from user group
 		meetings, conferences, and hackathons tagged as '<a
-		href="http://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
-		on <a href="http://www.flickr.com">flickr</a>.</li>
+		href="https://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
+		on <a href="https://www.flickr.com">flickr</a>.</li>
 
 		<li>There are hundreds of videos from conferences,
 		screencasts, and demonstrations relating to <a
