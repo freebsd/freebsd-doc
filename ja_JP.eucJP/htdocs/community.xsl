@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r51978 -->
+<!-- Original revision: r52000 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -51,8 +51,8 @@
 		  <a href="https://planet.freebsdish.org">ブログ</a>
 		  で紹介しています。
 		  また、開発者や活発な貢献者は、
-		  &os; の開発状況や関連プロジェクトの情報を
-		  <a href="http://wiki.FreeBSD.org/">wiki</a>
+		  &os; の開発状況や関連プロジェクトの情報を <a
+		  href="https://wiki.FreeBSD.org/">wiki</a>
 		  にまとめています。</p>
 
 		<p>昨年は、世界
@@ -141,7 +141,8 @@
 		ユーザグループミーティング、
 		カンファレンスおよびハッカソンの数千もの写真に
 		'<a
-		href="http://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>' タグが付けられています。</li>
+		href="https://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
+		タグが付けられています。</li>
 
 		<li><a href="https://www.youtube.com">YouTube</a> には、
 		何千もの <a
@@ -151,7 +152,7 @@
 		特に、新しい
 		<a href="https://www.youtube.com/bsdconferences">BSD
 		Conferences</a> チャネルでは、
-		新しい FreeBSD テクニカルカンファレンスの
+		FreeBSD テクニカルカンファレンスの
 		1 時間規模のプレゼンテーションを省略なく見ることができます。</li>
 
 		<li><a href="https://www.facebook.com">Facebook</a> には <a
