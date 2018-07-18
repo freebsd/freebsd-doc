@@ -10,20 +10,3 @@ DESTDIR=	${HOME}/public_html/${WEBDIR}
 .endif
 DOCBOOK_DEPS_DISABLE=	YES
 .endif
-.include "${DOC_PREFIX}/share/mk/doc.commands.mk"
-
-_OS?=		FreeBSD
-_REVMAJOR?=	12
-_REVMINOR?=	0
-_REVISION?=	${REVMAJOR}.${REVMINOR}
-_BRANCH?=	CURRENT
-THISRELEASE?=	${_OS}-${_REVISION}-${_BRANCH}
-
-HOSTNAME!=	hostname
-.if (${_BRANCH:MCURRENT*} != "" || ${_BRANCH:MALPHA*} != "")
-SRCBRANCH=	head
-.elif (${_BRANCH:MPRERELEASE} != "" || ${_BRANCH:MBETA*} != "" || ${_BRANCH:MSTABLE*} != "")
-SRCBRANCH=	stable/${_REVMAJOR}
-.elif (${_BRANCH:MRC*} != "" || ${_BRANCH:MRELEASE*} != "")
-SRCBRANCH=	releng/${_REVMAJOR}.${_REVMINOR}
-.endif
