@@ -3,6 +3,9 @@
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
+.if exists(../Makefile.hardware)
+.include "../Makefile.hardware"
+.endif
 
 MAN4TMP!=	${MKTEMP} -d ${.CURDIR}/svn.XXXXXXXX
 MAN4DIR=	${MAN4TMP}

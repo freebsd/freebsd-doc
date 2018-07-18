@@ -6,8 +6,8 @@
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
-.if exists(Makefile.inc)
-.include "Makefile.inc"
+.if exists(Makefile.hardware)
+.include "Makefile.hardware"
 .endif
 
 RELN_ROOT?=	${.CURDIR}
