@@ -6,7 +6,7 @@
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: r39146 -->
+<!-- Original revision: r43181 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -18,11 +18,11 @@
   <!-- Do not add last modified date for old news/press -->
   <xsl:variable name="date"/>
 
-  <xsl:variable name="title">&title;</xsl:variable>
-
   <xsl:variable name="year">
     <xsl:value-of select="descendant::year/name"/>
   </xsl:variable>
+
+  <xsl:variable name="title">&title;</xsl:variable>
 
   <xsl:template match="p">
     <xsl:apply-templates select="." mode="copy.html"/>
@@ -33,9 +33,23 @@
   </xsl:template>
 
   <xsl:template name="process.contentwrap">
+	<!-- Notice how entity references in SGML become variable references
+	     in the stylesheet, and that the syntax for referring to variables
+	     inside an attribute is "{$variable}".
+
+	     This is just dis-similar enough to Perl and the shell that you
+	     end up writing ${variable} all the time, and then scratch your
+	     head wondering why the stylesheet isn't working.-->
+
+	<!-- Also notice that because this is now XML and not SGML, empty
+             elements, like IMG, must have a trailing "/" just inside the
+   	     closing angle bracket, like this " ... />" -->
+	<img src="&enbase;/gifs/news.jpg" align="right" border="0" width="193"
+	     height="144" alt="FreeBSD News"/>
+ 
 	<xsl:apply-templates select="/news/descendant::month"/>
 
-	<p>Other project news:
+	<p>他のプロジェクトニュース:
 	  <a href="&enbase;/news/2009/index.html">2009</a>,
 	  <a href="&enbase;/news/2008/index.html">2008</a>,
 	  <a href="&enbase;/news/2007/index.html">2007</a>,
@@ -85,8 +99,7 @@
 	  </xsl:attribute>
 	</a>
 
-	<b>
-	  <xsl:value-of select="ancestor::year/name"/>
+	<b><xsl:value-of select="ancestor::year/name"/>
 	  <xsl:text> 年 </xsl:text>
 	  <xsl:call-template name="transtable-lookup">
 	    <xsl:with-param name="word-group" select="'number-month'" />
