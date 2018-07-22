@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2017 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 1996-2018 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -1841,7 +1841,7 @@ sub faq {
       '$FreeBSD$';
     return qq{\
 <pre>
-Copyright (c) 1996-2017 <a href="$mailtoURL">Wolfram Schneider</a>
+Copyright (c) 1996-2018 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE
