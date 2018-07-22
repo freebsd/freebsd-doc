@@ -859,51 +859,48 @@ while ( ( $key, $val ) = each %manPath ) {
 );
 
 #
-# sort by OS release number
+# sort by OS release number, highest version first
 #
 # e.g.:
 #
-# XFree86 2.1
-# XFree86 3.3
-# XFree86 3.3.6
 # XFree86 4.0
+# XFree86 3.3.6
+# XFree86 3.3
+# XFree86 2.1
 # ...
-# XFree86 10.0
-# XFree86 10.0.1
 # XFree86 11
+# XFree86 10.0.1
+# XFree86 10.0
 #
 sub sort_versions {
-    my @a = ( lc($a) =~ /(\d+|\D+)/g );
-    my @b = ( lc($b) =~ /(\d+|\D+)/g );
 
-    my $flag = 0;
-    while ( @a and @b ) {
-        my $a1 = shift @a;
-        my $b1 = shift @b;
+    # FreeBSD 11.1-RELEASE ports
+    my @a = ( lc($a) =~ m,^(\D+)([\d\.]+)(\D*)$, );
+    my @b = ( lc($b) =~ m,^(\D+)([\d\.]+)(\D*)$, );
 
-        # sort numerically if possible
-        if ( $a1 =~ /^\d+$/ && $b1 =~ /^\d+$/ ) {
-            return $a1 <=> $b1 if $a1 <=> $b1;
-            $flag++;
-        }
-
-        # sort by characters
-        else {
-
-            # minor number and characters
-            # 4.1 RELEASE <=>  4.1.1 RELEASE
-            if ( $flag && ( $a1 =~ /^\d+$/ || $b1 =~ /^\d+$/ ) ) {
-                return $a1 =~ /^\d+$/ ? 1 : -1;
-            }
-
-            # characters only
-            return $a1 cmp $b1 if $a1 cmp $b1;
-            $flag = 0;
-        }
+    if (@a and @b) {
+	return $a[0] cmp $b[0] || (-1 *  ($a[1] <=> $b[1])) || $a[2] cmp $a[2] || $a cmp $b;
     }
 
-    # longest version string wins
-    return @a <=> @b;
+    # 2.9.1 BSD
+    @a = ( lc($a) =~ m,^(\d\.+)(.*)$, );
+    @b = ( lc($b) =~ m,^(\d\.+)(.*)$, );
+    if (@a and @b) {
+	return (-1 * ( $a[0] <=> $b[0])) || $a[1] <=> $b[1] || $a cmp $b;
+    }
+
+    # rest
+    return $a cmp $b;
+}
+
+# FreeBSD manual pages first before any other manual pages
+sub freebsd_first {
+    my @list = @_;
+    my @data;
+    push @data, grep { /^FreeBSD/ } @list;
+    push @data, grep { !/^FreeBSD/ } @list;
+
+    return @data;
 }
 
 foreach ( sort { &sort_versions } keys %manPathAliases ) {
@@ -1758,7 +1755,7 @@ ETX
     print qq{</select>\n<select name="manpath">\n};
 
     local ($l) = ( $manpath ? $manpath : $manPathDefault );
-    foreach ( sort { &sort_versions } keys %manPath ) {
+    foreach ( &freebsd_first( sort { &sort_versions } keys %manPath) ) {
         $key = $_;
         print "<option"
           . ( ( $key eq $l ) ? ' selected="selected" ' : ' ' )
@@ -1821,7 +1818,7 @@ sub faq {
 
     local ( @list, @list2 );
     local ($url);
-    foreach ( sort { &sort_versions } keys %manPath ) {
+    foreach ( &freebsd_first (sort { &sort_versions } keys %manPath )) {
         $url = &encode_url($_);
         push( @list,
                 qq{<li><a href="$BASE?apropos=2&amp;manpath=$url">[download]}
@@ -1829,7 +1826,7 @@ sub faq {
               . qq{</li>\n} );
     }
 
-    foreach ( sort { &sort_versions } keys %manPathAliases ) {
+    foreach ( &freebsd_first (sort { &sort_versions } keys %manPathAliases )) {
         push( @list2,
                 qq[<li>"$_" -> "$manPathAliases{$_}" -> ]
               . qq{<a href="$BASE?manpath=}
