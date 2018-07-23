@@ -6,7 +6,7 @@
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Simplified Chinese Documentation Project -->
-<!-- Original Revision: r51328 -->
+<!-- Original Revision: r52000 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -31,7 +31,8 @@
   <xsl:template name="process.contentwrap">
 	      <p>有超过一百个 <a href="&enbase;/community/mailinglists.html">邮件列表</a>，
 		许多网页 <a href="https://forums.FreeBSD.org/">论坛</a>，
-		以及几个 <a href="&enbase;/community/newsgroups.html">新闻组</a>
+		以及几个 <a
+    href="&enbase;/doc/en_US.ISO8859-1/books/handbook/eresources-news.html">新闻组</a>
 		可供您查看。 在世界上 <xsl:value-of
 		select="count(document($usergroups.xml)//country)" />
 		个不同的国家有超过 <xsl:value-of
@@ -40,7 +41,7 @@
 		和一个活跃的 <a href="&enbase;/community/irc.html">IRC</a> 社区。
 		很多开发者维护了各种 <a href="https://planet.freebsd.org">博客</a>
 		来展示他们为 &os; 所做的工作。 开发者和关键的贡献者也维护了一个 <a
-		href="http://wiki.FreeBSD.org/">wiki</a>， 其中包括了 &os;
+		href="https://wiki.FreeBSD.org/">wiki</a>， 其中包括了 &os;
 		开发进度和相关项目的信息。</p>
 
 	      <p>过去的一年， 在世界上 <xsl:value-of
@@ -119,9 +120,9 @@
 
 	      <ul>
 
-		<li>在 <a href="http://www.flickr.com">flickr</a> 上，
+		<li>在 <a href="https://www.flickr.com">flickr</a> 上，
 		有上千张来自用户群组， 会议和黑客马拉松的照片被加上了 '<a
-		href="http://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
+		href="https://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
 		标签。</li>
 
 		<li>在 <a href="https://www.youtube.com">YouTube</a> 上有上百段会议视频，
@@ -131,7 +132,7 @@
 		<a href="https://www.youtube.com/bsdconferences">BSD 会议</a>
 		频道， 其中包含了来自 FreeBSD 技术会议的各种一小时 FreeBSD 录制演讲。</li>
 
-		<li>在 <a href="http://www.facebook.com">Facebook</a> 上有一个
+		<li>在 <a href="https://www.facebook.com">Facebook</a> 上有一个
 		<a href="https://www.facebook.com/groups/FreeSBD/">FreeBSD
 		用户群组</a>， 在<a href="https://www.linkedin.com">LinkedIn</a> 上有一个
 		<a href="https://www.linkedin.com/groups?gid=47628">FreeBSD 群组</a>。</li>
