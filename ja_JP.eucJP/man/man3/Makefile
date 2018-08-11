@@ -5,7 +5,6 @@ MAN3 =	_secure_path.3\
 	abs.3\
 	acos.3\
 	acosh.3\
-	addr2ascii.3\
 	alarm.3\
 	alloca.3\
 	arc4random.3\
@@ -19,7 +18,6 @@ MAN3 =	_secure_path.3\
 	atof.3\
 	atoi.3\
 	atol.3\
-	auth.3\
 	bcmp.3\
 	bcopy.3\
 	bindresvport.3\
@@ -36,9 +34,6 @@ MAN3 =	_secure_path.3\
 	catgets.3\
 	catopen.3\
 	ceil.3\
-	cfree.3\
-	cftime.3\
-	cipher.3\
 	clock.3\
 	com_err.3\
 	confstr.3\
@@ -109,7 +104,6 @@ MAN3 =	_secure_path.3\
 	fseek.3\
 	ftime.3\
 	ftok.3\
-	ftpio.3\
 	fts.3\
 	funopen.3\
 	getbootfile.3\
@@ -130,12 +124,10 @@ MAN3 =	_secure_path.3\
 	getmntinfo.3\
 	getnetent.3\
 	getnetgrent.3\
-	getobjformat.3\
 	getopt.3\
 	getpagesize.3\
 	getpass.3\
 	getprotoent.3\
-	getpw.3\
 	getpwent.3\
 	getrpcent.3\
 	getrpcport.3\
@@ -144,7 +136,6 @@ MAN3 =	_secure_path.3\
 	getttyent.3\
 	getusershell.3\
 	getvfsbyname.3\
-	getvfsent.3\
 	glob.3\
 	hash.3\
 	hypot.3\
@@ -155,7 +146,6 @@ MAN3 =	_secure_path.3\
 	initgroups.3\
 	insque.3\
 	intro.3\
-	ipx.3\
 	isalnum.3\
 	isalpha.3\
 	isascii.3\
@@ -171,10 +161,8 @@ MAN3 =	_secure_path.3\
 	isupper.3\
 	isxdigit.3\
 	j0.3\
-	keycap.3\
 	kvm.3\
 	kvm_geterr.3\
-	kvm_getfiles.3\
 	kvm_getloadavg.3\
 	kvm_getprocs.3\
 	kvm_nlist.3\
@@ -187,25 +175,18 @@ MAN3 =	_secure_path.3\
 	libalias.3\
 	libdisk.3\
 	libradius.3\
-	libstand.3\
 	libtacplus.3\
 	link_addr.3\
 	lockf.3\
-	login.3\
 	login_auth.3\
 	login_cap.3\
 	login_class.3\
 	login_ok.3\
 	login_times.3\
 	login_tty.3\
-	logout.3\
-	logwtmp.3\
 	lsearch.3\
 	malloc.3\
 	math.3\
-	mbrune.3\
-	md2.3\
-	md4.3\
 	md5.3\
 	memccpy.3\
 	memchr.3\
@@ -218,10 +199,6 @@ MAN3 =	_secure_path.3\
 	modf.3\
 	moncontrol.3\
 	mpool.3\
-	msgctl.3\
-	msgget.3\
-	msgrcv.3\
-	msgsnd.3\
 	multibyte.3\
 	ncurses.3\
 	nice.3\
@@ -286,11 +263,9 @@ MAN3 =	_secure_path.3\
 	random.3\
 	rcmd.3\
 	re_comp.3\
-	readline.3\
 	realpath.3\
 	recno.3\
 	regex.3\
-	regexp.3\
 	remove.3\
 	resolver.3\
 	rexec.3\
@@ -299,7 +274,6 @@ MAN3 =	_secure_path.3\
 	rpc.3\
 	rpc_secure.3\
 	rtime.3\
-	rune.3\
 	scandir.3\
 	scanf.3\
 	setbuf.3\
@@ -343,7 +317,6 @@ MAN3 =	_secure_path.3\
 	strtol.3\
 	strtoul.3\
 	strxfrm.3\
-	stty.3\
 	swab.3\
 	sysconf.3\
 	sysctl.3\
@@ -438,7 +411,6 @@ MLINKS+= cam_cdbparse.3 csio_decode_visit.3
 MLINKS+= cam_cdbparse.3 csio_encode.3
 MLINKS+= cam_cdbparse.3 csio_encode_visit.3
 MLINKS+= ceil.3 ceilf.3
-MLINKS+= cftime.3 ascftime.3
 MLINKS+= cipher.3 encrypt.3
 MLINKS+= cipher.3 setkey.3
 MLINKS+= cipher.3 des_cipher.3
@@ -839,8 +811,6 @@ MLINKS+= inet.3 inet_ntoa.3
 MLINKS+= inet.3 network.3
 MLINKS+= inet.3 ntoa.3
 MLINKS+= insque.3 remque.3
-MLINKS+= ipx.3 ipx_addr.3
-MLINKS+= ipx.3 ipx_ntoa.3
 MLINKS+= isinf.3 isnan.3
 MLINKS+= j0.3 j0f.3
 MLINKS+= j0.3 j1.3

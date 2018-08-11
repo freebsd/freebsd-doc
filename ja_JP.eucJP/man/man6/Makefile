@@ -1,7 +1,6 @@
 # $FreeBSD$
 
 MAN6 =	banner.6\
-	bcd.6\
 	caesar.6\
 	factor.6\
 	fortune.6\
