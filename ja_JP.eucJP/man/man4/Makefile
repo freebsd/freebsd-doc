@@ -28,22 +28,10 @@ MAN4=	adv.4\
 	drum.4\
 	dummynet.4\
 	ed.4\
-	en.4\
-	euc.4\
 	fd.4\
 	fdc.4\
-	fpa.4\
 	fxp.4\
 	gsc.4\
-	i4b.4\
-	i4bctl.4\
-	i4bipr.4\
-	i4bisppp.4\
-	i4bq921.4\
-	i4bq931.4\
-	i4brbch.4\
-	i4btel.4\
-	i4btrc.4\
 	icmp.4\
 	ifmib.4\
 	iic.4\
@@ -70,7 +58,6 @@ MAN4=	adv.4\
 	mouse.4\
 	mtio.4\
 	mx.4\
-	natm.4\
 	ncr.4\
 	netintro.4\
 	null.4\
@@ -78,13 +65,11 @@ MAN4=	adv.4\
 	opie.4\
 	pass.4\
 	pcm.4\
-	pcvt.4\
 	plip.4\
 	pn.4\
 	ppbus.4\
 	ppc.4\
 	ppi.4\
-	ppp.4\
 	psm.4\
 	pt.4\
 	pty.4\
@@ -96,23 +81,18 @@ MAN4=	adv.4\
 	sb.4\
 	screen.4\
 	scsi.4\
-	sd.4\
-	si.4\
 	sio.4\
-	sl.4\
 	smb.4\
 	smbus.4\
 	smp.4\
 	snp.4\
 	splash.4\
 	ssc.4\
-	st.4\
 	stl.4\
 	su.4\
 	sysmouse.4\
 	tcp.4\
 	tl.4\
-	ttcp.4\
 	tty.4\
 	tun.4\
 	tw.4\
@@ -121,15 +101,12 @@ MAN4=	adv.4\
 	uk.4\
 	unix.4\
 	update.4\
-	utf2.4\
 	vga.4\
-	vinum.4\
 	vn.4\
 	vpo.4\
 	vr.4\
 	wb.4\
 	wfd.4\
-	worm.4\
 	wt.4\
 	xl.4\
 	yp.4\
