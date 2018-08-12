@@ -37,6 +37,8 @@ DOC_PREFIX?=   ${.CURDIR}
 
 .if exists(/usr/bin/svnlite)
 SVN?=		/usr/bin/svnlite
+.elif exists(/usr/bin/svn)
+SVN?=		/usr/bin/svn
 .else
 SVN?=		/usr/local/bin/svn
 .endif
