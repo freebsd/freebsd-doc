@@ -41,8 +41,9 @@
 		select="count(document($usergroups.xml)//country)" />
 		unique countries around the world.  There is also an
 		active <a href="&base;/community/irc.html">IRC</a>
-		community. 
-	      	Developers and key contributors
+		community.  Many developers also maintain <a
+		href="https://planet.freebsd.org">blogs</a> about
+	      	their &os; work.  Developers and key contributors
 		also maintain a <a
 		  href="https://wiki.FreeBSD.org/">wiki</a>, which
 		contains information about &os; development
