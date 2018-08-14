@@ -65,7 +65,7 @@ fi
 if [ -z "${me}" ] ; then
 	error "Unable to determine user name."
 fi
-if ! expr "${me}" : '^[a-z][0-9a-z-]*$' >/dev/null ; then
+if ! expr "${me}" : '^[0-9a-z][0-9a-z-]*$' >/dev/null ; then
 	error "${me} does not seem like a valid user name."
 fi
 
