@@ -1,0 +1,145 @@
+--- sys/amd64/amd64/pmap.c.orig
++++ sys/amd64/amd64/pmap.c
+@@ -1215,6 +1215,9 @@
+ 	vm_size_t s;
+ 	int error, i, pv_npg, ret, skz63;
+ 
++	/* L1TF, reserve page @0 unconditionally */
++	vm_page_blacklist_add(0, bootverbose);
++
+ 	/* Detect bare-metal Skylake Server and Skylake-X. */
+ 	if (vm_guest == VM_GUEST_NO && cpu_vendor_id == CPU_VENDOR_INTEL &&
+ 	    CPUID_TO_FAMILY(cpu_id) == 0x6 && CPUID_TO_MODEL(cpu_id) == 0x55) {
+--- sys/amd64/vmm/intel/vmx.c.orig
++++ sys/amd64/vmm/intel/vmx.c
+@@ -185,6 +185,12 @@
+ SYSCTL_UINT(_hw_vmm_vmx, OID_AUTO, vpid_alloc_failed, CTLFLAG_RD,
+ 	    &vpid_alloc_failed, 0, NULL);
+ 
++static int guest_l1d_flush;
++SYSCTL_INT(_hw_vmm_vmx, OID_AUTO, l1d_flush, CTLFLAG_RD,
++    &guest_l1d_flush, 0, NULL);
++
++uint64_t vmx_msr_flush_cmd;
++
+ /*
+  * Use the last page below 4GB as the APIC access address. This address is
+  * occupied by the boot firmware so it is guaranteed that it will not conflict
+@@ -720,6 +726,12 @@
+ 		return (error);
+ 	}
+ 
++	guest_l1d_flush = (cpu_ia32_arch_caps & IA32_ARCH_CAP_RDCL_NO) == 0;
++	TUNABLE_INT_FETCH("hw.vmm.l1d_flush", &guest_l1d_flush);
++	if (guest_l1d_flush &&
++	    (cpu_stdext_feature3 & CPUID_STDEXT3_L1D_FLUSH) != 0)
++		vmx_msr_flush_cmd = IA32_FLUSH_CMD_L1D;
++
+ 	/*
+ 	 * Stash the cr0 and cr4 bits that must be fixed to 0 or 1
+ 	 */
+--- sys/amd64/vmm/intel/vmx_genassym.c.orig
++++ sys/amd64/vmm/intel/vmx_genassym.c
+@@ -36,6 +36,7 @@
+ 
+ #include <vm/vm.h>
+ #include <vm/pmap.h>
++#include <vm/vm_param.h>
+ 
+ #include <machine/vmm.h>
+ #include "vmx_cpufunc.h"
+@@ -86,3 +87,6 @@
+ 
+ ASSYM(KERNEL_SS, GSEL(GDATA_SEL, SEL_KPL));
+ ASSYM(KERNEL_CS, GSEL(GCODE_SEL, SEL_KPL));
++
++ASSYM(PAGE_SIZE, PAGE_SIZE);
++ASSYM(KERNBASE, KERNBASE);
+--- sys/amd64/vmm/intel/vmx_support.S.orig
++++ sys/amd64/vmm/intel/vmx_support.S
+@@ -28,6 +28,7 @@
+  */
+ 
+ #include <machine/asmacros.h>
++#include <machine/specialreg.h>
+ 
+ #include "vmx_assym.h"
+ 
+@@ -173,9 +174,47 @@
+ 	jbe	invept_error		/* Check invept instruction error */
+ 
+ guest_restore:
+-	cmpl	$0, %edx
+-	je	do_launch
+ 
++	/*
++	 * Flush L1D cache if requested.  Use IA32_FLUSH_CMD MSR if available,
++	 * otherwise load enough of the data from the zero_region to flush
++	 * existing L1D content.
++	 */
++#define	L1D_FLUSH_SIZE	(64 * 1024)
++	movl	%edx, %r8d
++	cmpb	$0, guest_l1d_flush(%rip)
++	je	after_l1d
++	movq	vmx_msr_flush_cmd(%rip), %rax
++	testq	%rax, %rax
++	jz	1f
++	movq	%rax, %rdx
++	shrq	$32, %rdx
++	movl	$MSR_IA32_FLUSH_CMD, %ecx
++	wrmsr
++	jmp	after_l1d
++1:	movq	$KERNBASE, %r9
++	movq	$-L1D_FLUSH_SIZE, %rcx
++	/*
++	 * pass 1: Preload TLB.
++	 * Kernel text is mapped using superpages,  TLB preload is
++	 * done for the benefit of older CPUs which split 2M page
++	 * into 4k TLB entries.
++	 */
++2:	movb	L1D_FLUSH_SIZE(%r9, %rcx), %al
++	addq	$PAGE_SIZE, %rcx
++	jne	2b
++	xorl	%eax, %eax
++	cpuid
++	movq	$-L1D_FLUSH_SIZE, %rcx
++	/* pass 2: Read each cache line */
++3:	movb	L1D_FLUSH_SIZE(%r9, %rcx), %al
++	addq	$64, %rcx
++	jne	3b
++	lfence
++#undef	L1D_FLUSH_SIZE
++after_l1d:
++	cmpl	$0, %r8d
++	je	do_launch
+ 	VMX_GUEST_RESTORE
+ 	vmresume
+ 	/*
+--- sys/x86/include/specialreg.h.orig
++++ sys/x86/include/specialreg.h
+@@ -387,6 +387,7 @@
+  */
+ #define	CPUID_STDEXT3_IBPB	0x04000000
+ #define	CPUID_STDEXT3_STIBP	0x08000000
++#define	CPUID_STDEXT3_L1D_FLUSH	0x10000000
+ #define	CPUID_STDEXT3_ARCH_CAP	0x20000000
+ #define	CPUID_STDEXT3_SSBD	0x80000000
+ 
+@@ -438,6 +439,7 @@
+ #define	MSR_IA32_EXT_CONFIG	0x0ee	/* Undocumented. Core Solo/Duo only */
+ #define	MSR_MTRRcap		0x0fe
+ #define	MSR_IA32_ARCH_CAP	0x10a
++#define	MSR_IA32_FLUSH_CMD	0x10b
+ #define	MSR_BBL_CR_ADDR		0x116
+ #define	MSR_BBL_CR_DECC		0x118
+ #define	MSR_BBL_CR_CTL		0x119
+@@ -592,6 +594,9 @@
+ /* MSR IA32_PRED_CMD */
+ #define	IA32_PRED_CMD_IBPB_BARRIER	0x0000000000000001ULL
+ 
++/* MSR IA32_FLUSH_CMD */
++#define	IA32_FLUSH_CMD_L1D	0x00000001
++
+ /*
+  * PAT modes.
+  */
