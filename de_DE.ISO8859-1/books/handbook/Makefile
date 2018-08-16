@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 # $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.67 2011/12/31 12:27:25 bcr Exp $
-# basiert auf: r47275
+# basiert auf: r51744
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -202,6 +202,7 @@ SRCS+= preface/preface.xml
 SRCS+= printing/chapter.xml
 SRCS+= security/chapter.xml
 SRCS+= serialcomms/chapter.xml
+SRCS+= usb-device-mode/chapter.xml
 SRCS+= virtualization/chapter.xml
 SRCS+= x11/chapter.xml
 
