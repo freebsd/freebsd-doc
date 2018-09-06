@@ -1,13 +1,12 @@
 #
 # The FreeBSD Documentation Project
 # The FreeBSD Brazilian Portuguese Documentation Project
-# 
+#
 # $FreeBSD$
 #
-# Original revision: r38826
-#
 
-MAINTAINER=doc@FreeBSD.org
+MAINTAINER=ebrandi@FreeBSD.org
+
 
 DOC?= book
 
@@ -16,25 +15,29 @@ FORMATS?= html-split html
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-# 
+#
 # SRCS lists the individual XML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
 
 # XML content
-SRCS=  book.xml 
-SRCS+= overview/chapter.xml 
-SRCS+= psgml-mode/chapter.xml 
-SRCS+= see-also/chapter.xml 
-SRCS+= sgml-markup/chapter.xml 
-SRCS+= sgml-primer/chapter.xml 
-SRCS+= stylesheets/chapter.xml 
+SRCS=  book.xml
+SRCS+= overview/chapter.xml
+SRCS+= tools/chapter.xml
+SRCS+= working-copy/chapter.xml
 SRCS+= structure/chapter.xml
 SRCS+= doc-build/chapter.xml
-SRCS+= the-website/chapter.xml 
-SRCS+= tools/chapter.xml 
+SRCS+= the-website/chapter.xml
+SRCS+= xml-primer/chapter.xml
+SRCS+= xhtml-markup/chapter.xml
+SRCS+= docbook-markup/chapter.xml
+SRCS+= stylesheets/chapter.xml
 SRCS+= translations/chapter.xml
-SRCS+= writing-style/chapter.xml 
+SRCS+= po-translations/chapter.xml
+SRCS+= manpages/chapter.xml
+SRCS+= writing-style/chapter.xml
+SRCS+= editor-config/chapter.xml
+SRCS+= see-also/chapter.xml
 
 SRCS+= examples/appendix.xml
 
@@ -44,11 +47,15 @@ IMAGES_LIB+=	callouts/2.png
 IMAGES_LIB+=	callouts/3.png
 IMAGES_LIB+=	callouts/4.png
 IMAGES_LIB+=	callouts/5.png
+IMAGES_LIB+=	callouts/6.png
+IMAGES_LIB+=	callouts/7.png
+IMAGES_LIB+=	callouts/8.png
+IMAGES_LIB+=	callouts/9.png
 
 # Entities
-SRCS+= chapters.ent 
+SRCS+= chapters.ent
 
 URL_RELPREFIX?=	../../../..
-DOC_PREFIX?= ${.CURDIR}/../../..
+DOC_PREFIX?=	${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
