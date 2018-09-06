@@ -1,0 +1,562 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V5.0-Based Extension//EN" "http://www.FreeBSD.org/XML/share/xml/freebsd50.dtd">
+<article xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:its="http://www.w3.org/2005/11/its" version="5.0" xml:lang="pt_BR">
+  <info>
+    <title>Autenticação LDAP</title>
+
+    <authorgroup>
+      <author><personname> <firstname>Toby</firstname> <surname>Burress</surname> </personname> <affiliation> <address>
+	    <email>kurin@causa-sui.net</email>
+	  </address> </affiliation></author>
+    </authorgroup>
+
+    <copyright><year>2007</year> <year>2008</year> <holder>Projeto de Documentação do FreeBSD</holder></copyright>
+
+    <legalnotice xml:id="trademarks" role="trademarks">
+      <para>FreeBSD is a registered trademark of the FreeBSD Foundation.</para>
+      <para>Many of the designations used by manufacturers and sellers to distinguish their products are claimed as trademarks. Where those designations appear in this document, and the FreeBSD Project was aware of the trademark claim, the designations have been followed by the <quote>™</quote> or the <quote>®</quote> symbol.</para>
+    </legalnotice>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <releaseinfo>$FreeBSD$</releaseinfo>
+
+    <abstract>
+      <para>Este documento pretende ser um guia para a configuração de um servidor LDAP (principalmente um servidor <application>OpenLDAP</application>) para autenticação no FreeBSD. Isso é útil para situações em que muitos servidores precisam das mesmas contas de usuário, por exemplo, como substituto do <application>NIS</application>.</para>
+    </abstract>
+  </info>
+
+  <sect1 xml:id="preface">
+    <title>Prefácio</title>
+
+    <para>Este documento destina-se a fornecer ao leitor uma compreensão suficiente do LDAP para configurar um servidor LDAP. Este documento tentará fornecer uma explicação de <package>net/nss_ldap</package> e <package>security/pam_ldap</package> para uso com serviços de máquinas cliente para uso com o servidor LDAP.</para>
+
+    <para>Quando terminar, o leitor deve ser capaz de configurar e implantar um servidor FreeBSD que possa hospedar um diretório LDAP e configurar e implantar um servidor FreeBSD que possa autenticar em um diretório LDAP.</para>
+
+    <para>Este artigo não pretende ser um relato exaustivo da segurança, robustez ou considerações sobre práticas recomendadas para configurar o LDAP ou os outros serviços discutidos aqui. Embora o autor tenha o cuidado de fazer tudo corretamente, ele não aborda problemas de segurança além do escopo geral. Este artigo deve ser considerado para estabelecer as bases teóricas somente, e qualquer implementação real deve ser acompanhada por uma análise cuidadosa dos requisitos.</para>
+  </sect1>
+
+  <sect1 xml:id="ldap">
+    <title>Configurando o LDAP</title>
+
+    <para>LDAP significa <quote>Lightweight Directory Access Protocol</quote> e é um subconjunto do X.500 Directory Access Protocol. Suas especificações mais recentes estão na <link xlink:href="http://www.ietf.org/rfc/rfc4510.txt">RFC4510</link> e documentos amigaveis. Essencialmente, é um banco de dados que espera ser lido com mais frequência do que é escrito.</para>
+
+    <para>O servidor LDAP <link xlink:href="http://www.openldap.org/">OpenLDAP</link> será usado nos exemplos deste documento; embora os princípios aqui devam ser geralmente aplicáveis ​​a muitos servidores diferentes, a maior parte da administração concreta é especificamente para <application>OpenLDAP</application>. Existem várias versões de servidor nos ports, por exemplo <package>net/openldap24-server</package>. Os servidores clientes precisarão das bibliotecas <package>net/openldap24-client</package> correspondentes.</para>
+
+    <para>Existem (basicamente) duas áreas do serviço LDAP que precisam de configuração. A primeira é a configuração de um servidor para receber as conexões corretamente, e o segundo é adicionar entradas ao diretório do servidor para que as ferramentas do FreeBSD saibam como interagir com ele.</para>
+
+    <sect2 xml:id="ldap-connect">
+      <title>Configurando o servidor para conexões</title>
+
+      <note>
+	<para>Esta seção é específica do <application>OpenLDAP</application>. Se você estiver usando outro servidor, precisará consultar a documentação desse servidor.</para>
+      </note>
+
+      <sect3 xml:id="ldap-connect-install">
+	<title>Instalando o <application>OpenLDAP</application></title>
+
+	<para>Primeiro, instale o <application>OpenLDAP</application>:</para>
+
+	<example xml:id="oldap-install">
+	  <title>Instalando o <application>OpenLDAP</application></title>
+
+	  <screen><prompt>#</prompt> <userinput>cd /usr/ports/net/openldap24-server</userinput>
+<prompt>#</prompt> make install clean</screen>
+	</example>
+
+	<para>Isso instala os binários <command>slapd</command> e <command>slurpd</command>, juntamente com as bibliotecas <application>OpenLDAP</application> requeridas.</para>
+      </sect3>
+
+      <sect3 xml:id="ldap-connect-config">
+	<title>Configurando o <application>OpenLDAP</application></title>
+
+	<para>Em seguida, devemos configurar o <application>OpenLDAP</application>.</para>
+
+	<para>Você desejará exigir criptografia em suas conexões com o servidor LDAP; caso contrário, as senhas de seus usuários serão transferidas em texto simples, o que é considerado inseguro. As ferramentas que usaremos suportam dois tipos muito semelhantes de criptografia, SSL e TLS.</para>
+
+	<para>TLS significa <quote>Segurança da Camada de Transporte</quote>. Serviços que empregam TLS tendem a se conectar nas <emphasis>mesmas</emphasis> portas que os mesmos serviços sem TLS; assim, um servidor SMTP que suporte o TLS escutará as conexões na porta 25 e um servidor LDAP escutará no 389.</para>
+
+	<para>SSL significa <quote>Secure Sockets Layer</quote>, e serviços que implementam SSL <emphasis>não</emphasis> escutam nas mesmas portas que seus equivalentes não-SSL. Assim, o SMTPS atende na porta 465 (não 25), HTTPS escuta na 443 e LDAPS na 636.</para>
+
+	<para>A razão pela qual o SSL usa uma porta diferente do TLS é porque uma conexão TLS começa como texto simples e alterna para o tráfego criptografado após a diretiva <literal>STARTTLS</literal>. As conexões SSL são criptografadas desde o início. Além disso, não há diferenças substanciais entre os dois.</para>
+
+	<note>
+	  <para>Ajustaremos o <application>OpenLDAP</application> para usar o TLS, já que o SSL é considerado obsoleto.</para>
+	</note>
+
+	<para>Uma vez que o <application>OpenLDAP</application> esteja instalado via ports, os seguintes parâmetros de configuração em <filename>/usr/local/etc/openldap/slapd.conf</filename> irão ativar o TLS:</para>
+
+	<programlisting>security ssf=128
+
+TLSCertificateFile /caminho/para/seu/cert.crt
+TLSCertificateKeyFile /caminho/para/sua/cert.key
+TLSCACertificateFile /caminho/para/seu/cacert.crt</programlisting>
+
+
+	<para>Aqui, <literal>ssf=128</literal> diz ao <application>OpenLDAP</application> para exigir criptografia de 128 bits para todas as conexões, tanto de pesquisa quanto de atualização. Esse parâmetro pode ser configurado com base nas necessidades de segurança do seu site, mas raramente é necessário enfraquecê-la, pois a maioria das bibliotecas de clientes LDAP oferece suporte à criptografia forte.</para>
+
+	<para>Os arquivos <filename>cert.crt</filename>, <filename>cert.key</filename> e <filename>cacert.crt</filename> são necessários para que os clientes autentiquem <emphasis>você</emphasis> como o servidor LDAP válido. Se você simplesmente quiser um servidor que seja executado, poderá criar um certificado autoassinado com o OpenSSL:</para>
+
+	<example xml:id="genrsa">
+	  <title>Gerando uma chave RSA</title>
+
+	  <screen><prompt>%</prompt> <userinput>openssl genrsa -out cert.key 1024</userinput>
+Generating RSA private key, 1024 bit long modulus
+....................++++++
+...++++++
+e is 65537 (0x10001)
+<prompt>%</prompt> <userinput>openssl req -new -key cert.key -out cert.csr</userinput></screen>
+	</example>
+
+	<para>Neste ponto, você deve ser solicitado para digitar alguns valores. Você pode inserir os valores que quiser; no entanto, é importante que o valor <quote>Common Name</quote> seja o nome de domínio totalmente qualificado do servidor <application>OpenLDAP</application>. No nosso caso, e os exemplos aqui, o servidor é <replaceable>server.example.org</replaceable>. Definir incorretamente esse valor fará com que os clientes falhem ao fazer conexões. Isso pode causar uma grande frustração, portanto, certifique-se de seguir atentamente estas etapas.</para>
+
+	<para>Por fim, a requisição de assinatura de certificado precisa ser assinada:</para>
+
+	<example xml:id="self-sign">
+	  <title>Auto-assinando o certificado</title>
+
+	  <screen><prompt>%</prompt> <userinput>openssl x509 -req -in cert.csr -days 365 -signkey cert.key -out cert.crt</userinput>
+Signature ok
+subject=/C=AU/ST=Some-State/O=Internet Widgits Pty Ltd
+Getting Private key</screen>
+	</example>
+
+	<para>Isso criará um certificado auto-assinado que pode ser usado para as diretivas em <filename>slapd.conf</filename>, onde <filename>cert.crt</filename> e <filename>cacert.crt</filename> são o mesmo arquivo. Se você for usar muitos servidores <application>OpenLDAP</application> (para replicação via <literal>slurpd</literal>), você vai querer ver <xref linkend="ssl-ca"/> para gerar uma chave CA e usá-la para assinar certificados de servidor individuais.</para>
+
+	<para>Feito isso, coloque o seguinte em <filename>/etc/rc.conf</filename>:</para>
+
+	<programlisting>slapd_enable="YES"</programlisting>
+
+	<para>Em seguida, execute <userinput>/usr/local/etc/rc.d/slapd start</userinput>. Isso deve iniciar o <application>OpenLDAP</application>. Confirme que está escutando em 389 com</para>
+
+	<screen><prompt>%</prompt> <userinput>sockstat -4 -p 389</userinput>
+ldap     slapd      3261  7  tcp4   *:389                 *:*</screen>
+      </sect3>
+
+      <sect3 xml:id="ldap-connect-client">
+	<title>Configurando o Cliente</title>
+
+	<para>Instale o port <package>net/openldap24-client</package> para as bibliotecas do <application>OpenLDAP</application>. As máquinas cliente sempre terão bibliotecas <application>OpenLDAP</application>, já que é todo o suporte a <package>security/pam_ldap</package> e <package>net/nss_ldap</package>, pelo menos por enquanto.</para>
+
+	<para>O arquivo de configuração para as bibliotecas <application>OpenLDAP</application> é <filename>/usr/local/etc/openldap/ldap.conf</filename>. Edite este arquivo para conter os seguintes valores:</para>
+
+	<programlisting>base dc=example,dc=org
+uri ldap://server.example.org/
+ssl start_tls
+tls_cacert /path/to/your/cacert.crt</programlisting>
+
+	<note>
+	  <para>É importante que seus clientes tenham acesso ao <filename>cacert.crt</filename>, caso contrário, eles não poderão se conectar.</para>
+	</note>
+
+	<note>
+	  <para>Existem dois arquivos chamados <filename>ldap.conf</filename>. O primeiro é este arquivo, que é para as bibliotecas <application>OpenLDAP</application> e define como falar com o servidor. O segundo é <filename>/usr/local/etc/ldap.conf</filename> e é para <application>pam_ldap</application>.</para>
+	</note>
+
+	<para>Neste ponto, você deve conseguir executar <userinput>ldapsearch -Z</userinput> na máquina cliente; <option>-Z</option> significa <quote>usar o TLS</quote>. Se você encontrar um erro, então algo está configurado errado; muito provavelmente são seus certificados. Use os comandos  <command>s_client</command> e <command>s_server</command> do <citerefentry><refentrytitle>openssl</refentrytitle><manvolnum>1</manvolnum></citerefentry> para assegurar que você os tenha configurado e assinado corretamente.</para>
+      </sect3>
+    </sect2>
+
+    <sect2 xml:id="ldap-database">
+      <title>Entradas no banco de dados</title>
+
+      <para>A autenticação em um diretório LDAP geralmente é realizada pela tentativa de vincular ao diretório como o usuário de conexão. Isso é feito estabelecendo um vinculo <quote>simples</quote> no diretório com o nome de usuário fornecido. Se houver uma entrada com o <literal>uid</literal> igual ao nome do usuário e o atributo <literal>userPassword</literal> da entrada corresponder à senha fornecida, o vinculo será bem-sucedido.</para>
+
+      <para>A primeira coisa que temos que fazer é descobrir onde no diretório os nossos usuários irão estar.</para>
+
+      <para>A entrada de base para nosso banco de dados é <literal>dc=example,dc=org</literal>. O local padrão para usuários que a maioria dos clientes parece esperar é algo como <literal>ou=people, <replaceable>base</replaceable> </literal>, então é isso que será usado aqui. No entanto, tenha em mente que isso é configurável.</para>
+
+      <para>Assim, a entrada ldif para a unidade organizacional <literal>people</literal> será semelhante a:</para>
+
+      <programlisting>dn: ou=people,dc=example,dc=org
+objectClass: top
+objectClass: organizationalUnit
+ou: people</programlisting>
+
+      <para>Todos os usuários serão criados como subentradas dessa unidade organizacional.</para>
+
+      <para>Alguma consideração pode ser dada à classe de objeto a que seus usuários pertencerão. A maioria das ferramentas, por padrão, usará <literal>people</literal>, o que é bom se você quiser simplesmente fornecer entradas para autenticar. No entanto, se você for armazenar informações do usuário no banco de dados LDAP, provavelmente usará <literal>inetOrgPerson</literal>, que possui muitos atributos úteis. Em ambos os casos, os esquemas relevantes precisam ser carregados em <filename>slapd.conf</filename>.</para>
+
+      <para>Para este exemplo, usaremos a classe de objeto <literal>person</literal>. Se você estiver usando <literal>inetOrgPerson</literal>, as etapas são basicamente idênticas, exceto que o atributo <literal>sn</literal> é necessário.</para>
+
+      <para>Para adicionar um usuário <literal>testuser</literal>, o ldif seria:</para>
+
+      <programlisting>dn: uid=tuser,ou=people,dc=example,dc=org
+objectClass: person
+objectClass: posixAccount
+objectClass: shadowAccount
+objectClass: top
+uidNumber: 10000
+gidNumber: 10000
+homeDirectory: /home/tuser
+loginShell: /bin/csh
+uid: tuser
+cn: tuser</programlisting>
+
+      <para>Eu inicio os UIDs dos meus usuários LDAP em 10000 para evitar colisões com contas do sistema; você pode configurar o número que desejar aqui, desde que seja menor que 65536.</para>
+
+      <para>Também precisamos de entradas de grupo. Eles são configuráveis ​​como entradas do usuário, mas usaremos os padrões abaixo:</para>
+
+      <programlisting>dn: ou=groups,dc=example,dc=org
+objectClass: top
+objectClass: organizationalUnit
+ou: groups
+
+dn: cn=tuser,ou=groups,dc=example,dc=org
+objectClass: posixGroup
+objectClass: top
+gidNumber: 10000
+cn: tuser</programlisting>
+
+      <para>Para inseri-los em seu banco de dados, você pode usar <command>slapadd</command> ou <command>ldapadd</command> em um arquivo contendo essas entradas. Alternativamente, você pode usar o <package>sysutils/ldapvi</package>.</para>
+
+      <para>O utilitário <command>ldapsearch</command> na máquina cliente deve agora retornar essas entradas. Em caso afirmativo, o banco de dados está configurado corretamente para ser usado como um servidor de autenticação LDAP.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="client">
+    <title>Configuração do Cliente</title>
+
+    <para>O cliente já deve ter bibliotecas do <application>OpenLDAP</application> do <xref linkend="ldap-connect-client"/>, mas se você estiver instalando várias máquinas clientes, precisará instalar o <package>net/openldap24-client</package> em cada um deles.</para>
+
+    <para>O FreeBSD requer que dois ports sejam instalados para autenticação em um servidor LDAP, <package>security/pam_ldap</package> e <package>net/nss_ldap</package>.</para>
+
+    <sect2 xml:id="client-auth">
+      <title>Autenticação</title>
+
+      <para>O <package>security/pam_ldap</package> é configurado através do <filename>/usr/local/etc/ldap.conf</filename>.</para>
+
+      <note>
+	<para>Este é um <emphasis>arquivo diferente</emphasis> que o arquivo de configuração das funções da biblioteca <application>OpenLDAP</application>, <filename>/usr/local/etc/openldap/ldap.conf</filename>; no entanto, são necessárias muitas das mesmas opções; na verdade, é um superconjunto desse arquivo. Para o resto desta seção, referências a <filename>ldap.conf</filename> irão significar o arquivo <filename>/usr/local/etc/ldap.conf</filename>.</para>
+      </note>
+
+      <para>Assim, vamos querer copiar todos os nossos parâmetros de configuração originais do <filename>openldap/ldap.conf</filename> para o novo <filename>ldap.conf</filename>. Feito isso, queremos informar ao <package>security/pam_ldap</package> o que procurar no servidor de diretório.</para>
+
+      <para>Estamos identificando nossos usuários com o atributo <literal>uid</literal>. Para configurar isso (embora seja o padrão), defina a diretiva <literal>pam_login_attribute</literal> no <filename>ldap.conf</filename>:</para>
+
+      <example xml:id="set-pam-login-attr">
+	<title>Definindo <literal>pam_login_attribute</literal></title>
+
+	<programlisting>pam_login_attribute uid</programlisting>
+      </example>
+
+      <para>Com esta definição, o <package>security/pam_ldap</package> pesquisará todo o diretório LDAP na <literal>base</literal> para o valor <literal>uid=<replaceable>username</replaceable> </literal>. Se encontrar uma e apenas uma entrada, ela tentará se vincular como aquele usuário com a senha que foi fornecida. Se vincular corretamente, então permitirá o acesso. Caso contrário, falhará.</para>
+
+      <para>Os usuários cujo shell não está em <filename>/etc/shells</filename> não poderão efetuar login. Isto é particularmente importante quando o <application>Bash</application> é definido como o shell do usuário no servidor LDAP. O <application>Bash</application> não está incluído em uma instalação padrão do FreeBSD. Quando instalado a partir de um pacote ou port, ele está localizado em <filename>/usr/local/bin/bash</filename>. Verifique se o caminho para o shell no servidor está definido corretamente:</para>
+
+      <screen><prompt>%</prompt> <userinput>getent passwd <replaceable>username</replaceable></userinput></screen>
+
+      <para>Existem duas opções quando a saída mostra <literal>/bin/bash</literal> na última coluna. A primeira é alterar a entrada do usuário no servidor LDAP para <filename>/usr/local/bin/bash</filename>. A segunda opção é criar um link simbólico no computador cliente LDAP para que o <application>Bash</application> seja encontrado no local correto:</para>
+
+      <screen><prompt>#</prompt> <userinput>ln -s /usr/local/bin/bash /bin/bash</userinput></screen>
+
+      <para>Certifique-se de que <filename>/etc/shells</filename> contenha entradas para ambos <literal>/usr/local/bin/bash</literal> e <literal>/bin/bash</literal>. O usuário poderá então efetuar login no sistema com <application>Bash</application> como seu shell.</para>
+
+      <sect3 xml:id="client-auth-pam">
+	<title>PAM</title>
+
+	<para>PAM, que significa <quote>Pluggable Authentication Modules</quote>, é o método pelo qual o FreeBSD autentica a maioria de suas sessões. Para dizer ao FreeBSD que desejamos usar um servidor LDAP, teremos que adicionar uma linha ao arquivo PAM apropriado.</para>
+
+	<para>Na maioria das vezes o arquivo PAM apropriado é <filename>/etc/pam.d/sshd</filename>, se você quiser usar <application>SSH</application> (lembre-se de definir as opções relevantes em <filename>/etc/ssh/sshd_config</filename>, caso contrário o <application>SSH</application> não usará o PAM).</para>
+
+	<para>Para usar o PAM para autenticação, adicione a linha</para>
+
+	<programlisting>auth suficiente /usr/local/lib/pam_ldap.so no_warn</programlisting>
+
+	<para>Exatamente onde essa linha aparece no arquivo e quais opções aparecem na quarta coluna, determine o comportamento exato do mecanismo de autenticação; veja <citerefentry><refentrytitle>pam.d</refentrytitle><manvolnum>5</manvolnum></citerefentry></para>
+
+	<para>Com essa configuração, você deve conseguir autenticar um usuário em um diretório LDAP. O <application>PAM</application> executará uma ligação com suas credenciais e, se for bem-sucedido, informará ao <application>SSH</application> para permitir o acesso.</para>
+
+	<para>No entanto, não é uma boa idéia permitir que <emphasis>todo</emphasis> usuário no diretório dentro de <emphasis>todo</emphasis> computador cliente. Com a configuração atual, tudo o que um usuário precisa para efetuar login em uma máquina é uma entrada LDAP. Felizmente, existem algumas maneiras de restringir o acesso do usuário.</para>
+
+	<para>O <filename>ldap.conf</filename> suporta uma diretiva <literal>pam_groupdn</literal>; Cada conta que se conecta a essa máquina precisa ser membro do grupo especificado aqui. Por exemplo, se você tem</para>
+
+	<programlisting>pam_groupdn cn=servername,ou=accessgroups,dc=example,dc=org</programlisting>
+
+	<para>em <filename>ldap.conf</filename>, somente os membros desse grupo poderão efetuar login. Entretanto, há algumas coisas a serem lembradas.</para>
+
+	<para>Os membros desse grupo são especificados em um ou mais atributos <literal>memberUid</literal> e cada atributo deve ter o nome distinto completo do membro. Então <literal>memberUid:someuser</literal> não funcionará; deve ser:</para>
+
+	<programlisting>memberUid: uid=algum usuário, ou=pessoas, dc=exemplo, dc=org</programlisting>
+
+	<para>Além disso, essa diretiva não é verificada no PAM durante a autenticação, ela é verificada durante o gerenciamento de contas, portanto, você precisará de uma segunda linha em seus arquivos PAM sob <literal>account</literal>. Isso exigirá, por sua vez, que <emphasis>todo</emphasis> usuário seja listado no grupo, o que não é necessariamente o que queremos. Para evitar o bloqueio de usuários que não estão no LDAP, você deve ativar o atributo <literal>ignore_unknown_user</literal>. Finalmente, você deve definir a opção <literal>ignore_authinfo_unavail</literal> para que você não fique bloqueado em todos os computadores quando o servidor LDAP estiver indisponível.</para>
+
+	<para>Seu <filename>pam.d/sshd</filename> pode acabar ficando assim:</para>
+
+	<example xml:id="pam">
+	  <title>Exemplo <filename>pam.d/sshd</filename></title>
+
+	  <programlisting>auth            required        pam_nologin.so          no_warn
+auth            sufficient      pam_opie.so             no_warn no_fake_prompts
+auth            requisite       pam_opieaccess.so       no_warn allow_local
+auth            sufficient      /usr/local/lib/pam_ldap.so      no_warn
+auth            required        pam_unix.so             no_warn try_first_pass
+
+account         required        pam_login_access.so
+account         required        /usr/local/lib/pam_ldap.so      no_warn ignore_authinfo_unavail ignore_unknown_user</programlisting>
+	</example>
+
+	<note>
+	  <para>Como estamos adicionando essas linhas especificamente para <filename>pam.d/sshd</filename>, isso só terá um efeito nas sessões <application>SSH</application>. Os usuários LDAP não poderão efetuar login no console. Para mudar este comportamento, examine os outros arquivos em <filename>/etc/pam.d</filename> e modifique-os de acordo.</para>
+	</note>
+      </sect3>
+    </sect2>
+
+    <sect2 xml:id="client-nss">
+      <title>Switch de serviço de nome</title>
+
+      <para><application>NSS</application> é o serviço que mapeia atributos para nomes. Assim, por exemplo, se um arquivo é de propriedade do usuário <literal>1001</literal>, um aplicativo consultará o <application>NSS</application> para o nome de <literal>1001</literal>, e ele pode obter <literal>bob</literal> ou <literal>ted</literal> ou qualquer que seja o nome do usuário.</para>
+
+      <para>Agora que nossas informações sobre o usuário são mantidas no LDAP, precisamos dizer ao <application>NSS</application> para procurar lá quando perguntado.</para>
+
+      <para>O port <package>net/nss_ldap</package> faz isso. Ele usa o mesmo arquivo de configuração como <package>security/pam_ldap</package> e não deve precisar de nenhum parâmetro extra depois de instalado. Em vez disso, o que resta é simplesmente editar é <filename>/etc/nsswitch.conf</filename> para aproveitar o diretório. Simplesmente substitua as seguintes linhas:</para>
+
+      <programlisting>group: compat
+passwd: compat</programlisting>
+
+      <para>com</para>
+
+      <programlisting>group: files ldap
+passwd: files ldap</programlisting>
+
+      <para>Isso permitirá que você mapeie nomes de usuários para UIDs e UIDs para nomes de usuários.</para>
+
+      <para>Parabéns! Agora você deve ter autenticação LDAP em funcionamento.</para>
+    </sect2>
+
+    <sect2 xml:id="caveats">
+      <title>Ressalvas</title>
+
+      <para>Infelizmente, a partir do momento em que isso foi escrito, o FreeBSD não suportava a mudança de senhas de usuário com <citerefentry><refentrytitle>passwd</refentrytitle><manvolnum>1</manvolnum></citerefentry>. Por causa disso, a maioria dos administradores estão deixando para implementar uma solução por conta própria. Eu forneço alguns exemplos aqui. Observe que, se você escrever seu próprio script de alteração de senha, há alguns problemas de segurança dos quais você deve estar ciente; veja <xref linkend="security-passwd"/></para>
+
+      <example xml:id="chpw-shell">
+	<title>Script de shell para alteração de senhas</title>
+
+	<programlisting>#!/bin/sh
+
+stty -echo
+read -p "Old Password: " oldp; echo
+read -p "New Password: " np1; echo
+read -p "Retype New Password: " np2; echo
+stty echo
+
+if [ "$np1" != "$np2" ]; then
+  echo "Passwords do not match."
+  exit 1
+fi
+
+ldappasswd -D uid="$USER",ou=people,dc=example,dc=org \
+  -w "$oldp" \
+  -a "$oldp" \
+  -s "$np1"</programlisting>
+      </example>
+
+      <caution>
+	<para>Esse script dificilmente faz qualquer verificação de erros, mas, o mais importante, é muito indiferente sobre como ele armazena suas senhas. Se você fizer algo assim, ajuste pelo menos o valor de sysctl <literal>security.bsd.see_other_uids</literal>:</para>
+
+	<screen><prompt>#</prompt> <userinput>sysctl security.bsd.see_other_uids=0</userinput></screen>
+      </caution>
+
+      <para>Uma abordagem mais flexível (e provavelmente mais segura) pode ser usada escrevendo um programa personalizado, ou até mesmo uma interface web. A seguir, parte de uma biblioteca <application>Ruby</application> que pode alterar senhas LDAP. Ele vê o uso na linha de comando e na web.</para>
+
+      <example xml:id="chpw-ruby">
+	<title>Script Ruby para Alterar Senhas</title>
+
+	<programlisting>require 'ldap'
+require 'base64'
+require 'digest'
+require 'password' # ruby-password
+
+ldap_server = "ldap.example.org"
+luser = "uid=#{ENV['USER']},ou=people,dc=example,dc=org"
+
+# get the new password, check it, and create a salted hash from it
+def get_password
+  pwd1 = Password.get("New Password: ")
+  pwd2 = Password.get("Retype New Password: ")
+
+  raise if pwd1 != pwd2
+  pwd1.check # check password strength
+
+  salt = rand.to_s.gsub(/0\./, '')
+  pass = pwd1.to_s
+  hash = "{SSHA}"+Base64.encode64(Digest::SHA1.digest("#{pass}#{salt}")+salt).chomp!
+  return hash
+end
+
+oldp = Password.get("Old Password: ")
+newp = get_password
+
+# We'll just replace it.  That we can bind proves that we either know
+# the old password or are an admin.
+
+replace = LDAP::Mod.new(LDAP::LDAP_MOD_REPLACE | LDAP::LDAP_MOD_BVALUES,
+                        "userPassword",
+                        [newp])
+
+conn = LDAP::SSLConn.new(ldap_server, 389, true)
+conn.set_option(LDAP::LDAP_OPT_PROTOCOL_VERSION, 3)
+conn.bind(luser, oldp)
+conn.modify(luser, [replace])</programlisting>
+      </example>
+
+      <para>Apesar de não ter a garantia de estar livre de falhas de segurança (a senha é mantida na memória, por exemplo), isso é mais limpo e mais flexível do que um simples script <command>sh</command>.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="secure">
+    <title>Considerações de segurança</title>
+
+    <para>Agora que suas máquinas (e possivelmente outros serviços) estão autenticando em seu servidor LDAP, este servidor precisa ser protegido pelo menos tão bem quanto <filename>/etc/master.passwd</filename> seria em um servidor regular, e possivelmente mais ainda, uma vez que um servidor LDAP corrompido quebraria todos os serviços do cliente.</para>
+
+    <para>Lembre-se, esta seção não é exaustiva. Você deve revisar continuamente sua configuração e procedimentos para melhorias.</para>
+
+    <sect2 xml:id="secure-readonly">
+      <title>Definindo atributos somente leitura</title>
+
+      <para>Vários atributos no LDAP devem ser somente leitura. Se deixado gravável pelo usuário, por exemplo, um usuário poderia alterar seu atributo <literal>uidNumber</literal> para <literal>0</literal> e obter acesso ao <systemitem class="username">root</systemitem>!</para>
+
+      <para>Para começar, o atributo <literal>userPassword</literal> não deve ser legível por todos. Por padrão, qualquer pessoa que possa se conectar ao servidor LDAP pode ler esse atributo. Para desabilitar isso, coloque o seguinte em <filename>slapd.conf</filename>:</para>
+
+      <example xml:id="hide-userpass">
+	<title>Ocultar senhas</title>
+
+	<programlisting>access to dn.subtree="ou=people,dc=example,dc=org"
+  attrs=userPassword
+  by self write
+  by anonymous auth
+  by * none
+
+access to *
+  by self write
+  by * read</programlisting>
+      </example>
+
+      <para>Isso não permitirá a leitura do atributo <literal>userPassword</literal>, enquanto ainda permite que os usuários alterem suas próprias senhas.</para>
+
+      <para>Além disso, você desejará impedir que os usuários alterem alguns de seus próprios atributos. Por padrão, os usuários podem alterar qualquer atributo (exceto aqueles que os próprios esquemas LDAP negam alterações), como <literal>uidNumber</literal>. Para fechar este buraco, modifique o acima para</para>
+
+      <example xml:id="attrib-readonly">
+	<title>Atributos somente leitura</title>
+
+	<programlisting>access to dn.subtree="ou=people,dc=example,dc=org"
+  attrs=userPassword
+  by self write
+  by anonymous auth
+  by * none
+
+access to attrs=homeDirectory,uidNumber,gidNumber
+  by * read
+
+access to *
+  by self write
+  by * read</programlisting>
+      </example>
+
+      <para>Isso impedirá que os usuários se disfarçam como outros usuários.</para>
+    </sect2>
+
+    <sect2 xml:id="secure-root">
+      <title>Definição da conta <systemitem class="username">root</systemitem></title>
+
+      <para>Geralmente, a conta <systemitem class="username"> root </systemitem> ou a conta de administrador para o serviço LDAP será definida no arquivo de configuração. O <application>OpenLDAP</application> suporta isso, por exemplo, e funciona, mas pode causar problemas se o <filename>slapd.conf</filename> estiver comprometido. Pode ser melhor usar isto apenas para se autoinicializar no LDAP, e então definir uma conta <systemitem class="username"> root </systemitem>.</para>
+
+      <para>Melhor ainda é definir contas com permissões limitadas e omitir totalmente uma conta <systemitem class="username">root</systemitem>. Por exemplo, os usuários que podem adicionar ou remover contas de usuário são adicionados a um grupo, mas não podem alterar a participação desse grupo. Essa política de segurança ajudaria a mitigar os efeitos de uma senha perdida.</para>
+
+      <sect3 xml:id="manager-acct">
+	<title>Criando um grupo de gerenciamento</title>
+
+	<para>Digamos que você queira que seu departamento de TI possa alterar os diretórios pessoais dos usuários, mas não deseja que todos eles possam adicionar ou remover usuários. A maneira de fazer isso é adicionar um grupo para esses administradores:</para>
+
+	<example xml:id="manager-acct-dn">
+	  <title>Criando um grupo de gerenciamento</title>
+
+	  <programlisting>dn: cn=homemanagement,dc=example,dc=org
+objectClass: top
+objectClass: posixGroup
+cn: homemanagement
+gidNumber: 121 # required for posixGroup
+memberUid: uid=tuser,ou=people,dc=example,dc=org
+memberUid: uid=user2,ou=people,dc=example,dc=org</programlisting>
+	</example>
+
+	<para>E então mude os atributos de permissões em <filename>slapd.conf</filename>:</para>
+
+	<example xml:id="management-acct-acl">
+	  <title>ACLs para um grupo de gerenciamento de diretório inicial</title>
+
+	  <programlisting>access to dn.subtree="ou=people,dc=example,dc=org"
+  attr=homeDirectory
+  by dn="cn=homemanagement,dc=example,dc=org"
+  dnattr=memberUid write</programlisting>
+	</example>
+
+	<para>Agora <systemitem class="username">tuser</systemitem> e <systemitem class="username">user2</systemitem> podem alterar os diretórios home de outros usuários.</para>
+
+	<para>Neste exemplo, demos um subconjunto de poder administrativo a certos usuários sem dar a eles poder em outros domínios. A idéia é que em breve nenhuma conta de usuário tenha o poder de uma conta <systemitem class="username">root</systemitem>, mas todo poder que root tem seja tido por pelo menos um usuário. A conta <systemitem class="username">root</systemitem> torna-se desnecessária e pode ser removida.</para>
+      </sect3>
+    </sect2>
+
+    <sect2 xml:id="security-passwd">
+      <title>Armazenamento de Senha</title>
+
+      <para>Por padrão, <application>OpenLDAP</application> armazenará o valor do atributo <literal>userPassword</literal> conforme ele armazena quaisquer outros dados: puro texto. Na maioria das vezes, ele é codificado na base 64, o que fornece proteção suficiente para impedir que um administrador honesto conheça sua senha, mas pouco ainda.</para>
+
+      <para>É uma boa idéia, então, armazenar senhas em um formato mais seguro, como o SSHA (salted SHA). Isso é feito por qualquer programa que você use para alterar as senhas dos usuários.</para>
+    </sect2>
+  </sect1>
+
+  <appendix xml:id="useful">
+    <title>Ajudas Úteis</title>
+
+    <para>Existem alguns outros programas que podem ser úteis, especialmente se você tiver muitos usuários e não quiser configurar tudo manualmente.</para>
+
+    <para>O <package>security/pam_mkhomedir</package> é um módulo PAM que sempre é bem-sucedido; Sua finalidade é criar diretórios pessoais para usuários que não os possuem. Se você tiver dezenas de servidores clientes e centenas de usuários, é muito mais fácil usar isso e configurar diretórios esqueletos do que preparar cada diretório inicial.</para>
+
+    <para>O <package>sysutils/cpu</package> é um utilitário do tipo <citerefentry><refentrytitle>pw</refentrytitle><manvolnum>8</manvolnum></citerefentry> que pode ser usado para gerenciar usuários no diretório LDAP. Você pode chamá-lo diretamente ou encapsular os scripts em torno dele. Ele pode manipular tanto o TLS (com o sinalizador <option>-x</option>) quanto o SSL (diretamente).</para>
+
+    <para>O <package>sysutils/ldapvi</package> é um ótimo utilitário para editar valores LDAP em uma sintaxe semelhante a LDIF. O diretório (ou subseção do diretório) é apresentado no editor escolhido pela variável de ambiente <envar>EDITOR</envar>. Isso facilita a ativação de alterações em grande escala no diretório sem a necessidade de escrever uma ferramenta personalizada.</para>
+
+    <para>O <package>security/openssh-portable</package> tem a capacidade de contatar um servidor LDAP para verificar as chaves <application>SSH</application>. Isso é extremamente bom se você tiver muitos servidores e não quiser copiar suas chaves públicas em todos eles.</para>
+  </appendix>
+
+  <appendix xml:id="ssl-ca">
+    <title>Certificados do <application>OpenSSL</application> para LDAP</title>
+
+    <para>Se você estiver hospedando dois ou mais servidores LDAP, provavelmente não desejará usar certificados autoassinados, já que cada cliente precisará ser configurado para trabalhar com cada certificado. Embora isso seja possível, não é tão simples quanto criar sua própria autoridade de certificação e assinar os certificados de seus servidores com isso.</para>
+
+    <para>Os passos aqui são apresentados como eles são, com muito pouca tentativa de explicar o que está acontecendo - mais explicações podem ser encontradas em <citerefentry><refentrytitle>openssl</refentrytitle><manvolnum>1</manvolnum></citerefentry> e aplicações iguais.</para>
+
+    <para>Para criar uma autoridade de certificação, simplesmente precisamos de um certificado e chave autoassinados. As etapas para isso novamente são</para>
+
+    <example xml:id="make-cert">
+      <title>Criando um Certificado</title>
+
+      <screen><prompt>%</prompt> <userinput>openssl genrsa -out root.key 1024</userinput>
+<prompt>%</prompt> <userinput>openssl req -new -key root.key -out root.csr</userinput>
+<prompt>%</prompt> <userinput>openssl x509 -req -days 1024 -in root.csr -signkey root.key -out root.crt</userinput></screen>
+    </example>
+
+    <para>Estas serão sua chave e certificado de CA raiz. Você provavelmente desejará criptografar a chave e armazená-la em um local seguro; qualquer pessoa com acesso a ele pode se passar por um dos seus servidores LDAP.</para>
+
+    <para>Em seguida, usando as duas primeiras etapas acima, crie uma chave <filename>ldap-server-one.key</filename> e a solicitação de assinatura de certificado <filename>ldap-server-one.csr</filename>. Depois de assinar o pedido de assinatura com <filename>root.key</filename>, você poderá usar o <filename>ldap-server-one.*</filename> nos servidores LDAP.</para>
+
+    <note>
+      <para>Não se esqueça de usar o nome de domínio totalmente qualificado para o atributo <quote>common name</quote> ao gerar a solicitação de assinatura de certificado; caso contrário, os clientes rejeitarão uma conexão com você e poderá ser muito complicado diagnosticar.</para>
+    </note>
+
+    <para>Para assinar a chave, use <option>-CA</option> e <option>-CAkey</option> em vez de <option>-signkey</option>:</para>
+
+    <example xml:id="ca-sign">
+      <title>Assinando como uma autoridade de certificação</title>
+
+      <screen><prompt>% </prompt> <userinput> openssl x509 -req -dias 1024 \
+-em servidor ldap-one.csr -CA root.crt -CAkey root.key \
+-out ldap-server-one.crt </userinput></screen>
+    </example>
+
+    <para>O arquivo resultante será o certificado que você pode usar em seus servidores LDAP.</para>
+
+    <para>Finalmente, para os clientes confiarem em todos os seus servidores, distribua <filename>root.crt</filename> (o <emphasis> certificado </emphasis>, não a chave!) Para cada cliente, e especifique-o na directiva <literal>TLSCACertificateFile</literal> no <filename>ldap.conf</filename>.</para>
+  </appendix>
+</article>
