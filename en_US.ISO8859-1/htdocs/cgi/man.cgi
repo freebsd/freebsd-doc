@@ -692,6 +692,7 @@ $manPathDefault = 'FreeBSD 11.2-RELEASE and Ports';
     'Plan 9',                      "$manLocalDir/plan9",
     'Minix 2.0',                   "$manLocalDir/Minix-2.0",
     'Unix Seventh Edition',        "$manLocalDir/v7man",
+
     "Darwin 1.3.1/x86",            "$manLocalDir/Darwin-1.3.1-x86",
     "Darwin 1.4.1/x86",            "$manLocalDir/Darwin-1.4.1-x86",
     "Darwin 6.0.2/x86",            "$manLocalDir/Darwin-6.0.2-x86",
@@ -701,6 +702,9 @@ $manPathDefault = 'FreeBSD 11.2-RELEASE and Ports';
     "OpenDarwin 6.6.1/x86",        "$manLocalDir/OpenDarwin-6.6.1-x86",
     "OpenDarwin 6.6.2/x86",        "$manLocalDir/OpenDarwin-6.6.2-x86",
     "OpenDarwin 7.2.1",            "$manLocalDir/OpenDarwin-7.2.1",
+
+    'NeXTSTEP 3.3',  "$manLocalDir/NeXTSTEP-3.3",
+    'OpenStep 4.2',  "$manLocalDir/OpenStep-4.2",
 );
 
 my @no_pdf_output = (
@@ -1849,6 +1853,7 @@ This script has the revsion: $id
 Copyright (c) for man pages by OS vendors.
 <p/>
 <a href="ftp://ftp.2bsd.com">2.11 BSD</a>,
+<a href="https://www.apple.com">Apple</a>,
 <a href="https://www.hp.com">HP</a>,
 <a href="https://www.freebsd.org">FreeBSD</a>,
 <a href="http://www.minix3.org">Minix</a>,
