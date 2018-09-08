@@ -4,8 +4,6 @@
 #
 # $FreeBSD$
 #
-# Original revision: r38826
-#
 # Article: Mirroring FreeBSD
 
 DOC?= article
