@@ -707,6 +707,8 @@ $manPathDefault = 'FreeBSD 11.2-RELEASE and Ports';
 
     'NeXTSTEP 3.3',  "$manLocalDir/NeXTSTEP-3.3",
     'OpenStep 4.2',  "$manLocalDir/OpenStep-4.2",
+    'Rhapsody DR1',  "$manLocalDir/Rhapsody-DR1",
+    'Rhapsody DR2',  "$manLocalDir/Rhapsody-DR2",
 );
 
 my @no_pdf_output = (
