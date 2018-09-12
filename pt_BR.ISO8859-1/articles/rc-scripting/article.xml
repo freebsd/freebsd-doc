@@ -1,0 +1,671 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V5.0-Based Extension//EN" "http://www.FreeBSD.org/XML/share/xml/freebsd50.dtd">
+<article xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:its="http://www.w3.org/2005/11/its" version="5.0" xml:lang="pt_BR">
+  <info><title>Scripts rc.d práticos no BSD</title>
+    
+
+    <author><personname><firstname>Yar</firstname><surname>Tikhiy</surname></personname><affiliation> <address><email>yar@FreeBSD.org</email></address> </affiliation></author>
+
+    <copyright><year>2005</year> <year>2006</year> <year>2012</year> <holder>The FreeBSD Project</holder></copyright>
+
+    <legalnotice xml:id="trademarks" role="trademarks">
+      <para>FreeBSD is a registered trademark of the FreeBSD Foundation.</para>
+      <para>NetBSD is a registered trademark of the NetBSD Foundation.</para>
+      <para>Many of the designations used by manufacturers and sellers to distinguish their products are claimed as trademarks. Where those designations appear in this document, and the FreeBSD Project was aware of the trademark claim, the designations have been followed by the <quote>™</quote> or the <quote>®</quote> symbol.</para>
+    </legalnotice>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <releaseinfo>$FreeBSD$</releaseinfo>
+
+    <abstract>
+      <para>Os iniciantes podem achar difícil relacionar os fatos da documentação formal do framework <filename>rc.d</filename> do BSD com as tarefas práticas do script <filename>rc.d</filename>. Neste artigo, consideramos alguns casos típicos de complexidade crescente, vamos mostrar os recursos do <filename>rc.d</filename> adequados para cada caso e vamos discutir como eles funcionam. Esse exame deve fornecer pontos de referência para um estudo mais aprofundado do design e da aplicação eficiente do <filename>rc.d</filename>.</para>
+    </abstract>
+  </info>
+
+  <sect1 xml:id="rcng-intro">
+    <title>Introdução</title>
+
+    <para>Historicamente o BSD tinha um script de inicialização monolítico, o <filename>/etc/rc</filename>. Ele era chamado pelo <citerefentry><refentrytitle>init</refentrytitle><manvolnum> 8</manvolnum></citerefentry> no momento da inicialização do sistema e executava todas as tarefas necessárias para a operação multi-usuário: verificação e montagem do sistemas de arquivos, configuração de rede, iniciava daemons e assim por diante. A lista precisa de tarefas não era a mesma em todos os sistemas; os administradores precisavam personalizá-lo. Com poucas exceções, o <filename>/etc/rc</filename> teve que ser modificado, e os verdadeiros hackers gostaram disso.</para>
+
+    <para>O problema real com a abordagem monolítica era que ela não fornecia nenhum controle sobre os componentes individuais iniciados a partir do <filename>/etc/rc</filename>. Por exemplo, o <filename>/etc/rc</filename> não podia reiniciar um único daemon. O administrador do sistema tinha que encontrar o processo daemon manualmente, matá-lo, esperar até que ele realmente finalizasse, então procurar pelas flags no <filename>/etc/rc</filename>, e finalmente digitar a linha de comando completa para iniciar o daemon novamente. A tarefa se tornaria ainda mais difícil e propensa a erros se o serviço de reinicialização consistisse em mais de um daemon ou exigisse ações adicionais. Em poucas palavras, o único script não cumpriu o objetivo dos scripts: tornar a vida do administrador do sistema mais fácil.</para>
+
+    <para>Mais tarde, houve uma tentativa de dividir algumas partes do <filename>/etc/rc</filename> para iniciar os subsistemas mais importantes separadamente. O exemplo notório foi o <filename>/etc/netstart</filename> para configurar a rede. Ele permitia acessar a rede a partir do modo single-user, mas não se integrou bem ao processo de inicialização automática porque partes de seu código precisavam intercalar com ações essencialmente não relacionadas à rede. Foi por isso que o <filename>/etc/netstart</filename> mudou para <filename>/etc/rc.network</filename>. Este último não era mais um script comum; ele era composto por um emaranhado de funções <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry> chamadas pelo <filename>/etc/rc</filename> em diferentes estágios da inicialização do sistema. No entanto, a medida que as tarefas de inicialização cresciam variadas e sofisticadas, a abordagem <quote>quase modular</quote> tornou-se ainda mais engessada do que o monolítico <filename>/etc/rc</filename>.</para>
+
+    <para>Sem um framework limpo e bem projetado, os scripts de inicialização tiveram que se curvar para satisfazer as necessidades de desenvolvimento rápido dos sistemas operacionais baseados no BSD. Tornou-se óbvio, finalmente, que mais passos eram necessários no caminho para construção de um sistema <filename>rc</filename> extensível e customizável. Assim nasceu o BSD <filename>rc.d</filename>. Seus pais reconhecidos foram o Luke Mewburn e a comunidade do NetBSD. Mais tarde ele foi importado para o FreeBSD. Seu nome se refere à localização dos scripts do sistema para serviços individuais, que é o <filename>/etc/rc.d</filename>. Em breve, vamos aprender sobre mais componentes do sistema <filename>rc.d</filename> e vamos ver como os scripts individuais são invocados.</para>
+
+    <para>As idéias básicas por trás do BSD <filename>rc.d</filename> são <emphasis>modularidade fina</emphasis> e <emphasis>reutilização de código</emphasis>. <emphasis>Modularidade fina</emphasis> significa que cada <quote>serviço básico</quote>, como um daemon do sistema ou uma tarefa de inicialização primitiva, obtém seu próprio script <citerefentry><refentrytitle>sh</refentrytitle> <manvolnum/></citerefentry> capaz de iniciar o serviço, pará-lo, recarregá-lo e verificar seu status. Uma ação específica é escolhida pelo argumento da linha de comando para o script. O script <filename>/etc/rc</filename> ainda comanda a inicialização do sistema, mas agora ele simplesmente invoca os scripts menores um por um com o argumento <option>start</option>. É fácil executar tarefas de desligamento executando o mesmo conjunto de scripts com o argumento <option>stop</option>, o que é feito pelo <filename>/etc/rc.shutdown</filename>. Observe como isso segue de perto o modo Unix de ter um conjunto de pequenas ferramentas especializadas, cada uma cumprindo sua tarefa da melhor forma possível. <emphasis>Reutilização de código</emphasis> significa que operações comuns são implementadas como funções <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry> e coletadas em <filename>/etc/rc.subr </filename>. Agora, um script típico pode conter apenas algumas linhas de código <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum> </citerefentry>. Finalmente, uma parte importante do framework do <filename>rc.d</filename> é <citerefentry> <refentrytitle>rcorder</refentrytitle> <manvolnum>8</manvolnum> </citerefentry>, o qual ajuda o <filename>/etc/rc</filename> a executar os pequenos scripts ordenadamente em relação às dependências entre eles. Ele também pode ajudar o <filename>/etc/rc.shutdown</filename>, porque a ordem apropriada para a sequência de encerramento é oposta à da inicialização.</para>
+
+    <para>O design do BSD <filename>rc.d</filename> é descrito no <link linkend="lukem">artigo original de Luke Mewburn</link>, e os componentes do <filename>rc.d</filename> são documentados em grande detalhe nas <link linkend="manpages">respectivas páginas de manual</link>. No entanto, pode não parecer óbvio para um novato em <filename>rc.d</filename> como amarrar os inúmeros pedaços juntos para criar um script bem estilizado para uma tarefa específica. Portanto, este artigo tentará uma abordagem diferente para descrever o <filename>rc.d</filename>. Ele mostrará quais recursos devem ser usados em vários casos típicos e por quê. Note que este não é um documento explicativo porque nosso objetivo não é fornecer receitas prontas, mas mostrar algumas entradas fáceis no domínio do <filename>rc.d</filename>. Nem este artigo é um substituto para as páginas de manual relevantes. Não hesite em consultá-los para obter uma documentação mais formal e completa ao ler este artigo.</para>
+
+    <para>Existem pré-requisitos para entender este artigo. Primeiro de tudo, você deve estar familiarizado com a linguagem de script <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry> para poder dominar o <filename>rc.d</filename>. Além disso, você deve saber como o sistema executa as tarefas de inicialização e encerramento do userland, o que está descrito em <citerefentry><refentrytitle>rc</refentrytitle><manvolnum>8</manvolnum></citerefentry>.</para>
+
+    <para>Este artigo foca no branch <filename>rc.d</filename> do FreeBSD. No entanto, ele também pode ser útil para os desenvolvedores do NetBSD, porque os dois branchs <filename>rc.d</filename> do BSD não apenas compartilham o mesmo design, mas também permanecem similares em seus aspectos visíveis aos autores do script.</para>
+  </sect1>
+
+  <sect1 xml:id="rcng-task">
+    <title>Esboçando a tarefa</title>
+
+    <para>Um pouco de consideração antes de iniciar o <envar>$EDITOR</envar> não irá prejudicar. Para escrever um script <filename>rc.d</filename> corretamente customizado para um serviço do sistema, devemos poder responder as seguintes questões primeiro:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>O serviço é obrigatório ou opcional?</para>
+      </listitem>
+
+      <listitem>
+	<para>O script servirá um único programa, por exemplo, um daemon, ou realizará ações mais complexas?</para>
+      </listitem>
+
+      <listitem>
+	<para>De quais outros serviços nosso serviço dependerá e vice-versa?</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>A partir dos exemplos que se seguem, veremos o porque é importante conhecer as respostas a essas perguntas.</para>
+  </sect1>
+
+  <sect1 xml:id="rcng-dummy">
+    <title>Um script fictício</title>
+
+    <para>O script a seguir apenas emite uma mensagem toda vez que o sistema é inicializado:</para>
+
+    <informalexample>
+      <programlisting>#!/bin/sh<co xml:id="rcng-dummy-shebang"/>
+
+. /etc/rc.subr<co xml:id="rcng-dummy-include"/>
+
+name="dummy"<co xml:id="rcng-dummy-name"/>
+start_cmd="${name}_start"<co xml:id="rcng-dummy-startcmd"/>
+stop_cmd=":"<co xml:id="rcng-dummy-stopcmd"/>
+
+dummy_start()<co xml:id="rcng-dummy-startfn"/>
+{
+	echo "Nothing started."
+}
+
+load_rc_config $name<co xml:id="rcng-dummy-loadconfig"/>
+run_rc_command "$1"<co xml:id="rcng-dummy-runcommand"/></programlisting>
+    </informalexample>
+
+    <para>Os pontos a serem observadas são:</para>
+
+    <calloutlist>
+      <callout arearefs="rcng-dummy-shebang">
+	<para>Um script interpretado deve começar com a linha mágica <quote>shebang</quote>. Essa linha especifica o programa interpretador para o script. Devido a linha shebang, o script pode ser invocado exatamente como um programa binário, desde que tenha o bit de execução definido. (Veja <citerefentry><refentrytitle>chmod</refentrytitle><manvolnum>1</manvolnum></citerefentry>.) Por exemplo, um administrador do sistema pode executar nosso script manualmente, a partir da linha de comando:</para>
+
+	<screen><prompt>#</prompt> <userinput>/etc/rc.d/dummy start</userinput></screen>
+
+	<note>
+	  <para>Para ser adequadamente gerenciado pelo framework do <filename>rc.d</filename>, seus scripts precisam ser escritos na linguagem <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry>. Se você tiver um serviço ou port que use um utilitário de controle binário ou uma rotina de inicialização escrita em outra linguagem, instale este elemento em <filename>/usr/sbin</filename> (para o sistema) ou em <filename>/usr/local/sbin</filename> (para um port) e invoque-o por meio de um script <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry> no diretório apropriado do <filename>rc.d</filename>.</para>
+	</note>
+
+	<tip>
+	  <para>Caso você queira aprender os detalhes do porque os scripts <filename>rc.d</filename> devem ser escritos na linguagem <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry>, veja como o <filename>/etc/rc</filename> invoca-os por meio de <function>run_rc_script</function>, e então estude a implementação de <function>run_rc_script</function> em <filename>/etc/rc. subr</filename>.</para>
+	</tip>
+      </callout>
+
+      <callout arearefs="rcng-dummy-include">
+	<para>Em <filename>/etc/rc.subr</filename>, várias funções <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry> estão definidas para serem utilizadas por um script <filename>rc.d</filename>. As funções estão documentadas em <citerefentry><refentrytitle>rc.subr</refentrytitle> <manvolnum>8</manvolnum></citerefentry>. Embora seja teoricamente possível escrever um script <filename>rc.d</filename> sem usar o <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry>, as suas funções são extremamente úteis e tornam o trabalho mais fácil. Portanto, não é de surpreender que todos recorram a scripts <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> em <filename>rc.d</filename>. Nós não vamos ser uma exceção.</para>
+
+	<para>Um script <filename>rc.d</filename> deve <quote>incluir</quote> o <filename>/etc/rc.subr</filename> (isto por ser feito usando o comando <quote><command>.</command></quote>) <emphasis>antes</emphasis> que ele chame as funções do <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> para que o <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum> </citerefentry> tenha a oportunidade para aprender as funções. O estilo preferido é incluir o <filename>/etc/rc.subr</filename> antes de tudo.</para>
+
+	<note>
+	  <para>Algumas funções úteis relacionadas a rede são fornecidas por outro arquivo include, o <filename>/etc/network.subr</filename>.</para>
+	</note>
+      </callout>
+
+      <callout arearefs="rcng-dummy-name">
+	<para><anchor xml:id="name-var"/>A variável obrigatória <envar>name</envar> especifica o nome do nosso script. Ela é exigida pelo <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry>. Ou seja, cada script <filename>rc.d</filename> <emphasis>deve</emphasis> definir a variável <envar>name</envar> antes de chamar funções do <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry>.</para>
+
+	<para>Agora é o momento certo para escolher um nome exclusivo para o nosso script de uma vez por todas. Vamos usá-lo em vários lugares enquanto desenvolvemos o script. Para começar, também vamos dar o mesmo nome ao arquivo de script.</para>
+
+	<note>
+	  <para>O estilo atual do script <filename>rc.d</filename> é incluir valores atribuídos as variáveis entre aspas duplas. Tenha em mente que é apenas um problema de estilo que nem sempre pode ser aplicável. Você pode omitir com segurança as aspas das palavras simples sem os metacaracteres do <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry> nelas, enquanto em certos casos você precisará de aspas simples para evitar qualquer interpretação do valor pelo <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry>. Um programador deve ser capaz de dizer a sintaxe da linguagem a partir das convenções de estilo e bem como de usá-las sabiamente.</para>
+	</note>
+      </callout>
+
+      <callout arearefs="rcng-dummy-startcmd">
+	<para>A idéia principal por trás do <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> é que um script <filename>rc.d</filename> fornece manipuladores, ou métodos, para o <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> invocar. Em particular, <option>start</option>, <option>stop</option> e outros argumentos para um script <filename>rc.d</filename> são tratados desta maneira. Um método é uma expressão <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum> </citerefentry> armazenada em uma variável denominada <envar><replaceable>argument</replaceable>_cmd</envar>, no qual <replaceable>argument</replaceable> corresponde ao que pode ser especificado na linha de comando do script. Vamos ver mais adiante como o <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> fornece métodos default para os argumentos padrão.</para>
+
+	<note>
+	  <para>Para tornar o código em <filename>rc.d</filename> mais uniforme, é comum usar <envar>${name}</envar> onde for apropriado. Assim, várias linhas podem ser copiadas de um script para outro.</para>
+	</note>
+      </callout>
+
+      <callout arearefs="rcng-dummy-stopcmd">
+	<para>Devemos ter em mente que o <citerefentry> <refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> fornece métodos default para os argumentos padrões. Consequentemente, devemos sobrescrever um método default com uma expressão no-op <citerefentry><refentrytitle>sh</refentrytitle><manvolnum/></citerefentry> se desejarmos que ele não faça nada.</para>
+      </callout>
+
+      <callout arearefs="rcng-dummy-startfn">
+	<para>O corpo de um método sofisticado pode ser implementado como uma função. É uma boa ideia tornar o nome da função significativo.</para>
+
+	<important>
+	  <para>É altamente recomendado adicionar o prefixo <envar>${name}</envar> aos nomes de todas as funções definidas em nosso script, para que eles nunca entrem em conflito com as funções do <citerefentry> <refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> ou outro arquivo de inclusão comum.</para>
+	</important>
+      </callout>
+
+      <callout arearefs="rcng-dummy-loadconfig">
+	<para>Essa chamada ao <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> carrega as variáveis do <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>. Nosso script não faz uso delas ainda, mas ainda assim é recomendado carregar o <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry> pois podem haver variáveis <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry> controlando o <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> propriamente dito.</para>
+      </callout>
+
+      <callout arearefs="rcng-dummy-runcommand">
+	<para>Geralmente este é o último comando em um script <filename>rc.d</filename>. Ele invoca o maquinário <citerefentry> <refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> para executar a ação solicitada usando as variáveis e métodos que nosso script forneceu.</para>
+      </callout>
+    </calloutlist>
+  </sect1>
+
+  <sect1 xml:id="rcng-confdummy">
+    <title>Um script fictício configurável</title>
+
+    <para>Agora vamos adicionar alguns controles ao nosso script fictício. Como você deve saber, os scripts <filename>rc.d</filename> são controlados pelo <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>. Felizmente, o <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> esconde todas as complicações de nós. O script a seguir usa o <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry> via <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> para ver se ele está habilitado em primeiro lugar, e buscar uma mensagem para mostrar no momento da inicialização. Estas duas tarefas são de fato independentes. Por um lado, um script <filename>rc.d</filename> pode apenas suportar a ativação e desativação de seu serviço. Por outro lado, um script <filename>rc.d</filename> obrigatório pode ter variáveis de configuração. Nós vamos fazer as duas coisas no mesmo script:</para>
+
+    <informalexample>
+      <programlisting>#!/bin/sh
+
+. /etc/rc.subr
+
+name=dummy
+rcvar=dummy_enable<co xml:id="rcng-confdummy-rcvar"/>
+
+start_cmd="${name}_start"
+stop_cmd=":"
+
+load_rc_config $name<co xml:id="rcng-confdummy-loadconfig"/>
+: ${dummy_enable:=no} <co xml:id="rcng-confdummy-enable"/>
+: ${dummy_msg="Nothing started."}<co xml:id="rcng-confdummy-opt"/>
+
+dummy_start()
+{
+	echo "$dummy_msg"<co xml:id="rcng-confdummy-msg"/>
+}
+
+run_rc_command "$1"</programlisting>
+    </informalexample>
+
+    <para>O que mudou neste exemplo?</para>
+
+    <calloutlist>
+      <callout arearefs="rcng-confdummy-rcvar">
+	<para>A variável <envar>rcvar</envar> especifica o nome da variável do botão ON/OFF.</para>
+      </callout>
+
+      <callout arearefs="rcng-confdummy-loadconfig">
+	<para>Agora o <function>load_rc_config</function> é invocado anteriormente no script, antes que qualquer variável do <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry> seja acessada.</para>
+
+	<note>
+	  <para>Ao examinar os scripts <filename>rc.d</filename>, tenha em mente que o <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry> adia a avaliação de expressões em uma função até que a função seja chamada. Portanto, não é um erro invocar <function>load_rc_config</function> tão tarde quanto antes do <function>run_rc_comman</function> e ainda acessar as variáveis do <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry> a partir do método das funções exportadas para o <function>run_rc_command</function>. Isto ocorre porque as funções do método devem ser chamadas por <function>run_rc_command</function>, que é chamado <emphasis>após</emphasis> o <function>load_rc_config</function>.</para>
+	</note>
+      </callout>
+
+      <callout arearefs="rcng-confdummy-enable">
+	<para>Um aviso será emitido pelo <function>run_rc_command</function> se o próprio <envar>rcvar</envar> estiver definido, mas a variável de knob indicada não estiver definida. Se o seu script <filename>rc.d</filename> for para o sistema base, você deve adicionar uma configuração padrão para o knob no <filename>/etc/defaults/rc.conf</filename> e documentá-lo em <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>. Caso contrário, será o seu script que deverá fornecer uma configuração padrão para o knob. A abordagem canônica para o último caso é mostrada no exemplo.</para>
+
+	<note>
+	  <para>Você pode fazer o <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> agir como se o knob fosse definido como <literal>ON</literal>, independentemente da sua configuração atual, prefixando o argumento para o script com <literal>one</literal> ou <literal>force</literal>, como em <option>onestart</option> ou <option>forcestop</option>. Tenha em mente que o <literal>force</literal> tem outros efeitos perigosos que mencionaremos abaixo, enquanto <literal>one</literal> apenas sobrescreve o knob ON/OFF. Por exemplo, suponha que <envar>dummy_enable</envar> seja <literal>OFF</literal>. O comando a seguir executará o método <option>start</option> apesar da configuração:</para>
+
+	  <screen><prompt>#</prompt> <userinput>/etc/rc.d/dummy onestart</userinput></screen>
+	</note>
+      </callout>
+
+      <callout arearefs="rcng-confdummy-opt">
+	<para>Agora, a mensagem a ser mostrada no momento da inicialização não é mais codificada no script. Ela é especificada por uma variável do <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry> chamada <envar>dummy_msg</envar>. Este é um exemplo trivial de como as variáveis do <citerefentry><refentrytitle>rc.conf</refentrytitle> <manvolnum>5</manvolnum></citerefentry> podem controlar um script <filename>rc.d</filename>.</para>
+
+	<important>
+	  <para>Os nomes de todas as variáveis do <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry> usadas exclusivamente pelo nosso script <emphasis>devem</emphasis> possuir o mesmo prefixo: <envar>$ {name} _</envar>. Por exemplo: <envar>dummy_mode</envar>, <envar>dummy_state_file</envar>, e assim por diante.</para>
+	</important>
+
+	<note>
+	  <para>Embora seja possível usar um nome mais curto internamente, por exemplo, apenas <envar>msg</envar>, adicionar o prefixo exclusivo <envar> ${name}_</envar> a todos os nomes globais introduzidos pelo nosso script nos salvará de possíveis colisões com o nome das funções existentes no <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry>.</para>
+
+	  <para>Como regra, os scripts <filename>rc.d</filename> do sistema base não precisam fornecer valores padrões para as suas variáveis <citerefentry><refentrytitle>rc.conf</refentrytitle> <manvolnum>5</manvolnum></citerefentry> porque os padrões devem ser definidos em <filename>/etc/defaults/rc.conf</filename>. Por outro lado, os scripts <filename>rc.d</filename> para os ports devem fornecer os valores padrões, conforme mostrado no exemplo.</para>
+	</note>
+      </callout>
+
+      <callout arearefs="rcng-confdummy-msg">
+	<para>Aqui usamos <envar>dummy_msg</envar> para realmente controlar nosso script, ou seja, para emitir uma mensagem variável. O uso de uma função de shell é um exagero aqui, já que ele só executa um único comando; uma alternativa igualmente válida seria:</para>
+
+	<programlisting>start_cmd="echo \"$dummy_msg\""</programlisting>
+      </callout>
+    </calloutlist>
+  </sect1>
+
+  <sect1 xml:id="rcng-daemon">
+    <title>Inicialização e desligamento de um daemon simples</title>
+
+    <para>Dissemos anteriormente que o <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> poderia fornecer métodos padrão. Obviamente, estes padrões não podem ser muito gerais. Eles são adequados para o caso comum de iniciar e encerrar um programa daemon simples. Vamos supor agora que precisamos escrever um script <filename>rc.d</filename> para um daemon chamado <command>mumbled</command>. Aqui está:</para>
+
+    <informalexample>
+      <programlisting>#!/bin/sh
+
+. /etc/rc.subr
+
+name=mumbled
+rcvar=mumbled_enable
+
+command="/usr/sbin/${name}"<co xml:id="rcng-daemon-basic-cmd"/>
+
+load_rc_config $name
+run_rc_command "$1"</programlisting>
+    </informalexample>
+
+    <para>Agradavelmente simples, não é? Vamos examinar nosso pequeno script. A única coisa nova a observar é o seguinte:</para>
+
+    <calloutlist>
+      <callout arearefs="rcng-daemon-basic-cmd">
+	<para>A variável <envar>command</envar> é significativa para o <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry>. Se estiver definido, o <citerefentry><refentrytitle>rc.subr</refentrytitle> <manvolnum>8</manvolnum></citerefentry> agirá de acordo com o cenário de servir um daemon convencional. Em particular, os métodos padrão serão fornecidos para tais argumentos: <option>start</option>, <option>stop</option>, <option>restart</option>, <option>poll</option>, e <option>status</option>.</para>
+
+	<para>O daemon será iniciado executando <envar>$command</envar> com os sinalizadores de linha de comando especificados por <envar>$mumbled_flags</envar>. Assim, todos os dados de entrada para o método padrão <option>start</option> estão disponíveis nas variáveis configuradas pelo nosso script. Ao contrário do <option>start</option>, outros métodos podem requerer informações adicionais sobre o processo iniciado. Por exemplo, <option>stop</option> deve conhecer o PID do processo para terminá-lo. No presente caso, <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> varrerá a lista de todos os processos, procurando por um processo com seu nome igual a <envar>$procname</envar>. Esta última é outra variável de significado para <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry>, e seu valor é padronizado para <envar>command</envar>. Em outras palavras, quando definimos o <envar>command</envar>, <envar>procname</envar> é efetivamente definido para o mesmo valor. Isso permite que nosso script mate o daemon e verifique se ele está sendo executado em primeiro lugar.</para>
+
+	<note>
+	  <para>Alguns programas são, na verdade, scripts executáveis. O sistema executa esse script iniciando seu interpretador e passando o nome do script para ele como um argumento de linha de comando. Isso é refletido na lista de processos, que podem confundir o <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry>. Você também deve definir o <envar>command_interpreter</envar> para permitir que o <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> saiba o nome real do processo se o <envar>$command</envar> é um script.</para>
+
+	  <para>Para cada script <filename>rc.d</filename>, existe uma variável <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum/></citerefentry> que tem precedência sobre <envar>command</envar>. Seu nome é construído da seguinte forma: <envar>${name}_program</envar>, onde <envar>name</envar> é a variável obrigatória que discutimos <link linkend="name-var">anteriormente</link>. Por exemplo, neste caso, será <envar> mumbled_program </envar>. É <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry>que organiza<envar>${name}_program</envar> para substituir o comando<envar/>.</para>
+
+	  <para>Obviamente, o <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry> permitirá que você defina <envar>${name}_program</envar> a partir do <citerefentry><refentrytitle>rc.conf </refentrytitle><manvolnum>5</manvolnum></citerefentry> ou o próprio script, mesmo que o <envar>command</envar> esteja indefinido. Nesse caso, as propriedades especiais de <envar>${name}_program</envar> são perdidas e se tornam uma variável comum que seu script pode usar para seus próprios propósitos. No entanto, o uso exclusivo de <envar>${name}_program</envar> é desencorajado porque usá-lo junto com o <envar>command</envar> tornou-se um idioma na escrita de scripts <filename>rc.d</filename>.</para>
+	</note>
+
+	<para>Para obter informações mais detalhadas sobre métodos padrões, consulte <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry>.</para>
+      </callout>
+    </calloutlist>
+  </sect1>
+
+  <sect1 xml:id="rcng-daemon-adv">
+    <title>Inicialização e desligamento de um daemon avançado</title>
+
+    <para>Vamos adicionar um pouco de carne aos ossos do script anterior e torná-lo mais complexo e cheio de funcionalidades. Os métodos padrões podem fazer um bom trabalho para nós, mas podemos precisar ajustar alguns dos seus aspectos. Agora vamos aprender como ajustar os métodos padrões para as nossas necessidades.</para>
+
+    <informalexample>
+      <programlisting>#!/bin/sh
+
+. /etc/rc.subr
+
+name=mumbled
+rcvar=mumbled_enable
+
+command="/usr/sbin/${name}"
+command_args="mock arguments &gt; /dev/null 2&gt;&amp;1"<co xml:id="rcng-daemon-adv-args"/>
+
+pidfile="/var/run/${name}.pid"<co xml:id="rcng-daemon-adv-pid"/>
+
+required_files="/etc/${name}.conf /usr/share/misc/${name}.rules"<co xml:id="rcng-daemon-adv-reqfiles"/>
+
+sig_reload="USR1"<co xml:id="rcng-daemon-adv-sig"/>
+
+start_precmd="${name}_prestart"<co xml:id="rcng-daemon-adv-precmd"/>
+stop_postcmd="echo Bye-bye"<co xml:id="rcng-daemon-adv-postcmd"/>
+
+extra_commands="reload plugh xyzzy"<co xml:id="rcng-daemon-adv-extra"/>
+
+plugh_cmd="mumbled_plugh"<co xml:id="rcng-daemon-adv-methods"/>
+xyzzy_cmd="echo 'Nothing happens.'"
+
+mumbled_prestart()
+{
+	if checkyesno mumbled_smart; then<co xml:id="rcng-daemon-adv-yn"/>
+		rc_flags="-o smart ${rc_flags}"<co xml:id="rcng-daemon-adv-rcflags"/>
+	fi
+	case "$mumbled_mode" in
+	foo)
+		rc_flags="-frotz ${rc_flags}"
+		;;
+	bar)
+		rc_flags="-baz ${rc_flags}"
+		;;
+	*)
+		warn "Invalid value for mumbled_mode"<co xml:id="rcng-daemon-adv-warn"/>
+		return 1<co xml:id="rcng-daemon-adv-preret"/>
+		;;
+	esac
+	run_rc_command xyzzy<co xml:id="rcng-daemon-adv-run"/>
+	return 0
+}
+
+mumbled_plugh()<co xml:id="rcng-daemon-adv-plugh"/>
+{
+	echo 'A hollow voice says "plugh".'
+}
+
+load_rc_config $name
+run_rc_command "$1"</programlisting>
+    </informalexample>
+
+    <calloutlist>
+      <callout arearefs="rcng-daemon-adv-args">
+	<para>Argumentos adicionais para <envar>$command</envar> podem ser passados em <envar>command_args</envar>. Eles serão adicionados a linha de comando após <envar>$mumbled_flags</envar>. Como a linha de comando final é passada para <command>eval</command> para sua execução real, os redirecionamentos de entrada e saída podem ser especificados em <envar>command_args</envar>.</para>
+
+	<note>
+	  <para><emphasis> Nunca</emphasis> inclua opções tracejadas, como <option>-X</option> ou <option>--foo</option>, em <envar>command_args</envar>. O conteúdo de <envar>command_args</envar> aparecerá no final da linha de comando final, portanto é provável que eles sigam os argumentos presentes em <envar>${name}_flags</envar>; mas a maioria dos comandos não reconhecerá opções tracejadas após argumentos comuns. Uma maneira melhor de passar opções adicionais para <envar>$command</envar> é adicioná-las ao início de <envar>${name}_flags </envar>. Outra maneira é modificar <envar>rc_flags</envar><link linkend="rc-flags"> como mostrado posteriormente </link>.</para>
+	</note>
+      </callout>
+
+      <callout arearefs="rcng-daemon-adv-pid">
+	<para>Um daemon de boas maneiras deve criar um <emphasis>pidfile</emphasis> para que seu processo possa ser encontrado com mais facilidade e confiabilidade. A variável <envar>pidfile</envar>, se configurada, informa ao <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> onde pode encontrar o pidfile para seus métodos padrão possam usar.</para>
+
+	<note>
+	  <para>De fato, o <citerefentry><refentrytitle>rc.subr</refentrytitle> <manvolnum>8</manvolnum></citerefentry> também usará o pidfile para ver se o daemon já está em execução antes de iniciá-lo. Esta verificação pode ser ignorada usando o argumento <option>faststart</option>.</para>
+	</note>
+      </callout>
+
+      <callout arearefs="rcng-daemon-adv-reqfiles">
+	<para>Se o daemon não puder ser executado a menos que existam certos arquivos, apenas liste-os em <envar>required_files</envar>, e <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> irá verificar se esses arquivos existem antes de iniciar o daemon. Também existem <envar>required_dirs</envar> e <envar>required_vars</envar> para diretórios e variáveis de ambiente, respectivamente. Todos eles são descritos em detalhes em <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry>.</para>
+
+	<note>
+	  <para>O método padrão de <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> pode ser forçado a ignorar as verificações de pré-requisitos usando <option>forcestart</option> como o argumento para o script.</para>
+	</note>
+      </callout>
+
+      <callout arearefs="rcng-daemon-adv-sig">
+	<para>Podemos personalizar sinais para enviar para o daemon caso eles sejam diferentes dos mais conhecidos. Em particular, <envar>sig_reload</envar> especifica o sinal que faz o daemon recarregar sua configuração; é <symbol>SIGHUP</symbol> por padrão. Outro sinal é enviado para parar o processo do daemon; o padrão é <symbol>SIGTERM</symbol>, mas isso pode ser alterado definindo <envar>sig_stop</envar> apropriadamente.</para>
+
+	<note>
+	  <para>Os nomes dos sinais devem ser especificados para o <citerefentry><refentrytitle>rc.subr</refentrytitle> <manvolnum>8</manvolnum></citerefentry> sem o prefixo <literal>SIG</literal>, como é mostrado no exemplo. A versão do FreeBSD do <citerefentry><refentrytitle>kill</refentrytitle><manvolnum>1</manvolnum></citerefentry> pode reconhecer o prefixo <literal>SIG</literal>, mas as versões de outros tipos de sistema operacional não.</para>
+	</note>
+      </callout>
+
+      <callout arearefs="rcng-daemon-adv-precmd rcng-daemon-adv-postcmd">
+	<para>Realizar tarefas adicionais antes ou depois dos métodos padrão é fácil. Para cada argumento de comando suportado pelo nosso script, podemos definir o argumento <envar><replaceable/>_precmd</envar> e <envar><replaceable/>_postcmd</envar>. Esses comandos no <citerefentry><refentrytitle>sh </refentrytitle><manvolnum>1</manvolnum> </citerefentry> são invocados antes e depois do respectivo método, como é evidente em seus nomes.</para>
+
+	<note>
+	  <para>Sobrescrever um método padrão com um <envar><replaceable>argumento </replaceable>_cmd</envar> personalizado ainda não nos impede de fazer uso do <envar><replaceable>argumento </replaceable>_precmd</envar> ou <envar><replaceable>argumento </replaceable>_postcmd</envar> se precisarmos. Em particular, o primeiro é bom para verificar condições personalizadas e sofisticadas que devem ser atendidas antes de executar o comando em si. Usar o <envar><replaceable>argumento </replaceable>_precmd</envar> junto com o <envar><replaceable>argumento </replaceable>_cmd</envar> nos permite separar logicamente as verificações da ação.</para>
+
+	  <para>Não se esqueça de que você pode amontoar qualquer expressão válida do <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry> nos métodos, pré e pós-comandos definidos por você. Apenas invocar uma função que faz com que o trabalho real seja um bom estilo na maioria dos casos, mas nunca deixe o estilo limitar sua compreensão do que está acontecendo por trás da cortina.</para>
+	</note>
+      </callout>
+
+      <callout arearefs="rcng-daemon-adv-extra">
+	<para>Se quisermos implementar argumentos customizados, que também podem ser considerados como <emphasis>comandos</emphasis> para o nosso script, precisamos listá-los em <envar>extra_commands</envar> e fornecer métodos para manipulá-los.</para>
+
+	<note>
+	  <para>O comando <option>reload</option> é especial. Por um lado, tem um método predefinido em <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry>. Por outro lado, <option>reload</option> não é oferecido por padrão. A razão é que nem todos os daemons usam o mesmo mecanismo de recarga e alguns não têm nada para recarregar. Portanto, precisamos solicitar explicitamente que a funcionalidade incorporada seja fornecida. Podemos fazer isso via <envar>extra_commands</envar>.</para>
+
+	  <para>O que obtemos do método padrão para <option>reload</option>? Muitas vezes, os daemons recarregam sua configuração na recepção de um sinal - normalmente, <symbol>SIGHUP</symbol>. Portanto, o <citerefentry><refentrytitle>rc.subr</refentrytitle> <manvolnum>8</manvolnum></citerefentry> tenta recarregar o daemon enviando um sinal para ele. O sinal é predefinido para <symbol>SIGHUP</symbol>, mas pode ser personalizado via <envar>sig_reload</envar>, caso necessário.</para>
+	</note>
+      </callout>
+
+      <callout arearefs="rcng-daemon-adv-methods rcng-daemon-adv-plugh">
+	<para>Nosso script suporta dois comandos não padrão, <option>plugh</option> e <option>xyzzy</option>. Nós os vimos listados em <envar>extra_commands</envar>, e agora é hora de fornecer métodos para eles. O método para <option>xyzzy</option> é apenas embutido, enquanto que para <option>plugh</option> é implementado como a função <function>mumbled_plugh</function>.</para>
+
+	<para>Comandos não padrão não são chamados durante a inicialização ou o desligamento. Geralmente eles são para a conveniência do administrador do sistema. Eles também podem ser usados de outros subsistemas, por exemplo, <citerefentry><refentrytitle>devd</refentrytitle> <manvolnum>8</manvolnum></citerefentry> se especificado em <citerefentry><refentrytitle>devd.conf</refentrytitle><manvolnum>5</manvolnum> </citerefentry>.</para>
+
+	<para>A lista completa de comandos disponíveis pode ser encontrada na linha de uso impressa por <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> quando o script é invocado sem argumentos. Por exemplo, aqui está a linha de uso do script em estudo:</para>
+
+	<screen><prompt>#</prompt> <userinput>/etc/rc.d/mumbled</userinput>
+Uso: /etc/rc.d/mumbled [fast|force|one](start|stop|restart|rcvar|reload|plugh|xyzzy|status|poll)</screen>
+      </callout>
+
+      <callout arearefs="rcng-daemon-adv-run">
+	<para>Um script pode invocar seus próprios comandos padrão ou não padrão, se necessário. Isto pode parecer semelhante as funções de chamada, mas sabemos que comandos e funções de shell nem sempre são a mesma coisa. Por exemplo, <command>xyzzy</command> não é implementado como uma função aqui. Além disso, pode haver um pré-comando e um pós-comando, que devem ser chamados ordenadamente. Portanto, a maneira correta de um script executar seu próprio comando é por meio de <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry>, conforme mostrado no exemplo.</para>
+      </callout>
+
+      <callout arearefs="rcng-daemon-adv-yn">
+	<para>Uma função útil chamada <function>checkyesno</function> é fornecida por <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum> </citerefentry>. Ele usa um nome de variável como argumento e retorna um código de saída zero se, e somente se, a variável estiver configurada como <literal>YES</literal>, ou <literal>TRUE</literal>, ou <literal>ON</literal>, ou <literal>1</literal>, sem distinção entre maiúsculas e minúsculas; um código de saída diferente de zero é retornado de outra forma. No último caso, a função testa a variável como sendo definida como <literal>NO</literal>,<literal>FALSE</literal>,<literal>OFF</literal>ou<literal>0</literal> insensível a maiúsculas e minúsculas; imprime uma mensagem de aviso se a variável contiver qualquer outra coisa, ou seja, lixo.</para>
+
+	<para>Tenha em mente que para o <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry> um código de saída zero significa verdadeiro e um código de saída diferente de zero significa falso.</para>
+
+	<important>
+	  <para>A função <function>checkyesno</function> recebe um <emphasis>nome da variável</emphasis>. Não passe o <emphasis>valor</emphasis> expandido de uma variável para ele; não funcionará como esperado.</para>
+
+	  <para>O uso correto de <function>checkyesno</function> é:</para>
+
+	  <programlisting>if checkyesno mumbled_enable; then
+        foo
+fi</programlisting>
+
+	  <para>Pelo contrário, chamar <function>checkyesno</function> como mostrado abaixo não funcionará - pelo menos não como esperado:</para>
+
+	  <programlisting>if checkyesno "${mumbled_enable}"; then
+        foo
+fi</programlisting>
+	</important>
+      </callout>
+
+      <callout arearefs="rcng-daemon-adv-rcflags">
+	<para><anchor xml:id="rc-flags"/> Podemos afetar os sinalizadores a serem passados para <envar>$command</envar> modificando <envar>rc_flags</envar> em <envar>$start_precmd</envar>.</para>
+      </callout>
+
+      <callout arearefs="rcng-daemon-adv-warn">
+	<para>Em certos casos, podemos precisar emitir uma mensagem importante que também deve ser enviada para o <application>syslog</application>. Isto pode ser feito facilmente com as seguintes funções <citerefentry><refentrytitle>rc.subr</refentrytitle> <manvolnum>8</manvolnum></citerefentry>: <function>debug</function>, <function>info</function>, <function>warn</function> e <function>err</function>. A última função, em seguida, sai do script com o código especificado.</para>
+      </callout>
+
+      <callout arearefs="rcng-daemon-adv-preret">
+	<para>Os códigos de saída dos métodos e seus pré-comandos não são apenas ignorados por padrão. Se o argumento <envar><replaceable/>_precmd</envar> retornar um código de saída diferente de zero, o método principal não será executado. Por sua vez, o <envar><replaceable>argumento</replaceable>_postcmd</envar> não será invocado a menos que o método principal retorne um código de saída zero.</para>
+
+	<note>
+	  <para>No entanto, o <citerefentry><refentrytitle>rc.subr</refentrytitle> <manvolnum>8</manvolnum></citerefentry> pode ser instruído a partir da linha de comando para ignorar esses códigos de saída e invocar todos os comandos, prefixando um argumento com <literal>force</literal>, como em <option>forcestart</option>.</para>
+	</note>
+      </callout>
+    </calloutlist>
+  </sect1>
+
+  <sect1 xml:id="rcng-hookup">
+    <title>Conectando um script ao framework rc.d</title>
+
+    <para>Depois que um script foi escrito, ele precisa ser integrado em <filename>rc.d&gt;</filename>. O passo crucial é instalar o script em <filename>/etc/rc.d</filename> (para o sistema base) ou <filename>/usr/local/etc/rc.d</filename> (para ports). Ambos &lt;<filename>bsd.prog.mk</filename> &gt; e &lt; <filename>bsd.port.mk</filename> &gt; fornecer ganchos convenientes para isso, e geralmente você não precisa se preocupar com a propriedade e o modo adequado. Os scripts do sistema devem ser instalados a partir do <filename>src /etc/rc.d</filename> através do <filename>Makefile</filename> encontrado lá. Os scripts de porta podem ser instalados usando <varname>USE_RC_SUBR</varname> conforme descrito em <link xlink:href="@@URL_RELPREFIX@@/doc/en_US.ISO8859-1/books/porters-handbook/rc-scripts.html"> no Manual do Porter</link>.</para>
+
+    <para>No entanto, devemos considerar antecipadamente o local do nosso script na sequência de inicialização do sistema. O serviço manipulado pelo nosso script provavelmente depende de outros serviços. Por exemplo, um daemon de rede não pode funcionar sem as interfaces de rede e o roteamento em funcionamento. Mesmo que um serviço pareça não exigir nada, dificilmente pode ser iniciado antes que os sistemas de arquivos básicos tenham sido verificados e montados.</para>
+
+    <para>Nós já mencionamos o <citerefentry><refentrytitle>rcorder</refentrytitle><manvolnum>8</manvolnum></citerefentry>. Agora é hora de dar uma olhada de perto. Em poucas palavras, o <citerefentry><refentrytitle>rcorder</refentrytitle> <manvolnum>8</manvolnum></citerefentry> pega um conjunto de arquivos, examina seu conteúdo e imprime uma lista ordenada por dependência de arquivos do conjunto para <varname>stdout</varname>. O objetivo é manter as informações de dependência <emphasis>dentro</emphasis> dos arquivos para que cada arquivo possa falar por si só. Um arquivo pode especificar as seguintes informações:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>os nomes das <quote>condições</quote> (o que significa serviços para nós) que ele <emphasis>fornece</emphasis>;</para>
+      </listitem>
+
+      <listitem>
+	<para>os nomes das <quote>condições</quote> que ele <emphasis>requer</emphasis>;</para>
+      </listitem>
+
+      <listitem>
+	<para>os nomes das <quote>condições</quote> deste arquivo devem ser executados <emphasis>antes</emphasis>;</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>palavras-chave adicionais</emphasis> que podem ser usadas para selecionar um subconjunto de todo o conjunto de arquivos (<citerefentry> <refentrytitle>rcorder</refentrytitle><manvolnum>8</manvolnum></citerefentry> podem ser instruídos através de opções para incluir ou omitir os arquivos com determinadas palavras-chave listadas.)</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Não é surpresa que <citerefentry><refentrytitle>rcorder</refentrytitle><manvolnum>8</manvolnum></citerefentry> possa manipular apenas arquivos de texto com uma sintaxe próxima a de <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry>. Ou seja, linhas especiais compreendidas por <citerefentry><refentrytitle>rcorder</refentrytitle><manvolnum>8</manvolnum></citerefentry> se parecem com comentários <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry>. A sintaxe de tais linhas especiais é bastante rígida para simplificar seu processamento. Veja <citerefentry><refentrytitle>rcorder</refentrytitle><manvolnum>8</manvolnum></citerefentry> para detalhes.</para>
+
+    <para>Além de usar linhas especiais do <citerefentry><refentrytitle>rcorder</refentrytitle><manvolnum>8</manvolnum></citerefentry>, um script pode insistir em sua dependência de outro serviço apenas iniciando-o forçadamente. Isso pode ser necessário quando o outro serviço é opcional e não será iniciado automaticamente porque o administrador do sistema o desativou por engano no <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>.</para>
+
+    <para>Com este conhecimento geral em mente, vamos considerar o simples script daemon aprimorado com coisas de dependência:</para>
+
+    <informalexample>
+      <programlisting>#!/bin/sh
+
+# PROVIDE: mumbled oldmumble <co xml:id="rcng-hookup-provide"/>
+# REQUIRE: DAEMON cleanvar frotz<co xml:id="rcng-hookup-require"/>
+# BEFORE:  LOGIN<co xml:id="rcng-hookup-before"/>
+# KEYWORD: nojail shutdown<co xml:id="rcng-hookup-keyword"/>
+
+. /etc/rc.subr
+
+name=mumbled
+rcvar=mumbled_enable
+
+command="/usr/sbin/${name}"
+start_precmd="${name}_prestart"
+
+mumbled_prestart()
+{
+	if ! checkyesno frotz_enable &amp;&amp; \
+	    ! /etc/rc.d/frotz forcestatus 1&gt;/dev/null 2&gt;&amp;1; then
+		force_depend frotz || return 1<co xml:id="rcng-hookup-force"/>
+	fi
+	return 0
+}
+
+load_rc_config $name
+run_rc_command "$1"</programlisting>
+    </informalexample>
+
+    <para>Como antes, a análise detalhada segue:</para>
+
+    <calloutlist>
+      <callout arearefs="rcng-hookup-provide">
+	<para>Esta linha declara os nomes das <quote>condições</quote> que nosso script fornece. Agora, outros scripts podem registrar uma dependência em nosso script por estes nomes.</para>
+
+	<note>
+	  <para>Geralmente, um script especifica uma única condição fornecida. No entanto, nada nos impede de listar várias condições, por exemplo, por razões de compatibilidade.</para>
+
+	  <para>Em qualquer caso, o nome da condição principal, ou a única, <literal>PROVIDE:</literal> deve ser o mesmo que <envar>${name}</envar>.</para>
+	</note>
+      </callout>
+
+      <callout arearefs="rcng-hookup-require rcng-hookup-before">
+	<para>Portanto, nosso script indica quais condições <quote/> são fornecidas por outros scripts dos quais depende. De acordo com as linhas, nosso script pede ao <citerefentry><refentrytitle>rcorder</refentrytitle> <manvolnum>8</manvolnum></citerefentry> para colocá-lo após o(s) script(s) fornecendo <filename>DAEMON</filename> e <filename>cleanvar</filename>, mas antes disso prover <filename>LOGIN</filename>.</para>
+
+	<note>
+	  <para>A linha <literal>BEFORE:</literal> não deve ser abusada para contornar uma lista de dependências incompleta no outro script. O caso apropriado para usar o <literal>BEFORE:</literal> é quando o outro script não se importa com o nosso, mas nosso script pode fazer sua tarefa melhor se for executado antes do outro. Um típico exemplo da vida real são as interfaces de rede versus o firewall: embora as interfaces não dependam do firewall em realizar seu trabalho, a segurança do sistema se beneficiará do firewall estar pronto antes que haja qualquer tráfego de rede.</para>
+
+	  <para>Além das condições correspondentes a um único serviço, existem meta-condições e seus scripts <quote>placeholder</quote> usados para garantir que determinados grupos de operações sejam executados antes dos outros. Estes são denotados pelos nomes <filename><replaceable>UPPERCASE</replaceable></filename>. Sua lista e finalidades podem ser encontradas em <citerefentry><refentrytitle>rc</refentrytitle><manvolnum>8</manvolnum></citerefentry>.</para>
+
+	  <para>Tenha em mente que colocar um nome de serviço na linha <literal>REQUIRE:</literal> não garante que o serviço estará realmente em execução no momento em que nosso script for iniciado. O serviço necessário pode falhar ao iniciar ou simplesmente ser desativado em <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum>5</manvolnum> </citerefentry>. Obviamente, o <citerefentry><refentrytitle>rcorder</refentrytitle> <manvolnum>8</manvolnum></citerefentry> não pode controlar tais detalhes, e o <citerefentry><refentrytitle>rc</refentrytitle><manvolnum>8</manvolnum></citerefentry> também não fará isso. Consequentemente, o aplicativo iniciado por nosso script deve ser capaz de lidar com quaisquer serviços necessários indisponíveis. Em certos casos, podemos ajudá-lo conforme discutido <link linkend="forcedep">abaixo.</link></para>
+	</note>
+      </callout>
+
+      <callout arearefs="rcng-hookup-keyword">
+	<para><anchor xml:id="keywords"/> Como lembramos do texto acima, as palavras-chave do <citerefentry><refentrytitle>rcorder</refentrytitle> <manvolnum>8</manvolnum> </citerefentry> podem ser usadas para selecionar ou deixar alguns scripts. Ou seja, qualquer consumidor <citerefentry><refentrytitle>rcorder</refentrytitle> <manvolnum>8</manvolnum></citerefentry> pode especificar através das opções <option>-k</option> e <option>-s</option> que as palavras-chave estão na <quote>keep list</quote> e na <quote>skip list</quote>, respectivamente. De todos os arquivos a serem classificados, o <citerefentry><refentrytitle>rcorder</refentrytitle> <manvolnum>8</manvolnum></citerefentry> selecionará apenas aqueles que tiverem uma palavra-chave da lista de manutenção (a menos que vazia) e não uma palavra-chave da lista de itens ignorados.</para>
+
+	<para>No FreeBSD, o <citerefentry><refentrytitle>rcorder</refentrytitle><manvolnum>8</manvolnum></citerefentry> é usado por <filename>/etc/rc</filename> e <filename>/etc/rc.shutdown</filename>. Esses dois scripts definem a lista padrão de palavras-chave do <filename>rc.d</filename> do FreeBSD e seus significados da seguinte forma:</para>
+
+	<variablelist>
+	  <varlistentry>
+	    <term><literal>nojail</literal></term>
+
+	    <listitem>
+	      <para>O serviço não é para o ambiente <citerefentry><refentrytitle>jail</refentrytitle><manvolnum>8</manvolnum> </citerefentry>. Os procedimentos automáticos de inicialização e encerramento ignoram o script se estiverem executando dentro de uma jail.</para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term><literal>nostart</literal></term>
+
+	    <listitem>
+	      <para>O serviço deve ser iniciado manualmente ou não iniciado. O procedimento de inicialização automática irá ignorar o script. Em conjunto com a palavra-chave <literal>shutdown</literal>, isso pode ser usado para escrever scripts que fazem algo apenas no desligamento do sistema.</para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term><literal>shutdown</literal></term>
+
+	    <listitem>
+	      <para>Esta palavra-chave deve ser listada <emphasis>explicitamente</emphasis> se o serviço precisar ser interrompido antes do desligamento do sistema.</para>
+
+	      <note>
+		<para>Quando o sistema for desligado, o <filename>/etc/rc.shutdown</filename> será executado. Ele assume que a maioria dos scripts <filename>rc.d</filename> não tem nada a fazer naquele momento. Portanto, <filename>/etc/rc.shutdown</filename> invoca seletivamente os scripts <filename>rc.d</filename> com a palavra-chave <literal>shutdown</literal>, efetivamente ignorando o restante dos scripts. Para um desligamento ainda mais rápido, o <filename>/etc/rc.shutdown</filename> passa o comando <option>faststop</option> para os scripts que executa, para que eles ignorem as verificações preliminares, por exemplo, a verificação do pidfile. Como os serviços dependentes devem ser parados antes de seus pré-requisitos, <filename>/etc/rc.shutdown</filename> executa os scripts na ordem de dependência inversa.</para>
+
+		<para>Se estiver escrevendo um script <filename>rc.d</filename> real, você deve considerar se é relevante no momento do desligamento do sistema. Por exemplo, se o seu script funcionar apenas em resposta ao comando <option>start</option>, não será necessário incluir essa palavra-chave. No entanto, se o seu script gerenciar um serviço, provavelmente será uma boa ideia pará-lo antes que o sistema prossiga para o estágio final de sua seqüência de desligamento descrita em <citerefentry><refentrytitle>halt</refentrytitle><manvolnum>8</manvolnum></citerefentry>. Em particular, um serviço deve ser interrompido explicitamente se precisar de tempo considerável ou ações especiais para encerrar de forma limpa. Um exemplo típico de tal serviço é um mecanismo de banco de dados.</para>
+	      </note>
+	    </listitem>
+	  </varlistentry>
+	</variablelist>
+      </callout>
+
+      <callout arearefs="rcng-hookup-force">
+	<para><anchor xml:id="forcedep"/> Para começar, <function>force_depend</function> deve ser usado com muito cuidado. Geralmente é melhor revisar a hierarquia de variáveis de configuração para seus scripts <filename>rc.</filename> se eles forem interdependentes.</para>
+
+	<para>Se você ainda não pode fazer sem <function>force_depend</function>, o exemplo oferece uma expressão de como invocá-lo condicionalmente. No exemplo, nosso daemon <command>mumbled</command> requer que outro, <command>frotz</command>, seja iniciado antecipadamente. No entanto, <command>frotz</command> é opcional também; e <citerefentry><refentrytitle>rcorder</refentrytitle><manvolnum>8</manvolnum></citerefentry> não sabe nada sobre esses detalhes. Felizmente, nosso script tem acesso a todas as variáveis <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>. Se <envar>frotz_enable</envar> estiver como true, esperamos pelo melhor e dependemos de <filename>rc.d</filename> para iniciar <command>frotz</command>. Caso contrário, nós forçadamente verificaremos o status de <command>frotz</command>. Finalmente, impomos nossa dependência ao <command>frotz</command> se ele não estiver sendo executado. Uma mensagem de aviso será emitida por <function>force_depend</function> porque ele deve ser chamado apenas se um erro de configuração for detectado.</para>
+      </callout>
+    </calloutlist>
+  </sect1>
+
+  <sect1 xml:id="rcng-args">
+    <title>Dando mais flexibilidade a um script rc.d</title>
+
+    <para>Quando chamado durante a inicialização ou desligamento, um script <filename> rc.d</filename> deve agir em todo o subsistema pelo qual é responsável. Por exemplo, <filename>/etc/rc.d/netif</filename> deve iniciar ou parar todas as interfaces de rede descritas por <citerefentry><refentrytitle>rc.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>. Qualquer tarefa pode ser indicada exclusivamente por um único argumento de comando, como <option>start</option> ou <option>stop</option>. Entre a inicialização e o desligamento, os scripts <filename>rc.d</filename> ajudam o administrador a controlar o sistema em execução, e é quando surge a necessidade de mais flexibilidade e precisão. Por exemplo, o administrador pode querer adicionar as configurações de uma nova interface de rede ao <citerefentry><refentrytitle>rc.conf</refentrytitle> <manvolnum>5</manvolnum></citerefentry> e então iniciá-lo sem interferir o funcionamento das interfaces existentes. Da próxima vez, o administrador pode precisar desligar uma única interface de rede. No espírito da linha de comando, o respectivo script <filename>rc.d</filename> solicita um argumento extra, o nome da interface.</para>
+
+    <para>Felizmente, <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> permite passar qualquer número de argumentos para os métodos do script (dentro dos limites do sistema). Devido a isso, as alterações no próprio script podem ser mínimas.</para>
+
+    <para>Como o <citerefentry><refentrytitle>rc.subr</refentrytitle> <manvolnum>8</manvolnum></citerefentry> pode obter acesso aos argumentos de linha de comando extra. Deveria pegá-los diretamente? Não por qualquer meio. Primeiro, uma função <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry> não tem acesso aos parâmetros posicionais de seu chamador, mas o <citerefentry><refentrytitle>rc.subr</refentrytitle> <manvolnum>8</manvolnum></citerefentry> é apenas uma despedida de tais funções. Em segundo lugar, a boa maneira de <filename>rc.d</filename> determina que é para o script principal decidir quais argumentos devem ser passados para seus métodos.</para>
+
+    <para>Portanto, a abordagem adotada por <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> é a seguinte: <function>run_rc_command</function> transmite todos os seus argumentos, mas o primeiro um para o respectivo método na íntegra. O primeiro, omitido, argumento é o nome do próprio método: <option>start</option>,<option>stop</option>, etc. Ele será deslocado por <function>run_rc_command</function>, então o que é <envar>$2</envar> na linha de comando original será apresentado como <envar>$1</envar> ao método, e assim por diante.</para>
+
+    <para>Para ilustrar essa oportunidade, vamos modificar o script fictício primitivo para que suas mensagens dependam dos argumentos adicionais fornecidos. Aqui vamos nós:</para>
+
+    <informalexample>
+      <programlisting>#!/bin/sh
+
+. /etc/rc.subr
+
+name="dummy"
+start_cmd="${name}_start"
+stop_cmd=":"
+kiss_cmd="${name}_kiss"
+extra_commands="kiss"
+
+dummy_start()
+{
+        if [ $# -gt 0 ]; then<co xml:id="rcng-args-start"/>
+                echo "Greeting message: $*"
+        else
+                echo "Nothing started."
+        fi
+}
+
+dummy_kiss()
+{
+        echo -n "A ghost gives you a kiss"
+        if [ $# -gt 0 ]; then<co xml:id="rcng-args-kiss"/>
+                echo -n " and whispers: $*"
+        fi
+        case "$*" in
+        *[.!?])
+                echo
+                ;;
+        *)
+                echo .
+                ;;
+        esac
+}
+
+load_rc_config $name
+run_rc_command "$@"<co xml:id="rcng-args-all"/></programlisting>
+    </informalexample>
+
+    <para>Quais mudanças essenciais podemos notar no script?</para>
+
+    <calloutlist>
+      <callout arearefs="rcng-args-start">
+	<para>Todos os argumentos digitados após <option>start</option> podem terminar como parâmetros posicionais para o respectivo método. Podemos usá-los de qualquer maneira de acordo com nossa tarefa, habilidades e fantasia. No exemplo atual, apenas passamos todos eles para <citerefentry><refentrytitle>echo</refentrytitle> <manvolnum>1</manvolnum></citerefentry> como uma cadeia na linha seguinte - note <envar>$*</envar> entre aspas duplas. Aqui está como o script pode ser chamado agora:</para>
+
+	<screen><prompt>#</prompt> <userinput>/etc/rc.d/dummy start</userinput>
+Nothing started.
+<prompt>#</prompt> <userinput>/etc/rc.d/dummy start Hello world!</userinput>
+Greeting message: Hello world!</screen>
+      </callout>
+
+      <callout arearefs="rcng-args-kiss">
+	<para>O mesmo se aplica a qualquer método que nosso script forneça, não apenas a um método padrão. Nós adicionamos um método customizado chamado <option>kiss</option>, e ele pode tirar proveito dos argumentos extras da mesma forma que o <option>start</option> tira. Por exemplo:</para>
+
+	<screen><prompt>#</prompt> <userinput>/etc/rc.d/dummy kiss</userinput>
+A ghost gives you a kiss.
+<prompt>#</prompt> <userinput>/etc/rc.d/dummy kiss Once I was Etaoin Shrdlu...</userinput>
+A ghost gives you a kiss and whispers: Once I was Etaoin Shrdlu...</screen>
+      </callout>
+
+      <callout arearefs="rcng-args-all">
+	<para>Se quisermos apenas passar todos os argumentos extras para qualquer método, podemos simplesmente substituir <literal>"$@"</literal> por <literal>"$ 1"</literal> na última linha do nosso script, onde invocamos o <function>run_rc_command</function>.</para>
+
+	<important>
+	  <para>Um programador <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry> deve entender a diferença sutil entre <envar>$*</envar> e <envar>$@</envar> como as formas de designar todos os parâmetros posicionais. Para sua discussão aprofundada, consulte um bom manual sobre programação de scripts <citerefentry><refentrytitle>sh</refentrytitle><manvolnum>1</manvolnum></citerefentry>. <emphasis>Não</emphasis> use estas expressões até que você as compreenda completamente, porque o uso incorreto delas resultará em scripts inseguros e contendo bugs.</para>
+	</important>
+
+	<note>
+	  <para>Atualmente, o <function>run_rc_command</function> pode ter um bug que o impede de manter os limites originais entre os argumentos. Ou seja, argumentos com espaços em branco incorporados podem não ser processados corretamente. O bug deriva do uso inadequado de <envar>$*</envar>.</para>
+	</note>
+      </callout>
+    </calloutlist>
+  </sect1>
+
+  <sect1 xml:id="rcng-furthur">
+    <title>Leitura adicional</title>
+
+    <para><anchor xml:id="lukem"/><link xlink:href="http://www.mewburn.net/luke/papers/rc.d.pdf">O artigo original de Luke Mewburn</link> oferece uma visão geral do <filename>rc.d</filename> e o raciocínio detalhado que o levou a suas decisões de design. Ele fornece informações sobre toda o framework do <filename>rc.d</filename> e o seu lugar em um moderno sistema operacional BSD.</para>
+
+    <para><anchor xml:id="manpages"/>As páginas de manual <citerefentry><refentrytitle>rc </refentrytitle><manvolnum>8</manvolnum> </citerefentry>, <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry> e <citerefentry><refentrytitle>rcorder</refentrytitle> <manvolnum>8</manvolnum></citerefentry> documentam os componentes do <filename>rc.d</filename> com grande detalhe. Você não pode usar totalmente o poder do <filename>rc.d</filename> sem estudar as páginas de manual e se referir a elas enquanto escreve seus próprios scripts.</para>
+
+    <para>A sua principal fonte de inspiração são os exemplos da vida real, existentes em no <filename>/etc/rc.d</filename> de um sistema vivo. Seu conteúdo é fácil e agradável de ler, porque a maioria dos cantos ásperos estão escondidos fundo no <citerefentry><refentrytitle>rc.subr</refentrytitle><manvolnum>8</manvolnum></citerefentry>. Tenha em mente que os scripts <filename>/etc/rc.d</filename> não foram escritos por anjos, então eles podem sofrer de bugs e decisões sub-ótimas de design. Agora você pode melhorá-los!</para>
+  </sect1>
+</article>
