@@ -24,6 +24,7 @@ SUBDIR+= new-users
 SUBDIR+= port-mentor-guidelines
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
+SUBDIR+= rc-scripting
 SUBDIR+= remote-install
 SUBDIR+= solid-state
 
