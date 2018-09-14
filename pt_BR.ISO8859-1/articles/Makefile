@@ -21,6 +21,7 @@ SUBDIR+= linux-users
 SUBDIR+= mailing-list-faq
 SUBDIR+= nanobsd
 SUBDIR+= new-users
+SUBDIR+= pam
 SUBDIR+= port-mentor-guidelines
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
