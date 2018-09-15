@@ -5,6 +5,7 @@
 # $FreeBSD$
 
 SUBDIR =
+SUBDIR+= bsdl-gpl
 SUBDIR+= building-products
 SUBDIR+= contributing
 SUBDIR+= cups
