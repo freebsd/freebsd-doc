@@ -28,6 +28,7 @@ SUBDIR+= problem-reports
 SUBDIR+= rc-scripting
 SUBDIR+= remote-install
 SUBDIR+= solid-state
+SUBDIR+= vinum
 SUBDIR+= vm-design
 
 DOC_PREFIX?= ${.CURDIR}/../..

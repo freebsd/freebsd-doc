@@ -1,0 +1,695 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V5.0-Based Extension//EN" "http://www.FreeBSD.org/XML/share/xml/freebsd50.dtd">
+<article xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:its="http://www.w3.org/2005/11/its" version="5.0" xml:lang="pt_BR">
+<!--
+	The Vinum Volume Manager
+	By Greg Lehey (grog at lemis dot com)
+
+	Added to the Handbook by Hiten Pandya <hmp@FreeBSD.org>
+	and Tom Rhodes <trhodes@FreeBSD.org>
+
+	For the FreeBSD Documentation Project
+	$FreeBSD$
+-->
+
+  <info>
+    <title>O Gerenciador de Volume <filename>vinum</filename></title>
+
+    <authorgroup>
+      <author><personname> <firstname>Greg</firstname> <surname>Lehey</surname> </personname> <contrib>Escrito originalmente por </contrib></author>
+    </authorgroup>
+  </info>
+
+  <sect1 xml:id="vinum-synopsis">
+    <title>Sinopse</title>
+
+    <para>Não importa o tipo de disco, sempre há problemas em potencial. Os discos podem ser muito pequenos, muito lentos ou pouco confiáveis para atender aos requisitos do sistema. Enquanto os discos estão ficando maiores, também ficam maiores os requisitos para armazenamento de dados. Geralmente, é necessário um sistema de arquivos maior que a capacidade de um disco. Várias soluções para esses problemas foram propostas e implementadas.</para>
+
+    <para>Um método é através do uso de vários discos, e às vezes discos redundantes. Além de suportar várias placas e controladoras para sistemas <acronym>RAID</acronym> (Redundant Array of Independent Disks), o sistema básico do FreeBSD inclui o gerenciador de volumes <filename>vinum</filename>, um driver de dispositivo de bloco que implementa discos virtuais e aborda esses três problemas. O <filename>vinum</filename> oferece mais flexibilidade, desempenho e confiabilidade do que o armazenamento em disco tradicional e implementa os modelos <acronym>RAID</acronym>-0, <acronym>RAID</acronym>-1 e <acronym> RAID</acronym>-5, tanto individualmente quanto combinados.</para>
+
+    <para>Este capítulo fornece uma visão geral dos possíveis problemas com o armazenamento em disco tradicional e uma introdução ao gerenciador de volumes <filename>vinum</filename>.</para>
+
+    <note>
+      <para>Começando com o FreeBSD 5, o <filename>vinum</filename> foi reescrito para se encaixar na <link xlink:href="@@URL_RELPREFIX@@/doc/en_US.ISO8859-1/books/handbook/geom.html">Arquitetura GEOM</link>, mantendo as idéias originais, a terminologia e os metadados no disco. Esta reescrita é chamada <emphasis>gvinum</emphasis> (para <emphasis>GEOM vinum</emphasis>). Enquanto este capítulo usa o termo <filename>vinum</filename>, qualquer invocação de comandos deve ser executada com o <command>gvinum</command>. O nome do módulo do kernel mudou do original <filename>vinum.ko</filename> para <filename>geom_vinum.ko</filename>, e todos os device nodes residem em <filename class="directory">/dev/gvinum</filename> em vez de <filename class="directory">/dev/vinum</filename>. A partir do FreeBSD 6, a implementação original do <filename>vinum</filename> não está mais disponível no código base.</para>
+    </note>
+  </sect1>
+
+  <sect1 xml:id="vinum-access-bottlenecks">
+    <title>Gargalos de Acesso</title>
+
+    <para>Sistemas modernos frequentemente precisam acessar dados de uma maneira altamente concorrente. Por exemplo, grandes servidores FTP ou HTTP podem manter milhares de sessões simultâneas e ter múltiplas conexões de 100 Mbit/s para o mundo externo, muito além da taxa de transferência sustentada da maioria dos discos.</para>
+
+    <para>As unidades de disco atuais podem transferir dados sequencialmente a até 70 MB/s, mas esse valor é de pouca importância em um ambiente em que muitos processos independentes acessam uma unidade e onde podem obter apenas uma fração desses valores. Nesses casos, é mais interessante visualizar o problema do ponto de vista do subsistema de disco. O parâmetro importante é a carga que uma transferência coloca no subsistema ou o tempo pelo qual uma transferência ocupa as unidades envolvidas na transferência.</para>
+
+    <para>Em qualquer transferência de disco, a unidade deve primeiro posicionar as cabeças, aguardar que o primeiro setor passe sob a cabeça de leitura e depois realizar a transferência. Essas ações podem ser consideradas atômicas, pois não faz sentido interrompê-las.</para>
+
+    <para><anchor xml:id="vinum-latency"/> Considere uma transferência típica de cerca de 10 kB: a geração atual de discos de alto desempenho pode posicionar as cabeças em uma média de 3,5 ms. As unidades mais rápidas giram a 15.000 rpm, portanto a latência rotacional média (meia revolução) é de 2 ms. A 70 MB/s, a própria transferência leva cerca de 150 μs, quase nada em comparação com o tempo de posicionamento. Nesse caso, a taxa de transferência efetiva cai para pouco mais de 1 MB/s e é claramente altamente dependente do tamanho da transferência.</para>
+
+    <para>A solução tradicional e óbvia para esse gargalo é <quote>mais eixos</quote>: em vez de usar um disco grande, use vários discos menores com o mesmo espaço de armazenamento agregado. Cada disco é capaz de se posicionar e transferir de forma independente, portanto, o rendimento efetivo aumenta em um fator próximo ao número de discos usados.</para>
+
+    <para>A melhoria real da taxa de transferência é menor que o número de discos envolvidos. Embora cada unidade seja capaz de transferir em paralelo, não há como garantir que as solicitações sejam distribuídas uniformemente pelas unidades. Inevitavelmente, a carga em uma unidade será maior que em outra.</para>
+
+    <indexterm><primary>Concatenação de disco</primary></indexterm>
+    <indexterm><primary>Concatenação </primary> <secondary>Vinum</secondary></indexterm>
+
+    <para>A uniformidade da carga nos discos é fortemente dependente da maneira como os dados são compartilhados entre as unidades. Na discussão a seguir, é conveniente pensar no armazenamento em disco como um grande número de setores de dados que são endereçáveis por número, mais ou menos como as páginas de um livro. O método mais óbvio é dividir o disco virtual em grupos de setores consecutivos do tamanho dos discos físicos individuais e armazená-los dessa maneira, mais ou menos como pegar um livro grande e dividi-lo em seções menores. Esse método é chamado de <emphasis>concatenação</emphasis> e tem a vantagem de os discos não precisarem ter nenhum relacionamento de tamanho específico. Ele funciona bem quando o acesso ao disco virtual é distribuído uniformemente sobre seu espaço de endereço. Quando o acesso é concentrado em uma área menor, a melhoria é menos acentuada. <xref linkend="vinum-concat"/> ilustra a seqüência na qual as unidades de armazenamento são alocadas em uma organização concatenada.</para>
+
+    <para>
+      <figure xml:id="vinum-concat">
+	<title>Organização Concatenada</title>
+
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="vinum-concat"/>
+	  </imageobject>
+	</mediaobject>
+      </figure></para>
+
+    <indexterm><primary>Discos Distribuídos</primary></indexterm>
+    <indexterm><primary>Discos Distribuídos no </primary><secondary>Vinum</secondary></indexterm>
+    <indexterm><primary><acronym>RAID</acronym></primary></indexterm>
+
+    <para>Um mapeamento alternativo é dividir o espaço de endereço em componentes menores e de tamanhos iguais e armazená-los sequencialmente em diferentes dispositivos. Por exemplo, os primeiros 256 setores podem ser armazenados no primeiro disco, os próximos 256 setores no próximo disco e assim por diante. Depois de preencher o último disco, o processo é repetido até que os discos estejam cheios. Este mapeamento é chamado <emphasis>striping</emphasis> ou <acronym>RAID-0</acronym>.</para>
+
+    <para>O <acronym>RAID</acronym> oferece várias formas de tolerância a falhas, embora o <acronym>RAID-0</acronym> seja um pouco enganador, pois não fornece redundância. O striping requer um pouco mais de esforço para localizar os dados e pode causar carga de I/O (INPUT/OUTPUT) adicional, onde uma transferência é distribuída por vários discos, mas também pode fornecer uma carga mais constante nos discos. <xref linkend="vinum-striped"/> ilustra a seqüência na qual as unidades de armazenamento são alocadas em uma organização distribuída.</para>
+
+    <para>
+      <figure xml:id="vinum-striped">
+	<title>Organização do modo distribuido (Striped)</title>
+
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="vinum-striped"/>
+	  </imageobject>
+	</mediaobject>
+      </figure></para>
+  </sect1>
+
+  <sect1 xml:id="vinum-data-integrity">
+    <title>Integridade de dados</title>
+
+    <para>O problema final com os discos é que eles não são confiáveis. Embora a confiabilidade tenha aumentado tremendamente nos últimos anos, as unidades de disco ainda são o componente central mais provável de um servidor para falhar. Quando o fazem, os resultados podem ser catastróficos e substituir uma unidade de disco com falha e a restauração de dados pode resultar em tempo de inatividade do servidor.</para>
+
+    <indexterm><primary>Espelhamento de disco</primary></indexterm>
+    <indexterm><primary>Espelhamento no </primary> <secondary>Vinum</secondary></indexterm>
+    <indexterm><primary><acronym>RAID</acronym>-1</primary></indexterm>
+
+    <para>Uma abordagem para esse problema é o <emphasis>mirroring (espelhamento)</emphasis>, ou <acronym>RAID-1</acronym>, que mantém duas cópias dos dados em diferentes hardwares físicos. Qualquer gravação no volume grava em ambos os discos; uma leitura pode ser satisfeita de qualquer um, portanto, se uma unidade falhar, os dados ainda estarão disponíveis na outra unidade.</para>
+
+    <para>O mirroring tem dois problemas:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Requer o dobro de armazenamento em disco que uma solução não redundante.</para>
+      </listitem>
+
+      <listitem>
+	<para>As gravações devem ser executadas em ambas as unidades, então ela usa o dobro da largura de banda de um volume não espelhado. As leituras não sofrem uma penalidade de desempenho e podem até ser mais rápidas.</para>
+      </listitem>
+    </itemizedlist>
+
+    <indexterm><primary><acronym>RAID</acronym>-5</primary></indexterm>
+
+    <para>Uma solução alternativa é a <emphasis>parity (paridade)</emphasis>, implementada nos níveis <acronym>RAID</acronym> 2, 3, 4 e 5. Destes, o <acronym>RAID-5</acronym> é o mais interessante. Como implementado no <filename>vinum</filename>, é uma variante em uma organização striped que dedica um bloco de cada distribuição à paridade de um dos outros blocos. Como implementado por <filename>vinum</filename>, um plex  <acronym>RAID-5</acronym> é semelhante a um plex striped, exceto que ele implementa <acronym>RAID-5</acronym> incluindo um bloco de paridade em cada stripe. Conforme exigido pelo <acronym>RAID-5</acronym>, o local desse bloco de paridade muda de um stripe para o próximo. Os números nos blocos de dados indicam os números de blocos relativos.</para>
+
+    <para>
+      <figure xml:id="vinum-raid5-org">
+	<title>Organização <acronym>RAID</acronym>-5</title>
+
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="vinum-raid5-org"/>
+	  </imageobject>
+	</mediaobject>
+      </figure></para>
+
+    <para>Comparado ao mirroring, o <acronym>RAID-5</acronym> tem a vantagem de exigir significativamente menos espaço de armazenamento. O acesso de leitura é semelhante ao das organizações distribuídas, mas o acesso de gravação é significativamente mais lento, aproximadamente 25% do desempenho de leitura. Se uma unidade falhar, a matriz pode continuar a operar no modo degradado, onde uma leitura de uma das unidades acessíveis restantes continua normalmente, mas uma leitura da unidade com falha é recalculada a partir do bloco correspondente de todas as unidades restantes.</para>
+  </sect1>
+
+  <sect1 xml:id="vinum-objects">
+    <title>Objetos do <filename>vinum</filename></title>
+
+    <para>A fim de resolver estes problemas, o <filename>vinum</filename> implementa uma hierarquia de quatro níveis de objetos:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>O objeto mais visível é o disco virtual, chamado <emphasis>volume</emphasis>. Os volumes têm essencialmente as mesmas propriedades de uma unidade de disco <trademark class="registered">UNIX</trademark>, embora haja algumas pequenas diferenças. Por um lado, eles não têm limitações de tamanho.</para>
+      </listitem>
+
+      <listitem>
+	<para>Os volumes são compostos de <emphasis>plexes</emphasis>, cada um dos quais representa o espaço de endereço total de um volume. Este nível na hierarquia fornece redundância. Pense em plexes como discos individuais em uma matriz espelhada, cada um contendo os mesmos dados.</para>
+      </listitem>
+
+      <listitem>
+	<para>Como o <filename>vinum</filename> existe dentro do framework de armazenamento em disco <trademark class="registered">UNIX</trademark>, seria possível usar as partições <trademark class="registered">UNIX</trademark> como bloco de construção para plexes de vários discos. Na verdade, isso acaba sendo muito inflexível, pois os discos <trademark class="registered">UNIX</trademark> podem ter apenas um número limitado de partições. Em vez disso, o <filename>vinum</filename> subdivide uma única partição <trademark class="registered">UNIX</trademark>, a <emphasis>unidade</emphasis>, em áreas contíguas chamadas  <emphasis>subdiscos</emphasis> , que são usados como blocos de construção para plexes.</para>
+      </listitem>
+
+      <listitem>
+	<para>Subdiscos residem em <filename>vinum</filename> <emphasis>drives</emphasis>, atualmente partições <trademark class="registered">UNIX</trademark>. Unidades <filename>vinum</filename> podem conter qualquer número de subdiscos. Com exceção de uma pequena área no início da unidade, que é usada para armazenar informações de configuração e estado, a unidade inteira está disponível para armazenamento de dados.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>As seções a seguir descrevem a maneira como esses objetos fornecem a funcionalidade necessária do <filename>vinum</filename>.</para>
+
+    <sect2>
+      <title>Considerações sobre o tamanho do volume</title>
+
+      <para>Os plexes podem incluir vários subdiscos distribuídos por todas as unidades na configuração <filename>vinum</filename>. Como resultado, o tamanho de uma unidade individual não limita o tamanho de um plex ou de um volume.</para>
+    </sect2>
+
+    <sect2>
+      <title>Armazenamento de Dados Redundantes</title>
+
+      <para>O <filename>vinum</filename> implementa o espelhamento anexando vários plexes a um volume. Cada plex é uma representação dos dados em um volume. Um volume pode conter entre um e oito plexes.</para>
+
+      <para>Embora um plex represente os dados completos de um volume, é possível que partes da representação estejam fisicamente ausentes, seja por design (por não definir um subdisco para partes do plex) ou por acidente (como resultado da falha de representação). Contanto que pelo menos um plex possa fornecer os dados para o intervalo de endereços completo do volume, o volume estará totalmente funcional.</para>
+    </sect2>
+
+    <sect2>
+      <title>Quais são as organizações disponíveis para um Plex?</title>
+
+      <para>O <filename>vinum</filename> implementa a concatenação e o striping no nível plex:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Um <emphasis>plex concatenado</emphasis> usa o espaço de endereço de cada subdisco um de cada vez. Plexes concatenados são os mais flexíveis, pois podem conter qualquer número de subdiscos e os subdiscos podem ser de tamanho diferente. O plex pode ser estendido adicionando subdiscos adicionais. Eles exigem menos tempo de <acronym>CPU</acronym> do que os plexes distribuídos, embora a diferença na sobrecarga de <acronym>CPU</acronym> não seja mensurável. Por outro lado, eles são mais suscetíveis a hot spots, nos quais um disco é muito ativo e outros ficam ociosos.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Um <emphasis>plex striped</emphasis> distribui os dados uniformemente entre cada subdisco. Os subdiscos devem ser todos do mesmo tamanho e deve haver pelo menos dois subdiscos para distingui-los de um plex concatenado. A maior vantagem dos plexes striped é que eles reduzem os hot spots. Ao escolher uma faixa de tamanho ideal, de cerca de 256 kB, a carga pode ser nivelada nas unidades de componentes. Estender um complexo adicionando novos subdiscos é algo tão complicado que o <filename>vinum</filename> não o implementa.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para><xref linkend="vinum-comparison"/> resume as vantagens e desvantagens de cada organização plex.</para>
+
+      <table xml:id="vinum-comparison" frame="none">
+	<title>Organizações Plex do <filename>vinum</filename></title>
+
+	<tgroup cols="5">
+	  <thead>
+	    <row>
+	      <entry>Tipo plex</entry>
+	      <entry>Subdiscos mínimos</entry>
+	      <entry>Pode adicionar subdiscos</entry>
+	      <entry>Deve ser de tamanho igual</entry>
+	      <entry>Aplicação</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry>concatenado</entry>
+	      <entry>1</entry>
+	      <entry>sim</entry>
+	      <entry>não</entry>
+	      <entry>Armazenamento de dados grandes com flexibilidade máxima de posicionamento e desempenho moderado</entry>
+	    </row>
+
+	    <row>
+	      <entry>striped</entry>
+	      <entry>2</entry>
+	      <entry>não</entry>
+	      <entry>sim</entry>
+	      <entry>Alto desempenho em combinação com acesso altamente concorrente</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="vinum-examples">
+    <title>Alguns exemplos</title>
+
+    <para>O <filename>vinum</filename> mantém um <emphasis>banco de dados de configuração</emphasis> que descreve os objetos conhecidos de um sistema individual. Inicialmente, o usuário cria o banco de dados de configuração a partir de um ou mais arquivos de configuração usando <citerefentry><refentrytitle>gvinum</refentrytitle><manvolnum>8</manvolnum></citerefentry>. O <filename>vinum</filename> armazena uma cópia de seu banco de dados de configuração em cada <emphasis>dispositivo</emphasis> de disco sob seu controle. Este banco de dados é atualizado em cada mudança de estado, de modo que uma reinicialização restaura com precisão o estado de cada objeto <filename>vinum</filename>.</para>
+
+    <sect2>
+      <title>O arquivo de configuração</title>
+
+      <para>O arquivo de configuração descreve objetos <filename>vinum</filename> individuais. A definição de um volume simples pode ser:</para>
+
+      <programlisting>    drive a device /dev/da3h
+    volume myvol
+      plex org concat
+        sd length 512m drive a</programlisting>
+
+      <para>Este arquivo descreve quatro objetos <filename>vinum</filename>:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>A linha <emphasis>drive</emphasis> descreve uma partição de disco (<emphasis>drive</emphasis>) e sua localização relativa ao hardware subjacente. É dado o nome simbólico <emphasis>a</emphasis>. Essa separação de nomes simbólicos de nomes de dispositivos permite que os discos sejam movidos de um local para outro sem confusão.</para>
+	</listitem>
+
+	<listitem>
+	  <para>A linha <emphasis>volume</emphasis> descreve um volume. O único atributo obrigatório é o nome, neste caso <emphasis>myvol</emphasis>.</para>
+	</listitem>
+
+	<listitem>
+	  <para>A linha <emphasis>plex</emphasis> define um plex. O único parâmetro requerido é a organização, neste caso <emphasis>concat</emphasis>. Nenhum nome é necessário, pois o sistema gera automaticamente um nome a partir do nome do volume, adicionando o sufixo <emphasis>.p</emphasis><emphasis>x</emphasis>, onde <emphasis>x</emphasis> é o número de o plex no volume. Assim, este plex será chamado <emphasis>myvol.p0</emphasis>.</para>
+	</listitem>
+
+	<listitem>
+	  <para>A linha <emphasis>sd</emphasis> descreve um subdisco. As especificações mínimas são o nome de uma unidade na qual irá armazená-lo e o tamanho do subdisco. Nenhum nome é necessário porque o sistema atribui automaticamente nomes derivados do nome do plex adicionando o sufixo <emphasis>.s</emphasis><emphasis>x</emphasis>, onde <emphasis>x</emphasis> é o número do subdisco no plex. Assim, <filename>vinum</filename> dá ao subdisco o nome <emphasis>myvol.p0.s0</emphasis>.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Depois de processar este arquivo, o <citerefentry><refentrytitle>gvinum</refentrytitle><manvolnum>8</manvolnum></citerefentry> produz a seguinte saída:</para>
+
+      <programlisting width="97">
+<prompt>#</prompt> gvinum -&gt; <userinput>create config1</userinput>
+Configuration summary
+Drives:         1 (4 configured)
+Volumes:        1 (4 configured)
+Plexes:         1 (8 configured)
+Subdisks:       1 (16 configured)
+
+  D a                     State: up       Device /dev/da3h      Avail: 2061/2573 MB (80%)
+
+  V myvol                 State: up       Plexes:       1 Size:      512 MB
+
+  P myvol.p0            C State: up       Subdisks:     1 Size:      512 MB
+
+  S myvol.p0.s0           State: up       PO:        0  B Size:      512 MB</programlisting>
+
+      <para>Esta saída mostra o formato de listagem breve de <citerefentry><refentrytitle>gvinum</refentrytitle><manvolnum>8</manvolnum></citerefentry>. Ele está representado graficamente em <xref linkend="vinum-simple-vol"/>.</para>
+
+      <para>
+	<figure xml:id="vinum-simple-vol">
+	  <title>Um volume <filename>vinum</filename> simples </title>
+
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="vinum-simple-vol"/>
+	    </imageobject>
+	  </mediaobject>
+	</figure></para>
+
+      <para>Esta figura, e as que se seguem, representam um volume, que contém os plexes, que por sua vez contém os subdiscos. Neste exemplo, o volume contém um plex e o plex contém um subdisco.</para>
+
+      <para>Este volume específico não tem nenhuma vantagem específica sobre uma partição de disco convencional. Ele contém um único plex, por isso não é redundante. O plex contém um único subdisco, portanto, não há diferença na alocação de armazenamento de uma partição de disco convencional. As seções a seguir ilustram vários métodos de configuração mais interessantes.</para>
+    </sect2>
+
+    <sect2>
+      <title>Maior Resiliência: Espelhamento</title>
+
+      <para>A resiliência de um volume pode ser aumentada pelo espelhamento. Ao dispor um volume espelhado, é importante garantir que os subdiscos de cada plex estejam em unidades diferentes, de modo que uma falha no dispositivo não derrubará os dois plexes. A configuração a seguir espelha um volume:</para>
+
+      <programlisting>	drive b device /dev/da4h
+	volume mirror
+      plex org concat
+        sd length 512m drive a
+	  plex org concat
+	    sd length 512m drive b</programlisting>
+
+      <para>Neste exemplo, não foi necessário especificar uma definição de drive <emphasis>a</emphasis> novamente, já que o <filename>vinum</filename> registra todos os objetos em seu banco de dados de configuração. Depois de processar esta definição, a configuração se parece com:</para>
+
+      <programlisting width="97">
+	Drives:         2 (4 configured)
+	Volumes:        2 (4 configured)
+	Plexes:         3 (8 configured)
+	Subdisks:       3 (16 configured)
+
+	D a                     State: up       Device /dev/da3h       Avail: 1549/2573 MB (60%)
+	D b                     State: up       Device /dev/da4h       Avail: 2061/2573 MB (80%)
+
+    V myvol                 State: up       Plexes:       1 Size:        512 MB
+    V mirror                State: up       Plexes:       2 Size:        512 MB
+
+    P myvol.p0            C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p0           C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p1           C State: initializing     Subdisks:     1 Size:        512 MB
+
+    S myvol.p0.s0           State: up       PO:        0  B Size:        512 MB
+	S mirror.p0.s0          State: up       PO:        0  B Size:        512 MB
+	S mirror.p1.s0          State: empty    PO:        0  B Size:        512 MB</programlisting>
+
+      <para><xref linkend="vinum-mirrored-vol"/> mostra a estrutura graficamente.</para>
+
+      <para>
+	<figure xml:id="vinum-mirrored-vol">
+	  <title>Um volume <filename>vinum</filename> espelhado</title>
+
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="vinum-mirrored-vol"/>
+	    </imageobject>
+	  </mediaobject>
+	</figure></para>
+
+      <para>Neste exemplo, cada plex contém os 512 MB completos do espaço de endereço. Como no exemplo anterior, cada plex contém apenas um único subdisco.</para>
+    </sect2>
+
+    <sect2>
+      <title>Otimizando o desempenho</title>
+
+      <para>O volume espelhado no exemplo anterior é mais resistente a falhas do que um volume não espelhado, mas seu desempenho é menor, pois cada gravação no volume requer uma gravação nas duas unidades, utilizando uma grande parte da largura de banda total do disco. As considerações de desempenho exigem uma abordagem diferente: em vez de espelhar, os dados são distribuídos em quantas unidades de disco forem possíveis. A configuração a seguir mostra um volume com um plex distribuído em quatro unidades de disco:</para>
+
+      <programlisting>        drive c device /dev/da5h
+	drive d device /dev/da6h
+	volume stripe
+	plex org striped 512k
+	  sd length 128m drive a
+	  sd length 128m drive b
+	  sd length 128m drive c
+	  sd length 128m drive d</programlisting>
+
+      <para>Como antes, não é necessário definir as unidades que já são conhecidas por <filename>vinum</filename>. Depois de processar esta definição, a configuração se parece com:</para>
+
+      <programlisting width="92">
+	Drives:         4 (4 configured)
+	Volumes:        3 (4 configured)
+	Plexes:         4 (8 configured)
+	Subdisks:       7 (16 configured)
+
+    D a                     State: up       Device /dev/da3h        Avail: 1421/2573 MB (55%)
+    D b                     State: up       Device /dev/da4h        Avail: 1933/2573 MB (75%)
+    D c                     State: up       Device /dev/da5h        Avail: 2445/2573 MB (95%)
+    D d                     State: up       Device /dev/da6h        Avail: 2445/2573 MB (95%)
+
+    V myvol                 State: up       Plexes:       1 Size:        512 MB
+    V mirror                State: up       Plexes:       2 Size:        512 MB
+    V striped               State: up       Plexes:       1 Size:        512 MB
+
+    P myvol.p0            C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p0           C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p1           C State: initializing     Subdisks:     1 Size:        512 MB
+    P striped.p1            State: up       Subdisks:     1 Size:        512 MB
+
+    S myvol.p0.s0           State: up       PO:        0  B Size:        512 MB
+    S mirror.p0.s0          State: up       PO:        0  B Size:        512 MB
+    S mirror.p1.s0          State: empty    PO:        0  B Size:        512 MB
+    S striped.p0.s0         State: up       PO:        0  B Size:        128 MB
+    S striped.p0.s1         State: up       PO:      512 kB Size:        128 MB
+    S striped.p0.s2         State: up       PO:     1024 kB Size:        128 MB
+    S striped.p0.s3         State: up       PO:     1536 kB Size:        128 MB</programlisting>
+
+      <para>
+	<figure xml:id="vinum-striped-vol">
+	  <title>Um volume <filename>vinum</filename> concatenado</title>
+
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="vinum-striped-vol"/>
+	    </imageobject>
+	  </mediaobject>
+	</figure></para>
+
+      <para>Este volume é representado em <xref linkend="vinum-striped-vol"/>. A escuridão das strips indica a posição dentro do espaço de endereço plex, onde as faixas mais claras vêm primeiro e as mais escuras por último.</para>
+    </sect2>
+
+    <sect2>
+      <title>Resiliência e Desempenho</title>
+
+      <para><anchor xml:id="vinum-resilience"/> Com hardware suficiente, é possível construir volumes que mostrem maior resiliência e melhor desempenho em comparação com as partições padrão <trademark class="registered">UNIX</trademark>. Um arquivo de configuração típico pode ser:</para>
+
+      <programlisting>	volume raid10
+      plex org striped 512k
+        sd length 102480k drive a
+        sd length 102480k drive b
+        sd length 102480k drive c
+        sd length 102480k drive d
+        sd length 102480k drive e
+      plex org striped 512k
+        sd length 102480k drive c
+        sd length 102480k drive d
+        sd length 102480k drive e
+        sd length 102480k drive a
+        sd length 102480k drive b</programlisting>
+
+      <para>Os subdiscos do segundo plex são compensados por duas unidades daquelas do primeiro plex. Isso ajuda a garantir que as gravações não vão para os mesmos subdiscos, mesmo que uma transferência passe por duas unidades.</para>
+
+      <para><xref linkend="vinum-raid10-vol"/> representa a estrutura deste volume.</para>
+
+      <para>
+	<figure xml:id="vinum-raid10-vol">
+	  <title>Um volume <filename>vinum</filename> espelhado e concatenado</title>
+
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="vinum-raid10-vol"/>
+	    </imageobject>
+	  </mediaobject>
+	</figure></para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="vinum-object-naming">
+    <title>Nomeação de Objetos</title>
+
+    <para>O <filename>vinum</filename> atribui nomes padrões a plexes e subdiscos, embora eles possam ser substituídos. Substituir os nomes padrões não é recomendado, pois não isso traz nenhuma vantagem significativa e pode causar confusão.</para>
+
+    <para>Os nomes podem conter qualquer caractere não-branco, mas é recomendado restringi-los a letras, dígitos e caracteres de sublinhado. Os nomes de volumes, plexes e subdiscos podem ter até 64 caracteres e os nomes das unidades podem ter até 32 caracteres.</para>
+
+    <para>Os objetos <filename>vinum</filename> são designados a device nodes na hierarquia <filename class="directory">/dev/gvinum</filename>. A configuração mostrada acima faria com que o <filename>vinum</filename> criasse os seguintes device nodes:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Entradas de dispositivos para cada volume. Estes são os principais dispositivos usados pelo <filename>vinum</filename>. A configuração acima incluiria os dispositivos <filename class="devicefile">/dev/gvinum/myvol</filename>, <filename class="devicefile">/dev/gvinum/mirror</filename>, <filename class="devicefile">/dev/gvinum/striped</filename>, <filename class="devicefile">/dev/gvinum/raid5</filename> e o <filename class="devicefile">/dev/gvinum/raid10</filename>.</para>
+      </listitem>
+
+      <listitem>
+	<para>Todos os volumes recebem entradas diretas em <filename class="directory">/dev/gvinum/</filename>.</para>
+      </listitem>
+
+      <listitem>
+	<para>Os diretórios <filename class="directory">/dev/gvinum/plex</filename>, e <filename class="directory"> /dev/gvinum/sd</filename> são aqueles que contém device nodes para cada plex e para cada subdisco, respectivamente.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Por exemplo, considere o seguinte arquivo de configuração:</para>
+
+    <programlisting>	drive drive1 device /dev/sd1h
+	drive drive2 device /dev/sd2h
+	drive drive3 device /dev/sd3h
+	drive drive4 device /dev/sd4h
+    volume s64 setupstate
+      plex org striped 64k
+        sd length 100m drive drive1
+        sd length 100m drive drive2
+        sd length 100m drive drive3
+        sd length 100m drive drive4</programlisting>
+
+    <para>Depois de processar este arquivo, o <citerefentry><refentrytitle>gvinum</refentrytitle><manvolnum>8</manvolnum> </citerefentry> cria a seguinte estrutura em <filename class="directory">/dev/gvinum</filename>:</para>
+
+    <programlisting>	drwxr-xr-x  2 root  wheel       512 Apr 13
+16:46 plex
+	crwxr-xr--  1 root  wheel   91,   2 Apr 13 16:46 s64
+	drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 sd
+
+    /dev/vinum/plex:
+    total 0
+    crwxr-xr--  1 root  wheel   25, 0x10000002 Apr 13 16:46 s64.p0
+
+    /dev/vinum/sd:
+    total 0
+    crwxr-xr--  1 root  wheel   91, 0x20000002 Apr 13 16:46 s64.p0.s0
+    crwxr-xr--  1 root  wheel   91, 0x20100002 Apr 13 16:46 s64.p0.s1
+    crwxr-xr--  1 root  wheel   91, 0x20200002 Apr 13 16:46 s64.p0.s2
+    crwxr-xr--  1 root  wheel   91, 0x20300002 Apr 13 16:46 s64.p0.s3</programlisting>
+
+    <para>Embora seja recomendado que os plexes e subdiscos não sejam atribuídos a nomes específicos, as unidades <filename>vinum</filename> devem ser nomeadas. Isso possibilita mover uma unidade para um local diferente e ainda reconhecê-la automaticamente. Os nomes dos drives podem ter até 32 caracteres.</para>
+
+    <sect2>
+      <title>Criando sistemas de arquivos</title>
+
+      <para>Para o sistema os volumes são idênticos aos discos, com uma exceção. Ao contrário das unidades <trademark class="registered">UNIX</trademark>, o <filename>vinum</filename> não particiona os volumes, e, portanto, não contêm uma tabela de partições. Isso exigiu modificação em alguns dos utilitários de disco, notavelmente no <citerefentry><refentrytitle>newfs</refentrytitle><manvolnum>8</manvolnum></citerefentry>, para que ele não tente interpretar a última letra de um nome do volume <filename>vinum</filename> como um identificador de partição. Por exemplo, uma unidade de disco pode ter um nome como <filename class="devicefile">/dev/ad0a</filename> ou <filename class="devicefile">/dev/da2h</filename>. Esses nomes representam a primeira partição (<filename>a</filename>) no primeiro (0) disco IDE (<filename>ad</filename>) e a oitava partição (<filename>h</filename>) no terceiro (2) disco SCSI (<filename>da</filename>) respectivamente. Por outro lado, um volume <filename>vinum</filename> pode ser chamado de <filename class="devicefile">/dev/gvinum/concat</filename>, que não tem relação com o nome da partição.</para>
+
+      <para>Para criar um sistema de arquivos neste volume, use <citerefentry><refentrytitle>newfs</refentrytitle><manvolnum>8</manvolnum></citerefentry>:</para>
+
+      <screen><prompt>#</prompt> <userinput>newfs /dev/gvinum/concat</userinput></screen>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="vinum-config">
+    <title>Configurando o <filename>vinum</filename></title>
+
+    <para>O kernel <filename>GENERIC</filename> não suporta o <filename>vinum</filename>. É possível compilar um kernel customizado que inclua o suporte estático ao <filename>vinum</filename>, mas isso não é recomendado. A maneira padrão de iniciar o <filename>vinum</filename> é como um módulo do kernel. O uso do <citerefentry><refentrytitle>kldload</refentrytitle><manvolnum>8</manvolnum></citerefentry> não é necessário porque quando o <citerefentry><refentrytitle>gvinum</refentrytitle><manvolnum>8</manvolnum></citerefentry> é iniciado, ele verifica se o módulo já foi carregado e, se ele não tiver sido, ele será carregado automaticamente.</para>
+
+
+    <sect2>
+      <title>Começando</title>
+
+      <para>O <filename>vinum</filename> armazena as informações de configuração nos slices dos discos essencialmente da mesma forma que nos arquivos de configuração. Ao ler a partir do banco de dados de configuração, o <filename>vinum</filename> reconhece um número de palavras-chave que não são permitidas nos arquivos de configuração. Por exemplo, uma configuração de disco pode conter o seguinte texto:</para>
+
+      <programlisting width="119">volume myvol state up
+volume bigraid state down
+plex name myvol.p0 state up org concat vol myvol
+plex name myvol.p1 state up org concat vol myvol
+plex name myvol.p2 state init org striped 512b vol myvol
+plex name bigraid.p0 state initializing org raid5 512b vol bigraid
+sd name myvol.p0.s0 drive a plex myvol.p0 state up len 1048576b driveoffset 265b plexoffset 0b
+sd name myvol.p0.s1 drive b plex myvol.p0 state up len 1048576b driveoffset 265b plexoffset 1048576b
+sd name myvol.p1.s0 drive c plex myvol.p1 state up len 1048576b driveoffset 265b plexoffset 0b
+sd name myvol.p1.s1 drive d plex myvol.p1 state up len 1048576b driveoffset 265b plexoffset 1048576b
+sd name myvol.p2.s0 drive a plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 0b
+sd name myvol.p2.s1 drive b plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 524288b
+sd name myvol.p2.s2 drive c plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 1048576b
+sd name myvol.p2.s3 drive d plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 1572864b
+sd name bigraid.p0.s0 drive a plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 0b
+sd name bigraid.p0.s1 drive b plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 4194304b
+sd name bigraid.p0.s2 drive c plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 8388608b
+sd name bigraid.p0.s3 drive d plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 12582912b
+sd name bigraid.p0.s4 drive e plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 16777216b</programlisting>
+
+	<para>As diferenças óbvias aqui são a presença de informações explícitas de localização e nomeação, as quais são ambas permitidas mas desencorajadas, e as informações sobre os estados. O <filename>vinum</filename> não armazena informações sobre unidades nas informações de configuração. Ele encontra as unidades varrendo as unidades de disco configuradas em busca de partições com um rótulo <filename>vinum</filename>. Isso permite que o <filename>vinum</filename> identifique as unidades corretamente, mesmo que elas tenham recebido diferentes IDs de unidade <trademark class="registered">UNIX</trademark>.</para>
+
+	<sect3 xml:id="vinum-rc-startup">
+	  <title>Inicialização automática</title>
+
+	  <para>O <emphasis>Gvinum</emphasis> apresenta sempre uma inicialização automática assim que o módulo do kernel é carregado, através do <citerefentry><refentrytitle>loader.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>. Para carregar o módulo <emphasis>Gvinum</emphasis> no momento da inicialização, adicione <literal>geom_vinum_load="YES"</literal> ao arquivo <filename>/boot/loader.conf</filename>.</para>
+
+	  <para>Quando o <filename>vinum</filename> é iniciado com <command>gvinum start</command>, o <filename>vinum</filename> lê o banco de dados de configuração de uma das unidades <filename>vinum</filename>. Em circunstâncias normais, cada unidade contém uma cópia idêntica do banco de dados de configuração, portanto, não importa qual unidade é lida. Após uma falha, no entanto, o <filename>vinum</filename> deve determinar qual unidade foi atualizada mais recentemente e ler a configuração desta unidade. Em seguida, atualiza a configuração, se necessário, de unidades progressivamente a partir das mais antigas.</para>
+	</sect3>
+      </sect2>
+    </sect1>
+
+    <sect1 xml:id="vinum-root">
+      <title>Usando o <filename>vinum</filename> para o sistema de arquivos raiz</title>
+
+      <para>Para uma máquina que tenha sistemas de arquivos totalmente espelhados usando <filename>vinum</filename>, é desejável também espelhar o sistema de arquivos raiz. Efetuar esta configuração é menos trivial do que espelhar um sistema de arquivos arbitrário porque:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>O sistema de arquivos raiz deve estar disponível muito cedo durante o processo de inicialização, portanto a infraestrutura <filename>vinum</filename> já deve estar disponível no momento.</para>
+	</listitem>
+	<listitem>
+	  <para>O volume que contém o sistema de arquivos raiz também contém a auto-inicialização do sistema e o kernel. Eles devem ser lidos usando os utilitários nativos do sistema, como o BIOS, que muitas vezes não pode ser instruído sobre os detalhes do <filename>vinum</filename>.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Nas seções a seguir, o termo <quote>volume raiz</quote> é geralmente usado para descrever o volume <filename>vinum</filename> que contém o sistema de arquivos raiz (/).</para>
+
+      <sect2>
+	<title>Iniciando o <filename>vinum</filename> cedo o suficiente para o sistema de arquivos raiz</title>
+
+	<para>O <filename>vinum</filename> deve estar disponível no início da inicialização do sistema pois o <citerefentry><refentrytitle>loader</refentrytitle> <manvolnum>8</manvolnum></citerefentry> deve ser capaz de carregar o módulo do kernel vinum antes de iniciar o kernel. Isto pode ser feito colocando esta linha no <filename>/boot/loader.conf</filename>:</para>
+
+	    <programlisting>geom_vinum_load="YES"</programlisting>
+
+    </sect2>
+
+    <sect2>
+      <title>Tornando um volume raiz baseado em <filename>vinum</filename> acessível ao Bootstrap</title>
+
+      <para>O bootstrap atual do FreeBSD tem apenas 7.5 KB de código e não entende as estruturas internas do <filename>vinum</filename>. Isso significa que não é possível analisar os dados de configuração <filename>vinum</filename> ou descobrir os elementos de um volume de inicialização. Assim, algumas soluções alternativas são necessárias para fornecer ao código de inicialização a ilusão de que ele está trabalhando com uma partição padrão <literal>a</literal> que contém o sistema de arquivos raiz.</para>
+
+      <para>Para que isso seja possível, os seguintes requisitos devem ser atendidos para o volume raiz:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>O volume raiz não pode ser uma stripe ou <acronym>RAID</acronym> -5.</para>
+	</listitem>
+
+	<listitem>
+	  <para>O volume raiz não deve conter mais de um subdisco concatenado por plex.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Observe que é desejável e possível usar vários plexes, cada um contendo uma réplica do sistema de arquivos raiz. O processo de bootstrap usará apenas uma réplica para localizar o bootstrap e todos os arquivos de inicialização, até que o kernel monte o sistema de arquivos raiz. Cada subdisco dentro desses plexes precisa da sua própria ilusão de partição <literal>a</literal>, para que o respectivo dispositivo seja inicializável. Não é estritamente necessário que cada uma dessas falsas partições <literal>a</literal> estejam localizadas no mesmo deslocamento dentro de seu dispositivo, em comparação com outros dispositivos contendo plexes do volume raiz. No entanto, é provavelmente uma boa ideia criar os volumes <filename>vinum</filename> dessa forma para que os dispositivos espelhados resultantes sejam simétricos, para evitar confusão.</para>
+
+      <para>Para configurar essas partições <literal>a</literal> para cada dispositivo contendo parte do volume raiz, é necessário o seguinte:</para>
+
+      <procedure>
+	<step>
+	  <para>A localização, offset desde o início do dispositivo, e o tamanho do subdisco desse dispositivo que faz parte do volume raiz precisam ser examinados, usando o comando:</para>
+
+	  <screen><prompt>#</prompt> <userinput>gvinum l -rv root</userinput></screen>
+
+	  <para>Os offsets (deslocamentos) e tamanhos do <filename>vinum</filename> são medidos em bytes. Eles devem ser divididos por 512 para obter os números de blocos que serão usados pelo <command>bsdlabel</command>.</para>
+	</step>
+
+	<step>
+	  <para>Execute este comando para cada dispositivo que participa do volume raiz:</para>
+
+	  <screen><prompt>#</prompt> <userinput>bsdlabel -e <replaceable>devname</replaceable></userinput></screen>
+
+	  <para>No comando acima <replaceable>devname</replaceable> deve ser o nome do disco, como <filename>da0</filename> para discos sem uma tabela de slices, ou o nome da slice, como <filename>ad0s1</filename>.</para>
+
+	  <para>Se já existir uma partição <literal>a</literal> no dispositivo a partir de um sistema de arquivos raiz pré-<filename>vinum</filename>, ela deve ser renomeada para outra coisa para que permaneça acessível (apenas nesse caso), mas ela não será mais usada por padrão para inicializar o sistema. Um sistema de arquivos raiz atualmente montado não pode ser renomeado, portanto, de forma que o processo ser executado quando o sistema for inicializado a partir de uma mídia <quote>Fixit</quote> ou em um processo de duas etapas em que, em um espelho, o disco que ainda não foi inicializado é manipulado primeiro.</para>
+
+	  <para>O offset da partição <filename>vinum</filename> neste dispositivo (se houver) deve ser adicionado ao deslocamento do respectivo subdisco de volume raiz neste dispositivo. O valor resultante se tornará o valor do <literal>offset</literal> para a nova partição <literal>a</literal>. O valor do <literal>size</literal> para esta partição também pode ser obtido a partir do cálculo acima. O <literal>fstype</literal> deve ser <literal>4.2BSD</literal>. Os valores de <literal>fsize</literal>, <literal>bsize</literal> e <literal>cpg</literal> devem ser escolhidos para corresponder ao sistema de arquivos atual, embora eles sejam relativamente sem importância dentro deste contexto.</para>
+
+	  <para>Desta forma, uma nova partição <literal>a</literal> será estabelecida sobrepondo a partição <filename>vinum</filename> neste dispositivo. O <command>bsdlabel</command> só permitirá essa sobreposição se a partição <filename>vinum</filename> tiver sido marcada corretamente usando o modo fstype do <literal>vinum</literal>.</para>
+	</step>
+
+	<step>
+	  <para>Temos agora uma falsa partição <literal>a</literal> em cada dispositivo que possui uma réplica do volume raiz. É altamente recomendável verificar o resultado usando um comando como:</para>
+
+	  <screen><prompt>#</prompt> <userinput>fsck -n /dev/<replaceable>devname</replaceable>a</userinput></screen>
+	</step>
+      </procedure>
+
+      <para>Deve ser lembrado que todos os arquivos contendo informações de controle devem ser relativos ao sistema de arquivos raiz no volume <filename>vinum</filename> e que, ao configurarmos um novo volume raiz <filename>vinum</filename>, ele pode não corresponder o sistema de arquivos raiz que está atualmente ativo. Então, em particular, o <filename>/etc/fstab</filename> e <filename>/boot/loader.conf</filename> precisam ser ajustados.</para>
+
+      <para>Na próxima reinicialização, o bootstrap deve descobrir as informações de controle apropriadas do novo sistema de arquivos raiz baseado no <filename>vinum</filename> e agir de acordo. No final do processo de inicialização do kernel, após todos os dispositivos terem sido anunciados, o aviso de destaque que mostra o sucesso desta configuração é uma mensagem como:</para>
+
+      <screen>Mounting root from ufs:/dev/gvinum/root</screen>
+    </sect2>
+
+    <sect2>
+      <title>Exemplo de uma configuração raiz baseada em <filename>vinum</filename></title>
+
+      <para>Depois que o volume raiz <filename>vinum</filename> foi configurado, a saída de <command>gvinum l -rv root</command> pode parecer com:</para>
+
+      <screen>...
+Subdisk root.p0.s0:
+		Size:        125829120 bytes (120 MB)
+		State: up
+		Plex root.p0 at offset 0 (0  B)
+		Drive disk0 (/dev/da0h) at offset 135680 (132 kB)
+
+Subdisk root.p1.s0:
+		Size:        125829120 bytes (120 MB)
+		State: up
+		Plex root.p1 at offset 0 (0  B)
+		Drive disk1 (/dev/da1h) at offset 135680 (132 kB)</screen>
+
+      <para>Os valores a serem observados são <literal>135680</literal> para o offset, relativo à partição <filename class="devicefile">/dev/da0h</filename>. Isso se traduz em 265 blocos de discos de 512 bytes nos termos do <command>bsdlabel</command>. Da mesma forma, o tamanho desse volume raiz é de 245760 blocos de 512 bytes. O <filename class="devicefile">/dev/da1h</filename>, contém a segunda réplica deste volume raiz, e possui uma configuração simétrica.</para>
+
+      <para>O bsdlabel para esses dispositivos pode se parecer com:</para>
+
+      <screen>...
+8 partitions:
+#        size   offset    fstype   [fsize bsize bps/cpg]
+  a:   245760      281    4.2BSD     2048 16384     0   # (Cyl.    0*- 15*)
+  c: 71771688        0    unused        0     0         # (Cyl.    0 - 4467*)
+  h: 71771672       16     vinum                        # (Cyl.    0*- 4467*)</screen>
+
+      <para>Pode-se observar que o parâmetro <literal>size</literal> para a falsa partição <literal>a</literal> corresponde ao valor descrito acima, enquanto o parâmetro <literal>offset</literal> é a soma do deslocamento dentro da partição <filename>vinum</filename> <literal>h</literal>, e o offset desta partição dentro do dispositivo ou slice. Esta é uma configuração típica que é necessária para evitar o problema descrito em <xref linkend="vinum-root-panic"/>. A partição <literal>a</literal> inteira está completamente dentro da partição <literal>h</literal> que contém todos os dados <filename>vinum</filename> para este dispositivo.</para>
+
+      <para>No exemplo acima, todo o dispositivo é dedicado ao <filename>vinum</filename> e não há sobra de partição raiz pré-<filename>vinum</filename>.</para>
+    </sect2>
+
+    <sect2>
+      <title>Soluções de problemas</title>
+
+      <para>A lista a seguir contém algumas armadilhas e soluções conhecidas.</para>
+
+      <sect3>
+	<title>Sistema de bootstrap carrega, mas o sistema não</title>
+
+	<para>Se por algum motivo o sistema não continuar a inicialização, o bootstrap pode ser interrompido pressionando <keycap>espaço</keycap> no aviso de 10 segundos. A variável <literal>vinum.autostart</literal> do loader pode ser examinada digitando <command>show</command> e manipulada usando <command>set</command> ou <command>unset</command>.</para>
+
+	<para>Se o módulo do kernel <filename>vinum</filename> ainda não estava na lista de módulos para carregar automaticamente, digite <command>load geom_vinum</command>.</para>
+
+	<para>Quando estiver pronto, o processo de inicialização pode ser continuado digitando-se <command>boot -as</command>, no qual <option>-as</option> solicita ao kernel que peça ao sistema de arquivos raiz para montar (<option>-a</option>) e fazer com que o processo de inicialização pare no modo single user(<option>-s</option>), em que o sistema de arquivos raiz é montado como somente leitura. Dessa forma, mesmo que apenas um plex de um volume multi-plex tenha sido montado, não estaremos arriscando nenhuma inconsistência de dados entre os plexes.</para>
+
+	<para>No prompt solicitando que um sistema de arquivos raiz seja montado, qualquer dispositivo que contenha um sistema de arquivos raiz válido pode ser inserido. Se o <filename>/etc/fstab</filename> estiver configurado corretamente, o padrão deve ser algo como <literal>ufs:/dev/gvinum/root</literal>. Uma opção alternativa típica seria algo como <literal>ufs:da0d</literal>, que poderia ser uma partição hipotética contendo o sistema de arquivos raiz pré-<filename>vinum</filename>. Deve-se tomar cuidado se uma das partições alias <literal>a</literal> for inserida aqui, para verificar se ela realmente faz referência aos subdiscos do dispositivo raiz <filename>vinum</filename>, porque em uma configuração espelhada, isso apenas montaria uma parte de um dispositivo raiz espelhado. Se este sistema de arquivos tiver que ser montado no modo read-write mais tarde, será necessário remover o(s) outro(s) plex(es) do volume raiz <filename>vinum</filename>, já que esses plexes carregariam dados inconsistentes.</para>
+      </sect3>
+
+      <sect3>
+	<title>Apenas o bootstrap primário carrega</title>
+
+	<para>Se o <filename>/boot/loader</filename> falhar ao carregar, mas o bootstrap primário ainda carregar (visível por um único traço na coluna esquerda da tela logo após o processo de boot ser iniciado), uma tentativa pode ser feita para interromper o bootstrap primário pressionando <keycap>espaço</keycap>. Isso fará com que o bootstrap pare no <link xlink:href="@@URL_RELPREFIX@@/doc/en_US.ISO8859-1/books/handbook/boot.html#boot-boot1">estágio dois</link>. Uma tentativa pode ser feita aqui para inicializar uma partição alternativa, como a partição que contém o sistema de arquivos raiz anterior que foi movido de <literal>a</literal>.</para>
+      </sect3>
+
+      <sect3 xml:id="vinum-root-panic">
+	<title>Nada carrega e o Bootstrap entra em panic</title>
+
+	<para>Esta situação acontecerá se o bootstrap tiver sido destruído pela instalação do <filename>vinum</filename>. Infelizmente, o  <filename>vinum</filename> acidentalmente deixa apenas 4 KB no início de sua partição livre antes de começar a escrever suas informações de cabeçalho <filename>vinum</filename>. No entanto, o estágio um e dois bootstraps mais o bsdlabel exigem 8 KB. Portanto, se uma partição <filename>vinum</filename> tiver sido iniciada no offset 0 dentro de uma slice ou disco que deveria ser inicializável, a configuração do <filename>vinum</filename> irá estragar o bootstrap.</para>
+
+	<para>Da mesma forma, se a situação acima foi recuperada, inicializando de uma mídia <quote>Fixit</quote>, e o bootstrap foi reinstalado usando <command>bsdlabel -B</command> como descrito em <link xlink:href="@@URL_RELPREFIX@@/doc/en_US.ISO8859-1/books/handbook/boot.html#boot-boot1"/>, o bootstrap irá estragar o cabeçalho <filename>vinum</filename> e o <filename>vinum</filename> não encontrará mais seu(s) disco(s). Entretando nenhum dado de configuração real do <filename>vinum</filename> e nenhum volume <filename>vinum</filename> de dados foi descartado, sendo possível recuperá-los digitando de novo exatamente as mesmas configurações do <filename>vinum</filename>, a situação é difícil de corrigir de forma definitiva. Pois será necessário mover toda a partição <filename>vinum</filename> em pelo menos 4 KB, para que o cabeçalho <filename>vinum</filename> e o bootstrap do sistema não colidam mais.</para>
+      </sect3>
+    </sect2>
+  </sect1>
+</article>
