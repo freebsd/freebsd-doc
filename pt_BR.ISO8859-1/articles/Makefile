@@ -14,6 +14,7 @@ SUBDIR+= filtering-bridges
 SUBDIR+= fonts
 SUBDIR+= freebsd-questions
 SUBDIR+= freebsd-update-server
+SUBDIR+= gjournal-desktop
 SUBDIR+= hubs
 SUBDIR+= ipsec-must
 SUBDIR+= ldap-auth
