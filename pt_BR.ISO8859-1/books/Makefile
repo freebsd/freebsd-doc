@@ -5,6 +5,7 @@
 #
 # $FreeBSD$
 
+SUBDIR+= dev-model
 SUBDIR+= faq
 SUBDIR+= fdp-primer
 
