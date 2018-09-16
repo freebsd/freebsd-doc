@@ -10,6 +10,7 @@ SUBDIR+= building-products
 SUBDIR+= contributing
 SUBDIR+= cups
 SUBDIR+= explaining-bsd
+SUBDIR+= filtering-bridges
 SUBDIR+= fonts
 SUBDIR+= freebsd-questions
 SUBDIR+= freebsd-update-server
