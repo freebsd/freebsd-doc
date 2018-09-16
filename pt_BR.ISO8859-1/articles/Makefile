@@ -8,6 +8,7 @@ SUBDIR =
 SUBDIR+= bsdl-gpl
 SUBDIR+= building-products
 SUBDIR+= contributing
+SUBDIR+= contributors
 SUBDIR+= cups
 SUBDIR+= explaining-bsd
 SUBDIR+= filtering-bridges
