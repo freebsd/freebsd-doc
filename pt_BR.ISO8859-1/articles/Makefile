@@ -27,6 +27,7 @@ SUBDIR+= mailing-list-faq
 SUBDIR+= nanobsd
 SUBDIR+= new-users
 SUBDIR+= pam
+SUBDIR+= pgpkeys
 SUBDIR+= port-mentor-guidelines
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
