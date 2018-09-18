@@ -33,6 +33,7 @@ SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
 SUBDIR+= rc-scripting
 SUBDIR+= remote-install
+SUBDIR+= serial-uart
 SUBDIR+= solid-state
 SUBDIR+= vinum
 SUBDIR+= vm-design
