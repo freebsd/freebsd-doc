@@ -32,6 +32,7 @@ SUBDIR+= port-mentor-guidelines
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
 SUBDIR+= rc-scripting
+SUBDIR+= releng
 SUBDIR+= remote-install
 SUBDIR+= serial-uart
 SUBDIR+= solid-state
