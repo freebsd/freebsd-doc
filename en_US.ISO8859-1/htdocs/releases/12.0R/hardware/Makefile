@@ -21,8 +21,6 @@ FORMATS?=		html txt
 INSTALL_COMPRESSED?=	gz
 INSTALL_ONLY_COMPRESSED=
 
-CLEANDIRS+=	${.CURDIR}/svn.*
-
 .if ${.TARGET:M${DOC}.html}
 MAN4TMP!=	${MKTEMP} -d ${.CURDIR}/svn.XXXXXXXX
 MAN4DIR=	${MAN4TMP}
@@ -35,7 +33,9 @@ hardware.parsed.xml:	dev-auto.ent man4-rmsrc
 dev-auto.ent:	man4-src-checkout
 	${PERL} ${MAN2HWNOTES_CMD} ${MAN2HWNOTES_FLAGS} -a ${ARCHLIST} -o ${.TARGET} ${MAN4PAGES} || (rm -f ${.TARGET})
 CLEANFILES+=	dev-auto.ent
+CLEANDIRS+=	${.CURDIR}/svn.*
 
+.ORDER:			man4-rmsrc man4-src-checkout
 man4-src-checkout:
 	mkdir -p ${MAN4TMP}
 	${SVN} co svn://svn.freebsd.org/base/${SRCBRANCH}/share/man/man4 \
