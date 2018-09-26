@@ -18,7 +18,6 @@ CGI+=	mailindex.cgi
 CGI+=	man.cgi
 CGI+=	mid.cgi
 CGI+=	mirror.cgi
-CGI+=	monthly.cgi
 CGI+=	ports.cgi
 
 .SUFFIXES:	.C .cgi
