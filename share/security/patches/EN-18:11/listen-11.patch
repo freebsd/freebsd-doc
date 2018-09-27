@@ -1,0 +1,260 @@
+--- sys/netinet/tcp_usrreq.c.orig
++++ sys/netinet/tcp_usrreq.c
+@@ -339,6 +339,7 @@
+ 	struct inpcb *inp;
+ 	struct tcpcb *tp = NULL;
+ 	struct sockaddr_in6 *sin6p;
++	u_char vflagsav;
+ 
+ 	sin6p = (struct sockaddr_in6 *)nam;
+ 	if (nam->sa_len != sizeof (*sin6p))
+@@ -355,6 +356,7 @@
+ 	inp = sotoinpcb(so);
+ 	KASSERT(inp != NULL, ("tcp6_usr_bind: inp == NULL"));
+ 	INP_WLOCK(inp);
++	vflagsav = inp->inp_vflag;
+ 	if (inp->inp_flags & (INP_TIMEWAIT | INP_DROPPED)) {
+ 		error = EINVAL;
+ 		goto out;
+@@ -384,6 +386,8 @@
+ 	error = in6_pcbbind(inp, nam, td->td_ucred);
+ 	INP_HASH_WUNLOCK(&V_tcbinfo);
+ out:
++	if (error != 0)
++		inp->inp_vflag = vflagsav;
+ 	TCPDEBUG2(PRU_BIND);
+ 	TCP_PROBE2(debug__user, tp, PRU_BIND);
+ 	INP_WUNLOCK(inp);
+@@ -447,6 +451,7 @@
+ 	int error = 0;
+ 	struct inpcb *inp;
+ 	struct tcpcb *tp = NULL;
++	u_char vflagsav;
+ 
+ 	TCPDEBUG0;
+ 	inp = sotoinpcb(so);
+@@ -456,6 +461,7 @@
+ 		error = EINVAL;
+ 		goto out;
+ 	}
++	vflagsav = inp->inp_vflag;
+ 	tp = intotcpcb(inp);
+ 	TCPDEBUG1();
+ 	SOCK_LOCK(so);
+@@ -482,6 +488,9 @@
+ 	if (tp->t_flags & TF_FASTOPEN)
+ 		tp->t_tfo_pending = tcp_fastopen_alloc_counter();
+ #endif
++	if (error != 0)
++		inp->inp_vflag = vflagsav;
++
+ out:
+ 	TCPDEBUG2(PRU_LISTEN);
+ 	TCP_PROBE2(debug__user, tp, PRU_LISTEN);
+@@ -558,6 +567,8 @@
+ 	struct inpcb *inp;
+ 	struct tcpcb *tp = NULL;
+ 	struct sockaddr_in6 *sin6p;
++	u_int8_t incflagsav;
++	u_char vflagsav;
+ 
+ 	TCPDEBUG0;
+ 
+@@ -574,6 +585,8 @@
+ 	inp = sotoinpcb(so);
+ 	KASSERT(inp != NULL, ("tcp6_usr_connect: inp == NULL"));
+ 	INP_WLOCK(inp);
++	vflagsav = inp->inp_vflag;
++	incflagsav = inp->inp_inc.inc_flags;
+ 	if (inp->inp_flags & INP_TIMEWAIT) {
+ 		error = EADDRINUSE;
+ 		goto out;
+@@ -603,11 +616,11 @@
+ 		}
+ 
+ 		in6_sin6_2_sin(&sin, sin6p);
+-		inp->inp_vflag |= INP_IPV4;
+-		inp->inp_vflag &= ~INP_IPV6;
+ 		if ((error = prison_remote_ip4(td->td_ucred,
+ 		    &sin.sin_addr)) != 0)
+ 			goto out;
++		inp->inp_vflag |= INP_IPV4;
++		inp->inp_vflag &= ~INP_IPV6;
+ 		if ((error = tcp_connect(tp, (struct sockaddr *)&sin, td)) != 0)
+ 			goto out;
+ #ifdef TCP_OFFLOAD
+@@ -625,11 +638,11 @@
+ 		}
+ 	}
+ #endif
++	if ((error = prison_remote_ip6(td->td_ucred, &sin6p->sin6_addr)) != 0)
++		goto out;
+ 	inp->inp_vflag &= ~INP_IPV4;
+ 	inp->inp_vflag |= INP_IPV6;
+ 	inp->inp_inc.inc_flags |= INC_ISIPV6;
+-	if ((error = prison_remote_ip6(td->td_ucred, &sin6p->sin6_addr)) != 0)
+-		goto out;
+ 	if ((error = tcp6_connect(tp, nam, td)) != 0)
+ 		goto out;
+ #ifdef TCP_OFFLOAD
+@@ -642,6 +655,15 @@
+ 	error = tp->t_fb->tfb_tcp_output(tp);
+ 
+ out:
++	/*
++	 * If the implicit bind in the connect call fails, restore
++	 * the flags we modified.
++	 */
++	if (error != 0 && inp->inp_lport == 0) {
++		inp->inp_vflag = vflagsav;
++		inp->inp_inc.inc_flags = incflagsav;
++	}
++
+ 	TCPDEBUG2(PRU_CONNECT);
+ 	TCP_PROBE2(debug__user, tp, PRU_CONNECT);
+ 	INP_WUNLOCK(inp);
+--- sys/netinet6/sctp6_usrreq.c.orig
++++ sys/netinet6/sctp6_usrreq.c
+@@ -557,6 +557,7 @@
+ 	struct sctp_inpcb *inp;
+ 	struct in6pcb *inp6;
+ 	int error;
++	u_char vflagsav;
+ 
+ 	inp = (struct sctp_inpcb *)so->so_pcb;
+ 	if (inp == NULL) {
+@@ -587,6 +588,7 @@
+ 		}
+ 	}
+ 	inp6 = (struct in6pcb *)inp;
++	vflagsav = inp6->inp_vflag;
+ 	inp6->inp_vflag &= ~INP_IPV4;
+ 	inp6->inp_vflag |= INP_IPV6;
+ 	if ((addr != NULL) && (SCTP_IPV6_V6ONLY(inp6) == 0)) {
+@@ -616,7 +618,7 @@
+ 					inp6->inp_vflag |= INP_IPV4;
+ 					inp6->inp_vflag &= ~INP_IPV6;
+ 					error = sctp_inpcb_bind(so, (struct sockaddr *)&sin, NULL, p);
+-					return (error);
++					goto out;
+ 				}
+ #endif
+ 				break;
+@@ -633,7 +635,8 @@
+ 		if (addr->sa_family == AF_INET) {
+ 			/* can't bind v4 addr to v6 only socket! */
+ 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
+-			return (EINVAL);
++			error = EINVAL;
++			goto out;
+ 		}
+ #endif
+ 		sin6_p = (struct sockaddr_in6 *)addr;
+@@ -642,10 +645,14 @@
+ 			/* can't bind v4-mapped addrs either! */
+ 			/* NOTE: we don't support SIIT */
+ 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
+-			return (EINVAL);
++			error = EINVAL;
++			goto out;
+ 		}
+ 	}
+ 	error = sctp_inpcb_bind(so, addr, NULL, p);
++out:
++	if (error != 0)
++		inp6->inp_vflag = vflagsav;
+ 	return (error);
+ }
+ 
+--- sys/netinet6/udp6_usrreq.c.orig
++++ sys/netinet6/udp6_usrreq.c
+@@ -1002,6 +1002,7 @@
+ 	struct inpcb *inp;
+ 	struct inpcbinfo *pcbinfo;
+ 	int error;
++	u_char vflagsav;
+ 
+ 	pcbinfo = udp_get_inpcbinfo(so->so_proto->pr_protocol);
+ 	inp = sotoinpcb(so);
+@@ -1009,6 +1010,7 @@
+ 
+ 	INP_WLOCK(inp);
+ 	INP_HASH_WLOCK(pcbinfo);
++	vflagsav = inp->inp_vflag;
+ 	inp->inp_vflag &= ~INP_IPV4;
+ 	inp->inp_vflag |= INP_IPV6;
+ 	if ((inp->inp_flags & IN6P_IPV6_V6ONLY) == 0) {
+@@ -1036,6 +1038,8 @@
+ #ifdef INET
+ out:
+ #endif
++	if (error != 0)
++		inp->inp_vflag = vflagsav;
+ 	INP_HASH_WUNLOCK(pcbinfo);
+ 	INP_WUNLOCK(inp);
+ 	return (error);
+@@ -1082,6 +1086,7 @@
+ 	struct inpcbinfo *pcbinfo;
+ 	struct sockaddr_in6 *sin6;
+ 	int error;
++	u_char vflagsav;
+ 
+ 	pcbinfo = udp_get_inpcbinfo(so->so_proto->pr_protocol);
+ 	inp = sotoinpcb(so);
+@@ -1109,17 +1114,26 @@
+ 			goto out;
+ 		}
+ 		in6_sin6_2_sin(&sin, sin6);
+-		inp->inp_vflag |= INP_IPV4;
+-		inp->inp_vflag &= ~INP_IPV6;
+ 		error = prison_remote_ip4(td->td_ucred, &sin.sin_addr);
+ 		if (error != 0)
+ 			goto out;
++		vflagsav = inp->inp_vflag;
++		inp->inp_vflag |= INP_IPV4;
++		inp->inp_vflag &= ~INP_IPV6;
+ 		INP_HASH_WLOCK(pcbinfo);
+ 		error = in_pcbconnect(inp, (struct sockaddr *)&sin,
+ 		    td->td_ucred);
+ 		INP_HASH_WUNLOCK(pcbinfo);
++		/*
++		 * If connect succeeds, mark socket as connected. If
++		 * connect fails and socket is unbound, reset inp_vflag
++		 * field.
++		 */
+ 		if (error == 0)
+ 			soisconnected(so);
++		else if (inp->inp_laddr.s_addr == INADDR_ANY &&
++		    inp->inp_lport == 0)
++			inp->inp_vflag = vflagsav;
+ 		goto out;
+ 	} else {
+ 		if ((inp->inp_vflag & INP_IPV6) == 0) {
+@@ -1132,16 +1146,25 @@
+ 		error = EISCONN;
+ 		goto out;
+ 	}
+-	inp->inp_vflag &= ~INP_IPV4;
+-	inp->inp_vflag |= INP_IPV6;
+ 	error = prison_remote_ip6(td->td_ucred, &sin6->sin6_addr);
+ 	if (error != 0)
+ 		goto out;
++	vflagsav = inp->inp_vflag;
++	inp->inp_vflag &= ~INP_IPV4;
++	inp->inp_vflag |= INP_IPV6;
+ 	INP_HASH_WLOCK(pcbinfo);
+ 	error = in6_pcbconnect(inp, nam, td->td_ucred);
+ 	INP_HASH_WUNLOCK(pcbinfo);
++	/*
++	 * If connect succeeds, mark socket as connected. If
++	 * connect fails and socket is unbound, reset inp_vflag
++	 * field.
++	 */
+ 	if (error == 0)
+ 		soisconnected(so);
++	else if (IN6_IS_ADDR_UNSPECIFIED(&inp->in6p_laddr) &&
++	    inp->inp_lport == 0)
++		inp->inp_vflag = vflagsav;
+ out:
+ 	INP_WUNLOCK(inp);
+ 	return (error);
