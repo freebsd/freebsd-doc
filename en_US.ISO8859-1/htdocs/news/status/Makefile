@@ -85,6 +85,7 @@ XSLT.DEFAULT=	report.xsl
 
 # Install a sample <project> entry.
 DATA=		report-sample.xml
+DATA+=		report-sample.md
 
 INDEXLINK=	status.html
 
