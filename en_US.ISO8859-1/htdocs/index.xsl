@@ -101,8 +101,10 @@
 				  <ul id="frontreleaseslist">
 					<li>Production:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,
+				<?ignore
 				<a
 				  href="&u.rel1.announce;">&rel1.current;</a>,
+				?>
 				<a
 				  href="&u.rel2.announce;">&rel2.current;</a></li>
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
