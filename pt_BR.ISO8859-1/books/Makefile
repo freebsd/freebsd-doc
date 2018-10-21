@@ -8,6 +8,7 @@
 SUBDIR+= dev-model
 SUBDIR+= faq
 SUBDIR+= fdp-primer
+SUBDIR+= porters-handbook
 
 DOC_PREFIX?= ${.CURDIR}/../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
