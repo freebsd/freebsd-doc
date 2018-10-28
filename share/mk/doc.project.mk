@@ -113,11 +113,17 @@ DOC_LOCAL_MK=	${DOC_PREFIX}/${LANGCODE}/share/mk/doc.local.mk
 # Subdirectory glue.
 .include "doc.subdir.mk"
 
+#
 # parallel build for target "all" and "clean"
-NCPU?= ${.MAKE.JOBS}
+#
+# by default we are using all available CPUs. You can override 
+# this on the command line with `make -j<number> p-all' or with the
+# variable `make NCPU=<number> p-all'
+#
+NCPU?= ${.MAKE.JOBS:U${:!/sbin/sysctl -n hw.ncpu!}}
 
 p-all p-clean p-po:
 	make -V SUBDIR | sed -E 's/[ ]+$$//' | tr " " "\n" | \
 		sed -E 's/^/make -C /; s/$$/ ${.TARGET:S/^p-//}/' | \
-		tr '\n' '\0' | xargs -0 -n1 -P${NCPU:S/^$$/8/} /bin/sh -c
+		tr '\n' '\0' | xargs -0 -n1 -P${NCPU} /bin/sh -c
 
