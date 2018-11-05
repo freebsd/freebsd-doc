@@ -126,7 +126,7 @@ sub MessageToHTML
     my ($header, $body) = split(/\n\n/, $doc, 2);
     my ($i, %hdr, $field, $data, $message);
     my ($mid) = 'mid.cgi';
-    my ($mid_full_url) = 'http://docs.FreeBSD.org/cgi/mid.cgi';
+    my ($mid_full_url) = 'https://docs.FreeBSD.org/cgi/mid.cgi';
     my ($tmid,$tirt,$tref);
     
     $body = &AddAnchors(&EscapeHTML($body));
