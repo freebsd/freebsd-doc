@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/multi-os/Makefile,v 1.1 2005/05/19 15:55:28 gad Exp $
 #
-# Original revision: 1.12
+# Original revision: r20561
 #
 # Article: Installing and Using FreeBSD With Other Operating Systems
 

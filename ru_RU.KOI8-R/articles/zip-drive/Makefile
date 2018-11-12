@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/zip-drive/Makefile,v 1.4 2005/10/28 18:00:47 gad Exp $
 #
-# Original revision: 1.4
+# Original revision: r20561
 #
 # Article: IOmega ZIP Drives
 

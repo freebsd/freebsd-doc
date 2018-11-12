@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/fdp-primer/Makefile,v 1.7 2004/11/22 16:00:40 den Exp $
 #
-# Original revision: 1.14
+# Original revision: r21373
 #
 # Build the FreeBSD Documentation Project Primer.
 #

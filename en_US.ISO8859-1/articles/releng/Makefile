@@ -19,6 +19,7 @@ IMAGES_EN+=	branches-releng5.pic
 IMAGES_EN+=	branches-releng6.pic
 IMAGES_EN+=	branches-releng7.pic
 IMAGES_EN+=	branches-releng8.pic
+IMAGES_EN+=	branches-releng9.pic
 
 CSS_SHEET_ADDITIONS= extra.css
 

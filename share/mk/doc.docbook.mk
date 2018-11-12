@@ -224,6 +224,9 @@ TEX_CMDSEQ+=	\tracingstats=${TRACE}
 .if defined(RLE)
 PNMTOPSFLAGS+=	-rle
 .endif
+.if defined(WWWFREEBSDORG)
+HTMLFLAGS+=	-V %html-header-script%
+.endif
 
 .if !defined(WITH_INLINE_LEGALNOTICE) || empty(WITH_INLINE_LEGALNOTICE)
 HTMLFLAGS+=	-V %generate-legalnotice-link%
@@ -525,6 +528,7 @@ index.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 		${DOC}.xml
 .endif
 .if !defined(NO_TIDY)
+	${REINPLACE_TABS_CMD} $$(${XARGS} < HTML.manifest)
 	-${TIDY} ${TIDYOPTS} $$(${XARGS} < HTML.manifest)
 .endif
 
@@ -545,6 +549,7 @@ ${DOC}.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 		${DOC}.xml > ${.TARGET}
 .endif
 .if !defined(NO_TIDY)
+	${REINPLACE_TABS_CMD} ${.TARGET}
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 

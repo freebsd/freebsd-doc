@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru$
 #
-# Original revision: 1.1
+# Original revision: r21463
 
 CHAPTERS= 	network-servers/chapter.sgml
 

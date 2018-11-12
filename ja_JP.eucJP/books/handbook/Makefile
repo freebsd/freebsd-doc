@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: 1.74
+# Original revision: 1.119
 #
 
 # ------------------------------------------------------------------------
@@ -25,6 +25,15 @@
 #                       easily be imported into PGP/GPG.
 #
 # ------------------------------------------------------------------------
+#
+# To add a new chapter to the Handbook:
+#
+# - Update this Makefile, chapters.ent and book.sgml
+# - Add a descriptive entry for the new chapter in preface/preface.sgml
+#
+# ------------------------------------------------------------------------
+
+.PATH: ${.CURDIR}/../../share/sgml/glossary
 
 MAINTAINER=	doc@FreeBSD.org
 
@@ -33,7 +42,6 @@ DOC?= book
 FORMATS?= html-split
 
 HAS_INDEX= true
-WITH_GLOSSARY?=
 USE_PS2PDF=	yes
 
 INSTALL_COMPRESSED?= gz
@@ -42,6 +50,53 @@ INSTALL_ONLY_COMPRESSED?=
 IMAGES_EN = advanced-networking/isdn-bus.eps
 IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
+IMAGES_EN+= advanced-networking/net-routing.pic
+IMAGES_EN+= advanced-networking/static-routes.pic
+IMAGES_EN+= bsdinstall/bsdinstall-adduser1.png
+IMAGES_EN+= bsdinstall/bsdinstall-adduser2.png
+IMAGES_EN+= bsdinstall/bsdinstall-adduser3.png
+IMAGES_EN+= bsdinstall/bsdinstall-boot-loader-menu.png
+IMAGES_EN+= bsdinstall/bsdinstall-choose-mode.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-components.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-hostname.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-keymap.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-services.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-crashdump.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4-dhcp.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4-static.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv6.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv6-static.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-slaac.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-ipv4-dns.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-wireless-accesspoints.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-wireless-scan.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-wireless-wpa2setup.png
+IMAGES_EN+= bsdinstall/bsdinstall-distfile-extracting.png
+IMAGES_EN+= bsdinstall/bsdinstall-distfile-fetching.png
+IMAGES_EN+= bsdinstall/bsdinstall-distfile-verifying.png
+IMAGES_EN+= bsdinstall/bsdinstall-final-confirmation.png
+IMAGES_EN+= bsdinstall/bsdinstall-finalconfiguration.png
+IMAGES_EN+= bsdinstall/bsdinstall-final-modification-shell.png
+IMAGES_EN+= bsdinstall/bsdinstall-keymap-select-default.png
+IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
+IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
+IMAGES_EN+= bsdinstall/bsdinstall-netinstall-mirrorselect.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-entire-part.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-guided-disk.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-guided-manual.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-manual-addpart.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-manual-create.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-manual-partscheme.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-review.png
+IMAGES_EN+= bsdinstall/bsdinstall-post-root-passwd.png
+IMAGES_EN+= bsdinstall/bsdinstall-set-clock-local-utc.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-confirm.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-country.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-region.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-zone.png
+IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
 IMAGES_EN+= install/adduser3.scr
@@ -53,7 +108,6 @@ IMAGES_EN+= install/console-saver1.scr
 IMAGES_EN+= install/console-saver2.scr
 IMAGES_EN+= install/console-saver3.scr
 IMAGES_EN+= install/console-saver4.scr
-IMAGES_EN+= install/desktop.scr
 IMAGES_EN+= install/disklabel-auto.scr
 IMAGES_EN+= install/disklabel-ed1.scr
 IMAGES_EN+= install/disklabel-ed2.scr
@@ -108,8 +162,15 @@ IMAGES_EN+= install/timezone2.scr
 IMAGES_EN+= install/timezone3.scr
 IMAGES_EN+= install/userconfig.scr
 IMAGES_EN+= install/userconfig2.scr
-IMAGES_EN+= install/xf86setup.scr
-#
+IMAGES_EN+= mail/mutt1.scr
+IMAGES_EN+= mail/mutt2.scr
+IMAGES_EN+= mail/mutt3.scr
+IMAGES_EN+= mail/pine1.scr
+IMAGES_EN+= mail/pine2.scr
+IMAGES_EN+= mail/pine3.scr
+IMAGES_EN+= mail/pine4.scr
+IMAGES_EN+= mail/pine5.scr
+
 IMAGES_EN+= install/example-dir1.eps
 IMAGES_EN+= install/example-dir2.eps
 IMAGES_EN+= install/example-dir3.eps
@@ -126,6 +187,44 @@ IMAGES_EN+= install/example-dir5.eps
 #IMAGES_EN+= vinum/vinum-simple-vol.pic
 #IMAGES_EN+= vinum/vinum-striped-vol.pic
 #IMAGES_EN+= vinum/vinum-striped.pic
+IMAGES_EN+= virtualization/parallels-freebsd1.png
+IMAGES_EN+= virtualization/parallels-freebsd2.png
+IMAGES_EN+= virtualization/parallels-freebsd3.png
+IMAGES_EN+= virtualization/parallels-freebsd4.png
+IMAGES_EN+= virtualization/parallels-freebsd5.png
+IMAGES_EN+= virtualization/parallels-freebsd6.png
+IMAGES_EN+= virtualization/parallels-freebsd7.png
+IMAGES_EN+= virtualization/parallels-freebsd8.png
+IMAGES_EN+= virtualization/parallels-freebsd9.png
+IMAGES_EN+= virtualization/parallels-freebsd10.png
+IMAGES_EN+= virtualization/parallels-freebsd11.png
+IMAGES_EN+= virtualization/parallels-freebsd12.png
+IMAGES_EN+= virtualization/parallels-freebsd13.png
+IMAGES_EN+= virtualization/virtualpc-freebsd1.png
+IMAGES_EN+= virtualization/virtualpc-freebsd2.png
+IMAGES_EN+= virtualization/virtualpc-freebsd3.png
+IMAGES_EN+= virtualization/virtualpc-freebsd4.png
+IMAGES_EN+= virtualization/virtualpc-freebsd5.png
+IMAGES_EN+= virtualization/virtualpc-freebsd6.png
+IMAGES_EN+= virtualization/virtualpc-freebsd7.png
+IMAGES_EN+= virtualization/virtualpc-freebsd8.png
+IMAGES_EN+= virtualization/virtualpc-freebsd9.png
+IMAGES_EN+= virtualization/virtualpc-freebsd10.png
+IMAGES_EN+= virtualization/virtualpc-freebsd11.png
+IMAGES_EN+= virtualization/virtualpc-freebsd12.png
+IMAGES_EN+= virtualization/virtualpc-freebsd13.png
+IMAGES_EN+= virtualization/vmware-freebsd01.png
+IMAGES_EN+= virtualization/vmware-freebsd02.png
+IMAGES_EN+= virtualization/vmware-freebsd03.png
+IMAGES_EN+= virtualization/vmware-freebsd04.png
+IMAGES_EN+= virtualization/vmware-freebsd05.png
+IMAGES_EN+= virtualization/vmware-freebsd06.png
+IMAGES_EN+= virtualization/vmware-freebsd07.png
+IMAGES_EN+= virtualization/vmware-freebsd08.png
+IMAGES_EN+= virtualization/vmware-freebsd09.png
+IMAGES_EN+= virtualization/vmware-freebsd10.png
+IMAGES_EN+= virtualization/vmware-freebsd11.png
+IMAGES_EN+= virtualization/vmware-freebsd12.png
 
 # Images from the cross-document image library
 IMAGES_LIB=  callouts/1.png
@@ -138,6 +237,11 @@ IMAGES_LIB+= callouts/7.png
 IMAGES_LIB+= callouts/8.png
 IMAGES_LIB+= callouts/9.png
 IMAGES_LIB+= callouts/10.png
+IMAGES_LIB+= callouts/11.png
+IMAGES_LIB+= callouts/12.png
+IMAGES_LIB+= callouts/13.png
+IMAGES_LIB+= callouts/14.png
+IMAGES_LIB+= callouts/15.png
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
@@ -145,35 +249,46 @@ IMAGES_LIB+= callouts/10.png
 #
 
 # SGML content
+#SRCS+= audit/chapter.sgml
 SRCS+= book.sgml
+SRCS+= bsdinstall/chapter.sgml
+SRCS+= colophon.sgml
+#SRCS+= dtrace/chapter.sgml
+#SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
-SRCS+= config/chapter.sgml
 SRCS+= boot/chapter.sgml
+SRCS+= config/chapter.sgml
 SRCS+= cutting-edge/chapter.sgml
+SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
+#SRCS+= firewalls/chapter.sgml
+#SRCS+= filesystems/chapter.sgml
+#SRCS+= geom/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
+#SRCS+= jails/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
 SRCS+= l10n/chapter.sgml
 SRCS+= linuxemu/chapter.sgml
+#SRCS+= mac/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= multimedia/chapter.sgml
-SRCS+= desktop/chapter.sgml
+#SRCS+= network-servers/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
+SRCS+= ports/chapter.sgml
 SRCS+= ppp-and-slip/chapter.sgml
+SRCS+= preface/preface.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
 SRCS+= users/chapter.sgml
 #SRCS+= vinum/chapter.sgml
+#SRCS+= virtualization/chapter.sgml
 SRCS+= x11/chapter.sgml
-SRCS+= ports/chapter.sgml
-SRCS+= preface/preface.sgml
-SRCS+= colophon.sgml
 
 # Entities
 SRCS+= chapters.ent 
@@ -187,14 +302,10 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
-.if defined(WITH_GLOSSARY) && !empty(WITH_GLOSSARY)
 SGMLFLAGS+= -i chap.freebsd-glossary
-.endif
 
 pgpkeyring: pgpkeys/chapter.sgml
-	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
-
-DOC_PREFIX?= ${.CURDIR}/../../..
+	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
 
 #
 # Handbook-specific variables
@@ -203,42 +314,46 @@ DOC_PREFIX?= ${.CURDIR}/../../..
 JADEFLAGS+=	-V withpgpkeys
 .endif
 
-DOC_PREFIX?= ${.CURDIR}/../../..
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?=	${.CURDIR}/../../..
 
-.for p in ftp cvsup
-SRCS+= mirrors.sgml.${p}.inc
-CLEANFILES+= mirrors.sgml.${p}.inc
-CLEANFILES+= mirrors.sgml.${p}.inc.tmp
-.endfor
+#
+# rules generating lists of mirror site from XML database.
+#
+XMLDOCS=	mirrors-ftp:::mirrors.sgml.ftp.inc.tmp \
+		mirrors-cvsup:::mirrors.sgml.cvsup.inc.tmp \
+		eresources:::eresources.sgml.www.inc.tmp
+DEPENDSET.DEFAULT=	transtable mirror
+XSLT.DEFAULT=		${XSL_MIRRORS}
+XML.DEFAULT=		${XML_MIRRORS}
+NO_TIDY.DEFAULT=	yes
 
-SRCS+= eresources.sgml.www.inc
-CLEANFILES+= eresources.sgml.www.inc
-CLEANFILES+= eresources.sgml.www.inc.tmp
+PARAMS.mirrors-ftp+=	--param 'type' "'ftp'" \
+			--param 'proto' "'ftp'" \
+			--param 'target' "'handbook/mirrors/chapter.sgml'"
+PARAMS.mirrors-cvsup+=	--param 'type' "'cvsup'" \
+			--param 'proto' "'cvsup'" \
+			--param 'target' "'handbook/mirrors/chapter.sgml'"
+PARAMS.eresources+=	--param 'type' "'www'" \
+			--param 'proto' "'http'" \
+			--param 'target' "'handbook/eresources/chapter.sgml'"
+
+SRCS+=		mirrors.sgml.ftp.inc \
+		mirrors.sgml.cvsup.inc \
+		eresources.sgml.www.inc
+
+CLEANFILES+=	mirrors.sgml.ftp.inc mirrors.sgml.ftp.inc.tmp \
+		mirrors.sgml.cvsup.inc mirrors.sgml.cvsup.inc.tmp \
+		eresources.sgml.www.inc eresources.sgml.www.inc.tmp
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
 
 .for p in ftp cvsup
-mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-	    -o $@.tmp \
-	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
-	    --param 'type' "'$p'" \
-	    --param 'proto' "'$p'" \
-	    --param 'target' "'handbook/mirrors/chapter.sgml'" \
-	    ${XSL_MIRRORS} ${XML_MIRRORS}
+mirrors.sgml.${p}.inc: mirrors.sgml.${p}.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
-	${RM} -f $@.tmp
 .endfor
 
-eresources.sgml.www.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-	    -o $@.tmp \
-	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
-	    --param 'type' "'www'" \
-	    --param 'proto' "'http'" \
-	    --param 'target' "'handbook/eresources/chapter.sgml'" \
-	    ${XSL_MIRRORS} ${XML_MIRRORS}
+eresources.sgml.www.inc: eresources.sgml.www.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
-	${RM} -f $@.tmp

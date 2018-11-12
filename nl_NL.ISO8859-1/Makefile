@@ -1,7 +1,7 @@
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/Makefile
-# %SRCID%	1.7
+# %SRCID%	38826
 #
 
 SUBDIR = articles

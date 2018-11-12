@@ -3,7 +3,7 @@
 #
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/pgpkeys/Makefile,v 1.3 2003/11/08 00:20:47 phantom Exp $
-# Original revision: 1.3
+# Original revision: r16831
 #
 
 CHAPTERS= 	pgpkeys/chapter.sgml

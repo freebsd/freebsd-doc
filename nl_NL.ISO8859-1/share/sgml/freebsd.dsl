@@ -1,10 +1,9 @@
 <!--
       The FreeBSD Documentation Project
       $FreeBSD$
-      $FreeBSDnl$
 
       %SOURCE%	en_US.ISO8859-1/share/sgml/freebsd.dsl
-      %SRCID%	1.23
+      %SRCID%	38826
 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [

@@ -6,7 +6,7 @@
 #
 # Article: Working with Hats
 #
-# Original revision: 1.4
+# Original revision: r20561
 #
 
 DOC?= article

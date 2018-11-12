@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/serialcomms/Makefile,v 1.1 2004/03/24 13:29:25 den Exp $
 #
-# Original revision: 1.1
+# Original revision: r9773
 #
 
 CHAPTERS= 	serialcomms/chapter.sgml

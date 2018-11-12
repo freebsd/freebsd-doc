@@ -1,4 +1,4 @@
-# $FreeBSD: doc/en_US.ISO_8859-1/articles/zip-drive/Makefile,v 1.1 2000/02/14 01:24:34 nik Exp $
+# $FreeBSD$
 
 DOC?= article
 

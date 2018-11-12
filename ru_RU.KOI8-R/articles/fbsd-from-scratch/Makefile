@@ -6,7 +6,7 @@
 #
 # Article: FreeBSD From Scratch
 #
-# Original revision: 1.6
+# Original revision: r20561
 #
 
 DOC?= article
@@ -34,7 +34,7 @@ ${EXTRAS}:
 
 afterinstall:
 .for entry in ${EXTRAS}
-	${INSTALL_DOCS} ${.CURDIR}/${entry} ${DESTDIR}
+	${INSTALL_DOCS} ${.OBJDIR}/${entry} ${DESTDIR}
 .endfor
 
 DOC_PREFIX?= ${.CURDIR}/../../..

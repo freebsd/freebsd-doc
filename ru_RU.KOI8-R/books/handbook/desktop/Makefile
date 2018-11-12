@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/desktop/Makefile,v 1.1 2004/03/24 13:29:23 den Exp $
 #
-# Original revision: 1.1
+# Original revision: r14154
 #
 
 CHAPTERS= 	desktop/chapter.sgml

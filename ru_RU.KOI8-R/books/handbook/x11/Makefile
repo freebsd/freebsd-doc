@@ -3,7 +3,7 @@
 #
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/x11/Makefile,v 1.1 2001/07/11 16:40:17 phantom Exp $
-# Original revision: 1.1
+# Original revision: r9773
 #
 
 CHAPTERS= 	x11/chapter.sgml

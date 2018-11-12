@@ -1,4 +1,4 @@
-# $FreeBSD: doc/ja_JP.eucJP/books/Makefile,v 1.7 2000/07/16 20:32:31 hrs Exp $
+# $FreeBSD$
 
 #SUBDIR = corp-net-guide
 SUBDIR = design-44bsd

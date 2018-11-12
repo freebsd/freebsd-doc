@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/developers-handbook/Makefile,v 1.8 2005/05/05 09:07:25 andy Exp $
 #
-# Original revision: 1.22
+# Original revision: r21373
 #
 # Build the FreeBSD Developers' Handbook.
 #

@@ -3,7 +3,7 @@
 #
 # Article: Writing a GEOM Class
 #
-# Original revision: 1.1
+# Original revision: r25510
 #
 
 DOC?= article

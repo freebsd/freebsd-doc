@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/solid-state/Makefile,v 1.4 2006/03/28 16:20:06 gad Exp $
 #
-# Original revision: 1.5
+# Original revision: r20561
 #
 # Article: FreeBSD and Solid State Devices
 

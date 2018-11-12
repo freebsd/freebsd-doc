@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/laptop/Makefile,v 1.3 2005/12/20 11:38:53 gad Exp $
 #
-# Original revision: 1.4
+# Original revision: r20561
 #
 # Article: FreeBSD on Laptops
 #

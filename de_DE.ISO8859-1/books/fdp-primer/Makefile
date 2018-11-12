@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/fdp-primer/Makefile,v 1.4 2004/08/04 23:33:31 mheinen Exp $
-# basiert auf: 1.14
+# $FreeBSDde$
+# basiert auf: r38826
 #
 # Build the FreeBSD Documentation Project Primer.
 #

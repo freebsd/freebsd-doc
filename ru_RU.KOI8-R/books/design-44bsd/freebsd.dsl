@@ -4,7 +4,7 @@
 
   $FreeBSD$
   $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/design-44bsd/freebsd.dsl,v 1.1 2001/07/11 19:27:16 phantom Exp $
-  Original revision: 1.2
+  Original revision: r9530
 
 -->
 

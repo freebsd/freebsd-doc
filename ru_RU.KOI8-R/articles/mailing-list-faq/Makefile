@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/mailing-list-faq/Makefile,v 1.1 2005/06/10 06:27:12 gad Exp $
 #
-# Original revision: 1.3
+# Original revision: r21373
 #
 # Article: Frequently Asked Questions About The FreeBSD Mailing Lists
 

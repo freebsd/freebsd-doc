@@ -5,7 +5,7 @@
 #
 # Article: CUPS on FreeBSD
 #
-# Original revision: 1.2
+# Original revision: r33118
 #
 
 DOC?= article

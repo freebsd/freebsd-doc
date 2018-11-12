@@ -8,6 +8,7 @@
 
 SUBDIR = committers-guide
 SUBDIR+= contributing
+SUBDIR+= contributing-ports
 SUBDIR+= contributors
 SUBDIR+= cvsup-advanced
 SUBDIR+= dialup-firewall
@@ -21,6 +22,7 @@ SUBDIR+= ip-aliasing
 SUBDIR+= ipsec-must
 SUBDIR+= java-tomcat
 SUBDIR+= laptop
+SUBDIR+= linux-users
 SUBDIR+= make-world
 SUBDIR+= mh
 SUBDIR+= multi-os

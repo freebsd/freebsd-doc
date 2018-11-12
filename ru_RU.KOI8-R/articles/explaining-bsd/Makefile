@@ -6,7 +6,7 @@
 #
 # Article: Explaining BSD
 #
-# Original revision: 1.6
+# Original revision: r21373
 #
 
 MAINTAINER=kappa@FreeBSD.org.ua

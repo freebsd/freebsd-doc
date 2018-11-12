@@ -6,7 +6,7 @@
 #
 # Article: Contributing to FreeBSD
 #
-# Original revision: 1.6
+# Original revision: r21373
 #
 
 DOC?= article

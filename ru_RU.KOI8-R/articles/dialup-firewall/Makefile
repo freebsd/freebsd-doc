@@ -2,7 +2,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/dialup-firewall/Makefile,v 1.2 2001/07/25 10:26:31 phantom Exp $
 #
-# Original revision: 1.1
+# Original revision: r7299
 #
 
 MAINTAINER=andy@FreeBSD.org.ua

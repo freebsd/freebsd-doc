@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- The FreeBSD Dutch Documentation Project
-     $FreeBSD: $ 
+     $FreeBSD$ 
      %SOURCE%	share/sgml/mirrors-local.xsl
-     %SRCID%	1.3
+     %SRCID%	38826
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
