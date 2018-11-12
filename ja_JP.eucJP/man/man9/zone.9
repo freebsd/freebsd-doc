@@ -1,0 +1,205 @@
+.\"-
+.\" Copyright (c) 2001 Dag-Erling Coidan Smorgrav
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man9/zone.9,v 1.26 2004/01/25 11:39:41 des Exp %
+.\"
+.\" $FreeBSD$
+.Dd July 21, 2003
+.Dt ZONE 9
+.Os
+.Sh 名称
+.Nm uma_zcreate ,
+.Nm uma_zalloc ,
+.Nm uma_zfree ,
+.Nm uma_zdestroy ,
+.Nm uma_zone_set_max
+.Nd ゾーンアロケータ
+.Sh 書式
+.In sys/param.h
+.In sys/queue.h
+.In vm/uma.h
+.Ft uma_zone_t
+.Fo uma_zcreate
+.Fa "char *name" "int size"
+.Fa "uma_ctor ctor" "uma_dtor dtor" "uma_init uminit" "uma_fini fini"
+.Fa "int align" "u_int16_t flags"
+.Fc
+.Ft "void *"
+.Fn uma_zalloc "uma_zone_t zone" "int flags"
+.Ft void
+.Fn uma_zfree "uma_zone_t zone" "void *item"
+.Ft void
+.Fn uma_zdestroy "uma_zone_t zone"
+.Ft void
+.Fn uma_zone_set_max "uma_zone_t zone" "int nitems"
+.Sh 解説
+ゾーンアロケータは動的に大きさが決められる類似した大きさの項目の集合を
+管理するための効率的なインタフェースを提供します。
+ゾーンアロケータは実行時に割り当てられたゾーンはもちろん、
+予め割り当てられているゾーンに対しても使用することが出来、またそのため、
+他のメモリ管理ルーチンよりもブートプロセスのより早い段階で利用可能です。
+.Pp
+ゾーンは伸張性のある同一の大きさの項目の集合です。
+ゾーンアロケータはどの項目が使用中かそうでないのかを見失わないようにし、
+ゾーンから
+項目を割り当てるための関数および解放して戻す (後での使用のために項目を
+利用可能にする) ための関数を提供します。
+.Pp
+構造体をゾーンアロケータで管理し、
+割り当ての間に埋め込み済みのフィールドを残すことにより
+型が固定となるゾーンの特性を使用したい場合、
+ゾーンアロケータが内部で使用する先頭 2 つのポインタを
+この構造体が予約しておく必要があります。
+.Bd -literal -offset indent
+struct my_item {
+        struct my_item  *z_rsvd1;
+        struct my_item  *z_rsvd2;
+        /* 構造体の残りの部分 */
+};
+.Ed
+.Pp
+そうしない場合、各々の割当ての後でこれらのエントリが壊れたとみなすべきです。
+項目の最初の割当ての後では、0 にクリアされています。
+しかしそれに続く割当てでは、
+最近解放されたものが内容として残っているでしょうが、
+前述のフィールドは例外です。
+.Pp
+.Fn uma_zcreate
+関数は、これから項目が割当てられることが可能な新しいゾーンを作成します。
+.Fa name
+引数はデバッグおよびステータスのためのテキストのゾーン名です。
+このメモリは、ゾーンの割当てが解放されるまでは、解放されるべきではありません。
+.Pp
+引数
+.Fa ctor
+と
+.Fa dtor
+は、それぞれ
+.Fn uma_zalloc
+と
+.Fn uma_zfree
+の呼び出し時に uma サブシステムから呼ばれる、コールバック関数です。
+これらの目的は、資源の割り当て時と解放時に必要となる、
+初期化および破壊のためのフックを提供することです。
+.Fa ctor
+および
+.Fa dtor
+のコールバックの良い使い方としては、
+割り当てられたオブジェクトのグローバルカウントの調整があるでしょう。
+.Pp
+引数
+.Fa uminit
+と
+.Fa fini
+は、ゾーンからのオブジェクト割り当ての最適化に使用されます。
+これらは、要求実現またはメモリ圧迫の理由により、
+uma サブシステムが複数の項目を割り当てまたは解放する必要があるときに、
+呼び出されます。
+.Fa uminit
+および
+.Fa fini
+のコールバックの良い使い方としては、
+オブジェクトに含まれるミューテックスの初期化と破壊があるでしょう。
+これにより、オブジェクトが uma サブシステムのオブジェクトから返されたときに、
+既に初期化済みのミューテックスを再使用可能となります。
+これらは、各
+.Fn uma_zalloc
+や
+.Fn uma_zfree
+の呼び出し時には呼び出されず、
+複数のオブジェクトに対してバッチ的に呼び出されます。
+.Pp
+項目はそのゾーンへのポインタを伴なう
+.Fn uma_zalloc
+の呼出しによって割当てられ、
+.Fa flags
+引数に
+.Xr malloc 9
+として文書化された選択されたフラグを設定されます。
+その項目はそのゾーンに解放し戻されます。
+成功の場合には項目へのポインタを返します。
+ゾーン中の全項目が使用中で且つアロケータがゾーンを拡張できない稀な場合か、
+.Dv M_NOWAIT
+が明示されている場合、
+.Dv NULL
+を返します。
+.Pp
+項目はそのゾーンへのポインタおよびその項目へのポインタを伴なった
+.Fn uma_zfree
+の呼び出しによって、割当てられていたゾーンに解放し戻されます。
+.Pp
+空である作成されたゾーンは、
+.Fn uma_zdestroy
+を使用して、そのゾーンのために割当てられた全てのメモリを解放して、
+破壊されることが可能です。
+そのゾーンから
+.Fn uma_zalloc
+によって割当てられた項目は、その前に
+.Fn uma_zfree
+によって解放されなければなりません。
+.Pp
+.Fn uma_zone_set_max
+の目的は、
+.Fa zone
+引数によって指定されたゾーンに対して専用にできるメモリの最大量を
+制限することです。
+.Fa nitems
+引数にはそのゾーン内の項目の上限を与えます。
+この制限は、割り当てられた項目、開放された項目、および CPU 毎の
+キャッシュ内にある開放された項目を含む、そのゾーンの中の項目のトータル数です。
+複数の CPU を持つシステム上では、メモリの不足がない時にでさえ、
+指定された数の項目を割り当てることが不可能であることがあります。
+なぜならば、制限に引っかかる時点で、残りの全ての開放されている項目が、
+他の CPU のキャッシュの中にあるかもしれないからです。
+.Sh 戻り値
+.Fn uma_zalloc
+関数は項目へのポインタを、またはゾーンの未使用項目が不足してアロケータが
+ゾーンを拡張できない場合に
+.Dv NULL
+を、返します。
+.Sh 関連項目
+.Xr malloc 9
+.Sh 歴史
+ゾーンアロケータは
+.Fx 3.0
+ではじめて登場しました。
+スラブアロケータとしての機能のため、
+.Fx 5.0
+で根本的に変更されました。
+.Sh 作者
+.An -nosplit
+ゾーンアロケータは
+.An John S. Dyson
+が書きました。
+ゾーンアロケータは、スラブアロケータとしての機能のため、
+.An Jeff Roberson Aq jeff@FreeBSD.org
+が大部分を書き直しました。
+.Pp
+このマニュアルページは
+.An Dag-Erling Sm\(/orgrav Aq des@FreeBSD.org
+が書きました。
+UMA のために
+.An Jeroen Ruigrok van der Werven Aq asmodai@FreeBSD.org
+が変更しました。

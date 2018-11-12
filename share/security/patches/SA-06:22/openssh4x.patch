@@ -1,0 +1,256 @@
+Index: crypto/openssh/deattack.c
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/deattack.c,v
+retrieving revision 1.1.1.1.2.5
+diff -u -d -r1.1.1.1.2.5 deattack.c
+--- crypto/openssh/deattack.c	17 Sep 2003 14:41:41 -0000	1.1.1.1.2.5
++++ crypto/openssh/deattack.c	30 Sep 2006 16:38:22 -0000
+@@ -27,6 +27,24 @@
+ #include "xmalloc.h"
+ #include "deattack.h"
+ 
++/*
++ * CRC attack detection has a worst-case behaviour that is O(N^3) over
++ * the number of identical blocks in a packet. This behaviour can be 
++ * exploited to create a limited denial of service attack. 
++ * 
++ * However, because we are dealing with encrypted data, identical
++ * blocks should only occur every 2^35 maximally-sized packets or so. 
++ * Consequently, we can detect this DoS by looking for identical blocks
++ * in a packet.
++ *
++ * The parameter below determines how many identical blocks we will
++ * accept in a single packet, trading off between attack detection and
++ * likelihood of terminating a legitimate connection. A value of 32 
++ * corresponds to an average of 2^40 messages before an attack is
++ * misdetected
++ */
++#define MAX_IDENTICAL	32
++
+ /* SSH Constants */
+ #define SSH_MAXBLOCKS	(32 * 1024)
+ #define SSH_BLOCKSIZE	(8)
+@@ -87,7 +105,7 @@
+ 	static u_int16_t *h = (u_int16_t *) NULL;
+ 	static u_int32_t n = HASH_MINSIZE / HASH_ENTRYSIZE;
+ 	u_int32_t i, j;
+-	u_int32_t l;
++	u_int32_t l, same;
+ 	u_char *c;
+ 	u_char *d;
+ 
+@@ -133,7 +151,7 @@
+ 	if (IV)
+ 		h[HASH(IV) & (n - 1)] = HASH_IV;
+ 
+-	for (c = buf, j = 0; c < (buf + len); c += SSH_BLOCKSIZE, j++) {
++	for (c = buf, same = j = 0; c < (buf + len); c += SSH_BLOCKSIZE, j++) {
+ 		for (i = HASH(c) & (n - 1); h[i] != HASH_UNUSED;
+ 		    i = (i + 1) & (n - 1)) {
+ 			if (h[i] == HASH_IV) {
+@@ -144,6 +162,8 @@
+ 						break;
+ 				}
+ 			} else if (!CMP(c, buf + h[i] * SSH_BLOCKSIZE)) {
++				if (++same > MAX_IDENTICAL)
++					return (DEATTACK_DOS_DETECTED);
+ 				if (check_crc(c, buf, len, IV))
+ 					return (DEATTACK_DETECTED);
+ 				else
+Index: crypto/openssh/deattack.h
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/deattack.h,v
+retrieving revision 1.1.1.1.2.2
+diff -u -d -r1.1.1.1.2.2 deattack.h
+--- crypto/openssh/deattack.h	3 Jul 2002 22:11:42 -0000	1.1.1.1.2.2
++++ crypto/openssh/deattack.h	30 Sep 2006 16:38:22 -0000
+@@ -25,6 +25,7 @@
+ /* Return codes */
+ #define DEATTACK_OK		0
+ #define DEATTACK_DETECTED	1
++#define DEATTACK_DOS_DETECTED	2
+ 
+ int	 detect_attack(u_char *, u_int32_t, u_char[8]);
+ #endif
+Index: crypto/openssh/defines.h
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/defines.h,v
+retrieving revision 1.1.1.2.2.2
+diff -u -d -r1.1.1.2.2.2 defines.h
+--- crypto/openssh/defines.h	3 Feb 2003 17:31:06 -0000	1.1.1.2.2.2
++++ crypto/openssh/defines.h	30 Sep 2006 16:38:22 -0000
+@@ -450,6 +450,11 @@
+ # undef HAVE_GAI_STRERROR
+ #endif
+ 
++#if defined(HAVE_OPENLOG_R) && defined(SYSLOG_DATA_INIT) && \
++    defined(SYSLOG_R_SAFE_IN_SIGHAND)
++# define DO_LOG_SAFE_IN_SIGHAND
++#endif
++
+ #if !defined(HAVE_MEMMOVE) && defined(HAVE_BCOPY)
+ # define memmove(s1, s2, n) bcopy((s2), (s1), (n))
+ #endif /* !defined(HAVE_MEMMOVE) && defined(HAVE_BCOPY) */
+Index: crypto/openssh/log.c
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/log.c,v
+retrieving revision 1.1.1.1.2.5
+diff -u -d -r1.1.1.1.2.5 log.c
+--- crypto/openssh/log.c	3 Feb 2003 17:31:07 -0000	1.1.1.1.2.5
++++ crypto/openssh/log.c	30 Sep 2006 16:38:22 -0000
+@@ -124,6 +124,20 @@
+ 	va_end(args);
+ }
+ 
++void
++sigdie(const char *fmt,...)
++{
++	va_list args;
++
++#ifdef DO_LOG_SAFE_IN_SIGHAND
++	va_start(args, fmt);
++	do_log(SYSLOG_LEVEL_FATAL, fmt, args);
++	va_end(args);
++#endif
++	_exit(1);
++}
++
++
+ /* Log this message (information that usually should go to the log). */
+ 
+ void
+Index: crypto/openssh/log.h
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/log.h,v
+retrieving revision 1.1.1.1.2.3
+diff -u -d -r1.1.1.1.2.3 log.h
+--- crypto/openssh/log.h	3 Feb 2003 17:31:07 -0000	1.1.1.1.2.3
++++ crypto/openssh/log.h	30 Sep 2006 16:38:22 -0000
+@@ -55,6 +55,7 @@
+ 
+ void     fatal(const char *, ...) __attribute__((format(printf, 1, 2)));
+ void     error(const char *, ...) __attribute__((format(printf, 1, 2)));
++void     sigdie(const char *, ...) __attribute__((format(printf, 1, 2)));
+ void     log(const char *, ...) __attribute__((format(printf, 1, 2)));
+ void     verbose(const char *, ...) __attribute__((format(printf, 1, 2)));
+ void     debug(const char *, ...) __attribute__((format(printf, 1, 2)));
+Index: crypto/openssh/packet.c
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/packet.c,v
+retrieving revision 1.1.1.1.2.6
+diff -u -d -r1.1.1.1.2.6 packet.c
+--- crypto/openssh/packet.c	3 Feb 2003 17:31:07 -0000	1.1.1.1.2.6
++++ crypto/openssh/packet.c	30 Sep 2006 18:29:54 -0000
+@@ -857,9 +857,16 @@
+ 	 * (C)1998 CORE-SDI, Buenos Aires Argentina
+ 	 * Ariel Futoransky(futo@core-sdi.com)
+ 	 */
+-	if (!receive_context.plaintext &&
+-	    detect_attack(buffer_ptr(&input), padded_len, NULL) == DEATTACK_DETECTED)
+-		packet_disconnect("crc32 compensation attack: network attack detected");
++	if (!receive_context.plaintext) {
++		switch (detect_attack(buffer_ptr(&input), padded_len, NULL)) {
++		case DEATTACK_DETECTED:
++			packet_disconnect("crc32 compensation attack: "
++			    "network attack detected");
++		case DEATTACK_DOS_DETECTED:
++			packet_disconnect("deattack denial of "
++			    "service detected");
++		}
++	}
+ 
+ 	/* Decrypt data to incoming_packet. */
+ 	buffer_clear(&incoming_packet);
+Index: crypto/openssh/ssh_config
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/ssh_config,v
+retrieving revision 1.2.2.9
+diff -u -d -r1.2.2.9 ssh_config
+--- crypto/openssh/ssh_config	24 Sep 2003 19:28:35 -0000	1.2.2.9
++++ crypto/openssh/ssh_config	30 Sep 2006 16:38:22 -0000
+@@ -35,4 +35,4 @@
+ #   Cipher 3des
+ #   Ciphers aes128-cbc,3des-cbc,blowfish-cbc,cast128-cbc,arcfour,aes192-cbc,aes256-cbc
+ #   EscapeChar ~
+-#   VersionAddendum FreeBSD-20030924
++#   VersionAddendum FreeBSD-20060930
+Index: crypto/openssh/ssh_config.5
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/ssh_config.5,v
+retrieving revision 1.4.2.5
+diff -u -d -r1.4.2.5 ssh_config.5
+--- crypto/openssh/ssh_config.5	24 Sep 2003 19:28:35 -0000	1.4.2.5
++++ crypto/openssh/ssh_config.5	30 Sep 2006 16:38:22 -0000
+@@ -616,7 +616,7 @@
+ Specifies a string to append to the regular version string to identify
+ OS- or site-specific modifications.
+ The default is
+-.Dq FreeBSD-20030924 .
++.Dq FreeBSD-20060930 .
+ .It Cm XAuthLocation
+ Specifies the full pathname of the
+ .Xr xauth 1
+Index: crypto/openssh/sshd.c
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/sshd.c,v
+retrieving revision 1.6.2.11
+diff -u -d -r1.6.2.11 sshd.c
+--- crypto/openssh/sshd.c	3 Feb 2003 17:31:08 -0000	1.6.2.11
++++ crypto/openssh/sshd.c	30 Sep 2006 16:38:22 -0000
+@@ -309,7 +309,7 @@
+ 	/* XXX no idea how fix this signal handler */
+ 
+ 	/* Log error and exit. */
+-	fatal("Timeout before authentication for %s", get_remote_ipaddr());
++	sigdie("Timeout before authentication for %s", get_remote_ipaddr());
+ }
+ 
+ /*
+Index: crypto/openssh/sshd_config
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/sshd_config,v
+retrieving revision 1.4.2.13
+diff -u -d -r1.4.2.13 sshd_config
+--- crypto/openssh/sshd_config	24 Sep 2003 19:28:35 -0000	1.4.2.13
++++ crypto/openssh/sshd_config	30 Sep 2006 16:38:22 -0000
+@@ -14,7 +14,7 @@
+ # Note that some of FreeBSD's defaults differ from OpenBSD's, and
+ # FreeBSD has a few additional options.
+ 
+-#VersionAddendum FreeBSD-20030924
++#VersionAddendum FreeBSD-20060930
+ 
+ #Port 22
+ #Protocol 2,1
+Index: crypto/openssh/sshd_config.5
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/sshd_config.5,v
+retrieving revision 1.5.2.7
+diff -u -d -r1.5.2.7 sshd_config.5
+--- crypto/openssh/sshd_config.5	7 Nov 2003 11:48:56 -0000	1.5.2.7
++++ crypto/openssh/sshd_config.5	30 Sep 2006 16:38:22 -0000
+@@ -647,7 +647,7 @@
+ Specifies a string to append to the regular version string to identify
+ OS- or site-specific modifications.
+ The default is
+-.Dq FreeBSD-20030924 .
++.Dq FreeBSD-20060930 .
+ .It Cm X11DisplayOffset
+ Specifies the first display number available for
+ .Nm sshd Ns 's
+Index: crypto/openssh/version.h
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/version.h,v
+retrieving revision 1.1.1.1.2.13
+diff -u -d -r1.1.1.1.2.13 version.h
+--- crypto/openssh/version.h	24 Sep 2003 19:28:35 -0000	1.1.1.1.2.13
++++ crypto/openssh/version.h	30 Sep 2006 16:38:22 -0000
+@@ -5,7 +5,7 @@
+ 
+ #define SSH_VERSION             (ssh_version_get())
+ #define SSH_VERSION_BASE        "OpenSSH_3.5p1"
+-#define SSH_VERSION_ADDENDUM    "FreeBSD-20030924"
++#define SSH_VERSION_ADDENDUM    "FreeBSD-20060930"
+ 
+ const char *ssh_version_get(void);
+ void ssh_version_set_addendum(const char *add);

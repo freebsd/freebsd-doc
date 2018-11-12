@@ -1,0 +1,455 @@
+.\" -*- nroff -*-
+.\"
+.\" Copyright (c) 1996 Doug Rabson
+.\"
+.\" All rights reserved.
+.\"
+.\" This program is free software.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE DEVELOPERS ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man9/VOP_LOOKUP.9,v 1.21 2004/07/08 00:36:58 alfred Exp %
+.\"
+.\" $FreeBSD$
+.Dd November 24, 1997
+.Os
+.Dt VOP_LOOKUP 9
+.Sh 名称
+.Nm VOP_LOOKUP
+.Nd パス名の構成要素の調査
+.Sh 書式
+.In sys/param.h
+.In sys/vnode.h
+.In sys/namei.h
+.Ft int
+.Fn VOP_LOOKUP "struct vnode *dvp" "struct vnode **vpp" "struct componentname *cnp"
+.Sh 解説
+このエントリポイントは与えられたディレクトリ内の単一のパス名要素を調べます。
+.Pp
+引数は以下のとおりです。
+.Bl -tag -width vpp
+.It Fa dvp
+検索するディレクトリのロックされた vnode です。
+.It Fa vpp
+結果のロックされた vnode が格納されるべき変数のアドレスです。
+.It Fa cnp
+検索されるためのパス名要素です。
+.El
+.Pp
+.Fa cnp
+は以下で定義されている componentname 構造体へのポインタです。
+.Bd -literal
+struct componentname {
+	/*
+	 * lookup への引数です。
+	 */
+	u_long	cn_nameiop;	/* namei 操作 */
+	u_long	cn_flags;	/* namei へのフラグ */
+	struct  thread *cn_thread;  /* lookup を要求しているスレッド */
+	struct	ucred *cn_cred;	/* 証明 */
+	/*
+	 * 検索ルーチンおよびコミットルーチンで共有されます。
+	 */
+	char	*cn_pnbuf;	/* パス名バッファ */
+	char	*cn_nameptr;	/* 検索された名前へのポインタ */
+	long	cn_namelen;	/* 検索された要素の長さ */
+	u_long	cn_hash;	/* 検索された名前のハッシュ値 */
+	long	cn_consume;	/* lookup() で消費する文字数 */
+};
+.Ed
+.Pp
+パス名の要素をロックされた vnode へのポインタに変換します。
+これが正に中心であり、より複雑なルーチンです。
+ファイルシステムが厳密なツリー階層に保たれていない場合には、
+デッドロック状態に陥ることがあります。
+.Pp
+.Fa cnp->cn_nameiop
+引数は、オブジェクトの用途目的に依存し、
+.Dv LOOKUP ,
+.Dv CREATE ,
+.Dv RENAME ,
+または
+.Dv DELETE
+です。
+.Dv CREATE ,
+.Dv RENAME ,
+または
+.Dv DELETE
+が明示されたときには、ディレクトリエントリの作成、名前変更、削除に
+使用する情報が計算できます。
+.Pp
+VOP_LOOKUP の全体の概要です。
+.Bd -ragged -offset indent
+ディレクトリのアクセス権をチェックします。
+キャッシュの中の名前を検索し、もし見つかれば、その名前を返します。
+ディレクトリの中の名前を検索し、found または notfound に適切に進みます。
+.Ed
+.Pp
+notfound:
+.Bd -ragged -offset indent
+作成または名前変更でパス名の最後の場合には、
+.Er EJUSTRETURN
+を返し、利用可能な位置に情報を残します。
+そうでなければ
+.Er ENOENT
+を返します。
+.Ed
+.Pp
+found:
+.Bd -ragged -offset indent
+パス名の最後で削除の場合には、削除を可能にする情報を返します。
+パス名の最後で名前変更の場合には、変更先の inode をロックして
+名前変更を可能にする情報を返します。
+最後でない場合には、名前をキャッシュに追加します。
+最後で作成でも削除でもない場合には、名前をキャッシュに追加します。
+.Ed
+.Sh ロック
+ディレクトリ
+.Fa dvp
+はエントリ時にロックされているべきです。
+エラー (注: 戻り値
+.Er EJUSTRETURN
+はエラーとはみなされません) が検出された場合には、ロックされたまま戻ります。
+しかしながら、
+.Fa cnp->cn_flags
+に
+.Dv LOCKPARENT
+および
+.Dv ISLASTCN
+の両方が明示されていない場合には、アンロックされません。
+エントリがそのディレクトリの中で見つかった場合には、ロックされて返されます。
+.Sh 戻り値
+要素が見つかった場合には、
+.Fa *vpp
+にそのファイルのロックされた vnode が設定されて、0 が返されます。
+検索されている要素が "." の場合、その vnode は
+.Xr vref 9
+を使用して追加された余分な参照を得ます。
+この場合は、呼び出し側が適切にロックを解放することに注意しなければなりません。
+.Pp
+要素が見つからず操作が
+.Dv CREATE
+または
+.Dv RENAME
+である場合には、フラグ
+.Dv ISLASTCN
+が明示されて操作は成功し、特別な戻り値
+.Er EJUSTRETURN
+が返されます。
+そうでない場合には、適切なエラーコードが返されます。
+.Sh 擬似コード
+.Bd -literal
+int
+vop_lookup(struct vnode *dvp,
+	   struct vnode **vpp,
+	   struct componentname *cnp)
+{
+    int error;
+    int nameiop = cnp->cn_nameiop;
+    int flags = cnp->cn_flags;
+    int lockparent = flags & LOCKPARENT;
+    int islastcn = flags & ISLASTCN;
+    struct vnode *vp = NULL;
+
+    /*
+     * ディレクトリのアクセス権をチェックします。
+     */
+    if (dvp->v_type != VDIR)
+	return ENOTDIR;
+
+    error = VOP_ACCESS(dvp, VEXEC, cred, cnp->cn_thread);
+    if (error)
+	return (error);
+
+    if (islastcn && (dvp->v_mount->mnt_flag & MNT_RDONLY) &&
+	(cnp->cn_nameiop == DELETE || cnp->cn_nameiop == RENAME))
+	return (EROFS);
+
+    /*
+     * ディレクトリ/名前のペアのための名前キャッシュをチェックします。
+     * これは、存在していない名前の場合には ENOENT を、名前が見つかった
+     * 場合には -1 を、そうでない場合には 0 を返します。
+     */
+    error = cache_lookup(dvp, vpp, cnp);
+    if (error) {
+	int vpid;
+
+	if (error = ENOENT)
+	    return error;
+
+	vp = *vpp;
+	if (dvp == vp) {	/* "." 上を探します */
+	    VREF(vp);
+	    error = 0;
+	} else if (flags & ISDOTDOT) {
+            /*
+	     * デッドロックを避けるため、".." のロックされた vnode を
+	     * 取得する前に、そのディレクトリをアンロックする必要が
+	     * あります。
+	     */
+	    VOP_UNLOCK(dvp);
+	    error = vget(vp, 1);
+	    if (!error) {
+		if (lockparent && islastcn)
+		    error = VOP_LOCK(dvp);
+	    }
+	} else {
+	    error = vget(vp, 1);
+	    if (error || !(lockparent && islastcn)) {
+		VOP_UNLOCK(dvp);
+	    }
+	}
+
+	/*
+	 * ロックを待っている間に特性の数が変化していないことを
+	 * チェックします。
+	 */
+	if (!error) {
+	    if (vpid == vp->v_id) {
+		/*
+		 * lockparent && islastcn の場合には dvp がロック
+		 * されます。 vp がロックされます。
+		 */
+		return (0);
+	    }
+	    vput(vp);
+
+	    if (dvp != vp && lockparent && islastcn)
+		VOP_UNLOCK(pdp);
+	}
+
+	/*
+	 * 以下のディレクトリ検索のために dvp を再度ロックします。
+	 */
+	error = VOP_LOCK(dvp);
+	if (error) {
+	    return (error);
+	}
+
+	*vpp = NULL;
+    }
+
+    /*
+     * 要素 cnp->cn_nameptr のために dvp を検索します。
+     */
+    ...;
+
+    if (!found) {
+	if ((nameiop == CREATE || nameiop == RENAME)
+	    && islastcn
+	    && directory dvp has not been removed) {
+	    /*
+	     * ディレクトリの書込み権をチェックします。
+	     */
+
+	    /*
+	     * できる限り、ディレクトリの中の新しい要素の名前のために
+	     * 十分に大きい場所の位置を記録します。 これは dvp のための
+	     * vnode の私的データの中に記録されることが可能です。
+	     * VOP_CREATE または VOP_RENAME で後で使用するために、
+	     * パス名に保持するために SAVENAME フラグを設定します。
+	     */
+	    cnp->cn_flags |= SAVENAME;
+	    if (!lockparent)
+		/*
+		 * 上記で記録された追加のデータは lockparent が明示
+		 * された時にのみ有用であることに注意してください。
+		 */
+		VOP_UNLOCK(dvp);
+
+	    return EJUSTRETURN;
+	}
+
+	/*
+	 * キャッシュに名前を挿入することを考慮します。
+	 */
+	if ((cnp->cn_flags & MAKEENTRY) && nameiop != CREATE)
+	    cache_enter(dvp, NULL, cnp);
+
+	return ENOENT;
+    } else {
+	/*
+	 * 削除でパス名の最後の場合には、ファイルの削除に使用できる
+	 * パラメータを返します。 wantparent フラグが設定されていない
+	 * 場合にはそのディレクトリのみを返し、そうでない場合には
+	 * 続けてその inode をロックし、"." に注意します。
+	 */
+	if (nameiop == DELETE && islastcn) {
+	    /*
+	     * ディレクトリの書込み権をチェックします。
+	     */
+	    error = VOP_ACCESS(dvp, VWRITE, cred, cnp->cn_thread);
+	    if (error)
+		return (error);
+
+	    if (found entry is same as dvp) {
+		VREF(dvp);
+		*vpp = dvp;
+		return 0;
+	    }
+
+	    error = VFS_VGET(dvp->v_mount, ..., &vp);
+	    if (error)
+		return error;
+
+	    if (directory is sticky
+		&& cred->cr_uid != 0
+		&& cred->cr_uid != owner of dvp
+		&& owner of vp != cred->cr_uid) {
+		vput(vp);
+		return EPERM;
+	    }
+	    *vpp = vp;
+	    if (!lockparent)
+		VOP_UNLOCK(dvp);
+
+	    return 0;
+	}
+
+	/*
+	 * 再書込み (RENAME) の場合には、その inode および現在の
+	 * ディレクトリを再書込みするために要求される情報を返します。
+	 * 通常ファイルまたは空のディレクトリであることを確認するために、
+	 * ディレクトリエントリの inode を取得しなければなりません。
+	 */
+	if (nameiop == RENAME && wantparent && islastcn) {
+	    error = VOP_ACCESS(dvp, VWRITE, cred, cnp->cn_thread);
+	    if (error)
+		return (error);
+
+	    /*
+	     * "." をチェックします。
+	     */
+	    if (found entry is same as dvp)
+		return EISDIR;
+
+	    error = VFS_VGET(dvp->v_mount, ..., &vp);
+	    if (error)
+		return error;
+	    *vpp = vp;
+	    /*
+	     * 後で VOP_RENAME で使用するために名前を保存します。
+	     */
+	    cnp->cn_flags |= SAVENAME;
+	    if (!lockparent)
+		VOP_UNLOCK(dvp);
+
+	    return 0;
+	}
+
+	/*
+	 * 名前の変換のステップの全容です。 シンボリックリンクが現在の
+	 * ディレクトリからの相対である場合には、再度必要になるので、
+	 * ディレクトリを 'vput' しません。 代わりに "pdp" として
+	 * アンロックされたディレクトリを保存します。 取得する前にその
+	 * inode が削除されないことを保証するために、そのディレクトリを
+	 * アンロックする前に目的の inode を取得しなければなりません。
+	 * ルートからディレクトリツリーを下る方向で inode を取得する
+	 * ことで、デッドロックを常に予防します。 従がって、逆向きの
+	 * ポインタ ".." を辿るときには、要求されたディレクトリを取得する
+	 * 前に親ディレクトリをアンロックしなければなりません。 ".." に
+	 * 関連付けられた inode のための VFS_VGET が戻る前に、現在の
+	 * および親ディレクトリの両方が削除された場合には、ここに潜在的な
+	 * 競合状態があります。 きわめて複雑なデッドロック検出アルゴリズム
+	 * の実装なしにこの競合状態を避けることができないので、この
+	 * 競合状態の発生が稀であることを期待しています。 ファイルシステムが、
+	 *  ".." 以外に、ディレクトリ構造の中に遡りを指すハードリンクを
+	 * 持つ場合、この簡単なデッドロック検出機構が働かないことにも注意
+	 * してください。
+	 */
+	if (flags & ISDOTDOT) {
+	    VOP_UNLOCK(dvp);	/* inode を取得するための競合です */
+	    error = VFS_VGET(dvp->v_mount, ..., &vp);
+	    if (error) {
+		VOP_LOCK(dvp);
+		return (error);
+	    }
+	    if (lockparent && islastcn) {
+		error = VOP_LOCK(dvp);
+		if (error) {
+		    vput(vp);
+		    return error;
+		}
+	    }
+	    *vpp = vp;
+	} else if (found entry is same as dvp) {
+	    VREF(dvp);	/* 例えば "." など、自分自身が必要です */
+	    *vpp = dvp;
+	} else {
+	    error = VFS_VGET(dvp->v_mount, ..., &vp);
+	    if (error)
+		return (error);
+	    if (!lockparent || !islastcn)
+		VOP_UNLOCK(dvp);
+	    *vpp = vp;
+	}
+
+	/*
+	 * 適切であれば名前をキャッシュに挿入します。
+	 */
+	if (cnp->cn_flags & MAKEENTRY)
+	    cache_enter(dvp, *vpp, cnp);
+	return (0);
+    }
+}
+.Ed
+.Sh エラー
+.Bl -tag -width Er
+.It Bq Er ENOTDIR
+vnode
+.Fa dvp
+がディレクトリを表わしていません。
+.It Bq Er ENOENT
+要素
+.Fa dvp
+がそのディレクトリには見つかりません。
+.It Bq Er EACCES
+明示された操作のためのアクセスが拒否されました。
+.It Bq Er EJUSTRETURN
+.Dv CREATE
+または
+.Dv RENAME
+の操作は成功です。
+.El
+.Sh 関連項目
+.Xr VOP_ACCESS 9 ,
+.Xr VOP_CREATE 9 ,
+.Xr VOP_MKDIR 9 ,
+.Xr VOP_MKNOD 9 ,
+.Xr VOP_RENAME 9 ,
+.Xr VOP_SYMLINK 9 ,
+.\" 下の関連項目をマージ by A.Ikeuchi。
+.Xr vnode 9
+.Sh 歴史
+関数
+.Nm
+は
+.Bx 4.3
+で登場しました。
+.\" 上の関連項目にマージ by A.Ikeuchi。
+.\" .Sh 関連項目
+.\" .Xr vnode 9
+.Sh 作者
+このマニュアルページは
+.Pa ufs_lookup.c
+の中のコメントからのテキストを使って、
+.An Doug Rabson
+が書きました。

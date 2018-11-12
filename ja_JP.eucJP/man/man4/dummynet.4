@@ -1,0 +1,182 @@
+.\"
+.\"     %Id: dummynet.4,v 1.2 1998/12/21 22:37:53 luigi Exp %
+.\"
+.\" $FreeBSD$
+.Dd Sep 28, 1998
+.Dt DUMMYNET 4
+.Os
+.Sh 名称
+.Nm dummynet
+.Nd フレキシブルな帯域マネージャおよび遅延エミュレータ
+.Sh 書式
+.Fd #include <sys/types.h>
+.Fd #include <sys/queue.h>
+.Fd #include <netinet/in.h>
+.Fd #include <netinet/ip_fw.h>
+.Ft int
+.Fn setsockopt raw_socket IPPROTO_IP "ipfw option" "struct ipfw" size
+.Sh 解説
+dummynet は、帯域幅とキューのサイズに制限を加えたり、パケットの遅延や
+損失をシミュレートすることにより、様々なネットワークインタフェースを
+介してやりとりされるトラフィックを制御可能にします。
+.Pp
+現在の実装では、パケットの選別は
+.Nm ipfw
+プログラムの
+.Nm ``パイプ''
+ルールにより行われます。
+dummynet の
+.Nm パイプ
+においては、帯域幅、遅延、キューサイズ、損失率を設定できます。
+これらの設定は
+.Nm ipfw
+プログラムで行います。
+パイプには 1 から 65534 までの番号がつけられます。また、パケットは
+ipfw の設定によっては複数のパイプを介して送出する事が可能です。
+.Pp
+dummynet は IP レベルで動作しますが、ブリッジ拡張機能を有効にすることに
+より、ブリッジされるパケットをパイプを介して送出できます。
+.Sh 使用法
+下記のコマンドにより、パイプにパケットを送出します。
+.Bd -literal
+    ipfw add pipe NNN ....
+.Ed
+
+また、パイプの設定は下記のコマンドにより行います。
+.Bd -literal
+    ipfw pipe NNN config bw B delay D queue Q plr P
+.Ed
+
+ただし、帯域幅 B は、bit/s, Kbit/s, Mbit/s, Bytes/s, KBytes/s, MBytes/s
+で表すことができます。
+delay はミリ秒単位で、また、キューサイズはパケット数かバイト数
+により指定します。
+また、plr はパケットがランダムに失われる割合です。
+.Pp
+ipfw を正しく動作させることは簡単ではありません。システムが
+ルータやブリッジとして機能している場合はなおさらです。
+.Pp
+ルータとして機能する場合は、ルーティングされるパケットの入力経路、および、
+出力経路に同じルールセットが適用されますので、パケットが同じパイプを
+二度通らないように注意してください (本当にそうしたい場合は別です)。
+.Pp
+ブリッジとして機能する時は、ブリッジされるパケットに対して、
+.Nm ipfw
+フィルタは、入力経路で一度だけ起動されます。
+.Pp
+同様に、真の全二重チャネルをシミュレートする場合には、方向の違う
+2 つのパイプを用いるようにしてください。
+例えば、非対象な双方向のリンクをシミュレートする場合のルールセットは
+次のようになるでしょう。
+.Bd -literal
+   ipfw add pipe 1 ip from A to B out
+   ipfw add pipe 2 ip from B to A in
+   ipfw pipe 1 config bw 1Mbit/s delay 80ms
+   ipfw pipe 2 config bw 128Kbit/s delay 300ms
+.Ed
+
+.Pp
+.Sh 操作
+.Nm ipfw
+のコードは、帯域幅、キューサイズ、遅延、損失を適用するべき
+パケットを選別し、それらの制限を記述する ``パイプ'' の識別子を
+返します。
+.Pp
+選別されたパケットは、まず割り当てられたサイズのキューに蓄えられます。
+キューに蓄えられたパケットは、プログラムされた速さで取り出され、遅延を
+シミュレートするための 2 番目のキューに移されます。
+2 番目のキューから取り出される際に、パケットが送られてきたのと同じ
+プロトコルスタックに入れられます(例えば ip_input(), ip_output(),
+bdg_forward() など)。
+これは sysctl の
+   sys.net.inet.ipfw.one_pass
+の設定値に依存します。
+パイプから出力されたパケットは、パケットの宛先に転送されるか、
+マッチしたルールの後に記述された
+.Nm ipfw
+のルールに再び渡されます。
+.Pp
+.Nm dummynet
+はタイマの 1 tick 毎に処理を行います。つまり、処理の周期はカーネル
+オプションの
+.Bd -literal
+    options HZ
+.Ed
+
+によって制御されます。デフォルト値 (100) は 10ms 周期を意味します。
+高いデータ速度で正確なシミュレーションを行うためには、タイマ
+周期を 1ms 以下に設定する必要があるかもしれません。
+しかし、プログラムによる I/O (programmed I/O)
+を用いているインタフェースの中には、
+パケットを出力するのにかなりの時間を要するものがあることに注意して
+ください。つまり、タイマ周期を小さくし過ぎると、タイマの周期に処理が
+追い付かず、処理の精度を損なってしまうおそれがあります。
+
+.Sh カーネルオプション
+カーネル設定ファイル内の以下のオプションが
+.Nm dummynet
+の動作に関係します。
+.Bd -literal
+  IPFIREWALL               - ipfirewall を有効化 (dummynet 使用には必須)。
+  IPFIREWALL_VERBOSE       - ファイアウォールの詳細出力を有効化。
+  IPFIREWALL_VERBOSE_LIMIT - ファイアウォールの詳細出力を制限。
+  DUMMYNET                 - dummynet の処理を有効化。
+  NMBCLUSTER               - ネットワークパケットバッファの大きさを設定。
+  HZ                       - タイマの周期を設定。
+.Ed
+.Pp
+通常、下記のオプションは必須です。
+.Bd -literal
+  options IPFIREWALL
+  options DUMMYNET
+.Ed
+
+加えて、設定したすべてのパイプの、帯域幅と遅延時間の積と、キューサイズ
+の合計によっては、mbuf クラスタ
+(ネットワークパケットを蓄えておくために使われます)
+の数を増やす方が良いかもしれません。
+
+.Sh SYSCTL 変数
+.Pp
+.Bd -literal
+    net.inet.ip.fw.one_pass
+.Ed
+
+パケットがファイアウォールのコードを一度のみ通るようにしたい場合、
+1 に設定します。
+.Bd -literal
+   net.link.ether.bridge_ipfw
+.Ed
+
+ブリッジされるパケットをファイアウォールのコードに渡したい場合にセットします。
+
+.Sh コマンド
+パイプを扱うためには、以下のソケットオプションを用います。
+.Pp
+IP_DUMMYNET_CONFIGURE は、パイプの設定を更新します。(または新しい
+パイプを作成します。)
+.Pp
+IP_DUMMYNET_DEL は、マッチするルール番号が存在するすべてのパイプを
+削除します。
+.Pp
+IP_DUMMYNET_GET は、指定した番号にマッチするパイプを返します。
+.Pp
+IP_FW_FLUSH 指定した番号にマッチするパイプをフラッシュします。
+.Pp
+カーネルセキュリティレベルが 2 より大きい場合は、
+IP_DUMMYNET_GET のみが使用可能です。
+.Sh 関連項目
+.Xr setsockopt 2 ,
+.Xr ip 4 ,
+.Xr ipfw 8 ,
+.Xr sysctl 8 .
+.Sh バグ
+このマニュアルページは dummynet 使用方法の全部を記述している
+わけではありません。
+.Sh 歴史
+.Nm
+dummynet
+は、ACM Computer Communication Review, Jan.97 issue に記述されているように、
+TCP の輻輳の制御のために Luigi Rizzo <luigi@iet.unipi.it> が実装しました。
+その後、IP およびブリッジレベルで機能するように変更され、さらに
+IPFW パケットフィルタに統合されました。

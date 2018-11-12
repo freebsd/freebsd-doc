@@ -1,0 +1,269 @@
+Index: crypto/openssh/buffer.c
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/buffer.c,v
+retrieving revision 1.1.1.1.2.3
+retrieving revision 1.1.1.1.2.3.2.2
+diff -c -p -c -r1.1.1.1.2.3 -r1.1.1.1.2.3.2.2
+*** crypto/openssh/buffer.c	28 Sep 2001 01:33:33 -0000	1.1.1.1.2.3
+--- crypto/openssh/buffer.c	17 Sep 2003 14:52:42 -0000	1.1.1.1.2.3.2.2
+*************** RCSID("$OpenBSD: buffer.c,v 1.13 2001/04
+*** 23,30 ****
+  void
+  buffer_init(Buffer *buffer)
+  {
+! 	buffer->alloc = 4096;
+! 	buffer->buf = xmalloc(buffer->alloc);
+  	buffer->offset = 0;
+  	buffer->end = 0;
+  }
+--- 23,33 ----
+  void
+  buffer_init(Buffer *buffer)
+  {
+! 	const u_int len = 4096;
+! 
+! 	buffer->alloc = 0;
+! 	buffer->buf = xmalloc(len);
+! 	buffer->alloc = len;
+  	buffer->offset = 0;
+  	buffer->end = 0;
+  }
+*************** buffer_init(Buffer *buffer)
+*** 34,41 ****
+  void
+  buffer_free(Buffer *buffer)
+  {
+! 	memset(buffer->buf, 0, buffer->alloc);
+! 	xfree(buffer->buf);
+  }
+  
+  /*
+--- 37,46 ----
+  void
+  buffer_free(Buffer *buffer)
+  {
+! 	if (buffer->alloc > 0) {
+! 		memset(buffer->buf, 0, buffer->alloc);
+! 		xfree(buffer->buf);
+! 	}
+  }
+  
+  /*
+*************** buffer_append(Buffer *buffer, const char
+*** 69,74 ****
+--- 74,81 ----
+  void
+  buffer_append_space(Buffer *buffer, char **datap, u_int len)
+  {
++ 	u_int	newlen;
++ 
+  	/* If the buffer is empty, start using it from the beginning. */
+  	if (buffer->offset == buffer->end) {
+  		buffer->offset = 0;
+*************** restart:
+*** 93,100 ****
+  		goto restart;
+  	}
+  	/* Increase the size of the buffer and retry. */
+! 	buffer->alloc += len + 32768;
+! 	buffer->buf = xrealloc(buffer->buf, buffer->alloc);
+  	goto restart;
+  }
+  
+--- 100,111 ----
+  		goto restart;
+  	}
+  	/* Increase the size of the buffer and retry. */
+! 	newlen = buffer->alloc + len + 32768;
+! 	if (newlen > 0xa00000)
+! 		fatal("buffer_append_space: alloc %u not supported",
+! 		    newlen);
+! 	buffer->buf = xrealloc(buffer->buf, newlen);
+! 	buffer->alloc = newlen;
+  	goto restart;
+  }
+  
+Index: crypto/openssh/channels.c
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/channels.c,v
+retrieving revision 1.1.1.1.2.5.2.1
+retrieving revision 1.1.1.1.2.5.2.2
+diff -c -p -c -r1.1.1.1.2.5.2.1 -r1.1.1.1.2.5.2.2
+*** crypto/openssh/channels.c	7 Mar 2002 14:33:54 -0000	1.1.1.1.2.5.2.1
+--- crypto/openssh/channels.c	17 Sep 2003 14:52:42 -0000	1.1.1.1.2.5.2.2
+*************** channel_new(char *ctype, int type, int r
+*** 243,251 ****
+  	if (found == -1) {
+  		/* There are no free slots.  Take last+1 slot and expand the array.  */
+  		found = channels_alloc;
+  		channels_alloc += 10;
+  		debug2("channel: expanding %d", channels_alloc);
+- 		channels = xrealloc(channels, channels_alloc * sizeof(Channel));
+  		for (i = found; i < channels_alloc; i++)
+  			channels[i].type = SSH_CHANNEL_FREE;
+  	}
+--- 243,255 ----
+  	if (found == -1) {
+  		/* There are no free slots.  Take last+1 slot and expand the array.  */
+  		found = channels_alloc;
++ 		if (channels_alloc > 10000)
++ 			fatal("channel_new: internal error: channels_alloc %d "
++ 			    "too big.", channels_alloc);
++ 		channels = xrealloc(channels,
++ 		    (channels_alloc + 10) * sizeof(Channel));
+  		channels_alloc += 10;
+  		debug2("channel: expanding %d", channels_alloc);
+  		for (i = found; i < channels_alloc; i++)
+  			channels[i].type = SSH_CHANNEL_FREE;
+  	}
+Index: crypto/openssh/deattack.c
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/deattack.c,v
+retrieving revision 1.1.1.1.2.3
+retrieving revision 1.1.1.1.2.3.2.1
+diff -c -p -c -r1.1.1.1.2.3 -r1.1.1.1.2.3.2.1
+*** crypto/openssh/deattack.c	28 Sep 2001 01:33:33 -0000	1.1.1.1.2.3
+--- crypto/openssh/deattack.c	17 Sep 2003 14:52:42 -0000	1.1.1.1.2.3.2.1
+*************** detect_attack(u_char *buf, u_int32_t len
+*** 100,111 ****
+  
+  	if (h == NULL) {
+  		debug("Installing crc compensation attack detector.");
+  		n = l;
+- 		h = (u_int16_t *) xmalloc(n * HASH_ENTRYSIZE);
+  	} else {
+  		if (l > n) {
+  			n = l;
+- 			h = (u_int16_t *) xrealloc(h, n * HASH_ENTRYSIZE);
+  		}
+  	}
+  
+--- 100,111 ----
+  
+  	if (h == NULL) {
+  		debug("Installing crc compensation attack detector.");
++ 		h = (u_int16_t *) xmalloc(l * HASH_ENTRYSIZE);
+  		n = l;
+  	} else {
+  		if (l > n) {
++ 			h = (u_int16_t *) xrealloc(h, l * HASH_ENTRYSIZE);
+  			n = l;
+  		}
+  	}
+  
+Index: crypto/openssh/session.c
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/session.c,v
+retrieving revision 1.4.2.11
+retrieving revision 1.4.2.11.2.1
+diff -c -p -c -r1.4.2.11 -r1.4.2.11.2.1
+*** crypto/openssh/session.c	3 Dec 2001 00:53:28 -0000	1.4.2.11
+--- crypto/openssh/session.c	17 Sep 2003 14:52:42 -0000	1.4.2.11.2.1
+*************** void
+*** 886,891 ****
+--- 886,892 ----
+  child_set_env(char ***envp, u_int *envsizep, const char *name,
+  	      const char *value)
+  {
++ 	u_int envsize;
+  	u_int i, namelen;
+  	char **env;
+  
+*************** child_set_env(char ***envp, u_int *envsi
+*** 904,912 ****
+  		xfree(env[i]);
+  	} else {
+  		/* New variable.  Expand if necessary. */
+! 		if (i >= (*envsizep) - 1) {
+! 			(*envsizep) += 50;
+! 			env = (*envp) = xrealloc(env, (*envsizep) * sizeof(char *));
+  		}
+  		/* Need to set the NULL pointer at end of array beyond the new slot. */
+  		env[i + 1] = NULL;
+--- 905,915 ----
+  		xfree(env[i]);
+  	} else {
+  		/* New variable.  Expand if necessary. */
+! 		envsize = *envsizep;
+! 		if (i >= envsize - 1) {
+! 			envsize += 50;
+! 			env = (*envp) = xrealloc(env, envsize * sizeof(char *));
+! 			*envsizep = envsize;
+  		}
+  		/* Need to set the NULL pointer at end of array beyond the new slot. */
+  		env[i + 1] = NULL;
+Index: crypto/openssh/ssh-agent.c
+===================================================================
+RCS file: /home/ncvs/src/crypto/openssh/ssh-agent.c,v
+retrieving revision 1.2.2.7
+retrieving revision 1.2.2.7.2.1
+diff -c -p -c -r1.2.2.7 -r1.2.2.7.2.1
+*** crypto/openssh/ssh-agent.c	28 Sep 2001 01:33:35 -0000	1.2.2.7
+--- crypto/openssh/ssh-agent.c	17 Sep 2003 14:52:43 -0000	1.2.2.7.2.1
+*************** process_message(SocketEntry *e)
+*** 508,514 ****
+  void
+  new_socket(int type, int fd)
+  {
+! 	u_int i, old_alloc;
+  	if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
+  		error("fcntl O_NONBLOCK: %s", strerror(errno));
+  
+--- 508,514 ----
+  void
+  new_socket(int type, int fd)
+  {
+! 	u_int i, old_alloc, new_alloc;
+  	if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
+  		error("fcntl O_NONBLOCK: %s", strerror(errno));
+  
+*************** new_socket(int type, int fd)
+*** 518,540 ****
+  	for (i = 0; i < sockets_alloc; i++)
+  		if (sockets[i].type == AUTH_UNUSED) {
+  			sockets[i].fd = fd;
+- 			sockets[i].type = type;
+  			buffer_init(&sockets[i].input);
+  			buffer_init(&sockets[i].output);
+  			return;
+  		}
+  	old_alloc = sockets_alloc;
+! 	sockets_alloc += 10;
+  	if (sockets)
+! 		sockets = xrealloc(sockets, sockets_alloc * sizeof(sockets[0]));
+  	else
+! 		sockets = xmalloc(sockets_alloc * sizeof(sockets[0]));
+! 	for (i = old_alloc; i < sockets_alloc; i++)
+  		sockets[i].type = AUTH_UNUSED;
+! 	sockets[old_alloc].type = type;
+  	sockets[old_alloc].fd = fd;
+  	buffer_init(&sockets[old_alloc].input);
+  	buffer_init(&sockets[old_alloc].output);
+  }
+  
+  int
+--- 518,541 ----
+  	for (i = 0; i < sockets_alloc; i++)
+  		if (sockets[i].type == AUTH_UNUSED) {
+  			sockets[i].fd = fd;
+  			buffer_init(&sockets[i].input);
+  			buffer_init(&sockets[i].output);
++ 			sockets[i].type = type;
+  			return;
+  		}
+  	old_alloc = sockets_alloc;
+! 	new_alloc = sockets_alloc + 10;
+  	if (sockets)
+! 		sockets = xrealloc(sockets, new_alloc * sizeof(sockets[0]));
+  	else
+! 		sockets = xmalloc(new_alloc * sizeof(sockets[0]));
+! 	for (i = old_alloc; i < new_alloc; i++)
+  		sockets[i].type = AUTH_UNUSED;
+! 	sockets_alloc = new_alloc;
+  	sockets[old_alloc].fd = fd;
+  	buffer_init(&sockets[old_alloc].input);
+  	buffer_init(&sockets[old_alloc].output);
++ 	sockets[old_alloc].type = type;
+  }
+  
+  int

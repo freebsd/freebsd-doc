@@ -1,0 +1,354 @@
+<!--
+     The FreeBSD Documentation Project
+
+     $FreeBSD$
+     Original revision: 1.7
+-->
+
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook V4.1-Based Extension//EN" [
+<!ENTITY % man PUBLIC "-//FreeBSD//ENTITIES DocBook Manual Page Entities//EN">
+%man;
+]>
+
+<article>
+  <articleinfo>
+    <title>Dialup-firewalling sa FreeBSD-om</title>
+
+    <authorgroup>
+      <author>
+        <firstname>Marc</firstname>
+        <surname>Silver</surname>
+
+        <affiliation>
+          <address><email>marcs@draenor.org</email></address>
+        </affiliation>
+      </author>
+    </authorgroup>
+
+    <pubdate>$Date: 2002-02-06 17:01:34 $</pubdate>
+
+    <abstract>
+      <para>Ovaj èlanak dokumentuje kako podesiti firewall koristeæi PPP dialup
+sa FreeBSD-om i IPFW-om, kao i posebno pode¹avanje firewall-a na
+dialup sa dinamièki dodeljenim IP adresama. Ovaj dokument ne pokriva
+pode¹avanje same PPP konekcije.</para>
+    </abstract>
+  </articleinfo>
+
+  <sect1 id="preface">
+    <title>Uvod</title>
+    
+    <para>Dialup-firewalling sa FreeBSD-om</para>
+    
+    <para>Ovaj dokument poku¹ava da objasni postupak koji je potreban da bi se
+	podesio firewall na FreeBSD-u u sluèaju kada imate dinamièki
+	dodeljenu IP adresu. Mnogo truda je bilo ulo¾eno u to da ovaj
+	dokument bude¹ ¹to informativniji i taèniji, svaki va¹
+	komentar/sugestija <ulink URL="mailto:marcs@draenor.org">autoru</ulink> je 
+	dobrodo¹la.</para>
+   </sect1>
+
+  <sect1 id="kernel">
+    <title>Opcije pri konfigurisanju kernela</title>
+    
+    <para>Prva stvar koju morate da uradite jeste da rekompajlirate kernel
+	FreeBSD-a. Ako vam je potrebno vi¹e informacija o tome kako da
+	rekompajlirate kernel, onda je svakako najbolje mesto da poènete poglavlje 
+	o konfigurisanju kernela u <ulink
+    URL="http://www.freebsd.org/handbook/kernelconfig.html">Pririèniku</ulink>.
+	Morate iskompajlirati kernel sa sledeæim opcijama:</para>
+
+    <variablelist>
+      <varlistentry>
+        <term><literal>options IPFIREWALL</literal></term>
+
+        <listitem>
+          <para>Ukljucuje firewall kod u kernel.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><literal>options IPFIREWALL_VERBOSE</literal></term>
+
+        <listitem>
+          <para>©alje logovane pakete system logger-u.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><literal>options
+            IPFIREWALL_VERBOSE_LIMIT=<replaceable>100</replaceable></literal></term>
+
+        <listitem>
+          <para>Limitira broj ekvivalentnih unosa u log. Ovo spreèava da se va¹ log prepuni 
+		  sa mnogo jednakih unosa. <replaceable>100</replaceable> je razuman broj, ali mo¾ete 
+		  promeniti ovaj podatak prema va¹im potrebama.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><literal>options IPDIVERT</literal></term>
+
+        <listitem>
+          <para>Omoguæava <emphasis>preusmeravanje</emphasis> socket-a, o èemu æe kasnije 
+		  biti reèi.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
+    <para>Postoje jos neke opcije koje nisu obavezne, a koje mo¾ete ukompajlirati u va¹ kernel 
+	kako bi ste pobolj¹ali bezbednost va¹eg sistema. Ove opcije nisu neophodne, ali æe neki 
+	paranoidniji korisnici svakako ¾eleti da ih upotrebe.</para>
+
+    <variablelist>
+      <varlistentry>
+        <term><literal>options TCP_RESTRICT_RST</literal></term>
+
+        <listitem>
+          <para>Ova opcija blokira sve TCP RST pakete. Ovo je najbolje koristiti za sisteme 
+		  koji bi mogli biti izlo¾eni SYN flooding-u (IRC serveri su dobar primer), ili sisteme 
+		  za koje je po¾eljno da im se ne mogu lako skenirati portovi.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><literal>options TCP_DROP_SYNFIN</literal></term>
+
+        <listitem>
+          <para>Ako ukljuèite ovu opciju u kernel, biæe ignorisani sci SYN i FIN paketi. Ovo 
+		  onemoguæava alate kao sto je nmap, itd. da odrede TCP/IP stek masine, ali onemoguæava 
+		  podr¹ku za RFC1644 ekstenzije. Ovo NIJE preporuèljivo ako æe ma¹ina raditi kao web 
+		  server.</para>
+        </listitem>
+      </varlistentry>
+     </variablelist>
+
+    <para>Nemojte odmah da restartujete ma¹inu po¹to rekompajlirate kernel. Uz malo sreæe moraæete 
+	samo jednom da uradite restartovanje da bi ste zavrsili instalaciju firewall-a.</para>
+  </sect1>
+
+  <sect1 id="rcconf">
+    <title>Izmene <filename>/etc/rc.conf</filename> fajla potrebne za podizanje 
+      firewall-a</title>
+    
+    <para>Sada je potrebno da uradimo odredjene izmene na
+      <filename>/etc/rc.conf</filename> fajlu kako bi smo omoguæili podizanje firewall-a. 
+	  Jednostavno dodajte sledeæe linije:</para>
+    
+    <programlisting>firewall_enable="YES"
+firewall_script="/etc/firewall/fwrules"
+natd_enable="YES"
+natd_interface="tun0"
+natd_flags="-dynamic"</programlisting>
+
+    <para>Za vi¹e informacija o tome pogledajte u
+      <filename>/etc/defaults/rc.conf</filename> i procitajte
+      &man.rc.conf.5;</para>
+  </sect1>
+  
+  <sect1>
+    <title>Iskljcivanje PPP prevodjenja adresa</title>
+    
+    <para>Moguæe je da veæ koristite prevodjenje adresa (network address translation-NAT) 
+	koji je ugraðen u PPP. U tom sluèaju moraæete da ga iskljuèite, kao sto sledeæi primeri 
+	koriste &man.natd.8; da bi uradili istu stvar.</para>
+
+    <para>Ako veæ imate pode¹en ppp, verovatno imate blok instrukcija za automatsko podizanje 
+	PPP-a i to verovatno izgleda otprilike ovako:</para>
+
+    <programlisting>ppp_enable="YES"
+ppp_mode="auto"
+ppp_nat="YES"
+ppp_profile="<replaceable>profile</replaceable>"</programlisting>
+
+    <para>Ako je tako, obri¹ite <literal>ppp_nat="YES"</literal> line. Takodje æete morati 
+	da uklonite <literal>nat enable yes</literal> ili <literal>alias enable yes</literal> 
+	u <filename>/etc/ppp/ppp.conf</filename> fajlu.</para>
+  </sect1>
+
+  <sect1 id="rules">
+    <title>Pode¹avanje firewall-a</title>
+    
+    <para>Sada smo veæ pri kraju. Sve ¹to je preostalo jeste da defini¹emo pravila po kojim 
+	æe se firewall pona¹ati i posle toga mo¾ete da restartujete ma¹inu i firewall bi trebao 
+	da bude podignut i aktivan. Svakako razumem da æe svako ¾eleti ne¹to drugaèija pravila za 
+	njihov firewall, tako da sam poku¹ao da napi¹em pravila koja æe odgovarati veæini 
+	korisnika dialup konekcije. Mo¾ete lako modifikovati veæ postojeæa pravila kao osnovu za 
+	va¹ set pravila. Krenimo prvo sa osnovama zatvorenog firewall-inga. Ono ¹to bi trebalo da 
+	uradite jeste da u osnovnoj konfiguraciji sve zatvorite i onda po potrebi otvorite samo ono
+	¹to vam je potrebno. Pravila se pi¹u tako da se prvo pi¹u pravila dozvole (allow), a onda 
+	pravila zabrane (deny). Pretpostavka je da æete prvo dodati pravila dozvole, a zatim sve 
+	ostalo zabraniti. :)</para>
+
+    <para>Napravimo sada direktorijum /etc/firewall. Udjite u taj direktorijum i potom napravite 
+	file fwrules koji smo naznaèili u rc.conf fajlu i editujte ga prema va¹im potrebama. Molim 
+	vas da obratite pa¾nju na to da mo¾ete da promenite ime ovog fajla kako vama odgovara. Ovo 
+	uputsvo samo daje ovo ime kao primer. </para>
+
+    <para>Pogledajmo sada primer konfiguracionog fajla, gde æete videti i detalje pode¹avanja:. 
+	</para>
+
+    <programlisting># Pravila za konfigurisanje firewall-a
+# Written by Marc Silver (marcs@draenor.org)
+# http://draenor.org/ipfw
+# Slobodna distribucija 
+
+
+# Defini¹ite firewall komadu (kao u /etc/rc.firewall) radi
+# lak¹eg referenciranja. Omoguæava lak¹e èitanje istog .
+fwcmd="/sbin/ipfw"
+
+# Prisiljava preuzimanje novih pravila prilikom restartovanja.
+$fwcmd -f flush
+
+# Preusmerava sve pakete kroz tunnel interfejs.
+$fwcmd add divert natd all from any to any via tun0
+
+# Dozvoljava protok svih podataka kroz mre¾ne karte i localhost.
+# Proverite da li ste promenili identifikaciju mre¾ne karte pre
+# nego ¹to restartujete ma¹inu (moja je bila fxp0) :)
+$fwcmd add allow ip from any to any via lo0
+$fwcmd add allow ip from any to any via fxp0
+
+# Dozvoli sve konekcije koje ja iniciram
+$fwcmd add allow tcp from any to any out xmit tun0 setup
+
+# Po¹to su konekcije napravljene, dozvoli im da ostanu otvorene
+$fwcmd add allow tcp from any to any via tun0 established
+
+# Svima na internetu je dozvoljeno da se konektuju na sledeæe
+# servise na ovoj ma¹ini. U ovom primeru ljudi mogu da se
+# konektuju na ssh i apache (ili neki drugi web server koji
+# slu¹a na portu 80)
+$fwcmd add allow tcp from any to any 80 setup
+$fwcmd add allow tcp from any to any 22 setup
+
+# Ova linija ¹alje RESET svim ident paketima.
+$fwcmd add reset log tcp from any to any 113 in recv tun0
+
+# Omoguæi izlazne DNS upite SAMO ka odreðenim serverima.
+$fwcmd add allow udp from any to <replaceable>x.x.x.x</replaceable> 53 out xmit tun0
+
+# Dozvoli im da daju povratnu infomaciju.... :)
+$fwcmd add allow udp from <replaceable>x.x.x.x</replaceable> 53 to any in recv tun0
+
+# Dozvoli ICMP (potreban za ping i traceroute). Mo¾da æete
+# ¾eleti da ovo onemoguæite, ali to mojim potrebama odgovara
+$fwcmd add 65435 allow icmp from any to any
+
+# Zabrani sve ostalo.
+$fwcmd add 65435 deny log ip from any to any</programlisting>
+
+    <para>Sada imate potpuno funkcionalan firewall koji ce dozvoliti konekcije 
+	na portove 80 i 22, i koji æe prijaviti poku¹aj konekcije na bilo koji 
+	drugi port. Sada bi trebalo da mo¾ete bezbedno da restartujete ma¹inu i 
+	posle restarta bi va¹ firewall trebao fino da radi. Ako pronadjete neku 
+	gre¹ku ili natrèite na neki problem, ili imate bilo koju sugestiju kako bi 
+	unapredio ovu dokumentaciju, molim vas da mi napi¹ete email.</para>
+  </sect1>
+
+  <sect1>
+    <title>Pitanja</title>
+    
+    <qandaset>
+      <qandaentry>
+        <question>
+          <para>Za¹to koristite natd i ipfw kada bi mogli da koristite 
+		  ugraðene ppp filtre?</para>
+        </question>
+        
+        <answer>
+          <para>Moraæu da budem iskren na ovom mestu i da ka¾em da nemam 
+		  odreðen razlog za¹to zaista koristim natd i ipfw umesto ugradjenih 
+		  ppp filtera. Posle razgovora koje sam imao sa raznim ljudima, do¹li 
+		  smo do konsezusa da je ipwf definitivno moæniji kao i konfigurabilniji 
+		  od ppp filtera sto mu daje poen vi¹e za funkcionalnost, kao i poen 
+		  manje za lakoæu kori¹æenja. Jedan od razloga zbog kojeg vi¹e volim 
+		  ipwf jeste ¹to preferiram da se firewalling radi na nivou kernela a 
+		  ne na nivou korisnièkog programa.</para>
+        </answer>
+      </qandaentry>
+
+      <qandaentry>
+        <question>
+          <para>Ako interno koristim privatnu adresu, kao npr. u 192.168.0.0 
+		  opsegu, mogu li dodati komandu kao npr. $fwcmd add deny all from 
+		  any to 192.168.0.0:255.255.0.0 via tun0 u pravila kako bih spreèio 
+		  poku¹aj konekcija sa udaljene ma¹ine na internu ma¹inu?</para>
+        </question>
+
+        <answer>
+          <para>Jednostavan odgovor je ne. Razlog je to sto natd radi prevodjenje 
+		  adresa za <emphasis>sve</emphasis> sto je preusmereno kroz tun0. Sto se 
+		  natd-a tièe, dolazeæi paketi æe govoriti samo o dinamièki dodeljenoj 
+		  IP adresi a NE o internoj mre¾i. Primetimo ipak da firewall-u mo¾ete 
+		  dodati pravilo nalik na <literal>$fwcmd add deny all from any to 
+		  192.168.0.0:255.255.0.0 via tun0</literal> koje bi ogranièilo host 
+		  u va¹oj internoj mre¾i da izaðe uz pomoæ firewall-a.</para>
+        </answer>
+      </qandaentry>
+
+      <qandaentry>
+        <question>
+          <para>Mora da je ne¹to pogre¹no. Pratio sam va¹a uputstva od reèi do reèi 
+		  i sada sam potpuno zatvoren.</para>
+        </question>
+
+        <answer>
+          <para>Ovaj tutorial pretpostavlja da koristite
+            <emphasis>userland-ppp</emphasis>, i iz tog razloga dati set  
+            pravila radi na <devicename>tun0</devicename> interfejsu, to odgovara 
+			prvoj konekciji ostvarenoj sa &man.ppp.8; (odn.
+            <emphasis>user-ppp</emphasis>).  Dodatne konekcije bi koristile
+            <devicename>tun1</devicename>, <devicename>tun2</devicename> 
+			itd.</para>
+
+          <para>Takoðe bi trebalo da primetite da &man.pppd.8; koristi ppp0 
+            <devicename>ppp0</devicename> interfejs, tako da ako zelite
+            da ostvarite konekciju pomocu &man.pppd.8;-a morate zameniti
+            <devicename>tun0</devicename> sa <devicename>ppp0</devicename>. 
+            Brz naèin da podesite firewall u tom sluèaju je prikazan dole.
+			Originalni set pravila je saèuvan
+            <filename>fwrules_tun0</filename>.</para>
+
+          <screen>
+            &prompt.user; <userinput>cd /etc/firewall</userinput>
+            /etc/firewall&prompt.user; <userinput>su</userinput>
+            <prompt>Password:</prompt>
+            /etc/firewall&prompt.root; <userinput>mv fwrules fwrules_tun0</userinput>
+            /etc/firewall&prompt.root; <userinput>cat fwrules_tun0 | sed s/tun0/ppp0/g > fwrules</userinput>
+          </screen>
+
+          <para>Da bi ste saznali da li trenutno koristite &man.ppp.8; ili
+            &man.pppd.8; mozete pogledati izlaz &man.ifconfig.8;-a kada uspostavite vezu.  
+			Pod uslovom da uspostavite konekciju sa &man.pppd.8;-om videæete ne¹to kao 
+			(prikazane su samo relevatne linije):</para>
+
+          <screen>
+            &prompt.user; <userinput>ifconfig</userinput>
+            <emphasis>(skipped...)</emphasis>
+            ppp0: flags=<replaceable>8051&lt;UP,POINTOPOINT,RUNNING,MULTICAST&gt; mtu 1524</replaceable>
+                    inet <replaceable>xxx.xxx.xxx.xxx</replaceable> --&gt; <replaceable>xxx.xxx.xxx.xxx</replaceable> netmask <replaceable>0xff000000</replaceable>
+            <emphasis>(preskoèeno...)</emphasis>
+            </screen>
+
+          <para>OPod uslovom da je konekcija uspostavljena sa &man.ppp.8;-om
+            (<emphasis>user-ppp</emphasis>) trebalo bi da dobijete nesto nalik 
+			na slede'e linije:</para>
+
+          <screen>
+            &prompt.user; <userinput>ifconfig</userinput>
+            <emphasis>(skipped...)</emphasis>
+            ppp0: flags=<replaceable>8010&lt;POINTOPOINT,MULTICAST&gt; mtu 1500</replaceable>
+            <emphasis>(skipped...)</emphasis>
+            tun0: flags=<replaceable>8051&lt;UP,POINTOPOINT,RUNNING,MULTICAST&gt; mtu 1524</replaceable>
+                    <emphasis>(IPv6 stuff skipped...)</emphasis>
+                    inet <replaceable>xxx.xxx.xxx.xxx</replaceable> --&gt; <replaceable>xxx.xxx.xxx.xxx</replaceable> netmask <replaceable>0xffffff00</replaceable>
+                    Opened by PID <replaceable>xxxxx</replaceable>
+            <emphasis>(preskoèeno...)</emphasis>
+            </screen>
+        </answer>
+      </qandaentry>
+    </qandaset>
+  </sect1>
+</article>

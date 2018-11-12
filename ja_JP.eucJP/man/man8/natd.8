@@ -1,0 +1,640 @@
+.\" %FreeBSD: src/sbin/natd/natd.8,v 1.61 2003/09/23 07:41:55 marcus Exp %
+.\"
+.\" $FreeBSD$
+.Dd February 28, 2003
+.Dt NATD 8
+.Os
+.Sh 名称
+.Nm natd
+.Nd ネットワークアドレス変換デーモン
+.Sh 書式
+.Nm
+.Bk -words
+.Op Fl unregistered_only | u
+.Op Fl log | l
+.Op Fl proxy_only
+.Op Fl reverse
+.Op Fl deny_incoming | d
+.Op Fl use_sockets | s
+.Op Fl same_ports | m
+.Op Fl verbose | v
+.Op Fl dynamic
+.Op Fl in_port | i Ar port
+.Op Fl out_port | o Ar port
+.Op Fl port | p Ar port
+.Op Fl alias_address | a Ar address
+.Op Fl target_address | t Ar address
+.Op Fl interface | n Ar interface
+.Op Fl proxy_rule Ar proxyspec
+.Op Fl redirect_port Ar linkspec
+.Op Fl redirect_proto Ar linkspec
+.Op Fl redirect_address Ar linkspec
+.Op Fl config | f Ar configfile
+.Op Fl log_denied
+.Op Fl log_facility Ar facility_name
+.Op Fl punch_fw Ar firewall_range
+.Op Fl skinny_port Ar port
+.Op Fl log_ipfw_denied
+.Op Fl pid_file | P Ar pidfile
+.Ek
+.Sh 解説
+.Nm
+ユーティリティは、
+.Fx
+における
+.Xr divert 4
+ソケットと共に用いることによって、ネットワークアドレスの変換を
+行います。
+.Pp
+(PPP リンク上で NAT が必要な場合、ほとんどの
+.Nm
+機能を提供し、同じ
+.Xr libalias 3
+ライブラリを使用する、
+.Xr ppp 8
+の
+.Fl nat
+オプションが提供されています)。
+.Pp
+.Nm
+ユーティリティは通常、デーモンとしてバックグラウンドで実行します。
+.Nm
+はマシンに入ってくるパケット、またはマシンから出て行くパケットを
+生 (raw) のまま扱い、場合により IP パケットストリームに
+再び送り出す前に手を加えます。
+.Pp
+.Nm natd
+は他のホストへ向かうすべてのパケットについて、発信元 IP アドレスを
+現在のマシンのものにする、という変換を行います。
+このように変換された各パケットについて、変換内容を記録するために
+内部テーブルエントリが作成されます。
+発信元ポート番号も、パケットに適用したテーブルエントリを示すように
+変更されます。
+現在のホストの、対象となる IP アドレスを使ったパケットが受信されると、
+この内部テーブルがチェックされます。
+エントリが見つかると、パケットに正しい対象 IP アドレスとポート番号を
+入れるのに利用されます。
+.Pp
+以下のコマンドラインオプションが利用できます。
+.Bl -tag -width Fl
+.It Fl log | l
+様々なエイリアスの統計や情報をファイル
+.Pa /var/log/alias.log
+に記録します。このファイルは
+.Nm
+が起動されるたびに切りつめられます。
+.It Fl deny_incoming | d
+入力パケットのうち、内部変換テーブルに
+エントリの無いものを渡しません。
+.Pp
+本オプションを使用しないと、このようなパケットは下記の
+.Fl target_address
+ルールを使用して変更され、内部変換テーブルにエントリが作成されます。
+.It Fl log_denied
+拒否した入力パケットを
+.Xr syslog 3
+を介してログします (
+.Fl log_facility
+を参照してください)。
+.It Fl log_facility Ar facility_name
+.Xr syslog 3
+を介して情報をログするときに、指定したログファシリティを使用します。
+引数
+.Ar facility_name
+は
+.Xr syslog.conf 5
+に記述されているキーワードのうちのひとつです。
+.It Fl use_sockets | s
+FTP data コネクションや IRC DCC send コネクションを確立するのに
+.Xr socket 2
+を割り当てます。このオプションはよりシステムリソースを消費しますが、
+ポート番号が衝突する場合でもコネクションが成功することを保証します。
+.It Fl same_ports | m
+出て行くパケットを変換する時に、できるだけポート番号を同じまま
+保つようにします。このオプションにより、RPC のようなプロトコルが
+うまく働く可能性があがります。ポート番号を維持することができない時には、
+暗黙のうちに通常と同じ方法で変換されます。
+.It Fl verbose | v
+起動時に
+.Xr daemon 3
+を呼び出しません。よって、制御端末から切り離されずに、標準出力に
+すべてのパケット変換を表示します。このオプションはデバッグの目的に
+のみ用いるべきです。
+.It Fl unregistered_only | u
+.Em 登録されていない
+発信元アドレスを伴う出て行くパケットのみを変換します。
+RFC 1918 によれば、登録されていない発信元アドレスは 10.0.0.0/8 と
+172.16.0.0/12 と 192.168.0.0/16 となっています。
+.It Fl redirect_port Ar proto Xo
+.Ar targetIP Ns : Ns Xo
+.Ar targetPORT Ns Op - Ns Ar targetPORT Xc
+.Op Ar aliasIP Ns : Ns Xo
+.Ar aliasPORT Ns Op - Ns Ar aliasPORT Xc
+.Oo Ar remoteIP Ns Oo : Ns
+.Ar remotePORT Ns Op - Ns Ar remotePORT
+.Oc Oc
+.Xc
+指定されたポートに入ってくるコネクションを別のホストとポートに
+リダイレクトします。
+引数
+.Ar proto
+には
+.Ar tcp
+または
+.Ar udp
+を指定します。
+.Ar targetIP
+は転送先の IP アドレス、
+.Ar targetPORT
+は同じく転送先ポート番号 (範囲指定可能)、
+.Ar aliasPORT
+は接続を受け付けるポート番号 (範囲指定可能)、
+.Ar aliasIP
+は同じく接続を受け付けるアドレスです。
+必要に応じて
+.Ar remoteIP
+と
+.Ar remotePORT
+を指定し、接続元を限定することができます。
+.Ar remotePORT
+の指定を省略した場合、全ポート番号が指定されたものとされます。
+.Pp
+引数
+.Ar targetIP , aliasIP ,
+.Ar remoteIP
+は、IP アドレスまたはホスト名で与えられます。
+.Ar targetPORT , aliasPORT ,
+.Ar remotePORT
+の範囲は、番号は異なっていても構いませんが、大きさは同じである必要があります。
+.Ar targetPORT , aliasPORT ,
+.Ar remotePORT
+が単一の値 (範囲ではない) を指定する場合、
+.Xr services 5
+データベース中で検索されるサービス名で指定可能です。
+.Pp
+例えば、
+.Pp
+.Dl Ar tcp inside1:telnet 6666
+.Pp
+という引数は、このマシンのポート 6666 に向けられた tcp パケットが
+マシン inside1 の telnet ポートに送られることを示しています。
+.Pp
+.Dl Ar tcp inside2:2300-2399 3300-3399
+.Pp
+は、
+ポート 3300-3399 に向けられた入力コネクションを
+ホスト inside2 のポート 2300-2399 へリダイレクトします。
+マッピングは、ポート 3300 は 2300 に 3301 は 2301 にというように
+1対1で行われます。
+.It Fl redirect_proto Ar proto localIP Oo
+.Ar publicIP Op Ar remoteIP
+.Oc
+.Ar publicIP
+に向けられたプロトコル
+.Ar proto
+(
+.Xr protocols 5
+を参照)
+の入力 IP パケットを、
+.Ar localIP
+アドレスへリダイレクトし、その逆も行います。
+.Pp
+.Ar publicIP
+が指定されないと、デフォルトのエイリアスアドレスが使用されます。
+.Ar remoteIP
+が指定されると、
+.Ar remoteIP
+から/へ向けて到着したパケットのみがルールにマッチします。
+.It Fl redirect_address Ar localIP publicIP
+公式な IP アドレスへのパケットの流れを、ローカルネットワーク内の
+マシンにリダイレクトします。この機能は
+.Em 静的 NAT (static NAT)
+と
+呼ばれています。
+静的 NAT はあなたの ISP が IP アドレスの小さなブロックをあなたに
+割り当てた時に、単一のアドレスとして用いるのにも利用できます:
+.Pp
+  redirect_address 10.0.0.8 0.0.0.0
+.Pp
+上記のコマンドは入ってくすべてのパケットをマシン 10.0.0.8 に
+リダイレクトします。
+.Pp
+下記のように、いくつかのアドレスエイリアスが同一の公式アドレスを
+示すように指定すると、
+.Pp
+.Bd -literal -offset indent
+.Ar redirect_address 192.168.0.2 public_addr
+.Ar redirect_address 192.168.0.3 public_addr
+.Ar redirect_address 192.168.0.4 public_addr
+.Ed
+.Pp
+入ってくるパケットの流れは最後に変換されたローカルアドレス
+(192.168.0.4) に向けられますが、最初の二つのアドレスへの出力
+パケットの流れは、指定された
+.Ar public_addr
+からのエイリアスのままになります。
+.It Fl redirect_port Ar proto Xo
+.Ar targetIP Ns : Ns Xo
+.Ar targetPORT Ns Oo , Ns
+.Ar targetIP Ns : Ns Xo
+.Ar targetPORT Ns Oo , Ns
+.Ar ...\&
+.Oc Oc
+.Xc
+.Xc
+.Op Ar aliasIP Ns : Ns Xo
+.Ar aliasPORT
+.Xc
+.Oo Ar remoteIP Ns
+.Op : Ns Ar remotePORT
+.Oc
+.Xc
+.It Fl redirect_address Xo
+.Ar localIP Ns Oo , Ns
+.Ar localIP Ns Oo , Ns
+.Ar ...\&
+.Oc Oc
+.Ar publicIP
+.Xc
+書式
+.Fl redirect_port
+および
+.Fl redirect_address
+は、単一サーバのネットワーク負荷をオフロードし、
+負荷をサーバプールへ分散します。
+この機能は
+.Em LSNAT
+(RFC 2391) として知られています。
+例えば、引数
+.Pp
+.Dl Ar tcp www1:http,www2:http,www3:http www:http
+.Pp
+は、ホスト www への入力 HTTP 要求を、
+www1, www2, www3 のいずれかへ、透過的にリダイレクトします。
+ここで、ホストの選択は、ネットの負荷にかかわらず、
+単純にラウンドロビンで行われます。
+.It Fl dynamic
+.Fl n
+オプションや
+.Fl interface
+オプションが用いられると、
+.Nm
+は
+指定された
+.Ar interface
+へルーティングする変換ソケットを監視します。
+.\" (訳注) kuriyama@opt.phys.waseda.ac.jp (Nov 29 1997)
+.\" 上の訳はどうも意味が通らない。原文は以下の通り。誰か直して。
+.\" .Nm
+.\" will monitor the routing socket for alterations to the
+.\" .Ar interface
+.\" passed.
+.\" (訳注2) kuriyama@opt.phys.waseda.ac.jp (Jan 4 1998)
+.\" ちょっと直してみたけどまだ不満。
+インタフェースの IP アドレスが変化すると、
+.Nm
+はエイリアスアドレスを動的に変更します。
+.It Fl in_port | i Ar port
+すべてのパケットを
+.Dq 入力
+として扱い、
+.Xr divert 4
+ポート
+.Ar port
+から読み込み
+.Ar port
+へ書き出します。
+.It Fl out_port | o Ar port
+すべてのパケットを
+.Dq 出力
+として扱い、
+.Xr divert 4
+ポート
+.Ar port
+から読み込み、
+.Ar port
+へ書き出します。
+.It Fl port | p Ar port
+.Xr divert 4
+によって指定されたルールを用いてパケットを識別し、
+.Dq 入力
+パケットを
+.Xr divert 4
+ポート
+.Ar port
+から読み、
+.Dq 出力
+パケットを
+.Ar port
+へ書き出します。
+.Ar port
+が数字でない場合、
+データベースが検索されます。
+このフラグが指定されない時には、デフォルトとして
+.Ar natd
+という名前の
+divert ポートが用いられます。
+.It Fl alias_address | a Ar address
+エイリアスアドレスとして
+.Ar address
+を用います。
+.Fl proxy_only
+オプションが指定されない場合、
+このオプションか
+.Fl interface
+オプションのどちらかが指定されなければなりません (片方だけです)。
+指定されたアドレスは、
+.Dq 公開された
+ネットワークインタフェースに割当てられたアドレスである
+必要があります。
+.Pp
+.Em 出力される
+全データのソースアドレスは
+.Ar address
+に書換えられます。
+.Em 到着する
+全データは、
+既にエイリアスされた外向け接続にマッチするかどうかチェックされます。
+マッチする場合、パケットはそれぞれ変換されます。
+マッチしない場合、
+.Fl redirect_port ,
+.Fl redirect_proto ,
+.Fl redirect_address
+の割り当てをチェックしそれぞれの動作を行います。
+他の動作が行えない場合かつ
+.Fl deny_incoming
+が指定されていない場合、後述の
+.Fl target_address
+オプションに指定された通りに、
+このパケットはローカルのマシンに配送されます。
+.It Fl t | target_address Ar address
+対象アドレスを設定します。
+既存のリンクとは関連付けられていない入力パケットがホストマシンに到着した時、
+そのパケットは指定された
+.Ar address
+へ送られます。
+.Pp
+対象アドレスは
+.Ar 255.255.255.255
+に設定可能です。
+この場合、すべての新規入力パケットは、
+.Fl alias_address
+または
+.Fl interface
+で設定されるエイリアスアドレスへ行きます。
+.Pp
+このオプションを使用しない場合、または引数
+.Ar 0.0.0.0
+で呼ばれた場合、
+すべての新規入力パケットはパケット中で指定されるアドレスへ行きます。
+これにより、パケットの経路が可能な場合には、
+外部のマシンが内部のマシンと直接通信可能になります。
+.It Fl interface | n Ar interface
+エイリアスアドレスを決めるのに、
+.Ar interface
+を用います。
+.Ar interface
+に関連づけられた IP アドレスが変化する可能性がある場合には、
+.Fl dynamic
+オプションも指定されるべきです。
+このオプションが指定されない場合、
+.Fl alias_address
+オプションを使用する必要があります。
+.Pp
+指定された
+.Ar interface
+は、通常、
+.Dq 公開された
+(または
+.Dq 外部
+の) ネットワークインタフェースです。
+.It Fl config | f Ar file
+.Ar file
+から設定を読み込みます。
+.Ar file
+はオプションのリストを含み、上記のコマンドラインフラグの長い表記と
+同じ物が 1 行ずつ入ります。例えば、
+.Pp
+.Dl alias_address 158.152.17.1
+.Pp
+という行はエイリアスアドレスに 158.152.17.1 を指定します。
+設定ファイル内では、引数を持たないオプションは
+.Ar yes
+か
+.Ar no
+を伴って指定されます。例えば、
+.Pp
+.Dl log yes
+.Pp
+は
+.Fl log
+と同じ意味になります。
+.Pp
+後続する空白と空行は無視されます。
+.Ql \&#
+記号は、行の残りがコメントである印です。
+.It Fl reverse
+このオプションを指定すると
+.Nm
+は
+.Dq 入力
+パケットと
+.Dq 出力
+パケットを逆に扱い、
+.Dq 外部
+インタフェースの代りに
+.Dq 内部
+インタフェース上で動作します。
+.Pp
+出力トラフィックがローカルマシンにリダイレクトされ、
+.Nm
+が入力インタフェースで走行している (通常は出力インタフェースで走行します)
+といった、透過プロキシを実行している状況で有用な場合があります。
+.It Fl proxy_only
+.Nm
+が透過プロキシのみを実行するよう強制します。
+通常のアドレス変換は実行されません。
+.It Fl proxy_rule Xo
+.Op Ar type encode_ip_hdr | encode_tcp_stream
+.Ar port xxxx
+.Ar server a.b.c.d:yyyy
+.Xc
+透過プロキシを有効にします。
+指定したポートのパケットでこのホストから他のホストへ向かう出力 TCP パケットは、
+指定したサーバのポートへリダイレクトされます。
+オプションとして、元の宛先アドレスがパケットにエンコードされます。
+.Ar encode_ip_hdr
+は、この情報を IP オプションフィールドに置きます。
+.Ar encode_tcp_stream
+は、このデータを TCP ストリームの先頭に挿入します。
+.It Fl punch_fw Xo
+.Ar basenumber Ns : Ns Ar count
+.Xc
+このオプションは、FTP/IRC DCC コネクション用に、
+.Xr ipfirewall 4
+ベースのファイアウォールに穴を開けるよう、
+.Nm
+に指示します。
+これは、
+特定のコネクション (このコネクションのみ) の
+ファイアウォールの通り抜けを許すという、
+一時的なファイアウォールルールを、動的にインストールすることで実現されます。
+このルールは、対応するコネクションが終了すると、自動的に削除されます。
+.Pp
+.Ar basenumber
+から開始する最大
+.Ar count
+個のルールが使用され、ファイアウォールに穴を開けます。
+すべてのルールに対する範囲は、起動時にクリアされます。
+.It Fl skinny_port Ar port
+このオプションで、Skinny Station プロトコルに使用する TCP ポートを
+指定可能です。
+Cisco Call Managers と通信してボイスオーバ IP コールを設定するために、
+Cisco IP 電話が Skinny を使用します。
+デフォルトでは、Skinny エイリアスは実行されません。
+Skinny 用の典型的なポート番号は 2000 です。
+.It Fl log_ipfw_denied
+.Xr ipfw 8
+ルールがブロックしたことにより、パケットが再挿入できなかったときに、
+ログします。
+.Fl verbose
+付きの場合は、これがデフォルトです。
+.It Fl pid_file | P Ar file
+プロセス ID を格納するための別のファイルを指定します。
+デフォルトは
+.Pa /var/run/natd.pid
+です。
+.El
+.Sh NATD の実行
+.Nm natd
+を走らせようとする前には以下の手順が必要となります:
+.Bl -enum
+.It
+自分のカーネルを以下のオプションを付けて構築します:
+.Bd -literal -offset indent
+options IPFIREWALL
+options IPDIVERT
+.Ed
+.Pp
+自分のカーネルを構築する方法については、ハンドブックに詳しい説明が
+あるのでそちらを参照してください。
+.It
+あなたのマシンがゲートウェイとして働くようにします。これは
+.Pa /etc/rc.conf
+に
+.Pp
+.Dl gateway_enable=YES
+.Pp
+と指定するか、
+.Pp
+.Dl "sysctl net.inet.ip.forwarding=1"
+.Pp
+というコマンドを用いることで機能するようになります。
+.It
+.Fl interface
+オプションを使いたい場合は、そのインタフェースがすでに設定済みとなるように
+します。例えば、
+.Ar interface
+として
+.Ql tun0
+を指定しようとし、そのインタフェースで
+.Xr ppp 8
+を使っている場合には、
+.Nm natd
+を起動する前に
+.Nm ppp
+を起動するようにしなければなりません。
+.El
+.Pp
+.Nm
+の実行は至って簡単です。
+.Pp
+.Dl natd -interface ed0
+.Pp
+という行でほとんどの場合充分です (正しいインタフェース名に置き換えて
+ください)。
+ブート時に自動的に開始するように設定する方法については
+.Xr rc.conf 5
+を参照してください。
+.Nm
+が起動されたら、パケットの流れの方向が
+.Nm natd
+の方に変わる
+(divert される) ようにしなければなりません:
+.Bl -enum
+.It
+.Pa /etc/rc.firewall
+スクリプトをうまく調整する必要があります。ファイアウォールに
+興味が無ければ、以下のようにすれば良いでしょう:
+.Bd -literal -offset indent
+/sbin/ipfw -f flush
+/sbin/ipfw add divert natd all from any to any via ed0
+/sbin/ipfw add pass all from any to any
+.Ed
+.Pp
+2 番目の行はあなたのインタフェースに依ります (
+.Ql ed0
+を適切に変更してください)。
+.Pp
+このファイアウォールの設定では、
+ローカルネットワーク上の誰もがソースアドレスをあなたのホストに
+偽装可能であることを認識してください。
+ローカルネットワーク上に他にホストがある場合、
+信頼するホストへ/からのトラフィックのみを許可する
+ファイアウォールルールを作成することを
+強く勧めます。
+.Pp
+本物のファイアウォールルールを指定する場合、スクリプトの先頭で上記の 2 行目を
+指定すると良いでしょう。
+そうすることによって、ファイアウォールにより排除されてしまう前に、
+.Nm
+がすべてのパケットを見ることができるようになります。
+.Pp
+.Nm natd
+の変換後、転換を生じさせたルール番号の次のルール番号から、
+パケットはファイアウォールに再入します
+(同じ番号に複数のルールがある場合には、次のルールからにはなりません)。
+.It
+.Pa /etc/rc.conf
+で
+.Pp
+.Dl firewall_enable=YES
+.Pp
+と設定し、ファイアウォールを作動させます。これはシステムの起動時のスクリプトに
+.Pa /etc/rc.firewall
+スクリプトを実行するように伝えます。
+今すぐ再起動したくない場合には、コンソールから手で実行してください。
+バックグラウンドで実行させるのでない限り、これは決して仮想セッションから
+行ってはいけません。もし実行させてしまうと、flush が行われた後に
+あなたは締め出されてしまい、すべてのアクセスを永久に遮断するために
+この地点で
+.Pa /etc/rc.firewall
+の実行は止まってしまいます。スクリプトをバックグラウンドで実行すれば、
+この災害を避けることができます。
+.El
+.Sh 関連項目
+.Xr libalias 3 ,
+.Xr divert 4 ,
+.Xr protocols 5 ,
+.Xr rc.conf 5 ,
+.Xr services 5 ,
+.Xr syslog.conf 5 ,
+.Xr ipfw 8 ,
+.Xr ppp 8
+.Sh 作者
+このプログラムは、多くの人々の細切れの努力の結果です:
+.Pp
+.An Archie Cobbs Aq archie@FreeBSD.org
+(divert ソケット)
+.An Charles Mott Aq cm@linktel.net
+(パケットエイリアス)
+.An Eivind Eklund Aq perhaps@yes.no
+(IRC サポートとその他の追加)
+.An Ari Suutari Aq suutari@iki.fi
+(natd)
+.An Dru Nelson Aq dnelson@redwoodsoft.com
+(初期の PPTP サポート)
+.An Brian Somers Aq brian@awfulhak.org
+(まとめ役)
+.An Ruslan Ermilov Aq ru@FreeBSD.org
+(natd とパケットエイリアシングと糊)

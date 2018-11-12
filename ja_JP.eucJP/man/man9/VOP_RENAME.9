@@ -1,0 +1,319 @@
+.\" -*- nroff -*-
+.\"
+.\" Copyright (c) 1996 Doug Rabson
+.\"
+.\" All rights reserved.
+.\"
+.\" This program is free software.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE DEVELOPERS ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man9/VOP_RENAME.9,v 1.20 2004/07/08 00:38:28 alfred Exp %
+.\"
+.\" $FreeBSD$
+.Dd July 24, 1996
+.Os
+.Dt VOP_RENAME 9
+.Sh 名称
+.Nm VOP_RENAME
+.Nd ファイルの名前変更
+.Sh 書式
+.In sys/param.h
+.In sys/vnode.h
+.Ft int
+.Fn VOP_RENAME "struct vnode *fdvp" "struct vnode *fvp" "struct componentname *fcnp" "struct vnode *tdvp" "struct vnode *tvp" "struct componentname *tcnp"
+.Sh 解説
+これはファイルの名前変更をし、
+もしかすると親ディレクトリを変更するかもしれません。
+変更先のオブジェクトが存在する場合には、最初に削除されます。
+.Pp
+引数は以下のとおりです。
+.Bl -tag -width fdvp
+.It Fa fdvp
+古い親ディレクトリの vnode です。
+.It Fa fvp
+名前変更されるべきファイルの vnode です。
+.It Fa fcnp
+ファイルの現在の名前についてのパス名情報です。
+.It Fa tdvp
+新しい親ディレクトリの vnode です。
+.It Fa tvp
+(もし存在するならば) 変更先のファイルの vnode です。
+.It Fa tcnp
+ファイルの新しい名前についてのパス名情報です。
+.El
+.Sh ロック
+エントリ時には、変更元のディレクトリおよびファイルはロックされておらず、
+それらの参照カウントは増やされています。
+この VOP ルーチンは戻る前に両方に対して
+.Xr vrele 9
+を呼び出すはずです。
+.Pp
+変更先のディレクトリおよびファイルは、それらの参照カウントが増やされるのは
+もちろん、ロックされています。
+この VOP ルーチンは戻る前に両方に対して
+.Xr vput 9
+を呼び出すはずです。
+.Sh 疑似コード
+.Bd -literal
+int
+vop_rename(struct vnode *fdvp, struct vnode *fvp, struct componentname *fcnp,
+	   struct vnode *tdvp, struct vnode *tvp, struct componentname *tcnp)
+{
+    int doingdirectory = 0;
+    int error = 0;
+
+    /*
+     * デバイスをまたがる名前変更のためのチェックです。
+     */
+    if (fvp->v_mount != tdvp->v_mount) {
+	error = EXDEV;
+    abortit:
+	if (tdvp == tvp)
+	    vrele(tdvp);
+	else
+	    vput(tdvp);
+	if (tvp)
+	    vput(tvp);
+	vrele(fdvp);
+	vrele(fvp);
+	return error;
+    }
+
+    if (tvp exists and is immutable) {
+	error = EPERM;
+	goto abortit;
+    }
+
+    /*
+     * リンク名を消そうとしているかどうかのチェックです。
+     */
+    if (fvp == tvp) {
+	if (fvp->v_type == VDIR) {
+	    error = EINVAL;
+	    goto abortit;
+	}
+
+	/*
+	 * 変更先を解放します。
+	 */
+	vput(tdvp);
+	vput(tvp);
+
+	/*
+	 * 変更元を削除します。少し異様な要素です。
+	 */
+	vrele(fdvp);
+	vrele(fvp);
+	fcnp->cn_flags &= ~MODMASK;
+	fcnp->cn_flags |= LOCKPARENT | LOCKLEAF;
+	fcnp->cn_nameiop = DELETE;
+	VREF(fdvp);
+	error = relookup(fdvp, &fvp, fcnp);
+	if (error == 0)
+	    vrele(fdvp);
+	return VOP_REMOVE(fdvp, fvp, fcnp);
+    }
+
+    if (fvp is immutable) {
+	error = EPERM;
+	goto abortit;
+    }
+
+    error = VOP_LOCK(fvp);
+    if (error)
+	goto abortit;
+
+    if (vp is a directory) {
+	/*
+	 * 明白な理由のため、".", ".." と "." の別名を避けます。
+	 */
+	if ((fcnp->cn_namelen == 1 && fcnp->cn_nameptr[0] == '.')
+	    || fdvp == fvp
+	    || ((fcnp->cn_flags | tcnp->cn_flags) & ISDOTDOT)) {
+	    VOP_UNLOCK(fvp);
+	    error = EINVAL;
+	    goto abortit;
+	}
+	doingdirectory = 1;
+    }
+    vrele(fdvp);
+
+    /*
+     * 移動要素の活動中の間は、fvp のリンクカウントを増やします。
+     * 作業完了の前にクラッシュした場合には、リンクカウントは間違って
+     * いるでしょうが、修正可能です。
+     */
+    ...;
+
+    /*
+     * それから (例えばディレクトリが新しい親を得るなど) ".." が変更
+     * されなければならない場合には、変更元のディレクトリは変更先よりも
+     * 上位のディレクトリ階層に在ってはなりません。これは変更元の
+     * ディレクトリ以下の全てが孤児となるからです。また、ユーザは
+     * 変更元で ".." を変更できるように書込みパーミッションを持って
+     * いなければなりません。
+     */
+    error = VOP_ACCESS(fvp, VWRITE, tcnp->cn_cred, tcnp->cn_thread);
+    VOP_UNLOCK(fvp);
+    if (doingdirectory && fdvp != tdvp) {
+	/*
+	 * パス名の衝突をチェックします。
+	 */
+	...;
+    }
+
+    /*
+     * 変更先が存在しない場合、変更先を変更元にリンクして、変更元を
+     * アンリンクします。そうでない場合、変更先ディレクトリを書き換えて
+     * 変更元を参照するようにし、元のエントリを削除します。
+     */
+    if (tvp == NULL) {
+	/*
+	 * 新しいディレクトリの ".." のアカウント。
+	 */
+	if (doingdirectory && fdvp != tdvp) {
+	    /*
+	     * tdvp のリンクカウントを増やします。
+	     */
+	    ...;
+	}
+
+	/*
+	 * 新しいディレクトリで名前を追加します。
+	 */
+	...;
+
+	if (error) {
+	    if (doingdirectory && fdvp != tdvp) {
+		/*
+		 * tdvp であればリンクカウントを減らします。
+		 */
+		...;
+	    }
+	    goto bad;
+	}
+	vput(tdvp);
+    } else {
+	/*
+	 * 変更先がディレクトリの場合、これは空でなければならず、これへの
+	 * リンクがあってはなりません。また、変更元と変更先は一致する
+	 * (両方ともディレクトリ、または両方ともディレクトリではない)
+	 * ことを保証してください。
+	 */
+	if (tvp is a directory) {
+	    if (tvp is not empty) {
+		error = ENOTEMPTY;
+		goto bad;
+	    }
+	    if (!doingdirectory) {
+		error = ENOTDIR;
+		goto bad;
+	    }
+	    /*
+	     * ディレクトリが消え去ったため、名前キャッシュを更新します。
+	     */
+	    cache_purge(tdvp);
+	} else if (doingdirectory) {
+	    error = ENOTDIR;
+	    goto bad;
+	}
+
+	/*
+	 * fvp が指す tdvp の名前 tcnp を変更します。
+	 */
+	...;
+
+	/*
+	 * 変更先ディレクトリが変更元と同じディレクトリにある場合には、
+	 * 変更先のディレクトリの親のリンクカウントを減らします。
+	 * ".." により、その親に対する戻り方向のリンクとなる事実を、
+	 * 説明するものです。
+	 */
+	if (doingdirectory && fdvp == tdvp) {
+	    /*
+	     * tdvp のリンクカウントを減らします。
+	     */
+	    ...;
+	}
+	vput(tdvp);
+
+	/*
+	 * ディレクトリがもはやそれを指さないので、tvp のリンクカウントを
+	 * 減らします。
+	 */
+	...;
+	if (doingdirectory) {
+	    /*
+	     * 古いディレクトリ tvp をきれいにします。
+	     */
+	    ...;
+	}
+	vput(tvp);
+    }
+
+    /*
+     * 変更元をアンリンクします。ディレクトリが新しい親に移動される場合
+     * には、その ".." エントリを更新します。ここで、たくさんの厄介な
+     * UFS のコードが省かれました。
+     */
+    ...;
+
+bad:
+    if (tvp)
+	vput(tvp);
+    vput(tdvp);
+out:
+    if (VOP_LOCK(fvp) == 0) {
+	/*
+	 * fvp のリンクカウントをデクリメント
+	 */
+	...;
+        vput(fvp);
+    } else
+	vrele(fvp);
+
+    return error;
+}
+.Ed
+.Sh エラー
+.Bl -tag -width Er
+.It Bq Er EPERM
+ファイルが変更可能ではありません。
+.It Bq Er EXDEV
+異なるファイルシステム間の名前変更はできません。
+.It Bq Er EINVAL
+.Pa \&.
+または
+.Pa ..
+の名前変更、またはディレクトリツリーを破壊するような操作の実行を
+行なおうとしました。
+.It Bq Er ENOTDIR
+ディレクトリからファイルにまたはその逆に名前変更しようとしました。
+.It Bq Er ENOTEMPTY
+空ではないディレクトリを削除しようとしました。
+.El
+.Sh 関連項目
+.Xr vnode 9
+.Sh 作者
+このマニュアルページは
+.An Doug Rabson
+が書きました。

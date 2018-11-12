@@ -1,25 +1,55 @@
 # doc.xml.mk
-# $FreeBSD: www/share/mk/doc.xml.mk,v 1.4 2005/10/04 17:18:41 hrs Exp $
+# $FreeBSD$
 
-XML_CATALOG_FILES=	file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
+XML_CATALOG_FILES=	file://${.OBJDIR}/catalog-cwd.xml \
+			file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
 			file://${DOC_PREFIX}/share/sgml/catalog.xml \
 			file://${DOC_PREFIX}/share/sgml/catalog-common.xml \
-			file://${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/catalog.xml \
-			file://${WEB_PREFIX}/share/sgml/catalog-common.xml \
 			file://${LOCALBASE}/share/xml/catalog
+
+.if exists(${DOC_PREFIX}/share/sgml/catalog-cwd.xml)
+XML_CATALOG_CWD=	${DOC_PREFIX}/share/sgml/catalog-cwd.xml
+.endif
 
 # Variables used in DEPENDSET
 
-_DEPENDSET.all=	wwwstd transtable mirrors usergroups \
-		news press events navigation advisories notices
+_DEPENDSET.all=	wwwstd transtable mirrors usergroups commercial \
+		news press events advisories notices
 
 # DEPENDSET: wwwstd  .........................................................
 _DEPENDSET.wwwstd=	${XML_INCLUDES}
-XML_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.xsl \
-		${WEB_PREFIX}/share/sgml/includes.header.xsl \
-		${WEB_PREFIX}/share/sgml/includes.misc.xsl \
-		${WEB_PREFIX}/share/sgml/includes.release.xsl \
-		${WEB_PREFIX}/share/sgml/includes.xsl
+_XML_INCLIST=	libcommon.l10n.xsl \
+		libcommon.xsl \
+		navibar.l10n.ent \
+		navibar.ent \
+		common.ent \
+		header.ent \
+		header.l10n.ent \
+		iso8879.ent \
+		l10n.ent \
+		release.ent
+.for F in ${_INCLIST}
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/${F})
+XML_INCLUDES+=	${F}
+.endif
+.if exists(${DOC_PREFIX}/share/sgml/${F})
+XML_INCLUDES+=	${F}
+.endif
+.endfor
+
+.if defined(XML_CATALOG_CWD)
+XML_INCLUDES+=	${.OBJDIR}/catalog-cwd.xml
+CLEANFILES+=	${.OBJDIR}/catalog-cwd.xml
+${.OBJDIR}/catalog-cwd.xml: ${XML_CATALOG_CWD}
+	${INSTALL} ${.ALLSRC} ${.TARGET}
+.endif
+
+XML_INCLUDES+=	${.OBJDIR}/autogen.ent
+CLEANFILES+=	${.OBJDIR}/autogen.ent
+${.OBJDIR}/autogen.ent:
+	${ECHO_CMD} '<!ENTITY base "${DOC_PREFIX_REL}">' > ${.TARGET}
+
+DEPENDSET.DEFAULT+=	wwwstd
 
 # DEPENDSET: transtable  ......................................................
 _DEPENDSET.transtable=	${XML_TRANSTABLE} ${XSL_TRANSTABLE} \
@@ -87,89 +117,110 @@ _DEPENDSET.usergroups=	${XML_USERGROUPS} ${XML_USERGROUPS_LOCAL} \
 			${XML_INCLUDES}
 _PARAMS.usergroups=	--param usergroups.xml "'${XML_USERGROUPS}'" \
 			--param usergroups-local.xml "'${XML_USERGROUPS_LOCAL}'"
-XML_USERGROUPS=		${WEB_PREFIX}/share/sgml/usergroups.xml
-.if exists(${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/usergroups.xml)
-XML_USERGROUPS_LOCAL=	${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/usergroups.xml
+XML_USERGROUPS=		${DOC_PREFIX}/share/sgml/usergroups.xml
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/usergroups.xml)
+XML_USERGROUPS_LOCAL=	${DOC_PREFIX}/${LANGCODE}/share/sgml/usergroups.xml
 .else
-XML_USERGROUPS_LOCAL=	${WEB_PREFIX}/share/sgml/usergroups.xml
+XML_USERGROUPS_LOCAL=	${DOC_PREFIX}/share/sgml/usergroups.xml
 .endif
-XSL_USERGROUPS_MASTER=	${WEB_PREFIX}/share/sgml/templates.usergroups.xsl
-.if exists(${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/templates.usergroups.xsl)
-XSL_USERGROUPS=	${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/templates.usergroups.xsl
+XSL_USERGROUPS_MASTER=	${DOC_PREFIX}/share/sgml/templates.usergroups.xsl
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/templates.usergroups.xsl)
+XSL_USERGROUPS=	${DOC_PREFIX}/${LANGCODE}/share/sgml/templates.usergroups.xsl
 .else
-XSL_USERGROUPS=	${WEB_PREFIX}/share/sgml/templates.usergroups.xsl
+XSL_USERGROUPS=	${DOC_PREFIX}/share/sgml/templates.usergroups.xsl
 .endif
 
 # DEPENDSET: news ............................................................
 _DEPENDSET.news=	${XML_NEWS_NEWS_MASTER} ${XML_NEWS_NEWS} \
-			${XML_NEWS_INCLUDES_MASTER} ${XML_NEWS_INCLUDES} \
+			${XSL_NEWS_NEWSFLASH} \
+			${XSL_NEWS_NEWS_RDF} \
+			${XSL_NEWS_NEWS_RSS} \
 			${XML_INCLUDES}
 _PARAMS.news=		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
 			--param news.project.xml "'${XML_NEWS_NEWS}'"
-XML_NEWS_INCLUDES_MASTER=${WEB_PREFIX}/en/news/includes.xsl
-XML_NEWS_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/news/includes.xsl
-XML_NEWS_NEWS_MASTER=	${WEB_PREFIX}/en/news/news.xml
-XML_NEWS_NEWS=		${WEB_PREFIX}/${WWW_LANGCODE}/news/news.xml
+XML_NEWS_NEWS_MASTER=	${DOC_PREFIX}/share/sgml/news.xml
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/news.xml)
+XML_NEWS_NEWS=		${DOC_PREFIX}/${LANGCODE}/share/sgml/news.xml
+.else
+XML_NEWS_NEWS=		${DOC_PREFIX}/share/sgml/news.xml
+.endif
+
+XSL_NEWS_NEWSFLASH=	${DOC_PREFIX}/share/sgml/templates.newsflash.xsl
+XSL_NEWS_NEWSFLASH_OLD=	${DOC_PREFIX}/share/sgml/templates.oldnewsflash.xsl
+XSL_NEWS_NEWS_RDF=	${DOC_PREFIX}/share/sgml/templates.news-rdf.xsl
+XSL_NEWS_NEWS_RSS=	${DOC_PREFIX}/share/sgml/templates.news-rss.xsl
 
 # DEPENDSET: press  ..........................................................
 _DEPENDSET.press=	${XML_NEWS_PRESS_MASTER} ${XML_NEWS_PRESS} \
-			${XML_NEWS_INCLUDES_MASTER} ${XML_NEWS_INCLUDES} \
+			${XSL_NEWS_PRESS} \
 			${XML_INCLUDES}
 _PARAMS.press=		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
 			--param news.press.xml "'${XML_NEWS_PRESS}'"
-XML_NEWS_INCLUDES_MASTER=${WEB_PREFIX}/en/news/includes.xsl
-XML_NEWS_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/news/includes.xsl
-XML_NEWS_PRESS_MASTER=	${WEB_PREFIX}/en/news/press.xml
-XML_NEWS_PRESS=		${WEB_PREFIX}/${WWW_LANGCODE}/news/press.xml
+XML_NEWS_PRESS_MASTER=	${DOC_PREFIX}/share/sgml/press.xml
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/press.xml)
+XML_NEWS_PRESS=		${DOC_PREFIX}/${LANGCODE}/share/sgml/press.xml
+.else
+XML_NEWS_PRESS=		${DOC_PREFIX}/share/sgml/press.xml
+.endif
+XSL_NEWS_PRESS=		${DOC_PREFIX}/share/sgml/templates.press.xsl
+XSL_NEWS_PRESS_RSS=	${DOC_PREFIX}/share/sgml/templates.press-rss.xsl
+XSL_NEWS_PRESS_OLD=	${DOC_PREFIX}/share/sgml/templates.oldpress.xsl
 
 # DEPENDSET: events  ..........................................................
 _DEPENDSET.events=	${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_EVENTS} \
-			${XML_EVENTS_CURDATE} ${XML_INCLUDES}
+			${XML_EVENTS_EVENTS_MASTER_SUBFILES} \
+			${XML_EVENTS_EVENTS_SUBFILES} \
+			${XSL_EVENTS} \
+			${XSL_EVENTS_ICS} \
+			${XML_INCLUDES}
 _PARAMS.events=		--param events.xml-master "'${XML_EVENTS_EVENTS_MASTER}'" \
-			--param events.xml "'${XML_EVENTS_EVENTS}'" \
-			--param curdate.xml "'${XML_EVENTS_CURDATE}'"
-XML_EVENTS_EVENTS_MASTER=${WEB_PREFIX}/en/events/events.xml
-.if exists(${WEB_PREFIX}/${WWW_LANGCODE}/events/events.xml)
-XML_EVENTS_EVENTS=	${WEB_PREFIX}/${WWW_LANGCODE}/events/events.xml
+			--param events.xml "'${XML_EVENTS_EVENTS}'"
+XML_EVENTS_EVENTS_MASTER=${DOC_PREFIX}/share/sgml/events.xml
+XML_EVENTS_EVENTS_MASTER_SUBFILES=
+.for Y in 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013
+XML_EVENTS_EVENTS_MASTER_SUBFILES+=	${DOC_PREFIX}/share/sgml/events${Y}.xml
+.endfor
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/events.xml)
+XML_EVENTS_EVENTS=	${DOC_PREFIX}/${LANGCODE}/share/sgml/events.xml
 .else
 XML_EVENTS_EVENTS=	${XML_EVENTS_EVENTS_MASTER}
 .endif
-XML_EVENTS_CURDATE=	${WEB_PREFIX}/en/events/curdate.xml
+XML_EVENTS_EVENTS_SUBFILES=
+.for Y in 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/events${Y}.xml)
+XML_EVENTS_EVENTS_SUBFILES+=	${DOC_PREFIX}/${LANGCODE}/share/sgml/events${Y}.xml
+.endif
+.endfor
+XSL_EVENTS=		${DOC_PREFIX}/share/sgml/templates.events.xsl
+XSL_EVENTS_ICS=		${DOC_PREFIX}/share/sgml/templates.events2ics.xsl
+XSL_EVENTS_PAST=	${DOC_PREFIX}/share/sgml/templates.pastevents.xsl
 
-DATE?=	/bin/date
-TR?=	/usr/bin/tr
+# DEPENDSET: commercial ........................................................
+_DEPENDSET.commercial=	${XML_COMMERCIAL_CONSULT} \
+			${XML_COMMERCIAL_HARDWARE} \
+			${XML_COMMERCIAL_ISP} \
+			${XML_COMMERCIAL_MISC} \
+			${XML_COMMERCIAL_SOFTWARE} \
+			${XSL_ENTRIES} \
+			${XML_INCLUDES}
+_PARAMS.commercial=	
+XML_COMMERCIAL_CONSULT=	${DOC_PREFIX}/share/sgml/commercial.consult.xml
+XML_COMMERCIAL_HARDWARE=${DOC_PREFIX}/share/sgml/commercial.hardware.xml
+XML_COMMERCIAL_ISP=	${DOC_PREFIX}/share/sgml/commercial.isp.xml
+XML_COMMERCIAL_MISC=	${DOC_PREFIX}/share/sgml/commercial.misc.xml
+XML_COMMERCIAL_SOFTWARE=${DOC_PREFIX}/share/sgml/commercial.software.xml
 
-${XML_EVENTS_CURDATE}:
-	@${ECHO} "Generating ${.TARGET}"
-	@${ECHO_CMD} '<?xml version="1.0"?>'     > ${.TARGET}
-	@${ECHO_CMD} '<curdate>'                >> ${.TARGET}
-	@${ECHO_CMD} -n '  <year>'              >> ${.TARGET}
-	@${DATE} +%Y | ${TR} -d "\n"            >> ${.TARGET}
-	@${ECHO_CMD} '</year>'                  >> ${.TARGET}
-	@${ECHO_CMD} -n '  <month>'             >> ${.TARGET}
-	@${DATE} +%m | ${TR} -d "\n"            >> ${.TARGET}
-	@${ECHO_CMD} '</month>'                 >> ${.TARGET}
-	@${ECHO_CMD} -n '  <day>'               >> ${.TARGET}
-	@${DATE} +%d | ${TR} -d "\n"            >> ${.TARGET}
-	@${ECHO_CMD} '</day>'                   >> ${.TARGET}
-	@${ECHO_CMD} '</curdate>'               >> ${.TARGET}
-
-CLEANFILES+=	${XML_EVENTS_CURDATE}
-
-# DEPENDSET: navigation  .....................................................
-_DEPENDSET.navigation=	${XML_NAVIGATION} ${XML_INCLUDES}
-_PARAMS.navigation=	--param navigation.xml "'${XML_NAVIGATION}'"
-XML_NAVIGATION=		${WEB_PREFIX}/${WWW_LANGCODE}/navigation.xml
+XSL_ENTRIES=		${DOC_PREFIX}/share/sgml/templates.entries.xsl
 
 # DEPENDSET: advisories  .....................................................
 _DEPENDSET.advisories=	${XML_ADVISORIES} ${XML_INCLUDES}
 _PARAMS.advisories=	--param advisories.xml "'${XML_ADVISORIES}'"
-XML_ADVISORIES=		${WEB_PREFIX}/share/sgml/advisories.xml
+XML_ADVISORIES=		${DOC_PREFIX}/share/sgml/advisories.xml
 
 # DEPENDSET: notices  ........................................................
 _DEPENDSET.notices=	${XML_NOTICES} ${XML_INCLUDES}
 _PARAMS.notices=	--param notices.xml "'${XML_NOTICES}'"
-XML_NOTICES=		${WEB_PREFIX}/share/sgml/notices.xml
+XML_NOTICES=		${DOC_PREFIX}/share/sgml/notices.xml
 
 # ---
 # .xml -> .html rendering rule
@@ -228,11 +279,21 @@ XSLTPROC_ENV+=	XML_CATALOG_FILES="${XML_CATALOG_FILES}"
 XSLTPROCOPTS=	${XSLTPROCFLAGS}
 XSLTPROCOPTS+=	--xinclude
 XSLTPROCOPTS+=	--stringparam LOCALBASE ${LOCALBASE}
-XSLTPROCOPTS+=	--stringparam WEB_PREFIX ${WEB_PREFIX}
+XSLTPROCOPTS+=	--stringparam DOC_PREFIX ${DOC_PREFIX}
 .if defined(XML_CATALOG_FILES) && !empty(XML_CATALOG_FILES)
 XSLTPROCOPTS+=	--nonet --catalogs
 .endif
+.if defined(WWWFREEBSDORG)
+XSLTPROCOPTS+=	--param "html.header.script.google" "'INCLUDE'"
+.endif
 XSLTPROC=	env ${XSLTPROC_ENV} ${LOCALBASE}/bin/xsltproc
+
+XMLLINTOPTS=	${XMLLINTFLAGS}
+XMLLINTOPTS+=	--xinclude --valid --noout
+.if defined(XML_CATALOG_FILES) && !empty(XML_CATALOG_FILES)
+XMLLINTOPTS+=	--nonet --catalogs
+.endif
+XMLLINT=	env ${XSLTPROC_ENV} ${PREFIX}/bin/xmllint
 
 .for D in ${XMLDOCS}
 # parse "docid:xslt:xml:target".
@@ -321,8 +382,17 @@ ${TARGET.${_ID}}: ${XML.${_ID}} ${DEPENDS.${_ID}}
 		${XSLT.${_ID}} ${XML.${_ID}}
 . if !defined(NO_TIDY) || empty(NO_TIDY)
 .  if !defined(NO_TIDY.${_ID}) || empty(NO_TIDY.${_ID})
+	${REINPLACE_TABS_CMD} ${.TARGET}
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .  endif
 . endif
+
+VALIDATE_DOCS+=	VALIDATE.${_ID}
+VALIDATE.${_ID}:
+	@${ECHO} "==>[xmllint] ${XML.${_ID}}"
+	-@${XMLLINT} ${XMLLINTOPTS} ${XML.${_ID}} 2>&1  \
+		| ${SED} -e 's/^/ | /'
+.  endfor
 .endfor
-.endfor
+
+lint: ${VALIDATE_DOCS}

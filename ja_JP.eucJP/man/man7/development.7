@@ -1,0 +1,507 @@
+.\" Copyright (C) 1998 Matthew Dillon. All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man7/development.7,v 1.13 2004/08/07 04:40:20 imp Exp %
+.\" $FreeBSD$
+.Dd December 21, 2002
+.Dt DEVELOPMENT 7
+.Os
+.Sh 名称
+.Nm development
+.Nd FreeBSD コードベースでの開発入門
+.Sh 解説
+このマニュアルページでは一般のシステムオペレータ、
+.Ux
+管理者、または開発者が特別な許可無しで
+.Fx
+コードベースを入手し、維持し、修正する方法、
+またあなたのネットワーク内の他のマシンにエクスポートできるマスタビルドを
+維持する方法について述べます。
+このマニュアルページは、システムオペレータ、プログラマ、および開発者を
+対象にしています。
+.Pp
+ここで述べられていることは、 FreeBSD カーネルだけではなくて、
+完全な FreeBSD 環境をベースにしていることに注意してください。
+ここで述べられている手法は
+開発環境だけでなく、作成したもののインストールにも応用できます。
+この作業をうまくやるには、 1 台のマシンに 12-17GB の適当なディスクスペースが
+必要です。
+.Sh マスタサーバの環境を構築する
+マスタサーバは安定した、プロダクション版の
+.Fx
+オペレーティングシステムで常に動作している必要があります。
+これが -CURRENT のビルドまたは開発を妨げることはありません。
+マスタサーバで不安定な環境を稼働させて環境を破壊したり、何かの間違いで
+修復不能になるのは絶対にいやでしょう。
+.Pp
+/FreeBSD という名前の巨大なパーティションを作成します。
+8-12GB を推奨します。
+このパーティションには、 CVS ツリー、取り出したソース、またあるいは
+オブジェクトファイルさえ含めた、ほぼ完全な開発環境が収まります。
+このパーティションを、他のよりセキュリティに敏感なパーティションとは
+一緒にせずに、読み取り専用の NFS エクスポートにより、他のマシンに
+エクスポートするのです。
+.Pp
+.Pa /usr/obj
+については選択する必要があります。
+つまり
+.Pa /FreeBSD
+に
+.Pa /usr/obj
+を入れることも出来るし、
+.Pa /usr/obj
+を単独のパーティションにすることも出来ます。
+私はいくつかの理由から、別のパーティションにすることを推奨します。
+第一は、このパーティションにかなり大量の書き込みがされることへの
+安全処置です。
+第二は、ここは一般的にバックアップをする必要がないからです。
+第三は、これは組み合わせを非常に容易にし、またこのドキュメントで後に
+述べる開発環境にマッチするからです。
+.Pa /usr/obj
+パーティションは少なくとも 5GB を推奨します。
+.Pp
+マスタサーバにおいて、
+.Fx
+CVS アーカイブを自動的に取得して管理する為に、 1 日 に 1 回 cvsup を
+使用します。
+最初に取得するときには、数ギガバイトあるので長い時間が
+かかります。
+しかし 1 回これをすれば、毎日の同期ではかなり小量である
+はずです。
+.Bd -literal -offset 4n
+mkdir /FreeBSD/FreeBSD-CVS
+rm -rf /home/ncvs
+ln -s /FreeBSD/FreeBSD-CVS /home/ncvs
+.Ed
+.Pp
+cron ジョブは大抵次のようなものでしょう (時刻はランダムにしてください!)。
+なお、 /usr/share/examples にある cvsup ファイルのサンプルを、
+cvsup に与える適切な引数と共に、修正無しで直接利用することが出来ます。
+.Bd -literal -offset 4n
+33 6 * * *      /usr/local/bin/cvsup -g -r 20 -L 2 -h cvsup.freebsd.org /usr/share/examples/cvsup/cvs-supfile
+.Ed
+.Pp
+アーカイブを最初に取得する時は、 cvsup を手動で実行します。
+あなたの接続速度によっては、丸一日かかってしまうでしょう!
+cvsup と cvs の全ての操作は root で実行し、また適切な cvs の操作のためには、
+~/.cvsrc (/root/.cvsrc) を次に示すように設定する必要があります。
+~/.cvsrc を使って cvs のデフォルトを設定するのは、 "ファイルして忘れる"
+優れた方法ですが、ここに設定した、ということは忘れないでください。
+.Bd -literal -offset 4n
+# cvs -q
+diff -u
+update -Pd
+checkout -P
+.Ed
+.Pp
+では、最初のソース環境を作成するのに、 -STABLE ソースツリーと -CURRENT
+ソースツリー、また同じく ports と docs を、 cvs を使ってチェックアウト
+しましょう。
+取り出したソースや ports を /FreeBSD に置くことで、読み取り専用の NFS で
+他のマシンにエクスポートできます。
+これはまた、一箇所でファイルを編集、維持していれば良いという意味です。
+そして全てのクライアントが自動的にその変更を拾い出すことが出来る、
+という意味でもあります。
+.Bd -literal -offset 4n
+mkdir /FreeBSD/FreeBSD-4.x
+mkdir /FreeBSD/FreeBSD-current
+
+cd /FreeBSD/FreeBSD-4.x
+cvs -d /home/ncvs checkout -rRELENG_4 src
+
+cd /FreeBSD/FreeBSD-current
+cvs -d /home/ncvs checkout src
+cvs -d /home/ncvs checkout ports
+cvs -d /home/ncvs checkout doc
+.Ed
+.Pp
+ここで、 /usr/src と /usr/src2 へシンボリックリンクを張ります。
+メインサーバにおいては、私はいつも /usr/src が -STABLE を、また
+/usr/src2 が -CURRENT を指しています。
+クライアントマシンにおいては、私は大抵 /usr/src2 を持たずに、
+クライアントボックスが動かそうとしている FreeBSD バージョンを
+/usr/src が指しているようにしています。
+.Bd -literal -offset 4n
+cd /usr
+rm -rf src src2
+ln -s /FreeBSD/FreeBSD-4.x/src src	(クライアント側を -CURRENT にするのも可)
+ln -s /FreeBSD/FreeBSD-current/src src2	(マスタサーバのみ)
+.Ed
+.Pp
+ところで、/usr/obj に対して選択する必要があります。
+まぁ、たぶんあなたはこれを既に行い、相応のパーティション手段を選んでいる
+ことでしょう。
+もし /FreeBSD に入れるというよくない選択をする考えならば、あなたがするのは
+次のようなことです。
+.Bd -literal -offset 4n
+(よくない選択として /FreeBSD に /usr/obj を入れる時だけです!)
+mkdir /FreeBSD/obj
+cd /usr
+rm -rf obj
+ln -s /FreeBSD/obj obj
+.Ed
+.Pp
+代わりに、単純に /usr/obj を /usr に置くという選択も出来ます。
+もし /usr が十分に大きい場合は動作しますが、安全上の理由から
+お勧めは出来ません (/usr/obj は絶えず改変されますが、 /usr は
+そういうものではありません)。
+.Pp
+なお /usr/obj を読み取り専用の NFS で他のボックスにエクスポートすることで、
+ビルドをメインサーバで行い、インストールを他のボックスから行うことができます。
+いくつかの、あるいは全てのクライアントでビルドを行いたいなら、
+単純にクライアント側で、/usr/obj をローカルディレクトリとして持てば良いです。
+/usr/obj を読み書き可でエクスポートするべきではありません。
+これはあらゆる種類の問題をもたらして、そして全面的に噴出してしまいます。
+またセキュリティの問題も引き起こします。
+マスタサーバでビルドを行い、クライアントではインストールだけを行うほうが、
+ずっと容易です。
+.Pp
+私は大抵、 ports ツリーを CVS を介して維持しています。
+これはマスタ CVS アーカイブの適切な場所に位置しており、
+実際あなたにチェックアウトするように言いました (前述を参照)。
+いくつかの技巧的なシンボリックリンクにより、あなたのマスタサーバと
+そのほかのマシンにおいて、 ports ツリーを利用することが出来ます。
+なお ports ツリーには cvs の HEAD ブランチしか存在しないので、
+-STABLE ボックスでも -CURRENT のものになります。
+あなたが行うのは次のことです。
+.Bd -literal -offset 4n
+(マスタサーバ及び全てのクライアントにおけるコマンド)
+cd /usr
+rm -rf ports
+ln -s /FreeBSD/FreeBSD-current/ports ports
+
+cd /usr/ports   			(シンボリックリンクの先に入ります)
+rm -rf distfiles			(マスタサーバのみ)
+ln -s /usr/ports.distfiles distfiles	(マスタサーバのみ)
+
+mkdir /usr/ports.distfiles
+mkdir /usr/ports.workdir
+.Ed
+.Pp
+全てのクライアントにおいて /usr/ports はシンボリックリンクで、その先は
+読み取り専用なので、 ports システムにはビルドのために別の作業ディレクトリを
+指示する必要があります。
+マスタサーバと全てのクライアントにおいて、 /etc/make.conf に次の行を
+追加したいところでしょう。
+.Bd -literal -offset 4n
+WRKDIRPREFIX=/usr/ports.workdir
+.Ed
+.Pp
+distfiles が収まるディレクトリはもちろん、 ports の作業ディレクトリも、
+全てのマシンで一貫するように作成するべきです。
+もし /usr/ports.distfiles と /usr/ports.workdir に十分な容量が無い場合、
+大抵私は distfiles と作業スペースに十分な容量のある場所を指した
+シンボリックリンク (/usr にあってここはマシン毎なので) にします。
+.Sh マスタサーバから NFS でエクスポートする
+マスタサーバは /FreeBSD と /usr/obj を、これらを得ることが出来る
+残りの全てのマシンのために、 NFS でエクスポートする必要があります。
+セキュリティと安全性の両面から、読み取り専用のエクスポートを使用することを
+強く勧めます。
+このマニュアルページで述べている環境は、
+読み取り専用の NFS エクスポートを第一としてデザインされています。
+マスタサーバの exports ファイルは、次の行を含んでいる必要があります。
+.Bd -literal -offset 4n
+/FreeBSD -ro -alldirs -maproot=root: -network YOURLAN -mask YOURLANMASK
+/usr/obj -ro -alldirs -maproot=root: -network YOURLAN -mask YOURLANMASK
+.Ed
+.Pp
+もちろん、 このマシンの NFS サーバの動作もまた設定する必要があります。
+典型的には /etc/rc.conf によって行われます。
+.Bd -literal -offset 4n
+nfs_server_enable="YES"
+nfs_server_flags="-u -t -n 4"
+.Ed
+.Sh クライアントの環境
+全てのクライアントマシンは、マスタサーバから /FreeBSD と /usr/obj を
+単純に NFS マウントすることで、開発/ビルド環境を直接インポートできます。
+クライアントマシン側の、典型的な /etc/fstab エントリは次のようなものでしょう。
+.Bd -literal -offset 4n
+masterserver:/FreeBSD     /FreeBSD        nfs     ro,bg    0       0
+masterserver:/usr/obj     /usr/obj        nfs     ro,bg    0       0
+.Ed
+.Pp
+そしてもちろん、クライアントにおける NFS クライアントの動作を
+/etc/rc.conf で設定する必要があります。
+典型的には、クライアント側の NFS 性能を上げるために、 nfsiod を起動します。
+.Bd -literal -offset 4n
+nfs_client_enable="YES"
+.Ed
+.Pp
+各クライアントは、 /usr/ports と /usr/src が NFS マウントした環境を
+指すように、シンボリックリンクを作成する必要があります。
+あるクライアントで -CURRENT を動かしている場合、 /usr/src は
+/FreeBSD/FreeBSD-current/src へのシンボリックリンクであるべきです。
+もし -STABLE を動かしている場合、 /usr/src は /FreeBSD/FreeBSD-4.x/src
+へのシンボリックリンクであるべきです。
+私はクライアント側で、 /usr/src2 シンボリックリンクを作ることは
+大抵ありません。これはマスタサーバ上のソースコードにおいて作業をする
+ときのみ、便利なショートカットとして使うものです。クライアント側では
+(人間の多様性からくる) 多大な混乱を招きます。
+.Bd -literal -offset 4n
+(各クライアントにおいて)
+cd /usr
+rm -rf ports src
+ln -s /FreeBSD/FreeBSD-current/ports ports
+ln -s /FreeBSD/FreeBSD-XXX/src src
+.Ed
+.Pp
+前にも述べましたが、 ports をビルドできるように、作業ディレクトリを
+作成するのを忘れないでください。
+適当な場所が無い場合、適切な場所へのシンボリックリンクを張りましょう。
+忘れないで欲しいのは、 /usr/ports/distfiles はマスタサーバから
+エクスポートされているので、各マシンは同じ場所
+(典型的には /usr/ports.distfiles) を指すようにするべきです。
+.Bd -literal -offset 4n
+mkdir /usr/ports.distfiles
+mkdir /usr/ports.workdir
+.Ed
+.Sh カーネルをビルドする
+では、 -STABLE カーネルを (あなたのメイン開発ボックスで) ビルドする
+方法です。
+もしカスタムカーネルを作成したいのなら、構成とビルドの前に、
+GENERIC を YOURKERNEL にコピーしてから編集してください。
+カーネル設定ファイルは /usr/src/sys/i386/conf/KERNELNAME に存在します。
+.Bd -literal -offset 4n
+cd /usr/src
+make buildkernel KERNCONF=KERNELNAME
+.Ed
+.Pp
+.Sy 警告!
+もしあなたが、旧来の config/cd/make 手法による -STABLE カーネルのビルドに
+馴染んでいるのなら、 config 手法はビルド環境を /usr/obj の代わりに、
+/usr/src/sys/compile/KERNELNAME に置きます。
+.Pp
+-CURRENT カーネルをビルドします。
+.Bd -literal -offset 4n
+cd /usr/src2		(マスタサーバにおいて)
+make buildkernel KERNCONF=KERNELNAME
+.Ed
+.Sh カーネルをインストールする
+-STABLE カーネルをインストールします (典型的にはクライアントで行います。
+メイン開発サーバに新しいカーネルをインストールしたい場合のみ、
+メイン開発サーバでも行います)。
+.Bd -literal -offset 4n
+cd /usr/src
+make installkernel KERNCONF=KERNELNAME
+.Ed
+.Pp
+もし安定性のために、旧来の config/cd/make ビルド機構を用いる場合、
+以下のようにインストールします。
+.Bd -literal -offset 4n
+cd /usr/src/sys/compile/KERNELNAME
+make install
+.Ed
+.Pp
+-CURRENT カーネルをインストールします (典型的にはクライアントのみで行います)。
+.Bd -literal -offset 4n
+(/usr/src の指す先はクライアント固有の環境であることを忘れずに)
+cd /usr/src
+make installkernel KERNCONF=KERNELNAME
+.Ed
+.Pp
+.Sh 世界をビルドする
+この環境は、全てのビルドをマスタサーバで行い、インストールを各クライアントで
+行うようにデザインされています。
+クライアントで /usr/obj がローカルにある場合だけ、クライアントでビルドを
+行うことが出来ます。
+世界をビルドするのは簡単です。
+.Bd -literal -offset 4n
+cd /usr/src
+make buildworld
+.Ed
+.Pp
+もしあなたがマスタサーバを -STABLE 環境で動かしていたとしても、
+それが -CURRENT 世界をビルドするのを妨げるわけではありません。
+適切なソースディレクトリに cd してからすればよいだけです。
+しかしマスタサーバにふとしたことからインストールしたりしないでください!
+.Bd -literal -offset 4n
+cd /usr/src2
+make buildworld
+.Ed
+.Sh 世界をインストールする
+メイン開発サーバでビルドしてクライアントにインストールすることが出来ます。
+メイン開発サーバは読み取り専用 NFS を介して、 /FreeBSD と /usr/obj を
+クライアントにエクスポートする必要があります。
+.Pp
+.Em 注意!!!
+もし /usr/obj がマスタサーバ上でシンボリックリンクである場合、
+各クライアントでも、やはり厳密に同じである必要があります。
+マスタサーバにおいて /usr/obj が /usr にあるディレクトリ、もしくは
+マウントポイントである場合、各クライアントでも (同じように) /usr にある
+ディレクトリ、もしくはマウントポイントである必要があります。
+これはビルドの時とインストールの時で、絶対パスが同じであると期待している
+からです。そして大体において、メイン開発ボックスでビルドしてクライアントで
+インストールするものです。
+もし /usr/obj を正しく設定していなければ、マシン上でビルドは出来ないし、
+クライアントにインストールも出来ないでしょう。
+.Bd -literal -offset 4n
+(クライアントにおいて)
+(/usr/src の指す先はクライアント固有の環境であることを忘れずに)
+cd /usr/src
+make installworld
+.Ed
+.Pp
+.Sy 警告!
+マスタサーバでのビルドは出来るがクライアントにインストールできない場合、
+例えばインストールをしようとすると、クライアントが読み取り専用の /usr/obj に
+インストールで書き込もうとして文句を言っているような場合では、
+それはおそらくクライアントの /etc/make.conf がマスタサーバのそれと
+十分厳密に一致しておらず、インストールにおいて、ビルドされていない何かを
+インストールしようとしているのでしょう。
+.Sh クライアントで開発をする (インストールするだけではなく)
+開発者はしばしば、単にボックスのライフテストのために、クライアントボックスで
+buildkernel あるいは buildworld を実行したい時があります。
+これは、マスタサーバでの buildkernel や buildworld と同じ方法で行います。
+あなたがするべきことの全ては、 /usr/obj がローカルストレージを指すように
+することです。
+あなたが私のアドバイスに従って、マスタサーバにおいて /usr/obj を
+独自のパーティションにしていれば、クライアント側では一般的に
+これを NFS マウントしているはずです。
+単純に /usr/obj をアンマウントすれば、/usr/obj は、クライアントでは一般に
+ローカルな、 /usr にあるサブディレクトリとなります。
+存分にビルドしてください!
+.Sh ローカルブランチを管理する
+私は 2 つのバージョンのソースツリー、 /FreeBSD/FreeBSD-4.x にある
+stable 版、及び /FreeBSD/FreeBSD-current にある current 版を管理する
+方法を述べてきました。
+他のバージョンのソースツリーを、 /FreeBSD/XXX に取り出すことを妨げるものは
+何もありません。
+実際、私の /FreeBSD パーティションには、
+.Ox
+や
+.Nx
+やいろいろな種類の Linux が含まれています。
+あなたのマスタサーバ上で FreeBSD 以外のオペレーティングシステムを
+ビルドできるとは限らないでしょうが、中央サーバでソース配布物の
+修正と管理ができるのはとても有用であり、またこれら他の
+オペレーティングシステムをビルドできるマシンにエクスポートすることも
+できます。
+.Pp
+多数の開発者が、カスタム配布物のビルドやパッチのテストのために、
+.Fx
+のローカルブランチを管理しています。
+これは CVS や他のソースコード管理システム
+(SubVersion, Perforce, BitKeeper) のリポジトリによってなされます。
+.Fx
+のメインツリーは CVS をベースにしており、これは使いやすいです。
+.Pp
+まず、あなたがリポジトリにコミットした後の、ローカルな変更が
+修正されるのを避けるために、 cvsup 環境を修正する必要があります。
+あなたの supfile から "delete" キーワードを削除し、また refuse ファイルに
+CVSROOT ディレクトリを追加することが重要です。
+詳細な情報は、
+.Xr cvsup 1
+を参照してください。
+.Pp
+.Fx
+版の CVS は、独自の環境変数を調べます。
+CVS_LOCAL_BRANCH_NUM には
+cvs tag/rtag を実行する際の整数値を指定します。
+この数値を適当に大きなもの (例えば 1000) にすることで、
+メインリポジトリで潜在する将来のブランチと衝突するのを避けられます。
+例えば、バージョン 1.4 のファイルからのブランチは 1.4.1000 となります。
+このブランチにおける将来のコミットは、リビジョン 1.4.1000.1 や
+1.4.1000.2 などとなります。
+.Pp
+ローカルブランチを分岐するには、こうします。
+.Bd -literal -offset 4n
+cvs rtag -r RELENG_4 -b LOCAL_RELENG_4 src
+.Ed
+.Pp
+このようにした後、新しいタグを使ってローカルリポジトリからチェックアウトし、
+そのコピーに対して変更を入れてコミットすることを始めることが出来ます。
+cvs を使う際のより詳しい情報は、
+.Xr cvs 1
+を参照してください。
+.Pp
+.Sy 警告!
+cvsup ユーティリティはいくつかの状況下において、ローカルブランチへの
+変更を帳消しにしてしまうことがあります。
+これはマスタ CVS リポジトリが直接操作されたり、または RCS ファイルが
+変更された時に起こると報告されています。
+この点において、 クライアントとサーバで全く異なる RCS ファイルを
+持っている場合に、 cvsup は報告をし、差分を送ろうとするかわりに、
+全体を置き換えます。
+理想を言えばこのような状況は起こるべきでないのですが、現実世界では
+常に起こるものです。
+.Pp
+これが、この問題が突然起こり得る唯一のシナリオですが、これだけでは
+説明できない、 CVS_LOCAL_BRANCH_NUM が引き起こす信じがたい報告も
+いくつかされています。
+結論としては、ローカルブランチを評価したら、 update の前に毎回バックアップを
+取るべきだということです。
+.Sh CVS を介して更新する
+cvsup を使ってソースツリーを直接管理するかわりに、 CVS リポジトリの
+更新されたコピーを管理する利点は、あなたのソースツリー (またはソースツリーの
+一部) を、好きな時に最新版にできることです。
+cron ジョブを使って CVS リポジトリの更新を管理する時、ソースツリーの更新は、
+ネットワークを要すること無しに、次のようにして更新することが出来ます。
+.Bd -literal -offset 4n
+(メイン開発サーバにおいて)
+cd /usr/src
+cvs -d /home/ncvs update
+cd /usr/src2
+cvs -d /home/ncvs update
+cd /usr/ports
+cvs -d /home/ncvs update
+.Ed
+.Pp
+これは簡単であり、全体をクライアントに対してエクスポートしているので、
+クライアントは更新されたソースにすぐに注目が出来ます。
+cvs 操作の大半は root で実行すること、また
+.Fx
+リポジトリを正しく操作するには、 CVS に対する適切なオプションが必要なことを、
+そろそろ思い出しても良い頃でしょう。
+例えば
+.Fl Pd
+が、 "cvs update" を実行する際には必要です。
+CVS コマンドを実行するたびに再明示する必要を無くすために、これらの
+オプションは一般的に ~/.cvsrc に置かれます (既に述べましたが)。
+CVS リポジトリの管理はまた、複数のバージョンのソースツリーを取り出すという
+ことに関して、より大きな柔軟性を与えます。
+まさにこのような理由から、 /FreeBSD パーティションに大きな領域
+(8-12GB を推奨します) を割り当てるのは良い考えなのです。
+可能ならば、 15GB を私なら割り当てます。
+.Pp
+私は通常、 cvs update を cron ジョブでは実行しません。
+私がコードを開発しているような時には通常、ソースを変更して欲しくない
+というのが理由です。
+そのかわり、私は時々…それが良い時だと思ったときに、手動で時々ソースを
+更新します。
+私が推薦するのは、 cron で cvs リポジトリだけを同期することです。
+.Sh 関連項目
+.Xr crontab 1 ,
+.Xr crontab 5 ,
+.Xr build 7 ,
+.Xr firewall 7 ,
+.Xr release 7 ,
+.Xr tuning 7 ,
+.Xr diskless 8
+.Sh 歴史
+.Nm
+マニュアルページは最初、
+.An Matthew Dillon Aq dillon@FreeBSD.org
+によって書かれ、
+2002 年 12 月に
+.Fx 5.0
+ではじめて登場しました。

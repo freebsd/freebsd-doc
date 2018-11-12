@@ -1,0 +1,492 @@
+.\" Copyright (c) 1998, 1999, Nicolas Souchu
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man9/microseq.9,v 1.18 2004/07/03 18:29:24 ru Exp %
+.\" $FreeBSD$
+.\"
+.Dd June 6, 1998
+.Dt MICROSEQ 9
+.Os
+.Sh 名称
+.Nm microseq
+.Nd ppbus マイクロシーケンサ開発者ガイド
+.Sh 書式
+.In sys/types.h
+.In dev/ppbus/ppbconf.h
+.In dev/ppbus/ppb_msq.h
+.Sh 解説
+ppbus の解説およびマイクロシーケンサについての一般的な情報は
+.Xr ppbus 4
+を参照してください。
+.Pp
+この文書の目的は以下を得るために、
+開発者がマイクロシーケンサ機構を使用するように支援することです。
+.Bl -enum -offset indent
+.It
+統一的なプログラミングモデル
+.It
+効率的なコード
+.El
+.Pp
+マイクロシーケンスを使用する前に、
+.Xr ppc 4
+マイクロシーケンサの実装および
+.Xr vpo 4
+の中のこれをどのように使用するかの例を見ることが、奨励されています。
+.Sh PPBUS レジスタモデル
+.Ss 背景
+ppbus のために選択されたパラレルポートモデルは PC パラレルポートモデルです。
+従って、後で解説されるあらゆるレジスタは、PC パラレルポートの対になるものと
+同じセマンティクスを持ちます。
+より多くの ISA/ECP プログラミングについての情報については、
+"Extended Capabilities Port Protocol and ISA interface Standard"
+として参照される Microsoft 標準を入手してください。
+後述するレジスタは標準のパラレルポートレジスタです。
+.Pp
+マスクマクロは、パラレルポートレジスタの個々の有効なビットのために
+標準 ppbus インクルードファイルの中で定義されています。
+.Ss データレジスタ
+コンパチブルモードまたはニブルモードでは、このレジスタへの書き込みは
+パラレルポートのデータ線へ出力されます。
+その他のモードでは、出力段は制御レジスタ内の方向ビット (PDC) の設定によって、
+トライステート (3 状態) になることができます。
+このレジスタへの読み込みはデータ線上の値を返します。
+.Ss デバイス状態レジスタ
+この読取り専用レジスタはパラレルポートインタフェース上の入力を反映します。
+.Pp
+.Bl -column "ビット" "名前" "解説" -compact
+.It Em ビット Ta Em 名前 Ta Em 解説
+.It 7 Ta nBUSY Ta "パラレルポートの Busy 信号の反転"
+.It 6 Ta nACK Ta "パラレルポートの nAck 信号"
+.It 5 Ta PERROR Ta "パラレルポートの PERROR 信号"
+.It 4 Ta SELECT Ta "パラレルポートの Select 信号"
+.It 3 Ta nFAULT Ta "パラレルポートの nFault 信号"
+.El
+.Pp
+その他は予約済みで、読込み時の結果は未定義です。
+.Ss デバイス制御レジスタ
+このレジスタは直接的に幾つかの機能の有効化はもちろん、
+幾つかの出力信号を制御します。
+.Pp
+.Bl -column "ビット" "名前    " "解説" -compact
+.It Em ビット Ta Em 名前 Ta Em 解説
+.It 5 Ta PCD Ta "拡張モード時の方向ビット"
+.It 4 Ta IRQENABLE Ta "1 で nAck の立ち上りで割り込み有効"
+.It 3 Ta SELECTIN Ta "パラレルポートの nSelect 信号の反転を出力"
+.It 2 Ta nINIT Ta "パラレルポートの nInit 信号を出力"
+.It 1 Ta AUTOFEED Ta "パラレルポートの nAutoFd 信号の反転を出力"
+.It 0 Ta STROBE Ta "パラレルポートの nStrobe 信号の反転を出力"
+.El
+.Sh マイクロインストラクション
+.Ss 解説
+.Em マイクロインストラクション
+はパラレルポートのアクセス、プログラムの繰り返し、サブマイクロシーケンス
+または C の呼び出しです。
+パラレルポートは
+.Xr ppbus 4
+で解説されている論理モデルとみなされなければなりません。
+.Pp
+利用可能なマイクロシーケンスは以下のとおりです。
+.Bd -literal
+#define MS_OP_GET       0	/* get <ptr>, <len>			*/
+#define MS_OP_PUT       1	/* put <ptr>, <len>			*/
+#define MS_OP_RFETCH	2	/* rfetch <reg>, <mask>, <ptr>		*/
+#define MS_OP_RSET	3	/* rset <reg>, <mask>, <mask>		*/
+#define MS_OP_RASSERT	4	/* rassert <reg>, <mask>		*/
+#define MS_OP_DELAY     5	/* delay <val>				*/
+#define MS_OP_SET       6	/* set <val>				*/
+#define MS_OP_DBRA      7	/* dbra <offset>			*/
+#define MS_OP_BRSET     8	/* brset <mask>, <offset>		*/
+#define MS_OP_BRCLEAR   9	/* brclear <mask>, <offset>		*/
+#define MS_OP_RET       10	/* ret <retcode>			*/
+#define MS_OP_C_CALL	11	/* c_call <function>, <parameter>	*/
+#define MS_OP_PTR	12	/* ptr <pointer>			*/
+#define MS_OP_ADELAY	13	/* adelay <val>				*/
+#define MS_OP_BRSTAT	14	/* brstat <mask>, <mask>, <offset>	*/
+#define MS_OP_SUBRET	15	/* subret <code>			*/
+#define MS_OP_CALL	16	/* call <microsequence>			*/
+#define MS_OP_RASSERT_P	17	/* rassert_p <iter>, <reg>		*/
+#define MS_OP_RFETCH_P	18	/* rfetch_p <iter>, <reg>, <mask>	*/
+#define MS_OP_TRIG	19	/* trigger <reg>, <len>, <array>	*/
+.Ed
+.Ss 実行コンテキスト
+マイクロインストラクションの
+.Em 実行コンテキスト
+は以下のとおりです。
+.Bl -bullet -offset indent
+.It
+メインのマイクロシーケンスの中またはサブコールの中の、実行するための
+次のマイクロインストラクションを指し示す
+.Em プログラムカウンタ
+.It
+送る/受け取るための次の文字を指し示す
+.Em ptr
+の現在の値
+.It
+内部の
+.Em 分岐レジスタ
+の現在の値
+.El
+.Pp
+このデータは全てではない幾つかのマイクロインストラクションによって
+変更されます。
+.Ss MS_OP_GET および MS_OP_PUT
+は定義済みの標準 IEEE1284-1994 転送またはプログラムされた非標準の
+入出力のいずれかを行なうために使用されるマイクロインストラクションです。
+.Ss MS_OP_RFETCH - レジスタ取得
+はパラレルポートレジスタの現在の値を取り出し、マスクを適用し、
+それをバッファに保存するために使用されます。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+レジスタ
+.It
+文字マスク
+.It
+バッファへのポインタ
+.El
+.Pp
+定義済みマクロ: MS_RFETCH(reg,mask,ptr)
+.Ss MS_OP_RSET - レジスタ設定
+は 2 つのマスクを適用された、個々のパラレルポートレジスタの幾つかの
+ビットをアサート/クリアするために使用されます。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+レジスタ
+.It
+アサートされるべきビットのマスク
+.It
+クリアされるべきビットのマスク
+.El
+.Pp
+定義済みマクロ: MS_RSET(reg,assert,clear)
+.Ss MS_OP_RASSERT - レジスタアサート
+は個々のパラレルポートレジスタの全てのビットをアサートするために使用されます。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+レジスタ
+.It
+アサートされるべきバイト
+.El
+.Pp
+定義済みマクロ: MS_RASSERT(reg,byte)
+.Ss MS_OP_DELAY - マイクロ秒の遅延
+はマイクロシーケンスの実行の遅延のために使用されます。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+マイクロ秒単位の遅延時間
+.El
+.Pp
+定義済みマクロ: MS_DELAY(delay)
+.Ss MS_OP_SET - 内部分岐レジスタの設定
+は内部の分岐レジスタの値を設定するために使用します。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+整数値
+.El
+.Pp
+定義済みマクロ: MS_SET(accum)
+.Ss MS_OP_DBRA - 分岐の実行
+は内部の分岐レジスタが 1 減らされた結果の値が正である場合に
+分岐するために使用されます。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+現在実行された (サブ) マイクロシーケンスの整数のオフセット。
+オフセットは次に実行されるマイクロインストラクションの
+インデックスに追加されます。
+.El
+.Pp
+定義済みマクロ: MS_DBRA(offset)
+.Ss MS_OP_BRSET - セット時に分岐
+はパラレルポートの状態レジスタのビットの幾つかがセットされている場合に
+分岐するために使用されます。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+状態レジスタのビット
+.It
+現在実行された (サブ) マイクロシーケンスの整数のオフセット。
+オフセットは次に実行されるマイクロインストラクションの
+インデックスに追加されます。
+.El
+.Pp
+定義済みマクロ: MS_BRSET(mask,offset)
+.Ss MS_OP_BRCLEAR - クリア時に分岐
+はパラレルポートの状態レジスタのビットの幾つかがクリアされている場合に
+分岐するために使用されます。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+状態レジスタのビット
+.It
+現在実行された (サブ) マイクロシーケンスの整数のオフセット。
+オフセットは次に実行されるマイクロインストラクションの
+インデックスに追加されます。
+.El
+.Pp
+定義済みマクロ: MS_BRCLEAR(mask,offset)
+.Ss MS_OP_RET - 戻る
+はマイクロシーケンスから戻るために使用されます。
+この関数は必須です。
+これはマイクロシーケンサがマイクロシーケンスの終わりを検出する唯一の方法です。
+ppb_MS_microseq() の (int *) パラメータによって指される整数に、
+リターンコードが返されます。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+整数のリターンコード
+.El
+.Pp
+定義済みマクロ: MS_RET(code)
+.Ss MS_OP_C_CALL - C 関数の呼び出し
+はマイクロシーケンスの実行から C 関数を呼び出すために使用されます。
+これはパラレルポートからデータ文字を取り出すために非標準の入出力が実行
+されるときに有用かもしれません。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+呼び出すべき C 関数
+.It
+関数呼び出しのために渡されるパラメータ
+.El
+.Pp
+C 関数は
+.Ft int(*)(void *p, char *ptr)
+と宣言されることになっています。
+ptr パラメータは現在走査されているバッファの中の現在位置です。
+.Pp
+定義済みマクロ: MS_C_CALL(func,param)
+.Ss MS_OP_PTR - 内部ポインタの初期化
+は現在走査されているバッファへの内部ポインタを初期化します。
+このポインタはあらゆる C 呼び出しに渡されます (上記を参照してください)。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+xxx_P() マイクロシーケンスの呼び出しによってアクセスされることになっている
+バッファへのポインタ。
+このポインタは xxx_P() 呼び出しの間自動的に増やされることに注意してください。
+.El
+.Pp
+定義済みマクロ: MS_PTR(ptr)
+.Ss MS_OP_ADELAY - 非同期遅延の実行
+はマイクロシーケンスの実行の間に tsleep() するために使用されます。
+この tsleep は PPBPRI レベルで実行されます。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+ミリ秒単位での遅延時間
+.El
+.Pp
+定義済みマクロ: MS_ADELAY(delay)
+.Ss MS_OP_BRSTAT - 状態による分岐
+は状態レジスタの状態で分岐するために使用されます。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+アサートされたビットのマスク。
+状態レジスタの中のアサートされるはずのビットがマスクにセットされます。
+.It
+クリアされたビットのマスク。
+状態レジスタの中のクリアされるはずのビットがマスクにセットされます。
+.It
+現在実行された (サブ) マイクロシーケンスの整数のオフセット。
+オフセットは次に実行されるマイクロインストラクションの
+インデックスに追加されます。
+.El
+.Pp
+定義済みマクロ: MS_BRSTAT(asserted_bits,clear_bits,offset)
+.Ss MS_OP_SUBRET - サブマイクロシーケンスから戻る
+はサブマイクロシーケンスの呼び出しから戻るために使用されます。
+この行動は RET の呼び出しの前に必須です。
+幾つかのマイクロインストラクション (PUT, GET) はサブマイクロシーケンスの
+内部では呼び出し可能ではないかもしれません。
+.Pp
+パラメータはありません。
+.Pp
+定義済みマクロ: MS_SUBRET()
+.Ss MS_OP_CALL - サブマイクロシーケンスの呼び出し
+はサブマイクロシーケンスを呼び出すために使用されます。
+サブマイクロシーケンスは SUBRET の呼び出しを伴なうマイクロシーケンスです。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+実行されるべきサブマイクロシーケンス
+.El
+.Pp
+定義済みマクロ: MS_CALL(microseq)
+.Ss MS_OP_RASSERT_P - 内部 PTR からレジスタへのアサート
+は内部の PTR ポインタによって現在指されているデータでレジスタを
+アサートするために使用されます。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+レジスタに書込むためのデータ量
+.It
+レジスタ
+.El
+.Pp
+定義済みマクロ: MS_RASSERT_P(iter,reg)
+.Ss MS_OP_RFETCH_P - 内部 PTR へのレジスタフェッチ
+はレジスタからデータを読込むために使用されます。
+データは内部の PTR ポインタによって現在指されているバッファに保存されます。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+レジスタから読込むためのデータ量
+.It
+レジスタ
+.It
+読込まれたデータに適用されるマスク
+.El
+.Pp
+定義済みマクロ: MS_RFETCH_P(iter,reg,mask)
+.Ss MS_OP_TRIG - レジスタのトリガ
+はパラレルポートをトリガするために使用されます。
+このマイクロインストラクションはパラレルポートのとても効率的な制御の
+提供を意図されています。
+レジスタのトリガはデータ書込み、少しウェイト、データ書込み、
+少しウェイト ... です。
+これはポートへマジックシーケンスを書込むことを可能にします。
+.Pp
+パラメータ:
+.Bl -enum -offset indent
+.It
+.\" 原文は読込まれる --- send-pr すべき?
+レジスタに書込まれるデータ量
+.It
+レジスタ
+.It
+配列の大きさ
+.It
+unsigned char の配列。
+個々の u_char の組はレジスタに書込むべきデータおよび
+マイクロ秒単位でのウェイトするべき遅延時間です。
+遅延時間は簡単化および配列の大きさの縮小のために 255 マイクロ秒までに
+制限されています。
+.El
+.Pp
+定義済みマクロ: MS_TRIG(reg,len,array)
+.Sh マイクロシーケンス
+.Ss C 構造体
+.Bd -literal
+union ppb_insarg {
+     int     i;
+     char    c;
+     void    *p;
+     int     (* f)(void *, char *);
+};
+
+struct ppb_microseq {
+     int                opcode;    /* マイクロインストラクション opcode */
+     union ppb_insarg   arg[PPB_MS_MAXARGS];    /* 引数 */
+};
+.Ed
+.Ss マイクロシーケンスの使用
+マイクロシーケンスを実体化するためには、ppb_microseq 構造体の配列を
+宣言して必要に応じて初期化するだけです。
+定義済みのマクロまたは ppb_microseq の定義に従った独自の
+マイクロインストラクションのいずれかを使用できます。
+例えば、
+.Bd -literal
+     struct ppb_microseq select_microseq[] = {
+
+	     /* パラメータリスト
+	      */
+	     #define SELECT_TARGET    MS_PARAM(0, 1, MS_TYP_INT)
+	     #define SELECT_INITIATOR MS_PARAM(3, 1, MS_TYP_INT)
+
+	     /* 出力するための選択コマンドの送信 */
+	     MS_DASS(MS_UNKNOWN),
+	     MS_CASS(H_nAUTO | H_nSELIN |  H_INIT | H_STROBE),
+	     MS_CASS( H_AUTO | H_nSELIN |  H_INIT | H_STROBE),
+	     MS_DASS(MS_UNKNOWN),
+	     MS_CASS( H_AUTO | H_nSELIN | H_nINIT | H_STROBE),
+
+	     /* 出力の準備ができるまで待ちます */
+	     MS_SET(VP0_SELTMO),
+/* loop: */     MS_BRSET(H_ACK, 2 /* ready */),
+	     MS_DBRA(-2 /* loop */),
+/* error: */    MS_RET(1),
+/* ready: */    MS_RET(0)
+     };
+.Ed
+.Pp
+ここで、幾つかのパラメータが未定義でマイクロシーケンスの実行の前に
+満たされなければなりません。
+個々のマイクロシーケンスを初期化するために、ppb_MS_init_msq() 関数を
+以下のように使用するべきです。
+.Bd -literal
+     ppb_MS_init_msq(select_microseq, 2,
+		     SELECT_TARGET, 1 << target,
+		     SELECT_INITIATOR, 1 << initiator);
+.Ed
+.Pp
+それからマイクロシーケンスを実行します。
+.Ss マイクロシーケンサ
+マイクロシーケンサは ppbus レベルまたはアダプタレベル (ppbus の
+システムレイヤについての情報は
+.Xr ppbus 4
+を参照してください) のいずれかで実行されます。
+マイクロシーケンサの殆んどは、ppbus からアダプタへの関数呼び出しの
+オーバヘッドを避けるために、ppc レベルで実行されます。
+しかし、その転送は IEEE1284-1994 に合致しているのに反して、
+いくつかの決まりきった様な機能は ppbus レイヤで実行されます。
+.Sh バグ
+1 レベルのサブマイクロシーケンスのみが認められています。
+.Pp
+ポートのトリガ時は、許可されている最大の遅延は 255 マイクロ秒です。
+.Sh 関連項目
+.Xr ppbus 4 ,
+.Xr ppc 4 ,
+.Xr vpo 4
+.Sh 歴史
+.Nm
+のマニュアルページは
+.Fx 3.0
+ではじめて登場しました。
+.Sh 作者
+このマニュアルページは
+.An Nicolas Souchu
+が書きました。

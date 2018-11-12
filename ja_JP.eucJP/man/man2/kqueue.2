@@ -1,0 +1,535 @@
+.\" Copyright (c) 2000 Jonathan Lemon
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/lib/libc/sys/kqueue.2,v 1.40 2004/07/02 23:52:13 ru Exp %
+.\"
+.\" $FreeBSD$
+.Dd April 14, 2000
+.Dt KQUEUE 2
+.Os
+.Sh 名称
+.Nm kqueue ,
+.Nm kevent
+.Nd カーネルイベント通知メカニズム
+.Sh ライブラリ
+.Lb libc
+.Sh 書式
+.In sys/types.h
+.In sys/event.h
+.In sys/time.h
+.Ft int
+.Fn kqueue "void"
+.Ft int
+.Fn kevent "int kq" "const struct kevent *changelist" "int nchanges" "struct kevent *eventlist" "int nevents" "const struct timespec *timeout"
+.Fn EV_SET "&kev" ident filter flags fflags data udata
+.Sh 解説
+.Fn kqueue
+システムコールは、フィルタと呼ばれる小さなカーネルコードの実行結果に基づき、
+イベントの発生やある状態の成立をユーザに通知する一般的な方法を提供します。
+kevent は (ident, filter) のペアによって識別されます。
+ここで、ident は識別子、filter はフィルタを表します。
+1 つの kqueue には、同じ kevent が複数存在することはできません。
+.Pp
+フィルタは、kevent の初期登録時に
+以前から存在した状態を検出するために実行されます。
+また、あるイベントが評価のためにフィルタに渡されるたびに実行されます。
+状態を報告すべきとフィルタが決定した場合には、
+その kevent はユーザが回収できるように kqueue に置かれます。
+.Pp
+ユーザが kqueue から kevent を回収しようとしたときにも、
+フィルタが実行されます。
+フィルタの実行により、そのイベントをトリガした状態が成立していないこと
+が示された場合には、その kevent は kqueue から削除され、
+ユーザに渡されません。
+.Pp
+フィルタをトリガするイベントが複数ある場合でも、
+kqueue の中に kevent が複数置かれるわけではありません。
+代わりに、フィルタは複数のイベントを単一の kevent 構造体へ集めます。
+ファイル記述子に対する
+.Fn close
+の呼び出しは、その記述子を参照しているあらゆる kevent を削除します。
+.Pp
+.Fn kqueue
+システムコールは新規のカーネルイベントキューを生成して記述子を返します。
+キューは
+.Xr fork 2
+で生成された子プロセスには継承されません。
+しかしながら、
+.Dv RFFDG
+フラグなしで
+.Xr rfork 2
+が呼び出された場合には、記述子テーブルが共有され、2 つの
+プロセス間で kqueue の共有が可能になります。
+.Pp
+.Fn kevent
+システムコールは、キューにイベントを登録し、保留中のあらゆるイベントを
+ユーザに返すために使用されます。
+.Fa changelist
+引数は
+.Va kevent
+構造体の配列へのポインタです。
+この構造体は
+.In sys/event.h
+で定義されています。
+保留中のイベントをキューから読み取る前に、
+.Fa changelist
+に含まれている全ての変更を適用します。
+.Fa nchanges
+引数は
+.Fa changelist
+の大きさを与えます。
+.Fa eventlist
+引数は kevent 構造体の配列へのポインタです。
+.Fa nevents
+引数は
+.Fa eventlist
+の大きさを決定します。
+.Fa nevents
+が 0 の時には、
+.Xr select 2
+とは違って、たとえ
+.Fa timeout
+がある場合でも
+.Fn kevent
+はすぐに戻ります。
+.Fa timeout
+が NULL でないポインタの場合には、timespec 構造体であると解釈されて、
+イベントを待つ最大待ち時間を指定します。
+.Fa timeout
+が NULL ポインタの場合には、
+.Fn kevent
+は無期限に待ちます。
+ポーリングの効果を得るためには、
+.Fa timeout
+引数に、0 を示す
+.Va timespec
+構造体を指す非 NULL のポインタを与えるべきです。
+.Fa changelist
+と
+.Fa eventlist
+用に同じ配列を使うことができます。
+.Pp
+.Fn EV_SET
+マクロは kevent 構造体の初期化を簡単にするために用意されています。
+.Pp
+.Va kevent
+構造体は次のように定義されています:
+.Bd -literal
+struct kevent {
+	uintptr_t ident;	/* このイベントの識別子 */
+	short	  filter;	/* イベントのフィルタ */
+	u_short	  flags;	/* kqueue のアクションフラグ */
+	u_int	  fflags;	/* フィルタフラグ値 */
+	intptr_t  data;		/* フィルタデータ値 */
+	void	  *udata;	/* 不透明なユーザデータ識別子 */
+};
+.Ed
+.Pp
+.Fa struct kevent
+のフィールドは以下のとおりです:
+.Bl -tag -width XXXfilter
+.It ident
+このイベントを識別するために使用される値です。
+厳密な解釈は結び付けられたフィルタにより決定されますが、
+普通はファイル記述子として解釈されます。
+.It filter
+このイベントを処理するために使用されるカーネルフィルタを識別します。
+あらかじめ定義されたシステムフィルタは後述してあります。
+.It flags
+イベント発生時に実行するべきアクションです。
+.It fflags
+フィルタ固有のフラグです。
+.It data
+フィルタ固有のデータの値です。
+.It udata
+変更されずにカーネルを通して渡される不透明なユーザ定義の値です。
+.El
+.Pp
+.Va flags
+フィールドは以下の値を含むことができます:
+.Bl -tag -width XXXEV_ONESHOT
+.It EV_ADD
+イベントを kqueue に追加します。
+既存のイベントを再び追加すると、元のイベントのパラメータが変更されます。
+重複するエントリができるわけではありません。
+イベントを追加すると、EV_DISABLE フラグによって上書きされない限りは
+自動的に有効にされます。
+.It EV_ENABLE
+イベントがトリガされた場合に、
+.Fn kevent
+がそのイベントを返すことを許可します。
+.It EV_DISABLE
+イベントを無効にします。
+これにより
+.Fn kevent
+はそのイベントを返さなくなります。
+フィルタ自身は無効にされません。
+.It EV_DELETE
+kqueue からイベントを削除します。
+ファイル記述子に結び付けられているイベントは、
+その記述子の最後のクローズ時に自動的に削除されます。
+.It EV_ONESHOT
+フィルタが最初トリガされたときにのみ、イベントが返るようにします。
+ユーザがイベントを kqueue から回収した後で、そのイベントは削除されます。
+.It EV_CLEAR
+ユーザがイベントを回収した後に、その状態をリセットします。
+これは現在の状態ではなく、状態の変化を報告するフィルタに有用です。
+幾つかのフィルタは内部でこのフラグを自動的にセットしている
+かもしれないことに注意してください。
+.It EV_EOF
+そのフィルタ固有の EOF 状態であることを示すために、
+フィルタがこのフラグをセットすることがあります。
+.It EV_ERROR
+後述の
+.Sx 戻り値
+を参照してください。
+.El
+.Pp
+あらかじめ定義されたシステムフィルタを次に示します。
+引数は kevent 構造体の
+.Va fflags
+および
+.Va data
+フィールドを経由してやりとりすることができます。
+.Bl -tag -width EVFILT_SIGNAL
+.It EVFILT_READ
+識別子に記述子を引数として取ります。
+読取り可能なデータがあるときに戻ります。
+このフィルタの振舞いは、その記述子の型により少し異なります。
+.Pp
+.Bl -tag -width 2n
+.It ソケット
+事前に
+.Fn listen
+に渡されたソケットの場合、保留中の次の接続があるときに戻ります。
+.Va data
+には listen のバックログ (backlog) の大きさが入っています。
+.Pp
+その他のソケット記述子の場合、ソケットバッファの
+.Dv SO_RCVLOWAT
+の値を基準にして、読み取るデータがあるときに戻ります。
+フィルタを追加するときに、
+.Va fflags
+に NOTE_LOWAT を設定し
+.Va data
+に新しい最低基準値を指定することにより、
+この値を、
+フィルタごとの最低基準値で上書きすることが可能です。
+戻るときには、
+.Va data
+には読取り可能なプロトコルデータのバイト数が入っています。
+.Pp
+ソケットの読取り側が切断された場合には、フィルタは
+.Va flags
+に EV_EOF も設定します。
+ここでエラーが起きた場合には、
+.Va fflags
+にソケットエラーを返します。
+ソケットバッファの中に保留中のデータが残っていても、
+(接続が切れたことを示す) EOF が返されることがあります。
+.It vnode
+ファイルポインタがファイルの最後 (EOF) でないときに戻ります。
+.Va data
+は現在位置からファイルの最後 (EOF) までのオフセットが入っています。
+この値は負であるかもしれません。
+.It "FIFO とパイプ"
+読み取るべきデータがあるときに戻ります。
+.Va data
+には有効なバイト数が入っています。
+.Pp
+最後の書込み側が切断したときに、フィルタは
+.Va flags
+に EV_EOF をセットします。
+EV_CLEAR を渡すことで、このフラグをクリアすることができ、
+フィルタはデータが読み取るようになるのを戻らずに再び待ちます。
+.It "BPF デバイス"
+BPF バッファが一杯になったとき、BPF タイムアウトが満了したとき、
+または BPF の
+.Dq 直接モード
+が有効で読み込むべきデータがあるときに、戻ります。
+このときの
+.Va data
+には利用可能なバイト数が入ります。
+.El
+.It EVFILT_WRITE
+識別子に記述子を引数として取ります。
+その記述子が書込み可能になるたびに戻ります。
+ソケット、パイプおよび FIFO では、
+.Va data
+には書込みバッファの残り領域の大きさが入っています。
+読取り側が切断したときに、フィルタは EV_EOF をセットします。
+FIFO の場合、EV_CLEAR を使いこれをクリアすることができます。
+このフィルタは vnode または BPF デバイスをサポートしていないことに
+注意してください。
+.Pp
+ソケットの場合、最低基準値およびソケットエラーの取り扱いは
+EVFULT_READ の場合と同じです。
+.It EVFILT_AIO
+非同期入出力要求の sigevent 部分の、
+.Va sigev_notify_kqueue
+にはイベントを付加する kqueue の記述子を入れ、
+.Va sigev_value
+には udata の値を入れ、
+.Va sigev_notify
+には SIGEV_KEVENT を入れて、非同期入出力要求を埋めます。
+.Fn aio_*
+システムコールが呼び出されたとき、そのイベントは
+指定された kqueue に登録されます。
+.Fn aio_*
+システムコールによって返された
+.Fa struct aiocb
+を
+.Va ident
+引数にセットします。
+このフィルタは aio_error と同様の条件で戻ります。
+.Pp
+別の方法として、
+.Va ident
+に kqueue 記述子を入れて kevent 構造体を初期化し、
+そのアドレスを非同期要求の
+.Va aio_lio_opcode
+フィールドに置くことも可能です。
+しかしながら、このアプローチは 64 ビットポインタのアーキテクチャでは
+動作しないでしょうし、あてにするべきではありません。
+.It EVFILT_VNODE
+ファイル記述子を識別子に、監視するイベントを
+.Va fflags
+に引数として取ります。
+指定した記述子に対し要求されたイベントが 1 つ以上発生したときに戻ります。
+監視するイベントを以下に示します:
+.Bl -tag -width XXNOTE_RENAME
+.It NOTE_DELETE
+記述子が参照するファイルに対し
+.Fn unlink
+システムコールが呼ばれました。
+.It NOTE_WRITE
+記述子が参照するファイルに対し書込みが起こりました。
+.It NOTE_EXTEND
+記述子が参照するファイルのサイズが拡張されました。
+.It NOTE_ATTRIB
+記述子が参照するファイルの属性が変更されました。
+.It NOTE_LINK
+ファイルのリンク数が変更されました。
+.It NOTE_RENAME
+記述子が参照するファイルがリネームされました。
+.It NOTE_REVOKE
+ファイルへのアクセスが
+.Xr revoke 2
+によって無効にされたか、もしくは、下位層のファイルシステムが
+マウントされていません。
+.El
+.Pp
+戻るときに、
+.Va fflags
+にフィルタをトリガしたイベントが入っています。
+.It EVFILT_PROC
+監視するプロセス ID を識別子に、監視するイベントを
+.Va fflags
+に引数として取ります。
+要求されたイベントを 1 つ以上プロセスが実行するときに戻ります。
+あるプロセスが他のプロセスを正常に見ることができる場合には、
+イベントをそのプロセスに結び付けることができます。
+監視するイベントを次に示します:
+.Bl -tag -width XXNOTE_TRACKERR
+.It NOTE_EXIT
+プロセスが終了しました。
+.It NOTE_FORK
+プロセスが
+.Fn fork
+を呼びました。
+.It NOTE_EXEC
+プロセスが
+.Xr execve 2
+または類似の呼び出しにより、新規のプロセスを実行しました。
+.It NOTE_TRACK
+.Fn fork
+の呼び出しを越えて、プロセスを追跡します。
+親プロセスは
+.Va fflags
+フィールドに NOTE_TRACK をセットして戻り、一方、子プロセスは
+.Va fflags
+に NOTE_CHILD を
+.Va data
+に親プロセスの PID をセットし戻ります。
+.It NOTE_TRACKERR
+このフラグは、システムが子プロセスへのイベントを
+結び付けることができなかったときに戻ります。
+通常、これは資源の制限により生じます。
+.El
+.Pp
+戻るときに、
+.Va fflags
+はフィルタをトリガしたイベントが入っています。
+.It EVFILT_SIGNAL
+監視するシグナル番号を識別子に引数として取ります。
+与えられたシグナルがプロセスに配送されたときに戻ります。
+これは
+.Fn signal
+および
+.Fn sigaction
+の仕組みと共存し、低い優先順位を持っています。
+たとえそのシグナルが SIG_IGN とマークされていたとしても、
+フィルタはプロセスに配送されようとしたシグナル全てを記録します。
+通常のシグナル配送処理の後に、イベント通知が発生します。
+.Va data
+には
+.Fn kevent
+を最後に呼び出してからのシグナル発生の回数が返ります。
+このフィルタは内部で自動的に EV_CLEAR フラグをセットします。
+.It EVFILT_TIMER
+.Va ident
+で識別される、任意のタイマを設定します。
+タイマを追加する場合、
+.Va data
+はタイムアウトをミリ秒単位で指定します。
+EV_ONESHOT を指定しない限り、タイマは周期的です。
+.Va data
+には、
+.Fn kevent
+を最後に呼び出してからのタイムアウトの回数が返ります。
+このフィルタは内部で自動的に EV_CLEAR フラグをセットします。
+.It Dv EVFILT_NETDEV
+識別子としてネットワークインタフェースの記述子を取り、
+監視するイベントを
+.Va fflags
+に取ります。
+記述子上に要求されたイベントが 1 つ以上発生したとき、戻ります。
+監視可能なイベントは次の通りです:
+.Bl -tag -width XXNOTE_LINKDOWN
+.It Dv NOTE_LINKUP
+リンクがアップ。
+.It Dv NOTE_LINKDOWN
+リンクがダウン。
+.It Dv NOTE_LINKINV
+リンク状態が無効。
+.El
+.Pp
+戻るとき、フィルタをトリガしたイベントが
+.Va fflags
+に格納されます。
+.El
+.Sh 戻り値
+.Fn kqueue
+システムコールは新規のカーネルイベントキューを生成し、
+ファイル記述子を返します。
+カーネルイベントキューの生成時にエラーがあった場合には、
+値 -1 が返されて errno がセットされます。
+.Pp
+.Fn kevent
+システムコールは
+.Fa eventlist
+に配列されているイベントの数を返します。
+この数は、最大
+.Fa nevents
+で与えられた値までです。
+.Fa changelist
+の要素の処理中にエラーが発生し、かつ
+.Fa eventlist
+に十分な余地がある場合には、
+.Va flags
+に
+.Dv EV_ERROR
+がセットされ、
+.Va data
+にシステムエラーがセットされたイベントが、
+.Fa eventlist
+に置かれます。
+さもなければ、
+.Dv -1
+が返され、
+.Dv errno
+がエラー状態を示すためにセットされます。
+時間切れの場合には、
+.Fn kevent
+は 0 を返します。
+.Sh エラー
+.Fn kqueue
+システムコールは以下の場合に失敗します:
+.Bl -tag -width Er
+.It Bq Er ENOMEM
+カーネルがカーネルキューのための十分なメモリの割り当てに失敗しました。
+.It Bq Er EMFILE
+プロセスの記述子テーブルが満杯です。
+.It Bq Er ENFILE
+システムファイルテーブルが満杯です。
+.El
+.Pp
+.Fn kevent
+関数は以下の場合に失敗します:
+.Bl -tag -width Er
+.It Bq Er EACCES
+プロセスがフィルタを登録する権限を持っていません。
+.It Bq Er EFAULT
+.Va kevent
+構造体の読取りまたは書込みでエラーがありました。
+.It Bq Er EBADF
+指定された記述子が有効ではありません。
+.It Bq Er EINTR
+時間切れ前や、戻るための何らかのイベントが kqueue に
+置かれる前に、シグナルが配送されました。
+.It Bq Er EINVAL
+指定されたタイムリミットまたはフィルタが無効です。
+.It Bq Er ENOENT
+修正または削除されるべきイベントが見つかりません。
+.It Bq Er ENOMEM
+イベント登録のためのメモリがありません。
+.It Bq Er ESRCH
+結び付けるために指定したプロセスが存在しません。
+.El
+.Sh 関連項目
+.Xr aio_error 2 ,
+.Xr aio_read 2 ,
+.Xr aio_return 2 ,
+.Xr poll 2 ,
+.Xr read 2 ,
+.Xr select 2 ,
+.Xr sigaction 2 ,
+.Xr write 2 ,
+.Xr signal 3
+.Sh 歴史
+.Fn kqueue
+および
+.Fn kevent
+システムコールは
+.Fx 4.1
+ではじめて登場しました。
+.Sh 作者
+.Fn kqueue
+システムと、このマニュアルページは
+.An Jonathan Lemon Aq jlemon@FreeBSD.org
+が書きました。
+.Sh バグ
+現在は、UFS ファイルシステムに属さない
+.Xr vnode 9
+を監視することができません。
+.Pp
+.Dv EVFILT_NETDEV
+フィルタが現在実装されているのは、LINKUP と LINKDOWN の操作に
+.Xr miibus 4
+ドライバを使用しているデバイスに対してのみです。
+そのため、非イーサネットデバイスに対しては動作しません。
+.Pp
+.Fa timeout
+の値は 24 時間に制限されています。
+より長いタイムアウトは暗黙のうちに 24 時間として再解釈されます。

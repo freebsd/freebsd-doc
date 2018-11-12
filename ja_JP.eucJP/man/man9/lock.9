@@ -1,0 +1,280 @@
+.\"
+.\" Copyright (C) 2002 Chad David <davidc@acns.ab.ca>. All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice(s), this list of conditions and the following disclaimer as
+.\"    the first lines of this file unmodified other than the possible
+.\"    addition of one or more copyright notices.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice(s), this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER(S) ``AS IS'' AND ANY
+.\" EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+.\" WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+.\" DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT HOLDER(S) BE LIABLE FOR ANY
+.\" DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+.\" (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+.\" SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+.\" CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+.\" DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man9/lock.9,v 1.11 2003/09/08 19:57:21 ru Exp %
+.\"
+.\" $FreeBSD$
+.Dd July 9, 2001
+.Dt LOCK 9
+.Os
+.Sh 名称
+.Nm lockinit ,
+.Nm lockdestroy ,
+.Nm lockcount ,
+.Nm lockmgr ,
+.Nm lockstatus ,
+.Nm lockmgr_printinfo
+.Nd lockmgr ファミリの関数
+.Sh 書式
+.In sys/types.h
+.In sys/lockmgr.h
+.Ft void
+.Fn lockinit "struct lock *lkp" "int prio" "const char *wmesg" "int timo" "int flags"
+.Ft void
+.Fn lockdestroy "struct lock *lkp"
+.Ft int
+.Fn lockcount "struct lock *lkp"
+.Ft int
+.Fn lockmgr "struct lock *lkp" "u_int flags" "struct mtx *interlkp" "struct thread *td"
+.Ft int
+.Fn lockstatus "struct lock *lkp" "struct thread *td"
+.Ft void
+.Fn lockmgr_printinfo "struct lock *lkp"
+.Sh 解説
+.Fn lockinit
+関数はロックを初期化するために使用されます。
+これはロックに関する実行されることが可能なあらゆる操作の前に、
+呼び出されなければなりません。
+引数は以下の通りです。
+.Bl -tag -width ".Fa wmesg"
+.It Fa lkp
+初期化されるべきロックへのポインタです。
+.It Fa prio
+.Xr msleep 9
+に渡される優先度です。
+.It Fa wmesg
+ロックのメッセージです。
+これはデバッグ出力と
+.Xr msleep 9
+の両方のために使用されます。
+.It Fa timo
+.Xr msleep 9
+に渡されるタイムアウト値です。
+.It Fa flags
+ロックを初期化するために使用されるべきフラグです。
+.Bl -tag -width ".Dv LG_CANRECURSE"
+.It Dv LK_NOWAIT
+ロックを獲得するとき、スリープしません。
+.It Dv LK_SLEEPFAIL
+スリープした後に失敗します。
+.It Dv LK_CANRECURSE
+再帰的な排他ロックを許可します。
+.It Dv LK_REENABLE
+ロックをドレインした後、そのロックを再度有効化します。
+.It Dv LK_NOPAUSE
+ロックを獲得するとき、スピンロックを使用しません。
+.It Dv LK_TIMELOCK
+スリープしている間
+.Fa timo
+を使用します。そうでなければ 0 が使用されます。
+.El
+.El
+.Pp
+.Fn lockdestroy
+関数はロックを破壊するために使用され、カーネル内のいくつかの場所で
+呼び出されますが、現在は何もしません。
+.Pp
+.Fn lockcount
+関数はロック
+.Fa lkp
+に対する排他ロックと共有ロックのカウント数を返します。
+.Pp
+.Fn lockmgr
+関数は共有ロックと排他ロックおよび再帰のサポートを含む、
+カーネル内部の一般的なロック機能を取り扱います。
+.Fn lockmgr
+はロックのアップグレードとダウングレードも可能です。
+.Pp
+引数は以下の通りです。
+.Bl -tag -width ".Fa interlkp"
+.It Fa lkp
+操作するべきロックへのポインタです。
+.It Fa flags
+行なわれるべき操作を示しているフラグです。
+.Bl -tag -width ".Dv LK_EXCLUPGRADE"
+.It Dv LK_SHARED
+共有ロックを獲得します。
+現在排他ロックが保持されている場合には、ダウングレードされます。
+.It Dv LK_EXCLUSIVE
+排他ロックを獲得します。
+既に排他ロックが保持されていて、
+.Dv LK_CANRECURSE
+が設定されていない場合には、システムは
+.Xr panic 9
+します。
+.It Dv LK_DOWNGRADE
+排他ロックから共有ロックにダウングレードします。
+共有ロックのダウングレードは許可されていません。
+排他ロックが既に再帰している場合には、全ての参照がダウングレードされます。
+.It Dv LK_EXCLUPGRADE
+共有ロックから排他ロックにアップグレードします。
+他の誰かが先にアップグレードを待っている最中の場合には、
+.Er EBUSY
+で失敗します。
+この呼び出しが失敗した場合には、その共有ロックは失われます。
+排他ロックのアップグレードの試みは
+.Xr panic 9
+を引き起こします。
+.It Dv LK_UPGRADE
+共有ロックから排他ロックにアップグレードします。
+この呼び出しが失敗した場合には、その共有ロックは失われます。
+排他ロックのアップグレードの試みは
+.Xr panic 9
+を引き起こします。
+.It Dv LK_RELEASE
+ロックを解放します。
+保持していないロックの解放は、
+.Xr panic 9
+を引き起こすことがあります。
+.It Dv LK_DRAIN
+ロック上の全ての行動の終了を待ち、それから役割を終えた印を付けます。
+今にも解放されようとしているメモリの一部分のロックを解放する前に使用されます。
+.In ( sys/lockmgr.h
+に解説されています。)
+.It Dv LK_SLEEPFAIL
+操作がスリープした場合には、失敗します。
+.It Dv LK_NOWAIT
+この呼び出しがスリープすることを認めません。
+これはロックをテストするために使用することが可能です。
+.It Dv LK_CANRECURSE
+排他ロック上の再帰を認めます。
+それぞれのロックに対し、解放が存在しなければなりません。
+.It Dv LK_INTERLOCK
+(既にロックされているべき) 相互ロックをロック解除します。
+.El
+.It Fa interlkp
+ロックへのグループアクセスを制御するための相互ロック mutex です。
+.Dv LK_INTERLOCK
+が指定された場合には、
+.Fn lockmgr
+は
+.Fa interlkp
+は現在所有されていて再帰していないと仮定し、ロック解除されて返します。
+.Xr mtx_assert 9
+を参照してください。
+.It Fa td
+この呼び出しに責任があるレッドです。
+.Dv NULL
+は
+.Dv LK_KERNPROC
+になります。
+.El
+.Pp
+.Fn lockstatus
+関数は渡された
+.Vt thread
+に関するロックの状態を返します。
+.Fa td
+が
+.Dv NULL
+で排他ロックが保持されている場合には、
+.Dv LK_EXCLUSIVE
+が返されます。
+.Pp
+.Fn lockmgr_printinfo
+関数はロックについてのデバッグ情報を出力します。
+これは主に
+.Xr VOP_PRINT 9
+関数によって使用されます。
+.Sh 戻り値
+.Fn lockcount
+関数は 0 以上の整数を返します。
+.Pp
+.Fn lockmgr
+関数は成功時には 0 を、失敗時には 0 ではない値を返します。
+.Pp
+.Fn lockstatus
+関数は以下の値を返します。
+.Bl -tag -width ".Dv LK_EXCLUSIVE"
+.It Dv LK_EXCLUSIVE
+スレッド
+.Fa td
+によって排他ロックが保持されています。
+.It Dv LK_EXCLOTHER
+スレッド
+.Fa td
+ではない他の誰かによって排他ロックが保持されています。
+.It Dv LK_SHARED
+共有ロックが保持されています。
+.It Li 0
+だれもロックを保持していません。
+.El
+.Sh エラー
+.Fn lockmgr
+は次の場合に失敗します。
+.Bl -tag -width Er
+.It Bq Er EBUSY
+.Dv LK_FORCEUPGRADE
+が要求されて、ほかのスレッドが既にロックのアップグレードを要求しています。
+.It Bq Er EBUSY
+.Dv LK_NOWAIT
+が設定されて、スリープが要求されていました。
+.It Bq Er ENOLCK
+.Dv LK_SLEEPFAIL
+が設定されて、
+.Fn lockmgr
+は既にスリープしました。
+.It Bq Er EINTR
+ロックの優先度に
+.Dv PCATCH
+が設定されて、スリープしている間にシグナルが配送されました。
+下記の
+.Er ERESTART
+エラーに注意してください。
+.It Bq Er ERESTART
+ロックの優先度に
+.Dv PCATCH
+が設定されて、スリープしている間にシグナルが配送され、システムコールが
+再スタートされました。
+.It Bq Er EWOULDBLOCK
+0 でないタイムアウトが与えられ、そのタイムアウトが満了しました。
+.El
+.Sh ロック
+.Fn lockmgr
+への
+.Fa flags
+引数に
+.Dv LK_INTERLOCK
+が渡された場合には、
+.Fa interlkp
+は
+.Fn lockmgr
+を呼び出すために以前に保持されていなければならず、ロック解除されて返されます。
+.Pp
+失敗するアップグレードの試みは、現在保持しているロックを失わせる
+結果になります。
+また、排他ロックのアップグレードは無効で、試行の結果として
+.Xr panic 9
+を引き起こします。
+.Sh 関連項目
+.Xr msleep 9 ,
+.Xr mtx_assert 9 ,
+.Xr panic 9 ,
+.Xr VOP_PRINT 9
+.Sh 作者
+このマニュアルページは
+.An Chad David Aq davidc@acns.ab.ca
+が書きました。

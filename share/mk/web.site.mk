@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.72 2006/02/25 23:19:40 hrs Exp $
+# $FreeBSD$
 
 #
 # Build and install a web site.
@@ -19,12 +19,23 @@ WEBDIR?=	${.CURDIR:T}
 CGIDIR?=	${.CURDIR:T}
 DESTDIR?=	${HOME}/public_html
 
+_ID?=		/usr/bin/id
+_UID!=		${_ID} -u
+
 WEBOWN?=	${USER}
+.if (${_UID} > 0)
+WEBGRP?=	${USER}
+.else
 WEBGRP?=	www
+.endif
 WEBMODE?=	664
 
 CGIOWN?=	${USER}
+.if (${_UID} > 0)
+CGIGRP?=	${USER}
+.else
 CGIGRP?=	www
+.endif
 CGIMODE?=	775
 
 BUNZIP2?=	/usr/bin/bunzip2
@@ -56,8 +67,7 @@ SGMLNORM?=	${PREFIX}/bin/sgmlnorm
 .else
 SGMLNORM?=	${PREFIX}/bin/osgmlnorm
 .endif
-CATALOG?=	${PREFIX}/share/sgml/html/catalog
-SGMLNORMOPTS?=	-d ${SGMLNORMFLAGS} -c ${CATALOG} -D ${.CURDIR}
+SGMLNORMOPTS?=	-d ${SGMLNORMFLAGS} ${CATALOG:S,^,-c ,} -D ${.CURDIR}
 
 XSLTPROC?=	${PREFIX}/bin/xsltproc
 XSLTPROCOPTS?=	${XSLTPROCFLAGS}
@@ -78,6 +88,10 @@ HTML2TXT?=	${PREFIX}/bin/w3m
 HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 ISPELL?=	ispell
 ISPELLOPTS?=	-l -p /usr/share/dict/freebsd ${ISPELLFLAGS}
+
+.if defined(WWWFREEBSDORG)
+SGMLNORMOPTS+=	-i html.header.script.google
+.endif
 
 WEBCHECK?=	${PREFIX}/bin/webcheck
 WEBCHECKOPTS?=	-ab ${WEBCHECKFLAGS}
@@ -115,7 +129,7 @@ PORTSBASE?=	/usr
 #
 # URL where INDEX can be found (define NOPORTSNET to disable)
 #
-INDEXURI?=	http://www.FreeBSD.org/ports/INDEX-6
+INDEXURI?=	http://www.FreeBSD.org/ports/INDEX-8
 
 #
 # Instruct bsd.subdir.mk to NOT to process SUBDIR directive.  It is not
@@ -126,49 +140,34 @@ NO_SUBDIR=	YES
 #
 # for dependency
 #
-.if !defined(WITHOUT_DOC)
-#
-# When WITHOUT_DOC is not defined, we use doc.common.mk.
-#
-DOC_PREFIX?=	${WEB_PREFIX}/../doc
-.if exists(${DOC_PREFIX}/share/mk/doc.common.mk)
 .include "${DOC_PREFIX}/share/mk/doc.common.mk"
 .include "${DOC_PREFIX}/share/mk/doc.xml.mk"
-.else
-.error	${DOC_PREFIX}/share/mk/doc.common.mk not found.\
-	Define $$WITHOUT_DOC and $$WEB_ONLY for performing a partial\
-	build without the doc/ module.
-.endif
-.else # !defined(WITHOUT_DOC)
-#
-# When WITHOUT_DOC is defined, we should not use files in doc/ module at all.
-#
-.if !defined(WWW_LANGCODE) || empty(WWW_LANGCODE)
-_WEB_PREFIX!=			realpath ${WEB_PREFIX}
-WWW_LANGCODE:=			${.CURDIR:S,^${_WEB_PREFIX}/,,:C,^([^/]+)/.*,\1,}
-.undef _WEB_PREFIX
-.include "${WEB_PREFIX}/share/mk/doc.xml.mk"
-.endif
-.endif # !defined(WITHOUT_DOC)
 
+_INCLIST=	navibar.ent \
+		navibar.l10n.ent \
+		common.ent \
+		header.ent \
+		header.l10n.ent \
+		iso8879.ent \
+		l10n.ent \
+		release.ent
 _SGML_INCLUDES=	${SGML_INCLUDES}
-_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navabout.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navcommunity.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdevelopers.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdocs.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdownload.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navsupport.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.header.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navabout.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navcommunity.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navdevelopers.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navdocs.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navdownload.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navsupport.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.misc.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.release.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.sgml
+
+.for F in ${_INCLIST}
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/${F})
+_SGML_INCLUDES+=${DOC_PREFIX}/${LANGCODE}/share/sgml/${F}
+.endif
+.if exists(${DOC_PREFIX}/share/sgml/${F})
+_SGML_INCLUDES+=${DOC_PREFIX}/share/sgml/${F}
+.endif
+.endfor
+
+CATALOG?=	${PREFIX}/share/sgml/html/catalog \
+		${PREFIX}/share/sgml/catalog
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog)
+CATALOG+=	${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog
+.endif
+CATALOG+=	${DOC_PREFIX}/share/sgml/catalog
 
 ##################################################################
 # Transformation rules
@@ -182,15 +181,15 @@ _SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.sgml
 
 .SUFFIXES:	.sgml .html
 .if defined(REVCHECK)
-PREHTML?=	${WEB_PREFIX}/ja/prehtml
-CANONPREFIX0!=	cd ${WEB_PREFIX}; ${ECHO_CMD} $${PWD};
+PREHTML?=	${DOC_PREFIX}/ja_JP.eucJP/htdocs/prehtml
+CANONPREFIX0!=	cd ${DOC_PREFIX}; ${ECHO_CMD} $${PWD};
 CANONPREFIX=	${PWD:S/^${CANONPREFIX0}//:S/^\///}
 LOCALTOP!=	${ECHO_CMD} ${CANONPREFIX} | \
 	${PERL} -pe 's@[^/]+@..@g; $$_.="/." if($$_ eq".."); s@^\.\./@@;'
 DIR_IN_LOCAL!=	${ECHO_CMD} ${CANONPREFIX} | ${PERL} -pe 's@^[^/]+/?@@;'
 PREHTMLOPTS?=	-revcheck "${LOCALTOP}" "${DIR_IN_LOCAL}" ${PREHTMLFLAGS}
 .else
-DATESUBST?=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"Last modified: \1">/'
+DATESUBST?=	's/<!ENTITY date[ \t]*"$$Free[B]SD. \(.*\) \(.*\) \(.* .*\) .* $$">/<!ENTITY date	"Last modified: \3 \(\1 r\2\)">/'
 # Force override base to point to http://www.FreeBSD.org/.  Note: This
 # is used for http://security.FreeBSD.org/ .
 .if WITH_WWW_FREEBSD_ORG_BASE
@@ -202,11 +201,17 @@ PREHTML?=	${SED} -e ${DATESUBST} ${BASESUBST}
 GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
 ORPHANS:=	${ORPHANS:N*.sgml}
 
+# XXX: using a pipe between ${PREHTML} and ${SGMLNORM} should be better,
+# but very strange errors will be reported when using osgmlnorm (from
+# OpenSP.  sgmlnorm works fine).  For the moment, we use a temporary file
+# to prevent it.
+
 .sgml.html: ${_SGML_INCLUDES}
-	${PREHTML} ${PREHTMLOPTS} ${.IMPSRC} | \
+	${PREHTML} ${PREHTMLOPTS} ${.IMPSRC} > ${.IMPSRC}-tmp
 	${SETENV} SGML_CATALOG_FILES= \
-		${SGMLNORM} ${SGMLNORMOPTS} > ${.TARGET} || \
-			(${RM} -f ${.TARGET} && false)
+		${SGMLNORM} ${SGMLNORMOPTS} ${.IMPSRC}-tmp > ${.TARGET} || \
+			(${RM} -f ${.IMPSRC}-tmp ${.TARGET} && false)
+	${RM} -f ${.IMPSRC}-tmp
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
@@ -245,7 +250,7 @@ ECHODIR=	${TRUE}
 
 # detect relative ${.CURDIR}
 _CURDIR!=	realpath ${.CURDIR}
-_PFXDIR!=	realpath ${WEB_PREFIX}
+_PFXDIR!=	realpath ${DOC_PREFIX}
 CDIR=		${_CURDIR:S/${_PFXDIR}\///}
 
 # populate missing directories list based on $SUBDIR

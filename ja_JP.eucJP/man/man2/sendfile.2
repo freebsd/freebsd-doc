@@ -1,0 +1,253 @@
+.\" Copyright (c) 2003, David G. Lawrence
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice unmodified, this list of conditions, and the following
+.\"    disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/lib/libc/sys/sendfile.2,v 1.23.2.2 2005/02/28 03:32:34 brueffer Exp %
+.\"
+.\" $FreeBSD$
+.Dd October 16, 2004
+.Dt SENDFILE 2
+.Os
+.Sh 名称
+.Nm sendfile
+.Nd ファイルをソケットに送信
+.Sh ライブラリ
+.Lb libc
+.Sh 書式
+.In sys/types.h
+.In sys/socket.h
+.In sys/uio.h
+.Ft int
+.Fo sendfile
+.Fa "int fd" "int s" "off_t offset" "size_t nbytes"
+.Fa "struct sf_hdtr *hdtr" "off_t *sbytes" "int flags"
+.Fc
+.Sh 解説
+.Fn sendfile
+システムコールは、記述子
+.Fa fd
+によって指定された通常のファイルを、記述子
+.Fa s
+によって指定されたストリームソケットから送信します。
+.Pp
+.Fa offset
+引数はファイルのどこから開始すべきかを指定します。
+.Fa offset
+がファイルの終りを超えていた場合は、システムは
+次に説明されるように成功を返して、0 バイトを送信したと報告します。
+.Fa nbytes
+引数は、ファイルの何バイトを送信する必要があるかを指定します。
+0 は、ファイルの終わりまで送信するという特殊な意味を持ちます。
+.Pp
+オプションのヘッダまたはトレーラ、またはその両方は、構造体 sf_hdtr を
+指すポインタを指定することによってファイルの前と後で送信できます。
+.Vt "struct sf_hdtr"
+の構造は次のとおりです:
+.Pp
+.Bd -literal -offset indent -compact
+struct sf_hdtr {
+	struct iovec *headers;  /* ヘッダ iovecs を指すポインタ */
+	int hdr_cnt;            /* ヘッダ iovecs の数 */
+	struct iovec *trailers; /* トレーラ iovecs を指すポインタ */
+	int  trl_cnt;           /* トレーラ iovecs の数 */
+};
+.Ed
+.Pp
+.Fa headers
+ポインタと
+.Fa trailers
+ポインタは、
+.Dv NULL
+でない場合に
+.Vt "struct iovec"
+構造体の配列を指します。
+iovec 構造体の詳細については、
+.Fn writev
+システムコールを参照してください。
+これらの配列内の iovecs の数は、
+.Fa hdr_cnt
+と
+.Fa trl_cnt
+によって指定されます。
+.Pp
+.Dv NULL
+でない場合に、システムは、ソケット上に送信された合計バイト数を、
+.Fa sbytes
+によって指された変数に書き込みます。
+.Pp
+.Fa flags
+引数として利用できる値は 1 つです:
+.Dv SF_NODISKIO
+。
+このフラグは、ディスク入出力でブロックされるであろうすべての
+.Fn sendfile
+呼び出しに対して、代わりに
+.Er EBUSY
+を返させます。
+ブロックされる転送要求を 1 つの分離された入出力ワーカスレッドにすることで、
+忙しいサーバには役に立つことがあります。
+.Pp
+非ブロッキング入出力用に指定されたソケットを使用するときに、
+.Fn sendfile
+は要求されたよりも少ないバイトを送信することがあります。
+この場合、正常に書き込まれたバイト数が
+.Fa *sbytes
+(指定されている場合) に返され、エラー
+.Er EAGAIN
+が返されます。
+.Sh 実装に関する注
+.Fn sendfile
+の
+.Fx
+での実装は「0 コピー」です。
+すなわち、ファイルデータのコピーが回避されるように最適化されています。
+.Sh チューニング
+内部ではこのシステムコールは、クライアントへの送信ファイルデータを
+取り扱うために、特別な
+.Fn sendfile
+バッファ
+.Pq Vt "struct sf_buf"
+を使用しています。
+送信ソケットがブロックされていて、
+利用可能な
+.Fn sendfile
+バッファが十分でない場合には、
+.Fn sendfile
+はブロックされ、
+.Dq Li sfbufa
+の状態を報告します。
+送信ソケットがブロックされておらず、利用可能な
+.Fn sendfile
+バッファが十分でない場合には、
+この呼び出しはブロックされ、呼び出しを終了する前に必要なバッファが
+利用可能になるのを待ちます。
+.Pp
+.Vt sf_buf
+の割り当てられた数は、
+.Fn sendfile
+を介してクライアントにデータを送信するために使用される nmbclusters の数に、
+比例しているべきです。
+ブロッキングを避けるために適宜にチューンしましょう!
+.Fn sendfile
+を広範囲に使用する忙しい装置が、
+.Va kern.ipc.nmbclusters
+に展開されるこれらの値を増加させたくなるかもしれません
+(詳細は
+.Xr tuning 7
+を参照してください)。
+.Pp
+利用可能な
+.Fn sendfile
+バッファの数は、
+.Xr loader.conf 5
+の中の
+.Va kern.ipc.nsfbufs
+変数または
+.Dv NSFBUFS
+カーネルコンフィギュレーション調整のどちらかによって、ブート時に決定されます。
+.Fn sendfile
+バッファの数は
+.Va kern.maxusers
+に合わせて調整されます。
+.Va kern.ipc.nsfbufsused
+および
+.Va kern.ipc.nsfbufspeak
+の読み取り専用の
+.Xr sysctl 8
+変数は現在とピークの
+.Fn sendfile
+バッファの使用量をそれぞれ表します。
+これらの値は
+.Nm netstat Fl m
+を通しても見ることができます。
+.Sh 戻り値
+.Rv -std sendfile
+.Sh エラー
+.Bl -tag -width Er
+.It Bq Er EBADF
+.Fa fd
+引数が有効なファイル記述子ではありません。
+.It Bq Er EBADF
+.Fa s
+引数が有効なソケット記述子ではありません。
+.It Bq Er EBUSY
+完全な転送を完了するにはディスク入出力が必要となるため、中断されました。
+部分的なデータは送られたかもしれません
+(このエラーは
+.Dv SF_NODISKIO
+が指定されたときのみ起こります)。
+.It Bq Er ENOTSOCK
+.Fa s
+引数がソケットではありません。
+.It Bq Er EINVAL
+.Fa fd
+引数が通常のファイルではありません。
+.It Bq Er EINVAL
+.Fa s
+引数が SOCK_STREAM 型のソケットではありません。
+.It Bq Er EINVAL
+.Fa offset
+引数が負です。
+.It Bq Er ENOTCONN
+.Fa s
+引数が、未接続のソケットを指しています。
+.It Bq Er EPIPE
+通信相手が接続を閉じてしまいました。
+.It Bq Er EIO
+.Fa fd
+から読取り中に入出力エラーが発生しました。
+.It Bq Er EFAULT
+引数について無効なアドレスが指定されました。
+.It Bq Er EINTR
+.Fn sendfile
+が完了する前にシグナルが割り込みました。
+.Fa *sbytes
+が指定された場合には、成功裏に送出されたバイト数がここに格納されます。
+.It Bq Er EAGAIN
+ソケットは非ブロッキング入出力と指定されており、ソケットバッファが
+満杯であるためにすべてのデータが送信されませんでした。
+sbytes が指定された場合、送信が正常に完了したバイト数が
+.Fa *sbytes
+内に返されます。
+.El
+.Sh 関連項目
+.Xr netstat 1 ,
+.Xr open 2 ,
+.Xr send 2 ,
+.Xr socket 2 ,
+.Xr writev 2 ,
+.Xr tuning 7
+.Sh 歴史
+.Fn sendfile
+システムコールは、
+.Fx 3.0
+ではじめて登場しました。
+このマニュアルページは
+.Fx 3.1
+ではじめて登場しました。
+.Sh 作者
+.Fn sendfile
+システムコールとこのマニュアルページは
+.An David G. Lawrence Aq dg@dglawrence.com
+が作成しました。

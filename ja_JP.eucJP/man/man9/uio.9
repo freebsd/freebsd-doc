@@ -1,0 +1,177 @@
+.\"
+.\" Copyright (c) 1997 Joerg Wunsch
+.\"
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE DEVELOPERS ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man9/uio.9,v 1.15 2004/04/15 07:24:10 markm Exp %
+.\"
+.\"
+.\" $FreeBSD$
+.Dd February 2, 1997
+.Os
+.Dt UIO 9
+.Sh 名称
+.Nm uio ,
+.Nm uiomove
+.Nd デバイスドライバ入出力ルーチン
+.Sh 書式
+.In sys/types.h
+.In sys/uio.h
+.Pp
+.Bd -literal
+struct uio {
+	struct	iovec *uio_iov;
+	int	uio_iovcnt;
+	off_t	uio_offset;
+	int	uio_resid;
+	enum	uio_seg uio_segflg;
+	enum	uio_rw uio_rw;
+	struct	thread *uio_td;
+};
+.Ed
+.Ft int
+.Fn uiomove "void *buf" "int howmuch" "struct uio *uiop"
+.Sh 解説
+.Fn uiomove
+関数は、ユーザ空間とカーネル空間の境界を越えることさえ可能で、
+バッファと入出力ベクタ間のデータ転送の実行に使用されます。
+.Pp
+文字型デバイスのドライバに渡された、あらゆる
+.Xr read 2 ,
+.Xr write 2 ,
+.Xr readv 2
+ないし
+.Xr writev 2
+システムコールの結果として、適切なドライバの
+.Va d_read
+または
+.Va d_write
+エントリが
+.Vt "struct uio"
+構造体のポインタを渡されて呼び出されます。
+転送のリクエストは、この構造体の中にエンコードされます。
+ドライバ自身もこの構造体の中のデータを取り出すために
+.Fn uiomove
+を使用するべきです。
+.Pp
+.Vt uio
+構造体の各フィールドは下記のとおりです。
+.Bl -tag -width ".Va uio_iovcnt"
+.It Va uio_iov
+処理すべき入出力ベクタの配列です。
+散在的な入出力の場合には、一つ以上のベクタとなるでしょう。
+.It Va uio_iovcnt
+存在している入出力ベクタの数を示します。
+.It Va uio_offset
+デバイスのオフセットです。
+.It Va uio_resid
+処理すべきバイト数です。
+.It Va uio_segflg
+以下のフラグの中の一つです。
+.Bl -tag -width ".Dv UIO_USERSPACE"
+.It Va UIO_USERSPACE
+入出力ベクタはプロセスのアドレス空間を指しています。
+.It Va UIO_SYSSPACE
+入出力ベクタはカーネルのアドレス空間を指しています。
+.It Va UIO_NOCOPY
+オブジェクト中に既にデータがあり、コピーしません。
+.El
+.It Va uio_rw
+要求された転送の方向を示し、
+.Dv UIO_READ
+または
+.Dv UIO_WRITE
+です。
+.It Va uio_procp
+スレッドに関連付けられた
+.Vt "struct thread"
+構造体へのポインタです。
+.Dv uio_segflg
+がプロセスのアドレス空間との転送をすべきであると示している場合に
+使用されます。
+.El
+.Sh 使用例
+考え方として、ドライバはデータのためのプライベートなバッファの保守を行ない、
+このバッファの最大サイズのデータのかたまりの要求を処理します。
+下記のバッファの取り扱いはとても簡略化されていて
+恐らく動きません(バッファのポインタは部分的な読み込みの場合進みません)し、
+.Nm
+の取り扱いを実際にやって見せているだけだ、ということに注意してください。
+.Bd -literal
+/* MIN() の定義はこの中にあります */
+#include <sys/param.h>
+
+#define BUFSIZE 512
+static char buffer[BUFSIZE];
+
+static int data_available;	/* 読み込めるデータ量 */
+
+static int
+fooread(dev_t dev, struct uio *uio, int flag)
+{
+	int rv, amnt;
+
+	rv = 0;
+	while (uio->uio_resid > 0) {
+		if (data_available > 0) {
+			amnt = MIN(uio->uio_resid, data_available);
+			rv = uiomove(buffer, amnt, uio);
+			if (rv != 0)
+				break;
+			data_available -= amnt;
+		} else
+			tsleep(...);	/* より良い時期まで待つ */
+	}
+	if (rv != 0) {
+		/* エラーのクリーンアップをここで行なう */
+	}
+	return (rv);
+}
+.Ed
+.Sh 戻り値
+.Fn uiomove
+は
+プロセスのアドレス空間との転送の場合に、
+.Xr copyin 9
+または
+.Xr copyout 9
+によって引き起こされた
+.Er EFAULT
+を返すことがあります。
+.Sh 関連項目
+.Xr read 2 ,
+.Xr readv 2 ,
+.Xr write 2 ,
+.Xr writev 2 ,
+.Xr copyin 9 ,
+.Xr copyout 9 ,
+.Xr sleep 9
+.Sh 歴史
+.Nm
+の仕組みはある早期のバージョンの
+.Ux
+で登場しました。
+.Sh 作者
+このマニュアルページは
+.An J\(:org Wunsch
+が書きました。

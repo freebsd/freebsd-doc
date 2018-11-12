@@ -1,0 +1,26 @@
+# $FreeBSD$
+
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
+
+DOCS=	announce.sgml
+DOCS+=	contents.sgml
+DOCS+=	hardware.sgml
+DOCS+=	notes.sgml
+DOCS+=	qa.sgml
+DOCS+=	schedule.sgml
+
+DATA=	docbook.css
+DATA+=	errata.html
+DATA+=	hardware-alpha.html
+DATA+=	hardware-i386.html
+DATA+=	relnotes-alpha.html
+DATA+=	relnotes-i386.html
+
+DATA+=  cd1.txt cd2.txt cd3.txt cd4.txt
+
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

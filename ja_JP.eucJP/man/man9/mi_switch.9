@@ -1,0 +1,160 @@
+.\"	$NetBSD: ctxsw.9,v 1.2 1996/12/02 00:11:31 tls Exp $
+.\"
+.\" Copyright (c) 1996 The NetBSD Foundation, Inc.
+.\" All rights reserved.
+.\"
+.\" This code is derived from software contributed to The NetBSD Foundation
+.\" by Paul Kranenburg.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. All advertising materials mentioning features or use of this software
+.\"    must display the following acknowledgement:
+.\"        This product includes software developed by the NetBSD
+.\"        Foundation, Inc. and its contributors.
+.\" 4. Neither the name of The NetBSD Foundation nor the names of its
+.\"    contributors may be used to endorse or promote products derived
+.\"    from this software without specific prior written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
+.\" ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+.\" TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+.\" PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
+.\" LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+.\" CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+.\" SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+.\" INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+.\" CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+.\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+.\" POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man9/mi_switch.9,v 1.18 2004/07/03 18:29:24 ru Exp %
+.\"
+.\" $FreeBSD$
+.Dd November 24, 1996
+.Dt MI_SWITCH 9
+.Os
+.Sh 名称
+.Nm mi_switch ,
+.Nm cpu_switch ,
+.Nm cpu_throw
+.Nd 別のスレッドコンテキストへのスイッチ
+.Sh 書式
+.In sys/param.h
+.In sys/proc.h
+.Ft void
+.Fn mi_switch "void"
+.Ft void
+.Fn cpu_switch "void"
+.Ft void
+.Fn cpu_throw "void"
+.Sh 解説
+.Fn mi_switch
+関数はマシン非依存なスレッドコンテキストスイッチの前処理を実装しています。
+横取り不可能なカーネルモード実行の方針の結果として、カーネル内の数少ない
+区別された場所からのみ呼び出されます。
+いくつかの主な
+.Nm
+の使用は以下に挙げられます。
+.Bl -enum -offset indent
+.It
+.Xr sleep 9 ,
+.Xr tsleep 9
+および
+.Xr msleep
+の中から、あるリソースが利用可能になるのを待つために
+現在のスレッドが自発的に CPU を放棄するとき。
+.It
+トラップ (例えば、システムコール、デバイス割り込み) の取り扱いの後で、
+カーネルがユーザモード実行のために戻る準備のとき。
+通常この場合は、現在のプロセスのシグナル配置の中の変化の検出の後で
+マシン依存のトラップハンドリングコードによって取り扱われるか、
+より高い優先度のスレッドが実行可能になったかもしれないときです。
+後者のイベントはマシン定義の
+.Fn need_resched
+の呼び出しによるマシン非依存のスケジューリングルーチンによって伝達されます。
+.It
+シグナルハンドラコード
+.Xr ( issignal 9
+を参照) の中で、プロセスを停止させるシグナルが届けられた場合。
+.It
+スレッドが
+.Xr thread_exit 9
+の中で終了し、プロセッサの制御が次の実行可能のスレッドに渡されることが
+可能なとき。
+.It
+.Xr thread_suspend_check 9
+中で、全体としてのプロセスの停止状態のために、
+スレッドが実行を停止する必要がある
+場合。
+.El
+.Pp
+.Fn mi_switch
+はプロセス構造体の中に現在のプロセスが実行された時間量を記録して、
+そのスレッドに割当てられている CPU の時間リミット
+.Xr ( getrlimit 2
+を参照) に照らしてこの値を検査します。
+ソフトリミットの超過はそのプロセスに
+.Dv SIGXCPU
+シグナルが配信される結果を招き、一方ハードリミットの超過は
+.Dv SIGKILL
+を引き起こします。
+これらの管理上の仕事が完了した後で、
+.Fn mi_switch
+は実際にプロセスコンテキストスイッチを行なうマシン依存ルーチン
+.Fn cpu_switch
+に制御を引き渡します。
+.Pp
+.Fn cpu_switch
+は優先度キューデータ構造において、
+実行準備のできているプロセスの中から選択します。
+優先度キューは、キュー先頭構造体である配列
+.Va qs[NQS]
+で構成されます。
+個々のキュー先頭構造体により、
+同じ優先度の実行可能なプロセスのリストを識別します
+.Fa ( <sys/proc.h>
+を参照)。
+単一の語
+.Va whichqs
+は、空ではないキューが分かるビットマスクを含み、
+素早くプロセスを選択することを助けます。
+.Fn cpu_switch
+は最も高い優先度を持つキュー上のリスト
+.Po Va qs
+の中の低いインデックスが高い優先度を示す
+.Pc
+から最初のプロセスを削除しなければならず、グローバル変数
+.Dv curproc
+にそのプロセス構造体のアドレスを割当てなければなりません。
+実行キュー上に利用可能なプロセスがない場合には、
+.Fn cpu_switch
+は
+.Dq idle
+ループに移行することになっています。
+idle ループは割り込みを許可する必要があります。
+これにより、やがてプロセスが実行キュー上に再び現れます。
+.Fn cpu_switch
+がこの発生を待っている間は変数
+.Va curproc
+は
+.Dv NULL
+であるべきです。
+.Pp
+.Fn mi_switch
+および当然
+.Fn cpu_switch
+は splhigh() で呼び出されるべきであることに注意してください。
+.Pp
+.Sh 関連項目
+.Xr issignal 9 ,
+.Xr spl 9 ,
+.Xr tsleep 9 ,
+.Xr wakeup 9
+.Pp

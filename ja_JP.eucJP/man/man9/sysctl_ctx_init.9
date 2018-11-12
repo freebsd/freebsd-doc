@@ -1,0 +1,232 @@
+.\"
+.\" Copyright (c) 2000, Andrzej Bialecki <abial@FreeBSD.org>
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. The name of the author may not be used to endorse or promote products
+.\"    derived from this software without specific prior written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man9/sysctl_ctx_init.9,v 1.12 2004/07/03 18:29:24 ru Exp %
+.\" $FreeBSD$
+.\"
+.Dd July 15, 2000
+.Dt SYSCTL_CTX_INIT 9
+.Os
+.Sh 名称
+.Nm sysctl_ctx_init ,
+.Nm sysctl_ctx_free ,
+.Nm sysctl_ctx_entry_add ,
+.Nm sysctl_ctx_entry_find ,
+.Nm sysctl_ctx_entry_del
+.Nd 動的に生成された sysctl oid のための sysctl コンテキスト
+.Sh 書式
+.In sys/types.h
+.In sys/sysctl.h
+.Ft int
+.Fo sysctl_ctx_init
+.Fa "struct sysctl_ctx_list *clist"
+.Fc
+.Ft int
+.Fo sysctl_ctx_free
+.Fa "struct sysctl_ctx_list *clist"
+.Fc
+.Ft struct sysctl_ctx_entry *
+.Fo sysctl_ctx_entry_add
+.Fa "struct sysctl_ctx_list *clist"
+.Fa "struct sysctl_oid *oidp"
+.Fc
+.Ft struct sysctl_ctx_entry *
+.Fo sysctl_ctx_entry_find
+.Fa "struct sysctl_ctx_list *clist"
+.Fa "struct sysctl_oid *oidp"
+.Fc
+.Ft int
+.Fo sysctl_ctx_entry_del
+.Fa "struct sysctl_ctx_list *clist"
+.Fa "struct sysctl_oid *oidp"
+.Fc
+.Sh 解説
+これらの関数は動的に作成された oid の管理のためのインタフェースを提供します。
+sysctl コンテキストは作成された oid の必要な時の厳密な削除はもちろん、
+oid を見失わないようにすることに対して責任があります。
+これは oid の削除操作に簡単なトランザクション的な側面を追加します。
+すなわち、途中で削除操作が失敗した場合に、sysctl ツリーを以前の状態に
+ロールバックすることが可能です。
+.Pp
+.Fn sysctl_ctx_init
+関数は sysctl コンテキストを初期化します。
+.Fa clist
+引数は既に割り当てられている変数を指していなければなりません。
+コンテキストは使用の前に
+.Em 必ず
+初期化されていなければなりません。
+一度初期化されると、そのコンテキストのポインタは全ての
+.Fa SYSCTL_ADD_*
+マクロ
+.Xr ( sysctl_add_oid 9
+参照) の引数として渡されることが可能で、新しく作成される oid を指すエントリ
+を伴って更新されるでしょう。
+.Pp
+内部的には、コンテキストは
+.Xr queue 3
+TAILQ リンクリストとして表現されています。
+そのリストは
+.Li struct sysctl_ctx_entry
+エントリから成っています。
+.Bd -literal -offset indent
+struct sysctl_ctx_entry {
+	struct sysctl_oid *entry;
+	TAILQ_ENTRY(sysctl_ctx_entry) link;
+};
+
+TAILQ_HEAD(sysctl_ctx_list, sysctl_ctx_entry);
+.Ed
+.Pp
+各々のコンテキストエントリは、それが管理する 1 つの動的な oid を指します。
+新しく作成された oid は常にリストの最初に挿入されます。
+.Pp
+.Fn sysctl_ctx_free
+関数はコンテキストおよびそれが管理する関連付けられた oid を削除します。
+その関数が成功して完了した場合には、全ての管理されている oid は
+登録抹消 (ツリーから削除) され、全てのそれらに割り当てられたメモリと共に
+解放され、同様にコンテキストのエントリも解放されています。
+.Pp
+削除操作は 2 ステップで実行されます。
+最初に、各々のコンテキストエントリのために、リソースの解放を抑制するパラメータ
+.Fa del
+を 0 に設定して、関数
+.Xr sysctl_remove_oid 9
+が呼び出されます。
+このステップでエラーが無い場合には、
+.Fn sysctl_ctx_free
+は次のステップに移行します。
+最初のステップが失敗した場合には、そのコンテキストに関連付けられた
+全ての登録抹消された oid が再登録されます。
+.Pp
+.Em 注意 :
+ほとんどの場合、プログラマは oid の作成時に oid 番号として
+.Dv OID_AUTO
+を明示します。
+しかしながら、ツリーに oid を登録している間に、
+この番号は 99 よりも大きい最初の利用可能な番号に変更されます。
+コンテキスト削除の最初のステップが失敗した場合、
+oid の再登録は既に割り当てられている oid 番号を
+変更しません (OID_AUTO とは異なります)。
+これは、再登録されたエントリがツリーの中の元の位置を維持していることを
+保証します。
+.Pp
+2 番目のステップは、動的な oid の削除を実際に実行します。
+.Xr sysctl_remove_oid 9
+は最初 (すなわち、最新のエントリ) から始めて、コンテキストリストを通して
+繰り返します。
+.Em 重要 :
+この時、この関数はツリーから oid を削除するだけではなく、全てのコンテキストの
+メモリはもちろん、(oid_refcount == 0 であれば) oid のメモリも解放します。
+.Pp
+.Fn sysctl_ctx_entry_add
+関数は既存の動的な oid のコンテキストへの追加を可能にします。
+.Pp
+.Fn sysctl_ctx_entry_del
+関数はコンテキストからエントリを取り除きます。
+.Em 重要 :
+この場合、対応する
+.Li struct sysctl_ctx_entry
+のみが解放されますが、
+.Fa oidp
+ポインタはそのまま残ります。
+その後は、プログラマにこの oid に割り当てられたリソースの管理の責任があります。
+.Pp
+.Fn sysctl_ctx_entry_find
+関数は与えられた
+.Fa oidp
+をコンテキストリストの中から検索し、見付かった
+.Fa struct sysctl_ctx_entry
+へのポインタまたは
+.Dv NULL
+を返します。
+.Sh 使用例
+以下は、どのように新しいトップレベルのカテゴリを作成するか、および
+どのように既存の静的なノードに別のサブツリーを引っ掛けるか
+を示す使用例です。
+この使用例は oid の追跡を維持するためにコンテキストを使用しています。
+.Bd -literal
+#include <sys/sysctl.h>
+ ...
+struct sysctl_ctx_list clist;
+struct sysctl_oid *oidp;
+int a_int;
+char *string = "dynamic sysctl";
+ ...
+
+sysctl_ctx_init(&clist);
+oidp = SYSCTL_ADD_NODE( &clist, SYSCTL_STATIC_CHILDREN(/* ツリートップ */),
+	OID_AUTO, "newtree", CTFLAG_RW, 0, "new top level tree");
+oidp = SYSCTL_ADD_INT( &clist, SYSCTL_CHILDREN(oidp),
+	OID_AUTO, "newint", CTLFLAG_RW, &a_int, 0, "new int leaf");
+ ...
+oidp = SYSCTL_ADD_NODE( &clist, SYSCTL_STATIC_CHILDREN(_debug),
+	OID_AUTO, "newtree", CTFLAG_RW, 0, "new tree under debug");
+oidp = SYSCTL_ADD_STRING( &clist, SYSCTL_CHILDREN(oidp),
+	OID_AUTO, "newstring", CTLFLAG_R, string, 0, "new string leaf");
+ ...
+/* ここで oid を解放できます */
+if(sysctl_ctx_free(&clist)) {
+	printf("コンテキストを解放出来ません - 他の oid が依存しています");
+	return(ENOTEMPTY);
+} else {
+	printf("成功です!\\n"):
+	return(0);
+}
+.Ed
+.Pp
+この使用例は以下のサブツリーを作成します。
+.Bd -literal -offset indent
+debug.newtree.newstring
+newtree.newint
+.Ed
+.Pp
+1 つの
+.Fn sysctl_ctx_free
+の呼び出しを通して、両方のツリーが削除され、
+リソースが解放されることに注意してください。
+最新のエントリ (葉) を解放することによって始まり、それから
+古いエントリ (この場合はノード) の削除を続行します。
+.Sh 関連項目
+.Xr queue 3 ,
+.Xr sysctl 8 ,
+.Xr sysctl_add_oid 9 ,
+.Xr sysctl_remove_oid 9
+.Sh 歴史
+これらの関数は
+.Fx 4.2
+ではじめて登場しました。
+.Sh 作者
+.An Andrzej Bialecki Aq abial@FreeBSD.org
+.Sh バグ
+現在の削除アルゴリズムは多少重いです。
+最悪の場合、全ての oid が登録抹消され、再登録され、それから登録抹消され、
+削除される必要があります。
+しかしながら、削除操作がトランザクションの特質を持つことを、
+このアルゴリズムは保証します。
+.Pp
+コンテキスト上の全ての操作はリンクリストを横切ることを必要とします。
+この理由のため、エントリの作成と削除には相対的にコストがかかります。

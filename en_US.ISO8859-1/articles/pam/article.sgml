@@ -1,0 +1,1362 @@
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook V4.1-Based Extension//EN" [
+<!ENTITY % articles.ent PUBLIC "-//FreeBSD//ENTITIES DocBook FreeBSD Articles Entity Set//EN">
+%articles.ent;
+]>
+
+<!--
+  - Copyright (c) 2001-2003 Networks Associates Technology, Inc.
+  - All rights reserved.
+  -
+  - This software was developed for the FreeBSD Project by ThinkSec AS and
+  - Network Associates Laboratories, the Security Research Division of
+  - Network Associates, Inc.  under DARPA/SPAWAR contract N66001-01-C-8035
+  - ("CBOSS"), as part of the DARPA CHATS research program.
+  -
+  - Redistribution and use in source and binary forms, with or without
+  - modification, are permitted provided that the following conditions
+  - are met:
+  - 1. Redistributions of source code must retain the above copyright
+  -    notice, this list of conditions and the following disclaimer.
+  - 2. Redistributions in binary form must reproduce the above copyright
+  -    notice, this list of conditions and the following disclaimer in the
+  -    documentation and/or other materials provided with the distribution.
+  - 3. The name of the author may not be used to endorse or promote
+  -    products derived from this software without specific prior written
+  -    permission.
+  -
+  - THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+  - ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  - IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  - ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+  - FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  - DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+  - OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+  - HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+  - LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+  - OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+  - SUCH DAMAGE.
+  -->
+
+<article>
+  <articleinfo>
+    <title>Pluggable Authentication Modules</title>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <abstract>
+      <para>This article describes the underlying principles and
+	mechanisms of the Pluggable Authentication Modules (PAM)
+	library, and explains how to configure PAM, how to integrate
+	PAM into applications, and how to write PAM modules.</para>
+    </abstract>
+
+    <copyright>
+      <year>2001</year>
+      <year>2002</year>
+      <year>2003</year>
+      <holder>Networks Associates Technology, Inc.</holder>
+    </copyright>
+
+    <authorgroup>
+      <author>
+	<firstname>Dag-Erling</firstname>
+	<surname>Sm&oslash;rgrav</surname>
+	<contrib>Contributed by </contrib>
+      </author>
+    </authorgroup>
+
+    <legalnotice>
+      <para>This article was written for the FreeBSD Project by
+	ThinkSec AS and Network Associates Laboratories, the Security
+	Research Division of Network Associates, Inc. under
+	DARPA/SPAWAR contract N66001-01-C-8035 (<quote>CBOSS</quote>),
+	as part of the DARPA CHATS research program.</para>
+    </legalnotice>
+
+    <legalnotice id="trademarks" role="trademarks">
+      &tm-attrib.freebsd;
+      &tm-attrib.linux;
+      &tm-attrib.opengroup;
+      &tm-attrib.sun;
+      &tm-attrib.general;
+    </legalnotice>
+  </articleinfo>
+
+  <section id="pam-intro">
+    <title id="pam-intro.title">Introduction</title>
+
+    <para>The Pluggable Authentication Modules (PAM) library is a
+      generalized API for authentication-related services which allows
+      a system administrator to add new authentication methods simply
+      by installing new PAM modules, and to modify authentication
+      policies by editing configuration files.</para>
+
+    <para>PAM was defined and developed in 1995 by Vipin Samar and
+      Charlie Lai of Sun Microsystems, and has not changed much since.
+      In 1997, the Open Group published the X/Open Single Sign-on
+      (XSSO) preliminary specification, which standardized the PAM API
+      and added extensions for single (or rather integrated) sign-on.
+      At the time of this writing, this specification has not yet been
+      adopted as a standard.</para>
+
+    <para>Although this article focuses primarily on FreeBSD 5.x,
+      which uses OpenPAM, it should be equally applicable to FreeBSD
+      4.x, which uses Linux-PAM, and other operating systems such as
+      Linux and &solaris;.</para>
+  </section>
+
+  <section id="pam-terms">
+    <title id="pam-terms.title">Terms and conventions</title>
+
+    <section id="pam-definitions">
+      <title id="pam-definitions.title">Definitions</title>
+
+      <para>The terminology surrounding PAM is rather confused.
+	Neither Samar and Lai's original paper nor the XSSO
+	specification made any attempt at formally defining terms for
+	the various actors and entities involved in PAM, and the terms
+	that they do use (but do not define) are sometimes misleading
+	and ambiguous.  The first attempt at establishing a consistent
+	and unambiguous terminology was a whitepaper written by Andrew
+	G. Morgan (author of Linux-PAM) in 1999.  While Morgan's
+	choice of terminology was a huge leap forward, it is in this
+	author's opinion by no means perfect.  What follows is an
+	attempt, heavily inspired by Morgan, to define precise and
+	unambiguous terms for all actors and entities involved in
+	PAM.</para>
+
+      <glosslist>
+	<glossentry>
+	  <glossterm>account</glossterm>
+	  <glossdef>
+	    <para>The set of credentials the applicant is requesting
+	      from the arbitrator.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>applicant</glossterm>
+	  <glossdef>
+	    <para>The user or entity requesting authentication.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>arbitrator</glossterm>
+	  <glossdef>
+	    <para>The user or entity who has the privileges necessary
+	      to verify the applicant's credentials and the authority
+	      to grant or deny the request.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>chain</glossterm>
+	  <glossdef>
+	    <para>A sequence of modules that will be invoked in
+	      response to a PAM request.  The chain includes
+	      information about the order in which to invoke the
+	      modules, what arguments to pass to them, and how to
+	      interpret the results.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>client</glossterm>
+	  <glossdef>
+	    <para>The application responsible for initiating an
+	      authentication request on behalf of the applicant and
+	      for obtaining the necessary authentication information
+	      from him.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>facility</glossterm>
+	  <glossdef>
+	    <para>One of the four basic groups of functionality
+	      provided by PAM: authentication, account management,
+	      session management and authentication token
+	      update.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>module</glossterm>
+	  <glossdef>
+	    <para>A collection of one or more related functions
+	      implementing a particular authentication facility,
+	      gathered into a single (normally dynamically loadable)
+	      binary file and identified by a single name.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>policy</glossterm>
+	  <glossdef>
+	    <para>The complete set of configuration statements
+	      describing how to handle PAM requests for a particular
+	      service.  A policy normally consists of four chains, one
+	      for each facility, though some services do not use all
+	      four facilities.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>server</glossterm>
+	  <glossdef>
+	    <para>The application acting on behalf of the arbitrator
+	      to converse with the client, retrieve authentication
+	      information, verify the applicant's credentials and
+	      grant or deny requests.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>service</glossterm>
+	  <glossdef>
+	    <para>A class of servers providing similar or related
+	      functionality and requiring similar authentication.  PAM
+	      policies are defined on a per-service basis, so all
+	      servers that claim the same service name will be subject
+	      to the same policy.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>session</glossterm>
+	  <glossdef>
+	    <para>The context within which service is rendered to the
+	      applicant by the server.  One of PAM's four facilities,
+	      session management, is concerned exclusively with
+	      setting up and tearing down this context.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>token</glossterm>
+	  <glossdef>
+	    <para>A chunk of information associated with the account,
+	      such as a password or passphrase, which the applicant
+	      must provide to prove his identity.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>transaction</glossterm>
+	  <glossdef>
+	    <para>A sequence of requests from the same applicant to
+	      the same instance of the same server, beginning with
+	      authentication and session set-up and ending with
+	      session tear-down.</para>
+	  </glossdef>
+	</glossentry>
+      </glosslist>
+    </section>
+
+    <section id="pam-usage-examples">
+      <title id="pam-usage-examples.title">Usage examples</title>
+
+      <para>This section aims to illustrate the meanings of some of
+	the terms defined above by way of a handful of simple
+	examples.</para>
+
+      <section>
+	<title>Client and server are one</title>
+
+	<para>This simple example shows <literal>alice</literal>
+	  &man.su.1;'ing to <literal>root</literal>.</para>
+
+<screen>&prompt.user; <userinput>whoami</userinput>
+alice
+&prompt.user; <userinput>ls -l `which su`</userinput>
+-r-sr-xr-x  1 root  wheel  10744 Dec  6 19:06 /usr/bin/su
+&prompt.user; <userinput>su -</userinput>
+Password: <userinput>xi3kiune</userinput>
+&prompt.root; whoami
+root
+</screen>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>The applicant is <literal>alice</literal>.</para>
+	  </listitem>
+	  <listitem>
+	    <para>The account is <literal>root</literal>.</para>
+	  </listitem>
+	  <listitem>
+	    <para>The &man.su.1; process is both client and
+	      server.</para>
+	  </listitem>
+	  <listitem>
+	    <para>The authentication token is
+	    <literal>xi3kiune</literal>.</para>
+	  </listitem>
+	  <listitem>
+	    <para>The arbitrator is <literal>root</literal>, which is
+	      why &man.su.1; is setuid <literal>root</literal>.</para>
+	  </listitem>
+	</itemizedlist>
+      </section>
+
+      <section>
+	<title>Client and server are separate</title>
+
+	<para>The example below shows <literal>eve</literal> try to
+	  initiate an &man.ssh.1; connection to
+	  <literal>login.example.com</literal>, ask to log in as
+	  <literal>bob</literal>, and succeed.  Bob should have chosen
+	  a better password!</para>
+
+<screen>&prompt.user; <userinput>whoami</userinput>
+eve
+&prompt.user; <userinput>ssh bob@login.example.com</userinput>
+bob@login.example.com's password: <userinput>god</userinput>
+Last login: Thu Oct 11 09:52:57 2001 from 192.168.0.1
+Copyright (c) 1980, 1983, 1986, 1988, 1990, 1991, 1993, 1994
+	The Regents of the University of California.  All rights reserved.
+FreeBSD 4.4-STABLE (LOGIN) #4: Tue Nov 27 18:10:34 PST 2001
+
+Welcome to FreeBSD!
+&prompt.user;</screen>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>The applicant is <literal>eve</literal>.</para>
+	  </listitem>
+	  <listitem>
+	    <para>The client is Eve's &man.ssh.1; process.</para>
+	  </listitem>
+	  <listitem>
+	    <para>The server is the &man.sshd.8; process on
+	      <literal>login.example.com</literal></para>
+	  </listitem>
+	  <listitem>
+	    <para>The account is <literal>bob</literal>.</para>
+	  </listitem>
+	  <listitem>
+	    <para>The authentication token is
+	    <literal>god</literal>.</para>
+	  </listitem>
+	  <listitem>
+	    <para>Although this is not shown in this example, the
+	      arbitrator is <literal>root</literal>.</para>
+	  </listitem>
+	</itemizedlist>
+      </section>
+
+      <section>
+	<title>Sample policy</title>
+
+	<para>The following is FreeBSD's default policy for
+	  <literal>sshd</literal>:</para>
+
+<programlisting>sshd	auth		required	pam_nologin.so	no_warn
+sshd	auth		required	pam_unix.so	no_warn try_first_pass
+sshd	account		required	pam_login_access.so
+sshd	account		required	pam_unix.so
+sshd	session		required	pam_lastlog.so	no_fail
+sshd	password	required	pam_permit.so</programlisting>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>This policy applies to the <literal>sshd</literal>
+	      service (which is not necessarily restricted to the
+	      &man.sshd.8; server.)</para>
+	  </listitem>
+	  <listitem>
+	    <para><literal>auth</literal>, <literal>account</literal>,
+	      <literal>session</literal> and
+	      <literal>password</literal> are facilities.</para>
+	  </listitem>
+	  <listitem>
+	    <para><filename>pam_nologin.so</filename>,
+	      <filename>pam_unix.so</filename>,
+	      <filename>pam_login_access.so</filename>,
+	      <filename>pam_lastlog.so</filename> and
+	      <filename>pam_permit.so</filename> are modules.  It is
+	      clear from this example that
+	      <filename>pam_unix.so</filename> provides at least two
+	      facilities (authentication and account
+	      management.)</para>
+	  </listitem>
+	</itemizedlist>
+      </section>
+    </section>
+
+<!--
+    <section id="pam-conventions">
+      <title id="pam-conventions.title">Conventions</title>
+
+      <para>This section has not yet been written.</para>
+    </section>
+-->
+  </section>
+
+  <section id="pam-essentials">
+    <title id="pam-essentials.title">PAM Essentials</title>
+
+    <section id="pam-facilities-primitives">
+      <title id="pam-facilities-primitives.title">Facilities and
+	primitives</title>
+
+      <para>The PAM API offers six different authentication primitives
+	grouped in four facilities, which are described below.</para>
+
+      <variablelist>
+	<varlistentry>
+	  <term><literal>auth</literal></term>
+	  <listitem>
+	    <para><emphasis>Authentication.</emphasis> This facility
+	      concerns itself with authenticating the applicant and
+	      establishing the account credentials.  It provides two
+	      primitives:</para>
+
+	    <itemizedlist>
+	      <listitem>
+		<para>&man.pam.authenticate.3; authenticates the
+		  applicant, usually by requesting an authentication
+		  token and comparing it with a value stored in a
+		  database or obtained from an authentication
+		  server.</para>
+	      </listitem>
+
+	      <listitem>
+		<para>&man.pam.setcred.3; establishes account
+		  credentials such as user ID, group membership and
+		  resource limits.</para>
+	      </listitem>
+	    </itemizedlist>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><literal>account</literal></term>
+	  <listitem>
+	    <para><emphasis>Account management.</emphasis> This
+	      facility handles non-authentication-related issues of
+	      account availability, such as access restrictions based
+	      on the time of day or the server's work load.  It
+	      provides a single primitive:</para>
+
+	    <itemizedlist>
+	      <listitem>
+		<para>&man.pam.acct.mgmt.3; verifies that the
+		  requested account is available.</para>
+	      </listitem>
+	    </itemizedlist>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><literal>session</literal></term>
+	  <listitem>
+	    <para><emphasis>Session management.</emphasis> This
+	      facility handles tasks associated with session set-up
+	      and tear-down, such as login accounting.  It provides
+	      two primitives:</para>
+
+	    <itemizedlist>
+	      <listitem>
+		<para>&man.pam.open.session.3; performs tasks
+		  associated with session set-up: add an entry in the
+		  <filename>utmp</filename> and
+		  <filename>wtmp</filename> databases, start an SSH
+		  agent, etc.</para>
+	      </listitem>
+
+	      <listitem>
+		<para>&man.pam.close.session.3; performs tasks
+		  associated with session tear-down: add an entry in
+		  the <filename>utmp</filename> and
+		  <filename>wtmp</filename> databases, stop the SSH
+		  agent, etc.</para>
+	      </listitem>
+	    </itemizedlist>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><literal>password</literal></term>
+	  <listitem>
+	    <para><emphasis>Password management.</emphasis> This
+	      facility is used to change the authentication token
+	      associated with an account, either because it has
+	      expired or because the user wishes to change it.  It
+	      provides a single primitive:</para>
+
+	    <itemizedlist>
+	      <listitem>
+		<para>&man.pam.chauthtok.3; changes the authentication
+		  token, optionally verifying that it is sufficiently
+		  hard to guess, has not been used previously,
+		  etc.</para>
+	      </listitem>
+	    </itemizedlist>
+	  </listitem>
+	</varlistentry>
+      </variablelist>
+
+    </section>
+
+    <section id="pam-modules">
+      <title id="pam-modules.title">Modules</title>
+
+      <para>Modules are a very central concept in PAM; after all,
+	they are the <quote>M</quote> in <quote>PAM</quote>.  A PAM
+	module is a self-contained piece of program code that
+	implements the primitives in one or more facilities for one
+	particular mechanism; possible mechanisms for the
+	authentication facility, for instance, include the &unix;
+	password database, NIS, LDAP and Radius.</para>
+
+      <section id="pam-module-naming">
+	<title id="pam-module-naming.title">Module Naming</title>
+
+	<para>FreeBSD implements each mechanism in a single module,
+	  named
+	  <literal>pam_<replaceable>mechanism</replaceable>.so</literal>
+	  (for instance, <literal>pam_unix.so</literal> for the &unix;
+	  mechanism.)  Other implementations sometimes have separate
+	  modules for separate facilities, and include the facility
+	  name as well as the mechanism name in the module name.  To
+	  name one example, &solaris; has a
+	  <literal>pam_dial_auth.so.1</literal> module which is
+	  commonly used to authenticate dialup users.</para>
+      </section>
+
+      <section id="pam-module-versioning">
+	<title id="pam-module-versioning.title">Module Versioning</title>
+
+	<para>FreeBSD's original PAM implementation, based on
+	  Linux-PAM, did not use version numbers for PAM modules.
+	  This would commonly cause problems with legacy applications,
+	  which might be linked against older versions of the system
+	  libraries, as there was no way to load a matching version of
+	  the required modules.</para>
+
+	<para>OpenPAM, on the other hand, looks for modules that have
+	  the same version number as the PAM library (currently 2),
+	  and only falls back to an unversioned module if no versioned
+	  module could be loaded.  Thus legacy modules can be provided
+	  for legacy applications, while allowing new (or newly built)
+	  applications to take advantage of the most recent
+	  modules.</para>
+
+	<para>Although &solaris; PAM modules commonly have a version
+	  number, they are not truly versioned, because the number is a
+	  part of the module name and must be included in the
+	  configuration.</para>
+      </section>
+    </section>
+
+    <section id="pam-chains-policies">
+      <title id="pam-chains-policies.title">Chains and
+	policies</title>
+
+      <para>When a server initiates a PAM transaction, the PAM library
+	tries to load a policy for the service specified in the
+	&man.pam.start.3; call.  The policy specifies how
+	authentication requests should be processed, and is defined in
+	a configuration file.  This is the other central concept in
+	PAM: the possibility for the admin to tune the system security
+	policy (in the wider sense of the word) simply by editing a
+	text file.</para>
+
+      <para>A policy consists of four chains, one for each of the four
+	PAM facilities.  Each chain is a sequence of configuration
+	statements, each specifying a module to invoke, some
+	(optional) parameters to pass to the module, and a control
+	flag that describes how to interpret the return code from the
+	module.</para>
+
+      <para>Understanding the control flags is essential to
+	understanding PAM configuration files.  There are four
+	different control flags:</para>
+
+      <variablelist>
+	<varlistentry>
+	  <term><literal>binding</literal></term>
+	  <listitem>
+	    <para>If the module succeeds and no earlier module in the
+	      chain has failed, the chain is immediately terminated
+	      and the request is granted.  If the module fails, the
+	      rest of the chain is executed, but the request is
+	      ultimately denied.</para>
+
+	    <para>This control flag was introduced by Sun in &solaris; 9
+	      (&sunos; 5.9), and is also supported by OpenPAM.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><literal>required</literal></term>
+	  <listitem>
+	    <para>If the module succeeds, the rest of the chain is
+	      executed, and the request is granted unless some other
+	      module fails.  If the module fails, the rest of the
+	      chain is also executed, but the request is ultimately
+	      denied.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><literal>requisite</literal></term>
+	  <listitem>
+	    <para>If the module succeeds, the rest of the chain is
+	      executed, and the request is granted unless some other
+	      module fails.  If the module fails, the chain is
+	      immediately terminated and the request is denied.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><literal>sufficient</literal></term>
+	  <listitem>
+	    <para>If the module succeeds and no earlier module in the
+	      chain has failed, the chain is immediately terminated
+	      and the request is granted.  If the module fails, the
+	      module is ignored and the rest of the chain is
+	      executed.</para>
+
+	    <para>As the semantics of this flag may be somewhat
+	      confusing, especially when it is used for the last
+	      module in a chain, it is recommended that the
+	      <literal>binding</literal> control flag be used instead
+	      if the implementation supports it.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><literal>optional</literal></term>
+	  <listitem>
+	    <para>The module is executed, but its result is ignored.
+	      If all modules in a chain are marked
+	      <literal>optional</literal>, all requests will always be
+	      granted.</para>
+	  </listitem>
+	</varlistentry>
+      </variablelist>
+
+      <para>When a server invokes one of the six PAM primitives, PAM
+	retrieves the chain for the facility the primitive belongs to,
+	and invokes each of the modules listed in the chain, in the
+	order they are listed, until it reaches the end, or determines
+	that no further processing is necessary (either because a
+	<literal>binding</literal> or
+	<literal>sufficient</literal> module succeeded, or because a
+	<literal>requisite</literal> module failed.)  The request is
+	granted if and only if at least one module was invoked, and
+	all non-optional modules succeeded.</para>
+
+      <para>Note that it is possible, though not very common, to have
+	the same module listed several times in the same chain.  For
+	instance, a module that looks up user names and passwords in a
+	directory server could be invoked multiple times with
+	different parameters specifying different directory servers to
+	contact.  PAM treat different occurrences of the same module
+	in the same chain as different, unrelated modules.</para>
+    </section>
+
+    <section id="pam-transactions">
+      <title id="pam-transactions.title">Transactions</title>
+
+      <para>The lifecycle of a typical PAM transaction is described
+	below.  Note that if any of these steps fails, the server
+	should report a suitable error message to the client and abort
+	the transaction.</para>
+
+      <orderedlist>
+	<listitem>
+	  <para>If necessary, the server obtains arbitrator
+	    credentials through a mechanism independent of
+	    PAM&mdash;most commonly by virtue of having been started
+	    by <literal>root</literal>, or of being setuid
+	    <literal>root</literal>.</para>
+	</listitem>
+
+	<listitem>
+	  <para>The server calls &man.pam.start.3; to initialize the
+	    PAM library and specify its service name and the target
+	    account, and register a suitable conversation
+	    function.</para>
+	</listitem>
+
+	<listitem>
+	  <para>The server obtains various information relating to the
+	    transaction (such as the applicant's user name and the
+	    name of the host the client runs on) and submits it to PAM
+	    using &man.pam.set.item.3;.</para>
+	</listitem>
+
+	<listitem>
+	  <para>The server calls &man.pam.authenticate.3; to
+	    authenticate the applicant.</para>
+	</listitem>
+
+	<listitem>
+	  <para>The server calls &man.pam.acct.mgmt.3; to verify that the
+	    requested account is available and valid.  If the password
+	    is correct but has expired, &man.pam.acct.mgmt.3; will
+	    return <literal>PAM_NEW_AUTHTOK_REQD</literal> instead of
+	    <literal>PAM_SUCCESS</literal>.</para>
+	</listitem>
+
+	<listitem>
+	  <para>If the previous step returned
+	    <literal>PAM_NEW_AUTHTOK_REQD</literal>, the server now
+	    calls &man.pam.chauthtok.3; to force the client to change
+	    the authentication token for the requested account.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Now that the applicant has been properly
+	    authenticated, the server calls &man.pam.setcred.3; to
+	    establish the credentials of the requested account.  It is
+	    able to do this because it acts on behalf of the
+	    arbitrator, and holds the arbitrator's credentials.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Once the correct credentials have been established,
+	    the server calls &man.pam.open.session.3; to set up the
+	    session.</para>
+	</listitem>
+
+	<listitem>
+	  <para>The server now performs whatever service the client
+	    requested&mdash;for instance, provide the applicant with a
+	    shell.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Once the server is done serving the client, it calls
+	    &man.pam.close.session.3; to tear down the session.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Finally, the server calls &man.pam.end.3; to notify
+	    the PAM library that it is done and that it can release
+	    whatever resources it has allocated in the course of the
+	    transaction.</para>
+	</listitem>
+      </orderedlist>
+    </section>
+  </section>
+
+  <section id="pam-config">
+    <title id="pam-config.title">PAM Configuration</title>
+
+    <section id="pam-config-file">
+      <title id="pam-config-file.title">PAM policy files</title>
+
+      <section id="pam-config-pam.conf">
+	<title id="pam-config-pam.conf.title">The
+	  <filename>/etc/pam.conf</filename> file</title>
+
+	<para>The traditional PAM policy file is
+	  <filename>/etc/pam.conf</filename>.  This file contains all
+	  the PAM policies for your system.  Each line of the file
+	  describes one step in a chain, as shown below:</para>
+
+<programlisting>login   auth    required        pam_nologin.so  no_warn</programlisting>
+
+	<para>The fields are, in order: service name, facility name,
+	  control flag, module name, and module arguments.  Any
+	  additional fields are interpreted as additional module
+	  arguments.</para>
+
+	<para>A separate chain is constructed for each service /
+	  facility pair, so while the order in which lines for the
+	  same service and facility appear is significant, the order
+	  in which the individual services and facilities are listed
+	  is not.  The examples in the original PAM paper grouped
+	  configuration lines by facility, and the &solaris; stock
+	  <filename>pam.conf</filename> still does that, but FreeBSD's
+	  stock configuration groups configuration lines by service.
+	  Either way is fine; either way makes equal sense.</para>
+      </section>
+
+      <section id="pam-config-pam.d">
+	<title id="pam-config-pam.d.title">The
+	  <filename>/etc/pam.d</filename> directory</title>
+
+	<para>OpenPAM and Linux-PAM support an alternate configuration
+	  mechanism, which is the preferred mechanism in FreeBSD.  In
+	  this scheme, each policy is contained in a separate file
+	  bearing the name of the service it applies to.  These files
+	  are stored in <filename>/etc/pam.d/</filename>.</para>
+
+	<para>These per-service policy files have only four fields
+	  instead of <filename>pam.conf</filename>'s five: the service
+	  name field is omitted.  Thus, instead of the sample
+	  <filename>pam.conf</filename> line from the previous
+	  section, one would have the following line in
+	  <filename>/etc/pam.d/login</filename>:</para>
+
+<programlisting>auth    required        pam_nologin.so  no_warn</programlisting>
+
+	<para>As a consequence of this simplified syntax, it is
+	  possible to use the same policy for multiple services by
+	  linking each service name to a same policy file.  For
+	  instance, to use the same policy for the
+	  <literal>su</literal> and <literal>sudo</literal> services,
+	  one could do as follows:</para>
+
+<screen>&prompt.root; <userinput>cd /etc/pam.d</userinput>
+&prompt.root; <userinput>ln -s su sudo</userinput></screen>
+
+	<para>This works because the service name is determined from
+	  the file name rather than specified in the policy file, so
+	  the same file can be used for multiple differently-named
+	  services.</para>
+
+	<para>Since each service's policy is stored in a separate
+	  file, the <filename>pam.d</filename> mechanism also makes it
+	  very easy to install additional policies for third-party
+	  software packages.</para>
+      </section>
+
+      <section id="pam-config-file-order">
+	<title id="pam-config-file-order.title">The policy search
+	  order</title>
+
+	<para>As we have seen above, PAM policies can be found in a
+	  number of places.  What happens if policies for the same
+	  service exist in multiple places?</para>
+
+	<para>It is essential to understand that PAM's configuration
+	  system is centered on chains.<!-- XXX --></para>
+
+      </section>
+    </section>
+
+    <section id="pam-config-breakdown">
+      <title id="pam-config-breakdown.title">Breakdown of a
+	configuration line</title>
+
+      <para>As explained in the <link linkend="pam-config-file"
+	endterm="pam-config-file.title"></link> section, each line in
+	<filename>/etc/pam.conf</filename> consists of four or more
+	fields: the service name, the facility name, the control flag,
+	the module name, and zero or more module arguments.</para>
+
+      <para>The service name is generally (though not always) the name
+	of the application the statement applies to.  If you are
+	unsure, refer to the individual application's documentation to
+	determine what service name it uses.</para>
+
+      <para>Note that if you use <filename>/etc/pam.d/</filename>
+	instead of <filename>/etc/pam.conf</filename>, the service
+	name is specified by the name of the policy file, and omitted
+	from the actual configuration lines, which then start with the
+	facility name.</para>
+
+      <para>The facility is one of the four facility keywords
+	described in the <link linkend="pam-facilities-primitives"
+	endterm="pam-facilities-primitives.title"></link>
+	section.</para>
+
+      <para>Likewise, the control flag is one of the four keywords
+	described in the <link linkend="pam-chains-policies"
+	endterm="pam-chains-policies.title"></link> section,
+	describing how to interpret the return code from the module.
+	Linux-PAM supports an alternate syntax that lets you specify
+	the action to associate with each possible return code, but
+	this should be avoided as it is non-standard and closely tied
+	in with the way Linux-PAM dispatches service calls (which
+	differs greatly from the way &solaris; and OpenPAM do it.)
+	Unsurprisingly, OpenPAM does not support this syntax.</para>
+    </section>
+
+    <section id="pam-policies">
+      <title id="pam-policies.title">Policies</title>
+
+      <para>To configure PAM correctly, it is essential to understand
+	how policies are interpreted.</para>
+
+      <para>When an application calls &man.pam.start.3;, the PAM
+	library loads the policy for the specified service and
+	constructs four module chains (one for each facility.)  If one
+	or more of these chains are empty, the corresponding chains
+	from the policy for the <literal>other</literal> service are
+	substituted.</para>
+
+      <para>When the application later calls one of the six PAM
+	primitives, the PAM library retrieves the chain for the
+	corresponding facility and calls the appropriate service
+	function in each module listed in the chain, in the order in
+	which they were listed in the configuration.  After each call
+	to a service function, the module type and the error code
+	returned by the service function are used to determine what
+	happens next.  With a few exceptions, which we discuss below,
+	the following table applies:</para>
+
+      <table>
+	<title>PAM chain execution summary</title>
+	<tgroup cols="4">
+	  <colspec colwidth="1*" colname="type">
+	  <colspec colwidth="1*" colname="success">
+	  <colspec colwidth="1*" colname="ignore">
+	  <colspec colwidth="1*" colname="other">
+	  <thead>
+	    <row>
+	      <entry colname="type"></entry>
+	      <entry colname="success"><literal>PAM_SUCCESS</literal></entry>
+	      <entry colname="ignore"><literal>PAM_IGNORE</literal></entry>
+	      <entry colname="other"><literal>other</literal></entry>
+	   </row>
+	  </thead>
+	  <tbody>
+	    <row>
+	      <entry colname="type">binding</entry>
+	      <entry colname="success">if (!fail) break;</entry>
+	      <entry colname="ignore">-</entry>
+	      <entry colname="other">fail = true;</entry>
+	    </row>
+	    <row>
+	      <entry colname="type">required</entry>
+	      <entry colname="success">-</entry>
+	      <entry colname="ignore">-</entry>
+	      <entry colname="other">fail = true;</entry>
+	    </row>
+	    <row>
+	      <entry colname="type">requisite</entry>
+	      <entry colname="success">-</entry>
+	      <entry colname="ignore">-</entry>
+	      <entry colname="other">fail = true; break;</entry>
+	    </row>
+	    <row>
+	      <entry colname="type">sufficient</entry>
+	      <entry colname="success">if (!fail) break;</entry>
+	      <entry colname="ignore">-</entry>
+	      <entry colname="other">-</entry>
+	    </row>
+	    <row>
+	      <entry colname="type">optional</entry>
+	      <entry colname="success">-</entry>
+	      <entry colname="ignore">-</entry>
+	      <entry colname="other">-</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+
+      <para>If <varname>fail</varname> is true at the end of a chain,
+	or when a <quote>break</quote> is reached, the dispatcher
+	returns the error code returned by the first module that
+	failed.  Otherwise, it returns
+	<literal>PAM_SUCCESS</literal>.</para>
+
+      <para>The first exception of note is that the error code
+	<literal>PAM_NEW_AUTHTOK_REQD</literal> is treated like a
+	success, except that if no module failed, and at least one
+	module returned <literal>PAM_NEW_AUTHTOK_REQD</literal>, the
+	dispatcher will return
+	<literal>PAM_NEW_AUTHTOK_REQD</literal>.</para>
+
+      <para>The second exception is that &man.pam.setcred.3; treats
+	<literal>binding</literal> and
+	<literal>sufficient</literal> modules as if they were
+	<literal>required</literal>.</para>
+
+      <para>The third and final exception is that
+	&man.pam.chauthtok.3; runs the entire chain twice (once for
+	preliminary checks and once to actually set the password), and
+	in the preliminary phase it treats
+	<literal>binding</literal> and
+	<literal>sufficient</literal> modules as if they were
+	<literal>required</literal>.</para>
+    </section>
+  </section>
+
+  <section id="pam-freebsd-modules">
+    <title id="pam-freebsd-modules.title">FreeBSD PAM Modules</title>
+
+    <section id="pam-modules-deny">
+      <title id="pam-modules-deny.title">&man.pam.deny.8;</title>
+
+      <para>The &man.pam.deny.8; module is one of the simplest modules
+	available; it responds to any request with
+	<literal>PAM_AUTH_ERR</literal>.  It is useful for quickly
+	disabling a service (add it to the top of every chain), or for
+	terminating chains of <literal>sufficient</literal>
+	modules.</para>
+    </section>
+
+    <section id="pam-modules-echo">
+      <title id="pam-modules-echo.title">&man.pam.echo.8;</title>
+
+      <para>The &man.pam.echo.8; module simply passes its arguments to
+	the conversation function as a
+	<literal>PAM_TEXT_INFO</literal> message.  It is mostly useful
+	for debugging, but can also serve to display messages such as
+	<quote>Unauthorized access will be prosecuted</quote> before
+	starting the authentication procedure.</para>
+    </section>
+
+    <section id="pam-modules-exec">
+      <title id="pam-modules-exec.title">&man.pam.exec.8;</title>
+
+      <para>The &man.pam.exec.8; module takes its first argument to be
+	the name of a program to execute, and the remaining arguments
+	are passed to that program as command-line arguments.  One
+	possible application is to use it to run a program at login
+	time which mounts the user's home directory.</para>
+    </section>
+
+    <section id="pam-modules-ftpusers">
+      <title id="pam-modules-ftpusers.title">&man.pam.ftpusers.8;</title>
+
+      <para>The &man.pam.ftpusers.8; module</para>
+    </section>
+
+    <section id="pam-modules-group">
+      <title id="pam-modules-group.title">&man.pam.group.8;</title>
+
+      <para>The &man.pam.group.8; module accepts or rejects applicants
+	on the basis of their membership in a particular file group
+	(normally <literal>wheel</literal> for &man.su.1;).  It is
+	primarily intended for maintaining the traditional behaviour
+	of BSD &man.su.1;, but has many other uses, such as excluding
+	certain groups of users from a particular service.</para>
+    </section>
+
+    <section id="pam-modules-guest">
+      <title id="pam-modules-guest.title">&man.pam.guest.8;</title>
+
+      <para>The &man.pam.guest.8; module allows guest logins using
+	fixed login names.  Various requirements can be placed on the
+	password, but the default behaviour is to allow any password
+	as long as the login name is that of a guest account.  The
+	&man.pam.guest.8; module can easily be used to implement
+	anonymous FTP logins.</para>
+    </section>
+
+    <section id="pam-modules-krb5">
+      <title id="pam-modules-krb5.title">&man.pam.krb5.8;</title>
+
+      <para>The &man.pam.krb5.8; module</para>
+    </section>
+
+    <section id="pam-modules-ksu">
+      <title id="pam-modules-ksu.title">&man.pam.ksu.8;</title>
+
+      <para>The &man.pam.ksu.8; module</para>
+    </section>
+
+    <section id="pam-modules-lastlog">
+      <title id="pam-modules-lastlog.title">&man.pam.lastlog.8;</title>
+
+      <para>The &man.pam.lastlog.8; module</para>
+    </section>
+
+    <section id="pam-modules-login-access">
+      <title id="pam-modules-login-access.title">&man.pam.login.access.8;</title>
+
+      <para>The &man.pam.login.access.8; module provides an
+	implementation of the account management primitive which
+	enforces the login restrictions specified in the
+	&man.login.access.5; table.</para>
+    </section>
+
+    <section id="pam-modules-nologin">
+      <title id="pam-modules-nologin.title">&man.pam.nologin.8;</title>
+
+      <para>The &man.pam.nologin.8; module refuses non-root logins
+	when <filename>/var/run/nologin</filename> exists.  This file
+	is normally created by &man.shutdown.8; when less than five
+	minutes remain until the scheduled shutdown time.</para>
+    </section>
+
+    <section id="pam-modules-opie">
+      <title id="pam-modules-opie.title">&man.pam.opie.8;</title>
+
+      <para>The &man.pam.opie.8; module implements the &man.opie.4;
+	authentication method.  The &man.opie.4; system is a
+	challenge-response mechanism where the response to each
+	challenge is a direct function of the challenge and a
+	passphrase, so the response can be easily computed <quote>just
+	in time</quote> by anyone possessing the passphrase,
+	eliminating the need for password lists.  Moreover, since
+	&man.opie.4; never reuses a challenge that has been correctly
+	answered, it is not vulnerable to replay attacks.</para>
+    </section>
+
+    <section id="pam-modules-opieaccess">
+      <title id="pam-modules-opieaccess.title">&man.pam.opieaccess.8;</title>
+
+      <para>The &man.pam.opieaccess.8; module is a companion module to
+	&man.pam.opie.8;.  Its purpose is to enforce the restrictions
+	codified in &man.opieaccess.5;, which regulate the conditions
+	under which a user who would normally authenticate herself
+	using &man.opie.4; is allowed to use alternate methods.  This
+	is most often used to prohibit the use of password
+	authentication from untrusted hosts.</para>
+
+      <para>In order to be effective, the &man.pam.opieaccess.8;
+	module must be listed as <literal>requisite</literal>
+	immediately after a <literal>sufficient</literal> entry for
+	&man.pam.opie.8;, and before any other modules, in the
+	<literal>auth</literal> chain.</para>
+    </section>
+
+    <section id="pam-modules-passwdqc">
+      <title id="pam-modules-passwdqc.title">&man.pam.passwdqc.8;</title>
+
+      <para>The &man.pam.passwdqc.8; module</para>
+    </section>
+
+    <section id="pam-modules-permit">
+      <title id="pam-modules-permit.title">&man.pam.permit.8;</title>
+
+      <para>The &man.pam.permit.8; module is one of the simplest
+	modules available; it responds to any request with
+	<literal>PAM_SUCCESS</literal>.  It is useful as a placeholder
+	for services where one or more chains would otherwise be
+	empty.</para>
+    </section>
+
+    <section id="pam-modules-radius">
+      <title id="pam-modules-radius.title">&man.pam.radius.8;</title>
+
+      <para>The &man.pam.radius.8; module</para>
+    </section>
+
+    <section id="pam-modules-rhosts">
+      <title id="pam-modules-rhosts.title">&man.pam.rhosts.8;</title>
+
+      <para>The &man.pam.rhosts.8; module</para>
+    </section>
+
+    <section id="pam-modules-rootok">
+      <title id="pam-modules-rootok.title">&man.pam.rootok.8;</title>
+
+      <para>The &man.pam.rootok.8; module reports success if and only
+	if the real user id of the process calling it (which is
+	assumed to be run by the applicant) is 0.  This is useful for
+	non-networked services such as &man.su.1; or &man.passwd.1;,
+	to which the <literal>root</literal> should have automatic
+	access.</para>
+    </section>
+
+    <section id="pam-modules-securetty">
+      <title id="pam-modules-securetty.title">&man.pam.securetty.8;</title>
+
+      <para>The &man.pam.securetty.8; module</para>
+    </section>
+
+    <section id="pam-modules-self">
+      <title id="pam-modules-self.title">&man.pam.self.8;</title>
+
+      <para>The &man.pam.self.8; module reports success if and only if
+	the names of the applicant matches that of the target account.
+	It is most useful for non-networked services such as
+	&man.su.1;, where the identity of the applicant can be easily
+	verified.</para>
+    </section>
+
+    <section id="pam-modules-ssh">
+      <title id="pam-modules-ssh.title">&man.pam.ssh.8;</title>
+
+      <para>The &man.pam.ssh.8; module provides both authentication
+	and session services.  The authentication service allows users
+	who have passphrase-protected SSH secret keys in their
+	<filename>~/.ssh</filename> directory to authenticate
+	themselves by typing their passphrase.  The session service
+	starts &man.ssh-agent.1; and preloads it with the keys that
+	were decrypted in the authentication phase.  This feature is
+	particularly useful for local logins, whether in X (using
+	&man.xdm.1; or another PAM-aware X login manager) or at the
+	console.</para>
+    </section>
+
+    <section id="pam-modules-tacplus">
+      <title id="pam-modules-tacplus.title">&man.pam.tacplus.8;</title>
+
+      <para>The &man.pam.tacplus.8; module</para>
+    </section>
+
+    <section id="pam-modules-unix">
+      <title id="pam-modules-unix.title">&man.pam.unix.8;</title>
+
+      <para>The &man.pam.unix.8; module implements traditional &unix;
+	password authentication, using &man.getpwnam.3; to obtain the
+	target account's password and compare it with the one provided
+	by the applicant.  It also provides account management
+	services (enforcing account and password expiration times) and
+	password-changing services.  This is probably the single most
+	useful module, as the great majority of admins will want to
+	maintain historical behaviour for at least some
+	services.</para>
+    </section>
+  </section>
+
+  <section id="pam-appl-prog">
+    <title id="pam-appl-prog.title">PAM Application Programming</title>
+
+    <para><!--XXX-->This section has not yet been written.</para>
+
+    <!--
+
+      Note that while the original PAM paper includes a sample PAM
+      application that calls pam_open_session() before pam_setcred(),
+      the Linux-PAM documentation states that pam_setcred() must be
+      called first, which makes more sense.
+
+      Also note that the example in the paper calls setgid(),
+      initgroups() and setuid() itself rather than rely on
+      pam_setcred() to do it.
+
+      -->
+
+  </section>
+
+  <section id="pam-module-prog">
+    <title id="pam-module-prog.title">PAM Module Programming</title>
+
+    <para><!--XXX-->This section has not yet been written.</para>
+  </section>
+
+  <appendix id="pam-sample-appl">
+    <title id="pam-sample-appl.title">Sample PAM Application</title>
+
+    <para>The following is a minimal implementation of &man.su.1;
+      using PAM.  Note that it uses the OpenPAM-specific
+      &man.openpam.ttyconv.3; conversation function, which is
+      prototyped in <filename
+      class="headerfile">security/openpam.h</filename>.  If you wish
+      build this application on a system with a different PAM library,
+      you will have to provide your own conversation function.  A
+      robust conversation function is surprisingly difficult to
+      implement; the one presented in the <link
+      linkend="pam-sample-conv"
+      endterm="pam-sample-conv.title"></link> appendix is a good
+      starting point, but should not be used in real-world
+      applications.</para>
+
+<programlisting><inlinegraphic fileref="pam_app.c"
+  format="linespecific"></programlisting>
+  </appendix>
+
+  <appendix id="pam-sample-module">
+    <title id="pam-sample-module.title">Sample PAM Module</title>
+
+    <para>The following is a minimal implementation of
+      &man.pam.unix.8;, offering only authentication services.  It
+      should build and run with most PAM implementations, but takes
+      advantage of OpenPAM extensions if available: note the use of
+      &man.pam.get.authtok.3;, which enormously simplifies prompting
+      the user for a password.</para>
+
+<programlisting><inlinegraphic fileref="pam_module.c"
+  format="linespecific"></programlisting>
+  </appendix>
+
+  <appendix id="pam-sample-conv">
+    <title id="pam-sample-conv.title">Sample PAM Conversation
+      Function</title>
+
+    <para>The conversation function presented below is a greatly
+      simplified version of OpenPAM's &man.openpam.ttyconv.3;.  It is
+      fully functional, and should give the reader a good idea of how
+      a conversation function should behave, but it is far too simple
+      for real-world use.  Even if you are not using OpenPAM, feel free
+      to download the source code and adapt &man.openpam.ttyconv.3; to
+      your uses; we believe it to be as robust as a tty-oriented
+      conversation function can reasonably get.</para>
+
+<programlisting><inlinegraphic fileref="pam_conv.c"
+  format="linespecific"></programlisting>
+  </appendix>
+
+  <bibliography id="pam-further">
+    <title id="pam-further.title">Further Reading</title>
+
+    <abstract>
+      <para>This is a list of documents relevant to PAM and related
+	issues.  It is by no means complete.</para>
+    </abstract>
+
+    <bibliodiv>
+      <title>Papers</title>
+
+      <biblioentry>
+	<title><ulink
+	  url="http://www.sun.com/software/solaris/pam/pam.external.pdf">
+	  Making Login Services Independent of Authentication
+	  Technologies</ulink></title>
+	<authorgroup>
+	  <author>
+	    <surname>Samar</surname>
+	    <firstname>Vipin</firstname>
+	  </author>
+	  <author>
+	    <surname>Lai</surname>
+	    <firstname>Charlie</firstname>
+	  </author>
+	</authorgroup>
+	<orgname>Sun Microsystems</orgname>
+      </biblioentry>
+
+      <biblioentry>
+	<title><ulink
+	  url="http://www.opengroup.org/pubs/catalog/p702.htm">X/Open
+	  Single Sign-on Preliminary Specification</ulink></title>
+	<orgname>The Open Group</orgname>
+	<isbn>1-85912-144-6</isbn>
+	<pubdate>June 1997</pubdate>
+      </biblioentry>
+
+      <biblioentry>
+	<title><ulink
+	  url="http://www.kernel.org/pub/linux/libs/pam/pre/doc/current-draft.txt">
+	  Pluggable Authentication Modules</ulink></title>
+	<author>
+	  <surname>Morgan</surname>
+	  <firstname>Andrew</firstname>
+	  <othername role="mi">G.</othername>
+	</author>
+	<pubdate>October 6, 1999</pubdate>
+      </biblioentry>
+    </bibliodiv>
+
+    <bibliodiv>
+      <title>User Manuals</title>
+
+      <biblioentry>
+	<title><ulink
+	  url="http://www.sun.com/software/solaris/pam/pam.admin.pdf">PAM
+	  Administration</ulink></title>
+	<orgname>Sun Microsystems</orgname>
+      </biblioentry>
+    </bibliodiv>
+
+    <bibliodiv>
+      <title>Related Web pages</title>
+
+      <biblioentry>
+	<title><ulink url="http://openpam.sourceforge.net/">OpenPAM homepage</ulink></title>
+	<author>
+	  <surname>Sm&oslash;rgrav</surname>
+	  <firstname>Dag-Erling</firstname>
+	</author>
+	<orgname>ThinkSec AS</orgname>
+      </biblioentry>
+
+      <biblioentry>
+	<title><ulink url="http://www.kernel.org/pub/linux/libs/pam/">Linux-PAM homepage</ulink></title>
+	<author>
+	  <surname>Morgan</surname>
+	  <firstname>Andrew</firstname>
+	  <othername role="mi">G.</othername>
+	</author>
+      </biblioentry>
+
+      <biblioentry>
+	<title><ulink url="http://wwws.sun.com/software/solaris/pam/">Solaris PAM homepage</ulink></title>
+	<orgname>Sun Microsystems</orgname>
+      </biblioentry>
+    </bibliodiv>
+  </bibliography>
+</article>

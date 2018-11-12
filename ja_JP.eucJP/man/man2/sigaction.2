@@ -1,0 +1,653 @@
+.\" Copyright (c) 1980, 1990, 1993
+.\"	The Regents of the University of California.  All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. All advertising materials mentioning features or use of this software
+.\"    must display the following acknowledgement:
+.\"	This product includes software developed by the University of
+.\"	California, Berkeley and its contributors.
+.\" 4. Neither the name of the University nor the names of its contributors
+.\"    may be used to endorse or promote products derived from this software
+.\"    without specific prior written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\"	From: @(#)sigaction.2	8.2 (Berkeley) 4/3/94
+.\" %FreeBSD: src/lib/libc/sys/sigaction.2,v 1.55 2004/07/03 22:30:09 ru Exp %
+.\"
+.\" 2001/01/01 horikawa@jp.FreeBSD.org
+.\" sigvec.2 を更新する場合は、共通部分の多い sigaction.2 も同時に更新
+.\" してください。
+.\"
+.\" $FreeBSD$
+.Dd June 7, 2004
+.Dt SIGACTION 2
+.Os
+.Sh 名称
+.Nm sigaction
+.Nd ソフトウェアシグナル機能
+.Sh ライブラリ
+.Lb libc
+.Sh 書式
+.In signal.h
+.Bd -literal
+struct  sigaction {
+        union {
+                void    (*__sa_handler)(int);
+                void    (*__sa_sigaction)(int, struct __siginfo *, void *);
+        } __sigaction_u;                /* シグナルハンドラ */
+        int     sa_flags;               /* 後述のシグナルオプション参照 */
+        sigset_t sa_mask;               /* 適用するシグナルマスク */
+};
+
+#define	sa_handler	__sigaction_u.__sa_handler
+#define	sa_sigaction	__sigaction_u.__sa_sigaction
+.Ed
+.Ft int
+.Fo sigaction
+.Fa "int sig"
+.Fa "const struct sigaction * restrict act"
+.Fa "struct sigaction * restrict oact"
+.Fc
+.Sh 解説
+システムではシグナルの集合を定義しており、
+これらはプロセスに配信されることがあります。
+シグナルの配信は、ハードウェア割込みの発生に似ています。
+通常の場合、シグナルのさらなる発生はブロックされ、
+現在のプロセスコンテキストは保存されて、新しいプロセスコンテキストが
+作成されます。
+プロセスは、シグナルの配信先
+.Em handler
+を指定することもあれば、シグナルを
+.Em 無視
+することを指定することもあります。
+シグナルが発生した場合に、システムがデフォルトのアクションを取ることを
+指定することも可能です。
+シグナルが
+.Em ブロック
+されることもあり、その場合、シグナルの配信は、
+.Em ブロックが解除
+されるまで延期されます。
+配信時に取るアクションは、配信時に決まります。
+通常の場合は、シグナルハンドラが、プロセスの現行スタックで動作します。
+これはハンドラごとに変更可能であり、変更すれば、シグナルは特殊な
+.Em シグナルスタック
+で実行可能です。
+.Pp
+通常の場合、シグナルルーチンは、呼び出しの原因となったシグナルが
+.Em ブロックされた
+状態で動作しますが、その他のシグナルが発生する可能性は
+あります。
+グローバルの
+.Em シグナルマスク
+には、プロセスへの配信が現在
+ブロックされているシグナルの集合が定義されています。
+プロセスのシグナルマスクは、親のシグナルマスクで初期化されます (通常は空)。
+.Xr sigprocmask 2
+が呼び出された場合、またはシグナルがプロセスに配信された場合に、
+シグナルマスクは変更されます。
+.Pp
+あるシグナルの生起条件がプロセスで発生すると、そのシグナルが、
+プロセスで保留中のシグナルの集合に追加されます。
+そのシグナルがプロセスで現在
+.Em ブロック
+されていない場合は、プロセスに配信されます。
+シグナルは、プロセスがオペレーティングシステムに入っている間に
+(システム呼び出し、ページエラーやトラップ、クロック割込み中などに)
+配信されます。
+複数のシグナルの配信準備が同時に整った場合は、トラップで生じたシグナルが
+先に配信されます。
+その他のシグナルは、それぞれが前のシグナルのハンドラに対し、
+最初の命令の前に割り込んだ状態で同時に処理されます。
+保留になっているシグナルの集合は、
+.Xr sigpending 2
+システムコールで返されます。
+捕捉されたシグナルが配信されると、プロセスの現在の
+状態が保存され、新しいシグナルマスクが以下で説明するように算出されて、
+シグナルハンドラが呼び出されます。
+ハンドラの呼び出しは、
+シグナル処理ルーチンが正常に戻った場合に、プロセスがシグナル配信前の
+コンテキストで実行を再開するように設定されます。
+プロセスが別のコンテキストでの再開を望む場合は、
+前のコンテキストそのものを自分自身で回復するように設定する必要があります。
+.Pp
+シグナルがプロセスに配信されると、プロセスの
+シグナルハンドラの実行が続く間 (または
+.Xr sigprocmask 2
+システムコールが呼び出されるまで)、新しいシグナルマスクが設置されます。
+このマスクは、現在のシグナルマスク集合、配信されるシグナル、
+呼び出されるハンドラに関連したシグナルマスクの和集合を取って形成されます。
+.Pp
+.Fn sigaction
+システムコールは、
+.Fa sig
+で指定したシグナルのアクションを割り当てます。
+.Fa act
+が 0 でない場合は、アクション
+.Dv ( SIG_DFL ,
+.Dv SIG_IGN
+かハンドラルーチン)、および指定されたシグナルの配信時に
+使用するマスクが指定されます。
+.Fa oact
+が 0 でない場合は、そのシグナルのそれまでの処理情報がユーザに返されます。
+.Pp
+シグナルハンドラが設置されると、通常の場合は別の
+.Fn sigaction
+システムコールを呼び出すか
+.Xr execve 2
+を実行するまで、そのシグナルハンドラは設置されたままです。
+.Va sa_handler
+を
+.Dv SIG_DFL
+に設定することで、
+シグナルごとに固有なデフォルトアクションにリセットすることができます。
+デフォルトとは、プロセスの終了 (コアダンプが取られることもあります)、
+アクションなし、プロセスの停止、プロセスの継続です。
+それぞれのシグナルのデフォルトアクションについては、
+下記のシグナルリストを参照してください。
+.Va sa_handler
+が
+.Dv SIG_DFL
+である場合、シグナルのデフォルトアクションはシグナルの破棄になります。
+また、シグナルが保留になっている場合でも、シグナルがマスクされていても
+保留中のシグナルは破棄されます。
+.Va sa_handler
+を
+.Dv SIG_IGN
+に設定すると、現在のシグナル実体と保留中のシグナル実体は無視されて
+破棄されます。
+.Pp
+オプションは、
+.Va sa_flags
+を設定することで指定できます。
+それぞれのビットの意味は以下のとおりです:
+.Bl -tag -offset indent -width SA_RESETHANDXX
+.It Dv SA_NOCLDSTOP
+.Dv SIGCHLD
+シグナルの受信関数を設置する場合にこのビットを設定すると、
+子プロセスが停止したときではなく、子プロセスが終了するときにのみ、
+.Dv SIGCHLD
+シグナルが生成されます。
+.It Dv SA_NOCLDWAIT
+.Dv SIGCHLD
+シグナルで
+.Fn sigaction
+を呼び出す場合にこのビットを設定すると、システムは、呼び出し側プロセスの
+子プロセスが終了したときにゾンビプロセスを作成しなくなります。
+そのあと、呼び出し側プロセスが
+.Xr wait 2
+(かそれに相当する関数) を実行すると、呼び出し側プロセスのすべて
+の子プロセスが終了するまでブロックし、次に
+.Va errno
+を
+.Er ECHILD
+に設定して \-1 を返します。
+.Dv SIGCHLD
+のための
+.Va sa_handler
+に
+.Dv SIG_IGN
+を設定することによって、
+ゾンビの作成を避ける同じ効果を得ることも可能です。
+.It Dv SA_ONSTACK
+このビットを設定すると、システムは、
+.Xr sigaltstack 2
+で指定された
+.Em シグナルスタック
+の上で、プロセスにシグナルを配信します。
+.It Dv SA_NODEFER
+このビットを設定すると、配信済みシグナルのさらなる発生が、
+ハンドラの実行中にマスクされなくなります。
+.It Dv SA_RESETHAND
+このビットを設定すると、シグナルが配信された瞬間に、ハンドラが
+.Dv SIG_DFL
+にリセットされます。
+.It Dv SA_RESTART
+下の段落を参照してください。
+.It Dv SA_SIGINFO
+このビットが設定されている場合、ハンドラ関数は、
+.Vt "struct sigaction"
+構造体の
+.Va sa_sigaction
+メンバが指すものと見なします。
+ハンドラ関数は、先に示したプロトタイプもしくは後で示す
+.Sx 使用例
+に一致しなくてはなりません。
+このビットは、
+.Dv SIG_DFL
+もしくは
+.Dv SIG_IGN
+を割り当てる時には設定してはいけません。
+.El
+.Pp
+次に挙げるシステムコールの実行中にシグナルが捕捉されると、
+そのシステムコールの呼び出しは、
+エラー
+.Er EINTR
+で強制終了されるか、要求より短いデータ転送で戻るか、または再開されます。
+保留中のシステムコールの再開は、
+.Va sa_flags
+で
+.Dv SA_RESTART
+ビットを設定することで要求できます。
+影響を受けるシステムコールは、
+通信チャネルか遅いデバイス (端末など、通常ファイルではないもの) に対する
+.Xr open 2 ,
+.Xr read 2 ,
+.Xr write 2 ,
+.Xr sendto 2 ,
+.Xr recvfrom 2 ,
+.Xr sendmsg 2 ,
+.Xr recvmsg 2
+と
+.Xr wait 2 ,
+.Xr ioctl 2
+です。
+しかし、すでに実行されているシステムコールは再開されず、
+部分的な処理成功の結果 (短い読取りカウントなど) を返します。
+.Pp
+.Xr fork 2
+か
+.Xr vfork 2
+の後では、すべてのシグナル、シグナルマスク、シグナルスタック、
+再開フラグ、割込みフラグが子プロセスに継承されます。
+.Pp
+.Xr execve 2
+システムコールは、捕捉されていたすべてのシグナルのデフォルトアクションを
+元に戻し、すべてのシグナルをユーザスタックで受信されるようにリセットします。
+無視されたシグナルは無視されたままです。
+シグナルマスクは同じ状態のままです。
+保留中のシステムコールを再開する設定のシグナルは、その再開の設定のままです。
+.Pp
+以下はすべてのシグナルのリストです。
+名称は、インクルードファイル
+.In signal.h
+にあるものと同じです:
+.Bl -column SIGVTALARMXX "create core imagexxx"
+.It Sy "名称	デフォルトアクション	説明"
+.It Dv SIGHUP No "	プロセスの終了" "	端末ラインのハングアップ"
+.It Dv SIGINT No "	プロセスの終了" "	プログラムの割込み"
+.It Dv SIGQUIT No "	コアイメージの作成" "	プログラムの中断終了"
+.It Dv SIGILL No "	コアイメージの作成" "	不正な命令"
+.It Dv SIGTRAP No "	コアイメージの作成" "	トラップのトレース"
+.It Dv SIGABRT No "	コアイメージの作成" Ta Xr abort 3
+の呼び出し (以前の
+.Dv SIGIOT )
+.It Dv SIGEMT No "	コアイメージの作成" "	命令実行のエミュレート"
+.It Dv SIGFPE No "	コアイメージの作成" "	浮動小数例外"
+.It Dv SIGKILL No "	プロセスの終了" "	プログラムの強制終了"
+.It Dv SIGBUS No "	コアイメージの作成" "	バスエラー"
+.It Dv SIGSEGV No "	コアイメージの作成" "	セグメンテーション違反"
+.It Dv SIGSYS No "	コアイメージの作成" "	存在しないシステムコールの呼び出し"
+.It Dv SIGPIPE No "	プロセスの終了" "	読取り側がないパイプへの書込み"
+.It Dv SIGALRM No "	プロセスの終了" "	リアルタイムタイマの満了"
+.It Dv SIGTERM No "	プロセスの終了" "	ソフトウェア終了シグナル"
+.It Dv SIGURG No "	シグナルの破棄" "	緊急状況がソケットに発生"
+.It Dv SIGSTOP No "	プロセスの停止" "	停止 (捕捉も無視もできません)"
+.It Dv SIGTSTP No "	プロセスの停止" "	キーボードから生成された停止シグナル"
+.It Dv SIGCONT No "	シグナルの破棄" "	停止後の継続"
+.It Dv SIGCHLD No "	シグナルの破棄" "	子プロセスの状態変化"
+.It Dv SIGTTIN No "	プロセスの停止" "	バックグラウンドプロセスが制御端末から読み取ろうとした"
+.It Dv SIGTTOU No "	プロセスの停止" "	バックグラウンドプロセスが制御端末に書き込もうとした"
+.It Dv SIGIO No "	シグナルの破棄" "	記述子への" Tn "I/O"
+可能
+.Xr ( fcntl 2
+参照)
+.It Dv SIGXCPU No "	プロセスの終了" "	cpu 制限時間の超過"
+.Xr ( setrlimit 2
+参照)
+.It Dv SIGXFSZ No "	プロセスの終了" "	ファイルサイズ制限の超過"
+.Xr ( setrlimit 2
+参照)
+.It Dv SIGVTALRM No "	プロセスの終了" "	仮想時間アラーム"
+.Xr ( setitimer 2
+参照)
+.It Dv SIGPROF No "	プロセスの終了" "	プロファイリングタイマアラーム"
+.Xr ( setitimer 2
+参照)
+.It Dv SIGWINCH No "	シグナルの破棄" "	ウィンドウサイズの変化"
+.It Dv SIGINFO No "	シグナルの破棄" "	キーボードからのステータス要求"
+.It Dv SIGUSR1 No "	プロセスの終了" "	ユーザ定義シグナル 1"
+.It Dv SIGUSR2 No "	プロセスの終了" "	ユーザ定義シグナル 2"
+.El
+.Sh 注
+.Fa act
+に指定する
+.Va sa_mask
+フィールドでは、
+.Dv SIGKILL
+や
+.Dv SIGSTOP
+をブロックできません。
+ブロックしようとしても無視されます。
+.Pp
+以下の関数は、再入的であるかシグナルで割り込まれることがないかのどちらかで、
+非同期シグナルでも安全です。
+このため、アプリケーションは、シグナル受信関数から制限なく呼び出せます:
+.Pp
+ベースインタフェース
+.Pp
+.Fn _exit ,
+.Fn access ,
+.Fn alarm ,
+.Fn cfgetispeed ,
+.Fn cfgetospeed ,
+.Fn cfsetispeed ,
+.Fn cfsetospeed ,
+.Fn chdir ,
+.Fn chmod ,
+.Fn chown ,
+.Fn close ,
+.Fn creat ,
+.Fn dup ,
+.Fn dup2 ,
+.Fn execle ,
+.Fn execve ,
+.Fn fcntl ,
+.Fn fork ,
+.Fn fpathconf ,
+.Fn fstat ,
+.Fn fsync ,
+.Fn getegid ,
+.Fn geteuid ,
+.Fn getgid ,
+.Fn getgroups ,
+.Fn getpgrp ,
+.Fn getpid ,
+.Fn getppid ,
+.Fn getuid ,
+.Fn kill ,
+.Fn link ,
+.Fn lseek ,
+.Fn mkdir ,
+.Fn mkfifo ,
+.Fn open ,
+.Fn pathconf ,
+.Fn pause ,
+.Fn pipe ,
+.Fn raise ,
+.Fn read ,
+.Fn rename ,
+.Fn rmdir ,
+.Fn setgid ,
+.Fn setpgid ,
+.Fn setsid ,
+.Fn setuid ,
+.Fn sigaction ,
+.Fn sigaddset ,
+.Fn sigdelset ,
+.Fn sigemptyset ,
+.Fn sigfillset ,
+.Fn sigismember ,
+.Fn signal ,
+.Fn sigpending ,
+.Fn sigprocmask ,
+.Fn sigsuspend ,
+.Fn sleep ,
+.Fn stat ,
+.Fn sysconf ,
+.Fn tcdrain ,
+.Fn tcflow ,
+.Fn tcflush ,
+.Fn tcgetattr ,
+.Fn tcgetpgrp ,
+.Fn tcsendbreak ,
+.Fn tcsetattr ,
+.Fn tcsetpgrp ,
+.Fn time ,
+.Fn times ,
+.Fn umask ,
+.Fn uname ,
+.Fn unlink ,
+.Fn utime ,
+.Fn wait ,
+.Fn waitpid ,
+.Fn write
+.Pp
+リアルタイムインタフェース
+.Pp
+.Fn aio_error ,
+.Fn clock_gettime ,
+.Fn sigpause ,
+.Fn timer_getoverrun ,
+.Fn aio_return ,
+.Fn fdatasync ,
+.Fn sigqueue ,
+.Fn timer_gettime ,
+.Fn aio_suspend ,
+.Fn sem_post ,
+.Fn sigset ,
+.Fn timer_settime
+.Pp
+.Tn ANSI C
+インタフェース
+.Pp
+.Fn strcpy ,
+.Fn strcat ,
+.Fn strncpy ,
+.Fn strncat
+そして多分他にもいくつか
+.Pp
+拡張インタフェース
+.Pp
+.Fn strlcpy ,
+.Fn strlcat
+.Pp
+上のリストに記載されていないすべての関数は、シグナルに関して安全でない
+と考えられます。
+つまり、そのような関数がシグナルハンドラから呼び出されるときの動作は、
+未定義です。
+しかし一般的に、シグナルハンドラはフラグを設定する以上のことは
+あまりするべきではなく、それ以外のアクションは安全ではありません。
+.Pp
+また、大域変数
+.Va errno
+のコピーを作成し、シグナルハンドラから戻る前にその値を戻すように
+するのはよいことです。
+こうすることによって、シグナルハンドラの内部から呼ばれた関数によって
+.Va errno
+が設定されてしまうという副作用を防ぐことができます。
+.Sh 戻り値
+.Rv -std sigaction
+.Sh 使用例
+ハンドラが一致する可能性のあるプロトタイプは 3 つあります:
+.Bl -tag -offset indent -width short
+.It Tn ANSI C :
+.Ft void
+.Fn handler int ;
+.It 伝統的な BSD スタイル:
+.Ft void
+.Fn handler int "int code" "struct sigcontext *scp" ;
+.It Tn POSIX の Dv SA_SIGINFO :
+.Ft void
+.Fn handler int "siginfo_t *info" "ucontext_t *uap" ;
+.El
+.Pp
+.Va sa_flags
+フラグ中で
+.Dv SA_SIGINFO
+ビットが設定されている場合、ハンドラ関数は
+.Dv SA_SIGINFO
+プロトタイプに一致しなくてはなりません。
+その場合、
+.Vt "struct sigaction"
+構造体の
+.Va sa_sigaction
+メンバがハンドラ関数を指していなければなりません。
+この方法で
+.Dv SIG_DFL
+あるいは
+.Dv SIG_IGN
+を割り当ててはいけないことに注意してください。
+.Pp
+.Dv SA_SIGINFO
+フラグが設定されていない場合、ハンドラ関数は
+.Tn ANSI C
+もしくは伝統的な
+.Bx
+プロトタイプのどちらかに一致しなくてはならず、
+.Vt "struct sigaction"
+構造体の
+.Va sa_handler
+メンバがハンドラ関数を指していなければなりません。
+実際には、
+.Fx
+は常に後者である
+.Bx
+プロトタイプの 3 つの引数を送りますし、
+.Tn ANSI C
+プロトタイプはそのサブセットになっていますので、どちらでも動作します。
+.Fx
+インクルードファイルの
+.Va sa_handler
+メンバ宣言は、
+.Tn ( POSIX
+の要求に従い)
+.Tn ANSI C
+のものです。
+そのため、
+.Bx
+スタイルの関数のポインタの場合、警告メッセージを無くして
+コンパイルするにはキャストする必要があります。
+伝統的な
+.Bx
+スタイルは移植性がなく、その機能性も
+.Dv SA_SIGINFO
+ハンドラの完全な部分集合になっていますので、
+.Bx
+スタイルを使うことは推奨されていません。
+.Pp
+.Fa sig
+引数はシグナル番号で、
+.In signal.h
+の
+.Dv SIG...
+値のうちの 1 つです。
+.Pp
+.Bx
+スタイルのハンドラの
+.Fa code
+引数および
+.Dv SA_SIGINFO
+ハンドラへの
+.Fa info
+引数の
+.Va si_code
+メンバには、シグナルの発生理由を説明した数値コードが含まれています。
+通常、この数値コードは
+.In sys/signal.h
+にある
+.Dv SI_...
+値の 1 つであるか、もしくはシグナルに特化したコード、すなわち
+.Dv SIGFPE
+に対する
+.Dv FPE_...
+値です。
+.Pp
+.Bx
+スタイルのハンドラの
+.Fa scp
+引数は
+.Vt "struct sigcontext"
+構造体のインスタンスを指しています。
+.Pp
+.Tn POSIX
+.Dv SA_SIGINFO
+ハンドラの
+.Fa uap
+引数は、ucontext_t のインスタンスを指しています。
+.Sh エラー
+以下のうち 1 つが発生すると、
+.Fn sigaction
+システムコールはエラーになり、新しいシグナルハンドラは設置されません:
+.Bl -tag -width Er
+.It Bq Er EFAULT
+.Fa act
+か
+.Fa oact
+は、プロセスに割り当てられたアドレス空間の範囲外を指しています。
+.It Bq Er EINVAL
+.Fa sig
+引数が、正しいシグナル番号になっていません。
+.It Bq Er EINVAL
+.Dv SIGKILL
+か
+.Dv SIGSTOP
+のハンドラを無視するか提供しようとしました。
+.El
+.Sh 規格
+.Fn sigaction
+システムコールは、
+.St -p1003.1-90
+に適合しています。
+.Dv SA_ONSTACK
+フラグと
+.Dv SA_RESTART
+フラグは、Berkeley の拡張機能です。
+.Dv SIGTRAP ,
+.Dv SIGEMT ,
+.Dv SIGBUS ,
+.Dv SIGSYS ,
+.Dv SIGURG ,
+.Dv SIGIO ,
+.Dv SIGXCPU ,
+.Dv SIGXFSZ ,
+.Dv SIGVTALRM ,
+.Dv SIGPROF ,
+.Dv SIGWINCH ,
+.Dv SIGINFO
+シグナルも同様です。
+これらのシグナルは、
+.Bx
+から派生したシステムのほとんどで使用できます。
+.Dv SA_NODEFER
+フラグと
+.Dv SA_RESETHAND
+フラグは、その他のオペレーティングシステムとの下位互換性を保つためのものです。
+.Dv SA_NOCLDSTOP
+フラグと
+.Dv SA_NOCLDWAIT
+.\" と
+.\" SA_SIGINFO
+フラグは、その他のオペレーティングシステムで一般的に見られるオプションです。
+これらのフラグは
+.Dv SIGCHLD
+を無視することによってゾンビの作成を避けるオプションと一緒に、
+.St -susv2
+によって承認されました。
+.Sh 関連項目
+.Xr kill 1 ,
+.Xr kill 2 ,
+.Xr ptrace 2 ,
+.Xr sigaltstack 2 ,
+.Xr sigblock 2 ,
+.Xr sigpause 2 ,
+.Xr sigpending 2 ,
+.Xr sigprocmask 2 ,
+.Xr sigsetmask 2 ,
+.Xr sigsuspend 2 ,
+.Xr sigvec 2 ,
+.Xr wait 2 ,
+.Xr fpsetmask 3 ,
+.Xr setjmp 3 ,
+.Xr siginterrupt 3 ,
+.Xr sigsetops 3 ,
+.Xr ucontext 3 ,
+.Xr tty 4

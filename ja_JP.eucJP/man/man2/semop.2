@@ -1,0 +1,276 @@
+.\"
+.\" Copyright (c) 1995 David Hovemeyer <daveho@infocom.com>
+.\"
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE DEVELOPERS ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/lib/libc/sys/semop.2,v 1.18 2003/01/25 21:27:37 alfred Exp %
+.\"
+.\" WORD:  atomic            不可分な [POSIX]
+.\" WORD:  adjust on exit    終了時調整
+.\" $FreeBSD$
+.Dd September 22, 1995
+.Dt SEMOP 2
+.Os
+.Sh 名称
+.Nm semop
+.Nd セマフォ集合に対する不可分な操作の配列
+.Sh ライブラリ
+.Lb libc
+.Sh 書式
+.In sys/types.h
+.In sys/ipc.h
+.In sys/sem.h
+.Ft int
+.Fn semop "int semid" "struct sembuf *array" "size_t nops"
+.Sh 解説
+.Fn semop
+システムコールは、
+.Fa semid
+が示すセマフォ集合に対して、
+.Fa array
+が示す操作の配列を不可分に実行します。
+.Fa array
+の長さは
+.Fa nops
+で示します。
+各操作は
+.Vt "struct sembuf"
+内にエンコードされており、
+それは次のように定義されます:
+.Bd -literal
+.\"
+.\" From <sys/sem.h>
+.\"
+struct sembuf {
+        u_short sem_num;        /* セマフォ番号 */
+        short   sem_op;         /* セマフォ操作 */
+        short   sem_flg;        /* 操作フラグ */
+};
+.Ed
+.Pp
+.Fa array
+内の各要素に関し、
+.Va sem_op
+と
+.Va sem_flg
+は、集合内のセマフォ番号
+.Va sem_num
+に対して実行される操作を決定します。
+指定した操作の動作を変更するために、
+.Dv SEM_UNDO
+と
+.Dv IPC_NOWAIT
+の値の論理和
+.Em ( OR )
+を取って
+.Va sem_flg
+メンバに入れることが可能です。
+.Pp
+実行される操作は次のように
+.Va sem_op
+の値に依存します:
+.\"
+.\" This section is based on the description of semop() in
+.\" Stevens, _Advanced Programming in the UNIX Environment_,
+.\" and the semop(2) description in The Open Group Unix2 specification.
+.\"
+.Bl -bullet
+.It
+.Va sem_op
+が正であり、プロセスが別のパーミッションを持っている場合、セマフォの値を
+.Va sem_op
+の値だけ増加させます。
+.Dv SEM_UNDO
+を指定した場合、セマフォの終了時調整値を
+.Va sem_op
+の値だけ減少させます。
+.Va sem_op
+についての正の値は、一般に、
+セマフォに結び付けられた資源をリリースするプロセスに対応します。
+.It
+.Va sem_op
+が負であり、プロセスが別のパーミッション持っている場合の動作は、
+セマフォの現在の値に依存します:
+.Bl -bullet
+.It
+セマフォの現在の値が
+.Va sem_op
+の絶対値と等しいかそれより大きい場合、セマフォの値を
+.Va sem_op
+の絶対値だけ減少させます。
+.Dv SEM_UNDO
+が指定されている場合、セマフォの終了時調整値を
+.Va sem_op
+の絶対値だけ増加させます。
+.It
+セマフォの現在値が
+.Va sem_op
+の絶対値より小さい場合、次のどれかが発生します:
+.\" XXX a *second* sublist?
+.Bl -bullet
+.It
+.Dv IPC_NOWAIT
+を指定した場合、
+.Fn semop
+は戻り値
+.Er EAGAIN
+でただちに復帰します。
+.It
+それ以外の場合、呼び出し元プロセスは、以下の条件の 1 つが満足されるまで
+休眠状態になります:
+.\" XXX We already have two sublists, why not a third?
+.Bl -bullet
+.It
+.Xr semctl 2
+の
+.Dv IPC_RMID
+オプションを用いて、他のプロセスがセマフォを削除した場合。
+この時
+.Fn semop
+は、戻り値
+.Er EIDRM
+でただちに復帰します。
+.It
+プロセスが、捕らえるべきシグナルを受け取った場合。
+この時そのプロセスは、
+.Xr sigaction 2
+で定義されたように実行を再開します。
+.It
+セマフォの値が
+.Va sem_op
+の絶対値以上になった場合。
+この条件が真となった時、セマフォの値を
+.Va sem_op
+の絶対値だけ減少させ、セマフォの終了時調整値を
+.Va sem_op
+の絶対値だけ増加させます。
+.El
+.El
+.El
+.Pp
+.Va sem_op
+が負の値であるときは、一般に、
+資源が利用可能になるのをプロセスが待っているということです。
+.It
+.Va sem_op
+が 0 でプロセスが読取り許可を持つ場合、次のどれかが発生します:
+.Bl -bullet
+.It
+現在のセマフォの値が 0 の場合、
+.Fn semop
+はただちに復帰します。
+.It
+.Dv IPC_NOWAIT
+が指定された場合、
+.Fn semop
+は戻り値
+.Er EAGAIN
+でただちに復帰します。
+.It
+それ以外の場合、呼び出し元プロセスは、以下の条件の 1 つが満足されるまで
+休眠状態になります:
+.\" XXX Another nested sublists
+.Bl -bullet
+.It
+.Xr semctl 2
+の
+.Dv IPC_RMID
+オプションを用いて、他のプロセスがセマフォを削除した場合。
+この時
+.Fn semop
+は、戻り値
+.Er EIDRM
+でただちに復帰します。
+.It
+プロセスが、捕らえるべきシグナルを受け取った場合。
+この時そのプロセスは、
+.Xr sigaction 2
+で定義されたように実行を再開します。
+.It
+セマフォの値が 0 となった場合。
+.El
+.El
+.El
+.Pp
+プロセスが使用しているセマフォごとに、カーネルは、先に述べたように
+.Dq 終了時調整
+値を保持します。
+自発的であれ非自発的にであれ、プロセスが終了するときには、
+各セマフォに対する終了時調整値がセマフォの値に追加されます。
+これを、プロセスが予期せず終了してしまう場合に
+資源を必ず解放することを保証するのに使用可能です。
+.Sh 戻り値
+.Rv -std semop
+.Sh エラー
+.Fn semop
+システムコールは次の場合に失敗します:
+.Bl -tag -width Er
+.It Bq Er EINVAL
+.Fa semid
+に対応するセマフォ集合がないか、システムで定義されるプロセス毎の
+.Dv SEM_UNDO
+構造体の数の制限が超過しました。
+.It Bq Er EACCES
+操作とセマフォ集合のモードの間で不一致があるため、
+パーミッションが拒否されました。
+.It Bq Er EAGAIN
+セマフォはそのプロセスを休眠状態に移行させる値ですが、
+.Dv IPC_NOWAIT
+が指定されました。
+.It Bq Er E2BIG
+あまりに多くの操作が指定されました。
+.Bq Dv SEMOPM
+.It Bq Er EFBIG
+.\"
+.\" I'd have thought this would be EINVAL, but the source says
+.\" EFBIG.
+.\"
+.Va sem_num
+が集合に対する有効なセマフォの範囲内にありませんでした。
+.It Bq Er EIDRM
+セマフォの組は、システムから削除されました。
+.It Bq Er EINTR
+.Fn semop
+システムコールは、シグナルによって中断されました。
+.It Bq Er ENOSPC
+システムの
+.Dv SEM_UNDO
+プール
+.Bq Dv SEMMNU
+が、いっぱいになりました。
+.It Bq Er ERANGE
+要求された操作によって、現在のセマフォの値
+.Bq Dv SEMVMX
+、もしくはその終了時調整値
+.Bq Dv SEMAEM
+が、システムによって課されている限界を越えようとしています。
+.El
+.Sh 関連項目
+.Xr semctl 2 ,
+.Xr semget 2 ,
+.Xr sigaction 2
+.Sh バグ
+.Fn semop
+システムコールは、
+.Dv IPC_NOWAIT
+が指定されていてもメモリ待ちでブロックすることがあります。

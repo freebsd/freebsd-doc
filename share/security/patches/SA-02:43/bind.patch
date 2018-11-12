@@ -1,0 +1,404 @@
+Index: contrib/bind/CHANGES
+===================================================================
+RCS file: /home/ncvs/src/contrib/bind/CHANGES,v
+retrieving revision 1.1.1.7.2.7
+diff -c -c -r1.1.1.7.2.7 CHANGES
+*** contrib/bind/CHANGES	7 Jul 2002 08:19:01 -0000	1.1.1.7.2.7
+--- contrib/bind/CHANGES	14 Nov 2002 01:30:48 -0000
+***************
+*** 1,3 ****
+--- 1,23 ----
++ 1469.	[bug]		buffer length calculation for PX was wrong.
++ 
++ 1468.	[bug]		ns_name_ntol() could overwite a zero length buffer.
++ 
++ 1467.	[bug]		off by one bug in ns_makecannon().
++ 
++ 1466.	[bug]		large ENDS UDP buffer size could trigger a assertion.
++ 
++ 1465.	[bug]		possible NULL pointer dereference in db_sec.c
++ 
++ 1464.	[bug]      	the buffer used to construct the -ve record was not
++ 			big enough for all possible SOA records.  use pointer
++ 			arithmetic to calculate the remaining size in this
++ 			buffer.
++ 
++ 1463.	[bug]		use serial space arithmetic to determine if a SIG is
++ 			too old, in the future or has internally constistant
++ 			times.
++ 
++ 1462.	[bug]		write buffer overflow in make_rr().
+  
+  	--- 8.3.3-REL released --- (Wed Jun 26 21:15:43 PDT 2002)
+  
+Index: contrib/bind/bin/named/db_defs.h
+===================================================================
+RCS file: /home/ncvs/src/contrib/bind/bin/named/db_defs.h,v
+retrieving revision 1.1.1.2.2.5
+diff -c -c -r1.1.1.2.2.5 db_defs.h
+*** contrib/bind/bin/named/db_defs.h	7 Jul 2002 08:19:13 -0000	1.1.1.2.2.5
+--- contrib/bind/bin/named/db_defs.h	14 Nov 2002 01:30:48 -0000
+***************
+*** 78,84 ****
+   */
+  
+  	/* max length of data in RR data field */
+! #define MAXDATA		(2*MAXDNAME + 5*INT32SZ)
+  
+  	/* max length of data in a TXT RR segment */
+  #define MAXCHARSTRING 255
+--- 78,84 ----
+   */
+  
+  	/* max length of data in RR data field */
+! #define MAXDATA		(3*MAXDNAME + 5*INT32SZ)
+  
+  	/* max length of data in a TXT RR segment */
+  #define MAXCHARSTRING 255
+Index: contrib/bind/bin/named/db_sec.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/bind/bin/named/db_sec.c,v
+retrieving revision 1.1.1.1.4.3
+diff -c -c -r1.1.1.1.4.3 db_sec.c
+*** contrib/bind/bin/named/db_sec.c	17 Feb 2002 15:48:38 -0000	1.1.1.1.4.3
+--- contrib/bind/bin/named/db_sec.c	14 Nov 2002 01:30:48 -0000
+***************
+*** 479,485 ****
+  	struct sig_record *sigdata;
+  	struct dnode *sigdn;
+  	struct databuf *sigdp;
+! 	time_t now;
+  	char *signer;
+  	u_char name_n[MAXDNAME];
+  	u_char *sig, *eom;
+--- 479,487 ----
+  	struct sig_record *sigdata;
+  	struct dnode *sigdn;
+  	struct databuf *sigdp;
+! 	u_int32_t now;
+! 	u_int32_t exptime;
+! 	u_int32_t signtime;
+  	char *signer;
+  	u_char name_n[MAXDNAME];
+  	u_char *sig, *eom;
+***************
+*** 492,497 ****
+--- 494,500 ----
+  	int dnssec_failed = 0, dnssec_succeeded = 0;
+  	int return_value;
+  	int i;
++ 	int expired = 0;
+  
+  	if (rrset == NULL || rrset->rr_name == NULL) {
+  		ns_warning (ns_log_default, "verify_set: missing rrset/name");
+***************
+*** 527,537 ****
+  		 * Don't verify a set if the SIG inception time is in
+  		 * the future.  This should be fixed before 2038 (BEW)
+  		 */
+! 		if ((time_t)ntohl(sigdata->sig_time_n) > now)
+  			continue;
+  
+  		/* An expired set is dropped, but the data is not. */
+! 		if ((time_t)ntohl(sigdata->sig_exp_n) < now) {
+  			db_detach(&sigdn->dp);
+  			sigdp = NULL;
+  			continue;
+--- 530,543 ----
+  		 * Don't verify a set if the SIG inception time is in
+  		 * the future.  This should be fixed before 2038 (BEW)
+  		 */
+! 		signtime = ntohl(sigdata->sig_time_n);
+! 		if (SEQ_GT(signtime, now))
+  			continue;
+  
+  		/* An expired set is dropped, but the data is not. */
+! 		exptime = ntohl(sigdata->sig_exp_n);
+! 		if (SEQ_GT(now, exptime)) {
+! 			expired++;
+  			db_detach(&sigdn->dp);
+  			sigdp = NULL;
+  			continue;
+***************
+*** 723,729 ****
+  	}
+  
+  end:
+! 	if (dnssec_failed > 0)
+  		rrset_trim_sigs(rrset);
+  	if (trustedkey == 0 && key != NULL)
+  		dst_free_key(key);
+--- 729,735 ----
+  	}
+  
+  end:
+! 	if (dnssec_failed > 0 || expired > 0)
+  		rrset_trim_sigs(rrset);
+  	if (trustedkey == 0 && key != NULL)
+  		dst_free_key(key);
+Index: contrib/bind/bin/named/ns_defs.h
+===================================================================
+RCS file: /home/ncvs/src/contrib/bind/bin/named/ns_defs.h,v
+retrieving revision 1.1.1.3.2.6
+diff -c -c -r1.1.1.3.2.6 ns_defs.h
+*** contrib/bind/bin/named/ns_defs.h	7 Jul 2002 08:19:13 -0000	1.1.1.3.2.6
+--- contrib/bind/bin/named/ns_defs.h	14 Nov 2002 01:30:48 -0000
+***************
+*** 469,475 ****
+  			q_cmsglen,	/* len of cname message */
+  			q_cmsgsize;	/* allocated size of cname message */
+  	int16_t		q_dfd;		/* UDP file descriptor */
+! 	int16_t		q_udpsize;	/* UDP message size */
+  	int		q_distance;	/* distance this query is from the
+  					 * original query that the server
+  					 * received. */
+--- 469,475 ----
+  			q_cmsglen,	/* len of cname message */
+  			q_cmsgsize;	/* allocated size of cname message */
+  	int16_t		q_dfd;		/* UDP file descriptor */
+! 	u_int16_t	q_udpsize;	/* UDP message size */
+  	int		q_distance;	/* distance this query is from the
+  					 * original query that the server
+  					 * received. */
+Index: contrib/bind/bin/named/ns_ncache.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/bind/bin/named/ns_ncache.c,v
+retrieving revision 1.1.1.2.2.2
+diff -c -c -r1.1.1.2.2.2 ns_ncache.c
+*** contrib/bind/bin/named/ns_ncache.c	17 Feb 2002 15:48:38 -0000	1.1.1.2.2.2
+--- contrib/bind/bin/named/ns_ncache.c	14 Nov 2002 01:30:48 -0000
+***************
+*** 66,72 ****
+  	u_int16_t atype;
+  	u_char *sp, *cp1;
+  	u_char data[MAXDATA];
+! 	size_t len = sizeof data;
+  #endif
+  
+  	nameserIncr(from.sin_addr, nssRcvdNXD);
+--- 66,72 ----
+  	u_int16_t atype;
+  	u_char *sp, *cp1;
+  	u_char data[MAXDATA];
+! 	u_char *eod = data + sizeof(data);
+  #endif
+  
+  	nameserIncr(from.sin_addr, nssRcvdNXD);
+***************
+*** 186,192 ****
+  		rdatap = cp;
+  
+  		/* origin */
+! 		n = dn_expand(msg, msg + msglen, cp, (char*)data, len);
+  		if (n < 0) {
+  			ns_debug(ns_log_ncache, 3,
+  				 "ncache: origin form error");
+--- 186,192 ----
+  		rdatap = cp;
+  
+  		/* origin */
+! 		n = dn_expand(msg, msg + msglen, cp, (char*)data, eod - data);
+  		if (n < 0) {
+  			ns_debug(ns_log_ncache, 3,
+  				 "ncache: origin form error");
+***************
+*** 195,203 ****
+  		cp += n;
+  		n = strlen((char*)data) + 1;
+  		cp1 = data + n;
+- 		len -= n;
+  		/* mail */
+! 		n = dn_expand(msg, msg + msglen, cp, (char*)cp1, len);
+  		if (n < 0) {
+  			ns_debug(ns_log_ncache, 3, "ncache: mail form error");
+  			return;
+--- 195,202 ----
+  		cp += n;
+  		n = strlen((char*)data) + 1;
+  		cp1 = data + n;
+  		/* mail */
+! 		n = dn_expand(msg, msg + msglen, cp, (char*)cp1, eod - cp1);
+  		if (n < 0) {
+  			ns_debug(ns_log_ncache, 3, "ncache: mail form error");
+  			return;
+***************
+*** 205,224 ****
+  		cp += n;
+  		n = strlen((char*)cp1) + 1;
+  		cp1 += n;
+- 		len -= n;
+  		n = 5 * INT32SZ;
+  		BOUNDS_CHECK(cp, n);
+  		memcpy(cp1, cp, n);
+  		/* serial, refresh, retry, expire, min */
+  		cp1 += n;
+- 		len -= n;
+  		cp += n;
+  		if (cp != rdatap + dlen) {
+  			ns_debug(ns_log_ncache, 3, "ncache: form error");
+  			return;
+  		}
+  		/* store the zone of the soa record */
+! 		n = dn_expand(msg, msg + msglen, sp, (char*)cp1, len);
+  		if (n < 0) {
+  			ns_debug(ns_log_ncache, 3, "ncache: form error 2");
+  			return;
+--- 204,223 ----
+  		cp += n;
+  		n = strlen((char*)cp1) + 1;
+  		cp1 += n;
+  		n = 5 * INT32SZ;
++ 		if (n > (eod - cp1))	/* Can't happen. See MAXDATA. */
++ 			return;
+  		BOUNDS_CHECK(cp, n);
+  		memcpy(cp1, cp, n);
+  		/* serial, refresh, retry, expire, min */
+  		cp1 += n;
+  		cp += n;
+  		if (cp != rdatap + dlen) {
+  			ns_debug(ns_log_ncache, 3, "ncache: form error");
+  			return;
+  		}
+  		/* store the zone of the soa record */
+! 		n = dn_expand(msg, msg + msglen, sp, (char*)cp1, eod - cp1);
+  		if (n < 0) {
+  			ns_debug(ns_log_ncache, 3, "ncache: form error 2");
+  			return;
+Index: contrib/bind/bin/named/ns_req.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/bind/bin/named/ns_req.c,v
+retrieving revision 1.1.1.2.2.10
+diff -c -c -r1.1.1.2.2.10 ns_req.c
+*** contrib/bind/bin/named/ns_req.c	7 Jul 2002 08:19:13 -0000	1.1.1.2.2.10
+--- contrib/bind/bin/named/ns_req.c	14 Nov 2002 01:30:48 -0000
+***************
+*** 2195,2201 ****
+  
+  		/* first just copy over the type_covered, algorithm, */
+  		/* labels, orig ttl, two timestamps, and the footprint */
+! 		if ((dp->d_size - 18) > buflen)
+  			goto cleanup;  /* out of room! */
+  		memcpy(cp, cp1, 18);
+  		cp  += 18;
+--- 2195,2201 ----
+  
+  		/* first just copy over the type_covered, algorithm, */
+  		/* labels, orig ttl, two timestamps, and the footprint */
+! 		if (buflen < 18)
+  			goto cleanup;  /* out of room! */
+  		memcpy(cp, cp1, 18);
+  		cp  += 18;
+Index: contrib/bind/bin/named/ns_resp.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/bind/bin/named/ns_resp.c,v
+retrieving revision 1.1.1.2.2.7
+diff -c -c -r1.1.1.2.2.7 ns_resp.c
+*** contrib/bind/bin/named/ns_resp.c	7 Jul 2002 08:19:13 -0000	1.1.1.2.2.7
+--- contrib/bind/bin/named/ns_resp.c	14 Nov 2002 01:30:48 -0000
+***************
+*** 2001,2007 ****
+  		 * to BOUNDS_CHECK() here.
+  		 */
+  		cp1 += (n = strlen((char *)cp1) + 1);
+! 		n1 = sizeof(data) - n;
+  		n = dn_expand(msg, eom, cp, (char *)cp1, n1);
+  		if (n < 0) {
+  			hp->rcode = FORMERR;
+--- 2001,2007 ----
+  		 * to BOUNDS_CHECK() here.
+  		 */
+  		cp1 += (n = strlen((char *)cp1) + 1);
+! 		n1 = sizeof(data) - n - INT16SZ;
+  		n = dn_expand(msg, eom, cp, (char *)cp1, n1);
+  		if (n < 0) {
+  			hp->rcode = FORMERR;
+***************
+*** 2043,2050 ****
+  			ttl = origTTL;
+  		}
+  
+  		/* Don't let bogus signers "sign" in the future.  */
+! 		if (signtime > now) {
+  			ns_debug(ns_log_default, 3,
+  			  "ignoring SIG: signature date %s is in the future",
+  				 p_secstodate (signtime));
+--- 2043,2060 ----
+  			ttl = origTTL;
+  		}
+  
++ 		/*
++ 		 * Check that expire and signature times are internally
++ 		 * consistant.
++ 		 */
++ 		if (!SEQ_GT(exptime, signtime) && exptime != signtime) {
++ 			ns_debug(ns_log_default, 3,
++ 			"ignoring SIG: signature expires before it was signed");
++ 			return ((cp - rrp) + dlen);
++ 		}
++ 
+  		/* Don't let bogus signers "sign" in the future.  */
+! 		if (SEQ_GT(signtime, now)) {
+  			ns_debug(ns_log_default, 3,
+  			  "ignoring SIG: signature date %s is in the future",
+  				 p_secstodate (signtime));
+***************
+*** 2052,2058 ****
+  		}
+  		
+  		/* Ignore received SIG RR's that are already expired.  */
+! 		if (exptime <= now) {
+  			ns_debug(ns_log_default, 3,
+  				"ignoring SIG: expiration %s is in the past",
+  				 p_secstodate (exptime));
+--- 2062,2068 ----
+  		}
+  		
+  		/* Ignore received SIG RR's that are already expired.  */
+! 		if (SEQ_GT(now, exptime)) {
+  			ns_debug(ns_log_default, 3,
+  				"ignoring SIG: expiration %s is in the past",
+  				 p_secstodate (exptime));
+Index: contrib/bind/lib/nameser/ns_name.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/bind/lib/nameser/ns_name.c,v
+retrieving revision 1.1.1.2.2.3
+diff -c -c -r1.1.1.2.2.3 ns_name.c
+*** contrib/bind/lib/nameser/ns_name.c	7 Jul 2002 08:19:18 -0000	1.1.1.2.2.3
+--- contrib/bind/lib/nameser/ns_name.c	14 Nov 2002 01:30:48 -0000
+***************
+*** 341,346 ****
+--- 341,350 ----
+  	dn = dst;
+  	eom = dst + dstsiz;
+  
++ 	if (dn >= eom) {
++ 		errno = EMSGSIZE;
++ 		return (-1);
++ 	}
+  	while ((n = *cp++) != 0) {
+  		if ((n & NS_CMPRSFLGS) == NS_CMPRSFLGS) {
+  			/* Some kind of compression pointer. */
+Index: contrib/bind/lib/nameser/ns_samedomain.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/bind/lib/nameser/ns_samedomain.c,v
+retrieving revision 1.1.1.1
+diff -c -c -r1.1.1.1 ns_samedomain.c
+*** contrib/bind/lib/nameser/ns_samedomain.c	30 Nov 1999 02:42:58 -0000	1.1.1.1
+--- contrib/bind/lib/nameser/ns_samedomain.c	14 Nov 2002 01:30:49 -0000
+***************
+*** 166,172 ****
+  ns_makecanon(const char *src, char *dst, size_t dstsize) {
+  	size_t n = strlen(src);
+  
+! 	if (n + sizeof "." > dstsize) {
+  		errno = EMSGSIZE;
+  		return (-1);
+  	}
+--- 166,172 ----
+  ns_makecanon(const char *src, char *dst, size_t dstsize) {
+  	size_t n = strlen(src);
+  
+! 	if (n + sizeof "." + 1 > dstsize) {
+  		errno = EMSGSIZE;
+  		return (-1);
+  	}

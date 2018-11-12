@@ -1,0 +1,149 @@
+.\" -*- nroff -*-
+.\"
+.\" Copyright (c) 1996 Doug Rabson
+.\"
+.\" All rights reserved.
+.\"
+.\" This program is free software.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE DEVELOPERS ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man9/VOP_FSYNC.9,v 1.13 2003/05/31 14:07:25 hmp Exp %
+.\"
+.\" $FreeBSD$
+.Dd July 24, 1996
+.Os
+.Dt VOP_FSYNC 9
+.Sh 名称
+.Nm VOP_FSYNC
+.Nd ファイルシステムバッファのファイルへの吐き出し
+.Sh 書式
+.In sys/param.h
+.In sys/vnode.h
+.Ft int
+.Fn VOP_FSYNC "struct vnode *vp" "struct ucred *cred" "int waitfor" "struct thread *td"
+.Sh 解説
+この呼び出しはファイルの全ての汚れたバッファを吐き出します。
+.Xr sync 2
+および
+.Xr fsync 2
+システムコールを実装するために使用されます。
+.Pp
+引数は以下の通りです。
+.Bl -tag -width waitfor
+.It Fa vp
+ファイルの vnode。
+.It Fa cred
+呼び出し側の証明。
+.It Fa waitfor
+入出力の完了を関数が待つべきかどうか。
+.Bl -tag -width MNT_NOWAIT
+.It Dv MNT_WAIT
+入出力の完了を同期的に待ちます。
+.It Dv MNT_NOWAIT
+全ての入出力を開始しますが、それを待ちません。
+.It Dv MNT_LAZY
+ファイルシステムの syncer によって書込まれていないデータを出力します。
+.El
+.It Fa td
+呼び出しているスレッド。
+.El
+.Pp
+引数
+.Fa waitfor
+は
+.Dv MNT_WAIT
+または
+.Dv MNT_NOWAIT
+のどちらかで、関数が戻る前に書き込みの終了を待つべきかどうかを指定します。
+.Sh ロック
+ファイルはエントリ時にロックされるべきです。
+.Sh 戻り値
+呼び出しが成功した場合には 0 が返され、
+そうでない場合には適切なエラーコードが返されます。
+.Sh 疑似コード
+.Bd -literal
+int
+vop_fsync(struct vnode *vp, struct ucred *cred, int waitfor, struct thread *td)
+{
+    struct buf *bp;
+    struct buf *nbp;
+    struct timeval tv;
+    int s;
+
+loop:
+    s = splbio();
+    for (bp = vp->v_dirtyblkhd.lh_first; bp; bp = nbp) {
+	nbp = bp->b_vnbufs.le_next;
+
+	/*
+	 * 既に書き込み中のバッファを無視します。
+	 */
+	if (bp->b_flags & B_BUSY)
+	    continue;
+	
+	/*
+	 * バッファが汚れているか確認します。
+	 */
+	if ((bp->b_flags & B_DELWRI) == 0)
+	    panic("vop_fsync: not dirty");
+
+	vfs_bio_awrite(bp);
+	splx(s);
+	goto loop;
+    }
+    splx(s);
+
+    if (waitfor == MNT_WAIT) {
+	s = splbio();
+	while (vp->v_numoutput) {
+	    vp->v_flag |= VBWAIT;
+	    tsleep((caddr_t)&vp->v_numoutput, PRIBIO + 1, "vopfsn");
+	}
+	splx(s);
+#ifdef DIAGNOSTIC
+	if (vp->v_dirtyblkhd.lh_first) {
+	    vprint("vop_fsync: dirty", vp);
+	    goto loop;
+	}
+#endif
+    }
+
+    /*
+     * ディスク上の vnode を書き出します。
+     */
+    tv = time;
+    return VOP_UPDATE(vp, &tv, &tv, waitfor == MNT_WAIT);
+}
+.Ed
+.Sh エラー
+.Bl -tag -width Er
+.It Bq Er ENOSPC
+ファイルシステムが一杯です。
+.It Bq Er EDQUOT
+クォータを超過しました。
+.El
+.Sh 関連項目
+.Xr vnode 9
+.Sh 作者
+このマニュアルページは
+.An Doug Rabson
+が書きました。

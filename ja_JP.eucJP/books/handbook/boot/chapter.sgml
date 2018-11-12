@@ -1,0 +1,906 @@
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD Japanese Documentation Project
+
+     Original revision: 1.65
+     $FreeBSD$
+-->
+
+<chapter id="boot">
+  <title>FreeBSD の起動のプロセス</title>
+
+  <sect1 id="boot-synopsis">
+    <title>この章では</title>
+
+    <indexterm><primary>起動</primary></indexterm>
+    <indexterm><primary>ブートストラップ (bootstrap)</primary></indexterm>
+
+    <para>計算機を起動しオペレーティングシステムをロードするプロセスは、
+      <quote>ブートストラッププロセス</quote>、
+      もしくは単に <quote>起動</quote> と呼ばれます。
+      FreeBSD の起動プロセスを使えば、
+      システムをスタートするときに起きることを
+      かなり柔軟にカスタマイズすることができます。
+      同じ計算機にインストールされた
+      別のオペレーティングシステムを選択することもできますし、
+      同じオペレーティングシステムの違うバージョンを選択することも、
+      インストールされた別のカーネルを選択することさえできます。</para>
+
+    <para>この章では、指定できる設定オプションと FreeBSD
+      の起動プロセスのカスタマイズ方法について詳しく述べます。
+      この章では FreeBSD カーネルがスタートし、デバイスを検出し、
+      &man.init.8; を起動するまでに起きることすべてを扱います。
+      どの最中のことだかはっきりしていない人のために補足すると、
+      テキストの色が明るい白から灰色に変わるまでに起きていることです。</para>
+
+    <para>この章を読むと、以下のことが分かります。</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>どのように FreeBSD のブートストラップシステムが構成され、
+	  そしてそれらが互いにどう関係しているのか</para>
+      </listitem>
+
+      <listitem>
+	<para>起動プロセスを制御するために FreeBSD
+	  のブートストラップの各要素に付加できるオプション</para>
+      </listitem>
+
+      <listitem>
+	<para>&man.device.hints.5; の基本的な記述方法</para>
+      </listitem>
+    </itemizedlist>
+
+    <note>
+      <title>x86 限定</title>
+
+      <para>この章では Intel x86 システム上で動作する FreeBSD
+	の起動プロセスだけを扱います。</para>
+    </note>
+  </sect1>
+
+  <sect1 id="boot-introduction">
+    <title>起動時の問題</title>
+
+    <para>計算機の電源を入れ、オペレーティングシステムをスタートさせるのには、
+      おもしろいジレンマがあります。定義により、
+      計算機は、オペレーティングシステムが起動するまでは、
+      ディスクからプログラムを動かすことも含めて、
+      何をどうすればよいかまったく知りません。
+      では、計算機はオペレーティングシステムなしに
+      ディスクからプログラムを実行することができず、
+      オペレーティングシステムのプログラムがディスク上にあるのなら、
+      どうやってオペレーティングシステムを起動するのでしょうか?</para>
+
+    <para>この問題は<citetitle>ほらふき男爵の冒険</citetitle>
+      という本の中に書かれている問題ととてもよく似ています。
+      登場人物がマンホールの下に半分落っこちて、
+      靴紐 (ブートストラップ) をつかんで自分を引っぱり、持ち上げるのです。
+      計算機の黎明期には、<firstterm>ブートストラップ</firstterm>
+      という用語でオペレーティングシステムをロードする
+      機構のことを指していたのですが、
+      いまはこれを縮めて <quote>ブート (起動)</quote> と言います。</para>
+
+    <indexterm><primary>BIOS</primary></indexterm>
+
+    <indexterm><primary>基本入出力システム
+      (Basic Input/Output System)</primary><see>BIOS</see></indexterm>
+
+    <para>x86 ハードウェアでは、基本入出力システム
+      (Basic Input/Output System: BIOS)
+      にオペレーティングシステムをロードする責任があります。
+      オペレーティングシステムをロードするために、
+      BIOS がハードディスク上のマスターブートレコード
+      (Master Boot Record: MBR) を探します。
+      MBR はハードディスク上の特定の場所になければなりません。
+      BIOS には MBR をロードし起動するのに十分な知識があり、
+      オペレーティングシステムをロードするために必要な作業の残りは、
+      場合によっては BIOS の助けを得た上で
+      MBR が実行できることを仮定しています。</para>
+
+    <indexterm><primary>マスターブートレコード
+      (Master Boot Record: MBR)</primary></indexterm>
+
+    <indexterm><primary>ブートマネージャ
+      (Boot Manager)</primary></indexterm>
+
+    <indexterm><primary>ブートローダ
+      (Boot Loader)</primary></indexterm>
+
+    <para>MBR 内部のコードは、
+      通常<emphasis>ブートマネージャ</emphasis>と呼ばれます。
+      とりわけユーザとの対話がある場合にそう呼ばれます。
+      その場合は、通常もっと多くのブートマネージャのコードが、
+      ディスクの最初の<emphasis>トラック</emphasis>
+      または OS のファイルシステム上におかれます
+      (ブートマネージャは<emphasis>ブートローダ</emphasis>
+      と呼ばれることもありますが、
+      FreeBSD はこの言葉を起動のもっと後の段階に対して使います)。
+      よく使われるブートマネージャには、
+      <application>boot0</application> (<application>Boot Easy</application>
+      とも呼ばれる &os; 標準のブートマネージャ),
+      <application>Grub</application>, <application>GAG</application> や
+      <application>LILO</application> 等があります
+      (MBR 内に収まるのは <application>boot0</application> だけです)。</para>
+
+    <para>ディスク上にインストールされているオペレーティングシステムが
+      1 つであれば、標準の PC MBR で十分です。
+      この MBR はディスク上の最初の起動可能な (アクティブな) スライスを探し、
+      そのスライスにあるコードを起動してオペレーティングシステムの残りをロードします。
+      デフォルトで &man.fdisk.8; がインストールする MBR
+      は、このような MBR です。<filename>/boot/mbr</filename>
+      を基にしています。</para>
+
+    <para>ディスク上にオペレーティングシステムを複数インストールしているなら、
+      別のブートマネージャ
+      (複数のオペレーティングシステムの一覧を表示できて、
+      起動するオペレーティングシステムを選択できるようなもの)
+      をインストールするとよいでしょう。
+      このようなブートマネージャの中から 2 つを次の節で説明します。</para>
+
+    <para>FreeBSD ブートストラップシステムの残りは 3 段階に分かれます。
+      第 1 ステージは MBR によって起動されるもので、
+      MBR は計算機を特定の状態にするために必要なことだけ知っていて、
+      第 2 ステージを起動します。
+      第 2 ステージでは、第 3 ステージを起動する前に、
+      もうちょっとやることができます。
+      第 3 ステージでオペレーティングシステムのロード作業を完了します。
+      起動作業がこれらの 3 段階に分かれているのは、
+      PC の規格がステージ 1 とステージ 2
+      で実行できるプログラムのサイズに制限を課しているからです。
+      これらの作業をつなぎ合わせることによって、
+      FreeBSD はより柔軟なローダ (loader) を提供しているのです。</para>
+
+    <indexterm><primary>カーネル (kernel)</primary></indexterm>
+    <indexterm><primary><command>init</command></primary></indexterm>
+
+    <para>その後カーネルが起動し、デバイスの検出と初期化を開始します。
+      そしてカーネルの起動が終わると、制御はユーザープロセスの
+      &man.init.8; へ移されます。&man.init.8; はまず
+      ディスクが利用可能であることを確かめ、
+      ファイルシステムのマウント、
+      ネットワークで利用するネットワークカードのセットアップ、
+      そして通常 FreeBSD システムで初期時に起動されるすべてのプロセスの起動、
+      といったユーザーレベルでのリソース (資源) 設定を行ないます。</para>
+  </sect1>
+
+  <sect1 id="boot-blocks">
+    <title>ブートマネージャと起動ステージ</title>
+
+    <indexterm><primary>ブートマネージャ</primary></indexterm>
+
+    <sect2 id="boot-boot0">
+      <title>ブートマネージャ</title>
+      <indexterm><primary>マスターブートレコード (MBR)</primary></indexterm>
+
+      <para>MBR やブートマネージャのコードは起動プロセスの<emphasis>第
+	0 ステージ</emphasis>と呼ばれることがあります。
+	この節では前述の 2 つのブートマネージャ、
+	<application>boot0</application> と <application>LILO</application>
+	について説明します。</para>
+
+      <formalpara><title><application>boot0</application> ブートマネージャ</title>
+	<para>FreeBSD のインストーラや &man.boot0cfg.8;
+	  がデフォルトでインストールする
+	  MBR は、<filename>/boot/boot0</filename> を基にしています
+	  (<filename>boot0</filename> は非常に単純なプログラムです。
+	  <abbrev>MBR</abbrev> にあるプログラムは、
+	  スライステーブルと末尾の識別子 <literal>0x55AA</literal> があるため、
+	  446 バイトの大きさでなければならないという制限があるためです)。
+	  ハードディスクに <application>boot0</application>
+	  と複数のオペレーティングシステムをインストールした場合、
+	  起動時に以下のような画面が出るでしょう。</para></formalpara>
+
+      <example id="boot-boot0-example">
+	<title><filename>boot0</filename> のスクリーンショット</title>
+
+	<screen>F1 DOS
+F2 FreeBSD
+F3 Linux
+F4 ??
+F5 Drive 1
+
+Default: F2</screen>
+      </example>
+
+      <para>他のオペレーティングシステム、特に &windows; は、
+	既存の MBR を自らの MBR で上書きしてしまうことで知られています。
+	もしそうなってしまったら、
+	もしくは既存の MBR を FreeBSD の MBR で置き換えたいのなら、
+	次のコマンドを使ってください。</para>
+
+      <screen>&prompt.root; <userinput>fdisk -B -b /boot/boot0 <replaceable>device</replaceable></userinput></screen>
+
+      <para><replaceable>device</replaceable> は起動するデバイス名で、
+	たとえば 1 番目の IDE ディスクは
+	<devicename>ad0</devicename>、
+	2 番目の IDE コントローラに接続されている 1 番目の IDE ディスクは
+	<devicename>ad2</devicename>、
+	1 番目の SCSI ディスクは
+	<devicename>da0</devicename>
+	などとなります。
+	MBR の設定をカスタマイズしたい場合は &man.boot0cfg.8;
+	を使ってください。</para>
+
+      <formalpara><title>LILO ブートマネージャ</title>
+
+	<para>このブートマネージャをインストールして FreeBSD
+	  を起動するようにするには、まず Linux を起動して
+	  <filename>/etc/lilo.conf</filename>
+	  コンフィグレーションファイルに以下を追加してください。</para></formalpara>
+
+      <programlisting>other=/dev/hdXY
+table=/dev/hdX
+loader=/boot/chain.b
+label=FreeBSD</programlisting>
+
+      <para>上記において、FreeBSD のプライマリパーティションとドライブを
+	Linux の識別子を使って指定してください。
+	<replaceable>X</replaceable> を Linux のドライブ文字に、また
+	<replaceable>Y</replaceable> を Linux
+	のプライマリパーティション番号に置き換えてください。
+	<acronym>SCSI</acronym> ドライブを使っているのであれば、
+	<replaceable>/dev/hd</replaceable> を
+	<replaceable>/dev/sd</replaceable>
+	のように読み替えてください。
+	同じドライブ上に両方のオペレーティングシステムが置いてあるなら、
+	<option>loader=/boot/chain.b</option> 行は不要です。
+	これで <command>/sbin/lilo&nbsp;-v</command>
+	を実行するとシステムに新しい変更が反映されます。
+	画面のメッセージを見て確認しておきましょう。</para>
+    </sect2>
+
+    <sect2 id="boot-boot1">
+      <title>起動ステージ 1 <filename>/boot/boot1</filename> と起動ステージ 2
+	<filename>/boot/boot2</filename></title>
+
+      <para>概念上、第 1 ステージと第 2 ステージは
+	ハードディスクの同じ領域上の同一のプログラムの部分部分です。
+	スペースの制約のため 2 つに分割されていますが、
+	いつも一緒にインストールされます。
+	インストーラまたは <application>bsdlabel</application>
+	は、両者を 1 つにまとめたファイル
+	<filename>/boot/boot</filename> をコピーします (下記参照)。</para>
+
+      <para>第 1 ステージと第 2 ステージは、ファイルシステムの外部、
+	起動スライスの最初のトラックに置かれ、
+	先頭が最初のセクタにきます。
+	<link linkend="boot-boot0">boot0</link>
+	またはその他のブートマネージャは、
+	起動プロセスを続けるために必要なプログラムがそこにあると想定しています。
+	使用されるセクタの数は、<filename>/boot/boot</filename>
+	の大きさから簡単に分かります。</para>
+
+      <para><filename>boot1</filename> は
+	512 バイトの大きさでなければならないという制限があるので、
+	非常に単純なプログラムです。
+	このプログラムは <filename>boot2</filename> を検索し、
+	実行するため、そのスライスの情報を保持する FreeBSD
+	の <firstterm>BSD ラベル</firstterm>
+	に関する最低限の情報だけを持っています。</para>
+
+      <para><filename>boot2</filename> はもう少し高機能です。
+	これは FreeBSD のファイルシステム上でファイルを見つける能力を持ち、
+ 	実行するカーネルやローダを指定するための簡単なインタフェースを提供します。</para>
+
+      <para><link linkend="boot-loader">ローダ (loader)</link>
+	はさらに高機能なもので、
+	使いやすく簡単な起動設定が行なえる手段を提供します。
+	<filename>boot2</filename> は通常それを起動します。
+	以前の <filename>boot2</filename> には、
+	カーネルを直接起動する機能しかありませんでした。</para>
+
+      <example id="boot-boot2-example">
+	<title><filename>boot2</filename> のスクリーンショット</title>
+
+	<screen>&gt;&gt; FreeBSD/i386 BOOT
+Default: 0:ad(0,a)/boot/loader
+boot:</screen>
+      </example>
+
+      <para>もし仮にインストールされた <filename>boot1</filename> と
+	<filename>boot2</filename> を変更したいのであれば、
+	&man.bsdlabel.8; を使ってください。</para>
+
+      <screen>&prompt.root; <userinput>bsdlabel -B <replaceable>diskslice</replaceable></userinput></screen>
+
+      <para><replaceable>diskslice</replaceable>
+	は起動するディスクとスライスで、
+	たとえば最初の IDE ディスクの 1 番目のスライスは
+	<devicename>ad0s1</devicename> となります。</para>
+
+      <warning>
+	<title>Dangerously Dedicated Mode</title>
+
+	<para>&man.bsdlabel.8; を使うとき、
+	  <devicename>ad0</devicename> のようにディスク名だけを指定すると、
+	  スライスを持たない危険な専用ディスクを作成してしまいます。
+	  これはまず間違いなく、あなたがやりたいことではないでしょうから、
+	  必ず <keycap>Return</keycap> キーを押す前に
+	  &man.bsdlabel.8; コマンドを二重にチェックしてください。</para>
+      </warning>
+    </sect2>
+
+  <sect2 id="boot-loader">
+    <title>起動ステージ 3 <filename>/boot/loader</filename></title>
+
+    <indexterm><primary>ブートローダ (boot-loader)</primary></indexterm>
+
+    <para>ローダは三段階の起動プロセスの最終段階です。
+      ローダは通常、ファイルシステム上の
+      <filename>/boot/loader</filename>
+      として存在しています。</para>
+
+    <para>ローダは、よりさまざまなコマンド群をサポートした
+      強力なインタプリタによって提供される簡易組み込みコマンド群を利用することで、
+      ユーザが利用しやすい設定手段となるように設計されています。</para>
+
+    <sect3 id="boot-loader-flow">
+      <title>ローダプログラムの処理の流れ</title>
+
+      <para>ローダは初期化の際にコンソールとディスクの検出を行ない、
+	どのディスクから起動しているかを調べます。
+	そして必要な変数を設定してからインタプリタを起動し、
+	スクリプトからコマンドを送ったり手でコマンドを入力したりできます。</para>
+
+      <indexterm><primary>ローダ</primary></indexterm>
+      <indexterm><primary>ローダの設定</primary></indexterm>
+
+      <para>ローダは次に
+	<filename>/boot/loader.rc</filename>
+	を読み込み、通常、変数の標準値を定義した
+	<filename>/boot/defaults/loader.conf</filename>
+	と、そのマシンにローカルな変数を定義した
+	<filename>/boot/loader.conf</filename>
+	を読み込みます。
+	<filename>loader.rc</filename>
+	はそれらの変数にもとづき、
+	選択されたモジュールとカーネルをロードします。</para>
+
+      <para>ローダは最後に、標準設定で 10 秒のキー入力待ち時間を用意し、
+	入力がなければカーネルを起動します。
+	入力があった場合、簡易コマンド群が使えるプロンプトが表示され、
+	ユーザは変数を調整したり、
+	すべてのモジュールをアンロードしたり、
+	モジュールをロードしたりすることができます。
+	その後、最終的な起動や再起動へ移行します。</para>
+
+    </sect3>
+
+    <sect3 id="boot-loader-commands">
+      <title>ローダの組み込みコマンド</title>
+
+      <para>もっともよく使われるローダのコマンドを以下に示します。
+	利用可能なコマンドをすべて知りたい場合、
+	&man.loader.8; を参照してください。</para>
+
+      <variablelist>
+	<varlistentry>
+	  <term>autoboot <replaceable>seconds</replaceable></term>
+
+	  <listitem>
+	    <para><replaceable>seconds</replaceable>
+	      で与えられた時間内に入力がなければ、
+	      カーネルの起動へと進みます。
+	      カウントダウンを表示し、標準設定では 10 秒間です。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>boot
+	    <optional><replaceable>-options</replaceable></optional>
+	    <optional><replaceable>kernelname</replaceable></optional></term>
+
+	  <listitem>
+	    <para>すぐにカーネルの起動へ進みます。
+	      オプション、カーネル名が指定されている場合は、
+	      それらが使われます。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>boot-conf</term>
+
+	  <listitem>
+	    <para>すべてのモジュールの設定を、
+	      起動時と同じように変数にもとづいて自動的に行ないます。
+	      このコマンドは、まず <command>unload</command> を行なって、
+	      変数&mdash;普通 <envar>kernel</envar>
+	      など&mdash;を変更した場合にのみ有効に働きます。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>help
+	    <optional><replaceable>topic</replaceable></optional></term>
+
+	  <listitem>
+	    <para><filename>/boot/loader.help</filename>
+	      を読み込み、ヘルプメッセージを表示します。
+	      <replaceable>topic</replaceable> に
+	      <literal>index</literal> が指定された場合、利用可能な
+	      <replaceable>topic</replaceable> を表示します。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>include <replaceable>filename</replaceable>
+	    &hellip;</term>
+
+	  <listitem>
+	    <para>指定されたファイル名のファイルを処理します。
+	      ローダはファイルを読み込み、行単位で解釈します。
+	      エラーが発生した場合、
+	      include コマンドの実行はその時点で停止します。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>load <optional><option>-t</option>
+	    <replaceable>type</replaceable></optional>
+	    <replaceable>filename</replaceable></term>
+
+	  <listitem>
+	    <para>指定されたファイル名のカーネル、
+	      カーネルモジュール、あるいは
+	      type に指定された種類のファイルをロードします。
+	      ファイル名以降に指定された引数はファイルへと渡されます。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>ls <optional><option>-l</option></optional>
+	    <optional><replaceable>path</replaceable></optional></term>
+
+	  <listitem>
+	    <para>指定された <replaceable>path</replaceable>
+	      にあるファイルを表示します。
+	      <replaceable>path</replaceable>
+	      が指定されていなければ、ルートディレクトリを表示します。
+	      <option>-l</option>
+	      が指定されていればファイルサイズも表示されます。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>lsdev <optional><option>-v</option></optional></term>
+
+	  <listitem>
+	    <para>モジュールがロード可能なすべてのデバイスを表示します。
+	      もし <option>-v</option> が指定されていれば、
+	      より詳細な出力がされます。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>lsmod <optional><option>-v</option></optional></term>
+
+	  <listitem>
+	    <para>ロード済みのモジュールを表示します。
+	      <option>-v</option> が指定されていれば、
+	      より詳細な内容が出力されます。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>more <replaceable>filename</replaceable></term>
+
+	  <listitem>
+	    <para><varname>LINES</varname>
+	      行を表示するごとに停止しながら指定されたファイルを表示します。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>reboot</term>
+
+	  <listitem>
+	    <para>すぐにシステムを再起動します。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>set <replaceable>variable</replaceable></term>
+	  <term>set
+	    <replaceable>variable</replaceable>=<replaceable>value</replaceable></term>
+
+	  <listitem>
+	    <para>ローダの環境変数を設定します。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>unload</term>
+
+	  <listitem>
+	    <para>すべてのロード済みモジュールを削除します。</para>
+	  </listitem>
+	</varlistentry>
+      </variablelist>
+    </sect3>
+
+    <sect3 id="boot-loader-examples">
+      <title>ローダの使用例</title>
+
+      <para>次にあげるのは、ローダの実践的な使用例です。</para>
+
+      <itemizedlist>
+	<indexterm><primary>シングルユーザモード</primary></indexterm>
+	<listitem>
+	  <para>普段使っているカーネルをシングルユーザモードで起動します。</para>
+
+	  <screen><userinput>boot -s</userinput></screen>
+	</listitem>
+
+	<listitem>
+	  <para>普段使っているカーネルとモジュールをアンロードし、
+	    古い (もしくは別の) カーネルをロードします。</para>
+    <indexterm>
+      <primary><filename>kernel.old</filename></primary>
+    </indexterm>
+
+	  <screen><userinput>unload</userinput>
+<userinput>load <replaceable>kernel.old</replaceable></userinput></screen>
+
+	  <para><filename>kernel.GENERIC</filename> とすると、
+	    インストールディスクに入っていた
+	    generic カーネルを指定することができます。
+	    また、直前にインストールされていたカーネル (たとえば、
+	    カーネルを自分で設定したり、
+	    アップグレードしたりした場合) を指定するには
+	    <filename>kernel.old</filename> とします。</para>
+
+	  <note>
+	    <para>普段のカーネルで使っているモジュールを
+	      指定したカーネルでロードする場合は、下のようにします。</para>
+
+	    <screen><userinput>unload</userinput>
+<userinput>set kernel="<replaceable>kernel.old</replaceable>"</userinput>
+<userinput>boot-conf</userinput></screen></note>
+	</listitem>
+
+	<listitem>
+	  <para>カーネルの設定スクリプト (通常、
+	    カーネル起動時に設定される内容を自動化するスクリプト)
+	    をロードします。</para>
+
+	  <screen><userinput>load -t userconfig_script <replaceable>/boot/kernel.conf</replaceable></userinput></screen>
+	</listitem>
+      </itemizedlist>
+     </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="boot-kernel">
+    <title>カーネル起動時の応答</title>
+    <indexterm>
+      <primary>カーネル (kernel)</primary>
+      <secondary>起動時の応答</secondary>
+    </indexterm>
+
+    <para>カーネルが<link linkend="boot-loader">ローダ</link> (通常は)
+      か<link linkend="boot-boot1">boot2</link>
+      (ローダを迂回して) によってロードされると、
+      起動フラグを調べます。
+      もし起動フラグがあれば、それに応じて動作を調整します。</para>
+
+    <sect2 id="boot-kernel-bootflags">
+      <title>カーネル起動フラグ</title>
+      <indexterm>
+	<primary>カーネル (kernel)</primary>
+	<secondary>起動フラグ</secondary>
+      </indexterm>
+
+      <para>良く使われる起動フラグは次のとおりです。</para>
+
+      <variablelist id="boot-kernel-bootflags-list">
+	<varlistentry>
+	  <term><option>-a</option></term>
+
+	  <listitem>
+	    <para>カーネル初期化中に、
+	      ルートファイルシステムとしてマウントするデバイスを尋ねます。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><option>-C</option></term>
+
+	  <listitem>
+	    <para>CDROM から起動します。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><option>-c</option></term>
+
+	  <listitem>
+	    <para>起動時にカーネルコンフィグレーションを行なう
+	      UserConfig を実行します。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><option>-s</option></term>
+
+	  <listitem>
+	    <para>シングルユーザモードで起動します。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><option>-v</option></term>
+
+	  <listitem>
+	    <para>カーネル起動時により詳細な情報を表示します。</para>
+	  </listitem>
+	</varlistentry>
+      </variablelist>
+
+      <note>
+	<para>起動フラグはこの他にもあります。
+	  それらについては &man.boot.8; を参照してください。
+	</para></note>
+    </sect2>
+
+<!--    <sect2 id="boot-kernel-userconfig">
+      <title>UserConfig: The Boot-time Kernel Configurator</title>
+
+      <para> </para>
+    </sect2> -->
+  </sect1>
+
+  <sect1 id="device-hints">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Tom</firstname>
+	  <surname>Rhodes</surname>
+	  <contrib>寄稿: </contrib>
+	</author>
+      </authorgroup>
+      <!-- 18 OCT 2002 -->
+    </sect1info>
+    <indexterm>
+      <primary>device.hints</primary>
+    </indexterm>
+    <title>Device Hints</title>
+
+    <note><para>これは FreeBSD&nbsp;5.0 以降の機能です。
+      これ以前のバージョンには存在しません。</para></note>
+
+    <para>起動プロセスの間に &man.loader.8; は
+      &man.device.hints.5; を読み込みます。
+      このファイルにはカーネル起動の環境変数が格納されており、
+      これらの環境変数は <quote>device hints</quote>
+      と呼ばれることがあります。<quote>device hints</quote>
+      はデバイスを設定するためにデバイスドライバが使用します。</para>
+
+    <para>device hints は <link
+      linkend="boot-loader">ステージ 3 ブートローダ</link>
+      でも設定できます。変数は
+      <command>set</command> コマンドを用いて追加したり、
+      <command>unset</command> コマンドを用いて削除できます。
+      <command>show</command> コマンドを用いて一覧を見ることもできます。
+      <filename>/boot/device.hints</filename> に設定されている変数は
+      このときに上書きすることができます。
+      ローダで設定した device hints の効果は一時的なものであるため、
+      次回起動するときには無効になります。</para>
+
+    <para>システムが起動すると、&man.kenv.1;
+      コマンドでカーネル環境変数をダンプすることができます。</para>
+
+    <para><filename>/boot/device.hints</filename>
+      は 1 行につき一つの変数を設定でき、行頭の <quote>#</quote>
+      はその行がコメントであることを示しています。
+      書式は次の通りです。</para>
+
+    <screen><userinput>hint.driver.unit.keyword="<replaceable>value</replaceable>"</userinput></screen>
+
+    <para>ステージ 3 ブートローダ で設定するときの書式は次の通りです。</para>
+    <screen><userinput>set hint.driver.unit.keyword=<replaceable>value</replaceable></userinput></screen>
+
+    <para><literal>driver</literal> はデバイスドライバの名前、
+      <literal>unit</literal> はデバイスドライバのユニット番号、
+      <literal>keyword</literal> はヒントキーワードです。
+      キーワードは次の設定を指定します:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>at</literal>:
+	  デバイスがどのバスに接続されているか指定します。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>port</literal>:
+	  使用する <acronym>I/O</acronym>
+	  ポートの開始アドレスを指定します。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>irq</literal>:
+	  使用する IRQ を指定します。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>drq</literal>:
+	  使用する DMA チャネルを指定します。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>maddr</literal>:
+	  使用する物理メモリアドレスを指定します。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>flags</literal>:
+	  デバイスに対してさまざまなフラグを設定します。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>disabled</literal>:
+	  <literal>1</literal>
+	  が設定されていると、そのデバイスは無効になります。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>デバイスドライバはこのリスト以外の変数を設定できるかもしれませんし、
+      このリスト以外の変数を必要とするかもしれません。
+      したがって、デバイスドライバのマニュアルを読むことをおすすめします。
+      より多くの情報を知りたければ、&man.device.hints.5;,
+      &man.kenv.1;, &man.loader.conf.5;, &man.loader.8;
+      などのマニュアルを参照してください。</para>
+  </sect1>
+
+  <sect1 id="boot-init">
+    <indexterm>
+      <primary><command>init</command></primary>
+    </indexterm>
+    <title>init: プロセス制御の初期化</title>
+
+    <para>カーネルの起動が完了すると、&man.init.8;
+      というユーザプロセスに制御が移されます。
+      これは <filename>/sbin/init</filename>、
+      もしくは <command>loader</command> の
+      <envar>init_path</envar> 変数で指定される場所にあります。</para>
+
+    <sect2 id="boot-autoreboot">
+      <title>自動再起動 (automatic reboot)の動作</title>
+
+      <para>自動再起動では、
+	システム上で利用できるファイルシステムの一慣性を確認します。
+	もしそれに問題があって &man.fsck.8;
+	がその不一致を修復できなければ、管理者に直接対処させるため
+	&man.init.8; はシステムを<link
+	linkend="boot-singleuser">シングルユーザモード</link>へと移行させます。</para>
+    </sect2>
+
+    <sect2 id="boot-singleuser">
+      <title>シングルユーザモード</title>
+
+      <indexterm><primary>シングルユーザモード</primary></indexterm>
+      <indexterm><primary>コンソール (console)</primary></indexterm>
+
+      <para>このモードには、
+	<link linkend="boot-autoreboot">自動再起動</link>の処理中か、
+	ユーザが起動時に <option>-s</option> オプションを指定した場合、
+	あるいは <command>loader</command> で
+	<envar>boot_single</envar>
+	変数を設定することによって移行します。</para>
+
+      <para>また、
+	<link linkend="boot-multiuser">マルチユーザモード</link>から
+	再起動オプション (<option>-r</option>)
+	や停止 (halt) オプション (<option>-h</option>) なしで
+	&man.shutdown.8; を呼び出すとこのモードに移行します。</para>
+
+      <para><filename>/etc/ttys</filename>
+	でシステムコンソール <literal>console</literal>
+	が <literal>insecure</literal> に設定されている場合、
+	システムはシングルユーザモードに移行する前に
+	<username>root</username> のパスワードを入力するように求めます。</para>
+
+      <example id="boot-insecure-console">
+	<title><filename>/etc/ttys</filename> の insecure コンソール</title>
+
+	<programlisting># name  getty                           type    status          comments
+#
+# If console is marked "insecure", then init will ask for the root password
+# when going to single-user mode.
+#
+# 訳) console に "insecure" という印をつけると、シングルユーザモードへ移行する
+# 際に init が root のパスワードを要求するようになります。
+#
+console none                            unknown off insecure</programlisting>
+      </example>
+
+      <note>
+	<para><literal>insecure</literal> コンソールとは、
+	  あなた自身、コンソールが物理的に安全でないと考えていて、
+	  <username>root</username>
+	  のパスワードを知る人だけがシングルユーザモードを
+	  使えるようにしたいという意味であり、
+	  コンソールを安全でない状態で使いたいという意味ではありません。
+	  そのため、安全性を求めるならば
+	  <literal>secure</literal> でなく
+	  <literal>insecure</literal> を選んでください。</para>
+      </note>
+    </sect2>
+
+    <sect2 id="boot-multiuser">
+      <title>マルチユーザモード</title>
+      <indexterm><primary>マルチユーザモード</primary></indexterm>
+
+      <para>&man.init.8; がファイルシステムが正常であると判断するか、
+	ユーザが<link
+	linkend="boot-singleuser">シングルユーザモード</link>を終了すると、
+	システムはマルチユーザモードへ移行し、
+	リソースの設定を始めます。</para>
+
+      <sect3 id="boot-rc">
+	<title>リソース設定 (rc)</title>
+
+      <indexterm><primary>rc ファイル群</primary></indexterm>
+
+	<para>リソース設定システムはデフォルト設定を
+	  <filename>/etc/defaults/rc.conf</filename> から、
+	  そのシステム独自の細かな設定を
+	  <filename>/etc/rc.conf</filename> から読み込みます。
+	  そして <filename>/etc/fstab</filename>
+	  に記述されるシステムファイルシステムをマウントし、
+	  ネットワークサービスの開始、
+	  さまざまなシステムデーモンの開始、
+	  そして最後に、ローカルにインストールされた package
+	  の起動スクリプトの実行へと進みます。</para>
+
+	<para>リソース設定システムに関する参考資料は、&man.rc.8; にあります。
+	  これはスクリプトそのものを調べることと同じくらい優れたものです。</para>
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="boot-shutdown">
+    <title>シャットダウン動作</title>
+
+    <indexterm>
+      <primary><command>shutdown</command></primary>
+    </indexterm>
+
+    <para>&man.shutdown.8;
+      を用いてシステムを意図的にシャットダウンした場合、
+      &man.init.8; は
+      <filename>/etc/rc.shutdown</filename>
+      というスクリプトの実行を試みます。
+      そして、すべてのプロセスへ <literal>TERM</literal>
+      シグナルを送り、続いてうまく終了できなかったプロセスへ
+      <literal>KILL</literal> シグナルを送ります。</para>
+
+    <para>電源管理機能を持ったシステムで稼働している FreeBSD
+      では <command>shutdown -p now</command> コマンドによって、
+      直ちに電源を落とすことができます。FreeBSD を再起動するには、
+      <command>shutdown -r now</command> を実行するだけです。
+      &man.shutdown.8; を実行するには、<username>root</username>
+      であるか、<groupname>operator</groupname>
+      グループのメンバでなければなりません。&man.halt.8; や
+      &man.reboot.8; コマンドを利用することもできますが、
+      より多くの情報を知るために、それらと &man.shutdown.8;
+      のマニュアルページを参照してください。</para>
+
+    <note>
+      <para>電源管理機能には &man.acpi.4;
+	がカーネルに組み込まれているか、
+	モジュールが読み込まれていることが必要です。</para>
+    </note>
+  </sect1>
+</chapter>
+
+<!--
+     Local Variables:
+     mode: sgml
+     sgml-declaration: "../chapter.decl"
+     sgml-indent-data: t
+     sgml-omittag: nil
+     sgml-always-quote-attributes: t
+     sgml-parent-document: ("../book.sgml" "part" "chapter")
+     End:
+-->

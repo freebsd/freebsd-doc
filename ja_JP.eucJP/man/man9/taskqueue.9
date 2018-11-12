@@ -1,0 +1,233 @@
+.\" -*- nroff -*-
+.\"
+.\" Copyright (c) 2000 Doug Rabson
+.\"
+.\" All rights reserved.
+.\"
+.\" This program is free software.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE DEVELOPERS ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man9/taskqueue.9,v 1.12 2004/08/08 02:37:22 jmg Exp %
+.\"
+.\" $FreeBSD$
+.Dd May 12, 2000
+.Dt TASKQUEUE 9
+.Os
+.Sh 名称
+.Nm taskqueue
+.Nd 非同期タスクの実行
+.Sh 書式
+.In sys/param.h
+.In sys/kernel.h
+.In sys/malloc.h
+.In sys/queue.h
+.In sys/taskqueue.h
+.Bd -literal
+typedef void (*task_fn)(void *context, int pending);
+
+typedef void (*taskqueue_enqueue_fn)(void *context);
+
+struct task {
+	STAILQ_ENTRY(task)	ta_link;	/* キューのためのリンク */
+	int			ta_pending;	/* キューに入った回数 */
+	int			ta_priority;	/* キュー内タスク優先度 */
+	task_fn			ta_func;	/* タスクハンドラ */
+	void			*ta_context;	/* ハンドラの引数 */
+};
+.Ed
+.Ft struct taskqueue *
+.Fn taskqueue_create "const char *name" "int mflags" "taskqueue_enqueue_fn enqueue" "void *context"
+.Ft void
+.Fn taskqueue_free "struct taskqueue *queue"
+.Ft struct taskqueue *
+.Fn taskqueue_find "const char *name"
+.Ft int
+.Fn taskqueue_enqueue "struct taskqueue *queue" "struct task *task"
+.Ft int
+.Fn taskqueue_enqueue_fast "struct taskqueue *queue" "struct task *task"
+.Ft void
+.Fn taskqueue_run "struct taskqueue *queue"
+.Fn TASK_INIT "struct task *task" "int priority" "task_fn_t *func" "void *context"
+.Fn TASKQUEUE_DECLARE "name"
+.Fn TASKQUEUE_DEFINE "name" "taskqueue_enqueue_fn enqueue" "void *context" "init"
+.Fn TASKQUEUE_DEFINE_THREAD "name"
+.Sh 解説
+これらの関数はコードの非同期の実行のための単純なインタフェースを提供します。
+.Pp
+関数
+.Fn taskqueue_create
+は新しいキューを作成するために使用されます。
+.Fn taskqueue_create
+への引数は、唯一であるべき名前、
+.Fn malloc
+の呼び出しがスリープを認めるかどうかを指定する
+.Xr malloc 9
+フラグの組、タスクがキューに追加されたときに
+.Fn taskqueue_enqueue
+から呼び出される関数を含みます。
+.\" XXX	以下の文は多くは最初の部分に関係しています。
+これは、(たとえば、ソフトウェア割り込みによるスケジューリングまたは
+カーネルスレッドが起こされることによって) キューが後で実行されるために
+準備されることができるようにするためです。
+.Pp
+関数
+.Fn taskqueue_free
+はキューのグローバルなリストからそのキューを取り除くためと、
+キューによって使用されたメモリを開放するために使用されるべきです。
+キュー上の全てのタスクはこのとき実行されます。
+.Pp
+システムは、
+.Fn taskqueue_find
+を使用して検索されることが可能な、全てのキューのリストを管理します。
+名前が一致する最初のキューが返され、そうでなければ
+.Dv NULL
+が返されます。
+.Pp
+タスクキュー上のキューに入れられたタスクのリストに、タスクを追加するためには、
+キューへのポインタとタスクへのポインタを指定して
+.Fn taskqueue_enqueue
+を呼び出します。
+タスクの
+.Va ta_pending
+フィールドが 0 でない場合には、タスクがキューに入れられた回数に反映するために
+単純にインクリメントされます。
+そうでない場合には、そのタスクはより低い
+.Va ta_priority
+値を持つ最初のタスクの前に、またはより低い優先度持つタスクがない場合は
+リストの最後に、追加されます。
+タスクをキューに入れることは、割り込みハンドラの中から呼び出されることに
+適応するために、メモリの割り当てを実行しません。
+この関数は、そのキューが開放されようとしている場合には、
+.Er EPIPE
+を返します。
+.Pp
+関数
+.Fn taskqueue_enqueue_fast
+は、高速割り込みハンドラからキューに入れることが発生するときには、
+.Fn taskqueue_enqueue
+の代わりに使用されるべきです。
+このメソッドは高速割り込みコンテキスト内でスリープの可能性を避けるために
+スピンロックを使用します。
+.Pp
+キュー上の全てのタスクを実行するには、
+.Fn taskqueue_run
+を呼び出します。
+タスクが実行されるときには、先ずそのタスクがキューから取り除かれ、
+.Va ta_pending
+の値が記録されそれからそのフィールドが 0 でクリアされます。
+task 構造体の
+.Va ta_func
+関数は
+.Va ta_context
+フィールドの値を最初の引数として、
+.Va ta_pending
+の値を 2 番目の引数として、呼び出されます。
+.Pp
+便利なマクロ
+.Fn TASK_INIT "task" "priority" "func" "context"
+は
+.Va task
+構造体を初期化するために提供されています。
+.Va priority ,
+.Va func
+および
+.Va context
+の値は単純に task 構造体のフィールドにコピーされ、
+.Va ta_pending
+フィールドはクリアされます。
+.Pp
+3 つのマクロ
+.Fn TASKQUEUE_DECLARE "name" ,
+.Fn TASKQUEUE_DEFINE "name" "enqueue" "context" "init"
+および
++.Fn TASKQUEUE_DEFINE_THREAD "name"
+は、グローバルなキューへの参照の宣言、そのキューの実装の定義、
+および所有するスレッドを使用するキューを宣言するために使用されます。
+.Fn TASKQUEUE_DEFINE
+マクロは
+.Va name ,
+.Va enqueue
+および
+.Va context
+引数の値で、システムの初期化の間に
+.Fn taskqueue_create
+を呼び出すための手配を行います。
+.Fn taskqueue_create
+の呼び出しの後で、(割り込みハンドラの登録などの) その他の初期化が
+実行されることを可能にするために、このマクロへの
+.Va init
+引数が C のステートメントとして実行されます。
+.Pp
+.Fn TASKQUEUE_DEFINE_THREAD
+マクロはタスクを取り扱う自身が所有するカーネルスレッドで
+新しいタスクキューを定義します。
+変数
+.Vt struct proc *taskqueue_name_proc
+はタスクを取り扱うカーネルスレッドを含んで定義されます。
+変数
+.Vt struct taskqueue *taskqueue_name
+はそのキューにタスクを追加するために使用されます。
+.Pp
+システムは 3 つのグローバルなタスクキュー
+.Va taskqueue_swi ,
+.Va taskqueue_swi_giant ,
+および
+.Va taskqueue_thread
+を提供します。
+swi タスクキューはソフトウェア割り込みの仕組みを介して実行されます。
+taskqueue_swi キューは Giant カーネルロックの保護無しで実行し、
+taskqueue_swi_giant キューは Giant カーネルロックの保護有りで
+実行します。
+スレッドタスクキューはカーネルスレッドコンテキストで実行され、このスレッド
+から実行されるタスクは、Giant カーネルロック下で実行されません。
+呼び出し側が Giant ロック下で実行したい場合には、呼び出し側の
+タスクキューハンドラルーチンの中で、呼び出し側が明確に Giant ロックの
+獲得および解放を行なうべきです。
+.Pp
+このキューを使用するためには、使用したいキュー (
+.Va taskqueue_swi ,
+.Va taskqueue_swi_giant
+または
+.Va taskqueue_thread
+) のためのグローバルタスクキュー変数の値で
+.Fn taskqueue_enqueue
+を呼び出します。
+.Pp
+ソフトウェア割り込みキューは、例えば、ハンドラの中で著しい量の処理を実行
+しなければならない割り込みハンドラを実装するために、使用されることが可能です。
+ハードウェア割り込みハンドラは、その割り込みの最小の処理を実行し、それから
+作業を完了させるためにタスクをキューに入れます。
+これは、割り込みが無効化されて費やされる時間を最小量にまで縮小します。
+.Pp
+スレッドキューは、例えば、スレッドコンテキストからのみ実行することが可能な
+何かを行なうカーネル関数を呼び出すことが必要な、割り込みレベルのルーチンに
+よって使用されることが可能です。
+(例えば、M_WAITOK フラグを伴った malloc の呼び出しです。)
+.Sh 歴史
+このインタフェースは
+.Fx 5.0
+ではじめて登場しました。
+Linux カーネルで tqueue と呼ばれる同様のファシリティがあります。
+.Sh 作者
+このマニュアルページは
+.An Doug Rabson
+が書きました。

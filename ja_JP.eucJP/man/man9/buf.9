@@ -1,0 +1,148 @@
+.\" Copyright (c) 1998
+.\"	The Regents of the University of California.  All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. All advertising materials mentioning features or use of this software
+.\"    must display the following acknowledgement:
+.\"	This product includes software developed by the University of
+.\"	California, Berkeley and its contributors.
+.\" 4. Neither the name of the University nor the names of its contributors
+.\"    may be used to endorse or promote products derived from this software
+.\"    without specific prior written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man9/buf.9,v 1.16 2004/07/03 18:29:23 ru Exp %
+.\" $FreeBSD$
+.\"
+.Dd December 22, 1998
+.Dt BUF 9
+.Os
+.Sh 名称
+.Nm buf
+.Nd "FreeBSD の VM システムで使用されたカーネルバッファ入出力機構"
+.Sh 解説
+カーネルは、(主にファイルシステムの) デバイスおよびデバイス入出力によって
+使用されるための、まったくバラバラかもしれない仮想メモリページを
+連続した KVM にマップすることを可能にする、
+バッファキャッシュの KVM の抽象概念を実装します。
+この抽象概念は、DEV_BSIZE (通常 512) から数ページ以上のまでのブロックサイズを
+サポートします。
+また、NFS によって使用されるための現在はハードコーディングされている、
+相対的に基本的なバイト粒度の正当な範囲およびダーティな範囲も、サポートします。
+VM バッファの抽象概念を実装しているコードは、大部分は
+.Pa /usr/src/sys/kern/vfs_bio.c
+に集約されています。
+.Pp
+バッファポインタ (struct buf) を取り扱うときに憶えておくべき最も重要な
+ことの 1 つは、下層のページがバッファキャッシュから直接的にマップされる
+ということです。
+もっとも UFS のような幾つかのファイルシステムがファイルのフラグメントを
+取り扱うときには少しコピーをしなければならないのですが、厳密な意味での
+この機構では、データのコピーは発生しません。
+憶えておくべき最も重要なことの 2 番目は、下層のページマッピングの
+ため、buf の中の b_data ベースポインタは常に *ブロック* で整列されるのでは
+なく、*ページ* で整列されるということです。
+ある b_offset および b_size を表現する VM バッファを持つもきには、
+そのバッファの実際の開始は (b_data + (b_offset & PAGE_MASK)) で、
+ちょうど b_data ではありません。
+最後に、VM システムの中核のバッファキャッシュは、DEV_BSIZE の塊の中の
+ページのための、正当およびダーティビット (m->valid, m->dirty) を
+サポートします。
+従って、4096 バイトのページサイズのハードウェアを持つ
+プラットホームは、8 個の正当ビットおよび 8 個のダーティビットを持ちます。
+これらのビットは一般的に、ページを裏打ちするそのデバイスの
+デバイスブロックサイズに基づいたグループ単位で、セットおよびクリアされます。
+完全なページの価値は、しばしば VM_PAGE_BITS_ALL ビットマスク (すなわち、
+ハードウェアのページサイズが 4096 であれば 0xFF) を使用することに当たります。
+.Pp
+VM バッファはバイト粒度のダーティな範囲および正当な範囲の追跡も維持します。
+この機能は通常 NFS サブシステムによってのみ使用されます。
+VM バッファの内部に DEV_BSIZE の正当/ダーティの粒度を持っているので、本当に、
+一体どうして使用されているのか自信を持って言えません。
+バッファをダーティにする操作が '穴' を生成する場合には、ダーティな範囲が
+その穴を覆うように広がります。
+バッファを正当化する操作が '穴' を生成する場合には、バイト粒度の正当な範囲が
+そのまま残され、新しい拡張の評価は行なわれません。
+従って、バイト粒度の抽象概念全体は悪いハックだと考えられます。
+それを徹底的に除去できるのであれば、快適なことでしょう。
+.Pp
+VM バッファは、カーネルが直接的に (vnode,b_offset,b_size) に関連付けられた
+データを操作することを可能にするために、
+下層の VM キャッシュページを KVM にマップすることが可能です。
+カーネルは一般的には、バッファがもはや必要でなくなった時に、VM バッファを
+アンマップしますが、すでに KVM からアンマップされているにもかかわらず、
+しばしば実体化された 'struct buf' 構造体を、および
+実体化された bp->b_pages の配列をも保持します。
+VM バッファに仕立てられたページが今にも入出力を受けようとしている場合には、
+システムは一般的には、それを KVM からアンマップし、b_pages[] 配列の中の
+ページを bogus_page (偽のページ) と呼ばれる位置目印に置き換えます。
+その場所の目印は、関連付けられたページを再捜索するために、全てのカーネルの
+サブシステムが関連付けられた struct buf を参照することを、強制します。
+位置目印のハックは、ファイルシステムデバイスのようなきわめて複雑な
+デバイスが、例えば、ファイルのフラグメントをファイルブロックに再マップ
+するために、下層のページを再マップすることを、
+可能にするために使用されると確信しています。
+.Pp
+VM バッファはカーネル内部の入出力操作を追跡するために使用されます。
+運の悪いことに、入出力の実装もハックの対象です。
+なぜならば、カーネルは
+物理的な入出力が実際に始まったときではなく、VFS デバイスに入出力をキューに
+入れたときに、下層のページ上のダーティビットをクリアしたいからです。
+これは、遅延書き込みを使用するファイルシステムデバイスの内部に混乱を
+生み出すことがありえます。
+なぜならば、実際には未だダーティであるがページを
+正当であると目印をつけて終了するからです。
+注意深く取り扱わない場合には、これらのページは破棄されてしまうことが
+ありえます。
+それどころか、このハックに関連したかなりの深刻なバグが、2.2.8/3.0 リリースまで
+修正されませんでした。
+カーネルはこの特殊状態にあるページに位置目印をつけるため、
+実体化された VM バッファ (すなわち struct buf) を使用します。
+バッファは通常 B_DELWRI フラグが付けられます。
+もはやバッファが必要でなくなったときに、通常 B_RELBUF としてフラグを付けます。
+下層のページが正当であると目印を付けられている結果、B_DELWRI|B_RELBUF の
+組み合わせは、そのバッファは実際には未だダーティであり、それが実際に解放される
+ことがありうる前に、後援の記憶装置に書込まれなければならないということを
+意味すると、解釈されなければなりません。
+この場合で、B_DELWRI が設定されない場合、下層のダーティなページは未だ適切に
+ダーティであると目印を付けられ、そのバッファは正当/ダーティの状態情報を
+失うことなく、完全に解放されることが可能です。
+(XXX この状況に配慮して、その他のフラグをチェックしなければならない
+のでしょうか ???)
+.Pp
+カーネルは VM バッファのデータマップを保持するために、その KVM 空間の
+一部を予約します。
+これは仮想空間 (バッファはバッファキャッシュからマップされるため) である
+にもかかわらず、それを任意に大きく出来ません。
+なぜならば、
+実体化された VM バッファ (struct buf) がバッファキャッシュの中の
+下層のページが解放されることを妨げるからです。
+これはページングシステムの生存を脅かし得ることです。
+.Pp
+.\" .Sh 関連項目
+.\" .Xr <fillmein> 9
+.Sh 歴史
+.Nm
+のマニュアルページは元々
+.An Matthew Dillon
+が書いて、1998 年 12 月に
+.Fx 3.1
+ではじめて登場しました。

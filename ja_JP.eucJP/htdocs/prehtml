@@ -1,0 +1,158 @@
+#!/usr/bin/perl -w
+#
+# The FreeBSD Japanese Documentation Project
+#
+# This is a preprocessor for HTML docs.
+#
+# usage: prehtml [-revcheck] <localtop> <relative pathname from localtop> <SGML filename>
+#   (ex. % prehtml -revcheck ../.. news/1996 index.sgml)
+#
+# $FreeBSD$
+
+my $revcheck;
+my $topdir;
+my $reldir;
+
+my %file;
+my %rev;
+
+### parse options ....................................................
+###
+sub sOPT {1};
+sub sARG {2};
+
+my $opt_state = sOPT;
+my $argv;
+
+die "$0: too few arguments.\n" if (scalar @ARGV < 2);
+
+while(defined($_ = $ARGV[0])) {
+
+    if ($opt_state eq sOPT) {
+        # option expected
+        if(/^-(.+)/) { 
+            shift @ARGV; # discard option itself
+            local $_ = $1;
+            /revcheck/ and do { $revcheck = 1; next; };
+
+            die qq/$0: invalid option "-$1"\n/;
+        } else {
+            # this is not a option but an argument
+            $opt_state = sARG;
+            next;
+        }
+    } elsif ($opt_state eq sARG) {
+        die "$0: too few arguments.\n" if (scalar @ARGV < 2);
+
+        $topdir = shift @ARGV;
+        $reldir = shift @ARGV;
+
+        ### normalize $reldir into the form "foo/bar/"
+        if($reldir ne '' and $reldir !~ /\/$/) {
+            $reldir .= "/";
+        }
+
+        if(@ARGV) {
+            $file{target} = shift @ARGV;
+            if($revcheck) {
+                local $_ = $file{target};
+                s/\.sgml$//;
+                $file{cvsweb}  = "www/en/${reldir}$_.sgml";
+                $file{orgbase} = "${topdir}/../${reldir}$_";
+                $rev{org} = get_rev_org("${topdir}/../en/${reldir}$_".".sgml");
+            }
+        } else {
+            ### If not specified SGML filename, then use stdin
+            ### (but revcheck facility is disabled).
+            ### This is mainly for debugging purpose.
+            $file{target} = "-";
+            undef $revcheck;
+        }
+        last;
+    }
+    die "$0: internal error: option parsing abnormally terminated.\n";
+}
+
+### add and replace entities .........................................
+###
+open TARGET,"<$file{target}" or die "$0: cannot open a target file: $!\n";
+my $pos_date;
+### first, get date string and rev_target
+while(defined($_ = <TARGET>)) {
+    if(/<!ENTITY\s+date/) {
+        $pos_date = tell(TARGET);
+        if(m/\"\x24FreeBSD: [^\s]+ [.0-9]+ ([\/0-9]+)[^\x24]*\x24\"/) {
+            $date = $1;
+        } else {
+            $date = "UNKNOWN";
+        }
+    }
+    if(/<!ENTITY\s+title/) {
+        $pos_title = tell(TARGET);
+    }
+
+    if($revcheck) {
+        if(/[Oo]riginal [Rr]evision:[ \t]*([0-9.]+)/) {
+            $rev{target} = $1;
+        }
+        last if($revcheck and $rev{target} and $date);
+    } else {
+        last if($date);
+    }
+}
+
+$rev{target} ||= "TARGET-NOT-FOUND";
+$rev{org}    ||= "ORG-NOT-FOUND";
+
+### if offset of "date" string is not found,
+### use "title"'s instead.
+if(not defined $pos_date) {
+    if(not defined $pos_title) {
+        die qq/$0: element "date" or "title" is not defined.\n/;
+    }
+    $pos_date = $pos_title;
+}
+
+### next, put lines and replace the line with
+### $date + entity definitions for revcheck 
+seek TARGET,0,0;
+while(defined($_ = <TARGET>)) {
+    if(tell(TARGET) == $pos_date) {
+        print qq|<!ENTITY date CDATA 'Last modified: ${date}'>\n|;
+        print qq|<!ENTITY base CDATA '${topdir}'>\n|;
+        if($revcheck) {
+            #print STDERR "$rev{org} -> $rev{target}\n";
+            print qq|<!ENTITY enbase CDATA '${topdir}/..'>\n|;
+            print qq|<!ENTITY file.cvsweb  CDATA '$file{cvsweb}'>\n|;
+            print qq|<!ENTITY file.orgbase CDATA '$file{orgbase}'>\n|;
+            print qq|<!ENTITY rev.latest CDATA '$rev{org}'>\n|;
+            print qq|<!ENTITY rev.target CDATA '$rev{target}'>\n|;
+            printf "<!ENTITY %% rev.diff '%s'>\n", ($rev{org} eq $rev{target}) ? "IGNORE" : "INCLUDE";
+        }
+    } else {
+        # for backward compatibility
+        s/<!ENTITY \% rev.incl SYSTEM "[-a-zA-Z0-9]+.revinc"> \%rev.incl;//;
+        print;
+    }
+}
+close TARGET;
+
+exit 0;
+
+sub get_rev_org 
+{
+    my $infile = shift @_;
+    my $rev_org;
+
+    open ORG,"<$infile" or return undef;
+    while(defined($_ = <ORG>)) {
+        if(/\x24Free[B]SD: [^\s]+ ([.0-9]+) [\/0-9]+[^\x24]*\x24/) {
+            $rev_org = $1;
+            last;
+        }
+    }
+    close ORG;
+    return $rev_org;
+}
+
+__END__

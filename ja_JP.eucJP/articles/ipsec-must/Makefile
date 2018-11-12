@@ -1,0 +1,20 @@
+#
+# $FreeBSD$
+#
+# Article: Independent Verification of IPsec Functionality in FreeBSD
+#
+# Original revision: 1.6
+
+DOC?= article
+
+FORMATS?= html
+
+INSTALL_COMPRESSED?=gz
+INSTALL_ONLY_COMPRESSED?=
+
+SRCS=	article.sgml
+
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?= ${.CURDIR}/../../..
+
+.include "${DOC_PREFIX}/share/mk/doc.project.mk"

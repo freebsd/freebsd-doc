@@ -1,0 +1,311 @@
+.\"
+.\" Copyright (c) 1998, 1999 Eivind Eklund
+.\" Copyright (c) 2003 Hiten M. Pandya
+.\"
+.\" All rights reserved.
+.\"
+.\" This program is free software.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE DEVELOPERS ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\"
+.\" If you integrate this manpage in another OS, I'd appreciate a note
+.\"	- eivind@FreeBSD.org
+.\"
+.\" %FreeBSD: src/share/man/man9/namei.9,v 1.25.4.1 2005/03/04 00:17:40 brueffer Exp %
+.\"
+.\" $FreeBSD$
+.Dd May 27, 2003
+.Os
+.Dt NAMEI 9
+.Sh 名称
+.Nm namei ,
+.Nm NDINIT ,
+.Nm NDFREE
+.Nd パス名の変換および検索操作
+.Sh 書式
+.In sys/param.h
+.In sys/proc.h
+.In sys/namei.h
+.Ft int
+.Fn namei "struct nameidata *ndp"
+.Ft void
+.Fo NDINIT
+.Fa "struct nameidata *ndp" "u_long op" "u_long flags"
+.Fa "enum uio_seg segflg" "const char *namep" "struct thread *td"
+.Fc
+.Ft void
+.Fn NDFREE "struct nameidata *ndp" "const uint flags"
+.Sh 解説
+.Nm
+の仕組みはクライアントによるパス名の変換および検索の操作を可能にします。
+.Nm
+関数は対象の vnode のための参照カウントをインクリメントします。
+その参照カウントは、
+.Dv LOCKLEAF
+フラグが指定されたかどうかに依存して、
+.Xr vrele 9
+または
+.Xr vput 9
+のどちらかを使用して、その vnode の使用後にデクリメントされなければなりません。
+.Pp
+.Fn NDINIT
+関数は
+.Nm
+の要素を初期化するために使用されます。
+これは以下の引数を取ります。
+.Bl -tag -width ".Fa segflg"
+.It Fa ndp
+初期化されるべき
+.Vt "struct nameidata"
+構造体です。
+.It Fa op
+.Fn namei
+が実行する操作です。
+.Dv LOOKUP , CREATE , DELETE
+および
+.Dv RENAME
+の操作が有効です。
+後者 3 つはこれらの効果のためのセットアップだけです。
+.Fn namei
+の呼び出しだけでは
+.Fn VOP_RENAME
+が呼び出されたような結果にはなりません。
+.It Fa flags
+操作フラグです。
+これらの内の幾つかは、同時に有効化されることが可能です。
+.It Fa segflg
+UIO セグメントのインジケータです。
+これはオブジェクトの名前がユーザ空間
+.Pq Dv UIO_USERSPACE
+にあるのかカーネルアドレス空間
+.Pq Dv UIO_SYSSPACE
+にあるのかを示します。
+.It Fa namep
+構成要素のパス名バッファへのポインタです
+(検索されるファイル名またはディレクトリ名)。
+.It Fa td
+.Nm
+の操作およびロックのために使用されるスレッドコンテキストです。
+.El
+.Sh NAMEI 操作フラグ
+.Fn namei
+は操作がどのような影響を及ぼすかという、以下の
+.Dq 操作フラグ
+のセットを取ります。
+.Bl -tag -width ".Dv WANTPARENT"
+.It Dv LOCKLEAF
+戻るときに vnode をロックします。
+これはその vnode の完全なロックで、ロックを解放するためには
+.Xr VOP_UNLOCK 9
+を使用するべきです。
+(または
+.Xr vrele 9
+が後に続く
+.Xr VOP_UNLOCK 9
+の呼び出しを一緒に行うことと等価である
+.Xr vput 9
+を使用するべきです。)
+.It Dv LOCKPARENT
+このフラグは
+.Va ni_vp
+が一致しない場合には、
+.Fn namei
+関数に親 (ディレクトリ) の vnode である
+.Va ni_dvp
+がロックされた状態で返されるようにします。
+この場合、これ自体では
+.Va ni_dvp
+はロックされません (が、
+.Dv LOCKLEAF
+のためロックされるかもしれません)。
+ロックが実施された場合には、
+.Xr vput 9
+または
+.Xr VOP_UNLOCK 9
+と
+.Xr vrele 9
+を使用してロックが解放されるべきです。
+.It Dv WANTPARENT
+このフラグは
+.Fn namei
+関数が親 (ディレクトリ) の vnode をロックされていない状態で、
+返すようにします。
+その親の vnode は
+.Xr vrele 9
+を使用して個別に解放されなければなりません。
+.It Dv NOCACHE
+名前キャッシュのエントリが既に存在していない場合には、
+.Fn namei
+が名前キャッシュにこのエントリを作成することを回避します。
+通常、そこにエントリが未だない場合には、
+.Fn namei
+は名前キャッシュにエントリを追加します。
+.It Dv FOLLOW
+このフラグがあると、
+.Fn namei
+は与えられたパス名の最後の部分がシンボリックリンクであれば、
+シンボリックリンクを辿ります (すなわち、リンクそれ自体の vnode の代わりに、
+リンクが指しているところの vnode が返されます)。
+.It Dv NOOBJ
+たとえ VM サポートのための要求された基準を満たしているとしても、
+返される vnode のために
+.Fn vfs_object_create
+を呼び出しません。
+.It Dv NOFOLLOW
+シンボリックリンクを辿りません (擬似フラグ)。
+このフラグは実際のコードによって期待されません。
+コードは
+.Dv FOLLOW
+の有無をみます。
+.Dv NOFOLLOW
+は、シンボリックリンクが辿られないことを、
+ソースコードの読者に対して意図的に示すために使用されます。
+.It Dv SAVENAME
+呼出し側がそのパス名のバッファにアクセスするかもしれない時のために、
+.Fn namei
+の実行の最後で、パス名のバッファを解放しません。
+代わりに後で
+.Fn NDFREE
+でその名前バッファを解放します。
+詳細は下記を参照してください。
+.It Dv SAVESTART
+親ディレクトリへの追加の参照を維持します。
+パス名のバッファを解放しません。
+詳細は下記を参照してください。
+.El
+.Sh 割当てられた要素
+.Vt nameidata
+構造体は以下のフィールドで構成されます。
+.Bl -tag -width ".Va ni_cnd.cn_pnbuf"
+.It Va ni_startdir
+通常の場合、これは現在のディレクトリまたはルートディレクトリのどちらかです。
+渡された名前が
+.Ql /
+で始まっておらず、絶対パスのシンボリックリンクを
+通り抜けていない場合には現在のディレクトリで、そうでない場合にはルートです。
+.Pp
+この場合、
+.Fn lookup
+によってのみ使用され、
+.Fn namei
+への呼出しの後で利用可能だとみなされるべきではありません。
+.Dv SAVESTART
+が設定されている場合には、追加の
+.Xr vref 9
+を伴なった
+.Va ni_dvp
+と同様に設定されます。
+.Va ni_startdir
+の解放から
+.Fn NDFREE
+をブロックするために、
+.Dv NDF_NO_STARTDIR_RELE
+を設定することが可能です。
+.It Va ni_dvp
+検索が実行されているオブジェクトのディレクトリへの vnode ポインタです。
+.Dv LOCKPARENT
+または
+.Dv WANTPARENT
+が設定されている場合に、成功して戻った時に利用可能です。
+.Dv LOCKPARENT
+が設定されている場合にはロックされます。
+.Dv NDF_NO_DVP_RELE , NDF_NO_DVP_PUT
+または
+.Dv NDF_NO_DVP_UNLOCK
+によって、(明らかな効果を伴って)
+.Fn NDFREE
+内の
+.Va ni_dvp
+の解放を抑制することが可能です。
+.It Va ni_vp
+オブジェクトが返されるための vnode ポインタで、そうでなければ
+.Dv NULL
+です。
+この vnode の
+.Va v_usecount
+フィールドがインクリメントされます。
+.Dv LOCKLEAF
+が設定されている場合には、ロックもされます。
+.Pp
+.Dv NDF_NO_VP_RELE , NDF_NO_VP_PUT
+または
+.Dv NDF_NO_VP_UNLOCK
+によって、(明らかな効果を伴って)
+.Fn NDFREE
+内の
+.Va ni_vp
+の解放を抑制することが可能です。
+.It Va ni_cnd.cn_pnbuf
+.Nm
+操作によって使用される、
+ファイルまたはディレクトリの位置が入っているパス名のバッファです。
+これは
+.Xr uma 9
+ゾーン割り当てインタフェースによって管理されます。
+.Dv SAVESTART
+または
+.Dv SAVENAME
+フラグが設定されている場合には、そのパス名のバッファは
+.Fn namei
+関数の呼び出し後も利用可能です。
+.Pp
+パス名のバッファ
+.Va ni_cnd.cn_pnbuf
+によって使用されているリソースのみを解放するために、
+.Dv NDF_ONLY_PNBUF
+フラグを
+.Fn NDFREE
+関数に渡すことが可能です。
+パス名のバッファをそのままで保持するために、
+.Dv NDF_NO_FREE_PNBUF
+フラグを
+.Fn NDFREE
+関数に渡すことが可能です。
+.El
+.Sh 関連ファイル
+.Bl -tag
+.It Pa src/sys/kern/vfs_lookup.c
+.El
+.Sh 関連項目
+.Xr uio 9 ,
+.Xr uma 9 ,
+.Xr VFS 9 ,
+.Xr vnode 9 ,
+.Xr vput 9 ,
+.Xr vref 9
+.Sh 作者
+.An -nosplit
+このマニュアルページは
+.An Eivind Eklund Aq eivind@FreeBSD.org
+によって書かれ、その後で
+.An Hiten M. Pandya Aq hmp@FreeBSD.org
+が大幅に修正しました。
+.Sh バグ
+.Dv LOCKPARENT
+フラグは常に親の vnode がロックされる結果になるとは限りません。
+.Dv LOCKPARENT
+が使用される時には、複雑化する結果となります。
+.Dv LOCKPARENT
+および
+.Dv LOCKLEAF
+の両方が使用される場合のこの問題の解決のために、
+再帰的ロックに頼ることが必要になります。

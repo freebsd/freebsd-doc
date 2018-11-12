@@ -1,0 +1,155 @@
+Index: contrib/sendmail/src/deliver.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/sendmail/src/deliver.c,v
+retrieving revision 1.1.1.24
+diff -u -I__FBSDID -r1.1.1.24 deliver.c
+--- contrib/sendmail/src/deliver.c	22 Mar 2006 16:39:57 -0000	1.1.1.24
++++ contrib/sendmail/src/deliver.c	12 Jun 2006 11:42:10 -0000
+@@ -4623,7 +4623,7 @@
+ 		/* now do the hard work */
+ 		boundaries[0] = NULL;
+ 		mci->mci_flags |= MCIF_INHEADER;
+-		if (mime8to7(mci, e->e_header, e, boundaries, M87F_OUTER) ==
++		if (mime8to7(mci, e->e_header, e, boundaries, M87F_OUTER, 0) ==
+ 								SM_IO_EOF)
+ 			goto writeerr;
+ 	}
+@@ -4654,7 +4654,7 @@
+ 			SuprErrs = true;
+ 
+ 		if (mime8to7(mci, e->e_header, e, boundaries,
+-				M87F_OUTER|M87F_NO8TO7) == SM_IO_EOF)
++				M87F_OUTER|M87F_NO8TO7, 0) == SM_IO_EOF)
+ 			goto writeerr;
+ 
+ 		/* restore SuprErrs */
+Index: contrib/sendmail/src/mime.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/sendmail/src/mime.c,v
+retrieving revision 1.1.1.14
+diff -u -I__FBSDID -r1.1.1.14 mime.c
+--- contrib/sendmail/src/mime.c	22 Mar 2006 16:39:59 -0000	1.1.1.14
++++ contrib/sendmail/src/mime.c	12 Jun 2006 11:42:11 -0000
+@@ -80,6 +80,7 @@
+ **		boundaries -- the currently pending message boundaries.
+ **			NULL if we are processing the outer portion.
+ **		flags -- to tweak processing.
++**		level -- recursion level.
+ **
+ **	Returns:
+ **		An indicator of what terminated the message part:
+@@ -96,12 +97,13 @@
+ };
+ 
+ int
+-mime8to7(mci, header, e, boundaries, flags)
++mime8to7(mci, header, e, boundaries, flags, level)
+ 	register MCI *mci;
+ 	HDR *header;
+ 	register ENVELOPE *e;
+ 	char **boundaries;
+ 	int flags;
++	int level;
+ {
+ 	register char *p;
+ 	int linelen;
+@@ -122,6 +124,18 @@
+ 	char pvpbuf[MAXLINE];
+ 	extern unsigned char MimeTokenTab[256];
+ 
++	if (level > MAXMIMENESTING)
++	{
++		if (!bitset(EF_TOODEEP, e->e_flags))
++		{
++			if (tTd(43, 4))
++				sm_dprintf("mime8to7: too deep, level=%d\n",
++					   level);
++			usrerr("mime8to7: recursion level %d exceeded",
++				level);
++			e->e_flags |= EF_DONT_MIME|EF_TOODEEP;
++		}
++	}
+ 	if (tTd(43, 1))
+ 	{
+ 		sm_dprintf("mime8to7: flags = %x, boundaries =", flags);
+@@ -242,7 +256,9 @@
+ 	*/
+ 
+ 	if (sm_strcasecmp(type, "multipart") == 0 &&
+-	    (!bitset(M87F_NO8BIT, flags) || bitset(M87F_NO8TO7, flags)))
++	    (!bitset(M87F_NO8BIT, flags) || bitset(M87F_NO8TO7, flags)) &&
++	    !bitset(EF_TOODEEP, e->e_flags)
++	   )
+ 	{
+ 
+ 		if (sm_strcasecmp(subtype, "digest") == 0)
+@@ -286,10 +302,13 @@
+ 		}
+ 		if (i >= MAXMIMENESTING)
+ 		{
+-			usrerr("mime8to7: multipart nesting boundary too deep");
++			if (tTd(43, 4))
++				sm_dprintf("mime8to7: too deep, i=%d\n", i);
++			if (!bitset(EF_TOODEEP, e->e_flags))
++				usrerr("mime8to7: multipart nesting boundary too deep");
+ 
+ 			/* avoid bounce loops */
+-			e->e_flags |= EF_DONT_MIME;
++			e->e_flags |= EF_DONT_MIME|EF_TOODEEP;
+ 		}
+ 		else
+ 		{
+@@ -333,7 +352,8 @@
+ 				goto writeerr;
+ 			if (tTd(43, 101))
+ 				putline("+++after putheader", mci);
+-			bt = mime8to7(mci, hdr, e, boundaries, flags);
++			bt = mime8to7(mci, hdr, e, boundaries, flags,
++				      level + 1);
+ 			if (bt == SM_IO_EOF)
+ 				goto writeerr;
+ 		}
+@@ -374,7 +394,8 @@
+ 
+ 	if (sm_strcasecmp(type, "message") == 0)
+ 	{
+-		if (!wordinclass(subtype, 's'))
++		if (!wordinclass(subtype, 's') ||
++		    bitset(EF_TOODEEP, e->e_flags))
+ 		{
+ 			flags |= M87F_NO8BIT;
+ 		}
+@@ -397,7 +418,8 @@
+ 			    !bitset(M87F_NO8TO7, flags) &&
+ 			    !putline("MIME-Version: 1.0", mci))
+ 				goto writeerr;
+-			bt = mime8to7(mci, hdr, e, boundaries, flags);
++			bt = mime8to7(mci, hdr, e, boundaries, flags,
++				      level + 1);
+ 			mci->mci_flags &= ~MCIF_INMIME;
+ 			return bt;
+ 		}
+Index: contrib/sendmail/src/sendmail.h
+===================================================================
+RCS file: /home/ncvs/src/contrib/sendmail/src/sendmail.h,v
+retrieving revision 1.1.1.27
+diff -u -I__FBSDID -r1.1.1.27 sendmail.h
+--- contrib/sendmail/src/sendmail.h	22 Mar 2006 16:40:02 -0000	1.1.1.27
++++ contrib/sendmail/src/sendmail.h	12 Jun 2006 11:42:13 -0000
+@@ -942,6 +942,7 @@
+ #define EF_TOOBIG	0x02000000L	/* message is too big */
+ #define EF_SPLIT	0x04000000L	/* envelope has been split */
+ #define EF_UNSAFE	0x08000000L	/* unsafe: read from untrusted source */
++#define EF_TOODEEP	0x10000000L	/* message is nested too deep */
+ 
+ #define DLVR_NOTIFY	0x01
+ #define DLVR_RETURN	0x02
+@@ -1655,7 +1656,7 @@
+ 
+ /* functions */
+ extern bool	mime7to8 __P((MCI *, HDR *, ENVELOPE *));
+-extern int	mime8to7 __P((MCI *, HDR *, ENVELOPE *, char **, int));
++extern int	mime8to7 __P((MCI *, HDR *, ENVELOPE *, char **, int, int));
+ 
+ /*
+ **  Flags passed to returntosender.

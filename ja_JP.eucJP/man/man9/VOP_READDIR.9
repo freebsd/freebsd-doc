@@ -1,0 +1,169 @@
+.\" -*- nroff -*-
+.\"
+.\" Copyright (c) 1996 Doug Rabson
+.\"
+.\" All rights reserved.
+.\"
+.\" This program is free software.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE DEVELOPERS ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man9/VOP_READDIR.9,v 1.12 2003/10/23 02:11:14 hmp Exp %
+.\"
+.\" $FreeBSD$
+.Dd July 24, 1996
+.Os
+.Dt VOP_READDIR 9
+.Sh 名称
+.Nm VOP_READDIR
+.Nd ディレクトリ内容の読込み
+.Sh 書式
+.In sys/param.h
+.In sys/dirent.h
+.In sys/vnode.h
+.Ft int
+.Fn VOP_READDIR "struct vnode *vp" "struct uio *uio" "struct ucred *cred" "int *eofflag" "int *ncookies" "u_long **cookies"
+.Sh 解説
+ディレクトリエントリを読込みます。
+.Bl -tag -width ncookies
+.It Fa vp
+ディレクトリの vnode です。
+.It Fa uio
+ディレクトリ内容を読込む場所です。
+.It Fa cred
+呼び出し側の証明です。
+.It Fa eofflag
+ファイル終端の状態を返します (必要なければ NULL)。
+.It Fa ncookies
+NFS のために作成されたディレクトリクッキーの数です (必要なければ NULL)。
+.It Fa cookies
+NFS のためのディレクトリ検索クッキーです (必要なければ NULL)。
+.El
+.Pp
+ディレクトリ内容は
+.Vt struct dirent
+構造体に読込まれます。
+ディスク上の構造体がこれと違っている場合、変換が必要となります。
+.Sh ロック
+ディレクトリはエントリ時にロックされているべきであり、
+終了時までロックされます。
+.Sh 戻り値
+成功時には 0 が返され、そうでなければエラーコードが返されます。
+.Pp
+NFS サーバから呼び出された場合には、追加の引数
+.Fa eofflag ,
+.Fa ncookies
+および
+.Fa cookies
+が与えられます。
+.Fa *eofflag
+の値は、読込み中にディレクトリの最後に達した場合には、
+TRUE に設定されるべきです。
+ディレクトリ検索クッキーは NFS クライアントに返され、後でそのディレクトリを
+通してディレクトリの読込みを再開するために使用されることが出来ます。
+ディレクトリエントリ毎に 1 つのクッキーが返されるべきです。
+クッキーの値は、ディレクトリ内のオフセットであり、
+対応するディスク上のディレクトリエントリがそこから開始します。
+クッキーのためのメモリは以下を使用して割り当てられるべきです。
+.Pp
+.Bd -literal
+	...;
+	*ncookies = number of entries read;
+	*cookies = (u_int*)#
+		malloc(*ncookies * sizeof(u_int), M_TEMP, M_WAITOK);
+.Ed
+.Sh 疑似コード
+.Bd -literal
+int
+vop_readdir(struct vnode *vp, struct uio *uio, struct ucred *cred,
+	    int *eofflag, int *ncookies, u_int **cookies)
+{
+    off_t off;
+    int error = 0;
+
+    /*
+     * クッキーの生成時に後で使うために元のオフセットを覚えます。
+     */
+    off = uio->uio_offset;
+
+    /*
+     * uio->uio_offset から始まるディレクトリ内容を uio によって
+     * 指されるバッファに読込みます。
+     */
+    ...;
+
+    if (!error && ncookies != NULL) {
+	struct dirent *dpStart;
+	struct dirent *dpEnd;
+	struct dirent *dp;
+	int count;
+	u_int *cookiebuf;
+	u_int *cookiep;
+
+	if (uio->uio_segflg != UIO_SYSSPACE || uio->uio_iovcnt != 1)
+	    panic("vop_readdir: unexpected uio from NFS server");
+
+	/*
+	 * 今 uio に読込んだ要素を解析します。
+	 */
+	dpStart = (struct dirent *)
+	    ((char *)uio->uio_iov->iov_base - (uio->uio_offset - off));
+	dpEnd = (struct dirent *) uio->uio_iov->iov_base;
+
+	/*
+	 * エントリ数の数え上げ
+	 */
+	for (dp = dpStart, count = 0;
+	     dp < dpEnd;
+	     dp = (struct dirent *)((caddr_t) dp + dp->d_reclen))
+	    count++;
+
+	cookiebuf = (u_int *) malloc(count * sizeof(u_int), M_TEMP, M_WAITOK);
+	for (dp = dpStart; cookiep = cookiebuf;
+	     dp < dpEnd;
+	     dp = (struct dirent *)((caddr_t) dp + dp->d_reclen)) {
+	    off += dp->d_reclen;
+	    *cookiep++ = (u_int) off;
+	}
+	*ncookies = count;
+	*cookies = cookiebuf;
+    }
+
+    if (eofflag && uio->uio_offset is past the end of the directory) {
+	*eofflag = TRUE;
+    }
+
+    return error;
+}
+.Ed
+.Sh エラー
+.Bl -tag -width Er
+.It Bq Er EINVAL
+ディレクトリ内の不正なオフセットから読込もうとしました。
+.It Bq Er EIO
+ディレクトリの読込み中に、読取りエラーが発生しました。
+.El
+.Sh 関連項目
+.Xr vnode 9
+.Sh 作者
+このマニュアルページは
+.An Doug Rabson
+が書きました。

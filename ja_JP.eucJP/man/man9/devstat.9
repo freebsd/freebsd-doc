@@ -1,0 +1,439 @@
+.\"
+.\" Copyright (c) 1998, 1999 Kenneth D. Merry.
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. The name of the author may not be used to endorse or promote products
+.\"    derived from this software without specific prior written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man9/devstat.9,v 1.21 2004/07/03 18:29:24 ru Exp %
+.\"
+.\" $FreeBSD$
+.Dd May 22, 1998
+.Dt DEVSTAT 9
+.Os
+.Sh 名称
+.Nm devstat ,
+.Nm devstat_add_entry ,
+.Nm devstat_end_transaction ,
+.Nm devstat_end_transaction_bio ,
+.Nm devstat_remove_entry ,
+.Nm devstat_start_transaction
+.Nd デバイス統計の記録のためのカーネルインタフェース
+.Sh 書式
+.In sys/devicestat.h
+.Ft void
+.Fo devstat_add_entry
+.Fa "struct devstat *ds"
+.Fa "const char *dev_name"
+.Fa "int unit_number"
+.Fa "u_int32_t block_size"
+.Fa "devstat_support_flags flags"
+.Fa "devstat_type_flags device_type"
+.Fa "devstat_priority priority"
+.Fc
+.Ft void
+.Fn devstat_remove_entry "struct devstat *ds"
+.Ft void
+.Fn devstat_start_transaction "struct devstat *ds"
+.Ft void
+.Fo devstat_end_transaction
+.Fa "struct devstat *ds"
+.Fa "u_int32_t bytes"
+.Fa "devstat_tag_type tag_type"
+.Fa "devstat_trans_flags flags"
+.Fc
+.Ft void
+.Fo devstat_end_transaction_bio
+.Fa "struct devstat *ds"
+.Fa "struct bio *bp"
+.Fc
+.Sh 解説
+devstat サブシステムは、その名称が暗示する様に、
+デバイス統計を記録するためのインタフェースです。
+この目的は、適度に詳細な統計情報を記録しつつ、
+記録に使用する CPU 時間を最小とするというものです。
+従って、
+.Nm
+のコードのカーネル内の部分では、実際の統計的な計算は行なわれていません。
+代わりに、これはユーザプログラムが取り扱うように残されています。
+.Pp
+.Fn devstat_add_entry
+は
+.Nm
+サブシステムにデバイスを登録します。
+呼び出し側はこの関数の呼び出しの前に、既に割当てられ \fB0 でクリア
+された\fR devstat 構造体を持っていることを期待されています。
+.Fn devstat_add_entry
+は幾つかの引数を取ります。
+.Bl -tag -width device_type
+.It ds
+クライアントによって割当てられ 0 でクリアされた、
+.Va devstat
+構造体です。
+.It dev_name
+デバイスの名前です。
+例えば da, cd, sa です。
+.It unit_number
+デバイスユニット番号です。
+.It block_size
+サポートされている場合には、デバイスのブロックサイズです。
+デバイスがブロックサイズをサポートしていない場合、または
+.Nm
+リストにそのデバイスが追加される時点ではブロックサイズが判っていない場合には、
+0 に設定されるべきです。
+.It flags
+デバイスによって操作がサポートされているかサポートされていないかを示す
+フラグです。
+詳細は以下を参照してください。
+.It device_type
+デバイスの型です。
+これは 3 つの部分、基本的なデバイスの型 (例えば、直接アクセス、CDROM、
+順次アクセス)、インタフェースの型 (IDE, SCSI またはその他) および
+通過するデバイスを示すためのパススルーフラグに、分割されます。
+完全な型のリストは以下を参照してください。
+.It priority
+デバイスの優先度です。
+優先度はデバイスの
+.Nm devstat
+リストの中でどのようにデバイスを並び替えるかを決定するために使用されます。
+デバイスは最初に優先度 (高い方から低い方) によって、
+それからアタッチされた順番によって並び替えられます。
+利用可能な優先度の完全なリストは以下を参照してください。
+.El
+.Pp
+.Fn devstat_remove_entry
+は
+.Nm
+サブシステムからデバイスを削除します。
+これは引数として当のデバイスの devstat 構造体を取ります。
+.Nm
+世代番号は増やされデバイスの数は減らされます。
+.Pp
+.Fn devstat_start_transaction
+は
+.Nm
+サブシステムに処理の開始を登録します。
+個々の処理の開始でビジーカウントが増やされます。
+デバイスがアイドルからビジーに移ったときには、システム uptime が
+.Va devstat
+構造体の
+.Va start_time
+フィールドに記録されます。
+.Pp
+.Fn devstat_end_transaction
+は
+.Nm
+サブシステムに処理の終了を登録します。
+これは 4 つの引数を取ります。
+.Bl -tag -width tag_type
+.It ds
+当のデバイスのための
+.Va devstat
+構造体です。
+.It bytes
+この処理で転送されたバイト数です。
+.It tag_type
+処理のタグの型です。
+タグの型は以下を参照してください。
+.It flags
+その処理が読込みだったのか、書込みだったのか、
+または転送されたデータがなかったのかを示す処理フラグです。
+.El
+.Pp
+.Fn devstat_end_transaction_bio
+は、biodone() の準備が整っている
+.Va "struct bio"
+からすべての情報を引き出すための、
+.Fn devstat_end_transaction
+のためのラッパです。
+.Pp
+.Va devstat
+構造体は以下のフィールドで構成されています。
+.Bl -tag -width dev_creation_time
+.It dev_links
+個々の
+.Va devstat
+は登録されたときにリンクされたリストに置かれます。
+.Va dev_links
+フィールドには
+.Va devstat
+構造体のリストの中の次のエントリへのポインタが入ります。
+.It device_number
+デバイス番号は、個々のデバイスのための一意な識別子です。
+デバイス番号は、個々の新しいデバイスが登録されるごとに増やされます。
+現在はデバイス番号は単なる 32 ビット整数ですが、40 億個を超える
+デバイス到着イベントを持つシステムがあれば、拡張するかもしれません。
+.It device_name
+デバイス名称はドライバ登録によって与えられる文字列であり、
+自分自身を識別するために使用できます。
+(例えば
+.Dq da ,
+.Dq cd ,
+.Dq sa ,
+など)。
+.It unit_number
+ユニット番号は当の周辺装置のドライバ特有の実体を識別します。
+.It bytes_written
+これはそのデバイスに既に書込まれたバイト数です。
+この数は現在は符号なし 64 ビット整数です。
+32 ビットの整数を使った場合にはシステムによってはすぐにカウンタが
+一回りしてしまうという問題を、これにより回避できると期待しています。
+.It bytes_read
+これはそのデバイスから既に読込まれたバイト数です。
+.It bytes_freed
+これはそのデバイス上の既に解放/消去されたバイト数です。
+.It num_reads
+これはそのデバイスからの読込み回数です。
+.It num_writes
+これはそのデバイスへの書込み回数です。
+.It num_frees
+これはそのデバイス上の解放/消去操作の回数です。
+.It num_other
+これはそのデバイスへの読込みでも書込みでもない処理の回数です。
+例えば、
+.Tn SCSI
+ドライバはしばしばテストユニットレディコマンドを
+.Tn SCSI
+デバイスに送ります。
+そのテストユニットレディコマンドはデータを全く読込みまたは書込みません。
+これは単にその状態を返させるだけにすぎません。
+.It busy_count
+これはそのデバイスのための現在未解決の処理の数です。
+これは 0 を決して下回るべきではなく、アイドルのデバイスでは 0 になるべきです。
+これらの状態のいずれかが真でない場合には、クライアントのコードの
+.Fn devstat_start_transaction
+と
+.Fn devstat_end_transaction
+の呼び出し方に問題があることを示しています。
+個々の処理にはただ 1 つの処理開始イベントがあるべきであり、
+各処理に対して 1 つの処理終了イベントがあるべきです。
+.It block_size
+そのデバイスがブロックサイズを持っている場合には、
+これはそのデバイスのブロックサイズです。
+.It tag_types
+これはデバイスに送られた様々なタグの型の数を記録するための
+カウンタの配列です。
+タグの型のリストは以下を参照してください。
+.It dev_creation_time
+これはそのデバイスが登録されたときの
+.Fn getmicrotime
+によって報告される時間です
+.It busy_time
+これは、デバイスのビジーカウントが 0 より大きかった時間の量です。
+これはビジーカウントが 0 に戻ったときにのみ更新されます。
+.It start_time
+これはそのデバイスのビジーカウントが 0 から 1 に移ったときの
+.Fn getmicrouptime
+によって報告される時間です
+.It last_comp_time
+これは処理が完全に終わったときの
+.Fn getmicrouptime
+によって報告される時間です。
+これはデバイスビジー時間を計算するために
+.Va start_time
+と一緒に使用されます。
+.It flags
+これらのフラグは個々のデバイスによって、どの統計測定がサポート
+されているのかを示します。
+これらのフラグは本来は、統計を解読するユーザ側のプログラムの補助として
+働くことを意図されています。
+.It device_type
+これはデバイスの型です。
+これは 3 つの部分から構成されています。
+デバイスの型 (例えば、直接アクセス、CDROM、順次アクセス、など)、
+インタフェース (IDE, SCSI またはその他) および当のデバイスが
+パススルードライバであるかどうか、です。
+デバイスの型の完全なリストは以下を参照してください。
+.It priority
+これは優先度です。
+これはデバイスを
+.Nm
+リストの何処に挿入するのかを決定するために使用される最初のパラメータです。
+2 番目のパラメータはアタッチの順番です。
+利用可能な優先度のリストは以下を参照してください。
+.El
+.Pp
+個々のデバイスはデバイスの型が与えられます。
+パススルーデバイスは
+インタフェースを供給するためのデバイスと同じ基礎的なデバイスの型と
+インタフェースを持ちますが、パススルーフラグも設定されています。
+基本のデバイスの型は
+.Tn SCSI
+のデバイス型番号と一致しています。
+そのため
+.Tn SCSI
+周辺装置では、問合せから返されたデバイスの型は、通常、
+.Tn SCSI
+インタフェースの型ともし適切であればパススルーフラグで OR されます。
+デバイスの型のフラグは以下のとおりです。
+.Bd -literal -offset indent
+typedef enum {
+	DEVSTAT_TYPE_DIRECT	= 0x000,
+	DEVSTAT_TYPE_SEQUENTIAL	= 0x001,
+	DEVSTAT_TYPE_PRINTER	= 0x002,
+	DEVSTAT_TYPE_PROCESSOR	= 0x003,
+	DEVSTAT_TYPE_WORM	= 0x004,
+	DEVSTAT_TYPE_CDROM	= 0x005,
+	DEVSTAT_TYPE_SCANNER	= 0x006,
+	DEVSTAT_TYPE_OPTICAL	= 0x007,
+	DEVSTAT_TYPE_CHANGER	= 0x008,
+	DEVSTAT_TYPE_COMM	= 0x009,
+	DEVSTAT_TYPE_ASC0	= 0x00a,
+	DEVSTAT_TYPE_ASC1	= 0x00b,
+	DEVSTAT_TYPE_STORARRAY	= 0x00c,
+	DEVSTAT_TYPE_ENCLOSURE	= 0x00d,
+	DEVSTAT_TYPE_FLOPPY	= 0x00e,
+	DEVSTAT_TYPE_MASK	= 0x00f,
+	DEVSTAT_TYPE_IF_SCSI	= 0x010,
+	DEVSTAT_TYPE_IF_IDE	= 0x020,
+	DEVSTAT_TYPE_IF_OTHER	= 0x030,
+	DEVSTAT_TYPE_IF_MASK	= 0x0f0,
+	DEVSTAT_TYPE_PASS	= 0x100
+} devstat_type_flags;
+.Ed
+.Pp
+デバイスはそれらに関連付けられた優先度を持っていて、
+.Nm
+リストのおおよそ何処に置かれるのかを制御します。
+優先度は以下のとおりです。
+.Bd -literal -offset indent
+typedef enum {
+	DEVSTAT_PRIORITY_MIN	= 0x000,
+	DEVSTAT_PRIORITY_OTHER	= 0x020,
+	DEVSTAT_PRIORITY_PASS	= 0x030,
+	DEVSTAT_PRIORITY_FD	= 0x040,
+	DEVSTAT_PRIORITY_WFD	= 0x050,
+	DEVSTAT_PRIORITY_TAPE	= 0x060,
+	DEVSTAT_PRIORITY_CD	= 0x090,
+	DEVSTAT_PRIORITY_DISK	= 0x110,
+	DEVSTAT_PRIORITY_ARRAY	= 0x120,
+	DEVSTAT_PRIORITY_MAX	= 0xfff
+} devstat_priority;
+.Ed
+.Pp
+個々のデバイスは何の操作がサポートされているかサポートされていないのかを示す、
+それに関連付けられたフラグを持っています。
+.Va devstat_support_flags
+の値は以下のとおりです。
+.Bl -tag -width DEVSTAT_NO_ORDERED_TAGS
+.It DEVSTAT_ALL_SUPPORTED
+デバイスによって全ての統計の型がサポートされています。
+.It DEVSTAT_NO_BLOCKSIZE
+このデバイスはブロックサイズを持っていません。
+.It DEVSTAT_NO_ORDERED_TAGS
+このデバイスは順序タグ (ordered tag) をサポートしていません。
+.It DEVSTAT_BS_UNAVAILABLE
+このデバイスはブロックサイズをサポートしていますが、現在は利用できません。
+このフラグはリムーバブルメディアのドライバでよく使用されます。
+.El
+.Pp
+デバイスへの処理は 3 つのカテゴリのうちのいずれかに分類されます。
+これは
+.Fn devstat_end_transaction
+へ渡される
+.Va flags
+に表現されています。
+処理の型は以下のとおりです。
+.Bd -literal -offset indent
+typedef enum {
+	DEVSTAT_NO_DATA	= 0x00,
+	DEVSTAT_READ	= 0x01,
+	DEVSTAT_WRITE	= 0x02,
+	DEVSTAT_FREE	= 0x03
+} devstat_trans_flags;
+.Ed
+.Pp
+.Fn devstat_end_transaction
+の
+.Va tag_type
+引数には、次の 4 つの値を指定可能です:
+.Bl -tag -width DEVSTAT_TAG_ORDERED
+.It DEVSTAT_TAG_SIMPLE
+その処理は単純なタグを持っていました。
+.It DEVSTAT_TAG_HEAD
+この処理はキュータグの先頭を持っていました。
+.It DEVSTAT_TAG_ORDERED
+その処理は順序タグを持っていました。
+.It DEVSTAT_TAG_NONE
+そのデバイスはタグをサポートしません。
+.El
+.Pp
+タグの型の値は
+.Tn SCSI
+のタグの定義の下位 4 ビットと一致しています。
+例えば CAM では、
+CCB の
+.Va tag_action
+が 0xf と OR することにより、
+.Fn devstat_end_transaction
+に渡すタグの型を判定します。
+.\" AND じゃないの？
+.Pp
+.In sys/devicestat.h
+で
+.Dv DEVSTAT_VERSION
+マクロが定義されています。
+これは
+.Nm
+サブシステムの現在のバージョンで、
+.Nm
+統計にアクセスするユーザ側プログラムの再コンパイルが要求される変更のたびに、
+増やされるべきです。
+ユーザ側プログラムは、カーネルの
+.Nm
+構造体と同期しているかどうかを決定するために、
+.Va kern.devstat.version
+.Nm sysctl
+変数を通してこのバージョンを使用します。
+.Sh 関連項目
+.Xr systat 1 ,
+.Xr devstat 3 ,
+.Xr iostat 8 ,
+.Xr rpc.rstatd 8 ,
+.Xr vmstat 8
+.Sh 歴史
+.Nm
+統計システムは
+.Fx 3.0
+で登場しました。
+.Sh 作者
+.An Kenneth Merry Aq ken@FreeBSD.org
+.Sh バグ
+.Nm
+リスト操作コード周りで
+.Fn spl
+保護が必要かもしれません。
+これは、例えば誰かが
+.Va kern.devstat.all
+.Nm sysctl
+変数を取り出している間に、デバイスのリストが変更されないことを
+保証するためです。
+.Pp
+現在の
+.Nm
+の構造では正確に処理毎の時間を測定することが不可能です。
+唯一の上手くいきそうな処理毎の正確な時間測定の方法は、
+処理毎にタイムスタンプを記録することです。
+システムのパフォーマンスおよび各個の処理のためにタイムスタンプを
+保存するための空間コストに負の影響を与えるため、
+この測定は恐らくは殆んどの人々には価値のないことです。
