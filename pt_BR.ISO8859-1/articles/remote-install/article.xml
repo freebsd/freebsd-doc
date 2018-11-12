@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V5.0-Based Extension//EN" "http://www.FreeBSD.org/XML/share/xml/freebsd50.dtd">
+<article xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:its="http://www.w3.org/2005/11/its" version="5.0" xml:lang="pt_BR">
+  <info>
+    <title>Instalação Remota do Sistema Operacional FreeBSD Sem um Console Remoto</title>
+
+    <author><personname> <firstname>Daniel</firstname> <surname>Gerzo</surname> </personname> <affiliation> <address>
+	  <email>danger@FreeBSD.org</email>
+	</address> </affiliation></author>
+
+    <legalnotice xml:id="trademarks" role="trademarks">
+      <para>FreeBSD is a registered trademark of the FreeBSD Foundation.</para>
+      <para>Many of the designations used by manufacturers and sellers to distinguish their products are claimed as trademarks. Where those designations appear in this document, and the FreeBSD Project was aware of the trademark claim, the designations have been followed by the <quote>™</quote> or the <quote>®</quote> symbol.</para>
+    </legalnotice>
+
+    <copyright><year>2008</year> <holder>Projeto de Documentação do FreeBSD</holder></copyright>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <releaseinfo>$FreeBSD$</releaseinfo>
+
+    <abstract>
+      <para>Este artigo documenta a instalação remota do sistema operacional FreeBSD quando o console do sistema remoto não está disponível. A idéia principal por trás deste artigo é o resultado de uma colaboração com Martin Matuska <email>mm@FreeBSD.org</email> com informações valiosas fornecidas por Paweł Jakub Dawidek <email>pjd@FreeBSD.org</email>.</para>
+    </abstract>
+  </info>
+
+  <sect1 xml:id="background">
+    <title>Background</title>
+
+    <para>Existem muitos provedores de hospedagem de servidores no mundo, mas poucos deles oferecem suporte oficial ao FreeBSD. Eles geralmente fornecem suporte para uma distribuição <trademark class="registered">Linux</trademark> para ser instalada nos servidores que eles oferecem.</para>
+
+    <para>Em alguns casos, estas empresas instalarão sua distribuição <trademark class="registered">Linux</trademark> preferida se você solicitá-la. Usando esta opção, tentaremos instalar o FreeBSD. Em outros casos, eles podem oferecer um sistema de recuperação para ser usado em uma emergência. É possível usá-la para os nossos propósitos também.</para>
+
+    <para>Este artigo aborda as etapas básicas de instalação e configuração necessárias para inicializar uma instalação remota do FreeBSD com suporte para RAID-1 e <application>ZFS</application>.</para>
+  </sect1>
+
+  <sect1 xml:id="intro">
+    <title>Introdução</title>
+
+    <para>Esta seção resumirá o objetivo deste artigo e explicará melhor o que é tratado aqui. As instruções incluídas neste artigo beneficiarão aqueles usuários que usam serviços fornecidos por provedores de colocation que não suportam o FreeBSD.</para>
+
+    <procedure>
+      <step>
+	<para>Como mencionamos na seção <link linkend="background">​​Background</link>, muitas das empresas de hospedagem de servidores renomadas fornecem algum tipo de sistema de recuperação, que é inicializado a partir de sua <acronym>LAN</acronym> e acessível por <application>SSH</application>. Eles normalmente fornecem esse suporte para ajudar seus clientes a consertar sistemas operacionais quebrados. Como este artigo explicará, é possível instalar o FreeBSD com a ajuda destes sistemas de recuperação.</para>
+	<!-- XXXTR: Solaris has a restore command, something like
+	  sysrestore, FreeBSD Should have one too. -->
+      </step>
+
+      <step>
+	<para>A próxima seção deste artigo descreverá como configurar e compilar uma versão mínima do FreeBSD na máquina local. Essa versão eventualmente será executada na máquina remota a partir de um ramdisk, o que nos permitirá instalar um sistema operacional completo do FreeBSD a partir de um espelho <acronym>FTP</acronym>usando o utilitário<application>sysinstall</application>.</para>
+      </step>
+
+      <step>
+	<para>O restante deste artigo descreverá o procedimento de instalação em si, bem como a configuração do sistema de arquivos <application>ZFS</application>.</para>
+      </step>
+    </procedure>
+
+    <sect2 xml:id="requirements">
+      <title>Requisitos</title>
+
+      <para>Para continuar com sucesso, você deve:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Ter um sistema operacional acessível pela rede com acesso <application>SSH</application></para>
+	</listitem>
+
+	<listitem>
+	  <para>Entender o processo de instalação do FreeBSD</para>
+	</listitem>
+
+	<listitem>
+	  <para>Familiarizar-se com o utilitário <citerefentry><refentrytitle>sysinstall</refentrytitle> <manvolnum>8</manvolnum></citerefentry></para>
+	</listitem>
+
+	<listitem>
+	  <para>Ter a imagem <acronym>ISO</acronym> de instalação do FreeBSD ou o <acronym> CD </acronym> de instalação à mão</para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="preparation">
+    <title>Preparação - <application>mfsBSD</application></title>
+
+    <para>Antes que o FreeBSD possa ser instalado no sistema de destino, é necessário construir a imagem mínima do sistema operacional FreeBSD que será inicializada a partir do disco rígido. Dessa forma, o novo sistema pode ser acessado a partir da rede e o restante da instalação pode ser feito sem acesso remoto ao console do sistema.</para>
+
+    <para>O conjunto de ferramentas <application>mfsBSD</application> pode ser usado para construir uma pequena imagem do FreeBSD. Como o nome <application>mfsBSD</application> sugere (<quote>mfs</quote> significa <quote>sistema de arquivos em memória</quote>), a imagem resultante é executada inteiramente de um ramdisk. Graças a este recurso, a manipulação de discos rígidos não será limitada, portanto, será possível instalar um sistema operacional completo do FreeBSD. A <uri xlink:href="http://mfsbsd.vx.sk/">página inicial</uri> do <application>mfsBSD</application> inclui links para a versão mais recente do conjunto de ferramentas.</para>
+
+    <para>Por favor, note que os detalhes de como o <application>mfsBSD</application> funciona internamente e como tudo se encaixa está além do escopo deste artigo. O leitor interessado deve consultar a documentação original do <application>mfsBSD</application> para mais detalhes.</para>
+
+    <para>Faça o download e extraia a versão mais recente do <application>mfsBSD</application> e altere seu diretório de trabalho para o diretório em que os scripts <application>mfsBSD</application> residirão:</para>
+
+    <screen><prompt>#</prompt> <userinput>fetch http://mfsbsd.vx.sk/release/mfsbsd-<replaceable>2.1</replaceable>.tar.gz</userinput>
+<prompt>#</prompt> <userinput>tar xvzf mfsbsd-<replaceable>2.1</replaceable>.tar.gz</userinput>
+<prompt>#</prompt> <userinput>cd mfsbsd-<replaceable>2.1</replaceable>/</userinput></screen>
+
+    <sect2 xml:id="mfsbsd-config">
+      <title>Configuração do <application>mfsBSD</application></title>
+
+      <para>Antes de inicializar o <application>mfsBSD</application>, algumas opções importantes de configuração precisam ser definidas. O mais importante que temos que acertar é, naturalmente, a configuração da rede. O método mais adequado para configurar opções de rede depende se sabemos de antemão o tipo de interface de rede que usaremos e o driver da interface de rede a ser carregado para o nosso hardware. Vamos ver como o <application>mfsBSD</application> pode ser configurado em ambos os casos.</para>
+
+      <para>Outra coisa importante para definir é a senha do usuário <systemitem class="username">root</systemitem>. Isto pode ser feito editando o <filename>conf/loader.conf</filename>. Por favor, veja os comentários incluídos no arquivo.</para>
+
+      <sect3>
+	<title>O método <filename>conf/interfaces.conf</filename></title>
+
+	<para>Quando a placa de rede instalada é desconhecida, é possível usar os recursos de detecção automática do  <application>mfsBSD</application>. Os scripts de inicialização do <application>mfsBSD</application> podem detectar o driver correto a ser usado, com base no endereço MAC da interface, se configurarmos as seguintes opções em <filename>conf/interfaces.conf</filename>:</para>
+
+	<programlisting>mac_interfaces="ext1"
+ifconfig_ext1_mac="00:00:00:00:00:00"
+ifconfig_ext1="inet 192.168.0.2/24"</programlisting>
+
+	<para>Não esqueça de adicionar a informação <literal>defaultrouter</literal> ao <filename>conf/rc.conf</filename>:</para>
+
+	<programlisting>defaultrouter="192.168.0.1"</programlisting>
+      </sect3>
+
+      <sect3>
+	<title>O método <filename>conf/rc.conf</filename></title>
+
+	<para>Quando o driver da interface de rede é conhecido, é mais conveniente usar <filename>conf/rc.conf</filename> para opções de rede. A sintaxe deste arquivo é a mesma usada no arquivo padrão <citerefentry><refentrytitle>rc.conf </refentrytitle><manvolnum>5</manvolnum></citerefentry> do FreeBSD.</para>
+
+	<para>Por exemplo, se você souber que uma interface de rede <citerefentry><refentrytitle>re</refentrytitle><manvolnum>4</manvolnum></citerefentry> estará disponível, você pode definir as seguintes opções em <filename>conf/rc.conf</filename>:</para>
+
+	<programlisting>defaultrouter="192.168.0.1"
+ifconfig_re0="inet 192.168.0.2/24"</programlisting>
+      </sect3>
+    </sect2>
+
+    <sect2 xml:id="mfsbsd-build">
+      <title>Construindo uma imagem do <application>mfsBSD</application></title>
+
+      <para>O processo de construção de uma imagem <application>mfsBSD</application> é bastante simples.</para>
+
+      <para>O primeiro passo é montar o <acronym>CD</acronym> de instalação do FreeBSD, ou a imagem <acronym>ISO</acronym> de instalação em <filename>/cdrom </filename>. Por exemplo, neste artigo vamos supor que você tenha baixado o <acronym>ISO</acronym> do FreeBSD 10.1-RELEASE. Montar esta imagem ISO no diretório <filename>/cdrom</filename> é fácil de se fazer com o utilitário <citerefentry><refentrytitle>mdconfig</refentrytitle><manvolnum>8</manvolnum></citerefentry>:</para>
+
+      <screen><prompt>#</prompt> <userinput>mdconfig -a -t vnode -u 10 -f <replaceable>FreeBSD-10.1-RELEASE-amd64-disc1.iso</replaceable></userinput>
+<prompt>#</prompt> <userinput>mount_cd9660 /dev/md10 /cdrom</userinput></screen>
+
+      <para>Como as versões recentes do FreeBSD não contêm conjuntos de distribuição regulares, é necessário extrair os arquivos de distribuição do FreeBSD dos arquivos de distribuição localizados na imagem <acronym>ISO</acronym>:</para>
+
+      <screen><prompt>#</prompt> <userinput>mkdir <replaceable>DIST</replaceable></userinput>
+<prompt>#</prompt> <userinput>tar -xvf /cdrom/usr/freebsd-dist/base.txz -C <replaceable>DIST</replaceable></userinput>
+<prompt>#</prompt> <userinput>tar -xvf /cdrom/usr/freebsd-dist/kernel.txz -C <replaceable>DIST</replaceable></userinput></screen>
+
+      <para>Em seguida, construa a imagem <application>mfsBSD</application> inicializável:</para>
+
+      <screen><prompt>#</prompt> <userinput>make BASE=<replaceable>DIST</replaceable></userinput></screen>
+
+      <note>
+	<para>O <command>make</command> acima deve ser executado a partir do nível superior da árvore de diretórios do <application>mfsBSD</application>, por exemplo, <filename>~/mfsbsd-2.1/</filename>.</para>
+      </note>
+    </sect2>
+
+    <sect2>
+      <title>Inicializando o <application>mfsBSD</application></title>
+
+      <para>Agora que a imagem <application>mfsBSD</application> está pronta, ela deve ser carregada para o sistema remoto executando o sistema de recuperação ou uma distribuição <trademark class="registered">Linux</trademark> pré-instalada. A ferramenta mais adequada para essa tarefa é o <application>scp</application>:</para>
+
+      <screen><prompt>#</prompt> <userinput>scp disk.img root@192.168.0.2:.</userinput></screen>
+
+      <para>Para inicializar corretamente a imagem <application>mfsBSD</application>, ela deve ser colocada no primeiro dispositivo (inicializável) da máquina em questão. Isso pode ser feito usando este exemplo, desde que o <filename>sda</filename> seja o primeiro dispositivo de disco inicializável:</para>
+
+      <screen><prompt>#</prompt> <userinput>dd if=/root/disk.img of=/dev/sda bs=1m</userinput></screen>
+
+      <para>Se tudo correu bem, a imagem deve estar agora no <acronym>MBR</acronym> do primeiro dispositivo e a máquina pode ser reinicializada. Observe a máquina inicializar corretamente com a ferramenta <citerefentry><refentrytitle>ping </refentrytitle><manvolnum>8</manvolnum></citerefentry>. Uma vez que tenha retornado on-line, deve ser possível acessá-la com o <citerefentry><refentrytitle>ssh</refentrytitle><manvolnum>1</manvolnum></citerefentry> como o usuário <systemitem class="username"> root </systemitem> usando a senha configurada.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="installation">
+    <title>Instalação do sistema operacional do FreeBSD</title>
+
+    <para>O <application>mfsBSD</application> foi inicializado com sucesso e deve ser possível efetuar login através do <citerefentry><refentrytitle>ssh</refentrytitle><manvolnum>1</manvolnum></citerefentry>. Esta seção descreverá como criar e rotular os slices, configurar o <application>gmirror</application> para o RAID-1 e como usar o <application>sysinstall</application> para instalar uma distribuição mínima do sistema operacional FreeBSD.</para>
+
+    <sect2>
+      <title>Preparação de Discos Rígidos</title>
+
+      <para>A primeira tarefa é alocar espaço em disco para o FreeBSD, ou seja: criar slices e partições. Obviamente, o sistema atualmente em execução é totalmente carregado na memória do sistema e, portanto, não haverá problemas com a manipulação dos discos rígidos. Para completar esta tarefa, é possível usar <application>sysinstall</application> ou <citerefentry><refentrytitle>fdisk</refentrytitle><manvolnum>8</manvolnum></citerefentry> em conjunto com o <citerefentry><refentrytitle>bsdlabel</refentrytitle><manvolnum>8</manvolnum></citerefentry>.</para>
+
+      <para>No início, marque todos os discos do sistema como vazios. Repita o seguinte comando para cada disco rígido:</para>
+
+      <screen><prompt>#</prompt> <userinput>dd if=/dev/zero of=/dev/<replaceable>ad0</replaceable> count=2</userinput></screen>
+
+      <para>Em seguida, crie as slices e atribua um label usando sua ferramenta preferida. Embora seja considerado mais fácil usar o <application>sysinstall</application>, um método poderoso e provavelmente com menos bugs será usar as ferramentas padrões de console <trademark class="registered">UNIX</trademark>, como o <citerefentry><refentrytitle>fdisk</refentrytitle><manvolnum>8</manvolnum></citerefentry> e o <citerefentry><refentrytitle>bsdlabel</refentrytitle><manvolnum>8</manvolnum></citerefentry>, o qual também será abordado nesta seção. A primeira opção está bem documentada no capítulo <link xlink:href="@@URL_RELPREFIX@@/doc/en_US.ISO8859-1/books/handbook/install-steps.html">Instalando o FreeBSD</link> do Handbook do FreeBSD. Como foi mencionado na introdução, este artigo apresentará como configurar um sistema com recursos RAID-1 e <application>ZFS</application>. Nossa configuração consistirá de uma pequena partição <filename>/</filename> (root) , de um dataset  composto por um <filename>/usr</filename> e  um <filename>/var</filename> , todos espelhados com o <citerefentry><refentrytitle>gmirror</refentrytitle><manvolnum>8</manvolnum></citerefentry>, e o restante do espaço em disco alocado para um sistema de arquivos <citerefentry><refentrytitle>zpool</refentrytitle><manvolnum>8</manvolnum></citerefentry> espelhado do <application>ZFS</application>. Por favor, observe que o sistema de arquivos<application>ZFS</application> será configurado depois que o sistema operacional FreeBSD for instalado e inicializado com sucesso.</para>
+
+      <para>O exemplo a seguir descreverá como criar slices e labels, inicializar o <citerefentry><refentrytitle>gmirror</refentrytitle><manvolnum>8</manvolnum></citerefentry> em cada partição e como criar um  sistema de arquivos <application>UFS2</application> em cada partição espelhada:</para>
+
+      <screen><prompt>#</prompt> <userinput>fdisk -BI /dev/ad0</userinput> <co xml:id="fdisk"/>
+<prompt>#</prompt> <userinput>fdisk -BI /dev/ad1</userinput>
+<prompt>#</prompt> <userinput>bsdlabel -wB /dev/ad0s1</userinput> <co xml:id="bsdlabel-writing"/>
+<prompt>#</prompt> <userinput>bsdlabel -wB /dev/ad1s1</userinput>
+<prompt>#</prompt> <userinput>bsdlabel -e /dev/ad0s1</userinput> <co xml:id="bsdlabel-editing"/>
+<prompt>#</prompt> <userinput>bsdlabel /dev/ad0s1 &gt; /tmp/bsdlabel.txt &amp;&amp; bsdlabel -R /dev/ad1s1 /tmp/bsdlabel.txt</userinput> <co xml:id="bsdlabel-restore"/>
+<prompt>#</prompt> <userinput>gmirror label root /dev/ad[01]s1a</userinput> <co xml:id="gmirror1"/>
+<prompt>#</prompt> <userinput>gmirror label var /dev/ad[01]s1d</userinput>
+<prompt>#</prompt> <userinput>gmirror label usr /dev/ad[01]s1e</userinput>
+<prompt>#</prompt> <userinput>gmirror label -F swap /dev/ad[01]s1b</userinput> <co xml:id="gmirror2"/>
+<prompt>#</prompt> <userinput>newfs /dev/mirror/root</userinput> <co xml:id="newfs"/>
+<prompt>#</prompt> <userinput>newfs /dev/mirror/var</userinput>
+<prompt>#</prompt> <userinput>newfs /dev/mirror/usr</userinput></screen>
+
+      <calloutlist>
+	<callout arearefs="fdisk">
+	  <para>Crie uma slice cobrindo todo o disco e inicialize o código de inicialização contido no setor 0 do disco fornecido. Repita este comando para todos os discos rígidos no sistema.</para>
+	</callout>
+
+	<callout arearefs="bsdlabel-writing">
+	  <para>Escreva um label padrão para cada disco, incluindo o código de bootstrap.</para>
+	</callout>
+
+	<callout arearefs="bsdlabel-editing">
+	  <para>Agora, edite manualmente o label do disco fornecido. Consulte a página de manual do <citerefentry><refentrytitle>bsdlabel</refentrytitle><manvolnum>8</manvolnum></citerefentry>para descobrir como criar partições. Crie as partições <literal>a</literal> para o sistema de arquivos <filename>/</filename> (root) , <literal>b</literal> para  swap, <literal>d</literal> para <filename>/var </filename>,<literal>e</literal> para <filename>/usr</filename> e finalmente <literal>f</literal>, que será usado posteriormente para o <application>ZFS</application>.</para>
+	</callout>
+
+	<callout arearefs="bsdlabel-restore">
+	  <para>Importe o label recém-criado para o segundo disco rígido, para que ambos os discos sejam rotulados da mesma maneira.</para>
+	</callout>
+
+	<callout arearefs="gmirror1">
+	  <para>Inicialize o <citerefentry><refentrytitle>gmirror</refentrytitle><manvolnum>8</manvolnum></citerefentry> em cada partição.</para>
+	</callout>
+
+	<callout arearefs="gmirror2">
+	  <para>Note que <option>-F</option> é usado para a partição de swap. Isso instrui o <citerefentry><refentrytitle>gmirror</refentrytitle><manvolnum>8</manvolnum> </citerefentry> a assumir que o dispositivo está no estado consistente após a falha de energia/sistema.</para>
+	</callout>
+
+	<callout arearefs="newfs">
+	  <para>Crie um sistema de arquivos <application>UFS2</application> em cada partição espelhada.</para>
+	</callout>
+      </calloutlist>
+    </sect2>
+
+    <sect2>
+      <title>Instalação do sistema</title>
+
+      <para>Esta é a parte mais importante. Esta seção irá descrever como instalar a distribuição mínima do FreeBSD nos discos rígidos que preparamos na seção anterior. Para atingir este objetivo, todos os sistemas de arquivos precisam ser montados para que o <application>sysinstall</application> possa gravar o conteúdo do FreeBSD nos discos rígidos:</para>
+
+      <screen><prompt>#</prompt> <userinput>mount /dev/mirror/root /mnt</userinput>
+<prompt>#</prompt> <userinput>mkdir /mnt/var /mnt/usr</userinput>
+<prompt>#</prompt> <userinput>mount /dev/mirror/var /mnt/var</userinput>
+<prompt>#</prompt> <userinput>mount /dev/mirror/usr /mnt/usr</userinput></screen>
+
+      <para>Quando terminar, inicie o <citerefentry><refentrytitle>sysinstall</refentrytitle><manvolnum>8</manvolnum></citerefentry>. Selecione a instalação <guimenuitem>Personalizada</guimenuitem> no menu principal. Selecione <guimenuitem>Opções</guimenuitem> e pressione <keycap>Enter</keycap>. Com a ajuda das teclas direcionais, mova o cursor para o item <literal>Install Root</literal>, pressione <keycap>Espaço</keycap> e altere-o para <filename>/mnt</filename>. Pressione <keycap>Enter</keycap> para enviar suas alterações e sair do menu  <guimenuitem>Opções</guimenuitem> pressionando <keycap>q</keycap>.</para>
+
+      <warning>
+	<para>Note que este passo é muito importante e se for ignorado, o <application>sysinstall</application> não poderá instalar o FreeBSD.</para>
+      </warning>
+
+      <para>Vá para o menu <guimenuitem>Distributions</guimenuitem>, mova o cursor com as teclas de seta para <option>Minimal</option> e selecione-o pressionando <keycap>Space</keycap>. Este artigo usa a distribuição mínima para salvar o tráfego de rede, porque o próprio sistema será instalado por <application>ftp</application>. Saia deste menu escolhendo <option>Exit</option>.</para>
+
+      <note>
+	<para>Os menus <guimenuitem>Partition</guimenuitem> e <guimenuitem>Label</guimenuitem> serão ignorados, pois são inúteis agora.</para>
+      </note>
+
+      <para>No menu <guimenuitem>Media</guimenuitem>, selecione <option>FTP</option>. Selecione o espelho mais próximo e deixe o <application>sysinstall</application> assumir que a rede já está configurada. Você retornará ao menu <guimenuitem>Personalizar</guimenuitem>.</para>
+
+      <para>Finalmente, realize a instalação do sistema selecionando a última opção, <guimenuitem>Commit</guimenuitem>. Saia do <application>sysinstall </application> quando terminar a instalação.</para>
+    </sect2>
+
+    <sect2>
+      <title>Etapas pós-instalação</title>
+
+      <para>O sistema operacional do FreeBSD deve estar instalado agora; no entanto, o processo ainda não está concluído. É necessário executar algumas etapas pós-instalação para permitir que o FreeBSD inicialize no futuro e consiga efetuar o login no sistema.</para>
+
+      <para>Você deve agora executar <citerefentry><refentrytitle>chroot</refentrytitle><manvolnum>8</manvolnum></citerefentry> para o sistema recém-instalado para concluir a instalação. Use o seguinte comando:</para>
+
+      <screen><prompt>#</prompt> <userinput>chroot /mnt</userinput></screen>
+
+      <para>Para completar nosso objetivo, execute estas etapas:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Copie o kernel <literal>GENERIC</literal> para o diretório <filename>/boot/kernel</filename>:</para>
+
+	  <screen><prompt>#</prompt> <userinput>cp -Rp /boot/GENERIC/* /boot/kernel</userinput></screen>
+	</listitem>
+
+	<listitem>
+	  <para>Crie os arquivos <filename>/etc/rc.conf</filename>, <filename>/etc/resolv.conf </filename> e <filename>/etc/fstab</filename>. Não se esqueça de configurar corretamente as informações de rede e ativar o <application>sshd</application> em <filename>/etc/rc.conf</filename>. O conteúdo do <filename>/etc/fstab</filename> será semelhante ao seguinte:</para>
+
+	  <programlisting># Device                Mountpoint      FStype  Options         Dump    Pass#
+/dev/mirror/swap        none            swap    sw              0       0
+/dev/mirror/root        /               ufs     rw              1       1
+/dev/mirror/usr         /usr            ufs     rw              2       2
+/dev/mirror/var         /var            ufs     rw              2       2
+/dev/cd0                /cdrom          cd9660  ro,noauto       0       0</programlisting>
+	</listitem>
+
+	<listitem>
+	  <para>Crie o <filename>/boot/loader.conf</filename> com o seguinte conteúdo:</para>
+
+	  <programlisting>geom_mirror_load="YES"
+zfs_load="YES"</programlisting>
+	</listitem>
+
+	<listitem>
+	  <para>Execute o seguinte comando, que disponibilizará o <application>ZFS</application> na próxima inicialização:</para>
+
+	  <screen><prompt>#</prompt> <userinput>echo 'zfs_enable="YES"' &gt;&gt; /etc/rc.conf </userinput></screen>
+	</listitem>
+
+	<listitem>
+	  <para>Adicione usuários adicionais ao sistema usando a ferramenta <citerefentry><refentrytitle>adduser</refentrytitle><manvolnum>8</manvolnum></citerefentry>. Não se esqueça de adicionar um usuário ao grupo <systemitem class="groupname">wheel</systemitem> para que você possa obter acesso root após a reinicialização.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Verifique todas as suas configurações.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>O sistema deve estar pronto para a próxima inicialização. Use o comando <citerefentry><refentrytitle>reboot</refentrytitle><manvolnum>8</manvolnum></citerefentry> para reinicializar seu sistema.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="zfs">
+    <title>ZFS</title>
+
+    <para>Se o seu sistema sobreviveu à reinicialização, agora deve ser possível efetuar login. Bem-vindo à nova instalação do FreeBSD, executada remotamente sem o uso de um console remoto!</para>
+
+    <para>O único passo restante é configurar o <citerefentry><refentrytitle>zpool</refentrytitle><manvolnum>8</manvolnum></citerefentry> e criar algum sistemas de arquivos <citerefentry><refentrytitle>zfs</refentrytitle><manvolnum>8</manvolnum></citerefentry>. Criar e administrar o <application>ZFS </application> é muito simples. Primeiro, crie um pool espelhado:</para>
+
+    <screen><prompt>#</prompt> <userinput>zpool create tank mirror /dev/ad[01]s1f</userinput></screen>
+
+    <para>Em seguida, crie alguns sistemas de arquivos:</para>
+
+    <screen><prompt>#</prompt> <userinput>zfs create tank/ports</userinput>
+<prompt>#</prompt> <userinput>zfs create tank/src</userinput>
+<prompt>#</prompt> <userinput>zfs set compression=gzip tank/ports</userinput>
+<prompt>#</prompt> <userinput>zfs set compression=on tank/src</userinput>
+<prompt>#</prompt> <userinput>zfs set mountpoint=/usr/ports tank/ports</userinput>
+<prompt>#</prompt> <userinput>zfs set mountpoint=/usr/src tank/src</userinput></screen>
+
+    <para>Isso é tudo. Se você está interessado em mais detalhes sobre o <application>ZFS</application>no FreeBSD, por favor consulte a seção <link xlink:href="https://wiki.freebsd.org/ZFS">ZFS</link> do o Wiki do FreeBSD.</para>
+  </sect1>
+</article>

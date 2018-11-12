@@ -60,6 +60,9 @@ Makefile.gen: categories-alpha.xml categories-grouped.xml index.xml \
 	done
 	${ECHO_CMD} >> Makefile.gen
 
+# set dependencies for parallel build
+categories-grouped.xml master-index.xml statistics.ent: categories-alpha.xml
+
 # this builds: categories-alpha.xml, categories-grouped.xml,
 # master-index.xml, statistics.ent, <category>.xml
 CATEGORYLIST=`grep "^[a-z]" categories | sed -e s"/,.*//"`
@@ -72,7 +75,7 @@ categories-alpha.xml: ${INDEX} categories categories.descriptions \
 	done
 	${PORTINDEX} ${INDEX} ${.CURDIR}
 
-install: all beforeinstall
+install: Makefile.gen index.html references.html beforeinstall
 
 all install clean:
 	cd ${.CURDIR}; \

@@ -215,3 +215,7 @@ obj: _IMAGESUBDIR
 
 cleanall:
 	${MAKE} FORMATS="${ALL_FORMATS}" clean
+
+# translations
+po:	_SUBDIRUSE
+

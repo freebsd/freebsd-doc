@@ -1,5 +1,5 @@
 # $FreeBSD$
-# Original Revision: 1.2
+# Original Revision: r51870
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -8,8 +8,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=   irc.xml mailinglists.xml newsgroups.xml webresources.xml
-
-#XMLDOCS+=	social::${XML_EVENTS_EVENTS}:
+DOCS=   irc.xml mailinglists.xml webresources.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

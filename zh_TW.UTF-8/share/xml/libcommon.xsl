@@ -7,7 +7,7 @@
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns="http://www.w3.org/1999/xhtml">
 
-  <xsl:import href="http://www.FreeBSD.org/XML/www/share/xml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/share/xml/libcommon.xsl"/>
 
   <!-- Language-specific definitions should be put below this line -->
   <!-- default format for date string -->

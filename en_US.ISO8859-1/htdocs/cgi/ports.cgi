@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2011 Wolfram Schneider <wosch@FreeBSD.ORG>
+# Copyright (c) 1996-2017 Wolfram Schneider <wosch@FreeBSD.ORG>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,7 @@ require "./cgi-style.pl";
 $t_style = qq`<style type="text/css">
 h3 { font-size: 1.2em; border-bottom: thin solid black; }
 </style>
-<link rel="search" type="application/opensearchdescription+xml" href="http://www.freebsd.org/search/opensearch/ports.xml" title="FreeBSD Ports" />
+<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/search/opensearch/ports.xml" title="FreeBSD Ports" />
 `;
 
 sub init_variables {
@@ -46,11 +46,11 @@ sub init_variables {
     $portsDatabaseHeadDir = "/usr/local/www/ports";
 
     # Ports database file to use
-    if ( -f "$portsDatabaseHeadDir/INDEX-9" ) {
-        $ports_database = 'INDEX-9';
+    if ( -f "$portsDatabaseHeadDir/INDEX-12" ) {
+        $ports_database = 'INDEX-12';
     }
-    elsif ( -f "$portsDatabaseHeadDir/INDEX-8" ) {
-        $ports_database = 'INDEX-8';
+    elsif ( -f "$portsDatabaseHeadDir/INDEX-11" ) {
+        $ports_database = 'INDEX-11';
     }
     else {
         $ports_database = 'INDEX';
@@ -341,7 +341,7 @@ sub out {
       qq{<dt><b><a name="$version"></a><a href="$l">$version</a></b></dt>\n};
     print qq{<dd>}, &escapeHTML($comment), qq{<br />\n};
 
-    print qq[<a href="$l/pkg-descr?revision=HEAD">Long description</a> <b>:</b>\n];
+    print qq[<a href="$l/pkg-descr?revision=HEAD">Description</a> <b>:</b>\n];
 
   # Link package in "default" arch/release. Verify it's existence on ftp-master.
     if ( $packages{"$version.$packageExt"} ) {
@@ -450,7 +450,7 @@ description about the port.
 
 <form method="get" action="$script_name">
 Search for:
-<input name="query" value="$query" />
+<input name="query" value="$query" type="text" autocapitalize="none" />
 <select name="stype">
 };
 
@@ -493,12 +493,10 @@ sub footer {
 
     print qq{
 <img align="right" src="$hsty_base/gifs/powerlogo.gif" alt="Powered by FreeBSD" />
-&copy; 1996-2012 by Wolfram Schneider. All rights reserved.<br />
+&copy; 1996-2017 by Wolfram Schneider. All rights reserved.<br />
 };
 
 #print q{$FreeBSD$} . "<br />\n";
-    print qq{Please direct questions about this service to
-<i><a href="$mailtoURL">$mailto</a></i><br />\n};
     print qq{General questions about FreeBSD ports should be sent to }
       . qq{<a href="mailto:$mailtoList">}
       . qq{<i>$mailtoList</i></a><br />\n};
@@ -536,16 +534,10 @@ sub faq {
 <h2>Keywords</h2>
 <dl>
 <dt><b>Description</b><dd>A more detailed description.
-<dt><b>Download</b><dd>Download the ports directory.
-<dt><b>Package</b><dd>Download the pre-compiled software package.
 <dt><b>Changes</b><dd>Read the latest changes.
-<dt><b>Sources</b><dd>Links to all source files.
 </dl>
 
 <h2>Misc</h2>
-<p>
-Package download links point to the FreeBSD 6-STABLE
-version and <b>not</b> to the latest releases.</p>
 
 <p>
 The script ports.cgi use the file
@@ -555,7 +547,7 @@ two hours.</p>
 
 <p>
 You may also search the
-<a href="http://www.FreeBSD.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.</p>
+<a href="https://www.FreeBSD.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.</p>
 
 <p>
 <a href="$script_name">Back to the search engine</a></p>

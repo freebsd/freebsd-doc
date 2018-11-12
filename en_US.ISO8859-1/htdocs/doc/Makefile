@@ -12,41 +12,34 @@
 .include "../Makefile.inc"
 .endif
 
-all: all-all all-install all-pgpkeyring
+_DOC_FORMATS?=	html-split html
+
+all: all-all 
+
 
 all-all:
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/${LANGCODE}; \
-		${MAKE} FORMATS="html-split html" \
-			INSTALL_COMPRESSED= all
-all-install:
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/${LANGCODE}; \
-		${MAKE} FORMATS="html-split html" DOCDIR=${.OBJDIR} \
-			INSTALL_COMPRESSED= install
+	${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" all
+
 all-pgpkeyring:
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/share/pgpkeys; \
-		${MAKE} \
-			pgpkeyring > ${.OBJDIR}/pgpkeyring.txt
+	${MAKE} -C ${DOC_PREFIX}/share/pgpkeys all
 
-install clean:
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/${LANGCODE}; \
-		${MAKE} FORMATS="html-split html" DOCDIR=${DESTDIR}/data/doc \
-			INSTALL_COMPRESSED= ${.TARGET}
-.if make(install)
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/share/pgpkeys; \
-		${MAKE} \
-			pgpkeyring > ${DESTDIR}/data/doc/pgpkeyring.txt
-.endif
-.if make(clean)
-	${RM} -rf en* handbook faq pgpkeyring.txt
-.endif
+clean:
+	${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" DOCDIR=${DESTDIR}/data/doc clean
 
+# here are dragons
+install:
+	unset DESTDIR || true; \
+	  ${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" DOCDIR=${DESTDIR}/data/doc install
+	${CP} ${DOC_PREFIX}/share/pgpkeys/pgpkeyring.txt ${DESTDIR}/data/doc/pgpkeyring.txt
+
+beforeinstall:
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
+.if ${LANGCODE} == en_US.ISO8859-1
+	${MAKE} -C ${.CURDIR} all-pgpkeyring
+.endif
 
+
+# XXX
 obj: _OBJUSE
 
 _OBJUSE: .USE

@@ -1,0 +1,361 @@
+--- sys/kern/uipc_mqueue.c.orig
++++ sys/kern/uipc_mqueue.c
+@@ -52,6 +52,7 @@
+ #include <sys/kernel.h>
+ #include <sys/systm.h>
+ #include <sys/limits.h>
++#include <sys/malloc.h>
+ #include <sys/buf.h>
+ #include <sys/capsicum.h>
+ #include <sys/dirent.h>
+@@ -60,8 +61,8 @@
+ #include <sys/fcntl.h>
+ #include <sys/file.h>
+ #include <sys/filedesc.h>
++#include <sys/jail.h>
+ #include <sys/lock.h>
+-#include <sys/malloc.h>
+ #include <sys/module.h>
+ #include <sys/mount.h>
+ #include <sys/mqueue.h>
+@@ -131,6 +132,7 @@
+ 	LIST_HEAD(,mqfs_node)	mn_children;
+ 	LIST_ENTRY(mqfs_node)	mn_sibling;
+ 	LIST_HEAD(,mqfs_vdata)	mn_vnodes;
++	const void		*mn_pr_root;
+ 	int			mn_refcount;
+ 	mqfs_type_t		mn_type;
+ 	int			mn_deleted;
+@@ -218,6 +220,7 @@
+ static uma_zone_t		mqnoti_zone;
+ static struct vop_vector	mqfs_vnodeops;
+ static struct fileops		mqueueops;
++static unsigned			mqfs_osd_jail_slot;
+ 
+ /*
+  * Directory structure construction and manipulation
+@@ -235,6 +238,7 @@
+ static void	mqfs_fileno_alloc(struct mqfs_info *mi, struct mqfs_node *mn);
+ static void	mqfs_fileno_free(struct mqfs_info *mi, struct mqfs_node *mn);
+ static int	mqfs_allocv(struct mount *mp, struct vnode **vpp, struct mqfs_node *pn);
++static int	mqfs_prison_remove(void *obj, void *data);
+ 
+ /*
+  * Message queue construction and maniplation
+@@ -435,6 +439,7 @@
+ 
+ 	node = mqnode_alloc();
+ 	strncpy(node->mn_name, name, namelen);
++	node->mn_pr_root = cred->cr_prison->pr_root;
+ 	node->mn_type = nodetype;
+ 	node->mn_refcount = 1;
+ 	vfs_timestamp(&node->mn_birth);
+@@ -643,6 +648,9 @@
+ {
+ 	struct mqfs_node *root;
+ 	struct mqfs_info *mi;
++	osd_method_t methods[PR_MAXMETHOD] = {
++	    [PR_METHOD_REMOVE] = mqfs_prison_remove,
++	};
+ 
+ 	mqnode_zone = uma_zcreate("mqnode", sizeof(struct mqfs_node),
+ 		NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, 0);
+@@ -669,6 +677,7 @@
+ 	    EVENTHANDLER_PRI_ANY);
+ 	mq_fdclose = mqueue_fdclose;
+ 	p31b_setcfg(CTL_P1003_1B_MESSAGE_PASSING, _POSIX_MESSAGE_PASSING);
++	mqfs_osd_jail_slot = osd_jail_register(NULL, methods);
+ 	return (0);
+ }
+ 
+@@ -682,6 +691,7 @@
+ 
+ 	if (!unloadable)
+ 		return (EOPNOTSUPP);
++	osd_jail_deregister(mqfs_osd_jail_slot);
+ 	EVENTHANDLER_DEREGISTER(process_exit, exit_tag);
+ 	mi = &mqfs_data;
+ 	mqfs_destroy(mi->mi_root);
+@@ -801,13 +811,17 @@
+  * Search a directory entry
+  */
+ static struct mqfs_node *
+-mqfs_search(struct mqfs_node *pd, const char *name, int len)
++mqfs_search(struct mqfs_node *pd, const char *name, int len, struct ucred *cred)
+ {
+ 	struct mqfs_node *pn;
++	const void *pr_root;
+ 
+ 	sx_assert(&pd->mn_info->mi_lock, SX_LOCKED);
++	pr_root = cred->cr_prison->pr_root;
+ 	LIST_FOREACH(pn, &pd->mn_children, mn_sibling) {
+-		if (strncmp(pn->mn_name, name, len) == 0 &&
++		/* Only match names within the same prison root directory */
++		if ((pn->mn_pr_root == NULL || pn->mn_pr_root == pr_root) &&
++		    strncmp(pn->mn_name, name, len) == 0 &&
+ 		    pn->mn_name[len] == '\0')
+ 			return (pn);
+ 	}
+@@ -879,7 +893,7 @@
+ 
+ 	/* named node */
+ 	sx_xlock(&mqfs->mi_lock);
+-	pn = mqfs_search(pd, pname, namelen);
++	pn = mqfs_search(pd, pname, namelen, cnp->cn_cred);
+ 	if (pn != NULL)
+ 		mqnode_addref(pn);
+ 	sx_xunlock(&mqfs->mi_lock);
+@@ -1364,6 +1378,7 @@
+ 	struct mqfs_node *pn;
+ 	struct dirent entry;
+ 	struct uio *uio;
++	const void *pr_root;
+ 	int *tmp_ncookies = NULL;
+ 	off_t offset;
+ 	int error, i;
+@@ -1388,10 +1403,18 @@
+ 	error = 0;
+ 	offset = 0;
+ 
++	pr_root = ap->a_cred->cr_prison->pr_root;
+ 	sx_xlock(&mi->mi_lock);
+ 
+ 	LIST_FOREACH(pn, &pd->mn_children, mn_sibling) {
+ 		entry.d_reclen = sizeof(entry);
++
++		/*
++		 * Only show names within the same prison root directory
++		 * (or not associated with a prison, e.g. "." and "..").
++		 */
++		if (pn->mn_pr_root != NULL && pn->mn_pr_root != pr_root)
++			continue;
+ 		if (!pn->mn_fileno)
+ 			mqfs_fileno_alloc(mi, pn);
+ 		entry.d_fileno = pn->mn_fileno;
+@@ -1525,6 +1548,38 @@
+ #endif /* notyet */
+ 
+ /*
++ * See if this prison root is obsolete, and clean up associated queues if it is.
++ */
++static int
++mqfs_prison_remove(void *obj, void *data __unused)
++{
++	const struct prison *pr = obj;
++	const struct prison *tpr;
++	struct mqfs_node *pn, *tpn;
++	int found;
++
++	found = 0;
++	TAILQ_FOREACH(tpr, &allprison, pr_list) {
++		if (tpr->pr_root == pr->pr_root && tpr != pr && tpr->pr_ref > 0)
++			found = 1;
++	}
++	if (!found) {
++		/*
++		 * No jails are rooted in this directory anymore,
++		 * so no queues should be either.
++		 */
++		sx_xlock(&mqfs_data.mi_lock);
++		LIST_FOREACH_SAFE(pn, &mqfs_data.mi_root->mn_children,
++		    mn_sibling, tpn) {
++			if (pn->mn_pr_root == pr->pr_root)
++				(void)do_unlink(pn, curthread->td_ucred);
++		}
++		sx_xunlock(&mqfs_data.mi_lock);
++	}
++	return (0);
++}
++
++/*
+  * Allocate a message queue
+  */
+ static struct mqueue *
+@@ -1984,7 +2039,7 @@
+ 		return (error);
+ 
+ 	sx_xlock(&mqfs_data.mi_lock);
+-	pn = mqfs_search(mqfs_data.mi_root, path + 1, len - 1);
++	pn = mqfs_search(mqfs_data.mi_root, path + 1, len - 1, td->td_ucred);
+ 	if (pn == NULL) {
+ 		if (!(flags & O_CREAT)) {
+ 			error = ENOENT;
+@@ -2079,7 +2134,7 @@
+ 		return (EINVAL);
+ 
+ 	sx_xlock(&mqfs_data.mi_lock);
+-	pn = mqfs_search(mqfs_data.mi_root, path + 1, len - 1);
++	pn = mqfs_search(mqfs_data.mi_root, path + 1, len - 1, td->td_ucred);
+ 	if (pn != NULL)
+ 		error = do_unlink(pn, td->td_ucred);
+ 	else
+--- sys/kern/uipc_sem.c.orig
++++ sys/kern/uipc_sem.c
+@@ -44,6 +44,7 @@
+ #include <sys/file.h>
+ #include <sys/filedesc.h>
+ #include <sys/fnv_hash.h>
++#include <sys/jail.h>
+ #include <sys/kernel.h>
+ #include <sys/ksem.h>
+ #include <sys/lock.h>
+@@ -444,12 +445,24 @@
+ static void
+ ksem_info_impl(struct ksem *ks, char *path, size_t size, uint32_t *value)
+ {
++	const char *ks_path, *pr_path;
++	size_t pr_pathlen;
+ 
+ 	if (ks->ks_path == NULL)
+ 		return;
+ 	sx_slock(&ksem_dict_lock);
+-	if (ks->ks_path != NULL)
+-		strlcpy(path, ks->ks_path, size);
++	ks_path = ks->ks_path;
++	if (ks_path != NULL) {
++		pr_path = curthread->td_ucred->cr_prison->pr_path;
++		if (strcmp(pr_path, "/") != 0) {
++			/* Return the jail-rooted pathname. */
++			pr_pathlen = strlen(pr_path);
++			if (strncmp(ks_path, pr_path, pr_pathlen) == 0 &&
++			    ks_path[pr_pathlen] == '/')
++				ks_path += pr_pathlen;
++		}
++		strlcpy(path, ks_path, size);
++	}
+ 	if (value != NULL)
+ 		*value = ks->ks_value;
+ 	sx_sunlock(&ksem_dict_lock);
+@@ -493,6 +506,8 @@
+ 	struct ksem *ks;
+ 	struct file *fp;
+ 	char *path;
++	const char *pr_path;
++	size_t pr_pathlen;
+ 	Fnv32_t fnv;
+ 	int error, fd;
+ 
+@@ -529,10 +544,16 @@
+ 			ks->ks_flags |= KS_ANONYMOUS;
+ 	} else {
+ 		path = malloc(MAXPATHLEN, M_KSEM, M_WAITOK);
+-		error = copyinstr(name, path, MAXPATHLEN, NULL);
++		pr_path = td->td_ucred->cr_prison->pr_path;
+ 
++		/* Construct a full pathname for jailed callers. */
++		pr_pathlen = strcmp(pr_path, "/") == 0 ? 0
++		    : strlcpy(path, pr_path, MAXPATHLEN);
++		error = copyinstr(name, path + pr_pathlen,
++		    MAXPATHLEN - pr_pathlen, NULL);
++
+ 		/* Require paths to start with a '/' character. */
+-		if (error == 0 && path[0] != '/')
++		if (error == 0 && path[pr_pathlen] != '/')
+ 			error = EINVAL;
+ 		if (error) {
+ 			fdclose(td, fp, fd);
+@@ -668,11 +689,17 @@
+ sys_ksem_unlink(struct thread *td, struct ksem_unlink_args *uap)
+ {
+ 	char *path;
++	const char *pr_path;
++	size_t pr_pathlen;
+ 	Fnv32_t fnv;
+ 	int error;
+ 
+ 	path = malloc(MAXPATHLEN, M_TEMP, M_WAITOK);
+-	error = copyinstr(uap->name, path, MAXPATHLEN, NULL);
++	pr_path = td->td_ucred->cr_prison->pr_path;
++	pr_pathlen = strcmp(pr_path, "/") == 0 ? 0
++	    : strlcpy(path, pr_path, MAXPATHLEN);
++	error = copyinstr(uap->name, path + pr_pathlen, MAXPATHLEN - pr_pathlen,
++	    NULL);
+ 	if (error) {
+ 		free(path, M_TEMP);
+ 		return (error);
+--- sys/kern/uipc_shm.c.orig
++++ sys/kern/uipc_shm.c
+@@ -57,6 +57,7 @@
+ #include <sys/kernel.h>
+ #include <sys/uio.h>
+ #include <sys/signal.h>
++#include <sys/jail.h>
+ #include <sys/ktrace.h>
+ #include <sys/lock.h>
+ #include <sys/malloc.h>
+@@ -712,6 +713,8 @@
+ 	struct shmfd *shmfd;
+ 	struct file *fp;
+ 	char *path;
++	const char *pr_path;
++	size_t pr_pathlen;
+ 	Fnv32_t fnv;
+ 	mode_t cmode;
+ 	int fd, error;
+@@ -749,13 +752,19 @@
+ 		shmfd = shm_alloc(td->td_ucred, cmode);
+ 	} else {
+ 		path = malloc(MAXPATHLEN, M_SHMFD, M_WAITOK);
+-		error = copyinstr(uap->path, path, MAXPATHLEN, NULL);
++		pr_path = td->td_ucred->cr_prison->pr_path;
++
++		/* Construct a full pathname for jailed callers. */
++		pr_pathlen = strcmp(pr_path, "/") == 0 ? 0
++		    : strlcpy(path, pr_path, MAXPATHLEN);
++		error = copyinstr(uap->path, path + pr_pathlen,
++		    MAXPATHLEN - pr_pathlen, NULL);
+ #ifdef KTRACE
+ 		if (error == 0 && KTRPOINT(curthread, KTR_NAMEI))
+ 			ktrnamei(path);
+ #endif
+ 		/* Require paths to start with a '/' character. */
+-		if (error == 0 && path[0] != '/')
++		if (error == 0 && path[pr_pathlen] != '/')
+ 			error = EINVAL;
+ 		if (error) {
+ 			fdclose(td, fp, fd);
+@@ -842,11 +851,17 @@
+ sys_shm_unlink(struct thread *td, struct shm_unlink_args *uap)
+ {
+ 	char *path;
++	const char *pr_path;
++	size_t pr_pathlen;
+ 	Fnv32_t fnv;
+ 	int error;
+ 
+ 	path = malloc(MAXPATHLEN, M_TEMP, M_WAITOK);
+-	error = copyinstr(uap->path, path, MAXPATHLEN, NULL);
++	pr_path = td->td_ucred->cr_prison->pr_path;
++	pr_pathlen = strcmp(pr_path, "/") == 0 ? 0
++	    : strlcpy(path, pr_path, MAXPATHLEN);
++	error = copyinstr(uap->path, path + pr_pathlen, MAXPATHLEN - pr_pathlen,
++	    NULL);
+ 	if (error) {
+ 		free(path, M_TEMP);
+ 		return (error);
+@@ -1053,11 +1068,23 @@
+ void
+ shm_path(struct shmfd *shmfd, char *path, size_t size)
+ {
++	const char *shm_path, *pr_path;
++	size_t pr_pathlen;
+ 
+ 	if (shmfd->shm_path == NULL)
+ 		return;
+ 	sx_slock(&shm_dict_lock);
+-	if (shmfd->shm_path != NULL)
+-		strlcpy(path, shmfd->shm_path, size);
++	shm_path = shmfd->shm_path;
++	if (shm_path != NULL) {
++		pr_path = curthread->td_ucred->cr_prison->pr_path;
++		if (strcmp(pr_path, "/") != 0) {
++			/* Return the jail-rooted pathname. */
++			pr_pathlen = strlen(pr_path);
++			if (strncmp(shm_path, pr_path, pr_pathlen) == 0 &&
++			    shm_path[pr_pathlen] == '/')
++				shm_path += pr_pathlen;
++		}
++		strlcpy(path, shm_path, size);
++	}
+ 	sx_sunlock(&shm_dict_lock);
+ }

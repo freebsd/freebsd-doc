@@ -89,6 +89,7 @@ $i_topbar = qq`
 		  <input type="hidden" name="kh" value="1" />
 		  <input type="hidden" name="kj" value="r2" />
 		  <input id="words" name="q" type="text" size="20"
+                    autocapitalize="none"
 		    maxlength="255"
 		    onfocus="if( this.value==this.defaultValue ) this.value='';"
 		    value="Search" />
@@ -151,7 +152,6 @@ $i_topbar = qq`
 		<ul>
 		  <li><a href="$hsty_base/projects/ideas/ideas.html">Project Ideas</a></li>
 		  <li><a href="//svnweb.FreeBSD.org">SVN Repository</a></li>
-		  <li><a href="//p4web.FreeBSD.org">Perforce Repository</a></li>
 		</ul>
 	      </li>
 	    </ul>
@@ -238,7 +238,7 @@ sub html_footer {
     return qq`
 	</div>
         <div id="footer">
-          <a href="$hsty_base/copyright/">Legal Notices</a> | &copy; 1995-2016
+          <a href="$hsty_base/copyright/">Legal Notices</a> | &copy; 1995-2018
           The FreeBSD Project. All rights reserved.<br />
 	  <address>$hsty_author<br />$hsty_date</address>
         </div>

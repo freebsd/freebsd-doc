@@ -47,7 +47,7 @@
   <!-- Template: events -->
   <xsl:template match="events">
     <xsl:variable name="title">Upcoming FreeBSD Events</xsl:variable>
-    <xsl:variable name="link">http://www.FreeBSD.org/events/</xsl:variable>
+    <xsl:variable name="link">https://www.FreeBSD.org/events/</xsl:variable>
 
     <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
       <channel>
@@ -60,7 +60,7 @@
         <docs>http://blogs.law.harvard.edu/tech/rss</docs>
         <ttl>120</ttl>
         <image>
-          <url>http://www.FreeBSD.org/logo/logo-full.png</url>
+          <url>https://www.FreeBSD.org/logo/logo-full.png</url>
           <title><xsl:value-of select="$title" /></title>
           <link><xsl:value-of select="$link" /></link>
         </image>

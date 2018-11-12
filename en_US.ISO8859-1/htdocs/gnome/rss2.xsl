@@ -14,7 +14,7 @@
 
   <xsl:template match="/">
     <xsl:variable name="title">FreeBSD GNOME Project News</xsl:variable>
-    <xsl:variable name="link">http://www.FreeBSD.org/gnome/</xsl:variable>
+    <xsl:variable name="link">https://www.FreeBSD.org/gnome/</xsl:variable>
 
     <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
       <channel>
@@ -28,7 +28,7 @@
         <docs>http://blogs.law.harvard.edu/tech/rss</docs>
         <ttl>120</ttl>
         <image>
-          <url>http://www.FreeBSD.org/logo/logo-full.png</url>
+          <url>https://www.FreeBSD.org/logo/logo-full.png</url>
           <title><xsl:value-of select="$title" /></title>
           <link><xsl:value-of select="$link" /></link>
         </image>
@@ -60,8 +60,8 @@
               </description>
             </xsl:if>
 
-            <link>http://www.FreeBSD.org/gnome/newsflash.html#<xsl:value-of select="$guid" /></link>
-            <guid>http://www.FreeBSD.org/gnome/newsflash.html#<xsl:value-of select="$guid" /></guid>
+            <link>https://www.FreeBSD.org/gnome/newsflash.html#<xsl:value-of select="$guid" /></link>
+            <guid>https://www.FreeBSD.org/gnome/newsflash.html#<xsl:value-of select="$guid" /></guid>
 
             <pubDate>
               <xsl:call-template name="misc-format-date-string">

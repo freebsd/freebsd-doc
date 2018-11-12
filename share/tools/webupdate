@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright (c) 2001 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 2001-2017 Wolfram Schneider <wosch@FreeBSD.org>
 # Copyright (c) 2001 Dima Dorfman <dd@FreeBSD.org>
 #
 # Update the FreeBSD web site from the SVN repository.
@@ -70,10 +70,13 @@ BUILDARGS=${BUILDARGS:-${DEFAULT_BUILDARGS}};
 INSTARGS="${BUILDARGS} ${INSTARGS:-${DEFAULT_INSTARGS}}";
 WEBMAILTO=${WEBMAILTO:-${DEFAULT_WEBMAILTO}};
 
+# too fragile, see PR: 222488	 
+export NO_OBJ=YES
+
 # Notes on the names of the release notes directories:
 #
 # - They weren't named the same way they will be on the web site
-# (CURRENT, 4-STABLE) becuase that wouldn't make it obvious that they
+# (CURRENT, 11-STABLE) becuase that wouldn't make it obvious that they
 # were release notes.
 #
 # - They weren't named after their path names in the repository
@@ -85,10 +88,9 @@ WEBMAILTO=${WEBMAILTO:-${DEFAULT_WEBMAILTO}};
 # assumes that the directory right below that is the language code.
 # This works fine if all the languages are in a directory called
 # 'doc', and not at all if they aren't.
-subtrees='head
-relnotes/doc relnotes/man4
+subtrees='head src/share/man/man4
+relnotes11/doc relnotes11/man4
 relnotes10/doc relnotes10/man4
-relnotes9/doc relnotes9/man4
 ports';
 
 #
@@ -106,8 +108,6 @@ cd $BUILDDIR || exit 1;
 
 # We use newsyslog now...
 mkdir -p $LOGDIR
-#rm -f $LOGFILE 2>/dev/null;
-#touch $LOGFILE;
 
 buildstart=`date +%s`
 echo Build started `date` >> ${LOGFILE}
@@ -129,12 +129,12 @@ if [ $cond ]; then
 	svn co $SVNROOT/doc/head head >> $LOGFILE 2>&1 || exit 2;
 
 	test -d relnotes || mkdir relnotes;
-	svn co $SVNROOT/base/head/release/doc relnotes/doc >> $LOGFILE 2>&1 || exit 2;
-	svn co $SVNROOT/base/head/share/man/man4 relnotes/man4 >> $LOGFILE 2>&1 || exit 2;
+	mkdir -p src/share/man/man4
+	svn co $SVNROOT/base/head/share/man/man4 src/share/man/man4 >> $LOGFILE 2>&1 || exit 2;
+	svn co $SVNROOT/base/stable/11/release/doc relnotes11/doc >> $LOGFILE 2>&1 || exit 2;
+	svn co $SVNROOT/base/stable/11/share/man/man4 relnotes11/man4 >> $LOGFILE 2>&1 || exit 2;
 	svn co $SVNROOT/base/stable/10/release/doc relnotes10/doc >> $LOGFILE 2>&1 || exit 2;
 	svn co $SVNROOT/base/stable/10/share/man/man4 relnotes10/man4 >> $LOGFILE 2>&1 || exit 2;
-	svn co $SVNROOT/base/stable/9/release/doc relnotes9/doc >> $LOGFILE 2>&1 || exit 2;
-	svn co $SVNROOT/base/stable/9/share/man/man4 relnotes9/man4 >> $LOGFILE 2>&1 || exit 2;
 	svn co --depth immediates $SVNROOT/ports/head ports >> $LOGFILE 2>&1 || exit 2
 	svn up --set-depth infinity ports/Mk >> $LOGFILE 2>&1 || exit 2
 	rm -f $BUILDDIR/fullbuild-clean.flag
@@ -143,9 +143,6 @@ else
 		svn cleanup $dir >> $LOGFILE 2>&1 || exit 2;
 		svn update --accept theirs-full $dir >> $LOGFILE 2>&1 || exit 2;
 	done
-
-	#svn update --accept theirs-full relnotes/doc >> $LOGFILE 2>&1 || exit 2;
-	#svn update --accept theirs-full relnotes/man4 >> $LOGFILE 2>&1 || exit 2;
 fi
 
 if [ ! -e "${PINDEX_OVERRIDE}" ]; then
@@ -156,11 +153,23 @@ fi
 #
 # Build the web site.
 #
+cd $BUILDDIR/head || exit 1;
+
+# get latest revision
+LATESTREVISION=$LOGDIR/LATESTREVISION
+make -C en_US.ISO8859-1/articles/pam/ SRCS="$(pwd)" -V LATESTREVISION | \
+  sed -E 's/--stringparam[ ]+/!/g' | tr '!' '\n' > $LATESTREVISION
+
+time make ${BUILDARGS} p-all >> $LOGFILE 2>&1 ||
+	(cat $LATESTREVISION >> $LOGFILE
+	 tail -50 $LOGFILE | mail -s "FreeBSD web build failed on `hostname`" $WEBMAILTO;
+	 exit 3) || exit 3;
+
 cd $BUILDDIR/head/en_US.ISO8859-1/htdocs || exit 1;
 
-time make ${BUILDARGS} all >> $LOGFILE 2>&1 &&
-    time make ${INSTARGS} install >> $LOGFILE 2>&1 ||
-	(tail -50 $LOGFILE |
+( time make ${INSTARGS} -j8 all && time make ${INSTARGS} install ) >> $LOGFILE 2>&1 ||
+	(cat $LATESTREVISION >> $LOGFILE
+	 tail -50 $LOGFILE |
 	 mail -s "FreeBSD web build failed on `hostname`" $WEBMAILTO;
 	 exit 3) || exit 3;
 
@@ -169,10 +178,7 @@ if [ "X${PUBDIR}" != "X" ]; then
 		>> ${LOGFILE} 2>&1
 fi
 
-# simon@ 20110116 - for now we use newsyslog...
-#gzip -f $LOGFILE
-#find $LOGDIR -mtime +60 -print0 | perl -n0e unlink
-
+cat $LATESTREVISION >> ${LOGFILE}
 buildstop=`date +%s`
 buildd=$(($buildstop - $buildstart))
 echo "Build ended `date` (${buildd}s)" >> ${LOGFILE}

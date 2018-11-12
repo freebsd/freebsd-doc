@@ -1,0 +1,75 @@
+--- sys/compat/freebsd32/freebsd32_misc.c.orig
++++ sys/compat/freebsd32/freebsd32_misc.c
+@@ -3331,8 +3331,8 @@
+ int
+ freebsd32_kldstat(struct thread *td, struct freebsd32_kldstat_args *uap)
+ {
+-	struct kld_file_stat stat;
+-	struct kld32_file_stat stat32;
++	struct kld_file_stat *stat;
++	struct kld32_file_stat *stat32;
+ 	int error, version;
+ 
+ 	if ((error = copyin(&uap->stat->version, &version, sizeof(version)))
+@@ -3342,17 +3342,22 @@
+ 	    version != sizeof(struct kld32_file_stat))
+ 		return (EINVAL);
+ 
+-	error = kern_kldstat(td, uap->fileid, &stat);
+-	if (error != 0)
+-		return (error);
+-
+-	bcopy(&stat.name[0], &stat32.name[0], sizeof(stat.name));
+-	CP(stat, stat32, refs);
+-	CP(stat, stat32, id);
+-	PTROUT_CP(stat, stat32, address);
+-	CP(stat, stat32, size);
+-	bcopy(&stat.pathname[0], &stat32.pathname[0], sizeof(stat.pathname));
+-	return (copyout(&stat32, uap->stat, version));
++	stat = malloc(sizeof(*stat), M_TEMP, M_WAITOK | M_ZERO);
++	stat32 = malloc(sizeof(*stat32), M_TEMP, M_WAITOK | M_ZERO);
++	error = kern_kldstat(td, uap->fileid, stat);
++	if (error == 0) {
++		bcopy(&stat->name[0], &stat32->name[0], sizeof(stat->name));
++		CP(*stat, *stat32, refs);
++		CP(*stat, *stat32, id);
++		PTROUT_CP(*stat, *stat32, address);
++		CP(*stat, *stat32, size);
++		bcopy(&stat->pathname[0], &stat32->pathname[0],
++		    sizeof(stat->pathname));
++		error = copyout(stat32, uap->stat, version);
++	}
++	free(stat, M_TEMP);
++	free(stat32, M_TEMP);
++	return (error);
+ }
+ 
+ int
+--- sys/kern/kern_linker.c.orig
++++ sys/kern/kern_linker.c
+@@ -1229,7 +1229,7 @@
+ int
+ sys_kldstat(struct thread *td, struct kldstat_args *uap)
+ {
+-	struct kld_file_stat stat;
++	struct kld_file_stat *stat;
+ 	int error, version;
+ 
+ 	/*
+@@ -1242,10 +1242,12 @@
+ 	    version != sizeof(struct kld_file_stat))
+ 		return (EINVAL);
+ 
+-	error = kern_kldstat(td, uap->fileid, &stat);
+-	if (error != 0)
+-		return (error);
+-	return (copyout(&stat, uap->stat, version));
++	stat = malloc(sizeof(*stat), M_TEMP, M_WAITOK | M_ZERO);
++	error = kern_kldstat(td, uap->fileid, stat);
++	if (error == 0)
++		error = copyout(stat, uap->stat, version);
++	free(stat, M_TEMP);
++	return (error);
+ }
+ 
+ int

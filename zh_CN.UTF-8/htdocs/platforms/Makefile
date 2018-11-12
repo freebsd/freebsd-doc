@@ -21,7 +21,6 @@ DOCS+=	index.xml
 #DOCS+=	sparc.xml
 #DOCS+=	xbox.xml
 
-SUBDIR=	amd64
 #SUBDIR+=ia64
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

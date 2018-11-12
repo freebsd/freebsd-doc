@@ -1,0 +1,197 @@
+#!/usr/bin/env perl
+# ts=4
+
+# Copyright (c) 2017 Warren Block
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# * SUCH DAMAGE.
+# *
+# $FreeBSD$
+
+# convert a FreeBSD documentation language subdirectory to UTF-8
+
+use strict;
+use warnings;
+use utf8;
+use open qw/:std :utf8/;
+
+use File::Basename;
+use Getopt::Std;
+
+our ($opt_d, $opt_e, $opt_h, $opt_n, $opt_v);
+
+my $file  = '/usr/bin/file';
+my $find  = '/usr/bin/find';
+my $grep  = '/usr/bin/grep';
+my $iconv = '/usr/bin/iconv';
+my $make  = '/usr/bin/make';
+my $svn   = '/usr/local/bin/svn';
+my $xargs = '/usr/bin/xargs';
+
+my $docdir = '/usr/doc/en_US.ISO8859-1';
+my $exclpath = 'htdocs/releases/*/*';
+my $verbose = 0;
+
+sub usage {
+	my $prog = basename($0);
+	print "$prog: convert FreeBSD documentation language subdirectory to UTF-8\n\n";
+	print "Usage: $prog -h\n";
+	print "       $prog [-v] [-n] [-d docdir] [-e excludepath]\n\n";
+	print "       -v  verbose\n";
+	print "       -n  trial run\n";
+	print "       -d docdir (default $docdir)\n";
+	print "       -e excludepath (relative to docdir, default $exclpath)\n\n";
+	print "This program converts FreeBSD documentation files in legacy\n";
+	print "encoding directories like en_US.ISO8859-1 to UTF-8.  The\n";
+	print "documentation directory must be a Subversion checkout.  After\n";
+	print "files are converted, the directory is renamed to *.UTF-8.\n\n";
+	print "The default exclude path prevents conversion of all files\n";
+	print "htdocs/releases/*/*.  These files are typically statically-\n";
+	print "generated historical files.\n";
+	exit 0;
+}
+
+sub check_local_copy {
+	my ($dn) = @_;
+	print "checking local copy\n" if $verbose;
+	my $rev = `$svn info $dn`;
+	my $localrev = $1 if ( `$svn info $dn` =~ /Revision: (\d+)/ );
+	die "** error checking local revision\n" if $?;
+	print "localrev = $localrev\n" if $verbose;
+	my $remoterev = $1 if ( `$svn info $dn -rHEAD` =~ /Revision: (\d+)/ );
+	die "** error checking remote revision\n" if $?;
+	print "remoterev = $remoterev\n" if $verbose;
+	die "** local copy not up to date, run svn up\n" if $localrev != $remoterev;
+}
+
+sub make_clean {
+	my ($dn) = @_;
+	print "cleaning '$dn'\n" if $verbose;
+	my $cmd = "$make -C $dn FORMATS=html,html-split,pdf,epub clean";
+	if ( $opt_n ) {
+		print "$cmd\n" if $verbose;
+	} else {
+		`$cmd`;
+	}
+}
+
+sub find_files {
+	my ($dn,$exclpath) = @_;
+
+	my $fullexclpath = "$dn/$exclpath";
+	# sanitize exclude path, find is very picky about matches
+	# convert multiple slashes to single
+	$fullexclpath =~ s%/{2,}%/%;
+	die "** exclude path '$exclpath' must be relative (under '$docdir')\n" if $exclpath =~ m%^/%;
+
+	print "finding files to be converted in '$dn'\n" if $verbose;
+	print "excluding files matching \"$fullexclpath/*\"\n" if $verbose;
+	return map(/^(.*):/, `$find $dn -not -path \"$fullexclpath\" -type f -print0 | $xargs -0 $file | $grep 'XML\\|SGML\\|BSD'`);
+}
+
+sub convert_file {
+	my ($fn, $bd, $iso, $from, $to) = @_;
+	my $lcto = lc($to);
+	print "converting '$fn' from $from to $to\n" if $verbose;
+
+	# convert to utf-8 variable
+	my $contents = `$iconv -f $from -t $to $fn`;
+	die "** error converting '$file'\n" if $?;
+
+	# do fixups:
+	# change <?xml version="1.0" encoding="whatever" ?> to target code
+	$contents =~ s/encoding=".*?"/encoding="$lcto"/g;
+	# change HTML charset, but do not change :charset=: strings
+	$contents =~ s/[^:]charset=((?:[-a-z0-9])+)/charset=$lcto/g;
+	# change "en_US.ISO8859-1"
+	$contents =~ s/$bd/$iso.$to/g;
+	# change <!ENTITY xml.encoding        'iso-8859-1'>
+	$contents =~ s/<!ENTITY xml\.encoding(\s+).*>/<!ENTITY xml.encoding$1'$lcto'>/;
+	# print "$contents\n" if $verbose;
+
+	# change character entities?
+
+	unless ( $opt_n ) {
+		# overwrite original
+		open my $fh, ">", "$fn" or die "** could not open '$fn' to write: $!\n";
+		print $fh $contents;
+		close $fh or die "** could not close '$fn': $!\n";
+	}
+}
+
+sub rename_dir {
+	my ($fromdir, $todir) = @_;
+	my $cmd = "$svn mv $docdir $todir";
+	if ( $opt_n ) {
+		print "$cmd\n" if $verbose;
+	} else {
+		`$cmd`;
+	}
+}
+
+
+sub main {
+	getopts('d:e:hnv');
+
+	usage() if $opt_h;
+	$verbose = 1 if $opt_v;
+	$docdir = $opt_d if $opt_d;
+	$exclpath = $opt_e if $opt_e;
+
+	my $basedir = basename($docdir);
+	die "** '$docdir' does not have a standard ISO xy_AB directory name\n" unless $basedir =~ /^([a-z]{2}_[A-Z]{1,3})\./;
+	my $isolang = $1;
+
+	die "** no language code on target directory\n" unless $basedir =~ /\.(.*)$/;
+	my $fromcode = $1;
+
+	die "** no Makefile in '$docdir'\n" unless -f "$docdir/Makefile";
+
+	my $tocode = "UTF-8";
+	my $targdir = dirname($docdir) . "/$isolang.$tocode";
+
+	if ( $verbose ) {
+		print "docdir   = '$docdir'\n";
+		print "basedir  = '$basedir'\n";
+		print "isolang  = '$isolang'\n";
+		print "fromcode = '$fromcode'\n";
+		print "tocode   = '$tocode'\n";
+		print "targdir  = '$targdir'\n";
+	}
+
+	check_local_copy($docdir);
+
+	make_clean($docdir);
+
+	my @files = find_files($docdir, $exclpath);
+
+	for my $f (@files) {
+		convert_file($f, $basedir, $isolang, $fromcode, $tocode);
+	}
+
+	rename_dir($docdir, $targdir);
+
+	print "Done.\n";
+	print "XML files in $docdir converted from $fromcode to $tocode, directory renamed to $targdir\n";
+}
+
+main();

@@ -7,7 +7,7 @@ set format x "%Y"
 set xdata time
 set grid
 # Uncomment to make ranges match 
-#  http://people.freebsd.org/~asami/papers/growth.gif
+#  https://people.FreeBSD.org/~asami/papers/growth.gif
 # set xrange ["1995/01":"2000/11"]
 # set yrange [0:4000]
 set multiplot

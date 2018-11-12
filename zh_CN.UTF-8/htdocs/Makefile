@@ -13,11 +13,8 @@
 DOCS=  about.xml
 DOCS+= applications.xml
 DOCS+= art.xml
-DOCS+= availability.xml
-DOCS+= community.xml
 DOCS+= docs.xml
 DOCS+= features.xml
-DOCS+= internet.xml
 DOCS+= logo.xml
 DOCS+= mailto.xml
 # DOCS+= publish.xml
@@ -33,6 +30,9 @@ DEPENDSET.index=transtable mirrors news press events \
 XMLDOCS+=	usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
 DEPENDSET.usergroups=transtable usergroups
 PARAMS.usergroups=	--param pagename "'FreeBSD User Groups'"
+
+XMLDOCS+=	community::${XML_EVENTS_EVENTS}:
+DEPENDSET.community=usergroups events
 
 # Subdirectories
 # XML
@@ -76,7 +76,7 @@ SUBDIR+=	doc
 # # Non-XML
 # SUBDIR+= cgi
 # SUBDIR+= gifs
-SUBDIR+= layout
+# SUBDIR+= layout
 #SUBDIR+= logo
 
 WEBDIR?=	data/zh_CN

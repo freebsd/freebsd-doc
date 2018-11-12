@@ -6,7 +6,7 @@
 <!--
      $FreeBSD$
      $FreeBSDde$
-     basiert auf: 47418
+     basiert auf: 51696
 -->
 
 <xsl:stylesheet version="1.0"
@@ -41,7 +41,7 @@
 				<h1>
 				  The &os; Project
 				</h1>
-				<p>FreeBSD&reg; ist ein modernes Betriebssystem für
+				<p>FreeBSD&reg; ist ein Betriebssystem für
 				  Server, Desktops und eingebettete Systeme, das auf
 				  zahlreichen <a
 				  href="&base;/platforms/index.html">Plattformen</a>
@@ -85,12 +85,11 @@
 
 			<div id="frontreleases">
 			  <div id="frontreleasescontent" class="txtshortcuts">
-				  <h2><a href="&base;/releases/">AKTUELLE VERSIONEN</a></h2>
+				  <h2><a href="&base;/releases/">Unterstützte Versionen:</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>
 					  Produktion:&nbsp;<a href="&u.rel.announce;">&rel.current;</a>,
-					  <a href="&u.rel2.announce;">&rel2.current;</a>,
-					  <a href="&u.rel3.announce;">&rel3.current;</a>
+					  <a href="&u.rel1.announce;">&rel1.current;</a>
 					</li>
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 					<li>Test:&nbsp;<a
@@ -101,8 +100,8 @@
 				href="&u.betarel2.schedule;">&betarel2.current;</a></li>
 			    </xsl:if>
 					<li><a
-					  href="&enbase;/security/security.html#sup">Unterstützte
-					  FreeBSD-Versionen</a></li>
+					  href="&base;/security/security.html#sup">FreeBSD
+					    Supportzyklus</a></li>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
@@ -119,45 +118,16 @@
 					<a href="&enbase;/" title="Englisch">en</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/es/" title="Spanisch">es</a>
-				  </li>
-				  <li>
-					<a href="&enbase;/fr/" title="Französisch">fr</a>
-				  </li>
-				  <li>
-					<a href="&enbase;/hu/" title="Ungarisch">hu</a>
-				  </li>
-				  <li>
-					<a href="&enbase;/it/" title="Italienisch">it</a>
-				  </li>
-				  <li>
-					<a href="&enbase;/nl/" title="Holländisch">nl</a>
-				  </li>
-				  <li>
 					<a href="&enbase;/ja/" title="Japanisch">ja</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/ru/" title="Russisch">ru</a>
+					<a href="&enbase;/zh_CN/" title="Chinesisch (Vereinfacht)">zh_CN</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/zh_CN/" title="Chinesisch (vereinfacht)">zh_CN</a>
-				  </li>
+					<a href="&enbase;/zh_TW/" title="Chinesisch (traditionell)">zh_TW</a>
+				  </li>				  
 				</ul>
 			</div> <!-- LANGUAGENAV -->
-
-			<div id="mirror">
-			  <form action="&cgibase;/mirror.cgi" method="get">
-				<div>
-				  <h2 class="blockhide"><label for="MIRRORSEL">Mirror</label></h2>
-				  <select id="mirrorsel" name="goto">
-					  <xsl:call-template name="html-index-mirrors-options-list">
-					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
-					  </xsl:call-template>
-				  </select>
-				</div> <!-- unnamed -->
-				<input type="submit" value="OK" />
-			  </form>
-			</div> <!-- MIRROR -->
 
 			<div id="frontshortcuts">
 			  <div id="frontshortcutscontent" class="txtshortcuts">
@@ -167,8 +137,8 @@
 					  <a href="&base;/community/mailinglists.html" title="Mailinglisten">Mailinglisten</a>
 					</li>
 					<li>
-					  <a href="&base;/support/bugreports.html" title="Einen Fehler melden">
-					    Einen Fehler melden</a>
+					  <a href="&base;/support/bugreports.html" title="Ein Problem melden">
+					    Ein Problem melden</a>
 					</li>
 					<li>
 					  <a href="&enbase;/doc/&url.doc.langcode;/books/faq/index.html" title="FAQ">FAQ</a>
@@ -190,6 +160,22 @@
 			    </div> <!-- frontnewCONTENT -->
 			  <div class="frontnewbot"><div>&nbsp;</div>&nbsp;</div>
 			</div> <!-- frontnewroundbox -->
+			<!-- 25th anniversary logo -->
+			<div class="frontfeaturecontent">
+			  <!-- XXX: target page not yet ready
+			  <a href="XXX TBD"
+			    title="&os; 25th Anniversary">
+			  -->
+			  <img
+			    src="&enbase;/layout/images/25thanniversary.png"
+			    style="margin-top: 5px;"
+			    width="167" height="88"
+			    alt="25th Anniversary Logo" />
+			  <!--
+			  </a>
+			  -->
+			</div>
+			<!-- end 25th anniversary logo -->
 		</div> <!-- featureright -->
 
             </div> <!-- FRONTFEATURECONTAINER -->

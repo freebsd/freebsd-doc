@@ -13,10 +13,6 @@ DOCS+=	hardware.xml
 DOCS+=	installation.xml
 DOCS+=	schedule.xml
 
-#FETCHFILE= http://people.freebsd.org/~pho/stress/log/news.rss
-#FETCHCMD=  /usr/bin/fetch
-#CLEANFILES+= news.rss stress.html
-
 DATA+=	errata.html
 DATA+=	hardware-alpha.html
 DATA+=	hardware-amd64.html
@@ -39,13 +35,5 @@ DATA+=	relnotes-powerpc.html
 DATA+=	relnotes-sparc64.html
 
 DATA+=	docbook.css
-
-#news.rss:
-#	${FETCHCMD} ${FETCHFILE}
-
-#stress.html: news.rss stress.xsl
-#	${XSLTPROC} stress.xsl news.rss > stress.html
-
-#todo.html: stress.html
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

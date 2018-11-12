@@ -74,7 +74,9 @@
 		<br/><h1><a>
 		  <xsl:attribute name="name"><xsl:value-of select="translate(normalize-space(description), ' ', '-')"/></xsl:attribute>
 		  <xsl:attribute name="href">#<xsl:value-of select="translate(normalize-space(description), ' ', '-')"/></xsl:attribute>
-		  <xsl:value-of select="description"/></a></h1><br/>
+		  <xsl:value-of select="description"/></a></h1>
+		  <!-- per-category intro text, if present -->
+		  <xsl:apply-templates select="p" mode="copy.html"/><br/>
 
 		<xsl:variable name="cat-short" select="name"/>
 		<xsl:apply-templates select="//project[@cat=$cat-short]">

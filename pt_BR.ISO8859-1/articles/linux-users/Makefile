@@ -3,6 +3,8 @@
 #
 # Article: FreeBSD Quickstart for Linux Users
 
+MAINTAINER=ebrandi@FreeBSD.org
+
 DOC?= article
 
 FORMATS?= html html-split

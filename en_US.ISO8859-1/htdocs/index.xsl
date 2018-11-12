@@ -37,7 +37,7 @@
 			<div id="frontfeaturecontent">
 				<h1>The &os; Project</h1>
 
-				<p>&os; is an advanced computer
+				<p>&os; is an
 				  operating system used to power
 				  modern servers, desktops, and
 				  embedded
@@ -97,14 +97,14 @@
 
 			<div id="frontreleases">
 			  <div id="frontreleasescontent" class="txtshortcuts">
-				  <h2><a href="&base;/releases/">LATEST RELEASES</a></h2>
+				  <h2><a href="&base;/releases/">Supported Releases</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>Production:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,
-					<a
-				href="&u.rel2.announce;">&rel2.current;</a>,
-					<a
-				href="&u.rel3.announce;">&rel3.current;</a></li>
+				<a
+				  href="&u.rel1.announce;">&rel1.current;</a>,
+				<a
+				  href="&u.rel2.announce;">&rel2.current;</a></li>
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 					<li>Upcoming: <a
 				href="&u.betarel.schedule;">&betarel.current;</a></li>
@@ -130,45 +130,16 @@
 					<a href="&base;/" title="English">en</a>
 				  </li>
 				  <li>
-					<a href="&base;/es/" title="Spanish">es</a>
-				  </li>
-				  <li>
-					<a href="&base;/fr/" title="French">fr</a>
-				  </li>
-				  <li>
-					<a href="&base;/hu/" title="Hungarian">hu</a>
-				  </li>
-				  <li>
-					<a href="&base;/it/" title="Italian">it</a>
-				  </li>
-				  <li>
 					<a href="&base;/ja/" title="Japanese">ja</a>
 				  </li>
 				  <li>
-					<a href="&base;/nl/" title="Dutch">nl</a>
-				  </li>
-				  <li>
-					<a href="&base;/ru/" title="Russian">ru</a>
+					<a href="&base;/zh_CN/" title="Chinese (Simplified)">zh_CN</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/zh_CN/" title="Chinese (Simplified)">zh_CN</a>
+					<a href="&base;/zh_TW/" title="Chinese (Traditional)">zh_TW</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
-
-			<div id="mirror">
-			  <form action="&cgibase;/mirror.cgi" method="get">
-				<div>
-				  <h2 class="blockhide"><label for="MIRRORSEL">Mirror</label></h2>
-				  <select id="mirrorsel" name="goto">
-					  <xsl:call-template name="html-index-mirrors-options-list">
-					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
-					  </xsl:call-template>
-				  </select>
-				</div> <!-- unnamed -->
-				<input type="submit" value="Go" />
-			  </form>
-			</div> <!-- MIRROR -->
 
 			<div id="frontshortcuts">
 			  <div id="frontshortcutscontent" class="txtshortcuts">
@@ -201,6 +172,22 @@
 			    </div> <!-- frontnewcontent -->
 			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontnewroundbox -->
+			<!-- 25th anniversary logo -->
+			<div class="frontfeaturecontent">
+			  <!-- XXX: target page not yet ready
+			  <a href="XXX TBD"
+			    title="&os; 25th Anniversary">
+			  -->
+			  <img
+			    src="&enbase;/layout/images/25thanniversary.png"
+			    style="margin-top: 5px;"
+			    width="167" height="88"
+			    alt="25th Anniversary Logo" />
+			  <!--
+			  </a>
+			  -->
+			</div>
+			<!-- end 25th anniversary logo -->
 		</div> <!-- FEATURERIGHT -->
 
             </div> <!-- FRONTFEATURECONTAINER -->

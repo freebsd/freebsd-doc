@@ -57,6 +57,9 @@
 #			Currently the only method.
 #
 
+# 'make obj' doesn't really work for the docs, disable it
+#NO_OBJ?= YES
+
 # Document-specific defaults
 DOCFORMAT?=	docbook
 MAINTAINER?=	doc@FreeBSD.org
@@ -96,6 +99,11 @@ DOC_LOCAL_MK=	${DOC_PREFIX}/${LANGCODE}/share/mk/doc.local.mk
 .if defined(DOC)
 .if ${DOCFORMAT} == "docbook"
 .include "doc.docbook.mk"
+
+.if !defined(DOCBOOK_DEPS_DISABLE) || ${DOCBOOK_DEPS_DISABLE} != "YES"
+.include "doc.docbook-dep.mk"
+.endif
+
 .endif
 .if ${DOCFORMAT} == "slides"
 .include "doc.slides.mk"
@@ -104,3 +112,12 @@ DOC_LOCAL_MK=	${DOC_PREFIX}/${LANGCODE}/share/mk/doc.local.mk
 
 # Subdirectory glue.
 .include "doc.subdir.mk"
+
+# parallel build for target "all" and "clean"
+NCPU?= ${.MAKE.JOBS}
+
+p-all p-clean p-po:
+	make -V SUBDIR | sed -E 's/[ ]+$$//' | tr " " "\n" | \
+		sed -E 's/^/make -C /; s/$$/ ${.TARGET:S/^p-//}/' | \
+		tr '\n' '\0' | xargs -0 -n1 -P${NCPU:S/^$$/8/} /bin/sh -c
+

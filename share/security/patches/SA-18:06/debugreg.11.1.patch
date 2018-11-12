@@ -1,0 +1,351 @@
+--- sys/amd64/amd64/exception.S.orig
++++ sys/amd64/amd64/exception.S
+@@ -116,7 +116,6 @@
+ 	jmp alltraps_noen
+ 	.endm
+ 
+-	TRAP_NOEN	dbg, T_TRCTRAP
+ 	TRAP_NOEN	bpt, T_BPTFLT
+ #ifdef KDTRACE_HOOKS
+ 	TRAP_NOEN	dtrace_ret, T_DTRACE_RET
+@@ -509,6 +508,121 @@
+ 	sysret
+ 
+ /*
++ * DB# handler is very similar to NM#, because 'mov/pop %ss' delay
++ * generation of exception until the next instruction is executed,
++ * which might be a kernel entry.  So we must execute the handler
++ * on IST stack and be ready for non-kernel GSBASE.
++ */
++IDTVEC(dbg)
++	subq	$TF_RIP,%rsp
++	movl	$(T_TRCTRAP),TF_TRAPNO(%rsp)
++	movq	$0,TF_ADDR(%rsp)
++	movq	$0,TF_ERR(%rsp)
++	movq	%rdi,TF_RDI(%rsp)
++	movq	%rsi,TF_RSI(%rsp)
++	movq	%rdx,TF_RDX(%rsp)
++	movq	%rcx,TF_RCX(%rsp)
++	movq	%r8,TF_R8(%rsp)
++	movq	%r9,TF_R9(%rsp)
++	movq	%rax,TF_RAX(%rsp)
++	movq	%rbx,TF_RBX(%rsp)
++	movq	%rbp,TF_RBP(%rsp)
++	movq	%r10,TF_R10(%rsp)
++	movq	%r11,TF_R11(%rsp)
++	movq	%r12,TF_R12(%rsp)
++	movq	%r13,TF_R13(%rsp)
++	movq	%r14,TF_R14(%rsp)
++	movq	%r15,TF_R15(%rsp)
++	SAVE_SEGS
++	movl	$TF_HASSEGS,TF_FLAGS(%rsp)
++	cld
++	testb	$SEL_RPL_MASK,TF_CS(%rsp)
++	jnz	dbg_fromuserspace
++	/*
++	 * We've interrupted the kernel.  Preserve GS.base in %r12,
++	 * %cr3 in %r13, and possibly lower half of MSR_IA32_SPEC_CTL in %r14d.
++	 */
++	movl	$MSR_GSBASE,%ecx
++	rdmsr
++	movq	%rax,%r12
++	shlq	$32,%rdx
++	orq	%rdx,%r12
++	/* Retrieve and load the canonical value for GS.base. */
++	movq	TF_SIZE(%rsp),%rdx
++	movl	%edx,%eax
++	shrq	$32,%rdx
++	wrmsr
++	movq	%cr3,%r13
++	movq	PCPU(KCR3),%rax
++	cmpq	$~0,%rax
++	je	1f
++	movq	%rax,%cr3
++1:	testl	$CPUID_STDEXT3_IBPB,cpu_stdext_feature3(%rip)
++	je	2f
++	movl	$MSR_IA32_SPEC_CTRL,%ecx
++	rdmsr
++	movl	%eax,%r14d
++	call	handle_ibrs_entry
++2:	FAKE_MCOUNT(TF_RIP(%rsp))
++	movq	%rsp,%rdi
++	call	trap
++	MEXITCOUNT
++	testl	$CPUID_STDEXT3_IBPB,cpu_stdext_feature3(%rip)
++	je	3f
++	movl	%r14d,%eax
++	xorl	%edx,%edx
++	movl	$MSR_IA32_SPEC_CTRL,%ecx
++	wrmsr
++	/*
++	 * Put back the preserved MSR_GSBASE value.
++	 */
++3:	movl	$MSR_GSBASE,%ecx
++	movq	%r12,%rdx
++	movl	%edx,%eax
++	shrq	$32,%rdx
++	wrmsr
++	movq	%r13,%cr3
++	RESTORE_REGS
++	addq	$TF_RIP,%rsp
++	jmp	doreti_iret
++dbg_fromuserspace:
++	/*
++	 * Switch to kernel GSBASE and kernel page table, and copy frame
++	 * from the IST stack to the normal kernel stack, since trap()
++	 * re-enables interrupts, and since we might trap on DB# while
++	 * in trap().
++	 */
++	swapgs
++	movq	PCPU(KCR3),%rax
++	cmpq	$~0,%rax
++	je	1f
++	movq	%rax,%cr3
++1:	movq	PCPU(RSP0),%rax
++	movl	$TF_SIZE,%ecx
++	subq	%rcx,%rax
++	movq	%rax,%rdi
++	movq	%rsp,%rsi
++	rep;movsb
++	movq	%rax,%rsp
++	call	handle_ibrs_entry
++	movq	PCPU(CURPCB),%rdi
++	orl	$PCB_FULL_IRET,PCB_FLAGS(%rdi)
++	testb	$CPUID_STDEXT_FSGSBASE,cpu_stdext_feature(%rip)
++	jz	3f
++	cmpw	$KUF32SEL,TF_FS(%rsp)
++	jne	2f
++	rdfsbase %rax
++	movq	%rax,PCB_FSBASE(%rdi)
++2:	cmpw	$KUG32SEL,TF_GS(%rsp)
++	jne	3f
++	movl	$MSR_KGSBASE,%ecx
++	rdmsr
++	shlq	$32,%rdx
++	orq	%rdx,%rax
++	movq	%rax,PCB_GSBASE(%rdi)
++3:	jmp	calltrap
++
++/*
+  * NMI handling is special.
+  *
+  * First, NMIs do not respect the state of the processor's RFLAGS.IF
+--- sys/amd64/amd64/machdep.c.orig
++++ sys/amd64/amd64/machdep.c
+@@ -675,6 +675,7 @@
+ static char dblfault_stack[PAGE_SIZE] __aligned(16);
+ static char mce0_stack[PAGE_SIZE] __aligned(16);
+ static char nmi0_stack[PAGE_SIZE] __aligned(16);
++static char dbg0_stack[PAGE_SIZE] __aligned(16);
+ CTASSERT(sizeof(struct nmi_pcpu) == 16);
+ 
+ struct amd64tss common_tss[MAXCPU];
+@@ -827,7 +828,7 @@
+ 	IDTVEC(tss), IDTVEC(missing), IDTVEC(stk), IDTVEC(prot),
+ 	IDTVEC(page), IDTVEC(mchk), IDTVEC(rsvd), IDTVEC(fpu), IDTVEC(align),
+ 	IDTVEC(xmm), IDTVEC(dblfault),
+-	IDTVEC(div_pti), IDTVEC(dbg_pti), IDTVEC(bpt_pti),
++	IDTVEC(div_pti), IDTVEC(bpt_pti),
+ 	IDTVEC(ofl_pti), IDTVEC(bnd_pti), IDTVEC(ill_pti), IDTVEC(dna_pti),
+ 	IDTVEC(fpusegm_pti), IDTVEC(tss_pti), IDTVEC(missing_pti),
+ 	IDTVEC(stk_pti), IDTVEC(prot_pti), IDTVEC(page_pti),
+@@ -1637,8 +1638,7 @@
+ 		    SEL_KPL, 0);
+ 	setidt(IDT_DE, pti ? &IDTVEC(div_pti) : &IDTVEC(div), SDT_SYSIGT,
+ 	    SEL_KPL, 0);
+-	setidt(IDT_DB, pti ? &IDTVEC(dbg_pti) : &IDTVEC(dbg), SDT_SYSIGT,
+-	    SEL_KPL, 0);
++	setidt(IDT_DB, &IDTVEC(dbg), SDT_SYSIGT, SEL_KPL, 4);
+ 	setidt(IDT_NMI, &IDTVEC(nmi),  SDT_SYSIGT, SEL_KPL, 2);
+ 	setidt(IDT_BP, pti ? &IDTVEC(bpt_pti) : &IDTVEC(bpt), SDT_SYSIGT,
+ 	    SEL_UPL, 0);
+@@ -1720,6 +1720,13 @@
+ 	np = ((struct nmi_pcpu *) &mce0_stack[sizeof(mce0_stack)]) - 1;
+ 	np->np_pcpu = (register_t) pc;
+ 	common_tss[0].tss_ist3 = (long) np;
++
++	/*
++	 * DB# stack, runs on ist4.
++	 */
++	np = ((struct nmi_pcpu *) &dbg0_stack[sizeof(dbg0_stack)]) - 1;
++	np->np_pcpu = (register_t) pc;
++	common_tss[0].tss_ist4 = (long) np;
+ 	
+ 	/* Set the IO permission bitmap (empty due to tss seg limit) */
+ 	common_tss[0].tss_iobase = sizeof(struct amd64tss) + IOPERM_BITMAP_SIZE;
+--- sys/amd64/amd64/mp_machdep.c.orig
++++ sys/amd64/amd64/mp_machdep.c
+@@ -87,6 +87,7 @@
+ char *doublefault_stack;
+ char *mce_stack;
+ char *nmi_stack;
++char *dbg_stack;
+ 
+ /*
+  * Local data and functions.
+@@ -225,6 +226,10 @@
+ 	np = ((struct nmi_pcpu *) &mce_stack[PAGE_SIZE]) - 1;
+ 	common_tss[cpu].tss_ist3 = (long) np;
+ 
++	/* The DB# stack runs on IST4. */
++	np = ((struct nmi_pcpu *) &dbg_stack[PAGE_SIZE]) - 1;
++	common_tss[cpu].tss_ist4 = (long) np;
++
+ 	/* Prepare private GDT */
+ 	gdt_segs[GPROC0_SEL].ssd_base = (long) &common_tss[cpu];
+ 	for (x = 0; x < NGDT; x++) {
+@@ -270,6 +275,10 @@
+ 	np = ((struct nmi_pcpu *) &mce_stack[PAGE_SIZE]) - 1;
+ 	np->np_pcpu = (register_t) pc;
+ 
++	/* Save the per-cpu pointer for use by the DB# handler. */
++	np = ((struct nmi_pcpu *) &dbg_stack[PAGE_SIZE]) - 1;
++	np->np_pcpu = (register_t) pc;
++
+ 	wrmsr(MSR_FSBASE, 0);		/* User value */
+ 	wrmsr(MSR_GSBASE, (u_int64_t)pc);
+ 	wrmsr(MSR_KGSBASE, (u_int64_t)pc);	/* XXX User value while we're in the kernel */
+@@ -368,6 +377,8 @@
+ 		    M_WAITOK | M_ZERO);
+ 		nmi_stack = (char *)kmem_malloc(kernel_arena, PAGE_SIZE,
+ 		    M_WAITOK | M_ZERO);
++		dbg_stack = (char *)kmem_malloc(kernel_arena, PAGE_SIZE,
++		    M_WAITOK | M_ZERO);
+ 		dpcpu = (void *)kmem_malloc(kernel_arena, DPCPU_SIZE,
+ 		    M_WAITOK | M_ZERO);
+ 
+--- sys/amd64/amd64/pmap.c.orig
++++ sys/amd64/amd64/pmap.c
+@@ -7565,6 +7565,9 @@
+ 		/* MC# stack IST 3 */
+ 		va = common_tss[i].tss_ist3 + sizeof(struct nmi_pcpu);
+ 		pmap_pti_add_kva_locked(va - PAGE_SIZE, va, false);
++		/* DB# stack IST 4 */
++		va = common_tss[i].tss_ist4 + sizeof(struct nmi_pcpu);
++		pmap_pti_add_kva_locked(va - PAGE_SIZE, va, false);
+ 	}
+ 	pmap_pti_add_kva_locked((vm_offset_t)kernphys + KERNBASE,
+ 	    (vm_offset_t)etext, true);
+--- sys/amd64/amd64/trap.c.orig
++++ sys/amd64/amd64/trap.c
+@@ -45,6 +45,7 @@
+  */
+ 
+ #include "opt_clock.h"
++#include "opt_compat.h"
+ #include "opt_cpu.h"
+ #include "opt_hwpmc_hooks.h"
+ #include "opt_isa.h"
+@@ -99,6 +100,11 @@
+ #include <sys/dtrace_bsd.h>
+ #endif
+ 
++extern inthand_t IDTVEC(bpt), IDTVEC(bpt_pti), IDTVEC(dbg),
++    IDTVEC(fast_syscall), IDTVEC(fast_syscall_pti), IDTVEC(fast_syscall32),
++    IDTVEC(int0x80_syscall_pti), IDTVEC(int0x80_syscall);
++
++
+ extern void __noinline trap(struct trapframe *frame);
+ extern void trap_check(struct trapframe *frame);
+ extern void syscall(struct trapframe *frame);
+@@ -536,7 +542,53 @@
+ 				load_dr6(rdr6() & ~0xf);
+ 				goto out;
+ 			}
++
+ 			/*
++			 * Malicious user code can configure a debug
++			 * register watchpoint to trap on data access
++			 * to the top of stack and then execute 'pop
++			 * %ss; int 3'.  Due to exception deferral for
++			 * 'pop %ss', the CPU will not interrupt 'int
++			 * 3' to raise the DB# exception for the debug
++			 * register but will postpone the DB# until
++			 * execution of the first instruction of the
++			 * BP# handler (in kernel mode).  Normally the
++			 * previous check would ignore DB# exceptions
++			 * for watchpoints on user addresses raised in
++			 * kernel mode.  However, some CPU errata
++			 * include cases where DB# exceptions do not
++			 * properly set bits in %dr6, e.g. Haswell
++			 * HSD23 and Skylake-X SKZ24.
++			 *
++			 * A deferred DB# can also be raised on the
++			 * first instructions of system call entry
++			 * points or single-step traps via similar use
++			 * of 'pop %ss' or 'mov xxx, %ss'.
++			 */
++			if (pti) {
++				if (frame->tf_rip ==
++				    (uintptr_t)IDTVEC(fast_syscall_pti) ||
++#ifdef COMPAT_FREEBSD32
++				    frame->tf_rip ==
++				    (uintptr_t)IDTVEC(int0x80_syscall_pti) ||
++#endif
++				    frame->tf_rip == (uintptr_t)IDTVEC(bpt_pti))
++					return;
++			} else {
++				if (frame->tf_rip ==
++				    (uintptr_t)IDTVEC(fast_syscall) ||
++#ifdef COMPAT_FREEBSD32
++				    frame->tf_rip ==
++				    (uintptr_t)IDTVEC(int0x80_syscall) ||
++#endif
++				    frame->tf_rip == (uintptr_t)IDTVEC(bpt))
++					return;
++			}
++			if (frame->tf_rip == (uintptr_t)IDTVEC(dbg) ||
++			    /* Needed for AMD. */
++			    frame->tf_rip == (uintptr_t)IDTVEC(fast_syscall32))
++				return;
++			/*
+ 			 * FALLTHROUGH (TRCTRAP kernel mode, kernel address)
+ 			 */
+ 		case T_BPTFLT:
+--- sys/i386/i386/trap.c.orig
++++ sys/i386/i386/trap.c
+@@ -116,6 +116,8 @@
+ 
+ extern inthand_t IDTVEC(lcall_syscall);
+ 
++extern inthand_t IDTVEC(bpt), IDTVEC(dbg), IDTVEC(int0x80_syscall);
++
+ #define MAX_TRAP_MSG		32
+ static char *trap_msg[] = {
+ 	"",					/*  0 unused */
+@@ -668,7 +670,35 @@
+ 				load_dr6(rdr6() & ~0xf);
+ 				goto out;
+ 			}
++
+ 			/*
++			 * Malicious user code can configure a debug
++			 * register watchpoint to trap on data access
++			 * to the top of stack and then execute 'pop
++			 * %ss; int 3'.  Due to exception deferral for
++			 * 'pop %ss', the CPU will not interrupt 'int
++			 * 3' to raise the DB# exception for the debug
++			 * register but will postpone the DB# until
++			 * execution of the first instruction of the
++			 * BP# handler (in kernel mode).  Normally the
++			 * previous check would ignore DB# exceptions
++			 * for watchpoints on user addresses raised in
++			 * kernel mode.  However, some CPU errata
++			 * include cases where DB# exceptions do not
++			 * properly set bits in %dr6, e.g. Haswell
++			 * HSD23 and Skylake-X SKZ24.
++			 *
++			 * A deferred DB# can also be raised on the
++			 * first instructions of system call entry
++			 * points or single-step traps via similar use
++			 * of 'pop %ss' or 'mov xxx, %ss'.
++			 */
++			if (frame->tf_eip ==
++			    (uintptr_t)IDTVEC(int0x80_syscall) ||
++			    frame->tf_eip == (uintptr_t)IDTVEC(bpt) ||
++			    frame->tf_eip == (uintptr_t)IDTVEC(dbg))
++				return;
++			/*
+ 			 * FALLTHROUGH (TRCTRAP kernel mode, kernel address)
+ 			 */
+ 		case T_BPTFLT:

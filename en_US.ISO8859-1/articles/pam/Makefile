@@ -18,7 +18,8 @@ EXTRAS+=	pam_module.c
 CLEANFILES+=	${EXTRAS}
 
 SRCS=	article.xml
-SRCS+=	${EXTRAS}
+
+index.html article.html: ${EXTRAS}
 
 pam_app.c: su.c
 	sed -e '/^[\/ ]\*/d' ${.ALLSRC} >${.TARGET}

@@ -3,14 +3,11 @@
 #
 # $FreeBSD$
 #
-# Original revision: r38826
-#
 # Article: Building products using FreeBSD
 
 DOC?=			article
 
-FORMATS?=		html html-split
-WITH_ARTICLE_TOC?= YES
+FORMATS?=		html
 
 INSTALL_COMPRESSED?=	gz
 INSTALL_ONLY_COMPRESSED?=

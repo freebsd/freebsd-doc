@@ -1,0 +1,279 @@
+#!/bin/sh
+# Copyright (c) 2017-2017 Wolfram Schneider <wosch@FreeBSD.org>
+#
+# regression test of the build of www.freebsd.org
+# Based on git
+#
+# examples:
+#
+# run on 2 CPUs
+# make_opt=-j2 /path/to/webupdate-regression
+#
+# run from a local GIT repo in $HOME/freebsd-doc
+# FREEBSD_DOC_GIT_REPO="$HOME/freebsd-doc" /path/to/webupdate-regression
+#
+# run the regression test on branch "debug"
+# FREEBSD_DOC_GIT_BRANCH=debug /path/to/webupdate-regression
+#
+# build html-split format only, on 8 CPUs
+# WEBUPDATE_FORMATS="html-split" make_opt=-j8 /path/to/webupdate-regression
+#
+# build html and html-split format, on 16 CPUs max.
+# WEBUPDATE_FORMATS="html html-split" make_opt=-j16 /path/to/webupdate-regression
+#
+# do not run the `make clean`' test after successfully build
+# WEBUPDATE_RUN_CLEAN=NO /path/to/webupdate-regression
+#
+# test only english pages
+# ENGLISH_ONLY=YES /path/to/webupdate-regression
+#
+# clean git checkout after success
+# WEBUPDATE_SANDBOX_CLEANUP=YES /path/to/webupdate-regression
+#
+#
+# $FreeBSD$
+
+set -e
+
+# by default run with more processes than CPUs
+ncpu2=$(( $(/sbin/sysctl -n hw.ncpu) + 1))
+
+: ${NO_OBJ=YES}
+: ${make_opt=-j${ncpu2}}
+: ${FREEBSD_DOC_GIT_REPO="$HOME/freebsd-doc"}
+: ${FREEBSD_DOC_GIT_BRANCH=""}
+: ${WEBUPDATE_FORMATS="html-split html"}
+: ${WEBUPDATE_RUN_CLEAN=YES}
+: ${WEBUPDATE_LEVEL="3"}
+: ${WEBUPDATE_SANDBOX_CLEANUP="NO"}
+
+FORMATS=$WEBUPDATE_FORMATS
+export NO_OBJ
+export FORMATS
+
+buildstart=""
+buildstart_script="$(date +%s)"
+
+log () {
+  file=$1
+  buildstop="$(date +%s)"
+  build_sec=$(($buildstop - $buildstart))
+
+  echo "($build_sec sec)"
+}
+
+# global build start
+buildstart () {
+  buildstart="$(date +%s)"
+}
+
+checkout ()
+{
+  dir=$(mktemp -d /tmp/doc-build.XXXXXXX)
+
+  cd $dir
+  echo "Run from $dir"
+  echo "date: $(date)"
+  echo "ENGLISH_ONLY=$ENGLISH_ONLY"
+  echo "WEB_ONLY=$WEB_ONLY"
+  echo "FORMATS=\"$FORMATS\""
+  echo "WEBUPDATE_RUN_CLEAN=$WEBUPDATE_RUN_CLEAN"
+  echo "WEBUPDATE_SANDBOX_CLEANUP=$WEBUPDATE_SANDBOX_CLEANUP"
+  echo "WEBUPDATE_LEVEL=$WEBUPDATE_LEVEL"
+  echo "NO_OBJ=$NO_OBJ"
+  echo "make_opt=$make_opt"
+
+  echo "git clone from $FREEBSD_DOC_GIT_REPO -> doc"
+  git clone -q $FREEBSD_DOC_GIT_REPO doc
+  cd doc
+  if [ "$FREEBSD_DOC_GIT_BRANCH" != "" ]; then
+    echo "switch to branch $FREEBSD_DOC_GIT_BRANCH"
+    git checkout $FREEBSD_DOC_GIT_BRANCH
+  fi
+  echo "branch: $(git branch)"
+  echo "cwd: $(pwd)"
+
+  echo ""
+}
+
+# build doc only, from ./doc
+# parallel build, 4-40 minutes
+build_doc ()
+{
+  logfile=$1
+  buildstart
+  echo -n "build doc (4-40min) $(pwd)/$logfile "
+  time make $make_opt p-all >> $logfile 2>&1; log $logfile
+}
+
+# build web only, from english web pages
+build_htdocs_web ()
+{
+  logfile=$1
+  buildstart
+  (
+  cd en_US.ISO8859-1/htdocs
+  echo -n "build htdocs web (1min) $(pwd)/$logfile "
+  WEB_ONLY=YES time make $make_opt >> $logfile 2>&1; log $logfile
+  buildstart
+  echo -n "build htdocs web/ports (1min) $(pwd)/$logfile "
+  WEB_ONLY=YES time make -C./ports $make_opt >> $logfile 2>&1; log $logfile
+  )
+}
+
+# build web + doc, from english web pages
+# after build_htdocs_web: 1-3 minutes (?)
+build_htdocs ()
+{
+  logfile=$1
+  buildstart
+  (
+  cd en_US.ISO8859-1/htdocs
+  echo -n "build htdocs (1-3min) $(pwd)/$logfile "
+  time make $make_opt all >> $logfile 2>&1; log $logfile 
+  )
+}
+
+# install web only, from english web pages
+install_htdocs ()
+{
+  logfile=$1
+  buildstart
+  (
+  cd en_US.ISO8859-1/htdocs
+  echo -n "install htdocs web (<10 sec) $(pwd)/$logfile "
+  DESTDIR=$dir/www WEB_ONLY=YES time make $make_opt install >> $logfile 2>&1; log $logfile 
+  #egrep -rl wosch $dir/www >/dev/null
+  )
+}
+
+# install web + doc, from english web pages
+install_doc ()
+{
+  logfile=$1
+  buildstart
+  (
+  echo "no parallel install"
+  make_opt=
+
+  cd en_US.ISO8859-1/htdocs
+  echo -n "install htdocs (<30 sec) $(pwd)/$logfile "
+  DESTDIR=$dir/www time make $make_opt install >> $logfile 2>&1; log $logfile 
+  )
+}
+
+# clean doc from ./doc
+# parallel clean
+clean_doc ()
+{
+  logfile=$1
+  buildstart
+  echo -n "clean doc (<5 sec) $(pwd)/$logfile "
+  time make $make_opt p-clean >> $logfile 2>&1; log $logfile 
+}
+
+# clean doc from english web pages
+# is required for docs which don't have a web pages (./htdocs)
+clean_htdocs ()
+{
+  logfile=$1
+  buildstart
+  (
+  cd en_US.ISO8859-1/htdocs
+  echo -n "clean htdocs web + doc (<20 sec) $(pwd)/$logfile "
+  time make $make_opt clean >> $logfile 2>&1; log $logfile 
+  )
+}
+
+########################################################################################
+#
+
+checkout
+
+# ./doc
+if [ "$WEB_ONLY" != "YES" ]; then
+  build_doc log.build_doc
+  if [ $WEBUPDATE_LEVEL -ge 2 ]; then
+    build_doc log.build_doc2
+  fi
+  if [ $WEBUPDATE_LEVEL -ge 3 ]; then
+    build_doc log.build_doc3
+  fi
+fi
+
+# doc/en_US.ISO8859-1/htdocs
+build_htdocs_web log.build_htdocs_web
+if [ $WEBUPDATE_LEVEL -ge 2 ]; then
+  build_htdocs_web log.build_htdocs_web2
+fi
+if [ $WEBUPDATE_LEVEL -ge 3 ]; then
+  build_htdocs_web log.build_htdocs_web3
+fi
+
+# doc/en_US.ISO8859-1/htdocs/doc
+build_htdocs log.build_htdocs
+if [ $WEBUPDATE_LEVEL -ge 2 ]; then
+  build_htdocs log.build_htdocs2
+fi
+if [ $WEBUPDATE_LEVEL -ge 3 ]; then
+  build_htdocs log.build_htdocs3
+fi
+
+# install doc/en_US.ISO8859-1/htdocs
+install_htdocs log.install_htdocs
+if [ $WEBUPDATE_LEVEL -ge 2 ]; then
+  install_htdocs log.install_htdocs2
+fi
+  if [ $WEBUPDATE_LEVEL -ge 3 ]; then
+install_htdocs log.install_htdocs3
+fi
+
+# install doc/en_US.ISO8859-1/htdocs/doc
+install_doc log.install_doc
+if [ $WEBUPDATE_LEVEL -ge 2 ]; then
+  install_doc log.install_doc2
+fi
+if [ $WEBUPDATE_LEVEL -ge 3 ]; then
+  install_doc log.install_doc3
+fi
+
+# make clean
+if [ "$WEBUPDATE_RUN_CLEAN" = "YES" ]; then
+  clean_htdocs log.clean_htdocs
+  if [ $WEBUPDATE_LEVEL -ge 2 ]; then
+    clean_htdocs log.clean_htdocs2
+  fi
+
+  clean_doc log.clean_doc
+  if [ $WEBUPDATE_LEVEL -ge 2 ]; then
+    clean_doc log.clean_doc2
+  fi
+fi
+
+echo ""
+echo "successfully done"
+echo ""
+
+# display user time for each task
+tail -n 1 $(ls -tr $(find . -name 'log.*' -type f))
+
+echo ""
+echo "installed data disk usage: $(du -hs $dir/www)"
+echo "installed file number: $(find $dir/www | wc -l)"
+( cd $dir/www && find -s . > ../find.www )
+
+if [ "$WEBUPDATE_SANDBOX_CLEANUP" = "YES" ]; then
+  echo "cleanup sandbox $dir"
+  rm -rf $dir
+else
+  echo ""
+  echo "Please cleanup: rm -rf $dir"
+fi
+
+# full run time
+buildstart=$buildstart_script
+echo "total run time: $(log)"
+
+exit 0
+
+#EOF

@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r48320 -->
+<!-- Original revision: r51914 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -42,7 +42,7 @@
 
 			<p>&os; は、最新のサーバ、デスクトップおよび組み込み
 			  <a href="&base;/platforms/">プラットフォーム</a>
-			  用の高性能なオペレーティングシステムです。
+			  用のオペレーティングシステムです。
 			  多くの <a href="&enbase;/doc/ja_JP.eucJP/articles/contributors/staff-committers.html">コミュニティ</a>
 			  が 30 年以上にも渡って開発を続けています。
 			  高度なネットワーク、セキュリティ、
@@ -84,25 +84,25 @@
 
 		  <div id="frontfeaturemiddle">
 		      <div class="frontgetroundbox">
-			<div class="frontgettop"><div>&#160;</div>&#160;</div>
+			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 
 			<div class="frontgetcontent">
 			  <a href="&base;/where.html">&os; を入手する</a>
 			</div> <!-- frontgetcontent -->
 
-			<div class="frontgetbot"><div>&#160;</div>&#160;</div>
+			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 		      </div> <!-- frontgetroundbox -->
 
 			<div id="frontreleases">
 			  <div id="frontreleasescontent" class="txtshortcuts">
-			  <h2><a href="&base;/releases/">最新リリース</a></h2>
+			  <h2><a href="&base;/releases/">サポートされているリリース</a></h2>
 			  <ul id="frontreleaseslist">
 			    <li>プロダクション:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,
-					<a
-				href="&u.rel2.announce;">&rel2.current;</a>,
-					<a
-				href="&u.rel3.announce;">&rel3.current;</a></li>
+				<a
+				  href="&u.rel1.announce;">&rel1.current;</a>,
+				<a
+				  href="&u.rel2.announce;">&rel2.current;</a></li>
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 			    <li>次回予定: <a
 				href="&u.betarel.schedule;">&betarel.current;</a></li>
@@ -129,45 +129,16 @@
 			    <a href="&enbase;/" title="英語">en</a>
 			  </li>
 			  <li>
-			    <a href="&enbase;/es/" title="スペイン語">es</a>
-			  </li>
-			  <li>
-			    <a href="&enbase;/fr/" title="フランス語">fr</a>
-			  </li>
-			  <li>
-			    <a href="&enbase;/hu/" title="ハンガリー語">hu</a>
-			  </li>
-			  <li>
-			    <a href="&enbase;/it/" title="イタリア語">it</a>
-			  </li>
-			  <li>
 			    <a href="&enbase;/ja/" title="日本語">ja</a>
 			  </li>
 			  <li>
-			    <a href="&enbase;/nl/" title="オランダ語">nl</a>
-			  </li>
-			  <li>
-			    <a href="&enbase;/ru/" title="ロシア語">ru</a>
+			    <a href="&enbase;/zh_CN/" title="中国語 (簡体字)">zh_CN</a>
 			  </li>
 			  <li class="last-child">
-			    <a href="&enbase;/zh_CN/" title="中国語 (簡体字)">zh_CN</a>
+			    <a href="&enbase;/zh_TW/" title="中国語 (繁体字)">zh_TW</a>
 			  </li>
 			</ul>
 		      </div> <!-- LANGUAGENAV -->
-
-		      <div id="mirror">
-			<form action="&cgibase;/mirror.cgi" method="get">
-			  <div>
-			    <h2 class="blockhide"><label for="MIRRORSEL">ミラーサイト</label></h2>
-			    <select id="mirrorsel" name="goto">
-			      <xsl:call-template name="html-index-mirrors-options-list">
-				<xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
-			      </xsl:call-template>
-			    </select>
-			  </div> <!-- unnamed -->
-			  <input type="submit" value="移動" />
-			</form>
-		      </div> <!-- MIRROR -->
 
 		      <div id="frontshortcuts">
 			<div id="frontshortcutscontent" class="txtshortcuts">
@@ -193,12 +164,28 @@
 		      </div> <!-- FRONTSHORTCUTS -->
 
 		      <div class="frontnewroundbox">
-			<div class="frontnewtop"><div>&#160;</div>&#160;</div>
+			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
 			<div class="frontnewcontent">
-			  <a href="&base;/projects/newbies.html">FreeBSD が初めての方</a>
+			  <a href="&base;/projects/newbies.html">FreeBSD が初めてという方へ</a>
 			</div> <!-- frontnewcontent -->
-			<div class="frontnewbot"><div>&#160;</div>&#160;</div>
+			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
 		      </div> <!-- frontnewroundbox -->
+			<!-- 25th anniversary logo -->
+			<div class="frontfeaturecontent">
+			  <!-- XXX: target page not yet ready
+			  <a href="XXX TBD"
+			    title="&os; 25th Anniversary">
+			  -->
+			  <img
+			    src="&enbase;/layout/images/25thanniversary.png"
+			    style="margin-top: 5px;"
+			    width="167" height="88"
+			    alt="25th Anniversary Logo" />
+			  <!--
+			  </a>
+			  -->
+			</div>
+			<!-- end 25th anniversary logo -->
 		    </div> <!-- FEATURERIGHT -->
 
 		  </div> <!-- FRONTFEATURECONTAINER -->

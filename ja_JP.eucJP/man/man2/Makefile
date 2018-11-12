@@ -68,7 +68,6 @@ MAN2 =	_exit.2\
 	kldsym.2\
 	kldunload.2\
 	kqueue.2\
-	kse.2\
 	ktrace.2\
 	link.2\
 	lio_listio.2\

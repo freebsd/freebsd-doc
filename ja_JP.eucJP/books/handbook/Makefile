@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: r47683
+# Original revision: r51744
 #
 
 # ------------------------------------------------------------------------
@@ -203,6 +203,7 @@ SRCS+= preface/preface.xml
 SRCS+= printing/chapter.xml
 SRCS+= security/chapter.xml
 SRCS+= serialcomms/chapter.xml
+#SRCS+= usb-device-mode/chapter.xml
 SRCS+= users/chapter.xml
 #SRCS+= virtualization/chapter.xml
 SRCS+= x11/chapter.xml
@@ -250,10 +251,16 @@ PARAMS.eresources+=	--param 'type' "'www'" \
 			--param 'proto' "'http'" \
 			--param 'target' "'handbook/eresources/chapter.xml'"
 
-SRCS+=		mirrors.lastmod.inc \
+EXTRAS=		mirrors.lastmod.inc \
 		mirrors.xml.ftp.inc \
 		mirrors.xml.ftp.index.inc \
 		eresources.xml.www.inc \
 		eresources.xml.www.index.inc
+
+XMLDOCS_NO_SRCS=YES
+CLEANFILES+= ${EXTRAS}
+
+_extras: ${EXTRAS}
+mirrors/chapter.xml: ${EXTRAS}
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

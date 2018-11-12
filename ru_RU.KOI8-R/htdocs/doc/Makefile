@@ -1,62 +1,44 @@
 #
-# The FreeBSD Russian Documentation Project
-#
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/doc/Makefile,v 1.2 2004/01/03 04:36:26 andy Exp $
 #
-# Original revision: 1.8
+# Build the FreeBSD documentation *outside* of the doc/ tree, and install it
+# in to the right place as necessary.
 #
-.if exists(Makefile.conf)
-.include "Makefile.conf"
+
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
 .endif
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
-#
-# Build the FreeBSD documentation *outside* of the www tree, and install it
-# in to the right place as necessary.
-#
-# This assumes that you have the www/ and doc/ trees checked out beside
-# one another -- this was always the case anyway, so there are no extra
-# requirements here.
-#
 
-#all: all-all all-install all-pgpkeyring
-all: all-all all-install
+_DOC_FORMATS?=	html-split html
+
+all: all-all 
+
 
 all-all:
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/${LANGCODE}; \
-		${MAKE} FORMATS="html-split html" \
-			INSTALL_COMPRESSED= all
-all-install:
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/${LANGCODE}; \
-		${MAKE} FORMATS="html-split html" DOCDIR=${.OBJDIR} \
-			INSTALL_COMPRESSED= install
-all-pgpkeyring:
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/share/pgpkeys; \
-		${MAKE} \
-			pgpkeyring > ${.OBJDIR}/pgpkeyring.txt
+	${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" all
 
-install clean:
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/${LANGCODE}; \
-		${MAKE} FORMATS="html-split html" DOCDIR=${DESTDIR}/data/doc \
-			INSTALL_COMPRESSED= ${.TARGET}
-#.if make(install)
-#	@unset DESTDIR || true; \
-#	 cd ${DOC_PREFIX}/${LANGCODE}/books/handbook; \
-#		${MAKE} \
-#			pgpkeyring > ${DESTDIR}/data/doc/pgpkeyring.txt
-#.endif
-.if make(clean)
-	${RM} -rf ru* handbook faq
-.endif
+all-pgpkeyring:
+	${MAKE} -C ${DOC_PREFIX}/share/pgpkeys pgpkeyring.txt
+
+clean:
+	${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" DOCDIR=${DESTDIR}/data/doc clean
+
+# here are dragons
+install:
+	unset DESTDIR || true; \
+	  ${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" DOCDIR=${DESTDIR}/data/doc install
+	${CP} ${DOC_PREFIX}/share/pgpkeys/pgpkeyring.txt ${DESTDIR}/data/doc/pgpkeyring.txt
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
+.if ${LANGCODE} == en_US.ISO8859-1
+all: all-pgpkeyring
+.endif
 
+
+# XXX
 obj: _OBJUSE
 
 _OBJUSE: .USE

@@ -51,21 +51,11 @@
 
   <xsl:template name="titlepage.pubdate">
     <xsl:variable name="pubdate">
-      <xsl:choose>
-	<xsl:when test="contains(., '$FreeBSD')">
-	  <xsl:value-of select="$latestrevision.timestamp"/>
-	</xsl:when>
-
-        <xsl:otherwise>
-          <xsl:value-of select="."/>
-        </xsl:otherwise>
-      </xsl:choose>
+      <xsl:value-of select="$latestrevision.timestamp"/>
     </xsl:variable>
 
     <xsl:variable name="committer">
-      <xsl:if test="contains(., '$FreeBSD')">
-	<xsl:value-of select="$latestrevision.committer"/>
-      </xsl:if>
+      <xsl:value-of select="$latestrevision.committer"/>
     </xsl:variable>
 
     <xsl:call-template name="gentext">

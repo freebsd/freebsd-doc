@@ -1,0 +1,277 @@
+--- sys/cam/ata/ata_xpt.c.orig
++++ sys/cam/ata/ata_xpt.c
+@@ -40,6 +40,7 @@
+ #include <sys/interrupt.h>
+ #include <sys/sbuf.h>
+ 
++#include <sys/eventhandler.h>
+ #include <sys/lock.h>
+ #include <sys/mutex.h>
+ #include <sys/sysctl.h>
+@@ -824,6 +825,7 @@
+ 	{
+ 		struct ccb_pathinq cpi;
+ 		int16_t *ptr;
++		int veto = 0;
+ 
+ 		ident_buf = &softc->ident_data;
+ 		for (ptr = (int16_t *)ident_buf;
+@@ -830,6 +832,17 @@
+ 		     ptr < (int16_t *)ident_buf + sizeof(struct ata_params)/2; ptr++) {
+ 			*ptr = le16toh(*ptr);
+ 		}
++
++		/*
++		 * Allow others to veto this ATA disk attachment.  This
++		 * is mainly used by VMs, whose disk controllers may
++		 * share the disks with the simulated ATA controllers.
++		 */
++		EVENTHANDLER_INVOKE(ada_probe_veto, path, ident_buf, &veto);
++		if (veto) {
++			goto device_fail;
++		}
++
+ 		if (strncmp(ident_buf->model, "FX", 2) &&
+ 		    strncmp(ident_buf->model, "NEC", 3) &&
+ 		    strncmp(ident_buf->model, "Pioneer", 7) &&
+--- sys/conf/files.amd64.orig
++++ sys/conf/files.amd64
+@@ -268,7 +268,6 @@
+ dev/hyperv/netvsc/hv_net_vsc.c				optional	hyperv
+ dev/hyperv/netvsc/hv_netvsc_drv_freebsd.c		optional	hyperv
+ dev/hyperv/netvsc/hv_rndis_filter.c			optional	hyperv
+-dev/hyperv/stordisengage/hv_ata_pci_disengage.c		optional	hyperv
+ dev/hyperv/storvsc/hv_storvsc_drv_freebsd.c		optional	hyperv
+ dev/hyperv/utilities/hv_heartbeat.c			optional	hyperv
+ dev/hyperv/utilities/hv_kvp.c				optional	hyperv
+--- sys/conf/files.i386.orig
++++ sys/conf/files.i386
+@@ -239,7 +239,6 @@
+ dev/hyperv/netvsc/hv_net_vsc.c				optional	hyperv
+ dev/hyperv/netvsc/hv_netvsc_drv_freebsd.c		optional	hyperv
+ dev/hyperv/netvsc/hv_rndis_filter.c			optional	hyperv
+-dev/hyperv/stordisengage/hv_ata_pci_disengage.c		optional	hyperv
+ dev/hyperv/storvsc/hv_storvsc_drv_freebsd.c		optional	hyperv
+ dev/hyperv/utilities/hv_heartbeat.c			optional	hyperv
+ dev/hyperv/utilities/hv_kvp.c				optional	hyperv
+--- sys/dev/hyperv/storvsc/hv_storvsc_drv_freebsd.c.orig
++++ sys/dev/hyperv/storvsc/hv_storvsc_drv_freebsd.c
+@@ -58,6 +58,7 @@
+ #include <sys/lock.h>
+ #include <sys/sema.h>
+ #include <sys/sglist.h>
++#include <sys/eventhandler.h>
+ #include <machine/bus.h>
+ #include <sys/bus_dma.h>
+ 
+@@ -139,6 +140,15 @@
+ 	struct hv_storvsc_request	hs_reset_req;
+ };
+ 
++static eventhandler_tag storvsc_handler_tag;
++/*
++ * The size of the vmscsi_request has changed in win8. The
++ * additional size is for the newly added elements in the
++ * structure. These elements are valid only when we are talking
++ * to a win8 host.
++ * Track the correct size we need to apply.
++ */
++static int vmscsi_size_delta = sizeof(struct vmscsi_win8_extension);
+ 
+ /**
+  * HyperV storvsc timeout testing cases:
+@@ -954,21 +964,15 @@
+ static int
+ storvsc_probe(device_t dev)
+ {
+-	int ata_disk_enable = 0;
+ 	int ret	= ENXIO;
+ 	
+ 	switch (storvsc_get_storage_type(dev)) {
+ 	case DRIVER_BLKVSC:
+ 		if(bootverbose)
+-			device_printf(dev, "DRIVER_BLKVSC-Emulated ATA/IDE probe\n");
+-		if (!getenv_int("hw.ata.disk_enable", &ata_disk_enable)) {
+-			if(bootverbose)
+-				device_printf(dev,
+-					"Enlightened ATA/IDE detected\n");
+-			device_set_desc(dev, g_drv_props_table[DRIVER_BLKVSC].drv_desc);
+-			ret = BUS_PROBE_DEFAULT;
+-		} else if(bootverbose)
+-			device_printf(dev, "Emulated ATA/IDE set (hw.ata.disk_enable set)\n");
++			device_printf(dev,
++			    "Enlightened ATA/IDE detected\n");
++		device_set_desc(dev, g_drv_props_table[DRIVER_BLKVSC].drv_desc);
++		ret = BUS_PROBE_DEFAULT;
+ 		break;
+ 	case DRIVER_STORVSC:
+ 		if(bootverbose)
+@@ -2018,27 +2022,45 @@
+ 	ccb->ccb_h.status &= ~CAM_STATUS_MASK;
+ 	if (vm_srb->scsi_status == SCSI_STATUS_OK) {
+ 		const struct scsi_generic *cmd;
+-
++		cmd = (const struct scsi_generic *)
++		    ((ccb->ccb_h.flags & CAM_CDB_POINTER) ?
++		     csio->cdb_io.cdb_ptr : csio->cdb_io.cdb_bytes);
+ 		if (vm_srb->srb_status != SRB_STATUS_SUCCESS) {
+-			if (vm_srb->srb_status == SRB_STATUS_INVALID_LUN) {
+-				xpt_print(ccb->ccb_h.path, "invalid LUN %d\n",
+-				    vm_srb->lun);
+-			} else {
+-				xpt_print(ccb->ccb_h.path, "Unknown SRB flag: %d\n",
+-				    vm_srb->srb_status);
+-			}
+ 			/*
+ 			 * If there are errors, for example, invalid LUN,
+ 			 * host will inform VM through SRB status.
+ 			 */
+-			ccb->ccb_h.status |= CAM_SEL_TIMEOUT;
++			if (bootverbose) {
++				if (vm_srb->srb_status == SRB_STATUS_INVALID_LUN) {
++					xpt_print(ccb->ccb_h.path,
++					    "invalid LUN %d for op: %s\n",
++					    vm_srb->lun,
++					    scsi_op_desc(cmd->opcode, NULL));
++				} else {
++					xpt_print(ccb->ccb_h.path,
++					    "Unknown SRB flag: %d for op: %s\n",
++					    vm_srb->srb_status,
++					    scsi_op_desc(cmd->opcode, NULL));
++				}
++			}
++
++			/*
++			 * XXX For a selection timeout, all of the LUNs
++			 * on the target will be gone.  It works for SCSI
++			 * disks, but does not work for IDE disks.
++			 *
++			 * For CAM_DEV_NOT_THERE, CAM will only get
++			 * rid of the device(s) specified by the path.
++			 */
++			if (storvsc_get_storage_type(sc->hs_dev->device) ==
++			    DRIVER_STORVSC)
++				ccb->ccb_h.status |= CAM_SEL_TIMEOUT;
++			else
++				ccb->ccb_h.status |= CAM_DEV_NOT_THERE;
+ 		} else {
+ 			ccb->ccb_h.status |= CAM_REQ_CMP;
+ 		}
+ 
+-		cmd = (const struct scsi_generic *)
+-		    ((ccb->ccb_h.flags & CAM_CDB_POINTER) ?
+-		     csio->cdb_io.cdb_ptr : csio->cdb_io.cdb_bytes);
+ 		if (cmd->opcode == INQUIRY) {
+ 			struct scsi_inquiry_data *inq_data =
+ 			    (struct scsi_inquiry_data *)csio->data_ptr;
+@@ -2059,7 +2081,7 @@
+ 				    resp_buf[3], resp_buf[4]);
+ 			}
+ 			if (vm_srb->srb_status == SRB_STATUS_SUCCESS &&
+-			    data_len > SHORT_INQUIRY_LENGTH) {
++			    data_len >= SHORT_INQUIRY_LENGTH) {
+ 				char vendor[16];
+ 
+ 				cam_strvis(vendor, inq_data->vendor,
+@@ -2152,3 +2174,57 @@
+ 	return (DRIVER_UNKNOWN);
+ }
+ 
++#define	PCI_VENDOR_INTEL	0x8086
++#define	PCI_PRODUCT_PIIX4	0x7111
++
++static void
++storvsc_ada_probe_veto(void *arg __unused, struct cam_path *path,
++    struct ata_params *ident_buf __unused, int *veto)
++{
++
++	/*
++	 * The ATA disks are shared with the controllers managed
++	 * by this driver, so veto the ATA disks' attachment; the
++	 * ATA disks will be attached as SCSI disks once this driver
++	 * attached.
++	 */
++	if (path->device->protocol == PROTO_ATA) {
++		struct ccb_pathinq cpi;
++
++		bzero(&cpi, sizeof(cpi));
++		xpt_setup_ccb(&cpi.ccb_h, path, CAM_PRIORITY_NONE);
++		cpi.ccb_h.func_code = XPT_PATH_INQ;
++		xpt_action((union ccb *)&cpi);
++		if (cpi.ccb_h.status == CAM_REQ_CMP &&
++		    cpi.hba_vendor == PCI_VENDOR_INTEL &&
++		    cpi.hba_device == PCI_PRODUCT_PIIX4) {
++			(*veto)++;
++			if (bootverbose) {
++				xpt_print(path,
++				    "Disable ATA disks on "
++				    "simulated ATA controller (0x%04x%04x)\n",
++				    cpi.hba_device, cpi.hba_vendor);
++			}
++		}
++	}
++}
++
++static void
++storvsc_sysinit(void *arg __unused)
++{
++	if (vm_guest == VM_GUEST_HV) {
++		storvsc_handler_tag = EVENTHANDLER_REGISTER(ada_probe_veto,
++		    storvsc_ada_probe_veto, NULL, EVENTHANDLER_PRI_ANY);
++	}
++}
++SYSINIT(storvsc_sys_init, SI_SUB_DRIVERS, SI_ORDER_SECOND, storvsc_sysinit,
++    NULL);
++
++static void
++storvsc_sysuninit(void *arg __unused)
++{
++	if (storvsc_handler_tag != NULL)
++		EVENTHANDLER_DEREGISTER(ada_probe_veto, storvsc_handler_tag);
++}
++SYSUNINIT(storvsc_sys_uninit, SI_SUB_DRIVERS, SI_ORDER_SECOND,
++    storvsc_sysuninit, NULL);
+--- sys/modules/hyperv/Makefile.orig
++++ sys/modules/hyperv/Makefile
+@@ -1,5 +1,5 @@
+ # $FreeBSD$
+ 
+-SUBDIR = vmbus netvsc stordisengage storvsc utilities
++SUBDIR = vmbus netvsc storvsc utilities
+ 
+ .include <bsd.subdir.mk>
+--- sys/sys/eventhandler.h.orig
++++ sys/sys/eventhandler.h
+@@ -270,4 +270,11 @@
+ EVENTHANDLER_DECLARE(register_framebuffer, register_framebuffer_fn);
+ EVENTHANDLER_DECLARE(unregister_framebuffer, unregister_framebuffer_fn);
+ 
++/* Veto ada attachment */
++struct cam_path;
++struct ata_params;
++typedef void (*ada_probe_veto_fn)(void *, struct cam_path *,
++    struct ata_params *, int *);
++EVENTHANDLER_DECLARE(ada_probe_veto, ada_probe_veto_fn);
++
+ #endif /* _SYS_EVENTHANDLER_H_ */
+--- sys/x86/x86/io_apic.c.orig
++++ sys/x86/x86/io_apic.c
+@@ -412,6 +412,18 @@
+ 	u_int old_id;
+ 
+ 	/*
++	 * On Hyper-V:
++	 * - Stick to the first cpu for all I/O APIC pins.
++	 * - And don't allow destination cpu changes.
++	 */
++	if (vm_guest == VM_GUEST_HV) {
++		if (intpin->io_vector)
++			return (EINVAL);
++		else
++			apic_id = 0;
++	}
++
++	/*
+ 	 * keep 1st core as the destination for NMI
+ 	 */
+ 	if (intpin->io_irq == IRQ_NMI)

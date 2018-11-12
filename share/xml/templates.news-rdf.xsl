@@ -18,7 +18,7 @@
 
       <channel>
 	<title>FreeBSD Project News</title>
-	<link>http://www.FreeBSD.org/news/</link>
+	<link>https://www.FreeBSD.org/news/</link>
 	<description>News from the FreeBSD Project</description>
       </channel>
 
@@ -52,7 +52,7 @@
 	</xsl:otherwise>
       </xsl:choose>
       <link>
-	<xsl:text>http://www.FreeBSD.org/news/newsflash.html#</xsl:text>
+	<xsl:text>https://www.FreeBSD.org/news/newsflash.html#</xsl:text>
 	<xsl:call-template name="html-news-generate-anchor">
 	  <xsl:with-param name="label" select="'event'" />
 	  <xsl:with-param name="year" select="$year" />

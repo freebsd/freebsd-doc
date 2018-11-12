@@ -1,8 +1,6 @@
 # $FreeBSD$
 
-MAN1 =	addftinfo.1\
-	addr2line.1\
-	afmtodit.1\
+MAN1 =	addr2line.1\
 	apply.1\
 	apropos.1\
 	ar.1\
@@ -11,7 +9,6 @@ MAN1 =	addftinfo.1\
 	at.1\
 	basename.1\
 	bc.1\
-	bdes.1\
 	biff.1\
 	brandelf.1\
 	bsdtar.1\
@@ -25,22 +22,16 @@ MAN1 =	addftinfo.1\
 	calendar.1\
 	cap_mkdb.1\
 	cat.1\
-	catman.1\
-	cdcontrol.1\
-	checknr.1\
 	chflags.1\
 	chgrp.1\
 	chio.1\
 	chkey.1\
 	chmod.1\
 	chpass.1\
-	ci.1\
 	ckdist.1\
 	cksum.1\
 	cmp.1\
-	co.1\
 	col.1\
-	colcrt.1\
 	colldef.1\
 	colrm.1\
 	column.1\
@@ -57,9 +48,7 @@ MAN1 =	addftinfo.1\
 	ctags.1\
 	ctm.1\
 	ctm_rmail.1\
-	cursor.1\
 	cut.1\
-	cvs.1\
 	date.1\
 	dc.1\
 	dd.1\
@@ -67,9 +56,7 @@ MAN1 =	addftinfo.1\
 	dialog.1\
 	diff.1\
 	diff3.1\
-	dig.1\
 	domainname.1\
-	dtmfdecode.1\
 	du.1\
 	echo.1\
 	ed.1\
@@ -77,14 +64,9 @@ MAN1 =	addftinfo.1\
 	elfdump.1\
 	enigma.1\
 	env.1\
-	eqn.1\
 	expand.1\
 	expr.1\
-	f77.1\
 	false.1\
-	fdformat.1\
-	fdread.1\
-	fdwrite.1\
 	fetch.1\
 	file.1\
 	file2c.1\
@@ -92,63 +74,42 @@ MAN1 =	addftinfo.1\
 	finger.1\
 	fmt.1\
 	fold.1\
-	fontedit.1\
 	from.1\
 	fstat.1\
 	fsync.1\
 	ftp.1\
-	g711conv.1\
 	gcc.1\
 	gcore.1\
 	gcov.1\
 	gdb.1\
 	gencat.1\
 	gensnmptree.1\
-	getNAME.1\
 	getconf.1\
 	getfacl.1\
 	getopt.1\
 	gperf.1\
 	gprof.1\
 	grep.1\
-	grn.1\
-	grodvi.1\
-	groff.1\
-	grog.1\
-	grolbp.1\
-	grolj4.1\
-	grops.1\
-	grotty.1\
 	groups.1\
-	gtar.1\
 	gzexe.1\
 	gzip.1\
 	head.1\
-	hesinfo.1\
 	hexdump.1\
 	host.1\
 	hostname.1\
-	hpftodit.1\
 	id.1\
 	ident.1\
 	indent.1\
-	indxbib.1\
-	info.1\
-	install-info.1\
 	install.1\
 	intro.1\
 	ipcrm.1\
 	ipcs.1\
 	ipftest.1\
-	ipnat.1\
 	ipresend.1\
-	ipsend.1\
-	iptest.1\
 	join.1\
 	jot.1\
 	kbdcontrol.1\
 	kbdmap.1\
-	kcon.1\
 	kdestroy.1\
 	kdump.1\
 	kenv.1\
@@ -171,10 +132,7 @@ MAN1 =	addftinfo.1\
 	lesskey.1\
 	lex.1\
 	limits.1\
-	lint.1\
-	lkbib.1\
 	ln.1\
-	loadfont.1\
 	locale.1\
 	locate.1\
 	lock.1\
@@ -184,7 +142,6 @@ MAN1 =	addftinfo.1\
 	logins.1\
 	logname.1\
 	look.1\
-	lookbib.1\
 	lorder.1\
 	lp.1\
 	lpq.1\
@@ -197,12 +154,9 @@ MAN1 =	addftinfo.1\
 	mail.1\
 	mailq.1\
 	make.1\
-	makeinfo.1\
-	makewhatis.1\
 	man.1\
 	manpath.1\
 	md5.1\
-	merge.1\
 	mesg.1\
 	minigzip.1\
 	mkdep.1\
@@ -211,17 +165,12 @@ MAN1 =	addftinfo.1\
 	mklocale.1\
 	mkstr.1\
 	mktemp.1\
-	mmroff.1\
 	mptable.1\
 	msgs.1\
 	mt.1\
 	mv.1\
 	nawk.1\
 	ncal.1\
-	ncplist.1\
-	ncplogin.1\
-	ncplogout.1\
-	neqn.1\
 	netstat.1\
 	newaliases.1\
 	newgrp.1\
@@ -230,11 +179,7 @@ MAN1 =	addftinfo.1\
 	nl.1\
 	nm.1\
 	nohup.1\
-	nroff.1\
-	nslookup.1\
-	objcopy.1\
 	objdump.1\
-	objformat.1\
 	od.1\
 	opieinfo.1\
 	opiekey.1\
@@ -246,42 +191,22 @@ MAN1 =	addftinfo.1\
 	pathchk.1\
 	pawd.1\
 	pax.1\
-	pfbtops.1\
-	pic.1\
-	pkg_add.1\
-	pkg_create.1\
-	pkg_delete.1\
-	pkg_info.1\
-	pkg_sign.1\
-	pkg_version.1\
 	pkill.1\
 	pr.1\
 	printenv.1\
 	printf.1\
 	ps.1\
-	psroff.1\
 	pwd.1\
 	quota.1\
 	ranlib.1\
-	rcp.1\
-	rcs.1\
-	rcsclean.1\
-	rcsdiff.1\
-	rcsfreeze.1\
-	rcsintro.1\
-	rcsmerge.1\
 	readelf.1\
 	realpath.1\
-	refer.1\
 	rev.1\
 	rfcomm_sppd.1\
-	rlog.1\
-	rlogin.1\
 	rm.1\
 	rmdir.1\
 	rpcgen.1\
 	rs.1\
-	rsh.1\
 	rtld.1\
 	rtprio.1\
 	rup.1\
@@ -289,12 +214,10 @@ MAN1 =	addftinfo.1\
 	rusers.1\
 	rwall.1\
 	rwho.1\
-	scon.1\
 	scp.1\
 	script.1\
 	sdiff.1\
 	sed.1\
-	send-pr.1\
 	setfacl.1\
 	sftp.1\
 	sh.1\
@@ -312,7 +235,6 @@ MAN1 =	addftinfo.1\
 	ssh-keygen.1\
 	ssh-keyscan.1\
 	ssh.1\
-	startslip.1\
 	stat.1\
 	strings.1\
 	strip.1\
@@ -322,16 +244,12 @@ MAN1 =	addftinfo.1\
 	tabs.1\
 	tail.1\
 	talk.1\
-	tbl.1\
 	tcopy.1\
 	tcpdump.1\
-	tcpslice.1\
 	tcsh.1\
 	tee.1\
 	telnet.1\
 	test.1\
-	texindex.1\
-	tfmtodit.1\
 	tftp.1\
 	time.1\
 	tip.1\
@@ -339,7 +257,6 @@ MAN1 =	addftinfo.1\
 	touch.1\
 	tput.1\
 	tr.1\
-	troff.1\
 	true.1\
 	truncate.1\
 	truss.1\
@@ -359,12 +276,9 @@ MAN1 =	addftinfo.1\
 	uuencode.1\
 	uuidgen.1\
 	vacation.1\
-	vgrind.1\
 	vi.1\
 	vidcontrol.1\
 	vis.1\
-	vt220keys.1\
-	vttest.1\
 	w.1\
 	wall.1\
 	wc.1\
@@ -374,7 +288,6 @@ MAN1 =	addftinfo.1\
 	who.1\
 	whoami.1\
 	whois.1\
-	window.1\
 	write.1\
 	xargs.1\
 	xstr.1\
@@ -383,7 +296,6 @@ MAN1 =	addftinfo.1\
 	ypcat.1\
 	ypmatch.1\
 	ypwhich.1\
-	yyfix.1\
 	zdiff.1\
 	zforce.1\
 	zmore.1\
@@ -494,7 +406,6 @@ MLINKS+=opiekey.1 otp-md5.1
 MLINKS+=opiekey.1 otp-sha.1
 MLINKS+=tcsh.1 csh.1
 MLINKS+=ee.1 edit.1
-MLINKS+=pkg_sign.1 pkg_check.1
 MLINKS+=ssh.1 slogin.1
 MLINKS+=bzip2.1 bunzip2.1
 MLINKS+=bzip2.1 bzcat.1

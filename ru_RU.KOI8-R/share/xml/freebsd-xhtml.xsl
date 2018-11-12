@@ -9,7 +9,7 @@
 
   <xsl:template name="user.footer.navigation">
     <p align="center"><small>Этот, и другие документы, могут быть скачаны с
-    <a href="http://ftp.FreeBSD.org/pub/FreeBSD/doc/">http://ftp.FreeBSD.org/pub/FreeBSD/doc/</a>.</small></p>
+    <a href="https://download.freebsd.org/ftp/doc/">https://download.freebsd.org/ftp/doc/</a>.</small></p>
 
     <p align="center"><small>По вопросам, связанным с FreeBSD, прочитайте
     <a href="http://www.FreeBSD.org/ru/docs.html">документацию</a> прежде чем писать в

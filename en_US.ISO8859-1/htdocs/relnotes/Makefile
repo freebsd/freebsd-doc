@@ -13,8 +13,7 @@
 .include "../Makefile.inc"
 .endif
 
-RELNOTES?=	CURRENT ${DOC_PREFIX}/../relnotes/doc/${LANGCODE} \
-		10-STABLE ${DOC_PREFIX}/../relnotes10/doc/${LANGCODE} \
-		9-STABLE ${DOC_PREFIX}/../relnotes9/doc/${LANGCODE}
+RELNOTES?=	11-STABLE ${DOC_PREFIX}/../relnotes11/doc/${LANGCODE} \
+		10-STABLE ${DOC_PREFIX}/../relnotes10/doc/${LANGCODE}
 
 .include "Makefile.inc"

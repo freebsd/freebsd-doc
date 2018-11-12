@@ -259,9 +259,9 @@ echo "	* Check /usr/ports/UPDATING for information pertinent to your build"
 echo "	  failure"
 echo "	* 99% of the commonly reported build failures can be solved by"
 echo "	  running \"portupgrade -a\""
-echo "	* Read the FAQs at http://www.FreeBSD.org/gnome/"
+echo "	* Read the FAQs at https://www.FreeBSD.org/gnome/"
 echo "	* Search the archives of freebsd-gnome@FreeBSD.org.  Archives can be"
-echo "	  searched at http://www.freebsd.org/gnome/index.html#search"
+echo "	  searched at https://www.freebsd.org/gnome/index.html#search"
 echo
 echo "If you have not performed each of the above suggestions, don't bother asking for help.  The chances are good that you'll simply be told to perform one of the aforementioned steps." | fmt 75 79
 

@@ -19,9 +19,13 @@ ${INDEX}: ${PINDEX_OVERRIDE}
 ${INDEX}: $${PORTSBASE}/${PINDEX}
 	${CP} ${PORTSBASE}/${PINDEX} ${INDEX}
 .else
-${INDEX}:
+
+${INDEX}: ${INDEX}.bz2
+${INDEX}.bz2: .EXEC
 	${FETCH} ${FETCH_OPT} -o ${INDEX}.bz2 ${INDEXURI}.bz2
-	${BUNZIP2} ${INDEX}.bz2
+	if [ ! -e ${INDEX} -o ${INDEX}.bz2 -nt ${INDEX} ]; then \
+	  ${BUNZIP2} -dc ${INDEX}.bz2 > ${INDEX}.tmp && ${MV} -f ${INDEX}.tmp ${INDEX}; \
+	fi
 .endif
 
 HOSTNAME!= hostname
@@ -58,6 +62,9 @@ Makefile.gen: categories-alpha.xml categories-grouped.xml index.xml \
 	done
 	${ECHO_CMD} >> Makefile.gen
 
+# set dependencies for parallel build
+categories-grouped.xml master-index.xml statistics.ent: categories-alpha.xml
+
 # this builds: categories-alpha.xml, categories-grouped.xml,
 # master-index.xml, statistics.ent, <category>.xml
 CATEGORYLIST=`grep "^[a-z]" categories | sed -e s"/,.*//"`
@@ -70,7 +77,7 @@ categories-alpha.xml: ${INDEX} categories categories.descriptions \
 	done
 	${PORTINDEX} ${INDEX} ${.CURDIR}
 
-install: all beforeinstall
+install: Makefile.gen index.html references.html beforeinstall
 
 all install clean:
 	cd ${.CURDIR}; \
@@ -81,8 +88,8 @@ all install clean:
 beforeinstall:
 .else
 beforeinstall:
-	${SED} -i "" -e 's,href="growth,href="http://www.FreeBSD.org/ports/growth,' index.html
-	${SED} -i "" -e 's,href="growth,href="http://www.FreeBSD.org/ports/growth,' references.html
+	${SED} -i "" -e 's,href="growth,href="https://www.FreeBSD.org/ports/growth,' index.html
+	${SED} -i "" -e 's,href="growth,href="https://www.FreeBSD.org/ports/growth,' references.html
 .endif
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

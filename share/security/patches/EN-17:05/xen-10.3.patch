@@ -1,0 +1,214 @@
+--- sys/dev/xen/blkfront/blkfront.c.orig
++++ sys/dev/xen/blkfront/blkfront.c
+@@ -1503,6 +1503,11 @@
+ {
+ 	struct xbd_softc *sc = device_get_softc(dev);
+ 
++	if (xen_suspend_cancelled) {
++		sc->xbd_state = XBD_STATE_CONNECTED;
++		return (0);
++	}
++
+ 	DPRINTK("xbd_resume: %s\n", xenbus_get_node(dev));
+ 
+ 	xbd_free(sc);
+--- sys/dev/xen/control/control.c.orig
++++ sys/dev/xen/control/control.c
+@@ -151,6 +151,7 @@
+ #include <machine/xen/xenvar.h>
+ #include <machine/xen/xenfunc.h>
+ 
++bool xen_suspend_cancelled;
+ /*--------------------------- Forward Declarations --------------------------*/
+ /** Function signature for shutdown event handlers. */
+ typedef	void (xctrl_shutdown_handler_t)(void);
+@@ -341,8 +342,11 @@
+ #ifdef SMP
+ 	cpuset_t cpu_suspend_map;
+ #endif
+-	int suspend_cancelled;
+ 
++	EVENTHANDLER_INVOKE(power_suspend_early);
++	xs_lock();
++	stop_all_proc();
++	xs_unlock();
+ 	EVENTHANDLER_INVOKE(power_suspend);
+ 
+ 	if (smp_started) {
+@@ -392,16 +396,20 @@
+ 	intr_suspend();
+ 	xen_hvm_suspend();
+ 
+-	suspend_cancelled = HYPERVISOR_suspend(0);
++	xen_suspend_cancelled = !!HYPERVISOR_suspend(0);
+ 
+-	xen_hvm_resume(suspend_cancelled != 0);
+-	intr_resume(suspend_cancelled != 0);
++	if (!xen_suspend_cancelled) {
++		xen_hvm_resume(false);
++	}
++	intr_resume(xen_suspend_cancelled != 0);
+ 	enable_intr();
+ 
+ 	/*
+ 	 * Reset grant table info.
+ 	 */
+-	gnttab_resume();
++	if (!xen_suspend_cancelled) {
++		gnttab_resume();
++	}
+ 
+ #ifdef SMP
+ 	/* Send an IPI_BITMAP in case there are pending bitmap IPIs. */
+@@ -429,6 +437,8 @@
+ 		thread_unlock(curthread);
+ 	}
+ 
++	resume_all_proc();
++
+ 	EVENTHANDLER_INVOKE(power_resume);
+ 
+ 	if (bootverbose)
+--- sys/dev/xen/netfront/netfront.c.orig
++++ sys/dev/xen/netfront/netfront.c
+@@ -509,6 +509,15 @@
+ {
+ 	struct netfront_info *info = device_get_softc(dev);
+ 
++	if (xen_suspend_cancelled) {
++		XN_RX_LOCK(info);
++		XN_TX_LOCK(info);
++		netfront_carrier_on(info);
++		XN_TX_UNLOCK(info);
++		XN_RX_UNLOCK(info);
++		return (0);
++	}
++
+ 	info->xn_resume = true;
+ 	netif_disconnect_backend(info);
+ 	return (0);
+@@ -796,6 +805,45 @@
+ }
+ 
+ static void
++netif_release_rx_bufs_copy(struct netfront_info *np)
++{
++	struct mbuf *m;
++	grant_ref_t ref;
++	unsigned int i, busy, inuse;
++
++	XN_RX_LOCK(np);
++
++	for (busy = inuse = i = 0; i < NET_RX_RING_SIZE; i++) {
++		ref = np->grant_rx_ref[i];
++
++		if (ref == GRANT_REF_INVALID)
++			continue;
++
++		inuse++;
++
++		m = np->rx_mbufs[i];
++
++		if (!gnttab_end_foreign_access_ref(ref)) {
++			busy++;
++			continue;
++		}
++
++		gnttab_release_grant_reference(&np->gref_rx_head, ref);
++		np->grant_rx_ref[i] = GRANT_REF_INVALID;
++		add_id_to_freelist(np->rx_mbufs, i);
++
++		m_freem(m);
++	}
++
++	if (busy != 0)
++		device_printf(np->xbdev,
++		    "Unable to release %u of %u in use grant references out of %zu total.\n",
++		    busy, inuse, NET_RX_RING_SIZE);
++
++	XN_RX_UNLOCK(np);
++}
++
++static void
+ network_alloc_rx_buffers(struct netfront_info *sc)
+ {
+ 	int otherend_id = xenbus_get_otherend_id(sc->xbdev);
+@@ -2190,6 +2238,12 @@
+ 		info->xn_ifp = NULL;
+ 	}
+ 	ifmedia_removeall(&info->sc_media);
++	netif_release_tx_bufs(info);
++	if (info->copying_receiver)
++		netif_release_rx_bufs_copy(info);
++
++	gnttab_free_grant_references(info->gref_tx_head);
++	gnttab_free_grant_references(info->gref_rx_head);
+ }
+ 
+ static void
+--- sys/xen/xen-os.h.orig
++++ sys/xen/xen-os.h
+@@ -57,6 +57,8 @@
+ extern int xen_disable_pv_nics;
+ #endif
+ 
++extern bool xen_suspend_cancelled;
++
+ enum xen_domain_type {
+ 	XEN_NATIVE,             /* running on bare hardware    */
+ 	XEN_PV_DOMAIN,          /* running in a PV domain      */
+--- sys/xen/xenbus/xenbusb.c.orig
++++ sys/xen/xenbus/xenbusb.c
+@@ -791,6 +791,11 @@
+ 			if (device_get_state(kids[i]) == DS_NOTPRESENT)
+ 				continue;
+ 
++			if (xen_suspend_cancelled) {
++				DEVICE_RESUME(kids[i]);
++				continue;
++			}
++
+ 			ivars = device_get_ivars(kids[i]);
+ 
+ 			xs_unregister_watch(&ivars->xd_otherend_watch);
+--- sys/xen/xenstore/xenstore.c.orig
++++ sys/xen/xenstore/xenstore.c
+@@ -1657,3 +1657,20 @@
+ 		sx_xunlock(&xs.xenwatch_mutex);
+ 	}
+ }
++
++void
++xs_lock(void)
++{
++
++	sx_xlock(&xs.request_mutex);
++	return;
++}
++
++void
++xs_unlock(void)
++{
++
++	sx_xunlock(&xs.request_mutex);
++	return;
++}
++
+--- sys/xen/xenstore/xenstorevar.h.orig
++++ sys/xen/xenstore/xenstorevar.h
+@@ -338,4 +338,15 @@
+  */
+ struct sbuf *xs_join(const char *, const char *);
+ 
++/**
++ * Lock the xenstore request mutex.
++ */
++void xs_lock(void);
++
++/**
++ * Unlock the xenstore request mutex.
++ */
++void xs_unlock(void);
++
+ #endif /* _XEN_XENSTORE_XENSTOREVAR_H */
++

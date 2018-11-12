@@ -40,7 +40,7 @@ $shortid = 1;
 $lookCommand = "/usr/bin/look";
 $ENV{PATH} = '/bin:/usr/bin';
 
-$main::t_style .= qq{\n<link rel="search" type="application/opensearchdescription+xml" href="http://www.freebsd.org/search/opensearch/message-id.xml" title="FreeBSD Mail Message-ID" />\n};
+$main::t_style .= qq{\n<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/search/opensearch/message-id.xml" title="FreeBSD Mail Message-ID" />\n};
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 

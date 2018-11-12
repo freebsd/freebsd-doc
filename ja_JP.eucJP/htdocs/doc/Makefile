@@ -1,6 +1,5 @@
 #
 # $FreeBSD$
-# Original revision: r40713
 #
 # Build the FreeBSD documentation *outside* of the doc/ tree, and install it
 # in to the right place as necessary.
@@ -13,30 +12,33 @@
 .include "../Makefile.inc"
 .endif
 
-all: all-all all-install
+_DOC_FORMATS?=	html-split html
+
+all: all-all 
+
 
 all-all:
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/${LANGCODE}; \
-		${MAKE} FORMATS="html-split html" \
-			INSTALL_COMPRESSED= NO_JPMAN= all
-all-install:
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/${LANGCODE}; \
-		${MAKE} FORMATS="html-split html" DOCDIR=${.OBJDIR} \
-			INSTALL_COMPRESSED= NO_JPMAN= install
+	${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" all
 
-install clean:
-	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/${LANGCODE}; \
-		${MAKE} FORMATS="html-split html" DOCDIR=${DESTDIR}/data/doc \
-			INSTALL_COMPRESSED= NO_JPMAN= ${.TARGET}
-.if make(clean)
-	${RM} -rf ja*
-.endif
+all-pgpkeyring:
+	${MAKE} -C ${DOC_PREFIX}/share/pgpkeys pgpkeyring.txt
+
+clean:
+	${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" DOCDIR=${DESTDIR}/data/doc clean
+
+# here are dragons
+install:
+	unset DESTDIR || true; \
+	  ${MAKE} -C ${DOC_PREFIX}/${LANGCODE} FORMATS="${_DOC_FORMATS}" DOCDIR=${DESTDIR}/data/doc install
+	${CP} ${DOC_PREFIX}/share/pgpkeys/pgpkeyring.txt ${DESTDIR}/data/doc/pgpkeyring.txt
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
+.if ${LANGCODE} == en_US.ISO8859-1
+all: all-pgpkeyring
+.endif
 
+
+# XXX
 obj: _OBJUSE
 
 _OBJUSE: .USE

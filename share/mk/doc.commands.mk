@@ -15,6 +15,7 @@ FIND?=		/usr/bin/find
 GREP?=		/usr/bin/grep
 LN?=		/bin/ln
 MKDIR?=		/bin/mkdir
+MKTEMP?=	/usr/bin/mktemp
 MV?=		/bin/mv
 RM?=		/bin/rm
 ISPELL?=	ispell
@@ -42,6 +43,7 @@ XARGS?=		/usr/bin/xargs
 # Version control
 #
 GIT?=		/usr/local/bin/git
+SVN?=		/usr/local/bin/svn
 
 #
 # Compession and decompression
@@ -81,6 +83,7 @@ ITSTOOL?=	${PREFIX}/bin/itstool
 
 JING?=		${PREFIX}/bin/jing
 
+MSGATTRIB?=	${PREFIX}/bin/msgattrib
 MSGFMT?=	${PREFIX}/bin/msgfmt
 MSGMERGE?=	${PREFIX}/bin/msgmerge
 

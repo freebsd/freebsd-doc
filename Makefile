@@ -26,7 +26,6 @@ SUBDIR+=	nl_NL.ISO8859-1
 SUBDIR+=	pl_PL.ISO8859-2
 SUBDIR+=	pt_BR.ISO8859-1
 SUBDIR+=	ru_RU.KOI8-R
-SUBDIR+=	sr_YU.ISO8859-2
 SUBDIR+=	tr_TR.ISO8859-9
 SUBDIR+=	zh_CN.UTF-8
 SUBDIR+=	zh_TW.UTF-8
@@ -38,6 +37,8 @@ DOC_PREFIX?=   ${.CURDIR}
 
 .if exists(/usr/bin/svnlite)
 SVN?=		/usr/bin/svnlite
+.elif exists(/usr/bin/svn)
+SVN?=		/usr/bin/svn
 .else
 SVN?=		/usr/local/bin/svn
 .endif

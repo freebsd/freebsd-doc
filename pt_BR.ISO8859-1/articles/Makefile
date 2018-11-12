@@ -1,23 +1,43 @@
 #
-# Build the FreeBSD FAQ
-#
 # The FreeBSD Documentation Project
 # The FreeBSD Brazilian Portuguese Documentation Project
-#
-# Original revision: r38826
 #
 # $FreeBSD$
 
 SUBDIR =
+SUBDIR+= bsdl-gpl
 SUBDIR+= building-products
 SUBDIR+= contributing
+SUBDIR+= contributors
+SUBDIR+= cups
 SUBDIR+= explaining-bsd
+SUBDIR+= filtering-bridges
+SUBDIR+= fonts
 SUBDIR+= freebsd-questions
 SUBDIR+= freebsd-update-server
+SUBDIR+= geom-class
+SUBDIR+= gjournal-desktop
 SUBDIR+= hubs
+SUBDIR+= ipsec-must
+SUBDIR+= ldap-auth
+SUBDIR+= leap-seconds
+SUBDIR+= linux-emulation
 SUBDIR+= linux-users
+SUBDIR+= mailing-list-faq
+SUBDIR+= nanobsd
 SUBDIR+= new-users
+SUBDIR+= pam
+SUBDIR+= pgpkeys
+SUBDIR+= port-mentor-guidelines
+SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
+SUBDIR+= rc-scripting
+SUBDIR+= releng
+SUBDIR+= remote-install
+SUBDIR+= serial-uart
+SUBDIR+= solid-state
+SUBDIR+= vinum
+SUBDIR+= vm-design
 
 DOC_PREFIX?= ${.CURDIR}/../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

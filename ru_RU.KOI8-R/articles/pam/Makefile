@@ -17,9 +17,12 @@ INSTALL_ONLY_COMPRESSED?=
 WITH_ARTICLE_TOC?=YES
 WITH_INLINE_LEGALNOTICE?=YES
 
-SRCS= article.xml pam_app.c pam_conv.c pam_module.c
+SRCS= article.xml
 
-CLEANFILES+= pam_app.c pam_conv.c pam_module.c
+EXTRAS=pam_app.c pam_conv.c pam_module.c
+CLEANFILES+= ${EXTRAS}
+
+index.html article.html: ${EXTRAS}
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 

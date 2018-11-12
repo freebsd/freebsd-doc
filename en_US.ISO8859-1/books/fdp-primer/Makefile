@@ -32,6 +32,7 @@ SRCS+= docbook-markup/chapter.xml
 SRCS+= stylesheets/chapter.xml
 SRCS+= translations/chapter.xml
 SRCS+= po-translations/chapter.xml
+SRCS+= manpages/chapter.xml
 SRCS+= writing-style/chapter.xml
 SRCS+= editor-config/chapter.xml
 SRCS+= see-also/chapter.xml
@@ -44,6 +45,10 @@ IMAGES_LIB+=	callouts/2.png
 IMAGES_LIB+=	callouts/3.png
 IMAGES_LIB+=	callouts/4.png
 IMAGES_LIB+=	callouts/5.png
+IMAGES_LIB+=	callouts/6.png
+IMAGES_LIB+=	callouts/7.png
+IMAGES_LIB+=	callouts/8.png
+IMAGES_LIB+=	callouts/9.png
 
 # Entities
 SRCS+= chapters.ent

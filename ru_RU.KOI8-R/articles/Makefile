@@ -25,7 +25,6 @@ SUBDIR+= new-users
 SUBDIR+= pam
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
-SUBDIR+= relaydelay
 SUBDIR+= releng
 #SUBDIR+= serial-uart
 SUBDIR+= solid-state

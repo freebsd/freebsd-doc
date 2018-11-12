@@ -51,10 +51,10 @@
 
   <xsl:template name="user.footer.navigation">
     <p align="center"><small>All FreeBSD documents are available for download
-    at <a href="http://ftp.FreeBSD.org/pub/FreeBSD/doc/">http://ftp.FreeBSD.org/pub/FreeBSD/doc/</a></small></p>
+    at <a href="https://download.freebsd.org/ftp/doc/">https://download.freebsd.org/ftp/doc/</a></small></p>
 
     <p align="center"><small>Questions that are not answered by the
-    <a href="http://www.FreeBSD.org/docs.html">documentation</a> may be
+    <a href="https://www.FreeBSD.org/docs.html">documentation</a> may be
     sent to &lt;<a href="mailto:freebsd-questions@FreeBSD.org">freebsd-questions@FreeBSD.org</a>&gt;.<br/>
     Send questions about this document to &lt;<a href="mailto:freebsd-doc@FreeBSD.org">freebsd-doc@FreeBSD.org</a>&gt;.</small></p>
   </xsl:template>
@@ -91,7 +91,7 @@
   </xsl:template>
 
   <xsl:template match="db:package">
-    <xsl:variable name="url" select="concat('http://www.freebsd.org/cgi/url.cgi?ports/', ., '/pkg-descr')"/>
+    <xsl:variable name="url" select="concat('https://www.freebsd.org/cgi/url.cgi?ports/', ., '/pkg-descr')"/>
 
     <a class="package" href="{$url}">
       <xsl:apply-templates/>
@@ -213,7 +213,7 @@
   </xsl:template>
 
   <xsl:template name="generate.citerefentry.link">
-    <xsl:text>http://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
+    <xsl:text>https://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
     <xsl:value-of select="db:refentrytitle"/>
     <xsl:text>&amp;sektion=</xsl:text>
     <xsl:value-of select="db:manvolnum"/>

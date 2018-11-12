@@ -42,7 +42,7 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=&xml.encoding;" />
 	<xsl:copy-of select="/xhtml:html/xhtml:head/xhtml:meta"/>
 	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon" />
-	<link rel="stylesheet" media="screen" href="&stylesheet;" type="text/css"/>
+	<link rel="stylesheet" media="screen,print" href="&stylesheet;" type="text/css"/>
 	<xsl:copy-of select="/xhtml:html/xhtml:head/xhtml:link"/>
 	<xsl:call-template name="process.rss.link"/>
 	&header1.googlejs;

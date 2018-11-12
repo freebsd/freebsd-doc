@@ -1,0 +1,94 @@
+--- crypto/openssl/ssl/d1_pkt.c.orig
++++ crypto/openssl/ssl/d1_pkt.c
+@@ -820,6 +820,13 @@
+         goto start;
+     }
+ 
++    /*
++     * Reset the count of consecutive warning alerts if we've got a non-empty
++     * record that isn't an alert.
++     */
++    if (rr->type != SSL3_RT_ALERT && rr->length != 0)
++        s->s3->alert_count = 0;
++
+     /* we now have a packet which can be read and processed */
+ 
+     if (s->s3->change_cipher_spec /* set when we receive ChangeCipherSpec,
+@@ -1043,6 +1050,14 @@
+ 
+         if (alert_level == 1) { /* warning */
+             s->s3->warn_alert = alert_descr;
++
++            s->s3->alert_count++;
++            if (s->s3->alert_count == MAX_WARN_ALERT_COUNT) {
++                al = SSL_AD_UNEXPECTED_MESSAGE;
++                SSLerr(SSL_F_DTLS1_READ_BYTES, SSL_R_TOO_MANY_WARN_ALERTS);
++                goto f_err;
++            }
++
+             if (alert_descr == SSL_AD_CLOSE_NOTIFY) {
+                 s->shutdown |= SSL_RECEIVED_SHUTDOWN;
+                 return (0);
+--- crypto/openssl/ssl/s3_pkt.c.orig
++++ crypto/openssl/ssl/s3_pkt.c
+@@ -922,6 +922,13 @@
+             return (ret);
+     }
+ 
++    /*
++     * Reset the count of consecutive warning alerts if we've got a non-empty
++     * record that isn't an alert.
++     */
++    if (rr->type != SSL3_RT_ALERT && rr->length != 0)
++        s->s3->alert_count = 0;
++
+     /* we now have a packet which can be read and processed */
+ 
+     if (s->s3->change_cipher_spec /* set when we receive ChangeCipherSpec,
+@@ -1121,6 +1128,14 @@
+ 
+         if (alert_level == 1) { /* warning */
+             s->s3->warn_alert = alert_descr;
++
++            s->s3->alert_count++;
++            if (s->s3->alert_count == MAX_WARN_ALERT_COUNT) {
++                al = SSL_AD_UNEXPECTED_MESSAGE;
++                SSLerr(SSL_F_SSL3_READ_BYTES, SSL_R_TOO_MANY_WARN_ALERTS);
++                goto f_err;
++            }
++
+             if (alert_descr == SSL_AD_CLOSE_NOTIFY) {
+                 s->shutdown |= SSL_RECEIVED_SHUTDOWN;
+                 return (0);
+--- crypto/openssl/ssl/ssl.h.orig
++++ crypto/openssl/ssl/ssl.h
+@@ -2195,6 +2195,7 @@
+ # define SSL_R_TLSV1_UNSUPPORTED_EXTENSION                1110
+ # define SSL_R_TLS_CLIENT_CERT_REQ_WITH_ANON_CIPHER       232
+ # define SSL_R_TLS_INVALID_ECPOINTFORMAT_LIST             227
++# define SSL_R_TOO_MANY_WARN_ALERTS                       409
+ # define SSL_R_TLS_PEER_DID_NOT_RESPOND_WITH_CERTIFICATE_LIST 233
+ # define SSL_R_TLS_RSA_ENCRYPTED_VALUE_LENGTH_IS_WRONG    234
+ # define SSL_R_TRIED_TO_USE_UNSUPPORTED_CIPHER            235
+--- crypto/openssl/ssl/ssl3.h.orig
++++ crypto/openssl/ssl/ssl3.h
+@@ -491,6 +491,8 @@
+     char is_probably_safari;
+ #  endif                        /* !OPENSSL_NO_EC */
+ # endif                         /* !OPENSSL_NO_TLSEXT */
++    /* Count of the number of consecutive warning alerts received */
++    unsigned int alert_count;
+ } SSL3_STATE;
+ 
+ /* SSLv3 */
+--- crypto/openssl/ssl/ssl_locl.h.orig
++++ crypto/openssl/ssl/ssl_locl.h
+@@ -247,6 +247,8 @@
+ # define DEC32(a)        ((a)=((a)-1)&0xffffffffL)
+ # define MAX_MAC_SIZE    20     /* up from 16 for SSLv3 */
+ 
++# define MAX_WARN_ALERT_COUNT    5
++
+ /*
+  * Define the Bitmasks for SSL_CIPHER.algorithms.
+  * This bits are used packed as dense as possible. If new methods/ciphers

@@ -2,7 +2,7 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd" [
 <!ENTITY title "FreeBSD News Flash">
-<!ENTITY link "http://www.FreeBSD.org/news/">
+<!ENTITY link "https://www.FreeBSD.org/news/">
 <!ENTITY email "freebsd-www">
 <!ENTITY realname "Webmaster Team">
 ]>
@@ -31,7 +31,7 @@
 	<docs>http://blogs.law.harvard.edu/tech/rss</docs>
 	<ttl>120</ttl>
 	<image>
-	  <url>http://www.FreeBSD.org/logo/logo-full.png</url>
+	  <url>https://www.FreeBSD.org/logo/logo-full.png</url>
 	  <title>&title;</title>
 	  <link>&link;</link>
 	</image>
@@ -58,7 +58,7 @@
     </xsl:param>
 
     <xsl:variable name="link">
-	<xsl:text>http://www.FreeBSD.org/news/newsflash.html#</xsl:text>
+	<xsl:text>https://www.FreeBSD.org/news/newsflash.html#</xsl:text>
 	<xsl:call-template name="html-news-generate-anchor">
 	  <xsl:with-param name="label" select="'event'" />
 	  <xsl:with-param name="year" select="$year" />

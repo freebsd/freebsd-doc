@@ -52,4 +52,7 @@ SRCS+= chapters.ent
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..
 
+# Fixme!
+DOCBOOK_DEPS_DISABLE=YES
+
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

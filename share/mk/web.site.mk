@@ -52,7 +52,7 @@ WEBCHECKOPTS?=	-ab ${WEBCHECKFLAGS}
 WEBCHECKDIR?=	/webcheck
 WEBCHECKINSTALLDIR?= ${DESTDIR}${WEBCHECKDIR} 
 .if !defined(WEBCHECKURL)
-WEBCHECKURL!=	${ECHO_CMD} http://www.FreeBSD.org/${WEBBASE:S/data//}/${WEBDIR:S/data//}/ | ${SED} -E "s%/+%/%g"
+WEBCHECKURL!=	${ECHO_CMD} https://www.FreeBSD.org/${WEBBASE:S/data//}/${WEBDIR:S/data//}/ | ${SED} -E "s%/+%/%g"
 .endif
 
 #
@@ -83,7 +83,7 @@ PORTSBASE?=	/usr
 #
 # URL where INDEX can be found (define NOPORTSNET to disable)
 #
-INDEXURI?=	http://www.FreeBSD.org/ports/INDEX-10
+INDEXURI?=	https://www.FreeBSD.org/ports/INDEX-11
 
 #
 # Instruct bsd.subdir.mk to NOT to process SUBDIR directive.  It is not
@@ -117,10 +117,10 @@ LOCALTOP!=	${ECHO_CMD} ${CANONPREFIX} | \
 DIR_IN_LOCAL!=	${ECHO_CMD} ${CANONPREFIX} | ${PERL} -pe 's@^[^/]+/?@@;'
 PREHTMLOPTS?=	-revcheck "${LOCALTOP}" "${DIR_IN_LOCAL}" ${PREHTMLFLAGS}
 .else
-# Force override base to point to http://www.FreeBSD.org/.  Note: This
-# is used for http://security.FreeBSD.org/ .
+# Force override base to point to https://www.FreeBSD.org/.  Note: This
+# is used for https://security.FreeBSD.org/ .
 .if WITH_WWW_FREEBSD_ORG_BASE
-PREHTML?=	${SED} -e 's/<!ENTITY base CDATA ".*">/<!ENTITY base CDATA "http:\/\/www.FreeBSD.org">/'
+PREHTML?=	${SED} -e 's/<!ENTITY base CDATA ".*">/<!ENTITY base CDATA "https:\/\/www.FreeBSD.org">/'
 .endif
 .endif
 
@@ -156,7 +156,7 @@ spellcheck:
 #
 # Check installed page's hypertext references.  Checking is done relatively
 # to ${.CURDIR} value, i.e. calling 'make webcheck' in www/ru/java
-# directory will force checking all URLs at http://www.FreeBSD.org/ru/java/
+# directory will force checking all URLs at https://www.FreeBSD.org/ru/java/
 #
 # NOTE: webcheck's output always stored to ${DESTDIR}/webcheck directory.
 #
@@ -300,6 +300,7 @@ _installlinks:
 		t=$$1; \
 		shift; \
 		${ECHO_CMD} $$t -\> $$l; \
+		${RM} -f $$t; \
 		${LN} -fs $$l $$t; \
 	done )
 .endif
@@ -324,6 +325,9 @@ _PROGSUBDIR: .USE
 			DIRPRFX=${DIRPRFX}${entry}/
 .endfor
 .endif
+
+# 'make obj' doesn't really work for the docs, disable it
+NO_OBJ?= YES
 
 .include <bsd.obj.mk>
 

@@ -3,8 +3,10 @@
 # The FreeBSD Documentation Project
 # The FreeBSD Brazilian Portuguese Documentation Project
 #
-# Original revision: r38826
+# Article: Contributing
 #
+
+MAINTAINER=ebrandi@FreeBSD.org
 
 DOC?= article
 

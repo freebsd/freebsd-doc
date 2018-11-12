@@ -19,7 +19,7 @@
 
       <channel>
         <title>FreeBSD GNOME Project News</title>
-	<link>http://www.FreeBSD.org/gnome</link>
+	<link>https://www.FreeBSD.org/gnome</link>
 	<description>FreeBSD GNOME News System</description>
       </channel>
 
@@ -35,7 +35,7 @@
 	  </xsl:otherwise>
 	</xsl:choose>
 	</title>
-	<link>http://www.FreeBSD.org/gnome/newsflash#<xsl:call-template name="generate-event-anchor"/></link>
+	<link>https://www.FreeBSD.org/gnome/newsflash#<xsl:call-template name="generate-event-anchor"/></link>
       </item>
       </xsl:for-each>
    </rdf:RDF>
