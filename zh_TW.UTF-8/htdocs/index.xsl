@@ -91,7 +91,7 @@
 				  <h2><a href="&base;/releases/">最新版本</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>Production:&nbsp;<a
-				href="&u.rel.announce;">&rel.current;</a>,
+				href="&u.rel.announce;">&rel.current;</a>
 				<?ignore
 					<a
 				href="&u.rel1.announce;">&rel1.current;</a>,
