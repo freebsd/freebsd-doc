@@ -106,7 +106,7 @@
 					<li>即將發佈: <a
 				href="&u.betarel2.schedule;">&betarel2.current;</a></li>
 			    </xsl:if>
-					<li><a href="&base;/security/security.html#sup">支援生命週期</a></li>
+					<li><a href="&enbase;/security/security.html#sup">支援生命週期</a></li>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
