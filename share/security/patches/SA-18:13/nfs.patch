@@ -1,0 +1,70 @@
+Index: sys/fs/nfs/nfs_commonsubs.c
+===================================================================
+--- sys/fs/nfs/nfs_commonsubs.c	(revision 341005)
++++ sys/fs/nfs/nfs_commonsubs.c	(working copy)
+@@ -360,10 +360,14 @@
+ 	if (offs == 0)
+ 		goto out;
+ 	/*
+-	 * A negative offs should be considered a serious problem.
++	 * A negative offs might indicate a corrupted mbuf chain and,
++	 * as such, a printf is logged.
+ 	 */
+-	if (offs < 0)
+-		panic("nfsrv_advance");
++	if (offs < 0) {
++		printf("nfsrv_advance: negative offs\n");
++		error = EBADRPC;
++		goto out;
++	}
+ 
+ 	/*
+ 	 * If left == -1, calculate it here.
+Index: sys/fs/nfsserver/nfs_nfsdport.c
+===================================================================
+--- sys/fs/nfsserver/nfs_nfsdport.c	(revision 341005)
++++ sys/fs/nfsserver/nfs_nfsdport.c	(working copy)
+@@ -1858,9 +1858,15 @@
+ 	 * cookie) should be in the reply. At least one client "hints" 0,
+ 	 * so I set it to cnt for that case. I also round it up to the
+ 	 * next multiple of DIRBLKSIZ.
++	 * Since the size of a Readdirplus directory entry reply will always
++	 * be greater than a directory entry returned by VOP_READDIR(), it
++	 * does not make sense to read more than NFS_SRVMAXDATA() via
++	 * VOP_READDIR().
+ 	 */
+ 	if (siz <= 0)
+ 		siz = cnt;
++	else if (siz > NFS_SRVMAXDATA(nd))
++		siz = NFS_SRVMAXDATA(nd);
+ 	siz = ((siz + DIRBLKSIZ - 1) & ~(DIRBLKSIZ - 1));
+ 
+ 	if (nd->nd_flag & ND_NFSV4) {
+Index: sys/fs/nfsserver/nfs_nfsdsocket.c
+===================================================================
+--- sys/fs/nfsserver/nfs_nfsdsocket.c	(revision 341005)
++++ sys/fs/nfsserver/nfs_nfsdsocket.c	(working copy)
+@@ -758,11 +758,6 @@
+ 		*repp = *tl;
+ 		op = fxdr_unsigned(int, *tl);
+ 		NFSD_DEBUG(4, "op=%d\n", op);
+-
+-		binuptime(&start_time);
+-		nfsrvd_statstart(op, &start_time);
+-		statsinprog = 1;
+-
+ 		if (op < NFSV4OP_ACCESS ||
+ 		    (op >= NFSV4OP_NOPS && (nd->nd_flag & ND_NFSV41) == 0) ||
+ 		    (op >= NFSV41_NOPS && (nd->nd_flag & ND_NFSV41) != 0)) {
+@@ -774,6 +769,11 @@
+ 		} else {
+ 			repp++;
+ 		}
++
++		binuptime(&start_time);
++		nfsrvd_statstart(op, &start_time);
++		statsinprog = 1;
++
+ 		if (i == 0)
+ 			op0 = op;
+ 		if (i == numops - 1)
