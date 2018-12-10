@@ -9,6 +9,8 @@ FORMATS?=		html txt
 INSTALL_COMPRESSED?=	gz
 INSTALL_ONLY_COMPRESSED=
 
+XSLTPROCFLAGS+=		--param toc.section.depth "'3'"
+
 .PHONY:			${DOC}.parsed.xml
 .PHONY:			${DOC}.html
 
