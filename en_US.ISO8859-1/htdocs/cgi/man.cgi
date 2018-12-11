@@ -229,10 +229,12 @@ foreach my $os ( keys %$sectionpath ) {
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
 # this should be the latest "release and ports"
-$manPathDefault = 'FreeBSD 11.2-RELEASE and Ports';
+$manPathDefault = 'FreeBSD 12.0-RELEASE and Ports';
 
 %manPath = (
     # supported releases / stable / current 
+    'FreeBSD 12.0-RELEASE and Ports',
+"$manLocalDir/FreeBSD-12.0-RELEASE/man:$manLocalDir/FreeBSD-12.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-12.0-RELEASE/man:$manLocalDir/FreeBSD-ports-12.0-RELEASE/misc",
     'FreeBSD 11.2-RELEASE and Ports',
 "$manLocalDir/FreeBSD-11.2-RELEASE/man:$manLocalDir/FreeBSD-11.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-11.2-RELEASE/man:$manLocalDir/FreeBSD-ports-11.2-RELEASE/misc",
     'FreeBSD 11.1-RELEASE and Ports',
@@ -276,6 +278,11 @@ $manPathDefault = 'FreeBSD 11.2-RELEASE and Ports';
     'FreeBSD 12-current',
 "$manLocalDir/FreeBSD-12-current/man:$manLocalDir/FreeBSD-12-current/openssl/man",
 
+    'FreeBSD 12.0-RELEASE',
+    'FreeBSD 12.0-stable',
+"$manLocalDir/FreeBSD-12.0-stable/man:$manLocalDir/FreeBSD-12.0-stable/openssl/man",
+
+    'FreeBSD 11.2-RELEASE',
     'FreeBSD 11.2-stable',
 "$manLocalDir/FreeBSD-11.2-stable/man:$manLocalDir/FreeBSD-11.2-stable/openssl/man",
     'FreeBSD 11.2-RELEASE',
@@ -368,6 +375,7 @@ $manPathDefault = 'FreeBSD 11.2-RELEASE and Ports';
     'FreeBSD Ports 11.0', "$manLocalDir/FreeBSD-ports-11.0-RELEASE/man:$manLocalDir/FreeBSD-ports-11.0-RELEASE/misc",
     'FreeBSD Ports 11.1', "$manLocalDir/FreeBSD-ports-11.1-RELEASE/man:$manLocalDir/FreeBSD-ports-11.1-RELEASE/misc",
     'FreeBSD Ports 11.2', "$manLocalDir/FreeBSD-ports-11.2-RELEASE/man:$manLocalDir/FreeBSD-ports-11.2-RELEASE/misc",
+    'FreeBSD Ports 12.0', "$manLocalDir/FreeBSD-ports-12.0-RELEASE/man:$manLocalDir/FreeBSD-ports-12.0-RELEASE/misc",
 
 
     # FreeBSD Releases + Ports
@@ -820,16 +828,16 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 11.2-RELEASE',
-    'freebsd-release', 'FreeBSD 11.2-RELEASE',
+    'freebsd',         'FreeBSD 12.0-RELEASE',
+    'freebsd-release', 'FreeBSD 12.0-RELEASE',
 
     'freebsd-stable', 'FreeBSD 11.2-stable',
     'freebsd-stable11', 'FreeBSD 11.2-stable',
     'freebsd-stable10', 'FreeBSD 10.4-stable',
 
     'freebsd-current',       'FreeBSD 12-current',
-    'freebsd-release-ports', 'FreeBSD 11.2-RELEASE and Ports',
-    'freebsd-ports', 'FreeBSD Ports 11.2',
+    'freebsd-release-ports', 'FreeBSD 12.0-RELEASE and Ports',
+    'freebsd-ports', 'FreeBSD Ports 12.0',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat Linux/i386 9',

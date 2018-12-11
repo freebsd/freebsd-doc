@@ -12,13 +12,15 @@
 
 RELN_ROOT?=	${.CURDIR}
 
-DOCS=	index.xml \
+DOCS=	announce.xml \
+	index.xml \
 	schedule.xml \
 	signatures.xml
 
-DATA=	docbook.css
+DATA=	announce.asc \
+	docbook.css
 
-SUBDIR=	errata readme relnotes
+SUBDIR=	errata readme relnotes installation
 
 .if exists(${SVN})
 SUBDIR+=hardware
