@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r52445 -->
+<!-- Original revision: r52666 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -98,10 +98,10 @@
 			  <h2><a href="&base;/releases/">サポートされているリリース</a></h2>
 			  <ul id="frontreleaseslist">
 			    <li>プロダクション:&nbsp;<a
-				href="&u.rel.announce;">&rel.current;</a>
-				<?ignore
+				href="&u.rel.announce;">&rel.current;</a>,
 				<a
-				  href="&u.rel1.announce;">&rel1.current;</a>,
+				  href="&u.rel1.announce;">&rel1.current;</a>
+				<?ignore
 				<a
 				  href="&u.rel2.announce;">&rel2.current;</a></li>
 				?></li>
