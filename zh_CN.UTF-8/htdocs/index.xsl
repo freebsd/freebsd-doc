@@ -6,7 +6,7 @@
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Simplified Chinese Documentation Project -->
-<!-- Original revision: r51914 -->
+<!-- Original revision: r52666 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -95,9 +95,11 @@
 					<li>生产环境适用:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,
 				<a
-					href="&u.rel1.announce;">&rel1.current;</a>,
+					href="&u.rel1.announce;">&rel1.current;</a>
+				<?ignore
 				<a
 					href="&u.rel2.announce;">&rel2.current;</a></li>
+				?></li>
 					<xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 					<li>即将发布: <a
 				href="&u.betarel.schedule;">&betarel.current;</a></li>
