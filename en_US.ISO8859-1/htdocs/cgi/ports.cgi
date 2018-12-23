@@ -109,8 +109,8 @@ sub init_variables {
 
     $remotePrefixHtml = "$hsty_base/ports";
 
-    # CVS Web interface
-    $remotePrefixCvs = 'http://svnweb.FreeBSD.org/ports/head';
+    # Web interface for the Ports tree
+    $remotePrefixRepo = 'https://svnweb.FreeBSD.org/ports/head';
 
     # Ports documentation
     $portsDesc = "$hsty_base/ports/";
@@ -335,13 +335,14 @@ sub out {
     #$version =~ s/[\+,]/X/g;
 
     local ($l) = $path;
-    $l =~ s%^$remotePrefixFtp%$remotePrefixCvs%o;
+    $l =~ s%^$remotePrefixFtp%$remotePrefixRepo%o;
+    $descfile =~ s%^$remotePrefixFtp%$remotePrefixRepo%o;
 
     print
       qq{<dt><b><a name="$version"></a><a href="$l">$version</a></b></dt>\n};
     print qq{<dd>}, &escapeHTML($comment), qq{<br />\n};
 
-    print qq[<a href="$l/pkg-descr?revision=HEAD">Description</a> <b>:</b>\n];
+    print qq[<a href="$descfile?revision=HEAD">Description</a> <b>:</b>\n];
 
   # Link package in "default" arch/release. Verify it's existence on ftp-master.
     if ( $packages{"$version.$packageExt"} ) {
