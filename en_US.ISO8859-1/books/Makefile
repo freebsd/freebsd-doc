@@ -7,7 +7,6 @@ SUBDIR+= developers-handbook
 SUBDIR+= faq
 SUBDIR+= fdp-primer
 SUBDIR+= handbook
-SUBDIR+= pmake
 SUBDIR+= porters-handbook
 
 ROOT_SYMLINKS= faq handbook
