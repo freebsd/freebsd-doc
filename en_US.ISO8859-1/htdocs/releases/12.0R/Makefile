@@ -56,6 +56,7 @@ _ARM64_AARCH64?=PINE64 \
 		PINE64-LTS \
 		RPI3
 
+.if (${_BRANCH:MRC*} != "" || ${_BRANCH:MRELEASE*} != "")
 .for CHECKSUM in SHA512 SHA256
 . for _B in ${_BIGIRON}
 DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-${_B}.asc
@@ -73,5 +74,6 @@ DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-arm-armv7-${_A}.asc
 DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-arm64-aarch64-${_A}.asc
 . endfor
 .endfor
+.endif # _BRANCH !RC* || RELEASE*
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
