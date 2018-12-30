@@ -696,6 +696,7 @@ $manPathDefault = 'FreeBSD 12.0-RELEASE and Ports';
     'X11R7.4',   "$manLocalDir/X11R7.4",
 
     'ULTRIX 4.2',      "$manLocalDir/ULTRIX-4.2",
+    'Ultrix-32 2.0/VAX', "$manLocalDir/Ultrix-32-2.0-VAX",
     'OSF1 V4.0/alpha', "$manLocalDir/OSF1-V4.0-alpha",
     'OSF1 V5.1/alpha', "$manLocalDir/OSF1-V5.1-alpha",
 
