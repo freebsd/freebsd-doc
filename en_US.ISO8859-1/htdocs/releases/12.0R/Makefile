@@ -56,7 +56,11 @@ _ARM64_AARCH64?=PINE64 \
 		PINE64-LTS \
 		RPI3
 
-.if (${_BRANCH:MRC*} != "" || ${_BRANCH:MRELEASE*} != "")
+# Do not look for checksums if BRANCH != RC* or RELEASE.
+# Special handling will be needed for cases where BRANCH
+# is RELEASE-pNN, for example, the 11.0-RELEASE really being
+# 11.0-RELEASE-p1.
+.if (${_BRANCH:MRC*} != "" || ${_BRANCH:MRELEASE} != "")
 .for CHECKSUM in SHA512 SHA256
 . for _B in ${_BIGIRON}
 DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-${_B}.asc
