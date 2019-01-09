@@ -1,0 +1,194 @@
+--- sys/netinet/cc/cc.h.orig
++++ sys/netinet/cc/cc.h
+@@ -102,8 +102,6 @@
+ #define	CCF_ACKNOW		0x0008	/* Will this ack be sent now? */
+ #define	CCF_IPHDR_CE		0x0010	/* Does this packet set CE bit? */
+ #define	CCF_TCPHDR_CWR		0x0020	/* Does this packet set CWR bit? */
+-#define	CCF_MAX_CWND		0x0040	/* Have we reached maximum cwnd? */
+-#define	CCF_CHG_MAX_CWND	0x0080	/* Cubic max_cwnd changed, for K */
+ 
+ /* ACK types passed to the ack_received() hook. */
+ #define	CC_ACK		0x0001	/* Regular in sequence ACK. */
+--- sys/netinet/cc/cc_cubic.c.orig
++++ sys/netinet/cc/cc_cubic.c
+@@ -88,8 +88,6 @@
+ 	unsigned long	max_cwnd;
+ 	/* cwnd at the previous congestion event. */
+ 	unsigned long	prev_max_cwnd;
+-	/* Cached value for t_maxseg when K was computed */
+-	uint32_t        k_maxseg;
+ 	/* Number of congestion events. */
+ 	uint32_t	num_cong_events;
+ 	/* Minimum observed rtt in ticks. */
+@@ -126,9 +124,6 @@
+ 	cubic_data = ccv->cc_data;
+ 	cubic_record_rtt(ccv);
+ 
+-	if (ccv->flags & CCF_MAX_CWND)
+-		return;
+-
+ 	/*
+ 	 * Regular ACK and we're not in cong/fast recovery and we're cwnd
+ 	 * limited and we're either not doing ABC or are slow starting or are
+@@ -156,12 +151,6 @@
+ 			    cubic_data->mean_rtt_ticks, cubic_data->max_cwnd,
+ 			    CCV(ccv, t_maxseg));
+ 
+-			if (ccv->flags & CCF_CHG_MAX_CWND || cubic_data->k_maxseg != CCV(ccv, t_maxseg)) {
+-				cubic_data->K = cubic_k(cubic_data->max_cwnd / CCV(ccv, t_maxseg));
+-				cubic_data->k_maxseg = CCV(ccv, t_maxseg);
+-				ccv->flags &= ~(CCF_MAX_CWND|CCF_CHG_MAX_CWND);
+-			}
+-
+ 			w_cubic_next = cubic_cwnd(ticks_since_cong +
+ 			    cubic_data->mean_rtt_ticks, cubic_data->max_cwnd,
+ 			    CCV(ccv, t_maxseg), cubic_data->K);
+@@ -173,18 +162,13 @@
+ 				 * TCP-friendly region, follow tf
+ 				 * cwnd growth.
+ 				 */
+-				CCV(ccv, snd_cwnd) = ulmin(w_tf, TCP_MAXWIN << CCV(ccv, snd_scale));
++				CCV(ccv, snd_cwnd) = w_tf;
+ 
+ 			else if (CCV(ccv, snd_cwnd) < w_cubic_next) {
+ 				/*
+ 				 * Concave or convex region, follow CUBIC
+ 				 * cwnd growth.
+ 				 */
+-				if (w_cubic_next >= TCP_MAXWIN << CCV(ccv, snd_scale)) {
+-					w_cubic_next = TCP_MAXWIN << CCV(ccv, snd_scale);
+-					ccv->flags |= CCF_MAX_CWND;
+-				}
+-				w_cubic_next = ulmin(w_cubic_next, TCP_MAXWIN << CCV(ccv, snd_scale));
+ 				if (V_tcp_do_rfc3465)
+ 					CCV(ccv, snd_cwnd) = w_cubic_next;
+ 				else
+@@ -202,10 +186,8 @@
+ 			 * max_cwnd.
+ 			 */
+ 			if (cubic_data->num_cong_events == 0 &&
+-			    cubic_data->max_cwnd < CCV(ccv, snd_cwnd)) {
++			    cubic_data->max_cwnd < CCV(ccv, snd_cwnd))
+ 				cubic_data->max_cwnd = CCV(ccv, snd_cwnd);
+-				ccv->flags |= CCF_CHG_MAX_CWND;
+-			}
+ 		}
+ 	}
+ }
+@@ -254,7 +236,6 @@
+ 				cubic_data->num_cong_events++;
+ 				cubic_data->prev_max_cwnd = cubic_data->max_cwnd;
+ 				cubic_data->max_cwnd = CCV(ccv, snd_cwnd);
+-				ccv->flags |= CCF_CHG_MAX_CWND;
+ 			}
+ 			ENTER_RECOVERY(CCV(ccv, t_flags));
+ 		}
+@@ -267,8 +248,6 @@
+ 			cubic_data->prev_max_cwnd = cubic_data->max_cwnd;
+ 			cubic_data->max_cwnd = CCV(ccv, snd_cwnd);
+ 			cubic_data->t_last_cong = ticks;
+-			ccv->flags |= CCF_CHG_MAX_CWND;
+-			ccv->flags &= ~CCF_MAX_CWND;
+ 			CCV(ccv, snd_cwnd) = CCV(ccv, snd_ssthresh);
+ 			ENTER_CONGRECOVERY(CCV(ccv, t_flags));
+ 		}
+@@ -285,7 +264,6 @@
+ 		if (CCV(ccv, t_rxtshift) >= 2) {
+ 			cubic_data->num_cong_events++;
+ 			cubic_data->t_last_cong = ticks;
+-			ccv->flags &= ~CCF_MAX_CWND;
+ 		}
+ 		break;
+ 	}
+@@ -304,7 +282,6 @@
+ 	 * get used.
+ 	 */
+ 	cubic_data->max_cwnd = CCV(ccv, snd_cwnd);
+-	ccv->flags |= CCF_CHG_MAX_CWND;
+ }
+ 
+ static int
+@@ -329,11 +306,9 @@
+ 	pipe = 0;
+ 
+ 	/* Fast convergence heuristic. */
+-	if (cubic_data->max_cwnd < cubic_data->prev_max_cwnd) {
++	if (cubic_data->max_cwnd < cubic_data->prev_max_cwnd)
+ 		cubic_data->max_cwnd = (cubic_data->max_cwnd * CUBIC_FC_FACTOR)
+ 		    >> CUBIC_SHIFT;
+-		ccv->flags |= CCF_CHG_MAX_CWND;
+-	}
+ 
+ 	if (IN_FASTRECOVERY(CCV(ccv, t_flags))) {
+ 		/*
+@@ -356,7 +331,6 @@
+ 			    cubic_data->max_cwnd) >> CUBIC_SHIFT));
+ 	}
+ 	cubic_data->t_last_cong = ticks;
+-	ccv->flags &= ~CCF_MAX_CWND;
+ 
+ 	/* Calculate the average RTT between congestion epochs. */
+ 	if (cubic_data->epoch_ack_count > 0 &&
+@@ -367,6 +341,7 @@
+ 
+ 	cubic_data->epoch_ack_count = 0;
+ 	cubic_data->sum_rtt_ticks = 0;
++	cubic_data->K = cubic_k(cubic_data->max_cwnd / CCV(ccv, t_maxseg));
+ }
+ 
+ /*
+--- sys/netinet/cc/cc_cubic.h.orig
++++ sys/netinet/cc/cc_cubic.h
+@@ -41,8 +41,6 @@
+ #ifndef _NETINET_CC_CUBIC_H_
+ #define _NETINET_CC_CUBIC_H_
+ 
+-#include <sys/limits.h>
+-
+ /* Number of bits of precision for fixed point math calcs. */
+ #define	CUBIC_SHIFT		8
+ 
+@@ -163,6 +161,8 @@
+ /*
+  * Compute the new cwnd value using an implementation of eqn 1 from the I-D.
+  * Thanks to Kip Macy for help debugging this function.
++ *
++ * XXXLAS: Characterise bounds for overflow.
+  */
+ static __inline unsigned long
+ cubic_cwnd(int ticks_since_cong, unsigned long wmax, uint32_t smss, int64_t K)
+@@ -174,15 +174,6 @@
+ 	/* t - K, with CUBIC_SHIFT worth of precision. */
+ 	cwnd = ((int64_t)(ticks_since_cong << CUBIC_SHIFT) - (K * hz)) / hz;
+ 
+-	/* moved this calculation up because it cannot overflow or underflow */
+-	cwnd *= CUBIC_C_FACTOR * smss;
+-
+-	if (cwnd > 2097151) /* 2^21 cubed is long max */
+-		return INT_MAX;
+-
+-	if (cwnd < -2097152) /* -2^21 cubed is long min */
+-		return smss;
+-
+ 	/* (t - K)^3, with CUBIC_SHIFT^3 worth of precision. */
+ 	cwnd *= (cwnd * cwnd);
+ 
+@@ -191,17 +182,8 @@
+ 	 * The down shift by CUBIC_SHIFT_4 is because cwnd has 4 lots of
+ 	 * CUBIC_SHIFT included in the value. 3 from the cubing of cwnd above,
+ 	 * and an extra from multiplying through by CUBIC_C_FACTOR.
+-	 *
+-	 * The original formula was this:
+-	 * cwnd = ((cwnd * CUBIC_C_FACTOR * smss) >> CUBIC_SHIFT_4) + wmax;
+-         *
+-         * CUBIC_C_FACTOR and smss factors were moved up to an earlier
+-	 * calculation to simplify overflow and underflow detection.
+ 	 */
+-	cwnd = (cwnd >> CUBIC_SHIFT_4) + wmax;
+-
+-	if (cwnd < 0)
+-		return 1;
++	cwnd = ((cwnd * CUBIC_C_FACTOR * smss) >> CUBIC_SHIFT_4) + wmax;
+ 
+ 	return ((unsigned long)cwnd);
+ }
