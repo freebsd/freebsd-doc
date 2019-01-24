@@ -11,6 +11,8 @@ SUBDIR=		advisories
 SUBDIR+=	patches
 
 DATA=	so_public_key.asc
+DATA=	advisory-template.txt
+DATA=	errata-template.txt
 DOCS=	charter.xml
 DOCS+=	security.xml
 DOCS+=	advisories.xml
