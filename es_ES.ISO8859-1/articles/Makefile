@@ -3,6 +3,7 @@
 
 SUBDIR =
 SUBDIR+= contributing
+SUBDIR+= cups
 SUBDIR+= explaining-bsd
 SUBDIR+= fdp-es
 SUBDIR+= leap-seconds
