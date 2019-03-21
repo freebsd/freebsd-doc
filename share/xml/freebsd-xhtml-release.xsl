@@ -39,7 +39,7 @@
 	<xsl:if test="@revision">
 	  <xsl:element name="a">
 	    <xsl:attribute name="href">
-	      <xsl:value-of select="concat('http://svn.freebsd.org/viewvc/base?view=revision&#38;revision=', @revision)"/>
+	      <xsl:value-of select="concat('https://svnweb.freebsd.org/viewvc/base?view=revision&#38;revision=', @revision)"/>
 	    </xsl:attribute>
 	    <xsl:value-of select="concat('[r', @revision, ']')"/>
 	  </xsl:element>
