@@ -47,7 +47,7 @@ packages.exists:
 	${TOUCH} ${.TARGET}
 .endif
 
-Makefile.gen: categories-alpha.xml categories-grouped.xml index.xml \
+Makefile.gen: .PHONY categories-alpha.xml categories-grouped.xml index.xml \
 	installing.xml master-index.xml references.xml searching.xml \
 	statistics.ent updating.xml .NOTMAIN
 	(	${ECHO_CMD} DOCS= *.xml | ${SED} 's|catalog-cwd\.xml||g';\
@@ -68,7 +68,7 @@ categories-grouped.xml master-index.xml statistics.ent: categories-alpha.xml
 # this builds: categories-alpha.xml, categories-grouped.xml,
 # master-index.xml, statistics.ent, <category>.xml
 CATEGORYLIST=`grep "^[a-z]" categories | sed -e s"/,.*//"`
-categories-alpha.xml: ${INDEX} categories categories.descriptions \
+categories-alpha.xml: .PHONY ${INDEX} categories categories.descriptions \
 	packages.exists portindex ports.ent .NOTMAIN
 	${RM} -f categories-alpha.xml categories-grouped.xml \
 		master-index.xml statistics.ent
