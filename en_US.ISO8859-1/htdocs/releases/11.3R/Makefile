@@ -30,8 +30,6 @@ _VMS?=		amd64 \
 		i386 \
 		arm64-aarch64
 
-_ARM?=		GUMSTIX
-
 _ARMV6?=	BANANAPI \
 		BEAGLEBONE \
 		CUBIEBOARD \
@@ -48,9 +46,6 @@ _ARMV6?=	BANANAPI \
 . endfor
 . for _V in ${_VMS}
 #DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-${_V}-vm.asc
-. endfor
-. for _A in ${_ARM}
-#DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-arm-${_A}.asc
 . endfor
 . for _A in ${_ARMV6}
 #DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-arm-armv6-${_A}.asc
