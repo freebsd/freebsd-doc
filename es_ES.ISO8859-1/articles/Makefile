@@ -6,6 +6,7 @@ SUBDIR+= contributing
 SUBDIR+= cups
 SUBDIR+= explaining-bsd
 SUBDIR+= fdp-es
+SUBDIR+= freebsd-questions
 SUBDIR+= leap-seconds
 SUBDIR+= linux-users
 SUBDIR+= mailing-list-faq
