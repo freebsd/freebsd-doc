@@ -1,11 +1,16 @@
 #
 # $FreeBSD$
 #
+# The FreeBSD Documentation Project
+# The FreeBSD Spanish Documentation Project
+#
 # Article: Leap Seconds
 
 DOC?= article
 
-FORMATS?= html
+MAINTAINER=carlavilla@mailbox.org
+
+FORMATS?= html html-split
 WITH_ARTICLE_TOC?= YES
 
 INSTALL_COMPRESSED?= gz
