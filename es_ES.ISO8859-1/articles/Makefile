@@ -7,6 +7,7 @@ SUBDIR+= cups
 SUBDIR+= explaining-bsd
 SUBDIR+= fdp-es
 SUBDIR+= freebsd-questions
+SUBDIR+= ipsec-must
 SUBDIR+= leap-seconds
 SUBDIR+= linux-users
 SUBDIR+= mailing-list-faq
