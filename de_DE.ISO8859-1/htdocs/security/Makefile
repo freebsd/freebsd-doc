@@ -1,6 +1,6 @@
 # $FreeBSD$
 # $FreeBSDde$
-# basiert auf: r50897
+# basiert auf: r52778
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
