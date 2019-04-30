@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2018 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 1996-2019 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -161,6 +161,8 @@ $sectionpath = {
     'OpenBSD 6.1' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 6.2' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 6.3' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 6.4' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 6.5' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 
     'CentOS Linux/i386 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS Linux/i386 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
@@ -540,6 +542,8 @@ $manPathDefault = 'FreeBSD 12.0-RELEASE and Ports';
     'OpenBSD 6.1', "$manLocalDir/OpenBSD-6.1",
     'OpenBSD 6.2', "$manLocalDir/OpenBSD-6.2",
     'OpenBSD 6.3', "$manLocalDir/OpenBSD-6.3",
+    'OpenBSD 6.4', "$manLocalDir/OpenBSD-6.4",
+    'OpenBSD 6.5', "$manLocalDir/OpenBSD-6.5",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
     'NetBSD 1.0',   "$manLocalDir/NetBSD-1.0",
@@ -810,6 +814,8 @@ my %arch = (
 'OpenBSD 6.1' => { 'arch' => [qw/alpha amd64 armv7 hppa i386 landisk loongson luna88k macppc octeon sgi socppc sparc64/] }, 
 'OpenBSD 6.2' => { 'arch' => [qw/alpha amd64 armv7 hppa i386 landisk loongson luna88k macppc octeon sgi socppc sparc64/] }, 
 'OpenBSD 6.3' => { 'arch' => [qw/alpha amd64 armv7 hppa i386 landisk loongson luna88k macppc octeon sgi socppc sparc64/] }, 
+'OpenBSD 6.4' => { 'arch' => [qw/alpha amd64 armv7 hppa i386 landisk loongson luna88k macppc octeon sgi socppc sparc64/] }, 
+'OpenBSD 6.5' => { 'arch' => [qw/alpha amd64 armv7 hppa i386 landisk loongson luna88k macppc octeon sgi socppc sparc64/] }, 
 );
 
 # delete not existing releases
@@ -853,7 +859,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'macosx',     'Darwin 8.0.1/ppc',
 
     'netbsd',        'NetBSD 8.0',
-    'openbsd',       'OpenBSD 6.3',
+    'openbsd',       'OpenBSD 6.5',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
     'x11',           'X11R7.4',
