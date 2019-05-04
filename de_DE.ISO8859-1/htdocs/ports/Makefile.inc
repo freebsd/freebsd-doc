@@ -1,6 +1,6 @@
 # $FreeBSD$
-# $FreeBSDde: de-www/ports/Makefile.inc,v 1.1 2007/03/31 14:27:06 jkois Exp $
-# basiert auf: 1.10
+# $FreeBSDde$
+# basiert auf: r47265
 
 PORTINDEX=	${PERL} ${.CURDIR}/../../../en_US.ISO8859-1/htdocs/ports/portindex
 INDEX=		INDEX
