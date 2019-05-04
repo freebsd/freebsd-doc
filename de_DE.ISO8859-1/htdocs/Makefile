@@ -41,7 +41,6 @@ SUBDIR+= news
 SUBDIR+= ipv6
 SUBDIR+= java
 SUBDIR+= platforms
-#SUBDIR+= ports
 SUBDIR+= projects
 SUBDIR+= releases
 SUBDIR+= security
