@@ -55,6 +55,9 @@ $www{'title'} = 'FreeBSD Manual Pages';
 $www{'home'}  = 'https://www.FreeBSD.org';
 $www{'head'}  = $www{'title'};
 
+# set to zero if your front-end cache has low memory
+my $download_streaming_caching = 0;
+
 #$command{'man'} = '/usr/bin/man';    # 8Bit clean man
 $command{'man'} = '/usr/local/www/bin/man.wrapper';    # set CPU limits
 
@@ -1147,6 +1150,9 @@ sub download {
     $filename =~ s/\s+/_/;
     $filename = &encode_url($filename);
     $filename .= '.tgz';
+
+    # bypass caching proxies which cannot handle streaming of large data very well
+    print qq{Cache-Control: no-cache, no-store, private, max-age=0\n} if $download_streaming_caching == 0;
 
     print qq{Content-type: application/x-tgz\n}
       . qq{Content-disposition: attachment; filename="$filename"\n} . "\n";
