@@ -48,8 +48,6 @@ use constant HAS_FREEBSD_CGI_STYLE => eval { require "./cgi-style.pl"; };
 
 package main;
 
-alarm(10);
-
 $debug        = 2;
 $www{'title'} = 'FreeBSD Manual Pages';
 $www{'home'}  = 'https://www.FreeBSD.org';
