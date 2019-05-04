@@ -1,6 +1,6 @@
 # $FreeBSD$
-# $FreeBSDde: de-www/ports/Makefile,v 1.3 2007/10/28 13:00:38 jkois Exp $
-# basiert auf: 1.49
+# $FreeBSDde$
+# basiert auf: r52882
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
