@@ -771,6 +771,7 @@ my @no_pdf_output = (
     'OpenBSD 4.7',
     'OpenBSD 4.8',
     'OpenBSD 4.9',
+    'IRIX-6.5.30',
 );
 
 my %no_pdf_output = map { $_ => 1 } @no_pdf_output;
@@ -872,6 +873,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'xfree86',       'XFree86 4.7.0',
     'ultrix',        'ULTRIX 4.2',
     'hpux',          'HP-UX 11.22',
+    'irix',          'IRIX-6.5.30',
     'solaris',       'SunOS 5.10',
     'sunos5',        'SunOS 5.10',
     'sunos4',        'SunOS 4.1.3',
