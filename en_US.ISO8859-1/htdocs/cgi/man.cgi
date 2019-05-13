@@ -105,7 +105,7 @@ $sectionpath = {
     'HP-UX 10.01' => { 'path' => '1:1m:2:3:4:5:7:9' },
     'HP-UX 9.07'  => { 'path' => '1:1m:2:3:4:5:7:9' },
 
-    'IRIX-6.5.30' => { 'path' => '1:1m:2:3:3c:3dm:3n:3x:4:5:7:9' },
+    'IRIX 6.5.30' => { 'path' => '1:1m:2:3:3c:3dm:3n:3x:4:5:7:9' },
 
     'SunOS 5.10'  => {
         'path' =>
@@ -733,7 +733,7 @@ $manPathDefault = 'FreeBSD 12.0-RELEASE and Ports';
 );
 
 my @no_html_output = (
-    'IRIX-6.5.30'
+    'IRIX 6.5.30'
 );
 
 my @no_pdf_output = (
@@ -775,7 +775,7 @@ my @no_pdf_output = (
     'OpenBSD 4.7',
     'OpenBSD 4.8',
     'OpenBSD 4.9',
-    'IRIX-6.5.30',
+    'IRIX 6.5.30',
 );
 
 my %no_pdf_output = map { $_ => 1 } @no_pdf_output;
@@ -878,7 +878,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'xfree86',       'XFree86 4.7.0',
     'ultrix',        'ULTRIX 4.2',
     'hpux',          'HP-UX 11.22',
-    'irix',          'IRIX-6.5.30',
+    'irix',          'IRIX 6.5.30',
     'solaris',       'SunOS 5.10',
     'sunos5',        'SunOS 5.10',
     'sunos4',        'SunOS 4.1.3',
