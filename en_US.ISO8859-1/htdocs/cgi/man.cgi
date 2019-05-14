@@ -1905,7 +1905,7 @@ sub faq {
       '$FreeBSD$';
     return qq{\
 <pre>
-Copyright (c) 1996-2018 <a href="$mailtoURL">Wolfram Schneider</a>
+Copyright (c) 1996-2019 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE
@@ -1926,7 +1926,7 @@ Copyright (c) for man pages by OS vendors.
 <a href="http://www.minix3.org">Minix</a>,
 <a href="https://www.netbsd.org">NetBSD</a>,
 <a href="https://www.openbsd.org">OpenBSD</a>,
-<a href="http://plan9.bell-labs.com/plan9/">Plan 9</a>,
+<a href="https://9p.io/plan9/">Plan 9</a>,
 <a href="https://www.redhat.com">Red Hat</a>,
 <a href="https://www.slackware.com">Slackware Linux</a>,
 <a href="https://www.sun.com">SunOS</a>,
