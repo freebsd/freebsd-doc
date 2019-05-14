@@ -906,28 +906,21 @@ while ( ( $key, $val ) = each %manPath ) {
 #
 sub sort_versions {
 
+    # a release has at least 2 numbers seperated by a dot:
     # FreeBSD 11.1-RELEASE ports
-    my @a = ( lc($a) =~ m,^(\D+)([\d\.]+)(\D*)$, );
-    my @b = ( lc($b) =~ m,^(\D+)([\d\.]+)(\D*)$, );
+    # X11R7.4
+    my @a = ( lc($a) =~ m,^(.*?)(\d+\.[\d\.]+)(.*)$, );
+    my @b = ( lc($b) =~ m,^(.*?)(\d+\.[\d\.]+)(.*)$, );
 
     if (@a and @b) {
 	return $a[0] cmp $b[0]   || # FreeBDS <=> IRIX
 	  &version($a[1], $b[1]) || # 6.5.30 <=> 6.5.31  
 	  $a[2] cmp $a[2] ||        # RELEASE <=> ports 
 	  $a cmp $b;		    # rest
+    } else {
+    	# for the rest: basic string compare
+    	return $a cmp $b;
     }
-
-    # 2.9.1 BSD
-    @a = ( lc($a) =~ m,^([\d\.]+)(.*)$, );
-    @b = ( lc($b) =~ m,^([\d\.]+)(.*)$, );
-    if (@a and @b) {
-	return &version($a[0], $b[0]) || # 2.9.1BSD
-	  $a[1] <=> $b[1] ||             # BSD 
-	  $a cmp $b;			 # rest
-    }
-
-    # rest
-    return $a cmp $b;
 }
 
 sub version {
