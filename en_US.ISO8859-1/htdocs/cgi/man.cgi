@@ -697,6 +697,7 @@ $manPathDefault = 'FreeBSD 12.0-RELEASE and Ports';
     'XFree86 4.5.0',    "$manLocalDir/XFree86-4.5.0",
     'XFree86 4.6.0',    "$manLocalDir/XFree86-4.6.0",
     'XFree86 4.7.0',    "$manLocalDir/XFree86-4.7.0",
+    'XFree86 4.8.0',    "$manLocalDir/XFree86-4.8.0",
 
     'X11R6.7.0', "$manLocalDir/X11R6.7.0",
     'X11R6.8.2', "$manLocalDir/X11R6.8.2",
@@ -875,7 +876,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
     'x11',           'X11R7.4',
-    'xfree86',       'XFree86 4.7.0',
+    'xfree86',       'XFree86 4.8.0',
     'ultrix',        'ULTRIX 4.2',
     'hpux',          'HP-UX 11.22',
     'irix',          'IRIX 6.5.30',
