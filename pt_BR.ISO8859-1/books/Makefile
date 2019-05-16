@@ -8,6 +8,7 @@
 SUBDIR+= dev-model
 SUBDIR+= faq
 SUBDIR+= fdp-primer
+SUBDIR+= handbook
 SUBDIR+= porters-handbook
 
 DOC_PREFIX?= ${.CURDIR}/../..
