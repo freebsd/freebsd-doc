@@ -6,10 +6,10 @@
 # The FreeBSD Documentation Project
 # The FreeBSD Brazilian Portuguese Documentation Project
 #
-# Original revision: 1.53
+# Original revision: r52873 
 #
 
-MAINTAINER=lioux@FreeBSD.org
+MAINTAINER=ebrandi@FreeBSD.org
 
 DOC?= book
 
