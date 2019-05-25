@@ -1844,8 +1844,8 @@ ETX
 
     # pickup a default machine type
     else {
-	exists $arch{$l}->{'default'} ? $arch{$l}->{'default'} : 'default';
-	}
+        #exists $arch{$l}->{'default'} ? $arch{$l}->{'default'} : 'default';
+    }
 
     foreach (@arch) {
         my $selected = $_ eq $a ? ' selected="selected"' : "";
