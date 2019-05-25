@@ -1449,6 +1449,10 @@ sub man {
     &proc( *MAN, $command{'man'}, @manargs, "--", $name )
       || &mydie("$0: open of $command{'man'} command failed: $!\n");
     if ( eof(MAN) ) {
+        if ( $format eq "ascii" ) {
+            print "Sorry, no data found for '$html_name'\n";
+	    return;
+        }
 
         # print "X $command{'man'} @manargs -- x $name x\n";
         print qq{</pre>\n};
