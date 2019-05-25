@@ -785,7 +785,7 @@ my %no_html_output = map { $_ => 1 } @no_html_output;
 my %valid_arch = map { $_ => 1 }
   qw/aarch64 acorn26 acorn32 algor alpha amd64 amiga arc arm arm26 arm32 arm64 armish atari aviion bebox cats cesfic cobalt dreamcast evbarm evbmips evbppc evbsh3 evbsh5 hp300 hp700 hpcarm hpcmips hpcsh hppa hppa64 i386 ibmnws landisk loongson luna68k luna88k mac68k macppc mipsco mmeye mvme68k mvme88k mvmeppc netwinder news68k newsmips next68k ofppc palm pc532 pegasos playstation2 pmax pmppc powerpc prep sandpoint sbmips sgi sgimips shark socppc sparc sparc64 sun2 sun3 sun3x tahoe vax walnut wgrisc x68k zaurus/;
 
-my $default_arch = 'amd64';
+my $default_arch = '';
 my %arch_names = ('default' => 'All Architectures');
 
 my %arch = ( 
@@ -1848,6 +1848,8 @@ ETX
     }
 
     foreach (@arch) {
+	next if $_ eq "";
+
         my $selected = $_ eq $a ? ' selected="selected"' : "";
         my $arch_name = exists $arch_names{$_} ? $arch_names{$_} : $_;
         print qq{<option $selected value="$_">$arch_name</option>\n};
