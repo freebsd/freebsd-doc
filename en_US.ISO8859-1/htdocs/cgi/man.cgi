@@ -1184,6 +1184,10 @@ sub get_the_sources {
 # download a manual directory as gzip'd tar archive
 sub download {
 
+    # 2019-05-31: allanjude: Disable downloading as it is being abused.
+    print qq{Status: 418 No Downloads For You\n\n};
+    exit(0);
+
     $| = 1;
     my $filename = $manpath;
     $filename =~ s/\s+/_/;
