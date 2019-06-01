@@ -8,7 +8,7 @@
 
 DOC?= article
 
-MAINTAINER=carlavilla@mailbox.org
+MAINTAINER=carlavilla@FreeBSD.org
 
 FORMATS?= html html-split
 WITH_ARTICLE_TOC?= YES
