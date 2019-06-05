@@ -25,6 +25,7 @@ IMAGES_EN+= bsdinstall/bsdinstall-adduser1.png
 IMAGES_EN+= bsdinstall/bsdinstall-adduser2.png
 IMAGES_EN+= bsdinstall/bsdinstall-adduser3.png
 IMAGES_EN+= bsdinstall/bsdinstall-boot-loader-menu.png
+IMAGES_EN+= bsdinstall/bsdinstall-newboot-loader-menu.png
 IMAGES_EN+= bsdinstall/bsdinstall-choose-mode.png
 IMAGES_EN+= bsdinstall/bsdinstall-config-components.png
 IMAGES_EN+= bsdinstall/bsdinstall-config-hostname.png
