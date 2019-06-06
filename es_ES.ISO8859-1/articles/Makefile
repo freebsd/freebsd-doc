@@ -1,5 +1,8 @@
+#
+# The FreeBSD Documentation Project
+# The FreeBSD Spanish Documentation Project
+#
 # $FreeBSD$
-# $FreeBSDes: doc/es_ES.ISO8859-1/articles/Makefile,v 1.3 2004/10/09 02:01:17 jesusr Exp $
 
 SUBDIR =
 SUBDIR+= contributing
@@ -12,6 +15,7 @@ SUBDIR+= leap-seconds
 SUBDIR+= linux-users
 SUBDIR+= mailing-list-faq
 SUBDIR+= nanobsd
+SUBDIR+= port-mentor-guidelines
 SUBDIR+= p4-primer
 SUBDIR+= problem-reports
 SUBDIR+= releng
