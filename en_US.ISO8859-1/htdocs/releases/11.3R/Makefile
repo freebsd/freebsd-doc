@@ -15,7 +15,11 @@ THISRELEASE?=	${_OS}-${_REVISION}-${_BRANCH}
 DOCS=	index.xml \
 	schedule.xml
 
-DATA=	docbook.css
+DATA=	docbook.css \
+	errata.html \
+	hardware.html \
+	readme.html \
+	relnotes.html
 
 # PGP-signed checksums
 
