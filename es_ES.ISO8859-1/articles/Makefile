@@ -19,6 +19,7 @@ SUBDIR+= port-mentor-guidelines
 SUBDIR+= p4-primer
 SUBDIR+= problem-reports
 SUBDIR+= releng
+SUBDIR+= remote-install
 
 DOC_PREFIX?= ${.CURDIR}/../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
