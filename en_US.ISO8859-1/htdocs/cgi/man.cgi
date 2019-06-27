@@ -241,6 +241,8 @@ $manPathDefault = 'FreeBSD 12.0-RELEASE and Ports';
     # supported releases / stable / current 
     'FreeBSD 12.0-RELEASE and Ports',
 "$manLocalDir/FreeBSD-12.0-RELEASE/man:$manLocalDir/FreeBSD-12.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-12.0-RELEASE/man:$manLocalDir/FreeBSD-ports-12.0-RELEASE/misc",
+    'FreeBSD 11.3-RELEASE and Ports',
+"$manLocalDir/FreeBSD-11.3-RELEASE/man:$manLocalDir/FreeBSD-11.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-11.3-RELEASE/man:$manLocalDir/FreeBSD-ports-11.3-RELEASE/misc",
     'FreeBSD 11.2-RELEASE and Ports',
 "$manLocalDir/FreeBSD-11.2-RELEASE/man:$manLocalDir/FreeBSD-11.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-11.2-RELEASE/man:$manLocalDir/FreeBSD-ports-11.2-RELEASE/misc",
     'FreeBSD 11.1-RELEASE and Ports',
@@ -289,8 +291,10 @@ $manPathDefault = 'FreeBSD 12.0-RELEASE and Ports';
     'FreeBSD 12.0-RELEASE',
 "$manLocalDir/FreeBSD-12.0-RELEASE/man:$manLocalDir/FreeBSD-12.0-RELEASE/openssl/man",
 
-    'FreeBSD 11.2-stable',
-"$manLocalDir/FreeBSD-11.2-stable/man:$manLocalDir/FreeBSD-11.2-stable/openssl/man",
+    'FreeBSD 11.3-stable',
+"$manLocalDir/FreeBSD-11.3-stable/man:$manLocalDir/FreeBSD-11.3-stable/openssl/man",
+    'FreeBSD 11.3-RELEASE',
+"$manLocalDir/FreeBSD-11.3-RELEASE/man:$manLocalDir/FreeBSD-11.3-RELEASE/openssl/man",
     'FreeBSD 11.2-RELEASE',
 "$manLocalDir/FreeBSD-11.2-RELEASE/man:$manLocalDir/FreeBSD-11.2-RELEASE/openssl/man",
     'FreeBSD 11.1-RELEASE',
@@ -381,6 +385,7 @@ $manPathDefault = 'FreeBSD 12.0-RELEASE and Ports';
     'FreeBSD Ports 11.0', "$manLocalDir/FreeBSD-ports-11.0-RELEASE/man:$manLocalDir/FreeBSD-ports-11.0-RELEASE/misc",
     'FreeBSD Ports 11.1', "$manLocalDir/FreeBSD-ports-11.1-RELEASE/man:$manLocalDir/FreeBSD-ports-11.1-RELEASE/misc",
     'FreeBSD Ports 11.2', "$manLocalDir/FreeBSD-ports-11.2-RELEASE/man:$manLocalDir/FreeBSD-ports-11.2-RELEASE/misc",
+    'FreeBSD Ports 11.3', "$manLocalDir/FreeBSD-ports-11.3-RELEASE/man:$manLocalDir/FreeBSD-ports-11.3-RELEASE/misc",
     'FreeBSD Ports 12.0', "$manLocalDir/FreeBSD-ports-12.0-RELEASE/man:$manLocalDir/FreeBSD-ports-12.0-RELEASE/misc",
 
 
@@ -789,6 +794,7 @@ my $default_arch = '';
 my %arch_names = ('default' => 'All Architectures');
 
 my %arch = ( 
+'FreeBSD 11.3-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64 aarch64/] } ,
 'FreeBSD 11.2-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64 aarch64/] } ,
 'FreeBSD 11.1-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64 aarch64/] } ,
 'FreeBSD 11.0-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64 aarch64/] } ,
@@ -854,7 +860,7 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'freebsd-stable', 'FreeBSD 12.0-stable',
     'freebsd-stable12', 'FreeBSD 12.0-stable',
-    'freebsd-stable11', 'FreeBSD 11.2-stable',
+    'freebsd-stable11', 'FreeBSD 11.3-stable',
     'freebsd-stable10', 'FreeBSD 10.4-stable',
 
     'freebsd-current',       'FreeBSD 13-current',
