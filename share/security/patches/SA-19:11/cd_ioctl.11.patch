@@ -1,0 +1,184 @@
+--- sys/cam/scsi/scsi_cd.c.orig
++++ sys/cam/scsi/scsi_cd.c
+@@ -1281,7 +1281,7 @@
+ 
+ 	struct 	cam_periph *periph;
+ 	struct	cd_softc *softc;
+-	int	nocopyout, error = 0;
++	int	error = 0;
+ 
+ 	periph = (struct cam_periph *)dp->d_drv1;
+ 	cam_periph_lock(periph);
+@@ -1323,7 +1323,6 @@
+ 	 */
+ 	cam_periph_unlock(periph);
+ 
+-	nocopyout = 0;
+ 	switch (cmd) {
+ 
+ 	case CDIOCPLAYTRACKS:
+@@ -1499,9 +1498,6 @@
+ 			cam_periph_unlock(periph);
+ 		}
+ 		break;
+-	case CDIOCREADSUBCHANNEL_SYSSPACE:
+-		nocopyout = 1;
+-		/* Fallthrough */
+ 	case CDIOCREADSUBCHANNEL:
+ 		{
+ 			struct ioc_read_subchannel *args
+@@ -1546,13 +1542,7 @@
+ 				data->header.data_len[1] +
+ 				sizeof(struct cd_sub_channel_header)));
+ 			cam_periph_unlock(periph);
+-			if (nocopyout == 0) {
+-				if (copyout(data, args->data, len) != 0) {
+-					error = EFAULT;
+-				}
+-			} else {
+-				bcopy(data, args->data, len);
+-			}
++			error = copyout(data, args->data, len);
+ 			free(data, M_SCSICD);
+ 		}
+ 		break;
+--- sys/compat/linux/linux_ioctl.c.orig
++++ sys/compat/linux/linux_ioctl.c
+@@ -1549,16 +1549,26 @@
+ 		struct ioc_read_subchannel bsdsc;
+ 		struct cd_sub_channel_info bsdinfo;
+ 
++		error = copyin((void *)args->arg, &sc, sizeof(sc));
++		if (error)
++			break;
++
++		/*
++		 * Invoke the native ioctl and bounce the returned data through
++		 * the userspace buffer.  This works because the Linux structure
++		 * is the same size as our structures for the subchannel header
++		 * and position data.
++		 */
+ 		bsdsc.address_format = CD_LBA_FORMAT;
+ 		bsdsc.data_format = CD_CURRENT_POSITION;
+ 		bsdsc.track = 0;
+-		bsdsc.data_len = sizeof(bsdinfo);
+-		bsdsc.data = &bsdinfo;
+-		error = fo_ioctl(fp, CDIOCREADSUBCHANNEL_SYSSPACE,
+-		    (caddr_t)&bsdsc, td->td_ucred, td);
++		bsdsc.data_len = sizeof(sc);
++		bsdsc.data = (void *)args->arg;
++		error = fo_ioctl(fp, CDIOCREADSUBCHANNEL, (caddr_t)&bsdsc,
++		    td->td_ucred, td);
+ 		if (error)
+ 			break;
+-		error = copyin((void *)args->arg, &sc, sizeof(sc));
++		error = copyin((void *)args->arg, &bsdinfo, sizeof(bsdinfo));
+ 		if (error)
+ 			break;
+ 		sc.cdsc_audiostatus = bsdinfo.header.audio_status;
+--- sys/dev/mcd/mcd.c.orig
++++ sys/dev/mcd/mcd.c
+@@ -134,8 +134,7 @@
+ static int	mcd_hard_reset(struct mcd_softc *);
+ static int 	mcd_setmode(struct mcd_softc *, int mode);
+ static int	mcd_getqchan(struct mcd_softc *, struct mcd_qchninfo *q);
+-static int	mcd_subchan(struct mcd_softc *, struct ioc_read_subchannel *sc,
+-		    int nocopyout);
++static int	mcd_subchan(struct mcd_softc *, struct ioc_read_subchannel *sc);
+ static int	mcd_toc_header(struct mcd_softc *, struct ioc_toc_header *th);
+ static int	mcd_read_toc(struct mcd_softc *);
+ static int	mcd_toc_entrys(struct mcd_softc *, struct ioc_read_toc_entry *te);
+@@ -482,10 +481,8 @@
+ 	case CDIOCPLAYMSF:
+ 		r = mcd_playmsf(sc, (struct ioc_play_msf *) addr);
+ 		break;
+-	case CDIOCREADSUBCHANNEL_SYSSPACE:
+-		return mcd_subchan(sc, (struct ioc_read_subchannel *) addr, 1);
+ 	case CDIOCREADSUBCHANNEL:
+-		return mcd_subchan(sc, (struct ioc_read_subchannel *) addr, 0);
++		return mcd_subchan(sc, (struct ioc_read_subchannel *) addr);
+ 	case CDIOREADTOCHEADER:
+ 		r = mcd_toc_header(sc, (struct ioc_toc_header *) addr);
+ 		break;
+@@ -1411,7 +1408,7 @@
+ }
+ 
+ static int
+-mcd_subchan(struct mcd_softc *sc, struct ioc_read_subchannel *sch, int nocopyout)
++mcd_subchan(struct mcd_softc *sc, struct ioc_read_subchannel *sch)
+ {
+ 	struct mcd_qchninfo q;
+ 	struct cd_sub_channel_info data;
+@@ -1478,10 +1475,7 @@
+ 	}
+ 
+ 	MCD_UNLOCK(sc);
+-	if (nocopyout == 0)
+-		return copyout(&data, sch->data, min(sizeof(struct cd_sub_channel_info), sch->data_len));
+-	bcopy(&data, sch->data, min(sizeof(struct cd_sub_channel_info), sch->data_len));
+-	return (0);
++	return (copyout(&data, sch->data, min(sizeof(struct cd_sub_channel_info), sch->data_len)));
+ }
+ 
+ static int
+--- sys/dev/scd/scd.c.orig
++++ sys/dev/scd/scd.c
+@@ -130,7 +130,7 @@
+ static int scd_playtracks(struct scd_softc *, struct ioc_play_track *pt);
+ static int scd_playmsf(struct scd_softc *, struct ioc_play_msf *msf);
+ static int scd_play(struct scd_softc *, struct ioc_play_msf *msf);
+-static int scd_subchan(struct scd_softc *, struct ioc_read_subchannel *sch, int nocopyout);
++static int scd_subchan(struct scd_softc *, struct ioc_read_subchannel *sch);
+ static int read_subcode(struct scd_softc *, struct sony_subchannel_position_data *sch);
+ 
+ /* for xcdplayer */
+@@ -357,10 +357,8 @@
+ 	case CDIOCPLAYMSF:
+ 		error = scd_playmsf(sc, (struct ioc_play_msf *) addr);
+ 		break;
+-	case CDIOCREADSUBCHANNEL_SYSSPACE:
+-		return scd_subchan(sc, (struct ioc_read_subchannel *) addr, 1);
+ 	case CDIOCREADSUBCHANNEL:
+-		return scd_subchan(sc, (struct ioc_read_subchannel *) addr, 0);
++		return scd_subchan(sc, (struct ioc_read_subchannel *) addr);
+ 	case CDIOREADTOCHEADER:
+ 		error = scd_toc_header (sc, (struct ioc_toc_header *) addr);
+ 		break;
+@@ -564,7 +562,7 @@
+ }
+ 
+ static int
+-scd_subchan(struct scd_softc *sc, struct ioc_read_subchannel *sch, int nocopyout)
++scd_subchan(struct scd_softc *sc, struct ioc_read_subchannel *sch)
+ {
+ 	struct sony_subchannel_position_data q;
+ 	struct cd_sub_channel_info data;
+@@ -594,12 +592,8 @@
+ 	data.what.position.absaddr.msf.frame = bcd2bin(q.abs_msf[2]);
+ 	SCD_UNLOCK(sc);
+ 
+-	if (nocopyout == 0) {
+-		if (copyout(&data, sch->data, min(sizeof(struct cd_sub_channel_info), sch->data_len))!=0)
+-			return (EFAULT);
+-	} else {
+-		bcopy(&data, sch->data, min(sizeof(struct cd_sub_channel_info), sch->data_len));
+-	}
++	if (copyout(&data, sch->data, min(sizeof(struct cd_sub_channel_info), sch->data_len))!=0)
++		return (EFAULT);
+ 	return (0);
+ }
+ 
+--- sys/sys/cdio.h.orig
++++ sys/sys/cdio.h
+@@ -274,11 +274,4 @@
+ 
+ #define	CDIOCCAPABILITY	_IOR('c',30,struct ioc_capability)	/*<2>*/
+ 
+-/*
+- * Special version of CDIOCREADSUBCHANNEL which assumes that
+- * ioc_read_subchannel->data points to the kernel memory. For
+- * use in compatibility layers.
+- */
+-#define CDIOCREADSUBCHANNEL_SYSSPACE _IOWR('c', 31, struct ioc_read_subchannel)
+-
+ #endif /* !_SYS_CDIO_H_ */
