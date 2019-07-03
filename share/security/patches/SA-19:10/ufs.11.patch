@@ -1,0 +1,311 @@
+--- sbin/fsck_ffs/dir.c.orig
++++ sbin/fsck_ffs/dir.c
+@@ -145,6 +145,7 @@
+ 	struct direct *dp, *ndp;
+ 	struct bufarea *bp;
+ 	long size, blksiz, fix, dploc;
++	int dc;
+ 
+ 	blksiz = idesc->id_numfrags * sblock.fs_fsize;
+ 	bp = getdirblk(idesc->id_blkno, blksiz);
+@@ -151,8 +152,16 @@
+ 	if (idesc->id_loc % DIRBLKSIZ == 0 && idesc->id_filesize > 0 &&
+ 	    idesc->id_loc < blksiz) {
+ 		dp = (struct direct *)(bp->b_un.b_buf + idesc->id_loc);
+-		if (dircheck(idesc, dp))
++		if ((dc = dircheck(idesc, dp)) > 0) {
++			if (dc == 2) {
++				/*
++				 * dircheck() cleared unused directory space.
++				 * Mark the buffer as dirty to write it out.
++				 */
++				dirty(bp);
++			}
+ 			goto dpok;
++		}
+ 		if (idesc->id_fix == IGNORE)
+ 			return (0);
+ 		fix = dofix(idesc, "DIRECTORY CORRUPTED");
+@@ -179,19 +188,26 @@
+ 	if ((idesc->id_loc % DIRBLKSIZ) == 0)
+ 		return (dp);
+ 	ndp = (struct direct *)(bp->b_un.b_buf + idesc->id_loc);
+-	if (idesc->id_loc < blksiz && idesc->id_filesize > 0 &&
+-	    dircheck(idesc, ndp) == 0) {
+-		size = DIRBLKSIZ - (idesc->id_loc % DIRBLKSIZ);
+-		idesc->id_loc += size;
+-		idesc->id_filesize -= size;
+-		if (idesc->id_fix == IGNORE)
+-			return (0);
+-		fix = dofix(idesc, "DIRECTORY CORRUPTED");
+-		bp = getdirblk(idesc->id_blkno, blksiz);
+-		dp = (struct direct *)(bp->b_un.b_buf + dploc);
+-		dp->d_reclen += size;
+-		if (fix)
++	if (idesc->id_loc < blksiz && idesc->id_filesize > 0) {
++		if ((dc = dircheck(idesc, ndp)) == 0) {
++			size = DIRBLKSIZ - (idesc->id_loc % DIRBLKSIZ);
++			idesc->id_loc += size;
++			idesc->id_filesize -= size;
++			if (idesc->id_fix == IGNORE)
++				return (0);
++			fix = dofix(idesc, "DIRECTORY CORRUPTED");
++			bp = getdirblk(idesc->id_blkno, blksiz);
++			dp = (struct direct *)(bp->b_un.b_buf + dploc);
++			dp->d_reclen += size;
++			if (fix)
++				dirty(bp);
++		} else if (dc == 2) {
++			/*
++			 * dircheck() cleared unused directory space.
++			 * Mark the buffer as dirty to write it out.
++			 */
+ 			dirty(bp);
++		}
+ 	}
+ 	return (dp);
+ }
+@@ -199,6 +215,11 @@
+ /*
+  * Verify that a directory entry is valid.
+  * This is a superset of the checks made in the kernel.
++ * Also optionally clears padding and unused directory space.
++ *
++ * Returns 0 if the entry is bad, 1 if the entry is good and no changes
++ * were made, and 2 if the entry is good but modified to clear out padding
++ * and unused space and needs to be written back to disk.
+  */
+ static int
+ dircheck(struct inodesc *idesc, struct direct *dp)
+@@ -207,15 +228,39 @@
+ 	char *cp;
+ 	u_char type;
+ 	u_int8_t namlen;
+-	int spaceleft;
++	int spaceleft, modified, unused;
+ 
++	modified = 0;
+ 	spaceleft = DIRBLKSIZ - (idesc->id_loc % DIRBLKSIZ);
+ 	if (dp->d_reclen == 0 ||
+ 	    dp->d_reclen > spaceleft ||
+-	    (dp->d_reclen & 0x3) != 0)
++	    (dp->d_reclen & (DIR_ROUNDUP - 1)) != 0)
+ 		goto bad;
+-	if (dp->d_ino == 0)
+-		return (1);
++	if (dp->d_ino == 0) {
++		/*
++		 * Special case of an unused directory entry. Normally
++		 * the kernel would coalesce unused space with the previous
++		 * entry by extending its d_reclen, but there are situations
++		 * (e.g. fsck) where that doesn't occur.
++		 * If we're clearing out directory cruft (-z flag), then make
++		 * sure this entry gets fully cleared as well.
++		 */
++		if (zflag && fswritefd >= 0) {
++			if (dp->d_type != 0) {
++				dp->d_type = 0;
++				modified = 1;
++			}
++			if (dp->d_namlen != 0) {
++				dp->d_namlen = 0;
++				modified = 1;
++			}
++			if (dp->d_name[0] != '\0') {
++				dp->d_name[0] = '\0';
++				modified = 1;
++			}
++		}
++		goto good;
++	}
+ 	size = DIRSIZ(0, dp);
+ 	namlen = dp->d_namlen;
+ 	type = dp->d_type;
+@@ -229,7 +274,37 @@
+ 			goto bad;
+ 	if (*cp != '\0')
+ 		goto bad;
++
++good:
++	if (zflag && fswritefd >= 0) {
++		/*
++		 * Clear unused directory entry space, including the d_name
++		 * padding.
++		 */
++		/* First figure the number of pad bytes. */
++		unused = roundup2(namlen + 1, DIR_ROUNDUP) - (namlen + 1);
++
++		/* Add in the free space to the end of the record. */
++		unused += dp->d_reclen - DIRSIZ(0, dp);
++
++		/*
++		 * Now clear out the unused space, keeping track if we actually
++		 * changed anything.
++		 */
++		for (cp = &dp->d_name[namlen + 1]; unused > 0; unused--, cp++) {
++			if (*cp != '\0') {
++				*cp = '\0';
++				modified = 1;
++			}
++		}
++		
++		if (modified) {
++			return 2;
++		}
++	}
++
+ 	return (1);
++
+ bad:
+ 	if (debug)
+ 		printf("Bad dir: ino %d reclen %d namlen %d type %d name %s\n",
+--- sbin/fsck_ffs/fsck.h.orig
++++ sbin/fsck_ffs/fsck.h
+@@ -313,6 +313,7 @@
+ extern int	debug;			/* output debugging info */
+ extern int	Eflag;			/* delete empty data blocks */
+ extern int	Zflag;			/* zero empty data blocks */
++extern int	zflag;			/* zero unused directory space */
+ extern int	inoopt;			/* trim out unused inodes */
+ extern char	ckclean;		/* only do work if not cleanly unmounted */
+ extern int	cvtlevel;		/* convert to newer file system format */
+--- sbin/fsck_ffs/fsck_ffs.8.orig
++++ sbin/fsck_ffs/fsck_ffs.8
+@@ -29,7 +29,7 @@
+ .\"	@(#)fsck.8	8.4 (Berkeley) 5/9/95
+ .\" $FreeBSD$
+ .\"
+-.Dd January 13, 2018
++.Dd May 3, 2019
+ .Dt FSCK_FFS 8
+ .Os
+ .Sh NAME
+@@ -38,7 +38,7 @@
+ .Nd file system consistency check and interactive repair
+ .Sh SYNOPSIS
+ .Nm
+-.Op Fl BCdEFfnpRrSyZ
++.Op Fl BCdEFfnpRrSyZz
+ .Op Fl b Ar block
+ .Op Fl c Ar level
+ .Op Fl m Ar mode
+@@ -301,6 +301,9 @@
+ and
+ .Fl Z
+ are specified, blocks are first zeroed and then erased.
++.It Fl z
++Clear unused directory space.
++The cleared space includes deleted file names and name padding.
+ .El
+ .Pp
+ Inconsistencies checked are as follows:
+--- sbin/fsck_ffs/globs.c.orig
++++ sbin/fsck_ffs/globs.c
+@@ -83,6 +83,7 @@
+ int	debug;			/* output debugging info */
+ int	Eflag;			/* delete empty data blocks */
+ int	Zflag;			/* zero empty data blocks */
++int	zflag;			/* zero unused directory space */
+ int	inoopt;			/* trim out unused inodes */
+ char	ckclean;		/* only do work if not cleanly unmounted */
+ int	cvtlevel;		/* convert to newer file system format */
+--- sbin/fsck_ffs/main.c.orig
++++ sbin/fsck_ffs/main.c
+@@ -86,7 +86,7 @@
+ 	sync();
+ 	skipclean = 1;
+ 	inoopt = 0;
+-	while ((ch = getopt(argc, argv, "b:Bc:CdEfFm:npRrSyZ")) != -1) {
++	while ((ch = getopt(argc, argv, "b:Bc:CdEfFm:npRrSyZz")) != -1) {
+ 		switch (ch) {
+ 		case 'b':
+ 			skipclean = 0;
+@@ -163,6 +163,10 @@
+ 			Zflag++;
+ 			break;
+ 
++		case 'z':
++			zflag++;
++			break;
++
+ 		default:
+ 			usage();
+ 		}
+--- sys/ufs/ufs/dir.h.orig
++++ sys/ufs/ufs/dir.h
+@@ -105,13 +105,11 @@
+  * The DIRSIZ macro gives the minimum record length which will hold
+  * the directory entry.  This requires the amount of space in struct direct
+  * without the d_name field, plus enough space for the name with a terminating
+- * null byte (dp->d_namlen+1), rounded up to a 4 byte boundary.
+- *
+- * 
++ * null byte (dp->d_namlen + 1), rounded up to a 4 byte boundary.
+  */
+-#define	DIRECTSIZ(namlen)						\
+-	((__offsetof(struct direct, d_name) +				\
+-	  ((namlen)+1)*sizeof(((struct direct *)0)->d_name[0]) + 3) & ~3)
++#define	DIR_ROUNDUP	4	/* Directory name roundup size */
++#define	DIRECTSIZ(namlen) \
++    (roundup2(__offsetof(struct direct, d_name) + (namlen) + 1, DIR_ROUNDUP))
+ #if (BYTE_ORDER == LITTLE_ENDIAN)
+ #define	DIRSIZ(oldfmt, dp) \
+     ((oldfmt) ? DIRECTSIZ((dp)->d_type) : DIRECTSIZ((dp)->d_namlen))
+--- sys/ufs/ufs/ufs_lookup.c.orig
++++ sys/ufs/ufs/ufs_lookup.c
+@@ -823,14 +823,21 @@
+ 	struct componentname *cnp;
+ 	struct direct *newdirp;
+ {
++	u_int namelen;
+ 
+-#ifdef INVARIANTS
+-	if ((cnp->cn_flags & SAVENAME) == 0)
+-		panic("ufs_makedirentry: missing name");
+-#endif
++	namelen = (unsigned)cnp->cn_namelen;
++	KASSERT((cnp->cn_flags & SAVENAME) != 0,
++		("ufs_makedirentry: missing name"));
++	KASSERT(namelen <= MAXNAMLEN,
++		("ufs_makedirentry: name too long"));
+ 	newdirp->d_ino = ip->i_number;
+-	newdirp->d_namlen = cnp->cn_namelen;
+-	bcopy(cnp->cn_nameptr, newdirp->d_name, (unsigned)cnp->cn_namelen + 1);
++	newdirp->d_namlen = namelen;
++
++	/* Zero out after-name padding */
++	*(u_int32_t *)(&newdirp->d_name[namelen & ~(DIR_ROUNDUP - 1)]) = 0;
++
++	bcopy(cnp->cn_nameptr, newdirp->d_name, namelen);
++
+ 	if (ITOV(ip)->v_mount->mnt_maxsymlinklen > 0)
+ 		newdirp->d_type = IFTODT(ip->i_mode);
+ 	else {
+@@ -1209,16 +1216,21 @@
+ 	if (ip && rep->d_ino != ip->i_number)
+ 		panic("ufs_dirremove: ip %ju does not match dirent ino %ju\n",
+ 		    (uintmax_t)ip->i_number, (uintmax_t)rep->d_ino);
+-	if (dp->i_count == 0) {
++	/*
++	 * Zero out the file directory entry metadata to reduce disk
++	 * scavenging disclosure.
++	 */
++	bzero(&rep->d_name[0], rep->d_namlen);
++	rep->d_namlen = 0;
++	rep->d_type = 0;
++	rep->d_ino = 0;
++
++	if (dp->i_count != 0) {
+ 		/*
+-		 * First entry in block: set d_ino to zero.
+-		 */
+-		ep->d_ino = 0;
+-	} else {
+-		/*
+ 		 * Collapse new free space into previous entry.
+ 		 */
+ 		ep->d_reclen += rep->d_reclen;
++		rep->d_reclen = 0;
+ 	}
+ #ifdef UFS_DIRHASH
+ 	if (dp->i_dirhash != NULL)

@@ -1,0 +1,92 @@
+--- sys/cam/scsi/scsi_cd.c.orig
++++ sys/cam/scsi/scsi_cd.c
+@@ -1314,7 +1314,7 @@
+ 
+ 	struct 	cam_periph *periph;
+ 	struct	cd_softc *softc;
+-	int	nocopyout, error = 0;
++	int	error = 0;
+ 
+ 	periph = (struct cam_periph *)dp->d_drv1;
+ 	cam_periph_lock(periph);
+@@ -1356,7 +1356,6 @@
+ 	 */
+ 	cam_periph_unlock(periph);
+ 
+-	nocopyout = 0;
+ 	switch (cmd) {
+ 
+ 	case CDIOCPLAYTRACKS:
+@@ -1532,9 +1531,6 @@
+ 			cam_periph_unlock(periph);
+ 		}
+ 		break;
+-	case CDIOCREADSUBCHANNEL_SYSSPACE:
+-		nocopyout = 1;
+-		/* Fallthrough */
+ 	case CDIOCREADSUBCHANNEL:
+ 		{
+ 			struct ioc_read_subchannel *args
+@@ -1579,13 +1575,7 @@
+ 				data->header.data_len[1] +
+ 				sizeof(struct cd_sub_channel_header)));
+ 			cam_periph_unlock(periph);
+-			if (nocopyout == 0) {
+-				if (copyout(data, args->data, len) != 0) {
+-					error = EFAULT;
+-				}
+-			} else {
+-				bcopy(data, args->data, len);
+-			}
++			error = copyout(data, args->data, len);
+ 			free(data, M_SCSICD);
+ 		}
+ 		break;
+--- sys/compat/linux/linux_ioctl.c.orig
++++ sys/compat/linux/linux_ioctl.c
+@@ -1489,16 +1489,26 @@
+ 		struct ioc_read_subchannel bsdsc;
+ 		struct cd_sub_channel_info bsdinfo;
+ 
++		error = copyin((void *)args->arg, &sc, sizeof(sc));
++		if (error)
++			break;
++
++		/*
++		 * Invoke the native ioctl and bounce the returned data through
++		 * the userspace buffer.  This works because the Linux structure
++		 * is the same size as our structures for the subchannel header
++		 * and position data.
++		 */
+ 		bsdsc.address_format = CD_LBA_FORMAT;
+ 		bsdsc.data_format = CD_CURRENT_POSITION;
+ 		bsdsc.track = 0;
+-		bsdsc.data_len = sizeof(bsdinfo);
+-		bsdsc.data = &bsdinfo;
+-		error = fo_ioctl(fp, CDIOCREADSUBCHANNEL_SYSSPACE,
+-		    (caddr_t)&bsdsc, td->td_ucred, td);
++		bsdsc.data_len = sizeof(sc);
++		bsdsc.data = (void *)args->arg;
++		error = fo_ioctl(fp, CDIOCREADSUBCHANNEL, (caddr_t)&bsdsc,
++		    td->td_ucred, td);
+ 		if (error)
+ 			break;
+-		error = copyin((void *)args->arg, &sc, sizeof(sc));
++		error = copyin((void *)args->arg, &bsdinfo, sizeof(bsdinfo));
+ 		if (error)
+ 			break;
+ 		sc.cdsc_audiostatus = bsdinfo.header.audio_status;
+--- sys/sys/cdio.h.orig
++++ sys/sys/cdio.h
+@@ -274,11 +274,4 @@
+ 
+ #define	CDIOCCAPABILITY	_IOR('c',30,struct ioc_capability)	/*<2>*/
+ 
+-/*
+- * Special version of CDIOCREADSUBCHANNEL which assumes that
+- * ioc_read_subchannel->data points to the kernel memory. For
+- * use in compatibility layers.
+- */
+-#define CDIOCREADSUBCHANNEL_SYSSPACE _IOWR('c', 31, struct ioc_read_subchannel)
+-
+ #endif /* !_SYS_CDIO_H_ */
