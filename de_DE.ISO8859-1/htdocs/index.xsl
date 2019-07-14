@@ -6,7 +6,7 @@
 <!--
      $FreeBSD$
      $FreeBSDde$
-     basiert auf: 52666
+     basiert auf: 53235
 -->
 
 <xsl:stylesheet version="1.0"
@@ -90,11 +90,10 @@
 					<li>
 					  Produktion:&nbsp;<a href="&u.rel.announce;">&rel.current;</a>,
 				<a
-				  href="&u.rel1.announce;">&rel1.current;</a>
-				<?ignore
+				  href="&u.rel1.announce;">&rel1.current;</a>,
 				<a
 				  href="&u.rel2.announce;">&rel2.current;</a></li>
-				?></li>
+
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 					<li>Test:&nbsp;<a
 				href="&u.betarel.schedule;">&betarel.current;</a></li>
