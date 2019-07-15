@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r52666 -->
+<!-- Original revision: r53235 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -94,10 +94,10 @@
 				href="&u.rel.announce;">&rel.current;</a>,
 					<a
 				href="&u.rel1.announce;">&rel1.current;</a>
-				<?ignore
+				
 				<a
 				href="&u.rel2.announce;">&rel2.current;</a></li>
-				?></li>
+				
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 					<li>即將發佈: <a
 				href="&u.betarel.schedule;">&betarel.current;</a></li>
