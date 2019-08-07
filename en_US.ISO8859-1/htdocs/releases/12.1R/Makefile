@@ -17,7 +17,10 @@ DOCS=	index.xml \
 
 DATA=	docbook.css
 
-#SUBDIR=	errata readme relnotes installation
+#SUBDIR= 	errata
+#SUBDIR+= 	readme
+SUBDIR+= 	relnotes
+#SUBDIR+= 	installation
 
 #.if exists(${SVN})
 #SUBDIR+=hardware
