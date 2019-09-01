@@ -687,6 +687,12 @@ $manPathDefault = 'FreeBSD 12.0-RELEASE and Ports';
     'SunOS 5.5.1', "$manLocalDir/SunOS-5.5.1",
     'SunOS 4.1.3', "$manLocalDir/SunOS-4.1.3",
 
+    # full name: Sun UNIX 4.2* Software Release 0.4 (*Berkeley Beta Release)
+    # 1/2'' Boot Tape 700-0586-01
+    # alias SunOS 0.4, apparently released in April 1983 based on 4.2BSD beta
+    'Sun UNIX 0.4', "$manLocalDir/Sun-UNIX-0.4",
+
+
     #'XFree86 3.2',      "$manLocalDir/XFree86-3.2",
     'XFree86 2.1',      "$manLocalDir/XFree86-2.1",
     'XFree86 3.3',      "$manLocalDir/XFree86-3.3",
