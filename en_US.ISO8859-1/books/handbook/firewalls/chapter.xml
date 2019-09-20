@@ -3788,4 +3788,327 @@ LOG_ERR - packets which have been logged and which can be considered short due t
 	message.</para>
     </sect2>
   </sect1>
+
+  <sect1 xml:id="firewalls-blacklistd">
+    <title>Blacklistd</title>
+
+    <para>Blacklistd is a daemon listening to sockets to receive
+      notifications from other daemons about connection attempts
+      that failed or were successful.  It is most widely used in
+      blocking too many connection attempts on open ports.  A
+      prime example is <application>SSH</application> running on
+      the internet getting a lot of requests from bots or scripts
+      trying to guess passwords and gain access.  Using
+      <application>blacklistd</application>, the daemon can notify
+      the firewall to create a filter rule to block excessive
+      connection attempts from a single source after a number of
+      tries.  Blacklistd was first developed on
+      NetBSD and appeared there in version 7.  &os;&nbsp;11
+      imported blacklistd from NetBSD.</para>
+
+    <para>This chapter describes how to set up blacklistd,
+      configure it, and provides examples on how to use it.
+      Readers should be familiar with basic firewall concepts like
+      rules.  For details, refer to the firewall chapter.  PF is
+      used in the examples, but other firewalls available on
+      &os; should be able to work with blacklistd, too.</para>
+
+    <sect2>
+      <title>Enabling Blacklistd</title>
+
+      <para>The main configuration for blacklistd is stored in
+	&man.blacklistd.conf.5;.  Various command line options are
+	also available to change blacklistd's run-time behavior.
+	Persistent configuration across reboots should be stored
+	in <filename>/etc/blacklistd.conf</filename>.  To enable
+	the daemon during system boot, add a
+	<literal>blacklistd_enable</literal> line to
+	<filename>/etc/rc.conf</filename> like this:</para>
+
+	<screen>&prompt.root; <userinput>sysrc blacklistd_enable=yes</userinput></screen>
+
+	<para>To start the service manually, run this command:</para>
+
+	<screen>&prompt.root; <userinput>service blacklistd start</userinput></screen>
+    </sect2>
+
+    <sect2>
+      <title>Creating a Blacklistd Ruleset</title>
+
+      <para>Rules for blacklistd are configured in
+	&man.blacklistd.conf.5; with one entry per line.  Each
+	rule contains a tuple separated by spaces or tabs.  Rules
+	either belong to a <literal>local</literal> or a
+	<literal>remote</literal>, which applies to the machine
+	where blacklistd is running or an outside source,
+	respectively.</para>
+
+      <sect3>
+	<title>Local Rules</title>
+
+	<para>An example blacklistd.conf entry for a local rule
+	  looks like this:</para>
+
+	<programlisting>[local]
+ssh             stream  *       *               *       3       24h</programlisting>
+
+	<para>All rules that follow the <literal>[local]</literal>
+	  section are treated as local rules (which is the
+	  default), applying to the local machine.  When a
+	  <literal>[remote]</literal> section is encountered, all
+	  rules that follow it are handled as remote machine
+	  rules.</para>
+
+	<para>Seven fields define a rule separated by either tabs
+	  or spaces.  The first four fields identify the traffic
+	  that should be blacklisted.  The three fields that
+	  follow define backlistd's behavior.  Wildcards are
+	  denoted as asterisks (<literal>*</literal>), matching
+	  anything in this field.  The first field defines the
+	  location.  In local rules, these are the network ports.
+	  The syntax for the location field is as follows:</para>
+
+	  <programlisting>[<replaceable>address</replaceable>|<replaceable>interface</replaceable>][/<replaceable>mask</replaceable>][:<replaceable>port</replaceable>]</programlisting>
+
+	  <para>Adressses can be specified as IPv4 in numeric format
+	    or IPv6 in square brackets.  An interface name like
+	    <literal><replaceable>em0</replaceable></literal> can also
+	    be used.</para>
+
+	  <para>The socket type is defined by the second field.  TCP
+	    sockets are of type <literal>stream</literal>, whereas UDP
+	    is denoted as <literal>dgram</literal>.  The example above
+	    uses TCP, since SSH is using that protocol.</para>
+
+	  <para>A protocol can be used in the third field of a
+	    blacklistd rule.  The following protocols can be used:
+	    <literal>tcp</literal>, <literal>udp</literal>,
+	    <literal>tcp6</literal>, <literal>udp6</literal>, or
+	    numeric.  A wildcard, like in the example, is typically
+	    used to match all protocols unless there is a reason to
+	    distinguish traffic by a certain protocol.</para>
+
+	  <para>In the fourth field, the effective user or owner of
+	    the daemon process that is reporting the event is defined.
+	    The username or <acronym>UID</acronym> can be used here,
+	    as well as a wildcard (see example rule above).</para>
+
+	  <para>The packet filter rule name is declared by the fifth
+	    field, which starts the behavior part of the rule.  By
+	    default, blacklistd puts all blocks under a pf anchor
+	    called <literal>blacklistd</literal> in
+	    <filename>pf.conf</filename> like this:</para>
+
+	  <programlisting>anchor "blacklistd/*" in on $ext_if
+block in
+pass out</programlisting>
+
+	  <para>For separate blacklists, an anchor name can be used in
+	    this field.  In other cases, the wildcard will suffice.
+	    When a name starts with a hyphen (<literal>-</literal>) it
+	    means that an anchor with the default rule name prepended
+	    should be used.  A modified example from the above using
+	    the hyphen would look like this:</para>
+
+	  <programlisting>ssh             stream  *       *               -ssh       3       24h</programlisting>
+
+	  <para>With such a rule, any new blacklist rules are added to
+	    an anchor called <literal>blacklistd-ssh</literal>.</para>
+
+	  <para>To block whole subnets for a single rule violation, a
+	    <literal>/</literal> in the rule name can be used.  This
+	    causes the remaining portion of the name to be interpreted
+	    as the mask to be applied to the address specified in
+	    the rule.  For example, this rule would block every
+	    address adjoining <literal>/24</literal>.</para>
+
+	  <programlisting>22              stream  tcp       *               */24    3       24h</programlisting>
+
+	  <note>
+	    <para>It is important to specify the proper
+	      protocol here.  IPv4 and IPv6 treat /24 differently,
+	      that is the reason why <literal>*</literal> cannot be
+	      used in the third field for this rule.</para>
+	  </note>
+
+	  <para>This rule defines that if any one host in that network
+	    is misbehaving, everything else on that network will be
+	    blocked, too.</para>
+
+	  <para>The sixth field, called <literal>nfail</literal>, sets
+	    the number of login failures required to blacklist the
+	    remote IP in question.  When a wildcard is used at this
+	    position, it means that blocks will never happen.  In the
+	    example rule above, a limit of three is defined meaning
+	    that after three attempts to log into
+	    <application>SSH</application> on one connection, the IP
+	    is blocked.</para>
+
+	  <para>The last field in a blacklistd rule definition
+	    specifies how long a host is blacklisted.  The default
+	    unit is seconds, but suffixes like <literal>m</literal>,
+	    <literal>h</literal>, and <literal>d</literal> can also be
+	    specified for minutes, hours, and days,
+	    respectively.</para>
+
+	  <para>The example rule in its entirety means that after
+	    three times authenticating to
+	    <application>SSH</application> will result in a new PF
+	    block rule for that host.  Rule matches are performed by
+	    first checking local rules one after another, from most
+	    specific to least specific.  When a match occurs, the
+	    <literal>remote</literal> rules are applied and the name,
+	    <literal>nfail</literal>, and disable fields are changed
+	    by the <literal>remote</literal> rule that matched.</para>
+	</sect3>
+
+	<sect3>
+	  <title>Remote Rules</title>
+
+	  <para>Remote rules are used to specify how blacklistd
+	    changes its behavior depending on the remote host
+	    currently being evaluated.  Each field in a remote rule
+	    is the same as in a local rule.  The only difference is
+	    in the way blacklistd is using them.  To explain it,
+	    this example rule is used:</para>
+
+	  <programlisting>[remote]
+203.0.113.128/25 *      *       *               =/25    =       48h</programlisting>
+
+	  <para>The address field can be an IP address (either v4 or
+	    v6), a port or both.  This allows setting special rules
+	    for a specific remote address range like in this example.
+	    The fields for type, protocol and owner are identically
+	    interpreted as in the local rule.</para>
+
+	  <para>The name fields is different though: the equal sign
+	    (<literal>=</literal>) in a remote rule tells blacklistd
+	    to use the value from the matching local rule.  It means
+	    that the firewall rule entry is taken and the
+	    <systemitem class="netmask">/25</systemitem> prefix (a
+	    netmask of <systemitem
+	      class="netmask">255.255.255.128</systemitem>) is added.
+	    When a connection from that address range is blacklisted,
+	    the entire subnet is affected.  A PF anchor name can also
+	    be used here, in which case blacklistd will add rules for
+	    this address block to the anchor of that name.  The
+	    default table is used when a wildcard is specified.</para>
+
+	  <para>A custom number of failures in the
+	    <literal>nfail</literal> column can be defined for an
+	    address.  This is useful for exceptions to a specific
+	    rule, to maybe allow someone a less strict application
+	    of rules or a bit more leniency in login tries.
+	    Blocking is disabled when an asterisk is used in this
+	    sixth field.</para>
+
+	  <para>Remote rules allow a stricter enforcement of limits
+	    on attempts to log in compared to attempts coming from a
+	    local network like an office.</para>
+	</sect3>
+      </sect2>
+
+      <sect2>
+	<title>Blacklistd Client Configuration</title>
+
+	<para>There are a few software packages in &os; that can
+	  utilize blacklistd's functionality.  The two most
+	  prominent ones are &man.ftpd.8; and &man.sshd.8; to block
+	  excessive connection attempts.  To activate blacklistd in
+	  the SSH daemon, add the following line to
+	  <filename>/etc/ssh/sshd_config</filename>:</para>
+
+	<programlisting>UseBlacklist yes</programlisting>
+
+	<para>Restart sshd afterwards to make these changes take
+	  effect.</para>
+
+	<para>Blacklisting for &man.ftpd.8; is enabled using
+	  <literal>-B</literal>, either in
+	  <filename>/etc/inetd.conf</filename> or as a
+	  flag in <filename>/etc/rc.conf</filename> like
+	  this:</para>
+
+	<programlisting>ftpd_flags="-B"</programlisting>
+
+	<para>That is all that is needed to make these programs
+	  talk to blacklistd.</para>
+      </sect2>
+
+      <sect2>
+	<title>Blacklistd Management</title>
+
+	<para>Blacklistd provides the user with a management utility
+	  called &man.blacklistctl.8;.  It displays blocked
+	  addresses and networks that are blacklisted by the rules
+	  defined in &man.blacklistd.conf.5;.  To see the
+	  list of currently blocked hosts, use
+	  <command>dump</command> combined with <option>-b</option>
+	  like this.</para>
+
+	<screen>&prompt.root; <userinput>blacklistctl dump -b</userinput>
+      address/ma:port id      nfail   last access
+213.0.123.128/25:22   OK      6/3     2019/06/08 14:30:19</screen>
+
+	<para>This example shows that there were 6 out of three
+	  permitted attempts on port 22 coming from the address
+	  range <systemitem
+	    class="netmask">213.0.123.128/25</systemitem>.  There
+	  are more attempts listed than are allowed because SSH
+	  allows a client to try multiple logins on a single TCP
+	  connection.  A connection that is currently going on is
+	  not stopped by blacklistd.  The last connection attempt is
+	  listed in the <literal>last access</literal> column of the
+	  output.</para>
+
+	<para>To see the remaining time that this host will be on
+	  the blacklist, add <option>-r</option> to the previous
+	  command.</para>
+
+	<screen>&prompt.root; <userinput>blacklistctl dump -br</userinput>
+      address/ma:port id      nfail   remaining time
+213.0.123.128/25:22   OK      6/3     36s</screen>
+
+	<para>In this example, there are 36s seconds left until this
+	  host will not be blocked any more.</para>
+      </sect2>
+
+      <sect2>
+	<title>Removing Hosts from the Block List</title>
+
+	<para>Sometimes it is necessary to remove a host from the
+	  block list before the remaining time expires.
+	  Unfortunately, there is no functionality in blacklistd to
+	  do that.  However, it is possible to remove the address
+	  from the PF table using pfctl.  For each blocked port,
+	  there is a child anchor inside the blacklistd anchor
+	  defined in <filename>/etc/pf.conf</filename>.  For
+	  example, if there is a child anchor for blocking port 22
+	  it is called <literal>blacklistd/22</literal>.  There is a
+	  table inside that child anchor that contains the blocked
+	  addresses.  This table is called port followed by the port
+	  number.  In this example, it would be called
+	  <literal>port22</literal>.  With that information at hand,
+	  it is now possible to use &man.pfctl.8; to display all
+	  addresses listed like this:</para>
+
+	<screen>&prompt.root; <userinput>pfctl -a <replaceable>blacklistd/22</replaceable> -t <replaceable>port22</replaceable> -T show</userinput>
+...
+213.0.123.128/25
+...</screen>
+
+	<para>After identifying the address to be unblocked from the
+	  list, the following command removes it from the list:</para>
+
+	<screen>&prompt.root; <userinput>pfctl -a <replaceable>blacklistd/22</replaceable> -T delete <replaceable>213.0.123.128/25</replaceable></userinput></screen>
+
+	<para>The address is now removed from PF, but will still
+	  show up in the blacklistctl list, since it does not know
+	  about any changes made in PF.  The entry in blacklistd's
+	  database will eventually expire and be removed from its
+	  output eventually.  The entry will be added again if the
+	  host is matching one of the block rules in blacklistd
+	  again.</para>
+      </sect2>
+    </sect1>
 </chapter>
