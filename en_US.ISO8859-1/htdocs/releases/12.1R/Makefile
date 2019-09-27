@@ -13,8 +13,7 @@
 RELN_ROOT?=	${.CURDIR}
 
 DOCS=	index.xml \
-	schedule.xml \
-	signatures.xml
+	schedule.xml
 
 DATA=	docbook.css
 
