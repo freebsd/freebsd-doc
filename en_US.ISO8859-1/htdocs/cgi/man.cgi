@@ -104,6 +104,7 @@ $sectionpath = {
     'HP-UX 10.10' => { 'path' => '1:1m:2:3:4:5:7:9' },
     'HP-UX 10.01' => { 'path' => '1:1m:2:3:4:5:7:9' },
     'HP-UX 9.07'  => { 'path' => '1:1m:2:3:4:5:7:9' },
+    'HP-UX 8.07'  => { 'path' => '1:1m:2:3:4:5:7:9' },
 
     'IRIX 6.5.30' => { 'path' => '1:1m:2:3:3c:3dm:3n:3x:4:5:7:9' },
 
@@ -676,6 +677,7 @@ $manPathDefault = 'FreeBSD 12.0-RELEASE and Ports';
     'HP-UX 10.10', "$manLocalDir/HP-UX-10.10",
     'HP-UX 10.01', "$manLocalDir/HP-UX-10.01",
     'HP-UX 9.07',  "$manLocalDir/HP-UX-9.07",
+    'HP-UX 8.07',  "$manLocalDir/HP-UX-8.07",
 
     'IRIX 6.5.30',  "$manLocalDir/IRIX-6.5.30/catman/a_man:$manLocalDir/IRIX-6.5.30/catman/p_man:$manLocalDir/IRIX-6.5.30/catman/u_man:$manLocalDir/IRIX-6.5.30/dt",
 
