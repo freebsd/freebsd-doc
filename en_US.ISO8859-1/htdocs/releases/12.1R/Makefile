@@ -64,19 +64,19 @@ _ARM64_AARCH64?=PINE64 \
 .if (${_BRANCH:MBETA*} != "" || ${_BRANCH:MRC*} != "" || ${_BRANCH:MRELEASE} != "")
 .for CHECKSUM in SHA512 SHA256
 . for _B in ${_BIGIRON}
-DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-${_B}.asc
+#DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-${_B}.asc
 . endfor
 . for _V in ${_VMS}
-DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-${_V}-vm.asc
+#DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-${_V}-vm.asc
 . endfor
 . for _A in ${_ARM_ARMV6}
-DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-arm-armv6-${_A}.asc
+#DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-arm-armv6-${_A}.asc
 . endfor
 . for _A in ${_ARM_ARMV7}
-DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-arm-armv7-${_A}.asc
+#DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-arm-armv7-${_A}.asc
 . endfor
 . for _A in ${_ARM64_AARCH64}
-DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-arm64-aarch64-${_A}.asc
+#DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-arm64-aarch64-${_A}.asc
 . endfor
 .endfor
 .endif # _BRANCH !RC* || RELEASE*
