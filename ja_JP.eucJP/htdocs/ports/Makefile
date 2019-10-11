@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r47265
+# Original revision: r52882
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -21,9 +21,13 @@ ${INDEX}: ${PINDEX_OVERRIDE}
 ${INDEX}: $${PORTSBASE}/${PINDEX}
 	${CP} ${PORTSBASE}/${PINDEX} ${INDEX}
 .else
-${INDEX}:
+
+${INDEX}: ${INDEX}.bz2
+${INDEX}.bz2: .EXEC
 	${FETCH} ${FETCH_OPT} -o ${INDEX}.bz2 ${INDEXURI}.bz2
-	${BUNZIP2} ${INDEX}.bz2
+	if [ ! -e ${INDEX} -o ${INDEX}.bz2 -nt ${INDEX} ]; then \
+	  ${BUNZIP2} -dc ${INDEX}.bz2 > ${INDEX}.tmp && ${MV} -f ${INDEX}.tmp ${INDEX}; \
+	fi
 .endif
 
 HOSTNAME!= hostname
@@ -49,7 +53,7 @@ packages.exists:
 	${TOUCH} ${.TARGET}
 .endif
 
-Makefile.gen: categories-alpha.xml categories-grouped.xml index.xml \
+Makefile.gen: .PHONY categories-alpha.xml categories-grouped.xml index.xml \
 	installing.xml master-index.xml references.xml searching.xml \
 	statistics.ent updating.xml .NOTMAIN
 	(	${ECHO_CMD} DOCS= *.xml | ${SED} 's|catalog-cwd\.xml||g';\
@@ -70,7 +74,7 @@ categories-grouped.xml master-index.xml statistics.ent: categories-alpha.xml
 # this builds: categories-alpha.xml, categories-grouped.xml,
 # master-index.xml, statistics.ent, <category>.xml
 CATEGORYLIST=`grep "^[a-z]" ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/ports/categories | sed -e s"/,.*//"`
-categories-alpha.xml: ${INDEX} categories categories.descriptions \
+categories-alpha.xml: .PHONY ${INDEX} categories categories.descriptions \
 	packages.exists portindex ports.ent .NOTMAIN
 	${RM} -f categories-alpha.xml categories-grouped.xml \
 		master-index.xml statistics.ent
@@ -92,8 +96,8 @@ all install clean:
 beforeinstall:
 .else
 beforeinstall:
-	${SED} -i "" -e 's,href="growth,href="http://www.FreeBSD.org/ports/growth,' index.html
-	${SED} -i "" -e 's,href="growth,href="http://www.FreeBSD.org/ports/growth,' references.html
+	${SED} -i "" -e 's,href="growth,href="https://www.FreeBSD.org/ports/growth,' index.html
+	${SED} -i "" -e 's,href="growth,href="https://www.FreeBSD.org/ports/growth,' references.html
 .endif
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
