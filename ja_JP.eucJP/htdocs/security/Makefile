@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r46904
+# Original revision: r52778
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -13,6 +13,8 @@
 #+SUBDIR+=	patches
 
 #DATA=	so_public_key.asc
+#DATA+=	advisory-template.txt
+#DATA+=	errata-template.txt
 #DOCS=	charter.xml
 DOCS+=	security.xml
 #DOCS+=	advisories.xml
@@ -20,11 +22,8 @@ DOCS+=	security.xml
 DOCS+=  reporting.xml
 DOCS+=  unsupported.xml
 
-#.PHONY:		advisories.xml
-#advisories.xml: advisories.html.inc
-
-#.PHONY:		notices.xml
-#notices.xml: notices.html.inc
+#advisories.html: advisories.html.inc
+#notices.html: notices.html.inc
 
 INDEXLINK=	security.html
 
