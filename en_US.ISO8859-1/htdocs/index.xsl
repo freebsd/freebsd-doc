@@ -100,6 +100,8 @@
 				  <h2><a href="&base;/releases/">Supported Releases</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>Production:&nbsp;<a
+				href="&u.rel121.announce;">&rel121.current;</a>,
+				<a
 				href="&u.rel120.announce;">&rel120.current;</a>,
 				<a
 				  href="&u.rel113.announce;">&rel113.current;</a></li>
