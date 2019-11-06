@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r52000 -->
+<!-- Original revision: r53526 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -47,9 +47,6 @@
 		  があり、
 		  <a href="&base;/community/irc.html">IRC</a>
 		  のコミュニティも活発です。
-		  多くの開発者は、関連する &os; の情報を
-		  <a href="https://planet.freebsdish.org">ブログ</a>
-		  で紹介しています。
 		  また、開発者や活発な貢献者は、
 		  &os; の開発状況や関連プロジェクトの情報を <a
 		  href="https://wiki.FreeBSD.org/">wiki</a>
