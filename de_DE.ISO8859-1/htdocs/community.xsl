@@ -7,7 +7,7 @@
 
 <!-- $FreeBSD$ -->
 <!-- $FreeBSDde$ -->
-<!-- basiert auf: r51328 -->
+<!-- basiert auf: r53526 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -34,7 +34,7 @@
 		Mailinglisten</a>, dutzende <a
 		href="https://forums.FreeBSD.org/">Foren</a> sowie
 		diverse <a
-		href="&base;/community/newsgroups.html">Newsgroups</a>.
+		href="&enbase;/doc/de_DE.ISO8859-1/books/handbook/eresources-news.html">Newsgroups</a>.
 		Dazu kommen mehr als 91 <!-- <xsl:value-of
 		select="count(document($usergroups.xml)//entry)"
 		/><xsl:text> </xsl:text>--> <a
@@ -43,9 +43,6 @@
 		select="count(document($usergroups.xml)//country)" />-->
 		Zusätzlich existiert eine aktive <a
 		href="&base;/community/irc.html">IRC</a>-Gemeinde.
-		Viele Entwickler betreiben auch <a
-		href="https://planet.freebsd.org">Blogs</a>, in denen
-		sie über ihre Arbeit an FreeBSD berichten.
 		Außerdem betreiben die &os;-Entwickler gemeinsam mit
 		einigen der wichtigsten Unterstützer ein <a
 		href="https://wiki.FreeBSD.org/">Wiki</a>, das Informationen
@@ -137,7 +134,7 @@
 		  Konferenzen und Hackatons, die auf <a
 		  href="http://www.flickr.com">flickr</a> mit dem
 		  Tag '<a
-		  href="http://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
+		  href="https://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
 		  versehen wurden.</li>
 
 		<li>Auf <a href="https://www.youtube.com">YouTube</a>
