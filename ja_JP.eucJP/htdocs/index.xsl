@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r53534 -->
+<!-- Original revision: r53644 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -326,7 +326,7 @@
 	The mark FreeBSD is a registered trademark of The FreeBSD
 	Foundation and is used by The FreeBSD Project with the
 	permission of <a
-	  href="https://www.freebsdfoundation.org/documents/Guidelines.shtml">The
+	  href="https://www.freebsdfoundation.org/legal/trademark-usage-terms-and-conditions/">The
 	FreeBSD Foundation</a>.
 	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>
