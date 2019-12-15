@@ -6,7 +6,7 @@
 <!--
      $FreeBSD$
      $FreeBSDde$
-     basiert auf: 53534
+     basiert auf: 53664
 -->
 
 <xsl:stylesheet version="1.0"
@@ -319,7 +319,7 @@
 	Die Marke FreeBSD ist eine eingetragene Marke der FreeBSD
 	Foundation und wird vom FreeBSD Project mit freundlicher Genehmigung
 	der <a
-	href="https://www.freebsdfoundation.org/documents/Guidelines.shtml">
+	href="https://www.freebsdfoundation.org/legal/trademark-usage-terms-and-conditions/">
 	FreeBSD Foundation</a> verwendet.
 	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>
