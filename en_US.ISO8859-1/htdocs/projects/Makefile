@@ -21,6 +21,6 @@ DATA+=	2018-freebsd-gsoc.pdf
 
 INDEXLINK= projects.html
 
-SUBDIR=	 acpi busdma ideas mips netperf
+SUBDIR=	 busdma ideas mips netperf
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
