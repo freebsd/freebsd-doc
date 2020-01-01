@@ -9,7 +9,6 @@
 
 DOCS=	projects.xml
 DOCS+=	newbies.xml
-DOCS+=	cvsweb.xml
 DOCS+=	summerofcode.xml
 DOCS+=	summerofcode-2005.xml
 DOCS+=	summerofcode-2006.xml
