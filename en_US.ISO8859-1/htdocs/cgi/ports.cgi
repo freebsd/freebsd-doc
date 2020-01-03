@@ -166,7 +166,7 @@ sub last_update {
 
     $modtime = ( stat($file) )[9];
     if ( defined($modtime) && $modtime > 0 ) {
-        $modtimestr = strftime( "%G-%m-%d %H:%M:%S UTC", gmtime($modtime) );
+        $modtimestr = strftime( "%Y-%m-%d %H:%M:%S UTC", gmtime($modtime) );
     }
     else {
         $modtimestr = "Unknown";
