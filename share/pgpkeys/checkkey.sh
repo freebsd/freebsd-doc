@@ -7,7 +7,7 @@
 # This script is intended to sanity-check PGP keys used by folks with
 # @FreeBSD.org email addresses.  The checks are intended to be derived
 # from the information at
-# <https://we.riseup.net/riseuplabs+paow/openpgp-best-practices#openpgp-key-checks>
+# <https://riseup.net/en/security/message-security/openpgp/gpg-best-practices#openpgp-key-checks>
 #
 
 # make sure we are in a well known language
