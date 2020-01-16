@@ -16,6 +16,9 @@
 
   <xsl:variable name="title">&title;</xsl:variable>
 
+  <!-- Sort only reports strictly older than 2019q4 -->
+  <xsl:variable name="manual-sorting-condition" select="/report/date/year &gt; 2020 or (/report/date/year = 2019 and /report/date/month = '10-12')"/>
+
   <xsl:template name="process.sidewrap">
     &nav.about;
   </xsl:template>
@@ -26,7 +29,7 @@
 
 	<hr/>
 
-	<!-- Generate a table of contents, sorted -->
+	<!-- Generate a table of contents, sorted if needed -->
 	<xsl:for-each select="report/category">
 	  <!-- category title and link -->
 	  <h3><a><xsl:attribute name="href">#<xsl:value-of
@@ -34,38 +37,74 @@
 	    <xsl:value-of select="description"/></a></h3>
 	  <xsl:variable name="cat-short" select="name"/>
 	  <ul>
-	    <xsl:for-each select="//project[@cat=$cat-short and @summary]">
-  	      <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
-	      <li><a><xsl:attribute name="href">#<xsl:value-of
-	      select="translate(normalize-space(title), ' ',
-	      '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
-	      </li>
-	    </xsl:for-each>
+	    <xsl:choose>
+	      <xsl:when test="$manual-sorting-condition">
+	        <xsl:for-each select="//project[@cat=$cat-short and @summary]">
+	          <li><a><xsl:attribute name="href">#<xsl:value-of
+	          select="translate(normalize-space(title), ' ',
+	          '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
+	          </li>
+	        </xsl:for-each>
+	      </xsl:when>
+	      <xsl:otherwise>
+	        <xsl:for-each select="//project[@cat=$cat-short and @summary]">
+  	          <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
+	          <li><a><xsl:attribute name="href">#<xsl:value-of
+	          select="translate(normalize-space(title), ' ',
+	          '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
+	           </li>
+	        </xsl:for-each>
+	      </xsl:otherwise>
+	    </xsl:choose>
 
-	    <xsl:for-each select="//project[@cat=$cat-short and not(@summary)]">
-  	      <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
-	      <li><a><xsl:attribute name="href">#<xsl:value-of
-	      select="translate(normalize-space(title), ' ',
-	      '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
-	      </li>
-	    </xsl:for-each>
+	    <xsl:choose>
+	      <xsl:when test="$manual-sorting-condition">
+	        <xsl:for-each select="//project[@cat=$cat-short and not(@summary)]">
+	          <li><a><xsl:attribute name="href">#<xsl:value-of
+	          select="translate(normalize-space(title), ' ',
+	          '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
+	          </li>
+	        </xsl:for-each>
+	      </xsl:when>
+	      <xsl:otherwise>
+	        <xsl:for-each select="//project[@cat=$cat-short and not(@summary)]">
+  	          <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
+	          <li><a><xsl:attribute name="href">#<xsl:value-of
+    	          select="translate(normalize-space(title), ' ',
+	          '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
+	          </li>
+	        </xsl:for-each>
+	      </xsl:otherwise>
+	    </xsl:choose>
 	  </ul>
 	</xsl:for-each>
 	<ul>
-	  <xsl:for-each select="//project[not(@cat)]">
-  	    <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
-	    <li><a><xsl:attribute name="href">#<xsl:value-of
-	    select="translate(normalize-space(title), ' ',
-	    '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
-	    </li>
-	  </xsl:for-each>
+	    <xsl:choose>
+	      <xsl:when test="$manual-sorting-condition">
+	        <xsl:for-each select="//project[not(@cat)]">
+	          <li><a><xsl:attribute name="href">#<xsl:value-of
+	          select="translate(normalize-space(title), ' ',
+	          '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
+	          </li>
+	        </xsl:for-each>
+	      </xsl:when>
+	      <xsl:otherwise>
+   	        <xsl:for-each select="//project[not(@cat)]">
+  	          <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
+	          <li><a><xsl:attribute name="href">#<xsl:value-of
+	          select="translate(normalize-space(title), ' ',
+	          '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
+	          </li>
+	        </xsl:for-each>
+	      </xsl:otherwise>
+	    </xsl:choose>
 	</ul>
 
 	<hr/>
 
 	<!-- For each category, process the corresponding projects and sort
-	     them by title, so they will be listed in the same order as
-	     they are in the table of contents -->
+	     them by title if needed, so they will be listed in the same
+	     order as they are in the table of contents -->
 	<xsl:choose>
 	    <xsl:when test="report/category">
 		<xsl:for-each select="report/category">
@@ -79,15 +118,32 @@
 		  <xsl:apply-templates select="p" mode="copy.html"/><br/>
 
 		<xsl:variable name="cat-short" select="name"/>
-		<xsl:apply-templates select="//project[@cat=$cat-short]">
+  	        <xsl:choose>
+	          <xsl:when test="$manual-sorting-condition">
+	    	    <xsl:apply-templates select="//project[@cat=$cat-short]"/>
+ 	          </xsl:when>
+	          <xsl:otherwise>
+	  	    <xsl:apply-templates select="//project[@cat=$cat-short]">
 		    <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
-		</xsl:apply-templates>
+		    </xsl:apply-templates>
+ 	          </xsl:otherwise>
+	        </xsl:choose>
 		</xsl:for-each>
+
 	    </xsl:when>
 	    <xsl:otherwise>
-		<xsl:apply-templates select="report/project">
-		    <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
-		</xsl:apply-templates>
+
+	      <xsl:choose>
+ 	        <xsl:when test="$manual-sorting-condition">
+		  <xsl:apply-templates select="report/project"/>
+	        </xsl:when>
+	        <xsl:otherwise>
+		  <xsl:apply-templates select="report/project">
+		  <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
+		  </xsl:apply-templates>
+	        </xsl:otherwise>
+	      </xsl:choose>
+
 	    </xsl:otherwise>
 	</xsl:choose>
 
