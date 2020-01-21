@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r53526 -->
+<!-- Original revision: r53778 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -152,17 +152,24 @@
 		FreeBSD テクニカルカンファレンスの
 		1 時間規模のプレゼンテーションを省略なく見ることができます。</li>
 
-		<li><a href="https://www.facebook.com">Facebook</a> には <a
-		href="https://www.facebook.com/groups/FreeSBD/">FreeBSD
-		Users Group</a>,
-		<a href="https://www.linkedin.com">LinkedIn</a>	には
-		<a href="https://www.linkedin.com/groups?gid=47628">FreeBSD
-		Group</a> があります。</li>
+		<li><a href="https://www.facebook.com"
+                    target="_blank"
+                    rel="noopener">Facebook</a> には <a
+                    href="https://www.facebook.com/groups/FreeSBD/"
+		    target="_blank"
+		    rel="noopener">FreeBSD Users Group</a> そして、
+                  <a
+                    href="https://www.linkedin.com"
+                    target="_blank"
+                    rel="noopener">LinkedIn</a> には
+                  <a
+                    href="https://www.linkedin.com/groups/47628/"
+                    target="_blank"
+                    rel="noopener">FreeBSD Group</a> があります。</li>
 
 		<li><a href="https://twitter.com">Twitter</a> で
 		<a href="https://twitter.com/freebsd">@freebsd</a>,
-		<a href="https://twitter.com/freebsdhelp">@freebsdhelp</a>,
-		<a href="https://twitter.com/freebsdblogs">@freebsdblogs</a> または
+		<a href="https://twitter.com/freebsdhelp">@freebsdhelp</a> または
 		<a href="https://twitter.com/freebsdcore">@freebsdcore</a>
 		をフォローしてください。</li>
 	      </ul>
