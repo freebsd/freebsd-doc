@@ -27,7 +27,7 @@
     &nav.about;
   </xsl:template>
 
-  <xsl:template names="process.contentwrap">
+  <xsl:template name="process.contentwrap">
 	<!-- Process all the <sections>, in order -->
 	<xsl:apply-templates select="/report/section"/>
 
@@ -49,7 +49,7 @@
 	</xsl:for-each>
 	<ul>
 	  <xsl:for-each select="//project[not(@cat)]">
-  	    <xsl:sort select="translate(title, $lowercase, $ucppercase)"/>
+  	    <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
 	    <li><a><xsl:attribute name="href">#<xsl:value-of
 	    select="translate(title, ' ',
 	    '-')"/></xsl:attribute><xsl:value-of select="title"/></a>

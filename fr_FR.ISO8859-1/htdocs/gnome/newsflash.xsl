@@ -26,14 +26,14 @@
     &nav.developers;
   </xsl:template>
 
-  <xsl:template names="process.contentwrap">
+  <xsl:template name="process.contentwrap">
 	<img src="&enbase;/gifs/news.jpg" align="right" border="0" width="193"
 	     height="144" alt="FreeBSD GNOME News"/>
 
 	<xsl:apply-templates select="/news/descendant::month"/>
 
 	<xsl:for-each select="/news">
-	<xsl:call-template name="html-news-list-homelink" />
+	<xsl:call-template name="html-news-list-newsflash-homelink" />
 	</xsl:for-each>
   </xsl:template>
 
