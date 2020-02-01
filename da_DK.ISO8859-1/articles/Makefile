@@ -1,7 +1,6 @@
 # $FreeBSD$
 
 SUBDIR+= ipsec-must
-SUBDIR+= pxe
 
 
 DOC_PREFIX?= ${.CURDIR}/../..
