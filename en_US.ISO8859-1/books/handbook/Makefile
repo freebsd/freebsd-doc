@@ -65,6 +65,7 @@ IMAGES_EN+= bsdinstall/bsdinstall-final-confirmation.png
 IMAGES_EN+= bsdinstall/bsdinstall-finalconfiguration.png
 IMAGES_EN+= bsdinstall/bsdinstall-final-modification-shell.png
 IMAGES_EN+= bsdinstall/bsdinstall-keymap-10.png
+IMAGES_EN+= bsdinstall/bsdinstall-keymap-loading.png
 IMAGES_EN+= bsdinstall/bsdinstall-keymap-select-default.png
 IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
