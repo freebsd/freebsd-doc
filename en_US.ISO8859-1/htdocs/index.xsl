@@ -102,8 +102,6 @@
 					<li>Production:&nbsp;<a
 				href="&u.rel121.announce;">&rel121.current;</a>,
 				<a
-				href="&u.rel120.announce;">&rel120.current;</a>,
-				<a
 				  href="&u.rel113.announce;">&rel113.current;</a></li>
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 					<li>Upcoming: <a
