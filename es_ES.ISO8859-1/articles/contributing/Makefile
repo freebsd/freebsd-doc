@@ -1,8 +1,16 @@
 # $FreeBSD$
+#
+# The FreeBSD Documentation Project
+# The FreeBSD Spanish Documentation Project
+#
+# Article: Contributing
+#
+
+MAINTAINER=carlavilla@FreeBSD.org
 
 DOC?= article
 
-FORMATS?= html
+FORMATS?= html html-split
 
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
