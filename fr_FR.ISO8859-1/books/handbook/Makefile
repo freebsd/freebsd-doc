@@ -2,7 +2,7 @@
 # The FreeBSD French Documentation Project
 #
 # $FreeBSD$
-# Original revision: 1.108
+# Original revision: 53939
 #
 # Build the FreeBSD Handbook.
 #
@@ -53,6 +53,7 @@ IMAGES_EN+= bsdinstall/bsdinstall-final-modification-shell.png
 IMAGES_EN+= bsdinstall/bsdinstall-keymap-10.png
 IMAGES_EN+= bsdinstall/bsdinstall-keymap-loading.png
 IMAGES_EN+= bsdinstall/bsdinstall-keymap-select-default.png
+IMAGES_EN+= bsdinstall/bsdinstall-keymap-testing.png
 IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-mirrorselect.png
@@ -69,6 +70,8 @@ IMAGES_EN+= bsdinstall/bsdinstall-timezone-confirm.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-country.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-region.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-zone.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-date.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-time.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-disk_info.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-disk_select.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-geli_password.png
