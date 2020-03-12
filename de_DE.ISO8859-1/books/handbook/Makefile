@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 # $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.67 2011/12/31 12:27:25 bcr Exp $
-# basiert auf: r53920
+# basiert auf: r53939
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -86,6 +86,8 @@ IMAGES_EN+= bsdinstall/bsdinstall-timezone-confirm.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-country.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-region.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-zone.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-date.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-time.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-disk_info.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-disk_select.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-geli_password.png
