@@ -1,0 +1,114 @@
+--- sys/net/if_clone.c.orig
++++ sys/net/if_clone.c
+@@ -208,6 +208,17 @@
+ 	return (if_clone_createif(ifc, name, len, params));
+ }
+ 
++void
++if_clone_addif(struct if_clone *ifc, struct ifnet *ifp)
++{
++
++	if_addgroup(ifp, ifc->ifc_name);
++
++	IF_CLONE_LOCK(ifc);
++	IFC_IFLIST_INSERT(ifc, ifp);
++	IF_CLONE_UNLOCK(ifc);
++}
++
+ /*
+  * Create a clone network interface.
+  */
+@@ -230,11 +241,7 @@
+ 		if (ifp == NULL)
+ 			panic("%s: lookup failed for %s", __func__, name);
+ 
+-		if_addgroup(ifp, ifc->ifc_name);
+-
+-		IF_CLONE_LOCK(ifc);
+-		IFC_IFLIST_INSERT(ifc, ifp);
+-		IF_CLONE_UNLOCK(ifc);
++		if_clone_addif(ifc, ifp);
+ 	}
+ 
+ 	return (err);
+--- sys/net/if_clone.h.orig
++++ sys/net/if_clone.h
+@@ -72,7 +72,8 @@
+ struct if_clone *if_clone_findifc(struct ifnet *);
+ void	if_clone_addgroup(struct ifnet *, struct if_clone *);
+ 
+-/* The below interface used only by epair(4). */
++/* The below interfaces are used only by epair(4). */
++void	if_clone_addif(struct if_clone *, struct ifnet *);
+ int	if_clone_destroyif(struct if_clone *, struct ifnet *);
+ 
+ #endif /* _KERNEL */
+--- sys/net/if_epair.c.orig
++++ sys/net/if_epair.c
+@@ -704,6 +704,23 @@
+ 	return (1);
+ }
+ 
++static void
++epair_clone_add(struct if_clone *ifc, struct epair_softc *scb)
++{
++	struct ifnet *ifp;
++	uint8_t eaddr[ETHER_ADDR_LEN];	/* 00:00:00:00:00:00 */
++
++	ifp = scb->ifp;
++	/* Assign a hopefully unique, locally administered etheraddr. */
++	eaddr[0] = 0x02;
++	eaddr[3] = (ifp->if_index >> 8) & 0xff;
++	eaddr[4] = ifp->if_index & 0xff;
++	eaddr[5] = 0x0b;
++	ether_ifattach(ifp, eaddr);
++
++	if_clone_addif(ifc, ifp);
++}
++
+ static int
+ epair_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
+ {
+@@ -713,26 +730,6 @@
+ 	int error, unit, wildcard;
+ 	uint8_t eaddr[ETHER_ADDR_LEN];	/* 00:00:00:00:00:00 */
+ 
+-	/*
+-	 * We are abusing params to create our second interface.
+-	 * Actually we already created it and called if_clone_create()
+-	 * for it to do the official insertion procedure the moment we knew
+-	 * it cannot fail anymore. So just do attach it here.
+-	 */
+-	if (params) {
+-		scb = (struct epair_softc *)params;
+-		ifp = scb->ifp;
+-		/* Assign a hopefully unique, locally administered etheraddr. */
+-		eaddr[0] = 0x02;
+-		eaddr[3] = (ifp->if_index >> 8) & 0xff;
+-		eaddr[4] = ifp->if_index & 0xff;
+-		eaddr[5] = 0x0b;
+-		ether_ifattach(ifp, eaddr);
+-		/* Correctly set the name for the cloner list. */
+-		strlcpy(name, scb->ifp->if_xname, len);
+-		return (0);
+-	}
+-
+ 	/* Try to see if a special unit was requested. */
+ 	error = ifc_name2unit(name, &unit);
+ 	if (error != 0)
+@@ -860,10 +857,11 @@
+ 	ifp->if_snd.ifq_maxlen = ifqmaxlen;
+ 	/* We need to play some tricks here for the second interface. */
+ 	strlcpy(name, epairname, len);
+-	error = if_clone_create(name, len, (caddr_t)scb);
+-	if (error)
+-		panic("%s: if_clone_create() for our 2nd iface failed: %d",
+-		    __func__, error);
++
++	/* Correctly set the name for the cloner list. */
++	strlcpy(name, scb->ifp->if_xname, len);
++	epair_clone_add(ifc, scb);
++
+ 	scb->if_qflush = ifp->if_qflush;
+ 	ifp->if_qflush = epair_qflush;
+ 	ifp->if_transmit = epair_transmit;
