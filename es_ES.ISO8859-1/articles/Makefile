@@ -9,6 +9,7 @@ SUBDIR+= contributing
 SUBDIR+= cups
 SUBDIR+= explaining-bsd
 SUBDIR+= filtering-bridges
+SUBDIR+= fonts
 SUBDIR+= fdp-es
 SUBDIR+= freebsd-questions
 SUBDIR+= ipsec-must
