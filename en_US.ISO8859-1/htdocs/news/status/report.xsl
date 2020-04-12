@@ -17,7 +17,7 @@
   <xsl:variable name="title">&title;</xsl:variable>
 
   <!-- Sort only reports strictly older than 2019q4 -->
-  <xsl:variable name="manual-sorting-condition" select="/report/date/year &gt; 2020 or (/report/date/year = 2019 and /report/date/month = '10-12')"/>
+  <xsl:variable name="manual-sorting-condition" select="/report/date/year &gt; 2019 or (/report/date/year = 2019 and /report/date/month = '10-12')"/>
 
   <xsl:template name="process.sidewrap">
     &nav.about;
