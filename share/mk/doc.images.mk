@@ -96,6 +96,13 @@ EPS2PNM_RES?=	100
 # Use suffix rules to convert .scr files to other formats
 .SUFFIXES:	.scr .pic .png .ps .eps .txt
 
+#
+# There are many rules around here that use > ${.TARGET}
+# so that on failure, may leave corrupt files behind.
+# Make sure to remove them.
+#
+.DELETE_ON_ERROR:
+
 .scr.png:
 	${SCR2PNG} ${SCR2PNGOPTS} < ${.IMPSRC} > ${.TARGET}
 
@@ -145,8 +152,8 @@ EPS2PNM_RES?=	100
 # (the older versions calculated BBox directly in ps2epsi.ps).
 .ps.eps:
 	tmpfile=$$(mktemp ${.TARGET}.XXXXXXXX); \
-	${PS2BBOX} ${PS2BBOXOPTS} ${.ALLSRC} > $$tmpfile 2>&1; \
-	${SETENV} outfile=$$tmpfile ${PS2EPS} ${PS2EPSOPTS} < ${.ALLSRC} 1>&2; \
+	${PS2BBOX} ${PS2BBOXOPTS} ${.ALLSRC} 2> $$tmpfile >$$tmpfile.err && \
+	${SETENV} outfile=$$tmpfile ${PS2EPS} ${PS2EPSOPTS} < ${.ALLSRC} >>$$tmpfile.err 2>&1 && \
 	(echo "save countdictstack mark newpath /showpage {} def /setpagedevice {pop} def";\
 		echo "%%EndProlog";\
 		echo "%%Page: 1 1";\
@@ -161,7 +168,9 @@ EPS2PNM_RES?=	100
 		echo "cleartomark countdictstack exch sub { end } repeat restore";\
 		echo "%%EOF";\
 	) >> $$tmpfile; \
-	${MV} -f $$tmpfile ${.TARGET}
+	test ! -s $$tmpfile.err && \
+	{ ${MV} -f $$tmpfile ${.TARGET} ; ${RM} -f $$tmpfile.err ; } \
+	|| { ${CAT} $$tmpfile.err ; ${RM} -f $$tmpfile.err $$tmpfile ; false ; }
 
 # We can't use suffix rules to generate the rules to convert EPS to PNG and
 # PNG to EPS.  This is because a .png file can depend on a .eps file, and
