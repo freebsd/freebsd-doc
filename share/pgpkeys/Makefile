@@ -10,6 +10,8 @@ CLEANFILES=	pgpkeyring.txt keyring.xml
 .ORDER:	pgpkeyring pgpkeyring.txt
 .ORDER:	keyring.xml pgpkeyring.txt
 
+.DELETE_ON_ERROR:
+
 all:	keyring.xml pgpkeyring pgpkeyring.txt
 
 keyring.xml:	.PHONY
