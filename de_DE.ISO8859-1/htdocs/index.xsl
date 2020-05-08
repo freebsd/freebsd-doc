@@ -6,7 +6,7 @@
 <!--
      $FreeBSD$
      $FreeBSDde$
-     basiert auf: 53664
+     basiert auf: 53947
 -->
 
 <xsl:stylesheet version="1.0"
@@ -90,8 +90,6 @@
 					<li>
 					  Produktion:&nbsp;<a
 				  href="&u.rel121.announce;">&rel121.current;</a>,
-				<a
-				  href="&u.rel120.announce;">&rel120.current;</a>,
 				<a
 				  href="&u.rel113.announce;">&rel113.current;</a></li>
 
