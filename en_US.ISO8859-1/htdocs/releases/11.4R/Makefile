@@ -9,7 +9,7 @@
 
 _OS?=		FreeBSD
 _REVISION?=	11.4
-_BRANCH?=	BETA1
+_BRANCH?=	BETA2
 THISRELEASE?=	${_OS}-${_REVISION}-${_BRANCH}
 
 DOCS=	index.xml \
