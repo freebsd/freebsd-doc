@@ -80,6 +80,10 @@ IMAGES_EN+= bsdinstall/bsdinstall-zfs-partmenu.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-vdev_invalid.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-vdev_type.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-warning.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-rescan-devices.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-pool-name.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-swap-amount.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-init-encription.png
 IMAGES_EN+= geom/striping.pic
 
 IMAGES+= install/disk-layout.eps
