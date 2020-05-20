@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: r53920
+# Original revision: r53939
 #
 
 # ------------------------------------------------------------------------
@@ -86,6 +86,8 @@ IMAGES_EN+= bsdinstall/bsdinstall-timezone-confirm.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-country.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-region.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-zone.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-date.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-time.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-disk_info.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-disk_select.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-geli_password.png
