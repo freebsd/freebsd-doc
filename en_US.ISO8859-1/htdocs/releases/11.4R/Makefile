@@ -9,11 +9,12 @@
 
 _OS?=		FreeBSD
 _REVISION?=	11.4
-_BRANCH?=	BETA2
+_BRANCH?=	RC1
 THISRELEASE?=	${_OS}-${_REVISION}-${_BRANCH}
 
 DOCS=	index.xml \
-	schedule.xml
+	schedule.xml \
+	signatures.xml
 
 DATA=	docbook.css
 
@@ -41,13 +42,13 @@ _ARMV6?=	BANANAPI \
 
 .for CHECKSUM in SHA512 SHA256
 . for _B in ${_BIGIRON}
-#DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-${_B}.asc
+DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-${_B}.asc
 . endfor
 . for _V in ${_VMS}
-#DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-${_V}-vm.asc
+DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-${_V}-vm.asc
 . endfor
 . for _A in ${_ARMV6}
-#DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-arm-armv6-${_A}.asc
+DATA+=		CHECKSUM.${CHECKSUM}-${THISRELEASE}-arm-armv6-${_A}.asc
 . endfor
 .endfor
 
