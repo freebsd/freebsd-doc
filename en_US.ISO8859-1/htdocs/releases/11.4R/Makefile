@@ -16,7 +16,9 @@ DOCS=	index.xml \
 	schedule.xml \
 	signatures.xml
 
-DATA=	docbook.css
+DATA=	docbook.css \
+	hardware.html \
+	relnotes.html
 
 # PGP-signed checksums
 
