@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 # $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.67 2011/12/31 12:27:25 bcr Exp $
-# basiert auf: r53939
+# basiert auf: r53958
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -65,6 +65,7 @@ IMAGES_EN+= bsdinstall/bsdinstall-distfile-verifying.png
 IMAGES_EN+= bsdinstall/bsdinstall-final-confirmation.png
 IMAGES_EN+= bsdinstall/bsdinstall-finalconfiguration.png
 IMAGES_EN+= bsdinstall/bsdinstall-final-modification-shell.png
+IMAGES_EN+= bsdinstall/bsdinstall-hardening.png
 IMAGES_EN+= bsdinstall/bsdinstall-keymap-10.png
 IMAGES_EN+= bsdinstall/bsdinstall-keymap-loading.png
 IMAGES_EN+= bsdinstall/bsdinstall-keymap-select-default.png
