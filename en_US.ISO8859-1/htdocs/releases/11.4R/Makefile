@@ -18,7 +18,9 @@ DOCS=	index.xml \
 
 DATA=	docbook.css \
 	hardware.html \
+	readme.html \
 	relnotes.html
+#DATA+=	installation.html
 
 # PGP-signed checksums
 
