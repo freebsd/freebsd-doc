@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 # $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.67 2011/12/31 12:27:25 bcr Exp $
-# basiert auf: r53975
+# basiert auf: r53989
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -98,6 +98,10 @@ IMAGES_EN+= bsdinstall/bsdinstall-zfs-partmenu.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-vdev_invalid.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-vdev_type.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-warning.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-rescan-devices.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-pool-name.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-swap-amount.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-init-encription.png
 IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= mail/mutt1.scr
 IMAGES_EN+= mail/mutt2.scr
