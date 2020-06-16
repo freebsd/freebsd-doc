@@ -9,19 +9,21 @@
 
 _OS?=		FreeBSD
 _REVISION?=	11.4
-_BRANCH?=	RC2
+_BRANCH?=	RELEASE
 THISRELEASE?=	${_OS}-${_REVISION}-${_BRANCH}
 
 DOCS=	index.xml \
 	schedule.xml \
-	signatures.xml
+	signatures.xml \
+	announce.xml
 
 DATA=	docbook.css \
 	errata.html \
 	hardware.html \
 	installation.html \
 	readme.html \
-	relnotes.html
+	relnotes.html \
+	announce.asc
 
 # PGP-signed checksums
 
