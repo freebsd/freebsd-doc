@@ -17,6 +17,7 @@ DOCS=	index.xml \
 	signatures.xml
 
 DATA=	docbook.css \
+	errata.html \
 	hardware.html \
 	readme.html \
 	relnotes.html
