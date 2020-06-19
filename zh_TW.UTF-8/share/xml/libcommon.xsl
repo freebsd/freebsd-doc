@@ -30,7 +30,6 @@
     <p>下列的每項都有自己的新聞頁面，裡面有這些的更新細節。</p>
 
     <ul>
-      <li><a href="&enbase;/java/newsflash.html">FreeBSD 上的 &java;</a></li>
       <li><a href="http://freebsd.kde.org/">FreeBSD 上的 KDE</a></li>
       <li><a href="&enbase;/gnome/newsflash.html">FreeBSD 上的 GNOME</a></li>
     </ul>
