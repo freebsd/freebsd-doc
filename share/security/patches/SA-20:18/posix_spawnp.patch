@@ -1,0 +1,280 @@
+--- lib/libc/gen/exec.c.orig
++++ lib/libc/gen/exec.c
+@@ -49,6 +49,9 @@
+ 
+ extern char **environ;
+ 
++static const char execvPe_err_preamble[] = "execvP: ";
++static const char execvPe_err_trailer[] = ": path too long\n";
++
+ int
+ execl(const char *name, const char *arg, ...)
+ {
+@@ -149,8 +152,8 @@
+ 	const char **memp;
+ 	size_t cnt, lp, ln;
+ 	int eacces, save_errno;
+-	char *cur, buf[MAXPATHLEN];
+-	const char *p, *bp;
++	char buf[MAXPATHLEN];
++	const char *bp, *np, *op, *p;
+ 	struct stat sb;
+ 
+ 	eacces = 0;
+@@ -158,7 +161,7 @@
+ 	/* If it's an absolute or relative path name, it's easy. */
+ 	if (strchr(name, '/')) {
+ 		bp = name;
+-		cur = NULL;
++		op = NULL;
+ 		goto retry;
+ 	}
+ 	bp = buf;
+@@ -169,24 +172,31 @@
+ 		return (-1);
+ 	}
+ 
+-	cur = alloca(strlen(path) + 1);
+-	if (cur == NULL) {
+-		errno = ENOMEM;
+-		return (-1);
+-	}
+-	strcpy(cur, path);
+-	while ((p = strsep(&cur, ":")) != NULL) {
++	op = path;
++	ln = strlen(name);
++	while (op != NULL) {
++		np = strchrnul(op, ':');
++
+ 		/*
+ 		 * It's a SHELL path -- double, leading and trailing colons
+ 		 * mean the current directory.
+ 		 */
+-		if (*p == '\0') {
++		if (np == op) {
++			/* Empty component. */
+ 			p = ".";
+ 			lp = 1;
+-		} else
+-			lp = strlen(p);
+-		ln = strlen(name);
++		} else {
++			/* Non-empty component. */
++			p = op;
++			lp = np - op;
++		}
+ 
++		/* Advance to the next component or terminate after this. */
++		if (*np == '\0')
++			op = NULL;
++		else
++			op = np + 1;
++
+ 		/*
+ 		 * If the path is too long complain.  This is a possible
+ 		 * security issue; given a way to make the path too long
+@@ -193,10 +203,11 @@
+ 		 * the user may execute the wrong program.
+ 		 */
+ 		if (lp + ln + 2 > sizeof(buf)) {
+-			(void)_write(STDERR_FILENO, "execvP: ", 8);
++			(void)_write(STDERR_FILENO, execvPe_err_preamble,
++			    sizeof(execvPe_err_preamble) - 1);
+ 			(void)_write(STDERR_FILENO, p, lp);
+-			(void)_write(STDERR_FILENO, ": path too long\n",
+-			    16);
++			(void)_write(STDERR_FILENO, execvPe_err_trailer,
++			    sizeof(execvPe_err_trailer) - 1);
+ 			continue;
+ 		}
+ 		bcopy(p, buf, lp);
+@@ -215,14 +226,28 @@
+ 		case ENOEXEC:
+ 			for (cnt = 0; argv[cnt]; ++cnt)
+ 				;
+-			memp = alloca((cnt + 2) * sizeof(char *));
++
++			/*
++			 * cnt may be 0 above; always allocate at least
++			 * 3 entries so that we can at least fit "sh", bp, and
++			 * the NULL terminator.  We can rely on cnt to take into
++			 * account the NULL terminator in all other scenarios,
++			 * as we drop argv[0].
++			 */
++			memp = alloca(MAX(3, cnt + 2) * sizeof(char *));
+ 			if (memp == NULL) {
+ 				/* errno = ENOMEM; XXX override ENOEXEC? */
+ 				goto done;
+ 			}
+-			memp[0] = "sh";
+-			memp[1] = bp;
+-			bcopy(argv + 1, memp + 2, cnt * sizeof(char *));
++			if (cnt > 0) {
++				memp[0] = argv[0];
++				memp[1] = bp;
++				bcopy(argv + 1, memp + 2, cnt * sizeof(char *));
++			} else {
++				memp[0] = "sh";
++				memp[1] = bp;
++				memp[2] = NULL;
++			}
+  			(void)_execve(_PATH_BSHELL,
+ 			    __DECONST(char **, memp), envp);
+ 			goto done;
+--- lib/libc/gen/posix_spawn.c.orig
++++ lib/libc/gen/posix_spawn.c
+@@ -28,6 +28,7 @@
+ __FBSDID("$FreeBSD$");
+ 
+ #include "namespace.h"
++#include <sys/param.h>
+ #include <sys/queue.h>
+ #include <sys/wait.h>
+ 
+@@ -202,8 +203,20 @@
+ 	volatile int error;
+ };
+ 
++#define	PSPAWN_STACK_ALIGNMENT	16
++#define	PSPAWN_STACK_ALIGNBYTES	(PSPAWN_STACK_ALIGNMENT - 1)
++#define	PSPAWN_STACK_ALIGN(sz) \
++	(((sz) + PSPAWN_STACK_ALIGNBYTES) & ~PSPAWN_STACK_ALIGNBYTES)
++
+ #if defined(__i386__) || defined(__amd64__)
++/*
++ * Below we'll assume that _RFORK_THREAD_STACK_SIZE is appropriately aligned for
++ * the posix_spawn() case where we do not end up calling _execvpe and won't ever
++ * try to allocate space on the stack for argv[].
++ */
+ #define	_RFORK_THREAD_STACK_SIZE	4096
++_Static_assert((_RFORK_THREAD_STACK_SIZE % PSPAWN_STACK_ALIGNMENT) == 0,
++    "Inappropriate stack size alignment");
+ #endif
+ 
+ static int
+@@ -244,10 +257,36 @@
+ 	pid_t p;
+ #ifdef _RFORK_THREAD_STACK_SIZE
+ 	char *stack;
++	size_t cnt, stacksz;
+ 
+-	stack = malloc(_RFORK_THREAD_STACK_SIZE);
++	stacksz = _RFORK_THREAD_STACK_SIZE;
++	if (use_env_path) {
++		/*
++		 * We need to make sure we have enough room on the stack for the
++		 * potential alloca() in execvPe if it gets kicked back an
++		 * ENOEXEC from execve(2), plus the original buffer we gave
++		 * ourselves; this protects us in the event that the caller
++		 * intentionally or inadvertently supplies enough arguments to
++		 * make us blow past the stack we've allocated from it.
++		 */
++		for (cnt = 0; argv[cnt] != NULL; ++cnt)
++			;
++		stacksz += MAX(3, cnt + 2) * sizeof(char *);
++		stacksz = PSPAWN_STACK_ALIGN(stacksz);
++	}
++
++	/*
++	 * aligned_alloc is not safe to use here, because we can't guarantee
++	 * that aligned_alloc and free will be provided by the same
++	 * implementation.  We've actively hit at least one application that
++	 * will provide its own malloc/free but not aligned_alloc leading to
++	 * a free by the wrong allocator.
++	 */
++	stack = malloc(stacksz);
+ 	if (stack == NULL)
+ 		return (ENOMEM);
++	stacksz = (((uintptr_t)stack + stacksz) & ~PSPAWN_STACK_ALIGNBYTES) -
++	    (uintptr_t)stack;
+ #endif
+ 	psa.path = path;
+ 	psa.fa = fa;
+@@ -271,8 +310,7 @@
+ 	 * parent.  Because of this, we must use rfork_thread instead while
+ 	 * almost every other arch stores the return address in a register.
+ 	 */
+-	p = rfork_thread(RFSPAWN, stack + _RFORK_THREAD_STACK_SIZE,
+-	    _posix_spawn_thr, &psa);
++	p = rfork_thread(RFSPAWN, stack + stacksz, _posix_spawn_thr, &psa);
+ 	free(stack);
+ #else
+ 	p = rfork(RFSPAWN);
+--- lib/libc/tests/gen/Makefile.orig
++++ lib/libc/tests/gen/Makefile
+@@ -20,6 +20,15 @@
+ # TODO: t_siginfo (fixes require further inspection)
+ # TODO: t_sethostname_test (consistently screws up the hostname)
+ 
++FILESGROUPS+=		posix_spawn_test_FILES
++
++posix_spawn_test_FILES=	spawnp_enoexec.sh
++posix_spawn_test_FILESDIR=	${TESTSDIR}
++posix_spawn_test_FILESMODE= 0755
++posix_spawn_test_FILESOWN= root
++posix_spawn_test_FILESGRP= wheel
++posix_spawn_test_FILESPACKAGE=	${PACKAGE}
++
+ CFLAGS+=	-DTEST_LONG_DOUBLE
+ 
+ # Not sure why this isn't defined for all architectures, since most
+--- lib/libc/tests/gen/posix_spawn_test.c.orig
++++ lib/libc/tests/gen/posix_spawn_test.c
+@@ -93,11 +93,50 @@
+ 	}
+ }
+ 
++ATF_TC_WITHOUT_HEAD(posix_spawnp_enoexec_fallback);
++ATF_TC_BODY(posix_spawnp_enoexec_fallback, tc)
++{
++	char buf[FILENAME_MAX];
++	char *myargs[2];
++	int error, status;
++	pid_t pid, waitres;
++
++	snprintf(buf, sizeof(buf), "%s/spawnp_enoexec.sh",
++	    atf_tc_get_config_var(tc, "srcdir"));
++	myargs[0] = buf;
++	myargs[1] = NULL;
++	error = posix_spawnp(&pid, myargs[0], NULL, NULL, myargs, myenv);
++	ATF_REQUIRE(error == 0);
++	waitres = waitpid(pid, &status, 0);
++	ATF_REQUIRE(waitres == pid);
++	ATF_REQUIRE(WIFEXITED(status) && WEXITSTATUS(status) == 42);
++}
++
++ATF_TC_WITHOUT_HEAD(posix_spawnp_enoexec_fallback_null_argv0);
++ATF_TC_BODY(posix_spawnp_enoexec_fallback_null_argv0, tc)
++{
++	char buf[FILENAME_MAX];
++	char *myargs[1];
++	int error, status;
++	pid_t pid, waitres;
++
++	snprintf(buf, sizeof(buf), "%s/spawnp_enoexec.sh",
++	    atf_tc_get_config_var(tc, "srcdir"));
++	myargs[0] = NULL;
++	error = posix_spawnp(&pid, buf, NULL, NULL, myargs, myenv);
++	ATF_REQUIRE(error == 0);
++	waitres = waitpid(pid, &status, 0);
++	ATF_REQUIRE(waitres == pid);
++	ATF_REQUIRE(WIFEXITED(status) && WEXITSTATUS(status) == 42);
++}
++
+ ATF_TP_ADD_TCS(tp)
+ {
+ 
+ 	ATF_TP_ADD_TC(tp, posix_spawn_simple_test);
+ 	ATF_TP_ADD_TC(tp, posix_spawn_no_such_command_negative_test);
++	ATF_TP_ADD_TC(tp, posix_spawnp_enoexec_fallback);
++	ATF_TP_ADD_TC(tp, posix_spawnp_enoexec_fallback_null_argv0);
+ 
+ 	return (atf_no_error());
+ }
+--- lib/libc/tests/gen/spawnp_enoexec.sh.orig
++++ lib/libc/tests/gen/spawnp_enoexec.sh
+@@ -0,0 +1,4 @@
++# $FreeBSD$
++# Intentionally no interpreter
++
++exit 42

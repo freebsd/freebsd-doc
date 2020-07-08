@@ -1,0 +1,342 @@
+--- sys/amd64/vmm/intel/vtd.c.orig
++++ sys/amd64/vmm/intel/vtd.c
+@@ -51,6 +51,8 @@
+  * Architecture Spec, September 2008.
+  */
+ 
++#define VTD_DRHD_INCLUDE_PCI_ALL(Flags)  (((Flags) >> 0) & 0x1)
++
+ /* Section 10.4 "Register Descriptions" */
+ struct vtdmap {
+ 	volatile uint32_t	version;
+@@ -116,10 +118,11 @@
+ static SLIST_HEAD(, domain) domhead;
+ 
+ #define	DRHD_MAX_UNITS	8
+-static int		drhd_num;
+-static struct vtdmap	*vtdmaps[DRHD_MAX_UNITS];
+-static int		max_domains;
+-typedef int		(*drhd_ident_func_t)(void);
++static ACPI_DMAR_HARDWARE_UNIT	*drhds[DRHD_MAX_UNITS];
++static int			drhd_num;
++static struct vtdmap		*vtdmaps[DRHD_MAX_UNITS];
++static int			max_domains;
++typedef int			(*drhd_ident_func_t)(void);
+ 
+ static uint64_t root_table[PAGE_SIZE / sizeof(uint64_t)] __aligned(4096);
+ static uint64_t ctx_tables[256][PAGE_SIZE / sizeof(uint64_t)] __aligned(4096);
+@@ -175,6 +178,69 @@
+ 	return (id);
+ }
+ 
++static struct vtdmap *
++vtd_device_scope(uint16_t rid)
++{
++	int i, remaining, pathremaining;
++	char *end, *pathend;
++	struct vtdmap *vtdmap;
++	ACPI_DMAR_HARDWARE_UNIT *drhd;
++	ACPI_DMAR_DEVICE_SCOPE *device_scope;
++	ACPI_DMAR_PCI_PATH *path;
++
++	for (i = 0; i < drhd_num; i++) {
++		drhd = drhds[i];
++
++		if (VTD_DRHD_INCLUDE_PCI_ALL(drhd->Flags)) {
++			/*
++			 * From Intel VT-d arch spec, version 3.0:
++			 * If a DRHD structure with INCLUDE_PCI_ALL flag Set is reported
++			 * for a Segment, it must be enumerated by BIOS after all other
++			 * DRHD structures for the same Segment.
++			 */
++			vtdmap = vtdmaps[i];
++			return(vtdmap);
++		}
++
++		end = (char *)drhd + drhd->Header.Length;
++		remaining = drhd->Header.Length - sizeof(ACPI_DMAR_HARDWARE_UNIT);
++		while (remaining > sizeof(ACPI_DMAR_DEVICE_SCOPE)) {
++			device_scope = (ACPI_DMAR_DEVICE_SCOPE *)(end - remaining);
++			remaining -= device_scope->Length;
++
++			switch (device_scope->EntryType){
++				/* 0x01 and 0x02 are PCI device entries */
++				case 0x01:
++				case 0x02:
++					break;
++				default:
++					continue;
++			}
++
++			if (PCI_RID2BUS(rid) != device_scope->Bus)
++				continue;
++
++			pathend = (char *)device_scope + device_scope->Length;
++			pathremaining = device_scope->Length - sizeof(ACPI_DMAR_DEVICE_SCOPE);
++			while (pathremaining >= sizeof(ACPI_DMAR_PCI_PATH)) {
++				path = (ACPI_DMAR_PCI_PATH *)(pathend - pathremaining);
++				pathremaining -= sizeof(ACPI_DMAR_PCI_PATH);
++
++				if (PCI_RID2SLOT(rid) != path->Device)
++					continue;
++				if (PCI_RID2FUNC(rid) != path->Function)
++					continue;
++
++				vtdmap = vtdmaps[i];
++				return (vtdmap);
++			}
++		}
++	}
++
++	/* No matching scope */
++	return (NULL);
++}
++
+ static void
+ vtd_wbflush(struct vtdmap *vtdmap)
+ {
+@@ -240,7 +306,7 @@
+ static int
+ vtd_init(void)
+ {
+-	int i, units, remaining;
++	int i, units, remaining, tmp;
+ 	struct vtdmap *vtdmap;
+ 	vm_paddr_t ctx_paddr;
+ 	char *end, envname[32];
+@@ -291,8 +357,9 @@
+ 			break;
+ 
+ 		drhd = (ACPI_DMAR_HARDWARE_UNIT *)hdr;
+-		vtdmaps[units++] = (struct vtdmap *)PHYS_TO_DMAP(drhd->Address);
+-		if (units >= DRHD_MAX_UNITS)
++		drhds[units] = drhd;
++		vtdmaps[units] = (struct vtdmap *)PHYS_TO_DMAP(drhd->Address);
++		if (++units >= DRHD_MAX_UNITS)
+ 			break;
+ 		remaining -= hdr->Length;
+ 	}
+@@ -302,12 +369,18 @@
+ 
+ skip_dmar:
+ 	drhd_num = units;
+-	vtdmap = vtdmaps[0];
+ 
+-	if (VTD_CAP_CM(vtdmap->cap) != 0)
+-		panic("vtd_init: invalid caching mode");
++	max_domains = 64 * 1024; /* maximum valid value */
++	for (i = 0; i < drhd_num; i++){
++		vtdmap = vtdmaps[i];
++
++		if (VTD_CAP_CM(vtdmap->cap) != 0)
++			panic("vtd_init: invalid caching mode");
+ 
+-	max_domains = vtd_max_domains(vtdmap);
++		/* take most compatible (minimum) value */
++		if ((tmp = vtd_max_domains(vtdmap)) < max_domains)
++			max_domains = tmp;
++	}
+ 
+ 	/*
+ 	 * Set up the root-table to point to the context-entry tables
+@@ -373,7 +446,6 @@
+ 	struct vtdmap *vtdmap;
+ 	uint8_t bus;
+ 
+-	vtdmap = vtdmaps[0];
+ 	bus = PCI_RID2BUS(rid);
+ 	ctxp = ctx_tables[bus];
+ 	pt_paddr = vtophys(dom->ptp);
+@@ -385,6 +457,10 @@
+ 		      (uint16_t)(ctxp[idx + 1] >> 8));
+ 	}
+ 
++	if ((vtdmap = vtd_device_scope(rid)) == NULL)
++		panic("vtd_add_device: device %x is not in scope for "
++		      "any DMA remapping unit", rid);
++
+ 	/*
+ 	 * Order is important. The 'present' bit is set only after all fields
+ 	 * of the context pointer are initialized.
+@@ -568,8 +644,6 @@
+ 	if (drhd_num <= 0)
+ 		panic("vtd_create_domain: no dma remapping hardware available");
+ 
+-	vtdmap = vtdmaps[0];
+-
+ 	/*
+ 	 * Calculate AGAW.
+ 	 * Section 3.4.2 "Adjusted Guest Address Width", Architecture Spec.
+@@ -594,7 +668,14 @@
+ 	pt_levels = 2;
+ 	sagaw = 30;
+ 	addrwidth = 0;
+-	tmp = VTD_CAP_SAGAW(vtdmap->cap);
++
++	tmp = ~0;
++	for (i = 0; i < drhd_num; i++) {
++		vtdmap = vtdmaps[i];
++		/* take most compatible value */
++		tmp &= VTD_CAP_SAGAW(vtdmap->cap);
++	}
++
+ 	for (i = 0; i < 5; i++) {
+ 		if ((tmp & (1 << i)) != 0 && sagaw >= agaw)
+ 			break;
+@@ -606,8 +687,8 @@
+ 	}
+ 
+ 	if (i >= 5) {
+-		panic("vtd_create_domain: SAGAW 0x%lx does not support AGAW %d",
+-		      VTD_CAP_SAGAW(vtdmap->cap), agaw);
++		panic("vtd_create_domain: SAGAW 0x%x does not support AGAW %d",
++		      tmp, agaw);
+ 	}
+ 
+ 	dom = malloc(sizeof(struct domain), M_VTD, M_ZERO | M_WAITOK);
+@@ -634,7 +715,12 @@
+ 	 * There is not any code to deal with the demotion at the moment
+ 	 * so we disable superpage mappings altogether.
+ 	 */
+-	dom->spsmask = VTD_CAP_SPS(vtdmap->cap);
++	dom->spsmask = ~0;
++	for (i = 0; i < drhd_num; i++) {
++		vtdmap = vtdmaps[i];
++		/* take most compatible value */
++		dom->spsmask &= VTD_CAP_SPS(vtdmap->cap);
++	}
+ #endif
+ 
+ 	SLIST_INSERT_HEAD(&domhead, dom, next);
+--- usr.sbin/bhyve/pci_emul.c.orig
++++ usr.sbin/bhyve/pci_emul.c
+@@ -868,7 +868,7 @@
+ 					sizeof(msixcap)));
+ }
+ 
+-void
++static void
+ msixcap_cfgwrite(struct pci_devinst *pi, int capoff, int offset,
+ 		 int bytes, uint32_t val)
+ {
+@@ -892,7 +892,7 @@
+ 	CFGWRITE(pi, offset, val, bytes);
+ }
+ 
+-void
++static void
+ msicap_cfgwrite(struct pci_devinst *pi, int capoff, int offset,
+ 		int bytes, uint32_t val)
+ {
+@@ -971,30 +971,34 @@
+ 
+ /*
+  * This function assumes that 'coff' is in the capabilities region of the
+- * config space.
++ * config space. A capoff parameter of zero will force a search for the
++ * offset and type.
+  */
+-static void
+-pci_emul_capwrite(struct pci_devinst *pi, int offset, int bytes, uint32_t val)
++void
++pci_emul_capwrite(struct pci_devinst *pi, int offset, int bytes, uint32_t val,
++    uint8_t capoff, int capid)
+ {
+-	int capid;
+-	uint8_t capoff, nextoff;
++	uint8_t nextoff;
+ 
+ 	/* Do not allow un-aligned writes */
+ 	if ((offset & (bytes - 1)) != 0)
+ 		return;
+ 
+-	/* Find the capability that we want to update */
+-	capoff = CAP_START_OFFSET;
+-	while (1) {
+-		nextoff = pci_get_cfgdata8(pi, capoff + 1);
+-		if (nextoff == 0)
+-			break;
+-		if (offset >= capoff && offset < nextoff)
+-			break;
++	if (capoff == 0) {
++		/* Find the capability that we want to update */
++		capoff = CAP_START_OFFSET;
++		while (1) {
++			nextoff = pci_get_cfgdata8(pi, capoff + 1);
++			if (nextoff == 0)
++				break;
++			if (offset >= capoff && offset < nextoff)
++				break;
+ 
+-		capoff = nextoff;
++			capoff = nextoff;
++		}
++		assert(offset >= capoff);
++		capid = pci_get_cfgdata8(pi, capoff);
+ 	}
+-	assert(offset >= capoff);
+ 
+ 	/*
+ 	 * Capability ID and Next Capability Pointer are readonly.
+@@ -1011,7 +1015,6 @@
+ 			return;
+ 	}
+ 
+-	capid = pci_get_cfgdata8(pi, capoff);
+ 	switch (capid) {
+ 	case PCIY_MSI:
+ 		msicap_cfgwrite(pi, capoff, offset, bytes, val);
+@@ -1878,7 +1881,7 @@
+ 			pci_set_cfgdata32(pi, coff, bar);
+ 
+ 		} else if (pci_emul_iscap(pi, coff)) {
+-			pci_emul_capwrite(pi, coff, bytes, *eax);
++			pci_emul_capwrite(pi, coff, bytes, *eax, 0, 0);
+ 		} else if (coff >= PCIR_COMMAND && coff < PCIR_REVID) {
+ 			pci_emul_cmdsts_write(pi, coff, *eax, bytes);
+ 		} else {
+--- usr.sbin/bhyve/pci_emul.h.orig
++++ usr.sbin/bhyve/pci_emul.h
+@@ -212,10 +212,6 @@
+     int ioapic_irq, void *arg);
+ 
+ int	init_pci(struct vmctx *ctx);
+-void	msicap_cfgwrite(struct pci_devinst *pi, int capoff, int offset,
+-	    int bytes, uint32_t val);
+-void	msixcap_cfgwrite(struct pci_devinst *pi, int capoff, int offset,
+-	    int bytes, uint32_t val);
+ void	pci_callback(void);
+ int	pci_emul_alloc_bar(struct pci_devinst *pdi, int idx,
+ 	    enum pcibar_type type, uint64_t size);
+@@ -223,6 +219,8 @@
+ 	    uint64_t hostbase, enum pcibar_type type, uint64_t size);
+ int	pci_emul_add_msicap(struct pci_devinst *pi, int msgnum);
+ int	pci_emul_add_pciecap(struct pci_devinst *pi, int pcie_device_type);
++void	pci_emul_capwrite(struct pci_devinst *pi, int offset, int bytes,
++	    uint32_t val, uint8_t capoff, int capid);
+ void	pci_generate_msi(struct pci_devinst *pi, int msgnum);
+ void	pci_generate_msix(struct pci_devinst *pi, int msgnum);
+ void	pci_lintr_assert(struct pci_devinst *pi);
+--- usr.sbin/bhyve/pci_passthru.c.orig
++++ usr.sbin/bhyve/pci_passthru.c
+@@ -828,8 +828,8 @@
+ 	 * MSI capability is emulated
+ 	 */
+ 	if (msicap_access(sc, coff)) {
+-		msicap_cfgwrite(pi, sc->psc_msi.capoff, coff, bytes, val);
+-
++		pci_emul_capwrite(pi, coff, bytes, val, sc->psc_msi.capoff,
++		    PCIY_MSI);
+ 		error = vm_setup_pptdev_msi(ctx, vcpu, sc->psc_sel.pc_bus,
+ 			sc->psc_sel.pc_dev, sc->psc_sel.pc_func,
+ 			pi->pi_msi.addr, pi->pi_msi.msg_data,
+@@ -840,7 +840,8 @@
+ 	}
+ 
+ 	if (msixcap_access(sc, coff)) {
+-		msixcap_cfgwrite(pi, sc->psc_msix.capoff, coff, bytes, val);
++		pci_emul_capwrite(pi, coff, bytes, val, sc->psc_msix.capoff,
++		    PCIY_MSIX);
+ 		if (pi->pi_msix.enabled) {
+ 			msix_table_entries = pi->pi_msix.table_count;
+ 			for (i = 0; i < msix_table_entries; i++) {
