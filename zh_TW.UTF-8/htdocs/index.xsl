@@ -88,7 +88,7 @@
 
 			<div id="frontreleases">
 			  <div id="frontreleasescontent" class="txtshortcuts">
-				  <h2><a href="&base;/releases/">最新版本</a></h2>
+				  <h2><a href="&enbase;/releases/">最新版本</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>Production:&nbsp;<a
 				href="&u.rel121.announce;">&rel121.current;</a>,
