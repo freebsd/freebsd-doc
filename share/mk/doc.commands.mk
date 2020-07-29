@@ -74,8 +74,6 @@ FOP?=		${PREFIX}/bin/fop
 
 GROFF?=		groff
 
-HTML2PDB?=	${PREFIX}/bin/iSiloBSD
-HTML2PDBOPTS?=	-y -d0 -Idef ${HTML2PDBFLAGS}
 HTML2TXT?=	${PREFIX}/bin/links
 HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 

@@ -74,7 +74,7 @@ FOPJAVAOPTS?=	-Xss1024k -Xmx1431552k
 FOPOPTS?=	-c ${DOC_PREFIX}/share/misc/fop.xconf
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
-		epub txt rtf ps pdf tex dvi tar pdb
+		epub txt rtf ps pdf tex dvi tar
 
 CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
 
@@ -240,9 +240,6 @@ XSLTPROCOPTS+=	--maxdepth 12000
 CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .endfor
 
-.elif ${_cf} == "pdb"
-_docs+= ${.CURDIR:T}.pdb
-CLEANFILES+= ${.CURDIR:T}.pdb
 
 .endif
 .endif
@@ -278,11 +275,6 @@ _curinst+= install-${_curformat}.${_curcomp}
 _docs+= ${DOC}.${_curformat}.${_curcomp}
 CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
 
-.if  ${_cf} == "pdb"
-_docs+= ${.CURDIR:T}.${_curformat}.${_curcomp}
-CLEANFILES+= ${.CURDIR:T}.${_curformat}.${_curcomp}
-
-.endif
 .endif
 .endfor
 .endfor
@@ -374,21 +366,6 @@ ${DOC}.txt: ${DOC}.html
 ${DOC}.txt:
 	${TOUCH} ${.TARGET}
 .endif
-.endif
-
-# PDB --------------------------------------------------------------------
-
-${DOC}.pdb: ${DOC}.html ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${HTML2PDB} ${HTML2PDBOPTS} ${DOC}.html ${.TARGET}
-
-${.CURDIR:T}.pdb: ${DOC}.pdb
-	${LN} -f ${.ALLSRC} ${.TARGET}
-
-.if defined(INSTALL_COMPRESSED) && !empty(INSTALL_COMPRESSED)
-.for _curcomp in ${INSTALL_COMPRESSED}
-${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
-	${LN} -f ${.ALLSRC} ${.TARGET}
-.endfor
 .endif
 
 # PS/PDF/RTF -----------------------------------------------------------------
@@ -663,8 +640,6 @@ install-${_curformat}: ${DOC}.${_curformat}
 .for _curimage in ${IMAGES_EPS:N*/*}
 	${INSTALL_DOCS} ${_curimage} ${DESTDIR}
 .endfor
-.elif ${_cf} == "pdb"
-	${LN} -f ${DESTDIR}/${.ALLSRC} ${DESTDIR}/${.CURDIR:T}.${_curformat}
 .endif
 
 .if ${_cf} == "html-split"
@@ -679,10 +654,6 @@ install-${_curformat}.tar.${_compressext}: ${DOC}.${_curformat}.tar.${_compresse
 install-${_curformat}.${_compressext}: ${DOC}.${_curformat}.${_compressext}
 	@[ -d ${DESTDIR} ] || ${MKDIR} -p ${DESTDIR}
 	${INSTALL_DOCS} ${.ALLSRC} ${DESTDIR}
-.if ${_cf} == "pdb"
-	${LN} -f ${DESTDIR}/${.ALLSRC} \
-		 ${DESTDIR}/${.CURDIR:T}.${_curformat}.${_compressext}
-.endif
 .endif
 .endfor
 .endif
