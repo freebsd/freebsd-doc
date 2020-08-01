@@ -74,7 +74,7 @@ FOPJAVAOPTS?=	-Xss1024k -Xmx1431552k
 FOPOPTS?=	-c ${DOC_PREFIX}/share/misc/fop.xconf
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
-		epub txt rtf ps pdf tex dvi tar
+		epub txt rtf pdf tex dvi tar
 
 CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
 
@@ -220,13 +220,6 @@ CLEANFILES+= ${DOC}.rtf-nopng
 
 .elif ${_cf} == "tex"
 CLEANFILES+= ${DOC}.aux ${DOC}.log
-
-.elif ${_cf} == "ps"
-CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-ps \
-	${DOC}.tex ${DOC}.tex-tmp ${DOC}.fo
-.for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
-CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
-.endfor
 
 .elif ${_cf} == "pdf"
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-pdf ${DOC}.tex-pdf-tmp \
@@ -377,18 +370,12 @@ ${DOC}.fo: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} ${DOC}.parsed.xml 
 ${DOC}.pdf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 	${SETENV} FOP_OPTS="${FOPJAVAOPTS}" ${FOP} ${FOPOPTS} ${DOC}.fo -pdf ${.TARGET}
 
-${DOC}.ps: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${SETENV} FOP_OPTS="${FOPJAVAOPTS}" ${FOP} ${FOPOPTS} ${DOC}.fo -ps ${.TARGET}
-
 ${DOC}.rtf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 	${SETENV} FOP_OPTS="${FOPJAVAOPTS}" ${FOP} ${FOPOPTS} ${DOC}.fo -rtf ${.TARGET}
 .else
 # Default is dblatex
 ${DOC}.pdf: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 	${DBLATEX} ${DOC}.parsed.print.xml ${DBLATEXOPTS} -tpdf -o ${.TARGET}
-
-${DOC}.ps: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${DBLATEX} ${DOC}.parsed.print.xml ${DBLATEXOPTS} -tps -o ${.TARGET}
 .endif
 
 
@@ -560,7 +547,7 @@ _curinst+= ${FORMATS:S/^/install-/g}
 .endif
 
 .if defined(NO_TEX)
-_curinst_filter+=N*dvi* N*tex* N*ps* N*pdf*
+_curinst_filter+=N*dvi* N*tex* N*pdf*
 .endif
 .if defined(NO_RTF)
 _curinst_filter+=N*rtf*
