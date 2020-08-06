@@ -66,7 +66,7 @@
 				    <span
 				     id="txtfrontjournallink">
 				      Get the <a
-				       href="http://www.freebsdjournal.com/"
+					href="https://freebsdfoundation.org/our-work/journal/"
 				       title="&os;&nbsp;Journal">&os;&nbsp;Journal</a>
 				    </span> <!-- TXTFRONTJOURNALLINK -->
 				  </div> <!-- TXTFRONTJOURNALBLOCK -->
