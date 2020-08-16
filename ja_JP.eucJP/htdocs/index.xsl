@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r54263 -->
+<!-- Original revision: r54412 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -61,7 +61,7 @@
 			  <span
 			    id="txtfrontjournallink">
 			    <a
-			      href="http://www.freebsdjournal.com/"
+					href="https://freebsdfoundation.org/our-work/journal/"
 			        title="&os;&nbsp;Journal">&os;&nbsp;Journal</a>
 			    ¤òÆþ¼ê
 			  </span> <!-- TXTFRONTJOURNALLINK -->
