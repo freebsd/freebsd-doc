@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: r53958
+# Original revision: r53979
 #
 
 # ------------------------------------------------------------------------
@@ -75,6 +75,7 @@ IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-mirrorselect.png
 IMAGES_EN+= bsdinstall/bsdinstall-part-entire-part.png
+IMAGES_EN+= bsdinstall/bsdinstall-ufs-warning.png
 IMAGES_EN+= bsdinstall/bsdinstall-part-guided-disk.png
 IMAGES_EN+= bsdinstall/bsdinstall-part-guided-manual.png
 IMAGES_EN+= bsdinstall/bsdinstall-part-manual-addpart.png
