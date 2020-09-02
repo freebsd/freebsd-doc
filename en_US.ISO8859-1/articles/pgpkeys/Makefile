@@ -19,3 +19,9 @@ URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
+
+# XXXHRS temporary measure to handle PGP key dependency
+.PATH: ${DOC_PREFIX}/share/pgpkeys
+.for f in ${FORMATS}
+${DOC}.${f}: ${_DEPENDSET.pgpkeys}
+.endfor
