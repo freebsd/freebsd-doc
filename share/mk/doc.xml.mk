@@ -16,7 +16,7 @@ XML_CATALOG_CWD=	${DOC_PREFIX}/share/xml/catalog-cwd.xml
 # Variables used in DEPENDSET
 
 _DEPENDSET.all=	wwwstd transtable mirrors usergroups commercial \
-		news press events advisories notices
+		news press events advisories notices pgpkeys
 
 # DEPENDSET: wwwstd  .........................................................
 _DEPENDSET.wwwstd=	${XML_INCLUDES}
@@ -230,6 +230,9 @@ XML_ADVISORIES=		${DOC_PREFIX}/share/xml/advisories.xml
 _DEPENDSET.notices=	${XML_NOTICES} ${XML_INCLUDES}
 _PARAMS.notices=	--param notices.xml "'${XML_NOTICES}'"
 XML_NOTICES=		${DOC_PREFIX}/share/xml/notices.xml
+
+# DEPENDSET: pgpkeys  ........................................................
+_DEPENDSET.pgpkeys!=	cd ${DOC_PREFIX}/share/pgpkeys && echo *.key *.ent
 
 # ---
 # .xml -> .html rendering rule
