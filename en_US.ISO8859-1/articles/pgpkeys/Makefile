@@ -22,6 +22,6 @@ DOC_PREFIX?=	${.CURDIR}/../../..
 
 # XXXHRS temporary measure to handle PGP key dependency
 .PATH: ${DOC_PREFIX}/share/pgpkeys
-.for f in ${FORMATS}
+.for f in ${FORMATS:Ntxt}
 ${DOC}.${f}: ${_DEPENDSET.pgpkeys}
 .endfor
