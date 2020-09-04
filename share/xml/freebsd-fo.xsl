@@ -97,7 +97,8 @@
 
   <!-- Hyphenation -->
   <xsl:param name="hyphenate">true</xsl:param>
-  <xsl:param name="hyphenate.verbatim" select="1"/>
+  <!-- Disable due to too long verbatim string in pgpkeys -->
+  <xsl:param name="hyphenate.verbatim" select="0"/>
   <xsl:param name="hyphenate.verbatim.characters"> </xsl:param>
 
   <!-- Base Fonts -->
