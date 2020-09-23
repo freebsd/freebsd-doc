@@ -742,6 +742,7 @@ $manPathDefault = 'FreeBSD 12.1-RELEASE and Ports';
     'OSF1 V4.0/alpha', "$manLocalDir/OSF1-V4.0-alpha",
     'OSF1 V5.1/alpha', "$manLocalDir/OSF1-V5.1-alpha",
 
+    'Inferno 4th Edition',         "$manLocalDir/Inferno",
     'Plan 9',                      "$manLocalDir/plan9",
     'Minix 2.0',                   "$manLocalDir/Minix-2.0",
     'Unix Seventh Edition',        "$manLocalDir/v7man",
