@@ -6,7 +6,7 @@
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Simplified Chinese Documentation Project -->
-<!-- Original revision: r52666 -->
+<!-- Original revision: r54642 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -93,13 +93,11 @@
 				  <h2><a href="&base;/releases/">支持的版本</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>生产环境适用:&nbsp;<a
-				href="&u.rel.announce;">&rel.current;</a>,
+				href="&u.rel122.announce;">&rel122.current;</a>,
 				<a
-					href="&u.rel1.announce;">&rel1.current;</a>
-				<?ignore
+				href="&u.rel121.announce;">&rel121.current;</a>
 				<a
-					href="&u.rel2.announce;">&rel2.current;</a></li>
-				?></li>
+				href="&u.rel114.announce;">&rel114.current;</a></li>
 					<xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 					<li>即将发布: <a
 				href="&u.betarel.schedule;">&betarel.current;</a></li>
