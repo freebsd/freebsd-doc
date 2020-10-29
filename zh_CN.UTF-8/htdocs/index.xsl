@@ -95,10 +95,10 @@
 					<li>生产环境适用:&nbsp;<a
 				href="&u.rel122.announce;">&rel122.current;</a>,
 				<a
-				href="&u.rel121.announce;">&rel121.current;</a>
+				href="&u.rel121.announce;">&rel121.current;</a>,
 				<a
 				href="&u.rel114.announce;">&rel114.current;</a></li>
-					<xsl:if test="'&beta.upcoming;' != 'IGNORE'">
+				<xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 					<li>即将发布: <a
 				href="&u.betarel.schedule;">&betarel.current;</a></li>
 			    </xsl:if>
