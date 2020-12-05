@@ -21,7 +21,7 @@ FORMATS?=		html txt
 INSTALL_COMPRESSED?=	gz
 INSTALL_ONLY_COMPRESSED=
 
-.if ${.TARGET:M${DOC}.html}
+.if ${.TARGET:M${DOC}.html} && !make(install)
 MAN4TMP!=	${MKTEMP} -d ${.CURDIR}/svn.XXXXXXXX
 MAN4DIR=	${MAN4TMP}
 .if exists(${MAN4DIR})
