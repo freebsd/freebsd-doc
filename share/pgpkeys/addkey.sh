@@ -1,7 +1,5 @@
 #!/bin/sh
 #
-# $FreeBSD$
-#
 
 progname=$(basename $(realpath $0))
 
@@ -116,7 +114,6 @@ fi
 keyfile="${me}.key"
 info "Generating ${keyfile}..."
 (
-    echo '<!-- $''FreeBSD''$ -->'
     echo '<!--'
     echo "sh ${progname} ${me}" ${keyids} ";"
     echo '-->'
@@ -154,7 +151,6 @@ either pgpkeys-officers.xml or pgpkeys-core.xml instead.
 If this is a new entry, don't forget to run the following commands
 before committing:
 
-% svn add ${keyfile}
-% svn propset svn:keywords FreeBSD=%H ${keyfile}
+% git add ${keyfile}
 
 EOF
