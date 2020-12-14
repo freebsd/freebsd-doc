@@ -1,0 +1,204 @@
+--- crypto/openssl/crypto/asn1/asn1.h.orig
++++ crypto/openssl/crypto/asn1/asn1.h
+@@ -1203,6 +1203,7 @@
+ # define ASN1_F_ASN1_ITEM_DUP                             191
+ # define ASN1_F_ASN1_ITEM_EX_COMBINE_NEW                  121
+ # define ASN1_F_ASN1_ITEM_EX_D2I                          120
++# define ASN1_F_ASN1_ITEM_EX_I2D                          224
+ # define ASN1_F_ASN1_ITEM_I2D_BIO                         192
+ # define ASN1_F_ASN1_ITEM_I2D_FP                          193
+ # define ASN1_F_ASN1_ITEM_PACK                            198
+@@ -1304,6 +1305,7 @@
+ # define ASN1_R_BAD_OBJECT_HEADER                         102
+ # define ASN1_R_BAD_PASSWORD_READ                         103
+ # define ASN1_R_BAD_TAG                                   104
++# define ASN1_R_BAD_TEMPLATE                              221
+ # define ASN1_R_BMPSTRING_IS_WRONG_LENGTH                 214
+ # define ASN1_R_BN_LIB                                    105
+ # define ASN1_R_BOOLEAN_IS_WRONG_LENGTH                   106
+--- crypto/openssl/crypto/asn1/asn1_err.c.orig
++++ crypto/openssl/crypto/asn1/asn1_err.c
+@@ -1,6 +1,6 @@
+ /* crypto/asn1/asn1_err.c */
+ /* ====================================================================
+- * Copyright (c) 1999-2018 The OpenSSL Project.  All rights reserved.
++ * Copyright (c) 1999-2020 The OpenSSL Project.  All rights reserved.
+  *
+  * Redistribution and use in source and binary forms, with or without
+  * modification, are permitted provided that the following conditions
+@@ -103,6 +103,7 @@
+     {ERR_FUNC(ASN1_F_ASN1_ITEM_DUP), "ASN1_item_dup"},
+     {ERR_FUNC(ASN1_F_ASN1_ITEM_EX_COMBINE_NEW), "ASN1_ITEM_EX_COMBINE_NEW"},
+     {ERR_FUNC(ASN1_F_ASN1_ITEM_EX_D2I), "ASN1_ITEM_EX_D2I"},
++    {ERR_FUNC(ASN1_F_ASN1_ITEM_EX_I2D), "ASN1_item_ex_i2d"},
+     {ERR_FUNC(ASN1_F_ASN1_ITEM_I2D_BIO), "ASN1_item_i2d_bio"},
+     {ERR_FUNC(ASN1_F_ASN1_ITEM_I2D_FP), "ASN1_item_i2d_fp"},
+     {ERR_FUNC(ASN1_F_ASN1_ITEM_PACK), "ASN1_item_pack"},
+@@ -207,6 +208,7 @@
+     {ERR_REASON(ASN1_R_BAD_OBJECT_HEADER), "bad object header"},
+     {ERR_REASON(ASN1_R_BAD_PASSWORD_READ), "bad password read"},
+     {ERR_REASON(ASN1_R_BAD_TAG), "bad tag"},
++    {ERR_REASON(ASN1_R_BAD_TEMPLATE), "bad template"},
+     {ERR_REASON(ASN1_R_BMPSTRING_IS_WRONG_LENGTH),
+      "bmpstring is wrong length"},
+     {ERR_REASON(ASN1_R_BN_LIB), "bn lib"},
+--- crypto/openssl/crypto/asn1/tasn_dec.c.orig
++++ crypto/openssl/crypto/asn1/tasn_dec.c
+@@ -223,6 +223,15 @@
+         break;
+ 
+     case ASN1_ITYPE_MSTRING:
++        /*
++         * It never makes sense for multi-strings to have implicit tagging, so
++         * if tag != -1, then this looks like an error in the template.
++         */
++        if (tag != -1) {
++            ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_BAD_TEMPLATE);
++            goto err;
++        }
++
+         p = *in;
+         /* Just read in tag and class */
+         ret = asn1_check_tlen(NULL, &otag, &oclass, NULL, NULL,
+@@ -240,6 +249,7 @@
+             ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_MSTRING_NOT_UNIVERSAL);
+             goto err;
+         }
++
+         /* Check tag matches bit map */
+         if (!(ASN1_tag2bit(otag) & it->utype)) {
+             /* If OPTIONAL, assume this is OK */
+@@ -316,6 +326,15 @@
+         goto err;
+ 
+     case ASN1_ITYPE_CHOICE:
++        /*
++         * It never makes sense for CHOICE types to have implicit tagging, so
++         * if tag != -1, then this looks like an error in the template.
++         */
++        if (tag != -1) {
++            ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_BAD_TEMPLATE);
++            goto err;
++        }
++
+         if (asn1_cb && !asn1_cb(ASN1_OP_D2I_PRE, pval, it, NULL))
+             goto auxerr;
+         if (*pval) {
+--- crypto/openssl/crypto/asn1/tasn_enc.c.orig
++++ crypto/openssl/crypto/asn1/tasn_enc.c
+@@ -151,9 +151,25 @@
+         break;
+ 
+     case ASN1_ITYPE_MSTRING:
++        /*
++         * It never makes sense for multi-strings to have implicit tagging, so
++         * if tag != -1, then this looks like an error in the template.
++         */
++        if (tag != -1) {
++            ASN1err(ASN1_F_ASN1_ITEM_EX_I2D, ASN1_R_BAD_TEMPLATE);
++            return -1;
++        }
+         return asn1_i2d_ex_primitive(pval, out, it, -1, aclass);
+ 
+     case ASN1_ITYPE_CHOICE:
++        /*
++         * It never makes sense for CHOICE types to have implicit tagging, so
++         * if tag != -1, then this looks like an error in the template.
++         */
++        if (tag != -1) {
++            ASN1err(ASN1_F_ASN1_ITEM_EX_I2D, ASN1_R_BAD_TEMPLATE);
++            return -1;
++        }
+         if (asn1_cb && !asn1_cb(ASN1_OP_I2D_PRE, pval, it, NULL))
+             return 0;
+         i = asn1_get_choice_selector(pval, it);
+--- crypto/openssl/crypto/x509v3/v3_genn.c.orig
++++ crypto/openssl/crypto/x509v3/v3_genn.c
+@@ -72,8 +72,9 @@
+ IMPLEMENT_ASN1_FUNCTIONS(OTHERNAME)
+ 
+ ASN1_SEQUENCE(EDIPARTYNAME) = {
+-        ASN1_IMP_OPT(EDIPARTYNAME, nameAssigner, DIRECTORYSTRING, 0),
+-        ASN1_IMP_OPT(EDIPARTYNAME, partyName, DIRECTORYSTRING, 1)
++        /* DirectoryString is a CHOICE type so use explicit tagging */
++        ASN1_EXP_OPT(EDIPARTYNAME, nameAssigner, DIRECTORYSTRING, 0),
++        ASN1_EXP(EDIPARTYNAME, partyName, DIRECTORYSTRING, 1)
+ } ASN1_SEQUENCE_END(EDIPARTYNAME)
+ 
+ IMPLEMENT_ASN1_FUNCTIONS(EDIPARTYNAME)
+@@ -107,6 +108,37 @@
+                                     (char *)a);
+ }
+ 
++static int edipartyname_cmp(const EDIPARTYNAME *a, const EDIPARTYNAME *b)
++{
++    int res;
++
++    if (a == NULL || b == NULL) {
++        /*
++         * Shouldn't be possible in a valid GENERAL_NAME, but we handle it
++         * anyway. OTHERNAME_cmp treats NULL != NULL so we do the same here
++         */
++        return -1;
++    }
++    if (a->nameAssigner == NULL && b->nameAssigner != NULL)
++        return -1;
++    if (a->nameAssigner != NULL && b->nameAssigner == NULL)
++        return 1;
++    /* If we get here then both have nameAssigner set, or both unset */
++    if (a->nameAssigner != NULL) {
++        res = ASN1_STRING_cmp(a->nameAssigner, b->nameAssigner);
++        if (res != 0)
++            return res;
++    }
++    /*
++     * partyName is required, so these should never be NULL. We treat it in
++     * the same way as the a == NULL || b == NULL case above
++     */
++    if (a->partyName == NULL || b->partyName == NULL)
++        return -1;
++
++    return ASN1_STRING_cmp(a->partyName, b->partyName);
++}
++
+ /* Returns 0 if they are equal, != 0 otherwise. */
+ int GENERAL_NAME_cmp(GENERAL_NAME *a, GENERAL_NAME *b)
+ {
+@@ -116,8 +148,11 @@
+         return -1;
+     switch (a->type) {
+     case GEN_X400:
++        result = ASN1_TYPE_cmp(a->d.x400Address, b->d.x400Address);
++        break;
++
+     case GEN_EDIPARTY:
+-        result = ASN1_TYPE_cmp(a->d.other, b->d.other);
++        result = edipartyname_cmp(a->d.ediPartyName, b->d.ediPartyName);
+         break;
+ 
+     case GEN_OTHERNAME:
+@@ -164,8 +199,11 @@
+ {
+     switch (type) {
+     case GEN_X400:
++        a->d.x400Address = value;
++        break;
++
+     case GEN_EDIPARTY:
+-        a->d.other = value;
++        a->d.ediPartyName = value;
+         break;
+ 
+     case GEN_OTHERNAME:
+@@ -199,8 +237,10 @@
+         *ptype = a->type;
+     switch (a->type) {
+     case GEN_X400:
++        return a->d.x400Address;
++
+     case GEN_EDIPARTY:
+-        return a->d.other;
++        return a->d.ediPartyName;
+ 
+     case GEN_OTHERNAME:
+         return a->d.otherName;
