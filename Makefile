@@ -1,5 +1,3 @@
-# $FreeBSD$
-#
 # The user can override the default list of languages to build and install
 # with the DOC_LANG variable.
 #
@@ -35,25 +33,19 @@ SUBDIR+=	share
 
 DOC_PREFIX?=   ${.CURDIR}
 
-.if exists(/usr/bin/svnlite)
-SVN?=		/usr/bin/svnlite
-.elif exists(/usr/bin/svn)
-SVN?=		/usr/bin/svn
-.else
-SVN?=		/usr/local/bin/svn
-.endif
+GIT?=		/usr/local/bin/git
 
 update:
-.if !exists(${SVN})
+.if !exists(${GIT})
 	@${ECHODIR} "--------------------------------------------------------------"
-	@${ECHODIR} ">>> ${SVN} is required to update ${.CURDIR}"
+	@${ECHODIR} ">>> ${GIT} is required to update ${.CURDIR}"
 	@${ECHODIR} "--------------------------------------------------------------"
 	@${EXIT}
 .else
 	@${ECHODIR} "--------------------------------------------------------------"
-	@${ECHODIR} ">>> Updating ${.CURDIR} from svn repository"
+	@${ECHODIR} ">>> Updating ${.CURDIR} from git repository"
 	@${ECHODIR} "--------------------------------------------------------------"
-	cd ${.CURDIR}; ${SVN} update
+	cd ${.CURDIR}; ${GIT} pull --ff-only
 .endif
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

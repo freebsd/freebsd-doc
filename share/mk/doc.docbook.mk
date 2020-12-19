@@ -1,6 +1,3 @@
-#
-# $FreeBSD$
-#
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
 #
@@ -99,25 +96,9 @@ LATESTREVISION!=cd ${.CURDIR} && ${GIT} log -1 --pretty=format:'\
 	--stringparam latestrevision.timestamp "%ci" \
 	--stringparam latestrevision.committer "%cn" \
 	--stringparam latestrevision.number "%h"' ${SRCS}
-.else
-# if using Subversion, get information from metadata
-# rather than embedded version strings
-.if exists(${DOC_PREFIX}/.svn) && exists(${SVN})
-LATESTREVISION!=cd ${.CURDIR} && ${SVN} info ${SRCS} 2>/dev/null | \
-		${AWK} 'BEGIN {	genfmt="--stringparam latestrevision."; \
-				timefmt=genfmt"timestamp \"%s %s\""; \
-				comtfmt=genfmt"committer \"%s\""; \
-				revnfmt=genfmt"number \"%u\""; \
-				fmt=timefmt" "comtfmt"\t\t"revnfmt"\n"; } \
-			/^Last Changed Author:/ { committer=$$4 } \
-		        /^Last Changed Rev:/    { number=$$4 } \
-		        /^Last Changed Date:/   { date=$$4; time=$$5; \
-				printf(fmt, date, time, committer, number) }' \
-		| ${SORT} | ${TAIL} -n1
-.endif
 .endif
 
-# if neither Subversion nor Git revision numbers are available, use
+# If the Git revision number is not available, use
 # the revision date from the timestamp of the most recent file and
 # set the revision number to "filedate"
 .if empty(LATESTREVISION)
