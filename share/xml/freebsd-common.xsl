@@ -91,7 +91,7 @@
     <xsl:text>.</xsl:text>
   </xsl:template>
 
-  <xsl:template name="svnref.genlink"/>
+  <xsl:template name="gitref.genlink"/>
 
   <xsl:template name="titlepage.releaseinfo">
     <xsl:variable name="rev" select="$latestrevision.number"/>
@@ -101,7 +101,7 @@
     </xsl:call-template>
     <xsl:text>:</xsl:text>
     <xsl:call-template name="gentext.space"/>
-    <xsl:call-template name="svnref.genlink">
+    <xsl:call-template name="gitref.genlink">
       <xsl:with-param name="repo" select="'doc'"/>
       <xsl:with-param name="rev" select="$rev"/>
     </xsl:call-template>
