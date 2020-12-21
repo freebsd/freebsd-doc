@@ -212,6 +212,24 @@
     </a>
   </xsl:template>
 
+  <xsl:template name="gitref.genlink">
+    <xsl:param name="rev" select="."/>
+    <xsl:param name="repo" select="'src'"/>
+
+    <a>
+      <xsl:attribute name="href">
+	<xsl:call-template name="cgit.link">
+	  <xsl:with-param name="repo" select="$repo"/>
+	  <xsl:with-param name="rev" select="$rev"/>
+	</xsl:call-template>
+      </xsl:attribute>
+
+      <span class="gitref">
+	<xsl:value-of select="$rev"/>
+      </span>
+    </a>
+  </xsl:template>
+
   <xsl:template name="generate.citerefentry.link">
     <xsl:text>https://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
     <xsl:value-of select="db:refentrytitle"/>

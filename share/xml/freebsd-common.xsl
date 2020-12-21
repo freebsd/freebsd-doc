@@ -16,6 +16,11 @@
     <xsl:call-template name="svnref.genlink"/>
   </xsl:template>
 
+  <!-- Generate link for githash -->
+  <xsl:template match="db:githash">
+    <xsl:call-template name="gitref.genlink"/>
+  </xsl:template>
+
   <!-- Redefine variables, and replace templates as necessary here -->
   <xsl:template match="db:buildtarget|db:command">
     <xsl:call-template name="inline.monoseq"/>
@@ -25,7 +30,15 @@
     <xsl:param name="repo" select="'base'"/>
     <xsl:param name="rev"/>
 
-    <xsl:value-of select="concat('https://cgit.freebsd.org/doc/commit/?id=',
+    <xsl:value-of select="concat('https://svnweb.freebsd.org/changeset/',
+      $repo, '/', $rev)"/>
+  </xsl:template>
+
+  <xsl:template name="cgit.link">
+    <xsl:param name="repo" select="'src'"/>
+    <xsl:param name="rev"/>
+
+    <xsl:value-of select="concat('https://cgit.freebsd.org/', $repo, '/commit/?id=',
       $rev)"/>
   </xsl:template>
 

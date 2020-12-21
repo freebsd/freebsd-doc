@@ -581,6 +581,23 @@
     </fo:basic-link>
   </xsl:template>
 
+  <xsl:template name="gitref.genlink">
+    <xsl:param name="rev" select="."/>
+    <xsl:param name="repo" select="'src'"/>
+    <xsl:variable name="href">
+      <xsl:call-template name="cgit.link">
+	<xsl:with-param name="repo" select="$repo"/>
+	<xsl:with-param name="rev" select="$rev"/>
+      </xsl:call-template>
+    </xsl:variable>
+
+    <fo:basic-link external-destination="url({$href})">
+      <fo:inline color="blue">
+	<xsl:value-of select="$rev"/>
+      </fo:inline>
+    </fo:basic-link>
+  </xsl:template>
+
   <xsl:template name="chapter.authorgroup">
     <fo:inline font-style="italic">
       <xsl:call-template name="freebsd.authorgroup"/>
