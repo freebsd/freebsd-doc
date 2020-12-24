@@ -4,7 +4,7 @@
 <!ENTITY title "FreeBSD 社群">
 ]>
 
-<!-- $FreeBSD$ Original revision: r52000 -->
+<!-- $FreeBSD$ Original Revision: 2bc0aef911 (r52000) -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"

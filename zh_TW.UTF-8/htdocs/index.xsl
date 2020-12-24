@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r54642 -->
+<!-- Original Revision: bfea49dccc (r54642) -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
