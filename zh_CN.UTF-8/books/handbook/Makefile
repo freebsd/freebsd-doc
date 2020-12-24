@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Simplified Chinese).
 #
-# Original revision: r38039
+# Original Revision: 71484c537f (r38039)
 
 # ------------------------------------------------------------------------
 #
