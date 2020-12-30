@@ -3,14 +3,13 @@
 # Copyright (c) 2001 Dima Dorfman <dd@FreeBSD.org>
 # Copyright (c) 2004 Simon L. Nielsen <simon@FreeBSD.org>
 #
-# Build the FreeBSD docs from the CVS^WSVN repository.
+# Build the FreeBSD docs from the Git repository.
 #
 #
 # Major variables:
 #
 #	PATH		- The search path as interpreted by the shell.
-#	CVSROOT		- Path to the FreeBSD CVS repository (obsolete)
-#	DOCSVN		- Url to the FreeBSD doc SVN repository.
+#	DOCGIT		- Url to the FreeBSD doc Git repository.
 #	BUILDDIR	- Where the checked out copies of the files are stored.
 #	DESTDIR		- Where the rendered copies should wind up.
 #	BUILDARGS	- Arguments to pass to make(1) when {build,install}ing.
@@ -29,13 +28,14 @@
 #
 #	0	- success
 #	1	- unknown failure
-#	2	- failure in CVS^SVN operations
+#	2	- failure in Git operations
 #	3	- failure in make operations
-#
-# $FreeBSD: www/tools/webupdate,v 1.10 2003/11/18 11:00:54 kuriyama Exp $
 #
 
 #
+# NOTE: This script is not automatically updated on the builder.
+#
+
 # WARNING!  This script depend on dobuild_wrap.sh setting the
 # configuration variables in the enviroment.
 #
@@ -61,8 +61,7 @@ if [ -z "${NOCLEAN}" ]; then
 	rm -Rf doc out 2>/dev/null
 
 	echo "===> Check out the new doc"
-	#cvs -qR checkout -P doc || exit 2
-	svn checkout ${DOCSVN} doc || exit 2
+	git clone -b main ${DOCGIT} doc || exit 2
 fi
 
 cd $BUILDDIR/doc || exit 1

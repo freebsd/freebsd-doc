@@ -24,18 +24,17 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
-#
 
+#
 # Wrapper around doc build.  Simplifies main build script.
+# NOTE: This script is not automatically updated on the builder.
 
 #
 # Default configuration.
 #
 DEFAULT_PATH=/bin:/usr/bin:/usr/local/bin
 DEFAULT_BUILDROOT=/local0/docbuild
-DEFAULT_CVSROOT=/home/dcvs
-DEFAULT_DOCSVN="svn://svn.freebsd.org/doc/head"
+DEFAULT_DOCGIT="https://git.freebsd.org/doc.git"
 DEFAULT_BUILDARGS="NO_JPMAN=yes GEN_INDEX=yes"
 DEFAULT_INSTARGS="NO_JPMAN=yes GEN_INDEX=yes INSTALL_ONLY_COMPRESSED=yes"
 # Must keep space between addresses.
@@ -51,8 +50,7 @@ DEFAULT_COMPTYPES="bz2 zip"
 #
 BUILDROOT=${BUILDROOT:-${DEFAULT_BUILDROOT}}; export BUILDROOT
 PATH="${PATH}:${DEFAULT_PATH}"; export PATH
-CVSROOT=${CVSROOT:-${DEFAULT_CVSROOT}}; export CVSROOT
-DOCSVN=${DOCSVN:-${DEFAULT_DOCSVN}}; export DOCSVN
+DOCGIT=${DOCGIT:-${DEFAULT_DOCGIT}}; export DOCGIT
 BUILDDIR=${BUILDDIR:-${BUILDROOT}/build}; export BUILDDIR
 DOCDIR=${DOCDIR:-${BUILDROOT}/build/out}; export DOCDIR
 FORMATS=${FORMATS:-${DEFAULT_FORMATS}}; export FORMATS
