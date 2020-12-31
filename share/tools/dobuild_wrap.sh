@@ -29,6 +29,10 @@
 # Wrapper around doc build.  Simplifies main build script.
 # NOTE: This script is not automatically updated on the builder.
 
+if [ -f "${PWD}/local.conf" ]; then
+	. ${PWD}/local.conf
+fi
+
 #
 # Default configuration.
 #
