@@ -39,6 +39,10 @@
 # WARNING!  This script depend on dobuild_wrap.sh setting the
 # configuration variables in the enviroment.
 #
+if [ -f "${PWD}/local.conf" ]; then
+	. ${PWD}/local.conf
+fi
+
 if [ -z "${DOBUILDWRAP}" ]; then
 	echo "Error: This script should only be called from dobuild_wrap.sh!"
 	exit 1
