@@ -61,7 +61,7 @@ if [ -z "${NOCLEAN}" ]; then
 	rm -Rf doc out 2>/dev/null
 
 	echo "===> Check out the new doc"
-	git clone -b main ${DOCGIT} doc || exit 2
+	git clone ${GITARGS} -b main ${DOCGIT} doc || exit 2
 fi
 
 cd $BUILDDIR/doc || exit 1
