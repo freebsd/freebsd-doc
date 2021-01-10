@@ -135,7 +135,11 @@
 		<li>There are hundreds of videos from conferences,
 		screencasts, and demonstrations relating to <a
 		href="https://www.youtube.com/results?search_query=freebsd">&os;</a>
-		on <a href="https://www.youtube.com">YouTube</a>.  In particular, there is a new <a href="https://www.youtube.com/bsdconferences">BSD Conferences</a> channel with full length 1 hour taped presentations from FreeBSD technical conferences.</li>
+		on <a href="https://www.youtube.com">YouTube</a>.  In particular, there is an
+		official <a href="https://www.youtube.com/FreeBSDProject">FreeBSD</a> channel
+		with developer summits, office hours and other event recordings, and a
+		<a href="https://www.youtube.com/bsdconferences">BSD Conferences</a> channel
+		with full taped presentations from FreeBSD technical conferences.</li>
 
 		<li>There is a
                   <a
