@@ -117,7 +117,7 @@ SCR2PNGOPTS?=	${SCR2PNGFLAGS}
 SCR2TXT?=	${PREFIX}/bin/scr2txt
 SCR2TXTOPTS?=	-l ${SCR2TXTFLAGS}
 EPS2PNM?=	${PREFIX}/bin/gs
-EPS2PNMOPTS?=	-q -dBATCH -dGraphicsAlphaBits=4 -dTextAlphaBits=4 \
+EPS2PNMOPTS?=	-sstdout=%stderr -q -dBATCH -dGraphicsAlphaBits=4 -dTextAlphaBits=4 \
 		-dEPSCrop -r${EPS2PNM_RES}x${EPS2PNM_RES} \
 		-dNOPAUSE -dSAFER -sDEVICE=pnm -sOutputFile=-
 #
