@@ -89,6 +89,8 @@ XMLDOCS+=	report-2019-10-2019-12
 XMLDOCS+=	report-2020-01-2020-03
 XMLDOCS+=	report-2020-04-2020-06
 XMLDOCS+=	report-2020-07-2020-09
+XMLDOCS+=	report-2020-10-2020-12
+
 XSLT.DEFAULT=	report.xsl
 
 # Install a sample <project> entry.
