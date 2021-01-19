@@ -92,7 +92,7 @@ NO_SUBDIR=      YES
 # If using git, use git log.  The revision won't work with the generated links,
 # because it is a hash, and git log doesn't know about git svn find-rev.
 .if exists(${DOC_PREFIX}/.git) && exists(${GIT})
-LATESTREVISION!=cd ${.CURDIR} && ${GIT} log -1 --pretty=format:'\
+LATESTREVISION!=cd ${.CURDIR} && LC_ALL=C ${GIT} log -1 --pretty=format:'\
 	--stringparam latestrevision.timestamp "%ci" \
 	--stringparam latestrevision.committer "%cn" \
 	--stringparam latestrevision.number "%h"' ${SRCS}
@@ -102,7 +102,7 @@ LATESTREVISION!=cd ${.CURDIR} && ${GIT} log -1 --pretty=format:'\
 # the revision date from the timestamp of the most recent file and
 # set the revision number to "filedate"
 .if empty(LATESTREVISION)
-LATESTREVISION!=${STAT} 2>/dev/null -t '%F %T %Z' -f '\
+LATESTREVISION!=cd ${.CURDIR} && ${STAT} 2>/dev/null -t '%F %T %Z' -f '\
 	--stringparam latestrevision.timestamp "%Sc" \
 	--stringparam latestrevision.committer "%Su" \
 	--stringparam latestrevision.number "filedate"' \
@@ -719,4 +719,3 @@ ${LOCAL_CSS_SHEET}: ${CSS_SHEET}
 .endif
 
 HTML.manifest: index.html
-
