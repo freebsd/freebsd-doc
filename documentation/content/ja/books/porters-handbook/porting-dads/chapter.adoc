@@ -1,0 +1,1107 @@
+---
+title: 第16章 やっていいことといけないこと
+prev: books/porters-handbook/port-upgrading
+next: books/porters-handbook/porting-samplem
+---
+
+[[porting-dads]]
+= やっていいことといけないこと
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 16
+:toc-title: 目次
+:table-caption: 表
+:figure-caption: 図
+:example-caption: 例 
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/ja/mailing-lists.adoc[]
+include::shared/ja/teams.adoc[]
+include::shared/ja/urls.adoc[]
+
+toc::[]
+
+[[dads-intro]]
+== はじめに
+
+このセクションではソフトウェアを port する上で、 良くある落し穴などについて説明します。 このリストを使ってあなた自身が作成した port のチェックはもとより、 さらにlink:http://www.FreeBSD.org/cgi/query-pr-summary.cgi?query[障害報告データベース] にある他の人が提出した port のチェックもできます。 PR データベースにある、 他の人が作成した port のチェックもできます。 あなたがチェックした port についてのコメントをlink:{contributing}#CONTRIB-GENERAL[ バグ報告と一般的な論評]にしたがって送ってください。 PR データベースにある port をチェックすることは、 わたしたちがそれらを commit するのを早めるとともに、 何をしているかをあなたが理解していることも証明します。
+
+[[dads-strip]]
+== バイナリの strip
+
+バイナリは特に必要がなければ、手動で strip しないでください。 すべてのバイナリは strip すべきですが、 `INSTALL_PROGRAM` マクロがバイナリのインストールと strip を同時に行います (次節をご覧ください)。
+
+ファイルを strip する必要はあるものの `INSTALL_PROGRAM` マクロを使いたくない場合は、 `${STRIP_CMD}` でプログラムを strip できます。 これは、多くの場合 `post-install` ターゲット内で行われます。たとえば
+
+[.programlisting]
+....
+post-install:
+	${STRIP_CMD} ${PREFIX}/bin/xdl
+....
+
+インストールされた実行形式がすでに strip されているかどうかは `file` コマンドで確認できます。 "not stripped" と表示されなければ strip されていることを示しています。 さらに、man:strip[1] はすでに strip されたプログラムは strip せず、問題なく終了します。
+
+[[dads-install]]
+== `INSTALL_*` マクロ
+
+あなた自身の `*-install` ターゲットでファイルの正しいモードとオーナを保証するために、 必ず [.filename]#bsd.port.mk# で提供されているマクロを使用してください。
+
+* `${INSTALL_PROGRAM}` は実行可能なバイナリをインストール (し、その過程で strip 処理)するコマンドです。
+* `${INSTALL_SCRIPT}` は実行可能なスクリプトをインストールするコマンドです。
+* `${INSTALL_DATA}` は共有可能なデータをインストールするコマンドです。
+* `${INSTALL_MAN}` はマニュアルとその他の文書をインストールするコマンドです (圧縮はしません)。
+
+これらは基本的に `install` コマンドに適切なフラグを与えたものです。 それらは distfile の [.filename]#Makefile# で、頭に "BSD_" が付けられた (つまり BSD_INSTALL_PROGRM というような) 形で使うことができます。 どのようにこれらを使用するかは以下の例を見てください。 
+
+[[porting-wrkdir]]
+== `WRKDIR`
+
+`WRKDIR` の外に存在するファイルには何も書き込んではいけません。 port のビルド中に書き込み可能なことが保証されているのは `WRKDIR` の中だけです (書き込み不可のツリー上での port ビルドの例については、 link:{handbook}#PORTS-CD[CDROM からの ports のインストール] を参照のこと)。 [.filename]#pkg-*# ファイルを変更する必要があるときには、 ファイルを上書きするのではなく <<porting-pkgfiles,変数の再定義>>により 行なうようにしてください。
+
+[[porting-wrkdirprefix]]
+== `WRKDIRPREFIX`
+
+`WRKDIRPREFIX` を尊重していることを確認してください。特に、別の port の `WRKDIR` を参照しているときには気を付けてください。 正しい場所は、 [.filename]#WRKDIRPREFIXPORTSDIR/subdir/name/work# です。 [.filename]#PORTSDIR/subdir/name/work# や [.filename]#.CURDIR/../../subdir/name/work# ではありません。
+
+また、 自分で `WRKDIR` 定義するときには先頭に `${WRKDIRPREFIX}${.CURDIR}` が付いていることを確認してください。
+
+[[porting-versions]]
+== OS の種類やバージョンの識別
+
+どのバージョンの Unix で動かすかによって、 変更や条件つきコンパイルが必要なコードに出くわすこともあるでしょう。 そのような変更を行なう場合には、 古い FreeBSD システムへのバックポートや、 CSRG の 4.4BSD, BSD/386, 386BSD, NetBSD, OpenBSD 等、 他の BSD システムへの移植が可能なように、 できるだけ汎用的な変更を行なうことを心がけてください。
+
+4.3BSD/Reno (1990) と、それより新しいバージョンの BSD コードを区別するには、 [.filename]#<sys/param.h># で定義されている `BSD` マクロを利用するのがよいでしょう。 このファイルがすでにインクルードされていれば良いのですが、 そうでない場合には、その [.filename]#.c# ファイルの 適当な場所に以下のコードを追加してください。
+
+[.programlisting]
+....
+#if (defined(__unix__) || defined(unix)) && !defined(USG)
+#include <sys/param.h>
+#endif
+....
+
+これらの二つのシンボルが定義されているシステムには必ず [.filename]#sys/param.h# があるはずです。 もしそうでないシステムを発見したら、 {freebsd-ports} までメールを送ってわたしたちに伝えてください。
+
+あるいは、GNU Autoconf のスタイルを使用することもできます。
+
+[.programlisting]
+....
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+....
+
+この方法を使用するときには、 [.filename]#Makefile# 中の ``CFLAGS``に ``-DHAVE_SYS_PARAM_H`` を加えることを忘れないようにしてください。
+
+いったん [.filename]#sys/param.h# がインクルードされると、
+
+[.programlisting]
+....
+#if (defined(BSD) && (BSD >= 199103))
+....
+
+このようにしてそのコードが 4.3 Net2 コードベース、 またはそれより新しいもの (例: FreeBSD 1.x, 4.3/Reno, NetBSD 0.9, 386BSD, BSD/386 1.1 とそれ以前) の上でコンパイルされているかを検出できます。
+
+[.programlisting]
+....
+#if (defined(BSD) && (BSD >= 199306))
+....
+
+これは、4.4コードベース、またはそれより新しいもの (例: FreeBSD 2.x, 4.4, NetBSD 1.0, BSD/386 2.0 とそれ以後) の上でコンパイルされているかどうかを検出するために使用します。
+
+4.4BSD-Lite2 コードベースでは `BSD` マクロの値は `199506` になっています。 これは参考程度の意味合いしかありません。 4.4-Lite ベースの FreeBSD と 4.4-Lite2 での変更がマージされたバージョンとを区別するのに使用するべきものではありません。 この目的のためにはかわりに {freebsd} マクロを使用してください。
+
+以下は控え目に使ってください。
+
+* {freebsd} はFreeBSDのすべての版で定義されています。 変更が FreeBSD だけに適用されるとき以外は使用しないでください。 port でよくある ``strerror()`` ではなく ``sys_errlist[]`` を使うなどは FreeBSDでの変更ではなく BSD の流儀です。
+* FreeBSD 2.xでは {freebsd} が ``2`` と定義されています。 それ以前の版では ``1`` になっています。 その後の版でもメジャー番号に合うように上げています。
+* もし FreeBSD 1.x システムと FreeBSD 2.x 以降のシステムを区別する必要があれば、 上で述べた `BSD` マクロを使用するのが大抵の場合において正しい答です。 もし FreeBSD 特有の変更であれば (`ld` を使うときの共有ライブラリ用のオプションなど)、 {freebsd}を使い `#if {freebsd} > 1` のようにFreeBSD 2.x および、 それ以降のシステムを検出するのはかまいません。 もし 2.0-RELEASE 以降の FreeBSD システムを細かく検出したければ、 以下を使用することができます。
++
+[.programlisting]
+....
+#if __FreeBSD__ >= 2
+#include <osreldate.h>
+#    if __FreeBSD_version >= 199504
+         /* 2.0.5+ release specific code here */
+#    endif
+#endif
+....
+
+これまで、何百もの port が作られてきましたが、 {freebsd} が正しく使われたのは一つか二つの場合だけでしょう。 以前の port が間違ってふさわしくない場所で そのマクロを使っているからといって、 それをまねする理由はありません。
+
+[[freebsd-versions]]
+== __FreeBSD_version の値
+
+以下は、[.filename]#sys/param.h# で定義されている `__FreeBSD_version` の便利な一覧です。
+
+.__FreeBSD_version values
+[cols="1,1", frame="none", options="header"]
+|===
+| Release
+| __FreeBSD_version
+
+|2.0-RELEASE
+|119411
+
+|2.1-CURRENT
+|199501, 199503
+
+|2.0.5-RELEASE
+|199504
+
+|2.1 以前の 2.2-CURRENT
+|199508
+
+|2.1.0-RELEASE
+|199511
+
+|2.1.5 以前の 2.2-CURRENT
+|199512
+
+|2.1.5-RELEASE
+|199607
+
+|2.1.6 以前の 2.2-CURRENT
+|199608
+
+|2.1.6-RELEASE
+|199612
+
+|2.1.7-RELEASE
+|199612
+
+|2.2-RELEASE
+|220000
+
+|2.2.1-RELEASE
+|220000 (変更なし)
+
+|2.2.1-RELEASE 以降の 2.2-STABLE
+|220000 (変更なし)
+
+|texinfo-3.9 以降の 2.2-STABLE
+|221001
+
+|top 導入以降の 2.2-STABLE
+|221002
+
+|2.2.2-RELEASE
+|222000
+
+|2.2.2-RELEASE 以降の 2.2-STABLE
+|222001
+
+|2.2.5-RELEASE
+|225000
+
+|2.2.5-RELEASE 以降の 2.2-STABLE
+|225001
+
+|ldconfig -R マージ以降の 2.2-STABLE
+|225002
+
+|2.2.6-RELEASE
+|226000
+
+|2.2.7-RELEASE
+|227000
+
+|2.2.7-RELEASE 以降の 2.2-STABLE
+|227001
+
+|man:semctl[2] 変更以降の 2.2-STABLE
+|227002
+
+|2.2.8-RELEASE
+|228000
+
+|2.2.8-RELEASE 以降の 2.2-STABLE
+|228001
+
+|man:mount[2] 変更以前の 3.0-CURRENT
+|300000
+
+|man:mount[2] 変更以降の 3.0-CURRENT
+|300001
+
+|man:semctl[2] 変更以降の 3.0-CURRENT
+|300002
+
+|ioctl 引数変更以降の 3.0-CURRENT
+|300003
+
+|ELF 化以降の 3.0-CURRENT
+|300004
+
+|3.0-RELEASE
+|300005
+
+|3.0-RELEASE 以降の 3.0-CURRENT
+|300006
+
+|3/4 の分岐以降の 3.0-STABLE
+|300007
+
+|3.1-RELEASE
+|310000
+
+|3.1-RELEASE 以降の 3.1-STABLE
+|310001
+
+|C++ コンストラクタ/デストラクタ順序変更の後の 3.1-STABLE
+|310002
+
+|3.2-RELEASE
+|320000
+
+|3.2-STABLE
+|320001
+
+|バイナリ互換性のない IPFW とソケットの変更後の 3.2-STABLE
+|320002
+
+|3.3-RELEASE
+|330000
+
+|3.3-STABLE
+|330001
+
+|libc に man:mkstemp[3] が追加された後の 3.3-STABLE
+|330002
+
+|3.4-RELEASE
+|340000
+
+|3.4-STABLE
+|340001
+
+|3.5-RELEASE
+|350000
+
+|3.5-STABLE
+|350001
+
+|3.4 が分岐した後の 4.0-CURRENT
+|400000
+
+|dynamic linker の変更後の 4.0-CURRENT
+|400001
+
+|C++ コンストラクタ/デストラクタ順序変更の後の 4.0-CURRENT
+|400002
+
+|man:dladdr[3] 機能追加後の 4.0-CURRENT
+|400003
+
+|__deregister_frame_info dynamic linker のバグ修正、 EGCS 1.1.2 導入後の 4.0-CURRENT
+|400004
+
+|man:suser[9] の API 変更、newbus 化 以降の 4.0-CURRENT
+|400005
+
+|cdevsw 登録方法の変更後の 4.0-CURRENT
+|400006
+
+|ソケットレベルの証明書 (credential) のために so_cred が追加された後の 4.0-CURRENT
+|400007
+
+|libc_r への poll syscall ラッパー追加後の 4.0-CURRENT
+|400008
+
+|kernel の `dev_t` 型から `struct spacinfo` ポインタへの 変更後の 4.0-CURRENT
+|400009
+
+|man:jail[2] のセキュリティホール 修正後の 4.0-CURRENT 
+|400010
+
+|`sigset_t` の データ型変更後の 4.0-CURRENT
+|400011
+
+|システムコンパイラを gcc 2.95.2 にアップグレードした 後の 4.0-CURRENT
+|400012
+
+|動的組み込み可能な Linux モードの ioctl ハンドラが 追加された後の 4.0-CURRENT
+|400013
+
+|OpenSSL 導入後の 4.0-CURRENT
+|400014
+
+|GCC 2.95.2 の C++ ABI 変更で、 デフォルトを -fvtable-thunks から -fno-vtable-thunks に 変更した後の 4.0-CURRENT
+|400015
+
+|OpenSSH 導入後の 4.0-CURRENT
+|400016
+
+|4.0-RELEASE
+|400017
+
+|4.0-RELEASE 以降の 4.0-STABLE
+|400018
+
+|チェックサム計算タイミングの変更後の 4.0-STABLE
+|400019
+
+|libxpg4 が libc にマージされた後の 4.0-STABLE
+|400020
+
+|Binutils を 2.10.0 にアップグレードし、 ELF バイナリのマーク付け (branding) 方法を変更し、 tcsh をベースシステムに導入した後の 4.0-STABLE
+|400021
+
+|4.1-RELEASE
+|410000
+
+|4.1-RELEASE 以降の 4.1-STABLE
+|410001
+
+|man:setproctitle[3] が libutil から libc に 移動した後の 4.1-STABLE
+|410002
+
+|4.1.1-RELEASE
+|411000
+
+|4.1.1-RELEASE 以降の 4.1.1-STABLE
+|411001
+
+|4.2-RELEASE
+|420000
+
+|libgcc.a と libgcc_r.a の結合および、関連する GCC linkage 変更が行なわれた後の 4.2-STABLE
+|420001
+
+|4.3-RELEASE
+|430000
+
+|wint_t 導入後の 4.3-STABLE
+|430001
+
+|PCI パワーステート API マージ後の 4.3-STABLE
+|430002
+
+|4.4-RELEASE
+|440000
+
+|d_thread_t 導入後の 4.4-STABLE
+|440001
+
+|マウント構造変更 (ファイルシステム kld に影響あり) 後の 4.4-STABLE
+|440002
+
+|smbfs のユーザランド部が取り込まれた後の 4.4-STABLE
+|440003
+
+|4.5-RELEASE
+|450000
+
+|usb の構成要素の名称が変更された後の 4.5-STABLE
+|450001
+
+|man:rc.conf[5] の `sendmail_enable` 変数が `NONE` という値をとれるようになった後の 4.5-STABLE
+|450004
+
+|package 作成のデフォルトを XFree86 4 に移行した後の 4.5-STABLE
+|450005
+
+|accept filter が修正され、 簡単なサービス妨害攻撃には影響を受けなくなった後の 4.5-STABLE
+|450006
+
+|4.6-RELEASE
+|460000
+
+|man:sendfile[2] をドキュメントに適合するよう修正して、 送信されたいかなるヘッダも、 ファイルから送信されたデータの総量に合計しないようにした 4.6-STABLE
+|460001
+
+|4.6.2-RELEASE
+|460002
+
+|4.6-STABLE
+|460100
+
+|`sed -i` を MFC した後の 4.6-STABLE
+|460101
+
+|多くの新たな pkg_install の機能を HEAD から MFC した後の 4.6-STABLE
+|460102
+
+|4.7-RELEASE
+|470000
+
+|4.7-STABLE
+|470100
+
+|__sF の代わりに __std{in,out,err}p 参照生成を開始。 これは、std{in,out,err} をコンパイル時の定数から、 ランタイムに変更します。
+|470101
+
+|m_aux mbuf を m_tag で置き換える mbuf の変更を MFC した後の 4.7-STABLE
+|470102
+
+|OpenSSL 0.9.7 導入後の 4.7-STABLE
+|470103
+
+|4.8-RELEASE
+|480000
+
+|4.8-STABLE
+|480100
+
+|man:realpath[3] がスレッドセーフになった後の 4.8-STABLE
+|480101
+
+|4.8-STABLE における twe の 3ware API の変更
+|480102
+
+|4.9-RELEASE
+|490000
+
+|4.9-STABLE
+|490100
+
+|構造体 kinfo_eproc に e_sid が追加された後の 4.9-STABLE
+|490101
+
+|rtld に libmap 機能を MFC した後の 4.9-STABLE
+|490102
+
+|4.10-RELEASE
+|491000
+
+|5.0-CURRENT
+|500000
+
+|ELF ヘッダフィールドの追加と ELF バイナリのマーク付け (branding) 方法の変更後の 5.0-CURRENT
+|500001
+
+|kld メタデータ変更後の 5.0-CURRENT
+|500002
+
+|buf/bio 変更後の 5.0-CURRENT
+|500003
+
+|binutils アップグレード後の 5.0-CURRENT
+|500004
+
+|libxpg4 コードの libc へのマージと、 TASKQ インターフェイスの導入後の 5.0-CURRENT
+|500005
+
+|AGP インターフェイス追加後の 5.0-CURRENT
+|500006
+
+|Perl を 5.6.0 にアップグレードした後の 5.0-CURRENT
+|500007
+
+|KAME コードを 2000/07 版のソースに更新した後の 5.0-CURRENT
+|500008
+
+|ether_ifattach() および ether_ifdetach() 変更後の 5.0-CURRENT
+|500009
+
+|mtree のデフォルトをオリジナルの変種に戻し、 シンボリックリンクをたどる -L オプションを追加した後の 5.0-CURRENT
+|500010
+
+|kqueue API 変更後の 5.0-CURRENT
+|500011
+
+|man:setproctitle[3] が libutil から libc へ移動した後の 5.0-CURRENT
+|500012
+
+|最初の SMPng がコミットされた後の 5.0-CURRENT
+|500013
+
+|<sys/select.h> が <sys/selinfo.h> に 移動した後の 5.0-CURRENT
+|500014
+
+|libgcc.a と libgcc_r.a の結合および関連する GCC linkage 変更が行なわれた後の 5.0-CURRENT
+|500015
+
+|libc と libc_r の混合リンクを許し、 -pthread オプションを deprecate する 変更後の 5.0-CURRENT
+|500016
+
+|mountd 等が使用する kernel-exported API の 安定化のため、ucred 構造体から xucred 構造体へ 移行した後の 5.0-CURRENT
+|500017
+
+|CPU 依存の最適化を制御するための make 変数 CPUTYPE が追加された後の 5.0-CURRENT
+|500018
+
+|<machine/ioctl_fd.h> が <sys/fdcio.h> に移動した後の 5.0-CURRENT
+|500019
+
+|ロケール名変更の後の 5.0-CURRENT
+|500020
+
+|Bzip2 導入後の 5.0-CURRENT。 また、S/Key が削除されていることも示す。
+|500021
+
+|SSE サポート後の 5.0-CURRENT
+|500022
+
+|KSE マイルストーン 2 以降の 5.0-CURRENT
+|500023
+
+|d_thread_t 導入、および UUCP を ports に移動した後の 5.0-CURRENT
+|500024
+
+|64 ビットプラットホーム上のデスクリプタおよび cred 受け渡し ABI 変更後の 5.0-CURRENT
+|500025
+
+|package 作成のデフォルトを XFree86 4 に移行し、libc に新たに strnstr() 関数を追加した後の 5.0-CURRENT
+|500026
+
+|libc に新たに strcasestr() 関数を追加した後の 5.0-CURRENT
+|500027
+
+|smbfs のユーザランド部が取り込まれた後の 5.0-CURRENT
+|500028
+
+|C99 の新しい特定サイズの整数型追加後の 5.0-CURRENT
+|500028 (変更なし)
+
+|man:sendfile[2] の戻り値が変更された後の 5.0-CURRENT
+|500029
+
+|ファイルフラグにふさわしいサイズの `fflags_t` が導入された後の 5.0-CURRENT
+|500030
+
+|usb の構成要素の名称が変更された後の 5.0-CURRENT
+|500031
+
+|Perl 5.6.1 導入後の 5.0-CURRENT
+|500032
+
+|man:rc.conf[5] の `sendmail_enable` 変数が `NONE` という値をとれるようになった後の 5.0-CURRENT
+|500033
+
+|mtx_init() に 3 番目の引数が加わった後の 5.0-CURRENT
+|500034
+
+|GCC 3.1 が取り込まれた 5.0-CURRENT
+|500035
+
+|/usr/src に Perl がなくなった 5.0-CURRENT
+|500036
+
+|man:dlfunc[3] 追加後の 5.0-CURRENT
+|500037
+
+|構造体 sockbuf のメンバの型が一部変更され、順序が変更された後の 5.0-CURRENT
+|500038
+
+|ヘッダで _BSD_FOO_T_ の使用をやめ、 _FOO_T_DECLARED を使うようになった後の 5.0-CURRENT。 また、この変数は man:bzip2[1] パッケージに対応したことが確実な目安としても使えます。
+|500039
+
+|ディスクラベルの内部構造の依存性を除く名目で行われた、 ディスク関連の機能へのさまざまな変更を加えた後の 5.0-CURRENT
+|500040
+
+|libc に man:getopt_long[3] を加えた後の 5.0-CURRENT
+|500041
+
+|Binutils 2.13 にアップグレードした後の 5.0-CURRENT。このアップグレードには、新たな FreeBSD の emulation, vec および出力形式が含まれている。 
+|500042
+
+|libc に pthread_XXX への弱いスタブを追加し、 libXThrStub.so が obsolete になった後の 5.0-CURRENT。 5.0-RELEASE
+|500043
+
+|RELENG_5_0 が分岐した後の 5.0-CURRENT
+|500100
+
+|<sys/dkstat.h> は空なので include すべきではない
+|500101
+
+|d_mmap_t インターフェイス変更後の 5.0-CURRENT
+|500102
+
+|taskqueue_swi が Giant ロック無しで実行され、 Giant ロックされて実行される taskqueue_swi_giant が追加された後の 5.0-CURRENT
+|500103
+
+|cdevsw_add() と cdevsw_remove() はもう存在しません。 MAJOR_AUTO 割り当て機能が登場しました
+|500104
+
+|cdevsw の新たな初期化方法が導入された後の 5.0-CURRENT
+|500105
+
+|devstat_add_entry() が devstat_new_entry() に置き換えられました
+|500106
+
+|Devstat のインターフェイス変更。 sys/sys/param.h 1.149 を参照のこと
+|500107
+
+|トークンリングインターフェイスの変更
+|500108
+
+|vm_paddr_t の追加
+|500109
+
+|man:realpath[3] がスレッドセーフになった後の 5.0-CURRENT
+|500110
+
+|man:usbhid[3] が NetBSD と同期した後の 5.0-CURRENT
+|500111
+
+|新たな NSS 実装と POSIX.1 準拠の getpw*_r, getgr*_r 関数が導入後の 5.0-CURRENT
+|500112
+
+|古い rc システムを削除した後の 5.0-CURRENT
+|500113
+
+|5.1-RELEASE
+|501000
+
+|RELENG_5_1 が分岐した後の 5.1-CURRENT
+|501100
+
+|sigtimedwait(2) と sigwaitinfo(2) の動作を修正した後の 5.1-CURRENT
+|501101
+
+|man:bus_dma_tag_create[9] に lockfunc と lockfuncarg フィールドを追加した後の 5.1-CURRENT
+|501102
+
+|GCC 3.3.1-pre 20030711 snapshot 導入後の 5.1-CURRENT
+|501103
+
+|5.1-CURRENT における twe の 3ware API の変更
+|501104
+
+|/bin と /sbin がダイナミックリンクされ、 ライブラリを /lib に移動した 5.1-CURRENT
+|501105
+
+|Coda 6.x のカーネルサポートを追加した後の 5.1-CURRENT
+|501106
+
+|16550 UART 定数を [.filename]#<dev/sio/sioreg.h># から [.filename]#<dev/ic/ns16550.h># に移動した後の 5.1-CURRENT。 また、rtld が 無条件で libmap 機能をサポートした時点。
+|501107
+
+|PFIL_HOOKS API を更新した後の 5.1-CURRENT
+|501108
+
+|kiconv(3) を追加した後の 5.1-CURRENT
+|501109
+
+|cdevsw の open および close のデフォルトの操作を変更した後の 5.1-CURRENT
+|501110
+
+|cdevsw のレイアウトを変更した後の 5.1-CURRENT
+|501111
+
+|kobj の多重継承を追加した後の 5.1-CURRENT
+|501112
+
+|構造体 ifnet の if_xname が変更された後の 5.1-CURRENT
+|501113
+
+|/bin と /sbin をダイナミックリンクに変更した後の 5.1-CURRENT
+|501114
+
+|5.2-RELEASE
+|502000
+
+|5.2.1-RELEASE
+|502010
+
+|RELENG_5_2 が分岐した後の 5.2-CURRENT
+|502100
+
+|__cxa_atexit/__cxa_finalize 関数が libc に追加された後の 5.2-CURRENT
+|502101
+
+|デフォルトの pthread ライブラリを libc_r から libpthread に変更した後の 5.2-CURRENT
+|502102
+
+|デバイスドライバ API の大規模パッチをあてた後の 5.2-CURRENT
+|502103
+
+|getopt_long_only() が追加された後の 5.2-CURRENT
+|502104
+
+|C に対して NULL が ((void *)0) になり、warning をより多く出すようになった 5.2-CURRENT
+|502105
+
+|pf がビルドおよびインストールされるようになった後の 5.2-CURRENT
+|502106
+
+|sparc64 で time_t を 64 ビットの値に変更した後の 5.2-CURRENT
+|502107
+
+|一部のヘッダで Intel C/C++ に対応し、 execve(2) をより厳密に POSIX に適合させた後の 5.2-CURRENT
+|502108
+
+|bus_alloc_resource_any API 導入後の 5.2-CURRENT
+|502109
+
+|UTF-8 ロケール追加後の 5.2-CURRENT
+|502110
+
+|getvfsent(3) API を削除した後の 5.2-CURRENT
+|502111
+
+|make に .warning 命令を追加した後の 5.2-CURRENT
+|502112
+|===
+
+[NOTE]
+====
+(2.2-STABLE は 2.2.5-RELESE 以後、 "2.2.5-STABLE" と呼ばれることがあります。) 見てのとおりこれは年・月というフォーマットになっていましたが、 バージョン 2.2 からより直接的にメジャー/マイナー番号を使うように変更になりました。 並行していくつかのブランチ (枝分かれしたバージョン) を開発する場合には、 リリースされた日付でそれらのリリースを分類することが不可能だからです (あなたが今 port を作成するときに、古い -CURRENT 達について心配する必要はありません。 これは参考のために挙げられているに過ぎないからです)。
+====
+
+[[dads-after-port-mk]]
+== [.filename]#bsd.port.mk# の後に書くこと
+
+`.include <bsd.port.mk>` の行の後には何も書かないようにしてください。 大抵の場合は [.filename]#Makefile# の中程のどこかで [.filename]#bsd.port.pre.mk# をインクルードして、 最後に [.filename]#bsd.port.pre.mk# をインクルードすることによって避けることができます。
+
+[NOTE]
+====
+[.filename]#bsd.port.pre.mk#/[.filename]#bsd.port.post.mk# のペアか [.filename]#bsd.port.mk# だけのどちらかだけをインクルードし、二つを混ぜないでください。
+====
+
+前者はいくつかの変数の定義だけをして [.filename]#Makefile# でのテストに使用し、後者は残りを定義します。
+
+以下は [.filename]#bsd.port.pre.mk# で定義される重要な変数です (これは、すべてではありません。 完全なリストは [.filename]#bsd.port.mk# を参照してください)。 
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| 変数名
+| 解説
+
+|`ARCH`
+|`uname -m` で返されるアーキテクチャ。(例、`i386`)。 
+
+|`OPSYS`
+|`uname -s` で返されるオペレーティングシステム (例、`FreeBSD`)。
+
+|`OSREL`
+|オペレーティングシステムのリリースバージョン (例、`2.1.5`, `2.2.7`)。
+
+|`OSVERSION`
+|数字形式のオペレーティングシステムのバージョン、 上記の <<freebsd-versions,`__FreeBSD_version`>> と同じです。
+
+|`PORTOBJFORMAT`
+|システムのオブジェクトフォーマット (`elf` あるいは `aout` ただし、"最近の" FreeBSD のバージョンでは `aout` は廃止予定になっています)。
+
+|`LOCALBASE`
+|"local" ツリーのベース。 (例、`/usr/local/`)。 
+
+|`X11BASE`
+|"X11" ツリーのベース。 (例、`/usr/X11R6/`)。 
+
+|`PREFIX`
+|ports のインストール先 (<<porting-prefix,``PREFIX``について>>を参照)。 
+|===
+
+[NOTE]
+====
+`USE_IMAKE`, `USE_X_PREFIX` あるいは `MASTERDIR` などの変数を定義する必要がある場合には、 [.filename]#bsd.port.pre.mk# をインクルード前に定義してください。 他のものは [.filename]#bsd.port.pre.mk# の前でも後でもかまいません。
+====
+
+以下は [.filename]#bsd.port.pre.mk# の後に書けるものの例です。
+
+[.programlisting]
+....
+# no need to compile lang/perl5 if perl5 is already in system
+.if ${OSVERSION} > 300003
+BROKEN= perl is in system
+.endif
+
+# only one shlib version number for ELF
+.if ${PORTOBJFORMAT} == "elf"
+TCL_LIB_FILE=  ${TCL_LIB}.${SHLIB_MAJOR}
+.else
+TCL_LIB_FILE=  ${TCL_LIB}.${SHLIB_MAJOR}.${SHLIB_MINOR}
+.endif
+
+# software already makes link for ELF, but not for a.out
+post-install:
+.if ${PORTOBJFORMAT} == "aout"
+       ${LN} -sf liblinpack.so.1.0 ${PREFIX}/lib/liblinpack.so
+.endif
+....
+
+`BROKEN=` と `TCL_LIB_FILE=` の後にスペースではなくタブを使うことを覚えていましたか? :-)
+
+[[dads-documentation]]
+== 付加的な文書のインストール
+
+普通のマニュアルや info ファイルの他にユーザにとって有用だと思えるような文書がある場合には、 [.filename]#PREFIX/shared/doc# の下にインストールしてください。 これは前記と同様 `post-install` ターゲットの中から行なうと良いでしょう。
+
+まず、あなたの port のために新しいディレクトリを作ります。 どの port の文書か簡単にわかるような名前にする必要がありますので、 普通は `PORTNAME` を使うと良いでしょう。 もちろん、ユーザが異なるバージョンのものを同時に使うことが予想される port の場合には `PKGNAME` をそのまま使っても構いません。
+
+ユーザが [.filename]#/etc/make.conf# でこの部分を禁止するために `NOPORTDOCS` という変数をセットしている場合には、 これらの文書がインストールされないようにしてください。 こんな具合です。
+
+[.programlisting]
+....
+post-install:
+.if !defined(NOPORTDOCS)
+        ${MKDIR} ${DOCSDIR}
+        ${INSTALL_MAN} ${WRKSRC}/docs/xvdocs.ps ${DOCSDIR}
+.endif
+....
+
+ここでは、変数をいくつかと、それを [.filename]#Makefile# で利用した時にどう展開されるかを説明します。
+
+* `${DATADIR}` は [.filename]#${PREFIX}/shared/${PORTNAME}# に展開されます。
+* `${DOCSDIR}` は [.filename]#${PREFIX}/shared/doc/${PORTNAME}# に展開されます。
+* `${EXAMPLESDIR}` は [.filename]#${PREFIX}/shared/examples/${PORTNAME}# に展開されます。
+
+文書ファイルおよびディレクトリはすべて [.filename]#pkg-plist# の中に `%%PORTDOCS%%` を頭につけて書く必要があります。 たとえば、次のようにしてください。
+
+[.programlisting]
+....
+%%PORTDOCS%%%%DOCSDIR%%/AUTHORS
+%%PORTDOCS%%%%DOCSDIR%%/CONTACT
+%%PORTDOCS%%@dirrm %%DOCSDIR%%
+....
+
+インストール時に [.filename]#pkg-message# ファイルを利用してメッセージを表示することができます。詳細は <<porting-message,pkg-message を使う>> のセクションを参照してください。
+
+[NOTE]
+====
+[.filename]#pkg-message# ファイルを [.filename]#pkg-plist# に加える必要はありません。
+====
+
+[[dads-subdirs]]
+== ディレクトリ構成
+
+インストール時には `PREFIX` の正しいサブディレクトリにファイルを置くように心がけてください。 ソフトウェアによっては新しいディレクトリを一つ作って、 ファイルを全部それに入れてしまうものがありますが、 それは良くありません。 また、バイナリ、ヘッダファイルとマニュアル以外のすべてを [.filename]#lib# というディレクトリに入れてしまう port もありますが、これも BSD 的なファイルシステム構成とはうまく合いません。 これは以下のように分散すべきです。 [.filename]#etc# にセットアップ/コンフィグレーションファイル、 [.filename]#libexec# に内部で使用されるプログラム (コマンドラインから呼ばれることのないコマンド)、 [.filename]#sbin# に管理者用のコマンド、 [.filename]#info# に GNU Info 用の文書、 そして [.filename]#share# にアーキテクチャに依存しないファイルが入ります。 詳細については man:hier[7] を参照してください。 [.filename]#/usr# の構成方針はほとんどそのまま [.filename]#/usr/local# にもあてはまります。 USENET "ニュース"を扱う ports は例外です。 これらはファイルのインストール先として [.filename]#PREFIX/news# を使用します。
+
+[[porting-cleaning]]
+== 空のディレクトリの削除
+
+ports は削除の際に、 自分自身を消去したあとに (ディレクトリの) 削除をするようにしてください。 これは大抵の場合 `@dirrm` の行を ports が作成するすべてのディレクトリについて加えることによって実現できます。 親ディレクトリは子ディレクトリを先に消さないと消せないことに注意してください。
+
+[.programlisting]
+....
+ :
+lib/X11/oneko/pixmaps/cat.xpm
+lib/X11/oneko/sounds/cat.au
+ :
+@dirrm lib/X11/oneko/pixmaps
+@dirrm lib/X11/oneko/sounds
+@dirrm lib/X11/oneko
+....
+
+といった感じです。
+
+しかし時として、 他の port とディレクトリを共有しているために `@dirrm` がエラーを返すことがあります。 `rmdir` を `@unexec` から呼びだすことによって、 警告(warning)なしで空のディレクトリのみを削除することができます。 
+
+[.programlisting]
+....
+@unexec rmdir %D/shared/doc/gimp 2>/dev/null || true
+....
+
+これを使えば、たとえ他の port がファイルをインストールしていて [.filename]#PREFIX/shared/doc/gimp# が空でない場合でもエラーメッセージは表示されませんし、 man:pkg_delete[1] が異常終了することもありません。
+
+[[dads-uid]]
+== UID
+
+あなたの port が、 インストールされるシステム上に特定のユーザを必要とする場合は [.filename]#pkg-install# スクリプトから `pw` コマンドを実行して自動的にそのユーザを追加するようにしてください。 package:net/cvsup-mirror[] の port が参考になるでしょう。
+
+あなたの port がバイナリの package としてインストールされる場合とコンパイルされる場合の両方で、 同じユーザー/グループ ID を使わなければならないのなら、50 から 999 の間で空いている UID を選んで登録してください。 package:japanese/Wnn6[] の port が参考になるでしょう。
+
+既にシステムや他の port で利用されている UID を使わないように十分注意してください。
+
+現在の 50 から 999 までの間の UID は以下のとおりです。
+
+[.programlisting]
+....
+bind:*:53:53:Bind Sandbox:/:/sbin/nologin
+majordom:*:54:54:Majordomo Pseudo User:/usr/local/majordomo:/nonexistent
+cyrus:*:60:60:the cyrus mail server:/nonexistent:/nonexistent
+gnats:*:61:1:GNATS database owner:/usr/local/shared/gnats/gnats-db:/bin/sh
+proxy:*:62:62:Packet Filter pseudo-user:/nonexistent:/nonexistent
+uucp:*:66:66:UUCP pseudo-user:/var/spool/uucppublic:/usr/libexec/uucp/uucico
+xten:*:67:67:X-10 daemon:/usr/local/xten:/nonexistent
+pop:*:68:6:Post Office Owner (popper):/nonexistent:/sbin/nologin
+wnn:*:69:7:Wnn:/nonexistent:/nonexistent
+pgsql:*:70:70:PostgreSQL pseudo-user:/usr/local/pgsql:/bin/sh
+oracle:*:71:71::0:0:Oracle:/usr/local/oracle7:/sbin/nologin
+ircd:*:72:72:IRC daemon:/nonexistent:/nonexistent
+ircservices:*:73:73:IRC services:/nonexistent:/nonexistent
+ifmail:*:75:66:Ifmail user:/nonexistent:/nonexistent
+www:*:80:80:World Wide Web Owner:/nonexistent:/sbin/nologin
+alias:*:81:81:QMail user:/var/qmail/alias:/nonexistent
+qmaild:*:82:81:QMail user:/var/qmail:/nonexistent
+qmaill:*:83:81:QMail user:/var/qmail:/nonexistent
+qmailp:*:84:81:QMail user:/var/qmail:/nonexistent
+qmailq:*:85:82:QMail user:/var/qmail:/nonexistent
+qmailr:*:86:82:QMail user:/var/qmail:/nonexistent
+qmails:*:87:82:QMail user:/var/qmail:/nonexistent
+mysql:*:88:88:MySQL Daemon:/var/db/mysql:/sbin/nologin
+vpopmail:*:89:89:VPop Mail User:/usr/local/vpopmail:/nonexistent
+firebird:*:90:90:Firebird Database Administrator:/usr/local/firebird:/bin/sh
+mailman:*:91:91:Mailman User:/usr/local/mailman:/sbin/nologin
+gdm:*:92:92:GDM Sandbox:/:/sbin/nologin
+jabber:*:93:93:Jabber Daemon:/nonexistent:/nonexistent
+p4admin:*:94:94:Perforce admin:/usr/local/perforce:/sbin/nologin
+interch:*:95:95:Interchange user:/usr/local/interchange:/sbin/nologin
+squeuer:*:96:96:SQueuer Owner:/nonexistent:/bin/sh
+mud:*:97:97:MUD Owner:/usr/local/shared/dgd:/bin/sh
+msql:*:98:98:mSQL-2 pseudo-user:/var/db/msqldb:/bin/sh
+rscsi:*:99:99:Remote SCSI:/usr/local/rscsi:/usr/local/sbin/rscsi
+squid:*:100:100:squid caching-proxy pseudo user:/usr/local/squid:/sbin/nologin
+quagga:*:101:101:Quagga route daemon pseudo user:/usr/local/etc/quagga:/sbin/nologin
+ganglia:*:102:102:Ganglia User:/nonexistent:/sbin/nologin
+sgeadmin:*:103:103:Sun Grid Engine Admin:/nonexistent:/sbin/nologin
+slimserv:*:104:104:Slim Devices SlimServer pseudo-user:/nonexistent:/sbin/nologin
+fido:*:111:111:Fido System:/usr/local/fido:/bin/sh
+postfix:*:125:125:Postfix Mail System:/var/spool/postfix:/sbin/nologin
+rbldns:*:153:153:rbldnsd pseudo-user:/nonexistent:/sbin/nologin
+sfs:*:171:171:Self-Certifying File System:/nonexistent:/sbin/nologin
+agk:*:172:172:AquaGateKeeper:/nonexistent:/nonexistent
+ldap:*:389:389:OpenLDAP Server:/nonexistent:/sbin/nologin
+drweb:*:426:426:Dr.Web Mail Scanner:/nonexistent:/sbin/nologin
+qtss:*:554:554:Darwin Streaming Server:/nonexistent:/sbin/nologin
+ircdru:*:555:555:Russian hybrid IRC server:/nonexistent:/bin/sh
+bacula:*:910:910:Bacula Daemon:/var/db/bacula:/sbin/nologin
+....
+
+以下は、現在予約されている GID の一覧です。
+
+[.programlisting]
+....
+bind:*:53:
+cyrus:*:60:
+proxy:*:62:
+authpf:*:63:
+uucp:*:66:
+dialer:*:68:
+network:*:69:
+pgsql:*:70:
+www:*:80:
+qnofiles:*:81:
+qmail:*:82:
+mailman:*:91:
+postfix:*:125:
+maildrop:*:126:
+rbldns:*:153:
+qtss:*:554:
+ircdru:*:555:
+....
+
+このリストを最新の状態に保つためにも、 この範囲の UID や GID を予約するような port を作ったり、 既存の port にそのような改変を行なってわたしたちに送るときには UID の予約に関する注意書きをつけてください。
+
+[[dads-rational]]
+== 合理的な port
+
+[.filename]#Makefile# は単純かつ適切であるべきです。もし、 [.filename]#Makefile# を数行短かくできたり、 もっと読みやすくできるのであればそうしてください。 たとえば、 シェルの `if` 構文を使うかわりに make の `.if` 構文を使う、 `EXTRACT*` の再定義で代用できるのであれば `do-extract` を再定義しない、 `CONFIGURE_ARGS += --prefix=${PREFIX}` とするかわりに `GNU_CONFIGURE` とする、などです。
+
+何かをするのに自分で新しくコードをたくさん書かなければならなくなった場合は、 戻って [.filename]#bsd.port.mk# であなたがやろうとしていることが既に実装されていないか見直してください。 読むのは大変ですが、難しく見える問題で [.filename]#bsd.port.mk# が簡単な解決法を提供しているものが数多くあります。
+
+[[dads-cc]]
+== `CC` および `CXX` の尊重
+
+Port は `CC` および `CXX` 変数を尊重すべきです。ここで言いたいのは、port は、既存の値を上書きしてこれらの変数をまるごと設定しなおすべきではなく、 その代わり必要な値を既存の値に追加してゆくべきだということです。 そうすれば、すべての ports に影響するビルドオプションをグローバルに設定できます。
+
+Port がこれらの変数を尊重しない場合は、 [.filename]#Makefile# に `NO_PACKAGE=ignores either cc or cxx` を追加してください。
+
+`CC` と `CXX` 変数を尊重している [.filename]#Makefile# の例を次に示します。`?=` に注意してください。
+
+[.programlisting]
+....
+CC ?= gcc
+....
+
+[.programlisting]
+....
+CXX ?= g++
+....
+
+こちらは、`CC` 変数も `CXX` 変数も尊重していない例です。
+
+[.programlisting]
+....
+CC = gcc
+....
+
+[.programlisting]
+....
+CXX = g++
+....
+
+FreeBSD システム上では、`CC` および `CFLAGS` 変数は、どちらも [.filename]#/etc/make.conf# で定義できます。最初の例では、システム全体の定義を保存している [.filename]#/etc/make.conf# で値がすでに設定されてない場合に限って、値を設定します。 2 番目の例では、すでに設定されていた内容を上書きしてしまいます。
+
+[[dads-cflags]]
+== `CFLAGS` の尊重
+
+`CFLAGS` 変数は尊重すべきです。 ここでいいたいのは、port は、 既存の値を上書きしてこの変数をまるごと設定しなおすべきではなく、 その代わり必要な値を既存の値に追加してゆくべきだということです。 そうすれば、すべてての ports に影響するビルドオプションをグローバルに設定できます。
+
+port がこれを尊重しない場合は、 `NO_PACKAGE=ignores cflags` を [.filename]#Makefile# に加えてください。
+
+`CFLAGS` 変数をきちんと考慮した [.filename]#Makefile# の例を以下に示します。 `+=` の部分に注目してください。
+
+[.programlisting]
+....
+CFLAGS += -Wall -Werror
+....
+
+次は `CFLAGS` 変数を考慮しない [.filename]#Makefile# の例です。
+
+[.programlisting]
+....
+CFLAGS = -Wall -Werror
+....
+
+`CFLAGS` 変数は、FreeBSD システムの [.filename]#/etc/make.conf# で定義されています。 最初の例では既存の定義を保存しつつ `CFLAGS` 変数にオプションフラグを追加しているのに対し、 二番目の例では既存の定義をすべて無効にしてしまっています。
+
+[[dads-config]]
+== コンフィグレーション (設定) ファイル
+
+もしあなたの port が設定ファイルを [.filename]#PREFIX/etc# に置く必要がある場合には、それを単純にインストールしたり、 [.filename]#pkg-plist# に加えては__いけません__。 こうしてしまうと man:pkg_delete[1] によってユーザが苦労して作ったファイルが消えてしまったり、 新しくインストールする時に上書きされてしまったりします。
+
+かわりに見本となるファイルをサフィックス ([.filename]#filename.sample# が良いでしょう) を付けてインストールして<<porting-message,メッセージ>>を表示し、 ソフトウェアを動かす前にユーザがそのファイルをコピーして編集をしなければならないことを知らせましょう。 
+
+[[dads-freedback]]
+== フィードバック
+
+port を作るためにソフトウェアに変更を加えたら、 なるべく原作者にその旨を伝えてパッチ等を送ってください。 これらが次のリリースに取り入れられればアップグレードが楽になります。
+
+[[dads-readme]]
+== [.filename]#README.html#
+
+[.filename]#README.html# というファイルを含めてはいけません。 このファイルは、cvs コレクションの一部ではなく、 `make readme` コマンドで生成されるファイルです。
+
+[[dads-broken]]
+== Port に `BROKEN`, `FORBIDDEN` などの印をつける
+
+ある port にセキュリティ脆弱性があることが判明したり、 根本的に壊れてしまい修正に何時間もの注意深い作業が必要になったり、 基本的には廃れてしまったものの、 何らかの理由で ports ツリーには残される (もちろんあとで修正しますよね?) という日が来るのは避けられません。 ある port が壊れていることを示すために、port の [.filename]#Makefile# では 3 つの `make` 変数が使えます。以下の `make` 変数の値は、 その port が壊れている理由を説明するためにユーザに示されます。 それぞれの make 変数は、ユーザと [.filename]#Makefile# を処理する自動化システムに対して根本的に異なる意味を伝えますので、 正しい `make` 変数をお使いください。
+
+* `BROKEN` は、動作しないためインストールすべきでない port 用のものです。これは、ユーザがその port をインストールしないようにしますが、 `BROKEN` とされた port は http://bento.FreeBSD.org/[Bento クラスタ]で引き続きビルドされます。 ユーザには port をインストールしてほしくないけれども Bento ではビルドしてほしい場合は、port を `BROKEN` にしてください。
+* `FORBIDDEN` は、セキュリティ脆弱性があったり、その port をインストールすると FreeBSD システムの安全性に重大な懸念を生じる (たとえば、セキュアでないという評判があるプログラムや、 容易に悪用できるサービスを提供するプログラムなど) port 用のものです。 あるソフトウェアの一部に脆弱性があることが判明し、 修正がリリースされていない場合は `FORBIDDEN` にすべきです。 理想的には、セキュリティ脆弱性が発見された時は、 脆弱性を抱えた FreeBSD ホストの数を減らすために、 ただちに ports を更新すべきです (我々は、セキュアであるという評判を得たいのです)。 しかし、脆弱性が公表されてから、 脆弱性を抱えたソフトウェアの新しい版がリリースされるまでに無視できない時間があくことがままあります。 セキュリティ以外の理由で port を `FORBIDDEN` にしないでください。
+* `IGNORE` は、どんな理由であれビルドすべきではない port 用です。 ユーザも http://bento.FreeBSD.org/[Bento クラスタ] も、どんな状況であれ `IGNORE` とされた port はビルドしません。 嘘だと思うなら、port のビルドを妨げるのに `IGNORE` を使ってみてください。
+
+この変数を使うのは、port が更新できない場合の最後の手段にしてください。 ずっと壊れたままの port は、ports ツリーから完全に削除すべきです。
+
+[[dads-workarounds]]
+== 必要な回避策
+
+古いバージョンの FreeBSD のソフトウェアにあるバグを回避する必要があることがあります。
+
+* man:make[1] は、少なくとも 4.8 と 5.0 を含むいくつかのバージョンで、`OSVERSION` に基づく比較に関してバグがあります。 これは、`make describe` の最中にエラーを起こすことになりやすく (したがって `make index` 全体も失敗することに) なります。回避策は、条件比較を括弧にいれることで、たとえば 
++
+[.programlisting]
+....
+if ( ${OSVERSION} > 500023 )
+....
+
+となります。4.9 と 5.2 で port のインストールテストを行っても、 この問題は__見つかりません__。
+
+[[dads-misc]]
+== その他諸々
+
+ファイル [.filename]#pkg-descr# と [.filename]#pkg-plist# はそれぞれ二重にチェックしてください。 再検討してもっと良い記述があればそれに置きかえてください。
+
+GNU General Public License (GNU一般公有使用許諾) のコピーは (すでにあるので) コピーしないでください。 お願いします。
+
+法律に関することには十分注意をはらってください。 わたしたちに法律に反するような形でソフトウェアの配布をさせないでください!
+
+[[dads-stuck]]
+== 困ったら...
+
+わたしたちに質問を送る前に、 既存の port の例と [.filename]#bsd.port.mk# をちゃんと読んでください! _;)_
+
+それでもわからないことがあったら一人で悩まないでどんどん質問してください! _:-)_

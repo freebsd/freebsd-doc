@@ -1,0 +1,945 @@
+---
+title: 16. Fejezet - Kötelező hozzáférés-vezérlés (MAC)
+part: III. Rész Rendszeradminisztráció
+prev: books/handbook/jails
+next: books/handbook/audit
+---
+
+[[mac]]
+= Kötelező hozzáférés-vezérlés (MAC)
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 16
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/mac/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/mac/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/mac/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[mac-synopsis]]
+== Áttekintés
+
+A FreeBSD 5.X változata új biztonsági bõvítéseket vett át a TrustedBSD projektbõl a POSIX(R).1e nyomán. A két legjelentõsebb új biztonsági mechanizmus az állományrendszerekben megtalálható hozzáférés-vezérlési listák (Access Control List, ACL) és a kötelezõ hozzáférés-vezérlés (Mandatory Access Control, MAC). A kötelezõ hozzáférés-vezérlés segítségével olyan új hozzáférés-vezérlési modulok tölthetõek be, amelyek új biztonsági házirendeket implementálnak. Némelyek közülük védelmet nyújtanak a rendszer egy szûk részének, amivel így egy adott szolgáltatást bástyáznak alá. Mások minden részletre kiterjedõ címkézett biztonságot szolgáltatnak alanyokon és objektumokon keresztül. A meghatározás "kötelezõ" része onnan fakad, hogy a szabályok betartatását a rendszergazdák és a rendszer végzik, és nem bízzák a felhasználókra, ahogy azt a System V típusú rendszerekben a szabványos állományokra és IPC-re érvényes engedélyeken keresztül a tetszés szerinti hozzáférés-vezérlés (Discretionary Access Control, DAC) teszi.
+
+Ebben a fejezetben a kötelezõ hozzáférés-vezérlést övezõ keretrendszerre (MAC Framework) és a különbözõ biztonsági házirendeket megvalósító, beilleszthetõ modulokra fogunk összpontosítani.
+
+A fejezet elolvasása során megismerjük:
+
+* hogy a FreeBSD jelen pillanatban milyen modulokat tartalmaz a MAC rendszeren belül és milyen mechanizmusok tartoznak hozzájuk;
+* hogy a MAC biztonsági házirendjeit képezõ modulok miket valósítanak meg, valamint mi a különbség a címkézett és címkézetlen házirendek között;
+* hogyan kell hatékonyan beállítani és használni rendszerünkben a MAC rendszert;
+* hogyan állítsuk be a MAC rendszerben található különféle biztonsági házirendeket képezõ modulokat;
+* hogyan hozzunk létre a MAC rendszer segítségével egy biztonságosabb környezetet, amire példákat is mutatunk;
+* hogyan teszteljük le a MAC rendszer beállításait és bizonyosodjunk meg mûködésének helyességérõl.
+
+A fejezet elolvasásához ajánlott:
+
+* a UNIX(R) és a FreeBSD alapjainak ismerete (crossref:basics[basics,A UNIX alapjai])
+* a rendszermag beállításának és lefordításának ismerete (crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása])
+* tisztában lenni az alapvetõ biztonsági kérdésekkel és azok hatásával a FreeBSD-n belül (crossref:security[security,Biztonság])
+
+[WARNING]
+====
+
+Az itt ismertetésre kerülõ információk helytelen alkalmazása a rendszer hozzáférhetõségének teljes elvesztését, a felhasználók bosszantását vagy az X11 által felkínált lehetõségek kirekesztését eredményezheti. Ami viszont ennél is fontosabb, hogy a MAC rendszerre nem úgy kell tekinteni, mint amitõl a rendszerünk tökéletesen biztonságossá válik. A MAC segítségével csupán a meglevõ biztonsági házirendeket gyarapítjuk. A szilárd biztonsági rutin és a rendszeres ellenõrzések elvégzése nélkül a rendszerünk valójában sosem lesz teljesen biztonságos.
+
+Hozzá kell tennünk, hogy a fejezetben bemutatott példák tényleg csak példák. Senkinek sem tanácsoljuk, hogy az itt említett beállításokat egy éles rendszerre is kiterjessze. A különbözõ biztonsági modulok felépítése rengeteg gondolkodást és próbálgatást igényel. Aki nem érti meg az egész mûködését, könnyen azon kaphatja magát, hogy újra végig kell mennie a rendszeren és egyenként be kell állítania minden könyvtárat és állományt.
+====
+
+=== Amivel itt nem foglalkozunk
+
+Ebben a fejezetben a MAC rendszerrel kapcsolatban rengeteg biztonsági kérdéssel foglalkozni fogunk. Az új MAC biztonsági modulok kifejlesztését azonban már nem érintjük. Számos olyan biztonsági modul található a MAC rendszerben, amelyek rendelkeznek az új modulok kialakításához és teszteléséhez szükséges jellemzõkkel. Ilyenek többek közt a man:mac_test[4], man:mac_stub[4] és a man:mac_none[4]. Ezekrõl a biztonsági modulokról és az általuk szolgáltatott mechnanizmusokról a man oldalaik tudnak bõvebb tájékoztatást adni.
+
+[[mac-inline-glossary]]
+== A fejezet fontosabb fogalmai
+
+A fejezet tartalmának kifejtéséhez szükségünk lesz néhány fontosabb alapfogalom tisztázására. Segítségükkel vélhetõen sikerül eloszlatni a téma feldolgozása során felmerülõ félreértéseket, illetve elkerülni az új fogalmak és információk váratlan felbukkanását.
+
+* _alany_: Alanynak tekintünk a rendszerben minden olyan aktív egyedet, amely információt áramoltat az _objektumok_, tehát a felhasználók, a processzorok, a rendszerben futó programok stb. között. A FreeBSD-ben majdnem minden esetben a felhasználók egy szálon keresztül vezérlik a futó programokat.
+* _címke_: A címke egy olyan biztonsági tulajdonság, ami vonatkozhat állományokra, könyvtárakra vagy a rendszer más elemeire. Egy címke tekinthetõ a bizalmasságot jelzõ pecsétnek is: ha egy állományra címkét teszünk, akkor benne megadjuk a rá vonatkozó biztonsági jellemzõket, és csak a hozzá hasonló biztonsági beállításokkal rendelkezõ állományok, felhasználók, erõforrások stb. érhetik el. A címkék jelentését és értelmezését a házirendek beállítása határozza meg: míg egyes házirendek a címkéket egy objektum sértetlenségének vagy titkosságának tekintik, addig mások a hozzáféréssel kapcsolatos szabályokat rögzítik bennük.
+* _egycímkés_: Egycímkés esetrõl akkor beszélünk, amikor az adat áramlásának szabályozására az egész állományrendszer egyetlen címkét alkalmaz. Ha ezt beállítjuk egy állományrendszernél, de nem adjuk meg vele együtt a `multilabel` opciót, akkor az összes állományra ugyanaz a címke érvényes.
+* _erõs vízjel_: Az erõs vízjel házirendje szerint a biztonsági szint akkor növelhetõ, ha magasabb szintû információkhoz akarunk hozzájutni. A legtöbb esetben a folyamatok befejezõdése után visszaállítódik az eredeti szint. A FreeBSD MAC rendszere pillanatnyilag ehhez nem tartalmaz házirendet, de a teljesség kedvéért megadtuk ennek a definícióját is.
+* _gyenge vízjel_: A gyenge vízjel házirendje szerint a biztonsági szint csökkenthetõ az alacsonyabb szintû információk elérése érdekében. A legtöbb esetben a folyamatok befejezõdése után visszaállítódik az eredeti szint. A FreeBSD-ben ezt a házirendet egyedül a man:mac_lomac[4] alkalmazza.
+* _házirend_: Szabályok olyan gyûjteménye, amely megadja, hogy miként kell a célokat teljesíteni. Egy _házirend_ általában az egyes elemek kezelését rögzíti. Ebben a fejezetben a _házirend_ kifejezés alatt a _biztonsági házirendet_ értjük, tehát olyan szabályok gyûjteményét, amelyek az adatok és az információ áramlását határozzák meg, továbbá megadják, hogy közülük ki mihez férhet hozzá.
+* _kényesség_: Általában az MLS tárgyalásakor kerül elõ. Az kényesség szintjével az adatok fontosságát vagy titkosságát szokták jelölni. A kényességi szint növekedésével növekszik az adat titkosságának vagy bizalmasságának szintje.
+* _objektum_: Objektum vagy rendszerobjektum minden olyan egyed, amelyen információ folyik keresztül az _alanyok_ irányításával. Ezek lehetnek többek közt könyvtárak, állományok, mezõk, képernyõk, billentyûzetek, a memória, mágneses tárolóeszközök, nyomtatók vagy bármilyen más adattároló/hordozó eszköz. Az objektumok alapvetõen adattárolók vagy a rendszer erõforrásai. Egy _objektum_ elérésén gyakorlatilag az adatok elérését értjük.
+* _rekesz_: Egy rekeszbe soroljuk az elrekeszteni vagy elkülöníteni kívánt programok és adatok összeségét, ahol a felhasználók explicit módon képesek hozzáférni a rendszer bizonyos komponenseihez. Emellett a rekesz utalhat egy tetszõleges csoportosításra is, például munkacsoportra, osztályra, projektre vagy témára. A rekeszek használata elengedhetetlen a biztonsági házirendek kialakításához.
+* _sértetlenség_: A sértetlenség, mint kulcsfogalom, az adatok megbízhatóságának szintje. Minél sértetlenebb az adat, annál inkább tekinthetjük megbízhatónak.
+* _szint_: Egy biztonsági tulajdonság megnövelt vagy lecsökkentett beállítása. A szint növekedésével együtt a biztonság mértéke is növekszik.
+* _többcímkés_: A `multilabel` vagyis többcímkés jellemzõ az állományrendszerek esetén fordulhat elõ, és a man:tunefs[8] segédprogrammal állítható be egyfelhasználós módban vagy a rendszer indítása során az man:fstab[5] állományon keresztül, esetleg egy új állományrendszer létrehozásakor. Ezzel a beállítással a rendszergazda különféle MAC címkéket rendelhet különbözõ objektumokhoz. Ez a beállítás természetesen csak olyan biztonsági modulok esetén él, amelyek tudnak címkézni.
+
+[[mac-initial]]
+== A MAC ismertetése
+
+Az imént definiált új fogalmak tükrében most nézzük meg, hogy a MAC rendszer alkalmazásával miként javíthatunk rendszerünk biztonságán. A MAC rendszerhez készített különbözõ biztonsági modulok alkalmasak a hálózat és az állományrendszerek védelmére, valamint segítségükkel megakadályozhatjuk, hogy a felhasználók elérhessenek bizonyos portokat és socketeket stb. A házirendeket formázó modulokat talán együttesen tudjuk a leghatékonyabban alkalmazni, és ha egyszerre több modul betöltésével egy többrétegû védelmi rendszert alakítunk ki. Ez nem ugyanaz, mint a rendszer megerõsítése, ahol a rendszer összetevõit jellemzõ módon csak bizonyos célok tekintetében edzzük meg. A módszer egyedüli hátulütõi a többszörös állományrendszeri címkékkel, a felhasználónként beállítandó hálózati eléréssel stb. járó adminisztrációs költségek.
+
+Ezek a hátrányok azonban eltörpülnek a létrehozott rendszer tartósságával szemben. Például, ha képesek vagyunk megmondani, hogy az adott konfigurációban milyen házirendek alkalmazására van szükség, akkor ezzel az adminisztrációs költségek visszaszoríthatóak. A szükségtelen házirendek eltávolításával még növelhetjük is a rendszer összteljesítményét, valamint az így felkínált rugalmasságot. Egy jó kialakításban figyelembe kell venni az összes biztonsági elõírást, és hatékonyan megvalósítani ezeket a rendszer által felajánlott különféle biztonsági modulokkal.
+
+Ezért tehát a MAC lehetõségeit kihasználó rendszerekben legalább annyit meg kell tudni oldani, hogy a felhasználók ne változtathassák kedvükre a biztonsági tulajdonságokat. Az összes felhasználói segédprogramnak, programnak és szkriptnek a kiválasztott biztonsági modulokban szereplõ hozzáférési szabályokkal kifeszített kereten belül kell mozognia. A MAC totális irányítása pedig a rendszergazda kezében van.
+
+A rendszergazda így egyedül csak a megfelelõ biztonsági modulok gondos összeválogatásáért felelõs. Bizonyos környezetekben szükséges lehet a hálózaton keresztüli hozzáférések korlátozása is. Ilyen esetekben a man:mac_portacl[4], man:mac_ifoff[4] vagy a man:mac_biba[4] moduloktól érdemes elindulnunk. Más esetekben az állományrendszerek objektumainak bizalmasságát kell csupán megõriznünk. Erre a célra a man:mac_bsdextended[4] és man:mac_mls[4] modulok a legalkalmasabbak.
+
+A házirendekhez kapcsolódó döntések a hálózati beállítások alapján is meghozhatóak. Elképzelhetõ, hogy csak bizonyos felhasználók férhetnek hozzá az man:ssh[1] szolgáltatásain keresztül a hálózathoz vagy az internethez. A man:mac_portacl[4] pontosan ilyen helyzetekben tud a segítségünkre sietni. Mit tegyünk viszont az állományrendszerek esetén? Vágjunk el adott felhasználókat vagy csoportokat bizonyos könyvtáraktól? Vagy korlátozzuk a felhasználók vagy segédprogramok hozzáférését adott állományokhoz bizonyos objektumok bizalmassá tételével?
+
+Az állományrendszerek esetében az objektumokat néhány felhasználó elérheti, mások pedig nem. Például egy nagyobb fejlesztõcsapat kisebb csoportokra bontható. Az A projektben résztvevõ fejlesztõk nem férhetnek hozzá a B projektben dolgozó fejlesztõk munkájához. Ellenben szükségük lehet a C projekten munkálkodó fejlesztõk által létrehozott objektumokra. Ez egy igen érdekes helyzet. A MAC rendszer által felkínált különbözõ biztonsági modulokra építkezve azonban könnyedén csoportokba tudjuk szervezni a felhasználókat, és a megfelelõ területekhez az információ kiszivárgása nélkül hozzá tudjuk õket engedni.
+
+Ennek következtében minden egyes biztonsági modul a maga módján gondoskodik az egész rendszer biztonságáról. A céljainknak megfelelõ modulokat egy jól átgondolt biztonsági házirend alapján válasszuk ki. Sok esetben az egész házirendet át kell tekinteni és újra kell alkalmazni a rendszerben. A MAC által felajánlott különbözõ biztonsági modulok megértése segít a rendszergazdáknak megválasztani az adott helyzetben legjobban alkalmazható házirendeket.
+
+A FreeBSD rendszermagja alapból nem tartalmazza a MAC rendszert. Ezért a fejezetben szereplõ példák vagy az itt leírtak kipróbálásához az alábbi beállítást kell hozzátennünk a rendszermag beállításait tartalmazó állományhoz:
+
+[.programlisting]
+....
+options	MAC
+....
+
+Majd fordítsuk és telepítsük újra a rendszermagot.
+
+[CAUTION]
+====
+
+Miközben a MAC rendszerhez készült különbözõ modulok a saját man oldalaik szerint igénylik a beépítésüket, vigyázzunk velük, mert ezzel a rendszerüket pillanatok alatt ki tudjuk zárni a hálózatból és így tovább. A MAC alapú védelem felépítése leginkább egy tûzfal összeállításához hasonlítható, ahol ugyanígy számolni kell azzal, hogy egy óvatlan paranccsal kizárhatjuk magunkat a rendszerbõl. Valamilyen módon mindig próbáljunk gondoskodni a rendszer elõzõ állapotának visszaállíthatóságáról, és a MAC távoli adminisztrációját mindig nagyfokú körültekintéssel végezzük.
+====
+
+[[mac-understandlabel]]
+== Bõvebben a MAC címkéirõl
+
+A MAC-címke egy olyan biztonsági tulajdonság, amelyet a rendszerben található alanyokhoz és objektumokhoz rendelhetünk.
+
+Egy címke beállításához a felhasználónak pontosan ismernie kell, hogy ilyenkor mi történik. Az objektumokhoz tartozó tulajdonságok a betöltött moduloktól függenek, és az egyes modulok eltérõ módon értelmezik ezeket a tulajdonságokat. Ha a precíz megértésük hiányában helytelenül állítjuk be ezeket, vagy nem vagyunk képesek tisztázni a velük járó következményeket, akkor az a rendszerünk kiszámíthatatlan és valószínûleg kedvezõtlen viselkedését eredményezi.
+
+A házirendek az objektumhoz rendelt biztonsági címkéket a hozzáféréssel kapcsolatos döntések meghozásában használják fel. Bizonyos házirendek esetében már maga a címke elegendõ információt tartalmaz a döntés megformálásához. Máshol viszont a címkék egy nagyobb szabályrendszer részeként dolgozódnak fel stb.
+
+Például, ha egy állományra beállítjuk a `biba/low` címkét, akkor az arra fog utalni, hogy a címkét a Biba nevû biztonsági modul kezeli és értéke "low".
+
+Az a néhány modul, amely a FreeBSD-ben támogatja a címkézés lehetõségét, három speciális címkét definiál elõre. Ezek rendre a "low" (alacsony), "high" (magas) és "equal" (egyezõ) címkék. Habár az egyes modulok esetén eltérõ módon képesek vezérelni a hozzáférést, azt mindig biztosra vehetjük, hogy a "low" a legalacsonyabb érték, az "equal" címke hatására az adott alanyt vagy objektumot érintetlenül hagyják, és a "high" értékû címke a Biba és MLS modulok esetében a legmagasabb beállítást jelenti.
+
+Az egycímkés állományrendszerek használata során az egyes objektumonkhoz csak egyetlen címkét rendelhetünk hozzá. Ezzel az egész rendszerben csak egyfajta engedélyt alkalmazunk, ami sok esetben pontosan elegendõ. Létezik néhány különleges eset, amikor az állományrendszerben levõ alanyokhoz vagy objektumokhoz egyszerre több címkét is hozzá kell rendelnünk. Ilyenkor a `multilabel` opciót kell átadnunk a man:tunefs[8] segédprogramnak.
+
+A Biba és az MLS esetében elõfordulhat, hogy egy numerikus címkével fogjuk jelölni a hierarchikus irányítás pontos szintjét. A numerikus szintek használatával tudjuk az információt különbözõ csoportokba szétosztani vagy elrendezni, például úgy, hogy csak az adott szintû vagy a felette álló csoportok számára engedélyezzük a hozzáférést.
+
+Az esetek többségében a rendszergazdának csak egyetlen címkét kell beállítania az egész állományrendszerre.
+
+_Hé, álljunk csak meg! Akkor ez viszont pont olyan, mint a DAC! Én azt hittem, hogy a MAC szigorúan a rendszergazda kezébe adja az irányítást._ Ez az állítás továbbra is fennáll, mivel bizonyos értelemben a `root` lesz az, aki beállítja a házirendeket, tehát õ mondja meg, hogy a felhasználók milyen kategóriákba vagy hozzáférési szintekbe sorolódnak. Sajnos, sok biztonsági modul még magát a `root` felhasználót is korlátozza. Az objektumok feletti irányítás ilyenkor a csoportra száll, de a `root` bármikor visszavonhatja vagy módosíthatja a beállításokat. Ezzel a hierarchikus/engedély alapú modellel a Biba és az MLS nevû házirendek foglalkoznak.
+
+=== A címkék beállítása
+
+A címkézéshez kapcsolódó összes beállítást gyakorlatilag az alapvetõ rendszerprogramokkal végezhetjük el. Ezek a parancsok az objektumok és az alanyok szabályozásához, valamint a konfiguráció módosításához és ellenõrzéséhez adnak egy egyszerû kezelõfelületet.
+
+Az összes konfigurációs beállítást a man:setfmac[8] és man:setpmac[8] segédprogramokkal végezhetjük el. A `setfmac` segítségével a rendszerszintû objektumokhoz tudunk hozzárendelni a MAC-címkéket, míg a `setpmac` paranccsal a rendszerben levõ alanyokhoz tudunk címkéket rendelni. Vegyük például ezt:
+
+[source,bash]
+....
+# setfmac biba/high próba
+....
+
+Amennyiben az iménti parancs hibátlanul lefutott, visszakapjuk a paranccsort. Ezek a parancsok csak olyankor maradnak nyugodtan, amikor semmilyen hiba nem történt. Mûködésük hasonló a man:chmod[1] és man:chown[8] parancsokéhoz. Bizonyos esetekben `Permission denied` (`A hozzáférés nem engedélyezett`) hibát kapunk, ami általában akkor bukkan fel, ha egy korlátozott objektummal kapcsolatban próbálunk meg címkét beállítani vagy módosítani . A rendszergazda a következõ paranccsal tudja feloldani az ilyen helyzeteket:
+
+[source,bash]
+....
+# setfmac biba/high próba
+Permission denied
+# setpmac biba/low setfmac biba/high próba
+# getfmac próba
+próba: biba/high
+....
+
+Ahogy az itt tetten is érhetõ, a `setpmac` használható a modul beállításainak felülbírálására úgy, hogy a meghívott programban egy másik címkét állít be. A `getpmac` segédprogram általában a sendmailhez hasonló háttérben futó programok esetében alkalmazható: ilyenkor a konkrét parancs helyett a futó program azonosítóját kell megadnunk, de mûködése ugyanaz. Ha a felhasználók a hatókörükön túl levõ állományokat próbálnak meg módosítani, akkor a betöltött modulok szabályainak megfelelõen a `mac_set_link` függvény `Operation not permitted` (`A mûvelet nem engedélyezett`) hibát fog adni.
+
+==== Gyakori címketípusok
+
+A man:mac_biba[4], man:mac_mls[4] és man:mac_lomac[4] moduloknál használhatunk címkéket. Értékük lehet "high", "equal" vagy "low", melyek rövid magyarázata a következõ:
+
+* A `low` címke az objektumra vagy alanyra érvényes leggyengébb beállítást jelenti. Az ilyen címkéjû objektumok vagy alanyok nem érhetik el a "high" címkéjûeket.
+* Az `equal` címke használható minden olyan objektum vagy alany esetében, amelyeket ki akarunk vonni az adott házirend hatálya alól.
+* A `high` címke adja az objektumhoz vagy alanyhoz tartozó legerõsebb beállítást.
+
+Az egyes moduloktól függõen ezek az értékek az információ áramoltatásának különbözõ irányait írhatják le. A megfelelõ man oldalak elolvasásával még jobban megismerhetjük az egyes címketípusok beállításának jellegzetességeit.
+
+===== A címkék beállításáról részletesebben
+
+A numerikus osztályozó címkék `összehasonlítás:rekesz+rekesz` alakban használatosak, tehát a
+
+[.programlisting]
+....
+biba/10:2+3+6(5:2+3-20:2+3+4+5+6)
+....
+
+kifejezés így értelmezhetõ:
+
+"A Biba házirend címkéje"/"10 osztály" :"2, 3 és 6 rekeszek": ("5 osztály...")
+
+Ebben a példában az elsõ osztály tekinthetõ "valódi osztálynak", amely a "valódi rekeszeket" jelenti, a második osztály egy alacsonyabb besorolás, míg az utolsó egy magasabb szintû. A legtöbb konfigurációban nem lesz szükségünk ennyire összetett beállításokra, noha képesek vagyunk felírni ezeket.
+
+Ha ezt kivetítjük a rendszer objektumaira, akkor a rendszerben levõ alanyokat illetõen csupán az aktuális osztály/rekeszek számítanak, mivel a rendszerben és hálózati csatolófelületeken elérhetõ hozzáférés-vezérlési jogokat tükrözi.
+
+Az alany-objektum párokban megadott osztályzatok és rekeszek használhatóak fel egy olyan kapcsolat kiépítésére, amit "dominanciának" nevezünk. Ilyenkor egy alany ural egy objektumot, vagy egy objektum ural egy alanyt, vagy egyikük sem uralja a másikat, esetleg mind a kettõ uralja egymást. A "kettõs dominancia" esete akkor forog fenn, amikor a két címke megegyezik. A Biba információáramoltatási sajátosságaiból adódóan jogunk van rekeszeket létrehozni, "tudunk kell", hogy ezek projekteknek feleltethetõek meg, de az objektumok is rendelkezhetnek rekeszekkel. A felhasználók ilyenkor csak úgy tudnak elérni egyes objektumokat, ha az `su` vagy a `setpmac` használatával leszûkítik a jogaikat egy olyan rekeszre, ahol már nem érvényesülnek rájuk korlátozások.
+
+==== A felhasználók és címkék kapcsolata
+
+Maguknak a felhasználóknak is szükségük van címkékre, mivel csak ezek segítségével tudnak az állományaik és programjaik megfelelõ módon együttmûködni a rendszerben érvényes biztonsági házirenddel. Ezt a [.filename]#login.conf# állományban megadható bejelentkezési osztályokkal állíthatjuk be. Minden címkéket használó modulban a felhasználóknak is van címkéjük.
+
+Lentebb látható egy ilyen minta bejegyzés, amely minden modulhoz tartalmaz beállítást:
+
+[.programlisting]
+....
+default:\
+	:copyright=/etc/COPYRIGHT:\
+	:welcome=/etc/motd:\
+	:setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+	:path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:\
+	:manpath=/usr/shared/man /usr/local/man:\
+	:nologin=/usr/sbin/nologin:\
+	:cputime=1h30m:\
+	:datasize=8M:\
+	:vmemoryuse=100M:\
+	:stacksize=2M:\
+	:memorylocked=4M:\
+	:memoryuse=8M:\
+	:filesize=8M:\
+	:coredumpsize=8M:\
+	:openfiles=24:\
+	:maxproc=32:\
+	:priority=0:\
+	:requirehome:\
+	:passwordtime=91d:\
+	:umask=022:\
+	:ignoretime@:\
+	:label=partition/13,mls/5,biba/10(5-15),lomac/10[2]:
+....
+
+Itt a `label` opciót használtuk a felhasználói osztályhoz tartozó alapértelmezett címkék beállításához, amit majd a MAC betartat. A felhasználók nem módosíthatják ezt az értéket, ezért ez a felhasználók számára nem tekinthetõ tetszõlegesen elhagyható beállításnak. Egy valós konfigurációban azonban a rendszergazda valószínûleg nem akarja majd egyszerre az összes modult használni. Javasoljuk, hogy mielõtt egy ilyen jellegû konfigurációt adnánk meg, olvassuk el az egész fejezetet.
+
+[NOTE]
+====
+A felhasználók ezt a címkét meg tudják változtatni az elsõ bejelentkezés után, de csak a házirend keretein belül. A fenti példában úgy állítjuk be a Biba házirendet, hogy a futó programok sértetlenségi foka legalább 5, legfeljebb 15 lehet, de az alapértéke 10. Tehát a programok egészen addig 10-es szinten futnak, amíg a programok a Biba bejelentkezéskor megadott tartományában meg nem változtatják ezt a címkét, feltehetõen a `setpmac` parancs hatására.
+====
+
+Mindig, amikor megváltozatjuk a [.filename]#login.conf# beállításait, a `cap_mkdb` paranccsal újra kell generálni a bejelentkezési osztályokhoz tartozó adatbázist, amire a késõbbi példákban vagy részekben igyekszünk is mindig felhívni a figyelmet.
+
+Nem árt hozzátennünk, hogy sok rendszerben kifejezetten sok felhasználót kell kezelnünk, amihez több különbözõ bejelentkezési osztályra is szükségünk lehet. Mivel késõbb már csak egyre jobban bonyolódni fog a felhasználók kezelése, ezért soha ne felejtsünk el komolyan elõre tervezni.
+
+A FreeBSD következõ változataiban meg fognak jelenni más módszerek is a felhasználók és címkék közti kapcsolatok kezelésére. A FreeBSD 5.3 elõtt azonban ez még semmiképpen sem várható.
+
+==== A hálózati csatolófelületek és a címkék kapcsolata
+
+A hálózati csatlakozások esetében is állíthatunk be címkéket, melyek a hálózaton keresztül folyó adatok áramlását határozzák meg. Minden esetben ugyanúgy mûködnek, mint ahogy a házirendek az objektumokra. Például a `biba` esetében a magas beállításokkal rendelkezõ felhasználók nem férhetnek hozzá az alacsonyabb címkéjû hálózati csatolófelületekhez.
+
+Ha MAC-címkéket akarunk rendelni egy hálózati felülethez, akkor az `ifconfig` parancsnak adjuk meg a `maclabel` paramétert. Például a
+
+[source,bash]
+....
+# ifconfig bge0 maclabel biba/equal
+....
+
+parancs beállítja a `biba/equal` MAC-címkét a man:bge[4] felületre. A `biba/high(low-high)` alakú címkéket átadásukhoz idézõjelek közé kell tenni, különben hibát kapunk.
+
+Minden címkézést támogató modulhoz tartoznak futási idõben állítható paraméterek, amelyekkel akár le is tudjuk tiltani a MAC-címkéket a hálózati csatolófelületeken. Ugyanezt jelenti egyébként, ha `equal` értéket adunk meg a címkének. Ezt behatóbban úgy ismerhetjük meg, ha kielemezzük a `sysctl` parancs kimenetét, a megfelelõ modul man oldalát vagy a fejezetben további részében található, erre vonatkozó információkat.
+
+=== Egy címke vagy több címke?
+
+Alapértelmezés szerint a rendszer a `singlelabel` beállítást használja. Ez vajon mit tartogat a rendszergazda számára? Számos olyan eltérést, aminek megvannak a saját elõnyei és hátrányai a rendszer védelmi modelljének rugalmassága szempontjából.
+
+A `singlelabel` beállítás minden alany vagy objektum esetében csupán egyetlen címke, például a `biba/high` használatát engedi. Kevesebb adminisztrációs költséggel jár, azonban csökkenteni a címkézést támogató modulok testreszabhatóságát. Ezért sok rendszergazda inkább a `multilabel` beállítást választja a biztonsági házirend kialakítása során.
+
+A `multilabel` beállítás lehetõvé teszi, hogy mindegyik alanyhoz és objektumhoz a szabványos `singlelabel` beállítás lehetõségeivel szemben egymástól függetlenül külön-külön rendelhessünk címkéket a partíciókon. Az egy- és többcímkés opciónak csak olyan modulok esetében van értelme, amelyek támogatják a címkézést, mint például a Biba, Lomac, MLS és a SEBSD házirendek.
+
+Sokszor egyáltalán nincs is szükségünk a `multilabel` használatára. Tekintsük például a következõ helyzetet és biztonsági modellt:
+
+* Adott egy FreeBSD webszerver, ahol a MAC rendszert több biztonsági házirenddel alkalmazzuk.
+* A gépen egyedül csak a `biba/high` címkére van szükségünk mindenhez a rendszerben. Itt egyszerûen csak nem adjuk meg az állományrendszernek a `multilabel` beállítást, mivel az egycímkés rendszer mindig rendelkezésünkre áll.
+* Mivel azonban erre a gépre telepíteni akarunk egy webszervert is, ilyenkor a `biba/low` címke használatával igyekszünk korlátozni a szerver feldolgozási képességeit. A Biba házirendrõl és annak mûködésérõl csak a késõbbiekben fogunk írni, ezért ha az elõbbi megjegyzést még nem teljesen értjük, akkor egyszerûen csak olvassunk tovább és térjünk vissza ide. A szerver futása alatt, vagy legalább is idejének nagy részében egy külön partíciót használhatna, amire a `biba/low` címkét állítanánk be. Természetesen ez a példa korántsem teljes, hiszen hiányoznak belõle az adatokra érvényes korlátozások, a konfigurációs és felhasználói beállítások. Ez csupán az iménti gondolatmenet gyors illusztrációja.
+
+Amennyiben címkézést nem támogató modulokat alkalmazunk, a `multilabel` beállításra szinte sosem lesz szükségünk. Ilyenek például a `seeotheruids`, `portacl` és `partition` házirendek.
+
+A `multilabel` opció használata és így speciális, többcímkés védelmi modell létrehozása képes elbonyolítani a rendszer karbantartását, mert ilyenkor az állományrendszerben mindennek lennie kell címkéjének: könyvtáraknak, állományok és még az eszközleíróknak is.
+
+A most következõ paranccsal beállítjuk az állományrendszerre a `multilabel` opciót. Ez csak egyfelhasználós módban tehetõ meg:
+
+[source,bash]
+....
+# tunefs -l enable /
+....
+
+A lapozópartíció esetében erre nincs szükség.
+
+[NOTE]
+====
+Elõfordulhat, hogy néhány felhasználónak nem sikerül a `multilabel` opciót beállítania a rendszerindító partícióra. Ha ez történne, akkor olvassuk el a fejezet <<mac-troubleshoot>>át.
+====
+
+[[mac-planning]]
+== A védelem megtervezése
+
+Mindig hasznos idõt szánni a tervezésre, amikor nekilátunk egy új technológia alkalmazásához. A tervezés közben a rendszergazdának "egyben kell látnia a képet", lehetõleg az alábbiak figyelembevételével:
+
+* Elvárások a modell felé
+* A modell célkitûzései
+
+Továbbá a MAC használata esetén:
+
+* Miként osztályozzuk a célrendszeren rendelkezésre álló információt és erõforrásokat
+* Milyen információt vagy erõforrást kell korlátoznunk és milyen típusú korlátozást alkalmazzunk rájuk
+* A MAC melyik moduljain keresztül tudjuk elérni céljainkat
+
+Habár mindig módunkban áll megváltoztatni és újra konfigurálni a rendszerben található erõforrásokat és biztonsági beállításokat, sokszor azért igen kényelmetlen utánanézni a rendszerben és állítgatni az állományok, illetve felhasználói hozzáférések paramétereit. A beállításainkat valamint azok konfigurációját _elõször_ külön próbáljuk ki, mielõtt a MAC alapú megvalósításunkat egy éles rendszeren kezdjük el használni. Ennek elhagyása szinte biztosan kudarcra ítél minket.
+
+A különbözõ környezetek igényei és elvárásai eltérnek. Egy alaposan és minden részletében átgondolt védelmi profil megalapozása csökkenti a rendszer üzembehelyezése után elvégzendõ módosítások számát. Mint olyanokra, a következõ szakaszokban kitérünk a rendszergazdák számára elérhetõ modulokra, bemutatjuk a használatukat és beállításukat és egyes esetekben betekintést is adunk olyan helyzetekbe, ahol a legjobban kiaknázhatóak a képességeik. Például egy webszerver esetén hasznos lehet a man:mac_biba[4] és man:mac_bsdextended[4] házirendek alkalmazása. Más esetekben, például egy kevés felhasználóval mûködõ számítógépen, a man:mac_partition[4] modul lehet jó választás.
+
+[[mac-modules]]
+== A modulok beállítása
+
+A MAC rendszerben megtalálható összes modul a korábban leírtak szerint beépíthetõ a rendszermagba vagy menet közben is betölthetõ modulként. A használni kívánt modulokat a [.filename]#/boot/loader.conf# állományba javasolt felvenni, így azok be tudnak töltõdni a rendszer indítása folyamán.
+
+A soron következõ szakaszokban a különbözõ MAC-modulokat dolgozzuk fel és foglaljuk össze a lehetõségeiket. Továbbá a fejezet szeretne szólni ezek alkalmazásáról speciális helyzetekben is. Egyes modulokkal címkézni is tudunk, aminek révén a hozzáféréseket címkékkel szabályozzuk, például úgy, hogy megmondjuk "mit szabad és mit nem". A címkék beállításait tartalmazó állomány vezérli az állományok elérését, a hálózati kommunikációt és még sok minden mást. Az elõzõ szakaszban már megismerhettük, hogy a `multilabel` opció segítségével hogyan állíthatjuk be az állományonkénti vagy partíciónkénti hozzáférés-vezérlést.
+
+Az egycímkés konfigurációban az egész rendszerben csupán egyetlen címke használatára nyílik mód, ezért is hívják a `tunefs` beállítását ``multilabel``nek.
+
+[[mac-seeotheruids]]
+== A seeotheruids MAC-modul
+
+A modul neve: [.filename]#mac_seeotheruids.ko#
+
+A rendszermag konfigurációs beállítása: `options MAC_SEEOTHERUIDS`
+
+Rendszerindítási beállítás: `mac_seeotheruids_load="YES"`
+
+A man:mac_seeotheruids[4] modul a `security.bsd.see_other_uids` és `security.bsd.see_other_gids sysctl`-változókat utánozza és terjeszti ki. A használatához semmilyen címkét nem kell beállítani és transzparens módon képes együttmûködni a többi modullal.
+
+A modult betöltése után az alábbi `sysctl`-változókkal tudjuk vezérelni:
+
+* A `security.mac.seeotheruids.enabled` engedélyezi a modult és az alapértelmezett beállításokat használja. Alapértelmezés szerint egyik felhasználó sem láthatja a többiek futó programjait és csatlakozásait.
+* A `security.mac.seeotheruids.specificgid_enabled` egy adott csoportot mentesít a házirend szabályozásai alól. Tehát ki akarunk vonni egy csoportot a házirend alkalmazásából, akkor állítsuk be a `security.mac.seeotheruids.specificgid=XXX sysctl`-változót, ahol az _XXX_ a mentesíteni kívánt csoport numerikus azonosítója.
+* A `security.mac.seeotheruids.primarygroup_enabled` segítségével adott elsõdleges csoportokat vonhatunk ki a házirend hatálya alól. Ezt a változót nem használhatjuk a `security.mac.seeotheruids.specificgid_enabled` változóval együtt.
+
+[[mac-bsdextended]]
+== A bsdextended MAC-modul
+
+A modul neve: [.filename]#mac_bsdextended.ko#
+
+A rendszermag konfigurációs beállítása: `options MAC_BSDEXTENDED`
+
+Rendszerindítási beállítás: `mac_bsdextended_load="YES"`
+
+A man:mac_bsdextended[4] modul segítségével egy állományrendszer szintjén mûködõ tûzfalat tudunk kialakítani. Ez a modul a szabványos állományrendszeri engedély alapú modelljét bõvíti ki, lehetõvé téve, hogy a rendszergazda tûzfalszerû szabályokkal nyújtson védelmet a könyvtárszerkezetben található állományoknak, segédprogramoknak és könyvtáraknak. Amikor egy állományrendszerbeli objektumhoz próbálunk meg hozzáférni, a modul illeszti ezt egy szabályrendszerre, amiben vagy talál egy hozzá tartozó szabályt vagy kifut belõle. Ez a viselkedés a `security.mac.bsdextended.firstmatch_enabled` man:sysctl[8] paraméter segítségével változtatható meg. Hasonlóan a FreeBSD-ben található többi tûzfalmodulhoz, az állományok elérését definiáló szabályok a rendszerindítás során egy man:rc.conf[5] változóból olvasódnak be.
+
+A szabályokat a man:ugidfw[8] segédprogrammal adhatjuk meg, amelynek a formai szabályai hasonlóak az man:ipfw[8] programéhoz. A man:libugidfw[3] függvénykönyvtár felhasználásával azonban további segédprogramok is írhatóak hozzá.
+
+A modul használata során igyekezzünk minél jobban odafigyelni, mert helytelen alkalmazásával el tudjuk vágni magunkat az állományrendszer bizonyos részeitõl.
+
+=== Példák
+
+Miután sikerült betölteni a man:mac_bsdextended[4] modult, a következõ paranccsal tudjuk lekérdezni a jelenleg érvényes szabályokat:
+
+[source,bash]
+....
+# ugidfw list
+0 slots, 0 rules
+....
+
+Ahogy az várható is volt, pillanatnyilag még egyetlen szabályt sem adtunk meg. Ennek értelmében tehát mindent el tudunk érni. A következõ paranccsal tudunk olyan szabályt létrehozni, ahol a `root` kivételével elutasítjuk az összes felhasználó hozzáférését:
+
+[source,bash]
+....
+# ugidfw add subject not uid root new object not uid root mode n
+....
+
+Ez egyébként egy nagyon buta ötlet, mivel így a felhasználók még a legegyszerûbb parancsokat, mint például az `ls`-t, sem tudják rájuk kiadni. Ennél sokkal humánusabb lesz, ha:
+
+[source,bash]
+....
+# ugidfw set 2 subject uid felhasználó1 object uid felhasználó2 mode n
+# ugidfw set 3 subject uid felhasználó1 object gid felhasználó2 mode n
+....
+
+Ilyenkor a `felhasználó1` nevû felhasználótól megvonjuk a `_felhasználó2_` felhasználói könyvtárának összes hozzáférését, beleértve a listázhatóságot is.
+
+A `felhasználó1` helyett megadhatjuk a `not uid _felhasználó2_` opciót is. Ebben az esetben egy felhasználó helyett az összes felhasználóra ugyanaz a korlátozás fog érvényesülni.
+
+[NOTE]
+====
+A `root` felhasználóra ezek a beállítások nem vonatkoznak.
+====
+
+Ezzel felvázoltuk, miként lehet a man:mac_bsdextended[4] modult felhasználni az állományrendszerek megerõsítésére. Részletesebb információkért járuljunk a man:mac_bsdextended[4] és man:ugidfw[8] man oldalakhoz.
+
+[[mac-ifoff]]
+== Az ifoff MAC-modul
+
+A modul neve: [.filename]#mac_ifoff.ko#
+
+A rendszermag konfigurációs beállítása: `options MAC_IFOFF`
+
+Rendszerindítási beállítás: `mac_ifoff_load="YES"`
+
+A man:mac_ifoff[4] modul kizárólag abból a célból készült, hogy segítségével menet közben le tudjuk tiltani bizonyos hálózati csatolófelületek beállítását a rendszerindítás közben. Sem címkékre, sem pedig a többi MAC-modulra nincs szükségünk a használatához.
+
+A vezérlést nagyrészt az alábbi `sysctl`-változókkal tudjuk megoldani.
+
+* A `security.mac.ifoff.lo_enabled` engedélyezi vagy letiltja a (man:lo[4]) helyi loopback felületen az összes forgalmat.
+* A `security.mac.ifoff.bpfrecv_enabled` engedélyezi vagy letiltja a Berkeley csomagszûrõ (BPF, Berkeley Packet Filter) felületén az összes forgalmat.
+* A `security.mac.ifoff.other_enabled` engedélyezi vagy letiltja az összes többi csatolófelületen az összes forgalmat.
+
+A man:mac_ifoff[4] modult általában olyan környezetek monitorozásakor szokták használni, ahol a rendszer indítása során még nem szabad hálózati forgalomnak keletkeznie. Vagy például a package:security/aide[] porttal együtt használva automatikusan el tudjuk zárni a rendszerünket, ha a védett könyvtárakban új állományok keletkeznek vagy megváltoznak a régiek.
+
+[[mac-portacl]]
+== A portacl MAC-modul
+
+A modul neve: [.filename]#mac_portacl.ko#
+
+A rendszermag konfigurációs beállítása: `MAC_PORTACL`
+
+Rendszerindítási beállítás: `mac_portacl_load="YES"`
+
+A man:mac_portacl[4] modul a helyi TCP és UDP portok kiosztásának korlátozását teszi lehetõvé különféle `sysctl`-változókon keresztül. A man:mac_portacl[4] segítségével lényegében a nem-`root` felhasználók is használhatnak privilegizált, tehát 1024 alatti portokat.
+
+Miután betöltöttük, a modul az összes csatlakozásra alkalmazza a MAC-házirendet. Ezután az alábbi változókkal hangolhatjuk a viselkedését:
+
+* A `security.mac.portacl.enabled` totálisan engedélyezi vagy letiltja a házirend használatát.
+* A `security.mac.portacl.port_high` megadja azt a legmagasabb portot, amelyre még kiterjed a man:mac_portacl[4] védelme.
+* Ha a `security.mac.portacl.suser_exempt` változónak nem nulla értéket adunk meg, akkor azzal a `root` felhasználót kivonjuk a szabályozások alól.
+* A `security.mac.portacl.rules` az érvényes mac_portacl házirendet adja meg, lásd lentebb.
+
+A `security.mac.portacl.rules` változó által megadott aktuális `mac_portacl` házirend formátuma a következõ: `szabály[,szabály,...]`, ahol ezen a módon tetszõleges számú szabályt adhatunk meg. Az egyes szabályok pedig így írhatóak fel: `azonosítótípus: azonosító: protokoll: port`. Az [parameter]#azonosítótípus# értéke `uid` vagy `gid` lehet, amivel megadjuk, hogy az [parameter]#azonosító# paraméter felhasználóra vagy csoportra hivatkozik. A [parameter]#protokoll# paraméter adja meg, hogy a szabályt TCP vagy UDP típusú kapcsolatra értjük, és ennek megfelelõen az értéke is `tcp` vagy `udp` lehet. A sort végül a [parameter]#port# paraméter zárja, ahol annak a portnak számát adjuk meg, amelyhez az adott felhasználót vagy csoportot akarjuk kötni.
+
+[NOTE]
+====
+Mivel a szabályokat közvetlenül maga a rendszermag dolgozza fel, ezért a felhasználók illetve csoportok azonosítója, valamint a port értéke kizárólag numerikus érték lehet. Tehát a szabályokban név szerint nem hivatkozhatunk felhasználókra, csoportokra vagy szolgáltatásokra.
+====
+
+A UNIX(R)-szerû rendszereken alapértelmezés szerint az 1024 alatti portokat csak privilegizált programok kaphatják meg és használhatják, tehát a `root` felhasználó neve alatt kell futniuk. A man:mac_portacl[4] azonban a nem privilegizált programok számára is lehetõvé teszi, hogy elfoglalhassanak 1024 alatti portokat, amihez viszont elõször le kell tiltani ezt a szabvány UNIX(R)-os korlátozást. Ezt úgy érhetjük el, ha a `net.inet.ip.portrange.reservedlow` és `net.inet.ip.portrange.reservedhigh` változókat egyaránt nullára állítjuk.
+
+A man:mac_portacl[4] mûködésének részleteirõl a példákon keresztül vagy a megfelelõ man oldalakból tudhatunk meg többet.
+
+=== Példák
+
+A következõ példák az iméntieket igyekeznek jobban megvilágítani:
+
+[source,bash]
+....
+# sysctl security.mac.portacl.port_high=1023
+# sysctl net.inet.ip.portrange.reservedlow=0 net.inet.ip.portrange.reservedhigh=0
+....
+
+Elsõként beállítjuk, hogy a man:mac_portacl[4] vegye át a szabványos privilegizált portok vezérlését és letiltjuk a normál UNIX(R)-os korlátozásokat.
+
+[source,bash]
+....
+# sysctl security.mac.portacl.suser_exempt=1
+....
+
+A `root` felhasználót azonban nem akarjuk kitenni a házirendnek, ezért a `security.mac.portacl.suser_exempt` változónak egy nem nulla értéket adunk meg. A man:mac_portacl[4] modul most pontosan ugyanúgy mûködik, mint a UNIX(R)-szerû rendszerek alapértelmezés szerint.
+
+[source,bash]
+....
+# sysctl security.mac.portacl.rules=uid:80:tcp:80
+....
+
+A 80-as azonosítóval rendelkezõ felhasználó (aki általában a `www`) számára engedélyezzük a 80-as port használatát. Így a `www` felhasználó anélkül képes webszervert futtatni, hogy szüksége lenne a `root` jogosultságaira.
+
+[source,bash]
+....
+# sysctl security.mac.portacl.rules=uid:1001:tcp:110,uid:1001:tcp:995
+....
+
+Az 1001-es azonosítóval rendelkezõ felhasználónak megengedjük, hogy elfoglalhassa a 110-es ("pop3") és 995-ös ("pop3s") portokat. Ennek köszönhetõen az adott felhasználó el tud indítani egy szervert, amihez a 110-es és 995-ös portokon lehet kapcsolódni.
+
+[[mac-partition]]
+== A partition MAC-modul
+
+A modul neve: [.filename]#mac_partition.ko#
+
+A rendszermag konfigurációs beállítása: `options MAC_PARTITION`
+
+Rendszerindítási beállítás: `mac_partition_load="YES"`
+
+A man:mac_partition[4] házirend a futó programokat címkéjük szerint adott "partíciókra" osztja szét. Ezt leginkább egy speciális man:jail[8] megoldásként tudjuk elképzelni, noha teljesen felesleges összehasonlítani a kettõt.
+
+Ez egy olyan modul, amelyet a man:loader.conf[5] állományba kell felvenni, hogy a rendszerindítása közben be tudjon töltõdni.
+
+Ezt a házirendet többségében a man:setpmac[8] segédprogrammal tudjuk állítgatni, ahogy az majd lentebb látható lesz. A következõ `sysctl`-változó tartozik még a modulhoz:
+
+* A `security.mac.partition.enabled` engedélyezi a futó programok MAC rendszeren keresztüli felosztását.
+
+A házirend engedélyezésével a felhasználók csak a saját programjaikat láthatják, illetve mindazokat, amelyek az övékével egy partícióba tartoznak, de a rajta kívül levõ programokkal már nem dolgozhatnak. Például, ha egy felhasználó az `insecure` ("nem biztonságos") osztály tagja, akkor ne engedjük, hogy hozzáférhessen a `top` vagy bármilyen más olyan parancshoz, amely további futó programokat hoz létre.
+
+A `setpmac` használatával tudunk címkéket készíteni a partíciókhoz és programokat rendelni hozzájuk:
+
+[source,bash]
+....
+# setpmac partition/13 top
+....
+
+Így a `top` parancsot hozzáadjuk az `insecure` osztályban levõ felhasználókhoz rendelt címkéhez. Vegyük észre, hogy az `insecure` osztályba tartozó felhasználók által elindított összes program a `partition/13` címkét fogja használni.
+
+=== Példák
+
+A következõ parancs megmutatja a partíciók címkéit és a futó programok listáját:
+
+[source,bash]
+....
+# ps Zax
+....
+
+Ezzel paranccsal pedig megnézhetjük egy másik felhasználó programjainak címkéit és a felhasználó által futtatott programokat:
+
+[source,bash]
+....
+# ps -ZU trhodes
+....
+
+[NOTE]
+====
+A felhasználók látják a `root` címkéjével futó programokat is, hacsak be nem töltjük a man:mac_seeotheruids[4] házirendet.
+====
+
+Ezt a megoldást úgy tudnánk igazán ravaszul felhasználni, ha például az [.filename]#/etc/rc.conf# állományban letiltanánk az összes szolgáltatást és egy olyan szkripttel indítanánk el ezeket, amely futtatásuk elõtt beállítja hozzájuk a megfelelõ címkét.
+
+[NOTE]
+====
+A most következõ házirendek a három alapértelmezett címkeérték helyett egész számokat használnak. Ezekrõl, valamint a rájuk vonatkozó korlátozásokról a megfelelõ modulok man oldalain ismerhetünk meg többet.
+====
+
+[[mac-mls]]
+== A többszintû biztonsági MAC-modul
+
+A modul neve: [.filename]#mac_mls.ko#
+
+A rendszermag konfigurációs beállítása: `options MAC_MLS`
+
+Rendszerindítási beállítás: `mac_mls_load="YES"`
+
+A man:mac_mls[4] (MLS, Multi-Level Security) házirend az információ szigorú áramoltatásával vezérli a rendszerben található alanyok és objektumok közti elérést.
+
+A MLS megoldását alkalmazó környezetekben a rekeszek mellett minden alanyra és objektumra be kell még állítanunk egy adott szintû "engedélyt" is. Mivel az engedélyek avagy az érzékenység szintje akár a hatezret is meghaladhatja, egy rendszergazda számára valódi rémálommá válthat az egyes alanyok és objektumok precíz beállítása. Szerencsére a házirend erre a célra tartalmaz három elõre definiált "instant" címkét.
+
+Ezek az `mls/low`, `mls/equal` és `mls/high`. Mivel a man oldal elég részletesen kifejti ezeket, ezért itt csak érintõlegesen foglalkozunk velük:
+
+* Az `mls/low` címke egy olyan alacsony szintû beállítást képvisel, amely lehetõvé teszi, hogy az összes többi objektum uralja. Tehát bárminek is adjuk az `mls/low` címkét, alacsony szintû engedéllyel fog rendelkezni és nem lesz képes elérni a magasabb szinten levõ információt. Ráadásul a címke a magasabb szintû objektumok számára se fogja engedni, hogy információt közöljön vagy adjon át az alacsonyabb szintek felé.
+* Az `mls/equal` címke olyan objektumok esetében ajánlott, amelyeket ki akarunk hagyni a házirend szabályozásaiból.
+* Az `mls/high` címke az elérhetõ legmagasabb szintû engedélyt ábrázolja. Az ilyen címkével ellátott objektumok a rendszer összes többi objektuma felett uralommal rendelkeznek, habár az alacsonyabb szintû objektumok felé nem képesek információt közvetíteni.
+
+Az MLS:
+
+* Egy hierarchikus védelmi szinteket épít fel nem hierarchikus kategóriákkal.
+* Szabályai rögzítettek: a felsõbb szintek olvasása és az alsóbb szintek írása egyaránt tiltott (az alanyok csak a saját vagy az alatta levõ szinteken levõ objektumokat képesek olvasni, de a felette állókat már nem. Ehhez hasonlóan az alanyok a velük egyezõ vagy a felsõbb szinteket tudják írni, de az alattuk levõket már nem).
+* Megõrzi a titkokat (megakadályozza az adatok alkalmatlan közzétételét).
+* Megadja mindazt az alapot, ami szükséges ahhoz, hogy az adatokat több kényességi szinten, párhuzamosan is kezelni tudjuk (anélkül, hogy titkos és bizalmas információkat szivárogtatnánk ki).
+
+A speciális szolgáltatások és felületek beállításához az alábbi `sysctl`-változók használhatóak:
+
+* A `security.mac.mls.enabled` engedélyezi vagy tiltja le az MLS házirend alkalmazását.
+* A `security.mac.mls.ptys_equal` hatására látja el `mls/equal` címkével az összes man:pty[4] eszközt létrehozásuk során.
+* A `security.mac.mls.revocation_enabled` használható az alacsonyabb szintre minõsített objektumok hozzáférésének megvonására.
+* A `security.mac.mls.max_compartments` segítségével adható meg az objektumok által használt rekeszek szintjének maximális száma. Lényegében a rekeszek rendszerben engedélyezett maximuma.
+
+Az MLS címkéit a man:setfmac[8] paranccsal tudjuk módosítani. Egy ehhez hasonló paranccsal tudunk egy objektumhoz címkét rendelni:
+
+[source,bash]
+....
+# setfmac mls/5 próba
+....
+
+A [.filename]#próba# állomány MLS-címkéjét az alábbi paranccsal kérhetjük le:
+
+[source,bash]
+....
+# getfmac próba
+....
+
+Ezzel össze is foglaltuk az MLS házirend lehetõségeit. Az eddigiket úgy is megoldhatjuk, hogy létrehozunk egy központi házirendet az [.filename]#/etc# könyvtárban, amelyben megadjuk az MLS házirendhez tartozó információkat, majd átadjuk a `setfmac` parancsnak. Erre a módszerre majd a házirendek bemutatása után kerül sor.
+
+=== A kényesség megállapítása
+
+A többszintû biztonsági házirend használatával a rendszergazda a kényes információk áramlásának irányát tudja befolyásolni. A megoldás "felfele nem lehet olvasni, lefele nem lehet írni" jellege folytán alapból mindent a legalacsonyabb szintre helyez. Így tehát kezdetben minden elérhetõ, és a rendszergazdának lassanként ebbõl az állapotból elindulva kell behangolnia az erre alapozó védelmi rendszert az információ bizalmasságának megfelelõen.
+
+A fentebb említett három alapvetõ címke mellett a rendszergazdának valószínûleg szüksége lesz a felhasználók csoportosítására és a csoportok közti információáramlás szabályozására. A információ bizalmasságának szintjeit minden bizonnyal könnyebb szavakkal beazonosítani, például `Confidential` (bizalmas), `Secret` (titkos) vagy `Top Secret` (szigorúan bizalmas). Bizonyos helyzetekben elég csak a futó projekteknek megfelelõen kialakítani csoportokat. Az osztályozás konkrét módszerétõl függetlenül azonban mindig elmondható, hogy elõzetes tervezés nélkül sose állítsunk össze ilyen fajsúlyú házirendet.
+
+Ezt a biztonsági modult például webes üzletek esetén érdemes használnunk, ahol egy állományszerver tárolja a cég fontos adatait és pénzügyi információit. Viszont egy két vagy három felhasználóval üzemelõ munkaállomás esetében szinte teljesen felesleges gondolkodni rajta.
+
+[[mac-biba]]
+== A Biba MAC-modul
+
+A modul neve: [.filename]#mac_biba.ko#
+
+A rendszermag konfigurációs beállítása: `options MAC_BIBA`
+
+Rendszerindítási beállítás: `mac_biba_load="YES"`
+
+A man:mac_biba[4] modul a MAC Biba elnevezésû házirendjét tölti be. Ez leginkább az MLS házirendhez hasonlít, azzal a kivétellel, hogy az információ áramoltatására vonatkozó szabályok némileg visszafelé mûködnek. Tehát míg az MLS házirend a kényes információ áramlását felfelé nem engedi, addig ez a lefelé irányuló áramlást állítja meg. Emiatt ez a szakasz tulajdonképpen mind a két házirendre érvényesül.
+
+A Biba alkalmazása során minden alany és objektum egy "sértetlenséget" jelképezõ címkét visel. Ezek a címkék hierarchikus osztályokból, nem peidg hiearchikus összetevõkbõl származnak. Egy objektum vagy alany sértetlensége a besorolásával növekszik.
+
+A modul a `biba/low`, `biba/equal` és `biba/high` címkéket ismeri, vagyis bõvebben:
+
+* A `biba/low` címke tekinthetõ az alanyok és objektumok legkisebb sértetlenségének. Ha beállítjuk egy objektumra vagy alanyra, akkor ezzel megakadályozzuk, hogy nagyobb sértetlenségû objektumokat vagy alanyokat tudjanak írni. Ettõl függetlenül azonban még képesek olvasni ezeket.
+* A `biba/equal` címke használata kizárólag olyan objektumok esetében javasolt, amelyeket ki akarunk vonni a házirend alól.
+* A `biba/high` címke megengedi az alacsonyabb szinteken levõ objektumokat írását, de az olvasását viszont már nem. Ezt a címkét olyan objektumra érdemes ragasztani, amelyek hatással vannak az egész rendszer sértetlenségére.
+
+A Biba:
+
+* Hierarchikus sértetlenségi szinteket épít fel nem hiearchikus sértetlenségi kategóriákkal kiegészítve.
+* Szabályai rögzítettek: az felsõbb szintek írása és az alsóbb szintek olvasása egyaránt tilos (pontosan az MLS ellentéte). Egy alany csak a saját vagy az alatta álló szinteken szereplõ objektumokat tudja írni. Ehhez hasonló módon egy alany csak a saját vagy az afeletti szinten található objektumokat képes olvasni.
+* Az adatok sértetlenségét biztosítja (megakadályozza az alkalmatlan módosításukat)
+* Sértetlenségi szinteket határoz meg (szemben az MLS kényességi szintjeivel).
+
+Az alábbi `sysctl`-változókkal vezérlhetjük a Biba házirend mûködését:
+
+* A `security.mac.biba.enabled` használható a célrendszeren a Biba házirend engedélyezére vagy letiltására.
+* A `security.mac.biba.ptys_equal` segítségével kapcsolhatjuk ki a Biba házirend alkalmazását a man:pty[4] eszközökön.
+* A `security.mac.biba.revocation_enabled` hatására visszavonódik az objektumok hozzáférése, ha az rájuk vonatkozó címke megváltozik.
+
+A rendszer objektumain a Biba házirendet a `setfmac` és `getfmac` paranccsal állíthatjuk be:
+
+[source,bash]
+....
+# setfmac biba/low próba
+# getfmac próba
+próba: biba/low
+....
+
+=== A sértetlenség megállapítása
+
+A sértetlenség a kényességtõl eltérõen azt igyekszik szavatolni, hogy az információt illetéktelenek nem módosítják. Ez egyaránt vonatkozik az alanyok, objektumok és a kettõ között átadott adatokra. Gondoskodik róla, hogy a felhasználók csak olyan információkat változtathathassanak meg, sõt csak olyat érhessenek el, amire ténylegesen szükségük van.
+
+A man:mac_biba[4] biztonsági modul megengedi a rendszergazda számára, hogy megmondja milyen állományokat és programokat láthat vagy hívhat meg a felhasználó vagy felhasználók egy csoportja, miközben biztosítja, hogy az állományok és a programok nincsenek kitéve semmilyen fenyegetésnek, és a rendszer az adott felhasználóban vagy felhasználói csoportban megbízik.
+
+A kezdeti tervezési fázis során a rendszergazdának fel kell készülnie arra, hogy a felhasználókat osztályokra, szintekre és területekre kell osztania. A felhasználók nem csak adatokhoz, hanem programokhoz és segédprogramokhoz sem lesznek képesek hozzáférni, mind az indításuk elõtt és után. A modul aktiválás után a rendszer alapból rögtön a legmagasabb címkét kapja meg, és teljesen a rendszergazdára hárul, hogy a felhasználókhoz beállítsa a különféle osztályokat és szinteket. A fentebb leírt engedélyszintek helyett akár témák alapján is tervezhetünk. Például kizárólag csak a fejlesztõk számára engedjük meg a forráskód módosítását, a forráskód lefordítását és a többi fejlesztõeszköz használatát. Eközben a többi felhasználót felosztjuk további csoportokba, például tesztelõkre és tervezõkre, vagy meghagyjuk ezeket átlagos felhasználóknak, akik csak olvasási joggal rendelkeznek.
+
+A megvalósított biztonsági modell természetébõl fakadóan egy kevésbé sértetlenebb alany nem írhatja a sokkal sértetlenebb alanyokat, a sokkal sértetlenebb alanyok pedig nem érhetik el vagy olvashatják a kevésbé sértetlen objektumokat. A lehetõ legkisebb osztályú címke beállításával gyakorlatilag elérhetetlenné teszük az alanyok számára. A modult valószínûleg egy korlátozott webszerver, fejlesztõi- és tesztgépek vagy forráskód tárolására szánt környezetben érdemes bevetni. Annál esélytelenebb a használata viszont egy munkaállomás, útválasztó vagy hálózati tûzfal esetében.
+
+[[mac-lomac]]
+== A LOMAC MAC-modul
+
+A modul neve: [.filename]#mac_lomac.ko#
+
+A rendszermag konfigurációs beállítása: `options MAC_LOMAC`
+
+Rendszerindítás beállítás: `mac_lomac_load="YES"`
+
+Eltérõen a MAC Biba házirendjétõl, a man:mac_lomac[4] egyedül csak azután engedi elérni az kevésbé sértetlenebb objektumokat, miután csökkentjük a sértetlenség szintjét és ezzel betartjuk a sértetlenségre vonatkozó szabályokat.
+
+A gyenge vízjeles sértetlenségi házirend MAC alapú változatát nem szabad összetéveszteni a korábbi man:lomac[4] implementációval, amely majdnem ugyanúgy mûködik, mint a Biba, azzal az a kivétellel, hogy a lebegõ címkékkel támogatjuk az alanyok lefokozását egy kisegítõ osztály rekeszén keresztül. Ez a másodlagos rekesz `[kisegítõ_osztály]` alakú. Tehát amikor egy kisegítõ osztállyal adjuk meg a lomac házirendet, valahogy így néz ki: `lomac/10[2]`, ahol a kettes (2) szám ez a kisegítésre használt osztály.
+
+A MAC LOMAC házirendje az összes rendszerszintû objektum esetében jelenlevõ sértetlenségi címkézésen alapszik, megengedve az alanyok számára, hogy az kevésbé sértetlen objektumokat olvasni tudják, majd a címke leminõsítésével az alany meg tudja akadályozni a sokkal sértetlenebbnek ítélt objektumok jövõbeni írását. Ez az a fentebb tárgyalt `[kisegítõ_osztály]` opció, ezért ez a modul a Bibáénál több kompatibilitást és kevesebb kezdeti beállítást igényel.
+
+=== Példák
+
+Hasonlóan a Biba és MLS házirendeknél megszokottakhoz, a `setfmac` és `setpmac` segédprogramok használhatóak a címkék hozzárendeléséhez:
+
+[source,bash]
+....
+# setfmac /usr/home/trhodes lomac/high[low]
+# getfmac /usr/home/trhodes lomac/high[low]
+....
+
+Itt a kisegítõ osztály a `low`. Ezt csak a LOMAC MAC-házirendnél adhatjuk meg.
+
+[[mac-implementing]]
+== A Nagios elzárása a MAC rendszerrel
+
+A most következõ bemutatóban a MAC moduljainak és a megfelelõen beállított házirendek használatával fogunk kialakítani egy biztonságos környezetet. Ne feledjük azonban, hogy ez csupán egy ártatlan próba és nem pedig a mindenki biztonsági aggályait kielégítõ legvégsõ megoldás. Ha egy házirendet vakon építünk fel és nem értjük meg a mûködését, az soha nem válik hasznunkra, és egy éles helyzetben katasztrofális hatással járhat.
+
+A folyamat megkezdése elõtt be kell állítanunk a `multilabel` opciót mindegyik állományrendszerre, a fejezet elején leírtaknak megfelelõen. Ha ezt a lépést kihagyjuk, akkor hibákat kapunk. Továbbá még az elõkészület részeként ne felejtsünk el gondoskodni a package:net-mngt/nagios-plugins[], package:net-mngt/nagios[] és package:www/apache13[] portok telepítésérõl, beállításáról és megfelelõ mûködésérõl sem.
+
+=== A nem megbízható felhasználók osztályának létrehozása
+
+Az eljárást kezdjük az alábbi (insecure) felhasználói osztály hozzáadásával az [.filename]#/etc/login.conf# állományban:
+
+[.programlisting]
+....
+insecure:\
+:copyright=/etc/COPYRIGHT:\
+:welcome=/etc/motd:\
+:setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+:path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+:manpath=/usr/shared/man /usr/local/man:\
+:nologin=/usr/sbin/nologin:\
+:cputime=1h30m:\
+:datasize=8M:\
+:vmemoryuse=100M:\
+:stacksize=2M:\
+:memorylocked=4M:\
+:memoryuse=8M:\
+:filesize=8M:\
+:coredumpsize=8M:\
+:openfiles=24:\
+:maxproc=32:\
+:priority=0:\
+:requirehome:\
+:passwordtime=91d:\
+:umask=022:\
+:ignoretime@:\
+:label=biba/10(10-10):
+....
+
+Valamint egészítsük ki az alapértelmezett (default) felhasználói osztályt a következõ sorral:
+
+[.programlisting]
+....
+:label=biba/high:
+....
+
+Ahogy ezzel elkészültünk, az hozzá tartozó adatbázis újbóli legyártásához a következõ parancsot kell kiadnunk:
+
+[source,bash]
+....
+# cap_mkdb /etc/login.conf
+....
+
+=== A rendszerindítással kapcsolatos beállítások
+
+Még ne indítsuk újra a számítógépet, csupán a szükséges modulok betöltéséhez bõvítsük ki a [.filename]#/boot/loader.conf# állományt az alábbi sorokkal:
+
+[.programlisting]
+....
+mac_biba_load="YES"
+mac_seeotheruids_load="YES"
+....
+
+=== A felhasználók beállítása
+
+Soroljuk be a `root` felhasználót a `default` osztályba:
+
+[source,bash]
+....
+# pw usermod root -L default
+....
+
+Az összes `root` felhasználón kívüli hozzáférésnek vagy rendszerfelhasználónak most kelleni fog egy bejelentkezési osztály. A bejelentkezési osztályra egyébként is szükség lesz, mert ennek hiányában a felhasználók még az olyan egyszerû parancsokat sem tudják kiadni, mint például a man:vi[1]. A következõ `sh` szkript nekünk erre pontosan megfelel:
+
+[source,bash]
+....
+# for x in `awk -F: '($3 >= 1001) && ($3 != 65534) { print $1 }' \
+	/etc/passwd`; do pw usermod $x -L default; done;
+....
+
+Helyezzük át a `nagios` és `www` felhasználókat az insecure osztályba:
+
+[source,bash]
+....
+# pw usermod nagios -L insecure
+....
+
+[source,bash]
+....
+# pw usermod www -L insecure
+....
+
+=== A [.filename]#contexts# állomány létrehozása
+
+Most csinálnunk kell egy [.filename]#contexts# állományt. Ebben példában az [.filename]#/etc/policy.contexts# állományt használjuk.
+
+[.programlisting]
+....
+# Ez a rendszer alapértelmezett BIBA házirendje.
+
+# Rendszer:
+/var/run                        biba/equal
+/var/run/*                      biba/equal
+
+/dev                            biba/equal
+/dev/*                          biba/equal
+
+/var				biba/equal
+/var/spool                      biba/equal
+/var/spool/*                    biba/equal
+
+/var/log                        biba/equal
+/var/log/*                      biba/equal
+
+/tmp				biba/equal
+/tmp/*				biba/equal
+/var/tmp			biba/equal
+/var/tmp/*			biba/equal
+
+/var/spool/mqueue		biba/equal
+/var/spool/clientmqueue		biba/equal
+
+# Nagios:
+/usr/local/etc/nagios
+/usr/local/etc/nagios/*         biba/10
+
+/var/spool/nagios               biba/10
+/var/spool/nagios/*             biba/10
+
+# Apache:
+/usr/local/etc/apache           biba/10
+/usr/local/etc/apache/*         biba/10
+....
+
+Ezzel a házirenddel az információ áramlását szabályozzuk. Ebben a konkrét konfigurációban a felhasználók, a `root` és társai, nem férhetnek hozzá a Nagioshoz. A Nagios beállításait tároló állományok és a neve alatt futó programok így teljesen különválnak vagyis elzáródnak a rendszer többi részétõl.
+
+Ez az iménti állomány a következõ parancs hatására kerül be a rendszerünkbe:
+
+[source,bash]
+....
+# setfsmac -ef /etc/policy.contexts /
+# setfsmac -ef /etc/policy.contexts /
+....
+
+[NOTE]
+====
+A fenti állományrendszer felépítése a környezettõl függõen eltérhet, habár ezt minden egyes állományrendszeren le kell futtatni.
+====
+
+Az [.filename]#/etc/mac.conf# állományt törzsét a következõképpen kell még átírnunk:
+
+[.programlisting]
+....
+default_labels file ?biba
+default_labels ifnet ?biba
+default_labels process ?biba
+default_labels socket ?biba
+....
+
+=== A hálózat engedélyezése
+
+Tegyük hozzá a következõ sort az [.filename]#/boot/loader.conf# állományhoz:
+
+[.programlisting]
+....
+security.mac.biba.trust_all_interfaces=1
+....
+
+Ezt az alábbi beállítást pedig szúrjuk be az [.filename]#rc.conf# állományba a hálózati kártya konfigurációjához. Amennyiben az internetet DHCP segítségével érjük el, ezt a beállítást manuálisan kell megtenni minden rendszerindítás alkalmával:
+
+[.programlisting]
+....
+maclabel biba/equal
+....
+
+=== A konfiguráció kipróbálása
+
+Gondoskodjunk róla, hogy a webszerver és a Nagios nem fog elindulni a rendszer indításakor, majd indítsuk újra a gépet. Ezenkívül még ellenõrizzük, hogy a `root` ne tudjon hozzáférni a Nagios beállításait tartalmazó könyvtárhoz. Ha a `root` képes kiadni egy man:ls[1] parancsot a [.filename]#/var/spool/nagios# könyvtárra, akkor valamit elronthattunk. Normális esetben egy `permission denied` üzenetet kell kapnunk.
+
+Ha minden jónak tûnik, akkor a Nagios, Apache és Sendmail most már elindítható a biztonsági házirend szabályozásai szerint. Ezt a következõ parancsokkal tehetjük meg:
+
+[source,bash]
+....
+# cd /etc/mail && make stop && \
+setpmac biba/equal make start && setpmac biba/10\(10-10\) apachectl start && \
+setpmac biba/10\(10-10\) /usr/local/etc/rc.d/nagios.sh forcestart
+....
+
+Kétszer is ellenõrizzük, hogy minden a megfelelõ módon viselkedik-e. Ha valamilyen furcsaságot tapasztalunk, akkor nézzük át a naplókat vagy a hibaüzeneteket. A man:sysctl[8] használatával tiltsuk le a man:mac_biba[4] biztonsági modult és próbáljunk meg mindent a szokott módon újraindítani.
+
+[NOTE]
+====
+A `root` felhasználó különösebb aggodalom nélkül képes megváltoztatni a biztonsági rend betartatását és átírni a konfigurációs állományokat. Egy frissen indított parancsértelmezõ számára ezzel a paranccsal tudjuk csökkenteni a biztonsági besorolást:
+
+[source,bash]
+....
+# setpmac biba/10 csh
+....
+
+Ennek kivédésére a felhasználókat a man:login.conf[5] beállításaival le kell korlátozni. Ha a man:setpmac[8] megpróbál a rekesz határain túl futtatni egy parancsot, akkor hibát ad vissza és a parancs nem fut le. Ebben az esetben a `root` felhasználót tegyük a `biba/high(high-high)` értékek közé.
+====
+
+[[mac-userlocked]]
+== A felhasználók korlátozása
+
+Ebben a példában egy viszonylag kicsi, nagyjából mindössze ötven felhasználós, adattárolásra használatos rendszert veszünk alapul. A felhasználók rendelkezhetnek bizonyos bejelentkezési tulajdonságokkal, és nem csak adatokat tudnak tárolni, hanem az erõforrásokhoz is hozzá tudnak férni.
+
+Itt most a man:mac_bsdextended[4] és a man:mac_seeotheruids[4] modulokat vetjük be együttesen, és nem csak a rendszer objektumainak elérését tudjuk megakadályozni, hanem az egyes felhasználók futó programjait is elrejtjük.
+
+A mûveletet kezdjük azzal, hogy a [.filename]#/boot/loader.conf# állományt kibõvítjük a következõ módon:
+
+[.programlisting]
+....
+mac_seeotheruids_load="YES"
+....
+
+A man:mac_bsdextended[4] biztonsági modul az alábbi [.filename]#rc.conf#-változóval hozható mûködésbe:
+
+[.programlisting]
+....
+ugidfw_enable="YES"
+....
+
+A hozzá tartozó alapértelmezett szabálykészlet az [.filename]#/etc/rc.bsdextended# állományban tárolódik, amely pedig a rendszer indítása során töltõdik be. Ezeket némileg módosítanunk kell majd. Mivel a példában szereplõ számítógép csak a felhasználók kiszolgálását hivatott ellátni, az utolsó kettõ kivételével mindent hagyhatunk megjegyzésben. Így kikényszerítjük felhasználók által birtokolt rendszerobjektumok alapértelmezés szerinti betöltését.
+
+Vegyük fel a szükséges felhasználókat a számítógépre és indítsuk újra. Tesztelési célból próbáljunk meg különbözõ felhasználókként bejelentkezni két konzolon. Futassuk le a `ps aux` parancsot, és így meg tudjuk figyelni, hogy mennyire látjuk a többi felhasználót. Amikor megpróbáljuk kiadni a man:ls[1] parancsot a többiek felhasználói könyvtáraira, akkor hibát kell kapnunk.
+
+Ne próbálgassunk a `root` felhasználóval, hacsak a megfelelõ `sysctl` változókban be nem állítottuk az õ hozzáférésének blokkolását is.
+
+[NOTE]
+====
+Amikor felveszük egy felhasználót a rendszerbe, a hozzá tartozó man:mac_bsdextended[4] szabály nem fog szerepelni a szabályrendszerben. A szabályrendszer gyors frissítését úgy tudjuk megoldani, ha a man:kldunload[8] használatával egyszerûen eltávolítjuk a biztonsági modult a memóriából és újratöltjük a man:kldload[8] paranccsal.
+====
+
+[[mac-troubleshoot]]
+== A hibák elhárítása a MAC rendszerben
+
+A fejlesztés fázisában bizonyos normál konfigurációval rendelkezõ felhasználók gondokat jeleztek. Ezeket foglaljuk most itt össze:
+
+=== A `multilabel` beállítás nem adható meg a [.filename]#/# állományrendszerre
+
+A `multilabel` beállítás nem marad meg a rendszerindító ([.filename]#/#) partíciómon!
+
+A tapasztalatok szerint körülbelül minden ötvenedik felhasználó szembesül ezzel a problémával, és mi is találkozunk vele a kezdeti konfigurációk kialakítása során. Ennek az úgynevezett "hibának" a behatóbb tanulmányozása során arra jutottunk, hogy ez többnyire vagy a hibás dokumentálásból vagy a dokumentáció félreértelmezésébõl ered. Független attól, hogy ez mitõl is következett be, a következõ lépések megtételével orvosolhatjuk:
+
+[.procedure]
+====
+. Nyissuk meg az [.filename]#/etc/fstab# állományt és adjuk meg a rendszerindító partíciónak az `ro`, vagyis az írásvédett (read-only) beállítást.
+. Indítsuk újra a gépet egyfelhasználós módban.
+. A `tunefs -l enable` parancsot futtassuk le a [.filename]#/# állományrendszeren.
+. Indítsuk újra a rendszert normál módban.
+. Adjuk ki a `mount -urw`[.filename]#/# parancsot, majd az [.filename]#/etc/fstab# állományban írjuk át a `ro` beállítást az `rw` értékre és megint indítsuk újra a rendszert.
+. Alaposan nézzük át a `mount` parancs kimenetét és gyõzödjünk meg róla, hogy a `multilabel` opció valóban beállítódott a rendszerindító állományrendszerre.
+====
+
+=== A MAC után nem lehet indítani az X11 szervert
+
+Nem indul az X, miután MAC-kel kialakítottunk egy biztonságos környezetet!
+
+Ezt vagy a MAC `partition` házirendje okozza, vagy az egyik címkékeket használó házirend helytelen beállítása. A következõ módon deríthetjük ki az okát:
+
+[.procedure]
+====
+. Figyelmesen olvassuk el a hibaüzenetet: ha a felhasználó az `insecure` osztály tagja, akkor a `partition` házirend lesz a bûnös. Próbáljuk meg a felhasználót visszatenni a `default` osztályba és a `cap_mkdb` paranccsal újragenerálni az adatbázist. Ha ez nem segít a problémán, akkor haladjunk tovább.
+. Alaposan ellenõrizzük a címkékhez tartozó házirendeket. Vizsgáljuk meg, hogy a kérdeses felhasználó esetében a házirendet és az X11 alkalmazást, valamint a [.filename]#/dev# eszközöket tényleg jól állítottuk be.
+. Ha az iméntiek egyik sem oldja meg gondunkat, küldjük el a hibaüzenetet és a környezetünk rövid leírását a a http://www.TrustedBSD.org[TrustedBSD] honlapjáról elérhetõ TrustedBSD levelezési lista vagy a {freebsd-questions} címére.
+====
+
+=== Hiba: man:_secure_path[3] cannot stat [.filename]#.login_conf#
+
+Amikor a rendszerben megpróbálok a `root` felhasználóról átváltani egy másik felhasználóra, a `_secure_path: unable to state .login_conf` hibaüzenet jelenik meg.
+
+Ez az üzenet általában akkor látható, amikor a felhasználó nagyobb értékû címkével rendelkezik annál, mint akivé válni akar. Például vegyük a `joska` nevû felhasználót a rendszerben, aki az alap `biba/low` címkével rendelkezik. A `root` felhasználó, akinek `biba/high` címkéje van, nem láthatja `joska` felhasználói könyvtárát. Ez attól függetlenül megtörténik, hogy a `root` a `su` paranccsal váltott át a `joska` nevû felhasználóra vagy sem. Egy ilyen helyzetben a Biba sértetlenségi modellje nem fogja engedni a `root` felhasználóra számára, hogy láthassa a kevésbé sértetlen objektumokat.
+
+=== A `root` felhasználó nem megy!
+
+A rendszer normál vagy egyfelhasználós módban sem ismeri fel a `root` felhasználót. A `whoami` parancs 0 (nullát) ad vissza és a `su` parancs pedig annyit mond: `who are you?` (`ki vagy?`). Mi történhetett?
+
+Ez csak olyankor történhet, ha a címkézési házirendet nem engedélyezzük, vagy a man:sysctl[8] használatával, vagy pedig a modul eltávolításával. Ha a házirendet letiltjuk vagy ideiglenesen letiltódik, akkor a bejelentkezési tulajdonságokat tároló adatbázist a `label` beállítás eltávolításával kell újrakonfigurálni. A [.filename]#login.conf# állományból ne felejtsük el kivenni az összes `label` beállítást és a `cap_mkdb` paranccsal újragenerálni az adatbázist.
+
+Ilyen akkor is elõfordulhat, amikor a házirend valamilyen módon korlátozza a [.filename]#master.passwd# állomány vagy adatbázis elérhetõségét. Ezt általában az okozza, hogy a rendszergazda az állományt olyan címke alatt módosítja, amely ütközik a rendszerben alkalmazott általános házirenddel. Ebben az esetekben a rendszer próbálja meg beolvasni a felhasználók adatait, azonban mivel közben az állomány új címkét örökölt, nem fér hozzá. Ha a man:sysctl[8] paranccsal letiltjuk a házirendet, minden vissza fog térni a rendes kerékvágásba.

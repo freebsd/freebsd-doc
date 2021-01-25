@@ -1,0 +1,2395 @@
+---
+title: Capitolo 27. Server di rete
+part: Parte IV. Comunicazione di Rete
+prev: books/handbook/mail
+next: books/handbook/firewalls
+---
+
+[[network-servers]]
+= Server di rete
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Indice
+:table-caption: Tabella
+:figure-caption: Figura
+:example-caption: Esempio
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 27
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/network-servers/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/network-servers/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/network-servers/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/it/mailing-lists.adoc[]
+include::shared/it/urls.adoc[]
+
+toc::[]
+
+[[network-servers-synopsis]]
+== Sinossi
+
+Questo capitolo coprirà alcuni dei servizi di rete usati più di frequente sui sistemi UNIX(R). Fra gli argomenti toccati, ci saranno l'installazione, la configurazione, il test ed la manutenzione di molti tipi diversi di servizi di rete. Per vostro beneficio in tutto il capitolo saranno inclusi file di configurazione di esempio.
+
+Dopo aver letto questo capitolo, sarai in grado di:
+
+* Gestire il demone inetd.
+* Installare un file system di rete.
+* Installare un server NIS per condividere account utenti.
+* Installare impostazioni automatiche di rete usando DHCP.
+* Installare un server di risoluzione dei nomi.
+* Installare il server HTTP Apache.
+* Installare un File Transfer Protocol (FTP) Server.
+* Installare un file server e server di stampa per client Windows(R) usando Samba.
+* Sincronizzare la data e l'ora ed installare un time server, col protocollo NTP.
+
+Prima di leggere questo capitolo, dovresti:
+
+* Comprendere le basi dell'organizzazione degli scripts [.filename]#/etc/rc#.
+* Avere familiarità con la terminologia di rete di base.
+* Sapere come installare software aggiuntivo di terze parti (crossref:ports[ports,Installazione delle Applicazioni. Port e Package]).
+
+[[network-inetd]]
+== Il "Super-Server"inetd
+
+[[network-inetd-overview]]
+=== Uno sguardo d'insieme
+
+man:inetd[8] viene talvolta definito l'"Internet Super-Server" perchè gestisce le connessioni verso molti servizi. Quando una connessione viene ricevuta da inetd, questo determina per quale programma la connessione sia destinata, esegue quel particolare processo e affida a lui la socket (il programma è invocato con la socket del servizio come descrittore di standard input, output ed error). Eseguire inetd per server dal carico non troppo alto può ridurre il carico complessivo di sistema, rispetto all'esecuzione individuale di ogni demone in modalità stand-alone.
+
+Principalmente, inetd è usato per lanciare altri demoni, ma molti protocolli triviali sono gestiti direttamente, come ad esempio i protocolli chargen, auth, e daytime.
+
+Questa sezione coprirà le basi della configurazione di inetd attraverso le opzioni da linea di comando ed il suo file di configurazione, [.filename]#/etc/inetd.conf#.
+
+[[network-inetd-settings]]
+=== Impostazioni
+
+inetd viene inizializzato attraverso il sistema man:rc[8]. L'opzione `inetd_enable` è impostata a `NO` di default, ma può essere attivata da sysinstall durante l'installazione, a seconda della configurazione scelta dall'utente. Inserendo:
+
+[.programlisting]
+....
+inetd_enable="YES"
+....
+
+o
+
+[.programlisting]
+....
+inetd_enable="NO"
+....
+
+in [.filename]#/etc/rc.conf# si abiliterà o meno la partenza di inetd al boot. Il comando:
+
+[source,bash]
+....
+# /etc/rc.d/inetd rcvar
+....
+
+può essere utilizzato per mostrare le impostazioni attive al momento.
+
+Inoltre, diverse opzioni di linea di comando possono essere passate a inetd attraverso l'opzione `inetd_flags`.
+
+[[network-inetd-cmdline]]
+=== Opzioni su linea di comando
+
+Come molti server di rete, inetd ha un numero di opzioni che possono essergli passate per modificare il suo comportamento. La lista di tutte le opzioni è:
+
+inetd synopsis:
+
+`inetd [-d] [-l] [-w] [-W] [-c maximum] [-C rate] [-a address | hostname] [-p filename] [-R rate] [configuration file]`
+
+Si possono passare opzioni ad inetd usando l'opzione `inetd_flags` in [.filename]#/etc/rc.conf#. Di default, `inetd_flags` è impostato a `-wW -C 60`, il che attiva il TCP wrapping per i servizi di inetd, ed impedisce ad ogni singolo indirizzo IP di richiedere qualsiasi servizio piùdi 60 volte al minuto.
+
+Gli utenti novizi possono notare con piacere che questi parametri di solito non devono essere modificati, anche se bisogna menzionare il fatto che le opzioni di limitazione delle connessioni sono utili solo se ci si accorge di ricevere un numero eccessivo di connessioni. L'intera lista delle opzioni di man:inetd[8] può essere trovata nel manuale di man:inetd[8].
+
+-c maximum::
+Specifica il numero massimo di invocazioni simultanee per ogni servizio; il default è illimitato. Può essere sovrascritto per ogni servizio dal parametro `max-child`.
+
+-C rate::
+Specifica un numero massimo di volte in cui un servizio può essere invocato da un singolo indirizzo IP in un minuto; il default è illimitato. Può essere sovrascritto per ogni servizio con il parametro `max-connections-per-ip-per-minute`.
+
+-R rate::
+Specifica il numero massimo di volte che un servizio può essere invocato in un minuto; il default è 256. L'impostazione 0 permette un numero illimitato di invocazioni.
+
+-s maximum::
+Specifica il numero massimo di volte che un servizio può essere invocato per ogni periodo di tempo; il default è illimitato. Può essere sovrascritto per ogni singolo servizio con il parametro `max-child-per-ip`. 
+
+[[network-inetd-conf]]
+=== [.filename]#inetd.conf#
+
+La configurazione di inetd è fatta attraverso il file [.filename]#/etc/inetd.conf#.
+
+Quando viene apportata una modifica a [.filename]#/etc/inetd.conf#, si può forzare inetd a rileggere il suo file di configurazione eseguendo il comando:
+
+[[network-inetd-reread]]
+.Ricaricare il file di configurazione di inetd
+[example]
+====
+
+[source,bash]
+....
+# /etc/rc.d/inetd reload
+....
+
+====
+
+Ogni linea del file di configurazione specifica un singolo demone. I commenti nel file sono preceduti da un "#". Il formato di ogni riga del file [.filename]##/etc/inetd.conf## è il seguente:
+
+[.programlisting]
+....
+nome del servizio
+tipo della socket
+protocollo
+{wait|nowait}[/max-child[/max-connections-per-ip-per-minute]]
+utente[:gruppo][/classe-di-login]
+programma-server
+argomenti-del-programma-server
+....
+
+Un esempio di linea per il demone man:ftpd[8] usando l'IPv4:
+
+[.programlisting]
+....
+ftp     stream  tcp     nowait  root /usr/libexec/ftpd       ftpd -l
+....
+
+nome-del-servizio::
+È il nome del servizio per il demone. Deve corrispondere ad un servizio elencato in [.filename]#/etc/services#. Questo determina su quale porta inetd deve restare in ascolto. Se viene creato un nuovo servizio, deve essere messo prima in [.filename]#/etc/services#.
+
+tipo-di-socket::
+Una a scelta fra `stream`, `dgram`, `raw`, o `seqpacket`. `stream` deve essere usata per demoni basati sulla connessione, tipo TCP, mentre `dgram` è usato per demoni che usano il protocollo di trasporto UDP.
+
+protocollo::
+Uno dei seguenti:
++
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Protocollo
+| Spiegazione
+
+|tcp, tcp4
+|TCP IPv4
+
+|udp, udp4
+|UDP IPv4
+
+|tcp6
+|TCP IPv6
+
+|udp6
+|UDP IPv6
+
+|tcp46
+|Entrambi TCP IPv4 e v6
+
+|udp46
+|Entrambi UDP IPv4 e v6
+|===
+{wait|nowait}[/max-child[/max-connections-per-ip-per-minute[/max-child-per-ip]]]::
+`wait|nowait` indica se il demone invocato da inetd è in grado di gestire la sua socket o meno. Il tipo di socket `dgram` deve usare l'opzione `wait`, mentre i demoni con socket stream, che sono in genere multi-thread, devono usare `nowait`. `wait` in genere fornisce socket multiple ad un singolo demone, mentre `nowait` lancia un demone figlio per ogni nuova socket.
++
+Il massimo numero di demoni figli che inetd può lanciare si imposta attraverso l'opzione `max-child`. Se è richiesto un limite di dieci istanze per un particolare demone, un `/10` dovrebbe essere inserito dopo l'opzione `nowait`. Specificando `/0` si lascia un numero illimitato di figli.
++
+Oltre all'opzione `max-child`, possono essere attivate due altre opzioni che limitano il massimo numero di connessioni da un singolo ip verso un particolare demone. `max-connections-per-ip-per-minute` limita il numero di connessioni da un particolare indirizzo IP per minuto, ad esempio un valore di dieci limiterebbe ogni singolo indirizzo IP a connettersi verso un certo servizio a dieci connessioni al minuto. `max-child-per-ip` limita il numero di figli che possono essere avviati su richiesta di un singolo indirizzo IP in ogni momento. Queste opzioni sono utili per prevenire eccessivo consumo delle risorse intenzionale o non intenzionale e attacchi Denial of Service (DoS) ad una macchina.
++
+In questo campo, `wait` o `nowait` sono obbligatorie. `max-child` e `max-connections-per-ip-per-minute` e `max-child-per-ip` sono opzionali.
++
+Un demone tipo-stream multi-thread senza i limiti `max-child` o `max-connections-per-ip-per-minute` dovrebbe essere semplicemente: `nowait`.
++
+Lo stesso demone con un limite massimo di dieci demoni dovrebbe avere: `nowait/10`.
++
+In aggiunta, la stessa impostazione con un limite di venti connessioni per IP al minuto ed un limite massimo di dieci demoni figli avrebbe: `nowait/10/20`.
++
+Queste opzioni sono tutte utilizzate di default nelle impostazioni del demone man:fingerd[8] come si vede di seguito:
++
+[.programlisting]
+....
+finger stream  tcp     nowait/3/10 nobody /usr/libexec/fingerd fingerd -s
+....
++
+Alla fine, un esempio di questo campo con 100 figli in tutto, con un massimo di 5 per singolo indirizzo IP sarebbe: `nowait/100/0/5`.
+
+user::
+Questo è lo username sotto il quale un particolare demone dovrebbe girare. Di frequente, i demoni girano come utente `root`. Per motivi di sicurezza, è normale trovare alcuni server che girano con l'utente `daemon`, o il meno privilegiato utente `nobody`.
+
+server-program::
+Il percorso assoluto del demone che deve essere eseguito quando è ricevuta una connessione . Se il demone è un servizio offerto da inetd internamente, bisogna usare `internal`.
+
+server-program-arguments::
+Questa opzione funziona in congiunzione con `server-program` specificando gli argomenti, cominciando con `argv[0]`, passati al demone al momento dell'invocazione. Se `mydaemon -d` è la linea di comando, `mydaemon -d` sarà il valore dell'opzione `server-program-arguments`. Ancora, se un demone è un servizio interno, usa `internal`.
+
+[[network-inetd-security]]
+=== Sicurezza
+
+A seconda delle scelte fatte all'installazione, molti servizi di inetd potrebbero essere attivi di default. Se non c'è necessità apparente per un particolare demone, considera di disabilitarlo. Usa un "#" a capo della riga del demone in questione in [.filename]##/etc/inetd.conf##, e quindi <<network-inetd-reread,ricarica la configurazione di inetd>>. Alcuni demoni, come fingerd, potrebbero non essere assolutamente desiderati, poichè forniscono all'attaccante informazioni che gli potrebbero risultare utili.
+
+Alcuni demoni non sono stati creati coll'obiettivo della sicurezza ed hanno timeout lunghi, o non esistenti. Questo permette ad un attaccante di inviare lentamente connessioni ad un particolare demone, saturando in questo modo le risorse disponibile. Può essere una buona idea impostare le limitazioni `max-connections-per-ip-per-minute` e `max-child` o `max-child-per-ip` su certi demoni se scopri di avere troppe connessioni.
+
+Di default, il TCP wrapping è attivo. Consulta la pagina del manuale di man:hosts_access[5] per impostare delle restrizioni TCP su certi demoni invocati da inetd.
+
+[[network-inetd-misc]]
+=== Miscellanei
+
+daytime, time, echo, discard, chargen, e auth sono tutti servizi interni di inetd.
+
+Il servizio auth fornisce servizi di rete di identificazione ed è configurabile fino ad un certo punto, mentre gli altri possono solo essere accesi o spenti.
+
+Consulta la paigna di manuale di man:inetd[8] per dettagli più approfonditi.
+
+[[network-nfs]]
+== Network File System (NFS)
+
+Fra i molti differenti file system che FreeBSD supporta c'è il Network File System, conosciuto anche come NFS. NFS permette ad un sistema di condividere directory e file con altri sistemi in rete. Usando NFS, utenti e programmi possono accedere a file su sistemi remoti quasi come se fossero files locali.
+
+Alcuni dei più notevoli benefici che NFS ci fornisce sono:
+
+* Workstation locali usano meno spazio su disco perchè i dati usati in locale possono essere conservati su una singola macchina e restano accessibili agli altri sulla rete.
+* Non c'è bisogno per gli utenti di avere home directory separate su ogni macchina in rete. Le home directory possono essere poste sul server NFS e rese disponibili attraverso la rete.
+* Device di storage come floppy disk, drive CDROM, e drive Zip(R) possono essere usati da altre macchine sulla rete. Questo può ridurre il numero di device di storage rimuovibili sulla rete.
+
+=== Come Funziona NFS
+
+NFS consiste di almeno due parti: un server ed uno o più client. Il client accede da remoto ai dati conservati sulla macchina server. Affinchè questo funzioni, alcuni processi devono essere configurati e devono essere attivi.
+
+Il server deve avere attivi i seguenti demoni:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Demone
+| Descrizione
+
+|nfsd
+|Il demone NFS che serve richieste da client NFS.
+
+|mountd
+|Il demone di mount NFS che serve le richieste che man:nfsd[8] gli passa.
+
+|rpcbind
+| Questo demone permette ai client NFS di scoprire quali porte il server NFS sta usando.
+|===
+
+Il client può anche eseguire un demone, noto come nfsiod. Il demone nfsiod serve le richieste dal server NFS. E' opzionale, aiuta a migliorare le prestazioni ma non è indispensabile per operazioni corrette. Consultare la pagina di manuale di man:nfsiod[8] per più informazioni. 
+
+[[network-configuring-nfs]]
+=== Configurare NFS
+
+La configurazione di NFS è un processo relativamente semplice. I processi che devono essere attivi possono essere tutti avviati al boot della macchina con poche modifiche al tuo file [.filename]#/etc/rc.conf#.
+
+Sul server NFS assicurati che le seguenti opzioni sono configurati nel file [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+rpcbind_enable="YES"
+nfs_server_enable="YES"
+mountd_flags="-r"
+....
+
+mountd viene eseguito automaticamente in caso il server NFS sia abilitato.
+
+Sul client, accertati che questa riga sia attiva nel file [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+nfs_client_enable="YES"
+....
+
+Il file [.filename]#/etc/exports# specifica quali file system NFS dovrebbe esportare (talora chiamate anche "share"). Ogni linea di [.filename]#/etc/exports# specifica un file system che deve essere esportato e quali macchine hanno accesso a quel file system. Assieme alle macchine che hanno accesso a quel file system, possono esserci specificate anche opzioni. Ci sono molte opzioni di questo tipo che possono essere usate in questo file ma solo poche saranno menzionate qui. Puoi facilmente scoprire le altre opzioni leggendo la pagina di manuale di man:exports[5].
+
+Queste sono alcune linee di esempio del file [.filename]#/etc/exports#:
+
+I seguenti esempi danno un'idea di come esportare file system, anche se le impostazioni possono essere diverse a seconda del tuo ambiente e della tua configurazione di rete. Ad esempio, per esportare la directory [.filename]#/cdrom# a tre macchine di esempio che hanno lo stesso nome di dominio del server (da qui la mancanza di nome dominio per ognuno) o hanno delle linee nel vostro file [.filename]#/etc/hosts#. L'opzione `-ro` rende il file system esportato read-only. Con questo flag, il sistema remoto non sarà in grado di scrivere alcun cambiamento sul file system esportato.
+
+[.programlisting]
+....
+/cdrom -ro host1 host2 host3
+....
+
+La seguente linea esporta la directory [.filename]#/home# a tre host identificati da indirizzo IP. E' una impostazione utile in caso tu abbia una rete privata senza un DNS server configurato. Opzionalmente il file [.filename]#/etc/hosts# può essere configurato per hostname interni. Per favore rileggi man:hosts[5] per più informazioni. Il flag `-alldirs` permette alle sottodirectory di fungere da mount point. In altre parole, non monterà le sottodirectory ma permetterà  ai client di montare solo le directory che necessita o di cui ha bisogno.
+
+[.programlisting]
+....
+/home  -alldirs  10.0.0.2 10.0.0.3 10.0.0.4
+....
+
+La linea seguente esporta [.filename]#/a# cosicchè due client da diversi domini possono accedere al file system. L'opzione `-maproot=root` permette all'utente `root` sul sistema remoto di scrivere dati sul file system esportato come utente `root`. Se il flag `-maproot=root` non è specificato, anche se l'utente ha accesso come `root` sul file system remoto, non sarà  in grado di modificare files sul file system esportato.
+
+[.programlisting]
+....
+/a  -maproot=root  host.example.com box.example.org
+....
+
+Affinchè un client abbia accesso ad un file system, questo deve avere permessi adeguati. Assicurati che il client sia elencato nel file [.filename]#/etc/exports#.
+
+In [.filename]#/etc/exports#, ogni linea rappresenta le informazioni per un file system esportato ad un host. Un host remoto può essere specificato solo una volta per file system, e può avere solo una entry di default. Ad esempio, supponi che [.filename]#/usr# sia un singolo file system. Il seguente [.filename]#/etc/exports# sarebbe invalido:
+
+[.programlisting]
+....
+# Invalid when /usr is one file system
+/usr/src   client
+/usr/ports client
+....
+
+Un file system, [.filename]#/usr#, ha due linee che specificano exports verso lo stesso host, `client`. Il formato corretto per questa situazione è:
+
+[.programlisting]
+....
+/usr/src /usr/ports  client
+....
+
+Le proprietà di un file system esportato ad un dato host devono essere tutte su una riga. Linee senza un cliente specificato sono trattate come un singolo host. Questo limita il modo di esportare file system, ma per la maggior parte delle persone non è un problema.
+
+Il seguente è un esempio di valida lista di esportazione, dove [.filename]#/usr# e [.filename]#/exports# [.filename]#/usr# and [.filename]#/exports# sono file system locali:
+
+[.programlisting]
+....
+# Export src and ports to client01 and client02, but
+only
+# client01 has root privileges on it
+/usr/src /usr/ports -maproot=root    client01
+/usr/src /usr/ports               client02
+# The client machines have root and can mount anywhere
+# on /exports. Anyone in the world can mount /exports/obj read-only
+/exports -alldirs -maproot=root      client01 client02
+/exports/obj -ro
+....
+
+Il demone mountd deve essere forzato a rileggere il file [.filename]#/etc/exports# ogni volta che lo modifichi, cosicchè i cambiamenti abbiano effetto. Questo può essere ottenuto inviando un segnale HUP al processo `mountd`:
+
+[source,bash]
+....
+# kill -HUP `cat /var/run/mountd.pid`
+....
+
+o invocando lo script `mountd` man:rc[8] con i parametri appropriati:
+
+[source,bash]
+....
+# /etc/rc.d/mountd onereload
+....
+
+Sei invitato a far riferimento a crossref:config[configtuning-initial,Configurazione Iniziale] per maggiori informazioni sugli script rc.
+
+Alternativamente, un reboot farà  sì che FreeBSD imposti tutto correttamente. Non è necessario tuttavia effettuare un reboot. L'esecuzione del seguente comando da utente `root` dovrebbe avviare tutto.
+
+Sul server NFS:
+
+[source,bash]
+....
+# rpcbind
+# nfsd -u -t -n 4
+# mountd -r
+....
+
+Sul client NFS:
+
+[source,bash]
+....
+# nfsiod -n 4
+....
+
+Ora dovrebbe essere tutto pronto per montare un file system remoto. In questi esempi il nome del server sarà  `server` e quello del client sarà  `client`. Se vuoi solo temporaneamente montare un file system remoto o anche testare la configurazione, basta che esegui un comando come questo come utente `root` sul client:
+
+[source,bash]
+....
+# mount server:/home
+/mnt
+....
+
+Questo monterà  la directory [.filename]#/home# del server sopra [.filename]#/mnt# sul client. Se tutto è impostato correttamente dovresti essere in grado di entrare nella directory [.filename]#/mnt# sul client e vedere tutti i file che sono sul server.
+
+Se vuoi montare automaticamente un file system remoto ogni volta che il computer fa boot, aggiungi il file system al file [.filename]#/etc/fstab#. Questo è un esempio:
+
+[.programlisting]
+....
+server:/home /mnt nfs rw 0 0
+....
+
+La pagina di manuale di man:fstab[5] elenca tutte le possibili opzioni.
+
+=== Locking
+
+Alcune applicazioni (es. mutt) richiedono il lock dei file per operare in modo corretto. In caso di NFS, può essere utilizzato rpc.lockd per il lock dei file. Per abilitarlo, aggiungi la seguente riga al file [.filename]#/etc/rc.conf# sia sul client che sul server (assumendo che il client e server NFS siano già configurati):
+
+[.programlisting]
+....
+rpc_lockd_enable="YES"
+rpc_statd_enable="YES"
+....
+
+Avvia l'applicazione con:
+
+[source,bash]
+....
+# /etc/rc.d/nfslocking start
+....
+
+Se non è richiesto un lock reale tra il server e il client NFS, è possibile dire al client NFS di fare un lock locale passando l'opzione `-L` a man:mount_nfs[8]. Ulteriori dettagli possono essere trovati nella pagina man di man:mount_nfs[8].
+
+=== Usi Pratici
+
+NFS ha molti usi pratici. Alcuni dei più usati sono elencati di seguito:
+
+* Fa sì che alcune macchine condividano un CDROM o un altro media fra di loro. Questo è un metodo più economico e spesso più convieniente di installare software su molte macchine.
+* Su grandi reti, potrebbe essere più conveniente configurare un server NFS centrale in cui conservare tutte le home directory degi utenti. Queste home directory possono essere esportate sulla rete cosicchè gli utenti abbiano sempre la stessa directory, indipendentemente dalla workstation dalla quale effettuino il login.
+* Molte macchine potrebbero avere una directory comune [.filename]#/usr/ports/distfiles#. In questo modo, quando hai bisogno di installare un port su molte macchine, puoi velocemente accedere al sorgente senza scaricarlo su ogni macchina.
+
+[[network-amd]]
+=== Mount automatici con amd
+
+man:amd[8] (il demone di mount automatico) monta automaticamente un file system remoto ogni volta che un file o una directory in quel file system viene acceduto. I file system che sono inattivi per un certo periodo di tempo possono anche essere smontati automaticamente da amd. L'uso di amd fornisce una semplice alternativa a mount permanenti, dato che i mount permanenti sono di solito elencati in [.filename]#/etc/fstab#.
+
+amd opera connettendosi ad un server NFS sulle directory [.filename]#/host# e [.filename]#/net#. Quando si accede ad un file all'interno di una di queste directory, amd fa una ricerca del mount remoto corrispondente e lo monta automaticamente. [.filename]#/net# è usato per montare un file system esportato da un indirizzo IP, mentre [.filename]#/host# è usato per montare un export da un hostname remoto.
+
+Un accesso ad un file in [.filename]#/host/foobar/usr# dovrebbe comunicare a amd di cercare di montare l'export [.filename]#/usr# sull'host `foobar`.
+
+.Montare un export con amd
+[example]
+====
+Puoi osservare i mount disponibili di un host remoto con il comando `showmount`. Ad esempio, per vedere i mounts di un host chiamato `foobar`, puoi usare:
+
+[source,bash]
+....
+% showmount -e foobar
+Exports list on foobar:
+/usr                               10.10.10.0
+/a                                 10.10.10.0
+% cd /host/foobar/usr
+....
+
+====
+
+Come si vede nell'esempio, il comando `showmount` mostra [.filename]#/usr# come un export. Quando si cambia directory in [.filename]#/host/foobar/usr#, amd cerca di risolvere `foobar` e automaticamente monta l'export desiderato.
+
+amd può essere avviato dagli scripts di startup inserendo le seguenti linee in [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+amd_enable="YES"
+....
+
+Inoltre, altri flags personalizzati possono essere ad amd con le opzioni `amd_flags`. Di default, `amd_flags` è impostato a:
+
+[.programlisting]
+....
+amd_flags="-a /.amd_mnt -l syslog /host /etc/amd.map
+/net /etc/amd.map"
+....
+
+Il file [.filename]#/etc/amd.map# definisce le opzioni di default con le quali gli export sono montati. Il file [.filename]#/etc/amd.conf# definisce alcune delle più avanzate caratteristiche di amd.
+
+Consulta le pagine di manuale di man:amd[8] e man:amd.conf[8] per maggiori informazioni.
+
+[[network-nfs-integration]]
+=== Problemi nell'integrazione con altri sistemi
+
+Alcuni adapter Ethernet per sistemi PC hanno limitazioni che possono portare a seri problemi seri di rete, in particolare con NFS. Questa difficoltà  non è specifica a FreeBSD, ma i sistemi FreeBSD ne sono affetti.
+
+I problemi avvengono quasi sempre quando sistemi PC (FreeBSD) sono connessi in rete con workstation ad alta performance, tipo quelli di Silicon Graphics, Inc., e Sun Microsystems, Inc. Il mount NFS funziona, ed alcune operazioni possono avere successo, ma d'improvviso sembra che il server non dia più risposte al client, anche se le richieste da e verso altri sistemi continuano ad essere processate. Questo avviene sul sistema client, sia che il client sia il sistema FreeBSD sia che sia la workstation. Su molti sistemi, non c'è modo di effettuare lo shutdown del client in modo pulito una volta che questo problema si sia manifestato. L'unica soluzione è spesso quella di resettare il client, poichè la situazione NFS non può essere risolta.
+
+Anche se la soluzione "corretta" è usare un adapter Ethernet dalle migliori prestazioni e capacità , c'è un semplice workaround che permetterà  operazioni soddisfacenti. Se il sistem FreeBSD è il _server_, includi le opzioni `-w=1024` al mount dal client. Se il sistema FreeBSD è il _client_, allora monta il file system NFS con l'opzione `-r=1024`. Queste opzioni possono essere specificate usando il quarto campo della linea di [.filename]#fstab# sul client per mount automatici, o usa il parametro `-o` del comando man:mount[8] per mount manuali.
+
+Bisognerebbe notare che c'è un problema diverso, a volte confuso con questo, quando il server NFS ed il client sono su reti diverse. Se è questo il caso, _accertatevi_ che i vostri router indirizzino correttamente l'informazione necessaria su UDP, o non andrai da nessuna parte, indipendentemente da cosa tu stia cercando di fare.
+
+Nei seguenti esempi, `fastws` è il nome host (interfaccia) di una workstation ad alte prestazioni, e `freebox` è il nome host (interfaccia) di un sistema FreeBSD con un adapter Ethernet a basse prestazioni. Inoltre, [.filename]#/sharedfs# sarà  il file system esportato (vedi man:exports[5]), e [.filename]#/project# sarà  il mount point sul client per il file system montato. In tutti i casi, nota che le opzioni `hard` o `soft` e `bg` possono essere utili nella tua applicazione.
+
+Esempi dal sistema FreeBSD (`freebox`) come client da [.filename]#/etc/fstab# su `freebox`:
+
+[.programlisting]
+....
+fastws:/sharedfs /project nfs rw,-r=1024 0 0
+....
+
+Come comando manuale di mount da `freebox`:
+
+[source,bash]
+....
+# mount -t nfs -o -r=1024 fastws:/sharedfs /project
+....
+
+Esempi dal sistema FreeBSD come server in [.filename]#/etc/fstab# su `fastws`:
+
+[.programlisting]
+....
+freebox:/sharedfs /project nfs rw,-w=1024 0 0
+....
+
+Come comando di mount manuale su `fastws`:
+
+[source,bash]
+....
+# mount -t nfs -o -w=1024 freebox:/sharedfs /project
+....
+
+Praticamente ogni Ethernet adapter a 16-bit permetterà  operazioni senza le succitate restrizioni sulla dimensione di lettura e scrittura.
+
+Per chiunque è interessato, ecco cosa succede quando occorre il problema, il che spiega anche perchè sia non riparabile. NFS tipicamente lavora con una dimensione di "block" di 8 K (anche se può creare frammenti di dimensione minore). Dal momento che la massima dimensione dei pacchetti Ethernet è attorno a 1500 bytes, il "block" NFS sarà  diviso in molti pacchetti Ethernet anche se è pur sempre una singola unità  per il codice di più alto livello e deve essere ricevuto, assemblato e _riconosciuto_ come una unità . La workstation ad alta performance può inviare pacchetti che comprendono le unità  NFS una dietro l'altra, l'una vicino all'altra come permette lo standard.i Sulla scheda a minore capacità , gli ultimi pacchetti sovrascrivono i precedenti pacchetti della stessa unità  prima che possano essere trasferiti all'host e l'unità  nella sua interezza non può essere ricostruita o riconosciuta. Come risultato, la workstation andrà  in timeout e cercherà  ancora di ripetere l'operazione, ma cercherà  con la stessa unità  da 8 K, ed il processo sarà  ripetuto ancora, all'infinito.
+
+Mantenendo la dimensione dell'unità  al di sotto della limitazione dei pacchetti Ethernet, ci assicuriamo che ogni completo pacchetto Ethernet ricevuto possa essere ricono sciuto individualmente, evitando così la situazione deadlock.
+
+Sovrascritture possono anche capitare quando una workstation ad alte prestazioni riversi dati verso un sistema PC, ma con la scheda di rete migliore, sovrascritture di questo tipo non sono garantite su "unità " NFS. Quando una sovrascrittura avviene, le unità  affette saranno ritrasmesse, e c'è una buona probabilità  che saranno ricevute, assemblate, e riconosciute.
+
+[[network-nis]]
+== Network Information System (NIS/YP)
+
+=== Cos'è?
+
+NIS, che sta per Network Information Services, fu sviluppato da Sun Microsystems per centralizzare l'amministrazione di sistemi UNIX(R) (in origine SunOS(TM)). Ora in sostanza è diventato uno standard di settore; tutti i sistemi UNIX(R) like (Solaris(TM), HP-UX, AIX(R), Linux, NetBSD, OpenBSD, FreeBSD, etc) supportano NIS.
+
+NIS in precedenza era noto come Yellow Pages, ma per una questione di marchi, Sun ha cambiato il nome. Il vecchio termine (e yp) è ancora si incontra ancora spesso.
+
+E' un sistema client/server basato su RPC che permette ad un gruppo di macchine in un dominio NIS di condividere un insieme comune di file di configurazione. Questo permette ad un amministratore di sistema di installare sistemi client NIS con il minimo di dati di configurazione e di aggiungere, rimuovere o modificare dati di configurazione da una singola macchina.
+
+E' simile al sistema di domini di Windows NT(R); anche se le implementazioni interne dei due sistemi sono del tutto diverse, le funzionalità  base possono essere paragonate.
+
+=== Termini/Processi che Dovresti Conoscere
+
+Ci sono parecchi termini e molti importanti processi utente che incontrerai quando cercherai di implementare NIS su FreeBSD, sia che cerchi di creare un server NIS sia che cerchi di installare un client NIS:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Termine
+| Descrizione
+
+|Nome dominio NIS
+|Un server NIS master e tutti i suoi client (inclusi i suoi server slave) hanno un nome dominio NIS. Analogamente al nome dominio di Windows NT(R), il nome dominio NIS non ha nulla a che fare con il DNS.
+
+|rpcbind
+|Deve essere in esecuzione al fine di abilitare RPC (Remote Procedure Call, un protocollo di rete usato da NIS). Se rpcbind non è attivo, sarà  impossibile portare in esecuzione un server NIS o fungere da client NIS 
+
+|ypbind
+|Esegue il "bind" di un client NIS al suo server. Prenderà  il nome dominio NIS dal sistema, e, usando RPC, si connetterà  al server. ypbind è il fulcro di una comunicazione client-server in ambiente NIS; se ypbind muore su un client, questo non sarà  in grado di accedere il server NIS.
+
+|ypserv
+|Dovrebbe essere in esecuzione solo sui server NIS;è il processo NIS vero e proprio. Se man:ypserv[8] muore, il server non sarà  più in grado di rispondere a richieste NIS (si spera ci sia un server slave per sostituirlo). Ci sono alcune implementazioni di NIS (ma non quello di FreeBSD) che non cerca di ricollegarsi ad un altro server se il server che stava usando muore. Spesso, l'unica cosa che aiuta in questo caso è riavviare il processo server (o anche l'intero server o il processo ypbind sul client).
+
+|rpc.yppasswdd
+|Un altro processo che dovrebbe essere in esecuzione solo sui server master NIS; è un demone che permette a client NIS di cambiare le proprie password NIS. Se questo demone non è attivo, gli utenti dovranno loggarsi al server master NIS e cambiare le proprie password da lì.
+|===
+
+=== Come funziona?
+
+Ci sono tre tipi di host in ambiente NIS: master server, slave server e client. I server fungono da magazzino centralizzato per le informazioni sulla configurazione degli host. I server master mantengono la copia "ufficiale" di queste informazioni, mentre i server slave effettuano il mirror di queste informazioni per ridondanza. I client si affidano al server per ottenere queste informazioni.
+
+Le informazioni in molti file possono essere condivise in questo modo. I file [.filename]#master.passwd# ,[.filename]#group# e [.filename]#hosts# sono in genere condivisi in questo modo via NIS. Qualora un processo su un client necessiti di informazioni che normalmente sarebbero trovate in questi file in locale, fa una query al server NIS a cui è legato.
+
+==== Tipi di macchine
+
+* Un _server master NIS_. Questo server, analogamente a primary domain controller Windows NT(R) , mantiene i file usati da tutti i client NIS. Il file [.filename]#passwd#, il file [.filename]#group#, e vari altri file usati da client NIS vivono sul server master.
++
+[NOTE]
+====
+E' possibile per una macchina agire da master server NIS per più di un dominio NIS. Comunque, questo caso non sarà  coperto in questa introduzione, che presuppone un ambiente NIS relativamente piccolo.
+====
+
+* _NIS slave server_. Analogamente a backup domain controller Windows NT(R), i server slave NIS mantengono copie dei file di dati del server master NIS. I server slave NIS garantiscono la ridondanza che viene richiesta in ambienti importanti. Inoltre aiutano a bilanciare il carico del server master: i client NIS si legano sempre al NIS server che risponde per primo alla loro richiesta, compresi i server slave.
+* _NIS client_. I client NIS, come la maggior parte delle workstation Windows NT(R) , si autenticano nei confronti del NIS server (o del domain controller Windows NT(R) nel caso di workstation Windows NT(R)) per effettuare il login. 
+
+=== Usare NIS/YP
+
+Questa sezione riguarderà  l'installazione di un ambiente di esempio NIS.
+
+==== Il Piano
+
+Supponiamo che tu sia l'amministratore di un piccolo laboratorio universitario. Questo laboratorio, che consiste di 15 macchine FreeBSD, al momento non ha un sistema centralizzato di amministrazione; ogni macchina ha il suo [.filename]#/etc/passwd# e [.filename]#/etc/master.passwd#. Questi file sono tenuti sincronizzati fra di loro attraverso intervento manuale; al momento, quando aggiungi un utente al laboratorio, devi eseguire `adduser` su tutte e 15 le macchine. Chiaramente, questa situazione è provvisoria, così hai deciso di convertire il laboratorio a NIS, usando due delle macchine come server.
+
+Così la configurazione del laboratorio adesso sembra questa:
+
+[.informaltable]
+[cols="1,1,1", frame="none", options="header"]
+|===
+| Nome della macchina
+| Indirizzo IP
+| Ruolo della macchina
+
+|`ellington`
+|`10.0.0.2`
+|NIS master
+
+|`coltrane`
+|`10.0.0.3`
+|NIS slave
+
+|`basie`
+|`10.0.0.4`
+|Workstation della facoltà
+
+|`bird`
+|`10.0.0.5`
+|Macchina client
+
+|`cli[1-11]`
+|`10.0.0.[6-17]`
+|Altre macchine client
+|===
+
+Se stai installando uno schema NIS per la prima volta, è una buona idea riflettere su come affrontarlo. Indipendemente dalla dimensione della rete, ci sono alcune decisioni che devono essere prese.
+
+===== Scegliere un nome dominio NIS
+
+Questo può non essere il "nome dominio" a cui sei abituato. Per la precisione viene chiamato "nome dominio NIS". Quando un client fa il broadcast della sua richiesta per informazioni, include il nome del dominio NIS di cui fa parte. In questo modo molti server su una rete possono distinguere a quale server la richiesta è riferita. Considerate il nome dominio NIS come il nome per un gruppo di host che sono collegati per qualche motivo.
+
+Alcune organizzazioni scelgono di usare il loro nome dominio Internet come nome dominio NIS. Questo non è raccomandabile in quanto può causare confusione quando si cerchi di debuggare problemi di rete. Il nome dominio NIS dovrebbe essere unico all'interno della tua rete ed è utile che sia descrittivo del gruppo di macchine che rappresenta. Per esempio, il dipartimento di Arte della Acme Inc. può essere nel dominio "acme-art". Per questo esempio, si presume tu abbia scelto il nome `test-domain`.
+
+Comunque, alcuni sistemi operativi (principalmente SunOS(TM)) usano il loro nome dominio NIS come loro nome dominio Internet. Se una o più macchine sulla tua rete hanno questa restrizione, tu _devi_ usare il nome dominio Internet come il tuo nome dominio NIS.
+
+===== Requisiti fisici dei server
+
+Ci sono molte cose da tener in mente quando si sceglie quale macchina usare come server NIS. Una delle caratteristiche più sfortunate di NIS è il livello di dipendenza che i client hanno verso il server. Se un client non riesce a contattare il server per il suo dominio NIS, molto spesso la macchina risulta inutilizzabile. La mancanza di informazioni utente e di gruppo fa sì che molti sistemi si blocchino. Tenendo questo in mente dovresti accertati di scegliere una macchina che non sia soggetta a reboot frequenti o una che non sia usata per sviluppo. Il server NIS dovrebbe essere in teoria una macchina stand alone il cui unico scopo di esistenza è essere un server NIS. Se hai una rete non pesantemente trafficata, è accettabile installare il server NIS su una macchina che esegue altri servizi, basta ricordarsi che se il server NIS diventa irrangiungibile, _tutti_ i tuoi client NIS ne saranno affetti in modo negativo.
+
+==== Server NIS
+
+Le copie canoniche di tutte le informazioni NIS sono conservate su una singola macchina chiamata il server master NIS. I database usati per conservare le informazioni sono chiamate mappe NIS. In FreeBSD, queste mappe sono conservate in [.filename]#/var/yp/[nome-dominio]# dove [.filename]#[nome-dominio]# è il nome del dominio NIS che si server. Un singolo server NIS può supportare molti domini al tempo stesso, di conseguenza è possibile avere molte directory di questo tipo, una per ogni dominio supportato. Ogni dominio avrà  il suo insieme indipendente di mappe.
+
+I server NIS master e slave gestiscono tutte le richieste NIS col demone `ypserv`. `ypserv` è responsabile per la ricezione delle richieste in entrata dai client NIS, traducendo il dominio richiesto e il nome mappa ad un percorso verso il file di database e trasmettendo i dati indietro al client.
+
+===== Installare un server master NIS
+
+Installare un server master NIS può essere relativamente semplice, a seconda delle tue necessità . FreeBSD presenta un supporto nativo per NIS. Tutto quello che devi fare è aggiungere le seguenti linee a [.filename]#/etc/rc.conf#, e FreeBSD farà  il resto.
+
+[.procedure]
+====
+[.programlisting]
+....
+nisdomainname="test-domain"
+....
+. Questa linea imposterà  il nome domino NIS a `test-domain` al momento della configurazione di rete (ad esempio dopo il reboot).
++
+[.programlisting]
+....
+nis_server_enable="YES"
+....
+. Questa linea dirà  a FreeBSD di avviare i processi NIS server la prossima volta che la rete è riavviata.
++
+[.programlisting]
+....
+nis_yppasswdd_enable="YES"
+....
+. Questo avvierà  il demone `rpc.yppasswd` che, come accennato prima, permetterà  agli utenti di cambiare la loro password NIS dalle macchine client.
+====
+
+[NOTE]
+====
+A seconda delle tue impostazioni NIS, potresti aver bisogno di aggiungere altre linee. Leggi la <<network-nis-server-is-client, sezione sui NIS server che sono anche NIS client >>, di seguito, per dettagli.
+====
+
+Ora, tutto quello che devi fare è eseguire il comando `/etc/netstart` come super-utente. Questo imposterà  il sistema, usando i valori che hai specificato in [.filename]#/etc/rc.conf#.
+
+===== Inizializzare le mappe NIS
+
+Le _mappe NIS_ sono file di database, che sono conservati nella directory [.filename]#/var/yp#. Sono generati da file di configurazione nella directory [.filename]#/etc# del NIS master, con una eccezione: il file [.filename]#/etc/master.passwd#. C'è un buon motivo per questo, infatti normalmente non vuoi che siano propagate le password a `root` e ad altri account amministrativi a tutti gli altri server nel dominio NIS. Così prima di inizializzare le mappe NIS, dovresti:
+
+[source,bash]
+....
+# cp /etc/master.passwd /var/yp/master.passwd
+# cd /var/yp
+# vi master.passwd
+....
+
+Dovresti rimuovere tutte le linee che riguardano account di sistema (`bin`, `tty`, `kmem`, `games`, etc.), così come altri account che non vuoi siano propagate ai client NIS (per esempio `root` ed ogni altro account con UID 0 (super-utente)).
+
+[NOTE]
+====
+Accertati che il file [.filename]#/var/yp/master.passwd# non sia nè leggibile dal gruppo nè dal resto del mondo (modo 600)! Usa il comando `chmod`, se appropriato.
+====
+
+Quando hai finito, è il momento di inizializzare le mappe NIS! FreeBSD include uno script chiamato `ypinit` che lo fa per te (leggi la sua pagina di manuale per dettagli). Nota che questo script è disponibile sulla maggior parte dei sistemi operativi UNIX(R) ma non su tutti. Su Digital Unix/Compaq Tru64 UNIX è chiamato `ypsetup`. Poichè stiamo generando mappe per un NIS master, passeremo l'opzione `-m` al comando `ypinit`. Per generare le mappe NIS, supponendo che tu abbia già  eseguito i passi di cui sopra, esegui:
+
+[source,bash]
+....
+ellington# ypinit -m test-domain
+Server Type: MASTER Domain: test-domain
+Creating an YP server will require that you answer a few questions.
+Questions will all be asked at the beginning of the procedure.
+Do you want this procedure to quit on non-fatal errors? [y/n: n]
+n
+Ok, please remember to go back and redo manually whatever fails.
+If you don't, something might not work.
+At this point, we have to construct a list of this domains YP servers.
+rod.darktech.org is already known as master server.
+Please continue to add any slave servers, one per line. When you are
+done with the list, type a <control D>.
+master server   :  ellington
+next host to add:  coltrane
+next host to add:  ^D
+The current list of NIS servers looks like this:
+ellington
+coltrane
+Is this correct?  [y/n: y] y
+
+[..output from map generation..]
+
+NIS Map update completed.
+ellington has been setup as an YP master server without any errors.
+....
+
+`ypinit` dovrebbe aver creato [.filename]#/var/yp/Makefile# da [.filename]#/var/yp/Makefile.dist#. Quando creato, questo file assume che tu stia operando su un ambiente NIS a server singolo con solo macchine FreeBSD. Dal momento che `test-domain` ha anche un server slave, devi editare [.filename]#/var/yp/Makefile#:
+
+[source,bash]
+....
+ellington# vi /var/yp/Makefile
+....
+
+Dovresti commentare la linea che dice
+
+[.programlisting]
+....
+NOPUSH = "True"
+....
+
+(se non è già commentata).
+
+===== Impostare un server slave NIS
+
+Impostare un server NIS slave è anche più semplice che impostare il master. Loggati al server slave ed edita il file [.filename]#/etc/rc.conf# esattamente come hai fatto col server master. L'unica differenza è che ora dobbiamo usare l'opzione `-s` quando eseguiamo `ypinit`. L'opzione `-s` richiede che il nome del server NIS sia passato, così la nostra linea di comando assomiglia alla seguente:
+
+[source,bash]
+....
+coltrane# ypinit -s ellington
+test-domain
+
+Server Type: SLAVE Domain: test-domain Master: ellington
+
+Creating an YP server will require that you answer a few questions.
+Questions will all be asked at the beginning of the procedure.
+
+Do you want this procedure to quit on non-fatal errors? [y/n: n]
+n
+
+Ok, please remember to go back and redo manually whatever fails.
+If you don't, something might not work.
+There will be no further questions. The remainder of the procedure
+should take a few minutes, to copy the databases from ellington.
+Transferring netgroup...
+ypxfr: Exiting: Map successfully transferred
+Transferring netgroup.byuser...
+ypxfr: Exiting: Map successfully transferred
+Transferring netgroup.byhost...
+ypxfr: Exiting: Map successfully transferred
+Transferring master.passwd.byuid...
+ypxfr: Exiting: Map successfully transferred
+Transferring passwd.byuid...
+ypxfr: Exiting: Map successfully transferred
+Transferring passwd.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring group.bygid...
+ypxfr: Exiting: Map successfully transferred
+Transferring group.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring services.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring rpc.bynumber...
+ypxfr: Exiting: Map successfully transferred
+Transferring rpc.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring protocols.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring master.passwd.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring networks.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring networks.byaddr...
+ypxfr: Exiting: Map successfully transferred
+Transferring netid.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring hosts.byaddr...
+ypxfr: Exiting: Map successfully transferred
+Transferring protocols.bynumber...
+ypxfr: Exiting: Map successfully transferred
+Transferring ypservers...
+ypxfr: Exiting: Map successfully transferred
+Transferring hosts.byname...
+ypxfr: Exiting: Map successfully transferred
+
+coltrane has been setup as an YP slave server without any errors.
+Don't forget to update map ypservers on ellington.
+....
+
+Ora dovresti avere una directory chiamata [.filename]#/var/yp/test-domain#. Copie delle mappe NIS del master server dovrebbero risiedere in questa directory. Dovresti accertarti che siano aggiornate. La seguente linea di [.filename]#/etc/crontab# sul tuo server slave dovrebbe far ciò:
+
+[.programlisting]
+....
+20      *       *       *       *       root /usr/libexec/ypxfr passwd.byname
+21      *       *       *       *       root   /usr/libexec/ypxfr passwd.byuid
+....
+
+Queste due linee forzano lo slave a sincronizzare le sue mappe con le mappe del server master. Anche se queste entry non sono obbligatorie, dal momento che il server master cerca di assicurarsi che tutte le modifiche alle sue mappe NIS siano comunicate ad i suoi slave e perchè le informazioni sulle password sono vitali per i sistemi che dipendono dal server, è una buona idea forzare gli aggiornamenti. Questo è ancora più importante su reti trafficate dove gli aggiornamenti delle mappe potrebbero non essere completi.
+
+Adesso, esegui il comando `/etc/netstart` anche sullo slave, per avviare il server NIS.
+
+==== Client NIS
+
+Un client NIS stabilisce quello che è chiamato un binding ad un particolare NIS server usando il demone `ypbind`. `ypbind` controlla il dominio di default del sistema (impostato dal comando `domainname`), ed inizia a fare broadcast di richieste RPC sulla rete locale. Queste richieste specificano il nome del dominio per il quale `ypbind` sta cercando di stabilire un binding. Se un server è stato configurato a servire il dominio richiesto, risponderà  a `ypbind`, che registrerà  l'indirizzo del server. Se ci sono molti server disponibili (ad esempio un master e molti slave), `ypbind` userà  l'indirizzo del primo che risponde. Da quel momento in poi, il sistema client dirigerà  tutte le sue richieste NIS a quel server. `ypbind` occasionalmente farà  un "ping" del server per accertarsi che sia su ed attivo. Se non riceve una risposta di uno dei suoi ping in un tempo accettabile, `ypbind` segnerà  il dominio come non connesso e inizierà  di nuovo a fare broadcasting nella speranza di localizzare un altro server.
+
+===== Impostare un client NIS
+
+Impostare una macchina FreeBSD perchè sia un client NIS è abbastanza semplice.
+
+[.procedure]
+====
+. Edita il file [.filename]#/etc/rc.conf# e aggiungi le seguenti linee per impostare il nome dominio NIS ed avviare `ypbind` all'avvio della rete:
++
+[.programlisting]
+....
+nisdomainname="test-domain"
+nis_client_enable="YES"
+....
++
+. Per importare tutte le possibili linee di password dal server NIS, rimuovi tutti gli account utente dal tuo [.filename]#/etc/master.passwd# ed usa `vipw` per aggiungere la seguente linea alla fine del file:
++
+[.programlisting]
+....
++:::::::::
+....
++
+[NOTE]
+======
+Questa linea permetterà  a chiunque con un valido account nella mappa delle password del server NIS di loggarsi sul client. Ci sono molti modi per configurare il tuo client NIS cambiando questa linea. Leggi la <<network-netgroups,sezione sui netgroups>> di seguito per maggiori informazioni. Per letture più dettagliate vedere il libro della O'Reilly `Managing NFS and NIS`.
+======
++
+[NOTE]
+======
+Dovresti tenere almeno un account locale (non importato via NIS) nel tuo file [.filename]#/etc/master.passwd# e questo account dovrebbe essere anche un membro del gruppo `wheel`. Se c'è qualche problema con NIS, questo account può essere usato per loggarsi da remoto, diventare `root` e riparare le cose.
+======
++
+. Per impostare tutte le possibili linee dei gruppi dal server NIS, aggiungi questa linea al tuo file [.filename]#/etc/group#:
++
+[.programlisting]
+....
++:*::
+....
+====
+
+Dopo aver completato questi passi, dovresti essere in grado di eseguire `ypcat passwd` e vedere la mappa delle password del NIS server.
+
+=== Sicurezza di NIS
+
+In generale, ogni utente remoto può eseguire una RPC a man:ypserv[8] ed ottenere i contenuti delle tue mappe NIS, ammesso che l'utente remoto conosca il tuo nome dominio. Per prevenire tali transazioni non autorizzate, man:ypserv[8] supporta una caratteristica chiamata "securenets" che può essere usata per restringere l'accesso ad un dato insieme di host. All'avvio man:ypserv[8] cercherà  di caricare le informazioni delle securenets da un file chiamato [.filename]#/var/yp/securenets#.
+
+[NOTE]
+====
+Questo percorso varia a secondo del percorso specificato con l'opzione `-p`. Questo file contiene linee che consistono di una specificazione della rete e di una maschera di rete separate da spazi vuoti. Le linee che cominciano con "#" sono considerati commenti. Un esempio di file securenets può assomigliare al seguente:
+====
+
+[.programlisting]
+....
+# allow connections from local host -- mandatory
+127.0.0.1     255.255.255.255
+# allow connections from any host
+# on the 192.168.128.0 network
+192.168.128.0 255.255.255.0
+# allow connections from any host
+# between 10.0.0.0 to 10.0.15.255
+# this includes the machines in the testlab
+10.0.0.0      255.255.240.0
+....
+
+Se man:ypserv[8] riceve una richiesta da un indirizzo che coincide con una di queste regole, processerà  la richiesta normalmente. Se l'indirizzo non coincide la richiesta sarà  ignorata ed un messaggio di warning sarà  loggato. Se il file [.filename]#/var/yp/securenets# non esiste, `ypserv` permetterà  connessioni da ogni host.
+
+Il programma `ypserv` ha anche supporto per il pacchetto di Wietse Venema TCP Wrapper. Questo permette all'amministratore di usare i file di configurazione di TCP Wrapper per controlli sull'accesso al posto di [.filename]#/var/yp/securenets#.
+
+[NOTE]
+====
+Pur essendo entrambi questi meccanismi di accesso di controllo abbastanza sicuri, questi, come il test di porta privilegiata, sono vulnerabili agli attacchi "IP spoofing". Tutto il traffico relativo a NIS dovrebbe essere bloccato al firewall.
+
+I server che usano [.filename]#/var/yp/securenets# possono non riuscire a servire client NIS legittimi che abbiano implementazioni TCP/IP obsolete. Alcune di queste implementazioni impostano a zero tutti i bit degli host quando fanno broadcast e/o non riescono a osservare la maschera di sotto-rete quando calcolano l'indirizzo broadcast. Mentre alcuni di questi problemi possono essere corretti cambiando la configurazione del client, altri problemi possono causare il ritiro dei client in questione o l'abbandono di [.filename]#/var/yp/securenets#.
+
+Usando [.filename]#/var/yp/securenets# su un server con una tale obsoleta implementazione del TCP/IP è sicuramente una cattiva idea e causerà  alla perdita della funzionalità  NIS per gran parte della tua rete.
+
+L'uso del pacchetto TCP Wrapper aumenta la latenza del tuo server NIS. Il ritardo addizionale può essere lungo a sufficienza tanto da causare dei timeout in programmi client, specialmente su reti trafficate o con server NIS lenti. Se uno o più client soffre di questi sintomi, dovresti convertire il sistema dei client in questione a server NIS slave e forzarli a non fare il binding a loro stessi.
+====
+
+=== Impedire ad Alcuni Utenti di Loggarsi
+
+Nel nostro laboratorio c'è una macchina `basie` che si suppone sia una workstation solo della facoltà . Non vogliamo togliere questa macchina dal dominio NIS, tuttavia il file [.filename]#passwd# sul server NIS master contiene account che sono sia della facoltà  sia degli studenti. Cosa possiamo fare?
+
+C'è un modo di impedire a specifici utenti di loggarsi ad una macchina, anche se sono presenti nel database NIS. Per farlo, tutto quello che devi fare è aggiungere `-username` alla fine del file [.filename]#/etc/master.passwd# sulla macchina client, dove _username_ è lo username dell'utente di cui vuoi impedire l'accesso. E' meglio fare questo con `vipw` dato che `vipw` farà  un controllo di correttezza dei tuoi cambiamenti a [.filename]#/etc/master.passwd#, e ricostruirà  automaticamente il database delle password quando hai finito di editarlo. Ad esempio, se vogliamo impedire l'accesso all'utente `bill` verso l'host `basie` faremmo:
+
+[source,bash]
+....
+basie# vipw
+[aggiungi -bill alla fine del file, poi esci]
+vipw: rebuilding the database...
+vipw: done
+
+basie# cat /etc/master.passwd
+
+root:[password]:0:0::0:0:The super-user:/root:/bin/csh
+toor:[password]:0:0::0:0:The other super-user:/root:/bin/sh
+daemon:*:1:1::0:0:Owner of many system processes:/root:/sbin/nologin
+operator:*:2:5::0:0:System &:/:/sbin/nologin
+bin:*:3:7::0:0:Binaries Commands and Source,,,:/:/sbin/nologin
+tty:*:4:65533::0:0:Tty Sandbox:/:/sbin/nologin
+kmem:*:5:65533::0:0:KMem Sandbox:/:/sbin/nologin
+games:*:7:13::0:0:Games pseudo-user:/usr/games:/sbin/nologin
+news:*:8:8::0:0:News Subsystem:/:/sbin/nologin
+man:*:9:9::0:0:Mister Man Pages:/usr/shared/man:/sbin/nologin
+bind:*:53:53::0:0:Bind Sandbox:/:/sbin/nologin
+uucp:*:66:66::0:0:UUCP
+pseudo-user:/var/spool/uucppublic:/usr/libexec/uucp/uucico
+xten:*:67:67::0:0:X-10 daemon:/usr/local/xten:/sbin/nologin
+pop:*:68:6::0:0:Post Office Owner:/nonexistent:/sbin/nologin
+nobody:*:65534:65534::0:0:Unprivileged user:/nonexistent:/sbin/nologin
++:::::::::
+-bill
+
+basie#
+....
+
+[[network-netgroups]]
+=== Usare i Netgroups
+
+Il metodo mostrato nella sezione precedente funziona ragionevolmente bene se hai bisogno di regole speciali per un numero molto piccolo di utenti e/o macchine. Su reti più grandi, _certamente_ ti dimenticherai di impedire l'accesso di certi utenti a macchine dal ruolo critico, oppure potresti perfino finire a modificare ogni macchina separatamente, in questo modo perdendo il beneficio centrale di NIS: l'amministrazione _centralizzata_.
+
+La soluzione degli sviluppatori NIS a questo problema è chiamata _netgroups_. Il loro scopo e la loro semantica possono essere paragonate ai normali gruppi utenti usati dal file system UNIX(R). L'unica differenza è la mancanza di un ID numerico e l'abilità  di definire un netgroup che includa sia gruppi utenti che altri netgroup.
+
+I netgroup furono sviluppati per gestire grandi reti complesse con centinaia di utenti e macchine. Da un lato questa è una Buona Cosa se sei obbligato a gestire una simile situazione. Dall'altro, questa complessità  rende praticamente impossibile spiegare i netgroup con esempi relativamente semplici. L'esempio usato nel resto di questa sezione dimostra questo problema.
+
+Assumiamo che la favorevole introduzione di NIS nei tuoi laboratori catturi l'interesse dei tuoi superiori. Il tuo prossimo compito è di estendere il tuo dominio NIS per coprire alcune altre macchine del campo. Le due tabelle contengono i nomi dei nuovi utenti e delle nuove macchine, con una breve descrizione.
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| User Name(s)
+| Description
+
+|`alpha`, `beta`
+|Impiegato normale del dipartimento IT
+
+|`charlie`, `delta`
+|Il nuovo apprendista del dipartimento IT
+
+|`echo`, `foxtrott`, `golf`, ...
+|Impiegato ordinario
+
+|`able`, `baker`, ...
+|Gli interni correnti
+|===
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Machine Name(s)
+| Description
+
+|`war`, `death`, `famine`, `pollution`
+|Il tuoi server più importanti. Solo gli impiegati IT hanno il permesso di loggarsi in queste macchine.
+
+|`pride`, `greed`, `envy`, `wrath`, `lust`, `sloth`
+|Server meno importanti. Tutti i membri del dipartimento IT hanno il permesso di loggarsi a queste macchine.
+
+|`one`, `two`, `three`, `four`, ...
+|Workstation normali. Solo _veri_ impiegati hanno permesso di accedere a queste macchine.
+
+|`trashcan`
+|Una macchina molto vecchia senza alcun dato critico. Anche gli interni hanno permesso di usare questa macchina.
+|===
+
+Se provi ad implementare queste restrizioni bloccando separatamente ogni utente, dovresti aggiungere una linea `-user` ad ogni [.filename]#passwd# per ogni utente che non ha il permesso di loggarsi in quel sistema. Se ti dimentichi anche solo di una linea, potresti essere nei pasticci. Può essere ragionevole fare ciò correttamente durante l'installazione iniziale, comunque _certamente_ ti dimenticherai alla fine di aggiungere le linee per i nuovi utenti durante le operazioni giornaliere. Dopo tutto, Murphy era un ottimista.
+
+Gestire questa situazione con i netgroup offre molti vantaggi. Non c'è bisogno di gestire separatamente ogni utente; basta assegnare un utente ad uno o più netgroup e permettere o impedire il login a tutti i membri del netgroup. Se aggiungi una nuova macchina, dovrai solo definire restrizioni di login per i netgroup. Se un nuovo utente viene aggiunto, dovrai solo aggiungere l'utente ad uno o più netgroup. Questi cambiamenti sono indipendenti l'uno dall'altro: non più "per ogni combinazione di utenti e macchine fai ..."Se la tua installazione NIS è pianificata con attenzione, dovrai solo modificare esattamente un file centrale di configurazione per garantire o negare l'accesso alle macchine.
+
+Il primo passo è l'inizializzazione della mappa NIS netgroup. man:ypinit[8] di FreeBSD non crea questa mappa di default, ma la sua implementazione NIS la supporterà  una volta che è stata creata. Per aggiungere una linea alla mappa, semplicemente usa il comando
+
+[source,bash]
+....
+ellington# vi /var/yp/netgroup
+....
+
+e poi inizia ad aggiungere contenuti. Per i nostri esempi abbiamo bisogno di almeno quattro netgroup: impiegati IT, apprendisti IT, impiegati normali ed interni.
+
+[.programlisting]
+....
+IT_EMP  (,alpha,test-domain)    (,beta,test-domain)
+IT_APP  (,charlie,test-domain)  (,delta,test-domain)
+USERS   (,echo,test-domain)     (,foxtrott,test-domain) \
+        (,golf,test-domain)
+INTERNS (,able,test-domain)     (,baker,test-domain)
+....
+
+`IT_EMP`, `IT_APP` etc. sono i nomi dei netgroup. Ogni gruppo fra parentesi tonde aggiunge uno o più account utente. I tre campi dentro il gruppo sono:
+
+. Il nome degli host dove le seguenti caratteristiche sono valide. Se non specifichi un nome host, la linea è valida per tutti gli host. Se specifichi un nome host, entrerai nel regno dell'oscurità , dell'orrore e della confusione assoluta.
+. Il nome dell'account che appartiene a questo netgroup.
+. Il dominio NIS per l'account. Puoi importare account da altri domini NIS nel tuo netgroup se sei uno di quei ragazzi sfortunati con più di un dominio NIS.
+
+Ognuno di questi campi può contenere wildcards. Leggi man:netgroup[5] per dettagli.
+
+[NOTE]
+====
+Nomi netgroup più lunghi di 8 caratteri non dovrebbero essere usati, specialmente se hai macchine che eseguono altri sistemi operativi all'interno del tuo dominio NIS. I nomi sono case sensitive; usare le lettere maiuscole per il tuo netgroup è un modo semplice per distinguere fra utenti, macchine e nomi di netgroup.
+
+Alcuni client NIS (non FreeBSD) non possono gestire netgroup con un numero troppo grande di linee. Ad esempio, alcune vecchie versioni di SunOS(TM) iniziano ad avere problemi se un netgroup contiene più di 15 _linee_. Puoi superare questo limite creando molti sotto-netgroup con 15 o meno utenti ed un vero netgroup che consiste dei sotto-netgroup:
+
+[.programlisting]
+....
+BIGGRP1  (,joe1,domain)  (,joe2,domain)
+(,joe3,domain) [...]
+BIGGRP2  (,joe16,domain)  (,joe17,domain) [...]
+BIGGRP3  (,joe31,domain)  (,joe32,domain)
+BIGGROUP  BIGGRP1 BIGGRP2 BIGGRP3
+....
+
+Puoi ripetere questo processo se hai bisogno di più di 225 utenti all'interno di un singolo netgroup.
+====
+
+Attivare e distribuire la tua nuova mappa NIS è facile:
+
+[source,bash]
+....
+ellington# cd /var/yp
+ellington# make
+....
+
+Questo genererà  le tre mappe NIS [.filename]#netgroup#, [.filename]#netgroup.byhost# e [.filename]#netgroup.byuser#. Usa man:ypcat[1] per controllare che le tue nuove mappe NIS siano disponibili:
+
+[source,bash]
+....
+ellington% ypcat -k
+netgroup
+ellington% ypcat -k netgroup.byhost
+ellington% ypcat -k
+netgroup.byuser
+....
+
+L'output del tuo primo comando dovrebbe assomigliare a [.filename]#/var/yp/netgroup#. Il secondo comando non produrrà  output se non hai specificato netgroup specifici agli host. Il terzo comando può essere usato per ottenere una lista dei netgroup di un utente.
+
+L'installazione del client è abbastanza semplice. Per configurare il server `war`, devi solo eseguire man:vipw[8] e sostituire la linea
+
+[.programlisting]
+....
++:::::::::
+....
+
+con
+
+[.programlisting]
+....
++@IT_EMP:::::::::
+....
+
+Ora, solo i dati per l'utente definito nel netgroup `IT_EMP` sono importati nel database delle password di `war` e solo questi utenti hanno permesso di accesso.
+
+Sfortunatamente, questa limitazione si applica anche alla funzione della shell `~` ed a tutte le routine che convertono fra nomi utenti e user ID numerici. In altre parole,`cd ~user ` non funzionerà , `ls -l` mostrerà  gli ID numerici invece dello username e `find . -user joe -print` darà  l'errore `No such user`. Per riparare questo, dovrai importare tutte le linee dell'utente _senza permettere a loro di loggarsi sui tuoi server_.
+
+Questo può essere ottenuto aggiungendo un'altra linea a [.filename]#/etc/master.passwd#. Questo dovrebbe contenere:
+
+`+:::::::::/sbin/nologin`, dal significato "Importa tutte le entry ma imposta la shell di login a [.filename]#/sbin/nologin# nelle linee importate". Puoi sostituire ogni campo nella linea `passwd` piazzando un valore di default nel tuo [.filename]#/etc/master.passwd#.
+
+[WARNING]
+====
+
+Accertati che la linea `+:::::::::/sbin/nologin` sia piazzata dopo `+@IT_EMP:::::::::`. Altrimenti tutti gli account utente importati da NIS avranno [.filename]#/sbin/nologin# come loro shell di login.
+====
+
+Dopo questo cambiamento, dovrai solo cambiare una mappa NIS se un nuovo impiegato si unisce al dipartimento IT. Puoi usare un simile approccio per i server meno importanti sostituendo `+:::::::::` nella tua versione locale di [.filename]#/etc/master.passwd# con qualcosa del tipo:
+
+[.programlisting]
+....
++@IT_EMP:::::::::
++@IT_APP:::::::::
++:::::::::/sbin/nologin
+....
+
+Le linee corrispondenti per le workstation normali potrebbero essere:
+
+[.programlisting]
+....
++@IT_EMP:::::::::
++@USERS:::::::::
++:::::::::/sbin/nologin
+....
+
+E tutto sarebbe a posto fino a che non c'è un cambiamento di policy dopo poche settimane: il dipartimento IT inizia ad assumere interni. Gli interni IT hanno permesso di usare le normali workstation ed i server meno importanti; e gli apprendisti IT hanno permesso di loggarsi ai server principali. Aggiungi un nuovo netgroup `IT_INTERN`, aggiungi i nuovi interni IT a questo nuovo netgroup `IT_INTERN`, e inizia a cambiare la configurazione su ogni nuova macchina... Come il vecchio adagio dice:"Errori nella pianificazione centralizzata porta a caos globale".
+
+L'abilità  NIS di creare netgroup da altri netgroup può essere usata per prevenire situazioni come queste. Una possibilità  è la creazione di netgroup basati sul ruolo. Per esempio, potresti creare un netgroup chiamato `BIGSRV` per definire le restrizioni di login per i server importanti, un altro netgroup chiamato `SMALLSRV` per i server meno importanti ed un terzo netgroup chiamato `USERBOX` per le workstation normali. Ognuna di questi netgroup contiene i netgroup che hanno permesso di accesso a queste macchine. Le nuove linee della tua mappa NIS dovrebbero assomigliare a questa:
+
+[.programlisting]
+....
+BIGSRV    IT_EMP  IT_APP
+SMALLSRV  IT_EMP  IT_APP  ITINTERN
+USERBOX   IT_EMP  ITINTERN USERS
+....
+
+Questo metodo di definire restrizioni di login funziona ragionevolmente bene se puoi definire gruppi di macchine con restrizioni identiche. Sfortunatamente questa è l'eccezione, non la regola. La maggior parte del tempo, avrai necessità  di definire restrizioni di login macchina per macchina.
+
+Definizioni di netgroup specifiche per ogni macchina sono l'altra possibilità  per gestire il cambiamento di policy delineato sopra. In questo scenario il [.filename]#/etc/master.passwd# di ogni macchina deve contenere due linee che iniziano con "+". La prima di queste aggiunge un netgroup con l'account che ha il permesso di loggarsi alla macchina, il secondo aggiunge tutti gli altri account con [.filename]#/sbin/nologin# come shell. E' buona norma usare la versione "MAIUSCOLA" del nome macchina come nome del netgroup. In altre parole, le linee dovrebbero assomigliare a questa:
+
+[.programlisting]
+....
++@BOXNAME:::::::::
++:::::::::/sbin/nologin
+....
+
+Una volta che hai completato questo task per tutte le macchine, non dovrai mai più modificare la versione locale di [.filename]#/etc/master.passwd#. Tutti gli ulteriori cambiamenti possono essere gestiti modificando la mappa NIS. Di seguito un esempio di una possibile mappa netgroup per questo scenario con altri vantaggi addizionali:
+
+[.programlisting]
+....
+# Define groups of users first
+IT_EMP    (,alpha,test-domain)    (,beta,test-domain)
+IT_APP    (,charlie,test-domain)  (,delta,test-domain)
+DEPT1     (,echo,test-domain)     (,foxtrott,test-domain)
+DEPT2     (,golf,test-domain)     (,hotel,test-domain)
+DEPT3     (,india,test-domain)    (,juliet,test-domain)
+ITINTERN  (,kilo,test-domain)     (,lima,test-domain)
+D_INTERNS (,able,test-domain)     (,baker,test-domain)
+#
+# Now, define some groups based on roles
+USERS     DEPT1   DEPT2     DEPT3
+BIGSRV    IT_EMP  IT_APP
+SMALLSRV  IT_EMP  IT_APP    ITINTERN
+USERBOX   IT_EMP  ITINTERN  USERS
+#
+# And a groups for a special tasks
+# Allow echo and golf to access our anti-virus-machine
+SECURITY  IT_EMP  (,echo,test-domain)  (,golf,test-domain)
+#
+# machine-based netgroups
+# Our main servers
+WAR       BIGSRV
+FAMINE    BIGSRV
+# User india needs access to this server
+POLLUTION  BIGSRV  (,india,test-domain)
+#
+# This one is really important and needs more access restrictions
+DEATH     IT_EMP
+#
+# The anti-virus-machine mentioned above
+ONE       SECURITY
+#
+# Restrict a machine to a single user
+TWO       (,hotel,test-domain)
+# [...more groups to follow]
+....
+
+Se stai usando qualche tipo di database per gestire i tuoi account utente, dovresti essere in grado di creare la prima parte della mappa con i tuoi tool di report del database. In questo modo, i nuovi utenti avranno accesso automaticamente alle macchine.
+
+Un ultima nota di avvertimento: può non essere sempre consigliabile usare netgroup basati sulle macchine. Se stai per mettere in produzione qualche dozzina o perfino qualche centinaia di macchine identiche per laboratori studente, dovresti usare netgroup basati sul ruolo invece che netgroup basati sulla macchina, per tenere la dimensione della mappa NIS al di sotto di un limite ragionevole.
+
+=== Cose Importanti da Ricordare
+
+Ci sono ancora un paio di cose che dovrai cambiare ora che operi in ambiente NIS.
+
+* Ogni volta che devi aggiungere un utente al laboratorio devi aggiungerlo _solo_ al server master NIS e _devi ricordarti di ricostruire le mappe NIS_. Se ti dimentichi di farlo il nuovo utente non sarà  in grado di loggarsi in alcuna macchina eccetto che sul server NIS master. Per esempio, se abbiamo bisogno di aggiungere un nuovo utente `jsmith` al laboratorio, faremmo:
++
+[source,bash]
+....
+# pw useradd jsmith
+# cd /var/yp
+# make test-domain
+....
++ 
+Puoi anche eseguire `adduser jsmith` invece di `pw useradd jsmith`.
+* _Tieni gli account amministrativi fuori dalle mappe NIS_. Normalmente non vuoi che gli account amministrativ e le password si propaghino a macchine che avranno utenti che non dovrebbero avere accesso a quegli account.
+* _Tieni al sicuro il NIS master e slave, e minimizza il tempo in cui sono giù_. Se qualcuno hackera o semplicemente spegne queste macchine riesce a privare molte persone della possibilità  di loggarsi al laboratorio.
++ 
+Questa è la principale debolezza di ogni sistema centralizzato di amministrazione. Se non proteggi il tuo server NIS, avrai un mucchio di utenti arrabbiati!
+
+=== Compatibilità con NIS v1
+
+ypserv di FreeBSD supporta fino ad un certo punto client NIS v1. L'implementazione di NIS di FreeBSD usa solo il protocollo NIS v2, comunque altre implementazioni includono supporto per il protocollo v1 per compatibilità  all'indietro coi vecchi sistemi. Il demone ypbind fornito con questi sistemi proverà  a stabilire un binding con un server NIS v1 anche se potrebbero non averne mai bisogno (e possono continuare a fare broadcast in ricerca di uno anche dopo che hanno ricevuto risposta da un server v2). Nota che mentre il supporto per i client normali viene garantito, questa versione di ypserv non gestisce richieste di trasferimento di mappe v1; di conseguenza, non può essere usato come master o slave in congiunzione con server NIS più vecchi che supportano solo il protocollo v1. Fortunatamente, probabilmente non ci sono server del genere in uso oggi.
+
+[[network-nis-server-is-client]]
+=== Server NIS che Sono Anche Client
+
+Bisogna prestare molta attenzione quando si esegue ypserv in un dominio multi-server dove le macchine server sono anche client NIS. E' generalmente una buona idea forzare i server ad effettuare il binding a sè stessi piuttosto che permettere loro di effettuare il broadcast delle richieste binding e potenzialmente possono fare il bind una all'altra. Possono risultare strani errori quando un server va giù e gli altri sono dipendenti da lui. Alla fine, tutti i client andranno in timeout e cercheranno di effettuare il bind ad altri server, ma il ritardo di questa operazione può essere considerevole e l'uscita di errore è ancora presente dato che i server possono fare il binding fra di loro di nuovo.
+
+Puoi forzare un host a fare il binding ad un server in particolare usando `ypbind` con l'opzione `-S`. Se non vuoi fare questa azione a mano ogni volta che fai il reboot del tuo server NIS, puoi aggiungere queste linee al tuo [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+nis_client_enable="YES"  # run client stuff as well
+nis_client_flags="-S NIS
+domain,server"
+....
+
+Consulta man:ypbind[8] per ulteriori informazioni.
+
+=== Formato delle Password
+
+Uno dei problemi più comuni in cui la gente incappa quando tenta di implementare NIS è la compatibilità del formato delle password. Se il tuo server NIS usa password criptate con DES, supporterà solo client che usano anche loro DES. Ad esempio, se hai client NIS Solaris(TM) nella rete, dovrai quasi certamente usare password criptate con DES.
+
+Per controllare quale formato il tuo server e client usano, dai un'occhiata a [.filename]#/etc/login.conf#. Se l'host è configurato per usare password criptate DES, la classe `default` conterrà  una linea simile a questa:
+
+[.programlisting]
+....
+default:\
+:passwd_format=des:\
+:copyright=/etc/COPYRIGHT:\
+[Further entries elided]
+....
+
+Altri valori possibili per l'opzione `passwd_format` includono `blf` e `md5` (per password criptate con Blowfish e con MD5, rispettivamente).
+
+Se hai fatto modifiche a [.filename]#/etc/login.conf#, dovrai anche ricostruire il database delle possibilità  di login, il che si ottiene eseguendo il seguente comando come `root`:
+
+[source,bash]
+....
+# cap_mkdb /etc/login.conf
+....
+
+[NOTE]
+====
+Il formato delle password che sono già  in [.filename]#/etc/master.passwd# non sarà  aggiornato finchè un utente cambia la sua password per la prima volta _dopo_ che il database delle possibilità  di login è ricostruito.
+====
+
+Dopodichè per assicurarti che le password siano criptate con il formato che hai scelto, dovresti anche controllare che `crypt_default` in [.filename]#/etc/auth.conf# dia precedenza al formato delle password scelto. Per farlo, inserisci il formato che hai scelto per primo nella lista. Ad esempio, quando usi password criptate DES, la linea dovrebbe essere:
+
+[.programlisting]
+....
+crypt_default  =  des blf md5
+....
+
+Seguendo i passi sopra citati su ognuno dei FreeBSD basati su NIS server e client, puoi star sicuro che tutti siano d'accordo su quale formato delle password sia usato all'interno della rete. Se hai problemi nell'identificazione su un client NIS, questo è un buon punto di partenza per cercare possibili problemi. Ricordati: se vuoi mettere in produzione un server NIS per una rete eterogenea, dovrai probabilmente usare DES su tutti i sistemi poichè questo è il minimo standard comune.
+
+[[network-dhcp]]
+== Configurazione Automatica della Rete (DHCP)
+
+=== Cos'è il DHCP?
+
+DHCP, il Protocollo di Configurazione Host Dinamico, descrive i passi attraverso i quali un sistema si può connettere ad una rete ed ottenere l'informazione necessaria per comunicare attraverso quella rete. Le versioni di FreeBSD prima della 6.0 usano l'implementazione DHCP client (man:dhclient[8]) dell'ISC (Internet Software Consortium). Le ultime versioni usano il `dhclient` di OpenBSD preso da OpenBSD 3.7. Tutte le informazioni specifiche all'implementazione di `dhclient` in questa sede sono riferite all'uso dei client DHCP sia di ISC che di OpenBSD. Il server DHCP è quello incluso nella distribuzione ISC.
+
+=== Cosa Copre Questa Sezione
+
+Questa sezione descrive sia il lato client del sistema DHCP di ISC e di OpenBSD che il lato server del sistema DHCP ISC. Il programma client, `dhclient`, è già integrato con FreeBSD, e la parte server è disponibile nel port package:net/isc-dhcp3-server[]. Le pagine di manuale man:dhclient[8], man:dhcp-options[5], e man:dhclient.conf[5], oltre ai riferimenti elencati oltre, sono risorse utili.
+
+=== Come Funziona
+
+Quando `dhclient`, il client DHCP, viene eseguito sulla macchina client, inizia a fare broadcasting di richieste per informazioni di configurazione. Di default queste richieste sono sulla porta UDP 68. Il server risponde sulla porta UDP 67, dando al client un indirizzo IP ed altre informazioni rilevanti di rete come la netmask, il router ed il DNS server. Tutte queste informazioni arrivano sotto forma di un "rilascio" DHCP e sono valide sono per un certo periodo di tempo (configurato dall'amministratore del server DHCP). In questo modo, gli indirizzi IP bloccati da client che non sono più connessi alla rete possono essere riutilizzati automaticamente.
+
+I client DHCP possono ottenere molti tipi di informazione dal server. Una lista esauriente può essere trovata in man:dhcp-options[5].
+
+=== L'Integrazione con FreeBSD
+
+FreeBSD integra completamente il client DHCP ISC o OpenBSD, `dhclient` (a seconda della versione di FreeBSD utilizzata). Viene fornito supporto al client DHCP sia con l'installazione sia con il sistema base, rendendo inutile il bisogno di una conoscenza dettagliata della configurazione di rete su ogni rete che abbia un server DHCP. `dhclient` è stato incluso in tutte le distribuzioni FreeBSD a partire dalla 3.2.
+
+DHCP è supportato da sysinstall. Quando configuri una interfaccia di rete con sysinstall, la seconda domanda che ti pone è: " Vuoi provare a configurare l'interfaccia via DHCP?". Una risposta affermativa eseguirà `dhclient`, e, se ha successo, riempirà le informazioni di configurazione della rete in automatico.
+
+Ci sono due cose che devi fare per far sì che il tuo sistema usi il DHCP all'avvio:
+
+* Accertati che il device [.filename]#bpf# sia compilato nel tuo kernel. Per fare ciò, aggiungi `device bpf` al tuo file di configurazione del kernel, e ricompilalo. Per maggiori informazioni su come ricompilare i kernel, vedi  crossref:kernelconfig[kernelconfig,Configurazione del Kernel di FreeBSD].
++ 
+Il device [.filename]#bpf# è già parte del kernel [.filename]#GENERIC# che è fornito con FreeBSD, così se non hai un kernel custom, non dovresti aver bisogno di crearne uno al fine di far funzionare il DHCP.
++
+[NOTE]
+====
+Quelli di voi che sono particolarmente attenti alla sicurezza, dovrebbero sapere che il device [.filename]#bpf# è anche il device che permette agli sniffer di pacchetti di funzionare correttamente (anche se devono sempre essere eseguiti come `root`). [.filename]#bpf#_è_ richiesto per l'uso del DHCP, ma se siete molto attenti alla sicurezza, non dovreste probabilmente aggiungere [.filename]#bpf# al vostro kernel in previsione di un uso futuro del DHCP.
+====
+
+* Edita il tuo [.filename]#/etc/rc.conf# per includere la seguente linea:
++
+[.programlisting]
+....
+ifconfig_fxp0="DHCP"
+....
++
+[NOTE]
+====
+Accertati di sostituire `fxp0` con il nome dell'interfaccia che intendi configurare dinamicamente, come descritto in .
+====
++ 
+Se stai usando una locazione diversa per `dhclient`, o se desideri passare flags addizionali a `dhclient` includi anche le linee seguenti (editandole come necessario):
++
+[.programlisting]
+....
+dhcp_program="/sbin/dhclient"
+dhcp_flags=""
+....
+
+Il server DHCP, dhcpd, è incluso come parte del port package:net/isc-dhcp3-server[] nella collezione dei ports. Questo port contiene il server DHCP ISC e la documentazione.
+
+=== Files
+
+* [.filename]#/etc/dhclient.conf#
++ 
+`dhclient` richiede un file di configurazione, [.filename]#/etc/dhclient.conf#. Tipicamente il file contiene solo commenti, essendo i default ragionevolmente corretti. Questo file di configurazione è descritto dalla pagina di manuale man:dhclient.conf[5].
+* [.filename]#/sbin/dhclient#
++ 
+`dhclient` è linkato staticamente e risiede in [.filename]#/sbin#. Le pagine di manuale di man:dhclient[8] danno maggiori informazioni su `dhclient`.
+* [.filename]#/sbin/dhclient-script#
++ 
+`dhclient-script` è lo script di configurazione del client DHCP specifico di FreeBSD. Viene descritto in man:dhclient-script[8] ma non dovrebbe aver bisogno di nessuna modifica utente per funzionare correttamente.
+* [.filename]#/var/db/dhclient.leases#
++ 
+Il client DHCP mantiene un database di validi rilasci in questo file, che viene scritto come un log. man:dhclient.leases[5] ne dàuna descrizione leggermente più estesa.
+
+=== Ulteriori Letture
+
+Il protocollo DHCP è descritto in maniera estesa in http://www.freesoft.org/CIE/RFC/2131/[RFC 2131]. Informazioni aggiuntive sono presenti a questo URL: http://www.dhcp.org/[http://www.dhcp.org/].
+
+[[network-dhcp-server]]
+=== Installare e Configurare un Server DHCP
+
+==== Cosa Copre Questa Sezione
+
+Questa sezione fornisce informazioni su come configurare un sistema FreeBSD che funzioni come un server DHCP usando l'implementazione del server DHCP dell'ISC (Internet Software Consortium).
+
+Il server non viene fornito come parte di FreeBSD, così dovrai installare il port package:net/isc-dhcp3-server[] per fornire questo servizio. Vedi crossref:ports[ports,Installazione delle Applicazioni. Port e Package] per più informazioni su come usare la Collezione dei Port.
+
+==== Installazione del DHCP Server
+
+Per configurare il tuo sistema FreeBSD come un server DHCP, assicurati che il device man:bpf[4] sia compilato nel kernel. Per farlo, aggiungi `device bpf` al file di configurazione del kernel, e ricompilalo. Per maggiori informazioni su come compilare un kernel, vedi  crossref:kernelconfig[kernelconfig,Configurazione del Kernel di FreeBSD].
+
+Il device [.filename]#bpf# è già parte del kernel [.filename]#GENERIC# che viene fornito con FreeBSD, così non hai bisogno di creare un kernel custom per far funzionare il DHCP.
+
+[NOTE]
+====
+Quelli di voi che sono particolarmente attenti alla sicurezza, dovrebbero notare che [.filename]#bpf# è anche il device che permette agli sniffer di pacchetti di funzionare correttamente (anche se tali programmi hanno bisogno di accesso privilegiato). [.filename]#bpf# _è _ richiesto per il funzionamento del DHCP, ma se siete molto attenti alla sicurezza, probabilmente non dovreste includere [.filename]#bpf# nel vostro kernel semplicemente perchè vi aspettate di usare il DHCP in qualche momento.
+====
+
+La prossima cosa che devi fare è editare il file [.filename]#dhcpd.conf# che è stato installato dal port package:net/isc-dhcp3-server[]. Di default, questo sarà [.filename]#/usr/local/etc/dhcpd.conf.sample# e dovresti copiare questo file in [.filename]#/usr/local/etc/dhcpd.conf# prima di procedere con i cambiamenti.
+
+==== Configurare il Server DHCP
+
+[.filename]#dhcpd.conf# è composto di dichiarazioni riguardanti sottoreti ed host, e forse lo si spiega meglio con un esempio:
+
+[.programlisting]
+....
+option domain-name "example.com";<.>
+option domain-name-servers 192.168.4.100;<.>
+option subnet-mask 255.255.255.0;<.>
+
+default-lease-time 3600;<.>
+max-lease-time 86400;<.>
+ddns-update-style none;<.>
+
+subnet 192.168.4.0 netmask 255.255.255.0 {
+  range 192.168.4.129 192.168.4.254;<.>
+  option routers 192.168.4.1;<.>
+}
+
+host mailhost {
+  hardware ethernet 02:03:04:05:06:07;<.>
+  fixed-address mailhost.example.com;<.>
+}
+....
+
+<.> Questa opzione specifica il dominio che verrà servito ai client come il dominio di default di ricerca. Si veda man:resolv.conf[5] per più informazioni.
+
+<.> Questa opzione specifica una lista di server DNS separata da virgole, che i client dovrebbero usare.
+
+<.> La netmask che sarà fornita ai client.
+
+<.> Un client potrebbe richiedere una lunghezza di tempo specifica per la quale il rilascio sarà valido. Altrimenti il server assegnerà un tempo di rilascio con questa durata (in secondi).
+
+<.> Questa è la lunghezza massima di tempo per la quale un server effettuerà un rilascio. Se un client dovesse richiedere un rilascio più lungo, sarà effettuato un rilascio, anche se sarà valido solo per `max-lease-time` secondi.
+
+<.> Questa opzione specifica se il server DHCP dovrà cercare di modificare il DNS quando un rilascio è accettato o liberato. Nella implementazione ISC questa opzione è _richiesta_.
+
+<.> Questo identifica quale indirizzo IP dovrà essere usato nel pool riservato per l'allocazione ad i client. Gli indirizzi IP fra, ed inclusi, quelli dichiarati sono assegnabili agli utenti.
+
+<.> Dichiara il default gateway che sarà assegnato ad i client.
+
+<.> L'indirizzo hardware MAC di un host (cosicchè il server DHCP possa riconoscere un host quando fa una richiesta).
+
+<.> Specifica che all'host dovrebbe sempre essere fornito lo stesso indirizzo IP. Nota che usare un hostname è corretto in questo caso, dato che il DHCP server risolverà l'hostname stesso prima di restituire l'informazione sul rilascio.
+
+Una volta che hai finito di scrivere il tuo [.filename]#dhcpd.conf#, puoi abilitare il server DHCP in [.filename]#/etc/rc.conf#, aggiungendo:
+
+[.programlisting]
+....
+dhcpd_enable="YES"
+dhcpd_ifaces="dc0"
+....
+
+Sostituisci il nome dell'interfaccia `dc0` con l'interfaccia (o le interfacce, separate da spazi) su cui il tuo server DHCP dovrebbe stare in ascolto per le richieste DHCP dei client.
+
+Quindi, puoi procedere ad avviare il server con il seguente comando:
+
+[source,bash]
+....
+# /usr/local/etc/rc.d/isc-dhcpd.sh start
+....
+
+Se hai bisogno di fare altri cambiamenti alla configurazione del server in futuro, è importante notare che l'invio di un segnale `SIGHUP` a dhcpd_non_ fa sì che il file di configurazione sia ricaricato, come avviene con la maggior parte dei demoni. Dovrai inviare un segnale `SIGTERM` per fermare il processo, e poi riavviarlo usando il comando sopracitato.
+
+==== Files
+
+* [.filename]#/usr/local/sbin/dhcpd#
++ 
+dhcpd è linkato staticamente e risiede in [.filename]#/usr/local/sbin#. La pagina di manuale di man:dhcpd[8] installata con il port dà più informazioni su dhcpd.
+* [.filename]#/usr/local/etc/dhcpd.conf#
++ 
+dhcpd richiede un file di configurazione, [.filename]#/usr/local/etc/dhcpd.conf#, prima che possa iniziare a fornire il servizio ai client. Questo file deve contenere tutte le informazioni che devono essere fornite ai client che sono serviti, oltre alle informazioni riguardanti le operazioni del server. Questo file di configurazione è descritto dalla pagina di manuale man:dhcpd.conf[5] installata dal port.
+* [.filename]#/var/db/dhcpd.leases#
++ 
+Il server DHCP mantiene un database dei rilasci che ha effettuato in questo file, che viene scritto come un log. La pagina di manuale man:dhcpd.leases[5], installata dal port ne dà una descrizione leggermente pi` lunga.
+* [.filename]#/usr/local/sbin/dhcrelay#
++ 
+dhcrelay è usata in ambienti avanzati dove un server DHCP reinvia le richieste da un client ad un altro server DHCP su una rete separata. Se hai bisogno di questa funzionalità, installa il port package:net/isc-dhcp3-relay[]. La pagina di manuale man:dhcrelay[8] fornita col port contiene più dettagli.
+
+[[network-dns]]
+== Domain Name System (DNS)
+
+=== Uno sguardo d'insieme
+
+FreeBSD utilizza, di default, una versione di BIND (Berkeley Internet Name Domain), che è la più completa implementazione del protocollo DNS. DNS è il protocollo attraverso il quale nomi sono mappati ad indirizzi IP, e viceversa. Per esempio, una query per `www.FreeBSD.org ` riceverà una replica con l'indirizzo IP del web server del The FreeBSD Project, mentre una query per `ftp.FreeBSD.org` ritornerà l'indirizzo IP della corrispondente macchina FTP. Allo stesso modo, può avvenire l'opposto. Una query per un indirizzo IP può risolvere il suo nome host. Non è necessario avere in esecuzione un name server per fare DNS lookups su un sistema. 
+
+FreeBSD al momento viene distribuito con software DNSBIND9 di default. La nostra installazione fornisce caratteristiche di sicurezza migliorate, un nuovo layout del file system e configurazione man:chroot[8] automatica.
+
+DNS è coordinato su Internet attraverso un sistema alquanto complesso di name server autoritativi, ed altri name server di più piccola scala che ospitano e gestiscono cache di informazioni individuali sui domini.
+
+Al momento corrente, BIND è mantenuto dall'Internet Software Consortium http://www.isc.org/[http://www.isc.org/]. 
+
+=== Terminologia
+
+Per comprendere questo documento, alcuni termini relativi al DNS devono essere capiti.
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Termine
+| Definizione
+
+|Forward DNS
+|La mappa da hostname ad indirizzi IP.
+
+|Origine
+|Si riferisce al dominio coperto in un particolare file di zona.
+
+|named, BIND, name server
+|Nomi comuni per il pacchetto name server BIND all'interno di FreeBSD.
+
+|Risolutore
+|Un processo di sistema attraverso il quale una macchina fa query su un name server per informazioni di zona.
+
+|DNS inverso
+|L'opposto del forward DNS; mappare indirizzi IP su nomi host.
+
+|Zona root
+|L'inizio della gerarchia della zona Internet. Tutte le zone cadono sotto la zona root, analogamente a come tutti i file nel file system cadono sotto la directory root.
+
+|Zona
+|Un dominio individuale, sottodominio, o porzione del DNS amministrato dalla stessa autorità
+|===
+
+Esempi di zone:
+
+* `.` è la zona root
+* `org.` è una zona Top Level Domain (TLD) sotto la zona root
+* `example.org.` è una zona sotto la zona `org.`TLD
+* `1.168.192.in-addr.arpa` è una zona che referenzia tutti gli indirizzi IP che cadono sotto lo spazio IP`192.168.1.*`. 
+
+Come si può vedere, la parte più specifica di un nome host appare a sinistra. Per esempio `example.org.` è più specifico di `org.`, come `org.` è più specifico della zona root. La disposizione di ogni parte di un nome host è analoga ad un file system: la directory [.filename]#/dev# cade all'interno della root, e così via.
+
+=== Ragioni per Avere in Esecuzione un Name Server
+
+Attualmente vengono usati due tipi di name server: un name server autoritativo, ed un name server cache.
+
+Un name server autoritativo è necessario quando:
+
+* uno vuole servire informazioni DNS a tutto il mondo, rispondendo in maniera autoritativa alle query.
+* un dominio, tipo `example.org`, è registrato e gli indirizzi IP devono essere assegnati ad hostname sotto questo.
+* un blocco di indirizzi IP richiede entry di DNS inverso (da IP ad hostname).
+* un name server di backup, chiamato uno slave, deve rispondere alle query.
+
+Un name server cache è necessario quando:
+
+* un server locale DNS può tenere in cache e rispondere più velocemente rispetto ad effettuare query ad un name server all'esterno.
+* una riduzione nel traffico complessivo di rete è desiderato (è stato calcolato che il traffico DNS conta più del 5% sul traffico totale di Internet).
+
+Quando uno fa una query per risolvere `www.FreeBSD.org`, il risolutore di solito fa una query al name server dell'ISP a cui si è connessi, ed ottiene una risposta. Con un server DNS locale, che fa cache, la query deve essere effettuata una volta sola dal server DNS che fa cache. Ogni query aggiuntiva non dovrà cercare all'esterno della rete locale, dato che l'informazione è tenuta in cache localmente.
+
+=== Come Funziona
+
+In FreeBSD, il demone BIND è chiamato named per ovvie ragioni.
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| File
+| Descrizione
+
+|man:named[8]
+|Il demone BIND.
+
+|man:rndc[8]
+|Programma di controllo del name server.
+
+|[.filename]#/etc/namedb#
+|Directory dove risiedono le informazioni di zona di BIND.
+
+|[.filename]#/etc/namedb/named.conf#
+|File di configurazione del demone.
+|===
+
+A seconda di come certe zone sono configurate sul server, i file relativi a quelle zone possono essere trovate nelle sottodirectory [.filename]#master#, [.filename]#slave#, or [.filename]#dynamic# della directory [.filename]#/etc/namedb#. Questi file contengono le informazioni DNS che saranno distribuite dal name server in risposta alle query.
+
+=== Avviare BIND
+
+Dato che BIND è installato di default, configurarlo è relativamente semplice.
+
+La configurazione di default di named è quella di un name server basilare, eseguito in ambiente man:chroot[8]. Per avviare il server una volta con questa configurazione, usa il seguente comando:
+
+[source,bash]
+....
+# /etc/rc.d/named forcestart
+....
+
+Per assicurarsi che il demone named sia avviato alla partenza, metti la seguente riga in [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+named_enable="YES"
+....
+
+Ci sono ovviamente molte opzioni di configurazione per [.filename]#/etc/namedb/named.conf# che sono al di là dello scopo di questo documento. Comunque, se siete interessati nelle opzioni di avvio per named su FreeBSD, dai un'occhiata ai flags `named_` in [.filename]#/etc/defaults/rc.conf# e consulta la pagina di manuale man:rc.conf[5]. Anche la sezione crossref:config[configtuning-initial,Configurazione Iniziale] è una buona base di partenza.
+
+=== File di Configurazione
+
+I file di configurazione per named al corrente risiedono nella directory [.filename]#/etc/named# e necessiteranno di modifiche prima dell'uso, a meno che non si voglia un semplice resolver. Qui è dove la maggior pare della configurazione viene effettuata.
+
+==== Usando `make-localhost`
+
+Per configurare una zona master per il localhost visita la directory [.filename]#/etc/namedb# ed esegui il seguente comando:
+
+[source,bash]
+....
+# sh make-localhost
+....
+
+Se tutto è andato bene, un nuovo file dovrebbe esistere nella sottodirectory [.filename]#master#. I nomi dei file dovrebbero essere [.filename]#localhost.rev# per il local domain name e [.filename]#localhost-v6.rev# per le configurazioni IPv6. Come il file di configurazione di default, l'informazione richiesta sarà presente nel file [.filename]#named.conf#. 
+
+==== [.filename]#/etc/namedb/named.conf#
+
+[.programlisting]
+....
+// $FreeBSD$
+//
+// Refer to the named.conf(5) and named(8) man pages, and the documentation
+// in /usr/shared/doc/bind9 for more details.
+//
+// If you are going to set up an authoritative server, make sure you
+// understand the hairy details of how DNS works.  Even with
+// simple mistakes, you can break connectivity for affected parties,
+// or cause huge amounts of useless Internet traffic.
+
+options {
+  directory "/etc/namedb";
+  pid-file  "/var/run/named/pid";
+  dump-file "/var/dump/named_dump.db";
+  statistics-file "/var/stats/named.stats";
+
+// If named is being used only as a local resolver, this is a safe default.
+// For named to be accessible to the network, comment this option, specify
+// the proper IP address, or delete this option.
+  listen-on { 127.0.0.1; };
+
+// If you have IPv6 enabled on this system, uncomment this option for
+// use as a local resolver.  To give access to the network, specify
+// an IPv6 address, or the keyword "any".
+//  listen-on-v6  { ::1; };
+
+// In addition to the "forwarders" clause, you can force your name
+// server to never initiate queries of its own, but always ask its
+// forwarders only, by enabling the following line:
+//
+//  forward only;
+
+// If you've got a DNS server around at your upstream provider, enter
+// its IP address here, and enable the line below.  This will make you
+// benefit from its cache, thus reduce overall DNS traffic in the Internet.
+/*
+  forwarders {
+    127.0.0.1;
+  };
+*/
+....
+
+Proprio come dicono i commenti, per beneficiare di una cache di un server superiore, può essere abilitato `forwarders`. Sotto circostanze normali, un name server farà query ricorsive attraverso Internet cercando certi name server fino a chè non trova la risposta che sta cercando. Averlo abilitato farà sì che sarà fatta prima una query verso il name server superiore (o il name server fornito), avvantaggiandosi della sua cache. Se il name server superiore è un name server molto trafficato e veloce, può valere la pena di abilitarlo.
+
+[WARNING]
+====
+
+`127.0.0.1` _non_ funzionerà qui. Cambia questo indirizzo IP in un name server superiore.
+====
+
+[.programlisting]
+....
+  /*
+   * If there is a firewall between you and nameservers you want
+   * to talk to, you might need to uncomment the query-source
+   * directive below.  Previous versions of BIND always asked
+   * questions using port 53, but BIND versions 8 and later
+   * use a pseudo-random unprivileged UDP port by default.
+   */
+   // query-source address * port 53;
+};
+
+// If you enable a local name server, don't forget to enter 127.0.0.1
+// first in your /etc/resolv.conf so this server will be queried.
+// Also, make sure to enable it in /etc/rc.conf.
+
+zone "." {
+  type hint;
+  file "named.root";
+};
+
+zone "0.0.127.IN-ADDR.ARPA" {
+  type master;
+  file "master/localhost.rev";
+};
+
+// RFC 3152
+zone "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.IP6.ARPA" {
+  type master;
+  file "master/localhost-v6.rev";
+};
+
+// NB: Do not use the IP addresses below, they are faked, and only
+// serve demonstration/documentation purposes!
+//
+// Example slave zone config entries.  It can be convenient to become
+// a slave at least for the zone your own domain is in.  Ask
+// your network administrator for the IP address of the responsible
+// primary.
+//
+// Never forget to include the reverse lookup (IN-ADDR.ARPA) zone!
+// (This is named after the first bytes of the IP address, in reverse
+// order, with ".IN-ADDR.ARPA" appended.)
+//
+// Before starting to set up a primary zone, make sure you fully
+// understand how DNS and BIND works.  There are sometimes
+// non-obvious pitfalls.  Setting up a slave zone is simpler.
+//
+// NB: Don't blindly enable the examples below. :-)  Use actual names
+// and addresses instead.
+
+/* An example master zone
+zone "example.net" {
+  type master;
+  file "master/example.net";
+};
+*/
+
+/* An example dynamic zone
+key "exampleorgkey" {
+  algorithm hmac-md5;
+  secret "sf87HJqjkqh8ac87a02lla==";
+};
+
+zone "example.org" {
+  type master;
+  allow-update {
+    key "exampleorgkey";
+  };
+  file "dynamic/example.org";
+};
+*/
+
+/* Examples of forward and reverse slave zones
+zone "example.com" {
+  type slave;
+  file "slave/example.com";
+  masters {
+    192.168.1.1;
+  };
+};
+zone "1.168.192.in-addr.arpa" {
+  type slave;
+  file "slave/1.168.192.in-addr.arpa";
+  masters {
+    192.168.1.1;
+  };
+};
+*/
+....
+
+In [.filename]#named.conf#, ci sono esempi di linee slave per zone di forward ed inverse.
+
+Per ogni nuova zona servita, una nuova linea di zona deve essere aggiunta a [.filename]#named.conf#.
+
+Per esempio, la più semplice entry per `example.org` può assomigliare a:
+
+[.programlisting]
+....
+zone "example.org" {
+   type master;
+   file "master/example.org";
+};
+....
+
+La zona è una master, come indicato dall'entry `type`, e conserva le informazioni di zona su [.filename]#/etc/namedb/master/example.org# indicata dalla entry `file`.
+
+[.programlisting]
+....
+zone "example.org" {
+   type slave;
+   file "slave/example.org";
+};
+....
+
+Nel caso slave, l'informazione di zona è trasferita dal name server master per quella zona particolare, e salvata nel file specificato. Se e quando il master muore o è irraggiungibile, il name server slave avrà le informazioni di zona trasferite e sarà in grado di servirlo.
+
+==== File di Zona
+
+Un esempio di file di zona master per `example.org` (che esiste all'interno di [.filename]#/etc/namedb/master/example.org#) è la seguente:
+
+[.programlisting]
+....
+$TTL 3600        ; 1 hour
+example.org.    IN      SOA      ns1.example.org. admin.example.org. (
+                                2006051501      ; Serial
+                                10800           ; Refresh
+                                3600            ; Retry
+                                604800          ; Expire
+                                86400           ; Minimum TTL
+                        )
+
+; DNS Servers
+                IN      NS      ns1.example.org.
+                IN      NS      ns2.example.org.
+
+; MX Records
+                IN      MX 10   mx.example.org.
+                IN      MX 20   mail.example.org.
+
+                IN      A       192.168.1.1
+
+; Machine Names
+localhost       IN      A       127.0.0.1
+ns1             IN      A       192.168.1.2
+ns2             IN      A       192.168.1.3
+mx              IN      A       192.168.1.4
+mail            IN      A       192.168.1.5
+
+; Aliases
+www             IN      CNAME   @
+....
+
+Nota che ogni hostname che finisce in un "." è un nome esatto, mentre ogni entità senza un "." è referenziato all'origine. Per esempio `www` è trasformato in `www.origin`. Nel nostro file di zone fittizio, la nostra origine è `example.org`, così `www` si trasformerebbe in `www.example.org`.
+
+Il formato di un file di zona è il seguente:
+
+[.programlisting]
+....
+recordname      IN recordtype
+value
+....
+
+I record DNS usati più di frequente:
+
+SOA::
+inizio di una zona di autorità
+
+NS::
+un name server autoritativo
+
+A::
+un indirizzo host
+
+CNAME::
+il nome canonico per un alias
+
+MX::
+mail exchanger
+
+PTR::
+un puntatore a nome di dominio (usato nel DNS inverso)
+
+[.programlisting]
+....
+
+example.org. IN SOA ns1.example.org. admin.example.org. (
+                        2006051501      ; Serial
+                        10800           ; Refresh after 3 hours
+                        3600            ; Retry after 1 hour
+                        604800          ; Expire after 1 week
+                        86400 )         ; Minimum TTL of 1
+day
+....
+
+`example.org.`::
+il nome di dominio, inoltre è l'origine per questo file di zona.
+
+`ns1.example.org.`::
+il name server primario/autoritativo per questa zona.
+
+`admin.example.org.`::
+la persona responsabile per questa zona, un indirizzo email con "@" sostituito. (mailto:admin@example.org[admin@example.org] diventa `admin.example.org`)
+
+`2006051501`::
+il numero di serie del file. Questo deve essere aumentato ogni volta che il file di zona è modificato. Al giorno d'oggi molti amministratori preferiscono un formato `yyyymmddrr` per il numero di serie. `2006051501` significherebbe modificato l'ultima volta il 05/15/2006, l'ultimo `01` essendo la prima volta che il file di zona è stato modificato in questo giorno. Il numero di serie è importante dato che avverte name server slave per una zona quando questa ` modificata.
+
+[.programlisting]
+....
+
+       IN NS           ns1.example.org.
+....
+
+Questa è una linea NS. Ogni name server che replicherà in maniera autoritativa la zona deve avere una di queste linee. Il `@` come visto potrebbe essere stato ` example.org.` Il `@` si traduce nell'origine.
+
+[.programlisting]
+....
+
+localhost       IN      A       127.0.0.1
+ns1             IN      A       192.168.1.2
+ns2             IN      A       192.168.1.3
+mx              IN      A       192.168.1.4
+mail            IN      A       192.168.1.5
+....
+
+Il record A indica un nome macchina. Come visto sopra, `ns1.example.org` risolverebbe in `192.168.1.2`. 
+
+[.programlisting]
+....
+
+                IN      A       192.168.1.1
+....
+
+Questa linea assegna l'indirizzo IP `192.168.1.1` alla corrente origine, in questo caso `example.org`.
+
+[.programlisting]
+....
+
+www             IN CNAME        @
+....
+
+Il record nome canonico è usato per dare alias ad una macchina. Nell'esempio, `www` è tramutato in alias nella macchina "master" che corrisponde al domain name `example.org ` (`192.168.1.1`). CNAME possono essere usati per fornire alias ad hostname o distribuire in round robin un hostname fra molte macchine.
+
+[.programlisting]
+....
+
+               IN MX   10      mail.example.org.
+....
+
+Il record MX ` usato per specificare quali mail server sono responsabili per gestire mail entranti per la zona. `mail.example.org ` è l'hostname del mail server, e 10 è la priorità di quel mail server.
+
+Uno può avere molti mail server, con priorità di 10, 20 e così via. Un mail server che cerca di consegnare una mail a `example.org` proverà prima l'MX con la più alta priorità (il record con il numero di priorita' minimo) poi il secondo, etc., fino a chè la mail non sia consegnata correttamente.
+
+Per file di zona in-addr.arpa (DNS inverso), lo stesso formato è usato, eccetto con linee PTR al posto di A o CNAME.
+
+[.programlisting]
+....
+$TTL 3600
+1.168.192.in-addr.arpa. IN SOA ns1.example.org. admin.example.org. (
+                        2006051501      ; Serial
+                        10800           ; Refresh
+                        3600            ; Retry
+                        604800          ; Expire
+                        3600 )          ; Minimum
+
+        IN      NS      ns1.example.org.
+        IN      NS      ns2.example.org.
+
+1       IN      PTR     example.org.
+2       IN      PTR     ns1.example.org.
+3       IN      PTR     ns2.example.org.
+4       IN      PTR     mx.example.org.
+5       IN      PTR     mail.example.org.
+....
+
+Questo file da la corretta mappa da indirizzi IP ad hostname per il nostro dominio fittizio.
+
+=== Caching Name Server
+
+Un name server caching è un name server che non è autoritativo per nessuna zona. Fa semplicemente query, e ne memorizza le risposte per uso successivo. Per impostarne uno, configura il name server come al solito, omettendo ogni inclusione di zona.
+
+=== Sicurezza
+
+Anche se BIND è la più comune implementazione del DNS, c'è sempre la questione della sicurezza. Talvolta vengono trovati possibili e sfruttabili buchi di sicurezza.
+
+Mentre FreeBSD tiene named automaticamente in un ambiente man:chroot[8], ci sono molti altri meccanismi di sicurezza che potrebbero essere sfruttati per attacchi al servizio DNS.
+
+È una buona idea leggere gli avvisi sulla sicurezza di http://www.cert.org/[CERT] e sottoscrivere le {freebsd-security-notifications} per stare aggiornato con le questioni correnti di sicurezza di Internet e FreeBSD.
+
+[TIP]
+====
+
+Se sorge un problema, tenere i sorgenti aggiornati e fare una compilazione al volo di named  non farebbe male.
+====
+
+=== Ulteriori letture
+
+Pagine di manuale di BIND/named: man:rndc[8] man:named[8] man:named.conf[8]
+
+* http://www.isc.org/products/BIND/[Official ISC BIND Page]
+* http://www.isc.org/sw/guild/bf/[Official ISC BIND Forum]
+* http://www.nominum.com/getOpenSourceResource.php?id=6[ BIND FAQ]
+* http://www.oreilly.com/catalog/dns4/[O'Reilly DNS and BIND 4th Edition]
+* link:ftp://ftp.isi.edu/in-notes/rfc1034.txt[RFC1034 - Domain Names - Concepts and Facilities]
+* link:ftp://ftp.isi.edu/in-notes/rfc1035.txt[RFC1035 - Domain Names - Implementation and Specification]
+
+[[network-apache]]
+== Apache HTTP Server
+
+=== Uno sguardo d'insieme
+
+FreeBSD è usato per far girare alcuni dei siti web più trafficati al mondo. La maggioranza dei web server su Internet usano attualmene Apache HTTP Server. Il pacchetto software di Apache dovrebbe essere incluso nel tuo media di installazione di FreeBSD. Se non hai installato Apache quando hai installato FreeBSD per la prima volta, lo puoi installare dal port package:www/apache13[] o package:www/apache22[].
+
+Una volta che Apache è stato installato con successo, deve essere configurato.
+
+[NOTE]
+====
+Questa sezione copre la versione 1.3.X di Apache HTTP Server dato che è la versione più usata per FreeBSD. Apache 2.X introduce molte nuove tecnologie ma queste non saranno discusse in questa sede. Per maggiori informazioni su Apache 2.X, per favore consulta link:httpd://httpd.apache.org/[httpd://httpd.apache.org/].
+====
+
+=== Configurazione
+
+Il principale file di configurazione di Apache HTTP Server è installato in [.filename]#/usr/local/etc/apache/httpd.conf# su FreeBSD. Questo file è un tipico file di testo di configurazione di UNIX(R) con linee di commento che cominciano col carattere `#`. Una descrizione comprensiva di tutte le possibili opzioni di configurazione è al di fuori dello scopo di questo libro, così solo le direttive usate più di frequente saranno descritte di seguito.
+
+`ServerRoot "/usr/local"`::
+Questo specifica la gerachia di directory di default per l'installazione di Apache. I binari sono conservati nelle sottodirectory [.filename]#bin# e [.filename]#sbin# sotto la server root, ed i file di configurazione sono conservati sotto [.filename]#etc/apache#.
+
+`ServerAdmin you@your.address`::
+L'indirizzo email al quale i problemi riguardanti il server dovrebbero essere inviati. Questo indirizzo appare su alcune pagine generate dal server, come alcuni documenti di errore.
+
+`ServerName www.example.com`::
+`ServerName` ti permette di impostare un nome host che viene inviato ai client per il tuo server, se questo è differente da quello per il quale l'host è configurato (ad esempio usi `www ` invece del vero nome host).
+
+`DocumentRoot "/usr/local/www/data"`::
+`DocumentRoot`: La directory dalla quale servirai documenti. Di default tutte le richieste sono girate a questa directory, ma link simbolici ed alias possono essere usati per puntare ad altre locazioni.
+
+È sempre una buona idea fare copie di backup del tuo file di configurazione di Apache prima di modificarlo. Una volta che sei soddisfatto dalla tua configurazione iniziale sei pronto per iniziare ad eseguire Apache.
+
+=== Eseguire Apache
+
+Apache non viene eseguito dal super server inetd a differenza di molti altri server di rete. È configurato per girare standalone per migliori performance per gestire le richieste HTTP in entrata dai client web browser. Un wrapper shell script è incluso per rendere il più semplice possibile lo start, lo stop ed il restart del server. Per avviare Apache per la prima volta, esegui:
+
+[source,bash]
+....
+# /usr/local/sbin/apachectl start
+....
+
+Puoi fermare il server in ogni istante digitando:
+
+[source,bash]
+....
+# /usr/local/sbin/apachectl stop
+....
+
+Dopo aver fatto modifiche al file di configurazione per una qualsiasi ragione, avrai bisogno di riavviare il server:
+
+[source,bash]
+....
+# /usr/local/sbin/apachectl restart
+....
+
+Per riavviare Apache senza mandare in abort le connessioni correnti, esegui.
+
+[source,bash]
+....
+# /usr/local/sbin/apachectl graceful
+....
+
+Informazioni addizionali sono disponibili sulla pagina di manuale di man:apachectl[8].
+
+Per eseguire Apache all'avvio del sistema, aggiungi la seguente linea ad [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+apache_enable="YES"
+....
+
+o per Apache 2.2:
+
+[.programlisting]
+....
+apache22_enable="YES"
+....
+
+Se volessi fornire opzioni addizionali di linea di comando al programma Apache`httpd` avviato al boot di sistema, puoi specificarle con una linea addizionale in [.filename]#rc.conf#:
+
+[.programlisting]
+....
+apache_flags=""
+....
+
+Ora che il web server è in esecuzione puoi navigare il tuo sito web puntando il tuo web browser ad `http://localhost/`. La pagina di default che viene mostrata è [.filename]#/usr/local/www/data/index.html#.
+
+=== Virtual Hosting
+
+Apache supporta due tipi diversi di Virtual Hosting. Il primo metodo è Virtual Hosting basato sul nome. Il Virtual Hosting basato sul nome usa gli header HTTP/1.1 per scoprire l'hostname. Questo permette a molti domini diversi di condividere lo stesso indirizzo IP.
+
+Per fare sì che Apache usi Virtual Hosting basato sui nomi aggiungi una entry come la seguente al tuo file [.filename]#httpd.conf#:
+
+[.programlisting]
+....
+NameVirtualHost *
+....
+
+Se il tuo webserver era nominato `www.domain.tld` e tu avessi voluto installare un dominio virtuale per `www.someotherdomain.tld ` avresti dovuto aggiungere le seguenti entry a [.filename]#httpd.conf#:
+
+[source,bash]
+....
+<VirtualHost *>
+ServerName www.domain.tld
+DocumentRoot /www/domain.tld
+</VirtualHost>
+
+<VirtualHost *>
+ServerName www.someotherdomain.tld
+DocumentRoot /www/someotherdomain.tld
+</VirtualHost>
+....
+
+Sostituisci gli indirizzi con gli indirizzi che vuoi usare ed i percorsi dei documenti con quelli che usi.
+
+Per maggiori informazioni sull'impostazione dei virtual host, per favore consulta la documentazione ufficiale a http://httpd.apache.org/docs/vhosts/[http://httpd.apache.org/docs/vhosts/].
+
+=== Moduli Apache
+
+Ci sono molti diversi moduli Apache disponibili per aggiungere funzionalità al server base. La Collezione Port di FreeBSD fornisce un modo semplice di installare Apache assieme ad alcuni dei più popolari moduli aggiuntivi.
+
+==== mod_ssl
+
+Il modulo mod_ssl usa la libreria OpenSSL per fornire una forte crittografia attraverso i protocolli Secure Sockets Layer (SSL v2/v3) e Transport Layer Security (TLS v1). Questo modulo fornisce tutto il necessario per richiedere un certificato firmato da un'autorità fidata che emette certificati, cosicchè puoi eseguire un web server sicuro su FreeBSD.
+
+Se non hai ancora installato Apache, una versione di Apache 1.3.X che includa mod_ssl può essere installata con il port package:www/apache13-modssl[]. Il supporto ad SSL è anche disponibile per Apache 2.X nel port package:www/apache22[], dove viene abilitato di default.
+
+==== Siti web dinamici con Perl & PHP
+
+Negli ultimi anni, molte aziende si sono rivolte a Internet per migliorare i loro ricavi e aumentare la loro esposizione. Questo ha anche aumentato il bisogno di contenuti interattivi web. Mentre alcune società come Microsoft(R) hanno introdotto soluzioni nei loro prodotti proprietari, la comunità open source ha risposto all'appello. Due opzioni per contenuti web dinamici includono mod_perl & mod_php.
+
+===== mod_perl
+
+Il progetto di integrazione Apache/Perl mette assieme la grande potenza del linguaggio di programmazione Perl e l'Apache HTTP Server. Con il modulo mod_perl è possibile scrivere moduli Apache  interamente in Perl. In aggiunta l'interprete persistente integrato nel server evita l'overhead di avviare un interprete esterno e la penalizzazione del tempo di caricamento Perl.
+
+mod_perl è disponibile in alcuni modi diversi. Per usare mod_perl  ricorda che mod_perl 1.0 funziona solo con Apache 1.3 e mod_perl 2.0 funziona solo con Apache 2.X. mod_perl 1.0 è disponibile in package:www/mod_perl[] ed una versione compilata staticamente è disponibile in package:www/apache13-modperl[]. mod_perl 2.0 è disponibile in package:www/mod_perl2[].
+
+===== mod_php
+
+PHP, anche noto come "Hypertext Prepocessor" è un linguaggio di scripting di scopo generale che è particolarmente adatto per lo sviluppo Web. Adatto ad essere usato all'interno dell'HTML, la sua sintassi deriva dal C, Java(TM), e Perl con l'intenzione di permettere agli sviluppatori web di scrivere pagine web generate dinamicamente in modo veloce.
+
+Per integrare supporto a PHP5 per il web server Apache, inizia con l'installare il port package:lang/php5[]. 
+
+Se il port package:lang/php5[] viene installato per la prima volta, le `OPTIONS` disponibili saranno mostrate automaticamente. Se non viene mostrato un menu, ad esempio perché il port package:lang/php5[] è stato installato qualche volta in passato, è sempre possibile rivedere il menu a dialogo con le opzioni eseguendo:
+
+[source,bash]
+....
+# make config
+....
+
+nella directory dei port.
+
+Nel menu a dialogo delle opzioni, flagga l'opzione `APACHE` per compilare mod_php5 come modulo caricabile per il web server Apache.
+
+[NOTE]
+====
+Molti siti stanno ancora usando PHP4 per varie ragioni (ad esempio questioni di compatibilità o applicativi web già costruiti). Se si necessita del modulo mod_php4 invece che di mod_php5, siete pregati di usare il port package:lang/php4[]. Il port package:lang/php4[] supporta molte delle configurazioni e delle opzioni di build-time del port package:lang/php5[].
+====
+
+Questo installerà e configurerà i moduli richiesti per supportare applicazioni web dinamiche PHP. Controlla che le seguenti linee siano state aggiunte al file [.filename]#/usr/local/etc/apache/httpd.conf#:
+
+[.programlisting]
+....
+LoadModule php5_module        libexec/apache/libphp5.so
+AddModule mod_php5.c
+    <IfModule mod_php5.c>
+        DirectoryIndex index.php index.html
+    </IfModule>
+
+    <IfModule mod_php5.c>
+        AddType application/x-httpd-php .php
+        AddType application/x-httpd-php-source .phps
+    </IfModule>
+....
+
+Una volta completato, una semplice chiamata al comando `apachectl` per un tranquillo restart è richiesto per caricare il modulo PHP:
+
+[source,bash]
+....
+# apachectl graceful
+....
+
+Per upgrade futuri di PHP, il comando `make config` non sarà richiesto; le `OPTIONS` selezionate sono salvate automaticamente dal sistema dei Ports di FreeBSD.
+
+Il supporto a PHP in FreeBSD è estremamente modulare così l'installazione base è molto limitata. È molto facile aggiungere supporto usando il port package:lang/php5-extensions[]. Questo port fornisce un interfaccia a menu per l'installazione di estensioni a PHP. Alternativamente le singole estensioni possono essere installate usando il port appropriato.
+
+Ad esempio, per aggiungere supporto al database MySQL a PHP5, semplicemente installa package:databases/php5-mysql[].
+
+Dopo aver installato un'estensione, il server Apache deve essere riavviato per caricare i cambiamenti della nuova configurazione:
+
+[source,bash]
+....
+# apachectl graceful
+....
+
+[[network-ftp]]
+== File Transfer Protocol (FTP)
+
+=== Uno sguardo d'insieme
+
+Il File Transfer Protocol (FTP) fornisce agli utenti un semplice modo di trasferire file da e verso un server FTP. FreeBSD include software per server FTP nel sistema base. Questo rende l'installazione e l'ammininistrazione di un server FTP molto semplice.
+
+=== Configurazione
+
+Il più importante passo di configurazione è decidere a quali account saraà permesso accedere al server FTP. Un sistema normale FreeBSD ha un certo numero di account di sistema usati per vari demoni, ma agli utenti estranei non dovrebbe essere permesso di loggarsi con questi account. Il file [.filename]#/etc/ftpusers# è una lista di utenti a cui è negato l'accesso FTP. Di default include gli account di sistema sopra citati ma è possibile aggiungere utenti specifici che non dovrebbero avere accesso FTP.
+
+Può essere che tu voglia restringere l'accesso ad alcuni utenti senza impedir loro di usare completamente FTP. Ciò può essere ottenuto con il file [.filename]#/etc/ftpchroot#. Questo file elenca utenti e gruppi soggetti a restrizioni di accesso FTP. La pagina di manuale man:ftpchroot[5] ha tutti i dettagli così non sarà descritta qui.
+
+Se tu volessi abilitare accesso anonimo FTP al tuo server, devi creare un utente chiamato `ftp` sul tuo sistema FreeBSD. Gli utenti allora potranno loggarsi al tuo server FTP con uno username di `ftp` o `anonymous` e con una password qualsiasi (di norma dovrebbe essere usato un indirizzo email dell'utente come password). Il server FTP chiamerà man:chroot[2] quando un utente anonimo si logga, per restringere l'accesso solo alla home directory di `ftp`.
+
+Ci sono due file di testo che specificano messaggi di benvenuto per i client FTP. Il contenuto del file [.filename]#/etc/ftpwelcome# sarà mostrato agli utenti prima che raggiungano il prompt del login. Dopo un login di successo, il contenuto del file [.filename]#/etc/ftpmotd# sarà mostrato. Nota che il percorso di questo file è relativo all'ambiente di login, così saraà mostrato il file [.filename]#~ftp/etc/ftpmotd#.
+
+Una volta che il server FTP è stato configurato correttamente, deve essere abilitato in [.filename]#/etc/inetd.conf#. Tutto ciò che viene richiesto è rimuovere il simbolo di commento "#" dall'inizio della linea relativa a ftpd:
+
+[.programlisting]
+....
+ftp  stream  tcp  nowait  root  /usr/libexec/ftpd ftpd -l
+....
+
+Come spiegato in <<network-inetd-reread>>, la configurazione di inetd deve essere ricaricata dopo che che questo file di configurazione è stato cambiato.
+
+Ora puoi loggarti al tuo server FTP digitando:
+
+[source,bash]
+....
+% ftp localhost
+....
+
+=== Manutenzione
+
+Il demone ftpd usa man:syslog[3] per loggare i mesaggi. Di default il demone dei log di sistema girerà i messaggi relativi a FTP nel file [.filename]#/var/log/xferlog#. La posizione del log FTP può essere modificata cambiando la seguente linea in [.filename]#/etc/syslog.conf#:
+
+[.programlisting]
+....
+ftp.info      /var/log/xferlog
+....
+
+Presta attenzione ai problemi potenziali correlati all'esecuzione di un server FTP anonimo. In particolare, dovresti pensarci due volte prima di permettere agli utenti anonimi di fare upload di file. Potresti scoprire che il tuo sito FTP è diventato un forum per il commercio di software commerciale senza licenza o anche peggio. Se hai veramente bisogno di permettere upload FTP anonimi, allora dovresti impostare i permessi in modo che questi file non possano essere letti da altri utenti fino a che non siano stati revisionati.
+
+[[network-samba]]
+== Servizi di File e Stampa per client Microsoft(R) Windows(R) (Samba)
+
+=== Uno sguardo d'insieme
+
+Samba è un popolare pacchetto software open source che fornisce servizi di file e stampa per client Microsoft(R) Windows(R). Tali client possono connettersi ed usare un file system FreeBSD come se fosse un disco locale, o stampanti FreeBSD come se fossero stampanti locali.
+
+Il pacchetto software Samba dovrebbe essere incluso nel tuo media di installazione FreeBSD. Se non hai installato Samba quando hai installato per la prima volta FreeBSD, puoi sempre installarlo dal port o pacchetto package:net/samba3[].
+
+=== Configurazione
+
+Un file di configurazione di Samba di default è installato in [.filename]#/usr/local/shared/examples/smb.conf.default#. Questo file deve essere copiato in [.filename]#/usr/local/etc/smb.conf# e personalizzato prima che Samba possa essere usato.
+
+Il file [.filename]#smb.conf# contiene informazione di configurazione runtime per Samba, come le definizioni delle stampanti e "share di file system" che vorresti condividere con Windows(R) client. Il pacchetto Samba include un tool basato sul web chiamato swat che fornisce un modo semplice di configurare il file [.filename]#smb.conf#.
+
+==== Usare il Samba Web Administration Tool (SWAT)
+
+Il Samba Web Administration Tool (SWAT) viene eseguito come demone da inetd. Quindi, dovresti togliere i commenti alla seguente linea in [.filename]#/etc/inetd.conf# prima che swat possa essere usato per configurare Samba:
+
+[.programlisting]
+....
+swat   stream  tcp     nowait/400      root    /usr/local/sbin/swat    swat
+....
+
+Come spiegato in <<network-inetd-reread>>, la configurazione di inetd deve essere ricaricata dopo che questo file di configurazione è stato cambiato.
+
+Una volta che swat è stato abilitato in [.filename]#inetd.conf#, puoi usare un browser per connetterti a http://localhost:901[http://localhost:901]. Dovrai prima loggarti con l'account di sistema `root`.
+
+Una volta che ti sei loggato con successo alla pagina principale di configurazione di Samba, puoi navigare la documentazione di sistema, o iniziare cliccando sul tab menu:Globals[]. La sezione menu:Globals[] corrisponde alle variabili che sono impostate nella sezione `[global]` di [.filename]#/usr/local/etc/smb.conf#.
+
+==== Impostazioni Globali
+
+Sia che tu stia usando swat o che tu stia editando direttamente [.filename]#/usr/local/etc/smb.conf#, le prime direttive che tu puoi incontrare quando configuri Samba sono:
+
+`workgroup`::
+Nome dominio NT o nome Workgroup per i computer che accedono a questo server.
+
+`netbios name`::
+Questo imposta il nome NetBIOS attraverso il quale un Samba è conosciuto. Di default è lo stesso della prima parte del nome host DNS.
+
+`server string`::
+Questo imposta la stringa che sarà mostrata con il comando `net view` e con alcuni altri strumenti di rete che cercano di mostrare testo descrittivo sul server.
+
+==== Impostazioni di Sicurezza
+
+Due delle più importanti impostazioni in [.filename]#/usr/local/etc/smb.conf# sono i modelli di sicurezza usati, ed il formato delle password di backend per utenti client. Le seguenti direttive controllano queste opzioni:
+
+`security`::
+Le due più comuni opzioni in questo caso sono `security = share` e `security = user`. Se i tuoi client usano nomi utente che sono gli stessi dei nomi utenti sulla tua macchina FreeBSD, allora vorrai sicurezza di tipo user. Questa è la policy di sicurezza di default e richiede ai client prima di loggarsi prima che possano accedere a risorse condivise.
++
+Nel modello di sicurezza di tipo share, i client non hanno bisogno di loggarsi al server con una valida coppia username e password prima che provino a connettersi a risorse condivise. Questo è il modello di sicurezza di default per versioni precedenti di Samba.
+
+`passdb backend`::
+Samba ha molti modelli diversi di backend di autenticazione. Puoi autenticare i client con LDAP, NIS+, un database SQL, o un file di password modificato. Il metodo di autenticazione di default è `smbpasswd`, e questo sarà l'unico coperto qui.
+
+Assumendo che il backend usato sia quello di default, `smbpasswd`, il file [.filename]#/usr/local/private/smbpasswd# deve essere creato per permettere a Samba di autenticare i client. Se tu volessi dare ai tuoi account UNIX(R) accesso da client Windows(R), usa il seguente comando:
+
+[source,bash]
+....
+# smbpasswd -a username
+....
+
+Per favore consulta l' http://www.samba.org/samba/docs/man/Samba-HOWTO-Collection/[Official Samba HOWTO] http://www.samba.org/samba/docs/man/Samba-HOWTO-Collection/[HOWTO Ufficiale di Samba] per informazioni addizionali sulle opzioni di configurazione. Con le basi delineate qui, dovresti avere tutto ciò di cui hai bisogno per avviare Samba.
+
+=== Avviare Samba
+
+Il port package:net/samba3[] aggiunge un nuovo script di avvio, che può essere usato per controllare Samba. Per abilitare questo script, in modo tale da essere usato per esempio per avviare fermare o far ripartire Samba, aggiungi la riga seguente al file [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+samba_enable="YES"
+....
+
+Oppure, per un controllo più accurato:
+
+[.programlisting]
+....
+nmbd_enable="YES"
+....
+
+[.programlisting]
+....
+smbd_enable="YES"
+....
+
+[NOTE]
+====
+In questo modo Samba viene avviato automaticamente ad ogni avvio del sistema.
+====
+
+Per avviare Samba digita:
+
+[source,bash]
+....
+# /usr/local/etc/rc.d/samba start
+Starting SAMBA: removing stale tdbs :
+Starting nmbd.
+Starting smbd.
+....
+
+Fai riferimento alla crossref:config[configtuning-rcd,Usare rc con FreeBSD] per ulteriori informazioni sull'uso degli script rc.
+
+Samba attualmente consiste di tre demoni separati. Dovresti osservare che entrambi nmbd e smbd siano avviati dallo script [.filename]#samba#. Se hai abilitato servizi di risoluzione di nomi winbind in [.filename]#smb.conf#, allora osserverai che anche il demone winbindd è avviato.
+
+Puoi anche fermare Samba in ogni istante digitando:
+
+[source,bash]
+....
+# /usr/local/etc/rc.d/samba stop
+....
+
+Samba è una suite complessa di software con funzionalità che permette una larga integrazione con reti Microsoft(R) Windows(R). Per maggiori informazioni sulle funzionalità al di là dell'installazione di base descritta qui per favore consulta http://www.samba.org[http://www.samba.org].
+
+[[network-ntp]]
+== Sincronizzazione del Clock con NTP
+
+=== Uno sguardo d'insieme
+
+Al passare del tempo, il clock di un computer tende a perdere la sincronizzazione. Il Network Time Protocol (NTP) fornisce un modo per assicurarti che il tuo clock sia accurato.
+
+Molti servizi Internet si basano sul fatto che il clock del computer sia accurato, o comunque traggono notevole beneficio da questo fatto. Per esempio, un web server può ricevere richieste di inviare un file se questo è stato modificato da una certa data. In un ambiente locale di rete, è essenziale che i computer che condividono i file dallo stesso file server abbiano clock sincronizzati cosicchè i timestamp dei file siano consistenti. Anche servizi come man:cron[8] si basano su un clock di sistema accurato per eseguire comandi al momento specificato.
+
+FreeBSD è dotato del server man:ntpd[8] NTP che può essere usato per interrogare altri server NTP per impostare il clock sulla tua macchina o fornire servizi di time ad altri.
+
+=== Scegliere Server NTP Appropriati
+
+Per sincronizzare il tuo clock, avrai bisogno di scegliere uno o più server NTP da usare. Il tuo amministratore di rete o ISP potrebbe aver impostato un server NTP, a questo scopo - controlla la loro documentazione per vedere se questo è il caso. C'è una http://ntp.isc.org/bin/view/Servers/WebHome[ lista online di server NTP pubblicamente accessibili ] che tu puoi usare per trovare un server NTP vicino a te. Accertati di essere al corrente della politica di ogni server che scegli, e chiedi il permesso se necessario.
+
+Scegliere molti server NTP non connessi fra loro è una buona idea in caso uno dei server che stai usando diventa irraggiungibile o il suo clock è inaffidabile. man:ntpd[8] usa le risposte che riceve da altri server in modo intelligente; favorirà server inaffidabili meno di quelli affidabili.
+
+=== Configurare la tua Macchina
+
+==== Configurazione Base
+
+Se desideri solo sincronizzare il tuo clock al momento del boot della macchina, puoi usare man:ntpdate[8]. Questo può essere appropriato per alcune macchine desktop che sono rebootate di frequente e richiedono sincronizzazione non frequente, ma le altre macchine dovrebbero eseguire man:ntpd[8].
+
+Usare man:ntpdate[8] al momento del boot è una buona idea per le macchine che eseguono man:ntpdate[8]. Il programma man:ntpd[8] cambia il clock gradualmente, mentre man:ntpdate[8] imposta il clock, indipentemente da quanto grande sia la differenza fra l'impostazione di clock corrente di una macchina e l'ora corretta.
+
+Per abilitare man:ntpdate[8] al momento del boot, aggiungi `ntpdate_enable="YES"` a [.filename]#/etc/rc.conf#. Avrai anche bisogno di specificare tutti i server con i quali ti desideri sincronizzare ed ogni flags passato a man:ntpdate[8] in `ntpdate_flags`.
+
+==== Configurazione Generale
+
+NTP è configurato dal file [.filename]#/etc/ntp.conf# nel formato descritto da man:ntp.conf[5]. Questo è un semplice esempio:
+
+[.programlisting]
+....
+server ntplocal.example.com prefer
+server timeserver.example.org
+server ntp2a.example.net
+
+driftfile /var/db/ntp.drift
+....
+
+L'opzione `server` specifica quali server siano da usare, con un server elencato su ogni linea. Se un server è specificato con l'argomento `prefer`, come con `ntplocal.example.com`, quel server saraà preferito rispetto ad altri. Una risposta da un server preferito sarà scartata se differisce in modo significativo dalle risposte di altri server, altrimenti sarà usata senza nessuna considerazione delle altre risposte. L'argomento `prefer` è normalmente usato per server NTP che sono noti per essere molto accurati, come quelli con hardware a monitoraggio speciale del tempo.
+
+L'opzione `driftfile` specifica quale file sia usato per conservare la frequenza di scostamento dal clock di sistema. Il programma man:ntpd[8] usa questo dato per compensare automaticamente le imprecisioni naturali del clock, permettendo di mantenere una impostazione ragionevolmente corretta anche se gli è impedito di accedere a tutte le sorgenti di sincronizzazione tempo esterne per un certo periodo di tempo.
+
+L'opzione `driftfile` specifica quale file sia usato per conservare informazioni sulle risposte precedenti dai server NTP che usi. Questo file contiene informazioni interne per NTP. Non dovrebbe essere modificato da altri processi.
+
+==== Controllare l'Accesso ad i tuoi Server
+
+Di default, il tuo server NTP sarà accessibile a tutti gli host su Internet. L'opzione `restrict` in [.filename]#/etc/ntp.conf# ti permette di controllare quali macchine possano accedere al tuo server.
+
+Se vuoi negare a tutte le macchine accesso al tuo server NTP, aggiungi la seguente linea a [.filename]#/etc/ntp.conf#:
+
+[.programlisting]
+....
+restrict default ignore
+....
+
+[NOTE]
+====
+Inoltre questo settaggio vieta l'accesso al tuo server dai server elencati nella tua configurazione locale. Se hai bisogno di sincronizzare il tuo server NTP con un server NTP esterno devi permettere il server che vuoi usare. Guada la pagina man man:ntp.conf[5] per ulteriori dettagli.
+====
+
+Se vuoi permettere solo alle macchine della tua rete di sincronizzare il loro clock con il tuo server, ma assicurarti che non gli sia permesso configurare il server o che non sianousate come punto di riferimento per sincronizzarsi, aggiungi
+
+[.programlisting]
+....
+restrict 192.168.1.0 mask 255.255.255.0 nomodify notrap
+....
+
+invece, dove`192.168.1.0` è un indirizzo IP sulla tua rete e `255.255.255.0` è la netmask della tua rete.
+
+[.filename]#/etc/ntp.conf# può contenere molte opzioni `restrict`. Per maggiori dettagli, consulta la sezione `Access Control Support` di man:ntp.conf[5].
+
+=== Eseguire il Server NTP
+
+Per assicurarsi che il server NTP sia avviato al momento del boot, aggiungi la linea `ntpd_enable="YES"` a [.filename]#/etc/rc.conf#. Se desideri passare flag addizionali a man:ntpd[8], edita il parametro `ntpd_flags` in [.filename]#/etc/rc.conf#.
+
+Per avviare il server senza riavviare la tua macchina, esegui `ntpd` accertandoti di specificare ogni parametro addizionale in `ntpd_flags` presente in [.filename]#/etc/rc.conf#. Per esempio:
+
+[source,bash]
+....
+# ntpd -p /var/run/ntpd.pid
+....
+
+=== Usare ntpd con una Connessione Temporanea ad Internet
+
+Il programma man:ntpd[8] non necessita di una connessione permanente ad Internet per funzionnare correttamente. Comunque, se hai una connessione temporanea che è configurata per effettuare una chiamata su richiesta, è una buona idea evitare che il traffico NTP causi la chiamata o mantenga la connessione attiva. Se stai usando PPP utente, puoi usare le direttive `filter` in [.filename]#/etc/ppp/ppp.conf#. Per esempio:
+
+[.programlisting]
+....
+ set filter dial 0 deny udp src eq 123
+# Prevent NTP traffic from initiating dial out
+set filter dial 1 permit 0 0
+set filter alive 0 deny udp src eq 123
+# Prevent incoming NTP traffic from keeping the connection open
+set filter alive 1 deny udp dst eq 123
+# Prevent outgoing NTP traffic from keeping the connection open
+set filter alive 2 permit 0/0 0/0
+....
+
+Pre maggiori dettagli consulta la sezione `PACKET FILTERING` in man:ppp[8] e gli esempi in [.filename]#/usr/shared/examples/ppp/#.
+
+[NOTE]
+====
+Alcuni provider di accesso ad Internet bloccano le porte dal numero basso, impedendo ad NTP di funzionare dato che le repliche non raggiungono mai la tua macchina.
+====
+
+=== Informazioni Ulteriori
+
+La documentazione per il server NTP può essere trovata in formato HTML in [.filename]#/usr/shared/doc/ntp/#.

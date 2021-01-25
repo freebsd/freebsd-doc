@@ -1,0 +1,133 @@
+---
+title: "Projet GNOME pour FreeBSD : Comment créer un port"
+sidenav: gnome
+--- 
+
+include::shared/fr/urls.adoc[]
+
+= Projet GNOME pour FreeBSD : Comment créer un port
+
+Ce document considère que vous connaissez déjà comment le système des ports fonctionne et par conséquent ne donne que les trucs et astuces spécifiques à GNOME. Des instructions plus générales sont disponibles dans le link:{porters-handbook}[Manuel du Porteur d'Applications pour FreeBSD].
+
+== Les macros Makefile pour GNOME
+
+Pour les ports qui _nécessitent_ GNOME, vous devez définir les variables suivantes dans le Makefile du port :
+
+....
+USE_GNOME=  yes
+USE_X_PREFIX=   yes  
+....
+
+Cela prendra en charge le préfix d'installation ainsi que les dépendances indispensables pour GNOME. Si votre port peut utiliser GNOME, mais qu'il n'est pas requis, vous pouvez définir les variables suivantes dans votre Makefile :
+
+....
+WANT_GNOME= yes
+....
+
+Si le système des ports détecte que GNOME est installé sur le système alors les composants GNOME seront compilés. Autres macros utiles en rapport avec GNOME qui peuvent être utilisées dans le Makefile :
+
+* `USE_GLIB (WANT_GLIB)` : L'application nécessite (peut utiliser) Glib. Définir `USE_GNOME` ou `USE_GTK` définit automatiquement cette option.
+* `USE_GTK (WANT_GTK)` : L'application n'est pas forcément compatible GNOME mais nécessite GTK+. Cela prendra en charge ces dépendances. A noter que cette option ne *doit pas* être définie si `USE_GNOME` est défini.
+* `USE_ESOUND (WANT_ESOUND)` : L'application nécessite (peut utiliser) esound. En temps normal, le support esound est ajouté en spécifiant `USE_GNOME`.
+* `USE_IMLIB (WANT_IMLIB)` : L'application nécessite (peut utiliser) la librairie graphique Imlib. Il n'est pas nécessaire de l'indiquer si `USE_GNOME` est défini.
+* `USE_GNOMELIBS (WANT_GNOMELIBS)` : L'application nécessite (peut utiliser) les librairies GNOME. Cela n'implique pas autant de dépendances que `USE_GNOME` et doit être utilisé pour les applications qui utilisent GNOME mais qui n'ont pas besoin du Centre de Contrôle GNOME, de la librairie capplet ou d'un composant faisant partie du noyau de GNOME.
+* `USE_GNOMECTRL (WANT_GNOMECTRL)` : L'application nécessite (peut utiliser) toutes les librairies GNOME et le Centre de Contrôle GNOME mais n'utilise aucun composant du noyau de GNOME. Cette option est habituellement utilisée pour les APIs.
+
+Si votre port peut en option utiliser GNOME, vous devez utiliser `WANT_GNOME= yes` dans votre Makefile et vérifier si `HAVE_GNOME` est positionné. Comme c'est une évaluation conditionnelle, vous devez le placer entre `bsd.port.pre.mk` et `bsd.port.post.mk`. Par exemple :
+
+....
+WANT_GNOME= yes
+
+.include <bsd.port.pre.mk>
+
+.if defined(HAVE_GNOME)
+USE_GNOME=  yes
+CONFIGURE_ARGS+=    --with-gnome
+.else
+CONFIGURE_ARGS+=    --without-gnome
+.endif
+
+.include <bsd.port.post.mk>
+....
+
+`WANT_GNOME` indique au système des ports de vérifie l'existence de `gnome-config`. S'il existe, `HAVE_GNOME` est positionné. Sinon, `HAVE_GNOME` ne l'est pas. En positionnant `USE_GNOME` après la vérification sur `HAVE_GNOME` le port enregistrera toutes les dépendances liées à GNOME correctement.
+
+Lors de la création des ports GNOME, rappelez-vous que de nombreuses applications ont besoin de répertoires partagés dans `${PREFIX}/share/gnome`. Les ports doivent être construits de telle manière que les fichiers placés dans ces répertoires soient supprimés avant le paquetage qui a créé les répertoires (i.e. le paquetage a une instruction `@dirrm` appropriée dans le fichier pkg-plist). Pour GNOME, le port parent principal est `gnomecore`. Si votre port inclu `USE_GNOME= yes`, tout devrait être correct. Si vous n'êtes pas certain d'avoir besoin d'autres paquetages, vous pouvez utiliser le script `${PORTSDIR}/Tools/scripts/gnomedepends.py` afin d'examiner le fichier pkg-plist de votre port :
+
+....
+# cd /usr/ports/x11/mygnomeport
+# /usr/ports/Tools/scripts/gnomedepends.py
+According to the contents of pkg-plist the port depends on the following GNOME
+port(s):
+
+/usr/ports/mail/gmail, for directories:
+    share/gnome/help
+    share/gnome/apps
+    share/gnome
+
+/usr/ports/sysutils/gnomecontrolcenter, for directories:
+    share/gnome/apps/Settings
+    share/gnome/apps
+
+/usr/ports/textproc/scrollkeeper, for directories:
+    share/gnome/omf
+    share/gnome
+
+/usr/ports/x11/gnomecore, for directories:
+    share/gnome/apps/System
+
+/usr/ports/x11/gnomelibs, for directories:
+    share/gnome/pixmaps
+    share/gnome/help
+....
+
+Pour voir la liste des paquetages indiqués comme nécessaire par votre port, utilisez la commande `make package-depends`.
+
+== Internationalisation de GNOME
+
+GNOME s'appuie sur le port `gettext` pour l'internationalisation (I18N). FreeBSD supporte actuellement deux versions de `gettext` : la 0.10.35 et la 0.11.1. La plupart des ports peuvent utiliser la 0.11.1. Cependant, si lors de la compilation de votre port, vous avez une erreur avec les fichiers de traduction .po, vous pouvez avoir besoin d'utiliser la version plus ancienne de `gettext`.
+
+Pour utiliser cette version plus ancienne de `gettext`, ajoutez les lignes suivantes dans le Makefile de votre port :
+
+....
+BUILD_DEPENDS=  msgfmt-old:${PORTSDIR}/devel/gettext-old
+CONFIGURE_ENV+= MSGFMT=${LOCALBASE}/bin/msgfmt-old \
+    XGETTEXT=${LOCALBASE}/bin/xgettext-old
+....
+
+Lors de l'installation des applications GNOME, assurez-vous que les fichiers de traduction sont placés dans `/usr/X11R6/share/locale` et non pas dans `/usr/X11R6/share/gnome/locale`. Pour ce faire, ajoutez les lignes suivantes dans la section `pre-patch:` du Makefile de votre port :
+
+....
+pre-patch:
+    @find ${WRKSRC} -name "Makefile.in*" | xargs ${PERL} -pi -e \
+        's|\$\(datadir\)/gnome/|\$\(datadir\)/|g ; \
+         s|\$\(datadir\)/locale|\$\(prefix\)/share/locale|g'
+....
+
+Assurez-vous également que les fichiers de traduction sont installés avec l'extension .mo et non pas avec l'extension .gmo. Pour cela, vous pouvez habituellement utiliser ce ../patches/patch-po::Makefile.in.in[patch].
+
+== Problèmes liés à Libtool
+
+La plupart si ce n'est toutes les applications GNOME dépendent de la libtool de GNU. Elles utilisent également le système "configure" de GNU. Les dernières versions de libtool ont un problème la macro `USE_LIBTOOL` de FreeBSD. L'utilisation de cette macro est déconseillée. A la place, positionnez `GNU_CONFIGURE= yes`, et utilisez ce link:../patches/patch-ltmain.sh[patch]. Il empêche l'installation des fichiers .la, empêche la compilation et l'installation des librairies statiques au format archive et permet de s'assurer que l'option -pthread est passé à l'éditeur de lien.
+
+== Fichiers sources
+
+A mesure que GNOME 2.0 gagne en popularité, nous devons faire le tri entre les fichiers sources de GNOME 2.0 et ceux de GNOME 1.0 ainsi que faire notre possible pour conserver un classement correct des fichiers sources dans le répertoire "distfiles". Pour ce faire, les ports de GNOME 1.0 qui téléchargent leurs fichiers sources depuis le serveur `${MASTER_SITE_GNOME}` doivent ajouter la ligne suivante au fichier Makefile :
+
+....
+DIST_SUBDIR=    gnome
+....
+
+Les ports de GNOME 2.0 qui téléchargent leurs fichiers sources depuis le serveur `${MASTER_SITE_GNOME}` doivent ajouter la ligne suivante au fichier Makefile :
+
+....
+DIST_SUBDIR=    gnome2
+....
+
+Plusieurs des fichiers sources GNOME sont disponibles aux formats tar gzip et tar bzip2. Pour économiser du temps de téléchargement sur les lignes à faible débit, utilisez les fichiers sources bzip2 à chaque fois que possible. Pour cela, ajoutez la ligne suivante au fichier Makefile du port :
+
+....
+USE_BZIP2=  yes
+....
+
+Si vous avez malgré tout besoin d'aide pour votre port, prenez exemple sur les link:https://www.FreeBSD.org/ports/gnome.html[ports existant]. La mailto:freebsd-gnome@FreeBSD.org[liste de diffusion freebsd-gnome] est également là pour vous aider.

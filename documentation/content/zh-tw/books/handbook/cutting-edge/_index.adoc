@@ -1,0 +1,916 @@
+---
+title: 章 23. 更新與升級 FreeBSD
+part: 部 III. 系統管理
+prev: books/handbook/l10n
+next: books/handbook/dtrace
+---
+
+[[updating-upgrading]]
+= 更新與升級 FreeBSD
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例 
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 23
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/cutting-edge/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/cutting-edge/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/cutting-edge/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-tw/mailing-lists.adoc[]
+include::shared/zh-tw/urls.adoc[]
+include::shared/zh-tw/teams.adoc[]
+
+toc::[]
+
+[[updating-upgrading-synopsis]]
+== 概述
+
+FreeBSD 在每次的發佈之間持續在開發。有些人偏好正式發佈的版本，也有另一群人喜歡使用最新的開發版本。然而，即使是正式發佈的版本也時常會有安全性與其他緊急修復的更新，因此，無論使用哪種版本，FreeBSD 都提供所有必要的工具來讓系統能維持最新的版本，且讓各種版本都能簡單的升級。本章將說明如何追蹤開發版本的系統及讓 FreeBSD 系統維持最新版本的基本工具。
+
+讀完這章，您將了解：
+
+* 如何使用 freebsd-update, Subversion 來維持 FreeBSD 系統為最新版。
+* 如何比對已安裝系統與已知原始複本間的狀態。
+* 如何使用 Subversion 或說明文件 Port 來維持已安裝的文件為新版。
+* 兩種開發分支間的差異：FreeBSD-STABLE 與 FreeBSD-CURRENT。
+* 如何重新編譯及重新安裝整個基礎系統 (Base system)。
+
+在開始閱讀這章之前，您需要：
+
+* 正確的設定網路連線 (crossref:advanced-networking[advanced-networking,進階網路設定])。
+* 了解如何安裝其他第三方軟體 (crossref:ports[ports,安裝應用程式：套件與 Port])。
+
+[NOTE]
+====
+本章會經常使用 `svnlite` 來取得與更新 FreeBSD 原始碼。您也可以使用 package:devel/subversion[] Port 或套件。
+====
+
+[[updating-upgrading-freebsdupdate]]
+== FreeBSD 更新
+
+隨時套用安全性更新以及升級到新發佈的作業系統版本對管理一個持續運作的系統是非常重要的任務，FreeBSD 內含可以執行這兩項任務的工具程式，叫做 `freebsd-update`。
+
+這個工具程式支援使用 Binary 對 FreeBSD 做安全性與和錯誤更新，不需要手動編譯和安裝修補 (Patch) 或新核心。目前由安全性團隊提供支援的 Binary 更新可用於所有的架構和發行版。支援的發行版清單及各自的支援期限列於 https://www.FreeBSD.org/security/[https://www.FreeBSD.org/security/]。
+
+這個工具程式也支援升級作業系統到次要的發佈版以及升級到另一個發佈版分支。在升級到新的發佈版本前，需先查看該版本的發佈公告，因為發行公告中包含了該發行版本的相關重要資訊。發行公告可自 https://www.FreeBSD.org/releases/[https://www.FreeBSD.org/releases/] 取得。
+
+[NOTE]
+====
+如果有使用 `crontab` 來執行 man:freebsd-update[8]，則必須在升級作業系統前先關閉。
+====
+
+本節將說明 `freebsd-update` 使用的設定檔， 示範如何套用安全性修補及如何升級到主要或次要的作業系統發行版，並討論升級作業系統的需要考量的事項。
+
+[[freebsdupdate-config-file]]
+=== 設定檔
+
+`freebsd-update` 預設的設定檔不需變更即可運作。 部份使用者可能會想要調校位於 [.filename]#/etc/freebsd-update.conf# 的預設設定檔來對程序有更好的控制。該設定檔中的註解均有說明可用的選項，但以下幾個項目可能需要進一步的說明：
+
+[.programlisting]
+....
+# Components of the base system which should be kept updated.
+Components world kernel
+....
+
+這個參數控制 FreeBSD 要保持最新版本的部份。 預設是更新整個基礎系統 (Base system) 和核心。 可指定個別元件，例如：`src/base` 或 `src/sys`。 雖然如此，最好的選項是維持預設值，因為更改指定特定項目時需列出每一個需要的項目。時間一久可能會因為原始碼和 Binary 檔案沒有更新而造成慘重的後果。
+
+[.programlisting]
+....
+# Paths which start with anything matching an entry in an IgnorePaths
+# statement will be ignored.
+IgnorePaths /boot/kernel/linker.hints
+....
+
+要保持特定的目錄在更新過程不被更動，例如 [.filename]#/bin# 或 [.filename]#/sbin#，可以將他們的路徑加到此敘述中。 這個選項可以防止 `freebsd-update` 覆蓋本地的修改。
+
+[.programlisting]
+....
+# Paths which start with anything matching an entry in an UpdateIfUnmodified
+# statement will only be updated if the contents of the file have not been
+# modified by the user (unless changes are merged; see below).
+UpdateIfUnmodified /etc/ /var/ /root/ /.cshrc /.profile
+....
+
+這個選項只會更新特定目錄中未修改的設定檔。任何使用者修改的檔案都不會自動更新。 有另一個選項 `KeepModifiedMetadata` 可讓 `freebsd-update` 在合併時儲存使用者做的變更。
+
+[.programlisting]
+....
+# When upgrading to a new FreeBSD release, files which match MergeChanges
+# will have any local changes merged into the version from the new release.
+MergeChanges /etc/ /var/named/etc/ /boot/device.hints
+....
+
+列出 `freebsd-update` 應嘗試合併的設定檔目錄。 檔案合併程序是指一系列類似 man:mergemaster[8] 做的 man:diff[1] 修補動作， 但是選項比較少。 合併的動作包含接受、開啟編輯器，或讓 `freebsd-update` 中止。 如果有疑慮，請先備份 [.filename]#/etc#，然後再接受合併。 更多關於 `mergemaster` 的資訊， 參見 man:mergemaster[8]。
+
+[.programlisting]
+....
+# Directory in which to store downloaded updates and temporary
+# files used by FreeBSD Update.
+# WorkDir /var/db/freebsd-update
+....
+
+這個目錄是所有修補檔和暫存檔的存放處。當使用者進行版本升級時，這個位置應該要有至少 1GB 的可用磁碟空間。
+
+[.programlisting]
+....
+# When upgrading between releases, should the list of Components be
+# read strictly (StrictComponents yes) or merely as a list of components
+# which *might* be installed of which FreeBSD Update should figure out
+# which actually are installed and upgrade those (StrictComponents no)?
+# StrictComponents no
+....
+
+當這個選項設定為 `yes` 時，`freebsd-update` 將會假設 `Components` 清單已完成，將不會對清單之外的項目做變更。 實際上 `freebsd-update` 會將嘗試更新每一個屬於 `Components` 清單中的檔案。
+
+[[freebsdupdate-security-patches]]
+=== 套用安全性修補
+
+套用 FreeBSD 安全性修補的過程已經被簡化，讓系統管理員可使用 `freebsd-update` 來保持系統更新。更多有關 FreeBSD 安全性報告的資訊可以參考 crossref:security[security-advisories,FreeBSD 安全報告]。
+
+FreeBSD 安全性修補可以使用以下指令下載並安裝。 第一個指令會偵測是否有可用的修補，如果有，將列出若執行修補後會變更的檔案清單。第二個指令將會套用修補。
+
+[source,bash]
+....
+# freebsd-update fetch
+# freebsd-update install
+....
+
+如果更新套用了任何核心修補，系統將會需要重新開機以使用修補過的核心。如果修補套用在任何執行中的 Binary，受影響的應用程式應重新啟動來使用修補過的 Binary 版本。
+
+加入以下項目至 [.filename]#/etc/crontab# 可設定系統每天自動檢查更新一次：
+
+[.programlisting]
+....
+@daily                                  root    freebsd-update cron
+....
+
+如果有新的修補，該程式會會自動下載，但不會執行。`root` 使用者會收到電子郵件通知複查該修補並手動執行 `freebsd-update install` 安裝。
+
+如果有發生任何錯誤，`freebsd-update` 可以使用以下指令還原最後所做的變更：
+
+[source,bash]
+....
+# freebsd-update rollback
+Uninstalling updates... done.
+....
+
+再次強調，若核心或任何核心模組有做過修改應重新啟動系統，以及任何受影響的 Binary 應重新執行。
+
+只有 [.filename]#GENERIC# 核心可使用 `freebsd-update` 自動更新。 如果有安裝自訂的核心，在 `freebsd-update` 完成安裝更新後，需要重新編譯和重新安裝。 預設的核心名稱為 _GENERIC_，可使用 man:uname[1] 指令來檢查安裝的核心。
+
+[NOTE]
+====
+隨時在 [.filename]#/boot/GENERIC# 保留一份 [.filename]#GENERIC# 核心的複本將有助於診斷各種問題及執行版本升級。請參考 <<freebsd-update-custom-kernel-9x>> 來了解有關如何取得 [.filename]#GENERIC# 核心的複本說明。
+====
+
+除非在 [.filename]#/etc/freebsd-update.conf# 的預設設定檔被修改，否則 `freebsd-update` 將會安裝更新後的核心原始碼和其餘的更新，可依平常的方式執行重新編譯與重新安裝核心。
+
+以 `freebsd-update` 發行的更新並非總是會更新核心。若核心的原始碼沒有被 `freebsd-update install` 修改則不需要重新編譯自訂的核心。雖然如此 `freebsd-update` 總是會更新 [.filename]#/usr/src/sys/conf/newvers.sh#，目前修補的版本如 `uname -r` 執行結果中的 `-p` 數字，便是由該檔取得。即使沒有做任何其他變更，重新編譯自訂核心可讓 `uname` 準確的回報系統目前的修補版本。當維護多個系統時這會特別有用，因其可讓你快速評估每個系統安裝的更新。
+
+[[freebsdupdate-upgrade]]
+=== 執行主要及次要版號升級
+
+從 FreeBSD 的次要版本升級到另一個版本，例如從 FreeBSD 9.0 到 FreeBSD 9.1, 叫作 _次要版本 (Minor version)_ 更新。 _主要版本 (Major version)_ 更新發生在當 FreeBSD 從一個主要版本升級到主要版本升級到另一個主要版本時，例如從 FreeBSD 9.X 到 FreeBSD 10.X。 兩種更新都可以透過提供 `freebsd-update` 目標的發佈版本來執行。
+
+[NOTE]
+====
+如果系統正在執行自訂的核心，請在開始升級前，確定有保留一份 [.filename]#GENERIC# 核心的複本在 [.filename]#/boot/GENERIC#。 請參考 <<freebsd-update-custom-kernel-9x>> 關於如何取得 [.filename]#GENERIC# 核心複本的說明。
+====
+
+在 FreeBSD 9.0 系統執行以下指令，將會把系統升級至 FreeBSD 9.1：
+
+[source,bash]
+....
+# freebsd-update -r 9.1-RELEASE upgrade
+....
+
+收到這個指令後，`freebsd-update` 會開始評估設定檔和目前的系統來收集升級所需的資訊。 螢幕會顯示偵測到或沒偵測到的元件清單。例如：
+
+[source,bash]
+....
+Looking up update.FreeBSD.org mirrors... 1 mirrors found.
+Fetching metadata signature for 9.0-RELEASE from update1.FreeBSD.org... done.
+Fetching metadata index... done.
+Inspecting system... done.
+
+The following components of FreeBSD seem to be installed:
+kernel/smp src/base src/bin src/contrib src/crypto src/etc src/games
+src/gnu src/include src/krb5 src/lib src/libexec src/release src/rescue
+src/sbin src/secure src/share src/sys src/tools src/ubin src/usbin
+world/base world/info world/lib32 world/manpages
+
+The following components of FreeBSD do not seem to be installed:
+kernel/generic world/catpages world/dict world/doc world/games
+world/proflibs
+
+Does this look reasonable (y/n)? y
+....
+
+此時，`freebsd-update` 將會嘗試下載所有升級需要的檔案。 在某些情況，會詢問使用者一些關於要安裝什麼或要如何繼續。
+
+當使用自訂核心，上述的步驟將會產生如下的警告：
+
+[source,bash]
+....
+WARNING: This system is running a "MYKERNEL" kernel, which is not a
+kernel configuration distributed as part of FreeBSD 9.0-RELEASE.
+This kernel will not be updated: you MUST update the kernel manually
+before running "/usr/sbin/freebsd-update install"
+....
+
+這時的警告可以安全地忽略，升級過程將會使用更新過的 [.filename]#GENERIC# 核心來進行。
+
+所有的修補都下載到本地系統之後， 將會開始套用更新。這個過程可能會花點時間，取決於機器的速度和工作量。設定檔將會被合併。 合併的過程中當檔案被合併或是手動合併畫面上出現編輯器時需要使用者操作。 每一個成功合併的結果將會顯示給使用者並繼續程序，失敗或忽略合併將會使程序中斷。使用者可能想要備份 [.filename]#/etc# 並稍後手動合併重要的檔案，例如：[.filename]#master.passwd# 或 [.filename]#group#。
+
+[NOTE]
+====
+所有的修補與合併動作會在另一個目錄進行，並不會直接修改。當成功套用所有修補，所有設定檔已合併且過程順利，使用者可使用以下指令將變更安裝到磁碟：
+
+[source,bash]
+....
+# freebsd-update install
+....
+
+====
+
+核心與核心模組會先修補，若系統正在執行自訂的核心，使用 man:nextboot[8] 來設定下次開機使用更新過的 [.filename]#/boot/GENERIC#：
+
+[source,bash]
+....
+# nextboot -k GENERIC
+....
+
+[WARNING]
+====
+
+若機器在遠端進行更新，請在使用 [.filename]#GENERIC# 核心重新開機前，請確定該核心含有所有系統所需的驅動程式以正常開機並連線至網路。特別是在執行的自訂核心有使用到由核心模組提供內建功能，請確定將這些模組已暫時使用 [.filename]#/boot/loader.conf# 設定檔載入到 [.filename]#GENERIC# 核心。建議關閉非必須的服務和磁碟與網路掛載直到升級程序完成。
+====
+
+機器現在應使用更新過的核心重新開機：
+
+[source,bash]
+....
+# shutdown -r now
+....
+
+一旦系統重新上線，使用以下指令繼續 `freebsd-update`。 由於程序的狀態已被儲存，`freebsd-update` 不會重頭開始，但會進行下一個階段並移除所有舊的共用程式庫和目標檔。
+
+[source,bash]
+....
+# freebsd-update install
+....
+
+[NOTE]
+====
+取決於是否有任何程式庫版本編號衝突，也可能只有兩個而不是三個安裝階段。
+====
+
+升級程序現在完成了。如果所做的是主要的版本升級，則需依 <<freebsdupdate-portsrebuild>> 的說明重新安裝所有的 Port 和套件。
+
+[[freebsd-update-custom-kernel-9x]]
+==== 在 FreeBSD 9.X 及之後版本自訂核心
+
+在使用 `freebsd-update` 前，請確定已有 [.filename]#GENERIC# 核心的複本於 [.filename]#/boot/GENERIC#。若只編譯過一次自訂核心，那麼 [.filename]#/boot/kernel.old# 就是 `GENERIC` 核心，只需要將該目錄重新命名為 [.filename]#/boot/kernel#。
+
+若有編譯自訂核心過超過一次，或已經不曉得編譯自訂核心的次數，則需取得與目前作業系統版本相符的 `GENERIC` 核心複本。若可直接操作實體系統，則可以從安裝媒體取得 `GENERIC` 核心複本：
+
+[source,bash]
+....
+# mount /cdrom
+# cd /cdrom/usr/freebsd-dist
+# tar -C/ -xvf kernel.txz boot/kernel/kernel
+....
+
+或者，可以從原始碼重新編譯 `GENERIC` 核心：
+
+[source,bash]
+....
+# cd /usr/src
+# make kernel __MAKE_CONF=/dev/null SRCCONF=/dev/null
+....
+
+這個核心要被 `freebsd-update` 認做 `GENERIC` 核心，[.filename]#GENERIC# 設定檔必須不能做任何修改，也建議在編譯核心時不要使用其他特殊選項。
+
+`freebsd-update` 僅需要 [.filename]#/boot/GENERIC# 存在便可，因此不須重新開機進入 [.filename]#GENERIC#。
+
+[[freebsdupdate-portsrebuild]]
+==== 主要版號升級後的套件升級
+
+一般來說，已安裝的應用程式在次要版本升級仍可沒問題的正常執行。但主要版本升級會採用不同的應用程式 Binary 介面 (Application Binary Interfaces, ABIs)，會導致大部份第三方應用程式無法正常執行。 因此在主要版本升級後，需要升及所有已安裝的套件和 Port，套件可以使用 `pkg upgrade` 來升級，而 Port 則需使用 package:ports-mgmt/portmaster[] 工具。
+
+強制升級所有已安裝的套件會使用檔案庫中新版本的套件來取得目前套件，即使該版號沒有增加。由於在升級 FreeBSD 主要版本時會變更 ABI 版本，因此這是必要動作。強制升級可以執行以下指令來完成：
+
+[source,bash]
+....
+# pkg-static upgrade -f
+....
+
+重新編譯所有已安裝的應用程式可以執行以下指令來完成：
+
+[source,bash]
+....
+# portmaster -af
+....
+
+這個指令會在安裝每個應用程式有可設定選項時顯示設定畫面，並會等待使用者操作該畫面，要避免這種情況並使用預設的設定選項，可在上述指令加上 `-G` 參數。
+
+完成軟體升級後，最後需執行 `freebsd-update` 來完成最後的升級動作：
+
+[source,bash]
+....
+# freebsd-update install
+....
+
+若有使用臨時 [.filename]#GENERIC# 核心，便應在此時依據 crossref:kernelconfig[kernelconfig,設定 FreeBSD 核心] 的說明編譯並安裝新的自訂核心。
+
+重新開機使用新的 FreeBSD 版本後，升級程序便正式完成。
+
+[[freebsdupdate-system-comparison]]
+=== 比對系統狀態
+
+已安裝的 FreeBSD 版本狀態可以使用 `freebsd-update IDS` 與另一個已知良好的複本來做比對測試。 這個指令會評估目前版本的系統工具，程式庫和設定檔，可做為內建的入侵偵測系統來使用 (Intrusion Detection System, IDS)。
+
+[WARNING]
+====
+
+這個指令並非用來取代真正的 IDS，如 package:security/snort[]。由於 `freebsd-update` 儲存在磁碟上，被竄改的可能性是顯而易見的，雖然這個可能性會因使用 `kern.securelevel` 以及將 `freebsd-update` 在不使用時以唯讀儲存而降低，最好的解決方案是能夠與安全的磁碟，如 DVD 或儲存在外部的 USB 磁碟裝置比對系統。替代的方式是使用內建工具的 IDS 功能，在 crossref:security[security-ids,Binary 檢驗] 有詳細說明
+====
+
+要開始比對，需指定輸出的檔案來儲存結果：
+
+[source,bash]
+....
+# freebsd-update IDS >> outfile.ids
+....
+
+系統將會開始檢查並且會產生相當長的檔案清單，內容包含發佈版本已知的與目前安裝版本的 SHA256 雜湊值會儲存到指定的輸出檔。
+
+清單中的項目會相當的多，但輸出的格式可以很簡單的用來分析。例如，要取得與發佈版本不同的檔案清單，可使用以下指令：
+
+[source,bash]
+....
+# cat outfile.ids | awk '{ print $1 }' | more
+/etc/master.passwd
+/etc/motd
+/etc/passwd
+/etc/pf.conf
+....
+
+實際的檔案會更多，此範例的輸出已精簡。部份檔案可能本來就會被修改。例如 [.filename]#/etc/passwd# 在新增使用者到系統時會被修改，核心模組也有可能因使用 `freebsd-update` 更新而有所不同。要排除特定的檔案或目錄可將這些檔案或目錄加入到 [.filename]#/etc/freebsd-update.conf# 中的 `IDSIgnorePaths` 選項。
+
+[[updating-upgrading-documentation]]
+== 更新文件集
+
+說明文件是 FreeBSD 作業系統不可或缺的一部份。最新版本的 FreeBSD 文件除了可在 FreeBSD 網站 (https://www.FreeBSD.org/doc/[https://www.freebsd.org/doc/]) 取得，也可很簡單的取得本地的 FreeBSD 網站、使用手冊、FAQ 及文章副本。
+
+本節將說明如何使用原始碼與 FreeBSD Port 套件集來取得最新版本 FreeBSD 文件本地複本。
+
+有關編輯與提出修正說明文件的資訊，請參考 FreeBSD 文件計畫入門書 (link:{fdp-primer}[FreeBSD Documentation Project Primer])。
+
+[[updating-installed-documentation]]
+=== 自原始碼更新說明文件
+
+從原始碼重新編譯 FreeBSD 文件需要一些不屬於 FreeBSD 基礎系統的工具。需要的工具可安裝由 FreeBSD 文件計劃所開發的 package:textproc/docproj[] 套件或 Port。
+
+安裝完成之後，可使用 svnlite 來取得乾淨的文件原始碼複本：
+
+[source,bash]
+....
+# svnlite checkout https://svn.FreeBSD.org/doc/head /usr/doc
+....
+
+第一次下載文件原始碼需要一些時間，請耐心等候執行完畢。
+
+往後更新文件原始碼可執行：
+
+[source,bash]
+....
+# svnlite update /usr/doc
+....
+
+下載最新的文件原始碼到 [.filename]#/usr/doc# 之後，便完成要更新已安裝文件的準備動作。
+
+完整更新所有可用的語言可以執行：
+
+[source,bash]
+....
+# cd /usr/doc
+# make install clean
+....
+
+若只想要更新特定語言，可對 [.filename]#/usr/doc# 中特定語言的子目錄執行 `make`：
+
+[source,bash]
+....
+# cd /usr/doc/en_US.ISO8859-1
+# make install clean
+....
+
+另一個更新文件的方式是在 [.filename]#/usr/doc# 或特定的語言子目錄下執行此指令：
+
+[source,bash]
+....
+# make update
+....
+
+要指定安裝的輸出格式可使用 `FORMATS` 來設定：
+
+[source,bash]
+....
+# cd /usr/doc
+# make FORMATS='html html-split' install clean
+....
+
+有數個選項可更新部份文件或只編譯特定翻譯來簡化更新程序。這些選項可在 [.filename]#/etc/make.conf# 設為系統全域的預設選項，或是透過指令傳送給 `make`。
+
+選項有：
+
+`DOC_LANG`::
+要編譯與安裝的語言及編碼清單，例如 `en_US.ISO8859-1` 代表英語文件。
+
+`FORMATS`::
+要編譯的輸出格式清單，目前支援 `html`, `html-split`, `txt`, `ps` 以及 `pdf`。
+
+`DOCDIR`::
+要安裝文件的位置，預設為 [.filename]#/usr/shared/doc#。
+
+要取得更多可做為 FreeBSD 系統全域選項的 `make` 變數，請參考 man:make.conf[5]。
+
+[[doc-ports-install-package]]
+=== 自 Port 更新說明文件
+
+前一節介紹了由原始碼更新 FreeBSD 文件的方法，本節將說明使用 Port 套件集的替代方法，可由以下方式達成：
+
+* 安裝事先編譯好的文件套件，無須在本地編譯任何東西或安裝文件工具集。
+* 使用 Port 框架來編譯文件原始碼，可讓取得與編譯文件的步驟更簡單。
+
+這個更新 FreeBSD 文件的方法，會使用到一系列由文件工程團隊 mailto:doceng@FreeBSD.org[doceng@FreeBSD.org] 每月更新的文件 Port 與套件。這些套件列於 FreeBSD Port 套件集的 docs 分類下 (http://www.freshports.org/docs/[http://www.freshports.org/docs/])。
+
+文件 Port 的組織方式如下：
+
+* package:misc/freebsd-doc-en[] 套件或 Port 會安裝所有英語的文件。
+* package:misc/freebsd-doc-all[] 套件或 Port 會安裝所有可用語言的文件。
+* 每個翻譯語言都有套件與 Port，如 package:misc/freebsd-doc-hu[] 為匈牙利語文件。
+
+當使用 Binary 套件時，會安裝指定語言 FreeBSD 文件的所有可用格式。例如以下指令會安裝最新的匈牙利語文件套件：
+
+[source,bash]
+....
+# pkg install hu-freebsd-doc
+....
+
+[NOTE]
+====
+套件使用的名稱格式與 Port 的名稱不同：`_lang_-freebsd-doc`，其中 _lang_ 是語言代碼的縮寫，例如 `hu` 代表匈牙利語，`zh_cn` 代表簡體中文。
+====
+
+要指定文件的格式，需以編譯 Port 來代替安裝套件。例如要編譯並安裝英語文件：
+
+[source,bash]
+....
+# cd /usr/ports/misc/freebsd-doc-en
+# make install clean
+....
+
+Port 提供設定選單來指定要編譯與安裝的格式，預設會選擇分頁的 HTML (類似 http://www.FreeBSD.org[http://www.FreeBSD.org] 使用的格式) 以及 PDF。
+
+此外，編譯文件 Port 時也可指定數個 `make` 選項，包括：
+
+`WITH_HTML`::
+編譯一份文件使用一個 HTML 檔的 HTML 格式。格式化後的文件會儲存至名稱為 [.filename]#article.html# 或 [.filename]#book.html# 的檔案。
+
+`WITH_PDF`::
+格式化的文件會儲存至名稱為 [.filename]#article.pdf# 或 [.filename]#book.pdf# 的檔案。
+
+`DOCBASE`::
+指定要安裝文件的位置，預設為 [.filename]#/usr/local/shared/doc/freebsd#。
+
+以下範例使用變數來安裝 PDF 的匈牙利語文件到特定目錄：
+
+[source,bash]
+....
+# cd /usr/ports/misc/freebsd-doc-hu
+# make -DWITH_PDF DOCBASE=share/doc/freebsd/hu install clean
+....
+
+文件套件或 Port 可以依 crossref:ports[ports,安裝應用程式：套件與 Port] 的說明更新。例如以下指令會使用 package:ports-mgmt/portmaster[] 更新已安裝的匈牙利語文件：
+
+[source,bash]
+....
+# portmaster -PP hu-freebsd-doc
+....
+
+[[current-stable]]
+== 追蹤開發分支
+
+FreeBSD 有兩個開發分支：FreeBSD-CURRENT 及 FreeBSD-STABLE。
+
+本節將說明每個分支及其的特定使用者，也會說明如何在各別分支維持系統為最新版。
+
+[[current]]
+=== 使用 FreeBSD-CURRENT
+
+FreeBSD-CURRENT 是 FreeBSD 開發的 "最前線"，FreeBSD-CURRENT 的使用者需具備較強的技術能力。技術能力較弱的使用者應改追蹤 FreeBSD-STABLE 開發分支。
+
+FreeBSD-CURRENT 是 FreeBSD 最新的原始碼，其中包括正在進行的開發工作、實驗性的變更以及不一定會在下一個官方發行版出現的過渡機制。 雖然 FreeBSD 開發者每天編譯 FreeBSD-CURRENT 原始碼，但仍可能有短暫時間原始碼是無法編譯的。雖然這些問題會儘快被解決，但是無論 FreeBSD-CURRENT 帶來災難或是新功能，同步原始碼時都要考量這個問題。
+
+FreeBSD-CURRENT 主要給下以三種族群：
+
+. 致力於開發某一部份原始碼樹的 FreeBSD 社群成員。
+. FreeBSD 社群成員中活耀的測試人員。 他們願意花時間解決問題，對 FreeBSD 的變更及大方向提出專業建議並送交修補。
+. 隨時關注的使用者，使用目前原始碼做為參考用途，或是偶爾提供意見或貢獻原始碼。
+
+__不應__將 FreeBSD-CURRENT 當做下一個發行版前取得新功能的快速途徑，因為尚未發行的功能並未被完整測試，很可能有問題。這也不是一個快速取得問題修正的方式，因為任何已知的問題修正有可能產生新的問題。 使用 FreeBSD-CURRENT 不在 "官方支援" 的範圍內。
+
+若要追蹤 FreeBSD-CURRENT：
+
+. 加入 http://lists.FreeBSD.org/mailman/listinfo/freebsd-current[freebsd-current] 和 http://lists.FreeBSD.org/mailman/listinfo/svn-src-head[svn-src-head] 郵遞論壇。這是 _重要_ 的，是為了要了解目前人們對於系統目前狀態的評論並接收有關 FreeBSD-CURRENT 目前狀態的重要公告。
++ 
+http://lists.FreeBSD.org/mailman/listinfo/svn-src-head[svn-src-head] 郵遞論壇會記錄每一次修改的提交項目，以及可能產生的副作用的相關資訊。
++ 
+要加入這兩個郵遞論壇，請前往 http://lists.FreeBSD.org/mailman/listinfo[http://lists.FreeBSD.org/mailman/listinfo] 點選要訂閱的郵遞論壇，並依照網頁指示的步驟操作。要追蹤整個原始碼樹，不單只有 FreeBSD-CURRENT 的變更，可訂閱 http://lists.FreeBSD.org/mailman/listinfo/svn-src-all[svn-src-all] 郵遞論壇。
+. 同步 FreeBSD-CURRENT 原始碼。 通常會使用 crossref:mirrors[svn,svnlite] 自列於 crossref:mirrors[svn-mirrors,Subversion 鏡像站] 中的其中一個 Subversion 鏡像站的 `head` 分支中取出 -CURRENT 的程式碼。
+. 考量到檔案庫的大小，部份使用者選擇只同步他們有興趣或貢獻修補的部份原始碼。然而， 計劃要從原始碼編譯整個作業系統的使用者須下載 _全部_ 的 FreeBSD-CURRENT，不可只有選擇的部份。
++ 
+編譯 FreeBSD-CURRENT  前，請仔細地閱讀 [.filename]#/usr/src/Makefile# 並依照 <<makeworld>> 的指示操作。 閱讀 http://lists.FreeBSD.org/mailman/listinfo/freebsd-current[FreeBSD-CURRENT 郵遞論壇] 以及 [.filename]#/usr/src/UPDATING# 來了解升級的相關資訊，有時會含有升級下一個發行版的必要資訊。
+. 要活躍！我們非常鼓勵 FreeBSD-CURRENT 的使用者發表他們對加強哪些功能或是修復哪些錯誤的建議。 如果您在建議時能附上相關程式碼的話，是最好的。
+
+[[stable]]
+=== 使用 FreeBSD-STABLE
+
+FreeBSD-STABLE 是一個開發分支，會在主要的版本更新後產生，進入這個分支的步伐會比較緩慢，而且通常會假定已經在 FreeBSD-CURRENT 中做過測試，所以問題會比較少，但這__仍然__是一個開發分支，在任何時間點，FreeBSD-STABLE 中的原始碼不能保証能供一般使用，它只是另一個開發支線，並不是供最終使用者使用的資源，若沒有任何資源可以做測試的使用者應改使用最新版本的 FreeBSD 發佈版。
+
+對於那些有興趣追蹤或為 FreeBSD 開發流程提供一些貢獻的人，特別是針對下一個主要發佈版的 FreeBSD，應該考慮追蹤 FreeBSD-STABLE。
+
+雖然 FreeBSD-STABLE 分支應該已經做過編譯並執行過，但這仍然無法保証不會出任何問題。由於使用 FreeBSD-STABLE 的人比 FreeBSD-CURRENT 更多，因此不可避免的，有時仍會在 FreeBSD-STABLE 中發現未在 FreeBSD-CURRENT 中出現的問題與特殊狀況。基於這個原因，任何人都不應盲目的追蹤 FreeBSD-STABLE，特別重要的是 _不_ 要將任何產線上的伺服器更新成未經開發或測試環境中測試過的 FreeBSD-STABLE。
+
+若要追蹤 FreeBSD-STABLE：
+
+. 加入 http://lists.FreeBSD.org/mailman/listinfo/freebsd-stable[freebsd-stable] 郵遞論壇來隨時了解 FreeBSD-STABLE 可能需要的編譯相依項目或任何需要特別注意的問題，當有一些有爭議的修復或更新時，開發人員也會在郵遞論壇中公告，如果有使用者對所提出的更改有任何的疑慮，可讓使用者有機會能反應問題。
++ 
+加入要追蹤的分支所相關的 svn 郵遞論壇，例如，在追蹤 9-STABLE 分支的使用者會加入 http://lists.FreeBSD.org/mailman/listinfo/svn-src-stable-9[svn-src-stable-9] 郵遞論壇，該郵遞論壇會記錄每次變更的提交記錄，以及有關可能出現的副作用的任何相關訊息。
++ 
+要加入這些郵遞論壇，請前往 http://lists.FreeBSD.org/mailman/listinfo[http://lists.FreeBSD.org/mailman/listinfo] 點選要訂閱的郵遞論壇，並依照網頁指示的步驟操作。要追蹤整個原始碼樹的變更，可訂閱 http://lists.FreeBSD.org/mailman/listinfo/svn-src-all[svn-src-all] 郵遞論壇。
+. 要安裝新的 FreeBSD-STABLE 系統，可安裝在 crossref:mirrors[mirrors,FreeBSD 鏡像站] 中最近的 FreeBSD-STABLE 發佈版或使用每月使用 FreeBSD-STABLE 所編譯的快照 (Snapshot)，請參考 https://www.FreeBSD.org/snapshots/[www.freebsd.org/snapshots] 取得更多有關快照的資訊。
++ 
+要編譯或升級已有的 FreeBSD 系統到 FreeBSD-STABLE 可使用 crossref:mirrors[svn,svn] 來取出欲升級的分支程式碼，可用分支的名稱如：`stable/9` 會列在 https://www.FreeBSD.org/releng/[www.freebsd.org/releng]。
+. 編譯 FreeBSD-STABLE  前，請仔細地閱讀 [.filename]#/usr/src/Makefile# 並依照 <<makeworld>> 的指示操作。 閱讀 http://lists.FreeBSD.org/mailman/listinfo/freebsd-stable[FreeBSD-STABLE 郵遞論壇] 以及 [.filename]#/usr/src/UPDATING# 來了解升級的相關資訊，有時會含有升級下一個發行版的必要資訊。
+
+[[makeworld]]
+== 從原始碼更新 FreeBSD
+
+從編譯原始碼來更新 FreeBSD 比起用 Binary 更新有幾項優點，在編譯程式碼時可以自訂選項來充分運用特定硬體，部份基礎系統可以使用非預設的設定值編譯，或是在不需要或不想要的時候跳過編譯。使用編譯的程序來更新系統比起安裝 Binary 來更新會耗時許多，但能夠完整自訂一個量身定做版本的 FreeBSD。
+
+[[updating-src-quick-start]]
+=== 快速開始
+
+這是從原始碼編譯來更新 FreeBSD 的標準步驟快速的參考，稍後的章節會更詳細的說明這個程序。
+
+[.procedure]
+====
+
+. 更新並編譯
++
+[source,bash]
+....
+# svnlite update /usr/src  <.>
+check /usr/src/UPDATING  <.>
+# cd /usr/src          <.>
+# make -j4 buildworld  <.>
+# make -j4 kernel      <.>
+# shutdown -r now      <.>
+# cd /usr/src          <.>
+# make installworld    <.>
+# mergemaster -Ui      <.>
+# shutdown -r now      <.>
+....
+
+<.> 取得最新版本的原始碼，請參考 <<updating-src-obtaining-src>> 來了解更多取得與更新原始碼的資訊。
+
+<.> 檢查 [.filename]#/usr/src/UPDATING# 看是否有任後在原始碼編譯之前或之後需要手動操作的步驟。
+
+<.> 前往原始碼目錄。
+
+<.> 編譯世界 (World)，即除了核心 (Kernel) 外的所有東西。
+
+<.> 編譯並安裝核心，此動作等同於 `make buildkernel installkernel`。
+
+<.> 重新啟動系統以使用新的核心。
+
+<.> 前往原始碼目錄。
+
+<.> 安裝世界。
+
+<.> 更新與合併在 [.filename]#/etc/# 中的設定檔案。
+
+<.> 重新啟動系統以使用新編譯好的世界與核心。
+====
+
+[[updating-src-preparing]]
+=== 準備原始碼更新
+
+閱讀 [.filename]#/usr/src/UPDATING#，從原始碼編譯之前與之後任何需要手動操作步驟會在此檔案中說明。
+
+[[updating-src-obtaining-src]]
+=== 更新原始碼
+
+FreeBSD 的原始碼位於 [.filename]#/usr/src/#，較建議透過 Subversion 版本控制系統來更新這份原始碼，要確認原始碼已在版本控制系統的管控下可：
+
+[source,bash]
+....
+# svnlite info /usr/src
+Path: /usr/src
+Working Copy Root Path: /usr/src
+...
+....
+
+此結果代表 [.filename]#/usr/src/# 已在版本控制系統的管控下並且可以使用 man:svnlite[1] 來更新：
+
+[source,bash]
+....
+# svnlite update /usr/src
+....
+
+若該目錄最近沒有更新過，可能會需要一些時間來完成更新動作。在更新完成之後，原始碼便為最新版本，並可開始依下一章節的說明來編譯程序。
+
+.取得原始碼
+[NOTE]
+====
+若輸出結果顯示 `'/usr/src' is not a working copy` 代表有缺少檔案或原始碼是採用其他方式安裝，若是如此，便需重新取出 (checkout) 原始碼。
+
+[[updating-src-obtaining-src-repopath]]
+.FreeBSD 版本與檔案庫路徑
+[cols="1,1,1", options="header"]
+|===
+| uname -r 的輸出結果
+| 檔案庫路徑
+| 說明
+
+|`_X.Y_-RELEASE`
+|``base/releng/``__X.Y__
+|發佈版本加上關鍵的安全性與錯誤修正，較建議大多數使用者使用這個分支。
+
+|`_X.Y_-STABLE`
+|``base/stable/``__X__
+|
+
+發佈版本加上所有在該分支上其他開發中的程式，_STABLE_ 代表不會更改應用程式 Binary 介面 (Applications Binary Interface, ABI)，所以在先前版本所編譯的軟體仍可以正常運作，舉例來說，被編譯在 FreeBSD 10.1 可執行的軟體在編譯完 FreeBSD 10-STABLE 之後仍可以執行。
+
+STABLE 分支偶爾也會有錯誤或無法相容的問題會影響使用者，雖然這些問題通常會很快的被修正。
+
+|`_X_-CURRENT`
+|`base/head/`
+|最新未發佈的 FreeBSD 開發版本，CURRENT 分支可能會有重大錯誤或不相容的問題，只建議進階的使用者使用。
+|===
+
+查看 FreeBSD 目前使用的版本可使用 man:uname[1]：
+
+[source,bash]
+....
+# uname -r
+10.3-RELEASE
+....
+
+根據 <<updating-src-obtaining-src-repopath>>，要更新 `10.3-RELEASE` 需使用的原始碼檔案庫路徑為 `base/releng/10.3`，在取出 (checkout) 原始碼時便要使用這個路徑：
+
+[source,bash]
+....
+# mv /usr/src /usr/src.bak  <.>
+# svnlite checkout https://svn.freebsd.org/base/releng/10.3 /usr/src  <.>
+....
+
+<.> 將舊的目錄移到其他地方，若沒有在這個目錄做過任何本地修改，可直接刪除這個目錄。
+
+<.> 將從 <<updating-src-obtaining-src-repopath>> 查到的路徑加到檔案庫 URL 之後。第三個參數用來存放本地系統原始碼的目標目錄。
+====
+
+[[updating-src-building]]
+=== 從原始碼編譯
+
+編譯世界 (_world_) 即編譯整個作業系統除了核心 (Kernel)，要先做這個動作以便提供最新的工具來編譯核心，接著便可編譯核心：
+
+[source,bash]
+....
+# cd /usr/src
+# make buildworld
+# make buildkernel
+....
+
+編譯完的程式會寫入至 [.filename]#/usr/obj#。
+
+以上這些均為基本的步驟，用來控制編譯的其他選項在以下章節會說明。
+
+[[updating-src-building-clean-build]]
+==== 執行清除編譯
+
+部份 FreeBSD 編譯系統版本會保留先前編譯的程式於暫存的物件目錄 [.filename]#/usr/obj#，避免重新編譯那些尚未更動過的程式碼可加速後續的編譯動作，若要強制重新編譯所有東西可在開始編譯前使用 `cleanworld`：
+
+[source,bash]
+....
+# make cleanworld
+....
+
+[[updating-src-building-jobs]]
+==== 設定工作數量
+
+在多核處理器上增加編譯工作的數量可增加編譯速度，可使用 `sysctl hw.ncpu` 來查看有多少核心，不同處理器使用不同版本的 FreeBSD 編譯系統，所以唯一能了解不同工作數量對編譯速度影響的方式便是測試。在一開始可考慮選擇一個介於 1/2 到 2 倍核心數之間的數值，工作的數量可使用 `-j` 來指定。
+
+[[updating-src-building-jobs-example]]
+.增加編譯工作數
+[example]
+====
+使用四個工作來編譯世界與核心：
+
+[source,bash]
+....
+# make -j4 buildworld buildkernel
+....
+
+====
+
+[[updating-src-building-only-kernel]]
+==== 只編譯核心
+
+若原始碼有更動，便須執行 `buildworld`，完成之後，便可隨時執行 `buildkernel` 來編譯核心，若要只編譯核心可：
+
+[source,bash]
+....
+# cd /usr/src
+# make buildkernel
+....
+
+[[updating-src-building-custom-kernel]]
+==== 編譯自訂核心
+
+標準的 FreeBSD 核心是以一個名為 [.filename]#GENERIC# 的__核心設定檔 (Kernel config file)__為基礎，[.filename]#GENERIC# 核心中內含了所有最常用的裝置驅動程式與選項，有時這個檔案對編譯自訂核心也非常有用，可根據其來加入或移除裝置驅動程式或選項來滿足特定需求。
+
+例如，要開發一個 RAM 受到嚴重限制的小型嵌入式電腦，便可移除不需要的裝置驅動程式或選項來縮小核心。
+
+核心設定檔位於 [.filename]#/usr/src/sys/arch/conf/#，其中使用的 _arch_ 即為 `uname -m` 輸出的結果，大部份的電腦為 `amd64`，那其設定檔目錄則為 [.filename]#/usr/src/sys/amd64/conf/#。
+
+[TIP]
+====
+
+[.filename]#/usr/src# 可以被刪除或重建，所以較建議將自訂核心設定檔放在另一個目錄，如 [.filename]#/root#，並將核心設定檔以連結放至 [.filename]#conf# 目錄，若該目錄被刪除或覆寫，便可重新建立一個新的核心設定的連結。
+====
+
+自訂設定檔可由複製 [.filename]#GENERIC# 設定檔來建立，在此範例，新的自訂核心要用在儲存伺服器，所以將其命名為 [.filename]#STORAGESERVER#：
+
+[source,bash]
+....
+# cp /usr/src/sys/amd64/conf/GENERIC /root/STORAGESERVER
+# cd /usr/src/sys/amd64/conf
+# ln -s /root/STORAGESERVER .
+....
+
+接著編譯 [.filename]#/root/STORAGESERVER#，要加入或移除裝置或選項可見 man:config[5]。
+
+自訂核心要在指令列設定 `KERNCONF` 為核心設定檔來編譯：
+
+[source,bash]
+....
+# make buildkernel KERNCONF=STORAGESERVER
+....
+
+[[updating-src-installing]]
+=== 安裝編譯好的程式
+
+在完成 `buildworld` 與 `buildkernel` 兩個步驟之後，便可安裝新的核心與世界：
+
+[source,bash]
+....
+# cd /usr/src
+# make installkernel
+# shutdown -r now
+# cd /usr/src
+# make installworld
+# shutdown -r now
+....
+
+若使用自訂核心，則同樣須設定 `KERNCONF` 來使用新的自訂核心：
+
+[source,bash]
+....
+# cd /usr/src
+# make installkernel KERNCONF=STORAGESERVER
+# shutdown -r now
+# cd /usr/src
+# make installworld
+# shutdown -r now
+....
+
+[[updating-src-completing]]
+=== 完成更新
+
+還有最後一些的工作要做來完成更新，任何修改過的設定檔要與新版本的設定檔合併、移除找到的過時程式庫，然後重新啟動系統。
+
+[[updating-src-completing-merge-mergemaster]]
+==== 使用 man:mergemaster[8] 合併設定檔案
+
+man:mergemaster[8] 可簡單的將修改過的系統設定檔與新版設定檔合併。
+
+使用 `-Ui`，man:mergemaster[8] 會自動更新那些未被使用者修改過的設定檔並安裝尚不存在的檔案：
+
+[source,bash]
+....
+# mergemaster -Ui
+....
+
+若檔案需要手動合併，會有互動式介面可讓使用者選擇要保留那一邊的檔案，請參考 man:mergemaster[8] 取得更多資訊。
+
+[[updating-src-completing-check-old]]
+==== 檢查過時的檔案與程式庫
+
+部份廢棄的檔案或目錄可以在更新之後保留，可使用以下指令找出這些檔案：
+
+[source,bash]
+....
+# make check-old
+....
+
+並用以下指令刪除：
+
+[source,bash]
+....
+# make delete-old
+....
+
+部份廢棄的程式庫也可以保留下來，可使用以下指令來偵測這些程式庫：
+
+[source,bash]
+....
+# make check-old-libs
+....
+
+並使用以下指令刪除
+
+[source,bash]
+....
+# make delete-old-libs
+....
+
+那些仍使用舊程式庫的程式將在刪除程式庫之後無法正常運作，而這些程式須要在刪除舊程式庫之後重新編譯或更換。
+
+[TIP]
+====
+
+當確認所有舊檔案或目錄可安全的刪除時，要避免刪除每一個檔案時均需按下 kbd:[y] 與 kbd:[Enter] 鍵可在指令設定 `BATCH_DELETE_OLD_FILES`，例如：
+
+[source,bash]
+....
+# make BATCH_DELETE_OLD_FILES=yes delete-old-libs
+....
+
+====
+
+[[updating-src-completing-restart]]
+==== 更新後重新啟動
+
+更新之後的最後一個步驟便是重新啟動電腦，來讓所有的變更生效：
+
+[source,bash]
+....
+# shutdown -r now
+....
+
+[[small-lan]]
+== 多部機器追蹤
+
+當有多部主機需要追蹤相同的原始碼樹，要在每一部主機的系統下載原始碼與重新編譯所有的東西會耗費不少磁碟空間、網路頻寬與 CPU 運算，要解決這個問題的方法是先在一部主機上做完大部份的工作，而其餘的主機透過 NFS 掛載使用編譯完的成果。本節會介紹如何做這件事。要取得更多有關使用 NFS 的資訊請參考 crossref:network-servers[network-nfs,網路檔案系統 (NFS)]。
+
+首先，要先確認要執行同一組 Binary 的一群主機，這群主機又稱作 _建置集 (Build set)_，其中每部主機可以有自己的自訂核心，但會執行相同的 Userland binary。建置集中需挑選一部做為__建置主機 (Build machine)__，這部主機將會拿來編譯 World 與核心 (Kernel)，理想情況下，要挑選一部速度較快、有足夠的 CPU 能夠執行 `make buildworld` 與 `make buildkernel` 的主機。
+
+再挑選一部主機做為__測試主機 (Test machine)__，這部主機,要在將系統更新上正式運作的環境前做測試，這__必須__一部能夠承受服務停止一段時間的主機，它也可是同時是建置主機，但不是一定要。
+
+所有在此建置集中的主機需要透過 NFS 掛載在建置主機上的 [.filename]#/usr/obj# 與 [.filename]#/usr/src#。在有多個建置集時，[.filename]#/usr/src# 也應放在其中一部建置主機，然後由其他主機使用 NFS 掛載。
+
+確保在建置集中的所有主機的 [.filename]#/etc/make.conf# 及 [.filename]#/etc/src.conf# 與建置主機一致，這是由於建置主機必須編譯整個基礎系統 (Base system) 給所有建置集中的主機安裝。此外，每一部建置主機應在 [.filename]#/etc/make.conf# 使用 `KERNCONF` 設定其核心名稱，且建置主機應列出所有要編譯的核心名稱在 `KERNCONF`，並且把自己要用的核心放在第一個。建置主機也必須有每部主機的核心設定檔在其 [.filename]#/usr/src/sys/arch/conf#。
+
+在建置主機上，編譯核心與 World 如 <<makeworld>> 所述，但不要在建置主機上安裝所有編譯好的東西，而是要將編譯好的核心安裝到測試主機，在測試主機透過 NFS 掛載 [.filename]#/usr/src# 及 [.filename]#/usr/obj#。然後執行 `shutdown now` 進入單使用者模式來安裝新的核心與 World 並如同往常執行 `mergemaster`。完成之後，重新開機回到正常的多使用者模式運作。
+
+在測試主機上檢驗完所有東西皆運作正常之後，使用相同的程序將編譯好的結果安裝到在建置集中的其他主機。
+
+同樣的方法也可用在 Port 樹，第一個步驟是透過 NFS 共享 [.filename]#/usr/ports# 給所有在建置集中的主機。要設定 [.filename]#/etc/make.conf# 使用共享的 distfiles，可設定 `DISTDIR` 為由 NFS 掛載對應到的使用者 `root` 可寫入的通用共享目錄。每一台主機應設定 `WRKDIRPREFIX` 到一個本地的編譯目錄，若 Port 要在本地編譯。或者，若建置系統要編譯並散佈套件到建置集中的主機可在建置系統上設定 `PACKAGES` 到一個類似 `DISTDIR` 的目錄。

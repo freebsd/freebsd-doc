@@ -1,0 +1,312 @@
+---
+title: "Capítulo 19. GEOM. Marco de trabajo modular de transformación de discos"
+part: Parte III. Administración del sistema
+prev: books/handbook/disks
+next: books/handbook/vinum
+---
+
+[[geom]]
+= GEOM: Marco de trabajo modular de transformación de discos
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tabla de contenidos
+:table-caption: Tabla
+:figure-caption: Figura
+:example-caption: Ejemplo
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 19
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../../images/books/handbook/geom/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/geom/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/geom/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/es/mailing-lists.adoc[]
+include::shared/es/teams.adoc[]
+include::shared/es/urls.adoc[]
+
+toc::[]
+
+[[GEOM-synopsis]]
+== Sinopsis
+
+Este capítulo explica el uso de discos bajo el marco de trabajo GEOM en FreeBSD. Esto incluye las principales utilidades de control de RAID que usan el marco de trabajo para su configuración. Este capítulo no se adentrará en un examen en profundidad de como GEOM maneja o controla la E/S, el subsistema subyacente, o el código. Esta información se proporciona en la página de manual man:geom[4] y sus diversas referencias VEA TAMBIÉN. Este capítulo tampoco es una guía definitiva de configuraciones RAID. Sólo se examinan las clasificaciones de RAID que puede usar GEOM.
+
+Tras leer este capítulo, sabrá:
+
+* Que tipo de soporte para RAID está disponible a través de GEOM.
+* Como utilizar las utilidades base para configurar, mantener, y manipular los diversos niveles de RAID.
+* Como replicar, unir, cifrar, y conectar remotamente dispositivos de disco por medio de GEOM.
+* Como solucionar problemas con los discos adscritos al marco de trabajo GEOM.
+
+Antes de leer este capítulo, debería:
+
+* Entender como trata FreeBSD a los dispositivos de disco (crossref:disks[disks,Almacenamiento]).
+* Saber como configurar e instalar un nuevo núcleo de FreeBSD (crossref:kernelconfig[kernelconfig,Configuración del kernel de FreeBSD]).
+
+[[GEOM-intro]]
+== Introducción a GEOM
+
+GEOM permite el acceso y control de clases -sectores de arranque maestros (MBR), etiquetas BSD, etc- por medio del uso de proveedores, o de los ficheros especiales de [.filename]#/dev#. Capaz de trabajar con varias configuraciones de RAID por software, GEOM proporcionará transparentemente acceso al sistema operativo y las utilidades del mismo.
+
+[[GEOM-striping]]
+== RAID0 - Distribución por bandas
+
+La distribución por bandas (striping) es un método que se usa para combinar varias unidades de disco en un único volumen. En muchos casos, esto se hace usando controladoras por hardware. El subsistema de discos GEOM proporciona soporte por software para RAID0, también conocido como discos configurados en bandas.
+
+En un sistema RAID0, los datos se dividen en bloques que son escritos por todas las unidades de la agrupación. En lugar de tener que esperar a que el sistema escriba 256 kB en un disco, un sistema RAID0 puede escribir simultáneamente 64 kB en cada uno de los cuatro discos, ofreciendo un superior rendimiento de E/S. Este rendimiento se puede mejorar aún más usando varias controladoras de disco.
+
+Cada uno de los discos de una banda RAID0 debe ser del mismo tamaño, pues las peticiones de E/S están intercaladas para leer o escribir en varios discos en paralelo.
+
+image::striping.png[Ilustració de la distribución por bandas de los discos]
+
+[.procedure]
+====
+*Procedure: Creación de una banda de discos ATA sin formatear*
+
+. Cargue el módulo [.filename]#geom_stripe#:
++
+[source,bash]
+....
+# kldload geom_stripe.ko
+....
+
+. Asegúrese de que existe un punto de montaje adecuado. Si este volumen se convertirá en una partición raíz, utilice temporalmente otro punto de montaje, como [.filename]#/mnt#.
++
+[source,bash]
+....
+# mkdir /mnt
+....
+
+. Determine los nombres de dispositivo de los discos que serán configurados en bandas, y cree el nuevo dispositivo de banda. Por ejemplo, podría utilizar la siguiente orden para configurar en bandas dos discos ATA sin usar ni particionar: [.filename]#/dev/ad2# y [.filename]#/dev/ad3#.
++
+[source,bash]
+....
+# gstripe label -v st0 /dev/ad2 /dev/ad3
+....
++
+. Si se va a usar este volumen como dispositivo raíz para arrancar el sistema, debe ejecutar la siguiente orden antes de crear el sistema de ficheros:
++
+[source,bash]
+....
+# fdisk -vBI /dev/stripe/st0
+....
+
+. Se debe crear una tabla de particiones en el nuevo volumen con la siguiente orden:
++
+[source,bash]
+....
+# bsdlabel -wB /dev/stripe/st0
+....
+
+. Aademás del dispositivo [.filename]#st0#, este proceso debería haber creado otros dos dispositivos en el directorio [.filename]#/dev/stripe#, incluyendo [.filename]#st0a# y [.filename]#st0c#. Ahora se debe crear un sistema de ficheros en el dispositivo [.filename]#st0a# usando la siguiente orden `newfs`:
++
+[source,bash]
+....
+# newfs -U /dev/stripe/st0a
+....
++ 
+Por la pantalla se deslizarán muchos números, y al cabo de unos pocos segundos, el proceso habrá finalizado. El volumen ha sido creado y está preparado para ser montado:
+====
+
+Se puede usar la siguiente orden para montar manualmente una banda de discos recién creada:
+
+[source,bash]
+....
+# mount /dev/stripe/st0a /mnt
+....
+
+Para montar automáticamente este sistema de ficheros distribuido por bandas durante el proceso de arranque, ponga la información del volumen en el fichero [.filename]#/etc/fstab#:
+
+[source,bash]
+....
+# echo "/dev/stripe/st0a /mnt ufs rw 2 2" \
+    >> /etc/fstab
+....
+
+También se debe cargar automáticamente durante la inicialización del sistema el módulo geom, añadiendo una línea a [.filename]#/boot/loader.conf#:
+
+[source,bash]
+....
+# echo 'geom_stripe_load="YES"' >> /boot/loader.conf
+....
+
+[[GEOM-mirror]]
+== RAID1 - Replicación
+
+La replicación es una tecnologín que usan muchas empresas y usuarios para hacer copias de respaldo de sus datos sin interrupciones. Cuando hay una réplica, simplemente significa que el discoB replica al discoA. O, quizá el discoC+D replica al discoA+B. Al margen de la configuración de los discos, lo importante es que la información de un disco o partición está siendo replicada. Más adelante se podría restaurar esa información más fácilmente, hacerse una copia de respaldo sin provocar intrrupciones de servicio o acceso, e incluso almacenarla físicamente en una caja fuerte para datos.
+
+Para empezar, asegúrese de que el sistema tiene dos unidades de disco del mismo tamaño, eb este ejercicio se supone que son discos SCSI de acceso directo (man:da[4]).
+
+Comience por instalar FreeBSD en el primer disco con sólo dos particiones. Una debería ser una partición de intercambio, de dos veces el tamaño de la RAM, y todo el espacio restante se dedicará al sistema de ficheros raíz ([.filename]#/#). Es posible tener particiones aparte para otros puntos de montajes; sin embargo, esto multiplicará por diez el nivel de dificultad, debido a la alteración manual de las opciones de man:bsdlabel[8] y man:fdisk[8].
+
+Reinicie y espere a que el sistema se inicie por completo. Una vez haya finalizado este proceso, ingrese como usuario `root`.
+
+Cree el dispositivo [.filename]#/dev/mirror/gm# y enlácelo a [.filename]#/dev/da1#:
+
+[source,bash]
+....
+# gmirror label -vnb round-robin gm0 /dev/da1
+....
+
+El sistema debería responder con:
+
+[source,bash]
+....
+Metadata value stored on /dev/da1.
+Done.
+....
+
+Inicialice GEOM, esto cargará el módulo del núcleo [.filename]#/boot/kernel/geom_mirror.ko#:
+
+[source,bash]
+....
+# gmirror load
+....
+
+[NOTE]
+====
+Esta orden debería haber creado en el directorio [.filename]#/dev/mirror# los nodos de dispositivo [.filename]#gm0#, [.filename]#gm0s1#, [.filename]#gm0s1a#, y [.filename]#gm0s1c#.
+====
+
+Instale una etiqueta genérica `fdisk` y el código de arranque en el recién creado dispositivo [.filename]#gm0#:
+
+[source,bash]
+....
+# fdisk -vBI /dev/mirror/gm0
+....
+
+Ahora instale la información `bsdlabel` genérica:
+
+[source,bash]
+....
+# bsdlabel -wB /dev/mirror/gm0s1
+....
+
+[NOTE]
+====
+Si hay varias slices (rodajas) y particiones, necesitará modificar las opciones de las dos órdenes anteriores. Deben coincidir con la slice y tamaño de partición del otro disco.
+====
+
+Utilice la utilidad man:newfs[8] para crear un sistema de ficheros predefinido en nodo de dispositivo [.filename]#gm0s1a#:
+
+[source,bash]
+....
+# newfs -U /dev/mirror/gm0s1a
+....
+
+Esto debería haber hecho que el sistema mostrara alguna información y un puñado de números. Esto es bueno. Examine la pantalla por si hay algún mensaje de error y monte el dispositivo en el punto de montaje [.filename]#/mnt#:
+
+[source,bash]
+....
+# mount /dev/mirror/gm0s1a /mnt
+....
+
+Ahora mueva todos los datos del disco de arranque a este nuevo sistema de ficheros. Este ejemplo usa las órdenes man:dump[8] y man:restore[8]; aunque, man:dd[1] también debería funcionar en este escenario. Evitamos utilizar man:tar[1] porque no copiará el código de arranque. De ese modo, el fallo estaría garantizado.
+
+[source,bash]
+....
+# dump -L -0 -f- / |(cd /mnt  restore -r -v -f-)
+....
+
+Se debe hacer esto para cada sistema de ficheros. Simplemente ponga el sistema de ficheros adecuado en la ubicación correcta al ejecutar la orden mencionada.
+
+Ahora edite el fichero replicado [.filename]#/mnt/etc/fstab# y elimine o comente el fichero swap . Cambie la información del otro sistema de ficheros para que utilice el nuevo disco. Vea el siguiente ejemplo:
+
+[.programlisting]
+....
+# Device                Mountpoint      FStype  Options         Dump    Pass#
+#/dev/da0s2b             none            swap    sw              0       0
+/dev/mirror/gm0s1a       /               ufs     rw              1       1
+....
+
+Ahora cree un fichero [.filename]#boot.conf# tanto en la partición actual como en la nueva partición raíz. Este fichero "ayudará" al BIOS del sistema a arrancar la unidad correcta:
+
+[source,bash]
+....
+# echo "1:da(1,a)/boot/loader"  /boot.config
+....
+
+[source,bash]
+....
+# echo "1:da(1,a)/boot/loader"  /mnt/boot.config
+....
+
+[NOTE]
+====
+Lo hemos colcoado en ambas particiones raíz para asegurar un arranque correcto. Si por alguna razón el sistema no pudiera leer en la nueva partición raíz, está disponible un arranque a prueba de fallos.
+====
+
+Ahora agregue la siguiente línea al nuevo [.filename]#/boot/loader.conf#:
+
+[source,bash]
+....
+# echo 'geom_mirror_load="YES"'  /mnt/boot/loader.conf
+....
+
+Esto le dice a la utilidad man:loader[8] que cargue el [.filename]#geom_mirror.ko# durante la inicialización del sistema.
+
+Reinicie el sistema:
+
+[source,bash]
+....
+# shutdown -r now
+....
+
+Si todo ha ido bien, el sistema debería haber arrancado desde el dispositivo [.filename]#gm0s1a#, y un prompt `login` debería estar a la espera. Si algo fue mal, consulte la sección posterior de resolución de problemas. Ahora agregue el disco [.filename]#da0# al dispositivo [.filename]#gm0#:
+
+[source,bash]
+....
+# gmirror configure -a gm0
+# gmirror insert gm0 /dev/da0
+....
+
+La opción `-a` le dice a man:gmirror[8] que use sincronización automática; por ejemplo, que replique las escrituras en disco automáticamente. La página de manual explica como reconstruir y reemplazar discos, aunque utiliza [.filename]#data# en vez de [.filename]#gm0#.
+
+=== Resolución de problemas
+
+==== El sistema se niega a arrancar
+
+Si el sistema arranca hasta un prompt similar a:
+
+[.programlisting]
+....
+ffs_mountroot: can't find rootvp
+Root mount failed: 6
+mountroot
+....
+
+Reinicie la máquina utilizando el botón de encendido o el de reset. En el menú de arranque, seleccione la opción seis (6). Esto llevará al sistema a un prompt de man:loader[8]. Cargue el módulo del núcleo manualmente:
+
+[source,bash]
+....
+OK? load geom_mirror.ko
+OK? boot
+....
+
+Si esto funciona, es que por alguna razón el módulo no se cargaba correctamente. Ponga:
+
+[.programlisting]
+....
+options	GEOM_MIRROR
+....
+
+en el fichero de configuración del núcleo, recompile y reinstale. Esto debería solucionar el problema.

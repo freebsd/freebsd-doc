@@ -1,0 +1,126 @@
+---
+title: Chapter 2. Locking Notes
+prev: books/arch-handbook/boot
+next: books/arch-handbook/kobj
+---
+
+[[locking]]
+= Locking Notes
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 2
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/en/mailing-lists.adoc[]
+include::shared/en/teams.adoc[]
+include::shared/en/urls.adoc[]
+
+toc::[]
+
+_This chapter is maintained by the FreeBSD SMP Next Generation Project._
+
+This document outlines the locking used in the FreeBSD kernel to permit effective multi-processing within the kernel. Locking can be achieved via several means. Data structures can be protected by mutexes or man:lockmgr[9] locks. A few variables are protected simply by always using atomic operations to access them.
+
+[[locking-mutexes]]
+== Mutexes
+
+A mutex is simply a lock used to guarantee mutual exclusion. Specifically, a mutex may only be owned by one entity at a time. If another entity wishes to obtain a mutex that is already owned, it must wait until the mutex is released. In the FreeBSD kernel, mutexes are owned by processes.
+
+Mutexes may be recursively acquired, but they are intended to be held for a short period of time. Specifically, one may not sleep while holding a mutex. If you need to hold a lock across a sleep, use a man:lockmgr[9] lock.
+
+Each mutex has several properties of interest:
+
+Variable Name::
+The name of the struct mtx variable in the kernel source.
+
+Logical Name::
+The name of the mutex assigned to it by `mtx_init`. This name is displayed in KTR trace messages and witness errors and warnings and is used to distinguish mutexes in the witness code.
+
+Type::
+The type of the mutex in terms of the `MTX_*` flags. The meaning for each flag is related to its meaning as documented in man:mutex[9].
+
+`MTX_DEF`:::
+A sleep mutex
+
+`MTX_SPIN`:::
+A spin mutex
+
+`MTX_RECURSE`:::
+This mutex is allowed to recurse.
+
+Protectees::
+A list of data structures or data structure members that this entry protects. For data structure members, the name will be in the form of `structure name`.`member name`.
+
+Dependent Functions::
+Functions that can only be called if this mutex is held.
+
+.Mutex List
+[cols="15%,10%,10%,55%,20%", frame="all", options="header"]
+|===
+| Variable Name
+| Logical Name
+| Type
+| Protectees
+| Dependent Functions
+
+|sched_lock
+|"sched lock"
+|`MTX_SPIN` \| `MTX_RECURSE`
+|`_gmonparam`, `cnt.v_swtch`, `cp_time`, `curpriority`, `mtx`.`mtx_blocked`, `mtx`.`mtx_contested`, `proc`.`p_procq`, `proc`.`p_slpq`, `proc`.`p_sflag`, `proc`.`p_stat`, `proc`.`p_estcpu`, `proc`.`p_cpticks` `proc`.`p_pctcpu`, `proc`.`p_wchan`, `proc`.`p_wmesg`, `proc`.`p_swtime`, `proc`.`p_slptime`, `proc`.`p_runtime`, `proc`.`p_uu`, `proc`.`p_su`, `proc`.`p_iu`, `proc`.`p_uticks`, `proc`.`p_sticks`, `proc`.`p_iticks`, `proc`.`p_oncpu`, `proc`.`p_lastcpu`, `proc`.`p_rqindex`, `proc`.`p_heldmtx`, `proc`.`p_blocked`, `proc`.`p_mtxname`, `proc`.`p_contested`, `proc`.`p_priority`, `proc`.`p_usrpri`, `proc`.`p_nativepri`, `proc`.`p_nice`, `proc`.`p_rtprio`, `pscnt`, `slpque`, `itqueuebits`, `itqueues`, `rtqueuebits`, `rtqueues`, `queuebits`, `queues`, `idqueuebits`, `idqueues`, `switchtime`, `switchticks`
+|`setrunqueue`, `remrunqueue`, `mi_switch`, `chooseproc`, `schedclock`, `resetpriority`, `updatepri`, `maybe_resched`, `cpu_switch`, `cpu_throw`, `need_resched`, `resched_wanted`, `clear_resched`, `aston`, `astoff`, `astpending`, `calcru`, `proc_compare`
+
+|vm86pcb_lock
+|"vm86pcb lock"
+|`MTX_DEF`
+|`vm86pcb`
+|`vm86_bioscall`
+
+|Giant
+|"Giant"
+|`MTX_DEF` \| `MTX_RECURSE`
+|nearly everything
+|lots
+
+|callout_lock
+|"callout lock"
+|`MTX_SPIN` \| `MTX_RECURSE`
+|`callfree`, `callwheel`, `nextsoftcheck`, `proc`.`p_itcallout`, `proc`.`p_slpcallout`, `softticks`, `ticks`
+|
+|===
+
+[[locking-sx]]
+== Shared Exclusive Locks
+
+These locks provide basic reader-writer type functionality and may be held by a sleeping process. Currently they are backed by man:lockmgr[9].
+
+.Shared Exclusive Lock List
+[cols="20%,80%", options="header"]
+|===
+| Variable Name
+| Protectees
+
+|`allproc_lock`
+|`allproc` `zombproc` `pidhashtbl` `proc`.`p_list` `proc`.`p_hash` `nextpid`
+
+|`proctree_lock`
+|`proc`.`p_children` `proc`.`p_sibling`
+|===
+
+[[locking-atomic]]
+== Atomically Protected Variables
+
+An atomically protected variable is a special variable that is not protected by an explicit lock. Instead, all data accesses to the variables use special atomic operations as described in man:atomic[9]. Very few variables are treated this way, although other synchronization primitives such as mutexes are implemented with atomically protected variables.
+
+* `mtx`.`mtx_lock`

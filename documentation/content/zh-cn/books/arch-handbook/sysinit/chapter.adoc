@@ -1,0 +1,152 @@
+---
+title: 第 5 章 SYSINIT框架
+prev: books/arch-handbook/jail
+next: books/arch-handbook/mac
+---
+
+[[sysinit]]
+= SYSINIT框架
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:part-signifier: 部分
+:appendix-caption: 附录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 5
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+SYSINIT是一个通用的调用排序与分别执行机制的框架。 FreeBSD目前使用它来进行内核的动态初始化。 SYSINIT使得FreeBSD的内核各子系统可以在内核或模块动态加载链接时被重整、 添加、删除、替换，这样，内核和模块加载时就不必去修改一个静态的有序初始化 安排表甚至重新编译内核。这个体系也使得内核模块 (现在称为__KLD__可以与内核不同时编译、链接、 在引导系统时加载，甚至在系统运行时加载。这些操作是通过 "内核链接器"(kernel linker)和"链接器集合" (linker set)完成的。
+
+[[sysinit-term]]
+== 术语
+
+链接器集合(Linker Set)::
+一种链接方法。这种方法将整个程序源文件中静态申明的数据收集到 一个可邻近寻址的数据单元中。
+
+[[sysinit-operation]]
+== SYSINIT操作
+
+SYSINIT要依靠链接器获取遍布整个程序源代码多处申明的静态数据 并把它们组成一个彼此相邻的数据块。这种链接方法被称为 "链接器集合"(linker set)。 SYSINIT使用两个链接器集合以维护两个数据集合， 包含每个数据条目的调用顺序、函数、一个会被提交给该函数的数据指针。
+
+SYSINIT按照两类优先级标识对函数排序以便执行。 第一类优先级的标识是子系统的标识， 给出SYSINIT分别执行子系统的函数的全局顺序， 定义在[.filename]##sys/kernel.h##中的枚举 ``sysinit_sub_id``内。第二类优先级标识在子系统中的元素的顺序， 定义在[.filename]##sys/kernel.h##中的枚举 ``sysinit_elem_order``内。
+
+有两种时刻需要使用SYSINIT：系统启动或内核模块加载时， 系统析构或内核模块卸载时。内核子系统通常在系统启动时使用SYSINIT 的定义项以初始化数据结构。例如，进程调度子系统使用一个SYSINIT 定义项来初始化运行队列数据结构。设备驱动程序应避免直接使用 ``SYSINIT()``，对于总线结构上的物理真实设备应使用 ``DRIVER_MODULE()``调用的函数先侦测设备的存在， 如果存在，再进行设备的初始化。这一系统过程中， 会做一些专门针对设备的事情，然后调用``SYSINIT()``本身。 对于非总线结构一部分的虚设备，应改用``DEV_MODULE()``。
+
+[[sysinit-using]]
+== 使用SYSINIT
+
+=== 接口
+
+==== 头文件
+
+[.programlisting]
+....
+sys/kernel.h
+....
+
+==== 宏
+
+[.programlisting]
+....
+SYSINIT(uniquifier, subsystem, order, func, ident)
+SYSUNINIT(uniquifier, subsystem, order, func, ident)
+....
+
+=== 启动
+
+宏``SYSINIT()``在SYSINIT启动数据集合中 建立一个SYSINIT数据项，以便SYSINIT在系统启动或模块加载时排序 并执行其中的函数。``SYSINIT()``有一个参数uniquifier， SYSINIT用它来标识数据项，随后是子系统顺序号、子系统元素顺序号、 待调用函数、传递给函数的数据。所有的函数必须有一个恒量指针参数。
+
+.``SYSINIT()``的例子
+[example]
+====
+[.programlisting]
+....
+#include sys/kernel.h
+
+void foo_null(void *unused)
+{
+        foo_doo();
+}
+SYSINIT(foo, SI_SUB_FOO, SI_ORDER_FOO, foo_null, NULL);
+
+struct foo foo_voodoo = {
+        FOO_VOODOO;
+}
+
+void foo_arg(void *vdata)
+{
+        struct foo *foo = (struct foo *)vdata;
+        foo_data(foo);
+}
+SYSINIT(bar, SI_SUB_FOO, SI_ORDER_FOO, foo_arg, foo_voodoo);
+....
+
+====
+
+注意，``SI_SUB_FOO``和``SI_ORDER_FOO`` 应当分别在上面提到的枚举``sysinit_sub_id``和 ``sysinit_elem_order``之中。既可以使用已有的枚举项， 也可以将自己的枚举项添加到这两个枚举的定义之中。 你可以使用数学表达式微调SYSINIT的执行顺序。 以下的例子示例了一个需要刚好要在内核参数调整的SYSINIT之前执行的SYSINIT。
+
+.调整``SYSINIT()``顺序的例子
+[example]
+====
+[.programlisting]
+....
+static void
+mptable_register(void *dummy __unused)
+{
+
+	apic_register_enumerator(mptable_enumerator);
+}
+
+SYSINIT(mptable_register, SI_SUB_TUNABLES - 1, SI_ORDER_FIRST,
+    mptable_register, NULL);
+....
+
+====
+
+=== 析构
+
+宏``SYSUNINIT()``的行为与``SYSINIT()``的相当， 只是它将数据项填加至SYSINIT的析构数据集合。
+
+.``SYSUNINIT()``的例子
+[example]
+====
+[.programlisting]
+....
+#include sys/kernel.h
+
+void foo_cleanup(void *unused)
+{
+        foo_kill();
+}
+SYSUNINIT(foobar, SI_SUB_FOO, SI_ORDER_FOO, foo_cleanup, NULL);
+
+struct foo_stack foo_stack = {
+        FOO_STACK_VOODOO;
+}
+
+void foo_flush(void *vdata)
+{
+}
+SYSUNINIT(barfoo, SI_SUB_FOO, SI_ORDER_FOO, foo_flush, foo_stack);
+....
+
+====

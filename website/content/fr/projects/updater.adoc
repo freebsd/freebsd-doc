@@ -1,0 +1,113 @@
+---
+title: "Projet de Mise à jour Binaire pour FreeBSD (binup)"
+sidenav: developers
+---
+
+include::shared/fr/urls.adoc[]
+
+= Projet de Mise à jour Binaire pour FreeBSD (binup)
+
+== Contenu
+
+* <<goals,Objectifs>>
+* <<design,Conception>>
+* <<implementation,Implémentation>>
+* <<code,Code>>
+
+[[goals]]
+== Objectifs
+
+Le projet de mise à jour binaire pour FreeBSD a pour objectif de fournir un mécanisme sécurisé pour la distribution des mises à jour binaires sous FreeBSD. Ce projet est complémentaire aux projets http://www.openpackages.org[Open Packages] et link:../libh/[libh] et n'empiète pas sur ceux-ci.
+
+Ce système est un mécanisme client/serveur qui permet aux clients d'installer n'importe quel "profil" ou version de FreeBSD via le réseau. Un profil peut contenir un ensemble spécifique de logiciels FreeBSD à installer, des paquetages additionnels et des actions de configuration de manière à l'adapter au mieux à un environnement donné (ie un profil de serveur web sécurisé sous FreeBSD 4.3)
+
+Notre implémentation a pour but de faire abstraction de l'ontologie actuelle des collections de logiciels FreeBSD de manière à pouvoir intégrer au mieux les futurs développements visant à une plus grande modularité du système de base.
+
+[[design]]
+== Conception
+
+=== Les "profils"
+
+Ce que l'utilisateur voit en tant "qu'objets de plus haut niveau" dans le système de mise à jour sont des profils. Un profil peut représenter un système de configuration utilisateur donné ou un modèle générique (serveur web, serveur de mail, etc) fourni par nous.
+
+Chaque profil consiste en des fichiers et/ou des collections. Une collection représente un ensemble de fichiers tel qu'un paquetage ou comme ce que le programme sysinstall appelle une "distribution". Les profils existent sur le serveur mais le client peut aussi choisir de mettre des copies en cache de manière à utiliser des services à la "tripwire". Des profils typiques pourraient ressembler à cela :
+
+....
+       [mysystem]                        [web-server]
+        bin  4.2                          bin      4.2
+        bash 2.02                         manpages 4.2
+        src  4.2                          apache   2.1
+        xblaster 1.0
+....
+
+Une collection peut également avoir un numéro de version spécifique associé ou bien un numéro de version "flottant" ce qui signifie que la collection utiliserait la plus récente version supérieure au numéro indiqué.
+
+Identification
+
+Les utilisateurs s'identifieront sur le serveur via un nom d'utilisateur et un mot de passe ce qui leur permettra d'accéder à leurs profils personnalisés ainsi qu'aux profils systèmes.
+
+Les paquetages binaires du serveur sont signés avec une clef publique.
+
+=== Logiciel client de mise à jour
+
+Le client supporte la connexion à un serveur de mise à jour, l'identification d'un utilisateur, la consultation des profils existants ou la création des nouveaux profils ainsi que le téléchargement des fichiers de données et "d'actions" à partir du serveur. Les nouveaux fichiers de données seront créés de telle façon que les mises à jour partielles ne provoqueront pas de corruption de données et les transactions sont délivrées avec une atomicité raisonnable.
+
+Le client sera implémenté en 3 étapes :
+
+* Un ensemble de librairies qui implémentent le plus gros des fonctions client <-> serveur.
+* Une version en ligne de commande du client qui supporte toutes les fonctions disponibles dans la librairie.
+* Une version avec interface graphique du client qui utilise soit le client version ligne de commande soit directement les routines de la librairie selon ce qui est le plus adapté.
+
+Etant donné qu'un système peut aussi être "mis à jour" à partir d'une première installation, la prochaine génération de logiciel d'installation pourrait prendre en charge le formatage du système de fichier ainsi que la configuration réseau puis utiliser la librairie cliente pour proposer un menu permettant de faire une sélection parmi les logiciels disponibles et réaliser l'installation.
+
+=== Logiciel serveur de mise à jour
+
+Le serveur supporte les connexions par un nombre arbitraire de clients et l'authentification des utilisateurs (ou d'un utilisateur "anonyme" si le serveur est configuré pour supporter les connexions anonymes) afin de déterminer les profils disponibles.
+
+Une fois que le serveur reçoit une demande (e.g. un jeu de collections) de la part d'un client et un nom de profil côté serveur pour faire la correspondance, il fait une recherche sur chaque collection pour voir si une version plus récente de cette collection existe sur le serveur ou s'il existe une modification en attente concernant la collection qui serait supérieure à la version de patch de la collection présente dans la demande du client.
+
+Les différences et/ou les collections entières sont envoyées au client pour être décompactées en même temps que toutes les pré/post-actions pour chaque différence ou collection qui doivent être exécutées sur le client. Une fois que le client a confirmé que toutes les pré/post-actions et le décompactage de la collection concernée ont été exécutés avec succès, il met à jour le profil stocké et passe à la suivante. Si le transfert est interrompu en cours de route, le processus peut donc reprendre d'où il s'est arrêté.
+
+Le serveur de mise à jour fournit un espace de stockage local pour un certain nombre de données sur les profils suivant des contraintes d'espace disque et peut également être utilisé comme moyen de cloner des machines. L'utilisateur installe une seule machine entièrement adaptée à ses besoins puis télécharge son profil sur le serveur. Chaque machine suivante est installée à partir de ce profil et voilà, une armée de clones.
+
+Le serveur ne conservera probablement pas les données concernant uniquement le côté client tel que `/etc/master.passwd` ou plus largement tout ce qui est en dehors de ces propres collections. Mais nous pouvons laisser cette décision ouverte pour plus tard ou le proposer en tant qu'option de configuration.
+
+[[implementation]]
+== Détails sur l'implémentation
+
+[[update-server]]
+=== Serveur de mise à jour
+
+Le serveur de mise à jour est en grande partie fonctionnel. Les informations à propos des profils, des collections et des actions sont stockées dans une base de données SQL. Une couche d'abstraction se charge d'appeler les fonctions correspondantes (MySQL et PostgreSQL sont supportés pour le moment) afin de répondre aux requêtes des clients. L'utilisation d'une base de données relationnelles nous a permis de modifier très facilement l'organisation des données sans perdre du temps à réécrire du code. Comme nos structures de données sont quasiment finalisées, il pourrait être plus efficace d'utiliser BerkeleyDB ou une autre solution mais, pour l'instant, l'utilisation du SQL nous a permis de gagner beaucoup de temps de développement.
+
+Le serveur peut être utilisé pour installer ou mettre à jour un système FreeBSD 4.X mais il reste beaucoup de finitions à faire et de nombreuses fonctionnalités manquantes sont encore nécessaires.
+
+[[update-server-todo]]
+Liste des choses à faire pour le serveur :
+
+* Ajouter la possibilité de gérer les paquetages tel qu'ils sont actuellement définis et utilisés dans FreeBSD
+* Ajouter un mécanisme pour lire l'ontologie (N.d.T. : sic !) de l'arbre des sources FreeBSD à partir d'un fichier XML au lieu de le coder en dur dans un script Perl qui se charge de générer les tables SQL nécessaires. Cela permettra beaucoup plus de flexibilité dans la création des profils et des composants logiciels. Il devrait aussi fournir une description pour des paquetages qui pourraient prendre le pas sur des sous-ensembles de ce que sysinstall appelle actuellement le "système de base" (par exemple, un profil avec Postfix au lieu de Sendmail et toutes les dépendances de configuration qui vont avec).
+* Ajouter une information "somme de contrôle" ("checksum") et offrir un service à la "tripwire" aux clients.
+
+[[update-client]]
+=== Client de mise à jour
+
+Le client de mise à jour n'est pour le moment pas utilisable. Actuellement, il existe du code pour réaliser concrètement les mises à jour ainsi que pour tester les diverses fonctions de mise à jour. Par ailleurs, le client ne gère pas encore les paquetages. Une fois que cette fonction aura été ajoutée, et que les bugs auront été corrigés, le code existant devra être converti en librairie.
+
+A partir de là, il sera aisément possible de créer un installeur ainsi qu'un programme utilisateur de mise à jour en version texte, X11 et peut-être même en version GNOME et KDE.
+
+[[update-client-todo]]
+Liste des choses à faire pour le client :
+
+* ajouter les informations concernant le copyright/la licence pour tous les fichiers sources
+* se mettre en conformité avec style(9)
+* corriger les bugs les plus critiques
+* ajouter la fonction de gestion des paquetages
+* faire la conversion en librairie
+
+[[code]]
+== Où est le code ?
+
+Ce projet est actuellement développé au sein du dépôt CVS principal de FreeBSD. Les sources sont disponibles dans `projects/binup`. Vous pouvez utiliser les méthodes habituelles pour récupérer les sources FreeBSD afin d'y accéder. *NOTE :* les utilisateurs de cvsup doivent utiliser la collection `projects-all` pour accéder à la hiérarchie `projects/`
+
+Une liste de diffusion a été mise en place pour ce projet. Vous pouvez poster vos questions, patches, etc sur la liste de diffusion freebsd-binup@FreeBSD.org Pour savoir comment s'abonner à cette liste, veuillez consulter le link:{handbook}#ERESOURCES-MAIL[Manuel de Référence FreeBSD]

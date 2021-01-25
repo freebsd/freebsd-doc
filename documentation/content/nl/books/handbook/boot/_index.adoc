@@ -1,0 +1,485 @@
+---
+title: Hoofdstuk 13. Het FreeBSD opstartproces
+part: Deel III. Systeembeheer
+prev: books/handbook/config
+next: books/handbook/users
+---
+
+[[boot]]
+= Het FreeBSD opstartproces
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Inhoudsopgave
+:table-caption: Tabel
+:figure-caption: Afbeelding
+:example-caption: Voorbeeld
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 13
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/boot/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/boot/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/boot/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/nl/mailing-lists.adoc[]
+include::shared/nl/teams.adoc[]
+include::shared/nl/urls.adoc[]
+
+toc::[]
+
+[[boot-synopsis]]
+== Overzicht
+
+Het proces van het starten van de computer en het laden van het besturingssysteem wordt het "bootstrapproces" of simpelweg "booten" genoemd. Het FreeBSD opstartproces levert een grote mate van flexibiliteit doordat gewijzigd kan worden wat er gebeurt als het systeem start en geeft de mogelijkheid om te kiezen uit verschillende geïnstalleerde besturingssystemen op dezelfde computer of zelfs verschillende versies van hetzelfde besturingssysteem of geïnstalleerde kernel.
+
+Dit hoofdstuk geeft gedetailleerde informatie over instellingen die gebruikt kunnen worden en hoe het FreeBSD opstartproces veranderd kan worden. Dit omvat alles wat er gebeurt totdat de FreeBSD kernel wordt geladen, gezocht heeft naar apparaten en man:init[8] start. Dit vindt plaats als tijdens het booten de tekstkleur verandert van helder wit naar grijs.
+
+Na het lezen van dit hoofdstuk weet de lezer:
+
+* Wat de onderdelen zijn van het FreeBSD bootstrap-systeem en hoe zij onderling communiceren;
+* De opties die meegegeven kunnen worden aan de componenten in de bootstrap om het proces te sturen;
+* Meer over man:device.hints[5];
+
+[NOTE]
+.Alleen voor x86
+====
+Dit hoofdstuk beschrijft alleen het opstartproces van FreeBSD dat draait op een Intel x86 systeem.
+====
+
+[[boot-introduction]]
+== Het bootprobleem
+
+Het aanzetten van een computer en het starten van het besturingssysteem zorgt voor een interessant dilemma. Vast staat dat een computer niet weet wat hij moet doen totdat het besturingssysteem gestart is. Daar valt ook het starten van programma's op schijf onder. Dus als een computer geen programma van schijf kan starten zonder besturingssysteem en het besturingssysteem staat op schijf, hoe wordt het besturingssysteem dan gestart?
+
+Dit is een gelijksoortig probleem als dat in het boek De avonturen van Baron von Münchausen. Iemand is in een put gevallen en heeft zichzelf eruit gehaald door zijn laarsriempjes (bootstraps) vast te pakken en zich op te trekken. In het begin van het computertijdperk is de term _bootstrap_ gegeven aan het mechanisme dat het besturingssysteem laadt. Later werd dit afgekort tot "booten".
+
+Op x86 machines is het Basis Input/Output Systeem (BIOS) verantwoordelijk voor het laden van het besturingssysteem. Om dit te doen zoekt het BIOS op de harde schijf naar het Master Boot Record (MBR), dat op een vaste plek op de schijf staat. Het BIOS heeft voldoende kennis om het MBR te starten en gaat er vanuit dat de MBR de rest van de taken uitvoert die nodig zijn om het besturingssysteem te kunnen laden, mogelijk met hulp van het BIOS.
+
+Aan de code binnen de MBR wordt meestal gerefereerd als een _bootmanager_, in het bijzonder als die interactie heeft met een gebruiker. In dit geval heeft de bootmanager meestal meer code in de eerste _track_ van een schijf binnen het bestandssysteem van een besturingssysteem. Een bootmanager wordt soms ook _boot loader_ genoemd, maar FreeBSD gebruikt die term voor een later stadium van het starten. Populaire bootmanagers zijn onder andere boot0 (ook bekend als Boot Easy, de standaard FreeBSD bootmanager), Grub, GAG en LILO (alleen boot0 past binnen de MBR.)
+
+Als er maar één besturingssysteem en een schijf geïnstalleerd is, voldoet een standaard PC MBR. Dit MBR zoekt naar de eerste opstartbare (alias actieve) slice op schijf en start de code op deze slice om de rest van het besturingssysteem te laden. De MBR die standaard door man:fdisk[8] wordt geïnstalleerd is zo'n MBR. Die is gebaseerd op [.filename]#/boot/mbr#.
+
+Indien er meerdere besturingssystemen op schijven staan, kan er een andere bootmanager geïnstalleerd worden, een die een lijst toont met verschillende besturingssystemen en de mogelijkheid geeft om er één te kiezen dat opgestart moet worden. In de volgende paragrafen worden er twee beschreven.
+
+Het resterende deel van het FreeBSD bootstrap-systeem is verdeeld in drie fases. De eerste fase wordt gestart door het MBR, dat net voldoende informatie heeft om de computer in een bepaalde toestand te zetten en de tweede fase te starten. De tweede fase kan net iets meer doen voordat hij de derde fase start. De derde fase voltooit het laden van het besturingssysteem. Dit proces is verdeeld in drie fases omdat de PC-standaarden grenzen stellen aan de grootte van programma's die gedraaid kunnen worden in de eerste twee fases van dit proces. Door deze taken aan elkaar te koppelen krijgt FreeBSD een flexibeler laadgedeelte.
+
+Daarna wordt de kernel gestart en begint met het zoeken naar en initialiseren van apparaten. Zodra het kernel-opstartproces klaar is, geeft de kernel de controle over aan het gebruikerproces man:init[8], dat controleert of de schijven een bruikbare status hebben. Dan start man:init[8] de instellingen op gebruikersniveau die de bestandssystemen mount, de netwerkkaarten instelt voor communicatie met het netwerk en in het algemeen worden de processen gestart die moeten draaien op een FreeBSD systeem bij het opstarten.
+
+[[boot-blocks]]
+== De bootmanager en opstartstadia
+
+[[boot-boot0]]
+=== De bootmanager
+
+De code in de MBR of bootmanager wordt soms ook wel _stage zero_ van het opstartproces genoemd. In dit onderdeel worden twee eerder genoemde bootmanagers beschreven: boot0 en LILO.
+
+*De boot0 bootmanager:* De MBR die standaard door de FreeBSD installer of man:boot0cfg[8] wordt geïnstalleerd is gebaseerd op [.filename]#/boot/boot0#. Het programma boot0 is erg eenvoudig, omdat  maar 446 bytes lang mag zijn vanwege de slicetabel en de `0x55AA` identificatie aan het einde van de MBR. Als de FreeBSD MBR is geïnstalleerd en er staan andere besturingssystemen op een harde schijf, dan is bij het opstarten een scherm te zien dat er ongeveer zo uitziet:
+
+[[boot-boot0-example]]
+.[.filename]#boot0# schermafbeelding
+[example]
+====
+
+[source,bash]
+....
+F1 DOS
+F2 FreeBSD
+F3 Linux
+F4 ??
+F5 Drive 1
+
+Default: F2
+....
+
+====
+
+Andere besturingssystemen, Windows(R) in het bijzonder, staan er om bekend dat zij bestaande MBRs overschrijven met die van zichzelf. Als dit is gebeurd of als het bestaande MBR vervangen moet worden door het FreeBSD MBR:
+
+[source,bash]
+....
+# fdisk -B -b /boot/boot0 apparaat
+....
+
+Waar _apparaat_ het apparaat is waar de computer van boot, zoals [.filename]#ad0# voor de eerste IDE-schijf [.filename]#ad2# voor de eerste IDE-schijf op de tweede IDE-controller, [.filename]#da0# voor de eerste SCSI-schijf, enzovoort. Als het wenselijk is een aangepaste instelling te gebruiken voor de MBR, dan kan man:boot0cfg[8] gebruikt worden.
+
+*De LILO bootmanager:* Start, om deze bootmanager te installeren zodat er ook FreeBSD mee gestart kan worden, eerst Linux(R) en voeg het volgende toe aan het bestaande instellingenbestand [.filename]#/etc/lilo.conf#:
+
+[.programlisting]
+....
+other=/dev/hdXY
+table=/dev/hdX
+loader=/boot/chain.b
+label=FreeBSD
+....
+
+Geef in de bovenstaande regels de primaire partitie en schijf van FreeBSD op met Linux(R) instellingen, waarbij _X_ vervangen wordt door de Linux(R) schijfletter en _Y_ door het primaire partitienummer van Linux(R). Wijzig bij gebruik van een SCSI-schijf _/dev/hd_ in iets als _/dev/sd_. De regel `loader=/boot/chain.b` kan achterwege blijven als de besturingssystemen op dezelfde schijf staan. Voer daarna `/sbin/lilo -v` uit om de wijzigingen vast te leggen. Controleer het vastleggen door controle van de schermberichten.
+
+[[boot-boot1]]
+=== Fase één [.filename]#/boot/boot1# en fase twee [.filename]#/boot/boot2#
+
+Conceptueel zijn de eerste en tweede fase onderdeel van hetzelfde programma op hetzelfde stukje schijf. Door ruimtebeperkingen zijn ze in twee stukken gesplitst. Ze worden echter altijd samen geïnstalleerd. Ze worden gekopieerd uit het gecombineerde bestand [.filename]#/boot/boot# door het installatieprogramma of bsdlabel (zie verderop).
+
+Ze staan buiten bestandssystemen in de eerste track van de opstartslice, beginnend bij de eerste sector. Dit is waar <<boot-boot0,boot0>> en iedere andere bootmanager een programma verwacht om door te gaan met het opstartproces. Het aantal gebruikte sectoren kan eenvoudig bepaald worden uit de grootte van [.filename]#/boot/boot#.
+
+[.filename]#boot1# is erg simpel omdat dit slechts 512 bytes groot kan zijn en net genoeg weet over het FreeBSD _bsdlabel_, dat informatie bevat over de slice om [.filename]#boot2# te vinden en te starten.
+
+[.filename]#boot2# is iets verfijnder en begrijpt het FreeBSD bestandssysteem genoeg om er bestanden op te vinden en geeft een simpele interface om de kernel of loader te kiezen die gestart moet worden.
+
+[.filename]#boot2# start meestal de <<boot-loader,loader>>, doordat deze veel slimmer is en gebruikersvriendelijke opstartinstellingen heeft. Voorheen was het zijn taak direct de kernel te starten.
+
+[[boot-boot2-example]]
+.[.filename]#boot2# schermafbeelding
+[example]
+====
+
+[source,bash]
+....
+>> FreeBSD/i386 BOOT
+Default: 0:ad(0,a)/boot/loader
+boot:
+....
+
+====
+
+Als ooit eens de geïnstalleerde [.filename]#boot1# en [.filename]#boot2# vervangen moeten worden kan dat met man:bsdlabel[8]:
+
+[source,bash]
+....
+# bsdlabel -B schijfslice
+....
+
+In het voorbeeld hierboven is _schijfslice_ de schijf en slice waarvan opgestart wordt, zoals [.filename]#ad0s1# voor de eerste slice op de eerste IDE-schijf.
+
+[WARNING]
+.Gevaarlijk toegewijde modus
+====
+Als alleen een schijfnaam als [.filename]#ad0# gebruikt wordt in man:bsdlabel[8] wordt er een gevaarlijk toegewijde schijf zonder slices gemaakt. Dit is niet aan te raden en daarom wordt aangeraden voor het uivoeren van man:bsdlabel[8] de commandoregel nog een keer te controleren voordat er op kbd:[Return] wordt gedrukt.
+====
+
+[[boot-loader]]
+=== Fase drie, [.filename]#/boot/loader#
+
+De loader is de laatse fase van de drietraps-bootstrap en deze bevindt zich op het bestandssysteem, meestal als [.filename]#/boot/loader#.
+
+De loader is bedoeld als een gebruikersvriendelijke manier voor de instelling, door gebruik te maken van een makkelijke commandoverzameling, gesteund door een krachtige vertaler met een wat complexere commandoverzameling.
+
+[[boot-loader-flow]]
+==== Loader programmaverloop
+
+Tijdens de start zoekt de loader naar een console en schijven en kijkt van welke schijf er opgestart wordt. Variabelen worden hiernaar gezet en er wordt een vertaler gestart zodat gebruikercommando's interactief of via een script kunnen worden doorgegeven.
+
+Dan leest de loader [.filename]#/boot/loader.rc#, die dan standaard [.filename]#/boot/defaults/loader.conf# leest. Deze plaatst redelijke standaarden in variabelen en leest [.filename]#/boot/loader.conf# voor lokale wijzigingen op deze variabelen. [.filename]#loader.rc# reageert op deze variabelen door de geselecteerde modules en kernel te laden.
+
+Als laatste wordt standaard door de loader 10 seconden gewacht op toetsinvoer en als dit niet wordt onderbroken laadt loader de kernel. Als het wel wordt onderbroken krijgt de gebruiker een prompt aangeboden die een eenvoudige commandoverzameling begrijpt. Hier kan de gebruiker variabelen wijzigen, alle modules stoppen en/of starten en uiteindelijk opstarten of herstarten.
+
+[[boot-loader-commands]]
+==== Ingebouwde loadercommando's
+
+Hieronder worden de meest gebruikte loadercommando's besproken. Een volledige omschrijving van alle beschikbare commando's staat in man:loader[8].
+
+autoboot _seconden_::
+Gaat door met het opstarten van de kernel als deze niet wordt onderbroken binnen de opgegeven tijd in seconden. Er wordt een aftelproces getoond dat standaard op 10 seconden staat.
+
+boot [-opties] [kernelnaam]::
+Start direct de kernel op met de opgegeven opties en naam, indien meegegeven. Het opgeven van een kernelnaam op de opdrachtregel is alleen van toepassing nadat een _unload_-commando is gegeven, anders wordt de kernel die hiervoor was geladen gebruikt.
+
+boot-conf::
+Doorloopt hetzelfde automatische instellen van modules gebaseerd op variabelen zoals ook gebeurt bij het opstarten. Dit is alleen zinnig als eerst `unload` is gebruikt en enkele variabelen zijn gewijzigd, meestal `kernel`.
+
+help [onderwerp]::
+Toont documentatie uit [.filename]#/boot/loader.help#. Als het opgegeven onderwerp `index` is, wordt een lijst met beschikbare onderwerpen getoond.
+
+include _bestandsnaam_ ...::
+Verwerkt het bestand met de opgegeven naam. Het bestand wordt ingelezen en regel voor regel vertaald. Iedere foutmelding stopt direct het include-commando.
+
+load [-t type] _bestandsnaam_::
+Laadt de kernel, kernel-module of bestand van opgegeven type en naam. Ieder argument achter de bestandsnaam wordt doorgegeven aan het bestand.
+
+ls [-l] [padnaam]::
+Toont de lijst bestanden in het opgegeven pad of van de rootmap als geen pad wordt opgegeven. Als `-l` wordt meegegeven wordt ook de bestandsgrootte weergegeven.
+
+lsdev [-v]::
+Toont de lijst met alle apparaten waarvan het mogelijk is om modules te kunnen laden. Als `-v` wordt meegegeven worden meer details getoond.
+
+lsmod [-v]::
+Toont geladen modules. Als `-v` wordt meegegeven worden meer details getoont.
+
+more _bestandsnaam_::
+Toont de inhoud van het opgegeven bestand met een pauze na iedere `LINES` regels.
+
+reboot::
+Herstart het systeem onmiddelijk.
+
+set _variabele_::
+Vult de omgevingsvariabele van de loader.
+
+unload::
+Verwijdert alle geladen modules.
+
+[[boot-loader-examples]]
+==== Loader voorbeelden
+
+Hier zijn wat practische voorbeelden van het gebruik van loader:
+
+* De kernel opstarten in single-user modus:
++
+[source,bash]
+....
+ boot -s
+....
++
+* De gebruikelijke kernel en modules ontladen om daarna de oude (of een andere) kernel te laden:
++
+[source,bash]
+....
+unload
+load kernel.old
+....
++ 
+[.filename]#kernel.GENERIC# kan gebruikt worden als de algemene kernel die meegeleverd is bij de installatieschijf of [.filename]#kernel.old# om de vorige geïnstalleerde kernel te gebruiken (als bijvoorbeeld de kernel is vervangen).
++
+[NOTE]
+====
+Zo worden de bekende modules geladen met een andere kernel:
+
+[source,bash]
+....
+unload
+set kernel="kernel.old"
+boot-conf
+....
+
+====
++
+* Voor het laden van een kernelinstellingenscript (een script dat dingen doet die anders met de hand ingegeven zouden worden):
++
+[source,bash]
+....
+ load -t userconfig_script /boot/kernel.conf
+....
+
+[[boot-splash]]
+==== Splash-schermen tijdens het opstarten
+
+Het splash-scherm creëert een visueel aantrekkelijker scherm in vergelijking met de originele opstartberichten. Dit scherm zal worden afgebeeld totdat een aanmeldprompt op de console verschijnt of een X-schermbeheerder een aanmeldprompt aanbiedt.
+
+Er zijn twee basisomgevingen beschikbaar in FreeBSD. De eerste is de verouderde standaardomgeving met de opdrachtregel op de virtuële console. Nadat het systeem klaar is met opstarten, wordt er een aanmeldprompt op de console gepresenteerd. De tweede omgeving is de grafische omgeving van het X11 Bureaublad. Nadat crossref:x11[x-install,X11] en één van de grafische crossref:x11[x11-wm,bureaubladomgevingen], zoals GNOME, KDE, of XFce zijn geïnstalleerd, kan het X11-bureaublad worden gestart door `startx` te gebruiken.
+
+Sommige gebruikers verkiezen het grafische aanmeldscherm van X11 boven de traditionele op tekst gebaseerde aanmeldprompt. Schermbeheerders zoals XDM voor Xorg, gdm voor GNOME, en kdm voor KDE (en anderen van de Portscollectie) bieden een grafisch aanmeldscherm in plaats van de aanmeldprompt op het console. Na succesvol aanmelden bieden ze de gebruiker een grafisch bureaublad.
+
+In de opdrachtregelomgeving zou het splash-scherm alle berichten over aftasten tijdens het opstarten en het starten van taken verbergen voordat het de aanmeldprompt laat zien. In een X11-omgeving zouden gebruikers een visueel overzichtelijkere opstartervaring krijgen dat meer lijkt op wat een gebruiker van een (Microsoft(R) Windows(R) of niet-Unix-systeem) zou ervaren.
+
+[[boot-splash-function]]
+===== Splash-schermfuncties
+
+De splash-schermfunctie ondersteunt 256-kleuren-bitmaps ( [.filename]#.bmp#), ZSoft PCX ( [.filename]#.pcx#) en TheDraw ([.filename]#.bin#) bestanden. Verder moeten de splash-afbeeldingsbestanden een resolutie van 320 bij 200 pixels of minder hebben om op de standaard VGA-adapters te werken.
+
+Activeer de VESA-ondersteuning die in FreeBSD zit om grotere afbeeldingen, tot de maximale resolutie van 1024 bij 768 pixels, te gebruiken. Dit kan worden aangezet door de VESA-module tijdens het opstarten van het systeem te laden, of door de kernelconfiguratieoptie `VESA` toe te voegen en een eigen kernel te bouwen (zie crossref:kernelconfig[kernelconfig,De FreeBSD-kernel instellen]). De ondersteuning voor VESA geeft gebruikers de mogelijkheid om een splash-schermafbeelding af te beelden dat het hele scherm vult.
+
+Zolang het splash-scherm wordt afgebeeld tijdens het opstartproces, kan het ten alle tijden worden uitgezet door op een toetsenbordtoets te drukken.
+
+Het splash-scherm is standaard ook een schermbeveiliging buiten X11. Na een periode van inactiviteit zal het scherm in het splash-scherm veranderen en herhaald door stappen van het veranderen van de intensiteit van de afbeelding lopen, van helder tot zeer donker. Dit standaardgedrag van het splash-scherm (schermbeveiliging) kan overruled worden door een regel met `saver=` toe te voegen aan [.filename]#/etc/rc.conf#. De optie `saver=` heeft verschillende ingebouwde schermbeveiligingen om uit te kiezen, de volledige lijst staat in de handleidingpagina man:splash[4]. De standaard schermbeveiliging heet "warp". Merk op dat de optie `saver=` die in [.filename]#/etc/rc.conf# is gespecificeerd alleen betrekking heeft op virtuele consoles. Het heeft geen effect op X11-schermbeheerders.
+
+Enkele meldingen van de bootloader, inclusief de opties van het opstartmenu en een getimede wachtende aftelprompt worden afgebeeld tijdens het opstarten, zelfs als het splash-scherm aanstaat.
+
+Voorbeelden van splash-schermen kunnen gedownload worden van de galerij op http://artwork.freebsdgr.org/node/3/[http://artwork.freebsdgr.org/]. Door de port package:sysutils/bsd-splash-changer[] te installeren, kunnen de splash-afbeeldingen willekeurig elke keer dat er wordt opgestart uit een verzameling worden gekozen.
+
+[[boot-splash-enable]]
+===== De splash-schermfunctie aanzetten
+
+Het splash-schermbestand ([.filename]#.bmp#, [.filename]#.pcx# of [.filename]#.bin#) moet op de rootpartitie staan, bijvoorbeeld in de map [.filename]#/boot#.
+
+Bewerk voor de standaardresolutie van het opstartscherm (256 kleuren, 320 bij 200 pixels, of minder) [.filename]#/boot/loader.conf# zodat het volgende erin staat:
+
+[.programlisting]
+....
+splash_bmp_load="YES"
+bitmap_load="YES"
+bitmap_name="/boot/splash.bmp"
+....
+
+Bewerk [.filename]#/boot/loader.conf# voor grotere videoresoluties (tot maximaal 1024 bij 768 pixels) zodat dit bestand het volgende bevat:
+
+[.programlisting]
+....
+vesa_load="YES"
+splash_bmp_load="YES"
+bitmap_load="YES"
+bitmap_name="/boot/splash.bmp"
+....
+
+Het bovenstaande neemt aan dat [.filename]#/boot/splash.bmp# voor het splash-scherm wordt gebruikt. Wanneer een PCX-bestand gewenst is, dienen de volgende opdrachten gebruikt te worden, en afhankelijk van de resolutie de regel `vesa_load="YES"`.
+
+[.programlisting]
+....
+splash_pcx_load="YES"
+bitmap_load="YES"
+bitmap_name="/boot/splash.pcx"
+....
+
+In versie 8.3 is een andere mogelijkheid het gebruik van ASCII-kunst in https://en.wikipedia.org/wiki/TheDraw[TheDraw] formaat.
+
+[.programlisting]
+....
+splash_txt="YES"
+bitmap_load="YES"
+bitmap_name="/boot/splash.bin"
+....
+
+De bestandsnaam is niet beperkt tot "splash" zoals in het bovenstaande voorbeeld. Het kan van alles zijn zolang het een van de bovenstaande types is, zoals [.filename]#splash_640x400.bmp# of [.filename]#bluewave.pcx#.
+
+Enkele andere interessante opties voor [.filename]#loader.conf#:
+
+`beastie_disable="YES"`::
+Dit zal het menu met opstartopties niet weergeven, maar de getimede wachtende aftelprompt zal nog steeds aanwezig zijn. Zelfs zonder dat het menu met opstartopties wordt afgebeeld, zal het invoeren van een optie in de getimede wachtende aftelprompt de actie van de overeenkomstige opstartoptie uitvoeren.
+
+`loader_logo="beastie"`::
+Dit zal de standaardwoorden "FreeBSD", welke rechts van het menu met opstartopties worden afgebeeld vervangen door het gekleurde beastie-logo zoals vroegere uitgaven die hadden.
+
+Raadpleeg voor meer informatie de handleidingpagina's man:splash[4], man:loader.conf[5], en man:vga[4].
+
+[[boot-kernel]]
+== Interactie met de kernel tijdens opstarten
+
+Zodra de kernel is geladen door de <<boot-loader,loader>> (zoals gewoonlijk) of door <<boot-boot1,boot2>> (zonder de loader), wordt er als ze er zijn gekeken naar de opstartvlaggen en wordt het gedrag zo nodig aangepast.
+
+[[boot-kernel-bootflags]]
+=== Opstartvlaggen kernel
+
+De meest voorkomende opstartvlaggen:
+
+`-a`::
+Vraag tijdens de opstart van de kernel om het apparaat dat gemount moet worden als root bestandssysteem.
+
+`-C`::
+Boot van cd-rom.
+
+`-c`::
+Start UserConfig om instellingen te maken voor de kernel tijdens het opstarten.
+
+`-s`::
+Start naar single-user modus.
+
+`-v`::
+Geef meer tekst en uitleg tijdens het opstarten van de kernel.
+
+[NOTE]
+====
+In man:boot[8] staan alle bootvlaggen beschreven.
+====
+
+[[device-hints]]
+== Device hints
+
+Tijdens het opstarten van het systeem leest de boot man:loader[8] het bestand man:device.hints[5]. Dit bestand slaat opstartinformatie voor de kernel op in variabelen, ook wel "device hints". Deze "device hints" worden door stuurprogramma's gebruikt voor instelling van apparaten.
+
+Device hints kunnen ook bij het <<boot-loader," Fase drie, [.filename]#/boot/loader#">> prompt ingevoerd worden. Variabelen kunnen toegevoegd worden met behulp van `set`, verwijderd worden met `unset` en bekeken worden met `show`. Variabelen uit [.filename]#/boot/device.hints# kunnen hier ook herroepen worden. Device hints die ingevoerd zijn bij de boot loader zijn niet permanent en zijn bij de volgende boot niet meer aanwezig.
+
+Zodra het systeem opgestart is, kan man:kenv[1] gebruikt worden om alle variabelen te bekijken.
+
+De schrijfwijze voor [.filename]#/boot/device.hints# is één variabele per regel. Het standaard hekje "#" wordt gebruikt voor commentaar. Regels worden als volgt opgebouwd:
+
+[source,bash]
+....
+ hint.driver.unit.keyword="waarde"
+....
+
+De syntaxis voor de Fase 3 bootloader is:
+
+[source,bash]
+....
+ set hint.driver.unit.keyword=waarde
+....
+
+`driver` is de naam van het apparaatstuurprogramma, `unit` is het apparaatnummer van het stuurprogramma en `keyword` is het hint-sleutelwoord. Dit sleutelwoord kan uit de volgende opties bestaan:
+
+* `at`: beschrijft de bus waarop het apparaat is aangesloten.
+* `port`: beschrijft het startadres van de I/O die gebruikt wordt.
+* `irq`: beschrijft het interrupt request nummer dat gebruikt wordt.
+* `drq`: beschrijft het DMA kanaalnummer.
+* `maddr`: beschrijft het fysieke geheugenadres dat gebruikt wordt door het apparaat.
+* `flags`: zet verschillende vlagbits voor het apparaat.
+* `disabled`: is `1` als het apparaat is uitgezet.
+
+Apparaatstuurprogramma's kunnen hints die hier niet genoemd zijn accepteren (of eisen). Zie hiervoor de betreffende handleiding: man:device.hints[5], man:kenv[1], man:loader.conf[5] en man:loader[8].
+
+[[boot-init]]
+== Init: start van procesbesturing
+
+Als de kernel klaar is met opstarten geeft die de besturing over aan het gebruikerproces man:init[8], te vinden in [.filename]#/sbin/init# of de padnaam die staat is in de variabele `init_path` in `loader`.
+
+[[boot-autoreboot]]
+=== Automatische herstart
+
+De automatische herstart ("Automatic Reboot Sequence") controleert of de beschikbare bestandssystemen betrouwbaar zijn. Als dat niet zo is en man:fsck[8] kan de fouten niet repareren, dan brengt man:init[8] het systeem terug naar <<boot-singleuser,Single-user modus>> voor de systeembeheerder, die het probleem dan directer kan aanpakken.
+
+[[boot-singleuser]]
+=== Single-user modus
+
+Deze modus kan bereikt worden vanuit de <<boot-autoreboot,Automatische herstart>> of door de gebruiker die opstart met de optie `-s` of door de variabele `boot_single` aan te zetten in de `loader`.
+
+Het kan ook door man:shutdown[8] te starten zonder de optie reboot (`-r`) of halt (`-h`), vanuit <<boot-multiuser,Multi-user modus>>.
+
+Als het systeem `console` op `insecure` staat in [.filename]#/etc/ttys#, dan vraagt het systeem om het `root` wachtwoord voordat de single-user modus wordt gestart.
+
+[[boot-insecure-console]]
+.Onveilige console in [.filename]#/etc/ttys#
+[example]
+====
+[.programlisting]
+....
+# name  getty                           type    status          comments
+#
+# Als de console op "insecure" staat vraagt init om het root wachtwoord
+# voor het naar single-user modus gaan.
+console none                            unknown off insecure
+....
+
+====
+
+[NOTE]
+====
+Met een `insecure` console wordt bedoeld dat de fysieke beveiliging van het console niet goed is en dat alleen personen die het `root` wachtwoord kennen naar single-user modus mogen gaan. Het betekent niet dat het console onveilig wordt ingesteld. Als het veilig moet, wordt er dus voor `insecure` gekozen en niet voor `secure`.
+====
+
+[[boot-multiuser]]
+=== Multi-user modus
+
+Als man:init[8] vindt dat het bestandssysteem in orde is of zodra de gebruiker klaar is in <<boot-singleuser,Single-user modus>>, gaat het systeem over naar multi-user modus, waarin het de resource configuration (broninstellingen) van het systeem start.
+
+[[boot-rc]]
+==== Bronconfiguratie (rc)
+
+Het broninstellingensysteem leest de standaard instellingen in vanuit [.filename]#/etc/defaults/rc.conf# en specifieke systeemdetails uit [.filename]#/etc/rc.conf# en gaat daarna door met het mounten van de bestandssystemen voor het systeem die genoemd worden in [.filename]#/etc/fstab#, start netwerkdiensten, start andere systeemdaemons en start als laatste de opstartscripts van lokaal geïnstalleerde packages.
+
+man:rc[8] is een goede referentie voor het broninstellingensysteem. Dat zijn de scripts zelf natuurlijk ook.
+
+[[boot-shutdown]]
+== Afsluitvolgorde
+
+Bij een gecontroleerde shutdown met man:shutdown[8] probeert man:init[8] om het script [.filename]#/etc/rc.shutdown# te starten en daarna aan alle processen het `TERM` signaal te sturen en eventueel het `KILL` signaal aan alle processen die niet op tijd zijn gestopt.
+
+Om een FreeBSD machine uit te zetten die energiebeheer ondersteund, kan het commando `shutdown -p now` gegeven worden om gelijk de stroom af te schakelen. Als er herstart moet worden dan kan `shutdown -r now` gebruikt worden. De gebruiker die dit uitvoert moet wel `root` zijn of lid van de `operator` groep om man:shutdown[8] te mogen gebruiken. man:halt[8] en man:reboot[8] kunnen ook gebruikt worden. Meer informatie is in de betreffende handleidingpagina's te vinden.
+
+[NOTE]
+====
+Voor energiebeheer is man:acpi[4] ondersteuning in de kernel nodig of via een module die ingeladen moet worden.
+====

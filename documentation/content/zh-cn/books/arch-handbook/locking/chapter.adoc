@@ -1,0 +1,137 @@
+---
+title: 第 2 章 内核中的锁
+prev: books/arch-handbook/boot
+next: books/arch-handbook/kobj
+---
+
+[[locking]]
+= 内核中的锁
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:part-signifier: 部分
+:appendix-caption: 附录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 2
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+__这一章由 FreeBSD SMP Next Generation Project 维护。 请将评论和建议发送给link:{freebsd-smp}_._
+
+这篇文档提纲挈领的讲述了在FreeBSD内核中的锁，这些锁使得有效的多处理成为可能。 锁可以用几种方式获得。数据结构可以用mutex或man:lockmgr[9]保护。 对于为数不多的若干个变量，假如总是使用原子操作访问它们，这些变量就可以得到保护。 
+
+[TIP]
+.译者注
+====
+仅读本章内容，还不足以找出"mutex" 和"共享互斥锁"的区别。似乎它们的功能有重叠之处， 前者比后者的功能选项更多。它们似乎都是man:lockmgr[9]的子集。
+====
+
+[[locking-mutexes]]
+== Mutex
+
+Mutex就是一种用来解决共享/排它矛盾的锁。 一个mutex在一个时刻只可以被一个实体拥有。如果另一个实体要获得已经被拥有的mutex， 就会进入等待，直到这个mutex被释放。在FreeBSD内核中，mutex被进程所拥有。
+
+Mutex可以被递归的索要，但是mutex一般只被一个实体拥有较短的一段时间， 因此一个实体不能在持有mutex时睡眠。如果你需要在持有mutex时睡眠， 可使用一个 man:lockmgr[9] 的锁。
+
+每个mutex有几个令人感兴趣的属性:
+
+变量名::
+在内核源代码中struct mtx变量的名字
+
+逻辑名::
+由函数``mtx_init``指派的mutex的名字。 这个名字显示在KTR跟踪消息和witness出错与警告信息里。 这个名字还用于区分标识在witness代码中的各个mutex
+
+类型::
+Mutex的类型，用标志MTX_表示。 每个标志的意义在man:mutex[9]有所描述。
+
+MTX_DEF:::
+一个睡眠mutex
+
+MTX_SPIN:::
+一个循环mutex
+
+MTX_RECURSE:::
+这个mutex允许递归
+
+保护对象::
+这个入口所要保护的数据结构列表或数据结构成员列表。 对于数据结构成员，将按照 ``结构名``.``成员名``的形式命名。
+
+依赖函数::
+仅当mutex被持有时才可以被调用的函数
+
+.Mutex列表
+[cols="1,1,1,1,1", frame="all", options="header"]
+|===
+| 变量名
+| 逻辑名
+| 类型
+| 保护对象
+| 依赖函数
+
+|sched_lock
+|"sched lock"(调度器锁)
+|MTX_SPIN \| MTX_RECURSE
+|`_gmonparam`, `cnt.v_swtch`, `cp_time`, `curpriority`, `mtx`.`mtx_blocked`, `mtx`.`mtx_contested`, `proc`.`p_procq`, `proc`.`p_slpq`, `proc`.`p_sflag`, `proc`.`p_stat`, `proc`.`p_estcpu`, `proc`.`p_cpticks proc`.`p_pctcpu`, `proc`.`p_wchan`, `proc`.`p_wmesg`, `proc`.`p_swtime`, `proc`.`p_slptime`, `proc`.`p_runtime`, `proc`.`p_uu`, `proc`.`p_su`, `proc`.`p_iu`, `proc`.`p_uticks`, `proc`.`p_sticks`, `proc`.`p_iticks`, `proc`.`p_oncpu`, `proc`.`p_lastcpu`, `proc`.`p_rqindex`, `proc`.`p_heldmtx`, `proc`.`p_blocked`, `proc`.`p_mtxname`, `proc`.`p_contested`, `proc`.`p_priority`, `proc`.`p_usrpri`, `proc`.`p_nativepri`, `proc`.`p_nice`, `proc`.`p_rtprio`, `pscnt`, `slpque`, `itqueuebits`, `itqueues`, `rtqueuebits`, `rtqueues`, `queuebits`, `queues`, `idqueuebits`, `idqueues`, `switchtime`, `switchticks`
+|`setrunqueue`, `remrunqueue`, `mi_switch`, `chooseproc`, `schedclock`, `resetpriority`, `updatepri`, `maybe_resched`, `cpu_switch`, `cpu_throw`, `need_resched`, `resched_wanted`, `clear_resched`, `aston`, `astoff`, `astpending`, `calcru`, `proc_compare`
+
+|vm86pcb_lock
+|"vm86pcb lock"(虚拟8086模式进程控制块锁)
+|MTX_DEF
+|`vm86pcb`
+|`vm86_bioscall`
+
+|Giant
+|"Giant"(巨锁)
+|MTX_DEF \| MTX_RECURSE
+|几乎可以是任何东西
+|许多
+
+|callout_lock
+|"callout lock"(延时调用锁)
+|MTX_SPIN \| MTX_RECURSE
+|`callfree`, `callwheel`, `nextsoftcheck`, `proc`.`p_itcallout`, `proc`.`p_slpcallout`, `softticks`, `ticks`
+|
+|===
+
+[[locking-sx]]
+== 共享互斥锁
+
+这些锁提供基本的读/写类型的功能，可以被一个正在睡眠的进程持有。 现在它们被统一到man:lockmgr[9]之中。
+
+.共享互斥锁列表
+[cols="1,1", options="header"]
+|===
+| 变量名
+| 保护对象
+
+|`allproc_lock`
+|``allproc zombproc pidhashtbl proc``.``p_list proc``.``p_hash nextpid``
+
+|`proctree_lock`
+|``proc``.``p_children proc``.``p_sibling``
+|===
+
+[[locking-atomic]]
+== 原子保护变量
+
+原子保护变量并非由一个显在的锁保护的特殊变量，而是： 对这些变量的所有数据访问都要使用特殊的原子操作(man:atomic[9])。 尽管其它的基本同步机制(例如mutex)就是用原子保护变量实现的， 但是很少有变量直接使用这种处理方式。
+
+* ``mtx``.``mtx_lock``

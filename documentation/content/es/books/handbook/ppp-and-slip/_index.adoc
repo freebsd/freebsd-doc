@@ -1,0 +1,1844 @@
+---
+title: Capítulo 25. PPP y SLIP
+part: Parte IV. Comunicaciones en red
+prev: books/handbook/serialcomms
+next: books/handbook/firewalls
+---
+
+[[ppp-and-slip]]
+= PPP y SLIP
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tabla de contenidos
+:table-caption: Tabla
+:figure-caption: Figura
+:example-caption: Ejemplo
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 25
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/ppp-and-slip/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/ppp-and-slip/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/ppp-and-slip/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/es/mailing-lists.adoc[]
+include::shared/es/teams.adoc[]
+include::shared/es/urls.adoc[]
+
+toc::[]
+
+== Sinopsis
+
+FreeBSD cuenta con un gran numero de formas para conectar una computadora a otra. Para establecer una red o una conección a Internet por medio de un módem, o bien, permitir a otras computadoras conectarse por medio de este, se requiere del uso de PPP o SLIP. Este capítulo describe en detalle como configurar los servicios de comunicación para llevar esto a cabo.
+
+Una vez que haya leido este capítulo, usted sabrá:
+
+* Como configurar User PPP.
+* Como configurar Kernel PPP.
+* Como configurar PPPoE (PPP over Ethernet*). 
+* Como configurar PPPoA (PPP over ATM*).
+* Como instalar y configurar un cliente y servidor SLIP.
+
+Nota del Traductor.: En estricto sentido esto se refiere a contar con la conexión por medio de un dispositivo Ethernet, o bien ATM, pero debido a que usted encontrará estos metodos en su sistema, como PPPoE o bien PPPoA, se han dejado los conceptos "literales" del documento original. Espero que no sea un problema.
+
+Antes de leer este capítulo, usted debiese:
+
+* Estar familiarizado con la terminología básica de redes.
+* Comprender lo básico y el propósito de una conección por módem SLIP y/o PPP.
+
+Puede ser que usted se pregunte cual es la principal diferencia entre User PPP y kernel PPP. La respuesta es sencilla; el método User PPP procesa la entrada y salida de datos en userland (ver nota siguiente) en lugar de hacerlo en el kernel. Esto es algo desgastante, en términos del manejo de datos entre userland y el kernel, pero permite, por mucho, un mejor desempeño e implementación de PPP. User PPP utiliza el dispositivo [.filename]#tun# para comunicarse con el mundo exterior, mientras que kernel-ppp, utiliza el dispositivo [.filename]#ppp#.
+
+En el desarrollo de este capítulo, se hará referencia a User PPP, simplemente como _ppp_, a menos de que sea necesaria hacer una distinción entre este y otro software de PPP, como es el caso de `pppd`. Así mismo, si en el desarrollo del capítulo no se señala lo contrario, todos los comandos explicados, deberán ser ejecutados como `root`.
+
+Nota del Traductor : Cuando se habla de "userland" se hace referencia a todo aquello que *no* forma parte del kernel y que en el caso de código de programa, se ejecuta en modo usuario, ya que el código del kernel se ejecuta en modo kernel, supervisor, o bien en modo privilegiado de ejecución. En lo sucesivo este término será utilizado tal cual.
+
+[[userppp]]
+== Uso de User PPP
+
+=== User PPP
+
+==== Aclaraciones
+
+Este documento asume que usted cuenta con lo siguiente:
+
+* Una cuenta activa con un Proveedor del Servicio de Internet (ISP-por sus siglas en inglées), que usted utliza para conectarse.
+* Adicionalmente, un módem o algún otro dispositivo, conectado a su sistema, y configurado correctamente, que le permite realizar la conexión con su ISP.
+* El número telefónico de su proveedor.
+* Su nombre de usuario y contraseña. (Ya sea un nombre de usuario y/o contraseña estilo UNIX, o bien para uso por medio de PAP o CHAP)
+*n La dirección IP de uno o más servidores de nombres (DNS). Normalmente, estos serán provistos por su proveedor de Internet. Si su proveedor no le ha dado esta información, puede utilizar la opción `enable dns` en su fichero [.filename]#ppp.conf#, para indicarle a ppp que configure el DNS por usted. Esta característica depende del sistema de negociación de DNS que mantenga su proveedor de Internet.
+
+La siguiente información puede ser que haya sido provista por su proveedor de servicios de internet, pero no es completamente necesaria:
+
+* La dirección IP del gateway (pasarela de salida) de su PSI. El gateway es la máquina a la cual usted se conectará y será la _ruta por default_. Si usted no cuenta con esta información, puede inventar uno y al intentar conectarse, el servidor de su PSI, este nos indicará cual es el valor correcto.
++ 
+Esta dirección IP, es referida por ppp como `HISADDR`.
+* La mascara de red (netmask) que debe utilizar. Si su PSI no le ha provisto de una, puede utilizar sin problema `255.255.255.255`.
+* Si su PSI, le ha provisto de una dirección de IP estática y un nombre de host, puede capturarla. De otra forma podemos dejar que el servidor asigne cualquier IP que corresponda.
+
+Si usted no cuenta con alguna de la información que hemos comentado, le recomendamos contactar con su PSI para requerirla.
+
+[NOTE]
+====
+En el transcurso de la presente sección, algunos ejemplos muestran el contenido de archivos de configuración los cuales presentan una numeración. Estos números sirven como ayuda y referencia a cada línea, pero estos no deben de estar presentes en el archivo original. Una sangría adecuada, así como espacios adecuados, también son de suma importancia.
+====
+
+==== Preparando el Kernel
+
+Como se comento anteriormente, la aplicación ppp utiliza el dispositivo [.filename]#tun#. Si este dispositivo no ha sido compilado dentro del kernel, ppp lo cargará como módulo cuando sea requerido. El dispositivo tun es dinámico, de tal forma que se generara de acuerdo a la demanda que tenga (usted no esta limitado por el kernel).
+
+[NOTE]
+====
+Vale la pena hacer notar que el controlador tun, crea los dispositivos de acuerdo a sus necesidades, por lo que el comando `ifconfig -a`, no necesariamente mostrará los dispositivos [.filename]#tun#.
+====
+
+==== Verificando el dispositivo [.filename]#tun#
+
+Bajo circunstancias normales, la mayoría de los usuarios sólo utilizaran un dispositivo [.filename]#tun# ([.filename]#/dev/tun0#). En lo sucesivo podemos hacer referencia a [.filename]#tun0# con la expresión [.filename]#tunN# donde `N` es el número que corresponde en su sistema.
+
+Para instalaciones de FreeBSD que no tienen el habilitado el DEVFS la existencia de [.filename]#tun0# debe ser verificada (esto no es necesario si se cuenta habilitada la opción DEVFS ya que los nodos de dispositivos seán creados en función a las necesidades).
+
+La forma más sencilla de verificar si el dispositivo [.filename]#tun0# se encuentra configurado correctamente, es la de rehacer el dispositivo. Para hacer esto simplemente siga los siguientes pasos:
+
+[source,bash]
+....
+# cd /dev
+# sh MAKEDEV tun0
+....
+
+Si usted necesita 16 dispositivos tun en su kernel, deberá crearlos. Esto puede hacerse de la siguiente manera:
+
+[source,bash]
+....
+# cd /dev
+# sh MAKEDEV tun15
+....
+
+==== Configuración de la Resolución de Nombres
+
+La resolución es la parte del sistema que busca una dirección IP en los nombres de servidores (host) y viceversa. Puede ser configurado para que busque en "mapas" que describen la IP del servidor en uno de dos lugares, el primero es un archivo llamado [.filename]#/etc/hosts#. Lea man:hosts[5] para más información al respecto. El segundo es el Servicio de Nombres de Dominio de Internet (DNS-Internet Domain Name Service), el cual es una base de datos de distribución. Para mayor información con respecto a los DNS, referirse a dns.
+
+La resolución de nombres es un sistema que por medio de llamadas, realiza el mapeo de nombres, pero es necesario inidicarle donde debe buscar la información. Para versiones de FreeBSD anteriores a la 5.0, esto es hecho al editar el archivo [.filename]#/etc/host.conf#. La versión 5.0 de FreeBSD utiliza el archivo [.filename]#/etc/nsswitch.conf#.
+
+===== Edición del archivo [.filename]#/etc/host.conf#
+
+Para versiones de FreeBSD anteriores a la 5.0, este archivo debe contener las siguientes dos líneas (en este orden):
+
+[.programlisting]
+....
+hosts
+bind
+....
+
+Esto le indica a la resolución que busque en primer término en el archivo [.filename]#/etc/hosts#, y posteriormente en el DNS, si el nombre no fué localizado
+
+===== Editando el archivo [.filename]#/etc/nsswitch.conf#
+
+Para versiones de FreeBSD 5.0 y posteriores, este archivo debe contener, al menos, la siguiente línea:
+
+[.programlisting]
+....
+hosts: files, dns
+....
+
+Esto le indica a la resolución de nombres, que busque en primer lugar en el archivo [.filename]#/etc/hosts#, y en caso de que el nombre no haya sido localizado, busque en el DNS.
+
+===== Editando el archivo [.filename]#/etc/hosts#
+
+Este archivo puede contener direcciones IP, así como el nombre de las máquinas de su red local. Como mínimo debe contar con la información de la máquina que correrá ppp. Asumiendo que su ordenador se llama `foo.bar.com` con la dirección IP `10.0.0.1`, el archivo [.filename]#/etc/hosts# debiese contener:
+
+[.programlisting]
+....
+127.0.0.1	localhost.bar.com	localhost
+::1	localhost.bar.com	localhost
+10.0.0.1	foo.bar.com		foo
+....
+
+Las primeras dos líneas definen el alias del `localhost`, como sinónimo de la maquina actual. Independientemente de su propia dirección IP, la dirección IP en estas líneas siempre debe ser `127.0.0.1` y `::1`. La última línea especifica el nombre `foo.bar.com` (asi como `foo` para acortarlo), para la dirección `10.0.0.1`.
+
+[NOTE]
+====
+La dirección `127.0.0.1` y el nombre `localhost` son conocidos como direcciones "loopback" las cuales hacen un "loopback" (salto de regreso) a la maquina local.
+====
+
+Si su proveedor de Internet, le asigna una dirección IP fija, asín como un nombre, y usted no lo utiliza como nombre del host, añada esto también al archivo [.filename]#/etc/hosts#.
+
+===== Editando el archivo [.filename]#/etc/resolv.conf#
+
+El archivo [.filename]#/etc/resolv.conf#, le indica a la resolución de nombres, como comportarse. Normalmente deberá de incluir la(s) siguiente(s) línea(s):
+
+[.programlisting]
+....
+domain ejemplo.com
+nameserver x.x.x.x
+nameserver y.y.y.y
+....
+
+Donde _x.x.x.x_ y _y.y.y.y_ deben reemplazarse con las direcciones IP de los servidores DNS, de su ISP. Puede ser que esta información se la hayan entregado al suscribirse o no, pero una rápida llamada a su ISP debe resolver esto.
+
+Tambié puede configurar su sistema, de tal forma que man:syslog[3] provee de un login para su conección por PPP. Sólo añada:
+
+[.programlisting]
+....
+
+	  !ppp
+	  *.*        /var/log/ppp.log
+....
+
+al fichero [.filename]#/etc/syslog.conf#. En la mayoría de los casos esto funciona bien.
+
+==== Configuración Automática de PPP
+
+Ambos, `ppp` así como `pppd` (la implementación del kernel para PPP), utilizan la configuración de los archivos localizados en el directorio [.filename]#/etc/ppp#. Ejemplos para ppp, pueden encontrarse en: [.filename]#/usr/shared/examples/ppp/#.
+
+Para efecto de configurar correctamente `ppp`, es necesario editar varios ficheros, dependiendo de sus necesidades. La manera en que edite dichos archivos, depende en la forma que utilice su PSI (Proveedor de Servicios de Internet) para brindarle conexión, ya sea por medio de una dirección IP estática o bien una IP dinámica (ya sea que cada vez que se conecta obtiene una nueva dirección).
+
+[[userppp-staticIP]]
+===== PPP y direcciones de IP estáticas (fijas)
+
+Será necesario editar el archivo de configuración; [.filename]#/etc/ppp/ppp.conf#. Y deberá quedar de una manera similar al ejemplo que se describe a continuación.
+
+[NOTE]
+====
+Las líneas que terminan con `:`, deben comenzar en la primer columna del archivo - el resto de las líneas deberán utilizar sangría como se muestra, utilizando espacios o bien el tabulador. La mayor parte de la información que requiere ingresar aqui, se mostro en el marcado manual anterior.
+====
+
+[.programlisting]
+....
+1     default:
+2       set log Phase Chat LCP IPCP CCP tun command
+3       ident user-ppp VERSION (built COMPILATIONDATE)
+4       set device /dev/cuaa0
+5       set speed 115200
+6       set dial "ABORT BUSY ABORT NO\\sCARRIER TIMEOUT 5 \
+7                 \"\" AT OK-AT-OK ATE1Q0 OK \\dATDT\\T TIMEOUT 40 CONNECT"
+8       set timeout 180
+9       enable dns
+10
+11    provider:
+12      set phone "(123) 456 7890"
+13      set authname foo
+14      set authkey bar
+15      set login "TIMEOUT 10 \"\" \"\" gin:--gin: \\U word: \\P col: ppp"
+16      set timeout 300
+17      set ifaddr x.x.x.x y.y.y.y 255.255.255.255 0.0.0.0
+18      add default HISADDR
+....
+
+Línea 1:::
+Identifica la entrada por omisión a utilizar. Los comandos descritos en esta parte, serán ejecutados de manera automática cuando se ejecute ppp.
+
+Línea 2:::
+Habilita los parámetros de acceso. Cuando la configuración trabaja sin problemas, esta línea deberá quedar de la siguiente forma: 
++
+[.programlisting]
+....
+set log phase tun
+....
+ para efecto de evitar avisos masivos del sistema (logs).
+
+Línea 3:::
+Esta línea le indica a PPP como identificarse ante el puerto. PPP se identifica, si tiene algun problema para efecto de establecer la conexión, en esta identificación, PPP provee de cierta información que puede resultar util para detectar el probelma.
+
+Línea 4:::
+Le indica a PPP cual es el dispositivo a utilizar para realizar la conexión, o bien al que esta conectado el módem. El dispositivo [.filename]#COM1# es [.filename]#/dev/cuaa0# y [.filename]#COM2# es [.filename]#/dev/cuaa1#.
+
+Línea 5:::
+Establece la velocidad a utilizar en la conexión. Si la velocidad de 115200 no trabaja correctamente (la cual deberia con cualquier módem normal), intente con una velocidad inferior, como puede ser 38400.
+
+Líneas 6 y 7:::
+La cadena de inicialización. El modo User PPP, utiliza y espera enviar-recibir, la información utilizando una sintaxis similar a la descrita en el programa man:chat[8]. Favor de consultar la página de ayuda para conocer las opciones de este lenguaje.
++
+Nota: Este comando continua en la siguiente línea, para facilitar su lectura. Cualquier comando en el archivo [.filename]#ppp.conf# puede utilizar este formato, siempre y cuando el último caracter de la línea sea una diagonal invertida "\".
+
+Línea 8:::
+Establece el tiempo de espera que debe tratar de realizar la conexión. Por omisión se establecen 180 segundos, por lo que esta línea se deja por pura estética.
+
+Línea 9:::
+Esta línea le indica a PPP, que solicite confirmación al puerto, sobre la configuración de la resolución local. Si usted esta corriendo un servidor local de nombres, deberá comentar o eliminar esta línea.
+
+Línea 10:::
+Una línea en blanco, para facilitar la lectura. Las líneas en blanco son ignoradas por PPP.
+
+Línea 11:::
+Identifica el incio de datos para un "proveedor" determinado, de servicios de internet. Este podrá ser cambiado por el nombre de su ISP, de tal forma que en lo sucesivo utilice la opción `load ISP`, para iniciar una sesión.
+
+Línea 12:::
+Indica el numero telefónico del proveedor. Pueden indicarse varios numeros a utilizar, utilizando el signo de dos puntos (`:`) o bien la barra (`|`) como separador. La diferencia entre estos dos separadores, es detallada en el man:ppp[8]. Pero en resumen, se puede decir que si se desean utilizar varios numeros de manera aleatoria se debe utilizar los dos puntos, pero si se desea siempre utilizar el primer numero y en caso de falla el siguiente y así sucesivamente, se debe utilizar la barra. Es importante que todo lo que se refiere a numeros telefonicos, este entre comillas como se muestra. Es importante que si piensa usar espacios en los numeros, haga uso de estas comillas (`"`). La falta de estas pueden ocasionar un simple error.
+
+Líneas 13 y 14:::
+Identifica el nombre de usuario y su contraseña. Cuando uno se conecta utilizando un login de tipo Unix, estos valores hacen referencia al comando `set login`, utilizando las variables \U y \P. Cuando la conexión es utilizando algún metodo como PAP o CHAP, estos valores, son utilizados al momento de la autentificación.
+
+Línea 15:::
+Si usted esta utilizando el metodo PAP o CHAP, no habrá un login en este punto, y esta línea deberá ser comentada (utilizando el símbolo `#` al principio de la línea) o bien eliminada por completo. Vea la parte <<userppp-PAPnCHAP,Autentificación con PAP y CHAP >> para más detalles.
++
+La cadena de acceso (login), utiliza la misma sintáxis que se utiliza en la cadena de marcado. En este ejemplo, la cadena sirve para un servicio, en el cual el inicio de sesión se ve algo así como lo siguiente:
++
+[source,bash]
+....
+Proveedor de servicios X
+login: foo
+password: bar
+protocol: ppp
+....
++
+Es recomendable editar el script, para que se ajuste a sus propias necesidades. Cuando cree este script por primera vez, asegurese de haber habilitado la parte que se refiere a al acceso por medio de "chat", para efecto de poder dar seguimiento al curso de la conexión y la resolución de la misma.
+
+Línea 16:::
+Establece el tiempo por defecto en el que se perderá la conexión (en segundos). En este caso la conexión será cortada de forma automática, después de 300 segundos de inactividad. Si no desea habilitar esta función establezca este valor en cero o bien utilice el comando en línea `-ddial`.
+
+Línea 17:::
+Indica la dirección de la interfaz. La cadena que aparece como _x.x.x.x._, debe se cambiada por la dirección asignada por su PSI. La línea que aparece como _y.y.y.y._, debe se substituida por la direcció IP especificada por su PSI, como servidor de salida o pasarela (gateway)(la maquina a la cual se va a conectar). Si su PSI no le ha indicado una dirección de este tipo, puede utilizar `10.0.0.2/0`. Si usted necesita utilizar una dirección "aleatoria", asegurese de crear el fichero [.filename]#/etc/ppp/ppp.linkup#, siguiendo las instrucciones de <<userppp-dynamicIP,PPP y las direcciones de IP Dinámicas>>, para su llenado. Si esta línea es omitida, `ppp`, no podrá ejecutarse en el modo `-auto`.
+
+Línea 18:::
+Añade una ruta por omisión al servidor de salida de su PSI. La palabra especial `HISADDR` se reemplaza con la dirección del gateway indicado por su PSI, que esta en la línea 9, de otra forma `HISADDR` no será inicializado.
++
+Si no desea ejecutar `ppp` en modo `-auto`, esta línea deberá pasar al archivo [.filename]#ppp.linkup#.
+
+No hay necesidad de editar el archivo [.filename]#ppp.linkup# si usted cuenta con una dirección IP estática y se esta ejecutando ppp en modo `-auto`, en virtud de que para efecto de realizar la conexión sus mapas de ruteo debe estar correctas. De cualquier forma puede ser que usted desee ejecutar algun programa/comando, posterior a la conexión. Este es explicado con más detalle posteriormente, cuando se vea el ejemplo de sendmail.
+
+Ejemplo de los archivos de configuración, se pueden encontrar en el directorio; [.filename]#/usr/shared/examples/ppp#. 
+
+[[userppp-dynamicIP]]
+===== PPP y direcciones de IP Dinámicas (Variables)
+
+Si su proveedor de servicios, no le asigna una dirección de IP fija, será necesario configurar a `ppp`, de tal forma que al momento de realizar la conexión, negocie tanto la dirección local, como la remota. Esto se lleva a cabo al "adivinar" una dirección IP y permitiendo a `ppp` que la establezca correctamente, usando el Protocolo de Configuración de IP (IPCP), una vez que se ha conectado. La configuración que debe tener el archivo [.filename]#ppp.conf#, es la misma que la utilizada en <<userppp-staticIP,PPP y direcciones de IP fijas>>, salvo el siguiente cambio:
+
+[.programlisting]
+....
+17      set ifaddr 10.0.0.1/0 10.0.0.2/0 255.255.255.255
+....
+
+Una vez más, no debe incluir el numero de línea, este sólo es una referencia. Así mismo deberá existir sangrado, de cuando menos 1 espacio.
+
+Línea 17:::
+El numero siguiente a la diagonal (`/`), es el numero de bits de la dirección en la cual ppp insistirá en conectarse. Puede ser que usted desee utilizar numeros de IP que sean más apropiados, para ajustar a sus necesiadades, pero el ejemplo descrito anteriormente siempre podrá utilizarse.
++
+El último argumento (`0.0.0.0`), le indica a PPP, que inicie las negociaciones, utilizando como dirección `0.0.0.0`, en lugar de que utilice `10.0.0.1`, lo cual es necesario con algunos proveedores. No utilice la dirección `0.0.0.0` como el primer argumento, para el comando `set ifaddr`, ya que impide que PPP configure de forma correcta el sistema, cuando se utiliza en modo `-auto`.
+
+Si usted no esta ejecutando PPP en modo `-auto`, deberá editar su archivo [.filename]#/etc/ppp/ppp.linkup#. El archivo [.filename]#ppp.linkup#, es utilizado una vez que se ha realizado la conexión. En este punto, `ppp` habrá negociado una dirección de interfaz, y será posible ahora, añadir las entradas para la las tablas de ruteo: 
+
+[.programlisting]
+....
+1     provider:
+2      add default HISADDR
+....
+
+Línea 1:::
+Al establecer (`ppp`) una conexión, buscará en [.filename]#ppp.linkup# una entrada, de acuerdo a las siguientes reglas. Primero, tratar de encontrar una entrada que sea igual a la utilizada en el archivo [.filename]#ppp.conf#. Si esto falla, buscar una IP con la dirección de nuestro gateway. Esta entrada es una etiqueta de tipo IP, de cuatro-octetos. Si aun después de esto no se ha detectado la entrada correcta, buscar la entrada `MYADDR`.
+
+Línea 2:::
+Esta línea le indica a `ppp` que añada una ruta por omisión, que este dirigida hacia `HISADDR`. `HISADDR` será reemplazada, con la IP del gateway, como se negocio por IPCP.
+
+Para ver un detalle más preciso de esto, puede consultar la entrada de `pmdemand` en los archivos de ejemplo [.filename]#/usr/shared/examples/ppp/ppp.conf.sample# así como [.filename]#/usr/shared/examples/ppp/ppp.linkup.sample#.
+
+===== Recibiendo Llamadas Externas
+
+Cuando se configure ppp, para recibir llamadas externas, en una maquina conectada a un LAN (Red de Area Local), debe decidir si se va a permitir el envío de paquetes a la LAN. Si es así, debe asignar un numero de IP de su red local y utilizar el comando `enable proxy` en el archivo de configuracion [.filename]#/etc/ppp/ppp.conf#. También deberá asegurarse que en su archivo [.filename]#/etc/rc.conf# cuente con la línea:
+
+[.programlisting]
+....
+gateway_enable="YES"
+....
+
+====== ?Qué getty utilizar?
+
+El enlace Configurando FreeBSD para Servicios de Marcado provee de una buena descripció, sobre la configuración de estos servicios, basado en man:getty[8].
+
+Una alternativa para el comando `getty` es http://www.leo.org/~doering/mgetty/index.html[mgetty ], el cual es una versión más inteligente de getty diseñada para servicios de marcado telefonico.
+
+Una de las principales ventajas de `mgetty` es que, de hecho _platica_ con los modems, esto es, significativo, ya que si el puerto esta desactivado en su [.filename]#/etc/ttys# el modem no responderá el llamado.
+
+Las últimas versiones de `mgetty` (de la 0.99beta y sucesivas), también cuentan con soporte para la detección automática de llamados de PPP, permitiendo el acceso a servidores de una manera más sencilla (sin uso de tanto scripts).
+
+Puede referirse a <<userppp-mgetty,Mgetty y AutoPPP>> para más información con respecto al comando `mgetty`.
+
+====== Permisos de PPP
+
+El comando `ppp` normalmente debe ser ejecutado por root (superusuario). Si de cualquier forma, usted desea permitir que `ppp` pueda ser ejecutado en modo servidor, por un usuario regular, como se describe a continuación, deberá otorgar los permisos necesarios a ese usuario al añadirlo al grupo `network`, en el fichero [.filename]#/etc/groups#.
+
+También será necesario darle acceso a una o más partes del archivo de configuración, haciendo uso del comando `allow`, como se ve a continuación:
+
+[.programlisting]
+....
+allow users fred mary
+....
+
+Si el comando es utilizado en la sección `default`, esto le dará a el(los) usuario(s) especificado(s), acceso a todo.
+
+====== Shells de PPP para Usuarios de IP Dinámica
+
+Cree un fichero llamado: [.filename]#/etc/ppp/ppp-shell# y que contenga lo siguiente:
+
+[.programlisting]
+....
+#!/bin/sh
+IDENT=`echo $0 | sed -e 's/^.*-\(.*\)$/\1/'`
+CALLEDAS="$IDENT"
+TTY=`tty`
+
+if [ x$IDENT = xdialup ]; then
+        IDENT=`basename $TTY`
+fi
+
+echo "PPP for $CALLEDAS on $TTY"
+echo "Starting PPP for $IDENT"
+
+exec /usr/sbin/ppp -direct $IDENT
+....
+
+Este script deberá ser ejecutable. Ahora cree un enláce simbólico llamado [.filename]#ppp-dialup# a este script, utilizando los siguientes comandos:
+
+[source,bash]
+....
+# ln -s ppp-shell /etc/ppp/ppp-dialup
+....
+
+Deberá utilizar este script como _shell_ para todos los usuarios que realicen conexión. Este es un ejemplo del fichero [.filename]#/etc/password# para un usuario con acceso a PPP, con nombre de usuario `pchilds` (recuerde no editar directamente el fichero password, utilice `vipw`).
+
+[.programlisting]
+....
+pchilds:*:1011:300:Peter Childs PPP:/home/ppp:/etc/ppp/ppp-dialup
+....
+
+Cree un directorio llamado [.filename]#/home/ppp# que contenga los siguentes archivos de 0 bytes:
+
+[source,bash]
+....
+-r--r--r--   1 root     wheel           0 May 27 02:23 .hushlogin
+-r--r--r--   1 root     wheel           0 May 27 02:22 .rhosts
+....
+
+los cuales impiden que [.filename]#/etc/motd# sea desplegado.
+
+====== Shells de PPP para Usuarios de IP Estática
+
+Cree el fichero [.filename]#ppp-shell# al igual que el mencionado con anterioridad, y por cada cuenta donde se tenga asignada una IP estática, cree un enlace simbólico al fichero [.filename]#ppp-shell#.
+
+Por ejemplo, si usted cuenta con tres usuarios que utilicen este servicio; `fred`, `sam` y `mary`, los cuales redirecciona a una red de clase C, habria que hacer lo siguiente:
+
+[source,bash]
+....
+# ln -s /etc/ppp/ppp-shell /etc/ppp/ppp-fred
+# ln -s /etc/ppp/ppp-shell /etc/ppp/ppp-sam
+# ln -s /etc/ppp/ppp-shell /etc/ppp/ppp-mary
+....
+
+Cada uno de los usuarios señalados, deberán de contar con el enlace a su shell-script como se indicó (por ejemplo, el usuario `mary`, debe contar con su enlace al fichero [.filename]#/etc/ppp/ppp-mary#).
+
+====== Configurando [.filename]#ppp.conf# para Usuarios de IP-Dinámica
+
+El archivo [.filename]#/etc/ppp/ppp.conf# deberá contener algo similar a lo siguiente:
+
+[.programlisting]
+....
+default:
+  set debug phase lcp chat
+  set timeout 0
+
+ttyd0:
+  set ifaddr 203.14.100.1 203.14.100.20 255.255.255.255
+  enable proxy
+
+ttyd1:
+  set ifaddr 203.14.100.1 203.14.100.21 255.255.255.255
+  enable proxy
+....
+
+[NOTE]
+====
+Tomar en cuenta el sangrado, ya que es importante.
+====
+
+La sección `default:` es cargada para cada sesión. Para cada línea que exista y habilite el marcado, en el fichero [.filename]#/etc/ttys#, se deberá crear una entrada similar a la línea `ttyd0:` mencionada arriba. Cada línea debera contar con su propia dirección IP, de sus direcciones IP disponibles para asignar dinámicamente.
+
+====== Configurando [.filename]#ppp.conf# para Usuarios de IP Estática
+
+Junto con el contenido del fichero de ejemplo [.filename]#/usr/shared/examples/ppp/ppp.conf# mencionado anteriormente, deberá agregar una sección para cada usuario asignado estáticamente. Continuaremos con nuestro ejemplo con los usuarios `fred`, `sam` y `mary`.
+
+[.programlisting]
+....
+fred:
+  set ifaddr 203.14.100.1 203.14.101.1 255.255.255.255
+
+sam:
+  set ifaddr 203.14.100.1 203.14.102.1 255.255.255.255
+
+mary:
+  set ifaddr 203.14.100.1 203.14.103.1 255.255.255.255
+....
+
+El archivo [.filename]#/etc/ppp/ppp.linkup# deberá de contener también información del ruteo, para cada IP estática, si es necesario. Las líneas a continuación añadirán una ruta a la dirección `203.14.101.0` de clase C, por medio del ppp link del cliente.
+
+[.programlisting]
+....
+fred:
+  add 203.14.101.0 netmask 255.255.255.0 HISADDR
+
+sam:
+  add 203.14.102.0 netmask 255.255.255.0 HISADDR
+
+mary:
+  add 203.14.103.0 netmask 255.255.255.0 HISADDR
+....
+
+===== Algo más de `mgetty`, AutoPPP, y Extensiones MS
+
+[[userppp-mgetty]]
+====== `mgetty` y AutoPPP
+
+Configurando y compilando `mgetty` con la opción `AUTO_PPP` habilitada, permite a `mgetty` detectar la fase LCP de conexiones PPP y automáticamente enviarlo a un shel de ppp. Aun con esto, y debido a que no se ingresa el nombre de usuario y contraseña, es necesario autntificarse por medio de PAP o CHAP.
+
+Esta sección asume que el usuaio ha configurado, compilado e instalado correctamente una versión de `mgetty`, con la opción `Auto_PPP` (v0.99beta o posterior).
+
+Asegurese de que su fichero [.filename]#/usr/local/etc/mgetty+sendfax/login.conf# contiene la siguiente línea en él:
+
+[.programlisting]
+....
+/AutoPPP/ -     -		      /etc/ppp/ppp-pap-dialup
+....
+
+Esto le indicará a `mgetty` que ejecute el script [.filename]#ppp-pap-dialup#, para efecto de detectar conexiones de tipo PPP.
+
+Cree un fichero llamado [.filename]#/etc/ppp/ppp-pap-dialup# que contenga las siguientes líneas (el fichero deberá ser ejecutable):
+
+[.programlisting]
+....
+#!/bin/sh
+exec /usr/sbin/ppp -direct pap$IDENT
+....
+
+Para cada línea de marcado habilitada en [.filename]#/etc/ttys#, cree la entrada correspondiente en [.filename]#/etc/ppp/ppp.conf#. Esto co-existirá pacíficamente con las definiciaones que se hayan hecho, de acuerdo a lo mostrado en la parte de arriba.
+
+[.programlisting]
+....
+pap:
+  enable pap
+  set ifaddr 203.14.100.1 203.14.100.20-203.14.100.40
+  enable proxy
+....
+
+Cada usuario que ingrese al sistema utilizando este metodo, deberá de contar con su clave de usuario, así como su contraseña, en el archivo [.filename]#/etc/ppp/ppp.secret#, o bien agrege la siguiente opción, para efecto de que se pueda realizar la autentificación por medio de PAP, directamente del fichero [.filename]#/etc/password#.
+
+[.programlisting]
+....
+enable passwdauth
+....
+
+Si desea asignar una dirección IP fija a algunos usuarios, puede especificar el número como un tercer argumento en el fichero [.filename]#/etc/ppp/ppp.secrets#. Vea el archivo [.filename]#/usr/shared/examples/ppp/ppp.secret.sample# para obtener ejemplos más detallados de esto.
+
+====== Extensiones de MS
+
+Es posible configurar PPP, para efecto de que brinde a DNS y a NetBIOS, direcciones de servidores de nombres de forma automática.
+
+Para efecto de habilitar estas extensiones con PPP versión 1.x, las siguientes líneas deberán añadirse a la sección relevante de [.filename]#/etc/ppp/ppp.conf#.
+
+[.programlisting]
+....
+enable msext
+set ns 203.14.100.1 203.14.100.2
+set nbns 203.14.100.5
+....
+
+Y para versiones de PPP 2 y posteriores:
+
+[.programlisting]
+....
+accept dns
+set dns 203.14.100.1 203.14.100.2
+set nbns 203.14.100.5
+....
+
+Esto le indicará a los clientes, las direcciones del servidor primario y secundario y el servidor-host para NetBIOS.
+
+Si la línea `set dns`, es omitida en versiones 2 y posteriores, PPP utilizará los valores que encuentre en [.filename]#/etc/resolv.conf#.
+
+[[userppp-PAPnCHAP]]
+===== Autentificación por medio de PAP y CHAP
+
+Algunos proveedores de internet tienen su sistema configurado para que cada usuario al conecatrse sean autentificados por medio de PAP o CHAP. Si este es el caso, al momento de realizar la conexion, no aparecerá un `login:`, sino que comenzará a comunicarse PPP inmediatamente.
+
+El metodo PAP es menos seguro que CHAP, pero la seguridad normalmente no se toma mucho en cuenta en este tipo de conexiones, en funcion de que al enviarse la información de contraseña en texto plano, por medio de una línea serial, no deja mucho espacio para que los crackers "husmeen".
+
+Haciendo referencia a lo que vimos de <<userppp-staticIP,PPP y Direcciones de IP Fijas>> o bien <<userppp-dynamicIP,PPP y Direcciones de IP Dinámicas>>, habría que aplicar los siguientes cambios:
+
+[.programlisting]
+....
+7       set login
+...
+12      set authname MiNombreDeUsuario
+13      set authkey MiContraseña
+....
+
+Línea 7:::
+Su PSI normalmente requerirá que usted ingrese al sistema, cuando se utiliza PAP o CHAP. Por esta razón debemos deshabilitar la línea que corresponde a "set login".
+
+Línea 12:::
+Esta línea especifíca a PAP/CHAP su nombre de usuario. Usted deberá cambiar el valor a quedar el nombre correcto en el campo; _MiNombreDeUsuario_.
+
+Línea 13:::
+Esta línea especifíca su contraseña de PAP/CHAP. Es necesario que usted cambie el valor a quedar el dato correcto, en el campo; _MiContraseña_. Quizás sea recomendable que añada una línea a quedar:
++
+[.programlisting]
+....
+15      accept PAP
+....
++
+o
++
+[.programlisting]
+....
+15      accept CHAP
+....
++
+la intención de esto es para hacerlo obvio, aunque en realidad PAP y CHAP son aceptadas por omisión.
+
+===== Cambiando la configuración de `ppp` sobre la marcha (al vuelo)
+
+Es posible hablar con el programa `ppp` mientras se esta ejecutando en segundo plano, pero sólo si se ha habilitado un puerto de diagnóstico. Para hacer esto, añada lo siguiente a su configuración:
+
+[.programlisting]
+....
+set server /var/run/ppp-tun%d DiagnosticPassword 0177
+....
+
+Esto le indicará a PPP que preste atención al socket del dominio-Unix, solicitando a los usuarios su contraseña, antes de permitir el acceso. La variable `%d` deberá ser reemplazada por el numero de dispositivo [.filename]#tun# que este utilizando (ej. [.filename]#tun0#).
+
+Una vez que se a configurado el socket, se puede utilizar man:pppctl[8] en scripts que deseen manipular el programa. 
+
+[[userppp-final]]
+==== Configuración Final del Sistema
+
+Ahora usted cuenta con un `ppp` configurado, pero es necesario hacer algunas cosas, antes de que este disponible para trabajar. Todas ellas giran entorno a la edición del fichero [.filename]#/etc/rc.conf#.
+
+En primer lugar es importante que se asegure que ha asignado un nombre a su maquina. Esto se hace asignandolo en la línea de `hostname=`, por ejemplo:
+
+[.programlisting]
+....
+hostname="foo.ejemplo.com"
+....
+
+Si su Proveedor de Servicios de Internet (PSI), le ha provisto de una dirección fija y un nombre de host, es recomendable que utilice este como su `hostname`.
+
+Localice la línea que se refiera a sus dispositivos de red, la cual es `network_interfaces`. Si desea configurar su sistema para marcar a su PSI a petición, asegurese de que el dispositivo [.filename]#tun0# este en la lista, de otra forma eliminelo.
+
+[.programlisting]
+....
+network_interfaces="lo0 tun0" ifconfig_tun0=
+....
+
+[NOTE]
+====
+La variable `ifconfig_tun0` debe permanecer en blanco (vacia), y deberá crearse un fichero llamado [.filename]#/etc/start_if.tun0# que contenga la siguiente línea:
+
+[.programlisting]
+....
+ppp -auto MiSistema
+....
+
+Este script se ejecuta cuando se esta configurando la red, inicializando el demonio de ppp de modo automático. Si usted cuenta con una LAN (red de área local), de la cual esta maquina sea la pasarela (gateway), es tambien recomendable que utilice la opción `-alias`. Referirse a la página de ayuda (man) para mayores detalles.
+====
+
+Especifique el programa router a `NO`, con la siguiente línea en su fichero [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+router_enable="NO"
+....
+
+Es importante que el demonio `routed` no se inicialice por default, en virtud de que `routed` tiende a eliminar las variables creadas por `ppp`.
+
+Probablemente valga la pena asegurarse de que la línea `sendmail_flags`, no incluya la opción `-q`, ya que de ser así `sendmail` intentará localizar los parámetros de la red de vex en cuando, ocasionando que realice llamados al exterior. Puede intentar esto:
+
+[.programlisting]
+....
+sendmail_flags="-bd"
+....
+
+La parte negativa de esta conifguración es que tiene que forzar a `sendmail` a re-examinar los llamados del servidor de correo, cada vez que `ppp` realiza una conexión, con el siguiente comando:
+
+[source,bash]
+....
+# /usr/sbin/sendmail -q
+....
+
+Puede utilizar el comando `!bg` en el fichero [.filename]#ppp.linkup# para hacer esto de manera automática:
+
+[.programlisting]
+....
+1     provider:
+2       delete ALL
+3       add 0 0 HISADDR
+4       !bg sendmail -bd -q30m
+....
+
+Si usted no desea hacer esto, es posible establecer un "dfilter" (filtro), para bloquear el tráfico al servidor de salida de correo (SMTP). Favor de referirse a los archivos de ejemplos para mayor detalle al respecto.
+
+Ahora lo único que queda pendiente de hacerse es reiniciar el equipo. Una vez reiniciado el equipo, puede teclear:
+
+[source,bash]
+....
+# ppp
+....
+
+y posteriormente `dial proveedor` para iniciar la sesión, o bien si desea que `ppp` inicie la sesión automáticamente, cuando haya una petición de salida (y no haya creado el fichero [.filename]#start_if.tun0#), puede teclear:
+
+[source,bash]
+....
+# ppp -auto proveedor
+....
+
+==== Summario
+
+A manera de recapitulación, podemos decir que para configurar ppp por primera ocasión, debemos:
+
+Por parte del Cliente:
+
+[.procedure]
+====
+. Asegurese de que existe el dispositivo [.filename]#tun# dentro de su kernel.
+. Asegurses de que el dispositivo [.filename]#tunX#, se encuentra disponible, bajo el directorio [.filename]#/dev#.
+. Cree una entrada en su fichero [.filename]#/etc/ppp/ppp.conf#. Con el fichero de ejemplo [.filename]#pmdemand# debe ser suficiente para la mayoria de proveedores.
+. Si cuenta con una dirección de IP dinámica, cree una entrada en el fichero [.filename]#/etc/ppp/ppp.linkup# .
+. Actualice su fichero [.filename]#/etc/rc.conf#.
+. Cree un archivo script llamado [.filename]#start_if.tun0# si requiere servicio de conexión a solicitud.
+====
+
+Por parte del Servidor:
+
+[.procedure]
+====
+. Asegurese de que dentro de su kernel exista el dispositivo [.filename]#tun#.
+. Asegurses de que el dispositivo [.filename]#tunX#, se encuentra disponible, bajo el directorio [.filename]#/dev#.
+. Cree una entrada en el fichero [.filename]#/etc/passwd# (usando el programa man:vipw[8]).
+. Cree un perfil en el directorio home de este usuario, que ejecute `ppp -direct direct-server` o algo similar.
+. Cree una entrada en el fichero [.filename]#/etc/ppp/ppp.conf#. El fichero de ejemplo [.filename]#direct-server# debe ser suficiente para darse una idea.
+. Cree una entrada en el fichero [.filename]#/etc/ppp/ppp.linkup#.
+. Actualice su fichero [.filename]#/etc/rc.conf#.
+====
+
+[[ppp]]
+== Uso de Kernel PPP
+
+=== Configurando Kernel PPP
+
+Antes de comenzar a configurar PPP en su maquina, asegurese de `pppd` se localiza en [.filename]#/usr/sbin# y de que existe el directorio [.filename]#/etc/ppp#.
+
+`pppd` puede trabajar de dos maneras
+
+. Como un "cliente" - cuando desea conectar su maquina al mundo exterior utilizando PPP, por medio de una conexión serial o bien una línea de modem.
+.
++ 
+como un "servidor" - cuando su maquina esta conectada a una red y es utilizada para que otras maquinas se conecten utilizando ppp.
+
+En ambos casos, será necesario configurar un fichero de opciones ([.filename]#/etc/ppp/options# o bien [.filename]#~/.ppprc# si se cuenta con más de un usuario que utilizará ppp en la misma maquina.
+
+También deberá de contar con un software para hacer la conexión por medio de módem (de preferencia kermit), de manera que pueda hacer la conexión con un host remoto.
+
+=== Uso de `pppd` como Cliente
+
+El siguiente archivo de configuración [.filename]#/etc/ppp/options# puede utilizarse para realizar la conexión a una terminal CISCO, por medio de PPP.
+
+[.programlisting]
+....
+crtscts         # habilita el flujo de controls de hardware
+modem           # línea de control del modem
+noipdefault     # el servidor PPP remoto asignará la dirección IP
+                # si el servidor no envia una dirección IP durante IPCP
+                # remueva esta opción.
+passive         # espere por los paquetes LCP
+domain ppp.foo.com      # escriba su nombre de dominio aqui
+
+:<remote_ip>    # escriba la IP del host remoto aqui
+                # este será utilizado para el ruteo de paquetes por medio
+                # de PPP, si no especifica esta opción, cambie la
+                # línea a quedar  <local_ip>:<remote_ip>
+
+defaultroute    # establezca esta opción si el servidor su ruteador
+                # por default
+....
+
+Para conectarse:
+
+[.procedure]
+====
+. Realice el llamado al host remoto, utilizando kermit (o cualquier otra aplicación de este tipo), ingrese su nombre de usuario y contraseña (o cualquier info que sea necesaria para habilitar PPP en el host remoto).
+. Salga de kermit (sin colgar la línea).
+. Ingrese lo siguiente:
++
+[source,bash]
+....
+# /usr/src/usr.sbin/pppd.new/pppd /dev/tty01 19200
+....
++ 
+Asegurese de utilizar el dispositivo y la velocidad adecuados.
+====
+
+Ahora su computadora esta conectada por medio de PPP. Si la conexión falla, puede añadir la opción `debug` en el fichero [.filename]#/etc/ppp/options# de tal forma que pueda verificar la que esta ocurriendo y pueda resolver el problema.
+
+El siguiente script; [.filename]#/etc/ppp/pppup# realizará los 3 pasos de forma automática:
+
+[.programlisting]
+....
+#!/bin/sh
+ps ax |grep pppd |grep -v grep
+pid=`ps ax |grep pppd |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill ${pid}
+fi
+ps ax |grep kermit |grep -v grep
+pid=`ps ax |grep kermit |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+kermit -y /etc/ppp/kermit.dial
+pppd /dev/tty01 19200
+....
+
+El fichero [.filename]#/etc/ppp/kermit.dial# es un script de kermit, uqe realiza el marcado y negocia la autorización necesaria con el host remoto (un ejemplo de este script se encuentra al final de este documento).
+
+Utilice el siguiente script, llamado [.filename]#/etc/ppp/pppdown# para desconectar la línea PPP:
+
+[.programlisting]
+....
+#!/bin/sh
+pid=`ps ax |grep pppd |grep -v grep|awk '{print $1;}'`
+if [ X${pid} != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill -TERM ${pid}
+fi
+
+ps ax |grep kermit |grep -v grep
+pid=`ps ax |grep kermit |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+/sbin/ifconfig ppp0 down
+/sbin/ifconfig ppp0 delete
+kermit -y /etc/ppp/kermit.hup
+/etc/ppp/ppptest
+....
+
+Verifique que su PPP aun se esta ejecutando, por medio de [.filename]#/usr/etc/ppp/ppptest#, que deberá verse algo similar a esto:
+
+[.programlisting]
+....
+#!/bin/sh
+pid=`ps ax| grep pppd |grep -v grep|awk '{print $1;}'`
+if [ X${pid} != "X" ] ; then
+        echo 'pppd running: PID=' ${pid-NONE}
+else
+        echo 'No pppd running.'
+fi
+set -x
+netstat -n -I ppp0
+ifconfig ppp0
+....
+
+Para colgar el módem, ejecute [.filename]#/etc/ppp/kermit.hup#, que deberá contener:
+
+[.programlisting]
+....
+set line /dev/tty01	; aqui va el dispositivo del modem
+set speed 19200
+set file type binary
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+
+pau 1
+out +++
+inp 5 OK
+out ATH0\13
+echo \13
+exit
+....
+
+He aqui un metodo alterno, donde se utiliza `chat` en lugar de utilizar `kermit`.
+
+Los siguientes dos ficheros deben ser suficiente, para realizar una conexión por medio de `pppd`.
+
+[.programlisting]
+....
+/dev/cuaa1 115200
+
+crtscts		# habilita el control de flujo por medio de hardware
+modem		# línea de control del módem
+connect "/usr/bin/chat -f /etc/ppp/login.chat.script"
+noipdefault	# el servidor remoto debe asignar la dirección IP.
+	        # si el servidor no asigna una IP durante la negociación
+                # IPCP , remueva esta línea y espere por los
+passive         # paquetes LCP
+domain <your.domain>	# aqui va su dominio
+
+:		# escriba la IP del host remoto aqui
+                # si no ha especificado la opción noipdefault
+                # cambie esta línea a quedar <local_ip>:<remote_ip>
+
+defaultroute	# escriba esto, si desea que el servidor PPP sea su
+	            # router por default
+....
+
+[.filename]#/etc/ppp/login.chat.script#:
+
+[NOTE]
+====
+Lo siguiente debe ir en una sola línea.
+====
+
+[.programlisting]
+....
+ABORT BUSY ABORT 'NO CARRIER' "" AT OK ATDT<numero.de.telefono>
+  CONNECT "" TIMEOUT 10 ogin:-\\r-ogin: <nombre.usuario>
+  TIMEOUT 5 sword: <contraseña>
+....
+
+Una vez que estos ficheros han sido modificados correctamente e instalados, todo lo que necesita es ejecutar el comando `pppd`, algo como:
+
+[source,bash]
+....
+# pppd
+....
+
+=== Uso de `pppd` como Servidor
+
+El fichero [.filename]#/etc/ppp/options# debe contener algo similar a lo siguiente:
+
+[.programlisting]
+....
+crtscts   # control de flujo por Hardware
+netmask 255.255.255.0           # mascara de red (no es requisito)
+192.114.208.20:192.114.208.165  # direcciones ip del host local y remoto
+                                # la dirección ip local debe ser
+                                # diferente a la que le haya asignado a su
+                                # dispositivo de red ethernet (u otro)
+                                # la dirección ip remota que será
+                                # asignada a la maquina remota
+domain ppp.foo.com              # su dominio
+passive                         # espera por LCP
+modem                           # línea de modem
+....
+
+El siguiengte script, llamado [.filename]#/etc/ppp/pppserv# habilitará pppd, para que actue como servidor:
+
+[.programlisting]
+....
+#!/bin/sh
+ps ax |grep pppd |grep -v grep
+pid=`ps ax |grep pppd |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill ${pid}
+fi
+ps ax |grep kermit |grep -v grep
+pid=`ps ax |grep kermit |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+# reset ppp interface
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+# enable autoanswer mode
+kermit -y /etc/ppp/kermit.ans
+
+# run ppp
+pppd /dev/tty01 19200
+....
+
+Utilice el script [.filename]#/etc/ppp/pppservdown# para detener el servidor:
+
+[.programlisting]
+....
+#!/bin/sh
+ps ax |grep pppd |grep -v grep
+pid=`ps ax |grep pppd |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill ${pid}
+fi
+ps ax |grep kermit |grep -v grep
+pid=`ps ax |grep kermit |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+kermit -y /etc/ppp/kermit.noans
+....
+
+El siguiente script de kermit ([.filename]#/etc/ppp/kermit.ans#) habilita/deshabilita el modo de autorespuesta en su módem. Y debe verse algo similar a lo siguiente:
+
+[.programlisting]
+....
+set line /dev/tty01
+set speed 19200
+set file type binary
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+
+pau 1
+out +++
+inp 5 OK
+out ATH0\13
+inp 5 OK
+echo \13
+out ATS0=1\13   ; cambiar esto a quedar out ATS0=0\13 si desea deshabilitar el modo
+                ; de autorespuesta
+inp 5 OK
+echo \13
+exit
+....
+
+Un script llamado [.filename]#/etc/ppp/kermit.dial# es utilizado para llamar y autentificarse en un host remoto. Es necesario que edite este fichero, de acuerdo a sus necesidades. Escriba su nombre de usuario (login) y contraseña (password) en este fichero, también será necesario cambiar su metodo de conexión, de acuerdo a lo que se ajuste a sus necesidades.
+
+[.programlisting]
+....
+;
+; ingrese el dispositivo que esta apuntando a su módem:
+;
+set line /dev/tty01
+;
+; escriba la velocidad del módem:
+;
+set speed 19200
+set file type binary            ; full 8 bit file xfer
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+set modem hayes
+set dial hangup off
+set carrier auto                ; Posteriormente SET CARRIER si es necesario
+set dial display on             ; despues SET DIAL si es necesario
+set input echo on
+set input timeout proceed
+set input case ignore
+def \%x 0
+goto slhup
+
+:slcmd                          ; cambio a modo de comando
+echo Put the modem in command mode.
+clear                           ; Limpieza del buffer de entrada
+pause 1
+output +++
+input 1 OK\13\10                ; esperar para OK
+if success goto slhup
+output \13
+pause 1
+output at\13
+input 1 OK\13\10
+if fail goto slcmd              ; si el modem no responde Ok, intentar de nuevo
+
+:slhup                          ; colgar el teléfono
+clear                           ; Limpieza del buffer de entrada
+pause 1
+echo Hanging up the phone.
+output ath0\13
+input 2 OK\13\10
+if fail goto slcmd              ; si no hay un OK como respuesta, poner el modem en modo de comando
+
+:sldial                         ; marcar el numero telefonico
+pause 1
+echo Dialing.
+output atdt9,550311\13\10               ; escriba el numero de telefono
+assign \%x 0                    ; asignar cero al contador
+
+:look
+clear                           ; Limpieza del buffer de entrada
+increment \%x                   ; Conteo de segundos
+input 1 {CONNECT }
+if success goto sllogin
+reinput 1 {NO CARRIER\13\10}
+if success goto sldial
+reinput 1 {NO DIALTONE\13\10}
+if success goto slnodial
+reinput 1 {\255}
+if success goto slhup
+reinput 1 {\127}
+if success goto slhup
+if < \%x 60 goto look
+else goto slhup
+
+:sllogin                        ; login
+assign \%x 0                    ; asignar cero al contador
+pause 1
+echo Looking for login prompt.
+
+:slloop
+increment \%x                   ; Conteo de segundos
+clear                           ; Limpieza del buffer de entrada
+output \13
+;
+; escriba su login prompt aqui:
+;
+input 1 {Username: }
+if success goto sluid
+reinput 1 {\255}
+if success goto slhup
+reinput 1 {\127}
+if success goto slhup
+if < \%x 10 goto slloop         ; intentar 10 veces para obtener un login
+else goto slhup                 ; colgar y empezar de nuevo si a la decima falla
+
+:sluid
+;
+; escriba su nombre de usuario:
+;
+output ppp-login\13
+input 1 {Password: }
+;
+; escriba su contraseña:
+;
+output ppp-password\13
+input 1 {Entering SLIP mode.}
+echo
+quit
+
+:slnodial
+echo \7No dialtone.  Check the telephone line!\7
+exit 1
+
+; local variables:
+; mode: csh
+; comment-start: "; "
+; comment-start-skip: "; "
+; end:
+....
+
+[[pppoe]]
+== Uso de PPP sobre Ethernet (PPPoE)
+
+En esta sección veremos como configurar PPP sobre una red Ethernet (PPPoE).
+
+=== Configurando el kernel
+
+Ya no es necesario realizar una configuración especial para que nuestro kernel cuente con soporte para PPPoE. Siempre y cuando el soporte de redes necesario se encuentre en él, ppp se encargará de cargarlo de una manera dinámica.
+
+=== Editando el fichero [.filename]#ppp.conf#
+
+He aqui un ejemplo de un fichero de configuración [.filename]#ppp.conf# completamente funcional:
+
+[.programlisting]
+....
+default:
+  set log Phase tun command # puede añadir más dispositivos si lo desea
+  set ifaddr 10.0.0.1/0 10.0.0.2/0
+
+nombre_del_proveedor_del_servicio_de_internet:
+  set device PPPoE:xl1 # sustituya xl1 con su dispositivo ethernet
+  set authname SuNombreDeUsuario
+  set authkey SuContraseña
+  set dial
+  set login
+  add default HISADDR
+....
+
+=== Ejecutando PPP
+
+Estando en modo `superusuario` (root) puede ejecutar:
+
+[source,bash]
+....
+# ppp -ddial nombre_del_proveedor_de_inet
+....
+
+=== Ejecutando PPP al inicio de sesión
+
+Añada las siguientes líneas a su archivo [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ppp_enable="YES"
+ppp_mode="ddial"
+ppp_nat="YES"	# siempre y cuando desee habilitar nat para su red local
+ppp_profile="nombre_del_proveedor_de_inet"
+....
+
+=== Diferenciando el uso del Servicio de PPPoE
+
+En ocasiones es necesario utilizar una pequeña marca para diferenciar el servicio que vamos a utilizar para establecer la conexión. Las marcas ("tags")de servicio son utilizadas para distinguir entre diferentes servidores de una red, a los que nos podemos conectar utilizando PPPoE.
+
+Su proveedor de internet debe haberle provisto de la información necesaria para crear esta marca. Si esto no fué así, puede solicitar a su proveedor que le brinde esta información.
+
+Como último recurso, puede intentar el método sugerido por el programa http://www.roaringpenguin.com/pppoe/[Roarging Penguin PPPoE], que puede encontrarse en la crossref:ports[ports, colección de ports]. Al utilizar este programa debe tener en mente, que este puede desconfigurar su módem por completo, por esta razón piense biena antes de utilizarlo. Simplemente instale el programa controlador del módem, provisto por su porveedor. Posteriormente, debe acceder al menú de `Sistema` del programa. El nombre de su perfil debe aparecer listado. Que normalmente es _ISP_.
+
+El nombre del perfil (marca del servicio) será utilizada por la configuración de PPPoE en el fichero de configuración [.filename]#ppp.conf# como el proveedor para la opción del comando `set device` (puede ver la página de ayuda man:ppp[8] para más detalles). Esto debe verse algo similar a lo siguiente:
+
+[.programlisting]
+....
+set device PPPoE:xl1:ISP
+....
+
+No olvide cambiar _x11_ por el dispositivo Ethernet que este utilizando.
+
+No olvide cambiar _ISP_ por el nombre del perfil que le fué descrito anteriormente (por lo general el nombre de su Proveedor de Servicio de Internet).
+
+Para información adicional consulte:
+
+* http://renaud.waldura.com/doc/freebsd/pppoe/[Cheaper Broadband with FreeBSD on DSL] por Renauld Waldura.
+
+[[ppp-3com]]
+=== Uso de PPPoE en Casa con un Modem Dual ADSL 3Com
+
+Este módem no sigue el estandar establecido en el http://www.faqs.org/rfcs/rfc2516.html[RFC 2516] (_Un metodo que describe el uso de PPP por medio de un dispositivo Ethernet (PPoE)_, escrito por L. Mamakos, K. Lidl, J. Evarts, D. Carrel, D. Simone y R. Wheeler). En su lugar, el código de diferentes tipos de paquetes ha sido utilizado para el manejo del entorno Ethernet. Si cree que esto es incorrecto y que se debiera ajustar a las especificaciones de PPPoE, por favor comentelo en http://www.3com.com/[3Com].
+
+Para poder hacer que FreeBSD sea capaz de comunicarse con este dispositivo, se debe establecer un control de sistema (sysctl). Esto puede hacerse de forma automática al momento del arranque, editando el fichero [.filename]#/etc/sysctl.conf#: 
+
+[.programlisting]
+....
+net.graph.nonstandard_pppoe=1
+....
+
+o bien pude hacerse desde la línea de comandos, para un efecto inmediato, por medio del comando `sysctl -w net.graph.nonstandard_pppoe=1`.
+
+Desafortunadamente y dado que esto implica una configuración general del sistema, por lo que no es posible comunicarnos con un dispositivo cliente - servidor que utilice PPPoE y con un módem casero 3Com ADSL, al mismo tiempo.
+
+[[pppoa]]
+== Uso de PPP sobre ATM (PPPoA)
+
+Lo siguiente describe como configurar PPP utilizando ATM, alias PPPoA. PPPoA es una alternativa muy común entre proveedores de DSL en Europa.
+
+=== Uso de PPPoA con un Alcatel Speedtouch USB
+
+El soporte bajo FreeBSD para este dispositivo se puede encontrar como un port, por que el firmware es distribuido bajo http://www.alcatel.com/consumer/dsl/disclaimer_lx.htm[ la licencia de Alcatel].
+
+Para instalar este software, simplemente utilice la crossref:ports[ports,colección de ports]. Instale el port package:net/pppoa[] y siga las instrucciones provistas por el port.
+
+=== Uso de mpd
+
+Puede usar mpd para conectarse a una gran variedad de servicios, en particular servicios pptp. Puede encontrar mpd en la colección de ports, bajo package:net/mpd[].
+
+Primero debe instalar el port, y posteriormente configurar mpd para que se ajuste a sus necesidades y a la configuración del proveedor. El port instala un conjunto de ficheros de configuración de ejemplo, que estan bien documentados en [.filename]#PREFIX/etc/mpd/#. Note que _PREFIX_ se refiere al directorio donde sus ports son instalados, que normalmente es en [.filename]#/usr/local#. Una guía completa en formato HTML, esta disponible una vez que se ha instalado el port. Esta se localiza en [.filename]#PREFIX/shared/mpd/#. Aqui tenemos un ejemplo simple de configuración para conectarse a un servicio ADSL con mpd. La configuración se divide en dos ficheros, primero tenemos el fichero [.filename]#mpd.conf#.
+
+[.programlisting]
+....
+default:
+     load adsl
+
+ adsl:
+     new -i ng0 adsl adsl
+     set bundle authname usuario <.>
+     set bundle password contraseña <.>
+     set bundle disable multilink
+
+     set link no pap actcomp protocomp
+     set link disable chap
+     set link accept chap
+     set link keep-alive 30 10
+
+     set ipcp no vjcomp
+     set ipcp ranges 0.0.0.0/0 0.0.0.0/0
+
+     set iface route default
+     set iface disable on-demand
+     set iface enable proxy-arp
+     set iface idle 0
+
+     open
+....
+
+<.> El nombre de usuario para autentificar con su proveedor.
+
+<.> La contraseña para autentificar con su proveedor.
+
+El fichero [.filename]#mpd.links# contiene información a cerca de la, o las conecciones, que desee establecer. Un ejemplo de [.filename]#mpd.links# y que sea acompañante del ejemplo anterior, se muestra a continuación.
+
+[.programlisting]
+....
+adsl:
+     set link type pptp
+     set pptp mode active
+     set pptp enable originate incoming outcall
+     set pptp self 10.0.0.140
+     set pptp peer 10.0.0.138
+....
+
+La conexión es fácil de inicializarla, al ingresar los siguientes comandos como `root`.
+
+[source,bash]
+....
+# mpd -b adsl
+....
+
+El estatus de la conexión la puede ver con el comando.
+
+[source,bash]
+....
+% ifconfig ng0
+ : flags=88d1<UP,POINTOPOINT,RUNNING,NOARP,SIMPLEX,MULTICAST> mtu 1500
+      inet 216.136.204.117 --> 204.152.186.171 netmask 0xffffffff
+....
+
+Usar mpd es la forma recomendada para conectarse con servicios ADSL con FreeBSD.
+
+=== Uso de pptpclient
+
+También es posible usar FreeBSD para conectarse a otros servicios PPPoA por medio de package:net/pptpclient[].
+
+Para conectarse por medio de package:net/pptpclient[] a un servicio DSL, instale el port o paquete y edite el fichero [.filename]#/etc/ppp/ppp.conf#. Debe ser `root` para hacer estas operaciones. Un ejemplo de la sección de [.filename]#ppp.conf#, se muestra a continuación. Para mayor información sobre las opciones de [.filename]#ppp.conf#, consulte la página de ayuda de ppp; man:ppp[8].
+
+[.programlisting]
+....
+adsl:
+  set log phase chat lcp ipcp ccp tun command
+  set timeout 0
+  enable dns
+  set authname usuario <.>
+  set authkey contraseña <.>
+  set ifaddr 0 0
+  add default HISADDR
+....
+
+<.> Nombre de usuario de la cuenta DSL.
+
+<.> La contraseña de su cuenta.
+
+[WARNING]
+====
+
+Debido a que debe poner su contraseña en el fichero [.filename]#ppp.conf# en texto plano, debe asegurarse que nadie tenga acceso de lectura a este fichero. Los siguientes comandos se aseguran de que el fichero solo pueda se leido por `root`. Ve las páginas de ayuda man:chmod[1] y man:chown[8] para mayor información.
+
+[source,bash]
+....
+# chown root:wheel /etc/ppp/ppp.conf
+# chmod 600 /etc/ppp/ppp.conf
+....
+
+====
+
+Esto abrirá una sesion por medio de PPP con su ruteador DSL. Los módems Ethernet DSL cuentan con una dirección IP de LAN preconfigurada a la cual se puede conectar. En el caso del Alcatel Speedtouch, esta dirección es `10.0.0.138`. La documentación de su equipo debe indicarle que dirección utiliza. Para abrir el "tunel" e iniciar la sesión ppp, ejecute el siguiente comando.
+
+[source,bash]
+....
+# pptp dirección proveedor
+....
+
+[TIP]
+====
+
+Puede añadir un símbolo de ampersand ("&") al final de este comando, ya que pptp no retorna al shell por default.
+====
+
+Un dispositivo virtual [.filename]#tun# será creado, para interactuar con los procesos de pptp y ppp. Una vez que regrese al shell puede examinar la conexión por medio del siguiente comando.
+
+[source,bash]
+....
+% ifconfig tun0
+ tun0: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 1500
+         inet 216.136.204.21 --> 204.152.186.171 netmask 0xffffff00
+         Opened by PID 918
+....
+
+Si no le es posible conectarse, verifique la configuración de su ruteador, que normalmente es accesible por medio de telnet o de su navegador web. Si aun no puede conectarse examine la salida que da el comando pptp y el contenido del fichero de registro (log) de ppp; [.filename]#/var/log/ppp.log#.
+
+[[slip]]
+== Uso de SLIP
+
+[[slipc]]
+=== Configurando un cliente SLIP
+
+Lo siguiente es una forma de configurar FreeBSD para que utilice SLIP, en un red con dirección estática. Para direcciones dinámicas (esto es, donde su dirección cambia cada vez que se conecta), probablemente sea necesario realizar algunos ajustes que complican la configuración.
+
+En primer término, es necesario determinar a que puerto serial esta conectado nuestro módem. Mucha gente opta por} contar con un enláce simbólico, tal como [.filename]#/dev//modem#, que apunta al nombre real del dispositivo, [.filename]#/dev/cuaaN#. Esto permite abstenerse de usar el nombre real del dispositivo, en caso de que sea necesario cambiar de puerto nuestro módem. Lo cual puede ser de mucha ayuda, ya que puede ser un fastidio tener que editar un monton de ficheros en [.filename]#/etc# y ficheros de tipo [.filename]#.kermrc# en todo el sistema!.
+
+[NOTE]
+====
+[.filename]#/dev/cuaa0# es [.filename]#COM1#, [.filename]#cuaa1# es [.filename]#COM2#, etc.
+====
+
+Asegurese de contar con la siguiente opción en la configuración de su kernel:
+
+[.programlisting]
+....
+pseudo-device   sl      1
+....
+
+Esta opción esta incluida en el archivo del kernel [.filename]#GENERIC#, así que no debe haber problema, claro esta, a menos que lo haya borrado intencionalmente.
+
+==== Cosas Que Tiene Que Hacer Solo Una Vez
+
+[.procedure]
+====
+
+. Añada el nombre de su maquina, gateway, servidores de nombre a su fichero [.filename]#/etc/hosts#. Este es un ejemplo de mi fichero:
++
+[.programlisting]
+....
+127.0.0.1               localhost loghost
+136.152.64.181          water.CS.Example.EDU water.CS water
+136.152.64.1            inr-3.CS.Example.EDU inr-3 slip-gateway
+128.32.136.9            ns1.Example.EDU ns1
+128.32.136.12           ns2.Example.EDU ns2
+....
++
+. Asegurese de que cuenta con la opción `hosts` antes de la opción `bind`, en su fichero [.filename]#/etc/host.conf#. De lo contrario pueden ocurrir cosas graciosas en su sistema.
+. Edite el fichero [.filename]#/etc/rc.conf#.
+.. Especifique su nombre host al editar la línea que dice: 
++
+[.programlisting]
+....
+hostname=minombre.mi.dominio
+....
++ 
+El nombre completo de su sistema para internet, debe ser escrito en este punto.
+.. Añada el dispositivo [.filename]#sl0# a la lista de dispositivos de red, al cambiar la línea que dice:
++
+[.programlisting]
+....
+network_interfaces="lo0"
+....
++ 
+a quedar:
++
+[.programlisting]
+....
+network_interfaces=lo0 sl0
+....
++
+.. Añada los parámetros de inicialización del dispositivo sl0, al añadir la línea:
++
+[.programlisting]
+....
+ifconfig_sl0="inet ${hostname} slip-gateway netmask 0xffffff00 up"
+....
++
+.. Especificque cual será su ruteador por omisión al editar la línea:
++
+[.programlisting]
+....
+defaultrouter=NO
+....
++ 
+a quedar:
++
+[.programlisting]
+....
+defaultrouter=slip-gateway
+....
++
+. Edite su fichero [.filename]#/etc/resolv.conf# (si no existe debe crearlo), a que contenga lo siguiente:
++
+[.programlisting]
+....
+domain CS.Ejemplo.EDU
+nameserver 128.32.136.9
+nameserver 128.32.136.12
+....
++ 
+Como puede ver, lo anterior define el nombre de host, de su servidor de nombres. Claro esta, el nombre de dominio y las direcciones IP, dependen de su sistema específico.
+. Establezca la contraseña del superusuario `root` y de su símil `toor` (y de cualquier otro usuario que aun no cuente con la misma).
+. Reinicie su sistema y asegurese que cuenta con el nombre de host (hostname) correcto.
+====
+
+==== Haciendo una Conexión con SLIP
+
+[.procedure]
+====
+. Marque el número, teclee en el signo de comando `slip`, ingrese el nombre y la contraseña. Lo que se requiere ingresar, depende de su sistema. Si utiliza kermit, puede utilizar un script similar al siguiente:
++
+[.programlisting]
+....
+# kermit setup
+set modem hayes
+set line /dev/modem
+set speed 115200
+set parity none
+set flow rts/cts
+set terminal bytesize 8
+set file type binary
+# El siguiente macro se encarga de llamar e ingresar al sistema
+define slip dial 643-9600, input 10 =>, if failure stop, -
+output slip\x0d, input 10 Username:, if failure stop, -
+output silvia\x0d, input 10 Password:, if failure stop, -
+output ***\x0d, echo \x0aCONNECTED\x0a
+....
++ 
+Claro esta, que debe cambiar el nombre y contraseñ a quedar de acuerdo a sus necesidades. Después de hacer esto, puede simplemente teclear `slip` en el símbolo de sistema (prompt) de kermit, para realizar la conexión.
++
+[NOTE]
+======
+El dejar su contraseña en texto plano, en cualquier parte del sistema, generalmente es una _mala_ idea. Hágalo bajo su propio riesgo.
+======
+
+. Dejé a kermit en ese punto trabajando (puede suspenderlo tecleando kbd:[Ctrl+z]) y como `root`, teclee:
++
+[source,bash]
+....
+# slattach -h -c -s 115200 /dev/modem
+....
++ 
+Si puede hacer `ping` a cualquier host que se encuentre del otro lado del ruteador, usted esta conectado!. Si esto no funciona, puede intentar como argumento del comando `slattach`, la opción `-a` en lugar de utilizar la optción `-c`.
+====
+
+==== Como Terminar la Conexión
+
+Para terminar la conexión haga lo siguiente:
+
+[source,bash]
+....
+# kill -INT `cat /var/run/slattach.modem.pid`
+....
+
+esto terminaraá `slattach`. Recuerde que para hacer esto, usted debe estar firmado como superusuario (root). Posteriormente dirijase a kermit (puede hacer esto con `fg` si lo envio a segundo plano) y salga (tecleando `q`).
+
+La página de ayuda de `slattach` indica que debe utilizar el comando `ifconfig sl0 down`, para marcar como terminado el uso del dispositivo, pero tal parece que esto no hace una gran diferencia para mi. (`ifconfig sl0` da el mismo resultado.)
+
+En algunas ocasiones, puede que su módem se niegue a cortar la comunicación (el mio lo hace a veces). Si ese es el caso, simplemente inicie de nuevo kermit y vuelva a salir. Normalmente en el segundo intento hay exito.
+
+==== Problemas Comunes
+
+Si esto no funciona, sientase libre de preguntarme. Lo siguiente es una recapitulación de los problemas que más comunmente se presentan:
+
+* El no utilizar la opción `-c` o `-a` con el comando `slattach` (Esto debiera se fatal, pero algunos usuarios han reportado que esto ha solucionado sus problemas.
+* Usar la opción `s10` en vez de usar la opción `sl0` (puede ser difícil ver la diferencia con algunos tipos de letras).
+* Intente `ifconfig sl0` para visualizar el estatus de sus dispositivos de red. Por ejemplo, puede ser que obtenga algo similiar a lo siguiente:
++
+[source,bash]
+....
+# ifconfig sl0
+sl0: flags=10<POINTOPOINT>
+        inet 136.152.64.181 --> 136.152.64.1 netmask ffffff00
+....
+
+* También el comando `netstat -r` le mostrará la tabla de ruteo, en caso de que obtenga el mensaje "no route to te host", al hacer `ping`. Un ejemplo de esto se muestra a continuación:
++
+[source,bash]
+....
+# netstat -r
+Routing tables
+Destination      Gateway            Flags     Refs     Use  IfaceMTU    Rtt    Netmasks:
+
+(root node)
+(root node)
+
+Route Tree for Protocol Family inet:
+(root node) =>
+default          inr-3.Example.EDU  UG          8   224515  sl0 -      -
+localhost.Exampl localhost.Example. UH          5    42127  lo0 -       0.438
+inr-3.Example.ED water.CS.Example.E UH          1        0  sl0 -      -
+water.CS.Example localhost.Example. UGH        34 47641234  lo0 -       0.438
+(root node)
+....
++ 
+Esto es después de que el sistema ha estado conectado por un tiempo. Los numeros pueden variar en su sistema.
+
+[[slips]]
+=== Estableciendo un Servidor SLIP
+
+Este documento provee sugerencias, para establecer un servidor de SLIP, bajo FreeBSD, lo que generalmente significa configurar su sistema, para que de manera automática inicie los servicios, al firmarse usuarios-clientes remotos en su sistema.
+
+[[slips-prereqs]]
+==== Prerequisitos
+
+Esta sección es de naturaleza muy técnica, así que contar con antecedentes sobre esto es requerido. Este documento supone que usted cuenta con conocimientos sobre el protocolo de redes TCP/IP, y particularmente, redes y direcciones de nodos, mascaras de red, subneteo, ruteo y protocolos de ruteo, tal como RIP. El configurar servicios SLIP, en un servidor, requiere un conocimiento de estos conceptos, y si usted no esta familiarizado con estos, puede leer una copia, ya sea del libro de Craig Hunt; _TCP/IP Networking Administration_, publicado por O'Reilly & Associates, Inc. (Numero ISBN 0-937175-82-X), o alguno de los libros de Douglas Comer, sobre protocolos TCP/IP.
+
+Se da por un hecho, que usted ha instalado y configurado correctamente su(s) módem(s), así como la configuración de su sistema, para efecto de utilizar el mismo para realizar la conexión. Si usted no lo ha hecho, por favor lea el tutorial sobre configuración de estos servicios; si cuenta con un navegador para la World-Wide Web, puede ver los tutoriales disponibles en link:../../../../index.html[http://www.FreeBSD.org/].
+
+Puede ser que también desee revisar las páginas de ayuda (_man_), man:sio[4] para información referente a los controladores de dispositivos de puertos en serie, y man:ttys[5], man:gettytab[5], man:getty[8], & man:init[8], para ver información relevante, sobre la configuración de su sistema, para efecto de que acepte accesos (logins) por medio de un módem, y quizás man:stty[1] para información sobre los parámetros de configuración de puertos en serie (tal como `clocal`, que se utiliza para la conexión directa por medio de puertos seriales).
+
+==== Echemos un Vistazo
+
+En su configuración típica, el desarrollo de FreeBSD como un servidor SLIP, funciona de la siguiente manera: un Usuario SLIP, se conecta del Servidor SLIP FreeBSD e ingresa al sistema con una identificación especial, que utiliza `/usr/sbin/sliplogin` como shell del usuario. El programa `sliplogin` busca en el fichero [.filename]#/etc/sliphome/slip.hosts# la línea que haya sido creada especialmente para el usuario, conecta la línea serial a una interfaz SLIP disponible y posteriormente ejecuta el script [.filename]#/etc/sliphome/slip.login#, para configurar la interfaz SLIP.
+
+===== Un Ejemplo de Acceso al Servidor SLIP
+
+Por ejemplo si la clave de acceso de un usuario SLIP fuese `Shelmerg`, la entrada del usuario `Shelmerg`, en el fichero [.filename]#/etc/master.passwd# se vera algo similar a lo siguiente:
+
+[.programlisting]
+....
+Shelmerg:password:1964:89::0:0:Guy Helmer - SLIP:/usr/users/Shelmerg:/usr/sbin/sliplogin
+....
+
+Cuando `Shelmerg` accese al sistema, el comando `sliplogin`, buscará en el fichero [.filename]#/etc/sliphome/slip.hosts#, una línea, en la cual el ID (identificación) del usuario coincida, por ejemplo, puede ser que en el fichero [.filename]#/etc/sliphome/slip.hosts# exista una línea simliar a la siguiente:
+
+[.programlisting]
+....
+Shelmerg        dc-slip sl-helmer       0xfffffc00		  autocomp
+....
+
+El comando `sliplogin` encontrará la línea que coincida, enganchará la línea serial a cualquier interfaz SLIP disponible y posteriormente ejecutará [.filename]#/etc/sliphome/slip.login# de manera similar a:
+
+[.programlisting]
+....
+/etc/sliphome/slip.login 0 19200 Shelmerg dc-slip sl-helmer 0xfffffc00 autocomp
+....
+
+Si todo marcha bien, [.filename]#/etc/sliphome/slip.login# creará una configuración, por medio de `ifconfig`, para la interfaz SLIP, a la cual `sliplogin` se ha adjuntado (la interfaz slip 0, que era el primer parámetro dado en la lista de [.filename]#slip.login#), para establecer la dirección local IP (`dc-slip`), la interfaz de la direción IP Remota (`sl-helmer`), la submascara de red para la interfaz SLIP (`0xfffffc00`) y cualquier otra opción adicional (`autocomp`). Si algo no va del todo bien, normalmente `sliplogin` guarda bastante información para depurar, por medio del `demonio` (`daemon`) syslog, que usualmente guarda dicha infomración en [.filename]#/var/log/messages# (vea la página de ayuda man:syslogd[8] así como man:syslog.conf[5] y quizas el fichero [.filename]#/etc/syslog.conf#, para ver que es lo que `syslogd` esta almacenando y donde es que lo almacena.
+
+OK, basta de ejemplos - entremos de lleno en la configuración del sistema.
+
+==== Configuración del Kernel
+
+El kernel de FreeBSD, por omisión, cuenta con 2 dispositivos SLIP definidos ([.filename]#sl0# y [.filename]#sl1#); usted puede utilizar `netstat -i`, para verificar si estos dispositivos se encuentran en el kernel de su sistema.
+
+Un ejemplo del resultado de `netstat -i`:
+
+[source,bash]
+....
+Name  Mtu   Network     Address            Ipkts Ierrs    Opkts Oerrs  Coll
+ed0   1500  <Link>0.0.c0.2c.5f.4a         291311     0   174209     0   133
+ed0   1500  138.247.224 ivory             291311     0   174209     0   133
+lo0   65535 <Link>                            79     0       79     0     0
+lo0   65535 loop        localhost             79     0       79     0     0
+sl0*  296   <Link>                             0     0        0     0     0
+sl1*  296   <Link>                             0     0        0     0     0
+....
+
+En este ejemplo vemos que existen dos dispositivos SLIP en el kernel, que son; [.filename]#sl0# y [.filename]#sl1# (el asterisco que aparece después de `sl0` y `sl1` indica que los dispositivos no estan "trabajando".)
+
+Aun cuando el kernel cuente con los dispositivos, por omisión el kernel de FreeBSD, no viene configurado para enviar paquetes (de hecho su sistema FreeBSD no trabajara como ruteador, por default) esto en base a los requerimientos para Internet, establecidos por los RFCs ( vea 1009 [Requerimentos para Pasarelas (Gateway) en Internet], 1122 [Requerimientos para hosts de Internet - Capas de comunicación] y quizás 1127 [RFC sobre Una Perspectiva de los Requerimientos de Hosts]). Si usted desea que su servidor SLIP sobre FreeBSD, opere como un ruteador, será necesario que edite el fichero [.filename]#/etc/rc.conf# y cambie la opción `gateway_enable`, a quedar `YES`, esto habilitará esta función.
+
+Será necesario que reinicie su sistema, para efecto de que estos cambios surtan efecto.
+
+Al verificar su fichero de configuración del kernel ([.filename]#/sys/i386/conf/GENERIC#), podrá notar que cerca del final, hay una línea como la siguiente:
+
+[.programlisting]
+....
+pseudo-device sl 2
+....
+
+Esta línea es la que define el numero de dispositivos SLIP disponibles en el kernel; el numero al final de la línea es el numero máximo de conecciones SLIP que puede manejar el servidor simultaneamente.
+
+Para ayuda con relación a la configuración y compilación del kernel en su sistema FreeBSD, por favor refierase crossref:kernelconfig[kernelconfig,Configuración del kernel de FreeBSD] al apartado correspondiente.
+
+==== Configuración de Sliplogin
+
+Como se menciono anteriormente, existen tres ficheros en el directorio [.filename]#/etc/sliphome#, que son parte de la configuración de [.filename]#/usr/sbin/sliplogin# (vea la pagina de ayuda man:sliplogin[8] de para ver la ayuda del comando `sliplogin`): [.filename]#slip.hosts#, que es el fichero que define a los usuarios SLIP, así como sus direcciones IP correspondientes; [.filename]#slip.login#, que normalmente es utilizado para configurar la interfaz de SLIP; y (opcionalmente) [.filename]#slip.logout#, que hace lo opuesto a [.filename]#slip.login#, cuando la conexión serial ha terminado.
+
+===== Configuració de [.filename]#slip.hosts#
+
+El fichero [.filename]#/etc/sliphome/slip.hosts# contiene líneas, que al menos cuentan con cuatro partes, separadas por espacios en blanco:
+
+* Identificador (nombre) del usuario SLIP
+* Dirección Local (local para el servidor SLIP) de la liga a SLIP
+* Dirección Remota de la liga a SLIP
+* Mascara de red
+
+Las direcciones local y remota, pueden ser nombres del host (la resolución de los mismos, es llevada a cabo, por medio de [.filename]#/etc/hosts# o por el servidor de nombres de dominio (DNS), dependiendo de lo que haya especificado en el fichero [.filename]#/etc/host.conf#), y la mascara de red puede ser un nombre, que puede ser resuelto revisando [.filename]#/etc/networks#. En un sistema de ejemplo, el fichero [.filename]#/etc/sliphome/slip.hosts#, puede verse así:
+
+[.programlisting]
+....
+#
+# login local-addr      remote-addr     mask            opt1    opt2
+#                                               (normal,compress,noicmp)
+#
+Shelmerg  dc-slip       sl-helmerg      0xfffffc00      autocomp
+....
+
+Al final de la línea puede ver que existen una o más opciones.
+
+* `normal` - sin compresión de los encabezados.
+* `compress` - compresión de los encabezados.
+* `autocomp` - compresión automática, si el host remoto lo permite.
+* `noicmp` - deshabilitar los paquetes ICMP (de tal forma que cualquier paquete enviado por "ping" seráa rechazado, en lugar de ocupar de su ancho de banda).
+
+La elección sobre la dirección local y remota depende si usted va a utilizar una conexión TCP/IP dedicada o bien si va a utilizar una conexión por medio de "proxy ARP" en su servidor SLIP (no es correcto "proxy ARP", pero es la terminología utilizada en esta sección para describirlo). Si usted no esta seguro que metodo manejar o como asignar la dirección IP, por favor refierase a alguno de los libros sobre TCP/IP, que se mencionan en los Prerequisitos de SLIP (<<slips-prereqs>>) y/o consulte al administrador de IP de su red.
+
+Si usted piensa subnetear para los diferentes clientes SLIP, será necesario que la dirección de la subred (subnet), salga de la dirección IP que tenga asignada su red, y el numero de cada cliente, del numero que asigne a su subred. Posteriormente puede que sea necesario, o bien configurar una ruta estática a la subred SLIP, por medio de su servidor SLIP en su ruteador más cercano por IP.
+
+De otra forma, si usted piensa utilizar un metodo "proxy ARP", será necesario que a sus clientes SLIP, se les asigne una dirección IP, que se encuentre dentro del rango que este utilizando para su subred Ethernet, y tambié será necesario que haga algunos ajustes en los ficheros script [.filename]#/etc/sliphome/slip.login# y en [.filename]#/etc/sliphome/slip.logout#, para que usen man:arp[8], para que maneje la tabla ARP del servidor SLIP y llamados del proxy-ARP.
+
+===== [.filename]#slip.login# Configuración
+
+El típico fichero [.filename]#/etc/sliphome/slip.login# se ve de la siguiente manera:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       @(#)slip.login  5.1 (Berkeley) 7/1/90
+
+#
+# generic login file for a slip line.  sliplogin invokes this with
+# the parameters:
+#      1        2         3        4          5         6     7-n
+#   slipunit ttyspeed loginname local-addr remote-addr mask opt-args
+#
+/sbin/ifconfig sl$1 inet $4 $5 netmask $6
+....
+
+This [.filename]#slip.login# file merely runs `ifconfig` for the appropriate SLIP interface with the local and remote addresses and network mask of the SLIP interface.
+
+If you have decided to use the "proxy ARP" method (instead of using a separate subnet for your SLIP clients), your [.filename]#/etc/sliphome/slip.login# file will need to look something like this:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       @(#)slip.login  5.1 (Berkeley) 7/1/90
+
+#
+# generic login file for a slip line.  sliplogin invokes this with
+# the parameters:
+#      1        2         3        4          5         6     7-n
+#   slipunit ttyspeed loginname local-addr remote-addr mask opt-args
+#
+/sbin/ifconfig sl$1 inet $4 $5 netmask $6
+# Answer ARP requests for the SLIP client with our Ethernet addr
+/usr/sbin/arp -s $5 00:11:22:33:44:55 pub
+....
+
+La línea adicional, `arp -s $5 00:11:22:33:44:55 pub` del script [.filename]#slip.login#, crea una entrada ARP en la tabla del servidor SLIP. Esta entrada le indica al servidor SLIP que debe responder con la dirección MAC de su dispositivo Ethernet, cuando cualquier otro nodo IP en la red, solicite información a la IP del cliente SLIP.
+
+Al tomar en cuenta el ejemplo anterior, es importante que sustituya la dirección Ethernet MAC (`00:11:22:33:44:55`), con la dirección que corresponde a su tarjeta de red, o definitivamente su "proxy ARP" no va a funcionar!. Para efecto de conocer cual es la dirección MAC del dispositivo Ethernet (tarjeta de red), de su servidor SLIP, puede ejecutar el comando `netstat -i`, el cual tendrá como resultado algo similar a lo siguiente:
+
+[source,bash]
+....
+ed0   1500  <Link>0.2.c1.28.5f.4a         191923	0   129457     0   116
+....
+
+Esto indica que la dirección MAC de su dispositivo Ethernet, en este sistema es `00:02:c1:28:5f:4a` - los puntos que aparecen en la salida del comando `netstat -i` deben cambiarse por dos puntos, así mismo deberá de anteponerse un cero, a cada dígito hexadecimal que aparezca sólo (no en pares), de tal forma que convirtamos la dirección en lo que man:arp[8] requiere para trabajar; vea la página de ayuda man:arp[8], para ver información completa sobre su uso.
+
+[NOTE]
+====
+Recuerde que cuando cree los ficheros [.filename]#/etc/sliphome/slip.login# y [.filename]#/etc/sliphome/slip.logout#, deben contar con permisos de ejecución (`chmod 755 /etc/sliphome/slip.login /etc/sliphome/slip.logout`), de otra forma estos scripts no podrán llevar a cabo su función.
+====
+
+===== Configuración de [.filename]#slip.logout#
+
+El fichero [.filename]#/etc/sliphome/slip.logout# no es indispensable (a menos que vaya a utilizar "proxy ARP"), pero si aun así decide crearlo, el siguiente es un ejemplo básico del script [.filename]#slip.logout# :
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       slip.logout
+
+#
+# logout file for a slip line.  sliplogin invokes this with
+# the parameters:
+#      1        2         3        4          5         6     7-n
+#   slipunit ttyspeed loginname local-addr remote-addr mask opt-args
+#
+/sbin/ifconfig sl$1 down
+....
+
+Si usted esta utilizando "proxy ARP", es recomendable que le indique a [.filename]#/etc/sliphome/slip.logout#, que desea eliminar la entrada ARP, para el cliente SLIP:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       @(#)slip.logout
+
+#
+# logout file for a slip line.  sliplogin invokes this with
+# the parameters:
+#      1        2         3        4          5         6     7-n
+#   slipunit ttyspeed loginname local-addr remote-addr mask opt-args
+#
+/sbin/ifconfig sl$1 down
+# Dejar de solicitar respuesta ARP al cliente SLIP
+/usr/sbin/arp -d $5
+....
+
+El comando `arp -d $5`, elimina la entrada ARP, que [.filename]#slip.login# de "proxy ARP" añadió al cliente SLIP al ingresar al sistema.
+
+Para esta más seguros: asegurese de que el fichero [.filename]#/etc/sliphome/slip.logout# cuenta con los permisos adecuados para su ejecución, una vez que lo ha creado (ej. `chmod 755 /etc/sliphome/slip.logout`) .
+
+==== Consideraciones sobre el Enrutamiento
+
+Si usted no esta utilizando el metodo "proxy ARP", para efecto de rutear los paquetes entre sus clientes SLIP y el resto de la red (y quizás Internet), deberá de hacer una de las siguientes dos acciones, o bien añadir direcciones estáticas, a su(s) ruteador(es) más cercanos, para que se reenvien los paquetes de la subred de sus clientes SLIP, por medio de su servidor SLIP, o bien tendrá que instalar y configurar `gated` en su servidor SLIP (que corre FreeBSD!), de tal forma que le indique a su(s) ruteador(es), por medio del protocolo correcto, a cerca de su subred SLIP.
+
+===== Direcciones de Enrutamiento Estáticas
+
+Añadir direcciones estáticas de enrutamiento puede ser un problema (o imposible si usted no cuenta con la autoridad para hacerlo...). Si usted cuenta con una red de ruteo-múltiple en su organización, algunos ruteadores, tales como los fabricados por Cisco y Proteon, puede ser que no sea suficiente con el hecho de configurar las rutas estáticas de su subred SLIP, sino que sea necesario indicar que rutas utilizar para informar a cerca de otras rutas, así que algo de experiencia así como determinación para la resolución de problemas serán necesarias para poner la ruta basada-en- ruteo-estático a trabajar.
+
+===== Ejecutando `gated`
+
+Una alternativa para los dolores de cabeza que pueden dar las redes con ruteo estático, es intalar `gated` en su servidor SLIP bajo FreeBSD y configurarlo, para que utilice los protocolos de ruteo apropiados (RIP/OSPF/BGP/EGP) para informar a otros ruteadores, a cerca de su subred SLIP. Una vez que lo ha compilado e instalado, deberá crear el fichero [.filename]#/etc/gated.conf#, que configurará a `gated`; aqui hay un ejemplo, similar al que el autor utilizó en un servidor SLIP FreeBSD: 
+
+[NOTE]
+====
+`gated` es un software propietario y su código fuente no estará disponible al público más (más información en el sitio http://www.gated.org/[gated]). Esta sección solo existe para asegurarse de la compatibilidad con aquellos que usan la versió antigua.
+====
+
+[.programlisting]
+....
+#
+# gated configuration file for dc.dsu.edu; for gated version 3.5alpha5
+# Only broadcast RIP information for xxx.xxx.yy out the ed Ethernet interface
+#
+#
+# tracing options
+#
+traceoptions "/var/tmp/gated.output" replace size 100k files 2 general ;
+
+rip yes {
+  interface sl noripout noripin ;
+  interface ed ripin ripout version 1 ;
+  traceoptions route ;
+} ;
+
+#
+# Turn on a bunch of tracing info for the interface to the kernel:
+kernel {
+  traceoptions remnants request routes info interface ;
+} ;
+
+#
+# Propagate the route to xxx.xxx.yy out the Ethernet interface via RIP
+#
+
+export proto rip interface ed {
+  proto direct {
+      xxx.xxx.yy mask 255.255.252.0 metric 1; # SLIP connections
+  } ;
+} ;
+
+#
+# Accept routes from RIP via ed Ethernet interfaces
+
+import proto rip interface ed {
+  all ;
+} ;
+....
+
+En el ejemplo anterior, el fichero de configuración [.filename]#gated.conf# transmite información sobre la subred SLIP _xxx.xxx.yy_, por medio de RIP al dispositivo Ethernet; si usted esta utilizando un dispositivo de red, diferente de [.filename]#ed#, será necesario que modifique el parámetro [.filename]#ed# por el correspondiente. En este ejemplo, el fichero también realiza una busqueda por el fichero [.filename]#/var/tmp/gated.output#, que es un fichero que nos sirve para depurar cualquier error que se presente en la actividad de `gated`; usted puede desactivar la opción de depuración (debug), si es que `gated` esta funcionando correctamente. Será necesario que modifique _xxx.xxx.yy._, a quedar con la dirección correcta de su subred SLIP (asegurese de modificar también la máscara de red, en la cláusula `proto direct` también).
+
+Una vez que ha instalado y configurado `gated` en su sistema, necesitará indicarle a FreeBSD que al iniciar el sistema, ejecute el script para `gated`, en lugar de ejecutar `routed`. La forma más fácil de hacer esto, es editar las variables de `route` y `router_flags`, en el fichero [.filename]#/etc/rc.conf#. Por favor vea la página de ayuda de `gated`, para ver información sobre los parámetros de la línea-de-comandos.

@@ -1,0 +1,258 @@
+---
+title: Rozdział 10. Linux® Binary Compatibility
+part: Część II. Codzienne czynności
+prev: books/handbook/printing
+next: books/handbook/partiii
+---
+
+[[linuxemu]]
+= Linux(R) Binary Compatibility
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Spis treści
+:table-caption: Tabela
+:figure-caption: Rysunek
+:example-caption: Przykład
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 10
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/linuxemu/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/linuxemu/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/linuxemu/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pl/mailing-lists.adoc[]
+include::shared/pl/urls.adoc[]
+include::shared/pl/teams.adoc[]
+
+toc::[]
+
+[[linuxemu-synopsis]]
+== Synopsis
+
+FreeBSD provides binary compatibility with Linux(R), allowing users to install and run most Linux(R) binaries on a FreeBSD system without having to first modify the binary. It has even been reported that, in some situations, Linux(R) binaries perform better on FreeBSD than they do on Linux(R).
+
+However, some Linux(R)-specific operating system features are not supported under FreeBSD. For example, Linux(R) binaries will not work on FreeBSD if they overly use i386(TM) specific calls, such as enabling virtual 8086 mode.
+
+[NOTE]
+====
+Support for 64-bit binary compatibility with Linux(R) was added in FreeBSD 10.3.
+====
+
+After reading this chapter, you will know:
+
+* How to enable Linux(R) binary compatibility on a FreeBSD system.
+* How to install additional Linux(R) shared libraries.
+* How to install Linux(R) applications on a FreeBSD system.
+* The implementation details of Linux(R) compatibility in FreeBSD.
+
+Before reading this chapter, you should:
+
+* Know how to install crossref:ports[ports,additional third-party software].
+
+[[linuxemu-lbc-install]]
+== Configuring Linux(R) Binary Compatibility
+
+By default, Linux(R) libraries are not installed and Linux(R) binary compatibility is not enabled. Linux(R) libraries can either be installed manually or from the FreeBSD Ports Collection.
+
+Before attempting to build the port, load the Linux(R) kernel module, otherwise the build will fail:
+
+[source,bash]
+....
+# kldload linux
+....
+
+For 64-bit compatibility:
+
+[source,bash]
+....
+# kldload linux64
+....
+
+To verify that the module is loaded:
+
+[source,bash]
+....
+% kldstat
+      Id Refs Address    Size     Name
+      1    2 0xc0100000 16bdb8   kernel
+      7    1 0xc24db000 d000     linux.ko
+....
+
+The package:emulators/linux_base-c7[] package or port is the easiest way to install a base set of Linux(R) libraries and binaries on a FreeBSD system. To install the port:
+
+[source,bash]
+....
+# pkg install emulators/linux_base-c7
+....
+
+For Linux(R) compatibility to be enabled at boot time, add this line to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+linux_enable="YES"
+....
+
+On 64-bit machines, [.filename]#/etc/rc.d/abi# will automatically load the module for 64-bit emulation.
+
+Since the Linux(R) binary compatibility layer has gained support for running both 32- and 64-bit Linux(R) binaries (on 64-bit x86 hosts), it is no longer possible to link the emulation functionality statically into a custom kernel.
+
+[[linuxemu-libs-manually]]
+=== Installing Additional Libraries Manually
+
+If a Linux(R) application complains about missing shared libraries after configuring Linux(R) binary compatibility, determine which shared libraries the Linux(R) binary needs and install them manually.
+
+From a Linux(R) system, `ldd` can be used to determine which shared libraries the application needs. For example, to check which shared libraries `linuxdoom` needs, run this command from a Linux(R) system that has Doom installed:
+
+[source,bash]
+....
+% ldd linuxdoom
+libXt.so.3 (DLL Jump 3.1) => /usr/X11/lib/libXt.so.3.1.0
+libX11.so.3 (DLL Jump 3.1) => /usr/X11/lib/libX11.so.3.1.0
+libc.so.4 (DLL Jump 4.5pl26) => /lib/libc.so.4.6.29
+....
+
+Then, copy all the files in the last column of the output from the Linux(R) system into [.filename]#/compat/linux# on the FreeBSD system. Once copied, create symbolic links to the names in the first column. This example will result in the following files on the FreeBSD system:
+
+[source,bash]
+....
+/compat/linux/usr/X11/lib/libXt.so.3.1.0
+/compat/linux/usr/X11/lib/libXt.so.3 -> libXt.so.3.1.0
+/compat/linux/usr/X11/lib/libX11.so.3.1.0
+/compat/linux/usr/X11/lib/libX11.so.3 -> libX11.so.3.1.0
+/compat/linux/lib/libc.so.4.6.29
+/compat/linux/lib/libc.so.4 -> libc.so.4.6.29
+....
+
+If a Linux(R) shared library already exists with a matching major revision number to the first column of the `ldd` output, it does not need to be copied to the file named in the last column, as the existing library should work. It is advisable to copy the shared library if it is a newer version, though. The old one can be removed, as long as the symbolic link points to the new one.
+
+For example, these libraries already exist on the FreeBSD system:
+
+[source,bash]
+....
+/compat/linux/lib/libc.so.4.6.27
+/compat/linux/lib/libc.so.4 -> libc.so.4.6.27
+....
+
+and `ldd` indicates that a binary requires a later version:
+
+[source,bash]
+....
+libc.so.4 (DLL Jump 4.5pl26) -> libc.so.4.6.29
+....
+
+Since the existing library is only one or two versions out of date in the last digit, the program should still work with the slightly older version. However, it is safe to replace the existing [.filename]#libc.so# with the newer version:
+
+[source,bash]
+....
+/compat/linux/lib/libc.so.4.6.29
+/compat/linux/lib/libc.so.4 -> libc.so.4.6.29
+....
+
+Generally, one will need to look for the shared libraries that Linux(R) binaries depend on only the first few times that a Linux(R) program is installed on FreeBSD. After a while, there will be a sufficient set of Linux(R) shared libraries on the system to be able to run newly installed Linux(R) binaries without any extra work.
+
+=== Installing Linux(R) ELF Binaries
+
+ELF binaries sometimes require an extra step. When an unbranded ELF binary is executed, it will generate an error message:
+
+[source,bash]
+....
+% ./my-linux-elf-binary
+ELF binary type not known
+Abort
+....
+
+To help the FreeBSD kernel distinguish between a FreeBSD ELF binary and a Linux(R) binary, use man:brandelf[1]:
+
+[source,bash]
+....
+% brandelf -t Linux my-linux-elf-binary
+....
+
+Since the GNU toolchain places the appropriate branding information into ELF binaries automatically, this step is usually not necessary.
+
+=== Installing a Linux(R) RPM Based Application
+
+To install a Linux(R) RPM-based application, first install the package:archivers/rpm4[] package or port. Once installed, `root` can use this command to install a [.filename]#.rpm#:
+
+[source,bash]
+....
+# cd /compat/linux
+# rpm2cpio < /path/to/linux.archive.rpm | cpio -id
+....
+
+If necessary, `brandelf` the installed ELF binaries. Note that this will prevent a clean uninstall.
+
+=== Configuring the Hostname Resolver
+
+If DNS does not work or this error appears:
+
+[source,bash]
+....
+resolv+: "bind" is an invalid keyword resolv+:
+"hosts" is an invalid keyword
+....
+
+configure [.filename]#/compat/linux/etc/host.conf# as follows:
+
+[.programlisting]
+....
+order hosts, bind
+multi on
+....
+
+This specifies that [.filename]#/etc/hosts# is searched first and DNS is searched second. When [.filename]#/compat/linux/etc/host.conf# does not exist, Linux(R) applications use [.filename]#/etc/host.conf# and complain about the incompatible FreeBSD syntax. Remove `bind` if a name server is not configured using [.filename]#/etc/resolv.conf#.
+
+[[linuxemu-advanced]]
+== Advanced Topics
+
+This section describes how Linux(R) binary compatibility works and is based on an email written to {freebsd-chat} by Terry Lambert mailto:tlambert@primenet.com[tlambert@primenet.com] (Message ID: `<199906020108.SAA07001@usr09.primenet.com>`).
+
+FreeBSD has an abstraction called an "execution class loader". This is a wedge into the man:execve[2] system call.
+
+Historically, the UNIX(R) loader examined the magic number (generally the first 4 or 8 bytes of the file) to see if it was a binary known to the system, and if so, invoked the binary loader.
+
+If it was not the binary type for the system, the man:execve[2] call returned a failure, and the shell attempted to start executing it as shell commands. The assumption was a default of "whatever the current shell is".
+
+Later, a hack was made for man:sh[1] to examine the first two characters, and if they were `:\n`, it invoked the man:csh[1] shell instead.
+
+FreeBSD has a list of loaders, instead of a single loader, with a fallback to the `#!` loader for running shell interpreters or shell scripts.
+
+For the Linux(R) ABI support, FreeBSD sees the magic number as an ELF binary. The ELF loader looks for a specialized _brand_, which is a comment section in the ELF image, and which is not present on SVR4/Solaris(TM) ELF binaries.
+
+For Linux(R) binaries to function, they must be _branded_ as type `Linux` using man:brandelf[1]:
+
+[source,bash]
+....
+# brandelf -t Linux file
+....
+
+When the ELF loader sees the `Linux` brand, the loader replaces a pointer in the `proc` structure. All system calls are indexed through this pointer. In addition, the process is flagged for special handling of the trap vector for the signal trampoline code, and several other (minor) fix-ups that are handled by the Linux(R) kernel module.
+
+The Linux(R) system call vector contains, among other things, a list of `sysent[]` entries whose addresses reside in the kernel module.
+
+When a system call is called by the Linux(R) binary, the trap code dereferences the system call function pointer off the `proc` structure, and gets the Linux(R), not the FreeBSD, system call entry points.
+
+Linux(R) mode dynamically _reroots_ lookups. This is, in effect, equivalent to `union` to file system mounts. First, an attempt is made to lookup the file in [.filename]#/compat/linux/original-path#. If that fails, the lookup is done in [.filename]#/original-path#. This makes sure that binaries that require other binaries can run. For example, the Linux(R) toolchain can all run under Linux(R) ABI support. It also means that the Linux(R) binaries can load and execute FreeBSD binaries, if there are no corresponding Linux(R) binaries present, and that a man:uname[1] command can be placed in the [.filename]#/compat/linux# directory tree to ensure that the Linux(R) binaries cannot tell they are not running on Linux(R).
+
+In effect, there is a Linux(R) kernel in the FreeBSD kernel. The various underlying functions that implement all of the services provided by the kernel are identical to both the FreeBSD system call table entries, and the Linux(R) system call table entries: file system operations, virtual memory operations, signal delivery, and System V IPC. The only difference is that FreeBSD binaries get the FreeBSD _glue_ functions, and Linux(R) binaries get the Linux(R) _glue_ functions. The FreeBSD _glue_ functions are statically linked into the kernel, and the Linux(R) _glue_ functions can be statically linked, or they can be accessed via a kernel module.
+
+Technically, this is not really emulation, it is an ABI implementation. It is sometimes called "Linux(R) emulation" because the implementation was done at a time when there was no other word to describe what was going on. Saying that FreeBSD ran Linux(R) binaries was not true, since the code was not compiled in.

@@ -1,0 +1,409 @@
+---
+title: Capitolo 12. La Procedura di Avvio di FreeBSD
+part: Parte II. Compiti Ordinari
+prev: books/handbook/config
+next: books/handbook/users
+---
+
+[[boot]]
+= La Procedura di Avvio di FreeBSD
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Indice
+:table-caption: Tabella
+:figure-caption: Figura
+:example-caption: Esempio
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 12
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/boot/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/boot/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/boot/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/it/mailing-lists.adoc[]
+include::shared/it/urls.adoc[]
+
+toc::[]
+
+[[boot-synopsis]]
+== Sinossi
+
+Il processo di accensione di un computer e caricamento del sistema operativo viene detto "processo di avviamento", o semplicemente "avvio". La procedura di avvio di FreeBSD fornisce un alto grado di flessibilità nel personalizzare quello che succede quando avvii il sistema, dandoti la possibilità di scegliere tra diversi sistemi operativi installati sullo stesso computer, o anche tra diverse versioni dello stesso sistema operativo o tra diversi kernel installati.
+
+Questo capitolo fornisce i dettagli sulle opzioni di configurazione che puoi impostare per personalizzare il processo di avvio di FreeBSD. Ciò comprende tutto quello che avviene fino a quando il kernel viene lanciato, vengono controllate le periferiche, e viene avviato man:init[8]. Se non sei sicuro di sapere quando tutto questo accada, si tratta del momento in cui il colore del testo a video cambia da bianco brillante a grigio.
+
+Dopo aver letto questo capitolo, saprai:
+
+* Quali sono i componenti del sistema di avvio di FreeBSD, e come interagiscono.
+* Le opzioni che puoi impostare per i componenti durante l'avviamento di FreeBSD per controllare il processo di avvio.
+* Le basi dei man:device.hints[5].
+
+[NOTE]
+.Solo per x86
+====
+Questo capitolo descrive la procedura di avvio di FreeBSD su sistemi Intel x86.
+====
+
+[[boot-introduction]]
+== Il Problema dell'Avvio
+
+Accendere un computer e far partire il sistema operativo pone un dilemma interessante. Per definizione, il computer non sa fare nulla finché non viene avviato il sistema operativo. Questo include anche l'esecuzione dei programmi dal disco. Dunque se il computer non può eseguire un programma da disco senza il sistema operativo, ed i programmi del sistema operativo sono sul disco, come viene avviato il sistema operativo?
+
+Questo è un problema analogo a quello descritto nel libro Le Avventure del Barone di Munchausen. Un personaggio era caduto in una botola, e ne era uscito tirandosi su da sé (in inglese "bootstrap"), riuscendo nell'intento solo con i propri sforzi. Nei primi giorni dei calcolatori al meccanismo usato per caricare il sistema operativo fu applicato il termine _bootstrap_, ed in seguito venne abbreviato in "booting" (in italiano "avvio").
+
+Su sistemi con hardware x86 il BIOS (Basic Input/Output System) è il responsabile del caricamento del sistema operativo. Per fare ciò, il BIOS cerca nel disco rigido il Master Boot Record (MBR), che deve essere in una specifica posizione sul disco. Il BIOS ha abbastanza conoscenze per caricare ed eseguire l'MBR, ed assume che l'MBR possa portare avanti il resto dei compiti relativi al caricamento del sistema operativo, possibilmente con l'aiuto del BIOS.
+
+Il codice all'interno del MBR è di solito riferito come _boot manager_, specialmente quando interagisce con l'utente. In questo caso la maggior parte del suo codice è nella prima _traccia_ del disco o direttamente nel file system dell'OS. (Il boot manager qualche volta viene chiamato anche _boot loader_, ma gli utenti di FreeBSD usano questo termine per una successiva fase di avvio.) Boot manager popolari sono boot0 (a.k.a. Boot Easy, il boot manager standard di FreeBSD), Grub, GAG, e LILO. (Solo boot0 è all'interno del MBR.)
+
+Se hai solo un sistema operativo installato sui tuoi dischi allora sarà sufficiente il MBR standard del PC. Questo MBR cerca la prima slice avviabile (a.k.a. attiva) sul disco, e quindi esegue il codice in quella slice per caricare il resto del sistema operativo. Il MBR installato da man:fdisk[8], di default, è come un MBR. È basato su [.filename]#/boot/mbr#.
+
+Se hai installato più sistemi operativi sui tuoi dischi allora puoi installare un boot manager diverso, che mostra una lista dei diversi sistemi operativi, e ti permette di scegliere quale avviare. Nella prossima sezione ne vengono presentati due.
+
+Il resto del sistema di avvio di FreeBSD è diviso in tre stadi. Il primo stadio viene eseguito dall'MBR, che sa solo il necessario per mettere il computer in un certo stato ed eseguire il secondo stadio. Quest'ultimo può fare poco di più, prima di eseguire il terzo. Il terzo stadio esaurisce il compito di caricare il sistema operativo. Il lavoro è diviso in queste tre parti perché gli standard dei PC pongono dei limiti alla dimensione dei programmi che possono essere eseguiti nei primi due stadi. Concatenando i compiti si permette a FreeBSD di fornire un loader più flessibile.
+
+A questo punto viene avviato il kernel ed esso comincia a verificare i dispositivi e ad inizializzarli. Una volta che la procedura di avvio del kernel è finita, il kernel passa il controllo al processo utente man:init[8], che si assicura che i dischi siano in uno stato usabile. Poi man:init[8] avvia la configurazione delle risorse a livello utente che monta i file system, imposta le schede di rete per comunicare via rete, ed in generale fa partire tutti i processi che generalmente sono in esecuzione su un sistema FreeBSD all'avvio.
+
+[[boot-blocks]]
+== Il Boot Manager e le Fasi di Boot
+
+[[boot-boot0]]
+=== Il Boot Manager
+
+Il codice nel MBR o nel boot manager è solitamente riferito alla _fase zero_ del processo di boot. Questa sezione discute dei due boot manager menzionati in precedenza: boot0 e LILO.
+
+*Il Boot Manager boot0:* Il MBR installato dall'installer di FreeBSD o da man:boot0cfg[8], di default, si basa su [.filename]#/boot/boot0#. (Il programma boot0 è molto semplice, poichè il programma nel  può essere al più di 446 byte a causa della tabella della slice e dell'identificatore `0x55AA` alla fine del MBR.) Se hai installato boot0 e hai più di un sistema operativo sui tuoi dischi, allora vedrai una schermata simile alla seguente nella fase di avvio:
+
+[[boot-boot0-example]]
+.Screenshot di [.filename]#boot0#
+[example]
+====
+
+[source,bash]
+....
+F1 DOS
+F2 FreeBSD
+F3 Linux
+F4 ??
+F5 Drive 1
+
+Default: F2
+....
+
+====
+
+Altri sistemi operativi, in particolare Windows(R), sono noti per l'abitudine di sovrascrivere l'MBR esistente con il proprio. Se accade questo, o se vuoi rimpiazzare l'MBR pre-esistente con quello di FreeBSD puoi usare il seguente comando:
+
+[source,bash]
+....
+# fdisk -B -b /boot/boot0 dispositivo
+....
+
+dove _dispositivo_ è il dispositivo dal quale vuoi avviare, come [.filename]#ad0# per il primo disco IDE, [.filename]#ad2# per il primo disco ide sul secondo canale, [.filename]#da0# per il primo disco SCSI, e così via. Se vuoi una configurazione ad hoc dell'MBR, usa man:boot0cfg[8].
+
+*Il Boot Manager LILO:* Per installare questo boot manager affinchè possa avviare anche FreeBSD, avvia Linux e aggiungi le seguenti cose nel tuo file di configurazione [.filename]#/etc/lilo.conf#:
+
+[.programlisting]
+....
+other=/dev/hdXY
+table=/dev/hdX
+loader=/boot/chain.b
+label=FreeBSD
+....
+
+Specifica la partizione primaria di FreeBSD e il disco usando le direttive di Linux, rimpiazzando _X_ con la lettera del dispositivo di Linux e _Y_ con il numero della partizione primaria di Linux. Se stai usando un dispositivo SCSI, devi modificare _/dev/hd_ in qualcosa simile a _/dev/sd_. La linea `loader=/boot/chain.b` può essere omessa se hai entrambi i sistemi operativi sullo stesso disco. Esegui `/sbin/lilo -v` per apportare le modifiche al sistema; verificando il relativo messaggio a video.
+
+[[boot-boot1]]
+=== Stadio Uno, [.filename]#/boot/boot1#, e Stadio Due, [.filename]#/boot/boot2#
+
+Concettualmente il primo ed il secondo stadio sono parte dello stesso programma, sulla stessa area del disco. Per limitazioni di spazio sono stati divisi in due, ma li installerai sempre insieme. Sono copiati dal file [.filename]#/boot/boot# dall'installer o da bsdlabel (vedi sotto).
+
+Questi sono posizionati fuori dai file system, nella prima traccia della slice di boot, a partire dal primo settore. Questo è il posto dove <<boot-boot0,boot0>>, o qualsiasi altro boot manager, si aspetta di trovare un programma da avviare per continuare il processo di boot. Il numero di settori usati è facilmente determinabile dalla dimensione di [.filename]#/boot/boot#.
+
+[.filename]#boot1# è molto semplice, poiché può essere lungo solo 512 byte, e conosce solo lo stretto necessario del _bsdlabel_ di FreeBSD, il quale memorizza le informazioni sulle slice, per trovare ed eseguire [.filename]#boot2#.
+
+[.filename]#boot2# è leggermente più sofisticato, e conosce il file system di FreeBSD abbastanza da potervi trovare dei file, e può fornire una semplice interfaccia per scegliere quale kernel o loader eseguire.
+
+Poiché il <<boot-loader,loader>> è molto più complesso, e fornisce una gradevole interfaccia di facile utilizzo alla configurazione di avvio, [.filename]#boot2# in genere lo esegue, ma in precedenza era incaricato di lanciare il kernel direttamente.
+
+[[boot-boot2-example]]
+.Screenshot di [.filename]#boot2#
+[example]
+====
+
+[source,bash]
+....
+>> FreeBSD/i386 BOOT
+Default: 0:ad(0,a)/boot/loader
+boot:
+....
+
+====
+
+Se mai avrai bisogno di rimpiazzare il [.filename]#boot1# ed il [.filename]#boot2# installati, usa man:bsdlabel[8]:
+
+[source,bash]
+....
+# bsdlabel -B discoslice
+....
+
+dove _discoslice_ sono il disco e la slice dal quale vuoi effettuare l'avvio, come ad esempio [.filename]#ad0s1# per la prima slice sul primo disco IDE.
+
+[WARNING]
+.Modalità Pericolosamente Dedicata
+====
+Se nella sintassi del comando man:bsdlabel[8] usi solo il nome del disco, come [.filename]#ad0#, creerai un disco pericolosamente dedicato, senza slice. Quasi sicuramente non è questo quello che vuoi fare, quindi controlla due volte il comando man:bsdlabel[8] prima di premere kbd:[Invio].
+====
+
+[[boot-loader]]
+=== Stadio Tre, [.filename]#/boot/loader#
+
+Il loader è l'ultimo stadio della procedura di avvio divisa in tre, e si trova sul file system, generalmente come [.filename]#/boot/loader#.
+
+Il loader deve essere inteso come un metodo user-friendly per la configurazione di avvio, tramite l'uso di un insieme di comandi integrati facili da usare, sostenuto da un potente interprete, con un insieme di comandi più complessi.
+
+[[boot-loader-flow]]
+==== Sequenza di Operazioni del Loader
+
+Durante l'inizializzazione, il loader controllerà la console e i dischi, e cercherà di capire da quale disco si stia avviando. Imposterà le variabili di conseguenza, ed avvierà un interprete al quale potranno essere passati i comandi dell'utente in maniera interattiva o attraverso uno script.
+
+Poi il loader leggerà [.filename]#/boot/loader.rc#, che di default legge i settaggi di [.filename]#/boot/defaults/loader.conf# il quale imposta dei valori di default ragionevoli per le variabili e inoltre [.filename]#/boot/loader.rc# legge [.filename]#/boot/loader.conf# per i cambiamenti locali a quelle variabili. In base a queste variabili [.filename]#loader.rc# carica i moduli ed il kernel prescelti.
+
+Infine, di default, il loader attende per 10 secondi la pressione di un tasto, ed avvia il kernel se non viene interrotto. Se invece viene interrotto, viene presentato all'utente un prompt in grado di comprendere un semplice insieme di comandi, dal quale l'utente può impostare precisamente le variabili, scaricare dalla memoria tutti i moduli, o caricarli, ed infine avviare o ri-avviare.
+
+[[boot-loader-commands]]
+==== Comandi Integrati nel Loader
+
+Questi sono i comandi usati più comunemente. Per una discussione completa su tutti i comandi disponibili, guarda man:loader[8].
+
+autoboot _secondi_::
+Procede all'avvio del kernel se non viene interrotto nell'intervallo di tempo specificato, in secondi. Mostra un conto alla rovescia, e l'intervallo predefinito è di 10 secondi.
+
+boot [-opzioni] [nomekernel]::
+Procede immediatamente all'avvio del kernel, con le opzioni date, se ce ne sono, e con il nome del kernel specificato, se fornito.
+
+boot-conf::
+Va avanti con la stessa configurazione automatica di moduli basati sulle variabili come accade al boot. Questo ha senso solo se prima usi `unload`, e cambi delle variabili, in generale `kernel`.
+
+help [argomento]::
+Mostra un messaggio d'aiuto letto da [.filename]#/boot/loader.help#. Se l'argomento dato è `index`, allora elenca tutti gli argomenti disponibili.
+
+include _nomefile_ ...::
+Processa il file specificato. Il file viene letto, e interpretato riga per riga. Un errore blocca il comando include immediatamente.
+
+load [-t tipo] _nomefile_::
+Carica il kernel, il modulo del kernel, o il file del tipo specificato, con il nome specificato. Ogni argomento dopo _nomefile_ viene passato al file.
+
+ls [-l] [percorso]::
+Mostra un elenco dei file nel percorso dato, o nella directory root, se non ne viene specificato uno. Se è specificato `-l`, verranno mostrate anche le dimensioni dei file.
+
+lsdev [-v]::
+Elenca tutti i dispositivi dai quali potrebbe essere possibile caricare moduli. Se viene specificata l'opzione `-v`, verranno stampati dettagli maggiori.
+
+lsmod [-v]::
+Mostra i moduli caricati. Se viene specificato `-v`, verranno stampati dettagli maggiori.
+
+more _nomefile_::
+Mostra i file specificati, con una pausa ad ogni pagina visualizzata.
+
+reboot::
+Riavvia immediatamente il sistema.
+
+set _variabile_::
+Imposta le variabili di ambiente del loader.
+
+unload::
+Rimuove tutti i moduli caricati.
+
+[[boot-loader-examples]]
+==== Esempi sul Loader
+
+Qui ci sono alcuni esempi pratici sull'uso del loader:
+
+* Per avviare semplicemente il vostro kernel abituale, ma in modalità singolo utente:
++
+[source,bash]
+....
+ boot -s
+....
+
+* Per scaricare dalla memoria i moduli e il kernel usuali, e poi caricare solo il vecchio (o un altro) kernel:
++
+[source,bash]
+....
+ unload
+ load kernel.old
+....
++ 
+Puoi usare [.filename]#kernel.GENERIC# per riferirti al kernel generico che viene fornito nel disco d'installazione, o [.filename]#kernel.old# per riferirti al kernel installato precedentemente (quando hai aggiornato o configurato il kernel, ad esempio).
++
+[NOTE]
+====
+Usa il comando seguente per caricare i tuoi soliti moduli con un altro kernel:
+
+[source,bash]
+....
+ unload
+ set kernel="kernel.old"
+ boot-conf
+....
+
+====
+
+* Per caricare uno script di configurazione del kernel (uno script automatizzato che faccia le cose che faresti tu normalmente configurando il kernel all'avvio):
++
+[source,bash]
+....
+ load -t userconfig_script /boot/kernel.conf
+....
+
+[[boot-kernel]]
+== Interazione con il Kernel Durante l'Avvio
+
+Una volta che il kernel è stato caricato dal <<boot-loader,loader>> (come di consueto) o da <<boot-boot1,boot2>> (scavalcando il loader), esso esamina i suoi flag di avvio, se ce ne sono, e aggiusta il suo comportamento come necessario.
+
+[[boot-kernel-bootflags]]
+=== I Flag di Avvio del Kernel
+
+Qui ci sono alcuni dei più comuni flag di avvio:
+
+`-a`::
+durante l'inizializzazione del kernel, chiede il dispositivo da montare come file system di root.
+
+`-C`::
+avvia da CDROM.
+
+`-c`::
+esegue UserConfig, il programma di configurazione del kernel all'avvio
+
+`-s`::
+avvia in modalità singolo utente
+
+`-v`::
+aumenta la verbosità durante l'avvio del kernel
+
+[NOTE]
+====
+Ci sono altri flag di avvio, leggi man:boot[8] per maggiori informazioni su di essi.
+====
+
+[[device-hints]]
+== Device Hints
+
+[NOTE]
+====
+Questa è una caratteristica di FreeBSD 5.0 e successive che non esiste nelle versioni precedenti.
+====
+
+Durante l'avvio iniziale del sistema, il boot man:loader[8] leggerà il file man:device.hints[5]. Questo file contiene informazioni di avvio per il kernel dette variabili, e talvolta indicate come "device hints", suggerimenti per i dispositivi. Questi "device hints" vengono usati dai driver per la configurazione delle varie periferiche.
+
+I device hints possono essere specificati anche nel prompt del terzo stadio <<boot-loader,del boot loader>>. Le variabili possono essere aggiunte usando il comando `set`, rimosse con `unset`, e visualizzate con `show`. Inoltre, in questo modo, le variabili impostate nel file [.filename]#/boot/device.hints# possono essere scavalcate. I device hint inseriti in questo modo non sono permanenti e verranno dimenticati al riavvio seguente.
+
+Una volta che il sistema è stato avviato, può essere usato il comando man:kenv[1] per mostrare tutte le variabili.
+
+La sintassi per il file [.filename]#/boot/device.hints# è una variabile per riga, usando il solito cancelletto "#" per indicare i commenti. Le linee sono costruite come segue:
+
+[source,bash]
+....
+ hint.driver.unit.keyword="valore"
+....
+
+La sintassi nel terzo stadio del boot loader è:
+
+[source,bash]
+....
+ set hint.driver.unit.keyword=valore
+....
+
+`driver` è il nome del driver per il dispositivo, `unit` è il numero di unità per quel driver, e `keyword` è la parola chiave per quell'hint. La parola chiave può essere:
+
+* `at`: specifica il bus sul quale è collegato il dispositivo.
+* `port`: specifica l'indirizzo iniziale di I/O che deve essere usato.
+* `irq`: specifica il numero di interrupt request che deve essere usato.
+* `drq`: specifica il numero del canale DMA.
+* `maddr`: specifica l'indirizzo di memoria fisico occupato dal dispositivo.
+* `flags`: imposta vari bit di flag per il dispositivo.
+* `disabled`: se impostato a "1" il dispositivo è disabilitato.
+
+I driver possono accettare (o richiedere) più hints di quelli elencati qui, si raccomanda quindi di verificare la loro pagina di manuale. Per maggiori informazioni, consulta le pagine man man:device.hints[5], man:kenv[1], man:loader.conf[5], e man:loader[8].
+
+[[boot-init]]
+== Init: Inizializzazione del Controllo dei Processi
+
+Una volta che il kernel ha finito di avviarsi, trasferisce il controllo al processo utente `init`, che si trova in [.filename]#/sbin/init#, o al programma specificato nella variabile `init_path` nel `loader`.
+
+[[boot-autoreboot]]
+=== Sequenza di Riavvio Automatica
+
+La sequenza di riavvio automatica assicura che i file system disponibili sul sistema siano consistenti. Se qualcuno non lo è, e man:fsck[8] non può risolvere le inconsistenze, man:init[8] abbandona il sistema in <<boot-singleuser,modalità singolo utente>> per permettere all'amministratore di sistema di occuparsi dei problemi direttamente.
+
+[[boot-singleuser]]
+=== Modalità Singolo Utente
+
+Questa modalità può essere raggiunta attraverso la <<boot-autoreboot,sequenza di riavvio automatica>>, o tramite l'avvio da parte dell'utente con l'opzione `-s` o impostando la variabile `boot_single` nel `loader`.
+
+Si può arrivare ad essa anche richiamando man:shutdown[8] senza l'opzione per il riavvio (`-r`) o per l'arresto (`-h`), dalla <<boot-multiuser,modalità multi utente>>.
+
+Se la `console` del sistema è settata come `insecure` in [.filename]#/etc/ttys#, allora il sistema richiede la password di `root` prima di entrare in modalità singolo utente.
+
+[[boot-insecure-console]]
+.Una Console Insicura in [.filename]#/etc/ttys#
+[example]
+====
+[.programlisting]
+....
+# name  getty                           type    status          comments
+#
+# Se la console è settata come  "insecure", allora init chiederà
+# la password di root per andare in modalità singolo utente .
+console none                            unknown off insecure
+....
+
+====
+
+[NOTE]
+====
+Avere una console `insecure` significa ritenere insicura la sicurezza fisica della console, ed assicurarsi che solo chi conosce la password di `root` possa usare la modalità singolo utente, non significa voler eseguire la console in maniera insicura. Dunque, se vuoi avere sicurezza, scegli `insecure`, non `secure`.
+====
+
+[[boot-multiuser]]
+=== Modalità Multi Utente
+
+Se man:init[8] ritiene che i tuoi file system siano in ordine, o quando l'utente ha terminato il lavoro in <<boot-singleuser,modalità singolo utente>>, il sistema entra in modalità multi utente, nella quale inizia la configurazione delle risorse del sistema.
+
+[[boot-rc]]
+==== Configurazione delle Risorse (rc)
+
+Il sistema di configurazione delle risorse legge i valori predefiniti della configurazione da [.filename]#/etc/defaults/rc.conf#, e i dettagli specifici del sistema da [.filename]#/etc/rc.conf#, e poi procede al montaggio dei file system del sistema elencati in [.filename]#/etc/fstab#, avvia i servizi di rete, avvia vari demoni di sistema, ed infine esegue gli script di avvio dei pacchetti installati localmente.
+
+La pagina man di man:rc[8] è un buon riferimento per la configurazione delle risorse del sistema, poiché esamina gli script stessi.
+
+[[boot-shutdown]]
+== Sequenza di Spegnimento
+
+Al momento di uno spegnimento controllato, tramite man:shutdown[8], man:init[8] cercherà di eseguire lo script [.filename]#/etc/rc.shutdown#, e poi procederà ad inviare a tutti i processi il segnale `TERM`, e successivamente il segnale `KILL` a quelli che non sono terminati in tempo.
+
+Per spegnere una macchina FreeBSD su architetture e sistemi che supportano la gestione dell'energia, usa semplicemente il comando `shutdown -p now` per disattivare immediatamente l'alimentazione. Per riavviare semplicemente un sistema FreeBSD, usa solo `shutdown -r now`. Avrai bisogno di essere `root` o un membro del gruppo `operator` per eseguire man:shutdown[8]. Possono essere usati anche i comandi man:halt[8] e man:reboot[8], fai riferimento alle loro pagine di man ed a quella di man:shutdown[8] per maggiori informazioni.
+
+[NOTE]
+====
+La gestione dell'energia richiede il supporto man:acpi[4] nel kernel o caricato come modulo.
+====

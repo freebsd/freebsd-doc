@@ -1,0 +1,1105 @@
+---
+title: Rozdział 15. Jails
+part: Część III. Administracja systemem
+prev: books/handbook/security
+next: books/handbook/mac
+---
+
+[[jails]]
+= Jails
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Spis treści
+:table-caption: Tabela
+:figure-caption: Rysunek
+:example-caption: Przykład
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 15
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/jails/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/jails/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/jails/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pl/mailing-lists.adoc[]
+include::shared/pl/urls.adoc[]
+include::shared/pl/teams.adoc[]
+
+toc::[]
+
+[[jails-synopsis]]
+== Synopsis
+
+Since system administration is a difficult task, many tools have been developed to make life easier for the administrator. These tools often enhance the way systems are installed, configured, and maintained. One of the tools which can be used to enhance the security of a FreeBSD system is _jails_. Jails have been available since FreeBSD 4.X and continue to be enhanced in their usefulness, performance, reliability, and security.
+
+Jails build upon the man:chroot[2] concept, which is used to change the root directory of a set of processes. This creates a safe environment, separate from the rest of the system. Processes created in the chrooted environment can not access files or resources outside of it. For that reason, compromising a service running in a chrooted environment should not allow the attacker to compromise the entire system. However, a chroot has several limitations. It is suited to easy tasks which do not require much flexibility or complex, advanced features. Over time, many ways have been found to escape from a chrooted environment, making it a less than ideal solution for securing services.
+
+Jails improve on the concept of the traditional chroot environment in several ways. In a traditional chroot environment, processes are only limited in the part of the file system they can access. The rest of the system resources, system users, running processes, and the networking subsystem are shared by the chrooted processes and the processes of the host system. Jails expand this model by virtualizing access to the file system, the set of users, and the networking subsystem. More fine-grained controls are available for tuning the access of a jailed environment. Jails can be considered as a type of operating system-level virtualization.
+
+A jail is characterized by four elements:
+
+* A directory subtree: the starting point from which a jail is entered. Once inside the jail, a process is not permitted to escape outside of this subtree.
+* A hostname: which will be used by the jail.
+* An IP address: which is assigned to the jail. The IP address of a jail is often an alias address for an existing network interface.
+* A command: the path name of an executable to run inside the jail. The path is relative to the root directory of the jail environment.
+
+Jails have their own set of users and their own `root` account which are limited to the jail environment. The `root` account of a jail is not allowed to perform operations to the system outside of the associated jail environment.
+
+This chapter provides an overview of the terminology and commands for managing FreeBSD jails. Jails are a powerful tool for both system administrators, and advanced users.
+
+After reading this chapter, you will know:
+
+* What a jail is and what purpose it may serve in FreeBSD installations.
+* How to build, start, and stop a jail.
+* The basics of jail administration, both from inside and outside the jail.
+
+[IMPORTANT]
+====
+Jails are a powerful tool, but they are not a security panacea. While it is not possible for a jailed process to break out on its own, there are several ways in which an unprivileged user outside the jail can cooperate with a privileged user inside the jail to obtain elevated privileges in the host environment.
+
+Most of these attacks can be mitigated by ensuring that the jail root is not accessible to unprivileged users in the host environment. As a general rule, untrusted users with privileged access to a jail should not be given access to the host environment.
+====
+
+[[jails-terms]]
+== Terms Related to Jails
+
+To facilitate better understanding of parts of the FreeBSD system related to jails, their internals and the way they interact with the rest of FreeBSD, the following terms are used further in this chapter:
+
+man:chroot[8] (command)::
+Utility, which uses man:chroot[2] FreeBSD system call to change the root directory of a process and all its descendants.
+
+man:chroot[2] (environment)::
+The environment of processes running in a "chroot". This includes resources such as the part of the file system which is visible, user and group IDs which are available, network interfaces and other IPC mechanisms, etc.
+
+man:jail[8] (command)::
+The system administration utility which allows launching of processes within a jail environment.
+
+host (system, process, user, etc.)::
+The controlling system of a jail environment. The host system has access to all the hardware resources available, and can control processes both outside of and inside a jail environment. One of the important differences of the host system from a jail is that the limitations which apply to superuser processes inside a jail are not enforced for processes of the host system.
+
+hosted (system, process, user, etc.)::
+A process, user or other entity, whose access to resources is restricted by a FreeBSD jail.
+
+[[jails-build]]
+== Creating and Controlling Jails
+
+Some administrators divide jails into the following two types: "complete" jails, which resemble a real FreeBSD system, and "service" jails, dedicated to one application or service, possibly running with privileges. This is only a conceptual division and the process of building a jail is not affected by it. When creating a "complete" jail there are two options for the source of the userland: use prebuilt binaries (such as those supplied on an install media) or build from source.
+
+=== Installing a Jail
+
+[[jails-install-internet]]
+==== To install a Jail from the Internet
+
+The man:bsdinstall[8] tool can be used to fetch and install the binaries needed for a jail. This will walk through the picking of a mirror, which distributions will be installed into the destination directory, and some basic configuration of the jail:
+
+[source,bash]
+....
+# bsdinstall jail /here/is/the/jail
+....
+
+Once the command is complete, the next step is configuring the host to run the jail.
+
+[[jails-install-iso]]
+==== To install a Jail from an ISO
+
+To install the userland from installation media, first create the root directory for the jail. This can be done by setting the `DESTDIR` variable to the proper location.
+
+Start a shell and define `DESTDIR`:
+
+[source,bash]
+....
+# sh
+# export DESTDIR=/here/is/the/jail
+....
+
+Mount the install media as covered in man:mdconfig[8] when using the install ISO:
+
+[source,bash]
+....
+# mount -t cd9660 /dev/`mdconfig -f cdimage.iso` /mnt
+# cd /mnt/usr/freebsd-dist/
+....
+
+Extract the binaries from the tarballs on the install media into the declared destination. Minimally, only the base set needs to be extracted, but a complete install can be performed when preferred.
+
+To install just the base system:
+
+[source,bash]
+....
+# tar -xf base.txz -C $DESTDIR
+....
+
+To install everything except the kernel:
+
+[source,bash]
+....
+# for set in base ports; do tar -xf $set.txz -C $DESTDIR ; done
+....
+
+[[jails-install-source]]
+==== To build and install a Jail from source
+
+The man:jail[8] manual page explains the procedure for building a jail:
+
+[source,bash]
+....
+# setenv D /here/is/the/jail
+# mkdir -p $D      <.>
+# cd /usr/src
+# make buildworld  <.>
+# make installworld DESTDIR=$D  <.>
+# make distribution DESTDIR=$D  <.>
+# mount -t devfs devfs $D/dev   <.>
+....
+
+<.> Selecting a location for a jail is the best starting point. This is where the jail will physically reside within the file system of the jail's host. A good choice can be [.filename]#/usr/jail/jailname#, where _jailname_ is the hostname identifying the jail. Usually, [.filename]#/usr/# has enough space for the jail file system, which for "complete" jails is, essentially, a replication of every file present in a default installation of the FreeBSD base system.
+
+<.> If you have already rebuilt your userland using `make world` or `make buildworld`, you can skip this step and install your existing userland into the new jail.
+
+<.> This command will populate the directory subtree chosen as jail's physical location on the file system with the necessary binaries, libraries, manual pages and so on.
+<.> The `distribution` target for make installs every needed configuration file. In simple words, it installs every installable file of [.filename]#/usr/src/etc/# to the [.filename]#/etc# directory of the jail environment: [.filename]#$D/etc/#.
+
+<.> Mounting the man:devfs[8] file system inside a jail is not required. On the other hand, any, or almost any application requires access to at least one device, depending on the purpose of the given application. It is very important to control access to devices from inside a jail, as improper settings could permit an attacker to do nasty things in the jail. Control over man:devfs[8] is managed through rulesets which are described in the man:devfs[8] and man:devfs.conf[5] manual pages.
+
+=== Configuring the Host
+
+Once a jail is installed, it can be started by using the man:jail[8] utility. The man:jail[8] utility takes four mandatory arguments which are described in the <<jails-synopsis>>. Other arguments may be specified too, e.g., to run the jailed process with the credentials of a specific user. The `_command_` argument depends on the type of the jail; for a _virtual system_, [.filename]#/etc/rc# is a good choice, since it will replicate the startup sequence of a real FreeBSD system. For a _service_ jail, it depends on the service or application that will run within the jail.
+
+Jails are often started at boot time and the FreeBSD [.filename]#rc# mechanism provides an easy way to do this.
+
+[.procedure]
+* Configure jail parameters in [.filename]#jail.conf#:
++
+[.programlisting]
+....
+www {
+    host.hostname = www.example.org;           # Hostname
+    ip4.addr = 192.168.0.10;                   # IP address of the jail
+    path = "/usr/jail/www";                    # Path to the jail
+    devfs_ruleset = "www_ruleset";             # devfs ruleset
+    mount.devfs;                               # Mount devfs inside the jail
+    exec.start = "/bin/sh /etc/rc";            # Start command
+    exec.stop = "/bin/sh /etc/rc.shutdown";    # Stop command
+}
+....
+
++ 
+Configure jails to start at boot time in [.filename]#rc.conf#:
++
+[.programlisting]
+....
+jail_enable="YES"   # Set to NO to disable starting of any jails
+....
++ 
+The default startup of jails configured in man:jail.conf[5], will run the [.filename]#/etc/rc# script of the jail, which assumes the jail is a complete virtual system. For service jails, the default startup command of the jail should be changed, by setting the `exec.start` option appropriately.
++
+[NOTE]
+====
+For a full list of available options, please see the man:jail.conf[5] manual page.
+====
+
+man:service[8] can be used to start or stop a jail by hand, if an entry for it exists in [.filename]#jail.conf#:
+
+[source,bash]
+....
+# service jail start www
+# service jail stop www
+....
+
+Jails can be shut down with man:jexec[8]. Use man:jls[8] to identify the jail's `JID`, then use man:jexec[8] to run the shutdown script in that jail.
+
+[source,bash]
+....
+# jls
+   JID  IP Address      Hostname                      Path
+     3  192.168.0.10    www                           /usr/jail/www
+# jexec 3 /etc/rc.shutdown
+....
+
+More information about this can be found in the man:jail[8] manual page.
+
+[[jails-tuning]]
+== Fine Tuning and Administration
+
+There are several options which can be set for any jail, and various ways of combining a host FreeBSD system with jails, to produce higher level applications. This section presents:
+
+* Some of the options available for tuning the behavior and security restrictions implemented by a jail installation.
+* Some of the high-level applications for jail management, which are available through the FreeBSD Ports Collection, and can be used to implement overall jail-based solutions.
+
+[[jails-tuning-utilities]]
+=== System Tools for Jail Tuning in FreeBSD
+
+Fine tuning of a jail's configuration is mostly done by setting man:sysctl[8] variables. A special subtree of sysctl exists as a basis for organizing all the relevant options: the `security.jail.*` hierarchy of FreeBSD kernel options. Here is a list of the main jail-related sysctls, complete with their default value. Names should be self-explanatory, but for more information about them, please refer to the man:jail[8] and man:sysctl[8] manual pages.
+
+* `security.jail.set_hostname_allowed: 1`
+* `security.jail.socket_unixiproute_only: 1`
+* `security.jail.sysvipc_allowed: 0`
+* `security.jail.enforce_statfs: 2`
+* `security.jail.allow_raw_sockets: 0`
+* `security.jail.chflags_allowed: 0`
+* `security.jail.jailed: 0`
+
+These variables can be used by the system administrator of the _host system_ to add or remove some of the limitations imposed by default on the `root` user. Note that there are some limitations which cannot be removed. The `root` user is not allowed to mount or unmount file systems from within a man:jail[8]. The `root` inside a jail may not load or unload man:devfs[8] rulesets, set firewall rules, or do many other administrative tasks which require modifications of in-kernel data, such as setting the `securelevel` of the kernel.
+
+The base system of FreeBSD contains a basic set of tools for viewing information about the active jails, and attaching to a jail to run administrative commands. The man:jls[8] and man:jexec[8] commands are part of the base FreeBSD system, and can be used to perform the following simple tasks:
+
+* Print a list of active jails and their corresponding jail identifier (JID), IP address, hostname and path.
+* Attach to a running jail, from its host system, and run a command inside the jail or perform administrative tasks inside the jail itself. This is especially useful when the `root` user wants to cleanly shut down a jail. The man:jexec[8] utility can also be used to start a shell in a jail to do administration in it; for example:
++
+[source,bash]
+....
+# jexec 1 tcsh
+....
+
+[[jails-tuning-admintools]]
+=== High-Level Administrative Tools in the FreeBSD Ports Collection
+
+Among the many third-party utilities for jail administration, one of the most complete and useful is package:sysutils/ezjail[]. It is a set of scripts that contribute to man:jail[8] management. Please refer to <<jails-ezjail,the handbook section on ezjail>> for more information.
+
+[[jails-updating]]
+=== Keeping Jails Patched and up to Date
+
+Jails should be kept up to date from the host operating system as attempting to patch userland from within the jail may likely fail as the default behavior in FreeBSD is to disallow the use of man:chflags[1] in a jail which prevents the replacement of some files. It is possible to change this behavior but it is recommended to use man:freebsd-update[8] to maintain jails instead. Use `-b` to specify the path of the jail to be updated.
+
+To update the jail to the latest patch release of the version of FreeBSD it is already running, then execute the following commands on the host:
+
+[source,bash]
+....
+# freebsd-update -b /here/is/the/jail fetch
+# freebsd-update -b /here/is/the/jail install
+....
+
+To upgrade the jail to a new major or minor version, first upgrade the host system as described in crossref:cutting-edge[freebsdupdate-upgrade,“Performing Major and Minor Version Upgrades”]. Once the host has been upgraded and rebooted, the jail can then be upgraded. For example to upgrade from 12.0-RELEASE to 12.1-RELEASE, on the host run:
+
+[source,bash]
+....
+# freebsd-update -b /here/is/the/jail --currently-running 12.0-RELEASE -r 12.1-RELEASE upgrade
+# freebsd-update -b /here/is/the/jail install
+# service jail restart myjail
+# freebsd-update -b /here/is/the/jail install
+....
+
+Then, if it was a major version upgrade, reinstall all installed packages and restart the jail again. This is required because the ABI version changes when upgrading between major versions of FreeBSD. From the host:
+
+[source,bash]
+....
+# pkg -j myjail upgrade -f
+# service jail restart myjail
+....
+
+[[jails-application]]
+== Updating Multiple Jails
+
+The management of multiple jails can become problematic because every jail has to be rebuilt from scratch whenever it is upgraded. This can be time consuming and tedious if a lot of jails are created and manually updated.
+
+This section demonstrates one method to resolve this issue by safely sharing as much as is possible between jails using read-only man:mount_nullfs[8] mounts, so that updating is simpler. This makes it more attractive to put single services, such as HTTP, DNS, and SMTP, into individual jails. Additionally, it provides a simple way to add, remove, and upgrade jails.
+
+[NOTE]
+====
+Simpler solutions exist, such as ezjail, which provides an easier method of administering FreeBSD jails but is less versatile than this setup. ezjail is covered in more detail in <<jails-ezjail>>.
+====
+
+The goals of the setup described in this section are:
+
+* Create a simple and easy to understand jail structure that does not require running a full installworld on each and every jail.
+* Make it easy to add new jails or remove existing ones.
+* Make it easy to update or upgrade existing jails.
+* Make it possible to run a customized FreeBSD branch.
+* Be paranoid about security, reducing as much as possible the possibility of compromise.
+* Save space and inodes, as much as possible.
+
+This design relies on a single, read-only master template which is mounted into each jail and one read-write device per jail. A device can be a separate physical disc, a partition, or a vnode backed memory device. This example uses read-write nullfs mounts.
+
+The file system layout is as follows:
+
+* The jails are based under the [.filename]#/home# partition.
+* Each jail will be mounted under the [.filename]#/home/j# directory.
+* The template for each jail and the read-only partition for all of the jails is [.filename]#/home/j/mroot#.
+* A blank directory will be created for each jail under the [.filename]#/home/j# directory.
+* Each jail will have a [.filename]#/s# directory that will be linked to the read-write portion of the system.
+* Each jail will have its own read-write system that is based upon [.filename]#/home/j/skel#.
+* The read-write portion of each jail will be created in [.filename]#/home/js#.
+
+[[jails-service-jails-template]]
+=== Creating the Template
+
+This section describes the steps needed to create the master template.
+
+It is recommended to first update the host FreeBSD system to the latest -RELEASE branch using the instructions in crossref:cutting-edge[makeworld,“Updating FreeBSD from Source”]. Additionally, this template uses the package:sysutils/cpdup[] package or port and portsnap will be used to download the FreeBSD Ports Collection.
+
+[.procedure]
+. First, create a directory structure for the read-only file system which will contain the FreeBSD binaries for the jails. Then, change directory to the FreeBSD source tree and install the read-only file system to the jail template:
++
+[source,bash]
+....
+# mkdir /home/j /home/j/mroot
+# cd /usr/src
+# make installworld DESTDIR=/home/j/mroot
+....
+
+. Next, prepare a FreeBSD Ports Collection for the jails as well as a FreeBSD source tree, which is required for mergemaster:
++
+[source,bash]
+....
+# cd /home/j/mroot
+# mkdir usr/ports
+# portsnap -p /home/j/mroot/usr/ports fetch extract
+# cpdup /usr/src /home/j/mroot/usr/src
+....
+
+. Create a skeleton for the read-write portion of the system:
++
+[source,bash]
+....
+# mkdir /home/j/skel /home/j/skel/home /home/j/skel/usr-X11R6 /home/j/skel/distfiles
+# mv etc /home/j/skel
+# mv usr/local /home/j/skel/usr-local
+# mv tmp /home/j/skel
+# mv var /home/j/skel
+# mv root /home/j/skel
+....
+
+. Use mergemaster to install missing configuration files. Then, remove the extra directories that mergemaster creates:
++
+[source,bash]
+....
+# mergemaster -t /home/j/skel/var/tmp/temproot -D /home/j/skel -i
+# cd /home/j/skel
+# rm -R bin boot lib libexec mnt proc rescue sbin sys usr dev
+....
+
+. Now, symlink the read-write file system to the read-only file system. Ensure that the symlinks are created in the correct [.filename]#s/# locations as the creation of directories in the wrong locations will cause the installation to fail.
++
+[source,bash]
+....
+# cd /home/j/mroot
+# mkdir s
+# ln -s s/etc etc
+# ln -s s/home home
+# ln -s s/root root
+# ln -s ../s/usr-local usr/local
+# ln -s ../s/usr-X11R6 usr/X11R6
+# ln -s ../../s/distfiles usr/ports/distfiles
+# ln -s s/tmp tmp
+# ln -s s/var var
+....
+
+. As a last step, create a generic [.filename]#/home/j/skel/etc/make.conf# containing this line:
++
+[.programlisting]
+....
+WRKDIRPREFIX?=  /s/portbuild
+....
++ 
+This makes it possible to compile FreeBSD ports inside each jail. Remember that the ports directory is part of the read-only system. The custom path for `WRKDIRPREFIX` allows builds to be done in the read-write portion of every jail.
+
+[[jails-service-jails-creating]]
+=== Creating Jails
+
+The jail template can now be used to setup and configure the jails in [.filename]#/etc/rc.conf#. This example demonstrates the creation of 3 jails: `NS`, `MAIL` and `WWW`.
+
+[.procedure]
+. Add the following lines to [.filename]#/etc/fstab#, so that the read-only template for the jails and the read-write space will be available in the respective jails:
++
+[.programlisting]
+....
+/home/j/mroot   /home/j/ns     nullfs  ro  0   0
+/home/j/mroot   /home/j/mail   nullfs  ro  0   0
+/home/j/mroot   /home/j/www    nullfs  ro  0   0
+/home/js/ns     /home/j/ns/s   nullfs  rw  0   0
+/home/js/mail   /home/j/mail/s nullfs  rw  0   0
+/home/js/www    /home/j/www/s  nullfs  rw  0   0
+....
++ 
+To prevent fsck from checking nullfs mounts during boot and dump from backing up the read-only nullfs mounts of the jails, the last two columns are both set to `0`.
+. Configure the jails in [.filename]#/etc/rc.conf#:
++
+[.programlisting]
+....
+jail_enable="YES"
+jail_set_hostname_allow="NO"
+jail_list="ns mail www"
+jail_ns_hostname="ns.example.org"
+jail_ns_ip="192.168.3.17"
+jail_ns_rootdir="/usr/home/j/ns"
+jail_ns_devfs_enable="YES"
+jail_mail_hostname="mail.example.org"
+jail_mail_ip="192.168.3.18"
+jail_mail_rootdir="/usr/home/j/mail"
+jail_mail_devfs_enable="YES"
+jail_www_hostname="www.example.org"
+jail_www_ip="62.123.43.14"
+jail_www_rootdir="/usr/home/j/www"
+jail_www_devfs_enable="YES"
+....
++ 
+The `jail__name__rootdir` variable is set to [.filename]#/usr/home# instead of [.filename]#/home# because the physical path of [.filename]#/home# on a default FreeBSD installation is [.filename]#/usr/home#. The `jail__name__rootdir` variable must _not_ be set to a path which includes a symbolic link, otherwise the jails will refuse to start.
+. Create the required mount points for the read-only file system of each jail:
++
+[source,bash]
+....
+# mkdir /home/j/ns /home/j/mail /home/j/www
+....
+
+. Install the read-write template into each jail using package:sysutils/cpdup[]:
++
+[source,bash]
+....
+# mkdir /home/js
+# cpdup /home/j/skel /home/js/ns
+# cpdup /home/j/skel /home/js/mail
+# cpdup /home/j/skel /home/js/www
+....
+
+. In this phase, the jails are built and prepared to run. First, mount the required file systems for each jail, and then start them:
++
+[source,bash]
+....
+# mount -a
+# service jail start
+....
+
+The jails should be running now. To check if they have started correctly, use `jls`. Its output should be similar to the following:
+
+[source,bash]
+....
+# jls
+   JID  IP Address      Hostname                      Path
+     3  192.168.3.17    ns.example.org                /home/j/ns
+     2  192.168.3.18    mail.example.org              /home/j/mail
+     1  62.123.43.14    www.example.org               /home/j/www
+....
+
+At this point, it should be possible to log onto each jail, add new users, or configure daemons. The `JID` column indicates the jail identification number of each running jail. Use the following command to perform administrative tasks in the jail whose JID is `3`:
+
+[source,bash]
+....
+# jexec 3 tcsh
+....
+
+[[jails-service-jails-upgrading]]
+=== Upgrading
+
+The design of this setup provides an easy way to upgrade existing jails while minimizing their downtime. Also, it provides a way to roll back to the older version should a problem occur.
+
+[.procedure]
+. The first step is to upgrade the host system. Then, create a new temporary read-only template in [.filename]#/home/j/mroot2#.
++
+[source,bash]
+....
+# mkdir /home/j/mroot2
+# cd /usr/src
+# make installworld DESTDIR=/home/j/mroot2
+# cd /home/j/mroot2
+# cpdup /usr/src usr/src
+# mkdir s
+....
++ 
+The `installworld` creates a few unnecessary directories, which should be removed:
++
+[source,bash]
+....
+# chflags -R 0 var
+# rm -R etc var root usr/local tmp
+....
+
+. Recreate the read-write symlinks for the master file system:
++
+[source,bash]
+....
+# ln -s s/etc etc
+# ln -s s/root root
+# ln -s s/home home
+# ln -s ../s/usr-local usr/local
+# ln -s ../s/usr-X11R6 usr/X11R6
+# ln -s s/tmp tmp
+# ln -s s/var var
+....
+
+. Next, stop the jails:
++
+[source,bash]
+....
+# service jail stop
+....
+
+. Unmount the original file systems as the read-write systems are attached to the read-only system ([.filename]#/s#):
++
+[source,bash]
+....
+# umount /home/j/ns/s
+# umount /home/j/ns
+# umount /home/j/mail/s
+# umount /home/j/mail
+# umount /home/j/www/s
+# umount /home/j/www
+....
+
+. Move the old read-only file system and replace it with the new one. This will serve as a backup and archive of the old read-only file system should something go wrong. The naming convention used here corresponds to when a new read-only file system has been created. Move the original FreeBSD Ports Collection over to the new file system to save some space and inodes:
++
+[source,bash]
+....
+# cd /home/j
+# mv mroot mroot.20060601
+# mv mroot2 mroot
+# mv mroot.20060601/usr/ports mroot/usr
+....
+
+. At this point the new read-only template is ready, so the only remaining task is to remount the file systems and start the jails:
++
+[source,bash]
+....
+# mount -a
+# service jail start
+....
+
+Use `jls` to check if the jails started correctly. Run `mergemaster` in each jail to update the configuration files.
+
+[[jails-ezjail]]
+== Managing Jails with ezjail
+
+Creating and managing multiple jails can quickly become tedious and error-prone. Dirk Engling's ezjail automates and greatly simplifies many jail tasks. A _basejail_ is created as a template. Additional jails use man:mount_nullfs[8] to share many of the basejail directories without using additional disk space. Each additional jail takes only a few megabytes of disk space before applications are installed. Upgrading the copy of the userland in the basejail automatically upgrades all of the other jails.
+
+Additional benefits and features are described in detail on the ezjail web site, https://erdgeist.org/arts/software/ezjail/[].
+
+[[jails-ezjail-install]]
+=== Installing ezjail
+
+Installing ezjail consists of adding a loopback interface for use in jails, installing the port or package, and enabling the service.
+
+[[jails-ezjail-install-procedure]]
+[.procedure]
+. To keep jail loopback traffic off the host's loopback network interface `lo0`, a second loopback interface is created by adding an entry to [.filename]#/etc/rc.conf#:
++
+[.programlisting]
+....
+cloned_interfaces="lo1"
+....
++ 
+The second loopback interface `lo1` will be created when the system starts. It can also be created manually without a restart:
++
+
+[source,bash]
+....
+# service netif cloneup
+Created clone interfaces: lo1.
+....
++ 
+Jails can be allowed to use aliases of this secondary loopback interface without interfering with the host.
++ 
+Inside a jail, access to the loopback address `127.0.0.1` is redirected to the first IP address assigned to the jail. To make the jail loopback correspond with the new `lo1` interface, that interface must be specified first in the list of interfaces and IP addresses given when creating a new jail.
++ 
+Give each jail a unique loopback address in the `127.0.0.0/8` netblock.
+. Install package:sysutils/ezjail[]:
++
+[source,bash]
+....
+# cd /usr/ports/sysutils/ezjail
+# make install clean
+....
+
+. Enable ezjail by adding this line to [.filename]#/etc/rc.conf#:
++
+[.programlisting]
+....
+ezjail_enable="YES"
+....
+
+. The service will automatically start on system boot. It can be started immediately for the current session:
++
+[source,bash]
+....
+# service ezjail start
+....
+
+[[jails-ezjail-initialsetup]]
+=== Initial Setup
+
+With ezjail installed, the basejail directory structure can be created and populated. This step is only needed once on the jail host computer.
+
+In both of these examples, `-p` causes the ports tree to be retrieved with man:portsnap[8] into the basejail. That single copy of the ports directory will be shared by all the jails. Using a separate copy of the ports directory for jails isolates them from the host. The ezjailFAQ explains in more detail: http://erdgeist.org/arts/software/ezjail/#FAQ[].
+
+[[jails-ezjail-initialsetup-procedure]]
+[.procedure]
+
+. To Populate the Jail with FreeBSD-RELEASE
++ 
+For a basejail based on the FreeBSD RELEASE matching that of the host computer, use `install`. For example, on a host computer running FreeBSD 10-STABLE, the latest RELEASE version of FreeBSD -10 will be installed in the jail):
++
+[source,bash]
+....
+# ezjail-admin install -p
+....
+
+. To Populate the Jail with `installworld`
++ 
+The basejail can be installed from binaries created by `buildworld` on the host with `ezjail-admin update`.
++ 
+In this example, FreeBSD 10-STABLE has been built from source. The jail directories are created. Then `installworld` is executed, installing the host's [.filename]#/usr/obj# into the basejail.
++
+[source,bash]
+....
+# ezjail-admin update -i -p
+....
++ 
+The host's [.filename]#/usr/src# is used by default. A different source directory on the host can be specified with `-s` and a path, or set with `ezjail_sourcetree` in [.filename]#/usr/local/etc/ezjail.conf#.
+
+[TIP]
+====
+
+The basejail's ports tree is shared by other jails. However, downloaded distfiles are stored in the jail that downloaded them. By default, these files are stored in [.filename]#/var/ports/distfiles# within each jail. [.filename]#/var/ports# inside each jail is also used as a work directory when building ports.
+====
+
+[TIP]
+====
+
+The FTP protocol is used by default to download packages for the installation of the basejail. Firewall or proxy configurations can prevent or interfere with FTP transfers. The HTTP protocol works differently and avoids these problems. It can be chosen by specifying a full URL for a particular download mirror in [.filename]#/usr/local/etc/ezjail.conf#:
+
+[.programlisting]
+....
+ezjail_ftphost=http://ftp.FreeBSD.org
+....
+
+See crossref:mirrors[mirrors-ftp,“FTP Sites”] for a list of sites.
+====
+
+[[jails-ezjail-create]]
+=== Creating and Starting a New Jail
+
+New jails are created with `ezjail-admin create`. In these examples, the `lo1` loopback interface is used as described above.
+[[jails-ezjail-create-steps]]
+[.procedure]
+.Procedure: Create and Start a New Jail
+. Create the jail, specifying a name and the loopback and network interfaces to use, along with their IP addresses. In this example, the jail is named `dnsjail`.
++
+[source,bash]
+....
+# ezjail-admin create dnsjail 'lo1|127.0.1.1,em0|192.168.1.50'
+....
++
+[TIP]
+====
+
+Most network services run in jails without problems. A few network services, most notably man:ping[8], use _raw network sockets_. In jails, raw network sockets are disabled by default for security. Services that require them will not work.
+
+Occasionally, a jail genuinely needs raw sockets. For example, network monitoring applications often use man:ping[8] to check the availability of other computers. When raw network sockets are actually needed in a jail, they can be enabled by editing the ezjail configuration file for the individual jail, [.filename]#/usr/local/etc/ezjail/jailname#. Modify the `parameters` entry:
+
+[.programlisting]
+....
+export jail_jailname_parameters="allow.raw_sockets=1"
+....
+
+Do not enable raw network sockets unless services in the jail actually require them.
+====
+
+. Start the jail:
++
+[source,bash]
+....
+# ezjail-admin start dnsjail
+....
+
+. Use a console on the jail:
++
+[source,bash]
+....
+# ezjail-admin console dnsjail
+....
+
+The jail is operating and additional configuration can be completed. Typical settings added at this point include:
+
+[.procedure]
+. Set the `root` Password
++ 
+Connect to the jail and set the `root` user's password:
++
+[source,bash]
+....
+# ezjail-admin console dnsjail
+# passwd
+Changing local password for root
+New Password:
+Retype New Password:
+....
+
+. Time Zone Configuration
++ 
+The jail's time zone can be set with man:tzsetup[8]. To avoid spurious error messages, the man:adjkerntz[8] entry in [.filename]#/etc/crontab# can be commented or removed. This job attempts to update the computer's hardware clock with time zone changes, but jails are not allowed to access that hardware.
+. DNS Servers
++ 
+Enter domain name server lines in [.filename]#/etc/resolv.conf# so DNS works in the jail.
+. Edit [.filename]#/etc/hosts#
++ 
+Change the address and add the jail name to the `localhost` entries in [.filename]#/etc/hosts#.
+. Configure [.filename]#/etc/rc.conf#
++ 
+Enter configuration settings in [.filename]#/etc/rc.conf#. This is much like configuring a full computer. The host name and IP address are not set here. Those values are already provided by the jail configuration.
+
+With the jail configured, the applications for which the jail was created can be installed.
+
+[TIP]
+====
+
+Some ports must be built with special options to be used in a jail. For example, both of the network monitoring plugin packages package:net-mgmt/nagios-plugins[] and package:net-mgmt/monitoring-plugins[] have a `JAIL` option which must be enabled for them to work correctly inside a jail.
+====
+
+[[jails-ezjail-update]]
+=== Updating Jails
+
+[[jails-ezjail-update-os]]
+==== Updating the Operating System
+
+Because the basejail's copy of the userland is shared by the other jails, updating the basejail automatically updates all of the other jails. Either source or binary updates can be used.
+
+To build the world from source on the host, then install it in the basejail, use:
+
+[source,bash]
+....
+# ezjail-admin update -b
+....
+
+If the world has already been compiled on the host, install it in the basejail with:
+
+[source,bash]
+....
+# ezjail-admin update -i
+....
+
+Binary updates use man:freebsd-update[8]. These updates have the same limitations as if man:freebsd-update[8] were being run directly. The most important one is that only -RELEASE versions of FreeBSD are available with this method.
+
+Update the basejail to the latest patched release of the version of FreeBSD on the host. For example, updating from RELEASE-p1 to RELEASE-p2.
+
+[source,bash]
+....
+# ezjail-admin update -u
+....
+
+To upgrade the basejail to a new version, first upgrade the host system as described in crossref:cutting-edge[freebsdupdate-upgrade,“Performing Major and Minor Version Upgrades”]. Once the host has been upgraded and rebooted, the basejail can then be upgraded. man:freebsd-update[8] has no way of determining which version is currently installed in the basejail, so the original version must be specified. Use man:file[1] to determine the original version in the basejail:
+
+[source,bash]
+....
+# file /usr/jails/basejail/bin/sh
+/usr/jails/basejail/bin/sh: ELF 64-bit LSB executable, x86-64, version 1 (FreeBSD), dynamically linked (uses shared libs), for FreeBSD 9.3, stripped
+....
+
+Now use this information to perform the upgrade from `9.3-RELEASE` to the current version of the host system:
+
+[source,bash]
+....
+# ezjail-admin update -U -s 9.3-RELEASE
+....
+
+After updating the basejail, man:mergemaster[8] must be run to update each jail's configuration files.
+
+How to use man:mergemaster[8] depends on the purpose and trustworthiness of a jail. If a jail's services or users are not trusted, then man:mergemaster[8] should only be run from within that jail:
+
+[[jails-ezjail-update-mergemaster-untrusted]]
+.man:mergemaster[8] on Untrusted Jail
+[example]
+====
+Delete the link from the jail's [.filename]#/usr/src# into the basejail and create a new [.filename]#/usr/src# in the jail as a mountpoint. Mount the host computer's [.filename]#/usr/src# read-only on the jail's new [.filename]#/usr/src# mountpoint:
+
+[source,bash]
+....
+# rm /usr/jails/jailname/usr/src
+# mkdir /usr/jails/jailname/usr/src
+# mount -t nullfs -o ro /usr/src /usr/jails/jailname/usr/src
+....
+
+Get a console in the jail:
+
+[source,bash]
+....
+# ezjail-admin console jailname
+....
+
+Inside the jail, run `mergemaster`. Then exit the jail console:
+
+[source,bash]
+....
+# cd /usr/src
+# mergemaster -U
+# exit
+....
+
+Finally, unmount the jail's [.filename]#/usr/src#:
+
+[source,bash]
+....
+# umount /usr/jails/jailname/usr/src
+....
+
+====
+
+[[jails-ezjail-update-mergemaster-trusted]]
+.man:mergemaster[8] on Trusted Jail
+[example]
+====
+
+If the users and services in a jail are trusted, man:mergemaster[8] can be run from the host:
+
+[source,bash]
+....
+# mergemaster -U -D /usr/jails/jailname
+....
+
+====
+
+[TIP]
+====
+
+After a major version update it is recommended by package:sysutils/ezjail[] to make sure your `pkg` is of the correct version. Therefore enter:
+
+[source,bash]
+....
+# pkg-static upgrade -f pkg
+....
+
+to upgrade or downgrade to the appropriate version.
+====
+
+[[jails-ezjail-update-ports]]
+==== Updating Ports
+
+The ports tree in the basejail is shared by the other jails. Updating that copy of the ports tree gives the other jails the updated version also.
+
+The basejail ports tree is updated with man:portsnap[8]:
+
+[source,bash]
+....
+# ezjail-admin update -P
+....
+
+[[jails-ezjail-control]]
+=== Controlling Jails
+
+[[jails-ezjail-control-stop-start]]
+==== Stopping and Starting Jails
+
+ezjail automatically starts jails when the computer is started. Jails can be manually stopped and restarted with `stop` and `start`:
+
+[source,bash]
+....
+# ezjail-admin stop sambajail
+Stopping jails: sambajail.
+....
+
+By default, jails are started automatically when the host computer starts. Autostarting can be disabled with `config`:
+
+[source,bash]
+....
+# ezjail-admin config -r norun seldomjail
+....
+
+This takes effect the next time the host computer is started. A jail that is already running will not be stopped.
+
+Enabling autostart is very similar:
+
+[source,bash]
+....
+# ezjail-admin config -r run oftenjail
+....
+
+[[jails-ezjail-control-backup]]
+==== Archiving and Restoring Jails
+
+Use `archive` to create a [.filename]#.tar.gz# archive of a jail. The file name is composed from the name of the jail and the current date. Archive files are written to the archive directory, [.filename]#/usr/jails/ezjail_archives#. A different archive directory can be chosen by setting `ezjail_archivedir` in the configuration file.
+
+The archive file can be copied elsewhere as a backup, or an existing jail can be restored from it with `restore`. A new jail can be created from the archive, providing a convenient way to clone existing jails.
+
+Stop and archive a jail named `wwwserver`:
+
+[source,bash]
+....
+# ezjail-admin stop wwwserver
+Stopping jails: wwwserver.
+# ezjail-admin archive wwwserver
+# ls /usr/jails/ezjail-archives/
+wwwserver-201407271153.13.tar.gz
+....
+
+Create a new jail named `wwwserver-clone` from the archive created in the previous step. Use the [.filename]#em1# interface and assign a new IP address to avoid conflict with the original:
+
+[source,bash]
+....
+# ezjail-admin create -a /usr/jails/ezjail_archives/wwwserver-201407271153.13.tar.gz wwwserver-clone 'lo1|127.0.3.1,em1|192.168.1.51'
+....
+
+[[jails-ezjail-example-bind]]
+=== Full Example: BIND in a Jail
+
+Putting the BINDDNS server in a jail improves security by isolating it. This example creates a simple caching-only name server.
+
+* The jail will be called `dns1`.
+* The jail will use IP address `192.168.1.240` on the host's `re0` interface.
+* The upstream ISP's DNS servers are at `10.0.0.62` and `10.0.0.61`.
+* The basejail has already been created and a ports tree installed as shown in <<jails-ezjail-initialsetup>>.
+
+[[jails-ezjail-example-bind-steps]]
+.Running BIND in a Jail
+[example]
+====
+
+Create a cloned loopback interface by adding a line to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+cloned_interfaces="lo1"
+....
+
+Immediately create the new loopback interface:
+
+[source,bash]
+....
+# service netif cloneup
+Created clone interfaces: lo1.
+....
+
+Create the jail:
+
+[source,bash]
+....
+# ezjail-admin create dns1 'lo1|127.0.2.1,re0|192.168.1.240'
+....
+
+Start the jail, connect to a console running on it, and perform some basic configuration:
+
+[source,bash]
+....
+# ezjail-admin start dns1
+# ezjail-admin console dns1
+# passwd
+Changing local password for root
+New Password:
+Retype New Password:
+# tzsetup
+# sed -i .bak -e '/adjkerntz/ s/^/#/' /etc/crontab
+# sed -i .bak -e 's/127.0.0.1/127.0.2.1/g; s/localhost.my.domain/dns1.my.domain dns1/' /etc/hosts
+....
+
+Temporarily set the upstream DNS servers in [.filename]#/etc/resolv.conf# so ports can be downloaded:
+
+[.programlisting]
+....
+nameserver 10.0.0.62
+nameserver 10.0.0.61
+....
+
+Still using the jail console, install package:dns/bind99[].
+
+[source,bash]
+....
+# make -C /usr/ports/dns/bind99 install clean
+....
+
+Configure the name server by editing [.filename]#/usr/local/etc/namedb/named.conf#.
+
+Create an Access Control List (ACL) of addresses and networks that are permitted to send DNS queries to this name server. This section is added just before the `options` section already in the file:
+
+[.programlisting]
+....
+...
+// or cause huge amounts of useless Internet traffic.
+
+acl "trusted" {
+	192.168.1.0/24;
+	localhost;
+	localnets;
+};
+
+options {
+...
+....
+
+Use the jail IP address in the `listen-on` setting to accept DNS queries from other computers on the network:
+
+[.programlisting]
+....
+	listen-on	{ 192.168.1.240; };
+....
+
+A simple caching-only DNS name server is created by changing the `forwarders` section. The original file contains:
+
+[.programlisting]
+....
+/*
+	forwarders {
+		127.0.0.1;
+	};
+*/
+....
+
+Uncomment the section by removing the `/\*` and `*/` lines. Enter the IP addresses of the upstream DNS servers. Immediately after the `forwarders` section, add references to the `trusted` ACL defined earlier:
+
+[.programlisting]
+....
+	forwarders {
+		10.0.0.62;
+		10.0.0.61;
+	};
+
+	allow-query       { any; };
+	allow-recursion   { trusted; };
+	allow-query-cache { trusted; };
+....
+
+Enable the service in [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+named_enable="YES"
+....
+
+Start and test the name server:
+
+[source,bash]
+....
+# service named start
+wrote key file "/usr/local/etc/namedb/rndc.key"
+Starting named.
+# /usr/local/bin/dig @192.168.1.240 freebsd.org
+....
+
+A response that includes
+
+[source,bash]
+....
+;; Got answer;
+....
+
+shows that the new DNS server is working. A long delay followed by a response including
+
+[source,bash]
+....
+;; connection timed out; no servers could be reached
+....
+
+shows a problem. Check the configuration settings and make sure any local firewalls allow the new DNS access to the upstream DNS servers.
+
+The new DNS server can use itself for local name resolution, just like other local computers. Set the address of the DNS server in the client computer's [.filename]#/etc/resolv.conf#:
+
+[.programlisting]
+....
+nameserver 192.168.1.240
+....
+
+A local DHCP server can be configured to provide this address for a local DNS server, providing automatic configuration on DHCP clients.
+====

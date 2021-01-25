@@ -1,0 +1,2133 @@
+---
+title: Rozdział 14. Security
+part: Część III. Administracja systemem
+prev: books/handbook/users
+next: books/handbook/jails
+---
+
+[[security]]
+= Security
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Spis treści
+:table-caption: Tabela
+:figure-caption: Rysunek
+:example-caption: Przykład
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 14
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/security/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/security/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/security/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pl/mailing-lists.adoc[]
+include::shared/pl/urls.adoc[]
+include::shared/pl/teams.adoc[]
+
+toc::[]
+
+[[security-synopsis]]
+== Synopsis
+
+Security, whether physical or virtual, is a topic so broad that an entire industry has evolved around it. Hundreds of standard practices have been authored about how to secure systems and networks, and as a user of FreeBSD, understanding how to protect against attacks and intruders is a must.
+
+In this chapter, several fundamentals and techniques will be discussed. The FreeBSD system comes with multiple layers of security, and many more third party utilities may be added to enhance security.
+
+After reading this chapter, you will know:
+
+* Basic FreeBSD system security concepts.
+* The various crypt mechanisms available in FreeBSD.
+* How to set up one-time password authentication.
+* How to configure TCP Wrapper for use with man:inetd[8].
+* How to set up Kerberos on FreeBSD.
+* How to configure IPsec and create a VPN.
+* How to configure and use OpenSSH on FreeBSD.
+* How to use file system ACLs.
+* How to use pkg to audit third party software packages installed from the Ports Collection.
+* How to utilize FreeBSD security advisories.
+* What Process Accounting is and how to enable it on FreeBSD.
+* How to control user resources using login classes or the resource limits database.
+
+Before reading this chapter, you should:
+
+* Understand basic FreeBSD and Internet concepts.
+
+Additional security topics are covered elsewhere in this Handbook. For example, Mandatory Access Control is discussed in crossref:mac[mac,Mandatory Access Control] and Internet firewalls are discussed in crossref:firewalls[firewalls,Firewalls].
+
+[[security-intro]]
+== Introduction
+
+Security is everyone's responsibility. A weak entry point in any system could allow intruders to gain access to critical information and cause havoc on an entire network. One of the core principles of information security is the CIA triad, which stands for the Confidentiality, Integrity, and Availability of information systems.
+
+The CIA triad is a bedrock concept of computer security as customers and users expect their data to be protected. For example, a customer expects that their credit card information is securely stored (confidentiality), that their orders are not changed behind the scenes (integrity), and that they have access to their order information at all times (availablility).
+
+To provide CIA, security professionals apply a defense in depth strategy. The idea of defense in depth is to add several layers of security to prevent one single layer failing and the entire security system collapsing. For example, a system administrator cannot simply turn on a firewall and consider the network or system secure. One must also audit accounts, check the integrity of binaries, and ensure malicious tools are not installed. To implement an effective security strategy, one must understand threats and how to defend against them.
+
+What is a threat as it pertains to computer security? Threats are not limited to remote attackers who attempt to access a system without permission from a remote location. Threats also include employees, malicious software, unauthorized network devices, natural disasters, security vulnerabilities, and even competing corporations.
+
+Systems and networks can be accessed without permission, sometimes by accident, or by remote attackers, and in some cases, via corporate espionage or former employees. As a user, it is important to prepare for and admit when a mistake has led to a security breach and report possible issues to the security team. As an administrator, it is important to know of the threats and be prepared to mitigate them.
+
+When applying security to systems, it is recommended to start by securing the basic accounts and system configuration, and then to secure the network layer so that it adheres to the system policy and the organization's security procedures. Many organizations already have a security policy that covers the configuration of technology devices. The policy should include the security configuration of workstations, desktops, mobile devices, phones, production servers, and development servers. In many cases, standard operating procedures (SOPs) already exist. When in doubt, ask the security team.
+
+The rest of this introduction describes how some of these basic security configurations are performed on a FreeBSD system. The rest of this chapter describes some specific tools which can be used when implementing a security policy on a FreeBSD system.
+
+[[security-accounts]]
+=== Preventing Logins
+
+In securing a system, a good starting point is an audit of accounts. Ensure that `root` has a strong password and that this password is not shared. Disable any accounts that do not need login access.
+
+To deny login access to accounts, two methods exist. The first is to lock the account. This example locks the `toor` account:
+
+[source,bash]
+....
+# pw lock toor
+....
+
+The second method is to prevent login access by changing the shell to [.filename]#/usr/sbin/nologin#. Only the superuser can change the shell for other users:
+
+[source,bash]
+....
+# chsh -s /usr/sbin/nologin toor
+....
+
+The [.filename]#/usr/sbin/nologin# shell prevents the system from assigning a shell to the user when they attempt to login.
+
+[[security-accountmgmt]]
+=== Permitted Account Escalation
+
+In some cases, system administration needs to be shared with other users. FreeBSD has two methods to handle this. The first one, which is not recommended, is a shared root password used by members of the `wheel` group. With this method, a user types `su` and enters the password for `wheel` whenever superuser access is needed. The user should then type `exit` to leave privileged access after finishing the commands that required administrative access. To add a user to this group, edit [.filename]#/etc/group# and add the user to the end of the `wheel` entry. The user must be separated by a comma character with no space.
+
+The second, and recommended, method to permit privilege escalation is to install the package:security/sudo[] package or port. This software provides additional auditing, more fine-grained user control, and can be configured to lock users into running only the specified privileged commands.
+
+After installation, use `visudo` to edit [.filename]#/usr/local/etc/sudoers#. This example creates a new `webadmin` group, adds the `trhodes` account to that group, and configures that group access to restart package:apache24[]:
+
+[source,bash]
+....
+# pw groupadd webadmin -M trhodes -g 6000
+# visudo
+%webadmin ALL=(ALL) /usr/sbin/service apache24 *
+....
+
+[[security-passwords]]
+=== Password Hashes
+
+Passwords are a necessary evil of technology. When they must be used, they should be complex and a powerful hash mechanism should be used to encrypt the version that is stored in the password database. FreeBSD supports the DES, MD5, SHA256, SHA512, and Blowfish hash algorithms in its `crypt()` library. The default of SHA512 should not be changed to a less secure hashing algorithm, but can be changed to the more secure Blowfish algorithm.
+
+[NOTE]
+====
+Blowfish is not part of AES and is not considered compliant with any Federal Information Processing Standards (FIPS). Its use may not be permitted in some environments.
+====
+
+To determine which hash algorithm is used to encrypt a user's password, the superuser can view the hash for the user in the FreeBSD password database. Each hash starts with a symbol which indicates the type of hash mechanism used to encrypt the password. If DES is used, there is no beginning symbol. For MD5, the symbol is `$`. For SHA256 and SHA512, the symbol is `$6$`. For Blowfish, the symbol is `$2a$`. In this example, the password for `dru` is hashed using the default SHA512 algorithm as the hash starts with `$6$`. Note that the encrypted hash, not the password itself, is stored in the password database:
+
+[source,bash]
+....
+# grep dru /etc/master.passwd
+dru:$6$pzIjSvCAn.PBYQBA$PXpSeWPx3g5kscj3IMiM7tUEUSPmGexxta.8Lt9TGSi2lNQqYGKszsBPuGME0:1001:1001::0:0:dru:/usr/home/dru:/bin/csh
+....
+
+The hash mechanism is set in the user's login class. For this example, the user is in the `default` login class and the hash algorithm is set with this line in [.filename]#/etc/login.conf#:
+
+[.programlisting]
+....
+        :passwd_format=sha512:\
+....
+
+To change the algorithm to Blowfish, modify that line to look like this:
+
+[.programlisting]
+....
+        :passwd_format=blf:\
+....
+
+Then run `cap_mkdb /etc/login.conf` as described in <<users-limiting>>. Note that this change will not affect any existing password hashes. This means that all passwords should be re-hashed by asking users to run `passwd` in order to change their password.
+
+For remote logins, two-factor authentication should be used. An example of two-factor authentication is "something you have", such as a key, and "something you know", such as the passphrase for that key. Since OpenSSH is part of the FreeBSD base system, all network logins should be over an encrypted connection and use key-based authentication instead of passwords. For more information, refer to <<openssh>>. Kerberos users may need to make additional changes to implement OpenSSH in their network. These changes are described in <<kerberos5>>.
+
+[[security-pwpolicy]]
+=== Password Policy Enforcement
+
+Enforcing a strong password policy for local accounts is a fundamental aspect of system security. In FreeBSD, password length, password strength, and password complexity can be implemented using built-in Pluggable Authentication Modules (PAM).
+
+This section demonstrates how to configure the minimum and maximum password length and the enforcement of mixed characters using the [.filename]#pam_passwdqc.so# module. This module is enforced when a user changes their password.
+
+To configure this module, become the superuser and uncomment the line containing `pam_passwdqc.so` in [.filename]#/etc/pam.d/passwd#. Then, edit that line to match the password policy:
+
+[.programlisting]
+....
+password        requisite       pam_passwdqc.so         min=disabled,disabled,disabled,12,10 similar=deny retry=3 enforce=users
+....
+
+This example sets several requirements for new passwords. The `min` setting controls the minimum password length. It has five values because this module defines five different types of passwords based on their complexity. Complexity is defined by the type of characters that must exist in a password, such as letters, numbers, symbols, and case. The types of passwords are described in man:pam_passwdqc[8]. In this example, the first three types of passwords are disabled, meaning that passwords that meet those complexity requirements will not be accepted, regardless of their length. The `12` sets a minimum password policy of at least twelve characters, if the password also contains characters with three types of complexity. The `10` sets the password policy to also allow passwords of at least ten characters, if the password contains characters with four types of complexity.
+
+The `similar` setting denies passwords that are similar to the user's previous password. The `retry` setting provides a user with three opportunities to enter a new password.
+
+Once this file is saved, a user changing their password will see a message similar to the following:
+
+[source,bash]
+....
+% passwd
+Changing local password for trhodes
+Old Password:
+
+You can now choose the new password.
+A valid password should be a mix of upper and lower case letters,
+digits and other characters.  You can use a 12 character long
+password with characters from at least 3 of these 4 classes, or
+a 10 character long password containing characters from all the
+classes.  Characters that form a common pattern are discarded by
+the check.
+Alternatively, if no one else can see your terminal now, you can
+pick this as your password: "trait-useful&knob".
+Enter new password:
+....
+
+If a password that does not match the policy is entered, it will be rejected with a warning and the user will have an opportunity to try again, up to the configured number of retries.
+
+Most password policies require passwords to expire after so many days. To set a password age time in FreeBSD, set `passwordtime` for the user's login class in [.filename]#/etc/login.conf#. The `default` login class contains an example:
+
+[.programlisting]
+....
+#       :passwordtime=90d:\
+....
+
+So, to set an expiry of 90 days for this login class, remove the comment symbol (`#`), save the edit, and run `cap_mkdb /etc/login.conf`.
+
+To set the expiration on individual users, pass an expiration date or the number of days to expiry and a username to `pw`:
+
+[source,bash]
+....
+# pw usermod -p 30-apr-2015 -n trhodes
+....
+
+As seen here, an expiration date is set in the form of day, month, and year. For more information, see man:pw[8].
+
+[[security-rkhunter]]
+=== Detecting Rootkits
+
+A _rootkit_ is any unauthorized software that attempts to gain `root` access to a system. Once installed, this malicious software will normally open up another avenue of entry for an attacker. Realistically, once a system has been compromised by a rootkit and an investigation has been performed, the system should be reinstalled from scratch. There is tremendous risk that even the most prudent security or systems engineer will miss something an attacker left behind.
+
+A rootkit does do one thing useful for administrators: once detected, it is a sign that a compromise happened at some point. But, these types of applications tend to be very well hidden. This section demonstrates a tool that can be used to detect rootkits, package:security/rkhunter[].
+
+After installation of this package or port, the system may be checked using the following command. It will produce a lot of information and will require some manual pressing of kbd:[ENTER]:
+
+[source,bash]
+....
+# rkhunter -c
+....
+
+After the process completes, a status message will be printed to the screen. This message will include the amount of files checked, suspect files, possible rootkits, and more. During the check, some generic security warnings may be produced about hidden files, the OpenSSH protocol selection, and known vulnerable versions of installed software. These can be handled now or after a more detailed analysis has been performed.
+
+Every administrator should know what is running on the systems they are responsible for. Third-party tools like rkhunter and package:sysutils/lsof[], and native commands such as `netstat` and `ps`, can show a great deal of information on the system. Take notes on what is normal, ask questions when something seems out of place, and be paranoid. While preventing a compromise is ideal, detecting a compromise is a must.
+
+[[security-ids]]
+=== Binary Verification
+
+Verification of system files and binaries is important because it provides the system administration and security teams information about system changes. A software application that monitors the system for changes is called an Intrusion Detection System (IDS).
+
+FreeBSD provides native support for a basic IDS system. While the nightly security emails will notify an administrator of changes, the information is stored locally and there is a chance that a malicious user could modify this information in order to hide their changes to the system. As such, it is recommended to create a separate set of binary signatures and store them on a read-only, root-owned directory or, preferably, on a removable USB disk or remote rsync server.
+
+The built-in `mtree` utility can be used to generate a specification of the contents of a directory. A seed, or a numeric constant, is used to generate the specification and is required to check that the specification has not changed. This makes it possible to determine if a file or binary has been modified. Since the seed value is unknown by an attacker, faking or checking the checksum values of files will be difficult to impossible. The following example generates a set of SHA256 hashes, one for each system binary in [.filename]#/bin#, and saves those values to a hidden file in ``root``'s home directory, [.filename]#/root/.bin_chksum_mtree#:
+
+[source,bash]
+....
+# mtree -s 3483151339707503 -c -K cksum,sha256digest -p /bin > /root/.bin_chksum_mtree
+# mtree: /bin checksum: 3427012225
+....
+
+The _3483151339707503_ represents the seed. This value should be remembered, but not shared.
+
+Viewing [.filename]#/root/.bin_cksum_mtree# should yield output similar to the following:
+
+[.programlisting]
+....
+#          user: root
+#       machine: dreadnaught
+#          tree: /bin
+#          date: Mon Feb  3 10:19:53 2014
+
+# .
+/set type=file uid=0 gid=0 mode=0555 nlink=1 flags=none
+.               type=dir mode=0755 nlink=2 size=1024 \
+                time=1380277977.000000000
+    \133        nlink=2 size=11704 time=1380277977.000000000 \
+                cksum=484492447 \
+                sha256digest=6207490fbdb5ed1904441fbfa941279055c3e24d3a4049aeb45094596400662a
+    cat         size=12096 time=1380277975.000000000 cksum=3909216944 \
+                sha256digest=65ea347b9418760b247ab10244f47a7ca2a569c9836d77f074e7a306900c1e69
+    chflags     size=8168 time=1380277975.000000000 cksum=3949425175 \
+                sha256digest=c99eb6fc1c92cac335c08be004a0a5b4c24a0c0ef3712017b12c89a978b2dac3
+    chio        size=18520 time=1380277975.000000000 cksum=2208263309 \
+                sha256digest=ddf7c8cb92a58750a675328345560d8cc7fe14fb3ccd3690c34954cbe69fc964
+    chmod       size=8640 time=1380277975.000000000 cksum=2214429708 \
+                sha256digest=a435972263bf814ad8df082c0752aa2a7bdd8b74ff01431ccbd52ed1e490bbe7
+....
+
+The machine's hostname, the date and time the specification was created, and the name of the user who created the specification are included in this report. There is a checksum, size, time, and SHA256 digest for each binary in the directory.
+
+To verify that the binary signatures have not changed, compare the current contents of the directory to the previously generated specification, and save the results to a file. This command requires the seed that was used to generate the original specification:
+
+[source,bash]
+....
+# mtree -s 3483151339707503 -p /bin < /root/.bin_chksum_mtree >> /root/.bin_chksum_output
+# mtree: /bin checksum: 3427012225
+....
+
+This should produce the same checksum for [.filename]#/bin# that was produced when the specification was created. If no changes have occurred to the binaries in this directory, the [.filename]#/root/.bin_chksum_output# output file will be empty. To simulate a change, change the date on [.filename]#/bin/cat# using `touch` and run the verification command again:
+
+[source,bash]
+....
+# touch /bin/cat
+# mtree -s 3483151339707503 -p /bin < /root/.bin_chksum_mtree >> /root/.bin_chksum_output
+# more /root/.bin_chksum_output
+cat changed
+	modification time expected Fri Sep 27 06:32:55 2013 found Mon Feb  3 10:28:43 2014
+....
+
+It is recommended to create specifications for the directories which contain binaries and configuration files, as well as any directories containing sensitive data. Typically, specifications are created for [.filename]#/bin#, [.filename]#/sbin#, [.filename]#/usr/bin#, [.filename]#/usr/sbin#, [.filename]#/usr/local/bin#, [.filename]#/etc#, and [.filename]#/usr/local/etc#.
+
+More advanced IDS systems exist, such as package:security/aide[]. In most cases, `mtree` provides the functionality administrators need. It is important to keep the seed value and the checksum output hidden from malicious users. More information about `mtree` can be found in man:mtree[8].
+
+[[security-tuning]]
+=== System Tuning for Security
+
+In FreeBSD, many system features can be tuned using `sysctl`. A few of the security features which can be tuned to prevent Denial of Service (DoS) attacks will be covered in this section. More information about using `sysctl`, including how to temporarily change values and how to make the changes permanent after testing, can be found in crossref:config[configtuning-sysctl,“Tuning with sysctl(8)”].
+
+[NOTE]
+====
+Any time a setting is changed with `sysctl`, the chance to cause undesired harm is increased, affecting the availability of the system. All changes should be monitored and, if possible, tried on a testing system before being used on a production system.
+====
+
+By default, the FreeBSD kernel boots with a security level of `-1`. This is called "insecure mode" because immutable file flags may be turned off and all devices may be read from or written to. The security level will remain at `-1` unless it is altered through `sysctl` or by a setting in the startup scripts. The security level may be increased during system startup by setting `kern_securelevel_enable` to `YES` in [.filename]#/etc/rc.conf#, and the value of `kern_securelevel` to the desired security level. See man:security[7] and man:init[8] for more information on these settings and the available security levels.
+
+[WARNING]
+====
+
+Increasing the `securelevel` can break Xorg and cause other issues. Be prepared to do some debugging.
+====
+
+The `net.inet.tcp.blackhole` and `net.inet.udp.blackhole` settings can be used to drop incoming SYN packets on closed ports without sending a return RST response. The default behavior is to return an RST to show a port is closed. Changing the default provides some level of protection against ports scans, which are used to determine which applications are running on a system. Set `net.inet.tcp.blackhole` to `2` and `net.inet.udp.blackhole` to `1`. Refer to man:blackhole[4] for more information about these settings.
+
+The `net.inet.icmp.drop_redirect` and `net.inet.ip.redirect` settings help prevent against _redirect attacks_. A redirect attack is a type of DoS which sends mass numbers of ICMP type 5 packets. Since these packets are not required, set `net.inet.icmp.drop_redirect` to `1` and set `net.inet.ip.redirect` to `0`.
+
+Source routing is a method for detecting and accessing non-routable addresses on the internal network. This should be disabled as non-routable addresses are normally not routable on purpose. To disable this feature, set `net.inet.ip.sourceroute` and `net.inet.ip.accept_sourceroute` to `0`.
+
+When a machine on the network needs to send messages to all hosts on a subnet, an ICMP echo request message is sent to the broadcast address. However, there is no reason for an external host to perform such an action. To reject all external broadcast requests, set `net.inet.icmp.bmcastecho` to `0`.
+
+Some additional settings are documented in man:security[7].
+
+[[one-time-passwords]]
+== One-time Passwords
+
+By default, FreeBSD includes support for One-time Passwords In Everything (OPIE). OPIE is designed to prevent replay attacks, in which an attacker discovers a user's password and uses it to access a system. Since a password is only used once in OPIE, a discovered password is of little use to an attacker. OPIE uses a secure hash and a challenge/response system to manage passwords. The FreeBSD implementation uses the MD5 hash by default.
+
+OPIE uses three different types of passwords. The first is the usual UNIX(R) or Kerberos password. The second is the one-time password which is generated by `opiekey`. The third type of password is the "secret password" which is used to generate one-time passwords. The secret password has nothing to do with, and should be different from, the UNIX(R) password.
+
+There are two other pieces of data that are important to OPIE. One is the "seed" or "key", consisting of two letters and five digits. The other is the "iteration count", a number between 1 and 100. OPIE creates the one-time password by concatenating the seed and the secret password, applying the MD5 hash as many times as specified by the iteration count, and turning the result into six short English words which represent the one-time password. The authentication system keeps track of the last one-time password used, and the user is authenticated if the hash of the user-provided password is equal to the previous password. Because a one-way hash is used, it is impossible to generate future one-time passwords if a successfully used password is captured. The iteration count is decremented after each successful login to keep the user and the login program in sync. When the iteration count gets down to `1`, OPIE must be reinitialized.
+
+There are a few programs involved in this process. A one-time password, or a consecutive list of one-time passwords, is generated by passing an iteration count, a seed, and a secret password to man:opiekey[1]. In addition to initializing OPIE, man:opiepasswd[1] is used to change passwords, iteration counts, or seeds. The relevant credential files in [.filename]#/etc/opiekeys# are examined by man:opieinfo[1] which prints out the invoking user's current iteration count and seed.
+
+This section describes four different sorts of operations. The first is how to set up one-time-passwords for the first time over a secure connection. The second is how to use `opiepasswd` over an insecure connection. The third is how to log in over an insecure connection. The fourth is how to generate a number of keys which can be written down or printed out to use at insecure locations.
+
+=== Initializing OPIE
+
+To initialize OPIE for the first time, run this command from a secure location:
+
+[source,bash]
+....
+% opiepasswd -c
+Adding unfurl:
+Only use this method from the console; NEVER from remote. If you are using
+telnet, xterm, or a dial-in, type ^C now or exit with no password.
+Then run opiepasswd without the -c parameter.
+Using MD5 to compute responses.
+Enter new secret pass phrase:
+Again new secret pass phrase:
+
+ID unfurl OTP key is 499 to4268
+MOS MALL GOAT ARM AVID COED
+....
+
+The `-c` sets console mode which assumes that the command is being run from a secure location, such as a computer under the user's control or a SSH session to a computer under the user's control.
+
+When prompted, enter the secret password which will be used to generate the one-time login keys. This password should be difficult to guess and should be different than the password which is associated with the user's login account. It must be between 10 and 127 characters long. Remember this password.
+
+The `ID` line lists the login name (`unfurl`), default iteration count (`499`), and default seed (`to4268`). When logging in, the system will remember these parameters and display them, meaning that they do not have to be memorized. The last line lists the generated one-time password which corresponds to those parameters and the secret password. At the next login, use this one-time password.
+
+=== Insecure Connection Initialization
+
+To initialize or change the secret password on an insecure system, a secure connection is needed to some place where `opiekey` can be run. This might be a shell prompt on a trusted machine. An iteration count is needed, where 100 is probably a good value, and the seed can either be specified or the randomly-generated one used. On the insecure connection, the machine being initialized, use man:opiepasswd[1]:
+
+[source,bash]
+....
+% opiepasswd
+
+Updating unfurl:
+You need the response from an OTP generator.
+Old secret pass phrase:
+	otp-md5 498 to4268 ext
+	Response: GAME GAG WELT OUT DOWN CHAT
+New secret pass phrase:
+	otp-md5 499 to4269
+	Response: LINE PAP MILK NELL BUOY TROY
+
+ID mark OTP key is 499 gr4269
+LINE PAP MILK NELL BUOY TROY
+....
+
+To accept the default seed, press kbd:[Return]. Before entering an access password, move over to the secure connection and give it the same parameters:
+
+[source,bash]
+....
+% opiekey 498 to4268
+Using the MD5 algorithm to compute response.
+Reminder: Do not use opiekey from telnet or dial-in sessions.
+Enter secret pass phrase:
+GAME GAG WELT OUT DOWN CHAT
+....
+
+Switch back over to the insecure connection, and copy the generated one-time password over to the relevant program.
+
+=== Generating a Single One-time Password
+
+After initializing OPIE and logging in, a prompt like this will be displayed:
+
+[source,bash]
+....
+% telnet example.com
+Trying 10.0.0.1...
+Connected to example.com
+Escape character is '^]'.
+
+FreeBSD/i386 (example.com) (ttypa)
+
+login: <username>
+otp-md5 498 gr4269 ext
+Password: 
+....
+
+The OPIE prompts provides a useful feature. If kbd:[Return] is pressed at the password prompt, the prompt will turn echo on and display what is typed. This can be useful when attempting to type in a password by hand from a printout.
+
+At this point, generate the one-time password to answer this login prompt. This must be done on a trusted system where it is safe to run man:opiekey[1]. There are versions of this command for Windows(R), Mac OS(R) and FreeBSD. This command needs the iteration count and the seed as command line options. Use cut-and-paste from the login prompt on the machine being logged in to.
+
+On the trusted system:
+
+[source,bash]
+....
+% opiekey 498 to4268
+Using the MD5 algorithm to compute response.
+Reminder: Do not use opiekey from telnet or dial-in sessions.
+Enter secret pass phrase:
+GAME GAG WELT OUT DOWN CHAT
+....
+
+Once the one-time password is generated, continue to log in.
+
+=== Generating Multiple One-time Passwords
+
+Sometimes there is no access to a trusted machine or secure connection. In this case, it is possible to use man:opiekey[1] to generate a number of one-time passwords beforehand. For example:
+
+[source,bash]
+....
+% opiekey -n 5 30 zz99999
+Using the MD5 algorithm to compute response.
+Reminder: Do not use opiekey from telnet or dial-in sessions.
+Enter secret pass phrase: <secret password>
+26: JOAN BORE FOSS DES NAY QUIT
+27: LATE BIAS SLAY FOLK MUCH TRIG
+28: SALT TIN ANTI LOON NEAL USE
+29: RIO ODIN GO BYE FURY TIC
+30: GREW JIVE SAN GIRD BOIL PHI
+....
+
+The `-n 5` requests five keys in sequence, and `30` specifies what the last iteration number should be. Note that these are printed out in _reverse_ order of use. The really paranoid might want to write the results down by hand; otherwise, print the list. Each line shows both the iteration count and the one-time password. Scratch off the passwords as they are used.
+
+=== Restricting Use of UNIX(R) Passwords
+
+OPIE can restrict the use of UNIX(R) passwords based on the IP address of a login session. The relevant file is [.filename]#/etc/opieaccess#, which is present by default. Refer to man:opieaccess[5] for more information on this file and which security considerations to be aware of when using it.
+
+Here is a sample [.filename]#opieaccess#:
+
+[.programlisting]
+....
+permit 192.168.0.0 255.255.0.0
+....
+
+This line allows users whose IP source address (which is vulnerable to spoofing) matches the specified value and mask, to use UNIX(R) passwords at any time.
+
+If no rules in [.filename]#opieaccess# are matched, the default is to deny non-OPIE logins.
+
+[[tcpwrappers]]
+== TCP Wrapper
+
+TCP Wrapper is a host-based access control system which extends the abilities of crossref:network-servers[network-inetd,“The inetd Super-Server”]. It can be configured to provide logging support, return messages, and connection restrictions for the server daemons under the control of inetd. Refer to man:tcpd[8] for more information about TCP Wrapper and its features.
+
+TCP Wrapper should not be considered a replacement for a properly configured firewall. Instead, TCP Wrapper should be used in conjunction with a firewall and other security enhancements in order to provide another layer of protection in the implementation of a security policy.
+
+=== Initial Configuration
+
+To enable TCP Wrapper in FreeBSD, add the following lines to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+inetd_enable="YES"
+inetd_flags="-Ww"
+....
+
+Then, properly configure [.filename]#/etc/hosts.allow#.
+
+[NOTE]
+====
+Unlike other implementations of TCP Wrapper, the use of [.filename]#hosts.deny# is deprecated in FreeBSD. All configuration options should be placed in [.filename]#/etc/hosts.allow#.
+====
+
+In the simplest configuration, daemon connection policies are set to either permit or block, depending on the options in [.filename]#/etc/hosts.allow#. The default configuration in FreeBSD is to allow all connections to the daemons started with inetd.
+
+Basic configuration usually takes the form of `daemon : address : action`, where `daemon` is the daemon which inetd started, `address` is a valid hostname, IP address, or an IPv6 address enclosed in brackets ([ ]), and `action` is either `allow` or `deny`. TCP Wrapper uses a first rule match semantic, meaning that the configuration file is scanned from the beginning for a matching rule. When a match is found, the rule is applied and the search process stops.
+
+For example, to allow POP3 connections via the package:mail/qpopper[] daemon, the following lines should be appended to [.filename]#hosts.allow#:
+
+[.programlisting]
+....
+# This line is required for POP3 connections:
+qpopper : ALL : allow
+....
+
+Whenever this file is edited, restart inetd:
+
+[source,bash]
+....
+# service inetd restart
+....
+
+=== Advanced Configuration
+
+TCP Wrapper provides advanced options to allow more control over the way connections are handled. In some cases, it may be appropriate to return a comment to certain hosts or daemon connections. In other cases, a log entry should be recorded or an email sent to the administrator. Other situations may require the use of a service for local connections only. This is all possible through the use of configuration options known as wildcards, expansion characters, and external command execution.
+
+Suppose that a situation occurs where a connection should be denied yet a reason should be sent to the host who attempted to establish that connection. That action is possible with `twist`. When a connection attempt is made, `twist` executes a shell command or script. An example exists in [.filename]#hosts.allow#:
+
+[.programlisting]
+....
+# The rest of the daemons are protected.
+ALL : ALL \
+	: severity auth.info \
+	: twist /bin/echo "You are not welcome to use %d from %h."
+....
+
+In this example, the message "You are not allowed to use _daemon name_ from _hostname_." will be returned for any daemon not configured in [.filename]#hosts.allow#. This is useful for sending a reply back to the connection initiator right after the established connection is dropped. Any message returned _must_ be wrapped in quote (`"`) characters.
+
+[WARNING]
+====
+
+It may be possible to launch a denial of service attack on the server if an attacker floods these daemons with connection requests.
+====
+
+Another possibility is to use `spawn`. Like `twist`, `spawn` implicitly denies the connection and may be used to run external shell commands or scripts. Unlike `twist`, `spawn` will not send a reply back to the host who established the connection. For example, consider the following configuration:
+
+[.programlisting]
+....
+# We do not allow connections from example.com:
+ALL : .example.com \
+	: spawn (/bin/echo %a from %h attempted to access %d >> \
+	  /var/log/connections.log) \
+	: deny
+....
+
+This will deny all connection attempts from `*.example.com` and log the hostname, IP address, and the daemon to which access was attempted to [.filename]#/var/log/connections.log#. This example uses the substitution characters `%a` and `%h`. Refer to man:hosts_access[5] for the complete list.
+
+To match every instance of a daemon, domain, or IP address, use `ALL`. Another wildcard is `PARANOID` which may be used to match any host which provides an IP address that may be forged because the IP address differs from its resolved hostname. In this example, all connection requests to Sendmail which have an IP address that varies from its hostname will be denied:
+
+[.programlisting]
+....
+# Block possibly spoofed requests to sendmail:
+sendmail : PARANOID : deny
+....
+
+[CAUTION]
+====
+
+Using the `PARANOID` wildcard will result in denied connections if the client or server has a broken DNS setup.
+====
+
+To learn more about wildcards and their associated functionality, refer to man:hosts_access[5].
+
+[NOTE]
+====
+When adding new configuration lines, make sure that any unneeded entries for that daemon are commented out in [.filename]#hosts.allow#.
+====
+
+[[kerberos5]]
+== Kerberos
+
+Kerberos is a network authentication protocol which was originally created by the Massachusetts Institute of Technology (MIT) as a way to securely provide authentication across a potentially hostile network. The Kerberos protocol uses strong cryptography so that both a client and server can prove their identity without sending any unencrypted secrets over the network. Kerberos can be described as an identity-verifying proxy system and as a trusted third-party authentication system. After a user authenticates with Kerberos, their communications can be encrypted to assure privacy and data integrity.
+
+The only function of Kerberos is to provide the secure authentication of users and servers on the network. It does not provide authorization or auditing functions. It is recommended that Kerberos be used with other security methods which provide authorization and audit services.
+
+The current version of the protocol is version 5, described in RFC 4120. Several free implementations of this protocol are available, covering a wide range of operating systems. MIT continues to develop their Kerberos package. It is commonly used in the US as a cryptography product, and has historically been subject to US export regulations. In FreeBSD, MITKerberos is available as the package:security/krb5[] package or port. The Heimdal Kerberos implementation was explicitly developed outside of the US to avoid export regulations. The Heimdal Kerberos distribution is included in the base FreeBSD installation, and another distribution with more configurable options is available as package:security/heimdal[] in the Ports Collection.
+
+In Kerberos users and services are identified as "principals" which are contained within an administrative grouping, called a "realm". A typical user principal would be of the form `_user_@_REALM_` (realms are traditionally uppercase).
+
+This section provides a guide on how to set up Kerberos using the Heimdal distribution included in FreeBSD.
+
+For purposes of demonstrating a Kerberos installation, the name spaces will be as follows:
+
+* The DNS domain (zone) will be `example.org`.
+* The Kerberos realm will be `EXAMPLE.ORG`.
+
+[NOTE]
+====
+Use real domain names when setting up Kerberos, even if it will run internally. This avoids DNS problems and assures inter-operation with other Kerberos realms.
+====
+
+=== Setting up a Heimdal KDC
+
+The Key Distribution Center (KDC) is the centralized authentication service that Kerberos provides, the "trusted third party" of the system. It is the computer that issues Kerberos tickets, which are used for clients to authenticate to servers. Because the KDC is considered trusted by all other computers in the Kerberos realm, it has heightened security concerns. Direct access to the KDC should be limited.
+
+While running a KDC requires few computing resources, a dedicated machine acting only as a KDC is recommended for security reasons.
+
+To begin, install the package:security/heimdal[] package as follows:
+
+[source,bash]
+....
+# pkg install heimdal
+....
+
+Next, update [.filename]#/etc/rc.conf# using `sysrc` as follows:
+
+[source,bash]
+....
+# sysrc kdc_enable=yes
+# sysrc kadmind_enable=yes
+....
+
+Next, edit [.filename]#/etc/krb5.conf# as follows:
+
+[.programlisting]
+....
+[libdefaults]
+    default_realm = EXAMPLE.ORG
+[realms]
+    EXAMPLE.ORG = {
+	kdc = kerberos.example.org
+	admin_server = kerberos.example.org
+    }
+[domain_realm]
+    .example.org = EXAMPLE.ORG
+....
+
+In this example, the KDC will use the fully-qualified hostname `kerberos.example.org`. The hostname of the KDC must be resolvable in the DNS.
+
+Kerberos can also use the DNS to locate KDCs, instead of a `[realms]` section in [.filename]#/etc/krb5.conf#. For large organizations that have their own DNS servers, the above example could be trimmed to:
+
+[.programlisting]
+....
+[libdefaults]
+      default_realm = EXAMPLE.ORG
+[domain_realm]
+    .example.org = EXAMPLE.ORG
+....
+
+With the following lines being included in the `example.org` zone file:
+
+[.programlisting]
+....
+_kerberos._udp      IN  SRV     01 00 88 kerberos.example.org.
+_kerberos._tcp      IN  SRV     01 00 88 kerberos.example.org.
+_kpasswd._udp       IN  SRV     01 00 464 kerberos.example.org.
+_kerberos-adm._tcp  IN  SRV     01 00 749 kerberos.example.org.
+_kerberos           IN  TXT     EXAMPLE.ORG
+....
+
+[NOTE]
+====
+In order for clients to be able to find the Kerberos services, they _must_ have either a fully configured [.filename]#/etc/krb5.conf# or a minimally configured [.filename]#/etc/krb5.conf#_and_ a properly configured DNS server.
+====
+
+Next, create the Kerberos database which contains the keys of all principals (users and hosts) encrypted with a master password. It is not required to remember this password as it will be stored in [.filename]#/var/heimdal/m-key#; it would be reasonable to use a 45-character random password for this purpose. To create the master key, run `kstash` and enter a password:
+
+[source,bash]
+....
+# kstash
+Master key: xxxxxxxxxxxxxxxxxxxxxxx
+Verifying password - Master key: xxxxxxxxxxxxxxxxxxxxxxx
+....
+
+Once the master key has been created, the database should be initialized. The Kerberos administrative tool man:kadmin[8] can be used on the KDC in a mode that operates directly on the database, without using the man:kadmind[8] network service, as `kadmin -l`. This resolves the chicken-and-egg problem of trying to connect to the database before it is created. At the `kadmin` prompt, use `init` to create the realm's initial database:
+
+[source,bash]
+....
+# kadmin -l
+kadmin> init EXAMPLE.ORG
+Realm max ticket life [unlimited]:
+....
+
+Lastly, while still in `kadmin`, create the first principal using `add`. Stick to the default options for the principal for now, as these can be changed later with `modify`. Type `?` at the prompt to see the available options.
+
+[source,bash]
+....
+kadmin> add tillman
+Max ticket life [unlimited]:
+Max renewable life [unlimited]:
+Principal expiration time [never]:
+Password expiration time [never]:
+Attributes []:
+Password: xxxxxxxx
+Verifying password - Password: xxxxxxxx
+....
+
+Next, start the KDC services by running:
+
+[source,bash]
+....
+# service kdc start
+# service kadmind start
+....
+
+While there will not be any kerberized daemons running at this point, it is possible to confirm that the KDC is functioning by obtaining a ticket for the principal that was just created:
+
+[source,bash]
+....
+% kinit tillman
+tillman@EXAMPLE.ORG's Password:
+....
+
+Confirm that a ticket was successfully obtained using `klist`:
+
+[source,bash]
+....
+% klist
+Credentials cache: FILE:/tmp/krb5cc_1001
+	Principal: tillman@EXAMPLE.ORG
+
+  Issued                Expires               Principal
+Aug 27 15:37:58 2013  Aug 28 01:37:58 2013  krbtgt/EXAMPLE.ORG@EXAMPLE.ORG
+....
+
+The temporary ticket can be destroyed when the test is finished:
+
+[source,bash]
+....
+% kdestroy
+....
+
+=== Configuring a Server to Use Kerberos
+
+The first step in configuring a server to use Kerberos authentication is to ensure that it has the correct configuration in [.filename]#/etc/krb5.conf#. The version from the KDC can be used as-is, or it can be regenerated on the new system.
+
+Next, create [.filename]#/etc/krb5.keytab# on the server. This is the main part of "Kerberizing" a service - it corresponds to generating a secret shared between the service and the KDC. The secret is a cryptographic key, stored in a "keytab". The keytab contains the server's host key, which allows it and the KDC to verify each others' identity. It must be transmitted to the server in a secure fashion, as the security of the server can be broken if the key is made public. Typically, the [.filename]#keytab# is generated on an administrator's trusted machine using `kadmin`, then securely transferred to the server, e.g., with man:scp[1]; it can also be created directly on the server if that is consistent with the desired security policy. It is very important that the keytab is transmitted to the server in a secure fashion: if the key is known by some other party, that party can impersonate any user to the server! Using `kadmin` on the server directly is convenient, because the entry for the host principal in the KDC database is also created using `kadmin`.
+
+Of course, `kadmin` is a kerberized service; a Kerberos ticket is needed to authenticate to the network service, but to ensure that the user running `kadmin` is actually present (and their session has not been hijacked), `kadmin` will prompt for the password to get a fresh ticket. The principal authenticating to the kadmin service must be permitted to use the `kadmin` interface, as specified in [.filename]#/var/heimdal/kadmind.acl#. See the section titled "Remote administration" in `info heimdal` for details on designing access control lists. Instead of enabling remote `kadmin` access, the administrator could securely connect to the KDC via the local console or man:ssh[1], and perform administration locally using `kadmin -l`.
+
+After installing [.filename]#/etc/krb5.conf#, use `add --random-key` in `kadmin`. This adds the server's host principal to the database, but does not extract a copy of the host principal key to a keytab. To generate the keytab, use `ext` to extract the server's host principal key to its own keytab:
+
+[source,bash]
+....
+# kadmin
+kadmin> add --random-key host/myserver.example.org
+Max ticket life [unlimited]:
+Max renewable life [unlimited]:
+Principal expiration time [never]:
+Password expiration time [never]:
+Attributes []:
+kadmin> ext_keytab host/myserver.example.org
+kadmin> exit
+....
+
+Note that `ext_keytab` stores the extracted key in [.filename]#/etc/krb5.keytab# by default. This is good when being run on the server being kerberized, but the `--keytab _path/to/file_` argument should be used when the keytab is being extracted elsewhere:
+
+[source,bash]
+....
+# kadmin
+kadmin> ext_keytab --keytab=/tmp/example.keytab host/myserver.example.org
+kadmin> exit
+....
+
+The keytab can then be securely copied to the server using man:scp[1] or a removable media. Be sure to specify a non-default keytab name to avoid inserting unneeded keys into the system's keytab.
+
+At this point, the server can read encrypted messages from the KDC using its shared key, stored in [.filename]#krb5.keytab#. It is now ready for the Kerberos-using services to be enabled. One of the most common such services is man:sshd[8], which supports Kerberos via the GSS-API. In [.filename]#/etc/ssh/sshd_config#, add the line:
+
+[.programlisting]
+....
+GSSAPIAuthentication yes
+....
+
+After making this change, man:sshd[8] must be restarted for the new configuration to take effect: `service sshd restart`.
+
+=== Configuring a Client to Use Kerberos
+
+As it was for the server, the client requires configuration in [.filename]#/etc/krb5.conf#. Copy the file in place (securely) or re-enter it as needed.
+
+Test the client by using `kinit`, `klist`, and `kdestroy` from the client to obtain, show, and then delete a ticket for an existing principal. Kerberos applications should also be able to connect to Kerberos enabled servers. If that does not work but obtaining a ticket does, the problem is likely with the server and not with the client or the KDC. In the case of kerberized man:ssh[1], GSS-API is disabled by default, so test using `ssh -o GSSAPIAuthentication=yes _hostname_`.
+
+When testing a Kerberized application, try using a packet sniffer such as `tcpdump` to confirm that no sensitive information is sent in the clear.
+
+Various Kerberos client applications are available. With the advent of a bridge so that applications using SASL for authentication can use GSS-API mechanisms as well, large classes of client applications can use Kerberos for authentication, from Jabber clients to IMAP clients.
+
+Users within a realm typically have their Kerberos principal mapped to a local user account. Occasionally, one needs to grant access to a local user account to someone who does not have a matching Kerberos principal. For example, `tillman@EXAMPLE.ORG` may need access to the local user account `webdevelopers`. Other principals may also need access to that local account.
+
+The [.filename]#.k5login# and [.filename]#.k5users# files, placed in a user's home directory, can be used to solve this problem. For example, if the following [.filename]#.k5login# is placed in the home directory of `webdevelopers`, both principals listed will have access to that account without requiring a shared password:
+
+[.programlisting]
+....
+tillman@example.org
+jdoe@example.org
+....
+
+Refer to man:ksu[1] for more information about [.filename]#.k5users#.
+
+=== MIT Differences
+
+The major difference between the MIT and Heimdal implementations is that `kadmin` has a different, but equivalent, set of commands and uses a different protocol. If the KDC is MIT, the Heimdal version of `kadmin` cannot be used to administer the KDC remotely, and vice versa.
+
+Client applications may also use slightly different command line options to accomplish the same tasks. Following the instructions at http://web.mit.edu/Kerberos/www/[http://web.mit.edu/Kerberos/www/] is recommended. Be careful of path issues: the MIT port installs into [.filename]#/usr/local/# by default, and the FreeBSD system applications run instead of the MIT versions if `PATH` lists the system directories first.
+
+When using MIT Kerberos as a KDC on FreeBSD, the following edits should also be made to [.filename]#rc.conf#:
+
+[.programlisting]
+....
+kdc_program="/usr/local/sbin/kdc"
+kadmind_program="/usr/local/sbin/kadmind"
+kdc_flags=""
+kdc_enable="YES"
+kadmind_enable="YES"
+....
+
+=== Kerberos Tips, Tricks, and Troubleshooting
+
+When configuring and troubleshooting Kerberos, keep the following points in mind:
+
+* When using either Heimdal or MITKerberos from ports, ensure that the `PATH` lists the port's versions of the client applications before the system versions.
+* If all the computers in the realm do not have synchronized time settings, authentication may fail. crossref:network-servers[network-ntp,“Clock Synchronization with NTP”] describes how to synchronize clocks using NTP.
+* If the hostname is changed, the `host/` principal must be changed and the keytab updated. This also applies to special keytab entries like the `HTTP/` principal used for Apache's package:www/mod_auth_kerb[].
+* All hosts in the realm must be both forward and reverse resolvable in DNS or, at a minimum, exist in [.filename]#/etc/hosts#. CNAMEs will work, but the A and PTR records must be correct and in place. The error message for unresolvable hosts is not intuitive: `Kerberos5 refuses authentication because Read req failed: Key table entry not found`.
+* Some operating systems that act as clients to the KDC do not set the permissions for `ksu` to be setuid `root`. This means that `ksu` does not work. This is a permissions problem, not a KDC error.
+* With MITKerberos, to allow a principal to have a ticket life longer than the default lifetime of ten hours, use `modify_principal` at the man:kadmin[8] prompt to change the `maxlife` of both the principal in question and the `krbtgt` principal. The principal can then use `kinit -l` to request a ticket with a longer lifetime.
+* When running a packet sniffer on the KDC to aid in troubleshooting while running `kinit` from a workstation, the Ticket Granting Ticket (TGT) is sent immediately, even before the password is typed. This is because the Kerberos server freely transmits a TGT to any unauthorized request. However, every TGT is encrypted in a key derived from the user's password. When a user types their password, it is not sent to the KDC, it is instead used to decrypt the TGT that `kinit` already obtained. If the decryption process results in a valid ticket with a valid time stamp, the user has valid Kerberos credentials. These credentials include a session key for establishing secure communications with the Kerberos server in the future, as well as the actual TGT, which is encrypted with the Kerberos server's own key. This second layer of encryption allows the Kerberos server to verify the authenticity of each TGT.
+* Host principals can have a longer ticket lifetime. If the user principal has a lifetime of a week but the host being connected to has a lifetime of nine hours, the user cache will have an expired host principal and the ticket cache will not work as expected.
+* When setting up [.filename]#krb5.dict# to prevent specific bad passwords from being used as described in man:kadmind[8], remember that it only applies to principals that have a password policy assigned to them. The format used in [.filename]#krb5.dict# is one string per line. Creating a symbolic link to [.filename]#/usr/shared/dict/words# might be useful.
+
+=== Mitigating Kerberos Limitations
+
+Since Kerberos is an all or nothing approach, every service enabled on the network must either be modified to work with Kerberos or be otherwise secured against network attacks. This is to prevent user credentials from being stolen and re-used. An example is when Kerberos is enabled on all remote shells but the non-Kerberized POP3 mail server sends passwords in plain text.
+
+The KDC is a single point of failure. By design, the KDC must be as secure as its master password database. The KDC should have absolutely no other services running on it and should be physically secure. The danger is high because Kerberos stores all passwords encrypted with the same master key which is stored as a file on the KDC.
+
+A compromised master key is not quite as bad as one might fear. The master key is only used to encrypt the Kerberos database and as a seed for the random number generator. As long as access to the KDC is secure, an attacker cannot do much with the master key.
+
+If the KDC is unavailable, network services are unusable as authentication cannot be performed. This can be alleviated with a single master KDC and one or more slaves, and with careful implementation of secondary or fall-back authentication using PAM.
+
+Kerberos allows users, hosts and services to authenticate between themselves. It does not have a mechanism to authenticate the KDC to the users, hosts, or services. This means that a trojanned `kinit` could record all user names and passwords. File system integrity checking tools like package:security/tripwire[] can alleviate this.
+
+=== Resources and Further Information
+
+* http://www.faqs.org/faqs/Kerberos-faq/general/preamble.html[The Kerberos FAQ]
+* http://web.mit.edu/Kerberos/www/dialogue.html[Designing an Authentication System: a Dialog in Four Scenes]
+* https://www.ietf.org/rfc/rfc4120.txt[RFC 4120, The Kerberos Network Authentication Service (V5)]
+* http://web.mit.edu/Kerberos/www/[MIT Kerberos home page]
+* https://github.com/heimdal/heimdal/wiki[Heimdal Kerberos project wiki page]
+
+[[openssl]]
+== OpenSSL
+
+OpenSSL is an open source implementation of the SSL and TLS protocols. It provides an encryption transport layer on top of the normal communications layer, allowing it to be intertwined with many network applications and services.
+
+The version of OpenSSL included in FreeBSD supports the Secure Sockets Layer 3.0 (SSLv3) and Transport Layer Security 1.0/1.1/1.2 (TLSv1/TLSv1.1/TLSv1.2) network security protocols and can be used as a general cryptographic library. In FreeBSD 12.0-RELEASE and above, OpenSSL also supports Transport Layer Security 1.3 (TLSv1.3).
+
+OpenSSL is often used to encrypt authentication of mail clients and to secure web based transactions such as credit card payments. Some ports, such as package:www/apache24[] and package:databases/postgresql11-server[], include a compile option for building with OpenSSL. If selected, the port will add support using OpenSSL from the base system. To instead have the port compile against OpenSSL from the package:security/openssl[] port, add the following to [.filename]#/etc/make.conf#:
+
+[.programlisting]
+....
+DEFAULT_VERSIONS+= ssl=openssl
+....
+
+Another common use of OpenSSL is to provide certificates for use with software applications. Certificates can be used to verify the credentials of a company or individual. If a certificate has not been signed by an external _Certificate Authority_ (CA), such as http://www.verisign.com[http://www.verisign.com], the application that uses the certificate will produce a warning. There is a cost associated with obtaining a signed certificate and using a signed certificate is not mandatory as certificates can be self-signed. However, using an external authority will prevent warnings and can put users at ease.
+
+This section demonstrates how to create and use certificates on a FreeBSD system. Refer to crossref:network-servers[ldap-config,“Configuring an LDAP Server”] for an example of how to create a CA for signing one's own certificates.
+
+For more information about SSL, read the free https://www.feistyduck.com/books/openssl-cookbook/[OpenSSL Cookbook].
+
+=== Generating Certificates
+
+To generate a certificate that will be signed by an external CA, issue the following command and input the information requested at the prompts. This input information will be written to the certificate. At the `Common Name` prompt, input the fully qualified name for the system that will use the certificate. If this name does not match the server, the application verifying the certificate will issue a warning to the user, rendering the verification provided by the certificate as useless.
+
+[source,bash]
+....
+# openssl req -new -nodes -out req.pem -keyout cert.key -sha256 -newkey rsa:2048
+Generating a 2048 bit RSA private key
+..................+++
+.............................................................+++
+writing new private key to 'cert.key'
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:US
+State or Province Name (full name) [Some-State]:PA
+Locality Name (eg, city) []:Pittsburgh
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:My Company
+Organizational Unit Name (eg, section) []:Systems Administrator
+Common Name (eg, YOUR name) []:localhost.example.org
+Email Address []:trhodes@FreeBSD.org
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:
+An optional company name []:Another Name
+....
+
+Other options, such as the expire time and alternate encryption algorithms, are available when creating a certificate. A complete list of options is described in man:openssl[1].
+
+This command will create two files in the current directory. The certificate request, [.filename]#req.pem#, can be sent to a CA who will validate the entered credentials, sign the request, and return the signed certificate. The second file, [.filename]#cert.key#, is the private key for the certificate and should be stored in a secure location. If this falls in the hands of others, it can be used to impersonate the user or the server.
+
+Alternately, if a signature from a CA is not required, a self-signed certificate can be created. First, generate the RSA key:
+
+[source,bash]
+....
+# openssl genrsa -rand -genkey -out cert.key 2048
+0 semi-random bytes loaded
+Generating RSA private key, 2048 bit long modulus
+.............................................+++
+.................................................................................................................+++
+e is 65537 (0x10001)
+....
+
+Use this key to create a self-signed certificate. Follow the usual prompts for creating a certificate:
+
+[source,bash]
+....
+# openssl req -new -x509 -days 365 -key cert.key -out cert.crt -sha256
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:US
+State or Province Name (full name) [Some-State]:PA
+Locality Name (eg, city) []:Pittsburgh
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:My Company
+Organizational Unit Name (eg, section) []:Systems Administrator
+Common Name (e.g. server FQDN or YOUR name) []:localhost.example.org
+Email Address []:trhodes@FreeBSD.org
+....
+
+This will create two new files in the current directory: a private key file [.filename]#cert.key#, and the certificate itself, [.filename]#cert.crt#. These should be placed in a directory, preferably under [.filename]#/etc/ssl/#, which is readable only by `root`. Permissions of `0700` are appropriate for these files and can be set using `chmod`.
+
+=== Using Certificates
+
+One use for a certificate is to encrypt connections to the Sendmail mail server in order to prevent the use of clear text authentication.
+
+[NOTE]
+====
+Some mail clients will display an error if the user has not installed a local copy of the certificate. Refer to the documentation included with the software for more information on certificate installation.
+====
+
+In FreeBSD 10.0-RELEASE and above, it is possible to create a self-signed certificate for Sendmail automatically. To enable this, add the following lines to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+sendmail_enable="YES"
+sendmail_cert_create="YES"
+sendmail_cert_cn="localhost.example.org"
+....
+
+This will automatically create a self-signed certificate, [.filename]#/etc/mail/certs/host.cert#, a signing key, [.filename]#/etc/mail/certs/host.key#, and a CA certificate, [.filename]#/etc/mail/certs/cacert.pem#. The certificate will use the `Common Name` specified in `sendmail_cert_cn`. After saving the edits, restart Sendmail:
+
+[source,bash]
+....
+# service sendmail restart
+....
+
+If all went well, there will be no error messages in [.filename]#/var/log/maillog#. For a simple test, connect to the mail server's listening port using `telnet`:
+
+[source,bash]
+....
+# telnet example.com 25
+Trying 192.0.34.166...
+Connected to example.com.
+Escape character is '^]'.
+220 example.com ESMTP Sendmail 8.14.7/8.14.7; Fri, 18 Apr 2014 11:50:32 -0400 (EDT)
+ehlo example.com
+250-example.com Hello example.com [192.0.34.166], pleased to meet you
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-8BITMIME
+250-SIZE
+250-DSN
+250-ETRN
+250-AUTH LOGIN PLAIN
+250-STARTTLS
+250-DELIVERBY
+250 HELP
+quit
+221 2.0.0 example.com closing connection
+Connection closed by foreign host.
+....
+
+If the `STARTTLS` line appears in the output, everything is working correctly.
+
+[[ipsec]]
+== VPN over IPsec
+
+Internet Protocol Security (IPsec) is a set of protocols which sit on top of the Internet Protocol (IP) layer. It allows two or more hosts to communicate in a secure manner by authenticating and encrypting each IP packet of a communication session. The FreeBSD IPsec network stack is based on the http://www.kame.net/[http://www.kame.net/] implementation and supports both IPv4 and IPv6 sessions.
+
+IPsec is comprised of the following sub-protocols:
+
+* _Encapsulated Security Payload (ESP)_: this protocol protects the IP packet data from third party interference by encrypting the contents using symmetric cryptography algorithms such as Blowfish and 3DES.
+* _Authentication Header (AH)_: this protocol protects the IP packet header from third party interference and spoofing by computing a cryptographic checksum and hashing the IP  packet header fields with a secure hashing function. This is then followed by an additional header that contains the hash, to allow the information in the packet to be authenticated.
+* _IP Payload Compression Protocol (IPComp_): this protocol tries to increase communication performance by compressing the IP  payload in order to reduce the amount of data sent.
+
+These protocols can either be used together or separately, depending on the environment.
+
+IPsec supports two modes of operation. The first mode, _Transport Mode_, protects communications between two hosts. The second mode, _Tunnel Mode_, is used to build virtual tunnels, commonly known as Virtual Private Networks (VPNs). Consult man:ipsec[4] for detailed information on the IPsec subsystem in FreeBSD.
+
+IPsec support is enabled by default on FreeBSD 11 and later. For previous versions of FreeBSD, add these options to a custom kernel configuration file and rebuild the kernel using the instructions in crossref:kernelconfig[kernelconfig,Configuring the FreeBSD Kernel]:
+
+[source,bash]
+....
+options   IPSEC        IP security
+device    crypto
+....
+
+If IPsec debugging support is desired, the following kernel option should also be added:
+
+[source,bash]
+....
+options   IPSEC_DEBUG  debug for IP security
+....
+
+This rest of this chapter demonstrates the process of setting up an IPsecVPN between a home network and a corporate network. In the example scenario:
+
+* Both sites are connected to the Internet through a gateway that is running FreeBSD.
+* The gateway on each network has at least one external IP address. In this example, the corporate LAN's external IP address is `172.16.5.4` and the home LAN's external IP address is `192.168.1.12`.
+* The internal addresses of the two networks can be either public or private IP addresses. However, the address space must not collide. For example, both networks cannot use `192.168.1.x`. In this example, the corporate LAN's internal IP address is `10.246.38.1` and the home LAN's internal IP address is `10.0.0.5`.
+
+=== Configuring a VPN on FreeBSD
+
+To begin, package:security/ipsec-tools[] must be installed from the Ports Collection. This software provides a number of applications which support the configuration.
+
+The next requirement is to create two man:gif[4] pseudo-devices which will be used to tunnel packets and allow both networks to communicate properly. As `root`, run the following commands, replacing _internal_ and _external_ with the real IP addresses of the internal and external interfaces of the two gateways:
+
+[source,bash]
+....
+# ifconfig gif0 create
+# ifconfig gif0 internal1 internal2
+# ifconfig gif0 tunnel external1 external2
+....
+
+Verify the setup on each gateway, using `ifconfig`. Here is the output from Gateway 1:
+
+[.programlisting]
+....
+gif0: flags=8051 mtu 1280
+tunnel inet 172.16.5.4 --> 192.168.1.12
+inet6 fe80::2e0:81ff:fe02:5881%gif0 prefixlen 64 scopeid 0x6
+inet 10.246.38.1 --> 10.0.0.5 netmask 0xffffff00
+....
+
+Here is the output from Gateway 2:
+
+[.programlisting]
+....
+gif0: flags=8051 mtu 1280
+tunnel inet 192.168.1.12 --> 172.16.5.4
+inet 10.0.0.5 --> 10.246.38.1 netmask 0xffffff00
+inet6 fe80::250:bfff:fe3a:c1f%gif0 prefixlen 64 scopeid 0x4
+....
+
+Once complete, both internal IP addresses should be reachable using man:ping[8]:
+
+[.programlisting]
+....
+priv-net# ping 10.0.0.5
+PING 10.0.0.5 (10.0.0.5): 56 data bytes
+64 bytes from 10.0.0.5: icmp_seq=0 ttl=64 time=42.786 ms
+64 bytes from 10.0.0.5: icmp_seq=1 ttl=64 time=19.255 ms
+64 bytes from 10.0.0.5: icmp_seq=2 ttl=64 time=20.440 ms
+64 bytes from 10.0.0.5: icmp_seq=3 ttl=64 time=21.036 ms
+--- 10.0.0.5 ping statistics ---
+4 packets transmitted, 4 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 19.255/25.879/42.786/9.782 ms
+
+corp-net# ping 10.246.38.1
+PING 10.246.38.1 (10.246.38.1): 56 data bytes
+64 bytes from 10.246.38.1: icmp_seq=0 ttl=64 time=28.106 ms
+64 bytes from 10.246.38.1: icmp_seq=1 ttl=64 time=42.917 ms
+64 bytes from 10.246.38.1: icmp_seq=2 ttl=64 time=127.525 ms
+64 bytes from 10.246.38.1: icmp_seq=3 ttl=64 time=119.896 ms
+64 bytes from 10.246.38.1: icmp_seq=4 ttl=64 time=154.524 ms
+--- 10.246.38.1 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 28.106/94.594/154.524/49.814 ms
+....
+
+As expected, both sides have the ability to send and receive ICMP packets from the privately configured addresses. Next, both gateways must be told how to route packets in order to correctly send traffic from either network. The following commands will achieve this goal:
+
+[source,bash]
+....
+corp-net# route add 10.0.0.0 10.0.0.5 255.255.255.0
+corp-net# route add net 10.0.0.0: gateway 10.0.0.5
+priv-net# route add 10.246.38.0 10.246.38.1 255.255.255.0
+priv-net# route add host 10.246.38.0: gateway 10.246.38.1
+....
+
+At this point, internal machines should be reachable from each gateway as well as from machines behind the gateways. Again, use man:ping[8] to confirm:
+
+[.programlisting]
+....
+corp-net# ping 10.0.0.8
+PING 10.0.0.8 (10.0.0.8): 56 data bytes
+64 bytes from 10.0.0.8: icmp_seq=0 ttl=63 time=92.391 ms
+64 bytes from 10.0.0.8: icmp_seq=1 ttl=63 time=21.870 ms
+64 bytes from 10.0.0.8: icmp_seq=2 ttl=63 time=198.022 ms
+64 bytes from 10.0.0.8: icmp_seq=3 ttl=63 time=22.241 ms
+64 bytes from 10.0.0.8: icmp_seq=4 ttl=63 time=174.705 ms
+--- 10.0.0.8 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 21.870/101.846/198.022/74.001 ms
+
+priv-net# ping 10.246.38.107
+PING 10.246.38.1 (10.246.38.107): 56 data bytes
+64 bytes from 10.246.38.107: icmp_seq=0 ttl=64 time=53.491 ms
+64 bytes from 10.246.38.107: icmp_seq=1 ttl=64 time=23.395 ms
+64 bytes from 10.246.38.107: icmp_seq=2 ttl=64 time=23.865 ms
+64 bytes from 10.246.38.107: icmp_seq=3 ttl=64 time=21.145 ms
+64 bytes from 10.246.38.107: icmp_seq=4 ttl=64 time=36.708 ms
+--- 10.246.38.107 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 21.145/31.721/53.491/12.179 ms
+....
+
+Setting up the tunnels is the easy part. Configuring a secure link is a more in depth process. The following configuration uses pre-shared (PSK) RSA keys. Other than the IP addresses, the [.filename]#/usr/local/etc/racoon/racoon.conf# on both gateways will be identical and look similar to:
+
+[.programlisting]
+....
+path    pre_shared_key  "/usr/local/etc/racoon/psk.txt"; #location of pre-shared key file
+log     debug;	#log verbosity setting: set to 'notify' when testing and debugging is complete
+
+padding	# options are not to be changed
+{
+        maximum_length  20;
+        randomize       off;
+        strict_check    off;
+        exclusive_tail  off;
+}
+
+timer	# timing options. change as needed
+{
+        counter         5;
+        interval        20 sec;
+        persend         1;
+#       natt_keepalive  15 sec;
+        phase1          30 sec;
+        phase2          15 sec;
+}
+
+listen	# address [port] that racoon will listen on
+{
+        isakmp          172.16.5.4 [500];
+        isakmp_natt     172.16.5.4 [4500];
+}
+
+remote  192.168.1.12 [500]
+{
+        exchange_mode   main,aggressive;
+        doi             ipsec_doi;
+        situation       identity_only;
+        my_identifier   address 172.16.5.4;
+        peers_identifier        address 192.168.1.12;
+        lifetime        time 8 hour;
+        passive         off;
+        proposal_check  obey;
+#       nat_traversal   off;
+        generate_policy off;
+
+                        proposal {
+                                encryption_algorithm    blowfish;
+                                hash_algorithm          md5;
+                                authentication_method   pre_shared_key;
+                                lifetime time           30 sec;
+                                dh_group                1;
+                        }
+}
+
+sainfo  (address 10.246.38.0/24 any address 10.0.0.0/24 any)	# address $network/$netmask $type address $network/$netmask $type ( $type being any or esp)
+{								# $network must be the two internal networks you are joining.
+        pfs_group       1;
+        lifetime        time    36000 sec;
+        encryption_algorithm    blowfish,3des;
+        authentication_algorithm        hmac_md5,hmac_sha1;
+        compression_algorithm   deflate;
+}
+....
+
+For descriptions of each available option, refer to the manual page for [.filename]#racoon.conf#.
+
+The Security Policy Database (SPD) needs to be configured so that FreeBSD and racoon are able to encrypt and decrypt network traffic between the hosts.
+
+This can be achieved with a shell script, similar to the following, on the corporate gateway. This file will be used during system initialization and should be saved as [.filename]#/usr/local/etc/racoon/setkey.conf#.
+
+[.programlisting]
+....
+flush;
+spdflush;
+# To the home network
+spdadd 10.246.38.0/24 10.0.0.0/24 any -P out ipsec esp/tunnel/172.16.5.4-192.168.1.12/use;
+spdadd 10.0.0.0/24 10.246.38.0/24 any -P in ipsec esp/tunnel/192.168.1.12-172.16.5.4/use;
+....
+
+Once in place, racoon may be started on both gateways using the following command:
+
+[source,bash]
+....
+# /usr/local/sbin/racoon -F -f /usr/local/etc/racoon/racoon.conf -l /var/log/racoon.log
+....
+
+The output should be similar to the following:
+
+[.programlisting]
+....
+corp-net# /usr/local/sbin/racoon -F -f /usr/local/etc/racoon/racoon.conf
+Foreground mode.
+2006-01-30 01:35:47: INFO: begin Identity Protection mode.
+2006-01-30 01:35:48: INFO: received Vendor ID: KAME/racoon
+2006-01-30 01:35:55: INFO: received Vendor ID: KAME/racoon
+2006-01-30 01:36:04: INFO: ISAKMP-SA established 172.16.5.4[500]-192.168.1.12[500] spi:623b9b3bd2492452:7deab82d54ff704a
+2006-01-30 01:36:05: INFO: initiate new phase 2 negotiation: 172.16.5.4[0]192.168.1.12[0]
+2006-01-30 01:36:09: INFO: IPsec-SA established: ESP/Tunnel 192.168.1.12[0]->172.16.5.4[0] spi=28496098(0x1b2d0e2)
+2006-01-30 01:36:09: INFO: IPsec-SA established: ESP/Tunnel 172.16.5.4[0]->192.168.1.12[0] spi=47784998(0x2d92426)
+2006-01-30 01:36:13: INFO: respond new phase 2 negotiation: 172.16.5.4[0]192.168.1.12[0]
+2006-01-30 01:36:18: INFO: IPsec-SA established: ESP/Tunnel 192.168.1.12[0]->172.16.5.4[0] spi=124397467(0x76a279b)
+2006-01-30 01:36:18: INFO: IPsec-SA established: ESP/Tunnel 172.16.5.4[0]->192.168.1.12[0] spi=175852902(0xa7b4d66)
+....
+
+To ensure the tunnel is working properly, switch to another console and use man:tcpdump[1] to view network traffic using the following command. Replace `em0` with the network interface card as required:
+
+[source,bash]
+....
+# tcpdump -i em0 host 172.16.5.4 and dst 192.168.1.12
+....
+
+Data similar to the following should appear on the console. If not, there is an issue and debugging the returned data will be required.
+
+[.programlisting]
+....
+01:47:32.021683 IP corporatenetwork.com > 192.168.1.12.privatenetwork.com: ESP(spi=0x02acbf9f,seq=0xa)
+01:47:33.022442 IP corporatenetwork.com > 192.168.1.12.privatenetwork.com: ESP(spi=0x02acbf9f,seq=0xb)
+01:47:34.024218 IP corporatenetwork.com > 192.168.1.12.privatenetwork.com: ESP(spi=0x02acbf9f,seq=0xc)
+....
+
+At this point, both networks should be available and seem to be part of the same network. Most likely both networks are protected by a firewall. To allow traffic to flow between them, rules need to be added to pass packets. For the man:ipfw[8] firewall, add the following lines to the firewall configuration file:
+
+[.programlisting]
+....
+ipfw add 00201 allow log esp from any to any
+ipfw add 00202 allow log ah from any to any
+ipfw add 00203 allow log ipencap from any to any
+ipfw add 00204 allow log udp from any 500 to any
+....
+
+[NOTE]
+====
+The rule numbers may need to be altered depending on the current host configuration.
+====
+
+For users of man:pf[4] or man:ipf[8], the following rules should do the trick:
+
+[.programlisting]
+....
+pass in quick proto esp from any to any
+pass in quick proto ah from any to any
+pass in quick proto ipencap from any to any
+pass in quick proto udp from any port = 500 to any port = 500
+pass in quick on gif0 from any to any
+pass out quick proto esp from any to any
+pass out quick proto ah from any to any
+pass out quick proto ipencap from any to any
+pass out quick proto udp from any port = 500 to any port = 500
+pass out quick on gif0 from any to any
+....
+
+Finally, to allow the machine to start support for the VPN during system initialization, add the following lines to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ipsec_enable="YES"
+ipsec_program="/usr/local/sbin/setkey"
+ipsec_file="/usr/local/etc/racoon/setkey.conf" # allows setting up spd policies on boot
+racoon_enable="yes"
+....
+
+[[openssh]]
+== OpenSSH
+
+OpenSSH is a set of network connectivity tools used to provide secure access to remote machines. Additionally, TCP/IP connections can be tunneled or forwarded securely through SSH connections. OpenSSH encrypts all traffic to effectively eliminate eavesdropping, connection hijacking, and other network-level attacks.
+
+OpenSSH is maintained by the OpenBSD project and is installed by default in FreeBSD. It is compatible with both SSH version 1 and 2 protocols.
+
+When data is sent over the network in an unencrypted form, network sniffers anywhere in between the client and server can steal user/password information or data transferred during the session. OpenSSH offers a variety of authentication and encryption methods to prevent this from happening. More information about OpenSSH is available from http://www.openssh.com/[http://www.openssh.com/].
+
+This section provides an overview of the built-in client utilities to securely access other systems and securely transfer files from a FreeBSD system. It then describes how to configure a SSH server on a FreeBSD system. More information is available in the man pages mentioned in this chapter.
+
+=== Using the SSH Client Utilities
+
+To log into a SSH server, use `ssh` and specify a username that exists on that server and the IP address or hostname of the server. If this is the first time a connection has been made to the specified server, the user will be prompted to first verify the server's fingerprint:
+
+[source,bash]
+....
+# ssh user@example.com
+The authenticity of host 'example.com (10.0.0.1)' can't be established.
+ECDSA key fingerprint is 25:cc:73:b5:b3:96:75:3d:56:19:49:d2:5c:1f:91:3b.
+Are you sure you want to continue connecting (yes/no)? yes
+Permanently added 'example.com' (ECDSA) to the list of known hosts.
+Password for user@example.com: user_password
+....
+
+SSH utilizes a key fingerprint system to verify the authenticity of the server when the client connects. When the user accepts the key's fingerprint by typing `yes` when connecting for the first time, a copy of the key is saved to [.filename]#.ssh/known_hosts# in the user's home directory. Future attempts to login are verified against the saved key and `ssh` will display an alert if the server's key does not match the saved key. If this occurs, the user should first verify why the key has changed before continuing with the connection.
+
+By default, recent versions of OpenSSH only accept SSHv2 connections. By default, the client will use version 2 if possible and will fall back to version 1 if the server does not support version 2. To force `ssh` to only use the specified protocol, include `-1` or `-2`. Additional options are described in man:ssh[1].
+
+Use man:scp[1] to securely copy a file to or from a remote machine. This example copies [.filename]#COPYRIGHT# on the remote system to a file of the same name in the current directory of the local system:
+
+[source,bash]
+....
+# scp user@example.com:/COPYRIGHT COPYRIGHT
+Password for user@example.com: *******
+COPYRIGHT            100% |*****************************|  4735
+00:00
+#
+....
+
+Since the fingerprint was already verified for this host, the server's key is automatically checked before prompting for the user's password.
+
+The arguments passed to `scp` are similar to `cp`. The file or files to copy is the first argument and the destination to copy to is the second. Since the file is fetched over the network, one or more of the file arguments takes the form `user@host:<path_to_remote_file>`. Be aware when copying directories recursively that `scp` uses `-r`, whereas `cp` uses `-R`.
+
+To open an interactive session for copying files, use `sftp`. Refer to man:sftp[1] for a list of available commands while in an `sftp` session.
+
+[[security-ssh-keygen]]
+==== Key-based Authentication
+
+Instead of using passwords, a client can be configured to connect to the remote machine using keys. To generate RSA authentication keys, use `ssh-keygen`. To generate a public and private key pair, specify the type of key and follow the prompts. It is recommended to protect the keys with a memorable, but hard to guess passphrase.
+
+[source,bash]
+....
+% ssh-keygen -t rsa
+Generating public/private rsa key pair.
+Enter file in which to save the key (/home/user/.ssh/id_rsa):
+Enter passphrase (empty for no passphrase):  <.>
+Enter same passphrase again:                 <.>
+Your identification has been saved in /home/user/.ssh/id_rsa.
+Your public key has been saved in /home/user/.ssh/id_rsa.pub.
+The key fingerprint is:
+SHA256:54Xm9Uvtv6H4NOo6yjP/YCfODryvUU7yWHzMqeXwhq8 user@host.example.com
+The key's randomart image is:
++---[RSA 2048]----+
+|                 |
+|                 |
+|                 |
+|        . o..    |
+|       .S*+*o    |
+|      . O=Oo . . |
+|       = Oo= oo..|
+|      .oB.* +.oo.|
+|       =OE**.o..=|
++----[SHA256]-----+
+....
+
+<.> Type a passphrase here. It can contain spaces and symbols.
+<.> Retype the passphrase to verify it.
+
+The private key is stored in [.filename]#~/.ssh/id_rsa# and the public key is stored in [.filename]#~/.ssh/id_rsa.pub#. The _public_ key must be copied to [.filename]#~/.ssh/authorized_keys# on the remote machine for key-based authentication to work.
+
+[WARNING]
+====
+
+Many users believe that keys are secure by design and will use a key without a passphrase. This is _dangerous_ behavior. An administrator can verify that a key pair is protected by a passphrase by viewing the private key manually. If the private key file contains the word `ENCRYPTED`, the key owner is using a passphrase. In addition, to better secure end users, `from` may be placed in the public key file. For example, adding `from="192.168.10.5"` in front of the `ssh-rsa` prefix will only allow that specific user to log in from that IP address.
+====
+
+The options and files vary with different versions of OpenSSH. To avoid problems, consult man:ssh-keygen[1].
+
+If a passphrase is used, the user is prompted for the passphrase each time a connection is made to the server. To load SSH keys into memory and remove the need to type the passphrase each time, use man:ssh-agent[1] and man:ssh-add[1].
+
+Authentication is handled by `ssh-agent`, using the private keys that are loaded into it. `ssh-agent` can be used to launch another application like a shell or a window manager.
+
+To use `ssh-agent` in a shell, start it with a shell as an argument. Add the identity by running `ssh-add` and entering the passphrase for the private key. The user will then be able to `ssh` to any host that has the corresponding public key installed. For example:
+
+[source,bash]
+....
+% ssh-agent csh
+% ssh-add
+Enter passphrase for key '/usr/home/user/.ssh/id_rsa':  <.>
+Identity added: /usr/home/user/.ssh/id_rsa (/usr/home/user/.ssh/id_rsa)
+%
+....
+
+<.> Enter the passphrase for the key.
+
+To use `ssh-agent` in Xorg, add an entry for it in [.filename]#~/.xinitrc#. This provides the `ssh-agent` services to all programs launched in Xorg. An example [.filename]#~/.xinitrc# might look like this:
+
+[.programlisting]
+....
+exec ssh-agent startxfce4
+....
+
+This launches `ssh-agent`, which in turn launches XFCE, every time Xorg starts. Once Xorg has been restarted so that the changes can take effect, run `ssh-add` to load all of the SSH keys.
+
+[[security-ssh-tunneling]]
+==== SSH Tunneling
+
+OpenSSH has the ability to create a tunnel to encapsulate another protocol in an encrypted session.
+
+The following command tells `ssh` to create a tunnel for telnet:
+
+[source,bash]
+....
+% ssh -2 -N -f -L 5023:localhost:23 user@foo.example.com
+%
+....
+
+This example uses the following options:
+
+`-2`::
+Forces `ssh` to use version 2 to connect to the server.
+
+`-N`::
+Indicates no command, or tunnel only. If omitted, `ssh` initiates a normal session.
+
+`-f`::
+Forces `ssh` to run in the background.
+
+`-L`::
+Indicates a local tunnel in _localport:remotehost:remoteport_ format.
+
+`user@foo.example.com`::
+The login name to use on the specified remote SSH server.
+
+An SSH tunnel works by creating a listen socket on `localhost` on the specified `localport`. It then forwards any connections received on `localport` via the SSH connection to the specified `remotehost:remoteport`. In the example, port `5023` on the client is forwarded to port `23` on the remote machine. Since port 23 is used by telnet, this creates an encrypted telnet session through an SSH tunnel.
+
+This method can be used to wrap any number of insecure TCP protocols such as SMTP, POP3, and FTP, as seen in the following examples.
+
+.Create a Secure Tunnel for SMTP
+[example]
+====
+
+[source,bash]
+....
+% ssh -2 -N -f -L 5025:localhost:25 user@mailserver.example.com
+user@mailserver.example.com's password: *****
+% telnet localhost 5025
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+220 mailserver.example.com ESMTP
+....
+This can be used in conjunction with `ssh-keygen` and additional user accounts to create a more seamless SSH tunneling environment. Keys can be used in place of typing a password, and the tunnels can be run as a separate user.
+====
+
+.Secure Access of a POP3 Server
+[example]
+====
+
+In this example, there is an SSH server that accepts connections from the outside. On the same network resides a mail server running a POP3 server. To check email in a secure manner, create an SSH connection to the SSH server and tunnel through to the mail server:
+
+[source,bash]
+....
+% ssh -2 -N -f -L 2110:mail.example.com:110 user@ssh-server.example.com
+user@ssh-server.example.com's password: ******
+....
+
+Once the tunnel is up and running, point the email client to send POP3 requests to `localhost` on port 2110. This connection will be forwarded securely across the tunnel to `mail.example.com`.
+====
+
+.Bypassing a Firewall
+[example]
+====
+
+Some firewalls filter both incoming and outgoing connections. For example, a firewall might limit access from remote machines to ports 22 and 80 to only allow SSH and web surfing. This prevents access to any other service which uses a port other than 22 or 80.
+
+The solution is to create an SSH connection to a machine outside of the network's firewall and use it to tunnel to the desired service:
+
+[source,bash]
+....
+% ssh -2 -N -f -L 8888:music.example.com:8000 user@unfirewalled-system.example.org
+user@unfirewalled-system.example.org's password: *******
+....
+
+In this example, a streaming Ogg Vorbis client can now be pointed to `localhost` port 8888, which will be forwarded over to `music.example.com` on port 8000, successfully bypassing the firewall.
+====
+
+=== Enabling the SSH Server
+
+In addition to providing built-in SSH client utilities, a FreeBSD system can be configured as an SSH server, accepting connections from other SSH clients.
+
+To see if sshd is operating, use the man:service[8] command:
+
+[source,bash]
+....
+# service sshd status
+....
+
+If the service is not running, add the following line to [.filename]#/etc/rc.conf#.
+
+[.programlisting]
+....
+sshd_enable="YES"
+....
+
+This will start sshd, the daemon program for OpenSSH, the next time the system boots. To start it now:
+
+[source,bash]
+....
+# service sshd start
+....
+
+The first time sshd starts on a FreeBSD system, the system's host keys will be automatically created and the fingerprint will be displayed on the console. Provide users with the fingerprint so that they can verify it the first time they connect to the server.
+
+Refer to man:sshd[8] for the list of available options when starting sshd and a more complete discussion about authentication, the login process, and the various configuration files.
+
+At this point, the sshd should be available to all users with a username and password on the system.
+
+=== SSH Server Security
+
+While sshd is the most widely used remote administration facility for FreeBSD, brute force and drive by attacks are common to any system exposed to public networks. Several additional parameters are available to prevent the success of these attacks and will be described in this section.
+
+It is a good idea to limit which users can log into the SSH server and from where using the `AllowUsers` keyword in the OpenSSH server configuration file. For example, to only allow `root` to log in from `192.168.1.32`, add this line to [.filename]#/etc/ssh/sshd_config#:
+
+[.programlisting]
+....
+AllowUsers root@192.168.1.32
+....
+
+To allow `admin` to log in from anywhere, list that user without specifying an IP address:
+
+[.programlisting]
+....
+AllowUsers admin
+....
+
+Multiple users should be listed on the same line, like so:
+
+[.programlisting]
+....
+AllowUsers root@192.168.1.32 admin
+....
+
+After making changes to [.filename]#/etc/ssh/sshd_config#, tell sshd to reload its configuration file by running:
+
+[source,bash]
+....
+# service sshd reload
+....
+
+[NOTE]
+====
+When this keyword is used, it is important to list each user that needs to log into this machine. Any user that is not specified in that line will be locked out. Also, the keywords used in the OpenSSH server configuration file are case-sensitive. If the keyword is not spelled correctly, including its case, it will be ignored. Always test changes to this file to make sure that the edits are working as expected. Refer to man:sshd_config[5] to verify the spelling and use of the available keywords.
+====
+
+In addition, users may be forced to use two factor authentication via the use of a public and private key. When required, the user may generate a key pair through the use of man:ssh-keygen[1] and send the administrator the public key. This key file will be placed in the [.filename]#authorized_keys# as described above in the client section. To force the users to use keys only, the following option may be configured:
+
+[.programlisting]
+....
+AuthenticationMethods publickey
+....
+
+[TIP]
+====
+
+Do not confuse [.filename]#/etc/ssh/sshd_config# with [.filename]#/etc/ssh/ssh_config# (note the extra `d` in the first filename). The first file configures the server and the second file configures the client. Refer to man:ssh_config[5] for a listing of the available client settings.
+====
+
+[[fs-acl]]
+== Access Control Lists
+
+Access Control Lists (ACLs) extend the standard UNIX(R) permission model in a POSIX(R).1e compatible way. This permits an administrator to take advantage of a more fine-grained permissions model.
+
+The FreeBSD [.filename]#GENERIC# kernel provides ACL support for UFS file systems. Users who prefer to compile a custom kernel must include the following option in their custom kernel configuration file:
+
+[.programlisting]
+....
+options UFS_ACL
+....
+
+If this option is not compiled in, a warning message will be displayed when attempting to mount a file system with ACL support. ACLs rely on extended attributes which are natively supported in UFS2.
+
+This chapter describes how to enable ACL support and provides some usage examples.
+
+=== Enabling ACL Support
+
+ACLs are enabled by the mount-time administrative flag, `acls`, which may be added to [.filename]#/etc/fstab#. The mount-time flag can also be automatically set in a persistent manner using man:tunefs[8] to modify a superblock ACLs flag in the file system header. In general, it is preferred to use the superblock flag for several reasons:
+
+* The superblock flag cannot be changed by a remount using `mount -u` as it requires a complete `umount` and fresh `mount`. This means that ACLs cannot be enabled on the root file system after boot. It also means that ACL support on a file system cannot be changed while the system is in use.
+* Setting the superblock flag causes the file system to always be mounted with ACLs enabled, even if there is not an [.filename]#fstab# entry or if the devices re-order. This prevents accidental mounting of the file system without ACL support.
+
+[NOTE]
+====
+It is desirable to discourage accidental mounting without ACLs enabled because nasty things can happen if ACLs are enabled, then disabled, then re-enabled without flushing the extended attributes. In general, once ACLs are enabled on a file system, they should not be disabled, as the resulting file protections may not be compatible with those intended by the users of the system, and re-enabling ACLs may re-attach the previous ACLs to files that have since had their permissions changed, resulting in unpredictable behavior.
+====
+
+File systems with ACLs enabled will show a plus (`+`) sign in their permission settings:
+
+[.programlisting]
+....
+drwx------  2 robert  robert  512 Dec 27 11:54 private
+drwxrwx---+ 2 robert  robert  512 Dec 23 10:57 directory1
+drwxrwx---+ 2 robert  robert  512 Dec 22 10:20 directory2
+drwxrwx---+ 2 robert  robert  512 Dec 27 11:57 directory3
+drwxr-xr-x  2 robert  robert  512 Nov 10 11:54 public_html
+....
+
+In this example, [.filename]#directory1#, [.filename]#directory2#, and [.filename]#directory3# are all taking advantage of ACLs, whereas [.filename]#public_html# is not.
+
+=== Using ACLs
+
+File system ACLs can be viewed using `getfacl`. For instance, to view the ACL settings on [.filename]#test#:
+
+[source,bash]
+....
+% getfacl test
+	#file:test
+	#owner:1001
+	#group:1001
+	user::rw-
+	group::r--
+	other::r--
+....
+
+To change the ACL settings on this file, use `setfacl`. To remove all of the currently defined ACLs from a file or file system, include `-k`. However, the preferred method is to use `-b` as it leaves the basic fields required for ACLs to work.
+
+[source,bash]
+....
+% setfacl -k test
+....
+
+To modify the default ACL entries, use `-m`:
+
+[source,bash]
+....
+% setfacl -m u:trhodes:rwx,group:web:r--,o::--- test
+....
+
+In this example, there were no pre-defined entries, as they were removed by the previous command. This command restores the default options and assigns the options listed. If a user or group is added which does not exist on the system, an `Invalid argument` error will be displayed.
+
+Refer to man:getfacl[1] and man:setfacl[1] for more information about the options available for these commands.
+
+[[security-pkg]]
+== Monitoring Third Party Security Issues
+
+In recent years, the security world has made many improvements to how vulnerability assessment is handled. The threat of system intrusion increases as third party utilities are installed and configured for virtually any operating system available today.
+
+Vulnerability assessment is a key factor in security. While FreeBSD releases advisories for the base system, doing so for every third party utility is beyond the FreeBSD Project's capability. There is a way to mitigate third party vulnerabilities and warn administrators of known security issues. A FreeBSD add on utility known as pkg includes options explicitly for this purpose.
+
+pkg polls a database for security issues. The database is updated and maintained by the FreeBSD Security Team and ports developers.
+
+Please refer to crossref:ports[pkgng-intro,instructions] for installing pkg.
+
+Installation provides man:periodic[8] configuration files for maintaining the pkg audit database, and provides a programmatic method of keeping it updated. This functionality is enabled if `daily_status_security_pkgaudit_enable` is set to `YES` in man:periodic.conf[5]. Ensure that daily security run emails, which are sent to ``root``'s email account, are being read.
+
+After installation, and to audit third party utilities as part of the Ports Collection at any time, an administrator may choose to update the database and view known vulnerabilities of installed packages by invoking:
+
+[source,bash]
+....
+# pkg audit -F
+....
+
+pkg displays messages any published vulnerabilities in installed packages:
+
+[.programlisting]
+....
+Affected package: cups-base-1.1.22.0_1
+Type of problem: cups-base -- HPGL buffer overflow vulnerability.
+Reference: <https://www.FreeBSD.org/ports/portaudit/40a3bca2-6809-11d9-a9e7-0001020eed82.html>
+
+1 problem(s) in your installed packages found.
+
+You are advised to update or deinstall the affected package(s) immediately.
+....
+
+By pointing a web browser to the displayed URL, an administrator may obtain more information about the vulnerability. This will include the versions affected, by FreeBSD port version, along with other web sites which may contain security advisories.
+
+pkg is a powerful utility and is extremely useful when coupled with package:ports-mgmt/portmaster[].
+
+[[security-advisories]]
+== FreeBSD Security Advisories
+
+Like many producers of quality operating systems, the FreeBSD Project has a security team which is responsible for determining the End-of-Life (EoL) date for each FreeBSD release and to provide security updates for supported releases which have not yet reached their EoL. More information about the FreeBSD security team and the supported releases is available on the link:https://www.FreeBSD.org/security[FreeBSD security page].
+
+One task of the security team is to respond to reported security vulnerabilities in the FreeBSD operating system. Once a vulnerability is confirmed, the security team verifies the steps necessary to fix the vulnerability and updates the source code with the fix. It then publishes the details as a "Security Advisory". Security advisories are published on the link:https://www.FreeBSD.org/security/advisories/[FreeBSD website] and mailed to the {freebsd-security-notifications}, {freebsd-security}, and {freebsd-announce} mailing lists.
+
+This section describes the format of a FreeBSD security advisory.
+
+=== Format of a Security Advisory
+
+Here is an example of a FreeBSD security advisory:
+
+[.programlisting]
+....
+=============================================================================
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+=============================================================================
+FreeBSD-SA-14:04.bind                                       Security Advisory
+                                                          The FreeBSD Project
+
+Topic:          BIND remote denial of service vulnerability
+
+Category:       contrib
+Module:         bind
+Announced:      2014-01-14
+Credits:        ISC
+Affects:        FreeBSD 8.x and FreeBSD 9.x
+Corrected:      2014-01-14 19:38:37 UTC (stable/9, 9.2-STABLE)
+                2014-01-14 19:42:28 UTC (releng/9.2, 9.2-RELEASE-p3)
+                2014-01-14 19:42:28 UTC (releng/9.1, 9.1-RELEASE-p10)
+                2014-01-14 19:38:37 UTC (stable/8, 8.4-STABLE)
+                2014-01-14 19:42:28 UTC (releng/8.4, 8.4-RELEASE-p7)
+                2014-01-14 19:42:28 UTC (releng/8.3, 8.3-RELEASE-p14)
+CVE Name:       CVE-2014-0591
+
+For general information regarding FreeBSD Security Advisories,
+including descriptions of the fields above, security branches, and the
+following sections, please visit <URL:http://security.FreeBSD.org/>.
+
+I.   Background
+
+BIND 9 is an implementation of the Domain Name System (DNS) protocols.
+The named(8) daemon is an Internet Domain Name Server.
+
+II.  Problem Description
+
+Because of a defect in handling queries for NSEC3-signed zones, BIND can
+crash with an "INSIST" failure in name.c when processing queries possessing
+certain properties.  This issue only affects authoritative nameservers with
+at least one NSEC3-signed zone.  Recursive-only servers are not at risk.
+
+III. Impact
+
+An attacker who can send a specially crafted query could cause named(8)
+to crash, resulting in a denial of service.
+
+IV.  Workaround
+
+No workaround is available, but systems not running authoritative DNS service
+with at least one NSEC3-signed zone using named(8) are not vulnerable.
+
+V.   Solution
+
+Perform one of the following:
+
+1) Upgrade your vulnerable system to a supported FreeBSD stable or
+release / security branch (releng) dated after the correction date.
+
+2) To update your vulnerable system via a source code patch:
+
+The following patches have been verified to apply to the applicable
+FreeBSD release branches.
+
+a) Download the relevant patch from the location below, and verify the
+detached PGP signature using your PGP utility.
+
+[FreeBSD 8.3, 8.4, 9.1, 9.2-RELEASE and 8.4-STABLE]
+# fetch http://security.FreeBSD.org/patches/SA-14:04/bind-release.patch
+# fetch http://security.FreeBSD.org/patches/SA-14:04/bind-release.patch.asc
+# gpg --verify bind-release.patch.asc
+
+[FreeBSD 9.2-STABLE]
+# fetch http://security.FreeBSD.org/patches/SA-14:04/bind-stable-9.patch
+# fetch http://security.FreeBSD.org/patches/SA-14:04/bind-stable-9.patch.asc
+# gpg --verify bind-stable-9.patch.asc
+
+b) Execute the following commands as root:
+
+# cd /usr/src
+# patch < /path/to/patch
+
+Recompile the operating system using buildworld and installworld as
+described in <URL:https://www.FreeBSD.org/handbook/makeworld.html>.
+
+Restart the applicable daemons, or reboot the system.
+
+3) To update your vulnerable system via a binary patch:
+
+Systems running a RELEASE version of FreeBSD on the i386 or amd64
+platforms can be updated via the freebsd-update(8) utility:
+
+# freebsd-update fetch
+# freebsd-update install
+
+VI.  Correction details
+
+The following list contains the correction revision numbers for each
+affected branch.
+
+Branch/path                                                      Revision
+- -------------------------------------------------------------------------
+stable/8/                                                         r260646
+releng/8.3/                                                       r260647
+releng/8.4/                                                       r260647
+stable/9/                                                         r260646
+releng/9.1/                                                       r260647
+releng/9.2/                                                       r260647
+- -------------------------------------------------------------------------
+
+To see which files were modified by a particular revision, run the
+following command, replacing NNNNNN with the revision number, on a
+machine with Subversion installed:
+
+# svn diff -cNNNNNN --summarize svn://svn.freebsd.org/base
+
+Or visit the following URL, replacing NNNNNN with the revision number:
+
+<URL:https://svnweb.freebsd.org/base?view=revision&revision=NNNNNN>
+
+VII. References
+
+<URL:https://kb.isc.org/article/AA-01078>
+
+<URL:http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2014-0591>
+
+The latest revision of this advisory is available at
+<URL:http://security.FreeBSD.org/advisories/FreeBSD-SA-14:04.bind.asc>
+-----BEGIN PGP SIGNATURE-----
+
+iQIcBAEBCgAGBQJS1ZTYAAoJEO1n7NZdz2rnOvQP/2/68/s9Cu35PmqNtSZVVxVG
+ZSQP5EGWx/lramNf9566iKxOrLRMq/h3XWcC4goVd+gZFrvITJSVOWSa7ntDQ7TO
+XcinfRZ/iyiJbs/Rg2wLHc/t5oVSyeouyccqODYFbOwOlk35JjOTMUG1YcX+Zasg
+ax8RV+7Zt1QSBkMlOz/myBLXUjlTZ3Xg2FXVsfFQW5/g2CjuHpRSFx1bVNX6ysoG
+9DT58EQcYxIS8WfkHRbbXKh9I1nSfZ7/Hky/kTafRdRMrjAgbqFgHkYTYsBZeav5
+fYWKGQRJulYfeZQ90yMTvlpF42DjCC3uJYamJnwDIu8OhS1WRBI8fQfr9DRzmRua
+OK3BK9hUiScDZOJB6OqeVzUTfe7MAA4/UwrDtTYQ+PqAenv1PK8DZqwXyxA9ThHb
+zKO3OwuKOVHJnKvpOcr+eNwo7jbnHlis0oBksj/mrq2P9m2ueF9gzCiq5Ri5Syag
+Wssb1HUoMGwqU0roS8+pRpNC8YgsWpsttvUWSZ8u6Vj/FLeHpiV3mYXPVMaKRhVm
+067BA2uj4Th1JKtGleox+Em0R7OFbCc/9aWC67wiqI6KRyit9pYiF3npph+7D5Eq
+7zPsUdDd+qc+UTiLp3liCRp5w6484wWdhZO6wRtmUgxGjNkxFoNnX8CitzF8AaqO
+UWWemqWuz3lAZuORQ9KX
+=OQzQ
+-----END PGP SIGNATURE-----
+....
+
+Every security advisory uses the following format:
+
+* Each security advisory is signed by the PGP key of the Security Officer. The public key for the Security Officer can be verified at crossref:pgpkeys[pgpkeys,OpenPGP Keys].
+* The name of the security advisory always begins with `FreeBSD-SA-` (for FreeBSD Security Advisory), followed by the year in two digit format (`14:`), followed by the advisory number for that year (`04.`), followed by the name of the affected application or subsystem (`bind`). The advisory shown here is the fourth advisory for 2014 and it affects BIND.
+* The `Topic` field summarizes the vulnerability.
+* The `Category` refers to the affected part of the system which may be one of `core`, `contrib`, or `ports`. The `core` category means that the vulnerability affects a core component of the FreeBSD operating system. The `contrib` category means that the vulnerability affects software included with FreeBSD, such as BIND. The `ports` category indicates that the vulnerability affects software available through the Ports Collection.
+* The `Module` field refers to the component location. In this example, the `bind` module is affected; therefore, this vulnerability affects an application installed with the operating system.
+* The `Announced` field reflects the date the security advisory was published. This means that the security team has verified that the problem exists and that a patch has been committed to the FreeBSD source code repository.
+* The `Credits` field gives credit to the individual or organization who noticed the vulnerability and reported it.
+* The `Affects` field explains which releases of FreeBSD are affected by this vulnerability.
+* The `Corrected` field indicates the date, time, time offset, and releases that were corrected. The section in parentheses shows each branch for which the fix has been merged, and the version number of the corresponding release from that branch. The release identifier itself includes the version number and, if appropriate, the patch level. The patch level is the letter `p` followed by a number, indicating the sequence number of the patch, allowing users to track which patches have already been applied to the system.
+* The `CVE Name` field lists the advisory number, if one exists, in the public http://cve.mitre.org[cve.mitre.org] security vulnerabilities database.
+* The `Background` field provides a description of the affected module.
+* The `Problem Description` field explains the vulnerability. This can include information about the flawed code and how the utility could be maliciously used.
+* The `Impact` field describes what type of impact the problem could have on a system.
+* The `Workaround` field indicates if a workaround is available to system administrators who cannot immediately patch the system .
+* The `Solution` field provides the instructions for patching the affected system. This is a step by step tested and verified method for getting a system patched and working securely.
+* The `Correction Details` field displays each affected Subversion branch with the revision number that contains the corrected code.
+* The `References` field offers sources of additional information regarding the vulnerability.
+
+[[security-accounting]]
+== Process Accounting
+
+Process accounting is a security method in which an administrator may keep track of system resources used and their allocation among users, provide for system monitoring, and minimally track a user's commands.
+
+Process accounting has both positive and negative points. One of the positives is that an intrusion may be narrowed down to the point of entry. A negative is the amount of logs generated by process accounting, and the disk space they may require. This section walks an administrator through the basics of process accounting.
+
+[NOTE]
+====
+If more fine-grained accounting is needed, refer to crossref:audit[audit,Security Event Auditing].
+====
+
+=== Enabling and Utilizing Process Accounting
+
+Before using process accounting, it must be enabled using the following commands:
+
+[source,bash]
+....
+# sysrc accounting_enable=yes
+# service accounting start
+....
+
+The accounting information is stored in files located in [.filename]#/var/account#, which is automatically created, if necessary, the first time the accounting service starts. These files contain sensitive information, including all the commands issued by all users. Write access to the files is limited to `root`, and read access is limited to `root` and members of the `wheel` group. To also prevent members of `wheel` from reading the files, change the mode of the [.filename]#/var/account# directory to allow access only by `root`.
+
+Once enabled, accounting will begin to track information such as CPU statistics and executed commands. All accounting logs are in a non-human readable format which can be viewed using `sa`. If issued without any options, `sa` prints information relating to the number of per-user calls, the total elapsed time in minutes, total CPU and user time in minutes, and the average number of I/O operations. Refer to man:sa[8] for the list of available options which control the output.
+
+To display the commands issued by users, use `lastcomm`. For example, this command prints out all usage of `ls` by `trhodes` on the `ttyp1` terminal:
+
+[source,bash]
+....
+# lastcomm ls trhodes ttyp1
+....
+
+Many other useful options exist and are explained in man:lastcomm[1], man:acct[5], and man:sa[8].
+
+[[security-resourcelimits]]
+== Resource Limits
+
+FreeBSD provides several methods for an administrator to limit the amount of system resources an individual may use. Disk quotas limit the amount of disk space available to users. Quotas are discussed in crossref:disks[quotas,"Disk Quotas"].
+
+Limits to other resources, such as CPU and memory, can be set using either a flat file or a command to configure a resource limits database. The traditional method defines login classes by editing [.filename]#/etc/login.conf#. While this method is still supported, any changes require a multi-step process of editing this file, rebuilding the resource database, making necessary changes to [.filename]#/etc/master.passwd#, and rebuilding the password database. This can become time consuming, depending upon the number of users to configure.
+
+`rctl` can be used to provide a more fine-grained method for controlling resource limits. This command supports more than user limits as it can also be used to set resource constraints on processes and jails.
+
+This section demonstrates both methods for controlling resources, beginning with the traditional method.
+
+[[users-limiting]]
+=== Configuring Login Classes
+
+In the traditional method, login classes and the resource limits to apply to a login class are defined in [.filename]#/etc/login.conf#. Each user account can be assigned to a login class, where `default` is the default login class. Each login class has a set of login capabilities associated with it. A login capability is a `_name_=_value_` pair, where _name_ is a well-known identifier and _value_ is an arbitrary string which is processed accordingly depending on the _name_.
+
+[NOTE]
+====
+Whenever [.filename]#/etc/login.conf# is edited, the [.filename]#/etc/login.conf.db# must be updated by executing the following command:
+
+[source,bash]
+....
+# cap_mkdb /etc/login.conf
+....
+
+====
+
+Resource limits differ from the default login capabilities in two ways. First, for every limit, there is a _soft_ and _hard_ limit. A soft limit may be adjusted by the user or application, but may not be set higher than the hard limit. The hard limit may be lowered by the user, but can only be raised by the superuser. Second, most resource limits apply per process to a specific user.
+
+<<resource-limits>> lists the most commonly used resource limits. All of the available resource limits and capabilities are described in detail in man:login.conf[5].
+[[resource-limits]]
+.Login Class Resource Limits
+[cols="20%,80%", frame="none", options="header"]
+|===
+| Resource Limit
+| Description
+
+|coredumpsize
+|The limit on the size of a core file generated by a program is subordinate to other limits on disk usage, such as `filesize` or disk quotas. This limit is often used as a less severe method of controlling disk space consumption. Since users do not generate core files and often do not delete them, this setting may save them from running out of disk space should a large program crash.
+
+|cputime
+|The maximum amount of CPU time a user's process may consume. Offending processes will be killed by the kernel. This is a limit on CPU _time_ consumed, not the percentage of the CPU as displayed in some of the fields generated by `top` and `ps`.
+
+|filesize
+|The maximum size of a file the user may own. Unlike disk quotas (crossref:disks[quotas,"Disk Quotas"]), this limit is enforced on individual files, not the set of all files a user owns.
+
+|maxproc
+|The maximum number of foreground and background processes a user can run. This limit may not be larger than the system limit specified by `kern.maxproc`. Setting this limit too small may hinder a user's productivity as some tasks, such as compiling a large program, start lots of processes.
+
+|memorylocked
+|The maximum amount of memory a process may request to be locked into main memory using man:mlock[2]. Some system-critical programs, such as man:amd[8], lock into main memory so that if the system begins to swap, they do not contribute to disk thrashing.
+
+|memoryuse
+|The maximum amount of memory a process may consume at any given time. It includes both core memory and swap usage. This is not a catch-all limit for restricting memory consumption, but is a good start.
+
+|openfiles
+|The maximum number of files a process may have open. In FreeBSD, files are used to represent sockets and IPC channels, so be careful not to set this too low. The system-wide limit for this is defined by `kern.maxfiles`.
+
+|sbsize
+|The limit on the amount of network memory a user may consume. This can be generally used to limit network communications.
+
+|stacksize
+|The maximum size of a process stack. This alone is not sufficient to limit the amount of memory a program may use, so it should be used in conjunction with other limits.
+|===
+
+There are a few other things to remember when setting resource limits:
+
+* Processes started at system startup by [.filename]#/etc/rc# are assigned to the `daemon` login class.
+* Although the default [.filename]#/etc/login.conf# is a good source of reasonable values for most limits, they may not be appropriate for every system. Setting a limit too high may open the system up to abuse, while setting it too low may put a strain on productivity.
+* Xorg takes a lot of resources and encourages users to run more programs simultaneously.
+* Many limits apply to individual processes, not the user as a whole. For example, setting `openfiles` to `50` means that each process the user runs may open up to `50` files. The total amount of files a user may open is the value of `openfiles` multiplied by the value of `maxproc`. This also applies to memory consumption.
+
+For further information on resource limits and login classes and capabilities in general, refer to man:cap.mkdb[1], man:getrlimit[2], and man:login.conf[5].
+
+=== Enabling and Configuring Resource Limits
+
+The `kern.racct.enable` tunable must be set to a non-zero value. Custom kernels require specific configuration:
+
+[.programlisting]
+....
+options         RACCT
+options         RCTL
+....
+
+Once the system has rebooted into the new kernel, `rctl` may be used to set rules for the system.
+
+Rule syntax is controlled through the use of a subject, subject-id, resource, and action, as seen in this example rule:
+
+[.programlisting]
+....
+user:trhodes:maxproc:deny=10/user
+....
+
+In this rule, the subject is `user`, the subject-id is `trhodes`, the resource, `maxproc`, is the maximum number of processes, and the action is `deny`, which blocks any new processes from being created. This means that the user, `trhodes`, will be constrained to no greater than `10` processes. Other possible actions include logging to the console, passing a notification to man:devd[8], or sending a sigterm to the process.
+
+Some care must be taken when adding rules. Since this user is constrained to `10` processes, this example will prevent the user from performing other tasks after logging in and executing a `screen` session. Once a resource limit has been hit, an error will be printed, as in this example:
+
+[source,bash]
+....
+% man test
+    /usr/bin/man: Cannot fork: Resource temporarily unavailable
+eval: Cannot fork: Resource temporarily unavailable
+....
+
+As another example, a jail can be prevented from exceeding a memory limit. This rule could be written as:
+
+[source,bash]
+....
+# rctl -a jail:httpd:memoryuse:deny=2G/jail
+....
+
+Rules will persist across reboots if they have been added to [.filename]#/etc/rctl.conf#. The format is a rule, without the preceding command. For example, the previous rule could be added as:
+
+[.programlisting]
+....
+# Block jail from using more than 2G memory:
+jail:httpd:memoryuse:deny=2G/jail
+....
+
+To remove a rule, use `rctl` to remove it from the list:
+
+[source,bash]
+....
+# rctl -r user:trhodes:maxproc:deny=10/user
+....
+
+A method for removing all rules is documented in man:rctl[8]. However, if removing all rules for a single user is required, this command may be issued:
+
+[source,bash]
+....
+# rctl -r user:trhodes
+....
+
+Many other resources exist which can be used to exert additional control over various `subjects`. See man:rctl[8] to learn about them.
+
+[[security-sudo]]
+== Shared Administration with Sudo
+
+System administrators often need the ability to grant enhanced permissions to users so they may perform privileged tasks. The idea that team members are provided access to a FreeBSD system to perform their specific tasks opens up unique challenges to every administrator. These team members only need a subset of access beyond normal end user levels; however, they almost always tell management they are unable to perform their tasks without superuser access. Thankfully, there is no reason to provide such access to end users because tools exist to manage this exact requirement.
+
+Up to this point, the security chapter has covered permitting access to authorized users and attempting to prevent unauthorized access. Another problem arises once authorized users have access to the system resources. In many cases, some users may need access to application startup scripts, or a team of administrators need to maintain the system. Traditionally, the standard users and groups, file permissions, and even the man:su[1] command would manage this access. And as applications required more access, as more users needed to use system resources, a better solution was required. The most used application is currently Sudo.
+
+Sudo allows administrators to configure more rigid access to system commands and provide for some advanced logging features. As a tool, it is available from the Ports Collection as package:security/sudo[] or by use of the man:pkg[8] utility. To use the man:pkg[8] tool:
+
+[source,bash]
+....
+# pkg install sudo
+....
+
+After the installation is complete, the installed `visudo` will open the configuration file with a text editor. Using `visudo` is highly recommended as it comes with a built in syntax checker to verify there are no errors before the file is saved.
+
+The configuration file is made up of several small sections which allow for extensive configuration. In the following example, web application maintainer, user1, needs to start, stop, and restart the web application known as _webservice_. To grant this user permission to perform these tasks, add this line to the end of [.filename]#/usr/local/etc/sudoers#:
+
+[.programlisting]
+....
+user1   ALL=(ALL)       /usr/sbin/service webservice *
+....
+
+The user may now start _webservice_ using this command:
+
+[source,bash]
+....
+% sudo /usr/sbin/service webservice start
+....
+
+While this configuration allows a single user access to the webservice service; however, in most organizations, there is an entire web team in charge of managing the service. A single line can also give access to an entire group. These steps will create a web group, add a user to this group, and allow all members of the group to manage the service:
+
+[source,bash]
+....
+# pw groupadd -g 6001 -n webteam
+....
+
+Using the same man:pw[8] command, the user is added to the webteam group:
+
+[source,bash]
+....
+# pw groupmod -m user1 -n webteam
+....
+
+Finally, this line in [.filename]#/usr/local/etc/sudoers# allows any member of the webteam group to manage _webservice_:
+
+[.programlisting]
+....
+%webteam   ALL=(ALL)       /usr/sbin/service webservice *
+....
+
+Unlike man:su[1], Sudo only requires the end user password. This adds an advantage where users will not need shared passwords, a finding in most security audits and just bad all the way around.
+
+Users permitted to run applications with Sudo only enter their own passwords. This is more secure and gives better control than man:su[1], where the `root` password is entered and the user acquires all `root` permissions.
+
+[TIP]
+====
+
+Most organizations are moving or have moved toward a two factor authentication model. In these cases, the user may not have a password to enter. Sudo provides for these cases with the `NOPASSWD` variable. Adding it to the configuration above will allow all members of the _webteam_ group to manage the service without the password requirement:
+
+[.programlisting]
+....
+%webteam   ALL=(ALL)       NOPASSWD: /usr/sbin/service webservice *
+....
+
+====
+
+[[security-sudo-loggin]]
+=== Logging Output
+
+An advantage to implementing Sudo is the ability to enable session logging. Using the built in log mechanisms and the included sudoreplay command, all commands initiated through Sudo are logged for later verification. To enable this feature, add a default log directory entry, this example uses a user variable. Several other log filename conventions exist, consult the manual page for sudoreplay for additional information.
+
+[.programlisting]
+....
+Defaults iolog_dir=/var/log/sudo-io/%{user}
+....
+
+[TIP]
+====
+
+This directory will be created automatically after the logging is configured. It is best to let the system create directory with default permissions just to be safe. In addition, this entry will also log administrators who use the sudoreplay command. To change this behavior, read and uncomment the logging options inside [.filename]#sudoers#.
+====
+
+Once this directive has been added to the [.filename]#sudoers# file, any user configuration can be updated with the request to log access. In the example shown, the updated _webteam_ entry would have the following additional changes:
+
+[.programlisting]
+....
+%webteam ALL=(ALL) NOPASSWD: LOG_INPUT: LOG_OUTPUT: /usr/sbin/service webservice *
+....
+
+From this point on, all _webteam_ members altering the status of the _webservice_ application will be logged. The list of previous and current sessions can be displayed with:
+
+[source,bash]
+....
+# sudoreplay -l
+....
+
+In the output, to replay a specific session, search for the `TSID=` entry, and pass that to sudoreplay with no other options to replay the session at normal speed. For example:
+
+[source,bash]
+....
+# sudoreplay user1/00/00/02
+....
+
+[WARNING]
+====
+
+While sessions are logged, any administrator is able to remove sessions and leave only a question of why they had done so. It is worthwhile to add a daily check through an intrusion detection system (IDS) or similar software so that other administrators are alerted to manual alterations.
+====
+
+The `sudoreplay` is extremely extendable. Consult the documentation for more information.

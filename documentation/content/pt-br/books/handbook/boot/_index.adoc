@@ -1,0 +1,419 @@
+---
+title: Capítulo 12. O processo de inicialização do FreeBSD
+part: Parte III. Administração do Sistema
+prev: books/handbook/config
+next: books/handbook/security
+---
+
+[[boot]]
+= O processo de inicialização do FreeBSD
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Índice
+:table-caption: Tabela
+:figure-caption: Figura
+:example-caption: Exemplo
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 12
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/boot/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/boot/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/boot/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pt-br/mailing-lists.adoc[]
+include::shared/pt-br/teams.adoc[]
+include::shared/pt-br/urls.adoc[]
+
+toc::[]
+
+[[boot-synopsis]]
+== Sinopse
+
+O processo de iniciar um computador e carregar o sistema operacional é chamado de "processo de bootstrap", ou de "inicialização". O processo de boot do FreeBSD fornece uma grande flexibilidade na personalização do que acontece quando o sistema é iniciado, incluindo a capacidade de selecionar diferentes sistemas operacionais instalados no mesmo computador, diferentes versões do mesmo sistema operacional ou um kernel instalado diferente.
+
+Este capítulo detalha as opções de configuração que podem ser definidas. Ele demonstra como personalizar o processo de inicialização do FreeBSD, incluindo tudo o que acontece até que o kernel do FreeBSD tenha iniciado, procurado por dispositivos e iniciado o man:init[8]. Isso ocorre quando a cor do texto das mensagens de inicialização muda de branco brilhante para cinza.
+
+Depois de ler este capítulo, você reconhecerá:
+
+* Os componentes do sistema de boot do FreeBSD e como eles interagem.
+* As opções que podem ser passadas para os componentes no bootstrap do FreeBSD para controlar o processo de inicialização.
+* Como configurar uma tela personalizada de inicialização.
+* O básico da configuração de device hints.
+* Como inicializar no modo de usuário único e multiusuário e como encerrar corretamente um sistema FreeBSD.
+
+[NOTE]
+====
+Este capítulo descreve apenas o processo de inicialização do FreeBSD rodando em sistemas x86 e amd64.
+====
+
+[[boot-introduction]]
+== Processo de Inicialização do FreeBSD
+
+Ligar um computador e iniciar o sistema operacional representa um dilema interessante. Por definição, o computador não sabe como fazer nada até que o sistema operacional seja iniciado. Isso inclui executar programas a partir do disco. Se o computador não pode executar um programa a partir do disco sem o sistema operacional e os programas do sistema operacional estão no disco, como o sistema operacional é iniciado?
+
+Este problema é semelhante ao do livro As Aventuras do Barão de Munchausen. Um personagem tinha caído no meio de um bueiro, e se retirou agarrando suas botas e levantando. Nos primeiros dias da computação, o termo _bootstrap_ era aplicado ao mecanismo usado para carregar o sistema operacional. Desde então, foi encurtado para "booting".
+
+No hardware x86, o Sistema Básico de Entrada/Saída (BIOS) é responsável por carregar o sistema operacional. O BIOS procura no disco rígido pelo Master Boot Record (MBR), que deve estar localizado em um local específico do disco. O BIOS tem conhecimento suficiente para carregar e executar o MBR, e assume que o MBR pode então executar o restante das tarefas envolvidas no carregamento do sistema operacional, possivelmente com a ajuda do BIOS.
+
+[NOTE]
+====
+O FreeBSD permite inicializar a partir do padrão mais antigo do MBR e da nova Tabela de Partição GUID (GPT). O particionamento GPT geralmente é encontrado em computadores com a Interface de Firmware Unificada e Extensivel (UEFI). No entanto, o FreeBSD pode inicializar a partir de partições de GPT mesmo em máquinas com apenas BIOS legado com o man:gptboot[8]. O trabalho está em andamento para fornecer a inicialização direta a partir do UEFI.
+====
+
+O código dentro do MBR é normalmente chamado de _gerenciador de inicialização_, especialmente quando ele interage com o usuário. O gerenciador de inicialização geralmente tem mais código na primeira faixa do disco ou dentro do sistema de arquivos. Exemplos de gerenciadores de inicialização incluem o gerenciador de boot padrão do FreeBSD boot0, também chamado Boot Easy, e o Grub, que é usado por muitas distribuições Linux(TM).
+
+Se apenas um sistema operacional estiver instalado, o MBR procura pelo primeiro slice inicializável (ativo) no disco e, em seguida, executa o código nesse slice para carregar o restante do sistema operacional. Quando vários sistemas operacionais estão presentes, um gerenciador de inicialização diferente pode ser instalado para exibir uma lista de sistemas operacionais para que o usuário possa selecionar um para inicializar.
+
+O restante do sistema de boot do FreeBSD é dividido em três estágios. O primeiro estágio sabe apenas o suficiente para colocar o computador em um estado específico e executar o segundo estágio. O segundo estágio pode fazer um pouco mais, antes de executar o terceiro estágio. O terceiro estágio termina a tarefa de carregar o sistema operacional. O trabalho é dividido em três etapas porque o MBR coloca limites no tamanho dos programas que podem ser executados nos estágios um e dois. Encadear as tarefas juntas permite que o FreeBSD forneça um carregador mais flexível.
+
+O kernel é então iniciado e começa a sondar os dispositivos e inicializá-los para uso. Quando o processo de inicialização do kernel é finalizado, o kernel passa o controle para o processo de usuário man:init[8], que garante que os discos estejam em estado utilizável, inicia a configuração de recursos no nível de usuário que monta sistemas de arquivos, configura placas de rede para se comunicar na rede e inicia os processos que foram configurados para serem executados na inicialização.
+
+Esta seção descreve esses estágios em mais detalhes e demonstra como interagir com o processo de inicialização do FreeBSD.
+
+[[boot-boot0]]
+=== O gerenciador de inicialização
+
+O código do gerenciador de inicialização no MBR é às vezes chamado de _estágio zero_ do processo de inicialização. Por padrão, o FreeBSD usa o gerenciador de boot boot0.
+
+O MBR instalado pelo instalador do FreeBSD é baseado no [.filename]#/boot/boot0#. O tamanho e a capacidade do boot0 são restritos a 446 bytes devido à tabela de slices e ao identificador `0x55AA` no final do MBR. Se o boot0 e vários sistemas operacionais estiverem instalados, uma mensagem semelhante a este exemplo será exibida no momento da inicialização:
+
+[[boot-boot0-example]]
+.Captura de tela do [.filename]#boot0#
+[example]
+====
+
+[source,bash]
+....
+F1 Win
+F2 FreeBSD
+
+Default: F2
+....
+
+====
+
+Outros sistemas operacionais sobrescreverão um MBR existente se forem instalados após o FreeBSD. Se isto acontecer, ou para substituir o MBR existente com o MBR do FreeBSD, use o seguinte comando:
+
+[source,bash]
+....
+# fdisk -B -b /boot/boot0 device
+....
+
+onde _device_ é o disco de inicialização, como [.filename]#ad0# para o primeiro disco IDE, [.filename]#ad2# para o primeiro disco IDE em um segundo controlador IDE, ou [.filename]#da0# para o primeiro disco SCSI. Para criar uma configuração personalizada do MBR, consulte man:boot0cfg[8].
+
+[[boot-boot1]]
+=== Estágio Um e Estágio Dois
+
+Conceitualmente, o primeiro e o segundo estágios fazem parte do mesmo programa na mesma área do disco. Por causa das restrições de espaço, eles foram divididos em dois, mas são sempre instalados juntos. Eles são copiados do combinado [.filename]#/boot/boot# pelo instalador do FreeBSD ou pelo `bsdlabel`.
+
+Estes dois estágios estão localizados fora do sistema de arquivos, na primeira trilha do slice de inicialização, começando pelo primeiro setor. É ali onde o boot0, ou qualquer outro gerenciador de inicialização, espera encontrar um programa para executar, o qual continuará o processo de inicialização.
+
+O primeiro estágio, [.filename]#boot1#, é muito simples, pois pode ter apenas 512 bytes de tamanho. Ele sabe o suficiente sobre o FreeBSD _bsdlabel_, que armazena informações sobre o slice, para localizar e executar o [.filename]#boot2#.
+
+O estágio dois, [.filename]#boot2#, é um pouco mais sofisticado, e entende o sistema de arquivos do FreeBSD o suficiente para encontrar arquivos. Ele pode fornecer uma interface simples para escolher o kernel ou loader para ser executado. Ele executa o loader, que é muito mais sofisticado e fornece um arquivo de configuração de inicialização. Se o processo de inicialização for interrompido no estágio dois, a seguinte tela interativa será exibida:
+
+[[boot-boot2-example]]
+.Captura de tela do [.filename]#boot2#
+[example]
+====
+
+[source,bash]
+....
+>> FreeBSD/i386 BOOT
+Default: 0:ad(0,a)/boot/loader
+boot:
+....
+
+====
+
+Para substituir o [.filename]#boot1# e [.filename]#boot2# instalados, use o `bsdlabel`, onde _diskslice_ é o disco e o slice para inicializar, como [.filename]#ad0s1# para o primeiro slice no primeiro disco IDE:
+
+[source,bash]
+....
+# bsdlabel -B diskslice
+....
+
+[WARNING]
+====
+
+Se apenas o nome do disco for usado, como [.filename]#ad0#, o `bsdlabel` criará o disco no "modo perigosamente dedicado", sem slices. Esta provavelmente não é a ação desejada, então verifique novamente o _diskslice_ antes de pressionar kbd:[Return].
+====
+
+[[boot-loader]]
+=== Estágio três
+
+O loader é o estágio final do processo de bootstrap de três estágios. Ele está localizado no sistema de arquivos, geralmente como [.filename]#/boot/loader#.
+
+O loader é projetado como um método interativo para configuração, usando um conjunto de comandos embutidos, auxiliado por um interpretador mais poderoso que possui um conjunto de comandos mais complexo.
+
+Durante a inicialização, o loader procurará por um console e por discos, e descobrirá de qual disco está sendo inicializado. Ele irá definir as variáveis de acordo, e um interpretador é iniciado onde os comandos do usuário podem ser passados a partir de um script ou usados interativamente.
+
+O loader então lerá o [.filename]#/boot/loader.rc#, que por padrão lê o [.filename]#/boot/defaults/loader.conf# que define padrões razoáveis para variáveis e lê o [.filename]#/boot/loader.conf# para mudanças locais nessas variáveis. O [.filename]#loader.rc# então age sobre essas variáveis, carregando os módulos e o kernel selecionados.
+
+Finalmente, por padrão, o loader realiza uma espera de 10 segundos por pressionamentos de teclas, e inicializa o kernel se não for interrompido. Se interrompido, o usuário é apresentado a um prompt que compreende o conjunto de comandos, no qual o usuário pode ajustar variáveis, descarregar todos os módulos, carregar módulos e finalmente inicializar ou reinicializar. <<boot-loader-commands>> lista os comandos do loader mais usados. Para uma discussão completa de todos os comandos disponíveis, consulte man:loader[8].
+[[boot-loader-commands]]
+.Comandos Internos do Loader
+[cols="1,1", frame="none", options="header"]
+|===
+| Variável
+| Descrição
+
+|autoboot _segundos_
+|Prossegue para inicializar o kernel se não for interrompido dentro do intervalo de tempo dado, em segundos. Ele exibe uma contagem regressiva e o intervalo de tempo padrão é de 10 segundos.
+
+|boot `[__-options__] [__kernelname]__`
+|Imediatamente prossegue a inicialização do kernel, com qualquer opção especificada ou nome do kernel. Fornecer um nome de kernel na linha de comando só é aplicável depois que um `unload` foi emitido. Caso contrário, o kernel previamente carregado será usado. Se o _nomedokernel_ não estiver qualificado, ele será pesquisado em _/boot/kernel_ e _/boot/modules_.
+
+|boot-conf
+|Passa pela mesma configuração automática de módulos baseada em variáveis especificadas, mais comumente `kernel`. Isso só faz sentido se `unload` for usado primeiro, antes de alterar algumas variáveis.
+
+|help `[__tópico__]`
+|Mostra mensagens de ajuda lidas de [.filename]#/boot/loader.help#. Se o tópico fornecido for `index`, a lista de tópicos disponíveis será exibida.
+
+|include _nomedoarquivo_...
+|Lê o arquivo especificado e interpreta-o linha por linha. Um erro interrompe imediatamente o `include`.
+
+|load `[-t __type__]` _filename_
+|Carrega o kernel, módulo do kernel ou arquivo do tipo especificado, com o nome de arquivo especificado. Quaisquer argumentos após o _nomedoarquivo_ são passados para o arquivo. Se _nomedoarquivo_ não estiver qualificado, ele será pesquisado em _/boot/kernel_ e _/boot/modules_.
+
+|ls [-l] `[__path__]`
+|Exibe uma listagem de arquivos do caminho fornecido ou do diretório raiz, se o caminho não for especificado. Se `-l` for especificado, os tamanhos dos arquivos também serão mostrados.
+
+|lsdev [-v]
+|Lista todos os dispositivos dos quais é possível carregar módulos. Se `-v` for especificado, mais detalhes serão impressos.
+
+|lsmod [-v]
+|Exibe os módulos carregados. Se `-v` for especificado, mais detalhes serão mostrados.
+
+|more _nomedoarquivo_
+|Exibe os arquivos especificados, com uma pausa em cada `LINES` exibidas.
+
+|reboot
+|Reinicia imediatamente o sistema.
+
+|set _variable_, set _variable_=_value_
+|Define as variáveis de ambiente especificadas.
+
+|unload
+|Remove todos os módulos carregados.
+|===
+
+Aqui estão alguns exemplos práticos de uso do loader. Para inicializar o kernel usual no modo single-user :
+
+[source,bash]
+....
+ boot -s
+....
+
+Para descarregar o kernel e os módulos usuais e, em seguida, carregar o kernel anterior ou outro especificado:
+
+[source,bash]
+....
+ unload
+ load kernel.old
+....
+
+Use o [.filename]#kernel.GENERIC# para se referir ao kernel padrão que vem com uma instalação, ou [.filename]#kernel.old#, para se referir ao kernel previamente instalado antes de uma atualização do sistema ou antes de configurar um kernel personalizado.
+
+Use o seguinte para carregar os módulos usuais com outro kernel:
+
+[source,bash]
+....
+ unload
+ set kernel="kernel.old"
+ boot-conf
+....
+
+Para carregar um script de configuração do kernel automatizado:
+
+[source,bash]
+....
+ load -t userconfig_script /boot/kernel.conf
+....
+
+[[boot-init]]
+=== Último estágio
+
+Quando o kernel é carregado pelo loader ou pelo boot2, que ignora o loader, ele examina qualquer flag de inicialização e ajusta seu comportamento conforme necessário. <<boot-kernel>> lista os flags de inicialização comumente usados. Consulte man:boot[8] para obter mais informações sobre os outros sinalizadores de inicialização.
+
+[[boot-kernel]]
+.Interação do Kernel durante o Boot
+[cols="1,1", frame="none", options="header"]
+|===
+| Opção
+| Descrição
+
+|`-a`
+|Durante a inicialização do kernel, solicita que o dispositivo seja montado como o sistema de arquivos raiz.
+
+|`-C`
+|Inicialize o sistema de arquivos raiz a partir de um CDROM.
+
+|`-s`
+|Inicialize no modo single-user.
+
+|`-v`
+|Seja mais detalhado durante a inicialização do kernel.
+|===
+
+Uma vez que o kernel terminou a inicialização, ele passa o controle para o processo de usuário man:init[8], localizado em [.filename]#/sbin/init#, ou o caminho do programa especificado na variável `init_path` no `loader`. Este é o último estágio do processo de inicialização.
+
+A sequência de inicialização garante que os sistemas de arquivos disponíveis no sistema estejam consistentes. Se um sistema de arquivos UFS não estiver e o `fsck` não puder corrigir as inconsistências, o init jogará o sistema no modo single-user para que o administrador do sistema possa resolver o problema diretamente. Caso contrário, o sistema é inicializado no modo multi-user.
+
+[[boot-singleuser]]
+==== Modo Single-User
+
+Um usuário pode especificar este modo inicializando com `-s` ou definindo a variável `boot_single` no loader. Ele também pode ser alcançado executando o `shutdown now` do modo multi-user. O modo single-user começa com esta mensagem:
+
+[.programlisting]
+....
+Enter full pathname of shell or RETURN for /bin/sh:
+....
+
+Se o usuário pressionar kbd:[Enter], o sistema entrará no Bourne shell padrão. Para especificar um shell diferente, insira o caminho completo para o shell.
+
+O modo single-user é geralmente usado para reparar um sistema que não inicializa devido a um sistema de arquivos inconsistente ou a um erro em um arquivo de configuração de inicialização. Ele também pode ser usado para redefinir a senha do `root` quando ela é desconhecida. Essas ações são possíveis porque o prompt do modo single-user fornece acesso local completo ao sistema e seus arquivos de configuração. Não há rede neste modo.
+
+Embora o modo single-user seja útil para reparar um sistema, ele representa um risco de segurança, a menos que o sistema esteja em um local fisicamente seguro. Por padrão, qualquer usuário que possa obter acesso físico a um sistema terá controle total desse sistema após a inicialização no modo single-user.
+
+Se o `console` do sistema for alterado para `insecure` em [.filename]#/etc/ttys#, o sistema solicitará primeiro a senha do `root` antes de iniciar o modo single-user. Isso adiciona uma medida de segurança ao remover a capacidade de redefinir a senha do `root` quando ela é desconhecida.
+
+[[boot-insecure-console]]
+.Configurando um Console Inseguro em [.filename]#/etc/ttys#
+[example]
+====
+[.programlisting]
+....
+# name  getty                           type    status          comments
+#
+# If console is marked "insecure", then init will ask for the root password
+# when going to single-user mode.
+console none                            unknown off insecure
+....
+
+====
+
+Um console `inseguro` significa que a segurança física para o console é considerada insegura, portanto, apenas alguém que conheça a senha do `root` pode usar o modo single-user.
+
+[[boot-multiuser]]
+==== Modo Multi-User
+
+Se o init encontrar os sistemas de arquivos em ordem, ou quando o usuário tiver concluído seus comandos no modo de usuário único e tiver digitado `exit` para deixar o modo single-user, o sistema entra no modo multi-user, no qual inicia a configuração de recursos do sistema.
+
+O sistema de configuração de recursos lê os padrões de configuração do [.filename]#/etc/defaults/rc.conf# e detalhes específicos do sistema a partir do [.filename]#/etc/rc.conf#. Em seguida, ele monta os sistemas de arquivos do sistema listados em [.filename]#/etc/fstab#. Ele inicia serviços de rede, daemons diversos do sistema e, em seguida, os scripts de inicialização dos pacotes instalados localmente.
+
+Para saber mais sobre o sistema de configuração de recursos, consulte man:rc[8] e examine os scripts localizados em [.filename]#/etc/rc.d#.
+
+[[boot-splash]]
+== Configurando telas iniciais de inicialização
+
+Normalmente, quando um sistema FreeBSD inicializa, ele exibe seu progresso com uma série de mensagens no console. Uma tela inicial de inicialização cria uma tela de inicialização alternativa que oculta todo o probe de inicialização e as mensagens de inicialização de serviços. Algumas mensagens do boot loader, incluindo o menu de opções de inicialização e um prompt de contagem regressiva de espera, são exibidas no momento da inicialização, mesmo quando a tela inicial está ativada. A exibição da tela inicial pode ser desativada pressionando qualquer tecla do teclado durante o processo de inicialização.
+
+Existem dois ambientes básicos disponíveis no FreeBSD. O primeiro é o ambiente padrão de linha de comando do console virtual legado. Depois que o sistema conclui a inicialização, é exibido um prompt de login do console. O segundo ambiente é um ambiente gráfico configurado. Consulte crossref:x11[x11, O sistema X Window] para obter maiores informações sobre como instalar e configurar um gerenciador gráfico de tela e um gerenciador gráfico de login.
+
+Depois que o sistema inicializa, a tela inicial é definida como proteção de tela. Após um período sem uso, a tela inicial será exibida e passará por etapas de mudança de intensidade da imagem, de brilhante a muito escuro e vice-versa. A configuração do protetor de tela inicial pode ser sobrescrita, adicionando-se uma linha `saver=` ao [.filename]#/etc/rc.conf#. Vários protetores de tela embutidos estão disponíveis e descritos em man:splash[4]. A opção `saver=` aplica-se apenas aos consoles virtuais e não tem efeito nos gerenciadores gráficos de telas.
+
+Ao instalar o pacote ou port package:sysutils/bsd-splash-changer[], uma imagem inicial aleatória de uma coleção será exibida na inicialização. A função tela inicial suporta 256 cores nos formatos bitmap ([.filename]#.bmp#), ZSoft PCX ([.filename]#.pcx#), ou TheDraw ([.filename]#.bin#). A imagem [.filename]#.bmp#, [.filename]#.pcx#, ou [.filename]#.bin# tem que ser colocada na partição root, em [.filename]#/boot# por exemplo. Os arquivos de imagens iniciais tem que ter a resolução de 320 por 200 pixels ou menos para funcionarem em adaptadores VGA padrão. Para a tela inicial padrão de 256 cores e 320 por 200 pixels ou menos, adicione as seguintes linhas ao [.filename]#/boot/loader.conf#. Substitua _splash.bmp_ com o nome do arquivo bitmap a ser utilizado:
+
+[.programlisting]
+....
+splash_bmp_load="YES"
+bitmap_load="YES"
+bitmap_name="/boot/splash.bmp"
+....
+
+Para usar um arquivo PCX em vez de um arquivo bitmap:
+
+[.programlisting]
+....
+splash_pcx_load="YES"
+bitmap_load="YES"
+bitmap_name="/boot/splash.pcx"
+....
+
+Em vez disso, use ASCII art no formato https://en.wikipedia.org/wiki/TheDraw[https://en.wikipedia.org/wiki/TheDraw]:
+
+[.programlisting]
+....
+splash_txt="YES"
+bitmap_load="YES"
+bitmap_name="/boot/splash.bin"
+....
+
+Outras opções interessantes do arquivo [.filename]#loader.conf# incluem:
+
+`beastie_disable="YES"`::
+Isso impedirá que o menu de opções de inicialização seja exibido, mas o prompt de contagem regressiva da espera programada ainda estará presente. Mesmo com a exibição do menu de opções de inicialização desabilitada, entrar com uma seleção de opção no prompt de contagem decrescente de tempo programado ativará a opção de inicialização correspondente.
+
+`loader_logo="beastie"`::
+Isso substituirá as palavras padrão "FreeBSD", que são exibidas à direita do menu de opções de inicialização, com o logotipo colorido do beastie.
+
+Para maiores informações, consulte man:splash[4], man:loader.conf[5], and man:vga[4].
+
+[[device-hints]]
+== Sugestões de dispositivos
+
+Durante o começo da inicialização do sistema, o boot man:loader[8] lê o man:device.hints[5]. Este arquivo armazena informações de inicialização do kernel conhecidas como variáveis, algumas vezes referenciadas como "sugestão de devices". Estas "sugestões de devices" são usados pelos drivers de dispositivo para configuração do dispositivo.
+
+As sugestões de dispositivos também são especificadas no estágio 3 do prompt do boot loader, conforme demonstrado em <<boot-loader>>. As variáveis podem ser adicionadas usando `set`, removidas com `unset` e visualizadas `show`. Variáveis configuradas no arquivo [.filename]#/boot/device.hints# também podem ser sobrescritas. As sugestões de dispositivos inseridas no boot loader não são permanentes e não serão aplicadas na próxima reinicialização.
+
+Uma vez que o sistema é inicializado, man:kenv[1] pode ser usado para despejar todas as variáveis.
+
+A sintaxe para o arquivo [.filename]#/boot/device.hints# é uma variável por linha, usando o hash "#" como marcadores de comentário. As linhas são construídas da seguinte forma:
+
+[source,bash]
+....
+ hint.driver.unit.keyword="value"
+....
+
+A sintaxe para o estágio 3 do boot loader é:
+
+[source,bash]
+....
+ set hint.driver.unit.keyword=value
+....
+
+onde `driver` é o nome do driver de dispositivo, `unit` é o número da unidade de driver do dispositivo, e `keyword` é a palavra-chave sugerida. A palavra-chave pode consistir das seguintes opções:
+
+* `at`: especifica o barramento ao qual o dispositivo está conectado.
+* `port`: especifica o endereço inicial de I/O a ser usado.
+* `irq`: especifica o número da requisição de interrupção a ser usada.
+* `drq`: especifica o número do canal DMA.
+* `maddr`: especifica o endereço de memória física ocupado pelo dispositivo.
+* `flags`: define vários bits de flags para o dispositivo.
+* `disabled`: se definido como `1`, o dispositivo é desativado.
+
+Como os drivers de dispositivo podem aceitar ou exigir mais sugestões não listadas aqui, é recomendável exibir uma página de manual do driver. Para obter mais informações, consulte man:device.hints[5], man:kenv[1], man:loader.conf[5], e man:loader[8].
+
+[[boot-shutdown]]
+== Sequência de Desligamento
+
+Após desligamento controlado usando man:shutdown[8], o man:init[8] tentará executar o script [.filename]#/etc/rc.shutdown# e, em seguida, enviará a todos os processos o sinal `TERM` e, subsequentemente, o sinal `KILL` para qualquer um que não termine em tempo hábil.
+
+Para desligar uma máquina FreeBSD em arquiteturas e sistemas que suportam gerenciamento de energia, use o `shutdown -p now` para desligar a energia imediatamente. Para reinicializar um sistema FreeBSD, use o `shutdown -r now`. É preciso ser `root` ou um membro de `operator` para executar man:shutdown[8]. Também é possível usar man:halt[8] e man:reboot[8]. Consulte as páginas de manual e o man:shutdown[8] para obter mais informações.
+
+Modifique a associação ao grupo referindo-se a crossref:basics[users-synopsis,Usuários e Gerenciamento Básico de Contas].
+
+[NOTE]
+====
+O gerenciamento de energia requer que o man:acpi[4] seja carregado como um módulo ou estaticamente compilado em um kernel personalizado.
+====

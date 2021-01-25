@@ -1,0 +1,509 @@
+---
+title: 第11章 設定とチューニング
+part: パートIII. システム管理
+prev: books/handbook/partiii
+next: books/handbook/boot
+---
+
+[[config-tuning]]
+= 設定とチューニング
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目次
+:table-caption: 表
+:figure-caption: 図
+:example-caption: 例 
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 11
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/x11/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/x11/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/x11/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/ja/mailing-lists.adoc[]
+include::shared/ja/teams.adoc[]
+include::shared/ja/urls.adoc[]
+
+toc::[]
+
+== この章では
+
+システムを正しく設定することは、 メンテナンスや将来の更新の際の作業の量を減らします。 この章では FreeBSD システムの管理上の設定の側面について記述します。
+
+またこの章では FreeBSD システムのパフォーマンスを最適化する チューニングについても記述します。
+
+この章を読むと、以下のことがわかります。
+
+* [.filename]#rc.conf# の設定と [.filename]#/usr/local/etc/rc.d# スタートアップシステムの基礎
+* ネットワークデバイスに対する、仮想ホストの設定方法
+* [.filename]#/etc# ディレクトリ内のさまざまな設定ファ イルの使い方
+* `sysctl` 変数を使った FreeBSD のチューニング方法
+* ディスク性能のチューニング方法と、カーネルの制限の変更方法
+
+この章を読む前に、以下のことをやっておくとよいでしょう。
+
+* Unix と FreeBSD の基本を理解する (crossref:basics[basics,UNIX の基礎知識])。
+* FreeBSD のソースコードを最新に保つこと (crossref:cutting-edge[updating-upgrading,FreeBSD のアップデートとアップグレード]) と、 カーネルコンフィグレーションおよび構築の基礎 (crossref:kernelconfig[kernelconfig,FreeBSD カーネルのコンフィグレーション]) に親しんでおく。
+
+[[configtuning-core-configuration]]
+== 中核となる設定
+
+システムの設定情報が収められている主な場所は [.filename]#/etc/rc.conf# です。 このファイルにはシステムの起動時にシステムの設定を行なうものをはじめ 多岐に渡る設定情報が含まれています。 そのファイル名はダイレクトに、それが [.filename]#rc*# ファイル群の設定情報であることを示しています。
+
+管理者は [.filename]#/etc/defaults/rc.conf# のデフォルトの設定を [.filename]#rc.conf# ファイルにエン トリを作ることで上書きすべきです。 デフォルトのファイルをそのまま [.filename]#/etc# にコピーするのはやめるべきです。 それはデフォルト値であってサンプルではないのです。 システム固有のすべての変更は [.filename]#rc.conf# ファイ ルの中でするべきです。
+
+管理の手間を減らす為、クラスター化されたアプリケーションには サイト共通の設定とシステム固有の設定を分離するさまざまな戦略が適用できます。 推奨されるアプローチは、サイト共通の設定は [.filename]#/etc/rc.conf.site# のような別のファイルに置き、 それをシステム固有の設定情報しか含ませない [.filename]#/etc/rc.conf# からインクルードすることです。
+
+[.filename]#rc.conf# は man:sh[1] によって読み込まれているので、これはじつに簡単に達成できます。 たとえば、
+
+* rc.conf:
++
+[.programlisting]
+....
+	. rc.conf.site
+	hostname="node15.example.com"
+	network_interfaces="fxp0 lo0"
+	ifconfig_fxp0="inet 10.1.1.1"
+....
+
+* rc.conf.site:
++
+[.programlisting]
+....
+	defaultrouter="10.1.1.254"
+	saver="daemon"
+	blanktime="100"
+....
+
+[.filename]#rc.conf.site# ファイルは `rsync` のようなプログラムを使うことで全システ ムに配布でき、一方 [.filename]#rc.conf# ファイルはユニークなままを保つことができます。
+
+システムを man:sysinstall[8] や `make world` 等で 更新した場合 [.filename]#rc.conf# ファイルは上書きされません。 なのでシステムの設定情報が失われることもありません。
+
+[[configtuning-appconfig]]
+== アプリケーションの設定
+
+基本的に、インストールされたアプリケーションには独自の文法を持つ 固有の設定ファイルがあります。 これらのファイルがベースシステムから分離されているということは重要で、 このためパッケージ管理ツールによる配置と管理が容易になっています。
+
+基本的に、それらのファイルは [.filename]#/usr/local/etc# にインストールされます。 設定ファイルの数が多数にのぼるアプリケーションに対しては、 それら用にサブディレクトリが作られます。
+
+通常、ports やパッケージがインストールされると 設定ファイルのサンプルが一緒にインストールされます。 大抵、識別のためにサフィックスとして ".default" がついています。 アプリケーションのための設定ファイルがまだ存在していなければ、 .defaults ファイルをコピーすることで作成できます。
+
+[.filename]#/usr/local/etc/apache# ディレクトリの例をご覧ください。
+
+....
+-rw-r--r--  1 root  wheel   2184 May 20  1998 access.conf
+-rw-r--r--  1 root  wheel   2184 May 20  1998 access.conf.default
+-rw-r--r--  1 root  wheel   9555 May 20  1998 httpd.conf
+-rw-r--r--  1 root  wheel   9555 May 20  1998 httpd.conf.default
+-rw-r--r--  1 root  wheel  12205 May 20  1998 magic
+-rw-r--r--  1 root  wheel  12205 May 20  1998 magic.default
+-rw-r--r--  1 root  wheel   2700 May 20  1998 mime.types
+-rw-r--r--  1 root  wheel   2700 May 20  1998 mime.types.default
+-rw-r--r--  1 root  wheel   7980 May 20  1998 srm.conf
+-rw-r--r--  1 root  wheel   7933 May 20  1998 srm.conf.default
+....
+
+ファイルサイズの差から、[.filename]#srm.conf# ファイルだけが変更されていることが分かります。 後に apache を更新した時にも、 この変更されたファイルは上書きされることはありません。
+
+[[configtuning-starting-services]]
+== サービスの起動
+
+一つのシステムでサービスをいくつも立ち上げているということは よくあることです。 それらには独自の立ち上げかたがあることがあり、 それぞれ有利な点があります。
+
+Ports collection やパッケージからインストールしたソフトウェアは しばしば [.filename]#/usr/local/etc/rc.d# にスクリプトを置き、 システムが起動した時には `start`、システムをシャッ トダウンする時には `stop` を引数にして実行します。 これは `root` で実行すべき、または `root` で起動することを期待されているシステム ワイドなサービスを起動する場合に推奨される方法です。 これらのスクリプトはパッケージの一部としてインストール時に記録され、 パッケージとともに削除されます。
+
+[.filename]#/usr/local/etc/rc.d# にある 一般的なスクリプトは次のようなものです。
+
+[.programlisting]
+....
+#!/bin/sh
+echo -n ' FooBar'
+
+case "$1" in
+start)
+        /usr/local/bin/foobar
+        ;;
+stop)
+        kill -9 `cat /var/run/foobar.pid`
+        ;;
+*)
+        echo "Usage: `basename $0` {start|stop}" >&2
+        exit 64
+        ;;
+esac
+
+exit 0
+....
+
+このスクリプトはその目的を果すべく起動時に `start`、 シャットダウン時に `stop` をつけて呼ばれます。
+
+サービスの中には固有のポートに接続を受けたときに man:inetd[8] から起動されるものもあります。 これはメールリーダサーバ (POP や IMAP 等) の場合によくあります。 これらのサービスは [.filename]#/etc/inetd.conf# ファイルを編集することで有効化されます。 このファイルの編集に関する詳細は man:inetd[8] を見てください。
+
+これらの他に [.filename]#/etc/rc.conf# による有効化/無効化がカバーされていないサービスもあります。 それらは伝統的に [.filename]#/etc/rc.local# にコマンドを書き込むことで実行されていました。 FreeBSD 3.1 にはデフォルトの [.filename]#/etc/rc.local# は存在していません。 もし管理者によって作られていれば、 その時は一般的なやりかたとして認められるべきでしょう。 [.filename]#rc.local# は最後の場所と考えられているということを 知っておいてください。 サービスを起動させるのにもっといい場所があるなら そこから始めてください。
+
+[NOTE]
+====
+[.filename]#/etc/rc.conf# でその他のコマンドを実行__しないでください__。 そのかわり、デーモンの起動やブート時のコマンド実行は [.filename]#/usr/local/etc/rc.d# にスクリプトを配置してください。
+====
+
+この他にサービスの起動に man:cron[8] を利用することもできます。 このアプローチには、man:cron[8] がそのプロセスを `crontab` の所有者権限で実行したり、サービスが 非特権ユーザによって立ち上げられ管理されるなどといった有利な点が いくつもあります。
+
+これで man:cron[8] の機能の利点を得ることができます。 日時の指定を `@reboot` で置き換えることでジョブは システムがブートした直後、man:cron[8] が起動した時に実行されます。
+
+[[configtuning-virtual-hosts]]
+== バーチャルホスト
+
+FreeBSD の非常にありふれた用途の一つにバーチャルサイトの ホスティングがあります。 これは一つのサーバがネットワークには複数のサーバとして現れるものです。 これは一つのネットワークインタフェイスに 複数のアドレスを割当てることで実現されます。
+
+ネットワークインタフェイスは "真の" アドレスを 一つと "別名" のアドレスを複数持ちます。これらの別 名は通常 [.filename]#/etc/rc.conf# に別名のエントリを置くことで追加されます。
+
+[.filename]#fxp0# インタフェイスへの別名のエント リは以下の様なものです。
+
+[.programlisting]
+....
+ifconfig_fxp0_alias0="inet xxx.xxx.xxx.xxx netmask xxx.xxx.xxx.xxx"
+....
+
+別名のエントリは alias0 から始まり昇順に命名されなければなり ません (たとえば、_alias1, _alias2 の様になります)。設定プロセス は最初に欠けた番号のところで停まります。
+
+別名のネットマスクの計算は重要ですが、幸いなことに非常に簡単です。 個々のインタフェイスについてそのネットワークのネットマスクを正しく 表現しているアドレスが必ず一つ必要です。 そのネットワークに所属しているそれ以外のアドレスのネットマスクは すべて 1 でなければなりません。
+
+例として、[.filename]#fxp0# インタフェイスが二つ のネットワークに接続されているものを考えてみましょう。 一つはネットマスクが 255.255.255.0 である 10.1.1.0 ネットワークで、もう一つはネットマスクが 255.255.255.240 である 202.0.75.16 ネットワークです。 システムは 10.1.1.0 には 10.1.1.1 として、 202.0.75.20 には 202.0.75.17 として現れるようにします。
+
+以下のエントリはネットワークインタフェイスを上述の環境に正しく 設定するものです。
+
+[.programlisting]
+....
+ ifconfig_fxp0="inet 10.1.1.1 netmask 255.255.255.0"
+ ifconfig_fxp0_alias0="inet 10.1.1.2 netmask 255.255.255.255"
+ ifconfig_fxp0_alias1="inet 10.1.1.3 netmask 255.255.255.255"
+ ifconfig_fxp0_alias2="inet 10.1.1.4 netmask 255.255.255.255"
+ ifconfig_fxp0_alias3="inet 10.1.1.5 netmask 255.255.255.255"
+ ifconfig_fxp0_alias4="inet 202.0.75.17 netmask 255.255.255.240"
+ ifconfig_fxp0_alias5="inet 202.0.75.18 netmask 255.255.255.255"
+ ifconfig_fxp0_alias6="inet 202.0.75.19 netmask 255.255.255.255"
+ ifconfig_fxp0_alias7="inet 202.0.75.20 netmask 255.255.255.255"
+....
+
+[[configtuning-configfiles]]
+== 設定ファイル
+
+=== [.filename]#/etc# のレイアウト
+
+設定のための情報が含まれているディレクトリはたくさんあります。 それぞれ以下のものを含んでいます。
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|[.filename]#/etc#
+|システム全般の設定情報。 ここにあるデータはシステム 固有のものです。
+
+|[.filename]#/etc/defaults#
+|デフォルトのシステム設定ファイル。
+
+|[.filename]#/etc/mail#
+|追加的な man:sendmail[8] の設定、他の MTA の設定ファイル。 
+
+|[.filename]#/etc/ppp#
+|ユーザモード、およびカーネルモードの ppp プログラムの設定。 
+
+|[.filename]#/etc/namedb#
+|man:named[8] のデータのデフォルトの置場。通常 boot ファイルはここに置かれ、 [.filename]#/var/db# に置かれた他のデータを 参照するディレクティブを含みます。
+
+|[.filename]#/usr/local/etc#
+|インストールされたアプリケーションの設定ファイル。 アプリケーションごとのサブディレクトリを含んでいることがあります。
+
+|[.filename]#/usr/local/etc/rc.d#
+|インストールされたアプリケーションの起動/停止スクリプト。
+
+|[.filename]#/var/db#
+|永続的なシステム固有のデータファイル。 たとえば man:named[8] のゾーンファイル、データベースファイル等。
+|===
+
+=== ホスト名
+
+==== [.filename]#/etc/resolv.conf#
+
+[.filename]#/etc/resolv.conf# は FreeBSD に インターネットドメインネームシステム (DNS) にどのようにアクセスするかを指定します。
+
+[.filename]#resolv.conf# の最もよくあるエントリは 
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|`nameserver`
+|リゾルバが問い合わせるべきネームサーバの IP アドレス。 サーバはリストの順に 3 番目まで問い合わせられます。
+
+|`search`
+|ホスト名をルックアップするための検索リスト。 通常、ローカルなホスト名のドメインから決定されます。
+
+|`domain`
+|ローカルドメイン名。
+|===
+
+基本的な [.filename]#resolv.conf#。
+
+[.programlisting]
+....
+search example.com
+nameserver 147.11.1.11
+nameserver 147.11.100.30
+....
+
+[NOTE]
+====
+`search` オプションと `domain` オプションは、 どちらか一方しか使ってはいけません。
+====
+
+DHCP を利用している場合、man:dhclient[8] は通常 [.filename]#resolv.conf# を DHCP サーバから受け取っ た情報で書き換えます。
+
+==== [.filename]#/etc/hosts#
+
+[.filename]#/etc/hosts# は古きインターネットを 偲ばせるシンプルなテキストのデータベースです。 これはホスト名と IP アドレスをマッピングする DNS や NIS と組み合わせて使われます。 LAN でつながれているローカルな計算機は、 名前引きを簡単にするために man:named[8] サーバを立ち上げるかわりにここに書くことができます。 さらに [.filename]#/etc/hosts# はインターネット名のローカルなレコードを提供し、 よくアクセスされる名前を外部に問い合わせるのを減らすためにも使えます。
+
+[.programlisting]
+....
+# $FreeBSD$
+#
+# Host Database
+# This file should contain the addresses and aliases
+# for local hosts that share this file.
+# In the presence of the domain name service or NIS, this file may
+# not be consulted at all; see /etc/nsswitch.conf for the resolution order.
+#
+#
+::1                     localhost localhost.my.domain myname.my.domain
+127.0.0.1               localhost localhost.my.domain myname.my.domain
+
+#
+# Imaginary network.
+#10.0.0.2               myname.my.domain myname
+#10.0.0.3               myfriend.my.domain myfriend
+#
+# According to RFC 1918, you can use the following IP networks for
+# private nets which will never be connected to the Internet:
+#
+#       10.0.0.0        -   10.255.255.255
+#       172.16.0.0      -   172.31.255.255
+#       192.168.0.0     -   192.168.255.255
+#
+# In case you want to be able to connect to the Internet, you need
+# real official assigned numbers.  PLEASE PLEASE PLEASE do not try
+# to invent your own network numbers but instead get one from your
+# network provider (if any) or from the Internet Registry (ftp to
+# rs.internic.net, directory `/templates').
+#
+....
+
+[.filename]#/etc/hosts# は、 次のようなごく簡単なフォーマットになっています。
+
+[.programlisting]
+....
+[インターネットアドレス] [正式なホスト名] [別名1] [別名2] ...
+....
+
+例:
+
+[.programlisting]
+....
+10.0.0.1 myRealHostname.example.com myRealHostname foobar1 foobar2
+....
+
+これ以上の情報は man:hosts[5] をあたってください。
+
+=== ログファイルに関係する設定
+
+==== [.filename]#syslog.conf#
+
+[.filename]#syslog.conf# は man:syslogd[8] プログラムのための設定ファイルです。 これはどのタイプの `syslog` メッセージを対応する ログファイルに記録するかを指定します。
+
+[.programlisting]
+....
+# $FreeBSD$
+#
+#       Spaces ARE valid field separators in this file. However,
+#       other *nix-like systems still insist on using tabs as field
+#       separators. If you are sharing this file between systems, you
+#       may want to use only tabs as field separators here.
+#       Consult the syslog.conf(5) manual page.
+*.err;kern.debug;auth.notice;mail.crit          /dev/console
+*.notice;kern.debug;lpr.info;mail.crit;news.err /var/log/messages
+security.*                                      /var/log/security
+mail.info                                       /var/log/maillog
+lpr.info                                        /var/log/lpd-errs
+cron.*                                          /var/log/cron
+*.err                                           root
+*.notice;news.err                               root
+*.alert                                         root
+*.emerg                                         *
+# uncomment this to log all writes to /dev/console to /var/log/console.log
+#console.info                                   /var/log/console.log
+# uncomment this to enable logging of all log messages to /var/log/all.log
+#*.*                                            /var/log/all.log
+# uncomment this to enable logging to a remote log host named loghost
+#*.*                                            @loghost
+# uncomment these if you're running inn
+# news.crit                                     /var/log/news/news.crit
+# news.err                                      /var/log/news/news.err
+# news.notice                                   /var/log/news/news.notice
+!startslip
+*.*                                             /var/log/slip.log
+!ppp
+*.*                                             /var/log/ppp.log
+....
+
+これ以上の情報は man:syslog.conf[5] のマニュアルページに あたってください。
+
+==== [.filename]#newsyslog.conf#
+
+[.filename]#newsyslog.conf# は、通常 man:cron[8] によって予定を決めて実行されるプログラム man:newsyslog[8] のための設定ファイルです。 man:newsyslog[8] は、 ログファイルをいつ保存して再編するかを決定します。 [.filename]#logfile# は [.filename]#logfile.0# に移され、[.filename]#logfile.0# は [.filename]#logfile.1# に、そして以下同様に移されます。 また、ログファイルを man:gzip[1] 形式で保存することもできます。 この場合ファイル名は [.filename]#logfile.0.gz#, [.filename]#logfile.1.gz# の様になります。
+
+[.filename]#newsyslog.conf# はどのログファイルが管理され、どのくらいの期間保存され、 そしていつ touch されるかを指定します。 ログファイルはあるサイズに到達するか、ある決められた時刻・ 日時で再編されあるいは保存されます。
+
+[.programlisting]
+....
+# configuration file for newsyslog
+# $FreeBSD$
+#
+# filename          [owner:group]    mode count size when [ZB] [/pid_file] [sig_num]
+/var/log/cron                           600  3     100  *     Z
+/var/log/amd.log                        644  7     100  *     Z
+/var/log/kerberos.log                   644  7     100  *     Z
+/var/log/lpd-errs                       644  7     100  *     Z
+/var/log/maillog                        644  7     *    @T00  Z
+/var/log/sendmail.st                    644  10    *    168   B
+/var/log/messages                       644  5     100  *     Z
+/var/log/all.log                        600  7     *    @T00  Z
+/var/log/slip.log                       600  3     100  *     Z
+/var/log/ppp.log                        600  3     100  *     Z
+/var/log/security                       600  10    100  *     Z
+/var/log/wtmp                           644  3     *    @01T05 B
+/var/log/daily.log                      640  7     *    @T00  Z
+/var/log/weekly.log                     640  5     1    $W6D0 Z
+/var/log/monthly.log                    640  12    *    $M1D0 Z
+/var/log/console.log                    640  5     100  *     Z
+....
+
+これ以上の情報は man:newsyslog[8] のマニュアルページに あたってください。
+
+=== [.filename]#sysctl.conf#
+
+[.filename]#sysctl.conf# は [.filename]#rc.conf# によく似ています。 値は``変数=値``のかたちでセットされます。 指定された値はシステムがマルチユーザモードに移行した後でセットされます。 すべての変数がこのモードで設定可能というわけではありません。
+
+以下は [.filename]#sysctl.conf# のサンプルで 致命的なシグナルを記録しないように、また Linux プログラムに それらが実際は FreeBSD 上で動いていることを知らせる様に チューニングしています。
+
+[.programlisting]
+....
+kern.logsigexit=0       # Do not log fatal signal exits (e.g. sig 11)
+compat.linux.osname=FreeBSD
+compat.linux.osrelease=4.3-STABLE
+....
+
+[[configtuning-sysctl]]
+== sysctl によるチューニング
+
+man:sysctl[8] は稼働中の FreeBSD システムに変更を加えるためのインタフェイスです。 これには経験を積んだ管理者用の TCP/IP スタックや 仮想メモリシステムのパフォーマンスを劇的に改善する 先進的なオプションが含まれます。 500 を越えるシステム変数を man:sysctl[8] で読んだり セットしたりできます。
+
+本質的には man:sysctl[8] の機能は次の二つ、 システムの設定を読むことと変更することです。
+
+読み取り可能なすべての変数を表示するには以下のようにします。
+
+[source,bash]
+....
+% sysctl -a
+....
+
+個々の変数、たとえば `kern.maxproc` を読むには以下のようにします。
+
+[source,bash]
+....
+% sysctl kern.maxproc
+kern.maxproc: 1044
+....
+
+特定の変数をセットするには、直感的な文法 _変数_=_値_ を使ってください。
+
+[source,bash]
+....
+# sysctl kern.maxfiles=5000
+kern.maxfiles: 2088 -> 5000
+....
+
+sysctl 変数の値は通常、文字列、数値、真偽値のいずれかです。 (真偽値は yes の場合には `1` で no の場合には `0` です)。
+
+[[configtuning-disk]]
+== ディスクのチューニング
+
+=== sysctl 変数
+
+==== `vfs.vmiodirenable`
+
+`vfs.vmiodirenable` sysctl 変数のデフォルトは 1 (オン) で、 0 (オフ) または 1 (オン) にセットすることができます。 このパラメータはディレクトリがシステムによってどのように キャッシュされるかを制御します。 ほとんどのディレクトリは小さく、 ファイルシステムにおいては単一フラグメント (典型的には 1K) であり、バッファキャッシュではさらに小さくなっています (典型的には 512 バイト)。 しかしデフォルトモードで動作している時は、 大量のメモリを搭載していても バッファキャッシュは固定数のディレクトリしかキャッシュしません。 この sysctl をオンにすると、バッファキャッシュが VM ページキャッシュを、 ディレクトリをキャッシュするために使うことを可能にします。 これによる利点は、全てのメモリがディレクトリを キャッシュするのに使えるようになるということです。 欠点は、キャッシュに使われる最小のメモリの大きさが 512 バイトではなく 物理ページサイズ (大抵は 4K) になることです。 多数のファイルを操作するサービスを稼動しているなら、 常にこのオプションをオンにすることを推奨します。 そのようなサービスには、web キャッシュや大規模なメールシステム、 ニューズシステムなどが含まれます。 このオプションは一般にメモリを消費しますが、 性能を削減することはありません。 ただし実験して調べてみるべきでしょう。
+
+==== `hw.ata.wc`
+
+FreeBSD 4.3 では IDE のライトキャッシュがオフになりました。 これは IDE ディスクへの書き込み帯域幅を減らしてしまうことになりますが、 ハードドライブベンダに起因するデータの一貫性に関する 重大な問題のために必要なことだと考えられました。 基本的には、書き込み完了時期について IDE ドライブが嘘をつくという問題です。 IDE ライトキャッシュがオンであると IDE ハードドライブはデータを順番に書きこまないばかりか、 ディスクの負荷が高い時にはいくつかのブロックの書き込みを 無期限に延期してしまいます。 クラッシュや電源故障の場合、 ファイルシステムの重大な破壊をもたらします。 したがって私たちはデフォルトを安全側に変更しました。 残念ながらこれは大変な性能の低下をもたらし、 私たちはあきらめてこのリリース後にオンに戻しました。 `hw.ata.wc` sysctl 変数を見てデフォルトを チェックしてみるべきです。 もし IDE ライトキャッシュがオフになっていたら、 hw.ata.wc カーネル変数を 1 に戻すことでオンに戻すことができます。 これはブート時にブートローダから行わなければなりません。 カーネルがブートした後に行っても効果はありません。
+
+詳しくは man:ata[4] を見てください。
+
+=== ソフトアップデート
+
+man:tunefs[8] プログラムはファイルシステムを細かくチュー ニングするのに使えます。このプログラムにはさまざまなオプションがありま すが、ここではソフトアップデートをオンオフすることだけを考えま す。以下の様にして切り替えます。
+
+[source,bash]
+....
+# tunefs -n enable /filesystem
+# tunefs -n disable /filesystem
+....
+
+ファイルシステムはマウントされているあいだは man:tunefs[8] で変更することができません。 ソフトアップデートを有効にする いい機会はシングルユーザモードでどのパーティションもマウント されていない時です。
+
+[NOTE]
+====
+FreeBSD 4.5 からは、ファイルシステム生成時に man:newfs[8] の `-U` オプションを使って ソフトアップデートを有効化できるようになりました。
+====
+
+ソフトアップデートはメタデータの性能、 主にファイルの作成と削除の性能を劇的に改善します。 すべてのファイルシステムでソフトアップデートを有効にすることを推奨します。 ソフトアップデートに関して、2 つの欠点を意識すべきです。 1 つめは、ソフトアップデートはクラッシュ時におけるファイルシス テムの一貫性は保証しますが、 物理ディスクの更新が何秒か (1 分に達することもあります!) 遅れる可能性が高いことです。 システムがクラッシュした場合、より多くの作業結果が消えてしまうかもしれません。 2 つめは、ソフトアップデート はファイルシステムブロックを解放するのを遅らせるということです。 あるファイルシステム (たとえばルートファイルシステム) が満杯近くの時に それに対する大規模な更新、たとえば `make installworld` をすると、空き領域を使い果たして更新が失敗してしまうことがあります。 
+
+[[configtuning-kernel-limits]]
+== Kernel 制限のチューニング
+
+=== File/Process 制限
+
+==== `kern.maxfiles`
+
+`kern.maxfiles` はあなたのシステムの要求に 応じて増減させることができます。 この変数はあなたのシステムのファイル記述子の最大値を示します。 ファイル記述子テーブルが溢れるような時には、システムメッセー ジバッファに頻繁に `file: table is full` と表示されます。これは、 `dmesg` コマンドで確認できます。
+
+ファイル、ソケット、パイプ (fifo) は それぞれオープンされるとファイル記述子を一つ消費します。 大規模なプロダクションサーバでは その時実行されているサービスの種類や数に応じては あっさり数千のファイル記述子が必要になります。
+
+`kern.maxfile` のデフォルト値はカーネル コンフィグレーションファイルの `MAXUSERS` オ プションで決まります。`kern.maxfiles` は `MAXUSERS` の値に比例して増加します。 カスタムカーネルをコンパイルする際は、このカーネルコンフィグ レーションオプションをシステムの利用法に合わせて設定するとよ いでしょう。カーネルは、この数値からほとんどの制限の初期値を 決定します。業務用マシンに、実際に 256 名のユーザが一度に接 続することはないかもしれませんが、大規模なウェブサーバに必要 なリソースは同程度になります。
+
+[NOTE]
+====
+FreeBSD 4.5 からは、 カーネルコンフィグレーションファイルで `MAXUSERS` を `0` に設定すると、システムの RAM 容量に基づいて適切なデフォルト値が選択されます。
+====
+
+=== ネットワークの制限
+
+カーネルコンフィグレーションオプション `NMBCLUSTERS` は、そのシステムで利用可能なネッ トワーク mbuf の量を決定します。通信量の多いサーバで MBUF の量 が少ないと、FreeBSD の性能が低下してしまいます。クラスタ一つは およそ 2kB のメモリに対応しているので、1024 だとカーネルメモリ から約 2 MB をネットワークバッファに予約することになります。ど れだけ必要になるかを、簡単な計算で出すことができます。同時に最 大 1000 接続までゆくウェブサーバがあり、それぞれの接続によって 受信バッファ 16kB と送信バッファ 16kB が消費されるなら、ウェ ブサーバをまかなうのに 32MB 程度のネットワークバッファが必要 になります。経験的に有用な値は、それを 2 倍したものなので、 32MBx2 = 64MB/2K = 32768 になります。

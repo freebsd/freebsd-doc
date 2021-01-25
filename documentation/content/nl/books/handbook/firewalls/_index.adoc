@@ -1,0 +1,1950 @@
+---
+title: Hoofdstuk 30. Firewalls
+part: Deel IV. Netwerkcommunicatie
+prev: books/handbook/network-servers
+next: books/handbook/advanced-networking
+---
+
+[[firewalls]]
+= Firewalls
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Inhoudsopgave
+:table-caption: Tabel
+:figure-caption: Afbeelding
+:example-caption: Voorbeeld
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 30
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/firewalls/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/firewalls/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/firewalls/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/nl/mailing-lists.adoc[]
+include::shared/nl/teams.adoc[]
+include::shared/nl/urls.adoc[]
+
+toc::[]
+
+[[firewalls-intro]]
+== Inleiding
+
+Firewalls bieden de mogelijkheid om inkomend en uitgaand verkeer op een systeem te filteren. Een firewall gebruikt daarvoor een of meer groepen regels ("rules") om netwerkpakketten te inspecteren als ze binnenkomen of weggaan door netwerkverbindingen en staat dat verkeer dan toe of blokkeert het. De regels van een firewall kunnen één of meerdere eigenschappen van pakketten onderzoeken waaronder, maar niet uitsluitend, het protocol, het bron- of bestemmingsadres en de bron- en bestemmingspoort.
+
+Firewalls kunnen de veiligheid van een host of netwerk enorm vergroten. Ze kunnen één of meer van de volgende dingen doen:
+
+* Applicaties, diensten en machines op een intern netwerk te beschermen tegen ongewild verkeer van het Internet.
+* Toegang tot Internet voor interne hosts te limiteren of uitschakelen.
+* Ondersteuning bieden voor netwerkadres vertaling ("network address translation" of NAT), waarmee er vanaf een intern netwerk met private IP adressen een Internetverbinding gedeeld kan worden met één IP adres of met een groep van publieke adressen die automatisch wordt toegewezen.
+
+Na het lezen van dit hoofdstuk weet de lezer:
+
+* Hoe pakketfilteringsregels op de juiste wijze samengesteld kunnen worden;
+* De verschillen tussen de firewalls die bij FreeBSD worden geleverd;
+* Hoe de OpenBSD firewall PF te gebruiken en in te stellen;
+* Hoe IPFILTER te gebruiken en in te stellen;
+* Hoe IPFW te gebruiken en in te stellen.
+
+Er wordt aangenomen dat de lezer van dit hoofdstuk:
+
+* Basisbegrip heeft van FreeBSD en Internetconcepten.
+
+[[firewalls-concepts]]
+== Firewallconcepten
+
+Er zijn twee basismogelijkheden om sets met regels te maken voor firewalls: "inclusief" of "exclusief". Een exclusieve firewall staat al het verkeer door behalve het verkeer dat past bij de set met regels. Een inclusieve firewall doet het tegenovergestelde. Die staat alleen verkeer toe dat past bij de regels en blokkeert al het overige verkeer.
+
+Een inclusieve firewall biedt veel betere controle over het uitgaande verkeer, waardoor het een betere keuze is voor systemen die diensten op het publieke Internet aanbieden. Het beheert ook het type verkeer dat van het publieke Internet afkomt en toegang heeft tot uw privé-netwerk. Al het verkeer dat niet aan de regels voldoet wordt geblokkeerd en gelogd, dat is zo ontworpen. Inclusieve firewalls zijn over het algemeen veiliger dan exclusieve firewalls omdat ze het risico dat ongewenst verkeer door ze heen gaat aanzienlijk verminderen.
+
+[NOTE]
+====
+Tenzij anders aangegeven, creëeren alle configuraties en voorbeelden van regelverzamelingen in dit hoofdstuk inclusieve firewalls.
+====
+
+De beveiliging kan nog verder vergroot worden met een "stateful firewall". Dit type firewall houdt bij welke connecties er door de firewall tot stand zijn gekomen en laat alleen verkeer door dat bij een bestaande connectie hoort of onderdeel is van een connectie in opbouw. Het nadeel van een stateful firewall is dat die kwetsbaar kan zijn voor Ontzegging van Dienst (DoS) aanvallen als er een groot aantal nieuwe verbindingen binnen korte tijd wordt opgezet. Met de meeste firewalls is het mogelijk een combinatie te maken van stateful en niet stateful gedrag om een optimale firewall voor een site te maken.
+
+[[firewalls-apps]]
+== Firewallsoftware
+
+FreeBSD heeft drie soorten firewallsoftware in de basisinstallatie. Dat zijn: IPFILTER (ook bekend als IPF), IPFIREWALL (ook bekend als IPFW) en de pakketfilter van OpenBSD (ook bekend als PF). FreeBSD heeft ook twee ingebouwde pakketten voor het regelen van verkeer (in de basis het beheersen van bandbreedtegebruik): man:altq[4] en man:dummynet[4]. Dummynet is traditioneel sterk verbonden met IPFW en ALTQ met PF. Het vormgeven van verkeer voor IPFILTER kan momenteel gedaan worden met IPFILTER voor NAT en filtering en IPFW met man:dummynet[4] _of_ door PF met ALTQ te gebruiken. IPFW en PF gebruiken allemaal regels om de toegang van pakketten tot een systeem te regelen, hoewel ze dat op andere manieren doen en ze een andere regelsyntaxis hebben.
+
+De reden dat er meerdere firewallpakketten in FreeBSD zitten is dat verschillende mensen verschillende eisen en voorkeuren hebben. Geen enkel firewallpakket is het beste.
+
+De schrijver van dit artikel geeft de voorkeur aan IPFILTER omdat daarmee stateful regels minder complex zijn toe te passen in een omgeving waar NAT wordt gebruikt en IPF heeft een ingebouwde FTP proxy waardoor de regels voor het veilig gebruiken van FTP eenvoudiger worden.
+
+Omdat alle firewalls gebaseerd zijn op het inspecteren van aangegeven controlevelden in pakketten, moet iemand die sets van firewallregels opstelt begrijpen hoe TCP/IP werkt, welke waarde de controlevelden kunnen hebben en hoe die waarden gebruikt worden in normaal verkeer. Op de volgende webpagina wordt een prima uitleg gegeven: http://www.ipprimer.com/overview.cfm[http://www.ipprimer.com/overview.cfm].
+
+[[firewalls-pf]]
+== De OpenBSD Packet Filter (PF) en ALTQ
+
+Vanaf juli 2003 is de OpenBSD firewalltoepassing PF geporteerd naar FreeBSD en beschikbaar gekomen in de FreeBSD Portscollectie. In 2004 was FreeBSD 5.3 de eerste release die PF bevatte is integraal onderdeel van het basissysteem. PF is een complete en volledige firewall die optioneel ALTQ bevat (Alternate Queuing). ALTQ biedt Quality of Service (QoS) functionaliteit.
+
+het OpenBSD Project levert een uitstekend werk wat betreft het onderhouden van de http://www.openbsd.org/faq/pf/[PF FAQ]. Zodoende zal deze sectie van het handboek zich richten op PF met betrekking tot FreeBSD terwijl het ook wat algemene informatie over het gebruik zal geven. Voor gedetailleerde gebruikersinformatie wordt naar de http://www.openbsd.org/faq/pf/[PF FAQ] verwezen.
+
+Meer informatie over PF voor FreeBSD staat op http://pf4freebsd.love2party.net/[http://pf4freebsd.love2party.net/].
+
+=== De laadbare kernelmodules voor PF gebruiken
+
+Voeg de volgende regel toe aan [.filename]#/etc/rc.conf# om de kernelmodule PF te laden:
+
+[.programlisting]
+....
+pf_enable="YES"
+....
+
+Draai vervolgens het opstartscript om de module te laden:
+
+[source,bash]
+....
+# service pf start
+....
+
+Merk op dat de PF module niet laadt als het het instellingenbestand met de regelverzameling niet kan vinden. De standaardlocatie is [.filename]#/etc/pf.conf#. Als de regelverzameling voor PF zich elders bevindt, kan PF worden verteld om daar te kijken een regel analoog aan de volgende aan [.filename]#/etc/rc.conf# toe te voegen:
+
+[.programlisting]
+....
+pf_rules="/pad/naar/pf.conf"
+....
+
+Het voorbeeld [.filename]#pf.conf# bestand kan gevonden worden in [.filename]#/usr/shared/examples/pf#
+
+De module PF kan ook handmatig vanaf de opdrachtregel geladen worden:
+
+[source,bash]
+....
+# kldload pf.ko
+....
+
+Logondersteuning voor PF wordt geleverd door `pflog.ko` en kan worden geladen door de volgende regel aan [.filename]#/etc/rc.conf# toe te voegen:
+
+[.programlisting]
+....
+pflog_enable="YES"
+....
+
+Draai vervolgens het opstartscript om de module te laden:
+
+[source,bash]
+....
+# service pflog start
+....
+
+Als u andere mogelijkheden van PF nodig heeft dient u ondersteuning voor PF in de kernel te compileren.
+
+=== Kernelopties voor PF
+
+Hoewel het niet nodig is om ondersteuning voor PF in de kernel te compileren, biedt dit wel de mogelijkheid om van een van PF's geavanceerde mogelijkheden gebruik te maken die niet in de laadbare module zitten, namelijk man:pfsync[4], dat een pseudo-apparaat is dat zekere veranderingen aan de toestandstabel die door PF wordt gebruikt prijsgeeft. Het kan worden gecombineerd met man:carp[4] om failover firewalls aan te maken die gebruik maken van PF. Meer informatie over CARP kan gevonden worden in crossref:advanced-networking[carp,Common Address Redundancy Protocol (CARP)] van het Handboek.
+
+De kernelopties voor PF kunnen gevonden worden in [.filename]#/usr/src/sys/conf/NOTES# en zijn hieronder gereproduceerd:
+
+[.programlisting]
+....
+device pf
+device pflog
+device pfsync
+....
+
+De optie `device pf` schakelt ondersteuning voor de "Packet Filter" firewall (man:pf[4]) in.
+
+De optie `device pflog` schakelt het optionele man:pflog[4] pseudo-netwerkapparaat in dat gebruikt kan worden om verkeer te loggen naar een man:bpf[4] descriptor. De man:pflogd[8] daemon kan gebruikt worden om de logboekinformatie naar schijf te schrijven.
+
+De optie `device pfsync` schakelt het optionele man:pfsync[4] pseudo netwerkapparaat in waarmee de toestandswijzigingen gemonitord kunnen worden.
+
+=== Beschikbare opties voor [.filename]#rc.conf#
+
+De volgende man:rc.conf[5] statements stellen PF en man:pflog[4] in tijdens het opstarten:
+
+[.programlisting]
+....
+pf_enable="YES"                 # Schakel PF in (laad module als nodig)
+pf_rules="/etc/pf.conf"         # bestand met regels voor pf
+pf_flags=""                     # aanvullende vragen voor opstarten pfctl
+pflog_enable="YES"              # start pflogd(8)
+pflog_logfile="/var/log/pflog"  # waar pflogd het logboekbestand moet opslaan
+pflog_flags=""                  # aanvullende vlaggen voor opstarten pflogd
+....
+
+Als er een LAN achter de firewall staat en er pakketten doorgestuurd moeten worden naar computers op het LAN of als NAT actief is, dan is de volgende optie ook nodig:
+
+[.programlisting]
+....
+gateway_enable="YES"            # Schakel in als LAN gateway
+....
+
+=== Filterregels aanmaken
+
+PF leest de instelregels van man:pf.conf[5] (standaard [.filename]#/etc/pf.conf#) en het verandert, verwijdert, of geeft pakketten door aan de hand van de regels of definities die daar zijn gespecificeerd. De FreeBSD-installatie bevat een aantal voorbeeldbestanden in [.filename]#/usr/shared/examples/pf/#. In de http://www.openbsd.org/faq/pf/[PF FAQ] staat een complete behandeling van de PF regels.
+
+[WARNING]
+====
+
+Houd tijdens het doornemen van de http://www.openbsd.org/faq/pf[PF FAQ] in de gaten dat verschillende versies van FreeBSD verschillende versies van PF kunnen bevatten. Momenteel gebruikt FreeBSD 8._X_ dezelfde versie van PF als OpenBSD 4.1. FreeBSD 9._X_ en hoger gebruiken dezelfde versie van PF als OpenBSD 4.5.
+====
+
+De {freebsd-pf} is een goede plaats om vragen over het instellen en draaien van de PF firewall te stellen. Vergeet niet de mailinglijstarchieven te controleren alvorens vragen te stellen!
+
+=== Werken met PF
+
+Gebruik man:pfctl[8] om PF te beheren. Hieronder staan wat nuttige commando's (bekijk de hulppagina man:pfctl[8] voor alle beschikbare opties):
+
+[.informaltable]
+[cols="1,1,1,1", frame="none", options="header"]
+|===
+| Commando
+| Doel
+| 
+| 
+
+|`pfctl -e`
+|PF aanzetten
+|
+|
+
+|`pfctl -d`
+|PF uitzetten
+|
+|
+
+|`pfctl -F all -f /etc/pf.conf`
+|Spoel alle regels door (nat, filter, toestand, tabel, etc.) en herlaad vanuit het bestand [.filename]#/etc/pf.conf#
+|`pfctl -s [ rules \| nat \| state ]`
+|Rapporteer over de filterregels, NAT-regels, of toestandstabel
+
+|`pfctl -vnf /etc/pf.conf`
+|Controleer [.filename]#/etc/pf.conf# op fouten, maar laad de regelverzameling niet
+|
+|
+|===
+
+=== ALTQ inschakelen
+
+ALTQ is alleen beschikbaar ondersteuning ervoor in de FreeBSD Kernel te compileren. ALTQ wordt niet door alle netwerkkaartstuurprogramma's ondersteund. In man:altq[4] staat een lijst met ondersteunde stuurprogramma's voor de betreffende versie.
+
+Met de volgende opties wordt ALTQ ingeschakeld en additionele functionaliteit toegevoegd:
+
+[.programlisting]
+....
+options         ALTQ
+options         ALTQ_CBQ        # Class Bases Queuing (CBQ)
+options         ALTQ_RED        # Random Early Detection (RED)
+options         ALTQ_RIO        # RED In/Out
+options         ALTQ_HFSC       # Hierarchical Packet Scheduler (HFSC)
+options         ALTQ_PRIQ       # Priority Queuing (PRIQ)
+options         ALTQ_NOPCC      # Required for SMP build
+....
+
+`options ALTQ` schakelt het ALTQ raamwerk in.
+
+`options ALTQ_CBQ` schakelt _Class Based Queuing_ (CBQ) in. Met CBQ kan de bandbreedte van een verbinding worden opgedeeld in verschillende klassen of wachtrijen om verkeer te prioriteren op basis van filterregels.
+
+`options ALTQ_RED` schakelt _Random Early Detection_ (RED) in. RED wordt gebruikt om netwerkverstopping te voorkomen. RED doet dit door de lengte van de wachtrij te meten en die te vergelijken met de minimale en maximale drempelwaarden voor de wachtrij. Als de wachtrij groter is dan de maximale waarde worden alle nieuwe pakketten genegeerd. Het werkt naar zijn naam, dus RED negeert willekeurig pakketten van verschillende verbindingen.
+
+`options ALTQ_RIO` schakelt _Random Early Detection In and Out_ in.
+
+`options ALTQ_HFSC` schakelt de _Hierarchical Fair Service Curve Packet Scheduler_ in. Meer informatie over HFSC staat op http://www-2.cs.cmu.edu/\~hzhang/HFSC/main.html[http://www-2.cs.cmu.edu/~hzhang/HFSC/main.html].
+
+`options ALTQ_PRIQ` schakelt _Priority Queuing_ (PRIQ) in. PRIQ laat verkeer dat in een hogere wachtrij staat altijd eerder door.
+
+`options ALTQ_NOPCC` schakelt SMP ondersteuning voor ALTQ in. Deze optie is verplicht op SMP systemen.
+
+[[firewalls-ipf]]
+== De IPFILTER (IPF) firewall
+
+Darren Reed is de auteur van IPFILTER, dat niet afhankelijk is van één besturingssysteem. Het is een open source applicatie die is geporteerd naar FreeBSD, NetBSD, OpenBSD, SunOS, HP/UX en Solaris besturingssystemen. IPFILTER wordt actief ondersteund en onderhouden en er worden regelmatig nieuwe versies uigebracht.
+
+IPFILTER is gebaseerd op een firewall aan de kernelkant en een NAT mechanisme dat gecontroleerd en gemonitord kan worden door programma's in userland. De firewallregels kunnen ingesteld of verwijderd worden met het hulpprogramma man:ipf[8]. De NAT regels kunnen ingesteld of verwijderd worden met man:ipnat[8]. Het programma man:ipfstat[8] kan actuele statistieken leveren voor de kernelonderdelen van IPFILTER. man:ipmon[8] kan acties van IPFILTER wegschrijven naar logboekbestanden van het systeem.
+
+IPF is oorspronkelijk geschreven met logica die regels verwerkte volgens het principe "de laatst passende regel wint" en gebruikte toen alleen staatloze regels. In de loop der tijd is IPF verbeterd en zijn de opties `quick` en `keep state` toegevoegd waarmee de logica van het verwerken van regels drastisch is gemoderniseerd. In de officiële documentatie van IPF worden alleen de regels en verwerkingslogica behandeld. De moderne functies worden alleen behandeld als opties, waardoor hun nut dat er een veel betere en veiligere firewall mee te maken volledig onderbelicht blijft.
+
+De instructies in dit hoofdstuk zijn gebaseerd op regels die gebruik maken van de optie `quick` en de stateful optie `keep state`. Dit is het raamwerk waarmee een set van inclusieve firewallregels wordt samengesteld.
+
+Voor een gedetailleerde uitleg over de verwerking van de verouderde regels zie http://www.munk.me.uk/ipf/ipf-howto.html[http://www.munk.me.uk/ipf/ipf-howto.html] en http://coombs.anu.edu.au/\~avalon/ip-filter.html[http://coombs.anu.edu.au/~avalon/ip-filter.html].
+
+De IPF FAQ is te vinden op http://www.phildev.net/ipf/index.html[http://www.phildev.net/ipf/index.html].
+
+Een doorzoekbaar archief van de open-source IPFilter mailing lijst is beschikbaar op http://marc.theaimsgroup.com/?l=ipfilter[http://marc.theaimsgroup.com/?l=ipfilter].
+
+=== IPF inschakelen
+
+IPF zit in de basisinstallatie van FreeBSD als een aparte "run time" laadbare module. Een systeem laadt de IPF kernel laadbare module dynamisch als `ipfilter_enable="YES"` in [.filename]#rc.conf# staat. Voor de laadbare module zijn de opties `logging` en `default pass all` ingeschakeld. IPF hoeft niet in de kernel gecompileerd te worden om het standaardgedrag te wijzigen naar `block all`. Dat is mogelijk door op het einde van de regelverzameling een regel `block all` toe te voegen die al het verkeer blokkeert.
+
+=== Kernelopties
+
+Het is niet verplicht om IPF in te schakelen door de volgende opties in de FreeBSD kernel te compileren. Dit wordt alleen beschreven als achtergrondinformatie. Door IPF in de kernel te compileren wordt de laadbare module niet gebruikt.
+
+Voorbeeld kernelinstellingen voor IPF staan beschreven in de [.filename]#/usr/src/sys/i386/conf/LINT# in de kernelbroncode en worden hier beschreven:
+
+[.programlisting]
+....
+options IPFILTER
+options IPFILTER_LOG
+options IPFILTER_DEFAULT_BLOCK
+....
+
+`options IPFILTER` schakelt ondersteuning voor de "IPFILTER" firewall in.
+
+`options IPFILTER_LOG` schakelt de optie in waarmee IPF verkeer kan loggen door het naar het [.filename]#ipl# pakketloggende pseudo-apparaat te schrijven voor iedere regel met het sleutelwoord `log` erin.
+
+`options IPFILTER_DEFAULT_BLOCK` wijzigt het standaardgedrag zodat ieder pakket waarop geen enkele `pass` regel van toepassing is wordt geblokkeerd.
+
+Deze instelling worden pas actief nadat een kernel waarvoor deze instellingen zijn gemaakt is gebouwd en geïnstalleerd.
+
+=== Beschikbare opties voor [.filename]#rc.conf#
+
+De volgende instellingen moeten in [.filename]#/etc/rc.conf# staan om IPF bij het opstarten te activeren:
+
+[.programlisting]
+....
+ipfilter_enable="YES"             # Start ipf firewall
+ipfilter_rules="/etc/ipf.rules"   # laad regels uit het doelbestand
+ipmon_enable="YES"                # Start IP monitor log
+ipmon_flags="-Ds"                 # D = start als daemon
+                                  # s = log naar syslog
+                                  # v = log tcp window, ack, seq
+                                  # n = vertaal IP & poort naar namen
+....
+
+Als er een LAN achter de firewall staat dat gebruik maakt van IP-adressen uit de private reeks, dan moet de volgende optie ook ingesteld worden om NAT-functionaliteit in te schakelen:
+
+[.programlisting]
+....
+gateway_enable="YES"              # Schakel in als LAN gateway
+ipnat_enable="YES"                # Start ipnat functie
+ipnat_rules="/etc/ipnat.rules"    # bestand met regels voor ipnat
+....
+
+=== IPF
+
+Het commando man:ipf[8] wordt gebruikt om het bestand met firewallregels te laden. Gewoonlijk wordt er een bestand aangemaakt waarin de situatieafhankelijke regels staan waarmee in één keer de bestaande regels kunnen worden vervangen:
+
+[source,bash]
+....
+# ipf -Fa -f /etc/ipf.rules
+....
+
+`-Fa`: verwijder alle interne tabellen met regels.
+
+`-f`: laad het aangegeven bestand met regels.
+
+Hiermee wordt het mogelijk wijzigingen te maken aan het bestand met eigen regels en met man:ipf[8] de firewall aan te passen met verse regels zonder het systeem te booten. Deze methode is erg handig om nieuwe regels te testen omdat dit zo vaak als nodig gedaan kan worden.
+
+In man:ipf[8] worden alle opties die beschikbaar zijn toegelicht.
+
+man:ipf[8] verwacht dat het bestand met regels een standaard tekstbestand is. Het accepteert geen bestand met regels dat is opgesteld als een script dat gebruik maakt van substitutie.
+
+Er is wel een mogelijkheid om IPF regels op te stellen en gebruik te maken van substitutie. Meer informatie staat in <<firewalls-ipf-rules-script>>.
+
+=== IPFSTAT
+
+man:ipfstat[8] haalt de totalen van de statistieken op die horen bij de firewall sinds die is gestart en toont deze. Het kan ook zijn dat de tellers in tussentijd op nul zijn gesteld met `ipf -Z`.
+
+In man:ipfstat[8] worden alle details behandeld.
+
+Standaard ziet man:ipfstat[8] uitvoer er ongeveer als volgt uit:
+
+[source,bash]
+....
+input packets: blocked 99286 passed 1255609 nomatch 14686 counted 0
+output packets: blocked 4200 passed 1284345 nomatch 14687 counted 0
+input packets logged: blocked 99286 passed 0
+output packets logged: blocked 0 passed 0
+packets logged: input 0 output 0
+log failures: input 3898 output 0
+fragment state(in): kept 0 lost 0
+fragment state(out): kept 0 lost 0
+packet state(in): kept 169364 lost 0
+packet state(out): kept 431395 lost 0
+ICMP replies: 0 TCP RSTs sent: 0
+Result cache hits(in): 1215208 (out): 1098963
+IN Pullups succeeded: 2 failed: 0
+OUT Pullups succeeded: 0 failed: 0
+Fastroute successes: 0 failures: 0
+TCP cksum fails(in): 0 (out): 0
+Packet log flags set: (0)
+....
+
+Als er als optie `-i` voor inkomend of `-o` voor uitgaand wordt meegegeven, dan zal het commando de juiste lijst met regels die de kernel op dat moment gebruikt wordt weergeven.
+
+`ipfstat -in` toont de tabel met regels voor inkomend verkeer met regelnummers
+
+`ipfstat -on` toont de tabel met regels voor uitgaand verkeer met regelnummers
+
+De uitvoer ziet er ongeveer als volgt uit:
+
+[source,bash]
+....
+@1 pass out on xl0 from any to any
+@2 block out on dc0 from any to any
+@3 pass out quick on dc0 proto tcp/udp from any to any keep state
+....
+
+`ipfstat -ih` toont de tabel met regels voor inkomend verkeer, waarbij voor iedere regel staat hoe vaak die van toepassing was.
+
+`ipfstat -oh` toont de tabel met regels voor uitgaand verkeer, waarbij voor iedere regel staat hoe vaak die van toepassing was.
+
+De uitvoer ziet er ongeveer als volgt uit:
+
+[source,bash]
+....
+2451423 pass out on xl0 from any to any
+354727 block out on dc0 from any to any
+430918 pass out quick on dc0 proto tcp/udp from any to any keep state
+....
+
+Een van de belangrijkste functies van `ipfstat` is de vlag `-t` waarmee de staat-tabel wordt getoond op een wijze die vergelijkbaar is met de wijze waarop man:top[1] de draaiende FreeBSD procestabel toont. Als een firewall wordt aangevallen, dan geeft deze functie de mogelijkheid om de pakketten van de aanvaller te identificeren en nader te onderzoeken. De optionele subvlaggen bieden de mogelijkheid om een bron of bestemmings IP adres, poort of protocol aan te geven dat gemonitord moet worden. Details zijn na te lezen in man:ipfstat[8].
+
+=== IPMON
+
+Om man:ipmon[8] te laten werken zoals bedoeld, moet de kerneloptie `IPFILTER_LOG` aan staan. Dit commando kan op twee verschillende wijzen gebruikt worden. De standaard is van toepassing als het commando op de commandoregel wordt ingegeven zonder de optie `-D`.
+
+De daemon wordt gebruikt als continu een systeemlogboek bijgewerkt moet worden zodat het mogelijk is om gebeurtenissen in het verleden te bekijken. Zo zijn FreeBSD en IPFILTER ingesteld om samen te werken. FreeBSD heeft ingebouwde mogelijkheden om automatisch syslogs te roteren. Daarom is het beter om de uitvoer naar man:syslogd[8] te schrijven dan naar een gewoon bestand. In de standaardversie van [.filename]#rc.conf# is te zien dat de instelling `ipmon_flags` de waarde `-Ds` heeft:
+
+[.programlisting]
+....
+ipmon_flags="-Ds" # D = start als daemon
+                  # s = log naar syslog
+                  # v = log tcp window, ack, seq
+                  # n = vertaal IP & poort naar namen
+....
+
+De voordelen van loggen zijn duidelijk. Het biedt de mogelijkheid om na het feit informatie na te zien als: welke pakketten heeft de firewall laten vallen, waar kwamen ze vandaan en waar gingen ze heen? Dit zijn allemaal voordelen als het gaat om uitvinden waar een aanvaller vandaan komt en wat deze heeft geprobeerd.
+
+Zelfs als loggen is ingeschakeld, logt IPF nog niets uit zichzelf. De beheerder van de firewall beslist welke regels in de regelverzameling iets weg moeten schrijven door het sleutelwoord `log` aan die regels toe te voegen. Gewoonlijk worden alleen `deny` regels gelogd.
+
+Het is heel normaal om als laatste regel een `deny` regel aan de set met regels toe te voegen waar het sleutelwoord `log` in staat. Zo krijgt een beheerder alle pakketten te zien waarop geen enkele regel van toepassing was.
+
+=== Loggen met IPMON
+
+Syslogd heeft een eigen methode om logboekgegevens te scheiden. Het maakt gebruik van speciale groepen die "facility" en "level" heten. man:ipmon[8] in `-Ds` mode gebruikt `local0` als "facility"naam. Alle door man:ipmon[8] gelogde gegevens gaan standaard naar de naam `security`. De nu volgende levels kunnen gebruikt worden om de gelogde gegevens nog verder uit elkaar te trekken als dat gewenst is.
+
+[source,bash]
+....
+LOG_INFO – pakketten gelogd met het sleutelwoord "log" als actie in plaats van pass of block.
+LOG_NOTICE – gelogde pakketten die ook zijn doorgelaten
+LOG_WARNING – gelogde pakketten die ook geblokkeerd zijn
+LOG_ERR – gelogde pakketten die een verkeerde opbouw hebben, "short"
+....
+
+Om IPFILTER alle gelogde gegevens naar [.filename]#/var/log/ipfilter.log# te laten schrijven, dient dat bestand vooraf te bestaan. Dat kan met het volgende commando:
+
+[source,bash]
+....
+# touch /var/log/ipfilter.log
+....
+
+De functionaliteit van man:syslogd[8] wordt beheerd met instellingen in [.filename]#/etc/syslog.conf#. Dit bestand biedt aanzienlijke flexibiliteit in hoe syslog omgaat met systeemberichten die door softwaretoepassingen als IPF worden gegeven.
+
+Zo kan de volgende instelling toegevoegd worden aan [.filename]#/etc/syslog.conf#:
+
+[.programlisting]
+....
+local0.* /var/log/ipfilter.log
+....
+
+Het deel `local0.*` betekent dat alle logberichten naar de aangegeven plaats geschreven moeten worden.
+
+Om de wijzigingen in [.filename]#/etc/syslog.conf# actief te maken kan er opnieuw opgestart worden of is het mogelijk de daemon man:syslogd[8] een schop te geven zodat [.filename]#/etc/syslog.conf# opnieuw wordt ingelezen met `/etc/rc.d/syslogd reload`. Het PID (procesnummer) is te achterhalen door een overzicht van taken te tonen met `ps -ax`. Het PID is het nummer in de linker kolom voor de regel waarop "syslog" staat.
+
+Vaak wordt vergeten [.filename]#/etc/newsyslog.conf# te wijzigen om het nieuw aangemaakte logboekbestand te laten roteren.
+
+=== De opmaak van gelogde berichten
+
+Berichten die door `ipmon` wordt gezonden bestaan uit velden die gescheiden worden door een spatie. Velden die in alle berichten zitten zijn:
+
+. De datum waarop het pakket is ontvangen.
+. De tijd waarop het pakket is ontvangen weergegeven als HH:MM:SS.F voor uren, minuten, seconden en fracties van een seconde. De fractie kan meerdere cijfers lang zijn.
+. De naam van de interface waarop het pakket is ontvangen, bijvoorbeeld [.filename]#dc0#.
+. De groep en regelnummer van de regel, bijvoorbeeld `@0:17`.
+
+Deze kunnen ingezien worden met `ipfstat -in`.
+
+. De acties: `p` voor doorgelaten ("passed"), `b` voor geblokkeerd ("blocked"), `S` voor een verkeerd pakket ("short packet"), `n` voor dat er geen enkele regel van toepassing was, `L` voor een logboekregel. De volgorde waarin deze acties getoond worden is: S, p, b, n, L. Een hoofdletter `P` of `B` betekent dat het pakket gelogd is vanwege een globale instelling, niet vanwege één regel in het bijzonder.
+. De adressen. Dit zijn eigenlijk drie velden: het bronadres en poort gescheiden door een komma, het symbool -> en het bestemmingsadres en poort, bijvoorbeeld: `209.53.17.22,80 -> 198.73.220.17,1722`.
+. Achter `PR` staat de naam van het protocol of het nummer, bijvoorbeeld `PR tcp`.
+. Achter `len` staan de lengte van de pakketkop en de totale lengte van het pakket, bijvoorbeeld `len 20 40`.
+
+Als het pakket een TCP pakket is, dan is er nog een veld dat begint met een verbindingsstreepje met daarachter letters die overeenkomen met vlaggen die ingeschakeld waren. In man:ipf[5] is een lijst met letters en bijbehorende vlaggen te vinden.
+
+Als het pakket een ICMP pakket is, dan worden aan het einde twee velden toegevoegd. Het eerste is altijd `ICMP` en het volgende het ICMP bericht en subbericht type, gescheiden door een slash, bijvoorbeeld `ICMP 3/3` voor "een poort niet bereikbaar" bericht.
+
+[[firewalls-ipf-rules-script]]
+=== Script met regels met substitutie bouwen
+
+Geoefende gebruikers van IPF maken een bestand dat de regels bevat en stellen dat op zo'n manier op dat het uitgevoerd kan worden als een script met substitutie. Het grote voordeel van deze werkwijze is dat er dan alleen de waarde geassocieerd met een symbolische naam gewijzigd hoeft te worden en dat als het script opnieuw wordt uitgevoerd, op alle plaatsen waar de variabele wordt gebruikt, de nieuwe waarde in de regels wordt opgenomen. Omdat het een script is, kan substitutie gebruik worden om vaak voorkomende waarden de definiëren zodat ze in meerdere regels vervangen kunnen worden. Dit wordt geïllustreerd in het onderstaande voorbeeld.
+
+De syntaxis die in het script wordt gebruikt is compatibel met de shells man:sh[1], man:csh[1] en man:tcsh[1].
+
+Velden waarvoor substitutie van toepassing is worden vooraf gegaan door het dollarteken `$`.
+
+Definities worden niet vooraf gegaan door het voorvoegsel $.
+
+De waarden van een definitie moet omsloten worden door dubbele aanhalingstekens (`"`).
+
+Een set regels begint wellicht als volgt:
+
+[.programlisting]
+....
+############## Begin IPF regels script #########################
+oif="dc0"            # naam van de uitgaande interface
+odns="192.0.2.11"    # IP adres van DNS server ISP
+myip="192.0.2.7"     # statische IP adres gekregen van ISP
+ks="keep state"
+fks="flags S keep state"
+
+# Er kan gekozen worden om dit script te gebruiken om een eigen
+# /etc/ipf.rules script te maken of dit script kan gebruikt worden
+# "as is"
+#
+# Haal bij één van deze regels het commentaarteken weg
+# en plaats hem bij de ander.
+#
+# 1) Deze kan gebruikt worden om /etc/ipf.rules te maken:
+#cat > /etc/ipf.rules << EOF
+# 2) Deze kan gebruikt worden om het script "as is" te starten:
+# Let op: er moet een lege regel zijn na het EOF teken.
+/sbin/ipf -Fa -f - << EOF
+
+# Verleen toegang tot de DNS van de ISP.
+pass out quick on $oif proto tcp from any to $odns port = 53 $fks
+pass out quick on $oif proto udp from any to $odns port = 53 $ks
+
+# Sta uitgaand verkeer voor niet beveiligd www verkeer toe
+pass out quick on $oif proto tcp from $myip to any port = 80 $fks
+
+# Sta uitgaand verkeer voor beveiligd www verkeer toe (https over TLS SSL)
+pass out quick on $oif proto tcp from $myip to any port = 443 $fks
+EOF
+################## Einde IPF regels script ########################
+....
+
+Dat is alles. De regels zijn niet van belang in dit voorbeeld, maar tonen hoe substitutievelden worden gedefinieerd en hoe ze worden gebruikt. Als het bovenstaande voorbeeld de inhoud van [.filename]#/etc/ipf.rules.script# was, dan konden deze regels herladen worden door het vanaf de commandoregel aan te roepen:
+
+[source,bash]
+....
+# sh /etc/ipf.rules.script
+....
+
+Er is wel een probleem met het gebruik van regels in combinatie met substitutie. IPF snapt het niet en kan deze scripts niet direct lezen.
+
+Dit script kan gebruikt worden op één van de volgende twee manieren:
+
+* Haal het commentaarteken weg bij de regel die begint met `cat` en zet het commentaarteken bij de regel die begint met `/sbin/ipf`. Plaats `ipfilter_enable="YES"` in [.filename]#/etc/rc.conf# zoals gewoonlijk en start het script eenmalig na elke wijziging om [.filename]#/etc/ipf.rules# te maken of bij te werken.
+* Schakel IPFILTER uit in de systeem opstart scripts door `ipfilter_enable="NO"` toe te voegen aan [.filename]#/etc/rc.conf# (dit is de standaardwaarde).
++ 
+Voeg een script zoals de volgende toe aan de opstartmap [.filename]#/usr/local/etc/rc.d#. Het script zou een duidelijke naam moeten hebben zoals [.filename]#ipf.loadrules.sh#. De uitbreiding [.filename]#.sh# is noodzakelijk.
++
+[.programlisting]
+....
+#!/bin/sh
+sh /etc/ipf.rules.script
+....
+
++ 
+De permissies op dit script moeten zijn: lezen,schrijven en uitvoeren voor de gebruiker `root`.
++
+
+[source,bash]
+....
+# chmod 700 /usr/local/etc/rc.d/ipf.loadrules.sh
+....
+
+Als het systeem nu herstart, worden de regels via het script gestart.
+
+=== Sets van IPF regels
+
+Een set regels is een groep IPF-regels die is gemaakt om pakketten toe te staan of te blokkeren op basis van de eigenschappen van dat pakket. De bi-directionele uitwisseling van pakketten tussen hosts bestaat uit een gesprek dat een sessie heet. De set van firewallregels verwerkt zowel de pakketten die arriveren van het publieke Internet, als de pakketten die door het systeem zijn geproduceerd als een antwoord erop. Elke TCP/IP-dienst (telnet, www, mail, enzovoorts) is vooraf gedefinieerd door een protocol en bevoorrechte (luister)poort. Pakketten bedoeld voor een speciale dienst beginnen bij het bronadres gebruik makend van een onbevoorrechte (hogere orde) poort en komen aan bij de specifieke dienstpoort op het bestemmingsadres. Alle bovengenoemde parameters (poorten en adressen) kunnen gebruikt worden als selectiecriteria om regels aan te maken die diensten zullen toestaan of blokkeren.
+
+IPF is oorspronkelijk geschreven met logica die regels verwerkte volgens het principe "de laatst passende regel wint" en gebruikte toen alleen staatloze regels. In de loop der tijd is IPF verbeterd en zijn de opties "quick" en "keep state" toegevoegd waarmee de logica van het verwerken van regels drastisch is gemoderniseerd.
+
+De instructies in dit hoofdstuk zijn gebaseerd op regels die gebruik maken van de optie "quick" en de stateful optie "keep state". Dit is het raamwerk waarmee een set van inclusieve firewallregels wordt samengesteld.
+
+[WARNING]
+====
+
+Werk bij het wijzigen van firewallregels _zeer voorzichtig_. Met sommige instellingen is een server _niet meer bereikbaar_. Om het veilig te spelen is het aan te raden de eerste instellingen vanaf het console te maken, in plaats van via ssh.
+====
+
+=== Regelsyntaxis
+
+De regelsyntaxis die hier wordt besproken is versimpeld door alleen de moderne stateful regels en de "eerste van toepassing zijnde regel wint" te belichten. De complete regelsyntaxis is na te lezen in man:ipf[8].
+
+Het karakter `#` wordt gebruikt om het begin van een opmerking te markeren en zowel op een eigen regel als achter een firewallregel staan. Lege regels worden genegeerd.
+
+Regels bevatten sleutelwoorden die in een bepaalde volgorde van links naar rechts op een regel horen te staan. Sleutelwoorden worden vet weergegeven. Sommige sleutelwoorden hebben subopties die zelf ook weer sleutelwoorden hebben die ook weer subopties kunnen hebben. Alle opties die hier direct onder staan, worden daaronder uitgebreid weergegeven en verderop in dit hoofdstuk in een aparte paragraaf behandeld.
+
+_ACTIE IN/UIT OPTIES SELECTIE STATEFUL PROTO BRON_ADR,BEST_ADR OBJECT POORT_NUM TCP_VLAG STATEFUL_
+
+_ACTIE_ = block | pass
+
+_IN/UIT_ = in | out
+
+_OPTIES_ = log | quick | on interfacenaam
+
+_SELECTIE_ = protowaarde | bron/bestemming IP | poort = nummer | flags flag-value
+
+_PROTO_ = tcp/udp | udp | tcp | icmp
+
+_BRON_ADR,BEST_ADR_ = all | from object to object
+
+_OBJECT_ = IP adres | any
+
+_POORT_NUM_ = poortnummer
+
+_TCP_VLAG_ = S
+
+_STATEFUL_ = keep state
+
+==== ACTIE
+
+De actie geeft aan wat er met het pakket gedaan moet worden als het van toepassing is op de rest van de filterregel. Iedere regel _moet_ een actie hebben. De volgende acties zijn mogelijk:
+
+`block` geeft aan dat het pakket moet verdwijnen als de parameters van toepassing zijn op het pakket.
+
+`pass` geeft aan dat het pakket doorgelaten moet worden als de parameters van toepassing zijn op het pakket.
+
+==== IN/UIT
+
+Een verplicht onderdeel voor iedere filterregel waarin expliciet wordt aangegeven op welke zijde van de in/uit deze van toepassing is. Het volgende sleutelwoord moet `in` of `out` zijn en één van de twee moet gecodeerd worden, anders is de regel syntactisch onjuist.
+
+`in` betekent dat de regel van toepassing is op inkomende pakketten.
+
+`out` betekent dat de regel van toepassing is op inkomende pakketten.
+
+==== OPTIES
+
+[NOTE]
+====
+Deze opties moeten in de volgorde waarin ze hier beschreven staan gebruikt worden.
+====
+
+`log` geeft aan dat het pakket naar het [.filename]#ipl# logboekbestand geschreven moeten worden (zoals verderop beschreven staat in de paragraaf "Loggen") als de regel van toepassing is op het pakket.
+
+`quick` geeft aan dat als een regel van toepassing is, dat de laatste regel moet zijn die wordt gecontroleerd, waardoor er een pad wordt "kortgesloten" waardoor de volgende regels voor dat pakket niet meer gecontroleerd worden. Deze optie is voor de moderne regels eigenlijk verplicht.
+
+`on` geeft de interface aan die in de parameters meegenomen moet worden. De namen van interfaces kunnen getoond worden met man:ifconfig[8]. Als deze optie wordt gebruikt, kan een regel alleen van toepassing zijn als het pakket door de aangegeven interface gaat in de richting die is aangegeven (`in`/`out`). Ook deze optie is verplicht voor de moderne regels.
+
+Als een pakket wordt gelogd, dan worden de koppen van het pakket weggeschreven naar het ipl pakketloggende pseudo-apparaat. Direct na het sleutelwoord `log` mogen de volgende opties gebruikt worden (in de aangegeven volgorde):
+
+`body` geeft aan dat de eerste 128 bytes van de inhoud van het pakket worden opgeslagen na de kop.
+
+`first`; als het sleutelwoord `log` samen met een optie `keep state` wordt gebruikt, wordt het aangeraden om deze optie ook te gebruiken zodat alleen het pakket dat als eerste in de sessie van toepassing was en niet ook alle pakketten die daarna in de sessie volgens `keep state` van toepassing zijn.
+
+==== SELECTIE
+
+De sleutelwoorden in deze paragraaf worden gebruikt om attributen van het pakket dat wordt geïnspecteerd te beschrijven om te bepalen of een regel wel of niet van toepassing is. Er is een sleutelwoord `subject` en er zijn subopties waarvan er één of meer gekozen moeten worden. De volgende attributen zijn beschikbaar voor het proces en moeten in de aangegeven volgorde worden gebruikt:
+
+==== PROTO
+
+`proto` is het `subject` sleutelwoord dat moet worden aangegeven samen met een van de sleutelwoorden uit de subopties. De waarde geeft een bepaald protocol aan dat van toepassing moet zijn. Ook deze optie is verplicht voor de moderne regels.
+
+`tcp/udp`, `tcp`, `udp`, `icmp` of ieder ander protocol dat in [.filename]#/etc/protocols# staat wordt herkend en kan gebruikt worden. Het bijzondere protocolsleutelwoord `tcp/udp` kan gebruikt worden om zowel voor TCP- als UDP-pakketten van toepassing te laten zijn. Het is toegevoegd voor het gemak om vrijwel gelijke regels te voorkomen.
+
+==== BRON_ADR/BEST_ADR
+
+Het sleutelwoord `all` is in feite hetzelfde als `from any to any` zonder overige parameters.
+
+`from bron to bestemming`; de sleutelwoorden `from` en `to` worden gebruikt om te testen op IP-adressen. In regels moet _zowel_ een bron- _als_ bestemmings-IP-adres aangegeven worden. `any` is een bijzonder sleutelwoord dat van toepassing is op ieder IP-adres. Voorbeelden van gebruik: `from any to any` of `from 0.0.0.0/0 to any` of `from any to 0.0.0.0/0` of `from 0.0.0.0 to any` of `from any to 0.0.0.0`.
+
+Het is vaak lastig om te komen tot een reeks IP-adressen die zich niet gemakkelijk laten uitdrukken met de gepunte numerieke vorm/ maskerlengte notatie. De port package:net-mgmt/ipcalc[] kan gebruikt worden om de berekeningen te vereenvoudigen. Aanvullende informatie is beschikbaar op de webpagina van het gereedschap: http://jodies.de/ipcalc[http://jodies.de/ipcalc].
+
+==== POORT
+
+Als in een regel op een poort wordt gecontroleerd, voor bron- of bestemmingspoort of beiden, dan is dat alleen van toepassing op TCP- en UDP-pakketten. Bij het maken van poortvergelijkingen kunnen zowel de dienstnamen uit [.filename]#/etc/services# als een uit een natuurlijk getal bestaand poortnummer ingesteld worden. Als de poort onderdeel is van het `from` object dan wordt het vergeleken met het poortnummer van de bron en als het onderdeel is van het `to` object, dan wordt het vergeleken met het poortnummer van de bestemming. Het gebruik van het `to` object is in de moderne regels verplicht en neemt de vorm aan van `from any to any port = 80`.
+
+Enkelvoudige poortvergelijkingen kunnen op verschillende manieren gedaan worden met een aantal verschillende operatoren. Er kunnen ook reeksen van poorten ingesteld worden.
+
+poort "=" | "!=" | "<" | ">" | "<=" | ">=" | "eq" | "ne" | "lt" | "gt" | "le" | "ge"
+
+Reeksen van poorten worden met de volgende optie aangegeven: poort <> | ><
+
+[WARNING]
+====
+
+De volgende twee parameters die betrekking hebben op bron en bestemming, zijn verplicht in de moderne regels.
+====
+
+==== TCP_VLAG
+
+Vlaggen zijn alleen beschikbaar voor het filteren van TCP. De letters staan voor de mogelijke vlaggen die bekeken kunnen worden in de kop van een TCP-pakket.
+
+In de moderne regels wordt de optie `flags S` gebruikt om het verzoek tot het starten van een TCP sessie.
+
+==== STATEFUL
+
+`keep state` geeft aan dat in een regel met `pass` voor alle pakketten die van toepassing zijn stateful gefilterd moet worden.
+
+[NOTE]
+====
+Deze optie is voor moderne regels verplicht.
+====
+
+=== Stateful filteren
+
+Met stateful filteren wordt verkeer benaderd als een uitwisseling van pakketten tussen twee kanten die een sessie zijn. Als het is ingeschakeld, dan maakt het `keep state` mechanisme dynamisch interne regels voor pakketten die in de sessie horen te volgen. Het kan bekijken of de karakteristieken van de sessie tussen verzender en ontvanger de juiste procedure volgen. Alle pakketten die niet passen in de sessie, worden automatisch geblokkeerd.
+
+`keep state` staat ook ICMP-pakketten toe die gerelateerd zijn aan een TCP- of UDP-sessie. Dus als er een ICMP-type 3 code 4 komt in antwoord op websurfen, dat wordt toegestaan van binnen naar buiten door een `keep state` regel, dan wordt dat toegelaten. Pakketten waarvan IPF zeker is dat ze onderdeel zijn van de sessie worden toegelaten, zelfs als ze van een ander protocol zijn.
+
+Wat er gebeurt: pakketten die naar buiten gaan op de interface die met Internet is verbonden worden eerst vergeleken met de dynamische staattabel. Als een pakket voldoet aan de verwachting van het volgende pakket in de sessie, dan mag het de firewall verlaten en wordt de toestand van de sessie in de dynamische toestandstabel bijgewerkt. Pakketten die niet bij een reeds actieve sessie horen, worden tegen de uitgaande regelverzameling gecontroleerd.
+
+Pakketten die binnenkomen op de interface die met Internet is verbonden worden eerst vergeleken met de dynamische staattabel. Als een pakket voldoet aan de verwachting van het volgende pakket in de sessie, dan mag het de firewall verlaten en wordt de toestand van de sessie in de dynamische toestandstabel bijgewerkt. Pakketten die niet bij een reeds actieve sessie horen, worden vergeleken met de regelverzameling voor binnenkomend verkeer.
+
+Als de sessie wordt beëindigd wordt het uit de dynamische staattabel verwijderd.
+
+Met stateful filteren is het mogelijk om de focus te leggen op het blokkeren of toestaan van nieuwe sessies. Als een nieuwe sessie tot stand mag komen, dan worden alle volgende pakketten automatisch doorgelaten en al het vervalste verkeer wordt automatisch tegengehouden. Als een nieuwe sessie wordt geweigerd, dan wordt geen enkel pakket doorgelaten. Met stateful filteren zijn er uitgebreide mogelijkheden voor onderzoek om bescherming te bieden tegen de veelheid aan aanvallen die tegenwoordig door aanvallers worden uitgevoerd.
+
+=== Voorbeeld van inclusieve regels
+
+De onderstaande regels zijn een voorbeeld van hoe een erg veilige inclusieve firewall opgezet kan worden. Een inclusieve firewall staat alleen diensten toe die passen bij de `pass`-regels en blokkeert al het overige verkeer. Firewalls die bedoeld zijn om andere machines te beschermen, ook wel "netwerk-firewalls" genoemd, dienen tenminste twee interfaces te hebben, die over het algemeen zijn ingesteld om de ene kant te vertrouwen (het LAN) maar niet de andere (het publieke Internet). Ook kan een firewall worden ingesteld om alleen het systeem te beschermen waarop het draait-dit wordt een "host-gebaseerde firewall" genoemd, en is in het bijzonder geschikt voor servers op een onvertrouwd netwerk.
+
+Alle UNIX(R) systemen en dus ook FreeBSD zijn zo ontworpen dat ze voor interne communicatie de interface [.filename]#lo0# en IP adres `127.0.0.1` gebruiken. De firewall moet dit interne verkeer gewoon doorgang laten vinden.
+
+Voor de interface die is verbonden met het publieke Internet worden regels gemaakt waarmee de toegang voor uitgaande en binnenkomende verbindingen worden geautoriseerd en beheerst. Dit kan de PPP-interface [.filename]#tun0# zijn of de netwerkkaart die is verbonden met een xDSL- of kabelmodem.
+
+In gevallen dat er één of meer netwerkkaarten zijn aangesloten op private netwerksegmenten kunnen er regels op de firewall nodig zijn om pakketten die van die LAN-interfaces afkomen vrije doorgang te geven naar elkaar en/of naar buiten (het Internet).
+
+De regels worden opgedeeld in drie onderdelen: eerst de vertrouwde interfaces, dan het publieke uitgaande interface en als laatste het onvertrouwde publieke binnenkomende interfaces.
+
+In iedere sectie moeten zo staan dat de regels die het meest gebruikt worden vóór de regels die minder vaak gebruikt worden staan. De laatste regel van een onderdeel geeft aan dat al het overige verkeer op die interface in die richting geblokkeerd en gelogd moet worden.
+
+In het onderdeel Uitgaand staan alleen regels met `pass` die parameters bevatten om uniek individuele diensten identificeren die het publieke Internet mogen benaderen. Bij al die regels staan de opties `quick`, `on`, `proto`, `port` en `keep state` aan. De regels met `proto tcp` maken ook gebruik van de optie `flag` om te bekijken of het een pakket betreft voor het opzetten van een sessie om de stateful functionaliteit aan te sturen.
+
+In het onderdeel Inkomend staan eerst alle regels voor het blokkeren van ongewenste pakketten, om twee redenen. Als eerste kan het zo zijn dat kwaadaardige pakketten gedeeltelijk overeenkomen met legitiem verkeer. Deze pakketten moeten worden weggegooid in plaats van binnengelaten te worden, gebaseerd op hun gedeeltelijke match met de `allow`-regels. De tweede reden is dat bekende en oninteressante verwerpingen stil geblokkeerd kunnen worden in plaats van gevangen en gelogd te worden door de laatste regels in de sectie. De laatste regel in elke sectie blokkeert en logt alle pakketten en kan worden gebruikt voor het wettelijke bewijs nodig om degenen die uw systeem aanvallen aan te klagen.
+
+Waar ook gezorgd voor moet worden is dat al het verkeer dat wordt geweigerd geen antwoord verstuurd. Ongeldige pakketten dienen gewoon te verdwijnen. Zo weet een aanvaller niet of een pakket het doelsysteem wel heeft bereikt. Zo kan een aanvaller geen informatie verzamelen over een systeem: hoe minder informatie er over een systeem beschikbaar is, hoe meer tijd iemand erin moet steken voordat er iets slechts gedaan kan worden. Regels die een optie `log first` bevatten, zullen alleen de eerste keer dat de gebeurtenis voorkomt de gebeurtenis loggen. Deze optie is opgenomen in de voorbeeldregel `nmap OS fingerpint`. Het gereedschap package:security/nmap[] wordt vaak door aanvallers gebruikt om het besturingssysteem van uw server proberen te achterhalen.
+
+We raden aan om telkens als er logmeldingen van een regel met de optie `log first` komen, `ipfstat -hio` uit te voeren om te bekijken hoe vaak de regel van toepassing is geweest. Een groot aantal overeenkomsten geeft gewoonlijk aan dat de firewall overspoeld wordt, met andere woorden aangevallen wordt.
+
+Het bestand [.filename]#/etc/services# kan gebruikt worden om onbekende poortnummers op te zoeken. Ook kan http://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers[http://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers] worden bezocht en het poortnummer worden opgezocht om het doel van een bepaalde poort uit te vinden.
+
+Op de volgende link worden poortnummers van Trojans beschreven: http://www.sans.org/security-resources/idfaq/oddports.php[http://www.sans.org/security-resources/idfaq/oddports.php].
+
+De onderstaande set regels is een complete en erg veilige `inclusieve` set met regels voor een firewall die is getest op productiesystemen. Deze set met regels is eenvoudig aan te passen voor uw eigen systeem. Maak gewoon commentaar van elke `pass`-regel voor een dienst die niet gewenst is.
+
+Logberichten die niet gewenst zijn, zijn uit te sluiten door een `block`-regel toe te voegen in het begin van het onderdeel Inkomend.
+
+Voor de onderstaande regels dient de [.filename]#dc0# interfacenaam in iedere regel vervangen te worden door de echte interfacenaam van de netwerkkaart in het systeem die met het publieke Internet is verbonden. Voor gebruikers van PPP zou dat [.filename]#tun0# zijn.
+
+Dit zou de inhoud van [.filename]#/etc/ipf.rules# kunnen zijn:
+
+[.programlisting]
+....
+#################################################################
+# Geen beperkingen op de interface aan de LAN kant.
+# Niet nodig als er geen LAN is.
+################################################################
+
+#pass out quick on xl0 all
+#pass in quick on xl0 all
+
+#################################################################
+# Geen beperkingen op de loopback interface
+#################################################################
+pass in quick on lo0 all
+pass out quick on lo0 all
+
+#################################################################
+# Interface aan het publieke Internet (onderdeel Uitgaand).
+# Inspecteer verzoeken om een sessie te starten van achter de
+# firewall op het private netwerk of vanaf deze gateway-server
+# naar het publieke Internet.
+#################################################################
+
+# Geef toegang tot de DNS server van de ISP.
+# xxx moet het IP adres van de DNS van de ISP zijn.
+# Dupliceer deze regels als een ISP meerdere DNS servers heeft.
+# Haal het IP adres evt. uit /etc/resolv.conf.
+pass out quick on dc0 proto tcp from any to xxx port = 53 flags S keep state
+pass out quick on dc0 proto udp from any to xxx port = 53 keep state
+
+# Geef toegang tot de DHCP server van de ISP voor kabel- en
+# xDSL-netwerken. Deze regel is niet nodig als gebruik gemaakt worden
+# van PPP naar het publieke Internet. In dat geval kan de hele groep
+# verwijderd worden. Gebruik de volgende regel en controleer het
+# logboek voor het IP adres. Wijzig dan het IP adres in de regel
+# commentaar hieronder en verwijder de eerste regel.
+pass out log quick on dc0 proto udp from any to any port = 67 keep state
+#pass out quick on dc0 proto udp from any to z.z.z.z port = 67 keep state
+
+# Sta niet beveiligd www verkeer toe.
+pass out quick on dc0 proto tcp from any to any port = 80 flags S keep state
+
+# Sta beveiligd www verkeer over TLS SSL toe.
+pass out quick on dc0 proto tcp from any to any port = 443 flags S keep state
+
+# Sta het verzenden en ontvangen van e-mail toe.
+pass out quick on dc0 proto tcp from any to any port = 110 flags S keep state
+pass out quick on dc0 proto tcp from any to any port = 25 flags S keep state
+
+# Sta Time toe.
+pass out quick on dc0 proto tcp from any to any port = 37 flags S keep state
+
+# Sta uitgaand NNTP nieuws toe.
+pass out quick on dc0 proto tcp from any to any port = 119 flags S keep state
+
+# Sta uitgaande lokale niet beveiligde FTP (ook van LAN-gebruikers) toe
+# (zowel passieve als actieve modes).  Deze functie maakt gebruik van
+# de in IP-NAT ingebouwde FTP-proxy die in het bestand met NAT-regels
+# staat om dit in één regel te laten werken. Als er met
+# pkg_add pakketten toegevoegd moeten kunnen worden op een systeem, dan
+# is deze regel nodig.
+pass out quick on dc0 proto tcp from any to any port = 21 flags S keep state
+
+# Sta uitgaande SSH/SFTP/SCP toe (vervangingen van telnet/rlogin/FTP)
+# Deze functie maakt gebruik van SSH (secure shell)
+pass out quick on dc0 proto tcp from any to any port = 22 flags S keep state
+
+# Sta uitgaande niet beveiligde telnet toe.
+pass out quick on dc0 proto tcp from any to any port = 23 flags S keep state
+
+# Sta de FreeBSD CVSUP-functie toe.
+pass out quick on dc0 proto tcp from any to any port = 5999 flags S keep state
+
+# Sta ping toe naar het publieke Internet.
+pass out quick on dc0 proto icmp from any to any icmp-type 8 keep state
+
+# Sta whois toe vanaf het LAN naar het publieke Internet.
+pass out quick on dc0 proto tcp from any to any port = 43 flags S keep state
+
+# Blokkeer en log het eerste voorkomen van al het andere dat probeert
+# buiten te komen. Deze regel implementeert de standaard-blokkade.
+block out log first quick on dc0 all
+
+#################################################################
+# Interface aan het publieke Internet (onderdeel Inkomend).
+# Inspecteert pakketten die van het publieke Internet komen
+# met als bestemming deze gateway-server of het private netwerk.
+#################################################################
+
+# Blokkeer al het verkeer voor niet-routeerbare of gereserveerde
+# adresreeksen.
+block in quick on dc0 from 192.168.0.0/16 to any    #RFC 1918 privaat IP
+block in quick on dc0 from 172.16.0.0/12 to any     #RFC 1918 privaat IP
+block in quick on dc0 from 10.0.0.0/8 to any        #RFC 1918 privaat IP
+block in quick on dc0 from 127.0.0.0/8 to any       #loopback
+block in quick on dc0 from 0.0.0.0/8 to any         #loopback
+block in quick on dc0 from 169.254.0.0/16 to any    #DHCP auto-config
+block in quick on dc0 from 192.0.2.0/24 to any      #gereserveerd voor documentatie
+block in quick on dc0 from 204.152.64.0/23 to any   #Sun cluster interconnect
+block in quick on dc0 from 224.0.0.0/3 to any       #Klasse D & E multicast
+
+##### Blokkeer wat vervelende dingen ############
+# die niet in de logboeken moeten komen.
+
+# Blokkeer fragmenten.
+block in quick on dc0 all with frags
+
+# Block korte TCP pakketten.
+block in quick on dc0 proto tcp all with short
+
+# Blokkeer source gerouteerde pakketten.
+block in quick on dc0 all with opt lsrr
+block in quick on dc0 all with opt ssrr
+
+# Blokkeer pogingen voor nmap OS fingerprint.
+# Blokkeer het eerste voorkomen ervan voor de IP-adressen
+block in log first quick on dc0 proto tcp from any to any flags FUP
+
+# Blokkeer alles met speciale opties.
+block in quick on dc0 all with ipopts
+
+# Blokkeer publieke pings.
+block in quick on dc0 proto icmp all icmp-type 8
+
+# Blokkeer ident.
+block in quick on dc0 proto tcp from any to any port = 113
+
+# Blokkeer alle Netbios diensten. 137=naam, 138=datagram, 139=sessie.
+# Netbios is de Windows(R) bestandsdeeldienst.
+# Blokkeer Windows(R) hosts2 name server verzoeken 81.
+block in log first quick on dc0 proto tcp/udp from any to any port = 137
+block in log first quick on dc0 proto tcp/udp from any to any port = 138
+block in log first quick on dc0 proto tcp/udp from any to any port = 139
+block in log first quick on dc0 proto tcp/udp from any to any port = 81
+
+# Sta inkomend verkeer toe van de DHCP server van de ISP. Deze regel
+# moet het IP adres van de DHCP server van de ISP bevatten omdat die
+# de enige toegestane bron van dit type pakketten moet zijn. Alleen
+# van belang voor kabel en xDSL instellingen. Deze regel is niet nodig
+# voor PPP verbindingen naar het publieke Internet.  Dit is hetzelfde
+# IP adres dat in het Uitgaande onderdeel is opgezocht.
+pass in quick on dc0 proto udp from z.z.z.z to any port = 68 keep state
+
+# Sta inkomend webverkeer toe omdat er een Apache server draait.
+pass in quick on dc0 proto tcp from any to any port = 80 flags S keep state
+
+# Sta niet beveiligde telnet sessie toe vanaf het publieke Internet.
+# Dit heeft het label niet veilig omdat gebruikersnaam en
+# wachtwoord als platte tekst over Internet gaan. Als er geen telnet
+# server draait, hoeft deze regel niet actief te zijn.
+#pass in quick on dc0 proto tcp from any to any port = 23 flags S keep state
+
+# Sta beveiligde FTP, telnet en SCP toe vanaf Internet.
+# Deze functie gebruikt SSH (secure shell).
+pass in quick on dc0 proto tcp from any to any port = 22 flags S keep state
+
+# Blokkeer en log het eerste voorkomen van al het andere dat probeert
+# binnen te komen. Het loggen van alleen het eerste voorkomen stopt
+# een ontzegging van dienst aanval die gericht is op het laten
+# vollopen van de partitie waarop de logboeken staan. Deze regel implementeert
+# de standaard blokkade.
+block in log first quick on dc0 all
+################### Einde van de regels ###################################
+....
+
+=== NAT
+
+NAT staat voor _Network Address Translation_ (netwerkadres vertaling). In Linux(R) heet dit IP Masquerading. Een van de vele mogelijkheden die IPF NAT kan bieden is het delen van één IP adres op het publieke Internet met een LAN achter een firewall.
+
+De vraag zou kunnen rijzen waarom iemand dat zou willen. ISP's wijzen normaliter namelijk dynamisch een IP adres toe aan hun niet-commerciële gebruikers. Dynamisch betekent hier dat het IP-adres iedere dat er wordt ingebeld of dat het kabel- of xDSL-modem uit- en aangeschakeld wordt anders kan zijn. Dit dynamische IP-adres wordt gebruikt om uw systeem op het publieke Internet te identificeren.
+
+Stel dat er vijf PC's in een huis staan en iedere computer in dat huis heeft toegang tot Internet nodig. Dan zouden er bij een ISP vijf individuele accounts moeten zijn en vijf telefoonlijnen om dat te realiseren.
+
+Met NAT is er maar één account bij een ISP nodig. De andere vier PC's moeten met kabels op een switch worden aangesloten waarop ook een FreeBSD systeem is aangesloten dat binnen uw LAN als gateway gaat opereren. NAT zal automatisch de private LAN IP adressen van alle PC's vertalen naar een enkel publiek IP-adres als de pakketten de firewall naar het Internet verlaten.
+
+Er is een speciale reeks van IP-adressen gereserveerd voor NAT op private LANs. Volgens RFC 1918 kunnen de volgende reeksen IP-adressen gebruikt worden op private netwerken die nooit direct op het publieke Internet gerouteerd worden.
+
+[.informaltable]
+[cols="1,1,1", frame="none"]
+|===
+
+|Eerste IP
+|-
+|Laatste IP
+
+|`10.0.0.0`
+|-
+|`10.255.255.255`
+
+|`172.16.0.0`
+|-
+|`172.31.255.255`
+
+|`192.168.0.0`
+|-
+|`192.168.255.255`
+|===
+
+=== IPNAT
+
+NAT regels worden geladen met `ipnat`. De NAT regels worden vaak opgeslagen in [.filename]#/etc/ipnat.rules#. Meer details staan in man:ipnat[8].
+
+Bij het maken van wijzigingen aan de NAT-regels nadat NAT gestart is, wordt aangeraden de wijziging aan het bestand met regels te maken en daarna `ipnat -CF` te gebruiken om alle actieve NAT-regels te wissen. Daarna kunnen de regels uit het bestand weer als volgt geladen worden:
+
+[source,bash]
+....
+# ipnat -CF -f /etc/ipnat.rules
+....
+
+Gebruiksgegevens over NAT kunnen getoond worden met:
+
+[source,bash]
+....
+# ipnat -s
+....
+
+De huidige inhoud van de NAT tabellen kan getoond worden met:
+
+[source,bash]
+....
+# ipnat -l
+....
+
+Met het volgende commando kan de uitgebreide rapportage worden ingeschakeld en dan wordt informatie over het verwerken van verkeer en de actieve regels getoond:
+
+[source,bash]
+....
+# ipnat -v
+....
+
+=== IPNAT regels
+
+NAT regels zijn erg flexibel en er kunnen veel dingen mee gedaan worden om behoeften van bedrijven en thuisgebruikers in te vullen.
+
+De syntaxis van de regels die hier wordt toegelicht is vereenvoudigd om te passen bij een niet-commerciële omgeving. De complete syntaxis is na te lezen in man:ipnat[5].
+
+De syntaxis voor een NAT regel ziet er ongeveer als volgt uit:
+
+[.programlisting]
+....
+map IF LAN_IP_REEKS -> PUBLIEK_ADRES
+....
+
+De regel begint met het sleutelwoord `map`.
+
+_IF_ dient vervangen te worden door de aanduiding van de externe interface.
+
+_LAN_IP_REEKS_ is de reeks die clients op een LAN gebruiken, meestal iets van `192.168.1.0/24`.
+
+_PUBLIEK_ADRES_ kan het publieke IP adres zijn of een speciaal sleutelwoord `0.32`, wat betekent dat het IP adres van _IF_ gebruikt moet worden.
+
+=== Hoe NAT werkt
+
+Een pakket komt vanaf het LAN aan bij de firewall en heeft een publieke bestemming. Het wordt verwerkt door de filterregels voor inkomend verkeer en daarna krijgt NAT de kans zijn regels op het pakket toe te passen. De regels worden van boven naar beneden toegepast en de eerste regel die van toepassing is wint. NAT controleert voor alle regels het pakket op interfacenaam en bron IP adres. Als de interfacenaam van een pakket past bij een NAT regel dan wordt het bron IP adres van dat pakket gecontroleerd, dat is dus een IP adres op het private LAN, om te bekijken of het valt in de reeks die is opgegeven aan de linkerkant van een NAT regel. Als ook dat klopt, dan wordt het bron IP adres van het pakket vervangen ("rewritten") door een publiek IP adres dat verkregen kan zijn met het sleutelwoord `0.32`. NAT werkt dan zijn interne NAT tabel bij, zodat als er een pakket uit die sessie terugkomt van het publieke Internet, dat pakket weer gepast kan worden bij het originele private IP adres en door de firewallregels gefilterd kan worden om daarna, als dat mag, naar een client gestuurd te worden.
+
+=== IPNAT inschakelen
+
+Voor IPNAT zijn de onderstaande instellingen in [.filename]#/etc/rc.conf# beschikbaar.
+
+Om verkeer tussen interfaces te kunnen routeren:
+
+[.programlisting]
+....
+gateway_enable="YES"
+....
+
+Om IPNAT automatisch te starten:
+
+[.programlisting]
+....
+ipnat_enable="YES"
+....
+
+Om aan te geven waar de IPNAT regels staan:
+
+[.programlisting]
+....
+ipnat_rules="/etc/ipnat.rules"
+....
+
+=== NAT voor een groot LAN
+
+Voor netwerken met grote aantallen PC's of netwerken met meerdere LAN's kan het een probleem worden om al die private IP adressen met één enkel publiek IP adres te vervangen, omdat vaak dezelfde poortnummers gebruikt worden. Er zijn twee manieren om dit probleem op te lossen.
+
+==== Aangeven welke poorten te gebruiken
+
+Een normale regel voor NAT ziet er als volgt uit:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 0.32
+....
+
+Met de bovenstaande regel blijft de bronpoort ongewijzigd als het pakket door IPNAT gaat. Door gebruik te maken van het sleutelwoord `portmap` kan IPNAT ingesteld worden om alleen bronpoorten in de aangegeven reeks te gebruiken. Zo stelt de onderstaande regel in dat IPNAT de bronpoort aanpast naar een poortnummer dat in de aangegeven reeks valt:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 0.32 portmap tcp/udp 20000:60000
+....
+
+Het kan nog eenvoudiger door gebruik te maken van het sleutelwoord `auto` zodat IPNAT zelf bepaalt welke poorten gebruikt kunnen worden:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 0.32 portmap tcp/udp auto
+....
+
+==== Meerdere publieke adressen gebruiken
+
+In grote netwerken komt er een moment waarop er gewoon te veel adressen zijn om te bedienen met één IP adres. Als er een blok van publiekelijke IP adressen beschikbaar is, dan kunnen deze adressen gebruikt worden in een "poel", welke door IPNAT gebruikt kan worden om één van de adressen te gebruiken als uitgaand adres.
+
+Bijvoorbeeld om alle pakketten te verstoppen achter één een enkel IP adres:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 204.134.75.1
+....
+
+Een reeks van publiekelijke IP adressen kan gespecificeerd worden met een netwerkmasker:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 204.134.75.1-10
+....
+
+of door gebruik van de CIDR notatie:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 204.134.75.0/24
+....
+
+=== Poorten omleiden
+
+Het is erg gebruikelijk om een webserver, mailserver, database server en DNS server op verschillende computers op een LAN te draaien. Het uitgaande verkeer van die servers kan dan met NAT afgehandeld worden, maar er moet ook ingesteld worden dat inkomend verkeer bij de juiste computer terecht komt. IPNAT gebruikt daarvoor de opties in NAT waarmee verkeer omgeleid kan worden. Als bijvoorbeeld een webserver op het LAN-adres `10.0.10.25` draait en het enkele publieke IP adres zou `20.20.20.5` zijn, dan zou de regel er als volgt uit zien:
+
+[.programlisting]
+....
+rdr dc0 20.20.20.5/32 port 80 -> 10.0.10.25 port 80
+....
+
+of:
+
+[.programlisting]
+....
+rdr dc0 0.0.0.0/32 port 80 -> 10.0.10.25 port 80
+....
+
+Voor een DNS server op een LAN die ook vanuit Internet bereikbaar met zijn en die draait op `10.0.10.33` zou de regel er als volgt uit zien:
+
+[.programlisting]
+....
+rdr dc0 20.20.20.5/32 port 53 -> 10.0.10.33 port 53 udp
+....
+
+=== FTP en NAT
+
+FTP is dinosaurus uit het tijdperk van voor Internet was zoals het nu is, toen onderzoeksinstellingen met elkaar verbonden waren via huurlijnen en FTP de aangewezen methode was om bestanden met elkaar uit te wisselen. Maar bij het gebruik van FTP worden gebruikersnaam en wachtwoord als platte tekst verzonden en het protocol is nooit aangepast. FTP is er in twee smaken: actief en passief. Het verschil zit 'm in hoe het datakanaal wordt opgezet. De passieve variant is veiliger voor een gebruiker omdat bij deze variant beide communicatiekanalen door de cliënt zelf worden opgezet. Op de volgende pagina zijn details over FTP na te lezen: http://www.slacksite.com/other/ftp.html[http://www.slacksite.com/other/ftp.html].
+
+==== IPNAT-regels
+
+IPNAT heeft een speciale FTP-proxy ingebouwd die kan worden ingeschakeld met een NAT-`map`-regel. Die kan al het uitgaande verkeer monitoren wat betreft opstartverzoeken voor sessies voor actieve en passieve FTP en dynamisch tijdelijke filterregels maken die alleen het poortnummer dat echt in gebruik is voor het datakanaal doorlaten. Hiermee wordt een veiligheidsrisico dat normaal gepaard gaat met FTP, namelijk het toestaan van grote reeksen hoge poortnummers, weggenomen.
+
+De volgende regel handelt al het FTP verkeer van het LAN af:
+
+[.programlisting]
+....
+map dc0 10.0.10.0/29 -> 0/32 proxy port 21 ftp/tcp
+....
+
+De regel hieronder handelt het FTP verkeer van de gateway zelf af:
+
+[.programlisting]
+....
+map dc0 0.0.0.0/0 -> 0/32 proxy port 21 ftp/tcp
+....
+
+Deze laatste regel handelt al het niet-FTP verkeer voor het LAN af:
+
+[.programlisting]
+....
+map dc0 10.0.10.0/29 -> 0/32
+....
+
+De FTP-afbeeldregel hoort voor de normale regels te staan. Alle pakketten worden als eerste vergeleken met de eerste regel en zo verder. Eerst wordt gekeken over de interfacenaam overeenkomt, daarna het bron IP adres van het LAN en dan of het een FTP pakket is. Als dat allemaal klopt, dan maakt de speciale FTP proxy een tijdelijke filterregel die de pakketten uit de FTP sessie naar binnen en buiten doorlaat en ook NAT toepast op de FTP pakketten. Alle pakketten van het LAN die niet van het protocoltype FTP zijn en dus niet bij de eerste regel passen, worden tegen de derde regel gehouden die van toepassing is vanwege de interface en bron IP adres, zodat er dan NAT op toegepast wordt.
+
+==== IPNAT FTP filterregels
+
+Als de NAT-FTP-proxy wordt gebruikt is er maar één filterregel voor FTP nodig. Zonder de FTP-proxy zouden er drie regels nodig zijn:
+
+[.programlisting]
+....
+# Sta LAN client toe te FTP-en naar Internet
+# Actieve en passieve modes
+pass out quick on rl0 proto tcp from any to any port = 21 flags S keep state
+
+# Sta opzetten van het datakanaal voor passieve mode toe voor hoge poorten
+pass out quick on rl0 proto tcp from any to any port > 1024 flags S keep state
+
+# Laat het datakanaal van de FTP server binnen voor actieve mode
+pass in quick on rl0 proto tcp from any to any port = 20 flags S keep state
+....
+
+[[firewalls-ipfw]]
+== IPFW
+
+IPFIREWALL (IPFW) is een firewall die binnen FreeBSD wordt ontwikkeld en onderhouden door vrijwillige leden van de staf. Het maakt gebruik van verouderde staatloze regels en een verouderde techniek om te realiseren wat eenvoudige stateful logica zou kunnen heten.
+
+De verzameling voorbeeldregels van IPFW (die in [.filename]#/etc/rc.firewall# en [.filename]#/etc/rc.firewall6# staan) uit de standaard FreeBSD-installatie is redelijk eenvoudig en niet voorbereid om zonder wijzigingen gebruikt te worden. Het voorbeeld maakt geen gebruik van stateful filteren, wat een voordeel is in de meeste situaties. Daarom worden deze regels niet als basis gebruikt in dit onderdeel.
+
+De staatloze syntaxis van IPFW is krachtig door de technisch geavanceerde mogelijkheden van de regelsyntaxis die de kennis van de gemiddelde gebruiker van firewalls ver overstijgt. IPFW is gericht op de professionele gebruiker of de gevorderde thuisgebruiker die hoge eisen stelt aan de wijze waarop er met pakketten wordt omgegaan. Voordat de kracht van de IPFW regels echt ingezet kan worden, moet de gebruiker veel weten over de verschillende protocollen en de wijze waarop pakketten in elkaar zitten. Het tot op dat niveau behandelen van stof valt buiten de doelstellingen van dit Handboek.
+
+IPFW bestaat uit zeven componenten: de verwerkingseenheid voor de firewallregels, verantwoording, loggen, regels met `divert` (omleiden) waarmee NAT gebruikt kan worden en de speciale gevorderde mogelijkheden voor bandbreedtebeheer met DUMMYNET, de `fwd rule` forward-mogelijkheid, de bridge-mogelijkheden en de ipstealth-mogelijkheden. IPFW ondersteunt zowel IPv4 als IPv6.
+
+[[firewalls-ipfw-enable]]
+=== IPFW inschakelen
+
+IPFW zit bij de basisinstallatie van FreeBSD als een losse tijdens runtime laadbare module. Het systeem laadt de kernelmodule dynamisch als in [.filename]#rc.conf# de regel `firewall_enable="YES"` staat. IPFW hoeft niet in de FreeBSD kernel gecompileerd te worden.
+
+Na het rebooten van een systeem met `firewall_enable="YES"` in [.filename]#rc.conf# is het volgende bericht op het scherm te zien tijdens het booten:
+
+[source,bash]
+....
+ipfw2 initialized, divert disabled, rule-based forwarding disabled, default to deny, logging disabled
+....
+
+In de laadbare module zit de mogelijkheid om te loggen gecompileerd. Er is een knop in [.filename]#/etc/sysctl.conf# om loggen aan te zetten en de uitgebreide loglimiet in te stellen. Door deze regels toe te voegen, staat loggen aan bij toekomstige herstarts:
+
+[.programlisting]
+....
+net.inet.ip.fw.verbose=1
+net.inet.ip.fw.verbose_limit=5
+....
+
+[[firewalls-ipfw-kernel]]
+=== Kernelopties
+
+Het is niet verplicht om IPFW in te schakelen door het mee te compileren in de FreeBSD kernel. Dit wordt alleen beschreven als achtergrondinformatie.
+
+[.programlisting]
+....
+options    IPFIREWALL
+....
+
+Met `IPFIREWALL` wordt IPFW ingeschakeld als deel van de kernel.
+
+[.programlisting]
+....
+options    IPFIREWALL_VERBOSE
+....
+
+Met `IPFIREWALL_VERBOSE` wordt het loggen van pakketten die worden verwerkt met IPFW mogelijk die het sleutelwoord `log` in een regel hebben staan.
+
+[.programlisting]
+....
+options    IPFIREWALL_VERBOSE_LIMIT=5
+....
+
+Limiteert het aantal pakketten dat per regel wordt gelogd via man:syslogd[8]. Deze optie kan gebruikt worden in vijandige omgevingen waar de activiteit van een firewall gelogd moet worden. Hierdoor kan een mogelijke ontzegging van dienst aanval door het vol laten lopen van syslog voorkomen worden.
+
+[.programlisting]
+....
+options    IPFIREWALL_DEFAULT_TO_ACCEPT
+....
+
+Met `IPFIREWALL_DEFAULT_TO_ACCEPT` wordt standaard alles door de firewall doorgelaten. Dit wordt aangeraden als iemand voor het eerst een firewall opzet.
+
+[.programlisting]
+....
+options    IPDIVERT
+....
+
+Met `IPDIVERT` wordt de NAT functionaliteit ingeschakeld.
+
+[NOTE]
+====
+De firewall zal alle binnenkomende en uitgaande pakketten blokkeren als de kerneloptie `IPFIREWALL_DEFAULT_TO_ACCEPT` of een regel om deze verbindingen expliciet toe te staan ontbreekt.
+====
+
+[[firewalls-ipfw-rc]]
+=== [.filename]#/etc/rc.conf# opties
+
+Start de firewall:
+
+[.programlisting]
+....
+firewall_enable="YES"
+....
+
+Om één van de standaard firewall types die geleverd wordt door FreeBSD te selecteren, lees [.filename]#/etc/rc.firewall#, maak een selectie en plaats het in de volgende regel:
+
+[.programlisting]
+....
+firewall_type="open"
+....
+
+Beschikbare waardes voor deze instelling zijn:
+
+* `open` - laat al het verkeer door.
+* `client` - beschermt alleen deze machine.
+* `simple` - beschermt het hele netwerk.
+* `closed` - blokkeert alle IP-verkeer, behalve voor lokaal verkeer.
+* `UNKNOWN` - voorkomt het laden de firewall-regels.
+* [.filename]#bestandsnaam# - absoluut pad naar een bestand dat firewall-regels bevat.
+
+Het is mogelijk om twee verschillende manieren te gebruiken voor speciaal gemaakte regels voor de ipfw firewall. één daarvan is door het zetten van de `firewall_type` variabele naar een absoluut pad van een bestand, welke _firewall-regels_ bevat, zonder enige specifieke opties voor man:ipfw[8]. Het volgende is een eenvoudig voorbeeld van een bestand met regelverzamelingen dat al het inkomend en uitgaand verkeer blokkeert:
+
+[.programlisting]
+....
+add deny in
+add deny out
+....
+
+Aan de andere kant is het mogelijk om de variabele `firewall_script` in te stellen op een absoluut pad van een uitvoerbaar script, welke inclusief `ipfw` commando's uitgevoerd wordt tijdens het opstarten van het systeem. Een geldig script met regels dat gelijkwaardig is aan het bestand met regels hierboven, zou het volgende zijn:
+
+[.programlisting]
+....
+#!/bin/sh
+
+ipfw -q flush
+
+ipfw add deny in
+ipfw add deny out
+....
+
+[NOTE]
+====
+Als `firewall_type` is gezet naar `client` of `simple` moeten de standaard regels die gevonden kunnen worden in [.filename]#/etc/rc.firewall# gecontroleerd worden om te zien of deze configuratie voldoet voor de machine. Let ook op dat alle voorbeelden die gebruikt zijn in dit hoofdstuk ervan uitgaan dat de `firewall_script` variabele gezet is naar [.filename]#/etc/ipfw.rules#.
+====
+
+Om loggen in te schakelen:
+
+[.programlisting]
+....
+firewall_logging="YES"
+....
+
+[WARNING]
+====
+
+Het enige dat de variabele `firewall_logging` doet is de sysctl variabele `net.inet.ip.fw.verbose` op de waarde `1` zetten (zie <<firewalls-ipfw-enable>>). Er is geen variabele in [.filename]#rc.conf# om logboeklimieten in te stellen, maar dat kan ingesteld worden via een sysctl variabele, handmatig of via [.filename]#/etc/sysctl.conf#:
+
+[.programlisting]
+....
+net.inet.ip.fw.verbose_limit=5
+....
+
+====
+
+Als de machine in kwestie een gateway is, dus Network Address Translation (NAT) diensten levert via man:natd[8], dan staat in crossref:advanced-networking[network-natd,Network Address Translation] meer informatie over de benodigde instellingen voor [.filename]#/etc/rc.conf#.
+
+[[firewalls-ipfw-cmd]]
+=== Het commando `IPFW`
+
+Gewoonlijk wordt `ipfw` gebruikt om met de hand enkelvoudige regels toe te voegen of te verwijderen als IPFW actief is. Het probleem met deze methode is dat, als het systeem wordt uitgezet alle regels die gewijzigd of verwijderd zijn verloren gaan. Door alle regels in een bestand op te nemen dat bij het booten wordt geladen of door het bestand waarin de wijzigingen zijn gemaakt als een machine draait te laden bestaat die probleem niet.
+
+Met `ipfw` kunnen de actieve regels van de firewall op het scherm getoond worden. De verantwoordingsmogelijkeden van man:ipfw[8] maken dynamisch tellers aan voor iedere regel en houden die bij voor alle pakketten die van toepassing zijn op die regel. Tijdens het testen van een regel is het afbeelden van de regel met zijn teller een van de manieren om te bepalen of de regel werkt.
+
+Om alle regels in volgorde te tonen:
+
+[source,bash]
+....
+# ipfw list
+....
+
+Om alle regels te tonen met de tijd waarop deze voor het laatst van toepassing was:
+
+[source,bash]
+....
+# ipfw -t list
+....
+
+Het volgende commando kan gebruikt worden om de verantwoordingsinformatie, pakkettellers en de regel zelf te tonen. De eerste kolom is het regelnummer met daarachter het aantal keren dat de regel van toepassing was voor inkomend verkeer, gevolgd door het aantal keren dat de regel van toepassing was voor uitgaand verkeer. Als laatste wordt de regel zelf getoond:
+
+[source,bash]
+....
+# ipfw -a list
+....
+
+Ook kunnen onder de statische regels de dynamische regels getoond worden:
+
+[source,bash]
+....
+# ipfw -d list
+....
+
+En de dynamische regels die verlopen zijn:
+
+[source,bash]
+....
+# ipfw -d -e list
+....
+
+De tellers op nul gesteld worden:
+
+[source,bash]
+....
+# ipfw zero
+....
+
+Alleen de tellers voor regel met nummer _NUM_ op nul stellen:
+
+[source,bash]
+....
+# ipfw zero NUM
+....
+
+[[firewalls-ipfw-rules]]
+=== Sets van IPFW regels
+
+Een verzameling regels is een groep IPFW-regels die is gemaakt om pakketten toe te staan of te blokkeren op basis van de inhoud van dat pakket. De bi-directionele uitwisseling van pakketten tussen hosts bestaat uit een gesprek dat een sessie heet. De verzameling van firewallregels beoordeelt zowel de pakketten die aankomen van de host op het publieke Internet als de pakketten die op het systeem ontstaan als antwoord daarop. Iedere TCP/IP-dienst als telnet, www, mail, etc, heeft zijn eigen protocol en bevoorrechte (luister)poort. Pakketten bestemd voor een specifieke poort verlaten het bronadres via een onbevoorrechte (hogere) poort en doelen op de specifieke dienstpoort op het bestemmingsadres. Alle bovenstaande parameters (poorten en adressen) kunnen gebruikt worden als selectiecriteria om regels aan te maken die diensten doorlaten of blokkeren.
+
+Als een pakket de firewall binnenkomt wordt het vergeleken met de eerste regel in de set regels en zo gaat dat voor iedere regel vanaf boven tot beneden. Als een regel van toepassing is op een pakket, dan wordt het actieveld van de regel uitgevoerd. Dit wordt de "de eerst passende regel wint" zoekmethode genoemd. Als een pakket bij geen enkele regel past, dan wordt de verplichte standaardregel 65535 van IPFW toegepast, die alle pakketten weigert zonder een antwoord terug te sturen naar de verzender.
+
+[NOTE]
+====
+Het zoeken gaat door na regels met `count`, `skipto` en `tee`.
+====
+
+De instructies in dit onderdeel zijn gebaseerd op regels die gebruik maken van de stateful opties `keep state`, `limit`, `in`, `out` en `via`. Dit is het raamwerk waarmee een set van inclusieve firewallregels wordt samengesteld.
+
+[WARNING]
+====
+
+Wees voorzichtig tijdens het werken met firewall-regels, het is gemakkelijk om uzelf uit te sluiten.
+====
+
+[[firewalls-ipfw-rules-syntax]]
+==== Regelsyntaxis
+
+De regelsyntaxis zoals hier toegelicht is vereenvoudigd door alleen te tonen wat nodig is om een standaard inclusieve set met firewallregels te maken. De complete beschrijving van alle mogelijkheden staat in man:ipfw[8].
+
+Regels bevatten sleutelwoorden die in een bepaalde volgorde van links naar rechts op een regel horen te staan. Sleutelwoorden worden vet weergegeven. Sommige sleutelwoorden hebben subopties die zelf ook weer sleutelwoorden hebben die ook weer subopties kunnen hebben.
+
+Het karakter `#` wordt gebruikt om het begin van een opmerking te markeren en kan zowel op een eigen regel als achter een firewallregel staan. Lege regels worden genegeerd.
+
+_CMD REGEL_NUMMER ACTIE LOGGEN SELECTIE STATEFUL_
+
+===== CMD
+
+Iedere regel moet beginnen met [parameter]#add# om hem toe te voegen aan de tabel met regels.
+
+===== REGEL_NUMMER
+
+Elke regel is geassocieerd met een regel_nummer van 1 tot en met 65535.
+
+===== ACTIE
+
+Bij een regel kunnen één of meer acties horen die worden uitgevoerd als een regel geldt voor een pakket.
+
+[parameter]#allow | accept | pass | permit#
+
+Deze opties betekenen allemaal hetzelfde: als de regel geldt voor een pakket, laat dat pakket dan door en stop met het zoeken naar geldende regels.
+
+[parameter]#check-state#
+
+Vergelijkt het pakket met de tabel met dynamische regels. Als het erin staat, dan wordt de actie van de dynamisch door deze regel gemaakte regel uitgevoerd. Anders wordt er verder gezocht door de regels. Een regel met check-state heeft geen selectiecriteria. Als er geen regel met check-state in de set met regels staat, dan wordt de tabel met dynamische regels bij het eerste voorkomen van keep-state of limit gecontroleerd.
+
+[parameter]#deny | drop#
+
+Deze opties betekenen hetzelfde: als de regel geldt voor een pakket, blokkeer dat pakket dan en stop met het zoeken naar geldende regels.
+
+===== Loggen
+
+[parameter]#log# of [parameter]#logamount#
+
+Als een regel met het sleutelwoord `log` van toepassing is op een pakket, dan wordt er een bericht naar man:syslogd[8] geschreven met de faciliteitsnaam SECURITY. Er wordt alleen een bericht geschreven als het aantal voor die regel gelogde pakketten niet groter is dan de instelling van de parameter logamount. Als er geen `logamount` is ingesteld, dan wordt de limiet uit de man:sysctl[8] variabele `net.inet.ip.fw.verbose_limit` gehaald. In beide gevallen bestaat er in het geval de waarde nul is geen limiet. Als de limiet is bereikt, dan kan het loggen weer ingeschakeld worden door de teller voor het loggen weer op nul te zetten voor die regel met `ipfw reset log`.
+
+[NOTE]
+====
+Er wordt gelogd als een pakket zeker past bij een regel, maar voordat de actie (bijvoorbeeld [parameter]#accept# of `deny`) op een pakket wordt toegepast. Uiteindelijk bepaalt de gebruiker zelf voor welke regels loggen wordt ingeschakeld.
+====
+
+===== Selectie
+
+De sleutelwoorden in deze paragraaf beschrijven de attributen van een pakket die gecontroleerd worden bij het bepalen of een regel wel of niet op een pakket van toepassing is. De attributen waarop gecontroleerd kan worden moeten in de beschreven volgorde gebruikt worden.
+
+[parameter]#udp | tcp | icmp#
+
+Naast de hierboven aangegeven protocollen kunnen alle in [.filename]#/etc/protocols# beschreven protocollen gebruikt worden. De waarde die wordt opgegeven is het protocol dat van toepassing moet zijn. Dit attribuut is verpicht.
+
+[parameter]#from bron to best#
+
+De sleutelwoorden `from` en `to` worden gebruikt om te bekijken of een regel van toepassing is op IP-adressen. Een regel moet _zowel_ bron- als bestemmingsadressen bevatten. `any` is een bijzonder sleutelwoord dat van toepassing is op alle IP-adressen. `me` is een bijzonder sleutelwoord dat van toepassing is op alle IP-adressen die ingesteld zijn op interfaces van een FreeBSD systeem om de PC waarop de firewall draait te vertegenwoordigen (deze machine). Zo kan dit onderdeel bijvoorbeeld de volgende vormen aannemen: `from me to any`, `from any to me`, `from 0.0.0.0/0 to any`, `from any to 0.0.0.0/0`, `from 0.0.0.0 to any`, `from any to 0.0.0.0` of `from me to 0.0.0.0`. IP-adressen mogen ingevoerd worden in de vorm numeriek, door punten gescheiden adres/maskerlengte (CIDR-notatie) of als een enkelvoudig IP-adres in de vorm numeriek, door punten gescheiden. De port package:net-mgmt/ipcalc[] kan gebruikt worden om de berekeningen e vereenvoudigen. Aanvullende informatie is beschikbaar op de webpagina van het programma: http://jodies.de/ipcalc[http://jodies.de/ipcalc].
+
+[parameter]#poortnummer#
+
+Wordt gebruikt voor protocollen die poortnummers ondersteunen (als TCP en UDP). Het gebruik van een poortnummer is verplicht. Er mogen ook dienstnamen uit [.filename]#/etc/services# gebruikt worden in plaats van nummers.
+
+[parameter]#in | out#
+
+Is op respectievelijk inkomende of uitgaande pakketten van toepassing. De sleutelwoorden `in` of `out` zijn verplicht in een regel.
+
+[parameter]#via IF#
+
+Deze parameter geeft aan op welke interface de regel van toepassing is, waarbij `IF` de exacte naam van de bedoelde interface is.
+
+[parameter]#setup#
+
+Dit is een verplicht sleutelwoord waarmee wordt aangegeven dat er gezocht wordt naar een pakket met het verzoek tot het opstarten van een TCP sessie.
+
+[parameter]#keep-state#
+
+Dit is een verplicht sleutelwoord. Als er een pakket op een regel met [parameter]#keep-state# van toepassing is, dan wordt er door de firewall een dynamische regel gemaakt die bi-directioneel verkeer zal toestaan tussen bron en bestemming en de bijbehorende poorten voor hetzelfde protocol.
+
+[parameter]#limit {bron-adr | bron-poort | best-adr | best-poort}#
+
+De firewall staat maar _N_ verbindingen toe met dezelfde groep parameters uit een regel. Er kunnen één of meer van de parameters bron- of bestemmingsadres en bron- en bestemmingspoort gebruikt worden. [parameter]#limit# en [parameter]#keep-state# kunnen niet in dezelfde regel gebruikt worden. De optie [parameter]#limit# geeft dezelfde mogelijkheden als [parameter]#keep-state# en voegt daar zijn eigen mogelijkheden aan toe.
+
+==== Regeloptie stateful
+
+Bij stateful filteren wordt verkeer bekeken als bi-directioneel verkeer dat samen een sessie vormt. Het heeft de mogelijkheid om te bepalen of de sessie tussen de zender en de ontvanger op de juiste wijze voortgaat. Alle pakketten die niet precies in de verwachting van een sessie passen worden automatisch als fout geblokkeerd.
+
+De optie `check-state` wordt gebruikt om aan te geven waar IPFW-regels tegen de mogelijkheden voor dynamische regels gehouden moeten worden. Als er een passende regel bij een pakket wordt gevonden, dan kan dat pakket de firewall verlaten en wordt een nieuwe regel gemaakt voor het volgende pakket dat wordt verwacht in de sessie. Als er geen regel van toepassing is op het pakket, dan wordt de volgende regel in de groep regels getest.
+
+De mogelijkheden voor dynamische regels zijn kwetsbaar voor een aanval die SYN-flood heet, waarmee wordt geprobeerd een zeer groot aantal regels aan te laten maken. Om deze aanval tegen te gaan, is de optie `limit` beschikbaar. Met deze optie kan het maximaal aantal simultane sessies geregeld worden op basis van bron en bestemmingsvelden. Als het aantal sessies gelijk aan het maximale aantal sessies is, wordt een pakket voor een nieuwe sessie geweigerd.
+
+==== Firewallberichten loggen
+
+De voordelen van loggen zijn duidelijk. Het biedt de mogelijkheid om na het feit informatie na te zien als: welke pakketten heeft de firewall laten vallen, waar kwamen ze vandaan en waar gingen ze heen. Dit zijn allemaal voordelen als het gaat om uitvinden waar een aanvaller vandaan komt en wat hij heeft geprobeerd.
+
+Zelfs als logging is ingeschakeld logt IPFW nog niets uit zichzelf. De beheerder van de firewall beslist welke actieve regels iets weg moeten schrijven door het sleutelwoord `log` aan die regels toe te voegen. Gewoonlijk worden alleen `deny`-regels gelogd. Dit geldt bijvoorbeeld voor de `deny`-regel voor inkomende ICMP pings. Het is gebruikelijk om de standaardregel "ipfw default deny everything" te dupliceren, daar `log` in op te nemen, en deze als laatste in de verzameling met regels te plaatsen. Zo zijn alle pakketten te zien die niet voldeden aan ook maar één regel.
+
+Loggen heeft ook mogelijke nadelen. Het is mogelijk om te veel te loggen en dan om te komen in logboekgegevens die uiteindelijk een schijf kunnen vullen. Een DoS aanval om een schijf met logs te vullen is een van de oudst bekende typen DoS aanvallen. Logberichten van de firewall worden niet alleen naar syslogd geschreven, maar ook op het `root` console getoond waar ze snel erg vervelend kunnen worden.
+
+De kerneloptie `IPFIREWALL_VERBOSE_LIMIT=5` beperkt het aantal opeenvolgende berichten dat naar man:syslogd[8] wordt geschreven voor één specifieke regel. Als deze optie is ingeschakeld, worden in dit geval maximaal vijf berichten voor dezelfde regel gemeld. Als er meer berichten op dezelfde regel zouden zijn, zou dat als volgt aan syslogd gemeld worden:
+
+[.programlisting]
+....
+last message repeated 45 times
+....
+
+Standaard worden alle gelogde pakketten weggeschreven naar [.filename]#/var/log/security#, wat is ingesteld in [.filename]#/etc/syslog.conf#.
+
+[[firewalls-ipfw-rules-script]]
+==== Regelscript bouwen
+
+De meeste ervaren gebruikers van IPFW maken een bestand waarin de regels staan en stellen dat zo op dat het als script uitgevoerd kan worden. Het grootste voordeel van deze methode is dat de firewallregels allemaal vervangen kunnen worden zonder dat het systeem opnieuw gestart moet worden. Deze methode is ook erg geschikt voor het testen van regels omdat de procedure zo vaak als nodig uitgevoerd kan worden. Omdat het een script is, kan er gebruik gemaakt worden van substitutie zodat veel gebruikte waarden verduidelijkt en in meerdere regels toegepast kunnen worden. In het volgende voorbeeld wordt hier gebruik van gemaakt.
+
+De syntaxis die in het script wordt gebruikt is compatibel met de shells man:sh[1], man:csh[1] en man:tcsh[1]. Velden waarvoor substitutie van toepassing is worden vooraf gegaan door het dollarteken $. Definities worden niet vooraf gegaan door het voorvoegsel $. De waarden van een substitutie moet omsloten worden door "dubbele aanhalingstekens".
+
+Een bestand met regels kan als volgt beginnen:
+
+[.programlisting]
+....
+############### begin voorbeeldscript ipfw regels ##############
+#
+ipfw -q -f flush       # Verwijder alle bestaande regels.
+# Stel standaarden in.
+oif="tun0"             # uitgaande interface.
+odns="192.0.2.11"      # IP adres DNS server ISP.
+cmd="ipfw -q add "     # Voorvoegsel voor regel.
+ks="keep-state"        # Te lui om iedere keer in te typen.
+$cmd 00500 check-state
+$cmd 00502 deny all from any to any frag
+$cmd 00501 deny tcp from any to any established
+$cmd 00600 allow tcp from any to any 80 out via $oif setup $ks
+$cmd 00610 allow tcp from any to $odns 53 out via $oif setup $ks
+$cmd 00611 allow udp from any to $odns 53 out via $oif $ks
+################### einde voorbeeldscript ipfw regels ###########
+....
+
+Dat is alles. De feitelijke functie van de regels is in dit voorbeeld van ondergeschikt belang. Dit was slechts een voorbeeld om het gebruik van substitutie te illustreren.
+
+Als het bovenstaande voorbeeld de inhoud van [.filename]#/etc/ipfw.rules# was, dan kon het herladen worden met het volgende commando:
+
+[source,bash]
+....
+# sh /etc/ipfw.rules
+....
+
+[.filename]#/etc/ipfw.rules# zou overal kunnen staan met iedere gewenste naam.
+
+Wat in het bovenstaande voorbeeld met een bestand is gerealiseerd, kan ook met de hand:
+
+[source,bash]
+....
+# ipfw -q -f flush
+# ipfw -q add 00500 check-state
+# ipfw -q add 00502 deny all from any to any frag
+# ipfw -q add 00501 deny tcp from any to any established
+# ipfw -q add 00600 allow tcp from any to any 80 out via tun0 setup keep-state
+# ipfw -q add 00610 allow tcp from any to 192.0.2.11 53 out via tun0 setup keep-state
+# ipfw -q add 00611 allow udp from any to 192.0.2.11 53 out via tun0 keep-state
+....
+
+==== Verzameling van stateful regels
+
+De volgende verzameling van regels, waarin geen gebruik gemaakt wordt van NAT, is een voorbeeld van hoe een erg veilige inclusieve firewall kan worden opgezet. Een inclusieve firewall laat alleen diensten toe waarvoor `pass` regels van toepassing zijn en blokkeert al het andere verkeer. Firewalls die ontworpen zijn om hele netwerksegmenten te beschermen hebben tenminste twee interfaces waarvoor regels moeten zijn die de firewall in staat stellen zijn werk te doen.
+
+Alle UNIX(R) systemen en dus ook FreeBSD zijn zo ontworpen dat ze voor interne communicatie de interface [.filename]#lo0# en IP adres `127.0.0.1` gebruiken. De firewall moet dit interne verkeer gewoon doorgang laten vinden.
+
+Voor de interface die is verbonden met het publieke Internet worden regels gemaakt waarmee sessies naar het Internet mogelijk gemaakt worden en toegang wordt gegeven voor pakketten die uit die sessies terug komen. Dit kan de gebruikers-PPP-interface [.filename]#tun0# zijn of de netwerkkaart die is verbonden met een xDSL of kabelmodem.
+
+In gevallen dat er meer dan één netwerkkaart is aangesloten op het private netwerk achter de firewall, moeten er op de firewall-regels zijn om het verkeer tussen die interfaces vrije doorgang te geven.
+
+De regels worden opgedeeld in drie onderdelen: alle interfaces met vrije doorgang, uitgaand op publieke interfaces en inkomend op publieke interfaces.
+
+De volgorde van de regels in iedere sectie voor publieke interfaces moet zo zijn dat de regels die het meest gebruikt worden vóór de regels staan die minder vaak gebruikt worden. De laatste regel van een onderdeel geeft aan dat al het overige verkeer op die interface in die richting geblokkeerd en gelogd moet worden.
+
+In het onderdeel Uitgaand van de volgende verzameling regels staan alleen regels met `allow` die parameters bevatten om individuele diensten beschikbaar te maken die publieke toegang tot Internet mogen hebben Al die regels moeten gebruik maken van de opties `proto`, `port`, `in/out`, `via` en `keep-state`. De regels met `proto tcp` maken ook gebruik van `setup` om te bekijken of het een pakket betreft voor het opzetten van een sessie om de stateful functionaliteit aan te sturen.
+
+In het onderdeel Inkomend staan als eerste alle regels voor het blokkeren van ongewenste pakketten, om twee redenen. Als eerste kan het zo zijn dat kwaadaardige pakketten gedeeltelijk overeenkomen met legitiem verkeer. Deze regels moeten worden geblokkeerd in plaats van te worden binnengelaten, gebaseerd op hun gedeeltelijke overeenkomst met `allow`-regels. De tweede reden is dat nu ongewenste pakketten die vaak voorkomen en die bij voorkeur niet in de logboeken voorkomen niet meer van toepassing zijn op de laatste regel van het onderdeel waarin ze zouden worden gelogd. Met de laatste regel van dit onderdeel worden alle overige pakketten geblokkeerd en gelogd en ze kunnen bewijsmateriaal zijn in een zaak tegen iemand die heeft geprobeerd een systeem aan te vallen.
+
+Iets waarop u ook moet letten is dat voor al het verkeer dat wordt geweigerd geen antwoord wordt gestuurd. Die pakketten verdwijnen gewoon. Zo weet een aanvaller niet of een pakket het doelsysteem wel heeft bereikt. Zo kan een aanvaller geen informatie verzamelen over een systeem: hoe minder informatie er over een systeem beschikbaar is, hoe veiliger het is. Als er pakketten gelogd worden met een onbekend poortnummer, dan is de functie van dat poortnummer na te zoeken in [.filename]#/etc/services# of op http://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers[http://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers]. Op de volgende link worden poortnummers van Trojans beschreven: http://www.sans.org/security-resources/idfaq/oddports.php[http://www.sans.org/security-resources/idfaq/oddports.php].
+
+==== Voorbeeld van een set inclusieve regels
+
+Het volgende voorbeeld is een complete inclusieve verzameling van regels die geen gebruik maakt van NAT. Deze verzameling van regels is veilig om deze regels op uw eigen systemen te gebruiken. Dit kan door commentaar te maken van een `pass`-regel voor een dienst die niet gewenst is. Logberichten die niet gewenst zijn, zijn uit te sluiten door een `deny`-regel toe te voegen aan het onderdeel Inkomend. Voor de onderstaande regels dient de interfacenaam [.filename]#dc0# in iedere regel vervangen te worden door de interfacenaam van de netwerkkaart in het systeem die met het publieke Internet is verbonden. Voor gebruikers van PPP zou dat [.filename]#tun0# zijn.
+
+Er zit een merkbare structuur in het gebruik van deze regels:
+
+* Alle regels die een verzoek zijn voor het opzetten van een sessie gebruiken `keep-state`.
+* Alle diensten die vanaf Internet bereikbaar zijn gebruiken de optie `limit` om "flooding" te voorkomen.
+* Alle regels gebruiken `in` of `out` om de richting aan te geven.
+* Alle regels gebruiken `via _interfacenaam_` om aan te geven op welke interface de regel van toepassing is.
+
+De volgende regels zouden in [.filename]#/etc/ipfw.rules# kunnen staan:
+
+[.programlisting]
+....
+################ Begin bestand met IPFW regels ###############################
+# Verwijder eerst de bestaande regels.
+ipfw -q -f flush
+
+# Stel commando voorvoegsel in.
+cmd="ipfw -q add"
+pif="dc0"     # Interfacenaam van NIC die verbinding
+              # met het publieke Internet heeft.
+
+#################################################################
+# Geen beperkingen op de interface aan de LAN kant. Alleen nodig
+# als er een LAN is. Wijzig xl0 naar de gebruikte interfacenaam.
+#################################################################
+#$cmd 00005 allow all from any to any via xl0
+
+#################################################################
+# Geen beperkingen op de loopback interface.
+#################################################################
+$cmd 00010 allow all from any to any via lo0
+
+#################################################################
+# Sta het pakket toe als het aan de tabel met dynamische regels
+# was toegevoegd met een 'allow keep-state' commando.
+#################################################################
+$cmd 00015 check-state
+
+#################################################################
+# Interface aan het publieke Internet (onderdeel Uitgaand).
+# Inspecteer verzoeken om een sessie te starten van achter de
+# firewall op het private netwerk of vanaf de server zelf naar
+# het publieke Internet.
+#################################################################
+
+# Geef toegang tot de DNS server van de ISP.
+# x.x.x.x moet het IP adres van de DNS van de ISP zijn.
+# Dupliceer deze regels als een ISP meerdere DNS servers heeft.
+# Haal het IP adres evt. uit /etc/resolv.conf
+$cmd 00110 allow tcp from any to x.x.x.x 53 out via $pif setup keep-state
+$cmd 00111 allow udp from any to x.x.x.x 53 out via $pif keep-state
+
+# Geef toegang tot de DHCP server van de ISP voor kabel- en
+# xDSL-netwerken. Deze regel is niet nodig als gebruik gemaakt worden
+# van PPP naar het publieke Internet. In dat geval kan de hele groep
+# verwijderd worden. Gebruik de volgende regel en controleer het
+# logboek voor het IP adres. Wijzig dan het IP adres in de regel
+# commentaar hieronder en verwijder de eerste regel.
+$cmd 00120 allow log udp from any to any 67 out via $pif keep-state
+#$cmd 00120 allow udp from any to x.x.x.x 67 out via $pif keep-state
+
+# Sta niet beveiligd www verkeer toe.
+$cmd 00200 allow tcp from any to any 80 out via $pif setup keep-state
+
+# Sta beveiligd www verkeer over TLS SSL toe.
+$cmd 00220 allow tcp from any to any 443 out via $pif setup keep-state
+
+# Sta het verzenden en ontvangen van e-mail toe.
+$cmd 00230 allow tcp from any to any 25 out via $pif setup keep-state
+$cmd 00231 allow tcp from any to any 110 out via $pif setup keep-state
+
+# Sta de FreeBSD CVSUP functie toe voor uid root.
+$cmd 00240 allow tcp from me to any out via $pif setup keep-state uid root
+
+# Sta ping toe.
+$cmd 00250 allow icmp from any to any out via $pif keep-state
+
+# Sta Time toe naar buiten.
+$cmd 00260 allow tcp from any to any 37 out via $pif setup keep-state
+
+# Sta NNTP nieuws toe naar buiten.
+$cmd 00270 allow tcp from any to any 119 out via $pif setup keep-state
+
+# Sta beveiligde FTP, Telnet en SCP toe naar buiten.
+# Deze functie maakt gebruik van SSH (secure shell).
+$cmd 00280 allow tcp from any to any 22 out via $pif setup keep-state
+
+# Sta whois toe naar buiten.
+$cmd 00290 allow tcp from any to any 43 out via $pif setup keep-state
+
+# Blokkeer en log al het andere dat probeert buiten te komen.
+# Deze regel dwingt de 'block all' logica af.
+$cmd 00299 deny log all from any to any out via $pif
+
+#################################################################
+# Interface aan het publieke Internet (onderdeel Inkomend).
+# Inspecteert pakketten die van het publieke Internet komen
+# met als bestemming de host zelf of het private netwerk.
+#################################################################
+
+# Blokkeer al het verkeer voor niet-routeerbare of gereserveerde
+# adresreeksen.
+$cmd 00300 deny all from 192.168.0.0/16 to any in via $pif   #RFC 1918 privaat IP
+$cmd 00301 deny all from 172.16.0.0/12 to any in via $pif     #RFC 1918 privaat IP
+$cmd 00302 deny all from 10.0.0.0/8 to any in via $pif        #RFC 1918 privaat IP
+$cmd 00303 deny all from 127.0.0.0/8 to any in via $pif       #loopback
+$cmd 00304 deny all from 0.0.0.0/8 to any in via $pif         #loopback
+$cmd 00305 deny all from 169.254.0.0/16 to any in via $pif    #DHCP auto-config
+$cmd 00306 deny all from 192.0.2.0/24 to any in via $pif      #gereserveerd voor documentatie
+$cmd 00307 deny all from 204.152.64.0/23 to any in via $pif   #Sun cluster interconnect
+$cmd 00308 deny all from 224.0.0.0/3 to any in via $pif       #Klasse D & E multicast
+
+# Blokkeer publieke pings.
+$cmd 00310 deny icmp from any to any in via $pif
+
+# Blokkeer ident.
+$cmd 00315 deny tcp from any to any 113 in via $pif
+
+# Blokkeer alle Netbios diensten. 137=naam, 138=datagram, 139=sessie.
+# Netbios is de Windows(R) bestandsdeeldienst.
+# Blokkeer Windows hosts2 name server verzoeken 81.
+$cmd 00320 deny tcp from any to any 137 in via $pif
+$cmd 00321 deny tcp from any to any 138 in via $pif
+$cmd 00322 deny tcp from any to any 139 in via $pif
+$cmd 00323 deny tcp from any to any 81 in via $pif
+
+# Blokkeer gefragmenteerde pakketten.
+$cmd 00330 deny all from any to any frag in via $pif
+
+# Blokkeer ACK pakketten die niet in de tabel met dynamische regels
+# staan.
+$cmd 00332 deny tcp from any to any established in via $pif
+
+# Geef toegang tot de DHCP server van de ISP voor kabel- en
+# xDSL-netwerken. Deze regel is niet nodig als gebruik gemaakt worden
+# van PPP naar het publieke Internet. In dat geval kan de hele groep
+# verwijderd worden. Hier wordt hetzelfde IP adres gebruikt als in de
+# sectie voor Uitgaand verkeer.
+#$cmd 00360 allow udp from any to x.x.x.x 67 in via $pif keep-state
+
+# Sta inkomend webverkeer toe omdat er een Apache server draait.
+$cmd 00400 allow tcp from any to me 80 in via $pif setup limit src-addr 2
+
+# Sta beveiligde FTP, telnet en SCP toe vanaf Internet.
+$cmd 00410 allow tcp from any to me 22 in via $pif setup limit src-addr 2
+
+# Sta niet beveiligde telnet sessie toe vanaf het publieke Internet.
+# Dit heeft het label ``niet veilig'' omdat gebruikersnaam en
+# wachtwoord als platte tekst over Internet gaan. Als er geen telnet
+# server draait, hoeft deze regel niet actief te zijn.
+$cmd 00420 allow tcp from any to me 23 in via $pif setup limit src-addr 2
+
+# Weiger en log alle niet toegestane inkomende verbindingen van buiten.
+$cmd 00499 deny log all from any to any in via $pif
+
+# Al het andere verkeer wordt standaard geblokkeerd. Weiger en log alle
+# pakketten die tot hier zijn gekomen om te bekijken welke het waren.
+$cmd 00999 deny log all from any to any
+################ Einde bestand met IPFW regels ########################
+....
+
+==== Voorbeeld NAT en stateful regels
+
+Om NAT met IPFW te gebruiken moeten een extra aantal instellingen gemaakt worden. In het instellingenbestand voor de kernel moet `option IPDIVERT` toegevoegd worden aan de andere opties van IPFIREWALL.
+
+Naast de normale IPFW opties in [.filename]#/etc/rc.conf# zijn de volgende nodig:
+
+[.programlisting]
+....
+natd_enable="YES"                   # Schakel NATD in
+natd_interface="rl0"                # interfacenaam voor de publieke Internet NIC
+natd_flags="-dynamic -m"            # -m = behoud poortnummers als mogelijk
+....
+
+Stateful regels samen met de regel `divert natd` (Network Address Translation) gebruiken maakt het schrijven van regels veel gecompliceerder. De plaats van de regels met `check-state` en `divert natd` zijn van kritiek belang. De logica bestaat niet langer uit het eenvoudigweg van boven naar beneden doorwerken van de regels. Er wordt dan ook een nieuw type actie gebruik: `skipto`. Bij het gebruik van `skipto` is het verplicht iedere regel te nummeren zodat duidelijk is waar een `skipto` precies heen springt.
+
+Hieronder staat een groep regels zonder commentaar waarin een manier om pakketten door de groep regels te leiden wordt aangegeven.
+
+De verwerking begint met de eerste regel en er wordt steeds een volgende regel gecontroleerd tot het einde wordt bereikt of totdat een regel op het gecontroleerde pakket van toepassing is, en het pakket uit de firewall wordt vrijgelaten. In het voorbeeld zijn de regels 100, 101, 450, 500, en 510 van belang. Die regels regelen de vertaling van inkomende en uitgaande pakketten zodat er in de tabel met de dynamische `keep-state`-regels altijd het private IP-adres staat. Daarnaast is het van belang op te merken dat er in alle `allow`- en `deny`-regels de richting van het pakket wordt gecontroleerd (inkomend of uitgaand) en over welke interface het pakket gaat. Merk ook op dat alle uitgaande verzoeken voor het starten van een sessie met een `skipto` naar regel 500 gaan voor NAT.
+
+Stel dat een gebruiker zijn webbrowser gebruikt om een webpagina op te halen. Webpagina's worden over poort 80 verzonden. Er komt een pakket de firewall binnen dat niet past bij regel 100 omdat het naar buiten gaat en niet naar binnen. Het komt voorbij regel 101 omdat dit het eerste pakket is en er dus nog niets over in de dynamische keep-state tabel staat. Als het pakket bij 125 aankomt blijkt het te passen bij die regel. Het gaat naar buiten door de interface aan het publieke Internet. Het pakket heeft dan nog steeds het bron-IP-adres van het private LAN. Als blijkt dat deze regel geldt, dan gebeuren er twee dingen: door `keep-state` wordt er een regel in de dynamische keep-state tabel gezet en wordt de aangegeven actie uitgevoerd. De actie is onderdeel van de informatie uit de dynamische tabel. In dit geval is het `skipto rule 500`. In regel 500 wordt NAT op het IP-adres van het pakket toegepast en dan kan het weg. Dit is van groot belang. Dit pakket komt aan op zijn bestemming en als er een pakket als antwoord terug komt, dan begint de verwerking van het antwoordpakket weer van voor af aan. Nu voldoet het aan regel 100 en dus wordt het bestemmingsadres vertaald naar het bijbehorende IP-adres op het LAN. Daarna past het bij de `check-state`-regel en wordt een vermelding in de tabel gevonden wat betekent dat er een bestaande sessie is en wordt het doorgelaten naar het LAN. Het gaat dan naar de PC op het LAN die als eerste een pakket heeft verzonden en die verstuurt een nieuw pakket met de vraag om een volgend segment met gegevens naar de server. Nu blijkt bij controle van de `check-state`-regel dat die op het pakket van toepassing moet zijn en er staat een vermelding in de tabel voor uitgaand verkeer. Daarom wordt de bijbehorende actie `skipto rule 500` uitgevoerd. Het pakket springt naar regel 500, er wordt NAT op toegepast en het kan zijn weg vervolgen.
+
+Wat betreft binnenkomende pakketten wordt alles dat onderdeel is van een bestaande sessie automatisch afgehandeld door de `check-state`-regel en de correct geplaatste `divert natd`-regels. Nu hoeven alleen de foute pakketten nog geweigerd te worden en moeten de inkomende geauthoriseerde diensten doorgelaten worden. In dit geval draait er een Apache server op de firewall-machine die vanaf Internet bereikbaar moet zijn. Het nieuwe inkomende pakket past bij regel 100 en het IP-adres wordt aangepast aan het interne IP-adres van de firewall-machine. Dat pakket wordt dan gecontroleerd op alle ongewenste eigenschappen en komt uiteindelijk aan bij regel 425 die van toepassing blijkt te zijn. In dat geval kunnen er twee dingen gebeuren: de pakketregel wordt in de dynamische keep-state tabel gezet, maar nu wordt het aantal nieuwe sessies dat van het bron IP-adres komt gelimiteerd tot twee. Dit is een bescherming tegen DoS-aanvallen op de dienst die op dat poortnummer wordt aangeboden. De actie is `allow`, dus het pakket wordt tot het LAN toegelaten. Voor het pakket dat als antwoord wordt verstuurd herkent de `check-state` regel dat het pakket bij een bestaande sessie hoort. Het stuurt het naar regel 500 voor NAT en stuurt het via de uitgaande interface weg.
+
+Voorbeeld Set Regels #1:
+
+[.programlisting]
+....
+#!/bin/sh
+cmd="ipfw -q add"
+skip="skipto 500"
+pif=rl0
+ks="keep-state"
+good_tcpo="22,25,37,43,53,80,443,110,119"
+
+ipfw -q -f flush
+
+$cmd 002 allow all from any to any via xl0  # exclude LAN traffic
+$cmd 003 allow all from any to any via lo0  # exclude loopback traffic
+
+$cmd 100 divert natd ip from any to any in via $pif
+$cmd 101 check-state
+
+# Toegestaan uitgaand verkeer.
+$cmd 120 $skip udp from any to xx.168.240.2 53 out via $pif $ks
+$cmd 121 $skip udp from any to xx.168.240.5 53 out via $pif $ks
+$cmd 125 $skip tcp from any to any $good_tcpo out via $pif setup $ks
+$cmd 130 $skip icmp from any to any out via $pif $ks
+$cmd 135 $skip udp from any to any 123 out via $pif $ks
+
+# Blokkeer al het verkeer voor niet-routeerbare of gereserveerde
+# adresreeksen.
+$cmd 300 deny all from 192.168.0.0/16  to any in via $pif  #RFC 1918 privaat IP
+$cmd 301 deny all from 172.16.0.0/12   to any in via $pif  #RFC 1918 privaat IP
+$cmd 302 deny all from 10.0.0.0/8      to any in via $pif  #RFC 1918 privaat IP
+$cmd 303 deny all from 127.0.0.0/8     to any in via $pif  #loopback
+$cmd 304 deny all from 0.0.0.0/8       to any in via $pif  #loopback
+$cmd 305 deny all from 169.254.0.0/16  to any in via $pif  #DHCP auto-config
+$cmd 306 deny all from 192.0.2.0/24    to any in via $pif  #gereserveerd voor documentatie
+$cmd 307 deny all from 204.152.64.0/23 to any in via $pif  #Sun cluster
+$cmd 308 deny all from 224.0.0.0/3     to any in via $pif  #Klasse D & E multicast
+
+# Toegestaan inkomend verkeer.
+$cmd 400 allow udp from xx.70.207.54 to any 68 in $ks
+$cmd 420 allow tcp from any to me 80 in via $pif setup limit src-addr 1
+
+$cmd 450 deny log ip from any to any
+
+# Dit is de 'skipto' locatie voor de uitgaande stateful regels.
+$cmd 500 divert natd ip from any to any out via $pif
+$cmd 510 allow ip from any to any
+
+######################## Einde regels  ##################
+....
+
+Het volgende voorbeeld doet vrijwel hetzelfde als het bovenstaande, maar volgt een zelfdocumenterende stijl voor het opstellen van regels en commentaar waardoor minder ervaren gebruikers beter kunnen begrijpen wat de regels doen.
+
+Voorbeeld Set Regels #2:
+
+[.programlisting]
+....
+#!/bin/sh
+################ Begin bestand met IPFW regels ###############################
+# Verwijder eerst de bestaande regels.
+ipfw -q -f flush
+
+# Stel commando voorvoegsel in.
+cmd="ipfw -q add"
+skip="skipto 800"
+pif="rl0"     # Interfacenaam van NIC die verbinding
+              # met het publieke Internet heeft.
+
+#################################################################
+# Geen beperkingen op de interface aan de LAN kant.
+# Wijzig xl0 naar de gebruikte interfacenaam.
+#################################################################
+$cmd 005 allow all from any to any via xl0
+
+#################################################################
+# Geen beperkingen op de loopback interface.
+#################################################################
+$cmd 010 allow all from any to any via lo0
+
+#################################################################
+# Controleer of pakket inkomend is. NAT in dat geval.
+#################################################################
+$cmd 014 divert natd ip from any to any in via $pif
+
+#################################################################
+# Sta het pakket toe als het aan de tabel met dynamische regels
+# was toegevoegd met een 'allow keep-state' commando.
+#################################################################
+$cmd 015 check-state
+
+#################################################################
+# Interface aan het publieke Internet (onderdeel Uitgaand).
+# Inspecteer verzoeken om een sessie te starten van achter de
+# firewall op het private netwerk of vanaf de server zelf naar
+# het publieke Internet.
+#################################################################
+
+# Geef toegang tot de DNS server van de ISP.
+# x.x.x.x moet het IP adres van de DNS van de ISP zijn.
+# Dupliceer deze regels als een ISP meerdere DNS servers heeft.
+# Haal het IP adres evt. uit /etc/resolv.conf
+$cmd 020 $skip tcp from any to x.x.x.x 53 out via $pif setup keep-state
+
+# Geef toegang tot de DHCP server van de ISP voor kabel en xDSL.
+$cmd 030 $skip udp from any to x.x.x.x 67 out via $pif keep-state
+
+# Sta niet beveiligd www verkeer toe.
+$cmd 040 $skip tcp from any to any 80 out via $pif setup keep-state
+
+# Sta beveiligd www verkeer over TLS SSL toe.
+$cmd 050 $skip tcp from any to any 443 out via $pif setup keep-state
+
+# Sta het verzenden en ontvangen van e-mail toe.
+$cmd 060 $skip tcp from any to any 25 out via $pif setup keep-state
+$cmd 061 $skip tcp from any to any 110 out via $pif setup keep-state
+
+# Sta de FreeBSD CVSUP functie toe voor uid root.
+$cmd 070 $skip tcp from me to any out via $pif setup keep-state uid root
+
+# Sta ping toe naar het publieke Internet.
+$cmd 080 $skip icmp from any to any out via $pif keep-state
+
+# Sta Time toe.
+$cmd 090 $skip tcp from any to any 37 out via $pif setup keep-state
+
+# Sta NNTP nieuws toe.
+$cmd 100 $skip tcp from any to any 119 out via $pif setup keep-state
+
+# Sta beveiligde FTP, Telnet en SCP toe.
+# Deze functie maakt gebruik van SSH (secure shell).
+$cmd 110 $skip tcp from any to any 22 out via $pif setup keep-state
+
+# Sta whois toe.
+$cmd 120 $skip tcp from any to any 43 out via $pif setup keep-state
+
+# Sta NPT tijdserver toe.
+$cmd 130 $skip udp from any to any 123 out via $pif keep-state
+
+#################################################################
+# Interface aan het publieke Internet (onderdeel Inkomend).
+# Inspecteert pakketten die van het publieke Internet komen met
+# als bestemming deze gateway-server zelf of het private netwerk.
+#################################################################
+
+# Blokkeer al het verkeer voor niet-routeerbare of gereserveerde
+# adresreeksen.
+$cmd 300 deny all from 192.168.0.0/16  to any in via $pif  #RFC 1918 privaat IP
+$cmd 301 deny all from 172.16.0.0/12   to any in via $pif  #RFC 1918 privaat IP
+$cmd 302 deny all from 10.0.0.0/8      to any in via $pif  #RFC 1918 privaat IP
+$cmd 303 deny all from 127.0.0.0/8     to any in via $pif  #loopback
+$cmd 304 deny all from 0.0.0.0/8       to any in via $pif  #loopback
+$cmd 305 deny all from 169.254.0.0/16  to any in via $pif  #DHCP auto-config
+$cmd 306 deny all from 192.0.2.0/24    to any in via $pif  #gereserveerd voor documentatie
+$cmd 307 deny all from 204.152.64.0/23 to any in via $pif  #Sun cluster
+$cmd 308 deny all from 224.0.0.0/3     to any in via $pif  #Klasse D & E multicast
+
+# Blokkeer ident.
+$cmd 315 deny tcp from any to any 113 in via $pif
+
+# Blokkeer alle Netbios diensten. 137=naam, 138=datagram, 139=sessie.
+# Netbios is de Windows® bestandsdeeldienst.
+# Blokkeer Windows hosts2 name server verzoeken 81.
+$cmd 320 deny tcp from any to any 137 in via $pif
+$cmd 321 deny tcp from any to any 138 in via $pif
+$cmd 322 deny tcp from any to any 139 in via $pif
+$cmd 323 deny tcp from any to any 81  in via $pif
+
+# Blokkeer gefragmenteerde pakketten.
+$cmd 330 deny all from any to any frag in via $pif
+
+# Blokkeer ACK pakketten die niet in de tabel met dynamische regels
+# staan.
+$cmd 332 deny tcp from any to any established in via $pif
+
+# Geef toegang tot de DHCP server van de ISP voor kabel- en
+# xDSL-netwerken. Deze regel is niet nodig als gebruik gemaakt worden
+# van PPP naar het publieke Internet. In dat geval kan de hele groep
+# verwijderd worden. Hier wordt hetzelfde IP adres gebruikt als in de
+# sectie voor Uitgaand verkeer.
+$cmd 360 allow udp from x.x.x.x to any 68 in via $pif keep-state
+
+# Sta inkomend webverkeer toe omdat er een Apache server draait.
+$cmd 370 allow tcp from any to me 80 in via $pif setup limit src-addr 2
+
+# Sta beveiligde FTP, telnet en SCP toe vanaf Internet.
+$cmd 380 allow tcp from any to me 22 in via $pif setup limit src-addr 2
+
+# Sta niet beveiligde telnet sessie toe vanaf het publieke Internet.
+# Dit heeft het label ``niet veilig'' omdat gebruikersnaam en
+# wachtwoord als platte tekst over Internet gaan. Als er geen telnet
+# server draait, hoeft deze regel niet actief te zijn.
+#$cmd 390 allow tcp from any to me 23 in via $pif setup limit src-addr 2
+
+# Weiger en log alle niet toegestane inkomende verbindingen vanaf het
+# publieke Internet.
+$cmd 400 deny log all from any to any in via $pif
+
+# Weiger en log alle niet toegestane uitgaande verbindingen naar
+# Internet.
+$cmd 450 deny log all from any to any out via $pif
+
+# Dit is de 'skipto' locatie voor de uitgaande stateful regels
+$cmd 800 divert natd ip from any to any out via $pif
+$cmd 801 allow ip from any to any
+
+# Al het andere verkeer wordt standaard geblokkeerd. Weiger en log alle
+# pakketten die tot hier zijn gekomen om te bekijken welke het waren.
+$cmd 999 deny log all from any to any
+################ Einde bestand met IPFW regels ########################
+....

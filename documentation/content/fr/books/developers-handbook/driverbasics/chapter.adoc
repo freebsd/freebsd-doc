@@ -1,0 +1,315 @@
+---
+title: Chapitre 16. Ecrire des pilotes de périphériques pour FreeBSD
+---
+
+[[driverbasics]]
+= Ecrire des pilotes de périphériques pour FreeBSD
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Table des matières
+:table-caption: Tableau
+:example-caption: Exemple
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+
+Ce chapitre a été écrit par {murray} avec des sélections depuis une variété de codes source inclus dans la page de manuel d'man:intro[4] de Joerg Wunsch.
+
+== Introduction
+
+Ce chapitre fournit une brève introduction sur l'écriture de pilotes de périphériques pour FreeBSD. Un périphérique, dans ce contexte, est un terme utilisé le plus souvent pour tout ce qui est lié au matériel et qui dépend du système, comme les disques, imprimantes, ou un écran avec son clavier. Un pilote de périphérique est un composant logiciel du système d'exploitation qui contrôle un périphérique spécifique. Il y a aussi ce que l'on appelle les pseudo-périphériques ("pseudo-devices") où un pilote de périphérique émule le comportement d'un périphérique dans un logiciel sans matériel particulier sous-jacent. Les pilotes de périphériques peuvent être compilés dans le système statiquement ou chargé à la demande via l'éditeur de liens dynamique du noyau "kld".
+
+La plupart des périphériques dans un système d'exploitation de type Unix sont accessibles au travers de fichiers spéciaux de périphérique (device-nodes), appelés parfois fichiers spéciaux. Ces fichiers sont habituellement stockés dans le répertoire [.filename]#/dev# de la hiérarchie du système de fichiers. Jusqu'à ce que devfs soit totalement intégré dans FreeBSD, chaque fichier spécial de périphérique doit être créé statiquement et indépendamment de l'existence du pilote de périphérique associé. La plupart des fichiers spéciaux de périphérique du système sont créés en exécutant `MAKEDEV`.
+
+Les pilotes de périphérique peuvent être en gros séparés en deux catégories; les pilotes de périphérique en mode caractère et les pilotes de périphériques réseau.
+
+== L'éditeur de liens dynamiques du noyau - KLD
+
+L'interface kld permet aux administrateurs système d'ajouter et d'enlever dynamiquement une fonctionnalité à un système en marche. Cela permet aux développeurs de pilote de périphérique de charger leurs nouveaux changements dans le noyau en fonctionnement sans redémarrer constamment pour tester ces derniers. 
+
+L'interface kld est utilisé au travers des commandes d'administrateur suivantes : 
+
+* `kldload` - charge un nouveau module dans le noyau
+* `kldunload` - décharge un module du noyau
+* `kldstat` - liste les modules chargés dans le noyau
+
+Structure squelettique d'un module de noyau
+
+[.programlisting]
+....
+/*
+ * Squelette KLD
+ * Inspiré de l'article d'Andrew Reiter paru sur Daemonnews
+ */
+
+#include <sys/types.h>
+#include <sys/module.h>
+#include <sys/systm.h>  /* uprintf */
+#include <sys/errno.h>
+#include <sys/param.h>  /* defines utilise dans kernel.h */
+#include <sys/kernel.h> /* types utilise dans le module d'initialisation */
+
+/*
+ * charge le gestionnaire quit traite du chargement et déchargement d'un KLD.
+ */
+
+static int
+skel_loader(struct module *m, int what, void *arg)
+{
+  int err = 0;
+
+  switch (what) {
+  case MOD_LOAD:                /* kldload */
+
+    uprintf("Skeleton KLD charge.\n");
+    break;
+  case MOD_UNLOAD:
+    uprintf("Skeleton KLD decharge.\n");
+    break;
+  default:
+    err = EINVAL;
+    break;
+  }
+  return(err);
+}
+
+/* Declare ce module au reste du noyau */
+
+DECLARE_MODULE(skeleton, skel_loader, SI_SUB_KLD, SI_ORDER_ANY);
+....
+
+=== Makefile
+
+FreeBSD fournit un fichier d'inclusion "makefile" que vous pouvez utiliser pour compiler rapidement votre ajout au noyau.
+
+[.programlisting]
+....
+SRCS=skeleton.c
+KMOD=skeleton
+
+.include <bsd.kmod.mk>
+....
+
+Lancer simplement la commande `make` avec ce fichier Makefile créera un fichier [.filename]#skeleton.ko# qui peut être chargé dans votre système en tapant : 
+
+[source,bash]
+....
+# kldload -v ./skeleton.ko
+....
+
+== Accéder au pilote d'un périphérique
+
+Unix fournit un ensemble d'appels système communs utilisable par les applications de l'utilisateur. Les couches supérieures du noyau renvoient ces appels au pilote de périphérique correspondant quand un utilisateur accède au fichier spécial de périphérique. Le script `/dev/MAKEDEV` crée la plupart des fichiers spéciaux de périphérique pour votre système mais si vous faites votre propre développement de pilote, il peut être nécessaire de créer vos propres fichiers spéciaux de périphérique avec la commande `mknod`
+
+=== Créer des fichiers spéciaux de périphériques statiques
+
+La commande `mknod` nécessite quatre arguments pou créer un fichier spécial de périphérique. Vous devez spécifier le nom de ce fichier spécial de périphérique, le type de périphérique, le numéro majeur et le numéro mineur du périphérique.
+
+=== Les fichiers spéciaux de périphérique dynamiques
+
+Le périphérique système de fichiers, ou devfs, fournit l'accès à l'espace des noms des périphériques du noyau dans l'espace du système de fichiers global. Ceci élimine les problèmes de pilote sans fichier spécial statique, ou de fichier spécial sans pilote installé. Devfs est toujours un travail en cours mais il fonctionne déjà assez bien.
+
+== Les périphériques caractères
+
+Un pilote de périphérique caractère est un pilote qui transfère les données directement au processus utilisateur ou vers celui-ci. Il s'agit du plus commun des types de pilote de périphérique et il y en a plein d'exemples simples dans l'arbre des sources.
+
+Cet exemple simple de pseudo-périphérique enregistre toutes les valeurs que vous lui avez écrites et peut vous les renvoyer quand vous les lui demandez.
+
+[.programlisting]
+....
+/*
+ * un simple pseudo-périphérique `echo' KLD
+ *
+ * Murray Stokely
+ */
+
+#define MIN(a,b) (((a) < (b)) ? (a) : (b))
+
+#include <sys/types.h>
+#include <sys/module.h>
+#include <sys/systm.h> /* uprintf */
+#include <sys/errno.h>
+#include <sys/param.h>  /* defines utilises dans kernel.h */
+#include <sys/kernel.h> /* types utilises dans me module d'initialisation */
+#include <sys/conf.h>   /* cdevsw struct */
+#include <sys/uio.h>    /* uio struct */
+#include <sys/malloc.h>
+
+#define BUFFERSIZE 256
+
+/* Prototypes des fonctions */
+d_open_t      echo_open;
+d_close_t     echo_close;
+d_read_t      echo_read;
+d_write_t     echo_write;
+
+/* Points d'entrée du périphérique Caractère */
+static struct cdevsw echo_cdevsw = {
+  echo_open,
+  echo_close,
+  echo_read,
+  echo_write,
+  noioctl,
+  nopoll,
+  nommap,
+  nostrategy,
+  "echo",
+  33,                   /* reserve pour lkms - /usr/src/sys/conf/majors */
+  nodump,
+  nopsize,
+  D_TTY,
+  -1
+};
+
+typedef struct s_echo {
+  char msg[BUFFERSIZE];
+  int len;
+} t_echo;
+
+/* variables */
+static dev_t sdev;
+static int len;
+static int count;
+static t_echo *echomsg;
+
+MALLOC_DECLARE(M_ECHOBUF);
+MALLOC_DEFINE(M_ECHOBUF, "echobuffer", "cache pour le module echo");
+
+/*
+ * Cette fonction est appelee par les appels systeme kld[un]load(2) pour
+ * determiner quelles actions doivent etre faites quand le
+ * module est charge ou decharge
+ */
+
+static int
+echo_loader(struct module *m, int what, void *arg)
+{
+  int err = 0;
+
+  switch (what) {
+  case MOD_LOAD:                /* kldload */
+    sdev = make_dev(&echo_cdevsw,
+		    0,
+		    UID_ROOT,
+		    GID_WHEEL,
+		    0600,
+		    "echo");
+    /* aloocation de mémoire noyau pour l'utilisation de ce module */
+    /*    malloc(256,M_ECHOBUF,M_WAITOK); */
+    MALLOC(echomsg, t_echo *, sizeof(t_echo), M_ECHOBUF, M_WAITOK);
+    printf("Peripherique Echo charge.\n");
+    break;
+  case MOD_UNLOAD:
+    destroy_dev(sdev);
+    FREE(echomsg,M_ECHOBUF);
+    printf("Peripherique Echo decharge.\n");
+    break;
+  default:
+    err = EINVAL;
+    break;
+  }
+  return(err);
+}
+
+int
+echo_open(dev_t dev, int oflags, int devtype, struct proc *p)
+{
+  int err = 0;
+
+  uprintf("Peripherique \"echo\" ouvert avec succes.\n");
+  return(err);
+}
+
+int
+echo_close(dev_t dev, int fflag, int devtype, struct proc *p)
+{
+  uprintf("Fermeture du peripherique \"echo.\"\n");
+  return(0);
+}
+
+/*
+ * La fonction read prend juste comme parametre
+ * le cache qui a ete sauve par l'appel à echo_write()
+ * et le retourne a l'utilisateur pour acces.
+ * uio(9)
+ */
+
+int
+echo_read(dev_t dev, struct uio *uio, int ioflag)
+{
+  int err = 0;
+  int amt;
+
+  /* De quelle taille est cette operation read ?  Aussi grande que l'utilisateur le veut,
+     ou aussi grande que les donnees restantes */
+  amt = MIN(uio->uio_resid, (echomsg->len - uio->uio_offset > 0) ? echomsg->len - uio->uio_offset : 0);
+  if ((err = uiomove(echomsg->msg + uio->uio_offset,amt,uio)) != 0) {
+    uprintf("uiomove echoue!\n");
+  }
+
+  return err;
+}
+
+/*
+ * echo_write prend un caractere en entree et le sauve
+ * dans le cache pour une utilisation ulterieure.
+ */
+
+int
+echo_write(dev_t dev, struct uio *uio, int ioflag)
+{
+  int err = 0;
+
+  /* Copie la chaine d'entree de la memoire de l'utilisateur a la memoire du noyau*/
+  err = copyin(uio->uio_iov->iov_base, echomsg->msg, MIN(uio->uio_iov->iov_len,BUFFERSIZE));
+
+  /* Maintenant nous avons besoin de terminer la chaine par NULL */
+  *(echomsg->msg + MIN(uio->uio_iov->iov_len,BUFFERSIZE)) = 0;
+  /* Enregistre la taille */
+  echomsg->len = MIN(uio->uio_iov->iov_len,BUFFERSIZE);
+
+  if (err != 0) {
+    uprintf("Ecriture echouee: mauvaise adresse!\n");
+  }
+
+  count++;
+  return(err);
+}
+
+DEV_MODULE(echo,echo_loader,NULL);
+....
+
+Pour installer ce pilote, vous devrez d'abord créer un fichier spécial dans votre système de fichiers avec une commande comme : 
+
+[source,bash]
+....
+# mknod /dev/echo c 33 0
+....
+
+Avec ce pilote chargé, vous devriez maintenant être capable de taper quelque chose comme :
+
+[source,bash]
+....
+# echo -n "Test Donnees" > /dev/echo
+# cat /dev/echo
+Test Donnees
+....
+
+Périphériques réels dans le chapitre suivant.
+
+Informations additionnelles 
+
+* http://www.daemonnews.org/200010/blueprints.html[Dynamic Kernel Linker (KLD) Facility Programming Tutorial] - http://www.daemonnews.org[Daemonnews] October 2000
+* http://www.daemonnews.org/200007/newbus-intro.html[How to Write Kernel Drivers with NEWBUS] - http://www.daemonnews.org[Daemonnews] July 2000
+
+== Pilotes Réseau
+
+Les pilotes pour périphérique réseau n'utilisent pas les fichiers spéciaux pour pouvoir être accessibles. Leur sélection est basée sur d'autres décisions faites à l'intérieur du noyau et plutôt que d'appeler open(), l'utilisation d'un périphérique réseau se fait généralement en se servant de l'appel système man:socket[2].
+
+man ifnet(), périphérique "en boucle", drivers de Bill Paul, etc..

@@ -1,0 +1,543 @@
+---
+title: Hoofdstuk 16. Jails
+part: Deel III. Systeembeheer
+prev: books/handbook/security
+next: books/handbook/mac
+---
+
+[[jails]]
+= Jails
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Inhoudsopgave
+:table-caption: Tabel
+:figure-caption: Afbeelding
+:example-caption: Voorbeeld
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 16
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/jails/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/jails/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/jails/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/nl/mailing-lists.adoc[]
+include::shared/nl/teams.adoc[]
+include::shared/nl/urls.adoc[]
+
+toc::[]
+
+[[jails-synopsis]]
+== Overzicht
+
+Dit hoofdstuk levert een uitleg van wat FreeBSD jails zijn en hoe ze gebruikt kunnen worden. Jails, soms ook wel bekend als een verbeterde vervanging van _chroot omgevingen_, zijn een erg krachtige tool voor systeem beheerders, maar het standaard gedrag kan ook interessant zijn voor gevorderde gebruikers.
+
+[IMPORTANT]
+====
+Jails zijn een krachtig gereedschap, maar zijn geen zilveren kogel qua beveiliging. Hoewel het belangrijk is om op te merken dat het onmogelijk is voor een gevangen proces om zelf te ontsnappen, zijn er verschillende manieren waarop een ongeprivilegieerde gebruiker buiten een jail kan samenwerken met een geprivilegieerde gebruiker binnen de jail en daarmee verhoogde privileges kan krijgen in de gastheeromgeving.
+
+De meeste van deze aanvallen kunnen worden voorkomen door ervoor te zorgen dat de jail-root niet beschikbaar is voor ongeprivilegieerde gebruikers binnen de gastheeromgeving. Buiten dat geldt als algemene regel dat onvertrouwde gebruikers met geprivilegieerde toegang tot een jail geen toegang tot de gastheeromgeving moet worden gegeven.
+====
+
+Na het lezen van dit hoofdstuk weet de lezer:
+
+* Wat een jail is, en welk doel het kan dienen in een FreeBSD installatie.
+* Hoe men een jail opbouwt, start en stopt.
+* De basis over jail beheer, zowel van binnen in de jail, als van buitenaf.
+
+Andere bronnen met nuttige informatie over jails zijn:
+
+* De man:jail[8] handleiding. Hier kan de volledige referentie gevonden worden van het `jail` commando - de administratieve tool die in FreeBSD gebruikt kan worden om FreeBSD jails mee te beheren, te starten en te stoppen.
+* De mailinglijsten en de archieven hiervan. De archieven van de {freebsd-questions} en andere mailing lijsten die gehost worden door de {mailman-lists} bevatten reeds een rijke bron van informatie over jails. Het zou altijd aantrekkelijk moeten zijn om informatie in de archieven te zoeken, of een nieuwe vraag stellen aan de link:{freebsd-questions-url}[freebsd-questions] mailinglijst.
+
+[[jails-terms]]
+== Termen en begrippen van jails
+
+Om een beter begrip te geven over de onderdelen van FreeBSD die gerelateerd zijn aan jails, de werking ervan, en hoe ze omgaan met de rest van FreeBSD worden de volgende termen gebruikt in het hoofdstuk:
+
+man:chroot[8] (commando)::
+Hulpmiddel dat de systeemaanroep man:chroot[2] van FreeBSD gebruikt om de rootmap van een proces en alle afstammelingen te veranderen.
+
+man:chroot[2] (omgeving)::
+Een omgeving van processen die draaien in een "chroot". Dit is inclusief bronnen die gebruikt worden, zoals bijvoorbeeld het gedeelte van het bestandssysteem dat zichtbaar is, de gebruiker en groep ID's welke beschikbaar zijn, netwerkkaarten en andere IPC-mechanismes, etcetera.
+
+man:jail[8] (commando)::
+De systeem utility die het mogelijk maakt om processen binnenin een jail te starten.
+
+host (systeem, processen, gebruiker, etc.)::
+Het controlerende systeem van een jail omgeving. Het host systeem heeft toegang tot alle beschikbare hardware bronnen en kan processen controleren zowel buiten als binnenin een jail. Één van de belangrijkste verschillen van het host systeem met een jail zijn de limitaties die van toepassing zijn op super-gebruiker processen binnenin een jail, niet geforceerd worden voor processen in het host systeem.
+
+hosted (systeem, processen, gebruiker, etc.)::
+Een proces, gebruiker, of andere entiteit wiens toegang tot bronnen is gelimiteerd door een FreeBSD jail.
+
+[[jails-intro]]
+== Introductie
+
+Omdat systeem beheer een complexe en enorme taak is, zijn er vele sterke tools ontwikkeld om het leven van een systeem beheerder makkelijker te maken. Deze tools leveren meestal verbeteringen op de manier waarop systemen worden geïnstalleerd, geconfigureerd en onderhouden. Een deel van de taken waarvan verwacht wordt dat die uitgevoerd wordt door de systeem beheerder is het goed configureren van de beveiliging van een systeem, zodat het kan blijven doorgaan met het serveren van de taak, zonder dat er beveiligingsproblemen optreden.
+
+Één van de tools welke gebruikt kan worden om de beveiliging van een FreeBSD systeem te verbeteren zijn _jails_. Jails zijn geïntroduceerd in FreeBSD 4.X door {phk}, maar zijn grotendeels verbeterd in FreeBSD 5.X om ze nog sterker en krachtiger te maken. De ontwikkeling gaat nog steeds door met verbeteringen voor het gebruik, performance, betrouwbaarheid en beveiliging.
+
+[[jails-what]]
+=== Wat is een jail
+
+BSD achtige systemen hebben sinds 4.2-BSD ondersteuning voor man:chroot[2]. De man:chroot[8] utility kan gebruikt worden om de root directory van een set processen te wijzigen waardoor een veilige omgeving wordt gecreeërd voor de rest van het systeem. Processen die gemaakt worden in een chroot omgeving kunnen bestanden en bronnen daarbuiten niet benaderen. Daardoor zou een compromitering van een dienst die in een chroot omgeving draait niet direct betekenen dat het hele systeem gecompromiteerd is. De man:chroot[8] utility is goed genoeg voor simpele taken, waarbij flexibiliteit en geavanceerde en complexe opties niet nodig zijn. Sinds het uitvinden van het chroot concept, zijn er vele mogelijkheden gevonden om hieruit te kunnen komen en alhoewel ze verbeterd zijn in moderne versies van FreeBSD, werd het duidelijk dat man:chroot[2] niet de meest ideale oplossing was voor het beveiligen van diensten. Er moest een nieuw subsysteem ontwikkeld worden.
+
+Dit is één van de redenen waarom jails zijn ontwikkeld.
+
+Jails zijn een verbeterd concept van de man:chroot[2] omgeving, in verschillende opzichten. In een traditionele man:chroot[2] omgeving worden processen alleen gelimiteerd in het deel van het bestandssysteem die ze kunnen benaderen. De rest van de systeem bronnen (zoals de set van systeem gebruikers, de draaiende processen of het netwerk subsysteem) worden gedeeld door het chrooted proces en de processen op het host systeem. Jails breiden dit model uit door het niet alleen virtualizeren van de toegang tot het bestandssysteem maar ook tot de set van gebruikers, het netwerk subsysteem van de FreeBSD kernel en een aantal andere delen. Een meer complete set van gespecificeerde controle mogelijkheden die beschikbaar zijn voor het personaliseren van de toegang tot een jail omgeving wordt beschreven in <<jails-tuning>>.
+
+Een jail heeft vier kenmerken:
+
+* Een eigen directory structuur - het startpunt van waaruit een jail benaderd wordt. Zodra men in de jail zit, mogen processen niet buiten deze directory structuur komen. Traditionele problemen die man:chroot[2]'s ontwerp getart hebben, hebben geen invloed op FreeBSD jails.
+* Een hostname - de hostnaam die gebruikt wordt in de jail. Jails worden met name gebruikt voor het hosten van netwerk diensten, daardoor kan het de systeembeheerder heel erg helpen als er beschrijvende hostnames worden gekozen.
+* Een IP adres - deze wordt gekoppeld aan de jail en kan op geen enkele manier worden gewijzigd tijdens het leven van de jail. Het IP adres van een jail is meestal een alias op een reeds bestaande netwerk interface, maar dit is niet noodzakelijk.
+* Een commando - het padnaam van een uitvoerbaar bestand in de jail. Deze is relatief aan de rootdirectory van de jail omgeving en verschilt per situatie, afhankelijk van het type van de specifieke jail omgeving.
+
+Buiten deze kenmerken, kunnen jails hun eigen set aan gebruikers en `root` gebruiker hebben. Uiteraard zijn de mogelijkheden van de `root` gebruiker beperkt tot de jail omgeving en, vanuit het host systeem gezien, is de `root` gebruiker geen super-gebruiker. Daarnaast is het de `root` gebruiker in een jail omgeving niet toegestaan om kritieke operaties uit te voeren op het systeem buiten de gedefinieerde jail omgeving. Meer informatie over de mogelijkheden en beperkingen van de `root` gebruiker kan gevonden worden in <<jails-tuning>>hieronder.
+
+[[jails-build]]
+== Creeëren en controleren van jails
+
+Sommige beheerders kiezen ervoor om jails op te delen in de volgende twee types: "complete" jails, welke een volledig FreeBSD systeem emuleert en "service" jails, gericht op één applicatie of dienst, mogelijkerwijs draaiende met privileges. Dit is alleen een conceptuele splitsing, de manier van het opbouwen van een jail wordt hierdoor niet veranderd. De man:jail[8] handleiding is heel duidelijk over de procedure voor het maken van een jail:
+
+[source,bash]
+....
+# setenv D /here/is/the/jail
+# mkdir -p $D <.>
+# cd /usr/src
+# make buildworld <.>
+# make installworld DESTDIR=$D <.>
+# make distribution DESTDIR=$D <.>
+# mount -t devfs devfs $D/dev <.>
+....
+
+<.> Het selecteren van een locatie voor een jail is het beste beginpunt. Hier zal de jail fysiek te vinden zijn binnen het bestandssysteem van het host systeem. Een goede keuze kan [.filename]#/usr/jailjailnaam# zijn, waar _jailnaam_ de naam is van de jail. Het [.filename]#/usr# bestandssysteem heeft meestal genoeg ruimte voor het jail bestandssysteem, wat voor een "complete" jail betekend dat het eigenlijk een replica is van elk bestand dat standaard aanwezig is binnen het FreeBSD basissysteem.
+
+<.> Als u uw userland al heeft herbouwd met `make world` of `make buildworld`, dan kunt u deze stap overslaan en uw bestaande userland in de nieuwe jail installeren.
+
+<.> Dit commando zal de gekozen fysieke directory vullen met de benodigde binaire bestanden, bibliotheken, handleidingen, etc.
+
+<.> Het `distribution` doel voor make installeert elk benodigd configuratie bestand. In simpelere termen, het installeert alle installeerbare bestanden in [.filename]#/usr/src/etc# naar de [.filename]#/etc# directory van de jail omgeving: [.filename]#$D/etc#.
+
+<.> Het koppelen van het man:devfs[8] bestandssysteem is niet vereist in een jail. Aan de andere kant, vrijwel elke applicatie heeft toegang nodig tot minstens één apparaat, afhankelijk van het doel van het programma. Het is erg belangrijk om toegang tot apparaten te controleren binnenin een jail, omdat incorrecte instellingen een aanvaller de mogelijkheid kunnen geven om vervelende dingen in de jail te doen. De controle over man:devfs[8] wordt gedaan door middel van rulesets, welke beschreven worden in de man:devfs[8] en man:devfs.conf[5] handleidingen.
+
+Zodra een jail is geïnstalleerd, kan het opgestart worden door de man:jail[8] applicatie. De man:jail[8] applicatie heeft vier benodigde argumenten welke beschreven worden in <<jails-what>>. Er kunnen ook andere argumenten gebruikt worden, om bijvoorbeeld de jail te starten met de instellingen van een specifieke gebruiker. Het `_commando_` argument hangt af van het type jail, voor een _virtueel systeem_ is [.filename]#/etc/rc# een goede keuze, omdat het de reguliere opstart procedure nabootst van een FreeBSD systeem. Voor een _dienst_ jail is het geheel afhankelijk van de dienst of applicatie die in de jail gaat draaien.
+
+Jails worden over het algemeen gestart tegelijkertijd met de rest van het systeem. Het FreeBSD [.filename]#rc# mechanisme levert een makkelijke manier om dat te doen:
+
+[.procedure]
+====
+
+. Een lijst van jails die opgestart moeten worden tijdens het opstarten van het systeem, moeten worden toegevoegd aan het man:rc.conf[5] bestand:
++
+[.programlisting]
+....
+jail_enable="YES"   # Stel dit in op NO om te voorkomen dat er jails gestart worden
+jail_list="www"     # Door spaties gescheiden lijst van jails
+....
++
+[NOTE]
+======
+De jail namen in `jail_list` mogen alleen alfanumerieke karakters bevatten.
+======
++
+. Voor elke jail die gespecificeerd is in `jail_list` moet een groep van man:rc.conf[5] instellingen worden toegevoegd:
++
+[.programlisting]
+....
+jail_www_rootdir="/usr/jail/www"     # de hoofd directory van de jail
+jail_www_hostname="www.example.org"  # de hostnaam van de jail
+jail_www_ip="192.168.0.10"           # het IP adres van de jail
+jail_www_devfs_enable="YES"          # moet devfs wel of niet gekoppeld worden in de jail
+jail_www_devfs_ruleset="www_ruleset" # welke devfs ruleset gebruikt moet worden voor de jail
+....
++ 
+De standaard opstart variabelen in man:rc.conf[5] gebruiken het [.filename]#/etc/rc# bestand om de jail op te starten, wat er vanuit gaat dat de jail een compleet virtueel systeem is. Voor service jails moet het standaard opstart commando worden gewijzigd door het aanpassen van de `jail__jailname__exec_start` optie.
++
+[NOTE]
+======
+Voor een complete lijst van beschikbare opties, zie de man:rc.conf[5] handleiding.
+======
+====
+
+man:service[8] kan worden gebruikt om jails handmatig te starten en te stoppen, mits er een overeenkomstige verzameling regels bestaat in [.filename]#/etc/rc.conf#.
+
+[source,bash]
+....
+# service jail start www
+# service jail stop www
+....
+
+Er is op dit moment geen nette methode om een jail te stoppen. Dit komt omdat de benodigde applicaties die een nette afsluiting verzorgen, niet beschikbaar zijn in een jail. De beste manier om een jail af te sluiten is door het volgende commando van binnenin de jail uit te voeren of door middel van het man:jexec[8] commando:
+
+[source,bash]
+....
+# sh /etc/rc.shutdown
+....
+
+Meer informatie hierover kan gevonden worden in de man:jail[8] handleiding.
+
+[[jails-tuning]]
+== Optimaliseren en administratie
+
+Er zijn meerdere opties beschikbaar die ingesteld kunnen worden voor elke jail, en er zijn meerdere mogelijkheden om een FreeBSD host systeem te combineren met jails om een betere scheiding tussen systeem en applicaties te verkrijgen. Deze sectie leert:
+
+* Een aantal opties zijn beschikbaar voor het optimaliseren van het gedrag en beveiligings beperkingen die geïmplementeerd worden in een jail.
+* Een aantal "high-level" applicaties die gebruikt worden voor het beheren van jails, welke beschikbaar zijn via de FreeBSD Ports Collectie en kunnen gebruikt worden om een complete jail-gebaseerde oplossing te creeëren.
+
+[[jails-tuning-utilities]]
+=== Systeem applicaties voor het optimaliseren van jails onder FreeBSD
+
+Het goed kunnen optimaliseren van een jail configuratie wordt veelal gedaan door het instellen van man:sysctl[8] variabelen. Er bestaat een speciale subtak van sysctl voor het organiseren van alle relevante opties: de `security.jail.*` hierarchie binnen de FreeBSD kernel. Hieronder staat een lijst van de belangrijkste jail-gerelateerde sysctl variabelen, met informatie over de standaard waarden. De benaming zou zelf beschrijvend moeten zijn, maar voor meer informatie kunnen de man:jail[8] en man:sysctl[8] handleidingen geraadpleegd worden.
+
+* `security.jail.set_hostname_allowed: 1`
+* `security.jail.socket_unixiproute_only: 1`
+* `security.jail.sysvipc_allowed: 1`
+* `security.jail.enforce_statfs: 2`
+* `security.jail.allow_raw_sockets: 0`
+* `security.jail.chflags_allowed: 0`
+* `security.jail.jailed: 0`
+
+Deze variabelen kunnen door de systeem beheerder gebruikt worden op het _host systeem_ om limitaties toe te voegen of te verwijderen, welke standaard opgedwongen worden aan de `root` gebruiker. Let op, een aantal beperkingen kan niet worden aangepast. De `root` gebruiker mag geen bestandssystemen koppelen of ontkoppelen binnenin een man:jail[8]. De `root` gebruiker mag ook geen man:devfs[8] rulesets laden of ontladen, firewall rules plaatsen of andere taken uitvoeren die vereisen dat de in-kernel data wordt aangepast, zoals het aanpassen van de `securelevel` variabele in de kernel.
+
+Het basis systeem van FreeBSD bevat een basis set van applicaties voor het inzien van de actieve jails, en voor het uitvoeren van administratieve commando's in een jail. De man:jls[8] en man:jexec[8] commando's zijn onderdeel van het basis systeem en kunnen gebruikt worden voor het uitvoeren van de volgende simpele taken:
+
+* Het printen van een lijst van actieve jails met het corresponderende jail ID (JID), IP adres, de hostnaam en het pad.
+* Het koppelen met een actieve jail vanuit het host systeem, en voor het uitvoeren van administratieve taken in de jail zelf. Dit is bijzonder handig wanneer de `root` gebruiker een jail netjes wilt afsluiten. Het man:jexec[8] commando kan ook gebruikt worden om een shell te starten in een jail om daarmee administratieve taken uit te voeren; bijvoorbeeld met:
++
+[source,bash]
+....
+# jexec 1 tcsh
+....
+
+[[jails-tuning-admintools]]
+=== Administratieve applicaties op hoog niveau in de FreeBSD Ports Collection.
+
+Tussen de vele software van derde partijen voor jail beheer, is één van de meest complete en bruikbare paketten: package:sysutils/jailutils[]. Dit is een set van kleine applicaties, die bijdragen aan man:jail[8] beheer. Kijk op de web pagina voor meer informatie.
+
+[[jails-application]]
+== Toepassing van jails
+
+[[jails-service-jails]]
+=== Dienst jails
+
+Deze sectie is gebaseerd op een idee van {simon} op http://simon.nitro.dk/service-jails.html[http://simon.nitro.dk/service-jails.html], en een geupdate artikel door Ken Tom mailto:locals@gmail.com[locals@gmail.com]. Deze sectie illusteert hoe een FreeBSD systeem opgezet kan worden met een extra laag beveiliging door gebruik te maken van man:jail[8]. Er wordt vanuit gegaan dat het betrokken systeem minstens RELENG_6_0 draait en dat de informatie eerder in dit hoofdstuk goed begrepen is.
+
+[[jails-service-jails-design]]
+==== Ontwerp
+
+Één van de grootste problemen met jails is het beheer van het upgrade proces. Dit is meestal een probleem omdat elke jail vanaf het begin af aan moet worden opgebouwd wanneer er geupdate wordt. Meestal is dit voor een enkele jail geen probleem, omdat het update proces redelijk simpel is, maar het kan een vervelende tijdrovende klus zijn als er meerdere jails zijn.
+
+[WARNING]
+====
+
+Deze opstelling vereist uitgebreide kennis en ervaring van FreeBSD en zijn mogelijkheden. Als onderstaande stappen te lastig lijken te zijn, wordt aangeraden om een simpeler systeem te bekijken zoals package:sysutils/ezjail[], welke een simpele manier geeft voor het beheren van FreeBSD jails en niet zo complex is als deze opstelling.
+====
+
+Het idee werd geopperd om zulke problemen zoveel als mogelijk te voorkomen door zoveel als mogelijk te delen tussen de verschillende jails op een zo veilig mogelijke manier - door gebruik te maken van alleen-lezen man:mount_nullfs[8] koppelingen, zodat het upgraden simpeler wordt en het inzetten van jails voor enkele diensten interessanter wordt. Daarnaast geeft het een simpele manier om nieuwe jails toe te voegen of te verwijderen en om deze te upgraden.
+
+[NOTE]
+====
+Voorbeelden binnen deze context zijn: een HTTP server, een DNS server, een SMTP server enzovoorts.
+====
+
+De doelen van de opstelling zoals beschreven in dit hoofdstuk zijn:
+
+* Het creeëren van een simpele en makkelijk te begrijpen jail structuur. Dit impliceert dat er _niet_ elke keer een volledige installworld gedraaid hoeft te worden voor elke jail.
+* Het makkelijk maken van het aanmaken en verwijderen van jails.
+* Het makkelijk maken van het updaten en upgraden van bestaande jails.
+* Het mogelijk maken van het draaien van een eigen gemaakte FreeBSD tak.
+* Paranoia zijn over beveiliging, zoveel mogelijk beperken, om de kans op inbraak zo klein mogelijk te maken.
+* Het zoveel mogelijk besparen van ruimte en inodes.
+
+Zoals reeds besproken is dit ontwerp sterk afhankelijk van het hebben van een "master-template", welke alleen-lezen (beter bekend als nullfs) gekoppeld is binnen elke jail, en een beschrijfbaar apparaat per jail. Een apparaat kan hierin zijn een aparte fysieke schijf, een partitie, of een door vnodes ondersteunde man:md[4] apparaat. In dit voorbeeld wordt gebruik gemaakt van lezen-schrijven nullfs koppelpunten.
+
+Het gebruikte bestandssysteem wordt beschreven door de volgende lijst:
+
+* Elke jail zal gekopeld worden onder de [.filename]#/home/j# directory.
+* [.filename]#/home/j/mroot# is de template voor elke jail en tevens de alleen-lezen partitie voor elke jail.
+* Voor elke jail zal een lege directory structuur gemaakt worden, welke valt onder de [.filename]#/home/j# directory.
+* Elke jail heeft een [.filename]#/s# directory, welke gekoppeld zal worden aan het beschrijfbare gedeelte van het systeem.
+* Elke jail zal zijn eigen beschrijfbaar systeem hebben welke gebaseerd is op [.filename]#/home/j/skel#.
+* Elke jail ruimte (het beschrijfbare gedeelte van de jail), wordt gecreeërd in de [.filename]#/home/js# directory.
+
+[NOTE]
+====
+De voorbeelden gaan er vanuit dat de jails geplaatst worden in [.filename]#/home# partitie. Dit kan uiteraard aangepast worden, maar dan moeten de voorbeelden hieronder ook worden aangepast naar de plek die gebruikt zal worden.
+====
+
+[[jails-service-jails-template]]
+==== De template creeëren
+
+Deze sectie leert welke stappen er genomen moeten worden om de master-template te maken. Deze zal het alleen-lezen gedeelte vormen van de jails.
+
+Het is altijd een goed idee om ervoor te zorgen dat het FreeBSD systeem de laatst beschikbare -RELEASE versie draait. Zie het corresponderende hoofdstuk in het crossref:cutting-edge[makeworld,Handboek] om te lezen hoe dit gedaan wordt. In het geval dat het de moeite niet is om te updaten, zal een buildworld nodig zijn voordat er verder gegaan kan worden. Daarnaast is het package:sysutils/cpdup[] pakket benodigd. Er wordt gebruik gemaakt van deman:portsnap[8] applicatie om de FreeBSD Ports Collectie te downloaden. Het handbook met het crossref:portsnap[portsnap,hoofdstuk] over Portsnap, is een aanrader voor nieuwe gebruikers.
+
+[.procedure]
+====
+
+. Als eerste moet er een directory structuur gecreeërd worden voor het alleen-lezen bestandssysteem, welke de FreeBSD binaries zal bevatten voor de jails. Daarna wordt het alleen-lezen bestandssysteem geïnstalleerd vanuit de FreeBSD broncode directory in de jail template:
++
+[source,bash]
+....
+# mkdir /home/j /home/j/mroot
+# cd /usr/src
+# make installworld DESTDIR=/home/j/mroot
+....
++
+. Hierna moet de FreeBSD Ports Collectie worden voorbereid, evenals de FreeBSD broncode directory, wat voor mergemaster vereist is:
++
+[source,bash]
+....
+# cd /home/j/mroot
+# mkdir usr/ports
+# portsnap -p /home/j/mroot/usr/ports fetch extract
+# cpdup /usr/src /home/j/mroot/usr/src
+....
++
+. Nu moet er een "skelet" gecreeërd worden voor het bechrijfbare gedeelte van het systeem:
++
+[source,bash]
+....
+# mkdir /home/j/skel /home/j/skel/home /home/j/skel/usr-X11R6 /home/j/skel/distfiles
+# mv etc /home/j/skel
+# mv usr/local /home/j/skel/usr-local
+# mv tmp /home/j/skel
+# mv var /home/j/skel
+# mv root /home/j/skel
+....
++
+. De mergemaster applictie moet gebruikt worden om de ontbrekende configuratie bestanden te installeren. Erna moeten alle overtollige directories die gecreeërd zijn door mergemaster verwijderd worden:
++
+[source,bash]
+....
+# mergemaster -t /home/j/skel/var/tmp/temproot -D /home/j/skel -i
+# cd /home/j/skel
+# rm -R bin boot lib libexec mnt proc rescue sbin sys usr dev
+....
++
+. Nu moet er een symbolische link gemaakt worden tussen het beschrijfbare bestandssysteem en het alleen-lezen bestandssysteem, zorg ervoor dat de links gemaakt worden in de juiste [.filename]#/s# directory. Als hier echte directories worden gemaakt of de directories worden op de verkeerde plak aangemaakt zal dit resulteren in een mislukte installatie:
++
+[source,bash]
+....
+# cd /home/j/mroot
+# mkdir s
+# ln -s s/etc etc
+# ln -s s/home home
+# ln -s s/root root
+# ln -s ../s/usr-local usr/local
+# ln -s ../s/usr-X11R6 usr/X11R6
+# ln -s ../../s/distfiles usr/ports/distfiles
+# ln -s s/tmp tmp
+# ln -s s/var var
+....
++
+. Als laatste stap moet er een generieke [.filename]#/home/j/skel/etc/make.conf# gemaakt worden met de volgende inhoud:
++
+[.programlisting]
+....
+WRKDIRPREFIX?=  /s/portbuild
+....
++ 
+Door het gebruik van `WRKDIRPREFIX` op deze manier, is het mogelijk om per jail FreeBSD ports te compileren. Onthoud dat de ports directory onderdeel is van het alleen-lezen bestandssysteem. Het eigen pad voor `WRKDIRPREFIX` maakt het mogelijk dat port builds gedaan worden op het beschrijfbare gedeelte van elke jail.
+====
+
+[[jails-service-jails-creating]]
+==== Jails creeëren
+
+Nu we een complete FreeBSD template hebben, kunnen we de jails opzetten en configureren in [.filename]#/etc/rc.conf#. Dit voorbeeld demonstreert het creeëren van drie jails: "NS", "MAIL" en "WWW".
+
+[.procedure]
+====
+
+. Zet het volgende in [.filename]#/etc/fstab# zodat de alleen-lezen template voor de jails en de beschrijfbare partititie beschikbaar zijn in de respectievelijke jails:
++
+[.programlisting]
+....
+/home/j/mroot   /home/j/ns     nullfs  ro  0   0
+/home/j/mroot   /home/j/mail   nullfs  ro  0   0
+/home/j/mroot   /home/j/www    nullfs  ro  0   0
+/home/js/ns     /home/j/ns/s   nullfs  rw  0   0
+/home/js/mail   /home/j/mail/s nullfs  rw  0   0
+/home/js/www    /home/j/www/s  nullfs  rw  0   0
+....
++
+[NOTE]
+======
+Partities die gemarkeerd zijn met een 0 als "passnummer" worden niet gecontroleerd door man:fsck[8] tijdens het opstarten, en partities met een "dumpnummer" van 0 worden niet geback-upped door man:dump[8]. Het is niet gewenst dat fsck de nullfs koppelingen controleert of dat dump een back-up maakt van de alleen-lezen nullfs koppelingen van de jails. Daarom worden ze gemarkeerd met "0 0" in de laatste twee kolommen van elke [.filename]#fstab# regel hierboven.
+======
++
+. Configureer de jails in [.filename]#/etc/rc.conf#:
++
+[.programlisting]
+....
+jail_enable="YES"
+jail_set_hostname_allow="NO"
+jail_list="ns mail www"
+jail_ns_hostname="ns.example.org"
+jail_ns_ip="192.168.3.17"
+jail_ns_rootdir="/usr/home/j/ns"
+jail_ns_devfs_enable="YES"
+jail_mail_hostname="mail.example.org"
+jail_mail_ip="192.168.3.18"
+jail_mail_rootdir="/usr/home/j/mail"
+jail_mail_devfs_enable="YES"
+jail_www_hostname="www.example.org"
+jail_www_ip="62.123.43.14"
+jail_www_rootdir="/usr/home/j/www"
+jail_www_devfs_enable="YES"
+....
++
+[WARNING]
+======
+
+De reden dat de `jail__name__rootdir` variabele verwijst naar de [.filename]#/usr/home# directory in plaats van naar [.filename]#/home# komt doordat het fysieke pad van de [.filename]#/home# directory op een standaard FreeBSD installatie verwijst naar [.filename]#/usr/home#. De `jail__name__rootdir` variabele mag _niet_ ingesteld worden op een symbolische link, omdat dan de jail weigert te starten. Gebruik het man:realpath[1] programma om te zien welke waarde ingesteld moet worden voor deze variabele. Zie de FreeBSD-SA-07:11.jail waarschuwing voor meer informatie.
+======
++
+. Creeër de benodigde koppelpunten voor het alleen-lezen bestandssysteem van elke jail:
++
+[source,bash]
+....
+# mkdir /home/j/ns /home/j/mail /home/j/www
+....
++
+. Installeer de beschrijfbare template in elke jail. Let op het gebruik van package:sysutils/cpdup[], wat helpt om een goede kopie te maken in elke directory:
++
+[source,bash]
+....
+# mkdir /home/js
+# cpdup /home/j/skel /home/js/ns
+# cpdup /home/j/skel /home/js/mail
+# cpdup /home/j/skel /home/js/www
+....
++
+. In deze fase zijn de jails gebouwd en voorbereid om op te starten. Koppel eerst de benodigde bestandssystemen voor elke jail, en start ze vervolgens door gebruik te maken van het rc-bestand voor de jail:
++
+[source,bash]
+....
+# mount -a
+# service jail start
+....
+====
+
+De jails zouden nu gestart moeten zijn. Om te zien of ze correct gestart zijn, wordt het man:jls[8] programma gebruikt. Het resultaat hiervan ziet er ongeveer als volgend uit:
+
+[source,bash]
+....
+# jls
+   JID  IP Address      Hostname                      Path
+     3  192.168.3.17    ns.example.org                /home/j/ns
+     2  192.168.3.18    mail.example.org              /home/j/mail
+     1  62.123.43.14    www.example.org               /home/j/www
+....
+
+Op dit moment, zou het mogelijk moeten zijn om op elke jail aan te loggen, nieuwe gebruikers toe te voegen en het configureren van daemons. De `JID` kolom geeft het identificatie nummer voor elke gestarte jail. Gebruik het volgende commando om administratieve commando's uit te voeren in de jail met het `JID` 3:
+
+[source,bash]
+....
+# jexec 3 tcsh
+....
+
+[[jails-service-jails-upgrading]]
+==== Upgraden
+
+Naarmate de tijd verstrijkt komt de noodzaak om het systeem te updaten naar een nieuwere versie van FreeBSD, danwel vanwege een veiligheids waarschuwing danwel vanwege nieuwe mogelijkheden die geïmplementeerd zijn en nuttig zijn voor de jails. Het ontwerp van deze opzet levert een makkelijke manier voor het upgraden van jails. Daarnaast minimaliseert het de "down-time", omdat de jails alleen in de allerlaatste minuut uitgeschakeld worden. Het geeft ook de mogelijkheid om terug te keren naar een oudere versie, voor het geval er problemen ontstaan.
+
+[.procedure]
+====
+
+. De eerste stap is het upgraden van het host systeem zelf, waarna een nieuwe alleen-lezen template gemaakt wordt in [.filename]#/home/j/mroot2#.
++
+[source,bash]
+....
+# mkdir /home/j/mroot2
+# cd /usr/src
+# make installworld DESTDIR=/home/j/mroot2
+# cd /home/j/mroot2
+# cpdup /usr/src usr/src
+# mkdir s
+....
++ 
+Het `installworld` doel creeërt een aantal onnodige directories, welke verwijderd moeten worden:
++
+[source,bash]
+....
+# chflags -R 0 var
+# rm -R etc var root usr/local tmp
+....
++
+. Maak opnieuw de beschrijfbare symbolische linken voor het hoofd bestandssysteem:
++
+[source,bash]
+....
+# ln -s s/etc etc
+# ln -s s/root root
+# ln -s s/home home
+# ln -s ../s/usr-local usr/local
+# ln -s ../s/usr-X11R6 usr/X11R6
+# ln -s s/tmp tmp
+# ln -s s/var var
+....
++
+. Dit is het juiste moment om de jails te stoppen:
++
+[source,bash]
+....
+# service jail stop
+....
++
+. Ontkoppel de originele bestandssystemen:
++
+[source,bash]
+....
+# umount /home/j/ns/s
+# umount /home/j/ns
+# umount /home/j/mail/s
+# umount /home/j/mail
+# umount /home/j/www/s
+# umount /home/j/www
+....
++
+[NOTE]
+======
+Het beschrijfbare gedeelte van de jail is gekoppeld aan het alleen-lezen gedeelte ([.filename]#/s#) en moet derhalve eerst ontkoppeld worden.
+======
++
+. Verplaatst het oude alleen-lezen systeem en vervang het door de nieuwe systeem. Het oude systeem dient als reservekopie voor het geval er iets misgaat. De naam moet het zelfde zijn als bij de installatie van het nieuwe systeem. Verplaats de FreeBSD Ports Collectie naar het nieuwe bestandssysteem om ruimte en inodes te besparen:
++
+[source,bash]
+....
+# cd /home/j
+# mv mroot mroot.20060601
+# mv mroot2 mroot
+# mv mroot.20060601/usr/ports mroot/usr
+....
++
+. Op dit moment is het alleen-lezen gedeelte klaar, de enig overgebleven taak is nu om alle bestandssystemen opnieuw te koppelen en om de jails weer op te starten:
++
+[source,bash]
+....
+# mount -a
+# service jail start
+....
+====
+
+Gebruik het man:jls[8] programma om te zien of de jails correct zijn opgestart. Vergeet niet om in elke jail het mergemaster programma te starten. Ook moeten de configuratie bestanden en de rc.d scripts geupdate worden.

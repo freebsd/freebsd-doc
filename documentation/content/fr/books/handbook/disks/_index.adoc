@@ -1,0 +1,2448 @@
+---
+title: Chapitre 18. Stockage des données
+part: Partie III. Administration Système
+prev: books/handbook/audit
+next: books/handbook/geom
+---
+
+[[disks]]
+= Stockage des données
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Table des matières
+:table-caption: Tableau
+:example-caption: Exemple
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 18
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/disks/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/disks/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/disks/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/fr/mailing-lists.adoc[]
+include::shared/fr/teams.adoc[]
+include::shared/fr/urls.adoc[]
+
+toc::[]
+
+[[disks-synopsis]]
+== Synopsis
+
+Ce chapitre couvre l'utilisation des disques sous FreeBSD. Cela comprend les disques mémoire, les disques réseau, les périphériques standards de stockage SCSI/IDE, et les périphériques utilisant l'interface USB.
+
+Après la lecture de ce chapitre, vous connaîtrez:
+
+* La terminologie qu'utilise FreeBSD pour décrire l'organisation des données sur un disque physique (les partitions et les tranches).
+* Comment ajouter des disques durs supplémentaires sur votre système.
+* Comment configurer FreeBSD pour l'utilisation de périphériques de stockage USB.
+* Comment configurer des systèmes de fichiers virtuels, comme les disques mémoires.
+* Comment utiliser les quotas pour limiter l'usage de l'espace disque.
+* Comment chiffrer des disques pour les sécuriser contre les attaques.
+* Comment créer et graver des CDs et DVDs sous FreeBSD.
+* Les différents supports disponibles pour les sauvegardes.
+* Comment utiliser les programmes de sauvegarde disponibles sous FreeBSD.
+* Comment faire des sauvegardes sur disquettes.
+* Ce que sont les "snapshots" (instantanés) de systèmes de fichiers et comment les utiliser efficacement.
+
+Avant de lire ce chapitre, vous devrez:
+
+* Savoir comment configurer et installer un nouveau noyau FreeBSD (crossref:kernelconfig[kernelconfig,Configurer le noyau de FreeBSD]).
+
+[[disks-naming]]
+== Noms des périphériques
+
+Ce qui suit est une liste des périphériques de stockage physiques, et des noms de périphériques associés.
+
+[[disk-naming-physical-table]]
+.Conventions de nom pour les disques physiques
+[cols="1,1", frame="none", options="header"]
+|===
+| Type de disque
+| Nom du périphérique
+
+|Disques durs IDE
+|`ad`
+
+|Lecteurs de CDROMs IDE
+|`acd`
+
+|Disques durs SCSI et périphériques de stockage USB
+|`da`
+
+|Lecteurs de CDROMs SCSI
+|`cd`
+
+|`mcd` pour les CD-ROMs Mitsumi, `scd` pour les CD-ROMs Sony 
+
+|Lecteurs de disquette
+|`fd`
+
+|Lecteurs de bande SCSI
+|`sa`
+
+|Lecteurs de bande IDE
+|`ast`
+
+|Disques flash
+|`fla` pour les périphériques Flash DiskOnChip(R)
+
+|Disques RAID
+|`aacd` pour l'AdvancedRAID Adaptec(R), `mlxd` et `mlyd` pour les Mylex(R), `amrd` le MegaRAID(R) d'AMI, `idad` pour le Smart RAID de Compaq, `twed` pour le 3ware(R) RAID.
+|===
+
+[[disks-adding]]
+== Ajouter des disques
+
+Supposons que nous voulions ajouter un second disque SCSI à une machine qui n'a pour l'instant qu'un seul disque. Commençons par arrêter l'ordinateur et installer le disque en suivant les instructions données par le constructeur de l'ordinateur, du contrôleur et du disque. Comme il y a de nombreuses façon de procéder, ces détails dépassent le cadre de ce document.
+
+Ouvrons maintenant une session sous le compte `root`. Après avoir installé le disque, consultez le fichier [.filename]#/var/run/dmesg.boot# pour vérifier que le nouveau disque a été reconnu. Dans notre exemple, le disque que nous venons d'ajouter sera le périphérique [.filename]#da1# et nous le monterons sur le répertoire [.filename]#/1# (si vous ajoutez un disque IDE, le nom de périphérique sera [.filename]#ad1#).
+
+FreeBSD tourne sur des ordinateurs compatibles IBM-PC, il doit tenir compte des partitions PC BIOS. Ces dernières sont différentes des partitions BSD traditionnelles. Un disque PC peut avoir jusqu'à quatre partitions. Si le disque va être réservé uniquement à FreeBSD, vous pouvez utiliser le mode _dédié_. Sinon, FreeBSD devra utiliser une des partitions PC BIOS. FreeBSD appelle les partitions PC BIOS _tranches_ ("slices") pour les distinguer des partitions BSD traditionnelles. Vous pouvez aussi des tranches sur un disque dédié à FreeBSD, mais utilisé sur une machine où un autre système d'exploitation est également installé. C'est une bonne manière pour éviter de perturber l'utilitaire `fdisk` des autres système d'exploitation différents de FreeBSD.
+
+Dans le cas d'une tranche, le disque ajouté deviendra le périphérique [.filename]#/dev/da1s1e#. Ce qui se lit: disque SCSI, numéro d'unité 1 (second disque SCSI), tranche 1 (partition PC BIOS 1), et partition BSD [.filename]#e#. Dans le cas du mode dédié, le disque sera ajouté en tant que [.filename]#/dev/da1e#.
+
+En raison de l'utilisation d'entiers codés sur 32 bits pour stocker le nombre de secteurs, man:bsdlabel[8] est limité à 2^32-1 secteurs par disque ou 2TB dans la plupart des cas. Le format man:fdisk[8] n'autorise pas de secteur au delà de 2^32-1 et une largeur de plus de 2^32-1, limitant donc les partitions à 2TB et les disques à 4TB en général. Le format man:sunlabel[8] est limité à 2^32-1 secteur par partition et 8 partitions pour un total de 16TB d'espace. Pour des disques plus importants, les partitions man:gpt[8] peuvent être utilisées.
+
+=== Utiliser man:sysinstall[8]
+
+[.procedure]
+====
+
+. Naviguer dans sysinstall
++ 
+Vous pouvez utiliser `sysinstall` et ses menus simples d'emploi pour partitionner et libeller le nouveau disque. Ouvrez une session sous le compte super-utilisateur `root` ou utilisez la commande man:su[1]. Lancez `sysinstall` et sélectionnez [.guimenuitem]#Configure#. A l'intérieur du menu [.guimenuitem]#FreeBSD Configuration Menu#, descendez et sélectionnez l'option [.guimenuitem]#Fdisk#.
+. L'éditeur de partition fdisk
++ 
+Une fois dans l'utilitaire fdisk, nous pouvons taper kbd:[A] pour utiliser tout le disque pour FreeBSD. Lorsque l'on vous demande si vous voulez garder la possibilité de pouvoir coopérer avec d'autres systèmes d'exploitation ("remain cooperative with any future possible operating systems"), répondez par l'affirmative (`YES`). Enregistrez les modifications sur le disque avec kbd:[W]. Quittez maintenant l'éditeur fdisk en tapant kbd:[q]. La prochaine question concernera le secteur de démarrage ("Master Boot Record"). Comme vous ajoutez un disque à un système déjà opérationnel, choisissez btn:[None].
+. L'éditeur de label du disque
++ 
+Ensuite, vous devez quitter puis relancer sysinstall. Suivez les instructions précédentes, en choisissant cette fois l'option [.guimenuitem]#Label#. Vous entrerez dans l'éditeur de label du disque (`Disk Label Editor`). C'est là que vous allez créer les partitions BSD traditionnelles. Un disque peut avoir jusqu'à huit partitions, libellées de `a` à `h`. Certains de ces labels ont des significations particulières. La partition `a` est la partition racine ([.filename]#/#). Seul votre disque système (e.g., celui à partir duquel vous démarrez) doit avoir une partition `a`. La partition `b` est utilisée pour la pagination, vous pouvez avoir plusieurs disques avec des partitions de pagination. La partition `c` désigne la totalité du disque en mode dédié, ou toute la tranche FreeBSD dans le cas contraire. Les autres partitions sont à usage général.
++ 
+L'éditeur de label de sysinstall définit par défaut la partition `e` comme première partition qui n'est ni racine, ni de pagination. Dans l'éditeur de label, créez un seul système de fichiers avec l'option kbd:[C]. Quand on vous demande si ce sera un système de fichiers (FS) ou une partition de pagination, choisissez `FS` et indiquez un point de montage (e.g., [.filename]#/mnt#). Lorsque vous ajoutez un disque sur un système déjà installé, sysinstall ne créera pas d'entrées dans [.filename]#/etc/fstab#, donc le nom que vous donnez au point de montage n'a pas d'importance.
++ 
+Vous pouvez maintenant écrire le nouveau label sur le disque et y créer un système de fichiers. Faites-le en tapant kbd:[W]. Ignorez les erreurs de sysinstall disant que la nouvelle partition ne peut être montée. Quittez maintenant l'éditeur de label et sysinstall.
+. Dernière étape
++ 
+La dernière étape consiste à éditer le fichier [.filename]#/etc/fstab# pour y ajouter une entrée pour votre nouveau disque.
+====
+
+=== Utiliser les utilitaires en ligne de commande
+
+==== Utiliser les tranches - "slices"
+
+Cette configuration permettra de faire fonctionner correctement votre disque dure avec d'autres systèmes d'exploitation qui pourraient être installé sur votre machine, et ne perturbera pas les utilitaires `fdisk` de ces autres systèmes d'exploitation. C'est la méthode recommandée pour l'installation de nouveau disques. N'utilisez le mode _dédié_ que si vous avez une bonne raison de le faire!
+
+[source,bash]
+....
+# dd if=/dev/zero of=/dev/da1 bs=1k count=1
+# fdisk -BI da1 #Initialize your new disk
+# bsdlabel -B -w da1s1 auto #Label it.
+# bsdlabel -e da1s1 # Edit the disklabel just created and add any partitions.
+# mkdir -p /1
+# newfs /dev/da1s1e # Repeat this for every partition you created.
+# mount /dev/da1s1e /1 # Mount the partition(s)
+# vi /etc/fstab # Add the appropriate entry/entries to your /etc/fstab.
+....
+
+Si vous avez un disque IDE, remplacez [.filename]#da# par [.filename]#ad#.
+
+==== Mode dédié
+
+Si le nouveau disque n'est pas destiné a être partagé avec un autre système d'exploitation, vous pouvez utiliser le mode _dédié_. Rappelez-vous que ce mode peut perturber les systèmes d'exploitation Microsoft; cependant, ils ne toucheront pas au disque. OS/2(R) d'IBM, au contraire, "s'approprie" toute partition qu'il trouve et ne reconnaît pas.
+
+[source,bash]
+....
+# dd if=/dev/zero of=/dev/da1 bs=1k count=1
+# bsdlabel -Bw da1 auto
+# bsdlabel -e da1				# create the `e' partition
+# newfs -d0 /dev/da1e
+# mkdir -p /1
+# vi /etc/fstab				# add an entry for /dev/da1e
+# mount /1
+....
+
+Un autre méthode est:
+
+[source,bash]
+....
+# dd if=/dev/zero of=/dev/da1 count=2
+# bsdlabel /dev/da1 | bsdlabel -BR da1 /dev/stdin
+# newfs /dev/da1e
+# mkdir -p /1
+# vi /etc/fstab					# add an entry for /dev/da1e
+# mount /1
+....
+
+[[raid]]
+== RAID
+
+[[raid-soft]]
+=== RAID logiciel
+
+[[ccd]]
+==== Configuration du pilote de disque concaténé (CCD - "Concatenated Disk Driver")
+
+Quand il est question du choix d'une solution de stockage de masse les critères de choix les plus importants à considérer sont la vitesse, la fiabilité, et le coût. Il est plutôt rare de pouvoir réunir ces trois critères; normalement un périphérique de stockage rapide et fiable est coûteux, et pour diminuer les coûts la vitesse ou la fiabilité doivent être sacrifiées.
+
+A la conception du système décrit plus bas, le coût a été choisi comme facteur le plus important, suivi de la vitesse, et enfin la fiabilité. La vitesse de transfert des données est limitée par le réseau. Et tandis que la fiabilité est très importante, le disque CCD décrit ci-dessous est destiné au stockage de données en ligne qui sont déjà complètement sauvegardées sur CD-Rs et qui peuvent être facilement remplacées.
+
+Définir vos propres besoins est la première étape dans le choix d'une solution de stockage de masse. Si vos critères de choix privilégient la vitesse ou la fiabilité par rapport au coût, votre solution diférera du système décrit dans cette section.
+
+[[ccd-installhw]]
+===== Installation du matériel
+
+En plus du disque système IDE, trois disques Western Digital de 30Go, 5400 trs/min IDE forment le coeur du disque CCD décrit ci-dessous donnant approximativement 90Go de stockage en ligne. La solution idéale serait d'avoir pour chaque disque IDE son propre câble et contrôleur IDE, mais pour minimiser les coûts, des contrôleur IDE supplémentaires n'ont pas été utilisés. Aussi, les disques ont été configuré de telle façon que chaque contrôleur IDE ait un disque maître et un disque esclave.
+
+Au redémarrage, le BIOS a été configuré pour détecter automatiquement les disques attachés. FreeBSD les a d'ailleurs détectés au redémarrage:
+
+[.programlisting]
+....
+ad0: 19574MB WDC WD205BA [39770/16/63] at ata0-master UDMA33
+ad1: 29333MB WDC WD307AA [59598/16/63] at ata0-slave UDMA33
+ad2: 29333MB WDC WD307AA [59598/16/63] at ata1-master UDMA33
+ad3: 29333MB WDC WD307AA [59598/16/63] at ata1-slave UDMA33
+....
+
+[NOTE]
+====
+Si FreeBSD ne détecte pas les disques, assurez-vous que vous avez correctement placé les cavaliers. La plupart des disques IDE disposent également d'un cavalier "Cable Select". Ce n'est _pas_ le cavalier de configuration maître/esclave. Consultez la documentation du disque pour identifier le cavalier correct.
+====
+
+Ensuite, réfléchissez sur la manière de les intégrer au système de fichiers. Vous devriez faire des recherches sur man:vinum[8] (crossref:vinum[vinum-vinum,Le gestionnaire de volume Vinum]) et man:ccd[4]. Dans cette configuration particulière, man:ccd[4] a été choisi.
+
+[[ccd-setup]]
+===== Configuration du CCD
+
+Le pilote man:ccd[4] vous permet de prendre plusieurs disques identiques et les concaténer en un seul système de fichiers logique. Afin d'utiliser man:ccd[4], vous avez besoin d'un noyau avec le support man:ccd[4]. Ajoutez la ligne suivante à votre fichier de configuration de noyau, recompilez, et installez le noyau:
+
+[.programlisting]
+....
+device   ccd
+....
+
+Le support man:ccd[4] peut également chargé sous la forme d'un module noyau.
+
+Pour configurer man:ccd[4], vous devez tout d'abord utiliser man:bsdlabel[8] pour labéliser les disques:
+
+[.programlisting]
+....
+bsdlabel -w ad1 auto
+bsdlabel -w ad2 auto
+bsdlabel -w ad3 auto
+....
+
+Cela a créé un label de disque [.filename]#ad1c#, [.filename]#ad2c# et [.filename]#ad3c# qui s'étend sur l'intégralité du disque.
+
+L'étape suivante est de modifier le type de label de disque. Vous pouvez utiliser man:bsdlabel[8] pour éditer les disques:
+
+[.programlisting]
+....
+bsdlabel -e ad1
+bsdlabel -e ad2
+bsdlabel -e ad3
+....
+
+Cela ouvre le label de disque actuel de chaque disque dans l'éditeur fixé par la variable d'environnement `EDITOR`, généralement, man:vi[1].
+
+Un label de disque non modifié ressemblera à quelque chose comme ceci:
+
+[.programlisting]
+....
+8 partitions:
+#        size   offset    fstype   [fsize bsize bps/cpg]
+  c: 60074784        0    unused        0     0     0   # (Cyl.    0 - 59597)
+....
+
+Ajoutez une nouvelle partition `e` pour être utilisé par man:ccd[4]. Cela peut être une copie de la partition `c` mais le type de système de fichiers (`fstype`) doit être `4.2BSD`. Le label de disque devait ressembler à:
+
+[.programlisting]
+....
+8 partitions:
+#        size   offset    fstype   [fsize bsize bps/cpg]
+  c: 60074784        0    unused        0     0     0   # (Cyl.    0 - 59597)
+  e: 60074784        0    4.2BSD        0     0     0   # (Cyl.    0 - 59597)
+....
+
+[[ccd-buildingfs]]
+===== Création du système de fichiers
+
+Maintenant que tous les disques sont labélisés, vous devez construire le man:ccd[4]. Pour cela, utilisez man:ccdconfig[8], avec des options semblables à ce qui suit:
+
+[.programlisting]
+....
+ccdconfig ccd0. 32. 0. /dev/ad1e. /dev/ad2e /dev/ad3e
+....
+
+* L'utilisation et la signification de chaque option est données ci-dessous:
+* Le premier argument est le périphérique à configurer, dans ce cas, [.filename]#/dev/ccd0c#. La partie [.filename]#/dev/# est optionnelle.
+* L'entrelacement ("interleave") du système de fichiers. L'entrelacement définit la taille d'une bande de blocs disque, de 512 octets chacune normalement. Donc un entrelacement de 32 serait d'une largeur de 16384 octets.
+* Paramètres pour man:ccdconfig[8]. Si vous désirez activer les miroirs disque, vous pouvez spécifier un indicateur à cet endroit. Cette configuration ne fournit pas de miroir pour man:ccd[4], aussi l'indicateur est a 0 (zéro).
+Les derniers arguments de man:ccdconfig[8] sont les périphériques à placer dans le disque concaténé. Utilisez le chemin complet pour chaque périphérique.
+
+Après avoir utilisé man:ccdconfig[8] le man:ccd[4] est configuré. Un système de fichiers peut être créé. Consultez la page de manuel de man:newfs[8] pour les options disponibles, ou lancez simplement:
+
+[.programlisting]
+....
+newfs /dev/ccd0c
+....
+
+[[ccd-auto]]
+===== Automatiser la procédure
+
+Généralement, vous voudrez monter le man:ccd[4] à chaque redémarrage. Pour cela, vous devez le configurer avant toute chose. Ecrivez votre configuration actuelle dans [.filename]#/etc/ccd.conf# en utilisant la commande suivante:
+
+[.programlisting]
+....
+ccdconfig -g  /etc/ccd.conf
+....
+
+Lors du démarrage, la procédure `/etc/rc` exécute `ccdconfig -C` si [.filename]#/etc/ccd.conf# existe. Cela configure automatiquement le man:ccd[4] de façon à pouvoir être monté.
+
+[NOTE]
+====
+Si vous démarrez en mode mono-utilisateur, avant que vous ne puissiez monter le man:ccd[4], vous devez utiliser la commande suivante pour configurer l'unité:
+
+[.programlisting]
+....
+ccdconfig -C
+....
+
+====
+
+Pour monter automatiquement le man:ccd[4] placez une entrées pour le man:ccd[4] dans [.filename]#/etc/fstab#, il sera ainsi monté au démarrage:
+
+[.programlisting]
+....
+/dev/ccd0c              /media       ufs     rw      2       2
+....
+
+[[vinum]]
+==== Le gestionnaire de volume Vinum
+
+Le gestionnaire de volume Vinum est un pilote de périphérique de gestion de disques virtuels. Il sépare le disque matériel de l'interface de périphérique bloc et organise les données de telle façon qu'il en résulte une amélioration de la flexibilité, des performances et de la fiabilité, comparé à la vision traditionnelle sous forme partitionnée du stockage disque. man:vinum[8] implémente les modèles RAID-0, RAID-1 et RAID-5, individuellement ou combinés.
+
+Voir le crossref:vinum[vinum-vinum,Le gestionnaire de volume Vinum] pour plus d'information au sujet de man:vinum[8].
+
+[[raid-hard]]
+=== RAID Matériel
+
+FreeBSD supporte également de nombreux contrôleurs RAID. Ces périphériques peuvent contrôler un système RAID sans nécessiter l'utilisation d'un logiciel spécifique pour FreeBSD pour gérer l'unité.
+
+En utilisant son propre BIOS, la carte contrôle la plupart des opérations disque. Ce qui suit est une description rapide d'une configuration utilisant un contrôleur Promise IDERAID. Quand cette carte est installée et le système redémarré, une invite s'affichera posant quelques questions. Suivez les instructions à l'écran pour atteindre l'écran de configuration de la carte. A partir de là, vous avez la possibilité de combiner tous les disques attachés. En faisant cela, les disques apparaîtront sous la forme d'un unique disque sous FreeBSD. D'autres niveaux RAID peuvent être configurés en conséquence.
+
+=== Reconstruire une unité ATA RAID1
+
+FreeBSD vous permet de remplacer à chaud un disque défectueux dans une unité. Cela doit être fait avant redémarrage.
+
+Vous verrez probablement dans [.filename]#/var/log/messages# ou dans la sortie de man:dmesg[8] quelque chose comme:
+
+[.programlisting]
+....
+ad6 on monster1 suffered a hard error.
+ad6: READ command timeout tag=0 serv=0 - resetting
+ad6: trying fallback to PIO mode
+ata3: resetting devices .. done
+ad6: hard error reading fsbn 1116119 of 0-7 (ad6 bn 1116119; cn 1107 tn 4 sn 11)
+status=59 error=40
+ar0: WARNING - mirror lost
+....
+
+En utilisant man:atacontrol[8], recherchez de plus amples informations:
+
+[source,bash]
+....
+# atacontrol list
+ATA channel 0:
+	Master:      no device present
+	Slave:   acd0 <HL-DT-ST CD-ROM GCR-8520B/1.00> ATA/ATAPI rev 0
+
+ATA channel 1:
+	Master:      no device present
+	Slave:       no device present
+
+ATA channel 2:
+	Master:  ad4 <MAXTOR 6L080J4/A93.0500> ATA/ATAPI rev 5
+	Slave:       no device present
+
+ATA channel 3:
+	Master:  ad6 <MAXTOR 6L080J4/A93.0500> ATA/ATAPI rev 5
+	Slave:       no device present
+
+# atacontrol status ar0
+ar0: ATA RAID1 subdisks: ad4 ad6 status: DEGRADED
+....
+
+[.procedure]
+====
+
+. Vous devrez détacher le canal ATA avec le disque défectueux de façon à pouvoir le retirer sans risque:
++
+[source,bash]
+....
+# atacontrol detach ata3
+....
++
+. Remplacer le disque.
+. Rattacher le canal ATA:
++
+[source,bash]
+....
+# atacontrol attach ata3
+Master:  ad6 <MAXTOR 6L080J4/A93.0500> ATA/ATAPI rev 5
+Slave:   no device present
+....
++
+. Rajouter le disque de rechange à l'unité:
++
+[source,bash]
+....
+# atacontrol addspare ar0 ad6
+....
++
+. Recontruire l'unité:
++
+[source,bash]
+....
+# atacontrol rebuild ar0
+....
++
+. Il est possible de contrôler l'avancée de la procédure en utilisant la commande suivante:
++
+[source,bash]
+....
+# dmesg | tail -10
+[output removed]
+ad6: removed from configuration
+ad6: deleted from ar0 disk1
+ad6: inserted into ar0 disk1 as spare
+
+# atacontrol status ar0
+ar0: ATA RAID1 subdisks: ad4 ad6 status: REBUILDING 0% completed
+....
++
+. Attendre jusqu'à la fin de cette opération.
+====
+
+[[usb-disks]]
+== Périphériques de stockage USB
+
+De nombreuses solutions de stockage externes utilisent, de nos jours, le bus série universel ("Universal Serial Bus"-USB): disques durs, clés USB, graveurs de CDs, etc. FreeBSD fournit un support pour ces périphériques.
+
+=== Configuration
+
+Le pilote de périphériques USB de stockage de masse, man:umass[4], fournit le support pour les périphériques de stockage USB. Si vous utilisez le noyau [.filename]#GENERIC#, vous n'avez rien à modifier à votre configuration. Si vous utilisez un noyau personnalisé, assurez-vous que les lignes suivantes sont présentent dans votre fichier de configuration du noyau:
+
+[.programlisting]
+....
+device scbus
+device da
+device pass
+device uhci
+device ohci
+device usb
+device umass
+....
+
+Le pilote man:umass[4] utilise le sous-système SCSI pour accéder aux périphériques de stockage USB, votre périphérique USB sera vu par le système comme étant un périphérique SCSI. En fonction du contrôleur USB présent sur votre carte mère, vous n'avez besoin qu'une des lignes `device uhci` et `device ohci`, cependant avoir les deux lignes dans votre configuration du noyau est sans danger. N'oubliez pas de compiler et d'installer le nouveau noyau si vous y avez effectué des modifications.
+
+[NOTE]
+====
+Si votre périphérique USB est un graveur de CD ou de DVD, le pilote de périphérique SCSI CD-ROM, man:cd[4], doit être ajouté au noyau via la ligne:
+
+[.programlisting]
+....
+device cd
+....
+
+Puisque le graveur est vu comme un disque SCSI, le pilote man:atapicam[4] ne devrait pas être employé dans la configuration du noyau.
+====
+
+Le support pour les contrôleurs USB 2.0 est fourni avec FreeBSD vous devez cependant ajouter:
+
+[.programlisting]
+....
+device ehci
+....
+
+à votre fichier de configuration pour bénéficier du support USB 2.0. Notez que les pilotes man:uhci[4] et man:ohci[4] sont toujours nécessaires si vous désirez le support de l'USB 1.X.
+
+=== Test de la configuration
+
+La configuration est prête à être testée: branchez votre périphérique USB, et dans le tampon des messages du système (man:dmesg[8]), le disque devrait apparaître de cette manière:
+
+[source,bash]
+....
+umass0: USB Solid state disk, rev 1.10/1.00, addr 2
+GEOM: create disk da0 dp=0xc2d74850
+da0 at umass-sim0 bus 0 target 0 lun 0
+da0: <Generic Traveling Disk 1.11> Removable Direct Access SCSI-2 device
+da0: 1.000MB/s transfers
+da0: 126MB (258048 512 byte sectors: 64H 32S/T 126C)
+....
+
+Bien évidement, le modèle, le fichier spécial de périphérique ([.filename]#da0#) et d'autres détails peuvent être différents en fonction de votre configuration.
+
+Comme le périphérique USB est vu comme étant un périphérique SCSI, la commande `camcontrol` peut être employée pour lister les périphériques de stockage USB attachés au système:
+
+[source,bash]
+....
+# camcontrol devlist
+<Generic Traveling Disk 1.11>      at scbus0 target 0 lun 0 (da0,pass0)
+....
+
+Si le disque dispose d'un système de fichiers, vous devriez pouvoir le monter. La <<disks-adding>> vous aidera à formater et créer des partitions sur le disque USB si nécessaire.
+
+Pour rendre ce périphérique montable par un utilisateur normal, un certain nombre de paramétrages sont nécessaires. Tout d'abord, les entrées de périphériques qui sont créées lors de la connexion d'un périphérique USB doivent être accessibles à l'utilisateur. Une solution est de faire en sorte que tous les utilisateurs de ces périphériques soient membres du groupe `operator`. Cela se fait à l'aide de man:pw[8]. Ensuite, quand ces entrées de périphériques sont créées, le groupe `operator` doit pouvoir y accéder en lecture et en écriture. Pour cela, les lignes suivantes sont ajoutées à [.filename]#/etc/devfs.rules#:
+
+[.programlisting]
+....
+[localrules=1]
+add path 'da*' mode 0660 group operator
+....
+
+[NOTE]
+====
+S'il y a déjà des disques SCSI dans le système, on doit procéder légèrement différemment. Par exemple, si le système contient déjà des disques [.filename]#da0# à [.filename]#da2# attachés au système, changez la seconde ligne pour:
+
+[.programlisting]
+....
+add path 'da[3-9]*' mode 0660 group operator
+....
+
+Les disques déjà présents n'appartiendront pas au groupe `operator`.
+====
+
+Vous devez également activer votre ensemble de règles man:devfs.rules[5] dans votre fichier [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+devfs_system_ruleset="localrules"
+....
+
+Le noyau doit être ensuite configuré pour autoriser les utilisateurs habituels à monter des systèmes de fichiers. La méthode la plus simple est d'ajouter la ligne suivante au fichier [.filename]#/etc/sysctl.conf#:
+
+[.programlisting]
+....
+vfs.usermount=1
+....
+
+Notez que ce paramétrage ne prendra effet qu'au prochain redémarrage. Il est également possible d'utiliser man:sysctl[8] pour fixer cette variable.
+
+La dernière étape est de créer un répertoire où le système de fichiers sera monté. Ce répertoire doit appartenir à l'utilisateur qui montera le système de fichiers. Une méthode adaptée et la création par `root` d'un sous-répertoire [.filename]#/mnt/$USER# appartenant à l'utilisateur en question (remplacez _$USER_ par le nom d'utilisateur de cet utilisateur):
+
+[source,bash]
+....
+# mkdir /mnt/$USER
+# chown $USER:$USER /mnt/$USER
+....
+
+Supposez qu'une clé USB soit branchée et qu'un périphérique [.filename]#/dev/da0s1# apparaît. Comme ce type de périphériques est en général livré préformaté avec un système de fichiers de type FAT, on pourra le monter de cette manière:
+
+[source,bash]
+....
+% mount -t msdosfs -m 644 -M 755 /dev/da0s1 /mnt/$USER
+....
+
+Si vous débranchez le périphérique (le disque doit être démonté auparavant), vous devriez voir dans les messages du système quelque chose comme:
+
+[source,bash]
+....
+umass0: at uhub0 port 1 (addr 2) disconnected
+(da0:umass-sim0:0:0:0): lost device
+(da0:umass-sim0:0:0:0): removing device entry
+GEOM: destroy disk da0 dp=0xc2d74850
+umass0: detached
+....
+
+=== Lectures supplémentaires
+
+En plus des sections <<disks-adding,Ajouter des disques>> et crossref:basics[mount-unmount,Monter et démonter des systèmes de fichiers], la lecture de différentes pages de manuel peut être également utile: man:umass[4], man:camcontrol[8], et man:usbdevs[8].
+
+[[creating-cds]]
+== Création et utilisation de supports optiques (CDs)
+
+=== Introduction
+
+Les CDs se différencient des disques conventionnels par de nombreuses caractéristiques. Au départ, ils n'étaient pas inscriptible par l'utilisateur. Ils sont conçu pour être lut de façon continue sans délai pour déplacer la tête de lecture entre les pistes. Ils sont également plus facile à déplacer entre systèmes que les supports de même taille à cette époque.
+
+Les CDs possèdent des pistes, mais cela fait référence à un ensemble de données qui peuvent être lues de façon continue et non pas à une particularité physique du disque. Pour produire un CD sous FreeBSD, il faut préparer les fichiers de données qui vont constituer les pistes sur le CD, puis écrire les pistes sur le CD.
+
+Le système de fichiers ISO 9660 a été conçu pour gérer ces différences. Malheureusement il incorpore des limites du système de fichiers qui semblaient normale alors. Mais heureusement, il fournit un mécanisme d'extension qui permet au CDs proprement gravés de passer outre ces limites tout en restant lisibles par les systèmes qui ne supportent pas ces extensions.
+
+Le logiciel package:sysutils/cdrtools[] comprend man:mkisofs[8], un programme que vous pouvez utiliser pour produire un fichier de données contenant un système de fichiers ISO 9660. Il dispose d'options pour le support de diverses extensions, et est décrit ci-dessous.
+
+L'outil a utiliser pour graver un CD varie en fonction du type de graveur de CD: ATAPI ou autre. Les graveurs ATAPI utilisent le programme `burncd` qui fait partie du système de base. Les graveurs SCSI ou USB devraient utiliser l'utilitaire `cdrecord` du logiciel porté package:sysutils/cdrtools[] port. Il est également possible d'utiliser `cdrecord` et d'autres outils pour lecteurs SCSI sur du matériel ATAPI avec le <<atapicam,module ATAPI/CAM>>.
+
+Si vous voulez un programme de gravure de CD avec une interface graphique, vous devriez jeter un oeil à X-CD-Roast ou K3b. Ces outils sont disponibles sous une version pré-compilée ou à partir des logiciels portés package:sysutils/xcdroast[] et package:sysutils/k3b[]. X-CD-Roast et K3b nécessitent le <<atapicam,module ATAPI/CAM>> avec des périphériques ATAPI.
+
+[[mkisofs]]
+=== mkisofs
+
+L'utilitaire man:mkisofs[8], qui fait partie du logiciel porté package:sysutils/cdrtools[], produit un système de fichiers ISO 9660 qui est une image de l'arborescence des répertoires dans un système de fichiers UNIX(R). L'utilisation la plus simple est:
+
+[source,bash]
+....
+# mkisofs -o fichierimage.iso /chemin/vers/arborescence
+....
+
+Cette commande créera un _fichierimage.iso_ contenant un système de fichiers ISO 9660 qui est une copie de l'arborescence _/chemin/vers/arborescence_. Durant le processus de création, les noms de fichiers seront modifiés de façon à respecter les limitations de la norme ISO 9660, et rejettera les fichiers ayant des noms non acceptables pour un système de fichiers ISO.
+
+De nombreuses options sont disponibles pour passer outre ces restrictions. En particulier, `-R` qui autorise les extensions Rock Ridge communes aux systèmes UNIX(R), `-J` qui active les extensions Joliet utilisées par les systèmes Microsoft, et `-hfs` peut être utilisé pour créer des systèmes de fichiers HFS utilisés par Mac OS(R).
+
+Pour des CDs qui sont destinés à n'être utilisé que sur des systèmes FreeBSD, l'option `-U` peut être utilisée pour désactiver toutes les restrictions au niveau des noms de fichiers. Quand elle est utilisée avec l'option `-R`, cela produit une image de système de fichiers qui est identique à l'arborescence FreeBSD d'origine, cependant ce système de fichiers pourra violer la norme ISO 9660 de nombreuses façon.
+
+La dernière option d'usage général est l'option `-b`. Elle est utilisée pour indiquer l'emplacement de l'image de démarrage à utiliser dans la création d'un CD démarrable "El Torito". Cette option prend en argument le chemin vers une image de démarrage à partir de la racine de l'arborescence qui va être copiée sur le CD. Par défaut, man:mkisofs[8] créé une image ISO dans un mode appelé "émulation de disquette", et s'attend donc à une image de démarrage de 1200, 1440 ou 2880 Ko en taille. Certains chargeurs, comme celui utilisé par les disques d'installation de FreeBSD, n'utilisent pas ce mode d'émulation, dans ce cas l'option `-no-emul-boot` devrait être utilisée. Aussi, si [.filename]#/tmp/monboot# contient un système FreeBSD avec une image de démarrage dans [.filename]#/tmp/monboot/boot/cdboot#, vous pourrez produire l'image d'un système de fichiers ISO 9660 dans [.filename]#/tmp/bootable.iso# de cette façon:
+
+[source,bash]
+....
+# mkisofs -R -no-emul-boot -b boot/cdboot -o /tmp/bootable.iso /tmp/monboot
+....
+
+Cela étant fait, si vous avez le pilote [.filename]#md# configuré dans votre noyau, vous pouvez monter le système de fichiers avec:
+
+[source,bash]
+....
+# mdconfig -a -t vnode -f /tmp/bootable.iso -u 0
+# mount -t cd9660 /dev/md0 /mnt
+....
+
+A ce moment vous pouvez vérifier que [.filename]#/mnt# et [.filename]#/tmp/monboot# sont identique.
+
+Il existe de nombreuses autres options que vous pouvez utiliser avec man:mkisofs[8] pour régler finement son comportement. En particulier: les modifications d'une organisation ISO 9660 et la création de disques Joliet et HFS. Voir la page de manuel man:mkisofs[8] pour plus de détails.
+
+[[burncd]]
+=== burncd
+
+Si vous disposez d'un graveur de CD ATAPI, vous pouvez utiliser la commande `burncd` pour graver une image ISO sur un CD. `burncd` fait partie du système de base, installé sous [.filename]#/usr/sbin/burncd#. Son utilisation est très simple, car il dispose de peu d'options:
+
+[source,bash]
+....
+# burncd -f cddevice data fichierimage.iso fixate
+....
+
+Gravera une copie de _fichierimage.iso_ sur _cddevice_. Le périphérique par défaut est [.filename]#/dev/acd0#. Consultez man:burncd[8] pour les options pour fixer la vitesse d'écriture, éjecter le CD après gravure, et graver des données audios.
+
+[[cdrecord]]
+=== cdrecord
+
+Si vous n'avez pas de graveur de CD ATAPI, vous devrez utiliser `cdrecord` pour graver vos CDs. `cdrecord` ne fait pas partie du système de base; vous devez l'installer soit à partir du logiciel porté package:sysutils/cdrtools[] ou de la version pré-compilée appropriée. Des modifications du système de base peuvent provoquer le dysfonctionnement des versions binaires de ce programme, et donner lieu à une production de "dessous de bouteille". Vous devrez par conséquent soit mettre à jour le logiciel porté quand vous mettez à jour votre système, soit si vous crossref:cutting-edge[stable,suivez la branche -STABLE], mettre à jour le logiciel porté lorsqu'une nouvelle version est disponible.
+
+Bien que `cdrecord` dispose de nombreuses options, l'usage de base est même plus simple qu'avec `burncd`. La gravure d'une image ISO 9660 se fait avec:
+
+[source,bash]
+....
+# cdrecord dev=device fichierimage.iso
+....
+
+La partie délicate dans l'utilisation de `cdrecord` est la recherche de la valeur à utiliser pour l'option `dev`. Pour déterminer le bon paramètre à utiliser, utilisez l'indicateur `-scanbus` de `cdrecord`, qui produira des résultats du type:
+
+[source,bash]
+....
+# cdrecord -scanbus
+Cdrecord-Clone 2.01 (i386-unknown-freebsd7.0) Copyright (C) 1995-2004 Jörg Schilling
+Using libscg version 'schily-0.1'
+scsibus0:
+        0,0,0     0) 'SEAGATE ' 'ST39236LW       ' '0004' Disk
+        0,1,0     1) 'SEAGATE ' 'ST39173W        ' '5958' Disk
+        0,2,0     2) *
+        0,3,0     3) 'iomega  ' 'jaz 1GB         ' 'J.86' Removable Disk
+        0,4,0     4) 'NEC     ' 'CD-ROM DRIVE:466' '1.26' Removable CD-ROM
+        0,5,0     5) *
+        0,6,0     6) *
+        0,7,0     7) *
+scsibus1:
+        1,0,0   100) *
+        1,1,0   101) *
+        1,2,0   102) *
+        1,3,0   103) *
+        1,4,0   104) *
+        1,5,0   105) 'YAMAHA  ' 'CRW4260         ' '1.0q' Removable CD-ROM
+        1,6,0   106) 'ARTEC   ' 'AM12S           ' '1.06' Scanner
+        1,7,0   107) *
+....
+
+Cela donne la valeur `dev` appropriée pour les périphériques listés. Recherchez votre graveur de CD dans la liste, et utilisez les trois chiffres séparés par une virgule comme valeur pour `dev`. Dans notre cas le périphérique de gravure est 1,5,0, donc l'entrée appropriée serait `dev=1,5,0`. Il existe des manières plus simple de spécifier cette valeur, consultez la page de manuel man:cdrecord[1] pour des détails. C'est également la documentation à consulter pour des informations sur la gravure de pistes audios, le contrôle de la vitesse, et d'autres choses.
+
+[[duplicating-audiocds]]
+=== Dupliquer des CDs Audio
+
+Vous pouvez dupliquer un CD audio en effectuant l'extraction des données audio du CD vers un ensemble de fichiers, puis graver ces fichiers sur un CD vierge. Le processus est légèrement différent entre lecteurs ATAPI et SCSI.
+
+[.procedure]
+====
+*Procedure: Lecteurs SCSI*
+
+. Utiliser `cdda2wav` pour effectuer l'extraction audio.
++
+[source,bash]
+....
+% cdda2wav -v255 -D2,0 -B -Owav
+....
++
+. Utiliser `cdrecord` pour graver les fichiers [.filename]#.wav#.
++
+[source,bash]
+....
+% cdrecord -v dev=2,0 -dao -useinfo  *.wav
+....
++ 
+Assurez-vous que _2,0_ est choisi correctement, comme décrit dans <<cdrecord>>.
+====
+
+[.procedure]
+====
+*Procedure: Lecteurs ATAPI*
+
+. Le pilote CD ATAPI rend disponible chaque piste sous la forme [.filename]#/dev/acddtnn#, où _d_ est le numéro de lecteur, et _nn_ est le numéro de la piste écrit sur deux digits décimaux. Donc la première piste sur le premier lecteur est [.filename]#/dev/acd0t01#, la seconde est [.filename]#/dev/acd0t02#, la troisième [.filename]#/dev/acd0t03#, et ainsi de suite.
++ 
+Assurez-vous que les fichiers appropriés existent sous [.filename]#/dev#. Si ces entrées sont absentes, forcez le système à lire le disque à nouveau:
++
+[source,bash]
+....
+# dd if=/dev/acd0 of=/dev/null count=1
+....
++
+. Extraire chaque piste en utilisant man:dd[1]. Vous devez également préciser une taille de bloc durant l'extraction des fichiers.
++
+[source,bash]
+....
+# dd if=/dev/acd0t01 of=piste1.cdr bs=2352
+# dd if=/dev/acd0t02 of=piste2.cdr bs=2352
+...
+....
++
+. Graver les fichiers récupérés en utilisant `burncd`. Vous devez spécifier que ce sont des fichiers audio, et que `burncd` devra fermer le disque une fois terminé.
++
+[source,bash]
+....
+# burncd -f /dev/acd0 audio piste1.cdr piste2.cdr ... fixate
+....
+====
+
+[[imaging-cd]]
+=== Dupliquer des CDs de données
+
+vous pouvez copier un CD de données vers un fichier image équivalent au fichier créé avec man:mkisofs[8], et vous pouvez l'utiliser pour dupliquer n'importe quel CD de données. L'exemple présenté ici suppose que votre lecteur de CDROM est les périphérique [.filename]#acd0#. Remplacez-le avec le périphérique correct.
+
+[source,bash]
+....
+# dd if=/dev/acd0 of=fichier.iso bs=2048
+....
+
+Vous disposez maintenant d'une image, vous pouvez la graver comme décrit plus haut.
+
+[[mounting-cd]]
+=== Utiliser des CDs de données
+
+Maintenant que vous avez créé une CDROM de données standard, vous voulez probablement le monter et lire les données présentes. Par défaut, man:mount[8] suppose que le système de fichier à monter est de type `UFS`. Si vous essayez quelque chose comme:
+
+[source,bash]
+....
+# mount /dev/cd0 /mnt
+....
+
+vous obtiendrez une erreur du type `Incorrect super block`, et pas de montage. Le CDROM n'est pas un système de fichiers de type `UFS`, aussi toute tentative de montage de ce type échouera. Vous devez juste préciser à man:mount[8] que le système de fichiers est du type `ISO9660`, et tout fonctionnera. Cela se fait en spécifiant l'option `-t cd9660` option à man:mount[8]. Par exemple, si vous désirez monter un CDROM, contenu dans le lecteur [.filename]#/dev/cd0#, sous [.filename]#/mnt#, vous devrez exécuter:
+
+[source,bash]
+....
+# mount -t cd9660 /dev/cd0 /mnt
+....
+
+Notez que votre nom de lecteur ([.filename]#/dev/cd0# dans cet exemple) pourra être différent, en fonction de l'interface utilisée par votre lecteur de CDROM. De plus l'option `-t cd9660` ne fait qu'exécuter la commande man:mount_cd9660[8]. L'exemple précédent pourrait être réduit à:
+
+[source,bash]
+....
+# mount_cd9660 /dev/cd0 /mnt
+....
+
+Vous pouvez généralement utiliser des CDROMs de données de n'importe quelle provenance de cette façon. Les disques avec certaines extensions ISO 9660 pourront se comporter de façon étrange, cependant. Par exemple, les disques Joliet conservent tous les noms de fichiers en utilisant des caractères Unicodes sur 2 octets. Le noyau FreeBSD ne comprend pas l'Unicode, mais le pilote CD9660 de FreeBSD est en mesure de convertir au vol les caractères Unicode. Si des caractères non-anglais apparaissent sous la forme de points d'interrogation, vous devrez préciser la table de caractères locale que vous utilisez avec l'option `-C`. Pour plus d'information, consultez la page de manuel man:mount_cd9660[8].
+
+[NOTE]
+====
+Pour pouvoir effectuer cette conversion de caractères à l'aide de l'option `-C`, le module [.filename]#cd9660_iconv.ko# devra être chargé. Cela peut être fait soit en ajoutant au fichier [.filename]#loader.conf# la ligne:
+
+[.programlisting]
+....
+cd9660_iconv_load="YES"
+....
+
+puis en redémarrant la machine, soit en chargeant directement le module avec man:kldload[8].
+====
+
+Occasionnellement, vous pourrez obtenir le message `Device not configured` (périphérique non configuré) lors d'une tentative de montage d'un CDROM. Cela veut généralement dire que le lecteur de CDROM pense qu'il n'y a pas de disque dans le lecteur, ou que le lecteur n'est pas visible sur le bus. Cela peut demander plusieurs secondes à un lecteur de CDROM de s'apercevoir qu'il a été chargé, soyez donc patient.
+
+Parfois, un lecteur de CDROM SCSI peut être manquant parce qu'il n'a pas eu suffisamment de temps pour répondre à la réinitialisation du bus. Si vous avez un lecteur de CDROM SCSI, veuillez ajouter l'option suivante à la configuration de votre noyau et crossref:kernelconfig[kernelconfig-building,recompiler votre noyau].
+
+[.programlisting]
+....
+options SCSI_DELAY=15000
+....
+
+Ceci demande à votre bus SCSI une pause de 15 seconds au démarrage, pour donner à votre lecteur de CDROM une chance de répondre la réinitialisation du bus.
+
+[[rawdata-cd]]
+=== Graver des CDs de données brutes
+
+Il est possible de graver directement un fichier sur CD, sans créer de système de fichiers ISO 9660. Certaines personnes le font dans le cas de sauvegardes. Cela est beaucoup plus rapide que de graver un CD standard:
+
+[source,bash]
+....
+# burncd -f /dev/acd1 -s 12 data archive.tar.gz fixate
+....
+
+Afin de récupérer les données gravées sur un tel CD, vous devez lire les données à partir du fichier spécial de périphériques en mode caractère:
+
+[source,bash]
+....
+# tar xzvf /dev/acd1
+....
+
+Vous ne pouvez monter ce disque comme vous le feriez avec un CDROM classique. Un tel CDROM ne pourra être lu sous un autre système d'exploitation en dehors de FreeBSD. Si vous voulez être en mesure de monter le CD, ou d'en partager les données avec un autre système d'exploitation, vous devez utiliser man:mkisofs[8] comme décrit plus haut.
+
+[[atapicam]]
+=== Utilisation du pilote de périphérique ATAPI/CAM
+
+Ce pilote permet d'accéder aux périphériques ATAPI (lecteurs de CD-ROM, graveurs CD-RW, lecteur de DVD etc...) par l'intermédiaire du sous-système SCSI, et autorise l'utilisation d'applications comme package:sysutils/cdrdao[] ou man:cdrecord[1].
+
+Pour utiliser ce pilote, vous devrez ajouter la ligne suivante au fichier [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+atapicam_load="YES"
+....
+
+puis redémarrez votre machine.
+
+[NOTE]
+====
+Si vous préférez compiler en statique dans le noyau le support man:atapicam[4], vous devrez ajouter au fichier de configuration du noyau la ligne:
+
+[.programlisting]
+....
+device atapicam
+....
+
+Vous avez également besoin des lignes suivantes dans votre fichier de configuration:
+
+[.programlisting]
+....
+device ata
+device scbus
+device cd
+device pass
+....
+
+qui devraient être déjà présentes. Puis recompilez, installez votre nouveau noyau, et enfin redémarrez votre machine.
+====
+
+Lors du démarrage, votre graveur devrait apparaître, comme suit:
+
+[source,bash]
+....
+acd0: CD-RW <MATSHITA CD-RW/DVD-ROM UJDA740> at ata1-master PIO4
+cd0 at ata1 bus 0 target 0 lun 0
+cd0: <MATSHITA CDRW/DVD UJDA740 1.00> Removable CD-ROM SCSI-0 device
+cd0: 16.000MB/s transfers
+cd0: Attempt to query device size failed: NOT READY, Medium not present - tray closed
+....
+
+Le lecteur doit être accessible via le nom de périphérique [.filename]#/dev/cd0#, par exemple pour monter un CD-ROM sous [.filename]#/mnt#, tapez juste ce qui suit:
+
+[source,bash]
+....
+# mount -t cd9660 /dev/cd0 /mnt
+....
+
+En tant que `root`, vous pouvez exécuter la commande suivante pour obtenir l'adresse SCSI du graveur:
+
+[source,bash]
+....
+# camcontrol devlist
+<MATSHITA CDRW/DVD UJDA740 1.00>   at scbus1 target 0 lun 0 (pass0,cd0)
+....
+
+Donc `1,0,0` sera l'adresse SCSI à utiliser avec man:cdrecord[1] et tout autre application SCSI.
+
+Pour plus d'information concernant ATAPI/CAM et le système SCSI, consultez les pages de manuel man:atapicam[4] et man:cam[4].
+
+[[creating-dvds]]
+== Création et utilisation de supports optiques (DVDs)
+
+=== Introduction
+
+Comparé au CD, le DVD est la génération technologique suivante de support optique de stockage de données. Un DVD peut contenir plus de données qu'un CD et est de nos jour le standard pour la publication de vidéos.
+
+Cinq formats physiques enregistrables peuvent être définis pour ce que nous appellerons un DVD enregistrable:
+
+* DVD-R: Ce fut le premier format DVD enregistrable disponible. La norme DVD-R est définie par le http://www.dvdforum.com/forum.shtml[Forum DVD]. Ce format n'est pas réinscriptible.
+* DVD-RW: C'est la version réinscriptible du standard DVD-R. Un DVD-RW peut supporter environ 1000 réécritures.
+* DVD-RAM: C'est également un format réinscriptible supporté par le Forum DVD. Un DVD-RAM peut être vu comme un disque dur extractible. Cependant, ce support n'est pas compatible avec la plupart des lecteurs DVD-ROM et DVD-Vidéo; seuls quelques graveurs de DVDs supportent le DVD-RAM. Consultez la <<creating-dvd-ram>> pour plus d'information sur l'utilisation d'un DVD-RAM.
+* DVD+RW: C'est un format réinscriptible défini par l' http://www.dvdrw.com/[Alliance DVD+RW]. Un DVD+RW supporte environ 1000 réécritures.
+* DVD+R: Ce format est la version non-réinscriptible du format DVD+RW.
+
+Un DVD enregistrable simple couche peut contenir jusqu'à 4 700 000 000 octets ce qui équivaut en fait à 4.38 Go ou 4485 Mo (1 kilo-octet représente 1024 octets).
+
+[NOTE]
+====
+Une différence doit être faite entre un support physique et son application. Par exemple un DVD-Vidéo est une organisation de fichiers particulière qui peut être écrite sur n'importe quel type de DVD enregistrable: DVD-R, DVD+R, DVD-RW etc. Avant de choisir le type de support, vous devez vous assurer que le graveur et le lecteur de DVD-Vidéo (lecteur de salon ou un lecteur de DVD-ROM sur un micro-ordinateur) sont compatibles avec le support.
+====
+
+=== Configuration
+
+Le programme man:growisofs[1] sera utilisé pour effectuer la gravure des DVDs. Cette commande fait partie des utilitaires dvd+rw-tools (package:sysutils/dvd+rw-tools[]). Les outils dvd+rw-tools supportent l'ensemble des supports DVD.
+
+Ces utilitaires utilisent le sous-système SCSI pour accéder aux périphériques, par conséquent le <<atapicam,support ATAPI/CAM>> doit être ajouté à votre noyau. Si votre graveur utilise l'interface USB, cet ajout est inutile et vous devriez lire la <<usb-disks>> sur la configuration de périphériques USB.
+
+Vous devez également activer l'accès aux périphériques ATAPI par DMA, cela peut être fait en ajoutant la ligne suivante au fichier [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+hw.ata.atapi_dma="1"
+....
+
+Avant de tenter d'utiliser les utilitaires dvd+rw-tools vous devriez consulter les http://fy.chalmers.se/~appro/linux/DVD+RW/hcn.html[notes de compatibilité matérielle des dvd+rw-tools] pour des informations concernant votre graveur de DVDs.
+
+[NOTE]
+====
+Si vous désirez une interface graphique, vous devriez jeter un oeil à K3b (package:sysutils/k3b[]) qui offre une interface conviviale à man:growisofs[1] et à d'autres outils de gravure.
+====
+
+=== Graver des DVDs de données
+
+La commande man:growisofs[1] est une interface à <<mkisofs,mkisofs>>, elle invoquera man:mkisofs[8] pour la création du système de fichiers et effectuera la gravure des données sur le DVD. Cela signifie que vous n'avez pas besoin de créer une image des données avant le processus de gravure.
+
+Pour écrire les données du répertoire [.filename]#/path/to/data#, utilisez la commande suivante:
+
+[source,bash]
+....
+# growisofs -dvd-compat -Z /dev/cd0 -J -R /path/to/data
+....
+
+Les options `-J -R` sont passées à man:mkisofs[8] pour la création du système de fichiers (dans le cas présent: un système de fichiers ISO 9660 avec les extensions Joliet et Rock Ridge), consultez la page de manuel de man:mkisofs[8] pour plus de détails.
+
+L'option `-Z` est utilisée pour la session d'écriture initiale dans tous les cas: multi-sessions ou pas. Le périphérique correspondant au graveur, _/dev/cd0_, doit être adapté en fonction de votre configuration. Le paramètre `-dvd-compat` provoquera la fermeture du disque, rien ne pourra être écrit à la suite de l'enregistrement. En retour cela devrait donner lieu à une plus grande compatibilité avec les lecteurs de DVD-ROMs.
+
+Il est également possible de graver une image de système de fichiers, par exemple pour graver l'image _imagefile.iso_, nous lancerons:
+
+[source,bash]
+....
+# growisofs -dvd-compat -Z /dev/cd0=imagefile.iso
+....
+
+La vitesse d'écriture devrait être détectée et positionnée automatiquement en fonction du support et du graveur utilisé. Si vous voulez forcer la vitesse de gravure, utilisez le paramètre `-speed=`. Pour plus d'informations, lisez la page de manuel de man:growisofs[1].
+
+=== Graver un DVD-Vidéo
+
+Un DVD-Vidéo est un système de fichiers particulier basé sur les spécifications IS0 9660 et micro-UDF (M-UDF). Le DVD-Vidéo présente également une arborescence de données spécifique, c'est la raison pour laquelle vous devez utiliser un programme particulier tel que package:multimedia/dvdauthor[] pour créer le DVD.
+
+Si vous disposez déjà d'une image du système de fichiers du DVD-Vidéo, gravez-la de la même façon que pour une autre image, reportez-vous aux sections précédentes pour un exemple. Si vous avez réalisé vous-même l'arborescence du DVD et que le résultat est dans, par exemple, le répertoire [.filename]#/path/to/video#, la commande suivante devrait être utilisée pour graver le DVD-Vidéo:
+
+[source,bash]
+....
+# growisofs -Z /dev/cd0 -dvd-video /path/to/video
+....
+
+L'option `-dvd-video` sera passée à man:mkisofs[8] et lui demandera de créer un système de fichiers de DVD-Vidéo. De plus, l'option `-dvd-video` implique l'option `-dvd-compat` de man:growisofs[1].
+
+=== Utiliser un DVD+RW
+
+Contrairement à un CD-RW, un DVD+RW vierge doit être formaté avant la première utilisation. Le programme man:growisofs[1] s'en chargera automatiquement quand cela sera nécessaire, ce qui est la méthode _recommandée_. Cependant vous pouvez utiliser la commande `dvd+rw-format` pour formater le DVD+RW:
+
+[source,bash]
+....
+# dvd+rw-format /dev/cd0
+....
+
+Vous devez effectuer cette opération qu'une seule fois, gardez à l'esprit que seuls des DVD+RW vierges doivent être formatés. Ensuite vous pouvez graver le DVD+RW de la manière vue dans les sections précédentes.
+
+Si vous voulez graver de nouvelles données (graver un système de fichiers totalement nouveau et pas juste ajouter des données) sur un DVD+RW, vous n'avez pas besoin de l'effacer, vous avez juste à récrire sur l'enregistrement précédent (en effectuant une nouvelle session initiale), comme ceci:
+
+[source,bash]
+....
+# growisofs -Z /dev/cd0 -J -R /path/to/newdata
+....
+
+Le format DVD+RW offre la possibilité d'ajouter facilement des données à un enregistrement précédent. L'opération consiste à fusionner une nouvelle session avec la session existante, ceci n'est pas une gravure multisession, man:growisofs[1] _augmentera_ le système de fichiers ISO 9660 présent sur le disque.
+
+Par exemple, si nous voulons ajouter des données à notre DVD+RW précédent, nous devons utiliser cela:
+
+[source,bash]
+....
+# growisofs -M /dev/cd0 -J -R /path/to/nextdata
+....
+
+Les mêmes options de man:mkisofs[8] utilisées lors de la gravure de la session initiale doivent être à nouveau utilisées lors des écritures ultérieures.
+
+[NOTE]
+====
+Vous pouvez ajouter l'option `-dvd-compat` si vous désirez une meilleure compatibilité avec les lecteurs de DVD-ROM. Dans le cas d'un DVD+RW cela ne vous empêchera pas de rajouter des données par la suite.
+====
+
+Si pour une quelconque raison vous voulez vraiment effacer le disque, faites ce qui suit:
+
+[source,bash]
+....
+# growisofs -Z /dev/cd0=/dev/zero
+....
+
+=== Utiliser un DVD-RW
+
+Un DVD-RW accepte deux formats de disque: le format séquentiel incrémental et le format "restricted overwrite". Par défaut les disques DVD-RW sont fournis sous le format séquentiel.
+
+Un DVD-RW vierge peut être directement gravé sans le besoin d'une opération de formatage préalable, cependant un DVD-RW non-vierge au format séquentiel doit être effacé avant de pouvoir y écrire une nouvelle session initiale.
+
+Pour effacer un DVD-RW en mode séquentiel, exécutez:
+
+[source,bash]
+....
+# dvd+rw-format -blank=full /dev/cd0
+....
+
+[NOTE]
+====
+Une opération d'effacement complète (`-blank=full`) prendra environ une heure avec un support 1x. Un effacement rapide peut être effectué en utilisant l'option `-blank` si le DVD-RW est destiné à être enregistré suivant le mode d'écriture Disk-At-Once (DAO). Pour écrire le DVD-RW suivant le mode DAO, utilisez la commande:
+
+[source,bash]
+....
+# growisofs -use-the-force-luke=dao -Z /dev/cd0=imagefile.iso
+....
+
+L'option `-use-the-force-luke=dao` ne devrait pas être nécessaire puisque man:growisofs[1] tente de détecter les supports effacés rapidement et engage une écriture DAO.
+
+En fait le mode "restricted overwrite" devrait être utilisé avec tout DVD-RW, ce format est plus flexible que le format séquentiel incrémental par défaut.
+====
+
+Pour écrire des données sur un DVD-RW en mode séquentiel, utilisez les mêmes instructions que pour tout autre format de DVD:
+
+[source,bash]
+....
+# growisofs -Z /dev/cd0 -J -R /path/to/data
+....
+
+Si vous voulez ajouter des données à votre enregistrement précédent, vous devrez utiliser la commande `-M` de man:growisofs[1]. Cependant, si vous effectuez un ajout de données sur un DVD-RW en mode séquentiel, une nouvelle session sera créée sur le disque avec pour résultat de donner naissance à un disque multi-sessions.
+
+Un DVD-RW dans le format "restricted overwrite" n'a pas besoin d'être effacé avant une nouvelle session initiale, vous avez juste à récrire sur le disque avec l'option `-Z`, ceci est similaire à un DVD+RW. Il est également possible d'augmenter un système de fichiers ISO 9660 existant écrit sur le disque de la même manière que pour un DVD+RW en utilisant l'option `-M`. Le résultat sera un DVD avec une seule session.
+
+Pour faire passer un DVD-RW dans le format "restricted overwrite", la commande suivante doit être utilisée:
+
+[source,bash]
+....
+# dvd+rw-format /dev/cd0
+....
+
+Pour revenir au format séquentiel, utilisez:
+
+[source,bash]
+....
+# dvd+rw-format -blank=full /dev/cd0
+....
+
+=== Multi-sessions
+
+Très peu de lecteurs de DVD-ROMs supportent les DVDs multi-sessions, ils ne liront, dans le meilleur des cas, que la première session. Les DVD+R, DVD-R et DVD-RW en mode séquentiel peuvent accepter de multiples sessions, la notion de multiples sessions n'existe pas pour les formats DVD+RW et DVD-RW en mode "restricted overwrite".
+
+Utiliser la commande suivante après une session initiale (non fermée) sur un DVD+R, DVD-R, ou DVD-RW en mode séquentiel, ajoutera une nouvelle session sur le disque:
+
+[source,bash]
+....
+# growisofs -M /dev/cd0 -J -R /path/to/nextdata
+....
+
+L'utilisation de cette ligne de commande avec un DVD+RW ou un DVD-RW en mode "restricted overwrite" aura pour effet d'ajouter les données en fusionnant la nouvelle session avec celle déjà présente. Le résultat sera un disque mono-session. C'est la méthode utilisée pour ajouter des données sur ces médias après une écriture initiale.
+
+[NOTE]
+====
+De l'espace sur le médium est utilisé entre chaque session pour la fin et le début des sessions. Par conséquent, tout ajout de données devrait se faire suivant une quantité importante de données pour optimiser l'espace sur le disque. Le nombre de sessions est limité à 154 pour un DVD+R, environ 2000 pour un DVD-R, et 127 pour un DVD+R double couche.
+====
+
+=== Pour plus d'informations
+
+Pour obtenir plus d'informations sur un DVD, la commande `dvd+rw-mediainfo /dev/cd0` peut être exécutée avec le disque dans le lecteur.
+
+Plus d'informations sur les utilitaires dvd+rw-tools peuvent être trouvées dans la page de manuel de man:growisofs[1], sur le http://fy.chalmers.se/~appro/linux/DVD+RW/[site Web de dvd+rw-tools] et dans les archives de la http://lists.debian.org/cdwrite/[liste de diffusion cdwrite].
+
+[NOTE]
+====
+La sortie de la commande `dvd+rw-mediainfo` sur le résultat de la gravure ou le disque posant problème est obligatoire avec tout rapport de problème. Sans cette sortie, il sera quasiment impossible de vous aider.
+====
+
+[[creating-dvd-ram]]
+=== Utiliser un disque DVD-RAM
+
+==== Configuration
+
+Les graveurs de DVD-RAM sont fournis soit avec une interface SCSI soit une interface ATAPI. Dans le cas des périphériques ATAPI, l'accès DMA doit être activé, cela peut être fait en ajoutant la ligne suivante au fichier [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+hw.ata.atapi_dma="1"
+....
+
+==== Préparer le disque
+
+Comme précisé dans l'introduction de cette section, un DVD-RAM peut être vu comme un disque dur extractible. Comme tout autre disque dur le DVD-RAM doit être "préparé" avant la première utilisation. Dans l'exemple, l'intégralité de l'espace sur le disque sera utilisé par un système de fichiers UFS2 standard:
+
+[source,bash]
+....
+# dd if=/dev/zero of=/dev/acd0 count=2
+# bsdlabel -Bw acd0
+# newfs /dev/acd0
+....
+
+Le périphérique DVD [.filename]#acd0# doit être modifié en fonction de la configuration.
+
+==== Utiliser le disque
+
+Une fois les opérations précédentes effectuées sur le DVD-RAM, il peut être monté comme un disque dur classique:
+
+[source,bash]
+....
+# mount /dev/acd0 /mnt
+....
+
+Après cela, on pourra lire et écrire sur le DVD-RAM.
+
+[[floppies]]
+== Création et utilisation de disquettes
+
+Sauvegarder des données sur disquette est parfois utile, par exemple quand on a pas d'autre support de stockage amovible de disponible ou quand on doit transférer de petites quantités de données sur un autre ordinateur.
+
+Cette section expliquera comment utiliser des disquettes sous FreeBSD. Elle couvrira principalement le formatage et l'utilisation de disquettes DOS de 3.5pouces, mais les concepts exposés sont identiques pour d'autres formats de disquettes.
+
+=== Formater des disquettes
+
+==== Le périphérique
+
+On accède aux disquettes par l'intermédiaire d'entrées dans [.filename]#/dev#, comme pour tout autre périphérique. Pour accéder directement à la disquette, utilisez simplement [.filename]#/dev/fdN#.
+
+==== Le formatage
+
+Une disquette doit subir un formatage bas niveau avant d'être utilisable. Il est généralement réalisé par le constructeur, mais le formatage est une bonne manière de contrôler l'intégrité du support. Bien qu'il soit possible de forcer une plus grande (ou plus petite) capacité, 1440Ko est celle pour laquelle sont conçues la plupart des disquettes.
+
+Pour effectuer un formatage bas niveau d'une disquette vous devez utiliser man:fdformat[1]. L'utilitaire attend le nom du périphérique en argument.
+
+Notez tout message d'erreur, sachant que cela peut aider à déterminer si la disquette est bonne ou défectueuse.
+
+===== Formatage des disquettes
+
+Utilisez un des périphériques [.filename]#/dev/fdN.size#, pour formater la disquette. Insérez une disquette 3.5pouces dans votre lecteur et tapez:
+
+[source,bash]
+....
+# /usr/sbin/fdformat -f 1440 /dev/fd0
+....
+
+=== Le label de disque
+
+Après le formatage bas niveau du disque, vous devrez y placer un label de disque. Ce label sera détruit plus tard, mais il est nécessaire au système pour déterminer par la suite la taille et la géométrie du disque.
+
+Le nouveau label de disque prendra l'intégralité du disque, et contiendra l'information correcte sur la géométrie de la disquette. Les différentes géométries possibles pour le label sont listées dans [.filename]#/etc/disktab#.
+
+Vous pouvez maintenant exécuter man:bsdlabel[8] de la façon suivante:
+
+[source,bash]
+....
+# /sbin/bsdlabel -B -w /dev/fd0 fd1440
+....
+
+=== Le système de fichiers
+
+La disquette est maintenant fin prête pour un formatage haut niveau. Cette opération placera un nouveau système de fichiers sur la disquette, qui permettra à FreeBSD d'écrire et de lire sur le disque. Après la création du nouveau système de fichiers, le label disque est détruit, aussi si vous désirez reformater le disque, vous devrez recréer le label de disque à nouveau.
+
+Le système de fichiers de la disquette peut soit être de l'UFS soit utiliser le système FAT. Le système FAT est généralement un meilleur choix pour les disquettes.
+
+Pour placer un nouveau système de fichier sur la disquette faites ceci:
+
+[source,bash]
+....
+# /sbin/newfs_msdos /dev/fd0
+....
+
+La disquette est maintenant prête à être utilisée.
+
+=== Utilisation de la disquette
+
+Pour utiliser la disquette, montez-la avec man:mount_msdosfs[8]. On peut également utiliser package:emulators/mtools[] du catalogue des logiciels portés.
+
+[[backups-tapebackups]]
+== Créer et utiliser les bandes magnétiques
+
+Les principaux types de bandes sont les 4mm, 8mm, QIC, les mini-cartouches et les DLTs.
+
+[[backups-tapebackups-4mm]]
+=== Bandes 4mm (DDS: "Digital Data Storage")
+
+Les bandes 4mm sont en train de remplacer les bandes QIC comme le format usuel de sauvegarde pour les stations de travail. Cette tendance s'est accélérée quand Conner a racheté Archive, un des leaders de la fabrication des lecteurs QIC, et a arrêté la production de ces derniers. Les lecteurs 4mm sont petits et silencieux mais n'ont pas la réputation de fiabilité des lecteurs 8mm. Les cartouches sont moins coûteuse et plus petites (3 x 2 x 0.5 pouces, 76 x 51 x 12 mm) que les cartouches 8mm. Les cartouches 4mm, tout comme les 8mm, ont une durée de vie faible car elles utilisent un procédé de lecture/écriture en hélice.
+
+Le débit de ces lecteurs va de ~150 Ko/s à ~500 Ko/s au maximum. Leur capacité de varie de 1.3 Go à 2.0 Go. La compression matérielle, disponible sur la plupart des lecteurs, double approximativement leur capacité. Les unités multi-lecteurs peuvent avoir jusqu'à 6 lecteurs dans une seule tour avec changement automatique de bande. La capacité totale atteint 240 Go.
+
+Le standard DDS-3 supporte maintenant des capacités de bande jusqu'à 12 Go (ou 24 Go compressés).
+
+Les lecteurs 4mm, comme les lecteurs 8mm, utilisent un procédé de lecture/écriture en hélice. Tous les avantages et les inconvénients de ce procédé s'appliquent aux deux types de lecteurs.
+
+Les bandes doivent être changées après 2000 utilisations ou 100 sauvegardes complètes.
+
+[[backups-tapebackups-8mm]]
+=== Bandes 8mm (Exabyte)
+
+Les unités de bandes 8mm sont les lecteurs de bandes SCSI les plus courant; c'est le meilleur choix de bandes amovibles. Presque chaque site dispose d'une unité Exabyte 2 Go 8mm. Les lecteurs 8mm sont fiables, pratiques et silencieux. Les cartouches sont bon marché et d'encombrement faible (4.8 x 3.3 x 0.6 pouces; 122 x 84 x 15 mm). Un des inconvénients de la bande 8mm est la durée de vie relativement courte des bandes et des têtes de lectures en raison de la grande vitesse de défilement de la bande devant les têtes.
+
+Leur débit va de ~250 Ko/s à ~500 Ko/s. Leur capacité commence à 300 Mo jusqu'à 7 Go. La compression matérielle, disponible sur la plupart des lecteurs, double approximativement la capacité. Ces lecteurs sont disponibles sous forme d'unité simple ou multiple accueillant 6 lecteurs et 120 bandes. Les bandes sont changées automatiquement par l'unité. Ils peuvent gérer une capacité de stockage de plus de 840 Go.
+
+Le lecteur Exabyte "Mammoth" supporte 12 Go sur une seule bande (24 Go compressé) et coûte approximativement le double d'un lecteur classique.
+
+L'enregistrement des données sur la bande utilise un procédé en hélice, les têtes sont positionnées en biais par rapport à la bande (environ 6 degrés). La bande fait un angle de 270 degrés avec le cylindre sur lequel se trouvent les têtes. Ce cylindre tourne en même temps que la bande défile. Il en résulte donc une grande densité de données et des pistes très serrées qui vont de biais d'un bord à l'autre de la bande.
+
+[[backups-tapebackups-qic]]
+=== QIC
+
+Les bandes et les lecteurs QIC-150 sont, peut-être, le format le plus courant. Les lecteurs QIC sont les moins chers des supports de sauvegarde "sérieux". Leur inconvénient par contre est le coût des bandes. Les bandes QIC sont chères comparées aux bandes 8mm ou 4mm, jusqu'à 5 fois le coût au Go. Mais, si une demi-douzaine de bandes vous suffit, le format QIC peut être le bon choix. QIC est le format le _plus_ répandu. Chaque site dispose d'un lecteur QIC d'une densité ou d'une autre. C'est là la difficulté, il existe de nombreuses densités pour des bandes physiquement semblables (parfois même identiques). Les lecteurs QIC ne sont pas silencieux. Ces lecteurs se positionnent bruyamment avant d'enregistrer des données et ont les entend clairement lors de lecture, écriture ou recherche. Les bandes QIC sont volumineuses: 6 x 4 x 0.7 pouces (152 x 102 x 17 mm).
+
+Leur débit va de ~150 Ko/s à ~500 Ko/s. Leur capacité varie de 40 Mo à 15 Go. La compression matérielle est disponible sur de nombreux lecteurs récents. Les lecteurs QIC sont de moins en moins utilisés, ils sont supplantés par les lecteurs DAT.
+
+Les données sont enregistrées sur des pistes sur la bande. Les pistes sont parallèles à la bande et vont d'une extrémité à l'autre. Le nombre de piste, et par conséquent la largeur des pistes, varie avec la capacité de la bande. La plupart des nouveaux lecteurs fournissent au moins une compatibilité descendante en lecture (mais aussi en écriture). Le format QIC a une bonne réputation de sécurité des données (la mécanique est plus simple et plus robuste que les lecteurs à système en hélice).
+
+Les bandes devraient être changée après 5000 sauvegardes.
+
+[[backups-tapebackups-dlt]]
+=== DLT
+
+Les DLT ont le taux de transfert le plus élevé de tous les types de lecteurs décrits ici. La bande d'1/2" (12.5mm) est contenue dans une seule cartouche (4 x 4 x 1 pouces; 100 x 100 x 25 mm). La cartouche est munie d'une trappe basculante le long d'un côté de la cartouche. Le lecteur ouvre cette trappe pour saisir l'amorce de la bande. Cette amorce comporte une découpe ovale que le lecteur utilise pour "crocheter" la bande. La bobine d'entraînement est située dans le lecteur. Tous les autres types de cartouches décrits ici (les bandes 9 pistes sont la seule exception) ont les bobines de stockage et d'entraînement dans la cartouche elle-même.
+
+Leur débit est d'environ 1.5 Mo/s, trois fois celui des lecteurs 4mm, 8mm, ou QIC. La capacité d'une bande varie de 10 Go à 20 Go pour une unité simple. Les lecteurs sont disponibles en unités multi-bandes avec changeurs et multi-lecteurs contenant de 5 à 900 bandes et 1 à 20 lecteurs, fournissant une capacité de stockage allant de 50 Go à 9 TO.
+
+Avec la compression, le format DLT type IV supporte jusqu'à une capacité de 70 Go.
+
+Les données sont enregistrées sur la bande sur des pistes parallèles à la direction de défilement (comme pour les bandes QIC). Deux pistes sont écrites à la fois. La durée de vie des têtes de lecture/écriture est relativement longue; une fois que la bande s'arrête, il n'y a pas de déplacement des têtes par rapport à la bande.
+
+=== AIT
+
+AIT est le nouveau format de Sony, il peut supporter jusqu'à 50 Go par bande (avec compression). Les bandes contiennent un circuit mémoire qui contient un index du contenu de la bande. Cet index peut être lu rapidement par le lecteur pour déterminer l'emplacement de fichiers sur la bande, au lieu des nombreuses minutes nécessaires aux autres types de bande. Des programmes comme SAMS:Alexandria peuvent contrôler quarante ou plus ensemble de bandes AIT, communiquant directement avec le circuit mémoire de la bande pour en afficher le contenu à l'écran, déterminer quels fichiers ont été sauvegardé sur quelle bande, localiser la bonne bande, la charger, et en restaurer les données.
+
+Les ensembles de ce type reviennent aux alentour des 20000 dollars, les rendant inaccessibles à l'amateur éclairé.
+
+=== Utiliser une bande neuve pour la première fois
+
+La première fois que vous essayez de lire ou d'écrire sur une bande vierge, l'opération échoue. Les messages affichés par la console devraient être du type:
+
+[source,bash]
+....
+sa0(ncr1:4:0): NOT READY asc:4,1
+sa0(ncr1:4:0):  Logical unit is in process of becoming ready
+....
+
+La bande ne contient pas de bloc d'identification (bloc numéro 0). Tous les lecteurs QIC depuis l'adoption du standard QIC-525 écrivent un bloc d'identification sur la bande. Il y a alors deux solutions:
+
+* `mt fsf 1` fait écrire au lecteur un bloc d'identification sur la bande.
+* Utiliser le bouton en face avant pour éjecter la bande.
++ 
+Ré-insérer la bande et utiliser man:dump[8] pour écrire dessus.
++ 
+man:dump[8] produira l'erreur `DUMP: End of tape detected` et la console affichera: `HARDWARE FAILURE info:280 asc:80,96`.
++ 
+Rembobiner la bande avec: `mt rewind`.
++ 
+Les manipulations ultérieures sur la bande fonctionneront.
+
+[[backups-floppybackups]]
+== Sauvegardes sur disquettes
+
+[[floppies-using]]
+=== Puis-je utiliser des disquettes pour la sauvegarde des mes données?
+
+Les disquettes ne sont pas des supports adaptés à la réalisation de sauvegardes étant donné que:
+
+* Le support n'est pas fiable, spécialement sur de longues périodes de temps.
+* Les opérations de sauvegarde et de restauration sont très lentes.
+* Elles ont une capacité très limitée (le jour où l'on pourra sauvegarder l'intégralité d'un disque dur sur une douzaine de disquette n'est pas encore arrivé).
+
+Cependant, si vous n'avez pas d'autres méthodes pour sauvegarder vos données alors les disquettes sont mieux que pas de sauvegardes du tout.
+
+Si vous devez utiliser les disquettes, alors assurez-vous que vous en utiliser des disquettes de bonne qualité. Les disquettes qui traînent sur le bureau depuis quelques années sont un mauvais choix. Idéalement utilisez de des disquettes neuves en provenance d'un fabricant renommé.
+
+[[floppies-creating]]
+=== Alors, comment je sauvegarde mes données sur disquettes?
+
+La meilleur façon de sauvegarder sur disquette est d'utiliser la commande man:tar[1] avec l'option `-M` (volume multiple), qui autorise la répartition des sauvegardes sur plusieurs disquettes.
+
+Pour sauvegarder tous les fichiers du répertoire courant et des sous-répertoires (en tant que `root`):
+
+[source,bash]
+....
+# tar Mcvf /dev/fd0 *
+....
+
+Quand la première disquette est pleine man:tar[1] vous réclamera d'introduire le volume suivant (parce que man:tar[1] est indépendant du support il parle en terme de volume; dans notre contexte cela signifie disquette).
+
+[source,bash]
+....
+Prepare volume 2 for /dev/fd0 and hit return:
+....
+
+Cette opération est répétée (avec incrémentation du numéro de volume) jusqu'à ce que les fichiers spécifiés soient sauvegardés.
+
+[[floppies-compress]]
+=== Puis-je sauvegarder mes sauvegardes?
+
+Malheureusement, man:tar[1] ne permettra pas l'utilisation de l'option `-z` pour les archives multi-volumes. Vous pourrez, bien sûr, utiliser man:gzip[1] sur tous les fichiers, les archiver avec man:tar[1] sur disquettes, puis décompresser les fichiers avec man:gunzip[1]!
+
+[[floppies-restoring]]
+=== Comment puis-je restaurer mes sauvegardes?
+
+Pour restaurer une archive complète utiliser:
+
+[source,bash]
+....
+# tar Mxvf /dev/fd0
+....
+
+Vous pouvez utiliser deux manières pour restaurer uniquement certains fichiers. Tout d'abord, vous pouvez commencer avec la première disquette et utiliser:
+
+[source,bash]
+....
+# tar Mxvf /dev/fd0 nomdufichier
+....
+
+man:tar[1] vous demandera d'insérer les disquettes suivantes jusqu'à trouver le fichier recherché.
+
+Alternativement, si vous savez sur quelle disquette le fichier se trouve alors vous pouvez simplement insérer cette disquette et utiliser la commande précédente. Notez que si le premier fichier sur la disquette est la suite d'un fichier de la précédente disquette alors man:tar[1] vous avertira qu'il ne peut le restaurer, même si vous ne le voulez pas!
+
+[[backup-strategies]]
+== Stratégies de sauvegarde
+
+La première chose a faire lors de la mise en place d'un plan de sauvegarde est de s'assurer que l'ensemble des problèmes suivants sera couvert:
+
+* Panne d'un disque
+* Suppression accidentelle de fichiers
+* Corruption aléatoire de fichiers
+* Destruction complète de la machine (par exemple suite à un incendie), avec destruction des sauvegardes stockées sur le même site.
+
+Il est parfaitement possible que certains systèmes utilisent une technique différente pour chacun des problèmes évoqués ci-dessus. En dehors des systèmes personnels avec des données peu importantes, il est peu probable qu'une seule technique puisse répondre à l'ensemble de ces risques.
+
+Quelques-unes des techniques à notre disposition sont:
+
+* Des archives de tout le système, sauvegardées sur un support fiable et à l'extérieur du site. C'est une protection réelle contre tous les problèmes précédemment cités, mais cette méthode est lente et peu pratique lors des restaurations. Vous pouvez conserver des copies de ces sauvegardes sur site et/ou en ligne, mais il y aura toujours des difficultés lors de la restauration des fichiers, en particulier pour les utilisateurs sans droits.
+* Instantané de systèmes de fichiers. Cet outil n'est vraiment utile que dans le cas d'une suppression accidentelle de fichiers, mais il l'est _vraiment_ dans ce cas; de plus cette méthode est rapide et simple à employer.
+* Copies de l'intégralité des systèmes de fichiers et/ou des disques (par une utilisation régulière de man:rsync[1] sur l'intégralité de la machine par exemple). C'est le procédé en général le plus utile dans le cas des réseaux avec des besoins spécifiques. Dans le cas d'une protection contre les pannes disques, cette méthode est normalement inférieure à un système RAID. Pour la restauration de fichiers supprimés accidentellement, c'est comparable aux instantanés UFS, c'est plus une question de préférence.
+* RAID. Réduit ou évite les périodes où le système est inutilisable quand un disque tombe en panne. Avec l'inconvénient d'avoir à faire face à des pannes disques plus fréquentes (parce que vous utilisez plus de disques), mais avec cependant une moindre urgence.
+* Le contrôle des empreintes de fichiers. L'utilitaire man:mtree[8] est très utile dans ce cas. Bien que cela ne soit pas une technique de sauvegarde des données, ce contrôle aidera à garantir que vous serez averti quand vous devrez ressortir vos sauvegardes. C'est tout particulièrement important dans le cas de sauvegardes hors site, et ces empreintes devraient être vérifiées régulièrement.
+
+Il est relativement simple de trouver d'autres solutions, nombreuses sont celles qui sont des variations des techniques présentées ci-dessus. Des besoins spécifiques conduiront généralement à des solutions spécifiques (par exemple sauvegarder une base de données durant son utilisation demande une étape intermédiaire spécifique au logiciel de base de données). L'important est de connaître les dangers contre lesquels vous désirez vous protéger, et comment vous ferez face à chacun d'entre eux.
+
+[[backup-basics]]
+== Sauvegardes
+
+Les trois principaux programmes de sauvegarde sont: man:dump[8], man:tar[1], et man:cpio[1].
+
+=== Dump et Restore
+
+man:dump[8] et man:restore[8] sont les programmes de sauvegarde traditionnels d'UNIX(R). Ils opèrent sur le disque comme sur une suite de blocs disque, en dessous du niveau d'abstraction que constituent les fichiers, liens et répertoires créés par les systèmes de fichiers. Le programme man:dump[8] sauvegarde l'intégralité d'un système de fichiers d'un périphérique. Il est incapable de sauvegarder seulement une partie d'un système de fichiers ou une arborescence de répertoires s'étalant sur plus d'un système de fichiers. Le programme man:dump[8] n'écrit pas de fichiers ou des répertoires sur la bande, mais écrit plutôt les blocs de données brutes dont sont constitués les fichiers et les répertoires.
+
+[NOTE]
+====
+Si vous utilisez man:dump[8] sur votre répertoire racine, vous ne sauvegarderez pas [.filename]#/home#, [.filename]#/usr# ou beaucoup d'autres répertoires puisque que ces derniers sont généralement des points de montages pour d'autres systèmes de fichiers ou des liens symboliques vers ces systèmes de fichiers.
+====
+
+L'utilitaire man:dump[8] a quelques particularités datant de ses débuts sous la version 6 d'ATT UNIX (circa 1975). Les paramètres par défaut conviennent aux bandes 9 pistes (6250 bpi), et non aux supports à haute densité d'aujourd'hui (jusqu'à 62182 ftpi). Il faut surcharger ces valeurs par défaut sur la ligne de commande pour utiliser la capacité des bandes actuelles.
+
+Il est également possible de sauvegarder les données par l'intermédiaire d'un réseau sur un lecteur de bande se trouvant sur une autre ordinateur à l'aide des commandes `rdump` et `rrestore`. Ces deux programmes utilisent man:rcmd[3] et man:ruserok[3] pour accéder à l'unité de bandes distante. Cependant, l'utilisateur effectuant une sauvegarde doit être présent dans le fichier [.filename]#.rhosts# sur la machine distante. Les arguments de man:rdump[8] et man:rrestore[8] doivent être compatibles avec une utilisation sur la machine distante. Quand on sauvegarde une machine FreeBSD sur un lecteur Exabyte installé sur un ordinateur Sun appelé `komodo`, utilisez:
+
+[source,bash]
+....
+# /sbin/rdump 0dsbfu 54000 13000 126 komodo:/dev/nsa8 /dev/da0a 2>&1
+....
+
+Attention: il y a des conséquences pour la sécurité à utiliser l'authentification [.filename]#.rhosts#. Evaluez soigneusement votre situation.
+
+Il est également possible d'utiliser man:dump[8] et man:restore[8] d'une façon plus sécurisée sur man:ssh[1].
+
+.Utiliser man:dump[8] sur ssh
+[example]
+====
+
+[source,bash]
+....
+# /sbin/dump -0uan -f - /usr | gzip -2 | ssh -c blowfish \
+          targetuser@targetmachine.example.com dd of=/mybigfiles/dump-usr-l0.gz
+....
+
+====
+
+Ou en utilisant une fonction interne de `dump`, positionner la variable d'environnement `RSH`:
+
+.Utiliser `dump` sur ssh avec la variable `RSH` positionnée
+[example]
+====
+
+[source,bash]
+....
+# RSH=/usr/bin/ssh /sbin/dump -0uan -f targetuser@targetmachine.example.com:/dev/sa0 /usr
+....
+
+====
+
+=== `tar`
+
+Le programme man:tar[1] date aussi de la Version 6 d'ATT UNIX (circa 1975). man:tar[1] travaille en coopération avec le système de fichiers; il permet d'écrire des fichiers et des répertoires sur bandes. man:tar[1] ne supporte pas toutes les options permises par man:cpio[1], mais ne demande pas l'inhabituelle concaténation de commandes qu'utilise man:cpio[1]
+
+Sous FreeBSD 5.3 et versions suivantes, GNU `tar` et la version par défaut `bsdtar` sont disponibles. La version GNU peut être invoquée avec la commande `gtar`. Elle supporte les sauvegardes sur des périphériques distants et cela avec la même syntaxe que man:rdump[8]. Pour sauvegarder avec man:tar[1] sur une unité Exabyte connectée sur une machine Sun appelée `komodo`, utilisez:
+
+[source,bash]
+....
+# /usr/bin/gtar cf komodo:/dev/nsa8 . 2>&1
+....
+
+La même opération peut être effectuée avec `bsdtar` en utilisant un tuyau et man:rsh[1] pour envoyer les données sur un lecteur de bande distant:
+
+[source,bash]
+....
+# tar cf - . | rsh hostname dd of=tape-device obs=20b
+....
+
+Si vous êtes inquiet au sujet de la sécurité de sauvegardes par réseau, vous devriez utiliser la commande man:ssh[1] à la place de man:rsh[1].
+
+=== `cpio`
+
+man:cpio[1] est le programme UNIX(R) original pour l'échange de fichiers par bandes magnétiques. man:cpio[1] dispose d'options (parmi beaucoup d'autres) pour intervertir les octets, utiliser de nombreux différents formats, et envoyer les données à d'autres programmes. Cette dernière caractéristique fait de man:cpio[1] un excellent choix pour les supports d'installation. man:cpio[1] ne sait pas parcourir une arborescence de répertoires et il faut lui passer la liste des fichiers via [.filename]#stdin#.
+
+man:cpio[1] ne supporte pas les sauvegardes par le réseau. Vous pouvez utiliser un tuyau et man:rsh[1] pour envoyer les données sur un lecteur de bande distant:
+
+[source,bash]
+....
+# for f in directory_list; do
+find $f >> backup.list
+done
+# cpio -v -o --format=newc < backup.list | ssh user@host "cat > backup_device"
+....
+
+Où _directory_list_ est la liste des répertoires que vous désirez sauvegarder, _user_@_host_ est l'ensemble utilisateur/nom de machine qui effectuera les sauvegardes, et _backup_device_ représente l'unité où seront écrites les sauvegardes (e.g., [.filename]#/dev/nsa0#).
+
+=== `pax`
+
+man:pax[1] est la réponse IEEE/POSIX(R) à man:tar[1] et man:cpio[1]. Au fil des ans les différentes versions de man:tar[1] et man:cpio[1] sont devenues légèrement incompatibles. Aussi, plutôt que de batailler pour les standardiser entièrement, POSIX(R) a défini un nouvel utilitaire d'archivage. man:pax[1] tente de lire et d'écrire nombre des divers formats man:tar[1] et man:cpio[1], en plus de ses propres nouveaux formats. Son ensemble de commandes ressemble plus à celui de man:cpio[1] qu'à celui de man:tar[1].
+
+[[backups-programs-amanda]]
+=== Amanda
+
+Amanda (Advanced Maryland Network Disk Archiver-Système Avancé d'Archivage de Disques en Réseau du Maryland) est un système d'archivage client/serveur plutôt qu'un simple programme. Un serveur Amanda archivera sur une seule unité de bandes un nombre quelconque d'ordinateurs disposant de clients Amanda et un accès réseau au serveur Amanda. Un problème classique sur les sites qui ont de nombreux disques volumineux est que le temps nécessaire pour sauvegarder directement les données sur la bande dépasse le temps alloué à cette tâche. Amanda résout ce problème. Amanda peut utiliser un "disque intermédiaire" pour sauvegarder plusieurs systèmes de fichiers à la fois. Amanda des "jeux d'archive": un ensemble de bandes utilisé pour une période donnée pour créer une sauvegarde complète de tous les systèmes de fichiers listé dans le fichier de configuration d'Amanda. Le "jeu d'archive" contient également les sauvegardes nocturnes incrémentales (ou différentielles) de tous les systèmes de fichiers. Pour restaurer une système de fichiers endommagé, il faut la sauvegarde complète la plus récente et les sauvegardes incrémentales.
+
+Le fichier de configuration permet un contrôle en finesse des sauvegardes et du trafic réseau qu'Amanda génère. Amanda utilisera n'importe quel des programmes de sauvegarde décrits plus haut pour écrire les données sur bande. Amanda est disponible sous forme de logiciel porté ou de logiciel pré-compilé, il n'est pas installé par défaut.
+
+=== Ne rien faire
+
+"Ne rien faire" n'est pas un logiciel, mais c'est la stratégie de sauvegarde la plus utilisée. Il n'y a aucun investissement initial. Il n'y a pas de de planification des sauvegardes à suivre. Juste dire non. Si quelque chose arrive à vos données, souriez et débrouillez-vous!
+
+Si votre temps et vos données ne valent pas grand chose, alors "Ne rien faire" est le programme de sauvegarde le mieux adapté à votre ordinateur. Mais prenez garde, UNIX(R) est un outil utile, et vous pouvez vous rendre compte au bout de six mois que vous disposez d'une collection de fichiers qui vous sont utiles.
+
+"Ne rien faire" est la bonne méthode de sauvegarde pour [.filename]#/usr/obj# et les autres répertoires qui peuvent facilement être recréés par votre ordinateur. Un exemple est les fichiers qui constituent la version HTML ou PostScript(R) de ce manuel. Ces fichiers ont été générés à partir de fichiers SGML. Faire des sauvegardes des fichiers HTML ou PostScript(R) n'est pas nécessaire. Les fichiers source SGML sont sauvegardés régulièrement.
+
+=== Quel est le meilleur programme de sauvegarde?
+
+man:dump[8] _Point._ Elizabeth D. Zwicky a soumis à rude épreuve tous les programmes de sauvegarde dont nous avons parlé. Le choix de man:dump[8] s'impose pour préserver toutes vos données et les particularités des systèmes de fichiers UNIX(R). Elizabeth a créé des systèmes de fichiers avec une grande variété de particularités inhabituelles (et quelques unes pas tellement inhabituelles) et a testé chacun des programmes en faisant une sauvegarde et une restauration de ces systèmes de fichiers. Parmi les spécificités testées: fichiers avec des trous, fichiers avec des trous et des blocs de caractères "null", fichiers dont les noms comportent des caractères inhabituels, les fichiers illisibles ou impossible à modifier, les périphériques, fichiers dont la taille change pendant la sauvegarde, fichiers créés ou détruits en cours de sauvegarde et bien plus. Elle a présenté les résultats de ces tests au LISA V en Octobre 1991. Voir les http://berdmann.dyndns.org/zwicky/testdump.doc.html[tests d'endurance des programmes de sauvegarde et d'archivage].
+
+=== Procédure de restauration d'urgence
+
+==== Avant le désastre
+
+Il y a quatre étapes à mettre en oeuvre en prévision d'un désastre éventuel.
+
+Tout d'abord, imprimez le label de chacun de vos disques (par exemple `bsdlabel da0 | lpr`), votre table des systèmes de fichiers ([.filename]#/etc/fstab#) et tous les messages de démarrage, en deux exemplaires.
+
+Deuxièmement, vérifiez que vos disquettes de démarrage et de reprise d'urgence ([.filename]#boot.flp# et [.filename]#fixit.flp#) incluent tous vos périphériques. La méthode la plus simple pour vérifier est de redémarrer avec la disquette de démarrage dans le lecteur et contrôler les messages de démarrage. Si tous vos périphériques sont listés et opérationnels, passez à la troisième étape.
+
+Sinon, vous devez créer deux disquettes de démarrage sur-mesure avec un noyau qui puisse monter tous vos disques et accéder à votre unité de bandes. Ces disquettes doivent contenir: man:fdisk[8], man:bsdlabel[8], man:newfs[8], man:mount[8], et le programme de sauvegarde que vous utilisez. L'édition de liens de ces programmes doit être statique. Si vous utilisez man:dump[8], la disquette doit contenir man:restore[8].
+
+Troisièmement, faites régulièrement des sauvegardes sur bandes. Toutes les modifications effectuées après votre dernière sauvegarde peuvent irrémédiablement perdues. Protégez vos bandes de sauvegarde en écriture.
+
+Quatrièmement, testez les disquettes (soit [.filename]#boot.flp# et [.filename]#fixit.flp# soit les deux disquettes sur-mesure que vous avez créées à la seconde étape) et vos bandes de sauvegarde. Prenez note de la procédure. Conservez ces notes avec la disquette de démarrage, les impressions et les bandes de sauvegarde. Vous serez si préoccupé quand vous devrez restaurer que ces notes peuvent vous éviter de détruire vos bandes de sauvegarde (Comment? Au lieu de `tar xvf /dev/sa0`, vous pourriez taper accidentellement `tar cvf /dev/sa0`, ce qui écraserait votre bande de sauvegarde).
+
+Par mesure de sécurité, créez une disquette de démarrage et deux bandes de sauvegarde à chaque fois. Conservez-les dans un lieu éloigné. Un endroit éloigné n'est PAS le sous-sol du même bâtiment. Un certain nombre de compagnies du World Trade Center l'ont appris à leurs dépends. Un endroit éloigné doit être physiquement séparé de vos ordinateurs et de vos disques par une distance significative.
+
+.Procédure de création d'une disquette de démarrage
+[example]
+====
+[.programlisting]
+....
+#!/bin/sh
+#
+# create a restore floppy
+#
+# format the floppy
+#
+PATH=/bin:/sbin:/usr/sbin:/usr/bin
+
+fdformat -q fd0
+if [ $? -ne 0 ]
+then
+	 echo "Bad floppy, please use a new one"
+	 exit 1
+fi
+
+# place boot blocks on the floppy
+#
+bsdlabel -w -B /dev/fd0c fd1440
+
+#
+# newfs the one and only partition
+#
+newfs -t 2 -u 18 -l 1 -c 40 -i 5120 -m 5 -o space /dev/fd0a
+
+#
+# mount the new floppy
+#
+mount /dev/fd0a /mnt
+
+#
+# create required directories
+#
+mkdir /mnt/dev
+mkdir /mnt/bin
+mkdir /mnt/sbin
+mkdir /mnt/etc
+mkdir /mnt/root
+mkdir /mnt/mnt			# for the root partition
+mkdir /mnt/tmp
+mkdir /mnt/var
+
+#
+# populate the directories
+#
+if [ ! -x /sys/compile/MINI/kernel ]
+then
+	 cat &lt;&lt; EOM
+The MINI kernel does not exist, please create one.
+Here is an example config file:
+#
+# MINI - A kernel to get FreeBSD onto a disk.
+#
+machine         "i386"
+cpu             "I486_CPU"
+ident           MINI
+maxusers        5
+
+options         INET                    # needed for _tcp _icmpstat _ipstat
+                                        #            _udpstat _tcpstat _udb
+options         FFS                     #Berkeley Fast File System
+options         FAT_CURSOR              #block cursor in syscons or pccons
+options         SCSI_DELAY=15           #Be pessimistic about Joe SCSI device
+options         NCONS=2                 #1 virtual consoles
+options         USERCONFIG              #Allow user configuration with -c XXX
+
+config          kernel	root on da0 swap on da0 and da1 dumps on da0
+
+device          isa0
+device          pci0
+
+device          fdc0	at isa? port "IO_FD1" bio irq 6 drq 2 vector fdintr
+device          fd0	at fdc0 drive 0
+
+device          ncr0
+
+device          scbus0
+
+device          sc0	at isa? port "IO_KBD" tty irq 1 vector scintr
+device          npx0	at isa? port "IO_NPX" irq 13 vector npxintr
+
+device          da0
+device          da1
+device          da2
+
+device          sa0
+
+pseudo-device   loop            # required by INET
+pseudo-device   gzip            # Exec gzipped a.out's
+EOM
+	 exit 1
+fi
+
+cp -f /sys/compile/MINI/kernel /mnt
+
+gzip -c -best /sbin/init > /mnt/sbin/init
+gzip -c -best /sbin/fsck > /mnt/sbin/fsck
+gzip -c -best /sbin/mount > /mnt/sbin/mount
+gzip -c -best /sbin/halt > /mnt/sbin/halt
+gzip -c -best /sbin/restore > /mnt/sbin/restore
+
+gzip -c -best /bin/sh > /mnt/bin/sh
+gzip -c -best /bin/sync > /mnt/bin/sync
+
+cp /root/.profile /mnt/root
+
+cp -f /dev/MAKEDEV /mnt/dev
+chmod 755 /mnt/dev/MAKEDEV
+
+chmod 500 /mnt/sbin/init
+chmod 555 /mnt/sbin/fsck /mnt/sbin/mount /mnt/sbin/halt
+chmod 555 /mnt/bin/sh /mnt/bin/sync
+chmod 6555 /mnt/sbin/restore
+
+#
+# create the devices nodes
+#
+cd /mnt/dev
+./MAKEDEV std
+./MAKEDEV da0
+./MAKEDEV da1
+./MAKEDEV da2
+./MAKEDEV sa0
+./MAKEDEV pty0
+cd /
+
+#
+# create minimum file system table
+#
+cat &lt; /mnt/etc/fstab &lt;&lt;EOM
+/dev/fd0a    /    ufs    rw  1  1
+EOM
+
+#
+# create minimum passwd file
+#
+cat &lt; /mnt/etc/passwd &lt;&lt;EOM
+root:*:0:0:Charlie &amp;:/root:/bin/sh
+EOM
+
+cat &lt; /mnt/etc/master.passwd &lt;&lt;EOM
+root::0:0::0:0:Charlie &amp;:/root:/bin/sh
+EOM
+
+chmod 600 /mnt/etc/master.passwd
+chmod 644 /mnt/etc/passwd
+/usr/sbin/pwd_mkdb -d/mnt/etc /mnt/etc/master.passwd
+
+#
+# umount the floppy and inform the user
+#
+/sbin/umount /mnt
+echo "The floppy has been unmounted and is now ready."
+....
+
+====
+
+==== Après le désastre
+
+La question cruciale est: votre matériel a-t-il survécu? Vous avez régulièrement fait des sauvegardes, vous n'avez donc pas besoin de vous inquiéter pour les fichiers et les programmes.
+
+Si le matériel a subi des dégâts, remplacez tout d'abord ce qui a été endommagé avant de tenter d'utiliser l'ordinateur.
+
+Si votre matériel est en état, contrôlez vos disquettes. Si vous utilisez une disquette de démarrage personnalisée, démarrez en mode mono-utilisateur (tapez `-s` à l'invite `boot:`). Sautez le paragraphe suivant.
+
+Si vous utilisez les disquettes [.filename]#boot.flp# et [.filename]#fixit.flp#, continuez à lire. Mettre la disquette [.filename]#boot.flp# dans le premier lecteur et démarrez l'ordinateur. Le menu d'installation d'origine s'affiche à l'écran. Choisissez l'option [.guimenuitem]#Fixit--Repair mode with CDROM or floppy.#. Insérez la disquette [.filename]#fixit.flp# quand on vous la demande. man:restore[8] et les autres programmes dont vous avez besoin sont situés dans le répertoire [.filename]#/mnt2/rescue# ([.filename]#/mnt2/stand# pour les versions de FreeBSD antérieures à la 5.2).
+
+Restaurez chaque système de fichiers séparément.
+
+Essayez man:mount[8] (e.g. `mount /dev/da0a /mnt`) sur la partition racine de votre premier disque. Si le label du disque est endommagé, utilisez man:bsdlabel[8] pour repartitionner et libeller le disque conformément au label que vous avez imprimé et mis de côté. Utilisez man:newfs[8] pour recréer les systèmes de fichiers. Remontez la partition racine de la disquette en lecture/écriture (`mount -u -o rw /mnt`). Utilisez votre programme de restauration et vos bandes de sauvegardes pour restaurer les données de ce système de fichiers (e.g. `restore vrf /dev/sa0`). Démontez le système de fichiers (e.g. `umount /mnt`). Répétez l'opération pour chacun des systèmes de fichiers endommagés.
+
+Une fois que le système fonctionne à nouveau, faites une sauvegarde sur de nouvelles bandes. Ce qui a causé la panne ou la perte de données peut se reproduire. Une heure de perdue maintenant peut vous épargner d'autres ennuis plus tard.
+
+[[disks-virtual]]
+== Systèmes de fichiers réseaux, en mémoire et sauvegardés sur fichier
+
+En plus des disques que vous introduisez physiquement dans votre ordinateur: disquettes, CD, disques durs, et ainsi de suite; d'autres formes de disques sont gérées par FreeBSD - les _disques virtuels_.
+
+Ceux-ci comprennent les systèmes de fichiers réseaux comme le crossref:network-servers[network-nfs,NFS] et Coda, les systèmes de fichiers en mémoire et les systèmes de fichiers sauvegardé dans un fichier.
+
+En fonction de la version de FreeBSD que vous utilisez, vous devrez utiliser des outils différents pour la création et l'utilisation de systèmes de fichiers en mémoire ou sauvegardé dans un fichier.
+
+[NOTE]
+====
+Utilisez man:devfs[5] pour allouer de façon transparente pour l'utilisateur les fichiers spéciaux de périphériques.
+====
+
+[[disks-mdconfig]]
+=== Système de fichiers sauvegardé dans un fichier
+
+L'utilitaire man:mdconfig[8] est utilisé pour configurer et activer les disques mémoires, man:md[4], sous FreeBSD. Pour utiliser man:mdconfig[8], vous devez charger le module man:md[4] ou en ajouter le support dans votre fichier de configuration du noyau:
+
+[.programlisting]
+....
+device md
+....
+
+La commande man:mdconfig[8] supporte trois sortes de disques virtuels en mémoire: les disques mémoire alloués avec man:malloc[9], les disques mémoires utilisant un fichier ou l'espace de pagination comme espace disque. Une des utilisations possibles est le montage d'images de disquettes ou de CDs conservées sous forme de fichier.
+
+Pour monter l'image d'un système de fichiers:
+
+.Utilisation de `mdconfig` pour monter une image d'un système de fichiers
+[example]
+====
+
+[source,bash]
+....
+# mdconfig -a -t vnode -f diskimage -u 0
+# mount /dev/md0 /mnt
+....
+
+====
+
+Pour créer l'image d'un nouveau système de fichiers avec man:mdconfig[8]:
+
+.Création d'un nouveau disque sauvegardé sur fichier avec `mdconfig`
+[example]
+====
+
+[source,bash]
+....
+# dd if=/dev/zero of=newimage bs=1k count=5k
+5120+0 records in
+5120+0 records out
+# mdconfig -a -t vnode -f newimage -u 0
+# bsdlabel -w md0 auto
+# newfs md0a
+/dev/md0a: 5.0MB (10224 sectors) block size 16384, fragment size 2048
+        using 4 cylinder groups of 1.25MB, 80 blks, 192 inodes.
+super-block backups (for fsck -b #) at:
+ 160, 2720, 5280, 7840
+# mount /dev/md0a /mnt
+# df /mnt
+Filesystem 1K-blocks Used Avail Capacity  Mounted on
+/dev/md0a       4710    4  4330     0%    /mnt
+....
+
+====
+
+Si vous ne préciser pas de numéro d'unité avec l'option `-u`, man:mdconfig[8] utilisera le mécanisme d'allocation automatique de man:md[4] pour sélectionner un périphérique libre. Le nom de l'unité allouée s'affichera sur la sortie standard comme par exemple [.filename]#md4#. Pour plus de détails concernant man:mdconfig[8], référez-vous à la page de manuel.
+
+L'outil man:mdconfig[8] est très utile, cependant son utilisation demande de nombreuses lignes de commandes pour créer un système de fichiers sauvegardé sur fichier. FreeBSD vient avec un outil appelé man:mdmfs[8], ce programme configure un disque man:md[4] en utilisant man:mdconfig[8], y ajoute dessus un système de fichiers UFS en utilisant man:newfs[8], et le monte avec man:mount[8]. Par exemple, si vous désirez créer et monter la même image de système de fichiers que précédemment, tapez simplement ce qui suit:
+
+.Création et montage d'un disque sauvegardé sur fichier avec `mdmfs`
+[example]
+====
+
+[source,bash]
+....
+# dd if=/dev/zero of=newimage bs=1k count=5k
+5120+0 records in
+5120+0 records out
+# mdmfs -F newimage -s 5m md0 /mnt
+# df /mnt
+Filesystem 1K-blocks Used Avail Capacity  Mounted on
+/dev/md0        4718    4  4338     0%    /mnt
+....
+
+====
+
+Si vous utilisez l'option `md` sans numéro d'unité, man:mdmfs[8] utilisera la fonction automatique de sélection d'unité de man:md[4] pour choisir un périphérique non utilisé. Pour plus de détails au sujet de man:mdmfs[8], référez-vous à la page de manuel.
+
+[[disks-md-freebsd5]]
+=== Système de fichiers en mémoire
+
+Pour un système de fichiers en mémoire la "sauvegarde sur l'espace de pagination" devrait être normalement utilisée. Utiliser l'espace de pagination ne signifie pas que le disque en mémoire sera par défaut sur l'espace de pagination, mais plutôt que le disque mémoire sera alloué sur une zone de mémoire qui pourra être sauvegardée sur l'espace de pagination si nécessaire. Il est également possible de créer un disque en mémoire dont la mémoire est allouée à l'aide de man:malloc[9], mais ce type de configuration, tout particulièrement dans le cas de disques de grande taille, peut donner lieu à une panique du système si le noyau se trouve à cours de mémoire.
+
+.Création d'un disque mémoire avec `mdconfig`
+[example]
+====
+
+[source,bash]
+....
+# mdconfig -a -t swap -s 5m -u 1
+# newfs -U md1
+/dev/md1: 5.0MB (10240 sectors) block size 16384, fragment size 2048
+        using 4 cylinder groups of 1.27MB, 81 blks, 192 inodes.
+        with soft updates
+super-block backups (for fsck -b #) at:
+ 160, 2752, 5344, 7936
+# mount /dev/md1 /mnt
+# df /mnt
+Filesystem 1K-blocks Used Avail Capacity  Mounted on
+/dev/md1        4718    4  4338     0%    /mnt
+....
+
+====
+
+.Création d'un disque mémoire avec `mdmfs`
+[example]
+====
+
+[source,bash]
+....
+# mdmfs -s 5m md2 /mnt
+# df /mnt
+Filesystem 1K-blocks Used Avail Capacity  Mounted on
+/dev/md2        4846    2  4458     0%    /mnt
+....
+
+====
+
+=== Détacher un disque mémoire du système
+
+Quand un système de fichiers en mémoire ou sauvegardé dans un fichier n'est pas utilisé, vous devriez rendre au système toutes les ressources. La première chose à faire est de démonter le système de fichiers, ensuite utiliser man:mdconfig[8] pour détacher le disque du système et rendre les ressources.
+
+Par exemple pour détacher et libérer toutes les ressources utilisées par [.filename]#/dev/md4#:
+
+[source,bash]
+....
+# mdconfig -d -u 4
+....
+
+Il est possible d'afficher des informations sur les périphériques man:md[4] configurés en utilisant la commande `mdconfig -l`.
+
+[[snapshots]]
+== Instantané ("Snapshot") d'un système de fichiers
+
+FreeBSD en association avec les crossref:config[soft-updates,Soft Updates] offre une nouvelle caractéristique: les instantanés de systèmes de fichiers ("file system snapshots").
+
+Les instantanés permettent à un utilisateur de créer des images d'un système de fichiers précis, et de les traiter comme un fichier. Les instantanés doivent être créés dans le système de fichiers sur lequel on veut effectuer l'opération, et un utilisateur ne pourra pas créer plus de 20 instantanés par système de fichiers. Les instantanés actifs sont enregistrés dans le superbloc, ils sont donc conservés durant les opérations de démontage et de remontage lors des redémarrages du système. Quand un instantané n'est plus requis, il peut être supprimé avec la commande standard man:rm[1]. Les instantanés peuvent être supprimés dans n'importe quel ordre, cependant tout l'espace utilisé pourra ne pas être à nouveau disponible car un autre instantané réclamera éventuellement les blocs libérés.
+
+L'indicateur inaltérable `snapshot` est positionné lors de la création initiale de l'instantané. La commande man:unlink[1] fait une exception pour les fichiers d'instantanés puisqu'elle autorise leur suppression.
+
+Les instantanés sont créés avec la commande man:mount[8]. Pour placer un instantané de [.filename]#/var# dans le fichier [.filename]#/var/snapshot/snap# utilisez la commande suivante:
+
+[source,bash]
+....
+# mount -u -o snapshot /var/snapshot/snap /var
+....
+
+Alternativement, vous pouvez utiliser man:mksnap_ffs[8] pour créer un instantané:
+
+[source,bash]
+....
+# mksnap_ffs /var /var/snapshot/snap
+....
+
+Les fichiers d'instantanés peuvent être localisés sur un système de fichiers (e.g. [.filename]#/var#) en utilisant la commande man:find[1]:
+
+[source,bash]
+....
+# find /var -flags snapshot
+....
+
+Une fois un instantané créé, ce dernier pourra avoir de nombreux usages:
+
+* Certains administrateurs utiliseront un instantané pour des besoins de sauvegarde, car l'instantané peut être transféré sur CD ou bande.
+* Un contrôle d'intégrité du système fichiers, man:fsck[8], pourra être effectué sur l'instantané. En supposant que le système de fichiers était propre quand il a été monté, vous devriez toujours obtenir un résultat positif (et non différent). C'est essentiellement que effectue le processus de man:fsck[8] en tâche de fond ("background man:fsck[8]").
+* Lancer l'utilitaire man:dump[8] sur l'instantané. Une image cohérente du système de fichiers avec les paramètres temporels de l'instantané sera produite. man:dump[8] peut également à partir d'un instantané, créer une image et puis supprimer l'instantané en une seule fois en utilisant l'indicateur `-L` dans la ligne de commande.
+* Monter l'instantané comme une image figée du système de fichiers. Pour monter l'instantané [.filename]#/var/snapshot/snap# lancer:
++
+
+[source,bash]
+....
+# mdconfig -a -t vnode -f /var/snapshot/snap -u 4
+# mount -r /dev/md4 /mnt
+....
+
+Vous pouvez maintenant parcourir l'arborescence de votre système de fichiers [.filename]#/var# figé monter sous [.filename]#/mnt#. Tout sera au départ dans le même état que lors de la création de l'instantané. La seule exception est que les instantanés antérieurs apparaîtront sous la forme de fichiers vides. Quand l'utilisation d'un instantané est terminée, il peut être démonté avec:
+
+[source,bash]
+....
+# umount /mnt
+# mdconfig -d -u 4
+....
+
+Pour plus d'informations sur les `softupdates` et les instantanés de systèmes de fichiers, et également de la documentation technique, vous pouvez consulter le site Web de Marshall Kirk McKusick à l'adresse http://www.mckusick.com/[http://www.mckusick.com/]
+
+[[quotas]]
+== Quotas d'utilisation des disques
+
+Les quotas sont une option du système d'exploitation qui vous permet de limiter la quantité d'espace disque et/ou le nombre de fichiers auxquels ont droit un utilisateur ou tous les utilisateurs d'un même groupe, sur un système de fichiers donné. On les utilise la plupart du temps sur les systèmes en temps partagé où il est souhaitable de limiter la quantité de ressources allouée à un utilisateur ou à un groupe. Cela évitera qu'un utilisateur ou un groupe d'utilisateur consomme tout l'espace disque.
+
+=== Configurer votre système pour pouvoir utiliser les quotas d'utilisation des disques
+
+Avant d'essayer de mettre en place des quotas disque, il est nécessaire de s'assurer que le noyau est configuré pour les quotas. Cela se fait en ajoutant la ligne suivante dans votre fichier de configuration du noyau:
+
+[.programlisting]
+....
+options QUOTA
+....
+
+Cette option n'est pas activée par défaut dans le noyau [.filename]#GENERIC# de base, vous devrez donc configurer, compiler et installer un noyau sur-mesure pour utiliser les quotas disque. Reportez-vous au chapitre crossref:kernelconfig[kernelconfig,Configurer le noyau de FreeBSD] pour plus d'informations sur la configuration du noyau.
+
+Ensuite vous devrez activer les quotas disques dans le fichier [.filename]#/etc/rc.conf#. Pour cela, ajoutez la ligne:
+
+[.programlisting]
+....
+enable_quotas="YES"
+....
+
+Pour un contrôle plus fin des quotas au démarrage du système, il existe une variable supplémentaire de configuration. Normalement au démarrage, l'intégrité des quotas sur chaque système de fichiers est vérifiée par le programme man:quotacheck[8]. Ce programme s'assure que les données de la base de données des quotas correspondent bien aux données présentes sur le système de fichiers. C'est un processus consommateur en temps qui affectera considérablement la durée de démarrage du système. Si vous désirez passer cette étape, une variable dans [.filename]#/etc/rc.conf# est prévue à cet effet:
+
+[.programlisting]
+....
+check_quotas="NO"
+....
+
+Vous devez enfin éditer le fichier [.filename]#/etc/fstab# pour activer les quotas système de fichiers par système de fichiers. C'est là que vous pouvez soit activer les quotas par utilisateur ou par groupe soit les pour les deux sur tous vos systèmes de fichiers.
+
+Pour activer les quotas par utilisateur sur un système de fichiers, ajouter l'option `userquota` dans le champ d'options sur l'entrée de [.filename]#/etc/fstab# pour le système de fichiers sur lequel vous voulez activer les quotas. Par exemple:
+
+[.programlisting]
+....
+/dev/da1s2g   /home    ufs rw,userquota 1 2
+....
+
+De même, pour activer les quotas par groupe, utilisez l'option `groupquota` à la place de `userquota`. Pour activer à la fois les quotas par utilisateur et par groupe, modifiez l'entrée de la façon suivante:
+
+[.programlisting]
+....
+/dev/da1s2g    /home    ufs rw,userquota,groupquota 1 2
+....
+
+Par défaut, les fichiers où sont définis les quotas dans le répertoire racine du système de fichiers sous les noms [.filename]#quota.user# et [.filename]#quota.group#, respectivement pour les quotas utilisateur et les quotas par groupe. Consultez la page de manuel man:fstab[5] pour plus d'information. Bien que la page de manuel man:fstab[5] indique que vous pouvez spécifier un autre emplacement pour ces fichiers, cela n'est pas recommandé parce que les divers utilitaires qui gèrent les quotas ne semblent pas les prendre correctement en compte.
+
+A ce point vous devriez redémarrer votre système avec votre nouveau noyau. La procédure [.filename]#/etc/rc# exécutera automatiquement les commandes nécessaires pour créer les fichiers de quotas initiaux pour tous les quotas que vous avez définis dans [.filename]#/etc/fstab#, vous n'avez donc pas besoin de créer à la main de fichiers de quotas vides.
+
+Vous ne devriez pas avoir à exécuter les commandes man:quotacheck[8], man:quotaon[8], ou man:quotaoff[8] manuellement. Cependant, vous pouvez lire leur page de manuel pour vous familiariser avec leur rôle.
+
+=== Définir les quotas
+
+Une fois que vous avez activé les quotas sur votre système, assurez-vous que cela fonctionne correctement. Une manière simple de le faire est d'exécuter:
+
+[source,bash]
+....
+# quota -v
+....
+
+Vous devriez obtenir une ligne résumant l'utilisation disque avec les quotas actuellement définis pour chaque système de fichiers sur lesquels il y a des quotas.
+
+Vous êtes maintenant prêt à définir les quotas avec la commande man:edquota[8].
+
+Vous disposez de différentes options pour instaurer les quotas d'espace disque alloué à un utilisateur ou à un groupe, et le nombre de fichiers qu'ils peuvent créer. Vous pouvez baser les limitations sur l'espace disque alloué (quotas en nombre de blocs) ou sur le nombre de fichiers (quotas en inode) ou les deux. Ces options peuvent être divisées en deux catégories: les limites strictes ou souples.
+
+Une limite stricte ne peut être dépassée. Une fois qu'un utilisateur atteint sa limite stricte, il ne pourra plus rien allouer sur le système de fichiers en question. Par exemple, si l'utilisateur a droit à une limite stricte de 500 Ko sur un système de fichiers et en utilise 490 Ko, il ne pourra allouer que 10 Ko supplémentaires. Une tentative d'allouer 11 Ko échouerait.
+
+Une limite souple peut être dépassée pour une période de temps restreinte. C'est ce que l'on appelle le délai de grâce, qui est d'une semaine par défaut. Si un utilisateur dépasse cette limite au delà du délai de grâce, cette limite devient stricte, et plus aucune allocation ne sera possible. Quand l'utilisateur redescend en dessous de la limite souple, le délai de grâce est à nouveau réaccordé.
+
+Ce qui suit est un exemple de ce que vous pourrez voir en utilisant la commande man:edquota[8]. Quand vous invoquez la commande man:edquota[8], vous vous retrouvez dans l'éditeur défini par la variable d'environnement `EDITOR`, ou sous vi si la variable d'environnement `EDITOR` n'est pas positionnée, ce qui vous permet d'éditer les quotas.
+
+[source,bash]
+....
+# edquota -u test
+....
+
+[.programlisting]
+....
+Quotas for user test:
+/usr: kbytes in use: 65, limits (soft = 50, hard = 75)
+        inodes in use: 7, limits (soft = 50, hard = 60)
+/usr/var: kbytes in use: 0, limits (soft = 50, hard = 75)
+        inodes in use: 0, limits (soft = 50, hard = 60)
+....
+
+Vous verrez normalement deux lignes pour chaque système de fichiers sur lequel il y a des quotas. Une ligne pour les quotas de blocs, et une autre pour la limite d'inode. Modifiez simplement les valeurs que vous voulez mettre à jour. Par exemple, pour augmenter la limite de blocs accordée à cet utilisateur de 50 pour la limite souple et de 75 pour la limite stricte à 500 pour la limite souple et 600 pour la limite stricte, modifiez:
+
+[.programlisting]
+....
+/usr: kbytes in use: 65, limits (soft = 50, hard = 75)
+....
+
+en:
+
+[.programlisting]
+....
+/usr: kbytes in use: 65, limits (soft = 500, hard = 600)
+....
+
+Les nouveaux quotas seront en service dès que vous quitterez l'éditeur.
+
+Il est parfois souhaitable de définir des quotas pour une plage d'UIDs (identifiants utilisateur). Cela peut être réalisé avec l'option `-p` de la commande man:edquota[8]. Définissez d'abord les quotas pour un seul utilisateur, et puis exécutez `edquota -p protouser startuid-enduid`. Par exemple, si l'utilisateur `test` dispose des quotas désirés, la commande suivante peut être utilisée pour appliquer ces quotas pour les UIDs de 10000 à 19999:
+
+[source,bash]
+....
+# edquota -p test 10000-19999
+....
+
+Pour plus d'informations consultez la page de manuel man:edquota[8].
+
+=== Consulter les quotas et l'utilisation des disques
+
+Vous pouvez soit utiliser la commande man:quota[1] soit la commande man:repquota[8] pour consulter les quotas et l'utilisation des disques. La commande man:quota[1] peut être employée pour connaître les quotas et l'utilisation des disques pour un utilisateur et un groupe. Un utilisateur ne peut consulter que ses propres quotas et ceux d'un groupe auquel il appartient. Seul le super-utilisateur peut consulter les quotas et l'usage disque de tous les utilisateurs et groupes. La commande man:repquota[8] permet d'obtenir un résumé de tous les quotas et l'utilisation disque pour les systèmes de fichiers sur lesquels il y a des quotas.
+
+Ce qui suit est un extrait de la sortie de la commande `quota -v` pour un utilisateur pour lequel on a défini des quotas sur deux systèmes de fichiers.
+
+[.programlisting]
+....
+Disk quotas for user test (uid 1002):
+     Filesystem  usage   quota   limit   grace   files   quota   limit   grace
+           /usr      65*     50      75   5days       7      50      60
+       /usr/var       0      50      75               0      50      60
+....
+
+Sur le système de fichiers [.filename]#/usr# dans l'exemple ci-dessus, l'utilisateur occupe 15 Ko de plus que la limite de 50 Ko qui lui est allouée et dispose d'un délai de grâce de 5 jours. Notez l'astérisque `*` qui indique que l'utilisateur dépasse actuellement son quota.
+
+Normalement les systèmes de fichiers sur lesquels l'utilisateur n'occupe pas d'espace n'apparaissent pas dans la sortie de la commande man:quota[1], même s'il a des quotas sur ces systèmes de fichiers. L'option `-v` listera ces systèmes de fichiers, comme [.filename]#/usr/var# dans l'exemple ci-dessus.
+
+=== Quotas avec NFS
+
+Les quotas sont gérés par le sous-système de gestion des quotas sur le serveur NFS. Le démon man:rpc.rquotad[8] fournit les informations sur les quotas à la commande man:quota[1] des clients NFS, permettant aux utilisateurs sur ces machines de consulter l'utilisation des quotas qui leur sont alloués.
+
+Activez `rpc.rquotad` dans [.filename]#/etc/inetd.conf# de la façon suivante:
+
+[.programlisting]
+....
+rquotad/1      dgram rpc/udp wait root /usr/libexec/rpc.rquotad rpc.rquotad
+....
+
+Puis redémarrez `inetd`:
+
+[source,bash]
+....
+# kill -HUP `cat /var/run/inetd.pid`
+....
+
+[[disks-encrypting]]
+== Chiffrer les partitions d'un disque
+
+FreeBSD offre d'excellentes protections contre un accès non autorisé aux données par l'intermédiaire du réseau. Les permissions sur les fichiers et le contrôle d'accès obligatoire - "Mandatory Access Control" (MAC) (voir crossref:mac[mac,Mandatory Access Control]) empêchent l'accès aux données pour des tiers non autorisés quand le système d'exploitation est actif et l'ordinateur en fonctionnement. Cependant, des permissions renforcés sont inutiles si l'attaquant a un accès physique à un ordinateur et peut simplement déplacer le disque dur sur un autre système pour copier et analyser les données sensibles.
+
+Indépendamment de la manière dont une personne malveillante s'est trouvé en possession d'un disque dur ou a arrêté un ordinateur, le chiffrage de disque basé sur GEOM (gbde) ("GEOM Based Disk Encryption") et le système de chiffrage `geli` de FreeBSD sont en mesure de protéger les données des systèmes de fichiers contre des attaquants très motivés et aux ressources importantes. A la différence des méthodes de chiffrage lourdes qui chiffrent uniquement les fichiers individuels, gbde et `geli` chiffrent de manière transparente l'intégralité du système de fichiers. Aucun texte en clair ne touche les plateaux du disque.
+
+=== Chiffrage des disques avec gbde
+
+[.procedure]
+====
+
+. Devenir `root`
++ 
+La configuration de gbde requiert les privilèges du super-utilisateur.
++
+[source,bash]
+....
+% su -
+Password:
+....
+. Ajouter le support man:gbde[4] au fichier de configuration du noyau
++ 
+Ajoutez la ligne suivante à votre fichier de configuration du noyau:
++ 
+`options GEOM_BDE`
++ 
+Recompilez le noyau comme décrit dans crossref:kernelconfig[kernelconfig,Configurer le noyau de FreeBSD].
++ 
+Redémarrez avec le nouveau noyau.
+. Au lieu de recompiler le noyau, on peut utiliser `kldload` pour charger le support man:gbde[4]:
++
+[source,bash]
+....
+# kldload geom_bde
+....
+====
+
+==== Préparation du disque dur chiffré
+
+L'exemple suivant suppose que vous ajoutez un nouveau disque dur à votre système et qui contiendra une seule partition chiffrée. Cette partition sera montée sous [.filename]#/private#. gbde peut également être utilisé pour chiffrer les répertoires [.filename]#/home# et [.filename]#/var/mail#, mais cela demande une configuration plus complexe qui dépasse le cadre de cette introduction.
+
+[.procedure]
+====
+
+. Ajouter le nouveau disque
++ 
+Installez le nouveau disque comme expliqué dans <<disks-adding>>. Pour les besoins de cet exemple, une nouvelle partition disque a été ajoutée en tant que [.filename]#/dev/ad4s1c#. Les périphériques du type [.filename]#/dev/ad0s1*# représentent les partitions FreeBSD standards sur le système exemple.
++
+[source,bash]
+....
+# ls /dev/ad*
+/dev/ad0        /dev/ad0s1b     /dev/ad0s1e     /dev/ad4s1
+/dev/ad0s1      /dev/ad0s1c     /dev/ad0s1f     /dev/ad4s1c
+/dev/ad0s1a     /dev/ad0s1d     /dev/ad4
+....
++
+. Créer un répertoire pour héberger les fichiers de verrouillage de GBDE
++
+[source,bash]
+....
+# mkdir /etc/gbde
+....
++ 
+Le fichier de verrouillage de gbde contient l'information nécessaire à gbde pour accéder aux partitions chiffrées. Sans accès au fichier de verrouillage, gbde sera incapable de déchiffrer les données contenues sur la partition chiffrée sans une aide manuelle significative ce qui n'est pas supporté par le logiciel. Chaque partition chiffrée utilise un fichier de verrouillage propre.
+. Initialiser la partition gbde
++ 
+Une partition gbde doit être initialisée avant d'être utilisable. Cette initialisation doit être effectuée une seule fois:
++
+[source,bash]
+....
+# gbde init /dev/ad4s1c -i -L /etc/gbde/ad4s1c
+....
++ 
+man:gbde[8] lancera votre éditeur, vous permettant de fixer diverses options de configuration dans un gabarit. Pour une utilisation de UFS1 ou UFS2, fixez l'option `sector_size` à 2048:
++
+[.programlisting]
+....
+$FreeBSD: src/sbin/gbde/template.txt,v 1.1 2002/10/20 11:16:13 phk Exp $
+#
+# La taille d'un secteur est la plus petite unité de donnée
+# qui peut être lue ou écrite.
+# Une valeur trop petite diminue les performances et l'espace
+# disponible.
+# Une valeur trop grande peut empêcher des systèmes de
+# fichiers de fonctionner correctement.  512 est la valeur minimale
+# et sans risque.  Pour l'UFS, utiliser la taille d'un fragment
+#
+sector_size     =       2048
+[...]
+....
++ 
+man:gbde[8] vous demandera de taper deux fois la phrase d'authentification qui devra être utilisée pour sécuriser les données. La phrase d'authentification doit être la même dans les deux cas. La capacité de gbde à protéger vos données dépend de la qualité de la phrase d'authentification que vous avez choisie. 
++ 
+La commande `gbde init` crée un fichier de verrouillage pour votre partition gbde qui dans cet exemple est stocké sous [.filename]#/etc/gbde/ad4s1c#.
++
+[CAUTION]
+======
+
+Les fichiers de verrouillage de gbde _doivent_ être conservés de pair avec le contenu des partitions chiffrées. Alors que la suppression seule d'un fichier de verrouillage ne peut empêcher une personne déterminée de déchiffrer une partition gbde, sans le fichier de verrouillage, le propriétaire légitime sera incapable d'accéder aux données de la partition chiffrée sans beaucoup de travail ce qui est totalement non supporté par man:gbde[8] et son concepteur.
+======
++
+. Attacher la partition chiffrée au noyau
++
+[source,bash]
+....
+# gbde attach /dev/ad4s1c -l /etc/gbde/ad4s1c
+....
++ 
+On vous demandera de fournir la phrase d'authentification que vous avez choisie lors de l'initialisation de la partition chiffrée. Le nouveau périphérique chiffré apparaîtra dans [.filename]#/dev# en tant que [.filename]#/dev/nom_périphérique.bde#:
++
+[source,bash]
+....
+# ls /dev/ad*
+/dev/ad0        /dev/ad0s1b     /dev/ad0s1e     /dev/ad4s1
+/dev/ad0s1      /dev/ad0s1c     /dev/ad0s1f     /dev/ad4s1c
+/dev/ad0s1a     /dev/ad0s1d     /dev/ad4        /dev/ad4s1c.bde
+....
++
+. Créer un système de fichiers sur le périphérique chiffré
++ 
+Une fois que le périphérique chiffré a été attaché au noyau, vous pouvez créer un système de fichiers sur le périphérique. Pour créer un système de fichiers sur le périphérique, utilisez man:newfs[8]. Puisqu'il est plus rapide d'initialiser un nouveau système de fichiers UFS2 qu'un nouveau système UFS1, l'utilisation de man:newfs[8] avec l'option `-O2` est recommandé.
++
+[source,bash]
+....
+# newfs -U -O2 /dev/ad4s1c.bde
+....
++
+[NOTE]
+======
+La commande man:newfs[8] peut être effectuée sur une partition gbde attachée qui est identifiée par une extension [.filename]#*.bde# au niveau du nom de périphérique.
+======
++
+. Monter la partition chiffrée
++ 
+Créez un point de montage pour le système de fichiers chiffré.
++
+[source,bash]
+....
+# mkdir /private
+....
++ 
+Montez le système de fichiers chiffré.
++
+[source,bash]
+....
+# mount /dev/ad4s1c.bde /private
+....
++
+. Vérifiez que le système de fichiers chiffré est disponible
++ 
+Le système de fichiers chiffré devrait être visible par man:df[1] et prêt à être utilisé:
++
+[source,bash]
+....
+% df -H
+Filesystem        Size   Used  Avail Capacity  Mounted on
+/dev/ad0s1a      1037M    72M   883M     8%    /
+/devfs            1.0K   1.0K     0B   100%    /dev
+/dev/ad0s1f       8.1G    55K   7.5G     0%    /home
+/dev/ad0s1e      1037M   1.1M   953M     0%    /tmp
+/dev/ad0s1d       6.1G   1.9G   3.7G    35%    /usr
+/dev/ad4s1c.bde   150G   4.1K   138G     0%    /private
+....
+====
+
+==== Montage des systèmes de fichiers chiffrés
+
+Après chaque démarrage, tout système de fichiers chiffré doit être rattaché au noyau, contrôlé pour les erreurs, et monté, avant que les systèmes de fichiers ne puissent être utilisés. Les commandes nécessaires doivent être exécutées en tant que `root`.
+
+[.procedure]
+====
+
+. Attacher la partition gdbe au noyau
++
+[source,bash]
+....
+# gbde attach /dev/ad4s1c -l /etc/gbde/ad4s1c
+....
++ 
+On vous demandera de fournir la phrase d'authentification que vous avez choisie lors de l'initialisation de la partition gbde chiffrée.
+. Contrôler les erreurs du système de fichiers
++ 
+Puisque les systèmes de fichiers chiffrés ne peuvent être encore listés dans le fichier [.filename]#/etc/fstab# pour un montage automatique, on doit donc contrôler les systèmes de fichiers pour d'éventuelles erreurs en exécutant manuellement man:fsck[8] avant le montage.
++
+[source,bash]
+....
+# fsck -p -t ffs /dev/ad4s1c.bde
+....
++
+. Monter le système de fichiers chiffré
++
+[source,bash]
+....
+# mount /dev/ad4s1c.bde /private
+....
++ 
+Le système de fichiers est maintenant disponible à l'utilisation.
+====
+
+===== Montage automatique de partitions chiffrées
+
+Il est possible de créer une procédure pour automatiquement attacher, contrôler, et monter une partition chiffrée, mais pour des raisons de sécurité la procédure ne devrait pas contenir le mot de passe man:gbde[8]. A la place, il est recommandé que de telles procédures soient exécutées manuellement tout en fournissant le mot de passe via la console ou man:ssh[1].
+
+Comme autre possibilité, une procédure [.filename]#rc.d# est fournie. Des arguments peuvent être passés à cette procédure par l'intermédiaire de man:rc.conf[5],, par exemple:
+
+[.programlisting]
+....
+gbde_autoattach_all="YES"
+gbde_devices="ad4s1c"
+....
+
+Cela impose la saisie de la phrase d'authentification gbde au démarrage. Après avoir entré la phrase d'authentification correctement, la partition chiffrée gbde sera montée automatiquement. Cela peut être très utile quand gbde est utilisé sur des ordinateurs portables.
+
+==== Les protections cryptographiques utilisées par gbde
+
+man:gbde[8] chiffre la partie utile des secteurs en utilisant le chiffrage AES 128 bits en mode CBC. Chaque secteur sur le disque est chiffré avec une clé AES différente. Pour plus d'informations sur l'architecture cryptographique de gbde, y compris comment les clés pour chaque secteur sont des dérivés de la phrase d'authentification donnée par l'utilisateur, voir la page de manuel man:gbde[4].
+
+==== Problèmes de compatibilité
+
+man:sysinstall[8] est incompatible avec les périphériques gbde-chiffrés. Tous les périphériques [.filename]#*.bde# doivent être détachés du noyau avant de lancer man:sysinstall[8] ou ce dernier plantera durant son processus initial de recherche des périphériques. Pour détacher le périphérique chiffré utilisé dans notre exemple, utilisez la commande suivante:
+
+[source,bash]
+....
+# gbde detach /dev/ad4s1c
+....
+
+Notez également qu'étant donné que man:vinum[4] n'utilise pas le sous-système man:geom[4], vous ne pouvez utiliser gbde avec des volumes vinum.
+
+[[disks-encrypting-geli]]
+=== Chiffrage des disques avec `geli`
+
+Depuis FreeBSD 6.0, une nouvelle classe GEOM pour le chiffrage des données est disponible: `geli`. Cette classe est développée par {pjd}. L'outil `geli` est différent de `gbde`; il offre des fonctionnalités différentes et utilise une méthode différente pour chiffrer les données.
+
+Les caractéristiques les plus importantes de man:geli[8] sont:
+
+* Utilisation du système man:crypto[9] - quand du matériel destiné au chiffrement est disponible dans la machine, `geli` l'utilisera automatiquement.
+* Support de plusieurs algorithmes de chiffrement (actuellement AES, Blowfish, et 3DES).
+* Permettre le chiffrage de la partition racine. La phrase d'authentification utilisée pour accéder à la partition racine chiffrée sera demandée au démarrage du système.
+* Permettre l'emploi de deux clés indépendantes (par exemple une "clé utilisateur" et une "clé entreprise").
+* `geli` est rapide-il effectue un simple chiffrement de secteur à secteur.
+* Permettre la sauvegarde et la restauration des clés principales. Quand un utilisateur doit détruire ses clés, il sera possible d'accéder à nouveau aux données en restaurant les clés à partir de la sauvegarde.
+* Permettre d'attacher un disque avec une clé aléatoire à usage unique - utile pour les partitions de pagination et les systèmes de fichiers temporaires.
+
+Plus de caractéristiques concernant `geli` peuvent être trouvées dans la page de manuel de man:geli[8].
+
+Les points suivants décriront comment activer le support pour `geli` dans le noyau FreeBSD et expliqueront comment créer et utiliser un _provider_ (ou partition) chiffré `geli`.
+
+Afin de pouvoir employer `geli`, vous devez utiliser FreeBSD 6.0-RELEASE ou une version ultérieure. Les privilèges du super-utilisateur seront également nécessaire puisque il faudra effectuer des modifications au niveau du noyau.
+
+[.procedure]
+====
+
+. Ajouter le support `geli` au noyau
++ 
+Ajoutez les lignes suivantes au fichier de configuration du noyau:
++
+[.programlisting]
+....
+options GEOM_ELI
+device crypto
+....
++ 
+Recompilez le noyau comme décrit dans la crossref:kernelconfig[kernelconfig,Configurer le noyau de FreeBSD].
++ 
+Sinon, le module `geli` peut être chargé au démarrage. Ajoutez la ligne suivante au fichier [.filename]#/boot/loader.conf#:
++
+[.programlisting]
+....
+geom_eli_load="YES"
+....
++ 
+Le système man:geli[8] devrait désormais être supporté par le noyau.
+. Générer la clé principale
++ 
+L'exemple suivant décrira la méthode pour générer un fichier clé qui sera utilisé comme partie de la clé principale pour le _provider_ chiffré monté sous le répertoire [.filename]#/private#. Le fichier clé fournira des données aléatoires qui seront employées pour chiffrer la clé principale. La clé principale sera également protégée par une phrase d'authentification. La taille des secteurs du _provider_ sera de 4Ko. De plus, sera décrit comment attacher au système le _provider_ geli, créer un système de fichiers dessus, utiliser ce système de fichiers et enfin comment le détacher.
++ 
+Il est recommandé d'utiliser une taille de secteur plus grande (comme 4Ko) pour de meilleures performances.
++ 
+La clé principale sera protégée avec une phrase d'authentification et la source de données pour le fichier clé sera [.filename]#/dev/random#. La taille des secteurs de [.filename]#/dev/da2.eli#, partition que nous appelons _provider_, sera de 4Ko.
++
+[source,bash]
+....
+# dd if=/dev/random of=/root/da2.key bs=64 count=1
+# geli init -s 4096 -K /root/da2.key /dev/da2
+Enter new passphrase:
+Reenter new passphrase:
+....
++ 
+Il n'est pas obligatoire d'utiliser la phrase d'authentification et le fichier clé; chacune de ces méthodes de sécurisation de la clé principale peut être utilisée séparément.
++ 
+Si à la place du fichier clé un "-" est passé, l'entrée standard sera utilisée. Cet exemple montre comment on peut utiliser plus d'un fichier clé:
++
+[source,bash]
+....
+# cat keyfile1 keyfile2 keyfile3 | geli init -K - /dev/da2
+....
++
+. Attacher le _provider_ avec la clé générée
++
+[source,bash]
+....
+# geli attach -k /root/da2.key /dev/da2
+Enter passphrase:
+....
++ 
+Le nouveau périphérique sera appelé [.filename]#/dev/da2.eli#.
++
+[source,bash]
+....
+# ls /dev/da2*
+/dev/da2  /dev/da2.eli
+....
++
+. Créer le nouveau système de fichiers
++
+[source,bash]
+....
+# dd if=/dev/random of=/dev/da2.eli bs=1m
+# newfs /dev/da2.eli
+# mount /dev/da2.eli /private
+....
++ 
+Le système de fichiers chiffré devrait être maintenant visible par man:df[1] et disponible à l'utilisation:
++
+[source,bash]
+....
+# df -H
+Filesystem     Size   Used  Avail Capacity  Mounted on
+/dev/ad0s1a    248M    89M   139M    38%    /
+/devfs         1.0K   1.0K     0B   100%    /dev
+/dev/ad0s1f    7.7G   2.3G   4.9G    32%    /usr
+/dev/ad0s1d    989M   1.5M   909M     0%    /tmp
+/dev/ad0s1e    3.9G   1.3G   2.3G    35%    /var
+/dev/da2.eli   150G   4.1K   138G     0%    /private
+....
++
+. Démonter et détacher le _provider_
++ 
+Une fois l'utilisation de la partition chiffrée achevée et que la partition [.filename]#/private# n'est plus nécessaire, il est prudent de penser à démonter et détacher la partition `geli` chiffrée:
++
+[source,bash]
+....
+# umount /private
+# geli detach da2.eli
+....
+====
+
+Plus d'information sur l'utilisation de man:geli[8] peut être trouvée dans sa page de manuel.
+
+==== Utiliser la procédure [.filename]#rc.d# de [.filename]#geli#
+
+La commande [.filename]#geli# est fournie avec une procédure [.filename]#rc.d# qui peut être employée pour simplifier l'utilisation de `geli`. Un exemple de configuration de `geli` à l'aide de man:rc.conf[5] sera:
+
+[.programlisting]
+....
+geli_devices="da2"
+geli_da2_flags="-p -k /root/da2.key"
+....
+
+Ces lignes configureront [.filename]#/dev/da2# comme _provider_ `geli` avec une clé principale [.filename]#/root/da2.key#, de plus `geli` n'utilisera pas de phrase d'authentification pour attacher le _provider_ (notez que ceci n'est utilisable que si l'option `-P` a été passée durant la phase `geli init`). Le système détachera du noyau le _provider_ `geli` avant l'arrêt du système.
+
+Plus d'information sur la configuration du système [.filename]#rc.d# est fournie dans la section crossref:config[configtuning-rcd,rc.d] de ce Manuel.
+
+[[swap-encrypting]]
+== Chiffrage de l'espace de pagination
+
+Sous FreeBSD, le chiffrement de l'espace de pagination est simple à mettre en place et est possible depuis FreeBSD 5.3-RELEASE. En fonction de la version de FreeBSD utilisée, différentes options sont disponibles et la configuration peut légèrement varier. Depuis FreeBSD 6.0-RELEASE, les systèmes de chiffrage man:gbde[8] ou man:geli[8] peuvent être utilisé à cet effet. Avec les versions antérieures, seul man:gbde[8] est disponible. Les deux systèmes utilisent la procédure crossref:config[configtuning-rcd,rc.d] nommée [.filename]#encswap#.
+
+La section précédente, <<disks-encrypting,Chiffrer les partitions d'un disque>>, contient une courte explication sur les différents systèmes de chiffrage.
+
+=== Pourquoi l'espace de pagination devrait être chiffré?
+
+Comme pour le chiffrage des partitions d'un disque, chiffrer l'espace de pagination a pour but la protection des informations sensibles. Imaginez une application qui, par exemple, traite des mots de passe. Tant que ces mots de passe résident en mémoire tout va pour le mieux. Cependant, si le système d'exploitation commence à transférer des pages mémoires vers l'espace de pagination en vue de libérer de la mémoire pour d'autres applications, les mots de passe peuvent être écrits en clair sur les plateaux du disque et seront faciles à récupérer par une personne malveillante. Chiffrer l'espace de pagination peut être une solution contre ce scénario.
+
+=== Préparation
+
+[NOTE]
+====
+Pour le reste de cette section, [.filename]#ad0s1b# sera la partition réservée à l'espace de pagination.
+====
+
+Jusqu'ici l'espace de pagination n'a jamais été chiffré. Il est fort possible qu'il y ait déjà des mots de passe ou toute autre donnée sensible de présents en clair sur les plateaux du disque. Afin d'y remédier, les données de la partition de pagination doivent être écrasées avec des données aléatoires:
+
+[source,bash]
+....
+# dd if=/dev/random of=/dev/ad0s1b bs=1m
+....
+
+=== Chiffrer de l'espace de pagination avec man:gbde[8]
+
+Si FreeBSD 6.0-RELEASE ou une version plus récente est utilisée, le suffixe `.bde` doit être ajouté au nom de périphérique sur la ligne du fichier [.filename]#/etc/fstab# correspondant à cet espace de pagination:
+
+[.programlisting]
+....
+# Device                Mountpoint      FStype  Options         Dump    Pass#
+/dev/ad0s1b.bde         none            swap    sw              0       0
+....
+
+Pour les systèmes antérieurs à FreeBSD 6.0-RELEASE, la ligne suivante doit également être ajoutée à [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+gbde_swap_enable="YES"
+....
+
+=== Chiffrage de l'espace de pagination avec man:geli[8]
+
+La procédure pour le chiffrage de l'espace de pagination avec man:geli[8] est similaire à celle pour l'utilisation de man:gbde[8]. Le suffixe `.eli` doit être ajouté au nom de périphérique sur la ligne du fichier [.filename]#/etc/fstab# correspondant à cet espace de pagination:
+
+[.programlisting]
+....
+# Device                Mountpoint      FStype  Options         Dump    Pass#
+/dev/ad0s1b.eli         none            swap    sw              0       0
+....
+
+Par défaut, man:geli[8] utilise l'algorithme AES avec une longueur de clé de 256bits.
+
+Les valeurs par défaut peuvent être modifiées en utilisant l'option `geli_swap_flags` dans le fichier [.filename]#/etc/rc.conf#. La ligne suivante demande à la procédure rc.d [.filename]#encswap# de créer des partitions de pagination en utilisant l'algorithme Blowfish avec une clé de 128 bits de longueur, une taille de secteur de 4 kilo-octets et avec l'option "detach on last close" (détacher après démontage de la partition) activée:
+
+[.programlisting]
+....
+geli_swap_flags="-a blowfish -l 128 -s 4096 -d"
+....
+
+Veuillez vous référer à la description de la commande `onetime` dans la page de manuel man:geli[8] pour une liste des options possibles.
+
+=== Vérifier que cela fonctionne
+
+Une fois que le système a été redémarré, le fonctionnement correct de l'espace de pagination peut être vérifié en utilisant la commande `swapinfo`.
+
+Si man:gbde[8] est utilisé:
+
+[source,bash]
+....
+% swapinfo
+Device          1K-blocks     Used    Avail Capacity
+/dev/ad0s1b.bde    542720        0   542720     0%
+....
+
+Si man:geli[8] est utilisé:
+
+[source,bash]
+....
+% swapinfo
+Device          1K-blocks     Used    Avail Capacity
+/dev/ad0s1b.eli    542720        0   542720     0%
+....

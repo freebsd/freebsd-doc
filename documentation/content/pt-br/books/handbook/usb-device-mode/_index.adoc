@@ -1,0 +1,264 @@
+---
+title: Capítulo 25. Modo de dispositivo USB/USB OTG
+part: Parte III. Administração do Sistema
+prev: books/handbook/dtrace
+next: books/handbook/partiv
+---
+
+[[usb-device-mode]]
+= Modo de dispositivo USB/USB OTG
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Índice
+:table-caption: Tabela
+:figure-caption: Figura
+:example-caption: Exemplo
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 25
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/usb-device-mode/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/usb-device-mode/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/usb-device-mode/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pt-br/mailing-lists.adoc[]
+include::shared/pt-br/teams.adoc[]
+include::shared/pt-br/urls.adoc[]
+
+toc::[]
+
+[[usb-device-mode-synopsis]]
+== Sinopse
+
+Este capítulo aborda o uso do Modo de Dispositivo USB e USB On The Go (USB OTG) no FreeBSD. Isso inclui consoles seriais virtuais, interfaces de rede virtual e drives USB virtuais.
+
+Quando rodando em hardware que suporta o modo de dispositivo USB ou USB OTG, como aquele embutido em muitas placas embarcadas, a stack USB do FreeBSD pode ser executada em _modo de dispositivo_. O modo de dispositivo possibilita que o computador apresente-se como diferentes tipos de classes de dispositivos USB, incluindo portas seriais, adaptadores de rede e armazenamento em massa, ou uma combinação dos mesmos. Um host USB como um laptop ou computador desktop pode acessá-los assim como faria com dispositivos USB físicos. O modo de dispositivo é algumas vezes chamado de "modo USB gadget".
+
+Existem duas maneiras básicas pelas quais o hardware pode fornecer a funcionalidade do modo de dispositivo: com uma "porta de cliente" separada, que suporta apenas o modo de dispositivo, e com uma porta USB OTG, que pode fornecer o modo de dispositivo e o modo de host. Para portas USB OTG, a stack USB alterna automaticamente entre o lado do host e o lado do dispositivo, dependendo do que estiver conectado à porta. Conectar um dispositivo USB como um cartão de memória à porta faz com que o FreeBSD mude para o modo de host. Conectar um host USB como um computador faz com que o FreeBSD mude para o modo de dispositivo. As "portas do cliente" de finalidade única sempre funcionam no modo de dispositivo.
+
+O que o FreeBSD apresenta para o host USB depende do sysctl `hw.usb.template`. Alguns modelos fornecem um único dispositivo, como um terminal serial; outros fornecem vários, que podem ser todos usados ao mesmo tempo. Um exemplo é o template 10, que fornece um dispositivo de armazenamento em massa, um console serial e uma interface de rede. Veja o man:usb_template[4] para obter a lista de valores disponíveis.
+
+Observe que, em alguns casos, dependendo do hardware e do sistema operacional do host, para o host notar a alteração da configuração, ele deve ser fisicamente desconectado e reconectado ou forçado a verificar novamente o barramento USB de uma maneira específica do sistema. Quando o FreeBSD é executado no host, o man:usbconfig[8]`reset` pode ser usado. Isto também deve ser feito após carregar o [.filename]#usb_template.ko# se o host USB já estiver conectado ao soquete USB OTG  .
+
+Depois de ler este capítulo, você saberá:
+
+* Como configurar a funcionalidade do modo de dispositivo USB no FreeBSD.
+* Como configurar a porta serial virtual no FreeBSD.
+* Como se conectar à porta serial virtual de vários sistemas operacionais.
+* Como configurar o FreeBSD para fornecer uma interface de rede virtual USB.
+* Como configurar o FreeBSD para fornecer um dispositivo virtual de armazenamento USB.
+
+[[usb-device-mode-terminals]]
+== Portas Seriais Virtuais USB
+
+=== Configurando Portas Seriais do Modo de Dispositivo USB
+
+O suporte para porta serial virtual é fornecido pelos templates número 3, 8 e 10. Observe que o template 3 funciona com o Microsoft Windows 10 sem a necessidade de drivers especiais e de arquivos INF. Outros sistemas operacionais host funcionam com todos os três modelos. Os módulos do kernel man:usb_template[4] e man:umodem[4] devem ser carregados.
+
+Para ativar as portas seriais do modo de dispositivo USB, adicione essas linhas ao [.filename]#/etc/ttys#:
+
+[source,bash]
+....
+ttyU0	"/usr/libexec/getty 3wire"	vt100	onifconsole secure
+ttyU1	"/usr/libexec/getty 3wire"	vt100	onifconsole secure
+....
+
+Então adicione estas linhas ao arquivo [.filename]#/etc/devd.conf#:
+
+[source,bash]
+....
+notify 100 {
+	match "system"		"DEVFS";
+	match "subsystem"	"CDEV";
+	match "type"		"CREATE";
+	match "cdev"		"ttyU[0-9]+";
+	action "/sbin/init q";
+};
+....
+
+Recarregue a configuração se o man:devd[8] já estiver em execução:
+
+[source,bash]
+....
+# service devd restart
+....
+
+Certifique-se de que os módulos necessários estejam carregados e que o template correto esteja configurado na inicialização, adicionando estas linhas ao [.filename]#/boot/loader.conf#, criando-o se ele ainda não existir:
+
+[source,bash]
+....
+umodem_load="YES"
+hw.usb.template=3
+....
+
+Para carregar o módulo e definir o modelo sem reiniciar, use:
+
+[source,bash]
+....
+# kldload umodem
+# sysctl hw.usb.template=3
+....
+
+=== Conectando-se às portas seriais do modo de dispositivo USB a partir do FreeBSD
+
+Para conectar-se a uma placa configurada para fornecer portas seriais de um dispositivo USB, conecte o host USB, como um laptop, às placas USB OTG ou porta de cliente USB. Use `pstat -t` no host para listar as linhas de terminal. Perto do final da lista, você deve ver uma porta serial USB, por exemplo, "ttyU0". Para abrir a conexão, use:
+
+[source,bash]
+....
+# cu -l /dev/ttyU0
+....
+
+Depois de pressionar a tecla Enter algumas vezes, você verá um prompt de login.
+
+=== Conectando-se às portas seriais do modo de dispositivo USB a partir do macOS
+
+Para conectar-se a uma placa configurada para fornecer portas seriais de modo de dispositivo USB, conecte o host USB, como um laptop, às placas USB OTG ou porta de cliente USB. Para abrir a conexão, use:
+
+[source,bash]
+....
+# cu -l /dev/cu.usbmodemFreeBSD1
+....
+
+=== Conectando-se às portas seriais do modo de dispositivo USB a partir do Linux
+
+Para conectar-se a uma placa configurada para fornecer portas seriais de modo de dispositivo USB, conecte o host USB, como um laptop, às placas USB OTG ou porta de cliente USB. Para abrir a conexão, use:
+
+[source,bash]
+....
+# minicom -D /dev/ttyACM0
+....
+
+=== Conectando-se às portas seriais do modo de dispositivo USB a partir do Microsoft Windows 10
+
+Para conectar-se a uma placa configurada para fornecer portas seriais de modo de dispositivo USB, conecte o host USB, como um laptop, às placas USB OTG ou porta de cliente USB. Para abrir uma conexão, você precisará de um programa de terminal serial, como PuTTY. Para verificar o nome da porta COM usada pelo Windows, execute o Gerenciador de dispositivos, expanda. "Ports (COM & LPT)".Você verá um nome semelhante a "USB Serial Device (COM4)". Execute o programa do terminal serial de sua escolha, por exemplo, PuTTY. Na caixa de diálogo PuTTY defina "Connection type" como "Serial", digite o COMx obtido no Gerenciador de Dispositivos na caixa de diálogo "Serial line" e clique em Abrir.
+
+[[usb-device-mode-network]]
+== Interfaces de rede do modo de dispositivo USB
+
+O suporte a interfaces de rede virtuais é fornecido pelos templates número 1, 8 e 10. Observe que nenhum deles funciona com o Microsoft Windows. Outros sistemas operacionais host funcionam com todos os três modelos. Os módulos de kernel man:usb_template[4] e man:if_cdce[4] devem ser carregados.
+
+Certifique-se de que os módulos necessários estejam carregados e que o template correto esteja configurado na inicialização, adicionando estas linhas ao [.filename]#/boot/loader.conf#, criando-o se ele ainda não existir:
+
+[source,bash]
+....
+if_cdce_load="YES"
+hw.usb.template=1
+....
+
+Para carregar o módulo e definir o modelo sem reiniciar, use:
+
+[source,bash]
+....
+# kldload if_cdce
+# sysctl hw.usb.template=1
+....
+
+[[usb-device-mode-storage]]
+== Dispositivo de armazenamento virtual USB
+
+[NOTE]
+====
+O driver man:cfumass[4] é um driver de modo de dispositivo USB disponibilizado pela primeira vez no FreeBSD 12.0.
+====
+
+O target de armazenamento em massa é fornecido pelos templates 0 e 10. Os módulos de kernel man:usb_template[4] e man:cfumass[4] devem ser carregados. O man:cfumass[4] faz interface com o subsistema CTL, o mesmo usado para os targets iSCSI ou Fibre Channel. No lado do host, os inicializadores do armazenamento em massa USB só podem acessar um único LUN, o LUN 0.
+
+=== Configurando o target de armazenamento em massa USB usando o script de inicialização cfumass
+
+A maneira mais simples de configurar um target de armazenamento USB somente de leitura é usar o script rc [.filename]#cfumass#. Para configurá-lo dessa maneira, copie os arquivos a serem apresentados para a máquina host USB no diretório `/var/cfumass` e inclua esta linha no [.filename]#/etc/rc.conf# :
+
+[.programlisting]
+....
+cfumass_enable="YES"
+....
+
+Para fazer valer a configuração sem reiniciar, execute este comando:
+
+[source,bash]
+....
+# service cfumass start
+....
+
+Diferentemente da funcionalidade serial e de rede, o modelo não deve ser definido como 0 ou 10 no [.filename]#/boot/loader.conf#. Isso ocorre porque o LUN deve ser configurado antes de definir o template. O script de inicialização cfumass define o número do modelo correto automaticamente quando iniciado.
+
+=== Configurando o armazenamento em massa USB usando outros meios
+
+O restante deste capítulo fornece uma descrição detalhada da configuração do target sem usar o arquivo rc cfumass. Isso é necessário se, por exemplo, alguém quiser fornecer um LUN gravável.
+
+O armazenamento em massaUSB não exige que o daemon man:ctld[8] esteja em execução, embora ele possa ser usado se desejado. Isso é diferente do iSCSI. Portanto, existem duas maneiras de configurar o target: o man:ctladm[8] ou o man:ctld[8]. Ambos exigem que o módulo do kernel [.filename]#cfumass.ko# seja carregado. O módulo pode ser carregado manualmente:
+
+[source,bash]
+....
+# kldload cfumass
+....
+
+Se o [.filename]#cfumass.ko# não foi compilado estaticamente no kernel, o [.filename]#/boot/loader.conf# pode ser configurado para carregar o módulo na inicialização:
+
+[.programlisting]
+....
+cfumass_load="YES"
+....
+
+Um LUN pode ser criado sem o daemon man:ctld[8]:
+
+[source,bash]
+....
+# ctladm create -b block -o file=/data/target0
+....
+
+Isto apresenta o conteúdo do arquivo de imagem [.filename]#/data/target0# como um LUN para o host USB. O arquivo deve existir antes de executar o comando. Para configurar o LUN na inicialização do sistema, adicione o comando ao [.filename]#/etc/rc.local#.
+
+O man:ctld[8] também pode ser usado para gerenciar LUNs. Crie [.filename]#/etc/ctl.conf#, adicione uma linha ao [.filename]#/etc/rc.conf# para certificar-se man:ctld[8] é iniciado automaticamente na inicialização e, em seguida, inicie o daemon.
+
+Este é um exemplo de um arquivo de configuração [.filename]#/etc/ctl.conf# simple. Consulte man:ctl.conf[5] para obter uma descrição mais completa das opções.
+
+[.programlisting]
+....
+target naa.50015178f369f092 {
+	lun 0 {
+		path /data/target0
+		size 4G
+	}
+}
+....
+
+O exemplo cria um único target com um único LUN. O `naa.50015178f369f092` é um identificador de dispositivo composto por 32 dígitos hexadecimais aleatórios. A linha `path` define o caminho completo para o arquivo ou zvol que suporta o LUN. Esse arquivo deve existir antes do man:ctld[8] ser iniciado. A segunda linha é opcional e especifica o tamanho do LUN.
+
+Para ter certeza que o daemon man:ctld[8] foi iniciado na inicialização, adicione esta linha ao [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ctld_enable="YES"
+....
+
+Para iniciar o man:ctld[8] agora, execute este comando:
+
+[source,bash]
+....
+# service ctld start
+....
+
+Quando o daemon man:ctld[8] é iniciado, ele lê o [.filename]#/etc/ctl.conf#. Se esse arquivo for editado depois que o daemon iniciar, recarregue as alterações para que elas entrem em vigor imediatamente:
+
+[source,bash]
+....
+# service ctld reload
+....

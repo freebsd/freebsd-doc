@@ -1,0 +1,810 @@
+---
+title: 第20章 電子メール
+part: パートIV. ネットワーク通信
+prev: books/handbook/ppp-and-slip
+next: books/handbook/advanced-networking
+---
+
+[[mail]]
+= 電子メール
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目次
+:table-caption: 表
+:figure-caption: 図
+:example-caption: 例 
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 20
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../../images/books/handbook/mail/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/mail/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/mail/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/ja/mailing-lists.adoc[]
+include::shared/ja/teams.adoc[]
+include::shared/ja/urls.adoc[]
+
+toc::[]
+
+[[mail-synopsis]]
+== この章では
+
+"電子メール"、email としてのほうが知られているでしょう、 は現代で最も広く利用されているコミュニケーション手段の一つです。 この章では FreeBSD 上でメールサーバを実行するための基本的な導入を説明します。 しかし、この文書は完璧な参考文献ではなく、 実際のところ考慮すべき重要な点の多くが省略されています。 この件について、より網羅したものについては crossref:bibliography[bibliography,参考図書] に掲載されている多くの優れた書籍を参照してください。
+
+この章では、以下の分野について説明します。
+
+* 電子メールの送受信に関係しているソフトウェアの構成要素
+* FreeBSD における sendmail の基本的な設定ファイルのある場所
+* スパマーがあなたのメールサーバを踏台として不正に使用することを防ぐ方法
+* あなたのシステムに sendmail の置き換えとなる代替の MTA をインストールして設定する方法
+* メールサーバにまつわる共通の問題の解決法
+* UUCP とともに SMTP を使う方法
+* ダイアルアップ接続でメールを使う方法
+* セキュリティを向上するために SMTP 認証を設定する方法
+
+この章を読む前に、以下のことを理解しておく必要があります。
+
+* ネットワーク接続の適切な設定方法 (crossref:advanced-networking[advanced-networking,高度なネットワーク])
+* あなたのメールホストに対する DNS 情報の適切な設定方法 (crossref:advanced-networking[advanced-networking,高度なネットワーク])
+* サードパーティ製ソフトウェアのインストール方法 (crossref:ports[ports,アプリケーションのインストール - packages と ports])
+
+[[mail-using]]
+== 電子メールを使う
+
+email の交換には 5 つの主要な部分があります。 それらは <<mail-mua,ユーザープログラム>>、 <<mail-mta,サーバーデーモン>>、 <<mail-dns,DNS>>、 <<mail-receive,POP もしくは IMAP のデーモン>>、 そしてもちろん <<mail-host,メールホスト>>です。
+
+[[mail-mua]]
+=== ユーザープログラム
+
+いくつか名前を挙げれば、 mutt, pine, elm そして mail といったコマンドラインプログラムや balsa, xfmail のような GUI プログラム、WWW ブラウザーのようにさらに "洗練された" ものまであります。 これらのプログラムは、email の処理を <<mail-mta,server daemons>> を呼び出したり TCP 経由で渡したり、といった手段でローカルの <<mail-host,"メールホスト">> に任せるだけです。
+
+[[mail-mta]]
+=== メールホストサーバデーモン
+
+通常、これは sendmail (FreeBSD のデフォルト) や qmail, postfix もしくは exim といった他のメールサーバーデーモンの一つです。 他にもあるのですが、以上のものが広く使われています。
+
+サーバーデーモンは通常 2 つの機能 - やってくるメールを受け取るのと出ていくメールを配送する、 を持っています。メールを読むために POP や IMAP で接続する、 ということはできません。 そのためにはもう一つ<<mail-receive,デーモン>>が必要なのです。
+
+いくつかの古いバージョンの sendmail には深刻なセキュリティ問題がありますが、 現在のバージョンを使っていれば特に問題ないことに注意してください。 例のごとく、 どんなソフトウェアを利用する時にも最新の状態にしておくのが大事なのです。
+
+[[mail-dns]]
+=== Email と DNS
+
+Domain Name System (DNS) とそのデーモンである `named` は email の配送において大変重要な役割を担ってます。 あなたのサイトからもう一つのサイトへメールを配送するためには、 サーバーデーモンは DNS からそのサイトを探し、 メールの受け取り先のホストを決定します。
+
+メールがあなたに送られた場合にも同じような仕組みになっています。 DNS にはホスト名と IP アドレス、ホスト名とメールホストをマッピングするデータベースがあります。 IP アドレスは A レコードで指定されます。 MX (Mail eXchanger) レコードはあなた宛のメールを受け取るホストを指定します。 あなたのホスト名に対する MX レコードがない場合には、 メールは直接あなたのホストに配送されます。
+
+[[mail-receive]]
+=== メールの受け取り
+
+メールはメールホストが受け取ります。 このホストは送られてきたメールを集め、 (ユーザーが) 読んだりピックアップしたりするために保存します。 保存されているメールをピックアップするにはメールホストに接続する必要があります。 これは POP や IMAP を用いて行なわれます。 メールホスト上で直接メールを読みたい時は POP や IMAP のサーバーは必要ありません。
+
+POP や IMAP のサーバーを走らせるためには 2 つのことをやらなければいけません。
+
+[.procedure]
+====
+. POP や IMAP のデーモンを link:https://www.FreeBSD.org/ports/[ports コレクション] からインストールします。
+. [.filename]#/etc/inetd.conf# を修正して POP や IMAP のサーバーが起動されるように設定します。
+====
+
+[[mail-host]]
+=== メールホスト
+
+メールホストとは責任をもってメールを配送したり、 あなたのホストや、もしかするネットワークも、に宛てたメールを受け取ったりするホストに与えられる名前です。
+
+[[sendmail]]
+== sendmail の設定
+
+man:sendmail[8] は FreeBSD のデフォルトの メールトランスファエージェント (MTA) です。 sendmail の仕事はメールユーザエージェント (MUA) からのメールを受け取り、 それを設定ファイルで定義された適当なメーラに届けることです。 sendmail はネットワーク接続を受け入れて、 ローカルのメールボックスにメールを届けたり 別のプログラムにメールを渡したりもできます。
+
+sendmail は次の設定ファイルを使用します。
+
+[.informaltable]
+[cols="1,1", options="header"]
+|===
+| ファイル名
+| 機能
+
+|[.filename]#/etc/mail/access#
+|sendmail アクセスデータベースファイル
+
+|[.filename]#/etc/mail/aliases#
+|メールボックスエイリアス
+
+|[.filename]#/etc/mail/local-host-names#
+|sendmail が受け付ける配送先ホストのリスト
+
+|[.filename]#/etc/mail/mailer.conf#
+|メーラプログラムの設定
+
+|[.filename]#/etc/mail/mailertable#
+|メーラ配送表
+
+|[.filename]#/etc/mail/sendmail.cf#
+|sendmail の主設定ファイル
+
+|[.filename]#/etc/mail/virtusertable#
+|仮想ユーザおよび仮想ドメイン表
+|===
+
+=== [.filename]#/etc/mail/access#
+
+アクセスデータベースは、 どのホストまたは IP アドレスがローカルメールサーバに接続できるか、 そして接続の種類は何か、ということを定義します。 ホストは `OK`, `REJECT`, `RELAY` として指定できます。 または、メーラエラーを指定することで、 単に sendmail の エラー処理ルーチンに渡されます。 `OK` として指定されたホスト (これはデフォルトです) は、 メールの最終宛先がローカルマシンである限り、 このホストへメールを送ることを認められます。 `REJECT` として指定されたホストは、 すべてのメール接続を拒絶されます。 ホスト名に対して `RELAY` オプションを指定されたホストは、 このメールサーバを通過して任意の宛先へメールを送ることを認められます。
+
+.sendmail アクセスデータベースの設定
+[example]
+====
+[.programlisting]
+....
+cyberspammer.com                550 We don't accept mail from spammers
+FREE.STEALTH.MAILER@            550 We don't accept mail from spammers
+another.source.of.spam          REJECT
+okay.cyberspammer.com           OK
+128.32                          RELAY
+....
+
+====
+
+この例では五つのエントリがあります。 表の左側に当てはまるメール送信者は、表の右側の動作に支配されます。 はじめの二つの例は、エラーコードを sendmail のエラー処理ルーチンに渡します。 メールが表の左側に当てはまると、リモートホストにそのメッセージが表示されます。 次のエントリは `another.source.of.spam` というインターネット上の特定のホストからのメールを拒絶します。 次のエントリは `okay.cyberspammer.com` からのメール接続を受け入れます。 このエントリは上にある `cyberspammer.com` という行よりもさらに厳密です (厳密に一致すればするほど、そうでないものより優先されます)。 最後のエントリは `128.32` から始まる IP アドレスのホストからの電子メールのリレーを認めます。 これらのホストは他のメールサーバに到達できるこのメールサーバを使ってメールを送ることができるでしょう。
+
+このファイルを変更したら、 データベースを更新するために [.filename]##/etc/mail/## ディレクトリで `make` コマンドを実行する必要があります。
+
+=== [.filename]#/etc/mail/aliases#
+
+エイリアスデータベースには、 他のユーザ、ファイル、プログラムまたは他のエイリアスに展開される 仮想的なメールボックスの一覧が記載されています。 [.filename]#/etc/mail/aliases# において使用できる例をいくつかあげます。
+
+.メールエイリアス
+[example]
+====
+[.programlisting]
+....
+root: localuser
+ftp-bugs: joe,eric,paul
+bit.bucket:  /dev/null
+procmail: "|/usr/local/bin/procmail"
+....
+
+====
+
+ファイル形式はシンプルです。 コロンの左側にあるメールボックス名は、右側のターゲットに展開されます。 はじめの例は単純に `root` のメールボックスを `localuser` のメールボックスに展開し、 それからエイリアスデータベースをもう一度調べます。 一致するエントリがなければメッセージはローカルユーザである `localuser` に配送されます。 次の例はメールリストです。 `ftp-bugs` のメールボックスへのメールは `joe`, `eric` および `paul` の三つのローカルメールボックスに展開されます。 リモートメールボックスは `user@example.com` のように指定できることに注意してください。 次の例はメールをファイル、この場合 [.filename]#/dev/null# に書き込みます。 最後の例はメールをプログラムに送ります。 この場合メールのメッセージは UNIX(R) パイプを通じて [.filename]#/usr/local/bin/procmail# の標準入力に書き込まれます。
+
+このファイルを変更したら、 データベースを更新するために[.filename]##/etc/mail/## ディレクトリで `make` コマンドを実行する必要があります。
+
+=== [.filename]#/etc/mail/local-host-names#
+
+これは man:sendmail[8] がローカルホスト名として認めるホスト名のリストです。 sendmail がメールを受け取るすべてのドメインやホストにこのファイルを置いてください。 たとえば、このメールサーバは `example.com` というドメインおよび `mail.example.com` というホストへのメールを受け取るとすると、 [.filename]#local-host-names# ファイルの内容は次のようになるでしょう。
+
+[.programlisting]
+....
+example.com
+mail.example.com
+....
+
+このファイルを更新したら、変更を読み込むために man:sendmail[8] を再起動する必要があります。
+
+=== [.filename]#/etc/mail/sendmail.cf#
+
+sendmail の主設定ファイルである [.filename]#sendmail.cf# は、電子メールアドレスの書き換えから、 リモートメールサーバへ拒絶メッセージを送ることまで sendmail の全般的な動作をすべて制御します。 当然、そのようなさまざまな役割によりこの設定ファイルは大変複雑で、 その詳細についてはこの節の少し範囲外です。好運なことに、 標準的な構成のメールサーバではこのファイルをめったに変更する必要はありません。
+
+sendmail の主設定ファイルは sendmail の機能と動作を決定する man:m4[1] マクロから構築できます。 詳細については [.filename]#/usr/src/contrib/sendmail/cf/README# を参照してください。
+
+このファイルを更新したら、その変更を反映するために sendmail を再起動する必要があります。
+
+=== [.filename]#/etc/mail/virtusertable#
+
+[.filename]#virtusertable# は仮想ドメインおよび仮想メールボックスに対するアドレスを実際のメールボックスと対応づけます。 これらのメールボックスにはローカル、リモート、 [.filename]#/etc/mail/aliases# に定義されたエイリアス、 またはファイルを使用できます。
+
+.仮想ドメインメール対応表の例
+[example]
+====
+[.programlisting]
+....
+root@example.com                root
+postmaster@example.com          postmaster@noc.example.net
+@example.com                    joe
+....
+
+====
+
+上の例では `example.com` ドメインへの対応づけをしています。 このファイルはファイルの下までファーストマッチ (訳注: 一致するルールが複数ある場合、 一番最初に一致したルールが適用されること) で処理されます。 はじめの行では `root@example.com` を ローカルの `root` メールボックスに対応づけています。 次のエントリでは `postmaster@example.com` を `noc.example.net` ホスト上の `postmaster` メールボックスに対応づけています。 最後に、今までのところでは `example.com` に関して何も一致しない場合、最後のエントリと一致するでしょう。 これは `example.com` の誰かに送ったすべてのメールが一致します。これは `joe` のローカルメールボックスに対応づけられています。
+
+[[mail-changingmta]]
+== MTA の変更
+
+すでに述べたように、FreeBSD には MTA (Mail Transfer Agent) として、 sendmail がすでにインストールされています。 したがって、デフォルトではこれがメールの送受信を担当しています。
+
+しかしながら、さまざまな理由によって、 システムの MTA を変更しようと考えるシステム管理者もいるかもしれません。 その理由は、単に他の MTA を試してみたいというものから 他のメーラに依存する特定の機能やパッケージが必要だといったものまで、 多岐にわたることでしょう。 幸い、理由がどんなものであれ、FreeBSD では簡単に変更できます。
+
+=== 新しい MTA のインストール
+
+さまざまな MTA が利用できます。 crossref:ports[ports,FreeBSD Ports Collection] から探しはじめるのがよいでしょう。 もちろん、どんな場所からでも、あなたが利用したい MTA が FreeBSD で動作する限りすべて自由に使えます。
+
+新しい MTA をインストールすることからはじめましょう。 新しい MTA をインストールすると、 あなたの要求が実際に実現したかどうか決める機会が与えられます。さらに、 サービスを sendmail から引き継ぐ前に 新しいソフトウェアを設定する機会が与えられます。これを行う場合、 新しいソフトウェアが [.filename]#/usr/bin/sendmail# のようなシステムバイナリを上書きしようとしないことを確認してください。 そうしないとあなたが設定する前に新しいメールソフトウェアが本格的に動作しはじめてしまいます。
+
+あなたが選択したソフトウェアを設定する方法についての情報は、 その MTA の文書を参照してください。
+
+=== sendmail を無効にする
+
+sendmail を起動するために使用されていた手続きは、 4.5-RELEASE と 4.6-RELEASE の間で著しく変更されました。 したがって、それを無効にするための手続きは微妙に違います。
+
+==== 2002 年 4 月 4 日より前の FreeBSD 4.5-STABLE (4.5-RELEASE とそれ以前のバージョンが該当)
+
+[.filename]#/etc/rc.conf# に次の行を加えてください。
+
+[.programlisting]
+....
+sendmail_enable="NO"
+....
+
+これは sendmail のメール受信機能を無効にします。 しかし [.filename]#/etc/mail/mailer.conf# (下記参照) が変更されていなければ、sendmail はメールの送信にまだ使われるでしょう。
+
+==== 2002 年 4 月 4 日以降の FreeBSD 4.5-STABLE (4.6-RELEASE とそれ以降のバージョンが該当)
+
+sendmail を完全に無効にするためには [.filename]#/etc/rc.conf# に次の行を加えなくてはいけません。
+
+[.programlisting]
+....
+sendmail_enable="NONE"
+....
+
+[WARNING]
+====
+
+もしこの方法で sendmail のメール送信機能を無効にしたのなら、 完全に動作する代替メール配送システムと置き換えることが重要です。 さもなければ、man:periodic[8] などのシステム機能は、 それらの結果を通常想定しているようにメールで配送することができなくなるでしょう。 システムの多くの部分が sendmail 互換のシステムがあることを想定しているかもしれません。 もしそれらを無効にした後に、 アプリケーションがメールを送ろうとするために sendmail のバイナリを使用し続ければ、 メールは使われていない sendmail のキューに入り、そして決して配送されないでしょう。
+====
+
+もし sendmail のメール受信機能だけを無効にしたいのなら [.filename]#/etc/rc.conf# に以下の行を追加してください。
+
+[.programlisting]
+....
+sendmail_enable="NO"
+....
+
+sendmailの起動オプションに関する詳細は man:rc.sendmail[8] マニュアルをご覧ください。
+
+=== 起動時に新しい MTA を起動する
+
+起動時に新しい MTA を起動するには二つの選択肢があります。 ここでも、あなたが稼働させている FreeBSD のバージョンに依存します
+
+==== 2002 年 4 月 11 日より前の FreeBSD 4.5-STABLE (4.5-RELEASE とそれ以前のバージョンが該当)
+
+[.filename]#/usr/local/etc/rc.d/# ディレクトリに、 ファイル名が [.filename]#.sh# でおわり、 `root` によって実行可能なスクリプトを追加します。 このスクリプトは `start` および `stop` パラメータを引数として受け付けるようにします。 起動時にシステムスクリプトは次のコマンドを実行するでしょう。
+
+[.programlisting]
+....
+/usr/local/etc/rc.d/supermailer.sh start
+....
+
+これは手動でサーバを起動するためにも使用できます。 システム終了時にはシステムスクリプトは `stop` オプションを使用して、次のコマンドを実行するでしょう。
+
+[.programlisting]
+....
+/usr/local/etc/rc.d/supermailer.sh stop
+....
+
+これはシステムが稼働している間に手動でサーバを停止するためにも使えます。
+
+==== 2002 年 4 月 11 日以降の FreeBSD 4.5-STABLE (4.6-RELEASE とそれ以降のバージョンが該当)
+
+より新しいバージョンの FreeBSD では、 上記の方法または次の行を [.filename]#/etc/rc.conf# に設定できます。
+
+[.programlisting]
+....
+mta_start_script="filename"
+....
+
+_filename_ は、あなたが MTA を立ち上げるために起動時に実行するスクリプト名です。
+
+=== システムのデフォルトメーラとして sendmail を置き換える
+
+sendmail プログラムは UNIX(R) システム上の標準ソフトウェアとして本当にどこでも利用できるので、 これがすでにインストールおよび設定されているとみなしている ソフトウェアもあるかもしれません。 この理由により、代替となる MTA の多くは sendmail コマンドラインインタフェースと 互換性のある実装を提供しています。 これを "差し込む" ことによって、 sendmail の置き換えとして代替 MTA を使用することが容易になります。
+
+したがって、あなたが互換メーラを使用しているときには、 [.filename]#/usr/bin/sendmail# のような標準 sendmail バイナリを実行しようとするソフトウェアが、 実際にはその代わりにあなたの選択したメーラを実行しているということを 確かめる必要があるでしょう。 好運なことに、FreeBSD はこの仕事をする man:mailwrapper[8] と呼ばれるシステムを提供しています。
+
+インストールされたまま sendmail が稼働しているときには [.filename]#/etc/mail/mailer.conf# には以下のような記述があるでしょう。
+
+[.programlisting]
+....
+sendmail    /usr/libexec/sendmail/sendmail
+send-mail   /usr/libexec/sendmail/sendmail
+mailq       /usr/libexec/sendmail/sendmail
+newaliases  /usr/libexec/sendmail/sendmail
+hoststat    /usr/libexec/sendmail/sendmail
+purgestat   /usr/libexec/sendmail/sendmail
+....
+
+このことは、これらのうちどの共通コマンド ([.filename]#sendmail# 自身のような) が実行されても、 システムは [.filename]#mailer.conf# を確認して、 代わりに [.filename]#/usr/libexec/sendmail/sendmail# を実行する [.filename]#sendmail# という名前の mailwapper のコピーを呼び出すことを意味します。 このようなシステムでは、デフォルトの [.filename]#sendmail# が呼び出されたときに、 どのバイナリが実際に実行されるかを変更するのが簡単になります。
+
+したがって、sendmail の代わりに [.filename]#/usr/local/supermailer/bin/sendmail-compat# を実行させたいのなら、次のように [.filename]#/etc/mail/mailer.conf# を変更してください。
+
+[.programlisting]
+....
+sendmail    /usr/local/supermailer/bin/sendmail-compat
+send-mail   /usr/local/supermailer/bin/sendmail-compat
+mailq       /usr/local/supermailer/bin/mailq-compat
+newaliases  /usr/local/supermailer/bin/newaliases-compat
+hoststat    /usr/local/supermailer/bin/hoststat-compat
+purgestat   /usr/local/supermailer/bin/purgestat-compat
+....
+
+=== 完了
+
+あなたのやりたいようにすべてを設定しおえたら、 もはや必要のない sendmail のプロセスを終了して新しいソフトウェアに関するプロセスを起動するか、 単に再起動してください。 再起動することによって、新しい MTA が起動時に正しく立ち上がるように システムが設定されているかどうか確認することもできるでしょう。
+
+[[mail-trouble]]
+== トラブルシュート
+
+=== どうして自分のサイトのホストなのに FQDN を使わなければいけないのですか?
+
+恐らく、そのホストは実際には別のドメインにあるのでしょう。 例えば `foo.bar.edu` ドメインにいて、 `bar.edu` というドメイン内の `mumble` というホストにアクセスしたいとします。 この時は単に `mumble` ではなく `mumble.bar.edu` と FQDN で参照しなければなりません。
+
+そもそも、BSD BIND のリゾルバー (resolver) ではこのようなことが可能でしたが、 FreeBSD に入っている最新版の BIND では自分のドメイン以外に対する FQDN でない省略形は許されません。 従ってホストを `mumble` と曖昧に指定した場合は `mumble.foo.bar.edu` という名前があればそれになり、 そうでなければ root ドメインから検索されます。
+
+これは、 `mumble.bar.edu` と `mumble.edu` ということなったドメイン名に対してホスト名のサーチがおこなわれていた以前の振る舞いとは異なったものです。 このような事が悪い例もしくはセキュリティホールとみなされる理由については RFC 1535 を見てください。
+
+[.filename]#/etc/resolv.conf# で 
+[.programlisting]
+....
+domain foo.bar.edu
+....
+
+と書いてある行を 
+
+[.programlisting]
+....
+search foo.bar.edu bar.edu
+....
+
+と書き換えることで上のようなことができます。 しかし、RFC 1535 にあるように検索順序が "内部 (local) と外部 (public) の管理の境界" をまたがないようにしてください。
+
+=== sendmail が mail loops back to myself というメッセージを出すのですが。
+
+sendmail FAQ に次のように書いてあります。
+
+[.programlisting]
+....
+Local configuration error というメッセージが出ます。例えば、
+
+553 relay.domain.net config error: mail loops back to myself
+554 <user@domain.net>... Local configuration error
+
+のような感じですが、どうしたら解決できますか?
+
+これは、例えば domain.net のようなドメイン宛てのメールを
+MX レコードで特定のホスト(ここでは
+relay.domain.net) に送ろうとしたのに、
+そのホストでは domain.net
+宛てのメールを受け取れるような設定になっていない場合です。
+設定の際に
+FEATURE(use_cw_file) を指定してある場合には
+/etc/mail/local-host-names の中に domain.net を追加してください。
+もしくは、/etc/mail/sendmail.cf の中に Cw domain.net
+を追加してください。
+....
+
+sendmail FAQ は http://www.sendmail.org/faq[http://www.sendmail.org/faq] にありますので、 メールの設定に "おかしなこと" があれば常に読んでください。
+
+=== ダイアルアップ PPPPPP ホストでメールサーバを実行するにはどうしたらいいの?
+
+LAN 上にある FreeBSD マシンを、 インターネットに接続したいとします。FreeBSD マシンは、その LAN でのメールゲートウェイになります。FreeBSD マシンは専用線接続ではありません (訳注: ダイアルアップ接続など)。
+
+これには、少なくとも二つの方法があります。 一つは UUCP を使うことです。
+
+もう一つの方法は、あなたのドメインに対するセカンダリ MX サービスを提供する常時稼働のインターネットサーバを用意することです。 たとえば、あなたの会社のドメインが `example.com` で、 ISP があなたのドメインに セカンダリ MX サービスを提供するために `example.net` ドメインを 用意するとしたら次のようにします。
+
+[.programlisting]
+....
+example.com.	MX	10	example.com.
+MX	20	example.net.
+....
+
+最終的なメール受信先としては、 一つのホストだけが定義されるべきです (`example.com` 上の [.filename]#/etc/mail/sendmail.cf# ファイルに、 `Cw example.com` を追加します)。
+
+送信側の `sendmail` が、 メールを配送しようとしている時、モデムの接続を介してあなたのところ (`example.com`) に接続しようとします。大抵の場合、 あなたのマシンがオンラインでないために、 接続はタイムアウトしてしまうでしょう。 `sendmail` プログラムは自動的に、 たとえばあなたのインターネットプロバイダなどのセカンダリの MX サイト (`example.net`) にメールを配送するでしょう。 セカンダリ MX サイトは定期的にあなたのホストに接続し、 プライマリ MX ホスト (`example.com`) にメールを配送しようとするでしょう。
+
+ログインスクリプトとして、 このようなものを使うとよいでしょう。
+
+[.programlisting]
+....
+#!/bin/sh
+# Put me in /usr/local/bin/pppmyisp
+( sleep 60 ; /usr/sbin/sendmail -q ) &
+/usr/sbin/ppp -direct pppmyisp
+....
+
+ユーザごとにログインスクリプトを作りたい場合には、 上記のスクリプトの代わりに、 `sendmail -qRexample.com` を使用することもできます。 このようにすると、 キューの中の `example.com` に対するすべてのメールは、すぐに強制的に処理されます。
+
+さらに、次のような改良もできます。
+
+以下は、link:{freebsd-isp} から抜粋してきたメッセージです。
+
+[.programlisting]
+....
+> 私たちはお客様に対して、セカンダリ MX を提供しています。
+> お客様は一日に何回か私たちのサービスに接続し、メールを彼らのプライマリ MX
+> に受け取ります (彼らのドメインに対するメールが到着した時には、
+> 私たちは彼らのサイトを呼び出しません)。
+> 私たちの sendmail は、30 分ごとにメールキューに溜っているメールを配送します。
+> ちょうどその時に、すべてのメールがプライマリ MX に送られたかどうかを確かめるためには、
+> 彼らは 30 分は オンラインでいなければなりません。
+>
+> すべてのメールを今すぐ送るために sendmail を初期化するコマンドはあるでしょうか?
+> もちろん私たちのマシン上には、ユーザはルート (root) 権限を持っていません。
+
+sendmail.cf の privacy flags セクションに、
+Opgoaway,restrictqrun の定義があります。
+
+root 以外のユーザがキューを処理できるようにするには、
+restrictqrun を削除してください。また、MX の再調整が必要かもしれません。
+あなたがたは、顧客のサイトに対する一番優先度の高い MX なので、
+次のように定義します。
+
+# If we are the best MX for a host, try directly instead of generating
+# local config error.
+OwTrue
+
+このようにすると、リモートサイトからのメールが、
+顧客のマシンと接続しようとせず、直接あなたがたのホストマシンに配送されるようになります。
+ホストマシンに配送されたメールは、続いて顧客のマシンに送られます。
+これはホスト名にのみ有効なので、顧客のメールマシンに、
+host.customer.com とは別に、customer.com も定義する必要があります。
+DNS 上で、customer.com に対する A レコードを定義してください。
+....
+
+=== なぜ他のホストにメールを送ろうとすると、いつも Relaying Denied と怒られてしまうの ?
+
+FreeBSD がインストールされたデフォルトの状態では、 sendmail は動作しているホストからのメールだけを送るように設定されています。 たとえば POP3 サーバがインストールされているとすると、 ユーザは学校や職場など他のリモートの場所からメールを確認することが できます。しかし、彼らは外部からそのホスト以外へのメールを 送ることはやはりできません。 通常、メールを送ろうとしてから少しすると、 `5.7 Relaying Denied` というエラーメッセージの書かれたメールが MAILER-DAEMON から送られてくるでしょう。
+
+これを解決する方法はいくつかあります。 一番の正攻法は [.filename]#/etc/mail/relay-domains# リレードメインファイルにあなたの ISP のアドレスを書くことです。 これをするのに簡単な方法は次のとおりです。
+
+[source,bash]
+....
+# echo "your.isp.example.com" > /etc/mail/relay-domains
+....
+
+このファイルを作成または編集したら、 sendmail を再起動してください。 もしあなたがサーバ管理者でメールをローカルに送りたくないか、 ポイントを使用して他のマシン (や、さらに他の ISP) の クライアントまたはシステムへ送りたい時は、とても効果があります。 さらに、あなたが一つあるいは二つだけのメールアカウントを 設定している場合でもこれは非常に有用です。 追加すべきアドレスがたくさんある場合には、 単にこのファイルをあなたの好きなテキストエディタで開いて、 そして一行に一つずつドメインを追加してください。
+
+[.programlisting]
+....
+your.isp.example.com
+other.isp.example.net
+users-isp.example.org
+www.example.org
+....
+
+これで、リストに掲載されているすべてのホスト (ユーザがあなたのシステムにアカウントを持っていると規定する) からあなたのシステムを通るすべてのメールは送信に成功するでしょう。 これはあなたのシステムから SPAM を送ることを認めることなく、 リモートであなたのシステムからメールを送ることをユーザに 認めるためのとてもよい方法です。
+
+[[mail-advanced]]
+== 先進的なトピックス
+
+これからのセクションでは、 メールの設定やドメイン全体のためのメールの設定といったさらに突込んだ話題について触れます。
+
+[[mail-config]]
+=== 基本事項
+
+あなたのマシンに FreeBSD を普通にインストールして、 [.filename]#/etc/resolv.conf# ファイルを設定するか、 またはネームサーバを走らせれば、 他のホストへ電子メールを送ることができるようになります。 あなたのホスト宛のメールをあなた自身の FreeBSD ホスト上の MTA (たとえば sendmail) に配送するようにしたい場合には、次の二つの方法があります。
+
+* 自身でネームサーバーを実行し、 自分のドメインを持つ。例えば `FreeBSD.org`。
+* あなたのホストへ直接メールが配送されるようにする。 これはメールがあなたのマシンの現在の DNS 名に直接配送されるようにすることにより実現できます。 たとえば `example.FreeBSD.org`。
+
+上のどちらを選ぶ場合でも、自分のホストに直接メールが配送されるようにするには恒久的で 静的 な IP アドレス (ほとんどの PPP ダイアルアップ設定で用いられる動的なアドレスではなく) を持っていなければなりません。 もしファイアウォールの中にいるならば、 SMTP トラフィックが通過してくれないといけません。 もし自分のホストでメールを直接受け取りたいならば、 次の二つのうちのどちらかができていることを確認してください。
+
+* 自分のドメインでの (一番値の小さい) MX レコードが自分のホストの IP アドレスを差していることを確認する。
+* 自分のドメインの中に自分のホスト用の MX エントリがないことを確認する。
+
+上のどちらかが設定されていれば、 自分のホストでメールを受け取ることができるでしょう。
+
+次のコマンドを実行してみてください。
+
+[source,bash]
+....
+# hostname
+example.FreeBSD.org
+# host example.FreeBSD.org
+example.FreeBSD.org has address 204.216.27.XX
+....
+
+もしあなたのマシンが上記のメッセージだけを出力したならば、 mailto:yourlogin@example.FreeBSD.org[yourlogin@example.FreeBSD.org] へのメールは問題なく配送されるでしょう (sendmail が `example.FreeBSD.org` 上で正しく動作していると仮定します)。
+
+上記のメッセージの代わりに、
+
+[source,bash]
+....
+# host example.FreeBSD.org
+example.FreeBSD.org has address 204.216.27.XX
+example.FreeBSD.org mail is handled (pri=10) by hub.FreeBSD.org
+....
+
+というメッセージが出力された場合は、 あなたのホスト (`example.FreeBSD.org`) に宛てたメールは全て直接配送されずに `hub` 上の同じユーザー名に配送されます。
+
+上の情報は DNS サーバーが扱います。 メールルーティング情報をもつ DNS レコードは、 __M__ail e__X__change エントリーです。 MX エントリが存在しない場合には、IP アドレスにしたがって、 直接宛先ホストに配送されます。
+
+`freefall.FreeBSD.org` の現時点での MX エントリは、次のようになっています。
+
+[.programlisting]
+....
+freefall		MX	30	mail.crl.net
+freefall		MX	40	agora.rdrop.com
+freefall		MX	10	freefall.FreeBSD.org
+freefall		MX	20	who.cdrom.com
+....
+
+`freefall` は多くの MX エントリを持っています。 一番 MX の値の小さいホストが利用可能な場合は直接メールを受け取ります。 もしなにかの理由でアクセスができない時には、 他のホスト (ときどき "バックアップ MX" と呼ばれます) が一時的にメールを受け取ります。そして、 より値の小さいホストが利用可能になったときにメールを渡し、 最終的に一番値の小さいホストに渡ります。
+
+使い勝手をよくするためには、代替の MX サイトは、それぞれ 別の経路でインターネットへ接続しているとよいでしょう。 インターネットプロバイダまたは他の関連サイトが、このサービスを 提供することができます。
+
+[[mail-domain]]
+=== あなたのドメインに対するメール設定
+
+"メールホスト" (メールサーバーとしても知られています) をセットアップするためには、 いろいろなワークステーションに宛てた全てのメールを受ける必要があります。 基本的には、あなたのドメイン内 (この場合だと `*.FreeBSD.org`) のすべてのホスト名宛てのすべてのメールを "受け取って"、 そのメールをあなたのメールサーバーに配送し、 ユーザーがマスタメールサーバ上でメールをチェックできるようにします。
+
+話を簡単にするために、あるユーザーのアカウントはどのマシンでも同じ__ユーザー名__にすべきです。 そのためには man:adduser[8] を使ってください。
+
+使用する予定のメールホストは、 各ワークステーションごとにメール交換が できるように設定されていなければなりません。 これは DNS の設定で次のように行なうことができます。
+
+[.programlisting]
+....
+example.FreeBSD.org	A	204.216.27.XX		; ワークステーション
+MX	10 hub.FreeBSD.org	; メールホスト
+....
+
+これは、ワークステーションの A レコードがどこを指していようとも そのワークステーション宛てのメールをメールホストに転送する、というものです。
+
+自前で DNS サーバを運用しているのでなければ、 この作業は自分では行えません。自分で DNS サーバを運用しないとかできないという場合は、 あなたの DNS を提供しているインターネットプロバイダなどに依頼して 作業を行ってもらってください。
+
+もしバーチャル電子メールホストを運用するなら次の情報が役に立つでしょう。 例として、あなたには自分のドメイン、ここでは `customer1.org`、 を持っている顧客がいるとしましょう。 あなたは `customer1.org` 宛ての全てのメールを `mail.myhost.com` というメールホストに集めたいとします。 DNS エントリーは次のようになるでしょう。
+
+[.programlisting]
+....
+customer1.org		MX	10 mail.myhost.com
+....
+
+`customer1.org` に対して電子メールを送りたいだけなら、 A レコードは必要__ありません__。
+
+[NOTE]
+====
+`customer1.org` に対して ping を実行しても、 A レコードが存在しない限りうまくいかないことに留意しておいてください。
+====
+
+やらなければいけない最後のことは、 メールホスト上の sendmail に対してどんなドメインやホスト宛のメールを受け取るのか、 を教えることです。いくつかの方法がありますが次のどちらかでいいでしょう。
+
+* `FEATURE(use_cw_file)` を使っているなら、 [.filename]#/etc/mail/local-host-names# ファイルにホストを加えます。 もし sendmail のバージョンが 8.10 より前であれば該当ファイルは [.filename]#/etc/sendmail.cw# です。
+* [.filename]#/etc/sendmail.cf# もしくは sendmail 8.10 以降なら [.filename]#/etc/mail/sendmail.cf# といったファイルに `Cwyour.host.com` という行を加えます。
+
+[[SMTP-UUCP]]
+== UUCP とともに SMTP を使う
+
+FreeBSD とともに出荷されている sendmail の設定は、 サイトがインターネットに直接接続しているものとして設計されています。 UUCP 経由でメールを交換したいサイトは、 他の sendmail 設定ファイルをインストールしなければいけません。
+
+[.filename]#/etc/mail/sendmail.cf# を手動で調整することは先進的なトピックです。 sendmail のバージョン 8 は設定ファイルを man:m4[1] プリプロセッサから生成します。 これにより、高度に抽象化された設定を行うことができます。 man:m4[1] による設定ファイルは [.filename]#/usr/src/usr.sbin/sendmail/cf# 以下にあります。
+
+もしシステムをすべてのソースとともにインストールしていなければ、 sendmail の設定材料は分割された個別のソース tarball を取得してください。 FreeBSD のソースコードが入った CDROM をマウントしているのなら、
+
+[source,bash]
+....
+# cd /cdrom/src
+# cat scontrib.?? | tar xzf - -C /usr/src/contrib/sendmail
+....
+
+と展開してください (展開してもたった数百 KB 程度です)。 [.filename]#cf# ディレクトリの [.filename]#README# ファイルは man:m4[1] による設定の基本的な手引として役に立つでしょう。
+
+UUCP 配送に対応するための一番よい方法は `mailertable` 機能を使用することです。 これは経路を決定するために sendmail が使用できるデータベースを作成します。
+
+まずはじめに [.filename]#.mc# ファイルを作成しなければいけません。 [.filename]#/usr/src/usr.sbin/sendmail/cf/cf# にいくつか例があります。[.filename]#foo.mc# という名前のファイルをあなたが作成したとすると、 有効な [.filename]#sendmail.cf# ファイルへ変換するには次のようにするだけです。
+
+[source,bash]
+....
+# cd /usr/src/usr.sbin/sendmail/cf/cf
+# make foo.cf
+# cp foo.cf /etc/mail/sendmail.cf
+....
+
+典型的な [.filename]#.mc# ファイルは次のようになるでしょう。
+
+[.programlisting]
+....
+VERSIONID(`Your version number') OSTYPE(bsd4.4)
+
+FEATURE(accept_unresolvable_domains)
+FEATURE(nocanonify)
+FEATURE(mailertable, `hash -o /etc/mail/mailertable')
+
+define(`UUCP_RELAY', your.uucp.relay)
+define(`UUCP_MAX_SIZE', 200000)
+define(`confDONT_PROBE_INTERFACES')
+
+MAILER(local)
+MAILER(smtp)
+MAILER(uucp)
+
+Cw    your.alias.host.name
+Cw    youruucpnodename.UUCP
+....
+
+`accept_unresolvable_domains`, `nocanonify` および `confDONT_PROBE_INTERFACES` 機能を含んでいる行は、 メール配送時にまったく DNS を使用しません。 `UUCP_RELAY` の記述は UUCP 配送に対応するのに必要です。 そこにインターネットホスト名を単に書くだけで .UUCP pseudo ドメインアドレスを扱うことができるようになります。 大抵の場合、あなたの ISP のメールリレーをそこに入力するでしょう。
+
+次に、 [.filename]#/etc/mail/mailertable# が必要になります。 メールを配送するリンクが外界との間に一つだけの場合は、 次のようにファイルを記述するだけで十分でしょう。
+
+[.programlisting]
+....
+#
+# makemap hash /etc/mail/mailertable.db < /etc/mail/mailertable
+.                             uucp-dom:your.uucp.relay
+....
+
+次はさらに複雑な例です。
+
+[.programlisting]
+....
+#
+# makemap hash /etc/mail/mailertable.db < /etc/mail/mailertable
+#
+horus.interface-business.de   uucp-dom:horus
+.interface-business.de        uucp-dom:if-bus
+interface-business.de         uucp-dom:if-bus
+.heep.sax.de                  smtp8:%1
+horus.UUCP                    uucp-dom:horus
+if-bus.UUCP                   uucp-dom:if-bus
+.                             uucp-dom:
+....
+
+はじめの三行はドメインで宛先を指定されたメールが、 配送路を "近道" するために、 デフォルトルートではなく代わりにいくつかの UUCP 隣接ホストへ送られる特別な場合を扱います。 次の行はメールを SMTP で配送可能なローカルイーサネットドメインへ送ります。 最後に `uucp-neighbor !recipient` がデフォルトルートを上書きすることを許可するための UUCP 隣接ホストは .UUCP 仮想ドメイン記法で言及されます。 最後の行は常に他のすべてが当てはまるシングルドットです。 これは UUCP 隣接ホストへの UUCP 配送をすることで、 世界に向けたあなたの普遍的メールゲートウェイとして役に立ちます。 `uucp-dom:` キーワードの後ろにあるノード名はすべて、 `uuname` コマンドを使用することで確かめられる正しい UUCP 隣接ホストである必要があります。
+
+このファイルは、実際に使用する前に DBM データベース形式に変換する必要があることに注意してください。 これを実行するコマンドラインは [.filename]#mailertable# ファイルの先頭にコメントとして書かれています。 [.filename]#mailertable# を変更するたびにいつもこのコマンドを実行する必要があります。
+
+最後のアドバイス: もし、 いくつかのメールルーティングがうまく動いているかどうか分からないときは sendmail に `-bt` オプションをつけることを覚えておいてください。 これは sendmail を _アドレステストモード_ で起動します。 あなたがテストしたいメールルーティングのアドレスを後につけて、 単純に `3,0` と入力してください。 最後の行は、内部で使われたメールエージェント、 このエージェントが呼び出された目的地ホスト、および (もしかしたら変換された) アドレスを表示します。 このモードを終了するには kbd:[Ctrl+D] を入力します。
+
+[source,bash]
+....
+% sendmail -bt
+ADDRESS TEST MODE (ruleset 3 NOT automatically invoked)
+Enter <ruleset> <address>
+> 3,0 foo@example.com
+canonify           input: foo @ example . com
+...
+parse            returns: $# uucp-dom $@ your.uucp.relay $: foo < @ example . com . >
+> ^D
+....
+
+[[SMTP-dialup]]
+== ダイアルアップ接続でメールを使う
+
+あなたが固定 IP アドレスを持っているのなら、 デフォルトから何も変更する必要はありません。 割りあてられたインターネット名をホスト名に設定すれば、 sendmail が残りをやってくれます。
+
+あなたが動的に割り当てられた IP アドレスを持っていて、 インターネットに接続するのにダイアルアップ PPP を使用しているのなら、 おそらく ISP のメールサーバにメールボックスがあるでしょう。 ここでは、あなたの ISP のドメインが `example.net`, あなたのユーザ名が `user`, あなたのマシンは `bsd.home` と呼ばれているものとします。 また、ISP から、メールリレーとして `relay.example.net` を使用してよいと通知されているとします。
+
+(訳注: ISP 上の) メールボックスからメールを取得するためには、 取得アプリケーションをインストールしないといけません。 fetchmail ユーティリティは、 さまざまなプロトコルの多くに対応しているのでよい選択肢です。 通常、あなたの ISP は POP3 を提供しています。 このプログラムは、package:mail/fetchmail[] package または Ports Collection からインストールできます。 あなたが ユーザ PPP を使用しているなら、次のエントリを [.filename]#/etc/ppp/ppp.linkup# に追加することで、 インターネット接続が確立したときに自動的にメールを取得することができます。
+
+[.programlisting]
+....
+MYADDR:
+ !bg su user -c fetchmail
+....
+
+あなたがローカルではないアカウントへのメールを配送するために (下記のような) sendmail を使用しているなら、 インターネット接続が確立するとすぐに、 sendmail があなたのメールキューを処理して欲しいとおそらく考えるでしょう。 これを行うには、[.filename]#/etc/ppp/ppp.linkup# ファイルの `fetchmail` コマンドの後に次のコマンドを追加してください。
+
+[.programlisting]
+....
+ !bg su user -c "sendmail -q"
+....
+
+`bsd.home` 上に `user` というアカウントを所有しているとします。 `bsd.home` 上の `user` のホームディレクトリに [.filename]#.fetchmailrc# ファイルを作成します。
+
+[.programlisting]
+....
+poll example.net protocol pop3 fetchall pass MySecret
+....
+
+このファイルはパスワード `MySecret` を含んでいるので、`user` を除く他の誰にも読めるようになっていてはいけません。
+
+正しい `from:` ヘッダでメールを送るためには、 sendmail が `user@bsd.home` ではなく `user@example.net` を使用するようにしなくてはいけません。 また、素早くメール送信をするために sendmail にすべてのメールを `relay.example.net` 経由で送るようにもしたいかもしれません。
+
+次の [.filename]#.mc# ファイルで十分でしょう。
+
+[.programlisting]
+....
+VERSIONID(`bsd.home.mc version 1.0')
+OSTYPE(bsd4.4)dnl
+FEATURE(nouucp)dnl
+MAILER(local)dnl
+MAILER(smtp)dnl
+Cwlocalhost
+Cwbsd.home
+MASQUERADE_AS(`example.net')dnl
+FEATURE(allmasquerade)dnl
+FEATURE(masquerade_envelope)dnl
+FEATURE(nocanonify)dnl
+FEATURE(nodns)dnl
+define(`SMART_HOST', `relay.example.net')
+Dmbsd.home
+define(`confDOMAIN_NAME',`bsd.home')dnl
+define(`confDELIVERY_MODE',`deferred')dnl
+....
+
+[.filename]#.mc# ファイルを [.filename]#sendmail.cf# ファイルに変換する方法の詳細については前の節を参照してください。 また、[.filename]#sendmail.cf# ファイルを変更した後は、 sendmail を再起動し忘れないでください。
+
+[[SMTP-Auth]]
+== SMTP 認証
+
+メールサーバ上で SMTP 認証を行うと、 多くの利益があります。 SMTP 認証は sendmail にもう一つのセキュリティ層を追加することができます。 さらに、ホストを切りかえるモバイルユーザにとっては、 その都度メールクライアントの設定を変更せずとも 同じメールサーバを利用できるようになります。
+
+[.procedure]
+====
+
+. ports から package:security/cyrus-sasl[] をインストールします。 この port は package:security/cyrus-sasl[] にあります。 package:security/cyrus-sasl[] にはここで使用する方法に対する多くのコンパイルオプションがあり、 確実に `pwcheck` オプションを選択してください。
+. package:security/cyrus-sasl[] をインストールした後に [.filename]#/usr/local/lib/sasl/Sendmail.conf# を編集して (もし無ければ作成して) 次の行を追加してください。
++
+[.programlisting]
+....
+pwcheck_method: passwd
+....
++ 
+この方法は sendmail があなたの FreeBSD の [.filename]#passwd# データベースに対して認証することを可能にします。 この方法は SMTP 認証に必要となる、 それぞれのユーザに対する一組の新しいユーザ名とパスワードを 作成する際のトラブルを減らし、 ログインパスワードとメールパスワードを同じままにします。
+. ここで [.filename]#/etc/make.conf# 編集し、 次の行を加えます。
++
+[.programlisting]
+....
+SENDMAIL_CFLAGS=-I/usr/local/include/sasl1 -DSASL
+SENDMAIL_LDFLAGS=-L/usr/local/lib
+SENDMAIL_LDADD=-lsasl
+....
++ 
+これらの行は sendmail に対して、 コンパイルするときに package:cyrus-sasl[] とリンクするための適切な設定オプションを与えるものです。 sendmail を再コンパイルする前に package:cyrus-sasl[] がインストールされていることを確かめてください。
+. 次のコマンドを入力して sendmail を再コンパイルしてください。
++
+[source,bash]
+....
+# cd /usr/src/usr.sbin/sendmail
+# make cleandir
+# make obj
+# make
+# make install
+....
++ 
+sendmail のコンパイルは [.filename]#/usr/src# が大幅に変更されていなくて、 必要な共有ライブラリが利用可能であれば何の問題も起こらないでしょう。
+. sendmail をコンパイルして再インストールした後は、 [.filename]#/etc/mail/freebsd.mc# ファイル (またはあなたが [.filename]#.mc# ファイルとして使用しているファイル。 多くの管理者は唯一の名前を用いるために man:hostname[1] の出力を [.filename]#.mc# として使用することを選んでいます) を編集してください。 次の行を加えてください。
++
+[.programlisting]
+....
+dnl set SASL options
+TRUST_AUTH_MECH(`GSSAPI DIGEST-MD5 CRAM-MD5 LOGIN')dnl
+define(`confAUTH_MECHANISMS', `GSSAPI DIGEST-MD5 CRAM-MD5 LOGIN')dnl
+define(`confDEF_AUTH_INFO', `/etc/mail/auth-info')dnl
+....
++ 
+これらのオプションは、ユーザを認証するために sendmail が利用可能な異なる方法を設定します。 もし pwcheck 以外の方法を使用したいのならドキュメントを参照してください。
+. 最後に [.filename]#/etc/mail# で man:make[1] を実行してください。 これにより、新しい [.filename]#.mc# ファイルから [.filename]#freebsd.cf# という名前 (またはあなたの [.filename]#.mc# に使用している名前) の [.filename]#.cf# ファイルが作成されます。 それから `make install restart` コマンドを実行してください。 新しい [.filename]#.cf# ファイルが [.filename]#sendmail.cf# にコピーされ、 sendmail が適切に再起動されるでしょう。 この手続きについての詳細は [.filename]##/etc/mail/Makefile##を参照してください。
+====
+
+すべてがうまくいけば、ログイン情報をメールクライアントに入力し、 テストメッセージを送ることができるでしょう。 より詳細に調べるには sendmail の `LogLevel` を 13 に設定し、 すべてのエラーについて [.filename]#/var/log/maillog# を見てください。
+
+このサービスがシステムを起動した後にいつでも利用可能となるように、 [.filename]#/etc/rc.conf# に次の行を追加しておくとよいでしょう。
+
+[.programlisting]
+....
+sasl_pwcheck_enable="YES"
+sasl_pwcheck_program="/usr/local/sbin/pwcheck"
+....
+
+これにより、システムの起動時に SMTP_AUTH が確実に初期化されるでしょう。
+
+詳細については http://www.sendmail.org/~ca/email/auth.html[ SMTP 認証] に関する sendmail の文書を参照してください。

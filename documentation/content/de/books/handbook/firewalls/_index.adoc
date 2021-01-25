@@ -1,0 +1,2230 @@
+---
+title: Kapitel 30. Firewalls
+part: Teil IV. Netzwerke
+prev: books/handbook/network-servers
+next: books/handbook/advanced-networking
+---
+
+[[firewalls]]
+= Firewalls
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:table-caption: Tabelle
+:figure-caption: Abbildung
+:example-caption: Beispiel
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 30
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/firewalls/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/firewalls/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/firewalls/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/de/mailing-lists.adoc[]
+include::shared/de/teams.adoc[]
+include::shared/de/urls.adoc[]
+
+toc::[]
+
+[[firewalls-intro]]
+== Einführung
+
+Firewalls ermöglichen es, den ein- und ausgehenden Netzwerkverkehr eines Systems zu filtern. Dazu verwendet eine Firewall eine oder mehrere Gruppen von "Regeln", um ankommende Netzwerkpakete zu untersuchen und entweder durchzulassen oder zu blockieren. Die Regeln einer Firewall untersuchen charakteristische Eigenschaften von Datenpaketen, darunter den Protokolltyp, die Quell- und Zieladresse sowie den Quell- und Zielport.
+
+Firewalls können die Sicherheit eines Rechners oder eines Netzwerks erhöhen, indem sie folgende Aufgaben übernehmen:
+
+* Den Schutz der Anwendungen, Dienste und Rechner eines internen Netzwerks vor unerwünschtem Datenverkehr aus dem Internet.
+* Die Beschränkung des Zugriffs von Rechnern des internen Netzwerks auf Rechner oder Dienste des öffentlichen Internets.
+* Den Einsatz von Network Address Translation (NAT), welches es durch die Verwendung von privaten IP-Adressen ermöglicht, eine einzige gemeinsame Internetverbindung für mehrere Rechner zu nutzen. Dies geschieht entweder über eine einzige IP-Adresse oder über eine Gruppe von jeweils automatisch zugewiesenen öffentlichen Adressen.
+
+Das Basissystem von FreeBSD enthält drei Firewalls: PF, IPFW und IPFILTER (auch als IPF bekannt). FreeBSD enthält ebenfalls zwei Traffic-Shaper zur Kontrolle der Bandbreite: man:altq[4] und man:dummynet[4]. ALTQ ist traditionell eng an PF gebunden, während dummynet zusammen mit IPFW verwendet wird. Gemeinsam ist allen Firewalls, dass sie Regeln einsetzen, um den Transfer von ein- und ausgehenden Datenpaketen des Systems zu steuern. Unterschiedlich ist aber die Art und Weise, wie dies realisiert wird. Auch die für diese Regeln verwendete Syntax ist unterschiedlich.
+
+FreeBSD besitzt mehrere Firewalls, um den unterschiedlichen Anforderungen und Vorlieben von Benutzern gerecht zu werden. Jeder Benutzer sollte selbst beurteilen, welche Firewall seinen Bedürfnissen am besten entspricht.
+
+Nachdem Sie dieses Kapitel gelesen haben, werden Sie wissen:
+
+* Wie man Paketfilterregeln erstellt.
+* Was die Unterschiede zwischen den in FreeBSD eingebauten Firewalls sind.
+* Wie die PF-Firewall konfiguriert und einsetzt wird.
+* Wie die IPFW-Firewall konfiguriert und einsetzt wird.
+* Wie die IPFILTER-Firewall konfiguriert und einsetzt wird.
+
+Bevor Sie dieses Kapitel lesen, sollten Sie:
+
+* Die grundlegenden Konzepte von FreeBSD und dem Internet verstehen.
+
+[NOTE]
+====
+Da alle Firewalls auf der Inspektion ausgewählter Kontrollfelder in Datenpaketen basieren, muss für die Erstellung von Firewallregeln ein grundlegendes Verständnis von TCP/IP vorhanden sein. Eine gute Einführung finden Sie in http://www.ipprimer.com[ Daryl's TCP/IP Primer].
+====
+
+[[firewalls-concepts]]
+== Firewallkonzepte
+
+Ein Regelsatz besteht aus einer Gruppe von Regeln, die Pakete basierend auf ihren Inhalt entweder blockieren oder durchlassen. Der bidirektionale Austausch von Paketen zwischen zwei Rechnern wird als Sitzung (Session) bezeichnet. Der Regelsatz verarbeitet sowohl ankommende Pakete aus dem Internet, als auch die vom System erzeugten Antwortpakete. Jeder TCP/IP-Dienst hat ein festgelegtes Protokoll und einen vorgegebenen Port. Pakete für einen bestimmten Dienst stammen von einer Quelladresse und einem unprivilegierten Port und gehen an einen spezifischen Port auf der Zieladresse. Alle oben genannten Parameter können als Selektionskriterien verwendet werden, um einen Regelsatz zu erstellen, der den Zugriff auf bestimmte Dienste gewährt oder blockiert.
+
+Unbekannte Portnummern können Sie in [.filename]#/etc/services# nachschlagen. Alternativ finden Sie die Portnummern und deren Verwendungszweck auf http://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers[ http://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers].
+
+Unter diesem Link finden Sie http://web.archive.org/web/20150803024617/http://www.sans.org/security-resources/idfaq/oddports.php[ Portnummern, die auch von Trojanern benutzt werden].
+
+FTP hat zwei Modi: Aktiv und Passiv. Unterschied liegt in der Bestimmung des Datenkanals. Der Passiv-Modus ist sicherer, da der Datenkanal vom Client bestimmt wird. Eine ausführliche Erklärung von FTP und den verschiedenen Modi finden Sie unter http://www.slacksite.com/other/ftp.html[ http://www.slacksite.com/other.ftp.html].
+
+Ein Firewall-Regelsatz kann entweder "einschließend" (inclusive firewall) oder "ausschließend" (exclusive Firewall) sein. Eine ausschließende Firewall lässt jeden Datenverkehr durch, der nicht durch eine Regel ausgeschlossen wurde. Eine einschließende Firewall macht das genaue Gegenteil. Sie lässt Datenverkehr nur dann passieren, wenn dieser einer der definierten Regeln entspricht.
+
+Eine einschließende Firewall bietet eine wesentlich bessere Kontrolle des ausgehenden Verkehrs, was sie zur besseren Wahl für Systeme macht, welche Dienste für das Internet anbieten. Sie kontrolliert auch den Verkehr aus dem öffentlichen Internet zum privaten Netzwerk. Jeder Verkehr, der keiner Regel entspricht wird geblockt und protokolliert. Einschließende Firewalls sind generell sicherer als ausschließende Firewalls, da sie das Risiko, dass unerwünschter Verkehr hindurch geht, drastisch reduzieren.
+
+[NOTE]
+====
+Wenn nicht anders vermerkt, verwenden alle Konfigurationen und Regelsätze in diesem Kapitel einschließende Firewalls.
+====
+
+Die Sicherheit kann durch den Einsatz einer "zustandsorientierten Firewall" (stateful firewall) weiter erhöht werden. Dieser Typ Firewall überwacht alle offenen Verbindungen und erlaubt nur Datenverkehr von bereits bestehenden Verbindungen oder wenn eine neue Verbindung aufgebaut wird.
+
+Eine zustandsorientierte Firewall behandelt den Verkehr als einen bidirektionalen Austausch von Paketen während einer Session. Wenn ein Zustand für eine passende Regel angegeben wird, erstellt die Firewall dynamisch interne Regeln für jedes Paket, das während dieser Session ausgetauscht wird. Die Firewall hat ausreichend Möglichkeiten, um zu bestimmen, ob ein Paket zu einer Session gehört. Alle Pakete, die nicht zu dieser Session passen, werden automatisch abgelehnt.
+
+Sobald die Session beendet ist, wird sie aus der dynamischen Zustandstabelle entfernt.
+
+Eine zustandsorientierte Filterung erlaubt es, sich auf die Sperrung bzw. Freigabe von neuen Sessions zu konzentrieren. Wenn eine neue Session genehmigt wird, werden alle nachfolgenden Pakete dieser Session automatisch erlaubt und betrügerische Pakete werden automatisch abgelehnt. Wenn eine neue Session nicht genehmigt wird, werden alle nachfolgenden Pakete dieser Session abgelehnt. Die zustandsorientierte Filterung bietet fortgeschrittene Fähigkeiten zur Abwehr von verschiedensten Angriffsmethoden, die von Angreifern eingesetzt werden.
+
+NAT steht für _Network Address Translation_. Die NAT-Funktion ermöglicht es einem privaten LAN hinter einer Firewall, sich eine einzelne vom ISP zugewiesene IP-Adresse zu teilen, auch wenn die Adresse dynamisch zugewiesen wird. NAT ermöglicht den Internetzugriff für jeden Rechner im LAN, ohne dass der ISP für mehrere Internet-Konten bezahlt wird.
+
+NAT übersetzt automatisch die private IP-Adresse auf die öffentliche IP-Adresse, sobald ein Paket für das öffentliche Internet die Firewall passiert. Zusätzlich führt es auch die Übersetzung der Anwortpakete durch.
+
+Gemäß RFC 1918 sind die folgenden IP-Adressbereiche für private Netzwerke reserviert und werden nie ins öffentliche Internet weitergeleitet. Daher sind diese Bereiche für den Einsatz mit NAT geeignet:
+
+* `10.0.0.0/8`
+* `172.16.0.0/12`
+* `192.168.0.0/16`
+
+[WARNING]
+====
+
+Seien Sie _äußerst vorsichtig_ wenn Sie mit Firewallregeln arbeiten. Durch eine falsche Konfiguration kann der Administrator den Zugriff auf den Server verlieren. Um auf der sicheren Seite zu sein, sollten Sie die anfängliche Konfiguration der Firewall von der lokalen Konsole durchführen, anstatt dass Sie dies aus der Ferne über ssh tun.
+====
+
+[[firewalls-pf]]
+== PF
+
+In FreeBSD 5.3 wurde PF von OpenBSD in das Basissystem integriert. Bei PF handelt es sich um eine komplette, voll ausgestattete Firewall, die optional auch ALTQ (Alternatives Queuing) unterstützt. ALTQ stellt Quality of Service (QoS) zur Verfügung.
+
+Das OpenBSD-Projekt pflegt die maßgebliche Referenz von PF in der http://www.openbsd.org/faq/pf[PF FAQ]. Peter Hansteen betreut ein sehr ausführliches PF-Tutorial unter http://home.nuug.no/~peter/pf/[ http://home.nuug.no/~peter/pf/].
+
+[WARNING]
+====
+
+Bedenken Sie beim Studium der http://www.openbsd.org/faq/pf/[PF FAQ], dass die PF-Version von FreeBSD im Laufe der Jahre erheblich von der Version in OpenBSD abgewichen ist. Nicht alle Eigenschaften funktionieren unter FreeBSD genauso wie unter OpenBSD und umgekehrt.
+====
+
+Die {freebsd-pf} ist ein guter Anlaufpunkt für Fragen zur Konfiguration und dem Einsatz der PF-Firewall. Überprüfen Sie aber zunächst die Archive der Mailingliste, bevor Sie eine Frage stellen. Vielleicht wurde die Frage dort schon beantwortet.
+
+Dieser Abschnitt konzentriert sich auf PF in FreeBSD. Es wird beschrieben, wie PF und ALTQ aktiviert werden. Zusätzlich wird demonstriert, wie Regelsätze auf einem FreeBSD-System erstellt werden.
+
+=== PF aktivieren
+
+Um PF zu benutzen, muss zunächst das Kernelmodul geladen werden. Dieser Abschnitt beschreibt die Einträge für [.filename]#/etc/rc.conf#, die verwendet werden können um PF zu aktivieren.
+
+Beginnen Sie damit `pf_enable=yes` in [.filename]#/etc/rc.conf# hinzuzufügen:
+
+[source,bash]
+....
+# sysrc pf_enable=yes
+....
+
+man:pfctl[8] beschreibt zusätzliche Optionen, die beim Start an PF übergeben werden können. Fügen Sie diesen Eintrag in [.filename]#/etc/rc.conf# hinzu und schreiben Sie die benötigten Optionen zwischen die Anführungszeichen:
+
+[.programlisting]
+....
+pf_flags=""                     # additional flags for pfctl startup
+....
+
+PF kann nicht gestartet werden, wenn es seine Konfigurationsdatei nicht findet. In der Voreinstellung existiert unter FreeBSD kein Regelsatz namens [.filename]#/etc/pf.conf#. Beispiel-Regelsätze finden Sie in [.filename]#/usr/shared/examples/pf/#. Wenn bereits ein Regelsatz an anderer Stelle gespeichert wurde, fügen Sie in [.filename]#/etc/rc.conf# einen Eintrag mit dem vollständigen Pfad zur Datei ein:
+
+[.programlisting]
+....
+pf_rules="/path/to/pf.conf"
+....
+
+Protokollierungsfunktionen für PF werden von man:pflog[4] zur Verfügung gestellt. Fügen Sie `pflog_enable=yes` in [.filename]#/etc/rc.conf# ein, um diese Funktion zu aktivieren:
+
+[source,bash]
+....
+# sysrc pflog_enable=yes
+....
+
+Die folgenden Zeilen können zusätzlich hinzugefügt werden, um den Speicherort der Protokolldatei zu bestimmen und weitere Optionen beim Start an man:pflog[4] zu übergeben:
+
+[.programlisting]
+....
+pflog_logfile="/var/log/pflog"  # where pflogd should store the logfile
+pflog_flags=""                  # additional flags for pflogd startup
+....
+
+Falls ein LAN hinter der Firewall existiert und die Pakete an die Rechner im LAN weitergeleitet werden müssen, oder wenn NAT benötigt wird, aktivieren Sie die folgende Option:
+
+[.programlisting]
+....
+gateway_enable="YES"            # Enable as LAN gateway
+....
+
+Nachdem die Änderungen gespeichert wurden, kann PF mit Unterstützung für Protokollierung gestartet werden:
+
+[source,bash]
+....
+# service pf start
+# service pflog start
+....
+
+In der Voreinstellung liest PF seine Konfiguration aus [.filename]#/etc/pf.conf# und modifiziert, verwirft oder akzeptiert Pakete anhand der Definitionen in dieser Datei. FreeBSD enthält mehrere Beispieldateien unter [.filename]#/usr/shared/examples/pf/#. Auch die http://www.openbsd.org/faq/pf/[PF FAQ] enthält sehr ausführliche Beispiele für PF-Regeln.
+
+Zur Steuerung von PF wird `pfctl` verwendet. <<pfctl>> fasst einige nützliche Optionen für diesen Befehl zusammen. Eine Beschreibung aller verfügbaren Optionen finden Sie in man:pfctl[8].
+[[pfctl]]
+.Nützliche `pfctl` Optionen
+[cols="1,1", frame="none", options="header"]
+|===
+| Kommando
+| Aufgabe
+
+|`pfctl -e`
+|PF aktivieren
+
+|`pfctl -d`
+|PF deaktivieren
+
+|`pfctl -F all -f /etc/pf.conf`
+|Alle Filterregeln zurücksetzen (NAT, Filter, Zustandstabelle) und [.filename]#/etc/pf.conf# erneut einlesen.
+
+|`pfctl -s [ rules \| nat \| states ]`
+|Zusammenfassung der Filterregeln, NAT-Regeln, oder der Zustandstabelle.
+
+|`pfctl -vnf /etc/pf.conf`
+|Überprüft [.filename]#/etc/pf.conf# auf Fehler, lädt aber die Filterregeln nicht neu.
+|===
+
+[TIP]
+====
+
+package:security/sudo[] ist nützlich um Kommandos mit erhöhten Berechtigungen auszuführen, wie beispielsweise `pfctl`. Das Programm kann aus der Ports-Sammlung installiert werden.
+====
+
+Um den ein- und ausgehenden Verkehr im Auge zu behalten, können Sie ein Werkzeug wie package:sysutils/pftop[] benutzen. Sobald das Programm installiert ist, können Sie pftop ausführen, um einen Snapshot des Datenverkehrs zu sehen. Das Format der Ausgabe ist der von man:top[1] sehr ähnlich.
+
+[[pf-tutorial]]
+=== PF Regelsätze
+
+Dieser Abschnitt beschreibt die Erstellung von angepassten Regelsätzen. Es wird mit dem einfachsten Regelsatz begonnen auf dem dann weitere aufgebaut werden, um die Konzepte und Funktionen von PF an einigen konkreten Beispielen zu verdeutlichen.
+
+Der einfachste Regelsatz gilt für einen Rechner, der keine Dienste anbietet und Zugriff auf das Internet haben soll. Für diesen minimalen Regelsatz wird [.filename]#/etc/pf.conf# wie folgt konfiguriert:
+
+[.programlisting]
+....
+block in all
+pass out all keep state
+....
+
+Die erste Regel blockiert jeglichen eingehenden Datenverkehr. Die zweite Regel erlaubt ausgehende Verbindungen von diesem Rechner, während die Zustandsinformationen dieser Verbindungen gespeichert werden. Diese Zustandsinformationen machen es möglich, den Antwortverkehr für diese Verbindungen zu erlauben. Der Regelsatz wird mit dem folgenden Befehl geladen:
+
+[source,bash]
+....
+# pfctl -e ; pfctl -f /etc/pf.conf
+....
+
+Neben den Zustandsinformationen verfügt PF über _Listen_ und _Makros_. Diese können bei der Erstellung der Regeln definiert werden. Makros können Listen enthalten und sie müssen vor ihrer ersten Benutzung definiert sein. Fügen Sie beispielsweise folgende Zeilen an den Anfang des Regelsatzes:
+
+[.programlisting]
+....
+tcp_services = "{ ssh, smtp, domain, www, pop3, auth, pop3s }"
+udp_services = "{ domain }"
+....
+
+PF versteht sowohl Portnamen als auch Portnummern, solange die Namen in [.filename]#/etc/services# aufgeführt sind. Dieses Beispiel erstellt zwei Makros. Das erste ist eine Liste mit sieben TCP-Portnamen, die zweite Liste enthält einen UDP-Portnamen. Sobald ein Makro definiert ist, kann es in den Regeln verwendet werden. In diesem Beispiel wird der gesamte Datenverkehr geblockt, mit Ausnahme der Verbindungen die von diesem Rechner initiiert wurden und sich auf einen der angegebenen TCP-Dienste oder den UDP-Dienst beziehen:
+
+[.programlisting]
+....
+tcp_services = "{ ssh, smtp, domain, www, pop3, auth, pop3s }"
+udp_services = "{ domain }"
+block all
+pass out proto tcp to any port $tcp_services keep state
+pass proto udp to any port $udp_services keep state
+....
+
+Obwohl UDP als zustandsloses Protokoll betrachtet wird, ist PF in der Lage einige Zustandsinformationen zu verfolgen. Wenn beispielsweise eine UDP-Abfrage für einen Nameserver das System verlässt, wird PF nach der Antwort Ausschau halten und das Antwortpaket durch lassen.
+
+Nachdem der Regelsatz verändert wurde, muss er neu geladen werden:
+
+[source,bash]
+....
+# pfctl -f /etc/pf.conf
+....
+
+Wenn keine Syntaxfehler festgestellt werden, wird `pfctl` keine Ausgabe erzeugen. Die Syntax kann auch getestet werden, bevor der Regelsatz geladen wird:
+
+[source,bash]
+....
+# pfctl -nf /etc/pf.conf
+....
+
+Die Option `-n` bewirkt, dass die Regeln nur interpretiert, jedoch nicht geladen werden. Dies bietet die Möglichkeit, alle Fehler zu korrigieren. Es wird immer der letzte gültige Regelsatz geladen, bis PF entweder deaktiviert, oder ein neuer Regelsatz geladen wird.
+
+[TIP]
+====
+
+Wenn Sie beim Laden oder Prüfen des Regelsatzes noch die Option `-v` hinzufügen, wird `pfctl` den komplett interpretierten Regelsatz anzeigen. Dies ist äußerst nützlich, wenn Sie versuchen Fehler im Regelsatz zu finden.
+====
+
+[[pftut-gateway]]
+==== Einfaches Gateway mit NAT
+
+Dieser Abschnitt zeigt wie ein FreeBSD-System mit PF als Gateway konfiguriert wird. Das Gateway muss über mindestens zwei Netzwerkkarten verfügen, die jeweils mit einem separaten Netzwerk verbunden sind. In diesem Beispiel ist [.filename]#xl0# mit dem Internet verbunden und [.filename]#xl1# ist mit dem internen Netzwerk verbunden.
+
+Aktivieren Sie zunächst das Gateway, damit der Rechner den Netzwerkverkehr von einer Schnittstelle zur nächsten weiterleiten kann. Diese sysctl-Einstellung sorgt dafür, dass IPv4-Pakete weitergeleitet werden:
+
+[source,bash]
+....
+# sysctl net.inet.ip.forwarding=1
+....
+
+So leiten Sie IPv6-Datenverkehr weiter:
+
+[source,bash]
+....
+# sysctl net.inet6.ip6.forwarding=1
+....
+
+Um diese Einstellungen beim Systemstart zu aktivieren, fügen Sie sie mit Hilfe von man:sysrc[8] in [.filename]#/etc/rc.conf# ein:
+
+[source,bash]
+....
+# sysrc gateway_enable=yes
+# sysrc ipv6_gateway_enable=yes
+....
+
+Prüfen Sie mit `ifconfig`, dass beide Schnittstellen vorhanden und aktiv sind.
+
+Als nächstes erstellen Sie die nötigen PF-Regeln, damit das Gateway den Datenverkehr weiterleiten kann. Die folgende Regel erlaubt den zustandsorientierten Verkehr aus dem Internet zu den Rechnern im Netzwerk:
+
+[.programlisting]
+....
+pass in on xl1 from xl1:network to xl0:network port $ports keep state
+....
+
+Diese Regel erlaubt lediglich den Datenverkehr über das Gateway auf der internen Schnittstelle. Damit die Pakete noch weiter gehen, wird eine passende Regel benötigt:
+
+[.programlisting]
+....
+pass out on xl0 from xl1:network to xl0:network port $ports keep state
+....
+
+Obwohl diese beiden Regeln funktionieren, werden sie in der Praxis so spezifisch selten benötigt. Ein lesbarer Regelsatz ist oft ein sicherer Regelsatz. Der Rest dieses Abschnitts zeigt, wie Sie die Regeln so einfach und lesbar wie möglich halten. Zum Beispiel könnten die beiden Regeln zu einer Regel zusammengefasst werden:
+
+[.programlisting]
+....
+pass from xl1:network to any port $ports keep state
+....
+
+Die Notation `interface:network` kann durch ein Makro ersetzt werden, um den Regelsatz besser lesbar zu machen. Zum Beispiel könnte für das Netzwerk an der internen Schnittstelle (`xl0:network`) ein Makro namens `$localnet` definiert werden. Alternativ könnte für die Definition von `$localnet` auch eine _IP-Adresse/Netzmaske_ Notation verwendet werden, um ein Netzwerk zu bezeichnen, beispielsweise `192.168.100.1/24` für ein privates Subnetz.
+
+Bei Bedarf kann für `$localnet` auch eine Liste von Netzwerken definiert werden. Abhängig von den Bedürfnissen kann `$localnet` auch für eine typische Regel wie folgt verwendet werden:
+
+[.programlisting]
+....
+pass from $localnet to any port $ports keep state
+....
+
+Der folgende Regelsatz erlaubt sämtlichen Verkehr, der von den Rechnern im internen Netzwerk initiiert wird. Zunächst werden zwei Makros definiert, die die externen und internen 3COM-Schnittstellen repräsentieren.
+
+[NOTE]
+====
+Bei Einwählverbindungen wird [.filename]#tun0# für die externe Schnittstelle verwendet. Bei ADSL-Verbindungen, insbesondere denen die PPP over Ethernet (PPPoE) verwenden, ist die richtige externe Schnittstelle [.filename]#tun0# und nicht die physische Ethernet-Schnittstelle.
+====
+
+[.programlisting]
+....
+ext_if = "xl0"	# macro for external interface - use tun0 for PPPoE
+int_if = "xl1"	# macro for internal interface
+localnet = $int_if:network
+# ext_if IP address could be dynamic, hence ($ext_if)
+nat on $ext_if from $localnet to any -> ($ext_if)
+block all
+pass from { lo0, $localnet } to any keep state
+....
+
+Dieser Regelsatz führt die NAT-Regel ein, die verwendet wird, um die Übersetzung der Netzwerkadressen von den nicht-routebaren Adressen im internen Netzwerk auf die IP-Adresse der externen Schnittstelle zu handhaben. Die Klammern im letzten Teil der NAT-Regel `($ext_if)` werden angegeben, wenn die IP-Adresse der externen Schnittstelle dynamisch zugewiesen wird. Damit wird sichergestellt, dass der Netzwerkverkehr ohne schwerwiegende Unterbrechungen weiterläuft, auch wenn sich die externe IP-Adresse ändert.
+
+Beachten Sie, dass dieser Regelsatz wahrscheinlich mehr Verkehr aus dem Netzwerk zulässt, als eigentlich nötig ist. Bei einem angemessenen Aufbau könnte folgendes Makro erstellt werden:
+
+[.programlisting]
+....
+client_out = "{ ftp-data, ftp, ssh, domain, pop3, auth, nntp, http, \
+    https, cvspserver, 2628, 5999, 8000, 8080 }"
+....
+
+Dieses Makro wird dann in der Filterregel benutzt:
+
+[.programlisting]
+....
+pass inet proto tcp from $localnet to any port $client_out \
+    flags S/SA keep state
+....
+
+Weitere `pass` Regeln werden vielleicht noch benötigt. Diese Regel aktiviert SSH auf der externen Schnittstelle:
+
+[.programlisting]
+....
+pass in inet proto tcp to $ext_if port ssh
+....
+
+Dieses Makrodefinition und Regel erlaubt DNS und NTP für interne Clients:
+
+[.programlisting]
+....
+udp_services = "{ domain, ntp }"
+pass quick inet proto { tcp, udp } to any port $udp_services keep state
+....
+
+Beachten Sie das Schlüsselwort `quick` in dieser Regel. Da der Regelsatz aus mehreren Regeln besteht, ist es wichtig, die Beziehungen zwischen den einzelnen Regeln zu verstehen. Die Regeln werden von oben nach unten ausgewertet, in der Reihenfolge wie sie geschrieben sind. Für jedes Paket oder jede Verbindung, das PF ausgewertet, wird die letzte übereinstimmende Regel im Regelsatz angewendet. Wenn jedoch ein Paket auf eine Regel passt, welche das Schlüsselwort `quick` enthält, wird das Paket entsprechend dieser Regel behandelt und die Regelverarbeitung wird gestoppt. Diese Vorgehensweise ist sehr nützlich, wenn eine Ausnahme von den allgemeinen Regeln erforderlich ist.
+
+[[pftut-ftp]]
+==== Einen FTP-Proxy einrichten
+
+Die Konfiguration einer funktionierenden Regel für FTP kann aufgrund der Beschaffenheit des FTP-Protokolls problematisch sein. FTP ist sehr viel älter als Firewalls und schon vom Design her unsicher. Die häufigsten Argumente gegen eine Verwendung von FTP sind:
+
+* Passwörter werden im Klartext übertragen.
+* Das Protokoll erfordert die Verwendung von mindestens zwei TCP-Verbindungen (Steuerung und Daten) auf separaten Ports.
+* Wenn eine Sitzung aufgebaut wird, werden die Daten auf zufällig ausgewählten Ports übermittelt.
+
+All diese Punkte stellen Herausforderungen dar, noch bevor die Client- oder Server-Software auf potenzielle Sicherheitslücken überprüft wurde. Es existieren aber auch sichere Alternativen für die Dateiübertragung, wie man:sftp[1] oder man:scp[1], wo die Authentifizierung und die Datenübertragung über eine verschlüsselte Verbindung erfolgt.
+
+Für Situationen, in denen FTP erforderlich ist, kann PF den FTP-Datenverkehr an ein kleines Proxy-Programm namens man:ftp-proxy[8] weiterleiten. Dieses Programm ist im Basissystem von FreeBSD enthalten. Die Aufgabe des Proxies ist das dynamische Einfügen und Entfernen von Regeln im Regelsatz. Dies wird durch den Einsatz von Ankern erreicht, damit der FTP-Verkehr korrekt verarbeitet werden kann.
+
+Fügen Sie folgende Zeilen in [.filename]#/etc/rc.conf# ein, um den Proxy zu aktivieren:
+
+[.programlisting]
+....
+ftpproxy_enable="YES"
+....
+
+Danach kann der Proxy mit `service ftp-proxy start` gestartet werden.
+
+Für die Grundkonfiguration müssen drei weitere Einträge in [.filename]#/etc/pf.conf# hinzugefügt werden. Zunächst werden die Anker hinzugefügt, die der Proxy für die FTP-Sitzungen verwendet:
+
+[.programlisting]
+....
+nat-anchor "ftp-proxy/*"
+rdr-anchor "ftp-proxy/*"
+....
+
+Dann wird eine `pass`-Regel benötigt, damit der FTP-Datenverkehr durch den Proxy geleitet werden kann.
+
+Die Regeln für Umleitung und NAT müssen vor den eigentlichen Filterregeln definiert werden. Fügen Sie diese `rdr`-Regel unmittelbar nach der NAT-Regel ein:
+
+[.programlisting]
+....
+rdr pass on $int_if proto tcp from any to any port ftp -> 127.0.0.1 port 8021
+....
+
+Zum Schluss muss der umgeleitete Verkehr die Firewall passieren dürfen:
+
+[.programlisting]
+....
+pass out proto tcp from $proxy to any port ftp
+....
+
+`$poxy` enthält die Adresse, an dem der Proxy-Daemon gebunden ist.
+
+Speichern Sie [.filename]#/etc/pf.conf# und laden Sie die Regeln neu. Prüfen Sie von einem Client, ob die FTP-Verbindungen funktionieren:
+
+[source,bash]
+....
+# pfctl -f /etc/pf.conf
+....
+
+Dieses Beispiel umfasst eine Grundkonfiguration, in der die Rechner im lokalen Netzwerk Zugriff auf entfernte FTP-Server benötigen. Diese Konfiguration sollte mit den meisten FTP-Clients und -Servern gut funktionieren. Das Verhalten von man:ftp-proxy[8] kann durch diverse Optionen in `ftpproxy_flags` beeinflusst werden. Einige Clients und Server haben bestimmte Marotten, die bei der Konfiguration berücksichtigt werden müssen. Es kann zum Beispiel notwendig sein, den FTP-Datenverkehr für den Proxy einer bestimmten Warteschlange zuzuweisen.
+
+Es besteht auch die Möglichkeit einen FTP-Server mit PF und man:ftp-proxy[8] zu schützen. Konfigurieren Sie einen separaten `ftp-proxy` mit `-R` für den Reverse-Modus auf einem separaten Port und einer eigenen Umleitungsregel.
+
+[[pftut-icmp]]
+==== ICMP verwalten
+
+Viele Werkzeuge zur Fehlerbehebung in TCP/IP-Netzwerken verlassen sich auf das Internet Control Message Protocol (ICMP), das speziell für diese Zwecke entwickelt wurde.
+
+Das ICMP-Protokoll sendet und empfängt Kontrollnachrichten zwischen Rechnern und Gateways, hauptsächlich um ungewöhnliche Bedingungen auf dem Weg zum Zielrechner zu berichten. Router verwenden ICMP um Paketgrößen und andere Übertragungsparameter zu ermitteln. Dieser Prozess ist auch als _Path MTU Discovery_ bekannt.
+
+Aus der Sicht einer Firewall sind einige ICMP-Kontrollnachrichten anfällig für bekannte Angriffsmethoden. Zwar ist die Fehlerbehebung einfacher, wenn alle ICMP-Pakete bedingungslos durch gelassen werden, aber dass macht es auch für Angreifer leichter, Informationen über das Netzwerk zu extrahieren. Aus diesen Gründen ist die folgende Regel nicht optimal:
+
+[.programlisting]
+....
+pass inet proto icmp from any to any
+....
+
+Eine Lösung besteht darin, nur den ICMP-Verkehr aus dem lokalen Netz zu akzeptieren, während ICMP-Pakete von außerhalb des Netzwerks verworfen werden:
+
+[.programlisting]
+....
+pass inet proto icmp from $localnet to any keep state
+pass inet proto icmp from any to $ext_if keep state
+....
+
+Es stehen noch weitere Optionen zur Verfügung, die die Flexibilität von PF demonstrieren. Anstatt beispielsweise alle ICMP-Nachrichten zu erlauben, kann man die Nachrichten angeben, die von man:ping[8] und man:traceroute[8] verwendet werden. Beginnen Sie damit, ein Makro für diese Art von Nachrichten zu definieren:
+
+[.programlisting]
+....
+icmp_types = "echoreq"
+....
+
+Erstellen Sie dann eine Regel, die das eben erstellte Makro benutzt:
+
+[.programlisting]
+....
+pass inet proto icmp all icmp-type $icmp_types keep state
+....
+
+Wenn weitere Arten von ICMP-Nachrichten benötigt werden, kann die Liste `icmp_types` einfach erweitert werden. Geben Sie `more /usr/src/sbin/pfctl/pfctl_parser.c` ein, um eine Liste der von PF unterstützten ICMP-Nachrichten zu sehen. Die Webseite http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml[ http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml] enthält eine Erklärung für jeden Nachrichtentyp.
+
+Da UNIX(R) `traceroute` in der Voreinstellung UDP verwendet, wird eine weitere Regel benötigt:
+
+[.programlisting]
+....
+# allow out the default range for traceroute(8):
+pass out on $ext_if inet proto udp from any to any port 33433 >< 33626 keep state
+....
+
+Da `TRACERT.EXE` unter Microsoft(R) Windows(R)-Systemen ICMP Echo Request Meldungen verwendet, ist nur die erste Regel notwendig um Traces für solche Systeme zu ermöglichen. UNIX(R) `traceroute` kann aber auch andere Protokolle verwenden, zum Beispiel ICMP Echo Request, wenn der Schalter `-I` benutzt wird. Details finden Sie in man:traceroute[8].
+
+[[pftut-pathmtudisc]]
+===== Path MTU Discovery
+
+Internet-Protokolle sind so ausgelegt, dass sie geräteunabhängig sind. Eine Folge davon ist, dass die optimale Paketgröße nicht immer zuverlässig vorhergesagt werden kann. Das größte Hindernis ist hier die _Maximum Transmission Unit_ (`MTU`), welche die Obergrenze für die Paketgröße festlegt. Die MTU für die Schnittstelle des Systems können Sie sich mit `ifconfig` anzeigen lassen.
+
+TCP/IP benutzt ein Verfahren, das als path MTU discovery bekannt ist, um die korrekte Paketgröße für eine Verbindung zu bestimmen. Dieses Verfahren sendet Pakete unterschiedlicher Größe mit dem Flag "do not fragment" und erwartet ein ICMP-Antwortpaket vom Typ "type 3, code 4", wenn die Obergrenze erreicht worden ist. Typ 3 bedeutet "Ziel nicht erreichbar" und Code 4 ist die Abkürzung für "Fragmentierung nötig, aber Do-not-Fragment Flag ist gesetzt". Um path MTU discovery zu erlauben und damit Verbindungen zu anderen MTUs zu unterstützen, fügen Sie dem Makro `icmp_types` den Typ `destination unreachable` hinzu:
+
+[.programlisting]
+....
+icmp_types = "{ echoreq, unreach }"
+....
+
+Da die `pass`-Regel bereits das Makro verwendet, braucht es nicht geändert werden um den neuen ICMP-Typ zu unterstützen:
+
+[.programlisting]
+....
+pass inet proto icmp all icmp-type $icmp_types keep state
+....
+
+PF kann alle Variationen von ICMP-Typen und Codes filtern. Eine Liste der verfügbaren Typen und Codes ist in man:icmp[4] und man:icmp6[4] dokumentiert.
+
+[[pftut-tables]]
+==== Tabellen benutzen
+
+Manchmal sind bestimmte Daten für die Filterung und Weiterleitung interessant, jedoch wäre eine Definition einer solchen Filterregel für einen Regelsatz viel zu lang. PF unterstützt die Verwendung von Tabellen. Dies sind definierte Listen, die verändert werden können, ohne den gesamten Regelsatz neu laden zu müssen. Zudem können diese Listen sehr schnell durchsucht werden. Tabellennamen sind immer in `< >` eingeschlossen und sehen wie folgt aus:
+
+[.programlisting]
+....
+table <clients> { 192.168.2.0/24, !192.168.2.5 }
+....
+
+In diesem Beispiel ist das Netzwerk `192.168.2.0/24` Teil der Tabelle. `192.168.2.5` wurde im dem Operator `!` ausgeschlossen und ist somit nicht Teil der Tabelle. Es ist auch möglich Tabellen aus Dateien zu laden, wo jeder Eintrag in einer separaten Zeile steht. Dieses Beispiel verwendet dazu die Datei [.filename]#/etc/clients#:
+
+[.programlisting]
+....
+192.168.2.0/24
+!192.168.2.5
+....
+
+Um sich auf diese Datei zu beziehen, definieren Sie die Tabelle wie folgt:
+
+[.programlisting]
+....
+table <clients> persist file "/etc/clients"
+....
+
+Sobald die Tabelle definiert ist, kann eine Filterregel Bezug darauf nehmen:
+
+[.programlisting]
+....
+pass inet proto tcp from <clients> to any port $client_out flags S/SA keep state
+....
+
+Die Inhalte einer Tabelle können mit `pfctl` direkt verändert werden. Dieses Beispiel fügt ein weiteres Netzwerk zur Tabelle hinzu:
+
+[source,bash]
+....
+# pfctl -t clients -T add 192.168.1.0/16
+....
+
+Beachten Sie, dass auf diese Weise vorgenommene Änderungen direkt übernommen werden, jedoch bei einem Neustart des Systems oder bei einem Stromausfall verloren gehen. Um die Änderungen dauerhaft zu speichern, müssen sie in der Definition der Tabelle oder in der Datei, auf die sich die Tabelle bezieht, bearbeitet werden. Mit einem man:cron[8] Job und einem Befehl wie `pfctl -t clients -T show >/etc/clients` können Sie auch eine Kopie der Tabelle auf Platte speichern und dann in regelmäßigen Abständen aktualisieren. Alternativ kann [.filename]#/etc/clients# auch mit den Tabelleneinträgen, die sich aktuell im Speicher befinden, aktualisiert werden.
+
+[source,bash]
+....
+# pfctl -t clients -T replace -f /etc/clients
+....
+
+[[pftut-overload]]
+==== Verwendung von Tabellen zum Schutz von SSH
+
+Benutzer, die SSH auf einer externen Schnittstelle ausführen, haben wahrscheinlich schon einmal ähnliche Meldungen in den Protokolldateien gesehen:
+
+[.programlisting]
+....
+Sep 26 03:12:34 skapet sshd[25771]: Failed password for root from 200.72.41.31 port 40992 ssh2
+Sep 26 03:12:34 skapet sshd[5279]: Failed password for root from 200.72.41.31 port 40992 ssh2
+Sep 26 03:12:35 skapet sshd[5279]: Received disconnect from 200.72.41.31: 11: Bye Bye
+Sep 26 03:12:44 skapet sshd[29635]: Invalid user admin from 200.72.41.31
+Sep 26 03:12:44 skapet sshd[24703]: input_userauth_request: invalid user admin
+Sep 26 03:12:44 skapet sshd[24703]: Failed password for invalid user admin from 200.72.41.31 port 41484 ssh2
+....
+
+Diese Meldungen deuten auf einen Brute-Force-Angriff hin, bei dem ein Angreifer oder ein Programm versucht, den Benutzernamen und das Passwort zu erraten, um Zugriff auf das System zu bekommen.
+
+Wenn der Zugriff über SSH für berechtigte Benutzer erforderlich ist, kann eine Änderung des Standard-Ports für SSH einen gewissen Schutz bieten. Allerdings bietet PF eine elegantere Lösung für dieses Problem. `pass`-Regeln können Einschränkungen für Dinge enthalten, die ein verbindender Rechner tun kann. Bei einem Verstoß gegen diese Einschränkungen kann dann dem betroffenen Rechner der Zugriff teilweise oder ganz entzogen werden. Es ist sogar möglich, alle bestehenden Verbindungen zu trennen, falls die Grenze überschritten wird.
+
+Um dies zu konfigurieren, erstellen Sie folgende Tabelle im Regelsatz:
+
+[.programlisting]
+....
+table <bruteforce> persist
+....
+
+Fügen Sie dann ziemlich am Anfang der Filterregeln folgende Regeln hinzu, um die Brute-Force-Angriffe zu blocken und gleichzeitig berechtigte Verbindungen zu erlauben:
+
+[.programlisting]
+....
+block quick from <bruteforce>
+pass inet proto tcp from any to $localnet port $tcp_services \
+    flags S/SA keep state \
+    (max-src-conn 100, max-src-conn-rate 15/5, \
+    overload <bruteforce> flush global)
+....
+
+Der Teil in Klammern definiert die Grenzwerte. Die Zahlen sollten an die lokalen Anforderungen angepasst werden. Die Zeilen können wie folgt interpretiert werden:
+
+`max-src-conn` definiert die maximal erlaubte Anzahl gleichzeitiger Verbindungen von einem Rechner.
+
+`max-src-conn-rate` definiert die maximal erlaubte Anzahl neuer Verbindungen eines einzelnen Rechners (_15_) pro Anzahl von Sekunden (_5_).
+
+`overload <bruteforce>` bedeutet, dass jeder Rechner, der diesen Grenzwert überschreitet, zur Tabelle `bruteforce` hinzugefügt wird. Diese Filterregel blockiert jeglichen Datenverkehr von Adressen aus der Tabelle `bruteforce`.
+
+`flush global` besagt, dass alle (`global`) Verbindungen dieses Rechners getrennt (`flush`) werden, wenn der Grenzwert erreicht wird.
+
+[NOTE]
+====
+Diese Filterregeln helfen nicht bei langsamen Brute-Force-Angriffen, wie sie in http://home.nuug.no/~peter/hailmary2013/[ http://home.nuug.no/~peter/hailmary2013/] beschrieben sind.
+====
+
+Dieser Beispielregelsatz dient lediglich als Illustration. Wenn Sie allgemein eine große Anzahl an Verbindungen erlauben wollen, aber gleichzeitig bei SSH etwas restriktiver vorgehen möchten, können Sie die obige Regel ergänzen:
+
+[.programlisting]
+....
+pass quick proto { tcp, udp } from any to any port ssh \
+    flags S/SA keep state \
+    (max-src-conn 15, max-src-conn-rate 5/3, \
+    overload <bruteforce> flush global)
+....
+
+[NOTE]
+.Es ist möglicherweise nicht notwendig, alle aggressiven Rechner zu blockieren
+====
+Es ist zu erwähnen, dass der `overlaod`-Mechanismus eine allgemeine Technik darstellt, die nicht auf SSH beschränkt ist. Außerdem ist es nicht immer optimal, Datenverkehr von aggressiven Rechnern zu blockieren.
+
+Eine `overload`-Regel kann beispielsweise benutzt werden, um einen Mail- oder Webserver zu schützen. Die `overload`-Tabelle könnte dann in einer Regel verwendet werden, um aggressive Rechner einer Warteschlange mit geringerer Bandbreite zuzuweisen, oder den Rechner auf eine bestimtme Webseite umzuleiten.
+====
+
+Im Laufe der Zeit werden die Tabellen durch die `overload`-Regeln immer größer und belegen immer mehr Speicher. Manchmal wird eine geblockte IP-Adresse einem Rechner dynamisch zugewiesen, der eigentlich berechtigt ist, mit den Rechnern im lokalen Netzwerk zu kommunizieren.
+
+Für solche Situationen bietet `pfctl` die Möglichkeit, Tabelleneinträge auslaufen zu lassen. Dieses Kommando würde beispielsweise Einträge aus der Tabelle `<bruteforce>` löschen, die seit `86400` Sekunden nicht mehr referenziert wurden:
+
+[source,bash]
+....
+# pfctl -t bruteforce -T expire 86400
+....
+
+Eine ähnliche Funktionalität bietet package:security/expiretable[], welches Einträge entfernt, die für einen bestimmten Zeitraum nicht referenziert wurden.
+
+Nach der Installation kann expiretable benutzt werden, um Einträge aus der Tabelle `<bruteforce>` nach einer bestimmten Zeit zu entfernen. Dieses Beispiel entfernt alle Einträge, die älter sind als 24 Stunden:
+
+[.programlisting]
+....
+/usr/local/sbin/expiretable -v -d -t 24h bruteforce
+....
+
+[[pftut-spamd]]
+==== Schutz vor SPAM
+
+Im Gegensatz zum spamd-Daemon von spamassassin, kann package:mail/spamd[] zusammen mit PF den SPAM direkt an der Firewall abwehren. Dieser spamd wird in PF über einen Satz von Umleitungen konfiguriert.
+
+Spammer neigen dazu, eine große Anzahl von Nachrichten zu versenden. Dabei nutzten Sie SPAM-freundliche Netzwerke und gekaperte Rechner, welche dann ziemlich schnell bei sogenannten Blacklists gemeldet werden.
+
+Wenn eine SMTP-Verbindung von einer Adresse in der Blacklist empfangen wird, präsentiert spamd einen Banner und schaltet sofort in einen Modus, in dem die Antworten auf den SMTP-Verkehr jeweils ein Byte groß sind. Diese Technik, die möglichst viel Zeit des Spammers verschwenden soll, wird Tarpitting genannt. Die spezifische Implementierung, welche ein Byte SMTP-Antworten verwendet, wird als Stuttering bezeichnet.
+
+Dieses Beispiel zeigt das grundlegende Verfahren zur Konfiguration von spamd mit automatisch aktualisierten Blacklists. Für weitere Informationen lesen die Manualpages, die zusammen mit package:mail/spamd[] installiert werden.
+
+[.procedure]
+****
+*Procedure: Konfiguration von spamd*
+
+. Installieren Sie das Paket oder den Port package:mail/spamd[]. Um spamd's Greylisting-Funktion zu nutzen, muss man:fdescfs[5] in [.filename]#/dev/fd# eingehängt werden. Fügen Sie folgende Zeile in [.filename]#/etc/fstab# ein:
++
+[.programlisting]
+....
+fdescfs /dev/fd fdescfs rw 0 0
+....
++ 
+Danach hängen Sie das Dateisystem ein:
++
+[source,bash]
+....
+# mount fdescfs
+....
+
+. Fügen Sie folgende Zeilen in den PF-Regelsatz ein:
++
+[.programlisting]
+....
+table <spamd> persist
+table <spamd-white> persist
+rdr pass on $ext_if inet proto tcp from <spamd> to \
+    { $ext_if, $localnet } port smtp -> 127.0.0.1 port 8025
+rdr pass on $ext_if inet proto tcp from !<spamd-white> to \
+    { $ext_if, $localnet } port smtp -> 127.0.0.1 port 8025
+....
++ 
+Die beiden Tabellen `<spamd>` und `<spam-white>` sind von großer Bedeutung. SMTP-Verkehr von einer Adresse, die in `<spamd>` aber nicht in `<spamd-white>` ist, wird an den spamd-Daemon auf Port 8025 umgeleitet.
+. Im nächsten Schritt wird spamd in [.filename]#/usr/local/etc/spamd.conf# konfiguriert und einige Parameter werden in [.filename]#/etc/rc.conf# hinzugefügt.
++ 
+Die Installation von package:mail/spamd[] enthält eine Beispielkonfiguration ([.filename]#/usr/local/etc/spamd.conf.sample#) und eine Manualpage für [.filename]#spamd.conf#. Beziehen Sie sich für zusätzliche Konfigurationsoptionen auf diese Dokumentation.
++ 
+Die Konfigurationsdatei enthält einen Block, in dem die `all`-Liste definiert ist, die wiederum weitere Listen spezifiziert:
++
+[.programlisting]
+....
+all:\
+    :traplist:whitelist:
+....
++ 
+Dieser Eintrag fügt die gewünschten Blacklists, getrennt durch einen Doppelpunkt (`:`), hinzu. Um auch eine Whitelist zu verwenden, fügen Sie den Namen unmittelbar hinter dem Namen der Blacklist ein. Zum Beispiel: `:Blacklist:Whitelist:`.
++ 
+Danach folgt die Definition der verwendeten Blacklist:
++
+[.programlisting]
+....
+traplist:\
+    :black:\
+    :msg="SPAM. Your address %A has sent spam within the last 24 hours":\
+    :method=http:\
+    :file=www.openbsd.org/spamd/traplist.gz
+....
++ 
+In der ersten Zeile steht der Name der Blacklist und die zweite Zeile gibt den Typ an. Das Feld `msg` enthält die Nachricht, die dem Absender während des SMTP-Dialogs angezeigt wird. Das Feld `mehtod` legt fest, wie spamd-setup die Listen bezieht; unterstützte Methoden sind `http`, `ftp`, `file` und ein externes Programm via `exec`. Im letzten Feld gibt `file` den Namen der Datei an, die spamd erwartet.
++ 
+Die Definition der Whitelist ist ähnlich. Das Feld `msg` wird jedoch nicht definiert, da eine Meldung hier nicht erforderlich ist:
++
+[.programlisting]
+....
+whitelist:\
+    :white:\
+    :method=file:\
+    :file=/var/mail/whitelist.txt
+....
+
+[TIP]
+.Wählen Sie die Datenquellen mit Sorgfalt
+====
+Bei der Verwendung von sämtlichen Blacklists aus der Beispieldatei [.filename]#spamd.conf# würden große Teile des Internets geblockt. Der Administrator muss diese Datei bearbeiten, um eine optimale Konfiguration zu erzielen. Dazu gehört auch die Auswahl von geeigneten Blacklists und, wenn nötig, die Erstellung von benutzerdefinierten Listen.
+====
+
+Als nächstes fügen Sie folgenden Eintrag in [.filename]#/etc/rc.conf# hinzu. Zusätzliche Optionen sind in der Manualpage beschrieben:
+
+[.programlisting]
+....
+spamd_flags="-v" # use "" and see spamd-setup(8) for flags
+....
+
+Wenn Sie fertig sind, starten Sie spamd durch die Eingabe von `service obspamd start`. Führen Sie die weitere Konfiguration mit `spamd-setup` durch. Erstellen Sie zum Schluss einen man:cron[8]-Job, der `spamd-setup` in regelmäßigen Abständen aufruft, um die Listen zu aktualisieren.
+****
+
+Auf einem typischen Gateway vor dem Mailserver, werden Rechner innerhalb von wenigen Minuten geblockt.
+
+PF unterstützt auch _Greylisting_, das Nachrichten von unbekannten Rechnern vorübergehend mit _45n_-Codes ablehnt. Nachrichten von diesen Rechnern werden bei einem erneuten Versuch nach einer angemessenen Zeit durchgelassen. Nachrichten von Rechnern, die nach RFC 1123 und RFC 2821 konfiguriert sind, werden sofort durchgelassen.
+
+Weitere Informationen über Greylisting finden Sie unter http://www.greylisting.org/[ greylisting.org]. Das Erstaunlichste an Greylisting ist, neben der einfachen Benutzung, dass es immer noch funktioniert. Spammer und Malware-Autoren gelingt es bislang nur schwer, diese Technik zu umgehen.
+
+Die grundsätzliche Vorgehensweise zur Konfiguration von Greylisting ist wie folgt:
+
+[.procedure]
+====
+*Procedure: Konfiguration von Greylisting*
+
+. Stellen Sie sicher, dass man:fdescfs[5] eingehängt ist. Dies wird in Schritt 1 der vorherigen Prozedur beschrieben.
+. Um spamd im Greylisting-Modus auszuführen, fügen Sie folgende Zeilen in [.filename]#/etc/rc.conf# ein:
++
+[.programlisting]
+....
+spamd_grey="YES"  # use spamd greylisting if YES
+....
++ 
+Lesen Sie die Manualpage von spamd für Beschreibungen von zusätzlichen Parametern.
+. Starten Sie die Dienste, um die Konfiguration von Greylisting abzuschließen:
++
+[source,bash]
+....
+# service obspamd restart
+# service spamlogd start
+....
+====
+
+Hinter den Kulissen führen die spamdb-Datenbank und spamlogd wesentliche Aufgaben der Greylisting-Funktion aus. spamdb ist die Schnittstelle für den Administrator, der über den Inhalt der Datenbank [.filename]#/var/db/spamdb# Blaklists, Whitelists und Greylists verwaltet.
+
+[[pftut-hygiene]]
+==== Netzwerk-Hygiene
+
+Dieser Abschnitt beschreibt die Verwendung von `block-policy`, `scrub` und `antispoof`, mit denen das Verhalten des Regelsatzes weiter optimiert werden kann.
+
+Die Option `block-policy` kann im Teil `options` des Regelwerks konfiguriert werden, vor den Umleitungen und den eigentlichen Filterregeln. Diese Option legt fest, welche Rückmeldung PF an einen geblockten Rechner sendet. Es existieren zwei mögliche Werte: `drop` verwirft das Paket ohne Rückmeldung und `return` gibt eine Statusmeldung, wie etwa `Connection refused` zurück.
+
+Die Voreinstellung ist `drop`. Geben Sie den gewünschten Wert ein, um die `block-policy`-Richtlinie zu ändern:
+
+[.programlisting]
+....
+set block-policy return
+....
+
+`scrub` ist ein Schlüsselwort in PF, das die Paket-Normalisierung aktiviert. Dieser Prozess fügt fragmentierte Pakete wieder zusammen und blockt TCP-Pakete mit ungültigen Flag-Kombinationen. Ein aktiviertes `scrub` bietet einen gewissen Schutz gegen Angriffe, die auf die falsche Handhabung von fragmentierten Paketen aufbauen. Es stehen viele Optionen zur Verfügung, jedoch sollte die einfachste Form für die meisten Konfigurationen ausreichend sein:
+
+[.programlisting]
+....
+scrub in all
+....
+
+Einige Dienste, wie beispielsweise NFS, erfordern eine bestimmte Handhabung von fragmentierten Paketen. Weitere Informationen finden Sie unter https://home.nuug.no/\~peter/pf/en/scrub.html[https://home.nuug.no/~peter/pf/en/scrub.html].
+
+Dieses Beispiel fügt fragmentierte Pakete wieder zusammen, löscht das "do not fragment"-Bit und setzt die maximale Segmentgröße auf 1440 Bytes:
+
+[.programlisting]
+....
+scrub in all fragment reassemble no-df max-mss 1440
+....
+
+Der `antispoof`-Mechanismus bietet einen Schutz gegen gefälschte IP-Adressen. Dabei werden hauptsächlich Pakete verworfen, die auf der falschen Schnittstellen ankommen.
+
+Folgende Regeln verwerfen gefälschte Adressen, wenn sie aus dem Internet oder dem lokalen Netzwerk stammen:
+
+[.programlisting]
+....
+antispoof for $ext_if
+antispoof for $int_if
+....
+
+[[pftut-unrouteables]]
+==== Handhabung von nicht-routebaren Adressen
+
+Sogar bei einem richtig konfigurierten NAT-Gateway müssen Sie vielleicht die Fehlkonfiguration anderer Personen ausgleichen. Ein typischer Fehler besteht darin, nicht-routebare Adressen ins Internet zu lassen. Da der Verkehr von nicht-routebaren Adressen Teil eines DoS-Angriffs sein kann, sollten Sie in Betracht ziehen, diesen Verkehr explizit an der externen Schnittstelle des Netzwerks zu blockieren.
+
+In diesem Beispiel wird ein Makro erstellt, das die nicht-routebaren Adressen enthält. Datenverkehr von und zu diesen Adressen wird dann an der externen Schnittstelle des Gateways verworfen.
+
+[.programlisting]
+....
+martians = "{ 127.0.0.0/8, 192.168.0.0/16, 172.16.0.0/12, \
+	      10.0.0.0/8, 169.254.0.0/16, 192.0.2.0/24, \
+	      0.0.0.0/8, 240.0.0.0/4 }"
+
+block drop in quick on $ext_if from $martians to any
+block drop out quick on $ext_if from any to $martians
+....
+
+=== ALTQ aktivieren
+
+Unter FreeBSD kann ALTQ zusammen mit PF benutzt werden, um Quality of Service (QoS) bereitzustellen. Sobald ALTQ aktiviert ist, können Warteschlangen definiert werden, mit denen Sie die Priorität für ausgehende Pakete festlegen können.
+
+Bevor Sie ALTQ aktivieren, sollten Sie man:altq[4] lesen und sicherstellen, das der Treiber der Netzwerkkarte diese Funktion unterstützt.
+
+ALTQ steht nicht als ladbares Kernelmodul zur Verfügung. Wenn die Netzwerkkarte des Systems ALTQ unterstützt, erstellen Sie nach den Anweisungen in crossref:kernelconfig[kernelconfig,Konfiguration des FreeBSD-Kernels] einen angepassten Kernel. Als erstes muss ALTQ aktiviert werden. Zudem ist mindestens eine weitere Option nötig, um den Algorithmus für die Warteschlange zu bestimmen:
+
+[.programlisting]
+....
+options         ALTQ
+options         ALTQ_CBQ        # Class Based Queuing (CBQ)
+options         ALTQ_RED        # Random Early Detection (RED)
+options         ALTQ_RIO        # RED In/Out
+options         ALTQ_HFSC       # Hierarchical Packet Schedule (HFSC)
+options         ALTQ_PRIQ       # Priority Queuing (PRIQ)
+....
+
+Die folgenden Algorithmen stehen zur Verfügung:
+
+CBQ::
+Class Based Queuing (CBQ) erlaubt es, die Bandbreite einer Verbindung in verschiedene Klassen oder Warteschlangen zu unterteilen, um die Priorität von Datenpaketen basierend auf Filterregeln zu beeinflussen.
+
+RED::
+Random Early Detection (RED) wird eingesetzt, um eine Überlastung des Netzwerks zu vermeiden. Dazu ermittelt RED die Größe der Warteschlange und vergleicht diesen Wert mit den minimalen und maximalen Grenzwerten der Warteschlange. Ist die Warteschlange größer als das erlaubte Maximum, werden alle neuen Pakete nach dem Zufallsprinzip verworfen.
+
+RIO::
+Random Early Detection In and Out (RIO). Dieser Modus verwaltet mehrere Warteschlangen durchschnittlicher Größe mit mehreren Schwellwerten, eine für jedes QoS-Level.
+
+HFSC::
+Hierachical Fair Service Curve Packet Scheduler (HFSC) wird in http://www-2.cs.cmu.edu/~hzhang/HFSC/main.html[ http://www-2.cs.cmu.edu/~hzhang/HFSC/main.html] beschrieben.
+
+PRIQ::
+Priority Queuing (PRIQ) lässt den Verkehr einer Warteschlange mit höherer Priorität zuerst durch.
+
+Weitere Informationen über diese Algorithmen und Beispiele für Regelsätze finden Sie in den https://web.archive.org/web/20151109213426/http://www.openbsd.org/faq/pf/queueing.html[ OpenBSD Archiven].
+
+[[firewalls-ipfw]]
+== IPFW
+
+IPFW ist eine Stateful-Firewall für FreeBSD, die sowohl IPv4 als auch IPv6 unterstützt. Die Firewall setzt sich aus mehreren Komponenten zusammen: dem Kernel Firewall Filter-Prozessor mit integriertem Paket-Accounting, Protokollfunktionen, NAT, dem man:dummynet[4] Traffic-Shaper, sowie Weiterleitungs-, Bridge- und ipstealth-Funktionen.
+
+FreeBSD enthält mit [.filename]#/etc/rc.firewall# ein Beispielregelwerk, welches mehrere Firewall-Typen für gebräuchliche Szenarien definiert und unerfahrene Anwender dabei unterstützen soll, ein geeignetes Regelwerk zu erstellen. IPFW besitzt eine leistungsstarke Syntax, mit der erfahrene Benutzer ihre eigenen Regeln anfertigen können, um den Sicherheitsanforderungen der jeweiligen Umgebung gerecht zu werden.
+
+Diser Abschnitt beschreibt, wie IPFW aktiviert wird und bietet einen Überblick über die Regelsyntax. Zudem werden mehrere Regelsätze für gebräuchliche Konfigurationsszenarien vorgestellt.
+
+[[firewalls-ipfw-enable]]
+=== IPFW aktivieren
+
+Das FreeBSD Basissystem enthält für IPFW ein ladbares Kernelmodul, was bedeutet, dass kein angepasster Kernel benötigt wird, um IPFW zu benutzen.
+
+Wenn Sie eine statische Unterstützung für IPFW in den Kernel kompilieren wollen, lesen Sie <<firewalls-ipfw-kernelconfig>>.
+
+Um IPFW beim Systemstart zu aktivieren, fügen Sie `firewall_enable="YES"` in [.filename]#/etc/rc.conf# ein:
+
+[source,bash]
+....
+# sysrc firewall_enable="YES"
+....
+
+Wenn Sie einen der von FreeBSD zur Verfügung gestellten Firewall-Profile benutzen möchten, fügen Sie eine weitere Zeile hinzu, in der Sie das Profil bestimmen:
+
+[source,bash]
+....
+# sysrc firewall_type="open"
+....
+
+Folgende Profile stehen zur Verfügung:
+
+* `open`: gestattet jeglichen Datenverkehr.
+* `client`: schützt lediglich diesen Rechner.
+* `simple`: schützt das gesamte Netzwerk.
+* `closed`: blockiert den gesamten IP-Datenverkehr, mit Ausnahme des Verkehrs über die Loopback-Schnittstelle.
+* `workstation`: schützt lediglich diesen Rechner und verwendet zustandsorientierte Regeln.
+* `UNKNOWN`: deaktiviert das Laden von Firewallregeln.
+* [.filename]#filename#: absoluter Pfad zu einer Datei, in der die Firewallregeln definiert sind.
+
+Wenn Sie `firewall_type` auf `client` oder `simple` setzen, müssen Sie die voreingestellten Regeln in [.filename]#/etc/rc.firewall# anpassen, damit sie der Konfiguration des Systems entsprechen.
+
+Beachten Sie, dass das Profil `filename` verwendet wird, um ein benutzerdefiniertes Regelwerk zu laden.
+
+Eine alternative Möglichkeit, um ein benutzerdefiniertes Regelwerk zu laden, bietet die Variable `firewall_script`. Setzen Sie die Variable auf den absoluten Pfad eines _ausführbaren Skripts_, welches die Befehle für IPFW enthält. Die Beispiele in diesem Abschnitt gehen davon aus, dass `firewall_script` auf [.filename]#/etc/ipfw.rules# gesetzt ist.
+
+[source,bash]
+....
+# sysrc firewall_script="/etc/ipfw.rules"
+....
+
+Die Protokollierung wird mit diesem Befehl aktiviert:
+
+[source,bash]
+....
+# sysrc firewall_logging="YES"
+....
+
+[WARNING]
+====
+
+Es werden nur Firewallregeln mit der Option `log` protokolliert. Die voreingestellten Regeln enthalten diese Option nicht und müssen manuell hinzugefügt werden. Daher ist es ratsam, diese Regeln zu bearbeiten. Außerdemkann eine Rotation der Protokolle erwünscht sein, wenn die Protokolle in einer separaten Datei gespeichert werden.
+====
+
+Es existiert keine Variable für [.filename]#/etc/rc.conf#, um die Protokollierung zu begrenzen. Um die Anzahl der Protokoll-Nachrichten pro Verbindungsversuch zu begrenzen, legen Sie die Anzahl der Einträge in [.filename]#/etc/sysctl.conf# fest:
+
+[source,bash]
+....
+# echo "net.inet.ip.fw.verbose_limit=5" >> /etc/sysctl.conf
+....
+
+Um die Protokollierung über die spezielle Schnittstelle `ipfw0` zu aktivieren, fügen Sie stattdessen folgende Zeile in [.filename]#/etc/rc.conf# hinzu:
+
+[source,bash]
+....
+# sysrc firewall_logif="YES"
+....
+
+Benutzen Sie dann tcpdump, um zu sehen, was protokolliert wird:
+
+[source,bash]
+....
+# tcpdump -t -n -i ipfw0
+....
+
+[TIP]
+====
+
+Durch die Protokollierung entsteht kein Aufwand, es sei denn, tcpdump wird an die Schnittstelle angebunden.
+====
+
+Nachdem Sie die Änderungen vorgenommen haben, können Sie die Firewall starten. Um auch die Anzahl der Protokoll-Nachrichten zu konfigurieren, setzen Sie mit `sysctl` den gewünschten Wert:
+
+[source,bash]
+....
+# service firewall start
+# sysctl net.inet.ip.fw.verbose_limit=5
+....
+
+[[firewalls-ipfw-rules]]
+=== IPFW Regel-Syntax
+
+Wenn ein Paket die Firewall "betritt", also von der Firewall geprüft und verarbeitet wird, wird die erste Regel des Regelwerkes auf das Paket angewandt. Auf diese Weise wird in aufsteigender Reihenfolge der Regelnummer mit allen weiteren Regeln verfahren. Falls die Selektionsparameter einer Regel auf ein Paket zutreffen, wird das Aktionsfeld der Regel ausgeführt und die Prüfung des Pakets beendet, nachfolgende Regeln werden also nicht mehr geprüft. Diese Suchmethode wird als "erster Treffer gewinnt" bezeichnet. Falls keine Regel auf das betreffende Paket zutrifft, wird die obligatorische IPFW-Rückfallregel mit der Nummer 65535 angewendet und das Paket wird ohne Rückantwort verworfen. Wenn das Paket jedoch einer Regel mit dem Schlüsselwort `count`, `skipto` oder `tee` entspricht, wird die Prüfung des Pakets weiter fortgeführt. Weitere Details darüber, wie diese Schlüsselwörter die Regelverarbeitung beeinflussen, finden Sie in man:ipfw[8].
+
+Bei der Erstellung der IPFW-Regeln müssen die Schlüsselwörter in der folgenden Reihenfolge geschrieben werden. Einige Schlüsselwörter müssen zwingend angegeben werden, während andere optional sind. Die Wörter in Großbuchstaben repräsentieren Variablen und die Wörter in Kleinbuchstaben müssen den Variablen vorangestellt werden. Das Zeichen `#` wird benutzt, um einen Kommentar einzuleiten und kann am Ende einer Regel oder in einer eigenen Zeile stehen. Leerzeilen werden ignoriert.
+
+`_CMD RULE_NUMBER set SET_NUMBER ACTION log LOG_AMOUNT PROTO from SRC SRC_PORT to DST DST_PORT OPTIONS_`
+
+Dieser Abschnitt bietet einen Überblick über diese Schlüsselwörter und deren Optionen. Es ist keine vollständige Liste aller verfügbaren Optionen. Eine vollständige Beschreibung der Regel-Syntax, die Sie verwenden können um IPFW-Regeln zu erstellen, finden Sie in man:ipfw[8].
+
+CMD::
+Jede Regel muss mit [parameter]#ipfw add# beginnen.
+
+RULE_NUMBER::
+Jede Regel gehört zu einer Nummer zwischen `1` und `65534`. Die Nummer wird verwendet, um die Reihenfolge der Regelverarbeitung zu kennzeichnen. Es ist möglich, dass mehrere Regeln dieselbe Nummer haben. In diesem Fall werden sie entsprechend der Reihenfolge angewendet, in der sie aufgenommen wurden.
+
+SET_NUMBER::
+Jede Regel ist einer _Set_-Nummer zwischen `0` und `31` zugeordnet. Sets können einzeln aktiviert oder deaktiviert werden. Dies macht es möglich, eine Reihe von Regeln schnell hinzuzufügen oder zu löschen. Wenn `SET_NUMBER` nicht angegeben ist, wird die Regel zu Set `0` hinzugefügt.
+
+ACTION::
+Eine Regel kann mit einer der folgenden Aktionen verknüpft werden. Die festgelegte Aktion wird ausgeführt, wenn das Paket den Selektionskriterien der Regel entspricht.
++
+[parameter]#allow | accept | pass | permit#: All diese Aktionen sind gleichbedeutend und erlauben Pakete, die mit der Regel übereinstimmen.
++
+[parameter]#check-state#: Diese Aktion überprüft die Regel in der dynamischen Zustandstabelle. Bei einer Übereinstimmung wird die mit der dynamischen Regel verknüpfte Aktion ausgeführt, andernfalls wird mit der Prüfung gegen die nächste Regel fortgefahren. Die Regel `check-state` hat selbst kein Selektionskriterium. Sollte keine `check-state`-Regel im Regelwerk vorhanden sein, wird die dynamische Zustandstabelle beim ersten Vorkommen einer `keep-state`- oder `limit`-Regel überprüft.
++
+[parameter]#count#: Aktualisiert die Zähler für alle Pakete, die mit dieser Regel übereinstimmen. Die Prüfung wird mit der nächsten Regel fortgesetzt.
++
+[parameter]#deny | drop#: Diese Aktionen sind gleichbedeutend und verwerfen Pakete, die mit dieser Regel übereinstimmen.
++
+Es stehen noch weitere Aktionen zur Verfügung. Einzelheiten finden Sie in man:ipfw[8].
+
+LOG_AMOUNT::
+Erfüllt ein Paket die Selektionskriterien mit dem Schlüsselwort `log`, wird dies von man:syslogd[8] mit der Annotation `SECURITY` protokolliert. Dies erfolgt allerdings nur, wenn die Anzahl der protokollierten Pakete der betreffenden Regel die definierte `LOG_AMOUNT`-Grenze nicht übersteigt. Wenn `LOG_AMOUNT` nicht definiert ist, wird die Grenze aus dem Wert von `net.inet.ip.fw.verbose_limit` benutzt. Ein Wert von `0` bedeutet eine unbegrenzte Protokollierung. Wird eine definierte Grenze erreicht, wird die Protokollierung für diese Regel deaktiviert. Um die Protokollierung zu reaktivieren, können Sie den Protokoll- oder Paketzähler mit `ipfw resetlog` zurücksetzen.
++
+
+[NOTE]
+====
+Die Protokollierung findet statt, nachdem alle Selektionskriterien geprüft und bevor die endgültige Aktion auf das Paket angewendet wird. Der Administrator entscheidet, welche Regel protokolliert werden soll.
+====
+
+PROTO::
+Dieser optionale Wert wird verwendet, um einen beliebigen Protokollnamen oder -nummer aus [.filename]#/etc/protocols# gegen das Paket zu prüfen.
+
+SRC::
+Nach dem Schlüsslwort `from` muss die Quelladresse stehen, oder ein Schlüsselwort, das die Quelladresse darstellt. Eine Adresse wird dargestellt duch `any`, `me` (jede Adresse dieses Systems), `me6` (jede IPv6-Adresse dieses Systems), oder `table` gefolgt von der Nummer der Tabelle, welche die Adressen enthält. IP-Adressen können in CIDR-Notation geschrieben werden. Beispielsweise `1.2.3.4/25` oder `1.2.3.4:255.255.255.128`.
+
+SRC_PORT::
+Optional kann ein Quellport über eine Nummer oder einen Namen aus [.filename]#/etc/services# spezifiziert werden.
+
+DST::
+Nach dem Schlüsselwort `to` muss die Zieladresse stehen, oder ein Schlüsselwort, das die Zieladresse darstellt. Es können die gleichen Schlüsselwörter und Adressen benutzt werden, die bereits im SRC-Abschnitt beschrieben wurden.
+
+DST_PORT::
+Optional kann ein Zielport über eine Nummer oder einen Namen aus [.filename]#/etc/services# spezifiziert werden.
+
+OPTIONS::
+Nach der Quell- und Zieladresse können noch weitere Optionen angegeben werden. Wie der Name bereits sagt, sind `OPTIONS` optional. Häufig verwendete Optionen sind `in` oder `out`, mit denen die Richtug des Pakets bestimmt wird, `icmptypes` gefolgt vom Typ der ICMP-Nachricht, sowie `keep-state`.
++
+Wenn ein Paket auf eine [parameter]#keep-state#-Regel zutrifft, wird die Firewall eine dynamische Regel erstellen, die dem bidirektionalen Datenverkehr zwischen den gleichen Quell- und Zieladressen mit dem gleichen Protokoll entspricht.
++
+Dynamische Regeln sind für einen sogenannten SYN-flood-Angriff anfällig, bei dem eine riesige Anzahl an dynamischen Regeln erzeugt wird. Verwenden Sie die Option `limit`, um einen solchen Angriff entgegenzuwirken. Diese Option begrenzt die Anzahl der gleichzeitig möglichen Sitzungen. Es handelt sich dabei um einen Zähler, der die Anzahl von dynamischen Regeln in Kombination mit der Quelladresse verfolgt. Übersteigt der Zähler den durch `limit` definierten Wert, wird das Paket verworfen.
++
+Es stehen noch viele weitere Optionen zur Verfügung. man:ipfw[8] enthält eine Beschreibung der einzelnen Optionen.
+
+=== Beispiel für einen Regelsatz
+
+Dieser Abschnitt die Erstellung eines Firewall-Skripts namens [.filename]#/etc/ipfw.rules# mit zustandsorientierten (stateful Regeln. Alle Regeln in diesem Beispiel verwenden die Optionen `in` und `out`, um die Richtung des Pakets zu verdeutlichen. Zusätzlich wird `via` _interface-name_ benutzt, um die Schnittstelle für das Paket zu prüfen.
+
+[NOTE]
+====
+Bei den anfänglichen Tests mit dem Firewall-Regelsatz sollten Sie vielleicht folgende Einstellung vornehmen:
+
+[.programlisting]
+....
+net.inet.ip.fw.default_to_accept="1"
+....
+
+Dies legt die Standardregel von man:ipfw[8] etwas großzügiger fest, als das voreingestellte `default deny ip from any to any`. Dadurch sinkt die Gefahr, sich nach einem Neustart des Systems auszusperren.
+====
+
+Das Firewall-Skript beginnt mit einem Hinweis, dass es sich um ein Bourne Shell-Skript handelt. Danach werden alle vorhandenen Filterregeln gelöscht. Anschließend wird die Variable `cmd` erstellt, sodass `ipfw add` nicht jedes mal von Hand eingegeben werden muss. Die Variable `pif` repräsentiert die mit dem Internet verbundene Schnittstelle.
+
+[.programlisting]
+....
+#!/bin/sh
+# Flush out the list before we begin.
+ipfw -q -f flush
+
+# Set rules command prefix
+cmd="ipfw -q add"
+pif="dc0"     # interface name of NIC attached to Internet
+....
+
+Jetzt folgen die eigentlichen Filterregeln. Diese ersten beiden Regeln erlauben den Datenverkehr aus dem internen Netzwerk und über die Loopback-Schnittstelle:
+
+[.programlisting]
+....
+# Change xl0 to LAN NIC interface name
+$cmd 00005 allow all from any to any via xl0
+
+# No restrictions on Loopback Interface
+$cmd 00010 allow all from any to any via lo0
+....
+
+Die nächste Regel erlaubt Pakete, für die ein Eintrag in der dynamischen Zustandstabelle existiert:
+
+[.programlisting]
+....
+$cmd 00101 check-state
+....
+
+Die nächsten Regeln definieren, welche internen Rechner Verbindungen zu anderen Rechnern im Internet aufbauen dürfen. Hier werden wieder zustandsorientierte Regeln verwendet:
+
+[.programlisting]
+....
+# Allow access to public DNS
+# Replace x.x.x.x with the IP address of a public DNS server
+# and repeat for each DNS server in /etc/resolv.conf
+$cmd 00110 allow tcp from any to x.x.x.x 53 out via $pif setup keep-state
+$cmd 00111 allow udp from any to x.x.x.x 53 out via $pif keep-state
+
+# Allow access to ISP's DHCP server for cable/DSL configurations.
+# Use the first rule and check log for IP address.
+# Then, uncomment the second rule, input the IP address, and delete the first rule
+$cmd 00120 allow log udp from any to any 67 out via $pif keep-state
+#$cmd 00120 allow udp from any to x.x.x.x 67 out via $pif keep-state
+
+# Allow outbound HTTP and HTTPS connections
+$cmd 00200 allow tcp from any to any 80 out via $pif setup keep-state
+$cmd 00220 allow tcp from any to any 443 out via $pif setup keep-state
+
+# Allow outbound email connections
+$cmd 00230 allow tcp from any to any 25 out via $pif setup keep-state
+$cmd 00231 allow tcp from any to any 110 out via $pif setup keep-state
+
+# Allow outbound ping
+$cmd 00250 allow icmp from any to any out via $pif keep-state
+
+# Allow outbound NTP
+$cmd 00260 allow udp from any to any 123 out via $pif keep-state
+
+# Allow outbound SSH
+$cmd 00280 allow tcp from any to any 22 out via $pif setup keep-state
+
+# deny and log all other outbound connections
+$cmd 00299 deny log all from any to any out via $pif
+....
+
+Die folgenden Regeln steuern die Verbindungen von Rechern aus dem Internet ins interne Netzwerk. Zuerst werden Pakete verworfen, die typischerweise im Zusammenhang mit Angriffen stehen. Danach werden bestimmte Arten von Verbindungen erlaubt. Alle Dienste aus dem öffentlichen Internet beinhalten die Option `limit`, um Flooding zu unterbinden.
+
+[.programlisting]
+....
+# Deny all inbound traffic from non-routable reserved address spaces
+$cmd 00300 deny all from 192.168.0.0/16 to any in via $pif     #RFC 1918 private IP
+$cmd 00301 deny all from 172.16.0.0/12 to any in via $pif      #RFC 1918 private IP
+$cmd 00302 deny all from 10.0.0.0/8 to any in via $pif         #RFC 1918 private IP
+$cmd 00303 deny all from 127.0.0.0/8 to any in via $pif        #loopback
+$cmd 00304 deny all from 0.0.0.0/8 to any in via $pif          #loopback
+$cmd 00305 deny all from 169.254.0.0/16 to any in via $pif     #DHCP auto-config
+$cmd 00306 deny all from 192.0.2.0/24 to any in via $pif       #reserved for docs
+$cmd 00307 deny all from 204.152.64.0/23 to any in via $pif    #Sun cluster interconnect
+$cmd 00308 deny all from 224.0.0.0/3 to any in via $pif        #Class D & E multicast
+
+# Deny public pings$
+$cmd 00310 deny icmp from any to any in via $pif$
+$
+# Deny ident$
+$cmd 00315 deny tcp from any to any 113 in via $pif$
+$
+# Deny all Netbios services.$
+$cmd 00320 deny tcp from any to any 137 in via $pif$
+$cmd 00321 deny tcp from any to any 138 in via $pif$
+$cmd 00322 deny tcp from any to any 139 in via $pif$
+$cmd 00323 deny tcp from any to any 81 in via $pif$
+
+# Deny fragments
+$cmd 00330 deny all from any to any frag in via $pif
+
+# Deny ACK packets that did not match the dynamic rule table
+$cmd 00332 deny tcp from any to any established in via $pif
+
+# Allow traffic from ISP's DHCP server.
+# Replace x.x.x.x with the same IP address used in rule 00120.
+#$cmd 00360 allow udp from any to x.x.x.x 67 in via $pif keep-state
+
+# Allow HTTP connections to internal web server
+$cmd 00400 allow tcp from any to me 80 in via $pif setup limit src-addr 2
+
+# Allow inbound SSH connections
+$cmd 00410 allow tcp from any to me 22 in via $pif setup limit src-addr 2
+
+# Reject and log all other incoming connections
+$cmd 00499 deny log all from any to any in via $pif
+....
+
+Die letzte Regel protokolliert alle Pakete, die mit keiner Regel im Regelsatz übereinstimmen:
+
+[.programlisting]
+....
+# Everything else is denied and logged
+$cmd 00999 deny log all from any to any
+....
+
+[[in-kernel-nat]]
+=== In-Kernel NAT
+
+Die IPFW-Firewall von FreeBSD hat zwei NAT-Implementierungen: die Userland-Implementierung man:natd[8] und die neuere, kernelinterne NAT-Implementierung. Beide arbeiten in Verbindung mit IPFW, um die Übersetzung von Netzwerkadressen zu ermöglichen. Damit kann eine Lösung zur gemeinsamen Nutzung der Internetverbindung bereitgestellt werden, so dass mehrere interne Rechner unter Verwendung einer einzigen öffentlichen IP-Adresse eine Verbindung zum Internet herstellen können.
+
+Um dies zu tun, muss der mit dem Internet verbundene FreeBSD-Rechner als Gateway eingerichtet sein. Das System muss über zwei Netzwerkschnittstellen verfügen, wobei eine Schnittstelle mit dem Internet verbunden ist und die andere mit dem internen Netzwerk. Jeder Rechner im internen Netzwerk sollte eine https://www.ietf.org/rfc/rfc1918.txt[RFC 1918] konforme Adresse zugewiesen bekommen.
+
+Es ist noch ein wenig Konfiguration nötig, um die In-Kernel NAT-Funktion von IPFW zu aktivieren. Um die In-Kernel NAT-Unterstützung beim Booten zu aktivieren, müssen folgende Einträge in [.filename]#/etc/rc.conf# vorhanden sein:
+
+[.programlisting]
+....
+gateway_enable="YES"
+firewall_enable="YES"
+firewall_nat_enable="YES"
+....
+
+[NOTE]
+====
+Wenn `firewall_nat_enable` gesetzt ist, `firewall_enable` jedoch nicht, hat dies keine Auswirkung, da die NAT-Implementierung im Kernel nur mit IPFW kompatibel ist.
+====
+
+Wenn der Regelsatz zustandsorientierte Regeln enthält, ist die Position der NAT-Regel kritisch und die `skipto`-Aktion wird benutzt. Die Aktion `skipto` benötigt eine Regelnummer, damit IPFW weiß, zu welcher Regel es springen muss. Das folgende Beispiel baut auf den im vorherigen Abschnitt gezeigten Firewall-Relgelsatz auf. Es werden einige neue Einträge hinzugefügt und bestehende Regeln modifiziert, um In-Kernel NAT zu konfigurieren. Zunächst werden einige Variablen hinzugefügt, darunter Regelnummern, die `keep-state`-Option und eine Liste mit TCP-Ports um die Anzahl der Regeln zu reduzieren:
+
+[.programlisting]
+....
+#!/bin/sh
+ipfw -q -f flush
+cmd="ipfw -q add"
+skip="skipto 1000"
+pif=dc0
+ks="keep-state"
+good_tcpo="22,25,37,53,80,443,110"
+....
+
+Bei In-Kernel NAT muss aufgrund der Architektur von man:libalias[3], einer Bibliothek, die als Kernel-Modul implementiert ist, um die In-Kernel NAT-Funktion für IPFW bereitzustellen, TCP segment offloading (TSO) deaktiviert werden. TSO kann pro Netzwerkschnittstelle mit man:ifconfig[8], oder systemweit mit man:sysctl[8] deaktiviert werden. Um TSO systemweit zu deaktivieren, muss folgende Zeile in [.filename]#/etc/sysctl.conf# enthalten sein:
+
+[.programlisting]
+....
+net.inet.tcp.tso="0"
+....
+
+Danach wird eine NAT-Instanz konfiguriert. Mit In-Kernel NAT ist es möglich, mehrere NAT-Instanzen mit jeweils eigener Konfiguration zu betreiben. In diesem Beispiel wird jedoch nur eine NAT-Instanz mit der Nummer 1 benötigt. Die Konfiguration kann ein paar Optionen enthalten, zum Beispiel: `if`, dass die öffentliche Netzwerkschnittstelle angibt, `same_ports`, das dafür sorgt, dass Alias-Ports und lokale Portnummern identisch zugeordnet werden, `unreg_only` führt dazu, dass nur unregistrierte (private) Adressräume von der NAT-Instanz verarbeitet werden, und `reset`, was dazu beiträgt, dass eine NAT-Instanz auch dann erhalten bleibt, wenn sich die öffentliche IP-Adresse des Rechners ändert. Weitere mögliche Optionen, die an einzelne NAT-Instanzen übergeben werden können, finden Sie in man:ipfw[8]. Wenn eine zustandsorientierte NAT-Firewall konfiguriert wird, ist es notwendig, dass übersetzte Pakete zur weiteren Verarbeitung in die Firewall eingespielt werden können, was durch die Deaktivierung des `one_pass`-Verhaltens beim Start des Firewall-Skripts erreicht werden kann.
+
+[.programlisting]
+....
+ipfw disable one_pass
+ipfw -q nat 1 config if $pif same_ports unreg_only reset
+....
+
+Die NAT-Regel für eingehende Pakete wird _nach_ den beiden Regeln, die das interne Netzwerk und die Loopback-Schnittstelle erlauben, und nach der Reassamble-Regel, aber _vor_ der `check-state`-Regel eingefügt. Es ist wichtig, dass die Nummer der NAT-Regel (in diesem Beispiel `100`) höher ist, als die drei vorherigen Regeln und niedriger, als die `check-state`-Regel. Darüber hinaus wird aufgrund des Verhaltens von In-Kernel NAT empfohlen, eine Reassamble-Regel kurz vor der ersten NAT-Regel, aber hinter den Regeln zu platzieren, die den Datenverkehr auf einer vertrauenswürdigen Schnittstelle erlauben. In der Regel sollte es nicht zu einer Fragmentierung kommen, aber bei getunnelten IPSEC/ESP/GRE-Verkehr kann es vorkommen, und das Zusammensetzen von Fragmenten ist notwendig, bevor das komplette Paket an das In-Kernel NAT übergeben werden kann.
+
+[NOTE]
+====
+Die Reassamble-Regel wird beim Userland man:natd[8] nicht benötigt, da die Aktion `divert` von IPFW dies bereits automatisch übernimmt, bevor das Paket an den Socket ausgeliefert wird. Dies ist auch in man:ipfw[8] dokumentiert.
+
+Beachten Sie, dass die aktuelle NAT-Instanznummer und NAT-Regelnummer in diesem Beispiel nicht mit der voreingestellten NAT-Instanznummer und Regelnummer übereinstimmt, wenn sie mit dem [.filename]#rc.firewall#-Skript von FreeBSD erstellt wurde.
+====
+
+[.programlisting]
+....
+$cmd 005 allow all from any to any via xl0  # exclude LAN traffic
+$cmd 010 allow all from any to any via lo0  # exclude loopback traffic
+$cmd 099 reass all from any to any in       # reassemble inbound packets
+$cmd 100 nat 1 ip from any to any in via $pif # NAT any inbound packets
+# Allow the packet through if it has an existing entry in the dynamic rules table
+$cmd 101 check-state
+....
+
+Die Regeln für den ausgehenden Verkehr werden ebenfalls modifiziert, um Aktionen mit der `$skipto`-Variable zu erlauben und anzuzeigen, dass die Prüfung mit der Regel `1000` fortgesetzt wird. Die sieben Regeln für TCP wurden durch die Regel `125` ersetzt, da die sieben erlaubten ausgehenden Ports in der Variable `$good_tcp0` enthalten sind.
+
+[NOTE]
+====
+Beachten Sie, dass die Leistung von IPFW weitgehend von der Anzahl der im Regelsatz vorhandenen Regeln bestimmt wird.
+====
+
+[.programlisting]
+....
+# Authorized outbound packets
+$cmd 120 $skip udp from any to x.x.x.x 53 out via $pif $ks
+$cmd 121 $skip udp from any to x.x.x.x 67 out via $pif $ks
+$cmd 125 $skip tcp from any to any $good_tcpo out via $pif setup $ks
+$cmd 130 $skip icmp from any to any out via $pif $ks
+....
+
+Die eingehenden Regeln bleiben unverändert, mit Ausnahme der letzten Regel, in der das `via $pif` entfernt wird, um ein- und ausgehende Pakete prüfen zu können. Nach der letzten Regel für ausgehende Pakete muss die NAT-Regel folgen. Die Regel muss eine höhere Nummer als die letzte Regel haben und die Nummer muss über die `skipto`-Aktion referenziert werden. In diesem Regelsatz leitet die Regel mit der Nummer `1000` alle ausgehenden Pakete zur konfigurierten NAT-Instanz weiter. Die darauf folgende Regel lässt alle von NAT verarbeiteten Pakete passieren.
+
+[.programlisting]
+....
+$cmd 999 deny log all from any to any
+$cmd 1000 nat 1 ip from any to any out via $pif # skipto location for outbound stateful rules
+$cmd 1001 allow ip from any to any
+....
+
+In diesem Beispiel steuern die Regeln `100`, `101`, `125`, `1000` und `1001` die Adressübersetzung der ein- und ausgehende Pakete, so dass immer die private LANIP-Adresse in der dynamische Zustandstabelle registriert werden.
+
+Nehmen wir beispielsweise einen Web-Browser, der neue HTTP-Sitzungen über Port 80 aufbaut. Wenn nun das erste ausgehende Paket von der Firewall geprüft wird, trifft es nicht auf Regel `100` zu, da das Paket nach außen geleitet wird und nicht nach innen. Das Paket trifft auch nicht auf Regel `101` zu, da es das erste ist und somit noch nicht in der dynamischen Zustandstabelle enthalten ist. Das Paket entspricht schließlich Regel `125`, da es ausgehend auf einem erlaubten Port gesendet wird und von einer IP-Adresse aus dem internen LAN stammt. Für Pakete, die auf diese Regel zutreffen, werden zwei Aktionen ausgeführt. Zuerst wird durch die Aktion `keep-state` ein dynamischer Eintrag in der Statustabelle erstellt und die angegebene Aktion `skipto 1000` ausgeführt. Als nächstes durchläuft das Paket NAT und wird dann an das Internet gesendet. Nachdem dieses Paket am Webserver angekommen ist, wird dort eine Antwort erzeugt und zurückgeschickt. Dieses Paket wird wieder von oben nach unten durch das Regelwerk geprüft. Dieses Mal trifft Regel `100` auf das Paket zu und die Zieladresse wird auf die zugehörige (lokale) LAN-Adresse abgebildet. Danach wird das Paket von der Regel `check-state` verarbeitet. Die Zustandstabelle erkennt, dass eine zugehörige aktive Sitzung vorliegt und das Paket wird freigegeben und in das LAN geleitet.
+
+Für den eingehenden Datenverkehr muss der Regelsatz unerwünschte Pakete blockieren und Pakete für autorisierte Dienste durchlassen. Ein Paket, das mit einer Regel für den eingehenden Datenverkehr übereinstimmt, wird in der dynamischen Zustandstabelle eingetragen und dann an das LAN freigegeben. Das Antwortpaket wird von der Regel `check-state` als Paket einer aktiven Sitzung erkannt. Das Paket wird dann von Regel `1000` per NAT verarbeitet, bevor es über die externe Schnittstelle verschickt wird.
+
+[NOTE]
+====
+Der Wechsel vom Userland man:natd[8] zu In-Kernel NAT mag zunächst nahtlos erscheinen, aber es gibt einen kleinen Haken. Bei Verwendung des [.filename]#GENERIC#-Kernels wird IPFW das Kernelmodul [.filename]#libalias.ko# laden, wenn `firewall_nat_enable` in [.filename]#rc.conf# aktiviert ist. Das Kernelmodul [.filename]#libalias.ko# stellt nur grundlegende NAT-Funktionalität bereit, während die Userland-Implementierung man:natd[8] alle Funktionalitäten ohne zusätzliche Konfiguration zur Verfügung stellt. Die gesamte Funktionalität bezieht sich auf die folgenden Kernelmodule, die bei Bedarf zusätzlich zu [.filename]#libalias.ko# geladen werden können: [.filename]#alias_cuseeme.ko#, [.filename]#alias_ftp.ko#, [.filename]#alias_bbt.ko#, [.filename]#skinny.ko#, [.filename]#irc.ko#, [.filename]#alias_pptp.ko# und [.filename]#alias_smedia.ko# unter Verwendung der `kld_list` Direktive in [.filename]#rc.conf#. Wenn ein angepasster Kernel benutzt wird, kann die volle Funktionalität der Userland-Bibliothek im Kernel mit `options LIBALIAS` gebaut werden.
+====
+
+==== Weiterleitung von Ports
+
+Der Nachteil von NAT ist, dass die Rechner im LAN nicht aus dem Internet zugänglich sind. Diese Rechner können zwar ausgehende Verbindungen zur Außenwelt aufbauen, jedoch keine eingehenden Verbindungen empfangen. Dies stellt ein Problem dar, wenn Sie auf einem Rechner im LAN Dienste anbieten möchten, die aus dem Internet erreichbar sein sollen. In diesem Fall können Sie die Ports, welche über das Internet erreichbar sein sollen, über die NAT-Maschine an den Rechner im LAN weiterleiten.
+
+Angenommen es gibt einen IRC-Server auf Rechner `A` und einen Webserver auf Rechner `B`. Damit dies funktioniert, müssen die Verbindungen auf den Ports 6667 (IRC) und 80 (HTTP) an die jeweiligen Rechner weitergeleitet werden.
+
+Bei In-Kernel NAT wird die gesamte Konfiguration in der NAT-Instanz selbst vorgenommen. Alle Optionen, die in einer NAT-Instanz benutzt werden können, sind in man:ipfw[8] dokumentiert. Die Syntax für IPFW folgt dabei der von natd. Die Syntax für `-redirect_port` lautet:
+
+[.programlisting]
+....
+redirect_port proto targetIP:targetPORT[-targetPORT]
+  [aliasIP:]aliasPORT[-aliasPORT]
+  [remoteIP[:remotePORT[-remotePORT]]]
+....
+
+Für das obige Beispiel sollten die Argumente wie folgt aussehen:
+
+[.programlisting]
+....
+redirect_port tcp 192.168.0.2:6667 6667
+redirect_port tcp 192.168.0.3:80 80
+....
+
+Nachdem diese Argumente der Konfiguration der NAT-Instanz 1 im obigen Regelsatz hinzugefügt wurden, werden die TCP-Ports an die Rechner im LAN weitergeleitet, auf denen IRC- und HTTP-Dienste laufen.
+
+[.programlisting]
+....
+ipfw -q nat 1 config if $pif same_ports unreg_only reset \
+  redirect_port tcp 192.168.0.2:6667 6667 \
+  redirect_port tcp 192.168.0.3:80 80
+....
+
+Portbereiche können über `redirect_port` festgelegt werden. Zum Beispiel würde _tcp 192.168.0.2:2000-3000 2000-3000_ alle Verbindungen auf die Ports 2000 bis 3000 an die Ports 2000 bis 3000 an Rechner `A` weiterleiten.
+
+==== Weiterleiten von Adressen
+
+Das Weiterleiten von Adressen ist nützlich, wenn mehr als eine IP-Adresse zur Verfügung steht. Jeder Rechner im LAN kann über man:ipfw[8] seine eigene externe IP-Adresse zugewiesen bekommen. IPFW wird dann den ausgehenden Datenverkehr der Rechner aus dem LAN mit der entsprechenden externen IP-Adresse umschreiben. Auch der eingehenden Datenverkehr über die externe IP-Adresse wird an die entsprechenden Rechner im LAN weitergeleitet. Diese Methode ist auch als statisches NAT bekannt. Wenn Ihnen beispielsweise die IP-Adressen `128.1.1.1`, `128.1.1.2` und `128.1.1.3` zur Verfügung stehen, kann `128.1.1.1` als externe Adresse der man:ipfw[8]-Maschine verwendet werden, während `128.1.1.2` und `128.1.1.3` an Rechner `A` und Rechner `B` im LAN weitergeleitet werden.
+
+Die Syntax für `redirect_address` lautet wie im Folgenden, wobei `localIP` die interne IP-Adresse des Rechners im LAN, und `publicIP` die externe IP-Adresse ist, die dem Rechner im LAN entspricht.
+
+[.programlisting]
+....
+redirect_address localIP publicIP
+....
+
+Auf das Beispiel bezogen, würden die Argumente so lauten:
+
+[.programlisting]
+....
+redirect_address 192.168.0.2 128.1.1.2
+redirect_address 192.168.0.3 128.1.1.3
+....
+
+Genau wie bei `redirect_port`, werden diese Argumente in der Konfiguration der NAT-Instanz gesetzt. Bei der Weiterleitung von Adressen ist keine Portumleitung notwendig, da alle Daten, die auf einer bestimmten IP-Adresse empfangen werden, weitergeleitet werden.
+
+Die externe IP-Adresse der man:ipfw[8]-Maschine muss auf der externen Schnittstelle aktiv und mit einem Alias versehen sein. Weitere Einzelheiten sind in man:rc.conf[5]; beschrieben.
+
+==== Userland NAT
+
+Zunächst sei gesagt, dass man:natd[8], die Userland-Implementierung aufwändiger ist als In-Kernel NAT. Damit man:natd[8] Pakete übersetzen kann, müssen die Pakete vom Kernel ins Userland und zurück kopiert werden, was zusätzlichen Aufwand mit sich bringt. Dieser Aufwand entfällt bei In-Kernel NAT.
+
+Um den Userland NAT-Daemon man:natd[8] beim Systemstart zu aktivieren, ist etwas Konfiguration in [.filename]#/etc/rc.conf# nötig. `natd_interface` wird auf den Namen der mit dem Internet verbundenen Schnittstelle gesetzt. Das man:rc[8]-Skript von man:natd[8] wird selbstständig prüfen, ob eine dynamische IP-Adresse benutzt wird und sich selbst so konfigurieren, dass es damit umgehen kann.
+
+[.programlisting]
+....
+gateway_enable="YES"
+natd_enable="YES"
+natd_interface="rl0"
+....
+
+Generell kann der obige Regelsatz, wie er für In-Kernel NAT erklärt wurde, auch zusammen mit man:natd[8] benutzt werden. Die Ausnahmen sind die Konfiguration der In-Kernel NAT-Instanz `(ipfw -q nat 1 config ...)`, die nicht zusammen mit der Regel 99 benötigt wird, da die `divert`-Aktion sich um die Fragmentierung kümmert. Die Regeln 100 und 1000 müssen leicht modifiziert werden, wie unten gezeigt.
+
+[.programlisting]
+....
+$cmd 100 divert natd ip from any to any in via $pif
+$cmd 1000 divert natd ip from any to any out via $pif
+....
+
+Um eine Port- oder Adressumleitung zu konfigurieren, wird eine ähnliche Syntax wie bei In-Kernel NAT verwendet. Anstatt die Konfiguration in unserem Regelsatz-Skript wie bei In-Kernel NAT anzugeben, wird die Konfiguration von man:natd[8] am besten in einer Konfigurationsdatei vorgenommen. Dazu muss eine zusätzliche Option in [.filename]#/etc/rc.conf# übergeben werden, welche den Pfad zur Konfigurationsdatei angibt.
+
+[.programlisting]
+....
+natd_flags="-f /etc/natd.conf"
+....
+
+[NOTE]
+====
+Die Konfigurationsdatei muss eine Liste von Optionen enthalten, eine pro Zeile. Weitere Informationen über die Konfigurationsdatei und mögliche Variablen finden Sie in man:natd[8]. Hier zwei Beispieleinträge, einer pro Zeile:
+
+[.programlisting]
+....
+redirect_port tcp 192.168.0.2:6667 6667
+redirect_address 192.168.0.3 128.1.1.3
+....
+
+====
+
+[[firewalls-ipfw-cmd]]
+=== Das IPFW Kommando
+
+`ipfw` kann benutzt werden, um einzelne Regeln im laufenden Betrieb hinzuzufügen oder zu entfernen. Problematisch ist jedoch, dass diese Änderungen bei einem Neustart des Systems verloren gehen. Daher ist es empfehlenswert, eigene Regeln in einer Datei zu definieren und diese zu laden, um die Regeln der Firewall im laufenden Betrieb anzupassen.
+
+`ipfw` ist auch hilfreich, um die geladenen Regeln der auf der Konsole auszugeben. IPFW erzeugt dynamisch einen Zähler, der jedes Paket, auf das eine Regel zutrifft, zählt. Dadurch ist es möglich, die Funktion einer Regel zu überprüfen.
+
+Eine Auflistung aller geladenen Regeln erhalten Sie mit:
+
+[source,bash]
+....
+# ipfw list
+....
+
+Eine Auflistung aller Regeln inklusive des letzten Treffers erhalten Sie mit:
+
+[source,bash]
+....
+# ipfw -t list
+....
+
+Das nächste Beispiel zeigt Informationen über die Anzahl der Pakete, die von einer Regel gefiltert wurden sowie die Regel selbst. Der erste Spalte zeigt die Nummer der Regel, gefolgt von der Anzahl der gefilterten Pakete und der Anzahl der Pakete in Bytes. Zum Schluss steht die Regel selbst:
+
+[source,bash]
+....
+# ipfw -a list
+....
+
+Das folgende Kommando zeigt zusätzlich alle dynamischen Regeln an:
+
+[source,bash]
+....
+# ipfw -d list
+....
+
+Um diese Auflistung um die "abgelaufenen" Regeln zu erweitern, geben Sie folgendes Kommando ein:
+
+[source,bash]
+....
+# ipfw -d -e list
+....
+
+Hiermit werden alle Zähler auf Null zurückgesetzt:
+
+[source,bash]
+....
+# ipfw zero
+....
+
+Es ist auch möglich, einen spezifischen Zähler zurückzusetzen:
+
+[source,bash]
+....
+# ipfw zero NUM
+....
+
+==== Protokollierung von Firewall-Nachrichten
+
+Auch bei aktivierter Protokollierung wird IPFW von selbst keine Regeln protokollieren. Der Administrator muss entscheiden, welche Regeln aus dem Regelwerk protokolliert werden sollen. In diesen Regeln muss dann das Schlüsselwort `log` hinzugefügt werden. Normalerweise werden nur geblockte Pakete protokolliert. Es ist üblich, die "ipfw default deny everything"-Regel am Ende des Regelwerks mit dem Schlüsselwort `log` zu duplizieren. Dadurch ist es möglich, alle Pakete zu sehen, auf die keine Regel zutraf.
+
+Protokollierung ist allerdings ein zweischneidiges Schwert. Bei mangelnder Vorsicht oder einem DoS-Angriff wird die Festplatte mit einer enormen Flut von Protokolldaten belastet. Protokoll-Nachrichten werden nicht nur an man:syslogd[8] geschickt, sondern auch auf der Konsole angezeigt, was dann schnell lästig werden kann.
+
+Die Kerneloption `IPFIREWALL_VERBOSE_LIMIT=5` begrenzt die Anzahl identischer Nachrichten an man:syslogd[8] für eine gegebene Regel auf fünf Nachrichten. Ist diese Option im Kernel aktiviert, wird nach Erreichen den festgelegten Anzahl die Protokollierung von aufeinanderfolgenden Nachrichten auf den festgelegten Wert begrenzt, da beispielsweise die Speicherung von 200 gleichen Protokoll-Nachrichten sinnlos ist. Daher werden durch diese Option nur fünf gleichartige Nachrichten protokolliert. Alle weiteren Nachrichten werden nur gezählt und deren Gesamtzahl wird schließlich von man:syslogd[8] wie folgt ausgegeben:
+
+[.programlisting]
+....
+Last message repeated 45 times
+....
+
+Alle protokollierten Pakete werden in der Voreinstellung in [.filename]#/var/log/security# gespeichert. Dies wird in [.filename]#/etc/syslog.conf# definiert.
+
+[[firewalls-ipfw-rules-script]]
+==== Ein Firewall-Regelwerk erstellen
+
+Die meisten fortgeschrittenen IPFW-Benutzer erzeugen eine Datei, welche die Regeln für die Firewall enthält, um diese als Skript ausführen zu können. Der Vorteil einer derartigen Konfiguration besteht darin, dass dadurch mehrere Regeln gleichzeitig geändert und aktiviert werden können, ohne dass dazu das System neu gestartet werden muss. Dies ist zudem beim Testen von Regeländerungen sehr hilfreich. Weil es sich bei der Datei um ein Skript handelt, ist es auch möglich, häufig verwendete Befehle durch Aliase zu ersetzen und diese dann in mehreren Regeln zu nutzen.
+
+Die Syntax des folgenden Skripts entspricht der Syntax von man:sh[1], man:csh[1] sowie man:tcsh[1]. Felder, die symbolisch substituiert werden, haben das Präfix $ (Dollarzeichen). Symbolische Felder haben das $-Präfix nicht. Der Wert, mit dem das symbolische Feld belegt wird, muss in doppelten Anführungszeichen ("") stehen.
+
+Die Datei mit den Regeln könnte wie folgt aufgebaut sein:
+
+[.programlisting]
+....
+############### start of example ipfw rules script #############
+#
+ipfw -q -f flush       # Delete all rules
+# Set defaults
+oif="tun0"             # out interface
+odns="192.0.2.11"      # ISP's DNS server IP address
+cmd="ipfw -q add "     # build rule prefix
+ks="keep-state"        # just too lazy to key this each time
+$cmd 00500 check-state
+$cmd 00502 deny all from any to any frag
+$cmd 00501 deny tcp from any to any established
+$cmd 00600 allow tcp from any to any 80 out via $oif setup $ks
+$cmd 00610 allow tcp from any to $odns 53 out via $oif setup $ks
+$cmd 00611 allow udp from any to $odns 53 out via $oif $ks
+################### End of example ipfw rules script ############
+....
+
+Die Regeln in diesem Beispiel sind nicht wichtig. Wichtig ist es, zu zeigen, wie die symbolische Substitution innerhalb der Regeln verwendet wird.
+
+Wenn dieses Beispiel in [.filename]#etc/ipfw.rules# gespeichert wurde, so könnten alle Regeln durch die Ausführung des folgenden Kommandos neu geladen werden:
+
+[source,bash]
+....
+# sh /etc/ipfw.rules
+....
+
+Anstelle von [.filename]#/etc/ipfw.rules# kann ein beliebig anderer Name oder Speicherort verwendet werden.
+
+Alternativ können die einzelnen Befehle dieses Skripts auch von Hand eingegeben werden:
+
+[source,bash]
+....
+# ipfw -q -f flush
+# ipfw -q add check-state
+# ipfw -q add deny all from any to any frag
+# ipfw -q add deny tcp from any to any established
+# ipfw -q add allow tcp from any to any 80 out via tun0 setup keep-state
+# ipfw -q add allow tcp from any to 192.0.2.11 53 out via tun0 setup keep-state
+# ipfw -q add 00611 allow udp from any to 192.0.2.11 53 out via tun0 keep-state
+....
+
+[[firewalls-ipfw-kernelconfig]]
+=== IPFW Kerneloptionen
+
+Um die Unterstützung für IPFW statisch in den Kernel zu kompilieren, lesen Sie die Anweisungen in crossref:kernelconfig[kernelconfig,Konfiguration des FreeBSD-Kernels]. Die folgenden Optionen können in der Kernelkonfigurationsdatei verwendet werden:
+
+[.programlisting]
+....
+options    IPFIREWALL			# enables IPFW
+options    IPFIREWALL_VERBOSE		# enables logging for rules with log keyword to syslogd(8)
+options    IPFIREWALL_VERBOSE_LIMIT=5	# limits number of logged packets per-entry
+options    IPFIREWALL_DEFAULT_TO_ACCEPT	# sets default policy to pass what is not explicitly denied
+options    IPFIREWALL_NAT		# enables basic in-kernel NAT support
+options    LIBALIAS			# enables full in-kernel NAT support
+options    IPFIREWALL_NAT64		# enables in-kernel NAT64 support
+options    IPFIREWALL_NPTV6		# enables in-kernel IPv6 NPT support
+options    IPFIREWALL_PMOD		# enables protocols modification module support
+options    IPDIVERT			# enables NAT through natd(8)
+....
+
+[NOTE]
+====
+IPFW kann auch als Kernelmodul geladen werden: Die oben genannten Optionen werden standardmäßig als Module erstellt, oder können zur Laufzeit über Parameter festgelegt werden.
+====
+
+[[firewalls-ipf]]
+== IPFILTER (IPF)
+
+IPFILTER, auch als IPF bekannt, ist eine plattformübergreifende Open Source Firewall, die auf mehrere Betriebssysteme portiert wurde, einschließlich FreeBSD, NetBSD, OpenBSD und Solaris(TM).
+
+IPFILTER basiert auf einer kernelseitigen Firewall und einem NAT-Mechanismus, der durch Anwenderprogramme gesteuert und überwacht werden kann. Firewallregeln werden mit ipf gesetzt oder gelöscht. Für die Manipulation der NAT-Regeln wird ipnat benutzt. Mit ipfstat werden Laufzeitstatistiken der kernelseitigen Anteile von IPFILTER aufgelistet. Mit ipmon können die Aktionen von IPFILTER in Protokolldateien gespeichert werden.
+
+IPF wurde ursprünglich mit der Verarbeitungslogik "die letzte passende Regel gewinnt" geschrieben und verwendete ausschließlich Regeln ohne feste Zustände. Inzwischen wurde IPF modernisiert und unterstützt nun auch die Optionen `quick` und `keep state`.
+
+Antworten auf häufige Fragen finden Sie unter http://www.phildev.net/ipf/index.html[ http://www.phildev.net/ipf/index.html]. Ein Archiv der IPFILTER Mailingliste steht unter http://marc.info/?l=ipfilter[ http://marc.info/?l=ipfilter] zur Verfügung.
+
+Dieser Abschnitt des Handbuchs konzentriert sich auf IPF unter FreeBSD. Es werden auch Firewallregeln mit den Optionen `quick` und `keep state` vorgestellt.
+
+=== IPF aktivieren
+
+IPF ist in FreeBSD als ladbares Kernelmodul enthalten. Das bedeutet, dass Sie keinen angepassten Kernel erzeugen müssen um IPF zu aktivieren.
+
+Benutzer, die IPF lieber statisch in den Kernel kompilieren, sollten den Anweisungen in crossref:kernelconfig[kernelconfig,Konfiguration des FreeBSD-Kernels] folgen. Die folgenden Kerneloptionen stehen zur Verfügung:
+
+[.programlisting]
+....
+options IPFILTER
+options IPFILTER_LOG
+options IPFILTER_LOOKUP
+options IPFILTER_DEFAULT_BLOCK
+....
+
+`options IPFILTER` aktiviert die Unterstützung für IPFILTER. `options IPFILTER_LOG` aktiviert die Protokollierung über die Pseudo-Schnittstelle [.filename]#ipl# für Firewallrelgen, die das Schlüsselwort `log` enthalten. `IPFILTER_LOOKUP` aktiviert IP-Pools, um die Suche nach IP-Adressen zu beschleunigen. `IPFILTER_DEFAULT_BLOCK` ändert das Verhalten der Firewall dahingehend, dass jedes Paket, das nicht explizit von einer `pass`-Regel Zugang erhält, geblockt wird.
+
+Um IPF während des Bootens zu aktivieren, müssen folgende Einträge in [.filename]#/etc/rc.conf# hinzugefügt werden. Diese Einträge aktivieren ebenfalls die Protokollierung und die Regel `default pass all`. Um diese Voreinstellung zu ändern, ohne einen neuen Kernel zu übersetzen, müssen Sie am Ende der Firewallregeln eine `block all` Regel hinzufügen.
+
+[.programlisting]
+....
+ipfilter_enable="YES"             # Start ipf firewall
+ipfilter_rules="/etc/ipf.rules"   # loads rules definition text file
+ipv6_ipfilter_rules="/etc/ipf6.rules" # loads rules definition text file for IPv6
+ipmon_enable="YES"                # Start IP monitor log
+ipmon_flags="-Ds"                 # D = start as daemon
+                                  # s = log to syslog
+                                  # v = log tcp window, ack, seq
+                                  # n = map IP & port to names
+....
+
+Wenn die NAT-Funktionalität benötigt wird, müssen auch diese Zeilen hinzugefügt werden:
+
+[.programlisting]
+....
+gateway_enable="YES"              # Enable as LAN gateway
+ipnat_enable="YES"                # Start ipnat function
+ipnat_rules="/etc/ipnat.rules"    # rules definition file for ipnat
+....
+
+Jetzt können Sie IPF starten:
+
+[source,bash]
+....
+# service ipfilter start
+....
+
+Um die Firewallregeln zu laden, übergeben Sie den Namen des Regelwerks an `ipf`. Mit dem folgenden Kommando ersetzen Sie alle aktuell geladenen Regeln:
+
+[source,bash]
+....
+# ipf -Fa -f /etc/ipf.rules
+....
+
+`-Fa` löscht zunächst alle internen Regeln und mit `-f` wird die Datei angegeben, welche die zu ladenen Regeln enthält.
+
+Damit haben Sie die Möglichkeit, Änderungen an der laufenden Firewall zu machen, ohne dass das System neu gestartet werden muss. Da dieser Vorgang beliebig oft wiederholt werden kann, ist es ein sehr bequemer Weg neue Regeln zu testen.
+
+Diese und weitere Optionen sind in man:ipf[8] beschrieben.
+
+=== IPF Regel-Syntax
+
+Mit der hier beschriebenen Regel-Syntax können zustandsorientierte Regeln erstellt werden. Beim Erstellen von Regeln ist zu beachten, dass Regeln ohne das Schlüsselwort `quick` der Reihe nach geprüft werden und "die letzte zutreffende Regel" angewendet wird. Das bedeutet, dass selbst dann, wenn die erste zutreffende Regel eine `pass`-Regel ist, das Paket dennoch geblockt wird, falls später eine `block`-Regel zutrifft. Beispielregelsätze finden Sie in [.filename]#/usr/shared/examples/ipfilter#.
+
+Beim Erstellen von Regeln wird das Zeichen `#` verwendet, um einen Kommentar bis zum Ende der Zeile einzuleiten. Leere Zeilen werden ignoriert.
+
+Die Schlüsselwörter, die in den Regeln verwendet werden, müssen in einer bestimmten Reihenfolge geschrieben werden, von links nach rechts. Einige Schlüsselwörter sind verbindlich, andere sind optional. Einige Schlüsselwörter haben Unteroptionen, die wiederum selbst Schlüsselwörter sind und ebenfalls weitere Unteroptionen einschließen können. Die Reihenfolge der Schlüsselwörter ist wie folgt, wobei die Wörter in Großbuchstaben eine Variable darstellen und die Wörter in Kleinbuchstaben der Variable vorangestellt werden müssen:
+
+`_ACTION DIRECTION OPTIONS proto PROTO_TYPE from SRC_ADDR SRC_PORT to DST_ADDR DST_PORT TCP_FLAG|ICMP_TYPE keep state STATE_`
+
+Dieser Abschnitt beschreibt jedes dieser Schlüsselwörter und ihre Optionen. Es ist jedoch keine vollständige Liste aller möglichen Optionen. man:ipf[5] enthält eine vollständige Beschreibung der Syntax und einige Beispiele zur Erstellung von IPF-Regeln.
+
+ACTION::
+Dieses Schlüsselwort bestimmt, was mit dem Paket zu tun ist, wenn es auf eine Regel zutrifft. Jede Regel _muss_ dieses Schlüsselwort enthalten. Die folgenden Aktionen werden erkannt:
++
+`block`: Das Paket wird verworfen.
++
+`pass`: Das Paket wird durchgelassen.
++
+`log`: Das Paket wird protokolliert.
++
+`count`: Zählt die Anzahl der Pakete und die Bytes. Die kann einen Hinweis darauf geben, wie oft Pakete auf diese Regel zutreffen.
++
+`auth`: Das Paket geht in eine Warteschlange zur Weiterverarbeitung durch ein anderes Programm.
++
+`call`: Ermöglicht den Zugriff auf eingebaute IPF-Funktionen, die komplexere Aktionen ermöglichen.
++
+`decapsulate`: Entfernt alle Header, um den Inhalt des Pakets zu verarbeiten.
+
+DIRECTION::
+Als nächstes muss für jede Regel explizit die Richtung mit einem der folgenden Schlüsselwörter angegeben werden:
++
+`in`: Die Regel wird auf ein eingehendes Paket angewendet.
++
+`out`: Die Regel wird auf ein ausgehendes Paket angewendet.
++
+`all`: Die Regel gilt für beide Richtungen.
++
+Wenn das System mehrere Schnittstellen ausweist, kann die Schnittstelle zusammen mit der Richtung angegeben werden. Ein Beispiel wäre `in on fxp0`.
+
+OPTIONS::
+Optionen müssen nicht zwingend angegeben werden. Falls jedoch mehrere Optionen angegeben werden, müssen sie in der hier gezeigten Reihenfolge verwendet werden.
++
+`log`: Wenn die Firewall die angegebene Aktion durchführt, werden die Kopfdaten des Pakets auf der Pseudo-Schnittstelle man:ipl[4] protokolliert.
++
+`quick`: Wenn ein Paket mit dieser Regel übereinstimmt, wird die Aktion für diese Regel ausgeführt und die Regelprüfung stoppt an dieser Stelle.
++
+`on`: Auf dieses Schlüsselwort muss der Name der Schnittstelle folgen. Die Regel trifft nur dann zu, wenn das Paket auf der angegebenen Schnittstelle in die angegebene Richtung geht.
++
+Wenn das Schlüsselwort `log` verwendet wird, können die folgenden Ausdrücke in dieser Reihenfolge benutzt werden:
++
+`body`: die ersten 128 Bytes des Paketinhaltes werden zusätzlich zu den Kopfdaten protokolliert.
++
+`first`: trifft nur zu, wenn das Schlüsselwort `log` zusammen mit `keep-state` verwendet wird. Es bestimmt, dass nur das auslösende Paket protokolliert wird und nicht jedes weitere Paket, dass von der gespeicherten Status-Regel betroffen ist.
++
+Es stehen noch weitere Optionen zur Rückmeldung von Fehlern verfügbar. Ausführliche Details finden Sie in man:ipf[5].
+
+PROTO_TYPE::
+Der Protokolltyp ist optional. Er ist jedoch zwingend erforderlich, falls die Regel einen SRC_PORT oder DST_PORT angeben muss da es den Typ des Protokolls bestimmt. Wenn Sie das Protokoll angeben, verwenden Sie das Schlüsselwort `proto`, gefolgt von der Protokollnummer oder dem Namen aus [.filename]#/etc/protocols#. Zum Beispiel `tcp`, `udp`, oder `icmp`. Wenn PROTO_TYPE angegeben wird und SCR_PORT oder DST_PORT ausgelassen werden, stimmen alle Portnummern für dieses Protokoll mit dieser Regel überein.
+
+SRC_ADDR::
+Das Schlüsselwort `from` ist verpflichtend und darauf folgt das Schlüsselwort, das die Quelle des Pakets darstellt. Die Quelle kann ein Rechnername, eine IP-Adresse gefolgt von der CIDR-Maske, ein Adresspool oder das Schlüsselwort `all` sein. man:ipf[5] enthält einige Beispiele.
++
+IP-Bereiche können nur in der CIDR-Notation angegeben werden. Der Port oder das Paket package:net-mgmt/ipcalc[] hilft bei der Berechnung der richtigen CIDR-Maske. Weiterführende Informationen finden Sie auf der Webseite http://jodies.de/ipcalc[ http://jodies.de/ipcalc].
+
+SCR_PORT::
+Die Portnummer der Quelle ist optional. Wenn sie jedoch verwendet wird, muss in der Regel zuerst PROTO_TYPE angegeben werden. Die Portnummer muss auch auf das Schlüsselwort `proto` folgen.
++
+Es werden verschiedene Vergleichsoperatoren unterstützt: `=` (gleich), `!=` (nicht gleich), `<` (kleiner als), `>` (größer als), `<=` (kleiner als oder gleich) `>=` (größer als oder gleich).
++
+Um Portbereiche anzugeben, schreiben Sie zwei Portnummern zwischen `<>` (kleiner als und größer als), `><` (größer als und kleiner als), oder `:` (größer als oder gleich und kleiner als oder gleich).
+
+DST_ADDR::
+Das Schlüsselwort `to` ist verpflichtend und darauf folgt das Schlüsselwort, welches das Ziel des Pakets darstellt. Dieses Ziel kann ein Rechnername, eine IP-Adresse gefolgt von der CIDR-Maske, ein Adresspool oder das Schlüsselwort `all` sein.
+
+DST_PORT::
+Die Portnummer des Ziels ist optional. Wenn sie jedoch verwendet wird, muss in der Regel zuerst PROTO_TYPE angegeben werden. Die Portnummer muss auch auf das Schlüsselwort `proto` folgen.
+
+TCP_FLAG|ICMP_TYPE::
+Wenn `tcp` als PROTO_TYPE verwendet wird, können bestimmte TCP-Flags angegeben werden, die den Zustand einer Verbindung bestimmen. Mögliche Flags sind: `S` (SYN), `A` (ACK), `P` (PSH), `F` (FIN), `U` (URG), `R` (RST), `C` (CWN) und `E` (ECN).
++
+Wenn `icmp` als PROTO_TYPE verwendet wird, kann der ICMP-Typ mit angegeben werden. man:ipf[5] enthält eine Auflistung der zulässigen Typen.
+
+STATE::
+Wenn eine `pass`-Regel das Schlüsselwort `keep state` enthält, wird IPF einen Eintrag in der dynamischen Zustandstabelle hinzufügen, damit nachfolgende Pakete dieser Verbindung ebenfalls durchgelassen werden. IPF kann den Zustand für TCP, UDP und ICMP-Sitzungen verfolgen. IPF wird jedes Paket, das zu einer aktiven Sitzung gehört, durchlassen, auch wenn ein anderes Protokoll verwendet wird.
++
+Pakete, die über die Schnittstelle zum öffentlichen Internet raus gehen, werden von IPF zuerst gegen die dynamische Zustandstabelle geprüft. Wenn das nächste Paket dieser aktiven Sitzung mit dem vorherigen Paket übereinstimmt, verlässt dieses Paket die Firewall und der Status wird in der dynamischen Zustandstabelle aktualisiert. Pakete, die nicht zu einer aktiven Sitzung gehören, werden gegen ausgehende Regeln geprüft. Eingehende Pakete von der Schnittstelle zum öffentlichen Internet werden gegen die dynamische Zustandstabelle geprüft. Wenn das nächste Paket mit der aktiven Sitzung übereinstimmt, verlässt dieses Paket die Firewall und der Status wird in der dynamischen Zustandstabelle aktualisiert. Pakete, die nicht zu einer aktiven Sitzung gehören, werden gegen eingehende Regeln geprüft.
++
+Mehrere Schlüsselwörter können an `keep state` angefügt werden. Bei der Verwendung dieser Schlüsselwörter werden verschiedene Optionen gesetzt, um die zustandsorientierte Filterung zu steuern. man:ipf[5] enthält eine Liste der verfügbaren Optionen und deren Beschreibungen.
+
+=== Beispielregelsatz
+
+Dieser Abschnitt beschreibt die Erstellung eines Regelsatzes, welcher nur entsprechende Dienste erlaubt und alle anderen Verbindungen blockiert.
+
+FreeBSD verwendet die Loopback-Schnittstelle ([.filename]#lo0#) und die IP-Adresse `127.0.0.1` zur internen Kommunikation. Der Regelsatz muss Regeln enthalten, die Pakete für diesen internen Verkehr ermöglichen:
+
+[.programlisting]
+....
+# no restrictions on the loopback interface
+pass in quick on lo0 all
+pass out quick on lo0 all
+....
+
+Die mit dem Internet verbundene Schnittstelle wird für die Autorisierung und den Zugriff aller ein- und ausgehenden Verbindungen verwendet. Wenn eine oder mehrere Schnittstellen mit privaten Netzwerken verbunden sind, müssen Regeln existieren, die den Datenverkehr aus dem LAN zwischen den internen Netzwerken oder ins Internet erlauben. Der Regelsatz sollte in drei Bereiche unterteilt werden: vertrauenswürdige interne Schnittstellen, ausgehende Verbindungen über die öffentlichen Schnittstellen und eingehende Verbindungen über die öffentliche Schnittstelle.
+
+Diese beiden Regeln erlauben den gesamten Datenverkehr über eine vertrauenswürdige LAN-Schnittstelle namens [.filename]#xl0#:
+
+[.programlisting]
+....
+# no restrictions on inside LAN interface for private network
+pass out quick on xl0 all
+pass in quick on xl0 all
+....
+
+Die Regeln für den ein- und ausgehenden Verkehr der öffentlichen Schnittstelle sollten in einer bestimmten Reihenfolge geschrieben werden. Zuerst Regeln, die häufiger übereinstimmen, danach Regeln, die seltener übereinstimmen. Die letzte Regel blockiert und protokolliert alle Pakete auf der Schnittstelle.
+
+Der folgende Regelsatz definiert die ausgehenden Regeln der öffentlichen Schnittstelle [.filename]#dc0#. Die Regeln prüfen den Zustand und identifizieren bestimmte Dienste, auf die die internen Systeme zugreifen dürfen. Alle Regeln verwenden das Schlüsselwort `quick` und geben die passenden Portnummern und ggf. auch die Zieladressen an.
+
+[.programlisting]
+....
+# interface facing Internet (outbound)
+# Matches session start requests originating from or behind the
+# firewall, destined for the Internet.
+
+# Allow outbound access to public DNS servers.
+# Replace x.x.x. with address listed in /etc/resolv.conf.
+# Repeat for each DNS server.
+pass out quick on dc0 proto tcp from any to x.x.x. port = 53 flags S keep state
+pass out quick on dc0 proto udp from any to xxx port = 53 keep state
+
+# Allow access to ISP's specified DHCP server for cable or DSL networks.
+# Use the first rule, then check log for the IP address of DHCP server.
+# Then, uncomment the second rule, replace z.z.z.z with the IP address,
+# and comment out the first rule
+pass out log quick on dc0 proto udp from any to any port = 67 keep state
+#pass out quick on dc0 proto udp from any to z.z.z.z port = 67 keep state
+
+# Allow HTTP and HTTPS
+pass out quick on dc0 proto tcp from any to any port = 80 flags S keep state
+pass out quick on dc0 proto tcp from any to any port = 443 flags S keep state
+
+# Allow email
+pass out quick on dc0 proto tcp from any to any port = 110 flags S keep state
+pass out quick on dc0 proto tcp from any to any port = 25 flags S keep state
+
+# Allow NTP
+pass out quick on dc0 proto tcp from any to any port = 37 flags S keep state
+
+# Allow FTP
+pass out quick on dc0 proto tcp from any to any port = 21 flags S keep state
+
+# Allow SSH
+pass out quick on dc0 proto tcp from any to any port = 22 flags S keep state
+
+# Allow ping
+pass out quick on dc0 proto icmp from any to any icmp-type 8 keep state
+
+# Block and log everything else
+block out log first quick on dc0 all
+....
+
+Die folgenden Beispielregeln für den eingehenden Verkehr auf der öffentlichen Schnittstelle blockieren zuerst alle unerwünschten Pakete. Dies reduziert die Anzahl der Pakete, die durch die letzte Regel protokolliert werden.
+
+[.programlisting]
+....
+# interface facing Internet (inbound)
+# Block all inbound traffic from non-routable or reserved address spaces
+block in quick on dc0 from 192.168.0.0/16 to any    #RFC 1918 private IP
+block in quick on dc0 from 172.16.0.0/12 to any     #RFC 1918 private IP
+block in quick on dc0 from 10.0.0.0/8 to any        #RFC 1918 private IP
+block in quick on dc0 from 127.0.0.0/8 to any       #loopback
+block in quick on dc0 from 0.0.0.0/8 to any         #loopback
+block in quick on dc0 from 169.254.0.0/16 to any    #DHCP auto-config
+block in quick on dc0 from 192.0.2.0/24 to any      #reserved for docs
+block in quick on dc0 from 204.152.64.0/23 to any   #Sun cluster interconnect
+block in quick on dc0 from 224.0.0.0/3 to any       #Class D & E multicast
+
+# Block fragments and too short tcp packets
+block in quick on dc0 all with frags
+block in quick on dc0 proto tcp all with short
+
+# block source routed packets
+block in quick on dc0 all with opt lsrr
+block in quick on dc0 all with opt ssrr
+
+# Block OS fingerprint attempts and log first occurrence
+block in log first quick on dc0 proto tcp from any to any flags FUP
+
+# Block anything with special options
+block in quick on dc0 all with ipopts
+
+# Block public pings and ident
+block in quick on dc0 proto icmp all icmp-type 8
+block in quick on dc0 proto tcp from any to any port = 113
+
+# Block incoming Netbios services
+block in log first quick on dc0 proto tcp/udp from any to any port = 137
+block in log first quick on dc0 proto tcp/udp from any to any port = 138
+block in log first quick on dc0 proto tcp/udp from any to any port = 139
+block in log first quick on dc0 proto tcp/udp from any to any port = 81
+....
+
+Wenn eine Regel mit der Option `log first` protokolliert wird, können Sie mit `ipfstat -hio` prüfen, wie viele Übereinstimmungen es für diese Regel gibt. Eine große Anzahl von Übereinstimmungen kann darauf hindeuten, dass das System angegriffen wird.
+
+Die restlichen Regeln definieren, welche Verbindungen aus dem Internet kommend hergestellt werden dürfen. Die letzte Regel blockiert alle Verbindungen, die nicht ausdrücklich von vorhergehenden Regeln erlaubt wurden.
+
+[.programlisting]
+....
+# Allow traffic in from ISP's DHCP server. Replace z.z.z.z with
+# the same IP address used in the outbound section.
+pass in quick on dc0 proto udp from z.z.z.z to any port = 68 keep state
+
+# Allow public connections to specified internal web server
+pass in quick on dc0 proto tcp from any to x.x.x.x port = 80 flags S keep state
+
+# Block and log only first occurrence of all remaining traffic.
+block in log first quick on dc0 all
+....
+
+=== NAT Konfiguration
+
+Um NAT zu aktivieren, fügen Sie folgende Zeilen in [.filename]#/etc/rc.conf# hinzu. Geben Sie den Namen der Datei an, welche die NAT-Regeln enthält:
+
+[.programlisting]
+....
+gateway_enable="YES"
+ipnat_enable="YES"
+ipnat_rules="/etc/ipnat.rules"
+....
+
+NAT-Regeln sind sehr flexibel, um den Bedürfnissen von kommerziellen Anwendern und Heimanwendern gerecht zu werden. Die hier vorgestellte Regelsyntax wurde vereinfacht, um die gemeinsame Nutzung zu demonstrieren. Eine vollständige Beschreibung der Syntax finden Sie in man:ipnat[5].
+
+Die grundlegende Syntax für eine NAT-Regel ist wie folgt. `map` leitet die Regel ein und `IF` sollte durch den Namen der externen Schnittstelle ersetzt werden:
+
+[.programlisting]
+....
+map IF LAN_IP_RANGE -> PUBLIC_ADDRESS
+....
+
+`_LAN_IP_RANGE_` ist ein Bereich von IP-Adressen, der von den internen Rechnern verwendet wird. In der Regel ist dies ein privater Bereich, beispielsweise `192.168.1.0/24`. `_PUBLIC_ADDRESS_` kann entweder eine statische externe IP-Adresse sein, oder das Schlüsselwort `0/32`, welches der zugewiesenen IP-Adresse für _IF_ entspricht.
+
+Wenn ein Paket aus dem LAN mit einem öffentlichen Ziel an der IPF Firewall ankommt, werden zunächst die Regeln für den ausgehenden Verkehr geprüft. Danach wird das Paket an das NAT-Regelwerk geleitet, wo es von oben nach unten gelesen und geprüft wird, wobei die erste übereinstimmende Regel gewinnt. IPF testet jede NAT-Regel gegen die Schnittstelle und die Quell-IP-Adresse des Pakets. Wenn der Schnittstellenname des Pakets mit einer NAT-Regel übereinstimmt, wird geprüft, ob die Quell-IP-Adresse des Pakets auf den Bereich in `_LAN_IP_RANGE_` passt. Wenn dies der Fall ist, wird die Quell-IP-Adresse des Pakets mit der Adresse aus `_PUBLIC_ADDRESS_` überschrieben. IPF speichert die Einträge in seiner internen NAT-Tabelle, so dass wenn das Paket aus dem Internet zurückkehrt, es der ursprünglichen privaten IP-Adresse zugeordnet werden kann, bevor es von den weiteren Firewallregeln geprüft wird.
+
+Bei Netzwerken mit einer großen Anzahl von Systemen oder mehreren Subnetzen, steigert sich der Ressourcenverbrauch für das Umschreiben der IP-Adressen. Es existieren zwei Methoden, um dieses Problem zu umgehen.
+
+Bei der ersten Methode wird ein Portbereich definiert, der für die Quell-Ports verwendet wird. Durch das Hinzufügen des Schlüsselworts `portmap` kann NAT angewiesen werden, nur Quell-Ports aus dem angegebenen Bereich zu benutzen:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 0/32 portmap tcp/udp 20000:60000
+....
+
+Alternativ kann das Schlüsselwort `auto` verwendet werden. Dadurch ermittelt NAT selbstständig die zur Verfügung stehenden Ports:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 0/32 portmap tcp/udp auto
+....
+
+Mit der zweiten Methode wird ein Pool von öffentlichen Adressen verwendet. Dies ist nützlich, wenn es viele Systeme im Netzwerk gibt und ein Block öffentlicher IP-Adressen verfügbar ist. Aus diesem Pool kann NAT dann IP-Adressen für die ausgehenden Pakete auswählen.
+
+Der Bereich der öffentlichen IP-Adressen kann mit einer Netzmaske oder der CIDR-Notation festgelegt werden. Die folgenden Regeln sind identisch:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 204.134.75.0/255.255.255.0
+map dc0 192.168.1.0/24 -> 204.134.75.0/24
+....
+
+Es ist gängige Praxis, öffentlich zugängliche Web- oder Mail-Server getrennt von den internen Netzwerksegmenten zu betreiben. Der Verkehr von diesen Servern muss dennoch von NAT bearbeitet werden und die Portumleitung ist erforderlich, um den eingehenden Datenverkehr an den richtigen Server zu leiten. Verwenden Sie beispielsweise folgende Regel, um den eingehenden Verkehr auf der öffentlichen IP-Adresse `20.20.20.5` dem internen Server mit der Adresse `10.0.10.25` zuzuordnen:
+
+[.programlisting]
+....
+rdr dc0 20.20.20.5/32 port 80 -> 10.0.10.25 port 80
+....
+
+Wenn dies der einzige Webserver im Netz ist, würde auch folgende Regel funktionieren, die alle HTTP-Anfragen an `10.0.10.25` umleitet:
+
+[.programlisting]
+....
+rdr dc0 0.0.0.0/0 port 80 -> 10.0.10.25 port 80
+....
+
+IPF enthält einen FTP-Proxy, der zusammen mit NAT benutzt werden kann. Dieser Proxy überwacht den ausgehenden Datenverkehr für aktive und passive Verbindungsanfragen und erstellt dynamische Filterregeln, welche die Portnummern des jeweiligen FTP-Datenkanal enthalten. Dadurch entfällt die Notwendigkeit, viele Ports für FTP-Verbindungen zu öffnen.
+
+In diesem Beispiel verwendet die erste Regel den Proxy für ausgehende FTP-Verbindungen aus dem internen LAN. Die zweite Regel übergibt den FTP-Datenverkehr von der Firewall an das Internet und die dritte Regel handhabt den restlichen Datenverkehr aus dem internen LAN:
+
+[.programlisting]
+....
+map dc0 10.0.10.0/29 -> 0/32 proxy port 21 ftp/tcp
+map dc0 0.0.0.0/0 -> 0/32 proxy port 21 ftp/tcp
+map dc0 10.0.10.0/29 -> 0/32
+....
+
+FTP `map`-Regeln stehen vor den NAT-Regeln. Wenn ein Paket mit der FTP-Regel übereinstimmt, erstellt der FTP-Proxy eine temporäre Filterregel, damit die Pakete durchgelassen und von NAT verarbeitet werden können. Alle Pakte aus dem LAN, die nicht für FTP bestimmt sind, werden von NAT verarbeitet, wenn sie mit der dritten Regel übereinstimmen.
+
+Ohne den FTP-Proxy würden stattdessen folgende Regeln benötigt. Beachten Sie, dass ohne den Proxy alle Ports oberhalb von `1024` freigegeben werden müssen:
+
+[.programlisting]
+....
+# Allow out LAN PC client FTP to public Internet
+# Active and passive modes
+pass out quick on rl0 proto tcp from any to any port = 21 flags S keep state
+
+# Allow out passive mode data channel high order port numbers
+pass out quick on rl0 proto tcp from any to any port > 1024 flags S keep state$
+# Active mode let data channel in from FTP server
+pass in quick on rl0 proto tcp from any to any port = 20 flags S keep state
+....
+
+Nachdem die Datei mit den NAT-Regeln bearbeitet wurde, führen Sie `ipnat` mit `-CF` aus, um die aktuellen NAT-Regeln und den Inhalt der dynamischen Zuordnungstabelle zu löschen. Geben Sie `-f` zusammen mit dem NAT-Regelsatz an:
+
+[source,bash]
+....
+# ipnat -CF -f /etc/ipnat.rules
+....
+
+Statistiken zu NAT lassen sich wie folgt anzeigen:
+
+[source,bash]
+....
+# ipnat -s
+....
+
+Die aktuellen Zuordnungen der NAT-Tabelle geben Sie mit diesem Kommando aus:
+
+[source,bash]
+....
+# ipnat -l
+....
+
+Ausführliche Informationen erhalten Sie mit:
+
+[source,bash]
+....
+# ipnat -v
+....
+
+=== IPF Statistiken
+
+IPF enthält mit man:ipfstat[8] ein Werkzeug, mit dem Statistiken abgerufen und angezeigt werden können. Die Zahlen beziehen sich auf den Zeitpunkt, an dem die Firewall zuletzt gestartet wurde, beziehungsweise die Statistik mit `ipf -Z` zurückgesetzt wurde.
+
+Die Ausgabe von `ifstat` sieht in etwa wie folgt aus:
+
+[source,bash]
+....
+input packets: blocked 99286 passed 1255609 nomatch 14686 counted 0
+output packets: blocked 4200 passed 1284345 nomatch 14687 counted 0
+input packets logged: blocked 99286 passed 0
+output packets logged: blocked 0 passed 0
+packets logged: input 0 output 0
+log failures: input 3898 output 0
+fragment state(in): kept 0 lost 0
+fragment state(out): kept 0 lost 0
+packet state(in): kept 169364 lost 0
+packet state(out): kept 431395 lost 0
+ICMP replies: 0 TCP RSTs sent: 0
+Result cache hits(in): 1215208 (out): 1098963
+IN Pullups succeeded: 2 failed: 0
+OUT Pullups succeeded: 0 failed: 0
+Fastroute successes: 0 failures: 0
+TCP cksum fails(in): 0 (out): 0
+Packet log flags set: (0)
+....
+
+Es stehen viele Optionen zur Verfügung. Wird entweder `-i` (eingehend) oder `-o` (ausgehend) angegeben, wird der Befehl die entsprechende Liste mit den derzeit vom Kernel benutzten Filterregeln anzeigen. Um auch die Regelnummern zu sehen, muss `-n` angegeben werden. Zum Beispiel zeigt `ipfstat -on` die Tabelle für ausgehende Regeln und die Regelnummer an:
+
+[source,bash]
+....
+@1 pass out on xl0 from any to any
+@2 block out on dc0 from any to any
+@3 pass out quick on dc0 proto tcp/udp from any to any keep state
+....
+
+Wenn Sie der Regel ein `-h` voranstellen, wird der Zähler für die jeweilige Regel ausgegeben. Zum Beispiel gibt `ipfstat -oh` die ausgehenden Regeln inklusive der Zähler aus:
+
+[source,bash]
+....
+2451423 pass out on xl0 from any to any
+354727 block out on dc0 from any to any
+430918 pass out quick on dc0 proto tcp/udp from any to any keep state
+....
+
+Benutzen Sie `ipfstat -t` um die Zustandstabelle in einem man:top[1] ähnlichen Format anzuzeigen. Unterliegt die Firewall einem Angriff, bietet diese Option die Möglichkeit, die entsprechenden Pakete zu identifizieren. Mit den optionalen Flags können IP-Adressen, Ports oder Protokolle in Echtzeit überwacht werden. Lesen Sie man:ipfstat[8] für weitere Informationen.
+
+=== IPF Protokollierung
+
+IPF enthält mit `ipmon` ein Werkzeug, mit dem die Protokolle der Firewall in menschenlesbarer Form gespeichert werden können. Dies erfordert jedoch, dass `options IPFILTER_LOG` in die Kernelkonfigurationsdatei hinzugefügt wird. Folgen Sie dazu den Anweisungen in crossref:kernelconfig[kernelconfig,Konfiguration des FreeBSD-Kernels].
+
+Um eine kontinuierliche Protokolldatei bereitzustellen, läuft dieses Kommando normalerweise im Daemon-Modus, damit auch ältere Ereignisse nachverfolgt werden können. Da FreeBSD mit man:syslogd[8] ein Werkzeug besitzt, das automatisch Protokolldateien rotiert, wird in der Voreinstellung für `ipmon_flags -Ds` in [.filename]#rc.conf# verwendet:
+
+[.programlisting]
+....
+ipmon_flags="-Ds" # D = start as daemon
+                  # s = log to syslog
+                  # v = log tcp window, ack, seq
+                  # n = map IP & port to names
+....
+
+Protokollierung bietet die im Nachhinein die Möglichkeit festzustellen, welche Pakete verworfen wurden, von welchen Adressen diese Pakete kamen und wohin sie gehen sollten. Diese Informationen sind hilfreich beim Aufspüren von Angreifern.
+
+Nachdem die Protokollierung in [.filename]#/etc/rc.conf# aktiviert und mit `service ipmon start` gestartet wurde, wird IPF Regeln aufzeichnen, welche das Schlüsselwort `log` enthalten. Der Firewalladministrator entscheidet, welche Regeln protokolliert werden. In der Regel werden nur geblockte Pakete protokolliert. Es ist üblich, das Schlüsselwort `log` in der letzten Regel des Regelsatzes mit aufzunehmen. Dies macht es möglich, alle Pakete zu sehen, die mit keiner Regel des Regelsatzes übereinstimmten.
+
+In der Voreinstellung verwendet `ipmon -Ds local0` als Protokoll-Facility. Die folgenden Level können verwendet werden, um die erfassten Daten weiter aufzuspalten:
+
+[source,bash]
+....
+LOG_INFO - packets logged using the "log" keyword as the action rather than pass or block.
+LOG_NOTICE - packets logged which are also passed
+LOG_WARNING - packets logged which are also blocked
+LOG_ERR - packets which have been logged and which can be considered short due to an incomplete header
+....
+
+Damit IPF alle Daten protokolliert, legen Sie zunächst eine neue Datei [.filename]#/var/log/ipfilter.log# an:
+
+[source,bash]
+....
+# touch /var/log/ipfilter.log
+....
+
+Um alle Nachrichten in der angegebenen Datei zu protokollieren, fügen Sie den folgenden Eintrag in [.filename]#/etc/syslog.conf# ein:
+
+[.programlisting]
+....
+local0.* /var/log/ipfilter.log
+....
+
+Führen Sie `service syslogd reload` aus, damit man:syslogd[8] [.filename]#/etc/syslog.conf# neu einliest, um die Änderungen zu aktivieren.
+
+Denken Sie daran, auch [.filename]#/etc/newsyslog.conf# anzupassen, damit das neue Protokoll rotiert wird.
+
+Die von `ipmon` generierten Nachrichten bestehen aus Daten, welche durch Leerzeichen getrennt sind. Alle Nachrichten enthalten die folgenden Felder:
+
+. Das Datum, an dem das Paket empfangen wurde.
+. Die Uhrzeit, wann das Paket empfangen wurde. Das Format ist HH:MM:SS.F (Stunden, Minuten, Sekunden und Sekundenbruchteile).
+. Der Name der Schnittstelle, die das Paket verarbeitet hat.
+. Die Gruppen- und Regelnummer im Format `@0:17`.
+. Die Aktion: `p` für durchgelassene Pakete, `b` für blockierte Pakete, `S` für kurze Pakete, `n` für Pakete auf die keine Regel zutraf und `L` für Pakete die protokolliert wurden.
+. Die Adressen werden in drei Felder unterteilt: die Quelladresse und der Port getrennt durch Komma, das Zeichen ->, sowie die Zieladresse und Port. Zum Beispiel `209.53.17.22,80 -> 198.72.220.17,1722`.
+. `PR`, gefolgt vom Namen oder Nummer des Protokolls. Zum Beispiel `PR tcp`.
+. `len`, gefolgt von der Größe des Headers und der Gesamtgröße des Pakets. Zum Beispiel `len 20 40`.
+
+Wenn es sich beim dem Paket um ein TCP-Paket handelt, gibt es ein zusätzliches Feld, das mit einem Bindestrich beginnt und die Buchstaben der entsprechenden Flags enthält. Eine Liste der Flags und deren Buchstaben finden Sie in man:ipf[5].
+
+Wenn es sich beim dem Paket um ein ICMP-Paket handelt, gibt es zwei zusätzliche Felder: das erste Feld ist immer "icmp" und das zweite Feld enthält die ICMP-Nachricht und den Nachrichten-Code, getrennt durch einen Schrägstrich. Beispielswiese `icmp 3/3` für die Nachricht Port unreachable.
+
+[[firewalls-blacklistd]]
+== Blacklistd
+
+Blacklistd ist ein Daemon der auf Sockets lauscht, um Benachrichtigungen von anderen Daemons über fehlgeschlagene oder erfolgreiche Verbindungsversuche zu erhalten. Dieser Daemon wird häufig verwendet, um zu viele Verbindungsversuche auf offenen Ports zu blockieren. Ein Beispiel ist SSH, das viele Anfragen von Bots oder Skripten erhält, die versuchen, Passwörter zu erraten und Zugriff zu erhalten. Mit Hilfe von blacklistd kann der Daemon die Firewall benachrichtigen, eine Filterregel zu erstellen, um übermäßige Verbindungsversuche einer einzigen Quelle nach einer Reihe von Versuchen zu blockieren. Blacklistd wurde ursprünglich auf NetBSD entwickelt und erschien dort in der Version 7. FreeBSD 11 hat blacklistd von NetBSD importiert.
+
+In diesem Kapitel wird die Einrichtung und Konfiguration von blacklistd besprochen. Sie finden aber auch Beispiele für die Verwendung von blacklistd. Sie sollten allerdings mit grundlegenden Firewall-Konzepten wie Filterregeln vertraut sein. Weitere Informationen finden Sie im Kapitel Firewalls. In diesen Beispielen wird PF benutzt, aber auch andere unter FreeBSD verfügbare Firewalls sollten in der Lage sein mit blacklistd zusammen zu arbeiten.
+
+=== Blacklistd aktivieren
+
+Die Konfiguration für blacklistd wird in man:blacklistd.conf[5] gespeichert. Um das Laufzeitverhalten von blacklistd zu beeinflussen, sind verschiedene Kommandozeilenoptionen verfügbar. Die permanente Konfiguration über Neustarts hinweg sollte in [.filename]#/etc/blacklistd.conf# gespeichert werden. Um den Daemon während des Systemstarts zu aktivieren, fügen Sie eine Zeile `blacklistd_enable` in [.filename]#/etc/rc.conf# hinzu:
+
+[source,bash]
+....
+# sysrc blacklistd_enable=yes
+....
+
+Sie können den Daemon auch manuell starten:
+
+[source,bash]
+....
+# service blacklistd start
+....
+
+=== Erstellen von Blacklistd-Regeln
+
+Die Regeln für blacklistd werden in man:blacklistd.conf[5] mit einem Eintrag pro Zeile konfiguriert. Jede Regel enthält ein Tupel, das durch Leerzeichen oder Tabulator getrennt ist. Eine Regel gilt entweder für einen lokalen oder einen entfernten Rechner.
+
+==== Lokale Regeln
+
+Ein typischer Eintrag für eine lokale Regel in [.filename]#/etc/blacklistd.conf# sieht wie folgt aus:
+
+[.programlisting]
+....
+[local]
+ssh             stream  *       *               *       3       24h
+....
+
+Alle Regeln, die dem Abschnitt `[local]` folgen, werden als lokale Regeln behandelt, die für den lokalen Rechner gelten. In einem `[remote]`-Abschnitt gelten alle Regeln für entfernte Maschinen.
+
+Die sieben Felder einer Regel werden entweder durch Tabulator oder Leerzeichen getrennt. Die ersten vier Felder identifizieren den Netzwerkverkehr, welcher geblockt werden soll. Die drei folgenden Felder definieren das Verhalten von blacklistd. Wildcards werden mit einem Sternchen (`*`) gekennzeichnet und stimmen mit allen anderen in diesem Feld überein. Das erste Feld definiert den Standort. In den lokalen Regeln sind dies die Ports. Die Syntax ist wie folgt:
+
+[.programlisting]
+....
+[address|interface][/mask][:port]
+....
+
+Adressen können als IPv4 im numerischen Format oder IPv6 in eckigen Klammern angegeben werden. Ebenfalls kann der Name der Schnittstelle wie `_em0_` verwendet werden.
+
+Im zweiten Feld wird der Socket-Typ definiert. TCP-Sockets sind vom Typ `stream`, wohingegen UDP als `dgram` bezeichnet wird. Das obige Beispiel verwendet TCP, weil SSH dieses Protokoll benutzt.
+
+Im dritten Feld kann ein Protokoll definiert werden. Die folgenden Protokolle können verwendet werden: `tcp`, `udp`, `tcp6`, `udp6` oder numerisch. Eine Wildcard, wie im Beispiel, wird typischerweise verwendet, um alle Protokolle abzubilden, es sei denn, es gibt einen Grund, den Verkehr nach einem bestimmten Protokoll zu differenzieren.
+
+Im vierten Feld wird der effektive Benutzer oder Eigentümer des Daemon-Prozesses definiert, welcher das Ereignis meldet. Hier kann der Benutzer oder die UID sowie eine Wildcard verwendet werden (siehe Beispiel oben).
+
+Der Name der Firewallregel wird im fünften Feld definiert. In der Voreinstellung setzt blacklistd alle geblockten Pakete unter einen pf-Anker namens `blacklistd` in [.filename]#pf.conf# wie folgt:
+
+[.programlisting]
+....
+anchor "blacklistd/*" in on $ext_if
+block in
+pass out
+....
+
+Für separate Blacklists kann in diesem Feld ein Ankername benutzt werden. In anderen Fällen genügt eine Wildcard. Ein Name mit vorangestelltem Bindestrich (`-`) bedeutet, das ein Anker mit dem voreingestellten Regelnamen verwendet werden sollte. Ein modifiziertes Beispiel von oben mit dem Bindestrich würde so aussehen:
+
+[.programlisting]
+....
+ssh             stream  *       *               -ssh       3       24h
+....
+
+Mit einer solchen Regel werden alle neuen Blacklistregeln zu einem Anker namens `blacklistd-ssh` hinzugefügt.
+
+Um ganze Subnetze für eine einzelne Regelverletzung zu blockieren, kann ein `/` im Regelnamen benutzt werden. Dadurch wird der verbleibende Teil des Namens als Maske interpretiert, die auf die in der Regel angegebene Adresse angewendet wird. Diese Regel würde beispielsweise jede Adresse blockieren, die an `/24` angrenzt:
+
+[.programlisting]
+....
+22              stream  tcp       *               */24    3       24h
+....
+
+[NOTE]
+====
+Es ist wichtig, hier das richtige Protokoll anzugeben. IPv4 und IPv6 behandeln `/24` unterschiedlich, deshalb kann `*` im dritten Feld für diese Regel nicht benutzt werden.
+====
+
+Diese Regel bewirkt, dass, wenn ein Rechner in diesem Netzwerk wegen seines Verhaltens blockiert wird, auch alle anderen Rechner aus diesem Netzwerk blockiert werden.
+
+Das sechste Feld, genannt `nfail`, legt die Anzahl der Anmeldeversuche fest, die erforderlich sind, um die betreffende IP auf die Blacklist zu setzen. Eine Wildcard an dieser Stelle bedeutet, dass niemals geblockt wird. Im obigen Beispiel ist eine Anzahl von 3 definiert, was bedeutet, dass die IP nach drei fehlgeschlagenen Anmeldeversuchen über SSH gesperrt wird.
+
+Das letzte Feld in der Regel gibt an, wie lange ein Rechner auf der Blacklist steht. Die Standardeinheit ist Sekunden, aber Suffixe wie `m` (Minuten), `h` (Stunden) und `d` (Tage) können auch angegeben werden.
+
+Die Regel im Beispiel besagt, dass nach dreimaliger Authentifizierung über SSH eine neue PF-Regel für diesen Rechner angelegt wird. Beim Überprüfen der Regeln werden zuerst lokale Regeln, von sehr spezifisch bis am wenigsten spezifisch, geprüft. Wenn eine Übereinstimmung auftritt, werden die `remote`-Regeln angewendet und die Felder `name`, `nfail` und `disable` werden durch die entsprechende `remote`-Regel geändert.
+
+==== Remote-Regeln
+
+Mit Remote-Regeln wird das Verhalten von blacklistd, in Abhängigkeit vom aktuell ausgewerteten Remote-Rechner, festgelegt. Die einzelnen Felder einer Remote-Regel sind identisch mit den Feldern einer lokalen Regel. Der einzige Unterschied besteht darin, wie blacklistd sie verwendet. Zur besseren Verständlichkeit wird folgende Regel benutzt:
+
+[.programlisting]
+....
+[remote]
+203.0.113.128/25 *      *       *               =/25    =       48h
+....
+
+Das Adressfeld kann eine IP-Adresse (entweder v4 oder v6), einen Port oder beides beinhalten. Dies ermöglicht es, wie in diesem Beispiel, spezielle Regeln für einen bestimmten entfernten Adressbereich festzulegen. Die Felder für den Socket-Typ, Protokoll und Besitzer werden genauso wie in den lokalen Regeln interpretiert.
+
+Die Felder für den Namen sind jedoch unterschiedlich. Das Gleichheitszeichen (`=`) in einer Remote-Regel weist blacklistd an, den Wert aus der entsprechenden lokalen Regel zu verwenden. Das bedeutet, dass der Eintrag der Firewall-Regel übernommen und das Präfix `/25` (eine Netzmaske von `255.255.255.128`) hinzugefügt wird. Wenn eine Verbindung aus diesem Adressbereich geblockt wird, ist das gesamte Subnetz betroffen. Ein PF-Ankername kann auch hier verwendet werden. In diesem Fall fügt blacklistd Regeln für diesen Adressbereich dem Namen des Ankers hinzu. Die Standardtabelle wird verwendet, wenn eine Wildcard angegeben wird.
+
+Für eine Adresse kann im Feld `nfail` die Anzahl von Fehlversuchen definiert werden. Dies ist nützlich für Ausnahmen, um weniger strenge Anwendungen zu ermöglichen, oder um Anmeldeversuche ein wenig nachsichtiger zu gestalten. Die Sperrung wird aufgehoben, wenn im sechsten Feld eine Wildcard benutzt wird.
+
+Remote-Regeln ermöglichen eine strengere Durchsetzung der Beschränkungen bei Anmeldeversuchen im Vergleich zu Anmeldeversuchen die aus dem lokalen Netzwerk kommen.
+
+=== Blacklistd Client Konfiguration
+
+Es gibt einige Softwarepakete in FreeBSD, die die Funktionalität von blacklistd nutzen können. Die beiden bekanntesten sind man:ftpd[8] und man:sshd[8]. Beide Programme nutzen blacklistd, um übermäßige Verbindungsversuche zu unterbinden. Um blacklistd im SSH-Daemon zu aktivieren, muss folgend Zeile in [.filename]#/etc/ssh/sshd_config# hinzugefügt werden:
+
+[.programlisting]
+....
+UseBlacklist yes
+....
+
+Damit die Änderungen wirksam werden, muss sshd im Anschluss neu gestartet werden.
+
+Für man:ftpd[8] wird blacklistd mit dem Schalter `-B` aktiviert. Entweder in [.filename]#/etc/inetd.conf# oder in [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ftpd_flags="-B"
+....
+
+Das ist alles, was benötigt wird, damit diese Programme mit blacklist kommunizieren.
+
+=== Blacklistd Verwaltung
+
+Blacklistd stellt dem Benutzer das Verwaltungswerkzeug man:blacklistctl[8] zur Verfügung. Es zeigt blockierte Adressen und Netzwerke an, die nach den in man:blacklistd.conf[5] definierten Regeln auf der Blacklist stehen. Um die Liste der aktuell blockierten Rechner anzuzeigen, benutzen Sie `dump` zusammen mit der Option `-b`:
+
+[source,bash]
+....
+# blacklistctl dump -b
+      address/ma:port id      nfail   last access
+213.0.123.128/25:22   OK      6/3     2019/06/08 14:30:19
+....
+
+Dieses Beispiel zeigt, dass es sechs von drei erlaubten Anmeldeversuchen auf Port 22 aus dem Adressbereich `213.0.123.128/25` gab. Es sind mehr Versuche aufgelistet, als erlaubt sind, da SSH es einem Client erlaubt, mehrere Anmeldungen über eine einzige TCP-Verbindung zu tätigen. Eine derzeit laufende Verbindung wird nicht von blacklistd unterbunden. Der letzte Verbindungsversuch ist in der letzten Spalte der Ausgabe aufgeführt.
+
+Um die verbleibende Zeit zu sehen, die sich dieser Rechner auf der Blacklist befindet, fügen Sie `-r` zum vorherigen Befehl hinzu:
+
+[source,bash]
+....
+# blacklistctl dump -br
+      address/ma:port id      nfail   remaining time
+213.0.123.128/25:22   OK      6/3     36s
+....
+
+In diesem Beispiel bleiben noch 36 Sekunden, bis dieser Rechner nicht mehr blockiert wird.
+
+=== Rechner aus der Blocklist entfernen
+
+Manchmal ist es notwendig, einen Rechner aus der Blocklist zu entfernen, bevor die verbleibende Zeit abgelaufen ist. Leider bietet blacklistd keine Möglichkeit dies zu tun. Es ist jedoch möglich, die Adresse mit `pfctl` aus der PF-Tabelle zu entfernen. Für den blockierten Port gibt es einen untergeordneten Anker innerhalb des definierten blacklistd-Ankers in [.filename]#/etc/pf.conf#. Wenn es beispielsweise einen untergeordneten Anker zum Blockieren von Port 22 gibt, wird dieser als `blacklistd/22` bezeichnet. In diesem untergeordneten Anker befindet sich eine Tabelle, die die blockierten Adressen enthält. Diese Tabelle wird Port genannt, gefolgt von der Portnummer. In diesem Beispiel würde es `port22` heißen. Mit diesen Informationen und man:pfctl[8] ist es nun möglich, alle geblockten Adressen anzuzeigen:
+
+[source,bash]
+....
+# pfctl -a blacklistd/22 -t port22 -T show
+...
+213.0.123.128/25
+...
+....
+
+Nachdem Sie die entsprechende Adresse ermittelt wurde, kann sie mit folgendem Befehl aus der Liste entfernt werden:
+
+[source,bash]
+....
+# pfctl -a blacklistd/22 -t port22 -T delete 213.0.123.128/25
+....
+
+Die Adresse ist nun aus PF entfernt, erscheint aber immer noch in der Liste von `blacklistctl`, da dieser keine Kenntnis von Änderungen an PF hat. Der Eintrag in blacklist's Datenbank wird irgendwann ablaufen und dann aus der Ausgabe entfernt werden. Der Eintrag wird wieder hinzugefügt, falls der Rechner erneut gegen eine der Regeln von blacklistd verstößt.

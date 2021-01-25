@@ -1,0 +1,590 @@
+---
+title: FreeBSD Git Primer (Don’t PANIC)
+releaseinfo: "$FreeBSD$" 
+trademarks: ["freebsd", "general"]
+---
+
+= FreeBSD Git Primer (Don’t PANIC)
+:doctype: article
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+
+New committers are assumed to already be familiar with the basic operation of Git. If not, start by reading the link:https://git-scm.com/book/en/v2[Git Book].
+
+toc::[]
+
+== Introduction
+
+Git is a distributed version control system (DVCS), which means that the entire repository, including all of the history, is maintained along with each copy (clone). A developer makes changes to their local repository, then shares those changes with other repositories. Git uses *fetch*, *pull*, and *push* to refer to these sharing operations.
+
+In the DVCS model there are multiple repositories, each with their own view of history. A canonical or "source of truth" repository is established by convention - cgit-beta.freebsd.org is FreeBSD's canonical repository. We'll refer to the canonical  repository as "upstream."
+
+The simplest case of making a change in the FreeBSD tree involves three steps:
+* Acquire latest changes from upstream
+* Commit change locally
+* Push to upstream
+
+In some cases there will be newer changes in the upstream repository, as well as local changes that have not yet been pushed there.
+
+There are two main approaches for dealing with this in a DVCS world - a rebase workflow, or a merge workflow. The rebase workflow "replays" the local commits on top of the upstream history, and maintains a linear progression. The merge workflow adds the new commits via a merge. The history logically diverges into two or more branches, coming back together via the merge.
+
+In FreeBSD we use a rebase workflow. In the case of having local commits not yet upstream the steps are:
+
+* Acquire latest changes from upstream
+* Rebase local changes on upstream
+* Push to upstream
+
+Examples of these cases are presented in this primer.
+
+XXX describe git index
+
+== Installing Git
+
+Git can be installed from the FreeBSD package collection by issuing this command:
+
+[source,bash]
+....
+# pkg install git
+....
+
+or from the ports tree:
+
+[source,bash]
+....
+# cd /usr/ports/devel/git
+# make all install clean
+....
+
+== Initial Configuration
+
+There are a number of global git configuration options that should be set:
+
+[source,bash]
+....
+% git config --global user.name "Inigo Montoya" # You killed my father
+% git config --global user.email "imontoya@FreeBSD.org"
+....
+
+== Getting Started
+
+There are a few ways to obtain a working copy of the tree from Git. This section will explain them.
+
+=== Direct Checkout
+
+The first is to check out directly from the main repository. For the src tree, use:
+
+[source,bash]
+....
+% git clone -o upstream git@cgit-beta.freebsd.org/src.git /usr/src
+....
+
+For the doc tree, use:
+
+[source,bash]
+....
+% git clone -o upstream git@cgit-beta.freebsd.org/doc.git /usr/doc
+....
+
+For the ports tree, use:
+
+[source,bash]
+....
+% git clone -o upstream git@cgit-beta.freebsd.org/ports.git /usr/ports
+....
+
+[NOTE]
+====
+Though the remaining examples in this document are written with the workflow of working with the src tree in mind, the underlying concepts are the same for working with the doc and the ports tree. Ports related Git operations are listed in Section XXX, “Ports Specific FAQ”.
+====
+
+The above command will check out a CURRENT source tree as /usr/src/, which can be any target directory on the local filesystem. Omitting the final argument of that command causes the working copy, in this case, to be named “src”, but that can be renamed safely.
+
+git@ means the git protocol tunnelled over SSH. The name of the server is *cgit-beta.freebsd.org* and *src* is the repository.
+
+XXX
+If your FreeBSD login name is different from the login name used on the local machine, either include it in the URL (for example jarjar@cgit-beta.freebsd.org/src.git), or add an entry to ~/.ssh/config in the form:
+
+[source,bash]
+....
+Host cgit-beta.freebsd.org
+	User jarjar
+....
+
+**Note**: The git diff command does not require access to the server, as git stores the entire repository history locally.
+
+=== RELENG_* Branches and General Layout
+
+In *git@cgit-beta.freebsd.org/src.git*, *src* refers to the source tree. Similarly, *ports* refers to the ports tree, and so on. These are separate repositories with their own revision hashes, access controls and commit mail.
+
+For the base repository, the main branch refers to the -CURRENT tree. For example, *bin/ls* is what would go into */usr/src/bin/ls* in a release. Some key branches:
+
+XXX
+* *main* which corresponds to HEAD, also known as -CURRENT.
+* *stable/n* which corresponds to RELENG_n.
+* *releng/n.n* which corresponds to RELENG_n_n.
+* *release/n.n.n* which corresponds to RELENG_n_n_n_RELEASE.
+
+=== FreeBSD Documentation Project Branches and Layout
+
+In *git@cgit-beta.freebsd.org/doc.git*, *doc* refers to the repository root of the documentation tree.
+
+In general, most FreeBSD Documentation Project work will be done within the main branch of the documentation source tree.
+
+FreeBSD documentation is written and/or translated to various languages, each in a separate directory in the main branch.
+
+Each translation set contains several subdirectories for the various parts of the FreeBSD Documentation Project. A few noteworthy directories are:
+
+* */articles/* contains the source code for articles written by various FreeBSD contributors.
+* */books/* contains the source code for the different books, such as the FreeBSD Handbook.
+* */htdocs/* contains the source code for the FreeBSD website.
+
+=== FreeBSD Ports Tree Branches and Layout
+
+In *git@cgit-beta.freebsd.org/ports.git*, *ports* refers to the repository root of the ports tree.
+
+In general, most FreeBSD port work will be done within the main/ branch of the ports tree which is the actual ports tree used to install software. Some other key branches:
+
+* RELENG_n_n_n which corresponds to RELENG_n_n_n is used to merge back security updates in preparation for a release.
+* RELEASE_n_n_n which corresponds to RELEASE_n_n_n represents a release tag of the ports tree.
+* /tags/RELEASE_n_EOL represents the end of life tag of a specific FreeBSD branch.
+
+== Daily Use
+
+While git has a lot of flexibility in how it can be used, we will concentrate on how we expect it to be used by FreeBSD Developers in this section, by which we mean people who are planning to commit changes to one of the three FreeBSD repositories: `doc, ports, src.`
+
+One concept to keep fixed in your mind as you begin working with git on FreeBSD is that our git repository is only meant for commits to the `main` branch, or merges from the `main` branch to one of our subsidiary branches, such as `STABLE`. The FreeBSD repos are not meant for, nor do they support, developer branches. If you wish to have a long lived, shared, branch for collaboration, that will be covered in the Collaboration Workflow section.
+
+=== Help
+
+git has built in help documentation. It can be accessed by typing:
+
+[source,bash]
+....
+% git help
+% git help <subcommand>
+....
+
+Additional information can be found in the link:https://git-scm.com/book/en/v2[Git Book].
+
+=== Checkout
+
+As seen earlier, to check out the FreeBSD head branch:
+
+=== Anonymous Checkout
+
+XXX
+It is possible to anonymously check out the FreeBSD repository with Git. This will give access to a read-only tree that can be updated, but not committed back to the main repository. To do this, use:
+
+=== Status
+
+To view the local changes that have been made to the working copy:
+
+[source,bash]
+....
+% git status
+....
+
+Git reports files in three different categories:
+- Untracked (i.e., new files not yet added to the tree)
+- Unstaged (modified, but not added to the index)
+- Staged (modified and added to the index, for the next commit)
+
+=== Editing, Staging,  and Committing
+
+To add a new file or stage all changes to a previously added file to the index:
+
+[source,bash]
+....
+% git add path/to/file
+....
+
+Likewise, you can stage files for removal (and remove them from the current checkout) with
+
+[source,bash]
+....
+% git rm path/to/file
+....
+
+Files can be moved with
+
+[source,bash]
+....
+% git mv foo.c bar.c
+....
+
+To review changes to previously added files and add some or all of those changes to the index:
+
+[source,bash]
+....
+% git add -p
+....
+
+To review changes staged for commit:
+
+[source,bash]
+....
+% git diff --staged
+....
+
+To commit staged changes (ones that have already been added to the index):
+
+[source,bash]
+....
+% git commit
+....
+
+=== XXX: git push here or cover rebase first?
+EM: suggest rebase first, we should discourage `git commit -a && git push`-style approach.
+
+=== Rebasing
+
+=== Pushing commits to the canonical repository
+
+=== Log and Annotate
+
+`git log` shows revisions and commit messages, most recent first, for files or directories. When used on a directory, all revisions that affected the directory and files within that directory are shown.
+
+[source,bash]
+....
+% git log sys/kern
+....
+
+To show the log for a single commit:
+
+[source,bash]
+....
+% git log -1 hash
+....
+
+To show the log for a single commit with the diff:
+
+[source,bash]
+....
+% git log -1 hash -p
+....
+
+A one-line summary of each commit alongside a short hash fits more information on one screen. This can also be configured as an alias for convenience:
+
+[source,bash]
+....
+% git log --oneline
+% git config --global alias.lol "log --oneline --graph --decorate"
+% git lol       # "log --oneline" short logs for working branch
+% git lol --all # for all branches, with fork/merge points visualized
+....
+
+`git annotate`, or equally `git blame`, shows the most recent commit hash and who committed that change for each line of a file.
+
+=== Diffs
+
+git diff displays changes in the working tree, or changes between specified version hashes. By default staged changes (i.e., in the index) are *not* shown by `git diff`.
+
+Diffs generated by git are unified and include new files by default in the diff output.
+
+To show differences between the working tree and the index:
+
+[source,bash]
+....
+% git diff
+....
+
+To show differences between the index and HEAD (the most recent commit on the branch):
+
+[source,bash]
+....
+% git diff --cached
+....
+
+To show differences between the working tree and HEAD, including changes already staged in the index:
+
+[source,bash]
+....
+% git diff HEAD
+....
+
+To show the commit message and diff for a particular commit:
+
+[source,bash]
+....
+% git show hash
+....
+
+git diff can show the changes between two revisions of the same file:
+
+[source,bash]
+....
+% git diff hash_1..hash_2 -- file
+....
+
+The paths generated by git diff start with a/ for the original and b/ for the modified files. They could be applied to the original tree with:
+
+[source,bash]
+....
+% patch -p1 file
+....
+
+=== Unstaging
+
+Remove the changes in a file from the index:
+
+[source,bash]
+....
+% git reset file
+....
+
+This works for both changes to an existing file and for new files.  In either case, the contents of the files are unchanged.
+
+=== Reverting
+
+To revert unstaged changes to a file:
+
+[source,bash]
+....
+% git checkout file
+....
+
+To review and revert some changes to a file:
+
+[source,bash]
+....
+% git checkout -p file
+....
+
+The above commands can also take a directory and will act on all files under that path. This can include the whole repository if `.` is given from the root of the clone. **These commands result in permantent lost of work.** Confusingly, `git checkout` is also used to switch between branches where it does not risk dataloss.
+
+=== Branches
+
+To switch between local branches use:
+
+[source,bash]
+....
+% git checkout branch
+....
+
+If `branch` does not exist but a remote branch you have cloned of the same name exists a local branch will be created tracking that branch.
+
+To create a new branch from your currently checked out branch's state:
+
+[source,bash]
+....
+% git checkout -b newbranch
+....
+
+=== XXX: something about merging and rebasing for our no-merge-commits main branch
+see above
+
+=== Conflicts
+
+If a git command resulted in a merge conflict, Git will remember which files have conflicts and refuse to commit any changes to those files until explicitly told that the conflicts have been resolved.
+
+Conflicts are indicated with ``<<<<<<<`, `=======`, and `>>>>>>>`` markers in the conflicting file(s). These can be resolved by editing the file:
+
+[source,bash]
+....
+% vim path/to/conflicting/file
+% git add path/to/conflicting/file
+% git commit
+....
+
+The link:https://git-scm.com/docs/git-mergetool[`git mergetool`] command can be used to manage the conflict resolution process, relying on a third-party 3-way merge tool such as kdiff3, vimdiff3, or p4merge.
+
+== Advanced Use
+
+=== Sparse Checkouts
+
+XXX to be written - see the link:https://git-scm.com/docs/git-sparse-checkout[git-sparse-checkout]  documentation.
+
+=== Direct Operation
+
+Certain operations can be performed directly on the repository without touching the working copy. Specifically, this applies to any operation that does not require editing a file, including:
+
+=== Merging with git
+
+This section deals with merging code from one branch to another (typically, from head to a stable branch).
+
+=== Vendor Imports with git
+
+XXX TODO
+
+Important:
+
+Please read this entire section before starting a vendor import.
+
+Note:
+
+Patches to vendor code fall into two categories:
+
+* Vendor patches: these are patches that have been issued by the vendor, or that have been extracted from the vendor's version control system, which address issues which cannot wait until the next vendor release.
+* FreeBSD patches: these are patches that modify the vendor code to address FreeBSD-specific issues.
+
+The nature of a patch dictates where it should be committed:
+
+* Vendor patches must be committed to the vendor branch, and merged from there to head. If the patch addresses an issue in a new release that is currently being imported, it must not be committed along with the new release: the release must be imported and tagged first, then the patch can be applied and committed. There is no need to re-tag the vendor sources after committing the patch.
+* FreeBSD patches are committed directly to head.
+
+==== Preparing the Tree
+
+If importing for the first time after the switch to Git, bootstrapping the merge history in the main tree is necessary.
+
+===== Bootstrapping Merge History
+
+If importing for the first time after the switch to Git, bootstrap svn:mergeinfo on the target directory in the main tree to the revision that corresponds to the last related change to the vendor tree, prior to importing new sources:
+
+==== Importing New Sources
+
+==== Merging to Head
+
+[source,bash]
+....
+% cd head/contrib/pf
+% svn up
+% svn merge --accept=postpone svn+ssh://repo.freebsd.org/base/vendor/pf/dist .
+....
+
+==== Committing the Vendor Import
+
+Committing is now possible! Everything must be committed in one go. If done properly, the tree will move from a consistent state with old code, to a consistent state with new code.
+
+=== Using a Git Mirror
+
+=== Committing High-ASCII Data
+
+== Some Tips
+
+When referring to other commits in prose (commit messages and such), specify the first 12 characters of the associated Git hash (e.g. “f3c8503082ea”).
+
+=== Collaboration Workflow
+
+Now that we've covered how to work with, and commit, directly to the FreeBSD repositories we can address the concept of a collaboration workflow. When working directly on the repository your changes are only visible once they are committed to the ```main``` branch, but what if you want to work on some feature for a long period, and share it with others inside and outside the FreeBSD community? A collaboration workflow allows you to have your own, publicly hosted, long lived, development branches that others can share in.
+
+To set up a collaboration branch you will need to work with two different repositories in parallel, the canonical FreeBSD repos that we've been describing thus far, and your own, hosted repository, which is where your development branches will live. The following examples use github for the hosted repository, but the same effect can be achieved with a GitLab instance, or your own, personally hosted, git.
+
+The steps required to set up a collaboration workflow are the following:
+
+* Clone the FreeBSD repository
+* Create a publicly visible repository
+* Push your cloned FreeBSD repo into your public repo.
+* Create branches locally
+* Push shared branches to your public repo.
+
+Note that pushing new branches to the FreeBSD repo is forbidden, and attempts to push a developer branch will result in an error.
+
+When we clone the FreeBSD repo we have a copy of the repo on our local system. The clone has a single ```remote``` which is where all updates come from:
+
+[source,bash]
+....
+> git remote -v
+origin	https://cgit-beta.freebsd.org/src.git (fetch)
+origin	https://cgit-beta.freebsd.org/src.git (push)
+....
+
+The ```origin``` remote is set by git when you clone the repo.
+
+Now you have to create your collaboration space, which can be done by creating a new, empty, repository on github. For this example I have created:
+
+[source,bash]
+....
+git@github.com:gvnn3/FreeBSD.src-gnn.git
+....
+
+using the standard github web UI.
+
+For convenience we rename origin to ```freebsd```:
+
+[source,bash]
+....
+> git remote rename origin freebsd
+> git remote -v
+freebsd	https://cgit-beta.freebsd.org/src.git (fetch)
+freebsd	https://cgit-beta.freebsd.org/src.git (push)
+....
+
+Next we'll add our collaboration repo as a secondary remote:
+
+[source,bash]
+....
+> git remote add public git@github.com:gvnn3/FreeBSD.src-gnn.git
+
+> git remote -v
+freebsd	https://cgit-beta.freebsd.org/src.git (fetch)
+freebsd	https://cgit-beta.freebsd.org/src.git (push)
+public	git@github.com:gvnn3/FreeBSD.src-gnn.git (fetch)
+public	git@github.com:gvnn3/FreeBSD.src-gnn.git (push)
+....
+
+Now we have a ```freebsd``` remote from which we mostly receive updates, and where we ONLY commit changes to ```main``` or bring changes from ```main``` to one of the ```STABLE``` branches.
+
+Finally we push the FreeBSD repo into our empty, public, repository.
+
+[source,bash]
+....
+> git push public
+....
+
+Now that you have a public collaboration space you can create and push branches to it for others to see and enjoy.  First we create our local branch to work in:
+
+[source,bash]
+....
+> git branch gnn-test
+> git checkout gnn-test
+Switched to branch 'gnn-test'
+....
+
+and then we push that branch into our `public` space:
+
+[source,bash]
+....
+> git push --set-upstream public gnn-test
+Warning: No xauth data; using fake authentication data for X11 forwarding.
+X11 forwarding request failed on channel 0
+Total 0 (delta 0), reused 0 (delta 0)
+remote:
+remote: Create a pull request for 'gnn-test' on GitHub by visiting:
+remote:      https://github.com/gvnn3/FreeBSD.src-gnn/pull/new/gnn-test
+remote:
+To github.com:gvnn3/FreeBSD.src-gnn.git
+ * [new branch]              gnn-test -> gnn-test
+Branch 'gnn-test' set up to track remote branch 'gnn-test' from 'public'.
+....
+
+Updating your working branch requires that you rebase from the `freebsd` repo.  First we'll fetch all the changes from the repo but NOT apply them:
+
+[source,bash]
+....
+> git fetch freebsd
+....
+
+and then we will apply the changes to the main branch via a rebase:
+
+[source,bash]
+....
+> git checkout master
+git rebase freebsd/master
+First, rewinding head to replay your work on top of it...
+....
+
+== XXX TODO
+(Notes here for updates we need)
+=== mention worktrees
+
+create a worktree for a project branch
+
+[source,bash]
+....
+% git worktree add -b pkgbase ../pkgbase upstream/main
+....
+
+example for a stable/12 worktree
+
+[source,bash]
+....
+% git worktree add -b stable/12 ../stable-12 upstream/stable/12
+....
+
+== Useful links
+* https://stackoverflow.com/questions/1587846/how-do-i-show-the-changes-which-have-been-staged

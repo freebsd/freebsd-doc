@@ -1,0 +1,1310 @@
+---
+title: 第5章 Makefile の作成
+prev: books/porters-handbook/slow
+next: books/porters-handbook/special
+---
+
+[[makefile]]
+= [.filename]#Makefile# の作成
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 5
+:toc-title: 目次
+:table-caption: 表
+:figure-caption: 図
+:example-caption: 例 
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/ja/mailing-lists.adoc[]
+include::shared/ja/teams.adoc[]
+include::shared/ja/urls.adoc[]
+
+toc::[]
+
+[.filename]#Makefile# の作成は非常に単純です。 繰り返しますが、始めるまえに既存の例を見ておくことを推奨します。 また、このハンドブックには <<porting-samplem,Makefile のサンプル>>があります。 それを見て、Makefile 内の変数の順番や 空行を入れるところなどの参考にしてください。 そうすると他の人々にも読みやすいものとなります。
+
+では、[.filename]#Makefile# を設計するときに 問題となるところを順に追って見てみましょう。
+
+[[makefile-source]]
+== オリジナルのソース
+
+ソースは [.filename]#foozolix-1.2.tar.gz# といった名前の 標準的な gzip された tar ファイルの形式で `DISTDIR` に置かれていますか? そうなっていれば、次のステップに進めます。 異なっている場合には、変数 `DISTNAME`, `EXTRACT_CMD`, `EXTRACT_BEFORE_ARGS`, `EXTRACT_AFTER_ARGS`, `EXTRACT_SUFX`, `DISTFILES` のうち いくつかを書き換える必要があります。 どれだけ変更しないといけないかは、その port の配布ファイルが どの程度標準からかけはなれているかによります (最もよくあるのは gzip ではなく普通の compress コマンドで tar ファイルが圧縮されている場合で、そのときは `EXTRACT_SUFX=.tar.Z` とするだけです)。
+
+最悪の場合には、自分で `do-extract` ターゲットを作成して、 デフォルトを上書きすることもできます。 しかし、そこまでする必要があることはめったにないでしょう。
+
+[[makefile-naming]]
+== 名前の付け方
+
+Port の [.filename]#Makefile# のはじめの部分で port に名前をつけ、バージョン番号を記述し、適切なカテゴリに載せます。
+
+=== `PORTNAME` および `PORTVERSION`
+
+`PORTNAME` には port の名前の基幹部分を入れ、 `PORTVERSION` には port のバージョン番号を入れます。
+
+=== `PORTREVISION` および `PORTEPOCH`
+
+==== `PORTREVISION`
+
+`PORTREVISION` 変数は単調増加する値です。 `PORTVERSION` が増加した時 (つまり、 新しいオフィシャルベンダーリリースが行なわれた時) には いつでも 0 にリセットされます。 また、その値が 0 でない場合には package 名に追加されます。 `PORTREVISION` の変更は、(例えば man:pkg_version[1] 等の) 自動化ツールが、 新たな package が入手できることを示すのに使われます。
+
+その port から作られる package の内容や構造に 大きな影響を与える変更を行なった時には、 `PORTREVISION` を増やしてください。
+
+`PORTREVISION` を上げる必要がある変更の例:
+
+* セキュリティ上の脆弱性やバグを修正するため、または その port に新しい機能を追加するためのパッチの追加。
+* package のコンパイル時オプションの有効化や 無効化のための port の [.filename]#Makefile# の変更。
+* パッキングリストの変更や、package のインストール時の 挙動の変更 (たとえば、ssh のホストキーのような package の 初期データを生成するスクリプトの変更など)。
+* その port が依存する共有ライブラリのバージョンを 上げる場合 (新しいバージョンの共有ライブラリが インストールされた後に、そのライブラリに依存していた 古い package をインストールを試みる場合、 その package は新しい libfoo.(x+1) ではなく 古い libfoo.x を探そうとするため、インストールに失敗します。 (訳注: そのため、PORTREVISION を上げた package を 作成する必要があるわけです))。
+* ひそかに port 配布ファイルの変更が行なわれ、 その機能に大きな変化があった場合。 つまり、[.filename]#distinfo# の修正を 必要とするような配布ファイルの変更が行なわれ、 新旧のバージョンの `diff -ru` を取ると 些細とは言えない変更が認められるにもかかわらず、 オリジナルのバージョン番号が変更されていないことから `PORTVERSION` の変更は難しい場合。
+
+PORTREVISION を上げる必要の無い変更の例:
+
+* 生成される package に機能の変化が起らないような port スケルトンのスタイル変更。
+* 生成される package に影響しないような `MASTER_SITES` その他の port に対する機能変更。
+* 誤植の修正などの些細な変更で、その package のユーザが アップグレードを必要とするほどには重要でないパッチ。
+* 以前にはコンパイルが通らなかった package を ビルド可能にするための修正 (その port が以前にビルド可能だった プラットフォームにおいて、その変更により何らかの機能的な 違いが発生しない場合に限ります)。 `PORTREVISION` は package の内容を反映したものなので、その package が以前にビルド可能でなかったのなら、変更を示すために、 `PORTREVISION` を 増やす必要はありません。
+
+経験的な判断方法としては、ある port にコミットされた変更が (それが強化や修正によるものであれ、新しい package による 実質的な効能であれ)、アップデートすることにより、 誰もが利益を受けるような何かかどうか、また定期的に ports ツリーを更新している人に更新を強制するということに値するか自問してみることです。 もし答がイエスであれば、 `PORTREVISION` を上げるべきでしょう。
+
+==== `PORTEPOCH`
+
+ソフトウェアのベンダや FreeBSD の port 作成者は、 以前のものよりも小さい数字のバージョン番号をつけたソフトウェアをリリースするといった、 何か馬鹿げたことをすることが時々あります。 例をあげると、ある port が foo-20000801 から foo-1.0 になるといった具合です (数字として見ると 20000801 は 1 よりも大きいため、 間違って前者の方が新しいバージョンとして扱われてしまいます)。
+
+このような場合には `PORTEPOCH` バージョンを増やしてください。 上のセクション 0 で説明したように、 `PORTEPOCH` がゼロでない場合には、 それがパッケージ名の後ろにつけられます。絶対に `PORTEPOCH` を減らしたり、ゼロにリセットしてはいけません。 さもないと、以前に作成された package との比較に失敗する (つまり、その package が古くなっていることがわからない) ためです: 新しいバージョン番号 (上の例では``1.0,1``) は 依然として前のバージョン番号 (20000801) よりも 数字としては小さいのですが、自動化ツールが サフィックス `,1` を特別扱いすることで、 以前の package には明示されていないサフィックス `,0` よりも新しいことがわかります。
+
+誤って `PORTEPOCH` を削除したりリセットしたりすると、終わりのない悲劇に見舞われます。 上記の議論を理解できないなら、 わかるまで議論をたどるかメーリングリストで質問してください。
+
+大多数の ports では、`PORTEPOCH` が 必要になることは まず無いものと考えられています。 また、注意深く `PORTVERSION` を使用することで、 そのソフトウェアの将来のリリースがバージョン構造を変更する必要が出てきた場合にも、 多くの場合前もって対応しておくことができるでしょう。 しかし、"スナップショット"リリースのように、 オフィシャルなバージョン番号を持たないベンダーリリースが行なわれた時には、 FreeBSD 版の port 作者によるケアが必要になります。 そういったリリースに対し、 リリース日付を使ったラベルを付けたいという誘惑にかられることがあるでしょうが、 そうすると新しい"オフィシャル"リリースが行なわれた時に、 上の例で示したような問題が起きることでしょう。
+
+例えば、あるソフトウェアのスナップショットリリースが 20000917 に行なわれ、以前のバージョン番号が 1.2 だったとすると、 そのスナップショットの `PORTVERSION` には 20000917 ではなく 1.2.20000917 か何か、そのような番号を 指定するのが良いでしょう。 そうしておけば、例えばバージョン番号 1.3 として後続のリリースが 行なわれた場合にも、大小関係が崩されずにすむわけです。
+
+==== `PORTREVISION` と `PORTEPOCH` の使い方の例
+
+`gtkmumble` の port, バージョン `0.10` が ports collection にコミットされます。
+
+[.programlisting]
+....
+PORTNAME=       gtkmumble
+PORTVERSION=    0.10
+....
+
+`PKGNAME` は `gtkmumble-0.10` になります。
+
+ローカルな FreeBSD パッチを必要とする セキュリティホールが発見されました。 それに合わせて `PORTREVISION` を増やします。
+
+[.programlisting]
+....
+PORTNAME=       gtkmumble
+PORTVERSION=    0.10
+PORTREVISION=   1
+....
+
+`PKGNAME` は `gtkmumble-0.10_1` になります。
+
+ベンダから `0.2` という番号が振られた 新バージョンがリリースされます (これにより、 作者は `0.10` という番号を "0.9 の次という意味ではなく"、 実際には `0.1.0` のつもりで 使用していたことがわかります - あらら、今さら遅すぎる)。 新しいマイナーバージョン `2` は数字として以前のバージョン番号 `10` より小さいので、 強制的に新しい package "の方が新しい"と認識させるため `PORTEPOCH` を増やす必要があります。 これは新しいベンダーリリースなので、 `PORTREVISION` は 0 にリセット (または [.filename]#Makefile# から削除) されます。
+
+[.programlisting]
+....
+PORTNAME=       gtkmumble
+PORTVERSION=    0.2
+PORTEPOCH=      1
+....
+
+`PKGNAME` は `gtkmumble-0.2,1` になります。
+
+次のリリースは 0.3 です。 `PORTEPOCH` は減少することが無いため、 今度のバージョン変数は次のようになります:
+
+[.programlisting]
+....
+PORTNAME=       gtkmumble
+PORTVERSION=    0.3
+PORTEPOCH=      1
+....
+
+`PKGNAME` は `gtkmumble-0.3,1` になります。
+
+[NOTE]
+====
+もし、このアップグレードによって `PORTEPOCH` が `0` に リセットされたとすると、`3` は数字として `10` よりも小さいため、 `gtkmumble-0.10_1` の package をインストールした誰かは `gtkmumble-0.3` の package の方が新しいことに気がつかないことになるでしょう。 これが、そもそも `PORTEPOCH` が導入された肝心な理由です。
+====
+
+=== `PKGNAMEPREFIX` および `PKGNAMESUFFIX`
+
+二つのオプション変数 `PKGNAMEPREFIX` と `PKGNAMESUFFIX` は、 `PORTNAME` および `PORTVERSION` と結合され、 `PKGNAME` を `${PKGNAMEPREFIX}${PORTNAME}${PKGNAMESUFFIX}-${PORTVERSION}` として定義します。 この時、<<porting-pkgname,適切な package 名を選ぶための ガイドライン>>に沿っているかどうかを確認してください。 特に、`PORTVERSION` 中に ハイフン (`-`) を使用することは__禁止__されています。 また、package 名に _language-_ もしくは _-compiled.specifics_ 部分が 含まれる場合、それぞれ `PKGNAMEPREFIX` と `PKGNAMESUFFIX` を使用してください。 これらを `PORTNAME` の一部としてはいけません。
+
+[[porting-pkgname]]
+=== package 名についての規則
+
+package の名前は以下のルールにしたがってつけてください。 これは package のディレクトリを見やすくするためで、 既に何千ものパッケージがありますし、 目を痛めてしまうようだとユーザはそっぽを向くでしょう。
+
+package の名前は以下のようにしてください。 [.filename]#言語-名前-オプションバージョン.番号#
+
+package 名は `${PKGNAMEPREFIX}${PORTNAME}${PKGNAMESUFFIX}-${PORTVERSION}` というように定義されています。 変数がこの書式と適合していることを確認してください。
+
+. FreeBSD はユーザの慣れ親しんだ言語のサポートに力を入れています。 特定の言語のための port の package 名には _言語-_ に ISO-639 で定義されている言語名の略称を入れてください。 たとえば日本語なら `ja`、 ロシア語なら `ru`、 ベトナム語なら `vi`、 中国語なら `zh`、 韓国語ならば `ko`、 ドイツ語なら `de` といった具合です。
++ 
+port がある言語地域に特化したものである場合には、 さらに二文字の国名コードを付加してください。 たとえば合衆国英語圏は `en_US` となり、 スイスのフランス語圏は `fr_CH` となります。
++ 
+_言語-_ 部分は、 `PKGNAMEPREFIX` 変数に 定義されなければなりません。
+. [.filename]##名前##の部分の最初の文字は 小文字でなければなりません。 (名前の残りの部分は大文字を含んでいても構わないため、 大文字を含んだソフトウェア名を変換する際の規則は、 あなた自身の裁量に任されています。) `perl 5` のモジュールでは先頭に `p5-` を付け、 二重コロン (`::`) のセパレータをハイフン (`-`) に置きかえる習慣になっています。 たとえば `Data::Dumper` は `p5-Data-Dumper` になります。 また、そのソフトウェアの名前として通常使われるものに番号、 ハイフン、あるいは下線が入っている場合には、 それらを使うことも構いません (``kinput2``など)。
+. コンパイル時に環境変数や `make` の引数などで<<porting-masterdir,ハードコードされたデフォルト>>を変えてコンパイルできる場合、 _-compiled.specifics_ にそのコンパイル時のデフォルトを入れてください (ハイフンはあってもなくてもかまいません)。 用紙のサイズ、あるいはフォントの解像度などがこれにあたります。
++ 
+_-compiled.specifics_ 部分は、 `PKGNAMESUFFIX` 変数に定義されなければなりません。
+. バージョン番号は数字とアルファベットからなり、 ピリオド (.) で区切ります。 アルファベットは二文字以上続けてはいけません。 唯一の例外は"パッチレベル"を意味する文字列 `pl` で、 それ以外にバージョン番号がまったくついていない場合にのみ使うことができます。 もしソフトウェアのバージョンに "alpha", "beta", "rc" や "pre" といった文字列が含まれるなら、 ピリオドの後に最初の一文字をとってください。 これらの後に、さらにバージョン文字列が続く場合には、 一文字のアルファベットの後にピリオドをつけずに番号を続けます。
++ 
+この考え方は、 バージョン文字列を見て簡単に ports を並べられるようにするためのものです。 特に、バージョン番号の各部分が必ずピリオドで区切られていること、 また日付の部分がバージョン文字列の一部となっている場合には `yyyy.mm.dd` という書式を使っていることを確認してください。 `dd.mm.yyyy` や、2000 年問題に対応していない `yy.mm.dd` という書式を使ってはいけません。
+
+では、``DISTNAME``を正しい ``PKGNAME`` に直す例を見てみましょう:
+
+以下は、ソフトウェアの作者が決めた名前から 適切な package 名に変換する方法を示した (実際の) 例です。
+
+[.informaltable]
+[cols="1,1,1,1,1,1", frame="none", options="header"]
+|===
+| 配布名
+| PKGNAMEPREFIX
+| PORTNAME
+| PKGNAMESUFFIX
+| PORTVERSION
+| 理由
+
+|mule-2.2.2
+|(空)
+|mule
+|(空)
+|2.2.2
+|変更の必要はありません
+
+|XFree86-3.3.6
+|(空)
+|XFree86
+|(空)
+|3.3.6
+|変更の必要はありません
+
+|EmiClock-1.0.2
+|(空)
+|emiclock
+|(空)
+|1.0.2
+|プログラム一つだけの時は小文字のみ
+
+|rdist-1.3alpha
+|(空)
+|rdist
+|(空)
+|1.3.a
+|`alpha` のような文字列は使えない
+
+|es-0.9-beta1
+|(空)
+|es
+|(空)
+|0.9.b1
+|`alpha` のような文字列は使えない
+
+|mailman-2.0rc3
+|(空)
+|mailman
+|(空)
+|2.0.r3
+|`rc` のような文字列は使えない
+
+|v3.3beta021.src
+|(空)
+|tiff
+|(空)
+|3.3
+|なんなんでしょう ;)
+
+|tvtwm
+|(空)
+|tvtwm
+|(空)
+|pl11
+|バージョン番号は必ず必要
+
+|piewm
+|(空)
+|piewm
+|(空)
+|1.0
+|同上
+
+|xvgr-2.10pl1
+|(空)
+|xvgr
+|(空)
+|2.10.1
+|`pl` が使えるのは、 他にメジャー/マイナーバージョン番号がない場合のみ
+
+|gawk-2.15.6
+|ja-
+|gawk
+|(空)
+|2.15.6
+|日本語バージョン
+
+|psutils-1.13
+|(空)
+|psutils
+|-letter
+|1.13
+|コンパイル時に用紙のサイズを指定
+
+|pkfonts
+|(空)
+|pkfonts
+|300
+|1.0
+|300dpiフォント用の package
+|===
+
+オリジナルのソースにまったくバージョン情報が見当たらず、 また原作者が新しいバージョンをリリースする可能性が低いときには、 バージョン番号として `1.0` を使えばいいでしょう (上記の `piewm` の例がこれにあたります)。 そうでない場合には原作者に聞くか、日付 (`yyyy.mm.dd`) を使うなどしてください。
+
+[[makefile-categories]]
+== カテゴリ分類
+
+=== `CATEGORIES`
+
+パッケージが作成されると [.filename]#/usr/ports/packages/All# に置かれ、一つ以上の [.filename]#/usr/ports/packages# のサブディレクトリからリンクが張られます。 これらのサブディレクトリの名称は、`CATEGORIES` 変数で指定されます。これは、ユーザが FTP サイトや CDROM のパッケージの山から探し出すのを容易にするためのものです。 既存の<<porting-categories,カテゴリ>>を参照して、 あなたの port にふさわしいものを選んでください。
+
+また、このリストは、その port が ports ツリーのどこにインポートされるかも決定します。 ここに複数のカテゴリを指定すると、port のファイルは最初のカテゴリ名のサブディレクトリに置かれることになります。 適切なカテゴリの選択方法については<<porting-categories,カテゴリ>>節をご覧ください。
+
+あなたが作成した port が、本当に既存のどのカテゴリにも当てはまらない場合には、 新たにカテゴリ名を作成することもできます。 その場合、新しいカテゴリを提案するメールを {freebsd-ports} 宛に送ってください。 しかし、一般的にはあなたが提案したカテゴリにあてはまる ports が一握りではすまない場合でなければ、 あなたの提案は却下されるでしょう。
+
+[NOTE]
+====
+時々、カテゴリを 2 階層構造や、 何か他のキーワードを利用した構造に再構成することを提案する人がいます。 今日まで、その提案はどれも実現しませんでした。 なぜなら、その構成を実現することは簡単なのですが、既存の Ports Collection 全体を構成しなおしたものに合わせて改修する労力は、 控え目にいっても気が遠くなるものだからです。 こういうアイディアを送る前に、 それらの提案の歴史をメーリングリストのアーカイブで調べてください。 さらに、動作するプロトタイプを示せと言われるのに対する準備をしておきましょう。
+====
+
+[[porting-categories]]
+=== 現在のカテゴリのリスト
+
+ここに現在の port のカテゴリの一覧を示します。 アスタリスク(`*`) が付いているものは仮想 (_virtual_) カテゴリです - これらには対応するサブディレクトリが  port ツリーにはありません。 これらは第 2 の補助的なカテゴリとして、 検索目的にしか使われません。
+
+[NOTE]
+====
+仮想カテゴリでないものは、 そのサブディレクトリ内の [.filename]#pkg/COMMENT# に一行の記述があります (例: [.filename]#archivers/pkg/COMMENT#)。
+====
+
+[.informaltable]
+[cols="1,1,1", frame="none", options="header"]
+|===
+| カテゴリ
+| 説明
+| Notes
+
+|[.filename]#accessibility#
+|障害を持ったユーザの役に立つ ports
+|
+
+|[.filename]#afterstep*#
+|http://www.afterstep.org[AfterStep] ウィンドウマネージャをサポートする ports
+|
+
+|[.filename]#arabic#
+|アラビア語サポート
+|
+
+|[.filename]#archivers#
+|アーカイブ用ツール
+|
+
+|[.filename]#astro#
+|天文学関連の ports
+|
+
+|[.filename]#audio#
+|サウンドをサポートする ports
+|
+
+|[.filename]#benchmarks#
+|ベンチマークユーティリティ
+|
+
+|[.filename]#biology#
+|生物学関連のソフトウェア
+|
+
+|[.filename]#cad#
+|CAD ツール
+|
+
+|[.filename]#chinese#
+|中国語サポート
+|
+
+|[.filename]#comms#
+|通信ソフトウェア
+|ほとんどはシリアルポート用のソフトウェア
+
+|[.filename]#converters#
+|文字コード変換
+|
+
+|[.filename]#databases#
+|データベース
+|
+
+|[.filename]#deskutils#
+|コンピュータが発明される以前に机上で使われていた道具
+|(訳注: いわゆるデスクトップユーティリティのこと)
+
+|[.filename]#devel#
+|開発ユーティリティ
+|単にライブラリだからというだけで、 どうしてもここに置かなければならない理由があるのでない限り、 ライブラリをここに含めないでください。
+
+|[.filename]#dns#
+|DNS 関連ソフトウェア
+|
+
+|[.filename]#editors#
+|一般的なエディタ
+|特殊なエディタはそれぞれふさわしいセクションに入れます (たとえば数式エディタは [.filename]#math# です)。
+
+|[.filename]#elisp#
+|Emacs-lisp の ports
+|
+
+|[.filename]#emulators#
+|他のオペレーティングシステム用のエミュレータ
+|端末エミュレータはここに__含まれません__ - X ベースのものは [.filename]#x11# に、 テキストベースのものは機能によって [.filename]#comms# か [.filename]#misc# に分類されます。
+
+|[.filename]#finance#
+|金融や財務会計関連のアプリケーション。
+|
+
+|[.filename]#french#
+|フランス語サポート
+|
+
+|[.filename]#ftp#
+|FTP クライアントとサーバユーティリティ
+|port が FTP と HTTP の両方に対応していれば、 [.filename]#ftp# に入れ、第 2 カテゴリを [.filename]#www# とします。
+
+|[.filename]#games#
+|ゲーム
+|
+
+|[.filename]#german#
+|ドイツ語サポート
+|
+
+|[.filename]#gnome*#
+|http://www.gnome.org[GNOME] プロジェクトの ports
+|
+
+|[.filename]#graphics#
+|グラフィックユーティリティ
+|
+
+|[.filename]#haskell*#
+|Haskell 言語関連のソフトウェア。
+|
+
+|[.filename]#hebrew#
+|ヘブライ語サポート
+|
+
+|[.filename]#hungarian#
+|ハンガリー語サポート
+|
+
+|[.filename]#ipv6*#
+|IPv6 関連のソフトウェア
+|
+
+|[.filename]#irc#
+|インターネットリレーチャット (IRC) 用ユーティリティ
+|
+
+|[.filename]#japanese#
+|日本語サポート
+|
+
+|[.filename]#java#
+|Java 言語関連のソフトウェア
+|
+
+|[.filename]#kde*#
+|http://www.kde.org[K Desktop Environment (kde)] プロジェクトの ports
+|
+
+|[.filename]#korean#
+|韓国語サポート
+|
+
+|[.filename]#lang#
+|プログラミング言語
+|
+
+|[.filename]#linux*#
+|Linux アプリケーションとサポートユーティリティ
+|
+
+|[.filename]#lisp*#
+|Lisp 言語関連のソフトウェア
+|
+
+|[.filename]#mail#
+|メールソフトウェア
+|
+
+|[.filename]#math#
+|数値計算ソフトウェアやその他の数学ソフトウェア
+|
+
+|[.filename]#mbone#
+|MBone アプリケーション
+|
+
+|[.filename]#misc#
+|種々のユーティリティ
+|基本的に他のカテゴリに属さないものです。 これは他の仮想でないカテゴリを伴わない、唯一のカテゴリです。 `misc` と他のカテゴリが `CATEGORIES` 行に書かれている場合、 `misc` を削除して他のサブディレクトリにおいて良いという意味になります。 このカテゴリに置かれた ports は見落とされやすいので、 可能な限り `misc` よりふさわしいカテゴリを探してください。
+
+|[.filename]#multimedia#
+|マルチメディアソフトウェア
+|
+
+|[.filename]#net#
+|種々のネットワークソフトウェア
+|
+
+|[.filename]#net-mgmt#
+|ネットワーク管理ソフトウェア
+|
+
+|[.filename]#news#
+|USENET ニュースソフトウェア
+|
+
+|[.filename]#offix*#
+|http://leb.net/OffiX/[OffiX] suite の ports
+|
+
+|[.filename]#palm#
+|http://www.palm.com/[Palm(TM)] シリーズをサポートするソフトウェア
+|
+
+|[.filename]#parallel*#
+|並列計算を行うアプリケーション
+|
+
+|[.filename]#pear*#
+|Pear PHP フレームワーク関連の ports
+|
+
+|[.filename]#perl5*#
+|実行に Perl バージョン 5 を必要とする ports
+|
+
+|[.filename]#picobsd#
+|http://people.FreeBSD.org/~picobsd/[PicoBSD] をサポートするための ports
+|
+
+|[.filename]#plan9*#
+|http://www.cs.bell-labs.com/plan9dist/[Plan9] に由来するさまざまなソフトウェア
+|
+
+|[.filename]#polish#
+|ポーランド語サポート
+|
+
+|[.filename]#portuguese#
+|ポルトガル語サポート
+|
+
+|[.filename]#print#
+|印刷ソフトウェア
+|DTP 用ツール (プレビューアなど) もここに分類されます。
+
+|[.filename]#python*#
+|http://www.python.org/[Python] 言語関連のソフトウェア
+|
+
+|[.filename]#ruby*#
+|http://www.ruby-lang.org/[Ruby] 言語関連のソフトウェア
+|
+
+|[.filename]#russian#
+|ロシア語サポート
+|
+
+|[.filename]#science#
+|[.filename]#astro# や [.filename]#biology#, [.filename]#math# 等、 他のカテゴリにはあてはまらない科学関連の ports
+|
+
+|[.filename]#security#
+|セキュリティ関連のユーティリティ
+|
+
+|[.filename]#shells#
+|コマンドラインシェル
+|
+
+|[.filename]#sysutils#
+|システムユーティリティ
+|
+
+|[.filename]#tcl76*#
+|実行に Tcl バージョン 7.6 を必要とする ports
+|
+
+|[.filename]#tcl80*#
+|実行に Tcl バージョン 8.0 を必要とする ports
+|
+
+|[.filename]#tcl81*#
+|実行に Tcl バージョン 8.1 を必要とする ports
+|
+
+|[.filename]#tcl82*#
+|実行に Tcl バージョン 8.2 を必要とする ports
+|
+
+|[.filename]#tcl83*#
+|実行に Tcl バージョン 8.3 を必要とする ports
+|
+
+|[.filename]#textproc#
+|テキスト処理ユーティリティ
+|DTP ツールはここではなく、[.filename]#print# に分類されます。
+
+|[.filename]#tk42*#
+|実行に Tk バージョン 4.2 を必要とする ports
+|
+
+|[.filename]#tk80*#
+|実行に Tk バージョン 8.0 を必要とする ports
+|
+
+|[.filename]#tk81*#
+|実行に Tk バージョン 8.1 を必要とする ports
+|
+
+|[.filename]#tk82*#
+|実行に Tk バージョン 8.2 を必要とする ports
+|
+
+|[.filename]#tk83*#
+|実行に Tk バージョン 8.3 を必要とする ports
+|
+
+|[.filename]#tkstep80*#
+|実行に TkSTEP バージョン 8.0 を必要とする ports
+|
+
+|[.filename]#ukrainian#
+|ウクライナ語サポート
+|
+
+|[.filename]#vietnamese#
+|ベトナム語サポート
+|
+
+|[.filename]#windowmaker*#
+|WindowMaker ウィンドウマネージャをサポートする ports
+|
+
+|[.filename]#www#
+|World Wide Web 関連のソフトウェア
+|HTML 言語サポートもここに分類されます。
+
+|[.filename]#x11#
+|X ウィンドウシステムとその関連ソフトウェア
+|このカテゴリは、 直接ウィンドウシステムをサポートするソフトウェアのみを対象とするものです。 通常の X アプリケーションをここに分類しないでください。 ほとんどは他の [.filename]#x11-*# カテゴリ (下記参照) に分類されるべきです。 あなたの port が X アプリケーションで、 `USE_XLIB` を定義し (`USE_IMAKE` を定義すると自動的に定義されます)、 適切なカテゴリに分類してください。
+
+|[.filename]#x11-clocks#
+|X11 用時計
+|
+
+|[.filename]#x11-fm#
+|X11 用ファイルマネージャ
+|
+
+|[.filename]#x11-fonts#
+|X11 フォントとフォントユーティリティ
+|
+
+|[.filename]#x11-servers#
+|X11 サーバ
+|
+
+|[.filename]#x11-toolkits#
+|X11 ツールキット
+|
+
+|[.filename]#x11-wm#
+|X11 ウィンドウマネージャ
+|
+
+|[.filename]#zope*#
+|http://www.zope.org/[Zope] サポート
+|
+|===
+
+=== 適切なカテゴリの選択
+
+多くのカテゴリに重なるので、 どれを"第一"カテゴリにするかを決めなければならないことがたびたびあるでしょう。 これをうまく決めるルールがいくつかあります。 以下はその優先順のリストで、優先度の高いものから低いものの順に書いてあります。
+
+* 言語特有のカテゴリがまず最初です。 たとえば日本語の X11 のフォントをインストールする port の場合、 `CATEGORIES` 行は [.filename]#japanese x11-fonts# となるでしょう。
+* より特徴的なカテゴリが、 一般的なカテゴリより優先されます。 たとえば、HTML エディタの場合は [.filename]#www editors# となります。 これを逆順にはしないでください。 また、 port が [.filename]#irc#, [.filename]#mail#, [.filename]#mbone#, [.filename]#news#, [.filename]#security#, [.filename]#www# のいずれかに属する場合には [.filename]#net# は暗黙のうちに含まれますので、入れるべきではありません。
+* [.filename]#x11# を第二カテゴリにするのは第一カテゴリが自然言語の場合のみにしてください。 特に X のアプリケーションには [.filename]#x11# を指定しないでください。
+* Emacs のモードは、 そのモードで対応しているアプリケーションと同じ ports カテゴリに置くようにして、 [.filename]#editors# には置かないでください。 例えば、あるプログラミング言語のソースファイルを編集するための Emacs モードは、 [.filename]#lang# に置くべきです。
+* もし、あなたの port が他のどのカテゴリにも属しない場合には [.filename]#misc# にしてください。
+
+もし、あなたがカテゴリについて自信が持てない場合には、 そのことを man:send-pr[1] する時に書き加えてください。 そうすればインポートする前にそれについて議論できます (もしあなたがコミッターであれば、 そのことを {freebsd-ports} に送って先に議論するようにしてください。 新しい port が間違ったカテゴリに import されて、 すぐ移動されることがあまりに多いのです。そうなると、 ソースリポジトリのマスターが不要で好ましくない膨れ方をしてしまいます。
+
+[[makefile-distfiles]]
+== 配布ファイル
+
+[.filename]#Makefile# の第二の部分では、 その port をビルドするためにダウンロードしなければならないファイルと、 それをどこからダウンロードできるか説明しています。
+
+=== `DISTNAME`
+
+`DISTNAME` は製作者が決めたソフトウェアの名前です。 デフォルトでは `DISTNAME` は `${PORTNAME}-${PORTVERSION}` になりますので、 必要にな場合だけ書き換えるようにしてください。 `DISTNAME` は二つの場所でしか使われません。 一つ目は配布ファイルリスト (`DISTFILES`) のデフォルト `${DISTNAME} ${EXTRACT_SUFX}` で、二つ目は配布ファイルが展開されるサブディレクトリ `WRKSRC` のデフォルト [.filename]#work/${DISTNAME}# です。
+
+[NOTE]
+====
+`PKGNAMEPREFIX` や `PKGNAMESUFFIX` は `DISTNAME` に影響を与えません。 また、元のソースアーカイブが `${PORTNAME}-${PORTVERSION}${EXTRACT_SUFX}` という 名前ではないのに、`WRKSRC` を [.filename]#work/${PORTNAME}-${PORTVERSION}# と設定しているなら、おそらく `DISTNAME` はそのままにしておく必要があることに注意してください - `DISTNAME` と `WRKSRC` の両方を (そして おそらく `EXTRACT_SUFX` も) セットするよりは、`DISTFILES` を定義する方が楽でしょう。
+====
+
+=== `MASTER_SITES`
+
+元になる配布ファイルを指し示す、FTP/HTTP の URL のファイル名を除いた部分を `MASTER_SITES` に設定します。 最後にスラッシュ ([.filename]#/#) をつけることをお忘れなく!
+
+このシステム上に配布ファイルが見つからなかった場合、 `make` マクロは `FETCH` を使ってこの変数に指定されたサイトから配布ファイルを取得しようとします。
+
+このリストには、 できれば異なる大陸に存在する複数のサイトを入れておくことが推奨されています。 これにより、広域ネットワークのトラブルに対する耐性を高めることができます。 さらに私たちは、自動的に最も近いマスタサイトを判断して、 そこから取ってくるメカニズムの導入を計画しています。 複数のサイトがあれば、この取組を大きく助けることになります。
+
+元になる tar ファイルが X-contrib や GNU, Perl CPAN 等の有名なアーカイブサイトに置かれている場合には、 `MASTER_SITE_*` を使ってこれらのサイトを簡潔に (例えば `MASTER_SITE_XCONTRIB` とか、 `MASTER_SITE_PERL_CPAN` のように) 指定することができます。 `MASTER_SITES` を これらの変数の一つにセットし、 サイト内でのパスを `MASTER_SITE_SUBDIR` に指定するだけです。 以下に例を示します。
+
+[.programlisting]
+....
+MASTER_SITES=         ${MASTER_SITE_XCONTRIB}
+MASTER_SITE_SUBDIR=   applications
+....
+
+これらの変数は [.filename]#/usr/ports/Mk/bsd.sites.mk# で定義されています。 いつでも新しい項目が追加されて行きますので、 port を提出する前に このファイルの最新版を チェックするように心掛けてください。
+
+ユーザは [.filename]#/etc/make.conf# 中で `MASTER_SITE_*` 変数を上書きすることもできます。 そうすることで、これらの有名なアーカイブそのものではなく、 好みのミラーサイトを使用することができます。
+
+=== `EXTRACT_SUFX`
+
+配布ファイルが 1 つで、 圧縮方式を示すのに普通と異なる接尾辞を使っていたら、 `EXTRACT_SUFX` を設定してください。
+
+例えば、配布ファイルがより一般的な [.filename]#foo.tar.gz# ではなく、 [.filename]#foo.tgz# となっていたら、 次のように書きます。
+
+[.programlisting]
+....
+DISTNAME=      foo
+EXTRACT_SUFX=  .tgz
+....
+
+`USE_BZIP2` と `USE_ZIP` 変数を設定すると、`EXTRACT_SUFX` は必要に応じて自動的に `.bz2` または `.zip` に設定されます。 どちらも設定されていなければ、`EXTRACT_SUFX` は `.tar.gz` に設定されます。
+
+[NOTE]
+====
+`EXTRACT_SUFX` と `DISTFILES` を両方設定する必要はありません。
+====
+
+=== `DISTFILES`
+
+時々、ダウンロードするファイルの名称が port の名称とまったく似ていないことがあります。たとえば、 [.filename]#source.tar.gz# などと名づけられていることもあるでしょう。 ほかに、ソースコードがいくつかのアーカイブに分かれていて、 そのすべてをダウンロードしなければならないならないこともあります。
+
+この場合、`DISTFILES` に、ダウンロードしなければならないファイルすべてのリストを、 スペースで区切って設定してください。
+
+[.programlisting]
+....
+DISTFILES=     source1.tar.gz source2.tar.gz
+....
+
+明示的に設定されていない場合、 `DISTFILES` は `${DISTNAME}${EXTRACT_SUFX}` に設定されます。
+
+=== `EXTRACT_ONLY`
+
+`DISTFILES` の一部だけを展開すべき (例えば、一方がソースコードで、もう一方は圧縮されていない文書という) 場合、展開しなければならないファイル名を `EXTRACT_ONLY` に設定してください。
+
+[.programlisting]
+....
+DISTFILES=     source.tar.gz manual.html
+EXTRACT_ONLY=  source.tar.gz
+....
+
+__どの__``DISTFILES`` も展開すべきでは__ない__なら、 `EXTRACT_ONLY` に空文字列を設定してください。
+
+[.programlisting]
+....
+EXTRACT_ONLY=
+....
+
+[[porting-patchfiles]]
+=== `PATCHFILES`
+
+その port が配布ファイルの他に FTP や HTTP で手に入る追加パッチを必要とする場合には、 `PATCHFILES` にはそのパッチのファイル名を、 `PATCH_SITES` にはそのファイルが置かれているディレクトリの URL をセットしてください。(書き方は `MASTER_SITES` と同じです。)
+
+そのパッチに記録されているファイル名に余計なパス名がついていて、 ソースツリーのトップディレクトリ (つまり `WKRSRC`) からの相対パスになっていない場合には、 それに応じた `PATCH_DIST_STRIP` を指定してください。 たとえば、パッチ内のすべてのファイル名の先頭に、余計な `foozolix-1.0/` がついている場合には、 `PATCH_DIST_STRIP=-p1` としてください。
+
+これらのパッチは圧縮されていても大丈夫です。 ファイル名が [.filename]#.gz# や [.filename]#.Z# で終わる場合には、自動的に展開されるようになっています。
+
+もしパッチが、ドキュメント等その他のファイルと一緒に gzip された tar ファイルで配布されている場合には、単に `PATCHFILES` を使うだけではうまくいきません。 このような場合には、このパッチの tar ファイルの名前と場所を `DISTFILES` と `MASTER_SITES` に追加しておきます。 それから、`EXTRA_PATCHES` 変数にそれらのパッチを指定すれば、 [.filename]#bsd.port.mk# が 自動的にパッチを適用してくれます。 特に注意が必要なのは、パッチファイルを `PATCHDIR` ディレクトリにコピー__してはならない__ことです - (訳注: port が CD-ROM 上に置かれている等の場合には、) そのディレクトリには書き込みができないかもしれません。
+
+[NOTE]
+====
+それが普通の gzip か compress された tar ファイルであれば、 通常のソースファイルと一緒にパッチ適用時までに展開されていますので、 明示的に展開する必要はありません。 もしパッチを `DISTFILES` に追加した場合には、パッチを含むファイルが展開される際に、 そのディレクトリにある何かを上書きしないように注意してください。 さらに、コピーされたパッチファイルを削除するコマンドを `pre-clean` ターゲットに追加することを忘れないでください。
+====
+
+[[porting-master-sites-n]]
+=== 異なるサイトやサブディレクトリからの複数の配布ファイルまたはパッチ (`MASTER_SITES:n`)
+
+(これはいささか"高度な話題"です。 この文書を初めて読む人は、 最初はこの節を飛ばしてもよいでしょう)。
+
+この節は `MASTER_SITES:n` や `MASTER_SITES_NN` と呼ばれる取得方法について説明しています。 ここでは、この方式を `MASTER_SITES:n` と呼びます。
+
+まず、背景を少し説明しておきましょう。OpenBSD には、`DISTFILES` と `PATCHFILES` 変数の両方に素敵な機能があります。ファイル、パッチの両方とも、 後ろに `:n` (`n` は `[0-9]` のどれかになります) をつけてグループを指示できます。たとえば、
+
+[.programlisting]
+....
+DISTFILES=      alpha:0 beta:1
+....
+
+OpenBSD では、配布ファイル [.filename]#alpha# は、通常の `MASTER_SITES` ではなく `MASTER_SITES0` に、 [.filename]#beta# は `MASTER_SITES1` に結び付けられます。
+
+これは、正しいダウンロードサイトを際限なく探す羽目になるのを減らせる、 興味深い機能です。
+
+`DISTFILES` にファイルが 2 つ指定され、`MASTER_SITES` が 20 サイトあって、サイトはものすごく遅く、 [.filename]#beta# は `MASTER_SITES` 中のすべてのサイトに置かれていますが、 [.filename]#alpha# は 20 番目のサイトにしかないという場合を考えてください。 メンテナがあらかじめそのことを知っていたら、 すべてのサイトを確認するのは無駄だと思いませんか? 楽しい週末のはじまりというわけにはゆきませんね。
+
+イメージできたら、今度は `DISTFILES` や `MASTER_SITES` がもっと沢山あるのを想像してください。 "distfiles 調査マイスタ"は、 ネットワーク負荷が緩和されることを喜ぶに違いありません。
+
+次節からは、FreeBSD におけるこのアイディアの実装について説明します。 OpenBSD の考え方を多少改良しています。
+
+=== 簡単な説明
+
+この節では、複数の配布ファイルやパッチを、 異なるサイトやサブディレクトリから細かく分けて取得する簡単な設定を示します。 ここでは、単純化した `MASTER_SITES:n` の使い方を説明します。ほとんどの場面ではこれで十分です。 さらに詳しいことを知りたければ、次の節をお読みください。
+
+アプリケーションによっては、 いくつもの異なるサイトからダウンロードする複数の配布ファイルからなっているものがあります。 たとえば、Ghostscript は、中核部のプログラムと、 ユーザのプリンタに応じて使い分けられる多数のドライバファイルからなっています。 このドライバファイルの一部は中核部と共に配布されますが、 多くはさまざまなサイトからダウンロードしなければなりません。
+
+これに対応するため、`DISTFILES` の各項目の後ろには、コロンと"タグ名" をつけられるようになっています。`MASTER_SITES` に設定されているそれぞれのサイトの末尾にも、コロンと、 そのサイトからダウンロードすべきファイルを示すためのタグを加えます。
+
+たとえば、ソースコードが [.filename]#source1.tar.gz# と [.filename]#source2.tar.gz# の 2 つに分けられていて、 2 つの別のサイトからダウンロードしなければならないアプリケーションを考えてみましょう。 その port の [.filename]#Makefile# には、<<ports-master-sites-n-example-simple-use-one-file-per-site>> のような行があるとします。
+
+[[ports-master-sites-n-example-simple-use-one-file-per-site]]
+.各サイトに 1 つファイルがある場合の、簡単な `MASTER_SITES:n` の使用法
+[example]
+====
+[.programlisting]
+....
+MASTER_SITES=   ftp://ftp.example1.com/:source1 \
+                ftp://ftp.example2.com/:source2
+DISTFILES=      source1.tar.gz:source1 \
+                source2.tar.gz:source2
+....
+
+====
+
+複数の配布ファイルに同じタグがついていてもかまいません。 先ほどの例に続いて、3 番目の配布ファイル [.filename]#source3.tar.gz# があって、 `ftp.example2.com` からダウンロードすべきだとしましょう。 [.filename]#Makefile# は <<ports-master-sites-n-example-simple-use-more-than-one-file-per-site>> のようになります。
+
+[[ports-master-sites-n-example-simple-use-more-than-one-file-per-site]]
+.各サイトに 1 つ以上ファイルがある場合の、簡単な `MASTER_SITES:n` の使用法
+[example]
+====
+[.programlisting]
+....
+MASTER_SITES=   ftp://ftp.example1.com/:source1 \
+                ftp://ftp.example2.com/:source2
+DISTFILES=      source1.tar.gz:source1 \
+                source2.tar.gz:source2 \
+                source3.tar.gz:source2
+....
+
+====
+
+=== 詳しい説明
+
+分かりました。 前節の例ではあなたの要求を満足できなかったわけですね。 この節では、ファイルの取得を細かく制御する仕組み `MASTER_SITES:n` がどう働くかと、これを利用するために ports をどう変更すればよいかを詳しく説明します。
+
+. 要素の末尾に `:n` をつけることができます。 ここで、_n_ は `[^:,]+` つまり、概念上はいかなる文字と数字からなる文字列でもよいのですが、 われわれとしては、当面は `[a-zA-Z_][0-9a-zA-Z_]+` に制限します。
++ 
+さらに、文字列のマッチは大文字と小文字を区別します。 つまり、`n` と `N` は別の文字として扱われます。
++ 
+しかし、 `default`, `all`, `ALL` は特別な意味を与えられているので、 末尾に付加するのには使えません (これは、<<porting-master-sites-n-what-changes-in-port-targets, ii>> 項で内部的に利用されています)。 さらに、`DEFAULT` は特別な意味を持つ単語です (<<porting-master-sites-n-DEFAULT-group,3>> の項を確認してください)。
+. `:n` がついた要素は、グループ `n` に属し、 `:m` がついた要素は、グループ `m` に属するということになります。
++
+[[porting-master-sites-n-DEFAULT-group]]
+. 接尾辞がついていない要素はグループに属しません。 これは、特別なグループ `DEFAULT` に属しているとして扱われます。 要素の後ろに `DEFAULT` をつけるのは、その要素を `DEFAULT` とそれ以外のグループに同時に割り当てたいのでなければ、 冗長に過ぎません (<<porting-master-sites-n-comma-operator,5>> の項を確認してください)。
++ 
+次の例はどちらも同じ意味ですが、 最初の方が好ましいです。
++
+[.programlisting]
+....
+MASTER_SITES=   alpha
+
+MASTER_SITES=   alpha:DEFAULT
+....
++
+. グループは相互排他ではありません。 ひとつの要素が同時に複数のグループに属することができ、 ひとつのグループには複数の要素が属することも、 何も割り当てないこともできます。 同じグループで何回も指定された要素は、 単に複数回指定された要素ということになります。
++
+[[porting-master-sites-n-comma-operator]]
+. ある要素を同時にいくつものグループに所属させたい時は、 カンマ演算子 (`,`) が使えます。
++ 
+その都度別の接尾辞をつけて繰り返すかわりに、 一度だけ接尾辞を指定して複数のグループを指定できます。 たとえば、`:m,n,o` と書くと、その要素はグループ `m`, `n` および `o` に属することを示します。
++ 
+以下の例はすべて同等ですが、 最後の形式がもっともよいでしょう。
++
+[.programlisting]
+....
+MASTER_SITES=   alpha alpha:SOME_SITE
+
+MASTER_SITES=   alpha:DEFAULT alpha:SOME_SITE
+
+MASTER_SITES=   alpha:SOME_SITE,DEFAULT
+
+MASTER_SITES=   alpha:DEFAULT,SOME_SITE
+....
+
+. 任意のグループ内のサイトは、 `MASTER_SORT_AWK` によって整列されます。 `MASTER_SITES` と `PATCH_SITES` 内のすべてのグループについても同様に整列されます。
+
+[[porting-master-sites-n-group-semantics]]
+. グループの概念は、変数 `MASTER_SITES`, `PATCH_SITES`, `MASTER_SITE_SUBDIR`, `PATCH_SITE_SUBDIR`, `DISTFILES` および `PATCHFILES` においても、下記の文法に従って使えます。
+.. `MASTER_SITES`, `PATCH_SITES`, `MASTER_SITE_SUBDIR` および `PATCH_SITE_SUBDIR` のすべての要素はスラッシュ `/` 記号で終端されていなければなりません。 ある要素がどれかのグループに属しているなら、 グループの接尾辞 `:n` は、終端記号 `/` のすぐ後にこなければなりません。 `MASTER_SITES:n` の仕組みでは、終端記号 `/` があることで、 `:n` が要素の有効な一部である場合と、 `:n` がグループ `n` を示す場合の混同を避けることができます。 以前は、 `MASTER_SITE_SUBDIR` と `PATCH_SITE_SUBDIR` 要素のいずれにおいても終端記号 `/` は不要だったので、互換性を保つために、 接尾辞の直前の文字が `/` でなければ、 要素の接尾辞が `:n` であっても、 グループの接尾語ではなく、 要素の有効な一部分として扱われます。 <<ports-master-sites-n-example-detailed-use-master-site-subdir>> と <<ports-master-sites-n-example-detailed-use-complete-example-master-sites>> の両方をご覧ください。
++
+[[ports-master-sites-n-example-detailed-use-master-site-subdir]]
+.`MASTER_SITE_SUBDIR` における `MASTER_SITES:n` の詳細な使用法
+[example]
+====
+[.programlisting]
+....
+MASTER_SITE_SUBDIR=     old:n new/:NEW
+....
+
+*** グループ `DEFAULT` に属するディレクトリ -> old:n
+*** グループ `NEW` に属するディレクトリ -> new
+
+====
++
+[[ports-master-sites-n-example-detailed-use-complete-example-master-sites]]
+.カンマ演算子、複数のファイル、複数のサイト、 複数のサブディレクトリと合わせた `MASTER_SITES:n` の詳細な使用法
+[example]
+====
+[.programlisting]
+....
+MASTER_SITES=   http://site1/%SUBDIR%/ http://site2/:DEFAULT \
+                http://site3/:group3 http://site4/:group4 \
+                http://site5/:group5 http://site6/:group6 \
+                http://site7/:DEFAULT,group6 \
+                http://site8/%SUBDIR%/:group6,group7 \
+                http://site9/:group8
+DISTFILES=      file1 file2:DEFAULT file3:group3 \
+                file4:group4,group5,group6 file5:grouping \
+                file6:group7
+MASTER_SITE_SUBDIR=     directory-trial:1 directory-n/:groupn \
+                        directory-one/:group6,DEFAULT \
+                        directory
+....
+
+上の例は、次のような細かく分けた取得を実現します。 サイトは、利用される順番で挙げられています。
+
+*** [.filename]#file1# は次のサイトから取得されます。
+
+**** `MASTER_SITE_OVERRIDE`
+**** http://site1/directory/
+**** http://site1/directory-one/
+**** http://site1/directory-trial:1/
+**** http://site2/
+**** http://site7/
+**** `MASTER_SITE_BACKUP`
+
+*** [.filename]#file2# は、[.filename]#file1# と同じグループに属しているので、 まったく同じように取得されます。
+
+**** `MASTER_SITE_OVERRIDE`
+**** http://site1/directory/
+**** http://site1/directory-one/
+**** http://site1/directory-trial:1/
+**** http://site2/
+**** http://site7/
+**** `MASTER_SITE_BACKUP`
+
+*** [.filename]#file3# は次のサイトから取得されます。
+
+**** `MASTER_SITE_OVERRIDE`
+**** http://site3/
+**** `MASTER_SITE_BACKUP`
+
+*** [.filename]#file4# は次のサイトから取得されます。
+
+**** `MASTER_SITE_OVERRIDE`
+**** http://site4/
+**** http://site5/
+**** http://site6/
+**** http://site7/
+**** http://site8/directory-one/
+**** `MASTER_SITE_BACKUP`
+
+*** [.filename]#file5# は次のサイトから取得されます。
+
+**** `MASTER_SITE_OVERRIDE`
+**** `MASTER_SITE_BACKUP`
+
+*** [.filename]#file6# は次のサイトから取得されます。
+
+**** `MASTER_SITE_OVERRIDE`
+**** http://site8/directory-one/
+**** `MASTER_SITE_BACKUP`
+
+====
+
+. `MASTER_SITE_SOURCEFORGE` のように、[.filename]#bsd.sites.mk# で定義される特別な変数をグループに割り当てるにはどうすればよいですか?
++ 
+<<ports-master-sites-n-example-detailed-use-master-site-sourceforge>> をご覧ください。
++
+[[ports-master-sites-n-example-detailed-use-master-site-sourceforge]]
+.`MASTER_SITE_SOURCEFORGE` と合わせた `MASTER_SITES:n` の詳しい使用法
+[example]
+====
+[.programlisting]
+....
+MASTER_SITES=   http://site1/ ${MASTER_SITE_SOURCEFORGE:S/$/:sourceforge,TEST/}
+DISTFILES=      something.tar.gz:sourceforge
+....
+
+====
++ 
+[.filename]#something.tar.gz# は、`MASTER_SITE_SOURCEFORGE` に含まれるあらゆるサイトから取得されます。
+. これを `PATCH*` 変数と組み合わせて使うにはどうすればよいでしょうか?
++ 
+すべての例で `MASTER*` 変数を使っていますが、<<ports-master-sites-n-example-detailed-use-patch-sites>> にあるように、`PATCH*` 変数に対してもまったく同じように働きます。
++
+[[ports-master-sites-n-example-detailed-use-patch-sites]]
+.`PATCH_SITES` と合わせた `MASTER_SITES:n` の簡単な使用法
+[example]
+====
+[.programlisting]
+....
+PATCH_SITES=    http://site1/ http://site2/:test
+PATCHFILES=     patch1:test
+....
+
+====
+
+=== ports について何が変更され、何が変わらないのでしょうか?
+
+[lowerroman]
+. 現在のすべての ports はそのまま変わりません。 `MASTER_SITES:n` 機能のコードは、<<porting-master-sites-n-group-semantics,7>> で述べた文法に従う `:n` のような形式が後ろについた要素がある場合だけ動作します。
+
+[[porting-master-sites-n-what-changes-in-port-targets]]
+. port を make する際のターゲットにも変更はありません。 `checksum`, `makesum`, `patch`, `configure`, `build` 等です。 もちろん、`do-fetch`, `fetch-list`, `master-sites` それから `patch-sites` は例外です。
+
+** `do-fetch` は、新しくグループ分けの接尾辞のついた `DISTFILES` と `PATCHFILES` を設定します。それぞれが、対応する `MASTER_SITES` と `PATCH_SITES` を利用し、さらに対応する `MASTER_SITE_SUBDIR` と `PATCH_SITE_SUBDIR` を利用します。<<ports-master-sites-n-example-detailed-use-complete-example-master-sites>> をご覧ください。
+** `fetch-list` は、`do-fetch` と同じようにグループを利用するということを除いて、以前の `fetch-list` のように動作します。
+** `master-sites` および `patch-sites` は、 (古いバージョンと互換性がなくなり) `DEFAULT` グループの要素を返すだけになっています。 実際は、それぞれ `master-sites-default` および `patch-sites-default` というターゲットを実行します。
++ 
+さらに、 `MASTER_SITES` や `PATCH_SITES` を直接確認するよりも、 `master-sites-all` または `patch-sites-all` のどちらかのターゲットを使う方がよいです。 また、将来のバージョンでも直接確認ができるかどうかは保証されていません。 これら新規 port ターゲットについては、<<porting-master-sites-n-new-port-targets-master-sites-all,B>> の項をご確認ください。
+
+. 新規の port ターゲット
+.. `MASTER_SITES` および `PATCH_SITES` のそれぞれについて、 グループ _n_ の要素を表示する `master-sites-_n_` および `patch-sites-_n_` ターゲットがあります。たとえば、 `master-sites-DEFAULT` および `patch-sites-DEFAULT` のいずれも `DEFAULT` グループの要素を返し、 `master-sites-test` および `patch-sites-test` は `test` グループの要素を返します。
+
+[[porting-master-sites-n-new-port-targets-master-sites-all]]
+.. 以前の `master-sites` および `patch-sites` が行っていた作業を行う `master-sites-all` および `patch-sites-all` という新たなターゲットがあります。 これらのターゲットは、 すべてのグループの要素をすべてが同じグループに属しているかのように返します。 ただし、 `master-sites-all` および `patch-sites-all` のそれぞれについて、 `DISTFILES` や `PATCHFILES` で定義されているグループと同じ数だけ `MASTER_SITE_BACKUP` と `MASTER_SITE_OVERRIDE` を表示します。
+
+=== `DIST_SUBDIR`
+
+[.filename]#/usr/ports/distfiles# ディレクトリ内をあまり散らかさないようにしてください。 たくさんのファイルを取ってくる port や、他の port と名前の衝突が起きる恐れのあるファイル ([.filename]#Makefile# など) がある場合には、 `DIST_SUBDIR` に port の名前 (`${PORTNAME}` か `${PKGNAMEPREFIX}${PORTNAME}` を使うといいでしょう) を入れてください。すると `DISTDIR` がデフォルトの [.filename]#/usr/ports/distfiles# から [.filename]#/usr/ports/distfiles/DIST_SUBDIR# に変更され、 取ってきたファイルはすべてそのサブディレクトリの中に置かれるようになります。
+
+また、 ファイルを取ってくるときにバックアップサイトとして使われる [.filename]#ftp.FreeBSD.org# のディレクトリ名にもこの変数の値が使われます (`Makefile` の中で `DISTDIR` を明示的に指定した場合、 ローカルのファイルを置くところは変わりますが、 このサイトのディレクトリ名は変わりません。 必ず `DIST_SUBDIR` を使うようにしてください)。
+
+[NOTE]
+====
+この変数は [.filename]#Makefile# 中で明示的に指定された `MASTER_SITES` には影響しません。
+====
+
+[[makefile-maintainer]]
+== `MAINTAINER`
+
+あなたのメールアドレスをここに入れてください。 お願いします。 _:-)_
+
+`MAINTAINER` の値は、コメント部のない単一のアドレスしか受け付けられません。 `user@hostname.domain` という形式を利用してください。この項目には、 あなたの本名などの説明用のテキストは一切いれないでください。 (そうしても、ただ [.filename]#bsd.port.mk# が混乱するだけです)。そういう情報は [.filename]#pkg-descr# に書いてください。
+
+保守担当者 (maintainer) の責任に関する詳細説明は、 link:{developers-handbook}#POLICIES-MAINTAINER[ Makefile 中の MAINTAINER] の セクションを参照してください。
+
+Port のメンテナがユーザからの更新要求に (主な公休日を除いて) 2 週間返答しなかったら、 保守担当者の持ち時間が切れたとみなして、 保守担当者の明示的な了承なしに更新して構いません。 保守担当者が 3 ヶ月以内に返答しない場合は、 その保守担当者は無断で不在にしているとみなして、 問題となっている port の保守担当者を入れ替えても構いません。 例外となるは、{portmgr} または {security-officer} が保守しているものです。このグループが保守している port に対しては許可を得ずにコミットしてはいけません。
+
+{portmgr} は、何か理由があれば、 誰かを保守担当から外したり、別の方を担当者にする権利を持ちます。 {security-officer} は、セキュリティ上の理由で、 保守担当者の権限を剥奪したり担当者を変更する権利を持ちます。
+
+[[makefile-comment]]
+== `COMMENT`
+
+その port の 1 行の説明です。 コメントにはパッケージ名 (やソフトウェアのバージョン) を__入れないでください__。 コメントは大文字で始め、最後にピリオドは付けないでください。 たとえば、こんな具合です。
+
+[.programlisting]
+....
+COMMENT=       A cat chasing a mouse all over the screen
+....
+
+[.filename]#Makefile# 中で、 COMMENT 変数は MAINTAINER 変数の直後においてください。
+
+COMMENT 行は、port の 1 行の要約としてユーザに示されるので、 70 文字未満に抑えるようにしてください。
+
+[[makefile-depend]]
+== 依存関係
+
+多くの port は他の port に依存しています。 必要なものすべてがユーザのマシン上に存在することを 保証するために使用可能な、7 つの変数が用意されています。 よくあるケースのためにあらかじめ設定された依存変数に加え、 いくつかの依存関係の制御のための変数があります。
+
+=== `LIB_DEPENDS`
+
+その port が必要とする共有ライブラリを、この変数で指定します。 (訳注: libc 等、標準のライブラリは指定する必要がありません。) これは __lib:dir__``:target`` という 組のリストです。 __lib__ が共有ライブラリの名前、 __dir__ が そのライブラリが見つからない場合に インストールされる port のディレクトリ、 __target__が そのディレクトリで呼ばれるターゲットです。 たとえば、
+
+[.programlisting]
+....
+LIB_DEPENDS= jpeg.9:${PORTSDIR}/graphics/jpeg:install
+....
+
+と指定されていた場合、まずメジャーバージョンが 9 の jpeg 共有ライブラリがインストールされているかどうかを確認します。 インストールされていない場合には、ports ツリーの [.filename]#graphics/jpeg# サブディレクトリに移動し、 _target_ のコンパイルとインストールを行ないます。 _target_ の部分は、 それが `DEPENDS_TARGET` (デフォルトでは `install`) と 等しいときには省略することができます。
+
+[NOTE]
+====
+先頭の _lib_ の部分は `ldconfig -r | grep -wF` への引数になります。 この変数には正規表現を入れないようにしてください。 
+====
+
+この依存関係のチェックは、 `extract` ターゲットと `install` ターゲットの中で、2 回行なわれます。 (訳注: これは、その port をビルドするマシンとインストールされるマシンが違う場合、 どちらのマシンでもそのライブラリが利用できることを確認するためです)。 同様に、依存するライブラリの名前は package 中にも書き込まれていて、 man:pkg_add[1] 実行時にそのライブラリがユーザのシステムに存在していなければ、 自動的にインストールされます。
+
+=== `RUN_DEPENDS`
+
+この port の実行時に必要となるプログラム、 またはファイルがあるときにはこの変数で指定します。これは __path:dir__``:target`` という組のリストです。 _path_ がファイルまたはプログラムの名前、 _dir_ が それが見つからない場合にインストールされる port のディレクトリ、 _target_ が そのディレクトリで呼ばれるターゲットです。 _path_ の最初の文字がスラッシュ (`/`) の場合にはファイルかディレクトリとみなし、 存在するかどうか `test -e` を使ってチェックします。 そうでない場合には実行可能ファイルであると考えて、 そのプログラムがユーザのサーチパス上にあるかどうか `which -s` を使って確認します。
+
+たとえば Makefile に以下のように書いてあるとします。
+
+[.programlisting]
+....
+RUN_DEPENDS=   ${LOCALBASE}/etc/innd:${PORTSDIR}/news/inn \
+                wish8.0:${PORTSDIR}/x11-toolkits/tk80
+....
+
+まず、[.filename]#/usr/local/etc/innd# というファイルかディレクトリが存在するか確認します。 存在しない場合には、ports ツリーの [.filename]#news/inn# というサブディレクトリで ビルドとインストールを行ないます。 さらに、`wish8.0` というプログラムがユーザのサーチパス中にあるかどうか探します。 ない場合には同じく ports ツリーの [.filename]#x11-toolkits/tk80# というサブディレクトリでコンパイルとインストールを行ないます。
+
+[NOTE]
+====
+この例で、`innd` は実際にはプログラムです。 このように、プログラムであっても一般ユーザのサーチパスに 含まれているとは考えにくいところに置かれているものの場合には、 絶対パスで指定してください。
+====
+
+この依存関係は `install` ターゲット中でチェックされます。 また、man:pkg_add[1] によるインストールの際に、その package が依存するものがユーザのシステムに存在しない場合には自動的に追加インストールできるように、 依存するものの名前も package 中に記録されます。 _target_ の部分が `DEPENDS_TARGET` と同じ場合には、 _target_ の部分を省略することができます。 
+
+=== `BUILD_DEPENDS`
+
+この port のビルド時に必要となるプログラム、 またはファイルがあるときにはこの変数で指定します。 `RUN_DEPENDS` と同様に、これは __path:dir__``:target`` という組のリストです。たとえば、 
+[.programlisting]
+....
+BUILD_DEPENDS=unzip:${PORTSDIR}/archivers/unzip
+....
+
+と指定されていた場合、まず `unzip` という名前のプログラムがインストールされているかどうかを確認します。 インストールされていない場合には ports ツリーの [.filename]#archivers/unzip# サブディレクトリに移動し、 ビルドとインストールを行ないます。
+
+[NOTE]
+====
+ここで言う"ビルド"とは、 ファイルの展開からコンパイルまでのすべての処理を意味します。 この依存関係は、`extract` ターゲットの中でチェックされます。 _target_ の部分は、 `DEPENDS_TARGET` と同じ場合には省略することができます。
+====
+
+=== `FETCH_DEPENDS`
+
+この port を取ってくるのに必要となるプログラム、 またはファイルがあるときにはこの変数で指定します。 上の二つと同様に、これは __path:dir__``:target`` という組のリストです。たとえば、 
+[.programlisting]
+....
+FETCH_DEPENDS=ncftp2:${PORTSDIR}/net/ncftp2
+....
+
+と指定されていれば、`ncftp2` という名前のプログラムを探します。 見つからない場合には、ports ツリーの [.filename]#net/ncftp2# サブディレクトリでビルドとインストールを行ないます。
+
+この依存関係は `fetch` ターゲット中でチェックされます。 _target_ の部分は、 `DEPENDS_TARGET` と同じ場合には省略することができます。
+
+=== `EXTRACT_DEPENDS`
+
+この変数には、この port の展開に必要な実行ファイルや、他のファイルを指定します。 前の変数と同じく、これは __path:dir__``:target`` のタプルの一覧です。たとえば、
+[.programlisting]
+....
+EXTRACT_DEPENDS=
+	    unzip:${PORTSDIR}/archivers/unzip
+....
+
+は、`unzip` という実行形式のファイルがあるかどうか確認し、 見つからなければ、ports ツリーの [.filename]#archivers/unzip# サブディレクトリに降りてビルドおよびインストールを行います。
+
+依存関係は `extract` ターゲットにおいて確認されます。 _target_ 部分が `DEPENDS_TARGET` と同じなら、省いて構いません。
+
+[NOTE]
+====
+この変数は、展開が働いておらず (デフォルトでは `gzip` を仮定しています)、 <<use-vars>> で説明されている `USE_ZIP` や `USE_BZIP2` を使っても動かない場合にだけ使ってください。
+====
+
+=== `PATCH_DEPENDS`
+
+この変数は、この port がパッチを当てる際に必要とする実行ファイルや他のファイルを指定します。 前の変数と同じく、これは __path:dir__``:target`` のタプルの一覧です。たとえば、
+[.programlisting]
+....
+ PATCH_DEPENDS=
+	    ${NONEXISTENT}:${PORTSDIR}/java/jfc:extract
+....
+
+は、ports ツリーの [.filename]#java/jfc# サブディレクトリに移動して、 ビルドおよびインストールを行います。
+
+依存関係は、`patch` ターゲットにおいて確認されます。_target_ 部分が `DEPENDS_TARGET` と同じなら省略して構いません。
+
+=== `DEPENDS`
+
+上記のいずれにもあてはまらないような依存関係がある場合、 または他の port がインストールされているだけではなく ソースが展開されている必要がある場合には、この変数を使います。 これは上記の四つと違い、特に"確認"するものが ありませんので、 __dir__``:target`` という形式のリストになります。 _target_ の部分は `DEPENDS_TARGET` と同じ場合には省略することができます。
+
+[[use-vars]]
+=== `USE_*`
+
+多くの ports に共通の依存関係をカプセル化するために、 いくつもの変数が存在しています。
+
+.`USE_*` 変数
+[cols="1,1", frame="none", options="header"]
+|===
+| 変数
+| 意味
+
+|`USE_BZIP2`
+|その port の tarball は `bzip2` で圧縮されています。
+
+|`USE_ZIP`
+|その port の tarball は `zip` で圧縮されています。
+
+|`USE_GMAKE`
+|その port をビルドするのに `gmake` が必要です。
+
+|`USE_PERL5`
+|その port をビルドしてインストールするのに `perl 5` が必要です。 `perl` に関連して設定可能な他の変数については <<using-perl>> をご覧ください。
+
+|`USE_X_PREFIX`
+|その port は `PREFIX` ではなく `X11BASE` にインストールされます。 X11 に関連して設定可能な他の変数については、 <<using-x11>> をご覧ください。
+
+|`USE_AUTOMAKE`
+|その port のビルドに GNU `automake` が使われます。`automake` に関わる他に設定可能な変数については、 <<using-automake>> をご覧ください。
+
+|`USE_AUTOCONF`
+|その port のビルドに GNU `autoconf` が使われます。`autoconf` に関わる他に設定可能な変数については、 <<using-automake>> をご覧ください。
+
+|`USE_LIBTOOL`
+|その port のビルドに GNU `libtool` が使われます。`libtool` に関わる他に設定可能な変数については、 <<using-automake>> をご覧ください。
+
+|`GMAKE`
+|`gmake` が `PATH` に入っていない場合のフルパス
+
+|`USE_BISON`
+|その port のビルドに `bison` が使われます。
+
+|`USE_SDL`
+|その port のビルドや実行に `SDL` が使われます。 `USE_SDL` の使い方について、詳しくは <<using-sdl>> をご覧ください。
+
+|`NO_INSTALL_MANPAGES`
+|`install.man` ターゲットを使いません。
+|===
+
+その ports が X Window System を必要とするのであれば、 `USE_XLIB=yes` を定義してください (これは `USE_IMAKE` が定義されていれば自動的に定義されます)。 BSD `make` ではなく GNU `make` を必要とする場合には `USE_GMAKE=yes` を、 GNU autoconf を実行する必要がある場合には `USE_AUTOCONF=yes` を、 最新の qt toolkit を使用する場合には `USE_QT=yes` を、 `perl` 言語のバージョン 5 を必要とする場合には `USE_PERL5=yes` を定義してください (特に最後のものは重要です。 FreeBSD のバージョンにより、基本システムに `perl5` が含まれていたり、いなかったりします)。
+
+=== 依存関係に関する注意
+
+上で述べたように、依存する ports が必要になったときに呼ばれるデフォルトのターゲットは `DEPENDS_TARGET` で、そのデフォルトは `install` です。 これはユーザが使用する変数であり、 port の [.filename]#Makefile# で定義するものではありません。 もし、その port が特別な方法で依存関係を扱う必要がある場合には、 `DEPENDS_TARGET` を再定義するのではなく `*_DEPENDS` 変数の `:target` 部分を使用してください。
+
+`make clean` と入力したときには、 その port が依存する port も自動的に clean されます。 そうならないようにしたい場合には、 環境変数 `NOCLEANDEPENDS` を設定してください。KDE, GNOME や Mozilla のように、再ビルドするのに時間がかかる port に依存している場合は特に望ましいかもしれません。
+
+無条件に他の port に依存させるには、 `BUILD_DEPENDS` や `RUN_DEPENDS` の最初のフィールドに `${NONEXISTENT}` という変数を指定してください。 これは、他の port のソースが必要なときのみ使用してください。 ターゲットも指定することで、 コンパイルの時間を節約できる場合もあります。 たとえば 
+[.programlisting]
+....
+BUILD_DEPENDS=   ${NONEXISTENT}:${PORTSDIR}/graphics/jpeg:extract
+....
+
+とすると、常に `jpeg` port のディレクトリに行ってソースの展開を行ないます。
+
+あなたがやりたいことが他の方法ではできない場合以外には `DEPENDS` を使わないでください。 これは常に他の port の作成を行ない (さらにデフォルトでは インストールも行ない)、package まで作成します。 この動作が本当に所望のものでしたら、 それを `BUILD_DEPENDS` と `RUN_DEPENDS` に書くべきでしょう - 少なくとも意図を明確にすることができます。
+
+=== オプション選択可能な依存ライブラリ
+
+巨大なアプリケーションの中には、 複数のコンフィギュレーションでビルドすることができるものがあります。 つまり、いくつもの外部ライブラリやアプリケーションの中の、 あるものが利用可能な場合に、 それを拡張機能として使用するように設定することができるということです。 それらのライブラリやアプリケーションを、 必ずしも すべてのユーザが必要としているわけではありませんので、ports システムではどのコンフィギュレーションがビルドされるべきかを port 作者が決めるために使えるフックを用意しています。 これらを適切にサポートすることにより、ユーザをハッピーにしたり、 port 1 つ分のコストで 2 つまたはそれ以上の port を提供するのと同様の効率化を行なうことが可能です。
+
+これらのフックのうちで最も簡単に使えるものは `WITHOUT_X11` でしょう。 その port が X Window System のサポートありと、 サポートなしの設定でビルドできるのであれば、 通常は X Window System サポートありでビルドするべきでしょう。 ビルド時に `WITHOUT_X11` が定義されていれば、 その時は X Window System サポートなしのバージョンが ビルドされるべきです。
+
+GNOME 環境の様々なパーツも、そのようなノブ (フック) を持っていますが、それらは幾分使いにくいものです。 [.filename]#Makefile# 中で その目的に使用される変数は `WANT_*` と `HAVE_*` になります。 そのアプリケーションが、 以下に示されている依存ライブラリの一つについて、 サポートあり、なしの両方でビルドできる場合、 [.filename]#Makefile# には `WANT_PKG` をセットする必要があります。 そして、ビルド時に `HAVE_PKG` が定義されていれば `PKG` を使うバージョンがビルドされることになります。
+
+現在、このような形でサポートされている `WANT_*` 変数は、 `WANT_GLIB`, `WANT_GTK`, `WANT_ESOUND`, `WANT_IMLIB`, そして `WANT_GNOME` です。
+
+=== 致命的な依存の循環
+
+[IMPORTANT]
+====
+Ports ツリーに循環する依存性を持ち込まないでください!
+====
+
+Ports の構築技術は循環依存性を許容していません。 循環依存させてしまうと、たちまちどこかの誰かがインストールしている FreeBSD を駄目にしてしまい、その数はまたたく間に増えて行きます。 この問題は見付けるのが非常に難しいです。 問題がありそうな場合は、その変更を行う前に `cd /usr/ports; make index` を実行するようにしてください。 この処理は古いマシンではかなり遅いかもしれませんが、 (あなたも含めて) 多くの人がその処理を行って嘆くことにならずに済ませられるでしょう。
+
+[[makefile-wrkdir]]
+== 作業ディレクトリの指定
+
+それぞれの port は作業ディレクトリに展開されるので、 作業ディレクトリは書き込み可能でなければなりません。 Ports システムは、デフォルトでは `DISTFILES` が `${DISTNAME}` というディレクトリに展開されると想定します。 つまり、次のように設定していたら、
+
+[.programlisting]
+....
+PORTNAME=      foo
+PORTVERSION=   1.0
+....
+
+その port の配布ファイルの内容は、最上位のディレクトリが [.filename]#foo-1.0# で、 残りのファイルはそのディレクトリの下に置かれているということです。
+
+そうでない場合に上書きできる変数がたくさんあります。
+
+=== `WRKSRC`
+
+この変数は、 アプリケーションの配布ファイルが展開された時に作成されるディレクトリの名称を示します。 前の例で、([.filename]#foo-1.0# ではなく) [.filename]#foo# というディレクトリに展開されるなら、
+
+[.programlisting]
+....
+WRKSRC=      ${WRKDIR}/foo
+....
+
+または、
+
+[.programlisting]
+....
+WRKSRC=      ${WRKDIR}/${PORTNAME}
+....
+
+と書いてください。
+
+=== `NO_WRKSUBDIR`
+
+その port がサブディレクトリに展開しないのであれば、 それを示すために `NO_WRKSUBDIR` を設定してください。
+
+[.programlisting]
+....
+NO_WRKSUBDIR= yes
+....
+
+[[conflicts]]
+== `CONFLICTS`
+
+あなたが作成している package が他の packageと (ファイルの衝突や実行時の非互換性により) 共存できないのであれば、`CONFLICTS` 変数にその package の名称を挙げてください。 `*` や `?` のようなシェルの補完が利用できます。package 名は [.filename]#/var/db/pkg# にあるのと同じ形式で並べてください。
+
+[[makefile-build]]
+== ビルドのメカニズム
+
+そのソフトウェアがビルドの際に GNU `make` を使う場合には、`USE_GMAKE=yes` をセットしてください。 `configure` を使う場合には、 `HAS_CONFIGURE=yes` をセットしてください。 GNU `configure` を使う場合には、 `GNU_CONFIGURE=yes` をセットしてください (これにより `HAS_CONFIGURE` もセットされます)。 `configure` に追加の引数を渡したい場合には、 追加部分を `CONFIGURE_ARGS` に指定してください。 (デフォルトの引数リストは、GNU `configure` では `--prefix=${PREFIX}` に、 GNU でない `configure` では空リストになります。) GNU `autoconf` を使う場合には、 `USE_AUTOCONF=yes` をセットしてください。 これにより `GNU_CONFIGURE` もセットされ、 `configure` を実行する前に `autoconf` が実行されます。
+
+[NOTE]
+====
+もしそのパッケージが GNU `configure` を使っていて、作成された実行形式のファイルが [.filename]#i386-portbld-freebsd4.7-#_appname_ のような"奇妙な"名称だった場合は、さらに `CONFIGURE_TARGET` を上書きして、新しいバージョンの `autoconf` で生成されたスクリプトが要求する方法でターゲットを指定する必要があります。 [.filename]#Makefile# の `GNU_CONFIGURE=yes` 行のすぐ後に次の行を追加してください。
+
+`CONFIGURE_TARGET=--build=${MACHINE_ARCH}-portbld-freebsd${OSREL}`
+====
+
+そのソフトウェアが X Window System のアプリケーションなどで、 `imake` を使って [.filename]#Imakefile# から [.filename]#Makefile# を作成する場合には、 `USE_IMAKE=yes` を指定してください。 そうするとコンフィグレーションステージで自動的に `xmkmf -a` が実行されます。 もし `-a` フラグが問題を引き起こすなら、 さらに `XMKMF=xmkmf` をセットしてください。 もし、その port が `imake` を使用するけれども `install.man` ターゲットを持たない場合には、 `NO_INSTALL_MANPAGES=yes` をセットしてください。 ついでに、そのソフトウェアの作者を探し出して八つ裂きにするといいでしょう。 _(-_-#)_
+
+そのソフトウェアの元々の [.filename]#Makefile# が `all` 以外のものをメインのターゲットとしている場合には、それを `ALL_TARGET` に指定してください。 `install` と `INSTALL_TARGET` も同様です。

@@ -1,0 +1,427 @@
+---
+title: 章 12. FreeBSD 開機程序
+part: 部 III. 系統管理
+prev: books/handbook/config
+next: books/handbook/security
+---
+
+[[boot]]
+= FreeBSD 開機程序
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例 
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 12
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/boot/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/boot/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/boot/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-tw/mailing-lists.adoc[]
+include::shared/zh-tw/urls.adoc[]
+include::shared/zh-tw/teams.adoc[]
+
+toc::[]
+
+[[boot-synopsis]]
+== 概述
+
+從開啟電腦到載入作業系統的這段流程稱為 "開機程序" (Bootstrap process) 或 "開機" (Booting)。FreeBSD 的開機程序提供大量的客製化彈性，包含可選擇安裝在同電腦的其他的作業系統、不同版本的作業系統或不同核心的作業系統的功能。
+
+本章會詳細說明可以設定的選項。示範如何自訂 FreeBSD 開機流程，包含其中所有會發生的事，直到啟動 FreeBSD 核心、偵測裝置及啟動 man:init[8]。這些事會發生在開機訊息的文字顏色會從亮白變成灰色之間。
+
+在閱讀本章之後，您會了解：
+
+* FreeBSD 開機系統的元件以及它們如何互動。
+* FreeBSD 開機程式中各元件可使用的選項，用來控制開機程序。
+* 如何設定自訂的開機啟動畫面 (Splash screen)。
+* 設定 Device Hints 的基礎。
+* 如何開機進入單人及多人模式以及如何正確關閉 FreeBSD 系統。
+
+[NOTE]
+====
+本章僅說明 FreeBSD 在 x86 及 amd64 系統上執行的開機流程。
+====
+
+[[boot-introduction]]
+== FreeBSD 開機程序
+
+打開電腦並啟動作業系統的這個動作呈現了一個有趣的困境。照道理，電腦在啟動作業系統之前並不知道要如何做任何事情，這些事情之中包括從磁碟執行程式。如果電腦無法在沒有作業系統的情況下執行程式，而作業系統的程式本身又在磁碟上，那麼作業系統要如何啟動呢?
+
+這個問題如同 The Adventures of Baron Munchausen 一書中的一個角色掉進了洞裡，他抓住了靴子上的拔靴帶 (Bootstrap) 才把自己拉了出來，因此在早期電腦領域用 _bootstrap_ 一詞來指載入作業系統的機制，後來被縮短為 "booting"。
+
+在 x86 硬體上，基本輸入/輸出系統 (Basic Input/Output System, BIOS) 負責載入作業系統。 BIOS 會找到硬碟上的主開機記錄區 (Master Boot Record, MBR)，該記錄區必須位於磁碟上的特定位置。BIOS 有足夠的知識可以載入並執行這個 MBR，並且假設這個 MBR 在 BIOS 的協助下可以完成接下來載入作業系統的工作。
+
+[NOTE]
+====
+FreeBSD 在較舊的 MBR 標準與較新的 GUID 分割區表 (GUID Partition Table, GPT) 上都能夠開機 (Booting)。GPT 磁碟分割通常會在有支援統一可延伸韌體介面 (Unified Extensible Firmware Interface, UEFI) 的電腦上找到。不論如何，FreeBSD 即使在只有傳統 BIOS 的機器上，也可以使用 man:gptboot[8] 由 GPT 分割區開機。直接使用 UEFI 開機的開發工作正在進行中。
+====
+
+在 MBR 中的程式通常會稱作開機管理程式 (_Boot manager_)，特別是那些會與使用者互動的程式。開機管理程式通常會另一部份的程式會存放於磁碟的第一個磁軌或檔案系統。開機管理程式的例子有標準 FreeBSD 開機管理程式 boot0 又稱 Boot Easy 以及 Grub 常用於各種 Linux(TM) 發行版。
+
+若只有安裝一個作業系統，MBR 會搜尋磁碟上第一個可開機的 (使用中) 切割區 (Slice)，然後執行在該切割區上的程式來載入剩下的作業系統。當有多個作業系統存在時，可以安裝可顯示作業系統清單的開機管理程式，以讓使用者可以選擇要啟動的作業系統。
+
+剩餘的 FreeBSD 開機系統分成三個階段，第一個階段只知道如何讓電腦進入特定狀態並執行第二階段，第二個階段在執行第三階段之前會做的事比較多一點，第三個階段會完成載入作業系統的工作。把工作分成三個階段的原因是 MBR 有限制在階段一與階段二能夠執行程式的大小。將這些工作連結在一起讓 FreeBSD 能夠提供更有彈性的載入程式。
+
+核心會接著開始偵測裝置並初始化這些裝置供使用。核心開機程序完成之後，核心便會傳送控制權給使用者程序 man:init[8]，這個程序會確保磁碟在可以使用的狀態，然後啟動使用者層級的資源設置來掛載檔案系統、設定網路卡以能夠連線網路、啟動那些被設定在開機時要啟動的程序。
+
+本章節將更詳細介紹這些階段並示範如何與 FreeBSD 開機程序互動。
+
+[[boot-boot0]]
+=== 開機管理程式
+
+有時會稱在 MBR 中的開機管理程式為開機程序的 _第零階段 (Stage zero)_，FreeBSD 預設會使用 boot0 開機管理程式。
+
+由 FreeBSD 安裝程式所安裝的 MBR 便是以 [.filename]#/boot/boot0# 為基礎。boot0 的大小與容量被限制在 446 個位元組是由於切割表與 `0x55AA` 識別碼位於 MBR 的最末端。若安裝多個作業系統使用 boot0 ，則會在開機時顯示如下範例的訊息：
+
+[[boot-boot0-example]]
+.[.filename]#boot0# 螢幕截圖
+[example]
+====
+
+[source,bash]
+....
+F1 Win
+F2 FreeBSD
+
+Default: F2
+....
+
+====
+
+其作他作業統若在 FreeBSD 之後才安裝則會覆蓋現有的 MBR，若這件事發生了，或者要使用 FreeBSD MBR 取代現有的 MBR 可使用以下指令：
+
+[source,bash]
+....
+# fdisk -B -b /boot/boot0 device
+....
+
+其中 _device_ 開機磁碟，例如第一個 IDE 磁碟為 [.filename]#ad0#，第二個 IDE 控制器的第一個 IDE磁碟為 [.filename]#ad2#，第一個 SCSI 磁碟為 [.filename]#da0#。要建立自訂的 MBR 設定請參考 man:boot0cfg[8]。
+
+[[boot-boot1]]
+=== 階段一與階段二
+
+概念上，第一與第二個階段均為磁碟上同一個區域上同一個程式的一部份，由於空間上的限制，它們被分成兩部份，但是會一併安裝。它們會由 FreeBSD 安裝程式或 `bsdlabel` 從 [.filename]#/boot/boot# 複製而來。
+
+這兩個階段均位於檔案系統之外，在開機切割區的第一個磁軌，從第一個磁碟扇區 (Sector) 開始，這個位置便是 boot0 或其他開機管理程式所會儲存的地方，並會尋找可以執行的程式以繼續開機程序。
+
+第一個階段的 [.filename]#boot1# 非常的簡單，因為它只能有 512 位元組的大小。它只能認得儲存切割區資訊的 FreeBSD _bsdlabel_ 以及尋找並執行 [.filename]#boot2#。
+
+階段二 [.filename]#boot2# 稍微複雜一點，能夠理解 FreeBSD 檔案系統來搜尋檔案。它可以提供一個簡單的介面來選擇要執行的核心或載入程式。它所執行的載入程式 (loader) 更複雜並能讀取開機設定檔。若開機程序在階段二中斷，則會顯示以下的互動畫面：
+
+[[boot-boot2-example]]
+.[.filename]#boot2# 螢幕截圖
+[example]
+====
+
+[source,bash]
+....
+>> FreeBSD/i386 BOOT
+Default: 0:ad(0,a)/boot/loader
+boot:
+....
+
+====
+
+要更換已安裝的 [.filename]#boot1# 與 [.filename]#boot2# 可使用 `bsdlabel`，其中 _diskslice_ 是要開機的磁碟與切割區，例如 [.filename]#ad0s1# 代表第一個 IDE 磁碟的第一個切割區：
+
+[source,bash]
+....
+# bsdlabel -B diskslice
+....
+
+[WARNING]
+====
+
+若只使用磁碟名稱，如 [.filename]#ad0#，`bsdlabel` 便會以 "危險專用的模式" 來建立磁碟，而不會建立任何分割區。這個可能與預期的動作不同，所以在按下 kbd:[Return] 鍵之前請再次確認 _diskslice_。
+====
+
+[[boot-loader]]
+=== 階段三
+
+loader 是三階段開機程多的最後一個階段，載入程式位於檔案系統之中，通常在 [.filename]#/boot/loader#。
+
+loader 主要目地是利用擁有更複雜指令集的強大直譯器做為基礎的內建指令集提供一個互動的方式來做設定。
+
+在初始化的過程中，loader 會偵測 Console 與磁碟，並找出可以用來開機的磁碟。在由 Script 或互動輸入使用者指令的地方會設定相對的變數並啟動直譯器。
+
+loader 接著會讀取 [.filename]#/boot/loader.rc#，這個程式預設又會讀取 [.filename]#/boot/defaults/loader.conf# 來設定合理的變數預設值以及讀取 [.filename]#/boot/loader.conf# 來對這些變數做本地的更改。[.filename]#loader.rc# 接著會依這些變數來運作，讀取選擇模組與核心。
+
+最後，預設情況下 loader 會待候鍵盤輸入 10 秒鐘，若沒有被中斷的話會接著啟動核心。若被使用者中斷，則會向使用者顯示提示字元，此時使用可以使用指令集來調整變數、卸載所有模組、載入模組，然後最後開機或重新開機。<<boot-loader-commands>> 中列出了最常使用的 loader 指令。要完整了解所有可用的指令，請參考 man:loader[8]。
+
+[[boot-loader-commands]]
+.載入程式內建指令
+[cols="1,1", frame="none", options="header"]
+|===
+| 變數
+| 說明
+
+|autoboot _seconds_
+|若在指定時間 (秒) 內沒有中斷，會繼續啟動核心。此指令會顯示倒數，預設的時間為 10 秒鐘。
+
+|boot `[__-options__] [__kernelname]__`
+|使用任何指定的選項或核心名稱立即啟動核心，要由指令列指定核心名稱必須先執行 `unload`，否則會使用先前載入過的核心。若 _kernelname_ 不是完整的路徑則會搜尋 _/boot/kernel_ 及 _/boot/modules_ 底下。
+
+|boot-conf
+|依據指定的變數及最常用的 `kernel` 再做一次相同的自動模組設置。這只有在執行 `unload` 之後，尚未變更變數之前方可使用。
+
+|help `[__topic__]`
+|顯示自 [.filename]#/boot/loader.help# 取得的說明訊息。若指定的主題為 `index` 則會顯示所有可用的主題。
+
+|include _filename_ ...
+|讀取指定的檔案並直譯每一行。若有錯誤則會立即中止 `include`。
+
+|load `[-t __type__]` _filename_
+|由指定的檔案名稱載入核心、核心模組或指定類型的檔案。任何於 _filename_ 之後的參數都會被傳遞到該檔案。若 _filename_ 不是絕對位置則會搜尋 _/boot/kernel_ 及 _/boot/modules_ 底下。
+
+|ls [-l] `[__path__]`
+|顯示指定路徑中的檔案，若未指定路徑則會顯示根目錄中的檔案。若有指定 `-l`，則會連檔案大小一同顯示。
+
+|lsdev [-v]
+|列出所有的裝置，這些裝置可能可以用來載入模組。若有指定 `-v` 則會顯示更詳細的資訊。
+
+|lsmod [-v]
+|顯示已載入的模組。若有指定 `-v` 則會顯示更詳細的資訊。
+
+|more _filename_
+|顯示指定的檔案，並於每 `LINES` 行顯示後會暫停。
+
+|reboot
+|立即重新啟動系統。
+
+|set _variable_, set _variable_=_value_
+|設定指定的環境變數。
+
+|unload
+|移除所有已載入的模組。
+|===
+
+這裡有一些 loader 用法的實務範例。要使用一般的核心開機進入單使用者模式 (Single-user mode) 可：
+
+[source,bash]
+....
+ boot -s
+....
+
+要卸載一般的核心與模組，然後載入先前或另一個指定的核心可：
+
+[source,bash]
+....
+ unload
+ load kernel.old
+....
+
+使用 [.filename]#kernel.GENERIC# 來代表安裝程式使用的預設核心，或 [.filename]#kernel.old# 來代表在系統升級之前或設定自訂核心前安裝的核心。
+
+使用以下指令來使用另一個核心載入一般的模組：
+
+[source,bash]
+....
+ unload
+ set kernel="kernel.old"
+ boot-conf
+....
+
+要載入一個已自動化的核心設置 Script 可：
+
+[source,bash]
+....
+ load -t userconfig_script /boot/kernel.conf
+....
+
+[[boot-init]]
+=== 最終階段
+
+由 loader 或由會繞開 loader 的 boot2 載入核心之後，載入程式便會檢查是不有使用任何開機旗標，並根據需要調整開機的方式。<<boot-kernel>> 列出了常用的開機旗標，請參考 man:boot[8] 取得更多其他開機旗標的資訊。
+
+[[boot-kernel]]
+.開機時核心互動參數
+[cols="1,1", frame="none", options="header"]
+|===
+| 項目
+| 說明
+
+|`-a`
+|核心初始化時，會詢問要掛載為根檔案系統的裝置。
+
+|`-C`
+|由 CDROM 做為根檔案系統開機。
+
+|`-s`
+|開機進入單使用者模式。
+
+|`-v`
+|核心啟動時提供更多詳細資訊。
+|===
+
+一旦核心完成開機程序後，便會傳送控制權給使用者程序 man:init[8]，該程序位於 [.filename]#/sbin/init# 或在 `loader` 中的 `init_path` 變數所指的程式路徑。這是開機程序的最後一個階段。
+
+開機程序會確保系統上的檔案系統的一致性 (Consistency)，若 UFS 檔案系統不一致且 `fsck` 無法修時，init 會讓系統進入單使用者模式，以讓系統管理者能夠直接解決問題，否則系統會開機進入多使用者模式。
+
+[[boot-singleuser]]
+==== 單使用者模式
+
+使用者可以在開機時指定 `-s` 或在 loader 設定 `boot_single` 變數進入這個模式。也可以透過在多使用者模式執行 `shutdown now` 進入此模式。進入單使用者模式時會出現此訊息：
+
+[.programlisting]
+....
+Enter full pathname of shell or RETURN for /bin/sh:
+....
+
+若使用者按下 kbd:[Enter]，系統便會進入預設的 Bourne shell。要指定使用其他的 Shell 則輸入該 Shell 的完整路徑。
+
+單使用者模式通常用來修復因檔案系統不一致或開機設定檔發生錯誤造成的無法開機，也可以用來重設遺忘的 `root` 的密碼，因為在單使用者模式會給予對本地系統及設定檔完整的存取權。在這個模式下沒有網路功能。
+
+雖然單使用者模式對修復系統很有幫助，但若系統放在不安全的場所便會有安全上的風險。預設，開機進入單使用者模式後，任何能夠存取實體主機的使用者便擁有系統的完整控制權。
+
+若在 [.filename]#/etc/ttys# 系統 `console` 更改為 `insecure`，系統便會在初始化單使用者模式前先詢問 `root` 的密碼。這可增加一定程度的安全性，但便無法在忘記 `root` 密碼時重設密碼。
+
+[[boot-insecure-console]]
+.在 [.filename]#/etc/ttys# 設定不安全的 Console
+[example]
+====
+[.programlisting]
+....
+# name  getty                           type    status          comments
+#
+# If console is marked "insecure", then init will ask for the root password
+# when going to single-user mode.
+console none                            unknown off insecure
+....
+
+====
+
+不安全 (`insecure`) console 代表對 Console 的實體安全性評估為不安全 (insecure)，所以只有知道 `root` 密碼的人可以使用單使用者模式。
+
+[[boot-multiuser]]
+==== 多使用者模式
+
+若 init 正常找到檔案系統或在單使用者模式的使用者完成了操作並輸入 `exit` 離開單使用者模式，系統便會進入多使用者模式，在這個模式便會開始系統的資源設置。
+
+資源設置系統 (Resource configuration system) 會從 [.filename]#/etc/defaults/rc.conf# 讀取設定預設值以及從 [.filename]#/etc/rc.conf# 讀取系統特定的設定，接著會繼續掛載系統列於 [.filename]#/etc/fstab# 的檔案系統，也會啟動網路服務、其他的系統 Daemon，然後執行本地已安裝套件的啟動 Script。
+
+要了解更多有關資源設置系統，請參考 man:rc[8] 以及查看位於 [.filename]#/etc/rc.d# 的 Script。
+
+[[boot-splash]]
+== 設定開機啟動畫面
+
+正常 FreeBSD 系統開機會在 Console 顯示以一系列訊息來表示開機進度。開機啟動畫面 (Boot splash screen) 是另一種可以把所有開機偵測與服務啟動訊息隱藏的開機畫面，但即使開啟了啟動畫面，仍有有少數的開機載入程式的訊息，如：開機選項選單以及倒數時間的提示，仍會在開機時顯示。在開機程序時可以按下鍵盤上的按鍵來關閉顯示中的啟動畫面。
+
+FreeBSD 有兩種基本的環境可以使用，一種是預設的傳統虛擬 Console 指令列環境，在系統完成開機之後，便會顯示 Console 登入提示。另一種環境則是設定好的圖型化環境，請參考 crossref:x11[x11,X Window 系統] 以取得更多有關如何安裝與設定圖型化顯示管理程式與圖型化登入管理程式的資訊。
+
+系統開機之後，啟動畫面預設會作為螢幕保護程式，一段時間未使用便會顯示啟動畫面，並且會循環更改影像的亮度，從明亮到非常暗，然後再繼續循環。啟動螢幕保護程式的設定可在 [.filename]#/etc/rc.conf# 增加一行 `saver=` 來更改。有許多內建的螢幕保護程式可用，在 man:splash[4] 中有說明。`saver=` 的選項只會套用至虛擬 Console，對圖型化顯示管理程式並不會有任何影響。
+
+透過安裝 package:sysutils/bsd-splash-changer[] 套件或 Port，可在開機時顯示隨機挑選的啟動畫面。啟動畫面功能支援 256 色的點陣圖 ([.filename]#.bmp#)、ZSoft PCX ([.filename]#.pcx#) 或 TheDraw ([.filename]#.bin#) 格式。[.filename]#.bmp#, [.filename]#.pcx# 或 [.filename]#.bin# 圖片必須放在根分割區，例如於 [.filename]#/boot#。啟動圖片檔必須使用 320x200 像素或更低的解析度以能夠在標準 VGA 介面卡上運作，要在預設 256 色、320x200 像素或更低的解析度設定開機啟動圖片，可加入下行到 [.filename]#/boot/loader.conf#，並替換 _splash.bmp_ 為實際要使用的點陣圖檔：
+
+[.programlisting]
+....
+splash_bmp_load="YES"
+bitmap_load="YES"
+bitmap_name="/boot/splash.bmp"
+....
+
+要使用 PCX 檔則可替換點陣圖檔：
+
+[.programlisting]
+....
+splash_pcx_load="YES"
+bitmap_load="YES"
+bitmap_name="/boot/splash.pcx"
+....
+
+若要改使用 https://en.wikipedia.org/wiki/TheDraw[https://en.wikipedia.org/wiki/TheDraw] 格式的 ASCII 圖可：
+
+[.programlisting]
+....
+splash_txt="YES"
+bitmap_load="YES"
+bitmap_name="/boot/splash.bin"
+....
+
+要使用較大的圖片來填滿整個顯示畫面支援的解析度最大可至 1024x768 像素，VESA 模組也必須在系統開機時載入。若使用自訂的核心，請確定自訂核心設定檔中有含有 `VESA` 核心設定選項。要載入 VESA 模組來顯示啟動畫面可在 [.filename]#/boot/loader.conf# 上述例子中提到的三行之前加入下行：
+
+[.programlisting]
+....
+vesa_load="YES"
+....
+
+其他有用的 [.filename]#loader.conf# 選項還有：
+
+`beastie_disable="YES"`::
+這個會關閉開機選項選單的顯示，但倒數計時提示仍會在。即使關閉了開機選項選單，在倒數計時提示時輸入選擇的選項還是會啟動對應的開機選項。
+
+`loader_logo="beastie"`::
+這個選項會替換預設與上色的小惡魔圖示一起顯示於開機選項選單右側的 "FreeBSD" 文字。
+
+要取得更多資訊，請參考 man:splash[4], man:loader.conf[5] 以及 man:vga[4]。
+
+[[device-hints]]
+== 裝置提示
+
+在一開始系統啟動時，開機 man:loader[8] 會讀取 man:device.hints[5]，這個檔中儲存了核心開機資訊，即變數，有時我們又會稱其為 "裝置提示 (Device hints)"。這些 "裝置提示 (Device hints)" 會傳送給裝置驅動程式做裝置的設置使用。
+
+裝置提示也可在階段 3 開機載入程式提示時指定，如 <<boot-loader>> 中的示範，其變數也可以使用 `set` 增加、使用 `unset` 移除、使用 `show` 檢視，也可覆蓋設定在 [.filename]#/boot/device.hints# 的變數，但在開機載入程式輸入的裝置提示並不是永久有效的，在下一次重新開機久後便會失效。
+
+一旦系統開機後，便可使用 man:kenv[1] 來列出所有的變數。
+
+[.filename]#/boot/device.hints# 的語法為一個變數一行，使用井字號 "#" 做為註解符號，每一行的結構如下：
+
+[source,bash]
+....
+ hint.driver.unit.keyword="value"
+....
+
+在階段 3 開機載入程式的語法則為：
+
+[source,bash]
+....
+ set hint.driver.unit.keyword=value
+....
+
+其中 `driver` 為裝置驅動程式名稱、`unit` 為裝置驅動程式單位編號及 `keyword` 為提示關鍵字，關鍵字由以下選項所組成：
+
+* `at`: 指定裝置所連結的匯流排 (Bus)。
+* `port`: 指定要使用的 I/O 開始位置。
+* `irq`: 指定要使用的中斷請求編號。
+* `drq`: 指定 DMA 頻道編號。
+* `maddr`: 指定裝置所使用的實體記憶體位置。
+* `flags`: 設定提供給裝置的各種旗標位元。
+* `disabled`: 若設為 `1` 則可關閉該裝置。
+
+由於裝置驅動程式可能會接受或請求更多未列於此處的提示，建議先閱讀驅動程式的操作手冊。要取得更多資訊請參考 man:device.hints[5], man:kenv[1], man:loader.conf[5] 以及 man:loader[8]。
+
+[[boot-shutdown]]
+== 關機程序
+
+在使用 man:shutdown[8] 控制關閉時，man:init[8] 會嘗試執行 [.filename]#/etc/rc.shutdown# Script 接著傳送 `TERM` 信號給所有的程序，然後傳送 `KILL` 信號給未在時間內中止的程序。
+
+要在支援電源管理的架構與系統關閉 FreeBSD 主機電源，可使用 `shutdown -p now` 來立即關閉電源，要重新啟動 FreeBSD 系統可使用 `shutdown -r now`。操作人必須為 `root` 或為 `operator` 的成員才可執行 man:shutdown[8]，擁有這些身份的人也可使用 man:halt[8] 與 man:reboot[8]，參考這些指令與 man:shutdown[8] 的操作手冊來取得更多資訊。
+
+要修改群組成員可參考 crossref:basics[users-synopsis,使用者與基礎帳號管理]。
+
+[NOTE]
+====
+電源管理需要以載入 man:acpi[4] 模組或將其靜態編譯至自訂核心中。
+====

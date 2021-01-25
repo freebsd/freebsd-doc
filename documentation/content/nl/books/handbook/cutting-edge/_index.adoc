@@ -1,0 +1,1520 @@
+---
+title: Hoofdstuk 24. FreeBSD updaten en upgraden
+part: Deel III. Systeembeheer
+prev: books/handbook/l10n
+next: books/handbook/dtrace
+---
+
+[[updating-upgrading]]
+= FreeBSD updaten en upgraden
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Inhoudsopgave
+:table-caption: Tabel
+:figure-caption: Afbeelding
+:example-caption: Voorbeeld
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 24
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/cutting-edge/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/cutting-edge/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/cutting-edge/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/nl/mailing-lists.adoc[]
+include::shared/nl/teams.adoc[]
+include::shared/nl/urls.adoc[]
+
+toc::[]
+
+[[updating-upgrading-synopsis]]
+== Overzicht
+
+FreeBSD wordt ontwikkeld tussen de verschillende versies in. Sommige mensen prefereren om de officieel uitgegeven versies te draaien, terwijl anderen gesynchroniseerd willen blijven met de nieuwste ontwikkelingen. Zelfs officiële uitgaven echter worden vaak bijgewerkt met veiligheids- en andere kritieke reparaties. Ongeacht de gebruikte versie biedt FreeBSD alle noodzakelijke gereedschappen om uw systeem bijgewerkt te houden, en maakt FreeBSD het upgraden tussen versies ook gemakkelijk. Dit hoofdstuk helpt om een keuze te maken of het wenselijk is het ontwikkelsysteem te volgen of één van de uitgegeven versies. De basisgereedschappen om uw systeem bijgewerkt te houden worden ook gepresenteerd.
+
+Na het lezen van dit hoofdstuk weet de lezer:
+
+* Welke gereedschappen gebruikt kunnen worden om het systeem en de Portscollectie te updaten.
+* Hoe een systeem bijgewerkt kan worden met freebsd-update, CVSup, CVS of CTM;
+* Hoe de toestand van een geïnstalleerd systeem met een bekende maagdelijke kopie te vergelijken.
+* Hoe uw documentatie bijgewerkt te houden met CVSup of documentatie-ports.
+* De verschillen tussen de ontwikkeltakken FreeBSD-STABLE en FreeBSD-CURRENT;
+* Hoe een basissysteem opnieuw te compileren en te herinstalleren met `make buildworld`, enzovoort.
+
+Veronderstelde criteria:
+
+* Een juist ingesteld netwerk (crossref:advanced-networking[advanced-networking,Geavanceerd netwerken]);
+* Weten hoe software van derden te installeren (crossref:ports[ports,Applicaties installeren. pakketten en ports]).
+
+[NOTE]
+====
+Door dit hoofdstuk heen wordt `cvsup` gebruikt om de broncode van FreeBSD te verkrijgen en bij te werken. Om het te gebruiken, dient u de port of het pakket voor package:net/cvsup[] te installeren (als u niet de grafische `cvsup`-cliënt wilt installeren, kunt u de port [.filename]#net/cvsup-without-gui# installeren. U kunt ervoor kiezen om dit te vervangen door man:csup[1] welke onderdeel is van het basissysteem.
+====
+
+[[updating-upgrading-freebsdupdate]]
+== FreeBSD Update
+
+Het toepassen van beveiligingspatches is een belangrijk onderdeel van het beheren van computersoftware, met name het besturingssysteem. Dit was voor een lange tijd geen gemakkelijk proces op FreeBSD. Er moesten patches op de broncode worden toegepast, de code moest herbouwd worden tot binairen, en daarna moesten de binairen worden geherinstalleerd.
+
+Dit is niet langer het geval aangezien FreeBSD nu een gereedschap heeft dat eenvoudigweg `freebsd-update` heet. Dit gereedschap biedt twee gescheiden functies. Ten eerste voorziet het in het toepassen van binaire beveiligings- en errata-updates op het basissysteem van FreeBSD zonder de eis om te bouwen en te installeren. Ten tweede ondersteunt het gereedschap kleine en grote uitgave-upgrades.
+
+[NOTE]
+====
+Binaire updates zijn beschikbaar voor alle architecturen en uitgaveaankondigingen dienen gelezen te worden aangezien deze belangrijke informatie over de gewenste uitgave kunnen bevatten. De aankondigingen kunnen op de volgende koppelin bekeken worden: http://www.FreeBSD.org/releases/[http://www.FreeBSD.org/releases/].
+====
+
+Als er een `crontab` bestaat die de mogelijkheden van `freebsd-update` gebruikt, moet het uitgeschakeld worden voordat aan de volgende operatie wordt begonnen.
+
+[[freebsdupdate-config-file]]
+=== Het configuratiebestand
+
+Sommige gebruikers willen het standaard configuratiebestand optimaliseren, waardoor het proces beter gecontroleerd kan worden. De opties zijn goed gedocumenteerd, maar voor de volgenden is wat extra uitleg nodig:
+
+[.programlisting]
+....
+# Componenten van het basissysteem die bijgewerkt moeten blijven
+Components src world kernel
+....
+
+Deze parameter bepaalt welke delen van FreeBSD bijgewerkt blijven. Standaard wordt de broncode bijgewerkt, het hele basissysteem, en de kernel. Dezelfde componenten als tijdens de installatie zijn beschikbaar, het toevoegen van bijvoorbeeld `world/games` zou de spelpatches toepassen. Het gebruik van `src/bin` zou de broncode in [.filename]#src/bin# bijgewerkt houden.
+
+Het beste kan dit op de standaardwaarde blijven aangezien het veranderen hiervan om specifieke items te bevatten de gebruiker dwingt om alle items die bijgewerkt dienen te worden op te noemen. Dit kan rampzalige gevolgen hebben aangezien de broncode en de binairen asynchroon kunnen raken.
+
+[.programlisting]
+....
+# Paden die beginnen met iets wat overeenkomt met een regel in een IgnorePaths
+# statement zullen genegeerd worden.
+IgnorePaths
+....
+
+Voeg paden, zoals [.filename]#/bin# of [.filename]#/sbin# toe om deze specifieke mappen ongemoeid te laten tijdens het updateproces. Deze optie kan gebruikt worden om te voorkomen dat `freebsd-update` lokale wijzigingen overschrijft.
+
+[.programlisting]
+....
+# Paden die beginnen met iets wat overeenkomt met een regel in een UpdateIfUnmodified
+# statement zullen alleen worden bijgewerkt als de inhoud van het bestand niet is
+# gewijzigd door de gebruiker (tenzij veranderingen zijn samengevoegd; zie beneden).
+UpdateIfUnmodified /etc/ /var/ /root/ /.cshrc /.profile
+....
+
+Werk configuratiebestanden in de aangegeven mappen alleen bij als ze niet zijn gewijzigd. Alle veranderingen die door de gebruiker zijn gemaakt maken het automatisch bijwerken van deze bestanden ongeldig. Er is een andere optie, `KeepModifiedMetadata`, die `freebsd-update` instrueert om de veranderingen tijdens het samenvoegen te bewaren.
+
+[.programlisting]
+....
+# Wanneer naar een nieuwe uitgave van FreeBSD wordt ge-upgraded, worden lokale veranderingen van bestanden die overeenkomen met MergeChanges
+# samengevoegd in de versie van de nieuwe uitgave.
+MergeChanges /etc/ /var/named/etc/
+....
+
+Lijst van mappen met instellingenbestanden waar `freebsd-update` moet proberen om in samen te voegen. Het proces van bestanden samenvoegen is een serie van man:diff[1]-patches die ongeveer gelijk is aan man:mergemaster[8] met minder opties, de samenvoegingen worden ofwel geaccepteerd, of openen een tekstverwerker, of zorgen ervoor dat `freebsd-update` afbreekt. Maak in geval van twijfel een reservekopie van [.filename]#/etc# en accepteer de samenvoegingen. In <<mergemaster>> staat meer informatie over het commando `mergemaster`.
+
+[.programlisting]
+....
+# Map waarin de gedownloade updates en tijdelijke
+bestanden
+# die door een FreeBSD Update worden gebruikt worden opgeslagen.
+# WorkDir /var/db/freebsd-update
+....
+
+Dit is de map waarin alle patches en tijdelijke bestanden worden geplaatst. In het geval dat de gebruiker een versie-upgrade uitvoert, dient deze locatie tenminste een gigabyte aan vrije schijfruimte te hebben.
+
+[.programlisting]
+....
+# Wanneer tussen uitgaven wordt ge-upgraded, dient de lijst van Componenten dan
+# strikt gelezen te worden (StrictComponents yes) of slechts als een lijst van componenten
+
+# die geïnstalleerd *kunnen* worden en waarvan FreeBSD Update uit dient te zoeken
+# welke daadwerkelijk zijn geïnstalleerd en die te upgraden (StrictComponents no)?
+# StrictComponents no
+....
+
+Wanneer ingesteld op `yes`, zal `freebsd-update` aannemen dat de lijst `Components` compleet is en zal het niet proberen om wijzigingen buiten de lijst te maken. Effectief zal `freebsd-update` proberen om elk bestand bij te werken dat op de lijst `Components` staat.
+
+[[freebsdupdate-security-patches]]
+=== Beveiligingspatches
+
+Beveiligingspatches staan op een verre machine en kunnen met het volgende commando gedownload en geïnstalleerd worden:
+
+[source,bash]
+....
+# freebsd-update fetch
+# freebsd-update install
+....
+
+Als er kernelpatches zijn toegepast moet het systeem opnieuw opgestart worden. Als alles goed is gegaan dient het systeem gepatcht te zijn en kan `freebsd-update` als een nachtelijke man:cron[8]-taak gedraaid worden. Een regel in [.filename]#/etc/crontab# zou genoeg moeten zijn om deze taak te volbrengen:
+
+[.programlisting]
+....
+@daily                                  root    freebsd-update cron
+....
+
+Deze regel verklaart dat eenmaal per dag het commando `freebsd-update` gedraaid zal worden. Op deze manier, door het argument `cron` te gebruiken, zal het gereedschap `freebsd-update` alleen kijken of er updates bestaan. Als er patches bestaan, zullen ze automatisch worden gedownload naar de plaatselijke schijf maar niet worden toegepast. Er zal een email aan de gebruiker `root` worden verstuurd zodat ze handmatig geïnstalleerd kunnen worden.
+
+Als er iets misging, heeft `freebsd-update` de mogelijkheid om de laatste verzamelingen veranderingen terug te draaien met het volgende commando:
+
+[source,bash]
+....
+# freebsd-update rollback
+....
+
+Eenmaal voltooid, dient het systeem herstart te worden als de kernel of enige kernelmodule is gewijzigd. Dit stelt FreeBSD in staat om de nieuwe binairen in het geheugen te laden.
+
+Het gereedschap `freebsd-update` kan alleen de kernel [.filename]#GENERIC# automatisch bijwerken. Als een eigen kernel wordt gebruikt, moet het herbouwd en geherinstalleerd worden nadat `freebsd-update` klaar is met het installeren de rest van de updates. `freebsd-update` zal echter de kernel [.filename]#GENERIC# in [.filename]#/boot/GENERIC# detecteren en bijwerken (als het bestaat), zelfs als het niet de huidige (draaiende) kernel van het systeem is.
+
+[NOTE]
+====
+Het is een goed idee om altijd een kopie van de kernel [.filename]#GENERIC# in [.filename]#/boot/GENERIC# te bewaren. Het kan van pas komen bij het vaststellen van een keur aan problemen, en bij het uitvoeren van versie-upgrades met `freebsd-update` zoals beschreven in <<freebsdupdate-upgrade>>.
+====
+
+Tenzij de standaardconfiguratie in [.filename]#/etc/freebsd-update.conf# is gewijzigd, zal `freebsd-update` de bijgewerkte kernelbronnen samen met de rest van de updates installeren. Het herbouwen en herinstalleren van uw nieuwe eigen kernel kan daarna op de gebruikelijke manier gedaan worden.
+
+[NOTE]
+====
+De updates die via `freebsd-update` verspreid worden hebben niet altijd betrekking op de kernel. Het is niet nodig om uw eigen kernel te herbouwen als de kernelbronnen niet zijn aangepast door het uitvoeren van `freebsd-update install`. `freebsd-update install` zal echter altijd het bestand [.filename]#/usr/src/sys/conf/newvers.sh# bijwerken. Het huidige patchniveau (zoals aangegeven door het `-p`-nummer gerapporteerd door `uname -r`) wordt uit dit bestand gehaald. Het herbouwen van uw eigen kernel, zelfs als er niets veranderd is, stelt man:uname[1] in staat om het huidige patchniveau van het systeem accuraat te rapporteren. Dit is in het bijzonder behulpzaam wanneer meerdere systemen onderhouden worden, aangezien hierdoor snel de geïnstalleerde updates op elk ervan kunnen worden nagegaan.
+====
+
+[[freebsdupdate-upgrade]]
+=== Grote en kleine upgrades
+
+Dit proces ruimt oude objectbestanden en bibliotheken op waardoor de meeste applicaties van derde partijen kapot gaan. Het wordt aangeraden dat alle geïnstalleerde poorten ofwel verwijderd en geherinstalleerd worden of later ge-upgraded worden met het hulpmiddel package:ports-mgmt/portupgrade[]. De meeste gebruikers zullen willen proefdraaien met het volgende commando:
+
+[source,bash]
+....
+# portupgrade -af
+....
+
+Dit zorgt ervoor dat alles juist wordt geherinstalleerd. Merk op dat het instellen van de omgevingsvariabele `BATCH` op `yes` het antwoord `yes` zal geven op alle prompts tijdens dit proces, waardoor het niet nodig is om handmatig in het bouwproces in te grijpen.
+
+Als een eigen kernel wordt gebruikt, is het upgradeproces iets ingewikkelder. Een kopie van de kernel [.filename]#GENERIC# is nodig en dient in [.filename]#/boot/GENERIC# geplaatst te worden. Als de kernel [.filename]#GENERIC# niet reeds op het systeem aanwezig is, moet het met één van de volgende methoden verkregen worden:
+
+* Als er slechts eenmaal een eigen kernel is gebouwd, dan is de kernel in [.filename]#/boot/kernel.old# eigenlijk de [.filename]#GENERIC#. Hernoem deze map naar [.filename]#/boot/GENERIC#.
+* Aannemende dat fysieke toegang tot de machine mogelijk is, kan een kopie van de kernel [.filename]#GENERIC# van het CD-ROM-medium worden geïnstalleerd. Laad de installatieschijf en geef de volgende commando's:
++
+[source,bash]
+....
+# mount /cdrom
+# cd /cdrom/X.Y-RELEASE/kernels
+# ./install.sh GENERIC
+....
++ 
+Vervang [.filename]#X.Y-RELEASE# met de versie van de uitgave die u gebruikt. De kernel [.filename]#GENERIC# zal standaard in [.filename]#/boot/GENERIC# worden geïnstalleerd.
+* Als al het bovenstaande niet lukt, kan de kernel [.filename]#GENERIC# herbouwd en geherinstalleerd worden vanaf de broncode:
++
+[source,bash]
+....
+# cd /usr/src
+# env DESTDIR=/boot/GENERIC make kernel
+# mv /boot/GENERIC/boot/kernel/* /boot/GENERIC
+# rm -rf /boot/GENERIC/boot
+....
++ 
+Om deze kernel door `freebsd-update` als [.filename]#GENERIC# te laten herkennen, mag het configuratiebestand voor [.filename]#GENERIC# niet op enige wijze veranderd zijn. Het is ook aan te raden dat het zonder andere speciale opties wordt gebouwd (bij voorkeur met een leeg [.filename]#/etc/make.conf#).
+
+Opnieuw opstarten naar de kernel [.filename]#GENERIC# is in dit stadium niet nodig.
+
+Updates van grote en kleine versies kunnen worden uitgevoerd door een uitgaveversie als doel aan `freebsd-update` op te geven, het volgende commando zal bijvoorbeeld updaten naar FreeBSD 8.1:
+
+[source,bash]
+....
+# freebsd-update -r 8.1-RELEASE upgrade
+....
+
+Nadat het commando is ontvangen, zal `freebsd-update` het instellingenbestand en het huidige systeem evalueren in een poging om de benodigde informatie te verzamelen om het systeem te updaten. Een lijst op het scherm zal aangeven welke componenten zijn gedetecteerd en welke niet. Bijvoorbeeld:
+
+[source,bash]
+....
+Looking up update.FreeBSD.org mirrors... 1 mirrors found.
+Fetching metadata signature for 8.0-RELEASE from update1.FreeBSD.org... done.
+Fetching metadata index... done.
+Inspecting system... done.
+
+The following components of FreeBSD seem to be installed:
+kernel/smp src/base src/bin src/contrib src/crypto src/etc src/games
+src/gnu src/include src/krb5 src/lib src/libexec src/release src/rescue
+src/sbin src/secure src/share src/sys src/tools src/ubin src/usbin
+world/base world/info world/lib32 world/manpages
+
+The following components of FreeBSD do not seem to be installed:
+kernel/generic world/catpages world/dict world/doc world/games
+world/proflibs
+
+Does this look reasonable (y/n)? y
+....
+
+Nu zal `freebsd-update` proberen om alle bestanden die nodig zijn voor de upgrade te downloaden. In sommige gevallen kan de gebruiker worden gevraagd wat te installeren of hoe verder te gaan.
+
+Wanneer een eigen kernel wordt gebruikt, zal de bovenstaande stap een waarschuwing geven die lijkt op de volgende:
+
+[source,bash]
+....
+WARNING: This system is running a "MIJNKERNEL" kernel, which is not a
+kernel configuration distributed as part of FreeBSD 8.0-RELEASE.
+This kernel will not be updated: you MUST update the kernel manually
+before running "/usr/sbin/freebsd-update install"
+....
+
+Deze waarschuwing kan op dit moment veilig worden genegeerd. De bijgewerkte kernel [.filename]#GENERIC# zal als tussenliggende stap in het upgradeproces worden gebruikt.
+
+Nadat alle patches zijn gedownload naar het plaatselijke systeem zullen ze worden toegepast. Dit proces kan afhankelijk van de snelheid en werklast van de machine even duren. Hierna zullen instellingenbestanden worden samengevoegd - voor dit gedeelte van het proces is enige tussenkomst van de gebruiker nodig aangezien een bestand kan worden samengevoegd of omdat er een tekstverwerker op het scherm kan verschijnen om het bestand handmatig samen te voegen. Het resultaat van elke succesvolle samenvoeging zal aan de gebruiker worden getoond naarmate het proces verder gaat. Een mislukte of genegeerde samenvoegpoging zal het proces afbreken. Het is mogelijk voor gebruikers om een reservekopie van [.filename]#/etc# te maken en belangrijke bestanden, zoals [.filename]#master.passwd# of [.filename]#group#, later samen te voegen.
+
+[NOTE]
+====
+Het systeem is nog niet veranderd, al het patchen en samenvoegen gebeurt in een andere map. Wanneer alle patches succesvol zijn toegepast, alle instellingenbestanden zijn samengevoegd en het erop lijkt dat het proces soepel verloopt, dienen de veranderingen verzegeld te worden door de gebruiker.
+====
+
+Als dit proces eenmaal voltooid is, kan de upgrade aan de schijf toevertrouwd worden met het volgende commando.
+
+[source,bash]
+....
+# freebsd-update install
+....
+
+De kernel en kernelmodules zullen als eerste gepatcht worden. Nu moet de machine opnieuw opgestart worden. Als het systeem een eigen kernel draaide, gebruik dan het commando man:nextboot[8] om de kernel voor de volgende keer dat opgestart wordt in te stellen op [.filename]#/boot/GENERIC# (welke is bijgewerkt):
+
+[source,bash]
+....
+# nextboot -k GENERIC
+....
+
+[WARNING]
+====
+
+Voordat er met de kernel [.filename]#GENERIC# wordt opgestart, dient te worden gecontroleerd dat het alle stuurprogramma's bevat om uw systeem juist te laten opstarten (en met het netwerk te verbinden, als de machine die bijgewerkt wordt van afstand wordt benaderd). In het bijzonder, als de vorige kernel die draaide ingebouwde functionaliteit bevatte die normaalgesproken door kernelmodules wordt geleverd, zorg er dan voor dat deze modules tijdelijk in de kernel [.filename]#GENERIC# worden geladen door de faciliteit [.filename]#/boot/loader.conf# te gebruiken. U kunt er ook voor kiezen om niet-essentiële diensten, schijf- en netwerkkoppelingen, enzovoorts uit te zetten totdat het upgradeproces voltooid is.
+====
+
+De machine dient nu te worden herstart met de bijgewerkte kernel:
+
+[source,bash]
+....
+# shutdown -r now
+....
+
+Als het systeem weer actief is, moet `freebsd-update` nogmaals gestart worden. De toestand van het proces is opgeslagen en dus zal `freebsd-update` niet vooraan beginnen, maar zal het alle oude gedeelde bibliotheken en objectbestanden verwijderen. Geef het volgende commando om verder te gaan op dit punt:
+
+[source,bash]
+....
+# freebsd-update install
+....
+
+[NOTE]
+====
+Afhankelijk van het feit of er versienummers van bibliotheken zijn opgehoogd, kunnen er slechts twee in plaats van drie installatiefasen zijn.
+====
+
+Alle software van derde partijen dient nu opnieuw gebouwd en geïnstalleerd te worden. Dit is nodig omdat geïnstalleerde software van bibliotheken afhankelijk kan zijn die tijdens het upgradeproces zijn verwijderd. Het commando package:ports-mgmt/portupgrade[] kan gebruikt worden om dit proces te automatiseren. Dit proces kan met de volgende commando's gestart worden:
+
+[source,bash]
+....
+# portupgrade -f ruby
+# rm /var/db/pkg/pkgdb.db
+# portupgrade -f ruby18-bdb
+# rm /var/db/pkg/pkgdb.db /usr/ports/INDEX-*.db
+# portupgrade -af
+....
+
+Voltooi, nadat dit voltooid is, het upgradeproces met een laatste aanroep naar `freebsd-update`. Geef het volgende commando om alle losse eindjes in het upgradeproces samen te knopen:
+
+[source,bash]
+....
+# freebsd-update install
+....
+
+Als de kernel [.filename]#GENERIC# tijdelijk werd gebruikt, is dit het moment om een nieuwe eigen kernel op de gebruikelijke manier te bouwen en installeren.
+
+Start de machine opnieuw op in de nieuwe FreeBSD-versie. Het proces is voltooid.
+
+[[freebsdupdate-system-comparison]]
+=== Het vergelijken van systeemtoestanden
+
+Het gereedschap `freebsd-update` kan gebruikt worden om de toestand van de geïnstalleerde versie van FreeBSD met een bekende goede kopie te vergelijken. Deze optie evalueert de huidige versie van systeemgereedschappen, bibliotheken, en instellingenbestanden. Geef het volgende commando om met de vergelijking te beginnen:
+
+[source,bash]
+....
+# freebsd-update IDS >> uitvoerbestand.ids
+....
+
+[WARNING]
+====
+
+Hoewel de commandonaam IDS is, is het in geen geval een vervanging voor een indringdetectiesysteem zoals package:security/snort[]. Aangezien `freebsd-update` gegevens op schijf opslaat, is de mogelijkheid om te knoeien duidelijk. Hoewel deze mogelijkheid verminderd kan worden door de instelling `kern.securelevel` te gebruiken en de gegevens van `freebsd-update` op een bestandssysteem dat alleen gelezen kan worden op te slaan wanneer deze niet gebruikt worden, zou een betere oplossing zijn om het systeem met een veilige schijf te vergelijken, zoals een DVD of een veilig opgeslagen externe USB-schijf.
+====
+
+Het systeem zal nu geïnspecteerd worden, en er zal een lijst van hun man:sha256[1]-hashwaarden, zowel de bekende waarde in de uitgave en de huidige geïnstalleerde waarde, afgebeeld worden. Hierom wordt de uitvoer naar het bestand [.filename]#uitvoerbestand.ids# gezonden. Het scrollt te snel voorbij om het met het oog te vergelijken, en het vult al snel de gehele consolebuffer op.
+
+Deze regels zijn ook extreem lang, maar het uitvoerformaat kan vrij eenvoudig geparsed worden. Geef, om bijvoorbeeld een lijst van alle bestanden te krijgen die verschillen van die in de uitgave, het volgende commando:
+
+[source,bash]
+....
+# cat uitvoerbestand.ids | awk '{ print $1 }' | more
+/etc/master.passwd
+/etc/motd
+/etc/passwd
+/etc/pf.conf
+....
+
+Deze uitvoer is afgekapt, er bestaan veel meer bestanden. Sommige van deze bestanden hebben natuurlijke veranderingen, het [.filename]#/etc/passwd# is gewijzigd omdat er gebruikers aan het systeem zijn toegevoegd. In sommige gevallen kunnen er andere bestanden zijn, zoals kernelmodules, die verschillen aangezien `freebsd-update` ze ge-updated kan hebben. Voeg, om bepaalde bestanden of mappen uit te sluiten, deze toe aan de optie `IDSIgnorePaths` in [.filename]#/etc/freebsd-update.conf#.
+
+Dit systeem kan gebruikt worden als deel van een uitgebreide upgrademethode, afgezien van de eerder besproken versie.
+
+[[updating-upgrading-portsnap]]
+== Portsnap: een updategereedschap voor de Portscollectie
+
+Het basissysteem van FreeBSD bevat ook een gereedschap om de Portscollectie bij te werken: het hulpmiddel man:portsnap[8]. Wanneer het wordt uitgevoerd, zal het een verbinding maken met een verre site, de veilige sleutel controleren, en een nieuwe kopie van de Portscollectie downloaden. De sleutel wordt gebruikt om de integriteit van alle gedownloade bestanden te controleren, om er zeker van te zijn dat ze niet tijdens het downloaden zijn gewijzigd. Geef het volgende commando om de nieuwste versie van de bestanden van de Portscollectie te downloaden:
+
+[source,bash]
+....
+# portsnap fetch
+Looking up portsnap.FreeBSD.org mirrors... 9 mirrors found.
+Fetching snapshot tag from geodns-1.portsnap.freebsd.org... done.
+Fetching snapshot metadata... done.
+Updating from Tue May 22 02:12:15 CEST 2012 to Wed May 23 16:28:31 CEST 2012.
+Fetching 3 metadata patches.. done.
+Applying metadata patches... done.
+Fetching 3 metadata files... done.
+Fetching 90 patches.....10....20....30....40....50....60....70....80....90. done.
+Applying patches... done.
+Fetching 133 new ports or files... done.
+....
+
+Dit voorbeeld laat zien dat man:portsnap[8] verscheidene patches heeft gevonden en deze met de huidige portsgegevens heeft gecontroleerd. Het geeft ook aan dat het gereedschap eerder is gedraaid, als het voor de eerste keer was gedraaid, had het simpelweg de collectie gedownload.
+
+Wanneer man:portsnap[8] succesvol een `fetch`-operatie afrondt, bestaan de Portscollectie en de vervolgpatches die de verificatie doorstaan hebben op het plaatselijke systeem. Gebruik de eerste keer dat `portsnap` wordt uitgevoerd `extract` om de gedownloade bestanden te installeren:
+
+[source,bash]
+....
+# portsnap extract
+/usr/ports/.cvsignore
+/usr/ports/CHANGES
+/usr/ports/COPYRIGHT
+/usr/ports/GIDs
+/usr/ports/KNOBS
+/usr/ports/LEGAL
+/usr/ports/MOVED
+/usr/ports/Makefile
+/usr/ports/Mk/bsd.apache.mk
+/usr/ports/Mk/bsd.autotools.mk
+/usr/ports/Mk/bsd.cmake.mk
+...
+....
+
+Om een reeds geïnstalleerde Ports Collectie te updaten kan er gebruik worden gemaakt van het commando `portsnap update`:
+
+[source,bash]
+....
+# portsnap update
+....
+
+Het proces is nu compleet, en applicaties kunnen met de bijgewerkte Portscollectie worden geïnstalleerd of worden bijgewerkt.
+
+De bewerkingen `fetch` en `extract` of `update` kunnen achter elkaar uitgevoerd worden, zoals het volgende voorbeeld laat zien:
+
+[source,bash]
+....
+# portsnap fetch update
+....
+
+Dit commando zal de laatste versie van de Ports Collectie downloaden en de lokale versie bijwerken in de [.filename]#/usr/ports#.
+
+[[updating-upgrading-documentation]]
+== De documentatie bijwerken
+
+Naast het basissysteem en de Portscollectie is documentatie een integraal onderdeel van het besturingssysteem FreeBSD. Hoewel een actuele versie van de FreeBSD-documentatie altijd beschikbaar is op de http://www.freebsd.org/doc/[FreeBSD website], hebben sommige gebruikers een langzame of helemaal geen permanente netwerkverbinding. Gelukkig zijn er verschillende manieren om de documentatie die bij elke uitgave wordt geleverd bij te werken door een lokale kopie van de nieuwste FreeBSD-documentatie bij te houden.
+
+[[dsvn-doc]]
+=== Subversion gebruiken om de documentatie bij te werken
+
+De bronnen van de FreeBSD-documentatie kunnen met Subversion worden bijgewerkt. Deze sectie beschrijft:
+
+* Hoe de documentatiegereedschappen, de gereedschappen die nodig zijn om de FreeBSD-documentatie vanuit de broncode te herbouwen, te installeren.
+* Hoe een kopie van de documentatiebronnen in [.filename]#/usr/doc# te downloaden door Subversion te gebruiken.
+* Hoe de FreeBSD-documentatie vanuit de broncode te herbouwen en onder [.filename]#/usr/shared/doc# te installeren.
+* Sommige bouwopties die door het bouwsysteem van de documentatie ondersteund worden, i.e., de opties die slechts enkele van de verschillende vertalingen van de documentatie bouwen of de opties die een specifiek uitvoerformaat selecteren.
+
+[[installing-documentation-toolchain]]
+=== Subversion en de documentatiegereedschappen installeren
+
+Voor het herbouwen van de FreeBSD-documentatie vanuit de broncode is een aardig grote verzameling gereedschappen nodig. Deze gereedschappen zijn geen deel van het basissysteem van FreeBSD omdat ze een grote hoeveelheid schijfruimte nodig hebben en niet voor alle FreeBSD-gebruikers nuttig zijn; ze zijn alleen nuttig voor die gebruikers die actief nieuwe documentatie voor FreeBSD schrijven of regelmatig hun documentatie vanuit de broncode bijwerken.
+
+Alle benodigde gereedschappen zijn beschikbaar als deel van de Portscollectie. De port package:textproc/docproj[] is een meester-port die door het FreeBSD Documentatieproject is ontwikkeld om de installatie en toekomstige updates van deze gereedschappen makkelijker te maken.
+
+[NOTE]
+====
+Wanneer er geen PostScript(R)- of PDF-documentatie nodig is, kan men overwegen om in plaats hiervan de port package:textproc/docproj-nojadetex[] te installeren. Deze versie van de documentatiegereedschappen bevat alles behalve de typesetting-engine teTeX. teTeX is een erg grote verzameling van gereedschappen, dus kan het zinvol zijn om de installatie ervan achterwege te laten als PDF-uitvoer niet echt nodig is.
+====
+
+Subversion wordt geïnstalleerd met de port package:textproc/docproj[].
+
+[[updating-documentation-sources]]
+=== De documentatiebroncode bijwerken
+
+Het programma Subversion kan een schone kopie van de documentatiebroncode ophalen door het volgende te typen:
+
+[source,bash]
+....
+# svn checkout svn://svn.FreeBSD.org/doc/head /usr/doc
+....
+
+De initiële download van de documentatiebroncode kan een tijd duren. Laat het draaien totdat het voltooid is.
+
+Toekomstige updates van de documentatiebroncode kunnen opgehaald worden door het volgende commando te draaien:
+
+[source,bash]
+....
+# svn update /usr/doc
+....
+
+Nadat de broncode is uitgecheckt, wordt een alternatieve manier om de documentatie bij te werken ondersteund door [.filename]#Makefile# van de map [.filename]#/usr/doc# door het volgende te draaien:
+
+[source,bash]
+....
+# cd /usr/doc
+# make update
+....
+
+[[updating-documentation-options]]
+=== Instelbare opties van de documentatiebroncode
+
+Het bijwerk- en bouwsysteem van de FreeBSD-documentatie ondersteunt enkele opties die het proces om de documentatie alleen gedeeltelijk bij te werken, of om specifieke vertalingen te bouwen, makkelijker maken. Deze opties kunnen of als systeemwijde opties in het bestand [.filename]#/etc/make.conf# worden ingesteld, of als opdrachtregelopties aan het hulpmiddel man:make[1] worden doorgegeven.
+
+De volgende opties zijn er enkelen van:
+
+`DOC_LANG`::
+De lijst van te bouwen en te installeren talen en coderingen, bijvoorbeeld `en_US.ISO8859-1` voor alleen de Engelse documentatie.
+
+`FORMATS`::
+Een enkel formaat of een lijst van uitvoerformaten die gebouwd moeten worden. Momenteel worden `html`, `html-split`, `txt`, `ps`, `pdf`, en `rtf` ondersteund.
+
+`DOCDIR`::
+Waar de documentatie te installeren. Dit staat standaard op [.filename]#/usr/shared/doc#.
+
+Bekijk man:make.conf[5] voor meer make-variabelen die als systeemwijde opties in FreeBSD worden ondersteund.
+
+Voor meer make-variabelen die door het bouwsysteem van de FreeBSD-documentatie ondersteund worden, wordt naar het link:www.FreeBSD.org/books/fdp-primer[FreeBSD Documentation Project Primer for New Contributors] verwezen.
+
+[[updating-installed-documentation]]
+=== De FreeBSD-documentatie vanuit de broncode installeren
+
+Wanneer er een actueel snapshot van de documentatiebroncode is opgehaald in [.filename]#/usr/doc#, is alles gereed om de geïnstalleerde documentatie bij te werken.
+
+Het volledig bijwerken van alle talen die in de Makefile-optie `DOC_LANG` zijn gedefinieerd kan worden gedaan door te typen:
+
+[source,bash]
+....
+# cd /usr/doc
+# make install clean
+....
+
+Als alleen het bijwerken van een specifieke taal gewenst is, dan kan man:make[1] worden aangeroepen in een taalspecifieke submap van [.filename]#/usr/doc#, i.e.:
+
+[source,bash]
+....
+# cd /usr/doc/en_US.ISO8859-1
+# make update install clean
+....
+
+De te installeren uitvoerformaten kunnen worden gespecificeerd door de make-variabele `FORMATS` in te stellen, i.e.:
+
+[source,bash]
+....
+# cd /usr/doc
+# make FORMATS='html html-split' install clean
+....
+
+[[doc-ports]]
+=== Documentatieports gebruiken
+
+In de vorige sectie werd er een methode voor het bijwerken van de FreeBSD-documentatie vanaf de broncode gepresenteerd. Het bijwerken gebaseerd op broncode is echter niet voor alle FreeBSD-systemen haalbaar of praktisch. Voor het bouwen van de documentatiebronnen zijn een redelijk grote verzameling van gereedschappen, de _documentatie gereedschapskist_, een bepaald niveau van bekendheid met Subversion en checkouts van broncode vanuit een reservoir nodig, en een aantal handmatige stappen om de uitgecheckte broncode te bouwen. In deze sectie wordt een alternatieve manier beschreven om de geïnstalleerde kopiën van de FreeBSD-documentatie bij te werken; een die de Ports Collectie gebruikt en het mogelijk maakt om:
+
+* Voorgebouwde versies van de documentatie te downloaden en te installeren, zonder iets lokaal te hoeven bouwen (op deze manier wordt de noodzaak voor een installatie van de gehele documentatie-gereedschapskist voorkomen).
+* De documentatiebronnen te bouwen en ze via het ports-raamwerk te bouwen (de stappen van het uitchecken en bouwen worden iets eenvoudiger gemaakt).
+
+Deze twee methoden om de FreeBSD-documentatie bij te werken worden ondersteund door een verzameling van _documentatie-ports_ die maandelijks door het {doceng} worden bijgewerkt. Deze zijn vermeld in de FreeBSD Ports Collectie onder de virtuele categorie http://www.freshports.org/docs/[docs].
+
+[[doc-ports-install-make]]
+==== Documentatie-ports bouwen en installeren
+
+De documentatie-ports gebruiken het bouwraamwerk van de ports om het bouwen van documentatie eenvoudiger te maken. Ze automatiseren het proces van het uitchecken van de broncode van de documentatie, het draaien van man:make[1] met de juiste omgevingsinstellingen en opdrachtregelopties, en ze maken de installatie of deïnstallatie van documentatie net zo eenvoudig als de installatie van elke andere FreeBSD-port of -pakket.
+
+[NOTE]
+====
+Als een extra eigenschap registreren de documentatie-ports, wanneer ze lokaal zijn gebouwd, een afhankelijkheid naar de ports van de _documentatie-gereedschapskist_, zodat de laatste ook automatisch is geïnstalleerd.
+====
+
+De organisatie van de documentatie-ports is als volgt:
+
+* Er is een "meester-port", package:misc/freebsd-doc-en[], waar de bestanden van de documentatie-ports gevonden kunnen worden. Het is de basis van alle documentatie-ports. Standaard bouwt het alleen de Engelstalige documentatie.
+* Er is een "alles-in-één port", package:misc/freebsd-doc-all[], en het bouwt en installeert alle documentatie in alle beschikbare talen.
+* Ten slotte is er een "slaaf-port" voor elke vertaling, bijvoorbeeld package:misc/freebsd-doc-hu[] voor de documenten in het Hongaars. Ze zijn allemaal afhankelijk van de meester-port en installeren de vertaalde documentatie van de respectievelijke taal.
+
+Gebruik de volgende commando's (als `root`) om een documentatieport vanaf de broncode te installeren:
+
+[source,bash]
+....
+# cd /usr/ports/misc/freebsd-doc-en
+# make install clean
+....
+
+Dit zal de Engelstalige documentatie in gesplitst HTML-formaat (hetzelfde als dat op http://www.FreeBSD.org[http://www.FreeBSD.org] wordt gebruikt) in de map [.filename]#/usr/local/shared/doc/freebsd# bouwen en installeren.
+
+[[doc-ports-options]]
+===== Algemene knoppen en opties
+
+Er zijn vele opties om het standaardgedrag van de documentatie-ports aan te passen. Het volgende is slechts een korte lijst:
+
+`WITH_HTML`::
+Staat bouwen van het HTML-formaat toe: een enkel HTML-bestand per document. De opgemaakte documentatie wordt naar gelang in een bestand genaamd [.filename]#article.html#, of [.filename]#book.html#, met afbeeldingen opgeslagen.
+
+`WITH_PDF`::
+Staat bouwen van het Adobe(R) Portable Document Format toe, te gebruiken met Adobe(R) Acrobat Reader(R), Ghostscript, of andere PDF-lezers. De opgemaakte documentatie wordt naar gelang opgeslagen in een bestand genaamd [.filename]#article.pdf# of [.filename]#book.pdf# opgeslagen.
+
+`DOCBASE`::
+Waar de documentatie te installeren. Standaard is dit [.filename]#/usr/local/shared/doc/freebsd#.
++
+[NOTE]
+====
+Merk op dat de standaard doelmap afwijkt van de map die door de Subversion-methode wordt gebruikt. Dit komt omdat er een port wordt geïnstalleerd, en ports worden normaliter onder de map [.filename]#/usr/local# geïnstalleerd. Dit kan veranderd worden door de variabele `PREFIX` toe te voegen.
+====
+
+Hier is een kort voorbeeld over hoe de bovengenoemde variabelen te gebruiken om de Hongaarse documentatie in Portable Document Format te installeren:
+
+[source,bash]
+....
+# cd /usr/ports/misc/freebsd-doc-hu
+# make -DWITH_PDF DOCBASE=share/doc/freebsd/hu install clean
+....
+
+[[doc-ports-install-package]]
+==== Documentatiepakketten gebruiken
+
+Voor het bouwen van de documentatie-ports vanaf broncode, zoals beschreven in de vorige sectie, is een lokale installatie van de documentatie-gereedschapskist en wat schijfruimte voor het bouwen van de ports nodig. Wanneer de bronnen voor het installeren van de documentatie-gereedschapskist niet aanwezig zijn, of wanneer het bouwen vanaf broncode te veel schijfruimte in beslag neemt, is het nog steeds mogelijk om de vooraf gebouwde versies van de documentatie-ports te installeren.
+
+Het {doceng} bereidt maandelijkse versies van de FreeBSD documentatiepakketten voor. Deze binaire pakketten kunnen met elk van de meegeleverde pakketgereedschappen, zoals man:pkg_add[1], man:pkg_delete[1], enzovoorts gebruikt worden.
+
+[NOTE]
+====
+Wanneer binaire pakketten worden gebruikt, zal de FreeBSD documentatie in _alle_ beschikbare formaten voor de gegeven taal geïnstalleerd worden.
+====
+
+Het volgende commando bijvoorbeeld zal het nieuwste vooraf gebouwde pakket van de Hongaarse documentatie installeren:
+
+[source,bash]
+....
+# pkg_add -r hu-freebsd-doc
+....
+
+[NOTE]
+====
+Pakketten hebben het volgende naamformaat welke afwijkt van de naam van de overeenkomstige port: `taal-freebsd-doc`. Hier is _taal_ het korte formaat van de taalcode, i.e., `hu` voor Hongaars, of `zh_cn` voor Vereenvoudigd Chinees.
+====
+
+[[doc-ports-update]]
+==== Documentatieports bijwerken
+
+Voor het bijwerken van een eerder geïnstalleerde documentatieport is elk gereedschap voor het bijwerken van ports geschikt. Het volgende commando bijvoorbeeld werkt de geïnstalleerde Hongaarse documentatie bij via het gereedschap package:ports-mgmt/portupgrade[] door alleen pakketten te gebruiken:
+
+[source,bash]
+....
+# portupgrade -PP hu-freebsd-doc
+....
+
+[[current-stable]]
+== Een ontwikkelingstak volgen
+
+Er zijn twee ontwikkeltakken voor FreeBSD: FreeBSD-CURRENT en FreeBSD-STABLE. Deze sectie licht beiden toe en beschrijft hoe een systeem bijgewerkt te houden met elke tak. FreeBSD-CURRENT wordt eerst behandeld, daarna FreeBSD-STABLE.
+
+[[current]]
+=== Bijblijven met FreeBSD
+
+Bedenk dat FreeBSD-CURRENT het "nieuwste van het nieuwste" is van FreeBSD ontwikkeling. Van FreeBSD-CURRENT gebruikers wordt verwacht dat ze veel technische kennis hebben en capabel zijn om zelfstandig lastige systeemproblemen op te lossen. Nieuwe gebruikers van FreeBSD kunnen het beste twee keer nadenken alvorens het te installeren.
+
+==== Wat is FreeBSD-CURRENT?
+
+FreeBSD-CURRENT is de laatste werkende set broncode voor FreeBSD. Dit bevat werk in uitvoering, experimentele wijzigingen en overgangsmechanismes die mogelijk wel of niet meegenomen worden in de volgende officiële uitgave van het besturingssysteem. Alhoewel veel FreeBSD-ontwikkelaars de broncode van FreeBSD-CURRENT dagelijks compileren, zijn er periodes dat de broncode niet compileerbaar is. Deze problemen worden zo snel mogelijk gerepareerd, maar het is mogelijk dat FreeBSD-CURRENT een ramp veroorzaakt in plaats van dat het de gewenste functionaliteit levert. Dit ligt geheel aan het moment waarop de broncode is opgehaald.
+
+==== Wie heeft FreeBSD-CURRENT nodig?
+
+FreeBSD-CURRENT is beschikbaar voor drie primaire aandachtsgroepen:
+
+. Leden van de FreeBSD-gemeenschap die actief werken aan een deel van de broncode voor wie "current" een echte eis is.
+. Leden van de FreeBSD-gemeenschap die actief testen en tijd hebben om problemen op te lossen om zeker te stellen dat FreeBSD-CURRENT zo gezond als mogelijk is. Er zijn ook mensen die actuele suggesties maken over wijzigingen en de algemene richting van FreeBSD en die patches opsturen om deze te implementeren.
+. Diegenen die alleen een oogje in het zeil willen houden of de huidige bronnen gebruiken ter referentie (bijvoorbeeld voor het _lezen_ en niet het draaien). Deze mensen geven ook regelmatig commentaar of dragen bij in de code.
+
+==== Wat is FreeBSD-CURRENT _niet_?
+
+. Een snelle manier om pre-release versies te krijgen omdat bekend is dat er een aantal leuke nieuwe mogelijkheden in zitten en het leuk is deze als eerste te gebruiken. Het als eerste gebruiken van nieuwe mogelijkheden betekent ook de eerste zijn die nieuwe bugs ontdekt.
+. Een snelle manier om bugfixes te krijgen. Elke willekeurige versie van FreeBSD-CURRENT heeft waarschijnlijk net zoveel nieuwe bugs als dat er bugs opgelost zijn.
+. Op welke manier dan ook "officieel ondersteund". We doen onze best om mensen echt te helpen in één van de drie "legitieme" FreeBSD-CURRENT groepen maar er is simpelweg _niet genoeg tijd_ om technische ondersteuning te leveren. Dit is niet omdat we gemene en vervelende mensen zijn die anderen niet willen helpen (we zouden niet eens aan FreeBSD werken als we dat durfden). De ontwikkelaars kunnen simpelweg geen honderd berichten per dag beantwoorden _én_ aan FreeBSD werken. Bij de keuze tussen het verbeteren van FreeBSD en vragen beantwoorden over experimentele code, kiezen ontwikkelaars voor het eerste.
+
+==== FreeBSD-CURRENT gebruiken
+
+. Neem een abonnement op de mailinglijsten {freebsd-current} en {svn-src-head}. Dit is niet alleen een goed idee, het is _essentieel_. Geen berichten ontvangen van de lijst _{freebsd-current}_ betekent geen commentaar zien dat mensen maken over de huidige staat van het systeem en dus waarschijnlijk struikelen over problemen die anderen al gevonden en opgelost hebben. Nog belangrijker is het missen van belangrijke informatie die kritisch kan zijn voor een systeem.
++ 
+De lijst {svn-src-head} biedt de mogelijkheid de wijzigingsboodschap te zien voor elke wijziging die gemaakt wordt, samen met relevante informatie over mogelijke bijwerkingen.
++ 
+Ga om op deze lijsten of één van de andere beschikbare lijsten te abonneren naar {mailman-lists-url} en klik op de gewenste lijst. Instructies over de rest van de procedure zijn daar beschikbaar. Als u geïnteresseerd bent in het volgen van veranderingen voor de gehele broncodeboom, raden wij u aan een abonnement te nemen op de lijst {svn-src-all}.
+. Haal de broncode van een FreeBSD crossref:mirrors[mirrors,mirrorsite]. Dit kan op de volgende twee manieren:
+.. Gebruik het programma crossref:mirrors[cvsup,cvsup] met de [.filename]#supfile# genaamd [.filename]#standard-supfile# uit [.filename]#/usr/shared/examples/cvsup#. Dit is de geadviseerde methode, omdat de gehele collectie in één keer wordt binnengehaald en daarna alleen hetgeen wat gewijzigd is. Veel mensen draaien `cvsup` vanuit de `cron` en houden daarmee hun broncode automatisch bijgewerkt. De voorbeeld [.filename]#supfile# dient aangepast te worden om crossref:mirrors[cvsup,cvsup] in te stellen voor uw omgeving.
++
+[NOTE]
+====
+Het voorbeeld [.filename]#standard-supfile# is bedoeld om een specifieke beveiligingstak van FreeBSD te volgen, niet FreeBSD-CURRENT. U moet dit bestand bewerken en de volgende regel vervangen:
+
+[.programlisting]
+....
+*default release=cvs tag=RELENG_X_Y
+....
+
+door deze:
+
+[.programlisting]
+....
+*default release=cvs tag=.
+....
+
+Voor een gedetailleerde uitleg over bruikbare tags wordt naar de sectie crossref:mirrors[cvs-tags,CVS Tags] van het Handboek verwezen.
+====
+
+.. Gebruik de faciliteit CTM. Bij een "slechte verbinding", dure connecties of alleen e-mail toegang, is CTM een optie. Het werkt echter lastig en geeft mogelijk corrupte bestanden. Dit zorgt ervoor dat het zelden gebruikt wordt, dat de kans verhoogt dat het niet werkt voor redelijk lange periodes. Het advies is CVSup te gebruiken.
+
+. Als de broncode wordt opgehaald om te draaien en niet alleen om naar te kijken, haal dan _alles_ op van FreeBSD-CURRENT en niet alleen geselecteerde delen. De reden hiervoor is dat verschillende delen van de code afhangen van updates op andere plekken en het compileren van een onderdeel gegarandeerd problemen oplevert.
++ 
+Voordat FreeBSD-CURRENT gecompileerd wordt is het raadzaam om de [.filename]#Makefile# in [.filename]#/usr/src# aandachtig te bekijken. Het is handig om de eerste keer op zijn minst <<makeworld,de kernel en de "wereld" opnieuw te bouwen>> als onderdeel van het updateproces. Via de {freebsd-current} en [.filename]#/usr/src/UPDATING# is het mogelijk op de hoogte te blijven van mogelijke wijzigingen in de opstartprocedures die soms nodig zijn tussen verschillende versies.
+. Wees actief! Ervaringen van FreeBSD-CURRENT-gebruikers zijn belangrijk, zeker als het gaat om suggesties voor verbeteringen of bugfixes. Suggesties met bijbehorende code worden enthousiast ontvangen!
+
+[[stable]]
+=== FreeBSD stabiel houden
+
+==== Wat is FreeBSD-STABLE?
+
+FreeBSD-STABLE is de ontwikkeltak waaruit grote releases gemaakt worden. Wijzigingen in deze tak gaan in een ander tempo en met de algemene aanname dat ze eerst in FreeBSD-CURRENT worden ingebracht ter test. Dit is _nog steeds_ een ontwikkeltak, echter dit betekent dat op elk gegeven moment de code voor FreeBSD-STABLE wel of niet geschikt is voor een speciaal doel. Het is simpelweg een andere ontwikkelomgeving en geen bron voor eindgebruikers.
+
+==== Wie heeft FreeBSD-STABLE nodig?
+
+Bij interesse in het bijhouden van of bijdragen aan het FreeBSD-ontwikkelproces, speciaal als het gerelateerd is aan de volgende versie van FreeBSD, is het volgen van FreeBSD-STABLE het overwegen waard.
+
+Ondanks dat security fixes ook in de FreeBSD-STABLE-tak komen, hoeft dit _niet_ per se. In elke beveiligingswaarschuwing voor FreeBSD wordt uitgelegd uit hoe het probleem opgelost kan worden voor de release die het betreft.  Het volgen van de volledige ontwikkeltak alleen om veiligheidsredenen levert ongetwijfeld ongewenste wijzigingen op.
+
+Ondanks het voornemen ervoor te zorgen dat de FreeBSD-STABLE-tak compileert en altijd draait, wordt dit niet gegarandeerd. Terwijl code ontwikkeld wordt in FreeBSD-CURRENT voordat die in FreeBSD-STABLE verwerkt wordt, draaien meer mensen FreeBSD-STABLE dan FreeBSD-CURRENT, dus het is onontkoombaar dat bugs en randgevallen soms in FreeBSD-STABLE gevonden worden die niet in FreeBSD-CURRENT bekend waren.
+
+Om deze redenen wordt _niet_ aangeraden FreeBSD-STABLE blindelings te volgen en het is extra belangrijk geen productieservers bij te werken naar FreeBSD-STABLE zonder de code te testen in een testomgeving.
+
+Als de mogelijkheden om dit te doen niet beschikbaar zijn, dan is het advies de meest recente release van FreeBSD te draaien en dan de binaire update methode te hanteren om bij te werken tussen verschillende releases.
+
+==== FreeBSD-STABLE gebruiken
+
+. Neem een abonnement op de lijst {freebsd-stable}. Deze biedt informatie over onderdelen van de build die mogelijk verschijnen in FreeBSD-STABLE of eventuele andere kwesties die speciale aandacht vereisen. Ontwikkelaars kondigen in deze mailinglijst ook aan wanneer ze overwegen om een controversiële fix of aanpassing willen maken, waardoor de gebruikers een kans hebben om te reageren als ze goede redenen hebben tegen de voorgestelde wijziging.
++ 
+Wordt lid van de relevante SVN-lijst voor de tak die u volgt. Als u bijvoorbeeld de tak 7-STABLE volgt, wordt u lid van de link:{svn-src-stable-7-url}[svn-src-stable-7] lijst. Dit stelt u in staat om het commit-log-bericht te bekijken voor elke verandering die is gemaakt, tezamen met relevante informatie over mogelijke bijwerkingen.
++ 
+Ga om te abonneren op deze lijsten, of één van de andere beschikbare lijsten naar {mailman-lists-url} en klik op de lijst waarop een abonnement gewenst is. Instructies over de rest van de procedure zijn daar beschikbaar. Als u geïnteresseerd bent in het volgen van veranderingen voor de gehele broncodeboom, raden wij u aan een abonnement te nemen op de {svn-src-all} lijst.
+. Kijk op de webpagina link:https://www.FreeBSD.org/snapshots/[Snapshots] om een systeem te installeren van een maandelijkse snapshot van FreeBSD-STABLE. Het is ook mogelijk om de meest recente FreeBSD-STABLE release te installeren van de crossref:mirrors[mirrors,mirrorsites]. Volg de onderstaande instructies om een systeem bij te werken naar de meest recente FreeBSD-STABLE broncode.
++ 
+Als al een vorige release van FreeBSD draait en bijgewerkt moet worden via de broncodes dan kan dat via de FreeBSD crossref:mirrors[mirrors,mirrorsites]. Dit kan op één van de twee volgende manieren:
++
+.. Gebruik het programma crossref:mirrors[cvsup,cvsup] met de [.filename]#supfile# [.filename]#stable-supfile# uit de map [.filename]#/usr/shared/examples/cvsup#. Dit is de aanbevolen methode omdat het hiermee mogelijk is de volledige collectie te downloaden en daarna alleen hetgeen wat veranderd is. Veel mensen draaien `cvsup` vanuit de `cron` om de broncodes automatisch bij te werken. Het voorbeeld van de [.filename]#supfile# dient aangepast en ingesteld te worden voor de omgeving waarin het instellingenbestand gebruikt wordt.
++
+.. Gebruik CTM als er geen snelle, goedkope verbinding is met internet. Dan is dit de methode om te gebruiken.
++
+. Als er snelle on-demand toegang nodig is tot de broncode en bandbreedte is geen overweging, gebruik dan `cvsup` of `ftp`. Gebruik anders CTM.
+. Lees alvorens FreeBSD-STABLE te compileren goed de [.filename]#Makefile# in [.filename]#/usr/src#. Het is handig om de eerste keer op zijn minst <<makeworld,de kernel en de "wereld" opnieuw te bouwen>> als onderdeel van het updateproces. Via de {freebsd-stable} en [.filename]#/usr/src/UPDATING# is het mogelijk op de hoogte te blijven van mogelijke wijzigingen in de opstartprocedures die soms nodig zijn tussen verschillende releases.
+
+[[synching]]
+== Broncode synchroniseren
+
+Er zijn verschillende manieren om een internet (of e-mail) verbinding te gebruiken om bij te blijven met elk onderdeel van de FreeBSD projectbronnen of alle onderdelen, afhankelijk van het interessegebied. De primaire diensten zijn crossref:mirrors[anoncvs,Anonieme CVS] en crossref:mirrors[ctm,CTM].
+
+[WARNING]
+====
+
+Ondanks dat het mogelijk is om alleen delen van de broncode bij te werken, is de enige ondersteunde methode de totale broncode bijwerken en zowel userland (alle programma's die in gebruikersruimte draaien, zoals programma's in [.filename]#/bin# en [.filename]#/sbin#) als de kernel opnieuw compileren. Als alleen delen van de broncode worden bijgewerkt, alleen de kernel of alleen het userland, resulteert dat vaak in problemen. Deze problemen kunnen verschillen van compileerfouten tot kernel panics of corruptie van gegevens.
+====
+
+Anonieme CVS en CVSup gebruiken het _pull_ model om broncode bij te werken. In het geval van CVSup start de gebruiker (of een `cron` script) het programma `cvsup` waarbij het communiceert met een `cvsupd` server om bestanden bij te werken. De ontvangen updates zijn op de minuut nauwkeurig en ze komen alleen wanneer dat is ingesteld. Updates kunnen eenvoudig beperkt worden tot specifieke bestanden of mappen uit een interessegebied. Updates worden automatisch gegenereerd door een server, aan de hand van wat is ingesteld. Anonieme CVS is veel eenvoudiger dan CVSup omdat dat alleen een uitbreiding is van CVS die de mogelijkheid biedt om wijzigingen direct van een CVS repository op afstand te halen. CVSup kan dit veel efficiënter doen, maar anonieme CVS is makkelijker in het gebruik.
+
+CTM aan de andere kant maakt geen vergelijking tussen de aanwezige bronnen en die op de master server. In plaats daarvan wordt een script uitgevoerd dat wijzigingen in bestanden ziet sinds de vorige keer dat is bijgewerkt en die meerdere keren per dag worden uitgevoerd op de master CTM machine. Elke ontdekte wijziging wordt gecomprimeerd, krijgt een volgnummer toegekend en wordt gecodeerd voor verzending via e-mail (in leesbare ASCII). Deze "CTM delta's" kunnen dan aangeleverd worden aan man:ctm_rmail[1] die ze automatisch decodeert, controleert en toepast in de gebruikerskopie van de bronnen. Dit proces is veel efficiënter dan CVSup en claimt minder systeembronnen omdat het model _push_ in plaats van _pull_ is.
+
+Er zijn andere nadelen. Als per ongeluk een deel van het archief wordt verwijderd, kan CVSup dat detecteren en het beschadigde deel repareren. CTM doet dit niet en als een deel van de broncode wordt verwijderd (en er geen back-up is), dan moet er opnieuw begonnen worden (vanaf de meest recente CVS "base delta" en moet alles opnieuw opgebouwd worden met CTM. Met Anonymous CVS kan simpelweg het slechte deel verwijderd worden alvorens weer te synchroniseren.
+
+[[makeworld]]
+== De "wereld" opnieuw bouwen
+
+Zodra de lokale broncode gesynchroniseerd is met een bepaalde versie van FreeBSD (FreeBSD-STABLE, FreeBSD-CURRENT, enzovoort) kan de broncode gebruikt worden om een systeem te herbouwen.
+
+[WARNING]
+.Maak een back-up
+====
+Het kan niet vaak genoeg verteld worden hoe belangrijk het is om een back-up te maken van een systeem _vóór_ deze taak uit te voeren. Ook al is het opnieuw bouwen van de wereld vrij simpel (als deze instructies gevolgd worden), er worden ongetwijfeld ooit fouten gemaakt, misschien zelfs in de broncode, die het onmogelijk maken om een systeem op te starten.
+
+Wees ervan verzekerd dat er een back-up gemaakt is en dat er een reparatiediskette of cd-rom bij de hand is. Deze wordt waarschijnlijk nooit gebruikt maar "better safe than sorry".
+====
+
+[WARNING]
+.Abonneer op de juiste mailinglijsten
+====
+De FreeBSD-STABLE en FreeBSD-CURRENT takken zijn van nature _in ontwikkeling_. Mensen die bijdragen aan FreeBSD zijn menselijk en foutjes ontstaan regelmatig.
+
+Soms zijn deze foutjes onschadelijk, ze geven dan hooguit een nieuwe diagnostische waarschuwing weer. Maar de wijziging kan ook catastrofaal zijn en ervoor zorgen dat een systeem niet meer opstart of bestandssystemen vernietigt (of erger).
+
+Als problemen zoals deze voorkomen wordt er een "heads up" naar de juiste mailinglijst gestuurd, waarin uitgelegd wordt wat het probleem is en welke systemen het raakt. Er wordt een "all clear" bericht gestuurd als het probleem is opgelost.
+
+FreeBSD-STABLE of FreeBSD-CURRENT volgen zonder de {freebsd-stable} of {freebsd-current} te volgen is vragen om problemen.
+====
+
+[WARNING]
+.Gebruik geen `make world`
+====
+Veel oudere documentatie raadt aan om `make world` te gebruiken. In dat geval worden er belangrijke stappen overgeslagen en gebruik het commando alleen als er voldoende kennis over aanwezig is. In bijna alle omstandigheden is `make world` verkeerd en de procedure die hier beschreven is hoort in plaats daarvan gebruikt te worden.
+====
+
+[[canonical-build]]
+=== De universele wijze om een systeem bij te werken
+
+Om uw systeem bij te werken, dient u [.filename]#/usr/src/UPDATING# te controleren op eventuele pre-buildworld stappen die nodig zijn voor uw versie van de broncode en daarna de procedure te gebruiken die hier beschreven staat.
+
+Deze bijwerkstappen nemen aan dat u nu een oude versie van FreeBSD gebruikt, die uit een oude compiler, een oude kernel, een oude wereld en oude instellingenbestanden bestaat. Onder "wereld" worden de binairen, bibliotheken, en programmeerbestanden van het kernsysteem verstaan. De compiler is deel van "wereld", maar heeft enkele speciale aandachtspunten.
+
+We nemen ook aan dat u reeds de broncode van een nieuwer systeem heeft verkregen. Bekijk, als de bronnen op een bepaald systeem ook oud zijn, <<synching>> voor uitgebreide hulp over het synchroniseren ervan naar een nieuwere versie.
+
+Het bijwerken van het systeem vanaf de broncode is wat subtieler dan het op het eerste gezicht lijkt, en de ontwikkelaars van FreeBSD vonden het in de loop der jaren nodig om de aangeraden methode redelijk drastisch te veranderen met het aan het licht komen van nieuwe soorten onontwijkbare afhankelijkheden. De rest van deze sectie beschrijft de rationale achter de huidige aanbevolen bijwerkmethode.
+
+Elke succesvolle bijwerkmethode krijgt te maken met de volgende punten:
+
+* Het kan voorkomen dat de oude compiler de nieuwe kernel niet kan compileren. (Oude compilers bevatten soms bugs.) De nieuwe kernel dient dus met de nieuwe compiler gebouwd te worden. In het bijzonder moet de nieuwe compiler gebouwd worden voordat de nieuwe kernel gebouwd wordt. Dit betekent niet per se dat de nieuwe compiler _geïnstalleerd_ moet worden voordat de nieuwe kernel gebouwd wordt.
+* De nieuwe wereld kan afhankelijk zijn van mogelijkheden van de nieuwe kernel. Dus moet de nieuwe kernel worden geïnstalleerd voordat de nieuwe wereld wordt geïnstalleerd.
+
+De eerste twee gevallen zijn de basis voor de methode `buildworld`, `buildkernel`, `installkernel`, `installworld` die we in de volgende paragrafen beschrijven. Dit is geen uitputtende lijst van alle redenen waarom het huidige aanbevolen bijwerkproces de voorkeur verdient. Wat minder voor de hand liggende redenen worden hieronder genoemd:
+
+* Het kan zijn dat de oude wereld niet correct draait op de nieuwe kernel, dus moet de nieuwe wereld onmiddellijk na het installeren van de nieuwe kernel geïnstalleerd worden.
+* Sommige instellingen moeten veranderd worden voordat de nieuwe wereld wordt geïnstalleerd, maar anderen kunnen de oude wereld kapot maken. Vandaar dat over het algemeen twee verschillende bijwerkstappen voor de instellingen nodig zijn.
+* Voor het grootste gedeelte houdt het bijwerkproces zich alleen bezig met het vervangen of toevoegen van bestanden; bestaande oude bestanden worden niet verwijderd. Dit kan in sommige gevallen problemen geven. Als een gevolg zal de bijwerkprocedure soms aangeven dat bepaalde bestanden tijdens bepaalde stappen handmatig verwijderd dienen te worden. Dit kan in de toekomst eventueel geautomatiseerd worden.
+
+Deze zorgen hebben tot het volgende aanbevolen bijwerkproces geleid. Merk op dat het gedetailleerde proces voor bepaalde updates aanvullende stappen nodig kan hebben, maar dit kernproces zou de komende tijd ongewijzigd moeten blijven:
+
+. `make buildworld`
++ 
+Dit compileert eerst de nieuwe compiler en enkele aanverwante gereedschappen, daarna wordt de nieuwe compiler gebruikt om de rest van de nieuwe wereld te compileren. Het resultaat komt in [.filename]#/usr/obj# te staan.
+. `make buildkernel`
++ 
+In tegenstelling tot de oude aanpak, die man:config[8] en man:make[1] gebruikt, gebruikt dit de _nieuwe_ compiler die in [.filename]#/usr/obj# verblijft. Dit beschermt u tegen mismatches tussen de compiler en de kernel.
+. `make installkernel`
++ 
+Plaatst de nieuwe kernel en kernelmodules op de schijf, waardoor het mogelijk wordt om met de nieuw bijgewerkte kernel op te starten.
+. Start opnieuw op in enkele-gebruikersmodus.
++ 
+De enkele-gebruikersmodus minimaliseert problemen met het bijwerken van software die al draait. Het minimaliseert ook problemen die opduiken door een oude wereld op een nieuwe kernel te draaien.
+. `mergemaster -p`
++ 
+Dit voert wat initiële updates aan instellingenbestanden uit ter voorbereiding op de nieuwe wereld. Het kan bijvoorbeeld nieuwe gebruikersgroepen aan het systeem, of nieuwe gebruikersnamen aan de wachtwoorddatabase toevoegen. Dit is vaak nodig wanneer er nieuwe groepen of speciale accounts voor systeemgebruikers zijn toegevoegd sinds de laatste keer bijwerken, zodat de stap `installworld` zonder problemen de nieuw geïnstalleerde namen van systeemgebruikers of systeemgroepen kan gebruiken.
+. `make installworld`
++ 
+Kopieert de wereld van [.filename]#/usr/obj#. U heeft nu een nieuwe kernel en een nieuwe wereld op schijf staan.
+. `mergemaster`
++ 
+Nu kunt u de overgebleven instellingenbestanden bijwerken, aangezien u een nieuwe wereld op schijf heeft staan.
+. Start opnieuw op.
++ 
+Een volledige nieuwe start van de machine is nodig om de nieuwe kernel en de nieuwe wereld met nieuwe instellingenbestanden te laden.
+
+Merk op dat als u van de ene uitgave van dezelfde tak van FreeBSD bijwerkt naar een recentere uitgave van dezelfde tak, i.e. van 7.0 naar 7.1, dat deze procedure dan niet absoluut nodig is, aangezien het onwaarschijnlijk is dat u serieuze problemen krijgt met de compiler, kernel, gebruikersland en instellingenbestanden. De oudere aanpak met `make world` gevolgd door het bouwen en installeren van een nieuwe kernel kan voor kleine updates goed genoeg zijn.
+
+Maar mensen die deze procedure niet volgen tijdens het bijwerken tussen grote uitgaven kunnen wat problemen verwachten.
+
+Het is ook goed om op te merken dat veel upgrades (i.e. 4._X_ naar 5.0) wat specifieke aanvullende stappen nodig hebben (bijvoorbeeld het hernoemen of verwijderen van specifieke bestanden voorafgaand aan installworld). Lees het bestand [.filename]#/usr/src/UPDATING# zorgvuldig, met name het einde, waar het huidig aangeraden bijwerkproces expliciet wordt beschreven.
+
+Deze procedure is in de loop der tijd veranderd aangezien de ontwikkelaars zagen dat het onmogelijk was om bepaalde mismatch-problemen volledig te voorkomen. Hopelijk blijft de huidige procedure voor een lange tijd stabiel.
+
+Samengevat is de huidige aanbevolen manier om FreeBSD vanaf broncode bij te werken:
+
+[source,bash]
+....
+# cd /usr/src
+# make buildworld
+# make buildkernel
+# make installkernel
+# shutdown -r now
+....
+
+[NOTE]
+====
+Er zijn een aantal zeldzame gevallen waarin `mergemaster -p` nog een keer moet draaien voor de stap met `buildworld`. Deze staan beschreven in [.filename]#UPDATING#. In het algemeen kan deze stap echter zonder risico worden overgeslagen als er niet tussen een of meer hoofdversies wordt bijgewerkt.
+====
+
+Nadat `installkernel` succesvol is afgerond, dient er in single-user modus opgestart te worden (met `boot -s` vanaf de loaderprompt). Draai dan:
+
+[source,bash]
+....
+# mount -u /
+# mount -a -t ufs
+# adjkerntz -i
+# mergemaster -p
+# cd /usr/src
+# make installworld
+# mergemaster
+# reboot
+....
+
+.Lees verdere uitleg
+[WARNING]
+====
+
+De hierboven beschreven volgorde is alleen een korte samenvatting. Ook de volgende secties lezen geeft een beter beeld van elke stap, met name als er een op maat gemaakte kernelinstelling wordt gebruikt.
+====
+
+[[src-updating]]
+=== [.filename]#/usr/src/UPDATING# lezen
+
+Lees voor verder te gaan [.filename]#/usr/src/UPDATING# (of het gelijknamige bestand waar de kopie van de broncode ook staat). Dit bestand kan belangrijke informatie bevatten over mogelijke problemen of specificeert de volgorde waarin bepaalde commando's gestart moeten worden. Als [.filename]#UPDATING# tegenstrijdig is met wat hier wordt beschreven, heeft [.filename]#UPDATING# voorrang.
+
+[IMPORTANT]
+====
+[.filename]#UPDATING# lezen is geen acceptabele vervanging voor het abonneren op de correcte mailinglijst zoals eerder beschreven. De twee vullen elkaar aan en zijn niet exclusief.
+====
+
+[[make-conf]]
+=== [.filename]#/etc/make.conf# controleren
+
+Controleer [.filename]#/usr/shared/examples/etc/make.conf# en [.filename]#/etc/make.conf#. Het eerste bestand bevat standaard definities, waarvan de meeste uitgecommentarieerd zijn. Om hiervan gebruik te maken als het systeem opnieuw opgebouwd wordt vanuit de broncode, moeten ze toegevoegd worden aan [.filename]#/etc/make.conf#. Bedenk dat alles wat toegevoegd wordt aan [.filename]#/etc/make.conf# ook gebruikt wordt bij elk `make` commando. Het is dus verstandig om daar redelijke waardes in te vullen voor een systeem.
+
+Een typische gebruiker wil waarschijnlijk de regel `NO_PROFILE` uit [.filename]#/usr/shared/examples/etc/make.conf# kopiëren naar [.filename]#/etc/make.conf# en het commentaar verwijderen.
+
+Bekijk de andere definities, zoals `NOPORTDOCS` en bepaal of deze relevant zijn.
+
+[[updating-etc]]
+=== [.filename]#/etc# bijwerken
+
+De map [.filename]#/etc# bevat een groot deel van de systeeminstellingen en scripts die gestart worden tijdens de systeemstart. Sommige van deze scripts verschillen van versie tot versie in FreeBSD.
+
+Sommige van de instellingenbestanden worden dagelijks gebruikt voor het draaien van een systeem. In het bijzonder [.filename]#/etc/group#.
+
+Er zijn gevallen geweest waarbij het installatiegedeelte van `make installworld` een aantal gebruikersnamen of groepen verwachtte. Als er een upgrade wordt uitgevoerd is het waarschijnlijk dat deze gebruikers of groepen niet bestaan. Dit levert problemen op bij upgraden. In sommige gevallen controleert `make buildworld` of deze gebruikers of groepen bestaan.
+
+Een voorbeeld hiervan is het toevoegen van de gebruiker `smmsp`. Gebruikers hadden een falend installatieproces toen man:mtree[8] probeerde om [.filename]#/var/spool/clientmqueue# te creëren.
+
+man:mergemaster[8] kan in voorbereidende modus gedraaid worden als de optie `-p` wordt meegegeven. Dan worden alleen de bestanden vergeleken die essentieel zijn voor het succes van `buildworld` of `installworld`:
+
+[TIP]
+====
+
+In "paranoide beheerdersmodus" kan er gecontroleerd worden welke bestanden op een systeem eigendom zijn van de groep die wordt hernoemd of verwijderd:
+
+[source,bash]
+....
+# find / -group GID -print
+....
+
+Dit commando toont alle bestanden die eigendom zijn van de groep _GID_ (een groepsnaam of een numeriek groeps-ID).
+====
+
+[[makeworld-singleuser]]
+=== Systeem naar single-user modus brengen
+
+Het kan zijn dat een systeem in single-user modus gecompileerd moet worden. Buiten het duidelijke voordeel dat de operatie iets sneller verloopt, is het voordeel dat bij een herinstallatie van een systeem een aantal belangrijke systeembestanden waaronder binaire systeembestanden, bibliotheken, include bestanden, enzovoort, worden aangepast, iets wat op een actief systeem vragen om problemen is (zeker als er actieve gebruikers op een systeem aanwezig zijn).
+
+Een andere methode is het systeem compileren in multi-user modus en daarna naar single-user modus gaan voor de installatie. Bij deze methode moeten de volgende stappen gevolgd worden. Het overschakelen naar single-user modus kan uitgesteld worden tot en met `installkernel` of `installworld`.
+
+Een supergebruiker kan als volgt een draaiend systeem naar single-user modus overgeschakelen:
+
+[source,bash]
+....
+# shutdown now
+....
+
+Als alternatief kan tijdens het opstarten de optie `single user` worden gekozen. Het systeem start dan in single-user modus. Op de shell prompt moet dan worden ingegeven:
+
+[source,bash]
+....
+# fsck -p
+# mount -u /
+# mount -a -t ufs
+# swapon -a
+....
+
+Hierdoor worden de bestandssystemen gecontroleerd, [.filename]#/# met lees en schrijf rechten opnieuw gemount, worden alle andere UFS bestandssystemen die in [.filename]#/etc/fstab# staan gemount en wordt swap ingeschakeld.
+
+[NOTE]
+====
+Als de CMOS-klok ingesteld is naar de lokale tijd en niet naar GMT (dit is waar als het resultaat van man:date[1] niet de correcte tijd en zone weergeeft), dan is het misschien handig om het volgende commando te starten:
+
+[source,bash]
+....
+# adjkerntz -i
+....
+
+Dit zorgt ervoor dat de lokale tijdzoneinstellingen correct ingesteld worden. Zonder deze instelling kunnen er later problemen ontstaan.
+====
+
+[[cleaning-usr-obj]]
+=== [.filename]#/usr/obj# verwijderen
+
+Als delen van een systeem opnieuw gebouwd worden, worden ze standaard geplaatst in mappen onder [.filename]#/usr/obj#. Deze mappen schaduwen de mappen onder [.filename]#/usr/src#.
+
+Het proces `make buildworld` kan versneld worden en problemen met afhankelijkheden kunnen voorkomen worden als deze map wordt verwijderd.
+
+Sommige bestanden onder [.filename]#/usr/obj# hebben mogelijk de optie "niet aanpassen" ingesteld (zie man:chflags[1]) die eerst verwijderd moet worden:
+
+[source,bash]
+....
+# cd /usr/obj
+# chflags -R noschg *
+# rm -rf *
+....
+
+[[updating-upgrading-recompilebase]]
+=== Broncode van het basissysteem hercompileren
+
+==== Uitvoer bewaren
+
+Het is een goed idee om de uitvoer van man:make[1] te bewaren in een ander bestand. Als er iets misgaat is er een kopie van de foutmelding aanwezig. Hoewel dit misschien niet helpt in de diagnose van wat er fout is gegaan, kan het anderen helpen als het probleem wordt aangegeven in een FreeBSD mailinglijst.
+
+De makkelijkste manier om dit te doen is door het commando man:script[1] te gebruiken, met een parameter die de naam specificeert waar de uitvoer naartoe moet. Dit moet direct gedaan worden vóór het herbouwen van de wereld, zodat het proces klaar is moet `exit` worden ingegeven:
+
+[source,bash]
+....
+# script /var/tmp/mw.out
+Script started, output file is /var/tmp/mw.out
+# make TARGET
+… compile, compile, compile …
+# exit
+Script done, …
+....
+
+Bewaar de uitvoer in deze stap _niet_ in [.filename]#/tmp#. Deze map wordt mogelijk opgeschoond tijdens de volgende herstart. Een betere plaats om dit bestand te bewaren is de map [.filename]#/var/tmp# (zoals in het vorige voorbeeld) of in de thuismap van `root`.
+
+[[make-buildworld]]
+==== Basissysteem compileren
+
+Ga naar de map [.filename]#/usr/src#, tenzij de broncode ergens anders staat, in welk geval naar die map gegaan moet worden:
+
+[source,bash]
+....
+# cd /usr/src
+....
+
+Om de wereld opnieuw te bouwen moet het commando man:make[1] gebruikt worden. Dit commando leest zijn instructies uit het bestand [.filename]#Makefile#, dat beschrijft hoe de programma's die samen FreeBSD vormen moeten worden gebouwd, in welke volgorde ze gebouwd moeten worden, enzovoort.
+
+Het algemene formaat van de commandoregel die gebruikt moet worden is als volgt:
+
+[source,bash]
+....
+# make -x -DVARIABELE doel
+....
+
+In dit voorbeeld is de optie `-_x_` een optie die wordt meegegeven aan man:make[1]. In de hulppagina voor man:make[1] staat een voorbeeld van de opties die meegegeven kunnen worden.
+
+`-D_VARIABELE_` geeft een variabele door aan [.filename]#Makefile#. Het gedrag van [.filename]#Makefile# wordt beïnvloed door deze variabele. Dit zijn dezelfde variabelen die ingesteld worden in [.filename]#/etc/make.conf#. Deze optie biedt een alternatief om deze opties in te stellen.
+
+[source,bash]
+....
+# make -DNO_PROFILE doel
+....
+
+Het bovenstaande commando is een andere manier om aan te geven dat geprofileerde bibliotheken niet gebouwd moeten worden en correspondeert met de onderstaande regel in [.filename]#/etc/make.conf#:
+
+[.programlisting]
+....
+NO_PROFILE=    true	#    Avoid compiling profiled libraries
+....
+
+_doel_ geeft man:make[1] aan wat er gedaan moet worden. Elke [.filename]#Makefile# definieert een aantal van verschillende doelen en het gekozen doel bepaalt wat er gebeurt.
+
+Sommige doelen staan vermeld in het bestand [.filename]#Makefile#, maar zijn niet geschikt om direct te starten. Integendeel, deze worden gebruikt door het bouwproces om de benodigde stappen onder te verdelen.
+
+In veel gevallen hoeven er geen parameters te worden meegegeven aan man:make[1] en dus ziet de commando regel er als volgt uit:
+
+[source,bash]
+....
+# make doel
+....
+
+Waar _doel_ een van de vele bouw opties is. De eerste target moet echter altijd `buildworld` zijn.
+
+Zoals de namen impliceren bouwt `buildworld` een compleet nieuwe boom onder [.filename]#/usr/obj# en `installworld`, een andere target, installeert deze boom op de huidige machine.
+
+Het hebben van verschillende opties is handig om twee redenen. Als eerste biedt het de mogelijkheid om de bouw veilig te doen met de wetenschap dat geen enkel draaiend onderdeel van een systeem geraakt wordt. De bouw is "zelf ondersteunend". Hierdoor kan veilig in multi-user modus `buildworld` gedraaid worden. Het wordt echter nog steeds aangeraden om `installworld` in single-user modus te starten.
+
+Ten tweede geeft het de mogelijkheid om NFS-mounts te gebruiken om meerdere machines in het netwerk bij te werken. Als er drie machines zijn, `A`, `B` en `C`, die bijgewerkt moeten worden, dan kunnen `make buildworld` en `make installworld` gedraaid worden op `A` waarna `B` en `C` een NFS-mount kunnen opzetten naar [.filename]#/usr/src# en [.filename]#/usr/obj# op machine `A` waarna `make installworld` gedraaid kan worden op `B` en `C` om de resultaten de installeren.
+
+Alhoewel het doel `world` nog wel bestaat wordt het gebruik ervan sterk _afgeraden_.
+
+Voer het volgende commando uit:
+
+[source,bash]
+....
+# make buildworld
+....
+
+Het is mogelijk om de optie `-j` mee te geven aan `make`, wat resulteert in meerdere processen die tegelijkertijd draaien. Dit heeft het meeste effect op machines met meerdere processoren. Echter, omdat het compilatieproces meer IO-gericht is dan processorgericht, kan het ook nuttig zijn op systemen met één processor.
+
+Start als volgt op een systeem met één processor:
+
+[source,bash]
+....
+# make -j4 buildworld
+....
+
+man:make[1] draait dan maximaal 4 processen tegelijkertijd. In het algemeen blijkt uit de mailinglijsten dat dit de beste resultaten geeft.
+
+Als er meerdere processoren in een systeem zitten en gebruik gemaakt wordt van een SMP kernel, probeer dan waardes tussen de 6 en 10 en bekijk hoe het systeem reageert.
+
+==== Doorlooptijd
+
+Veel factoren bepalen de doorlooptijd van het bouwen van een boom, maar redelijk recente machines doen er maar 1 tot 2 uur over om de FreeBSD-STABLE boom te bouwen. zonder extra trucjes. Een FreeBSD-CURRENT boom kan wat langer duren.
+
+[[new-kernel]]
+=== Nieuwe kernel compileren en installeren
+
+Om volledig gebruik te maken van het nieuwe systeem moet de kernel opnieuw gecompileerd worden. Dit is bijna altijd nodig omdat sommige geheugenstructuren mogelijkerwijs veranderd zijn en programma's als man:ps[1] en man:top[1] niet werken totdat de kernel en de broncode dezelfde versie hebben.
+
+De simpelste en makkelijkste manier om dit te doen is om een kernel te maken die gebaseerd is op [.filename]#GENERIC#. Ondanks dat [.filename]#GENERIC# mogelijk niet alle benodigde apparaten heeft voor een systeem, hoort het alles te bevatten dat nodig is om een systeem te starten in single-user modus. Dit is een goede test op de correcte werking van een nieuw systeem. Na het opstarten van [.filename]#GENERIC# en een systeemcontrole kan erna een nieuwe kernel gebouwd worden gebaseerd op een aangepast kernelinstellingenbestand.
+
+Op FreeBSD is het belangrijk om de <<make-buildworld,wereld opnieuw te bouwen>> voordat een nieuwe kernel gebouwd wordt.
+
+[NOTE]
+====
+Als een aangepaste kernel gemaakt moet worden en er reeds een instellingenbestand aanwezig is, gebruik dan `KERNCONF=MYKERNEL` als volgt:
+
+[source,bash]
+....
+# cd /usr/src
+# make buildkernel KERNCONF=MYKERNEL
+# make installkernel KERNCONF=MYKERNEL
+....
+
+====
+
+Let op dat als `kern.securelevel` een waarde hoger dan 1 heeft _of_ `noschg` of gelijksoortige opties geplaatst zijn op het binaire kernelbestand, is het misschien nodig om terug te gaan naar single-user modus om `installkernel` uit te voeren. In andere gevallen moet het mogelijk zijn om deze commando's zonder problemen uit te voeren in multi-user modus. Zie man:init[8] voor meer informatie over `kern.securelevel` en man:chflags[1] voor informatie over diverse bestandsopties.
+
+[[new-kernel-singleuser]]
+=== Opnieuw opstarten in single-user modus
+
+Start met de instructies in <<makeworld-singleuser>> in single-user modus op om te testen of de nieuwe kernel werkt.
+
+[[post-installworld-updates]]
+=== Nieuwe binaire systeembestanden installeren
+
+Na het draaien van `make buildworld` kan nu `installworld` gebruikt worden om de nieuwe binaire systeembestanden te installeren.
+
+Voer de volgende commando's uit:
+
+[source,bash]
+....
+# cd /usr/src
+# make installworld
+....
+
+[NOTE]
+====
+Als er variabelen gespecificeerd zijn op de commandoregel van `make buildworld` moeten dezelfde variabelen gebruikt worden op de commandoregel van `make installworld`. Dit is niet per se waar voor opties zoals `-j`, die nooit gebruikt mogen worden met `installworld`.
+
+Als bijvoorbeeld het volgende commando is uitgevoerd:
+
+[source,bash]
+....
+# make -DNO_PROFILE buildworld
+....
+
+Dan moet het resultaat geïnstalleerd worden met:
+
+[source,bash]
+....
+# make -DNO_PROFILE installworld
+....
+
+Anders wordt geprobeerd geprofileerde bibliotheken te installeren die niet gebouwd zijn tijdens de fase `make buildworld`.
+====
+
+[[make-installworld]]
+=== Bestanden bijwerken die niet bijgewerkt zijn door `make installworld`
+
+Het herbouwen van de wereld werkt bepaalde mappen niet bij (in het bijzonder [.filename]#/etc#, [.filename]#/var# en [.filename]#/usr#) met nieuwe of gewijzigde instellingenbestanden.
+
+De simpelste manier om deze bestanden bij te werken is door man:mergemaster[8] te gebruiken, maar het is ook mogelijk dit handmatig te doen. Welke manier er ook gekozen wordt, zorg er altijd voor dat een back-up van [.filename]#/etc# beschikbaar is voor het geval er iets misgaat.
+
+[[mergemaster]]
+==== `mergemaster`
+
+Het hulpprogramma man:mergemaster[8] is een Bourne script dat helpt bij het bepalen van de verschillen tussen de instellingenbestanden in [.filename]#/etc# en de instellingenbestanden in de broncodeboom [.filename]#/usr/src/etc#. Deze methode wordt aangeraden om instellingenbestanden van een systeem bijgewerkt te houden met de bestanden die in de broncodeboom staan.
+
+Het programma wordt gestart met `mergemaster` op de commandoregel en geeft dan resultaten weer. `mergemaster` bouwt dan een tijdelijke root omgeving vanaf [.filename]#/# en vult deze met diverse instellingenbestanden voor een systeem. Deze bestanden worden vergeleken met de bestanden die geïnstalleerd zijn op een systeem. Op dit punt worden de bestanden getoond die verschillen in het man:diff[1]-formaat, met een `+` voor toegevoegde of gewijzigde regels en een `-` voor regels die verwijderd of vervangen zijn. In de hulppagina voor man:diff[1] staat meer informatie over de syntaxis van man:diff[1] en hoe bestandsverschillen getoond worden.
+
+man:mergemaster[8] toont dan elk bestand dat verschilt en op dit moment is er de mogelijkheid om of het nieuwe bestand te verwijderen (ofwel het tijdelijke bestand), het tijdelijke bestand te installeren zonder enige wijzigingen, het verwerken van het oude bestand in het nieuwe bestand of de resultaten van man:diff[1] nogmaals te tonen.
+
+Als gekozen wordt om het tijdelijke bestand te verwijderen, geeft dit man:mergemaster[8] aan dat het huidige bestand niet gewijzigd dient te worden en de nieuwe versie verwijderd kan worden. Deze optie wordt niet aangeraden, behalve als er geen reden is om het huidige bestand aan te passen. Op ieder moment kunnen hulpteksten getoond worden door kbd:[?] in te geven op de prompt van man:mergemaster[8]. Als een bestand wordt overgeslagen, dan wordt het weer getoond als alle overige bestanden verwerkt zijn.
+
+Bij de keuze om het ongewijzigde tijdelijke bestand te installeren wordt het huidige bestand vervangen door het nieuwe. Voor de meeste ongewijzigde bestanden is dit de beste optie.
+
+Als ervoor gekozen wordt om de wijzigingen te verwerken wordt er een tekstverwerker gestart die de inhoud van beide bestanden toont. De verschillen kunnen verwerkt worden terwijl beide bestanden naast elkaar op het scherm staan. Hier kunnen delen gekozen worden die gezamenlijk een nieuw bestand opleveren. Als de bestanden zij aan zij vergeleken worden, wordt met de toets kbd:[l] de inhoud links geselecteerd en met de toets kbd:[r] de inhoud rechts geselecteerd. Het eindresultaat bestaat uit delen van beide bestanden die erna geinstalleerd kunnen worden. Deze optie wordt voornamelijk gebruikt voor bestanden die gewijzigd zijn door de beheerder.
+
+Als ervoor gekozen wordt om de man:diff[1] resultaten nog een keer te tonen, worden dezelfde verschillen getoond zoals man:mergemaster[8] deed voordat een optie gevraagd werd.
+
+Zodra man:mergemaster[8] klaar is met de systeembestanden worden er andere opties getoond. man:mergemaster[8] kan vragen of het wachtwoordbestand opnieuw gebouwd moet worden. Als laatste wordt een optie getoond om alle overgebleven tijdelijke bestanden te verwijderen.
+
+==== Handmatig bijwerken
+
+Bij handmatig bijwerken kunnen de bestanden van [.filename]#/usr/src/etc# niet zomaar naar [.filename]#/etc# gekopieerd worden om een werkend systeem te krijgen. Sommige van deze bestanden moeten eerst "geïnstalleerd" worden. Dit omdat de map [.filename]#/usr/src/etc#_geen_ kopie is van [.filename]#/etc#. Daarnaast staan er in [.filename]#/etc# bestanden die niet in [.filename]#/usr/src/etc# staan.
+
+Als man:mergemaster[8] gebruikt wordt (zoals aangeraden), kan doorgegaan worden met het <<updating-upgrading-rebooting,volgende onderdeel>>.
+
+De simpelste manier om met de hand bij te werken, is de bestanden in een nieuwe map installeren en daarna naar verschillen tussen de bestanden te zoeken.
+
+[WARNING]
+.Back-up maken van [.filename]#/etc#
+====
+Ondanks dat, in theorie, niets in deze map automatisch wordt aangepast, is het altijd beter om daar zeker van te zijn. Dus kopieer de bestaande [.filename]#/etc# naar een veilige locatie. Zoals bijvoorbeeld met het volgende commando:
+
+[source,bash]
+....
+# cp -Rp /etc /etc.old
+....
+
+`-R` maakt een recursieve kopie, `-p` bewaart tijden, eigenaarschap, enzovoorts op bestanden.
+====
+
+Er moet een dummyset van mappen gemaakt worden om de nieuwe [.filename]#/etc# en andere bestanden in te installeren. [.filename]#/var/tmp/root# is een redelijke keuze en er zijn hier een aantal benodigde submappen aanwezig:
+
+[source,bash]
+....
+# mkdir /var/tmp/root
+# cd /usr/src/etc
+# make DESTDIR=/var/tmp/root distrib-dirs distribution
+....
+
+Dit maakt de benodigde mappenstructuur en installeert de bestanden. Een groot deel van de submappen die gemaakt zijn in [.filename]#/var/tmp/root# zijn leeg en moeten verwijderd worden. De simpelste manier om dit te doen is:
+
+[source,bash]
+....
+# cd /var/tmp/root
+# find -d . -type d | xargs rmdir 2>/dev/null
+....
+
+Dit verwijderd alle lege mappen. De standaardfout wordt omgeleid naar [.filename]#/dev/null# om waarschuwingen te voorkomen over mappen die niet leeg zijn.
+
+[.filename]#/var/tmp/root# bevat nu alle bestanden die geplaatst zouden moeten worden op de juiste locaties in [.filename]#/#. Er moet nu in de bestanden gekeken worden om te bepalen of deze verschillen met de huidige betanden.
+
+Let op dat sommige van de bestanden die geïnstalleerd zijn in [.filename]#/var/tmp/root# beginnen met een ".". Op het moment van schrijven hebben alleen shell opstartscripts in [.filename]#/var/tmp/root# en [.filename]#/var/tmp/root/root# dit, maar er kunnen ook andere zijn. Zorg ervoor dat `ls -a` gebruikt wordt om deze bestanden te zien.
+
+De simpelste manier om twee bestanden te vergelijken is man:diff[1] gebruiken:
+
+[source,bash]
+....
+# diff /etc/shells /var/tmp/root/etc/shells
+....
+
+Dit toont de verschillen tussen de huidige [.filename]#/etc/shells# en de nieuwe [.filename]#/var/tmp/root/etc/shells#. Gebruik dit om te bepalen of de wijzigingen gemigreerd moeten worden of dat het oude bestand gekopieërd moet worden.
+
+[TIP]
+.Voeg aan de naam van de nieuwe rootmap ([.filename]#/var/tmp/root#) een tijdsindicatie toe zodat makkelijk verschillen tussen versies bepaald kunnen worden
+====
+Als de wereld regelmatig wordt herbouwd moeten bestanden in [.filename]#/etc# ook regelmatig bijgewerkt moeten worden, wat een vervelend werkje kan zijn.
+
+Dit proces kan versneld worden door een kopie te bewaren van de bestanden die gemigreerd zijn naar [.filename]#/etc#. De volgende procedure geeft een idee over hoe dit gedaan kan worden.
+
+[.procedure]
+======
+. Maak de wereld zoals normaal. Als [.filename]#/etc# en de andere mappen bijgewerkt moeten worden, geef dan de doelmap een naam gebaseerd op de huidige datum. Op 14 februari 1998 wordt dat als volgt gedaan:
++
+[source,bash]
+....
+# mkdir /var/tmp/root-19980214
+# cd /usr/src/etc
+# make DESTDIR=/var/tmp/root-19980214 \
+    distrib-dirs distribution
+....
++
+. Migreer de wijzigingen van deze map zoals hierboven beschreven.
++ 
+Verwijder de map [.filename]#/var/tmp/root-19980214#_niet_ na afronden.
+. Als de laatste versie van de broncode gedownload en opnieuw gemaakt is, volg stap 1. Dit geeft een nieuwe map die wellicht [.filename]#/var/tmp/root-19980221# heet (als er een week zit tussen het bijwerken).
+. De verschillen die gemaakt zijn in de tussenliggende week kunnen nu getoond worden door met man:diff[1] een recursieve diff te maken tussen de twee mappen:
++
+[source,bash]
+....
+# cd /var/tmp
+# diff -r root-19980214 root-19980221
+....
++ 
+Vaak is dit een kleinere set aan verschillen dan tussen [.filename]#/var/tmp/root-19980221/etc# en [.filename]#/etc#. Omdat de set verschillen kleiner is, is het makkelijker om deze te migreren naar de map [.filename]#/etc#.
+. De oudste van de twee [.filename]#/var/tmp/root-*#-mappen kan nu verwijderd worden:
++
+[source,bash]
+....
+# rm -rf /var/tmp/root-19980214
+....
++
+. Herhaal dit proces elke keer als er wijzigingen gemigreerd moeten worden naar [.filename]#/etc#.
+======
+
+Met man:date[1] kan het maken van de mappen geautomatiseerd worden:
+
+[source,bash]
+....
+# mkdir /var/tmp/root-`date "+%Y%m%d"`
+....
+
+====
+
+[[updating-upgrading-rebooting]]
+=== Herstarten
+
+Dit was het. Na een controle of alles op de juiste plaats staat kan het systeem herstart worden. Dan kan met een simpele man:shutdown[8]:
+
+[source,bash]
+....
+# shutdown -r now
+....
+
+=== Klaar
+
+Het FreeBSD systeem is nu succesvol bijgewerkt. Gefeliciteerd!
+
+Als er dingen misgingen is het makkelijk om een deel van het systeem opnieuw te bouwen. Als bijvoorbeeld per ongeluk [.filename]#/etc/magic# verwijderd is als onderdeel van de upgrade of door het samenvoegen van [.filename]#/etc#, dan werkt man:file[1] niet meer. Dat kan als volgt opgelost worden:
+
+[source,bash]
+....
+# cd /usr/src/usr.bin/file
+# make all install
+....
+
+[[updating-questions]]
+=== Vragen
+
+==== Moet de wereld opnieuw gemaakt worden voor elke wijziging?
+
+Op deze vraag bestaat geen eenvoudig antwoord, omdat dit afhangt van de aard van de wijziging. Als bijvoorbeeld net CVSup is gedraaid en de onderstaande bestanden zijn bijgewerkt, dan is het waarschijnlijk niet de moeite waard om de volledige wereld te herbouwen:
+
+[source,bash]
+....
+src/games/cribbage/instr.c
+src/games/sail/pl_main.c
+src/release/sysinstall/config.c
+src/release/sysinstall/media.c
+src/shared/mk/bsd.port.mk
+....
+
+Dan is het handiger om naar de juiste submappen te gaan, daar `make all install` uit te voeren en dat is het zo'n beetje. Maar als er iets wezenlijks is veranderd, bijvoorbeeld [.filename]#src/lib/libc/stdlib#, dan dient ofwel de wereld herbouwd te worden of tenminste die delen die statisch gelinkt zijn (en ook al het andere dat statisch gelinkt is en onderdeel is van een systeem).
+
+Uiteindelijk beslist een beheerder zelf. Misschien vindt die het prettig iedere twee weken de wereld te herbouwen terwijl de wijzigingen in die twee weken binnenkomen. Een andere beheerder herbouwt alleen die onderdelen die veranderd zijn en vertrouwt erop dat hij alle afhankelijkheden in de gaten heeft.
+
+Natuurlijk hangt het ook af van de keuze hoe vaak het wenselijk is bij te werken en of FreeBSD-STABLE of FreeBSD-CURRENT wordt bijgehouden.
+
+==== Het compileren gaat fout met veel meldingen van signal 11signal 11 (of andere signalnummers). Wat is er aan de hand?
+
+Dit wijst meestal op hardwareproblemen. Het (her)bouwen van de wereld is een prima manier om een stresstest op hardware uit te voeren en hierdoor komen vaak geheugenproblemen bovendrijven. Die resulteren vaak in een compiler die op mysterieuze wijze overlijdt na het ontvangen van vreemde signalen.
+
+Dit probleem is nog duidelijker als na het herstarten van de make het proces opnieuw stopt op een ander punt.
+
+Hier biedt niets anders uitkomst dan componenten in een systeem wisselen om uit te zoeken welk component er faalt.
+
+==== Kan /usr/obj verwijderd worden na afloop?
+
+Het korte antwoord is ja.
+
+[.filename]#/usr/obj# bevat alle objectbestanden die tijdens het compileren zijn gemaakt. Normaliter is een van de eerste stappen in het `make buildworld` proces deze map verwijderen en een verse start maken. In dit geval heeft het behouden van [.filename]#/usr/obj# na het afronden weinig zin en geeft het ook nogal wat extra vrije schijfruimte (ongeveer 2 GB).
+
+Als er veel kennis aanwezig is bij een beheerder, dan kan `make buildworld` aangegeven worden deze stap over te slaan. Hierdoor draaien volgende builds veel sneller, omdat veel broncode niet opnieuw gecompileerd hoeft te worden. De andere kant van de medaille is dat er subtiele afhankelijkheidsproblemen kunnen ontstaan, waardoor een build op bijzondere wijze kan falen. Hierdoor onstaat regelmatig ruis op FreeBSD mailinglijsten als er iemand klaagt dat zijn build faalt, terwijl hij zich niet realiseert dat dit komt doordat hij zijn updateproces niet volgens het boekje heeft uitgevoerd.
+
+==== Kunnen onderbroken builds gecontinueerd worden?
+
+Dit hangt af van hoever een systeem was voordat een probleem gevonden werd.
+
+_Normaal gesproken_ (en dit is geen vaste regel) maakt het proces `make buildworld` nieuwe kopieën van essentiele hulpprogramma's (zoals man:gcc[1] en man:make[1]) en de systeembibliotheken. Deze hulpprogramma's en bibliotheken worden daarna geïnstalleerd. De nieuwe hulpprogramma's en bibliotheken worden daarna gebruikt om zichzelf opnieuw op te bouwen en wederom te installeren. Het complete systeem (nu met gewone programma's zoals man:ls[1] en man:grep[1]) wordt daarna opnieuw gebouwd met de nieuwe systeembestanden.
+
+Als een systeem in de laatste fase zit (wat uit de uitvoer blijkt) kan dit redelijk veilig gedaan worden:
+
+[source,bash]
+....
+… fix the problem …
+# cd /usr/src
+# make -DNO_CLEAN all
+....
+
+Dit maakt het werk van de vorige `make buildworld` niet ongedaan.
+
+Als het onderstaande bericht in de uitvoer van `make buildworld` staat, dan is het redelijk veilig om het te doen:
+
+[source,bash]
+....
+--------------------------------------------------------------
+Building everything..
+--------------------------------------------------------------
+....
+
+Als dat bericht er niet is, of er is onzekerheid over, dan is het altijd beter om de build opnieuw te starten vanaf het begin.
+
+==== Kan kan de wereld bouwen versneld worden?
+
+* Draai in single-user modus;
+* Zet de mappen [.filename]#/usr/src# en [.filename]#/usr/obj# op aparte bestandssystemen die op aparte schijven staan. Hang deze schijven als mogelijk aan aparte schijfcontrollers;
+* Nog beter, verspreid de bestandssystemen over meerdere schijven via het apparaat man:ccd[4] (concatenated disk driver);
+* Zet profiling uit (voeg "NO_PROFILE=true" toe aan [.filename]#/etc/make.conf#). Het is zeer waarschijnlijk niet nodig;
+* Geef de optie `-j__n__` mee aan man:make[1] om meerdere processen parallel te laten lopen. Dit helpt in de meeste gevallen, onafhankelijk of er gewerkt wordt op een systeem met één of meerdere processoren;
+* Het bestandssysteem dat [.filename]#/usr/src# bevat, kan (opnieuw) gemount worden met de optie `noatime`. Dit voorkomt dat het bestandssysteem de toegangsmomenten registreert. Deze informatie is waarschijnlijk toch niet nodig.
++
+[source,bash]
+....
+# mount -u -o noatime /usr/src
+....
++
+[WARNING]
+====
+
+In dit voorbeeld wordt aangenomen dat [.filename]#/usr/src# op zijn eigen bestandssysteem staat. Als dit niet het geval is (bijvoorbeeld als het onderdeel is van [.filename]#/usr#), dan moet het mountpunt voor dat bestandssysteem gebruikt moeten worden en niet [.filename]#/usr/src#;
+====
+
+* Het bestandssysteem dat [.filename]#/usr/obj# gevat kan (opnieuw) worden gemount met de optie `async`. Dit zorgt ervoor dat schrijfacties naar een schijf asynchroon plaatsvinden. In andere woorden: de schrijfactie wordt direct uitgevoerd en de gegevens worden later naar de schijf geschreven. Dit stelt het systeem in staat om data geclusterd weg te schrijven, wat een grote prestatieverbetering kan opleveren.
++
+[WARNING]
+====
+
+Houd er rekening mee dat deze optie het bestandssysteem kwetsbaarder maakt. Met deze optie is er een vergrote kans dat, indien er een stroomstoring optreed, het bestandssysteem in een niet meer te herstellen staat komt als de machine herstart.
+
+Als op dit bestandssysteem alleen [.filename]#/usr/obj# staat, is dit geen probleem. Als er andere belangrijke gegevens op hetzelfde bestandssysteem staan, zorg er dan voor dat er verse back-ups zijn voordat deze optie aangezet wordt.
+====
++
+[source,bash]
+....
+# mount -u -o async /usr/obj
+....
++
+[WARNING]
+====
+
+Zorg ervoor, zoals al eerder is aangegeven, dat als [.filename]#/usr/obj# niet op een eigen bestandssysteem staat, het juiste mountpunt wordt gebruikt.
+====
+
+==== Wat te doen als er iets mis gaat?
+
+Zorg ervoor dat het systeem geen rommel meer bevat van eerdere builds. Het volgende helpt daarbij:
+
+[source,bash]
+....
+# chflags -R noschg /usr/obj/usr
+# rm -rf /usr/obj/usr
+# cd /usr/src
+# make cleandir
+# make cleandir
+....
+
+Inderdaad, `make cleandir` moet twee keer gedraaid worden.
+
+Herstart daarna het complete proces vanaf `make buildworld`.
+
+Als er nog steeds problemen zijn, stuur dan de foutmelding en de uitvoer van `uname -a` naar de {freebsd-questions}. Wees bereid aanvullende vragen over het systeem te beantwoorden!
+
+[[make-delete-old]]
+== Het verwijderen van overbodige bestanden, directories en bibliotheken
+
+Als onderdeel van de FreeBSD ontwikkel levenscyclus kan het van tijd tot tijd gebeuren dat bestanden en de inhoud ervan overbodig worden. Dit kan komen doordat de functionaliteit ergens anders geïmplementeerd is, het versienummer van de bibliotheek veranderd is of hij is totaal van het systeem verdwenen. Dit is inclusief oude bestanden, bibliotheken en directories welke verwijderd moeten worden bij het updaten van het systeem. Het voordeel voor de gebruiker is dat het systeem niet vervuild wordt met oude bestanden die onnodig ruimte innemen op het opslag (en back-up) systeem. Ook is het zo dat als de oude bibliotheek een beveiligings of stabiliteits probleem had, er moet worden geupdate naar de nieuwere bibliotheek om het systeem veilig te houden en te voorkomen dat er crashes komen door de oude implementatie van de bibliotheek. De bestanden, directories en bibliotheken welke als overbodig worden gezien zijn beschreven in [.filename]#/usr/src/ObsoleteFiles.inc#. De volgende instructies zullen helpen om deze verouderde bestanden te verwijderen tijdens het systeem upgrade proces.
+
+Er wordt aangenomen dat de stappen gevolgd worden zoals uitgelegd in <<canonical-build>>. Na het `make installworld` commando en het daarop volgende `mergemaster` commando succesvol uitgevoerd zijn kan er op de volgende manier gecontroleerd worden voor verouderde bestanden en bibliotheken:
+
+[source,bash]
+....
+# cd /usr/src
+# make check-old
+....
+
+Als er verouderde bestanden gevonden worden kunnen deze verwijderd worden door het volgende commando:
+
+[source,bash]
+....
+# make delete-old
+....
+
+[TIP]
+====
+
+Zie het [.filename]#/usr/src/Makefile# bestand voor meer interessante targets.
+====
+
+Er wordt een prompt getoond voordat elk verouderd bestand wordt verwijderd. Deze prompt kan worden overgeslagen en het systeem deze bestanden automatisch laten verwijderen door gebruik te maken van de `BATCH_DELETE_OLD_FILES` make variabele als volgt:
+
+[source,bash]
+....
+# make -DBATCH_DELETE_OLD_FILES delete-old
+....
+
+Dit kan ook worden gedaan door deze commando's door `yes` te pipen als volgt:
+
+[source,bash]
+....
+# yes|make delete-old
+....
+
+.Waarschuwing
+[WARNING]
+====
+
+Het verwijderen van verouderde bestanden zal applicaties stuk maken die nog gebruik maken van de overbodige bestanden. Dit is zeker waar voor oude bibliotheken. In de meeste gevallen moeten de programma's, ports of bibliotheken opnieuw gecompileerd worden voordat `make delete-old-libs` wordt uitgevoerd.
+====
+
+Gereedschappen om gedeelde bibliotheek afhankelijkheden te controleren zijn beschikbaar in de Ports Collectie in package:sysutils/libchk[] of package:sysutils/bsdadminscripts[].
+
+Overbodige gedeelde bibliotheken kunnen conflicteren met nieuwere bibliotheken welke berichten zoals deze kunnen veroorzaken:
+
+[source,bash]
+....
+/usr/bin/ld: warning: libz.so.4, needed by /usr/local/lib/libtiff.so, may conflict with libz.so.5
+/usr/bin/ld: warning: librpcsvc.so.4, needed by /usr/local/lib/libXext.so, may conflict with librpcsvc.so.5
+....
+
+Om deze problemen op te lossen moet bepaald worden welke port deze bibliotheek heeft geïnstalleerd:
+
+[source,bash]
+....
+# pkg_info -W /usr/local/lib/libtiff.so
+/usr/local/lib/libtiff.so was installed by package tiff-3.9.4
+# pkg_info -W /usr/local/lib/libXext.so
+/usr/local/lib/libXext.so was installed by package libXext-1.1.1,1
+....
+
+Deïnstalleer, herbouw en herinstalleer de port. De package:ports-mgmt/portmaster[] en package:ports-mgmt/portupgrade[] gereedschappen kunnen gebruikt worden om deze processen te automatiseren. Nadat zeker is dat alle ports opnieuw gebouwd zijn, en de oude bibliotheken niet meer gebruikt worden, kunnen deze verwijderd worden met het volgende commando:
+
+[source,bash]
+....
+# make delete-old-libs
+....
+
+[[small-lan]]
+== Meerdere machines bijwerken
+
+Als er meerdere machines zijn die dezelfde broncode bijhouden, lijkt het downloaden van alle broncode en alles overal opnieuw bouwen zonde van de bronnen: harde schijfruimte, netwerk bandbreedte, en processorbelasting. Dit klopt en de oplossing is om alles op één machine te doen terwijl de overige machines het uitgevoerde werk benaderen via NFS. Nu wordt een methode beschreven waarmee dit gedaan kan worden.
+
+[[small-lan-preliminaries]]
+=== Benodigdheden
+
+Als eerste moet er een groep van machines gekozen worden die dezelfde set aan binaire bestanden zal draaien, hier een _bouwgroep_. Elke machine kan een eigen afwijkende kernel hebben maar moet dezelfde binaire gebruikersbestanden draaien. Uit die groep moet een machine gekozen worden die de _bouwmachine_ wordt. Dit wordt de machine waar de wereld en kernel op gebouwd worden. In het meest ideale geval is dit een snelle machine die genoeg processorkracht vrij heeft om `make buildworld` en `make buildkernel` te draaien. Er moet ook een machine gekozen worden die de _testmachine_ wordt waarop alle bijgewerkte software wordt test voordat die in productie wordt genomen. Dit _moet_ een machine zijn die voor langere tijd down mag zijn. Dit kan de bouwmachine zijn maar dat hoeft niet per se.
+
+Alle machines in deze bouwgroep moeten ingesteld worden om [.filename]#/usr/obj# en [.filename]#/usr/src# vanaf dezelfde machine te mounten op hetzelfde punt. In het meest ideale geval zijn dit twee verschillende schijven op de bouwmachine, maar ze kunnen ook door middel van NFS op die machine gemount zijn. Als er meerdere bouwgroepen zijn, dan moet [.filename]#/usr/src# op één bouwmachine staan en door middel van NFS gemount worden op de overige machines.
+
+Zorg er als laatste voor dat [.filename]#/etc/make.conf# en [.filename]#/etc/src.conf# op alle machines in de bouwgroep het eens zijn met de bouwmachine. Dat betekent dat de bouwmachine alle delen van het basissysteem moet bouwen die elke machine in de bouwgroep installeert. Ook heeft elke bouwmachine zijn kernelnaam ingesteld met `KERNCONF` in [.filename]#/etc/make.conf# en de bouwmachine moet ze allemaal hebben in `KERNCONF`, zijn eigen kernel eerst. De bouwmachine moet de instellingenbestanden voor elke machine in [.filename]#/usr/src/sys/arch/conf# hebben als deze machine de kernels voor de overige machines gaat bouwen.
+
+[[small-lan-base-system]]
+=== Basissysteem
+
+Nu kan één systeem alles bouwen. Bouw de kernel en wereld zoals beschreven in <<make-buildworld>> op de bouwmachine, maar installeer niets. Zodra de bouw klaar is, moet op de testmachine de kernel geïnstalleerd en getest worden. Als deze machine [.filename]#/usr/src# en [.filename]#/usr/obj# mount via NFS, moet na een herstart in single-user modus het netwerk ingeschakeld worden zodat de mounts opnieuw gemaakt kunnen worden. De makkelijkste manier om dit te doen is om te starten in multi-user modus en daar `shutdown now` starten om in single-user modus te komen. Eenmaal daar aangekomen kunnen de nieuwe kernel en de wereld geïnstalleerd worden en kan daarna normaal `mergemaster` gestart worden. Zodra dit klaar is, kan de machine opnieuw gestart worden om naar multi-user modus terug te keren.
+
+Nadat zeker is dat alles op de testmachine correct werkt, kan dezelfde procedure gebruikt worden om de nieuwe software op elke machine te installeren in de bouwgroep.
+
+[[small-lan-ports]]
+=== Ports
+
+Dezelfde ideeën kunnen gebruikt worden voor de ports. De eerste kritieke stap is om [.filename]#/usr/ports# te mounten op alle machines in de bouwgroep. Daarna kan [.filename]#/etc/make.conf# correct ingesteld worden om de distfiles te delen. De variabele `DISTDIR` moet wijzen naar een gedeelde map waarin geschreven kan worden door de gebruiker waar `root` naar wijst in de NFS mounts. Op elke machine moet `WRKDIRPREFIX` naar een lokale bouwmap wijzen. Als er pakketten gebouwd en gedistribueerd worden moet `PACKAGES` naar een map wijzen gelijkvormig aan de instelling voor `DISTDIR`.

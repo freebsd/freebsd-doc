@@ -1,0 +1,1881 @@
+---
+title: 第 5 章 配置 Makefile
+prev: books/porters-handbook/slow
+next: books/porters-handbook/special
+---
+
+[[makefile]]
+= 配置 Makefile
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 5
+:toc-title: 目录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+配置 [.filename]#Makefile# 是相当简单的， 我们在此建议您在开始之前看一下现有的例子。 在这份手册里也有一个 <<porting-samplem,Makefile例子>>， 照着里面变量的顺序来写能使得您的 port 更容易地被其它人看懂。
+
+现在， 当您开始编写您新的[.filename]##Makefile## 的时候， 可以依次思考一下以下的问题：
+
+[[makefile-source]]
+== 作者发布的代码
+
+放在 `DISTDIR` 中的是不是标准的用 gzip 压缩的 tar 包， 例如 [.filename]#foozolix-1.2.tar.gz#？ 如果是， 可以先略过这一节。 如果不是， 您应当看看是不是要覆盖这些变量： `DISTVERSION`、 `DISTNAME`、 `EXTRACT_CMD`、 `EXTRACT_BEFORE_ARGS`、 `EXTRACT_AFTER_ARGS`、 `EXTRACT_SUFX`， `DISTFILES`，取决于您 port 的 distfile 格式有多么怪异。 (最常见的一个例子便是 `EXTRACT_SUFX=.tar.Z`， 一般这是因为 tar 包是用 `compress` 而不是 `gzip` 压缩的时候。)
+
+最糟的情况是， 您需要自己编写 `do-extract` 来覆盖默认的定义， 尽管这不常见， 但如果遇到了， 还是需要这么做。
+
+[[makefile-naming]]
+== 命名
+
+Makefile 的第一部分便是 port 的名字、 版本号， 以及它所属的分类。
+
+=== `PORTNAME` 和 `PORTVERSION`
+
+您应该把 `PORTNAME` 设置为您 port 的名字， `PORTVERSION` 则是 port 的版本号。
+
+[[makefile-naming-revepoch]]
+=== `PORTREVISION` 和 `PORTEPOCH`
+
+==== `PORTREVISION` (port 的修订版本号)
+
+`PORTEREVISION` 变量是一个单调递增的值， 如果不为 0， 就会被加到包名的后面， 当 `PORTVERSION` 增加 的时候应被置 0 (也就是当官方有新版本发布的时候)。 `PORTREVISION` 会被自动化工具 (比如 man:pkg_version[1]) 用来检测是否存在可用的新版本。
+
+每当 port 发生变化并对生成的 package 的内容或结构有显著影响时， 都应增加 `PORTREVISION` 值。
+
+下面是一些应当修改 `PORTREVISION` 的情况：
+
+* 有新的补丁用来修正安全漏洞、 错误， 或给 port 添加了新的功能。
+* 修改了 [.filename]#Makefile# 里编译时开启或禁用的选项。
+* 修改了要安装文件的列表或安装时的行为 (例如， 修改了一个用来给 package 初始化数据的脚本， 如 ssh host keys)。
+* 一个port依赖的共享库版本改变 (在这种情况下， 当安装了新版本的共享库， 后再去安装较早的软件就会出错， 因为它们要依赖老的 libfoo.x 而不是libfoo.(x+1))。
+* 原作者修改了 port distfile， 并且 distfile 的新老版本之间用 `diff -ru` 只能发现一些细微的变化， 这时我们只需要对 [.filename]#distinfo# 做相应的修正， 而不需要修改 `PORTVERSION`。
+
+不需要修改 `PORTREVISION` 的例子：
+
+* port 结构风格的改变， 但对于打成的包没有功能的上的变化。
+* `MASTER_SITES` 发生变化， 或进行了对 port 功能的修改， 但不致影响最后打成的包。
+* 对 distfiles 诸如修正拼写错误之类的补丁， 对用户而言没有升级上的麻烦。
+* 对一个原本编译失败的包的修改， 使其可编译， 而没有加入新功能。 因为 `PORTREVISION` 表示包的内容发生了变化， 如果先前没有可编译的包， 也就不需要修改 `PORTREVISION` 来表示变化。
+
+一个修改并提交 port 的原则是： 使得别人能从中受益 (改进、 修改已有错误， 或使新的 package 能够运行)， 您还要权衡一下这是否应让那些经常更新 ports 树的人升级， 如果回答是 "是" 的话， `PORTREVISION` 就应该修改了。
+
+==== `PORTEPOCH` (port 的加权版本号)
+
+有时软件商或 FreeBSD 的 porter 会使用比旧版的版本号小的数字做为新版本号的情况。 举例来说， 从 foo-20000801 到 foo-1.0 (从形式上来说这是不对的， 因为 20000801 在数值上比1大很多)。
+
+在这种情况下， `PORTEPOCH` 应当增加。 如果 `PORTEPOCH` 非 0， 就应当加到包名字的后面。 `PORTEPOCH` 永远不能被减少或清零， 因为那样会导致与前一时期的 package 比较版本时产生不正确的结果。 (就是说， 那个 package 就不会被检测到已经过时了。) 新的版本号 (比如前面在前面那个例子中的 `1.0,1`) 在数值上比前一个版本 (20000801) 小， 但多数自动化的工具会认为 `,1` 后缀意味着比前一个包的后缀 `,0` 大。
+
+错误的去除或重置 `PORTEPOCH` 会导致很多不幸发生； 如果您还不明白前面的讨论， 请多阅读几次直至明白为止， 或到邮件列表上来提问。
+
+大多数 port 都不会用到 `PORTEPOCH`， 并且如果某个软件的下一个版本改变了版本号结构的话， 用巧妙的方法来设定 `PORTVERSION` 也能避免使用 `PORTEPOCH`。 然而， FreeBSD porter 也需要注意， 当有新版本的软件发布， 但并非正式版本时 - 比如 "snapshot" 版本， 原作者可能会使用当时的日期来命名， 这在新的 "官方" 版本发布的时候， 就很容易引起前面提到的问题。
+
+举个例子， 如果 snapshot 版本的发布日期是 20000917， 这个软件的上一个版本是1.2， 那么这个版本的 `PORTVERSIN` 应该设为 1.2.20000917 或类似的样子， 而不是20000917， 这样在 1.3 发布以后， 新版本就可以在数值上大于旧的版本了。
+
+==== 关于 `PORTREVISION` 和 `PORTEPOCH` 的用例
+
+`gtkmumble` port，版本号 `0.10`， 被提交到 ports collection:
+
+[.programlisting]
+....
+PORTNAME=       gtkmumble
+PORTVERSION=    0.10
+....
+
+`PKGNAME` 变成 `gtkmumble-0.10`。
+
+然后有人发现了一个安全漏洞， 需要用一个FreeBSD的补丁。 `PORTREVISION` 就要相应的增加。
+
+[.programlisting]
+....
+PORTNAME=       gtkmumble
+PORTVERSION=    0.10
+PORTREVISION=   1
+....
+
+``PKGNAME``变成了 `gtkmumble-0.10_1`
+
+软件的作者发布了新的版本， 版本为 `0.2` (作者本来的意思是， 用 `0.10` 表示 `0.1.0`，"而不是指 0.9 之后的那个版本" - 但是现在太迟了)。 因为现在的次版本号 `2` 在数值上比上一个版本 `10` 小， `PORTEPOCH` 必须增加， 以使新的 package 被认为是 "更新的"。 由于那是作者发布的一个新版本， 因此 `PORTREVISION` 应被置0 (或者从 [.filename]#Makefile# 里面删除它)。
+
+[.programlisting]
+....
+PORTNAME=       gtkmumble
+PORTVERSION=    0.2
+PORTEPOCH=      1
+....
+
+`PKGNAME` 变成了 `gtkmumble-0.2,1`
+
+下一个版本将会是 0.3。 由于 `PORTEPOCH` 从不减少， 那么就无须改动：
+
+[.programlisting]
+....
+PORTNAME=       gtkmumble
+PORTVERSION=    0.3
+PORTEPOCH=      1
+....
+
+`PKGNAME` 变成 `gtkmumble-0.3,1`
+
+[NOTE]
+====
+如果在这次升级中 `PORTEPOCH` 被置为了``0``， 那么在装了 `gtkmumble-0.10_1` 包的机器上就无法检测到 `gtkmumble-0.3` 包的更新， 因为 `3` 在数值上比 `10` 小。 记住， 这是 `PORTEPOCH` 最重要的地方。
+====
+
+=== `PKGNAMEPREFIX` 和 `PKGNAMESUFFIX`
+
+2 个可选的变量， `PKGNAMEPREFIX` 和 `PKGNAMESUFFIX` 可以和 `PORTNAME` 还有 `PORTVERSION` 配合使用， 形成像这样的 `PKGNAME`： `${PKGNAMEPREFIX}${PORTNAME}${PKGNAMESUFFIX}-${PORTVERSION}`。 请确定符合我们的 <<porting-pkgname,包命名规则>>。 当然， _不_ 允许在 `PORTVERSION` 中使用连字符 (`-`)。 如果包名有 _language-_ 或 _-compiled.specifics_ 部分 (见下文)， 请分别用 `PKGNAMEPREFIX` 和 `PKGNAMESUFFIX`， 不要直接加到 `PORTNAME` 中。
+
+=== `LATEST_LINK`
+
+`LATEST_LINK` 在编译包的过程中用于确定可以为 `pkg_add -r` 使用的缩短的名字。 举例来说， 在安装最新版本的 perl 的时候， 只需指定 `pkg_add -r perl` 而无需知道具体的版本号。 这个名字应该是独一无二的， 并且对用户而言应该是显而易见的名字。
+
+有时， 在 ports 套件中可能会存在同一程序的多个版本。 索引和预编译包的联编系统都需要能够将它们视为不同的软件包， 尽管其 `PORTNAME`、 `PKGNAMEPREFIX`， 甚至 `PKGNAMESUFFIX` 可能是一模一样的。 遇到这种情况时， 就需要将除了 "主" port 之外的其他 port 中的 `LATEST_LINK` 变量设为不同的值 - 请参见 [.filename]#lang/gcc46# 和 [.filename]#lang/gcc# port， 以及 [.filename]#www/apache*# 系列， 以了解它的用法。 如果设置了 `NO_LATEST_LINK`， 则系统便不会生成对应的连接， 对于非 "主" port 来说是一个可行的选择。 需要注意的是， 如何确定 "主" 版本 - "最流行"、 "受支持最好"， "变动最少"， 等等 - 已经超过了本书能够给出的建议范围； 这里只是向您介绍在选定了一个 "主" port 之后如何指定其他 port 的版本。
+
+[[porting-pkgname]]
+=== 包命名规则
+
+以下是您在命名您的包时应当遵守的规则。 这将使得我们放包的目录更利于浏览， 因为我们已经有数以万计的包了， 如果用户觉得查看包名很困难的话， 他们会很快走开的。
+
+一个包的名字应该看起来像这样： [.filename]#language_region-name-compiled.specifics-version.numbers#。
+
+要像这样来定义包的名字： `${PKGNAMEPREFIX}${PORTNAME}${PKGNAMESUFFIX}-${PORTVERSION}`。 确保所有的变量符合上面的格式。
+
+. FreeBSD 会尽力去支持用户当地的语言。 如果这个 port 是某种语言专用的， 那么 _language-_ 部分应该是 由 ISO-639 定义的自然语言的 2 个字母缩写。 比如， ``ja``是表示日本， `ru` 是表示俄罗斯， `vi` 表示越南， `zh` 表示中国， `ko` 表示韩国， `de` 表示德国。
++ 
+如果是针对某种语言的某一地区的话， 再要加上2个字母的国家代码。 例如， `en_US` 表示美国英语， `fr_CH` 表示瑞士法语。
++ 
+_language-_ 部分应该在 `PKGNAMEPREFIX` 变量里设置。
+. [.filename]#name# 部分的首字母应该 小写。 (余下的部分可以包含大写字母， 所以当您 要转换一个包含大写字母软件的名字时， 您需要 自己做出判断。) 对于 `Perl 5` 模块的命名， 有个传统的规则是， 在前面 加上 `p5-` 并把两个冒号的部分改为连字号， 如： `Data::Dumper` 模块对应的名字， 就应该是 `p5-Data-Dumper`。
+. 确认 port 的名字和版本之间有清晰的分隔， 并放入 `PORTNAME` 和 `PORTVERSION` 变量。 在 `PORTNAME` 中包含版本部分的唯一理由是上游软件包真的采用这样的命名方式， 类似 [.filename]#textproc/libxml2# 或 [.filename]#japanese/kinput2-freewnn# port 这样。 否则， 在 `PORTNAME` 中就不应包含任何版本信息。 许多 port 采用同样的 `PORTNAME` 名字是很正常的， [.filename]#www/apache*# port 便是如此； 在这种情况下， 不同的版本 (以及不同的索引项) 是由 `PKGNAMEPREFIX`、 `PKGNAMESUFFIX`， 以及 `LATEST_LINK` 的值的不同而有所区别的。
+. 如果 port 可以使用不同的 <<makefile-masterdir,硬编码默认配置>> 进行联编 (通常是一系列 port 的一部分目录名)， 则 _-compiled.specifics_ 部分就应该明示编译进去的默认值 (此处连字号是可选的)。 通常的用例包括纸型和不同的字体尺寸。
++ 
+_-compiled.specifics_ 部分应该通过 `PKGNAMESUFFIX` 变量来设置。
+. 版本号应该紧随在连字号 (`-`) 后面并由数字和字母组成。 特别指出， 另外的连字号是不允许出现在版本号里的。 唯一例外的是字符串 `pl` (表示 "patchlevel")， _只能_ 用在软件没有主版本号和次版本号的情况下。 如果软件的版本号里出现了像 "alpha"， "beta"， "rc"， "pre"， 取第一个字母把它放在小数点的后面。 如果在版本号里一直出现那些名字， 那么在数字和字母之间不应有多余的小数点。
++ 
+这个方法是为了更容易得凭版本号来排序 port。 特别注意的是， 确保版本号之间的每部分都由小数点来分隔， 如果日期也是版本号的一部分， 就用这样的格式， `0.0.yyyy.mm.dd` 这样的格式， 而非 `dd.mm.yyyy` 甚至 `yy.mm.dd` 这种不适合表示千年的格式。 在版本号上使用 `0.0.` 前缀十分重要， 因为当软件发行正式的版本时， 其版本号数字很可能会小于表示年份的 `yyyy` 数字。
+
+这里是一些真实的例子， 我们藉此说明如何把软件作者对软件的命名， 转换为适合我们包的命名方式：
+
+[.informaltable]
+[cols="1,1,1,1,1,1", frame="none", options="header"]
+|===
+| 发行版的名字
+| PKGNAMEPREFIX
+| PORTNAME
+| PKGNAMESUFFIX
+| PORTVERSION
+| 说明
+
+|mule-2.2.2
+|(空)
+|mule
+|(空)
+|2.2.2
+|没什么需要修改的
+
+|EmiClock-1.0.2
+|(空)
+|emiclock
+|(空)
+|1.0.2
+|程序的名字不能使用大写字母
+
+|rdist-1.3alpha
+|(空)
+|rdist
+|(空)
+|1.3.a
+|像 `alpha` 这样的字符串是不允许出现的
+
+|es-0.9-beta1
+|(空)
+|es
+|(空)
+|0.9.b1
+|像 `beta` 这样的字符串是不允许出现的
+
+|mailman-2.0rc3
+|(空)
+|mailman
+|(空)
+|2.0.r3
+|像 `rc` 这样的字符串是不允许出现的
+
+|v3.3beta021.src
+|(空)
+|tiff
+|(空)
+|3.3
+|那个是啥鬼东西？
+
+|tvtwm
+|(空)
+|tvtwm
+|(空)
+|pl11
+|总需要有个版本号吧
+
+|piewm
+|(空)
+|piewm
+|(空)
+|1.0
+|总需要有个版本号吧
+
+|xvgr-2.10pl1
+|(空)
+|xvgr
+|(空)
+|2.10.1
+|`pl` 只允许在没有 主/次 版本号的情况下才能出现
+
+|gawk-2.15.6
+|ja-
+|gawk
+|(空)
+|2.15.6
+|日文版
+
+|psutils-1.13
+|(空)
+|psutils
+|-letter
+|1.13
+|纸张大小已经在编译的时候被硬编码到程序里了
+
+|pkfonts
+|(空)
+|pkfonts
+|300
+|1.0
+|300dpi 字体的包
+|===
+
+如果在原始的代码里没有版本号， 或者原作者并不打算开发另外的版本， 就应把版本号设成 `1.0` (就像前面 `piewm` 的例子那样)。 否则， 要求原始的作者加上版本号或使用日期 (`0.0.yyyy.mm.dd`) 来作为版本号。
+
+[[makefile-categories]]
+== 分类
+
+=== `CATEGORIES` (所属分类)
+
+在包制作完成之后， 它会被放在 [.filename]#/usr/ports/packages/All#， 并建立一系列来自 [.filename]#/usr/ports/packages# 下子目录的符号连接。 这些子目录的名称是由 `CATEGORIES` 指定的。 这将方便于那些用户在 FTP 站点或 CDROM 的一大堆包里面寻找自己想要的包。 请查看一下 <<porting-categories,目前的分类表>>， 并找出一个适合您 port 的分类。
+
+此列表也会决定您的 port 在 port 目录中的位置。 如果您在这里设定了 1 个以上的分类， 则认为您 port 文件应放到以第一个分类命名的子目录中。 请参阅 <<choosing-categories,后面>> 关于如何选择正确分类的更多讨论。
+
+[[porting-categories]]
+=== 目前的分类表
+
+这是目前 port 中的分类。 那些用星号 (`*`) 标记的是 __虚拟__分类 - 它们在ports树里没有相应的子目录， 因而只用来做为次要的分类， 用以方便搜索。
+
+[NOTE]
+====
+对于非虚拟的分类来说， 您会看到在相对应子目录中的 [.filename]#Makefile# 里有写在 `COMMENT` 里的单行描述。
+====
+
+[.informaltable]
+[cols="1,1,1", frame="none", options="header"]
+|===
+| 分类
+| 描述
+| 注意事项
+
+|[.filename]#accessibility#
+|帮助残障人士的 port。
+|
+
+|[.filename]#afterstep*#
+|对于 http://www.afterstep.org[AfterStep] 窗口管理器的支持。
+|
+
+|[.filename]#arabic#
+|阿拉伯语言支持。
+|
+
+|[.filename]#archivers#
+|压缩与备份工具。
+|
+
+|[.filename]#astro#
+|有关天文学的 port。
+|
+
+|[.filename]#audio#
+|声音支持。
+|
+
+|[.filename]#benchmarks#
+|测评程序。
+|
+
+|[.filename]#biology#
+|生物学相关的软件。
+|
+
+|[.filename]#cad#
+|计算机辅助设计工具。
+|
+
+|[.filename]#chinese#
+|中文语言支持。
+|
+
+|[.filename]#comms#
+|通讯软件。
+|大部分是用于串口通讯的。
+
+|[.filename]#converters#
+|字符编码转换。
+|
+
+|[.filename]#databases#
+|数据库。
+|
+
+|[.filename]#deskutils#
+|在发明计算机以前就已经在桌面上使用的东西。
+|
+
+|[.filename]#devel#
+|程序开发工具。
+|不要把开发库放在这里 - 除非您再也找不到更合适的分类， 否则就不该放在这个分类里。
+
+|[.filename]#dns#
+|DNS 相关的软件。
+|
+
+|[.filename]#docs*#
+|有关 FreeBSD 文档的 Meta-ports。
+|
+
+|[.filename]#editors#
+|通用编辑器。
+|有特殊用途的编辑器应该被置于相应的分类中 (比如， 数学-方程式 编辑器应该放在 [.filename]#math# 分类里。
+
+|[.filename]#elisp*#
+|Emacs-lisp相关的port。
+|
+
+|[.filename]#emulators#
+|其它操作系统的模拟器。
+|终端模拟器 _不应该_ 属于这个分类 - 基于 X 的应该放在 [.filename]#x11# 而基于文本模式的应该放到 [.filename]#comms# 或 [.filename]#misc# 中去， 取决于具体的功能。
+
+|[.filename]#finance#
+|货币、 金融以及相关的应用程序。
+|
+
+|[.filename]#french#
+|法语语言支持。
+|
+
+|[.filename]#ftp#
+|FTP 客户端和服务器端的程序。
+|如果您的 port 同时支持 FTP 和 HTTP 的话， 把它放进 [.filename]#ftp# 并把 [.filename]#www# 做为第二分类。
+
+|[.filename]#games#
+|游戏。
+|
+
+|[.filename]#geography*#
+|与地理学有关的软件。
+|
+
+|[.filename]#german#
+|德语语言支持。
+|
+
+|[.filename]#gnome*#
+|关于 http://www.gnome.org[GNOME] 项目的支持。
+|
+
+|[.filename]#gnustep*#
+|与 GNUstep 桌面环境有关的软件。
+|
+
+|[.filename]#graphics#
+|图形图象程序。
+|
+
+|[.filename]#hamradio*#
+|业余无线电爱好者使用的软件。
+|
+
+|[.filename]#haskell*#
+|有关 Haskell 编程语言的软件。
+|
+
+|[.filename]#hebrew#
+|希伯来语语言支持。
+|
+
+|[.filename]#hungarian#
+|匈牙利语语言支持。
+|
+
+|[.filename]#ipv6*#
+|IPv6 相关软件。
+|
+
+|[.filename]#irc#
+|IRC 相关程序
+|
+
+|[.filename]#japanese#
+|日语语言支持。
+|
+
+|[.filename]#java#
+|与 Java(TM) 编程语言有关的软件。
+|[.filename]#java# 分类对 port 而言不应是其唯一的分类。 除了直接与 Java 语言相关的 port 之外， 开发人员应尽量避免使用 [.filename]#java# 作为 port 的主分类。
+
+|[.filename]#kde*#
+|http://www.kde.org[K 桌面环境 (KDE)] 相关的软件。
+|
+
+|[.filename]#kld*#
+|可加载内核模块。
+|
+
+|[.filename]#korean#
+|韩语语言支持。
+|
+
+|[.filename]#lang#
+|编程语言。
+|
+
+|[.filename]#linux*#
+|Linux 相关的应用程序。
+|
+
+|[.filename]#lisp*#
+|和 Lisp 编程语言有关的软件。
+|
+
+|[.filename]#mail#
+|电子邮件软件。
+|
+
+|[.filename]#math#
+|数值计算和其它数学相关的软件。
+|
+
+|[.filename]#mbone*#
+|MBone 应用程序。
+|
+
+|[.filename]#misc#
+|各式各样的实用程序。
+|通常不属于其它的任何分类， 如果可能的话， 尽量为您的 port 选择 `misc` 以外的分类， 因为在这里的 port 比较容易被人忽略。
+
+|[.filename]#multimedia#
+|多媒体软件。
+|
+
+|[.filename]#net#
+|各种网络相关的软件。
+|
+
+|[.filename]#net-im#
+|即时消息软件。
+|
+
+|[.filename]#net-mgmt#
+|网络管理软件。
+|
+
+|[.filename]#net-p2p#
+|对等网 (Peer to peer network) 应用程序。
+|
+
+|[.filename]#news#
+|USENET新闻组相关软件。
+|
+
+|[.filename]#palm#
+|http://www.palm.com/[Palm(TM)] 系列相关软件。
+|
+
+|[.filename]#parallel*#
+|并行计算相关软件。
+|
+
+|[.filename]#pear*#
+|Pear PHP 架构相关软件。
+|
+
+|[.filename]#perl5*#
+|Perl5 相关的软件。
+|
+
+|[.filename]#plan9*#
+|http://www.cs.bell-labs.com/plan9dist/[Plan9] 相关程序。
+|
+
+|[.filename]#polish#
+|波兰语语言语言支持。
+|
+
+|[.filename]#ports-mgmt#
+|用于管理、 安装和开发 FreeBSD ports 和预编译包的 port。
+
+|[.filename]#portuguese#
+|葡萄牙语语言支持。
+|
+
+|[.filename]#print#
+|打印相关的软件。
+|桌面出版工具 (打印预览工具等等) 也可以放在此分类里。
+
+|[.filename]#python*#
+|http://www.pythong.org/[Python] 编程语言相关的软件。
+|
+
+|[.filename]#ruby*#
+|http://www.ruby-lang.org/[Ruby] 编程语言相关的软件。
+|
+
+|[.filename]#rubygems*#
+|移植版本的 http://www.rubygems.org/[RubyGems] 软件包。
+|
+
+|[.filename]#russian#
+|俄语语言支持。
+|
+
+|[.filename]#scheme*#
+|与 Scheme 语言有关的 port。
+|
+
+|[.filename]#science#
+|科学相关但不适合放在 [.filename]#astro#、 [.filename]#biology#， 以及 [.filename]#math# 分类的 port。
+|
+
+|[.filename]#security#
+|安全相关的实用程序。
+|
+
+|[.filename]#shells#
+|命令行 shell。
+|
+
+|[.filename]#spanish*#
+|西班牙语支持
+|
+
+|[.filename]#sysutils#
+|系统相关的实用程序。
+|
+
+|[.filename]#tcl*#
+|依赖于 Tcl 运行的 port。
+|
+
+|[.filename]#textproc#
+|文本处理的实用程序。
+|这个分类并不适合于那些应该放到 [.filename]#print# 的桌面出版工具。
+
+|[.filename]#tk*#
+|依赖于 Tk 运行的 port。
+|
+
+|[.filename]#ukrainian#
+|乌克兰语语言支持。
+|
+
+|[.filename]#vietnamese#
+|越南语语言支持。
+|
+
+|[.filename]#windowmaker*#
+|WindowMaker 窗口管理器的相关支持。
+|
+
+|[.filename]#www#
+|Word Wide Web的相关软件。
+|HTML语言相关的支持也可以放在这个分类里。
+
+|[.filename]#x11#
+|X Window System以及相关软件。
+|这个分类是给那些直接支持X Window System 的软件的。 不要把常规的 X 应用程序也放进这里； 它们中的大多数都应被归类到 [.filename]#x11-*# (参见下文)。 如果您的 port _是_ X 应用程序， 应定义 `USE_XLIB` (使用 `USER_IMAKE` 隐含包括它)， 然后把它放到合适的分类里。
+
+|[.filename]#x11-clocks#
+|X11 下的时钟程序。
+|
+
+|[.filename]#x11-drivers#
+|X11 驱动程序。
+|
+
+|[.filename]#x11-fm#
+|X11 下的文件管理器。
+|
+
+|[.filename]#x11-fonts#
+|X11 下的字体以及相关工具。
+|
+
+|[.filename]#x11-servers#
+|X11 服务器。
+|
+
+|[.filename]#x11-themes#
+|X11 主题。
+|
+
+|[.filename]#x11-toolkits#
+|X11 工具包。
+|
+
+|[.filename]#x11-wm#
+|X11 窗口管理器。
+|
+
+|[.filename]#xfce*#
+|与 http://www.xfce.org/[Xfce] 桌面环境有关的 port。
+|
+
+|[.filename]#zope*#
+|http://www.zope.org/[Zope] 相关的支持。
+|
+|===
+
+[[choosing-categories]]
+=== 选择正确的分类
+
+由于不少分类是重复的， 您通常在用哪个分类作为您 port 的主分类上做出选择。 下面有几条规则能帮您解决这个问题。 这是一个带优先级的表， 按优先级降序罗列：
+
+* 第一个分类必须是个物理的分类 (参阅 <<porting-categories,前面>>)。 这对于制作包是必要的。 虚拟分类和物理分类可能在包制作完成后混合在一起。
+* 对于特定语言的分类通常放在第一位。 例如， 如果您的 port 会安装一些 X11 的日文字体， 那么 ``CATEGORIES``那行 就应该是 [.filename]#japanese x11-fonts#。
+* 有特定意义的分类应当被列在无特定意义的前面。 例如， HTML 编辑器应该是这样的 [.filename]#www editors#， 而不是其它的什么。 同样地， 您不应该列出 [.filename]#net#， 如果 port 属于 [.filename]#irc#、 [.filename]#mail#、 [.filename]#news#、 [.filename]#security#， 或是 [.filename]#www#， 因为 [.filename]#net# 可以表示它们的超集。
+* 只有当主要的分类是一门自然语言的时候， [.filename]#x11# 能被做为第二分类。 需要特别指出的是， 您不应把 X 的应用程序也归类为 [.filename]#x11#。
+* Emacs 模式应当于相应的应用程序放在同一个分类里， 而不是 [.filename]#editors# 分类。 举例来说， 一个用于编辑某种编程语言源代码的 Emacs 模式应该被归为 [.filename]#lang# 一类。 
+* 需要安装可加载内核模块的 port 应在其 `CATEGORIES` 中归入虚拟分类 [.filename]#kld#。 
+* [.filename]#misc# 分类的 port 不能有其它非虚拟的分类。 如果您在您的 `CATEGORIES` 里设了 `misc` 和另外的分类， 那意味着可以安全地删除 `misc` 并把 port 放到其它的子目录中了！
+* 如果您的 port 确实不属于现有的分类， 才把它放到 [.filename]#misc#。
+
+如果您不能确定使用哪个分类， 请在您提交的 man:send-pr[1] 里加上一行注释， 这样我们就能在导入进 port 树之前讨论一下。 如果您是 committer， 发一份备忘到 {freebsd-ports} 先讨论一下。 很多情况是新的 port 被加到错误的分类里， 然后又立即被移走。这会造成源代码库不必要和不良的膨胀。
+
+[[proposing-categories]]
+=== 如何提议建立新的分类
+
+由于 Ports Collection 在持续增长， 已经引入了许多新的分类。 新的分类既可以是 _虚拟的_ 分类 - 这些分类在整个 ports 目录中没有属于自己的子目录 - 或 _物理的_ 分类 - 它们有自己的子目录。 接下来我们将讨论与建立新的物理分类有关的事项， 以便帮助您理解如何提议建立新的分类。
+
+我们目前的做法是避免建立新的物理分类， 除非有非常多的 port 应被归入这一分类， 或者 port 属于某一特定的小团体 (例如， 与某种人类语言相关)， 或两者皆是。
+
+这样做的原因是这类修改会让 committer 和用户都不得不进行 link:{committers-guide}#ports[许多工作] 来在 Ports Collection 进行或追踪修改。 此外， 提议新的分类通常都会引起争论。 (可能这是因为关于某个分类是否 "太大" 一直没有非常一致的意见的缘故， 另一方面， 分类是否能够能够有助于浏览 (以及多少个分类是合适的)， 等等， 也都是问题。)
+
+下面是具体的步骤：
+
+[.procedure]
+====
+. 在 {freebsd-ports} 提议新的分类。 您应提供建立新分类的详细依据， 包括为什么认为现有的分类不够， 以及希望移动位置的一系列 port 的名字。 (如果有尚在 GNATS 而未 commit 的 port， 也应一一列出。) 如果您是相关 port 的监护人或提交者， 说明这一情况可能有助于您的提议得到通过。
+. 参与讨论。
+. 如果有人支持您的建议， 应及时提交一个 PR， 其中包括提议 PR 的理由， 以及需要移动的 port 的列表。 理想情况下， 这个 PR 也应包含针对下列文件的补丁：
+
+** 进行 repocopy 之后对 [.filename]#Makefile# 进行的修改
+** 新分类的 [.filename]#Makefile#
+** 旧分类的 [.filename]#Makefile#
+** 依赖于旧 port 的 port 的 [.filename]#Makefile#
+** (此外， 作为一项加分因素， 您还可以按照 Committer 指南所介绍的流程， 提供一些其它需要修改的文件。)
+
+. 由于这是一项影响 ports 基础设施的变动， 它不仅涉及 repo-copy 的使用， 而且也可能会影响联编集群的回归测试操作， 因此这类 PR 应分派给 {portmgr}。
+. 如果这一 PR 得到批准， 某个 committer 将按照在 link:{committers-guide}#PORTS[ Committer 指南] 中所介绍的步骤来完成余下的工作。
+====
+
+提议新的虚拟分类和上述过程类似， 但会容易许多， 因为不需要实际地移动任何 port。 这种情况下， PR 应附带的补丁， 就只需要修改影响到的 port 的 Makefile， 以便在其中的 `CATEGORIES` 中加入新的分类了。
+
+[[proposing-reorg]]
+=== 如何提议对分类进行重新组织
+
+有些时候会有一些人提议重新将分类组织为 2-层 或某种基于关键字的结构。 目前为止， 还没有进行任何相关的改变， 因为尽管这些修改比较容易完成， 但修改整个 Ports Collection 所需要进行的工作， 至少也是令人生畏的。 在发表您的观点之前， 请阅读在邮件列表存档中历史上所进行过的提议； 此外， 您也会被要求提供一个可用的原形。
+
+[[makefile-distfiles]]
+== 源码包文件
+
+在 [.filename]#Makefile# 中的第二部分是描述用于联编 port 所必需下载的文件， 以及到什么地方去下载它们。
+
+=== `DISTVERSION/DISTNAME` (源码包版本号/名称)
+
+`DISTNAME` 是作者称呼您所 port 软件的名字。 `DISTNAME` 的默认值是 `${PORTNAME}-${PORTVERSION}`， 因此只有在需要时才应手工指定。 `DISTNAME` 只在两个地方用到。 第一处是源码包文件列表 (`DISTFILES`)， 其默认值是 `${DISTNAME}${EXTRACT_SUFX}`。 第二处是源码包应被展开到的目录名， 即 `WRKSRC` 所指定的目录， 其默认值是 [.filename]#work/${DISTNAME}#。
+
+某些软件作者发布源码包的时候并不采取 `${PORTNAME}-${PORTVERSION}` 这样的模式， 这可以通过设置 `DISTVERSION` 来自动处理。 `PORTVERSION` 和 `DISTNAME` 会自动地展开， 当然， 也可以改掉它。 下表给出了一些例子：
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| DISTVERSION
+| PORTVERSION
+
+|0.7.1d
+|0.7.1.d
+
+|10Alpha3
+|10.a3
+
+|3Beta7-pre2
+|3.b7.p2
+
+|8:f_17
+|8f.17
+|===
+
+[NOTE]
+====
+`PKGNAMEPREFIX` 和 `PKGNAMESUFFIX` 并不影响 `DISTNAME`。 此外还应注意 `WRKSRC` 等于 [.filename]#work/${PORTNAME}-${PORTVERSION}#， 而源代码的压缩包则可能是 `${PORTNAME}-${PORTVERSION}${EXTRACT_SUFX}` 以外的其它名字。 一般情况下应该保持 `DISTNAME` 不变 - 更好的方法是定义 `DISTFILES` 而不是同时设置 `DISTNAME` 和 `WRKSRC` (可能还有 `EXTRACT_SUFX`)。
+====
+
+=== `MASTER_SITES` (主流下载站点)
+
+记录 FTP/HTTP-URL 指向 `MASTER_SITES` 中原始压缩档的目录部分。 不要忘了结尾的斜线 ([.filename]#/#)！
+
+`make` 宏将尝试使用 `FETCH` 来抓取所指定的源码包文件， 如果无法在本地系统中找到这些文件的话。
+
+建议您指定多个镜像站点， 最好是在不同的大洲上的。 这样将有效地防止由于大范围网络问题所导致无法下载的问题。 我们甚至打算增加自动检测距离最近的站点并从那里下载的功能； 使用多个站点是这样做的重要一步。
+
+如果原始的源码包可以从比较流行的软件下载站点， 例如 SourceForge、 GNU 或是 Perl CPAN 等等来获得， 您可能会希望使用类似 `MASTER_SITE_*` 这样的缩写来表示它们 (例如 `MASTER_SITE_SOURCEFORGE`、 `MASTER_SITE_GNU` 以及 `MASTER_SITE_PERL_CPAN`)。 只需将 `MASTER_SITES` 设为这些变量， 并使用 `MASTER_SITE_SUBDIR` 来指定路径就可以了。 下面是一个例子：
+
+[.programlisting]
+....
+MASTER_SITES=         ${MASTER_SITE_GNU}
+MASTER_SITE_SUBDIR=   make
+....
+
+此外， 您还可以用更为简略的格式：
+
+[.programlisting]
+....
+MASTER_SITES=	GNU/make
+....
+
+这些变量是在 [.filename]#/usr/ports/Mk/bsd.sites.mk# 中定义的。 新项目会随时增加， 因此在您提交 port 之前， 应先看一看这个文件的最新版本。
+
+针对常用软件下载站的许多 _暗黑魔法_ 宏， 还能够自动判断目录的结构。 对于这些站点， 只要使用与之对应的缩写， 系统便会自动为您生成相关的子目录配置。
+
+[.programlisting]
+....
+MASTER_SITES=	SF
+....
+
+如果系统猜测的路径不对， 则可以使用下面这样的配置来替换。
+
+[.programlisting]
+....
+MASTER_SITES=	SF/stardict/WyabdcRealPeopleTTS/${PORTVERSION}
+....
+
+.常用的魔术 `MASTER_SITES` 宏
+[cols="1,1", frame="none", options="header"]
+|===
+| 宏
+| 自动猜测的子目录
+
+|`APACHE_JAKARTA`
+|`/dist/jakarta/${PORTNAME:S,-,,/,}/source`
+
+|`BERLIOS`
+|`/${PORTNAME:L}`
+
+|`CHEESESHOP`
+|`/packages/source/source/${DISTNAME:C/(.).\*/\1/}/${DISTNAME:C/(.*)-[0-9].*/\1/}`
+
+|`DEBIAN`
+|`/debian/pool/main/${PORTNAME:C/^((lib)?.).*$/\1/}/${PORTNAME}`
+
+|`GCC`
+|`/pub/gcc/releases/${DISTNAME}`
+
+|`GNOME`
+|`/pub/GNOME/sources/${PORTNAME}/${PORTVERSION:C/^([0-9]+\.[0-9]+).*/\1/}`
+
+|`GNU`
+|`/gnu/${PORTNAME}`
+
+|`MOZDEV`
+|`/pub/mozdev/${PORTNAME:L}`
+
+|`PERL_CPAN`
+|`/pub/CPAN/modules/by-module/${PORTNAME:C/-.*//}`
+
+|`PYTHON`
+|`/ftp/python/${PYTHON_PORTVERSION:C/rc[0-9]//}`
+
+|`RUBYFORGE`
+|`/${PORTNAME:L}`
+
+|`SAVANNAH`
+|`/${PORTNAME:L}`
+
+|`SF`
+|`/project/${PORTNAME:L}/${PORTNAME:L}/${PORTVERSION}`
+|===
+
+=== `EXTRACT_SUFX` (压缩包所用的扩展名)
+
+如果您有一个源码包文件， 而它使用了某种怪异的扩展名来表达压缩方法， 应设置 `EXTRACT_SUFX`。
+
+例如， 如果源码包文件的名字是 [.filename]#foo.tgz# 而非更为一般的 [.filename]#foo.tar.gz#， 您应写上：
+
+[.programlisting]
+....
+DISTNAME=      foo
+EXTRACT_SUFX=  .tgz
+....
+
+`USE_BZIP2` 和 `USE_ZIP` 变量会自动根据需要将 `EXTRACT_SUFX` 设置为 `.tar.bz2` 或 `.zip`。 如果这两个都没设置， 则 `EXTRACT_SUFX` 的 默认值将是 `.tar.gz`。
+
+[NOTE]
+====
+任何时候都不需要同时设置 `EXTRACT_SUFX` 和 `DISTFILES`.
+====
+
+=== `DISTFILES` (全部源代码包)
+
+有些时候所下载的文件名字和 port 的名字没有任何联系。 例如， 可能是 [.filename]#source.tar.gz#， 或者与此类似的其它名字。 也有一些其它的应用软件， 它们的源代码可能被存放到了不同的压缩包中， 而且全都需要下载。
+
+如果遇到这种情况， 可以将 `DISTFILES` 设置为以空格分隔的一组需要下载的文件列表。
+
+[.programlisting]
+....
+DISTFILES=     source1.tar.gz source2.tar.gz
+....
+
+如果没有予以明确的设置， `DISTFILES` 的默认值将是 `${DISTNAME}${EXTRACT_SUFX}`。
+
+=== `EXTRACT_ONLY` (只解压缩部分源文件)
+
+如果只有一部分 `DISTFILES` 需要解压缩 - 例如， 其中的一个是源代码， 而其它则是未压缩的文档 - 此时应把那些需要解压缩的文件加到 `EXTRACT_ONLY` 中。
+
+[.programlisting]
+....
+DISTFILES=     source.tar.gz manual.html
+EXTRACT_ONLY=  source.tar.gz
+....
+
+如果 `DISTFILES` 中 _没有_ 需要解压缩的文件， 则应将 `EXTRACT_ONLY` 设为空串。
+
+[.programlisting]
+....
+EXTRACT_ONLY=
+....
+
+[[porting-patchfiles]]
+=== `PATCHFILES` (通过下载得到的补丁文件)
+
+如果您的 port 需要来自 FTP 或 HTTP 的一些额外的补丁， 应将 `PATCHFILES` 设置为这些文件的名字， 并将 `PATCH_SITES` 指向包含这些文件的目录的 URL (格式与 `MASTER_SITES` 相同)。
+
+如果这些补丁， 由于包含了其它的目录名， 而导致它们不是相对于源代码目录的顶级目录 (也就是 `WRKSRC`) 的话， 就需要相应地设置 `PATCH_DIST_STRIP` 了。 例如， 如果补丁中所有的目录名前面都有一个多余的 `foozolix-1.0/`， 就应设置 `PATCH_DIST_STRIP=-p1`。
+
+不需要担心补丁文件本身是否是压缩的； 如果文件名以 [.filename]#.gz# or [.filename]#.Z# 结尾， 系统会自动解压缩。
+
+如果补丁是同某些其它文件， 例如文档， 一同以 gzip 压缩的 tar 格式发布的， 就不能简单地使用 `PATCHFILES` 了。 这种情况下， 您应将这些补丁包的文件和位置加入到 `DISTFILES` 和 `MASTER_SITES` 中。 然后， 用 `EXTRA_PATCHES` 变量来指出这些文件， 这样 [.filename]#bsd.port.mk# 就会自动地为您应用这些补丁了。 需要特别注意的是， _不要_ 将补丁文件复制到 `PATCHDIR` 目录中 - 这个目录可能是不可写的。
+
+[NOTE]
+====
+压缩包会以同源代码一样的方式解压缩， 因此不需要自行完成解压缩操作， 并复制补丁文件。 如果您一定要这样做， 就要注意， 不要让解压缩出来的文件覆盖先前已经存在的文件。 此外， 这么做还需要手工增加命令， 以便在 `pre-clean` target 中删除这些复制出来的文件。
+====
+
+[[porting-master-sites-n]]
+=== 来自不同站点的多个源代码包或补丁文件 (`MASTER_SITES:n`)
+
+(这一节在某种程度上应被视作 "进阶话题"； 刚开始阅读这份文档的读者可能会希望先跳过这一部分)。
+
+这一节提供了被称作 `MASTER_SITES:n` 和 `MASTER_SITES_NN` 的下载控制机制。 这里我们把它们称为 `MASTER_SITES:n`。
+
+首先给出一些背景。 OpenBSD 在其 `DISTFILES` 和 `PATCHFILES` 变量中提供了一个很棒的功能， 即， 允许这些文件和补丁拥有 `:n` 后缀， 其中 `n` 可以使用 `[0-9]`， 来表达组。 例如：
+
+[.programlisting]
+....
+DISTFILES=      alpha:0 beta:1
+....
+
+在 OpenBSD 中， 源码包文件 [.filename]#alpha# 应被关联到变量 `MASTER_SITES0` 而不是公共的 `MASTER_SITES` 变量上； 而 [.filename]#beta# 则应关联到 `MASTER_SITES1` 上。
+
+这是一个很有意思的功能， 它可以避免无休止地搜索正确的下载站点的过程。
+
+想象 `DISTFILES` 中指定了 2 个文件， 而 `MASTER_SITES` 包含了 20 个站点的情形， 这其中许多站点慢如蜗牛， 而 [.filename]#beta# 可以在 `MASTER_SITES` 的所有站点找到， 而 [.filename]#alpha# 只能在第 20 个上面找到。 如果监护人了解这一点， 那么检查所有的站点无疑是在浪费时间， 不是吗？ 这显然不是开始一个愉快周末的好办法！
+
+现在您有了一个感性的认识了， 想象一下 `DISTFILES` 和更多的 `MASTER_SITES`。 显然， 我们的 "distfiles 调查员先生" 会感谢您减少他浪费在等待下载上所耗费的时间。
+
+下一节中， 将按照 FreeBSD 对上述想法的实现来加以阐释。 我们对 OpenBSD 所提出的概念进行了一些改进。
+
+==== 简化信息
+
+这一节将介绍如何迅速地对从不同的站点以及子目录下载多个源码包和补丁进行精确的控制。 这里， 我们将描述 `MASTER_SITES:n` 的一种简化用法。 对于多数情况而言这样做是足够的。 然而， 如果您需要更多信息， 还需要参考下面的几节。
+
+一些应用程序需要从多个站点下载不同的源码包。 例如， Ghostscript 包括了程序核心本身， 以及大量的驱动文件， 以及则取决于用户的打印机品牌和型号的驱动程序。 某些驱动文件已经随程序核心附带， 但也有很多需要从其它站点下载。
+
+为了适应这种需要， 每一个 `DISTFILES` 项应跟随一个冒号， 以及一个 "标签名"。 在 `MASTER_SITES` 的每个站点也应跟随冒号和标签名， 以便指定从哪个网站下载源码包文件。
+
+例如， 考虑一个将源代码包分为两部分， 即 [.filename]#source1.tar.gz# 和 [.filename]#source2.tar.gz# 的软件， 它必须从两个不同的站点下载。 port 的 [.filename]#Makefile# 应包括类似 <<ports-master-sites-n-example-simple-use-one-file-per-site>> 的配置。
+
+[[ports-master-sites-n-example-simple-use-one-file-per-site]]
+.简化的 `MASTER_SITES:n` 用法， 每个文件来自一个站点
+[example]
+====
+[.programlisting]
+....
+MASTER_SITES=   ftp://ftp.example1.com/:source1 \
+		ftp://ftp.example2.com/:source2
+DISTFILES=      source1.tar.gz:source1 \
+		source2.tar.gz:source2
+....
+
+====
+
+多个源码包可以使用同一个标签。 继续前面的例子， 假定增加了第三个源码包， [.filename]#source3.tar.gz#， 应从 `ftp.example2.com` 下载。 [.filename]#Makefile# 的这部分应写成 <<ports-master-sites-n-example-simple-use-more-than-one-file-per-site>> 的样子。
+
+[[ports-master-sites-n-example-simple-use-more-than-one-file-per-site]]
+.简化的 `MASTER_SITES:n` 用法， 其中同一个站点上提供了不止一个文件
+[example]
+====
+[.programlisting]
+....
+MASTER_SITES=   ftp://ftp.example1.com/:source1 \
+		ftp://ftp.example2.com/:source2
+DISTFILES=      source1.tar.gz:source1 \
+		source2.tar.gz:source2 \
+		source3.tar.gz:source2
+....
+
+====
+
+==== 深入介绍
+
+前面的例子无法满足您的需求？ 这一节， 我们将详细介绍 `MASTER_SITES:n` 的精细控制是如何工作的， 以及如何修改您的 port 来使用它们。
+
+. 元素可以包含 `:n` 这样的后缀， 其中 _n_ 是 `[^:,]+`， 概念上即 _n_ 可以取任意数字或字母， 但我们目前将其限定为 `[a-zA-Z_][0-9a-zA-Z_]+`。
++ 
+此外， 字符串匹配时对大小写是敏感的； 换言之， `n` 与 `N` 不同。
++ 
+但是， 由于表达特殊的意义， 下列单词不能用于后缀： `default`、 `all` 和 `ALL` (它们会在 <<porting-master-sites-n-what-changes-in-port-targets,ii>> 中介绍的部分用到)。 此外， `DEFAULT` 是一个有特殊用途的词 (请参见 <<porting-master-sites-n-DEFAULT-group,3>>)。
+. 后缀为 `:n` 的项目属于 `n` 组， 而 `:m` 属于 `m` 组， 依此类推。
+[[porting-master-sites-n-DEFAULT-group]]
+. 没有后缀的元素是无组的， 也就是它们都属于那个特殊的 `DEFAULT` 组。 给元素加入 `DEFAULT` 后缀通常是多余的， 除非您有同时属于 `DEFAULT` 和其它组的元素 (参见 <<porting-master-sites-n-comma-operator,5>>)。
++ 
+下面的例子是等价的， 但通常应适用第一个：
++
+[.programlisting]
+....
+MASTER_SITES=   alpha
+
+MASTER_SITES=   alpha:DEFAULT
+....
+
+. 组之间不是互斥的， 同一元素可以同时隶属于多个组， 而组则可以为空或者有任意多个元素。 同一组中的重复元素， 并不会被自动消去。
+[[porting-master-sites-n-comma-operator]]
+. 如果希望同一元素同时属于多个组， 可以用逗号 (`,`) 分开。
++ 
+这种办法可以避免仅为指定不同的组而多次重复同一元素。 例如 `:m,n,o` 表示这个元素同时属于 `m`、 `n` 和 `o` 这三组。
++ 
+下面这些写法都是等价的， 但只推荐使用最后一种：
++
+[.programlisting]
+....
+MASTER_SITES=   alpha alpha:SOME_SITE
+
+MASTER_SITES=   alpha:DEFAULT alpha:SOME_SITE
+
+MASTER_SITES=   alpha:SOME_SITE,DEFAULT
+
+MASTER_SITES=   alpha:DEFAULT,SOME_SITE
+....
+
+. 同一组中的所有站点， 会根据 `MASTER_SORT_AWK` 排序。 在 `MASTER_SITES` 和 `PATCH_SITES` 中的组也会进行排序。
+[[porting-master-sites-n-group-semantics]]
+. 在 `MASTER_SITES`、 `PATCH_SITES`、 `MASTER_SITE_SUBDIR`、 `PATCH_SITE_SUBDIR`、 `DISTFILES`， 以及 `PATCHFILES` 中， 都可以使用组， 其语法为：
+.. 所有 `MASTER_SITES`、 `PATCH_SITES`、 `MASTER_SITE_SUBDIR` 以及 `PATCH_SITE_SUBDIR` 的元素， 都必须以 `/` 字符结尾。 如果有元素属于某些组， 则组后缀 `:n` 必须出现在终结符 `/` 之后。 `MASTER_SITES:n` 机制依赖于 `/` 的存在， 以避免在 `:n` 是元素一部分， 而 `:n` 同时又表示组 `n` 时发生混淆。 为了兼容性的考虑， 因为之前 `/` 终结符在 `MASTER_SITE_SUBDIR` 和 `PATCH_SITE_SUBDIR` 元素中都不是必需的， 如果后缀所紧跟的字符不是 `/`， 则 `:n` 将被认为是元素的一部分， 而不被当作组后缀， 即使元素拥有 `:n` 后缀。 请参见 <<ports-master-sites-n-example-detailed-use-master-site-subdir>> 和 <<ports-master-sites-n-example-detailed-use-complete-example-master-sites>> 以了解进一步的细节。
++
+[[ports-master-sites-n-example-detailed-use-master-site-subdir]]
+.在 `MASTER_SITE_SUBDIR` 中 `MASTER_SITES:n` 的详细用法
+[example]
+====
+[.programlisting]
+....
+MASTER_SITE_SUBDIR=     old:n new/:NEW
+....
+
+*** 组 `DEFAULT` 中的目录 -> old:n
+*** 组 `NEW` 中的目录 -> new
+
+====
++
+[[ports-master-sites-n-example-detailed-use-complete-example-master-sites]]
+.用到逗号分隔符、 多个文件， 多个站点和 不同子目录的 `MASTER_SITES:n` 详细用法
+[example]
+====
+[.programlisting]
+....
+MASTER_SITES=   http://site1/%SUBDIR%/ http://site2/:DEFAULT \
+		http://site3/:group3 http://site4/:group4 \
+		http://site5/:group5 http://site6/:group6 \
+		http://site7/:DEFAULT,group6 \
+		http://site8/%SUBDIR%/:group6,group7 \
+		http://site9/:group8
+DISTFILES=      file1 file2:DEFAULT file3:group3 \
+		file4:group4,group5,group6 file5:grouping \
+		file6:group7
+MASTER_SITE_SUBDIR=     directory-trial:1 directory-n/:groupn \
+			directory-one/:group6,DEFAULT \
+			directory
+....
+
+前述的例子的结果是下述的对于下载行为的精细控制。 站点的列表按照使用的顺序给出。
+
+*** [.filename]#file1# 将从
+
+**** `MASTER_SITE_OVERRIDE`
+**** http://site1/directory-trial:1/
+**** http://site1/directory-one/
+**** http://site1/directory/
+**** http://site2/
+**** http://site7/
+**** `MASTER_SITE_BACKUP`
+
++ 
+下载。
+*** [.filename]#file2# 将和 [.filename]#file1# 以同样的方式下载， 因为它们属于同一组
+
+**** `MASTER_SITE_OVERRIDE`
+**** http://site1/directory-trial:1/
+**** http://site1/directory-one/
+**** http://site1/directory/
+**** http://site2/
+**** http://site7/
+**** `MASTER_SITE_BACKUP`
+
+*** [.filename]#file3# 将从
+
+**** `MASTER_SITE_OVERRIDE`
+**** http://site3/
+**** `MASTER_SITE_BACKUP`
+
++ 
+下载。
+*** [.filename]#file4# 将从
+
+**** `MASTER_SITE_OVERRIDE`
+**** http://site4/
+**** http://site5/
+**** http://site6/
+**** http://site7/
+**** http://site8/directory-one/
+**** `MASTER_SITE_BACKUP`
+
++ 
+下载。
+*** [.filename]#file5# 将从
+
+**** `MASTER_SITE_OVERRIDE`
+**** `MASTER_SITE_BACKUP`
+
++ 
+下载。
+*** [.filename]#file6# 将从
+
+**** `MASTER_SITE_OVERRIDE`
+**** http://site8/
+**** `MASTER_SITE_BACKUP`
+
++ 
+下载。
+
+====
+
+. 如何对来自 [.filename]#bsd.sites.mk# 的特殊变量， 例如 `MASTER_SITE_SOURCEFORGE` 进行分组？
++ 
+参见 <<ports-master-sites-n-example-detailed-use-master-site-sourceforge>>。
++
+[[ports-master-sites-n-example-detailed-use-master-site-sourceforge]]
+.`MASTER_SITE_SOURCEFORGE` 中 `MASTER_SITES:n` 的详细用法
+[example]
+====
+[.programlisting]
+....
+MASTER_SITES=   http://site1/ ${MASTER_SITE_SOURCEFORGE:S/$/:sourceforge,TEST/}
+DISTFILES=      something.tar.gz:sourceforge
+....
+
+====
++ 
+[.filename]#something.tar.gz# 将从所有 `MASTER_SITE_SOURCEFORGE` 中的站点下载。
+. 如何与 `PATCH*` 变量连用？
++ 
+前面的例子介绍的都是 `MASTER*` 变量， 但对于 `PATCH*` 也是完全一样的， 它们在 <<ports-master-sites-n-example-detailed-use-patch-sites>> 有所介绍。
++
+[[ports-master-sites-n-example-detailed-use-patch-sites]]
+.简化的 `PATCH_SITES` 中的 `MASTER_SITES:n` 用法。
+[example]
+====
+[.programlisting]
+....
+PATCH_SITES=    http://site1/ http://site2/:test
+PATCHFILES=     patch1:test
+....
+
+====
+
+==== 会改变 ports 的哪些行为？ 哪些不会？
+
+[lowerroman]
+. 所有普通的 ports 的行为都会保持不变。 `MASTER_SITES:n` 功能的代码， 只有在某些元素包含了前述， 特别是 <<porting-master-sites-n-group-semantics,7>> 中所提及语法的 `:n` 后缀时， 才会启用。
+[[porting-master-sites-n-what-changes-in-port-targets]]
+. 不受影响的 port target： `checksum`、 `makesum`、 `patch`、 `configure`、 `build`， 等等。 显然， `do-fetch`、 `fetch-list`、 `master-sites` 和 `patch-sites` 的行为会发生变化。
+
+** `do-fetch`： 会按照新的、 带有组后缀的 `DISTFILES` 和 `PATCHFILES` 在 `MASTER_SITES` 和 `PATCH_SITES` 所匹配的组元素， 以及 `MASTER_SITE_SUBDIR` 和 `PATCH_SITE_SUBDIR` 来进行。 请参见 <<ports-master-sites-n-example-detailed-use-complete-example-master-sites>>。
+** `fetch-list`： 和旧式的 `fetch-list` 类似， 但以同 `do-fetch` 相似的方式处理组。
+** `master-sites` 和 `patch-sites`： (与旧版本不兼容) 仅返回组 `DEFAULT` 的元素； 事实上， 它们会执行 `master-sites-default` 和 `patch-sites-default` 这两个 target。
++ 
+更进一步， 使用 `master-sites-all` 或 `patch-sites-all` 这两个 target 之一， 要比直接检查 `MASTER_SITES` 或 `PATCH_SITES` 更好。 此外， 未来版本可能不再保证直接检查能够正确工作。 请参见 <<porting-master-sites-n-new-port-targets-master-sites-all>> 以了解关于这些新 target 的更多技术细节。
+
+. port 中的新 target
+.. 一系列 `master-sites-_n_` 和 `patch-sites-_n_` target 可以分别用来列出 `MASTER_SITES` 和 `PATCH_SITES` 中的 _n_ 组的内容。 例如， `master-sites-DEFAULT` 和 `patch-sites-DEFAULT` 都会返回 `DEFAULT` 组的内容， 而 `master-sites-test` 和 `patch-sites-test` 则返回 `test` 组的内容， 等等。
+[[porting-master-sites-n-new-port-targets-master-sites-all]]
+.. 新增的 `master-sites-all` 和 `patch-sites-all` 这两个 target， 会完成先前 `master-sites` 和 `patch-sites` 所做的工作。 它们会返回所有组的元素， 就像这些元素都属于同一组一样， 并且会列出与 `MASTER_SITE_BACKUP` 或 `MASTER_SITE_OVERRIDE` 中在 `DISTFILES` 或 `PATCHFILES` 中指定的同样多个； 分别对于 `master-sites-all` 和 `patch-sites-all`。
+
+=== `DIST_SUBDIR` (独立的源码包子目录)
+
+避免让您的 port 使 [.filename]#/usr/ports/distfiles# 陷入混乱。 如果您的 port 需要下载很多文件， 或者需要下载可能与其它 port 的源文件名冲突的文件 (例如， [.filename]#Makefile#)， 则应将 `DIST_SUBDIR` 设置为 port 的名字 (通常可以用 `${PORTNAME}` 或 `${PKGNAMEPREFIX}${PORTNAME}`)。 这将把 `DISTDIR` 从默认的 [.filename]#/usr/ports/distfiles# 改为 [.filename]#/usr/ports/distfiles/DIST_SUBDIR#， 并将与您的 port 有关的文件放到那个目录中。
+
+此外， 它也会在备份文件主服务器 [.filename]#ftp.FreeBSD.org# 上查找同一子目录下的文件 (直接在您的 `Makefile` 中设置 `DISTDIR` 则不会有这样的效果， 因此您应使用 `DIST_SUBDIR`。)
+
+[NOTE]
+====
+这一设置并不影响您在 [.filename]#Makefile# 中定义的 `MASTER_SITES`。
+====
+
+=== `ALWAYS_KEEP_DISTFILES` (一直保存源码包)
+
+如果您的 port 采用的是预编译的包， 但却采用了某种要求源代码必须与预编译版本一同提供的授权， 例如 GPL， 则应使用 `ALWAYS_KEEP_DISTFILES` 来告诉 FreeBSD 联编集群保留一份在 `DISTFILES` 中文件的副本。 一般来说这些 port 的用户并不需要这些文件， 因此， 只在定义了 `PACKAGE_BUILDING` 符的时候， 才将源代码包文件加入 `DISTFILES` 是个好主意。 
+
+[[ports-master-sites-n-example-always-keep-distfiles]]
+.如何使用 `ALWAYS_KEEP_DISTFILES`。
+[example]
+====
+[.programlisting]
+....
+.if defined(PACKAGE_BUILDING)
+DISTFILES+=             foo.tar.gz
+ALWAYS_KEEP_DISTFILES=  yes
+.endif
+....
+
+====
+
+当您在 `DISTFILES` 加入其它文件时， 请务必确保这些文件也出现在了 [.filename]#distinfo# 中。 此外， 这些额外的文件通常也会展开到 `WRKDIR` 中， 对于某些 ports， 这可能导致一些不希望的副作用， 因而需要进行特别的处理。
+
+[[makefile-maintainer]]
+== `MAINTAINER` (监护人)
+
+请在此处写上您的电子邮件地址。 _:-)_
+
+需要注意一点， `MAINTAINER` 变量的值只能是一个不包括注释部分的电子邮件地址， 其格式应为 `user@hostname.domain`。 请不要在此处写任何说明性的文字， 例如您的真实姓名 - 这会给 [.filename]#bsd.port.mk# 带来麻烦。
+
+监护人有责任保持 port 随时更新， 并确保其能够正确地运行。 详细的 port 监护人职责说明， 请参见 link:{contributing-ports}#maintain-port/[ port 监护人面临的挑战] 一节。
+
+对于 port 的修改， 应被发给 port 的监护人进行复审， 且在 commit 之前需要获得其监护人的同意。 假如某一 port 的监护人没有在两周之内 (不包括主要的公共假日) 响应来自用户的更新请求， 则可视为监护人超时， 在这种情况下可以在没有监护人明确同意的情形下进行更新。 如果监护人在多达三个月的时间内没有进行任何响应， 则可以认为该监护人不辞而别， 允许对出现此类问题的 port 进行监护人变更。 尽管如此， 监护人为 {portmgr} 或者 {security-officer} 的 port 不受此限。 对监护人为这些小组的 port 进行未经许可的 commit 是不允许的。
+
+我们保留对监护人所提交修正案进行改动的权力， 以便使其更符合现行的 Ports Collection 规范， 而无需提交补丁的人明确批准。 此外， 大规模的基础性修改， 也可能使 port 在没有得到监护人同意的情形下进行修改。 但这类修改都不应影响 port 本身的功能。
+
+{portmgr} 保留以任何原因收回或绕过任何人监护权的权力， 而 {security-officer} 则保留以安全原因收回或绕过监护权的权力。
+
+[[makefile-comment]]
+== `COMMENT` (一句话说明)
+
+这一变量用于指定 port 的一句话说明。 _请_ 勿将 package 的名字 (或软件的版本) 放在说明中。 这一说明的第一个字母应大写， 结尾不用句点。 下面是一个例子：
+
+[.programlisting]
+....
+COMMENT=       A cat chasing a mouse all over the screen
+....
+
+[.filename]#Makefile# 中的 COMMENT 变量应该紧接着 MAINTAINER 变量出现。
+
+请务必将 COMMENT 这行限制在不超过 70 个字符之内， 因为这行内容会成为 man:pkg_info[1] 呈现给用户的 port 的一句话简介。
+
+[[makefile-depend]]
+== 依赖关系
+
+许多 ports 会依赖其它 port。 这是包括 FreeBSD 在内的多数 类-Unix 系统的很方便的功能。 这项功能， 可以避免在每个 port 或预编译包中都带上重复的依赖的代码， 而可以以依赖关系的方式去共享它们。 有七个变量用于帮助您确保所需的文件都存在于用户的机器上。 此外， 也提供了用于支持常见情形的依赖关系变量， 以及对依赖关系行为的更多控制。
+
+=== `LIB_DEPENDS` (依赖的函数库/共享库)
+
+这个变量用于指定 port 所依赖的共享库。 其内容是由一系列 lib:dir:target 元组构成的表， 其中 _lib_ 是共享库的名字， 而 _dir_ 则是在找不到时应该从哪里联编和安装， 最后， _target_ 用于指定在那个目录中调用的 target。 例如， 
+
+[.programlisting]
+....
+LIB_DEPENDS=   jpeg.9:${PORTSDIR}/graphics/jpeg
+....
+
+会检测主版本号为 9 的 jpeg 共享库， 如果它不存在， 则会进入到您的 ports 目录中的 [.filename]#graphics/jpeg# 子目录， 并联编和安装它。 如果您指定的 _target_ 就是 `DEPENDS_TARGET` (默认是 `install`)， 则可以略去不写。
+
+[NOTE]
+====
+_lib_ 部分是一个正则表达式， 用于在 `ldconfig -r` 的输出中进行查找。 可以使用类似 `intl.[5-7]` 和 `intl` 这样的值。 前一种模式， 即 `intl.[5-7]`， 能够匹配 `intl.5`、 `intl.6` 和 `intl.7` 中的任意一个。 第二种模式， 即 `intl` 则可以匹配任意版本的 `intl` 库。
+====
+
+依赖关系会被检测两次， 一次是在 `extract` target 中， 而另一次则是在 `install` target。 另外， 依赖关系的名字会放到 package 中， 以便让 man:pkg_add[1] 能够自动地在用户系统上安装所需的未安装的其它 package。
+
+=== `RUN_DEPENDS` (依赖的运行环境)
+
+这个变量可以用来指定 port 在运行时所需要的可执行文件， 以及资源文件。 它是一系列 path:dir:target 元组的列表， 这里， _path_ 时所需的可执行， 或者资源文件的名字， _dir_ 是在无法找到这些文件或目录时， 去什么地方完成联编和安装以便获得这些文件； 而 _target_ 则用来指定在这个目录中所调用的 target 的名字。 假如 _path_ 以斜线 (`/`) 开始， 则会当作普通文件， 使用 `test -e` 来测试； 反之， 则系统会假定这是一个可执行文件， 并且用 `which -s` 来检测程序是否存在于搜索路径中。
+
+例如，
+
+[.programlisting]
+....
+RUN_DEPENDS=   ${LOCALBASE}/etc/innd:${PORTSDIR}/news/inn \
+	       xmlcatmgr:${PORTSDIR}/textproc/xmlcatmgr
+....
+
+将检查文件， 或者目录 [.filename]#/usr/local/etc/innd# 是否存在， 如果找不到， 则将从 port 目录的 [.filename]#news/inn# 子目录加以安装。 系统也会检查是否能够在搜索路径中找到名为 `xmlcatmgr` 的文件， 如果找不到的话， 则会进入 ports 目录中的 [.filename]#textproc/xmlcatmgr# 子目录， 并进行联编和安装的操作。
+
+[NOTE]
+====
+这种情况下， `innd` 实际上是一个可执行文件； 如果可执行文件不会出现在搜索路径中， 您就需要指定完整路径了。
+====
+
+[NOTE]
+====
+ports 联编集群上官方的搜索 `PATH` 是
+
+[.programlisting]
+....
+/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/X11R6/bin
+....
+
+====
+
+这个依赖关系会在 `install` target 的过程中进行检查。 此外， 依赖关系的名字会被放到 package 中， 以便 man:pkg_add[1] 能够在用户的系统中尚未安装相关软件时自动地安装那些 package。 如果您希望指定一个的 _target_ 和默认的 `DEPENDS_TARGET` 相同， 则可以略去不写。
+
+一种比较常见的情形是 `RUN_DEPENDS` 和 `BUILD_DEPENDS` 完全一样， 这种情况在移植的软件是采用脚本语言书写， 或联编环境与运行环境需求相同时尤其普遍。 这种情况可以用下面简单明了的方式直接将其中一个变量赋值给另一个变量：
+
+[.programlisting]
+....
+RUN_DEPENDS= ${BUILD_DEPENDS}
+....
+
+不过， 这种赋值有可能会令运行环境被某些没有在 port 原本的 `BUILD_DEPENDS` 明确定义的依赖关系污染。 导致这种情况的原因是 man:make[1] 计算变量赋值时默认采用的是延后计算 (lazy evaluation)。 例如， 如果在 [.filename]#Makefile# 中使用了 `USE_*` 变量， 这些变量就会由 [.filename]#ports/Mk/bsd.*.mk# 处理， 并填写与之对应的联编依赖关系。 例如， `USE_GMAKE=yes` 会把 package:devel/gmake[] 加入到 `BUILD_DEPENDS`。 如果希望避免这些附加的依赖关系污染 `RUN_DEPENDS`， 在使用赋值的时候就需要小心考虑这类扩展的情况， 例如， 可以在赋值展开之前复制变量的值：
+
+[.programlisting]
+....
+RUN_DEPENDS:=  ${BUILD_DEPENDS}
+....
+
+=== `BUILD_DEPENDS` (依赖的联编环境)
+
+此变量用于指定用来联编 port 的可执行文件或资源文件。 与 `RUN_DEPENDS` 类似， 它是一个 path:dir:target 元组的列表。 例如， 
+[.programlisting]
+....
+ BUILD_DEPENDS=
+	      unzip:${PORTSDIR}/archivers/unzip
+....
+
+将检测名为 `unzip` 的可执行文件是否存在， 如果不存在， 则会进入到您的 ports 目录中的 [.filename]#archivers/unzip# 并完成联编和安装工作。
+
+[NOTE]
+====
+这里的 "build" 表示从解压缩到编译的全部过程。 依赖关系是在 `extract` target 的过程中检测的。 假如您要指定的 _target_ 和 `DEPENDS_TARGET` 相同， 则可以略去不写。
+====
+
+=== `FETCH_DEPENDS` (依赖的下载环境)
+
+这一变量用于指定 port 在下载时所需的可执行文件或资源文件。 和前两个类似， 它是一组 path:dir:target 元组。 例如， 
+[.programlisting]
+....
+ FETCH_DEPENDS=
+	      ncftp2:${PORTSDIR}/net/ncftp2
+....
+
+将检测名为 `ncftp2` 的可执行文件是否存在， 如果找不到， 则将进入到您 ports 目录中的 [.filename]#net/ncftp2# 子目录并加以联编和安装。
+
+这个依赖关系是在 `fetch` target 过程中检查的。 如果与 `DEPENDS_TARGET` 相同， 则可以省略 _target_ 部分。
+
+=== `EXTRACT_DEPENDS` (依赖的解压缩环境)
+
+此变量用于指定 port 在解压缩时所需的可执行文件或其它资源文件。 和前一个变量类似， 它是一系列 path:dir:target 元组的列表。 例如， 
+[.programlisting]
+....
+EXTRACT_DEPENDS=
+	      unzip:${PORTSDIR}/archivers/unzip
+....
+
+将检查名为 `unzip` 的可执行文件是否存在， 如果不存在， 则会进入到您的 ports 目录中的 [.filename]#archivers/unzip# 子目录， 予以联编和安装。
+
+这个依赖关系是在 `extract` target 的过程中检查的。 如果与 `DEPENDS_TARGET` 相同， 则可以略去 _target_ 部分。
+
+[NOTE]
+====
+只有在其它方式都不可用 (默认是 `gzip`) 而且无法通过 <<use-vars>> 所介绍的 `USE_ZIP` 或 `USE_BZIP2` 都不能达到需要时， 才应使用这个变量。
+====
+
+=== `PATCH_DEPENDS` (依赖的打补丁环境)
+
+这个变量用于指定 port 在进行 patch 操作时所需的可执行文件或其它资源文件。 和前一个变量类似， 它是一组 path:dir:target 元组的表。 例如， 
+
+[.programlisting]
+....
+ PATCH_DEPENDS=
+	      ${NONEXISTENT}:${PORTSDIR}/java/jfc:extract
+....
+
+表示进入到您的 ports 目录中的 [.filename]#java/jfc# 子目录， 并将其解压缩。
+
+这个依赖关系是在 `patch` target 的过程中检查的。 _target_ 部分如果和 `DEPENDS_TARGET` 相同， 就可略去不写。
+
+[[use-vars]]
+=== `USE_*`
+
+提供了一系列变量， 用以封装大量 port 都用到的依赖关系。 虽然使用这些变量是可选的， 但它们能显著减少 port 的 [.filename]#Makefile# 复杂性。 这些变量的共同特征在于， 它们的名字都是 `USE_*` 这样的形式。 这些变量的使用， 应严格限制于 port 的 [.filename]#Makefile# 以及 [.filename]#ports/Mk/bsd.*.mk#， 而绝不应用于表达用户能够设置的选项 - 这种情况下应采用 `WITH__*_` 和 `WITHOUT__*_` 这样的变量。
+
+[NOTE]
+====
+在 _任何_ 情况下， 都不应在 [.filename]#/etc/make.conf# 中配置任何 `USE_*`。 例如， 设置 
+[.programlisting]
+....
+USE_GCC=3.4
+....
+
+将导致每个 port 都依赖 gcc34， 甚至包括 gcc34 本身！
+====
+
+.常用的 `USE_*` 变量
+[cols="1,1", frame="none", options="header"]
+|===
+| 变量
+| 含义
+
+|`USE_BZIP2`
+|此 port 的源码包是使用 `bzip2` 压缩的。
+
+|`USE_ZIP`
+|此 port 的源码包是用 `zip` 压缩的。
+
+|`USE_BISON`
+|此 port 在联编时使用 `bison`。
+
+|`USE_CDRTOOLS`
+|此 port 需要使用 cdrecord， 根据用户的喜好， 可能是 package:sysutils/cdrtools[] 或 package:sysutils/cdrtools-cjk[]。
+
+|`USE_GCC`
+|此 port 需要使用某一特定版本的 `gcc` 才能完成编译。 可以使用类似 `3.4` 这样的值来精确指定版本。 如果希望使用不低于某一版本的编译器， 则可以用 `3.4+` 这样的形式。 如果与所希望的版本吻合， 则将使用基本系统中所提供的 `gcc`， 反之， 系统会从 ports 中安装所希望版本的 `gcc`， 并调整 `CC` 以及 `CXX` 变量的设置。
+|===
+
+与 gmake 和 [.filename]#configure# 脚本有关的变量在 <<building>> 中进行了介绍， 而 autoconf、 automake 以及 libtool 的介绍则可以在 <<using-autotools>> 找到。 <<using-perl>> 介绍了与 Perl 有关的的变量。 <<using-x11>> 中列出了关于 X11 的变量。 关于 GNOME 的变量在 <<using-gnome>>， 而关于 KDE 的则在 <<using-kde>>。 <<using-java>> 讲述了和 Java 有关的变量， 而 <<using-php>> 则包含了关于 Apache、 PHP 以及 PEAR 的介绍性信息。 关于 Python， 在 <<using-python>> 进行了讨论， 而关于 Ruby 的介绍， 则可以在 <<using-ruby>> 中找到。 <<using-sdl>> 提供了用于 SDL 应用程序的变量介绍， 最后， <<using-xfce>> 包含了关于 Xfce 的信息。
+
+=== 在依赖关系中指定最低版本
+
+在依赖某个其他 port 时， 可以采用下面的句法， 通过除 `LIB_DEPENDS` 之外的 `*_DEPENDS` 变量来指定最低版本：
+
+[.programlisting]
+....
+p5-Spiffy>=0.26:${PORTSDIR}/devel/p5-Spiffy
+....
+
+第一个字段指明了所依赖 package 的名字， 用以与 package 数据库中的某项匹配， 然后是比较算符， 以及 package 的版本号。 前面的例子中， 如果系统中安装了 p5-Spiffy-0.26 则认为满足了依赖条件。
+
+=== 关于依赖关系的补充说明
+
+如前面所提到的那样， 在需要某一依赖的 port 时， 将调用 `DEPENDS_TARGET` 所指定的 target。 这一变量的默认值是 `install`。 这不是一个用户变量， 它不应在 port 的 [.filename]#Makefile# 中予以定义。 如果您的 port 需要使用特殊的 target 来处理依赖关系， 应使用 `*_DEPENDS` 的 `:target` 部分， 而不是重定义 `DEPENDS_TARGET` 来完成。
+
+当您输入 `make clean` 时， 其依赖的 port 也会自动进行清理。 如果您不希望如此， 应定义环境变量 `NOCLEANDEPENDS`。 如果 port 依赖一些重新联编需要花费很长时间的 port 时， 例如 KDE， GNOME 或 Mozilla 时， 这一方法会非常有用。
+
+要无条件地依赖某个 port， 可以使用 `${NONEXISTENT}` 作为 `BUILD_DEPENDS` 或 `RUN_DEPENDS` 的第一部分。 只有在您需要使用其它 port 提供的源代码时才应这样做。 通常也可以通过这样指定来缩短编译所需的时间。 例如 
+[.programlisting]
+....
+BUILD_DEPENDS=   ${NONEXISTENT}:${PORTSDIR}/graphics/jpeg:extract
+....
+
+表示依赖 `jpeg` port 并将其解压缩。
+
+=== 循环的依赖关系是致命的
+
+[IMPORTANT]
+====
+不要在 ports tree 中引入任何循环依赖关系!
+====
+
+ports 联编技术不能够容忍循环依赖关系。 如果您引入了这样的关系， 就一定会有人安装的 FreeBSD 会因此而损坏， 而且这种现象会越来越多。 这些情形很难检测； 如果有疑虑， 在进行这样的修改之前， 务必执行： `cd /usr/ports; make index`。 这个过程在旧的机器上会很慢， 但能够让大量的用户 - 也包括您自己 - 拯救于由这种问题所造成的困惑之中。
+
+[[makefile-masterdir]]
+== `MASTERDIR` (主 port 所在的目录)
+
+如果 port 需要依某些变量的设置 (举例来说， 分辨率或纸型) 来联编略有不同的预编译包， 则可以为每一个这样的包建立不同的目录， 这样可以让用户更容易地看到他们想要安装的版本， 但又能在这些 port 之间共用尽可能多的文件。 一般情况下， 如果运用得当， 除主目录之外都只需要很短的 [.filename]#Makefile#。 这些 [.filename]#Makefile# 中， 可以用 `MASTERDIR` 来指定其它文件所在的目录。 另外， 还应使用一个变量作为 <<porting-pkgname,`PKGNAMESUFFIX`>> 的一部分， 以便为不同的包给出不同的命名。
+
+用例子来阐述这些会更为明晰。 以下是 [.filename]#japanese/xdvi300/Makefile# 的部分代码：
+
+[.programlisting]
+....
+PORTNAME=       xdvi
+PORTVERSION=    17
+PKGNAMEPREFIX=  ja-
+PKGNAMESUFFIX=  ${RESOLUTION}
+ :
+# default
+RESOLUTION?=   300
+.if ${RESOLUTION} != 118 && ${RESOLUTION} != 240 && \
+       ${RESOLUTION} != 300 && ${RESOLUTION} != 400
+       @${ECHO_MSG} "Error: invalid value for RESOLUTION: \"${RESOLUTION}\""
+       @${ECHO_MSG} "Possible values are: 118, 240, 300 (default) and 400."
+       @${FALSE}
+.endif
+....
+
+package:japanese/xdvi300[] 也提供了全部常规的补丁， 以及打包用到的文件等等内容。 如果您在那里输入 `make`， 它将使用默认的分辨率值 (300) 并正常地联编 port。
+
+对于其它分辨率而言， 以下是 __完整的__ [.filename]#xdvi118/Makefile#：
+
+[.programlisting]
+....
+RESOLUTION=     118
+MASTERDIR=      ${.CURDIR}/../xdvi300
+
+.include "${MASTERDIR}/Makefile"
+....
+
+([.filename]#xdvi240/Makefile# 和 [.filename]#xdvi400/Makefile# 是相似的)。 `MASTERDIR` 定义会告诉 [.filename]#bsd.port.mk# 常规的目录， 例如 `FILESDIR` 以及 `SCRIPTDIR` 应在 [.filename]#xdvi300# 中查找。 `RESOLUTION=118` 这行将覆盖在 [.filename]#xdvi300/Makefile# 中所作的 `RESOLUTION=300` 设置， 从而 port 将以分辨率为 118 的设置来联编。
+
+[[makefile-manpages]]
+== 联机手册
+
+`MAN[1-9LN]` 这些变量， 会自动地将联机手册加到 [.filename]#pkg-plist# (这也意味着 _不能_ 在 [.filename]#pkg-plist# 中列出联机手册 - 参见 <<plist-sub,PLIST 的生成>> 来了解更多细节)。 此外， 这也会让安装阶段自动地根据在 [.filename]#/etc/make.conf# 中所作的 `NO_MANCOMPRESS` 设置来自动对联机手册文件执行压缩或解压缩操作。
+
+如果 port 尝试通过使用符号连接或硬连接将联机手册安装为多个名字， 就必须使用 `MLINKS` 变量来予以明示。 由 port 创建的连接， 将由 [.filename]#bsd.port.mk# 删除和重建， 以确认它们指向了正确的文件。 任何在 MLINKS 中列出的文件都不应在 [.filename]#pkg-plist# 中再出现。
+
+要指定是否在安装时对联机手册进行压缩， 可以使用 `MANCOMPRESSED` 变量。 这一变量可以取三种值， `yes`、 `no` 和 `maybe` 之一。 `yes` 表示联机手册已经以压缩的形式安装， `no` 表示还没有， 而 `maybe` 则表示所安装的软件会尊重 `NO_MANCOMPRESS` 的设置值， 因此 [.filename]#bsd.port.mk# 不需要特别做什么事情。
+
+如果设置了 `USE_IMAKE` 而未定义 `NO_INSTALL_MANPAGES`， `MANCOMPRESSED` 会自动设为 `yes`， 反之则是 `no`。 除非默认值不合适， 否则就不需要在 port 中明确地加以改变。
+
+如果 port 将联机手册放到了 `PREFIX` 之外的其它目录， 则应使用 `MANPREFIX` 来加以设置。 此外， 如果只有某些部分的联机手册会安装到不标准的位置， 例如某些 `perl` 模块的 port， 还可以使用 `MAN_sect_PREFIX` (此处 _sect_ 是 `1-9`、 `L` 或 `N` 之一) 来指定。
+
+如果您的联机手册需要装入专用于某一语言专用的子目录， 需要将 `MANLANG` 设为那种语言的名字。 此变量的默认值是 `""` (也就是只有英语)。
+
+下面是一个综合的例子。
+
+[.programlisting]
+....
+MAN1=          foo.1
+MAN3=          bar.3
+MAN4=          baz.4
+MLINKS=        foo.1 alt-name.8
+MANLANG=       "" ja
+MAN3PREFIX=    ${PREFIX}/shared/foobar
+MANCOMPRESSED= yes
+....
+
+这表示 port 会安装六个文件；
+
+[.programlisting]
+....
+${MANPREFIX}/man/man1/foo.1.gz
+${MANPREFIX}/man/ja/man1/foo.1.gz
+${PREFIX}/shared/foobar/man/man3/bar.3.gz
+${PREFIX}/shared/foobar/man/ja/man3/bar.3.gz
+${MANPREFIX}/man/man4/baz.4.gz
+${MANPREFIX}/man/ja/man4/baz.4.gz
+....
+
+此外， [.filename]#${MANPREFIX}/man/man8/alt-name.8.gz# 可能会通过您的 port 安装， 也可能不会。 无论如何， 都会创建一个符号连接， 把 foo(1) 和 alt-name(8) 联机手册连起来。
+
+假如只有部分联机手册是翻译过的， 则可以使用一些根据 `MANLANG` 内容动态生成的变量：
+
+[.programlisting]
+....
+MANLANG=       "" de ja
+MAN1=          foo.1
+MAN1_EN=       bar.1
+MAN3_DE=       baz.3
+....
+
+这相当于下列文件：
+
+[.programlisting]
+....
+${MANPREFIX}/man/man1/foo.1.gz
+${MANPREFIX}/man/de/man1/foo.1.gz
+${MANPREFIX}/man/ja/man1/foo.1.gz
+${MANPREFIX}/man/man1/bar.1.gz
+${MANPREFIX}/man/de/man3/baz.3.gz
+....
+
+[[makefile-info]]
+== Info 文件
+
+如果软件包需要安装 GNU info 文件， 则需要在 `INFO` 变量中一一列出 (不需要指定 `.info` 后缀)。 系统假定这些文件均会安装到 [.filename]#PREFIX/INFO_PATH# 目录中。 如果软件包有需要， 也可以通过修改 `INFO_PATH` 来指定不同的位置。 不过， 并不推荐这样做。 所有列出的项目均是相对于 [.filename]#PREFIX/INFO_PATH# 的文件路径。 例如， package:lang/gcc34[] 表示将 info 文件安装到 [.filename]#PREFIX/INFO_PATH/gcc34#， 因此 `INFO` 应写成类似这样： 
+
+[.programlisting]
+....
+INFO= gcc34/cpp gcc34/cppinternals gcc34/g77 ...
+....
+
+这样安装/卸载代码就会自动地在注册包之前将它们加入到临时的 [.filename]#pkg-plist# 中了。
+
+[[makefile-options]]
+== Makefile 选项
+
+某些大型应用程序可以在联编时使用一系列配置选项， 用以在系统中已经安装了某些库或应用程序时增加一些功能。 例如， 选择某种自然 (人类的) 语言， GUI 或命令行界面， 由于并不是所有的用户都希望使用这些库或者应用程序， port 系统提供了一组方便的机制， 来让 port 的作者控制联编时的配置。 支持这些特性可以让用户体验更好， 并达到事半功倍的效果。
+
+=== 开关 (Knobs)
+
+==== `WITH_*` 和 `WITHOUT_*`
+
+这些变量是为系统管理员准备的。 许多这样的变量被标准化并置于 http://www.freebsd.org/cgi/cvsweb.cgi/ports/KNOBS?rev=HEAD&content-type=text/x-cvsweb-markup[ports/KNOBS] 文件。
+
+在创建一个 port 的时候，不要使用某个应用程序专有的 knob 名称，比如对于 Avahi 这个 port，应该用 `WITHOUT_MDNS` 而不是 `WITHOUT_AVAHI_MDNS`。
+
+[NOTE]
+====
+您不应假定每一个 `WITH_*` 都会有对应的 `WITHOUT_*` 变量， 反之亦然。 一般而言， 会使用默认值。
+====
+
+[NOTE]
+====
+除非另有说明， 这些变量都是测试是否定义， 而不是它们设置了 `YES` 或 `NO`。
+====
+
+.常见的 `WITH_*` 和 `WITHOUT_*` 变量
+[cols="1,1", frame="none", options="header"]
+|===
+| 变量
+| 意义
+
+|`WITHOUT_NLS`
+|表示不需要国际化支持， 这可以节省编译所消耗的时间。 默认情况下， 会启用国际化支持。
+
+|`WITH_OPENSSL_BASE`
+|使用基本系统中的 OpenSSL 版本。
+
+|`WITH_OPENSSL_PORT`
+|从 package:security/openssl[] 安装 OpenSSL，即使基本系统中的版本是最新的。
+
+|`WITHOUT_X11`
+|如果 port 能够在是否包含 X 支持的情况下分别联编， 则一般情况应该默认以包含 X 支持的配置来联编。 如果定义了这一变量， 则应联编不包含 X 支持的版本。
+|===
+
+==== 开关 (knob) 的命名
+
+我们建议 port 的开发人员使用相似的开关， 以便最终用户使用， 并减少开关名称的总数。 最为常用的开关名字可以在 http://www.freebsd.org/cgi/cvsweb.cgi/ports/KNOBS?rev=HEAD&content-type=text/x-cvsweb-markup[KNOBS] 文件中找到。
+
+开关的名字应反映其功能。 如果 port 的 `PORTNAME` 包括 lib- 前缀， 则开关名中应删去 lib- 前缀。
+
+=== `OPTIONS` (菜单式可选项)
+
+==== 背景
+
+`OPTIONS` 将为正在安装 port 的用户提供一个包含可用选项的对话框， 并将用户的选择保存到 [.filename]#/var/db/ports/portname/options# 中。 下次重新联编 port 时， 这些选项将被再次使用。 这样一来， 就不需要劳神去记忆您之前联编 port 时的那几十个 `WITH_*` 和 ``WITHOUT_*``选项了！
+
+当用户运行 `make config` (或首次运行 `make build`) 时， 框架会首先检查 [.filename]#/var/db/ports/portname/options#。 如果这个文件不存在， 则它会使用 `OPTIONS` 的值来生成一个可以启用或禁用各个选项的对话框。 随后， 用户的选择将保存到 [.filename]#options# 文件中， 并被用于联编 port。
+
+如果新版本的 port 新增了 `OPTIONS`， 则系统会再次给出对话框， 并根据先前的 `OPTIONS` 配置预设先前存在的配置。
+
+使用 `make showconfig` 可以查看保存的配置。 此外， `make rmconfig` 可以删除已经保存的配置。
+
+==== 语法
+
+`OPTIONS` 变量的语法是： 
+[.programlisting]
+....
+OPTIONS=	OPTION	"说明性文字" 默认值 ...
+....
+
+默认值必须是 `ON` 和 `OFF` 之一。 这种三元组可以使用多次。
+
+定义 `OPTIONS` 变量的值， 必须在引入 [.filename]#bsd.port.options.mk# 之前进行。 而 `WITH_*` 和 `WITHOUT_*` 变量则只能在引入了 [.filename]#bsd.port.options.mk# 之后才可以进行检测。 使用 [.filename]#bsd.port.pre.mk# 也可以达到同样的目的， 在系统开始提供 [.filename]#bsd.port.options.mk# 之前的许多 port 都在使用这种用法。 不过， 请注意 [.filename]#bsd.port.pre.mk# 会要求某些变量已经进行过定义， 如 `USE_*` 等。
+
+[[ports-options-simple-use]]
+.简单的 `OPTIONS` 用法
+[example]
+====
+
+[.programlisting]
+....
+OPTIONS=      FOO "启用 foo 选项" On \
+              BAR "支持 bar 功能" Off
+
+.include <bsd.port.options.mk>
+
+.if defined(WITHOUT_FOO)
+CONFIGURE_ARGS+=	--without-foo
+.else
+CONFIGURE_ARGS+=	--with-foo
+.endif
+
+.if defined(WITH_BAR)
+RUN_DEPENDS+=	bar:${PORTSDIR}/bar/bar
+.endif
+
+.include <bsd.port.mk>
+....
+
+====
+
+[[ports-options-old-style-use]]
+.Old style use of `OPTIONS`
+[example]
+====
+
+[.programlisting]
+....
+OPTIONS=      FOO "Enable option foo" On
+
+.include <bsd.port.pre.mk>
+
+.if defined(WITHOUT_FOO)
+CONFIGURE_ARGS+=	--without-foo
+.else
+CONFIGURE_ARGS+=	--with-foo
+.endif
+
+.include <bsd.port.post.mk>
+....
+
+====
+
+=== 自动激活的特性
+
+在使用 GNU configure 脚本时， 一定要小心有些特性会由其自动检测而激活。 您应通过明确地指定相应的 `--without-xxx` 或 `--disable-xxx` 参数到 `CONFIGURE_ARGS` 来禁用不希望的特性。
+
+.处理选项时的错误做法
+[example]
+====
+[.programlisting]
+....
+.if defined(WITH_FOO)
+LIB_DEPENDS+=		foo.0:${PORTSDIR}/devel/foo
+CONFIGURE_ARGS+=	--enable-foo
+.endif
+....
+
+====
+
+在前面的例子中， 假设系统中已经安装了 libfoo 库。 用户可能并不希望应用程序使用 libfoo， 因此他在 `make config` 对话框中关掉了这个选项。 但是， 应用程序的 configure 脚本检测到了系统中存在这个库， 并将其加入到了最终可执行文件支持的功能中。 现在， 如果用户决定从系统中卸载 libfoo 时， ports 系统就无法保护这个应用程序免遭破坏了 (因为没有记录 libfoo 的依赖关系)。
+
+.处理选项时的正确做法
+[example]
+====
+[.programlisting]
+....
+.if defined(WITH_FOO)
+LIB_DEPENDS+=		foo.0:${PORTSDIR}/devel/foo
+CONFIGURE_ARGS+=	--enable-foo
+.else
+CONFIGURE_ARGS+=	--disable-foo
+.endif
+....
+
+====
+
+在第二个例子中， libfoo 库被明确禁用。 即使系统中已经安装了这个库， configure 脚本也不会启用相应的功能了。
+
+[[makefile-wrkdir]]
+== 指定工作临时目录
+
+每个 port 都会被解压缩到一个工作临时目录中， 这个目录必须是可写的。 ports 系统默认情况下会将 `DISTFILES` 解压缩到一个叫做 `${DISTNAME}` 的目录中。 换言之， 如果设了：
+
+[.programlisting]
+....
+PORTNAME=      foo
+PORTVERSION=   1.0
+....
+
+则 port 的源码包文件的顶级目录将是 [.filename]#foo-1.0#。
+
+如果这不是所希望的情形， 您可以修改一系列变量的设置。
+
+=== `WRKSRC` (开始联编操作的目录名)
+
+这个变量给出了在应用程序的源代码包解压缩之后所生成的目录的名字。 如果我们之前的例子解压缩生成一个叫做 [.filename]#foo# (而不是 [.filename]#foo-1.0#) 的目录， 您应：
+
+[.programlisting]
+....
+WRKSRC=      ${WRKDIR}/foo
+....
+
+或者， 也可能是
+
+[.programlisting]
+....
+WRKSRC=      ${WRKDIR}/${PORTNAME}
+....
+
+=== `NO_WRKSUBDIR` (不需要临时的联编目录)
+
+如果 port 完全不需要写入到某个子目录中， 您应设置 `NO_WRKSUBDIR` 以明示这一点。
+
+[.programlisting]
+....
+NO_WRKSUBDIR= yes
+....
+
+[[conflicts]]
+== 处理冲突
+
+针对不同的 package 或 port 之间的冲突情形， 系统提供了不同的变量来协助开发人员进行表达： `CONFLICTS`、 `CONFLICTS_INSTALL` 和 `CONFLICTS_BUILD`。
+
+[NOTE]
+====
+这些用于描述冲突的变量会自动地设置 `IGNORE`， 后者的完整介绍， 可以在 <<dads-noinstall>> 找到。
+====
+
+在删去相互冲突的 port 时， 建议将 `CONFLICTS` 保留几个月， 以便让那些不经常更新系统的用户能够看到。
+
+=== `CONFLICTS_INSTALL`
+
+如果您的软件包不能与某些软件包同时安装 (例如由于安装同样的文件到相同的位置、 运行时不兼容等等)， 则应把其它软件包的名字列在 `CONFLICTS_INSTALL` 变量中。 此处可以使用 shell 通配符， 如 `*` 和 `?`。 列出其它软件包的名字时需要遵循它们在 [.filename]#/var/db/pkg# 中出现的样子。 请确保 `CONFLICTS_INSTALL` 不会匹配到您正制作的这个预编译包的名字， 否则， 使用 `FORCE_PKG_REGISTER` 来强制安装就没有办法进行了。 对于 CONFLICTS_INSTALL 的检查是在联编过程之后、 安装开始之前进行的。
+
+=== `CONFLICTS_BUILD`
+
+如果您的软件包在系统中存在某些其它软件包时不能完成联编， 则应把其它软件包的名字列在 `CONFLICTS_BUILD` 变量中。 此处可以使用 shell 通配符， 如 `*` 和 `?`。 列出其它软件包的名字时需要遵循它们在 [.filename]#/var/db/pkg# 中出现的样子。 对于 CONFLICTS_BUILD 的检查是在联编过程开始之前进行的。 联编时的冲突不会在编译好的包中予以记录。
+
+=== `CONFLICTS`
+
+如果您的 port 在某些其它 port 已经存在的情况下既不能联编， 也不能安装， 则应把其它软件包的名字列在 `CONFLICTS` 变量中。 此处可以使用 shell 通配符， 如 `*` 和 `?`。 列出其它软件包的名字时需要遵循它们在 [.filename]#/var/db/pkg# 中出现的样子。 请确保 `CONFLICTS` 不会匹配到您正制作的这个预编译包的名字， 否则， 使用 `FORCE_PKG_REGISTER` 来强制安装就没有办法进行了。 对于 CONFLICTS 的检查是在联编过程之后、 安装开始之前进行的。
+
+[[install]]
+== 安装文件
+
+[[install-macros]]
+=== INSTALL_* 宏
+
+一定要使用由 [.filename]#bsd.port.mk# 提供的宏， 以确保在您自己的 `*-install` target 中能够以正确的属主和权限模式安装文件。
+
+* `INSTALL_PROGRAM` 是安装可执行二进制文件的命令。
+* `INSTALL_SCRIPT` 是安装可执行脚本文件的命令。
+* `INSTALL_LIB` 是安装动态连接库的命令。
+* `INSTALL_KLD` 是用于安装可加载式内核模块的命令。 在某些平台上， 当对内核模块进行 strip 之后会导致一些问题， 因此您应使用这个宏而不是 `INSTALL_PROGRAM` 来安装内核模块。
+* `INSTALL_DATA` 是安装可共享数据的命令。
+* `INSTALL_MAN` 是安装联机手册和其他文档的命令 (注意它并不会执行压缩操作)。
+
+这些宏展开后基本上都是包含适当参数的 `install` 命令。
+
+[[install-strip]]
+=== 对可执行文件和动态连接库做脱模 (strip) 操作
+
+除非不得不进行， 否则不要手工对可执行文件作脱模操作。 所有文件在安装时都应脱模， 但 `INSTALL_PROGRAM` 宏会在安装的同时对其进行脱模 (参见下一节的内容)。 `INSTALL_LIB` 宏
+
+如果您需要对某一文件进行脱模， 但不希望使用 `INSTALL_PROGRAM` 及 `INSTALL_LIB` 宏， 则应使用 `${STRIP_CMD}` 来处理程序。 一般而言这应该在 `post-install` target 中进行。 例如：
+
+[.programlisting]
+....
+post-install:
+	${STRIP_CMD} ${PREFIX}/bin/xdl
+....
+
+可以使用 man:file[1] 命令来检查所安装的可执行文件是否进行过脱模。 如果它没有给出 `not stripped` 的提示， 则表示已经做过脱模了。 另外， man:strip[1] 不会对已经脱模过的文件重新脱模， 它会直接退出的。
+
+[[install-copytree]]
+=== 安装一个目录下的全部文件
+
+有时， 会有需要安装大量的文件， 并保持其层次结构， 例如， 将整个目录结构从 `WRKSRC` 复制到 `PREFIX` 的目标目录。
+
+针对这种情况， 系统提供了两个宏。 使用这些宏， 而不是直接使用 `cp` 的优势是它们能够确保目标文件的属主和权限正确。 第一个宏， `COPYTREE_BIN` 将所有安装的文件视为可执行文件， 因而适合安装文件到 [.filename]#PREFIX/bin#。 第二个宏， `COPYTREE_SHARE`， 则不会设置可执行权限， 因此适合于将文件安装到 [.filename]#PREFIX/share# 下。
+
+[.programlisting]
+....
+post-install:
+	${MKDIR} ${EXAMPLESDIR}
+	(cd ${WRKSRC}/examples/ && ${COPYTREE_SHARE} \* ${EXAMPLESDIR})
+....
+
+这个例子将原作者提供的整个 [.filename]#examples# 目录复制到您 port 指定的安装示范文件的位置。
+
+[.programlisting]
+....
+post-install:
+	${MKDIR} ${DATADIR}/summer
+	(cd ${WRKSRC}/temperatures/ && ${COPYTREE_SHARE} "June July August" ${DATADIR}/summer/)
+....
+
+这个例子将把夏季的三个月的数据， 复制到 [.filename]#DATADIR# 中的 [.filename]#summer# 子目录。
+
+经由设置 `COPYTREE_*` 宏的第三个参数， 您还可以为 `find` 指定额外的参数。 例如， 如果希望安装除了 Makefile 之外的其他所有文件， 可以使用下述命令。
+
+[.programlisting]
+....
+post-install:
+	${MKDIR} ${EXAMPLESDIR}
+	(cd ${WRKSRC}/examples/ && \
+		${COPYTREE_SHARE} \* ${EXAMPLESDIR} "! -name Makefile")
+....
+
+需要注意的是， 这些宏并不能自动将所安装的文件加到 [.filename]#pkg-plist# 中， 您还是需要自行列出它们。
+
+[[install-documentation]]
+=== 安装附加的文档
+
+如果您的软件包含了标准的联机手册和 info 手册以外的文档， 而且您认为它们对用户会有用， 请把这些文档安装到 [.filename]#PREFIX/shared/doc# 下。 和前面类似， 这也可以在 `post-install` target 中完成。
+
+为您的 port 建立一个新的目录。 这个目录的名字应该反映它是属于哪个 port 的。 通常建议使用 `PORTNAME`。 不过， 如果您认为不同版本的 port 可能会同时安装， 也可以用完整的 `PKGNAME`。
+
+另外， 应该让是否安装取决于变量 `NOPORTDOCS` 的设置， 这样用户就能够在 [.filename]#/etc/make.conf# 中禁止安装它。 例如：
+
+[.programlisting]
+....
+post-install:
+.if !defined(NOPORTDOCS)
+	${MKDIR} ${DOCSDIR}
+	${INSTALL_MAN} ${WRKSRC}/docs/xvdocs.ps ${DOCSDIR}
+.endif
+....
+
+这里是一些便于使用的变量， 以及它们在 [.filename]#Makefile# 中默认的展开方式：
+
+* `DATADIR` 会展开成 [.filename]#PREFIX/shared/PORTNAME#。
+* `DATADIR_REL` 会展开成 [.filename]#share/PORTNAME#。
+* `DOCSDIR` 会展开成 [.filename]#PREFIX/shared/doc/PORTNAME#。
+* `DOCSDIR_REL` 会展开成 [.filename]#share/doc/PORTNAME#。
+* `EXAMPLESDIR` 会展开成 [.filename]#PREFIX/shared/examples/PORTNAME#。
+* `EXAMPLESDIR_REL` 会展开成 [.filename]#share/examples/PORTNAME#。
+
+[NOTE]
+====
+`NOPORTDOCS` 只控制将要安装到 `DOCSDIR` 的那些文档， 而不应影响标准的联机手册以及 info 手册的安装。 安装到 `DATADIR` 和 `EXAMPLESDIR` 的文件则相应地受 `NOPORTDATA` 和 `NOPORTEXAMPLES` 控制。
+====
+
+这些变量也会被导出到 `PLIST_SUB` 中。 只要可能， 它们的值就将在那里以相对于 [.filename]#PREFIX# 的路径形式出现。 也就是说， [.filename]#share/doc/PORTNAME# 在装箱单中默认情况下会替换掉 `%%DOCSDIR%%`， 等等。 (更多的 [.filename]#pkg-plist# 代换可以在 <<plist-sub,这里>> 找到。)
+
+所有非无条件安装的文档文件和目录， 都应在 [.filename]#pkg-plist# 出现， 并且使用 `%%PORTDOCS%%` 前缀， 例如：
+
+[.programlisting]
+....
+%%PORTDOCS%%%%DOCSDIR%%/AUTHORS
+%%PORTDOCS%%%%DOCSDIR%%/CONTACT
+%%PORTDOCS%%@dirrm %%DOCSDIR%%
+....
+
+如果不希望在 [.filename]#pkg-plist# 中逐个列举文档文件， port 也可以将 `PORTDOCS` 设置为一组文件及其 shell glob 模式， 通过这种方式来加入到最终的装箱单中。 这些名字应是相对于 `DOCSDIR` 的。 因此， 使用了 `PORTDOCS`， 并将文档安装到非标准位置的 port， 应相应地设置 `DOCSDIR`。 如果有在 `PORTDOCS` 中列出目录， 或者这一变量中的 glob 模式匹配到了目录， 则整个子树中的文件和目录， 都将被注册到最终的装箱单中。 如果定义了 `NOPORTDOCS`， 则 `PORTDOCS` 中定义的文件和目录将不被安装或加入装箱单。 是否安装文档到前面所说的 `PORTDOCS` 仍取决于 port 本身。 下面是一个典型的使用 `PORTDOCS` 的例子：
+
+[.programlisting]
+....
+PORTDOCS=       README.* ChangeLog docs/*
+....
+
+[NOTE]
+====
+与 `PORTDOCS` 类似， 对应于 `DATADIR` 和 `EXAMPLESDIR` 的变量分别是 `PORTDATA` 和 `PORTEXAMPLES`。
+
+您也可以使用 [.filename]#pkg-message# 这个文件， 来在安装时显示一些信息。 参见 <<porting-message,关于使用 [.filename]#pkg-message# 的这一节>> 以了解进一步的详情。 需要说明的是， 并不需要把 [.filename]#pkg-message# 加到 [.filename]#pkg-plist# 中。
+====
+
+[[install-subdirs]]
+=== 子目录
+
+尽可能让 port 将它创建的文件， 放置到 `PREFIX` 中正确的位置。 一些 port 会把各式各样的东西混在一起， 并放到一个同名的目录中， 这是不对的。 另外， 许多 port 会把除了可执行文件、 头文件和联机手册之外的所有文件， 全都一股脑地放到 [.filename]#lib# 中， 这在和 BSD 配合使用时会有问题。 多数文件， 应被放到下列位置之一： [.filename]#etc# (安装/配置文件)、 [.filename]#libexec# (由系统内部调用的可执行文件)、 [.filename]#sbin# (为超级用户/管理员提供的可执行文件)、 [.filename]#info# (用于 info 浏览器的文档) 或 [.filename]#share# (平台无关的其它文件)。 请参见 man:hier[7] 以了解进一步的详情； 针对 [.filename]#/usr# 的那些规则， 同样也适用于 [.filename]#/usr/local#。 例外情况是那些需要和 USENET "news" 打交道的 port， 它们可以选择采用 [.filename]#PREFIX/news# 作为文件的目的地。

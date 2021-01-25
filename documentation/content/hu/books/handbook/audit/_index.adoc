@@ -1,0 +1,331 @@
+---
+title: 17. Fejezet - Biztonsági események vizsgálata
+part: III. Rész Rendszeradminisztráció
+prev: books/handbook/mac
+next: books/handbook/disks
+---
+
+[[audit]]
+= Biztonsági események vizsgálata
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 17
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/audit/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/audit/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/audit/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[audit-synopsis]]
+== Áttekintés
+
+A FreeBSD támogatja a biztonsági események aprólékos vizsgálatát. Ezzel egy megbízható, részletes és jól konfigurálható naplózási rendszert nyújtanak a rendszerben található biztonságot igénylõ események széles köréhez, beleértve a bejelentkezéseket, a konfigurációs állományokban bekövetkezõ változásokat, állomány- és hálózati hozzáféréseket. Az így létrehozott naplóbejegyzések felbecsülhetetlen értékûnek bizonyulhatnak egy élõ rendszer felügyelete során, vagy egy hálózati támadás észleléséhez, esetleg egy összeomlás okainak kielemezéséhez. A FreeBSD ehhez a Sun(TM) által kifejlesztett BSM technológia API-ját és állományformátumát valósítja meg, és így képes együttmûködni a Sun(TM) Solaris(TM) valamint az Apple(R) Mac OS(R) X bizonsági rendszereivel egyaránt.
+
+Ebben a fejezetben a biztonsági események vizsgálatának telepítéséhez és beállításához szükséges ismeretek tekintjük át. Ennek keretében szó esik a vizsgálati házirendekrõl, valamint mutatunk egy példát a vizsgálatok beállítására.
+
+A fejezet elolvasása során megismerjük:
+
+* mit jelent az események vizsgálata és hogyan mûködik;
+* hogyan kell beállítani az események vizsgálatát FreeBSD-n a különbözõ felhasználók és programok esetén;
+* hogyan értelmezzük a vizsgálati nyomokat a vizsgálatot szûkítõ és -elemzõ segédprogramok segítségével.
+
+A fejezet elolvasásához ajánlott:
+
+* alapvetõ UNIX(R)-os és FreeBSD-s ismeretek (crossref:basics[basics,A UNIX alapjai]);
+* a rendszermag konfigurálásával és fordításával kapcsolatos tudnivalók alapszintû ismerete (crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]);
+* az informatikai biztonság alapfogalmainak és annak a FreeBSD-re vonatkozó részleteinek minimális ismerete (crossref:security[security,Biztonság]).
+
+[WARNING]
+====
+
+Az események vizsgálatával kapcsolatos ismert korlátozások: nem mindegyik biztonságot érintõ esemény vizsgálható, mint például az egyes bejelentkezési típusok, mivel azok nem megfelelõen hitelesítik a belépõ felhasználókat. Ilyenek például az X11-alapú felületek és az egyéb, erre a célra alkalmas, más által fejlesztett démonok.
+
+A biztonsági események vizsgálata során a rendszer képes nagyon részletes naplókat készíteni az érintett tevékenységekrõl. Így egy kellõen forgalmas rendszeren az állománymozgások alapos nyomonkövetése bizonyos konfigurációkon akár gigabyte-okat is kitehet hetente. A rendszergazdáknak ezért mindig javasolt számolniuk a nagy forgalmú események biztonsági vizsgálatának tárigényével. Például, emiatt érdemes lehet egy egész állományrendszert szánni erre a feladatra a [.filename]#/var/audit# könyvtárban, és így a többi állományrendszer nem látja kárát, ha véletlenül betelne ez a terület.
+====
+
+[[audit-inline-glossary]]
+== A fejezet fontosabb fogalmai
+
+A fejezet elolvasása elõtt meg kell ismernünk néhány fontos alapfogalmat:
+
+* _esemény:_ Vizsgálható eseménynek azt az eseményt nevezzük, amely egy vizsgálati alrendszerben naplózható. Biztonsági események lehetnek például: egy állomány létrehozása, egy hálózati kapcsolat felépítése, vagy egy felhasználó bejelentkezése. Egy esemény "jellegzetes", ha visszakövethetõ valamelyik hitelesített felhasználóhoz, vagy "nem jellegzetes", ha ez nem lehetséges. Nem jellegzetes esemény lehet minden olyan esemény, amely egy bejelentkezési folyamat hitelesítési lépése elõtt történik, például egy belépési kísérlet hibás jelszóval.
+* _osztály:_ Eseményosztálynak az összefüggõ események névvel ellátott halmazát tekintjük, és szûrési feltételekben használjuk ezeket. Általában alkalmazott osztályok: "file creation" (fc, állománylétrehozás), "exec" (ex, programindítás), és "login_logout" (lo, ki- és bejelentkezés).
+* _rekord:_ Rekordnak nevezzük a biztonsági eseményeket leíró biztonsági naplóbejegyzéseket. A rekordok tartalmazhatják a feljegyzett esemény típusát, az eseményt kiváltó tevékenységet (felhasználót), a dátumot és az idõt, tetszõleges objektum vagy paraméter értékét, feltételek teljesülését vagy meghiúsulását.
+* _nyom:_ Vizsgálati nyomnak vagy naplóállománynak nevezzük a különféle biztonsági eseményeket leíró vizsgálati rekordok sorozatát. A nyomok többnyire nagyjából az események bekövetkezése szerinti idõrendben következnek. Csak és kizárólag az erre felhatalmazott programok hozhatnak létre rekordokat a vizsgálati nyomban.
+* _szûrési feltétel:_ Szûrési feltételnek nevezünk egy olyan karakterláncot, amelyet események szûrésére használunk, és módosítókat valamint eseményosztályok neveit tartalmazza.
+* _elõválogatás:_ Elõválogatásnak nevezzük a folyamatot, amelynek során a rendszer beazonosítja azokat az eseményeket, amelyek a rendszergazda számára fontosak. Ezáltal elkerülhetjük olyan vizsgálati rekordok generálását, amelyek számunkra érdektelen eseményekrõl számolnak be. Az elõválogatás szûrési feltételek sorát használja az adott felhasználókhoz tartozó adott biztonsági események vizsgálatának beállításához, akárcsak a hitelesített és a nem hitelesített programokat értintõ globális beállítások meghatározásához.
+* _leszûkítés:_ Leszûkítésnek nevezzük a folyamatot, amelynek során a már meglevõ biztonsági rekordokból válogatunk le tárolásra, nyomtatásra vagy elemzésre. Hasonlóan ez a folyamat, ahol a szükségtelen rekordokat eltávolítjuk a vizsgálatai nyomból. A leszûkítés segítségével a rendszergazdák a vizsgálati adatok eltárolására alakíthatnak ki házirendet. Például a részletesebb vizsgálati nyomokat érdemes egy hónapig megtartani, ennek lejártával viszont már inkább ajánlott leszûkíteni ezeket és archiválásra csak a bejelentkezési információkat megtartani.
+
+[[audit-install]]
+== A vizsgálat támogatásának telepítése
+
+A eseményvizsgálathoz szükséges felhasználói programok a FreeBSD alaprendszer részét képezik. Az eseményvizsgálat támogatása alapértelmezés szerint megtalálható a rendszermagban, azonban egy saját rendszermag esetén már külön be kell kapcsolnunk a megfelelõ támogatást, mégpedig a rendszermag konfigurációs állományában az alábbi sor hozzáadásával:
+
+[.programlisting]
+....
+options	AUDIT
+....
+
+Fordítsuk és telepítsük újra a rendszermagot az crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]ben ismertetett folyamat szerint.
+
+Ahogy a rendszermagot a bekapcsolt eseményvizsgálati támogatással sikerült lefordítanunk és telepítenünk, valamint a rendszerünk is újraindult, indítsuk el a vizsgáló démont a következõ sor hozzáadásával az man:rc.conf[5] állományban:
+
+[.programlisting]
+....
+auditd_enable="YES"
+....
+
+A vizsgálatot innentõl ténylegesen egy ismételt újraindítással vagy pedig az elõbb említett démon manuális elindításával aktiválhatjuk:
+
+[.programlisting]
+....
+/etc/rc.d/auditd start
+....
+
+[[audit-config]]
+== A vizsgálat beállítása
+
+A vizsgálatok beállításához szükséges összes konfigurációs állomány a [.filename]#/etc/security# könyvtárban található. A következõ állományok vannak itt a démon indítása elõtt:
+
+* [.filename]#audit_class# - a vizsgálati osztályok definícióit tartalmazza.
+* [.filename]#audit_control# - a vizsgálati alrendszer különbözõ területeit vezérli, többek közt az alapértelmezett vizsgálati osztályokat, az vizsgálati adatok tárhelyén fenntartandó minimális lemezterületet, a vizsgálati nyom maximális méretét, stb.
+* [.filename]#audit_event# - a rendszerben jelenlevõ vizsgálati események szöveges megnevezése és leírása, valamint a lista, hogy melyikük mely osztályban található.
+* [.filename]#audit_user# - felhasználónként változó vizsgálati elvárások, kombinálva a bejelentkezéskor érvényes globálisan alapértelmezett beállításokkal.
+* [.filename]#audit_warn# - az auditd által használt testreszabható shell szkript, aminek segítségével a szélsõséges helyzetekben figyelmeztetõ üzeneteket tudunk generálni, mint például amikor a rekordok számára fenntartott hely hamarosan elfogy, vagy amikor a nyomokat tartalmazó állományt archiváltuk.
+
+[WARNING]
+====
+
+Az eseményvizsgálat konfigurációs állományait alapos körültekintés mellett szabad szerkeszteni és karbantartani, mivel a bennük keletkezõ hibák az események helytelen naplózását eredményezhetik.
+====
+
+=== Eseményszûrési feltételek
+
+Az eseményvizsgálati beállítások során számtalan helyen felbukkanak a vizsgálni kívánt eseményeket meghatározó szûrési feltételek. Ezen feltételek eseményosztályok felsorolását tartalmazzák, mindegyiküket egy módosító vezeti be, ezzel jelezve, hogy az adott eseményosztályba tartozó rekordokat tartsuk meg vagy vessük el. Esetleg utalhatnak arra is, hogy vagy csak a sikerességet jelzõ rekordokat, vagy csak a sikertelenséget jelzõ rekordokat szûrjük ki. A szûrési feltételek balról jobbra értékelõdnek ki, és két kifejezés összefûzéssel kombinálható.
+
+A most következõ lista tartalmazza a [.filename]#audit_class# állományban található alapértelmezett eseményvizsgálati osztályokat:
+
+* `all` - _all (mind)_ - Minden eseményosztályra vonatkozik.
+* `ad` - _administrive (adminisztrációs)_ - olyan adminisztrációs tevékenységek, amelyek egyben az egész rendszeren végrehajtódnak.
+* `ap` - _application (alkalmazás)_ - az alkalmazások által meghatározott tevékenység.
+* `cl` - _file close (állomány lezárása)_ - a `close` rendszerhívás meghívásának vizsgálata.
+* `ex` - _exec (programindítás)_ - egy program indításának vizsgálata. A parancssorban átadott paraméterek és a környezeti változók vizsgálatát az man:audit_control[5] vezérli a `policy` beállításhoz tartozó `argv` és `envv` paraméterek segítségével.
+* `fa` - _file attribute access (állományjellemzõk hozzáférése)_ - a rendszerbeli objektumok jellemzõinek hozzáférésnek vizsgálata, mint például a man:stat[1], man:pathconf[2] és ehhez hasonló események.
+* `fc` - _file create (állomány létrehozása)_ - állományt eredményezõ események vizsgálata.
+* `fd` - _file delete (állomány törlése)_ - állományt törlõ események vizsgálata.
+* `fm` - _file attribute modify (állományjellemzõk módosítása)_ - állományok jellemzõit megváltoztató események vizsgálata, mint például a man:chown[8], man:chflags[1], man:flock[2], stb.
+* `fr` - _file read (állományolvasás)_ - állományok megnyitásával olvasásra, olvasásával, stb. kapcsolatos események vizsgálata.
+* `fw` - _file write (állományírás)_ - állományok megnyitásával írásra, írásával, módosításával, stb. kapcsolatos események vizsgálata.
+* `io` - _ioctl_ - az man:ioctl[2] rendszerhívást használó események vizsgálata.
+* `ip` - _ipc_ - a folyamatok közti kommunikáció különféle formáinak, beleértve a POSIX csövek és System V IPC mûveleteinek vizsgálata.
+* `lo` - _login_logout (ki- és bejelentkezés)_ - a rendszerben megjelenõ man:login[1] és man:logout[1] események vizsgálata.
+* `na` - _non attributable (nem jellegzetes)_ - a nem jellegzetes események vizsgálata.
+* `no` - _invalid class (érvénytelen osztály)_ - egyetlen biztonsági eseményt sem tartalmaz.
+* `nt` - _network (hálózat)_ - a hálózathoz tartozó események vizsgálata, mint például a man:connect[2] és az man:accept[2].
+* `ot` - _other (egyéb)_ - más egyéb események vizsgálata.
+* `pc` - _process (folyamat)_ - a folyamatokkal kapcsolatos mûveletek, mint például az man:exec[3] és az man:exit[3] vizsgálata.
+
+Az imént felsorolt eseményosztályok az [.filename]#audit_class# és az [.filename]#audit_event# állományok módosításával igény szerint testreszabhatóak.
+
+A listában szereplõ minden egyes eseményosztályhoz tartozik még egy módosító is, amely jelzi, hogy a sikeres vagy a sikertelen mûveleteket kell-e szûrnünk, valamint hogy a bejegyzés az adott típust vagy osztályt hozzáadja vagy elveszi az adott szûrésbõl.
+
+* (üres) az adott típusból mind a sikereseket és mind a sikerteleneket feljegyzi.
+* `+` az eseményosztályba tartozó sikeres eseményeket vizsgálja csak.
+* `-` az eseményosztályba tartozó sikertelen eseményeket vizsgálja csak.
+* `^` az eseményosztályból sem a sikereseket, sem pedig a sikerteleneket nem vizsgálja.
+* `^+` az eseményosztályból nem vizsgálja a sikeres eseményeket.
+* `^-` az eseményosztályból nem vizsgálja a sikertelen eseményeket.
+
+Az alábbi példa egy olyan szûrési feltételt mutat be, amely a ki- és bejelentkezések közül megadja a sikereset és a sikerteleneket, viszont a programindítások közül csak a sikereseket:
+
+[.programlisting]
+....
+lo,+ex
+....
+
+=== A konfigurációs állományok
+
+A vizsgálati rendszer beállításához az esetek túlnyomó részében a rendszergazdáknak csupán két állományt kell módosítaniuk: ezek az [.filename]#audit_control# és az [.filename]#audit_user#. Az elõbbi felelõs a rendszerszintû vizsgálati jellemzõkért és házirendekért, míg az utóbbi az igények felhasználókénti finomhangolásához használható.
+
+[[audit-auditcontrol]]
+==== Az [.filename]#audit_control# állomány
+
+Az [.filename]#audit_control# állomány határozza meg a vizsgálati alrendszer alapértelmezéseit. Ezt az állományt megnyitva a következõket láthatjuk:
+
+[.programlisting]
+....
+dir:/var/audit
+flags:lo
+minfree:20
+naflags:lo
+policy:cnt
+filesz:0
+....
+
+A `dir` opciót használjuk a vizsgálati naplók tárolására szolgáló egy vagy több könyvtár megadására. Ha egynél több könyvtárra vonatkozó bejegyzés található az állományban, akkor azok a megadás sorrendjében kerülnek feltöltésre. Nagyon gyakori az a beállítás, ahol a vizsgálati naplókat egy erre a célra külön kialakított állományrendszeren tárolják, megelõzve ezzel az állományrendszer betelésekor keletkezõ problémákat a többi alrendszerben.
+
+A `flags` mezõ egy rendszerszintû alapértelmezett elõválogatási maszkot határoz meg a jellegzetes események számára. A fenti példában a sikeres és sikertelen ki- és bejelentkezéseket mindegyik felhasználó esetén vizsgáljuk.
+
+A `minfree` opció megszabja a vizsgálati nyom tárolására szánt állományrendszeren a minimális szabad helyet, a teljes kapacitás százalékában. Amint ezt a küszöböt túllépjük, egy figyelmeztetés fog generálódni. A fenti példa a minimálisan szükséges rendelkezésre álló helyet húsz százalékra állítja.
+
+A `naflags` opció megadja azokat az eseményosztályokat, amelyeket vizsgálni kell a nem jellegzetes események, mind például a bejelentkezési folyamatok vagy rendszerdémonok esetén.
+
+A `policy` opció a vizsgálat különbözõ szempontjait irányító házirendbeli beállítások vesszõvel elválasztott listáját tartalmazza. Az alapértelmezett `cnt` beállítás azt adja meg, hogy a rendszer a felmerülõ vizsgálati hibák ellenére is folytassa tovább a mûködését (erõsen javasolt a használata). A másik gyakorta alkalmazott beállítás az `argv`, amellyel a rendszer a parancsvégrehajtás részeként az man:execve[2] rendszerhívás parancssori paramétereit is megvizsgálja.
+
+A `filesz` opció határozza meg a vizsgálati nyom automatikus szétvágása és archiválása elõtti maximális méretét, byte-ban. Az alapértelmezett értéke a 0, amely kikapcsolja ezt az archiválást. Ha az itt megadott állományméret nem nulla és a minimálisan elvárt 512 KB alatt van, akkor a rendszer figyelmen kívül hagyja és errõl egy figyelmeztetést ad.
+
+[[audit-audituser]]
+==== Az [.filename]#audit_user# állomány
+
+Az [.filename]#audit_user# állomány lehetõvé teszi a rendszergazda számára, hogy az egyes felhasználók számára további vizsgálati szigorításokat határozzon meg. Minden sor egy-egy felhasználó vizsgálatának pontosítását adja meg két mezõ segítségével: az elsõ közülük az `alwaysaudit` mezõ, mely felsorolja azokat az eseményeket, amelyeket minden esetben vizsgáni kell az adott felhasználó esetén, valamint a második a `neveraudit` mezõ, mely az adott felhasználó esetén a nem vizsgálandó eseményeket adja meg.
+
+A most következõ [.filename]#audit_user# példában vizsgáljuk a `root` felhasználó ki- és bejelentkezéseit és sikeres programindításait, valamint a `www` felhasználó állománylétrehozásait és sikeres programindításait. Ha a korábban bemutatott [.filename]#audit_control# példával együtt használjuk, akkor észrevehetjük, hogy a `lo` bejegyzés a `root` felhasználó esetén redundáns, illetve ilyenkor a ki/bejelentkezést a `www` felhasználó esetén is vizsgáljuk.
+
+[.programlisting]
+....
+root:lo,+ex:no
+www:fc,+ex:no
+....
+
+[[audit-administration]]
+== A vizsgálati alrendszer használata
+
+=== A vizsgálati nyomok megtekintése
+
+A vizsgálati nyomok a BSM bináris formátumban tárolódnak, ezért a tartalmának konvertálásához és módosításához külön segédprogramokra van szükség. A man:praudit[1] parancs a nyomállományokat egyszerû szöveges formátumra alakítja, az man:auditreduce[1] parancs pedig a nyomok elemzéséhez, archiválásához vagy nyomtatásához szükséges leszûkítéséket végzi el. Az `auditreduce` a szûrési feltételek paramétereinek széles skáláját kezeli, beleértve az eseménytípusokat, -osztályokat, felhasználókat, események dátumát vagy idõpontját, állományok elérési útvonalát vagy az általuk érintett objektumokat.
+
+Például a `praudit` segédprogram képes kilistázni szövegesen egy adott vizsgálati napló teljes tartalmát:
+
+[source,bash]
+....
+# praudit /var/audit/AUDITFILE
+....
+
+ahol az [.filename]#AUDITFILE# a kiírandó vizsgálati napló.
+
+A vizsgálati nyomok tokenekbõl összeállított vizsgálati rekordok, amelyeket a `praudit` egymás után soronként megjelenít. Minden token adott típusú, például a `header` egy vizsgálati rekord fejlécét tartalmazza, vagy a `path`, amely a névfeloldásból származó elérési utat tartalmaz. A következõ példa egy `execve` eseményt mutat be:
+
+[.programlisting]
+....
+header,133,10,execve(2),0,Mon Sep 25 15:58:03 2006, + 384 msec
+exec arg,finger,doug
+path,/usr/bin/finger
+attribute,555,root,wheel,90,24918,104944
+subject,robert,root,wheel,root,wheel,38439,38032,42086,128.232.9.100
+return,success,0
+trailer,133
+....
+
+Ez a vizsgálat egy sikeres `execve` hívást rögzít, ahol a `finger doug` parancs futott le. A paramétereket tartalmazó token magában foglalja a shell által a rendszermag felé jelzett parancsot és annak paraméterét egyaránt. A `path` token tárolja a végrehajtott állomány rendszermag által feloldott elérési útját. A `attribute` token errõl a binárisról ad további információkat, különösen az állomány módjáról, amely segít megállapítani, hogy az adott alkalmazásnál be volt-e állítva a setuid bit. A `subject` token leírja az érintett folyamatot és rendre megjegyzi a vizsgált felhasználó azonosítóját, az aktuálisan érvényben levõ felhasználó és csoport azonosítóját, a valós felhasználói és csoport azonosítót, a folyamat azonosítóját, a munkamenet azonosítóját, a port azonosítóját és a bejelentkezéshez használt hálózati címet. Vegyük észre, hogy a vizsgált felhasználó azonosítója és a valódi azonosítója eltér egymástól: a `robert` nevû felhasználó a `root` accountjára váltott a parancs futattása elõtt, de az eredetileg hitelesített felhasználójaként lett vizsgálva. Végezetül a `return` token jelzi a sikeres végrehajtást, és a `trailer` pedig zárja a rekordot.
+
+=== A vizsgálati nyomok leszûkítése
+
+Mivel a vizsgálatokhoz tartozó naplók akár egészen nagyok is lehetnek, ezért a rendszergazdának minden bizonnyal szüksége lehet a számára fontos, például egy adott felhasználóhoz tartozó rekordok kiválogatására:
+
+[source,bash]
+....
+# auditreduce -u trhodes /var/audit/AUDITFILE | praudit
+....
+
+Ezzel ki tudjuk szûrni a `trhodes` nevû felhasználóhoz tartozó összes vizsgálati rekordot az [.filename]#AUDITFILE# állományból.
+
+=== A naplók megtekintéséhez szükséges jogok továbbadása
+
+Az `audit` csoport tagjai olvashatják a [.filename]#/var/audit# könyvtárban található vizsgálati nyomokat. Alapértelmezés szerint ez a csoport üres, ezért csak a `root` képes ekkor vizsgálni a nyomokat. A többi felhasználó számára úgy tudunk olvasási jogot biztosítani, ha felvesszük õket az `audit` csoportba. Mivel a vizsgálati naplók tartalmának figyelése jelentõs rálátást adhat a rendszerben jelenlevõ felhasználók és folyamatok viselkedésére, ajánlott körültekintõen kiosztani az olvasási jogokat.
+
+=== Élõ rendszerfelügyelet a vizsgálati csövekkel
+
+A vizsgálati csövek az eszközök állományabsztrakcióit klónozzák le, és ezzel teszik lehetõvé az alkalmazások számára, hogy menet közben megcsapolhassák a megfigyelt eszközök adatait. Ez az elsõdleges célja a különbözõ betörésfigyelõ és rendszerfelügyeleti eszközök készítõinek. A rendszergazda számára azonban a vizsgálati csövek megkönnyítik az élõ megfigyelést, mert itt nem merülnek fel a nyomok jogosultságaiból vagy az archiválás miatt megszakadó eseményfolyamokból adódó problémák. Az élõ eseményfolyamra az alábbi parancs kiadásával lehet rácsatlakozni:
+
+[source,bash]
+....
+# praudit /dev/auditpipe
+....
+
+Alapértelmezés szerint a vizsgálati csõhöz tartozó csomópontok kizárólag csak a `root` felhasználó részére érhetõek el. Az `audit` csoport tagjai úgy tudnak majd hozzáférni, ha felvesszük a következõ `devfs` szabályt a [.filename]#devfs.rules# állományba:
+
+[.programlisting]
+....
+add path 'auditpipe*' mode 0440 group audit
+....
+
+A devfs állományrendszer beállításárõl bõvebben lásd a man:devfs.rules[5] oldalt.
+
+[WARNING]
+====
+
+Könnyen gerjedést lehet elõidézni a vizsgált események megfigyelésével, amikor is az egyes események megtekintése újabb vizsgálandó események sorozatát indítják el. Például, ha az összes hálózati forgalmat egyszerre vizsgáljuk és a man:praudit[1] egy SSH-munkameneten keresztül fut, akkor a vizsgálati események töméntelen áradata indul meg, mivel minden kiírandó esemény egy újabb eseményt indukál. Ennek elkerülése érdekében ajánlott a `praudit` parancsot részletes forgalmat nem figyelõ vizsgálati csõvel ellátott munkameneten keresztül elindítani.
+====
+
+=== A vizsgálati nyomok archiválása
+
+A vizsgálati nyomokat egyedül a rendszermag képes írni, illetve csak a vizsgálati démon, az auditd képes felügyelni. A rendszergazdáknak ebben az esetben tehát nem szabad használniuk a man:newsyslog.conf[5] vagy a hozzá hasonló eszközök használatát a vizsgálati naplók archiválásához. Helyettük a `audit` segédprogramot javasolt használni a vizsgálatok leállítására, a vizsgálati rendszer újrakonfigurálására vagy a napló archiválásának elvégzésére. Az alábbi parancs utasítja a vizsgálati démont, hogy hozzon létre egy új vizsgálati naplót és jelzi a rendszermagnak, hogy váltson erre az új naplóra. Az eddig használt naplót lezárja és átnevezi, ami ezután a rendszergazda által tetszõlegesen feldolgozható.
+
+[source,bash]
+....
+# audit -n
+....
+
+[WARNING]
+====
+
+Ha az auditd démon a parancs kiadásánák pillanatában nem futna, akkor hiba történik és errõl hibaüzenetet kapunk.
+====
+
+A man:cron[8] segítségével tizenként óránként kikényszeríthetjük a naplók váltását, ha felvesszük a [.filename]#/etc/crontab# állományba az alábbi sort:
+
+[.programlisting]
+....
+0     */12       *       *       *       root    /usr/sbin/audit -n
+....
+
+Ez a változtatás akkor fog érvénybe lépni, ha elmentjük az új [.filename]#/etc/crontab# állományt.
+
+A vizsgálati nyomok mérete szerinti automatikus váltás is megvalósítható az man:audit_control[5] állományban szereplõ `filesz` opció beállításával, amit meg is találhatunk ebben a fejezetben, a konfigurációs állományok beállításánál.
+
+=== A vizsgálati nyomok tömörítése
+
+Mivel a vizsgálati nyomok óriásira is megnõhetnek, sokszor felmerül az igény, hogy lehessen õket tömöríteni vagy más egyéb módon archiválni a vizsgálati démon által lezárt nyomokat. Az [.filename]#audit_warn# szkript használható a különbözõ vizsgálatokhoz kapcsolódó események esetén elvégzendõ mûveletek megadásához, beleértve ebbe a vizsgálati nyomok váltásakor elvégzett szabályos lezárását. Például a következõket kell beleírnunk az [.filename]#audit_warn# szkriptbe a nyomok lezárását követõ tömörítéséhez:
+
+[.programlisting]
+....
+#
+# Lezáráskor tömöríti a vizsgálati nyomot.
+#
+if [ "$1" = closefile ]; then
+        gzip -9 $2
+fi
+....
+
+Egyéb archiválási tevékenységek lehetnek még: a nyomok felmásolása egy központi szerverre, a régebbi nyomok törlése, vagy a meglevõ nyomok leszûkítése csak a fontos információkra. A szkript csak akkor fog lefutni, ha a vizsgálati nyomot sikerült szabályosan lezárni, így tehát a szabálytalan leálláskor megmaradó nyomok esetén nem.
+
+A FreeBSD 6.3 és késõbbi verzióiban, a `praudit` XML kimeneti formátumot is támogat, amely az `-x` kapcsolóval érhetõ el.

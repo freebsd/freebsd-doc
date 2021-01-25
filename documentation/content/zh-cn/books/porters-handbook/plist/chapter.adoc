@@ -1,0 +1,216 @@
+---
+title: 第 7 章 高级 pkg-plist 用法
+prev: books/porters-handbook/special
+next: books/porters-handbook/pkg-files
+---
+
+[[plist]]
+= 高级 [.filename]#pkg-plist# 用法
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 7
+:toc-title: 目录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+[[plist-sub]]
+== 根据 make 变量对 [.filename]#pkg-plist# 进行修改
+
+某些 port， 特别是 `p5-` port， 会需要根据配置选项 (或对于 `p5-` port 而言， `perl` 的版本) 来修改它们的 [.filename]#pkg-plist#。 为简化这一工作， 在 [.filename]#pkg-plist# 中的 `%%OSREL%%`、 `%%PERL_VER%%`， 以及 `%%PERL_VERSION%%` 将自动进行相应的替换。 其中， `%%OSREL%%` 的值是操作系统以数值表示的版本 (例如 `4.9`)。 `%%PERL_VERSION%%` 和 `%%PERL_VER%%` 是 `perl` 的完整版本号 (例如 `5.8.9`)。许多其它与 port 文档文件有关的 `%%变量%%` 在 <<install-documentation,相应章节>> 中进行了介绍。
+
+如果您还需要进行其它的替换， 可以通过将 `PLIST_SUB` 变量设置为一组 `变量=值` 对来实现。 其中， `%%VAR%%` 表示在 [.filename]#pkg-plist# 中将被 _值_ 替换的那些文字。
+
+举例来说， 如果 port 需要把很多文件放到和版本有关的目录中， 可以在 [.filename]#Makefile# 中按照类似下面的例子：
+
+[.programlisting]
+....
+OCTAVE_VERSION= 2.0.13
+PLIST_SUB=      OCTAVE_VERSION=${OCTAVE_VERSION}
+....
+
+并在 [.filename]#pkg-plist# 中将具体的版本替换为 `%%OCTAVE_VERSION%%`。 这样， 在升级 port 时， 就不需要再到 [.filename]#pkg-plist# 中修改那几十 (或者， 有时甚至是上百) 行的内容了。
+
+如果您的 port 需要根据一定的配置来有条件地安装一些文件， 通常的做法是在 [.filename]#pkg-plist# 中列出这些文件时， 在对应行的开头加上 `%%TAG%%`， 并将 `TAG` 写到 [.filename]#Makefile# 中的 `PLIST_SUB` 变量中， 根据需要替换掉， 或替换为 `@comment`， 后者表示让打包工具忽略这行：
+
+[.programlisting]
+....
+.if defined(WITH_X11)
+PLIST_SUB+=	X11=""
+.else
+PLIST_SUB+=	X11="@comment "
+.endif
+....
+
+与之对应， 在 [.filename]#pkg-plist# 中：
+
+[.programlisting]
+....
+%%X11%%bin/foo-gui
+....
+
+这一替换过程 (以及加入 <<makefile-manpages,联机手册>> 的过程)， 会在 `pre-install` 和 `do-install` 两个 target 之间， 通过读取 [.filename]#PLIST# 并写入 [.filename]#TMPPLIST# (默认情况下， 是： [.filename]#WRKDIR/.PLIST.mktmp#) 来完成。 因此， 如果您的 port 动态生成 [.filename]#PLIST#， 就需要在 `pre-install` 之前完成。 另外， 如果您的 port 需要编辑所生成的文件， 则需要在 `post-install` 中操作名为 [.filename]#TMPPLIST# 的那个文件。
+
+另一种可行的修改装箱单的方法， 则是根据 `PLIST_FILES` 和 `PLIST_DIRS` 这两个变量的设置来进行。 它们的值会作为目录名连同 [.filename]#PLIST# 的内容一起写入 [.filename]#TMPPLIST#。 在 `PLIST_FILES` 和 `PLIST_DIRS` 中列出的名字， 会经历前面所介绍的 `%%变量%%` 替换过程。 除此之外， 在 `PLIST_FILES` 中列出的文件， 会不加任何修改第出现在最终的装箱单中， 而 `@dirrm` 将作为前缀加到 `PLIST_DIRS` 所列的名字之前。 为了达到目的， `PLIST_FILES` 和 `PLIST_DIRS` 必须在写 [.filename]#TMPPLIST# 之前， 也就是在 `pre-install` 或更早的阶段进行设置。
+
+[[plist-cleaning]]
+== 空目录
+
+[[plist-dir-cleaning]]
+=== 清理空目录
+
+一定要让 port 在卸载时进行清理空目录。 通常， 可以通过为所有由 port 创建的目录增加对应的 `@dirrm` 行来实现。 在删除父目录之前， 需要首先删除它的子目录。
+
+[.programlisting]
+....
+ :
+lib/X11/oneko/pixmaps/cat.xpm
+lib/X11/oneko/sounds/cat.au
+ :
+@dirrm lib/X11/oneko/pixmaps
+@dirrm lib/X11/oneko/sounds
+@dirrm lib/X11/oneko
+....
+
+然而， 有时 `@dirrm` 会由于其它 port 使用了同一个目录而发生错误。 利用 `@dirrmtry` 可以只删除那些空目录， 而避免给出警告。
+
+[.programlisting]
+....
+@dirrmtry share/doc/gimp
+....
+
+按照上面的写法， 将不会显示任何错误信息， 而且，即使在 [.filename]#${PREFIX}/shared/doc/gimp# 由于其它 port 在其中安装了一些别的文件的时候， 也不会导致 man:pkg_delete[1] 异常退出。
+
+[[plist-dir-empty]]
+=== 如何建立空目录
+
+在 port 安装过程中创建的空目录需要特别留意。 安装 package 时并不会自动创建这些目录， 这是因为 package 只保存文件。 要确保安装 package 时会自动创建这些空目录， 需要在 [.filename]#pkg-plist# 中加入与 `@dirrm` 对应的行：
+
+[.programlisting]
+....
+@exec mkdir -p %D/shared/foo/templates
+....
+
+[[plist-config]]
+== 配置文件
+
+如果 port 需要把一些文件放到 [.filename]#PREFIX/etc#， _不要_ 简单地安装它们， 并将其列入 [.filename]#pkg-plist#， 因为这样会导致 man:pkg_delete[1] 删除用户精心编辑的文件， 而新安装时则又会把这些文件覆盖。
+
+因此， 您应把配置文件的例子按其它的后缀来安装 (例如 [.filename]#filename.sample# 就是一个不错的选择) 并显示一条 <<porting-message,消息>> 告诉用户如何复制并编辑这个配置文件， 以便让软件能够正确工作。
+
+因此， 应按其它的后缀来安装配置文件的例子 ([.filename]#filename.sample# 就是一个不错的选择)。 如果实际的配置文件不存在， 则将其复制为实际文件的名字。 卸载时， 如果发现用户没有修改配置文件， 则将其删除。 您需要在 port 的 [.filename]#Makefile#， 以及 [.filename]#pkg-plist# (对于从 package 安装的情形) 进行处理。
+
+示例的 [.filename]#Makefile# 部分：
+
+[.programlisting]
+....
+post-install:
+	@if [ ! -f ${PREFIX}/etc/orbit.conf ]; then \
+		${CP} -p ${PREFIX}/etc/orbit.conf.sample ${PREFIX}/etc/orbit.conf ; \
+	fi
+....
+
+示例的 [.filename]#pkg-plist# 部分：
+
+[.programlisting]
+....
+@unexec if cmp -s %D/etc/orbit.conf.sample %D/etc/orbit.conf; then rm -f %D/etc/orbit.conf; fi
+etc/orbit.conf.sample
+@exec if [ ! -f %D/etc/orbit.conf ] ; then cp -p %D/%F %B/orbit.conf; fi
+....
+
+另外， 还应显示一条 <<porting-message,消息>> 指出用户应在何处复制并编辑这个文件， 以便让软件能开始正常工作。
+
+[[plist-dynamic]]
+== 动态装箱单与静态装箱单的对比
+
+_静态装箱单_ 是指在 Ports Collection 中以 [.filename]#pkg-plist# 文件 (可能包含变量替换)， 或以 `PLIST_FILES` 和 `PLIST_DIRS` 的形式嵌入到 [.filename]#Makefile# 出现的装箱单。 即使它是由工具或 Makefile 中的某个 target 在经由 committer 加入到 Ports Collection _之前_ 自动生成的也是如此， 因为可以在不下载或编译源代码包的前提下对其进行检视。
+
+_动态装箱单_ 是指在 port 编译并安装时生成的装箱单。 在下载并编译您所移植的应用程序的源代码之前， 或在执行了 `make clean` 之后， 就无法查看其内容了。
+
+尽管使用动态装箱单并不被禁止， 但监护人应尽可能使用静态装箱单， 因为它能够让用户使用 man:grep[1]来发现所需的 ports， 例如， 它是否会安装某个特定文件。 动态列表主要应用于复杂的， 其装箱单随所选功能会发生巨变 (因而使得维护静态装箱单不再可行)， 或那些随版本而改变装箱单内容的 port (例如， 使用 Javadoc 来生成文档的那些 ports)。
+
+我们鼓励那些选择使用动态装箱单的监护人提供一个能够生成 [.filename]#pkg-plist# 的 target， 以便于用户检视其内容。
+
+[[plist-autoplist]]
+== 装箱单 (package list) 的自动化制作
+
+首先， 请确认已经基本上完成了 port 的工作， 仅缺 [.filename]#pkg-plist#。
+
+接下来， 建立一个用于安装您的 port 的临时目录， 并在其中安装它所依赖的所有其他软件包：
+
+[source,bash]
+....
+# mkdir /var/tmp/`make -V PORTNAME`
+# mtree -U -f `make -V MTREE_FILE` -d -e -p /var/tmp/`make -V PORTNAME`
+# make depends PREFIX=/var/tmp/`make -V PORTNAME`
+....
+
+将目录结构保存到一新文件中。
+
+[source,bash]
+....
+# (cd /var/tmp/`make -V PORTNAME` && find -d * -type d) | sort > OLD-DIRS
+....
+
+建立一空白 [.filename]#pkg-plist# 文件：
+
+[source,bash]
+....
+# :>pkg-plist
+....
+
+如果您的 port 遵循 `PREFIX` (应该如此) 则接下来应安装该 port 并创建装箱单。
+
+[source,bash]
+....
+# make install PREFIX=/var/tmp/`make -V PORTNAME`
+# (cd /var/tmp/`make -V PORTNAME` && find -d * \! -type d) | sort > pkg-plist
+....
+
+此外还应把新建立的目录加入装箱单。
+
+[source,bash]
+....
+# (cd /var/tmp/`make -V PORTNAME` && find -d * -type d) | sort | comm -13 OLD-DIRS - | sort -r | sed -e 's#^#@dirrm #' >> pkg-plist
+....
+
+最后需要手工整理 packing list； 这一过程不是 _完全_ 自动的。 联机手册应列入 port 的 [.filename]#Makefile# 中的 `MAN__n__`， 而不是装箱单。 用户配置文件应被删除， 或以 [.filename]#filename.sample# 这样的名字来安装。 [.filename]#info/dir# 文件， 也不应列入， 同时应按照 <<makefile-info,info 文件>> 的说明来增加一些 [.filename]#install-info# 行。 所有由 port 安装的库， 应按照 <<porting-shlibs,动态连接库>> 小节中介绍的方法处理。
+
+另外， 也可以使用 [.filename]#/usr/ports/Tools/scripts/# 中的 `plist` 脚本来自动创建 package list。 [.filename]#plist# 脚本是一个 Ruby 脚本， 它能够将前面介绍的手工操作自动化。
+
+开始的步骤和上面的前三行一样， 也就是 `mkdir`， `mtree` 并 `make depends`。 然后联编和安装 port：
+
+[source,bash]
+....
+# make install PREFIX=/var/tmp/`make -V PORTNAME`
+....
+
+然后让 `plist` 生成 [.filename]#pkg-plist# 文件：
+
+[source,bash]
+....
+# /usr/ports/Tools/scripts/plist -Md -m `make -V MTREE_FILE` /var/tmp/`make -V PORTNAME` > pkg-plist
+....
+
+与前面类似， 如此生成的装箱单也需要手工进行一些清理工作。
+
+另一个可以用来创建最初的 [.filename]#pkg-plist# 的工具是 package:ports-mgmt/genplist[]。 和其他自动化工具类似， 您应对它生成的 [.filename]#pkg-plist# 应手工检查并根据需要进行修改。

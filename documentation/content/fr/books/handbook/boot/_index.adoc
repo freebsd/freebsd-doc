@@ -1,0 +1,409 @@
+---
+title: Chapitre 12. Processus de démarrage de FreeBSD
+part: Partie III. Administration Système
+prev: books/handbook/config
+next: books/handbook/users
+---
+
+[[boot]]
+= Processus de démarrage de FreeBSD
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Table des matières
+:table-caption: Tableau
+:example-caption: Exemple
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 12
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/boot/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/boot/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/boot/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/fr/mailing-lists.adoc[]
+include::shared/fr/teams.adoc[]
+include::shared/fr/urls.adoc[]
+
+toc::[]
+
+[[boot-synopsis]]
+== Synopsis
+
+L'action de démarrer un ordinateur et de charger le système d'exploitation est désignée sous le nom de "processus de bootstrap", ou simplement démarrage. Le processus de démarrage de FreeBSD fournit une grande flexibilité en adaptant ce qui se passe quand vous démarrez le système, vous permettant de choisir parmi les différents systèmes d'exploitation installés sur l'ordinateur, ou même parmi les différentes versions du même système d'exploitation ou du noyau installées.
+
+Ce chapitre détaille les options de configuration que vous pouvez paramétrer et comment personnaliser le processus de démarrage de FreeBSD. Cela inclut tout ce qui se produit jusqu'au démarrage du noyau FreeBSD, la détection des périphériques, et le démarrage d'man:init[8]. Si vous n'êtes pas tout à fait sûr du moment auquel cela arrive, cela se produit à l'instant où la couleur du texte passe d'un blanc lumineux au gris.
+
+Après la lecture de ce chapitre, vous connaîtrez:
+
+* Quels sont les composants du système de démarrage de FreeBSD, et comment ils agissent les uns sur les autres.
+* Les options que vous pouvez passer aux composants du système de démarrage de FreeBSD pour contrôler le processus.
+* Les bases du système man:device.hints[5].
+
+[NOTE]
+.x86 seulement
+====
+Ce chapitre ne décrit que le processus de démarrage de FreeBSD pour les systèmes Intel x86.
+====
+
+[[boot-introduction]]
+== Le problème du démarrage
+
+Allumer un ordinateur et démarrer le système d'exploitation pose un intéressant dilemme. Par définition, l'ordinateur ne sait rien faire jusqu'à ce que le système d'exploitation soit lancé. Ceci inclut l'exécution des programmes à partir du disque. Donc si l'ordinateur ne peut pas exécuter de programme à partir du disque sans le système d'exploitation, et que les programmes du système d'exploitation sont sur le disque, comment le système d'exploitation est-il démarré?
+
+On peut faire le parallèle avec un événement du livre Les aventures du Baron Munchausen. Le personnage tombe dans une bouche d'égout avec une partie du corps hors de la bouche, et il s'en sort en attrapant les fixations de ses bottes ("bootstraps"), et en se soulevant ainsi. Dans les premiers jours de l'informatique le terme _bootstrap_ fut appliqué au mécanisme utilisé pour charger le système d'exploitation, terme qui a été raccourci en "booting" (que l'on traduit par démarrage en Français).
+
+Sur l'architecture x86 c'est le BIOS ("Basic Input/Output System") qui est responsable du chargement du système d'exploitation. Pour effectuer cela, le BIOS recherche sur le disque dur le "Master Boot Record" - Secteur Principal de Démarrage (MBR), qui doit être placé à un endroit bien précis sur le disque. Le BIOS dispose de suffisamment de connaissances pour charger et exécuter le MBR, et suppose que le MBR peut alors effectuer le reste des tâches impliquées dans le chargement du système d'exploitation, probablement avec l'aide du BIOS.
+
+Pour parler du code contenu dans le MBR, on fait souvent référence aux termes de _gestionnaire de démarrage gestionnaire d'amorce_, tout particulièrement quand il y a intéraction avec l'utilisateur. Dans ce cas le code de ce gestionnaire occupe un espace plus important sur la première _piste_ du disque ou du système de fichier du système d'exploitation (le gestionnaire de démarrage est parfois également appelé gestionnaire de chargement ou chargeur, "boot loader", sous FreeBSD ce terme est utilisé pour une étape ultérieur du démarrage). Parmi les gestionnaire de démarrage populaire, se trouvent boot0 (également connu sous le nom de Boot Easy, le gestionnaire de démarrage standard de FreeBSD), Grub, GAG, et LILO (seul boot0 peut tenir entièrement dans l'espace du MBR.).
+
+Si vous n'avez qu'un seul système d'exploitation installé sur vos disques alors le MBR PC standard sera suffisant. Ce MBR recherche la première tranche ("slice") amorçable (souvent appelée active) sur le disque, et puis exécute le code sur cette tranche pour charger le reste du système d'exploitation. Le MBR installé par man:fdisk[8] par défaut se comporte de cette manière. Il est basé sur [.filename]#/boot/mbr#.
+
+Si vous avez installé plusieurs systèmes d'exploitation sur vos disques alors vous pouvez installer un gestionnaire d'amorce différent, qui permet d'afficher une liste des différents systèmes d'exploitation, et vous permet de sélectionner celui à partir duquel démarrer. Ceci est abordé dans la sous-section suivante.
+
+Le reste du système de démarrage de FreeBSD est divisé en trois étapes. La première étape est exécutée par le MBR, qui en sait juste assez pour mettre l'ordinateur dans un état spécifique et lancer la deuxième étape. La seconde étape peut en faire un peu plus, avant de lancer la troisième étape. La troisième étape termine la tâche de chargement du système d'exploitation. La tâche a été séparée en trois étapes parce que le standard PC impose des limites sur la taille des programmes qui peuvent être exécutés aux étapes une et deux. L'enchaînement des tâches permet à FreeBSD de fournir un chargeur plus flexible.
+
+Le noyau est ensuite démarré et commence à sonder le système à la recherche de périphériques et les initialise. Une fois le processus de démarrage du noyau achevé, le noyau passe la main au processus man:init[8], qui alors vérifie que les disques sont utilisables. man:init[8] commence ensuite la configuration des ressources au niveau utilisateur, monte les systèmes de fichiers, initialise les cartes réseaux pour communiquer sur le réseau, et lance tous les processus qui sont habituellement exécutés au démarrage d'un système FreeBSD.
+
+[[boot-blocks]]
+== Le gestionnaire de démarrage et les étapes de démarrage
+
+[[boot-boot0]]
+=== Le gestionnaire de démarrage
+
+Le code contenu dans le MBR ou gestionnaire de démarrage ou d'amorce est parfois appelé _étape zéro_ du processus de démarrage. Cette section discute de deux gestionnaires de démarrage précédemment mentionnés: boot0 et LILO.
+
+*Le gestionnaire d'amorce boot0:* Le MBR installé par l'installateur FreeBSD ou par man:boot0cfg[8] est basé sur [.filename]#/boot/boot0#. ([.filename]#boot0# est très simple, puisque le programme dans le  ne peut pas occuper plus de 446 octets en raison de la table de partition principale et l'identifiant `0x55AA` à la fin du MBR). Si vous avez installé boot0 et plusieurs systèmes d'exploitation sur vos disques durs alors vous verrez un affichage semblable à celui-ci au démarrage:
+
+[[boot-boot0-example]]
+.Ecran de [.filename]#boot0#
+[example]
+====
+
+[source,bash]
+....
+F1 DOS
+F2 FreeBSD
+F3 Linux
+F4 ??
+F5 Drive 1
+
+Default: F2
+....
+
+====
+
+D'autres systèmes d'exploitation, en particulier Windows(R), sont connus pour écraser le MBR existant avec le leur. Si cela vous arrive, ou que vous désirez remplacer le MBR existant avec le MBR de FreeBSD alors utilisez la commande suivante:
+
+[source,bash]
+....
+# fdisk -B -b /boot/boot0 device
+....
+
+où _device_ est le périphérique à partir duquel vous démarrez, comme [.filename]#ad0# pour le premier disque IDE, [.filename]#ad2# pour le premier disque IDE sur le second contrôleur IDE, [.filename]#da0# pour le premier disque SCSI, et ainsi de suite. Ou, si vous voulez une configuration sur mesure du MBR, employez man:boot0cfg[8].
+
+*Le gestionnaire de démarrage LILO:* Pour installer ce gestionnaire de manière à ce qu'il amorce également FreeBSD, démarrez tout d'abord Linux et ajoutez ce qui suit au fichier de configuration [.filename]#/etc/lilo.conf#:
+
+[.programlisting]
+....
+other=/dev/hdXY
+table=/dev/hdX
+loader=/boot/chain.b
+label=FreeBSD
+....
+
+Dans ce qui précède, précisez la partition primaire et le disque FreeBSD en utilisant les paramètres propres à Linux, en remplaçant _X_ avec la lettre correspondant au disque Linux et _Y_ avec le numéro de la partition primaire Linux. Si vous utilisez un disque SCSI, vous changerez _/dev/hd_ pour quelque chose de semblable à _/dev/sd_. La ligne `loader=/boot/chain.b` peut être omise si vous avez les deux systèmes d'exploitation sur le même disque. Lancez maintenant la commande `/sbin/lilo -v` pour entériner vos modifications; des messages de contrôle devraient s'afficher, vérifiant ces modifications.
+
+[[boot-boot1]]
+=== Etape une, [.filename]#/boot/boot1#, et étape deux, [.filename]#/boot/boot2#
+
+Conceptuellement la première et la seconde étapes font partie du même programme, sur le même emplacement du disque. Mais en raison de contraintes d'espace elles ont été divisées en deux, mais vous les installerez toujours de paire. Elles sont copiées, à partir du fichier combiné [.filename]#/boot/boot#, par l'installateur ou bsdlabel (voir plus bas).
+
+On les trouve en dehors des systèmes de fichiers, sur la première piste de la tranche de démarrage, à partir du premier secteur. C'est l'endroit où <<boot-boot0,boot0>>, ou tout autre gestionnaire de démarrage s'attend à trouver le code à exécuter pour continuer le processus de démarrage. Le nombre de secteurs utilisés est facilement déterminé à partir de la taille du fichier [.filename]#/boot/boot#.
+
+[.filename]#boot1# est très simple, puisqu'il est limité à 512 octets, et en sait juste assez du _bsdlabel_ de FreeBSD, qui contient l'information sur la tranche, pour trouver et lancer [.filename]#boot2#.
+
+[.filename]#boot2# est légèrement plus sophistiqué, et en connaît assez sur le système de fichiers de FreeBSD pour y trouver des fichiers, et il peut également fournir une interface simple pour sélectionner un noyau ou un chargeur à exécuter.
+
+Comme le <<boot-loader,chargeur>> est beaucoup plus sophistiqué, et dispose d'une interface de configuration du démarrage facile d'emploi, [.filename]#boot2# l'exécute habituellement, bien que précédemment, c'est lui qui lançait directement le noyau.
+
+[[boot-boot2-example]]
+.Ecran de [.filename]#boot2#
+[example]
+====
+
+[source,bash]
+....
+>> FreeBSD/i386 BOOT
+Default: 0:ad(0,a)/boot/loader
+boot:
+....
+
+====
+
+Si vous avez un jour besoin de remplacer [.filename]#boot1# et [.filename]#boot2#, utilisez man:bsdlabel[8]:
+
+[source,bash]
+....
+# bsdlabel -B diskslice
+....
+
+où _diskslice_ est le disque et la tranche à partir de laquelle vous démarrez, comme [.filename]#ad0s1# pour la première tranche sur le premier disque IDE.
+
+[WARNING]
+.Mode dangereusement dédié
+====
+Si vous utilisez juste le nom du disque, comme [.filename]#ad0#, dans la commande man:bsdlabel[8] vous créerez un disque dangereusement dédié, sans tranches. Ce n'est presque certainement pas ce que vous voulez faire, donc vérifiez à deux fois la commande man:bsdlabel[8] avant d'appuyer sur kbd:[Entrée].
+====
+
+[[boot-loader]]
+=== Etape trois, [.filename]#/boot/loader#
+
+Le chargeur est la dernière étape du processus de démarrage en trois temps, et il réside sur le système de fichiers, c'est habituellement le fichier [.filename]#/boot/loader#.
+
+Le chargeur a pour objet de fournir une méthode de configuration conviviale, en utilisant un jeu de commandes faciles d'emploi, doublé d'un interpréteur plus puissant, avec un ensemble de commandes plus complexes.
+
+[[boot-loader-flow]]
+==== Déroulement des opérations du chargeur
+
+A l'initialisation, le chargeur recherchera la console et les disques, et déterminera à partir de quel disque démarrer. Il positionnera les variables en conséquence, et un interpréteur sera lancé pour lequel l'utilisateur pourra passer des commandes par l'intermédiaire d'une procédure ou de façon interactive.
+
+Le chargeur lira ensuite [.filename]#/boot/loader.rc#, qui lui ira lire dans [.filename]#/boot/defaults/loader.conf# les valeurs par défaut des variables à positionner et dans [.filename]#/boot/loader.conf# les variantes locales de ces dernières. [.filename]#loader.rc# se sert de ces variables pour charger les modules et le noyau sélectionnés.
+
+Finalement, par défaut, le chargeur attend 10 secondes l'appui sur une ou plusieurs touches, et démarre le noyau s'il n'est pas interrompu. S'il est interrompu, une invite est alors affichée à l'utilisateur, un jeu de commandes simples permet à l'utilisateur de modifier des variables, charger ou décharger des modules, et enfin démarrer ou redémarrer.
+
+[[boot-loader-commands]]
+==== Commandes intégrées au chargeur
+
+Voici les commandes du chargeur les plus utilisées. Pour une information complète sur toutes les commandes disponibles, veuillez consulter la page man:loader[8].
+
+autoboot _secondes_::
+Démarre le noyau si elle n'est pas interrompue dans le laps de temps donné en secondes. Elle affiche un compte à rebours, et le délai par défaut est de 10 secondes.
+
+boot [-options] [nom_du_noyau]::
+Démarre immédiatement le noyau dont le nom est indiqué, avec les options données, s'il y en a.
+
+boot-conf::
+Passe par la même configuration automatique des modules basée sur des variables comme ce qui se produit au démarrage. Cela n'a de sens que si vous utilisez `unload` en premier, et modifiez certaines variables, généralement `kernel`.
+
+help [sujet]::
+Affiche les messages d'aide contenus dans [.filename]#/boot/loader.help#. Si le sujet donné est `index`, alors c'est la liste de tous les sujets existants qui est donnée.
+
+include _nom_du_fichier_ ...::
+Traite le fichier dont le nom est donné. Le fichier est lu, et interprété ligne par ligne. Une erreur stoppe immédiatement le traitement.
+
+load [-t type] _nom_du_fichier_::
+Charge le noyau, le module, ou le fichier du type donné, dont le nom est passé en paramètre. Les arguments qui suivent le nom du fichier sont passés au fichier.
+
+ls [-l] [chemin_d_accès]::
+Affiche la liste des fichiers du répertoire donné, ou du répertoire racine, si le chemin d'accès n'est pas précisé. Si l'option `-l` est utilisée, les tailles des fichiers seront également listées.
+
+lsdev [-v]::
+Liste tous les périphériques depuis lesquels il sera possible de charger des modules. Si l'option `-v` est utilisée, plus de détails seront donnés.
+
+lsmod [-v]::
+Affiche la liste des modules chargés. Si l'option `-v` est utilisée, plus de détails seront donnés.
+
+more _nom_du_fichier_::
+Affiche les fichiers indiqués, avec une pause toutes `LINES` lignes.
+
+reboot::
+Redémarre immédiatement le système.
+
+set _variable_::
+Positionne les variables d'environnement du chargeur.
+
+unload::
+Retire de la mémoire tous les modules chargés.
+
+[[boot-loader-examples]]
+==== Exemples d'utilisation du chargeur
+
+Voici quelques exemples pratiques d'utilisation du chargeur:
+
+* Pour simplement démarrer votre noyau habituel, mais en mode mono-utilisateur:
++
+[source,bash]
+....
+ boot -s
+....
+
+* Pour décharger votre noyau et modules habituels, puis charger votre ancien (ou un autre) noyau:
++
+[source,bash]
+....
+unload
+load kernel.old
+....
++ 
+Vous pouvez utiliser [.filename]#kernel.GENERIC# pour faire référence au noyau générique du disque d'installation, ou [.filename]#kernel.old# pour désigner votre noyau précédent (quand vous avez mis à jour ou configuré votre propre noyau, par exemple).
++
+[NOTE]
+====
+Utilisez ce qui suit pour charger vos modules habituels avec un autre noyau:
+
+[source,bash]
+....
+unload
+set kernel="kernel.old"
+boot-conf
+....
+
+====
+
+* Pour charger une procédure de configuration du noyau (une procédure qui automatise ce que vous faites normalement avec l'outil de configuration du noyau au démarrage):
++
+[source,bash]
+....
+load -t userconfig_script /boot/kernel.conf
+....
+
+[[boot-kernel]]
+== Interaction avec le noyau au démarrage
+
+Une fois que le noyau est chargé, soit par le <<boot-loader,chargeur>> (habituellement) soit par <<boot-boot1,boot2>> (en court-circuitant le chargeur), il examine les options de démarrage s'il y en a, et adapte son comportement en conséquence.
+
+[[boot-kernel-bootflags]]
+=== Options de démarrage du noyau
+
+Voici les options de démarrage les plus courantes:
+
+`-a`::
+A l'initialisation du noyau, demande quel est le périphérique où se trouve le système de fichiers racine.
+
+`-C`::
+Démarre depuis le CDROM.
+
+`-c`::
+Exécute UserConfig, l'outil de configuration du noyau au démarrage.
+
+`-s`::
+Démarre en mode mono-utilisateur.
+
+`-v`::
+Donne plus de détails lors du lancement du noyau.
+
+[NOTE]
+====
+Il existe d'autres options de démarrage, lisez la page de manuel man:boot[8] pour plus d'informations.
+====
+
+[[device-hints]]
+== "Device Hints"-Paramétrage des périphériques
+
+[NOTE]
+====
+C'est une caractéristique de FreeBSD 5.0 et des versions suivantes qui n'existe pas dans les versions précédentes.
+====
+
+Lors du démarrage du système, le chargeur (man:loader[8]) lira le fichier man:device.hints[5]. Ce fichier stocke les informations de démarrage du noyau connues sous le nom de variables, et parfois appelées "device hints". Ces "device hints" sont utilisés par les pilotes de périphérique pour la configuration des périphériques.
+
+Les "device hints" peuvent être spécifiés à l'invite du <<boot-loader,chargeur>>. Des variables peuvent être ajoutées en utilisant la commande `set`, retirées avec la commande `unset`, et affichées avec la commande `show`. Les variables positionnées dans le fichier [.filename]#/boot/device.hints# peuvent être écrasées à cet endroit. Les "device hints" entrés au niveau du chargeur ne sont pas permanents et seront oubliés au prochain redémarrage.
+
+Une fois le système démarré, la commande man:kenv[1] peut être utilisée pour afficher toutes les variables.
+
+La syntaxe du fichier [.filename]#/boot/device.hints# est d'une variable par ligne, en utilisant le caractère "#" comme signe de mise en commentaire. Les lignes sont présentées comme suit:
+
+[source,bash]
+....
+hint.pilote.unité.motclé="valeur"
+....
+
+La syntaxe à utiliser avec le chargeur est:
+
+[source,bash]
+....
+set hint.pilote.unité.motclé=valeur
+....
+
+où `pilote` est le pilote de périphérique, `unité` est le numéro de l'unité et `motclé` est le mot-clé correspondant à la variable. Le mot-clé pourra être une des options suivantes:
+
+* `at`: spécifie le bus auquel le périphérique est attaché.
+* `port`: spécifie l'adresse de départ de l'E/S à utiliser.
+* `irq`: spécifie le numéro de la requête d'interruption à utiliser.
+* `drq`: spécifie le numéro du canal DMA.
+* `maddr`: spécifie l'adresse mémoire physique occupée par le périphérique.
+* `flags`: fixe les bits des indicateurs pour le périphérique.
+* `disabled`: si positionnée à `1` le périphérique est désactivé.
+
+Les pilotes de périphérique pourront accepter (ou nécessiter) plus de variables non listées ici, il est recommandé de lire leur page de manuel. Pour plus d'information, consultez les pages de manuel man:device.hints[5], man:kenv[1], man:loader.conf[5], et man:loader[8].
+
+[[boot-init]]
+== Init: Initialisation de la gestion des processus
+
+Une fois que le noyau a démarré, il passe le contrôle au processus utilisateur man:init[8], qui se trouve dans [.filename]#/sbin/init#, ou au programme défini dans la variable d'environnement `init_path` du chargeur.
+
+[[boot-autoreboot]]
+=== Séquence de redémarrage automatique
+
+La séquence de redémarrage automatique vérifie que les systèmes de fichiers sont cohérents. S'ils ne le sont pas, et que man:fsck[8] ne peut pas corriger les incohérences, man:init[8] place le système dans le <<boot-singleuser,mode mono-utilisateur>> pour que l'administrateur système règle directement le problème.
+
+[[boot-singleuser]]
+=== Mode mono-utilisateur
+
+Ce mode peut être atteint depuis la <<boot-autoreboot,séquence de redémarrage automatique>>, ou quand l'utilisateur démarre avec l'option `-s` ou en positionnant la variable `boot_single` du chargeur.
+
+On peut également y parvenir en appelant la commande man:shutdown[8] sans les options de redémarrage (`-r`) ou d'arrêt (`-h`), à partir du <<boot-multiuser,mode multi-utilisateur>>.
+
+Si la `console` système est positionnée dans le mode `insecure` dans le fichier [.filename]#/etc/ttys#, alors le système demande le mot de passe de `root` avant de passer en mode mono-utilisateur.
+
+[[boot-insecure-console]]
+.Une console non sécurisée dans [.filename]#/etc/ttys#
+[example]
+====
+[.programlisting]
+....
+# name  getty                           type    status          comments
+#
+# If console is marked "insecure", then init will ask for the root password
+# when going to single-user mode.
+console none                            unknown off insecure
+....
+
+====
+
+[NOTE]
+====
+Une console `insecure` (non sécurisée) signifie que vous considérez que la console n'est pas sécurisée, et vous désirez que seul quelqu'un connaissant le mot passe de `root` puisse utiliser le mode mono-utilisateur, et cela ne signifie pas que vous utilisez une console sans sécurité. Donc, si vous voulez de la sécurité, choisissez `insecure`, et non `secure`.
+====
+
+[[boot-multiuser]]
+=== Mode multi-utilisateur
+
+Si man:init[8] trouve vos systèmes de fichiers en état de marche, ou dès que l'utilisateur quitte le <<boot-singleuser,mode mono-utilisateur>>, le système entre dans le mode multi-utilisateur, dans lequel il commence la configuration de ses ressources.
+
+[[boot-rc]]
+==== Configuration des ressources (rc)
+
+Le système de configuration des ressources lit les valeurs par défaut dans [.filename]#/etc/defaults/rc.conf#, et les valeurs propres à la machine dans [.filename]#/etc/rc.conf#, puis ensuite monte les systèmes de fichiers mentionnés dans [.filename]#/etc/fstab#, démarre les services réseau, divers autres "démons" système, et enfin exécute les procédures de démarrage des logiciels installés localement.
+
+La page de manuel man:rc[8] est une bonne référence au sujet du système de configuration des ressources, de même que la lecture des procédures de démarrage elles-mêmes.
+
+[[boot-shutdown]]
+== Séquence d'arrêt du système
+
+Lors de l'arrêt manuel du système, via man:shutdown[8], man:init[8] tentera d'exécuter la procédure [.filename]#/etc/rc.shutdown#, et ensuite enverra à tous les processus le signal `TERM`, suivi du signal `KILL` à tous ceux qui ne se terminent pas à temps.
+
+Pour éteindre une machine FreeBSD et cela sur des architectures ou des systèmes supportant la gestion par logiciel de l'énergie, utilisez simplement la commande `shutdown -p now` pour arrêter et couper l'alimentation de la machine. Pour juste redémarrer un système FreeBSD, utilisez `shutdown -r now`. Vous devez être super-utilisateur (`root`) ou un membre du groupe `operator` pour pouvoir exécuter man:shutdown[8]. Les commandes man:halt[8] et man:reboot[8] peuvent également être utilisées, veuillez consulter leur page de manuel ainsi que celle de man:shutdown[8] pour plus d'informations.
+
+[NOTE]
+====
+La gestion de l'énergie nécessite d'avoir le support man:acpi[4] dans son noyau ou chargé en tant que module.
+====

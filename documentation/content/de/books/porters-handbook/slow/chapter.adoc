@@ -1,0 +1,143 @@
+---
+title: Kapitel 4. Einen Port in aller Ruhe erstellen
+prev: books/porters-handbook/quick-porting
+next: books/porters-handbook/makefile
+---
+
+[[slow]]
+= Einen Port in aller Ruhe erstellen
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 4
+:toc-title: Inhaltsverzeichnis
+:table-caption: Tabelle
+:figure-caption: Abbildung
+:example-caption: Beispiel
+
+toc::[]
+
+Ok, das war nicht ganz einfach und der Port hat einige Veränderungen erfordert, um funktionieren zu können. In diesem Abschnitt werden wir Schritt für Schritt erklären, wie man den funktionierenden Port den Vorgaben der Ports entsprechend anpasst.
+
+[[slow-work]]
+== Die Funktionsweise
+
+Beginnen wir mit der Abfolge der Ereignisse, die eintreten, wenn der Nutzer das erste `make` in Ihrem Portsverzeichnis ausführt. Sie empfinden es für das Verständnis vielleicht hilfreich [.filename]#bsd.port.mk# in einem anderen Fenster offen zu haben, während Sie diesen Abschnitt lesen.
+
+Aber machen Sie sich keine Sorgen, falls Sie nicht wirklich verstehen, was [.filename]#bsd.port.mk# macht, die Wenigsten begreifen dies... _:>_
+
+[.procedure]
+====
+. Das Target `fetch` wird aufgerufen. Es ist dafür verantwortlich sicherzustellen, dass der Tarball lokal im `DISTDIR` verfügbar ist. Falls `fetch` die benötigten Dateien in `DISTDIR` nicht finden kann, durchsucht es die URL `MASTER_SITES`, welche im Makefile gesetzt ist, ebenso wie unsere Haupt-FTP-Seite unter link:ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/distfiles[ ftp://ftp.freebsd.org/pub/FreeBSD/ports/distfiles/ ], wo wir genehmigte Distfiles als Backup aufbewahren. Danach wird versucht, so eine direkte Internetverbindung besteht, dass genannte Distfile mit `FETCH` herunterzuladen. Falls dies gelingt, wird die Datei in `DISTDIR` für weitere Nutzung abgelegt und fährt fort.
+. Das Target `extract` wird aufgerufen. Es sucht nach den Distfiles Ihres Ports (normalerweise ein gzip-komprimierter Tarball) in `DISTDIR` und entpackt diese in ein temporäres Unterverzeichnis, welches von `WRKDIR` festgelegt wird (standardmäßig [.filename]#work#).
+. Das Target `patch` wird aufgerufen. Zuerst werden alle in `PATCHFILES` festgelegten Patches eingespielt. Anschließend werden, falls Patches der Form [.filename]#patch-*# in `PATCHDIR` (standardmäßig das [.filename]#files#-Unterverzeichnis) gefunden werden, diese in alphabetischer Reihenfolge eingespielt.
+. Das Target `configure` wird aufgerufen. Dieses kann viele verschiedene Dinge machen.
+.. Existiert [.filename]#scripts/configure#, so wird es aufgerufen.
+.. Falls `HAS_CONFIGURE` oder `GNU_CONFIGURE` gesetzt sind, wird [.filename]#WRKSRC/configure# ausgeführt.
+.. Falls `USE_IMAKE` gesetzt ist, wird `XMKMF` (standardmäßig `xmkmf -a`) ausgeführt.
+
+. Das Target `build` wird aufgerufen. Es ist für das Wechseln in das private Arbeitsverzeichnis (`WRKSRC`) und das Bauen des Ports zuständig. Ist `USE_GMAKE` gesetzt, so wird GNU `make` verwendet, sonst das System-`make`.
+====
+
+Die oben genannten Schritte sind die Standardaktionen. Zusätzlich können Sie `pre-_ irgendwas_` oder `post-_irgendwas_` als Targets definieren oder Skripten mit diesen Namen in das [.filename]#scripts#-Unterverzeichnis legen. Sie werden dann vor bzw. nach den Standardaktionen aufgerufen.
+
+Angenommen Sie haben das Target `post-extract` in Ihrem [.filename]#Makefile# definiert und eine Datei [.filename]#pre-build# im [.filename]#scripts# Unterverzeichnis, so wird das Target `post-extract` nach dem normalen Entpacken aufgerufen und das Skript [.filename]#pre-build# ausgeführt, bevor die vordefinierten Bau-Regeln abgearbeitet sind. Es wird empfohlen, dass Sie [.filename]#Makefile#-Targets verwenden, falls die Aktionen es erlauben, da es so für jemanden einfacher sein wird herauszufinden, was für eine nicht-standardmäßige Aktion der Port benötigt.
+
+Die Standardaktionen werden aus den Targets [.filename]#bsd.port.mk# `do-_irgendwas_` übernommen. Zum Beispiel sind die Befehle zum Entpacken eines Ports im Target `do-extract` zu finden. Falls Sie mit einem vorgegebenen Target nicht zufrieden sind, können Sie es verändern, indem Sie das Target `do-_irgendwas_` in Ihrem [.filename]#Makefile# neu definieren.
+
+[NOTE]
+====
+Die "Haupt"-Targets (z.B. `extract`, `configure` usw.) machen nicht mehr als sicherzustellen, dass bis hierhin alle Abschnitte abgeschlossen sind, um danach die eigentlichen Targets oder Skripte aufzurufen. Und es ist nicht beabsichtigt, dass diese geändert werden. Falls Sie das Entpacken verändern wollen, verändern Sie `do-extract`, aber niemals die Art, wie `extract` arbeitet!
+====
+
+Jetzt, da Sie verstehen, was geschieht, wenn der Benutzer `make` eingibt, lassen Sie uns durch die empfohlenen Schritte gehen, um den perfekten Port zu erstellen.
+
+[[slow-sources]]
+== Den originalen Quelltext besorgen
+
+Normalerweise liegt der original Quelltext als gepackte Datei ([.filename]#foo.tar.gz# oder [.filename]#foo.tar.Z#) vor. Kopieren Sie diese nach `DISTDIR`. Nutzen Sie, soweit möglich, immer die Quellen aus dem _Hauptzweig_.
+
+Es ist notwendig die Variable `MASTER_SITES` anzupassen, um anzugeben, wo sich der originale Quelltext befindet. In [.filename]#bsd.sites.mk# finden sich hilfreiche Definitionen für die gebräuchlichsten Seiten. Bitte nutzen Sie diese Seiten und die zugehörigen Definitionen, soweit dies möglich ist. Damit wird vermieden, immer und immer wieder dieselben Informationen zu wiederholen. Da die Hauptseiten regelmäßig angepasst werden müssen, vereinfacht dieses Vorgehen die Pflege der Dateien für jeden Beteiligten.
+
+Falls keine zuverlässige und gut erreichbare FTP/HTTP-Seite zu finden ist, oder nur Seiten auffindbar sind, die keinen Standards entsprechen, sollte eine Kopie des Quelltextes auf einer zuverlässigen Seite abgelegt werden. Dies könnte z.B. die eigene Internetseite sein.
+
+Ist kein geeigneter Ort zum Ablegen des Quelltextes auffindbar, ist es möglich diesen "intern" auf `ftp.FreeBSD.org` abzulegen; dies sollte jedoch als letzte Möglichkeit angesehen werden. Das Distfile muss in diesem Fall in [.filename]#~/public_distfiles/# eines `freefall`-Accounts abgelegt werden. Bitten Sie den Committer Ihres Ports dies zu erledigen. Er wird außerdem `MASTER_SITES` nach `MASTER_SITE_LOCAL` und `MASTER_SITE_SUBDIR` auf den `freefall`-Benutzernamen angepasst.
+
+Sollte sich das Distfile des Ports regelmäßig ohne Versionsanpassungen des Autors ändern, sollte überlegt werden, das Disfile auf der eigenen Internetseite abzulegen und diese in der Liste der `MASTER_SITES` an die erste Stelle zu setzen. Falls möglich, sollte der Autor des Ports gebeten werden, dies zu erledigen; hierüber wird die Kontrolle des Quelltextes verbessert. Wird eine eigene Version des Quelltextes auf eigenen Internetseiten verfügbar gemacht, verhindert dies Warnungen von `checksum mismatch` und reduziert den Arbeitsaufwand der Maintainer der FTP-Seiten. Auch wenn nur eine Quelle für den Quelltext des Ports zur Verfügung steht, ist es empfohlen, ein Backup auf einer weiteren Seite abzulegen und diese als zweiten Eintrag in `MASTER_SITES` aufzunehmen.
+
+Sind für den Port zusätzlich aus dem Internet verfügbare Patches erforderlich, sollten diese ebenfalls in `DISTDIR` abgelegt werden. Sollten diese Patches von anderer Quelle als der Hauptseite des Ports stammen, ist das kein Grund zur Sorge. Es gibt Wege diesem Umstand gerecht zu werden (beachten Sie die unten stehende Beschreibung zu <<porting-patchfiles,PATCHFILES >>).
+
+[[slow-modifying]]
+== Den Port bearbeiten
+
+Entpacken Sie eine Kopie des Tarballs in ein privates Verzeichnis und nehmen Sie alle Änderungen vor, die nötig sind, um den Port unter einer aktuellen FreeBSD-Version kompilieren zu können. _Protokollieren Sie sorgfältig_ alle Schritte, die Sie vornehmen, da Sie den Prozess in Kürze automatisieren werden. Alles, auch das Entfernen, Hinzufügen oder Bearbeiten von Dateien, sollte von einem automatisierten Skript oder einer Patch-Datei machbar sein, wenn Ihr Port fertig ist.
+
+Falls Ihr Port bedeutende Interaktionen/Veränderungen durch den Benutzer benötigt, um ihn zu Kompilieren oder zu Installieren, sollten Sie einen Blick auf Larry Walls klassische Configure-Skripte werfen oder vielleicht etwas Ähnliches selbst erstellen. Das Ziel der Ports-Sammlung ist es, jeden Port so "plug-and-play-fähig" wie möglich für den Endbenutzer zu machen, während ein Minimum an Speicherplatz gebraucht wird.
+
+[NOTE]
+====
+Solange nicht anders angegeben wird von Patch-Dateien, Skripten und anderen Dateien, die Sie erstellt und der FreeBSD Ports-Sammlung hinzugefügt haben, angenommen, dass Sie unter den standardmäßigen BSD-Copyright-Bedingungen stehen.
+====
+
+[[slow-patch]]
+== Fehlerbehebung (Patches)
+
+Bei der Vorbereitung eines Ports können die Dateien, die hinzugefügt oder verändert wurden, mittels man:diff[1] abgefangen werden, um Sie später an man:patch[1] zu übergeben. Jeder Patch, der dem Quelltext übergeben werden soll, sollte in einer Datei [.filename]#patch-*# abgelegt werden, wobei _*_ dem Pfadnamen der zu korrigierenden Datei entspricht, wie er auch in [.filename]#patch-Imakefile# oder im [.filename]#patch-src-config.h# erscheint. Diese Dateien sollten in `PATCHDIR` (normalerweise [.filename]#files#) abgelegt sein, von wo sie automatisch übernommen werden. Alle Patches müssen sich relativ zur `WRKSRC`-Variable (normalerweise dem Verzeichnis, in dem sich der Quelltext des Ports entpackt und wo auch der Bau stattfindet) befinden.
+
+Um Korrekturen und Updates zu vereinfachen, sollte es vermieden werden, mehr als einen Patch für eine Datei zu nutzen (z.B. [.filename]#patch-file# und [.filename]#patch-file2#, welche beide [.filename]#WRKSRC/foobar.c# verändern). Beachten Sie, dass, falls der Pfad einer zu korrigierenden Datei einen Unterstrich (`_`) enthält, der Patch stattdessen zwei Unterstriche im Namen haben muss. Zum Beispiel muss der Patch, der eine Datei namens [.filename]#src/freeglut_joystick.c# korrigieren soll, [.filename]#patch-src-freeglut__joystick.c# genannt werden.
+
+Für die Benennung der Patches sollten nur die Zeichen `[-+._a-zA-Z0-9]` genutzt werden. Bitte verwenden Sie keine weiteren Zeichen als die angegebenen. Die Namensvergabe sollte nicht [.filename]#patch-aa# oder [.filename]#patch-ab# etc. entsprechen, erwähnen Sie immer den Pfad und Dateinamen.
+
+RCS-Zeichenketten sollten vermieden werden, da CVS diese verstümmeln würde, sobald wir diese Dateien in die Ports-Sammlung einpflegen. Wenn wir die Dateien wieder abrufen wären diese verändert und der Patch würde fehlschlagen. RCS-Zeichenketten sind in Dollar-Zeichen (`$`) eingefügte Zeichen und beginnen üblicherweise mit `$Id` oder `$RCS`.
+
+Die Option rekursiv (`-r`) zu nutzen man:diff[1], um Patches zu erstellen, ist zulässig, jedoch sollte der Patch anschließend geprüft werden, um Unnötiges aus dem Patch zu entfernen. Im Einzelnen bedeutet dies, dass Diffs zwischen zwei Backup-Dateien, [.filename]##Makefile##s oder wenn der Port `Imake` oder GNU `configure` usw. nutzt, überflüssig sind und entfernt werden sollten. Falls es es notwendig war, [.filename]##configure.in## zu bearbeiten und es soll `autoconf` zum Neuerstellen von `configure` genutzt werden, sollten die Diffs aus `configure` nicht genutzt werden (diese werden oft einige tausend Zeilen groß!); - hier sollte `USE_AUTOTOOLS=autoconf:261` definiert und das Diff aus [.filename]##configure.in## genutzt werden.
+
+Zusätzlich sollte man unnötige Markup-Änderungen in Patches/Änderungen möglichst vermeiden. In der Open Source-Welt teilen sich Projekte häufig große Teile des Quellcodes. Allerdings verwenden die einzelnen Projekte oft unterschiedliche Programmierstile und Vorgaben für Einrückungen. Wenn man also einen funktionierenden Teil einer Funktion aus einem Projekt verwendet, um ein ähnliches Problem in einem anderen Projekt zu lösen, sollte man besonders vorsichtig sein, weil sich ansonsten die CVS-Änderungseinträge mit überflüssigen Einträgen füllen, die nur das Markup des Quellcodes betreffen, ohne dass sich an der Funktion des eigentlichen Quellcode etwas ändert ("withspace-only changes"). Solche Änderungen vergrößern nicht nur das CVS-Repository, sondern erschweren es auch die Ursache für eventuell auftretende Probleme zu finden.
+
+War es notwendig eine Datei zu entfernen, wird dies besser mittels des `post-extract`-Targets als über den Patch selbst realisiert.
+
+Ein einfacher Austausch kann direkt über das [.filename]#Makefile# des Ports umgesetzt werden, indem der in-place-Modus von man:sed[1] genutzt wird. Dies ist sehr hilfreich, wenn variable Werte korrigiert werden sollen. Beispiel:
+
+[.programlisting]
+....
+post-patch:
+      @${REINPLACE_CMD} -e 's|for Linux|for FreeBSD|g' ${WRKSRC}/README
+	  @${REINPLACE_CMD} -e 's|-pthread|${PTHREAD_LIBS}|' ${WRKSRC}/configure
+....
+
+Relativ häufig ergibt sich die Situation, in der die portierte Software die CR/LF-Konventionen für Zeilenenden nutzt (dies ist bei unter Windows(R) entwickelter Software häufig der Fall). Dies kann bei weiteren Patches Probleme (Compiler-Warnungen, Fehlermeldungen bei der Ausführung von Skripten wie z.B. `/bin/sh^M` not found) und anderes ergeben. Um schnell alle Dateien von CR/LF nach LF zu konvertieren, kann `USE_DOS2UNIX=yes` in das [.filename]#Makefile# des Ports geschrieben werden. Hierzu kann eine Liste der zu konvertierenden Dateien erstellt werden:
+
+[.programlisting]
+....
+USE_DOS2UNIX=    util.c util.h
+....
+
+Sollen Gruppen von Dateien über verschiedene Unterverzeichnisse konvertiert werden, kann `DOS2UNIX_REGEX` genutzt werden, dessen Argumente `find`-kompatible, reguläre Ausdrücke sind. Mehr zur Formatierung findet sich in man:re_format[7]. Diese Option ist beim Konvertieren aller Dateien mit definierter Endung, z.B. aller Dateien im Quellcode, wobei binäre Dateien unberührt bleiben, sinnvoll:
+
+[.programlisting]
+....
+USE_DOS2UNIX=    yes
+      DOS2UNIX_REGEX=  .*\.(c|cpp|h)
+....
+
+Wenn Sie einen Patch zu einer bereits existierenden Datei erstellen wollen, können Sie von ihr eine Kopie mit der Endung [.filename]#.orig# erstellen und anschließend die Originaldatei bearbeiten. Das make-Ziel `makepatch` führt dann zu einer entsprechenden Patch-Datei im Verzeichnis [.filename]#files# des Ports.
+
+[[slow-configure]]
+== Konfigurieren
+
+Fügen Sie alle zusätzlichen Veränderungsbefehle Ihrem Skript [.filename]#configure# hinzu und speichern Sie es im [.filename]#scripts#-Unterverzeichnis. Wie vorstehend schon erwähnt, können Sie dies auch mit den Targets [.filename]#Makefile# und/oder Skripte mit dem Namen [.filename]#pre-configure# oder [.filename]#post-configure# erledigen.
+
+[[slow-user-input]]
+== Handhabung von Benutzereingaben
+
+Sollte der Port Eingaben vom Benutzer benötigen, muss `IS_INTERACTIVE` im [.filename]#Makefile# des Ports gesetzt werden. Dies erlaubt "overnight builds" Ihren Port zu überspringen, falls der Nutzer die Variable `BATCH` setzt (setzt der Nutzer hingegen die Variable `INTERACTIVE`, werden _nur_ Ports gebaut, die Interaktion vom Nutzer erwarten). Dies erspart den Rechnern, welche kontinuierlich Ports bauen, eine Menge Zeit (siehe unten).
+
+Zudem ist es empfohlen, falls sinnvolle Vorgaben für interaktive Optionen gesetzt sind, die `PACKAGE_BUILDING`-Variable zu prüfen und das interaktive Skript abzuschalten. Dies macht es uns möglich, Pakete für CDROMs und FTP-Server zu bauen.

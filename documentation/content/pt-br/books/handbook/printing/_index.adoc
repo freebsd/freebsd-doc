@@ -1,0 +1,754 @@
+---
+title: Capítulo 9. Impressão
+part: Parte II. Tarefas comuns
+prev: books/handbook/kernelconfig
+next: books/handbook/linuxemu
+---
+
+[[printing]]
+= Impressão
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Índice
+:table-caption: Tabela
+:figure-caption: Figura
+:example-caption: Exemplo
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 9
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/printing/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/printing/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/printing/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pt-br/mailing-lists.adoc[]
+include::shared/pt-br/teams.adoc[]
+include::shared/pt-br/urls.adoc[]
+
+toc::[]
+
+Colocar informações no papel é uma função vital, apesar de muitas tentativas de eliminá-la. A impressão tem dois componentes básicos. Os dados devem ser entregues à impressora e devem estar em um formato que a impressora possa entender.
+
+[[printing-quick-start]]
+== Inicio Rápido
+
+A impressão básica pode ser configurada rapidamente. A impressora deve ser capaz de imprimir texto simples ASCII. Para imprimir em outros tipos de arquivos, consulte <<printing-lpd-filters>>.
+
+[.procedure]
+====
+
+. Crie um diretório para armazenar arquivos enquanto eles estão sendo impressos:
++
+[source,bash]
+....
+# mkdir -p /var/spool/lpd/lp
+# chown daemon:daemon /var/spool/lpd/lp
+# chmod 770 /var/spool/lpd/lp
+....
++
+. Como `root`, crie [.filename]#/etc/printcap# com estes conteúdos:
++
+[.programlisting]
+....
+lp:\
+	:lp=/dev/unlpt0:\  <.>
+	:sh:\
+	:mx#0:\
+	:sd=/var/spool/lpd/lp:\
+	:lf=/var/log/lpd-errs:
+....
++
+<.> Esta linha é para uma impressora conectada a uma porta USB.Para uma impressora conectada a uma porta paralela ou uma porta de "impressora", use:Para uma impressora conectada diretamente a uma rede, use:Substitua _network-printer-name_ pelo nome de host DNS da impressora de rede.
+. Ative o `lpd` editando o [.filename]#/etc/rc.conf#, adicionando esta linha:
++
+[.programlisting]
+....
+lpd_enable="YES"
+....
++ 
+Inicie o serviço:
++
+[source,bash]
+....
+# service lpd start
+Starting lpd.
+....
++
+. Imprima um teste:
++
+[source,bash]
+....
+# printf "1. This printer can print.\n2. This is the second line.\n" | lpr
+....
++
+[TIP]
+======
+
+Se ambas as linhas não iniciarem na borda esquerda, mas em "degrau", consulte <<printing-lpd-filters-stairstep>>.
+======
++ 
+Arquivos de texto agora podem ser impressos com `lpr`. Dê o nome do arquivo na linha de comando ou canalize a saída diretamente no `lpr`.
++
+[source,bash]
+....
+% lpr textfile.txt
+% ls -lh | lpr
+....
+====
+
+[[printing-connections]]
+== Conexões de Impressora
+
+As impressoras são conectadas a sistemas de computadores de várias maneiras. Geralmente, as impressoras desktop pequenas são conectadas diretamente à porta USB do computador. As impressoras mais antigas são conectadas a uma porta paralela ou a porta de "impressora". Algumas impressoras estão diretamente conectadas a uma rede, facilitando o compartilhamento com vários computadores. Algumas impressoras usam uma rara conexão de porta serial.
+
+O FreeBSD pode se comunicar com todos esses tipos de impressoras.
+
+[[printing-connections-usb]]
+USB::
+As impressoras USB podem ser conectadas a qualquer porta USB disponível no computador.
++
+Quando o FreeBSD detecta uma impressora USB, duas entradas de dispositivos são criadas: [.filename]#/dev/ulpt0# e [.filename]#/dev/unlpt0#. Os dados enviados para qualquer dispositivo serão retransmitidos para a impressora. Após cada trabalho de impressão, o [.filename]#ulpt0# reseta a porta USB. O reset da porta pode causar problemas em algumas impressoras, portanto, o dispositivo [.filename]#unlpt0# é normalmente usado em seu lugar. O [.filename]#unlpt0# não reseta a porta USB.
+[[printing-connections-parallel]]
+Paralela (IEEE-1284)::
+O dispositivo da porta paralela é o [.filename]#/dev/lpt0#. Este dispositivo aparece independentemente se uma impressora está ou não conectada, ela não é autodetectada.
++
+A maior parte dos fabricantes se afastou destas portas "legadas" e muitos computadores não as têm mais. Adaptadores podem ser usados para conectar uma impressora paralela a uma porta USB. Com este tipo de adaptador, a impressora pode ser tratada como se fosse uma impressora USB. Dispositivos chamados _servidores de impressão_ também podem ser usados para conectar impressoras paralelas diretamente a uma rede.
+[[printing-connections-serial]]
+Serial (RS-232)::
+Portas seriais são outro tipo de porta legada, raramente usada para impressoras, exceto em determinadas aplicações de nicho. Os cabos, os conectores e a fiação necessária variam muito.
++
+Para portas seriais incorporadas em uma placa-mãe, o nome do dispositivo serial é [.filename]#/dev/cuau0# ou [.filename]#/dev/cuau1#. Os adaptadores Seriais USB também podem ser usados, e eles aparecerão como [.filename]#/dev/cuaU0#.
++
+Vários parâmetros de comunicação devem ser conhecidos para se comunicar com uma impressora serial. Os mais importantes são _baud rate_ ou BPS (Bits por segundo) e _paridade_. Os valores variam, mas as impressoras seriais típicas usam uma taxa de transmissão de 9600 e nenhuma paridade.
+[[printing-connections-network]]
+Rede::
+As impressoras de rede estão conectadas diretamente à rede de computadores local.
++
+O nome de host DNS da impressora deve ser conhecido. Se a impressora tiver um endereço dinâmico atribuído por DHCP, o DNS deverá ser atualizado dinamicamente para que o nome do host tenha sempre o endereço IP correto. As impressoras de rede geralmente recebem endereços IP estáticos para evitar esse problema.
++
+A maioria das impressoras de rede entende os trabalhos de impressão enviados com o protocolo LPD. Um nome de fila de impressão também pode ser especificado. Algumas impressoras processam dados de maneira diferente, dependendo de qual fila é usada. Por exemplo, uma fila `raw` imprime os dados inalterados, enquanto a fila `text` adiciona retornos de carro aos textos simples.
++
+Muitas impressoras de rede também podem imprimir dados enviados diretamente para a porta 9100.
+
+[[printing-connections-summary]]
+=== Resumo
+
+As conexões de rede com fio geralmente são as mais fáceis de configurar e oferecem a impressão mais rápida. Para conexão direta com o computador, a conexão USB é preferida em função da velocidade e da simplicidade. As conexões paralelas funcionam, mas têm limitações no comprimento do cabo e na velocidade. Conexões seriais são mais difíceis de configurar. A configuração do cabo difere entre os modelos, e os parâmetros de comunicação, como taxa de transmissão e bits de paridade, se somam a complexidade. Felizmente, as impressoras seriais são raras.
+
+[[printing-pdls]]
+== Linguagens de Descrição de Página Comuns
+
+Os dados enviados a uma impressora devem estar em um idioma que a impressora possa entender. Esses idiomas são chamados de Linguagens de Descrição de Página ou PDLs.
+[[print-pdls-ascii]]
+ASCII::
+Texto ASCII simples é a maneira mais simples de enviar dados para uma impressora. Os caracteres correspondem um a um com o que será impresso: um `A` nos dados imprime um `A` na página. Muito pouca formatação está disponível. Não há como selecionar uma fonte ou espaçamento proporcional. A simplicidade forçada do texto ASCII simples significa que o texto pode ser impresso diretamente do computador com pouca ou nenhuma codificação ou tradução. A saída impressa corresponde diretamente ao que foi enviado.
++
+Algumas impressoras baratas não conseguem imprimir texto ASCII simples. Isso as torna mais difíceis de configurar, mas geralmente ainda é possível fazê-lo.
+[[print-pdls-postscript]]
+PostScript(TM)::
+O PostScript(TM) é quase o oposto do ASCII. Em vez de um texto simples, um programa PostScript(TM) é um conjunto de instruções que desenham o documento final. Fontes e gráficos diferentes podem ser usados. No entanto, esse poder tem um preço. O programa que desenha a página deve ser escrito. Geralmente este programa é gerado pelo software aplicativo, portanto, o processo é invisível para o usuário.
++
+Impressoras baratas às vezes deixam de fora a compatibilidade com o PostScript(TM) como uma medida para economia de custos.
+
+[[print-pdls-pcl]]
+PCL (linguagem de comando de impressora)::
+A PCL é uma extensão do ASCII, adicionando sequências de escape para formatação, seleção de fontes e impressão de gráficos. Muitas impressoras fornecem suporte para PCL5. Algumas suportam o mais recente PCL6 ou o PCLXL. Essas versões posteriores são superconjuntos do PCL5 e podem fornecer uma impressão mais rápida.
+[[print-pdls-host-based]]
+Baseado em Host::
+Os fabricantes podem reduzir o custo de uma impressora, oferecendo um processador simples e muito pouca memória. Essas impressoras não são capazes de imprimir texto simples. Em vez disso, bitmaps de texto e gráficos são desenhados por um driver no computador host e, em seguida, enviados para a impressora. Estas são chamadas de impressoras _baseadas em host_.
++
+A comunicação entre o driver e uma impressora baseada em host geralmente ocorre por meio de protocolos proprietários ou não documentados, tornando-os funcionais apenas nos sistemas operacionais mais comuns.
+
+[[print-pdls-table]]
+=== Convertendo PostScript(TM) para outros PDLs
+
+Muitas aplicações da Coleção de Ports e muitos utilitários do FreeBSD produzem uma saída em PostScript(TM). Esta tabela mostra os utilitários disponíveis para converter o postscript em outros PDLs comuns:
+[[print-pdls-ps-to-other-tbl]]
+.Saída PDLs
+[cols="1,1,1", frame="none", options="header"]
+|===
+<| Saída PDL
+<| Gerado por
+<| Notas
+
+|PCL ou PCL5
+|package:print/ghostscript9[]
+|`-sDEVICE=ljet4` para monocromático, e `-sDEVICE=cljet5` para colorido
+
+|PCLXL ou PCL6
+|package:print/ghostscript9[]
+|`-sDEVICE=pxlmono` para monocromático, `-sDEVICE=pxlcolor` para colorido
+
+|ESC/P2
+|package:print/ghostscript9[]
+|`-sDEVICE=uniprint`
+
+|XQX
+|package:print/foo2zjs[]
+|
+|===
+
+[[print-pdls-summary]]
+=== Resumo
+
+Para facilitar a impressão, escolha uma impressora que suporte PostScript(TM). Impressoras que suportam PCL são as próximas preferidas. Com o package:print/ghostscript[], essas impressoras podem ser usadas como se entendessem nativamente PostScript(TM). Impressoras que suportam PostScript(TM) ou PCL diretamente quase sempre suportam a impressão direta de arquivos de texto simples ASCII também.
+
+Impressoras baseadas em linha, como as jatos de tinta comuns, geralmente não suportam PostScript(TM) ou PCL. Elas geralmente podem imprimir arquivos de texto plano ASCII. O package:print/ghostscript[] suporta os PDL usados por algumas dessas impressoras. Entretanto, a impressão de uma página inteira baseada em gráficos nessas impressoras costuma ser muito lenta devido à grande quantidade de dados a serem transferidos e impressos.
+
+Geralmente, as impressoras baseadas em host são mais difíceis de configurar. Algumas não podem ser usadas por causa de PDLs proprietários. Evite essas impressoras quando possível.
+
+Descrições de muitos PDLs podem ser encontradas em http://www.undocprint.org/formats/page_description_languages[]. O PDL específico usado por vários modelos de impressoras pode ser encontrado em http://www.openprinting.org/printers[].
+
+[[printing-direct]]
+== Impressão Direta
+
+Para impressão ocasional, os arquivos podem ser enviados diretamente para um dispositivo de impressora sem qualquer configuração. Por exemplo, um arquivo chamado [.filename]#exemplo.txt# pode ser enviado para uma impressora USB:
+
+[source,bash]
+....
+# cp sample.txt /dev/unlpt0
+....
+
+A impressão direta para impressoras de rede depende das capacidades da impressora, mas a maioria aceita trabalhos de impressão na porta 9100, e o man:nc[1] pode ser usado com eles. Para imprimir o mesmo arquivo em uma impressora com o nome de host DNS de _netlaser_:
+
+[source,bash]
+....
+# nc netlaser 9100 < sample.txt
+....
+
+[[printing-lpd]]
+== LPD (Daemon de impressora de linha)
+
+A impressão de um arquivo em segundo plano é chamada de _spooling_. Um spooler permite que o usuário continue com outros programas no computador sem ter de esperar que a impressora conclua lentamente o trabalho de impressão.
+
+O FreeBSD inclui um spooler chamado man:lpd[8]. Os trabalhos de impressão são enviados com o comando man:lpr[1].
+
+[[printing-lpd-setup]]
+=== Configuração inicial
+
+Um diretório para armazenar trabalhos de impressão é criado, a propriedade é definida e as permissões são definidas para impedir que outros usuários visualizem o conteúdo desses arquivos:
+
+[source,bash]
+....
+# mkdir -p /var/spool/lpd/lp
+# chown daemon:daemon /var/spool/lpd/lp
+# chmod 770 /var/spool/lpd/lp
+....
+
+As impressoras são definidas no [.filename]#/etc/printcap#. Uma entrada para cada impressora inclui detalhes como um nome, a porta onde ela está conectada e várias outras configurações. Crie [.filename]#/etc/printcap# com estes conteúdos:
+
+[.programlisting]
+....
+lp:\				<.>
+	:lp=/dev/unlpt0:\	<.>
+	:sh:\			<.>
+	:mx#0:\			<.>
+	:sd=/var/spool/lpd/lp:\	<.>
+	:lf=/var/log/lpd-errs:	<.>
+....
+
+<.> O nome desta impressora. O man:lpr[1] envia trabalhos de impressão para a impressora `lp`, a menos que outra impressora seja especificada com `-P`, portanto, a impressora padrão deve ser denominada `lp`.
+
+<.> O dispositivo em que a impressora está conectada. Substitua esta linha pela apropriada para o tipo de conexão mostrado aqui.
+
+<.> Suprimir a impressão de uma página de cabeçalho no início de um trabalho de impressão.
+
+<.> Não limite o tamanho máximo de um trabalho de impressão.
+
+<.> O caminho para o diretório de spooling desta impressora. Cada impressora usa seu próprio diretório de spooling.
+
+<.> O arquivo de log no qual os erros nesta impressora serão relatados.
+
+Depois de criar o [.filename]#/etc/printcap#, use man:chkprintcap[8] para testar se há erros:
+
+[source,bash]
+....
+# chkprintcap
+....
+
+Corrija quaisquer problemas relatados antes de continuar.
+
+Ative o man:lpd[8] no [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+lpd_enable="YES"
+....
+
+Inicie o serviço:
+
+[source,bash]
+....
+# service lpd start
+....
+
+[[printing-lpd-lpr]]
+=== Imprimindo com o man:lpr[1]
+
+Os documentos são enviados para a impressora com o `lpr`. Um arquivo a ser impresso pode ser nomeado na linha de comando ou canalizado para o `lpr`. Esses dois comandos são equivalentes, enviando o conteúdo de [.filename]#doc.txt# para a impressora padrão:
+
+[source,bash]
+....
+% lpr doc.txt
+% cat doc.txt | lpr
+....
+
+Impressoras podem ser selecionadas com `-P`. Para imprimir em uma impressora chamada _laser_:
+
+[source,bash]
+....
+% lpr -Plaser doc.txt
+....
+
+[[printing-lpd-filters]]
+=== Filtros
+
+Os exemplos mostrados até agora enviaram o conteúdo de um arquivo de texto diretamente para a impressora. Contanto que a impressora entenda o conteúdo desses arquivos, a saída será impressa corretamente.
+
+Algumas impressoras não são capazes de imprimir texto simples, e o arquivo de entrada pode nem ser texto simples.
+
+_Filtros_ permitem que os arquivos sejam traduzidos ou processados. O uso típico é traduzir um tipo de entrada, como texto simples, em um formato que a impressora possa entender, como PostScript(TM) ou PCL. Os filtros também podem ser usados para fornecer recursos adicionais, como adicionar números de página ou destacar o código-fonte para facilitar a leitura.
+
+Os filtros discutidos aqui são _filtros de entrada_ ou _filtros de texto_. Esses filtros convertem o arquivo recebido em diferentes formatos. Use man:su[1] para se tornar `root` antes de criar os arquivos.
+
+Os filtros são especificados em [.filename]#/etc/printcap# com o identificador `if=`. Para usar [.filename]#/usr/local/libexec/lf2crlf# como um filtro, modifique o [.filename]#/etc/printcap# assim:
+
+[.programlisting]
+....
+lp:\
+	:lp=/dev/unlpt0:\
+	:sh:\
+	:mx#0:\
+	:sd=/var/spool/lpd/lp:\
+	:if=/usr/local/libexec/lf2crlf:\   <.>
+	:lf=/var/log/lpd-errs:
+....
+
+<.> `if=` identifica o _filtro de entrada_ que será usado no texto recebido.
+
+[TIP]
+====
+
+Os caracteres backslash de _continuação de linha_ no final das linhas nas entradas do [.filename]#printcap# revelam que uma entrada para uma impressora é na verdade apenas uma linha longa com entradas delimitadas por dois pontos. O exemplo anterior pode ser reescrito como uma única linha menos legível:
+
+[.programlisting]
+....
+lp:lp=/dev/unlpt0:sh:mx#0:sd=/var/spool/lpd/lp:if=/usr/local/libexec/lf2crlf:lf=/var/log/lpd-errs:
+....
+
+====
+
+[[printing-lpd-filters-stairstep]]
+==== Impedindo degraus em impressoras de texto simples
+
+Os arquivos de texto típicos do FreeBSD contêm apenas um único caractere de feed de linha no final de cada linha. Estas linhas vão ficar em "degraus" em uma impressora padrão:
+
+[.programlisting]
+....
+Um arquivo impresso parece
+                    como os degraus de uma escada
+                                              espalhados pelo vento
+....
+
+Um filtro pode converter os caracteres de nova linha em retornos de carro e novas linhas. Os retornos de carro fazem a impressora retornar para a esquerda após cada linha. Crie o [.filename]#/usr/local/libexec/lf2crlf# com este conteúdo:
+
+[.programlisting]
+....
+#!/bin/sh
+CR=$'\r'
+/usr/bin/sed -e "s/$/${CR}/g"
+....
+
+Defina as permissões e torne-o executável:
+
+[source,bash]
+....
+# chmod 555 /usr/local/libexec/lf2crlf
+....
+
+Modifique o [.filename]#/etc/printcap# para usar o novo filtro:
+
+[.programlisting]
+....
+:if=/usr/local/libexec/lf2crlf:\
+....
+
+Teste o filtro imprimindo o mesmo arquivo de texto simples. O procedimento fará com que cada linha comece no lado esquerdo da página.
+
+[[printing-lpd-filters-enscript]]
+==== Texto simples chique em impressoras PostScript(TM) com package:print/enscript[]
+
+O GNUEnscript converte arquivos de texto simples em arquivos formatados como PostScript(TM) para impressão em impressoras PostScript(TM). Ele adiciona números de página, quebra as linhas longas e fornece vários outros recursos para facilitar a leitura dos arquivos de texto impressos. Dependendo do tamanho do papel local, instale o package:print/enscript-letter[] ou o package:print/enscript-a4[] da coleção Ports.
+
+Crie o [.filename]#/usr/local/libexec/enscript# com este conteúdo:
+
+[.programlisting]
+....
+#!/bin/sh
+/usr/local/bin/enscript -o -
+....
+
+Defina as permissões e torne-o executável:
+
+[source,bash]
+....
+# chmod 555 /usr/local/libexec/enscript
+....
+
+Modifique o [.filename]#/etc/printcap# para usar o novo filtro:
+
+[.programlisting]
+....
+:if=/usr/local/libexec/enscript:\
+....
+
+Teste o filtro imprimindo um arquivo de texto simples.
+
+[[printing-lpd-filters-ps2pcl]]
+==== Imprimindo PostScript(TM) em impressoras PCL
+
+Muitos programas produzem documentos PostScript(TM). No entanto, impressoras baratas geralmente só entendem texto simples ou PCL. Este filtro converte os arquivos PostScript(TM) para o formato PCL antes de enviá-los para a impressora.
+
+Instale o interpretador de PostScript(TM) Ghostscript, package:print/ghostscript9[], através da Coleção de Ports.
+
+Crie o [.filename]#/usr/local/libexec/ps2pcl# com este conteúdo:
+
+[.programlisting]
+....
+#!/bin/sh
+/usr/local/bin/gs -dSAFER -dNOPAUSE -dBATCH -q -sDEVICE=ljet4 -sOutputFile=- -
+....
+
+Defina as permissões e torne-o executável:
+
+[source,bash]
+....
+# chmod 555 /usr/local/libexec/ps2pcl
+....
+
+A entrada PostScript(TM) enviada para este script será processada e convertida em PCL antes de ser enviada para a impressora.
+
+Modifique o [.filename]#/etc/printcap# para usar este novo filtro de entrada:
+
+[.programlisting]
+....
+:if=/usr/local/libexec/ps2pcl:\
+....
+
+Teste o filtro enviando um pequeno programa PostScript(TM) para ele:
+
+[source,bash]
+....
+% printf "%%\!PS \n /Helvetica findfont 18 scalefont setfont \
+72 432 moveto (PostScript printing successful.) show showpage \004" | lpr
+....
+
+[[printing-lpd-filters-smart]]
+==== Filtros Inteligentes
+
+Um filtro que detecta o tipo de entrada e converte automaticamente para o formato correto da impressora pode ser muito conveniente. Os dois primeiros caracteres de um arquivo PostScript(TM) são geralmente `%!`. Um filtro pode detectar esses dois caracteres. Os arquivos PostScript(TM) podem ser enviados de forma inalterada para uma impressora PostScript(TM). Arquivos de texto podem ser convertidos para PostScript(TM) com o Enscript como mostrado anteriormente. Crie o [.filename]#/usr/local/libexec/psif# com este conteúdo:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  psif - Print PostScript or plain text on a PostScript printer
+#
+IFS="" read -r first_line
+first_two_chars=`expr "$first_line" : '\(..\)'`
+
+case "$first_two_chars" in
+%!)
+    # %! : PostScript job, print it.
+    echo "$first_line" && cat && exit 0
+    exit 2
+    ;;
+*)
+    # otherwise, format with enscript
+    ( echo "$first_line"; cat ) | /usr/local/bin/enscript -o - && exit 0
+    exit 2
+    ;;
+esac
+....
+
+Defina as permissões e torne-o executável:
+
+[source,bash]
+....
+# chmod 555 /usr/local/libexec/psif
+....
+
+Modifique o [.filename]#/etc/printcap# para usar este novo filtro de entrada:
+
+[.programlisting]
+....
+:if=/usr/local/libexec/psif:\
+....
+
+Teste o filtro imprimindo PostScript(TM) e arquivos de texto simples.
+
+[[printing-lpd-filters-othersmart]]
+==== Outros Filtros Inteligentes
+
+Escrever um filtro que detecte muitos tipos diferentes de entrada e os formate corretamente é um desafio. O package:print/apsfilter[] da Coleção de Ports é um filtro "magico" inteligente que detecta dezenas de tipos de arquivos e os converte automaticamente para o PDL entendido pela impressora. Veja http://www.apsfilter.org[] para mais detalhes.
+
+[[printing-lpd-queues]]
+=== Múltiplas filas
+
+As entradas no [.filename]#/etc/printcap# são na verdade definições de _filas_. Pode haver mais de uma fila para uma única impressora. Quando combinadas com filtros, múltiplas filas fornecem aos usuários um maior controle sobre como seus trabalhos são impressos.
+
+Por exemplo, considere uma impressora laser PostScript(TM) em rede num escritório. A maioria dos usuários deseja imprimir texto simples, mas alguns usuários avançados querem poder imprimir diretamente os arquivos PostScript(TM). Duas entradas podem ser criadas para a mesma impressora no [.filename]#/etc/printcap#:
+
+[.programlisting]
+....
+textprinter:\
+	:lp=9100@officelaser:\
+	:sh:\
+	:mx#0:\
+	:sd=/var/spool/lpd/textprinter:\
+	:if=/usr/local/libexec/enscript:\
+	:lf=/var/log/lpd-errs:
+
+psprinter:\
+	:lp=9100@officelaser:\
+	:sh:\
+	:mx#0:\
+	:sd=/var/spool/lpd/psprinter:\
+	:lf=/var/log/lpd-errs:
+....
+
+Os documentos enviados para a fila `textprinter` serão formatados pelo filtro [.filename]#/usr/local/libexec/enscript# mostrado em um exemplo anterior. Usuários avançados podem imprimir arquivos PostScript(TM) em `psprinter`, onde nenhuma filtragem é feita.
+
+Esta técnica de múltiplas filas pode ser usada para fornecer acesso direto a todos os tipos de recursos da impressora. Uma impressora com um duplexador pode usar duas filas, uma para impressões em apenas um lado da folha e outra com um filtro que envia a seqüência de comandos para habilitar a impressão frente e verso e, em seguida, envia o arquivo recebido.
+
+[[printing-lpd-monitor]]
+=== Monitoramento e controle de impressão
+
+Vários utilitários estão disponíveis para monitorar trabalhos de impressão e verificar e controlar a operação da impressora.
+
+[[printing-lpd-monitor-lpq]]
+==== man:lpq[1]
+
+O man:lpq[1] mostra o status das tarefas de impressão de um usuário. Trabalhos de impressão de outros usuários não são mostrados.
+
+Mostra os trabalhos pendentes do usuário atual em uma única impressora:
+
+[source,bash]
+....
+% lpq -Plp
+Rank   Owner      Job  Files                                 Total Size
+1st    jsmith     0    (standard input)                      12792 bytes
+....
+
+Mostra os trabalhos pendentes do usuário atual em todas as impressoras:
+
+[source,bash]
+....
+% lpq -a
+lp:
+Rank   Owner      Job  Files                                 Total Size
+1st    jsmith     1    (standard input)                      27320 bytes
+
+laser:
+Rank   Owner      Job  Files                                 Total Size
+1st    jsmith     287  (standard input)                      22443 bytes
+....
+
+[[printing-lpd-monitor-lprm]]
+==== man:lprm[1]
+
+O man:lprm[1] é usado para remover trabalhos de impressão. Usuários normais só podem remover seus próprios trabalhos. O `root` pode remover qualquer um ou todos os trabalhos.
+
+Remova todos os trabalhos pendentes de uma impressora:
+
+[source,bash]
+....
+# lprm -Plp -
+dfA002smithy dequeued
+cfA002smithy dequeued
+dfA003smithy dequeued
+cfA003smithy dequeued
+dfA004smithy dequeued
+cfA004smithy dequeued
+....
+
+Remova um único trabalho de uma impressora. O man:lpq[1] é usado para encontrar o número do trabalho.
+
+[source,bash]
+....
+% lpq
+Rank   Owner      Job  Files                                 Total Size
+1st    jsmith     5    (standard input)                      12188 bytes
+% lprm -Plp 5
+dfA005smithy dequeued
+cfA005smithy dequeued
+....
+
+[[printing-lpd-monitor-lpc]]
+==== man:lpc[8]
+
+O man:lpc[8] é usado para verificar e modificar o status da impressora. O `lpc` é seguido por um comando e um nome de impressora opcional. O parâmetro `all` pode ser usado em vez de um nome de impressora específico, e o comando será aplicado a todas as impressoras. Usuários normais podem visualizar o status com man:lpc[8]. Somente o `class="username"&gt;root` pode usar comandos que modificam o status da impressora.
+
+Mostrar o status de todas as impressoras:
+
+[source,bash]
+....
+% lpc status all
+lp:
+	queuing is enabled
+	printing is enabled
+	1 entry in spool area
+	printer idle
+laser:
+	queuing is enabled
+	printing is enabled
+	1 entry in spool area
+	waiting for laser to come up
+....
+
+Impedindo que uma impressora aceite novos trabalhos e fazendo com que ela comece a aceitar novos trabalhos novamente:
+
+[source,bash]
+....
+# lpc disable lp
+lp:
+	queuing disabled
+# lpc enable lp
+lp:
+	queuing enabled
+....
+
+Pare de imprimir, mas continue aceitando novos trabalhos. Em seguida, comece a imprimir novamente:
+
+[source,bash]
+....
+# lpc stop lp
+lp:
+	printing disabled
+# lpc start lp
+lp:
+	printing enabled
+	daemon started
+....
+
+Reinicie uma impressora após alguma condição de erro:
+
+[source,bash]
+....
+# lpc restart lp
+lp:
+	no daemon to abort
+	printing enabled
+	daemon restarted
+....
+
+Desative a fila de impressão e desative a impressão, com uma mensagem para explicar o problema aos usuários:
+
+[source,bash]
+....
+# lpc down lp Repair parts will arrive on Monday
+lp:
+	printer and queuing disabled
+	status message is now: Repair parts will arrive on Monday
+....
+
+Reative uma impressora que esteja inativa:
+
+[source,bash]
+....
+# lpc up lp
+lp:
+	printing enabled
+	daemon started
+....
+
+Veja man:lpc[8] para mais comandos e opções.
+
+[[printing-lpd-shared]]
+=== Impressoras Compartilhadas
+
+As impressoras costumam ser compartilhadas por vários usuários em empresas e escolas. Recursos adicionais são fornecidos para tornar as impressoras compartilhadas mais convenientes.
+
+[[printing-shared-aliases]]
+==== Aliases
+
+O nome da impressora é definido na primeira linha da entrada em [.filename]#/etc/printcap#. Nomes adicionais, ou _aliases_, podem ser adicionados após esse nome. Os aliases são separados do nome e um do outro por barras verticais:
+
+[.programlisting]
+....
+lp|repairsprinter|salesprinter:\
+....
+
+Os aliases podem ser usados no lugar do nome da impressora. Por exemplo, os usuários do departamento de vendas imprimem em sua impressora com
+
+[source,bash]
+....
+% lpr -Psalesprinter sales-report.txt
+....
+
+Usuários do departamento de Reparos podem imprimir na _sua_ impressora com
+
+[source,bash]
+....
+% lpr -Prepairsprinter repairs-report.txt
+....
+
+Todos os documentos são impressos nessa única impressora. Quando o departamento de vendas cresce o suficiente para precisar de sua própria impressora, o alias pode ser removido da entrada da impressora compartilhada e usado como o nome de uma nova impressora. Os usuários nos dois departamentos continuam usando os mesmos comandos, mas os documentos de vendas são enviados para a nova impressora.
+
+[[printing-shared-headers]]
+==== Páginas de cabeçalho
+
+Pode ser difícil para os usuários localizarem seus documentos na pilha de páginas produzidas por uma impressora compartilhada ocupada. _Páginas de cabeçalho_ foram criadas para resolver este problema. Uma página de cabeçalho com o nome de usuário e o nome do documento é impressa antes de cada trabalho de impressão. Estas páginas são por vezes chamadas de páginas _banner_ ou _separadoras_.
+
+A ativação das páginas de cabeçalho é diferente, dependendo se a impressora está conectada diretamente ao computador com um cabo USB, paralelo ou serial, ou se está conectada remotamente por uma rede.
+
+As páginas de cabeçalho em impressoras conectadas diretamente são ativadas removendo-se a linha `:sh:\` (Suprimir Cabeçalho) da entrada no [.filename]#/etc/printcap#. Essas páginas de cabeçalho usam apenas caracteres de feed de linha para novas linhas. Algumas impressoras precisarão do filtro [.filename]#/usr/shared/examples/printing/hpif# para evitar imprimir o texto em escada. O filtro configura impressoras PCL para imprimir retornos de carro e alimentações de linha quando um feed de linha é recebido.
+
+As páginas de cabeçalho das impressoras de rede devem ser configuradas na própria impressora. Entradas de página de cabeçalho no [.filename]#/etc/printcap# são ignoradas. As configurações geralmente estão disponíveis no painel frontal da impressora ou em uma página da web de configuração acessível com um navegador da web.
+
+[[printing-lpd-references]]
+=== Referências
+
+Arquivos de exemplo: [.filename]#/usr/shared/examples/printing/#.
+
+O _Manual do Spooler de Impressora de Linha do 4.3BSD_, [.filename]#/usr/shared/doc/smm/07.lpd/paper.ascii.gz#.
+
+Páginas de manual: man:printcap[5], man:lpd[8], man:lpr[1], man:lpc[8], man:lprm[1], man:lpq[1].
+
+[[printing-other]]
+== Outros sistemas de impressão
+
+Vários outros sistemas de impressão estão disponíveis, além do man:lpd[8]. Esses sistemas oferecem suporte para outros protocolos ou recursos adicionais.
+
+[[printing-other-cups]]
+=== CUPS (Sistema de impressão comum UNIX(TM))
+
+O CUPS é um sistema de impressão popular disponível em muitos sistemas operacionais. Usar o CUPS no FreeBSD está documentado em um artigo separado: link:{cups}[CUPS]
+
+[[printing-other-hplip]]
+=== HPLIP
+
+A Hewlett Packard fornece um sistema de impressão que suporta muitas de suas impressoras a jato de tinta e laser. O port é o package:print/hplip[]. A página principal da web está em http://hplipopensource.com/hplip-web/index.html[]. O port lida com todos os detalhes de instalação no FreeBSD. As informações de configuração são mostradas em http://hplipopensource.com/hplip-web/install/manual/hp_setup.html[].
+
+[[printing-other-lprng]]
+=== LPRng
+
+O LPRng foi desenvolvido como uma alternativa aprimorada para o man:lpd[8]. O port é package:sysutils/LPRng[]. Para detalhes e documentação, veja http://www.lprng.com/[].

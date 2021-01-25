@@ -1,0 +1,212 @@
+---
+title: Kapitel 3. Sicheres Programmieren
+authors: 
+  - author: Murray Stokely
+prev: books/developers-handbook/tools
+next: books/developers-handbook/l10n
+---
+
+[[secure]]
+= Sicheres Programmieren
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:table-caption: Tabelle
+:figure-caption: Abbildung
+:example-caption: Beispiel
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 3
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/de/mailing-lists.adoc[]
+include::shared/de/teams.adoc[]
+include::shared/de/urls.adoc[]
+
+toc::[]
+
+[[secure-synopsis]]
+== Zusammenfassung
+
+Dieses Kapitel beschreibt einige Sicherheitsprobleme, die UNIX(R)-Programmierer seit Jahrzehnten quälen, und inzwischen verfügbare Werkzeuge, die Programmierern helfen, Sicherheitslücken in ihrem Quelltext zu vermeiden.
+
+[[secure-philosophy]]
+== Methoden des sicheren Entwurfs
+
+Sichere Anwendungen zu schreiben erfordert eine sehr skeptische und pessimistische Lebenseinstellung. Anwendungen sollten nach dem Prinzip der "geringsten Privilegien" ausgeführt werden, sodass kein Prozess mit mehr als dem absoluten Minimum an Zugriffsrechten arbeitet, die er zum Erfüllen seiner Aufgabe benötigt. Wo es möglich ist, sollte Quelltext, der bereits überprüft wurde, wiederverwendet werden, um häufige Fehler, die andere schon korrigiert haben, zu vermeiden.
+
+Eine der Stolperfallen der UNIX(R)-Umgebung ist, dass es sehr einfach ist Annahmen über die Konsistenz der Umgebung zu machen. Anwendungen sollten Nutzereingaben (in allen Formen) niemals trauen, genauso wenig wie den System-Ressourcen, der Inter-Prozess-Kommunikation oder dem zeitlichen Ablauf von Ereignissen. UNIX(R)-Prozesse arbeiten nicht synchron. Daher sind logische Operationen selten atomar.
+
+[[secure-bufferov]]
+== Puffer-Überläufe
+
+Puffer-Überläufe gibt es schon seit den Anfängen der Von-Neuman-Architektur <<COD>>.  Sie erlangten zum ersten Mal durch den Internetwurm Morris im Jahre 1988 öffentliche Bekanntheit. Unglücklicherweise  funktioniert der gleiche grundlegende Angriff noch heute. Die bei weitem häufigste Form eines Puffer-Überlauf-Angriffs basiert darauf, den Stack zu korrumpieren.
+
+Die meisten modernen Computer-Systeme verwenden einen Stack, um Argumente an Prozeduren zu übergeben und lokale Variablen zu speichern. Ein Stack ist ein last-in-first-out-Puffer (LIFO) im hohen Speicherbereich eines Prozesses. Wenn ein Programm eine Funktion  aufruft wird ein neuer "Stackframe" erzeugt. Dieser besteht aus den Argumenten, die der Funktion übergeben wurden und einem variabel grossem Bereich für lokale Variablen. Der "Stack-Pointer" ist ein Register, dass die  aktuelle Adresse der Stack-Spitze enthält. Da sich dieser Wert oft ändert, wenn neue Werte auf dem Stack abgelegt werden, bieten viele Implementierungen einen "Frame-Pointer", der nahe am Anfang des Stack-Frames liegt und es so leichter macht lokale Variablen relativ zum aktuellen Stackframe zu adressieren. <<COD>> Die Rücksprungadresse  der Funktionen werden ebenfalls auf dem Stack gespeichert und das ist der Grund für Stack-Überlauf-Exploits. Denn ein böswilliger Nutzer kann die Rücksprungadresse der Funktion überschreiben indem er eine lokale Variable in der Funktion überlaufen lässt, wodurch es ihm möglich ist beliebigen Code auszuführen.
+
+Obwohl Stack-basierte Angriffe bei weitem die Häufigsten sind, ist es auch möglich den Stack mit einem Heap-basierten (malloc/free) Angriff zu überschreiben.
+
+Die C-Programmiersprache führt keine automatischen Bereichsüberprüfungen bei Feldern oder Zeigern durch, wie viele andere Sprachen das tun. Außerdem enthält die C-Standardbibliothek eine Handvoll sehr gefährlicher Funktionen.
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|`strcpy`(char *dest, const char *src)
+|
+
+Kann den Puffer dest überlaufen lassen
+
+|`strcat`(char *dest, const char *src)
+|
+
+Kann den Puffer dest überlaufen lassen
+
+|`getwd`(char *buf)
+|
+
+Kann den Puffer buf überlaufen lassen
+
+|`gets`(char *s)
+|
+
+Kann den Puffer s überlaufen lassen
+
+|`[vf]scanf`(const char *format, ...)
+|
+
+Kann sein Argument überlaufen lassen
+
+|`realpath`(char *path, char resolved_path[])
+|
+
+Kann den Puffer path überlaufen lassen
+
+|`[v]sprintf`(char *str, const char *format, ...)
+|
+
+Kann den Puffer str überlaufen lassen
+|===
+
+=== Puffer-Überlauf Beispiel
+
+Das folgende Quellcode-Beispiel enthält einen Puffer-Überlauf, der darauf ausgelegt ist die Rücksprungadresse zu überschreiben und die Anweisung direkt nach dem Funktionsaufruf zu überspringen. (Inspiriert durch <<Phrack>>)
+
+[.programlisting]
+....
+#include stdio.h
+
+void manipulate(char *buffer) {
+char newbuffer[80];
+strcpy(newbuffer,buffer);
+}
+
+int main() {
+char ch,buffer[4096];
+int i=0;
+
+while ((buffer[i++] = getchar()) != '\n') {};
+
+i=1;
+manipulate(buffer);
+i=2;
+printf("The value of i is : %d\n",i);
+return 0;
+}
+....
+
+Betrachten wir nun, wie das Speicherabbild dieses Prozesses aussehen würde, wenn wir 160 Leerzeichen in unser kleines Programm eingeben, bevor wir Enter drücken.
+
+[XXX figure here!]
+
+Offensichtlich kann man durch böswilligere Eingaben bereits kompilierten Programmtext ausführen (wie z.B. exec(/bin/sh)).
+
+=== Puffer-Überläufe vermeiden
+
+Die direkteste Lösung, um Stack-Überläufe zu vermeiden, ist immer grössenbegrenzten Speicher und String-Copy-Funktionen zu verwenden. `strncpy` und `strncat` sind Teil der C-Standardbibliothek.  Diese Funktionen akzeptieren einen Längen-Parameter. Dieser Wert sollte nicht größer sein als die Länge des Zielpuffers. Die Funktionen kopieren dann bis zu `length` Bytes von der Quelle zum Ziel. Allerdings gibt es einige Probleme. Keine der Funktionen garantiert, dass die Zeichenkette NUL-terminiert ist, wenn die Größe  des Eingabepuffers so groß ist wie das Ziel. Außerdem wird der Parameter length zwischen strncpy und strncat inkonsistent definiert, weshalb Programmierer leicht bezüglich der korrekten Verwendung durcheinander kommen können. Weiterhin gibt es einen spürbaren Leistungsverlust im Vergleich zu `strcpy`, wenn eine kurze Zeichenkette in einen großen Puffer kopiert wird. Denn `strncpy` fült den Puffer bis zur angegebenen Länge mit NUL auf. 
+
+In OpenBSD wurde eine weitere Möglichkeit zum  kopieren von Speicherbereichen implementiert, die dieses Problem umgeht. Die Funktionen `strlcpy` und `strlcat` garantieren, dass das Ziel immer NUL-terminiert wird, wenn das Argument length ungleich null ist. Für weitere Informationen über diese Funktionen lesen Sie bitte <<OpenBSD>>. Die OpenBSD-Funktionen `strlcpy` und `strlcat` sind seit Version 3.3 auch in FreeBSD verfügbar.
+
+==== Compiler-basierte Laufzeitüberprüfung von Grenzen
+
+Unglücklicherweise gibt es immer noch sehr viel Quelltext, der allgemein verwendet wird und blind Speicher umherkopiert, ohne eine der gerade besprochenen Funktionen, die Begrenzungen unterstützen, zu verwenden. Glücklicherweise gibt es einen Weg, um solche Angriffe zu verhindern - Überprüfung der Grenzen zur Laufzeit, die in verschiedenen C/C++ Compilern eingebaut ist.
+
+ProPolice ist eine solche Compiler-Eigenschaft und ist in den man:gcc[1] Versionen 4.1 und höher integriert. Es ersetzt und erweitert die man:gcc[1] StackGuard-Erweiterung von früher.
+
+ProPolice schützt gegen stackbasierte Pufferüberläufe und andere Angriffe durch das Ablegen von Pseudo-Zufallszahlen in Schlüsselbereichen des Stacks bevor es irgendwelche Funktionen aufruft. Wenn eine Funktion beendet wird, werden diese "Kanarienvögel" überprüft und wenn festgestellt wird, dass diese verändert wurden wird das Programm sofort abgebrochen. Dadurch wird jeglicher Versuch, die Rücksprungadresse oder andere Variablen, die auf dem Stack gespeichert werden, durch die Ausführung von Schadcode zu manipulieren, nicht funktionieren, da der Angreifer auch die Pseudo-Zufallszahlen unberührt lassen müsste.
+
+Ihre Anwendungen mit ProPolice neu zu kompilieren ist eine effektive Maßnahme, um sie vor den meisten Puffer-Überlauf-Angriffen zu schützen, aber die Programme können noch immer kompromittiert werden.
+
+==== Bibliotheks-basierte Laufzeitüberprüfung von Grenzen
+
+Compiler-basierte Mechanismen sind bei Software, die nur im Binärformat vertrieben wird, und die somit nicht neu kompiliert werden kann völlig nutzlos. Für diesen Fall gibt es einige Bibliotheken, welche die unsicheren Funktionen der C-Bibliothek (`strcpy`, `fscanf`, `getwd`, etc..) neu implementieren und sicherstellen, dass nicht hinter den Stack-Pointer geschrieben werden kann.
+
+* libsafe
+* libverify
+* libparanoia
+
+Leider haben diese Bibliotheks-basierten Verteidigungen mehrere Schwächen. Diese Bibliotheken schützen nur vor einer kleinen Gruppe von Sicherheitslücken und sie können das eigentliche Problem nicht lösen. Diese Maßnahmen können versagen, wenn die Anwendung mit -fomit-frame-pointer kompiliert wurde. Außerdem kann der Nutzer die Umgebungsvariablen LD_PRELOAD und LD_LIBRARY_PATH überschreiben oder löschen.
+
+[[secure-setuid]]
+== SetUID-Themen
+
+Es gibt zu jedem Prozess mindestens sechs verschiedene IDs, die diesem zugeordnet sind. Deshalb müssen Sie sehr vorsichtig mit den Zugriffsrechten sein, die Ihr Prozess zu jedem Zeitpunkt besitzt. Konkret bedeutet dass, das alle seteuid-Anwendungen ihre Privilegien abgeben sollten, sobald sie diese nicht mehr benötigen.
+
+Die reale Benutzer-ID kann nur von einem Superuser-Prozess geändert werden. Das Programm login setzt sie, wenn sich ein Benutzer am System anmeldet, und sie wird nur selten geändert.
+
+Die effektive Benutzer-ID wird von der Funktion `exec()` gesetzt, wenn ein Programm das seteuid-Bit gesetzt hat. Eine Anwendung kann `seteuid()` jederzeit aufrufen, um die effektive Benutzer-ID entweder auf die reale Benutzer-ID oder die gespeicherte set-user-ID zu setzen. Wenn eine der `exec()`-Funktionen die effektive Benutzer-ID setzt, wird der vorherige Wert als gespeicherte set-user-ID abgelegt.
+
+[[secure-chroot]]
+== Die Umgebung ihrer Programme einschränken
+
+Die herkömmliche Methode, um einen Prozess einzuschränken, besteht in dem Systemaufruf `chroot()`. Dieser Aufruf ändert das Wurzelverzeichnis, auf das sich alle Pfadangaben des Prozesses und jegliche Kind-Prozesse beziehen. Damit dieser Systemaufruf gelingt, muss der Prozess Ausführungsrechte (Durchsuchungsrechte) für das Verzeichnis haben, auf das er sich bezieht. Die neue Umgebung wird erst wirksam, wenn Sie mittels `chdir()` in Ihre neue Umgebung wechseln. Es sollte erwähnt werden, dass ein Prozess recht einfach aus der chroot-Umgebung ausbrechen kann, wenn er root-Rechte besitzt. Das kann man erreichen, indem man Gerätedateien anlegt, um Kernel-Speicher zu lesen, oder indem man einen Debugger mit einem Prozess außerhalb seiner man:chroot[8]-Umgebung verbindet, oder auf viele andere kreative Wege.
+
+Das Verhalten des Systemaufrufs `chroot()` kann durch die kern.chroot.allow_open_directories `sysctl`-Variable beeinflusst werden. Wenn diese auf 0 gesetzt ist, wird `chroot()` mit EPERM fehlschlagen, wenn irgendwelche Verzeichnisse geöffnet sind. Wenn die Variable auf den Standardwert 1 gesetzt ist, wird `chroot()` mit EPERM fehlschlagen, wenn irgendwelche Verzeichnisse geöffnet sind und sich der Prozess bereits in einer `chroot()`-Umgebung befindet. Bei jedem anderen Wert wird die Überprüfung auf geöffnete Verzeichnisse komplett umgangen.
+
+=== Die Jail-Funktionalität in FreeBSD
+
+Das Konzept einer Jail (Gefängnis) erweitert `chroot()`, indem es die Macht des Superusers einschränkt, um einen echten 'virtuellen Server' zu erzeugen. Wenn ein solches Gefängnis einmal eingerichtet ist, muss die gesamte Netzwerkkommunikation über eine bestimmte IP-Adresse erfolgen und die "root-Privilegien" innerhalb der Jail sind sehr stark eingeschränkt.
+
+Solange Sie sich in einer Jail befinden, werden alle Tests auf Superuser-Rechte durch den Aufruf von `suser()` fehlschlagen. Allerdings wurden einige Aufrufe von `suser()` abgeändert, um die neue `suser_xxx()`-Schnittstelle zu implementieren. Diese Funktion ist dafür verantwortlich, festzustellen, ob bestimmte Superuser-Rechte einem eingesperrten Prozess zur Verfügung stehen.
+
+Ein Superuser-Prozess innerhalb einer Jail darf folgendes:
+
+* Berechtigungen verändern mittels: `setuid`, `seteuid`, `setgid`, `setegid`, `setgroups`, `setreuid`, `setregid`, `setlogin`
+* Ressourcenbegrenzungen setzen mittels `setrlimit`
+* Einige sysctl-Variablen (kern.hostname) verändern
+* `chroot()`
+* Ein Flag einer vnode setzen: `chflags`, `fchflags`
+* Attribute einer vnode setzen wie Dateiberechtigungen, Eigentümer, Gruppe, Größe, Zugriffszeit und Modifikationszeit
+* Binden eines Prozesses an einen öffentlichen privilegierten Port (ports 1024)
+
+``Jail``s sind ein mächtiges Werkzeug, um Anwendungen in einer sicheren Umgebung auszuführen, aber sie haben auch ihre Nachteile. Derzeit wurden die IPC-Mechanismen noch nicht an `suser_xxx` angepasst, so dass Anwendungen wie MySQL nicht innerhalb einer Jail ausgeführt werden können. Der Superuser-Zugriff hat in einer Jail nur eine sehr eingeschränkte Bedeutung, aber es gibt keine Möglichkeit zu definieren was "sehr eingeschränkt" heißt.
+
+=== POSIX(R).1e Prozess Capabilities
+
+POSIX(R) hat einen funktionalen Entwurf (Working Draft) herausgegeben, der Ereignisüberprüfung, Zugriffskontrolllisten, feiner einstellbare Privilegien, Informationsmarkierung und verbindliche Zugriffskontrolle enthält.
+
+Dies ist im Moment in Arbeit und das Hauptziel des http://www.trustedbsd.org/[TrustedBSD]-Projekts. Ein Teil der bisherigen Arbeit wurde in FreeBSD-CURRENT übernommen (cap_set_proc(3)).
+
+[[secure-trust]]
+== Vertrauen
+
+Eine Anwendung sollte niemals davon ausgehen, dass irgendetwas in der Nutzerumgebung vernünftig ist. Das beinhaltet (ist aber sicher nicht darauf beschränkt): Nutzereingaben, Signale, Umgebungsvariablen, Ressourcen, IPC, mmaps, das Arbeitsverzeichnis im Dateisystem, Dateideskriptoren, die Anzahl geöffneter Dateien, etc..
+
+Sie sollten niemals annehmen, dass Sie jede Art von inkorrekten Eingaben abfangen können, die ein Nutzer machen kann. Stattdessen sollte Ihre Anwendung positive Filterung verwenden, um nur eine bestimmte Teilmenge an Eingaben zuzulassen, die Sie für sicher halten. Ungeeignete Datenüberprüfung ist die Ursache vieler Exploits, besonders für CGI-Skripte im Internet. Bei Dateinamen müssen Sie besonders vorsichtig sein, wenn es sich um Pfade ("../", "/"), symbolische Verknüpfungen und Shell-Escape-Sequenzen handelt.
+
+Perl bietet eine wirklich coole Funktion, den sogenannten "Taint"-Modus, der verwendet werden kann, um zu verhindern, dass Skripte Daten, die von außerhalb des Programmes stammen, auf unsichere Art und Weise verwenden. Dieser Modus überprüft Kommandozeilenargumente, Umgebungsvariablen, Lokalisierungsinformationen, die Ergebnisse von Systemaufrufen (`readdir()`, `readlink()`, `getpwxxx()`) und alle Dateieingaben.
+
+[[secure-race-conditions]]
+== Race-Conditions
+
+Eine Race-Condition ist ein unnormales Verhalten, das von einer unerwarteten Abhängigkeit beim Timing von Ereignissen verursacht wird. Mit anderen Worten heißt das, ein Programmierer nimmt irrtümlicher Weise an, dass ein bestimmtes Ereignis immer vor einem anderen stattfindet.
+
+Einige der häufigsten Ursachen für Race-Conditions sind Signale, Zugriffsprüfungen und das Öffnen von Dateien. Signale sind von Natur aus asynchrone Ereignisse, deshalb ist besondere Vorsicht im Umgang damit geboten. Das Prüfen des Zugriffs mittels der Aufrufe `access(2)` gefolgt von `open(2)` ist offensichtlich nicht atomar. Benutzer können zwischen den beiden Aufrufen Dateien verschieben. Stattdessen sollten privilegierte Anwendungen `seteuid()` direkt gefolgt von `open()` aufrufen. Auf die gleiche Art sollte eine Anwendung immer eine korrekte Umask vor dem Aufruf von `open()` setzen, um störende Aufrufe von `chmod()` zu umgehen.

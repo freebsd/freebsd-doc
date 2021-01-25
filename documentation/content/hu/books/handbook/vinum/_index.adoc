@@ -1,0 +1,675 @@
+---
+title: 21. Fejezet - A Vinum kötetkezelő
+part: III. Rész Rendszeradminisztráció
+prev: books/handbook/filesystems
+next: books/handbook/virtualization
+---
+
+[[vinum-vinum]]
+= A Vinum kötetkezelő
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 21
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../../images/books/handbook/vinum/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/vinum/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/vinum/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[vinum-synopsis]]
+== Áttekintés
+
+Nem számít, milyen lemezeink is vannak, ugyanis mindig adódnak velük kapcsolatban gondjaink:
+
+* Kicsik.
+* Lassúk.
+* Nem elég megbízhatóak.
+
+Ezekre a problémákra javasoltak és meg is valósítottak számos megoldást. A felhasználók egy része általában úgy védekezik ellenük, hogy több, gyakran redundánsan tároló lemezt használ. A különféle kártyák és hardveres RAID-vezérlõk támogatása mellett a FreeBSD alaprendszerében megtalálható egy blokkos eszközmeghajtóként a Vinum kötetkezelõ is, amellyel virtuális lemezmeghajtókat lehet létrehozni. Tehát a _Vinum_ egy olyan ún. _kötetkezelõ_, vagyis virtuális lemezkezelõ, ami az említett három problémára próbál megoldást adni. A Vinum a hagyományos lemezes tárolásnál jóval nagyobb rugalmasságot, teljesítményt és megbízhatóságot biztosít, valamint ismeri a RAID-0, RAID-1 és RAID-5 modelleket külön-külön és kombinálva is.
+
+Ebben a fejezetben összefoglaljuk a hagyományos lemezes tárolás jellegzetes problémáit és bemutatjuk a Vinum kötetkezelõt.
+
+[NOTE]
+====
+A FreeBSD 5-ös verziójától kezdve a Vinumot újraírták a GEOM-nak megfelelõen (crossref:geom[geom,GEOM. a moduláris lemezszervező rendszer]), megtartva az eredeti elgondolásokat, elnevezéseket és a lemezen tárolt metaadatok formátumát. Ezt az újraírt változatot nevezik __gvinum__nak (_GEOM vinum_). A szövegben a __Vinum__ra kizárólag csak általánosságban hivatkozunk, függetlenül az implementációjától. Most már az összes parancsot a `gvinum` használatával kell kiadni, illetve a hozzá tartozó modul neve [.filename]#vinum.ko#-ról [.filename]#geom_vinum.ko#-ra változott és a megfelelõ eszközleírók a [.filename]#/dev/vinum# könyvtár helyett a [.filename]#/dev/gvinum# könyvtárban találhatóak. A FreeBSD 6. verziójától pedig a régi Vinum implementáció többé már nem is része az alaprendszernek.
+====
+
+[[vinum-intro]]
+== Kicsik a lemezeink
+
+A lemezek kapacitása ugyan növekszik, de velük együtt a tárigények is. Ezért gyakran érezzük úgy, hogy a rendelkezésünkre álló lemezek tárkapacitását meghaladó állományrendszerre lenne szükségünk. Kétségtelen, hogy ez a probléma messze nem akkora jelentõségû, mint például tíz évvel ezelõtt, de még mindig fennáll. Egyes rendszerek ezt úgy hidalták át, hogy létrehoztak egy olyan absztrakt eszközt, amely az adatokat több lemezen tárolja el.
+
+[[vinum-access-bottlenecks]]
+== A hozzáférési idõk szûk keresztmetszetei
+
+Napjaink rendszerei szinte állandóan egyszerre több adathoz is hozzá akarnak férni. Például egy nagy forgalmú FTP vagy HTTP szerver több 100 Mbit/s sebességû kapcsolattal is csatlakozhat a világhálóhoz, amelyeken keresztül párhuzamosan többezernyi tranzakciót is folytathat, ami jelentõsen meghaladja a legtöbb lemez átlagos átviteli sebességét.
+
+A jelenleg kapható lemezek soros adatátviteli sebessége egészen 70 MB/s-ig is terjedhet, de ennek az értéknek kevés a jelentõsége olyan környezetekben, ahol több, egymástól függetlenül futó program próbál egyszerre hozzáférni, hiszen ilyen esetekben csak a töredékét képesek elérni. Ilyenkor sokkal érdekesebb a lemezt kezelõ alrendszer szempontjából nézni a problémát: így az egyes adatátviteli kérések terhelése lesz a meghatározó paraméter, vagyis az az idõ, amit a kérés teljesítésében érintett meghajtók eltöltenek a feldolgozással.
+
+Bármelyik kérést is vesszük, a kiszolgáláshoz a meghajtónak elõször a megfelelõ helyre kell mozgatnia az író/olvasó fejeket, meg kell várni a fej alatt elhaladó elsõ szektort, majd végrehajtani a megfelelõ mûveletet. Ezek a mûveletek szétválaszthatatlanok: semmi értelme nincs megszakítani ezeket.
+
+[[vinum-latency]]Tekintsünk egy átlagosnak mondható, nagyjából 10 kB méretû adatátvitelt: a legújabb nagyteljesítményû lemezek átlagosan 3,5 ms alatt képesek pozicionálni a fejeket. A leggyorsabb lemezek 15 000 fordulatot tesznek meg percenként (RPM), így az átlagos forgási késleltetés (egy fél fordulat ideje) 2 ms. 70 MB/s-os sebesség mellett az átvitel maga megközelítõleg 150 μs, ami szinte elhanyagolható a pozicionálás idejéhez képest. Ilyen esetekben a tényleges adatátviteli sebesség 1 MB/s-nél alig valamivel többre esik vissza, és tisztán látszik, hogy erõsen függ az átvitt adat mennyiségétõl.
+
+A hagyományos és kézenfekvõ megoldása ennek a problémának "még több cséve" használata: egyetlen nagy lemez helyett alkalmazzunk több kisebb, de azonos tárkapacitású lemezt. Mindegyik lemez képes egymástól függetlenül mozgatni a fejeiket és az adatokat, aminek köszönhetõen a tényleges adatátvitel mértéke nagyjából a lemezek számával arányosan növekszik.
+
+Az adatátvitelben bekövetkezõ javulás pontos aránya természetesen kisebb, mint a lemezek száma: habár az egyes meghajtók képesek párhuzamosan mozgatni az adatokat, semmilyen módon garantálhatjuk, hogy a kérések egyenletesen oszlanak el köztük. Emiatt szinte elkerülhetetlen, hogy az egyik meghajtót nagyobb terhelés érje, mint a másikat.
+
+A lemezekre esõ terhelés egyenletessége erõsen függ attól, hogyan osztjuk el az adatokat a meghajtók között. Az itt használt példában a lemezen tárolt adatokat egy könyv oldalaiként érdemes elképzelni, vagyis rengeteg szám szerint címezhetõ adatszektorként. A virtuális lemezt ennek megfelelõen a legegyszerûbben úgy tudjuk felosztani az egymás után következõ független fizikai lemezek mérete szerint és így használni, mintha egy nagy könyvet kisebb részekre téptünk volna. Ezt a módszert nevezik _összefûzésnek_, és elõnye, hogy a résztvevõ lemezeknek nem kell azonos méretûeknek lenniük. Ez a megoldás remekül mûködik abban az esetben, amikor a virtuális lemez hozzáférései egyenletesen oszlanak el annak teljes területén. Amikor viszont az elérés csak egy kisebb területre korlátozódik, kevesebb javulás tapasztalható. A <<vinum-concat>> mutatja be lemezek egy ilyen összefûzött konfigurációját.
+
+[[vinum-concat]]
+.Az összefûzött szervezési mód
+image::vinum-concat.png[]
+
+Feloszthatjuk a virtuális lemezünket kisebb azonos méretû darabokra is, melyeket különbözõ eszközökön sorosan tárolunk el. Például az elsõ 256 szektort eltároljuk az elsõ lemezen, majd a következõ 256 szektort a következõ lemezen és így tovább. Az utolsó lemez kitöltése után az egész folyamat ismétlõdik, egészen az összes lemez megtöltéséig. Ezt a leképezést __csíkozás__nak ("striping") vagy RAID-0-nak nevezzük . A csíkozás használata során valamivel bonyolultabbá válik az adatok megtalálása és többletmunkát is jelenthet olyan esetekben, amikor az adatátvitel több lemezt is érint, de ezzel egyidõben sokkal jobban szétosztja a terhelést a lemezek között. A <<vinum-striped>> mutatja be a lemezek csíkozott szervezését.
+
+[[vinum-striped]]
+.A csíkozott szervezési mód
+image::vinum-striped.png[]
+
+[[vinum-data-integrity]]
+== Adatintegritás
+
+A modern lemezhajtók utolsó fontos problémája, hogy nem eléggé megbízhatóak. Annak ellenére, hogy a lemezek ezen a téren meglehetõsen sokat fejlõdtek az utóbbi pár évben, egy szervernek még mindig ezek azok a központi részei, amelyek a leginkább hajlamosak a meghibásodásra. Amikor ez bekövetkezik, a hatása akár egy katasztrófával is felérhet: a sérült lemezmeghajtók cseréje és az adatok visszaállítása napokat is igénybe vehet.
+
+Ennek a problémának a hagyományos megközelítése lenne a _tükrözés_ ("mirroring"), vagyis amikor ugyanarról az adatról tartunk két példányt két eltérõ fizikai hardveren. A RAID-szintek beköszöntével ezt a technikát RAID level 1-nak vagy RAID-1-nek is nevezik. Amikor írunk a kötetre, mindenhova írunk, az olvasás pedig bármelyik eszközrõl elvégezhetõ. Így ha az egyik meghajtó tönkremenne, egy másikon még mindig megtalálható az összes adat.
+
+A tükrözés két problémát vet fel:
+
+* Ár. Legalább kétszer annyiba kerül, mint a nem redundánsan tároló megoldások.
+* Teljesítménycsökkenés. Mivel az írást minden meghajtón végre kell hajtani, legalább kétszer annyi sávszélességet is felémeszt, mint a nem tükrözött kötetek esetén. Az olvasás viszont nem veszít a sebességébõl: sõt, még gyorsabbnak is tûnhet.
+
+Az adatintegritás megõrzésére egy másik megoldás a _paritás_ használata, melyet a 2, 3, 4 és 5 RAID-szintek valósítanak meg. Ezek közül talán a RAID-5 a legérdekesebb. A Vinumban egy olyan csíkozott szervezési módként valósították meg, ahol minden csíkból egy blokk az összes többi paritási információját tartalmazza. A RAID-5 által megvalósított szervezés hasonlít a csíkozáshoz, azonban a RAID-5-ben mindegyik csík tartalmaz egy paritási információt is. Tehát a Vinumban, ahogy azt RAID-5 a megköveteli, a paritást tároló blokkok helye az egyik csíkról a másikra változik. Az adatblokkokban található számok relatív blokkszámokat jelölnek.
+
+[[vinum-raid5-org]]
+.A RAID-5 szervezési mód
+image::vinum-raid5-org.png[]
+
+A RAID-5-nek a tükrözéshez képest megvan az az elõnye, hogy jelentõsen kevesebb tárhelyet igényel. Az olvasás hasonló a csíkozott szervezésekéhez, azonban az írás jóval lassabb, közel 25%-a az olvasás sebességének. Az egyik meghajtó meghibásodása esetén a tömb csökkentett módban még képes folytatni a mûködést: a fennmaradó meghajtókról továbbra is a megszokott módon lehet olvasni, viszont a sérült meghajtóról olvasott adatokat folyamatosan javítani kell a többirõl származó segédinformációk szerint.
+
+[[vinum-objects]]
+== A Vinum objektumai
+
+A tárgyalt problémák orvoslására a Vinumban egy négyszintû objektumhierarchiát alakítottak ki:
+
+* A legjobban észlelhetõ objektum a virtuális lemez, amelyet __kötet__nek (volume) nevezünk. Ez a kötet lényegében ugyanazokkal a tulajdonságokkal rendelkezik, mint egy UNIX(R)-os lemezmeghajtó, habár akadnak finomabb különbségek. Mérete korlátlan lehet.
+* A kötetek __erek__bõl (plex) állnak, melyek a kötet teljes területét képviselik. Ennélfogva a hierarchia ezen szintje nyújtja a redundanciát. Az ereket legegyszerûbben a tükrözött tömbben helyet foglaló lemezekként tudjuk elképzelni, melyek ugyanazt az adatot tartalmazzák.
+* Mivel a Vinum a UNIX(R) lemezes tárolást megvalósító alrendszerében helyezkedik el, a többlemezes erek felépítéséhez használhatnánk a UNIX(R)-os partíciókat, azonban ehhez a feladathoz nem eléggé rugalmasak, mivel a UNIX(R)-os lemezek csak korlátozott számú partíciót tartalmazhatnak. A Vinum ehelyett __allemez__nek (subdisk) nevezett folytonos területekre osztja fel az egyes UNIX(R)-os partíciókat (a __meghajtó__kat), melyeket aztán az erek létrehozására használ fel.
+* A Vinum által létrehozott __meghajtó__kon (drive) levõ allemezek lesznek valódi UNIX(R)-os partíciók. A Vinum-meghajtók tetszõleges számú allemezt tartalmazhatnak. Eltekintve a meghajtó elején található apró területtõl, melyen a beállításokra és az állapotra vonatkozó információk tárolódnak, az egész meghajtó felhasználható adatok tárolására.
+
+A most következõ szakaszokban ismertetjük, hogy ezek az objektumok milyen módon szolgáltatják a Vinum részérõl elvárt funkciókat.
+
+=== A kötetek mérete
+
+Az erek képesek a Vinum konfigurációjában található több különbözõ meghajtón elhelyezkedõ allemezeket is nyalábba kötni. Ennek következményeképpen az egyes meghajtók mérete nem korlátozza az erek méretét, emiatt a kötetét sem.
+
+=== Redundáns adattárolás
+
+A Vinum a tükrözést több ér egyetlen kötetté olvasztásával hozza létre. Az erek mindegyike a köteten található adatokat képviseli. Egy kötet legalább egy, legfeljebb nyolc eret tartalmazhat.
+
+Habár egy ér egy kötet teljes adatát ábrázolja, elõfordulhat olyan eset, hogy bizonyos részei hiányoznak fizikai, kialakítási (nem társítottunk allemezeket hozzájuk) okokból adódóan vagy véletlenül (a hozzá tartozó lemezterületek sérültek). Amíg legalább egy ér képes a kötet teljes tartalmát szolgáltatni, addig a kötet teljesen épnek tekinthetõ.
+
+=== Teljesítmény
+
+A Vinum az összefûzést és a csíkozást is egyaránt megvalósítja az erek szintjén:
+
+* Az _összefûzött ér_ allemezek területeibõl építkezik.
+* A _csíkozott ér_ felosztja az adatokat az allemezek között. Az allemezek mindegyikének ugyanakkorának kell lennie, és legalább két allemeznek lennie kell, hogy eltérjen az összefûzött értõl.
+
+=== Hogyan szervezzük az ereket?
+
+A FreeBSD {rel120-current} verziójában két fajta erezési megoldást találhatunk:
+
+* Az összefûzött erek a legrugalmasabbak: tetszõleges számú allemezt tartalmazhatnak, az allemezek mérete pedig eltérhet. Az ér újabb allemezek hozzáadásával tovább bõvíthetõ. Kevesebb processzoridõt igényel, mint egy csíkozott ér, habár a kettõ többletköltsége közti eltérés nem mérhetõ. Másrészrõl azonban nagyon érzékenyek a forgalmasabb pontokra, vagyis amikor az egyik lemez folyamatosan használatban van, miközben a többi üresen jár.
+* A csíkozott (RAID-0) erek legnagyobb elõnye, hogy csökkentik a forgalmasabb pontok kialakulását: a megfelelõ méretû csíkszélesség (ami kb. 256 kB) választásával el tudjuk egyengetni a tömbben dolgozó meghajtók terhelését. Ennek a megközelítésnek a hátránya (részben) a sokkal összetettebb kód, valamint az allemezekre vonatkozó megszorítás, amely szerint meg kell egyezniük a méretüknek, illetve az érhez annyira bonyolult újabb allemezeket kapcsolni, hogy a Vinum jelenleg nem is képes rá. Ezeken kívü a Vinum még támaszt egy triviális igényt is: a csíkozott érben legalább két allemeznek lennie kell, mivel másképp nem tér el egy összefûzött értõl.
+
+A <<vinum-comparison>> foglalja össze az egyes erezések elõnyeit és hátrányait.
+
+[[vinum-comparison]]
+.Vinum erezések
+[cols="1,1,1,1,1", frame="none", options="header"]
+|===
+| Erezés típusa
+| Legkevesebb allemez
+| Bõvíthetõ
+| Megegyezõ méret
+| Alkalmazás
+
+|összefûzött
+|1
+|igen
+|nem
+|Sok adat tárolása, ahol a hangsúly a rugalmasságon és a mérsékelt teljesítményen van.
+
+|csíkozott
+|2
+|nem
+|igen
+|Nagy teljesítmény, nagy mennyiségû egyidejû hozzáférés mellett
+|===
+
+[[vinum-examples]]
+== Példák
+
+A Vinum a rendszerben ismert objektumokkal kapcsolatos információkat egy __konfigurációs adatbázis__ban tartja fenn. Kezdetben a felhasználó egy vagy több konfigurációs állomány segítségével hozza létre ezt az adatbázist a man:gvinum[8] segédprogrammal. A Vinum ezt a konfigurációs adatbázist bemásolja mindegyik irányítása alatt álló slice-ba (melyek a Vinum __eszköz__nek hív). Az adatbázis minden egyes állapotváltás folyamán frissül, így egy újraindítás után minden egyes Vinum-objektum állapota pontosan helyreállítódik.
+
+=== A konfigurációs állomány
+
+A konfigurációs állomány írja le az egyes objektumokat. Egy egyszerûbb kötet definíciója így nézhet ki:
+
+[.programlisting]
+....
+
+    drive a device /dev/da3h
+    volume myvol
+      plex org concat
+        sd length 512m drive a
+....
+
+Ez az állomány négy Vinum-objektumot definiál:
+
+* A _drive_ kezdetû sor adja meg a lemez partícióját (__meghajtó__ját) és a hardveren levõ elhelyezkedését. Az _a_ szimbolikus nevet kapta. A szimbolikus és a konkrét eszköznevek szétválasztásával lehetõvé válik, hogy a lemezek félreértések nélkül átkerülhessek egyik helyrõl a másikra.
+* A _volume_ kezdetû sor adja meg a kötetet. Itt az egyetlen szükséges jellemzõ a név, ami ebben az esetben a _myvol_.
+* A _plex_ kezdetû sor adja meg az eret. Itt az egyetlen szükséges paraméter a szervezési mód, ami ebben az esetben a _concat_ (összefûzött). Nevet nem kell megadnunk, mivel a rendszer automatikusan létrehoz egy nevet a kötet nevébõl a _.px_ utótag hozzáadásával, ahol az _x_ az ér száma lesz a köteten belül. Emiatt a most definiált ér neve _myvol.p0_ lesz.
+* Az _sd_ kezdetû sor adja meg az allemezt. Itt legalább meg kell adnunk a meghajtónak a nevét, ahol tárolni akarjuk, ill. a méretét. Ahogy már említettük az ereknél is, nevet nem kötelezõ megadnunk, mivel a rendszer magától rendel hozzá nevet, amit a hozzá tartozó ér nevébõl származtat, hozzáadja a _.sx_ utótagot, ahol az _x_ az allemez éren belüli sorszáma lesz. Ennek következtében a Vinum ennek az allemeznek a _myvol.p0.s0_ nevet adja.
+
+Miután a man:gvinum[8] feldolgozta ezt az állományt, az alábbi kimenetet fogja adni:
+
+[.programlisting]
+....
+
+      #  gvinum -> create config1
+      Configuration summary
+      Drives:         1 (4 configured)
+      Volumes:        1 (4 configured)
+      Plexes:         1 (8 configured)
+      Subdisks:       1 (16 configured)
+
+	D a                     State: up       Device /dev/da3h        Avail: 2061/2573 MB (80%)
+
+	V myvol                 State: up       Plexes:       1 Size:        512 MB
+
+	P myvol.p0            C State: up       Subdisks:     1 Size:        512 MB
+
+	S myvol.p0.s0           State: up       PO:        0  B Size:        512 MB
+....
+
+Ez a kimenet a man:gvinum[8] egyszerû listázási formátumát mutatja. Grafikusan a <<vinum-simple-vol>> mutatja be.
+
+[[vinum-simple-vol]]
+.Egyszerû Vinum-kötet
+image::vinum-simple-vol.png[]
+
+Ezen és az ezt követõ ábrán egy kötetet láthatunk, amely ereket tartalmaz, amelyek pedig allemezeket. Ebben az alapvetõ példában a kötet egyetlen eret tartalmaz, amiben pedig egyetlen allemez van.
+
+Az itt bemutatott kötetnek nincs semmilyen elõnye a hagyományos lemezpartícionáláshoz képest. Egyetlen eret tartalmaz, tehát nem is redundáns. Az ér egyetlen allemezt tartalmaz, tehát nem tér el a megszokott lemezpartíciók helyfoglalásától sem. A következõ szakaszokban sokkal érdekesebb konfigurációs módszereket is illusztrálunk.
+
+=== Megnövelt rugalmasság: tükrözés
+
+A kötetek rugalmassága tükrözéssel növelhetõ. Egy tükrözött kötet kiosztása során feltétlenül gondoskodnunk kell arról, hogy az egyes erekhez tartozó allemezek eltérõ meghajtókon találhatóak, így az esetleges meghibásodások nem károsítják mind a két eret. Az alábbi konfigurációban egy kötetet tükrözünk:
+
+[.programlisting]
+....
+
+	drive b device /dev/da4h
+	volume mirror
+      plex org concat
+        sd length 512m drive a
+	  plex org concat
+	    sd length 512m drive b
+....
+
+Ebben a példában már nem kellett újra megadnunk az _a_ meghajtót, mivel a Vinum figyelemmel kíséri az összes objektumot a saját konfigurációs adatbázisában. A definíció feldolgozása után a konfiguráció így fog kinézni:
+
+[.programlisting]
+....
+
+	Drives:         2 (4 configured)
+	Volumes:        2 (4 configured)
+	Plexes:         3 (8 configured)
+	Subdisks:       3 (16 configured)
+
+	D a                     State: up       Device /dev/da3h        Avail: 1549/2573 MB (60%)
+	D b                     State: up       Device /dev/da4h        Avail: 2061/2573 MB (80%)
+
+    V myvol                 State: up       Plexes:       1 Size:        512 MB
+    V mirror                State: up       Plexes:       2 Size:        512 MB
+
+    P myvol.p0            C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p0           C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p1           C State: initializing     Subdisks:     1 Size:        512 MB
+
+    S myvol.p0.s0           State: up       PO:        0  B Size:        512 MB
+	S mirror.p0.s0          State: up       PO:        0  B Size:        512 MB
+	S mirror.p1.s0          State: empty    PO:        0  B Size:        512 MB
+....
+
+A <<vinum-mirrored-vol>> ugyanezt a szerkezetet grafikusan is.
+
+[[vinum-mirrored-vol]]
+.Tükrözött Vinum-kötet
+image::vinum-mirrored-vol.png[]
+
+Ebben a példában minden ér tartalmazza a teljes 512 MB-os területet. Ahogy a korábbi példa esetén, itt is mindegyik ér csak egyetlen allemezt tartalmaz.
+
+=== A teljesítmény javítása
+
+Az elõbbi példában szereplõ tükrözött kötet egy tükrözetlen kötetnél már jobban ellenáll a hibáknak, azonban a teljesítménye is kisebb. A köteten minden egyes írás mind a két meghajtóra érvényesül, ezáltal a lemezek teljes sávszélességét nagyobb arányban használja. A teljesítményre vonatkozó megfontolásaink egy másik megközelítést kívánnak meg: a tükrözés helyett inkább csíkozzuk szét az adatot a lehetõ legtöbb lemezen. Az alábbi konfiguráció egy olyan kötetet mutat be, ahol egy eret négy lemezmeghajtóan keresztül csíkozunk:
+
+[.programlisting]
+....
+
+	drive c device /dev/da5h
+	drive d device /dev/da6h
+	volume stripe
+	plex org striped 512k
+	  sd length 128m drive a
+	  sd length 128m drive b
+	  sd length 128m drive c
+	  sd length 128m drive d
+....
+
+Mint ahogy azt már korábban is említettük, nem szükséges még egyszer megadni azokat a meghajtókat, amiket a Vinum már ismer. A definíció feldolgozása után a konfigurációnk nagyjából így néz ki:
+
+[.programlisting]
+....
+
+	Drives:         4 (4 configured)
+	Volumes:        3 (4 configured)
+	Plexes:         4 (8 configured)
+	Subdisks:       7 (16 configured)
+
+    D a                     State: up       Device /dev/da3h        Avail: 1421/2573 MB (55%)
+    D b                     State: up       Device /dev/da4h        Avail: 1933/2573 MB (75%)
+    D c                     State: up       Device /dev/da5h        Avail: 2445/2573 MB (95%)
+    D d                     State: up       Device /dev/da6h        Avail: 2445/2573 MB (95%)
+
+    V myvol                 State: up       Plexes:       1 Size:        512 MB
+    V mirror                State: up       Plexes:       2 Size:        512 MB
+    V striped               State: up       Plexes:       1 Size:        512 MB
+
+    P myvol.p0            C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p0           C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p1           C State: initializing     Subdisks:     1 Size:        512 MB
+    P striped.p1            State: up       Subdisks:     1 Size:        512 MB
+
+    S myvol.p0.s0           State: up       PO:        0  B Size:        512 MB
+    S mirror.p0.s0          State: up       PO:        0  B Size:        512 MB
+    S mirror.p1.s0          State: empty    PO:        0  B Size:        512 MB
+    S striped.p0.s0         State: up       PO:        0  B Size:        128 MB
+    S striped.p0.s1         State: up       PO:      512 kB Size:        128 MB
+    S striped.p0.s2         State: up       PO:     1024 kB Size:        128 MB
+    S striped.p0.s3         State: up       PO:     1536 kB Size:        128 MB
+....
+
+[[vinum-striped-vol]]
+.Csíkozott Vinum-kötet
+image::vinum-striped-vol.png[]
+
+Ez a kötet a <<vinum-striped-vol>>ban látható. A csíkok sötétedése jelzi a helyüket az ér területében: a világosabbak elöl, a sötétebbek hátul szerepelnek.
+
+=== Rugalmasság és teljesítmény
+
+[[vinum-resilience]]Megfelelõ hardver birtokában lehet olyan köteteket is építeni, amelyek mind megnövelt rugalmasságot, mind pedig megnövelt teljesítményt mutatnak a szabványos UNIX(R)-os partíciókhoz képest. Ennek a konfigurációs állománya így nézne ki:
+
+[.programlisting]
+....
+
+	volume raid10
+      plex org striped 512k
+        sd length 102480k drive a
+        sd length 102480k drive b
+        sd length 102480k drive c
+        sd length 102480k drive d
+        sd length 102480k drive e
+      plex org striped 512k
+        sd length 102480k drive c
+        sd length 102480k drive d
+        sd length 102480k drive e
+        sd length 102480k drive a
+        sd length 102480k drive b
+....
+
+A második ér allemezei el vannak tolva az elsõ ér allemezeitõl két meghajtónyival. Ez segít megelõzni, hogy az írási mûveletek ne ugyanarra az allemezre vonatkozznak, még akkor is, ha az adatátvitel két meghajtón is keresztülível.
+
+A <<vinum-raid10-vol>> illusztrálja ennek a kötetnek a szerkezetét.
+
+[[vinum-raid10-vol]]
+.Tükrözött, csíkozott Vinum-kötet
+image::vinum-raid10-vol.png[]
+
+[[vinum-object-naming]]
+== Az objektumok elnevezése
+
+Korábban már megismerhettük, hogy a Vinum alapértelmezett neveket társít az erekhez és az allemezekhez, habár ezek a nevek felülbírálhatóak. Ez viszont egyáltalán nem ajánlott, mivel már a VERITAS kötetkezelõ, ahol tetszõleges neveket rendelhetünk az objektumokhoz, használata során kiderült, hogy akkora mértékû rugalmasságot nem kínál fel, mint amennyi zavart képes okozni.
+
+A nevek tartalmazhatnak bármilyen nem üres karaktert, azonban érdemes inkább csak betûket, számjegyeket és az aláhúzást használni. A kötetek, erek és allemezek nevei akár 64 karakteresek is lehetnek, a meghajtók nevei pedig 32 karakteresek.
+
+A Vinum objektumai a [.filename]#/dev/gvinum# könyvtáron belüli hierarchiában helyezkednek el eszközleírókként. Az imént említett példakonfiguráció hatására a következõ eszközleírók jönnek létre:
+
+[NOTE]
+====
+Ez a rész csak a Vinum korábbi, elavult implementációjára vonatkozik.
+====
+
+A [.filename]#/dev/vinum/control# és [.filename]#/dev/vinum/controld# nevû vezérlõeszközök, melyeket a man:gvinum[8] és a Vinum démon használ.
+* Mindegyik kötethez egy eszközleíró tartozik. Ezek a Vinum számára a központi eszközök, ezért az elõbbi konfiguráció révén megjelennek a [.filename]#/dev/gvinum/myvol#, [.filename]#/dev/gvinum/mirror#, [.filename]#/dev/gvinum/striped#, [.filename]#/dev/gvinum/raid5# és [.filename]#/dev/gvinum/raid10# eszközök.
+
+[NOTE]
+====
+Ez a rész csak a Vinum korábbi, elavult implementációjára vonatkozik.
+====
+
+Az egyes meghajtókhoz tartozó leírók a [.filename]#/dev/vinum/drive# könyvtárban találhatóak. Ezek valójában szimbolikus linkek a megfelelõ lemezes eszközökre.
+* Minden kötethez közvetlen leírók tartoznak [.filename]#/dev/gvinum# könyvtárban.
+* Az egyes erek és allemezek eszközleírói a [.filename]#/dev/gvinum/plex# és [.filename]#/dev/gvinum/sd# könyvtárakban jelennek meg.
+
+Például tekintsük most az alábbi konfigurációs állományt:
+
+[.programlisting]
+....
+
+	drive drive1 device /dev/sd1h
+	drive drive2 device /dev/sd2h
+	drive drive3 device /dev/sd3h
+	drive drive4 device /dev/sd4h
+    volume s64 setupstate
+      plex org striped 64k
+        sd length 100m drive drive1
+        sd length 100m drive drive2
+        sd length 100m drive drive3
+        sd length 100m drive drive4
+....
+
+Az állomány feldolgozása után az eszközleírókat a man:gvinum[8] az alábbi módon szervezi a [.filename]#/dev/gvinum# könyvtárban:
+
+[.programlisting]
+....
+
+	drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 plex
+	crwxr-xr--  1 root  wheel   91,   2 Apr 13 16:46 s64
+	drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 sd
+
+    /dev/vinum/plex:
+    total 0
+    crwxr-xr--  1 root  wheel   25, 0x10000002 Apr 13 16:46 s64.p0
+
+    /dev/vinum/sd:
+    total 0
+    crwxr-xr--  1 root  wheel   91, 0x20000002 Apr 13 16:46 s64.p0.s0
+    crwxr-xr--  1 root  wheel   91, 0x20100002 Apr 13 16:46 s64.p0.s1
+    crwxr-xr--  1 root  wheel   91, 0x20200002 Apr 13 16:46 s64.p0.s2
+    crwxr-xr--  1 root  wheel   91, 0x20300002 Apr 13 16:46 s64.p0.s3
+....
+
+Jóllehet, az ereket és allemezeket nem ajánlott külön-külön elnevezni, a Vinum meghajtóknak nevet kell adni. Ezzel megoldhatóvá válik, hogy az egyes meghajtók automatikusan felismerhetõek legyenek abban az esetben is, amikor fizikailag áthelyezzük ezeket. A meghajtók nevei legfeljebb 32 karakteresek lehetnek.
+
+=== Állományrendszerek létrehozása
+
+A kötetek egyetlen kivétellel teljesen azonosak a lemezekkel a rendszer számára. Ugyanis a UNIX(R)-os meghajtóktól eltérõen a Vinum nem particionálja a köteteket, és ezért nem is tárolnak partíciós táblát. Ez megkövetelte néhány lemezkezelõ segédprogram, leginkább a man:newfs[8] módosítását, mivel azok korábban megpróbálták a Vinum-kötetek nevének utolsó betûit egy partíció azonosítójaként értelmezni. Például egy lemezes meghajtó neve [.filename]#/dev/ad0a# vagy [.filename]#/dev/da2h# alakú. Az elõbbi az elsõ (0) IDE lemez elsõ ([.filename]#a#) partícióját, míg az utóbbi a harmadik (2) SCSI lemez nyolcadik ([.filename]#h#) partícióját jelöli. Ezzel szemben azonban a Vinum-kötetek neve [.filename]#/dev/gvinum/concat# alakú lesz, ahol a név semmilyen kapcsolatban nem áll a partíció nevével.
+
+Hétköznapi esetben a man:newfs[8] megpróbálja a lemez nevét értelmezni, és panaszkodik, ha nem sikerül. Például:
+
+[source,bash]
+....
+# newfs /dev/gvinum/concat
+newfs: /dev/gvinum/concat: can't figure out file system partition
+....
+
+A köteten a man:newfs[8] parancs kiadásával tudunk állományrendszert létrehozni:
+
+[source,bash]
+....
+# newfs /dev/gvinum/concat
+....
+
+[NOTE]
+====
+A FreeBSD 5.0 elõtt verzióiban a man:newfs[8] parancsnak a régi elnevezési séma használata mellett még át kell adni egy -v kapcsolót is:
+
+[source,bash]
+....
+# newfs -v /dev/vinum/concat
+....
+
+====
+
+[[vinum-config]]
+== A Vinum beállítása
+
+A [.filename]#GENERIC# rendszermag nem tartalmazza a Vinumot. Habár készíteni lehet olyan rendszermagot, amelyik támogatja a Vinumot, mégsem ajánlott. A Vinumot a szabványos módon modulként (kld) indíthatjuk el. Még a man:kldload[8] használatára sincs szükség, mivel a man:gvinum[8] indulása során ellenõrzi a modul jelenlétét és betölti, ha még nem lenne jelen.
+
+=== Indítás
+
+A Vinum alapvetõen ugyanúgy tárolja a konfigurációkat a slice-okban, mint maguk a konfigurációs állományok. A konfigurációs adatbázis beolvasása során a Vinum felismeri azokat a kulcsszavakat, amelyeknek nem szabad elõfordulniuk az állományokban. Például a lemezek beállítása tartalmazhatja a következõ szöveget:
+
+[.programlisting]
+....
+volume myvol state up
+volume bigraid state down
+plex name myvol.p0 state up org concat vol myvol
+plex name myvol.p1 state up org concat vol myvol
+plex name myvol.p2 state init org striped 512b vol myvol
+plex name bigraid.p0 state initializing org raid5 512b vol bigraid
+sd name myvol.p0.s0 drive a plex myvol.p0 state up len 1048576b driveoffset 265b plexoffset 0b
+sd name myvol.p0.s1 drive b plex myvol.p0 state up len 1048576b driveoffset 265b plexoffset 1048576b
+sd name myvol.p1.s0 drive c plex myvol.p1 state up len 1048576b driveoffset 265b plexoffset 0b
+sd name myvol.p1.s1 drive d plex myvol.p1 state up len 1048576b driveoffset 265b plexoffset 1048576b
+sd name myvol.p2.s0 drive a plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 0b
+sd name myvol.p2.s1 drive b plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 524288b
+sd name myvol.p2.s2 drive c plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 1048576b
+sd name myvol.p2.s3 drive d plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 1572864b
+sd name bigraid.p0.s0 drive a plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 0b
+sd name bigraid.p0.s1 drive b plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 4194304b
+sd name bigraid.p0.s2 drive c plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 8388608b
+sd name bigraid.p0.s3 drive d plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 12582912b
+sd name bigraid.p0.s4 drive e plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 16777216b
+....
+
+Az elõbbiektõl nyilvánvalóan eltér abban, hogy itt már megjelennek a konkrét pozíciókra és elnevezésekre vonatkozó információk (melyeket a felhasználó is megadhat, azonban ezt nem tanácsoljuk), valamint az állapotok (ezeket nem láthatja a felhasználó). A Vinum a konfigurációban nem tárolja a meghajtókat, helyette a beállított lemezes meghajtók partícióin fog Vinum-címkéket keresni. Ennek köszönhetõen a Vinum még akkor is képes pontosan megtalálni a meghajtókat, amikor megváltoznak a hozzá tartozó UNIX(R)-os meghajtók azonosítói.
+
+[[vinum-rc-startup]]
+==== Automatikus indítás
+
+[NOTE]
+====
+Ez a rész csak a Vinum elavult implementációjára vonatkozik. A man:loader.conf[5] közvetítésével a _Gvinum_ mindig automatikusan elindul a hozzá tartozó modul betöltésével együtt. Ha a rendszerindításkor be akarjuk tölteni a _Gvinum_ modult, akkor a [.filename]#/boot/loader.conf# állományba vegyük fel a `geom_vinum_load="YES"` sort.
+====
+
+Az alábbi sort mindenképpen hozzá kell adnunk az [.filename]#/etc/rc.conf# állományhoz, hogy a Vinum a rendszerindítás során automatikusan elinduljon:
+
+[.programlisting]
+....
+start_vinum="YES"		# állítsuk YES-re az indításhoz
+....
+
+Hozzuk létre és írjuk bele, ha nem lenne [.filename]#/etc/rc.conf# nevû állományunk. Ennek hatására a rendszer az indulás során betölti a Vinum kld modult, és a konfigurációban szereplõ objektumokat elindítja. Ez még az állományrendszerek csatlakoztatása elõtt történik meg, aminek révén a Vinum-köteteken található állományrendszereket a rendszer automatikusan át tudja vizsgálni az man:fsck[8] segítségével, majd csatlakoztatja ezeket.
+
+Amikor a Vinumot a `vinum start` paranccsal indítjuk el, a Vinum beolvassa a konfigurációs adatbázist a Vinum-meghajtók egyikérõl. Normál körülmények között mindegyik meghajtón megtalálható a konfigurációs adatbázis egy példánya, ezért szinte teljesen mindegy, melyik meghajtót is olvassa. Egy rendszer-összeomlás után azonban a Vinumnak meg kell tudnia állapítania, melyik meghajtón található meg az adatbázis legfrissebb példánya, és ezt kell beolvasnia. Ezután a lemaradt meghajtókon található adatbázispéldányokat szinkronizálja ehhez a változathoz.
+
+[[vinum-root]]
+== Rendszerindítás Vinum-kötetrõl
+
+Olyan számítógépeknél, ahol a teljesen tükrözött Vinum-alapú állományrendszereket használunk, kívánatos lehet magát a rendszerindításhoz használt állományrendszert is tükrözni. Egy ilyen konfiguráció összeállítása már messze nem annyira egyszerû, mint egy tetszõleges állományrendszer esetén, mivel:
+
+* Az indításhoz használt állományrendszernek már a folyamat nagyon korai szakaszában rendelkezésre kell állnia, ezért a Vinumnak már itt elérhetõnek kell lennie.
+* A rendszerindító állományrendszert tartalmazó köteten még ott kell lennie a rendszerindító kódnak és a rendszermagnak is, melyeket a rendszer saját eszközein (például ilyen a BIOS a PC-knél) keresztül kell tudnunk beolvasni, amiket viszont nem tudunk felkészíteni a Vinumra.
+
+A soronkövetkezõ szakaszokban "rendszerindító kötetként" (root volume) fogunk általánosságban véve hivatkozni a rendszerindításhoz használt állományrendszert tartalmazó Vinum-kötetre. Ennek megfelelõen valószínûleg jó ötlet a `"root"` névvel azonosítani ezt a kötetet, habár technikai szempontból ezt semmi nem követeli meg. Az itt felsorakozó példákban azonban ezt a nevet fogjuk használni.
+
+=== A Vinum kellõen korai indítása
+
+Ennek kiváltásához számos lépést kell megtennünk:
+
+* A rendszermagnak már el kell érnie a Vinumot a rendszerindítás során. Emiatt a <<vinum-rc-startup>>ban leírt automatikus indítási módszer nem alkalmazható erre a feladatra, és a `start_vinum` paramétert _nem_ is szabad használni a most ismertetendõ konfigurációban. A Vinumot statikusan bele is építhetjük a rendszermagba és így állandóan elérhetõ, de ez általában nem kielégítõ megoldás. Megoldhatjuk úgy is, ha a [.filename]#/boot/loader#-re (crossref:boot[boot-loader,A harmadik fokozat (/boot/loader)]) bízzuk a vinum modul betöltését, még a rendszermag elõtt. Ezt az alábbi sorral válthatjuk ki a [.filename]#/boot/loader.conf# állományban:
++
+[.programlisting]
+....
+geom_vinum_load="YES"
+....
+
+[NOTE]
+====
+A _Gvinum_ használata során az összes többi beállítás automatikusan végrehajtódik, amint a modul betöltõdik, ezért ilyenkor csak a fentebb leírt eljárásra van szükség. Az itt felsoroltak csak az elavult Vinum implementációra vonatkoznak, csupán a régebbi típusú rendszerek kedvéért említjük meg.
+====
+
+A Vinumot nagyon korán életre kell keltenünk, hiszen a rendszerindításhoz használt állományrendszert tartalmazó kötetet kell élesítenünk. Alapértelmezés szerint a Vinum rendszerszinten futó része nem keres addig semmilyen Vinum-kötetinformációval rendelkezõ meghajtót, amíg a rendszergazda (vagy valamelyik rendszerindító szkript) ki nem adja a `vinum start` parancsot.
+
+[NOTE]
+====
+A most következõ bekezdések mutatják be a szükséges lépéseket.
+====
+
+Ha hozzáadjuk a következõ sort a [.filename]#/boot/loader.conf# állományhoz, akkor azzal utasíthatjuk a Vinumot, hogy a rendszermag indítása során vizsgálja át az összes meghajtót:
+
+[.programlisting]
+....
+vinum.autostart="YES"
+....
+
+Nem szükséges megmondani a rendszermagnak, merre keresse a rendszerindításhoz használt állományrendszert. A [.filename]#/boot/loader# megkeresi a hozzá tartozó eszközt a [.filename]#/etc/fstab# állományban és átadja ezt az információt a rendszermagnak. Amikor a csatlakoztatására kerül sor, a rendszermag az eszköz nevébõl meg tudja állapítani, melyik eszközmeghajtót kérje meg a belsõ (fõ- és al)eszközazonosító leképzéséhez.
+
+=== A Vinum-alapú rendszerindító kötet elérése a rendszertöltés során
+
+Mivel a jelenlegi FreeBSD rendszertöltõ csak 7,5 KB méretû és egyébként is csak az UFS állományrendszerrõl tud állományokat beolvasni (mint például a [.filename]##/boot/loader##t), teljesen lehetetlen még a Vinum belsõ szerkezetére is megtanítani, tehát a Vinum-konfigurációk értelmezésére és magának a rendszerindító kötet elemeinek kielemzésére. Ezért be kell vetnünk néhány trükköt ahhoz, hogy a rendszerindító kód számára a rendszerindításhoz használható szabványos `"a"` partíció képzetét keltsük.
+
+Mindez csak akkor válik elérhetõvé, ha az alábbi követelményeket teljesíti a rendszerindító kötet:
+
+* Nem lehet csíkozott vagy RAID-5 típusú.
+* Erenként nem tartalmazhat egynél több összefûzött allemezt.
+
+Láthatjuk, hogy hasznos és lehetséges is több eret használni, melyek mindegyike a rendszerindító állományrendszer egy-egy másolatát tartalmazza. Az indulás folyamán azonban ezen példányok közül csak az egyiken fogja keresni a rendszer a rendszertöltõt és a többi állományt egészen addig, amíg a rendszermag magát az állományrendszert nem csatlakoztatja. A látszat kedvéért az ereken belül található allemezek mindegyikének lennie kell egy saját `"a"` partíciójának, amivel lényegében alkalmassá válik a rendszerindításra. Ezeknek a hamis `"a"` partícióknak nem kell feltétlenül a többiekkel megegyezõ pozíciókon elhelyezkedniük, azonban a tévedések elkerülése érdekében valószínûleg hasznos olyan Vinum-köteteket létrehozni, ahol a keletkezõ tükrözött eszközök szimmetrikusak.
+
+A rendszerindító kötet egyes eszközökön található `"a"` partícióit az alábbiak segítségével állíthatjuk be:
+
+[.procedure]
+====
+. A rendszerindító kötet részeként megjelenõ eszközön található allemez helyét (az eszköz elejétõl számított eltolását) és méretét ellenõrizni kell az alábbi parancs segítségével:
++
+[source,bash]
+....
+# gvinum l -rv root
+....
++ 
+Ne felejtsük el, hogy a Vinum az eltolásokat és méreteket byte-okban méri. Ezekbõl tehát úgy nyerünk a `bsdlabel` használatához szükséges blokkszámokat, ha ezeket elosztjuk 512-vel.
+. Futassuk le a
++
+[source,bash]
+....
+# bsdlabel -e eszköznév
+....
++ 
+parancsot minden olyan eszközön, amelyik részt vesz a rendszerindító kötet kialakításában. Az _eszköznév_ legyen a slice (fdisk)-táblát nem tartalmazó lemezek esetén a lemez neve (mint például [.filename]#da0#), vagy ellenkezõ esetben a slice neve (például [.filename]#ad0s1#).
++ 
+Ha már lenne egy `"a"` partíció az eszközön (valószínûleg egy Vinum elõtti rendszeríndító állományrendszert tartalmaz), nevezzük át valami másra és így továbbra is elérhetõ marad (biztos, ami biztos), viszont többé már nem lesz a rendszer számára alapértelmezett rendszerindító eszköz. Az aktív partíciók (mint például az éppen csatlakoztatott rendszerindító állományrendszer) nem nevezhetõek át, ezért ezt a lépést csak akkor tudjuk megtenni, ha a rendszerünket egy "Fixit" (Helyreállító) eszközrõl indítjuk, vagy egy olyan kétlépéses folyamat során, ahol (tükrözés esetén) a lemezrõl még nem indítottuk el a rendszert.
++ 
+Ezt követõen az eszközön található Vinum-partíciót (amennyiben létezik) az eszközön levõ allemez eltolásához kell helyezni. Ennek eredménye lesz az új `"a"` partíció `"offset"` értéke. A partíció `"size"` (méret) értéke szó szerint átemelhetõ a fenti számításból. Az `"fstype"` legyen `4.2BSD`. Az `"fsize"`, `"bsize"` és `"cpg"` értékeket a jelenlegi állományrendszerhez mérten ajánlott megválasztani, azonban itt most egyáltalán nem bírnak jelentõséggel.
++ 
+Ezzel a módszerrel létesítettünk egy olyan új `"a"` partíciót, amely lefedi az eszközön található Vinum-partíciót. Jegyezzük meg, hogy a `bsdlabel` kizárolag csak abban az esetben fogja megengedi ezt az átfedést, ha a Vinum-partíciónk `"vinum"` típussal van megjelölve.
+. Készen is vagyunk! Most már van minden eszközön egy hamisított `"a"` partíciónk, amelyeken megtalálható a rendszerindító kötet egy-egy másolata. Határozottan ajánlott még egyszer ellenõrizni a munkánkat az alábbi parancs kiadásával:
++
+[source,bash]
+....
+# fsck -n /dev/eszköznéva
+....
+====
+
+Figyeljünk arra, hogy az összes vezérlési információt tartalmazó állománynak a Vinum-köteten található rendszerindító állományrendszerre kell vonatkoznia, ami viszont egy új Vinum rendszerindító kötet beállítása után nem feltétlenül egyezik meg a jelenlegi aktív állományrendszerrel. Különösen az [.filename]#/etc/fstab# és [.filename]#/boot/loader.conf# állományokat kell ilyen szempontból ellenõriznünk.
+
+A következõ indítás során a rendszertöltõ már az új Vinum-alapú rendszerindító állományrendszerrõl fogja összeszedni a mûködéséhez szükséges adatokat és ezeknek megfelelõen cselekedni. Végül, a rendszermag inicializálója után, mikor az összes eszközt felismerte, egy ehhez hasonló feltûnõ üzenet fogja jelezni a beállítás sikerességét:
+
+[source,bash]
+....
+Mounting root from ufs:/dev/gvinum/root
+....
+
+=== Egy Vinum-alapú rendszerindító állományrendszer példája
+
+Miután sikeresen konfiguráltuk a rendszerindító Vinum-kötetet, a `gvinum l -rv root` kimenete nagyjából így fog kinézni:
+
+[source,bash]
+....
+...
+Subdisk root.p0.s0:
+		Size:        125829120 bytes (120 MB)
+		State: up
+		Plex root.p0 at offset 0 (0  B)
+		Drive disk0 (/dev/da0h) at offset 135680 (132 kB)
+
+Subdisk root.p1.s0:
+		Size:        125829120 bytes (120 MB)
+		State: up
+		Plex root.p1 at offset 0 (0  B)
+		Drive disk1 (/dev/da1h) at offset 135680 (132 kB)
+....
+
+Itt (a [.filename]#/dev/da0h# partícióhoz képesti) `135680`-as eltoltás értékekre kell figyelnünk. Ez képzõdik le a `bsdlabel` fogalmi rendszerében aztán 265 darab 512 byte-os blokkra a lemezen. Ehhez hasonlóan a rendszerindító kötet mérete 245 760 darab 512 byte-os blokk lesz. A rendszerindító kötet másodpéldányát tartalmazó [.filename]#/dev/da1h# ugyanilyen beállításokkal rendelkezik.
+
+Az említett eszközök valahogy így jelennek meg a `bsdlabel` szerint:
+
+[source,bash]
+....
+...
+8 partitions:
+#        size   offset    fstype   [fsize bsize bps/cpg]
+  a:   245760      281    4.2BSD     2048 16384     0   # (Cyl.    0*- 15*)
+  c: 71771688        0    unused        0     0         # (Cyl.    0 - 4467*)
+  h: 71771672       16     vinum                        # (Cyl.    0*- 4467*)
+....
+
+Megfigyelhetõ, hogy a hamis `"a"` partíció `"size"` paraméter értéke megegyezik a fentebb becsült értékkel, miközben az `"offset"` paraméter értéke egyenlõ lesz a `"h"` Vinum-partíción belüli eltolás és az eszközön (vagy slice-on) belüli eltolás összegével. Ez jellemzõen egy olyan beállítás, amivel szükségszerûen el tudjuk kerülni a <<vinum-root-panic>>ban leírt hibajelenséget. Látható továbbá az is, hogy az egész `"a"` partíció végig az eszköz összes Vinum adatát tartalmazó `"h"` partíciójában foglal helyet.
+
+A példával kapcsolatban megjegyezzük, hogy itt az egész eszközt a Vinum felügyelete alá bocsátottuk, tehát nem marad hátra semmilyen Vinum elõtt használt rendszerindító partíció, hiszen ez egy olyan lemez, amelyet eleve egy Vinum-konfigurációba szántunk.
+
+=== Hibakeresés
+
+Fontos tudunk, hogy probléma esetén hogyan tudjuk helyreállítani a rendszerünket. A következõ felsorolásban bemutatunk néhány ismert buktatót és a megoldásaikat.
+
+==== A rendszertöltõ elindul, de a rendszer viszont már nem
+
+Ha valamilyen okból a rendszer nem indulna el, a 10 másodpercig tartó visszaszámlálás során a rendszertöltõt még meg tudjuk állítani a kbd:[szóköz] lenyomásával. Ekkor a betöltõ által használt változók (mint például a `vinum.autostart`) a `show` segítségével megvizsgálhatóak és a `set` vagy `unset` parancsokkal módosíthatóak.
+
+Ha mindössze az volt a probléma, hogy a Vinum modulja nem szerepelt az automatikusan betöltendõ modulok között, a `load geom_vinum` parancs kiadásával betölthetjük azt.
+
+Miután végeztünk, a rendszerindítás folyamata a `boot -as` paranccsal folytatható. A `-as` kapcsolók jelzik a rendszermag számára, hogy kérdezzen rá a rendszerindító állományrendszerre a csatlakoztatása elõtt (`-a`) és csak egyfelhasználós módban indítsa a rendszert (`-s`), ahol a rendszerindító állományrendszer írásvédett. Így, ha csak egyetlen eret csatlakoztattunk egy többeres kötetbõl, az erek még véletlenül sem tudnak egymásnak ellentmondó állapotba kerülni.
+
+Amikor megjelenik a csatlakoztatandó rendszerindító állományrendszert bekérése, bármelyik érvényes rendszerindításra alkalmas állományrendszer megadható. Amennyiben az [.filename]#/etc/fstab# állományt jól beállítottuk, az alapértelmezett érték egy `ufs:/dev/gvinum/root` értékhez hasonló alakú lesz. Itt általában egy `ufs:da0d` formátumú értéket láthatunk, amely feltehetõen egy Vinum használata elõtti rendszerindító állományrendszert tartalmazó partíció. Legyünk óvatosak, ha itt egy olyan `"a"` partíciót adunk meg, amely valójában egy rendszerindító Vinum-eszköz allemezeire hivatkozik, mivel egy tükrözött konfiguráció esetén csak az eszköz egyik részét fogjuk csatlakoztatni. Ha a késõbbiekben ezt az állományrendszert már nem csak írásvédett módban csatlakoztatjuk, mindenképpen el kell távolítanunk a rendszerindító Vinum-kötetbõl a többi eret, mivel máskülönben nagy valószínûséggel eltérõ adatokat fognak tartalmazni.
+
+==== Csak az elsõdleges rendszertöltõ indul el
+
+Amikor az elsõdleges rendszertöltõ még elindul, viszont a [.filename]#/boot/loader# már nem tud betöltõdni (ezt rendszerindítás megkezdése után bal oldalt rögtön megjelenõ forgó vonalból vehetjük észre), a kbd:[szóköz] lenyomásával itt még tehetünk egy kísérletet a betöltés megszakítására. Ennek hatására a rendszertöltés megáll a második fázisban, lásd crossref:boot[boot-boot1,Az első fokozat (/boot/boot1) és a második fokozat (/boot/boot2)]. Itt a rendszerindításhoz megpróbálhatunk megadni egy másik partíciót, például egy olyat, amely a korábbi rendszerindító állományrendszert tartalmazza és amelyet az elõbb átneveztünk az `"a"`-ról.
+
+[[vinum-root-panic]]
+==== Semmi sem indul, a rendszertöltõ hibákat ír
+
+Ez a helyzet akkor állhat elõ, ha a Vinum telepítése során tönkretettük volna a rendszertöltõt. Sajnos a Vinum minden esetben 4 KB helyet hagy szabadon a partíció elején, a saját fejléc információjának rögzítése elõtt. Az ide kerülõ elsõ és második fázisú rendszertöltõk, illetve a bsdlabel adatai azonban jelenleg 8 KB helyet kívánnak meg. Így ha a Vinum-partíció egy rendszerindításra szánt slice vagy lemez 0. eltolásánál kezdõdik, a Vinum beállításai felül fogják írni a rendszertöltõt.
+
+A rendszertöltõ is ugyanígy felülírja a Vinum fejlécét és akkor a Vinum nem találja a lemezeit, ha a fenti problémát orvosolva, például egy "Fixit" (Helyreállító) lemez segítségével, újratelepítjük a rendszertöltõt a crossref:boot[boot-boot1,Az első fokozat (/boot/boot1) és a második fokozat (/boot/boot2)]ban bemutatott `bsdlabel -B` parancs segítségével. Noha a Vinum egyetlen konkrét konfigurációs beállítása vagy a kötetekben tárolt adat sem sérül meg és vissza tudjuk állítani az összes elveszett információt ugyannak a Vinum-konfigurációnak az újbóli megadásával, a helyzetet magát nehéz megoldani. A Vinum-fejléc és a rendszertöltõ ütközésének megszüntetéséhez ugyanis legalább 4 KB-tal arrébb kell mozgatnunk az egész Vinum-partíciót.

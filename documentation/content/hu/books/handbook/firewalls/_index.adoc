@@ -1,0 +1,1985 @@
+---
+title: 30. Fejezet - Tűzfalak
+part: IV. Rész Hálózati kommunikáció
+prev: books/handbook/network-servers
+next: books/handbook/advanced-networking
+---
+
+[[firewalls]]
+= Tűzfalak
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 30
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/firewalls/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/firewalls/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/firewalls/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[firewalls-intro]]
+== Bevezetés
+
+A tûzfalakkal a rendszerünkön keresztülfolyó bejövõ és kimenõ forgalmat tudjuk szûrni. A tûzfalak egy vagy több "szabályrendszer" alapján vizsgálják az éppen érkezõ vagy távozó hálózati csomagokat, és vagy továbbengedik ezeket vagy megállítják. A tûzfalak szabályai a csomagok egy vagy több jellemzõjét veszik szemügyre, amelyek lehetnek például a protokoll típusa, a forrás vagy cél hálózati címe, esetleg a forrás- vagy a célport.
+
+A tûzfalak jelentõs mértékben képesek gyarapítani egy gép vagy egy hálózat védelmét. Leginkább a következõkre tudjuk felhasználni:
+
+* A belsõ hálózatunkban futó alkalmazások, szolgáltatások, gépek megvédésére és elszigetelésére az internetrõl érkezõ nem kívánt forgalom ellen
+* A belsõ hálózatban levõ gépek elérését tudjuk korlátozni vagy letiltani az interneten elérhetõ szolgáltatások felé
+* A hálózati címfordítás (Network Address Translation, NAT) beállításához, ahol a belsõ hálózatunk privát IP-címeket használnak és egy közös kapcsolaton keresztül érik el az internetet (egyetlen IP-címmel, vagy pedig automatikusan kiosztott publikus címekkel).
+
+A fejezet elolvasása során megismerjük:
+
+* hogyan adjuk meg helyesen a csomagok szûrését leíró szabályokat;
+* a FreeBSD-be épített tûzfalak közti különbségeket;
+* hogyan állítsuk be és használjuk az OpenBSD PF tûzfalát;
+* hogyan állítsuk be és használjuk az IPFILTER tûzfalat;
+* hogyan állítsuk be és használjuk az IPFW tûzfalat.
+
+A fejezet elolvasása elõtt ajánlott:
+
+* a FreeBSD-hez és az internethez kötõdõ alapvetõ fogalmak ismerete.
+
+[[firewalls-concepts]]
+== Röviden a tûzfalakról
+
+A tûzfalak szabályrendszereit alapvetõen kétféleképpen tudjuk összeállítani: "inkluzív", vagyis megengedõ, illetve "exkluzív" vagyis kizáró módon. Az exkluzív tûzfalak minden forgalmat átengednek, amirõl nem rendelkeznek a tûzfal szabályai. Az inkluzív tûzfalak ennek pontosan az ellenkezõjét teszik. Csak azt a forgalmat engedik át, amirõl van szabály és minden mást blokkolnak.
+
+Az inkluzív tûzfalak alkalmazásával sokkal jobban kezünkbentudjuk tartani a hálózatunk kimenõ forgalmát, ezért leginkább az internetes szolgáltatásokat futtató rendszerek esetében bizonyulhat jobb választásnak. Emellett az internetrõl a hálózatunk felé irányuló forgalmat is képes szabályozni. Ekkor az egyetlen szabályra sem illeszkedõ csomagokat egyszerûen eldobjuk és naplózzuk. Az inkluzív tûzfalak általában biztonságosabbak az exkluzív típusú társaiknál, mivel esetükben jelentõs mértékben visszaszorul a nem kívánatos átfolyó forgalom.
+
+[NOTE]
+====
+Hacsak nem emeljük ki külön, a fejezet további részében minden példaként megadott szabályrendszer inkluzív tûzfalat hoz létre.
+====
+
+Ez a típusú védelem még tovább fokozható az "állapottartó tûzfalak" (stateful firewall) használatával. Az ilyen típusú tûzfalak szemmel tartják a rajtuk keresztül megnyitott kapcsolatokat, és vagy csak a már meglevõ kapcsolathoz tartozó forgalmat engedik át vagy nyitnak egy újat. Az állapottartó tûzfalak hátránya, hogy a "Denial of Service" (DoS) típusú támadásokkal szemben sokkal sérülékenyebbek olyan helyzetekben, amikor az új kapcsolatok nagyon gyorsan jönnek létre. A legtöbb tûzfal esetében azonban tudjuk vegyíteni az állapottartó és nem állapottartó viselkedést, és ezzel egy ideális beállítást kialakítani.
+
+[[firewalls-apps]]
+== Tûzfalak
+
+A FreeBSD alaprendszerébe három különbözõ tûzfalat építettek be, melyek a következõk: az _IPFILTER_ (másik nevén IPF), az _IPFIREWALL_ (más néven IPFW) és az _OpenBSD csomagszûrõje_ (Packet Filter, azaz PF). A forgalom szabályozására (vagyis alapvetõen a sávszélesség kihasználtságának vezérlésére) a FreeBSD két beépített csomagot tartalmaz: ez az man:altq[4] és a man:dummynet[4]. Általában a Dummynet az IPFW, míg az ALTQ a PF partnere. Az IPFILTER esetében maga az IPFILTER végzi a címfordítást és a szûrést, a sávszélességet pedig az IPFW a man:dummynet[4] _vagy_ a PF az ALTQ segítségével. Az IPFW és a PF szabályokkal rendelkezik a rendszerünkbe érkezõ vagy onnan távozó csomagokról, habár megoldásaik teljesen máshogy mûködnek és a szabályok megadási módja is eltér.
+
+A FreeBSD azért tartalmaz egyszerre ennyiféle tûzfalat, mert az emberek elvárásai és igényei eltérnek. Egyikük sem tekinthetõ a legjobbnak.
+
+A szerzõ egyébként az IPFILTER megoldását részesíti elõnyben, mivel egy hálózati címfordítást alkalmazó környezetben sokkal könnyebb vele megfogalmazni az állapottartó szabályokat, valamint tartalmaz egy beépített FTP proxyt is, amivel így a kimenõ FTP kapcsolatok beállítása még tovább egyszerûsödik.
+
+Mivel az összes tûzfal a csomagok fejlécének bizonyos mezõinek alapján dolgozik, ezért a tûzfal szabályrendszerét megalkotó egyénnek teljesen tisztában kell lennie a TCP/IP mûködésével, továbbá azzal, hogy ezekben a mezõkben milyen értékek szerepelhetnek és ezeket hogyan használják egy átlagos kapcsolat alatt. Ebben a témában a http://www.ipprimer.com/overview.cfm[http://www.ipprimer.com/overview.cfm] címen találhatunk egy remek ismertetõt (angolul).
+
+[[firewalls-pf]]
+== Az OpenBSD csomagszûrõje (PF) és az ALTQ
+
+2003 júliusában az OpenBSD PF néven ismert csomagszûrõjét átírták FreeBSD-re és elérhetõvé tették a FreeBSD Portgyûjteményének részeként. A PF programot beépítetten tartalmazó elsõ kiadás pedig 2004 novemberében a FreeBSD 5.3 volt. A PF egy teljes, mindentudó tûzfal, amely támogatja az ún. ALTQ (Alternate Queuing, vagyis a "váltóbesorolás") megoldást. Az ALTQ lehetõvé teszi a sávszélesség korlátozását a szolgáltatás minõsége (Quality of Service, QoS) alapján.
+
+Az OpenBSD Projekt kiváló munkát végez a PF http://www.openbsd.org/faq/pf/[felhasználói útmutatójának] karbantartásával. A kézikönyv ezen szakasza ezért elsõsorban azzal foglalkozik, hogyan kell a PF-et FreeBSD alatt használni, miközben igyekszik egy általános összefoglalást adni a témáról. A részletesebb információkkal kapcsolatban azonban feltétlenül nézzük meg a felhasználói útmutatót.
+
+A http://pf4freebsd.love2party.net/[http://pf4freebsd.love2party.net/] címen olvashatunk többet arról (angolul), hogy a PF-et hogyan használjunk FreeBSD-n.
+
+=== A PF rendszermagmodulok használata
+
+A PF modul betöltéséhez a következõ sort kell felvennünk az [.filename]#/etc/rc.conf# állományba:
+
+[.programlisting]
+....
+pf_enable="YES"
+....
+
+Ezt követõen futtassuk le a hozzá tartozó rendszerindító szkriptet:
+
+[source,bash]
+....
+# /etc/rc.d/pf start
+....
+
+A PF modul abban az esetben nem fog betöltõdni, ha nem találja a szabályokat tartalmazó konfigurációs állományt. Ez alapértelmezés szerint az [.filename]#/etc/pf.conf# állomány. Ha a szabályok leírása rendszerünkön máshol található, akkor az [.filename]#/etc/rc.conf# állományban a következõ módon adhatjuk meg annak pontos helyét:
+
+[.programlisting]
+....
+pf_rules="/elérési/út/pf.conf"
+....
+
+[NOTE]
+====
+A FreeBSD 7.0 kiadással a minta [.filename]#pf.conf# állomány az [.filename]#/etc# könyvtárból átkerült a [.filename]#/usr/shared/examples/pf# könyvtárba. A FreeBSD 7.0 elõtti kiadásokban alapértelmezés szerint található egy [.filename]#pf.conf# állomány az [.filename]#/etc# könyvtárban.
+====
+
+A PF modul parancssorból akár kézzel is betölthetõ:
+
+[source,bash]
+....
+# kldload pf.ko
+....
+
+A PF mûködésének naplózását a `pflog.ko` teszi lehetõvé, amelyet az alábbi sor hozzáadásával engedélyezhetünk az [.filename]#/etc/rc.conf# állományban:
+
+[.programlisting]
+....
+pflog_enable="YES"
+....
+
+A modul betöltését a hozzá tartozó rendszerindító szkript segítségével kérhetjük:
+
+[source,bash]
+....
+# /etc/rc.d/pflog start
+....
+
+Ha a PF többi funkcióját is használni szeretnénk, akkor ehhez egy új rendszermagot kell fordítanunk PF támogatással.
+
+=== A PF rendszermagbeli beállításai
+
+Noha egyáltalán nem szükséges beépítenünk a PF támogatását a rendszermagba, abban az esetben mégis szükségünk lehet rá, amikor a PF olyan komolyabb lehetõségeit szeretnénk kiaknázni, amelyek már nem részei a modulnak. Ilyen például a man:pfsync[4], amely a PF által használt állapottáblázatok bizonyos változásainak megjelenítésére alkalmas pszeudoeszköz. A man:carp[4] megoldásával párosítva így akár hibatûrõ tûzfalak is kialakíthatóak a PF-fel. A CARP megoldásáról a kézikönyvben bõvebb ismertetést a crossref:advanced-networking[carp,A Közös cím redundancia protokoll (CARP)] ad.
+
+A PF rendszermag konfigurációs beállításai a [.filename]#/usr/src/sys/conf/NOTES# állományban találhatóak:
+
+[.programlisting]
+....
+device pf
+device pflog
+device pfsync
+....
+
+A `device pf` beállítás engedélyezi a csomagszûrõ tûzfalat (man:pf[4]).
+
+A `device pflog` megadásával keletkezik egy man:pflog[4] pszeudo hálózati eszköz, amellyel egy man:bpf[4] eszközre érkezõ forgalmat tudunk naplózni. Ezután a man:pflogd[8] démon használható tõle származó naplózott adatok rögzítésére.
+
+A `device pfsync` engedélyezi a man:pfsync[4] pszeudo hálózati eszköz létrejöttét, amely az ún. "állapotváltások" megfigyelésére alkalmas.
+
+=== Az [.filename]#rc.conf# állományban elérhetõ beállítások
+
+A következõ man:rc.conf[5] beállítások aktiválják a rendszerindítás során a PF és a man:pflog[4] használatát:
+
+[.programlisting]
+....
+pf_enable="YES"                 # a PF engedélyezése (a modul betöltése, ha kell)
+pf_rules="/etc/pf.conf"         # a pf szabályait tartalmazó állomány
+pf_flags=""                     # a pfctl indításához szükséges további paraméterek
+pflog_enable="YES"              # a pflogd(8) elindítása
+pflog_logfile="/var/log/pflog"  # hol tartsa a pflogd az naplóit
+pflog_flags=""                  # a pflogd indításához szükséges paraméterek
+....
+
+Ha a tûzfalunk mögött egy helyi hálózat is meghúzódik, akkor az ott levõ gépek számára valamilyen módon tudnunk kell továbbítani a csomagokat vagy címfordítást kell végezni, így ez is mindenképpen kelleni fog:
+
+[.programlisting]
+....
+gateway_enable="YES"            # az átjáró funkciók engedélyezése
+....
+
+=== A szûrési szabályok megfogalmazása
+
+A PF a beállításait a man:pf.conf[5] állomány tárolja (amely alapértelmezés szerint az [.filename]#/etc/pf.conf# helyen található), és az ebben található szabályok alapján módosítja, dobja el vagy éppen engedi át a csomagokat. A FreeBSD rendszerünkben ehhez találhatunk néhány példát a [.filename]#/usr/shared/examples/pf/# könyvtárban. A PF által használt szabályokról minden részletre kiterjedõen a PF http://www.openbsd.org/faq/pf/[felhasználói útmutatójában] olvashatunk.
+
+[WARNING]
+====
+
+A PF http://www.openbsd.org/faq/pf/[felhasználói útmutatójának] olvasásakor ne feledkezzünk meg róla, hogy a különbözõ FreeBSD verziók különbözõ PF verziókat tartalmaznak. A FreeBSD 7._X_ és késõbbi változatok az OpenBSD 4.1 kiadásában szereplõ PF változatot tartalmazzák.
+====
+
+A {freebsd-pf} remek hely a PF tûzfal beállításával és futtatásával kapcsolatos kérdésekre. A kérdezés elõtt azonban ne felejtsük el alaposan átnézni az archívumot!
+
+=== A PF használata
+
+A PF a man:pfctl[8] segítségével vezérelhetõ. Az alábbiakban ezzel kapcsolatban most összefoglalunk néhány hasznos parancsot (de ne felejtsük el megnézni a man:pfctl[8] man oldalon található többi lehetõséget sem):
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Parancs
+| Leírás
+
+|`pfctl -e`
+|A PF engedélyezése
+
+|`pfctl -d`
+|A PF tiltása
+
+|`pfctl -F all -f /etc/pf.conf`
+|Az összes (címfordítási, szûrési, állapottartási stb.) szabály törlése, és az [.filename]#/etc/pf.conf# állomány újratöltése
+
+|`pfctl -s [ rules \| nat \| state ]`
+|A szûrési (`rules`), címfordítási (`nat`) és állapottartási (`state`) információk lekérdezése
+
+|`pfctl -vnf /etc/pf.conf`
+|Az [.filename]#/etc/pf.conf# állomány ellenõrzése a benne levõ szabályok betöltése nélkül
+|===
+
+=== Az ALTQ engedélyezése
+
+Az ALTQ kizárólag csak úgy használható, ha a konfigurációs beállításokon keresztül beépítjük a FreeBSD rendszermagjába. Az ALTQ alkalmazását nem minden hálózati kártya meghajtója támogatja, ezért ezt a man:altq[4] man oldalon ellenõrizzük.
+
+A következõ rendszermag konfigurációs beállításokkal engedélyezhetjük az ALTQ használatát és bõvíthetjük azt további lehetõségekkel:
+
+[.programlisting]
+....
+options         ALTQ
+options         ALTQ_CBQ        # osztályozás alapú besorolás (Class Bases Queuing, CBQ)
+options         ALTQ_RED        # véletlen korai észlelés (Random Early Detection, RED)
+options         ALTQ_RIO        # RED befele/kifele
+options         ALTQ_HFSC       # hiearchikus csomagütemezõ (Hierarchical Packet Scheduler, HFSC)
+options         ALTQ_PRIQ       # prioritásos besorolás (Priority Queuing, PRIQ)
+options         ALTQ_NOPCC      # az SMP esetén kell
+....
+
+Az `options ALTQ` az ALTQ rendszert engedélyezi.
+
+Az `options ALTQ_CBQ` engedélyezi a osztályozás alapú besorolást (_Class Based Queuing_, CBQ). A CBQ használatával a kapcsolatunkhoz tartozó sávszélességet különbözõ osztályokra vagy sorokra tudjuk bontani és a szûrési szabályoknak megfelelõen osztályozni segítségükkel a forgalmat.
+
+Az `options ALTQ_RED` a véletlen korai észlelés (_Random Early Detection_, RED) használatát engedélyezi. A RED a hálózati forgalomban keletkezõ torlódások elkerülésére alkalmas. A RED ezt a problémát úgy oldja meg, hogy méri a sorok hosszát és összeveti a hozzá tartozó minimális és maximális küszöbértékekkel. Ha a sor hossza meghaladja a számára elõírt maximális értéket, akkor az új csomagokat eldobja. Nevéhez hûen a RED az eldobásra ítélt csomagokat véletlenszerûen választja ki.
+
+Az `options ALTQ_RIO` engedélyezi a RED használatát mind a két irányba, tehát be- és kifelé.
+
+Az `options ALTQ_HFSC` a pártatlan hierachikus szolgáltatási görbe alapú csomagütemezõt (_Hierarchical Fair Service Curve Packet Scheduler_, HFSC) engedélyezi. Vele kapcsolatban a http://www-2.cs.cmu.edu/\~hzhang/HFSC/main.html[http://www-2.cs.cmu.edu/~hzhang/HFSC/main.html] címen találhatunk bõvebben olvasnivalót (angolul).
+
+Az `options ALTQ_PRIQ` a prioritásos besorolást (_Priority Queuing_, PRIQ) teszi elérhetõvé. A PRIQ mindig elsõként a nagyobb értékû sorban levõ forgalmat továbbítja.
+
+Az `options ALTQ_NOPCC` az ALTQSMP, vagyis többprocesszoros támogatását adja meg. Ilyen típusú rendszerekben ez kötelezõ.
+
+[[firewalls-ipf]]
+== Az IPFILTER (IPF) tûzfal
+
+Az IPFILTER szerzõje Darren Reed. Az IPFILTER nem kötõdik egyik rendszerhez sem: ez egy olyan nyílt forráskódú alkalmazás, amelyet átírtak FreeBSD, NetBSD, OpenBSD, SunOS(TM), HP/UX és Solaris(TM) operációs rendszerekre. Az IPFILTER karbantartása és támogatása pillanatnyilag is aktív, folyamatosan jelennek meg újabb változatai.
+
+Az IPFILTER egy rendszermag oldalán mûködõ tûzfalazási és egy címfordítási mechanizmusra alapszik, amelyet felhasználói programokkal tudunk felügyelni és vezérelni. A tûzfal szabályai az man:ipf[8] segédprogrammal állíthatóak be vagy törölhetõek. A hálózati címfordításra vonatkozó szabályokat az man:ipnat[1] segédprogrammal állíthatjuk be vagy törölhetjük. Az man:ipfstat[8] segédprogram képes futás közben statisztikákat készíteni az IPFILTER rendszermagban elhelyezkedõ részeinek viselkedésérõl. Az man:ipmon[8] program pedig az IPFILTER cselekvéseit képes a rendszernaplókba feljegyezni.
+
+Az IPF eredetileg olyan szabályfeldolgozási módszer szerint készült, amelyben "az utolsó egyezõ szabály nyer" és csak állapotnélküli szabályokat ismert. Az idõ múlásával az IPF részévé vált a "quick" opció és a "keep state" opción keresztül az állapottartás is, melyek drámai mértékben korszerûsítették a szabályok feldolgozásának elvét. Az IPF hivatalos dokumentációja csak a régi szabályok létrehozását és azok feldolgozásának leírását tartalmazza. A korszerûsített funkciók csak kiegészítésképpen jelennek meg, és az általuk felkínált elõnyök megértése egy sokkal magasabb szintû és biztonságosabb tûzfal megépítését teszik lehetõvé.
+
+A szakaszban szereplõ utasításokban olyan szabályok szerepelnek, amelyek kihasználják a "quick" és "keep state" opciókat. Ezek az inkluzív tûzfalszabályok létrehozásának alapjai.
+
+A régi típusú szabályokról a http://www.obfuscation.org/ipf/ipf-howto.html#TOC_1[http://www.obfuscation.org/ipf/ipf-howto.html#TOC_1] és http://coombs.anu.edu.au/\~avalon/ip-filter.html[http://coombs.anu.edu.au/~avalon/ip-filter.html] címeken olvashatunk (angolul).
+
+Az IPF gyakran ismételt kérdései a http://www.phildev.net/ipf/index.html[http://www.phildev.net/ipf/index.html] címen érhetõek el (angolul).
+
+A nyílt forrású IPFILTER levelezési lista kereshetõ archívumait a http://marc.theaimsgroup.com/?l=ipfilter[http://marc.theaimsgroup.com/?l=ipfilter] címen találjuk (angolul).
+
+=== Az IPF engedélyezése
+
+Az IPF megtalálható a FreeBSD alaptelepítésében mint menet közben külön betölthetõ modul. Ha az [.filename]#rc.conf# állományba beírjuk a `ipfilter_enable="YES"` sort, akkor ez a modul dinamikusan betöltõdik. A betölthetõ modul alapból naplóz és a `default pass all` beállítást tartalmazza. Ha helyette a `block all` szabályt akarjuk használni, akkor emiatt még nem kell feltétlenül újrafordítanunk a FreeBSD rendszermagját, elég ha egyszerûen csak a szabályrendszerünk végére beszúrjuk.
+
+=== A rendszermag beállításai
+
+Az IPF használatához nem kötelezõ a következõ beállításokkal újrafordítani a FreeBSD rendszermagját, itt csupán háttérinformációként szerepel. Amikor az IPF a rendszermagba kerül, a betölhetõ modulra nem lesz szükség.
+
+Az IPF a rendszermag forrásai között található [.filename]#/usr/src/sys/conf/NOTES# állományban megadott beállításai a következõ módon foglalhatóak össze:
+
+[.programlisting]
+....
+options IPFILTER
+options IPFILTER_LOG
+options IPFILTER_DEFAULT_BLOCK
+....
+
+Az `options IPFILTER` engedélyezi az "IPFILTER" tûzfal támogatását.
+
+Az `options IPFILTER_LOG` hatására az IPF az [.filename]#ipl# csomagnaplózó pszeudo eszközre jegyzi fel a forgalmat - minden olyan szabály esetén, ahol megjelenik a `log` kulcsszó.
+
+Az `options IPFILTER_DEFAULT_BLOCK` megváltoztatja az alapértelmezett viselkedést, tehát minden olyan csomag, amely nem illeszkedik a tûzfal valamelyik `pass` típusú (átengedõ) szabályára, blokkolásra kerül.
+
+Ezek a beállítások csak azt követõen érvényesülnek, ha fordítottunk és telepítettünk velük egy új rendszermagot.
+
+=== Az [.filename]#rc.conf# állomány beállításai
+
+Az [.filename]#/etc/rc.conf# állományban a következõ utasításokra lesz szükségünk az IPF mûködésbe hozására a rendszer indítása során:
+
+[.programlisting]
+....
+ipfilter_enable="YES"             # az ipf tûzfal indítása
+ipfilter_rules="/etc/ipf.rules"   # betölti a szabályokat tartalmazó szöveges állományt
+ipmon_enable="YES"                # elindítja az IP monitor naplózását
+ipmon_flags="-Ds"                 # D = indítás démonként
+                                  # s = naplózás a syslog használatával
+                                  # v = a tcp ablak, ack, seq csomagok naplózása
+                                  # n = az IP-címek és portok feloldása
+....
+
+Ha olyan helyi hálózat áll meg a tûzfal mögött, amely egy fenntartott privát IP-címtartományt használ, akkor még a következõ utasításokra is szükségünk lesz a címfordítás bekapcsolásához:
+
+[.programlisting]
+....
+gateway_enable="YES"              # a helyi hálózat átjárója
+ipnat_enable="YES"                # az ipnat funkció elindítása
+ipnat_rules="/etc/ipnat.rules"    # az ipnat mûködéséhez szükséges definíciók
+....
+
+=== IPF
+
+Az man:ipf[8] parancs használható a szabályokat tartalmazó állomány betöltésére. Általában egy állományba írjuk össze a tûzfal szabályait és ezzel a paranccsal cseréljük le egyszerre a tûzfalban levõ jelenlegi szabályokat:
+
+[source,bash]
+....
+# ipf -Fa -f /etc/ipf.rules
+....
+
+Az `-Fa` az összes belsõ szabály törlését jelenti.
+
+Az `-f` jelzi, hogy egy állományból kell beolvasni a betöltendõ szabályokat.
+
+Ezzel mintegy lehetõségünk van változtatni a korábban összeállított szabályainkon, futtatni a fenti IPF parancsot és ezen keresztül úgy frissíteni a szabályok friss másolatával a már mûködõ tûzfalat, hogy nem is kell újraindítanunk a rendszert. Ez a módszer igen kényelmes az új szabályok kipróbálásához, mivel bármikor tetszõlegesen végrehajtható.
+
+Az man:ipf[8] man oldala tartalmazza a parancsnak megadható további beállításokat.
+
+Az man:ipf[8] parancs a szabályokat tároló állományt egy szabványos szöveges állománynak tekinti, semmilyen szimbolikus helyettesítést alkalmazó szkriptet nem fogad el.
+
+Lehetõségünk van azonban olyan IPF szabályokat készíteni, amelyek kiaknázzák a szkriptek szimbolikus helyettesítésének lehetõségeit. Errõl bõvebben lásd <<firewalls-ipf-rules-script>>.
+
+=== Az IPFSTAT
+
+Az man:ipfstat[8] alapértelmezés szerint a arra használatos, hogy le tudjuk kérdezni és megjeleníteni a tûzfalhoz tartozó számlálók értékeit, amelyek a legutóbbi indítás vagy az `ipf -Z` parancs által kiadott lenullázásuk óta a bejövõ vagy kimenõ forgalomból a megadott szabályoknak megfelelõ csomagok alapján gyûjtenek össze statisztikákat.
+
+A parancs mûködésének részleteit az man:ipfstat[8] man oldalon olvashatjuk.
+
+Az man:ipfstat[8] meghívása alapból így néz ki:
+
+[source,bash]
+....
+input packets: blocked 99286 passed 1255609 nomatch 14686 counted 0
+ output packets: blocked 4200 passed 1284345 nomatch 14687 counted 0
+ input packets logged: blocked 99286 passed 0
+ output packets logged: blocked 0 passed 0
+ packets logged: input 0 output 0
+ log failures: input 3898 output 0
+ fragment state(in): kept 0 lost 0
+ fragment state(out): kept 0 lost 0
+ packet state(in): kept 169364 lost 0
+ packet state(out): kept 431395 lost 0
+ ICMP replies: 0 TCP RSTs sent: 0
+ Result cache hits(in): 1215208 (out): 1098963
+ IN Pullups succeeded: 2 failed: 0
+ OUT Pullups succeeded: 0 failed: 0
+ Fastroute successes: 0 failures: 0
+ TCP cksum fails(in): 0 (out): 0
+ Packet log flags set: (0)
+....
+
+Az `-i` mint bejövõ (inbound), vagy az `-o` mint kimenõ (outbound) forgalomra vonatkozó paraméterek megadásával a rendszermagban az adott oldalon jelenleg telepített és alkalmazott szabályokat kérhetjük le és jeleníthetjük meg.
+
+Az `ipfstat -in` parancs így a bejövõ forgalomra vonatkozó belsõ szabályokat mutatja a szabályok számával.
+
+Az `ipfstat -on` parancs a kimenõ forgalmat érintõ belsõ szabályokat mutatja a szabályok számával.
+
+Az eredmény körülbelül ilyen lesz:
+
+[source,bash]
+....
+@1 pass out on xl0 from any to any
+@2 block out on dc0 from any to any
+@3 pass out quick on dc0 proto tcp/udp from any to any keep state
+....
+
+Az `ipfstat -ih` a bejövõ forgalomhoz tartozó belsõ szabályokat mutatja és mindegyik elé odaírja, hogy eddig mennyi csomag illeszkedett rájuk.
+
+Az `ipfstat -oh` ugyanígy a kimentõ forgalom esetén mutatja a belsõ szabályokat és mindegyik elõtt feltünteti, hogy az adott pillanatig mennyi csomag illeszkedett rájuk.
+
+A kimenete nagyjából ilyen lesz:
+
+[source,bash]
+....
+2451423 pass out on xl0 from any to any
+354727 block out on dc0 from any to any
+430918 pass out quick on dc0 proto tcp/udp from any to any keep state
+....
+
+Az `ipfstat` parancs talán egyik legfontosabb funkciója a `-t` kapcsolóval csalható elõ, melynek hatására a rendszerben aktív állapotok táblázatát mutatja meg ugyanúgy, ahogy a man:top[1] a FreeBSD rendszerben futó programokat. Amikor a tûzfalunk támadás alatt áll, ezzel a funkcióval tudjuk a problémát beazonosítani, leásni a mélyébe és látni a támadótól érkezõ csomagokat. A kiegészítésképpen megadható alkapcsolók megadásával kiválaszthatjuk azt a cél vagy forrás IP-címet, portot vagy protokollt, amelyet valós idõben meg akarunk figyelni. Ennek részleteit az man:ipfstat[8] man oldalán láthatjuk.
+
+=== Az IPMON
+
+Az `ipmon` megfelelõ mûködéséhez be kell kapcsolnunk a rendszermag `IPFILTER_LOG` beállítását. Ez a parancs két különbözõ módban használható. Ha parancsot a `-D` opció nélkül gépeljük be, akkor ezek közül alapból a natív módot kapjuk meg.
+
+A démon mód abban az esetben hasznos, ha folyamatosan naplózni akarjuk a rendszerben zajló eseményeket, majd késõbb ezeket átnézni. Így képes egymással együttmûködni a FreeBSD és az IPFILTER. A FreeBSD beépítve tartalmaz olyan lehetõséget, aminek révén magától cseréli a rendszernaplókat. Ezért ha átküldjük a man:syslogd[8] démonnak a naplózandó üzeneteket, akkor sokkal jobban járunk, mintha egyszerûen csak mezei állományba naplóznánk. Az [.filename]#rc.conf# alapértelmezései között az `ipmon_flags` beállítás a `-Ds` kapcsolókat rögzíti:
+
+[.programlisting]
+....
+ipmon_flags="-Ds" # D = indítás démonként
+                  # s = naplózás a syslog használatával
+                  # v = a tcp ablak, ack, seq csomagok naplózása
+                  # n = az IP-címek és portok nevének feloldása
+....
+
+Ennek a viselkedésnek az elõnyei minden bizonnyal egyértelmûek. Segítségével képesek vagyunk az esetek megtörténte után átnézni, hogyan milyen csomagokat dobott el a rendszer, azok milyen címekrõl érkeztek és hova szánták. Ez egy komoly fegyver a támadók lenyomozásában.
+
+Hiába engedélyezzük a naplózást, az IPF önszántából semmilyen naplózási szabályt nem fog gyártani. A tûzfal gazdájának kell eldöntenie, hogy a szabályokat közül melyiket akarja naplózni, és így neki kell megadnia a `log` kulcsszót ezekben az esetekben. Normális esetben csak a `deny` szabályokat naplózzák.
+
+Egyáltalán nem ritka, hogy a szabályrendszer végén egy alapértelmezés szerint mindent eldobó szabály áll, amely naplóz. Ezzel lehetõségünk nyílik rögzíteni azokat a csomagokat, amelyek egyetlen szabályra sem illeszkedtek.
+
+=== Naplózás az IPMON használatával
+
+A syslogd egy saját módszert alkalmaz a naplózott adatok elkülönítésére. Egy "funkciók" (facility) és "szintek" (level) segítségével kialakított speciális csoportosítást alkalmaz. Az IPMON `-Ds` módja alapértelmezés szerint a `local0` "funkciót" használja. Ezen túl a következõ szinteken különíthetjük el igényeinknek megfelelõen a naplózott adatokat:
+
+[source,bash]
+....
+LOG_INFO - az átengedés vagy blokkolás helyett a "log" kulcsszóval ellátott csomagok
+LOG_NOTICE - az át is engedett csomagok
+LOG_WARNING - a blokkolt csomagok
+LOG_ERR - a naplózott csomagok közül azok, amelyek túlságosan kicsik (hibás a fejlécük)
+....
+
+Az IPFILTER csak akkor tud naplózni a [.filename]#/var/log/ipfilter.log# állományba, ha elõtte létrehozzuk. Az alábbi parancs erre tökéletesen megfelelõ:
+
+[source,bash]
+....
+# touch /var/log/ipfilter.log
+....
+
+A man:syslogd[8] mûködését az [.filename]#/etc/syslog.conf# állományban szereplõ definíciók vezérlik. A [.filename]#syslog.conf# állomány számottevõ mértékben képes meghatározni azt, ahogy a syslog az IPF és a hozzá hasonló alkalmazásoktól kapott rendszerszintû üzeneteket kezeli.
+
+Az [.filename]#/etc/syslog.conf# állományba az alábbi sor kell felvennünk:
+
+[.programlisting]
+....
+local0.* /var/log/ipfilter.log
+....
+
+A `local0.*` megadásával az összes ilyen típusú üzenet egy elõre rögzített helyre kerül.
+
+Az [.filename]#/etc/syslog.conf# állományban elvégzett módosításokat úgy léptethetjük érvénybe, ha újraindítjuk a számítógépet vagy az `/etc/rc.d/syslogd reload` paranccsal megkérjük a man:syslogd[8] démont, hogy olvassa újra az [.filename]#/etc/syslog.conf# állományt.
+
+Az imént létrehozott naplót ne felejtsük el megadni az [.filename]#/etc/newsyslog.conf# állományban sem, és akkor ezzel a cseréjét is megoldjuk.
+
+=== A naplózott üzenetek formátuma
+
+Az `ipmon` által létrehozott üzenetek whitespace karakterekkel elválasztott adatmezõkbõl állnak. A következõ mezõk az összes üzenet esetében megjelennek:
+
+. A csomag megérkezésének dátuma
+. A csomag megérkezésének idõpontja. ÓÓ:PP:MM.E alakban jelennek meg az órák, percek, másodpercek és ezredmásodpercek (ez több számjegy hosszú is lehet) szerint
+. Azon interfész a neve, ahol a csomag feldolgozásra került, például [.filename]#dc0#
+. A szabályhoz tartozó csoport és sorszám, például `@0:17`
+
+Ezek az `ipfstat -in` paranccsal nézhetõek meg.
+
+. Cselekvés: a p mint átment (passed), b mint blokkolt (blocked), S mint rövid csomag (short packet), n mint egyik szabályra sem illeszkedett (not match), L mint naplózás (log). A módosítók megjelenítésének sorrendje: S, p, b, n, L. A nagybetûs P és B azt jelzi, hogy a csomagot egy felsõbb szintû beállítás miatt naplózták, nem egy szabály hatására.
+. Címek: ez tulajdonképpen három mezõt takar: a forrás címet és portot (melyet egy vesszõ választ el), a -> jelet és cél címet és portot. Például: `209.53.17.22,80 -> 198.73.220.17,1722`.
+. A `PR` után a protokoll neve vagy száma olvasható, például `PR tcp`.
+. A `len` csomaghoz tartozó fejléc és törzsének teljes hosszát jelöli, például `len 20 40`.
+
+Amennyiben a csomag TCP, egy kötõjellel kezdõdõen további mezõk is megjelenhetnek a beállított opcióknak megfelelõ betûk képében. A betûket és beállításaikat az man:ipf[5] man oldalán olvashatjuk.
+
+Amennyiben a csomag ICMP, a sort két mezõ zárja, melyek közül az elsõ tartalma mindig "ICMP", és ezt egy perjellel elválasztva az ICMP üzenet típusa és altípusa követi. Tehát például az ICMP 3/3 a "nem elérhetõ port" üzenetet hordozza.
+
+[[firewalls-ipf-rules-script]]
+=== A szabályok felírása szimbolikus helyettesítéssel
+
+Az IPF használatában gyakorlott felhasználók közül néhányan képesek olyan stílusú szabályrendszert készíteni, ahol szimbolikus helyettesítést használnak. Ennek az egyik legnagyobb elõnye az, hogy ilyenkor elég csak a szimbolikus névhez tartozó értéket megváltoztatni és amikor a szkript lefut, akkor az összes rá hivatkozó szabályba ez kerül be. Szkript lévén a szimbolikus helyettesítéssel ki tudjuk emelni a gyakran használt értékeket és behelyettesíteni ezeket több helyre. Ezt a most következõ példában láthatjuk.
+
+Az itt alkalmazott felírás kompatibilis az man:sh[1], man:csh[1] és man:tcsh[1] parancsértelmezõkkel.
+
+A szimbolikus helyettesítést egy dollárjellel fejezzük ki: `$`.
+
+A szimbolikus mezõkben nem szerepel a $ jelölés.
+
+A szimbolikus mezõ tartalmát kettõs idézõjelbe (`"`) tesszük.
+
+Kezdjük így el a szabályok írását:
+
+[.programlisting]
+....
+######### Az IPF szabályait tartalmazó szkript eleje ###########
+
+oif="dc0"            # a kimenõ interfész neve
+odns="192.0.2.11"    # az internet szolgáltató névszerverének IP-címe
+myip="192.0.2.7"     # a szolgáltatótól kapott statikus IP-címünk
+ks="keep state"
+fks="flags S keep state"
+
+# Választhatunk, hogy az /etc/ipf.rules állományt ebbõl a szkriptbõl
+# hozzuk létre vagy futtathatjuk "magát" a szkriptet.
+#
+# Egyszerre csak az egyik sort használjuk.
+#
+# 1) Ezzel gyárhatjuk le az /etc/ipf.rules állományt:
+#cat > /etc/ipf.rules << EOF
+#
+# 2) Ezzel futtathajuk "magát" a szkriptet:
+/sbin/ipf -Fa -f - << EOF
+
+# Engedélyezzük a szolgáltató névszerverének elérését.
+pass out quick on $oif proto tcp from any to $odns port = 53 $fks
+pass out quick on $oif proto udp from any to $odns port = 53 $ks
+
+# Engedélyezzük kifelé a titkosítatlan www funkciót.
+pass out quick on $oif proto tcp from $myip to any port = 80 $fks
+
+# Engedélyezzük kifelé a TLS SSL felett üzemelõ titkosított www funkciót.
+pass out quick on $oif proto tcp from $myip to any port = 443 $fks
+EOF
+################## Itt az IPF szkript vége ########################
+....
+
+Ennyi lenne. A példában szereplõ szabályok most nem annyira lényegesek, a hangsúly most igazából a szimbolikus helyettesítésen és annak használatán van. Ha a fenti példát az [.filename]#/etc/ipf.rules.script# állományba mentjük, akkor ezeket a szabályokat a következõ paranccsal újra tudjuk tölteni:
+
+[source,bash]
+....
+# sh /etc/ipf.rules.script
+....
+
+Egyetlen aprócska gond van a beágyazott szimbólumokat tartalmazó állományokkal: az IPF maga nem képes megérteni a helyettesítéseket, azért közvetlenül nem olvassa a szkriptet.
+
+Ez a szkript két módon hasznosítható:
+
+* Vegyük ki megjegyzésbõl a `cat` paranccsal kezdõdõ sort, és tegyük megjegyzésbe az `/sbin/ipf` kezdetût. A megszokottak szerint tegyük az `ipfilter_enable="YES"` sort az [.filename]#/etc/rc.conf# állományba, majd minden egyes módosítása után futtassuk le a szkriptet az [.filename]#/etc/ipf.rules# állomány létrehozásához vagy frissítéséhez.
+* Tiltsuk le az IPFILTER aktiválását a rendszerindításkor, tehát írjuk bele az `ipfilter_enable="NO"` sort (ami mellesleg az alapértelmezett értéke) az [.filename]#/etc/rc.conf# állományba.
++ 
+Tegyünk egy, az alábbi szkripthez hasonlót az [.filename]#/usr/local/etc/rc.d/# könyvtárba. A szkriptnek adjuk valamilyen értelmes nevet, például [.filename]#ipf.loadrules.sh#. Az [.filename]#.sh# kiterjesztés használata kötelezõ.
++
+[.programlisting]
+....
+#!/bin/sh
+sh /etc/ipf.rules.script
+....
++ 
+A szkript engedélyeit állítsuk be úgy, hogy a `root` tulajdonában legyen és képes legyen olvasni, írni valamint végrehajtani.
++
+[source,bash]
+....
+# chmod 700 /usr/local/etc/rc.d/ipf.loadrules.sh
+....
+
+Most miután a rendszer elindult, az IPF szabályai be fognak töltõdni.
+
+=== Szabályrendszerek az IPF-ben
+
+Az IPF esetében a szabályrendszer olyan szabályokból áll, amelyek a csomagokról tartalmuk alapján eldöntik, hogy át kell engedni vagy vissza kell tartani. A gépek közt két irányban áramló csomagok egy munkamenet alapú társalgást képeznek. A tûzfalhoz tartozó szabályrendszer egyaránt feldolgozza a internetrõl a hálózatunk felé igyekvõ csomagokat, illetve a hálózatunk ezekre adott válaszait. Az egyes TCP/IP szolgáltatásokat (mint például telnet, www, levelezés stb.) a hozzájuk tartozó protokol és szabványos (fogadó) portszám írja le. Ezekre a forrásról általában valamilyen nem szabványos (magasabb értékû) portról érkeznek csomagok. Ekkor a kommunikáció összes paramétere (vagyis a portok és címek) bármelyike alapján definiálhatunk blokkolást vagy továbbengedést leíró szabályokat.
+
+Az IPF eredetileg úgy íródott, hogy a szabályokat "az utolsó illeszkedõ szabály nyer" stílusban dolgozza fel és csak állapot nélküli szabályokat ismert. Az idõk folyamán az IPF szabályai kiegészültek a "quick" és az állapottartásra vonatkozó "keep state" opciókkal, amelynek köszönhetõen óriási mértékben korszerûsödött a szabályok feldolgozása.
+
+A szakaszban szereplõ utasítások olyan szabályokat alkalmaznak, amelyekben egyaránt szerepel a "quick" és az állapottartásért felelõs "keep state" beállítás. Ez az inkluzív tûzfalak létrehozásának egyik alapeszköze.
+
+[WARNING]
+====
+
+A tûzfal szabályainak összeállítása során _nagyon óvatosnak_ kell lennünk! Bizonyos beállítások hatására akár _ki is zárhatjuk magunkat_ a szerverünkrõl. Az ebbõl fakadó esetleges kellemetlenségek elkerülése érdekében javasoljuk, hogy a tûzfal alapjait elõször helyi konzolról építsük fel, ne pedig távolról, például ssh segítségével.
+====
+
+=== A szabályok felépítése
+
+A szabályok felépítésének bemutatását itt most leszûkítjük a modern állapottartó szabályokra és az "elsõ illeszkedõ szabály nyer" típusú feldolgozásra. A szabályok felírásának régebbi módjai az man:ipf[8] man oldalon találhatóak.
+
+A `#` karakterrel egy megjegyzés kezdetét jelezzük, és általában a sor végén vagy egy külön sorban bukkan fel. Az üres sorokat a rendszer nem veszi figyelembe.
+
+A szabályok kulcsszavakat tartalmaznak. Ezeknek a kulcsszavaknak balról jobbra haladva adott sorrendben kell szerepelniük. A kulcsszavakat kiemeltük. Egyes kulcsszavakhoz további beállítások is tartozhatnak, amelyek maguk is kulcsszavak lehetnek, és még további opciókkal rendelkezhetnek. Az alábbi nyelvtan mindegyik elemét kiemeltük és az alábbiakban egyenként kifejtjük a részleteiket.
+
+_CSELEKVÉS BE-KI OPCIÓK SZûRÉS ÁLLAPOTTARTÓ PROTOKOLL FORRÁS_CÍM,CÉL_CÍM OBJEKTUM PORTSZÁM TCP_BEÁLLÍTÁS ÁLLAPOTTARTÓ_
+
+_CSELEKVÉS_ = block | pass
+
+_BE-KI_ = in | out
+
+_OPCIÓK_ = log | quick | on _interfész_
+
+_SZûRÉS_ = proto _érték_ | _forrás/cél IP_ | port = _szám_ | flags _beállítás_
+
+_PROTOKOLL_ = tcp/udp | udp | tcp | icmp
+
+_FORRÁS_CÍM,CÉL_CÍM_ = all | from _objektum_ to _objektum_
+
+_OBJEKTUM_ = _IP-cím_ | any
+
+_PORTSZÁM_ = _portszám_
+
+_TCP_BEÁLLÍTÁS_ = S
+
+_ÁLLAPOTTARTÓ_ = keep state
+
+==== CSELEKVÉS
+
+A cselekvés határozza meg, hogy mit kell tenni azokkal a csomagokkal, amelyek illeszkednek a szabály többi részére. Minden szabályhoz tartoznia _kell_ egy cselekvésnek. A következõ cselekvések közül választhatunk:
+
+A `block` megadásával a szabályban szereplõ szûrési feltételre illeszkedõ csomagot eldobjuk.
+
+A `pass` megadásával a szabályban szereplõ szûrési feltételre illeszkedõ csomagot átengedjük a tûzfalon.
+
+==== BE-KI
+
+Az összes szûrési szabály esetében kötelezõ egyértelmûen nyilatkozunk arról, hogy a bemenõ vagy a kimenõ forgalomra vonatkozik. Ezért a következõ kulcsszó vagy az `in` vagy pedig az `out`, de közülük egyszerre csak az egyiket szabad használni, máskülönben a szabály hibásnak minõsül.
+
+Az `in` jelenti, hogy a szabályt az internet felõl az adott interfészen beérkezõ csomagokra kell alkalmazni.
+
+Az `out` jelenti, hogy a szabályt az internet felé az adott interfészen kiküldött csomagokra kell alkalmazni.
+
+==== OPCIÓK
+
+[NOTE]
+====
+Ezek az opciók csak a lentebb bemutatott sorrendben használhatók.
+====
+
+A `log` jelzi, hogy illeszkedés esetén a csomag fejlécét az [.filename]#ipl# eszközön keresztül naplózni kell (lásd a naplózásról szóló szakaszt).
+
+A ``quick``jelzi, hogy illeszkedés esetén ez lesz a legutolsónak ellenõrzött szabály és így egy olyan "rövidzárat" tudunk képezni a feldolgozásban, amellyel elkerüljük a csomagra egyébként vonatkozó többi szabály illesztését. Ez az opció a korszerûsített szabályfeldolgozás kihasználásához elengedhetetlen.
+
+Az `on` használatával a szûrés feltételei közé bevonhatjuk a csomaghoz tartozó hálózati interfészt. Itt az interfészek az man:ifconfig[8] által megjelenített formában adhatóak meg. Az opció megadásával csak az adott interfészen az adott irányba (befelé/kifelé) közlekedõ csomagokra fog illeszkedni a szabály. Ez az opció a korszerûsített szabályfeldolgozás kihasználásához nélkülözhetetlen.
+
+Amikor naplózunk egy csomagot, akkor a hozzá tartozó fejléc az IPL csomagnaplózó pszeudo eszközhöz kerül. A `log` kulcsszó után közvetlenül a következõ minõsítõk szerepelhetnek (a következõ sorrendben):
+
+A `body` jelzi, hogy a csomag tartalmának elsõ 128 byte-ját még jegyezzük fel a fejléc mellé.
+
+A `first` minõsítõt akkor érdemes használnunk, amikor a `log` kulcsszót a `keep state` opcióval együtt alkalmazzuk, mivel ilyenkor csak a szabályt kialakító csomag kerül naplózásra és nem minden olyan, ami illeszkedik az állapottartási feltételekre.
+
+==== SZûRÉS
+
+Ebben a szakaszban olyan kulcsszavak jelenhetnek meg, amelyekkel a csomagok különféle tulajdonságai alapján ítélkezhetünk azok illeszkedésérõl. Itt adott egy kiinduló kulcsszó, amelyhez további kulcsszavak is tartoznak, és amelyek közül csak egyet választhatunk. Az alábbi általános tulajdonságok alapján tudjuk szûrni a csomagokat, ebben a sorrendben:
+
+==== PROTOKOLL
+
+A `proto` egy olyan kulcsszó, amelyhez hozzá kell rendelnünk még valamelyik opcióját is. Ez az opció segít az adott protokolloknak megfelelõen válogatni a csomagok között. A korszerûsített szabályfeldolgozás lehetõségeinek kihasználásához nélkülözhetetlen.
+
+Opcióként a `tcp/udp | udp | tcp | icmp`, vagy bármelyik, az [.filename]#/etc/protocols# állományban megtalálható kulcsszó felhasználható. A `tcp/udp` ebbõl a szempontból speciálisnak tekinthetõ, mivel hatására egyszerre illeszthetõek a szabályra a TCP és UDP csomagok, és így a protokolltól eltekintve azonos szabályok felesleges többszörözését kerülhetjük el.
+
+==== FORRÁS_CÍM/CÉL_CÍM
+
+Az `all` kulcsszó gyakorlatilag a "from any to any" ("bárhonnan bárhova") szinonímája és nem tartozik hozzá paraméter.
+
+A `from forrás to cél` felépítése: a `from` és `to` kulcsszavak az IP-címek illesztésére használhatóak. Ilyenkor a szabályokban a forrás _és_ a cél paramétereknek is szerepelniük kell. Az `any` egy olyan speciális kulcsszó, amely tetszõleges IP-címre illeszkedik. Néhány példa az alkalmazására: `from any to any` vagy `from 0.0.0.0/0 to any`, `from any to 0.0.0.0/0`, `from 0.0.0.0/0 to any` vagy `from any to 0.0.0.0`.
+
+Az IP-címek megadhatóak pontozott numerikus formában a hálózati maszk bitekben mért hosszával együtt, vagy akár egyetlen pontozott numerikus IP-címként.
+
+Nincs lehetõség olyan IP-címtartományok illesztésére, amelyek nem adhatóak meg kényelmesen ponttal elválasztott számok és maszk hosszával. A package:net-mgmt/ipcalc[] port az ilyen számításokat könnyíti meg. A hálózati maszkok hosszának megállapításban segíthet az említett segédprogram (angol nyelvû) honlapja: http://jodies.de/ipcalc[http://jodies.de/ipcalc].
+
+==== PORT
+
+Amikor portra vonatkozó illeszkedést írunk elõ, megadhatjuk a forrásra és célra, amit aztán vagy csak TCP vagy pedig csak UDP csomagokra alkalmazunk. A portok feltételeinek megfogalmazásánál használhatjuk a portok számát vagy az [.filename]#/etc/services# állományban szereplõ nevüket. Amikor a port egy `from` típusú objektum leírásában jelenik meg, akkor automatikusan a forrásportot jelenti, míg a `to` objektum leírásában pedig a célportot. A `to` objektumoknál a port megadása elengedhetetlen a korszerûsített szabályfeldolgozás elõnyeinek kihasználásához. Példa: `from any to any port = 80`.
+
+Az egyes portokat különbözõ mûveletek segítségével, numerikusan hasonlíthatjuk össze, ahol akár porttartományt is megadhatunk.
+
+port "=" | "!=" | "<" | ">" | "<=" | ">=" | "eq" | "ne" | "lt" | "gt" | "le" | "ge".
+
+A porttartományok megadásához használjuk a `port` "<>" | "><" felírási módot.
+
+[WARNING]
+====
+
+A forrásra és célra vonatkozó paraméterek után szereplõ másik két paraméter nélkülözhetetlen a korszerûsített szabályfeldolgozás mûködéséhez.
+====
+
+==== TCP_BEÁLLÍTÁS
+
+A beállítások csak a TCP forgalom szûrésénél érvényesülnek. A betûk jelölik azokat a lehetséges beállításokat, amelyek a TCP csomagok fejlécében megvizsgálhatóak.
+
+A korszerûsített szabályfeldolgozás a `flags S` paraméter segítségével ismeri fel a TCP munkameneteket kezdeményezõ kéréseket.
+
+==== ÁLLAPOTTARTÓ
+
+A `keep state` jelzi, hogy a szabály paramétereinek megfelelõ bármely csomag aktiválja az állapottartó szûrés használatát.
+
+[NOTE]
+====
+Ez a beállítás feltétlenül szükséges a korszerûsített szabályfeldolgozás megfelelõ kihasználásához.
+====
+
+=== Állapottartó csomagszûrés
+
+Az állapottartó szûrés a csomagok kétirányú áramlását egy létrejött kapcsolatba sorolja be. Amikor aktiválódik, az állapottartó szabály elõre dinamikusan létrehozza a kétirányú kommunikációban megforduló csomagokhoz a megfelelõ belsõ szabályokat. Olyan vizsgálatokat végez, amelyek segítségével ki tudja deríteni, hogy a csomag küldõje és címzettje között fennálló kétirányú kapcsolat érvényes szabályok szerint zajlik-e. Minden olyan csomagot, amely nem illeszkedik megfelelõen a kapcsolatra vonatkozó sémára, csalásnak tekintjük és automatikusan eldobjuk.
+
+Az állapottartás révén lehetõségünk van a TCP vagy UDP kapcsolatokhoz tartozó ICMP csomagokat is átengedni a tûzfalon. Tehát ha kapunk egy 3-as típusú, 4-es kódú ICMP választ valamilyen böngészésre használt állapottartó szabályon keresztül kiküldött kérésre, akkor az automatikusan bejöhet. Amelyik csomagot az IPF egyértelmûen képes besorolni az aktív kapcsolatba, még ha az eltérõ protokollt is használ, beengedi.
+
+Ami ilyenkor történik:
+
+Az internethez csatlakozó interfészen keresztül kifelé haladó csomagokat elõször egy dinamikus állapottábla alapján illesztjük, és ha a csomag illeszkedik az aktív kapcsolatban következõként várt csomagra, akkor átmegy a tûzfalon és a dinamikus állapottáblában frissül a kapcsolat állapota. Az aktív munkameneten kívül csomagok pedig egyszerûen a kimenõ szabályrendszer szerint kerülnek ellenõrzésre.
+
+Hasonlóan az elõzõhöz, az internethez csatlakozó interfészen keresztül befelé haladó csomagokat elõször egy dinamikus állapottábla alapján illesztjük, és ha a csomag illeszkedik az aktív kapcsolatban következõként várt csomagra, akkor átmegy a tûzfalon és a dinamikus állapottáblában frissül a kapcsolat állapota. Az aktív munkamenethez nem tartozó csomagok pedig egyszerûen a bejövõ szabályrendszer szerint kerülnek ellenõrzésre.
+
+Amikor egy kapcsolat befejezõdik, automatikusan törlõdik a dinamikus állapottáblából.
+
+Az állapottartó csomagszûrés használatával az újonnan keletkezõ kapcsolatok elutasítására vagy engedélyezésére tudunk koncentrálni. Ha engedélyeztük egy új kapcsolat létrejöttét, akkor a rákövetkezõ összes többi csomag automatikusan átmegy a tûzfalon és minden más hamis csomag eldobódik. Ha tiltjuk az új kapcsolatot, akkor egyetlen rákövetkezõ csomag sem juthat át. Az állapottartó szûrés által felkínált fejlett elemzési lehetõségek képesek védelmet nyújtani a behatolók részérõl alkalmazott megannyi különbözõ támadási módszer ellen.
+
+=== Példa inkluzív szabályrendszerre
+
+A most következõ szabályrendszer arra mutat példát, hogyan programozzunk le egy nagyon biztonságos inkluzív tûzfalat. Az inkluzív tûzfalak csak a szabályainak megfelelõ szolgáltatásokat engedik keresztül, és alapértelmezés szerint minden mást blokkolnak. Egy hálózat gépeit védõ tûzfalnak, amelyet gyakran "hálózati tûzfalnak" (network firewall) is neveznek, legalább két hálózati interfésszel kell rendelkeznie. Ezeket az interfészeket általában úgy állítják be, hogy tökéletesen megbíznak az egyik oldalban (a helyi hálózatban), a másikban (az internetben) pedig egyáltalán nem. A tûzfalat egyébként úgy is beállíthatjuk, hogy csak a tûzfalat mûködtetõ gépet védje - ezt "egyrendszeres tûzfalnak" (host based firewall) nevezik. Az ilyen típusú megoldásokat nem biztonságos hálózaton keresztül kommunikáló szervereknél alkalmaznak.
+
+Mindegyik UNIX(R)-típusú rendszert, köztük a FreeBSD-t is úgy alakították ki, hogy az operációs rendszeren belüli kommunikáció az [.filename]#lo0# interfészen és a `127.0.0.1` IP-címen keresztül történik. A tûzfal szabályai között feltétlenül szerepelniük kell olyanoknak, amelyek lehetõvé teszik ezen a speciális intefészen a csomagok zavartalan mozgását.
+
+Az internetre csatlakozó interfészhez kell rendelni a kifelé és befelé haladó forgalom hitelesítését é a hozzáférésének vezérlését. Ez lehet a felhasználói PPP által létrehozott [.filename]#tun0# interfész vagy a DSL-, illetve kábelmodemhez csatlakozó hálózati kártya.
+
+Ahol egy vagy több hálózati kártya is csatlakozik több különbözõ helyi hálózathoz, úgy kell beállítani a hozzájuk tartozó interfészeket, hogy egymás felé és az internet felé képesek legyenek küldeni és fogadni.
+
+A szabályokat elõször három nagy csoportba kell szerveznünk: elõször jönnek a megbízható interfészek, ezeket követik az internet felé mutató interfészek, végül internet felõl jövõ, nem megbízható interfészeke.
+
+Az egyes csoportokban szereplõ szabályokat úgy kell megadni, hogy közülük elõre kerüljenek a leggyakrabban alkalmazottak, és a csoport utolsó szabálya blokkoljon és naplózzon minden csomagot az adott interfészen és irányban.
+
+A kimenõ forgalomat vezérlõ szabályrendszer csak `pass` (tehát átengedõ) szabályokat tartalmazhat, amelyek bentrõl az interneten elérhetõ szolgáltatásokat azonosítják egyértelmûen. Az összes ilyen szabályban meg kell jelenni a `quick`, `on`, `proto`, `port` és `keep state` beállításoknak. A `proto tcp` szabályok esetében meg kell adni a `flag` opciót is, amivel fel tudjuk ismertetni a kapcsolatok keletkezését és ezen keresztül aktiválni az állapottartást.
+
+A bejövõ forgalmat vezérlõ szabályrendszerben elõször az eldobni kívánt csomagokat kell megadni, aminek két eltérõ oka van. Elõször is elõfordulhat, hogy a veszélyes csomagok részleges illeszkedés miatt szabályosnak tûnnek. Az ilyen csomagokat értelemszerûen nem lenne szabad beengedni a szabályok részleges megfelelése alapján. A másodszor az eleve ismerten problémás és értelmetlen csomagokat csendben el kellene vetni, mielõtt a szakaszhoz tartozó utolsó szabály fogná meg és naplózná. Ez az utolsó szabály egyébként szükség esetén felhasználható a támadók elleni bizonyítékok begyûjtésére.
+
+A másik, amire még oda kell figyelnünk, hogy a blokkolt csomagok esetében semmilyen válasz nem keletkezzen, egyszerûen csak tûnjenek el. Így a támadó nem fogja tudni, hogy a csomagjai vajon elérték-e a rendszerünket. Minél kevesebb információt tudnak összegyûjteni a rendszerünkrõl a támadók, annál több idõt kell szánniuk csínytevéseik kieszelésére. A `log first` opciót tartalmazó szabályok csak az illeszkedésnél fogják naplózni a hozzájuk tartozó eseményt. Erre láthatunk példát az `nmap OS fingerprint` szabálynál. Az package:security/nmap[] segédprogramot a támadók gyakran alkalmazzák a megtámadni kívánt szerver operációs rendszerének felderítésére.
+
+Minden `log first` opcióval megadott szabály illeszkedésénél a `ipfstat -hio` parancs meghatározódik az eddigi illeszkedések aktuális száma. Nagyobb értékek esetében következtethetünk arra, hogy a rendszerünket megtámadták (vagyis csomagokkal árasztják éppen el).
+
+Az ismeretlen portszámok felderítésére az [.filename]#/etc/services# állomány, esetleg a http://www.securitystats.com/tools/portsearch.php[http://www.securitystats.com/tools/portsearch.php] (angol nyelvû) honlap használható.
+
+Érdemes továbbá megnézni a trójai programok által használt portokat a http://www.simovits.com/trojans/trojans.html[http://www.simovits.com/trojans/trojans.html] címen (angolul).
+
+A következõ szabályrendszer egy olyan biztonságos "inkluzív" típusú tûzfal, amelyet éles rendszeren is használnak. Ezt a rendszerünkön nem használt szolgáltatásokra vonatkozó `pass` szabályok törlésével könnyedén a saját igényeink szerint alakíthatjuk.
+
+Ha nem akarunk látni bizonyos üzeneteket, akkor vegyünk fel hozzájuk egy `block` típusú szabályt a befelé irányuló forgalomhoz tartozó szabályok közé.
+
+A szabályokban írjuk át a [.filename]#dc0# interfész nevét annak a hálózati kártyának az interfészére, amelyen keresztül csatlakozunk az internethez. A felhasználói PPP esetében ez a [.filename]#tun0# lesz.
+
+Tehát a következõket kell beírni az [.filename]#/etc/ipf.rules# állományba:
+
+[.programlisting]
+....
+#################################################################
+# A helyi hálózatunkon zajló forgalmat ne korlátozzuk.
+# Csak akkor kell, ha helyi hálózathoz is csatlakozunk.
+#################################################################
+
+#pass out quick on xl0 all
+#pass in quick on xl0 all
+
+#################################################################
+# A belsõ interfészen szintén ne korlátozzunk semmit.
+#################################################################
+pass in quick on lo0 all
+pass out quick on lo0 all
+
+#################################################################
+# Az internet felé forgalmazó interfész (kimenõ kapcsolatok)
+# A saját hálózatunkról belülrõl vagy errõl az átjáróról
+# kezdeményezett kapcsolatokat vizsgáljuk az internet felé.
+#################################################################
+
+# Engedélyezzük az internet szolgáltatók névszerverének elérését,
+# az "xxx" helyett a névszervet IP-címét kell megadni.
+# Másoljuk le ezeket a sorokat, ha a szolgáltatónknak több
+# névszerverét is beakarjuk állítani. A címeiket az /etc/resolv.conf
+# állományban találjuk.
+pass out quick on dc0 proto tcp from any to xxx port = 53 flags S keep state
+pass out quick on dc0 proto udp from any to xxx port = 53 keep state
+
+# DSL vagy kábeles hálózatoknál engedélyezzük a
+# szolgáltatónk DHCP szerverének elérését.
+# Ez a szabály nem kell, ha "felhasználói PPP"-vel
+# kapcsolódunk az internethez, ilyenkor tehát az egész
+# csoport törölhetõ.
+# Használjuk az alábbi szabályt és keressük meg a naplóban az
+# IP-címet. Ha megtaláltuk, akkor tegyük bele a megjegyzésben
+# szereplõ szabályba és töröljük az elsõ szabályt.
+pass out log quick on dc0 proto udp from any to any port = 67 keep state
+#pass out quick on dc0 proto udp from any to z.z.z.z port = 67 keep state
+
+# Kifelé engedélyezzük a szabványos nem biztonságos WWW funkciókat.
+pass out quick on dc0 proto tcp from any to any port = 80 flags S keep state
+
+# Kifelé engedélyezzük a biztonságos WWW funkciókat TLS SSL
+# protokollal.
+pass out quick on dc0 proto tcp from any to any port = 443 flags S keep state
+
+# Kifelé engedélyezzük az e-mailek küldését és fogadását.
+pass out quick on dc0 proto tcp from any to any port = 110 flags S keep state
+pass out quick on dc0 proto tcp from any to any port = 25 flags S keep state
+
+# Kifelé engedélyezzük az idõ szolgáltatást.
+pass out quick on dc0 proto tcp from any to any port = 37 flags S keep state
+
+# Kifelé engedélyezzük az nntp híreket.
+pass out quick on dc0 proto tcp from any to any port = 119 flags S keep state
+
+# Kifelé engedélyezzük az átjáróról és a helyi hálózatról a nem
+# biztonságos FTP használatát (passzív és akív módokban is). Ez a
+# funkció a mûködéséhez a nat szabályokat tartalmazó állományban
+# hivatkozott FTP proxyt használja. Amennyiben a pkg_add paranccsal
+# csomagokat akarunk telepíteni az átjáróra, erre a szabályra
+# mindenképpen szükségünk lesz.
+pass out quick on dc0 proto tcp from any to any port = 21 flags S keep state
+
+# Kifelé engedélyezzük az ssh/sftp/scp # (biztonságos telnet/rlogin/FTP)
+# szolgáltatások # elérését az SSH (secure shell) használatával.
+pass out quick on dc0 proto tcp from any to any port = 22 flags S keep state
+
+# Kifelé engedélyezzük a nem biztonságos telnet elérését.
+pass out quick on dc0 proto tcp from any to any port = 23 flags S keep state
+
+# Kifelé engedélyezzük FreeBSD CVSUp funkcióját.
+pass out quick on dc0 proto tcp from any to any port = 5999 flags S keep state
+
+# Kifelé engedélyezzük a pinget.
+pass out quick on dc0 proto icmp from any to any icmp-type 8 keep state
+
+# Kifelé engedélyezzük a helyi hálózatról érkezõ whois kéréseket.
+pass out quick on dc0 proto tcp from any to any port = 43 flags S keep state
+
+# Minden mást eldobunk és naplózzuk az elsõ elõfordulásukat.
+# Ez a szabály blokkol alapértelmezés szerint mindent.
+block out log first quick on dc0 all
+
+#################################################################
+# Az internet felõli interfész (bejövõ kapcsolatok)
+# A saját hálózatunk felé vagy erre az átjáróra
+# nyitott kapcsolatokat vizsgáljuk az internet felõl.
+#################################################################
+
+# Eldobjuk az összes olyan bejövõ forgalmat, amit hivatalosan nem
+# lehetne továbbítani vagy fenntartott címterülethez tartozik.
+block in quick on dc0 from 192.168.0.0/16 to any    #RFC 1918: privát IP
+block in quick on dc0 from 172.16.0.0/12 to any     #RFC 1918: privát IP
+block in quick on dc0 from 10.0.0.0/8 to any        #RFC 1918: privát IP
+block in quick on dc0 from 127.0.0.0/8 to any       #helyi
+block in quick on dc0 from 0.0.0.0/8 to any         #helyi
+block in quick on dc0 from 169.254.0.0/16 to any    #DHCP
+block in quick on dc0 from 192.0.2.0/24 to any      #dokumentációs célokra fenntartva
+block in quick on dc0 from 204.152.64.0/23 to any   #Sun klaszterek összekötésére használt
+block in quick on dc0 from 224.0.0.0/3 to any       #D és E osztályú multicast
+
+##### Itt eldobunk egy rakás csúf dolgot ############
+# Ezeket nem akarjuk a naplóban látni:
+
+# Eldobjuk a töredékcsomagokat.
+block in quick on dc0 all with frags
+
+# Eldobjuk a túlságosan rövid TCP csomagokat.
+block in quick on dc0 proto tcp all with short
+
+# Eldobjuk a forrás által közvetített (source routed) csomagokat.
+block in quick on dc0 all with opt lsrr
+block in quick on dc0 all with opt ssrr
+
+# Elutasítjuk az "OS fingerprint" kéréseket.
+# Naplózzuk az elsõ elõfordulást, így nálunk lesz a kíváncsiskodó
+# egyén IP-címe.
+block in log first quick on dc0 proto tcp from any to any flags FUP
+
+# Eldobunk mindent, aminek speciális beállításai vannak.
+block in quick on dc0 all with ipopts
+
+# Elutasítjuk a publikus pinget.
+block in quick on dc0 proto icmp all icmp-type 8
+
+# Elutasítjuk az ident kéréseket.
+block in quick on dc0 proto tcp from any to any port = 113
+
+# Blokkoljuk az összes Netbios szolgáltatást: 137=név, 138=datagram,
+# 139=session. A Netbios az MS Windows megosztását implementálja.
+# Blokkoljuk az MS Windows hosts2 névszerver kéréseit is a 81-es
+# porton.
+block in log first quick on dc0 proto tcp/udp from any to any port = 137
+block in log first quick on dc0 proto tcp/udp from any to any port = 138
+block in log first quick on dc0 proto tcp/udp from any to any port = 139
+block in log first quick on dc0 proto tcp/udp from any to any port = 81
+
+# Engedélyezzük a szolgáltatónk DHCP szerverétõl érkezõ forgalmat.
+# Ebben a szabályban meg kell adnunk a szolgáltató DHCP szerverének
+# IP-címét, mivel itt csak a hiteles forrásból fogadunk el csomagokat.
+# Erre csak DSL- és kábelmodemes kapcsolat esetében van szükség, a
+# "felhasználói PPP" alkalmazása során szükségtelen. Ez az IP-cím
+# megegyezik a kimenõ kapcsolatoknál megadott címmel.
+pass in quick on dc0 proto udp from z.z.z.z to any port = 68 keep state
+
+# Befelé engedélyezzük a szabványos WWW funkciót, mivel webszerverünk
+# van.
+pass in quick on dc0 proto tcp from any to any port = 80 flags S keep state
+
+# Befelé engedélyezzük az internetrõl érkezõ nem biztonságos telnet
+# kapcsolatokat. Azért nem biztonságos, mert az azonosítókat és
+# jelszavakat titkosítatlan formában közli az interneten keresztül.
+# Töröljük ezt a szabályt, ha nem használunk telnet szervert.
+#pass in quick on dc0 proto tcp from any to any port = 23 flags S keep state
+
+# Befelé engedélyezzük az internetrõl # érkezõ ssh/sftp/scp (biztonságos
+# telnet/rlogin/FTP) # kapcsolatokat az SSH (secure shell) használatával.
+pass in quick on dc0 proto tcp from any to any port = 22 flags S keep state
+
+# Minden mást dobjuk el és naplózzuk az elsõ elõfordulásukat.
+# Az elsõ alkalom naplózásával elejét tudjuk venni a "Denial of
+# Service" típusú támadásoknak, amivel egyébként lehetséges lenne a
+# napló elárasztása.
+# Ez a szabály blokkol alapértelmezés szerint mindent.
+block in log first quick on dc0 all
+################### Itt van a szabályok vége ##############################
+....
+
+=== NAT
+
+A NAT jelentése _Network Address Translation_, vagyis hálózati címfordítás. A Linux(R) esetében ezt "IP masqueradingnak", vagyis IP maszkolásnak hívják. A hálózati címfordítás és az IP maszkolás lényegben ugyanazt takarja. Az IPF címfordításért felelõs funkciójának köszönhetõen képesek vagyunk a tûzfal mögött elhelyezkedõ helyi hálózat számára megosztani az internet-szolgáltatól kapott publikus IP-címet.
+
+Sokakban felmerülhet a kérdés, hogy erre vajon mi szükségünk lehet. Az internet-szolgáltatók a magánszemélyeknek általában dinamikus IP-címeket osztanak ki. A dinamikus itt arra utal, hogy a címünk minden alkalommal változik, amikor betárcsázunk a szolgáltatóhoz vagy amikor ki- és bekapcsoljuk a modemünket. Ez a dinamikus IP-cím fog azonosítani minket az interneten.
+
+Most tegyük fel, hogy öt gépünk van otthon, viszont csak egyetlen elõfizetéssel rendelkezünk. Ebben az esetben öt telefonvonalat kellene használnunk és mindegyik géphez elõfizetni az internetre.
+
+A hálózati címfordítás alkalmazásával azonban mindössze egyetlen elõfizetés kell. A gépek közül négyet hozzákötünk egy switch-hez és a switch-et pedig a fennmaradó géphez, amelyen FreeBSD fut. Ez utóbbi lesz az így kialakított helyi hálózatunk átjárója. A tûzfalban mûködõ címfordítás segítségével a helyi hálózaton található gépek IP-címeit észrevétlenül át tudjuk fordítani a hálózatunk publikus IP-címére, ahogy a csomagok elhagyják az átjárót. A beérkezõ csomagok esetében mindez visszafelé történik meg.
+
+Az IP-címek közül adott egy tartomány, amit a címfordítást használó helyi hálózatok részére tartanak fenn. Az RFC 1918 szerint az alábbi IP-címtartományok használhatók a helyi hálózatban, mivel ezeken keresztül közvetlenül sosem lehet kijutni az internetre:
+
+[.informaltable]
+[cols="1,1,1", frame="none"]
+|===
+
+|Kezdõ IP: `10.0.0.0`
+|-
+|Záró IP: `10.255.255.255`
+
+|Kezdõ IP: `172.16.0.0`
+|-
+|Záró IP: `172.31.255.255`
+
+|Kezdõ IP: `192.168.0.0`
+|-
+|Záró IP: `192.168.255.255`
+|===
+
+=== IPNAT
+
+A címfordításra vonatkozó szabályokat az `ipnat` paranccsal tudjuk betölteni. Az ilyen típusú szabályokat általában az [.filename]#/etc/ipnat.rules# állományban találjuk. A részleteket lásd az man:ipnat[1] man oldalán.
+
+Amikor a címfordítás üzembe helyezése után meg akarjuk változtatni a címfordítás szabályait, elõször a címfordítás szabályait tartalmazó állományt módosítsuk, majd a belsõ címfordítási szabályok és a címfordítási táblázatban szereplõ aktív bejegyzések törléséhez futassuk le az `ipnat` parancsot a `-CF` beállítással.
+
+A címfordítási szabályok újratöltését egy ehhez hasonló paranccsal tudjuk elvégezni:
+
+[source,bash]
+....
+# ipnat -CF -f /etc/ipnat.szabályok
+....
+
+A címfordításhoz tartozó statisztikákat ezzel a paranccsal tudjuk lekérdezni:
+
+[source,bash]
+....
+# ipnat -s
+....
+
+A címfordítási táblázatban pillanatnyilag szereplõ összerendeléseket a következõ paranccsal tudjuk listázni:
+
+[source,bash]
+....
+# ipnat -l
+....
+
+A szabályok feldolgozásával és az aktív szabályokkal/bejegyzésekkel kapcsolatos információk részletezését így engedélyezhetjük:
+
+[source,bash]
+....
+# ipnat -v
+....
+
+=== A címfordítási szabályok
+
+A címfordítási szabályok nagyon rugalmasak és rengeteg olyan funkciót meg tudunk velük valósítani, ami az üzleti és otthoni felhasználók számára egyaránt hasznos.
+
+Itt most a szabályok felépítését csak egyszerûsítve mutatjuk be, leginkább a nem üzleti környezetek tekintetében. A szabályok komplett formai leírását az man:ipnat[5] man oldalán találjuk.
+
+Egy címfordítási szabály tehát valahogy így néz ki:
+
+[.programlisting]
+....
+map INTERFÉSZ HELYI_IP_TARTOMÁNY -> PUBLIKUS_CÍM
+....
+
+A szabályt a `map` kulcsszó kezdi.
+
+A _INTERFÉSZ_ helyére az internet felé mutató külsõ interfész nevét írjuk be.
+
+A _HELYI_IP_TARTOMÁNY_ lesz az, amelyben a kliensek címeznek. Ez például a `192.168.1.0/24`.
+
+A _PUBLIKUS_CÍM_ lehet egy külsõ IP-cím vagy a `0/32` speciális kulcsszó, amellyel a _FELÜLET_-hez rendelt IP-címre hivatkozunk.
+
+=== Hogyan mûködik a hálózati címfordítás
+
+A publikus cél felé haladó csomag megérkezik a helyi hálózatról. Miután a kimenõ kapcsolatokra vonatkozó szabályok átengedik, a címfordítás kapja meg a szerepet és fentrõl lefelé haladva nekilát alkalmazni a saját szabályait, ahol az elsõ egyezõ szerint cselekszik. A címfordítás a szabályokat a csomaghoz tartozó interfészre és a forrás IP-címére illeszti. Amikor a csomag interfészének neve illeszkedik egy címfordítási szabályra, akkor ezután a csomag forrás (vagyis a helyi hálózaton belüli) IP-címérõl igyekszik eldönteni, hogy a szabály nyilának bal oldalán szereplõ tartományba esik-e. Ha erre is illeszkedik, akkor a forrás IP-címét átírjuk a `0/32` kulcsszó alapján felderített publikus IP-címre. A címfordító rutin ezt feljegyzi a saját belsõ táblázatába, így amikor a csomag visszatér az internetrõl, akkor képes lesz visszafordítani az eredeti belsõ IP-címére és feldolgozásra átadni a tûzfal szabályainak.
+
+=== A címfordítás engedélyezése
+
+A címfordítás életre keltéséhez a következõket kell beállítanunk az [.filename]#/etc/rc.conf# állományban.
+
+Elõször engedélyezzük a gépünknek, hogy közvetítsen forgalmat az interfészek között:
+
+[.programlisting]
+....
+gateway_enable="YES"
+....
+
+Minden alkalommal indítsuk el a címfordításért felelõs IPNAT programot:
+
+[.programlisting]
+....
+ipnat_enable="YES"
+....
+
+Adjuk meg az IPNAT számára a betöltendõ szabályokat:
+
+[.programlisting]
+....
+ipnat_rules="/etc/ipnat.rules"
+....
+
+=== Hálózati címfordítás nagyon nagy helyi hálózatok esetében
+
+Az olyan helyi hálózatokban, ahol rengeteg PC található vagy több alhálózatot is tartalmaz, az összes privát IP-cím egyetlen publikus IP-címbe tömörítése igen komoly problémává tud dagadni és az azonos portok gyakori használata a helyi hálózatra kötött számítógépek között ütközéseket okoz. Két módon tudunk megoldást nyújtani erre a problémára.
+
+==== A használható portok kiosztása
+
+Egy normális címfordítási szabály valahogy így nézne ki:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 0/32
+....
+
+A fenti szabályban a csomag forrásportját az IPNAT változatlanul a feldolgozás után hagyja. Ha ehhez még hozzátesszük a `portmap` kulcsszót, akkor ezzel utasítani tudjuk az IPNAT-ot, hogy csak az adott tartományban képezze le a forrásportokat. Például a következõ szabály hatására az IPNAT a forrásportokat egy adott tartományon belül fogja módosítani:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 0/32 portmap tcp/udp 20000:60000
+....
+
+Ha viszont még inkább meg akarjuk könnyíteni a dolgunkat, akkor itt egyszerûen csak adjuk meg az `auto` kulcsszót, amellyel az IPNAT önmagától megállapítja, hogy milyen portokat tud használni:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 0/32 portmap tcp/udp auto
+....
+
+==== Több publikus cím használata
+
+Minden nagyobb helyi hálózat esetében elérkezünk ahhoz a ponthoz, ahol már egyetlen publikus cím nem elég. Ha több publikus IP-címmel is rendelkezünk, akkor ezekbõl a címekbõl egy "közös készletet" hozhatunk létre, amibõl majd az IPNAT válogathat miközben a csomagok címeit átírja kifelé menetben.
+
+Például ahelyett, hogy a csomagokat egyetlen publikus IP-címre képeznénk le, ahogy itt tesszük:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 204.134.75.1
+....
+
+A hálózati maszk segítségével meg tudjuk adni IP-címek egy tartományát is:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 204.134.75.0/255.255.255.0
+....
+
+CIDR-jelöléssel:
+
+[.programlisting]
+....
+map dc0 192.168.1.0/24 -> 204.134.75.0/24
+....
+
+=== A portok átirányítása
+
+Gyakran elõfordul, hogy van webszerverünk, levelezõ szerverünk, adatbázis szerverünk és névszerverünk, melyek a helyi hálózat különbözõ gépein futnak. Ebben az esetben a szerverekhez tartozó forgalmat is fordítanunk kell, illetve valamilyen módon a bejövõ forgalmat is át kell irányítanunk a helyi hálózat megfelelõ gépeihez. Az IPNAT ezt a gondot a hálózati címfordítás átirányítást támogató funkcióival szünteti meg. Tegyük fel, hogy a `10.0.10.25` belsõ címen van egy webszerverünk, amelyhez a `20.20.20.5` publikus IP tartozik. Ilyenkor a következõ szabályt adjuk meg:
+
+[.programlisting]
+....
+rdr dc0 20.20.20.5/32 port 80 -> 10.0.10.25 port 80
+....
+
+vagy:
+
+[.programlisting]
+....
+rdr dc0 0.0.0.0/0 port 80 -> 10.0.10.25 port 80
+....
+
+Így tudjuk beállítani a `10.0.10.33` címmel rendelkezõ névszervert a kintrõl érkezõ névfeloldási kérések fogadására:
+
+[.programlisting]
+....
+rdr dc0 20.20.20.5/32 port 53 -> 10.0.10.33 port 53 udp
+....
+
+=== Az FTP és a címfordítás
+
+Az FTP egy olyan õskövület, amely még az internet egy régi korszakából maradt fenn, amikor az egyetemek között még bérelt vonal létezett és az FTP szolgált a kutatók közt az állományok megosztására. Ez még abban az idõben történt, amikor a biztonság egyáltalán nem volt lényeges szempont. Az évek elõrehaladtával az FTP protokoll beleivódott a feltörekvõ internet gerincébe és a titkosítatlanul küldött azonosítóival és jelszavaival továbbra is ugyanolyan védtelen maradt. Az FTP két változatban, aktív és passzív módban képes mûködni. Az eltérés kettejük között az adatcsatorna megállapításában van. A passzív mód sokkal biztonságosabb, mivel ilyenkor az adatcsatornát az FTP kapcsolatot kezdeményezõ állítja be. Az FTP különbözõ módjainak magyarázatát és a köztük levõ különbséget a http://www.slacksite.com/other/ftp.html[http://www.slacksite.com/other/ftp.html] címen ismerhetjük meg részleteiben (angolul).
+
+==== Az IPNAT szabályai
+
+Az IPNAT egy speciális beépített FTP proxyval rendelkezik, amelyre a hálózati címfordítás leképezései között hivatkozhatunk. Képes figyelni az összes aktív vagy passzív FTP kapcsolathoz tartozó kimenõ kérést és ezekhez dinamikusan létrehozni olyan ideiglenes szûrési szabályokat, amelyek valóban csak az adatcsatornához felhasznált portokat tartalmazzák. Ezzel ki tudjuk küszöbölni az FTP azon káros hatását a tûzfalra nézve, hogy egyszerre túlságosan sok magasabb tartománybeli port legyen nyitva.
+
+Ez a szabály a belsõ hálózat összes FTP forgalmát lekezeli:
+
+[.programlisting]
+....
+map dc0 10.0.10.0/29 -> 0/32 proxy port 21 ftp/tcp
+....
+
+Ez a szabály pedig az átjáróról érkezõ FTP forgalommal bírkózik meg:
+
+[.programlisting]
+....
+map dc0 0.0.0.0/0 -> 0/32 proxy port 21 ftp/tcp
+....
+
+Ez a szabály kezeli a belsõ hálózatról érkezõ összes nem FTP típusú forgalmat:
+
+[.programlisting]
+....
+map dc0 10.0.10.0/29 -> 0/32
+....
+
+Az FTP leképzésére vonatkozó szabály a szokásos leképzési szabály elé kerül. Az összes csomag fentrõl haladva az elsõ illeszkedõ szabály alapján kerül feldolgozásra. Elõször az interfész nevét vizsgáljuk, majd a belsõ hálózatbeli forrás IP-t, végül azt, hogy a csomag egy FTP kapcsolat része. Ha minden paraméterében megfelel, akkor az FTP proxy készít egy ideiglenes szûrési szabályt hozzá, amellyel az FTP kapcsolathoz tartozó csomagok mind a két irányba képesek lesznek vándorolni, természetesen a címfordítással együtt. Az összes többi bentrõl érkezõ csomag átlép ezen a szabályon és megáll a harmadiknál, ahol az interfésznek és forrás IP-nek megfelelõen átfordítjuk a címét.
+
+==== Az IPNAT szûrési szabályai FTP-re
+
+Az FTP esetében csak egyetlen szûrési szabályra van szükségünk a hálózati címfordításba épített FTP proxy használatához.
+
+FTP proxy nélkül az alábbi három szabály kellene:
+
+[.programlisting]
+....
+# Kifelé engedélyezzük a belsõ gépek FTP elérést az internet irányába,
+# aktív és passzív módokban.
+pass out quick on rl0 proto tcp from any to any port = 21 flags S keep state
+
+# Kifelé engedélyezzük a passzív módhoz tartozó magasabb tartománybeli
+# adatcsatornákat.
+pass out quick on rl0 proto tcp from any to any port > 1024 flags S keep state
+
+# Aktív módban beengedjük az FTP szervertõl érkezõ adatcsatornát.
+pass in quick on rl0 proto tcp from any to any port = 20 flags S keep state
+....
+
+[[firewalls-ipfw]]
+== IPFW
+
+Az IPFIREWALL (IPFW) a FreeBSD által támogatott tûzfalazó alkalmazás, melyet a FreeBSD Projektben résztvevõ önkéntesek fejlesztettek ki és tartanak karban. Régi típusú, állapottartás nélküli szabályokat használ, és az itt használatos szabályírási technikát "egyszerû állapottartó megoldásnak" nevezzük.
+
+Az IPFW szabvány FreeBSD-ben levõ, mintaként szolgáló szabályrendszere (ez az [.filename]#/etc/rc.firewall# és [.filename]#/etc/rc.firewall6# állományokban található meg) annyira egyszerû, hogy komolyabb módosítások nélkül nem ajánlatos használni. Ez a példa nem tartalmaz állapottartó szûrést, ami viszont a legtöbb esetben kívánatos lenne, ezért ezt a szakaszt nem erre alapozzuk.
+
+Az IPFW állapottartás nélküli szabályainak felépítésében olyan technikailag kifinomult leválogatási képességek bújnak meg, amelyek jócskán meghaladják az átlagos tûzfalépítõk tudását. Az IPFW elsõsorban olyan szakemberek vagy szakmailag elõrehaladott felhasználók számára készült, akiknek speciális csomagszûrési igényeik vannak. A különbözõ protokollok használatának és a hozzájuk tartozó fejlécinformációk mindenre kiterjedõ ismerete szinte nélkülözhetetlen az IPFW valódi erejének kihasználásához. Ez a szint azonban túlmutat a kézikönyv ezen szakaszának keretein.
+
+Az IPFW hét komponensbõl épül fel, melyek közül az elsõdleges a rendszermag tûzfalazásért felelõs szabályfeldolgozó és a hozzá tartozó csomagnyilvántartás, majd ezt követi a naplózás, a hálózati címfordítást aktiváló `divert` szabály, valamint a komolyabb célok megvalósítására alkalmas lehetõségek: a forgalom korlátozásáért felelõs dummynet, a továbbküldésre alkalmas `fwd rule` szabály, a hálózati hidak támogatása, illetve az ipstealth. Az IPFW egyaránt használható IPv4 és IPv6 esetén.
+
+[[firewalls-ipfw-enable]]
+=== Az IPFW engedélyezése
+
+Az IPFW az alap FreeBSD telepítésben külön, futás idõben betölthetõ modulként érhetõ el. Ha az [.filename]#rc.conf# állományban megadjuk a `firewall_enable="YES"` beállítást, akkor a rendszer indulásakor ezt a modult dinamikusan betölti. Az IPFW-t csak akkor kell a FreeBSD rendszermagjába beépítenünk, ha szükségünk van a címfordítási funkciójára is.
+
+Ha tehát az [.filename]#rc.conf# állományban megadtuk a `firewall_enable="YES"` sort és újraindítottuk a számítógépünket, akkor a következõ fehérrel kiemelt üzenet fog megjelenni a rendszerindítás során:
+
+[source,bash]
+....
+ipfw2 initialized, divert disabled, rule-based forwarding disabled, default to deny, logging disabled
+....
+
+A "logging disabled" üzenetbõl kiderül, hogy a modul nem végez naplózást. A naplózást és a hozzá tartozó részletesség szintjét úgy tudjuk beállítani, ha az [.filename]#/etc/sysctl.conf# állományba felvesszük a következõ sorokat, amivel a következõ indításkor már mûködni fog:
+
+[.programlisting]
+....
+net.inet.ip.fw.verbose=1
+net.inet.ip.fw.verbose_limit=5
+....
+
+[[firewalls-ipfw-kernel]]
+=== A rendszermag beállításai
+
+Ha nem akarjuk kihasználni az IPFW által felkínált címfordítási lehetõségeket, akkor egyáltalán nem szükséges a FreeBSD rendszermagjába belefordítani a támogatását. Ezért az alábbiakat csak kiegészítõ információként tüntettük fel.
+
+[.programlisting]
+....
+options    IPFIREWALL
+....
+
+Ez a beállítás engedélyezi az IPFW használatát a rendszermag részeként.
+
+[.programlisting]
+....
+options    IPFIREWALL_VERBOSE
+....
+
+Ezzel és a `log` kulcsszóval tudjuk az IPFW szabályain keresztülhaladó csomagokat naplózni.
+
+[.programlisting]
+....
+options    IPFIREWALL_VERBOSE_LIMIT=5
+....
+
+Ez az érték korlátozza a man:syslogd[8] segítségével naplózott azonos bejegyzések maximális számát. Ezt a beállítást olyan veszélyes környezetekben érdemes használnunk, ahol naplózni akarunk. Segítségével meg tudjuk akadályozni, hogy a rendszernapló elárasztásával megakasszák a rendszerünket.
+
+[.programlisting]
+....
+options    IPFIREWALL_DEFAULT_TO_ACCEPT
+....
+
+Ezen beállítás hatására a tûzfal alapértelmezés szerint mindent átenged, ami általában akkor jöhet jól, amikor elõször beállítjuk a tûzfalat.
+
+[.programlisting]
+....
+options    IPDIVERT
+....
+
+Ezzel a beállítással engedélyezzük a címfordítás használatát.
+
+[NOTE]
+====
+Ha nem adjuk meg az IPFIREWALL_DEFAULT_TO_ACCEPT beállítást, vagy ha nem engedélyezzük a bejövõ csomagokat, akkor a gépünkre semmilyen csomag nem lesz képes bejutni, illetve onnan kijutni.
+====
+
+[[firewalls-ipfw-rc]]
+=== Az [.filename]#/etc/rc.conf# beállításai
+
+Így tudjuk engedélyezni a tûzfalat:
+
+[.programlisting]
+....
+firewall_enable="YES"
+....
+
+A FreeBSD-hez mellékelt alapértelmezett tûzfaltípusok közül az [.filename]#/etc/rc.firewall# állomány átolvasásával tudunk választani, és megadni az alábbi helyett:
+
+[.programlisting]
+....
+firewall_type="open"
+....
+
+A következõ értékek állnak rendelkezésünkre:
+
+* `open` - átengedi az összes forgalmat
+* `client` - csak ezt a gépet védi
+* `simple` - az egész hálózatot védi
+* `closed` - a helyi interfész kivételével minden IP alapú forgalmat tilt
+* `UNKNOWN` - tiltja a tûzfal szabályainak betöltését
+* [.filename]#állománynév# - a tûzfal szabályait tartalmazó állomány abszolút elérési útvonala
+
+Két különbözõ módon lehet betölteni a saját ipfw szabályainkat. Az egyik közülük, ha a `firewall_type` változóban megadjuk a _tûzfal szabályait_ tartalmazó állomány abszolút elérési útvonalát, az man:ipfw[8] parancssori beállításai nélkül. Az alábbi példában egy olyan egyszerû szabályrendszert láthatunk, amely blokkolja az összes bejövõ és kimenõ forgalmat:
+
+[.programlisting]
+....
+add deny in
+add deny out
+....
+
+Másrészrõl az `firewall_script` változóban is megadhatjuk azt a szkriptet, amelyben a rendszerindítás során meghívjuk `ipfw` parancsot. Az iménti szabályrendszert az alábbi szkripttel tudjuk kiváltani:
+
+[.programlisting]
+....
+#!/bin/sh
+
+ipfw -q flush
+
+ipfw add deny in
+ipfw add deny out
+....
+
+[NOTE]
+====
+Ha a `firewall_type` változó `client` vagy `simple` értékét használjuk, akkor az [.filename]#/etc/rc.firewall# állományban található alapértelmezett szabályokat érdemes átvizsgálnunk, hogy kellõen illeszkednek-e az adott géphez. Hozzátennénk, hogy a fejezetben szereplõ példák azt feltételezik, hogy a `firewall_script` értéke az [.filename]#/etc/ipfw.rules# állomány.
+====
+
+A naplózás így engedélyezhetõ:
+
+[.programlisting]
+....
+firewall_logging="YES"
+....
+
+[WARNING]
+====
+
+A `firewall_logging` változó egyedül csak annyit tesz, hogy beállítja a `net.inet.ip.fw.verbose` sysctl változónak az `1` értéket (lásd <<firewalls-ipfw-enable>>). A napló korlátozására nincs külön változó az [.filename]#rc.conf# állományon belül, de az [.filename]#/etc/sysctl.conf# állomány segítségével és manuálisan be tudjuk állítani a hozzá tartozó változót:
+
+[.programlisting]
+....
+net.inet.ip.fw.verbose_limit=5
+....
+
+====
+
+Amennyiben a gépünk átjáróként viselkedik, tehát a man:natd[8] segítségével címfordítást végez, a crossref:advanced-networking[network-natd,Hálózati címfordítás]ban olvashatunk utána, hogy ehhez az [.filename]#/etc/rc.conf# állományban milyen beállításokat kell megadnunk.
+
+[[firewalls-ipfw-cmd]]
+=== Az IPFW parancs
+
+Normál esetben az `ipfw` parancs használatos arra, hogy a tûzfal mûködése közben az aktív belsõ szabályai közé vegyünk fel vagy töröljünk közülük manuálisan bejegyzéseket. Ennek a módszernek az egyedüli hátránya, hogy az így végrehajtott módosítások el fognak veszni a rendszer leállításával. Itt inkább azt a megoldást javasoljuk, hogy az összes szabályt tegyük bele egy állományba és a rendszerindítás során ezt töltsük be, majd ha változtatni akarunk a tûzfalon, akkor ezt az állományt módosítsuk és a régiek törlésével töltsük be újra az egész szabályrendszert.
+
+Az `ipfw` parancs mellesleg remekül használható a jelenleg futó tûzfalszabályok megjelenítésére a konzolon. Az IPFW nyilvántartásában az egyes szabályokhoz dinamikusan jönnek létre számlálók, amelyek a rá illeszkedõ csomagokat számolják. A tûzfal tesztelése folyamán a szabályok és hozzá tartozó számlálók lekérdezése a megfelelõ mûködés ellenõrzésének egyik lehetséges módja.
+
+A szabályokat így tudjuk egymás után felsoroltatni:
+
+[source,bash]
+....
+# ipfw list
+....
+
+A szabályokat így tudjuk az utolsó illeszkedésük idejével együtt megjeleníteni:
+
+[source,bash]
+....
+# ipfw -t list
+....
+
+A következõ példában a nyilvántartási információkat kérdezzük le, ekkor a szabályok mellett az illeszkedõ csomagok száma is láthatóvá válik. Az elsõ sorban a szabály száma szerepel, majd ezt követi rendre az illeszkedõ kimenõ és bejövõ csomagok mennyisége, valamint végül maga a szabály.
+
+[source,bash]
+....
+# ipfw -a list
+....
+
+A statikus szabályok mellett a dinamikusakat így lehet kilistázni:
+
+[source,bash]
+....
+# ipfw -d list
+....
+
+A lejárt dinamikus szabályokat is meg tudjuk nézni:
+
+[source,bash]
+....
+# ipfw -d -e list
+....
+
+A számlálók nullázása:
+
+[source,bash]
+....
+# ipfw zero
+....
+
+Csak a _SZÁM_ sorszámú szabályhoz tartozó számlálók nullázása:
+
+[source,bash]
+....
+# ipfw zero SZÁM
+....
+
+[[firewalls-ipfw-rules]]
+=== Szabályrendszerek az IPFW-ben
+
+Az IPFW esetében a szabályrendszer olyan szabályokból áll, amelyek a csomagokról tartalmuk alapján eldöntik, hogy át kell engedni vagy vissza kell tartani. A gépek közt két irányban áramló csomagok egy munkamenet alapú társalgást képeznek. A tûzfalhoz tartozó szabályrendszer egyaránt feldolgozza a internetrõl a hálózatunk felé igyekvõ csomagokat, illetve a hálózatunk ezekre adott válaszait. Az egyes TCP/IP szolgáltatásokat (mint például telnet, www, levelezés stb.) a hozzájuk tartozó protokol és szabványos (fogadó) portszám írja le. Ezekre a forrásról általában valamilyen nem szabványos (magasabb értékû) portról érkeznek csomagok. Ekkor a kommunikáció összes paramétere (vagyis a portok és címek) bármelyike alapján definiálhatunk blokkolást vagy továbbengedést leíró szabályokat.
+
+Amikor egy csomag eléri a tûzfalat, a szabályrendszer elsõ szabályával kerül összehasonlításra és amíg nem illeszkedik valamelyikre, addig lefut rá a többi szabály is fentrõl lefelé egyesével, a sorszámuknak megfelelõ növekvõ sorrendben. Ha a csomag megfelel valamelyik szabály leválogatási paramétereinek, akkor a benne megnevezett cselekvés zajlik le, és számára a feldolgozás befejezõdik. Ezt a viselkedést neveztük "az elsõ illeszkedés nyer" típusú keresésnek. Amennyiben a csomag egyetlen szabályra sem illeszkedik, akkor az IPFW 65535-ös sorszámú állandó szabálya fogja elcsípni, amely feladata szerint eldobja az összes hozzá beérkezõ csomagot anélkül, hogy bármit is válaszolna a csomag feladójának.
+
+[NOTE]
+====
+A keresés a `count`, `skipto` és `tee` szabályok után még folytatódik.
+====
+
+Az itt szereplõ utasítások különbözõ állapottartásra vonatkozó opciókat, például a `keep state`, `limit`, `in`, `out` és `via` kulcsszavakat tartalmazó szabályokon alapulnak. Lényegében ezt tekinthetjük az inkluzív típusú tûzfalak kiindulási alapjaként.
+
+[WARNING]
+====
+
+A tûzfal szabályainak beállítása során nem árt óvatosnak lennünk, mert figyelmetlenségünk révén könnyen kizárathatjuk magunkat a gépünkrõl.
+====
+
+[[firewalls-ipfw-rules-syntax]]
+==== A szabályok felépítése
+
+Az itt bemutatásra kerülõ szabályok felépítését csak olyan mértékig részletezzük, ami elengedõ a szabványos inkluzív típusú tûzfalak kialakításához. A szabályok felépítésének pontos leírását az man:ipfw[8] man oldalán találhatjuk meg.
+
+A szabályok kulcsszavakat tartalmaznak. Ezeket a kulcsszavakat soronként egy elõre rögzített sorrendben kell szerepeltetni. A kulcsszavakat a szövegben kiemeltük. Bizonyos kulcsszavakhoz további opciókhoz is tartozhatnak, amelyek gyakran maguk is kulcsszavak és szintén további opciókat tartalmazhatnak.
+
+A `#` egy megjegyzés kezdetét jelzi, mely egyaránt megjelenhet egy külön sorban, vagy egy szabályt tartalmazó sor végén. Az üres sorok nem vesznek részt a feldolgozásban.
+
+_PARANCS SZABÁLY_SZÁM CSELEKVÉS NAPLÓZÁS SZûRÉS ÁLLAPOTTARTÁS_
+
+===== PARANCS
+
+Minden új szabály elõttt az [parameter]#add# (mint hozzáadás) parancsnak kell szerepelni, amellyel a belsõ táblázatba tudjuk felvenni.
+
+===== SZABÁLY_SZÁM
+
+A szabályokhoz mindig tartozik egy sorszám is.
+
+===== CSELEKVÉS
+
+A szabályhoz az alábbi cselekvések valamelyike kapcsolható, amely akkor hajtódik végre, amikor a csomag megfelel a hozzá tartozó szûrési feltételeknek.
+
+[parameter]#allow | accept | pass | permit#
+
+A fentiek közül mindegyik ugyanazt jelenti, vagyis hatásukra az illeszkedõ csomag kilép a tûzfalból. Ez a szabály megállítja a keresést.
+
+[parameter]#check-state#
+
+A csomagot a dinamikus szabályokat tároló táblázattal veti össze. Ha itt egyezést talál, akkor végrehajtja az egyezõ dinamikus szabályhoz tartozó cselekvést, minden más esetben továbblép a következõ szabályra. Ennek a szabálynak nincs illeszthetõ paramétere. Ha a szabályrendszerben nem szerepel ilyen, akkor a dinamikus szabályok vizsgálatát az elsõ `keep-state` vagy `limit` használatánál vonja be a rendszer.
+
+[parameter]#deny | drop#
+
+Mind a két szó ugyanarra utal, vagyis a szabályra illeszkedõ csomagokat el kell dobni. Ebben az esetben a keresés befejezõdik.
+
+===== NAPLÓZÁS
+
+[parameter]#log# vagy [parameter]#logamount#
+
+Amikor egy csomag egy `log` kulcsszót tartalmazó szabályra illeszkedik, akkor a rendszernaplóban egy üzenet keletkezik a `security` (biztonság) funkción keresztül. A naplóba ténylegesen csak akkor kerül bele az üzenet, ha az adott szabály még nem haladta meg a hozzá tartozó `logamount` paraméter értékét. Ha ezt nem adtuk meg, akkor az itt érvényes korlát a `net.inet.ip.fw.verbose_limit` sysctl változóból fog származni. A nulla érték mind a két esetben megszünteti ezt a korlátozást. Ha elértük a korlátot, akkor a naplózást úgy tudjuk újra engedélyezni, ha töröljük a naplózáshoz tartozó számláló értékét, lásd az `ipfw reset log` parancsot.
+
+[NOTE]
+====
+A naplózás mindig az összes paraméter illeszkedésének ellenõrzése után történik, de még a cselekvés (accept, deny) elvégzése elõtt. Teljesen rajtunk múlik, hogyan milyen szabályokat naplózunk.
+====
+
+===== SZûRÉS
+
+Ebben a szakaszban azok a kulcsszavak találhatóak, amelyek segítségével a csomagok különbözõ tulajdonságait tudjuk megvizsgálni és eldönteni, hogy illeszkedik-e a szabályra vagy sem. A következõ általános tulajdonságokat tudjuk megvizsgálni, ebben a kötött sorrendben:
+
+[parameter]#udp | tcp | icmp#
+
+Bármilyen más olyan protokoll is megadható, amely megtalálható az [.filename]#/etc/protocols# állományban. Ezzel adjuk a csomaghoz tartozó protokollt. Használata kötelezõ.
+
+[parameter]#from _forrás_ to _cél_#
+
+Mind a `from` és `to` kulcsszavak IP-címek illesztésére alkalmasak. A szabályoknak tartalmazniuk kell a _forrás_ ÉS a _cél_ paramétereket is. Az `any` egy olyan kulcsszó, amely tetszõleges IP-címre illeszkedik. A `me` pedig egy olyan speciális kulcsszó, amely a tûzfalat mûködtetõ FreeBSD-s gép (tehát ez a gép) adott interfészhez tartozó IP-címét jelöli, mint ahogy a `from me to any`, `from any to me`, `from 0.0.0.0/0 to any`, `from any to 0.0.0.0/0`, `from 0.0.0.0 to any`, `from any to 0.0.0.0` vagy `from me to 0.0.0.0` paraméterekben. Az IP-címek numerikus pontozott formában a hálózati maszk hosszával együtt (CIDR-jelöléssel), vagy egyszerûen csak pontozott formában adhatóak meg. A hálózati maszkok megállapításában a package:net-mgmt/ipcalc[] port lehet segítségünkre. Errõl bõvebb információkat a segédprogram honlapján, a http://jodies.de/ipcalc[http://jodies.de/ipcalc] címen találhatunk (angolul).
+
+[parameter]#port _szám_#
+
+A portszámokat is ismerõ protokollok esetében (mint például a TCP vagy UDP) adhatjuk meg. Fontos, hogy itt annak a szolgáltatásnak a portszámát adjuk meg, amelyre a szabály vonatkozik. A szolgáltatás (az [.filename]#/etc/services# állományból származó) nevét is megadhatjuk a port száma helyett.
+
+[parameter]#in | out#
+
+A beérkezõ valamint a kimenõ csomagokat adhatjuk meg ezen a módon. Itt az `in` és `out` kulcsszavak, melyeket kötelezõ megadni a szabály részeként.
+
+[parameter]#via _interfész_#
+
+Név szerint az adott interfészen keresztül haladó csomagokat tudjuk szûrni. A `via` kulcsszó hatására a használt interfész is számítani fog a csomag feldolgozása során.
+
+[parameter]#setup#
+
+Ez a kulcsszó a TCP csomagok esetében a kapcsolatok felépítésére vonatkozó kéréseket segít beazonosítani.
+
+[parameter]#keep-state#
+
+Ez egy kötelezõ kulcsszó. Feldolgozásakor a tûzfal létrehoz dinamikus szabályt, amely alapértelmezés szerint az egyazon protokollt használó forrás és cél IP/port párosok közti kétirányú forgalomra fog automatikusan illeszkedni.
+
+[parameter]#limit {_forráscím_ | _forrásport_ | _célcím_ | _célport_}#
+
+A tûzfal csak _N_ darab, a szabálynak megfelelõ azonos paraméterû kapcsolatot fog átengedi. Itt egy vagy több forrás- és célcím valamint forrás- és célport adható meg. A `limit` és a `keep-state` egy szabályon belül nem használható. A `limit` ugyanazokat az állapottartó funkciókat képviseli, mint a `keep-state`, csak a saját kiegészítéseivel megtoldva.
+
+==== ÁLLAPOTTARTÁS
+
+Az állapottartó szûrés a kétirányú csomagváltásokat egy létrejött kapcsolatba sorolja. Olyan vizsgálatokat végez, amivel képes megállapítani, hogy a csomag küldõje és címzettje között kialakult kommunikáció követ-e valamilyen kétirányú csomagküldésre érvényes folyamatot. Az így felállított sablontól eltérõ összes csomag hamisnak minõsül és automatikusan eldobásra kerül.
+
+A `check-state` segítségével ellenõrizhetjük, hogy az adott csomag a IPFW szerint megfelel-e valamelyik dinamikusan leképzett szabálynak. Ha egyezik valamelyikõjükkel, akkor a csomag a tûzfalból kilépve folytatja útját és a kommunikációban soron következõ csomag számára létrejön egy másik dinamikus szabály. Ha nincs egyezés, akkor csomag feldolgozása a szabályrendszer következõ szabályánál folytatódik.
+
+A dinamikus szabályokat kezelõ rutin sebezhetõ, mivel ha egyszerre nagy mennyiségû SYN csomagot küldünk, akkor olyan sok dinamikus bejegyzés keletkezik, hogy egyszerûen kifogyunk a rendelkezésre álló erõforrásokból. A FreeBSD fejlesztõi azonban az ilyen természetû támadások kivédésére is felkészítették, és kialakították belõle a `limit` opciót. Alkalmazásával le tudjuk korlátozni az egyszerre folyó párhuzamos kapcsolatok számát a forrás vagy a cél a `limit` paraméternél megadott mezõinek és a csomag IP-címe alapján. Így az adott szabályhoz és IP-címhez csak elõre rögzített mennyiségû nyitott állapotú dinamikus szabály létezhet egy idõben. Ha ezt a korlátot átlépjük, a csomag eldobódik.
+
+==== A tûzfal üzeneteinek naplózása
+
+A naplózás elõnyei nyilvánvalóak. Ha engedélyezzük, aktiválása után képesek leszünk olyan információknak utánanézni, mint például milyen csomagokat dobtunk el, honnan érkeztek, hova tartottak. Ez egy komoly fegyverünk lehet a potenciális támadókkal szemben.
+
+Azonban hiába engedélyezzünk önmagában a naplózást, attól az IPFW még saját magától nem fog naplózást elõíró szabályokat gyártani. A tûzfal karbantartóinak maguknak kell eldöntenie, hogy a szabályrendszerben mely szabályokhoz tartozzon naplózás, nekik kell felvenni ezekhez a `log` kulcsszót. Általában csak az eldobással járó `deny` típusú szabályokat vagy a bejövõ ICMP pingeket szokták naplózni. Gyakran úgy oldják meg ezt, hogy a szabályrendszer utolsó szabályaként lemásolják az `ipfw` alapértelmezett "mindent eldobunk" szabályát és a naplózást adják meg benne. Ezen a módon fény derül azokra a csomagokra, amelyek a szabályrendszerben semmire sem illeszkedtek.
+
+A naplózás azonban egy kétélû fegyver, mivel ha nem vagyunk elég körültekintõek, akkor a sok naplóinformáció között könnyen el tudunk veszni és a lemezünk is gyorsan betelhet a mindent elfoglaló naplóktól. Mellesleg a naplók megdagasztását célzó DoS típusú támadás a rendszerek lebénítására alkalmazott egyik legõsibb technika. Ezek az üzenetek nem csak a rendszernaplóba kerülnek bele, hanem az elsõdleges konzol képernyõjére is kiíródnak, ami egy idõ után idegesítõ tud lenni.
+
+A rendszermag `IPFIREWALL_VERBOSE_LIMIT=5` beállításával azonban képesek vagyunk korlátozni azokat a rendszernapló felé küldött egymás után következõ üzeneteket, amelyek ugyanarra a szabályra vonatkoznak. Amikor ezt a beállítást megadjuk a rendszermag fordításánál, akkor az egyes szabályokhoz az általa meghatározott értéken felül nem jön létre több hasonló üzenet. Hiszen semmi sem derül ki 200 teljesen azonos naplóüzenetbõl. Például, ha az egyes szabályokhoz legfeljebb öt egymást követõ üzenetet engedélyezünk, akkor a többi fennmaradó azonos üzenetet összeszámolja a rendszer és a következõ módon közvetíti a rendszernaplózó szolgáltatás felé:
+
+[.programlisting]
+....
+last message repeated 45 times
+....
+
+Ami magyarul így hangzik:
+
+[.programlisting]
+....
+az utolsó üzenet 45 alkalommal ismétlõdött meg
+....
+
+Az összes csomagokkal kapcsolatos naplózás alapértelmezés szerint a [.filename]#/var/log/security# állományba kerül, amelyet az [.filename]#/etc/syslog.conf# állomány definiál.
+
+[[firewalls-ipfw-rules-script]]
+==== Szabályokat tartalmazó szkript készítése
+
+A rutinosabb IPFW felhasználók a szabályokat egy állományban programozzák le olyan stílusban, hogy szkriptként is futtatható legyen. Ennek az egyik legnagyobb elõnye, hogy a tûzfal szabályai így egyszerre cserélhetõek a rendszer újraindítása nélkül. Ez a módszer nagyon kényelmes az új szabályok kipróbálásánál, mivel tetszõleges alkalommal végrehajthatjuk. Mivel ez egy szkript, ki tudjuk használni az itt megszokott szimbolikus helyettesítés által felkínált lehetõségeket, és ezzel a gyakran használt értékeket is egyszerre több szabályban tudjuk helyettesíteni. Erre a következõkben fogunk egy konkrét példát látni.
+
+A szkript felépítése kompatibilis a man:sh[1], man:csh[1] és man:tcsh[1] parancsértelmezõkkel. A szimbolikus mezõk helyettesítését a $ vagyis dollárjel vezeti be. Maguk a szimbolikus mezõk nem tartalmazzák a $ elõtagot. A szimbolikus mezõk értékeit "kettõs idézõjelek" között kell megadni.
+
+A szabályok összeírását kezdjük el így:
+
+[.programlisting]
+....
+####### itt kezdõdik az ipfw szabályait tartalmazó szkript ######
+#
+ipfw -q -f flush       # töröljük az összes aktuális szabályt
+# Set defaults
+oif="tun0"             # a kimenõ interfész
+odns="192.0.2.11"      # az internet szolgáltató névszerverének IP-címe
+cmd="ipfw -q add "     # a szabályok hozzáadásához szükséges elemek
+ks="keep-state"        # csupán a lustaság miatt
+$cmd 00500 check-state
+$cmd 00502 deny all from any to any frag
+$cmd 00501 deny tcp from any to any established
+$cmd 00600 allow tcp from any to any 80 out via $oif setup $ks
+$cmd 00610 allow tcp from any to $odns 53 out via $oif setup $ks
+$cmd 00611 allow udp from any to $odns 53 out via $oif $ks
+#### itt fejezõdik be az ipfw szabályait tartalmazó szkript ######
+....
+
+Ezzel készen is vagyunk. Most ne törõdjünk a példában szereplõ szabályokkal, itt most a szimbolikus helyettesítés használatát igyekeztük bemutatni.
+
+Ha az iménti példát az [.filename]#/etc/ipfw.rules# állományba mentettük el, akkor az alábbi parancs kiadásával tudjuk újratölteni a benne szereplõ szabályokat:
+
+[source,bash]
+....
+# sh /etc/ipfw.rules
+....
+
+Az [.filename]#/etc/ipfw.rules# állományt egyébként tetszõleges néven hívhatjuk és bárhová rakhatjuk.
+
+Ugyanez természetesen elérhetõ a következõ parancsok egymás utáni begépelésével is:
+
+[source,bash]
+....
+# ipfw -q -f flush
+# ipfw -q add check-state
+# ipfw -q add deny all from any to any frag
+# ipfw -q add deny tcp from any to any established
+# ipfw -q add allow tcp from any to any 80 out via tun0 setup keep-state
+# ipfw -q add allow tcp from any to 192.0.2.11 53 out via tun0 setup keep-state
+# ipfw -q add 00611 allow udp from any to 192.0.2.11 53 out via tun0 keep-state
+....
+
+==== Állapottartó szabályrendszerek
+
+A most következõ címfordítás nélküli szabályrendszer arra mutat példát, hogyan valósítsunk meg egy biztonságos "inkluzív" tûzfalat. Az inkluzív tûzfalak csak a szabályainak megfelelõ szolgáltatásokat engedik át, minden mást alapértelmezés szerint tiltanak. A komplett hálózati szegmensek védelmére összeállított tûzfalaknak legalább két interfészük van, amelyek mindegyikéhez tartoznia kell szabályoknak a megfelelõ mûködéshez.
+
+Az UNIX(R) mintájú operációs rendszer, köztül a FreeBSD is olyan, hogy a rendszerben belüli kommunikációt a [.filename]#lo0# nevû interfészen és a `127.0.0.1` IP-címen bonyolítja le. A tûzfalban mindenképpen szerepelniük kell olyan szabályoknak, amelyek gondoskodnak ezen speciális belsõ csomagok zavartalan közlekedésérõl.
+
+Az internet felé csatlakozó interfész lesz az, amelyen keresztül a kifelé menõ kéréseket hitelesítjük és vezéreljük az internet elérését, valamint ahol szûrjük az internet felõl érkezõ kéréseket. Ez lehet a PPP esetében a [.filename]#tun0# eszköz, vagy a DSL-, illetve kábelmodemhez csatlakozó hálózati kártya.
+
+Abban az esetben, amikor egy vagy több hálózati kártyával csatlakozunk a tûzfal mögött található belsõ helyi hálózatra, szintén gondoskodnunk kell a helyi hálózaton belül mozgó csomagok akadálymentes továbbításáról.
+
+A szabályokat elõször három nagyobb osztályba kell sorolnunk: az összes szabadon forgalmazó interfész, a publikus kimenõ és a publikus bejövõ interfész csoportjába.
+
+A publikus interfészekhez tartozó csoportokban úgy kell rendeznünk a szabályokat, hogy elõre kerüljenek a gyakrabban használtak és hátra a kevésbé használtak, valamint a csoportok utolsó szabálya blokkoljon és naplózzon minden csomagot az adott interfészen és irányban.
+
+A következõ szabályrendszerben szereplõ, a kimenõ kapcsolatokat tartalmazó csoport csak olyan `allow` típusú szabályokat tartalmaz, amelyek szûrési feltételei egyértelmûen azonosítják az interneten elérhetõ szolgáltatásokat. Az összes szabályban megjelennek a `proto`, `port`, `in`/`out`, `via` és `keep state` opciók. A `proto tcp` szabályokban emellett szerepel még egy `setup` opció is, amellyel a kapcsolatokat kezdeményezõ csomagokat tudjuk azonosítani és felvenni az állapottartásért felelõs dinamikus szabályok közé.
+
+A bejövõ forgalmat vezérlõ szabályrendszerben elõször az eldobni kívánt csomagokat kell megadni, aminek két eltérõ oka van. Elõször is elõfordulhat, hogy a veszélyes csomagok részleges illeszkedés miatt szabályosnak tûnnek. Az ilyen csomagokat értelemszerûen nem lenne szabad beengedni a szabályok részleges megfelelése alapján. A másodszor az eleve ismerten problémás és értelmetlen csomagokat csendben el kellene vetni, mielõtt a szakaszhoz tartozó utolsó szabály fogná meg és naplózná. Ez az utolsó szabály egyébként szükség esetén felhasználható a támadók elleni bizonyítékok begyûjtésére.
+
+A másik, amire még oda kell figyelnünk, hogy a blokkolt csomagok esetében semmilyen válasz nem keletkezzen, egyszerûen csak tûnjenek el. Így a támadó nem fogja tudni, hogy a csomagjai vajon elérték-e a rendszerünket. Minél kevesebb információt tudnak összegyûjteni a rendszerünkrõl a támadók, annál biztonságosabbnak tekinthetõ. Amikor ismeretlen portokra érkezõ csomagokat naplózunk, érdemes az [.filename]#/etc/services/# állományban vagy http://www.securitystats.com/tools/portsearch.php[http://www.securitystats.com/tools/portsearch.php] címen (angolul) utánanézni a porthoz tartozó szolgáltatásnak. A különbözõ trójai programok által portok számai ezen a linken érhetõek el (angolul): http://www.simovits.com/trojans/trojans.html[http://www.simovits.com/trojans/trojans.html].
+
+==== Példa egy inkluzív szabályrendszerre
+
+A most következõ, címfordítást nem tartalmazó szabályrendszer teljesen inkluzív típusú. Éles rendszereken is nyugodtan alkalmazhatjuk. Egyszerûen csak annyit kell tennünk, hogy megjegyzésbe tesszük az olyan szolgáltatásokra vonatkozó szabályokat, amelyeket nem akarunk engedélyezni. Amikor pedig olyan üzenetek jelennek meg a naplóban, amelyeket nem akarunk tovább látni, a bejövõ kapcsolatokhoz vegyünk fel egy `deny` típusú szabályt hozzájuk. Minden szabályban cseréljük ki a `dc0` interfészt arra a hálózati kártyára, amely közvetlenül csatlakoztatja rendszerünket az internethez. A felhasználói PPP esetében ez a `tun0`.
+
+A szabályok használatában felfedezhetünk egyfajta rendszerszerûséget:
+
+* Mindegyik sorban, ahol az internet felé nyitunk meg egy kapcsolatot, a `keep-state` opciót használjuk.
+* Az internetrõl az összes hitelesített szolgáltatás elérése tartalmazza a `limit` opciót az elárasztások kivédése miatt.
+* Az összes szabályban az `in` vagy az `out` paraméterrel megadjuk szûrni kívánt forgalom irányát.
+* Az összes szabályban szerepel a `via` paraméterrel a csomagokat továbbító interfész neve.
+
+Az alábbi szabályokat tegyük az [.filename]#/etc/ipfw.rules# állományba.
+
+[.programlisting]
+....
+############## Itt kezdõdnek az IPFW szabályai ##########################
+# Kezdés elõtt töröljük az összes aktív szabályt.
+ipfw -q -f flush
+
+# Állítsuk be a parancsok további szükséges opciót.
+cmd="ipfw -q add"
+pif="dc0"     # az internethez csatlakozó
+              # interfész neve
+
+#################################################################
+# A belsõ hálózat számára ne korlátozzunk semmit se.
+# Ha nincs helyi hálózatunk, akkor erre nincs szükségünk.
+# Az 'xl0' nevét írjuk át a helyi hálózatra csatlakozó
+# interfész nevére.
+################################################################
+#$cmd 00005 allow all from any to any via xl0
+
+################################################################
+# A rendszer belsõ interfészét se szûrjük.
+################################################################
+$cmd 00010 allow all from any to any via lo0
+
+################################################################
+# A csomagot engedjük át a tûzfalon, ha korábban már felvettünk
+# hozzá egy dinamikus szabályt a keep-state opcióval.
+################################################################
+$cmd 00015 check-state
+
+################################################################
+# Az internet felé forgalmazó interfész (kimenõ kapcsolatok)
+# A saját hálózatunkról belülrõl vagy errõl az átjáróról
+# kezdeményezett kapcsolatokat vizsgáljuk az internet felé.
+################################################################
+
+# Kifelé engedélyezzük az internet-szolgáltatónk névszerverének
+# elérését. Az x.x.x.x a szolgáltatónk névszerverének IP-címe
+# legyen. Ha a szolgáltatónak több névszervere is van, akkor
+# másoljuk le ezeket a sorokat és az /etc/resolv.conf
+# állományban található IP-címeket helyettesítsük be.
+$cmd 00110 allow tcp from any to x.x.x.x 53 out via $pif setup keep-state
+$cmd 00111 allow udp from any to x.x.x.x 53 out via $pif keep-state
+
+# Kábel/DSL konfigurációk esetében kifelé engedélyezzük a
+# szolgáltatónk DHCP szerverének elérését. Ha a "felhasználói
+# PPP"-t használjuk, akkor erre nem lesz szükségünk, az egész
+# csoportot törölhetjük. Az alábbi szabállyal csíphetjük el a
+# beírandó IP-címet. Ha a naplóban megtaláltuk, akkor vegyük
+# ki az elsõ szabályt, a másodikba írjuk bele a címet és
+# engedélyezzük.
+$cmd 00120 allow log udp from any to any 67 out via $pif keep-state
+#$cmd 00120 allow udp from any to x.x.x.x 67 out via $pif keep-state
+
+# Kifelé engedélyezzük a szabvány nem biztonságos WWW
+# funkció elérését.
+$cmd 00200 allow tcp from any to any 80 out via $pif setup keep-state
+
+# Kifelé engedélyezzük a biztonságos HTTPS funkció
+# elérését TLS SSL használatával.
+$cmd 00220 allow tcp from any to any 443 out via $pif setup keep-state
+
+# Kifelé engedélyezzük a e-mailek küldését és fogadását.
+$cmd 00230 allow tcp from any to any 25 out via $pif setup keep-state
+$cmd 00231 allow tcp from any to any 110 out via $pif setup keep-state
+
+# Kifelé engedélyezzük a FreeBSD (a make install és a CVSUP)
+# funkcióit. Ezzel lényegében a rendszeradminisztrátornak
+# ,,ISTENI'' jogokat adunk.
+$cmd 00240 allow tcp from me to any out via $pif setup keep-state uid root
+
+# Kifelé engedélyezzük a pinget.
+$cmd 00250 allow icmp from any to any out via $pif keep-state
+
+# Kifelé engedélyezzük az idõ szolgáltatást.
+$cmd 00260 allow tcp from any to any 37 out via $pif setup keep-state
+
+# Kifelé engedélyezzük az nntp news szolgáltatást
+# (vagyis a hírcsoportokat)
+$cmd 00270 allow tcp from any to any 119 out via $pif setup keep-state
+
+# Kifelé engedélyezzük a biztonságos FTP, telnet és SCP
+# elérését az SSH (secure shell) használatával.
+$cmd 00280 allow tcp from any to any 22 out via $pif setup keep-state
+
+# Kifelé engedélyezzük a whois szolgáltatást.
+$cmd 00290 allow tcp from any to any 43 out via $pif setup keep-state
+
+# Dobjuk el és naplózzunk mindent, ami megpróbál kijutni.
+# Ez a szabály gondoskodik róla, hogy alapértelmezés szerint
+# mindent blokkoljunk.
+$cmd 00299 deny log all from any to any out via $pif
+
+################################################################
+# Az internet felõli interfész (bejövõ kapcsolatok)
+# A saját hálózatunk felé vagy erre az átjáróra
+# nyitott kapcsolatokat vizsgáljuk az internet felõl.
+################################################################
+
+# Blokkoljunk minden olyan bejövõ forgalmat, amely a fenntartott
+# címtartományok felé tart.
+$cmd 00300 deny all from 192.168.0.0/16 to any in via $pif  #RFC 1918: privát IP
+$cmd 00301 deny all from 172.16.0.0/12 to any in via $pif   #RFC 1918: privát IP
+$cmd 00302 deny all from 10.0.0.0/8 to any in via $pif      #RFC 1918: privát IP
+$cmd 00303 deny all from 127.0.0.0/8 to any in via $pif     #helyi
+$cmd 00304 deny all from 0.0.0.0/8 to any in via $pif       #helyi
+$cmd 00305 deny all from 169.254.0.0/16 to any in via $pif  #DHCP
+$cmd 00306 deny all from 192.0.2.0/24 to any in via $pif    #dokumentációs célokra fenntartott
+$cmd 00307 deny all from 204.152.64.0/23 to any in via $pif #Sun klaszterek összekötésére használt
+$cmd 00308 deny all from 224.0.0.0/3 to any in via $pif     #D és E osztályú multicast
+
+# A nyilvános pingek tiltása.
+$cmd 00310 deny icmp from any to any in via $pif
+
+# Az ident szolgáltatás tiltása.
+$cmd 00315 deny tcp from any to any 113 in via $pif
+
+# Blokkoljuk az összes Netbios szolgáltatást: 137=név, 138=datagram,
+# 139=session. A Netbios az MS Windows megosztását implementálja.
+# Blokkoljuk az MS Windows hosts2 névszerver kéréseit is a 81-es
+# porton.
+$cmd 00320 deny tcp from any to any 137 in via $pif
+$cmd 00321 deny tcp from any to any 138 in via $pif
+$cmd 00322 deny tcp from any to any 139 in via $pif
+$cmd 00323 deny tcp from any to any 81 in via $pif
+
+# Eldobjuk az összes késõn érkezõ csomagot.
+$cmd 00330 deny all from any to any frag in via $pif
+
+# Eldobjuk azokat az ACK csomagokat, amelyek egyik dinamikus
+# szabálynak sem felelnek meg.
+$cmd 00332 deny tcp from any to any established in via $pif
+
+# Befelé engedélyezzük a szolgáltató DHCP szerverének válaszát. Ebben
+# a szabályban csak a DHCP szerver IP-címe szerepelhet, mivel ez az
+# egyetlen olyan hitelesített forrás, ami ilyen csomagokat küldhet.
+# Ez csak a kábeles és DSL típusú kapcsolatok esetében szükséges.
+# Amikor a "felhasználói PPP"-vel csatlakozunk az internethez, nem
+# kell ez a szabály. Ugyanazt az IP-címet kell megadnunk, amelyet a
+# kimenõ kapcsolatoknál is.
+#$cmd 00360 allow udp from any to x.x.x.x 67 in via $pif keep-state
+
+# Befelé engedélyezzük a szabvány WWW funkciót, mivel webszerverünk
+# is van.
+$cmd 00400 allow tcp from any to me 80 in via $pif setup limit src-addr 2
+
+# Befelé engedélyezzük a biztonságos FTP, telnet és SCP
+# típusú kapcsolatokat az internetrõl.
+$cmd 00410 allow tcp from any to me 22 in via $pif setup limit src-addr 2
+
+# Befelé engedélyezzük az internetrõl érkezõ nem biztonságos telnet
+# kapcsolatokat. Azért tekintjük nem biztonságosnak, mert az
+# azonosítók és a jelszavak az interneten titkosítatlanul vándorolnak.
+# Töröljük ezt a csoportot, ha nincs telnet szolgáltatásunk.
+$cmd 00420 allow tcp from any to me 23 in via $pif setup limit src-addr 2
+
+# Dobjuk el és naplózzuk az összes többi kintrõl érkezõ csomagot.
+$cmd 00499 deny log all from any to any in via $pif
+
+# Alapértelmezés szerint dobjuk el mindent. Az ide érkezõ
+# csomagokat is naplózzuk, amibõl többet is ki tudunk majd
+# deríteni.
+$cmd 00999 deny log all from any to any
+############# Itt fejezõdnek be az IPFW szabályai #####################
+....
+
+==== Példa hálózati címfordításra és állapottartásra
+
+Az IPFW címfordító funkciójának kihasználásához további konfigurációs beállítások alkalmazására is szükségünk lesz. A rendszermagban opció között meg kell adnunk az `option IPDIVERT` sort a többi `IPFIREWALL` sor mellett, és fordítanunk egy saját verziót.
+
+Emellett még az [.filename]#/etc/rc.conf# állományban is engedélyezni kell az IPFW alapvetõ funkcióit.
+
+[.programlisting]
+....
+natd_enable="YES"                   # engedélyezzük a címfordításért felelõs démont
+natd_interface="rl0"                # az internet felé mutató hálózati kártya neve
+natd_flags="-dynamic -m"            # -m = a portszámok megtartása, ha lehetséges
+....
+
+Az állapottartó szabályok használata a `divert natd` címfordítási opcióval együtt nagyban növeli a szabályrendszer leprogramozásának bonyolultságát. A `check-state` és `divert natd` szabályok helye kritikus a megfelelõ mûködés tekintetében. Az eddig megszokott egyszerû viselkedés itt már nem érvényesül. Bevezetünk egy új cselekvést is, amelynek a neve `skipto`. A `skipto` parancs használatához elengedhetetlen a szabályok sorszámozása, mivel pontosan tudnunk kell, hogy a `skipto` hatására hova kell ugrania a vezérlésnek.
+
+A következõ példában nem fogunk sok megjegyzést látni, mivel benne az egyik lehetséges programozási stílust próbáljuk érzékeltetni és a csomagok szabályrendszerek közti áramlását magyarázzuk.
+
+A feldolgozás a szabályokat tartalmazó állomány tetején található elsõ szabállyal kezdõdik, és innen egyesével pereg végig lefelé a feldolgozás egészen addig, amíg a csomag a szûrési feltételek valamelyikének eleget nem tesz és távozik a tûzfalból. Leginkább a 100-as, 101-es, 450-es, 500-as és 510-es sorszámú szabályokat emelnénk ki. Ezek vezérlik kimenõ és bejövõ csomagok fordítását, ezért a hozzájuk tartozó dinamikus állapottartó bejegyzések mindig a helyi hálózat IP-címeire hivatkoznak. Amit még érdemes megfigyelnünk, hogy az összes áteresztõ és eldobó szabályban szerepel a csomag haladási iránya (tehát kimenõ vagy éppen bejövõ) és az érintett interfészt megnevezése. Emellett azt is vegyük észre, hogy az összes kifelé irányuló kapcsolatlétrehozási kérés az 500-as sorszámú szabályhoz fog ugrani a címfordítás elvégzéséhez.
+
+Tegyük fel, hogy a helyi hálózatunkon levõ felhasználók szeretnek honlapokat nézgetni az interneten. A honlapok a 80-as porton keresztül kommunikálnak. Tehát amikor egy ilyen csomag eléri a tûzfalat, nem fog illeszkedni a 100-as szabályra, mert a fejléce szerint kifelé halad és nem befelé. A 101-es szabályon is átlép, mivel ez az elsõ csomag, így a dinamikus állapottartó táblázatban sem szerepel még. A csomag végül a 125-ös szabályra fog illeszkedni: kifelé halad az internetre csatlakozó hálózati kártyán. A csomagban azonban még mindig az eredeti forrás IP-címe található, amely a helyi hálózat egyik gépére hivatkozik. A szabály illeszkedésekor két cselekvés is végbemegy. A `keep-state` opció hatására ez a szabály felveszi ezt a kapcsolatot az állapottartó dinamikus szabályok közé és végrehajtja a másik megadott feladatot. Ez a feladat része a dinamikus táblázatba rögzített bejegyzésnek, ami ebben az esetben a `skipto 500` ("ugorjunk az 500-as szabályra") lesz. Az 500-as szabály a továbbküldés elõtt lefordítja a csomag forrás IP-címét. Ezt ne felejtsük el, nagyon fontos! A csomag ezután eljut a céljához, és visszatérve ismét belép a szabályrendszer tetején. Ezúttal illeszkedni fog a 100-as szabályra és a cél IP-címét visszafordítjuk a helyi hálózatunk megfelelõ gépének címére. Ezután a `check-state` szabályhoz kerül, amely megtalálja a dinamikus szabályok között és továbbengedi a belsõ hálózatra. Ezzel visszakerül a küldõ géphez, amely egy újabb csomagot küld egy újabb adatszeletet kérve a távoli szervertõl. Ekkor már a `check-state` szabály megtalálja a hozzá tartozó bejegyzést a dinamikus szabályok között és végrehajtódik a korábban letárolt `skipto 500` mûvelet. A csomag erre az 500-as szabályra ugrik, ahol lefordítjuk a címét és továbbküldjük.
+
+Az bejövõ oldalon minden, ami egy korábban kialakult kapcsolat részeként érkezik, automatikusan a `check-state` és a megfelelõ helyre rakott `divert natd` szabályok által dolgozódik fel. Itt mindössze a rossz csomagok eldobásával és a hitelesített szolgáltatások elérésének biztosításával kell foglalkoznunk. Például a tûzfalon egy webszerver fut, és azt szeretnénk, hogy az internetrõl képesek legyenek elérni a rajta levõ oldalakat. Az újonnan beérkezõ kapcsolatépítési kérelem a 100-as szabályra fog illeszkedni, amelynek a cél IP-címét a tûzfal helyi hálózaton található címére fogjuk leképezni. A csomagot ezután még megvizsgáljuk, nem tartalmaz-e valamilyen huncutságot, majd végül a 425-ös szabálynál fog kikötni. Az egyezéskor két dolog történhet: a csomaghoz felveszünk egy dinamikus szabályt, de ezúttal az adott forrás IP-címrõl érkezõ kapcsolatkérések számát 2-re lekorlátozzuk. Ezzel az adott szolgáltatás portján meg tudjuk óvni a tûzfalat üzemeltetõ gépet a DoS típusú támadásoktól. A csomagot ezután hozzá tartozó cselekvés szerint továbbengedjük a belsõ hálózat felé. Visszatéréskor a tûzfal felismeri, hogy a csomag egy már meglevõ kapcsolathoz tartozik, ezért közvetlenül az 500-as szabályhoz kerül címfordításra, majd a kimenõ interfészen keresztül továbbküldjük.
+
+Íme az elsõ példa egy ilyen szabályrendszerre:
+
+[.programlisting]
+....
+#!/bin/sh
+cmd="ipfw -q add"
+skip="skipto 500"
+pif=rl0
+ks="keep-state"
+good_tcpo="22,25,37,43,53,80,443,110,119"
+
+ipfw -q -f flush
+
+$cmd 002 allow all from any to any via xl0  # nem szûrjük a belsõ hálózatot
+$cmd 003 allow all from any to any via lo0  # nem szûrjük a helyi interfészt
+
+$cmd 100 divert natd ip from any to any in via $pif
+$cmd 101 check-state
+
+# A kimenõ csomagok hitelesítése:
+$cmd 120 $skip udp from any to xx.168.240.2 53 out via $pif $ks
+$cmd 121 $skip udp from any to xx.168.240.5 53 out via $pif $ks
+$cmd 125 $skip tcp from any to any $good_tcpo out via $pif setup $ks
+$cmd 130 $skip icmp from any to any out via $pif $ks
+$cmd 135 $skip udp from any to any 123 out via $pif $ks
+
+# Az összes olyan csomagot eldobjuk, amely a fenntartott
+# címtartományokba tart:
+$cmd 300 deny all from 192.168.0.0/16  to any in via $pif  #RFC 1918: privát IP
+$cmd 301 deny all from 172.16.0.0/12   to any in via $pif  #RFC 1918: privát IP
+$cmd 302 deny all from 10.0.0.0/8      to any in via $pif  #RFC 1918: privát IP
+$cmd 303 deny all from 127.0.0.0/8     to any in via $pif  #helyi
+$cmd 304 deny all from 0.0.0.0/8       to any in via $pif  #helyi
+$cmd 305 deny all from 169.254.0.0/16  to any in via $pif  #DHCP
+$cmd 306 deny all from 192.0.2.0/24    to any in via $pif  #dokumentációs célokra fenntartott
+$cmd 307 deny all from 204.152.64.0/23 to any in via $pif  #Sun klaszter
+$cmd 308 deny all from 224.0.0.0/3     to any in via $pif  #D és E osztályú multicast
+
+# Az érkezõ csomagok hitelesítése:
+$cmd 400 allow udp from xx.70.207.54 to any 68 in $ks
+$cmd 420 allow tcp from any to me 80 in via $pif setup limit src-addr 1
+
+$cmd 450 deny log ip from any to any
+
+# Ide ugrunk a kimenõ állapottartó szabályoknál:
+$cmd 500 divert natd ip from any to any out via $pif
+$cmd 510 allow ip from any to any
+
+##################### a szabályok vége ##################
+....
+
+A következõ példa teljesen megegyezik az elõzõvel, azonban itt már dokumentációs szándékkal szerepelnek megjegyzések is, melyek a tapasztalatlan IPFW szabályíróknak segítik jobban megérteni a szabályok pontos mûködését.
+
+A második példa:
+
+[.programlisting]
+....
+#!/bin/sh
+############# Az IPFW szabályai itt kezdõdnek ###########################
+# Kezdés elõtt töröljük az összes jelenleg aktív szabályt:
+ipfw -q -f flush
+
+# Beállítjuk a parancsok megfelelõ elõtagjait:
+cmd="ipfw -q add"
+skip="skipto 800"
+pif="rl0"     # az internethez csatlakozó
+              # hálózati interfész neve
+
+#################################################################
+# A belsõ hálózat számára ne korlátozzunk semmit se.
+# Ha nincs helyi hálózatunk, akkor erre nincs szükségünk.
+# Az 'xl0' nevét írjuk át a helyi hálózatra csatlakozó
+# interfész nevére.
+#################################################################
+$cmd 005 allow all from any to any via xl0
+
+#################################################################
+# A rendszer belsõ interfészét se szûrjük.
+#################################################################
+$cmd 010 allow all from any to any via lo0
+
+#################################################################
+# Ellenõrizzük, hogy ez egy beérkezõ csomag és ha igen, akkor
+# fordítsuk a címét.
+#################################################################
+$cmd 014 divert natd ip from any to any in via $pif
+
+#################################################################
+# Ha ehhez a csomaghoz korábban már vettük fel dinamikus
+# szabályt a keep-state opció révén, akkor engedjük tovább.
+#################################################################
+$cmd 015 check-state
+
+#################################################################
+# Az internet felé forgalmazó interfész (kimenõ kapcsolatok)
+# A saját hálózatunkról belülrõl vagy errõl az átjáróról
+# kezdeményezett kapcsolatokat vizsgáljuk az internet felé.
+#################################################################
+
+# Kifelé engedélyezzük az internet-szolgáltatónk névszerverének
+# elérését. Az x.x.x.x a szolgáltató névszerverének IP-címe
+# lesz. Ha a szolgáltatónknak több névszervere is van, akkor
+# az /etc/resolv.conf állományból nézzük ki a címeiket és
+# másoljuk le az alábbi sor mindegyikükhöz.
+$cmd 020 $skip tcp from any to x.x.x.x 53 out via $pif setup keep-state
+
+# A kábeles és DSL kapcsolatok esetén engedélyezzük a szolgáltató
+# DHCP szerverének elérését.
+$cmd 030 $skip udp from any to x.x.x.x 67 out via $pif keep-state
+
+# Kifelé engedélyezzük a szabvány nem biztonságos WWW funkciót
+$cmd 040 $skip tcp from any to any 80 out via $pif setup keep-state
+
+# Kifelé engedélyezzük a biztonságos HTTPS funkciót a TLS SSL
+# használatával.
+$cmd 050 $skip tcp from any to any 443 out via $pif setup keep-state
+
+# Kifelé engedélyezzük az e-mailek küldését és fogadását.
+$cmd 060 $skip tcp from any to any 25 out via $pif setup keep-state
+$cmd 061 $skip tcp from any to any 110 out via $pif setup keep-state
+
+# Kifelé engedélyezzük a FreeBSD (make install és CVSUP) funkcióit.
+# Ezzel a rendszeradminisztrátornak ,,ISTENI'' jogokat adunk.
+$cmd 070 $skip tcp from me to any out via $pif setup keep-state uid root
+
+# Kifelé engedélyezzük a pinget.
+$cmd 080 $skip icmp from any to any out via $pif keep-state
+
+# Kifelé engedélyezzük az idõ szolgáltatást.
+$cmd 090 $skip tcp from any to any 37 out via $pif setup keep-state
+
+# Kifelé engedélyezzük az nntp news szolgáltatást (tehát a
+# hírcsoportokat).
+$cmd 100 $skip tcp from any to any 119 out via $pif setup keep-state
+
+# Kifelé engedélyezzük a biztonságos FTP, telnet és SCP
+# funkciókat az SSH (secure shell) használatával.
+$cmd 110 $skip tcp from any to any 22 out via $pif setup keep-state
+
+# Kifelé engedélyezzük ki a whois kéréseket.
+$cmd 120 $skip tcp from any to any 43 out via $pif setup keep-state
+
+# Kifelé engedélyezzük az NTP idõszerver elérését.
+$cmd 130 $skip udp from any to any 123 out via $pif keep-state
+
+#################################################################
+# Az internet felõli interfész (bejövõ kapcsolatok)
+# A saját hálózatunk felé vagy erre az átjáróra
+# nyitott kapcsolatokat vizsgáljuk az internet felõl.
+#################################################################
+
+# Tiltsuk a fenntartott címtartományok felé haladó összes beérkezõ
+# forgalmat.
+$cmd 300 deny all from 192.168.0.0/16  to any in via $pif  #RFC 1918: privát IP
+$cmd 301 deny all from 172.16.0.0/12   to any in via $pif  #RFC 1918: privát IP
+$cmd 302 deny all from 10.0.0.0/8      to any in via $pif  #RFC 1918: privát IP
+$cmd 303 deny all from 127.0.0.0/8     to any in via $pif  #helyi
+$cmd 304 deny all from 0.0.0.0/8       to any in via $pif  #helyi
+$cmd 305 deny all from 169.254.0.0/16  to any in via $pif  #DHCP
+$cmd 306 deny all from 192.0.2.0/24    to any in via $pif  #dokumentációs célokra fenntartott
+$cmd 307 deny all from 204.152.64.0/23 to any in via $pif  #Sun klaszter
+$cmd 308 deny all from 224.0.0.0/3     to any in via $pif  #D és E osztályú multicast
+
+# Az ident tiltása.
+$cmd 315 deny tcp from any to any 113 in via $pif
+
+# Blokkoljuk az összes Netbios szolgáltatást: 137=név, 138=datagram,
+# 139=session. A Netbios az MS Windows megosztását implementálja.
+# Blokkoljuk az MS Windows hosts2 névszerver kéréseit is a 81-es
+# porton.
+$cmd 320 deny tcp from any to any 137 in via $pif
+$cmd 321 deny tcp from any to any 138 in via $pif
+$cmd 322 deny tcp from any to any 139 in via $pif
+$cmd 323 deny tcp from any to any 81  in via $pif
+
+# Dobjuk el a késõn érkezõ csomagokat.
+$cmd 330 deny all from any to any frag in via $pif
+
+# Dobjuk el azokat az ACK csomagokat, amelyekre nincs
+# dinamikus szabály.
+$cmd 332 deny tcp from any to any established in via $pif
+
+# Engedélyezzük a szolgáltató DHCP szerverétõl érkezõ forgalmat. Ennek
+# a szabálynak tartalmaznia kell a DHCP szerver címét, mert csak tõle
+# fogadunk el ilyen típusú csomagokat. Egyedül csak kábeles vagy DSL
+# konfigurációk esetén használatos, a "felhasználói PPP" esetében
+# törölhetjük. Ez ugyanaz az IP-cím, amelyet a kimenõ kapcsolatoknál
+# megadtunk.
+$cmd 360 allow udp from x.x.x.x to any 68 in via $pif keep-state
+
+# Befelé engedélyezzük a szabvány WWW funkciót, mivel van
+# webszerverünk.
+$cmd 370 allow tcp from any to me 80 in via $pif setup limit src-addr 2
+
+# Befelé engedélyezzük a biztonságos FTP, telnet és SCP
+# használatát az internetrõl.
+$cmd 380 allow tcp from any to me 22 in via $pif setup limit src-addr 2
+
+# Befelé engedélyezzük a nem biztonságos telnet elérését az
+# internetrõl. Azért nem tekintjük biztonságosnak, mert az
+# azonosítókat és a jelszavakat az interneten titkosítatlanul
+# közvetíti. Ha nincs telnet szolgáltatásunk, akkor törölhetjük is ezt
+# a csoportot.
+$cmd 390 allow tcp from any to me 23 in via $pif setup limit src-addr 2
+
+# Dobjuk el és naplózzuk az összes internetrõl érkezõ hitelesítetlen kapcsolatot.
+$cmd 400 deny log all from any to any in via $pif
+
+# Dobjuk el és naplózzuk az összes internetre menõ hitelesítetlen kapcsolatot.
+$cmd 450 deny log all from any to any out via $pif
+
+# Ez lesz a kimenõ szabályokhoz tartozó "skipto" célja.
+$cmd 800 divert natd ip from any to any out via $pif
+$cmd 801 allow ip from any to any
+
+# Minden mást alapértelmezés szerint tiltunk és naplózunk.
+$cmd 999 deny log all from any to any
+############# Az IPFW szabályai itt fejezõdnek be #####################
+....

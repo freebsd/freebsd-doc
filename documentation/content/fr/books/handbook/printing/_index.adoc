@@ -1,0 +1,1966 @@
+---
+title: Chapitre 9. Imprimer
+part: Partie II. Tâches courantes
+prev: books/handbook/kernelconfig
+next: books/handbook/linuxemu
+---
+
+[[printing]]
+= Imprimer
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Table des matières
+:table-caption: Tableau
+:example-caption: Exemple
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 9
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/printing/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/printing/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/printing/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/fr/mailing-lists.adoc[]
+include::shared/fr/teams.adoc[]
+include::shared/fr/urls.adoc[]
+
+toc::[]
+
+[[printing-synopsis]]
+== Synopsis
+
+FreeBSD peut être utilisé pour imprimer sur une grande variété d'imprimantes, depuis la plus ancienne des imprimantes matricielles jusqu'aux toutes dernières imprimantes laser, en passant par tout ce qui peut exister entre les deux, et vous permet d'obtenir des impressions de haute qualité avec les programmes que vous exécutez.
+
+Il est également possible de configurer FreeBSD pour qu'il fasse office de serveur d'impression sur un réseau; de cette manière FreeBSD peut recevoir des travaux d'impression ("jobs") en provenance de différents ordinateurs, comprenant d'autres machines sous FreeBSD et des machines sous Windows(R) ou Mac OS(R). FreeBSD veillera à ce qu'un seul travail d'impression ne soit imprimé à la fois, et pourra tenir des statistiques sur les utilisateurs et les machines lançant le plus d'impressions, produire des pages d'"en-têtes" pour distinguer les impressions de chacun, et plus encore.
+
+Après la lecture de ce chapitre, vous saurez:
+
+* Comment configurer le gestionnaire d'impression de FreeBSD
+* Comment installer des filtres d'impression, pour gérer des travaux d'impression particuliers de manière différente, ce qui inclut la transformation de documents entrants en un format que vos imprimantes comprennent.
+* Comment inclure des en-têtes ou des pages bannière dans vos impressions.
+* Comment imprimer en utilisant des imprimantes connectées à d'autres ordinateurs.
+* Comment imprimer en utilisant des imprimantes connectées directement au réseau.
+* Comment gérer des restrictions d'impression, notamment comment limiter la taille des travaux d'impression, et empêcher certains utilisateurs d'imprimer.
+* Comment tenir des statistiques d'impression, et rendre compte de l'utilisation de l'imprimante.
+* Comment résoudre les problèmes d'impression.
+
+Avant de lire ce chapitre, vous devriez:
+
+* Savoir comment configurer et installer un nouveau noyau (crossref:kernelconfig[kernelconfig,Configurer le noyau de FreeBSD]).
+
+[[printing-intro-spooler]]
+== Introduction
+
+Afin d'utiliser des imprimantes avec FreeBSD, vous avez la possibilité de les paramétrer pour qu'elles utilisent le gestionnaire d'impression de Berkeley, également connu sous le nom de gestionnaire d'impression LPD, ou tout simplement LPD. C'est le système contrôle d'imprimante par défaut de FreeBSD. Ce chapitre présente LPD et vous assistera tout au long de sa configuration.
+
+Si vous connaissez déjà LPD ou un autre système de gestion des impressions, vous pouvez directement vous rendre à la section <<printing-intro-setup,Paramétrage de base>>.
+
+LPD contrôle tout ce qui relève des imprimantes. Il est responsable de plusieurs tâches:
+
+* Il contrôle l'accès aux imprimantes directement connectées au système ainsi qu'à celles connectées à d'autres machines via le réseau.
+* Il permet aux utilisateurs de soumettre des fichiers à imprimer; ces requêtes sont connues sous le nom de _travaux_.
+* Il empêche l'accès simultané de plusieurs utilisateurs à une même imprimante, en gérant une _queue_ pour chaque imprimante.
+* Il peut produire des _pages d'en-tête_ (également connues sous le nom de _pages bannières_ ou encore _cartouches_) afin que les utilisateurs puissent facilement retrouver dans une pile d'impressions celles correspondant aux travaux qu'ils ont soumis.
+* Il s'occupe de paramétrer les communications lorsque les imprimantes sont connectées via un port série.
+* Il peut transmettre des travaux par réseau à un gestionnaire d'impression LPD situé sur une autre machine.
+* Il peut appliquer des filtres spéciaux afin d'assurer le formatage des travaux en fonction des différents langages et caractéristiques des imprimantes.
+* Il peut comptabiliser l'utilisation de l'imprimante.
+
+Vous pouvez, au travers d'un fichier de configuration ([.filename]#/etc/printcap#) et en fournissant les programmes de filtres spéciaux, faire exécuter par LPD tout ou partie des tâches mentionnées ci-dessus sur une grande variété de modèles d'imprimantes.
+
+[[printing-intro-why]]
+=== Pourquoi vous devriez utiliser le gestionnaire d'impression
+
+Si vous êtes l'unique utilisateur de votre système, vous vous demandez sans doute pourquoi il vous faudrait vous préoccuper du gestionnaire d'impression, alors que vous n'avez pas besoin de contrôle d'accès, de pages d'en-tête ni de statistiques relatives à l'utilisation de l'imprimante. Quand bien même il est possible de mettre en oeuvre l'accès direct à l'imprimante, vous devriez tout de même utiliser le gestionnaire d'impression, parce que:
+
+* LPD imprime les travaux en tâche de fond: vous n'êtes pas obligé d'attendre que les données soient passées à l'imprimante.
+* LPD peut commodément se charger d'appliquer des filtres à un travail pour adjoindre une en-tête contenant la date et l'heure, ou convertir un fichier au format particulier (comme un fichier DVI TeX) en un format que l'imprimante comprenne. Ainsi, vous n'aurez pas à vous charger de ces manipulations à la main.
+* Beaucoup d'applications, tant libres que commerciales, fournissant une fonctionnalité d'impression s'attendent généralement à traiter avec le gestionnaire d'impression. En le mettant en oeuvre, vous vous faciliterez le support des autres applications que vous pourriez ajouter plus tard, ou que vous avez déjà installées.
+
+[[printing-intro-setup]]
+== Configuration de base
+
+Pour utiliser des imprimantes avec le gestionnaire d'impression, il vous faudra configurer à la fois la partie matérielle (c'est à dire les imprimantes) et la partie logicielle (c'est à dire LPD). Ce document présente deux niveaux de configuration:
+
+* La section <<printing-simple,Configuration simple de l'imprimante>> vous apprendra à connecter une imprimante, à renseigner LPD sur la façon dont il doit communiquer avec elle, et à imprimer de simples fichiers textes.
+* La section <<printing-advanced,Configuration avancée de l'imprimante>> vous apprendra à imprimer différents formats de fichiers, des pages d'en-tête, par l'intermédiaire d'un réseau, à contrôler l'accès aux imprimantes, et comptabiliser leur utilisation.
+
+[[printing-simple]]
+=== Configuration simple de l'imprimante
+
+Cette section vous apprendra à configurer l'imprimante et LPD. Elle présente les bases:
+
+* La section <<printing-hardware,Configuration matérielle>> donne des indications sur la façon de connecter l'imprimante à l'un des ports de votre ordinateur.
+* La section <<printing-software,Configuration logicielle>> montre comment renseigner le fichier de configuration du gestionnaire d'impression LPD ([.filename]#/etc/printcap#).
+
+Si vous mettez en oeuvre une imprimante réceptionnant les données à imprimer via un protocole réseau plutôt que par les interfaces locales de l'ordinateur, lisez la section <<printing-advanced-network-net-if,Imprimantes avec des interfaces utilisant des flux réseau>>.
+
+Bien que cette section soit intitulée "Configuration simple de l'imprimante", elle s'avère en réalité plutôt complexe. La partie la plus difficile consiste à faire fonctionner l'imprimante avec votre ordinateur et LPD. Les options avancées telles les pages d'en-tête ou les statistiques sont relativement faciles à mettre en oeuvre une fois que l'imprimante fonctionne.
+
+[[printing-hardware]]
+==== Configuration matérielle
+
+Cette section détaille les différentes manières de connecter une imprimante à votre PC. Elle discute les types de ports et de câbles, et de la configuration noyau dont vous pourriez avoir besoin afin que FreeBSD puisse communiquer avec l'imprimante.
+
+Si vous avez déjà connecté votre imprimante et réussi à imprimer sous un autre système d'exploitation, vous pouvez probablement passer à la section <<printing-software,Configuration logicielle>>.
+
+[[printing-ports]]
+===== Les ports et les câbles
+
+Les imprimantes pour PC vendues aujourd'hui sont en général pourvues d'une ou plusieurs des trois interfaces suivantes:
+
+* Les interfaces _série_, également connues sous les noms RS-232 ou ports COM, utilisent un port série sur votre ordinateur pour envoyer des données à l'imprimante. Les interfaces série sont courantes, dans l'industrie informatique, et les câbles sont à la fois disponibles et faciles à réaliser. Elles réclament parfois des câbles spéciaux et peuvent nécessiter le paramétrage d'options de communication assez complexes. La plupart des ports série PC ont une vitesse de transmission maximale de 115200 bps, ce qui rend l'impression de travaux comportant beaucoup de graphismes malaisée.
+* Les interfaces _parallèles_ utilisent un port parallèle sur votre ordinateur pour envoyer des données à l'imprimante. Les interfaces parallèles sont courantes dans l'industrie informatique et plus rapides que les interfaces série RS-232. Les câbles sont disponibles mais sont moins faciles à fabriquer à la main. En général, il n'y a aucune option de communication à paramétrer avec ces interfaces, ce qui rend leur configuration particulièrement simple.
++ 
+Les interfaces parallèles sont parfois appelées "Centronics", nom tiré du type de connecteur de l'imprimante
+* Les interfaces USB, tenant leur nom de "Universal Serial Bus", ou "Bus Série Universel", s'avèrent plus véloces encore que les interfaces parallèles ou série RS-232. Les câbles sont simples et peu onéreux. L'USB surpasse les interfaces série RS-232 et parallèles pour l'impression, mais son support par les systèmes UNIX(R) n'est pas aussi bon. Une façon d'éviter ce problème est d'acheter une imprimante qui dispose à la fois d'une interface USB et d'une interface parallèle, comme beaucoup de modèles.
+
+En règle générale, les interfaces parallèles n'offrent qu'une communication unidirectionnelle (de l'ordinateur vers l'imprimante) alors que les interfaces série et USB permettent un échange bidirectionnel. Les imprimantes et ports parallèles plus récents (EPP et ECP) peuvent communiquer dans les deux sens sous FreeBSD lorsque l'on a recourt à un câble conforme à la norme IEEE-1284.
+
+La communication bidirectionnelle avec l'imprimante en utilisant un port parallèle se fait en général de l'une des deux manières suivantes. La première utilise un pilote d'imprimante compilé pour FreeBSD comprenant le langage propriétaire de l'imprimante. C'est couramment le cas des imprimantes jet d'encre et cela peut être utilisé pour retourner les niveaux d'encre et autres informations d'état. La seconde méthode est employée lorsque l'imprimante supporte PostScript(R).
+
+Les travaux PostScript(R) sont en fait des programmes envoyés à l'imprimante. Ils ne génèrent pas nécessairement de sortie papier et peuvent retourner leurs résultats directement à l'ordinateur. PostScript(R) utilise aussi la communication bidirectionnelle pour avertir l'ordinateur de problèmes, comme des erreurs dans le programme PostScript(R) ou des bourrages papier. Vos utilisateurs apprécieraient certainement de telles informations. De surcroît, la meilleure façon de tenir des statistiques sérieusement avec une imprimante PostScript(R) nécessite la communication bidirectionnelle: on demande à l'imprimante quel est son compteur de pages (combien en a-t-elle imprimées depuis sa fabrication), puis on lui envoie le travail de l'utilisateur, enfin on lui redemande son compteur de pages. La différence entre les deux valeurs donne la consommation de papier que vous pouvez attribuer à cet utilisateur.
+
+[[printing-parallel]]
+===== Les ports parallèles
+
+Pour raccorder une imprimante utilisant une interface parallèle, branchez le câble Centronics sur l'imprimante et sur l'ordinateur. Les instructions accompagnant l'imprimante, l'ordinateur, ou les deux, devraient parfaitement vous renseigner.
+
+Souvenez-vous du port parallèle que vous avez utilisé sur l'ordinateur. Pour FreeBSD, le premier se nomme [.filename]#ppc0#; le deuxième, [.filename]#ppc1#, et ainsi de suite. Le nom du fichier spécial de périphérique de l'imprimante suit les mêmes règles: [.filename]#/dev/lpt0# pour celle connectée sur le premier port parallèle, etc.
+
+[[printing-serial]]
+===== Les ports série
+
+Pour raccorder une imprimante utilisant une interface série, branchez le câble série adéquat sur l'imprimante et sur l'ordinateur. Les instructions accompagnant l'imprimante, l'ordinateur, ou les deux, devraient parfaitement vous renseigner.
+
+Si vous n'êtes pas sûr de savoir quel est le bon câble, voici ce que vous pouvez essayer:
+
+* Un câble _modem_ relie chacune des broches du connecteur depuis l'une des extrémités du câble directement à la broche lui correspondant dans le connecteur de l'autre extrémité. Ce type de câble est également connu sous le nom de câble "DTE-to-DCE".
+* Un câble _null-modem_ relie certaines des broches directement, en intervertit d'autres (par exemple, "émission de données" et "réception de données"), et en court-circuite d'autres en interne sur chacun des sertissages des connecteurs. Ce type de câble est également connu sous le nom de câble "DTE-to-DTE".
+* Un câble _série pour imprimante_, requis par certaines imprimantes peu conventionnelles, ressemble au câble null-modem, à ceci près qu'il envoie certains signaux à l'autre extrémité au lieu de les court-circuiter en interne.
+
+Vous devriez également définir les paramètres de communication pour l'imprimante, d'ordinaire en utilisant les contrôles sur la face avant ou les commutateurs sur l'imprimante. Choisissez la valeur la plus élevée de `bps` (bits par seconde, encore appelés "vitesse de transmission") autorisée conjointement par votre ordinateur et votre imprimante. Choisissez 7 ou 8 bits de données; aucun contrôle de parité ou un bit de parité paire ou impaire; et 1 ou 2 bits d'arrêt. Choisissez également un protocole de contrôle de flux: soit aucun, soit XON/XOFF (également appelé "in-band", ou encore "contrôle logiciel"). Retenez ces paramètres pour la configuration logicielle, dans la section qui suit.
+
+[[printing-software]]
+==== Configuration logicielle
+
+Cette section détaille la configuration logicielle nécessaire pour imprimer sous FreeBSD avec le gestionnaire d'impression LPD.
+
+Voici un aperçu des étapes à suivre:
+
+[.procedure]
+====
+. Configurez le noyau, si nécessaire, pour utiliser le port sur lequel vous raccorderez votre imprimante; la section <<printing-kernel,Configurer le noyau de FreeBSD>> vous donnera la marche à suivre.
+. Paramétrez le mode de communication du port parallèle si vous utilisez une imprimante de ce type; la section <<printing-parallel-port-mode,Paramétrer le mode de communication du port parallèle>> vous donnera les détails.
+. Configurez LPD pour qu'il communique avec l'imprimante en renseignant le fichier [.filename]#/etc/printcap#. Vous apprendrez comment faire un peu plus loin dans ce chapitre.
+====
+
+[[printing-kernel]]
+===== Configuration du noyau
+
+Le noyau du système d'exploitation est compilé avec le support d'un certain ensemble de périphériques. Les interfaces série ou parallèle de votre imprimante en font partie. De ce fait, vous pourriez avoir à ajouter le support d'un port série ou parallèle supplémentaire si votre noyau n'a pas déjà été configuré en ce sens.
+
+Pour savoir si le support d'une interface série est activé dans le noyau que vous êtes en train d'utiliser, entrez:
+
+[source,bash]
+....
+# # grep sioN /var/run/dmesg.boot
+....
+
+Où _N_ représente le numéro du port série, en commençant à zéro. Si vous obtenez un affichage similaire à:
+
+[source,bash]
+....
+sio2 at port 0x3e8-0x3ef irq 5 on isa sio2: type 16550A
+....
+
+alors le port est activé dans le noyau.
+
+Pour savoir si le noyau supporte une interface parallèle, entrez:
+
+[source,bash]
+....
+# grep ppcN /var/run/dmesg.boot
+....
+
+Où _N_ représente le numéro du port parallèle, en commençant à zéro. Si vous obtenez un affichage similaire à:
+
+[source,bash]
+....
+ppc0: <Parallel port> at port 0x378-0x37f irq 7 on isa0
+ppc0: SMC-like chipset (ECP/EPP/PS2/NIBBLE) in COMPATIBLE mode
+ppc0: FIFO with 16/16/8 bytes threshold
+....
+
+alors le port est activé dans le noyau.
+
+Il se pourrait que vous ayez à reconfigurer le noyau afin que le système détecte et puisse utiliser un port parallèle ou série auquel vous avez connecté votre imprimante.
+
+Pour ajouter le support d'un port série, voyez la section sur la configuration du noyau. Pour ajouter le support du port parallèle, voyez cette même section _et_ celle qui suit.
+
+[[printing-parallel-port-mode]]
+==== Paramétrer le mode de communication du port parallèle
+
+Lorsque vous utilisez l'interface parallèle, vous avez le choix entre deux modes de communication avec l'imprimante: par interruption, ou par polling (interrogation régulière ou scrutation). Le pilote d'imprimante générique (man:lpt[4]) de FreeBSD utilise le système man:ppbus[4], qui contrôle le chipset du port via le pilote man:ppc[4].
+
+* Le mode par _interruption_ est le mode par défaut avec un noyau GENERIC. De cette manière, le système d'exploitation utilise une ligne d'interruption (IRQ) pour déterminer si l'imprimante est prête à recevoir des données.
+* Le mode _par scrutation_ enjoint au système d'exploitation d'interroger à intervalles réguliers l'imprimante pour savoir si elle est prête à recevoir d'autres données. Lorsqu'elle répond par l'affirmative, le noyau lui en envoie plus.
+
+Le mode par interruption est en général nettement plus rapide, mais consomme une précieuse ligne d'interruption (IRQ). On rapporte que certaines imprimantes HP récentes ne fonctionneraient pas correctement en mode par interruption, apparemment à cause d'un problème (pas encore très bien identifié) d'horloge. Ces imprimantes nécessitent le recours au mode par scrutation. Utilisez celui des deux qui fonctionne. Certaines imprimantes fonctionnent dans les deux modes, mais s'avèrent désagréablement lentes en mode par interruption.
+
+Vous pouvez choisir le mode de communication de deux manières différentes: en configurant le noyau ou en utilisant le programme man:lptcontrol[8].
+
+_Pour paramétrer le mode de communication en configurant le noyau:_
+
+[.procedure]
+====
+
+. Editez le fichier de configuration de votre noyau. Cherchez une entrée `ppc0`. Si vous voulez configurer le deuxième port parallèle, cherchez plutôt `ppc1`. Ou `ppc2` pour le troisième, et ainsi de suite.
+
+** Si vous souhaitez activer le mode par interruption, éditez la ligne suivante:
++
+[.programlisting]
+....
+hint.ppc.0.irq="N"
+....
++ 
+dans le fichier [.filename]#/boot/device.hints# et remplacez _N_ par le numéro d'IRQ approprié. Le fichier de configuration du noyau doit également comporter le pilote man:ppc[4]:
++
+[.programlisting]
+....
+device ppc
+....
+
+** Si vous souhaitez activer le mode par scrutation, ôtez la ligne suivante de votre fichier [.filename]#/boot/device.hints#:
++
+[.programlisting]
+....
+hint.ppc.0.irq="N"
+....
++ 
+Dans certains cas, positionner le port en mode scrutation sous FreeBSD n'est pas suffisant. La plupart du temps cela vient du pilote man:acpi[4], ce dernier étant capable de sonder et d'attacher des périphériques, et donc de contrôler le mode d'accès au port de l'imprimante. Vous devrez donc vérifier votre configuration man:acpi[4] pour résoudre ce problème.
++
+. Sauvegardez le fichier, puis configurez, compilez, et installez le noyau avant de redémarrer. Consultez la section <<kernelconfig,configuration du noyau>> pour plus de détails.
+====
+
+_Pour paramétrer le mode de communication avec_ man:lptcontrol[8]:
+
+[.procedure]
+====
+
+. Entrez:
++
+[source,bash]
+....
+# lptcontrol -i -d /dev/lptN
+....
++ 
+pour sélectionner le mode par interruption pour `lptN`.
+. Entrez:
++
+[source,bash]
+....
+# lptcontrol -p -d /dev/lptN
+....
++ 
+pour sélectionner le mode par scrutation pour `lptN`.
+====
+
+Vous pouvez placer ces commandes dans votre fichier [.filename]#/etc/rc.local# pour sélectionner le mode à chaque démarrage du système. Consultez man:lptcontrol[8] pour obtenir plus d'informations.
+
+[[printing-testing]]
+==== Vérifier la communication avec l'imprimante
+
+Avant de passer à la configuration du gestionnaire d'impression, vous devriez vous assurer que le système d'exploitation fait parvenir avec succès des données à l'imprimante. Il est beaucoup plus facile de déboguer séparément la communication avec l'imprimante et la configuration du gestionnaire d'impression.
+
+Pour tester l'imprimante, nous allons lui envoyer du texte. Pour les imprimantes qui peuvent immédiatement imprimer les caractères qui leur sont envoyés, le programme man:lptest[1] est parfait: il génère les 96 caractères ASCII imprimables sur 96 lignes.
+
+Pour une imprimante PostScript(R) (ou basée sur un autre langage), il va nous falloir un test plus sophistiqué. Un petit programme PostScript(R), tel que celui qui suit, devrait suffire:
+
+[.programlisting]
+....
+%!PS
+100 100 moveto 300 300 lineto stroke
+310 310 moveto /Helvetica findfont 12 scalefont setfont
+(Is this thing working?) show
+showpage
+....
+
+Le code PostScript(R) ci-dessus peut être placé dans un fichier et utilisé comme indiqué dans les exemples qui apparaissent dans les sections suivantes.
+
+[NOTE]
+====
+Lorsque ce document fait référence à un langage d'imprimante, il suppose un langage comme PostScript(R), et pas le PCL de Hewlett-Packard. Quoique PCL dispose de fonctionnalités intéressantes, il est possible de mélanger du texte simple avec des séquences d'échappement. PostScript(R) ne permet pas d'imprimer du texte clair, c'est le type de langage d'imprimante pour lequel nous devons prendre des mesures particulières.
+====
+
+[[printing-checking-parallel]]
+===== Tester une imprimante parallèle
+
+Cette section vous apprendra à vérifier si FreeBSD peut communiquer avec une imprimante connectée sur un port parallèle.
+
+_Pour tester une imprimante connectée sur un port parallèle:_
+
+[.procedure]
+====
+. Passez en `root` avec man:su[1].
+. Envoyez des données à l'imprimante.
+
+** Si l'imprimante peut sortir du texte simple, alors utilisez man:lptest[1]. Entrez:
++
+[source,bash]
+....
+# lptest  /dev/lptN
+....
++ 
+Où _N_ est le numéro du port parallèle, en commençant à zéro.
+** Si l'imprimante comprend le PostScript(R) ou un autre langage d'imprimante, alors envoyez lui un petit programme. Entrez:
++
+[source,bash]
+....
+# cat  /dev/lptN
+....
++ 
+Tapez ensuite le programme, ligne à ligne et _attentivement_, car vous ne pouvez plus éditer une ligne une fois que vous avez appuyé sur la touche `Retour Chariot` ou `Entrée`. Une fois terminé, faites `CONTROL+D`, ou la combinaison correspondant à votre fin de fichier.
++ 
+Une autre manière de procéder est de placer le programme dans un fichier et d'entrer:
++
+[source,bash]
+....
+# cat fichier  /dev/lptN
+....
++ 
+Où _fichier_ désigne le nom du fichier que vous désirez envoyer à l'imprimante.
+====
+
+Vous devriez voir quelque chose s'imprimer. Ne vous inquiétez pas si l'apparence du texte n'est pas satisfaisante; nous remédierons à ce genre de soucis plus tard.
+
+[[printing-checking-serial]]
+===== Tester une imprimante série
+
+Dans cette section vous apprendrez à vérifier si FreeBSD parvient à communiquer avec une imprimante connectée à un port série.
+
+_Pour tester une imprimante connectée sur un port série:_
+
+[.procedure]
+====
+
+. Passez en `root` avec man:su[1].
+. Editez le fichier [.filename]#/etc/remote#. Ajoutez l'entrée suivante:
++
+[.programlisting]
+....
+printer:dv=/dev/port:br#bps-rate:pa=parity
+....
++ 
+Où _port_ représente le fichier de périphérique du port série (`ttyd0`, `ttyd1`, etc.), _bps-rate_ représente la vitesse en bits-par-seconde à laquelle l'imprimante communique, et _parity_ représente la parité réclamée par l'imprimante (`even` pour paire, `odd` pour impaire, `none` pour aucune, ou `zero` pour zéro).
++ 
+Voici un exemple d'entrée pour une imprimante connectée à 19200 bps, sans parité, sur le troisième port série:
++
+[.programlisting]
+....
+printer:dv=/dev/ttyd2:br#19200:pa=none
+....
+
+. Connectez-vous à l'imprimante avec man:tip[1]. Entrez:
++
+[source,bash]
+....
+# tip printer
+....
++ 
+Si cette étape ne fonctionne pas, éditez le fichier [.filename]#/etc/remote# à nouveau et essayez d'utiliser [.filename]#/dev/cuaaN# au lieu de [.filename]#/dev/ttydN#.
+. Envoyez des données à l'imprimante.
+
+** Si l'imprimante peut sortir du texte simple, alors utilisez man:lptest[1]. Entrez:
++
+[source,bash]
+....
+% $lptest
+....
+
+** Si l'imprimante comprend le PostScript(R) ou tout autre langage d'imprimante, envoyez-lui un petit programme. Entrez-le ligne à ligne et _très attentivement_, dans la mesure où les touches d'édition, comme retour-arrière, peuvent revêtir une signification particulière pour l'imprimante. Vous pourriez également avoir besoin d'un caractère de fin de fichier ("EOF") particulier pour que l'imprimante sache qu'elle a reçu tout le programme. Pour les imprimantes PostScript(R), appuyez sur `CONTROL+D`.
++ 
+Une autre manière de procéder est de placer le programme dans un fichier et d'entrer:
++
+[source,bash]
+....
+% >fichier
+....
++ 
+Où _fichier_ est le nom du fichier contenant le programme. Après avoir envoyé le fichier avec man:tip[1], appuyez sur la touche de fin de fichier appropriée.
+====
+
+Vous devriez voir quelque chose s'imprimer. Ne vous inquiétez pas si l'apparence du texte n'est pas satisfaisante; nous remédierons à ce genre de soucis plus tard.
+
+[[printing-printcap]]
+==== Mettre en place le gestionnaire d'impression: le fichier [.filename]#/etc/printcap#
+
+A ce stade, votre imprimante doit être branchée, votre noyau configuré pour communiquer avec elle (si cela est nécessaire); et vous avez réussi à faire parvenir des données simples à l'imprimante. Nous sommes maintenant prêts à paramétrer LPD pour qu'il contrôle l'accès à l'imprimante.
+
+LPD se paramètre en éditant le fichier [.filename]#/etc/printcap#. Le gestionnaire d'impression LPD le lit à chaque fois que le gestionnaire est solicité, donc les mises à jour du fichier sont immédiatement prises en compte.
+
+Le format du fichier man:printcap[5] est explicite. Utilisez votre éditeur favori pour modifier [.filename]#/etc/printcap#. Le format est identique aux autres fichiers de configuration comme [.filename]#/usr/shared/misc/termcap# et [.filename]#/etc/remote#. Pour obtenir des informations complètes concernant ce format, consultez man:cgetent[3].
+
+Le paramétrage simple du gestionnaire d'impression s'effectue selon les étapes suivantes:
+
+[.procedure]
+====
+. Choisissez un nom (et quelques alias appropriés) pour l'imprimante, et placez-les dans [.filename]#/etc/printcap#; lisez la section <<printing-naming,Nommer l'imprimante>> pour plus d'informations sur le nommage.
+. Désactivez les pages d'en-tête (elles sont activées par défaut) en insérant le paramètre `sh`; lisez la section <<printing-no-header-pages,Supprimer les pages d'en-tête>> pour plus d'informations.
+. Créez un répertoire de file d'attente, et précisez son chemin d'accès avec le paramètre `sd`; lisez la section <<printing-spooldir,Créer le répertoire de fil d'attente>> pour obtenir plus d'informations.
+. Sélectionnez l'entrée [.filename]#dev# à utiliser pour l'imprimante, et notez la dans [.filename]#/etc/printcap# avec le paramètre `lp`; lisez la section <<printing-device,Identifier le périphérique d'imprimante>> pour obtenir plus d'informations. De plus, si l'imprimante est reliée par un port série, précisez les paramètres de communication avec le paramètre `ms#`, qui est détaillé dans la section <<printing-commparam,Configurer les paramètres de communication du gestionnaire d'impression>>.
+. Installez un filtre d'entrée sous forme de fichier texte simple; lisez la section <<printing-textfilter,Installer le filtre texte>> pour obtenir plus de détails.
+. Testez la configuration en imprimant quelque chose avec la commande man:lpr[1]. Vous trouverez plus de détails dans les sections <<printing-trying,Tester l'impression>> et <<printing-troubleshooting,Résolution des problèmes>>.
+====
+
+[NOTE]
+====
+Les imprimantes basées sur un langage d'impression, telles les imprimantes PostScript(R), ne peuvent imprimer du texte simple directement. La configuration simple esquissée ci-dessus et détaillée dans les sections suivantes présuppose que si vous installez ce genre d'imprimante vous n'imprimerez que des fichiers qu'elle peut comprendre.
+====
+
+Les utilisateurs s'attendent souvent à pouvoir imprimer du texte simple sur n'importe laquelle des imprimante installées sur votre système. Les applications qui s'en remettent à LPD pour imprimer s'y attendent en général elles aussi. Si vous installez ce genre d'imprimante et désirez pouvoir imprimer à la fois des travaux dans le langage de l'imprimante _et_ des travaux en texte simple, vous êtes instamment prié d'ajouter une étape supplémentaire à la configuration simple esquissée ci-dessus: installez un programme de conversion automatique texte simple vers PostScript(R) (ou tout autre langage d'imprimante). La section <<printing-advanced-if-conversion,Prendre en charge des travaux texte sur des imprimantes PostScript(R)>> vous apprendra à le faire.
+
+[[printing-naming]]
+===== Nommer l'imprimante
+
+La première étape (facile) est de choisir un nom pour l'imprimante. Que vous choisissiez un nom fonctionnel ou fantaisiste n'a aucune importance puisque vous pouvez également fournir une série d'alias.
+
+Au moins l'une des imprimantes définies dans le fichier [.filename]#/etc/printcap# devrait avoir pour alias `lp`. C'est le nom de l'imprimante par défaut. Si les utilisateurs n'ont pas positionné la variable d'environnement `PRINTER` et ne spécifient pas le nom d'une imprimante lorsqu'ils utilisent une ligne de commande relative à LPD, `lp` sera l'imprimante par défaut utilisée.
+
+Par ailleurs, l'usage commun veut que le dernier alias d'une imprimante en soit une description complète, en incluant le fabricant et le modèle.
+
+Une fois le nom et des alias communs choisis, placez-les dans le fichier [.filename]#/etc/printcap#. Le nom de l'imprimante devrait commencer dans la colonne la plus à gauche. Séparez chaque alias par une barre verticale et mettez le caractère deux-points après le dernier alias.
+
+Dans l'exemple suivant, nous commençons avec le squelette d'un [.filename]#/etc/printcap# qui définit deux imprimantes (une Diablo 630 et une imprimante PostScript(R) laser Panasonic KX-P4455):
+
+[.programlisting]
+....
+#
+#  /etc/printcap for host rose
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:
+....
+
+Dans cet exemple, la première imprimante se nomme `rattan` et possède les alias suivants: `line`, `diablo`, `lp` et `Diablo 630 Line Printer`. Puisque l'alias `lp` lui est attribué, elle est également l'imprimante par défaut. La seconde s'appelle `bamboo` et possède les alias suivants: `ps`, `PS`, `S`, `panasonic` et `Panasonic KX-P4455 PostScript v51.4`.
+
+[[printing-no-header-pages]]
+===== Supprimer les pages d'en-tête
+
+Par défaut, le gestionnaire d'impression LPD imprime une _page d'en-tête_ pour chaque impression. Celle-ci mentionne le nom de l'utilisateur qui a demandé l'impression, la machine qui l'a envoyé, et le nom de l'impression, en grands et jolis caractères. Malheureusement, tout ce texte supplémentaire parasite le débogage d'une configuration simple de l'imprimante, aussi supprimerons-nous ces pages d'en-têtes.
+
+Pour cela, ajoutez le paramètre `sh` à l'entrée de l'imprimante dans [.filename]#/etc/printcap#. Voici un exemple de [.filename]#/etc/printcap# où `sh` a été ajouté:
+
+[.programlisting]
+....
+#
+#  /etc/printcap for host rose - no header pages anywhere
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:
+....
+
+Observez la façon dont nous avons respecté le format correct: la première ligne commence dans la colonne la plus à gauche, et les lignes suivantes sont indentées. Toutes les lignes d'une entrée sauf la dernière se terminent par un antislash.
+
+[[printing-spooldir]]
+===== Créer le répertoire de file d'attente
+
+La prochaine étape dans la configuration simple du gestionnaire d'impression consiste à créer un _répertoire de file d'attente_, c'est à dire un répertoire où les travaux vont demeurer jusqu'à ce qu'ils soient imprimés, et où un certain nombre d'autres fichiers nécessaires au gestionnaire d'impression prennent place.
+
+A cause de la nature variable des répertoires de file d'attente, il est d'usage de les placer dans [.filename]#/var/spool#. Il n'est pas non plus nécessaire de sauvegarder leur contenu. Les recréer est aussi simple que de faire un man:mkdir[1].
+
+Il est également d'usage de créer le répertoire avec un nom identique à celui de l'imprimante, comme dans l'exemple ci-dessous:
+
+[source,bash]
+....
+# mkdir /var/spool/nom-de-l-imprimante
+....
+
+Toutefois, si votre réseau comporte beaucoup d'imprimantes, vous pouvez préférer placer les répertoires de file d'attente dans un unique répertoire que vous réserverez à l'impression avec LPD. C'est ce que nous allons faire pour les deux imprimantes de notre exemple, `rattan` et `bamboo`:
+
+[source,bash]
+....
+# mkdir /var/spool/lpd
+# mkdir /var/spool/lpd/rattan
+# mkdir /var/spool/lpd/bamboo
+....
+
+[NOTE]
+====
+Si la confidentialité des travaux imprimés par les utilisateurs vous importe, vous souhaiterez certainement protéger le répertoire de file d'attente afin qu'il ne soit pas accessible par tout le monde. Les répertoires de file d'attente doivent appartenir, être accessibles en lecture et écriture et pouvoir être parcourus par l'utilisateur `daemon` et le groupe `daemon`, et personne d'autre. C'est ce que nous allons faire pour les deux imprimantes de notre exemple:
+
+[source,bash]
+....
+# chown daemon:daemon /var/spool/lpd/rattan
+# chown daemon:daemon /var/spool/lpd/bamboo
+# chmod 770 /var/spool/lpd/rattan
+# chmod 770 /var/spool/lpd/bamboo
+....
+
+====
+
+Pour finir, vous devez avertir LPD de l'existence de ces répertoires en utilisant le fichier [.filename]#/etc/printcap#. Vous spécifiez le chemin du répertoire file d'attente avec le paramètre `sd`:
+
+[.programlisting]
+....
+#
+#  /etc/printcap for host rose - added spooling directories
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:sd=/var/spool/lpd/rattan:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:
+....
+
+Notez que le nom de l'imprimante commence dans la première colonne mais que toutes les autres entrées décrivant l'imprimante doivent être indentées et que chaque fin de ligne doit être protégée par un antislash.
+
+Si vous ne précisez pas de répertoire de file d'attente avec `sd`, le gestionnaire d'impression utilisera [.filename]#/var/spool/lpd# par défaut.
+
+[[printing-device]]
+===== Identifier le périphérique d'imprimante
+
+Dans la section Entrées des périphériques nous avons identifié l'entrée du répertoire [.filename]#/dev# que FreeBSD utiliserait pour communiquer avec l'imprimante. Maintenant, nous allons passer cette information à LPD. Quand le gestionnaire d'impression aura une impression à effectuer, il ouvrira le périphérique spécifié au nom du programme de filtre (qui est responsable de la transmission des données à l'imprimante).
+
+Positionnez l'entrée pour le chemin d'accès [.filename]#/dev# dans le fichier [.filename]#/etc/printcap# en utilisant le paramètre `lp`.
+
+Dans notre exemple, supposons que `rattan` est sur le premier port parallèle, et que `bamboo` est sur un sixième port série; voici les ajouts à apporter à [.filename]#/etc/printcap#:
+
+[.programlisting]
+....
+#
+#  /etc/printcap for host rose - identified what devices to use
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:sd=/var/spool/lpd/rattan:\
+        :lp=/dev/lpt0:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:\
+        :lp=/dev/ttyd5:
+....
+
+Si dans votre [.filename]#/etc/printcap# vous ne précisez pas le paramètre `lp` pour une imprimante, LPD utilisera [.filename]#/dev/lp# par défaut. A l'heure actuelle, il n'existe pas d'entrée [.filename]#/dev/lp# sous FreeBSD.
+
+Si l'imprimante que vous êtes en train d'installer est connectée à un port parallèle, vous pouvez directement vous rendre à la section <<printing-textfilter,Installer le filtre texte>>. Sinon, assurez-vous de suivre les instructions de la section qui suit.
+
+[[printing-commparam]]
+===== Configurer les paramètres de communication du gestionnaire d'impression
+
+Pour les imprimantes connectées au port série, LPD peut configurer la vitesse en bps, la parité, et d'autres paramètres de communication série, pour le compte du programme de filtre qui envoie les données à l'imprimante. C'est avantageux dans la mesure où:
+
+* Cela vous laisse essayer divers paramètres simplement en éditant le fichier [.filename]#/etc/printcap#; vous n'avez pas besoin de recompiler le programme de filtre.
+* Cela permet au gestionnaire d'impression d'utiliser le même programme pour de multiples imprimantes qui peuvent avoir des paramètres de communication série différents.
+
+Les paramètres [.filename]#/etc/printcap# suivants contrôlent les options de communication série pour le périphérique spécifié dans le paramètre `lp`:
+
+`br#vitesse-bps`::
+Positionne la vitesse de transmission du périphérique à _vitesse-bps_, où _vitesse-bps_ peut prendre l'une des valeurs suivantes: 50, 75, 110, 134, 150, 200, 300, 600, 1200, 1800, 2400, 4800, 9600, 19200, 38400, 57600, ou 115200 bits par seconde.
+
+`ms#stty-mode`::
+Positionne les options du périphérique de terminal après l'avoir ouvert. man:stty[1] présente les options disponibles.
+
+Quand LPD ouvre le périphérique spécifié par le paramètre `lp`, il positionne les caractéristiques de ce périphérique aux valeurs précisées par le paramètre `ms#`. Les modes suivants, détaillés dans man:stty[1] sont particulièrement intéressants: `parenb`, `parodd`, `cs5`, `cs6`, `cs7`, `cs8`, `cstopb`, `crtscts`, et `ixon`.
+
+Peaufinons notre exemple pour l'imprimante qui est connectée au sixième port série. Nous allons paramétrer sa vitesse à 38400 bps. Quant au mode, nous allons spécifier aucune parité avec `-parenb`, des caractères 8 bits avec `cs8`, aucun contrôle modem avec `clocal` et un contrôle de flux matériel avec `crtscts`:
+
+[.programlisting]
+....
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:\
+        :lp=/dev/ttyd5:ms#-parenb cs8 clocal crtscts:
+....
+
+[[printing-textfilter]]
+===== Installer le filtre texte
+
+Nous sommes maintenant en mesure de dire à LPD quel filtre texte utiliser pour envoyer les travaux à l'imprimante. Un _filtre texte_, également connu sous le nom de _filtre d'entrée_, est un programme que LPD lance lorsqu'il a une impression à effectuer. Lorsque LPD exécute le filtre texte pour une imprimante, il redirige l'entrée standard du filtre sur le travail d'impression, et la sortie standard sur le fichier spécial de périphérique spécifié par le paramètre `lp`. On attend du filtre qu'il lise le travail d'impression sur son entrée standard, effectue les transformations nécessaires pour l'imprimante, et écrive le résultat sur sa sortie standard, qui sera imprimée. Pour plus d'informations sur les filtres texte, lisez la section <<printing-advanced-filters,Filtres>>.
+
+Pour notre configuration simple de l'imprimante, le filtre texte peut être une petite procédure d'interpréteur de commandes qui ne fera qu'exécuter `/bin/cat` pour envoyer le travail d'impression à l'imprimante. Un autre filtre est livré avec FreeBSD, nommé [.filename]#lpf#, qui se charge de faire des suppressions arrière et des soulignements pour les imprimantes qui ne sauraient pas gérer correctement ce genre de flux de caractères. Et bien sûr, vous pouvez utiliser un autre filtre, quel qu'il soit. Le filtre [.filename]#lpf# est détaillé dans la section <<printing-advanced-lpf,lpf: un filtre texte>>.
+
+Tout d'abord, composons le filtre [.filename]#/usr/local/libexec/if-simple# qui sera un simple filtre texte. Ecrivez ceci avec votre éditeur de texte favori:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+# if-simple - Simple text input filter for lpd
+# Installed in /usr/local/libexec/if-simple
+#
+# Simply copies stdin to stdout.  Ignores all filter arguments.
+
+/bin/cat  exit 0
+exit 2
+....
+
+Rendez le fichier exécutable:
+
+[source,bash]
+....
+# chmod 555 /usr/local/libexec/if-simple
+....
+
+Et avertissez LPD qu'il doit l'utiliser, en renseignant le paramètre `if` dans [.filename]#/etc/printcap#. Nous l'ajouterons aux deux imprimantes utilisées jusqu'ici dans notre [.filename]#/etc/printcap# d'exemple:
+
+[.programlisting]
+....
+#
+#  /etc/printcap for host rose - added text filter
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:sd=/var/spool/lpd/rattan:\ :lp=/dev/lpt0:\
+        :if=/usr/local/libexec/if-simple:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:\
+        :lp=/dev/ttyd5:ms#-parenb cs8 clocal crtscts:\
+        :if=/usr/local/libexec/if-simple:
+....
+
+[NOTE]
+====
+Vous trouverez une copie du filtre [.filename]#if-simple# dans le répertoire [.filename]#/usr/shared/examples/printing#.
+====
+
+===== Lancer LPD
+
+man:lpd[8] se lance depuis [.filename]#/etc/rc#, avec la variable de contrôle `lpd_enable`. Cette variable a `NO` pour valeur par défaut. Si vous ne l'avez pas déjà fait, ajoutez la ligne:
+
+[.programlisting]
+....
+lpd_enable="YES"
+....
+
+à votre [.filename]#/etc/rc.conf#, puis relancez votre machine, ou lancez simplement man:lpd[8].
+
+[source,bash]
+....
+# lpd
+....
+
+[[printing-trying]]
+===== Tester la configuration
+
+Vous avez achevé la configuration simple de LPD. Malheureusement, les félicitations ne sont pas encore à l'ordre du jour, puisque nous devons encore tester la configuration et résoudre tout problème. Pour tester la configuration, essayez d'imprimer quelque chose. Pour imprimer avec le système LPD, vous devez utiliser la commande man:lpr[1], qui soumet un travail d'impression.
+
+Vous pouvez combiner man:lpr[1] au programme man:lptest[1], que nous avons présenté à la section <<printing-testing,Vérifier la communication avec l'imprimante>>, pour produire du texte de test.
+
+_Pour tester la configuration simple de LPD_
+
+Entrez:
+
+[source,bash]
+....
+# lptest 20 5 | lpr -Pnom-de-l-imprimante
+....
+
+Où _nom-de-l-imprimante_ représente le nom (ou l'alias) d'une imprimante tel que spécifié dans [.filename]#/etc/printcap#. Pour tester l'imprimante par défaut, tapez man:lpr[1] sans aucun argument `-P`. Encore une fois, si vous faites ce test avec une imprimante qui s'attend à recevoir du PostScript(R), envoyez un programme PostScript(R) au lieu d'employer man:lptest[1]. Vous pouvez le faire en plaçant le programme dans un fichier et en entrant `lpr fichier`.
+
+Pour une imprimante PostScript(R), vous devriez obtenir le résultat du programme. Si vous utilisez man:lptest[1], alors votre sortie devrait ressembler à ça:
+
+[.programlisting]
+....
+!"#$%'()*+,-./01234
+"#$%'()*+,-./012345
+#$%'()*+,-./0123456
+$%'()*+,-./01234567
+%'()*+,-./012345678
+....
+
+Pour tester l'imprimante plus encore, téléchargez des programmes (pour les imprimantes basées sur un langage spécifique) plus longs, ou lancez man:lptest[1] avec des arguments différents. Par exemple, `lptest 80 60` produira 60 lignes de 80 caractères chacune.
+
+Si l'impression ne fonctionne pas, lisez la section <<printing-troubleshooting,Résolution des problèmes>>.
+
+[[printing-advanced]]
+== Configuration avancée de l'imprimante
+
+Cette section décrit les filtres à utiliser pour imprimer des fichiers au formatage particulier, des pages d'en-tête, pour imprimer en réseau, et pour restreindre et comptabiliser l'utilisation de l'imprimante.
+
+[[printing-advanced-filter-intro]]
+=== Les filtres
+
+Bien que LPD gère les protocoles réseaux, les files d'attente, le contrôle d'accès et d'autres aspects de l'impression, la plus grande partie du _véritable_ travail intervient dans les _filtres_. Les filtres sont des programmes qui communiquent avec l'imprimante et gèrent ses dépendances matérielles ainsi que ses besoins particuliers. Dans la configuration simple de l'imprimante, nous avons installé un filtre texte simple- un filtre particulièrement basique qui devrait fonctionner avec la plupart des imprimantes (voir la section <<printing-textfilter,Installer le filtre texte>>).
+
+Toutefois, afin de profiter de la conversion de format, de la comptabilisation de l'utilisation de l'imprimante, de particularités matérielles, et ainsi de suite, il vous faut comprendre le fonctionnement des filtres. En dernier ressort, il incombera au filtre de gérer ces aspects. Et la mauvaise nouvelle, c'est que la plupart du temps, c'est _vous_ qui devrez produire ces filtres vous-même. La bonne nouvelle, c'est que beaucoup existent déjà et que, sinon, ils sont en général assez faciles à écrire.
+
+Par ailleurs, il en est un livré avec FreeBSD, [.filename]#/usr/libexec/lpr/lpf#, qui fonctionne avec beaucoup d'imprimantes capables d'imprimer du texte brut. (Il gère les retours arrière et les tabulations dans le fichier, effectue une comptabilisation, mais c'est à peu près tout). Vous trouverez également d'autres filtres et composants de filtres dans le catalogue des logiciels portés de FreeBSD.
+
+Voici ce que vous trouverez dans cette section:
+
+* La section <<printing-advanced-filters,Fonctionnement des filtres>> tâche de donner une vue générale du rôle des filtres dans le processus d'impression. Il vous faut lire cette section pour comprendre ce qui se passe "sous le capot" lorsque LPD utilise des filtres. Cette connaissance vous permettra d'anticiper et de résoudre les problèmes que vous pourriez rencontrer quand vous installerez de plus en plus de filtres pour chacune de vos imprimantes.
+* LPD s'attend à ce que toutes les imprimantes sachent imprimer du texte brut par défaut. Cela pose un problème pour les imprimantes PostScript(R) (ou les imprimantes basées sur un autre langage) qui ne peut pas imprimer du texte brut directement. La section <<printing-advanced-if-conversion,Gérer les travaux d'impression de texte brut sur des imprimantes PostScript(R)>> vous indique la marche à suivre pour résoudre ce problème. Vous devrez lire cette section si vous avez une imprimante PostScript(R).
+* PostScript(R) est un format de sortie courant pour beaucoup d'applications. Certaines personnes écrivent même du code PostScript(R) directement. Malheureusement, les imprimantes PostScript(R) sont onéreuses. La section <<printing-advanced-ps,Emuler du PostScript(R) sur les imprimantes non-PostScript(R)>> vous indiquera comment modifier un filtre texte pour qu'une imprimante _non-PostScript(R)_ accepte et imprime du PostScript(R). Vous devrez lire cette section si vous ne disposez pas d'une imprimante PostScript(R).
+* La section <<printing-advanced-convfilters,Filtres de conversion>> vous apprendra à automatiser la conversion de formats de fichiers spécifiques, comme des graphiques ou des données de composition, en formats compréhensibles par l'imprimante. Après avoir lu cette section, vous serez en mesure de configurer vos imprimantes de telle sorte que vos utilisateurs pourront entrer la commande `lpr -t` pour imprimer du troff, ou `lpr -d` pour imprimer le format DVI produit par TeX, ou `lpr -v` pour imprimer des images en mode point, etc. Nous recommandons la lecture de cette section.
+* La section <<printing-advanced-of,Filtres de sortie>> révèle tout d'une fonctionnalité peu utilisée de LPD: les filtres de sortie. A moins que vous n'imprimiez des pages d'en-têtes (voir la section <<printing-advanced-header-pages,Pages d'en-tête>>), vous pouvez probablement complètement ignorer cette section.
+* La section <<printing-advanced-lpf,lpf: un filtre texte>> détaille `lpf`, un filtre texte destiné aux imprimantes en ligne (et aux imprimantes laser se comportant comme telles) plutôt complet malgré sa simplicité, et livré avec FreeBSD. Si vous avez besoin de mettre rapidement en place la comptabilisation de l'utilisation de l'imprimante pour du texte brut, ou si vous avez une imprimante qui fume lorsqu'elle voit passer des caractères de retour arrière, vous devez vraiment penser à `lpf`.
+
+[NOTE]
+====
+Une copie des différents scripts présentés ci-dessous se trouve dans le répertoire [.filename]#/usr/shared/examples/printing#. 
+====
+
+[[printing-advanced-filters]]
+==== Fonctionnement des filtres
+
+Comme expliqué précédemment, un filtre est un programme exécutable lancé par LPD pour gérer la partie de la communication avec l'imprimante qui est dépendante du périphérique.
+
+Lorsque LPD veut imprimer un fichier d'un travail d'impression, il lance un programme de filtre. Il redirige l'entrée standard du filtre sur le fichier à imprimer, sa sortie standard vers l'imprimante, et l'erreur standard vers le fichier journal des erreurs (spécifié dans le paramètre `lf` du fichier [.filename]#/etc/printcap#, ou [.filename]#/dev/console# par défaut).
+
+Le filtre lancé par LPD ainsi que les paramètres qui lui sont donnés dépendent de ce qui est placé dans le fichier [.filename]#/etc/printcap# et des paramètres que l'utilisateur a passé sur la ligne de commande man:lpr[1] pour ce travail d'impression. Par exemple, si l'utilisateur a entré `lpr -t`, LPD aurait lancé le filtre troff, précisé par la paramètre `tf` pour l'imprimante de destination. Si l'utilisateur veut imprimer du texte brut, il lancerait le filtre `if` (c'est vrai la plupart du temps: lisez la section <<printing-advanced-of,Filtres de sortie>> pour plus de détails).
+
+Il existe trois types de filtres que vous pouvez spécifier dans [.filename]#/etc/printcap#:
+
+* Le _filtre texte_, confusément appelé _filtre d'entrée_ dans la documentation LPD, gère l'impression de texte classique. Considérez-le comme le filtre par défaut. LPD s'attend à ce que toutes les imprimantes sachent imprimer du texte brut par défaut, et c'est au filtre texte de s'assurer que les retours arrière, tabulations et autres caractères spéciaux ne trompent pas l'imprimante. Si vous êtes dans un environnement où il vous faut rendre compte de l'utilisation de l'imprimante, le filtre texte doit également comptabiliser les pages imprimées, généralement en comptant le nombre de lignes imprimées et en le comparant avec le nombre de lignes par page supporté par l'imprimante. Le filtre texte est exécuté avec la liste de paramètres suivante:
++
+`nom_du_filtre` [ -c ] -w _largeur_ -l _hauteur_ -i _indentation_ -n _utilisateur_ -h _machine_ _fichier_comptabilité_
++ 
+où
++
+`-c`:::
+apparaît si le travail d'impression est lancé par la commande `lpr -l`
+
+_largeur_:::
+est la valeur du paramètre `pw` ("page width", pour "largeur de page") spécifié dans [.filename]#/etc/printcap#, et possédant la valeur par défaut 132.
+
+_hauteur_:::
+est la valeur du paramètre `pl` ("page length", pour "hauteur de page"), par défaut: 66.
+
+_indentation_:::
+est le nombre d'indentations inséré par `lpr -i`, par défaut: 0.
+
+_utilisateur_:::
+est le nom du compte de l'utilisateur imprimant le fichier.
+
+_machine_:::
+est le nom de la machine depuis laquelle le travail d'impression a été soumis.
+
+_fichier_comptabilité_:::
+est le nom du fichier de comptabilisation spécifié par le paramètre `af`.
+
+* Un _filtre de conversion_ convertit un format de fichier spécifique en un autre que l'imprimante saura imprimer sur papier. Par exemple, des données de composition ditroff ne peuvent être imprimées directement, mais il vous est possible d'installer un filtre de conversion ditroff afin de convertir ces données ditroff en une forme que l'imprimante sait ingérer et imprimer. La section <<printing-advanced-convfilters,Filtres de conversion>> vous dira tout sur ce sujet. Les filtres de conversion doivent également tenir des statistiques, si vous avez besoin de comptabiliser les impressions. Les filtres de conversion sont lancés avec les paramètres suivants:
++
+`nom-du-filtre` -x _largeur-en-pixels_ -y _hauteur-en-pixels_ -n _login_ -h _hôte_ _fichier_comptabilité_
++ 
+où _largeur-en-pixels_ est la valeur du paramètre `px` (0 par défaut) et _hauteur-en-pixels_ est la valeur du paramètre `py` (0 par défaut).
+* Le _filtre de sortie_ n'est utilisé que s'il n'y a pas de filtre texte, ou si les pages d'en-tête ont été activées. D'après notre expérience, les filtres de sortie sont rarement employés. La section <<printing-advanced-of,Filtres de sortie>> les détaillera. Un filtre de sortie ne prend que deux paramètres:
++
+`nom-du-filtre` -w _largeur_ -l _hauteur_
++ 
+qui sont identiques aux paramètres `-w` et `-l` des filtres textes.
+
+Les filtres doivent également _retourner_ avec le code de retour suivant:
+
+exit 0::
+Si le filtre a imprimé avec succès le fichier.
+
+exit 1::
+Si le filtre n'a pu imprimer le fichier, mais désire que LPD essaie de l'imprimer à nouveau. LPD relancera un filtre s'il retourne avec ce code.
+
+exit 2::
+Si le filtre n'a pu imprimer le fichier et ne veut pas que LPD retente l'impression. LPD rejettera le fichier.
+
+Le filtre texte livré avec FreeBSD, [.filename]#/usr/libexec/lpr/lpf#, tire parti des paramètres de largeur et hauteur de page pour savoir quand envoyer une instruction de saut de page et comment comptabiliser l'utilisation de l'imprimante. Il utilise les paramètres nom d'utilisateur, nom de machine, et fichier de comptabilisation pour enregistrer les entrées concernant la consommation.
+
+Si vous recherchez des filtres, prenez garde à ce qu'ils soient compatibles avec LPD. Si c'est le cas, ils doivent se conformer à la liste de paramètres décrite ci-dessus. Si vous songez à écrire des filtres à usage général, alors faites en sorte qu'ils se conforment à ces mêmes listes de paramètres et de codes de retour.
+
+[[printing-advanced-if-conversion]]
+==== Gérer les travaux d'impression de texte brut sur des imprimantes PostScript(R)
+
+Si vous êtes l'unique utilisateur de votre ordinateur et de votre imprimante PostScript(R) (ou basée sur un autre langage), et que vous promettez de ne jamais envoyer de texte brut à votre imprimante et de ne jamais utiliser les fonctionnalités des divers programmes qui voudraient lui en envoyer, alors vous pouvez tout à fait passer cette section l'esprit tranquille.
+
+Toutefois, si vous désirez envoyer du PostScript(R) et du texte brut à l'imprimante, alors vous êtes instamment priés de compléter la configuration de votre imprimante. Pour ce faire, nous chargerons le filtre texte de détecter si le travail d'impression est du texte brut ou du PostScript(R). Tous les travaux d'impression PostScript(R) doivent débuter par `%!` (en ce qui concerne les autres langages, référez-vous à la documentation de l'imprimante). Si ces deux caractères sont les deux premiers du travail d'impression, il s'agit de PostScript(R) et le reste du travail d'impression peut être passé directement à l'imprimante. Dans le cas contraire, alors le filtre convertit le texte en PostScript(R) et imprime le résultat.
+
+Comment procéder?
+
+Si vous disposez d'une imprimante série, une bonne façon de faire est d'installer `lprps`. Il s'agit d'un filtre d'impression PostScript(R) qui assure une communication en duplex avec l'imprimante. Il met à jour le fichier d'état de l'imprimante avec des informations détaillées que cette dernière lui fournit, de sorte que les utilisateurs et les administrateurs puissent connaître précisément l'état de l'imprimante (par exemple `niveau de toner bas` ou `bourrage papier`). Mais plus important encore, il inclut un programme nommé `psif` qui détecte si le travail d'impression qui vient d'arriver est du texte brut et lance `textps` (un autre programme fourni avec `lprps`) pour le convertir en PostScript(R). Il utilise alors `lprps` pour envoyer le travail d'impression à l'imprimante.
+
+`lprps` fait partie du catalogue des logiciels portés FreeBSD (lisez la section crossref:ports[ports,Le catalogue des logiciels portés]). Vous pouvez installer un des deux logiciels portés package:print/lprps-a4[] et package:print/lprps-letter[] en fonction du format de papier utilisé. Après avoir installé `lprps`, précisez simplement le chemin vers le programme `psif` qui fait partie de `lprps`. Si vous avez installé `lprps` en recourant au catalogue des logiciels portés, placez les valeurs suivantes pour l'entrée de l'imprimante série PostScript(R) dans [.filename]#/etc/printcap#:
+
+[.programlisting]
+....
+:if=/usr/local/libexec/psif:
+....
+
+Vous devrez également renseigner le paramètre `rw` qui indique à LPD de requérir l'imprimante en mode lecture/écriture.
+
+Si vous disposez d'une imprimante PostScript(R) parallèle (et ne pouvez donc pas utiliser la communication en duplex avec l'imprimante dont a besoin `lprps`), vous pouvez recourir à la procédure suivante en tant que filtre texte:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  psif - Imprime du PostScript ou du texte brut sur une imprimante PostScript
+#  Version script; CECI N'EST PAS la version fournie avec lprps
+#  Fichier /usr/local/libexec/psif
+#
+
+IFS="" read -r first_line
+first_two_chars=`expr "$first_line" : '\(..\)'`
+
+if [ "$first_two_chars" = "%!" ]; then
+    #
+    #  Travail PostScript, l'imprimer.
+    #
+    echo "$first_line"  cat  printf "\004"  exit 0
+    exit 2
+else
+    #
+    #  Texte brut, le convertir, puis l'imprimer.
+    #
+    ( echo "$first_line"; cat ) | /usr/local/bin/textps  printf "\004"  exit 0
+    exit 2
+fi
+....
+
+Dans la procédure ci-dessus, `textps` est un programme que nous avons installé séparément pour convertir du texte en PostScript(R). Vous pouvez recourir à n'importe quel programme texte-vers-PostScript(R), selon votre désir. Le catalogue des logiciels portés de FreeBSD (voir la section crossref:ports[ports,Le catalogue des logiciels portés]) comprend un programme de conversion texte-vers-PostScript(R) complet nommée `a2ps`, qui pourrait vous intéresser.
+
+[[printing-advanced-ps]]
+==== Emuler du PostScript(R) sur les imprimantes non-PostScript(R)
+
+PostScript(R) est le standard _de fait_ pour l'impression et la composition de haute qualité. Cependant, PostScript(R) est un standard _onéreux_. Heureusement, Aladdin Enterprises propose un succédané gratuit de PostScript(R) nommé Ghostscript qui fonctionne sous FreeBSD. Ghostscript peut lire la majorité des fichiers PostScript(R) et peut produire leurs pages sur une diversité de périphériques, incluant beaucoup de marques d'imprimantes non-PostScript(R). En installant Ghostscript et en recourant à un filtre texte spécial, vous pouvez obtenir de votre imprimante non-PostScript(R) qu'elle se comporte comme une véritable imprimante PostScript(R).
+
+Ghostscript fait partie du catalogue des logiciels portés, de nombreuses versions sont disponibles, la version la plus couramment utilisée est package:print/ghostscript-gpl[].
+
+Pour émuler du PostScript(R), il nous faut faire en sorte que le filtre texte détecte s'il imprime un fichier PostScript(R). Si ce n'est pas le cas, alors le filtre doit passer le fichier directement à l'imprimante; sinon il recourra à Ghostscript pour tout d'abord le convertir dans un format que l'imprimante saura interpréter.
+
+Voici un exemple: la procédure suivante est un filtre texte pour les imprimantes Hewlett Packard Deskjet 500. Pour d'autres modèles, changez le paramètre `-sDEVICE` de la commande `gs` (Ghostscript). (Entrez `gs -h` pour obtenir une liste des périphériques reconnus par l'installation actuelle de Ghostscript).
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  ifhp - Imprime du PostScript émulé par Ghostscript sur une DeskJet 500
+#  Fichier /usr/local/libexec/ifhp
+
+#
+#  Traite LF comme CR+LF (pour éviter l'"effet d'escalier" sur les
+#  imprimantes HP/PCL):
+#
+printf "\033k2G" || exit 2
+
+#
+#  Lit les deux premiers caractères du fichier
+#
+IFS="" read -r first_line
+first_two_chars=`expr "$first_line" : '\(..\)'`
+
+if [ "$first_two_chars" = "%!" ]; then
+    #
+    #  Si c'est du PostScript; utiliser Ghostscript pour le convertir et l'imprimer
+    #
+    /usr/local/bin/gs -dSAFER -dNOPAUSE -q -sDEVICE=djet500 \
+      -sOutputFile=- -  exit 0
+else
+    #
+    #  Texte brut ou HP/PCL, donc impression directe; effectuer un
+    #  saut de page à la fin pour éjecter la dernière page.
+    #
+    echo "$first_line"  cat  printf "\033l0H" 
+exit 0
+fi
+
+exit 2
+....
+
+Pour finir, vous devez communiquer à LPD le filtre utilisé en positionnant le paramètre `if`:
+
+[.programlisting]
+....
+:if=/usr/local/libexec/ifhp:
+....
+
+Voilà. Vous pouvez entrer `lpr texte.simple` et [.filename]#lpr
+	  peuimporte.ps#, et chacune des deux commandes devrait imprimer avec succès.
+
+[[printing-advanced-convfilters]]
+==== Filtres de conversion
+
+Après avoir mené à bien la configuration basique décrite à la section <<printing-simple,Configuration simple de l'imprimante>>, la première chose que vous souhaiterez probablement faire sera d'installer des filtres de conversion pour vos formats de fichiers favoris (le simple texte ASCII mis à part).
+
+===== Pourquoi installer des filtres de conversion?
+
+Les filtres de conversion facilitent l'impression de différentes sortes de fichiers. Par exemple, supposons que nous travaillions énormément avec le système de composition TeX, et que nous ayons une imprimante PostScript(R). Chaque fois que nous générerons un fichier DVI à partir de TeX, nous ne pouvons l'imprimer directement avant d'avoir converti ce fichier DVI en PostScript(R). La séquence de commandes serait la suivante:
+
+[source,bash]
+....
+% dvips seaweed-analysis.dvi
+% lpr seaweed-analysis.ps
+....
+
+En installant un filtre de conversion pour fichiers DVI, nous pouvons à chaque fois nous passer de l'étape de conversion manuelle en chargeant LPD de le faire à notre place. Maintenant, à chaque fois que nous avons un fichier DVI, nous ne sommes plus qu'à un pas de l'impression:
+
+[source,bash]
+....
+% lpr -d seaweed-analysis.dvi
+....
+
+Nous faisons en sorte que LPD se charge de la conversion du fichier DVI à notre place en positionnant l'option `-d`. La section <<printing-lpr-options-format,Options de conversion et de formatage>> donne la liste des options de conversion.
+
+Pour chacune des options de conversion que vous voulez faire accepter par une imprimante, installez un _filtre de conversion_ et indiquez son chemin d'accès dans [.filename]#/etc/printcap#. Un filtre de conversion ressemble au filtre texte de notre configuration de base (voir la section <<printing-textfilter,Installer le filtre texte>>), à ceci près qu'au lieu d'imprimer du texte brut, le filtre convertit le fichier en un format compréhensible par l'imprimante.
+
+===== Quels filtres de conversion dois-je installer?
+
+Vous devez installer les filtres de conversion que vous vous attendez à utiliser. Si vous imprimez beaucoup de données DVI, alors un filtre de conversion DVI est dans la logique des choses. Si vous devez imprimer beaucoup de troff, alors vous aurez sûrement besoin d'un filtre troff.
+
+Le tableau suivant récapitule les filtres avec lesquels LPD fonctionne, leurs paramètres [.filename]#/etc/printcap#, et comment les invoquer avec la `lpr`:
+
+[.informaltable]
+[cols="1,1,1", frame="none", options="header"]
+|===
+| Type de fichier
+| paramètre /etc/printcap 
+| option lpr
+
+|cifplot
+|`cf`
+|`-c`
+
+|DVI
+|`df`
+|`-d`
+
+|plot
+|`gf`
+|`-g`
+
+|ditroff
+|`nf`
+|`-n`
+
+|code FORTRAN
+|`rf`
+|`-f`
+
+|troff
+|`tf`
+|`-f`
+
+|image en mode point
+|`vf`
+|`-v`
+
+|texte brut
+|`if`
+|aucune, `-p`, or `-l`
+|===
+
+Dans notre exemple, utiliser `lpr -d` veut dire que l'imprimante a besoin du paramètre `df` dans l'entrée [.filename]#/etc/printcap# la concernant.
+
+Aussi fortement que certains puissent s'en émouvoir, des formats comme le code FORTRAN ou le plot sont probablement obsolètes. Sur votre site, vous pouvez attribuer de nouvelles significations à ces options ou à toute autre option de formatage en installant simplement des filtres personnalisés. Par exemple, supposons que vous aimeriez imprimer des fichiers Printerleaf directement (fichiers issus du programme de publication assistée par ordinateur Interleaf), mais jamais de fichiers plot. Vous pourriez alors installer un filtre de conversion Printerleaf sous le paramètre `gf` et ensuite informer vos utilisateurs que `lpr -g` veut dire "imprimer des fichiers Printerleaf".
+
+===== Installer des filtres de conversion
+
+Etant donné que les filtres de conversion sont des applications qui ne font pas partie du système FreeBSD de base, vous devriez les installer dans [.filename]#/usr/local#. Le répertoire [.filename]#/usr/local/libexec# est une destination de choix, car ce sont des programmes spécialisés que seul LPD lancera; les utilisateurs ordinaires ne devraient jamais avoir à les lancer.
+
+Pour activer un filtre de conversion, précisez son chemin d'accès dans le paramètre relatif à l'imprimante de destination dans [.filename]#/etc/printcap#.
+
+Dans notre exemple, nous allons ajouter le filtre de conversion DVI pour l'imprimante nommée `bamboo`. Revoici le fichier [.filename]#/etc/printcap# d'exemple, avec le nouveau paramètre `df` pour l'imprimante `bamboo`:
+
+[.programlisting]
+....
+#
+#  /etc/printcap pour la machine rose - ajout du filtre df pour bamboo
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:sd=/var/spool/lpd/rattan:\
+        :lp=/dev/lpt0:\
+        :if=/usr/local/libexec/if-simple:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:\
+        :lp=/dev/ttyd5:ms#-parenb cs8 clocal crtscts:rw:\
+        :if=/usr/local/libexec/psif:\
+        :df=/usr/local/libexec/psdf:
+....
+
+Le filtre DVI est une procédure nommée [.filename]#/usr/local/libexec/psdf#. En voici le contenu:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  psdf - filtre DVI vers imprimante PostScript
+#  Fichier /usr/local/libexec/psdf
+#
+# Appelé par lpd quand l'utilisateur lance lpr -d
+#
+exec /usr/local/bin/dvips -f | /usr/local/libexec/lprps "$@"
+....
+
+Cette procédure lance `dvips` en mode filtre (cela correspond au paramètre `-f`) sur l'entrée standard, qui est le travail d'impression à exécuter. Ensuite, elle lance le filtre pour imprimante PostScript(R) `lprps` (voir la section <<printing-advanced-if-conversion,Gérer les travaux d'impression de texte brut sur des imprimantes PostScript(R)>>) avec les paramètres que LPD lui a passés. Le programme `lprps` utilisera ces paramètres pour comptabiliser les pages imprimées.
+
+===== Exemples de filtre de conversion supplémentaires
+
+Il n'existe pas de procédure figée pour l'installation des filtres de conversion, des exemples fonctionnels sont présentés dans cette section. Inspirez-vous de ces exemples pour créer vos propres filtres. Utilisez les tels quels s'il s'avèrent adéquats.
+
+Cet exemple présente un filtre de conversion d'image en mode point (en fait un fichier GIF) pour une imprimante Hewlett-Packard LaserJet III-Si:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  hpvf - Convertit des fichiers GIF en HP/PCL, puis les imprime
+#  Fichier /usr/local/libexec/hpvf
+
+PATH=/usr/X11R6/bin:$PATH; export PATH
+giftopnm | ppmtopgm | pgmtopbm | pbmtolj -resolution 300 \
+     exit 0 \
+    || exit 2
+....
+
+Son fonctionnement est le suivant: il convertit le fichier GIF en un format portable universel, puis en format portable en niveau de gris, et ensuite en bitmap portable, qu'il convertit enfin en données compatibles LaserJet/PCL.
+
+Voici le [.filename]#/etc/printcap# comportant une entrée pour une imprimante recourant au filtre ci-dessus:
+
+[.programlisting]
+....
+#
+#  /etc/printcap pour la machine orchid
+#
+teak|hp|laserjet|Hewlett Packard LaserJet 3Si:\
+        :lp=/dev/lpt0:sh:sd=/var/spool/lpd/teak:mx#0:\
+        :if=/usr/local/libexec/hpif:\
+        :vf=/usr/local/libexec/hpvf:
+....
+
+La procédure suivante est un filtre de conversion de données troff du système de composition groff pour l'imprimante PostScript(R) `bamboo`:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  pstf - Convertit des données troff de groff en PS, puis imprime.
+#  Fichier /usr/local/libexec/pstf
+#
+exec grops | /usr/local/libexec/lprps "$@"
+....
+
+La procédure ci-dessus emploie de nouveau `lprps` pour gérer la communication avec l'imprimante. S'il s'agissait d'une imprimante sur port parallèle, nous utiliserions plutôt la procédure suivante:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  pstf - Convertit des données troff de groff en PS, puis imprime.
+#  Fichier /usr/local/libexec/pstf
+#
+exec grops
+....
+
+C'est tout. Voici l'entrée qu'il faut ajouter dans [.filename]#/etc/printcap# pour activer le filtre:
+
+[.programlisting]
+....
+:tf=/usr/local/libexec/pstf:
+....
+
+Voici un exemple qui pourrait faire rougir les vieux briscards de FORTRAN. C'est un filtre de code FORTRAN pour toute imprimante sachant imprimer du texte brut. Nous l'installerons pour l'imprimante `teak`:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+# hprf - filtre texte FORTRAN pour LaserJet 3si:
+# Fichier /usr/local/libexec/hprf
+#
+
+printf "\033k2G"  fpr  printf "\033l0H" 
+ exit 0
+exit 2
+....
+
+Et nous ajouterons cette ligne dans [.filename]#/etc/printcap# pour l'imprimante `teak` afin d'activer le filtre:
+
+[.programlisting]
+....
+:rf=/usr/local/libexec/hprf:
+....
+
+Voici un dernier exemple, quelque peu complexe. Nous allons ajouter un filtre DVI pour l'imprimante LaserJet `teak` présentée ci-dessus. Tout d'abord, la partie facile: mettre à jour [.filename]#/etc/printcap# avec l'emplacement du filtre DVI:
+
+[.programlisting]
+....
+:df=/usr/local/libexec/hpdf:
+....
+
+Et maintenant, la partie difficile: écrire le filtre. Pour cela, nous avons besoin d'un programme de conversion DVI-vers-LaserJet/PCL. Le catalogue des logiciels portés (voyez la section crossref:ports[ports,Le catalogue des logiciels portés]) en possède un: package:print/dvi2xx[]. Installer ce logiciel porté nous fournira le programme dont nous avons besoin, `dvilj2p`, qui convertit le DVI en code compatible LaserJet IIp, LaserJet III et LaserJet 2000.
+
+L'utilitaire `dvilj2p` rend le filtre `hpdf` assez complexe, parce que `dvilj2p` ne sait pas lire l'entrée standard. Il lui faut un nom de fichier. Pire encore, le nom du fichier doit se terminer par [.filename]#.dvi#, ce qui rend l'utilisation de [.filename]#/dev/fd/0# pour l'entrée standard problématique. Nous pouvons contourner cette difficulté en créant un lien symbolique temporaire (se terminant par [.filename]#.dvi#) pointant vers [.filename]#/dev/fd/0#, obligeant ainsi `dvilj2p` à lire l'entrée standard.
+
+Le seul petit accroc restant est que nous ne pouvons pas utiliser [.filename]#/tmp# pour le lien temporaire. Les liens symboliques ont pour propriétaire l'utilisateur et le group `bin`. Le filtre est lancé sous l'utilisateur `daemon`. Et le bit "sticky" est positionné sur le répertoire [.filename]#/tmp#. Le filtre peut créer le lien, mais il ne pourra pas nettoyer lorsqu'il aura fini et supprimer ce lien puisqu'il appartient à un utilisateur différent.
+
+Au lieu de ça, le filtre créera le lien dans le répertoire courant, qui est le répertoire de la file d'attente des travaux d'impression (précisé par le paramètre `sd` dans [.filename]#/etc/printcap#). C'est l'endroit idéal pour faire travailler les filtres, particulièrement parce qu'il y a (parfois) plus d'espace disque libre dans ce répertoire que sous [.filename]#/tmp#.
+
+Voici, enfin, le filtre:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  hpdf - Imprime des données DVI sur une imprimante HP/PCL
+#  Fichier /usr/local/libexec/hpdf
+
+PATH=/usr/local/bin:$PATH; export PATH
+
+#
+#  Définit une fonction de nettoyage de nos fichiers temporaires.  Ils prennent place
+#  dans le répertoire courant, qui sera le répertoire
+#  de file d'attente
+#  de l'imprimante.
+#
+cleanup() {
+   rm -f hpdf$$.dvi
+}
+
+#
+#  Définit une fonction de gestion des erreurs fatales: affiche le message
+#  d'erreur et retourne 2.  Ce code d'erreur de 2 indique à LPD
+#  de ne pas essayer de réimprimer le travail d'impression
+#
+fatal() {
+    echo "$@" 12
+    cleanup
+    exit 2
+}
+
+#
+#  Si l'utilisateur enlève le travail d'impression, LPD envoie SIGINT, donc
+#  il faut capturer le signal SIGINT
+#  (et quelques autres signaux) pour nettoyer après notre passage.
+#
+trap cleanup 1 2 15
+
+#
+#  Assurons-nous qu'il n'y ait pas conflit ce nom avec des fichiers existants.
+#
+cleanup
+
+#
+#  Lien du fichier DVI vers l'entrée standard (fichier à imprimer).
+#
+ln -s /dev/fd/0 hpdf$$.dvi || fatal "Cannot symlink /dev/fd/0"
+
+#
+#  Conversion LF = CR+LF
+#
+printf "\033k2G" || fatal "Cannot initialize printer"
+
+#
+#  Conversion et impression.  Le code de retour de dvilj2p ne semble
+#  pas fiable: ignorons-le.
+#
+dvilj2p -M1 -q -e- dfhp$$.dvi
+
+#
+#  Nettoyage et sortie de la procédure
+#
+cleanup
+exit 0
+....
+
+[[printing-advanced-autoconv]]
+===== Conversion automatique: une alternative aux filtres de conversion
+
+Tous ces filtres de conversion apportent beaucoup à votre environnement d'impression, mais nécessitent que l'utilisateur précise (dans la ligne de commande man:lpr[1]) lequel utiliser. Si vos utilisateurs ne sont pas particulièrement versés en informatique, préciser une option de filtre sera problématique. Mais ce qui s'avère pire encore est qu'une option de filtre mal choisie peut lancer un filtre sur un type de fichier erroné et causer l'impression de centaines de pages.
+
+Plutôt que d'installer quelque filtre de conversion que ce soit, vous préférerez sans doute laisser le filtre texte (puisque c'est le filtre par défaut) déterminer le type de fichier qu'on lui a demandé d'imprimer et lancer automatiquement le filtre de conversion approprié. Des outils comme `file` peuvent s'avérer utiles dans ce cas. Bien entendu, il sera difficile d'établir les différences entre _certains_ types de fichiers-et vous pouvez toujours, bien sûr, fournir des filtres de conversion uniquement pour eux.
+
+Le catalogue des logiciels portés FreeBSD contient un filtre texte, nommé `apsfilter` (package:print/apsfilter[]), qui sait effectuer la conversion automatique. Il peut reconnaître le texte brut, le PostScript(R) les fichiers DVI et quasiment n'importe quelle sorte de fichier, effectuer les conversions appropriées et imprimer.
+
+[[printing-advanced-of]]
+==== Filtres de sortie
+
+Le gestionnaire d'impression LPD reconnaît un autre type de filtre dont nous n'avons pas encore discuté: le filtre de sortie. Un filtre de sortie est destiné à l'impression de texte brut seulement, comme le filtre texte, mais avec de nombreuses simplifications. Si vous utilisez un filtre de sortie mais pas de filtre texte, alors:
+
+* LPD lance un filtre de sortie une seule fois par travail d'impression, au lieu d'une fois pour chacun des fichiers du travail d'impression.
+* LPD ne fournit rien pour permettre au filtre de sortie de repérer le début ou la fin des fichiers du travail d'impression.
+* LPD ne passe pas le nom de l'utilisateur ou le nom de la machine au filtre, qui n'est donc pas prévu pour effectuer la comptabilisation de l'impression. En fait, il ne reçoit que deux paramètres:
++
+`nom-du-filtre` -w _largeur_ -l _hauteur_
++ 
+Où _largeur_ provient du paramètre `pw` et _hauteur_ du paramètre `pl` de l'entrée [.filename]#/etc/printcap# pour l'imprimante en question.
+
+Ne vous laissez pas séduire par la simplicité d'un filtre de sortie. Si vous désirez que chaque fichier d'un travail d'impression commence sur une page différente, un filtre de sortie _ne conviendra pas_. Utilisez un filtre texte (également appelé filtre d'entrée); voir la section <<printing-textfilter,Installer le filtre texte>>. De plus, le filtre de sortie se révèle en fait _plus complexe_ en ce sens qu'il doit examiner le flux d'octets qui lui est envoyé pour y rechercher des caractères spéciaux et qu'il doit s'envoyer à lui-même des signaux comme s'ils provenaient de LPD.
+
+Toutefois, un filtre de sortie s'avère _nécessaire_ si vous désirez des pages d'en-tête et avez besoin d'envoyer des séquences d'échappement ou d'autres chaînes d'initialisation afin de pouvoir imprimer la page d'en-tête. (Mais il est également _futile_ si vous voulez imputer les pages d'en-tête au compte de l'utilisateur, puisque LPD ne livre pas d'information sur l'utilisateur ou la machine au filtre de sortie).
+
+Sur une seule imprimante, LPD permet à la fois un filtre de sortie et des filtres texte ou autres. Dans de tels cas, LPD ne lancera le filtre de sortie que pour imprimer la page d'en-tête (consultez la section <<printing-advanced-header-pages,Pages d'en-tête>>). LPD attend alors que le filtre de sortie _s'arrête par lui-même_ en envoyant deux octets au filtre: ASCII 031 suivi d'ASCII 001. Lorsqu'un filtre de sortie lit ces deux octets (031,001), il devrait s'arrêter en s'envoyant à lui-même un `SIGSTOP`. Lorsque LPD a fini d'exécuter les autres filtres, il relance le filtre de sortie en lui envoyant un `SIGCONT`.
+
+S'il y a un filtre de sortie mais _aucun_ filtre texte et que LPD s'occupe d'un travail d'impression concernant du texte brut, alors LPD utilise le filtre de sortie pour réaliser ce travail d'impression. Comme exposé plus haut, le filtre de sortie imprimera chacun des travaux d'impression séquentiellement sans que des sauts de page ou autres formes d'avancement du papier ne surviennent, et ce n'est vraisemblablement _pas_ ce que vous désirez. Dans presque tous les cas, il vous faut un filtre texte.
+
+Le programme `lpf`, que nous avons présenté précédemment comme un filtre texte, peut également fonctionner en tant que filtre de sortie. Si vous avez besoin d'un filtre de sortie vite-fait-bien-fait mais ne voulez pas écrire le code d'examen d'octets et d'envoi de signal, essayez `lpf`. Vous pouvez également inclure `lpf` dans une procédure pour prendre en charge tout code d'initialisation qui pourrait être requis par l'imprimante.
+
+[[printing-advanced-lpf]]
+==== `lpf`: un filtre texte
+
+Le programme [.filename]#/usr/libexec/lpr/lpf# qui est fourni avec la distribution binaire FreeBSD est un filtre texte (un filtre d'entrée) qui sait indenter la sortie (un travail d'impression soumis avec `lpr -i`), laisse passer les caractères littéraux (travail d'impression soumis avec `lpr -l`), ajuste la position d'impression des retours arrière et des tabulations dans le travail d'impression, et comptabilise les pages imprimées. Il peut également servir de filtre de sortie.
+
+Le filtre `lpf` convient à de nombreux environnements d'impression. Et bien qu'il ne puisse pas envoyer de séquences d'initialisation à une imprimante, il est aisé d'écrire une procédure pour effectuer l'initialisation nécessaire et ensuite exécuter `lpf`.
+
+Afin que `lpf` mène à bien la comptabilisation des pages, il faut que des valeurs correctes soient indiquées pour les paramètres `pw` et `pl` dans le fichier [.filename]#/etc/printcap#. Il utilise ces valeurs pour déterminer combien de texte peut être imprimé sur une page et combien de pages ont été imprimées dans le travail d'impression d'un utilisateur. Pour plus d'informations sur la comptabilisation de l'impression, lisez la section <<printing-advanced-acct,Comptabiliser l'utilisation de l'imprimante>>.
+
+[[printing-advanced-header-pages]]
+=== Pages d'en-tête
+
+Si vous avez _beaucoup_ d'utilisateurs, et que tous utilisent des imprimantes diverses, alors vous allez certainement envisager les _pages d'en-tête_ comme un mal nécessaire.
+
+Les pages d'en-tête, également appelées _bannières_ ou _burst page_, identifient à qui appartiennent les travaux d'impression après qu'ils aient été imprimés. Elles sont en général imprimées en caractères de grande taille et en gras, peuvent comporter des bordures décorées, de sorte qu'elles contrastent dans une pile d'impressions avec les véritables documents formant les travaux d'impression des utilisateurs. Elles leur permettent de retrouver facilement leurs travaux d'impression. L'inconvénient majeur d'une page d'en-tête est qu'elle représente une page supplémentaire à imprimer pour chacun des travaux d'impression, son utilité éphémère ne dépasse pas quelques minutes, et elle termine au recyclage du papier ou dans une corbeille. (Notez que une page d'en-tête est liée à chaque travail d'impression et non à chaque fichier dans un travail d'impression: il se pourrait donc que le gâchis de papier ne soit pas si grand.)
+
+Le système LPD peut fournir des pages d'en-tête automatiquement pour vos impressions _si_ votre imprimante sait imprimer directement du texte brut. Si vous disposez d'une imprimante PostScript(R), il vous faudra un programme externe pour générer la page d'en-tête; lisez la section <<printing-advanced-header-pages-ps,Les pages d'en-tête sur les imprimantes PostScript(R)>>.
+
+[[printing-advanced-header-pages-enabling]]
+==== Activer les pages d'en-tête
+
+Dans la section <<printing-simple,Configuration simple de l'imprimante>>, nous avons désactivé les pages d'en-tête en positionnant le paramètre `sh` (ce qui signifie "suppress header", soit "suppression des en-têtes") dans [.filename]#/etc/printcap#. Pour activer les pages d'en-tête sur une imprimante, il suffit d'enlever ce paramètre `sh`.
+
+Cela semble trop facile, n'est-ce pas?
+
+C'est vrai. Il se _pourrait_ que vous ayez à fournir un filtre de sortie pour envoyer des chaînes d'initialisation à l'imprimante. Voici un exemple de filtre sortie pour les imprimantes Hewlett-Packard compatibles-PCL:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  hpof - filtre de sortie pour les imprimantes Hewlett Packard compatibles PCL
+#  Fichier /usr/local/libexec/hpof
+
+printf "\033k2G" || exit 2
+exec /usr/libexec/lpr/lpf
+....
+
+Spécifiez le chemin d'accès au filtre de sortie avec le paramètre `of`. Lisez la section <<printing-advanced-of,Filtres de sortie>> pour plus de détails.
+
+Voici un fichier [.filename]#/etc/printcap# d'exemple pour l'imprimante `teak` que nous avons présentée plus haut; nous avons activé les pages d'en-tête et ajouté le fichier de sortie ci-dessus:
+
+[.programlisting]
+....
+#
+#  /etc/printcap pour la machine orchid
+#
+teak|hp|laserjet|Hewlett Packard LaserJet 3Si:\
+        :lp=/dev/lpt0:sd=/var/spool/lpd/teak:mx#0:\
+        :if=/usr/local/libexec/hpif:\
+        :vf=/usr/local/libexec/hpvf:\
+        :of=/usr/local/libexec/hpof:
+....
+
+Désormais, lorsque les utilisateurs lancent des travaux d'impression avec `teak`, ils obtiennent une page d'en-tête avec chaque travail d'impression. Si vos utilisateurs désirent perdre du temps à rechercher leurs impressions, ils peuvent omettre la page d'en-tête en soumettant le travail d'impression avec la commande `lpr -h`; lisez la section <<printing-lpr-options-misc,Options des pages d'en-tête>> pour connaître plus d'options man:lpr[1].
+
+[NOTE]
+====
+LPD imprime un caractère de saut de page après une page d'en-tête. Si votre imprimante utilise un autre caractère ou séquence de caractères différente pour éjecter une page, précisez-le avec le paramètre `ff` dans [.filename]#/etc/printcap#.
+====
+
+[[printing-advanced-header-pages-controlling]]
+==== Contrôle des pages d'en-tête
+
+Une fois les pages d'en-tête activées, LPD produira un _en-tête long_, c'est à dire une page entière de grands caractères identifiant l'utilisateur, le nom de la machine et le travail d'impression. Voici un exemple (`kelly` a lancé le travail d'impression nommé "outline" depuis la machine `rose`):
+
+[.programlisting]
+....
+      k                   ll       ll
+      k                    l        l
+      k                    l        l
+      k   k     eeee       l        l     y    y
+      k  k     e    e      l        l     y    y
+      k k      eeeeee      l        l     y    y
+      kk k     e           l        l     y    y
+      k   k    e    e      l        l     y   yy
+      k    k    eeee      lll      lll     yyy y
+                                               y
+                                          y    y
+                                           yyyy
+
+                                   ll
+                          t         l        i
+                          t         l
+       oooo    u    u   ttttt       l       ii     n nnn     eeee
+      o    o   u    u     t         l        i     nn   n   e    e
+      o    o   u    u     t         l        i     n    n   eeeeee
+      o    o   u    u     t         l        i     n    n   e
+      o    o   u   uu     t  t      l        i     n    n   e    e
+       oooo     uuu u      tt      lll      iii    n    n    eeee
+
+      r rrr     oooo     ssss     eeee
+      rr   r   o    o   s    s   e    e
+      r        o    o    ss      eeeeee
+      r        o    o      ss    e
+      r        o    o   s    s   e    e
+      r         oooo     ssss     eeee
+
+                                              Job:  outline
+                                              Date: Sun Sep 17 11:04:58 1995
+....
+
+LPD ajoute un saut de page à ce texte de sorte que le travail d'impression commence sur une nouvelle page (à moins que `sf` (supprimer les sauts de page) ne soit dans l'entrée correspondant à l'imprimante dans [.filename]#/etc/printcap#).
+
+Si vous préférez, LPD peut générer des _en-tête courts_; ajoutez le paramètre `sb` (en-tête court) dans le fichier [.filename]#/etc/printcap#. La page d'en-tête ressemblera à ceci:
+
+[.programlisting]
+....
+rose:kelly  Job: outline  Date: Sun Sep 17 11:07:51 1995
+....
+
+Par défaut également, LPD imprime d'abord la page d'en-tête, puis le travail d'impression. Pour inverser ce comportement, placez le paramètre `hl` (en-tête à la fin) dans [.filename]#/etc/printcap#.
+
+[[printing-advanced-header-pages-accounting]]
+==== Comptabiliser les pages d'en-tête
+
+Utiliser les pages d'en-tête fournies par LPD provoque un comportement particulier lorsqu'il s'agit de comptabiliser l'utilisation de l'imprimante: les pages d'en-tête doivent être _gratuites_.
+
+Pourquoi?
+
+Parce que le filtre de sortie est le seul programme externe pouvant tenir les comptes qui aura le contrôle lors de l'impression de la page d'en-tête, et qu'aucune information sur _l'utilisateur ou le nom de la machine_ ne lui est donnée ni aucun fichier de comptabilisation, par conséquent il ne sait pas à qui attribuer le coût de l'utilisation de l'imprimante. Il ne suffit pas non plus de simplement "ajouter une page" au filtre texte ou un quelconque filtre de conversion (qui, eux, possèdent des informations sur l'utilisateur et la machine) puisque les utilisateurs peuvent supprimer les pages d'en-tête avec `lpr -h`. Ils pourraient toujours se voir imputer des pages d'en-tête qu'ils n'auraient pas imprimées. En somme, `lpr -h` demeurera l'option favorite des utilisateurs soucieux de l'environnement, mais vous ne pouvez aucunement les inciter à l'utiliser.
+
+Il ne _suffit pas non plus_ de laisser chacun des filtres générer ses propres pages d'en-tête (ce qui permettrait de savoir à qui imputer les coûts). Si les utilisateurs désiraient omettre les pages d'en-tête avec `lpr -h`, ils les obtiendraient quand même et le coût leur serait attribué puisque LPD ne donne aucun renseignement sur l'emploi de l'option `-h` à aucun des filtres.
+
+Alors, quelles sont les options à votre disposition?
+
+Vous pouvez:
+
+* Accepter le comportement de LPD et la gratuité des pages d'en-tête.
+* Installer une alternative à LPD, comme LPRng. La section <<printing-lpd-alternatives,Alternatives au gestionnaire d'impression standard>> en dit plus au sujet des autres gestionnaires d'impression qui peuvent être substitués à LPD.
+* Ecrire un filtre de sortie _intelligent_. Normalement, un filtre de sortie n'est pas censé faire plus que d'initialiser une imprimante ou exécuter une conversion simple de caractères. Il convient aux pages d'en-tête et aux travaux d'impression de texte brut (lorsqu'il n'y a aucun filtre (d'entrée) texte). Mais, s'il existe un filtre texte pour les travaux d'impression de texte, alors LPD ne lancera le filtre de sortie que pour les pages d'en-tête. Le filtre de sortie peut également analyser le texte de la page d'en-tête généré par LPD pour déterminer quels sont l'utilisateur et la machine à qui il faut attribuer le coût de cette page d'en-tête. Le seul autre problème avec cette méthode est que le filtre de sortie ne sait toujours pas quel fichier de comptabilisation utiliser (le nom du fichier spécifié par le paramètre `af` ne lui est pas fourni), mais si vous disposez d'un fichier de comptabilisation bien identifié, vous pouvez le coder en dur dans le filtre de sortie. Afin de faciliter l'étape d'analyse, utilisez le paramètre `sh` (en-tête courte) dans [.filename]#/etc/printcap#. D'un autre côté, tout cela pourrait bien représenter beaucoup de dérangement, et les utilisateurs apprécieront certainement davantage l'administrateur généreux qui propose la gratuité des pages d'en-tête.
+
+[[printing-advanced-header-pages-ps]]
+==== Les pages d'en-tête sur les imprimantes PostScript(R)
+
+Comme décrit précédemment, LPD est en mesure de générer des pages d'en-tête texte convenant pour de nombreuses d'imprimantes. Bien entendu, PostScript(R) ne peut pas imprimer du texte directement, donc la fonctionnalité de page d'en-tête offerte par LPD est inutilisable ou presque.
+
+Une solution manifeste est de faire générer la page d'en-tête par tous les filtres de conversion et le filtre texte. Les filtres devraient employer les paramètres utilisateur et nom de machine pour générer une page d'en-tête convenable. L'inconvénient de cette méthode est que les utilisateurs obtiendront toujours une page d'en-tête, même s'ils soumettent leurs travaux d'impression avec `lpr -h`.
+
+Examinons cette méthode. La procédure ci-dessous prend trois paramètres (le nom de l'utilisateur, le nom de la machine et celui du travail d'impression) et réalise une page d'en-tête simple en PostScript(R):
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  make-ps-header - génére une page d'en-tête PostScript sur la sortie standard
+#  Fichier /usr/local/libexec/make-ps-header
+#
+
+#
+#  Ce sont des unités PostScript (72 par pouce).  A modifier pour A4 ou
+#  tout autre format papier employé:
+#
+page_width=612
+page_height=792
+border=72
+
+#
+#  Vérification des paramètres
+#
+if [ $# -ne 3 ]; then
+    echo "Usage: `basename $0` user host job" 12
+    exit 1
+fi
+
+#
+#  Mémorisation des paramètres, pour la lisibilité du PostScript, plus bas.
+#
+user=$1
+host=$2
+job=$3
+date=`date`
+
+#
+#  Envoi du code PostScript sur stdout.
+#
+exec cat EOF
+%!PS
+
+%
+%  Assurons-nous qu'il n'y a pas d'interférence avec le travail
+%  utilisateur qui suivra
+%
+save
+
+%
+%  Applique une grosse bordure désagréable autour
+%  du bord de la page.
+%
+$border $border moveto
+$page_width $border 2 mul sub 0 rlineto
+0 $page_height $border 2 mul sub rlineto
+currentscreen 3 -1 roll pop 100 3 1 roll setscreen
+$border 2 mul $page_width sub 0 rlineto closepath
+0.8 setgray 10 setlinewidth stroke 0 setgray
+
+%
+%  Affiche le nom de l'utilisateur, de façon jolie, grande et proéminente
+%
+/Helvetica-Bold findfont 64 scalefont setfont
+$page_width ($user) stringwidth pop sub 2 div $page_height 200 sub moveto
+($user) show
+
+%
+%  Maintenant, les détails ennuyant:
+%
+/Helvetica findfont 14 scalefont setfont
+/y 200 def
+[ (Job:) (Host:) (Date:) ] {
+200 y moveto show /y y 18 sub def }
+forall
+
+/Helvetica-Bold findfont 14 scalefont setfont
+/y 200 def
+[ ($job) ($host) ($date) ] {
+        270 y moveto show /y y 18 sub def
+} forall
+
+%
+% C'est tout
+%
+restore
+showpage
+EOF
+....
+
+Désormais, chacun des filtres de conversion et le filtre texte peuvent appeler cette procédure pour d'abord générer la page d'en-tête, et ensuite imprimer le travail d'impression de l'utilisateur. Voici le filtre de conversion DVI déjà mentionné plus haut dans ce document, modifié afin de générer une page d'en-tête:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  psdf - filtre DVI vers imprimante PostScript
+#  Fichier /usr/local/libexec/psdf
+#
+#  Appelé par lpd quand l'utilisateur lance lpr -d
+#
+
+orig_args="$@"
+
+fail() {
+    echo "$@" 12
+    exit 2
+}
+
+while getopts "x:y:n:h:" option; do
+    case $option in
+        x|y)  ;; # Ignore
+        n)    login=$OPTARG ;;
+        h)    host=$OPTARG ;;
+        *)    echo "LPD started `basename $0` wrong." 12
+              exit 2
+              ;;
+    esac
+done
+
+[ "$login" ] || fail "Pas de nom d'utilisateur"
+[ "$host" ] || fail "PAs de nom de machine"
+
+( /usr/local/libexec/make-ps-header $login $host "DVI File"
+  /usr/local/bin/dvips -f ) | eval /usr/local/libexec/lprps $orig_args
+....
+
+Observez que le filtre doit analyser la liste des paramètres pour déterminer le nom de l'utilisateur et celui de la machine. L'analyse menée par les autres filtres de conversion est identique. Toutefois, le filtre texte réclame un ensemble de paramètres légèrement différent (voyez la section <<printing-advanced-filters,Fonctionnement des filtres>>).
+
+Comme précédemment exposé, cette solution, quoique relativement simple, invalide l'option de "suppression de page d'en-tête" (l'option `-h`) de `lpr`. Si les utilisateurs désiraient épargner la vie d'un arbre (ou économiser quelques centimes, si vous faites payer les pages d'en-tête), ils ne seraient pas en mesure de le faire, puisque chaque filtre va imprimer une page d'en-tête avec chaque travail d'impression.
+
+Pour permettre aux utilisateurs de désactiver les pages d'en-tête en fonction du travail d'impression, il vous faudra recourir à l'une des astuces de la section <<printing-advanced-header-pages-accounting,Comptabiliser les pages d'en-tête>>: écrire un filtre de sortie qui analyse la page d'en-tête générée par LPD et produit une version PostScript(R). Si l'utilisateur soumet le travail d'impression avec `lpr -h` alors ni LPD ni votre filtre de sortie ne généreront de page d'en-tête. Sinon, votre filtre de sortie lira le texte en provenance de LPD et enverra la page d'en-tête PostScript(R) appropriée à l'imprimante.
+
+Si vous disposez d'une imprimante PostScript(R) sur une interface série, vous pouvez utiliser `lprps`, qui est livré avec un filtre de sortie, `psof`, qui réalise ce que nous venons d'exposer ci-dessus. Notez que `psof` n'assume pas la tenue de comptes pour les pages d'en-tête.
+
+[[printing-advanced-network-printers]]
+=== Imprimer via un réseau
+
+FreeBSD gère l'impression via un réseau: c'est à dire en envoyant les travaux d'impression à des imprimantes distantes. L'impression via un réseau désigne deux choses différentes:
+
+* Accéder à une imprimante connectée à une machine distante. Vous installez une imprimante disposant d'une interface conventionnelle, série ou parallèle, sur une machine. Puis vous configurez LPD pour permettre l'accès à l'imprimante depuis d'autres machines du réseau. La section <<printing-advanced-network-rm,Imprimantes installées sur des machines distantes>> en détaillera la mise en œuvre.
+* Accéder à une imprimante directement connectée au réseau. L'imprimante dispose d'une interface réseau en plus (ou à la place) d'interfaces plus conventionnelles, série ou parallèle. Une imprimante de ce genre peut fonctionner ainsi:
+
+** Elle peut comprendre le protocole LPD et sait même gérer une file d'attente de travaux d'impression provenant de machines distantes. En ce cas, elle se comporte comme une machine normale qui exécuterait LPD. Suivez la même procédure que celle exposée à la section <<printing-advanced-network-rm,Imprimantes installées sur des machines distantes>> afin de configurer une imprimante de ce genre.
+** Elle peut savoir gérer un flux de données au travers d'une connexion réseau. Dans ce cas, vous pouvez "attacher" l'imprimante à l'une des machines du réseau en la rendant responsable de la gestion de la file d'impression et de l'envoi des travaux d'impression à l'imprimante. La section <<printing-advanced-network-net-if,Imprimantes avec des interfaces utilisant des flux réseau>> donne quelque indications sur l'installation d'imprimantes de ce type.
+
+[[printing-advanced-network-rm]]
+==== Imprimantes installées sur des machines distantes
+
+Le gestionnaire d'impression LPD dispose des fonctions pour gérer l'envoi des travaux d'impression à d'autres machines exécutant également LPD (ou un système qui lui est compatible). Cette fonctionnalité vous permet d'installer une imprimante sur une machine, puis de la rendre accessible depuis les autres machines. Cela fonctionne également avec les imprimantes disposant d'interfaces réseau comprenant le protocole LPD.
+
+Pour activer ce type d'impression à distance, installez d'abord une imprimante sur une machine, qui sera _la machine d'impression_, en suivant les instructions de configuration basique décrites à la section <<printing-simple,Configuration simple de l'imprimante>>. Réalisez toute étape de la <<printing-advanced,configuration avancée de l'imprimante>> dont vous pourriez avoir besoin. Veillez à tester l'imprimante et vérifiez qu'elle fonctionne avec les paramètres de LPD que vous avez activés. Assurez-vous également que _la machine locale_ est autorisée à utiliser le service LPD sur _la machine distante_ (lisez la section <<printing-advanced-restricting-remote,Restreindre les impressions à distance>>).
+
+Si vous utilisez une imprimante avec une interface réseau qui est compatible avec LPD, alors _la machine d'impression_ dans le texte ci-dessous est l'imprimante elle-même, et le _nom de l'imprimante_ est le nom que vous avez paramétré pour l'imprimante. Lisez la documentation livrée avec votre imprimante ou l'interface réseau-imprimante.
+
+[TIP]
+====
+
+Si vous utilisez une Hewlett Packard Laserjet, alors le nom d'imprimante `text` réalisera la conversion LF en CRLF automatiquement, de sorte que vous n'aurez pas besoin de la procédure [.filename]#hpif#.
+====
+
+Ensuite, sur les autres machines pour lesquelles vous désirez autoriser l'accès à l'imprimante, créez une ligne dans leur [.filename]#/etc/printcap# avec les paramètres suivants:
+
+. Nommez cette entrée comme vous le voulez. Par souci de simplicité, cependant, vous préférerez certainement employer les mêmes nom et alias que ceux utilisés sur la machine de d'impression.
+. Laissez le paramètre `lp` non-renseigné, de manière explicite (`:lp=:`).
+. Créez un répertoire de file d'impression et indiquez son chemin d'accès dans le paramètre `sd`. C'est là où LPD entreposera les travaux d'impression avant leur envoi vers la machine d'impression.
+. Indiquez le nom de la machine d'impression avec le paramètre `rm`.
+. Placez le nom de l'imprimante sur _la machine d'impression_ dans le paramètre `rp`.
+
+C'est tout. Il n'est pas nécessaire de préciser la liste des filtres de conversion, les dimensions de la page, ou quoique ce soit d'autre dans le fichier [.filename]#/etc/printcap#.
+
+Voici un exemple. La machine `rose` dispose de deux imprimantes, `bamboo` et `rattan`. Nous allons permettre aux utilisateurs de la machine `orchid` d'imprimer avec ces imprimantes. Voici le fichier [.filename]#/etc/printcap# pour `orchid` (apparu dans la section <<printing-advanced-header-pages-enabling,Activer les pages d'en-tête>>). Il contenait déjà une entrée pour l'imprimante `teak`; nous avons ajouté celles pour les deux imprimantes sur la machine `rose`:
+
+[.programlisting]
+....
+#
+#  /etc/printcap pour la machine orchid - ajout d'imprimantes (distantes)
+#    sur rose
+#
+
+#
+#  teak est locale; connectée directement à orchid:
+#
+teak|hp|laserjet|Hewlett Packard LaserJet 3Si:\
+        :lp=/dev/lpt0:sd=/var/spool/lpd/teak:mx#0:\
+        :if=/usr/local/libexec/ifhp:\
+        :vf=/usr/local/libexec/vfhp:\
+        :of=/usr/local/libexec/ofhp:
+
+#
+#  rattan est connectée à rose; envoie les travaux pour rattan
+#    à rose:
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :lp=:rm=rose:rp=rattan:sd=/var/spool/lpd/rattan:
+
+#
+#  bamboo est également connectée à rose:
+#
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :lp=:rm=rose:rp=bamboo:sd=/var/spool/lpd/bamboo:
+....
+
+Ensuite, nous n'avons qu'à créer les répertoires de file d'impression sur `orchid`:
+
+[source,bash]
+....
+# mkdir -p /var/spool/lpd/rattan /var/spool/lpd/bamboo
+# chmod 770 /var/spool/lpd/rattan /var/spool/lpd/bamboo
+# chown daemon:daemon /var/spool/lpd/rattan /var/spool/lpd/bamboo
+....
+
+Maintenant les utilisateurs d'``orchid`` peuvent imprimer sur `rattan` et `bamboo`. Par exemple, si un utilisateur sur `orchid` entrait:
+
+[source,bash]
+....
+% lpr -P bamboo -d sushi-review.dvi
+....
+
+le système LPD sur `orchid` copierait le travail d'impression dans le répertoire de file d'impression [.filename]#/var/spool/lpd/bamboo# et relèverait qu'il s'agit d'un travail d'impression DVI. Dès que la machine `rose` dispose d'assez de place dans son répertoire de file d'impression, les deux LPD transfèrent le fichier à `rose`. Le fichier reste en attente dans la file de `rose` jusqu'à son impression. Il sera converti de DVI en PostScript(R) (puisque `bamboo` est une imprimante PostScript(R)) sur `rose`.
+
+[[printing-advanced-network-net-if]]
+==== Imprimantes avec des interfaces utilisant des flux réseau
+
+Bien souvent, lorsque vous achetez une carte d'interface réseau pour une imprimante, vous avez le choix entre deux versions: l'une qui émule un gestionnaire d'impression (la version la plus onéreuse), ou une autre qui ne vous permet que de lui envoyer des données comme s'il s'agissait d'un port série ou parallèle (c'est la version la moins chère). Cette section vous indique comment utiliser cette seconde version moins onéreuse. Pour la plus chère, lisez la section précédente <<printing-advanced-network-rm,Imprimantes installées sur des machines distantes>>.
+
+Le format du fichier [.filename]#/etc/printcap# vous permet de préciser quelle interface série ou parallèle vous souhaitez utiliser, et (si vous employez une interface série) à quelle vitesse de transmission, s'il faut employer le contrôle de flux, les temporisations pour les tabulations, la conversion des sauts de lignes, et plus encore. Mais il n'existe aucun moyen de préciser une connexion à une imprimante qui écoute sur un port TCP/IP ou un autre port réseau.
+
+Pour envoyer des données à une imprimante mise en réseau, il vous faut développer un programme de communication qui puisse être appelé par les filtres textes et de conversion. Voici un exemple: la procédure `netprint` récupère toutes les données sur l'entrée standard et les envoie à une imprimante connectée au réseau. Nous précisons le nom de machine de l'imprimante dans le premier paramètre et le numéro de port auquel se connecter dans le deuxième paramètre de `netprint`. Notez qu'il ne gère que la communication unidirectionnelle (dans le sens FreeBSD vers imprimante); de nombreuses imprimantes réseau supporte la communication bidirectionnelle, et vous désirerez certainement en tirer parti (afin de connaître le statut de l'imprimante, de comptabiliser l'utilisation, etc.).
+
+[.programlisting]
+....
+#!/usr/bin/perl
+#
+#  netprint - Filtre texte pour imprimante connectée au réseau
+#  Fichier /usr/local/libexec/netprint
+#
+$#ARGV eq 1 || die "Usage: $0 printer-hostname port-number";
+
+$printer_host = $ARGV[0];
+$printer_port = $ARGV[1];
+
+require 'sys/socket.ph';
+
+($ignore, $ignore, $protocol) = getprotobyname('tcp');
+($ignore, $ignore, $ignore, $ignore, $address)
+    = gethostbyname($printer_host);
+
+$sockaddr = pack('S n a4 x8', AF_INET, $printer_port, $address);
+
+socket(PRINTER, PF_INET, SOCK_STREAM, $protocol)
+    || die "Can't create TCP/IP stream socket: $!";
+connect(PRINTER, $sockaddr) || die "Can't contact $printer_host: $!";
+while (STDIN) { print PRINTER; }
+exit 0;
+....
+
+Nous pouvons maintenant utiliser cette procédure avec différents filtres. Supposons que nous ayons une imprimante Diablo 750-N connectée au réseau. Elle reçoit les données à imprimer sur le port 5100. Le nom de machine de l'imprimante est `scrivener`. Voici le filtre texte pour cette imprimante:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  diablo-if-net - Filtre texte pour l'imprimante  Diablo `scrivener' écoutant
+#  le port 5100.  Fichier /usr/local/libexec/diablo-if-net
+#
+exec /usr/libexec/lpr/lpf "$@" | /usr/local/libexec/netprint scrivener 5100
+....
+
+[[printing-advanced-restricting]]
+=== Restreindre l'utilisation de l'imprimante
+
+Cette section fournit des informations sur la restriction de l'utilisation de l'imprimante. Le système LPD vous permet de contrôler quels utilisateurs peuvent accéder à une imprimante, tant localement qu'à distance, s'il leur est autorisé d'imprimer en plusieurs exemplaires, quelles sont les tailles maximales de leurs travaux d'impression et des files d'impression.
+
+[[printing-advanced-restricting-copies]]
+==== Restreindre l'impression en plusieurs exemplaires
+
+Le système LPD facilite l'impression de plusieurs copies d'un même fichier par les utilisateurs. Ils peuvent imprimer leur travail avec `lpr -#5` (par exemple) et obtenir cinq exemplaires de chaque fichier du travail d'impression. Le fait de savoir s'il s'agit là d'une bonne idée vous appartient.
+
+Si vous estimez que les copies multiples provoquent charge et usure inutiles pour vos imprimantes, vous pouvez désactiver l'option `-#` de man:lpr[1] en ajoutant le paramètre `sc` au fichier [.filename]##/etc/printcap##. Lorsque des utilisateurs soumettront un travail d'impression avec l'option `-#`, ils obtiendront cet affichage:
+
+[source,bash]
+....
+lpr: multiple copies are not allowed
+....
+
+Notez que si vous avez mis en œuvre l'accès à une imprimante distante (voir la section <<printing-advanced-network-rm,Imprimantes installées sur des machines distantes>>), il faut que le paramètre `sc` soit positionné sur les [.filename]#/etc/printcap# distants également, sinon vos utilisateurs auront toujours la possibilité d'imprimer des copies multiples en passant par une autre machine.
+
+Voici un exemple. C'est le [.filename]#/etc/printcap# pour la machine `rose`. L'imprimante `rattan` est plutôt robuste, et autorisera donc les copies multiples, par contre l'imprimante laser `bamboo` est quant à elle plus délicate, nous interdiront donc les impressions multiples en ajoutant le paramètre `sc`:
+
+[.programlisting]
+....
+#
+#  /etc/printcap pour la machine rose - restreint les impressions en plusieurs exemplaires sur bamboo
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:sd=/var/spool/lpd/rattan:\
+        :lp=/dev/lpt0:\
+        :if=/usr/local/libexec/if-simple:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:sc:\
+        :lp=/dev/ttyd5:ms#-parenb cs8 clocal crtscts:rw:\
+        :if=/usr/local/libexec/psif:\
+        :df=/usr/local/libexec/psdf:
+....
+
+Maintenant, il nous faut également ajouter le paramètre `sc` dans le fichier [.filename]#/etc/printcap# de `orchid` (et tant que nous y sommes, désactivons les copies multiples pour l'imprimante `teak`):
+
+[.programlisting]
+....
+#
+#  /etc/printcap pour la machine orchid - pas d'impression en
+#  plusieurs exemplaires pour
+#  l'imprimante locale teak ou l'imprimante distante bamboo
+teak|hp|laserjet|Hewlett Packard LaserJet 3Si:\
+        :lp=/dev/lpt0:sd=/var/spool/lpd/teak:mx#0:sc:\
+        :if=/usr/local/libexec/ifhp:\
+        :vf=/usr/local/libexec/vfhp:\
+        :of=/usr/local/libexec/ofhp:
+
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :lp=:rm=rose:rp=rattan:sd=/var/spool/lpd/rattan:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :lp=:rm=rose:rp=bamboo:sd=/var/spool/lpd/bamboo:sc:
+....
+
+En recourant au paramètre `sc`, nous empêchons l'utilisation de `lpr -#`, mais cela n'empêche toujours pas les utilisateurs de lancer man:lpr[1] à plusieurs reprises, ou de soumettre le même fichier plusieurs fois en un seul travail, de cette façon:
+
+[source,bash]
+....
+% lpr forsale.sign forsale.sign forsale.sign forsale.sign forsale.sign
+....
+
+Il existe plusieurs moyens de prévenir ces abus (y compris les ignorer) que vous êtes libres d'essayer.
+
+[[printing-advanced-restricting-access]]
+==== Restreindre l'accès aux imprimantes
+
+Vous pouvez contrôler qui a le droit d'imprimer sur quelles imprimantes en utilisant le mécanisme des groupes UNIX(R) et le paramètre `rg` dans [.filename]#/etc/printcap#. Placez simplement les utilisateurs à qui vous voulez donner l'accès à une imprimante dans un groupe, et précisez ce groupe avec le paramètre `rg`.
+
+Les utilisateurs n'appartenant pas au groupe (`root` inclus) se verront gratifiés d'un `lpr: Not a member of the restricted group` s'ils essaient d'imprimer avec l'imprimante contrôlée.
+
+De même que pour le paramètre `sc` (supprimer les exemplaires multiples), il vous faut activer `rg` sur les machines distantes qui eux aussi ont accès à vos imprimantes, si vous estimez que c'est approprié (voir la section <<printing-advanced-network-rm,Imprimantes installées sur des machines distantes>>).
+
+Dans notre exemple, nous allons permettre l'accès à `rattan` à quiconque, mais seuls les membres du groupe `artists` pourront utiliser `bamboo`. Voici l'habituel [.filename]#/etc/printcap# pour la machine `rose`:
+
+[.programlisting]
+....
+#
+#  /etc/printcap pour la machine rose - restreint au groupe pour bamboo
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:sd=/var/spool/lpd/rattan:\
+        :lp=/dev/lpt0:\
+        :if=/usr/local/libexec/if-simple:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:sc:rg=artists:\
+        :lp=/dev/ttyd5:ms#-parenb cs8 clocal crtscts:rw:\
+        :if=/usr/local/libexec/psif:\
+        :df=/usr/local/libexec/psdf:
+....
+
+Ne nous préoccupons pas de l'autre fichier [.filename]#/etc/printcap# (pour la machine `orchid`). Bien entendu, n'importe qui sur `orchid` peut imprimer avec `bamboo`. Selon le cas, nous pourrons autoriser que certains utilisateurs sur `orchid`, et leur donner accès à l'imprimante. Ou non.
+
+[NOTE]
+====
+Il ne peut exister qu'un seul groupe de restriction par imprimante.
+====
+
+[[printing-advanced-restricting-sizes]]
+==== Contrôler la taille des travaux d'impression
+
+Si beaucoup de vos utilisateurs accèdent aux imprimantes, vous aurez sans doute besoin de fixer une limite supérieure à la taille des fichiers qu'ils peuvent soumettre à l'impression. Après tout, le système de fichiers hébergeant les répertoires de file d'impression ne peut offrir que l'espace libre dont il dispose, et vous devez également vous assurer que de la place existe pour les travaux d'impression des autres utilisateurs.
+
+LPD vous permet de fixer la taille maximale en octets qu'un fichier d'un travail d'impression peut atteindre avec le paramètre `mx`. Les unités sont exprimées en blocs de `BUFSIZ`, valant 1024 octets. Si vous donnez la valeur 0 à ce paramètre, la taille ne sera pas du tout limitée; en revanche, si aucun paramètre `mx` n'est défini, alors une limite par défaut de 1000 blocs sera utilisée.
+
+[NOTE]
+====
+La limite s'applique aux _fichiers_ dans un travail d'impression, et _non pas_ à la taille totale du travail d'impression.
+====
+
+LPD ne refusera pas un fichier dont la taille excède la limite que vous fixez pour une imprimante. Au lieu de cela, il placera les octets du fichier dans la file jusqu'à ce que la limite soit atteinte, puis imprimera. Les octets supplémentaires seront ignorés. S'il s'agit là d'un comportement approprié est un choix qui vous appartient.
+
+Ajoutons des limites pour nos imprimantes d'exemple, `rattan` et `bamboo`. Puisque les fichiers PostScript(R) des utilisateurs du groupe `artists` ont tendance à être volumineux, nous allons les limiter à cinq mégaoctets. Nous ne fixerons aucune limite pour l'imprimante texte:
+
+[.programlisting]
+....
+#
+#  /etc/printcap pour la machine rose
+#
+
+#
+#  Pas de limite sur la taille des travaux:
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:mx#0:sd=/var/spool/lpd/rattan:\
+        :lp=/dev/lpt0:\
+        :if=/usr/local/libexec/if-simple:
+
+#
+#  Limite de cinq mégaoctets:
+#
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:sc:rg=artists:mx#5000:\
+        :lp=/dev/ttyd5:ms#-parenb cs8 clocal crtscts:rw:\
+        :if=/usr/local/libexec/psif:\
+        :df=/usr/local/libexec/psdf:
+....
+
+Là encore, les limites ne s'appliquent qu'aux utilisateurs locaux. Si vous avez mis en place un accès distant à vos imprimantes, les utilisateurs distants ne seront pas contraints par ces limites. Il vous faudra positionner le paramètre `mx` dans les fichiers [.filename]#/etc/printcap# distants également. Lisez la section <<printing-advanced-network-rm,Imprimantes installées sur des machines distantes>> pour obtenir plus d'informations sur l'impression à distance.
+
+Il existe une autre manière spécifique pour limiter la taille des travaux d'impression sur les imprimantes à distance; lisez la section <<printing-advanced-restricting-remote,Restreindre les impressions à distance>>.
+
+[[printing-advanced-restricting-remote]]
+==== Restreindre les impressions à distance
+
+Le gestionnaire d'impression LPD propose plusieurs moyens de restreindre les travaux d'impression soumis depuis des machines distants:
+
+Restrictions en fonction des machines::
+Vous pouvez contrôler de quelles machines distantes les requêtes seront acceptées par un LPD local avec les fichiers [.filename]#/etc/hosts.equiv# et [.filename]#/etc/hosts.lpd#. LPD vérifie qu'une requête entrante provient d'une machine listée dans l'un de ces deux fichiers. Si ce n'est pas le cas, LPD refuse la requête.
++
+Le format de ces fichiers est simple: un nom de machine par ligne. Notez que [.filename]#/etc/hosts.equiv# est également utilisé par le protocole man:ruserok[3], et qu'il a un impact sur des programmes comme man:rsh[1] et man:rcp[1], aussi soyez prudent.
++
+Par exemple, voici le fichier [.filename]#/etc/hosts.lpd# présent sur la machine `rose`:
++
+[.programlisting]
+....
+orchid
+violet
+madrigal.fishbaum.de
+....
++
+Cela signifie que `rose` accepte les requêtes provenant des machines `orchid`, `violet` et `madrigal.fishbaum.de`. Si une quelconque autre machine tente d'accéder au LPD de `rose`, le travail d'impression sera refusé.
+
+Restrictions sur la taille::
+Vous pouvez contrôler combien d'espace doit demeurer libre sur le système de fichiers où se trouve un répertoire de file d'impression. Créez un fichier nommé [.filename]#minfree# dans le répertoire de file d'impression pour l'imprimante locale. Placez dans ce fichier un nombre représentant combien de blocs disques (de 512 octets) d'espace libre il doit rester pour qu'un travail d'impression soit accepté.
++
+Cela vous permet de vous assurer que des utilisateurs distants ne rempliront pas votre système de fichiers. Vous pouvez également vous en servir pour accorder une certaine priorité aux utilisateurs locaux: ils pourront placer des travaux d'impression dans la file bien après que l'espace libre soit tombé sous le seuil indiqué dans le fichier [.filename]#minfree#.
++
+Par exemple, ajoutons un fichier [.filename]#minfree# pour l'imprimante `bamboo`. Nous examinons [.filename]#/etc/printcap# pour trouver le répertoire de file d'impression pour cette imprimante; voici l'entrée concernant `bamboo`:
++
+[.programlisting]
+....
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:sc:rg=artists:mx#5000:\
+        :lp=/dev/ttyd5:ms#-parenb cs8 clocal crtscts:rw:mx#5000:\
+        :if=/usr/local/libexec/psif:\
+        :df=/usr/local/libexec/psdf:
+....
++
+Le répertoire de file d'impression est précisé par le paramètre `sd`. Nous placerons à trois méga-octets (soit 6144 blocs disque) la limite d'espace libre devant exister sur le système de fichiers pour que LPD accepte les travaux d'impression distants:
++
+[source,bash]
+....
+# echo 6144 > /var/spool/lpd/bamboo/minfree
+....
+
+Restrictions sur l'utilisateur::
+Vous pouvez contrôler quels utilisateurs distants ont le droit d'imprimer sur les imprimantes locales en positionnant le paramètre `rs` dans [.filename]#/etc/printcap#. Lorsque `rs` est présent dans l'entrée d'une imprimante connectée localement, LPD acceptera les travaux d'impressions de machines distantes _si_ l'utilisateur soumettant le travail possède également un compte sous le même nom sur la machine locale. Sinon, LPD refusera le travail d'impression.
++
+Ce paramètre se révèle particulièrement utile dans un environnement où (par exemple) existent plusieurs services qui partagent un réseau, et que des utilisateurs débordent les frontières de ces services. En leur donnant des comptes sur vos systèmes, vous leur permettez d'utiliser vos imprimantes depuis les systèmes de leur propre service. Si vous préférez les autoriser à n'utiliser _que_ vos imprimantes et pas les autres ressources de l'ordinateur, alors vous pouvez leur attribuer des comptes "bloqués", sans répertoire de connexion et avec un interpréteur de commandes inutilisable comme [.filename]#/usr/bin/false#.
+
+[[printing-advanced-acct]]
+=== Comptabiliser l'utilisation de l'imprimante
+
+Donc vous voulez faire payer vos impressions. Et pourquoi pas? Le papier et l'encre coûtent de l'argent. Et puis, il y a les coûts de maintenance-les imprimantes sont constituées de pièces mobiles et ont tendance à tomber en panne. Vous avez étudié vos imprimantes, vos modes d'utilisation et factures de maintenance, et avez abouti à un coût par page (ou par pied, par mètre, ou par ce que vous voulez). Maintenant, comment commencer à comptabiliser les impressions, dans les faits?
+
+Eh bien, la mauvaise nouvelle est que le gestionnaire d'impression LPD ne vous aide pas beaucoup dans ce domaine. La comptabilisation dépend fortement du type d'imprimante que vous employez, des formats que vous imprimez et de _vos_ besoins pour ce qui est de faire payer l'utilisation de l'imprimante.
+
+Pour mettre en œuvre la comptabilisation, il vous faut modifier le filtre texte de l'imprimante (pour faire payer les travaux d'impression de texte brut) et ses filtres de conversion (pour faire payer les autres formats de fichiers), pour compter les pages ou demander à l'imprimante combien elle en a imprimées. Vous ne pouvez pas vous en tirer en utilisant le filtre de sortie simple, puisqu'il ne peut pas gérer la comptabilisation. Voir la section <<printing-advanced-filter-intro,Les filtres>>.
+
+En général, il existe deux façons de procéder à la comptabilisation:
+
+* La comptabilisation _périodique_ est la plus habituelle, probablement parce que la plus facile. Chaque fois que quelqu'un imprime un travail, le filtre enregistre l'utilisateur, la machine et le nombre de pages dans un fichier de comptabilisation. Tous les mois, semestres, années ou toute autre échéance que vous désirez, vous récupérez les fichiers de comptabilisation des diverses imprimantes, établissez les pages imprimées par les utilisateurs, et faites payer l'utilisation. Purgez ensuite tous les fichiers de comptabilisation, pour commencer à zéro la nouvelle période.
+* La comptabilisation _à la volée_ est moins répandue, peut-être parce qu'elle s'avère plus difficile. Cette méthode laisse les filtres s'occuper de taxer les utilisateurs pour les impressions dès qu'ils utilisent les imprimantes. Tout comme les quotas disques, la comptabilisation est immédiate. Vous pouvez empêcher les utilisateurs d'imprimer quand leur compte est dans le rouge, et pourriez leur fournir un moyen de vérifier et ajuster leurs "quotas d'impression". Cependant, cette méthode nécessite la mise en oeuvre d'une base de données afin de tracer les utilisateurs et leurs quotas.
+
+Le gestionnaire d'impression LPD gère les deux méthodes facilement: puisque vous devez fournir les filtres (enfin, la plupart du temps), vous devez également fournir le code de comptabilisation. Mais il y a un bon côté: vous disposez d'une énorme flexibilité dans vos méthodes de comptabilisation. Par exemple, vous avez le choix entre les comptabilisations périodique et à la volée. Vous avez le choix des informations à tracer: noms d'utilisateurs, noms de machines, types des travaux d'impression, pages imprimées, surface de papier utilisée, durée d'impression du travail, etc. Et vous le faites en modifiant les filtres afin d'enregistrer ces informations.
+
+==== Comptabilisation rapide et simplifiée des impressions
+
+Deux programmes sont livrés avec FreeBSD qui vous permettent de mettre en place une comptabilisation périodique simple immédiatement. Il s'agit du filtre texte `lpf`, détaillé dans la section <<printing-advanced-lpf,lpf: un filtre texte>>, et de man:pac[8], un programme qui rassemble et fait le total des entrées contenues dans des fichiers de comptabilisation d'impressions.
+
+Comme indiqué dans la section sur les filtres (<<printing-advanced-filters,Fonctionnement des filtres>>), LPD lance les filtres texte et de conversion avec le nom du fichier de comptabilisation à employer fourni en argument. Les filtres peuvent utiliser ce paramètre pour savoir où écrire un enregistrement de comptabilisation. Le nom de ce fichier provient du paramètre `af` dans [.filename]#/etc/printcap#, et si le chemin donné n'est pas absolu, alors c'est un chemin d'accès relatif au répertoire de file d'impression.
+
+LPD lance `lpf` avec les paramètres de largeur et hauteur de page (qui correspondent aux paramètres `pw` et `pl`). Le filtre `lpf` les utilise pour déterminer combien de papier sera consommé. Après avoir envoyé le fichier à l'imprimante, il enregistre ensuite une entrée dans le fichier de comptabilisation. Les entrées ressemblent à ceci:
+
+[.programlisting]
+....
+2.00 rose:andy
+3.00 rose:kelly
+3.00 orchid:mary
+5.00 orchid:mary
+2.00 orchid:zhang
+....
+
+Vous devriez utiliser un fichier de comptabilisation séparé pour chaque imprimante, `lpf` ne disposant pas de mécanisme de verrouillage des fichiers, deux `lpf` pourraient corrompre leurs entrées respectives s'ils essayaient d'écrire dans le même fichier en même temps. Une manière aisée de s'assurer d'un fichier de comptabilisation séparé pour chaque imprimante est de recourir au paramètre `af=acct` dans [.filename]#/etc/printcap#. Dès lors, un fichier de comptabilisation, nommé [.filename]#acct#, sera placé dans le répertoire de file d'impression de chaque imprimante.
+
+Lorsque vous serez prêts à faire payer les utilisateurs pour leurs impressions, lancez le programme man:pac[8]. Placez-vous simplement dans le répertoire de file d'impression de l'imprimante pour laquelle vous voulez collecter les informations, et tapez `pac`. Vous obtiendrez un récapitulatif en dollars ressemblant à ceci:
+
+[source,bash]
+....
+ Login               pages/feet   runs    price
+orchid:kelly                5.00    1   $  0.10
+orchid:mary                31.00    3   $  0.62
+orchid:zhang                9.00    1   $  0.18
+rose:andy                   2.00    1   $  0.04
+rose:kelly                177.00  104   $  3.54
+rose:mary                  87.00   32   $  1.74
+rose:root                  26.00   12   $  0.52
+
+total                     337.00  154   $  6.74
+....
+
+Voici les arguments attendus par man:pac[8]:
+
+`-P__imprimante__`::
+Pour quelle _imprimante_ effectuer un récapitulatif. Cette option ne fonctionne que si un chemin d'accès absolu est donné dans le paramètre `af` de [.filename]#/etc/printcap#.
+
+`-c`::
+Trier selon le coût plutôt qu'alphabétiquement par nom d'utilisateur.
+
+`-m`::
+Ignorer le nom de la machine dans les fichiers de comptabilisation. Avec cette option, l'utilisateur `smith` sur la machine `alpha` est le même que l'utilisateur `smith` sur la machine `gamma`. Sans elle, ils représentent des utilisateurs distincts.
+
+`-p__prix__`::
+Calculer le coût en comptant un _prix_ en dollars par page ou par pied au lieu du prix indiqué par le paramètre `pc` dans [.filename]#/etc/printcap#, ou deux cents (la valeur par défaut). Vous pouvez préciser le _prix_ en nombre à virgule flottante.
+
+`-r`::
+Inverser l'ordre du tri.
+
+`-s`::
+Créer un fichier de rapport et tronquer le fichier de comptabilisation.
+
+__nom ...__::
+N'imprimer des statistiques que pour les utilisateurs dont les __nom__s sont donnés.
+
+Dans le récapitulatif produit par défaut par man:pac[8], vous pouvez lire le nombre de pages imprimées par chaque utilisateur depuis les différentes machines. Si, sur votre site, la machine n'a pas d'importance (parce que les utilisateurs peuvent utiliser n'importe quelle machine), lancez `pac -m`, afin de produire le récapitulatif ci-dessous:
+
+[source,bash]
+....
+  Login               pages/feet   runs    price
+andy                        2.00    1   $  0.04
+kelly                     182.00  105   $  3.64
+mary                      118.00   35   $  2.36
+root                       26.00   12   $  0.52
+zhang                       9.00    1   $  0.18
+
+total                     337.00  154   $  6.74
+....
+
+Afin de calculer le montant dû en dollars, man:pac[8] utilise le paramètre `pc` de [.filename]#/etc/printcap# (200 par défaut, c'est à dire 2 cents par page). Précisez avec ce paramètre le prix par page ou par pied, exprimé en centièmes de cents, que vous voulez imputer aux impressions. Vous pouvez spécifier cette valeur lorsque vous lancez man:pac[8] avec l'option `-p`. Cependant, avec cette option, les unités sont exprimées en dollars, et non en centièmes de cents. Par exemple,
+
+[source,bash]
+....
+# pac -p1.50
+....
+
+fait en sorte que chaque page coûte un dollar et cinquante cents. Vous pouvez vraiment faire des bénéfices en utilisant cette option.
+
+Enfin, lancer `pac -s` enregistrera les informations du récapitulatif dans un fichier, dont le nom sera le même que le fichier de comptabilisation de l'imprimante mais avec le suffixe `_sum`. Il procède alors à la troncature du fichier de comptabilisation. Lorsque vous exécutez man:pac[8] à nouveau, il relit le fichier récapitulatif pour établir les totaux de départ, puis ajoute les informations du fichier de comptabilisation normal.
+
+==== Comment compter les pages imprimées?
+
+Afin de réaliser une comptabilisation précise et cela même à distance, vous devez pouvoir déterminer combien un travail d'impression consomme de papier. C'est le problème principal de la comptabilisation des impressions.
+
+Pour du texte brut, ce problème n'est pas compliqué à résoudre: vous comptez combien un travail d'impression comporte de lignes et comparez avec le nombre de lignes par page que gère votre imprimante. N'oubliez pas de tenir compte des retours arrière dans le fichier, qui superposent les lignes, ou des longues lignes qui s'étendent sur une ou plusieurs lignes physiques supplémentaires.
+
+Le filtre texte `lpf` (présenté à la section <<printing-advanced-lpf,lpf: un filtre texte>>) prend ces éléments en considération lorsqu'il effectue la comptabilisation. Si vous écrivez un filtre texte qui doit effectuer une comptabilisation, vous pouvez vous inspirer du code source de `lpf`.
+
+Mais comment gérer les autres formats?
+
+Eh bien, pour la conversion DVI-vers-LaserJet ou DVI-vers-PostScript(R), vous pouvez faire analyser les messages de sortie de `dvilj` ou `dvips` par votre filtre et regarder combien de pages ont été converties. Vous devriez pouvoir procéder de manière identique avec d'autres formats de fichiers et programmes de conversion.
+
+Mais ces méthodes connaissent un défaut: il se peut que l'imprimante n'imprime pas toutes ces pages. Par exemple, un bourrage peut se produire, l'imprimante peut arriver à cours d'encre, ou exploser - et l'utilisateur serait tout de même débité.
+
+Alors, que pouvez-vous faire?
+
+Il n'existe qu'une seule méthode _sûre_ pour procéder à une comptabilisation _précise_. Prenez une imprimante qui sache dire combien de papier elle utilise, et reliez-la par un câble série ou une connection réseau. Presque toutes les imprimantes PostScript(R) gèrent cela. D'autres types et modèles également (les imprimantes laser réseau Imagen, par exemple). Modifiez les filtres pour ces imprimantes afin d'obtenir la consommation de pages après chaque travail d'impression et faites en sorte qu'elles enregistrent des informations de comptabilisation basées sur cette _seule_ valeur. Nul besoin de compter les lignes ou d'une analyse de fichier susceptible d'être erronée.
+
+Bien entendu, vous pouvez toujours être généreux et rendre toutes les impressions gratuites.
+
+[[printing-using]]
+== Using Printers ** Traduction en Cours **
+
+[[printing-lpr]]
+=== Printing Jobs
+
+[[printing-lpq]]
+=== Checking Jobs
+
+[[printing-lprm]]
+=== Removing Jobs
+
+[[printing-lpr-options]]
+=== Beyond Plain Text: Printing Options
+
+[[printing-lpr-options-format]]
+==== Formatting and Conversion Options
+
+[[printing-lpr-options-job-handling]]
+==== Job Handling Options
+
+[[printing-lpr-options-misc]]
+==== Header Page Options
+
+[[printing-lpc]]
+=== Administering Printers
+
+[[printing-lpd-alternatives]]
+== Alternatives to the Standard Spooler ** Traduction en Cours **
+
+[[printing-troubleshooting]]
+== Troubleshooting ** Traduction en Cours **

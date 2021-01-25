@@ -1,0 +1,404 @@
+---
+title: "Chapitre 19. GEOM: architecture modulaire de gestion des disques"
+part: Partie III. Administration Système
+prev: books/handbook/disks
+next: books/handbook/zfs
+---
+
+[[geom]]
+= GEOM: architecture modulaire de gestion des disques
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Table des matières
+:table-caption: Tableau
+:example-caption: Exemple
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 19
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../../images/books/handbook/geom/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/geom/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/geom/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/fr/mailing-lists.adoc[]
+include::shared/fr/teams.adoc[]
+include::shared/fr/urls.adoc[]
+
+toc::[]
+
+[[GEOM-synopsis]]
+== Synopsis
+
+Ce chapitre couvre l'utilisation des disques via le système GEOM sous FreeBSD. Cela comprend les utilitaires principaux de contrôle des niveaux RAID qui utilisent GEOM pour la configuration. Ce chapitre n'abordera pas en profondeur la manière dont GEOM gère et contrôle les E/S, les systèmes sous-jacents, ou le code utilisé. Ces informations sont fournies par la page de manuel man:geom[4] et ses nombreuses références. Ce chapitre n'est pas non plus un guide de référence sur les configurations RAID. Seuls les niveaux de RAID supportés par GEOM seront abordés.
+
+Après la lecture de ce chapitre, vous saurez:
+
+* Quel type de support RAID est disponible avec GEOM.
+* Comment utiliser les utilitaires de base pour configurer, gérer et manipuler les différents niveaux de RAID.
+* Comment dupliquer, entrelacer, et connecter à distance des disques via le système GEOM.
+* Comment dépanner les disques attachés au système GEOM.
+
+Avant de lire ce chapitre, vous devrez:
+
+* Comprendre comment FreeBSD gère les disques (crossref:disks[disks,Stockage des données]).
+* Savoir comment configurer et installer un nouveau noyau FreeBSD (crossref:kernelconfig[kernelconfig,Configurer le noyau de FreeBSD]).
+
+[[GEOM-intro]]
+== Introduction à GEOM
+
+GEOM autorise l'accès et le contrôle de classes - secteur principaux de démarrage ("Master Boot Records"), labels BSD, etc. - par l'intermédiaire d'interfaces, ou de fichiers spéciaux du répertoire [.filename]#/dev#. En supportant plusieurs configurations RAID logicielles, GEOM offrira un accès transparent au système d'exploitation et à ses utilitaires.
+
+[[GEOM-striping]]
+== RAID0 - "Striping"
+
+Le "striping" (ou entrelacement) est utilisé pour combiner plusieurs disques en un seul volume de stockage. Dans de nombreux cas, cette configuration est réalisée à l'aide de contrôleurs matériels. Le sous-système GEOM offre le support pour le niveau RAID0, également connu sous le nom de "striping".
+
+Dans un système RAID0, les données sont divisées en blocs répartis sur l'ensemble des disques de la "grappe". Au lieu de devoir attendre l'écriture de 256k sur un disque, un système RAID0 peut écrire en simultané 64k sur quatre disques différents, offrant alors des performances d'accès supérieures. Ces performances peuvent être encore améliorées en utilisant plusieurs contrôleurs de disques.
+
+Chaque disque d'une bande ("stripe") RAID0 doit avoir la même taille, puisque les requêtes d'E/S sont entrelacées de manière à lire ou écrire sur plusieurs disques en parallèle.
+
+image::striping.png[Illustration de l'entrelacement de disques]
+
+[.procedure]
+====
+*Procedure: Création d'un système entrelacé à partir de disques ATA non formatés*
+
+. Chargez le module [.filename]#geom_stripe#:
++
+[source,bash]
+....
+# kldload geom_stripe
+....
++
+. Assurez-vous de l'existence d'un point de montage. Si ce volume doit devenir une partition racine, utilisez alors un autre point de montage comme [.filename]#/mnt#.
++
+[source,bash]
+....
+# mkdir /mnt
+....
++
+. Déterminez les noms de périphériques pour les disques qui seront entrelacé, et créez le nouveau périphérique entrelacé. Par exemple, pour entrelacer deux disques ATA non utilisés et non partitionnés, par exemple [.filename]#/dev/ad2# et [.filename]#/dev/ad3#:
++
+[source,bash]
+....
+# gstripe label -v st0 /dev/ad2 /dev/ad3
+....
++
+. Créez un label standard, également connu sous le nom de table des partitions, sur le nouveau volume et installez le code d'amoraçage par défaut:
++
+[source,bash]
+....
+# bsdlabel -wB /dev/stripe/st0
+....
++
+. Cette opération doit avoir créé deux autres périphériques dans le répertoire [.filename]#/dev/stripe# en plus du périphérique [.filename]#st0#: [.filename]#st0a# et [.filename]#st0c#. A ce stade, un système de fichiers peut être créé sur [.filename]#st0a# en utilisant la commande `newfs`:
++
+[source,bash]
+....
+# newfs -U /dev/stripe/st0a
+....
++ 
+Des nombres défileront à l'écran, l'opération sera s'achèvera après quelques secondes. Le volume a été créé et est prêt à être monté.
+====
+
+Pour monter manuellement une grappe de disques entrelacés fraîchement créée:
+
+[source,bash]
+....
+# mount /dev/stripe/st0a /mnt
+....
+
+Pour monter automatiquement au démarrage ce système de fichiers entrelacé, ajoutez les informations concernant ce volume dans le fichier [.filename]#/etc/fstab#:
+
+[source,bash]
+....
+# echo "/dev/stripe/st0a /mnt ufs rw 2 2" \
+    >> /etc/fstab
+....
+
+Le module [.filename]#geom_stripe# doit également être automatiquement chargé lors de l'initialisation du système en ajoutant une ligne au fichier [.filename]#/boot/loader.conf#:
+
+[source,bash]
+....
+# echo 'geom_stripe_load="YES"'  /boot/loader.conf
+....
+
+[[GEOM-mirror]]
+== RAID1 - "mirroring"
+
+Le "mirroring" est une technologie utilisée par de nombreuses entreprises et beaucoup de particuliers pour sauvegarder les données sans interruption des activités. Quand un miroir existe, cela signifie que le disque B est une copie du disque A. Ou, autre cas, que les disques C+D sont une copie des disques A+B. Indépendamment de la configuration des disques, l'aspect important est que les données d'un disque ou d'une partition sont dupliquées. Ultérieurement, ces données pourront être plus facilement restaurées, sauvegardées sans interrompre le système ou les accès, et pourront même être stockées physiquement de manière sure.
+
+Pour commencer, vérifiez que le système dispose de deux disques de taille identique, cet exemple suppose que ce sont des disques SCSI (man:da[4]).
+
+Installez FreeBSD sur le premier disque avec uniquement deux partitions. Une partition sera la partition de pagination d'une taille double à celle de la RAM et l'espace restant sera alloué au système de fichiers racine ([.filename]#/#). Il est possible d'avoir des partitions séparées pour les autres points de montage, cependant cela augmentera énormément le niveau de difficulté en raison des modifications manuelles nécessaires des paramètres de man:bsdlabel[8] et man:fdisk[8].
+
+Redémarrez et attendez l'initialisation complète du système. Ensuite, ouvrez une session sous l'utilisateur `root`.
+
+Créez le périphérique [.filename]#/dev/mirror/gm# et liez-le avec [.filename]#/dev/da1#:
+
+[source,bash]
+....
+# gmirror label -vnb round-robin gm0 /dev/da1
+....
+
+Le système devrait répondre par:
+
+[source,bash]
+....
+Metadata value stored on /dev/da1.
+Done.
+....
+
+Initialisez GEOM, cela devrait charger le module du noyau [.filename]#/boot/kernel/geom_mirror.ko#:
+
+[source,bash]
+....
+# gmirror load
+....
+
+[NOTE]
+====
+Cette commande devrait créer le fichier spécial de périphérique [.filename]#gm0# sous le répertoire [.filename]#/dev/mirror#.
+====
+
+Installez un label `fdisk` et un code de d'amorce génériques sur le nouveau périphérique [.filename]#gm0#:
+
+[source,bash]
+....
+# fdisk -vBI /dev/mirror/gm0
+....
+
+Installez maintenant un label générique `bsdlabel`:
+
+[source,bash]
+....
+# bsdlabel -wB /dev/mirror/gm0s1
+....
+
+[NOTE]
+====
+S'il existe plusieurs "slices" et plusieurs partitions, il faudra modifier les paramètres des deux commandes précédentes. Elles doivent correspondre aux tailles des partitions et "slices" sur l'autre disque.
+====
+
+Utilisez l'utilitaire man:newfs[8] pour créer un système de fichiers UFS sur le périphérique [.filename]#gm0s1a#:
+
+[source,bash]
+....
+# newfs -U /dev/mirror/gm0s1a
+....
+
+Le système devrait alors afficher un certain nombre d'informations et de nombres. C'est bon signe. Contrôlez l'affichage à la recherche de messages d'erreur et montez le périphérique sur le point de montage [.filename]#/mnt#:
+
+[source,bash]
+....
+# mount /dev/mirror/gm0s1a /mnt
+....
+
+Transférez maintenant toutes les données du disque de démarrage vers ce nouveau système de fichiers. Dans notre exemple nous utilisons à cet effet les commandes man:dump[8] et man:restore[8], cependant la commande man:dd[1] conviendrait également.
+
+[source,bash]
+....
+# dump -L -0 -f- / |(cd /mnt && restore -r -v -f-)
+....
+
+Cela doit être effectué pour chaque système de fichiers. Placez simplement le système de fichiers approprié au bon endroit quand vous exécutez la commande précédente.
+
+Editez ensuite le fichier [.filename]#/mnt/etc/fstab# et supprimez ou mettez en commentaires le fichier de pagination . Modifiez les autres paramètres du système de fichiers pour utiliser le nouveau disque comme présenté l'exemple suivant:
+
+[.programlisting]
+....
+# Device                Mountpoint      FStype  Options         Dump    Pass#
+#/dev/da0s2b             none            swap    sw              0       0
+/dev/mirror/gm0s1a       /               ufs     rw              1       1
+....
+
+Créez maintenant un fichier [.filename]#boot.config# sur la partition racine actuelle et celle nouvellement créée. Ce fichier "aidera" le BIOS à déterminer correctement sur quel disque démarrer:
+
+[source,bash]
+....
+# echo "1:da(1,a)/boot/loader" > /boot.config
+....
+
+[source,bash]
+....
+# echo "1:da(1,a)/boot/loader" > /mnt/boot.config
+....
+
+[NOTE]
+====
+Nous l'avons ajouter sur les deux partitions racines afin d'assurer un démarrage correct. Si pour une raison quelconque le système ne pourrait le lire à partir de la nouvelle partition racine, une version de secours est disponible.
+====
+
+Assurez-vous que le module [.filename]#geom_mirror.ko# sera chargé au démarrage du système en lançant la commande suivante:
+
+[source,bash]
+....
+# echo 'geom_mirror_load="YES"'  /mnt/boot/loader.conf
+....
+
+Redémarrez le système:
+
+[source,bash]
+....
+# shutdown -r now
+....
+
+Si tout s'est bien passé, le système a dû démarrer à partir du périphérique [.filename]#gm0s1a# et une invite d'ouverture de session doit être affichée. En cas de problème, consultez la section suivante consacrée au dépannage. Ajoutez maintenant le disque [.filename]#da0# au périphérique [.filename]#gm0#:
+
+[source,bash]
+....
+# gmirror configure -a gm0
+# gmirror insert gm0 /dev/da0
+....
+
+L'option `-a` demande à man:gmirror[8] d'utiliser une synchronisation automatique, c'est à dire dupliquer automatiquement toute écriture disque. La page de manuel explique comment reconstruire et remplacer les disques, avec la différence qu'elle utilise [.filename]#data# à la place de [.filename]#gm0#.
+
+=== Dépannage
+
+==== Le système refuse de démarrer
+
+Si le démarrage du système s'interrompt à une invite semblable à:
+
+[.programlisting]
+....
+ffs_mountroot: can't find rootvp
+Root mount failed: 6
+mountroot
+....
+
+Redémarrez la machine à l'aide du bouton de mise en marche ou de "reset". Au menu de démarrage, sélectionnez la sixième option (6). Le système basculera alors vers une invite du chargeur (man:loader[8]). Chargez manuellement le module du noyau:
+
+[source,bash]
+....
+OK? load geom_mirror
+OK? boot
+....
+
+Si cela fonctionne, cela signifie que pour une raison quelconque le module n'a pas été correctement chargé. Ajoutez la ligne:
+
+[.programlisting]
+....
+options	GEOM_MIRROR
+....
+
+dans le fichier de configuration du noyau, recompilez-le puis réinstallez-le. Cela devrait corriger le problème.
+
+[[geom-ggate]]
+== Périphériques réseau "GEOM Gate"
+
+GEOM supporte l'utilisation de périphériques distants, comme les disques durs, les CD-ROMs, les fichiers, etc. via l'utilisation des outils "gate". Ce mécanisme est semblable à NFS.
+
+Pour commencer, un fichier d'export doit être créé. Ce fichier précise qui est autorisé à accéder aux ressources partagées et quel niveau d'accès est offert. Par exemple, pour partager la quatrième tranche du premier disque SCSI, le fichier [.filename]#/etc/gg.exports# suivant est adapté:
+
+[.programlisting]
+....
+192.168.1.0/24 RW /dev/da0s4d
+....
+
+Cette ligne autorisera l'accès au système de fichiers présent sur la partition [.filename]#da0s4d# à toutes les machines du réseau local.
+
+Pour exporter ce périphérique, assurez-vous tout d'abord qu'il n'est pas déjà monté et lancez le "démon" man:ggated[8]:
+
+[source,bash]
+....
+# ggated
+....
+
+Maintenant pour monter le périphérique sur la machine cliente, tapez les commandes suivantes:
+
+[source,bash]
+....
+# ggatec create -o rw 192.168.1.1 /dev/da0s4d
+ggate0
+# mount /dev/ggate0 /mnt
+....
+
+A partir d'ici, on peut accéder au périphérique par l'intermédiaire du point de montage [.filename]#/mnt#.
+
+[NOTE]
+====
+Il est à noter que toutes ces opérations échoueront si le disque est déjà monté soit sur la machine serveur soit sur tout autre machine du réseau.
+====
+
+Quand le périphérique n'est plus utilisé, il peut être démonté sans risque avec la commande man:umount[8] de la même manière que pour tout autre disque.
+
+[[geom-glabel]]
+== Ajouter un label à un disque
+
+Lors de l'initialisation du système, le noyau FreeBSD créé les fichiers spéciaux de périphériques à mesure que les périphériques sont détectés. Cette méthode de détection des périphériques soulève quelques problèmes, par exemple que se passe-t-il si un nouveau disque est ajouté par l'intermédiaire de l'interface USB? Il est très probable qu'un disque flash se verra proposer le nom de périphérique [.filename]#da0# et le périphérique original [.filename]#da0# déplacé en [.filename]#da1#. Cela sera à l'origine de problèmes de montage des systèmes de fichiers s'ils sont listés dans [.filename]#/etc/fstab#, en fait cela pourra tout simplement empêcher le démarrage du système.
+
+Une solution à ce problème est d'"enchaîner" les périphériques SCSI afin que tout nouveau périphérique ajouté sur la carte SCSI se voit assigné un numéro de périphérique non-utilisé. Mais qu'en est-il des périphériques USB qui peuvent remplacer le premier disque SCSI? Cela se produit parce que les périphériques USB sont en général détectés avant la carte SCSI. Une solution est de brancher ces périphériques qu'après le démarrage du système. Une autre méthode serait de n'utiliser qu'un seul disque ATA et de ne jamais lister de périphériques SCSI dans le fichier [.filename]#/etc/fstab#.
+
+Une meilleure solution existe. En employant l'utilitaire `glabel`, un administrateur ou un utilisateur peut attribuer un label à chacun de ses disques et utiliser ces labels dans [.filename]#/etc/fstab#. Comme `glabel` conserve le label sur le dernier secteur du support concerné, le label persistera après redémarrage du système. En utilisant ce label comme un véritable périphérique, le système de fichiers pourra toujours être monté indépendamment du fichier spécial de périphérique utilisé pour y accéder.
+
+[NOTE]
+====
+Cela se fait sans préciser qu'un label sera permanent. L'utilitaire `glabel` peut être utilisé pour créer des labels persistants et des labels éphémères. Seul le label persistant sera conservé après redémarrage du système. Consultez la page de manuel de man:glabel[8] pour plus d'information sur les différences entre labels.
+====
+
+=== Types et exemples de labels
+
+Il existe deux types de label, un label générique et un label de système de fichiers. La différence entre les labels est le système d'auto-détection associé avec les labels permanents, et le fait que ce type de label sera persistant après redémarrage du système. A ces labels est attribué un sous-répertoire spécifique de [.filename]#/dev# dont le nom sera basé sur le type de système de fichiers. Par exemple, les labels de systèmes de fichiers UFS2 seront créés dans le répertoire [.filename]#/dev/ufs2#.
+
+Un label générique disparaîtra au redémarrage suivant. Ces labels seront créés dans le répertoire [.filename]#/dev/label# et sont parfaits pour faire des expériences.
+
+Les labels permanents peuvent être placés sur le système de fichiers en utilisant les utilitaires `tunefs` ou `newfs`. Pour créer un label permanent pour un système de fichier UFS2 sans endommager de données, utilisez la commande suivante:
+
+[source,bash]
+....
+# tunefs -L home /dev/da3
+....
+
+[WARNING]
+====
+
+Si le système de fichiers est plein, cette opération pourra entraîner une corruption des données; si le système de fichiers est plein, alors la première chose à faire sera de supprimer les fichiers inutiles et non pas l'ajout de labels.
+====
+
+Un nouveau label devrait désormais apparaître dans [.filename]#/dev/ufs2# et pourra être ajouté à [.filename]#/etc/fstab#:
+
+[.programlisting]
+....
+/dev/ufs2/home		/home            ufs     rw              2      2
+....
+
+[NOTE]
+====
+Le système de fichiers ne doit pas être monté lors de l'utilisation de `tunefs`.
+====
+
+Le système de fichiers peut, maintenant, être normalement monté:
+
+[source,bash]
+....
+# mount /home
+....
+
+La commande suivante peut être employée pour supprimer le label:
+
+[source,bash]
+....
+# glabel destroy home
+....
+
+A partir de cet instant, aussi longtemps que le module du noyau [.filename]#geom_label.ko# est chargé au démarrage avec [.filename]#/boot/loader.conf# ou que l'option `GEOM_LABEL` est présente dans le noyau, le fichier spécial de périphérique peut changer sans effet négatif pour le système.
+
+Les systèmes de fichiers peuvent également être créés avec un label par défaut en utilisant l'option `-L` avec `newfs`. Consultez la page de manuel de man:newfs[8] pour plus d'information.

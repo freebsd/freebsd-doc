@@ -1,0 +1,215 @@
+---
+title: 章 3. Secure Programming
+authors: 
+  - author: Murray Stokely
+prev: books/developers-handbook/tools
+next: books/developers-handbook/l10n
+---
+
+[[secure]]
+= Secure Programming
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:part-signifier: 部分
+:chapter-signifier: 第
+:appendix-caption: 附录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例 
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 3
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-tw/mailing-lists.adoc[]
+include::shared/zh-tw/urls.adoc[]
+
+toc::[]
+
+[[secure-synopsis]]
+== Synopsis
+
+This chapter describes some of the security issues that have plagued UNIX(R) programmers for decades and some of the new tools available to help programmers avoid writing exploitable code.
+
+[[secure-philosophy]]
+== Secure Design Methodology
+
+Writing secure applications takes a very scrutinous and pessimistic outlook on life. Applications should be run with the principle of "least privilege" so that no process is ever running with more than the bare minimum access that it needs to accomplish its function. Previously tested code should be reused whenever possible to avoid common mistakes that others may have already fixed.
+
+One of the pitfalls of the UNIX(R) environment is how easy it is to make assumptions about the sanity of the environment. Applications should never trust user input (in all its forms), system resources, inter-process communication, or the timing of events. UNIX(R) processes do not execute synchronously so logical operations are rarely atomic.
+
+[[secure-bufferov]]
+== Buffer Overflows
+
+Buffer Overflows have been around since the very beginnings of the von Neumann <<COD>> architecture.  They first gained widespread notoriety in 1988 with the Morris Internet worm. Unfortunately, the same basic attack remains  effective today. By far the most common type of buffer overflow attack is based on corrupting the stack.
+
+Most modern computer systems use a stack to pass arguments to procedures and to store local variables. A stack is a last in first out (LIFO) buffer in the high memory area of a process image. When a program invokes a function a new "stack frame" is  created. This stack frame consists of the arguments passed to the function as well as a dynamic amount of local variable space. The "stack pointer" is a register that holds the current  location of the top of the stack. Since this value is constantly changing as new values are pushed onto the top of the stack, many implementations also provide a "frame pointer" that is located near the beginning of a stack frame so that local variables can more easily be addressed relative to this value. <<COD>> The return address for function  calls is also stored on the stack, and this is the cause of stack-overflow exploits since overflowing a local variable in a function can overwrite the return address of that function, potentially allowing a malicious user to execute any code he or she wants.
+
+Although stack-based attacks are by far the most common, it would also be possible to overrun the stack with a heap-based (malloc/free) attack.
+
+The C programming language does not perform automatic bounds checking on arrays or pointers as many other languages do. In addition, the standard C library is filled with a handful of very dangerous functions.
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|`strcpy`(char *dest, const char *src)
+|
+
+May overflow the dest buffer
+
+|`strcat`(char *dest, const char *src)
+|
+
+May overflow the dest buffer
+
+|`getwd`(char *buf)
+|
+
+May overflow the buf buffer
+
+|`gets`(char *s)
+|
+
+May overflow the s buffer
+
+|`[vf]scanf`(const char *format, ...)
+|
+
+May overflow its arguments.
+
+|`realpath`(char *path, char resolved_path[])
+|
+
+May overflow the path buffer
+
+|`[v]sprintf`(char *str, const char *format, ...)
+|
+
+May overflow the str buffer.
+|===
+
+=== Example Buffer Overflow
+
+The following example code contains a buffer overflow designed to overwrite the return address and skip the instruction immediately following the function call. (Inspired by <<Phrack>>)
+
+[.programlisting]
+....
+#include <stdio.h>
+
+void manipulate(char *buffer) {
+  char newbuffer[80];
+  strcpy(newbuffer,buffer);
+}
+
+int main() {
+  char ch,buffer[4096];
+  int i=0;
+
+  while ((buffer[i++] = getchar()) != '\n') {};
+
+  i=1;
+  manipulate(buffer);
+  i=2;
+  printf("The value of i is : %d\n",i);
+  return 0;
+}
+....
+
+Let us examine what the memory image of this process would look like if we were to input 160 spaces into our little program before hitting return.
+
+[XXX figure here!]
+
+Obviously more malicious input can be devised to execute actual compiled instructions (such as exec(/bin/sh)).
+
+=== Avoiding Buffer Overflows
+
+The most straightforward solution to the problem of stack-overflows is to always use length restricted memory and string copy functions. `strncpy` and `strncat` are part of the standard C library.  These functions accept a length value as a parameter which should be no larger than the size of the destination buffer. These functions will then copy up to 'length' bytes from the source to the destination. However there are a number of problems with these functions. Neither function guarantees NUL termination if the size of the input buffer is as large as the  destination. The length parameter is also used inconsistently between strncpy and strncat so it is easy for programmers to get confused as to their proper usage. There is also a significant performance loss compared to `strcpy` when copying a short string into a large buffer since `strncpy` NUL fills up the size specified.
+
+Another memory copy implementation exists to get around these problems. The `strlcpy` and `strlcat` functions guarantee that they will always null terminate the destination string when given a non-zero length argument.
+
+==== Compiler based run-time bounds checking
+
+Unfortunately there is still a very large assortment of code in public use which blindly copies memory around without using any of the bounded copy routines we just discussed. Fortunately, there is a way to help prevent such attacks - run-time bounds checking, which is implemented by several C/C++ compilers.
+
+ProPolice is one such compiler feature, and is integrated into man:gcc[1] versions 4.1 and later. It replaces and extends the earlier StackGuard man:gcc[1] extension.
+
+ProPolice helps to protect against stack-based buffer overflows and other attacks by laying pseudo-random numbers in key areas of the stack before calling any function. When a function returns, these "canaries" are checked and if they are found to have been changed the executable is immediately aborted. Thus any attempt to modify the return address or other variable stored on the stack in an attempt to get malicious code to run is unlikely to succeed, as the attacker would have to also manage to leave the pseudo-random canaries untouched.
+
+Recompiling your application with ProPolice is an effective means of stopping most buffer-overflow attacks, but it can still be compromised.
+
+==== Library based run-time bounds checking
+
+Compiler-based mechanisms are completely useless for binary-only software for which you cannot recompile. For these situations there are a number of libraries which re-implement the unsafe functions of the C-library (`strcpy`, `fscanf`, `getwd`, etc..) and ensure that these functions can never write past the stack pointer.
+
+* libsafe
+* libverify
+* libparanoia
+
+Unfortunately these library-based defenses have a number of shortcomings. These libraries only protect against a very small set of security related issues and they neglect to fix the actual problem. These defenses may fail if the application was compiled with -fomit-frame-pointer. Also, the LD_PRELOAD and LD_LIBRARY_PATH environment variables can be overwritten/unset by the user.
+
+[[secure-setuid]]
+== SetUID issues
+
+There are at least 6 different IDs associated with any given process. Because of this you have to be very careful with the access that your process has at any given time. In particular, all seteuid applications should give up their privileges as soon as it is no longer required.
+
+The real user ID can only be changed by a superuser process. The login program sets this when a user initially logs in and it is seldom changed.
+
+The effective user ID is set by the `exec()` functions if a program has its seteuid bit set. An application can call `seteuid()` at any time to set the effective user ID to either the real user ID or the saved set-user-ID. When the effective user ID is set by `exec()` functions, the previous value is saved in the saved set-user-ID.
+
+[[secure-chroot]]
+== Limiting your program's environment
+
+The traditional method of restricting a process is with the `chroot()` system call. This system call changes the root directory from which all other paths are referenced for a process and any child processes. For this call to succeed the process must have execute (search) permission on the directory being referenced. The new environment does not actually take effect until you `chdir()` into your new environment. It should also be noted that a process can easily break out of a chroot environment if it has root privilege. This could be accomplished by creating device nodes to read kernel memory, attaching a debugger to a process outside of the man:chroot[8] environment, or in many other creative ways.
+
+The behavior of the `chroot()` system call can be controlled somewhat with the kern.chroot_allow_open_directories `sysctl` variable. When this value is set to 0, `chroot()` will fail with EPERM if there are any directories open. If set to the default value of 1, then `chroot()` will fail with EPERM if there are any directories open and the process is already subject to a `chroot()` call. For any other value, the check for open directories will be bypassed completely.
+
+=== FreeBSD's jail functionality
+
+The concept of a Jail extends upon the `chroot()` by limiting the powers of the superuser to create a true `virtual server'. Once a prison is set up all network communication must take place through the specified IP address, and the power of "root privilege" in this jail is severely constrained.
+
+While in a prison, any tests of superuser power within the kernel using the `suser()` call will fail. However, some calls to `suser()` have been changed to a new interface `suser_xxx()`. This function is responsible for recognizing or denying access to superuser power for imprisoned processes.
+
+A superuser process within a jailed environment has the power to:
+
+* Manipulate credential with `setuid`, `seteuid`, `setgid`, `setegid`, `setgroups`, `setreuid`, `setregid`, `setlogin`
+* Set resource limits with `setrlimit`
+* Modify some sysctl nodes (kern.hostname)
+* `chroot()`
+* Set flags on a vnode: `chflags`, `fchflags`
+* Set attributes of a vnode such as file permission, owner, group, size, access time, and modification time.
+* Bind to privileged ports in the Internet domain (ports < 1024)
+
+`Jail` is a very useful tool for running applications in a secure environment but it does have some shortcomings. Currently, the IPC mechanisms have not been converted to the `suser_xxx` so applications such as MySQL cannot be run within a jail. Superuser access may have a very limited meaning within a jail, but there is no way to specify exactly what "very limited" means.
+
+=== POSIX(R).1e Process Capabilities
+
+POSIX(R) has released a working draft that adds event auditing, access control lists, fine grained privileges, information labeling, and mandatory access control.
+
+This is a work in progress and is the focus of the http://www.trustedbsd.org/[TrustedBSD] project. Some of the initial work has been committed to FreeBSD-CURRENT (cap_set_proc(3)).
+
+[[secure-trust]]
+== Trust
+
+An application should never assume that anything about the users environment is sane. This includes (but is certainly not limited to): user input, signals, environment variables, resources, IPC, mmaps, the filesystem working directory, file descriptors, the # of open files, etc.
+
+You should never assume that you can catch all forms of invalid input that a user might supply. Instead, your application should use positive filtering to only allow a specific subset of inputs that you deem safe. Improper data validation has been the cause of many exploits, especially with CGI scripts on the world wide web. For filenames you need to be extra careful about paths ("../", "/"), symbolic links, and shell escape characters.
+
+Perl has a really cool feature called "Taint" mode which can be used to prevent scripts from using data derived outside the program in an unsafe way. This mode will check command line arguments, environment variables, locale information, the results of certain syscalls (`readdir()`, `readlink()`, `getpwxxx()`), and all file input.
+
+[[secure-race-conditions]]
+== Race Conditions
+
+A race condition is anomalous behavior caused by the unexpected dependence on the relative timing of events. In other words, a programmer incorrectly assumed that a particular event would always happen before another.
+
+Some of the common causes of race conditions are signals, access checks, and file opens. Signals are asynchronous events by nature so special care must be taken in dealing with them. Checking access with `access(2)` then `open(2)` is clearly non-atomic. Users can move files in between the two calls. Instead, privileged applications should `seteuid()` and then call `open()` directly. Along the same lines, an application should always set a proper umask before `open()` to obviate the need for spurious `chmod()` calls.

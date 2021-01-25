@@ -1,0 +1,2820 @@
+---
+title: Rozdział 32. Advanced Networking
+part: Część IV. Komunikacja sieciowa
+prev: books/handbook/firewalls
+next: books/handbook/partv
+---
+
+[[advanced-networking]]
+= Advanced Networking
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Spis treści
+:table-caption: Tabela
+:figure-caption: Rysunek
+:example-caption: Przykład
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 32
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/advanced-networking/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/advanced-networking/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/advanced-networking/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pl/mailing-lists.adoc[]
+include::shared/pl/urls.adoc[]
+include::shared/pl/teams.adoc[]
+
+toc::[]
+
+[[advanced-networking-synopsis]]
+== Synopsis
+
+This chapter covers a number of advanced networking topics.
+
+After reading this chapter, you will know:
+
+* The basics of gateways and routes.
+* How to set up USB tethering.
+* How to set up IEEE(R) 802.11 and Bluetooth(R) devices.
+* How to make FreeBSD act as a bridge.
+* How to set up network PXE booting.
+* How to set up IPv6 on a FreeBSD machine.
+* How to enable and utilize the features of the Common Address Redundancy Protocol (CARP) in FreeBSD.
+* How to configure multiple VLANs on FreeBSD.
+* Configure bluetooth headset.
+
+Before reading this chapter, you should:
+
+* Understand the basics of the [.filename]#/etc/rc# scripts.
+* Be familiar with basic network terminology.
+* Know how to configure and install a new FreeBSD kernel (crossref:kernelconfig[kernelconfig,Configuring the FreeBSD Kernel]).
+* Know how to install additional third-party software (crossref:ports[ports,Installing Applications: Packages and Ports]).
+
+[[network-routing]]
+== Gateways and Routes
+
+_Routing_ is the mechanism that allows a system to find the network path to another system. A _route_ is a defined pair of addresses which represent the "destination" and a "gateway". The route indicates that when trying to get to the specified destination, send the packets through the specified gateway. There are three types of destinations: individual hosts, subnets, and "default". The "default route" is used if no other routes apply. There are also three types of gateways: individual hosts, interfaces, also called links, and Ethernet hardware (MAC) addresses. Known routes are stored in a routing table.
+
+This section provides an overview of routing basics. It then demonstrates how to configure a FreeBSD system as a router and offers some troubleshooting tips.
+
+[[network-routing-default]]
+=== Routing Basics
+
+To view the routing table of a FreeBSD system, use man:netstat[1]:
+
+[source,bash]
+....
+% netstat -r
+Routing tables
+
+Internet:
+Destination      Gateway            Flags     Refs     Use     Netif Expire
+default          outside-gw         UGS        37      418       em0
+localhost        localhost          UH          0      181       lo0
+test0            0:e0:b5:36:cf:4f   UHLW        5    63288       re0     77
+10.20.30.255     link#1             UHLW        1     2421
+example.com      link#1             UC          0        0
+host1            0:e0:a8:37:8:1e    UHLW        3     4601       lo0
+host2            0:e0:a8:37:8:1e    UHLW        0        5       lo0 =>
+host2.example.com link#1            UC          0        0
+224              link#1             UC          0        0
+....
+
+The entries in this example are as follows:
+
+default::
+The first route in this table specifies the `default` route. When the local system needs to make a connection to a remote host, it checks the routing table to determine if a known path exists. If the remote host matches an entry in the table, the system checks to see if it can connect using the interface specified in that entry.
++
+If the destination does not match an entry, or if all known paths fail, the system uses the entry for the default route. For hosts on a local area network, the `Gateway` field in the default route is set to the system which has a direct connection to the Internet. When reading this entry, verify that the `Flags` column indicates that the gateway is usable (`UG`).
++
+The default route for a machine which itself is functioning as the gateway to the outside world will be the gateway machine at the Internet Service Provider (ISP).
+
+localhost::
+The second route is the `localhost` route. The interface specified in the `Netif` column for `localhost` is [.filename]#lo0#, also known as the loopback device. This indicates that all traffic for this destination should be internal, rather than sending it out over the network.
+
+MAC address::
+The addresses beginning with `0:e0:` are MAC addresses. FreeBSD will automatically identify any hosts, `test0` in the example, on the local Ethernet and add a route for that host over the Ethernet interface, [.filename]#re0#. This type of route has a timeout, seen in the `Expire` column, which is used if the host does not respond in a specific amount of time. When this happens, the route to this host will be automatically deleted. These hosts are identified using the Routing Information Protocol (RIP), which calculates routes to local hosts based upon a shortest path determination.
+
+subnet::
+FreeBSD will automatically add subnet routes for the local subnet. In this example, `10.20.30.255` is the broadcast address for the subnet `10.20.30` and `example.com` is the domain name associated with that subnet. The designation `link#1` refers to the first Ethernet card in the machine.
++
+Local network hosts and local subnets have their routes automatically configured by a daemon called man:routed[8]. If it is not running, only routes which are statically defined by the administrator will exist.
+
+host::
+The `host1` line refers to the host by its Ethernet address. Since it is the sending host, FreeBSD knows to use the loopback interface ([.filename]#lo0#) rather than the Ethernet interface.
++
+The two `host2` lines represent aliases which were created using man:ifconfig[8]. The `=>` symbol after the [.filename]#lo0# interface says that an alias has been set in addition to the loopback address. Such routes only show up on the host that supports the alias and all other hosts on the local network will have a `link#1` line for such routes.
+
+224::
+The final line (destination subnet `224`) deals with multicasting.
+
+Various attributes of each route can be seen in the `Flags` column. <<routeflags>> summarizes some of these flags and their meanings:
+
+[[routeflags]]
+.Commonly Seen Routing Table Flags
+[cols="1,1", frame="none", options="header"]
+|===
+| Command
+| Purpose
+
+|U
+|The route is active (up).
+
+|H
+|The route destination is a single host.
+
+|G
+|Send anything for this destination on to this gateway, which will figure out from there where to send it.
+
+|S
+|This route was statically configured.
+
+|C
+|Clones a new route based upon this route for machines to connect to. This type of route is normally used for local networks.
+
+|W
+|The route was auto-configured based upon a local area network (clone) route.
+
+|L
+|Route involves references to Ethernet (link) hardware.
+|===
+
+On a FreeBSD system, the default route can defined in [.filename]#/etc/rc.conf# by specifying the IP address of the default gateway:
+
+[.programlisting]
+....
+defaultrouter="10.20.30.1"
+....
+
+It is also possible to manually add the route using `route`:
+
+[source,bash]
+....
+# route add default 10.20.30.1
+....
+
+Note that manually added routes will not survive a reboot. For more information on manual manipulation of network routing tables, refer to man:route[8].
+
+[[network-static-routes]]
+=== Configuring a Router with Static Routes
+
+A FreeBSD system can be configured as the default gateway, or router, for a network if it is a dual-homed system. A dual-homed system is a host which resides on at least two different networks. Typically, each network is connected to a separate network interface, though IP aliasing can be used to bind multiple addresses, each on a different subnet, to one physical interface.
+
+In order for the system to forward packets between interfaces, FreeBSD must be configured as a router. Internet standards and good engineering practice prevent the FreeBSD Project from enabling this feature by default, but it can be configured to start at boot by adding this line to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+gateway_enable="YES"          # Set to YES if this host will be a gateway
+....
+
+To enable routing now, set the man:sysctl[8] variable `net.inet.ip.forwarding` to `1`. To stop routing, reset this variable to `0`.
+
+The routing table of a router needs additional routes so it knows how to reach other networks. Routes can be either added manually using static routes or routes can be automatically learned using a routing protocol. Static routes are appropriate for small networks and this section describes how to add a static routing entry for a small network.
+
+[NOTE]
+====
+For large networks, static routes quickly become unscalable. FreeBSD comes with the standard BSD routing daemon man:routed[8], which provides the routing protocols RIP, versions 1 and 2, and IRDP. Support for the BGP and OSPF routing protocols can be installed using the package:net/zebra[] package or port.
+====
+
+Consider the following network:
+
+image::static-routes.png[]
+
+In this scenario, `RouterA` is a FreeBSD machine that is acting as a router to the rest of the Internet. It has a default route set to `10.0.0.1` which allows it to connect with the outside world. `RouterB` is already configured to use `192.168.1.1` as its default gateway.
+
+Before adding any static routes, the routing table on `RouterA` looks like this:
+
+[source,bash]
+....
+% netstat -nr
+Routing tables
+
+Internet:
+Destination        Gateway            Flags    Refs      Use  Netif  Expire
+default            10.0.0.1           UGS         0    49378    xl0
+127.0.0.1          127.0.0.1          UH          0        6    lo0
+10.0.0.0/24        link#1             UC          0        0    xl0
+192.168.1.0/24     link#2             UC          0        0    xl1
+....
+
+With the current routing table, `RouterA` does not have a route to the `192.168.2.0/24` network. The following command adds the `Internal Net 2` network to ``RouterA``'s routing table using `192.168.1.2` as the next hop:
+
+[source,bash]
+....
+# route add -net 192.168.2.0/24 192.168.1.2
+....
+
+Now, `RouterA` can reach any host on the `192.168.2.0/24` network. However, the routing information will not persist if the FreeBSD system reboots. If a static route needs to be persistent, add it to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+# Add Internal Net 2 as a persistent static route
+static_routes="internalnet2"
+route_internalnet2="-net 192.168.2.0/24 192.168.1.2"
+....
+
+The `static_routes` configuration variable is a list of strings separated by a space, where each string references a route name. The variable `route_internalnet2` contains the static route for that route name.
+
+Using more than one string in `static_routes` creates multiple static routes. The following shows an example of adding static routes for the `192.168.0.0/24` and `192.168.1.0/24` networks:
+
+[.programlisting]
+....
+static_routes="net1 net2"
+route_net1="-net 192.168.0.0/24 192.168.0.1"
+route_net2="-net 192.168.1.0/24 192.168.1.1"
+....
+
+[[network-routing-troubleshooting]]
+=== Troubleshooting
+
+When an address space is assigned to a network, the service provider configures their routing tables so that all traffic for the network will be sent to the link for the site. But how do external sites know to send their packets to the network's ISP?
+
+There is a system that keeps track of all assigned address spaces and defines their point of connection to the Internet backbone, or the main trunk lines that carry Internet traffic across the country and around the world. Each backbone machine has a copy of a master set of tables, which direct traffic for a particular network to a specific backbone carrier, and from there down the chain of service providers until it reaches a particular network.
+
+It is the task of the service provider to advertise to the backbone sites that they are the point of connection, and thus the path inward, for a site. This is known as route propagation.
+
+Sometimes, there is a problem with route propagation and some sites are unable to connect. Perhaps the most useful command for trying to figure out where routing is breaking down is `traceroute`. It is useful when `ping` fails.
+
+When using `traceroute`, include the address of the remote host to connect to. The output will show the gateway hosts along the path of the attempt, eventually either reaching the target host, or terminating because of a lack of connection. For more information, refer to man:traceroute[8].
+
+[[network-routing-multicast]]
+=== Multicast Considerations
+
+FreeBSD natively supports both multicast applications and multicast routing. Multicast applications do not require any special configuration in order to run on FreeBSD. Support for multicast routing requires that the following option be compiled into a custom kernel:
+
+[.programlisting]
+....
+options MROUTING
+....
+
+The multicast routing daemon, mrouted can be installed using the package:net/mrouted[] package or port. This daemon implements the DVMRP multicast routing protocol and is configured by editing [.filename]#/usr/local/etc/mrouted.conf# in order to set up the tunnels and DVMRP. The installation of mrouted also installs map-mbone and mrinfo, as well as their associated man pages. Refer to these for configuration examples.
+
+[NOTE]
+====
+DVMRP has largely been replaced by the PIM protocol in many multicast installations. Refer to man:pim[4] for more information.
+====
+
+[[network-wireless]]
+== Wireless Networking
+
+=== Wireless Networking Basics
+
+Most wireless networks are based on the IEEE(R) 802.11 standards. A basic wireless network consists of multiple stations communicating with radios that broadcast in either the 2.4GHz or 5GHz band, though this varies according to the locale and is also changing to enable communication in the 2.3GHz and 4.9GHz ranges.
+
+802.11 networks are organized in two ways. In _infrastructure mode_, one station acts as a master with all the other stations associating to it, the network is known as a BSS, and the master station is termed an access point (AP). In a BSS, all communication passes through the AP; even when one station wants to communicate with another wireless station, messages must go through the AP. In the second form of network, there is no master and stations communicate directly. This form of network is termed an IBSS and is commonly known as an _ad-hoc network_.
+
+802.11 networks were first deployed in the 2.4GHz band using protocols defined by the IEEE(R) 802.11 and 802.11b standard. These specifications include the operating frequencies and the MAC layer characteristics, including framing and transmission rates, as communication can occur at various rates. Later, the 802.11a standard defined operation in the 5GHz band, including different signaling mechanisms and higher transmission rates. Still later, the 802.11g standard defined the use of 802.11a signaling and transmission mechanisms in the 2.4GHz band in such a way as to be backwards compatible with 802.11b networks.
+
+Separate from the underlying transmission techniques, 802.11 networks have a variety of security mechanisms. The original 802.11 specifications defined a simple security protocol called WEP. This protocol uses a fixed pre-shared key and the RC4 cryptographic cipher to encode data transmitted on a network. Stations must all agree on the fixed key in order to communicate. This scheme was shown to be easily broken and is now rarely used except to discourage transient users from joining networks. Current security practice is given by the IEEE(R) 802.11i specification that defines new cryptographic ciphers and an additional protocol to authenticate stations to an access point and exchange keys for data communication. Cryptographic keys are periodically refreshed and there are mechanisms for detecting and countering intrusion attempts. Another security protocol specification commonly used in wireless networks is termed WPA, which was a precursor to 802.11i. WPA specifies a subset of the requirements found in 802.11i and is designed for implementation on legacy hardware. Specifically, WPA requires only the TKIP cipher that is derived from the original WEP cipher. 802.11i permits use of TKIP but also requires support for a stronger cipher, AES-CCM, for encrypting data. The AES cipher was not required in WPA because it was deemed too computationally costly to be implemented on legacy hardware.
+
+The other standard to be aware of is 802.11e. It defines protocols for deploying multimedia applications, such as streaming video and voice over IP (VoIP), in an 802.11 network. Like 802.11i, 802.11e also has a precursor specification termed WME (later renamed WMM) that has been defined by an industry group as a subset of 802.11e that can be deployed now to enable multimedia applications while waiting for the final ratification of 802.11e. The most important thing to know about 802.11e and WME/WMM is that it enables prioritized traffic over a wireless network through Quality of Service (QoS) protocols and enhanced media access protocols. Proper implementation of these protocols enables high speed bursting of data and prioritized traffic flow.
+
+FreeBSD supports networks that operate using 802.11a, 802.11b, and 802.11g. The WPA and 802.11i security protocols are likewise supported (in conjunction with any of 11a, 11b, and 11g) and QoS and traffic prioritization required by the WME/WMM protocols are supported for a limited set of wireless devices.
+
+[[network-wireless-quick-start]]
+=== Quick Start
+
+Connecting a computer to an existing wireless network is a very common situation. This procedure shows the steps required.
+
+[.procedure]
+. Obtain the SSID (Service Set Identifier) and PSK (Pre-Shared Key) for the wireless network from the network administrator.
+. Identify the wireless adapter. The FreeBSD [.filename]#GENERIC# kernel includes drivers for many common wireless adapters. If the wireless adapter is one of those models, it will be shown in the output from man:ifconfig[8]:
++
+[source,bash]
+....
+% ifconfig | grep -B3 -i wireless
+....
++ 
+On FreeBSD 11 or higher, use this command instead:
++
+[source,bash]
+....
+% sysctl net.wlan.devices
+....
++ 
+If a wireless adapter is not listed, an additional kernel module might be required, or it might be a model not supported by FreeBSD.
++ 
+This example shows the Atheros `ath0` wireless adapter.
+. Add an entry for this network to [.filename]#/etc/wpa_supplicant.conf#. If the file does not exist, create it. Replace _myssid_ and _mypsk_ with the SSID and PSK provided by the network administrator.
++
+[.programlisting]
+....
+network={
+	ssid="myssid"
+	psk="mypsk"
+}
+....
+
+. Add entries to [.filename]#/etc/rc.conf# to configure the network on startup:
++
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA SYNCDHCP"
+....
+
+. Restart the computer, or restart the network service to connect to the network:
++
+[source,bash]
+....
+# service netif restart
+....
+
+[[network-wireless-basic]]
+=== Basic Setup
+
+==== Kernel Configuration
+
+To use wireless networking, a wireless networking card is needed and the kernel needs to be configured with the appropriate wireless networking support. The kernel is separated into multiple modules so that only the required support needs to be configured.
+
+The most commonly used wireless devices are those that use parts made by Atheros. These devices are supported by man:ath[4] and require the following line to be added to [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+if_ath_load="YES"
+....
+
+The Atheros driver is split up into three separate pieces: the driver (man:ath[4]), the hardware support layer that handles chip-specific functions (man:ath_hal[4]), and an algorithm for selecting the rate for transmitting frames. When this support is loaded as kernel modules, any dependencies are automatically handled. To load support for a different type of wireless device, specify the module for that device. This example is for devices based on the Intersil Prism parts (man:wi[4]) driver:
+
+[.programlisting]
+....
+if_wi_load="YES"
+....
+
+[NOTE]
+====
+The examples in this section use an man:ath[4] device and the device name in the examples must be changed according to the configuration. A list of available wireless drivers and supported adapters can be found in the FreeBSD Hardware Notes, available on the https://www.FreeBSD.org/releases/[Release Information] page of the FreeBSD website. If a native FreeBSD driver for the wireless device does not exist, it may be possible to use the Windows(R) driver with the help of the crossref:config[config-network-ndis,NDIS] driver wrapper.
+====
+
+In addition, the modules that implement cryptographic support for the security protocols to use must be loaded. These are intended to be dynamically loaded on demand by the man:wlan[4] module, but for now they must be manually configured. The following modules are available: man:wlan_wep[4], man:wlan_ccmp[4], and man:wlan_tkip[4]. The man:wlan_ccmp[4] and man:wlan_tkip[4] drivers are only needed when using the WPA or 802.11i security protocols. If the network does not use encryption, man:wlan_wep[4] support is not needed. To load these modules at boot time, add the following lines to [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+wlan_wep_load="YES"
+wlan_ccmp_load="YES"
+wlan_tkip_load="YES"
+....
+
+Once this information has been added to [.filename]#/boot/loader.conf#, reboot the FreeBSD box. Alternately, load the modules by hand using man:kldload[8].
+
+[NOTE]
+====
+For users who do not want to use modules, it is possible to compile these drivers into the kernel by adding the following lines to a custom kernel configuration file:
+
+[.programlisting]
+....
+device wlan              # 802.11 support
+device wlan_wep          # 802.11 WEP support
+device wlan_ccmp         # 802.11 CCMP support
+device wlan_tkip         # 802.11 TKIP support
+device wlan_amrr         # AMRR transmit rate control algorithm
+device ath               # Atheros pci/cardbus NIC's
+device ath_hal           # pci/cardbus chip support
+options AH_SUPPORT_AR5416 # enable AR5416 tx/rx descriptors
+device ath_rate_sample   # SampleRate tx rate control for ath
+....
+
+With this information in the kernel configuration file, recompile the kernel and reboot the FreeBSD machine.
+====
+
+Information about the wireless device should appear in the boot messages, like this:
+
+[source,bash]
+....
+ath0: <Atheros 5212> mem 0x88000000-0x8800ffff irq 11 at device 0.0 on cardbus1
+ath0: [ITHREAD]
+ath0: AR2413 mac 7.9 RF2413 phy 4.5
+....
+
+==== Setting the Correct Region
+
+Since the regulatory situation is different in various parts of the world, it is necessary to correctly set the domains that apply to your location to have the correct information about what channels can be used.
+
+The available region definitions can be found in [.filename]#/etc/regdomain.xml#. To set the data at runtime, use `ifconfig`:
+
+[source,bash]
+....
+# ifconfig wlan0 regdomain ETSI country AT
+....
+
+To persist the settings, add it to [.filename]#/etc/rc.conf#:
+
+[source,bash]
+....
+# sysrc create_args_wlan0="country AT regdomain ETSI"
+....
+
+=== Infrastructure Mode
+
+Infrastructure (BSS) mode is the mode that is typically used. In this mode, a number of wireless access points are connected to a wired network. Each wireless network has its own name, called the SSID. Wireless clients connect to the wireless access points.
+
+==== FreeBSD Clients
+
+===== How to Find Access Points
+
+To scan for available networks, use man:ifconfig[8]. This request may take a few moments to complete as it requires the system to switch to each available wireless frequency and probe for available access points. Only the superuser can initiate a scan:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 up scan
+SSID/MESH ID    BSSID              CHAN RATE   S:N     INT CAPS
+dlinkap         00:13:46:49:41:76   11   54M -90:96   100 EPS  WPA WME
+freebsdap       00:11:95:c3:0d:ac    1   54M -83:96   100 EPS  WPA
+....
+
+[NOTE]
+====
+The interface must be `up` before it can scan. Subsequent scan requests do not require the interface to be marked as up again.
+====
+
+The output of a scan request lists each BSS/IBSS network found. Besides listing the name of the network, the `SSID`, the output also shows the `BSSID`, which is the MAC address of the access point. The `CAPS` field identifies the type of each network and the capabilities of the stations operating there:
+
+.Station Capability Codes
+[cols="1,1", frame="none", options="header"]
+|===
+| Capability Code
+| Meaning
+
+|`E`
+|Extended Service Set (ESS). Indicates that the station is part of an infrastructure network rather than an IBSS/ad-hoc network.
+
+|`I`
+|IBSS/ad-hoc network. Indicates that the station is part of an ad-hoc network rather than an ESS network.
+
+|`P`
+|Privacy. Encryption is required for all data frames exchanged within the BSS using cryptographic means such as WEP, TKIP or AES-CCMP.
+
+|`S`
+|Short Preamble. Indicates that the network is using short preambles, defined in 802.11b High Rate/DSSS PHY, and utilizes a 56 bit sync field rather than the 128 bit field used in long preamble mode.
+
+|`s`
+|Short slot time. Indicates that the 802.11g network is using a short slot time because there are no legacy (802.11b) stations present.
+|===
+
+One can also display the current list of known networks with:
+
+[source,bash]
+....
+# ifconfig wlan0 list scan
+....
+
+This information may be updated automatically by the adapter or manually with a `scan` request. Old data is automatically removed from the cache, so over time this list may shrink unless more scans are done.
+
+===== Basic Settings
+
+This section provides a simple example of how to make the wireless network adapter work in FreeBSD without encryption. Once familiar with these concepts, it is strongly recommend to use <<network-wireless-wpa,WPA>> to set up the wireless network.
+
+There are three basic steps to configure a wireless network: select an access point, authenticate the station, and configure an IP address. The following sections discuss each step.
+
+====== Selecting an Access Point
+
+Most of the time, it is sufficient to let the system choose an access point using the builtin heuristics. This is the default behavior when an interface is marked as up or it is listed in [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="DHCP"
+....
+
+If there are multiple access points, a specific one can be selected by its SSID:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="ssid your_ssid_here DHCP"
+....
+
+In an environment where there are multiple access points with the same SSID, which is often done to simplify roaming, it may be necessary to associate to one specific device. In this case, the BSSID of the access point can be specified, with or without the SSID:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="ssid your_ssid_here bssid xx:xx:xx:xx:xx:xx DHCP"
+....
+
+There are other ways to constrain the choice of an access point, such as limiting the set of frequencies the system will scan on. This may be useful for a multi-band wireless card as scanning all the possible channels can be time-consuming. To limit operation to a specific band, use the `mode` parameter:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="mode 11g ssid your_ssid_here DHCP"
+....
+
+This example will force the card to operate in 802.11g, which is defined only for 2.4GHz frequencies so any 5GHz channels will not be considered. This can also be achieved with the `channel` parameter, which locks operation to one specific frequency, and the `chanlist` parameter, to specify a list of channels for scanning. More information about these parameters can be found in man:ifconfig[8].
+
+====== Authentication
+
+Once an access point is selected, the station needs to authenticate before it can pass data. Authentication can happen in several ways. The most common scheme, open authentication, allows any station to join the network and communicate. This is the authentication to use for test purposes the first time a wireless network is setup. Other schemes require cryptographic handshakes to be completed before data traffic can flow, either using pre-shared keys or secrets, or more complex schemes that involve backend services such as RADIUS. Open authentication is the default setting. The next most common setup is WPA-PSK, also known as WPA Personal, which is described in <<network-wireless-wpa-wpa-psk>>.
+
+[NOTE]
+====
+If using an Apple(R) AirPort(R) Extreme base station for an access point, shared-key authentication together with a WEP key needs to be configured. This can be configured in [.filename]#/etc/rc.conf# or by using man:wpa_supplicant[8]. For a single AirPort(R) base station, access can be configured with:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="authmode shared wepmode on weptxkey 1 wepkey 01234567 DHCP"
+....
+
+In general, shared key authentication should be avoided because it uses the WEP key material in a highly-constrained manner, making it even easier to crack the key. If WEP must be used for compatibility with legacy devices, it is better to use WEP with `open` authentication. More information regarding WEP can be found in <<network-wireless-wep>>.
+====
+
+====== Getting an IP Address with DHCP
+
+Once an access point is selected and the authentication parameters are set, an IP address must be obtained in order to communicate. Most of the time, the IP address is obtained via DHCP. To achieve that, edit [.filename]#/etc/rc.conf# and add `DHCP` to the configuration for the device:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="DHCP"
+....
+
+The wireless interface is now ready to bring up:
+
+[source,bash]
+....
+# service netif start
+....
+
+Once the interface is running, use man:ifconfig[8] to see the status of the interface [.filename]#ath0#:
+
+[source,bash]
+....
+# ifconfig wlan0
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+        ether 00:11:95:d5:43:62
+        inet 192.168.1.100 netmask 0xffffff00 broadcast 192.168.1.255
+        media: IEEE 802.11 Wireless Ethernet OFDM/54Mbps mode 11g
+        status: associated
+        ssid dlinkap channel 11 (2462 Mhz 11g) bssid 00:13:46:49:41:76
+        country US ecm authmode OPEN privacy OFF txpower 21.5 bmiss 7
+        scanvalid 60 bgscan bgscanintvl 300 bgscanidle 250 roam:rssi 7
+        roam:rate 5 protmode CTS wme burst
+....
+
+The `status: associated` line means that it is connected to the wireless network. The `bssid 00:13:46:49:41:76` is the MAC address of the access point and `authmode OPEN` indicates that the communication is not encrypted.
+
+====== Static IP Address
+
+If an IP address cannot be obtained from a DHCP server, set a fixed IP address. Replace the `DHCP` keyword shown above with the address information. Be sure to retain any other parameters for selecting the access point:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="inet 192.168.1.100 netmask 255.255.255.0 ssid your_ssid_here"
+....
+
+[[network-wireless-wpa]]
+===== WPA
+
+Wi-Fi Protected Access (WPA) is a security protocol used together with 802.11 networks to address the lack of proper authentication and the weakness of WEP. WPA leverages the 802.1X authentication protocol and uses one of several ciphers instead of WEP for data integrity. The only cipher required by WPA is the Temporary Key Integrity Protocol (TKIP). TKIP is a cipher that extends the basic RC4 cipher used by WEP by adding integrity checking, tamper detection, and measures for responding to detected intrusions. TKIP is designed to work on legacy hardware with only software modification. It represents a compromise that improves security but is still not entirely immune to attack. WPA also specifies the AES-CCMP cipher as an alternative to TKIP, and that is preferred when possible. For this specification, the term WPA2 or RSN is commonly used.
+
+WPA defines authentication and encryption protocols. Authentication is most commonly done using one of two techniques: by 802.1X and a backend authentication service such as RADIUS, or by a minimal handshake between the station and the access point using a pre-shared secret. The former is commonly termed WPA Enterprise and the latter is known as WPA Personal. Since most people will not set up a RADIUS backend server for their wireless network, WPA-PSK is by far the most commonly encountered configuration for WPA.
+
+The control of the wireless connection and the key negotiation or authentication with a server is done using man:wpa_supplicant[8]. This program requires a configuration file, [.filename]#/etc/wpa_supplicant.conf#, to run. More information regarding this file can be found in man:wpa_supplicant.conf[5].
+
+[[network-wireless-wpa-wpa-psk]]
+====== WPA-PSK
+
+WPA-PSK, also known as WPA Personal, is based on a pre-shared key (PSK) which is generated from a given password and used as the master key in the wireless network. This means every wireless user will share the same key. WPA-PSK is intended for small networks where the use of an authentication server is not possible or desired.
+
+[WARNING]
+====
+
+Always use strong passwords that are sufficiently long and made from a rich alphabet so that they will not be easily guessed or attacked.
+====
+
+The first step is the configuration of [.filename]#/etc/wpa_supplicant.conf# with the SSID and the pre-shared key of the network:
+
+[.programlisting]
+....
+network={
+  ssid="freebsdap"
+  psk="freebsdmall"
+}
+....
+
+Then, in [.filename]#/etc/rc.conf#, indicate that the wireless device configuration will be done with WPA and the IP address will be obtained with DHCP:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+....
+
+Then, bring up the interface:
+
+[source,bash]
+....
+# service netif start
+Starting wpa_supplicant.
+DHCPDISCOVER on wlan0 to 255.255.255.255 port 67 interval 5
+DHCPDISCOVER on wlan0 to 255.255.255.255 port 67 interval 6
+DHCPOFFER from 192.168.0.1
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67
+DHCPACK from 192.168.0.1
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet OFDM/36Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+Or, try to configure the interface manually using the information in [.filename]#/etc/wpa_supplicant.conf#:
+
+[source,bash]
+....
+# wpa_supplicant -i wlan0 -c /etc/wpa_supplicant.conf
+Trying to associate with 00:11:95:c3:0d:ac (SSID='freebsdap' freq=2412 MHz)
+Associated with 00:11:95:c3:0d:ac
+WPA: Key negotiation completed with 00:11:95:c3:0d:ac [PTK=CCMP GTK=CCMP]
+CTRL-EVENT-CONNECTED - Connection to 00:11:95:c3:0d:ac completed (auth) [id=0 id_str=]
+....
+
+The next operation is to launch man:dhclient[8] to get the IP address from the DHCP server:
+
+[source,bash]
+....
+# dhclient wlan0
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67
+DHCPACK from 192.168.0.1
+bound to 192.168.0.254 -- renewal in 300 seconds.
+# ifconfig wlan0
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet OFDM/36Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+[NOTE]
+====
+If [.filename]#/etc/rc.conf# has an `ifconfig_wlan0="DHCP"` entry, man:dhclient[8] will be launched automatically after man:wpa_supplicant[8] associates with the access point.
+====
+
+If DHCP is not possible or desired, set a static IP address after man:wpa_supplicant[8] has authenticated the station:
+
+[source,bash]
+....
+# ifconfig wlan0 inet 192.168.0.100 netmask 255.255.255.0
+# ifconfig wlan0
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.100 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet OFDM/36Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+When DHCP is not used, the default gateway and the nameserver also have to be manually set:
+
+[source,bash]
+....
+# route add default your_default_router
+# echo "nameserver your_DNS_server" >> /etc/resolv.conf
+....
+
+[[network-wireless-wpa-eap-tls]]
+====== WPA with EAP-TLS
+
+The second way to use WPA is with an 802.1X backend authentication server. In this case, WPA is called WPA Enterprise to differentiate it from the less secure WPA Personal. Authentication in WPA Enterprise is based on the Extensible Authentication Protocol (EAP).
+
+EAP does not come with an encryption method. Instead, EAP is embedded inside an encrypted tunnel. There are many EAP authentication methods, but EAP-TLS, EAP-TTLS, and EAP-PEAP are the most common.
+
+EAP with Transport Layer Security (EAP-TLS) is a well-supported wireless authentication protocol since it was the first EAP method to be certified by the http://www.wi-fi.org/[Wi-Fi Alliance]. EAP-TLS requires three certificates to run: the certificate of the Certificate Authority (CA) installed on all machines, the server certificate for the authentication server, and one client certificate for each wireless client. In this EAP method, both the authentication server and wireless client authenticate each other by presenting their respective certificates, and then verify that these certificates were signed by the organization's CA.
+
+As previously, the configuration is done via [.filename]#/etc/wpa_supplicant.conf#:
+
+[.programlisting]
+....
+network={
+  ssid="freebsdap" <.>
+  proto=RSN  <.>
+  key_mgmt=WPA-EAP <.>
+  eap=TLS <.>
+  identity="loader" <.>
+  ca_cert="/etc/certs/cacert.pem" <.>
+  client_cert="/etc/certs/clientcert.pem" <.>
+  private_key="/etc/certs/clientkey.pem" <.>
+  private_key_passwd="freebsdmallclient" <.>
+}
+....
+
+<.> This field indicates the network name (SSID).
+<.> This example uses the RSN IEEE(R) 802.11i protocol, also known as WPA2.
+<.> The `key_mgmt` line refers to the key management protocol to use. In this example, it is WPA using EAP authentication.
+<.> This field indicates the EAP method for the connection.
+<.> The `identity` field contains the identity string for EAP.
+<.> The `ca_cert` field indicates the pathname of the CA certificate file. This file is needed to verify the server certificate.
+<.> The `client_cert` line gives the pathname to the client certificate file. This certificate is unique to each wireless client of the network.
+<.> The `private_key` field is the pathname to the client certificate private key file.
+<.> The `private_key_passwd` field contains the passphrase for the private key.
+
+Then, add the following lines to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+....
+
+The next step is to bring up the interface:
+
+[source,bash]
+....
+# service netif start
+Starting wpa_supplicant.
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 7
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 15
+DHCPACK from 192.168.0.20
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet DS/11Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+It is also possible to bring up the interface manually using man:wpa_supplicant[8] and man:ifconfig[8].
+
+[[network-wireless-wpa-eap-ttls]]
+====== WPA with EAP-TTLS
+
+With EAP-TLS, both the authentication server and the client need a certificate. With EAP-TTLS, a client certificate is optional. This method is similar to a web server which creates a secure SSL tunnel even if visitors do not have client-side certificates. EAP-TTLS uses an encrypted TLS tunnel for safe transport of the authentication data.
+
+The required configuration can be added to [.filename]#/etc/wpa_supplicant.conf#:
+
+[.programlisting]
+....
+network={
+  ssid="freebsdap"
+  proto=RSN
+  key_mgmt=WPA-EAP
+  eap=TTLS <.>
+  identity="test" <.>
+  password="test" <.>
+  ca_cert="/etc/certs/cacert.pem" <.>
+  phase2="auth=MD5" <.>
+}
+....
+
+<.> This field specifies the EAP method for the connection.
+<.> The `identity` field contains the identity string for EAP authentication inside the encrypted TLS tunnel.
+<.> The `password` field contains the passphrase for the EAP authentication.
+<.> The `ca_cert` field indicates the pathname of the CA certificate file. This file is needed to verify the server certificate.
+<.> This field specifies the authentication method used in the encrypted TLS tunnel. In this example, EAP with MD5-Challenge is used. The "inner authentication" phase is often called "phase2".
+
+Next, add the following lines to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+....
+
+The next step is to bring up the interface:
+
+[source,bash]
+....
+# service netif start
+Starting wpa_supplicant.
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 7
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 15
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 21
+DHCPACK from 192.168.0.20
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet DS/11Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+[[network-wireless-wpa-eap-peap]]
+====== WPA with EAP-PEAP
+
+[NOTE]
+====
+PEAPv0/EAP-MSCHAPv2 is the most common PEAP method. In this chapter, the term PEAP is used to refer to that method.
+====
+
+Protected EAP (PEAP) is designed as an alternative to EAP-TTLS and is the most used EAP standard after EAP-TLS. In a network with mixed operating systems, PEAP should be the most supported standard after EAP-TLS.
+
+PEAP is similar to EAP-TTLS as it uses a server-side certificate to authenticate clients by creating an encrypted TLS tunnel between the client and the authentication server, which protects the ensuing exchange of authentication information. PEAP authentication differs from EAP-TTLS as it broadcasts the username in the clear and only the password is sent in the encrypted TLS tunnel. EAP-TTLS will use the TLS tunnel for both the username and password.
+
+Add the following lines to [.filename]#/etc/wpa_supplicant.conf# to configure the EAP-PEAP related settings:
+
+[.programlisting]
+....
+network={
+  ssid="freebsdap"
+  proto=RSN
+  key_mgmt=WPA-EAP
+  eap=PEAP <.>
+  identity="test" <.>
+  password="test" <.>
+  ca_cert="/etc/certs/cacert.pem" <.>
+  phase1="peaplabel=0" <.>
+  phase2="auth=MSCHAPV2" <.>
+}
+....
+
+<.> This field specifies the EAP method for the connection.
+<.> The `identity` field contains the identity string for EAP authentication inside the encrypted TLS tunnel.
+<.> The `password` field contains the passphrase for the EAP authentication.
+<.> The `ca_cert` field indicates the pathname of the CA certificate file. This file is needed to verify the server certificate.
+<.> This field contains the parameters for the first phase of authentication, the TLS tunnel. According to the authentication server used, specify a specific label for authentication. Most of the time, the label will be "client EAP encryption" which is set by using `peaplabel=0`. More information can be found in man:wpa_supplicant.conf[5].
+<.> This field specifies the authentication protocol used in the encrypted TLS tunnel. In the case of PEAP, it is `auth=MSCHAPV2`.
+
+Add the following to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+....
+
+Then, bring up the interface:
+
+[source,bash]
+....
+# service netif start
+Starting wpa_supplicant.
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 7
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 15
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 21
+DHCPACK from 192.168.0.20
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet DS/11Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+[[network-wireless-wep]]
+===== WEP
+
+Wired Equivalent Privacy (WEP) is part of the original 802.11 standard. There is no authentication mechanism, only a weak form of access control which is easily cracked.
+
+WEP can be set up using man:ifconfig[8]:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 inet 192.168.1.100 netmask 255.255.255.0 \
+	    ssid my_net wepmode on weptxkey 3 wepkey 3:0x3456789012
+....
+
+* The `weptxkey` specifies which WEP key will be used in the transmission. This example uses the third key. This must match the setting on the access point. When unsure which key is used by the access point, try `1` (the first key) for this value.
+* The `wepkey` selects one of the WEP keys. It should be in the format _index:key_. Key `1` is used by default; the index only needs to be set when using a key other than the first key.
++
+[NOTE]
+====
+Replace the `0x3456789012` with the key configured for use on the access point.
+====
+
+Refer to man:ifconfig[8] for further information.
+
+The man:wpa_supplicant[8] facility can be used to configure a wireless interface with WEP. The example above can be set up by adding the following lines to [.filename]#/etc/wpa_supplicant.conf#:
+
+[.programlisting]
+....
+network={
+  ssid="my_net"
+  key_mgmt=NONE
+  wep_key3=3456789012
+  wep_tx_keyidx=3
+}
+....
+
+Then:
+
+[source,bash]
+....
+# wpa_supplicant -i wlan0 -c /etc/wpa_supplicant.conf
+Trying to associate with 00:13:46:49:41:76 (SSID='dlinkap' freq=2437 MHz)
+Associated with 00:13:46:49:41:76
+....
+
+=== Ad-hoc Mode
+
+IBSS mode, also called ad-hoc mode, is designed for point to point connections. For example, to establish an ad-hoc network between the machines `A` and `B`, choose two IP addresses and a SSID.
+
+On `A`:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0 wlanmode adhoc
+# ifconfig wlan0 inet 192.168.0.1 netmask 255.255.255.0 ssid freebsdap
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:c3:0d:ac
+	  inet 192.168.0.1 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <adhoc>
+	  status: running
+	  ssid freebsdap channel 2 (2417 Mhz 11g) bssid 02:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 scanvalid 60
+	  protmode CTS wme burst
+....
+
+The `adhoc` parameter indicates that the interface is running in IBSS mode.
+
+`B` should now be able to detect `A`:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0 wlanmode adhoc
+# ifconfig wlan0 up scan
+  SSID/MESH ID    BSSID              CHAN RATE   S:N     INT CAPS
+  freebsdap       02:11:95:c3:0d:ac    2   54M -64:-96  100 IS   WME
+....
+
+The `I` in the output confirms that `A` is in ad-hoc mode. Now, configure `B` with a different IP address:
+
+[source,bash]
+....
+# ifconfig wlan0 inet 192.168.0.2 netmask 255.255.255.0 ssid freebsdap
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:d5:43:62
+	  inet 192.168.0.2 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <adhoc>
+	  status: running
+	  ssid freebsdap channel 2 (2417 Mhz 11g) bssid 02:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 scanvalid 60
+	  protmode CTS wme burst
+....
+
+Both `A` and `B` are now ready to exchange information.
+
+[[network-wireless-ap]]
+=== FreeBSD Host Access Points
+
+FreeBSD can act as an Access Point (AP) which eliminates the need to buy a hardware AP or run an ad-hoc network. This can be particularly useful when a FreeBSD machine is acting as a gateway to another network such as the Internet.
+
+[[network-wireless-ap-basic]]
+==== Basic Settings
+
+Before configuring a FreeBSD machine as an AP, the kernel must be configured with the appropriate networking support for the wireless card as well as the security protocols being used. For more details, see <<network-wireless-basic>>.
+
+[NOTE]
+====
+The NDIS driver wrapper for Windows(R) drivers does not currently support AP operation. Only native FreeBSD wireless drivers support AP mode.
+====
+
+Once wireless networking support is loaded, check if the wireless device supports the host-based access point mode, also known as hostap mode:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 list caps
+drivercaps=6f85edc1<STA,FF,TURBOP,IBSS,HOSTAP,AHDEMO,TXPMGT,SHSLOT,SHPREAMBLE,MONITOR,MBSS,WPA1,WPA2,BURST,WME,WDS,BGSCAN,TXFRAG>
+cryptocaps=1f<WEP,TKIP,AES,AES_CCM,TKIPMIC>
+....
+
+This output displays the card's capabilities. The `HOSTAP` word confirms that this wireless card can act as an AP. Various supported ciphers are also listed: WEP, TKIP, and AES. This information indicates which security protocols can be used on the AP.
+
+The wireless device can only be put into hostap mode during the creation of the network pseudo-device, so a previously created device must be destroyed first:
+
+[source,bash]
+....
+# ifconfig wlan0 destroy
+....
+
+then regenerated with the correct option before setting the other parameters:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0 wlanmode hostap
+# ifconfig wlan0 inet 192.168.0.1 netmask 255.255.255.0 ssid freebsdap mode 11g channel 1
+....
+
+Use man:ifconfig[8] again to see the status of the [.filename]#wlan0# interface:
+
+[source,bash]
+....
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:c3:0d:ac
+	  inet 192.168.0.1 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <hostap>
+	  status: running
+	  ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 scanvalid 60
+	  protmode CTS wme burst dtimperiod 1 -dfs
+....
+
+The `hostap` parameter indicates the interface is running in the host-based access point mode.
+
+The interface configuration can be done automatically at boot time by adding the following lines to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+create_args_wlan0="wlanmode hostap"
+ifconfig_wlan0="inet 192.168.0.1 netmask 255.255.255.0 ssid freebsdap mode 11g channel 1"
+....
+
+==== Host-based Access Point Without Authentication or Encryption
+
+Although it is not recommended to run an AP without any authentication or encryption, this is a simple way to check if the AP is working. This configuration is also important for debugging client issues.
+
+Once the AP is configured, initiate a scan from another wireless machine to find the AP:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 up scan
+SSID/MESH ID    BSSID              CHAN RATE   S:N     INT CAPS
+freebsdap       00:11:95:c3:0d:ac    1   54M -66:-96  100 ES   WME
+....
+
+The client machine found the AP and can be associated with it:
+
+[source,bash]
+....
+# ifconfig wlan0 inet 192.168.0.2 netmask 255.255.255.0 ssid freebsdap
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:d5:43:62
+	  inet 192.168.0.2 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet OFDM/54Mbps mode 11g
+	  status: associated
+	  ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 bmiss 7
+	  scanvalid 60 bgscan bgscanintvl 300 bgscanidle 250 roam:rssi 7
+	  roam:rate 5 protmode CTS wme burst
+....
+
+[[network-wireless-ap-wpa]]
+==== WPA2 Host-based Access Point
+
+This section focuses on setting up a FreeBSD access point using the WPA2 security protocol. More details regarding WPA and the configuration of WPA-based wireless clients can be found in <<network-wireless-wpa>>.
+
+The man:hostapd[8] daemon is used to deal with client authentication and key management on the WPA2-enabled AP.
+
+The following configuration operations are performed on the FreeBSD machine acting as the AP. Once the AP is correctly working, man:hostapd[8] can be automatically started at boot with this line in [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+hostapd_enable="YES"
+....
+
+Before trying to configure man:hostapd[8], first configure the basic settings introduced in <<network-wireless-ap-basic>>.
+
+===== WPA2-PSK
+
+WPA2-PSK is intended for small networks where the use of a backend authentication server is not possible or desired.
+
+The configuration is done in [.filename]#/etc/hostapd.conf#:
+
+[.programlisting]
+....
+interface=wlan0                  <.>
+debug=1                          <.>
+ctrl_interface=/var/run/hostapd  <.>
+ctrl_interface_group=wheel       <.>
+ssid=freebsdap                   <.>
+wpa=2                            <.>
+wpa_passphrase=freebsdmall       <.>
+wpa_key_mgmt=WPA-PSK             <.>
+wpa_pairwise=CCMP                <.>
+....
+
+<.> Wireless interface used for the access point.
+<.> Level of verbosity used during the execution of man:hostapd[8]. A value of `1` represents the minimal level.
+<.> Pathname of the directory used by man:hostapd[8] to store domain socket files for communication with external programs such as man:hostapd_cli[8]. The default value is used in this example.
+<.> The group allowed to access the control interface files.
+<.> The wireless network name, or SSID, that will appear in wireless scans.
+<.> Enable WPA and specify which WPA authentication protocol will be required. A value of `2` configures the AP for WPA2 and is recommended. Set to `1` only if the obsolete WPA is required.
+<.> ASCII passphrase for WPA authentication.
+<.> The key management protocol to use. This example sets WPA-PSK.
+<.> Encryption algorithms accepted by the access point. In this example, only the CCMP (AES) cipher is accepted. CCMP is an alternative to TKIP and is strongly preferred when possible. TKIP should be allowed only when there are stations incapable of using CCMP.
+
+The next step is to start man:hostapd[8]:
+
+[source,bash]
+....
+# service hostapd forcestart
+....
+
+[source,bash]
+....
+# ifconfig wlan0
+wlan0: flags=8943<UP,BROADCAST,RUNNING,PROMISC,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	ether 04:f0:21:16:8e:10
+	inet6 fe80::6f0:21ff:fe16:8e10%wlan0 prefixlen 64 scopeid 0x9
+	nd6 options=21<PERFORMNUD,AUTO_LINKLOCAL>
+	media: IEEE 802.11 Wireless Ethernet autoselect mode 11na <hostap>
+	status: running
+	ssid No5ignal channel 36 (5180 MHz 11a ht/40+) bssid 04:f0:21:16:8e:10
+	country US ecm authmode WPA2/802.11i privacy MIXED deftxkey 2
+	AES-CCM 2:128-bit AES-CCM 3:128-bit txpower 17 mcastrate 6 mgmtrate 6
+	scanvalid 60 ampdulimit 64k ampdudensity 8 shortgi wme burst
+	dtimperiod 1 -dfs
+	groups: wlan
+....
+
+Once the AP is running, the clients can associate with it. See <<network-wireless-wpa>> for more details. It is possible to see the stations associated with the AP using `ifconfig _wlan0_ list sta`.
+
+==== WEP Host-based Access Point
+
+It is not recommended to use WEP for setting up an AP since there is no authentication mechanism and the encryption is easily cracked. Some legacy wireless cards only support WEP and these cards will only support an AP without authentication or encryption.
+
+The wireless device can now be put into hostap mode and configured with the correct SSID and IP address:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0 wlanmode hostap
+# ifconfig wlan0 inet 192.168.0.1 netmask 255.255.255.0 \
+	ssid freebsdap wepmode on weptxkey 3 wepkey 3:0x3456789012 mode 11g
+....
+
+* The `weptxkey` indicates which WEP key will be used in the transmission. This example uses the third key as key numbering starts with `1`. This parameter must be specified in order to encrypt the data.
+* The `wepkey` sets the selected WEP key. It should be in the format _index:key_. If the index is not given, key `1` is set. The index needs to be set when using keys other than the first key.
+
+Use man:ifconfig[8] to see the status of the [.filename]#wlan0# interface:
+
+[source,bash]
+....
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:c3:0d:ac
+	  inet 192.168.0.1 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <hostap>
+	  status: running
+	  ssid freebsdap channel 4 (2427 Mhz 11g) bssid 00:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy ON deftxkey 3 wepkey 3:40-bit
+	  txpower 21.5 scanvalid 60 protmode CTS wme burst dtimperiod 1 -dfs
+....
+
+From another wireless machine, it is now possible to initiate a scan to find the AP:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 up scan
+SSID            BSSID              CHAN RATE  S:N   INT CAPS
+freebsdap       00:11:95:c3:0d:ac    1   54M 22:1   100 EPS
+....
+
+In this example, the client machine found the AP and can associate with it using the correct parameters. See <<network-wireless-wep>> for more details.
+
+=== Using Both Wired and Wireless Connections
+
+A wired connection provides better performance and reliability, while a wireless connection provides flexibility and mobility. Laptop users typically want to roam seamlessly between the two types of connections.
+
+On FreeBSD, it is possible to combine two or even more network interfaces together in a "failover" fashion. This type of configuration uses the most preferred and available connection from a group of network interfaces, and the operating system switches automatically when the link state changes.
+
+Link aggregation and failover is covered in <<network-aggregation>> and an example for using both wired and wireless connections is provided at <<networking-lagg-wired-and-wireless>>.
+
+=== Troubleshooting
+
+This section describes a number of steps to help troubleshoot common wireless networking problems.
+
+* If the access point is not listed when scanning, check that the configuration has not limited the wireless device to a limited set of channels.
+* If the device cannot associate with an access point, verify that the configuration matches the settings on the access point. This includes the authentication scheme and any security protocols. Simplify the configuration as much as possible. If using a security protocol such as WPA or WEP, configure the access point for open authentication and no security to see if traffic will pass.
++ 
+Debugging support is provided by man:wpa_supplicant[8]. Try running this utility manually with `-dd` and look at the system logs.
+* Once the system can associate with the access point, diagnose the network configuration using tools like man:ping[8].
+* There are many lower-level debugging tools. Debugging messages can be enabled in the 802.11 protocol support layer using man:wlandebug[8]. For example, to enable console messages related to scanning for access points and the 802.11 protocol handshakes required to arrange communication:
++
+[source,bash]
+....
+# wlandebug -i wlan0 +scan+auth+debug+assoc
+  net.wlan.0.debug: 0 => 0xc80000<assoc,auth,scan>
+....
++ 
+Many useful statistics are maintained by the 802.11 layer and `wlanstats`, found in [.filename]#/usr/src/tools/tools/net80211#, will dump this information. These statistics should display all errors identified by the 802.11 layer. However, some errors are identified in the device drivers that lie below the 802.11 layer so they may not show up. To diagnose device-specific problems, refer to the drivers' documentation.
+
+If the above information does not help to clarify the problem, submit a problem report and include output from the above tools.
+
+[[network-usb-tethering]]
+== USB Tethering
+
+Many cellphones provide the option to share their data connection over USB (often called "tethering"). This feature uses one of RNDIS, CDC, or a custom Apple(R) iPhone(R)/iPad(R) protocol.
+
+* Android(TM) devices generally use the man:urndis[4] driver.
+* Apple(R) devices use the man:ipheth[4] driver.
+* Older devices will often use the man:cdce[4] driver.
+
+Before attaching a device, load the appropriate driver into the kernel:
+
+[source,bash]
+....
+# kldload if_urndis
+# kldload if_cdce
+# kldload if_ipheth
+....
+
+Once the device is attached ``ue``_0_ will be available for use like a normal network device. Be sure that the "USB tethering" option is enabled on the device.
+
+To make this change permanent and load the driver as a module at boot time, place the appropriate line of the following in [.filename]#/boot/loader.conf#:
+
+[source,bash]
+....
+if_urndis_load="YES"
+if_cdce_load="YES"
+if_ipheth_load="YES"
+....
+
+[[network-bluetooth]]
+== Bluetooth
+
+Bluetooth is a wireless technology for creating personal networks operating in the 2.4 GHz unlicensed band, with a range of 10 meters. Networks are usually formed ad-hoc from portable devices such as cellular phones, handhelds, and laptops. Unlike Wi-Fi wireless technology, Bluetooth offers higher level service profiles, such as FTP-like file servers, file pushing, voice transport, serial line emulation, and more.
+
+This section describes the use of a USB Bluetooth dongle on a FreeBSD system. It then describes the various Bluetooth protocols and utilities.
+
+=== Loading Bluetooth Support
+
+The Bluetooth stack in FreeBSD is implemented using the man:netgraph[4] framework. A broad variety of Bluetooth USB dongles is supported by man:ng_ubt[4]. Broadcom BCM2033 based Bluetooth devices are supported by the man:ubtbcmfw[4] and man:ng_ubt[4] drivers. The 3Com Bluetooth PC Card 3CRWB60-A is supported by the man:ng_bt3c[4] driver. Serial and UART based Bluetooth devices are supported by man:sio[4], man:ng_h4[4], and man:hcseriald[8].
+
+Before attaching a device, determine which of the above drivers it uses, then load the driver. For example, if the device uses the man:ng_ubt[4] driver:
+
+[source,bash]
+....
+# kldload ng_ubt
+....
+
+If the Bluetooth device will be attached to the system during system startup, the system can be configured to load the module at boot time by adding the driver to [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+ng_ubt_load="YES"
+....
+
+Once the driver is loaded, plug in the USB dongle. If the driver load was successful, output similar to the following should appear on the console and in [.filename]#/var/log/messages#:
+
+[source,bash]
+....
+ubt0: vendor 0x0a12 product 0x0001, rev 1.10/5.25, addr 2
+ubt0: Interface 0 endpoints: interrupt=0x81, bulk-in=0x82, bulk-out=0x2
+ubt0: Interface 1 (alt.config 5) endpoints: isoc-in=0x83, isoc-out=0x3,
+      wMaxPacketSize=49, nframes=6, buffer size=294
+....
+
+To start and stop the Bluetooth stack, use its startup script. It is a good idea to stop the stack before unplugging the device. Starting the bluetooth stack might require man:hcsecd[8] to be started. When starting the stack, the output should be similar to the following:
+
+[source,bash]
+....
+# service bluetooth start ubt0
+BD_ADDR: 00:02:72:00:d4:1a
+Features: 0xff 0xff 0xf 00 00 00 00 00
+<3-Slot> <5-Slot> <Encryption> <Slot offset>
+<Timing accuracy> <Switch> <Hold mode> <Sniff mode>
+<Park mode> <RSSI> <Channel quality> <SCO link>
+<HV2 packets> <HV3 packets> <u-law log> <A-law log> <CVSD>
+<Paging scheme> <Power control> <Transparent SCO data>
+Max. ACL packet size: 192 bytes
+Number of ACL packets: 8
+Max. SCO packet size: 64 bytes
+Number of SCO packets: 8
+....
+
+=== Finding Other Bluetooth Devices
+
+The Host Controller Interface (HCI) provides a uniform method for accessing Bluetooth baseband capabilities. In FreeBSD, a netgraph HCI node is created for each Bluetooth device. For more details, refer to man:ng_hci[4].
+
+One of the most common tasks is discovery of Bluetooth devices within RF proximity. This operation is called _inquiry_. Inquiry and other HCI related operations are done using man:hccontrol[8]. The example below shows how to find out which Bluetooth devices are in range. The list of devices should be displayed in a few seconds. Note that a remote device will only answer the inquiry if it is set to _discoverable_ mode.
+
+[source,bash]
+....
+% hccontrol -n ubt0hci inquiry
+Inquiry result, num_responses=1
+Inquiry result #0
+       BD_ADDR: 00:80:37:29:19:a4
+       Page Scan Rep. Mode: 0x1
+       Page Scan Period Mode: 00
+       Page Scan Mode: 00
+       Class: 52:02:04
+       Clock offset: 0x78ef
+Inquiry complete. Status: No error [00]
+....
+
+The `BD_ADDR` is the unique address of a Bluetooth device, similar to the MAC address of a network card. This address is needed for further communication with a device and it is possible to assign a human readable name to a `BD_ADDR`. Information regarding the known Bluetooth hosts is contained in [.filename]#/etc/bluetooth/hosts#. The following example shows how to obtain the human readable name that was assigned to the remote device:
+
+[source,bash]
+....
+% hccontrol -n ubt0hci remote_name_request 00:80:37:29:19:a4
+BD_ADDR: 00:80:37:29:19:a4
+Name: Pav's T39
+....
+
+If an inquiry is performed on a remote Bluetooth device, it will find the computer as "your.host.name (ubt0)". The name assigned to the local device can be changed at any time.
+
+Remote devices can be assigned aliases in [.filename]#/etc/bluetooth/hosts#. More information about [.filename]#/etc/bluetooth/hosts# file might be found in man:bluetooth.hosts[5].
+
+The Bluetooth system provides a point-to-point connection between two Bluetooth units, or a point-to-multipoint connection which is shared among several Bluetooth devices. The following example shows how to create a connection to a remote device:
+
+[source,bash]
+....
+% hccontrol -n ubt0hci create_connection BT_ADDR
+....
+
+`create_connection` accepts `BT_ADDR` as well as host aliases in [.filename]#/etc/bluetooth/hosts#.
+
+The following example shows how to obtain the list of active baseband connections for the local device:
+
+[source,bash]
+....
+% hccontrol -n ubt0hci read_connection_list
+Remote BD_ADDR    Handle Type Mode Role Encrypt Pending Queue State
+00:80:37:29:19:a4     41  ACL    0 MAST    NONE       0     0 OPEN
+....
+
+A _connection handle_ is useful when termination of the baseband connection is required, though it is normally not required to do this by hand. The stack will automatically terminate inactive baseband connections.
+
+[source,bash]
+....
+# hccontrol -n ubt0hci disconnect 41
+Connection handle: 41
+Reason: Connection terminated by local host [0x16]
+....
+
+Type `hccontrol help` for a complete listing of available HCI commands. Most of the HCI commands do not require superuser privileges.
+
+=== Device Pairing
+
+By default, Bluetooth communication is not authenticated, and any device can talk to any other device. A Bluetooth device, such as a cellular phone, may choose to require authentication to provide a particular service. Bluetooth authentication is normally done with a _PIN code_, an ASCII string up to 16 characters in length. The user is required to enter the same PIN code on both devices. Once the user has entered the PIN code, both devices will generate a _link key_. After that, the link key can be stored either in the devices or in a persistent storage. Next time, both devices will use the previously generated link key. This procedure is called _pairing_. Note that if the link key is lost by either device, the pairing must be repeated.
+
+The man:hcsecd[8] daemon is responsible for handling Bluetooth authentication requests. The default configuration file is [.filename]#/etc/bluetooth/hcsecd.conf#. An example section for a cellular phone with the PIN code set to `1234` is shown below:
+
+[.programlisting]
+....
+device {
+        bdaddr  00:80:37:29:19:a4;
+        name    "Pav's T39";
+        key     nokey;
+        pin     "1234";
+      }
+....
+
+The only limitation on PIN codes is length. Some devices, such as Bluetooth headsets, may have a fixed PIN code built in. The `-d` switch forces man:hcsecd[8] to stay in the foreground, so it is easy to see what is happening. Set the remote device to receive pairing and initiate the Bluetooth connection to the remote device. The remote device should indicate that pairing was accepted and request the PIN code. Enter the same PIN code listed in [.filename]#hcsecd.conf#. Now the computer and the remote device are paired. Alternatively, pairing can be initiated on the remote device.
+
+The following line can be added to [.filename]#/etc/rc.conf# to configure man:hcsecd[8] to start automatically on system start:
+
+[.programlisting]
+....
+hcsecd_enable="YES"
+....
+
+The following is a sample of the man:hcsecd[8] daemon output:
+
+[.programlisting]
+....
+hcsecd[16484]: Got Link_Key_Request event from 'ubt0hci', remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Found matching entry, remote bdaddr 0:80:37:29:19:a4, name 'Pav's T39', link key doesn't exist
+hcsecd[16484]: Sending Link_Key_Negative_Reply to 'ubt0hci' for remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Got PIN_Code_Request event from 'ubt0hci', remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Found matching entry, remote bdaddr 0:80:37:29:19:a4, name 'Pav's T39', PIN code exists
+hcsecd[16484]: Sending PIN_Code_Reply to 'ubt0hci' for remote bdaddr 0:80:37:29:19:a4
+....
+
+=== Network Access with PPP Profiles
+
+A Dial-Up Networking (DUN) profile can be used to configure a cellular phone as a wireless modem for connecting to a dial-up Internet access server. It can also be used to configure a computer to receive data calls from a cellular phone.
+
+Network access with a PPP profile can be used to provide LAN access for a single Bluetooth device or multiple Bluetooth devices. It can also provide PC to PC connection using PPP networking over serial cable emulation.
+
+In FreeBSD, these profiles are implemented with man:ppp[8] and the man:rfcomm_pppd[8] wrapper which converts a Bluetooth connection into something PPP can use. Before a profile can be used, a new PPP label must be created in [.filename]#/etc/ppp/ppp.conf#. Consult man:rfcomm_pppd[8] for examples.
+
+In this example, man:rfcomm_pppd[8] is used to open a connection to a remote device with a `BD_ADDR` of `00:80:37:29:19:a4` on a DUNRFCOMM channel:
+
+[source,bash]
+....
+# rfcomm_pppd -a 00:80:37:29:19:a4 -c -C dun -l rfcomm-dialup
+....
+
+The actual channel number will be obtained from the remote device using the SDP protocol. It is possible to specify the RFCOMM channel by hand, and in this case man:rfcomm_pppd[8] will not perform the SDP query. Use man:sdpcontrol[8] to find out the RFCOMM channel on the remote device.
+
+In order to provide network access with the PPPLAN service, man:sdpd[8] must be running and a new entry for LAN clients must be created in [.filename]#/etc/ppp/ppp.conf#. Consult man:rfcomm_pppd[8] for examples. Finally, start the RFCOMMPPP server on a valid RFCOMM channel number. The RFCOMMPPP server will automatically register the Bluetooth LAN service with the local SDP daemon. The example below shows how to start the RFCOMMPPP server.
+
+[source,bash]
+....
+# rfcomm_pppd -s -C 7 -l rfcomm-server
+....
+
+=== Bluetooth Protocols
+
+This section provides an overview of the various Bluetooth protocols, their function, and associated utilities.
+
+==== Logical Link Control and Adaptation Protocol (L2CAP)
+
+The Logical Link Control and Adaptation Protocol (L2CAP) provides connection-oriented and connectionless data services to upper layer protocols. L2CAP permits higher level protocols and applications to transmit and receive L2CAP data packets up to 64 kilobytes in length.
+
+L2CAP is based around the concept of _channels_. A channel is a logical connection on top of a baseband connection, where each channel is bound to a single protocol in a many-to-one fashion. Multiple channels can be bound to the same protocol, but a channel cannot be bound to multiple protocols. Each L2CAP packet received on a channel is directed to the appropriate higher level protocol. Multiple channels can share the same baseband connection.
+
+In FreeBSD, a netgraph L2CAP node is created for each Bluetooth device. This node is normally connected to the downstream Bluetooth HCI node and upstream Bluetooth socket nodes. The default name for the L2CAP node is "devicel2cap". For more details refer to man:ng_l2cap[4].
+
+A useful command is man:l2ping[8], which can be used to ping other devices. Some Bluetooth implementations might not return all of the data sent to them, so `0 bytes` in the following example is normal.
+
+[source,bash]
+....
+# l2ping -a 00:80:37:29:19:a4
+0 bytes from 0:80:37:29:19:a4 seq_no=0 time=48.633 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=1 time=37.551 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=2 time=28.324 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=3 time=46.150 ms result=0
+....
+
+The man:l2control[8] utility is used to perform various operations on L2CAP nodes. This example shows how to obtain the list of logical connections (channels) and the list of baseband connections for the local device:
+
+[source,bash]
+....
+% l2control -a 00:02:72:00:d4:1a read_channel_list
+L2CAP channels:
+Remote BD_ADDR     SCID/ DCID   PSM  IMTU/ OMTU State
+00:07:e0:00:0b:ca    66/   64     3   132/  672 OPEN
+% l2control -a 00:02:72:00:d4:1a read_connection_list
+L2CAP connections:
+Remote BD_ADDR    Handle Flags Pending State
+00:07:e0:00:0b:ca     41 O           0 OPEN
+....
+
+Another diagnostic tool is man:btsockstat[1]. It is similar to man:netstat[1], but for Bluetooth network-related data structures. The example below shows the same logical connection as man:l2control[8] above.
+
+[source,bash]
+....
+% btsockstat
+Active L2CAP sockets
+PCB      Recv-Q Send-Q Local address/PSM       Foreign address   CID   State
+c2afe900      0      0 00:02:72:00:d4:1a/3     00:07:e0:00:0b:ca 66    OPEN
+Active RFCOMM sessions
+L2PCB    PCB      Flag MTU   Out-Q DLCs State
+c2afe900 c2b53380 1    127   0     Yes  OPEN
+Active RFCOMM sockets
+PCB      Recv-Q Send-Q Local address     Foreign address   Chan DLCI State
+c2e8bc80      0    250 00:02:72:00:d4:1a 00:07:e0:00:0b:ca 3    6    OPEN
+....
+
+==== Radio Frequency Communication (RFCOMM)
+
+The RFCOMM protocol provides emulation of serial ports over the L2CAP protocol. RFCOMM is a simple transport protocol, with additional provisions for emulating the 9 circuits of RS-232 (EIATIA-232-E) serial ports. It supports up to 60 simultaneous connections (RFCOMM channels) between two Bluetooth devices.
+
+For the purposes of RFCOMM, a complete communication path involves two applications running on the communication endpoints with a communication segment between them. RFCOMM is intended to cover applications that make use of the serial ports of the devices in which they reside. The communication segment is a direct connect Bluetooth link from one device to another.
+
+RFCOMM is only concerned with the connection between the devices in the direct connect case, or between the device and a modem in the network case. RFCOMM can support other configurations, such as modules that communicate via Bluetooth wireless technology on one side and provide a wired interface on the other side.
+
+In FreeBSD, RFCOMM is implemented at the Bluetooth sockets layer.
+
+==== Service Discovery Protocol (SDP)
+
+The Service Discovery Protocol (SDP) provides the means for client applications to discover the existence of services provided by server applications as well as the attributes of those services. The attributes of a service include the type or class of service offered and the mechanism or protocol information needed to utilize the service.
+
+SDP involves communication between a SDP server and a SDP client. The server maintains a list of service records that describe the characteristics of services associated with the server. Each service record contains information about a single service. A client may retrieve information from a service record maintained by the SDP server by issuing a SDP request. If the client, or an application associated with the client, decides to use a service, it must open a separate connection to the service provider in order to utilize the service. SDP provides a mechanism for discovering services and their attributes, but it does not provide a mechanism for utilizing those services.
+
+Normally, a SDP client searches for services based on some desired characteristics of the services. However, there are times when it is desirable to discover which types of services are described by an SDP server's service records without any prior information about the services. This process of looking for any offered services is called _browsing_.
+
+The Bluetooth SDP server, man:sdpd[8], and command line client, man:sdpcontrol[8], are included in the standard FreeBSD installation. The following example shows how to perform a SDP browse query.
+
+[source,bash]
+....
+% sdpcontrol -a 00:01:03:fc:6e:ec browse
+Record Handle: 00000000
+Service Class ID List:
+        Service Discovery Server (0x1000)
+Protocol Descriptor List:
+        L2CAP (0x0100)
+                Protocol specific parameter #1: u/int/uuid16 1
+                Protocol specific parameter #2: u/int/uuid16 1
+
+Record Handle: 0x00000001
+Service Class ID List:
+        Browse Group Descriptor (0x1001)
+
+Record Handle: 0x00000002
+Service Class ID List:
+        LAN Access Using PPP (0x1102)
+Protocol Descriptor List:
+        L2CAP (0x0100)
+        RFCOMM (0x0003)
+                Protocol specific parameter #1: u/int8/bool 1
+Bluetooth Profile Descriptor List:
+        LAN Access Using PPP (0x1102) ver. 1.0
+....
+
+Note that each service has a list of attributes, such as the RFCOMM channel. Depending on the service, the user might need to make note of some of the attributes. Some Bluetooth implementations do not support service browsing and may return an empty list. In this case, it is possible to search for the specific service. The example below shows how to search for the OBEX Object Push (OPUSH) service:
+
+[source,bash]
+....
+% sdpcontrol -a 00:01:03:fc:6e:ec search OPUSH
+....
+
+Offering services on FreeBSD to Bluetooth clients is done with the man:sdpd[8] server. The following line can be added to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+sdpd_enable="YES"
+....
+
+Then the man:sdpd[8] daemon can be started with:
+
+[source,bash]
+....
+# service sdpd start
+....
+
+The local server application that wants to provide a Bluetooth service to remote clients will register the service with the local SDP daemon. An example of such an application is man:rfcomm_pppd[8]. Once started, it will register the Bluetooth LAN service with the local SDP daemon.
+
+The list of services registered with the local SDP server can be obtained by issuing a SDP browse query via the local control channel:
+
+[source,bash]
+....
+# sdpcontrol -l browse
+....
+
+==== OBEX Object Push (OPUSH)
+
+Object Exchange (OBEX) is a widely used protocol for simple file transfers between mobile devices. Its main use is in infrared communication, where it is used for generic file transfers between notebooks or PDAs, and for sending business cards or calendar entries between cellular phones and other devices with Personal Information Manager (PIM) applications.
+
+The OBEX server and client are implemented by obexapp, which can be installed using the package:comms/obexapp[] package or port.
+
+The OBEX client is used to push and/or pull objects from the OBEX server. An example object is a business card or an appointment. The OBEX client can obtain the RFCOMM channel number from the remote device via SDP. This can be done by specifying the service name instead of the RFCOMM channel number. Supported service names are: `IrMC`, `FTRN`, and `OPUSH`. It is also possible to specify the RFCOMM channel as a number. Below is an example of an OBEX session where the device information object is pulled from the cellular phone, and a new object, the business card, is pushed into the phone's directory.
+
+[source,bash]
+....
+% obexapp -a 00:80:37:29:19:a4 -C IrMC
+obex> get telecom/devinfo.txt devinfo-t39.txt
+Success, response: OK, Success (0x20)
+obex> put new.vcf
+Success, response: OK, Success (0x20)
+obex> di
+Success, response: OK, Success (0x20)
+....
+
+In order to provide the OPUSH service, man:sdpd[8] must be running and a root folder, where all incoming objects will be stored, must be created. The default path to the root folder is [.filename]#/var/spool/obex#. Finally, start the OBEX server on a valid RFCOMM channel number. The OBEX server will automatically register the OPUSH service with the local SDP daemon. The example below shows how to start the OBEX server.
+
+[source,bash]
+....
+# obexapp -s -C 10
+....
+
+==== Serial Port Profile (SPP)
+
+The Serial Port Profile (SPP) allows Bluetooth devices to perform serial cable emulation. This profile allows legacy applications to use Bluetooth as a cable replacement, through a virtual serial port abstraction.
+
+In FreeBSD, man:rfcomm_sppd[1] implements SPP and a pseudo tty is used as a virtual serial port abstraction. The example below shows how to connect to a remote device's serial port service. A RFCOMM channel does not have to be specified as man:rfcomm_sppd[1] can obtain it from the remote device via SDP. To override this, specify a RFCOMM channel on the command line.
+
+[source,bash]
+....
+# rfcomm_sppd -a 00:07:E0:00:0B:CA -t
+rfcomm_sppd[94692]: Starting on /dev/pts/6...
+/dev/pts/6
+....
+
+Once connected, the pseudo tty can be used as serial port:
+
+[source,bash]
+....
+# cu -l /dev/pts/6
+....
+
+The pseudo tty is printed on stdout and can be read by wrapper scripts:
+
+[.programlisting]
+....
+PTS=`rfcomm_sppd -a 00:07:E0:00:0B:CA -t`
+cu -l $PTS
+....
+
+=== Troubleshooting
+
+By default, when FreeBSD is accepting a new connection, it tries to perform a role switch and become master. Some older Bluetooth devices which do not support role switching will not be able to connect. Since role switching is performed when a new connection is being established, it is not possible to ask the remote device if it supports role switching. However, there is a HCI option to disable role switching on the local side:
+
+[source,bash]
+....
+# hccontrol -n ubt0hci write_node_role_switch 0
+....
+
+To display Bluetooth packets, use the third-party package hcidump, which can be installed using the package:comms/hcidump[] package or port. This utility is similar to man:tcpdump[1] and can be used to display the contents of Bluetooth packets on the terminal and to dump the Bluetooth packets to a file.
+
+[[network-bridging]]
+== Bridging
+
+It is sometimes useful to divide a network, such as an Ethernet segment, into network segments without having to create IP subnets and use a router to connect the segments together. A device that connects two networks together in this fashion is called a "bridge".
+
+A bridge works by learning the MAC addresses of the devices on each of its network interfaces. It forwards traffic between networks only when the source and destination MAC addresses are on different networks. In many respects, a bridge is like an Ethernet switch with very few ports. A FreeBSD system with multiple network interfaces can be configured to act as a bridge.
+
+Bridging can be useful in the following situations:
+
+Connecting Networks::
+The basic operation of a bridge is to join two or more network segments. There are many reasons to use a host-based bridge instead of networking equipment, such as cabling constraints or firewalling. A bridge can also connect a wireless interface running in hostap mode to a wired network and act as an access point.
+
+Filtering/Traffic Shaping Firewall::
+A bridge can be used when firewall functionality is needed without routing or Network Address Translation (NAT).
++
+An example is a small company that is connected via DSL or ISDN to an ISP. There are thirteen public IP addresses from the ISP and ten computers on the network. In this situation, using a router-based firewall is difficult because of subnetting issues. A bridge-based firewall can be configured without any IP addressing issues.
+
+Network Tap::
+A bridge can join two network segments in order to inspect all Ethernet frames that pass between them using man:bpf[4] and man:tcpdump[1] on the bridge interface or by sending a copy of all frames out an additional interface known as a span port.
+
+Layer 2 VPN::
+Two Ethernet networks can be joined across an IP link by bridging the networks to an EtherIP tunnel or a man:tap[4] based solution such as OpenVPN.
+
+Layer 2 Redundancy::
+A network can be connected together with multiple links and use the Spanning Tree Protocol (STP) to block redundant paths.
+
+This section describes how to configure a FreeBSD system as a bridge using man:if_bridge[4]. A netgraph bridging driver is also available, and is described in man:ng_bridge[4].
+
+[NOTE]
+====
+Packet filtering can be used with any firewall package that hooks into the man:pfil[9] framework. The bridge can be used as a traffic shaper with man:altq[4] or man:dummynet[4].
+====
+
+=== Enabling the Bridge
+
+In FreeBSD, man:if_bridge[4] is a kernel module which is automatically loaded by man:ifconfig[8] when creating a bridge interface. It is also possible to compile bridge support into a custom kernel by adding `device if_bridge` to the custom kernel configuration file.
+
+The bridge is created using interface cloning. To create the bridge interface:
+
+[source,bash]
+....
+# ifconfig bridge create
+bridge0
+# ifconfig bridge0
+bridge0: flags=8802<BROADCAST,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        ether 96:3d:4b:f1:79:7a
+        id 00:00:00:00:00:00 priority 32768 hellotime 2 fwddelay 15
+        maxage 20 holdcnt 6 proto rstp maxaddr 100 timeout 1200
+        root id 00:00:00:00:00:00 priority 0 ifcost 0 port 0
+....
+
+When a bridge interface is created, it is automatically assigned a randomly generated Ethernet address. The `maxaddr` and `timeout` parameters control how many MAC addresses the bridge will keep in its forwarding table and how many seconds before each entry is removed after it is last seen. The other parameters control how STP operates.
+
+Next, specify which network interfaces to add as members of the bridge. For the bridge to forward packets, all member interfaces and the bridge need to be up:
+
+[source,bash]
+....
+# ifconfig bridge0 addm fxp0 addm fxp1 up
+# ifconfig fxp0 up
+# ifconfig fxp1 up
+....
+
+The bridge can now forward Ethernet frames between [.filename]#fxp0# and [.filename]#fxp1#. Add the following lines to [.filename]#/etc/rc.conf# so the bridge is created at startup:
+
+[.programlisting]
+....
+cloned_interfaces="bridge0"
+ifconfig_bridge0="addm fxp0 addm fxp1 up"
+ifconfig_fxp0="up"
+ifconfig_fxp1="up"
+....
+
+If the bridge host needs an IP address, set it on the bridge interface, not on the member interfaces. The address can be set statically or via DHCP. This example sets a static IP address:
+
+[source,bash]
+....
+# ifconfig bridge0 inet 192.168.0.1/24
+....
+
+It is also possible to assign an IPv6 address to a bridge interface. To make the changes permanent, add the addressing information to [.filename]#/etc/rc.conf#.
+
+[NOTE]
+====
+When packet filtering is enabled, bridged packets will pass through the filter inbound on the originating interface on the bridge interface, and outbound on the appropriate interfaces. Either stage can be disabled. When direction of the packet flow is important, it is best to firewall on the member interfaces rather than the bridge itself.
+
+The bridge has several configurable settings for passing non-IP and IP packets, and layer2 firewalling with man:ipfw[8]. See man:if_bridge[4] for more information.
+====
+
+=== Enabling Spanning Tree
+
+For an Ethernet network to function properly, only one active path can exist between two devices. The STP protocol detects loops and puts redundant links into a blocked state. Should one of the active links fail, STP calculates a different tree and enables one of the blocked paths to restore connectivity to all points in the network.
+
+The Rapid Spanning Tree Protocol (RSTP or 802.1w) provides backwards compatibility with legacy STP. RSTP provides faster convergence and exchanges information with neighboring switches to quickly transition to forwarding mode without creating loops. FreeBSD supports RSTP and STP as operating modes, with RSTP being the default mode.
+
+STP can be enabled on member interfaces using man:ifconfig[8]. For a bridge with [.filename]#fxp0# and [.filename]#fxp1# as the current interfaces, enable STP with:
+
+[source,bash]
+....
+# ifconfig bridge0 stp fxp0 stp fxp1
+bridge0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        ether d6:cf:d5:a0:94:6d
+        id 00:01:02:4b:d4:50 priority 32768 hellotime 2 fwddelay 15
+        maxage 20 holdcnt 6 proto rstp maxaddr 100 timeout 1200
+        root id 00:01:02:4b:d4:50 priority 32768 ifcost 0 port 0
+        member: fxp0 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 3 priority 128 path cost 200000 proto rstp
+                role designated state forwarding
+        member: fxp1 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 4 priority 128 path cost 200000 proto rstp
+                role designated state forwarding
+....
+
+This bridge has a spanning tree ID of `00:01:02:4b:d4:50` and a priority of `32768`. As the `root id` is the same, it indicates that this is the root bridge for the tree.
+
+Another bridge on the network also has STP enabled:
+
+[source,bash]
+....
+bridge0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        ether 96:3d:4b:f1:79:7a
+        id 00:13:d4:9a:06:7a priority 32768 hellotime 2 fwddelay 15
+        maxage 20 holdcnt 6 proto rstp maxaddr 100 timeout 1200
+        root id 00:01:02:4b:d4:50 priority 32768 ifcost 400000 port 4
+        member: fxp0 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 4 priority 128 path cost 200000 proto rstp
+                role root state forwarding
+        member: fxp1 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 5 priority 128 path cost 200000 proto rstp
+                role designated state forwarding
+....
+
+The line `root id 00:01:02:4b:d4:50 priority 32768 ifcost 400000 port 4` shows that the root bridge is `00:01:02:4b:d4:50` and has a path cost of `400000` from this bridge. The path to the root bridge is via `port 4` which is [.filename]#fxp0#.
+
+=== Bridge Interface Parameters
+
+Several `ifconfig` parameters are unique to bridge interfaces. This section summarizes some common uses for these parameters. The complete list of available parameters is described in man:ifconfig[8].
+
+private::
+A private interface does not forward any traffic to any other port that is also designated as a private interface. The traffic is blocked unconditionally so no Ethernet frames will be forwarded, including ARP packets. If traffic needs to be selectively blocked, a firewall should be used instead.
+
+span::
+A span port transmits a copy of every Ethernet frame received by the bridge. The number of span ports configured on a bridge is unlimited, but if an interface is designated as a span port, it cannot also be used as a regular bridge port. This is most useful for snooping a bridged network passively on another host connected to one of the span ports of the bridge. For example, to send a copy of all frames out the interface named [.filename]#fxp4#:
++
+[source,bash]
+....
+# ifconfig bridge0 span fxp4
+....
+
+sticky::
+If a bridge member interface is marked as sticky, dynamically learned address entries are treated as static entries in the forwarding cache. Sticky entries are never aged out of the cache or replaced, even if the address is seen on a different interface. This gives the benefit of static address entries without the need to pre-populate the forwarding table. Clients learned on a particular segment of the bridge cannot roam to another segment.
++
+An example of using sticky addresses is to combine the bridge with VLANs in order to isolate customer networks without wasting IP address space. Consider that `CustomerA` is on `vlan100`, `CustomerB` is on `vlan101`, and the bridge has the address `192.168.0.1`:
++
+[source,bash]
+....
+# ifconfig bridge0 addm vlan100 sticky vlan100 addm vlan101 sticky vlan101
+# ifconfig bridge0 inet 192.168.0.1/24
+....
++
+In this example, both clients see `192.168.0.1` as their default gateway. Since the bridge cache is sticky, one host cannot spoof the MAC address of the other customer in order to intercept their traffic.
++
+Any communication between the VLANs can be blocked using a firewall or, as seen in this example, private interfaces:
++
+[source,bash]
+....
+# ifconfig bridge0 private vlan100 private vlan101
+....
++
+The customers are completely isolated from each other and the full `/24` address range can be allocated without subnetting.
++
+The number of unique source MAC addresses behind an interface can be limited. Once the limit is reached, packets with unknown source addresses are dropped until an existing host cache entry expires or is removed.
++
+The following example sets the maximum number of Ethernet devices for `CustomerA` on `vlan100` to 10:
++
+[source,bash]
+....
+# ifconfig bridge0 ifmaxaddr vlan100 10
+....
+
+Bridge interfaces also support monitor mode, where the packets are discarded after man:bpf[4] processing and are not processed or forwarded further. This can be used to multiplex the input of two or more interfaces into a single man:bpf[4] stream. This is useful for reconstructing the traffic for network taps that transmit the RX/TX signals out through two separate interfaces. For example, to read the input from four network interfaces as one stream:
+
+[source,bash]
+....
+# ifconfig bridge0 addm fxp0 addm fxp1 addm fxp2 addm fxp3 monitor up
+# tcpdump -i bridge0
+....
+
+=== SNMP Monitoring
+
+The bridge interface and STP parameters can be monitored via man:bsnmpd[1] which is included in the FreeBSD base system. The exported bridge MIBs conform to IETF standards so any SNMP client or monitoring package can be used to retrieve the data.
+
+To enable monitoring on the bridge, uncomment this line in [.filename]#/etc/snmpd.config# by removing the beginning `#` symbol:
+
+[.programlisting]
+....
+begemotSnmpdModulePath."bridge" = "/usr/lib/snmp_bridge.so"
+....
+
+Other configuration settings, such as community names and access lists, may need to be modified in this file. See man:bsnmpd[1] and man:snmp_bridge[3] for more information. Once these edits are saved, add this line to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+bsnmpd_enable="YES"
+....
+
+Then, start man:bsnmpd[1]:
+
+[source,bash]
+....
+# service bsnmpd start
+....
+
+The following examples use the Net-SNMP software (package:net-mgmt/net-snmp[]) to query a bridge from a client system. The package:net-mgmt/bsnmptools[] port can also be used. From the SNMP client which is running Net-SNMP, add the following lines to [.filename]#$HOME/.snmp/snmp.conf# in order to import the bridge MIB definitions:
+
+[.programlisting]
+....
+mibdirs +/usr/shared/snmp/mibs
+mibs +BRIDGE-MIB:RSTP-MIB:BEGEMOT-MIB:BEGEMOT-BRIDGE-MIB
+....
+
+To monitor a single bridge using the IETF BRIDGE-MIB (RFC4188):
+
+[source,bash]
+....
+% snmpwalk -v 2c -c public bridge1.example.com mib-2.dot1dBridge
+BRIDGE-MIB::dot1dBaseBridgeAddress.0 = STRING: 66:fb:9b:6e:5c:44
+BRIDGE-MIB::dot1dBaseNumPorts.0 = INTEGER: 1 ports
+BRIDGE-MIB::dot1dStpTimeSinceTopologyChange.0 = Timeticks: (189959) 0:31:39.59 centi-seconds
+BRIDGE-MIB::dot1dStpTopChanges.0 = Counter32: 2
+BRIDGE-MIB::dot1dStpDesignatedRoot.0 = Hex-STRING: 80 00 00 01 02 4B D4 50
+...
+BRIDGE-MIB::dot1dStpPortState.3 = INTEGER: forwarding(5)
+BRIDGE-MIB::dot1dStpPortEnable.3 = INTEGER: enabled(1)
+BRIDGE-MIB::dot1dStpPortPathCost.3 = INTEGER: 200000
+BRIDGE-MIB::dot1dStpPortDesignatedRoot.3 = Hex-STRING: 80 00 00 01 02 4B D4 50
+BRIDGE-MIB::dot1dStpPortDesignatedCost.3 = INTEGER: 0
+BRIDGE-MIB::dot1dStpPortDesignatedBridge.3 = Hex-STRING: 80 00 00 01 02 4B D4 50
+BRIDGE-MIB::dot1dStpPortDesignatedPort.3 = Hex-STRING: 03 80
+BRIDGE-MIB::dot1dStpPortForwardTransitions.3 = Counter32: 1
+RSTP-MIB::dot1dStpVersion.0 = INTEGER: rstp(2)
+....
+
+The `dot1dStpTopChanges.0` value is two, indicating that the STP bridge topology has changed twice. A topology change means that one or more links in the network have changed or failed and a new tree has been calculated. The `dot1dStpTimeSinceTopologyChange.0` value will show when this happened.
+
+To monitor multiple bridge interfaces, the private BEGEMOT-BRIDGE-MIB can be used:
+
+[source,bash]
+....
+% snmpwalk -v 2c -c public bridge1.example.com
+enterprises.fokus.begemot.begemotBridge
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseName."bridge0" = STRING: bridge0
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseName."bridge2" = STRING: bridge2
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseAddress."bridge0" = STRING: e:ce:3b:5a:9e:13
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseAddress."bridge2" = STRING: 12:5e:4d:74:d:fc
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseNumPorts."bridge0" = INTEGER: 1
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseNumPorts."bridge2" = INTEGER: 1
+...
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTimeSinceTopologyChange."bridge0" = Timeticks: (116927) 0:19:29.27 centi-seconds
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTimeSinceTopologyChange."bridge2" = Timeticks: (82773) 0:13:47.73 centi-seconds
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTopChanges."bridge0" = Counter32: 1
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTopChanges."bridge2" = Counter32: 1
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpDesignatedRoot."bridge0" = Hex-STRING: 80 00 00 40 95 30 5E 31
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpDesignatedRoot."bridge2" = Hex-STRING: 80 00 00 50 8B B8 C6 A9
+....
+
+To change the bridge interface being monitored via the `mib-2.dot1dBridge` subtree:
+
+[source,bash]
+....
+% snmpset -v 2c -c private bridge1.example.com
+BEGEMOT-BRIDGE-MIB::begemotBridgeDefaultBridgeIf.0 s bridge2
+....
+
+[[network-aggregation]]
+== Link Aggregation and Failover
+
+FreeBSD provides the man:lagg[4] interface which can be used to aggregate multiple network interfaces into one virtual interface in order to provide failover and link aggregation. Failover allows traffic to continue to flow as long as at least one aggregated network interface has an established link. Link aggregation works best on switches which support LACP, as this protocol distributes traffic bi-directionally while responding to the failure of individual links.
+
+The aggregation protocols supported by the lagg interface determine which ports are used for outgoing traffic and whether or not a specific port accepts incoming traffic. The following protocols are supported by man:lagg[4]:
+
+failover::
+This mode sends and receives traffic only through the master port. If the master port becomes unavailable, the next active port is used. The first interface added to the virtual interface is the master port and all subsequently added interfaces are used as failover devices. If failover to a non-master port occurs, the original port becomes master once it becomes available again.
+
+fec / loadbalance::
+Cisco(R) Fast EtherChannel(R) (FEC) is found on older Cisco(R) switches. It provides a static setup and does not negotiate aggregation with the peer or exchange frames to monitor the link. If the switch supports LACP, that should be used instead.
+
+lacp::
+The IEEE(R) 802.3ad Link Aggregation Control Protocol (LACP) negotiates a set of aggregable links with the peer into one or more Link Aggregated Groups (LAGs). Each LAG is composed of ports of the same speed, set to full-duplex operation, and traffic is balanced across the ports in the LAG with the greatest total speed. Typically, there is only one LAG which contains all the ports. In the event of changes in physical connectivity, LACP will quickly converge to a new configuration.
++
+LACP balances outgoing traffic across the active ports based on hashed protocol header information and accepts incoming traffic from any active port. The hash includes the Ethernet source and destination address and, if available, the VLAN tag, and the IPv4 or IPv6 source and destination address.
+
+roundrobin::
+This mode distributes outgoing traffic using a round-robin scheduler through all active ports and accepts incoming traffic from any active port. Since this mode violates Ethernet frame ordering, it should be used with caution.
+
+=== Configuration Examples
+
+This section demonstrates how to configure a Cisco(R) switch and a FreeBSD system for LACP load balancing. It then shows how to configure two Ethernet interfaces in failover mode as well as how to configure failover mode between an Ethernet and a wireless interface.
+
+[[networking-lacp-aggregation-cisco]]
+.LACP Aggregation with a Cisco(R) Switch
+[example]
+====
+This example connects two man:fxp[4] Ethernet interfaces on a FreeBSD machine to the first two Ethernet ports on a Cisco(R) switch as a single load balanced and fault tolerant link. More interfaces can be added to increase throughput and fault tolerance. Replace the names of the Cisco(R) ports, Ethernet devices, channel group number, and IP address shown in the example to match the local configuration.
+
+Frame ordering is mandatory on Ethernet links and any traffic between two stations always flows over the same physical link, limiting the maximum speed to that of one interface. The transmit algorithm attempts to use as much information as it can to distinguish different traffic flows and balance the flows across the available interfaces.
+
+On the Cisco(R) switch, add the _FastEthernet0/1_ and _FastEthernet0/2_ interfaces to channel group _1_:
+
+[source,bash]
+....
+interface FastEthernet0/1
+ channel-group 1 mode active
+ channel-protocol lacp
+!
+interface FastEthernet0/2
+ channel-group 1 mode active
+ channel-protocol lacp
+....
+
+On the FreeBSD system, create the man:lagg[4] interface using the physical interfaces _fxp0_ and _fxp1_ and bring the interfaces up with an IP address of _10.0.0.3/24_:
+
+[source,bash]
+....
+# ifconfig fxp0 up
+# ifconfig fxp1 up
+# ifconfig lagg0 create
+# ifconfig lagg0 up laggproto lacp laggport fxp0 laggport fxp1 10.0.0.3/24
+....
+
+Next, verify the status of the virtual interface:
+
+[source,bash]
+....
+# ifconfig lagg0
+lagg0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=8<VLAN_MTU>
+        ether 00:05:5d:71:8d:b8
+        inet 10.0.0.3 netmask 0xffffff00 broadcast 10.0.0.255
+        media: Ethernet autoselect
+        status: active
+        laggproto lacp
+        laggport: fxp1 flags=1c<ACTIVE,COLLECTING,DISTRIBUTING>
+        laggport: fxp0 flags=1c<ACTIVE,COLLECTING,DISTRIBUTING>
+....
+
+Ports marked as `ACTIVE` are part of the LAG that has been negotiated with the remote switch. Traffic will be transmitted and received through these active ports. Add `-v` to the above command to view the LAG identifiers.
+
+To see the port status on the Cisco(R) switch:
+
+[source,bash]
+....
+switch# show lacp neighbor
+Flags:  S - Device is requesting Slow LACPDUs
+        F - Device is requesting Fast LACPDUs
+        A - Device is in Active mode       P - Device is in Passive mode
+
+Channel group 1 neighbors
+
+Partner's information:
+
+                  LACP port                        Oper    Port     Port
+Port      Flags   Priority  Dev ID         Age     Key     Number   State
+Fa0/1     SA      32768     0005.5d71.8db8  29s    0x146   0x3      0x3D
+Fa0/2     SA      32768     0005.5d71.8db8  29s    0x146   0x4      0x3D
+....
+
+For more detail, type `show lacp neighbor detail`.
+
+To retain this configuration across reboots, add the following entries to [.filename]#/etc/rc.conf# on the FreeBSD system:
+
+[.programlisting]
+....
+ifconfig_fxp0="up"
+ifconfig_fxp1="up"
+cloned_interfaces="lagg0"
+ifconfig_lagg0="laggproto lacp laggport fxp0 laggport fxp1 10.0.0.3/24"
+....
+
+====
+
+[[networking-lagg-failover]]
+.Failover Mode
+[example]
+====
+
+Failover mode can be used to switch over to a secondary interface if the link is lost on the master interface. To configure failover, make sure that the underlying physical interfaces are up, then create the man:lagg[4] interface. In this example, _fxp0_ is the master interface, _fxp1_ is the secondary interface, and the virtual interface is assigned an IP address of _10.0.0.15/24_:
+
+[source,bash]
+....
+# ifconfig fxp0 up
+# ifconfig fxp1 up
+# ifconfig lagg0 create
+# ifconfig lagg0 up laggproto failover laggport fxp0 laggport fxp1 10.0.0.15/24
+....
+
+The virtual interface should look something like this:
+
+[source,bash]
+....
+# ifconfig lagg0
+lagg0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=8<VLAN_MTU>
+        ether 00:05:5d:71:8d:b8
+        inet 10.0.0.15 netmask 0xffffff00 broadcast 10.0.0.255
+        media: Ethernet autoselect
+        status: active
+        laggproto failover
+        laggport: fxp1 flags=0<>
+        laggport: fxp0 flags=5<MASTER,ACTIVE>
+....
+
+Traffic will be transmitted and received on _fxp0_. If the link is lost on _fxp0_, _fxp1_ will become the active link. If the link is restored on the master interface, it will once again become the active link.
+
+To retain this configuration across reboots, add the following entries to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ifconfig_fxp0="up"
+ifconfig_fxp1="up"
+cloned_interfaces="lagg0"
+ifconfig_lagg0="laggproto failover laggport fxp0 laggport fxp1 10.0.0.15/24"
+....
+
+====
+
+[[networking-lagg-wired-and-wireless]]
+.Failover Mode Between Ethernet and Wireless Interfaces
+[example]
+====
+
+For laptop users, it is usually desirable to configure the wireless device as a secondary which is only used when the Ethernet connection is not available. With man:lagg[4], it is possible to configure a failover which prefers the Ethernet connection for both performance and security reasons, while maintaining the ability to transfer data over the wireless connection.
+
+This is achieved by overriding the Ethernet interface's MAC address with that of the wireless interface.
+
+[NOTE]
+****
+In theory, either the Ethernet or wireless MAC address can be changed to match the other. However, some popular wireless interfaces lack support for overriding the MAC address. We therefore recommend overriding the Ethernet MAC address for this purpose.
+****
+
+[NOTE]
+****
+If the driver for the wireless interface is not loaded in the `GENERIC` or custom kernel, and the computer is running FreeBSD {rel121-current}, load the corresponding [.filename]#.ko# in [.filename]#/boot/loader.conf# by adding `*driver_load="YES"*` to that file and rebooting. Another, better way is to load the driver in [.filename]#/etc/rc.conf# by adding it to `kld_list` (see man:rc.conf[5] for details) in that file and rebooting. This is needed because otherwise the driver is not loaded yet at the time the man:lagg[4] interface is set up.
+****
+
+In this example, the Ethernet interface, _re0_, is the master and the wireless interface, _wlan0_, is the failover. The _wlan0_ interface was created from the _ath0_ physical wireless interface, and the Ethernet interface will be configured with the MAC address of the wireless interface. First, determine the MAC address of the wireless interface:
+
+[source,bash]
+....
+# ifconfig wlan0
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	ether b8:ee:65:5b:32:59
+	groups: wlan
+	ssid Bbox-A3BD2403 channel 6 (2437 MHz 11g ht/20) bssid 00:37:b7:56:4b:60
+	regdomain ETSI country FR indoor ecm authmode WPA2/802.11i privacy ON
+	deftxkey UNDEF AES-CCM 2:128-bit txpower 30 bmiss 7 scanvalid 60
+	protmode CTS ampdulimit 64k ampdudensity 8 shortgi -stbctx stbcrx
+	-ldpc wme burst roaming MANUAL
+	media: IEEE 802.11 Wireless Ethernet MCS mode 11ng
+	status: associated
+	nd6 options=29<PERFORMNUD,IFDISABLED,AUTO_LINKLOCAL>
+....
+
+Replace _wlan0_ to match the system's wireless interface name. The `ether` line will contain the MAC address of the specified interface. Now, change the MAC address of the Ethernet interface:
+
+[source,bash]
+....
+# ifconfig re0 ether b8:ee:65:5b:32:59
+....
+
+Bring the wireless interface up (replacing _FR_ with your own 2-letter country code), but do not set an IP address:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0 country FR ssid my_router up
+....
+
+Make sure the _re0_ interface is up, then create the man:lagg[4] interface with _re0_ as master with failover to _wlan0_:
+
+[source,bash]
+....
+# ifconfig re0 up
+# ifconfig lagg0 create
+# ifconfig lagg0 up laggproto failover laggport re0 laggport wlan0
+....
+
+The virtual interface should look something like this:
+
+[source,bash]
+....
+# ifconfig lagg0
+lagg0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=8<VLAN_MTU>
+        ether b8:ee:65:5b:32:59
+        laggproto failover lagghash l2,l3,l4
+        laggport: re0 flags=5<MASTER,ACTIVE>
+        laggport: wlan0 flags=0<>
+        groups: lagg
+        media: Ethernet autoselect
+        status: active
+....
+
+Then, start the DHCP client to obtain an IP address:
+
+[source,bash]
+....
+# dhclient lagg0
+....
+
+To retain this configuration across reboots, add the following entries to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ifconfig_re0="ether b8:ee:65:5b:32:59"
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA"
+create_args_wlan0="country FR"
+cloned_interfaces="lagg0"
+ifconfig_lagg0="up laggproto failover laggport re0 laggport wlan0 DHCP"
+....
+
+====
+
+[[network-diskless]]
+== Diskless Operation with PXE
+
+The Intel(R) Preboot eXecution Environment (PXE) allows an operating system to boot over the network. For example, a FreeBSD system can boot over the network and operate without a local disk, using file systems mounted from an NFS server. PXE support is usually available in the BIOS. To use PXE when the machine starts, select the `Boot from network` option in the BIOS setup or type a function key during system initialization.
+
+In order to provide the files needed for an operating system to boot over the network, a PXE setup also requires properly configured DHCP, TFTP, and NFS servers, where:
+
+* Initial parameters, such as an IP address, executable boot filename and location, server name, and root path are obtained from the DHCP server.
+* The operating system loader file is booted using TFTP.
+* The file systems are loaded using NFS.
+
+When a computer PXE boots, it receives information over DHCP about where to obtain the initial boot loader file. After the host computer receives this information, it downloads the boot loader via TFTP and then executes the boot loader. In FreeBSD, the boot loader file is [.filename]#/boot/pxeboot#. After [.filename]#/boot/pxeboot# executes, the FreeBSD kernel is loaded and the rest of the FreeBSD bootup sequence proceeds, as described in crossref:boot[boot,The FreeBSD Booting Process].
+
+This section describes how to configure these services on a FreeBSD system so that other systems can PXE boot into FreeBSD. Refer to man:diskless[8] for more information.
+
+[CAUTION]
+====
+
+As described, the system providing these services is insecure. It should live in a protected area of a network and be untrusted by other hosts.
+====
+
+[[network-pxe-nfs]]
+=== Setting Up the PXE Environment
+
+The steps shown in this section configure the built-in NFS and TFTP servers. The next section demonstrates how to install and configure the DHCP server. In this example, the directory which will contain the files used by PXE users is [.filename]#/b/tftpboot/FreeBSD/install#. It is important that this directory exists and that the same directory name is set in both [.filename]#/etc/inetd.conf# and [.filename]#/usr/local/etc/dhcpd.conf#.
+
+[.procedure]
+. Create the root directory which will contain a FreeBSD installation to be NFS mounted:
++
+[source,bash]
+....
+# export NFSROOTDIR=/b/tftpboot/FreeBSD/install
+# mkdir -p ${NFSROOTDIR}
+....
+
+. Enable the NFS server by adding this line to [.filename]#/etc/rc.conf#:
++
+[.programlisting]
+....
+nfs_server_enable="YES"
+....
+
+. Export the diskless root directory via NFS by adding the following to [.filename]#/etc/exports#:
++
+[.programlisting]
+....
+/b -ro -alldirs -maproot=root
+....
+
+. Start the NFS server:
++
+[source,bash]
+....
+# service nfsd start
+....
+
+. Enable man:inetd[8] by adding the following line to [.filename]#/etc/rc.conf#:
++
+[.programlisting]
+....
+inetd_enable="YES"
+....
+
+. Uncomment the following line in [.filename]#/etc/inetd.conf# by making sure it does not start with a `#` symbol:
++
+[.programlisting]
+....
+tftp dgram udp wait root /usr/libexec/tftpd tftpd -l -s /b/tftpboot
+....
++
+[NOTE]
+====
+Some PXE versions require the TCP version of TFTP. In this case, uncomment the second `tftp` line which contains `stream tcp`.
+====
+
+. Start man:inetd[8]:
++
+[source,bash]
+....
+# service inetd start
+....
+
+. Install the base system into [.filename]#${NFSROOTDIR}#, either by decompressing the official archives or by rebuilding the FreeBSD kernel and userland (refer to crossref:cutting-edge[makeworld,“Updating FreeBSD from Source”] for more detailed instructions, but do not forget to add `DESTDIR=_${NFSROOTDIR}_` when running the `make installkernel` and `make installworld` commands.
+. Test that the TFTP server works and can download the boot loader which will be obtained via PXE:
++
+[source,bash]
+....
+# tftp localhost
+tftp> get FreeBSD/install/boot/pxeboot
+Received 264951 bytes in 0.1 seconds
+....
+
+. Edit [.filename]#${NFSROOTDIR}/etc/fstab# and create an entry to mount the root file system over NFS:
++
+[.programlisting]
+....
+# Device                                         Mountpoint    FSType   Options  Dump Pass
+myhost.example.com:/b/tftpboot/FreeBSD/install       /         nfs      ro        0    0
+....
++ 
+Replace _myhost.example.com_ with the hostname or IP address of the NFS server. In this example, the root file system is mounted read-only in order to prevent NFS clients from potentially deleting the contents of the root file system.
+. Set the root password in the PXE environment for client machines which are PXE booting :
++
+[source,bash]
+....
+# chroot ${NFSROOTDIR}
+# passwd
+....
+
+. If needed, enable man:ssh[1] root logins for client machines which are PXE booting by editing [.filename]#${NFSROOTDIR}/etc/ssh/sshd_config# and enabling `PermitRootLogin`. This option is documented in man:sshd_config[5].
+. Perform any other needed customizations of the PXE environment in [.filename]#${NFSROOTDIR}#. These customizations could include things like installing packages or editing the password file with man:vipw[8].
+
+When booting from an NFS root volume, [.filename]#/etc/rc# detects the NFS boot and runs [.filename]#/etc/rc.initdiskless#. In this case, [.filename]#/etc# and [.filename]#/var# need to be memory backed file systems so that these directories are writable but the NFS root directory is read-only:
+
+[source,bash]
+....
+# chroot ${NFSROOTDIR}
+# mkdir -p conf/base
+# tar -c -v -f conf/base/etc.cpio.gz --format cpio --gzip etc
+# tar -c -v -f conf/base/var.cpio.gz --format cpio --gzip var
+....
+
+When the system boots, memory file systems for [.filename]#/etc# and [.filename]#/var# will be created and mounted and the contents of the [.filename]#cpio.gz# files will be copied into them. By default, these file systems have a maximum capacity of 5 megabytes. If your archives do not fit, which is usually the case for [.filename]#/var# when binary packages have been installed, request a larger size by putting the number of 512 byte sectors needed (e.g., 5 megabytes is 10240 sectors) in [.filename]#${NFSROOTDIR}/conf/base/etc/md_size# and [.filename]#${NFSROOTDIR}/conf/base/var/md_size# files for [.filename]#/etc# and [.filename]#/var# file systems respectively.
+
+[[network-pxe-setting-up-dhcp]]
+=== Configuring the DHCP Server
+
+The DHCP server does not need to be the same machine as the TFTP and NFS server, but it needs to be accessible in the network.
+
+DHCP is not part of the FreeBSD base system but can be installed using the package:net/isc-dhcp43-server[] port or package.
+
+Once installed, edit the configuration file, [.filename]#/usr/local/etc/dhcpd.conf#. Configure the `next-server`, `filename`, and `root-path` settings as seen in this example:
+
+[.programlisting]
+....
+subnet 192.168.0.0 netmask 255.255.255.0 {
+   range 192.168.0.2 192.168.0.3 ;
+   option subnet-mask 255.255.255.0 ;
+   option routers 192.168.0.1 ;
+   option broadcast-address 192.168.0.255 ;
+   option domain-name-servers 192.168.35.35, 192.168.35.36 ;
+   option domain-name "example.com";
+
+   # IP address of TFTP server
+   next-server 192.168.0.1 ;
+
+   # path of boot loader obtained via tftp
+   filename "FreeBSD/install/boot/pxeboot" ;
+
+   # pxeboot boot loader will try to NFS mount this directory for root FS
+   option root-path "192.168.0.1:/b/tftpboot/FreeBSD/install/" ;
+
+}
+....
+
+The `next-server` directive is used to specify the IP address of the TFTP server.
+
+The `filename` directive defines the path to [.filename]#/boot/pxeboot#. A relative filename is used, meaning that [.filename]#/b/tftpboot# is not included in the path.
+
+The `root-path` option defines the path to the NFS root file system.
+
+Once the edits are saved, enable DHCP at boot time by adding the following line to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+dhcpd_enable="YES"
+....
+
+Then start the DHCP service:
+
+[source,bash]
+....
+# service isc-dhcpd start
+....
+
+=== Debugging PXE Problems
+
+Once all of the services are configured and started, PXE clients should be able to automatically load FreeBSD over the network. If a particular client is unable to connect, when that client machine boots up, enter the BIOS configuration menu and confirm that it is set to boot from the network.
+
+This section describes some troubleshooting tips for isolating the source of the configuration problem should no clients be able to PXE boot.
+
+[.procedure]
+****
+. Use the package:net/wireshark[] package or port to debug the network traffic involved during the PXE booting process, which is illustrated in the diagram below.
++
+.PXE Booting Process with NFS Root Mount
+image::pxe-nfs.png[]
++
+1. Client broadcasts a DHCPDISCOVER message.
++
+2. The DHCP server responds with the IP address, next-server, filename, and root-path values.
++
+3. The client sends a TFTP request to next-server, asking to retrieve filename.
++
+4. The TFTP server responds and sends filename to client.
++
+5. The client executes filename, which is pxeboot(8), which then loads the kernel. When the kernel executes, the root file system specified by root-path is mounted over NFS.
++
+. On the TFTP server, read [.filename]#/var/log/xferlog# to ensure that [.filename]#pxeboot# is being retrieved from the correct location. To test this example configuration:
++
+[source,bash]
+....
+# tftp 192.168.0.1
+tftp> get FreeBSD/install/boot/pxeboot
+Received 264951 bytes in 0.1 seconds
+....
++ 
+The `BUGS` sections in man:tftpd[8] and man:tftp[1] document some limitations with TFTP.
+. Make sure that the root file system can be mounted via NFS. To test this example configuration:
++
+[source,bash]
+....
+# mount -t nfs 192.168.0.1:/b/tftpboot/FreeBSD/install /mnt
+....
+****
+
+[[network-ipv6]]
+== IPv6
+
+IPv6 is the new version of the well known IP protocol, also known as IPv4. IPv6 provides several advantages over IPv4 as well as many new features:
+
+* Its 128-bit address space allows for 340,282,366,920,938,463,463,374,607,431,768,211,456 addresses. This addresses the IPv4 address shortage and eventual IPv4 address exhaustion.
+* Routers only store network aggregation addresses in their routing tables, thus reducing the average space of a routing table to 8192 entries. This addresses the scalability issues associated with IPv4, which required every allocated block of IPv4 addresses to be exchanged between Internet routers, causing their routing tables to become too large to allow efficient routing.
+
+* Address autoconfiguration (http://www.ietf.org/rfc/rfc2462.txt[RFC2462]).
+* Mandatory multicast addresses.
+* Built-in IPsec (IP security).
+* Simplified header structure.
+* Support for mobile IP.
+* IPv6-to-IPv4 transition mechanisms.
+
+FreeBSD includes the http://www.kame.net/[http://www.kame.net/] IPv6 reference implementation and comes with everything needed to use IPv6. This section focuses on getting IPv6 configured and running.
+
+=== Background on IPv6 Addresses
+
+There are three different types of IPv6 addresses:
+
+Unicast::
+A packet sent to a unicast address arrives at the interface belonging to the address.
+
+Anycast::
+These addresses are syntactically indistinguishable from unicast addresses but they address a group of interfaces. The packet destined for an anycast address will arrive at the nearest router interface. Anycast addresses are only used by routers.
+
+Multicast::
+These addresses identify a group of interfaces. A packet destined for a multicast address will arrive at all interfaces belonging to the multicast group. The IPv4 broadcast address, usually `xxx.xxx.xxx.255`, is expressed by multicast addresses in IPv6.
+
+When reading an IPv6 address, the canonical form is represented as `x:x:x:x:x:x:x:x`, where each `x` represents a 16 bit hex value. An example is `FEBC:A574:382B:23C1:AA49:4592:4EFE:9982`.
+
+Often, an address will have long substrings of all zeros. A `::` (double colon) can be used to replace one substring per address. Also, up to three leading ``0``s per hex value can be omitted. For example, `fe80::1` corresponds to the canonical form `fe80:0000:0000:0000:0000:0000:0000:0001`.
+
+A third form is to write the last 32 bits using the well known IPv4 notation. For example, `2002::10.0.0.1` corresponds to the hexadecimal canonical representation `2002:0000:0000:0000:0000:0000:0a00:0001`, which in turn is equivalent to `2002::a00:1`.
+
+To view a FreeBSD system's IPv6  address, use man:ifconfig[8]:
+
+[source,bash]
+....
+# ifconfig
+....
+
+[.programlisting]
+....
+rl0: flags=8943<UP,BROADCAST,RUNNING,PROMISC,SIMPLEX,MULTICAST> mtu 1500
+         inet 10.0.0.10 netmask 0xffffff00 broadcast 10.0.0.255
+         inet6 fe80::200:21ff:fe03:8e1%rl0 prefixlen 64 scopeid 0x1
+         ether 00:00:21:03:08:e1
+         media: Ethernet autoselect (100baseTX )
+         status: active
+....
+
+In this example, the [.filename]#rl0# interface is using `fe80::200:21ff:fe03:8e1%rl0`, an auto-configured link-local address which was automatically generated from the MAC address.
+
+Some IPv6 addresses are reserved. A summary of these reserved addresses is seen in <<reservedip6>>:
+[[reservedip6]]
+.Reserved IPv6 Addresses
+[cols="1,1,1,1", frame="none", options="header"]
+|===
+| IPv6 address
+| Prefixlength (Bits)
+| Description
+| Notes
+
+|`::`
+|128 bits
+|unspecified
+|Equivalent to `0.0.0.0` in IPv4.
+
+|`::1`
+|128 bits
+|loopback address
+|Equivalent to `127.0.0.1` in IPv4.
+
+|`::00:xx:xx:xx:xx`
+|96 bits
+|embedded IPv4
+|The lower 32 bits are the compatible IPv4 address.
+
+|`::ff:xx:xx:xx:xx`
+|96 bits
+|IPv4 mapped IPv6 address
+|The lower 32 bits are the IPv4 address for hosts which do not support IPv6.
+
+|`fe80::/10`
+|10 bits
+|link-local
+|Equivalent to 169.254.0.0/16 in IPv4.
+
+|`fc00::/7`
+|7 bits
+|unique-local
+|Unique local addresses are intended for local communication and are only routable within a set of cooperating sites.
+
+|`ff00::`
+|8 bits
+|multicast
+|
+
+|``2000::-3fff::``
+|3 bits
+|global unicast
+|All global unicast addresses are assigned from this pool. The first 3 bits are `001`.
+|===
+
+For further information on the structure of IPv6 addresses, refer to http://www.ietf.org/rfc/rfc3513.txt[RFC3513].
+
+=== Configuring IPv6
+
+To configure a FreeBSD system as an IPv6 client, add these two lines to [.filename]#rc.conf#:
+
+[.programlisting]
+....
+ifconfig_rl0_ipv6="inet6 accept_rtadv"
+rtsold_enable="YES"
+....
+
+The first line enables the specified interface to receive router advertisement messages. The second line enables the router solicitation daemon, man:rtsol[8].
+
+If the interface needs a statically assigned IPv6 address, add an entry to specify the static address and associated prefix length:
+
+[.programlisting]
+....
+ifconfig_rl0_ipv6="inet6 2001:db8:4672:6565:2026:5043:2d42:5344 prefixlen 64"
+....
+
+To assign a default router, specify its address:
+
+[.programlisting]
+....
+ipv6_defaultrouter="2001:db8:4672:6565::1"
+....
+
+=== Connecting to a Provider
+
+In order to connect to other IPv6 networks, one must have a provider or a tunnel that supports IPv6:
+
+* Contact an Internet Service Provider to see if they offer IPv6.
+* http://www.tunnelbroker.net[Hurricane Electric] offers tunnels with end-points all around the globe.
+
+[NOTE]
+====
+Install the package:net/freenet6[] package or port for a dial-up connection.
+====
+
+This section demonstrates how to take the directions from a tunnel provider and convert them into [.filename]#/etc/rc.conf# settings that will persist through reboots.
+
+The first [.filename]#/etc/rc.conf# entry creates the generic tunneling interface [.filename]#gif0#:
+
+[.programlisting]
+....
+cloned_interfaces="gif0"
+....
+
+Next, configure that interface with the IPv4 addresses of the local and remote endpoints. Replace `_MY_IPv4_ADDR_` and `_REMOTE_IPv4_ADDR_` with the actual IPv4 addresses:
+
+[.programlisting]
+....
+create_args_gif0="tunnel MY_IPv4_ADDR REMOTE_IPv4_ADDR"
+....
+
+To apply the IPv6 address that has been assigned for use as the IPv6 tunnel endpoint, add this line, replacing `_MY_ASSIGNED_IPv6_TUNNEL_ENDPOINT_ADDR_` with the assigned address:
+
+[.programlisting]
+....
+ifconfig_gif0_ipv6="inet6 MY_ASSIGNED_IPv6_TUNNEL_ENDPOINT_ADDR"
+....
+
+Then, set the default route for the other side of the IPv6 tunnel. Replace `_MY_IPv6_REMOTE_TUNNEL_ENDPOINT_ADDR_` with the default gateway address assigned by the provider:
+
+[.programlisting]
+....
+ipv6_defaultrouter="MY_IPv6_REMOTE_TUNNEL_ENDPOINT_ADDR"
+....
+
+If the FreeBSD system will route IPv6 packets between the rest of the network and the world, enable the gateway using this line:
+
+[.programlisting]
+....
+ipv6_gateway_enable="YES"
+....
+
+=== Router Advertisement and Host Auto Configuration
+
+This section demonstrates how to setup man:rtadvd[8] to advertise the IPv6 default route.
+
+To enable man:rtadvd[8], add the following to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+rtadvd_enable="YES"
+....
+
+It is important to specify the interface on which to do IPv6 router advertisement. For example, to tell man:rtadvd[8] to use [.filename]#rl0#:
+
+[.programlisting]
+....
+rtadvd_interfaces="rl0"
+....
+
+Next, create the configuration file, [.filename]#/etc/rtadvd.conf# as seen in this example:
+
+[.programlisting]
+....
+rl0:\
+	:addrs#1:addr="2001:db8:1f11:246::":prefixlen#64:tc=ether:
+....
+
+Replace [.filename]#rl0# with the interface to be used and `2001:db8:1f11:246::` with the prefix of the allocation.
+
+For a dedicated `/64` subnet, nothing else needs to be changed. Otherwise, change the `prefixlen#` to the correct value.
+
+=== IPv6 and IPv6 Address Mapping
+
+When IPv6 is enabled on a server, there may be a need to enable IPv4 mapped IPv6 address communication. This compatibility option allows for IPv4 addresses to be represented as IPv6 addresses. Permitting IPv6 applications to communicate with IPv4 and vice versa may be a security issue.
+
+This option may not be required in most cases and is available only for compatibility. This option will allow IPv6-only applications to work with IPv4 in a dual stack environment. This is most useful for third party applications which may not support an IPv6-only environment. To enable this feature, add the following to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ipv6_ipv4mapping="YES"
+....
+
+Reviewing the information in RFC 3493, section 3.6 and 3.7 as well as RFC 4038 section 4.2 may be useful to some administrators.
+
+[[carp]]
+== Common Address Redundancy Protocol (CARP)
+
+The Common Address Redundancy Protocol (CARP) allows multiple hosts to share the same IP address and Virtual Host ID (VHID) in order to provide _high availability_ for one or more services. This means that one or more hosts can fail, and the other hosts will transparently take over so that users do not see a service failure.
+
+In addition to the shared IP address, each host has its own IP address for management and configuration. All of the machines that share an IP address have the same VHID. The VHID for each virtual IP address must be unique across the broadcast domain of the network interface.
+
+High availability using CARP is built into FreeBSD, though the steps to configure it vary slightly depending upon the FreeBSD version. This section provides the same example configuration for versions before and equal to or after FreeBSD 10.
+
+This example configures failover support with three hosts, all with unique IP addresses, but providing the same web content. It has two different masters named `hosta.example.org` and `hostb.example.org`, with a shared backup named `hostc.example.org`.
+
+These machines are load balanced with a Round Robin DNS configuration. The master and backup machines are configured identically except for their hostnames and management IP addresses. These servers must have the same configuration and run the same services. When the failover occurs, requests to the service on the shared IP address can only be answered correctly if the backup server has access to the same content. The backup machine has two additional CARP interfaces, one for each of the master content server's IP addresses. When a failure occurs, the backup server will pick up the failed master machine's IP address.
+
+[[carp-10x]]
+=== Using CARP on FreeBSD 10 and Later
+
+Enable boot-time support for CARP by adding an entry for the [.filename]#carp.ko# kernel module in [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+carp_load="YES"
+....
+
+To load the module now without rebooting:
+
+[source,bash]
+....
+# kldload carp
+....
+
+For users who prefer to use a custom kernel, include the following line in the custom kernel configuration file and compile the kernel as described in crossref:kernelconfig[kernelconfig,Configuring the FreeBSD Kernel]:
+
+[.programlisting]
+....
+device	carp
+....
+
+The hostname, management IP address and subnet mask, shared IP address, and VHID are all set by adding entries to [.filename]#/etc/rc.conf#. This example is for `hosta.example.org`:
+
+[.programlisting]
+....
+hostname="hosta.example.org"
+ifconfig_em0="inet 192.168.1.3 netmask 255.255.255.0"
+ifconfig_em0_alias0="inet vhid 1 pass testpass alias 192.168.1.50/32"
+....
+
+The next set of entries are for `hostb.example.org`. Since it represents a second master, it uses a different shared IP address and VHID. However, the passwords specified with `pass` must be identical as CARP will only listen to and accept advertisements from machines with the correct password.
+
+[.programlisting]
+....
+hostname="hostb.example.org"
+ifconfig_em0="inet 192.168.1.4 netmask 255.255.255.0"
+ifconfig_em0_alias0="inet vhid 2 pass testpass alias 192.168.1.51/32"
+....
+
+The third machine, `hostc.example.org`, is configured to handle failover from either master. This machine is configured with two CARPVHIDs, one to handle the virtual IP address for each of the master hosts. The CARP advertising skew, `advskew`, is set to ensure that the backup host advertises later than the master, since `advskew` controls the order of precedence when there are multiple backup servers.
+
+[.programlisting]
+....
+hostname="hostc.example.org"
+ifconfig_em0="inet 192.168.1.5 netmask 255.255.255.0"
+ifconfig_em0_alias0="inet vhid 1 advskew 100 pass testpass alias 192.168.1.50/32"
+ifconfig_em0_alias1="inet vhid 2 advskew 100 pass testpass alias 192.168.1.51/32"
+....
+
+Having two CARPVHIDs configured means that `hostc.example.org` will notice if either of the master servers becomes unavailable. If a master fails to advertise before the backup server, the backup server will pick up the shared IP address until the master becomes available again.
+
+[NOTE]
+====
+If the original master server becomes available again, `hostc.example.org` will not release the virtual IP address back to it automatically. For this to happen, preemption has to be enabled. The feature is disabled by default, it is controlled via the man:sysctl[8] variable `net.inet.carp.preempt`. The administrator can force the backup server to return the IP address to the master:
+
+[source,bash]
+....
+# ifconfig em0 vhid 1 state backup
+....
+
+====
+
+Once the configuration is complete, either restart networking or reboot each system. High availability is now enabled.
+
+CARP functionality can be controlled via several man:sysctl[8] variables documented in the man:carp[4] manual pages. Other actions can be triggered from CARP events by using man:devd[8].
+
+[[carp-9x]]
+=== Using CARP on FreeBSD 9 and Earlier
+
+The configuration for these versions of FreeBSD is similar to the one described in the previous section, except that a CARP device must first be created and referred to in the configuration.
+
+Enable boot-time support for CARP by loading the [.filename]#if_carp.ko# kernel module in [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+if_carp_load="YES"
+....
+
+To load the module now without rebooting:
+
+[source,bash]
+....
+# kldload carp
+....
+
+For users who prefer to use a custom kernel, include the following line in the custom kernel configuration file and compile the kernel as described in crossref:kernelconfig[kernelconfig,Configuring the FreeBSD Kernel]:
+
+[.programlisting]
+....
+device	carp
+....
+
+Next, on each host, create a CARP device:
+
+[source,bash]
+....
+# ifconfig carp0 create
+....
+
+Set the hostname, management IP address, the shared IP address, and VHID by adding the required lines to [.filename]#/etc/rc.conf#. Since a virtual CARP device is used instead of an alias, the actual subnet mask of `/24` is used instead of `/32`. Here are the entries for `hosta.example.org`:
+
+[.programlisting]
+....
+hostname="hosta.example.org"
+ifconfig_fxp0="inet 192.168.1.3 netmask 255.255.255.0"
+cloned_interfaces="carp0"
+ifconfig_carp0="vhid 1 pass testpass 192.168.1.50/24"
+....
+
+On `hostb.example.org`:
+
+[.programlisting]
+....
+hostname="hostb.example.org"
+ifconfig_fxp0="inet 192.168.1.4 netmask 255.255.255.0"
+cloned_interfaces="carp0"
+ifconfig_carp0="vhid 2 pass testpass 192.168.1.51/24"
+....
+
+The third machine, `hostc.example.org`, is configured to handle failover from either of the master hosts:
+
+[.programlisting]
+....
+hostname="hostc.example.org"
+ifconfig_fxp0="inet 192.168.1.5 netmask 255.255.255.0"
+cloned_interfaces="carp0 carp1"
+ifconfig_carp0="vhid 1 advskew 100 pass testpass 192.168.1.50/24"
+ifconfig_carp1="vhid 2 advskew 100 pass testpass 192.168.1.51/24"
+....
+
+[NOTE]
+====
+Preemption is disabled in the [.filename]#GENERIC# FreeBSD kernel. If preemption has been enabled with a custom kernel, `hostc.example.org` may not release the IP address back to the original content server. The administrator can force the backup server to return the IP address to the master with the command:
+
+[source,bash]
+....
+# ifconfig carp0 down && ifconfig carp0 up
+....
+
+This should be done on the [.filename]#carp# interface which corresponds to the correct host.
+====
+
+Once the configuration is complete, either restart networking or reboot each system. High availability is now enabled.
+
+[[network-vlan]]
+== VLANs
+
+VLANs are a way of virtually dividing up a network into many different subnetworks, also referred to as segmenting. Each segment will have its own broadcast domain and be isolated from other VLANs.
+
+On FreeBSD, VLANs must be supported by the network card driver. To see which drivers support vlans, refer to the man:vlan[4] manual page.
+
+When configuring a VLAN, a couple pieces of information must be known. First, which network interface? Second, what is the VLAN tag?
+
+To configure VLANs at run time, with a NIC of `em0` and a VLAN tag of `5` the command would look like this:
+
+[source,bash]
+....
+# ifconfig em0.5 create vlan 5 vlandev em0 inet 192.168.20.20/24
+....
+
+[NOTE]
+====
+See how the interface name includes the NIC driver name and the VLAN tag, separated by a period? This is a best practice to make maintaining the VLAN configuration easy when many VLANs are present on a machine.
+====
+
+To configure VLANs at boot time, [.filename]#/etc/rc.conf# must be updated. To duplicate the configuration above, the following will need to be added:
+
+[.programlisting]
+....
+vlans_em0="5"
+ifconfig_em0_5="inet 192.168.20.20/24"
+....
+
+Additional VLANs may be added, by simply adding the tag to the `vlans_em0` field and adding an additional line configuring the network on that VLAN tag's interface.
+
+It is useful to assign a symbolic name to an interface so that when the associated hardware is changed, only a few configuration variables need to be updated. For example, security cameras need to be run over VLAN 1 on `em0`. Later, if the `em0` card is replaced with a card that uses the man:ixgb[4] driver, all references to `em0.1` will not have to change to `ixgb0.1`.
+
+To configure VLAN `5`, on the NIC `em0`, assign the interface name `cameras`, and assign the interface an IP address of `_192.168.20.20_` with a `24`-bit prefix, use this command:
+
+[source,bash]
+....
+# ifconfig em0.5 create vlan 5 vlandev em0 name cameras inet 192.168.20.20/24
+....
+
+For an interface named `video`, use the following:
+
+[source,bash]
+....
+# ifconfig video.5 create vlan 5 vlandev video name cameras inet 192.168.20.20/24
+....
+
+To apply the changes at boot time, add the following lines to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+vlans_video="cameras"
+create_args_cameras="vlan 5"
+ifconfig_cameras="inet 192.168.20.20/24"
+....

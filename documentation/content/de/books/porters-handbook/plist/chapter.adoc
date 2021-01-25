@@ -1,0 +1,209 @@
+---
+title: Kapitel 7. Fortgeschrittene pkg-plist-Methoden
+prev: books/porters-handbook/special
+next: books/porters-handbook/pkg-files
+---
+
+[[plist]]
+= Fortgeschrittene [.filename]#pkg-plist#-Methoden
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 7
+:toc-title: Inhaltsverzeichnis
+:table-caption: Tabelle
+:figure-caption: Abbildung
+:example-caption: Beispiel
+
+toc::[]
+
+[[plist-sub]]
+== Änderungen an pkg-plist mit Hilfe von make-Variablen
+
+Einige Ports, insbesondere die `p5-`-Ports, müssen, abhängig von ihren Konfigurationsoptionen (oder im Falle der p5-Ports von der `perl`-Version), die [.filename]#pkg-plist# verändern. Um dies zu vereinfachen, werden für jeden Eintrag in [.filename]#pkg-plist# die Variablen `%%OSREL%%`, `%%PERL_VER%%` und `%%PERL_VERSION%%` durch die jeweiligen Werte ersetzt. Der Wert von `%%OSREL%%` ist die Revisionsnummer des Betriebssystems (z.B. `4.9`). `%%PERL_VERSION%%` und `%%PERL_VER%%` geben die vollständige Versionsnummer von `perl` (z.B. `5.8.9`) an. Weitere, die Dokumentationsdateien des Ports betreffende `%%VARS%%`, werden im <<install-documentation,entsprechenden Abschnitt>> erläutert.
+
+Falls Sie weitere Ersetzungen von Variablen durchführen müssen, können Sie in der Variable `PLIST_SUB` eine Liste von `VAR=VALUE`-Paaren angeben, wobei in der [.filename]#pkg-plist#`%%VAR%%` durch _VALUE_ ersetzt wird.
+
+Wenn Sie z.B. einen Port haben, der viele Dateien in ein versionsspezifisches Unterverzeichnis installiert, dann können Sie etwas wie
+
+[.programlisting]
+....
+OCTAVE_VERSION= 2.0.13
+PLIST_SUB=      OCTAVE_VERSION=${OCTAVE_VERSION}
+....
+
+in das [.filename]#Makefile# schreiben und `%%OCTAVE_VERSION%%` verwenden, unabhängig davon, wo die Variable in [.filename]#pkg-plist# verwendet wird. In diesem Fall müssen Sie bei einem Upgrade des Ports nicht dutzende (oder manchmal sogar hunderte) Zeilen in [.filename]#pkg-plist# anpassen.
+
+Falls Ihr Port in Abhängigkeit von den ausgewählten Optionen Dateien installiert, ist es üblich, den entsprechenden Zeilen in der [.filename]#pkg-plist# eine Zeichenfolge `%%TAG%%` voranzustellen, wobei der Platzhalter `TAG` der Variablen `PLIST_SUB` im [.filename]#Makefile# bei gleichzeitiger Zuweisung des speziellen Werts `@comment` hinzugefügt wird, der die Paket-Werkzeuge die Zeile ignorieren lässt:
+
+[.programlisting]
+....
+.if defined(WITH_X11)
+PLIST_SUB+= X11=""
+.else
+PLIST_SUB+= X11="@comment "
+.endif
+....
+
+und in der [.filename]#pkg-plist#:
+
+[.programlisting]
+....
+%%X11%%bin/foo-gui
+....
+
+Diese Ersetzung (ebenso wie das Hinzufügen weiterer <<makefile-manpages,Manualpages>>) wird zwischen den `pre-install`- und `do-install`-Targets ausgeführt, indem aus [.filename]#PLIST# gelesen und in [.filename]#TMPPLIST# geschrieben wird (Standard: [.filename]#WRKDIR/.PLIST.mktmp#). Falls Ihr Port also [.filename]#PLIST# während dem Erstellen generiert, so sollte dies vor oder in `pre-install` geschehen. Muss Ihr Port die resultierende Datei verändern, so sollte dies in `post-install` mit der Ausgabedatei [.filename]#TMPPLIST# erfolgen.
+
+Eine weitere Möglichkeit, die Paketliste eines Ports zu verändern, besteht darin die Variablen `PLIST_FILES` und `PLIST_DIRS` zu setzen. Der Wert jeder der beiden Variablen stellt eine Liste von Pfadnamen dar, die zusammen mit dem Inhalt von [.filename]#PLIST# in [.filename]#TMPPLIST# geschrieben wird. Dabei unterliegen die Namen in `PLIST_FILES` und `PLIST_DIRS` der weiter oben beschriebenen Substitution von `%%VAR%%`. Die Namen aus `PLIST_FILES` werden ansonsten unverändert in die endgültige Paketliste übernommen, während den Namen aus `PLIST_DIRS` noch der Wert von `@dirrm` vorangestellt wird. Damit die Verwendung von `PLIST_FILES` und `PLIST_DIRS` überhaupt möglich ist, müssen diese gesetzt werden, bevor [.filename]#TMPPLIST# geschrieben wird - z.B. in `pre-install` oder vorher.
+
+[[plist-cleaning]]
+== Leere Verzeichnisse
+
+[[plist-dir-cleaning]]
+=== Aufräumen leerer Verzeichnisse
+
+Bitte sorgen Sie dafür, dass ihre Ports bei der Deinstallation leere Verzeichnisse löschen. Dazu wird für jedes Verzeichnis, das der Port erzeugt hat, eine `@dirrm`-Zeile angegeben. Um ein Verzeichnis zu löschen müssen Sie zuerst dessen Unterverzeichnisse entfernen.
+
+[.programlisting]
+....
+ :
+lib/X11/oneko/pixmaps/cat.xpm
+lib/X11/oneko/sounds/cat.au
+ :
+@dirrm lib/X11/oneko/pixmaps
+@dirrm lib/X11/oneko/sounds
+@dirrm lib/X11/oneko
+....
+
+Es kann allerdings auch vorkommen, dass `@dirrm` Fehler ausgibt, da andere Ports ein Verzeichnis ebenfalls nutzen. Deshalb können Sie `@dirrmtry` verwenden, um nur Verzeichnisse zu löschen, die wirklich leer sind, und damit Warnhinweise vermeiden.
+
+[.programlisting]
+....
+@dirrmtry share/doc/gimp
+....
+
+Dadurch wird es weder eine Fehlermeldung geben noch wird man:pkg_delete[1] abnormal beendet werden - auch dann nicht, wenn [.filename]#${PREFIX}/shared/doc/gimp# nicht leer ist, da andere Ports hier ebenfalls Dateien installiert haben.
+
+[[plist-dir-empty]]
+=== Erstellen leerer Verzeichnisse
+
+Um leere Verzeichnisse während der Installation eines Ports zu erstellen, bedarf es etwas Aufmerksamkeit. Diese Verzeichnisse werden nicht erstellt, wenn das Paket installiert wird, da Pakete nur die Dateien speichern und man:pkg_add[1] nur die Verzeichnisse erstellt, die dafür benötigt werden. Um sicher zu gehen, dass das leere Verzeichnis erstellt wird, wenn ein Paket installiert wird, muss die folgende Zeile in [.filename]#pkg-plist# über der entsprechenden `@dirrm` Zeile eingetragen werden:
+
+[.programlisting]
+....
+@exec mkdir -p %D/shared/foo/templates
+....
+
+[[plist-config]]
+== Konfigurationsdateien
+
+Sollte Ihr Port Konfigurationsdateien in [.filename]#PREFIX/etc# benötigen, so sollten Sie diese _nicht_ einfach installieren und in [.filename]#pkg-plist# auflisten. Dies würde man:pkg_delete[1] veranlassen, diese Dateien zu löschen, selbst wenn wenn sie vom Benutzer editiert wurden.
+
+Stattdessen sollten Beispieldateien mit einem entsprechenden Suffix (beispielsweise [.filename]#filename.sample#) versehen werden. Ist die Konfigurationsdatei nicht vorhanden, so sollte die Beispieldatei an deren Platz kopiert werden. Bei der Deinstallation sollte die Konfigurationsdatei gelöscht werden, aber nur, wenn sie nicht vom Benutzer verändert wurde. Das alles muss sowohl im [.filename]#Makefile# des Ports als auch in der [.filename]#pkg-plist# (für die Installation aus einem Paket) sichergestellt werden.
+
+Beispiel aus einem [.filename]#Makefile#:
+
+[.programlisting]
+....
+post-install:
+    @if [ ! -f ${PREFIX}/etc/orbit.conf ]; then \
+	${CP} -p ${PREFIX}/etc/orbit.conf.sample ${PREFIX}/etc/orbit.conf ; \
+    fi
+....
+
+Beispiel aus einer [.filename]#pkg-plist#:
+
+[.programlisting]
+....
+@unexec if cmp -s %D/etc/orbit.conf.sample %D/etc/orbit.conf; then rm -f %D/etc/orbit.conf; fi
+etc/orbit.conf.sample
+@exec if [ ! -f %D/etc/orbit.conf ] ; then cp -p %D/%F %B/orbit.conf; fi
+....
+
+Wahlweise können Sie auch eine <<porting-message,Nachricht>> ausgegeben lassen, in der Sie den Nutzer auffordern, die Datei an die richtige Stelle zu kopieren und zu bearbeiten, bevor das Programm ausgeführt werden kann.
+
+[[plist-dynamic]]
+== Dynamische oder statische Paketliste
+
+Eine _statische Paketliste_ ist eine Paketliste, die in der Ports-Sammlung, entweder in Form der [.filename]#pkg-plist# (mit oder ohne der Ersetzung von Variablen) oder durch `PLIST_FILES` und `PLIST_DIRS` im [.filename]#Makefile# eingebettet, verfügbar ist. Selbst wenn der Inhalt durch ein Werkzeug oder ein Target im Makefile automatisch erzeugt wird, _bevor_ die Datei von einem Committer in die Ports-Sammlung aufgenommen wird, so ist dies immer noch eine statische Liste, da es möglich ist den Dateiinhalt zu betrachten ohne ein Distfile Herunterladen oder Kompilieren zu müssen.
+
+Eine _dynamische Paketliste_ ist eine Paketliste, die beim Kompilieren des Ports erstellt wird, abhängig davon, welche Dateien und Verzeichnisse installiert werden. Es ist nicht möglich diese Liste zu betrachten, bevor der Quelltext heruntergeladen und kompiliert oder nachdem ein `make clean` ausgeführt wurde.
+
+Der Einsatz dynamischer Paketlisten ist zwar nicht untersagt, aber Sie sollten, wann immer das möglich ist, statische Paketlisten verwenden, da die Nutzer dann man:grep[1] auf alle verfügbaren Ports anwenden können, um z.B. herauszufinden, von welchem eine bestimmte Datei installiert wurde. Dynamische Paketlisten sollten für komplexe Ports verwendet werden, bei denen sich die Liste abhängig von den gewählten Funktionen sehr stark ändern kann (wodurch die Pflege von statischen Listen unmöglich wird), oder Ports, welche die Paketliste abhängig von den Versionen verwendeter Abhängigkeiten verändern (z.B. Ports, die Ihre Dokumentation mit Javadoc erzeugen).
+
+Maintainer, die dynamische Paketlisten bevorzugen, werden dazu aufgefordert, neue Targets zu Ihren Ports hinzuzufügen, welche die [.filename]#pkg-plist#-Datei erzeugen, sodass Benutzer den Inhalt überprüfen können.
+
+[[plist-autoplist]]
+== Automatisiertes Erstellen von Paketlisten
+
+Als Erstes sollten Sie sich vergewissern, dass der Port bis auf [.filename]#pkg-plist# vollständig ist.
+
+Als Nächstes erstellen Sie einen temporären Verzeichnisbaum, in welchem Ihr Port installiert werden kann, und installieren Sie alle Abhängigkeiten.
+
+[source,bash]
+....
+# mkdir /var/tmp/`make -V PORTNAME`
+# mtree -U -f `make -V MTREE_FILE` -d -e -p /var/tmp/`make -V PORTNAME`
+# make depends PREFIX=/var/tmp/`make -V PORTNAME`
+....
+
+Speichern Sie die Verzeichnisstruktur in einer neuen Datei.
+
+[source,bash]
+....
+# (cd /var/tmp/`make -V PORTNAME` && find -d * -type d) | sort > OLD-DIRS
+....
+
+Erstellen Sie eine leere [.filename]#pkg-plist#-Datei:
+
+[source,bash]
+....
+# :>pkg-plist
+....
+
+Wenn Ihr Port auf `PREFIX` achtet (was er machen sollte), so kann der Port nun installiert und die Paketliste erstellt werden.
+
+[source,bash]
+....
+# make install PREFIX=/var/tmp/`make -V PORTNAME`
+# (cd /var/tmp/`make -V PORTNAME` && find -d * \! -type d) | sort > pkg-plist
+....
+
+Sie müssen auch alle neu erstellten Verzeichnisse in die Paketliste aufnehmen.
+
+[source,bash]
+....
+# (cd /var/tmp/`make -V PORTNAME` && find -d * -type d) | sort | comm -13 OLD-DIRS - | sort -r | sed -e 's#^#@dirrm #' >> pkg-plist
+....
+
+Zu guter Letzt muss die Paketliste noch manuell aufgeräumt werden - es funktioniert eben nicht _alles_ automatisch. Manualpages sollten im [.filename]#Makefile# des Ports unter `MAN__n__` aufgeführt sein und nicht in der Paketliste. Konfigurationsdateien des Benutzers sollten entfernt oder als [.filename]#filename.sample# installiert werden. Die [.filename]#info/dir#-Datei sollte nicht aufgeführt sein und die zugehörigen [.filename]#install-info#-Zeilen sollten hinzugefügt werden, wie im <<makefile-info,info files>>-Abschnitt beschrieben. Alle Bibliotheken, die der Port installiert, sollten aufgelistet werden, wie es im <<porting-shlibs,Shared Libraries>>-Abschnitt festgelegt ist.
+
+Alternativ dazu können Sie das `plist`-Skript in [.filename]#/usr/ports/Tools/scripts/# verwenden, um die Paketliste automatisch zu erstellen. Das [.filename]#plist#-Skript ist ein Ruby-Skript, das die meisten der in den vorangehenden Absätzen kurz dargestellten manuellen Schritte automatisiert.
+
+Der erste Schritt ist derselbe wie oben: Nehmen Sie die ersten drei Zeilen, also `mkdir`, `mtree` und `make depends`. Installieren und bauen Sie dann den Port:
+
+[source,bash]
+....
+# make install PREFIX=/var/tmp/`make -V PORTNAME`
+....
+
+Und lassen Sie `plist` die [.filename]#pkg-plist#-Datei erstellen:
+
+[source,bash]
+....
+# /usr/ports/Tools/scripts/plist -Md -m `make -V MTREE_FILE` /var/tmp/`make -V PORTNAME` > pkg-plist
+....
+
+Die Paketliste muss immer noch von Hand aufgeräumt werden, wie es oben erklärt wurde.
+
+Ein weiteres Werkzeug zur Erzeugung einer ersten [.filename]#pkg-plist#-Datei ist package:ports-mgmt/genplist[]. Wie bei jedem automatisierten Hilfswerkzeug, sollte die erzeugte [.filename]#pkg-plist#-Datei überprüft und bei Bedarf von Hand nachbearbeitet werden.
+
+Es gibt noch einige Tricks mit [.filename]#pkg-*#, die wir noch nicht erwähnt haben, die aber oft sehr praktisch sind.

@@ -1,0 +1,534 @@
+---
+title: 15. Fejezet - A jail alrendszer
+part: III. Rész Rendszeradminisztráció
+prev: books/handbook/security
+next: books/handbook/mac
+---
+
+[[jails]]
+= A jail alrendszer
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 15
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/jails/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/jails/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/jails/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[jails-synopsis]]
+== Áttekintés
+
+Ez a fejezet a FreeBSD-ben található jail alrendszert, valamint annak használatát mutatja be közelebbrõl. Az jail, melyet gyakran csak úgy emlegetnek, mint a _chroot környezetek_ továbbfejlesztését, a rendszergazdák számára ajánlott, nagyon sokoldalú eszköz, de a haladó felhasználók is hasznosnak találhatják.
+
+A fejezet elolvasása során megismerjük:
+
+* mi is az a jail, milyen célra használható a FreeBSD-ben;
+* hogyan hozzunk létre, indítsunk el és állítsunk le jaileket;
+* a létrehozott jailek karbantartásainak alapjait, a jailek belülrõl és kívülrõl egyaránt.
+
+A jail alrendszerrõl még több hasznos információt a következõ helyekrõl tudhatunk meg:
+
+* A man:jail[8] man oldal. Ez tartalmazza a `jail` segédprogram teljes referenciáját - ez az a karbantartásra használható eszköz, amellyel el tudjuk indítani, le tudjuk állítani és vezérelni tudjuk a jaileket a FreeBSD-ben.
+* A levelezési listák és azok archívumai. A {freebsd-questions} archívuma és a {mailman-lists}en található többi levelezési lista rengeteg olvasnivalót tartogat a jailekkel kapcsolatban. Mindig érdemes keresni ezekben az archívumokban, vagy beküldeni a kérdésünket a link:{freebsd-questions-url}[freebsd-questions] levelezési listára.
+
+[[jails-terms]]
+== A jail alrendszerhez kapcsolódó fogalmak
+
+A fejezet további részében a következõ fogalmakat fogjuk használni, hogy a FreeBSD jailekhez tartozó egyes részeit és azok belsõ mûködését, valamint kapcsolatukat a rendszer többi részével még inkább érthetõvé tegyük:
+
+man:chroot[8] (parancs)::
+Egy segédprogram, amely a FreeBSD man:chroot[2] rendszerhívásán keresztül egy program és annak leszármazottjainak futtatásához megváltoztatja a rendszer gyökérkönyvtárát (change root).
+
+man:chroot[2] (környezet)::
+A "chroot" módban futó programok környezete. Olyan erõforrásokat foglal magában, mint mondjuk az állományrendszer látható része, az elérhetõ felhasználói és csoport azonosítók, hálózati csatolók és egyéb folyamatok közti kommunikációs mechanizmusok stb.
+
+man:jail[8] (parancs)::
+Az a rendszerkarbantartó segédprogram, amely lehetõvé teszi program elindítását elzárt környezetben.
+
+befogadó (rendszer, program, felhasználó stb.)::
+Az elzárt környezetet irányító rendszer. A befogadó rendszer hozzá tud férni az összes elérhetõ hardveres erõforráshoz, képes az elzárt környezeten kívül és belül futó programokat vezérelni. Az egyik legfontosabb különbség a befogadó és az elzárt rendszer között, hogy azok a korlátozások, amelyek az elzárt környezetben rendszeradminisztrátori jogokkal futó programokra vonatkoznak, nem feltétlenül érvényesek a befogadó rendszerben futóakra.
+
+befogadott (rendszer, program, felhasználó stb.)::
+Olyan program, felhasználó vagy más egyéb egyed, amely csak egy jailen keresztül, korlátozottan tud hozzáférni az erõforrásokhoz.
+
+[[jails-intro]]
+== Bevezetés
+
+Mivel a rendszeradminisztráció egy nehéz és zavarba ejtõ feladat, rengeteg komoly eszköz jött létre a rendszergazdák életének megkönnyítésére. Ezek az eszközök többnyire a rendszerek telepítését, beállítását és karbantartását igyekeznek valamilyen módon jobbá tenni. A rendszergazdák egyik feladata úgy gondoskodni a biztonságról, hogy közben a rendszer képes legyen ellátni eredeti feladatát.
+
+A FreeBSD rendszerek biztonságosságának növelését hivatott egyik ilyen eszköz a _jails_. Elõször a FreeBSD 4.X verziójában bukkant fel, de jelentõs fejlõdésen ment keresztül a FreeBSD 5.X verziókban, aminek köszönhetõen sokkal erõteljesebb és rugalmasabb alrendszerré vált. A fejlesztése természetesen most is folytatódik tovább, állandóan fejlõdik a használhatósága, teljesítménye, megbízhatósága és biztonságossága.
+
+[[jails-what]]
+=== Mi is az a jail?
+
+A BSD-szerû operációs rendszerekben már a 4.2BSD óta megtalálható volt a man:chroot[2]. A man:chroot[8] segédprogrammal meg tudjuk megváltoztatni adott programok számára a gyökérkönyvtárat, és ezzel egy biztonságos környezetet teremteni, távol a rendszer többi részétõl. A chroot-tal kialakított környezetben elinduló programok nem tudnak hozzáférni a rajta kívül található állományokhoz és erõforrásokhoz. Ennek okán, ha egy ilyen környezetben futó szolgáltatást megtámadnak, az önmagában még nem teszi lehetõvé a támadó számára, hogy elérhesse az egész rendszert. A man:chroot[8] remekül használható olyan egyszerûbb feladatok megoldására, amelyek nem igényelnek túlságosan sok rugalmasságot vagy bonyolult és fejlett támogatást. A chroot ötletének felmerülése óta azonban számos kiskaput találtak már az általa létrehozott környezetekben, és habár ezek mindegyikét javították a FreeBSD újabb változataiban, teljesen egyértelmûvé vált, hogy a man:chroot[2] nem biztosít járható utat a szolgáltatások biztonságossá tételéhez. Erre a feladatra egy új alrendszert kellett kiépíteni.
+
+Ez az egyik oka annak, amiért az _jaileket_ kifejlesztették.
+
+A jailek által képviselt elzárás ötlete több szempontból is a hagyományos man:chroot[2] környezet elvén alapszik. Egy hagyományos man:chroot[2] környezetben futó programok korlátozása csupán abban merül ki, hogy az állományrendszer melyik részét láthatják. A rendszer többi erõforrása (mint mondjuk a felhasználók, futó programok vagy a hálózati alrendszer) azonban továbbra is megosztva marad a chroot környezetben és a befogadó rendszerben futó programok között. A jailek által alkalmazott megoldás kibõvíti ezt a modellt, és nem csak az állományrendszerre vonatkozó hozzáférést virtualizálja, hanem több más dolog mellett kiterjeszti ezt a felhasználókra és a FreeBSD hálózati alrendszerére is. Az elzárt környezetek beállításaihoz elérhetõ finomhangolási lehetõségekrõl bõvebben a <<jails-tuning>>ban esik szó.
+
+A jaileket az alább négy elem írja le:
+
+* A könyvtárszerkezet egy részfája - attól a résztõl indulva, ahonnan a jail kezdõdik. A jailen belül futó programok nem léphetnek ki ebbõl a részfából. Az eredeti man:chroot[2] kialakításában merengõ biztonsági hibák lehetõségei nem veszélyeztetik a többi FreeBSD jailt.
+* A rendszer neve - a név, amelyet a jailen belül használunk. Mivel a jaileket elsõsorban hálózati szolgáltatások kordában tartására használjuk, a jailekhez tartozó beszédes rendszernevek sokat tudnak segíteni a rendszergazdák munkájában.
+* Egy IP-cím - a jailhez tartozik és nem változtatható meg a mûködése során. Egy jail IP-címe általában egy már létezõ hálózati csatoló másik címe, de ez nem szükségszerûen igaz minden esetben.
+* Egy parancs - annak a programnak az elérési útja, amelyet elzártan kívánunk futtatni. Az elzárt környezet gyökerétõl mérve relatívan adjuk meg, és az adott környezet típusától függõen eltérõ lehet.
+
+Ezektõl eltekintve a jailek rendelkezhetnek saját felhasználókkal és lehetnek saját `root` felhasználóik is. Természetesen a `root` hatásköre csak az elzárt környezetre korlátozódik, és a befogadó rendszer szemszögébõl az elzárt `root` nem mindenható. Ráadásul az elzárt `root` felhasználó nem hajthat végre semmilyen kritikus mûveletet a saját man:jail[8] környezetén kívül. A `root` további képességeirõl és korlátozásairól lentiekben bõvebben is említést teszünk a <<jails-tuning>>ban.
+
+[[jails-build]]
+== A jailek létrehozása és vezérlése
+
+Egyes rendszergazdák a jaileket a következõ két típusba sorolják: "teljes" jail, mely egy valódi FreeBSD rendszerre emlékeztet, és a "szolgáltatás" jail, mely egyetlen, feltehetõen kiemelt jogokkal futó alkalmazás vagy szolgáltatás számára van elõkészítve. Ez a besorolás csupán fogalmi szintû, a jail felépítésének módját nem befolyásolja. A man:jail[8] man oldal részletesen ismerteti a jailek létrehozását:
+
+[source,bash]
+....
+# setenv D /itt/lesz/a/jail
+# mkdir -p $D <.>
+# cd /usr/src
+# make buildworld <.>
+# make installworld DESTDIR=$D <.>
+# make distribution DESTDIR=$D <.>
+# mount -t devfs devfs $D/dev <.>
+....
+
+<.> Érdemes elõször a jail helyét megválasztani. Itt fog fizikailag helyet foglalni a befogadó rendszer állományrendszerén belül a jail. Jó választás lehet erre a [.filename]#/usr/jail/jailnév#, ahol a _jailnév_ a jailt azonosító rendszernév. A [.filename]#/usr/# állományrendszeren általában elegendõ hely jut a jail állományrendszerének, ami egy "teljes" jail esetén lényegében a FreeBSD alaprendszer alapértelmezett telepítésében megtalálható összes állomány másolatát tartalmazza.
+
+<.> Ha korábban már a `make world` vagy a `make buildworld` parancs segítségével újrafordítottuk az alaprendszert, akkor ezt a lépést ki is hagyhatjuk és telepítsük az új alaprendszert közvetlenül az új jailbe.
+
+<.> Ez a parancs fogja felmásolni a jail fizikai helyének választott könyvtár-részfába a mûködéshez szükséges programokat, függvénykönyvtárakat, man oldalakat és így tovább.
+
+<.> A make paramétereként megadott `distribution` cél gondoskodik az összes szükséges konfigurációs állomány felmásolásáról. Magyarán szólva, átmásolja az összes telepíhetõ állományt a [.filename]#/usr/src/etc/# könyvtárból a jail [.filename]#/etc# alkönyvtárába, vagyis a [.filename]#$D/etc/# könyvtárba.
+
+<.> A jaileken belül a man:devfs[8] csatlakoztatása nem kötelezõ. Másrészt azonban majdnem mindegyik alkalmazás, a feladatától függõen, legalább egy eszközhöz hozzá akar férni. Nagyon fontos, hogy a kezünkbe vegyük a eszközök hozzáférésének irányítását a jaileken belül, mivel a helytelen beállítások révén a támadók csúnya dolgokat tudnak majd mûvelni. A man:devfs[8] mûködését a man:devfs[8] és man:devfs.conf[5] man oldalakon is ismertetett szabályrendszerek irányítják.
+
+Ahogy a jailt telepítettük, a man:jail[8] segédprogrammal tudjuk elindítani. A man:jail[8] négy kötelezõ paramétert vár, melyekre a <<jails-what>>ban ki is térünk. Más paramétereket is megadhatunk, például azt, hogy az elzárt program egy adott felhasználó jogaival fusson. A `_command_` paraméter használata a jail típusától függ: egy _virtuális rendszer_ esetében a [.filename]#/etc/rc# jó választásnak bizonyulhat, mivel ennek segítségével egy valódi FreeBSD rendszerindítási folyamatát játszhatjuk le. Amennyiben elzárt __szolgáltatás__ról van szól, az adott szolgáltatástól vagy alkalmazástól függ.
+
+A jaileket gyakran már a rendszerindítás során elindítják, amit a FreeBSD [.filename]#rc# mechanizmusa nagyban meg is könnyít.
+
+[.procedure]
+====
+. A rendszer indítása során aktiválandó jailek listáját vegyük hozzá a man:rc.conf[5] állományhoz:
++
+[.programlisting]
+....
+jail_enable="YES"   # Ide NO-t írjunk, ha ki akarjuk kapcsolni
+jail_list="www"     # Szóközzel elválasztva soroljuk fel a jaileket
+....
++
+[NOTE]
+======
+A `jail_list` értékeként felsorolt jailek nevei csak betûket és számjegyeket tartalmazhatnak.
+======
++
+. A `jail_list`-ben szereplõ összes jailt meg kell adnunk az ezeket leíró man:rc.conf[5]-beli beállításokat:
++
+[.programlisting]
+....
+jail_www_rootdir="/usr/jail/www"     # a jail gyökérkönyvtára
+jail_www_hostname="www.example.org"  # a jail neve
+jail_www_ip="192.168.0.10"           # a jail IP-címe
+jail_www_devfs_enable="YES"          # legyen-e devfs a jailen belül
+jail_www_devfs_ruleset="www_ruleset" # az alkalmazott devfs szabályrendszer
+....
++ 
+Az man:rc.conf[5] állományban szereplõ jailek esetén a [.filename]#/etc/rc# szkript fut le, tehát feltételezi, hogy az így megadott jail egy teljes virtuális rendszer. A szolgáltatások jailbe foglalásához meg kell változtatnunk a jail alapértelmezett parancsát is. Ezt a `jail__jailnév__exec_start` opció megfelelõ beállításával tudjuk megtenni.
++
+[NOTE]
+======
+Az összes itt elérhetõ opciót a man:rc.conf[5] man oldalon találhatjuk meg.
+======
+====
+
+Ha léteznek a megfelelõ bejegyzések az [.filename]#rc.conf# állományban, akkor az [.filename]#/etc/rc.d/jail# szkript is használható arra, hogy a jaileket kézzel indítsuk el vagy állítsuk le:
+
+[source,bash]
+....
+# /etc/rc.d/jail start www
+# /etc/rc.d/jail stop www
+....
+
+A man:jail[8] leállítására jelen pillanatban még nem érhetõ el szabályos módszer. Ez azért van, mert a szabályos rendszerleállítást elvégzõ parancsok nem használhatóak a jailen belül. Emiatt a jaileket a legtisztábban úgy tudjuk leállítani, ha kiadjuk az alábbi parancsot magában a jailben vagy pedig a man:jexec[8] segédprogrammal a jailen kívülrõl:
+
+[source,bash]
+....
+# sh /etc/rc.shutdown
+....
+
+Errõl a témáról többet a man:jail[8] man oldalon olvashatunk.
+
+[[jails-tuning]]
+== Finomhangolás és karbantartás
+
+Számos opció állítható be a jaileknél, és sokféle módon vegyíthetjük a befogadó FreeBSD rendszerünket a jailekkel, ami által magasabb szintû alkalmazásokat hozhatunk létre. Ebben a részben bemutatunk:
+
+* Néhány olyan beállítást, amellyel finomhangolhatjuk a telepített jailek által megvalósított biztonsági megszorítások viselkedését.
+* A jailek kezelésére alkalmas néhány olyan magasabb szintû alkalmazást, amelyek elérhetõek a FreeBSD Portgyûjteményén keresztül, és általános jail alapú megoldások kialakításához használhatóak.
+
+[[jails-tuning-utilities]]
+=== A FreeBSD-ben található finomhangoló eszközök
+
+A jailek beállításainak finomhangolását túlnyomórészt man:sysctl[8] változókkal végezhetjük el. A sysctl-en belül egy speciális részfában találhatunk erre alkalmas beállításokat: ez a a FreeBSD rendszermag opciói között megtalálható `security.jail.*`. Itt közüljük a jailekre vonatkozó fontosabb sysctl változók listáját, az alapértelmezett értékeikkel együtt. A nevek minden bizonnyal sokat elárulnak, de ha többet szeretnénk tudni róluk, lapozzuk fel a man:jail[8] és man:sysctl[8] man oldalakat.
+
+* `security.jail.set_hostname_allowed: 1`
+* `security.jail.socket_unixiproute_only: 1`
+* `security.jail.sysvipc_allowed: 0`
+* `security.jail.enforce_statfs: 2`
+* `security.jail.allow_raw_sockets: 0`
+* `security.jail.chflags_allowed: 0`
+* `security.jail.jailed: 0`
+
+Ezekkel a változókkal a _befogadó rendszer_ rendszergazdája tud hozzátenni vagy elvenni a `root` felhasználó alapértelmezett határaihoz. Vegyük azonban észre, hogy egyes korlátozások azonban semmiképpen sem szüntethetõek meg. A `root` nem csatlakoztathat és választhat le állományrendszereket a man:jail[8] környezetben. Az elzárt `root` nem tölthet be és törölhet man:devfs[8] szabályrendszereket, tûzfal szabályokat sem, ill. nem végezhet semmilyen olyan bármilyen más karbantartási feladatot, amely a rendszermag adataiban módosítást vonna maga után, például nem állíthatja a rendszermag `securelevel` (biztonsági szintjének) értékét.
+
+A FreeBSD alaprendszere tartalmazza azokat a segédeszközöket, amelyekkel a rendszerben aktív jailek információt tudjuk megjeleníteni, vagy csatlakozni tudunk hozzájuk. A man:jls[8] és man:jexec[8] parancsok részei az alap FreeBSD rendszernek, segítségükkel elvégezhetõek az alábbi egyszerû feladatokat:
+
+* Ki tudjuk íratni az aktív jailek és hozzájuk tartozó azonosítókat (JID-eket), IP-címeket, neveket és útvonalakat.
+* A befogadó rendszerbõl hozzá tudunk csatlakozni egy futó jailhez, és parancsokat tudunk futtatni a jailen belül vagy karbantartási feladatokat tudunk elvégezni magán a jailen belül. Ez különösen hasznosnak bizonyulhat, amikor a `root` felhasználó szabályosan le akarja állítani a jailt. A man:jexec[8] segédprogrammal el tudunk indítani egy parancsértelmezõt a jailen belül, amibõl aztán irányíthatjuk. Példa:
++
+[source,bash]
+....
+# jexec 1 tcsh
+....
+
+[[jails-tuning-admintools]]
+=== Magasszintû karbantartó eszközök a FreeBSD Portgyûjteményében
+
+A sok külsõ karbantartó eszköz közül az egyik legteljesebb és leghasznosabb a package:sysutils/jailutils[]. Sok kisebb alkalmazást tartalmaz, melyek kibõvítik a man:jail[8] irányíthatóságát. Bõvebb információkért kérjük, látogassa meg a hozzá tartozó honlapot.
+
+[[jails-application]]
+== A jailek alkalmazása
+
+[[jails-service-jails]]
+=== Szolgáltatások jailbe foglalása
+
+Ez a rész eredetileg {simon} http://simon.nitro.dk/service-jails.html[http://simon.nitro.dk/service-jails.html] oldalon található írásán, valamint Ken Tom (mailto:locals@gmail.com[locals@gmail.com]) átdolgozott cikkén alapul. Itt megismerhetjük, hogyan állítsunk be a FreeBSD rendszerünkben egy biztonsági réteget a man:jail[8] felhasználásával. Továbbá feltételezzük, hogy ez a rendszer legalább RELENG_6_0 verziójú és a fejezetben korábban tárgyaltakat az olvasó teljes mértékben megértette.
+
+[[jails-service-jails-design]]
+==== A kialakítás
+
+A jailek egyik legnagyobb gondja a frissítés folyamatának lebonyolítása. Azért jelent ez egyre inkább gondot, mert minden egyes jailt újra fel kell építenünk a frissítése során. Ez többnyire nem okoz gondot egyetlen jail használata során, mivel maga a frissítési folyamat meglehetõsen egyszerû, azonban igen idõigényessé és fárasztóvá tud válni több jail esetében.
+
+[WARNING]
+====
+
+Ez a példa a FreeBSD képességeinek haladó szintû ismeretét követeli meg. Amennyiben az itt bemutatott lépesek túlságosan is bonyolultnak tûnnének, érdemes olyan egyszerûbb rendszerek után nézni, mint mondjuk a package:sysutils/ezjail[], amely egy egyszerûbb módszert kínál fel a FreeBSD-ben használt jailek karbantartására, és nem is annyira bonyolult, mint ez a példa.
+====
+
+A bemutatandó példa célja, hogy feloldja az ilyen jellegû problémákat, és ezért igyekszik a jailek között mindent megosztani, ami csak lehetséges. Mindezt biztonságosan éri el - írásvédett man:mount_nullfs[8] állományrendszer használatával, aminek köszönhetõen a frissítés maga egyszerûbbé, az egyes szolgáltatások különzárása pedig vonzóbbá válik. Ráadásul egyúttal egy nagyon egyszerû módszert mutat az új jailek hozzáadására és a régi törlésére ugyanúgy, mint a frissítésükre.
+
+[NOTE]
+====
+Például ilyen szolgáltatásokat kívánunk szabályozni: egy HTTP szervert, egy DNS szervert, egy SMTP szervert és így tovább.
+====
+
+Az itt szereplõ beállítás céljai:
+
+* Készítsünk egy egyszerûen és könnyen átlátható jailkezelési rendszert. Ebbõl tehát következik, hogy _ne_ kelljen lefuttatni a teljes rendszer telepítését minden egyes jailre.
+* Könnyítsük meg az új jailek hozzáadását és a régiek eltávolítását.
+* Könnyítsük meg a már létezõ jailek frissítését és cseréjét.
+* Tegyük lehetõvé saját FreeBSD ágak futtatását.
+* Legyünk különösen körültekintõek a biztonság tekintetében, és igyekezzünk minél jobban csökkenteni veszély kockázatát.
+* Takarékoskodjunk a tárhellyel és az állományrendszerrel, amennyire csak lehet.
+
+Ahogy azt már korábban is említettük, ez a kialakítás nagyban építkezik egyetlen fõ sablonra, amely írásvédetten kerül csatlakoztatásra (nullfsen keresztül) az egyes jailekben, valamint jailenként egy-egy írható-olvasható eszközre. Ez az eszköz lehet egy külön fizikai lemez, egy partíció vagy egy vnode alapú man:md[4] eszköz. Ebben a példában írható-olvasható nullfs csatlakozásokat használunk.
+
+Az állományrendszer kiosztása a most következõ listában szerepel:
+
+* Minden jailt a [.filename]#/home/j# könyvtárban csatlakoztatunk.
+* A [.filename]#/home/j/mroot# lesz az összes jail sablonja és mindegyikük számára írásvédett.
+* Minden jailnek létrehozunk egy üres alkönyvtárat a [.filename]#/home/j# könyvtárban.
+* Minden jailnek lesz egy [.filename]#/s# alkönyvtára, amelyet a rendszer írható-olvasható részére irányítunk.
+* Minden jailnek lesz egy saját írható-olvasható része, amely a [.filename]#/home/j/skel# könyvtáron alapszik.
+* Mindegyik elzárt terület (a jailek írható-olvasható része) a [.filename]#/home/js# könyvtárban jön létre.
+
+[NOTE]
+====
+Ez a kiosztás feltételezi, hogy a jaileket a [.filename]#/home# partíción hozzuk létre. Ez természetesen bármi másra megváltoztatható, de akkor figyelnünk kell erre minden egyes parancs kiadása elõtt.
+====
+
+[[jails-service-jails-template]]
+==== A sablon létrehozása
+
+Ez a rész leírja a fõ sablon létrehozásához szükséges lépéseket. Ez a jailek számára írásvédett lesz.
+
+Érdemes mindig frissíteni a FreeBSD rendszerünket a legújabb -RELEASE ágra. Ehhez olvassuk el az ide tartozó crossref:cutting-edge[makeworld,fejezetet] a kézikönyvbõl. Abban az esetben, ha a frissítés nem lenne megoldható, egy `make buildworld` parancsot mindenképpen le kell tudnunk futtatni. Ezenfelül a package:sysutils/cpdup[] csomagra is szükségünk van. Használni fogjuk a man:portsnap[8] segédprogramot is a FreeBSD Portgyûjtemény letöltéséhez. Akik nem ismernék, a kézikönyv crossref:portsnap[portsnap,errõl szóló fejezetében] olvashatnak róla.
+
+[.procedure]
+====
+. Elõször is, készítsük el az írásvédett állományrendszer könyvtárszerkezetét, amely majd tartalmazni fogja a jailek által használt FreeBSD-s programokat. Ezután lépjünk be a FreeBSD forrásfájának könyvtárába és telepítsük fel az írásvédett állományrendszert a sablonba:
++
+[source,bash]
+....
+# mkdir /home/j /home/j/mroot
+# cd /usr/src
+# make installworld DESTDIR=/home/j/mroot
+....
++
+. Ezt követõen készítsük elõ a jailek számára a FreeBSD Portgyûjteményt és FreeBSD forrásfát, melyek kellenek a mergemaster használatához:
++
+[source,bash]
+....
+# cd /home/j/mroot
+# mkdir usr/ports
+# portsnap -p /home/j/mroot/usr/ports fetch extract
+# cpdup /usr/src /home/j/mroot/usr/src
+....
++
+. Hozzuk létre a rendszer írásvédett részének vázát:
++
+[source,bash]
+....
+# mkdir /home/j/skel /home/j/skel/home /home/j/skel/usr-X11R6 /home/j/skel/distfiles
+# mv etc /home/j/skel
+# mv usr/local /home/j/skel/usr-local
+# mv tmp /home/j/skel
+# mv var /home/j/skel
+# mv root /home/j/skel
+....
++
+. Használjuk a mergemastert a hiányzó konfigurációs állományok telepítésére. Szabaduljunk meg a mergemaster által készített felesleges könyvtáraktól:
++
+[source,bash]
+....
+# mergemaster -t /home/j/skel/var/tmp/temproot -D /home/j/skel -i
+# cd /home/j/skel
+# rm -R bin boot lib libexec mnt proc rescue sbin sys usr dev
+....
++
+. Most pedig szimbolikusan linkeljük az írható-olvasható állományrendszert az írásvédett állományrendszerre. Ellenõrizzük, hogy a szimbolikus linkek a megfelelõ [.filename]#s/# könyvtárakban jöttek létre. Valós vagy rossz helyen létrehozott könyvtárak használata esetén a telepítés nem fog sikerülni.
++
+[source,bash]
+....
+# cd /home/j/mroot
+# mkdir s
+# ln -s s/etc etc
+# ln -s s/home home
+# ln -s s/root root
+# ln -s ../s/usr-local usr/local
+# ln -s ../s/usr-X11R6 usr/X11R6
+# ln -s ../../s/distfiles usr/ports/distfiles
+# ln -s s/tmp tmp
+# ln -s s/var var
+....
++
+. Utolsó lépésként hozzunk létre egy [.filename]#/home/j/skel/etc/make.conf# állományt az alábbi tartalommal:
++
+[.programlisting]
+....
+WRKDIRPREFIX?=  /s/portbuild
+....
++ 
+A `WRKDIRPREFIX` beállításával lehetõvé válik a FreeBSD portok jaileken belüli fordítása. Ne felejtsük el, hogy a portokat tartalmazó könyvtár az írásvédett rendszer része! Az átállított `WRKDIRPREFIX` azonban megengedi, hogy a fordítások az egyes jailek írható-olvasható részeiben történjenek.
+====
+
+[[jails-service-jails-creating]]
+==== A jailek létrehozása
+
+Most, miután teljesen elkészült a FreeBSD jailek sablonja, be is tudjuk állítani és hozzá is tudjuk venni ezeket az [.filename]#/etc/rc.conf# állományhoz. Ebben a példában 3 jail létrehozását láthatjuk: "NS", "MAIL" és "WWW".
+
+[.procedure]
+====
+
+. Írjuk bele a következõ sorokat az [.filename]#/etc/fstab# állományba, aminek köszönhetõen az egyes jailek számára elérhetõvé válik az írásvédett sablon és a hozzájuk tartozó írható-olvasható területek:
++
+[.programlisting]
+....
+/home/j/mroot   /home/j/ns     nullfs  ro  0   0
+/home/j/mroot   /home/j/mail   nullfs  ro  0   0
+/home/j/mroot   /home/j/www    nullfs  ro  0   0
+/home/js/ns     /home/j/ns/s   nullfs  rw  0   0
+/home/js/mail   /home/j/mail/s nullfs  rw  0   0
+/home/js/www    /home/j/www/s  nullfs  rw  0   0
+....
++
+[NOTE]
+======
+Az elsõ helyen nullával jelölt partíciókat a man:fsck[8] nem fogja ellenõrizni a rendszer indulása során, a második helyen nullával jelölt partíciókat pedig nem fogja menteni a man:dump[8]. Mi egyáltalán nem akarjuk, hogy az fsck ellenõrizze vagy a dump lementse a jailjeinkhez tartozó írásvédett nullfs-partícióinkat. Ezért szerepel végig "0 0" a fentebb szereplõ [.filename]#fstab#-bejegyzések utolsó két oszlopában.
+======
++
+. Állítsuk be a jaileket az [.filename]#/etc/rc.conf#-ban:
++
+[.programlisting]
+....
+jail_enable="YES"
+jail_set_hostname_allow="NO"
+jail_list="ns mail www"
+jail_ns_hostname="ns.example.org"
+jail_ns_ip="192.168.3.17"
+jail_ns_rootdir="/usr/home/j/ns"
+jail_ns_devfs_enable="YES"
+jail_mail_hostname="mail.example.org"
+jail_mail_ip="192.168.3.18"
+jail_mail_rootdir="/usr/home/j/mail"
+jail_mail_devfs_enable="YES"
+jail_www_hostname="www.example.org"
+jail_www_ip="62.123.43.14"
+jail_www_rootdir="/usr/home/j/www"
+jail_www_devfs_enable="YES"
+....
++
+[WARNING]
+======
+
+Azért állítottuk a `jail__név__rootdir` változó értékét a [.filename]#/usr/home# könyvtárra a [.filename]#/home# könyvtár helyett, mert a FreeBSD alaptelepítésében a [.filename]#/home# könyvtár fizikailag a [.filename]#/usr/home# könyvtárral egyezik meg. A `jail__név__rootdir` változó értékeként megadott könyvtár _nem_ tartalmazhat szimbolikus linket, máskülönben a jailek nem lesznek hajlandóak létrejönni. Ennek megállapításában a man:realpath[1] segédprogram lehet segítségünkre. A korlátozás részleteirõl a FreeBSD-SA-07:01.jail biztonsági figyelmeztetésben olvashatunk.
+======
++
+. Hozzuk létre az egyes jailek írásvédett állományrendszereihez szükséges csatlakozási pontokat:
++
+[source,bash]
+....
+# mkdir /home/j/ns /home/j/mail /home/j/www
+....
++
+. Telepítsük az írható-olvasható sablont az egyes jailekbe. Figyeljük meg a package:sysutils/cpdup[] használatát, amellyel az egyes könyvtárak pontos másolatait hozhatjuk létre:
++
+[source,bash]
+....
+# mkdir /home/js
+# cpdup /home/j/skel /home/js/ns
+# cpdup /home/j/skel /home/js/mail
+# cpdup /home/j/skel /home/js/www
+....
++
+. Ebben a fázisban a jailek már elkészültek és készen állnak a futásra. Elõször csatlakoztassuk az egyes jailekhez szükséges állományrendszereket, majd indítsuk el ezeket a [.filename]#/etc/rc.d/jail# szkripttel:
++
+[source,bash]
+....
+# mount -a
+# /etc/rc.d/jail start
+....
+====
+
+A jailek most már futnak. Az elindulásuk ellenõrzéséhez használjuk a man:jls[8] parancsot. Valami ilyesmit láthatunk a kiadása után:
+
+[source,bash]
+....
+# jls
+   JID  IP Address      Hostname                      Path
+     3  192.168.3.17    ns.example.org                /home/j/ns
+     2  192.168.3.18    mail.example.org              /home/j/mail
+     1  62.123.43.14    www.example.org               /home/j/www
+....
+
+Itt már be tudunk jelentkezni az egyes jailekbe, új felhasználókat tudunk készíteni vagy démonokat tudunk beállítani. A `JID` oszlop mutatja az egyes jailek azonosítási számát. A 3-as `JID` számú jailben az alábbi parancs használatával karbantartási feladatokat elvégezni:
+
+[source,bash]
+....
+# jexec 3 tcsh
+....
+
+[[jails-service-jails-upgrading]]
+==== Frissítés
+
+Idõrõl idõre adódhat, hogy frissítenünk kell a rendszert a FreeBSD egy újabb változatára, vagy egy biztonsági hiba javítása miatt, vagy pedig a már meglevõ jailek számára hasznos újítások bevezetése miatt. Ez a kialakítás megkönnyíti a korábban létrehozott jailjeink frissítését. Továbbá igyekszik minimalizálni a kiesésüket is, mivel a jaileket csak a legutolsó pillanatban fogjuk leállítani. Sõt, még az is lehetõvé válik, hogy visszaállítsuk a korábbi verziót, ha véletlenül valami rosszul sülne el menetközben.
+
+[.procedure]
+====
+
+. Elsõ lépéseként frissítsük magát a befogadó rendszert a megszokott módon. Ezután hozzunk létre egy új írásvédett sablont a [.filename]#/home/j/mroot2# könyvtárban.
++
+[source,bash]
+....
+# mkdir /home/j/mroot2
+# cd /usr/src
+# make installworld DESTDIR=/home/j/mroot2
+# cd /home/j/mroot2
+# cpdup /usr/src usr/src
+# mkdir s
+....
++ 
+A `installworld` lefuttatása létrehoz néhány felesleges könyvtárat, melyeket takarítsunk is el:
++
+[source,bash]
+....
+# chflags -R 0 var
+# rm -R etc var root usr/local tmp
+....
++
+. Hozzuk újra létre az írható-olvasható szimbolikus linkjeinket a fõ állományrendszerre:
++
+[source,bash]
+....
+# ln -s s/etc etc
+# ln -s s/root root
+# ln -s s/home home
+# ln -s ../s/usr-local usr/local
+# ln -s ../s/usr-X11R6 usr/X11R6
+# ln -s s/tmp tmp
+# ln -s s/var var
+....
++
+. Most érkezett el az idõ, hogy leállítsuk a jaileket:
++
+[source,bash]
+....
+# /etc/rc.d/jail stop
+....
++
+. Válasszuk le az eredeti állományrendszereket:
++
+[source,bash]
+....
+# umount /home/j/ns/s
+# umount /home/j/ns
+# umount /home/j/mail/s
+# umount /home/j/mail
+# umount /home/j/www/s
+# umount /home/j/www
+....
++
+[NOTE]
+======
+Az írható-olvasható állományrendszerek hozzá vannak kapcsolva az írásvédett állományrendszerhez ([.filename]#/s#), ezért azokat elõször le kell választani.
+======
++
+. Mozgassuk el az útból a régi írásvédett állományrendszerünket és váltsuk fel az újjal. Így biztonsági mentésként és a régi írásvédett rendszer archívumaként továbbra is rendelkezésre áll, ha valami baj történne. Az itt használt elnevezés az újonnan létrehozott írásvédett állományrendszer dátumából ered. Mozgassuk át az eredeti FreeBSD Portgyûjteményt az új állományrendszerre, hogy megtakarítsunk némi tárhelyet és állományleírót:
++
+[source,bash]
+....
+# cd /home/j
+# mv mroot mroot.20060601
+# mv mroot2 mroot
+# mv mroot.20060601/usr/ports mroot/usr
+....
++
+. Most már készen áll az új írásvédett sablon, így már csak az állományrendszerek újracsatlakoztatása és a jailek újraindítása maradt:
++
+[source,bash]
+....
+# mount -a
+# /etc/rc.d/jail start
+....
+====
+
+A man:jls[8] használatával ellenõrizzük, hogy a jailek rendesen elindultak. Ne felejtsük el jailenként lefuttatni a mergemastert sem. A konfigurációs állományokat és az rc.d szkripteket is frissítenünk kell majd.

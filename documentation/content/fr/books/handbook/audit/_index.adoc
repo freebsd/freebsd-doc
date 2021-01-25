@@ -1,0 +1,405 @@
+---
+title: Chapitre 17. Audit des événements relatifs à la sécurité du système
+part: Partie III. Administration Système
+prev: books/handbook/mac
+next: books/handbook/disks
+---
+
+[[audit]]
+= Audit des événements relatifs à la sécurité du système
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Table des matières
+:table-caption: Tableau
+:example-caption: Exemple
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 17
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/audit/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/audit/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/audit/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/fr/mailing-lists.adoc[]
+include::shared/fr/teams.adoc[]
+include::shared/fr/urls.adoc[]
+
+toc::[]
+
+[[audit-synopsis]]
+== Synopsis
+
+FreeBSD dispose d'un support pour l'audit d'événements relatifs à la sécurité du système. L'audit d'événements permet un enregistrement fiable et configurable d'une grande variété d'événements système en rapport avec la sécurité, parmi lesquels les ouvertures de session, les modifications de la configuration, et les accès aux fichiers et au réseau. Ces enregistrements ou journaux peuvent être d'une très grande aide pour la surveillance d'un système, pour la détection d'intrusion, et les analyses post-mortem. FreeBSD implémente l'API et le format de fichiers BSM (_Basic Security Module_) publiés par Sun(TM) qui sont interopérables avec les implémentations d'audits de Solaris(TM) de Sun(TM) et de Mac OS(R) X d'Apple(R).
+
+Ce chapitre se concentre sur l'installation et la configuration de l'audit des événements. Il explique les stratégies utilisées pour l'audit, et propose un exemple de configuration.
+
+Après la lecture de ce chapitre, vous saurez:
+
+* Ce qu'est l'audit d'événements et comment cela fonctionne.
+* Comment configurer l'audit d'événements sous FreeBSD pour les utilisateurs et les processus.
+* Comment lire une trace d'audit en utilisant les outils de réduction et de lecture.
+
+Avant de lire ce chapitre, vous devrez:
+
+* Comprendre les fondements d'UNIX(R) et de FreeBSD (crossref:basics[basics,Quelques bases d'UNIX]).
+* Etre familier avec la configuration et la compilation du noyau (crossref:kernelconfig[kernelconfig,Configurer le noyau de FreeBSD]).
+* Avoir quelques notions de sécurité et savoir comment les appliquer à FreeBSD (crossref:security[security,Sécurité]).
+
+[WARNING]
+====
+
+La fonctionnalité d'audit connaît des limitations. Tous les événements systèmes en rapport avec la sécurité ne peuvent pas être soumis à un audit, et que certains mécanismes d'ouverture de session, comme les gestionnaires de procédures de connexions basés sur Xorg et des "démons" tiers, ne permettent pas une configuration correcte de l'audit pour les ouvertures de session utilisateur.
+
+Le système d'audit des événements permet la génération d'enregistrements détaillés de l'activité du système. Sur un système occupé, un fichier journal d'audit peut être très important quand le système est configuré pour un haut niveau de détail, dépassant plusieurs gigaoctets par semaine sur certaines configurations. Les administrateurs système devraient prendre en compte les besoins en espace disque associés avec les configurations d'audit à haut niveau de détail. Par exemple, il peut être recommandé de dédier un système de fichiers à [.filename]#/var/audit# de manière à ce que les autres systèmes de fichiers ne soient pas affectés si le système de fichiers pour les audits est plein.
+====
+
+[[audit-inline-glossary]]
+== Mots-clés
+
+Les termes suivants sont relatifs à l'audit des événements:
+
+* _événement_: un événement pouvant être audité est n'importe quel événement pouvant faire l'objet d'un suivi par le système d'audit. La création d'un fichier, la mise en place d'une connection réseau, ou une ouverture de session sont des exemples d'événements relatifs à la sécurité. Les événements sont considérés soit comme "attribuables", quand on peut les relier à un utilisateur authentifié, soit "non-attribuables" quand on ne peut pas les relier à un utilisateur authentifié. Des événements comme ceux qui apparaissent avant l'authentification durant le processus d'ouverture de session, tels que les tentatives avec un mauvais mot de passe, sont des exemples d'événements non-attribuables.
+* _classe_: désigne à l'aide d'un nom particulier des ensembles d'événements en rapport les uns avec les autres et sont utilisées dans les expressions de sélection des événements. Les classes d'événement généralement utilisées sont la "création de fichiers" (fc) l'"exécution" (ex) et l'"ouverture/fermeture de session" (lo).
+* _enregistrement_: une entrée du fichier de trace d'audit décrivant un événement relatif à la sécurité. Les enregistrements contiennent le type d'événement, des informations sur l'auteur (l'utilisateur) de l'action, la date et l'heure, des informations sur tout objet ou argument en relation avec l'action, et une condition de succès ou d'échec.
+* _trace d'audit_: un fichier journal consistant en une série d'enregistrements décrivant les événements relatifs à la sécurité. Les traces sont organisées de manière chronologiques par rapport à l'horaire de fin des événements. Seuls les processus autorisés peuvent ajouter des enregistrements aux fichiers journaux d'audit.
+* _expression de sélection_: une chaîne de caractères contenant une liste de préfixes et de classes d'événement d'audit utilisés pour désigner des événements.
+* _préselection_: le processus par lequel le système identifie quels événements intéressent l'administrateur. La configuration de la présélection utilise une série d'expressions de sélection pour déterminer quelles classes d'événement sont à auditer et pour quels utilisateurs, ainsi que le paramétrage global qui s'applique aux processus authentifiés et non-authentifiés.
+* _réduction_: le processus par lequel les enregistrements de traces d'audit existantes sont sélectionnés pour être conservés, imprimés ou analysés. Ou encore le processus qui supprime de la trace d'audit les enregistrements non-désirés. En utilisant le principe de réduction, les administrateurs peuvent mettre en place des stratégies pour la conservation des données d'audit. Par exemple, les traces d'audit détaillées peuvent être conservées pendant un mois, mais passé ce délai, les traces seront réduites afin de ne préserver pour archivage que les informations relatives aux ouvertures de sessions.
+
+[[audit-config]]
+== Configuration de l'audit
+
+Le support pour l'audit des événements est installé avec le système de base de FreeBSD. Le support présent dans le noyau [.filename]#GENERIC# par défaut, et man:auditd[8] peut être activé en ajoutant la ligne suivante au fichier [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+auditd_enable="YES"
+....
+
+Puis, le daemon d'audit peut être lancé:
+
+[source,bash]
+....
+# service auditd start
+....
+
+Les utilisateurs préférant compiler un noyau sur mesure doivent ajouter la ligne suivante dans le fichier de configuration du noyau:
+
+[.programlisting]
+....
+options     AUDIT
+....
+
+=== Expressions de sélection des événements
+
+Les expressions de sélection sont utilisées à plusieurs endroits dans la configuration du système d'audit pour déterminer quels événements doivent être suivis. Les expressions contiennent une liste de classes d'événements devant correspondre. Les expressions de sélection sont évaluées de gauche à droite, et deux expressions sont combinées en ajoutant l'une à la suite de l'autre.
+
+<<event-selection>> résume les classes d'événements présentes par défaut
+
+[[event-selection]]
+.Classes d'événements par défaut
+[cols="1,1,1", frame="none", options="header"]
+|===
+| Classe
+| Description
+| Action
+
+|all
+|tout
+|correspond à toutes les classes d'événements.
+
+|aa
+|authentification et autorisation
+|
+
+|ad
+|administration
+|Actions d'administration du système.
+
+|ap
+|application
+|Action définie par l'application.
+
+|cl
+|fermeture de fichiers
+|Enregistre les utilisations de l'appel système `close`.
+
+|ex
+|exécution
+|Enregistre les exécutions de programmes. L'audit des arguments en ligne de commande et des variables d'environnement est contrôlé par via man:audit_control[5] en utilisant les paramètres `argv` et `envv` pour l'entrée `policy`.
+
+|fa
+|accès à aux attributs des fichiers
+|enregistre l'accès aux attributs des objets comme man:stat[1], man:pathconf[2].
+
+|fc
+|création de fichiers
+|Enregistre les événements ayant pour résultat la création d'un fichier.
+
+|fd
+|suppression de fichiers
+|Enregistre les événements pour lesquels une suppression de fichier a lieu.
+
+|fm
+|modification des attributs d'un fichier
+|Enregistre les événements lors desquels une modification des attributs d'un fichier intervient, comme l'utilisation de man:chown[8], man:chflags[1], et man:flock[2].
+
+|fr
+|lecture de fichiers
+|Enregistre les événements qui donnent lieu à la lecture de données, l'ouverture de fichiers pour la lecture.
+
+|fw
+|écriture de fichiers
+|Enregistre les événements qui donnent lieu à l'écriture de données ou à l'écriture ou la modification de fichiers.
+
+|io
+|ioctl
+|Enregistre l'utilisation de l'appel système `ioctl`.
+
+|ip
+|ipc
+|Enregistre les différentes utilisations de communication inter-processus, dont les utilisations des tubes POSIX et les opérations IPC Système V.
+
+|lo
+|login_logout
+|Enregistre les ouvertures et fermeture de session (man:login[1] et man:logout[1]).
+
+|na
+|non attributable
+|Enregistre les événements non-attribuables.
+
+|no
+|classe invalide
+|Ne correspond à aucun des événements surveillés.
+
+|nt
+|réseau
+|Enregistre les événements relatifs au réseau, comme l'utilisation des fonctions man:connect[2] et man:accept[2].
+
+|ot
+|autre
+|Enregistre les événements divers.
+
+|pc
+|processus
+|Enregistre les opérations sur les processus, comme l'utilisation des fonctions man:exec[3] et man:exit[3].
+|===
+
+Ces classes d'événement peuvent être personnalisées en modifiant les fichiers de configuration [.filename]#audit_class# et [.filename]#audit_event#.
+
+Chaque classe d'audit peut être combinée avec un préfixe indiquant si les opérations réussies/échouées sont sélectionnées, et si l'entrée ajoute ou supprime une sélection pour la classe ou le type concerné. <<event-prefixes>> résume les préfixes disponibles.
+[[event-prefixes]]
+.Prefixes pour les classes d'audit
+[cols="1,1", frame="none", options="header"]
+|===
+| Prefixe
+| Action
+
+|+
+|Enregistre les événements réussis de cette classe.
+
+|-
+|Enregistre les événements de cette classe qui ont échoué.
+
+|^
+|N'enregistre ni les événements réussis ni les échecs de cette classe.
+
+|^+
+|Ne pas enregistrer les événements réussis de cette classe.
+
+|^-
+|Ne pas enregistrer les événements de cette classe qui ont échoué.
+|===
+
+Si aucun préfixe n'est présent, les succès et le échecs de l'événement seront enregistrés.
+
+L'exemple suivant d'expression de sélection permet la sélection des ouvertures et fermetures de session réussies ou échouées, et uniquement les exécutions ayant réussies:
+
+[.programlisting]
+....
+lo,+ex
+....
+
+=== Fichiers de configuration
+
+Les fichiers de configuration suivants pour l'audit d'événements en rapport avec la sécurité se trouvent dans le répertoire [.filename]#/etc/security#.
+
+* [.filename]#audit_class#: contient les définitions des classes d'audit.
+* [.filename]#audit_control#: contrôle les caractéristiques du système d'audit comme les classes d'audit par défaut, l'espace disque minimal à conserver sur le volume réservé aux journaux, la taille maximale des traces d'audit.
+* [.filename]#audit_event#: les noms et la description des événements systèmes audités ainsi qu'une liste de classes auxquelles appartiennent chaque événement.
+* [.filename]#audit_user#: les classes d'événement à auditer pour des utilisateurs spécifiques, qui s'ajoutent aux paramètres généraux fixés par défaut à l'ouverture de session.
+* [.filename]#audit_warn#: une procédure modifiable utilisée par man:auditd[8] pour générer des messages d'alerte lors des situations exceptionnelles comme un espace disque faible pour les fichiers journaux d'audit ou quand il y a eu rotation de ces fichiers journaux.
+
+[WARNING]
+====
+
+Les fichiers de configuration de l'audit devraient être modifiés et gérés avec prudence étant donné que des erreurs dans la configuration pourraient donner lieu à un enregistrement incorrect des événements.
+====
+
+Dans la plupart des cas, les administrateurs ne devront modifier que [.filename]#audit_control# et [.filename]#audit_user#. Le premier contrôle les propriétés et les stratégies au niveau du système et le second peut être utilisé pour affiner l'audit pour chaque utilisateur.
+
+[[audit-auditcontrol]]
+==== Le fichier [.filename]#audit_control#
+
+Un certain nombre de paramètres par défaut pour le système d'audit sont spécifiés dans le fichier [.filename]#audit_control#:
+
+[.programlisting]
+....
+dir:/var/audit
+dist:off
+flags:lo,aa
+minfree:5
+naflags:lo,aa
+policy:cnt,argv
+filesz:2M
+expire-after:10M
+....
+
+L'option `dir` est utilisée pour déclarer un ou plusieurs répertoires dans lesquels seront stockés les fichiers journaux. Si l'on mentionne plus d'un répertoire, ces derniers seront utilisés dans l'ordre à mesure qu'ils se remplissent. Il est classique de configurer le système d'audit pour le stockage des fichiers journaux sur un système de fichiers dédié, afin d'éviter toute interférence entre le système d'audit et d'autres systèmes si le système de fichiers est plein.
+
+Si le champ `dist` est fixé à `on` ou `yes`, des liens matériel seront créés pour tous les fichiers de trace d'audit de [.filename]#/var/audit/dist#.
+
+Le champ `flags` fixe le masque général de présélection utilisé par défaut pour les événements attribuables. Dans l'exemple ci-dessus, les ouvertures et fermetures de sessions réussies ou échouées ainsi que les authentifications et autorisations sont enregistrées pour tous les utilisateurs.
+
+L'option `minfree` définit le pourcentage minimal d'espace libre du système de fichiers sur lequel les traces d'audit sont stockées.
+
+L'entrée `naflags` indique les classes à surveiller pour les événements non-attribués, comme les processus d'ouverture et de fermeture de session et les authentifications et autorisations.
+
+L'entrée `policy` donne une liste d'indicateurs de stratégie contrôlant divers aspect du comportement de l'audit séparés par une virgule. L'indicateur `cnt` indique que le système devrait continuer à fonctionner en dépit d'un échec dans l'audit (l'emploi de cet indicateur est hautement recommandé). L'autre indicateur `argv`, provoque l'audit des arguments passés à l'appel système man:execve[2] lors de l'audit de l'exécution des commandes.
+
+L'entrée `filez` indique la taille maximale en octets autorisée pour un fichier de trace avant qu'il soit interrompu et que le système provoque sa rotation. La valeur par défaut, `0`, désactive la rotation automatique des journaux. Si la taille de fichier est inférieure à 512K, elle sera ignorée et un message sera généré.
+
+Le champ `expire-after` indique quand un fichier de trace expirera et sera supprimé.
+
+[[audit-audituser]]
+==== Le fichier [.filename]#audit_user#
+
+L'administrateur peut spécifier des exigences supplémentaires qu niveau de l'audit pour des utilisateurs spécifiques dans le fichier [.filename]#audit_user#. Chaque ligne paramètre l'audit pour un utilisateur par l'intermédiaire de deux champs: le champ `alwaysaudit`, qui indique l'ensemble des événements qui devraient toujours être surveillés pour l'utilisateur, le champ, `neveraudit`, indique un ensemble d'événements qui ne devrait jamais être audité pour cet utilisateur.
+
+L'exemple suivant d'entrées permet le suivi des ouvertures et fermetures de sessions et l'exécution de commandes avec succès de l'utilisateur `root`, et audite la création de fichiers et l'exécution de commandes avec succès pour l'utilisateur `www`. Si utilisé avec le fichier [.filename]#audit_control# par défaut, l'entrée `lo` pour `root` est redondante, et les événements relatifs aux ouvertures et aux fermetures de sessions seront également enregistrés pour l'utilisateur `www`.
+
+[.programlisting]
+....
+root:lo,+ex:no
+www:fc,+ex:no
+....
+
+[[audit-administration]]
+== Travailler avec les traces d'audit
+
+Etant donné que les traces d'audit sont stockées sous le format binaire BSM ("Basic Security Module"), plusieurs outils sont disponibles pour modifier ou convertir en texte ces fichiers de trace. Pour convertir les fichiers de trace en en texte simple, utiliser la commande `praudit`. Pour réduire le fichier de trace en vue d'une analyse, d'un archivage, ou d'une impression, utiliser la commande `auditreduce`. Cet utilitaire supporte une variété de paramètres de sélection, parmi lesquels le type d'événement, la classe de l'événement, l'utilisateur, la date ou l'heure de l'événement, et le chemin d'accès ou l'objet sur lequel on agit.
+
+Par exemple, pour afficher sous forme de texte brut l'intégralité du contenu du fichier journal d'audit précisé:
+
+[source,bash]
+....
+# praudit /var/audit/AUDITFILE
+....
+
+Où _AUDITFILE_ est le journal à afficher.
+
+Les traces d'audit consistent en une série d'enregistrements constitués de champs que la commande `praudit` affiche de manière séquentielle, un par ligne. Chaque champ est spécifique, comme `header` (l'entête de l'enregistrement), ou `path` (le chemin d'accès). Ce qui suit est un exemple d'événement `execve`:
+
+[.programlisting]
+....
+header,133,10,execve(2),0,Mon Sep 25 15:58:03 2006, + 384 msec
+exec arg,finger,doug
+path,/usr/bin/finger
+attribute,555,root,wheel,90,24918,104944
+subject,robert,root,wheel,root,wheel,38439,38032,42086,128.232.9.100
+return,success,0
+trailer,133
+....
+
+Cet audit représente un appel réussi à `execve`, lors de l'exécution de la commande `finger doug`. Le champ `exec arg` contient la ligne de commande présentée par l'interpréteur de commandes au noyau. Le champ `path` contient le chemin d'accès à l'exécutable comme le voit le noyau. Le champ `attribute` décrit le binaire et précise les permissions sur le fichier. Le champ `subject` conserve l'identifiant (ID) de l'utilisateur audité, les identifiants groupe et utilisateur effectifs, les identifiants groupe et utilisateur réels, l'ID du processus, l'ID de la session, l'ID du port, et l'adresse correspondant à la session. Notez que l'ID de l'utilisateur pour l'audit diffère de l'ID réel de l'utilisateur étant donné que l'utilisateur `robert` est passé en `root` avant l'exécution de la commande, mais l'audit se fait par rapport à l'utilisateur authentifié original. Le champ `return` indique la réussite de l'exécution et le champ `trailer` termine l'enregistrement.
+
+Le format de sortie XML est également supporté et peut être sélectionné en utilisant l'argument `-x`.
+
+Comme les journaux d'audit peuvent être très gros, un sous-ensemble d'enregistrements peut être sélectionné en utilisant `auditreduce`. Cet exemple sélectionne tous les enregistrements produits pour l'utilisateur `trhodes` et stockés dans le fichier _AUDITFILE_:
+
+[source,bash]
+....
+# auditreduce -u trhodes /var/audit/AUDITFILE | praudit
+....
+
+Les membres du groupe `audit` sont autorisés à lire les traces d'audit présentes dans le répertoire [.filename]#/var/audit#. Par défaut, ce groupe est vide, par conséquent seul l'utilisateur `root` peut lire les traces d'audit. Des utilisateurs peuvent être ajoutés au groupe `audit` afin de déléguer les droits de lecture des audits. Comme la possibilité de suivre le contenu des fichiers journaux de l'audit donne un aperçu significatif du comportement des utilisateurs et des processus, il est donc recommandé de déléguer avec prudence les droits de lecture des audits.
+
+=== Surveillance en direct à l'aide de tubes d'audit
+
+Les tubes ("pipes") d'audit sont des pseudo-périphériques "clonables" qui autorisent aux applications l'accès au flux d'enregistrement des audits en cours. C'est de tout premier intérêt pour les auteurs d'applications de détection des intrusions et de surveillance du système. Cependant, le tube d'audit est un moyen pratique pour l'administrateur pour autoriser la surveillance en direct sans avoir à faire face aux problèmes de permissions ou de rotation des fichiers journaux interrompant le flux des enregistrements des événements. Pour suivre le flux des enregistrements de l'audit en cours:
+
+[source,bash]
+....
+# praudit /dev/auditpipe
+....
+
+Par défaut, les fichiers spéciaux de périphériques correspondant aux tubes d'audit ne sont accessibles qu'à l'utilisateur `root`. Pour les rendre accessibles aux membres du groupe `audit`, ajoutez une règle `devfs` au fichier [.filename]#/etc/devfs.rules#:
+
+[.programlisting]
+....
+add path 'auditpipe*' mode 0440 group audit
+....
+
+Consultez la page de manuel man:devfs.rules[5] pour plus d'information sur la configuration du système de fichiers devfs.
+
+[WARNING]
+====
+
+Il est relativement simple de produire un effet de boucle sans fin, dans lequel la consultation de chaque événement enregistré par le système d'audit provoque la génération de nouveaux événements d'audit. Par exemple, si toutes les entrées/sorties réseau sont surveillées, et que `praudit` est exécuté depuis une session SSH, alors un flux continu d'événements sera généré suivant une fréquence importante, chaque événement affiché générant un autre événement. Pour cette raison, il est recommandé d'exécuter `praudit` sur un tube par l'intermédiaire de sessions sans surveillance précise des entrées/sorties.
+====
+
+=== Rotation et compression des fichiers de trace d'audit
+
+Les traces d'audit sont écrites par le noyau, et sont gérées par le "démon" d'audit, man:auditd[8]. Les administrateurs ne devraient donc pas tenter d'utiliser man:newsyslog.conf[5] ou tout autre outil pour assurer la rotation directe des journaux d'audit. A la place, l'utilitaire `audit` devrait être employé pour stopper l'audit, reconfigurer le système d'audit et effectuer la rotation des journaux. La commande suivante provoque la création d'un nouveau fichier journal d'audit par le "démon" et signale au noyau d'utiliser le nouveau fichier pour les enregistrements. L'ancien fichier journal sera fermé et renommé et pourra, à partir de cet instant, être manipulé par l'administrateur:
+
+[source,bash]
+....
+# audit -n
+....
+
+Si man:auditd[8] ne tourne pas, cette commande échouera et un message d'erreur sera généré.
+
+Ajouter la ligne suivante au fichier [.filename]#/etc/crontab# provoquera cette rotation toutes les douze heures:
+
+[.programlisting]
+....
+0     */12       *       *       *       root    /usr/sbin/audit -n
+....
+
+La modification sera prise en compte une fois que aurez sauvegardé le fichier [.filename]#/etc/crontab#.
+
+La rotation automatique du fichier d'une trace d'audit basée sur la taille du fichier est possible à l'aide de l'option `filesz` de [.filename]#audit_control# comme décrit dans <<audit-auditcontrol>>.
+
+=== Compresser les traces d'audit
+
+Les fichiers de trace d'audit peuvent devenir très gros, il est souvent désirable de les compresser ou sinon de les archiver une fois qu'ils ont été fermés par le "démon" d'audit. La procédure [.filename]#audit_warn# peut être employée pour effectuer des opérations personnalisées pour une variété d'événements relatifs à l'audit, y compris l'arrêt propre des traces d'audit lors de leur rotation. Par exemple, ce qui suit peut être ajouté au fichier [.filename]#/etc/security/audit_warn# pour compresser les traces d'audit à leur fermeture:
+
+[.programlisting]
+....
+#
+# Compression des fichiers de trace d'audit à leur fermeture.
+#
+if [ "$1" = closefile ]; then
+        gzip -9 $2
+fi
+....
+
+D'autres activités d'archivage pourront inclure la copie des fichiers de trace vers un serveur central, la suppression d'anciennes traces, ou la réduction des traces pour supprimer les enregistrements inutiles. Cette procédure ne sera exécutée que lorsque les fichiers de trace d'audit auront été proprement arrêtés, et ne sera pas exécutée sur les traces interrompues en cours d'utilisation suite à un arrêt incorrect du système.

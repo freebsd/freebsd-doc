@@ -1,0 +1,479 @@
+---
+title: 12. Fejezet - A FreeBSD rendszerindítási folyamata
+part: III. Rész Rendszeradminisztráció
+prev: books/handbook/config
+next: books/handbook/users
+---
+
+[[boot]]
+= A FreeBSD rendszerindítási folyamata
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 12
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/boot/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/boot/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/boot/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[boot-synopsis]]
+== Áttekintés
+
+A számítógép indulását és a rajta található operációs rendszer betöltõdését "rendszerindítási folyamatnak" nevezzük, vagy egyszerûen csak "bootolásnak". A FreeBSD rendszerindítási folyamata nagymértékû rugalmasságot kínál a rendszer indulását követõ események vezérlését illetõen, legyen az a számítógépre telepített különféle operációs rendszerek egyikének kiválasztása, vagy pedig ugyanazon operációs rendszer valamelyik változatának vagy rendszermagjának kiválasztása.
+
+Ez a fejezet részleteiben bemutatja a rendszerindításhoz kapcsolódó konfigurációs opciókat, illetve a FreeBSD bootolásának testreszabhatóságát. Ebbe minden beleértendõ, ami a FreeBSD rendszermag beindulása és az eszközök keresése során történik, majd az man:init[8] elindításával zárul. Ha nem vagyunk teljesen biztosak benne, ez pontosan mikor is következik be, figyeljük, amikor a szöveg színe fehérrõl szürkére vált.
+
+A fejezet elolvasása során megismerjük:
+
+* milyen elemekbõl áll a FreeBSD rendszertöltõ alrendszere, és ezek miként kapcsolódnak egymáshoz;
+* melyek azok a FreeBSD rendszerindításában résztvevõ elemeknek átadható opciók, amelyekkel vezérelhetõ ez a folyamat;
+* a man:device.hints[5] alapjait.
+
+[NOTE]
+.Csak x86
+====
+Ez a fejezet kizárólag csak az Intel(R) x86 típusú architektúráján futó FreeBSD rendszerindítási folyamatát mutatja be.
+====
+
+[[boot-introduction]]
+== A rendszerindítás problémája
+
+Az operációs rendszer elindítása a számítógép bekapcsolása után egy felettébb érdekes problémát vet fel. Definíció szerint a számítógép ugyanis egy lépést sem tud megtenni az operációs rendszer elindulása nélkül. Például nem tud programokat futtatni a lemezrõl. Eszerint ha a számítógépünk nem képes programokat futtatni a lemezrõl az operációs rendszer segítsége nélkül, viszont az operációs rendszer programjai a lemezen vannak, mégis hogyan képes elindulni maga az operációs rendszer?
+
+Maga a probléma a Münchhausen báró kalandjai c. könyvben leírtakhoz hasonló. A történet szerint ugyanis a fõszereplõ egy mocsárban ragadt derék lovával, azonban sikerült kihúznia magát belõle a saját hajánál fogva. Ez a motívum vált a számítógépek hõskorában a _rendszerbetöltés_ alapjává, vagyis ahogyan betöltötték az operációs rendszereket. _(Ford.: ezt az angolban bootstrappingnek hívják, mivel a történet angol változata szerint a csizmáján (boot) emelkedett ki. Ebbõl alakult ki késõbb az elterjedt bootolás szó is.)_
+
+Az x86-os konfigurációkon a BIOS (Basic Input/Output System, avagy "alapvetõ be- és kimeneti rendszer") felelõs az operációs rendszer betöltéséért. Ehhez a BIOS elõször megkeresi a merevlemez egy speciális helyén található Master Boot Record-ot (MBR). A BIOS elegendõ tudással rendelkezik az MBR beolvasásához és lefuttatásához, és feltételezi, hogy az MBR majd elvégzi az operációs rendszer betöltéséhez szükséges további feladatokat, helyenként a BIOS közremûködésével.
+
+Az MBR-ben található programkódot hívják általában __boot manager__nek, kiváltképp abban az esetben, amikor az a felhasználóval is kommunikál. Ilyenkor a boot manager többnyire további kódot tartalmaz a lemez elsõ __sáv__ján vagy az egyik állományrendszerben. (A boot managereket néha __boot loader__nek is nevezzük, de a FreeBSD-s terminológia ezt a kifejezést a rendszerindítás egy késõbbi fokozatára használja.) Népszerûbb boot managerek: boot0 (avagy Boot Easy, a FreeBSD alapvetõ boot managere), GRUB, GAG és a LILO. (Ezek közül egyedül csak a boot0 fér el az MBR-ben.)
+
+Amennyiben merevlemezeinken csupán egyetlen operációs rendszer foglal helyet, akkor egy szabványos MBR tökéletesen megfelelõ. Ez az MBR megkeresi az elsõ indítható (más néven aktív) slice-ot a lemezen, majd lefuttatja a benne található indítókódot az operációs rendszer többi részének felélesztéséhez. Az man:fdisk[8] által alapértelmezés szerint telepített MBR pontosan ilyen. Ennek alapja a [.filename]#/boot/mbr# állomány.
+
+Ha viszont több operációs rendszert is telepítettünk a lemezeinkre, akkor egy ettõl eltérõ boot managert érdemes használnunk, olyat, amely képes felsorolni a rendelkezésre álló operációs rendszereket, lehetõvé téve, hogy választani lehessen az indításuk között. Ezek közül kettõrõl esik szó a következõ alfejezetekben.
+
+A FreeBSD rendszertöltõ alrendszerének fennmaradó része három fokozatra bontható. Az elsõ fokozatot az MBR indítja el, amely pontosan eleget tud ahhoz, hogy a számítógépet egy elõre megadott állapotba hozza és lefuttassa rajta a második fokozatot. A második fokozat ennél már egy kicsivel többre képes, majd ezt követi a harmadik fokozat. Ez a fokozat zárja le végül az operációs rendszer betöltésének feladatát. A munka tehát ezen három fokozat között oszlik meg, mivel a PC-szabványok komoly korlátozásokat tesznek az elsõ, illetve második fokozatban futtatható programok méretére. Ha így fûzzük össze a feladatokat, akkor a FreeBSD számára egy sokkal rugalmasabb betöltõt kapunk.
+
+Ezután beindul a rendszermag (más néven kernel), és nekilát a számítógépben rendelkezésre álló hardvereszközök keresésének, majd elõkészíti õket a használatra. Ahogy a rendszermag beindításának folyamata véget ért, az átadja a vezérlést az man:init[8] nevû felhasználói programnak, amely megbizonyosodik a lemezek használhatóságáról. Az man:init[8] ezt követõen megkezdi az erõforrások felhasználói szintû konfigurálását: csatlakoztatja az állományrendszereket, beállítja a hálózati kártyá(ka)t, és elindítja mindazon programokat, amelyeknek egy FreeBSD rendszer indulásakor futnia kell.
+
+[[boot-blocks]]
+== A boot manager és az indulás fokozatai
+
+[[boot-boot0]]
+=== A boot manager
+
+Az MBR-ben található programkódot, avagy boot managert, sokszor csak a rendszerindítás __nulladik fokozat__aként emlegetik. Ez az alfejezet a korábban említett két boot managert tárgyalja: a boot0-t és a LILO-t.
+
+*A boot0 boot manager:* A FreeBSD telepítõje vagy a man:boot0cfg[8] által kialakított MBR alapértelmezett állapotban a [.filename]#/boot/boot0# állományon alapszik. (A boot0 program nagyon egyszerû, hiszen az -ben elhelyezhetõ kód csak 446 byte hosszúságú lehet, mert a végében még el kell férnie a slice-táblának és az `0x55AA` azonosítónak.) Ha telepítettük a boot0-t és a lemezeinken több operációs rendszer is megtalálható, akkor a rendszerindítás során egy hasonló képet kell látnunk:
+
+[[boot-boot0-example]]
+.A [.filename]#boot0# munkában
+[example]
+====
+
+[source,bash]
+....
+F1 DOS
+F2 FreeBSD
+F3 Linux
+F4 ??
+F5 Drive 1
+
+Default: F2
+....
+
+====
+
+Más operációs rendszerek, különösen a Windows(R), telepítésük során felülírják a már meglevõ MBR-t a sajátjukkal. Ha ez történne, vagy egyszerûen csak szeretnénk a meglevõ MBR-t lecserélni a FreeBSD MBR-jével, adjuk ki a következõ parancsot:
+
+[source,bash]
+....
+# fdisk -B -b /boot/boot0 eszköznév
+....
+
+ahol az _eszköznév_ annak az eszköznek a neve, ahonnan a rendszert indítani szeretnénk, tehát például [.filename]#ad0# az elsõ IDE-lemez esetén, vagy [.filename]#ad2# a második IDE-vezérlõn található elsõ IDE-lemez esetén, illetve [.filename]#da0# az elsõ SCSI-lemez esetén, és így tovább. Ha testre akarjuk szabni az MBR-t, használjuk a man:boot0cfg[8]-t.
+
+*A LILO boot manager:* Ezen boot manager telepítéséhez és beállításához elsõként indítsuk el a Linuxot és vegyük hozzá az alábbi sort a rendszerünkben található [.filename]#/etc/lilo.conf# konfigurációs állományhoz:
+
+[.programlisting]
+....
+other=/dev/hdXY
+table=/dev/hdX
+loader=/boot/chain.b
+label=FreeBSD
+....
+
+A fenti sablont kiegészítve, a linuxos konvenciók szerint adjuk meg a FreeBSD elsõdleges partícióját és meghajtóját úgy, hogy az _X_-et átírjuk a linuxos meghajtó betûjelére és az _Y_-t átírjuk a Linux(R) elsõdleges partíciójának számára. Ha SCSI-meghajtót használunk, a _/dev/hd_ részt is át kell írnunk az elõbbiek mellett _/dev/sd_-re. A `loader=/boot/chain.b` sor elhagyható abban az esetben, ha mind a két operációs rendszer ugyanazon a meghajtón található. Ha befejeztük a módosítást, futtassuk le a `/sbin/lilo -v` parancsot a változtatásaink életbe léptetéséhez. Ezt ellenõrizhetjük is a képernyõn megjelenõ üzenetek alapján.
+
+[[boot-boot1]]
+=== Az elsõ fokozat ([.filename]#/boot/boot1#) és a második fokozat ([.filename]#/boot/boot2#)
+
+Az elsõ és a második fokozat fogalmilag ugyanannak a programnak a része, a lemezen ugyanott helyezkedik el. A tárbeli megszorítások miatt ugyan el kellett választani õket egymástól, de a telepítésük mindig egy helyre történik. A telepítõ vagy a bsdlabel (lásd lentebb) használata során a [.filename]#/boot/boot# nevû kombinált állományból másolódnak ki.
+
+Az állományrendszereken kívül találhatóak, az aktív slice elsõ sávjában, annak elsõ szektorától kezdõdõen. Ez az a hely, ahol a <<boot-boot0,boot0>>, illetve a többi boot manager is keresi a rendszerindítás folytatására alkalmas programot. A felhasznált szektorok száma könnyedén kideríthetõ a [.filename]#/boot/boot# méretébõl.
+
+Legfeljebb 512 byte-os méreténél fogva a [.filename]#boot1# állomány nagyon egyszerû felépítésû, és éppen csak annyit tud a slice-ra vonatkozó információkat tároló FreeBSD _bsdlabel_-rõl, hogy megtalálja a [.filename]#boot2#-t és elindítsa.
+
+A [.filename]#boot2# már egy kicsivel ügyesebb, és eléggé ismeri a FreeBSD állományrendszerét ahhoz, hogy megtaláljon rajta állományokat, valamint képes egy egyszerû felületet nyújtani a rendszermag vagy a betöltõ megválasztásához.
+
+Mivel a <<boot-loader,betöltõ>> pedig már ennél is okosabb, és egy könnyen használható rendszerindítási konfigurációt tud a felhasználó számára nyújtani, ezért a [.filename]#boot2# általában ezt indítja el, de elõtte közvetlenül a rendszermag futtatását végzi el.
+
+[[boot-boot2-example]]
+.A [.filename]#boot2# mûködés közben
+[example]
+====
+
+[source,bash]
+....
+>> FreeBSD/i386 BOOT
+Default: 0:ad(0,a)/boot/loader
+boot:
+....
+
+====
+
+Ha le kellene váltani a korábban telepített [.filename]#boot1# és [.filename]#boot2# fokozatokat, használjuk a man:bsdlabel[8]-t:
+
+[source,bash]
+....
+# bsdlabel -B lemezslice
+....
+
+ahol a _lemezslice_ annak a lemeznek és slice-nak a kombinációja, ahonnan indítjuk a rendszerünket, például az elsõ IDE-lemez elsõ slice-a esetén ez az [.filename]#ad0s1#.
+
+[WARNING]
+.A veszélyesen dedikált mód (Dangerously Dedicated Mode)
+====
+Amikor a man:bsdlabel[8] meghívásakor csak a lemez nevét használjuk, például [.filename]#ad0#-t, a parancs egy veszélyesen dedikált lemezt hoz létre, slice-ok nélkül! Szinte biztos, hogy nem ez az, amire szükségünk lenne, ezért mindig ellenõrizzük kiadása elõtt a man:bsdlabel[8] parancsot!
+====
+
+[[boot-loader]]
+=== A harmadik fokozat ([.filename]#/boot/loader#)
+
+A betöltõ a három fokozatú rendszertöltés utolsó állomása. Az állományrendszerben [.filename]#/boot/loader# néven találhatjuk meg.
+
+A rendszertöltõt az egyszerû konfigurálhatóságot támogató, felhasználóbarát eszköznek tervezték, és könnyen megtanulható, beépített parancsokat használ, melyek mögött egy összetettebb parancsokat ismerõ, erõsebb értelmezõ áll.
+
+[[boot-loader-flow]]
+==== A rendszertöltõ mûködése
+
+Az inicializálás során a rendszertöltõ megpróbálja megkeresni a konzolt, és a lemezek közül igyekszik megtalálni azt, amelyikrõl elindult a rendszer. A keresések eredményének megfelelõen beállítja a változókat, majd elindul egy értelmezõ, ahol vagy szkriptbõl olvasva, vagy pedig interaktívan feldolgozásra kerülnek a parancsok.
+
+A rendszertöltõ ezt követõen beolvassa a [.filename]#/boot/loader.rc# állományt, az pedig alapértelmezés szerint feldolgozza a [.filename]#/boot/defaults/loader.conf# állományt, ahol a változók értelmes kezdõértéket kapnak, valamint feldolgozza még a [.filename]#/boot/loader.conf# állományt is, ahol a változók értékeit változtathatjuk meg. Miután ez lezajlott, a [.filename]#loader.rc# a változók értékeinek megfelelõen cselekszik, betöltve az ily módon kiválasztott rendszermagot és a hozzá választott modulokat.
+
+Végezetül, a rendszertöltõ beiktat egy, alapértelmezés szerint 10 másodperces várakozási szünetet, majd elindítja a rendszermagot, ha azt meg nem szakítjuk egy billentyû lenyomásával. Ha megszakítjuk ezt a várakozást, a rendszertöltõ egy parancssort ad, amelyen keresztül egyszerû parancsokat adhatunk ki neki: állíthatjuk a változók értékeit, modulokat távolíthatunk el a memóriából, modulokat töltethetünk be, elindíthatjuk a rendszert vagy újraindíthatjuk a számítógépet.
+
+[[boot-loader-commands]]
+==== A rendszertöltõ beépített parancsai
+
+Következzenek a leggyakrabban használt parancsok a rendszertöltõben. Az összes itt elérhetõ parancsot a man:loader[8] man oldalon találjuk meg.
+
+autoboot _másodperc_::
+Megkezdi a rendszermag betöltését, ha nem szakítjuk meg a várakozást másodpercekben megadott idõtartam alatt. Ekkor egy visszaszámlálást láthatunk, ami az alapértelmezés szerint 10 másodperctõl indul.
+
+boot [-opciók] [rendszermag]::
+Amennyiben léteznek, a megadott opciókkal azonnal megkezdi a megadott rendszermag betöltését. A _rendszermag_ paraméter csak abban az esetben adható meg, ha elõtte kiadtunk egy _unload_ parancsot, máskülönben a korábban betöltött rendszermaggal indul a rendszer.
+
+boot-conf::
+Végigmegy a modulok ugyanazon automatikus konfigurációján, ahogy az a normális rendszerindítás során is történik. Ezen parancs használatának csak akkor van értelme, ha elõtte az `unload` parancsot használjuk, megváltoztatunk egy-két változót, általában a `kernel`-t.
+
+help [témakör]::
+A [.filename]#/boot/loader.help# állományban fellelhetõ súgóüzeneteket mutatja meg. Ha témakörnek ``index``et adunk meg, akkor az elérhetõ témakörök listáját kapjuk meg.
+
+include _állománynév_ ...::
+Feldolgozza a megnevezett állományt: beolvassa, majd sorról sorra értelmezi. Hiba esetén azonnal megállítja a feldolgozást.
+
+load [-t típus] _állománynév_::
+A név alapján betölti a rendszermagot, modult vagy az adott típusú állományt. Az állománynév után megadott további paraméterek az állománynak adódnak át.
+
+ls [-l] [elérési útvonal]::
+Kilistázza a megadott elérési útvonalon található állományokat, vagy ennek hiányában a gyökér tartalmát. Ha hozzátesszük a `-l` kapcsolót, az állományok mérete is látható válik.
+
+lsdev [-v]::
+Kilistázza az összes olyan eszközt, ahonnan modulokat tölthetünk be. Amennyiben a `-v` kapcsolót is megadjuk, további részleteket tudhatunk meg róluk.
+
+lsmod [-v]::
+Kilistázza a betöltött modulokat. Ha többet szeretnénk megtudni róluk, adjuk meg a `-v` kapcsolót.
+
+more _állománynév_::
+Megmutatja a megadott állomány tartalmát, minden `LINES` számú sor után szünetet tartva.
+
+reboot::
+Azonnal újraindítja a számítógépet.
+
+set _változó_::
+Beállítja a rendszertöltõ környezeti változójának értékét.
+
+unload::
+Eltávolítja a memóriából az összes betöltött modult.
+
+[[boot-loader-examples]]
+==== Rendszertöltõ példák
+
+Íme néhány konkrét példa a rendszertöltõ használatára:
+
+* Így indíthatjuk egyfelhasználós módban az általunk használt rendszermagot:
++
+[source,bash]
+....
+ boot -s
+....
++
+* Távolítsuk el a betöltött rendszermagot és a moduljait, és töltsük be helyettük a korábbi (vagy egy másik) rendszermagot:
++
+[source,bash]
+....
+unload
+load kernel.old
+....
++ 
+Itt használhatjuk a [.filename]#kernel.GENERIC# nevet is, amely a telepítõlemezen található általános rendszermagra utal, vagy a [.filename]#kernel.old# nevet, amely a korábban használt rendszermagot rejti (például amikor rendszermagot frissítettünk vagy készítettünk magunknak).
++
+[NOTE]
+====
+A következõképpen lehet betölteni a szokásos moduljainkat egy másik rendszermaggal:
+
+[source,bash]
+....
+unload
+set kernel="kernel.old"
+boot-conf
+....
+
+====
++
+* Egy rendszermag-konfigurációs szkript (automatizált szkript, amely ugyanazokat a beállításokat végzi el, amelyeket mi magunk tennénk akkor, amikor a rendszermagot indítjuk) betöltése:
++
+[source,bash]
+....
+ load -t userconfig_script /boot/kernel.conf
+....
+
+[[boot-splash]]
+==== Rendszerbetöltõ képernyõk
+
+A rendszertöltés során megjelenõ rendszerüzenetek megjelenítése helyett egy sokkal megnyerõbb, látványosabb rendszerindítást tudunk elérni betöltõ képernyõk használatával. Egy ilyen képet egészen a konzolos bejelentkezésig, vagy az X felett futó valamelyik bejelentkezõ képernyõ megjelenéséig láthatunk.
+
+FreeBSD alatt alapvetõen két típusú környezet létezik. Ezek közül az egyik a hagyományos virtuális konzolos parancssoros felület. Ekkor a rendszertöltés befejezõdésekor egy szöveges parancssori bejelentkezõ promptot kapunk. A másik környezet az X11 által felkínált grafikus felület. Miután telepítettük az crossref:x11[x-install,X11] szervert és valamelyik crossref:x11[x11-wm,munkakörnyezetet], tehát például a GNOME, a KDE vagy az XFce környezetek valamelyikét, a `startx` paranccsal indíthatjuk el a grafikus felületet.
+
+Némely felhasználók a megszokott szöveges bejelentkezés helyett is inkább valamelyik X11 alapú grafikus bejelentkezést szeretnék használni. A különbözõ bejelentkezõ képernyõk, mint amilyen az Xorg esetén az XDM, a GNOME esetén a gdm, vagy a KDE esetén a kdm (illetve a Portgyûjteménybõl származó egyéb megoldások) alapvetõen a konzolos bejelentkezés helyett nyújtanak egy grafikus bejelentkezõ felületet. Ilyenkor a sikeres bejelentkezést követõen a felhasználó közvetlenül egy grafikus környezetbe kerül.
+
+A parancssoros felület esetén a rendszertöltõ képernyõ elrejti az összes rendszerüzenetet és a rendszer indításakor futtatott programok üzeneteit. Az X11 használata esetén azonban a felhasználók ezzel együtt már a többi, alapértelmezés szerint grafikus felülettel rendelkezõ rendszerhez (Microsoft(R) Windows(R) vagy más nem-UNIX operációs rendszer) hasonló élményt nyernek.
+
+[[boot-splash-function]]
+===== A rendszerbetöltõ képek támogatása
+
+A FreeBSD csak BMP ([.filename]#.bmp#) vagy ZSoft PCX formátumú, 256 színû rendszerbetöltõ képek megjelenítését támogatja. Emellett szabványos VGA kártyákon csak akkor fog mûködni, ha a kép 320x200 vagy annál kisebb felbontású.
+
+Nagyobb méretû képek esetén, egészen az 1024x768-as felbontásig, a FreeBSD VESA támogatására lesz szükségünk. Ezt vagy a rendszer indításakor a VESA modul betöltésével engedélyezhetjük, vagy ha a rendszermag konfigurációs állományában megadjuk a `VESA` sort és készítünk egy saját rendszermagot (lásd crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]). A VESA támogatáson keresztül a felhasználók a teljes képernyõt betöltõ rendszerbetöltõ képeket is meg tudnak így jeleníteni.
+
+A rendszerbetöltõ képernyõ a rendszer indítása közben bármikor tetszõlegesen kikapcsolható egy tetszõleges billentyû lenyomásával.
+
+A megadott betöltõképernyõ alapértelmezés szerint a képernyõvédõ szerepét is betölti az X11 felületén kívül. Ha tehát egy ideig nem használjuk a számítógépünket, akkor a képernyõ átvált a betöltõképre és folyamatosan változtatni kezdi az intenzitását, a nagyon világosból a nagyon sötétbe, majd újrakezdi. Az alapértelmezett képernyõvédõ az [.filename]#/etc/rc.conf# állományban a `saver=` sor megadásával állítható át. Ehhez a beállításhoz több különbözõ beépített képernyõvédõ tartozik, ezek teljes listáját a man:splash[4] man oldalon olvashatjuk. Ezek közül az alapértelmezett a "warp". Az [.filename]#/etc/rc.conf# állományban megadható `saver=` csak a virtuális konzolokra vonatkozik, az X11 bejelentkezõ képernyõire semmilyen hatással sincs.
+
+A rendszerbetöltõ néhány üzenete, valamint a rendszerindítási opciókat tartalmazó menü és a hozzá tartozó visszaszámlálás még a rendszerbetöltõ képernyõ használata során is meg fog jelenni.
+
+A http://artwork.freebsdgr.org/node/3/[http://artwork.freebsdgr.org] címen találhatunk néhány ilyen betöltõképernyõt. A package:sysutils/bsd-splash-changer[] port telepítésével pedig a rendszer egyes indításakor egy elõre megadott gyûjteménybõl tudunk véletlenszerûen választani egyet.
+
+[[boot-splash-enable]]
+===== A rendszerbetöltõ képek használata
+
+A betöltõképet tartalmazó ([.filename]#.bmp# vagy [.filename]#.pcx# kiterjesztésû) állományt a rendszerindító partícióra, például a [.filename]#/boot# könyvtárba kell tennünk.
+
+A normál (256 szín, legfeljebb 320x200-as felbontású) képek esetén a következõ sorokat adjuk hozzá a [.filename]#/boot/loader.conf# állományhoz:
+
+[.programlisting]
+....
+splash_bmp_load="YES"
+bitmap_load="YES"
+bitmap_name="/boot/betöltõkép.bmp"
+....
+
+Nagyobb felbontás esetén (legfeljebb 1024x768-as méretig) pedig a [.filename]#/boot/loader.conf# állománynak a következõket kell tartalmaznia:
+
+[.programlisting]
+....
+vesa_load="YES"
+splash_bmp_load="YES"
+bitmap_load="YES"
+bitmap_name="/boot/betöltõkép.bmp"
+....
+
+Az iménti példában feltételeztük, hogy a [.filename]#/boot/betöltõkép.bmp# állományt használjuk betöltõképként. Amikor azonban PCX állományokat akarunk használni, a következõ sorokat kell megadnunk, a felbontástól függõen a `vesa_load="YES"` sorral kiegészítve:
+
+[.programlisting]
+....
+splash_pcx_load="YES"
+bitmap_load="YES"
+bitmap_name="/boot/betöltõkép.pcx"
+....
+
+Természetesen a kép neve sem csak "betöltõkép" lehet. Tetszõlegesen elnevezhetjük, egyedül csak arra kell ügyelünk, hogy BMP vagy PCX formátumú legyen: [.filename]#splash_640x400.bmp# vagy például [.filename]#blue_wave.pcx#.
+
+További érdekes beállítások a [.filename]#loader.conf# állományból:
+
+`beastie_disable="YES"`::
+Ennek megadásakor nem jelenik meg a rendszerindítási lehetõségeket felkínáló menü, de a visszaszámlálás megmarad. Hiába tiltjuk le a menüt, ilyenkor továbbra is választanunk kell a lehetõségek közül.
+
+`loader_logo="beastie"`::
+Ezzel a beállítással a menüben látható "FreeBSD" feliratot cserélhetjük le a korábbi kiadásokban szereplõ színes démonos emblémára.
+
+[[boot-kernel]]
+== Kapcsolat a rendszermaggal a rendszerindítás folyamán
+
+Ahogy sikerült betölteni (a szokásos módon) a <<boot-loader,rendszertöltõ>>vel vagy (a rendszertöltõ átugrásával) a <<boot-boot1,boot2>> segítségével, a rendszermag megvizsgálja az esetlegesen átvett rendszerindítási paramétereket, és azoknak megfelelõen viselkedik.
+
+[[boot-kernel-bootflags]]
+=== A rendszermag paraméterei
+
+A rendszermag leginkább használt paraméterei:
+
+`-a`::
+a rendszermag inicializálása során rákérdez a gyökér állományrendszerként csatlakoztatandó eszközre.
+
+`-C`::
+a rendszer indítása CD-rõl.
+
+`-c`::
+a UserConfig, a rendszerindítás során használt rendszermag-beállító, futtatása.
+
+`-s`::
+a rendszer indítása egyfelhasználós módban.
+
+`-v`::
+részletesebb információk megjelenítése a rendszermag indítása során.
+
+[NOTE]
+====
+Ezeken kívül még számos paraméter létezik, a teljes listát a man:boot[8] man oldalon találhatjuk meg.
+====
+
+[[device-hints]]
+== Eszköz útmutatók (device.hints)
+
+[NOTE]
+====
+Ez a lehetõség csak a FreeBSD 5.0 vagy annál késõbbi verzióiban jelenik meg.
+====
+
+A rendszerindítás kezdeti szakaszában a man:loader[8] beolvassa a man:device.hints[5] állományt. Ebben az állományban tárolódnak a gyakran csak "eszköz útmutatóknak" nevezett változók, amelyek a rendszermag számára nyújtanak hasznos információkat az indulás során. Ezeket az "útmutatókat" az eszközmeghajtók hasznosítják az általuk ismert eszközök beállítása során.
+
+Az eszközökre vonatkozó ilyen jellegû útmutatások a <<boot-loader,harmadik fázisban>> megjelenõ parancssorban is megadhatóak. A változókat a `set` (beállít) parancs segítségével tudjuk felvenni, míg az `unset` (eltávolít) paranccsal tudunk törölni, valamint a `show` (megmutat) paranccsal megjeleníteni az értéküket. Sõt, ezen a ponton a [.filename]#/boot/device.hints# állománnyal már beállított változókat is felülbírálhatjuk. A rendszerindító parancssorában elvégzett módosítások viszont nem fognak megmaradni, és a következõ rendszerindítás alkalmával elvesznek.
+
+Ahogy a rendszerünk használatra kész állapotba került, a man:kenv[1] parancs használható a változók értékeinek listázásához.
+
+A [.filename]#/boot/device.hints# állományban soronként egy-egy változót tudunk megadni, illetve a kettõskereszttel ("#") bevezetve megjegyzéseket illeszthetünk bele. A sorok szerkezete az alábbi:
+
+[source,bash]
+....
+ útmutató.meghajtó.egység.kulcsszó="érték"
+....
+
+A harmadik fázisban pedig így adhatjuk meg:
+
+[source,bash]
+....
+ set útmutató.meghajtó.egység.kulcsszó=érték
+....
+
+Itt a `meghajtó` az eszközmeghajtó neve, az `egység` az eszközmeghajtó által kezelt egyik egység sorszáma, a `kulcsszó` pedig az útmutatáshoz tartozó kulcsszó. Ez a következõk egyike lehet:
+
+* `at`: az útmutatás az eszköz által használt buszra vonatkozik.
+* `port`: az útmutatás az eszköz által használt I/O-címre vonatkozik.
+* `irq`: az útmutatás az eszköz által használt megszakítás sorszámára vonatkozik.
+* `drq`: az útmutatás az eszköz által használt DMA-csatorna sorszámára vonatkozik.
+* `maddr`: az útmutatás az eszköz által használt fizikai memóriaterület kezdõcímére vonatkozik.
+* `flags`: az eszközhöz tartozó bitek beállítása.
+* `disabled`: ha az értéke `1`, akkor az adott eszköz használatát letiltjuk.
+
+Az eszközmeghajtók elfogadhatnak (vagy várhatnak) olyan útmutatásokat is, amelyek itt nem szerepelnek, ezért mindegyik esetében érdemes áttekinteni a hozzájuk tartozó man oldalt. Bõvebb információért lásd a man:device.hints[5], man:kenv[1], man:loader.conf[5] és man:loader[8] man oldalakat.
+
+[[boot-init]]
+== Init: A folyamatirányítás elindítása
+
+Miután a rendszermag sikeresen elindult, átadja a vezérlést az man:init[8] felhasználói folyamatnak, amely vagy az [.filename]#/sbin/init#, vagy pedig a rendszerindítóban megadott `init_path` változó által mutatott program.
+
+[[boot-autoreboot]]
+=== Az automatikus újraindulási folyamat
+
+Az automatikus újraindulási folyamat gondoskodik róla, hogy az indulást követõen rendelkezésre álló állományrendszerek ne legyenek sérültek. Amennyiben mégis sérültek és a man:fsck[8] nem tudja megjavítani õket, az man:init[8] a rendszert <<boot-singleuser,egyfelhasználós mód>>ba állítja, ahol a rendszergazdának kell közvetlenül megoldania a fennálló problémákat.
+
+[[boot-singleuser]]
+=== Egyfelhasználós mód
+
+Ezt a módot az <<boot-autoreboot,automatikus újraindítási folyamat>> során érhetjük el, vagy akkor, ha a rendszert a `-s` kapcsolóval indítjuk, esetleg a rendszerindítóban beállítjuk a `boot_single` változót.
+
+Ezt a módot <<boot-multiuser,többfelhasználós mód>>ban, a man:shutdown[8] hívásával is aktiválhatjuk, ha nem adjuk meg az újraindítást (`-r`) vagy leállítást (`-h`) kérõ opciók egyikét sem.
+
+Ha az [.filename]#/etc/ttys# állományban a `console` értékét `insecure` (nem biztonságos)ra állítjuk, a rendszer az egyfelhasználós módba lépés elõtt kérni fogja a `root` felhasználó jelszavát.
+
+[[boot-insecure-console]]
+.Nem biztonságos konzol megadása az [.filename]#/etc/ttys#-ben
+[example]
+====
+[.programlisting]
+....
+# name  getty                           type    status          comments
+#
+# If console is marked "insecure", then init will ask for the root password
+# when going to single-user mode.
+console none                            unknown off insecure
+....
+
+====
+
+[NOTE]
+====
+Az `insecure` (nem biztonságos) konzol az, ahol nem tekintjük megbízhatónak a rendszerkonzol fizikai biztonságát, és biztosak akarunk lenni benne, hogy csak az képes használni a rendszert egyfelhasználós módban, aki ismeri a `root` felhasználó jelszavát. Ez tehát nem arra utal, hogy magát a konzolt akarjuk nem biztonságos módban mûködtetni. Szóval, ha biztonságot akarunk, az `insecure`-t válasszuk, ne pedig a `secure`-t.
+====
+
+[[boot-multiuser]]
+=== Többfelhasználós mód
+
+Ha az man:init[8] mindent rendben talál, vagy ha a felhasználó kilépett az <<boot-singleuser,egyfelhasználós mód>>ból, a rendszer többfelhasználós módba lép át, ahol megkezdi az erõforrások konfigurálását.
+
+[[boot-rc]]
+==== Az erõforrások konfigurációja (rc)
+
+Az erõforrásokat konfiguráló alrendszer beolvassa a folyamathoz kapcsolódó változók alapértelmezett értékeit az [.filename]#/etc/defaults/rc.conf# állományból, majd módosítja õket a rendszer egyéni beállításai szerint, amit a [.filename]#/etc/rc.conf# állományból olvas ki. Ezután elvégzi az [.filename]#/etc/fstab# alapján az állományrendszerek csatlakoztatását, elindítja a hálózati szolgáltatásokat, egyéb rendszerdaemonokat, és végezetül lefuttatja a telepített csomagok indítószkriptjeit.
+
+Az erõforrásokat konfiguráló alrendszerrõl magáról az man:rc[8] man oldalon, valamint az érintett szkriptek tanulmányozásával tudhatunk meg többet.
+
+[[boot-shutdown]]
+== A leállítási folyamat
+
+A man:shutdown[8] paranccsal vezérelt leállítás során az man:init[8] megpróbálja lefuttatni az [.filename]#/etc/rc.shutdown# szkriptet, majd ezt követõen `TERM` (befejeztetés) jelzést küld az aktuálisan futó folyamatoknak, kis idõ múlva pedig `KILL` (leállítás) jelzést azoknak, amelyek még nem álltak le addig a pillanatig.
+
+Azokon az architektúrákon és rendszereken, ahol elérhetõ a fejlett energiagazdálkodás támogatása, a FreeBSD-t a `shutdown -p now` paranccsal állíthatjuk le, amit közvetlenül a számítógép automatikus kikapcsolása követ. A FreeBSD-s rendszer újraindításához egyszerûen csak adjuk ki a `shutdown -r now` parancsot. Fontos tudni, hogy alapértelmezés szerint a man:shutdown[8] használatához `root` felhasználónak, vagy legalább az `operator` csoport tagjának kell lennünk. Ezekre a feladatokra egyébként a man:halt[8] és man:reboot[8] parancsok is használhatóak. Alkalmazásukról bõvebben a hozzájuk, valamint a man:shutdown[8]-hoz tartozó man oldalakon találhatunk bõvebben információkat.
+
+[NOTE]
+====
+Az energiagazdálkodás használatához a rendszermagnak beépítve vagy a megfelelõ modul betöltésével bizosítania kell az man:acpi[4] támogatást.
+====

@@ -1,0 +1,808 @@
+---
+title: Capítulo 15. Controle de acesso obrigatório
+part: Parte III. Administração do Sistema
+prev: books/handbook/jails
+next: books/handbook/audit
+---
+
+[[mac]]
+= Controle de acesso obrigatório
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Índice
+:table-caption: Tabela
+:figure-caption: Figura
+:example-caption: Exemplo
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 15
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/mac/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/mac/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/mac/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pt-br/mailing-lists.adoc[]
+include::shared/pt-br/teams.adoc[]
+include::shared/pt-br/urls.adoc[]
+
+toc::[]
+
+[[mac-synopsis]]
+== Sinopse
+
+O FreeBSD suporta extensões de segurança baseadas no projeto POSIX(TM).1e. Esses mecanismos de segurança incluem as Listas de Controle de Acesso do sistema de arquivos (crossref:security[fs-acl,Listas de Controle de Acesso]) e o Controle de Acesso Obrigatório, (Mandatory Access Control - MAC). O MAC permite que os módulos de controle de acesso sejam carregados para implementar políticas de segurança. Alguns módulos fornecem proteções para um subconjunto restrito do sistema, fortalecendo um serviço específico. Outros fornecem segurança rotulada abrangente em todos os assuntos e objetos. A parte obrigatória da definição indica que a imposição de controles é executada pelos administradores e pelo sistema operacional. Isso está em contraste com o mecanismo de segurança padrão do Controle de Acesso Discricionário (Discretionary Access Control - DAC), onde a imposição é deixada a critério dos usuários.
+
+Este capítulo enfoca o framework MAC e o conjunto de módulos de política de segurança plugáveis que o FreeBSD fornece para habilitar vários mecanismos de segurança.
+
+Depois de ler este capítulo, você saberá:
+
+* A terminologia associada ao framework MAC.
+* Os recursos dos módulos de política de segurança MAC, bem como a diferença entre uma política rotulada e não rotulada.
+* As considerações a se levar em conta antes de configurar um sistema para usar o framework MAC.
+* Quais módulos de política de segurança MAC estão incluídos no FreeBSD e como configurá-los.
+* Como implementar um ambiente mais seguro usando o framework MAC.
+* Como testar a configuração para garantir que o framework MAC foi implementado corretamente.
+
+Antes de ler este capítulo, você deve:
+
+* Entender os fundamentos do UNIX(TM) e do FreeBSD (crossref:basics[basics, Fundamentos do FreeBSD]).
+* Ter alguma familiaridade com segurança e como ela está presente no FreeBSD (crossref:security[security, Segurança]).
+
+[WARNING]
+====
+
+A configuração incorreta do MAC pode causar perda de acesso ao sistema, agravamento de usuários, ou incapacidade de acessar os recursos fornecidos pelo Xorg. Mais importante, o MAC não deve ser usado para proteger completamente um sistema. O framework MAC apenas aumenta uma política de segurança existente. Sem práticas de segurança sólidas e verificações regulares de segurança, o sistema nunca estará completamente seguro.
+
+Os exemplos contidos neste capítulo são para fins de demonstração e os exemplos de configurações _não_ devem ser implementadas em um sistema de produção. A implementação de qualquer política de segurança requer um bom entendimento, design adequado e testes completos.
+====
+
+Embora este capítulo abranja uma ampla gama de questões de segurança relacionadas à estrututa MAC, o desenvolvimento de novos módulos de políticas de segurança MAC não serão abrangidos. Vários módulos de política de segurança incluídos com o framework MAC possuem características específicas que são fornecidas tanto para o teste quanto para o desenvolvimento de novos módulos. Consulte man:mac_test[4], man:mac_stub[4] e man:mac_none[4] para obter mais informações sobre esses módulos de política de segurança e os diversos mecanismos que eles fornecem.
+
+[[mac-inline-glossary]]
+== Termos chave
+
+Os seguintes termos chave são usados ao se referir ao framework MAC:
+
+* _compartment_: um conjunto de programas e dados a serem particionados ou separados, onde os usuários recebem acesso explícito ao componente específico de um sistema. Um compartimento (compartment) representa um agrupamento, como um grupo de trabalho, departamento, projeto ou tópico. Os compartimentos possibilitam a implementação de uma política de segurança baseada na necessidade de conhecimento.
+* _integrity_: o nível de confiança que pode ser colocado nos dados. Como a integridade (integrity) dos dados é elevada, também aumenta a capacidade de confiar nesses dados.
+* _level_: a configuração aumentada ou diminuída de um atributo de segurança. À medida que o nível (level) aumenta, sua segurança também é considerada alta.
+* _label_: um atributo de segurança que pode ser aplicado a arquivos, diretórios ou outros itens no sistema. Pode ser considerado um selo de confidencialidade. Quando um rótulo (label) é colocado em um arquivo, ele descreve as propriedades de segurança desse arquivo e só permitirá acesso por arquivos, usuários e recursos com uma configuração de segurança semelhante. O significado e a interpretação dos valores do rótulo dependem da configuração da política. Algumas políticas tratam um rótulo como representando a integridade ou o sigilo de um objeto, enquanto outras políticas podem usar rótulos para manter regras de acesso.
+* _multilabel_: esta propriedade é uma opção de sistema de arquivos que pode ser configurada no modo usuário único (single-user) usando o man:tunefs[8], durante a inicialização usando o man:fstab[5], ou durante a criação de um novo sistema de arquivos. Essa opção permite que um administrador aplique rótulos MAC diferentes em objetos diferentes. Essa opção aplica-se somente aos módulos de política de segurança que suportam rotulagem.
+* _single label_: uma política em que o sistema de arquivos inteiro usa um rótulo para impor o controle de acesso sobre o fluxo de dados. Sempre que `multilabel` não estiver definido, todos os arquivos estarão em conformidade com a mesma configuração de rótulo.
+* _object_: uma entidade através da qual a informação flui sob a direção de um _sujeito_. Isso inclui diretórios, arquivos, campos, telas, teclados, memória, armazenamento magnético, impressoras ou qualquer outro dispositivo de armazenamento ou movimentação de dados. Um objeto (object) é um contêiner de dados ou um recurso do sistema. O acesso a um objeto significa efetivamente acesso aos seus dados.
+* _subject_: qualquer entidade ativa que faz com que as informações fluam entre _objetos_, como um usuário, processo do usuário ou processo do sistema. No FreeBSD, isso é quase sempre um segmento agindo em um processo em nome de um usuário.
+* _policy_: uma coleção de regras que define como os objetivos devem ser alcançados. Uma política (policy) geralmente documenta como determinados itens devem ser manipulados. Este capítulo considera uma política como uma coleção de regras que controla o fluxo de dados e informações e define quem tem acesso a esses dados e informações.
+* _high-watermark_: esse tipo de política permite o aumento dos níveis de segurança com o objetivo de acessar informações de nível superior. Na maioria dos casos, o nível original é restaurado depois que o processo é concluído. Atualmente, o framework MAC do FreeBSD não inclui este tipo de política.
+* _low-watermark_: esse tipo de política permite reduzir os níveis de segurança com o objetivo de acessar informações menos seguras. Na maioria dos casos, o nível de segurança original do usuário é restaurado após a conclusão do processo. O único módulo de política de segurança no FreeBSD para usar isto é o man:mac_lomac[4].
+* _sensitivity_: normalmente usado quando se discute Segurança Multinível (Multilevel Security - MLS). Um nível de sensibilidade (sensitivity) descreve o quão importante ou secreto os dados devem ser. À medida que o nível de sensibilidade aumenta, também aumenta a importância do sigilo ou confidencialidade dos dados.
+
+[[mac-understandlabel]]
+== Entendendo os rótulos MAC
+
+Um rótulo MAC é um atributo de segurança que pode ser aplicado a sujeitos e objetos em todo o sistema. Ao definir um rótulo, o administrador deve entender suas implicações para evitar o comportamento inesperado ou indesejado do sistema. Os atributos disponíveis em um objeto dependem do módulo de política carregado, pois os módulos de política interpretam seus atributos de maneiras diferentes.
+
+O rótulo de segurança em um objeto é usado como parte de uma decisão de controle de acesso de segurança por uma política. Com algumas políticas, o rótulo contém todas as informações necessárias para tomar uma decisão. Em outras políticas, os rótulos podem ser processados como parte de um conjunto de regras maior.
+
+Existem dois tipos de políticas de rótulos: rótulo único e rótulo múltiplo. Por padrão, o sistema usará rótulo único. O administrador deve estar ciente dos prós e contras de cada um para implementar políticas que atendam aos requisitos do modelo de segurança do sistema.
+
+Uma diretiva de segurança de rótulo único permite que apenas um rótulo seja usado para cada sujeito ou objeto. Como uma política de rótulo único impõe um conjunto de permissões de acesso em todo o sistema, ela fornece menor sobrecarga de administração, mas diminui a flexibilidade das políticas que suportam rotulagem. No entanto, em muitos ambientes, uma única diretiva de rótulo pode ser tudo o que é necessário.
+
+Uma diretiva de segurança de rótulo único é um pouco semelhante ao DAC pois o `root` configura as políticas para que os usuários sejam colocados nas categorias e níveis de acesso apropriados. Uma diferença notável é que muitos módulos de política também podem restringir o `root`. O controle básico sobre os objetos será então liberado para o grupo, mas o `root` poderá revogar ou modificar as configurações a qualquer momento.
+
+Quando apropriado, uma política de rótulos múltiplos pode ser configurada em um sistema de arquivos UFS passando `multilabel` para o man:tunefs[8]. Uma política de rótulos múltiplos permite que cada sujeito ou objeto tenha seu próprio rótulo MAC independente. A decisão de usar uma política de rótulos múltiplos ou rótulo único é necessária apenas para políticas que implementam o recurso de rotulagem, como `biba`, `lomac` e `mls`. Algumas políticas, como `seeotheruids`, `portacl` e `partition`, não usam rótulos.
+
+Usar uma política de rótulos múltiplos em uma partição e estabelecer um modelo de segurança de rótulos múltiplos pode aumentar a sobrecarga administrativa, já que tudo nesse sistema de arquivos tem um rótulo. Isso inclui diretórios, arquivos e até mesmo nós de dispositivos.
+
+O comando a seguir definirá a flag `multilabel` no sistema de arquivos UFS especificado . Isso só pode ser feito no modo de usuário único e não é um requisito para o sistema de arquivos de swap:
+
+[source,bash]
+....
+# tunefs -l enable /
+....
+
+[NOTE]
+====
+Alguns usuários tiveram problemas com a configuração de flag `multilabel` na partição raiz. Se este for o caso, por favor consulte <<mac-troubleshoot>>.
+====
+
+Como a política de rótulos múltiplos é definida por sistema de arquivos, ela pode não ser necessária se o layout do sistema de arquivos for bem projetado. Considere um exemplo de modelo de segurança MAC para um servidor Web do FreeBSD. Esta máquina usa o rótulo único, `biba/high`, para tudo nos sistemas de arquivos padrão. Se o servidor Web precisar ser executado em `biba/low` para evitar recursos de gravação, ele poderá ser instalado em um sistema de arquivos UFS separado, [.filename]#/usr/local#, definido com `biba/low`.
+
+=== Configuração de rótulo
+
+Praticamente todos os aspectos da configuração do módulo de política de rótulo serão executados usando os utilitários do sistema base. Esses comandos fornecem uma interface simples para a configuração de objeto ou sujeito ou a manipulação e verificação da configuração.
+
+Toda a configuração pode ser feita usando `setfmac`, que é usado para definir rótulos MAC em objetos do sistema, e `setpmac`, que é usado para definir os rótulos em sujeitos do sistema. Por exemplo, para definir o rótulo MAC`biba` como `high` em [.filename]#test#:
+
+[source,bash]
+....
+# setfmac biba/high test
+....
+
+Se a configuração for bem sucedida, o prompt será retornado sem erro. Um erro comum é `Permission denied`, que geralmente ocorre quando o rótulo está sendo definido ou modificado em um objeto restrito. Outras condições podem produzir falhas diferentes. Por exemplo, o arquivo pode não ser de propriedade do usuário que está tentando re-rotular o objeto, o objeto pode não existir ou o objeto pode ser somente de leitura. Uma política obrigatória não permitirá que o processo renomeie o arquivo, talvez devido a uma propriedade do arquivo, uma propriedade do processo ou uma propriedade do novo valor de rótulo proposto. Por exemplo, se um usuário que estiver executando com baixa integridade tentar alterar o rótulo de um arquivo de alta integridade, ou um usuário executando com baixa integridade tentar alterar o rótulo de um arquivo de baixa integridade para um rótulo de alta integridade, essas operações falharão.
+
+O administrador do sistema pode usar `setpmac` para substituir as configurações do módulo de política, atribuindo um rótulo diferente a chamada do processo:
+
+[source,bash]
+....
+# setfmac biba/high test
+Permission denied
+# setpmac biba/low setfmac biba/high test
+# getfmac test
+test: biba/high
+....
+
+Para processos atualmente em execução, como o sendmail, o `getpmac` é normalmente usado. Esse comando usa uma ID de processo (PID) no lugar de um nome de comando. Se os usuários tentarem manipular um arquivo que não esteja em seu acesso, sujeito às regras dos módulos de política carregados, o erro `Operation not permitted` será exibido.
+
+=== Rótulos pré-definidos
+
+Alguns módulos de política do FreeBSD que suportam o recurso de rotulagem oferecem três rótulos predefinidos: `low`, `equal` e `high`, onde:
+
+* `low` é considerada a configuração de rótulo mais baixa que um objeto ou assunto pode ter. Definir isso em sujeitos ou objetos bloqueia o acesso a objetos ou sujeitos marcados como alto (high).
+* `equal` define o sujeito ou objeto a ser desabilitado ou não afetado e deve ser colocado apenas em objetos considerados como isentos da política.
+* `high` concede a um objeto ou sujeito a configuração mais alta disponível nos módulos de política Biba e MLS.
+
+Esses módulos de política incluem man:mac_biba[4], man:mac_mls[4] e man:mac_lomac[4]. Cada um dos rótulos predefinidos estabelece uma diretiva de fluxo de informações diferentes. Consulte a página de manual do módulo para determinar as características das configurações genéricas de rótulos.
+
+=== Rótulos numéricos
+
+Os módulos de políticas Biba e MLS suportam um rótulo numérico que pode ser configurado para indicar o nível exato de controle hierárquico. Esse nível numérico é usado para particionar ou classificar informações em diferentes grupos de classificação, permitindo apenas o acesso a esse grupo ou a um nível de grupo mais alto. Por exemplo:
+
+[.programlisting]
+....
+biba/10:2+3+6(5:2+3-20:2+3+4+5+6)
+....
+
+pode ser interpretado como "Rótulo de Política Biba/Grau 10:Compartimentos 2, 3 e 6: (grau 5 ...")
+
+Neste exemplo, o primeiro grau seria considerado o grau efetivo com compartimentos efetivos, o segundo grau é o grau baixo e o último é o grau alto. Na maioria das configurações, essas definições refinadas não são necessárias, pois são consideradas configurações avançadas.
+
+Objetos do sistema possuem apenas um grau e compartimento atuais. Os sujeitos do sistema refletem o intervalo de direitos disponíveis no sistema e as interfaces de rede, onde são usados para controle de acesso.
+
+O grau e os compartimentos em um par de sujeito e objeto são usados para construir um relacionamento conhecido como _dominance_, em que um sujeito domina um objeto, o objeto domina o sujeito, nenhum domina o outro, ou ambos dominam cada um. O caso em que "ambos dominam" ocorre quando dois rótulos são iguais. Devido à natureza do fluxo de informações do Biba, um usuário tem direitos sobre um conjunto de compartimentos que podem corresponder aos projetos, mas os objetos também têm um conjunto de compartimentos. Os usuários podem ter que subconjuntar seus direitos usando `su` ou `setpmac` para acessar objetos em um compartimento a partir do qual eles não estão restritos.
+
+=== Rótulos de usuários
+
+Os usuários precisam ter rótulos para que seus arquivos e processos interajam adequadamente com a política de segurança definida no sistema. Isso é configurado no [.filename]#/etc/login.conf# usando classes de login. Todo módulo de política que usa rótulos implementará a configuração da classe de usuário.
+
+Para definir o rótulo padrão da classe de usuário que será imposto pelo MAC, adicione uma entrada `label`. Um exemplo de entrada `label` contendo todos os módulos de política é exibida abaixo. Observe que, em uma configuração real, o administrador nunca habilitaria todos os módulos de política. Recomenda-se que o restante deste capítulo seja revisado antes que qualquer configuração seja implementada.
+
+[.programlisting]
+....
+default:\
+	:copyright=/etc/COPYRIGHT:\
+	:welcome=/etc/motd:\
+	:setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+	:path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:\
+	:manpath=/usr/shared/man /usr/local/man:\
+	:nologin=/usr/sbin/nologin:\
+	:cputime=1h30m:\
+	:datasize=8M:\
+	:vmemoryuse=100M:\
+	:stacksize=2M:\
+	:memorylocked=4M:\
+	:memoryuse=8M:\
+	:filesize=8M:\
+	:coredumpsize=8M:\
+	:openfiles=24:\
+	:maxproc=32:\
+	:priority=0:\
+	:requirehome:\
+	:passwordtime=91d:\
+	:umask=022:\
+	:ignoretime@:\
+	:label=partition/13,mls/5,biba/10(5-15),lomac/10[2]:
+....
+
+Embora os usuários não possam modificar o valor padrão, eles podem alterar seu rótulo após o login, sujeito às restrições da política. O exemplo acima diz à política do Biba que a integridade mínima de um processo é `5`, seu máximo é `15` e o rótulo efetivo padrão é `10`. O processo será executado em `10` até que ele escolha alterar o rótulo, talvez devido ao usuário usar `setpmac`, que será restringido pelo Biba ao intervalo configurado.
+
+Após qualquer alteração no [.filename]#login.conf#, o banco de dados de recursos da classe de login deve ser reconstruído usando o `cap_mkdb`.
+
+Muitos sites têm um grande número de usuários que exigem várias classes de usuário diferentes. Um planejamento detalhado é necessário, pois isso pode dificultar o gerenciamento.
+
+=== Rótulos de interface de rede
+
+Os rótulos podem ser definidos em interfaces de rede para ajudar a controlar o fluxo de dados através da rede. Políticas que usam rótulos de interface de rede funcionam da mesma maneira que as políticas funcionam em relação aos objetos. Usuários com configurações altas no Biba, por exemplo, não terão permissão para acessar interfaces de rede com um rótulo `low`.
+
+Ao definir o rótulo MAC em interfaces de rede, `maclabel` pode ser passado para o `ifconfig`:
+
+[source,bash]
+....
+# ifconfig bge0 maclabel biba/equal
+....
+
+Este exemplo irá definir o rótulo MAC de `biba/equal` na interface `bge0`. Ao usar uma configuração semelhante a `biba/high(low-high)`, o rótulo inteiro deve ser citado para evitar que um erro seja retornado.
+
+Cada módulo de política que suporta rotulagem tem um ajuste que pode ser usado para desativar o rótulo MAC em interfaces de rede. Configurar o rótulo para `equal` terá um efeito semelhante. Reveja a saída do `sysctl`, as páginas do manual de políticas e as informações no restante deste capítulo para obter mais informações sobre esses ajustes.
+
+[[mac-planning]]
+== Planejando a configuração de segurança
+
+Antes de implementar qualquer política de MAC, recomenda-se uma fase de planejamento. Durante as etapas de planejamento, um administrador deve considerar os requisitos e metas de implementação, como:
+
+* Como classificar informações e recursos disponíveis nos sistemas de destino.
+* Quais informações ou recursos para restringir o acesso, juntamente com o tipo de restrições que devem ser aplicadas.
+* Quais módulos MAC serão necessários para atingir esse objetivo.
+
+Um teste de sistema confiável e sua configuração deve ocorrer _antes_ de uma implementação MAC ser usada em sistemas de produção. Como diferentes ambientes têm diferentes necessidades e requisitos, estabelecer um perfil de segurança completo diminuirá a necessidade de alterações quando o sistema entrar em operação.
+
+Considere como o framework MAC aumenta a segurança do sistema como um todo. Os vários módulos de política de segurança fornecidos pelo framework MAC podem ser usados para proteger a rede e os sistemas de arquivos ou para impedir que usuários acessem determinadas portas e soquetes. Talvez o melhor uso dos módulos de política seja carregar vários módulos de política de segurança por vez para fornecer um ambiente MLS. Essa abordagem difere de uma política rígida, que tipicamente endurece elementos de um sistema que são usados apenas para propósitos específicos. A desvantagem de MLS é o aumento da sobrecarga administrativa.
+
+A sobrecarga é mínima quando comparada ao efeito duradouro de uma estrutura que fornece a capacidade de escolher quais políticas são necessárias para uma configuração específica e que reduzem a sobrecarga de desempenho. A redução do suporte a políticas desnecessárias pode aumentar o desempenho geral do sistema, além de oferecer flexibilidade de escolha. Uma boa implementação consideraria os requisitos gerais de segurança e implementaria efetivamente os vários módulos de política de segurança oferecidos pelo framework.
+
+Um sistema que utiliza MAC garante que um usuário não terá permissão para alterar atributos de segurança à vontade. Todos os utilitários, programas e scripts de usuário devem funcionar dentro das restrições das regras de acesso fornecidas pelos módulos de política de segurança selecionados e o controle das regras de acesso do MAC está nas mãos do administrador do sistema.
+
+É dever do administrador do sistema selecionar cuidadosamente os módulos de política de segurança corretos. Para um ambiente que precisa limitar o controle de acesso na rede, o man:mac_portacl[4], man:mac_ifoff[4], e os módulos de políticas man:mac_biba[4] são bons pontos de partida. Para um ambiente em que a confidencialidade rigorosa dos objetos do sistema de arquivos é necessária, considere man:mac_bsdextended[4] e os módulos de política man:mac_mls[4].
+
+Decisões de políticas podem ser tomadas com base na configuração da rede. Se apenas determinados usuários tiverem permissão para acessar o man:ssh[1], o módulo de política man:mac_portacl[4] é uma boa escolha. No caso de sistemas de arquivos, o acesso a objetos pode ser considerado confidencial para alguns usuários, mas não para outros. Como um exemplo, uma grande equipe de desenvolvimento pode ser dividida em projetos menores, onde os desenvolvedores do projeto A podem não ter permissão para acessar objetos escritos por desenvolvedores do projeto B. No entanto, ambos os projetos podem precisar acessar objetos criados por desenvolvedores do projeto C. Usando os diferentes módulos de política de segurança fornecidos pelo framework MAC, os usuários poderiam ser divididos nesses grupos e então receber acesso aos objetos apropriados.
+
+Cada módulo de política de segurança tem uma maneira exclusiva de lidar com a segurança geral de um sistema. A seleção de módulos deve se basear em uma política de segurança bem pensada, que pode exigir revisão e reimplementação. Entender os diferentes módulos da política de segurança oferecidos pelo framework MAC ajudará os administradores a escolher as melhores políticas para suas situações.
+
+O restante deste capítulo aborda os módulos disponíveis, descreve seu uso e configuração e, em alguns casos, fornece informações sobre as situações aplicáveis.
+
+[CAUTION]
+====
+
+A implementação do MAC é muito parecida com a implementação de um firewall, já que é preciso tomar cuidado para evitar que o sistema seja completamente bloqueado. A capacidade de reverter para uma configuração anterior deve ser considerada e a implementação do MAC em uma conexão remota deve ser feita com extrema cautela.
+====
+
+[[mac-policies]]
+== Políticas MAC Disponíveis
+
+O kernel padrão do FreeBSD inclui a diretiva `options MAC`. Isso significa que todos os módulos incluídos no framework MAC podem ser carregados com o comando `kldload` como um módulo do kernel em tempo de execução. Depois de testar o módulo, adicione o nome do módulo ao arquivo [.filename]#/boot/loader.conf# para que ele seja carregado durante a inicialização. Cada módulo também fornece uma opção de kernel para os administradores que escolhem compilar seu próprio kernel personalizado.
+
+O FreeBSD inclui um grupo de políticas que cobrirá a maioria dos requisitos de segurança. Cada política é resumida abaixo. As três últimas políticas suportam configurações inteiras no lugar dos três rótulos padrão.
+
+[[mac-seeotheruids]]
+=== O MAC vê a Política de Outros UIDs
+
+Nome do módulo: [.filename]#mac_seeotheruids.ko#
+
+Linha de configuração do kernel: `options MAC_SEEOTHERUIDS`
+
+Opção de inicialização: `mac_seeotheruids_load="YES"`
+
+O módulo man:mac_seeotheruids[4] amplia os ajustes `security.bsd.see_other_uids` e `security.bsd.see_other_gids` do `sysctl`. Esta opção não requer que nenhum rótulo seja definido antes da configuração e pode operar de forma transparente com outros módulos.
+
+Depois de carregar o módulo, os seguintes ajustes `sysctl` podem ser usados para controlar seus recursos:
+
+* O `security.mac.seeotheruids.enabled` ativa o módulo e implementa as configurações padrões que impedem que os usuários visualizem processos e soquetes pertencentes a outros usuários.
+* `security.mac.seeotheruids.specificgid_enabled` permite que grupos especificados sejam isentos desta política. Para isentar grupos específicos, use a variável `security.mac.seeotheruids.specificgid=_XXX_` do `sysctl`, substituindo _XXX_ pelo ID numérico do grupo a ser isento.
+* `security.mac.seeotheruids.primarygroup_enabled` é usado para isentar grupos primários específicos desta política. Ao usar este ajuste, o `security.mac.seeotheruids.specificgid_enabled` não pode estar definido.
+
+[[mac-bsdextended]]
+=== A Política Estendida do BSD MAC
+
+Nome do módulo: [.filename]#mac_bsdextended.ko#
+
+Linha de configuração do kernel: `options MAC_BSDEXTENDED`
+
+Opção de inicialização: `mac_bsdextended_load="YES"`
+
+O módulo man:mac_bsdextended[4] aplica um firewall no sistema de arquivos. Ele fornece uma extensão para o modelo de permissões do sistema de arquivos padrão, permitindo que um administrador crie um conjunto de regras semelhante a um firewall para proteger arquivos, utilitários e diretórios na hierarquia do sistema de arquivos. Quando se tenta acessar um objeto do sistema de arquivos, a lista de regras é iterada até que uma regra correspondente seja localizada ou o final seja atingido. Esse comportamento pode ser alterado usando `security.mac.bsdextended.firstmatch_enabled`. Semelhante a outros módulos de firewall no FreeBSD, um arquivo contendo as regras de controle de acesso pode ser criado e lido pelo sistema no momento da inicialização usando uma variável do man:rc.conf[5].
+
+A lista de regras pode ser inserida usando o man:ugidfw[8] que possui uma sintaxe similar ao man:ipfw[8]. Mais ferramentas podem ser escritas usando as funções da biblioteca man:libugidfw[3].
+
+Depois que o módulo man:mac_bsdextended[4] tiver sido carregado, o seguinte comando poderá ser usado para listar a configuração atual da regra:
+
+[source,bash]
+....
+# ugidfw list
+0 slots, 0 rules
+....
+
+Por padrão, nenhuma regra é definida e tudo está completamente acessível. Para criar uma regra que bloqueia todo o acesso dos usuários, mas que não afeta o ` root `:
+
+[source,bash]
+....
+# ugidfw add subject not uid root new object not uid root mode n
+....
+
+Embora essa regra seja simples de implementar, é uma idéia muito ruim, pois impede que todos os usuários emitam comandos. Um exemplo mais realista bloqueia todo o acesso do `user1`, incluindo listagens de diretórios, ao diretório inicial do usuário `_user2_` :
+
+[source,bash]
+....
+# ugidfw set 2 subject uid user1 object uid user2 mode n
+# ugidfw set 3 subject uid user1 object gid user2 mode n
+....
+
+Em vez de `user1`, `not uid_user2` poderia ser usado para impor as mesmas restrições de acesso para todos os usuários. No entanto, o usuário `root` não é afetado por essas regras.
+
+[NOTE]
+====
+Deve-se ter extremo cuidado ao trabalhar com este módulo, pois o uso incorreto pode bloquear o acesso a certas partes do sistema de arquivos.
+====
+
+[[mac-ifoff]]
+=== A política de silenciamento da interface MAC
+
+Nome do módulo: [.filename]#mac_ifoff.ko#
+
+Linha de configuração do kernel: `options MAC_IFOFF`
+
+Opção de inicialização: `mac_ifoff_load="YES"`
+
+O módulo man:mac_ifoff[4] é usado para desabilitar as interfaces de rede e evitar que as interfaces de rede sejam ativadas durante a inicialização do sistema. Ele não usa rótulos e não depende de nenhum outro módulo MAC.
+
+A maior parte do controle deste módulo é realizada através destes ajustes `sysctl`:
+
+* `security.mac.ifoff.lo_enabled` ativa ou desativa todo o tráfego na interface de loopback, man:lo[4].
+* `security.mac.ifoff.bpfrecv_enabled` ativa ou desativa todo o tráfego na interface do Filtro de Pacotes Berkeley, man:bpf[4].
+* `security.mac.ifoff.other_enabled` ativa ou desativa o tráfego em todas as outras interfaces.
+
+Um dos usos mais comuns do man:mac_ifoff[4] é o monitoramento de rede em um ambiente onde o tráfego de rede não deve ser permitido durante a sequência de inicialização. Outro uso seria escrever um script que usa um aplicativo como o package:security/aide[] para bloquear automaticamente o tráfego da rede se encontrar arquivos novos ou alterados em diretórios protegidos.
+
+[[mac-portacl]]
+=== A política de lista de controle de acesso da porta MAC
+
+Nome do módulo: [.filename]#mac_portacl.ko#
+
+Linha de configuração do kernel: `MAC_PORTACL`
+
+Opção de inicialização: `mac_portacl_load="YES"`
+
+O módulo man:mac_portacl[4] é usado para limitar a ligação a portas TCP e UDP locais , tornando possível permitir que usuários non-`root` sejam vinculados a portas privilegiadas especificadas abaixo de 1024.
+
+Uma vez carregado, este módulo habilita a política MAC em todos os sockets. Os seguintes ajustes estão disponíveis:
+
+* `security.mac.portacl.enabled` ativa ou desativa a política completamente.
+* A `security.mac.portacl.port_high` configura o número de porta mais alto que o man:mac_portacl[4] protege.
+* A `security.mac.portacl.suser_exempt`, quando configurada para um valor diferente de zero, isenta o usuário `root` desta política.
+* A `security.mac.portacl.rules` especifica a política como uma cadeia de texto no formato `rule [, rule, ...]`, com tantas regras quantas forem necessárias, e onde cada regra esta na forma `idtype:id:protocol:port`. O [parameter]#idtype# é `uid` ou `gid`. O parâmetro [parameter]#protocol# pode ser `tcp` ou `udp`. O parâmetro [parameter]#port# é o número da porta para permitir que o usuário ou grupo especificado se vincule. Somente valores numéricos podem ser usados para os parâmetros ID do usuário, ID do grupo e porta.
+
+Por padrão, as portas abaixo de 1024 só podem ser usadas por processos privilegiados que são executados como `root`. Para que o man:mac_portacl[4] permita que processos não privilegiados se vinculem a portas abaixo de 1024, defina os seguintes ajustes da seguinte forma:
+
+[source,bash]
+....
+# sysctl security.mac.portacl.port_high=1023
+# sysctl net.inet.ip.portrange.reservedlow=0
+# sysctl net.inet.ip.portrange.reservedhigh=0
+....
+
+Para evitar que o usuário `root` seja afetado por esta política, configure `security.mac.portacl.suser_exempt` para um valor diferente de zero.
+
+[source,bash]
+....
+# sysctl security.mac.portacl.suser_exempt=1
+....
+
+Para permitir que o usuário `www` com UID 80 seja vinculado à porta 80 sem precisar do privilégio `root`:
+
+[source,bash]
+....
+# sysctl security.mac.portacl.rules=uid:80:tcp:80
+....
+
+Este próximo exemplo permite que o usuário com o UID de 1001 se vincule às portas TCP 110 (POP3) e 995 (POP3):
+
+[source,bash]
+....
+# sysctl security.mac.portacl.rules=uid:1001:tcp:110,uid:1001:tcp:995
+....
+
+[[mac-partition]]
+=== A Política de Partição MAC
+
+Nome do módulo: [.filename]#mac_partition.ko#
+
+Linha de configuração do kernel: `options MAC_PARTITION`
+
+Opção de inicialização: `mac_partition_load="YES"`
+
+A política man:mac_partition[4] coloca os processos em "partições" específicas com base no rótulo MAC. A maioria das configurações para esta política é feita usando man:setpmac[8]. Uma vari[avek `sysctl` está disponível para esta política:
+
+* A `security.mac.partition.enabled` permite a aplicação de partições de processo MAC.
+
+Quando essa política esta ativada, os usuários só poderão ver seus processos e quaisquer outros em sua partição, mas não terão permissão para trabalhar com utilitários fora do escopo dessa partição. Por exemplo, um usuário na classe `insecure` não terá permissão para acessar `top`, bem como muitos outros comandos que devem fazer spawn de um processo.
+
+Este exemplo adiciona o `top` ao conjunto de rótulos dos usuários na classe `insecure`. Todos os processos gerados por usuários na classe `insecure` permanecerão no rótulo `partition/13`.
+
+[source,bash]
+....
+# setpmac partition/13 top
+....
+
+Este comando exibe o rótulo da partição e a lista de processos:
+
+[source,bash]
+....
+# ps Zax
+....
+
+Esse comando exibe o rótulo da partição de processo de outro usuário e os processos atualmente em execução desse usuário:
+
+[source,bash]
+....
+# ps -ZU trhodes
+....
+
+[NOTE]
+====
+Os usuários podem ver processos no rótulo `root`, a menos que a política man:mac_seeotheruids[4] esteja carregada.
+====
+
+[[mac-mls]]
+=== O módulo de segurança multinível MAC
+
+Nome do módulo: [.filename]#mac_mls.ko#
+
+Linha de configuração do kernel: `options MAC_MLS`
+
+Opção de inicialização: `mac_mls_load="YES"`
+
+A política man:mac_mls[4] controla o acesso entre sujeitos e objetos no sistema, aplicando uma diretiva de fluxo de informações restrita.
+
+Em ambientes MLS, um nível de "clearance" é definido no rótulo de cada sujeito ou objeto, juntamente com os compartimentos. Como esses níveis de liberação podem atingir números maiores que vários milhares, seria uma tarefa difícil configurar completamente cada sujeito ou objeto. Para facilitar essa sobrecarga administrativa, três rótulos são incluídos nesta política: `mls/low`, `mls/equal` e `mls/high`, onde:
+
+* Qualquer coisa rotulada com `mls/low` terá um nível de folga baixo e não será permitido acessar informações de um nível superior. Esse rótulo também evita que objetos de nível de liberação mais alto gravem ou transmitam informações para um nível inferior.
+* `mls/equal` deve ser colocado em objetos que devem ser isentos da política.
+* `mls/high` é o nível mais alto de permissão possível. Objetos atribuídos a esse rótulo terão domínio sobre todos os outros objetos no sistema; no entanto, eles não permitirão o vazamento de informações para objetos de classe baixa.
+
+O MLS fornece:
+
+* Um nível de segurança hierárquico com um conjunto de categorias não hierárquicas.
+* Regras fixas de `no read up, no write down`. Isso significa que um sujeito pode ter acesso de leitura a objetos em seu próprio nível ou abaixo, mas não acima. Da mesma forma, um sujeito pode ter acesso de gravação a objetos em seu próprio nível ou acima, mas não abaixo dele.
+* Sigilo, ou a prevenção de divulgação inadequada de dados.
+* Uma base para o projeto de sistemas que lidam simultaneamente com dados em múltiplos níveis de sensibilidade sem vazar informações entre secretas e confidenciais.
+
+Os seguintes ajustes `sysctl` estão disponíveis:
+
+* `security.mac.mls.enabled` é usado para habilitar ou desabilitar a política MLS.
+* `security.mac.mls.ptys_equal` todos os dispositivos man:pty[4] como `mls/equal` durante a criação.
+* `security.mac.mls.revocation_enabled` revoga o acesso a objetos depois que seu rótulo é alterado para um rótulo de nível inferior.
+* `security.mac.mls.max_compartments` define o número máximo de níveis de compartimentos permitidos em um sistema.
+
+Para manipular os rótulos MLS, use man:setfmac[8]. Para atribuir um rótulo a um objeto:
+
+[source,bash]
+....
+# setfmac mls/5 test
+....
+
+Para obter o rótulo MLS para o arquivo [.filename]#test#:
+
+[source,bash]
+....
+# getfmac test
+....
+
+Outra abordagem é criar um arquivo de política mestre em [.filename]#/etc/#, que especifica as informações de política de MLS e alimentar o `setfmac` com esse arquivo.
+
+Ao usar o módulo de política do MLS, um administrador planeja controlar o fluxo de informações confidenciais. O padrão `block read up block write down` define tudo para um estado baixo. Tudo é acessível e um administrador aumenta lentamente a confidencialidade das informações.
+
+Além das três opções básicas de rótulo, um administrador pode agrupar usuários e grupos conforme necessário para bloquear o fluxo de informações entre eles. Pode ser mais fácil olhar as informações em níveis de clearance usando palavras descritivas, como classificações de `Confidential`, `Secret` e `Top Secret`. Alguns administradores criam grupos diferentes com base nos níveis do projeto. Independentemente do método de classificação, um plano bem pensado deve existir antes de implementar uma política restritiva.
+
+Alguns exemplos de situações para o módulo de política MLS incluem um servidor Web de e-commerce, um servidor de arquivos com informações críticas sobre a empresa e ambientes de instituições financeiras.
+
+[[mac-biba]]
+=== O Módulo MAC Biba
+
+Nome do módulo: [.filename]#mac_biba.ko#
+
+Linha de configuração do kernel: `options MAC_BIBA`
+
+Opção de inicialização: `mac_biba_load="YES"`
+
+O módulo man:mac_biba[4] carrega a política MAC Biba. Essa política é semelhante à política MLS, com a exceção de que as regras para o fluxo de informações são levemente revertidas. Isso evita o fluxo descendente de informações confidenciais, enquanto a política MLS impede o fluxo ascendente de informações confidenciais.
+
+Nos ambientes do Biba, um rótulo "integrity" é definido em cada sujeito ou objeto. Esses rótulos são compostos de classes hierárquicas e componentes não hierárquicos. Como um grau ascende, o mesmo acontece com a sua integridade.
+
+Rótulos suportados são `biba/low`, `biba/equal` e `biba/high`, onde:
+
+* `biba/low` é considerado a integridade mais baixa que um sujeito ou objeto pode ter. Definir isso em sujeitos ou objetos bloqueia o acesso de gravação a objetos ou sujeitos marcados como `biba/high`, mas não impede o acesso de leitura.
+* `biba/equal` só deve ser colocado em objetos considerados como isentos da política.
+* `biba/high` permite gravar objetos em um rótulo inferior, mas não permite a leitura desse objeto. Recomenda-se que esse rótulo seja colocado em objetos que afetam a integridade de todo o sistema.
+
+O Biba fornece:
+
+* Níveis de integridade hierárquica com um conjunto de categorias de integridade não hierárquicas.
+* As regras fixas são `no write up, no read down`, o oposto do MLS. Um sujeito pode ter acesso de gravação a objetos em seu próprio nível ou abaixo, mas não acima. Da mesma forma, um sujeito pode ter acesso de leitura a objetos em seu próprio nível ou acima, mas não abaixo.
+* Integridade, impedindo a modificação inadequada de dados.
+* Níveis de integridade em vez dos níveis de sensibilidade do MLS.
+
+Os seguintes ajustes podem ser usados para manipular a política Biba:
+
+* `security.mac.biba.enabled` é usado para ativar ou desativar a imposição da política Biba na máquina de destino.
+* O `security.mac.biba.ptys_equal` é usado para desabilitar a política Biba em dispositivos man:pty[4].
+* `security.mac.biba.revocation_enabled` força a revogação do acesso a objetos se o rótulo for alterado para dominar o sujeito.
+
+Para acessar a configuração de política Biba em objetos do sistema, use `setfmac` e `getfmac`:
+
+[source,bash]
+....
+# setfmac biba/low test
+# getfmac test
+test: biba/low
+....
+
+Integridade, que é diferente de sensibilidade, é usada para garantir que a informação não seja manipulada por partes não confiáveis. Isso inclui informações passadas entre sujeitos e objetos. Ele garante que os usuários só poderão modificar ou acessar as informações para as quais receberam acesso explícito. O módulo de política de segurança man:mac_biba[4] permite que um administrador configure quais arquivos e programas um usuário pode ver e invocar enquanto assegura que os programas e arquivos sejam confiáveis pelo sistema para esse usuário.
+
+Durante a fase de planejamento inicial, um administrador deve estar preparado para particionar os usuários em graus, níveis e áreas. O sistema terá como padrão um rótulo alto assim que esse módulo de política for ativado e cabe ao administrador configurar as diferentes classificações e níveis para os usuários. Em vez de usar níveis de liberação, um bom método de planejamento pode incluir tópicos. Por exemplo, permita apenas que os desenvolvedores modifiquem o acesso ao repositório do código-fonte, ao compilador do código-fonte e a outros utilitários de desenvolvimento. Outros usuários seriam agrupados em outras categorias, como testadores, designers ou usuários finais, e somente o acesso de leitura seria permitido.
+
+Um sujeito de integridade inferior é incapaz de escrever para um sujeito de integridade superior e um sujeito de integridade superior não pode listar ou ler um objeto de integridade inferior. Definir um rótulo com o grau mais baixo possível pode torná-lo inacessível aos sujeitos. Alguns ambientes em potencial para esse módulo de política de segurança incluiriam um servidor Web restrito, uma máquina de desenvolvimento e teste e um repositório de código-fonte. Uma implementação menos útil seria uma estação de trabalho pessoal, uma máquina usada como roteador ou um firewall de rede.
+
+[[mac-lomac]]
+=== O módulo MAC de marca d'água baixa
+
+Nome do módulo: [.filename]#mac_lomac.ko#
+
+Linha de configuração do kernel: `options MAC_LOMAC`
+
+Opção de inicialização: `mac_lomac_load="YES"`
+
+Diferentemente da política do MAC Biba, a política man:mac_lomac[4] permite acesso a objetos de baixa integridade somente após diminuir o nível de integridade para não interromper nenhuma regra de integridade.
+
+A política de integridade de marca d'água baixa funciona de forma quase idêntica ao Biba, com a exceção do uso de rótulos flutuantes para suportar o rebaixamento do sujeito por meio de um compartimento auxiliar de classificação. Este compartimento secundário assume o formato `[auxgrade]`. Ao atribuir uma política com um grau auxiliar, use a sintaxe `lomac/10[2]`, onde `2` é o grau auxiliar.
+
+Essa política se baseia na rotulagem onipresente de todos os objetos do sistema com rótulos de integridade, permitindo que os sujeitos leiam objetos de baixa integridade e fazendo o downgrade do rótulo no sujeito para evitar gravações futuras em objetos de alta integridade usando `[auxgrade]` . A política pode fornecer maior compatibilidade e exigir menos configuração inicial do que o Biba.
+
+Como as políticas Biba e MLS, `setfmac` e `setpmac` são usadas para colocar rótulos nos objetos do sistema:
+
+[source,bash]
+....
+# setfmac /usr/home/trhodes lomac/high[low]
+# getfmac /usr/home/trhodes lomac/high[low]
+....
+
+Um grau auxiliar `low` é uma funcionalidade fornecida apenas pela política MACLOMAC.
+
+[[mac-userlocked]]
+== Bloqueio do Usuário
+
+Este exemplo considera um sistema de armazenamento relativamente pequeno com menos de cinquenta usuários. Os usuários terão recursos de login e terão permissão para armazenar dados e acessar recursos.
+
+Para este cenário, os módulos de política man:mac_bsdextended[4] e man:mac_seeotheruids[4] podem coexistir e bloquear o acesso a objetos do sistema enquanto ocultam processos do usuário.
+
+Comece adicionando a seguinte linha ao [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+mac_seeotheruids_load="YES"
+....
+
+O módulo de política de segurança man:mac_bsdextended[4] pode ser ativado adicionando esta linha ao arquivo [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ugidfw_enable="YES"
+....
+
+As regras padrões armazenadas em [.filename]#/etc/rc.bsdextended# serão carregadas na inicialização do sistema. No entanto, as entradas padrões podem precisar de modificação. Como esta máquina é destinada apenas para servir os usuários, tudo pode ser deixado comentado, exceto as duas últimas linhas, a fim de forçar o carregamento de objetos do sistema de propriedade do usuário por padrão.
+
+Adicione os usuários necessários a esta máquina e reinicie. Para fins de teste, tente efetuar login como um usuário diferente em dois consoles. Execute `ps aux` para ver se os processos de outros usuários estão visíveis. Verifique se a execução do man:ls[1] no diretório inicial de outro usuário falha.
+
+Não tente testar com o usuário `root`, a menos que o `sysctl` específico tenha sido modificado para bloquear o acesso do superusuário.
+
+[NOTE]
+====
+Quando um novo usuário é adicionado, sua regra man:mac_bsdextended[4] não estará na lista de conjuntos de regras. Para atualizar o conjunto de regras rapidamente, descarregue o módulo de política de segurança e recarregue-o novamente usando man:kldunload[8] e man:kldload[8].
+====
+
+[[mac-implementing]]
+== Nagios em Jail MAC
+
+Esta seção demonstra as etapas necessárias para implementar o sistema de monitoramento de rede Nagios em um ambiente MAC. Isso é um exemplo que ainda exige que o administrador teste se a política implementada atende aos requisitos de segurança da rede antes de usar em um ambiente de produção.
+
+Este exemplo requer que o `multilabel` seja definido em cada sistema de arquivos. Ele também assume que o package:net-mgmt/nagios-plugins[], package:net-mgmt/nagios[] e package:www/apache22[] estão todos instalados, configurados e funcionando corretamente antes de tentar a integração na estrutura MAC.
+
+=== Criar uma Classe de Usuário Insegura
+
+Comece o procedimento adicionando a seguinte classe de usuário ao [.filename]#/etc/login.conf#:
+
+[.programlisting]
+....
+insecure:\
+:copyright=/etc/COPYRIGHT:\
+:welcome=/etc/motd:\
+:setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+:path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+:manpath=/usr/shared/man /usr/local/man:\
+:nologin=/usr/sbin/nologin:\
+:cputime=1h30m:\
+:datasize=8M:\
+:vmemoryuse=100M:\
+:stacksize=2M:\
+:memorylocked=4M:\
+:memoryuse=8M:\
+:filesize=8M:\
+:coredumpsize=8M:\
+:openfiles=24:\
+:maxproc=32:\
+:priority=0:\
+:requirehome:\
+:passwordtime=91d:\
+:umask=022:\
+:ignoretime@:\
+:label=biba/10(10-10):
+....
+
+Em seguida, adicione a seguinte linha a seção de classe de usuário padrão:
+
+[.programlisting]
+....
+:label=biba/high:
+....
+
+Salve as edições e rode o seguinte comando para reconstruir o banco de dados:
+
+[source,bash]
+....
+# cap_mkdb /etc/login.conf
+....
+
+=== Configurar usuários
+
+Configure o usuário `root` para a classe padrão usando:
+
+[source,bash]
+....
+# pw usermod root -L default
+....
+
+Todas as contas de usuário que não são `root` agora exigirão uma classe de login. A classe de login é necessária, caso contrário, os usuários terão acesso recusado aos comandos comuns. O seguinte script `sh` deve resolver:
+
+[source,bash]
+....
+# for x in `awk -F: '($3 >= 1001) && ($3 != 65534) { print $1 }' \
+	/etc/passwd`; do pw usermod $x -L default; done;
+....
+
+Em seguida, altere as contas `nagios` e `www` para a classe insegura:
+
+[source,bash]
+....
+# pw usermod nagios -L insecure
+# pw usermod www -L insecure
+....
+
+=== Crie o arquivo de contextos
+
+Um arquivo de contexto deve agora ser criado como [.filename]#/etc/policy.contexts#:
+
+[.programlisting]
+....
+# This is the default BIBA policy for this system.
+
+# System:
+/var/run(/.*)?			biba/equal
+
+/dev/(/.*)?			biba/equal
+
+/var				biba/equal
+/var/spool(/.*)?		biba/equal
+
+/var/log(/.*)?			biba/equal
+
+/tmp(/.*)?			biba/equal
+/var/tmp(/.*)?			biba/equal
+
+/var/spool/mqueue		biba/equal
+/var/spool/clientmqueue		biba/equal
+
+# For Nagios:
+/usr/local/etc/nagios(/.*)?	biba/10
+
+/var/spool/nagios(/.*)?		biba/10
+
+# For apache
+/usr/local/etc/apache(/.*)?	biba/10
+....
+
+Essa política impõe segurança ao definir restrições no fluxo de informações. Nesta configuração específica, os usuários, incluindo O `root`, nunca devem ter permissão para acessar o Nagios. Arquivos de configuração e processos que fazem parte do Nagios serão completamente auto-contidos ou presos.
+
+Este arquivo será lido depois da execução do `setfsmac` em cada sistema de arquivos. Este exemplo define a política no sistema de arquivos raiz:
+
+[source,bash]
+....
+# setfsmac -ef /etc/policy.contexts /
+....
+
+Em seguida, adicione estas edições a seção principal do [.filename]#/etc/mac.conf#:
+
+[.programlisting]
+....
+default_labels file ?biba
+default_labels ifnet ?biba
+default_labels process ?biba
+default_labels socket ?biba
+....
+
+=== Configuração do Inicializador
+
+Para finalizar a configuração, adicione as seguintes linhas ao [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+mac_biba_load="YES"
+mac_seeotheruids_load="YES"
+security.mac.biba.trust_all_interfaces=1
+....
+
+E a seguinte linha para a configuração da placa de rede armazenada em [.filename]#/etc/rc.conf#. Se a configuração de rede principal for feita via DHCP, talvez seja necessário configurá-la manualmente após cada inicialização do sistema:
+
+[.programlisting]
+....
+maclabel biba/equal
+....
+
+=== Testando a Configuração
+
+Primeiro, certifique-se de que o servidor Web e o Nagios não iniciarão na inicialização e reinicialização do sistema. Assegure-se de que o `root` não possa acessar nenhum dos arquivos no diretório de configuração do Nagios. Se o `root` puder listar o conteúdo de [.filename]#/var/spool/nagios#, algo está errado. Em vez disso, um erro "permission denied" deve ser retornado.
+
+Se tudo parecer bem, o Nagios, o Apache e o Sendmail agora poderão ser iniciados:
+
+[source,bash]
+....
+# cd /etc/mail && make stop && \
+setpmac biba/equal make start && setpmac biba/10\(10-10\) apachectl start && \
+setpmac biba/10\(10-10\) /usr/local/etc/rc.d/nagios.sh forcestart
+....
+
+Verifique novamente para garantir que tudo esteja funcionando corretamente. Caso contrário, verifique os arquivos de log em busca de mensagens de erro. Se necessário, use o man:sysctl[8] para desativar o módulo de política de segurança man:mac_biba[4] e tente iniciar tudo novamente.
+
+[NOTE]
+====
+O usuário `root` ainda pode alterar a aplicação de segurança e editar seus arquivos de configuração. O comando a seguir permitirá a degradação da política de segurança para um nível inferior para um shell recém executado:
+
+[source,bash]
+....
+# setpmac biba/10 csh
+....
+
+Para impedir que isso aconteça, force o usuário a um intervalo usando man:login.conf[5]. Se o man:setpmac[8] tentar executar um comando fora do intervalo do compartimento, um erro será retornado e o comando não será executado. Nesse caso, defina root como `biba/high(high-high)`.
+====
+
+[[mac-troubleshoot]]
+== Solução de problemas do framework MAC
+
+Esta seção discute erros de configuração comuns e como resolvê-los.
+
+O sinalizador `multilabel` não fica habilitado na partição raiz ([.filename]#/#):::
+As etapas a seguir podem resolver este erro transitório:
+
+[.procedure]
+====
+.. Edite [.filename]#/etc/fstab# e defina a partição raiz como somente leitura `ro`.
+.. Reinicie no modo single user.
+.. Execute `tunefs -l enable` no [.filename]#/#.
+.. Reinicie o sistema.
+.. Execute `mount -urw`[.filename]#/# e mude a opção `ro` de volta para `rw` no [.filename]#/etc/fstab# e reinicie o sistema novamente.
+.. Verifique novamente a saída do `mount` para garantir que o `multilabel` tenha sido configurado corretamente no sistema de arquivos raiz.
+====
+
+Depois de estabelecer um ambiente seguro com o MAC, o Xorg não inicia mais:::
+Isso pode ser causado pela política MAC `partition` ou por uma rotulagem incorreta em uma das políticas de rotulagem do MAC. Para depurar, tente o seguinte:
+
+[.procedure]
+====
+.. Verifique a mensagem de erro. Se o usuário estiver na classe `insecure`, a política `partition` pode ser a culpada. Tente definir a classe do usuário de volta para a classe `default` e reconstrua o banco de dados com o `cap_mkdb`. Se isso não mitigar o problema, vá para a etapa dois.
+.. Verifique duas vezes se as políticas de rótulo estão definidas corretamente para o usuário, para o Xorg e para as entradas no [.filename]#/dev#.
+.. Se nenhum destes resolver o problema, envie a mensagem de erro e uma descrição do ambiente para a lista de discussão http://lists.FreeBSD.org/mailman/listinfo/freebsd-questions[de perguntas gerais sobre o FreeBSD].
+====
+
+O erro `_secure_path: unable to stat .login_conf` aparece:::
+Esse erro pode aparecer quando um usuário tenta alternar do usuário `root` para outro usuário no sistema. Essa mensagem geralmente ocorre quando o usuário possui uma qualificação mais alta do que a do usuário que ele está tentando se tornar. Por exemplo, se `joe` tiver uma classificação padrão de `biba/low` e o `root` tiver uma classificação de `biba/high`, o `root` não poderá visualizar o diretório inicial de `joe`. Isso acontecerá independente se o `root` usou ou não o `su` para se tornar o `joe`, pois o modelo de integridade do Biba não permitirá que o `root` exiba objetos definidos em um nível de integridade mais baixo.
+
+O sistema não reconhece mais o `root`:::
+Quando isso ocorre, o `whoami` retorna `0` e `su` retorna `who are you?`.
++
+Isso pode acontecer se uma política de rotulagem foi desativada por man:sysctl[8] ou o módulo de política foi descarregado. Se a política estiver desativada, o banco de dados de recursos de login precisará ser reconfigurado. Verifique duas vezes o [.filename]#/etc/login.conf# para garantir que todas as opções de `label` tenham sido removidas e reconstrua o banco de dados com `cap_mkdb`.
++
+Isso também pode acontecer se uma política restringir o acesso ao [.filename]#master.passwd#. Isso geralmente é causado por um administrador que altera o arquivo sob um rótulo que entra em conflito com a política geral que está sendo usada pelo sistema. Nesses casos, as informações do usuário seriam lidas pelo sistema e o acesso seria bloqueado, pois o arquivo herdaria o novo rótulo. Desative a política usando o man:sysctl[8] e tudo deve retornar ao normal.

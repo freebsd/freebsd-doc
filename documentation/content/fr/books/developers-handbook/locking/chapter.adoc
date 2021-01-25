@@ -1,0 +1,121 @@
+---
+title: Chapitre 8. Notes sur le verrouillage
+---
+
+[[locking]]
+= Notes sur le verrouillage
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Table des matières
+:table-caption: Tableau
+:example-caption: Exemple
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+
+_Ce chapître est maintenu par The FreeBSD SMP Next Generation Project. Envoyez leur directement les commentaires et les suggestions à link:{freebsd-smp}._
+
+Ce document souligne le verrouillage utilisé dans le noyau FreeBSD pour permettre d'utiliser du vrai multi-processeur à l'intérieur du noyau. Le verrouillage peut être réalisé par différents moyens. Les structures de données puvent être protégées par des mutex ou man:lockmgr[9] verrous. Quelques variables sont protégées simplement par l'utilisation continuelle d'opérations atomiques pour y accéder. 
+
+== Les mutex
+
+Un mutex est simplement un verrou utilisé pour garantir exclusion mutuelle. Spécifiquement, un mutex ne peut appartenir qu'à une entité à la fois. Si une autre entité désire obtenir un mutex déjà pris , elle doit attendre jusqu'à ce que le mutex soit relaché. Dans le noyau FreeBSD, les mutex appartiennent aux processus.
+
+Les mutex peuvent être acquis récursivement, mais ils sont conçus pour n'être pris que pendant une courte période. Spécifiquement, le détenteur ne doit pas se suspendre pendant qu'il retient un mutex. Si vous avez besoin de maintenir un verrouillage pendant une suspension, utilisez un man:lockmgr[9] verrou ("lock").
+
+Chaque mutex a plusieurs intérêts :
+
+Nom de la variable::
+Nom de la variable struct mtx dans le code source du noyau.
+
+Nom logique::
+Le nom du mutex lui est assigné par `mtx_init`. Ce nom est affiché dans les messages de trace KTR, témoigne des erreurs et avertissements et est utilisé pour distinguer les mutex dans les traces.
+
+Type::
+Le type du mutex en termes de constantes nommées MTX_*. La signification de chaque constante nommée est documentée dans man:mutex[9].
+
+MTX_DEF:::
+Un mutex endormi
+
+MTX_SPIN:::
+Un mutex tournant
+
+MTX_COLD:::
+Ce mutex est initialisé très tard. Toutefois, il doit être déclaré via `MUTEX_DECLARE`, et la constante nommée MTX_COLD doit être passée à `mtx_init`.
+
+MTX_TOPHALF:::
+Ce mutex tournant ne désactive pas les interruptions.
+
+MTX_NORECURSE:::
+Ce mutex n'a pas la permission d'être recursif.
+
+Protégés::
+Une liste de structures de données ou des membres de structure de données que cette entrée protège. Pour les membres de structures de données, le nom sera de la forme `structure name`.`member name`.
+
+Fonctions dépendantes::
+Les fonctions qui peuvent seulement être appelées si ce mutex est pris.
+
+.Liste du mutex
+[cols="1,1,1,1,1", frame="all", options="header"]
+|===
+| Nom de la variable
+| Nom logique
+| Type
+| Protégés
+| Fonctions dépendantes
+
+|sched_lock
+|"sched lock"
+|MTX_SPIN \| MTX_COLD
+|`_gmonparam`, `cnt.v_swtch`, `cp_time`, `curpriority`, `mtx`.`mtx_blocked`, `mtx`.`mtx_contested`, `proc`.`p_contested`, `proc`.`p_blocked`, `proc`.`p_flag` (P_PROFIL XXX, P_INMEM, P_SINTR, P_TIMEOUT, P_SWAPINREQ XXX, P_INMEN XXX), `proc`.`p_nice`, `proc`.`p_procq`, `proc`.`p_blocked`, `proc`.`p_estcpu`, `proc`.`p_nativepri`, `proc`.`p_priority`, `proc`.`p_usrpri`, `proc`.`p_rtprio`, `proc`.`p_rqindex`, `proc`.`p_stats->p_prof`, `proc`.`p_stats->p_ru`, `proc`.`p_stat`, `proc`.`p_cpticks`, `proc`.`p_iticks`, `proc`.`p_uticks`, `proc`.`p_sticks`, `proc`.`p_swtime`, `proc`.`p_slptime`, `proc`.`p_runtime`, `proc`.`p_pctcpu`, `proc`.`p_oncpu`, `proc`.`p_asleep`, `proc`.`p_wchan`, `proc`.`p_wmesg`, `proc`.`p_slpq`, `proc`.`p_vmspace` (XXX - in `statclock`), `pscnt`, `slpque`, `itqueuebits`, `itqueues`, `rtqueuebits`, `rtqueues`, `queuebits`, `queues`, `idqueuebits`, `idqueues`, `switchtime`, 
+|`setrunqueue`, `remrunqueue`, `mi_switch`, `chooseproc`, `schedclock`, `resetpriority`, `updatepri`, `maybe_resched`, `cpu_switch`, `cpu_throw`
+
+|vm86pcb_lock
+|"vm86pcb lock"
+|MTX_DEF \| MTX_COLD
+|`vm86pcb`
+|`vm86_bioscall`
+
+|Giant
+|"Giant"
+|MTX_DEF \| MTX_COLD
+|nearly everything
+|lots
+
+|callout_lock
+|"callout lock"
+|MTX_SPIN
+|`callfree`, `callwheel`, `nextsoftcheck`, `proc`.`p_itcallout`, `proc`.`p_slpcallout`, `softticks`, `ticks`
+|
+|===
+
+== Les verrous du gestionnaire de verrous (Lock Manager)
+
+Les verrous qui sont fournis par l'interface man:lockmgr[9] sont les verrous du gestionnaire de verrous. Ces verrous sont des verrous lecture-écriture et peuvent être retenus par un process suspendu. 
+
+.man:lockmgr[9] List de verrou
+[cols="1,1,1,1", options="header"]
+|===
+| Nom de la variable
+| Protégés
+| 
+| 
+
+|`allproc_lock`
+|`allproc` `zombproc` `pidhashtbl` `proc.p_list` `proc.p_hash` `nextpid`
+|`proctree_lock`
+|`proc.p_children` `proc.p_sibling`
+|===
+
+== Variables protégées atomiquement
+
+Une variable protégée atomiquement est une variable spéciale qui n'est pas protégé par un verrou explicite. Toutefois, tous les accès de données aux variables utilisent des opérations atomiques spéciales comme décrit dans man:atomic[9]. Très peu de variables sont traitées de cette façon, bien que les autres primitives de synchronisation comme les mutex soient implémentées avec des variables protégées atomiquement.
+
+* `astpending`
+* `mtx`.`mtx_lock`

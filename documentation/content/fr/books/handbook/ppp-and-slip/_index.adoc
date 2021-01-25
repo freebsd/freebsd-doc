@@ -1,0 +1,1224 @@
+---
+title: Chapitre 28. PPP et SLIP
+part: Partie IV. Réseau
+prev: books/handbook/serialcomms
+next: books/handbook/mail
+---
+
+[[ppp-and-slip]]
+= PPP et SLIP
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Table des matières
+:table-caption: Tableau
+:example-caption: Exemple
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 28
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/ppp-and-slip/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/ppp-and-slip/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/ppp-and-slip/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/fr/mailing-lists.adoc[]
+include::shared/fr/teams.adoc[]
+include::shared/fr/urls.adoc[]
+
+toc::[]
+
+[[ppp-and-slip-synopsis]]
+== Synopsis
+
+FreeBSD dispose de nombreuses façons pour relier un ordinateur à un autre. Pour mettre en place un réseau ou établir une connexion Internet par l'intermédiaire d'un modem, ou pour autoriser d'autres à le faire par votre intermédiaire, il est nécessaire d'utiliser PPP ou SLIP. Ce chapitre décrit la configuration en détail de ces services de communication par modem.
+
+Après la lecture de ce chapitre, vous saurez:
+
+* Comment configurer PPP en mode utilisateur.
+* Comment configurer PPP intégré au noyau.
+* Comment configurer PPPoE (PPP sur Ethernet).
+* Comment configurer PPPoA (PPP sur ATM).
+* Comment configurer et utiliser un client et un serveur SLIP.
+
+Avant de lire ce chapitre, vous devrez:
+
+* Etre familier avec la terminologie réseau de base.
+* Comprendre les bases, le but d'une connexion entrante par modem, et PPP et/ou SLIP.
+
+Vous pouvez vous demander quelle est la principale différence entre PPP en mode utilisateur et PPP intégré au noyau. La réponse est simple: PPP en mode utilisateur traite les données entrantes et sortantes en dehors du noyau. C'est coûteux en terme de copie de donnée entre le noyau et l'espace utilisateur mais permet l'implémentation de plus de fonctionnalités PPP. PPP en mode utilisateur utilise le périphérique [.filename]#tun# pour communiquer avec le monde extérieur alors que PPP intégré au noyau utilise le périphérique [.filename]#ppp#.
+
+[NOTE]
+====
+Dans ce chapitre, le programme utilisateur PPP sera simplement appelé ppp, à moins qu'il faille explicitement faire la distinction entre lui et d'autres logiciels PPP comme pppd. Sauf indications contraires, toutes les commandes mentionnées dans ce chapitre doivent être exécutées par le super-utilisateur `root`.
+====
+
+[[userppp]]
+== Using User PPP ** Traduction en Cours **
+
+[[ppp]]
+== Utiliser PPP intégré au noyau
+
+=== Configurer PPP intégré au noyau
+
+Avant de configurer PPP sur votre machine, vérifiez que `pppd` est bien dans le répertoire [.filename]#/usr/sbin# et que le répertoire [.filename]#/etc/ppp# existe.
+
+La commande `pppd` peut fonctionner selon deux modes:
+
+. Comme "client" - si vous désirez connecter votre machine au monde extérieur via une liaison PPP série ou un modem.
+. Comme "serveur" - si votre machine est sur le réseau, et sert à y connecter d'autres ordinateurs avec PPP.
+
+Dans les deux cas, vous devrez renseigner un fichier d'options ([.filename]#/etc/ppp/options# ou [.filename]#~/.ppprc# si vous avez plus d'un utilisateur sur votre machine utilisant PPP).
+
+Vous aurez également besoin d'un logiciel "modem/série" (de préférence package:comms/kermit[]), pour appeler et établir la connexion avec la machine distante.
+
+=== Utiliser `pppd` comme client
+
+Le fichier [.filename]#/etc/ppp/options# suivant pourrait être utilisé pour se connecter à la liaison PPP d'un concentrateur Cisco:
+
+[.programlisting]
+....
+crtscts         # contrôle de flux matériel
+modem           # liaison par modem
+noipdefault     # adresse IP affectée par le serveur PPP distant
+                # si la machine distante ne vous donne pas d'adresse
+                # IP lors de la négociation IPCP, retirez cette option
+passive         # attendre les paquets LCP
+domain ppp.foo.com      # mettre ici votre nom de domaine
+
+:remote_ip    # mettre ici l'adresse IP de la machine PPP distante
+                # elle servira à router des paquets via la liaison PPP
+                # si vous n'avez pas précisé l'option noipdefault
+                # changez cette ligne en ip_locale:ip_distante
+
+defaultroute    # mettre cette ligne si vous voulez que le serveur PPP soit
+                # votre routeur par défaut
+....
+
+Pour se connecter:
+
+[.procedure]
+====
+
+. Appelez la machine distante en utilisant kermit (ou un autre programme pour modem), puis entrez votre nom d'utilisateur et mot de passe (ou ce qu'il faut pour activer PPP sur la machine distante).
+. Quittez kermit (sans raccrocher la ligne).
+. Entrez la commande suivante:
++
+[source,bash]
+....
+# /usr/src/usr.sbin/pppd.new/pppd /dev/tty01 19200
+....
++ 
+Assurez-vous d'utiliser la vitesse et le nom de périphérique adéquats.
+====
+
+Votre ordinateur est maintenant connecté via PPP. Si la connexion échoue, vous pouvez ajouter l'option `debug` au fichier [.filename]#/etc/ppp/options#, et consulter les messages sur la console pour tracer le problème.
+
+La procédure [.filename]#/etc/ppp/pppup# ci-dessous effectuera automatiquement ces trois étapes:
+
+[.programlisting]
+....
+#!/bin/sh
+ps ax |grep pppd |grep -v grep
+pid=`ps ax |grep pppd |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'arrêt de pppd, PID=' ${pid}
+        kill ${pid}
+fi
+ps ax |grep kermit |grep -v grep
+pid=`ps ax |grep kermit |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'arrêt de kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+kermit -y /etc/ppp/kermit.dial
+pppd /dev/tty01 19200
+....
+
+[.filename]#/etc/ppp/kermit.dial# est une procédure kermit qui appelle et fournit toutes les informations d'authentification nécessaires à la machine distante (un exemple d'une telle procédure est donné à la fin de ce document).
+
+Utilisez la procédure [.filename]#/etc/ppp/pppdown# suivante pour terminer la session PPP et vous déconnecter:
+
+[.programlisting]
+....
+#!/bin/sh
+pid=`ps ax |grep pppd |grep -v grep|awk '{print $1;}'`
+if [ X${pid} != "X" ] ; then
+        echo 'arrêt de pppd, PID=' ${pid}
+        kill -TERM ${pid}
+fi
+
+ps ax |grep kermit |grep -v grep
+pid=`ps ax |grep kermit |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'arrêt de kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+/sbin/ifconfig ppp0 down
+/sbin/ifconfig ppp0 delete
+kermit -y /etc/ppp/kermit.hup
+/etc/ppp/ppptest
+....
+
+Vérifiez si `pppd` tourne toujours en lançant la procédure [.filename]#/usr/etc/ppp/ppptest#, qui devrait ressembler à ceci:
+
+[.programlisting]
+....
+#!/bin/sh
+pid=`ps ax| grep pppd |grep -v grep|awk '{print $1;}'`
+if [ X${pid} != "X" ] ; then
+        echo 'pppd actif: PID=' ${pid-NONE}
+else
+        echo 'Pas de pppd en cours d'exécution.'
+fi
+set -x
+netstat -n -I ppp0
+ifconfig ppp0
+....
+
+Pour raccrocher la ligne, exécutez [.filename]#/etc/ppp/kermit.hup#, qui devrait contenir:
+
+[.programlisting]
+....
+set line /dev/tty01	; mettre ici le périphérique pour votre modem
+set speed 19200
+set file type binary
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+
+pau 1
+out +++
+inp 5 OK
+out ATH0\13
+echo \13
+exit
+....
+
+Voici une autre méthode qui utilise `chat` au lieu de `kermit`.
+
+Les deux fichiers suivants suffisent à établir une connexion avec `pppd`.
+
+[.filename]#/etc/ppp/options#:
+
+[.programlisting]
+....
+/dev/cuaa1 115200
+
+crtscts		# contrôle de flux matériel
+modem		# liaison par modem
+connect "/usr/bin/chat -f /etc/ppp/login.chat.script"
+noipdefault	# adresse IP affectée par le serveur PPP distant
+	        # si la machine distante ne vous donne pas d'adresse
+	        # IP lors de la négociation IPCP, retirer cette option
+passive	        # attendre les paquets LCP
+domain your.domain	# mettre ici votre nom de domaine
+
+:	        # mettre ici l'adresse IP de la machine PPP distante
+	        # elle servira à router des paquets via la liaison PPP
+	        # si vous n'avez pas précisé l'option noipdefault
+	        # modifier cette ligne en ip_locale:ip_distante
+
+defaultroute	# mettre cette ligne si vous voulez que le serveur PPP soit
+	        # votre routeur par défaut
+....
+
+[.filename]#/etc/ppp/login.chat.script#:
+
+[NOTE]
+====
+Ce qui suit doit être tapé sur une seule ligne.
+====
+
+[.programlisting]
+....
+ABORT BUSY ABORT 'NO CARRIER' "" AT OK ATDTnuméro_de_téléphone
+  CONNECT "" TIMEOUT 10 ogin:-\\r-ogin: nom_d_utilisateur
+  TIMEOUT 5 sword: mot_de_passe
+....
+
+Une fois que ces fichiers sont installés et correctement modifiés, tout ce dont vous avez besoin de faire est de lancer `pppd`, comme suit:
+
+[source,bash]
+....
+# pppd
+....
+
+=== Utiliser `pppd` comme serveur
+
+Le contenu du fichier [.filename]#/etc/ppp/options# devrait être semblable à ce qui suit:
+
+[.programlisting]
+....
+crtscts                         # contrôle de flux matériel
+netmask 255.255.255.0           # masque de sous-réseau (facultatif)
+192.114.208.20:192.114.208.165  # adresses IP des machines locales et distantes
+                                # l'adresse locale ne doit pas être la même que
+                                # celle que vous avez assignée à l'interface
+                                # Ethernet (ou autre) de la machine.
+                                # l'adresse IP de la machine distante est
+                                # l'adresse IP qui lui sera affectée
+domain ppp.foo.com              # votre nom de domaine
+passive                         # attendre LCP
+modem                           # liaison modem
+....
+
+La procédure [.filename]#/etc/ppp/pppserv# ci-dessous demandera à pppd de se comporter comme un serveur:
+
+[.programlisting]
+....
+#!/bin/sh
+ps ax |grep pppd |grep -v grep
+pid=`ps ax |grep pppd |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'arrêt de pppd, PID=' ${pid}
+        kill ${pid}
+fi
+ps ax |grep kermit |grep -v grep
+pid=`ps ax |grep kermit |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'arrêt de kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+# réinitialiser l'interface ppp
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+# activer le mode réponse automatique
+kermit -y /etc/ppp/kermit.ans
+
+# lancer ppp
+pppd /dev/tty01 19200
+....
+
+Utilisez cette procédure [.filename]#/etc/ppp/pppservdown# pour arrêter le serveur:
+
+[.programlisting]
+....
+#!/bin/sh
+ps ax |grep pppd |grep -v grep
+pid=`ps ax |grep pppd |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'arrêt de pppd, PID=' ${pid}
+        kill ${pid}
+fi
+ps ax |grep kermit |grep -v grep
+pid=`ps ax |grep kermit |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'arrêt de kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+kermit -y /etc/ppp/kermit.noans
+....
+
+La procédure kermit ci-dessous ([.filename]#/etc/ppp/kermit.ans#) activera ou désactivera le mode réponse automatique de votre modem:
+
+[.programlisting]
+....
+set line /dev/tty01
+set speed 19200
+set file type binary
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+
+pau 1
+out +++
+inp 5 OK
+out ATH0\13
+inp 5 OK
+echo \13
+out ATS0=1\13   ; remplacer cela par ATS0=0\13 si vous voulez désactiver
+                ; le mode réponse automatique
+inp 5 OK
+echo \13
+exit
+....
+
+Une procédure nommée [.filename]#/etc/ppp/kermit.dial# est utilisée pour appeler et s'authentifier sur la machine distante. Vous devrez l'adapter à vos besoins. Mettez-y votre nom d'utilisateur et votre mot de passe; vous devrez également modifier les entrées en fonctions des réponses que vous envoient votre modem et la machine distante.
+
+[.programlisting]
+....
+;
+; mettre ici la liaison série à laquelle est raccordé le modem:
+;
+set line /dev/tty01
+;
+; mettre ici la vitesse du modem:
+;
+set speed 19200
+set file type binary            ; transfert 8 bits
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+set modem hayes
+set dial hangup off
+set carrier auto                ; puis SET CARRIER si nécessaire,
+set dial display on             ; puis SET DIAL si nécessaire,
+set input echo on
+set input timeout proceed
+set input case ignore
+def \%x 0                       ; compteur d'ouverture de session
+goto slhup
+
+:slcmd                          ; mettre le modem en mode commande
+echo Put the modem in command mode.
+clear                           ; vider le tampon d'entrée
+pause 1
+output +++                      ; séquence d'échappement Hayes
+input 1 OK\13\10                ; attendre OK
+if success goto slhup
+output \13
+pause 1
+output at\13
+input 1 OK\13\10
+if fail goto slcmd              ; si le modem ne répond pas OK, réessayer
+
+:slhup                          ; raccrocher la ligne
+clear                           ; vider le tampon d'entrée
+pause 1
+echo Hanging up the phone.
+output ath0\13                  ; commande Hayes pour raccrocher
+input 2 OK\13\10
+if fail goto slcmd              ; si pas de réponse OK, passer le modem en mode commande
+
+:sldial                         ; composer le numéro
+pause 1
+echo Dialing.
+output atdt9,550311\13\10       ; mettre ici le numéro de téléphone
+assign \%x 0                    ; mettre le compteur à zéro
+
+:look
+clear                           ; vider le tampon d'entrée
+increment \%x                   ; compter les secondes
+input 1 {CONNECT }
+if success goto sllogin
+reinput 1 {NO CARRIER\13\10}
+if success goto sldial
+reinput 1 {NO DIALTONE\13\10}
+if success goto slnodial
+reinput 1 {\255}
+if success goto slhup
+reinput 1 {\127}
+if success goto slhup
+if  \%x 60 goto look
+else goto slhup
+
+:sllogin                        ; ouverture de session
+assign \%x 0                    ; mettre le compteur à zéro
+pause 1
+echo Looking for login prompt.
+
+:slloop
+increment \%x                   ; compter les secondes
+clear                           ; vider le tampon d'entrée
+output \13
+;
+; put your expected login prompt here:
+;
+input 1 {Username: }
+if success goto sluid
+reinput 1 {\255}
+if success goto slhup
+reinput 1 {\127}
+if success goto slhup
+if  \%x 10 goto slloop         ; essayer 10 fois d'obtenir une invite de session
+else goto slhup                 ; raccrocher et recommencer après 10 échecs
+
+:sluid
+;
+; mettre ici votre nom d'utilisateur:
+;
+output nom-d-utilisateur-ppp\13
+input 1 {Password: }
+;
+; mettre ici votre mot de passe:
+;
+output mot-de-passe-ppp\13
+input 1 {Entering SLIP mode.}
+echo
+quit
+
+:slnodial
+echo \7Pas de tonalité.  Vérifiez votre ligne téléphonique!\7
+exit 1
+
+; local variables:
+; mode: csh
+; comment-start: "; "
+; comment-start-skip: "; "
+; end:
+....
+
+[[pppoe]]
+== Utiliser PPP sur Ethernet (PPPoE)
+
+Cette section décrit comment configurer PPP sur Ethernet (PPPoE).
+
+=== Configuration du noyau
+
+Il n'est plus du tout nécessaire de configurer le noyau pour utiliser PPPoE. Si le support netgraph nécessaire n'est pas compilé dans le noyau, il sera chargé dynamiquement par ppp.
+
+=== Renseigner [.filename]#ppp.conf#
+
+Voici un exemple de fichier [.filename]#ppp.conf# opérationnel:
+
+[.programlisting]
+....
+default:
+  set log Phase tun command # vous pouvez détailler plus les traces si vous le désirez
+  set ifaddr 10.0.0.1/0 10.0.0.2/0
+
+nom_du_fournisseur_d'accès:
+  set device PPPoE:xl1 # remplacez xl1 par votre périphérique Ethernet
+  set authname VOTRENOMDUTILISATEUR
+  set authkey VOTREMOTDEPASSE
+  set dial
+  set login
+  add default HISADDR
+....
+
+=== Exécuter ppp
+
+En tant que `root`, vous pouvez lancer:
+
+[source,bash]
+....
+# ppp -ddial nom_du_fournisseur_d'accès
+....
+
+=== Lancer ppp au démarrage
+
+Ajoutez ce qui suit à votre fichier [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ppp_enable="YES"
+ppp_mode="ddial"
+ppp_nat="YES"	# si vous voulez activer NAT pour votre réseau local, sinon NO
+ppp_profile="nom_du_fournisseur_d'accès"
+....
+
+=== Utilisation d'une étiquette de service PPPoE
+
+Parfois il sera nécessaire d'utiliser une étiquette de service pour établir votre connexion. Les étiquettes de service sont employées pour faire la distinction entre différents serveurs PPPoE attachés à un réseau donné.
+
+Vous devez avoir l'information concernant l'étiquette de service dans la documentation fournie par votre fournisseur d'accès. Si vous ne pouvez la trouver, contactez le support technique de votre fournisseur d'accès Internet.
+
+En dernier ressort, vous pourrez essayer la méthode suggérée par le programme http://www.roaringpenguin.com/pppoe/[Roaring Penguin PPPoE] qui peut-être trouvé dans le crossref:ports[ports,catalogue des logiciels portés]. Gardez cependant à l'esprit, que cela peut déprogrammer votre modem et le rendre inutilisable, aussi réfléchissez à deux fois avant de le faire. Installez simplement le logiciel fourni avec le modem par votre fournisseur d'accès. Ensuite accédez au menu menu:Système[] du programme. Le nom de votre profil devrait y figurer. C'est habituellement le nom du _FAI_.
+
+Le nom du profil (étiquette de service) sera utilisé dans l'entrée de configuration PPPoE dans le fichier [.filename]#ppp.conf# dans la partie fournisseur d'accès de la commande `set device` (voir la page de manuel man:ppp[8] pour plus de détails). Cela devrait ressembler à ceci:
+
+[.programlisting]
+....
+set device PPPoE:xl1:FAI
+....
+
+N'oubliez pas de changer _xl1_ pour le périphérique correct correspondant à votre carte Ethernet.
+
+N'oubliez pas de changer _FAI_ par le profil que vous avez déterminé ci-dessus.
+
+Pour une information supplémentaire, consultez:
+
+* http://renaud.waldura.com/doc/freebsd/pppoe/[Cheaper Broadband with FreeBSD on DSL] par Renaud Waldura.
+* http://www.ruhr.de/home/nathan/FreeBSD/tdsl-freebsd.html[ Nutzung von T-DSL und T-Online mit FreeBSD] par Udo Erdelhoff (en allemand).
+
+[[ppp-3com]]
+=== PPPoE avec un modem ADSL 3Com(R) HomeConnect(TM) Dual Link
+
+Ce modem ne respecte pas la http://www.faqs.org/rfcs/rfc2516.html[RFC 2516] (_A Method for transmitting PPP over Ethernet (PPPoE)_, rédigée par L. Mamakos, K. Lidl, J. Evarts, D. Carrel, D. Simone, et R. Wheeler). Au lieu de cela des codes différents pour les types de paquets sont utilisés pour les frames Ethernet. Veuillez vous plaindre auprès de http://www.3com.com/[3Com] si vous pensez que le modem devrait respecter la spécification PPPoE.
+
+Afin de permettre à FreeBSD de communiquer avec ce périphérique, un paramètre sysctl doit être configuré. Cela peut être effectué de manière automatique au démarrage en renseignant le fichier [.filename]#/etc/sysctl.conf#:
+
+[.programlisting]
+....
+net.graph.nonstandard_pppoe=1
+....
+
+ou peut être paramétré pour prendre immédiatement effet avec la commande:
+
+[source,bash]
+....
+# sysctl net.graph.nonstandard_pppoe=1
+....
+
+Malheureusement, parce que c'est un paramétrage concernant l'intégralité du système, il n'est pas possible de communiquer en même temps avec un client ou un serveur PPPoE normal et un modem ADSL 3Com(R) HomeConnect(TM).
+
+[[pppoa]]
+== Utiliser PPP sur ATM (PPPoA)
+
+Ce qui suit décrit comment configurer PPP sur ATM (PPPoA). PPPoA est très populaire parmi les fournisseurs d'accès DSL européens.
+
+=== Utiliser PPPoA avec le modem Alcatel SpeedTouch(TM) USB
+
+Le support PPPoA pour ce périphérique est fourni sous la forme d'un logiciel porté sous FreeBSD car le "firmware" est distribué sous l'http://www.speedtouchdsl.com/disclaimer_lx.htm[accord de licence d'Alcatel] et ne peut être redistribué librement avec le système de base de FreeBSD.
+
+Pour installer le logiciel, utilisez simplement le crossref:ports[ports,catalogue des logiciels portés]. Installez le logiciel porté package:net/pppoa[] et suivez les instructions fournies avec.
+
+Comme de nombreux périphériques, le modem USB Alcatel SpeedTouch(TM) a besoin de charger un "firmware" à partir de l'ordinateur hôte pour opérer correctement. Il est possible d'automatiser ce processus sous FreeBSD de manière à ce que ce transfert ait lieu dès que le périphérique est branché dans un port USB. L'information suivante peut être ajoutée au fichier [.filename]#/etc/usbd.conf# pour autoriser ce transfert automatique de "firmware". Ce fichier doit être édité en tant que super-utilisateur.
+
+[.programlisting]
+....
+device "Alcatel SpeedTouch USB"
+    devname "ugen[0-9]+"
+    vendor 0x06b9
+    product 0x4061
+    attach "/usr/local/sbin/modem_run -f /usr/local/libdata/mgmt.o"
+....
+
+Pour activer le "daemon" USB, usbd, ajoutez la ligne suivante dans le fichier [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+usbd_enable="YES"
+....
+
+Il est également possible de paramétrer ppp pour se connecter au démarrage. Pour cela ajoutez les lignes suivantes au fichier [.filename]#/etc/rc.conf#. Encore une fois, vous devrez être attaché sous l'utilisateur `root` pour effectuer ces ajouts.
+
+[.programlisting]
+....
+ppp_enable="YES"
+ppp_mode="ddial"
+ppp_profile="adsl"
+....
+
+Pour que cela fonctionne correctement, vous devrez utiliser le fichier d'exemple [.filename]#ppp.conf# qui est fourni avec le logiciel porté package:net/pppoa[].
+
+=== Utiliser mpd
+
+Vous pouvez utiliser mpd pour vous connecter à différents services, en particulier aux services PPTP. Vous trouverez mpd dans le catalogue des logiciels portés, package:net/mpd[]. De nombreux modems ADSL demandent à ce qu'un tunnel PPTP soit créé entre le modem et l'ordinateur, le SpeedTouch(TM) Home d'Alcatel en fait partie.
+
+Vous devez tout d'abord installer le logiciel porté, ensuite vous pouvez configurer mpd selon vos besoins et les paramètres propres au fournisseur d'accès. Le logiciel porté place un ensemble de fichiers de configuration très bien commentés dans le répertoire [.filename]#PREFIX/etc/mpd/#. Notez qu'ici _PREFIX_ représente le répertoire dans lequel les logiciels portés sont installés, par défaut le répertoire [.filename]#/usr/local/#. Un guide complet pour la configuration de mpd est disponible dans le format HTML, une fois que le logiciel a été installé. Il se trouve dans le répertoire [.filename]#PREFIX/shared/doc/mpd/#. Voici un exemple de configuration pour se connecter à un service ADSL à l'aide de mpd. La configuration est séparée en deux fichiers, le premier est [.filename]#mpd.conf#:
+
+[.programlisting]
+....
+default:
+    load adsl
+
+adsl:
+    new -i ng0 adsl adsl
+    set bundle authname username <.>
+    set bundle password password <.>
+    set bundle disable multilink
+
+    set link no pap acfcomp protocomp
+    set link disable chap
+    set link accept chap
+    set link keep-alive 30 10
+
+    set ipcp no vjcomp
+    set ipcp ranges 0.0.0.0/0 0.0.0.0/0
+
+    set iface route default
+    set iface disable on-demand
+    set iface enable proxy-arp
+    set iface idle 0
+
+    open
+....
+
+<.> Le nom d'utilisateur utilisé pour vous identifier auprès de votre FAI.
+
+<.> Le mot de passe utilisé pour vous identifier auprès de votre FAI.
+
+Le fichier [.filename]#mpd.links# contient les informations concernant la liaison, ou les liaisons, que vous souhaitez établir. En exemple de fichier [.filename]#mpd.links# accompagnant l'exemple précédent est donné ci-dessous:
+
+[.programlisting]
+....
+adsl:
+    set link type pptp
+    set pptp mode active
+    set pptp enable originate outcall
+    set pptp self 10.0.0.1 <.>
+    set pptp peer 10.0.0.138 <.>
+....
+
+<.> L'adresse IP de la machine FreeBSD à partir de laquelle vous utiliserez mpd.
+
+<.> L'adresse IP de votre modem ADSL. Pour le SpeedTouch(TM) Home d'Alcatel cette adresse est par défaut `10.0.0.138`.
+
+Il est possible d'initialiser aisément une connexion en tapant la commande suivante en tant que `root`:
+
+[source,bash]
+....
+# mpd -b adsl
+....
+
+Vous pouvez voir quel est l'état de votre connexion à l'aide de la commande suivante:
+
+[source,bash]
+....
+% ifconfig ng0
+ng0: flags=88d1<UP,POINTOPOINT,RUNNING,NOARP,SIMPLEX,MULTICAST> mtu 1500
+     inet 216.136.204.117 --> 204.152.186.171 netmask 0xffffffff
+....
+
+L'utilisation de mpd est la méthode recommandée de connexion à un service ADSL sous FreeBSD.
+
+=== Utiliser pptpclient
+
+Il est également possible d'utiliser FreeBSD pour se connecter à d'autres service PPPoA en utilisant package:net/pptpclient[].
+
+Pour utiliser package:net/pptpclient[] pour vous connecter à un service DSL, installez le logiciel porté ou le paquetage correspondant et éditez votre fichier [.filename]#/etc/ppp/ppp.conf#. Vous aurez besoin des droits de super-utilisateur pour effectuer ces deux opérations. Un exemple de fichier [.filename]#ppp.conf# est donné plus bas. Pour plus d'information sur les options du fichier [.filename]#ppp.conf#, consultez la page de manuel de ppp, man:ppp[8].
+
+[.programlisting]
+....
+adsl:
+ set log phase chat lcp ipcp ccp tun command
+ set timeout 0
+ enable dns
+ set authname username <.>
+ set authkey password <.>
+ set ifaddr 0 0
+ add default HISADDR
+....
+
+<.> Le nom d'utilisateur de votre compte chez le fournisseur d'accès DSL.
+
+<.> Le mot de passe de votre compte.
+
+[WARNING]
+====
+
+Etant donné que vous devez mettre le mot de passe de votre compte en clair dans le fichier [.filename]#ppp.conf#, vous devez vous assurer que personne d'autre ne puisse lire le contenu de ce fichier. La série de commandes suivante s'assurera que ce fichier n'est lisible que par `root`. Référez-vous aux pages de manuel de man:chmod[1] et man:chown[8] pour plus d'informations.
+
+[source,bash]
+....
+# chown root:wheel /etc/ppp/ppp.conf
+# chmod 600 /etc/ppp/ppp.conf
+....
+
+====
+
+Cela créera un tunnel pour une session PPP vers votre routeur DSL. Les modems DSL Ethernet ont une adresse IP pour le réseau local pré-configurée à laquelle vous vous connectez. Dans le cas du modem SpeedTouch(TM) Home d'Alcatel cette adresse est `10.0.0.138`. La documentation de votre routeur devrait mentionner quelle adresse utilise votre périphérique. Pour créer le tunnel et démarrer une session PPP exécutez la commande suivante:
+
+[source,bash]
+....
+# pptp address adsl
+....
+
+[TIP]
+====
+
+Vous pourrez ajouter un "et commercial" ("") à la fin de la commande précédente car sinon pptp ne vous rendra pas la main.
+====
+
+Un périphérique virtuel de tunnel ([.filename]#tun#) sera créé pour la communication entre les processus pptp et ppp. Une fois retourné à l'invite, ou que le processus pptp a confirmé la connexion, vous pouvez examiner le tunnel de cette manière:
+
+[source,bash]
+....
+% ifconfig tun0
+tun0: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 1500
+        inet 216.136.204.21 --> 204.152.186.171 netmask 0xffffff00
+        Opened by PID 918
+....
+
+Si vous n'êtes pas en mesure de vous connecter, vérifiez la configuration de votre routeur qui est généralement accessible par telnet ou avec un navigateur web. Si le problème persiste, vous devrez examiner la sortie de la commande `pptp` et le contenu du fichier de trace de ppp, [.filename]#/var/log/ppp.log# à la recherche d'indices.
+
+[[slip]]
+== Utiliser SLIP
+
+[[slipc]]
+=== Configurer un client SLIP
+
+Ce qui suit décrit une manière de configurer une machine FreeBSD pour utiliser SLIP sur un réseau où les noms de machine sont statiques. Si le nom de machine est affecté dynamiquement (votre adresse change à chaque connexion), vous devrez probablement utiliser une méthode plus sophistiquée.
+
+Tout d'abord, déterminez sur quel port série votre modem est connecté. De nombreuses personnes utilisent un lien symbolique, comme [.filename]#/dev/modem#, pour pointer vers le nom réel du périphérique, [.filename]#/dev/cuaaN# (ou [.filename]#/dev/cuadN# sous FreeBSD 6.X). Ceci vous permet de faire abstraction du véritable nom du périphérique même si vous déplacez le modem vers un autre port. Cela évite le côté pénible de devoir modifier un certain nombre de fichiers dans le répertoire [.filename]#/etc# et les fichiers [.filename]#.kermrc# pour l'ensemble du système!
+
+[NOTE]
+====
+[.filename]#/dev/cuaa0# (ou [.filename]#/dev/cuad0# sous FreeBSD 6.X) représente [.filename]#COM1#, [.filename]#cuaa1# (ou [.filename]#/dev/cuad1#) [.filename]#COM2#, etc.
+====
+
+Assurez-vous d'avoir dans votre fichier de configuration du noyau ce qui suit:
+
+[.programlisting]
+....
+device   sl
+....
+
+Sous FreeBSD 4.X, utilisez à la place la ligne suivante:
+
+[.programlisting]
+....
+pseudo-device   sl      1
+....
+
+Cette configuration fait partie du noyau [.filename]#GENERIC#, aussi cela ne devrait pas être un problème à moins que vous ne l'ayez effacée.
+
+==== Ce que vous n'aurez à faire qu'une seule fois
+
+[.procedure]
+====
+
+. Ajoutez votre machine, la passerelle et les serveurs de noms de domaines à votre fichier [.filename]#/etc/hosts#. Le notre ressemble à ceci:
++
+[.programlisting]
+....
+127.0.0.1               localhost loghost
+136.152.64.181          water.CS.Example.EDU water.CS water
+136.152.64.1            inr-3.CS.Example.EDU inr-3 slip-gateway
+128.32.136.9            ns1.Example.EDU ns1
+128.32.136.12           ns2.Example.EDU ns2
+....
++
+. Assurez-vous que `hosts` apparaît avant `bind` dans votre fichier [.filename]#/etc/host.conf# sous les versions de FreeBSD antérieures à 5.0. Depuis FreeBSD 5.0, le système utilise à la place le fichier [.filename]#/etc/nsswitch.conf#, vérifiez que `files` est avant `dns` dans la ligne `hosts` de ce fichier. Sans ces paramètres, il peut se passer des choses bizarres.
+. Editez le fichier [.filename]#/etc/rc.conf#.
+.. Définissez votre nom de machine en éditant la ligne:
++
+[.programlisting]
+....
+hostname="myname.my.domain"
+....
++ 
+Le nom Internet complet de la machine doit être utilisé ici.
+.. Ajoutez [.filename]#sl0# à la liste des interfaces réseau en modifiant la ligne:
++
+[.programlisting]
+....
+network_interfaces="lo0"
+....
++ 
+en:
++
+[.programlisting]
+....
+network_interfaces="lo0 sl0"
+....
++
+.. Définissez les paramètres de configuration de [.filename]#sl0# en ajoutant une ligne:
++
+[.programlisting]
+....
+ifconfig_sl0="inet ${hostname} slip-gateway netmask 0xffffff00 up"
+....
++
+.. Indiquez la passerelle par défaut en modifiant la ligne:
++
+[.programlisting]
+....
+defaultrouter="NO"
+....
++ 
+en:
++
+[.programlisting]
+....
+defaultrouter="slip-gateway"
+....
++
+. Créez un fichier [.filename]#/etc/resolv.conf# qui contient:
++
+[.programlisting]
+....
+domain CS.Example.EDU
+nameserver 128.32.136.9
+nameserver 128.32.136.12
+....
++ 
+Comme vous pouvez le voir, ceci définit les serveurs de noms de domaines. Bien entendu, les noms de domaines et les adresses dépendront de votre environnement.
+. Donnez des mots de passe pour les utilisateurs `root` et `toor` (et à tous les autres comptes qui n'auraient pas de mot de passe).
+. Redémarrez votre machine et vérifiez qu'elle a bien le nom voulu.
+====
+
+==== Etablir une connexion SLIP
+
+[.procedure]
+====
+
+. Téléphonez, tapez `slip` à l'invite, puis entrez votre nom de machine et votre mot de passe. Ce que vous devez entrer dépend de votre environnement. Si vous utilisez Kermit, vous pouvez essayer une procédure comme celle-ci:
++
+[.programlisting]
+....
+# configuration kermit
+set modem hayes
+set line /dev/modem
+set speed 115200
+set parity none
+set flow rts/cts
+set terminal bytesize 8
+set file type binary
+# The next macro will dial up and login
+define slip dial 643-9600, input 10 =, if failure stop, -
+output slip\x0d, input 10 Username:, if failure stop, -
+output silvia\x0d, input 10 Password:, if failure stop, -
+output ***\x0d, echo \x0aCONNECTED\x0a
+....
++ 
+Vous devez, bien évidemment, remplacer le nom d'utilisateur et le mot de passe par les votre. Après cela vous pouvez alors entrer simplement `slip` à l'invite de Kermit pour vous connecter.
++
+[NOTE]
+======
+Conserver votre mot de passe en clair dans un fichier quelconque est en général une _mauvaise_ idée. Faites-le à vos risques et périls.
+======
++
+. Laissez ensuite Kermit tel quel (vous pouvez le mettre en arrière-plan avec kbd:[Ctrl+z]) et en tant que `root`, tapez:
++
+[source,bash]
+....
+# slattach -h -c -s 115200 /dev/modem
+....
++ 
+Si vous êtes en mesure d'envoyer un `ping` vers des machines situées de l'autre côté du routeur, c'est que vous êtes connecté! Si cela ne fonctionne pas, vous pouvez essayer l'option `-a` au lieu de `-c` en argument de `slattach`.
+====
+
+==== Comment couper la connexion
+
+Effectuez ceci:
+
+[source,bash]
+....
+# kill -INT `cat /var/run/slattach.modem.pid`
+....
+
+pour tuer `slattach`. Gardez à l'esprit que vous devez avoir les droits du super-utilisateur pour faire cela. Revenez ensuite sous `kermit` (en tapant `fg` si l'avez mis en tâche de fond) et quittez-le (kbd:[q]).
+
+La page de manuel de man:slattach[8] dit que vous devez employer la commande `ifconfig sl0 down` pour indiquer que l'interface n'est plus active, mais cela ne change apparemment rien (les diagnostics donnés par la commande `ifconfig sl0` restent identiques).
+
+Il arrive que parfois que votre modem refuse de raccrocher. Dans ce cas, relancez `kermit` et quittez-le de nouveau. Cela fonctionne en général à la seconde tentative.
+
+==== Dépannage
+
+Si cela ne fonctionne pas, n'hésitez pas à contacter la liste de diffusion link:{freebsd-net-url}[freebsd-net]. Voici les problèmes que certains ont rencontré jusqu'ici:
+
+* Ne pas utiliser l'option `-c` ou `-a` avec `slattach` (Cela ne devrait pas poser de problème, mais des utilisateurs ont signalé que l'utilisation de cet indicateur a résolu leur problème).
+* Utiliser `s10` au lieu de `sl0` (avec certaines polices de caractères, il est parfois difficile de faire la différence).
+* Essayez `ifconfig sl0` pour connaître la configuration de votre interface. Vous obtiendrez, par exemple:
++
+[source,bash]
+....
+# ifconfig sl0
+sl0: flags=10<POINTOPOINT>
+        inet 136.152.64.181 --> 136.152.64.1 netmask ffffff00
+....
+
+* Si vous obtenez le message d'erreur `no route to host` lors de l'utilisation de man:ping[8], il se peut qu'il y ait un problème avec votre table de routage. Vous pouvez utiliser la commande `netstat -r` pour afficher les routes actives:
++
+[source,bash]
+....
+# netstat -r
+Routing tables
+Destination      Gateway            Flags     Refs     Use  IfaceMTU    Rtt    Netmasks:
+
+(root node)
+(root node)
+
+Route Tree for Protocol Family inet:
+(root node) =>
+default          inr-3.Example.EDU  UG          8   224515  sl0 -      -
+localhost.Exampl localhost.Example. UH          5    42127  lo0 -       0.438
+inr-3.Example.ED water.CS.Example.E UH          1        0  sl0 -      -
+water.CS.Example localhost.Example. UGH        34 47641234  lo0 -       0.438
+(root node)
+....
++ 
+Les exemples précédents proviennent d'un système relativement chargé. La valeurs sur votre système varieront en fonction de l'activité réseau.
+
+[[slips]]
+=== Configurer un serveur SLIP
+
+Ce document donne des indications pour la mise en oeuvre d'un serveur SLIP sur un système FreeBSD, ce qui signifie généralement configurer votre système pour ouvrir automatiquement une connexion à l'ouverture d'une session depuis un client SLIP distant.
+
+[[slips-prereqs]]
+==== Prérequis
+
+Cette section est très technique, il vous faut donc quelques connaissances de base. On supposera que vous connaissez le protocole réseau TCP/IP et, en particulier, l'adressage des réseaux et des noeuds, les masques de sous-réseau, les sous-réseaux, le routage et les protocoles de routage tels que RIP. Ce sont les concepts que vous devez maîtriser pour configurer les services SLIP sur un serveur de connexions, et si ce n'est pas le cas, veuillez lire _TCP/IP Network Administration_ de Craig Hunt chez O'Reilly Associates, Inc. (ISBN 0-937175-82-X), ou les ouvrages de Douglas Comer sur le protocole TCP/IP.
+
+On suppose également que vous avez déjà installé vos modems et configuré les fichiers systèmes appropriés pour permettre l'ouverture de session via vos modems. Si vous ne l'avez pas encore fait reportez-vous à la crossref:serialcomms[dialup,Dial-in Service] pour des informations sur la configuration des connexions entrantes. Vous pouvez aussi consulter les pages de manuel de man:sio[4] pour plus d'information sur le pilote du port série et man:ttys[5], man:gettytab[5], man:getty[8], et man:init[8] en ce qui concerne la configuration du système pour qu'il autorise les connexions en provenance de modems, et peut-être la page de manuel man:stty[1] pour des informations sur le paramétrage des ports série (comme `clocal` pour les interfaces série directement connectées).
+
+==== Rapide vue d'ensemble
+
+Une configuration typique d'utilisation de FreeBSD comme serveur SLIP fonctionne de la manière suivante: un utilisateur SLIP appelle votre serveur SLIP FreeBSD et ouvre une session sous un identifiant utilisateur SLIP particulier qui lance [.filename]#/usr/sbin/sliplogin# comme interpréteur de commandes. Le programme `sliplogin` consulte le fichier [.filename]#/etc/sliphome/slip.hosts# à la recherche d'une ligne correspondant à cet utilisateur particulier, et s'il la trouve, connecte la ligne série à une interface SLIP disponible et lance ensuite la procédure [.filename]#/etc/sliphome/slip.login# pour configurer cette interface SLIP.
+
+===== Un exemple d'ouverture de session sur un serveur SLIP
+
+Par exemple, si `Shelmerg` était un identifiant utilisateur SLIP, l'entrée pour `Shelmerg` ressemblerait à ceci:
+
+[.programlisting]
+....
+Shelmerg:password:1964:89::0:0:Guy Helmer - SLIP:/usr/users/Shelmerg:/usr/sbin/sliplogin
+....
+
+Quand `Shelmerg` ouvre une session, `sliplogin` consulte [.filename]#/etc/sliphome/slip.hosts# à la recherche d'une ligne correspondant à l'identifiant de l'utilisateur correspondant; par exemple, il peut y avoir dans le fichier [.filename]#/etc/sliphome/slip.hosts# la ligne:
+
+[.programlisting]
+....
+Shelmerg        dc-slip sl-helmer       0xfffffc00		  autocomp
+....
+
+`sliplogin` trouvera alors cette ligne, affectera la ligne série à l'interface SLIP suivante,et ensuite exécutera [.filename]#/etc/sliphome/slip.login# avec les arguments suivants:
+
+[.programlisting]
+....
+/etc/sliphome/slip.login 0 19200 Shelmerg dc-slip sl-helmer 0xfffffc00 autocomp
+....
+
+Si tous se passe bien, [.filename]#/etc/sliphome/slip.login# exécutera un `ifconfig` sur l'interface SLIP que s'est attribué `sliplogin` (l'interface SLIP 0, dans l'exemple ci-dessus, qui est le premier paramètre passé à [.filename]#slip.login#) pour définir l'adresse IP locale (`dc-slip`), l'adresse IP de la machine distante (`sl-helmer`), le masque de sous-réseau de l'interface SLIP (`0xfffffc00`), et tout autre indicateur supplémentaire (`autocomp`). Si quelque chose se passe mal, `sliplogin` fournit en général des messages d'information via la fonctionnalité de trace du "démon"syslogd, qui les enregistre habituellement dans le fichier [.filename]#/var/log/messages# (reportez-vous au pages de manuel de man:syslogd[8] et man:syslog.conf[5] et consultez peut-être aussi le fichier [.filename]#/etc/syslog.conf# pour voir ce que trace syslogd et où il enregistre ces messages.).
+
+==== Configuration du noyau
+
+Le noyau par défaut de FreeBSD ([.filename]#GENERIC#) fourni le support SLIP (man:sl[4]); dans le cas d'un noyau personnalisé, vous devez ajouter la ligne suivante à votre fichier de configuration du noyau:
+
+[.programlisting]
+....
+device   sl
+....
+
+Sous FreeBSD 4.X, utilisez la ligne suivante:
+
+[.programlisting]
+....
+pseudo-device   sl      2
+....
+
+[NOTE]
+====
+Le chiffre en fin de ligne représente le nombre maximum de connexions SLIP qui peuvent cohexister. Depuis FreeBSD 5.0, le pilote man:sl[4] est capable d'"auto-clonage".
+====
+
+Par défaut, votre machine FreeBSD ne transmettra pas les paquets. Si vous désirez que votre serveur SLIP FreeBSD agisse en routeur, vous devez éditer le fichier [.filename]#/etc/rc.conf# et positionner la variable `gateway_enable` à `YES`.
+
+Vous devrez ensuite redémarrer pour que les nouveaux paramètres prennent effet.
+
+Veuillez vous référer à la crossref:kernelconfig[kernelconfig,Configurer le noyau de FreeBSD] sur la configuration du noyau pour de l'aide sur ce sujet.
+
+==== Configuration de sliplogin
+
+Comme indiqué plus haut, il y a trois fichiers dans le répertoire [.filename]#/etc/sliphome# qui servent à la configuration de [.filename]#/usr/sbin/sliplogin# (voyez man:sliplogin[8] pour avoir la page de manuel de `sliplogin`): [.filename]#slip.hosts#, définit les utilisateurs SLIP et les adresses IP qui leur sont associées, [.filename]#slip.login#, qui ne fait en général que configurer l'interface SLIP, et (facultatif) [.filename]#slip.logout#, qui effectue le travail inverse de [.filename]#slip.login# quand la connexion série est terminée.
+
+===== Configuration de [.filename]#slip.hosts#
+
+[.filename]#/etc/sliphome/slip.hosts# contient des lignes avec au moins quatre champs séparés par des espaces:
+
+* L'identifiant (ID) d'utilisateur SLIP;
+* L'adresse locale (locale au serveur SLIP) de la liaison SLIP;
+* L'adresse de l'autre extrémité de la liaison SLIP;
+* Le masque de sous-réseau.
+
+Les adresses locales et distantes peuvent être des noms de machines (qui seront convertis en adresses IP via [.filename]#/etc/hosts# ou par le service de noms de domaines, en fonction de ce que contient le fichier [.filename]#/etc/nsswitch.conf#, ou [.filename]#/etc/host.conf# si vous utilisez FreeBSD 4.X), et le masque de sous-réseau peut être un nom qui sera converti en consultant le fichier [.filename]#/etc/networks#. Par exemple, [.filename]#/etc/sliphome/slip.hosts# contiendra:
+
+[.programlisting]
+....
+#
+# login local-addr      remote-addr     mask            opt1    opt2
+#                                               (normal,compress,noicmp)
+#
+Shelmerg  dc-slip       sl-helmerg      0xfffffc00      autocomp
+....
+
+La ligne se termine par une ou plusieurs options:
+
+* `normal` - pas de compression des en-têtes;
+* `compress` - compression des en-têtes;
+* `autocomp` - compression des en-têtes si la machine distante l'autorise;
+* `noicmp` - interdit les paquets ICMP (de sorte que les paquets "ping" seront ignorés au lieu de consommer votre bande passante).
+
+Le choix des adresses pour les deux extrémités des liaisons SLIP dépend du fait que vous leur dédiez un sous-réseau TCP/IP ou que vous comptiez utiliser un "proxy ARP" sur votre serveur SLIP (ce n'est pas un "vrai" proxy ARP, mais c'est la terminologie que nous utiliserons dans ce document pour le désigner). Si vous n'êtes pas sûr de la méthode à choisir ou de la façon d'assigner les adresses IP, référez-vous aux ouvrages sur le TCP/IP mentionnés à section sur les prérequis (<<slips-prereqs>>) et/ou consultez l'administrateur de votre réseau IP.
+
+Si vous comptez utiliser un sous-réseau IP séparé pour vos clients SLIP, vous devrez définir l'adresse de sous-réseau à partir de votre réseau IP et attribuer à chacun de vos clients SLIP une adresse IP sur ce sous-réseau. Ensuite, vous devrez probablement configurer sur votre routeur IP le plus proche une route statique vers votre sous-réseau SLIP via votre serveur SLIP.
+
+Sinon, si vous avez l'intention d'utiliser la méthode du "proxy ARP", vous devrez assigner à vos clients SLIP des adresses IP en provenance du sous-réseau Ethernet de votre serveur SLIP, et vous devrez également adapter vos procédures [.filename]#/etc/sliphome/slip.login# et [.filename]#/etc/sliphome/slip.logout# pour qu'elles utilisent man:arp[8] pour gérer les entrées proxy ARP dans la table ARP de votre serveur SLIP.
+
+===== Configuration de [.filename]#slip.login#
+
+Le fichier [.filename]#/etc/sliphome/slip.login# ressemble généralement à ceci:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       @(#)slip.login  5.1 (Berkeley) 7/1/90
+
+#
+# procédure générique d'ouverture de session pour
+# une liaison SLIP.  sliplogin l'appelle avec les paramètres:
+#      1        2         3        4          5         6     7-n
+# interface vitesse nom adresse-locale adresse-distante masque arg-optionnels
+#
+/sbin/ifconfig sl$1 inet $4 $5 netmask $6
+....
+
+Ce fichier [.filename]#slip.login# ne fait qu'exécuter `ifconfig` sur l'interface SLIP appropriée avec comme paramètres les adresses locales et distantes et le masque de sous-réseau de l'interface SLIP.
+
+Si vous avez choisi d'utiliser la méthode du "proxy ARP" (au lieu d'affecter un sous-réseau distinct à vos clients SLIP), votre fichier [.filename]#/etc/sliphome/slip.login# devra ressembler à ceci:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       @(#)slip.login  5.1 (Berkeley) 7/1/90
+
+#
+# procédure générique d'ouverture de session pour
+# une liaison SLIP.  sliplogin l'appelle avec les paramètres:
+#     1         2    3         4              5           6     7-n
+# interface vitesse nom adresse-locale adresse-distante masque arg-optionnels
+#
+/sbin/ifconfig sl$1 inet $4 $5 netmask $6
+# répondre aux requêtes ARP concernant le client SLIP avec notre
+# adresse Ethernet
+/usr/sbin/arp -s $5 00:11:22:33:44:55 pub
+....
+
+La ligne supplémentaire dans ce fichier [.filename]#slip.login#, `arp -s $5 00:11:22:33:44:55 pub`, crée une entrée ARP dans la table ARP du serveur SLIP. Cette entrée ARP fait que le serveur SLIP répond avec sa propre adresse MAC lorsqu'un autre noeud IP du réseau Ethernet demande à dialoguer avec le client SLIP qui possède cette adresse IP.
+
+Dans l'exemple donné ci-dessus, remplacez l'adresse MAC Ethernet (`00:11:22:33:44:55`) avec l'adresse MAC de la carte Ethernet de votre système, ou sinon votre "proxy ARP" ne fonctionnera jamais! Vous pouvez déterminer l'adresse MAC de votre serveur SLIP en examinant le résultat de la commande `netstat -i`; la seconde ligne doit ressembler à ce qui suit:
+
+[source,bash]
+....
+ed0   1500  Link0.2.c1.28.5f.4a         191923	0   129457     0   116
+....
+
+Cela indique que l'adresse MAC Ethernet de ce système est `00:02:c1:28:5f:4a` - les points dans les adresses MAC que donne `netstat -i` doivent être remplacés par des ":" et il faut ajouter un zéro devant chaque valeur hexadécimale donnée sur un seul digit pour obtenir des adresses dans le format requis par man:arp[8]; consultez la page de manuel d'man:arp[8] pour avoir des informations complètes sur ces conventions.
+
+[NOTE]
+====
+Quand vous créez les fichiers [.filename]#/etc/sliphome/slip.login# et [.filename]#/etc/sliphome/slip.logout#, le bit "exécutable" (i.e., `chmod 755 /etc/sliphome/slip.login /etc/sliphome/slip.logout`) doit être positionné, ou sinon `sliplogin` sera incapable d'exécuter la procédure.
+====
+
+===== Configuration de [.filename]#slip.logout#
+
+[.filename]#/etc/sliphome/slip.logout# n'est pas strictement indispensable (à moins que vous n'implémentiez un "proxy ARP"), mais si vous décidez de la créer, voici un exemple de procédure [.filename]#slip.logout# élémentaire:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       slip.logout
+
+#
+# procédure générique de fermeture de session pour
+# une liaison SLIP.  sliplogin l'appelle avec les paramètres:
+#     1         2    3         4              5           6     7-n
+# interface vitesse nom adresse-locale adresse-distante masque arg-optionnels
+#
+/sbin/ifconfig sl$1 down
+....
+
+Si vous utilisez la méthode "proxy ARP", vous voudrez que [.filename]#/etc/sliphome/slip.logout# supprime l'entrée ARP pour le client SLIP:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       @(#)slip.logout
+
+#
+# procédure générique de fermeture de session pour
+# une liaison SLIP.  sliplogin l'appelle avec les paramètres:
+#     1         2    3         4              5           6     7-n
+# interface vitesse nom adresse-locale adresse-distante masque arg-optionnels
+#
+/sbin/ifconfig sl$1 down
+# Cesser de répondre aux requêtes ARP concernant le client SLIP
+/usr/sbin/arp -d $5
+....
+
+La commande `arp -d $5` supprime l'entrée ARP que la procédure [.filename]#slip.login# pour le "proxy ARP" a ajouté quand le client SLIP a ouvert la session.
+
+Il n'est pas inutile de répéter: assurez-vous que le bit "exécutable" de la procédure [.filename]#/etc/sliphome/slip.logout# a été positionné après que vous l'ayez créée (i.e., `chmod 755 /etc/sliphome/slip.logout`).
+
+==== A propos du routage
+
+Si vous n'utilisez pas "proxy ARP" pour router les paquets entre vos clients SLIP et le reste de votre réseau (et peut-être l'Internet), vous devrez probablement ajouter des routes statiques vers le(s) routeur(s) par défaut le(s) plus proche(s) pour router le sous-réseau de vos clients SLIP via votre serveur SLIP.
+
+===== Routes statiques
+
+Ajouter des routes statiques vers vos routeurs les plus proches peut être problématique (voire impossible si vous n'avez pas les autorisations pour...). Si vous avez un réseau avec plusieurs routeurs, certains d'entre eux, tels que les Cisco et les Proteon, devront non seulement être configurés pour la route statique vers le sous-réseau SLIP, mais devront aussi savoir quelles routes statiques ils doivent annoncer aux autres routeurs, donc quelques compétences, un peu de dépannage ou de "bidouille" pourront être nécessaire pour que vos routes statiques fonctionnent.
+
+===== Utiliser GateD(R)
+
+[NOTE]
+====
+GateD(R) est désormais un logiciel propriétaire et les sources ne seront donc plus disponibles (plus d'information sur le site Web de http://www.gated.org/[GateD(R)]). Cette section existe uniquement pour des raisons de compatibilité pour ceux qui utilisent encore une ancienne version.
+====
+
+Une alternative aux maux de tête que provoquent les routes statiques est d'installer GateD(R) sur votre serveur SLIP FreeBSD et de le configurer pour qu'il utilise les protocoles de routage appropriés (RIP/OSPF/BGP/EGP) pour annoncer aux autres routeurs votre sous-réseau SLIP. Vous aurez besoin de créer un fichier [.filename]#/etc/gated.conf# pour configurer GateD(R); voici un exemple, semblable à celui que l'auteur a utilisé sur un serveur SLIP FreeBSD:
+
+[.programlisting]
+....
+#
+# fichier de configuration de gated dc.dsu.edu; pour la version
+# 3.5alpha5
+# diffusion des informations RIP pour xxx.xxx.yy via l'interface
+# Ethernet "ed"
+#
+#
+# options de trace
+#
+traceoptions "/var/tmp/gated.output" replace size 100k files 2 general ;
+
+rip yes {
+  interface sl noripout noripin ;
+  interface ed ripin ripout version 1 ;
+  traceoptions route ;
+} ;
+
+#
+# Activer un certain nombre d'informations de trace sur l'interface
+# au noyau:
+kernel {
+  traceoptions remnants request routes info interface ;
+} ;
+
+#
+# Propager la route vers xxx.xxx.yy via l'Ethernet interface et RIP
+#
+
+export proto rip interface ed {
+  proto direct {
+      xxx.xxx.yy mask 255.255.252.0 metric 1; # SLIP connections
+  } ;
+} ;
+
+#
+# Accepter les routes de RIP via les interfaces Ethernet "ed"
+
+import proto rip interface ed {
+  all ;
+} ;
+....
+
+L'exemple de fichier [.filename]#gated.conf# ci-dessus diffuse l'information de routage concernant le sous-réseau SLIP _xxx.xxx.yy_ via RIP sur l'interface Ethernet; si vous utilisez un pilote de périphérique Ethernet différent du pilote [.filename]#ed#, vous devrez modifier en conséquence les références à l'interface [.filename]#ed#. Ce fichier d'exemple active également les journaux sur [.filename]#/var/tmp/gated.output# pour pouvoir déboguer le fonctionnement de GateD(R); vous pouvez désactiver ces options de trace si GateD(R) fonctionne correctement pour vous. Vous devrez remplacer _xxx.xxx.yy_ par l'adresse réseau de votre propre sous-réseau SLIP (assurez-vous de remplacer également le masque de sous-réseau dans la clause `proto direct`).
+
+Une fois que vous avez installé et configuré GateD(R) sur votre système, vous devrez indiquer aux procédures de démarrage de FreeBSD de lancer GateD(R) à la place de routed. La manière la plus simple de faire cela est de positionner les variables `router` et `router_flags` dans le fichier [.filename]#/etc/rc.conf#. Veuillez consulter la page de manuel de GateD(R) pour des informations sur les paramètres en ligne de commande.

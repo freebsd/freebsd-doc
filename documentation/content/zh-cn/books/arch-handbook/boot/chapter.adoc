@@ -1,0 +1,741 @@
+---
+title: 第 1 章 引导过程与内核初始化
+prev: books/arch-handbook/
+next: books/arch-handbook/locking
+---
+
+[[boot]]
+= 引导过程与内核初始化
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:part-signifier: 部分
+:appendix-caption: 附录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 1
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+[[boot-synopsis]]
+== 概述
+
+这一章是对引导过程和系统初始化过程的总览。这些过程始于BIOS(固件)POST, 直到第一个用户进程建立。由于系统启动的最初步骤是与硬件结构相关的、是紧配合的， 这里用IA-32(Intel Architecture 32bit)结构作为例子。
+
+[[boot-overview]]
+== 总览
+
+一台运行FreeBSD的计算机有多种引导方法。这里讨论其中最通常的方法， 也就是从安装了操作系统的硬盘上引导。引导过程分几步完成:
+
+* BIOS POST
+* ``boot0``阶段
+* ``boot2``阶段
+* loader阶段
+* 内核初始化
+
+``boot0``和``boot2``阶段在手册 man:boot[8]中被称为__bootstrap stages 1 and 2__， 是FreeBSD的3阶段引导过程的开始。在每一阶段都有各种各样的信息显示在屏幕上， 你可以参考下表识别出这些步骤。请注意实际的显示内容可能随机器的不同而有一些区别: 
+
+[.informaltable]
+[cols="90%,10%", frame="none"]
+|===
+
+|视不同机器而定
+|BIOS(固件)消息
+
+a|
+[source,bash]
+....
+F1    FreeBSD
+F2    BSD
+F5    Disk 2
+....
+
+|`boot0`
+
+a|
+[source,bash]
+....
+>>FreeBSD/i386 BOOT
+Default: 1:ad(1,a)/boot/loader
+boot:
+....
+
+|`boot2`
+
+a|
+[source,bash]
+....
+BTX loader 1.0 BTX version is 1.01
+BIOS drive A: is disk0
+BIOS drive C: is disk1
+BIOS 639kB/64512kB available memory
+FreeBSD/i386 bootstrap loader, Revision 0.8
+Console internal video/keyboard
+(jkh@bento.freebsd.org, Mon Nov 20 11:41:23 GMT 2000)
+/kernel text=0x1234 data=0x2345 syms=[0x4+0x3456]
+Hit [Enter] to boot immediately, or any other key for command prompt
+Booting [kernel] in 9 seconds..._
+....
+
+|loader
+
+a|
+[source,bash]
+....
+Copyright (c) 1992-2002 The FreeBSD Project.
+Copyright (c) 1979, 1980, 1983, 1986, 1988, 1989, 1991, 1992, 1993, 1994
+        The Regents of the University of California. All rights reserved.
+FreeBSD 4.6-RC #0: Sat May  4 22:49:02 GMT 2002
+    devnull@kukas:/usr/obj/usr/src/sys/DEVNULL
+Timecounter "i8254"  frequency 1193182 Hz
+....
+
+|内核
+
+|===
+
+[[boot-bios]]
+== BIOS POST
+
+当PC加电后，处理器的寄存器被设为某些特定值。在这些寄存器中， __指令指针__寄存器被设为32位值0xfffffff0。 指令指针寄存器指向处理器将要执行的指令代码。`cr1`， 一个32位控制寄存器，在刚启动时值被设为0。cr1的PE(Protected Enabled， 保护模式使能)位用来指示处理器是处于保护模式还是实地址模式。 由于启动时该位被清位，处理器在实地址模式中引导。在实地址模式中， 线性地址与物理地址是等同的。
+
+值0xfffffff0略小于4G,因此计算机没有4G字节物理内存， 这就不会是一个有效的内存地址。计算机硬件将这个地址转指向BIOS存储块。 
+
+BIOS表示__Basic Input Output System__ (基本输入输出系统)。在主板上，它被固化在一个相对容量较小的 只读存储器(Read-Only Memory, ROM)。BIOS包含各种各样为主板硬件 定制的底层例程。就这样，处理器首先指向常驻BIOS存储器的地址 0xfffffff0。通常这个位置包含一条跳转指令，指向BIOS的POST例程。
+
+POST表示__Power On Self Test__(加电自检)。 这套程序包括内存检查，系统总线检查和其它底层工具， 从而使得CPU能够初始化整台计算机。这一阶段中有一个重要步骤， 就是确定引导设备。现在所有的BIOS都允许手工选择引导设备。 你可以从软盘、光盘驱动器、硬盘等设备引导。
+
+POST的最后一步是执行``INT 0x19``指令。 这个指令从引导设备第一个扇区读取512字节，装入地址0x7c00。 __第一个扇区__的说法最早起源于硬盘的结构， 硬盘面被分为若干圆柱形轨道。给轨道编号，同时又将轨道分为 一定数目(通常是64)的扇形。0号轨道是硬盘的最外圈，1号扇区， 第一个扇区(轨道、柱面都从0开始编号，而扇区从1开始编号) 有着特殊的作用，它又被称为主引导记录(Master Boot Record, MBR)。 第一轨剩余的扇区常常不使用。
+
+[[boot-boot0]]
+== ``boot0``阶段
+
+让我们看一下文件[.filename]##/boot/boot0##。 这是一个仅512字节的小文件。如果在FreeBSD安装过程中选择 "bootmanager"，这个文件中的内容将被写入硬盘MBR
+
+如前所述， `INT 0x19` 指令装载 MBR， 也就是 [.filename]#boot0# 的内容至内存地址 0x7c00。 再看文件 [.filename]#sys/boot/i386/boot0/boot0.S#， 可以猜想这里面发生了什么 - 这是引导管理器， 一段由 Robert Nordier书写的令人起敬的程序片段。
+
+MBR里，也就是[.filename]##boot0##里， 从偏移量0x1be开始有一个特殊的结构，称为 _分区表_。其中有4条记录 (称为__分区记录__)，每条记录16字节。 分区记录表示硬盘如何被划分，在FreeBSD的术语中， 这被称为slice(d)。16字节中有一个标志字节决定这个分区是否可引导。 有仅只能有一个分区可设定这一标志。否则， [.filename]##boot0##的代码将拒绝继续执行。
+
+一个分区记录有如下域：
+
+* 1字节 文件系统类型
+* 1字节 可引导标志
+* 6字节 CHS格式描述符
+* 8字节 LBA格式描述符
+
+一个分区记录描述符包含某一分区在硬盘上的确切位置信息。 LBA和CHS两种描述符指示相同的信息，但是指示方式有所不同：LBA (逻辑块寻址，Logical Block Addressing)指示分区的起始扇区和分区长度， 而CHS(柱面 磁头 扇区)指示首扇区和末扇区
+
+引导管理器扫描分区表，并在屏幕上显示菜单，以便用户可以 选择用于引导的磁盘和分区。在键盘上按下相应的键后， [.filename]##boot0##进行如下动作：
+
+* 标记选中的分区为可引导，清除以前的可引导标志
+* 记住本次选择的分区以备下次引导时作为缺省项
+* 装载选中分区的第一个扇区，并跳转执行之
+
+什么数据会存在于一个可引导扇区(这里指FreeBSD扇区)的第一扇区里呢？ 正如你已经猜到的，那就是[.filename]##boot2##。
+
+[[boot-boot2]]
+== ``boot2``阶段
+
+也许你想知道，为什么``boot2``是在 ``boot0``之后，而不是在boot1之后。事实上， 也有一个512字节的文件[.filename]##boot1##存放在目录 [.filename]##/boot##里，那是用来从一张软盘引导系统的。 从软盘引导时，[.filename]##boot1##起着 [.filename]##boot0##对硬盘引导相同的作用:它找到 [.filename]##boot2##并运行之。
+
+你可能已经看到有一文件[.filename]##/boot/mbr##。 这是[.filename]##boot0##的简化版本。 [.filename]##mbr##中的代码不会显示菜单让用户选择， 而只是简单的引导被标志的分区。
+
+实现[.filename]##boot2##的代码存放在目录 [.filename]##sys/boot/i386/boot2/##里，对应的可执行文件在 [.filename]##/boot##里。在[.filename]##/boot##里的文件 [.filename]##boot0##和[.filename]##boot2##不会在引导过程中使用， 只有boot0cfg这样的工具才会使用它们。 [.filename]##boot0##的内容应在MBR中才能生效。 [.filename]##boot2##位于可引导的FreeBSD分区的开始。 这些位置不受文件系统控制，所以它们不可用ls 之类的命令查看。
+
+``boot2``的主要任务是装载文件 [.filename]##/boot/loader##，那是引导过程的第三阶段。 在``boot2``中的代码不能使用诸如 ``open()``和``read()`` 之类的例程函数,因为内核还没有被加载。而应当扫描硬盘， 读取文件系统结构，找到文件[.filename]##/boot/loader##， 用BIOS的功能将它读入内存，然后从其入口点开始执行之。
+
+除此之外，``boot2``还可提示用户进行选择， loader可以从其它磁盘、系统单元、分区装载。
+
+`boot2` 的二进制代码用特殊的方式产生：
+
+[.programlisting]
+....
+sys/boot/i386/boot2/Makefile
+boot2: boot2.ldr boot2.bin ${BTX}/btx/btx
+	btxld -v -E ${ORG2} -f bin -b ${BTX}/btx/btx -l boot2.ldr \
+		-o boot2.ld -P 1 boot2.bin
+....
+
+这个Makefile片断表明man:btxld[8]被用来链接二进制代码。 BTX表示引导扩展器(BooT eXtender)是给程序(称为客户(client) 提供保护模式环境、并与客户程序相链接的一段代码。所以 ``boot2``是一个BTX客户，使用BTX提供的服务。
+
+工具btxld是链接器， 它将两个二进制代码链接在一起。man:btxld[8]和man:ld[1] 的区别是ld通常将两个目标文件 链接成一个动态链接库或可执行文件，而btxld 则将一个目标文件与BTX链接起来，产生适合于放在分区首部的二进制代码， 以实现系统引导。
+
+``boot0``执行跳转至BTX的入口点。 然后，BTX将处理器切换至保护模式，并准备一个简单的环境， 然后调用客户。这个环境包括：
+
+* 虚拟8086模式。这意味着BTX是虚拟8086的监视程序。 实模式指令，如pushf, popf, cli, sti, if，均可被客户调用。
+* 建立中断描述符表(Interrupt Descriptor Table, IDT)， 使得所有的硬件中断可被缺省的BIOS程序处理。 建立中断0x30，这是系统调用关口。
+* 两个系统调用``exec``和 ``exit``的定义如下:
++
+[.programlisting]
+....
+sys/boot/i386/btx/lib/btxsys.s:
+		.set INT_SYS,0x30		# 中断号
+#
+# System call: exit
+#
+__exit: 	xorl %eax,%eax			# BTX系统调用0x0
+		int $INT_SYS			#
+#
+# System call: exec
+#
+__exec: 	movl $0x1,%eax			# BTX系统调用0x1
+		int $INT_SYS			#
+....
+
+BTX建立全局描述符表(Global Descriptor Table, GDT):
+
+[.programlisting]
+....
+sys/boot/i386/btx/btx/btx.s:
+gdt:		.word 0x0,0x0,0x0,0x0		# 以空为入口
+		.word 0xffff,0x0,0x9a00,0xcf	# SEL_SCODE
+		.word 0xffff,0x0,0x9200,0xcf	# SEL_SDATA
+		.word 0xffff,0x0,0x9a00,0x0	# SEL_RCODE
+		.word 0xffff,0x0,0x9200,0x0	# SEL_RDATA
+		.word 0xffff,MEM_USR,0xfa00,0xcf# SEL_UCODE
+		.word 0xffff,MEM_USR,0xf200,0xcf# SEL_UDATA
+		.word _TSSLM,MEM_TSS,0x8900,0x0 # SEL_TSS
+....
+
+客户的代码和数据始于地址MEM_USR(0xa000)，选择符(selector) SEL_UCODE指向客户的数据段。选择符 SEL_UCODE 拥有第3级描述符权限 (Descriptor Privilege Level, DPL)，这是最低级权限。但是 `INT 0x30` 指令的处理程序存储于另一个段里， 这个段的选择符SEL_SCODE (supervisor code)由有着管理级权限。 正如代码建立IDT(中断描述符表)时进行的操作那样:
+
+[.programlisting]
+....
+		mov $SEL_SCODE,%dh		# 段选择符
+init.2: 	shr %bx				# 是否处理这个中断？
+		jnc init.3			# 否
+		mov %ax,(%di)			# 设置处理程序偏移量
+		mov %dh,0x2(%di)		# 设置处理程序选择符
+		mov %dl,0x5(%di)		# 设置 P:DPL:type
+		add $0x4,%ax			# 下一个中断处理程序
+....
+
+所以，当客户调用 ``__exec()``时，代码将被以最高权限执行。 这使得内核可以修改保护模式数据结构，如分页表(page tables)、全局描述符表(GDT)、 中断描述符表(IDT)等。
+
+`boot2` 定义了一个重要的数据结构： `struct bootinfo`。这个结构由 `boot2` 初始化，然后被转送到loader，之后又被转入内核。 这个结构的部分项目由``boot2``设定，其余的由loader设定。 这个结构中的信息包括内核文件名、BIOS提供的硬盘柱面/磁头/扇区数目信息、 BIOS提供的引导设备的驱动器编号，可用的物理内存大小，`envp` 指针(环境指针)等。定义如下：
+
+[.programlisting]
+....
+/usr/include/machine/bootinfo.h
+struct bootinfo {
+	u_int32_t	bi_version;
+	u_int32_t	bi_kernelname;		/* 用一个字节表示 * */
+	u_int32_t	bi_nfs_diskless;	/* struct nfs_diskless * */
+		/* 以上为常备项 */
+#define	bi_endcommon	bi_n_bios_used
+	u_int32_t	bi_n_bios_used;
+	u_int32_t	bi_bios_geom[N_BIOS_GEOM];
+	u_int32_t	bi_size;
+	u_int8_t	bi_memsizes_valid;
+	u_int8_t	bi_bios_dev;		/* 引导设备的BIOS单元编号 */
+	u_int8_t	bi_pad[2];
+	u_int32_t	bi_basemem;
+	u_int32_t	bi_extmem;
+	u_int32_t	bi_symtab;		/* struct symtab * */
+	u_int32_t	bi_esymtab;		/* struct symtab * */
+		/* 以下项目仅高级bootloader提供 */
+	u_int32_t	bi_kernend;		/* 内核空间末端 */
+	u_int32_t	bi_envp;		/* 环境 */
+	u_int32_t	bi_modulep;		/* 预装载的模块 */
+};
+....
+
+``boot2`` 进入一个循环等待用户输入，然后调用 ``load()``。如果用户不做任何输入，循环将在一段时间后结束， ``load()`` 将会装载缺省文件([.filename]##/boot/loader##)。 函数 ``ino_t lookup(char *filename)``和 ``int xfsread(ino_t inode, void *buf, size_t nbyte)`` 用来将文件内容读入内存。[.filename]##/boot/loader##是一个ELF格式二进制文件， 不过它的头部被换成了a.out格式中的``struct exec``结构。 ``load()``扫描loader的ELF头部，装载[.filename]##/boot/loader## 至内存，然后跳转至入口执行之：
+
+[.programlisting]
+....
+sys/boot/i386/boot2/boot2.c:
+    __exec((caddr_t)addr, RB_BOOTINFO | (opts  RBX_MASK),
+	   MAKEBOOTDEV(dev_maj[dsk.type], 0, dsk.slice, dsk.unit, dsk.part),
+	   0, 0, 0, VTOP(bootinfo));
+....
+
+[[boot-loader]]
+== loader阶段
+
+loader也是一个 BTX 客户，在这里不作详述。 已有一部内容全面的手册 man:loader[8] ，由Mike Smith书写。 比loader更底层的BTX的机理已经在前面讨论过。
+
+loader 的主要任务是引导内核。当内核被装入内存后，即被loader调用:
+
+[.programlisting]
+....
+sys/boot/common/boot.c:
+    /* 从loader中调用内核中对应的exec程序 */
+    module_formats[km-m_loader]-l_exec(km);
+....
+
+[[boot-kernel]]
+== 内核初始化
+
+让我们来看一下链接内核的命令。 这能帮助我们了解 loader 传递给内核的准确位置。 这个位置就是内核真实的入口点。
+
+[.programlisting]
+....
+sys/conf/Makefile.i386:
+ld -elf -Bdynamic -T /usr/src/sys/conf/ldscript.i386  -export-dynamic \
+-dynamic-linker /red/herring -o kernel -X locore.o \
+lots of kernel .o files
+....
+
+在这一行中有一些有趣的东西。首先，内核是一个ELF动态链接二进制文件， 可是动态链接器却是[.filename]##/red/herring##，一个莫须有的文件。 其次，看一下文件[.filename]##sys/conf/ldscript.i386##， 可以对理解编译内核时ld的选项有一些启发。 阅读最前几行，字符串
+
+[.programlisting]
+....
+sys/conf/ldscript.i386:
+ENTRY(btext)
+....
+
+表示内核的入口点是符号 ``btext``。这个符号在[.filename]##locore.s## 中定义:
+
+[.programlisting]
+....
+sys/i386/i386/locore.s:
+	.text
+/**********************************************************************
+ *
+ * This is where the bootblocks start us, set the ball rolling...
+ * 入口
+ */
+NON_GPROF_ENTRY(btext)
+....
+
+首先将寄存器EFLAGS设为一个预定义的值0x00000002， 然后初始化所有段寄存器:
+
+[.programlisting]
+....
+sys/i386/i386/locore.s
+/* 不要相信BIOS给出的EFLAGS值 */
+	pushl	$PSL_KERNEL
+	popfl
+
+/*
+ * 不要相信BIOS给出的%fs、%gs值。相信引导过程中设定的%cs、%ds、%es、%ss值
+ */
+	mov	%ds, %ax
+	mov	%ax, %fs
+	mov	%ax, %gs
+....
+
+btext调用例程``recover_bootinfo()``, `identify_cpu()`,`create_pagetables()`。 这些例程也定在[.filename]##locore.s##之中。这些例程的功能如下：
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|`recover_bootinfo`
+|这个例程分析由引导程序传送给内核的参数。引导内核有3种方式: 由loader引导(如前所述), 由老式磁盘引导块引导,无盘引导方式。 这个函数决定引导方式，并将结构``struct bootinfo`` 存储至内核内存。
+
+|`identify_cpu`
+|这个函数侦测CPU类型，将结果存放在变量 ``_cpu``中。
+
+|`create_pagetables`
+|这个函数为分页表在内核内存空间顶部分配一块空间，并填写一定内容
+|===
+
+下一步是开启VME(如果CPU有这个功能):
+
+[.programlisting]
+....
+	testl	$CPUID_VME, R(_cpu_feature)
+	jz	1f
+	movl	%cr4, %eax
+	orl	$CR4_VME, %eax
+	movl	%eax, %cr4
+....
+
+然后，启动分页模式:
+
+[.programlisting]
+....
+/* Now enable paging */
+	movl	R(_IdlePTD), %eax
+	movl	%eax,%cr3			/* load ptd addr into mmu */
+	movl	%cr0,%eax			/* get control word */
+	orl	$CR0_PE|CR0_PG,%eax		/* enable paging */
+	movl	%eax,%cr0			/* and let's page NOW! */
+....
+
+由于分页模式已经启动，原先的实地址寻址方式随即失效。 随后三行代码用来跳转至虚拟地址:
+
+[.programlisting]
+....
+	pushl	$begin				/* jump to high virtualized address */
+	ret
+
+/* 现在跳转至KERNBASE，那里是操作系统内核被链接后真正的入口 */
+begin:
+....
+
+函数``init386()``被调用；随参数传递的是一个指针， 指向第一个空闲物理页。随后执行``mi_startup()``。 ``init386``是一个与硬件系统相关的初始化函数， ``mi_startup()``是个与硬件系统无关的函数 (前缀'mi_'表示Machine Independent，不依赖于机器)。 内核不再从``mi_startup()``里返回； 调用这个函数后，内核完成引导:
+
+[.programlisting]
+....
+sys/i386/i386/locore.s:
+	movl	physfree, %esi
+	pushl	%esi		/* 送给init386()的第一个参数 */
+	call	_init386	/* 设置386芯片使之适应UNIX工作 */
+	call	_mi_startup	/* 自动配置硬件，挂接根文件系统，等 */
+	hlt		/* 不再返回到这里！ */
+....
+
+=== `init386()`
+
+``init386()``定义在 [.filename]##sys/i386/i386/machdep.c##中， 它针对Intel 386芯片进行低级初始化。loader已将CPU切换至保护模式。 loader已经建立了最早的任务。
+
+[TIP]
+.译者注
+====
+每个"任务"都是与其它"``任务``"相对独立的执行环境。 任务之间可以分时切换，这为并发进程/线程的实现提供了必要基础。 对于Intel 80x86任务的描述，详见Intel公司关于80386 CPU及后续产品的资料， 或者在link:http://www.lib.tsinghua.edu.cn/[清华大学图书馆] 馆藏记录中用"80386"作为关键词所查找到的系统结构方面的书目。
+====
+
+在这个任务中，内核将继续工作。在讨论其代码前， 我将处理器对保护模式必须完成的一系列准备工作一并列出:
+
+* 初始化内核的可调整参数，这些参数由引导程序传来
+* 准备GDT(全局描述符表)
+* 准备IDT(中断描述符表)
+* 初始化系统控制台
+* 初始化DDB(内核的点调试器)，如果它被编译进内核的话
+* 初始化TSS(任务状态段)
+* 准备LDT(局部描述符表)
+* 建立proc0(0号进程，即内核的进程)的pcb(进程控制块)
+
+``init386()``首先初始化内核的可调整参数， 这些参数由引导程序传来。先设置环境指针(environment pointer, envp)调用， 再调用``init_param1()``。 envp指针已由loader存放在结构``bootinfo``中:
+
+[.programlisting]
+....
+sys/i386/i386/machdep.c:
+		kern_envp = (caddr_t)bootinfo.bi_envp + KERNBASE;
+
+	/* 初始化基本可调整项,如hz等 */
+	init_param1();
+....
+
+``init_param1()``定义在 [.filename]##sys/kern/subr_param.c##之中。 这个文件里有一些sysctl项，还有两个函数， ``init_param1()``和``init_param2()``。 这两个函数从``init386()``中调用:
+
+[.programlisting]
+....
+sys/kern/subr_param.c
+	hz = HZ;
+	TUNABLE_INT_FETCH("kern.hz", hz);
+....
+
+TUNABLE_typename_FETCH用来获取环境变量的值:
+
+[.programlisting]
+....
+/usr/src/sys/sys/kernel.h
+#define	TUNABLE_INT_FETCH(path, var)	getenv_int((path), (var))
+....
+
+Sysctl``kern.hz``是系统时钟频率。同时， 这些sysctl项被``init_param1()``设定: ``kern.maxswzone, kern.maxbcache, kern.maxtsiz, kern.dfldsiz, kern.maxdsiz, kern.dflssiz, kern.maxssiz, kern.sgrowsiz``。
+
+然后``init386()`` 准备全局描述符表 (Global Descriptors Table, GDT)。在x86上每个任务都运行在自己的虚拟地址空间里， 这个空间由"段址:偏移量"的数对指定。举个例子，当前将要由处理器执行的指令在 CS:EIP，那么这条指令的线性虚拟地址就是"代码段虚拟段地址CS" + EIP。 为了简便，段起始于虚拟地址0，终止于界限4G字节。所以，在这个例子中， 指令的线性虚拟地址正是EIP的值。段寄存器，如CS、DS等是选择符， 即全局描述符表中的索引(更精确的说，索引并非选择符的全部， 而是选择符中的INDEX部分)。
+
+[TIP]
+.译者注
+====
+对于80386， 选择符有16位，INDEX部分是其中的高13位。
+====
+
+FreeBSD的全局描述符表为每个CPU保存着15个选择符:
+
+[.programlisting]
+....
+sys/i386/i386/machdep.c:
+union descriptor gdt[NGDT * MAXCPU];	/* 全局描述符表 */
+
+sys/i386/include/segments.h:
+/*
+ * 全局描述符表(GDT)中的入口
+ */
+#define	GNULL_SEL	0	/* 空描述符 */
+#define	GCODE_SEL	1	/* 内核代码描述符 */
+#define	GDATA_SEL	2	/* 内核数据描述符 */
+#define	GPRIV_SEL	3	/* 对称多处理(SMP)每处理器专有数据 */
+#define	GPROC0_SEL	4	/* Task state process slot zero and up, 任务状态进程 */
+#define	GLDT_SEL	5	/* 每个进程的局部描述符表 */
+#define	GUSERLDT_SEL	6	/* 用户自定义的局部描述符表 */
+#define	GTGATE_SEL	7	/* 进程任务切换关口 */
+#define	GBIOSLOWMEM_SEL	8	/* BIOS低端内存访问(必须是这第8个入口) */
+#define	GPANIC_SEL	9	/* 会导致全系统异常中止工作的任务状态 */
+#define GBIOSCODE32_SEL	10	/* BIOS接口(32位代码) */
+#define GBIOSCODE16_SEL	11	/* BIOS接口(16位代码) */
+#define GBIOSDATA_SEL	12	/* BIOS接口(数据) */
+#define GBIOSUTIL_SEL	13	/* BIOS接口(工具) */
+#define GBIOSARGS_SEL	14	/* BIOS接口(自变量，参数) */
+....
+
+请注意，这些#defines并非选择符本身，而只是选择符中的INDEX域， 因此它们正是全局描述符表中的索引。 例如，内核代码的选择符(GCODE_SEL)的值为0x08。
+
+下一步是初始化中断描述符表(Interrupt Descriptor Table, IDT)。 这张表在发生软件或硬件中断时会被处理器引用。例如，执行系统调用时， 用户应用程序提交``INT 0x80`` 指令。这是一个软件中断， 处理器用索引值0x80在中断描述符表中查找记录。这个记录指向处理这个中断的例程。 在这个特定情形中，这是内核的系统调用关口。
+
+[TIP]
+.译者注
+====
+Intel 80386支持"``调用门``"，可以使得用户程序只通过一条call指令 就调用内核中的例程。可是FreeBSD并未采用这种机制， 也许是因为使用软中断接口可免去动态链接的麻烦吧。另外还有一个附带的好处： 在仿真Linux时，当遇到FreeBSD内核不支持的而又并非关键性的系统调用时， 内核只会显示一些出错信息，这使得程序能够继续运行； 而不是在真正执行程序之前的初始化过程中就因为动态链接失败而不允许程序运行。
+====
+
+中断描述符表最多可以有256 (0x100)条记录。内核分配NIDT条记录的内存给中断描述符表， 这里NIDT=256，是最大值：
+
+[.programlisting]
+....
+sys/i386/i386/machdep.c:
+static struct gate_descriptor idt0[NIDT];
+struct gate_descriptor *idt = idt0[0];	/* 中断描述符表 */
+....
+
+每个中断都被设置一个合适的中断处理程序。 系统调用关口``INT 0x80``也是如此:
+
+[.programlisting]
+....
+sys/i386/i386/machdep.c:
+ 	setidt(0x80, IDTVEC(int0x80_syscall),
+			SDT_SYS386TGT, SEL_UPL, GSEL(GCODE_SEL, SEL_KPL));
+....
+
+所以当一个用户应用程序提交``INT 0x80``指令时， 全系统的控制权会传递给函数``_Xint0x80_syscall``， 这个函数在内核代码段中，将被以管理员权限执行。
+
+然后，控制台和DDB(调试器)被初始化:
+
+[.programlisting]
+....
+sys/i386/i386/machdep.c:
+	cninit();
+/* 以下代码可能因为未定义宏DDB而被跳过 */
+#ifdef DDB
+	kdb_init();
+	if (boothowto  RB_KDB)
+		Debugger("Boot flags requested debugger");
+#endif
+....
+
+任务状态段(TSS)是另一个x86保护模式中的数据结构。当发生任务切换时， 任务状态段用来让硬件存储任务现场信息。
+
+局部描述符表(LDT)用来指向用户代码和数据。系统定义了几个选择符， 指向局部描述符表，它们是系统调用关口和用户代码、用户数据选择符:
+
+[.programlisting]
+....
+/usr/include/machine/segments.h
+#define	LSYS5CALLS_SEL	0	/* Intel BCS强制要求的 */
+#define	LSYS5SIGR_SEL	1
+#define	L43BSDCALLS_SEL	2	/* 尚无 */
+#define	LUCODE_SEL	3
+#define	LSOL26CALLS_SEL	4	/* Solaris =2.6版系统调用关口 */
+#define	LUDATA_SEL	5
+/* separate stack, es,fs,gs sels ? 分别的栈、es、fs、gs选择符？ */
+/* #define	LPOSIXCALLS_SEL	5*/	/* notyet, 尚无 */
+#define LBSDICALLS_SEL	16	/* BSDI system call gate, BSDI系统调用关口 */
+#define NLDT		(LBSDICALLS_SEL + 1)
+....
+
+然后，proc0(0号进程，即内核所处的进程)的进程控制块(Process Control Block) (`struct pcb`)结构被初始化。proc0是一个 `struct proc` 结构，描述了一个内核进程。 内核运行时，该进程总是存在，所以这个结构在内核中被定义为全局变量:
+
+[.programlisting]
+....
+sys/kern/kern_init.c:
+    struct	proc proc0;
+....
+
+结构``struct pcb``是proc结构的一部分， 它定义在[.filename]##/usr/include/machine/pcb.h##之中， 内含针对i386硬件结构专有的信息，如寄存器的值。
+
+=== `mi_startup()`
+
+这个函数用冒泡排序算法，将所有系统初始化对象，然后逐个调用每个对象的入口:
+
+[.programlisting]
+....
+sys/kern/init_main.c:
+	for (sipp = sysinit; *sipp; sipp++) {
+
+		/* ... 省略 ... */
+
+		/* 调用函数 */
+		(*((*sipp)-func))((*sipp)-udata);
+		/* ... 省略 ... */
+	}
+....
+
+尽管sysinit框架已经在《FreeBSD开发者手册》中有所描述， 我还是在这里讨论一下其内部原理。
+
+每个系统初始化对象(sysinit对象)通过调用宏建立。 让我们以``announce`` sysinit对象为例。 这个对象打印版权信息:
+
+[.programlisting]
+....
+sys/kern/init_main.c:
+static void
+print_caddr_t(void *data __unused)
+{
+	printf("%s", (char *)data);
+}
+SYSINIT(announce, SI_SUB_COPYRIGHT, SI_ORDER_FIRST, print_caddr_t, copyright)
+....
+
+这个对象的子系统标识是SI_SUB_COPYRIGHT(0x0800001)， 数值刚好排在SI_SUB_CONSOLE(0x0800000)后面。 所以，版权信息将在控制台初始化之后就被很早的打印出来。
+
+让我们看一看宏``SYSINIT()``到底做了些什么。 它展开成宏``C_SYSINIT()``。 宏``C_SYSINIT()``然后展开成一个静态结构 ``struct sysinit``。结构里申明里调用了另一个宏 ``DATA_SET``:
+
+[.programlisting]
+....
+/usr/include/sys/kernel.h:
+      #define C_SYSINIT(uniquifier, subsystem, order, func, ident) \
+      static struct sysinit uniquifier ## _sys_init = { \ subsystem, \
+      order, \ func, \ ident \ }; \ DATA_SET(sysinit_set,uniquifier ##
+      _sys_init);
+
+#define	SYSINIT(uniquifier, subsystem, order, func, ident)	\
+	C_SYSINIT(uniquifier, subsystem, order,			\
+	(sysinit_cfunc_t)(sysinit_nfunc_t)func, (void *)ident)
+....
+
+宏``DATA_SET()``展开成``MAKE_SET()``， 宏``MAKE_SET()``指向所有隐含的sysinit幻数:
+
+[.programlisting]
+....
+/usr/include/linker_set.h
+#define MAKE_SET(set, sym)						\
+	static void const * const __set_##set##_sym_##sym = sym;	\
+	__asm(".section .set." #set ",\"aw\"");				\
+	__asm(".long " #sym);						\
+	__asm(".previous")
+#endif
+#define TEXT_SET(set, sym) MAKE_SET(set, sym)
+#define DATA_SET(set, sym) MAKE_SET(set, sym)
+....
+
+回到我们的例子中，经过宏的展开过程，将会产生如下声明:
+
+[.programlisting]
+....
+static struct sysinit announce_sys_init = {
+	SI_SUB_COPYRIGHT,
+	SI_ORDER_FIRST,
+	(sysinit_cfunc_t)(sysinit_nfunc_t)  print_caddr_t,
+	(void *) copyright
+};
+
+static void const *const __set_sysinit_set_sym_announce_sys_init =
+    announce_sys_init;
+__asm(".section .set.sysinit_set" ",\"aw\"");
+__asm(".long " "announce_sys_init");
+__asm(".previous");
+....
+
+第一个``\__asm``指令在内核可执行文件中建立一个ELF节(section)。 这发生在内核链接的时候。这一节将被命令为``.set.sysinit_set``。 这一节的内容是一个32位值――announce_sys_init结构的地址，这个结构正是第二个 ``\__asm``指令所定义的。第三个``\__asm``指令标记节的结束。 如果前面有名字相同的节定义语句，节的内容(那个32位值)将被填加到已存在的节里， 这样就构造出了一个32位指针数组。
+
+用objdump察看一个内核二进制文件， 也许你会注意到里面有这么几个小的节:
+
+[source,bash]
+....
+% objdump -h /kernel
+  7 .set.cons_set 00000014  c03164c0  c03164c0  002154c0  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+  8 .set.kbddriver_set 00000010  c03164d4  c03164d4  002154d4  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+  9 .set.scrndr_set 00000024  c03164e4  c03164e4  002154e4  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+ 10 .set.scterm_set 0000000c  c0316508  c0316508  00215508  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+ 11 .set.sysctl_set 0000097c  c0316514  c0316514  00215514  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+ 12 .set.sysinit_set 00000664  c0316e90  c0316e90  00215e90  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+....
+
+这一屏信息显示表明节.set.sysinit_set有0x664字节的大小， 所以``0x664/sizeof(void *)``个sysinit对象被编译进了内核。 其它节，如``.set.sysctl_set``表示其它链接器集合。
+
+通过定义一个类型为``struct linker_set``的变量， 节``.set.sysinit_set``将被"收集"到那个变量里:
+
+[.programlisting]
+....
+sys/kern/init_main.c:
+      extern struct linker_set sysinit_set; /* XXX */
+....
+
+``struct linker_set``定义如下:
+
+[.programlisting]
+....
+/usr/include/linker_set.h:
+  struct linker_set {
+	int	ls_length;
+	void	*ls_items[1];		/* ls_length个项的数组, 以NULL结尾 */
+};
+....
+
+[TIP]
+.译者注
+====
+实际上是说， 用C语言结构体linker_set来表达那个ELF节。
+====
+
+第一项是sysinit对象的数量，第二项是一个以NULL结尾的数组， 数组中是指向那些对象的指针。
+
+回到对``mi_startup()``的讨论， 我们清楚了sysinit对象是如何被组织起来的。 函数``mi_startup()``将它们排序， 并调用每一个对象。最后一个对象是系统调度器:
+
+[.programlisting]
+....
+/usr/include/sys/kernel.h:
+enum sysinit_sub_id {
+	SI_SUB_DUMMY		= 0x0000000,	/* 不被执行，仅供链接器使用 */
+	SI_SUB_DONE		= 0x0000001,	/* 已被处理*/
+	SI_SUB_CONSOLE		= 0x0800000,	/* 控制台*/
+	SI_SUB_COPYRIGHT	= 0x0800001,	/* 最早使用控制台的对象 */
+...
+	SI_SUB_RUN_SCHEDULER	= 0xfffffff	/* 调度器:不返回 */
+};
+....
+
+系统调度器sysinit对象定义在文件[.filename]##sys/vm/vm_glue.c##中， 这个对象的入口点是``scheduler()``。 这个函数实际上是个无限循环，它表示那个进程标识(PID)为0的进程――swapper进程。 前面提到的proc0结构正是用来描述这个进程。
+
+第一个用户进程是_init_， 由sysinit对象``init``建立:
+
+[.programlisting]
+....
+sys/kern/init_main.c:
+static void
+create_init(const void *udata __unused)
+{
+	int error;
+	int s;
+
+	s = splhigh();
+	error = fork1(proc0, RFFDG | RFPROC, initproc);
+	if (error)
+		panic("cannot fork init: %d\n", error);
+	initproc-p_flag |= P_INMEM | P_SYSTEM;
+	cpu_set_fork_handler(initproc, start_init, NULL);
+	remrunqueue(initproc);
+	splx(s);
+}
+SYSINIT(init,SI_SUB_CREATE_INIT, SI_ORDER_FIRST, create_init, NULL)
+....
+
+``create_init()``通过调用``fork1()`` 分配一个新的进程，但并不将其标记为可运行。当这个新进程被调度器调度执行时， ``start_init()``将会被调用。 那个函数定义在[.filename]##init_main.c##中。 它尝试装载并执行二进制代码[.filename]##init##， 先尝试[.filename]##/sbin/init##，然后是[.filename]##/sbin/oinit##， [.filename]##/sbin/init.bak##，最后是[.filename]##/stand/sysinstall##:
+
+[.programlisting]
+....
+sys/kern/init_main.c:
+static char init_path[MAXPATHLEN] =
+#ifdef	INIT_PATH
+    __XSTRING(INIT_PATH);
+#else
+    "/sbin/init:/sbin/oinit:/sbin/init.bak:/stand/sysinstall";
+#endif
+....

@@ -1,0 +1,207 @@
+---
+title: "FreeBSD GNOME Project: Hardware Abstraction Layer (HAL) FAQ"
+sidenav: gnome
+--- 
+
+= FreeBSD GNOME Project: Hardware Abstraction Layer (HAL) FAQ
+
+_"You're in luck, Dave. Turns out I CAN let you do that."_
+
+== Contents
+
+. <<q1,How do I use hal on FreeBSD?>>
+. <<q2,How do I prevent hal from probing a device?>>
+. <<q3,How do I mount media using hal?>>
+. <<q4,How do I troubleshoot problems with hal?>>
+. <<q5,Does hal support Fuse file systems?>>
+. <<q6,Hal is interfering with my CD/DVD drive when I want to play a disc or burn something. How can I stop this from happening?>>
+
+== Full Text
+
+[[q1]]
+* *How do I use hal on FreeBSD?*
+
+The only thing you need to do in order to use hal is to start the HAL daemon, `hald`. To do this, add the following to `/etc/rc.conf`:
+
+....
+dbus_enable="YES"
+hald_enable="YES"    
+....
+
+*NOTE:* GNOME users can opt to add `gnome_enable="YES"` to `/etc/rc.conf` instead of the lines above. This will start all GNOME-related services including Avahi and GDM.
+
+Then you must either reboot, or run:
+
+....
+# /usr/local/etc/rc.d/dbus start
+# /usr/local/etc/rc.d/hald start    
+....
+
+Once `hald` is running, hal-aware application will automatically start to communicate with it over D-BUS. To confirm that hald is running correctly, execute `lshal` from the command line. This provides you with a list of devices attached to the system. *Note:* `lshal` must be run from within a D-BUS enabled session (e.g. GNOME or KDE).
+
+[[q2]]
+* *How do I prevent hal from probing a device?*
+
+Sometimes, when hal probes a device, this can cause the system to hang, panic, or otherwise behave badly. By using device information files (.fdi files), you can tell hal to ignore such devices. These files are in XML format, and should be created under `/usr/local/share/hal/fdi/preprobe/20thirdparty`. For example, to tell hal to ignore USB uhci controller 0, create a file `/usr/local/share/hal/fdi/preprobe/20thirdparty/10-ignore-uhci0.fdi` with the following contents:
+
+....
+<?xml version="1.0" encoding="utf-8"?>
+
+<deviceinfo version="0.2">
+  <device>
+    <match key="freebsd.driver" string="uhci">
+      <match key="freebsd.unit" int="0">
+        <merge key="info.ignore" type="bool">true</merge>
+      </match>
+    </match>
+  </device>
+</deviceinfo>
+....
+
+Using this same technique, you can also merge (or change) other hal device properties. Use the `lshal` command to get a list of all available device properties. You can also look at the system-provided .fdi files under `/usr/local/share/hal/fdi/preprobe/10osvendor` for more examples.
+
+All .fdi files in this `20thirdparty` directory are loaded in alphabetical order, so name your files accordingly. The convention is to start the files with a number. The lower the number, the earlier the file will be loaded.
+
+[[q3]]
+* *How do I mount media using hal?*
+
+Understand that having hal alone does not mean media will get automatically mounted. Hal simply serves as a broker for requests to mount certain devices. Some other software needs to make this request. As of GNOME 2.22, this is Nautilus. KDE and XFCE have their own components to mount hal volumes.
+
+*NOTE:* Volumes that you wish to manage using hal should _NOT_ be listed in `/etc/fstab`. This is especially true for CD devices and floppy disk devices. If you try to dynamically mount a volume using hal that is listed in `/etc/fstab` you will see the following error:
+
+....
+mount_cd9660: /dev/acd0: Operation not permitted    
+....
+
+If you are a GNOME user be aware that prior to GNOME 2.22, `gnome-volume-manager` was responsible for asking hal to mount volumes. Since this responsibility has moved to Nautilus, it is vital to change `gnome-volume-manager's` configuration so that it will no longer attempt to mount volumes.
+
+*NOTE:* This step is only required if you are a GNOME user that upgraded to 2.22 from a previous version of GNOME. If this is not the case, then skip to Step 1.
+
+From within your GNOME session, run the following commands:
+
+....
+% gconftool-2 -s --type bool /desktop/gnome/volume_manager/automount_drives false
+% gconftool-2 -s --type bool /desktop/gnome/volume_manager/automount_media false
+% gconftool-2 -s --type bool /desktop/gnome/volume_manager/autobrowse false
+% gconftool-2 -s --type bool /desktop/gnome/volume_manager/autoplay_cda false
+% gconftool-2 -s --type bool /desktop/gnome/volume_manager/autoplay_dvd false
+% gconftool-2 -s --type bool /desktop/gnome/volume_manager/autoplay_vcd false
+% gconftool-2 -s --type bool /desktop/gnome/volume_manager/autoprinter false
+....
+
+Then restart GNOME.
+
+*Step 1:* All users _MUST_ have `procfs` mounted on `/proc`. Hal uses an application called PolicyKit to authorize users to perform mount tasks, and PolicyKit relies heavily on `/proc` entries. If `/proc` is not mounted, volume mounting will not work. To mount `/proc`, add the following to `/etc/fstab`:
+
+....
+proc           /proc       procfs  rw  0   0
+....
+
+Then run the following command:
+
+....
+# mount /proc
+....
+
+*Step 2:* In order to mount volumes using hal, you must be authorized. This authorization is carried out by ConsoleKit and PolicyKit. If you are a GNOME user, and you use GDM to login to GNOME, then you do not need to make any additional configuration changes in order to mount removable media. If you are not a GNOME user, or you start GNOME without using GDM, then you will need to edit `/usr/local/etc/PolicyKit/PolicyKit.conf`, and add the `org.freedesktop.hal.storage.mount-removable` action to your username. For example, if your username is "marcus," you would add the following lines:
+
+....
+<match action="org.freedesktop.hal.storage.mount-removable">
+  <match user="marcus">
+    <return result="yes"/>
+  </match>
+</match>
+....
+
+*NOTE:* All config lines in this file _MUST_ be between the opening and closing `<config>` tags:
+
+....
+<config version="0.1">
+<!-- New configuration lines go here. -->
+</config>
+    
+....
+
+If you use GDM to login to GNOME, GDM will add a ConsoleKit record for the session. If this session is active, then you will be allowed to mount removable media without any additional PolicyKit configuration. You can confirm if ConsoleKit is working correctly by running the command, `ck-list-sessions`. The `active` property must be `TRUE` for auto-mounting to work.
+
+By default, PolicyKit allows root to do everything, and all users in the "wheel" group are allowed to authenticate for admin tasks with their own password. To get a list of all available actions, use the `polkit-action(1)` command. For more information on the directives available for `PolicyKit.conf`, see the `PolicyKit.conf(5)` man page.
+
+*Step 3:* If you have fixed volumes you wish to mount, you must also authorize yourself for the `org.freedesktop.hal.storage.mount-fixed` action. *Note:* This step is applicable to _ALL_ users including GNOME users using GDM. This is done just like the removable action above. For example, to allow user "marcus" to mount fixed volumes, add the following to `PolicyKit.conf`:
+
+....
+<match action="org.freedesktop.hal.storage.mount-fixed">
+  <match user="marcus">
+    <return result="yes"/>
+  </match>
+</match>
+....
+
+*Step 4:* While not really part of hal volume management, you may also be able to have volumes listed in `/etc/fstab` automatically mounted. In GNOME, for example, Nautilus will mount volumes listed in `/etc/fstab` provided the following conditions are met:
+.. The `vfs.usermount` sysctl is set to `1`.
+.. The user requesting the mount owns the mount point.
+.. The user requesting the mount is in the "operator" group.
+
+For example, say you had the following listed in `/etc/fstab`:
+
+....
+/dev/ad0s1              /win/c          msdosfs rw,noauto       0 0
+....
+
+If you want Nautilus to mount this volume as the user "marcus," do the following:
+
+....
+# sysctl vfs.usermount="1"
+# chown marcus /win/c
+# pw group mod operator -m marcus
+....
+
+Then, when the user marcus logs into GNOME, `/win/c` will be automatically mounted on the desktop.
+
+[[q4]]
+* *How do I troubleshoot problems with hal?*
+
+If you run into problems with hal, you must first collect the link:../bugging/[general troubleshooting information] required by the FreeBSD GNOME Team. You should also provide a detailed description of the problem, and the output of `lshal` (assuming `hald` is starting). Remember, `lshal` _MUST_ be run under a D-BUS enabled session. If you cannot login to GNOME, KDE, or XFCE, run `lshal` within `dbus-launch`:
+
+....
+% dbus-launch lshal
+....
+
+You should also provide the verbose output from `hald` when it is performing the problematic task. To get this, first stop `hald`, then run it manually:
+
+....
+# /usr/local/etc/rc.d/hald stop
+# /usr/local/sbin/hald --daemon="no" --verbose="yes"
+....
+
+Capture all of the output on the screen.
+
+If you are having problems with hal detecting volumes or media, or having problems with mounting volumes through hal, obtain the following additional information. All of this needs to be collected with the problem device attached to the system.
+.. Output of `sysctl -b kern.geom.conftxt`
+.. Contents of `/etc/fstab`
+.. Output of the `mount` command
+.. Full `dmesg` output
+.. If using GNOME, and a volume is not mounting properly, include the output of `gnome-mount --block --no-ui --verbose --hal-udi <Device UDI>` (<Device UDI> is the Unique Device Identifier obtained from the output of `lshal` for the device that is not mounting properly)
+
+Additionally, if you are a GDM user, please provide the output of `ck-list-sessions`.
+
+[[q5]]
+* *Does hal support Fuse file systems?*
+
+Yes. As of hal-0.5.11_10, Fuse file systems are supported. See the installed `/usr/local/share/doc/hal-0.5.11/README.fuse` file for more details.
+
+[[q6]]
+* *Hal is interfering with my CD/DVD drive when I want to play a disc or burn something. How can I stop this from happening?*
+
+Applications which are not hal-aware will not be able to tell hald to stop polling CD/DVD drives when they begin to use them. Because of this, hald may cause these applications to abort because two different processes are trying to use the device at the same time. Applications such as totem, k3b, sound-juicer, etc. should not be affected as they are hal-aware. For other applications, you can start them using the `hal-lock` command. This command will try and lock the device in question. If successful, hald will stop polling the device, and `hal-lock` will spawn the desired application. The arguments to `hal-lock` are as follows:
+
+....
+% hal-lock --interface org.freedesktop.Hal.Device.Storage --udi UDI --run COMMAND
+....
+
+You can use `lshal` to determine the proper `UDI` value. For example, to run `abcde` to extract tracks from a CD:
+
+....
+% hal-lock --interface org.freedesktop.Hal.Device.Storage --udi /org/freedesktop/Hal/devices/storage_model_DVD__RW_DVD8801 --run abcde
+....
+
+As soon as the application finishes, the lock will be released.

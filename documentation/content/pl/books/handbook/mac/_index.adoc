@@ -1,0 +1,808 @@
+---
+title: Rozdział 16. Mandatory Access Control
+part: Część III. Administracja systemem
+prev: books/handbook/jails
+next: books/handbook/audit
+---
+
+[[mac]]
+= Mandatory Access Control
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Spis treści
+:table-caption: Tabela
+:figure-caption: Rysunek
+:example-caption: Przykład
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 16
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/mac/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/mac/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/mac/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pl/mailing-lists.adoc[]
+include::shared/pl/urls.adoc[]
+include::shared/pl/teams.adoc[]
+
+toc::[]
+
+[[mac-synopsis]]
+== Synopsis
+
+FreeBSD supports security extensions based on the POSIX(R).1e draft. These security mechanisms include file system Access Control Lists (crossref:security[fs-acl,“Access Control Lists”]) and Mandatory Access Control (MAC). MAC allows access control modules to be loaded in order to implement security policies. Some modules provide protections for a narrow subset of the system, hardening a particular service. Others provide comprehensive labeled security across all subjects and objects. The mandatory part of the definition indicates that enforcement of controls is performed by administrators and the operating system. This is in contrast to the default security mechanism of Discretionary Access Control (DAC) where enforcement is left to the discretion of users.
+
+This chapter focuses on the MAC framework and the set of pluggable security policy modules FreeBSD provides for enabling various security mechanisms.
+
+After reading this chapter, you will know:
+
+* The terminology associated with the MAC framework.
+* The capabilities of MAC security policy modules as well as the difference between a labeled and non-labeled policy.
+* The considerations to take into account before configuring a system to use the MAC framework.
+* Which MAC security policy modules are included in FreeBSD and how to configure them.
+* How to implement a more secure environment using the MAC framework.
+* How to test the MAC configuration to ensure the framework has been properly implemented.
+
+Before reading this chapter, you should:
+
+* Understand UNIX(R) and FreeBSD basics (crossref:basics[basics,FreeBSD Basics]).
+* Have some familiarity with security and how it pertains to FreeBSD (crossref:security[security,Security]).
+
+[WARNING]
+====
+
+Improper MAC configuration may cause loss of system access, aggravation of users, or inability to access the features provided by Xorg. More importantly, MAC should not be relied upon to completely secure a system. The MAC framework only augments an existing security policy. Without sound security practices and regular security checks, the system will never be completely secure.
+
+The examples contained within this chapter are for demonstration purposes and the example settings should _not_ be implemented on a production system. Implementing any security policy takes a good deal of understanding, proper design, and thorough testing.
+====
+
+While this chapter covers a broad range of security issues relating to the MAC framework, the development of new MAC security policy modules will not be covered. A number of security policy modules included with the MAC framework have specific characteristics which are provided for both testing and new module development. Refer to man:mac_test[4], man:mac_stub[4] and man:mac_none[4] for more information on these security policy modules and the various mechanisms they provide.
+
+[[mac-inline-glossary]]
+== Key Terms
+
+The following key terms are used when referring to the MAC framework:
+
+* _compartment_: a set of programs and data to be partitioned or separated, where users are given explicit access to specific component of a system. A compartment represents a grouping, such as a work group, department, project, or topic. Compartments make it possible to implement a need-to-know-basis security policy.
+* _integrity_: the level of trust which can be placed on data. As the integrity of the data is elevated, so does the ability to trust that data.
+* _level_: the increased or decreased setting of a security attribute. As the level increases, its security is considered to elevate as well.
+* _label_: a security attribute which can be applied to files, directories, or other items in the system. It could be considered a confidentiality stamp. When a label is placed on a file, it describes the security properties of that file and will only permit access by files, users, and resources with a similar security setting. The meaning and interpretation of label values depends on the policy configuration. Some policies treat a label as representing the integrity or secrecy of an object while other policies might use labels to hold rules for access.
+* _multilabel_: this property is a file system option which can be set in single-user mode using man:tunefs[8], during boot using man:fstab[5], or during the creation of a new file system. This option permits an administrator to apply different MAC labels on different objects. This option only applies to security policy modules which support labeling.
+* _single label_: a policy where the entire file system uses one label to enforce access control over the flow of data. Whenever `multilabel` is not set, all files will conform to the same label setting.
+* _object_: an entity through which information flows under the direction of a _subject_. This includes directories, files, fields, screens, keyboards, memory, magnetic storage, printers or any other data storage or moving device. An object is a data container or a system resource. Access to an object effectively means access to its data.
+* _subject_: any active entity that causes information to flow between _objects_ such as a user, user process, or system process. On FreeBSD, this is almost always a thread acting in a process on behalf of a user.
+* _policy_: a collection of rules which defines how objectives are to be achieved. A policy usually documents how certain items are to be handled. This chapter considers a policy to be a collection of rules which controls the flow of data and information and defines who has access to that data and information.
+* _high-watermark_: this type of policy permits the raising of security levels for the purpose of accessing higher level information. In most cases, the original level is restored after the process is complete. Currently, the FreeBSD MAC framework does not include this type of policy.
+* _low-watermark_: this type of policy permits lowering security levels for the purpose of accessing information which is less secure. In most cases, the original security level of the user is restored after the process is complete. The only security policy module in FreeBSD to use this is man:mac_lomac[4].
+* _sensitivity_: usually used when discussing Multilevel Security (MLS). A sensitivity level describes how important or secret the data should be. As the sensitivity level increases, so does the importance of the secrecy, or confidentiality, of the data.
+
+[[mac-understandlabel]]
+== Understanding MAC Labels
+
+A MAC label is a security attribute which may be applied to subjects and objects throughout the system. When setting a label, the administrator must understand its implications in order to prevent unexpected or undesired behavior of the system. The attributes available on an object depend on the loaded policy module, as policy modules interpret their attributes in different ways.
+
+The security label on an object is used as a part of a security access control decision by a policy. With some policies, the label contains all of the information necessary to make a decision. In other policies, the labels may be processed as part of a larger rule set.
+
+There are two types of label policies: single label and multi label. By default, the system will use single label. The administrator should be aware of the pros and cons of each in order to implement policies which meet the requirements of the system's security model.
+
+A single label security policy only permits one label to be used for every subject or object. Since a single label policy enforces one set of access permissions across the entire system, it provides lower administration overhead, but decreases the flexibility of policies which support labeling. However, in many environments, a single label policy may be all that is required.
+
+A single label policy is somewhat similar to DAC as `root` configures the policies so that users are placed in the appropriate categories and access levels. A notable difference is that many policy modules can also restrict `root`. Basic control over objects will then be released to the group, but `root` may revoke or modify the settings at any time.
+
+When appropriate, a multi label policy can be set on a UFS file system by passing `multilabel` to man:tunefs[8]. A multi label policy permits each subject or object to have its own independent MAC label. The decision to use a multi label or single label policy is only required for policies which implement the labeling feature, such as `biba`, `lomac`, and `mls`. Some policies, such as `seeotheruids`, `portacl` and `partition`, do not use labels at all.
+
+Using a multi label policy on a partition and establishing a multi label security model can increase administrative overhead as everything in that file system has a label. This includes directories, files, and even device nodes.
+
+The following command will set `multilabel` on the specified UFS file system. This may only be done in single-user mode and is not a requirement for the swap file system:
+
+[source,bash]
+....
+# tunefs -l enable /
+....
+
+[NOTE]
+====
+Some users have experienced problems with setting the `multilabel` flag on the root partition. If this is the case, please review <<mac-troubleshoot>>.
+====
+
+Since the multi label policy is set on a per-file system basis, a multi label policy may not be needed if the file system layout is well designed. Consider an example security MAC model for a FreeBSD web server. This machine uses the single label, `biba/high`, for everything in the default file systems. If the web server needs to run at `biba/low` to prevent write up capabilities, it could be installed to a separate UFS [.filename]#/usr/local# file system set at `biba/low`.
+
+=== Label Configuration
+
+Virtually all aspects of label policy module configuration will be performed using the base system utilities. These commands provide a simple interface for object or subject configuration or the manipulation and verification of the configuration.
+
+All configuration may be done using `setfmac`, which is used to set MAC labels on system objects, and `setpmac`, which is used to set the labels on system subjects. For example, to set the `biba` MAC label to `high` on [.filename]#test#:
+
+[source,bash]
+....
+# setfmac biba/high test
+....
+
+If the configuration is successful, the prompt will be returned without error. A common error is `Permission denied` which usually occurs when the label is being set or modified on a restricted object. Other conditions may produce different failures. For instance, the file may not be owned by the user attempting to relabel the object, the object may not exist, or the object may be read-only. A mandatory policy will not allow the process to relabel the file, maybe because of a property of the file, a property of the process, or a property of the proposed new label value. For example, if a user running at low integrity tries to change the label of a high integrity file, or a user running at low integrity tries to change the label of a low integrity file to a high integrity label, these operations will fail.
+
+The system administrator may use `setpmac` to override the policy module's settings by assigning a different label to the invoked process:
+
+[source,bash]
+....
+# setfmac biba/high test
+Permission denied
+# setpmac biba/low setfmac biba/high test
+# getfmac test
+test: biba/high
+....
+
+For currently running processes, such as sendmail, `getpmac` is usually used instead. This command takes a process ID (PID) in place of a command name. If users attempt to manipulate a file not in their access, subject to the rules of the loaded policy modules, the `Operation not permitted` error will be displayed.
+
+=== Predefined Labels
+
+A few FreeBSD policy modules which support the labeling feature offer three predefined labels: `low`, `equal`, and `high`, where:
+
+* `low` is considered the lowest label setting an object or subject may have. Setting this on objects or subjects blocks their access to objects or subjects marked high.
+* `equal` sets the subject or object to be disabled or unaffected and should only be placed on objects considered to be exempt from the policy.
+* `high` grants an object or subject the highest setting available in the Biba and MLS policy modules.
+
+Such policy modules include man:mac_biba[4], man:mac_mls[4] and man:mac_lomac[4]. Each of the predefined labels establishes a different information flow directive. Refer to the manual page of the module to determine the traits of the generic label configurations.
+
+=== Numeric Labels
+
+The Biba and MLS policy modules support a numeric label which may be set to indicate the precise level of hierarchical control. This numeric level is used to partition or sort information into different groups of classification, only permitting access to that group or a higher group level. For example:
+
+[.programlisting]
+....
+biba/10:2+3+6(5:2+3-20:2+3+4+5+6)
+....
+
+may be interpreted as "Biba Policy Label/Grade 10:Compartments 2, 3 and 6: (grade 5 ...")
+
+In this example, the first grade would be considered the effective grade with effective compartments, the second grade is the low grade, and the last one is the high grade. In most configurations, such fine-grained settings are not needed as they are considered to be advanced configurations.
+
+System objects only have a current grade and compartment. System subjects reflect the range of available rights in the system, and network interfaces, where they are used for access control.
+
+The grade and compartments in a subject and object pair are used to construct a relationship known as _dominance_, in which a subject dominates an object, the object dominates the subject, neither dominates the other, or both dominate each other. The "both dominate" case occurs when the two labels are equal. Due to the information flow nature of Biba, a user has rights to a set of compartments that might correspond to projects, but objects also have a set of compartments. Users may have to subset their rights using `su` or `setpmac` in order to access objects in a compartment from which they are not restricted.
+
+=== User Labels
+
+Users are required to have labels so that their files and processes properly interact with the security policy defined on the system. This is configured in [.filename]#/etc/login.conf# using login classes. Every policy module that uses labels will implement the user class setting.
+
+To set the user class default label which will be enforced by MAC, add a `label` entry. An example `label` entry containing every policy module is displayed below. Note that in a real configuration, the administrator would never enable every policy module. It is recommended that the rest of this chapter be reviewed before any configuration is implemented.
+
+[.programlisting]
+....
+default:\
+	:copyright=/etc/COPYRIGHT:\
+	:welcome=/etc/motd:\
+	:setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+	:path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:\
+	:manpath=/usr/shared/man /usr/local/man:\
+	:nologin=/usr/sbin/nologin:\
+	:cputime=1h30m:\
+	:datasize=8M:\
+	:vmemoryuse=100M:\
+	:stacksize=2M:\
+	:memorylocked=4M:\
+	:memoryuse=8M:\
+	:filesize=8M:\
+	:coredumpsize=8M:\
+	:openfiles=24:\
+	:maxproc=32:\
+	:priority=0:\
+	:requirehome:\
+	:passwordtime=91d:\
+	:umask=022:\
+	:ignoretime@:\
+	:label=partition/13,mls/5,biba/10(5-15),lomac/10[2]:
+....
+
+While users can not modify the default value, they may change their label after they login, subject to the constraints of the policy. The example above tells the Biba policy that a process's minimum integrity is `5`, its maximum is `15`, and the default effective label is `10`. The process will run at `10` until it chooses to change label, perhaps due to the user using `setpmac`, which will be constrained by Biba to the configured range.
+
+After any change to [.filename]#login.conf#, the login class capability database must be rebuilt using `cap_mkdb`.
+
+Many sites have a large number of users requiring several different user classes. In depth planning is required as this can become difficult to manage.
+
+=== Network Interface Labels
+
+Labels may be set on network interfaces to help control the flow of data across the network. Policies using network interface labels function in the same way that policies function with respect to objects. Users at high settings in Biba, for example, will not be permitted to access network interfaces with a label of `low`.
+
+When setting the MAC label on network interfaces, `maclabel` may be passed to `ifconfig`:
+
+[source,bash]
+....
+# ifconfig bge0 maclabel biba/equal
+....
+
+This example will set the MAC label of `biba/equal` on the `bge0` interface. When using a setting similar to `biba/high(low-high)`, the entire label should be quoted to prevent an error from being returned.
+
+Each policy module which supports labeling has a tunable which may be used to disable the MAC label on network interfaces. Setting the label to `equal` will have a similar effect. Review the output of `sysctl`, the policy manual pages, and the information in the rest of this chapter for more information on those tunables.
+
+[[mac-planning]]
+== Planning the Security Configuration
+
+Before implementing any MAC policies, a planning phase is recommended. During the planning stages, an administrator should consider the implementation requirements and goals, such as:
+
+* How to classify information and resources available on the target systems.
+* Which information or resources to restrict access to along with the type of restrictions that should be applied.
+* Which MAC modules will be required to achieve this goal.
+
+A trial run of the trusted system and its configuration should occur _before_ a MAC implementation is used on production systems. Since different environments have different needs and requirements, establishing a complete security profile will decrease the need of changes once the system goes live.
+
+Consider how the MAC framework augments the security of the system as a whole. The various security policy modules provided by the MAC framework could be used to protect the network and file systems or to block users from accessing certain ports and sockets. Perhaps the best use of the policy modules is to load several security policy modules at a time in order to provide a MLS environment. This approach differs from a hardening policy, which typically hardens elements of a system which are used only for specific purposes. The downside to MLS is increased administrative overhead.
+
+The overhead is minimal when compared to the lasting effect of a framework which provides the ability to pick and choose which policies are required for a specific configuration and which keeps performance overhead down. The reduction of support for unneeded policies can increase the overall performance of the system as well as offer flexibility of choice. A good implementation would consider the overall security requirements and effectively implement the various security policy modules offered by the framework.
+
+A system utilizing MAC guarantees that a user will not be permitted to change security attributes at will. All user utilities, programs, and scripts must work within the constraints of the access rules provided by the selected security policy modules and control of the MAC access rules is in the hands of the system administrator.
+
+It is the duty of the system administrator to carefully select the correct security policy modules. For an environment that needs to limit access control over the network, the man:mac_portacl[4], man:mac_ifoff[4], and man:mac_biba[4] policy modules make good starting points. For an environment where strict confidentiality of file system objects is required, consider the man:mac_bsdextended[4] and man:mac_mls[4] policy modules.
+
+Policy decisions could be made based on network configuration. If only certain users should be permitted access to man:ssh[1], the man:mac_portacl[4] policy module is a good choice. In the case of file systems, access to objects might be considered confidential to some users, but not to others. As an example, a large development team might be broken off into smaller projects where developers in project A might not be permitted to access objects written by developers in project B. Yet both projects might need to access objects created by developers in project C. Using the different security policy modules provided by the MAC framework, users could be divided into these groups and then given access to the appropriate objects.
+
+Each security policy module has a unique way of dealing with the overall security of a system. Module selection should be based on a well thought out security policy which may require revision and reimplementation. Understanding the different security policy modules offered by the MAC framework will help administrators choose the best policies for their situations.
+
+The rest of this chapter covers the available modules, describes their use and configuration, and in some cases, provides insight on applicable situations.
+
+[CAUTION]
+====
+
+Implementing MAC is much like implementing a firewall since care must be taken to prevent being completely locked out of the system. The ability to revert back to a previous configuration should be considered and the implementation of MAC over a remote connection should be done with extreme caution.
+====
+
+[[mac-policies]]
+== Available MAC Policies
+
+The default FreeBSD kernel includes `options MAC`. This means that every module included with the MAC framework can be loaded with `kldload` as a run-time kernel module. After testing the module, add the module name to [.filename]#/boot/loader.conf# so that it will load during boot. Each module also provides a kernel option for those administrators who choose to compile their own custom kernel.
+
+FreeBSD includes a group of policies that will cover most security requirements. Each policy is summarized below. The last three policies support integer settings in place of the three default labels.
+
+[[mac-seeotheruids]]
+=== The MAC See Other UIDs Policy
+
+Module name: [.filename]#mac_seeotheruids.ko#
+
+Kernel configuration line: `options MAC_SEEOTHERUIDS`
+
+Boot option: `mac_seeotheruids_load="YES"`
+
+The man:mac_seeotheruids[4] module extends the `security.bsd.see_other_uids` and `security.bsd.see_other_gids sysctl` tunables. This option does not require any labels to be set before configuration and can operate transparently with other modules.
+
+After loading the module, the following `sysctl` tunables may be used to control its features:
+
+* `security.mac.seeotheruids.enabled` enables the module and implements the default settings which deny users the ability to view processes and sockets owned by other users.
+* `security.mac.seeotheruids.specificgid_enabled` allows specified groups to be exempt from this policy. To exempt specific groups, use the `security.mac.seeotheruids.specificgid=_XXX_ sysctl` tunable, replacing _XXX_ with the numeric group ID to be exempted.
+* `security.mac.seeotheruids.primarygroup_enabled` is used to exempt specific primary groups from this policy. When using this tunable, `security.mac.seeotheruids.specificgid_enabled` may not be set.
+
+[[mac-bsdextended]]
+=== The MAC BSD Extended Policy
+
+Module name: [.filename]#mac_bsdextended.ko#
+
+Kernel configuration line: `options MAC_BSDEXTENDED`
+
+Boot option: `mac_bsdextended_load="YES"`
+
+The man:mac_bsdextended[4] module enforces a file system firewall. It provides an extension to the standard file system permissions model, permitting an administrator to create a firewall-like ruleset to protect files, utilities, and directories in the file system hierarchy. When access to a file system object is attempted, the list of rules is iterated until either a matching rule is located or the end is reached. This behavior may be changed using `security.mac.bsdextended.firstmatch_enabled`. Similar to other firewall modules in FreeBSD, a file containing the access control rules can be created and read by the system at boot time using an man:rc.conf[5] variable.
+
+The rule list may be entered using man:ugidfw[8] which has a syntax similar to man:ipfw[8]. More tools can be written by using the functions in the man:libugidfw[3] library.
+
+After the man:mac_bsdextended[4] module has been loaded, the following command may be used to list the current rule configuration:
+
+[source,bash]
+....
+# ugidfw list
+0 slots, 0 rules
+....
+
+By default, no rules are defined and everything is completely accessible. To create a rule which blocks all access by users but leaves `root` unaffected:
+
+[source,bash]
+....
+# ugidfw add subject not uid root new object not uid root mode n
+....
+
+While this rule is simple to implement, it is a very bad idea as it blocks all users from issuing any commands. A more realistic example blocks `user1` all access, including directory listings, to ``_user2_``'s home directory:
+
+[source,bash]
+....
+# ugidfw set 2 subject uid user1 object uid user2 mode n
+# ugidfw set 3 subject uid user1 object gid user2 mode n
+....
+
+Instead of `user1`, `not uid _user2_` could be used in order to enforce the same access restrictions for all users. However, the `root` user is unaffected by these rules.
+
+[NOTE]
+====
+Extreme caution should be taken when working with this module as incorrect use could block access to certain parts of the file system.
+====
+
+[[mac-ifoff]]
+=== The MAC Interface Silencing Policy
+
+Module name: [.filename]#mac_ifoff.ko#
+
+Kernel configuration line: `options MAC_IFOFF`
+
+Boot option: `mac_ifoff_load="YES"`
+
+The man:mac_ifoff[4] module is used to disable network interfaces on the fly and to keep network interfaces from being brought up during system boot. It does not use labels and does not depend on any other MAC modules.
+
+Most of this module's control is performed through these `sysctl` tunables:
+
+* `security.mac.ifoff.lo_enabled` enables or disables all traffic on the loopback, man:lo[4], interface.
+* `security.mac.ifoff.bpfrecv_enabled` enables or disables all traffic on the Berkeley Packet Filter interface, man:bpf[4].
+* `security.mac.ifoff.other_enabled` enables or disables traffic on all other interfaces.
+
+One of the most common uses of man:mac_ifoff[4] is network monitoring in an environment where network traffic should not be permitted during the boot sequence. Another use would be to write a script which uses an application such as package:security/aide[] to automatically block network traffic if it finds new or altered files in protected directories.
+
+[[mac-portacl]]
+=== The MAC Port Access Control List Policy
+
+Module name: [.filename]#mac_portacl.ko#
+
+Kernel configuration line: `MAC_PORTACL`
+
+Boot option: `mac_portacl_load="YES"`
+
+The man:mac_portacl[4] module is used to limit binding to local TCP and UDP ports, making it possible to allow non-`root` users to bind to specified privileged ports below 1024.
+
+Once loaded, this module enables the MAC policy on all sockets. The following tunables are available:
+
+* `security.mac.portacl.enabled` enables or disables the policy completely.
+* `security.mac.portacl.port_high` sets the highest port number that man:mac_portacl[4] protects.
+* `security.mac.portacl.suser_exempt`, when set to a non-zero value, exempts the `root` user from this policy.
+* `security.mac.portacl.rules` specifies the policy as a text string of the form `rule[,rule,...]`, with as many rules as needed, and where each rule is of the form `idtype:id:protocol:port`. The `idtype` is either `uid` or `gid`. The `protocol` parameter can be `tcp` or `udp`. The `port` parameter is the port number to allow the specified user or group to bind to. Only numeric values can be used for the user ID, group ID, and port parameters.
+
+By default, ports below 1024 can only be used by privileged processes which run as `root`. For man:mac_portacl[4] to allow non-privileged processes to bind to ports below 1024, set the following tunables as follows:
+
+[source,bash]
+....
+# sysctl security.mac.portacl.port_high=1023
+# sysctl net.inet.ip.portrange.reservedlow=0
+# sysctl net.inet.ip.portrange.reservedhigh=0
+....
+
+To prevent the `root` user from being affected by this policy, set `security.mac.portacl.suser_exempt` to a non-zero value.
+
+[source,bash]
+....
+# sysctl security.mac.portacl.suser_exempt=1
+....
+
+To allow the `www` user with UID 80 to bind to port 80 without ever needing `root` privilege:
+
+[source,bash]
+....
+# sysctl security.mac.portacl.rules=uid:80:tcp:80
+....
+
+This next example permits the user with the UID of 1001 to bind to TCP ports 110 (POP3) and 995 (POP3s):
+
+[source,bash]
+....
+# sysctl security.mac.portacl.rules=uid:1001:tcp:110,uid:1001:tcp:995
+....
+
+[[mac-partition]]
+=== The MAC Partition Policy
+
+Module name: [.filename]#mac_partition.ko#
+
+Kernel configuration line: `options MAC_PARTITION`
+
+Boot option: `mac_partition_load="YES"`
+
+The man:mac_partition[4] policy drops processes into specific "partitions" based on their MAC label. Most configuration for this policy is done using man:setpmac[8]. One `sysctl` tunable is available for this policy:
+
+* `security.mac.partition.enabled` enables the enforcement of MAC process partitions.
+
+When this policy is enabled, users will only be permitted to see their processes, and any others within their partition, but will not be permitted to work with utilities outside the scope of this partition. For instance, a user in the `insecure` class will not be permitted to access `top` as well as many other commands that must spawn a process.
+
+This example adds `top` to the label set on users in the `insecure` class. All processes spawned by users in the `insecure` class will stay in the `partition/13` label.
+
+[source,bash]
+....
+# setpmac partition/13 top
+....
+
+This command displays the partition label and the process list:
+
+[source,bash]
+....
+# ps Zax
+....
+
+This command displays another user's process partition label and that user's currently running processes:
+
+[source,bash]
+....
+# ps -ZU trhodes
+....
+
+[NOTE]
+====
+Users can see processes in ``root``'s label unless the man:mac_seeotheruids[4] policy is loaded.
+====
+
+[[mac-mls]]
+=== The MAC Multi-Level Security Module
+
+Module name: [.filename]#mac_mls.ko#
+
+Kernel configuration line: `options MAC_MLS`
+
+Boot option: `mac_mls_load="YES"`
+
+The man:mac_mls[4] policy controls access between subjects and objects in the system by enforcing a strict information flow policy.
+
+In MLS environments, a "clearance" level is set in the label of each subject or object, along with compartments. Since these clearance levels can reach numbers greater than several thousand, it would be a daunting task to thoroughly configure every subject or object. To ease this administrative overhead, three labels are included in this policy: `mls/low`, `mls/equal`, and `mls/high`, where:
+
+* Anything labeled with `mls/low` will have a low clearance level and not be permitted to access information of a higher level. This label also prevents objects of a higher clearance level from writing or passing information to a lower level.
+* `mls/equal` should be placed on objects which should be exempt from the policy.
+* `mls/high` is the highest level of clearance possible. Objects assigned this label will hold dominance over all other objects in the system; however, they will not permit the leaking of information to objects of a lower class.
+
+MLS provides:
+
+* A hierarchical security level with a set of non-hierarchical categories.
+* Fixed rules of `no read up, no write down`. This means that a subject can have read access to objects on its own level or below, but not above. Similarly, a subject can have write access to objects on its own level or above, but not beneath.
+* Secrecy, or the prevention of inappropriate disclosure of data.
+* A basis for the design of systems that concurrently handle data at multiple sensitivity levels without leaking information between secret and confidential.
+
+The following `sysctl` tunables are available:
+
+* `security.mac.mls.enabled` is used to enable or disable the MLS policy.
+* `security.mac.mls.ptys_equal` labels all man:pty[4] devices as `mls/equal` during creation.
+* `security.mac.mls.revocation_enabled` revokes access to objects after their label changes to a label of a lower grade.
+* `security.mac.mls.max_compartments` sets the maximum number of compartment levels allowed on a system.
+
+To manipulate MLS labels, use man:setfmac[8]. To assign a label to an object:
+
+[source,bash]
+....
+# setfmac mls/5 test
+....
+
+To get the MLS label for the file [.filename]#test#:
+
+[source,bash]
+....
+# getfmac test
+....
+
+Another approach is to create a master policy file in [.filename]#/etc/# which specifies the MLS policy information and to feed that file to `setfmac`.
+
+When using the MLS policy module, an administrator plans to control the flow of sensitive information. The default `block read up block write down` sets everything to a low state. Everything is accessible and an administrator slowly augments the confidentiality of the information.
+
+Beyond the three basic label options, an administrator may group users and groups as required to block the information flow between them. It might be easier to look at the information in clearance levels using descriptive words, such as classifications of `Confidential`, `Secret`, and `Top Secret`. Some administrators instead create different groups based on project levels. Regardless of the classification method, a well thought out plan must exist before implementing a restrictive policy.
+
+Some example situations for the MLS policy module include an e-commerce web server, a file server holding critical company information, and financial institution environments.
+
+[[mac-biba]]
+=== The MAC Biba Module
+
+Module name: [.filename]#mac_biba.ko#
+
+Kernel configuration line: `options MAC_BIBA`
+
+Boot option: `mac_biba_load="YES"`
+
+The man:mac_biba[4] module loads the MAC Biba policy. This policy is similar to the MLS policy with the exception that the rules for information flow are slightly reversed. This is to prevent the downward flow of sensitive information whereas the MLS policy prevents the upward flow of sensitive information.
+
+In Biba environments, an "integrity" label is set on each subject or object. These labels are made up of hierarchical grades and non-hierarchical components. As a grade ascends, so does its integrity.
+
+Supported labels are `biba/low`, `biba/equal`, and `biba/high`, where:
+
+* `biba/low` is considered the lowest integrity an object or subject may have. Setting this on objects or subjects blocks their write access to objects or subjects marked as `biba/high`, but will not prevent read access.
+* `biba/equal` should only be placed on objects considered to be exempt from the policy.
+* `biba/high` permits writing to objects set at a lower label, but does not permit reading that object. It is recommended that this label be placed on objects that affect the integrity of the entire system.
+
+Biba provides:
+
+* Hierarchical integrity levels with a set of non-hierarchical integrity categories.
+* Fixed rules are `no write up, no read down`, the opposite of MLS. A subject can have write access to objects on its own level or below, but not above. Similarly, a subject can have read access to objects on its own level or above, but not below.
+* Integrity by preventing inappropriate modification of data.
+* Integrity levels instead of MLS sensitivity levels.
+
+The following tunables can be used to manipulate the Biba policy:
+
+* `security.mac.biba.enabled` is used to enable or disable enforcement of the Biba policy on the target machine.
+* `security.mac.biba.ptys_equal` is used to disable the Biba policy on man:pty[4] devices.
+* `security.mac.biba.revocation_enabled` forces the revocation of access to objects if the label is changed to dominate the subject.
+
+To access the Biba policy setting on system objects, use `setfmac` and `getfmac`:
+
+[source,bash]
+....
+# setfmac biba/low test
+# getfmac test
+test: biba/low
+....
+
+Integrity, which is different from sensitivity, is used to guarantee that information is not manipulated by untrusted parties. This includes information passed between subjects and objects. It ensures that users will only be able to modify or access information they have been given explicit access to. The man:mac_biba[4] security policy module permits an administrator to configure which files and programs a user may see and invoke while assuring that the programs and files are trusted by the system for that user.
+
+During the initial planning phase, an administrator must be prepared to partition users into grades, levels, and areas. The system will default to a high label once this policy module is enabled, and it is up to the administrator to configure the different grades and levels for users. Instead of using clearance levels, a good planning method could include topics. For instance, only allow developers modification access to the source code repository, source code compiler, and other development utilities. Other users would be grouped into other categories such as testers, designers, or end users and would only be permitted read access.
+
+A lower integrity subject is unable to write to a higher integrity subject and a higher integrity subject cannot list or read a lower integrity object. Setting a label at the lowest possible grade could make it inaccessible to subjects. Some prospective environments for this security policy module would include a constrained web server, a development and test machine, and a source code repository. A less useful implementation would be a personal workstation, a machine used as a router, or a network firewall.
+
+[[mac-lomac]]
+=== The MAC Low-watermark Module
+
+Module name: [.filename]#mac_lomac.ko#
+
+Kernel configuration line: `options MAC_LOMAC`
+
+Boot option: `mac_lomac_load="YES"`
+
+Unlike the MAC Biba policy, the man:mac_lomac[4] policy permits access to lower integrity objects only after decreasing the integrity level to not disrupt any integrity rules.
+
+The Low-watermark integrity policy works almost identically to Biba, with the exception of using floating labels to support subject demotion via an auxiliary grade compartment. This secondary compartment takes the form `[auxgrade]`. When assigning a policy with an auxiliary grade, use the syntax `lomac/10[2]`, where `2` is the auxiliary grade.
+
+This policy relies on the ubiquitous labeling of all system objects with integrity labels, permitting subjects to read from low integrity objects and then downgrading the label on the subject to prevent future writes to high integrity objects using `[auxgrade]`. The policy may provide greater compatibility and require less initial configuration than Biba.
+
+Like the Biba and MLS policies, `setfmac` and `setpmac` are used to place labels on system objects:
+
+[source,bash]
+....
+# setfmac /usr/home/trhodes lomac/high[low]
+# getfmac /usr/home/trhodes lomac/high[low]
+....
+
+The auxiliary grade `low` is a feature provided only by the MACLOMAC policy.
+
+[[mac-userlocked]]
+== User Lock Down
+
+This example considers a relatively small storage system with fewer than fifty users. Users will have login capabilities and are permitted to store data and access resources.
+
+For this scenario, the man:mac_bsdextended[4] and man:mac_seeotheruids[4] policy modules could co-exist and block access to system objects while hiding user processes.
+
+Begin by adding the following line to [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+mac_seeotheruids_load="YES"
+....
+
+The man:mac_bsdextended[4] security policy module may be activated by adding this line to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ugidfw_enable="YES"
+....
+
+Default rules stored in [.filename]#/etc/rc.bsdextended# will be loaded at system initialization. However, the default entries may need modification. Since this machine is expected only to service users, everything may be left commented out except the last two lines in order to force the loading of user owned system objects by default.
+
+Add the required users to this machine and reboot. For testing purposes, try logging in as a different user across two consoles. Run `ps aux` to see if processes of other users are visible. Verify that running man:ls[1] on another user's home directory fails.
+
+Do not try to test with the `root` user unless the specific ``sysctl``s have been modified to block super user access.
+
+[NOTE]
+====
+When a new user is added, their man:mac_bsdextended[4] rule will not be in the ruleset list. To update the ruleset quickly, unload the security policy module and reload it again using man:kldunload[8] and man:kldload[8].
+====
+
+[[mac-implementing]]
+== Nagios in a MAC Jail
+
+This section demonstrates the steps that are needed to implement the Nagios network monitoring system in a MAC environment. This is meant as an example which still requires the administrator to test that the implemented policy meets the security requirements of the network before using in a production environment.
+
+This example requires `multilabel` to be set on each file system. It also assumes that package:net-mgmt/nagios-plugins[], package:net-mgmt/nagios[], and package:www/apache22[] are all installed, configured, and working correctly before attempting the integration into the MAC framework.
+
+=== Create an Insecure User Class
+
+Begin the procedure by adding the following user class to [.filename]#/etc/login.conf#:
+
+[.programlisting]
+....
+insecure:\
+:copyright=/etc/COPYRIGHT:\
+:welcome=/etc/motd:\
+:setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+:path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+:manpath=/usr/shared/man /usr/local/man:\
+:nologin=/usr/sbin/nologin:\
+:cputime=1h30m:\
+:datasize=8M:\
+:vmemoryuse=100M:\
+:stacksize=2M:\
+:memorylocked=4M:\
+:memoryuse=8M:\
+:filesize=8M:\
+:coredumpsize=8M:\
+:openfiles=24:\
+:maxproc=32:\
+:priority=0:\
+:requirehome:\
+:passwordtime=91d:\
+:umask=022:\
+:ignoretime@:\
+:label=biba/10(10-10):
+....
+
+Then, add the following line to the default user class section:
+
+[.programlisting]
+....
+:label=biba/high:
+....
+
+Save the edits and issue the following command to rebuild the database:
+
+[source,bash]
+....
+# cap_mkdb /etc/login.conf
+....
+
+=== Configure Users
+
+Set the `root` user to the default class using:
+
+[source,bash]
+....
+# pw usermod root -L default
+....
+
+All user accounts that are not `root` will now require a login class. The login class is required, otherwise users will be refused access to common commands. The following `sh` script should do the trick:
+
+[source,bash]
+....
+# for x in `awk -F: '($3 >= 1001) && ($3 != 65534) { print $1 }' \
+	/etc/passwd`; do pw usermod $x -L default; done;
+....
+
+Next, drop the `nagios` and `www` accounts into the insecure class:
+
+[source,bash]
+....
+# pw usermod nagios -L insecure
+# pw usermod www -L insecure
+....
+
+=== Create the Contexts File
+
+A contexts file should now be created as [.filename]#/etc/policy.contexts#:
+
+[.programlisting]
+....
+# This is the default BIBA policy for this system.
+
+# System:
+/var/run(/.*)?			biba/equal
+
+/dev/(/.*)?			biba/equal
+
+/var				biba/equal
+/var/spool(/.*)?		biba/equal
+
+/var/log(/.*)?			biba/equal
+
+/tmp(/.*)?			biba/equal
+/var/tmp(/.*)?			biba/equal
+
+/var/spool/mqueue		biba/equal
+/var/spool/clientmqueue		biba/equal
+
+# For Nagios:
+/usr/local/etc/nagios(/.*)?	biba/10
+
+/var/spool/nagios(/.*)?		biba/10
+
+# For apache
+/usr/local/etc/apache(/.*)?	biba/10
+....
+
+This policy enforces security by setting restrictions on the flow of information. In this specific configuration, users, including `root`, should never be allowed to access Nagios. Configuration files and processes that are a part of Nagios will be completely self contained or jailed.
+
+This file will be read after running `setfsmac` on every file system. This example sets the policy on the root file system:
+
+[source,bash]
+....
+# setfsmac -ef /etc/policy.contexts /
+....
+
+Next, add these edits to the main section of [.filename]#/etc/mac.conf#:
+
+[.programlisting]
+....
+default_labels file ?biba
+default_labels ifnet ?biba
+default_labels process ?biba
+default_labels socket ?biba
+....
+
+=== Loader Configuration
+
+To finish the configuration, add the following lines to [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+mac_biba_load="YES"
+mac_seeotheruids_load="YES"
+security.mac.biba.trust_all_interfaces=1
+....
+
+And the following line to the network card configuration stored in [.filename]#/etc/rc.conf#. If the primary network configuration is done via DHCP, this may need to be configured manually after every system boot:
+
+[.programlisting]
+....
+maclabel biba/equal
+....
+
+=== Testing the Configuration
+
+First, ensure that the web server and Nagios will not be started on system initialization and reboot. Ensure that `root` cannot access any of the files in the Nagios configuration directory. If `root` can list the contents of [.filename]#/var/spool/nagios#, something is wrong. Instead, a "permission denied" error should be returned.
+
+If all seems well, Nagios, Apache, and Sendmail can now be started:
+
+[source,bash]
+....
+# cd /etc/mail && make stop && \
+setpmac biba/equal make start && setpmac biba/10\(10-10\) apachectl start && \
+setpmac biba/10\(10-10\) /usr/local/etc/rc.d/nagios.sh forcestart
+....
+
+Double check to ensure that everything is working properly. If not, check the log files for error messages. If needed, use man:sysctl[8] to disable the man:mac_biba[4] security policy module and try starting everything again as usual.
+
+[NOTE]
+====
+The `root` user can still change the security enforcement and edit its configuration files. The following command will permit the degradation of the security policy to a lower grade for a newly spawned shell:
+
+[source,bash]
+....
+# setpmac biba/10 csh
+....
+
+To block this from happening, force the user into a range using man:login.conf[5]. If man:setpmac[8] attempts to run a command outside of the compartment's range, an error will be returned and the command will not be executed. In this case, set root to `biba/high(high-high)`.
+====
+
+[[mac-troubleshoot]]
+== Troubleshooting the MAC Framework
+
+This section discusses common configuration errors and how to resolve them.
+
+The `multilabel` flag does not stay enabled on the root ([.filename]#/#) partition:::
+The following steps may resolve this transient error:
+
+[.procedure]
+====
+. Edit [.filename]#/etc/fstab# and set the root partition to `ro` for read-only.
+. Reboot into single user mode.
+. Run `tunefs -l enable` on [.filename]#/#.
+. Reboot the system.
+. Run `mount -urw`[.filename]#/# and change the `ro` back to `rw` in [.filename]#/etc/fstab# and reboot the system again.
+. Double-check the output from `mount` to ensure that `multilabel` has been properly set on the root file system.
+====
+
+After establishing a secure environment with MAC, Xorg no longer starts:::
+This could be caused by the MAC `partition` policy or by a mislabeling in one of the MAC labeling policies. To debug, try the following:
+
+[.procedure]
+====
+. Check the error message. If the user is in the `insecure` class, the `partition` policy may be the culprit. Try setting the user's class back to the `default` class and rebuild the database with `cap_mkdb`. If this does not alleviate the problem, go to step two.
+. Double-check that the label policies are set correctly for the user, Xorg, and the [.filename]#/dev# entries.
+. If neither of these resolve the problem, send the error message and a description of the environment to the {freebsd-questions}.
+====
+
+The `_secure_path: unable to stat .login_conf` error appears:::
+This error can appear when a user attempts to switch from the `root` user to another user in the system. This message usually occurs when the user has a higher label setting than that of the user they are attempting to become. For instance, if `joe` has a default label of `biba/low` and `root` has a label of `biba/high`, `root` cannot view ``joe``'s home directory. This will happen whether or not `root` has used `su` to become `joe` as the Biba integrity model will not permit `root` to view objects set at a lower integrity level.
+
+The system no longer recognizes `root`:::
+When this occurs, `whoami` returns `0` and `su` returns `who are you?`.
++
+This can happen if a labeling policy has been disabled by man:sysctl[8] or the policy module was unloaded. If the policy is disabled, the login capabilities database needs to be reconfigured. Double check [.filename]#/etc/login.conf# to ensure that all `label` options have been removed and rebuild the database with `cap_mkdb`.
++
+This may also happen if a policy restricts access to [.filename]#master.passwd#. This is usually caused by an administrator altering the file under a label which conflicts with the general policy being used by the system. In these cases, the user information would be read by the system and access would be blocked as the file has inherited the new label. Disable the policy using man:sysctl[8] and everything should return to normal.

@@ -1,0 +1,742 @@
+---
+title: 章 10. Kernel Debugging
+authors:
+  - author: Paul Richards
+  - author: Jörg Wunsch
+  - author: Robert Watson
+prev: books/developers-handbook/kernelbuild
+next: books/developers-handbook/x86
+---
+
+[[kerneldebug]]
+= Kernel Debugging
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:part-signifier: 部分
+:chapter-signifier: 第
+:appendix-caption: 附录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例 
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 10
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-tw/mailing-lists.adoc[]
+include::shared/zh-tw/urls.adoc[]
+
+toc::[]
+
+[[kerneldebug-obtain]]
+== Obtaining a Kernel Crash Dump
+
+When running a development kernel (e.g., FreeBSD-CURRENT), such as a kernel under extreme conditions (e.g., very high load averages, tens of thousands of connections, exceedingly high number of concurrent users, hundreds of man:jail[8]s, etc.), or using a new feature or device driver on FreeBSD-STABLE (e.g., PAE), sometimes a kernel will panic. In the event that it does, this chapter will demonstrate how to extract useful information out of a crash.
+
+A system reboot is inevitable once a kernel panics. Once a system is rebooted, the contents of a system's physical memory (RAM) is lost, as well as any bits that are on the swap device before the panic. To preserve the bits in physical memory, the kernel makes use of the swap device as a temporary place to store the bits that are in RAM across a reboot after a crash. In doing this, when FreeBSD boots after a crash, a kernel image can now be extracted and debugging can take place.
+
+[NOTE]
+====
+A swap device that has been configured as a dump device still acts as a swap device. Dumps to non-swap devices (such as tapes or CDRWs, for example) are not supported at this time. A "swap device" is synonymous with a "swap partition."
+====
+
+Several types of kernel crash dumps are available:
+
+Full memory dumps::
+Hold the complete contents of physical memory.
+
+Minidumps::
+Hold only memory pages in use by the kernel (FreeBSD 6.2 and higher).
+
+Textdumps::
+Hold captured, scripted, or interactive debugger output (FreeBSD 7.1 and higher).
+
+Minidumps are the default dump type as of FreeBSD 7.0, and in most cases will capture all necessary information present in a full memory dump, as most problems can be isolated only using kernel state.
+
+[[config-dumpdev]]
+=== Configuring the Dump Device
+
+Before the kernel will dump the contents of its physical memory to a dump device, a dump device must be configured. A dump device is specified by using the man:dumpon[8] command to tell the kernel where to save kernel crash dumps. The man:dumpon[8] program must be called after the swap partition has been configured with man:swapon[8]. This is normally handled by setting the `dumpdev` variable in man:rc.conf[5] to the path of the swap device (the recommended way to extract a kernel dump) or `AUTO` to use the first configured swap device. The default for `dumpdev` is `AUTO` in HEAD, and changed to `NO` on RELENG_* branches (except for RELENG_7, which was left set to `AUTO`). On FreeBSD 9.0-RELEASE and later versions, bsdinstall will ask whether crash dumps should be enabled on the target system during the install process.
+
+[TIP]
+====
+
+Check [.filename]#/etc/fstab# or man:swapinfo[8] for a list of swap devices.
+====
+
+[IMPORTANT]
+====
+Make sure the `dumpdir` specified in man:rc.conf[5] exists before a kernel crash!
+
+[source,bash]
+....
+# mkdir /var/crash
+# chmod 700 /var/crash
+....
+
+Also, remember that the contents of [.filename]#/var/crash# is sensitive and very likely contains confidential information such as passwords.
+====
+
+[[extract-dump]]
+=== Extracting a Kernel Dump
+
+Once a dump has been written to a dump device, the dump must be extracted before the swap device is mounted. To extract a dump from a dump device, use the man:savecore[8] program. If `dumpdev` has been set in man:rc.conf[5], man:savecore[8] will be called automatically on the first multi-user boot after the crash and before the swap device is mounted. The location of the extracted core is placed in the man:rc.conf[5] value `dumpdir`, by default [.filename]#/var/crash# and will be named [.filename]#vmcore.0#.
+
+In the event that there is already a file called [.filename]#vmcore.0# in [.filename]#/var/crash# (or whatever `dumpdir` is set to), the kernel will increment the trailing number for every crash to avoid overwriting an existing [.filename]#vmcore# (e.g., [.filename]#vmcore.1#). man:savecore[8] will always create a symbolic link to named [.filename]#vmcore.last# in [.filename]#/var/crash# after a dump is saved. This symbolic link can be used to locate the name of the most recent dump.
+
+The man:crashinfo[8] utility generates a text file containing a summary of information from a full memory dump or minidump. If `dumpdev` has been set in man:rc.conf[5], man:crashinfo[8] will be invoked automatically after man:savecore[8]. The output is saved to a file in `dumpdir` named [.filename]#core.txt.N#.
+
+[TIP]
+====
+
+If you are testing a new kernel but need to boot a different one in order to get your system up and running again, boot it only into single user mode using the `-s` flag at the boot prompt, and then perform the following steps:
+
+[source,bash]
+....
+# fsck -p
+# mount -a -t ufs       # make sure /var/crash is writable
+# savecore /var/crash /dev/ad0s1b
+# exit                  # exit to multi-user
+....
+
+This instructs man:savecore[8] to extract a kernel dump from [.filename]#/dev/ad0s1b# and place the contents in [.filename]#/var/crash#. Do not forget to make sure the destination directory [.filename]#/var/crash# has enough space for the dump. Also, do not forget to specify the correct path to your swap device as it is likely different than [.filename]#/dev/ad0s1b#!
+====
+
+=== Testing Kernel Dump Configuration
+
+The kernel includes a man:sysctl[8] node that requests a kernel panic. This can be used to verify that your system is properly configured to save kernel crash dumps. You may wish to remount existing file systems as read-only in single user mode before triggering the crash to avoid data loss.
+
+[source,bash]
+....
+# shutdown now
+...
+Enter full pathname of shell or RETURN for /bin/sh:
+# mount -a -u -r
+# sysctl debug.kdb.panic=1
+debug.kdb.panic:panic: kdb_sysctl_panic
+...
+....
+
+After rebooting, your system should save a dump in [.filename]#/var/crash# along with a matching summary from man:crashinfo[8].
+
+[[kerneldebug-gdb]]
+== Debugging a Kernel Crash Dump with `kgdb`
+
+[NOTE]
+====
+This section covers man:kgdb[1]. The latest version is included in the package:devel/gdb[]. An older version is also present in FreeBSD 11 and earlier.
+====
+
+To enter into the debugger and begin getting information from the dump, start kgdb:
+
+[source,bash]
+....
+# kgdb -n N
+....
+
+Where _N_ is the suffix of the [.filename]#vmcore.N# to examine. To open the most recent dump use:
+
+[source,bash]
+....
+# kgdb -n last
+....
+
+Normally, man:kgdb[1] should be able to locate the kernel running at the time the dump was generated. If it is not able to locate the correct kernel, pass the pathname of the kernel and dump as two arguments to kgdb:
+
+[source,bash]
+....
+# kgdb /boot/kernel/kernel /var/crash/vmcore.0
+....
+
+You can debug the crash dump using the kernel sources just like you can for any other program.
+
+This dump is from a 5.2-BETA kernel and the crash comes from deep within the kernel. The output below has been modified to include line numbers on the left. This first trace inspects the instruction pointer and obtains a back trace. The address that is used on line 41 for the `list` command is the instruction pointer and can be found on line 17. Most developers will request having at least this information sent to them if you are unable to debug the problem yourself. If, however, you do solve the problem, make sure that your patch winds its way into the source tree via a problem report, mailing lists, or by being able to commit it!
+
+[source,bash]
+....
+ 1:# cd /usr/obj/usr/src/sys/KERNCONF
+ 2:# kgdb kernel.debug /var/crash/vmcore.0
+ 3:GNU gdb 5.2.1 (FreeBSD)
+ 4:Copyright 2002 Free Software Foundation, Inc.
+ 5:GDB is free software, covered by the GNU General Public License, and you are
+ 6:welcome to change it and/or distribute copies of it under certain conditions.
+ 7:Type "show copying" to see the conditions.
+ 8:There is absolutely no warranty for GDB.  Type "show warranty" for details.
+ 9:This GDB was configured as "i386-undermydesk-freebsd"...
+10:panic: page fault
+11:panic messages:
+12:---
+13:Fatal trap 12: page fault while in kernel mode
+14:cpuid = 0; apic id = 00
+15:fault virtual address   = 0x300
+16:fault code:             = supervisor read, page not present
+17:instruction pointer     = 0x8:0xc0713860
+18:stack pointer           = 0x10:0xdc1d0b70
+19:frame pointer           = 0x10:0xdc1d0b7c
+20:code segment            = base 0x0, limit 0xfffff, type 0x1b
+21:                        = DPL 0, pres 1, def32 1, gran 1
+22:processor eflags        = resume, IOPL = 0
+23:current process         = 14394 (uname)
+24:trap number             = 12
+25:panic: page fault
+26      cpuid = 0;
+27:Stack backtrace:
+28
+29:syncing disks, buffers remaining... 2199 2199 panic: mi_switch: switch in a critical section
+30:cpuid = 0;
+31:Uptime: 2h43m19s
+32:Dumping 255 MB
+33: 16 32 48 64 80 96 112 128 144 160 176 192 208 224 240
+34:---
+35:Reading symbols from /boot/kernel/snd_maestro3.ko...done.
+36:Loaded symbols for /boot/kernel/snd_maestro3.ko
+37:Reading symbols from /boot/kernel/snd_pcm.ko...done.
+38:Loaded symbols for /boot/kernel/snd_pcm.ko
+39:#0  doadump () at /usr/src/sys/kern/kern_shutdown.c:240
+40:240             dumping++;
+41:(kgdb) list *0xc0713860
+42:0xc0713860 is in lapic_ipi_wait (/usr/src/sys/i386/i386/local_apic.c:663).
+43:658                     incr = 0;
+44:659                     delay = 1;
+45:660             } else
+46:661                     incr = 1;
+47:662             for (x = 0; x < delay; x += incr) {
+48:663                     if ((lapic->icr_lo & APIC_DELSTAT_MASK) == APIC_DELSTAT_IDLE)
+49:664                             return (1);
+50:665                     ia32_pause();
+51:666             }
+52:667             return (0);
+53:(kgdb) backtrace
+54:#0  doadump () at /usr/src/sys/kern/kern_shutdown.c:240
+55:#1  0xc055fd9b in boot (howto=260) at /usr/src/sys/kern/kern_shutdown.c:372
+56:#2  0xc056019d in panic () at /usr/src/sys/kern/kern_shutdown.c:550
+57:#3  0xc0567ef5 in mi_switch () at /usr/src/sys/kern/kern_synch.c:470
+58:#4  0xc055fa87 in boot (howto=256) at /usr/src/sys/kern/kern_shutdown.c:312
+59:#5  0xc056019d in panic () at /usr/src/sys/kern/kern_shutdown.c:550
+60:#6  0xc0720c66 in trap_fatal (frame=0xdc1d0b30, eva=0)
+61:    at /usr/src/sys/i386/i386/trap.c:821
+62:#7  0xc07202b3 in trap (frame=
+63:      {tf_fs = -1065484264, tf_es = -1065484272, tf_ds = -1065484272, tf_edi = 1, tf_esi = 0, tf_ebp = -602076292, tf_isp = -602076324, tf_ebx = 0, tf_edx = 0, tf_ecx = 1000000, tf_eax = 243, tf_trapno = 12, tf_err = 0, tf_eip = -1066321824, tf_cs = 8, tf_eflags = 65671, tf_esp = 243, tf_ss = 0})
+64:    at /usr/src/sys/i386/i386/trap.c:250
+65:#8  0xc070c9f8 in calltrap () at {standard input}:94
+66:#9  0xc07139f3 in lapic_ipi_vectored (vector=0, dest=0)
+67:    at /usr/src/sys/i386/i386/local_apic.c:733
+68:#10 0xc0718b23 in ipi_selected (cpus=1, ipi=1)
+69:    at /usr/src/sys/i386/i386/mp_machdep.c:1115
+70:#11 0xc057473e in kseq_notify (ke=0xcc05e360, cpu=0)
+71:    at /usr/src/sys/kern/sched_ule.c:520
+72:#12 0xc0575cad in sched_add (td=0xcbcf5c80)
+73:    at /usr/src/sys/kern/sched_ule.c:1366
+74:#13 0xc05666c6 in setrunqueue (td=0xcc05e360)
+75:    at /usr/src/sys/kern/kern_switch.c:422
+76:#14 0xc05752f4 in sched_wakeup (td=0xcbcf5c80)
+77:    at /usr/src/sys/kern/sched_ule.c:999
+78:#15 0xc056816c in setrunnable (td=0xcbcf5c80)
+79:    at /usr/src/sys/kern/kern_synch.c:570
+80:#16 0xc0567d53 in wakeup (ident=0xcbcf5c80)
+81:    at /usr/src/sys/kern/kern_synch.c:411
+82:#17 0xc05490a8 in exit1 (td=0xcbcf5b40, rv=0)
+83:    at /usr/src/sys/kern/kern_exit.c:509
+84:#18 0xc0548011 in sys_exit () at /usr/src/sys/kern/kern_exit.c:102
+85:#19 0xc0720fd0 in syscall (frame=
+86:      {tf_fs = 47, tf_es = 47, tf_ds = 47, tf_edi = 0, tf_esi = -1, tf_ebp = -1077940712, tf_isp = -602075788, tf_ebx = 672411944, tf_edx = 10, tf_ecx = 672411600, tf_eax = 1, tf_trapno = 12, tf_err = 2, tf_eip = 671899563, tf_cs = 31, tf_eflags = 642, tf_esp = -1077940740, tf_ss = 47})
+87:    at /usr/src/sys/i386/i386/trap.c:1010
+88:#20 0xc070ca4d in Xint0x80_syscall () at {standard input}:136
+89:---Can't read userspace from dump, or kernel process---
+90:(kgdb) quit
+....
+
+[TIP]
+====
+
+If your system is crashing regularly and you are running out of disk space, deleting old [.filename]#vmcore# files in [.filename]#/var/crash# could save a considerable amount of disk space!
+====
+
+[[kerneldebug-online-ddb]]
+== On-Line Kernel Debugging Using DDB
+
+While `kgdb` as an off-line debugger provides a very high level of user interface, there are some things it cannot do. The most important ones being breakpointing and single-stepping kernel code.
+
+If you need to do low-level debugging on your kernel, there is an on-line debugger available called DDB. It allows setting of breakpoints, single-stepping kernel functions, examining and changing kernel variables, etc. However, it cannot access kernel source files, and only has access to the global and static symbols, not to the full debug information like `kgdb` does.
+
+To configure your kernel to include DDB, add the options 
+[.programlisting]
+....
+options KDB
+....
+
+[.programlisting]
+....
+options DDB
+....
+
+to your config file, and rebuild. (See link:{handbook}/[The FreeBSD Handbook] for details on configuring the FreeBSD kernel).
+
+Once your DDB kernel is running, there are several ways to enter DDB. The first, and earliest way is to use the boot flag `-d`. The kernel will start up in debug mode and enter DDB prior to any device probing. Hence you can even debug the device probe/attach functions. To use this, exit the loader's boot menu and enter `boot -d` at the loader prompt.
+
+The second scenario is to drop to the debugger once the system has booted. There are two simple ways to accomplish this. If you would like to break to the debugger from the command prompt, simply type the command:
+
+[source,bash]
+....
+# sysctl debug.kdb.enter=1
+....
+
+Alternatively, if you are at the system console, you may use a hot-key on the keyboard. The default break-to-debugger sequence is kbd:[Ctrl+Alt+ESC]. For syscons, this sequence can be remapped and some of the distributed maps out there do this, so check to make sure you know the right sequence to use. There is an option available for serial consoles that allows the use of a serial line BREAK on the console line to enter DDB (`options BREAK_TO_DEBUGGER` in the kernel config file). It is not the default since there are a lot of serial adapters around that gratuitously generate a BREAK condition, for example when pulling the cable.
+
+The third way is that any panic condition will branch to DDB if the kernel is configured to use it. For this reason, it is not wise to configure a kernel with DDB for a machine running unattended.
+
+To obtain the unattended functionality, add:
+
+[.programlisting]
+....
+options	KDB_UNATTENDED
+....
+
+to the kernel configuration file and rebuild/reinstall.
+
+The DDB commands roughly resemble some `gdb` commands. The first thing you probably need to do is to set a breakpoint:
+
+[source,bash]
+....
+ break function-name address
+....
+
+Numbers are taken hexadecimal by default, but to make them distinct from symbol names; hexadecimal numbers starting with the letters `a-f` need to be preceded with `0x` (this is optional for other numbers). Simple expressions are allowed, for example: `function-name + 0x103`.
+
+To exit the debugger and continue execution, type:
+
+[source,bash]
+....
+ continue
+....
+
+To get a stack trace of the current thread, use:
+
+[source,bash]
+....
+ trace
+....
+
+To get a stack trace of an arbitrary thread, specify a process ID or thread ID as a second argument to `trace`.
+
+If you want to remove a breakpoint, use
+
+[source,bash]
+....
+ del
+ del address-expression
+....
+
+The first form will be accepted immediately after a breakpoint hit, and deletes the current breakpoint. The second form can remove any breakpoint, but you need to specify the exact address; this can be obtained from:
+
+[source,bash]
+....
+ show b
+....
+
+or:
+
+[source,bash]
+....
+ show break
+....
+
+To single-step the kernel, try:
+
+[source,bash]
+....
+ s
+....
+
+This will step into functions, but you can make DDB trace them until the matching return statement is reached by:
+
+[source,bash]
+....
+ n
+....
+
+[NOTE]
+====
+This is different from ``gdb``'s `next` statement; it is like ``gdb``'s `finish`. Pressing kbd:[n] more than once will cause a continue.
+====
+
+To examine data from memory, use (for example): 
+
+[source,bash]
+....
+ x/wx 0xf0133fe0,40
+ x/hd db_symtab_space
+ x/bc termbuf,10
+ x/s stringbuf
+....
+
+for word/halfword/byte access, and hexadecimal/decimal/character/ string display. The number after the comma is the object count. To display the next 0x10 items, simply use:
+
+[source,bash]
+....
+ x ,10
+....
+
+Similarly, use 
+
+[source,bash]
+....
+ x/ia foofunc,10
+....
+
+to disassemble the first 0x10 instructions of `foofunc`, and display them along with their offset from the beginning of `foofunc`.
+
+To modify memory, use the write command:
+
+[source,bash]
+....
+ w/b termbuf 0xa 0xb 0
+ w/w 0xf0010030 0 0
+....
+
+The command modifier (`b`/`h`/`w`) specifies the size of the data to be written, the first following expression is the address to write to and the remainder is interpreted as data to write to successive memory locations.
+
+If you need to know the current registers, use:
+
+[source,bash]
+....
+ show reg
+....
+
+Alternatively, you can display a single register value by e.g. 
+
+[source,bash]
+....
+ p $eax
+....
+
+and modify it by:
+
+[source,bash]
+....
+ set $eax new-value
+....
+
+Should you need to call some kernel functions from DDB, simply say:
+
+[source,bash]
+....
+ call func(arg1, arg2, ...)
+....
+
+The return value will be printed.
+
+For a man:ps[1] style summary of all running processes, use:
+
+[source,bash]
+....
+ ps
+....
+
+Now you have examined why your kernel failed, and you wish to reboot. Remember that, depending on the severity of previous malfunctioning, not all parts of the kernel might still be working as expected. Perform one of the following actions to shut down and reboot your system:
+
+[source,bash]
+....
+ panic
+....
+
+This will cause your kernel to dump core and reboot, so you can later analyze the core on a higher level with man:kgdb[1].
+
+[source,bash]
+....
+ call boot(0)
+....
+
+Might be a good way to cleanly shut down the running system, `sync()` all disks, and finally, in some cases, reboot. As long as the disk and filesystem interfaces of the kernel are not damaged, this could be a good way for an almost clean shutdown.
+
+[source,bash]
+....
+ reset
+....
+
+This is the final way out of disaster and almost the same as hitting the Big Red Button.
+
+If you need a short command summary, simply type:
+
+[source,bash]
+....
+ help
+....
+
+It is highly recommended to have a printed copy of the man:ddb[4] manual page ready for a debugging session. Remember that it is hard to read the on-line manual while single-stepping the kernel.
+
+[[kerneldebug-online-gdb]]
+== On-Line Kernel Debugging Using Remote GDB
+
+This feature has been supported since FreeBSD 2.2, and it is actually a very neat one.
+
+GDB has already supported _remote debugging_ for a long time. This is done using a very simple protocol along a serial line. Unlike the other methods described above, you will need two machines for doing this. One is the host providing the debugging environment, including all the sources, and a copy of the kernel binary with all the symbols in it, and the other one is the target machine that simply runs a similar copy of the very same kernel (but stripped of the debugging information).
+
+You should configure the kernel in question with `config -g` if building the "traditional" way. If building the "new" way, make sure that `makeoptions DEBUG=-g` is in the configuration. In both cases, include `DDB` in the configuration, and compile it as usual. This gives a large binary, due to the debugging information. Copy this kernel to the target machine, strip the debugging symbols off with `strip -x`, and boot it using the `-d` boot option. Connect the serial line of the target machine that has "flags 080" set on its uart device to any serial line of the debugging host. See man:uart[4] for information on how to set the flags on an uart device. Now, on the debugging machine, go to the compile directory of the target kernel, and start `gdb`:
+
+[source,bash]
+....
+% kgdb kernel
+GDB is free software and you are welcome to distribute copies of it
+ under certain conditions; type "show copying" to see the conditions.
+There is absolutely no warranty for GDB; type "show warranty" for details.
+GDB 4.16 (i386-unknown-freebsd),
+Copyright 1996 Free Software Foundation, Inc...
+(kgdb) 
+....
+
+Initialize the remote debugging session (assuming the first serial port is being used) by:
+
+[source,bash]
+....
+(kgdb) target remote /dev/cuau0
+....
+
+Now, on the target host (the one that entered DDB right before even starting the device probe), type:
+
+[source,bash]
+....
+Debugger("Boot flags requested debugger")
+Stopped at Debugger+0x35: movb	$0, edata+0x51bc
+db> gdb
+....
+
+DDB will respond with:
+
+[source,bash]
+....
+Next trap will enter GDB remote protocol mode
+....
+
+Every time you type `gdb`, the mode will be toggled between remote GDB and local DDB. In order to force a next trap immediately, simply type `s` (step). Your hosting GDB will now gain control over the target kernel:
+
+[source,bash]
+....
+Remote debugging using /dev/cuau0
+Debugger (msg=0xf01b0383 "Boot flags requested debugger")
+    at ../../i386/i386/db_interface.c:257
+(kgdb)
+....
+
+You can use this session almost as any other GDB session, including full access to the source, running it in gud-mode inside an Emacs window (which gives you an automatic source code display in another Emacs window), etc.
+
+[[kerneldebug-console]]
+== Debugging a Console Driver
+
+Since you need a console driver to run DDB on, things are more complicated if the console driver itself is failing. You might remember the use of a serial console (either with modified boot blocks, or by specifying `-h` at the `Boot:` prompt), and hook up a standard terminal onto your first serial port. DDB works on any configured console driver, including a serial console.
+
+[[kerneldebug-deadlocks]]
+== Debugging Deadlocks
+
+You may experience so called deadlocks, a situation where a system stops doing useful work. To provide a helpful bug report in this situation, use man:ddb[4] as described in the previous section. Include the output of `ps` and `trace` for suspected processes in the report.
+
+If possible, consider doing further investigation. The recipe below is especially useful if you suspect that a deadlock occurs in the VFS layer. Add these options to the kernel configuration file.
+
+[.programlisting]
+....
+makeoptions 	DEBUG=-g
+options 	INVARIANTS
+options 	INVARIANT_SUPPORT
+options 	WITNESS
+options 	WITNESS_SKIPSPIN
+options 	DEBUG_LOCKS
+options 	DEBUG_VFS_LOCKS
+options 	DIAGNOSTIC
+....
+
+When a deadlock occurs, in addition to the output of the `ps` command, provide information from the `show pcpu`, `show allpcpu`, `show locks`, `show alllocks`, `show lockedvnods` and `alltrace`.
+
+To obtain meaningful backtraces for threaded processes, use `thread thread-id` to switch to the thread stack, and do a backtrace with `where`.
+
+[[kerneldebug-dcons]]
+== Kernel debugging with Dcons
+
+man:dcons[4] is a very simple console driver that is not directly connected with any physical devices. It just reads and writes characters from and to a buffer in a kernel or loader. Due to its simple nature, it is very useful for kernel debugging, especially with a FireWire(R) device. Currently, FreeBSD provides two ways to interact with the buffer from outside of the kernel using man:dconschat[8].
+
+=== Dcons over FireWire(R)
+
+Most FireWire(R) (IEEE1394) host controllers are based on the OHCI specification that supports physical access to the host memory. This means that once the host controller is initialized, we can access the host memory without the help of software (kernel). We can exploit this facility for interaction with man:dcons[4]. man:dcons[4] provides similar functionality as a serial console. It emulates two serial ports, one for the console and DDB, the other for GDB. Because remote memory access is fully handled by the hardware, the man:dcons[4] buffer is accessible even when the system crashes.
+
+FireWire(R) devices are not limited to those integrated into motherboards. PCI cards exist for desktops, and a cardbus interface can be purchased for laptops.
+
+==== Enabling FireWire(R) and Dcons support on the target machine
+
+To enable FireWire(R) and Dcons support in the kernel of the _target machine_:
+
+* Make sure your kernel supports `dcons`, `dcons_crom` and `firewire`. `Dcons` should be statically linked with the kernel. For `dcons_crom` and `firewire`, modules should be OK.
+* Make sure physical DMA is enabled. You may need to add `hw.firewire.phydma_enable=1` to [.filename]#/boot/loader.conf#.
+* Add options for debugging.
+* Add `dcons_gdb=1` in [.filename]#/boot/loader.conf# if you use GDB over FireWire(R).
+* Enable `dcons` in [.filename]#/etc/ttys#.
+* Optionally, to force `dcons` to be the high-level console, add `hw.firewire.dcons_crom.force_console=1` to [.filename]#loader.conf#.
+
+To enable FireWire(R) and Dcons support in man:loader[8] on i386 or amd64:
+
+Add `LOADER_FIREWIRE_SUPPORT=YES` in [.filename]#/etc/make.conf# and rebuild man:loader[8]:
+
+[source,bash]
+....
+# cd /sys/boot/i386 && make clean && make && make install
+....
+
+To enable man:dcons[4] as an active low-level console, add `boot_multicons="YES"` to [.filename]#/boot/loader.conf#.
+
+Here are a few configuration examples. A sample kernel configuration file would contain:
+
+[source,bash]
+....
+device dcons
+device dcons_crom
+options KDB
+options DDB
+options GDB
+options ALT_BREAK_TO_DEBUGGER
+....
+
+And a sample [.filename]#/boot/loader.conf# would contain:
+
+[source,bash]
+....
+dcons_crom_load="YES"
+dcons_gdb=1
+boot_multicons="YES"
+hw.firewire.phydma_enable=1
+hw.firewire.dcons_crom.force_console=1
+....
+
+==== Enabling FireWire(R) and Dcons support on the host machine
+
+To enable FireWire(R) support in the kernel on the _host machine_:
+
+[source,bash]
+....
+# kldload firewire
+....
+
+Find out the EUI64 (the unique 64 bit identifier) of the FireWire(R) host controller, and use man:fwcontrol[8] or `dmesg` to find the EUI64 of the target machine.
+
+Run man:dconschat[8], with:
+
+[source,bash]
+....
+# dconschat -e \# -br -G 12345 -t 00-11-22-33-44-55-66-77
+....
+
+The following key combinations can be used once man:dconschat[8] is running:
+
+[.informaltable]
+[cols="1,1"]
+|===
+
+|kbd:[~+.]
+|Disconnect
+
+|kbd:[~]
+|ALT BREAK
+
+|kbd:[~]
+|RESET target
+
+|kbd:[~]
+|Suspend dconschat
+|===
+
+Attach remote GDB by starting man:kgdb[1] with a remote debugging session:
+
+[source,bash]
+....
+ kgdb -r :12345 kernel
+....
+
+==== Some general tips
+
+Here are some general tips:
+
+To take full advantage of the speed of FireWire(R), disable other slow console drivers:
+
+[source,bash]
+....
+# conscontrol delete ttyd0	     # serial console
+# conscontrol delete consolectl	# video/keyboard
+....
+
+There exists a GDB mode for man:emacs[1]; this is what you will need to add to your [.filename]#.emacs#:
+
+[source,bash]
+....
+(setq gud-gdba-command-name "kgdb -a -a -a -r :12345")
+(setq gdb-many-windows t)
+(xterm-mouse-mode 1)
+M-x gdba
+....
+
+And for DDD ([.filename]#devel/ddd#):
+
+[source,bash]
+....
+# remote serial protocol
+LANG=C ddd --debugger kgdb -r :12345 kernel
+# live core debug
+LANG=C ddd --debugger kgdb kernel /dev/fwmem0.2
+....
+
+=== Dcons with KVM
+
+We can directly read the man:dcons[4] buffer via [.filename]#/dev/mem# for live systems, and in the core dump for crashed systems. These give you similar output to `dmesg -a`, but the man:dcons[4] buffer includes more information.
+
+==== Using Dcons with KVM
+
+To use man:dcons[4] with KVM:
+
+Dump a man:dcons[4] buffer of a live system:
+
+[source,bash]
+....
+# dconschat -1
+....
+
+Dump a man:dcons[4] buffer of a crash dump:
+
+[source,bash]
+....
+# dconschat -1 -M vmcore.XX
+....
+
+Live core debugging can be done via:
+
+[source,bash]
+....
+# fwcontrol -m target_eui64
+# kgdb kernel /dev/fwmem0.2
+....
+
+[[kerneldebug-options]]
+== Glossary of Kernel Options for Debugging
+
+This section provides a brief glossary of compile-time kernel options used for debugging:
+
+* `options KDB`: compiles in the kernel debugger framework. Required for `options DDB` and `options GDB`. Little or no performance overhead. By default, the debugger will be entered on panic instead of an automatic reboot.
+* `options KDB_UNATTENDED`: change the default value of the `debug.debugger_on_panic` sysctl to 0, which controls whether the debugger is entered on panic. When `options KDB` is not compiled into the kernel, the behavior is to automatically reboot on panic; when it is compiled into the kernel, the default behavior is to drop into the debugger unless `options KDB_UNATTENDED` is compiled in. If you want to leave the kernel debugger compiled into the kernel but want the system to come back up unless you're on-hand to use the debugger for diagnostics, use this option.
+* `options KDB_TRACE`: change the default value of the `debug.trace_on_panic` sysctl to 1, which controls whether the debugger automatically prints a stack trace on panic. Especially if running with `options KDB_UNATTENDED`, this can be helpful to gather basic debugging information on the serial or firewire console while still rebooting to recover.
+* `options DDB`: compile in support for the console debugger, DDB. This interactive debugger runs on whatever the active low-level console of the system is, which includes the video console, serial console, or firewire console. It provides basic integrated debugging facilities, such as stack tracing, process and thread listing, dumping of lock state, VM state, file system state, and kernel memory management. DDB does not require software running on a second machine or being able to generate a core dump or full debugging kernel symbols, and provides detailed diagnostics of the kernel at run-time. Many bugs can be fully diagnosed using only DDB output. This option depends on `options KDB`.
+* `options GDB`: compile in support for the remote debugger, GDB, which can operate over serial cable or firewire. When the debugger is entered, GDB may be attached to inspect structure contents, generate stack traces, etc. Some kernel state is more awkward to access than in DDB, which is able to generate useful summaries of kernel state automatically, such as automatically walking lock debugging or kernel memory management structures, and a second machine running the debugger is required. On the other hand, GDB combines information from the kernel source and full debugging symbols, and is aware of full data structure definitions, local variables, and is scriptable. This option is not required to run GDB on a kernel core dump. This option depends on `options KDB`. 
+* `options BREAK_TO_DEBUGGER`, `options ALT_BREAK_TO_DEBUGGER`: allow a break signal or alternative signal on the console to enter the debugger. If the system hangs without a panic, this is a useful way to reach the debugger. Due to the current kernel locking, a break signal generated on a serial console is significantly more reliable at getting into the debugger, and is generally recommended. This option has little or no performance impact.
+* `options INVARIANTS`: compile into the kernel a large number of run-time assertion checks and tests, which constantly test the integrity of kernel data structures and the invariants of kernel algorithms. These tests can be expensive, so are not compiled in by default, but help provide useful "fail stop" behavior, in which certain classes of undesired behavior enter the debugger before kernel data corruption occurs, making them easier to debug. Tests include memory scrubbing and use-after-free testing, which is one of the more significant sources of overhead. This option depends on `options INVARIANT_SUPPORT`. 
+* `options INVARIANT_SUPPORT`: many of the tests present in `options INVARIANTS` require modified data structures or additional kernel symbols to be defined.
+* `options WITNESS`: this option enables run-time lock order tracking and verification, and is an invaluable tool for deadlock diagnosis. WITNESS maintains a graph of acquired lock orders by lock type, and checks the graph at each acquire for cycles (implicit or explicit). If a cycle is detected, a warning and stack trace are generated to the console, indicating that a potential deadlock might have occurred. WITNESS is required in order to use the `show locks`, `show witness` and `show alllocks` DDB commands. This debug option has significant performance overhead, which may be somewhat mitigated through the use of `options WITNESS_SKIPSPIN`. Detailed documentation may be found in man:witness[4].
+* `options WITNESS_SKIPSPIN`: disable run-time checking of spinlock lock order with WITNESS. As spin locks are acquired most frequently in the scheduler, and scheduler events occur often, this option can significantly speed up systems running with WITNESS. This option depends on `options WITNESS`.
+* `options WITNESS_KDB`: change the default value of the `debug.witness.kdb` sysctl to 1, which causes WITNESS to enter the debugger when a lock order violation is detected, rather than simply printing a warning. This option depends on `options WITNESS`.
+* `options SOCKBUF_DEBUG`: perform extensive run-time consistency checking on socket buffers, which can be useful for debugging both socket bugs and race conditions in protocols and device drivers that interact with sockets. This option significantly impacts network performance, and may change the timing in device driver races.
+* `options DEBUG_VFS_LOCKS`: track lock acquisition points for lockmgr/vnode locks, expanding the amount of information displayed by `show lockedvnods` in DDB. This option has a measurable performance impact.
+* `options DEBUG_MEMGUARD`: a replacement for the man:malloc[9] kernel memory allocator that uses the VM system to detect reads or writes from allocated memory after free. Details may be found in man:memguard[9]. This option has a significant performance impact, but can be very helpful in debugging kernel memory corruption bugs.
+* `options DIAGNOSTIC`: enable additional, more expensive diagnostic tests along the lines of `options INVARIANTS`.

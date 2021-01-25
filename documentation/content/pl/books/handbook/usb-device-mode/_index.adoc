@@ -1,0 +1,264 @@
+---
+title: Rozdział 26. USB Device Mode / USB OTG
+part: Część III. Administracja systemem
+prev: books/handbook/dtrace
+next: books/handbook/partiv
+---
+
+[[usb-device-mode]]
+= USB Device Mode / USB OTG
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Spis treści
+:table-caption: Tabela
+:figure-caption: Rysunek
+:example-caption: Przykład
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 26
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/usb-device-mode/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/usb-device-mode/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/usb-device-mode/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pl/mailing-lists.adoc[]
+include::shared/pl/urls.adoc[]
+include::shared/pl/teams.adoc[]
+
+toc::[]
+
+[[usb-device-mode-synopsis]]
+== Synopsis
+
+This chapter covers the use of USB Device Mode and USB On The Go (USB OTG) in FreeBSD. This includes virtual serial consoles, virtual network interfaces, and virtual USB drives.
+
+When running on hardware that supports USB device mode or USB OTG, like that built into many embedded boards, the FreeBSD USB stack can run in _device mode_. Device mode makes it possible for the computer to present itself as different kinds of USB device classes, including serial ports, network adapters, and mass storage, or a combination thereof. A USB host like a laptop or desktop computer is able to access them just like physical USB devices. Device mode is sometimes called the "USB gadget mode".
+
+There are two basic ways the hardware can provide the device mode functionality: with a separate "client port", which only supports the device mode, and with a USB OTG port, which can provide both device and host mode. For USB OTG ports, the USB stack switches between host-side and device-side automatically, depending on what is connected to the port. Connecting a USB device like a memory stick to the port causes FreeBSD to switch to host mode. Connecting a USB host like a computer causes FreeBSD to switch to device mode. Single purpose "client ports" always work in device mode.
+
+What FreeBSD presents to the USB host depends on the `hw.usb.template` sysctl. Some templates provide a single device, such as a serial terminal; others provide multiple ones, which can all be used at the same time. An example is the template 10, which provides a mass storage device, a serial console, and a network interface. See man:usb_template[4] for the list of available values.
+
+Note that in some cases, depending on the hardware and the hosts operating system, for the host to notice the configuration change, it must be either physically disconnected and reconnected, or forced to rescan the USB bus in a system-specific way. When FreeBSD is running on the host, man:usbconfig[8] `reset` can be used. This also must be done after loading [.filename]#usb_template.ko# if the USB host was already connected to the USBOTG socket.
+
+After reading this chapter, you will know:
+
+* How to set up USB Device Mode functionality on FreeBSD.
+* How to configure the virtual serial port on FreeBSD.
+* How to connect to the virtual serial port from various operating systems.
+* How to configure FreeBSD to provide a virtual USB network interface.
+* How to configure FreeBSD to provide a virtual USB storage device.
+
+[[usb-device-mode-terminals]]
+== USB Virtual Serial Ports
+
+=== Configuring USB Device Mode Serial Ports
+
+Virtual serial port support is provided by templates number 3, 8, and 10. Note that template 3 works with Microsoft Windows 10 without the need for special drivers and INF files. Other host operating systems work with all three templates. Both man:usb_template[4] and man:umodem[4] kernel modules must be loaded.
+
+To enable USB device mode serial ports, add those lines to [.filename]#/etc/ttys#:
+
+[source,bash]
+....
+ttyU0	"/usr/libexec/getty 3wire"	vt100	onifconsole secure
+ttyU1	"/usr/libexec/getty 3wire"	vt100	onifconsole secure
+....
+
+Then add these lines to [.filename]#/etc/devd.conf#:
+
+[source,bash]
+....
+notify 100 {
+	match "system"		"DEVFS";
+	match "subsystem"	"CDEV";
+	match "type"		"CREATE";
+	match "cdev"		"ttyU[0-9]+";
+	action "/sbin/init q";
+};
+....
+
+Reload the configuration if man:devd[8] is already running:
+
+[source,bash]
+....
+# service devd restart
+....
+
+Make sure the necessary modules are loaded and the correct template is set at boot by adding those lines to [.filename]#/boot/loader.conf#, creating it if it does not already exist:
+
+[source,bash]
+....
+umodem_load="YES"
+hw.usb.template=3
+....
+
+To load the module and set the template without rebooting use:
+
+[source,bash]
+....
+# kldload umodem
+# sysctl hw.usb.template=3
+....
+
+=== Connecting to USB Device Mode Serial Ports from FreeBSD
+
+To connect to a board configured to provide USB device mode serial ports, connect the USB host, such as a laptop, to the boards USB OTG or USB client port. Use `pstat -t` on the host to list the terminal lines. Near the end of the list you should see a USB serial port, eg "ttyU0". To open the connection, use:
+
+[source,bash]
+....
+# cu -l /dev/ttyU0
+....
+
+After pressing the Enter key a few times you will see a login prompt.
+
+=== Connecting to USB Device Mode Serial Ports from macOS
+
+To connect to a board configured to provide USB device mode serial ports, connect the USB host, such as a laptop, to the boards USB OTG or USB client port. To open the connection, use:
+
+[source,bash]
+....
+# cu -l /dev/cu.usbmodemFreeBSD1
+....
+
+=== Connecting to USB Device Mode Serial Ports from Linux
+
+To connect to a board configured to provide USB device mode serial ports, connect the USB host, such as a laptop, to the boards USB OTG or USB client port. To open the connection, use:
+
+[source,bash]
+....
+# minicom -D /dev/ttyACM0
+....
+
+=== Connecting to USB Device Mode Serial Ports from Microsoft Windows 10
+
+To connect to a board configured to provide USB device mode serial ports, connect the USB host, such as a laptop, to the boards USB OTG or USB client port. To open a connection you will need a serial terminal program, such as PuTTY. To check the COM port name used by Windows, run Device Manager, expand "Ports (COM & LPT)". You will see a name similar to "USB Serial Device (COM4)". Run serial terminal program of your choice, for example PuTTY. In the PuTTY dialog set "Connection type" to "Serial", type the COMx obtained from Device Manager in the "Serial line" dialog box and click Open.
+
+[[usb-device-mode-network]]
+== USB Device Mode Network Interfaces
+
+Virtual network interfaces support is provided by templates number 1, 8, and 10. Note that none of them works with Microsoft Windows. Other host operating systems work with all three templates. Both man:usb_template[4] and man:if_cdce[4] kernel modules must be loaded.
+
+Make sure the necessary modules are loaded and the correct template is set at boot by adding those lines to [.filename]#/boot/loader.conf#, creating it if it does not already exist:
+
+[source,bash]
+....
+if_cdce_load="YES"
+hw.usb.template=1
+....
+
+To load the module and set the template without rebooting use:
+
+[source,bash]
+....
+# kldload if_cdce
+# sysctl hw.usb.template=1
+....
+
+[[usb-device-mode-storage]]
+== USB Virtual Storage Device
+
+[NOTE]
+====
+The man:cfumass[4] driver is a USB device mode driver first available in FreeBSD 12.0.
+====
+
+Mass Storage target is provided by templates 0 and 10. Both man:usb_template[4] and man:cfumass[4] kernel modules must be loaded. man:cfumass[4] interfaces to the CTL subsystem, the same one that is used for iSCSI or Fibre Channel targets. On the host side, USB Mass Storage initiators can only access a single LUN, LUN 0.
+
+=== Configuring USB Mass Storage Target Using the cfumass Startup Script
+
+The simplest way to set up a read-only USB storage target is to use the [.filename]#cfumass# rc script. To configure it this way, copy the files to be presented to the USB host machine into the `/var/cfumass` directory, and add this line to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+cfumass_enable="YES"
+....
+
+To configure the target without restarting, run this command:
+
+[source,bash]
+....
+# service cfumass start
+....
+
+Differently from serial and network functionality, the template should not be set to 0 or 10 in [.filename]#/boot/loader.conf#. This is because the LUN must be set up before setting the template. The cfumass startup script sets the correct template number automatically when started.
+
+=== Configuring USB Mass Storage Using Other Means
+
+The rest of this chapter provides detailed description of setting the target without using the cfumass rc file. This is necessary if eg one wants to provide a writeable LUN.
+
+USB Mass Storage does not require the man:ctld[8] daemon to be running, although it can be used if desired. This is different from iSCSI. Thus, there are two ways to configure the target: man:ctladm[8], or man:ctld[8]. Both require the [.filename]#cfumass.ko# kernel module to be loaded. The module can be loaded manually:
+
+[source,bash]
+....
+# kldload cfumass
+....
+
+If [.filename]#cfumass.ko# has not been built into the kernel, [.filename]#/boot/loader.conf# can be set to load the module at boot:
+
+[.programlisting]
+....
+cfumass_load="YES"
+....
+
+A LUN can be created without the man:ctld[8] daemon:
+
+[source,bash]
+....
+# ctladm create -b block -o file=/data/target0
+....
+
+This presents the contents of the image file [.filename]#/data/target0# as a LUN to the USB host. The file must exist before executing the command. To configure the LUN at system startup, add the command to [.filename]#/etc/rc.local#.
+
+man:ctld[8] can also be used to manage LUNs. Create [.filename]#/etc/ctl.conf#, add a line to [.filename]#/etc/rc.conf# to make sure man:ctld[8] is automatically started at boot, and then start the daemon.
+
+This is an example of a simple [.filename]#/etc/ctl.conf# configuration file. Refer to man:ctl.conf[5] for a more complete description of the options.
+
+[.programlisting]
+....
+target naa.50015178f369f092 {
+	lun 0 {
+		path /data/target0
+		size 4G
+	}
+}
+....
+
+The example creates a single target with a single LUN. The `naa.50015178f369f092` is a device identifier composed of 32 random hexadecimal digits. The `path` line defines the full path to a file or zvol backing the LUN. That file must exist before starting man:ctld[8]. The second line is optional and specifies the size of the LUN.
+
+To make sure the man:ctld[8] daemon is started at boot, add this line to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ctld_enable="YES"
+....
+
+To start man:ctld[8] now, run this command:
+
+[source,bash]
+....
+# service ctld start
+....
+
+As the man:ctld[8] daemon is started, it reads [.filename]#/etc/ctl.conf#. If this file is edited after the daemon starts, reload the changes so they take effect immediately:
+
+[source,bash]
+....
+# service ctld reload
+....

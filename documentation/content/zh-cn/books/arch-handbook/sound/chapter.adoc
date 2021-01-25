@@ -1,0 +1,336 @@
+---
+title: 第 15 章 声音子系统
+prev: books/arch-handbook/newbus
+next: books/arch-handbook/pccard
+---
+
+[[oss]]
+= 声音子系统
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:part-signifier: 部分
+:appendix-caption: 附录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 15
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+[[oss-intro]]
+== 简介
+
+FreeBSD声音子系统清晰地将通用声音处理问题与设备特定的问题分离 开来。这使得更容易加入对新设备的支持。
+
+man:pcm[4]框架是声音子系统的中心部分。它主要实现下面的组件： 
+
+* 一个到数字化声音和混音器函数的系统调用接口（read, write, ioctls）。ioctl命令集合兼容老的__OSS__ 或__Voxware__接口，允许一般多媒体应用程序 不加修改地移植。
+* 处理声音数据的公共代码（格式转换，虚拟通道）。
+* 一个统一的软件接口，与硬件特定的音频接口模块接口 
+* 对某些通用硬件接口（ac97）或共享的硬件特定代码 （例如：ISA DMA例程）的额外支持。
+
+对特定声卡的支持是通过硬件特定的驱动程序来实现的，这些驱动程序 提供通道和混音器接口，插入到通用[.filename]##pcm##代码中。 
+
+本章中，术语[.filename]##pcm##将指声音驱动程序的 中心，通用部分，这是对比硬件特定的模块而言的。
+
+预期的驱动程序编写者当然希望从现有模块开始，并使用那些代码作为 最终参考。但是，由于声音代码十分简洁漂亮，这也基本上免除了注释。 本文档试图给出框架接口的一个概览，并回答改写现有代码时可能出现的 一些问题。
+
+作为另外的途径，或者说除了从一个可工作的范例开始的办法之外， 你可以从link:http://people.FreeBSD.org/\~cg/template.c[http://people.FreeBSD.org/~cg/template.c]找到一个注释过的 驱动程序模板。
+
+[[oss-files]]
+== 文件
+
+除[.filename]##/usr/src/sys/sys/soundcard.h##中的公共 ioctl接口定义外，所有的相关代码当前(FreeBSD 4.4)位于 [.filename]##/usr/src/sys/dev/sound/##。
+
+在[.filename]##/usr/src/sys/dev/sound/##下面， [.filename]##pcm/##目录中保存着中心代码， 而[.filename]##isa/##和[.filename]##pci/##目录中有 ISA和PCI板的驱动程序。
+
+[[pcm-probe-and-attach]]
+== 探测，连接等
+
+声音驱动程序使用与任何硬件驱动程序模块相同的方法探测和连接（设备）。 你可能希望浏览一下手册中<<isa-driver,ISA>>或<<pci,PCI>>章节的内容来获取更多信息。
+
+然而，声音驱动程序在某些方面又有些不同：
+
+* 他们将自己声明为[.filename]##pcm##类设备，带有一个 设备私有结构``struct snddev_info``：
++
+[.programlisting]
+....
+          static driver_t xxx_driver = {
+              "pcm",
+              xxx_methods,
+              sizeof(struct snddev_info)
+          };
+
+          DRIVER_MODULE(snd_xxxpci, pci, xxx_driver, pcm_devclass, 0, 0);
+          MODULE_DEPEND(snd_xxxpci, snd_pcm, PCM_MINVER, PCM_PREFVER,PCM_MAXVER);
+....
++ 
+大多数声音驱动程序需要存储关于其设备的附加私有信息。私有数据 结构通常在连接例程中分配。其地址通过调用 ``pcm_register()``和 ``mixer_init()``传递给 [.filename]##pcm##。后面[.filename]##pcm## 将此地址作为调用声音驱动程序接口时的参数传递回来。
+* 声音驱动程序的连接例程应当通过调用``mixer_init()``向[.filename]##pcm##声明它的MIXER或AC97 接口。对于MIXER接口，这会接着引起调用 <<xxxmixer-init,``xxxmixer_init()``>>。
+* 声音驱动程序的连接例程通过调用 ``pcm_register(dev, sc, nplay, nrec)`` 向[.filename]##pcm##声明其通用CHANNEL配置，其中 ``sc``是设备数据结构的地址， 在[.filename]##pcm##以后的调用中将会用到它， ``nplay``和``nrec``是播放和录音 通道的数目。
+* 声音驱动程序的连接例程通过调用 ``pcm_addchan()``声明它的每个通道对象。这会在 [.filename]##pcm##中建立起通道合成，并接着会引起调用 <<xxxchannel-init,``xxxchannel_init()``>> （译注：请参考原文）。
+* 声音驱动程序的分离例程在释放其资源之前应当调用 ``pcm_unregister()``。
+
+有两种可能的方法来处理非PnP设备：
+
+* 使用``device_identify()``方法 （范例：[.filename]##sound/isa/es1888.c##）。 ``device_identify()``方法在已知地址探测硬件， 如果发现支持的设备就会创建一个新的pcm设备，这个pcm设备接着 会被传递到probe/attach。
+* 使用定制内核配置的方法，为pcm设备设置适当的hints（范例： [.filename]#sound/isa/mss.c#）。
+
+[.filename]##pcm##驱动程序应当实现 ``device_suspend``， ``device_resume``和 ``device_shutdown``例程，这样电源管理和模块卸载就能 正确地发挥作用。
+
+[[oss-interfaces]]
+== 接口
+
+[.filename]##pcm##核心与声音驱动程序之间的接口以术语 <<kernel-objects,内核对象>>的叫法来定义。
+
+声音驱动程序通常提供两种主要的接口： __CHANNEL__以及 __MIXER__或__AC97__。
+
+__AC97__是一个很小的硬件访问（寄存器读/写） 接口，由驱动程序为带AC97编码解码器的硬件来实现。这种情况下，实际的 MIXER接口由[.filename]##pcm##中共享的AC97代码提供。 
+
+=== CHANNEL接口
+
+==== 函数参数的通常注意事项
+
+声音驱动程序通常用一个私有数据结构来描述他们的设备，驱动 程序所支持的播放和录音数据通道各有一个。
+
+对于所有的CHANNEL接口函数，第一个参数是一个不透明的指针。 
+
+第二个参数是指向私有的通道数据结构的指针， ``channel_init()``是个例外，它的指针指向私有 设备结构（并返回由[.filename]##pcm##以后使用的通道指针）。 
+
+==== 数据传输操作概览
+
+对于声音数据传输，[.filename]##pcm##核心与声音驱动 程序是通过一个由``struct snd_dbuf``描述的 共享内存区域进行通信的。
+
+``struct snd_dbuf``是 [.filename]##pcm##私有的，声音驱动程序通过调用访问者 函数（``sndbuf_getxxx()``）来获得感兴趣的值。 
+
+共享内存区域的大小等于 ``sndbuf_getsize()``，并被分割为大小固定，且等于 ``sndbuf_getblksz()``字节的很多块。
+
+当播放时，常规的传输机制如下（将意思反过来就是录音）： 
+
+* [.filename]##pcm##开始时填充缓冲区，然后以 参数PCMTRIG_START调用声音驱动程序的<<channel-trigger,``xxxchannel_trigger()``>> 。
+* 声音驱动程序接着安排以 ``sndbuf_getblksz()``字节大小为块，重复将 整个内存区域（``sndbuf_getbuf()``， ``sndbuf_getsize()``）传输到设备。对于每个 传输块回调[.filename]##pcm##函数 ``chn_intr()``（这通常在中断时间发生）。 
+* ``chn_intr()``安排将新数据拷贝到那些 数据已传输到设备（现在空闲）的区域，并对 ``snd_dbuf``结构进行适当的更新。
+
+[[xxxchannel-init]]
+==== channel_init
+
+调用``xxxchannel_init()``来初始化每个播放 和录音通道。这个调用从声音驱动程序的连接例程中发起。（参看 <<pcm-probe-and-attach,探测和连接>>一节）。
+
+[.programlisting]
+....
+          static void *
+          xxxchannel_init(kobj_t obj, void *data,
+             struct snd_dbuf *b, struct pcm_channel *c, int dir).
+          {
+              struct xxx_info *sc = data;
+              struct xxx_chinfo *ch;
+               ...
+              return ch;.
+           }
+....
+
+``b``为通道 ``struct snd_dbuf``的地址。它应当在 函数中通过调用``sndbuf_alloc()``来初始化。 所用的缓冲区大小通常是设备'典型'传输大小的一个较小的倍数。 ``c``为 [.filename]##pcm##通道控制结构的指针。这是个不透明 指针。函数应当将它保存到局部通道结构中，在后面调用 [.filename]##pcm##函数（例如： ``chn_intr(c)``）时会使用它。``dir``指示通道方向 （``PCMDIR_PLAY``或 ``PCMDIR_REC``）。
+函数应当返回一个指针，此指针指向用于控制此通道的私有 区域。它将作为参数被传递到对其他通道接口的调用。 
+
+==== channel_setformat
+
+``xxxchannel_setformat()``应当按特定通道， 特定声音格式设置硬件。
+
+[.programlisting]
+....
+          static int
+          xxxchannel_setformat(kobj_t obj, void *data, u_int32_t format).
+          {
+              struct xxx_chinfo *ch = data;
+               ...
+              return 0;
+           }
+....
+
+``format``为 ``AFMT_XXX value``值之一 （[.filename]#soundcard.h#）。
+
+==== channel_setspeed
+
+``xxxchannel_setspeed()``按指定的取样速度 设置通道硬件，并返回返回可能调整过的速度。
+
+[.programlisting]
+....
+          static int
+          xxxchannel_setspeed(kobj_t obj, void *data, u_int32_t speed)
+          {
+              struct xxx_chinfo *ch = data;
+               ...
+              return speed;
+           }
+....
+
+==== channel_setblocksize
+
+``xxxchannel_setblocksize()``设置块大小， 这是[.filename]##pcm##与声音驱动程序，以及声音驱动 程序与设备之间的传输单位的大小。传输期间，每次传输这样大小的 数据后，声音驱动程序都应当调用[.filename]##pcm##的 ``chn_intr()``。
+
+大多数驱动程序只注意这儿的块大小，因为当实际传输开始时应该 使用这个值。
+
+[.programlisting]
+....
+          static int
+          xxxchannel_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
+          {
+              struct xxx_chinfo *ch = data;
+                ...
+              return blocksize;.
+           }
+....
+
+函数返回可能调整过的块大小。如果块大小真的变化了， 这种情况下应当调用``sndbuf_resize()``调整 缓冲区的大小。
+
+[[channel-trigger]]
+==== channel_trigger
+
+``xxxchannel_trigger()``由 [.filename]##pcm##来控制驱动程序中的实际传输操作。 
+
+[.programlisting]
+....
+          static int
+          xxxchannel_trigger(kobj_t obj, void *data, int go).
+          {
+              struct xxx_chinfo *ch = data;
+               ...
+              return 0;
+           }
+....
+
+``go``定义当前调用的动作。可能的值为： 
+
+[NOTE]
+====
+如果驱动程序使用ISA DMA，则应当在设备上执行动作前 调用``sndbuf_isadma()``，并处理DMA芯片一方的 事情。
+====
+
+==== channel_getptr
+
+``xxxchannel_getptr()``返回传输缓冲区中 当前的缓冲。它通常由``chn_intr()``调用，而且 这也是为什么[.filename]##pcm##知道它应当往哪儿传送 新数据。
+
+==== channel_free
+
+调用``xxxchannel_free()``来释放通道资源， 例如当驱动程序卸载时，并且如果通道数据结构是动态分配的，或者 如果不使用``sndbuf_alloc()``进行缓冲区分配， 则应当实现这个函数。
+
+==== channel_getcaps
+
+[.programlisting]
+....
+          struct pcmchan_caps *
+          xxxchannel_getcaps(kobj_t obj, void *data)
+          {
+              return xxx_caps;.
+           }
+....
+
+这个例程返回指向（通常静态定义的） ``pcmchan_caps``结构的指针（在 [.filename]##sound/pcm/channel.h##中定义）。这个结构 保存着最小和最大采样频率和被接受的声音格式。任何声音驱动 程序都可以作为一个范例。
+
+==== 更多函数
+
+``channel_reset()``, ``channel_resetdone()``和 ``channel_notify()``用于特殊目的，未与权威人士 (Cameron Grant)进行探讨之前不应当在驱动程序中实现它。
+
+不赞成使用``channel_setdir()``.
+
+=== MIXER接口
+
+[[xxxmixer-init]]
+==== mixer_init
+
+``xxxmixer_init()``初始化硬件，并告诉 [.filename]##pcm##什么混音器设备可用来播放和录音。 
+
+[.programlisting]
+....
+          static int
+          xxxmixer_init(struct snd_mixer *m)
+          {
+              struct xxx_info   *sc = mix_getdevinfo(m);
+              u_int32_t v;
+
+              [初始化硬件]
+
+              [为播放混音器设置v中适当的位].
+              mix_setdevs(m, v);
+              [为录音混音器设置v中适当的位]
+              mix_setrecdevs(m, v)
+
+              return 0;
+          }
+....
+
+设置一个整数值中的位，并调用 ``mix_setdevs()``和 ``mix_setrecdevs()``来告诉 [.filename]##pcm##存在什么设备。
+
+混音器的位定义可以在[.filename]##soundcard.h##中 找到。（``SOUND_MASK_XXX``值和 ``SOUND_MIXER_XXX``移位）。
+
+==== mixer_set
+
+``xxxmixer_set()``为混音器设备设置音量级别 (level)。
+
+[.programlisting]
+....
+          static int
+          xxxmixer_set(struct snd_mixer *m, unsigned dev,
+                           unsigned left, unsigned right).
+          {
+              struct sc_info *sc = mix_getdevinfo(m);
+              [设置音量级别(level)]
+              return left | (right  8);.
+          }
+....
+
+设备被指定为 `SOUND_MIXER_XXX` 值在范围[0-100]之间指定音量值。零值应当让设备静音。
+由于硬件(音量)级别(level)可能不匹配输入比例，会出现 某些圆整，例程返回如上面所示的实际级别值（范围0-100内）。
+
+==== mixer_setrecsrc
+
+``xxxmixer_setrecsrc()``设定录音源设备。 
+
+[.programlisting]
+....
+          static int
+          xxxmixer_setrecsrc(struct snd_mixer *m, u_int32_t src).
+          {
+              struct xxx_info *sc = mix_getdevinfo(m);
+
+              [查看src中的非零位, 设置硬件]
+
+              [更新src反映实际动作]
+              return src;.
+           }
+....
+
+期望的录音设备由一个位域指定. 
+返回设置用来录音的实际设备。一些驱动程序只能设置一个 录音设备。如果出现错误，函数应当返回-1。
+
+==== mixer_uninit, mixer_reinit
+
+``xxxmixer_uninit()``应当确保不会发出任何 声音，并且如果可能则应当让混音器硬件断电。
+
+``xxxmixer_reinit()``应当确保混音器硬件 加电，并且恢复所有不受``mixer_set()``或 ``mixer_setrecsrc()``控制的设置。
+
+=== AC97接口
+
+__AC97__由带有AC97编码解码器的驱动程序实现。 它只有三个方法：
+
+* ``xxxac97_init()``返回找到的 ac97编码解码器的数目。
+* ``ac97_read()``与 ``ac97_write()``读写指定的寄存器。
+
+The __AC97__接口由 [.filename]##pcm##中的AC97代码来执行高层操作。参看 [.filename]##sound/pci/maestro3.c##或 [.filename]##sound/pci/##下很多其他内容作为范例。

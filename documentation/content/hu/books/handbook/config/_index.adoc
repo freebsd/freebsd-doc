@@ -1,0 +1,1410 @@
+---
+title: 11. Fejezet - Beállítás és finomhangolás
+part: III. Rész Rendszeradminisztráció
+prev: books/handbook/partiii
+next: books/handbook/boot
+---
+
+[[config-tuning]]
+= Beállítás és finomhangolás
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 11
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/config/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/config/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/config/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[config-synopsis]]
+== Áttekintés
+
+A FreeBSD egyik fontos szempontja a rendszer megfelelõ beállítása, aminek segítségével elkerülhetjük a késõbbi frissítések során keletkezõ kellemetlenségeket. Ez a fejezet a FreeBSD beállítási folyamatából kíván minél többet bemutatni, köztük a FreeBSD rendszerek finomhangolására szánt paramétereket.
+
+A fejezet elolvasása során megismerjük:
+
+* hogyan dolgozzunk hatékonyan az állományrendszerekkel és a lapozóállományokkal;
+* az [.filename]#rc.conf# beállításának alapjait és a [.filename]#/usr/local/etc/rc.d# könyvtárban található indítási rendszert;
+* hogyan állítsunk be és próbáljunk ki egy hálózati kártyát;
+* hogyan állítsunk be virtuális címeket a hálózati eszközeinken;
+* hogyan használjuk az [.filename]#/etc# könyvtárban megtalálható különféle konfigurációs állományokat;
+* hogyan hangoljuk a FreeBSD mûködését a `sysctl` változóinak segítségével;
+* hogyan hangoljuk a lemezek teljesítményét és módosítsuk a rendszermag korlátozásait.
+
+A fejezet elolvasásához ajánlott:
+
+* a UNIX(R) és a FreeBSD alapjainak megértése (crossref:basics[basics,A UNIX alapjai]);
+* a rendszermag beállításához és fordításához kötõdõ alapok ismerete (crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]).
+
+[[configtuning-initial]]
+== Kezdeti beállítások
+
+=== A partíciók kiosztása
+
+==== Alappartíciók
+
+Amikor a man:bsdlabel[8] vagy a man:sysinstall[8] segítségével állományrendszereket telepítünk, nem szabad figyelmen kívül hagynunk a tényt, hogy a merevlemezes egységekben a külsõ sávokból gyorsabban lehet hozzáférni az adatokhoz, mint a belsõkbõl. Emiatt a kisebb és gyakrabban elérni kívánt állományrendszereket a meghajtó lemezének külsejéhez közel kell létrehozni, míg például a [.filename]#/usr# partícióhoz hasonló nagyobb partíciókat annak belsõ része felé. A partíciókat a következõ sorrendben érdemes kialakítani: gyökér (rendszerindító), lapozóállomány, [.filename]#/var# és [.filename]#/usr#.
+
+A [.filename]#/var# méretének tükröznie kell a számítógép szándékolt használatát. A [.filename]#/var# partíción foglalnak helyet a felhasználók postaládái, a naplóállományok és a nyomtatási sorok. A postaládák és a naplóállományok egészen váratlan mértékben is képesek megnövekedni attól függõen, hogy mennyi felhasználónk van a rendszerben és hogy mekkora naplókat tartunk meg. Itt a legtöbb felhasználónak soha nem lesz szüksége egy gigabyte-nál több helyre.
+
+[NOTE]
+====
+Bizonyos esetekben a [.filename]#/var/tmp# könyvtárban azért ennél több tárterület szükségeltetik. Amikor a man:pkg_add[1] segítségével egy friss szoftvert telepítünk a rendszerünkre, akkor a program a [.filename]#/var/tmp# könyvtárba tömöríti ki a hozzá tartozó csomag tartalmát. Ezért a nagyobb szoftvercsomagok, mint például a Firefox vagy az OpenOffice esetén gondok merülhetnek fel, ha nem rendelkezünk elegendõ szabad területtel a [.filename]#/var/tmp# könyvtárban.
+====
+
+A [.filename]#/usr# partíció tartalmaz számos, a rendszer mûködéséhez elengedhetetlenül fontos állományt, többek közt a portok gyûjteményét (ajánlott, lásd man:ports[7]) és a forráskódot (választható). A portok és az alaprendszer forrásai telepítés során választhatóak, de telepítésük esetén akkor ezen a partíción legalább két gigabyte-nyi hely ajánlott.
+
+Vegyük figyelembe a tárbeli igényeket, amikor megválasztjuk a partíciók méretét. Igen kellemetlen lehet, amikor úgy futunk ki az egyik partíción a szabad helybõl, hogy a másikat alig használjuk.
+
+[NOTE]
+====
+Egyes felhasználók szerint elõfordulhat, hogy a man:sysinstall[8] `Auto-defaults` opciója a [.filename]#/var# és [.filename]#/# partíciók méretét túl kicsire választja. Particionáljunk okosan és nagylelkûen!
+====
+
+[[swap-design]]
+==== A lapozóállomány partíciója
+
+Általános szabály, hogy a lapozóállományt tároló partíció mérete legyen a rendszer fizikai memóriájának (RAM) kétszerese. Például, ha a számítógépünk 128 megabyte memóriával rendelkezik, akkor a lapozóállomány méretének 256 megabyte-nak kell lennie. Az ennél kevesebb memóriát maguknak tudó rendszerek több lapozóállománnyal jobban teljesítenek. 256 megabyte-nál kevesebb lapozóállományt semmiképpen sem ajánlunk, és inkább a fizikai memóriát érdemes bõvítenünk. A rendszermag virtuális memóriát kezelõ lapozási algoritmusait úgy állították be, hogy abban az esetben teljesítsenek a legjobban, ha a lapozóállomány mérete legalább kétszerese a központi memória mennyiségének. A túl kicsi lapozóállomány beállítása rontja a virtuális memória lapkeresésési rutinjának hatékonyságát és a memória bõvítése esetén még további gondokat is okozhat.
+
+A több SCSI-lemezzel (vagy a különbözõ vezérlõkre csatlakoztatott több IDE-lemezzel) bíró nagyobb rendszerek esetében érdemes minden egyes (de legfeljebb négy) meghajtóra beállítani lapozóállományt. A lapozóállományoknak közel azonos méretûnek kell lenniük. A rendszermag tetszõleges méretûeket képes kezelni, azonban a belsejében alkalmazott adatszerkezetek a legnagyobb lapozóállomány méretének négyszereséig képesek növekedni. Ha a lapozóállományokat nagyjából ugyanazon a méreten tartjuk, akkor a rendszermag képes lesz a lapozáshoz felhasznált területet optimálisan elosztani a lemezek között. A nagyobb lapozóállományok használata még akkor is jól jön, ha nem is használjuk annyira. Segítségével sokkal könnyebben talpra tudunk állni egy elszabadult program tombolásából, és nem kell rögtön újraindítanunk a rendszert.
+
+==== Miért particionáljunk?
+
+Egyes felhasználók úgy gondolják, hogy egyetlen nagyobb méretû partíció mindenre megfelel, ám ez a gondolat több okból is helytelennek tekinthetõ. Elõször is, minden egyes partíciónak eltér a mûködési jellemzõje, és különválasztásukkal lehetõvé válik az állományrendszerek megfelelõ behangolása. Például a rendszerindításhoz használt és a [.filename]#/usr# partíciókat többségében csak olvasásra használják, és nem sokat írnak rájuk. Eközben a [.filename]#/var# és [.filename]#/var/tmp# könyvtárakban zajlik az írások és olvasások túlnyomó része.
+
+A rendszer megfelelõ felosztásával a kisebb, intenzívebben írt partíciókon megjelenõ töredezettség nem szivárog át a többségében csak olvasásra használt partíciókra. Ha a sokat írt partíciókat közel tartjuk a lemez széléhez, akkor azokon a partíciókon növekszik az I/O teljesítménye, ahol az a leggyakrabban megjelenik. Mivel mostanság az I/O teljesítményére inkább a nagyobb partíciók esetén van szükség, azzal nem érünk el ebben különösebb mértékû növekedést, ha a [.filename]#/var# partíciót a lemez szélére toljuk. Befejezésképpen hozzátesszük, hogy ennek vannak biztonsági megfontolásai is. Egy kisebb és takarosabb rendszerindító partíció, ami többnyire írásvédett, nagyobb eséllyel él túl egy csúfos rendszerösszeomlást.
+
+[[configtuning-core-configuration]]
+== A mag beállítása
+
+A rendszer beállításaira vonatkozó információk központi lelõhelye az [.filename]#/etc/rc.conf# állomány. Ez az állomány tartalmazza a beállításokra vonatkozó adatok széles körét, amelyet elsõsorban a rendszer indulása során a rendszer beállítására használnak. Erre a neve is utal: ez az [.filename]#rc*# állományok konfigurációs állománya.
+
+A rendszergazda az [.filename]#rc.conf# állományban tudja felülbírálni az [.filename]#/etc/defaults/rc.conf# állományban szereplõ alapértelmezett beállításokat. Az alapértelmezéseket tartalmazó állományt nem szabad közvetlenül átmásolni az [.filename]#/etc# könyvtárba, hiszen alapértelmezett értékeket tartalmaz, nem pedig mintákat. Minden rendszerfüggõ beállítást magában az [.filename]#rc.conf# állományban kell elvégezni.
+
+Számos stratégia létezik a tömegesen adminisztrált számítógépeknél a közös és rendszerfüggõ beállítások különválasztására, ezáltal a karbantartási költségek csökkentésére. A közös beállításokat ajánlott egy másik helyre, például az [.filename]#/etc/rc.conf.site# állományba rakni, majd hivatkozni erre a kizárólag csak rendszerfüggõ információkat tartalmazó [.filename]#/etc/rc.conf# állományból.
+
+Mivel az [.filename]#rc.conf# állományt az man:sh[1] dolgozza fel, ezt elég könnyen el tudjuk érni. Például:
+
+* rc.conf:
++
+[.programlisting]
+....
+	. /etc/rc.conf.site
+	hostname="node15.example.com"
+	network_interfaces="fxp0 lo0"
+	ifconfig_fxp0="inet 10.1.1.1"
+....
+
+* rc.conf.site:
++
+[.programlisting]
+....
+	defaultrouter="10.1.1.254"
+	saver="daemon"
+	blanktime="100"
+....
+
+Az [.filename]#rc.conf.site# állomány ezt követõen az `rsync` parancs használatával már szétszórható a rendszerben, miközben az [.filename]#rc.conf# állomány mindenkinél egyedi marad.
+
+Ha a rendszert a man:sysinstall[8] vagy a `make world` használatával frissítjük, akkor az [.filename]#rc.conf# tartalma nem íródik felül, így a rendszer beállításairól szóló adatok nem vesznek el.
+
+[[configtuning-appconfig]]
+== Az alkalmazások beállítása
+
+A telepített alkalmazások általában saját konfigurációs állományokkal, azok pedig saját formátummal stb. rendelkeznek. Fontos, hogy ezeket az állományokat az alaprendszertõl elkülönítve tároljuk, ezáltal a csomagkezelõ eszközök könnyen rájuk tudjanak találni és dolgozni velük.
+
+Ezeket az állományokat általában a [.filename]#/usr/local/etc# könyvtárban találjuk meg. Amennyiben egy alkalmazáshoz több konfigurációs állomány is tartozik, akkor ahhoz ezen belül egy külön alkönyvtár jön létre.
+
+Normális esetben, amikor egy portot vagy csomagot telepítünk, minta konfigurációs állományokat is kapunk. Ezek nevében többnyire a [.filename]#.default# utótag szerepel. Ha még nincs konfigurációs állomány az adott alkalmazáshoz, akkor a [.filename]#.default# jelzésû állományokból ez létrehozható.
+
+Példaképpen most tekintsük a [.filename]#/usr/local/etc/apache# könyvtár tartalmát:
+
+....
+-rw-r--r--  1 root  wheel   2184 May 20  1998 access.conf
+-rw-r--r--  1 root  wheel   2184 May 20  1998 access.conf.default
+-rw-r--r--  1 root  wheel   9555 May 20  1998 httpd.conf
+-rw-r--r--  1 root  wheel   9555 May 20  1998 httpd.conf.default
+-rw-r--r--  1 root  wheel  12205 May 20  1998 magic
+-rw-r--r--  1 root  wheel  12205 May 20  1998 magic.default
+-rw-r--r--  1 root  wheel   2700 May 20  1998 mime.types
+-rw-r--r--  1 root  wheel   2700 May 20  1998 mime.types.default
+-rw-r--r--  1 root  wheel   7980 May 20  1998 srm.conf
+-rw-r--r--  1 root  wheel   7933 May 20  1998 srm.conf.default
+....
+
+Az állományok mérete jól mutatja, hogy csak az [.filename]#srm.conf# változott meg. Az Apache késõbbi frissítései ezt az állományt nem fogják felülírni.
+
+[[configtuning-starting-services]]
+== Szolgáltatások indítása
+
+A felhasználók közül sokan választják a FreeBSD Portgyûjteményében található külsõ szoftverek telepítését. A telepített szoftvert ilyenkor gyakran úgy kell beállítani, hogy a rendszer indulásával együtt induljon. Az olyan szolgáltatások, mint például a package:mail/postfix[] vagy a package:www/apache13[] csupán két olyan szoftvercsomag, amelyet a rendszerrel együtt kell elindítani. Ebben a szakaszban a külsõ szoftverek indítására használatos eljárásokkal foglalkozunk.
+
+A FreeBSD-ben megjelenõ legtöbb szolgáltatás, mint például a man:cron[8], a rendszerindító szkripteken keresztül kel életre. Habár ezek a szkriptek a FreeBSD egyes verziói vagy az egyes gyártók esetén különbözhetnek, azonban az mindegyikükben közös, hogy az elindításukra vonatkozó beállítások egyszerû indítószkriptekkel adhatóak meg.
+
+=== Az alkalmazások részletesebb beállítása
+
+Most miután a FreeBSD rendelkezik egy [.filename]#rc.d# könyvtárral, az alkalmazások indításának beállítása is könnyebbé és ügyesebbé vált. Az <<configtuning-rcd,rc.d>> mûködésérõl szóló szakaszban megismert kulcsszavak segítségével az alkalmazások mostantól kezdve a többi szolgáltatás, például a DNS után indulnak el, és az [.filename]#rc.conf# állományon keresztül a szkriptekbe huzalozottak helyett most már tetszõleges paramétereket is átadhatunk stb. Egy egyszerû szkript ehhez hasonlóan néz ki:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+# PROVIDE: utility
+# REQUIRE: DAEMON
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name=utility
+rcvar=utility_enable
+
+command="/usr/local/sbin/utility"
+
+load_rc_config $name
+
+#
+# NE VÁLTOZTASSUK MEG AZ ITT LÉVõ ALAPÉRTELMEZÉSEKET,
+# INKÁBB AZ /etc/rc.conf ÁLLOMÁNYBAN ÁLLÍTSUK BE EZEKET
+#
+utility_enable=${utility_enable-"NO"}
+pidfile=${utility_pidfile-"/var/run/utility.pid"}
+
+run_rc_command "$1"
+....
+
+Ez a szkript gondoskodik arról, hogy a utility nevû alkalmazás a `DAEMON` szolgáltatás után induljon el. Emellett még felkínál egy módszert a PID avagy futó programok azonosítójának beállítására és nyomonkövetésére is.
+
+Ezt követõen az [.filename]#/etc/rc.conf# állományból az alkalmazás elindítható az alábbi sor hozzáadásával:
+
+[.programlisting]
+....
+utility_enable="YES"
+....
+
+Ez a módszer megkönnyíti a parancssorban átadott paraméterek módosítását, az [.filename]#/etc/rc.subr# állományban szereplõ alapértelmezett függvények használatát, az man:rcorder[8] segédprogrammal szembeni kompatibilitást és az [.filename]#rc.conf# állomány könnyebb beállítását.
+
+=== Szolgáltatások indítása szolgáltatásokkal
+
+Más szolgáltatások, mint például a POP3 vagy IMAP szerverek démonai stb. az man:inetd[8] segítségével indíthatóak el. Ez a Portgyûjteménybõl telepített szolgáltatások esetén magával vonja az adott segédprogram felvételét vagy a hozzá tartozó sor engedélyezését az [.filename]#/etc/inetd.conf# állományban. Az inetd mûködésével és annak beállításával mélyrehatóbban az crossref:network-servers[network-inetd,inetd] szakasza foglalkozik.
+
+A legtöbb esetben a man:cron[8] démon használata kézenfekvõ a rendszerszintû szolgáltatások elindításában. Ez a megközelítés számos elõnyt tartogat, mivel a `cron` ezeket a programokat a felhasználó [.filename]#crontab# állománya alapján futtatja. Ezzel a mezei felhasználók számára is lehetõvé válik, hogy elindítsanak és karbantartsanak alkalmazásokat.
+
+A `cron` segédprogramnak van egy olyan speciális lehetõsége, hogy az idõ helyett a `@reboot` értéket adhatjuk meg. Ennek hatására a feladat a man:cron[8] indításával együtt fut le, tehát megszokott esetben a rendszer indítása során.
+
+[[configtuning-cron]]
+== A `cron` segédprogram beállítása
+
+A man:cron[8] a FreeBSD egyik leghasznosabb segédprogramja. A `cron` segédprogram a háttérben fut és folyamatosan figyeli az [.filename]#/etc/crontab# állományt. Emellett a `cron` új [.filename]#crontab# állományok után kutatva folyamatosan ellenõrzi a [.filename]#/var/cron/tabs# könyvtárat. Ezek a [.filename]#crontab# állományok olyan feladatokról tárolnak adatokat, amelyeket a `cron` programnak egy adott pillanatban el kell végeznie.
+
+A `cron` a konfigurációs állományok két külön fajtáját, a rendszer- és felhasználói crontabokat használja. A két típus között levõ egyetlen különbség a hatodik mezõben található. A rendszerszintû crontabok esetében a hatodik mezõ annak a felhasználónak a nevét tartalmazza, amivel a program fut. Ezzel a rendszer szintjén mûködõ crontaboknak megadatott az a képesség, hogy tetszõleges felhasználó nevében futtassanak programokat. A felhasználók crontabjaiban a hatodik mezõ a futtatandó parancsot tartalmazza, és ilyenkor az összes parancs a crontabot létrehozó felhasználó nevében hajtódik végre. Ez utóbbi egy fontos biztonsági jellemzõ.
+
+[NOTE]
+====
+A felhasználói crontabok lehetõvé teszik az egyes felhasználók számára, hogy a `root` felhasználó jogosultságai nélkül képesek legyenek feladatokat ütemezni, ugyanis a felhasználóhoz tartozó crontabban szereplõ parancsok mindegyike a tulajdonosának engedélyeivel fut.
+
+Az átlagos felhasználókhoz hasonlóan a `root` felhasználónak is lehet crontabja, ami nem ugyanaz, mint az [.filename]#/etc/crontab# (a rendszer saját crontab állománya). De mivel a rendszernek külön crontabja van, ezért a `root` felhasználónak nem kell külön crontabot létrehozni.
+====
+
+Vessünk egy pillanatást az [.filename]#/etc/crontab# (a rendszer crontabjának) tartalmára:
+
+[.programlisting]
+....
+# /etc/crontab - a root crontabja FreeBSD alatt
+#
+# $FreeBSD: src/etc/crontab,v 1.32 2002/11/22 16:13:39 tom Exp $
+## <.>
+#
+SHELL=/bin/sh
+PATH=/etc:/bin:/sbin:/usr/bin:/usr/sbin <.>
+HOME=/var/log
+#
+#
+#minute	hour	day	month	wday	who	command <.>
+#
+#
+*/5	*	*	*	*	root	/usr/libexec/atrun <.>
+....
+
+<.> A FreeBSD legtöbb konfigurációs állományához hasonlóan itt is a `#` jelöli a megjegyzéseket. Az ilyen megjegyzések remekül használhatóak annak feljegyzésére, hogy mit és miért akarunk futtatni. A megjegyzések azonban nem szerepelhetnek a paranccsal egy sorban, mivel máskülönben a parancs részeként kerülnek értelmezésre. Tehát mindig új sorba kell raknunk ezeket. Az üres sorokat a program nem veszi figyelembe.
+
+<.> Elõször is meg kell adnunk egy környezetet. Az egyenlõség (`=`) karakter használatos a környezeti beállítások meghatározására, ahogy mindezt az itteni példában is tapasztalhatjuk a `SHELL`, `PATH` és `HOME` értékek esetében. Ha nem adunk meg mást, akkor a `cron` az alapértelmezés szerinti `sh` parancsértelmezõt használja. Ha nem adjuk meg a `PATH` változó értékét, akkor minden állományra abszolút elérési úttal kell hivatkoznunk, mivel ennek nincs alapértelmezett értéke. Ha nem definiáljuk a `HOME` változó értékét, akkor a `cron` a parancshoz tartozó felhasználó könyvtárából fog dolgozni.
+
+<.> Ez a sor írja le a megadható hét mezõt. Az itt szereplõ értékek a `minute` (perc), `hour` (óra), `mday` (a hónap napja), `month` (hónap), `wday` (a hét napja), `who` (ki) és `command` (mit). A mezõk szinte maguktól értetõdnek. A `minute` egy órán belül adja meg azokat a perceket, amikor az adott parancsot le kell futtatni. A `hour` hasonló a `minute` beállításhoz, csak az itt szereplõ értékét órákban kell értelmezni. Az `mday` a hónap napjaiban számol. A `month` hasonló a `minute` és `hour` opciókhoz, de ez hónapot jelöl. A `wday` a hét egy napját jelzi. Ezeknek a mezõknek numerikus, valamint a huszonnégy órás idõformátumnak megfelelõ értékeket kell tartalmazniuk. A `who` mezõ, a többiektõl eltérõ módon, csak az [.filename]#/etc/crontab# állományban jelenik meg. Ez a mezõ adja meg, hogy a parancsot milyen felhasználóval kell futtatni. Ez az opció nem jelenik meg a felhasználók saját [.filename]#crontab# állományainak telepítésekor. A sor végén láthatjuk még a `command` oszlopot is. Ez az utolsó mezõ, és ide kerül a végrehajtandó parancs.
+
+<.> Ez az utolsó sor a fentebb tárgyalt értékeket határozza meg. Észrevehetjük, hogy a sor egy `*/5` alakú felírással kezdõdik, amelyet további `*` karakterek követnek. A `*` karakterek jelentése "elsõ-utolsó", ami arra utal, hogy _mindig_. Ennek megfelelõen úgy értelmezhetjük ezt a sort, hogy a `root` felhasználóval le kell futtatni az `atrun` parancsot minden ötödik percben, függetlenül attól, hogy milyen nap vagy hónap van. Az `atrun` parancsról részletesebban az man:atrun[8] man oldalán kapunk felvilágosítást.Az itt szereplõ parancsoknak tetszõleges mennyiségû paraméter adható át, azonban a több soron keresztül átívelõ parancsok tördelését a sor végén a "\" karakterrel kell jelezni.
+
+Ez mindegyik [.filename]#crontab# állomány alapbeállítása, habár ettõl általában egy dologban eltérnek. A hatodik mezõ, ahol a felhasználót adtuk meg, csak a rendszer [.filename]#/etc/crontab# állományában jelenik meg. Ez a mezõ a felhasználók [.filename]#crontab# állományaiból kimarad.
+
+[[configtuning-installcrontab]]
+=== Egy crontab telepítése
+
+[IMPORTANT]
+====
+Nem kötelezõ az itt ismertetésre kerülõ módon szerkeszteni vagy telepíteni a rendszer crontabját. Egyszerûen nyissuk meg a kedvenc szövegszerkesztõnkkel, és a `cron` segédprogram majd észreveszi, hogy az állomány megváltozott, majd ennek megfelelõen neki is lát a módosított változat használatának. Errõl link:{faq}#ROOT-NOT-FOUND-CRON-ERRORS[a GYIK-ban (angolul)] többet is megtudhatunk.
+====
+
+Egy frissen készített felhasználói [.filename]#crontab# telepítéséhez elõször a kedvenc szövegszerkesztõnk segítségével létre kell hoznunk a megfelelõ formátumú állományt, majd használnunk a `crontab` segédprogramot. Ennek általános alakja:
+
+[source,bash]
+....
+% crontab crontab_állomány
+....
+
+Ebben a példában a [.filename]#crontab_állomány# a korábban létrehozott [.filename]#crontab# neve lesz.
+
+Lehetõségünk van lekérdezni a telepített [.filename]#crontab# állományokat: egyszerûen adjuk át a `-l` kapcsolót a `crontab` parancsnak, és nézzük meg, mit ad vissza.
+
+A `crontab -e` használata olyan felhasználók számára ajánlott, akik sablon alkalmazása nélkül szeretnének teljesen maguktól megírni egy crontab állományt. Ennek hatására a kiválasztott szövegszerkesztõ egy üres állományt kap. Miután ezt az állományt elmentettük, a `crontab` programmal magától telepítésre kerül.
+
+Ha a késõbbiekben törölni akarjuk a felhasználónkhoz tartozó [.filename]#crontab# állományt, akkor erre a célra használjuk a `crontab -r` kapcsolóját.
+
+[[configtuning-rcd]]
+== Az rc használata FreeBSD alatt
+
+A rendszer indítására a FreeBSD 2002-ben átvette a NetBSD [.filename]#rc.d# rendszerét. Ezt a felhasználók könnyen felismerhetik az [.filename]#/etc/rc.d# könyvtárban található állományokról. A legtöbbjük olyan alapvetõ szolgáltatás, amelyet a `start`, `stop` és `restart` paraméterekkel lehet vezérelni. Például az man:sshd[8] az alábbi paranccsal indítható újra:
+
+[source,bash]
+....
+# /etc/rc.d/sshd restart
+....
+
+Ez az eljárás hasonló a többi szolgáltatás esetén is. Természetesen ezek a szolgáltatások általában maguktól indulnak el a rendszer indítása során az man:rc.conf[5] állományban megadottak szerint. Például ha a rendszerünk indulásakor szeretnénk aktiválni a hálózati címfordítással foglalatoskodó démont, akkor csak adjuk hozzá az [.filename]#/etc/rc.conf# állományhoz a következõ sort:
+
+[.programlisting]
+....
+natd_enable="YES"
+....
+
+Amennyiben a `natd_enable="NO"` sor már szerepel benne, akkor egyszerûen írjuk át a `NO` értéket `YES`-re. Ezután az rc szkriptek a rendszer következõ indításakor a lentieknek megfelelõen automatikusan elindítják a hozzá tartozó szolgáltatásokat is.
+
+Mivel az [.filename]#rc.d# rendszert elsõsorban arra használják, hogy szolgáltatásokat indítsanak el vagy állítsanak le az operációs rendszerrel együtt, a szabványos `start`, `stop` és `restart` paraméterek csak abban az esetben látják el a feladatukat, ha a nekik megfelelõ változókat beállítottuk az [.filename]#/etc/rc.conf# állományban. Tehát például az `sshd restart` csak abban az esetben fog bármit is csinálni, ha az [.filename]#/etc/rc.conf# állományban az `sshd_enable` változót a `YES` értékre állítottuk. Ha az [.filename]#/etc/rc.conf# beállításaitól függetlenül kívánunk egy szolgáltatásnak `start`, `stop` vagy `restart` parancsot adni, akkor elé kell tennünk egy "one" szót. Például ha az `sshd` szolgáltatás újraindításához az [.filename]#/etc/rc.conf# tartalmát figyelmen kívül akarjuk hagyni, akkor ezt a parancsot kell kiadnunk:
+
+[source,bash]
+....
+# /etc/rc.d/sshd onerestart
+....
+
+Könnyen ellenõrizni tudjuk, hogy az adott szolgáltatás az [.filename]#/etc/rc.conf# részérõl engedélyezett-e, ha a neki megfelelõ [.filename]#rc.d# szkriptnek megadjuk az `rcvar` paramétert. Ennek segítségével például a rendszergazda így képes ellenõrizni, hogy az `sshd` szolgáltatást engedélyezi-e az [.filename]#/etc/rc.conf#:
+
+[source,bash]
+....
+# /etc/rc.d/sshd rcvar
+# sshd
+$sshd_enable=YES
+....
+
+[NOTE]
+====
+A második sor (`# sshd`) az `sshd` parancs kimenete, nem pedig a `root` parancssora.
+====
+
+A `status` paraméterrel kideríthetjük, hogy egy szolgáltatás aktív-e. Ezzel például így tudjuk ellenõrizni az `sshd` szolgáltatás mûködését:
+
+[source,bash]
+....
+# /etc/rc.d/sshd status
+sshd is running as pid 433.
+....
+
+Az üzenet:
+
+[source,bash]
+....
+Az sshd a 433-as azonosítóval fut.
+....
+
+Bizonyos esetekben a `reload` paraméter használatával lehetõségünk van a szolgáltatások újraindítására is. Ilyenkor a rendszer megpróbál egy olyan jelzést küldeni a szolgáltatásnak, amivel a konfigurációs állományainak újraolvasását kéri. A legtöbbször lényegében ez a `SIGHUP` jelzés kiküldését rejti magában. Ez a lehetõség azonban nem mindegyik szolgáltatás esetén érhetõ el.
+
+Az [.filename]#rc.d# rendszer nem csupán hálózati szolgáltatások esetén használatos, hanem nagyrészben hozzájárul a rendszer indításához is. Erre vegyük példának a [.filename]#bgfsck# állományt. Amikor ez a szkript lefut, a következõ üzenetet jeleníti meg:
+
+[source,bash]
+....
+Starting background file system checks in 60 seconds.
+....
+
+Az üzenet fordítása:
+
+[source,bash]
+....
+A háttérben 60 másodperc múlva megkezdõdik az állományrendszerek ellenõrzése.
+....
+
+Ennek megfelelõen tehát ezt az állományt az állományrendszerek háttérben folyó ellenõrzésére használják, ami pedig a rendszer indítása során fut le.
+
+Számos rendszerszolgáltatás igényel a mûködéséhez további szolgáltatásokat. Például a NIS és más egyéb távoli eljáráshíváson alapú szolgáltatások egészen addig nem képesek elindulni, amíg az `rpcbind` (portmapper) szolgáltatást el nem indítjuk. Az ilyen jellegû gondok feloldására az indítószkriptek elején levõ megjegyzésekben található egy kevés metainformáció a szkript mûködéséhez szükséges elemekre (függõségeire) vonatkozóan. A rendszer indítása közben az man:rcorder[8] nevû program képes a megjegyzések közt ezeket az információkat feldolgozni és ebbõl megállapítani, hogy a függõségi viszonyok betartásával milyen sorrendben kell elindítani a rendszer által felkínált szolgáltatásokat.
+
+Ehhez a következõ kulcsszavakat kell megadni az egyes indító szkriptek elején (az man:rc.subr[8] így tudja "engedélyezni" az indító szkriptet):
+
+* `PROVIDE`: segítségével megmondjuk, hogy ez az állomány milyen szolgáltatásokat nyújt.
+
+A következõ kulcsszavak az egyes indítóállományok elején szerepelhetnek. Nem kell feltétlenül használnunk ezeket, de velük az man:rcorder[8] munkáját segíthetjük:
+
+* `REQUIRE`: felsoroljuk azokat a szolgáltatásokat, amelyek a futásához kellenek. Az állomány tehát az itt megadott szolgáltatások _után_ fog lefutni.
+* `BEFORE`: felsoroljuk azokat a szolgáltatásokat, amelyek _elõtt_ futtatni kell ezt az állományt.
+
+Az indító szkriptekben a kulcsszavak ügyes megválasztásával a rendszergazda nagyon finoman képes az indításkor végrehajtódó szkriptek sorrendjét szabályozni és a többi UNIX(R) alapú operációs rendszerbõl ismert "futtatási szintek" használata nélkül vezérelni a rendszerben megjelenõ szolgáltatásokat.
+
+Az [.filename]#rc.d# rendszerrõl bõvebben az man:rc[8] és man:rc.subr[8] man oldalakon olvashatunk. Ha szeretnénk saját [.filename]#rc.d# szkripteket írni vagy javítani a már meglévõkön, akkor ez link:{rc-scripting}[a cikk] (angolul) segítségünkre lehet.
+
+[[config-network-setup]]
+== A hálózati kártyák beállítása
+
+Manapság már el sem tudunk képzelni számítógépet hálózati csatlakozás nélkül. A hálózati csatolókártyák hozzáadása és beállítása egy FreeBSD rendszergazda mindennapos feladata.
+
+=== A megfelelõ meghajtóprogram felderítése
+
+Mielõtt bárminek is nekikezdenénk, érdemes tisztában lennünk azzal, hogy a rendelkezésünkre álló kártya milyen típusú, milyen chipet használ és hogy PCI vagy ISA buszon csatlakozik-e. A FreeBSD a PCI és ISA csatolós kártyák széles spektrumát ismeri. Az egyes kiadásokhoz mellékelt "Hardware Compatibility List" (Hardverkompatibilitási lista) dokumentumokban tudjuk ellenõrizni, hogy a kártyákat ismeri a rendszer.
+
+Miután meggyõzõdtünk róla, hogy a kártyánkat ismeri a rendszer, meg kell keresnünk a hozzá tartozó meghajtót. A [.filename]#/usr/src/sys/conf/NOTES# és a [.filename]#/usr/src/sys/arch/conf/NOTES# állományok tartalmazzák a hálózati kártyák meghajtóinak rövid leírását, benne a támogatott chipsetek és kártyák típusaival. Ha ez alapján nem tudjuk teljes biztosággal eldönteni, hogy melyik a számunkra megfelelõ meghajtó, nézzük meg a saját man oldalát. Ezen a man oldalon megtaláljuk az általa ismert összes eszközt és a velük kapcsolatban elõforduló jellemzõ problémákat.
+
+Ha egy elterjedt típust sikerült beszereznünk, akkor nem kell különösebben sokáig keresnünk a neki megfelelõ meghajtót. Az ismertebb hálózati kártyák meghajtói ugyanis alapból benne vannak a [.filename]#GENERIC# rendszermagban, ezért a rendszer indítása során ehhez hasonlóan meg is jelennek a kártyák:
+
+[source,bash]
+....
+dc0: <82c169 PNIC 10/100BaseTX> port 0xa000-0xa0ff mem 0xd3800000-0xd38
+000ff irq 15 at device 11.0 on pci0
+miibus0: <MII bus> on dc0
+bmtphy0: <BCM5201 10/100baseTX PHY> PHY 1 on miibus0
+bmtphy0:  10baseT, 10baseT-FDX, 100baseTX, 100baseTX-FDX, auto
+dc0: Ethernet address: 00:a0:cc:da:da:da
+dc0: [ITHREAD]
+dc1: <82c169 PNIC 10/100BaseTX> port 0x9800-0x98ff mem 0xd3000000-0xd30
+000ff irq 11 at device 12.0 on pci0
+miibus1: <MII bus> on dc1
+bmtphy1: <BCM5201 10/100baseTX PHY> PHY 1 on miibus1
+bmtphy1:  10baseT, 10baseT-FDX, 100baseTX, 100baseTX-FDX, auto
+dc1: Ethernet address: 00:a0:cc:da:da:db
+dc1: [ITHREAD]
+....
+
+Ebben a példában láthatunk is két olyan kártyát, amelyek a man:dc[4] meghajtót használják.
+
+Ha a hálózati kártyánk meghajtója nem szerepel a [.filename]#GENERIC# konfigurációban, akkor a mûködéséhez be kell tölteni a megfelelõ meghajtót. Ezt alapvetõen kétféleképpen érhetjük el:
+
+* Ennek legegyszerûbb módja, ha a man:kldload[8] használatával alkalmanként vagy a [.filename]#/boot/loader.conf# állományban a megfelelõ sor hozzáadásával a rendszer indításával együtt betöltjük a hálózati kártya meghajtójához tartozó modult. Nem mindegyik hálózati kártya meghajtója érhetõ el modul formájában. Erre konkrét például szolgálnak az ISA kártyákhoz tartozó modulok.
+* Másik lehetõségünk, ha statikusan beépítjük a kártyánk támogatását a rendszermagba. A [.filename]#/usr/src/sys/conf/NOTES# és az [.filename]#/usr/src/sys/arch/conf/NOTES# állományok, valamint a meghajtóhoz tartozó man oldal elolvasásából megtudhatjuk a rendszermag beállításait tartalmazó állományban megadandó paramétereket. A rendszermag újrafordítását lásd crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]. Ha a rendszermag ([.filename]#GENERIC#) az indulás során észlelte a kártyánkat, nem kell újat készítenünk.
+
+[[config-network-ndis]]
+==== A Windows(R) NDIS meghajtóinak használata
+
+Sajnos még mindig sok olyan gyártó akad, akik a nyílt forrású közösség számára nem adják ki a meghajtóik mûködésének alapjait, mivel az ilyen adatokat szakmai titoknak tekintik. Ebbõl következik, hogy a FreeBSD és más operációs rendszerek fejlesztõi számára két választás marad: vagy a gyári meghajtók visszafejtésének hosszú és fájdalmas útján haladva fejlesztik ki a saját meghajtójukat, vagy pedig a Microsoft(R) Windows(R) platformra kiadott meghajtók binárisait hasznosítják. A legtöbb fejlesztõ, köztük a FreeBSD fejlesztõi is, ez utóbbi megközelítést választották.
+
+Bill Paul (wpaul) jóvoltából a FreeBSD 5.3-RELEASE változatában megjelent a "Network Driver Interface Specification" (NDIS, avagy hálózati meghajtók szabványos felülete) "natív" támogatása. A FreeBSD NDISulator (másnéven Project Evil, a Gonosz terve) nevû komponense fog egy Windows(R)-os meghajtót és elhiteti vele, hogy a Windows(R) operációs rendszerrel kommunikál. Mivel az man:ndis[4] meghajtó Windows(R) binárisokat használ fel, ezért csak i386 és amd64 rendszerek esetén érhetõ el.
+
+[NOTE]
+====
+Az man:ndis[4] meghajtó leginkább a PCI, CardBus és PCMCIA csatolójú eszközök támogatására lett kitalálva, az USB eszközöket még nem ismeri.
+====
+
+Az NDISulator használatához három tényezõre van szükségünk:
+
+. A rendszermag forrása
+. a Windows(R) XP meghajtó binárisa ([.filename]#.SYS# a kiterjesztése)
+. a Windows(R) XP meghajtó konfigurációs állománya ([.filename]#.INF# a kiterjesztése)
+
+Keressük meg az említett állományokat az adott kártyához. Ezeket általában a mellékelt CD-n vagy a gyártó honlapján találjuk meg. A most következõ példákban a [.filename]#W32DRIVER.SYS# és a [.filename]#W32DRIVER.INF# neveket fogjuk használni.
+
+[NOTE]
+====
+A Windows(R) i386 architektúrájú verziójához készült meghajtóprogramokat nem tudjuk a FreeBSD/amd64 verziójával használni. A mûködéshez amd64-re készült Windows(R)-os meghajtókra van szükség.
+====
+
+A következõ lépés a meghajtó binárisainak betölthetõ modulba fordítása. Ennek eléréséhez használjuk az man:ndisgen[8] parancsot a `root` felhasználóval:
+
+[source,bash]
+....
+# ndisgen /windowsos/meghajtó/W32DRIVER.INF /windowsos/meghajtó/W32DRIVER.SYS
+....
+
+Az man:ndisgen[8] egy interaktív segédprogram, amely mûködése közben még rákérdez néhány szükséges információra. Az aktuális könyvtárban létrehoz egy rendszermagmodult, amelyet az alábbi módon tudunk betölteni:
+
+[source,bash]
+....
+# kldload ./W32DRIVER_SYS.ko
+....
+
+Az elõállított modul mellé be kell töltenünk még az [.filename]#ndis.ko# és az [.filename]#if_ndis.ko# modulokat is. Ez általában minden olyan modul esetén megtörténik magától, amely függ az man:ndis[4] használatától. Kézileg a következõ parancsokkal tudjuk ezeket betölteni:
+
+[source,bash]
+....
+# kldload ndis
+# kldload if_ndis
+....
+
+Itt az elsõ parancs betölti az NDIS miniport meghajtó burkolására szánt kódot, valamint a második a tényleges hálózati csatolófelületet.
+
+Most pedig a man:dmesg[8] kimenetében ellenõrizzük, hogy történt-e valamilyen hiba a betöltés során. Ha minden jól ment, akkor az alábbiakhoz hasonló kimenetet produkált:
+
+[source,bash]
+....
+ndis0: <Wireless-G PCI Adapter> mem 0xf4100000-0xf4101fff irq 3 at device 8.0 on pci1
+ndis0: NDIS API version: 5.0
+ndis0: Ethernet address: 0a:b1:2c:d3:4e:f5
+ndis0: 11b rates: 1Mbps 2Mbps 5.5Mbps 11Mbps
+ndis0: 11g rates: 6Mbps 9Mbps 12Mbps 18Mbps 36Mbps 48Mbps 54Mbps
+....
+
+Innentõl kezdve az [.filename]#ndis0# nevû eszközt úgy tudjuk használni, mint bármelyik más hálózati felületet (például [.filename]#dc0#).
+
+A többi modulhoz hasonló módon be tudjuk állítani, hogy a rendszer indulásával együtt betöltõdjenek az NDIS modulok. Ehhez elõször másoljuk az imént létrehozott modult, az [.filename]#W32DRIVER_SYS.ko# állományt a [.filename]#/boot/modules# könyvtárba. Ezután adjuk hozzá a következõ sort a [.filename]#/boot/loader.conf# állomány tartalmához:
+
+[.programlisting]
+....
+W32DRIVER_SYS_load="YES"
+....
+
+=== A hálózati kártya beállítása
+
+Ahogy betöltõdött a megfelelõ meghajtó a hálózati kártyánkhoz, be is kell állítanunk a kártyát. A hálózati kártyák sok más dologgal együtt beállíthatóak a telepítés során a sysinstall segítségével.
+
+A rendszerünkben beállított hálózati csatolófelületek megjelenítéséhez gépeljük be a következõ parancsot:
+
+[source,bash]
+....
+% ifconfig
+dc0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=80008<VLAN_MTU,LINKSTATE>
+        ether 00:a0:cc:da:da:da
+        inet 192.168.1.3 netmask 0xffffff00 broadcast 192.168.1.255
+        media: Ethernet autoselect (100baseTX <full-duplex>)
+        status: active
+dc1: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=80008<VLAN_MTU,LINKSTATE>
+        ether 00:a0:cc:da:da:db
+        inet 10.0.0.1 netmask 0xffffff00 broadcast 10.0.0.255
+        media: Ethernet 10baseT/UTP
+        status: no carrier
+plip0: flags=8810<POINTOPOINT,SIMPLEX,MULTICAST> mtu 1500
+lo0: flags=8049<UP,LOOPBACK,RUNNING,MULTICAST> metric 0 mtu 16384
+        options=3<RXCSUM,TXCSUM>
+        inet6 fe80::1%lo0 prefixlen 64 scopeid 0x4
+        inet6 ::1 prefixlen 128
+        inet 127.0.0.1 netmask 0xff000000
+        nd6 options=8010<POINTOPOINT,MULTICAST> mtu 1500
+....
+
+Az elõbbi parancs kimenetében a következõ eszközök jelentek meg:
+
+* [.filename]#dc0#: az elsõ Ethernet felület
+* [.filename]#dc1#: a második Ethernet felület
+* [.filename]#plilp0#: a párhuzamos port felülete (amennyiben található párhuzamos port a számítógépben)
+* [.filename]#lo0#: a loopback eszköz
+
+A FreeBSD a kártyához tartozó meghajtó nevével és egy sorszámmal azonosítja a rendszermag indulása során talált eszközöket. Például az [.filename]#sis2# a rendszerben található harmadik olyan eszköz, amely a man:sis[4] meghajtót használja.
+
+A példában a [.filename]#dc0# eszköz aktív és mûködõképes. Ennek legfontosabb jelei:
+
+. Az `UP` szó mutatja, hogy a kártyát sikerült beállítani és készen áll a használatra.
+. A kártya internet (`inet`) címe (jelen esetünkben ez `192.168.1.3`).
+. Érvényes hálózati maszkkal rendelkezik (`netmask`, ahol a `0xffffff00` a `255.255.255.0` címnek felel meg).
+. Érvényes broadcast (üzenetszóró) címmel rendelkezik (ami itt most `192.168.1.255`).
+. A kártya MAC-címe (`ether`) `00:a0:cc:da:da:da`.
+. A hozzá tartozó fizikai eszköz kiválasztása automatikus (`media: Ethernet autoselect (100baseTX <full-duplex>)`). Láthatjuk, hogy a [.filename]#dc1# eszközt egy `10baseT/UTP` típusú fizikai eszközhöz állítottuk be. Az egyes meghajtókhoz tartozó fizikai módokról a nekik megfelelõ man oldalakon olvashatunk.
+. A kapcsolat állapota (`status`) `active` értékû, tehát van vonal. A [.filename]#dc1# esetén láthatjuk, hogy a `status: no carrier` (nincs vonal). Ez teljesen normálisnak tekinthetõ minden olyan esetben, amikor a kártyába még nem dugtunk Ethernet-kábelt.
+
+Amennyiben az man:ifconfig[8] kimenete valami ilyesmi:
+
+[source,bash]
+....
+dc0: flags=8843<BROADCAST,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	        options=80008<VLAN_MTU,LINKSTATE>
+	        ether 00:a0:cc:da:da:da
+	        media: Ethernet autoselect (100baseTX <full-duplex>)
+	        status: active
+....
+
+akkor az arra utal, hogy a kártyát nem állítottuk be.
+
+A kártya beállításához a `root` felhasználó jogosultságaira van szükségünk. A hálózati kártyák beállítása az man:ifconfig[8] segítségével elvégezhetõ parancssorból is, de a gép újraindításakor az így megadott értékek elvesznek. Ezért az [.filename]#/etc/rc.conf# állományba kell felvennünk a hálózati kártyák érvényes beállításait.
+
+A kedvenc szövegszerkesztõnkben nyissuk meg az [.filename]#/etc/rc.conf# állományt. Minden egyes hálózati csatolóhoz fel kell vennünk benne egy sort, ennek megfelelõen most a példához tartozó módon az alábbiakat:
+
+[.programlisting]
+....
+ifconfig_dc0="inet 192.168.1.3 netmask 255.255.255.0"
+ifconfig_dc1="inet 10.0.0.1 netmask 255.255.255.0 media 10baseT/UTP"
+....
+
+A [.filename]#dc0# és [.filename]#dc1# neveket kell a rendszerünkben ténylegesen megtalálható eszközök neveire kicserélni, valamint megadni a nekik megfelelõ címeket. A kártya meghajtójának és az man:ifconfig[8] man oldalának elolvasásával kideríthetjük az itt megadható további beállításokat, valamint az man:rc.conf[5] man oldalán részletesebben megismerhetjük az [.filename]#/etc/rc.conf# formai követelményeit.
+
+Ha a telepítés során beállítottuk volna a hálózati kapcsolatokat, akkor tapasztalhatjuk, hogy egyes hálózati kártyák sorai itt már szerepelnek. Ellenõrizzük az [.filename]#/etc/rc.conf# tartalmát, mielõtt bõvítenénk!
+
+Mindezek mellett az [.filename]#/etc/hosts# állományba is be kell írnunk a helyi hálózatunkon található különféle gépek neveit és IP-címeit, ha még nem szerepelnének ott. Errõl további részleteket a man:hosts[5] man oldalról és az [.filename]#/usr/shared/examples/etc/hosts# állományból tudhatunk meg.
+
+[NOTE]
+====
+Ha a géppel szeretnénk majd csatlakozni az internetre, akkor ne felejtsük el manuálisan beállítani az alapértelmezett átjárót és a névfeloldáshoz szükséges kiszolgálót:
+
+[source,bash]
+....
+# echo 'defaultrouter="alapertelmezett_atjaro"' >> /etc/rc.conf
+# echo 'nameserver DNS_kiszolgalo' >> /etc/resolv.conf
+....
+
+====
+
+=== Tesztelés és hibaelhárítás
+
+Miután az [.filename]#/etc/rc.conf# állományban elvégeztük a szükséges változtatásokat, érdemes újraindítanunk a rendszerünket. Ennek révén érvényesítjük a csatolófelületekkel kapcsolatos változtatásainkat és ellenõrizzük, hogy így a rendszer mindenféle hibaüzenet nélkül képes elindulni. A másik lehetõség, ha csak magát a hálózati alrendszer konfigurációját indítjuk el újra:
+
+[source,bash]
+....
+# /etc/rc.d/netif restart
+....
+
+[NOTE]
+====
+Ha az [.filename]#/etc/rc.conf# állományban már beállítottuk az alapértelmezett átjárót, akkor elegendõ csupán ez a parancs:
+
+[source,bash]
+....
+# /etc/rc.d/routing restart
+....
+
+====
+
+Ahogy újrakonfiguráltuk a hálózati alrendszert, ki is tudjuk próbálni a hálózati felületeket.
+
+==== Az Ethernet kártyák tesztelése
+
+Az Ethernet kártyák helyes beállításának vizsgálatához két dolgot kell kipróbálnunk. Elõször is pingeljük magát a felületet, majd ezután pingeljünk meg a helyi hálózaton egy másik számítógépet.
+
+Elsõként tehát próbáljuk meg a helyi felületet:
+
+[source,bash]
+....
+% ping -c5 192.168.1.3
+PING 192.168.1.3 (192.168.1.3): 56 data bytes
+64 bytes from 192.168.1.3: icmp_seq=0 ttl=64 time=0.082 ms
+64 bytes from 192.168.1.3: icmp_seq=1 ttl=64 time=0.074 ms
+64 bytes from 192.168.1.3: icmp_seq=2 ttl=64 time=0.076 ms
+64 bytes from 192.168.1.3: icmp_seq=3 ttl=64 time=0.108 ms
+64 bytes from 192.168.1.3: icmp_seq=4 ttl=64 time=0.076 ms
+
+--- 192.168.1.3 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 0.074/0.083/0.108/0.013 ms
+....
+
+Most pedig pingeljünk meg egy másik számítógépet a helyi hálózaton:
+
+[source,bash]
+....
+% ping -c5 192.168.1.2
+PING 192.168.1.2 (192.168.1.2): 56 data bytes
+64 bytes from 192.168.1.2: icmp_seq=0 ttl=64 time=0.726 ms
+64 bytes from 192.168.1.2: icmp_seq=1 ttl=64 time=0.766 ms
+64 bytes from 192.168.1.2: icmp_seq=2 ttl=64 time=0.700 ms
+64 bytes from 192.168.1.2: icmp_seq=3 ttl=64 time=0.747 ms
+64 bytes from 192.168.1.2: icmp_seq=4 ttl=64 time=0.704 ms
+
+--- 192.168.1.2 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 0.700/0.729/0.766/0.025 ms
+....
+
+Ha beállítottuk az [.filename]#/etc/hosts# állományt, akkor a `192.168.1.2` helyett a gép nevét is megadhatjuk.
+
+==== A hibák elhárítása
+
+A hardverek és szoftverek beállításaiban mindig is valódi kín megtalálni a hibákat, és ezeket a kínokat többnyire úgy tudjuk enyhíteni, ha elõször az egyszerû hibaforrásokat szûrjük ki. Csatlakoztattuk a hálózati kábelt? Tisztességesen beállítottuk a hálózati szolgáltatásokat? Jól állítottuk be a tûzfalat? A FreeBSD képes kezelni a kártyát? A hibajelentések elküldése elõtt mindig bújjuk át a támogatott hardvereszközök listáját. A FreeBSD verziókat frissítsük a legújabb STABLE változatra. Olvassuk át a levelezési listák archívumait vagy legalább keressünk rá a témára az interneten.
+
+Ha a kártya mûködik, de a teljesítménye nem kielégítõ, érdemes ennek utánanézni a man:tuning[7] man oldalon. Ilyenkor érdemes ellenõrizni a hálózati beállításainkat is, mivel a helytelen beállítások gyakran okoznak teljesítményvesztést.
+
+Bizonyos esetekben láthatunk egy vagy két `device timeout` típusú hibát is, ami a kártyák egyes fajtáinál elfogadható. Ha azonban folyamatosan megjelennek vagy zavaróvá válnak, érdemes utánanéznünk, hogy az eszköz nem ütközik-e valamelyik másikkal. Mindenképpen gyõzõdjünk meg a kábelek épségérõl és csatlakoztatásáról. Még az is elképzelhetõ, hogy egyszerûen csak egy másik hálózati kártyára van szükségünk.
+
+Néha felbukkanak `watchdog timeout` jellegû hibák is. Ilyenkor elsõként mindig a hálózati kábelt ellenõrizzük. Egyes kártyáknak olyan PCI foglalatra van szükségük, ami támogatja a Bus Mastering opciót. Néhány régebbi alaplapon csak ilyen PCI bõvítõhely található (ami általában a 0. foglalat). Olvassunk utána a hálózati kártya és az alaplap dokumentációjában, hátha ezek okozzák a problémát.
+
+A `No route to host` üzenet akkor jelenik meg, ha a rendszer képtelen megállapítani, milyen úton juttassa el a csomagokat a megadott célhoz. Ez többnyire olyankor történik meg, amikor nem adtunk meg alapértelmezett kézbesítési irányt (default route) vagy nem dugtuk be a hálózati kábelt. A `netstat -rn` kimenetébõl meg tudjuk állapítani, hogy létezik-e érvényes út az elérni kívánt cél felé. Ha nincs, akkor haladjunk tovább a crossref:advanced-networking[advanced-networking,Egyéb haladó hálózati témák]re.
+
+A `ping: sendto: Permission denied` jellegû üzeneteket többségében egy helytelenül beállított tûzfal okozza. Ha az `ipfw` mûködését engedélyeztük a rendszermagban, de nem adtunk meg hozzá szabályokat, akkor az alapértelmezett házirend szerint minden forgalmat blokkolni fog, tehát még a pingeket is! Ezzel kapcsolatban a crossref:firewalls[firewalls,Tűzfalak] elolvasását ajánljuk.
+
+Elõfordulhat, hogy a kártya teljesítménye igen gyenge vagy az átlagos alatt van. Ilyenkor a fizikai eszköz `autoselect` (automatikus) típusú kiválasztása helyett érdemes megadnunk a konkrét eszköznek megfelelõ típust. Habár ez a legtöbb hardver esetén beválik, nem mindenki számára jelent megoldást. Ismételten csak annyit tudunk ehhez hozzátenni, hogy ellenõrizzük a hálózati beállításainkat és olvassuk el a man:tuning[7] man oldalt.
+
+[[configtuning-virtual-hosts]]
+== Virtuális címek
+
+A FreeBSD alkalmazása során igen gyakori a virtuális címek használata, aminek segítségével egyetlen szerver több szerverként képes látszódni a hálózaton. Ezt úgy érik el, hogy egyetlen felülethez több hálózati címet rendelnek hozzá.
+
+Az adott hálózati csatolófelületnek van egy "valódi címe" és tetszõleges számú "álcíme". Ezeket az álcímeket általában az [.filename]#/etc/rc.conf# állományban kell feltüntetni.
+
+Az [.filename]#fxp0# felület esetén az álcímek megadása valahogy így néz ki:
+
+[.programlisting]
+....
+ifconfig_fxp0_alias0="inet xxx.xxx.xxx.xxx netmask xxx.xxx.xxx.xxx"
+....
+
+Figyeljük meg, hogy az álcímekhez tartozó bejegyzések az `alias0` névvel kezdõdnek és szám szerint növekvõleg következnek egymás után (például, `_alias1`, `_alias2` és így tovább). A beállítás a sorozat elsõ kimaradó tagjánál megszakad.
+
+Az álcímek hálózati maszkjának pontos meghatározása nagyon fontos, de szerencsére nem különösebben bonyolult. Minden felület esetén lennie kell egy olyan címnek, amely helyesen reprezentálja a hálózat hálózati maszkját. Minden egyéb olyan címnek, ami ugyanabba az alhálózatba esik, végig `1`-esekbõl álló hálózati maszkkal kell rendelkezniük (ami felírható `255.255.255.255` vagy `0xffffffff` formájában is).
+
+Például vegyük azt, hogy az [.filename]#fxp0# felületen keresztül két hálózathoz csatlakozunk, melyek közül az egyik a `10.1.1.0`, amelynek hálózati maszkja `255.255.255.0`, és a `202.0.75.16`, amelynek hálózati maszkja `255.255.255.240`. Azt szeretnénk elérni, hogy a rendszerünk a `10.1.1.1` címtõl a `10.1.1.5` címig, valamint a `202.0.75.17` címtõl a `202.0.75.20` címig jelenjen meg a nekik megfelelõ hálózatokon. Ahogy arra már fentebb is utaltunk, az adott hálózati tartományban csak az elsõ címnek (ebben az esetben ez a `10.0.1.1` és a `202.0.75.17`) kell valódi hálózati maszkkal rendelkeznie. Minden további címnek (a `10.1.1.2` és `10.1.1.5` között, valamint a `202.0.75.18` és `202.0.75.20` között) legyen `255.255.255.255` a hálózati maszkja.
+
+Az alábbi [.filename]#/etc/rc.conf# bejegyzések ennek az elrendezésnek megfelelõen állítják be a kártyát:
+
+[.programlisting]
+....
+ifconfig_fxp0="inet 10.1.1.1 netmask 255.255.255.0"
+ifconfig_fxp0_alias0="inet 10.1.1.2 netmask 255.255.255.255"
+ifconfig_fxp0_alias1="inet 10.1.1.3 netmask 255.255.255.255"
+ifconfig_fxp0_alias2="inet 10.1.1.4 netmask 255.255.255.255"
+ifconfig_fxp0_alias3="inet 10.1.1.5 netmask 255.255.255.255"
+ifconfig_fxp0_alias4="inet 202.0.75.17 netmask 255.255.255.240"
+ifconfig_fxp0_alias5="inet 202.0.75.18 netmask 255.255.255.255"
+ifconfig_fxp0_alias6="inet 202.0.75.19 netmask 255.255.255.255"
+ifconfig_fxp0_alias7="inet 202.0.75.20 netmask 255.255.255.255"
+....
+
+[[configtuning-configfiles]]
+== Konfigurációs állományok
+
+=== Az [.filename]#/etc# felépítése
+
+A beállításokkal kapcsolatos információk számos könyvtárban tárolódnak. Többek közt:
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|[.filename]#/etc#
+|Általános rendszerszintû beállítások. Az itt levõ adatok a rendszer egészére vonatkoznak.
+
+|[.filename]#/etc/defaults#
+|A rendszer konfigurációs állományainak alapértelmezett változatai.
+
+|[.filename]#/etc/mail#
+|A man:sendmail[8] beállításához tartozó további állományok, egyéb levélküldéshez használt adatok.
+
+|[.filename]#/etc/ppp#
+|A felhasználói és rendszermag szintû ppp programok beállításai.
+
+|[.filename]#/etc/namedb#
+|A man:named[8] mûködéséhez szükséges adatok alapértelmezett helye. Általában a [.filename]#named.conf# és a zónák leírását tároló állományok kerülnek ide.
+
+|[.filename]#/usr/local/etc#
+|A telepített alkalmazások konfigurációs állományai. Néha alkalmazásonként külön könyvtárakba kerülnek a benne található állományok.
+
+|[.filename]#/usr/local/etc/rc.d#
+|A telepített alkalmazások indításával és leállításával kapcsolatos szkriptek.
+
+|[.filename]#/var/db#
+|Automatikusan generált rendszerszintû adatbázisok a csomagokkal, a programok helyével stb. kapcsolatosan.
+|===
+
+=== Hálózati nevek
+
+==== [.filename]#/etc/resolv.conf#
+
+Az [.filename]#/etc/resolv.conf# határozza meg, hogy a FreeBSD névfeloldója miként fér hozzá az internet tartománynév rendszeréhez (a DNS-hez).
+
+Az [.filename]#resolv.conf# állományban leggyakrabban a következõ bejegyzések fordulnak elõ:
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|`nameserver`
+|Annak a névszernek az IP-címe, ahova a névfeloldó küldi a kéréseit. A névszervereket a felírás sorrendjében kérdezi meg, maximum hármat.
+
+|`search`
+|A hálózati nevek keresõlistája. Ezt általában a helyi hálózati nevek tartománya határozza meg.
+
+|`domain`
+|A helyi tartomány neve.
+|===
+
+Egy átlagos [.filename]#resolv.conf# tartalma:
+
+[.programlisting]
+....
+search example.com
+nameserver 147.11.1.11
+nameserver 147.11.100.30
+....
+
+[NOTE]
+====
+Csak egy `search` és `domain` opciót szabad megadni.
+====
+
+A DHCP használatakor a man:dhclient[8] felül szokta írni a [.filename]#resolv.conf# tartalmát a DHCP szervertõl kapott információkkal.
+
+==== [.filename]#/etc/hosts#
+
+Az [.filename]#/etc/hosts# az internet kezdeti napjaira emlékeztetõ egyszerû szöveges adatbázis. A nevek és IP-címek közti leképzéseket a DNS és NIS rendszerekkel karöltve oldja fel. Ide a helyi hálózaton csatlakozó számítógépek neveit lehet beírni ahelyett, hogy erre a célra beállítanánk egy külön man:named[8] szervert. Ezenkívül még az [.filename]#/etc/hosts# állományba internetes nevek rekordját is felvehetjük, amivel így csökkenthetjük a gyakran használt nevek feloldására irányuló külsõ kéréseket.
+
+[.programlisting]
+....
+# $FreeBSD$
+#
+#
+# A hálózati nevek adatbázisa
+#
+# Ebbe az állományba rakjuk a helyi hálózaton található címeket és
+# a hozzájuk tartozó hálózati neveket, ahol szinte ugyanez az
+# adatbázis megtalálható.  A 'my.domain' helyére a saját gépünk
+# nevét írjuk be.
+#
+# A DNS vagy NIS alkalmazása esetén ez az állomány nem feltétlenül kerül
+# felhasználásra. A névfeloldás sorrendjét az /etc/nsswitch.conf
+# állományban adhatjuk meg.
+#
+::1                     localhost localhost.my.domain
+127.0.0.1               localhost localhost.my.domain
+
+#
+# Egy képzeletbeli hálózat.
+#10.0.0.2               myname.my.domain myname
+#10.0.0.3               myfriend.my.domain myfriend
+#
+# Az RFC 1918-nak megfelelõen a következõ IP-címekkel rendelkezõ
+# alhálózatok sosem csatlakozhatnak közvetlenül az internetre:
+#
+#       10.0.0.0        -   10.255.255.255
+#       172.16.0.0      -   172.31.255.255
+#       192.168.0.0     -   192.168.255.255
+#
+# Amikor csatlakozunk az internethez, egy valódi, hivatalosan
+# kiosztott számra lesz szükségünk.  Ne találjunk ki magunknak
+# hálózati címeket, hanem használjuk az internetszolgáltatótól
+# kapott címet (amennyiben rendelkezünk # ilyennel) vagy az
+# regionális internetes nyilvántartásban szereplõ címek közül
+# valamelyiket (ARIN, APNIC, LACNIC, RIPE NCC vagy AfriNIC).
+....
+
+Az [.filename]#/etc/hosts# formai felépítése igen egyszerû:
+
+[.programlisting]
+....
+[internetes cím] [hivatalos hálózati név] [álnév1] [álnév2] ...
+....
+
+Tehát például:
+
+[.programlisting]
+....
+10.0.0.1 azEnValodiNevem.aHalozaton.hu azEnValodiNevem izemize1 izemize2
+....
+
+A részletekért keressük fel a man:hosts[5] man oldalt.
+
+=== A naplóállományok beállítása
+
+==== [.filename]#syslog.conf#
+
+A [.filename]#syslog.conf# állomány a man:syslogd[8] program beállításait tartalmazza. Segítségével megadhatjuk, hogy a `syslog` által generált üzenetek egyes típusait milyen naplóállományokba mentsük.
+
+[.programlisting]
+....
+# $FreeBSD$
+#
+# Ebben az állományban HASZNÁLHATÓAK szóközök a mezõk elválasztására,
+# habár a többi *nix-típusú rendszer inkább tabulátorokat használ
+# erre a célra. Ha több rendszeren is használni akarjuk ezt az
+# állományt, akkor ne használjunk szóközöket.
+#
+# A többit lásd a syslog.conf(5) man oldalon.
+#
+.err;kern.debug;auth.notice;mail.crit           /dev/console
+*.notice;kern.debug;lpr.info;mail.crit;news.err /var/log/messages
+security.*                                      /var/log/security
+mail.info                                       /var/log/maillog
+lpr.info                                        /var/log/lpd-errs
+cron.*                                          /var/log/cron
+*.err                                           root
+*.notice;news.err                               root
+*.alert                                         root
+*.emerg                                         *
+# Tegyük vissza ezt a sort, ha a /dev/console eszközre kiírt
+# üzeneteket át akarjuk irányítani az /var/log/console.log állományba.
+#console.info                                   /var/log/console.log
+# Ha az összes üzenetet a /var/log/all.log állományba akarjuk menteni,
+# akkor tegyük vissza ezt a sort.
+#*.*                                            /var/log/all.log
+# Ha egy "loghost" nevû gépre szeretnénk naplózni, akkor tegyük vissza
+# ezt a sort.
+#*.*                                            @loghost
+# Az inn használatakor tegyük vissza ezeket a sorokat.
+# news.crit                                     /var/log/news/news.crit
+# news.err                                      /var/log/news/news.err
+# news.notice                                   /var/log/news/news.notice
+!startslip
+*.*                                             /var/log/slip.log
+!ppp
+*.*                                             /var/log/ppp.log
+....
+
+A man:syslog.conf[5] man oldalának elolvasásával tudhatunk meg többet ezekrõl.
+
+==== [.filename]#newsyslog.conf#
+
+A [.filename]#newsyslog.conf# a man:newsyslog[8] beállításait tároló állomány. Ez egy olyan program, amelyet általában a man:cron[8] futtat le. A man:newsyslog[8] dönti el, hogy mikor van szükség a naplók archiválására és átrendezésére. Ennek során a [.filename]#logfile# állományból [.filename]#logfile.0# lesz, a [.filename]#logfile.0# állományból pedig [.filename]#logfile.1# és így tovább. Beállíthatjuk úgy is, hogy a naplóállományokat archiválja man:gzip[1] formátumban, aminek megfelelõen ezek [.filename]#logfile.0.gz#, [.filename]#logfile.1.gz# és ehhez hasonló névvel jönnek létre.
+
+A [.filename]#newsyslog.conf# megadja, hogy melyik naplóállományokat kell felügyelni, mennyi példányt tartsunk meg belõlük és mikor kell velük foglalkozni. A naplóállományok átrendezhetõek és/vagy archiválhatóak egy adott méret elérésekor vagy egy adott idõ eltelte után.
+
+[.programlisting]
+....
+# A newsyslog konfigurációs állománya
+# $FreeBSD$
+#
+# állománynév     [tulajdonos:csoport]  mód  darab méret mikor [ZB] [/pid_állomány] [jelzés]
+/var/log/cron                           600  3     100  *     Z
+/var/log/amd.log                        644  7     100  *     Z
+/var/log/kerberos.log                   644  7     100  *     Z
+/var/log/lpd-errs                       644  7     100  *     Z
+/var/log/maillog                        644  7     *    @T00  Z
+/var/log/sendmail.st                    644  10    *    168   B
+/var/log/messages                       644  5     100  *     Z
+/var/log/all.log                        600  7     *    @T00  Z
+/var/log/slip.log                       600  3     100  *     Z
+/var/log/ppp.log                        600  3     100  *     Z
+/var/log/security                       600  10    100  *     Z
+/var/log/wtmp                           644  3     *    @01T05 B
+/var/log/daily.log                      640  7     *    @T00  Z
+/var/log/weekly.log                     640  5     1    $W6D0 Z
+/var/log/monthly.log                    640  12    *    $M1D0 Z
+/var/log/console.log                    640  5     100  *     Z
+....
+
+További információkat a man:newsyslog[8] man oldaláról nyerhetünk.
+
+[[configtuning-sysctlconf]]
+=== [.filename]#sysctl.conf#
+
+A [.filename]#sysctl.conf# állomány leginkább az [.filename]#rc.conf# állományhoz hasonlít, benne az értékeket `változó=érték` párokban adhatjuk meg. Az itt definiált értékek akkor kerülnek ténylegesen beállításra, amikor a rendszer többfelhasználós módba vált. Ezen a módon nem mindegyik változó értékét tudjuk átállítani.
+
+A [.filename]#sysctl.conf# állományban az alábbi érték beállításával tudjuk beállítani, hogy a rendszer ne naplózza, amikor a programok végzetes jelzéssel fejezõdnek be, valamint azt, hogy a felhasználók láthassák egymás futó programjait:
+
+[.programlisting]
+....
+# Ne naplózzuk a végzetes jelzésekhez (például sig 11) tartozó kilépéseket.
+kern.logsigexit=0
+
+# Ne engedjük a felhasználóknak, hogy lássák egy másik felhasználó
+# azonosítójával futó programokat.
+security.bsd.see_other_uids=0
+....
+
+[[configtuning-sysctl]]
+== Finomhangolás a sysctl használatával
+
+A man:sysctl[8] egy olyan felület, amely lehetõséget biztosít egy mûködõ FreeBSD rendszer megváltoztatására. Segítségével többek közt hozzáférhetünk a TCP/IP protokollkészlet és a virtuális memóriát kezelõ alrendszer rengeteg apró opciójához, melyek megfelelõ beállításával egy tapasztalt rendszergazda kezében drasztikusan növelhetõ a rendszer teljesítménye. A man:sysctl[8] alkalmazásával több mint ötszáz rendszerszintû változó kérdezhetõ le és állítható be.
+
+A man:sysctl[8] két funkciót rejt magában: a rendszer beállításainak lekérdezését és módosítását.
+
+Így nézhetjük meg az összes lekérdezhetó változót:
+
+[source,bash]
+....
+% sysctl -a
+....
+
+Így kérhetjük egy konkrét változó, például a `kern.maxproc` értékét:
+
+[source,bash]
+....
+% sysctl kern.maxproc
+kern.maxproc: 1044
+....
+
+Egy adott változó értékének módosításához pedig használjuk a _változó_=_érték_ felírást:
+
+[source,bash]
+....
+# sysctl kern.maxfiles=5000
+kern.maxfiles: 2088 -> 5000
+....
+
+A sysctl változók értékei lehetnek karakterláncok, számok és logikai értékek (ahol az `1` az igennek, a `0` a nemnek felel meg).
+
+Ha a számítógép indításakor automatikusan be akarunk állítani bizonyos változókat, akkor vegyük fel ezeket az [.filename]#/etc/sysctl.conf# állományba. Ennek pontosabb részleteit a man:sysctl.conf[5] man oldalon és a <<configtuning-sysctlconf>>ban találhatjuk meg.
+
+[[sysctl-readonly]]
+=== A man:sysctl[8] írásvédett értékei
+
+Egyes esetekben szükséges lehet a man:sysctl[8] írásvédett változóinak módosítása. Habár gyakran elengedhetetlen, ezt kizárólag csak a rendszer (újra)indításakor tudjuk megtenni.
+
+Például egyes laptopoknál a man:cardbus[4] eszköz nem próbálkozik több memóriaterület használatával, ezért egy ehhez hasonló hibával leáll:
+
+[source,bash]
+....
+cbb0: Could not map register memory
+device_probe_and_attach: cbb0 attach returned 12
+....
+
+Az ilyen és ehhez hasonló esetekben gyakran olyan man:sysctl[8] változók alapértelmezett értékeit kellene megváltoztatnunk, amelyek írásvédettek. Ilyenkor tegyük az érintett man:sysctl[8] változó "objektumazonosítóját" (OID) és a hozzá tartozó értéket a [.filename]#/boot/loader.conf# állományunkba. Az alapértelmezéseket a [.filename]#/boot/defaults/loader.conf# állományban találjuk meg.
+
+A fentebb tárgyalt probléma megoldásához a felhasználónak a `hw.pci.allow_unsupported_io_range=1` értéket kell beállítania az elõbb említett állományban. Ezután már a man:cardbus[4] megfelelõen fog mûködni.
+
+[[configtuning-disk]]
+== A lemezek finomhangolása
+
+=== Sysctl változók
+
+==== `vfs.vmiodirenable`
+
+A `vfs.vmiodirenable` sysctl változó értéke lehet 0 (ki) vagy 1 (be, és ez az alapértelmezés is). Ez a változó vezérli a könyvtárak gyorsítótárazását a rendszerben. A könyvtárak többsége kis méretû, így az állományrendszerbõl csak egyetlen (általában 1 KB méretû) darabkát használnak és még ennél is kevesebbet (általában 512 byte-ot) a pufferben. A változó kikapcsolt (avagy 0) értéke mellett a puffer csak rögzített számú könyvtárat táraz be még abban az esetben is, amikor temérdek mennyiségû memória áll a rendelkezésére. Ha viszont (az 1 értékkel) engedélyezzük, akkor a rendszer a könyvtárak tárazására felhasználja a virtuális memóriában pufferelt lapokat is, amivel lényegében az összes elérhetõ memóriát a könyvtárak tárazására fordítja. Ilyenkor azonban az egyes könyvtárak tárazására használt legkisebb memóriaterület a fizikai lapmérettel egyezik meg (ami általában 4 KB) és nem 512 byte. Abban az esetben javasoljuk ennek a beállításnak a használatát, ha olyan szolgáltatásokkal dolgozunk, amelyek nagy számú állománnyal dolgoznak egyszerre. Ilyen szolgáltatások többek közt a webes gyorsítótárak, nagyobb levelezõrendszerek és hírrendszerek. Az opció engedélyezése alapvetõen nem veti vissza a rendszer teljesítményét még akkor sem, ha ezzel memóriát pazarlunk el, de ezt igazából érdemes kikísérletezni.
+
+==== `vfs.write_behind`
+
+A `vfs.write_behind` sysctl változó alapértelmezett értéke `1` (bekapcsolt). Ez arra utasítja az állományrendszert, hogy csak akkor küldje ki az adatokat az eszközre, ha belõlük teljes fürtök gyûltek össze. Ez jellemzõ módon nagyobb szekvenciális állományok írása esetén kedvezõ. Arra szolgál, hogy segítségével el lehessen kerülni az I/O túlságosan gyakori módosítások okozta terhelését. Bizonyos körülmények közt ez azonban lassíthatja a futó programok mûködését, ezért ilyenkor érdemes megfontolni a kikapcsolását.
+
+==== `vfs.hirunningspace`
+
+A `vfs.hirunningspace` sysctl változó értéke azt adja meg, hogy tetszõleges számú példánynál rendszerszinten mekkora mértékû írási mûvelet irányítható át a lemezvezérlõk soraiba. Az alapértelmezés többnyire elegendõ, de olyan gépeken, ahol sok lemez dolgozik egyszerre, ez az érték négy vagy öt _megabyte-ra_ is felszökhet! Hozzátennénk, hogy ha ezt az értéket túlságosan nagyra állítjuk (és így túllépjük a puffer írási küszöbértékét), akkor ezzel hihetetlenül gyenge fürtözési teljesítményt nyerünk. Semmiképp se állítsuk túlzottan nagy értékre! A nagyobb írási értékek a velük párhuzamos olvasások számára késleltetést is jelentenek.
+
+Találhatunk még más egyéb pufferelési és gyorsítótárazási sysctl változókat, azonban ezek megváltoztatását egyáltalán nem javasoljuk, mivel a virtuális memória alrendszer kiválóan tudja önállóan állítani ezeket a paramétereit.
+
+==== `vm.swap_idle_enabled`
+
+A `vm.swap_idle_enabled` sysctl változó módosítása olyan nagyobb többfelhasználós rendszerekben bizonyulhat hasznosnak, ahol sok felhasználó lép be és lép ki a rendszerbe és sok az üresjáratban futó program. Az ilyen jellegû rendszerek hajlamosak nagy mennyiségû folyamatos terhelést mérni a tartalékolt szabad memóriára. A beállítás engedélyezésével, valamint a `vm.swap_idle_threshold1` és a `vm.swap_idle_threshold2` változókon keresztül a kilapozás "reakcióidejének" alkalmas behangolásával a megszokottnál gyorsabban lenyomhatjuk az üresjáratban dolgozó programokhoz tartozó memórialapok prioritását, amivel a kilapozásokat vezérlõ démon kezére játszunk. Azonban tényleg csak akkor engedélyezzük ezt a lehetõséget, ha valóban szükségünk van rá, mivel így a memóriát jóval elõbb lapozzuk ki és ezzel több lapozóállományt és lemezteljesítményt emésztünk fel. Kisebb rendszerekben jól behatárolható a hatása, azonban a nagyobb rendszerekben, ahol már eleve visszafogott mértékû lapozás történik, ez a beállítás lehetõvé teszi a virtuális memóriát kezelõ alrendszer számára, hogy könnyedén ki- és be rakosgasson komplett futó programokat a memóriába.
+
+==== `hw.ata.wc`
+
+A FreeBSD 4.3 egyszer már kacérkodott az IDE-lemezek írási pufferének kikapcsolásával. Ez ugyan csökkentette az IDE-lemezek írási sávszélességét, azonban bizonyos merevlemezgyártók gondatlanságából eredõ súlyos adatvesztések miatt szükséges volt a használata. A gond ezzel kapcsolatban ott van, hogy egyes IDE-meghajtók hazudnak az írások teljesítésérõl. A lemezek írási gyorsítótárazásának bekapcsolásával az IDE-meghajtók nem csak az írások sorrendjét rendezik át, hanem nagyobb terhelés esetén egyes blokkokat jóval késõbb is rögzítenek. Ezért a rendszer esetleges összeomlása vagy egy áramkimaradás súlyos károkat okozhat az állományrendszerben. A FreeBSD úgy döntött, hogy a megbízhatóságot választja. Sajnos ez olyan nagyságú teljesítményvesztést okozott, hogy a következõ kiadásban már kénytelenek voltunk alapértelmezés szerint is visszakapcsolni ezt a lehetõséget. A `hw.ata.wc` nevû sysctl változó vizsgálatával ellenõrizhetjük a rendszerünkön érvényes alapértelmezett beállítást. Amennyiben az IDE írások gyorsítótárazása nem engedélyezett, akkor ezt a változó értékének 1-re állításával állíthatjuk vissza. Ezt a rendszer indításakor a rendszerbetöltõben tehetjük meg. A rendszermag indítása után ennek már nincs hatása.
+
+A részleteket a man:ata[4] man oldalon tudhatjuk meg.
+
+==== `SCSI_DELAY` (`kern.cam.scsi_delay`)
+
+A rendszermag `SCSI_DELAY` nevû beállítása a rendszer indulásának idejét hivatott mérsékelni. Az alapértelmezett értéke viszonylag magas, innen származik a rendszer indítása során keletkezõ `15` másodperces csúszás. Általában az is megfelelõ, ha ezt visszavesszük az `5` értékre (fõleg a modernebb meghajtók számára). A FreeBSD újabb (5.0 vagy késõbbi) változataiban ez az érték már a `kern.cam.scsi_delay` sysctl változó értékével is megadható a rendszer indításakor. Azonban ügyeljünk rá, hogy mind a finomhangoláshoz használt változó, mind pedig rendszermag beállítása _ezredmásodpercben_ és _nemmásodpercben_ értelmezi ezt az értéket.
+
+[[soft-updates]]
+=== Soft Updates
+
+A man:tunefs[8] nevû program használható az állományrendszerek finomhangolására. Nagyon sok opciót találhatunk benne, de itt most csak a "Soft Updates" ki- és bekapcsolásával foglalkozunk, amit a következõ módon tehetünk meg:
+
+[source,bash]
+....
+# tunefs -n enable /allomanyrendszer
+# tunefs -n disable /allomanyrendszer
+....
+
+Amíg egy állományrendszer csatlakoztatott állapotban van, addig nem módosítható a man:tunefs[8] paranccsal. A Soft Updates bekapcsolására ezért az a legalkalmasabb idõpont, amikor egyfelhasználós módban vagyunk és még egyetlen partíciót sem csatlakoztattunk.
+
+A Soft Updates beállítás engedélyezése a memóriában pufferelt gyorsítótáron keresztül jelentõs mértékben fokozza a metaadatok teljesítményét, elsõsorban az állományok létrehozását és törlését. A Soft Updates használatát ezért minden állományrendszer esetén ajánljuk. A Soft Updates alkalmazásának két rossz oldalára kell tekintettel lennünk. Elõször is a Soft Updates a rendszer összeomlása esetén ugyan garantálja az állományrendszer konzisztenciáját, de könnyen elképzelhetõ, hogy több másodperccel (vagy akár egy egész perccel!) hátrébb jár a fizikai lemez frissítésében. Másodszor a Soft Updates késlelteti az állományrendszer blokkjainak felszabadítását. Ha van egy olyan állományrendszerünk (mint például a rendszer indításához használt gyökér partíció), ami már majdnem betelt, akkor egy nagyobb frissítés, például a `make installworld` parancs kiadása, során az állományrendszer egyszerûen kifogy a helybõl és így a frissítés meghiúsul.
+
+==== Bõvebben a Soft Updates mûködésérõl
+
+Két hagyományos megközelítés létezik az állományrendszerek metaadatainak visszaírására. (A metaadatok módosításakor olyan nem adatot tartalmazó blokkok változnak meg, mint például az állományokra vonatkozó információk vagy a könyvtárak.)
+
+Eredetileg alapértelmezés szerint a metaadatok változásait szinkron módon írták ki. Amikor egy könyvtár megváltozott, a rendszer egészen addig várt, amíg ez a változás a lemezre nem íródott. Ugyanekkor az állományok adatait tartalmazó pufferek (az állományok tartalma) átkerültek a pufferelt gyorsítótárba, hogy majd késõbb, aszinkron módon kerüljenek kiírásra. Ennek az implementációnak a biztonságos mûködés volt az elõnye, mivel így a metaadatok még akkor is konzisztens állapotban maradtak, amikor valamilyen hiba következett be. Tehát egy állomány vagy teljesen létrejött vagy egyáltalán nem. Ha az állományhoz tartozó blokkok már nem tudtak kijutni a gyorsítótárból az összeomlás ideje elõtt, akkor az man:fsck[8] felismerte ezt a helyzetet és az állományrendszer ilyen jellegû hibáját úgy orvosolta, hogy az adott állomány méretét nullára állította. Ezenkívül még az implementációs részletek is tiszták és egyszerûek maradtak. Ennek viszont hátránya, hogy a metaadatok kezelése lassú. Ha például kiadunk egy `rm -r` parancsot, akkor az a könyvtárban levõ állományokat szekvenciálisan dolgozza fel, de minden egyes változtatást (az állományok törlését) csak szinkron módon rögzíti a lemezre. Ezek a frissítések érintik magát a könyvtárat, az állományokkal kapcsolatos információkat tároló táblázatot (az ún. inode táblát) és minden valószínûség szerint az állományok által lefoglalt blokkokat is közvetve. Hasonló megfontolások élnek a nagyobb könyvtárszerkezetek kibontása esetén is (`tar -x`).
+
+A második lehetõség a metaadatok aszinkron frissítése. Ez az alapértelmezés a Linux ext2fs és BSD-k `mount -o async` opcióval csatlakoztatott UFS állományrendszerei esetén. Ilyenkor minden metaadattal kapcsolatos aktualizálás egyszerûen bekerült a pufferelt gyorsítótárba, tehát az állományok adatai és ezek a típusú frissítések keverednek. Ennek a megvalósításnak az az elõnye, hogy nem kell megvárni, amíg a metaadatok is kiíródnak a lemezre, ezért a metaadatok óriási mennyiségû változásával járó mûveletek sokkal gyorsabban hajtódnak végre, mint a szinkron esetben. Sõt, maga az implementáció is tiszta és egyszerû marad, ezért a kódban megjelenõ hibák beszivárgásának kockázata alacsony. A módszer hátránya, hogy egyáltalán semmilyen garanciát nem kapunk az állományrendszer konzisztenciájára. Ha tehát egy rengeteg metaadat megváltozásával együttjáró mûvelet közben történik valamilyen probléma (áramkimaradás, vagy valaki egyszerûen megnyomja a reset gombot), akkor az állományrendszer elõre kiszámíthatatlan állapotba kerül. A rendszer újbóli indításakor ezért nincs lehetõségünk megvizsgálni az állományrendszer állapotát. Elképzelhetõ, hogy az állományokhoz tartozó adatok már kikerültek a lemezre, miközben a rá vonatkozó inode- vagy könyvtári bejegyzések még nem. Így lényegében lehetetlen olyan `fsck` implementációt készíteni, ami képes lenne eltüntetni ezt a káoszt (hiszen az ehhez szükséges adatok nem állnak rendelkezésre). Ha az állományrendszer helyrehozhatatlanul károsodott, akkor csak a man:newfs[8] és a biztonsági mentés visszaállítása segíthet rajta.
+
+Ezt általában úgy küszöbölik ki, hogy az egészhez hozzáteszik még a _módosított területek feljegyzését_, amit gyakran csak _naplózásnak_ (journaling) neveznek, habár ezt az elnevezést nem mindenhol ilyen értelemben használják, ezért a tranzakciók naplózásának más formáira is utalhat. A metaadatok frissítése ebben az esetben is csak szinkron módon történik, de csak a lemez egy kisebb területére. Késõbb ez a megfelelõ helyére kerül. Mivel a lemez naplózásra fordított része egy viszonylag kis méretû, folytonos terület, a lemez fejének még a megterhelõbb mûveletek esetén sem kell sokat mozognia, ezért valójában ez a megoldás gyorsabb, mint a mezei szinkron frissítések. Az implementáció bonyolultsága továbbra is jól behatárolható, a velejáró hibalehetõségek kockázata alacsony. Hátránya, hogy minden metaadat kétszer íródik ki (egyszer a naplózási területre, aztán a megfelelõ helyre), ezért a hétköznapi használat során "visszaesés" tapasztalható a teljesítményben. Másrészrõl azonban egy összeomlás esetén a naplózási terület segítségével minden függõben levõ metaadattal kapcsolatos mûvelet könnyen visszafordítható vagy lezárható a rendszer következõ indításakor, így ezzel egy gyors helyreállítást nyerünk.
+
+Kirk McKusick, a Berkeley FFS fejlesztõje ezt a problémát a Soft Updates segítségével hidalta át: a metaadatokkal kapcsolatos minden függõben levõ frissítést a memóriában tart, majd ezeket rendezett sorrendben írja ki a lemezre ("a metaadatok rendezett frissítése"). Ennek következményeképpen a metaadatok komolyabb frissítése során a késõbb érkezõ módosításoknak lehetõségük van "elkapni" a memóriában levõ korábbi változataikat, ha azok még nem kerültek ki a lemezre. Így az összes, például könyvtárakon végzett, mûvelet a lemezre írás elõtt általában elõször a memóriában játszódik le (az adatblokkok a pozíciójuknak megfelelõen kerülnek rendezésre, ezért a rájuk vonatkozó metaadatok elõtt nem jutnak ki a lemezre). Ha eközben a rendszer összeomlik, akkor így implicit módon a "napló visszalapozását" eredményezi: minden olyan mûvelet, ami már nem tudott kijutni a lemezre, meg nem történtnek számít. Ezen a módon az állományrendszernek egy 30 és 60 másodperc közti korábbi állapota marad fenn. Az algoritmus garantálja, hogy az összes használt erõforrás a nekik megfelelõ bittérképekben helyesen jelölõdik, a blokkokban és az inode-okban. Az összeomlás után az erõforrások kiosztásával kapcsolatban csak egyetlen hiba léphet fel: amikor olyan erõforrások jelölõdnek "használtnak", amelyek igazából "szabadok". Az man:fsck[8] azonban képes felismerni ezeket a helyzeteket és felszabadítani a nem használt erõforrásokat. A `mount -f` parancs kiadásával minden további következmény nélkül figyelmen kívül hagyhatjuk az állományrendszer félkész állapotát és csatlakoztathatjuk az állományrendszereket. A használatban már nem levõ erõforrások felszabadításához az man:fsck[8] parancsot késõbb kell futtatni. Ez az alapötlet húzódik meg a _háttérben végzett lemezellenõrzés_ mögött. A rendszer indításakor az állományrendszernek csupán egy _pillanatképét_ rögzítjük, és az `fsck` tényleges lefuttatását késõbbre toljuk. Mivel mindegyik állományrendszer csatlakoztatható "félkész" állapotban, ezért a rendszer képes elindulni többfelhasználós módban. Eközben a háttérben az `fsck` beütemezhetõ minden olyan állományrendszer számára, ahol arra szükség van, hogy szabadítsa fel az esetlegesen már nem használt erõforrásokat. (Így a Soft Updates opciót nem alkalmazó állományrendszerek esetén továbbra is szükség van az elõtérben elvégzett `fsck` parancsra.)
+
+A módszer elõnye, hogy így a metaadatokkal kapcsolatos mûveletek közel olyan gyorsak, mint az aszinkron módon végzett frissítések (tehát gyorsabb, mintha _naplóznánk_, ami ugye minden metaadatot kétszer ír ki). A hátránya a bonyolultabb kód (ami miatt növekszik az olyan hibák lehetõsége, amelyek érzékenyen befolyásolhatják a felhasználói adatok elvesztését) és a nagyobb memóriaigény. Ezenkívül még van néhány olyan egyéni jellemzõje, amelyet meg kell szokni. A rendszer összeomlása után az állományrendszer valamivel "régebbi" lesz. Amikor pedig megszokott szinkron megközelítés szerint az `fsck` lefutása után nulla méretû állományok jönnének létre, ezek az állományok a Soft Updates esetén egyáltalán meg sem jelennek, mivel sem a rájuk vonatkozó metaadatok, sem pedig a tartalmuk nem került ki a lemezre. Egy `rm` lefuttatása után a lemezterület addig nem kerül felszabadításra, amíg a frissítések teljesen rá nem kerülnek a lemezre. Ez nagyobb mennyiségû adat telepítésekor gondokat okozhat egy olyan állományrendszeren, ahol nincs elegendõ hely az állományok kétszeri tárolására.
+
+[[configtuning-kernel-limits]]
+== A rendszermag korlátainak finomhangolása
+
+[[file-process-limits]]
+=== Az állományok és a futó programok korlátozásai
+
+[[kern-maxfiles]]
+==== `kern.maxfiles`
+
+A `kern.maxfiles` értéke a rendszerünk igényeinek megfelelõen növelhetõ vagy csökkenthetõ. Ez a változó adja meg a rendszerünkben levõ állományleírók maximális számát. Amikor az állományleírókat tároló táblázat megtelik, a rendszer üzenetpufferében egy `file: table is full` üzenet jelenik meg, amit a `dmesg` paranccsal tudunk megnézni.
+
+Minden megnyitott állomány, csatlakozás vagy FIFO elhasznál egy állományleírót. Egy nagyméretû szerver könnyen felemészthet több ezernyi állományleírót attól függõen, hogy milyen és mennyi szolgáltatást futtat egymás mellett.
+
+A FreeBSD korábbi kiadásaiban a `kern.maxfiles` a rendszermag beállításait tartalmazó állomány `maxusers` (a rendszerben egyszerre jelenlevõ felhasználók maximumának) értékébõl származott, tehát a `kern.maxfiles` a `maxusers` értékével arányosan növekszik. Amikor készítünk egy saját rendszermagot, mindig érdemes a rendszerünk használatának megfelelõen beállítani ezt az értéket, mivel a rendszermag ebbõl a számból határozza meg a legtöbb elõre meghatározott korlátait. Mivel még egy komoly szerveren sem jelentkeznek be egyszerre 256 felhasználónál többen, nagyjából ugyanannyi erõforrásra van szüksége, mint egy nagyobb webszervernek.
+
+A `kern.maxusers` értéke a rendelkezésre álló memóriának megfelelõen magától méretezõdik a rendszer indításakor, és amit futás közben csak a `kern.maxusers` sysctl változó írásvédett értékének lekérdezésébõl tudhatunk meg. Egyes oldalak üzemeltetése a `kern.maxusers` így megállapított értékétõl nagyobbat vagy éppen kisebbet igényel, ezért a betöltéskor minden gond nélkül át lehet állítani 64, 128 vagy 256 értékûre. Senkinek sem ajánljuk, hogy 256 felé menjen, hacsak tényleg nincs szüksége ekkora mennyiségû állományleíróra. A `kern.maxusers` függvényében beállított alapértelmezett értékek tetszõleges módon átállíthatóak a rendszer indításakor vagy futás közben a [.filename]#/boot/loader.conf# módosításával (az ide kapcsolódó javaslatokról bõvebben lásd a man:loader.conf[5] man oldalt vagy a [.filename]#/boot/defaults/loader.conf# állományt) illetve a leírás más részén megadott módok szerint.
+
+A korábbi kiadásokban úgy lehet önszabályozóra állítani a `maxusers` beállítást, ha explicit módon `0` értéket adtunk meg neki . A `maxusers` paraméter beállításakor érdemes legalább 4-et megadni, különösen akkor, ha használjuk az X Window Systemet vagy szoftvereket fordítunk le. Azért van erre szükség, mert a `maxusers` értéke által szabályozott legfontosabb mennyiség az egyszerre futtatható programok táblázatának maximális mérete, amelyet így számolunk ki: `20 + 16 * maxusers`. Tehát ha a `maxusers` értékét 1-re állítjuk be, akkor az elõbbi képlet értelmében csak 36 programunk futhat egymással párhuzamosan, beleértve mindazt a kb. 18 programot, amelyek a rendszerrel együtt indulnak, illetve még azt a további 15 programot, amelyeket az X Window System használatával indítunk el. Még egy olyan egyszerû dolog is, mint például egy man oldal megnézése, legalább kilenc programot indít el a szûréshez, kitömörítéshez és megnézéshez. Azonban ha a `maxusers` értékét 64-re állítjuk, akkor egyszerre akár már 1044 programot futtathatunk, ami szinte mindenre elegendõ. Ha persze egy új program indításakor kapunk egy  típusú üzenetet vagy nagy számú konkurens felhasználóval futtatunk szervert (ilyen például az `ftp.FreeBSD.org`), akkor érdemes növelni ezt a számot és újrafordítani a rendszermagot.
+
+[NOTE]
+====
+A `maxusers` _nem_ korlátozza a számítógépre egyszerre bejelentkezni képes felhasználók számát. Egyszerûen csak beállítja néhány táblázat méretét és az egyszerre futtatható programok mennyiségét a rendszert egyidejûleg használni kívánó felhasználók maximális számának figyelembevételével.
+====
+
+==== `kern.ipc.somaxconn`
+
+Az `kern.ipc.somaxconn` sysctl változó a beérkezõ TCP kapcsolatokat fogadó sor hosszát határozza meg. Ennek az alapértelmezett értéke `128`, ami az új kapcsolatok megbízható kezeléséhez általában kevés egy erõsen leterhelt webszerver számára. Ilyen helyzetekben ezt az értéket javasolt `1024`-re vagy még annál is nagyobbra állítani. Az egyes szolgáltatások démonai ugyan szintén korlátozni szokták a fogadósoruk méretét (például a man:sendmail[8] vagy az Apache), de gyakran találunk a beállításai között olyat, amivel ennek a sornak a mérete növelhetõ. A nagyobb fogadósorok mellesleg jó szolgálatot tesznek a Denial of Service () típusú támadásokkal szemben is.
+
+[[nmbclusters]]
+=== Hálózati korlátozások
+
+A rendszermag `NMBCLUSTERS` nevû beállítása szab határt a rendszer részére elérhetõ memóriapufferek mennyiségének. Egy nagyobb forgalmú szerver esetén a pufferek alacsony száma gátat szabhat a FreeBSD képességeinek. Minden klaszter nagyjából 2 KB memóriát takar, így az 1024-es érték azt jelenti, hogy a rendszermag memóriájából 2 megabyte-ot fordítunk a hálózati pufferelésre. Egyszerûen kiszámítható, mennyire is van szükségünk: ha van egy webszerverünk, amely egyszerre legfeljebb 1000 párhuzamos kapcsolatot fogad, és minden kapcsolat lefoglal 16 KB-ot a fogadó-, valamint újabb 16 KB-ot a küldõpuffer számára, akkor megközelítõleg 32 MB-nyi hálózati pufferre lesz szükségünk a webszerver hatékony mûködéséhez. Ezt az értéket gyakran még érdemes megszorozni kettõvel, így 2 x 32 MB / 2 KB = 64 MB / 2 KB = 32768. Több memóriával rendelkezõ számítógépek esetén egy 4096 és 32768 közti értéket javaslunk. Semmilyen körülmények között ne adjunk meg ennél nagyobb értéket, mert ezzel a rendszer már az indítása során összeomolhat. A man:netstat[1] `-m` beállításával ellenõrizhetjük a hálózati klaszterek kihasználtságát.
+
+A `kern.ipc.nmbclusters` változó értékét a rendszer indításakor érdemes megváltoztatni. A FreeBSD korábbi változataiban ehhez a rendszermag `NMBCLUSTERS` nevû man:config[8] paraméterének módosítására van szükségünk.
+
+Az olyan forgalmasabb szervereken, ahol sokat használják a man:sendfile[2] rendszerhívást, szükségünk lehet a man:sendfile[2] által használt pufferek számának növelésére a rendszermag `NFSBUFS` nevû konfigurációs paraméterén vagy a [.filename]#/boot/loader.conf# állományon keresztül (lásd man:loader[8]). Amikor a futó programok közül sokan vannak `sfbufa` állapotban, akkor az egyértelmûen annak a jele, hogy ezen a paraméteren állítanunk kell. A `kern.ipc.nsfbufs` egy írásvédett változót, amelyet a rendszermag állít be. Ez a paraméter névlegesen a `kern.maxusers` változó értékének megfelelõen változik, de bizonyos esetekben ettõl függetlenül önállóan kell behangolni.
+
+[IMPORTANT]
+====
+Annak ellenére, hogy egy socketet blokkolásmentesnek jelöltünk meg, a man:sendfile[2] meghívása egy blokkolásmentes socketre blokkolódást eredményezhet egészen addig, amíg a használatához elegendõ `struct sf_buf` struktúra össze nem gyûlik.
+====
+
+==== `net.inet.ip.portrange.*`
+
+A `net.inet.ip.portrange.*` sysctl változók vezérlik a TCP és UDP csatlakozásokhoz automatikusan hozzárendelt portszámok tartományát. Három ilyen tartomány létezik: az alsó, az alapértelmezett és a felsõ tartomány. A legtöbb hálózati program a `net.inet.ip.portrange.first` és `net.inet.ip.portrange.last` változók által rendre az 1024-tõl 5000-ig kijelölt alapértelmezett tartományt használja. A kimenõ kapcsolatok is rögzített porttartományokat követnek, és adott körülmények mellett be lehet állítani úgy a rendszerünket, hogy ezen kívül osszon ki portokat. Ez a legtöbbször akkor fordul elõ, amikor egy erõsen leterhelt webproxyt mûködtetünk. A porttartományok nem okoznak gondot olyan szervereknél, ahol általában bejövõ kapcsolatokra lehet számítani, tehát például webszerverek esetén, vagy ahol korlátozott a kimenõ kapcsolatok száma, mint például a levelek továbbításánál. Ha olyan helyzetbe keverednénk, ahol már kifutunk a felhasználható portokból, a `net.inet.ip.portrange.last` mérsékelt növelésével javasolt kitörni. Ilyenkor a `10000`, `20000` vagy `30000` értékek elfogadhatóak. Amikor megváltoztatjuk a porttartományok határait, elõtte mindig gondoljuk át, milyen hatással lehet ez a tûzfalra. Egyes tûzfalak blokkolhatnak bizonyos tartományokat (általában az alacsonyabbakat) és arra számítanak, hogy a rendszerek a kimenõ kapcsolatokhoz a nagyobb számú portokat használják - ebbõl kifolyólag nem ajánlott csökkenteni a `net.inet.ip.portrange.first` értékét.
+
+==== A TCP sávszélesség-késletetés szorzat
+
+A TCP sávszélesség-késleltetés szorzat korlátozása hasonlít a NetBSD-ben megtalálható TCP/Vegas implementációhoz. A `net.inet.tcp.inflight.enable` sysctl változó `1`-re állításával lehet engedélyezni. A rendszer ilyenkor minden egyes kapcsolathoz megpróbálja kiszámítani a sávszélesség-késleltetés szorzatot és az optimális átviteli sebesség fenntartásához illeszkedõen korlátozni a hálózat felé küldött adatok sorának hosszát.
+
+Ez a lehetõség még olyankor bizonyulhat hasznosnak, amikor modemen, Gigabit Etherneten vagy nagysebességû WAN (vagy bármilyen más nagy sávszélesség-késleltetés szorzattal bíró) összeköttetéseken keresztül küldünk át adatokat, különösen abban az esetben, amikor ablakméretezést is használnunk vagy nagy küldési ablakot állítottunk be. Az engedélyezésekor ne felejtsük el `net.inet.tcp.infligt.debug` változót sem beállítani `0`-ra (amivel így kikapcsoljuk a nyomkövetést),éles használat esetén pedig elõnyös lehet a `net.inet.cp.inflight.min` változót legalább `6144`-re állítani. Azonban hozzátesszük, hogy összeköttetéstõl függõen a nagy minimum értékek tulajdonképpen kikapcsolják a sávszélességkorlátozást. Ez a korlátozási lehetõség csökkenti a közbensõ út adatainak és csomagváltásokhoz tartozó soroknak a méretét, miközben csökkenti a helyi számítógép felületén felépülõ sorok méretét is. Ha kevesebb csomagot rakunk be a sorba, akkor az interaktív kapcsolatok, különösen a lassabb modemek esetében, kisebb _körbejárási idõvel_ (Round Trip Time) mûködnek. Továbbá megemlítenénk, hogy ez a lehetõség csak az adatok küldésére (feltöltésére, szerveroldalra) van hatással. Semmilyen befolyása nincs az adatok fogadására (letöltésére).
+
+A `net.inet.tcp.inflight.stab` állítgatása _nem_ ajánlott. A paraméter értéke alapértelmezés szerint 20, ami legfeljebb 2 csomag hozzáadását jelenti a sávszélesség-késleltetés szorzat ablakának kiszámításakor. Erre a kiegészítõ ablakra azért van szükség, hogy stabilizálni tudjuk vele az algoritmust és javítani tudjuk a változó feltételekre adott reakciót, de lassabb összeköttetések esetében nagyobb ping idõket is eredményezhet (habár ezek még így kisebbek, mint ha nem használnánk az algoritmust). Ilyen esetekben megpróbálhatjuk 15-re, 10-re vagy esetleg 5-re visszavenni a paraméter értékét, de ekkor a kívánt hatás eléréséhez minden bizonnyal a `net.inet.tcp.inflight.min` értékét is redukálunk kell majd (például 3500-ra). Ezen paraméterek megváltoztatását csak végsõ esetben ajánljuk!
+
+=== Virtuális memória
+
+==== `kern.maxvnodes`
+
+A vnode egy állomány vagy könyvtár belsõ ábrázolása. Ennek megfelelõen a vnode-ok számának növelésével az operációs rendszer spórolni tud a lemezmûveletekkel. Ezt általában maga az operációs rendszer szabályozza, és nincs szükség a finomhangolására. Néhány esetben, amikor a lemezmûveletek jelentik a rendszerben a szûk keresztmetszetet és kezdenek elfogyni a vnode-ok, szükség lehet ennek a számnak a növelésére. Ehhez az inaktív és szabad fizikai memória mennyiségét kell számításba vennünk.
+
+Így kérhetjük le a pillanatnyilag használatban levõ vnode-ok mennyiségét:
+
+[source,bash]
+....
+# sysctl vfs.numvnodes
+vfs.numvnodes: 91349
+....
+
+Így tudhatjuk meg a vnode-ok maximális számát:
+
+[source,bash]
+....
+# sysctl kern.maxvnodes
+kern.maxvnodes: 100000
+....
+
+Ha a vnode-ok aktuális kihasználtsága megközelíti a csúcsértéket, nagyjából ezerrel javasolt megnövelni a `kern.maxvnodes` értékét. Ezután figyeljük továbbra is a `vfs.numvnodes` változását. Ha ismét felkúszik a maximális értékre, akkor növeljük megint egy keveset a `kern.maxvnodes` értékén. Eközben a man:top[1] használatával figyelhetjük a memória kihasználtságának növekedését is, ilyenkor tehát több memóriának kell használatban lennie.
+
+[[adding-swap-space]]
+== A lapozóterület bõvítése
+
+Nem számít, mennyire tervezünk jól elõre, mindig elõfordulhat, hogy a rendszerünk mégsem teljesíti a kitûzött elvárásokat. Amennyiben további lapozóterület hozzáadására lenne szükségünk, azt igen könnyen megtehetjük. Háromféleképpen növelhetjük a lapozásra szánt területet: hozzáadunk a rendszerhez egy újabb merevlemezes meghajtót, NFS-en keresztül lapozunk, vagy egy már meglevõ partíción hozunk létre lapozóállományt.
+
+A lapozóterület titkosításával, valamint annak lehetõségeivel és okaival kapcsolatban lapozzuk fel a kézikönyv crossref:disks[swap-encrypting,A lapozóterület titkosítása]át.
+
+[[new-drive-swap]]
+=== Lapozás egy új merevlemezre
+
+A lapozóterület bõvítésének legjobb módja természetesen remek indok egy új merevlemez beszerzésére is. Elvégre egy merevlemezt mindig fel tudunk ilyen célra használni. Ha ezt a megoldást választjuk, elõtte ajánlott (újra) elolvasni a kézikönyv <<configtuning-initial>>ában a lapozóterületek elrendezésére vonatkozó javaslatokat.
+
+[[nfs-swap]]
+=== Lapozás NFS-en keresztül
+
+NFS-en keresztül csak akkor lapozzunk, ha ezt helyi lemezek segítségével nem tudjuk megtenni. Az NFS alapú lapozás hatékonyságát erõsen behatárolja a rendelkezésre álló hálózati sávszélesség és további terheket ró az NFS szerverünkre is.
+
+[[create-swapfile]]
+=== Lapozóállományok
+
+Lapozóállománynak egy adott méretû állományt hozzunk létre. Ebben a példában erre egy [.filename]#/usr/swap0# nevû, 64 MB méretû állományt fogunk használni. Természetesen bármilyen más nevet is választhatunk.
+
+.Lapozóállomány létrehozása FreeBSD-ben
+[example]
+====
+. Gyõzõdjünk meg róla, hogy a rendszermagunk beállításai között megtalálható a memórialemez meghajtójának (man:md[4]) használata. Ez a [.filename]#GENERIC# rendszermag alapból tartalmazza.
++
+[.programlisting]
+....
+device   md   # Memória "lemezek"
+....
++
+. Hozzunk létre egy lapozóállományt ([.filename]#/usr/swap0#):
++
+[source,bash]
+....
+# dd if=/dev/zero of=/usr/swap0 bs=1024k count=64
+....
++
+. Állítsuk be rá a megfelelõ engedélyeket ([.filename]#/usr/swap0#):
++
+[source,bash]
+....
+# chmod 0600 /usr/swap0
+....
++
+. Adjuk meg a lapozóállományt az [.filename]#/etc/rc.conf# állományban:
++
+[.programlisting]
+....
+swapfile="/usr/swap0"   # Állítsuk be swapfile értékét, ha külsõ lapozóállományra van szükségünk.
+....
++
+. Indítsuk újra a számítógépünket, vagy a lapozóállomány azonnali használtba vételéhez írjuk be:
++
+[source,bash]
+....
+# mdconfig -a -t vnode -f /usr/swap0 -u 0 && swapon /dev/md0
+....
+
+====
+
+[[acpi-overview]]
+== Energia- és erõforrásgazdálkodás
+
+Fontos a hardveres erõforrásaink hatékony kihasználása. Az ACPI megjelenése elõtt az operációs rendszerek csak nehézkesen és rugalmatlanul tudták kezelni a rendszer energiafelhasználási és hõszabályzási lehetõségeit. A hardvert a BIOS kezelte, ezért a felhasználó kevesebbet tudott látni és irányítani az energiagazdálkodási beállításokból. Az _Fejlett energiagazdálkodás (Advanced Power Management, APM)_ ehhez nyújtott egy erõsen korlátozott felületet. Napjaink operációs rendszereiben az energia- és erõforráskezelés az egyik legfontosabb alkotóelem. Például, ha az operációs rendszerrel folyamatosan figyelni akarjuk a rendszer hõmérsékletének váratlan növekedését (és errõl figyelmeztetést kérni).
+
+A FreeBSD kézikönyvének ezen szakaszában az ACPI-rõl adunk egy átfogó áttekintést, a végén pedig összefoglaljuk a témához tartozó irodalmat.
+
+[[acpi-intro]]
+=== Mi az ACPI?
+
+A speciális energia- és konfigurációs illesztõ felület (Advanced Configuration and Power Interface, avagy ACPI) gyártók egy csoportja által létrehozott szabvány, amely a hardveres erõforrások és az energiagazdálkodás egységes felületét rögzíti (innen a neve). Döntõ szerepet játszik a _Beállítások és az energiagazdálkodás operációs rendszerek áltai vezérlésében_, vagyis segítségével az operációs rendszer még nagyobb mértékben és rugalmassággal tudja irányítani ezeket a lehetõségeket. A modern operációs rendszerek az ACPI felbukkanásával "kitolták" a jelenleg meglevõ Plug and Play felületek korlátait. Az ACPI az APM közvetlen leszármazottja.
+
+[[acpi-old-spec]]
+=== A Fejlett energiagazdálkodás (APM) hiányosságai
+
+A _Fejlett energiagazdálkodás (APM)_ a rendszer által felhasznált energiát annak elfoglaltsága alapján vezérli. Az APM-et támogató BIOS-t a (rendszert) gyártó állítja elõ és az adott hardverplatformra jellemzõ. Az APM operációs rendszerben levõ meghajtója hozzáférést biztosít az _APM szoftveres felületéhez_, amivel lehetõség nyílik az energiaszintek kezelésére. Az APM-et 2000 elõtt és körül még mindig használták egyes rendszerek gyártásánál.
+
+Az APM használata négy nagyobb gondot rejt magában. Elõször is, az energiagazdálkodást a (gyártófüggõ) BIOS végzi el, és az operációs rendszernek errõl semmilyen ismerete nincsen. Ennek egyik példája az, amikor a felhasználó az APM-et ismerõ BIOS-ban beállítja a merevlemezek automatikus kikapcsolásának idejét, majd amikor ez letelik, a BIOS az operációs rendszer tudta nélkül egyszerûen leállítja a lemezt. Másodszor: az APM mûködését a BIOS-ban programozták le, és teljesen az operációs rendszer hatáskörén túl tevékenykedik. Ez azt jelenti, hogy a felhasználó csak úgy tudja korrigálni az APM-es BIOS-ok problémáit, ha frissíti az alaplapi ROM-ot. Ez viszont egy nagyon kockázatos folyamat, amelynek hibája révén a rendszerünk helyrehozhatatlan állapotba kerülhet. Harmadszor: az APM alapvetõen egy gyártófüggõ megoldás, ami azt vonja maga után, hogy sok az átfedés (ugyanazt valósítják meg több módon), és ha az egyik gyártó BIOS-ában hibát találnak, akkor a másikéban az nem feltétlenül javítható. Végül, de nem utolsósorban, az APM alapú BIOS-okban nincs elég hely az igazán kifinomult energiagazdálkodási sémák vagy bármi más kialakítására, amivel a felhasználók képesek lennének az igényeikhez alakítani a számítógépet.
+
+A _Plug and Play BIOS (PNPBIOS)_ sok szempontból megbízhatatlannak bizonyult. A PNPBIOS ráadásul egy 16 bites megoldás, ezért az operációs rendszereknek 16 bites emulációt kell használniuk a PNPBIOS eszközeinek "eléréséhez".
+
+A FreeBSD APM meghajtójának dokumentációját az man:apm[4] man oldalon találjuk.
+
+[[acpi-config]]
+=== Az ACPI beállítása
+
+Az [.filename]#acpi.ko# meghajtó alapértelmezés szerint a man:loader[8] segítségével töltõdik be, és _ne_ is fordítsuk bele a rendszermagba. Ezt azzal tudnánk magyarázni, hogy modulokkal könnyebb dolgozni, például ha a rendszermag újrafordítása nélkül egy másik [.filename]#acpi.ko# modult akarunk használni. Ezzel a lényegében a tesztelés is egyszerûbbé válik. Másik magyarázat, hogy a rendszer ACPI támogatása nem minden esetben mûködik rendesen. Ha a rendszer indítása során valamilyen problémát tapasztalunk, akkor próbálkozzunk meg az ACPI kikapcsolásával. Ezt a meghajtót nem lehet és nem is szabad kidobni a memóriából, mivel a hardverrel a rendszerbuszon keresztül tartja a kapcsolatot. Az ACPI a `hint.acpi.0.disabled="1"` sor megadásával kapcsolható a [.filename]#/boot/loader.conf# állományban vagy a man:loader[8] parancssorában.
+
+[NOTE]
+====
+Az ACPI és az APM nem használató egyszerre. Közülük a késõbb betöltött magától kilép, ha észreveszi, hogy a másikuk már mûködésbe lépett.
+====
+
+Az ACPI és az man:acpiconf[8] használatával a rendszerünk készenléti módba helyezhetõ az `-s` valamint az `1-5` paraméterek megadásával. Ezek közül is a legtöbb felhasználó számára csak az `1` vagy a `3` (állapot mentése a fizikai memóriába) érdekes. Az `5` opció egy szoftveres kikapcsolást eredményez, ehhez hasonlóan:
+
+[source,bash]
+....
+# halt -p
+....
+
+A további opciók a man:sysctl[8] man oldaláról érhetõek el. Ezen kívül még olvassuk el az man:acpi[4] és man:acpiconf[8] man oldalakat is.
+
+[[ACPI-debug]]
+== A FreeBSD ACPI támogatásának használata és nyomonkövetése
+
+Az ACPI az eszközök felderítésének, energiagazdálkodásának és a korábban a BIOS által kezelt hardverek szabványosított hozzáférésének alapjaiban új módja. Az ACPI folyamatosan fejlõdik, de útját az egyes alaplapok _ACPI Machine Language_ (AML) bytekód implementációjában megjelenõ hibák, a FreeBSD rendszermag alrendszereinek befejezetlensége és az Intel(R) ACPI-CA értelmezõjében levõ hibák lassítják.
+
+Ez a leírás azzal a szándékkal készült, hogy segítsünk a felhasználóknak megtalálni az általuk tapasztalt problémák gyökerét és ezzel segíteni az ACPI fejlesztõket a nyomonkövetésében és kijavításában. A fejlesztõk köszönik, hogy ezt elolvassuk és segédkezünk a rendszerünkkel kapcsolatban felmerülõ problémák orvosolásában!
+
+[[ACPI-submitdebug]]
+=== A nyomkövetési információk beküldése
+
+[NOTE]
+====
+Mielõtt beküldenénk bármilyen problémát is, gondoskodjunk róla, hogy a BIOS-unk, és ha lehetséges, akkor a beágyazott vezérlõk, legfrissebb verzióját használjuk.
+====
+
+Megkérnénk azokat, akik hibát akarnak bejelenteni, hogy a következõ információkat küldjék a link:mailto:freebsd-acpi@FreeBSD.org[ freebsd-acpi@FreeBSD.org] címre:
+
+* A hibás mûködés leírása, beleértve a rendszer típusát és gyártmányát, illetve minden olyat, aminek köze lehet a hibához. Ha eddig még nem tapasztaltuk, igyekezzünk minél pontosabban leírni a hiba keletkezésének folyamatát.
+* A `boot -v` paranccsal indított rendszer man:dmesg[8] kimenetét, beleértve a vizsgálni kívánt hiba által okozott összes hibaüzenetet.
+* A `boot -v` paranccsal és az ACPI használata nélkül indított rendszer man:dmesg[8] kimenete abban az esetben, ha ez segít megoldani a problémát.
+* A `sysctl hw.acpi` parancs kimenete. Ezzel egyébként kitûnõen kideríthetõ, milyen lehetõségeket is kínál fel a rendszerünk.
+* Az általunk használt _ACPI forrásnyelvének_ (ACPI Source Language, ASL) elérhetõsége az interneten. Mivel ezek akár igen nagyok is lehetnek, ezért a listára közvetlenül ne küldjünk ASL kódokat! Az ASL másolatát az alábbi parancs kiadásával hozhatjuk létre:
++
+[source,bash]
+....
+# acpidump -dt > név-rendszer.asl
+....
++ 
+(Adjuk meg a _név_ helyett a bejelentkezéshez használt nevünket, a _rendszer_ helyett pedig a gyártót/típust. Például: [.filename]#njl-FooCo6000.asl#)
+
+Habár a legtöbb fejlesztõ a {freebsd-current}t figyeli, a problémáink leírását mindenképpen a {freebsd-acpi} listára küldjük, hogy biztosan észrevegyék. A fejlesztõk azt kérik, hogy legyünk türelmesek, hiszen emellett mindannyian teljes állásban is dolgoznak. Ha az általunk felfedezett hiba nem teljesen egyértelmû, akkor a fejlesztõk valószínûleg meg fognak kérni arra, hogy a man:send-pr[1] használatával hozzunk róla létre egy hivatalos hibajelentést. A hibajelentés készítésekor lehetõleg a fentebb megadott információkat ugyanúgy adjuk meg. Ez segít a probléma szemmel tartásában és elhárításában. Az {freebsd-acpi} lista kihagyása nélkül közvetlenül ne küldjünk hibajelentést, mivel a hibabejelentõ rendszert elsõsorban emlékeztetõnek használjuk, nem pedig a hibák tényleges bejelentésére. Gyakran elõfordul, hogy valaki korábban már találkozott az adott problémával.
+
+[[ACPI-background]]
+=== Háttér
+
+Az ACPI minden olyan modern számítógépben megtalálható, mely megfelel az ia32 (x86), ia64 (Itanium) vagy amd64 (AMD) architektúrának. A teljes szabvány rengeteg lehetõséget biztosít, többek közt a processzor teljesítményének kezelését, az energiaszintek vezérlését, hõzónákat, különféle akkumulátor rendszereket, beágyazott vezérlõk és a buszok felsorolását. A legtöbb rendszer általában nem a teljes szabványt valósítja meg. Például egy asztali rendszer általában csak a buszok felsorolásával kapcsolatos részeket tartalmazza, miközben egy laptop felajánlhatja a hûtés és az akkumulátor kezelését is. A laptopokban gyakorta találunk készenléti üzemmódot a maguk elbonyolított formájában.
+
+Egy ACPI-nak megfelelõ rendszert számos összetevõ alkot. A BIOS-ok és chipkészletek gyártói a memóriában egy elõre rögzített ponton elhelyeznek bizonyos táblázatokat (például FADT), amelyekkel megadják például az APIC összerendeléseit (ezt az SMP rendszerek használják), a konfigurációs regisztereket és az egyszerûbb konfigurációs értékeket. Itt ezenkívül még bytekódok egy táblázata (amit _Differenciált rendszerleírtó táblának_, Differentiated System Description Table, DSDT nevezünk) is megtalálható, ahol az eszközök és módszerek nevei szerepelnek faszerû elrendezésben.
+
+Az ACPI-hoz tartozó meghajtónak képesnek kell lennie értelmezni ezeket a rögzített táblázatokat, implementálni egy bytekód-értelmezõt, módosítani az eszközmeghajtókat és a rendszermagot az ACPI alrendszerbõl érkezõ információk befogadásához. A Linuxszal és a NetBSD-vel közösen a FreeBSD kapott egy ilyen értelmezõt az Intel(R)tõl (ACPI-CA). Az ACPI-CA forráskódja a rendszer forrásai között, a [.filename]#src/sys/dev/acpica# könyvtárban található. A [.filename]#src/sys/dev/acpica/0sd# könyvtárban található források pedig lehetõvé teszik, hogy az ACPI-CA mûködhessen FreeBSD-n. Végezetül, az ACPI eszközöket megvalósító meghajtók a [.filename]#src/sys/dev/acpica# könyvtárban találhatóak.
+
+[[ACPI-comprob]]
+=== Gyakori problémák
+
+Az ACPI megfelelõ mûködéséhez minden alkotórésznek helyesen kell mûködnie. A most következendõkben elõfordulásuk gyakorisága szerint felsorolunk néhány ismert problémát, valamint a hozzájuk tartozó javításokat vagy elkerülésük módszerét.
+
+==== Gondok az egérrel
+
+Egyes esetekben felfüggesztett állapotból visszatérve az egerünk nem hajlandó mûködni. Ezt úgy lehet elkerülni, ha [.filename]#/boot/loader.conf# állományba beírjuk a `hint.psm.0.flags="0x3000"` sort. Ha ez nem segít, akkor a fentieknek megfelelõen küldjünk be egy hibajelentést.
+
+==== Felfüggesztés/Folytatás
+
+Az ACPI három (STR) állapotban képes a fizikai memória segítségével készenléti módba váltani, ezek az `S1`-`S3`, és egy állapotban használja a lemezt (`STD`), amelyet `S4`-nek hívnak. Az `S5` neve a "szoftveres kikapcsolás", ami egy olyan állapotot takar, amikor a rendszerünk áram alatt van, de még nem üzemel. Az ``S4``BIOS állapot a BIOS segítségével a lemezre menti a rendszert, az ``S4``OS állapotot pedig teljes egészében az operációs rendszer valósítja meg.
+
+A rendszerünk által ismert készenléti módokat a `sysctl hw.acpi` paranccsal ellenõrizhetjük. Íme mindez egy Thinkpad esetén:
+
+[source,bash]
+....
+hw.acpi.supported_sleep_state: S3 S4 S5
+hw.acpi.s4bios: 0
+....
+
+Ez azt jelenti, hogy az `acpiconf -s` parancs kiadásával kipróbálhatjuk az `S3`, ``S4``OS, és `S5` állapotokat. Ha az `s4bios` értéke egy (`1`), akkor az ``S4``BIOS támogatása helyett az ``S4``OS állapotot kapjuk.
+
+A felfüggesztés és folytatás kipróbálása során kezdjük az `S1` állapottal, már amennyiben az támogatott a rendszerünkön. Ez az állapot többnyire használható, mivel nem igényel túlságosan sok támogatást a meghajtó részérõl. Eddig még senki sem implementálta az `S2` állapotot, de ha ezt is tudja a rendszerünk, akkor az `S1`-hez hasonlót nyerünk vele. A következõ próba az `S3` állapoté. Ez a legmélyebb STR állapot, és a hardver megfelelõ újraélesztéséhez rengeteg támogatás szükségeltetik a meghajtó részérõl. Ha gondjaink lennének a rendszerünk felébresztésével, nyugodtan írjunk egy levelet a {freebsd-acpi} listára, ám a probléma gyors megoldódásában ne reménykedjünk, hiszen ehhez még temérdek meghajtón és hardveren kell tesztelni és kell dolgozni.
+
+Felfüggesztés és folytatás esetén gyakori probléma, hogy sok eszközmeghajtó nem menti el, nem állítja vissza vagy éppen nem hozza újra rendesen mûködésbe az adott eszközön található firmware-t, a regisztereket vagy memóriát. Az okok felderítéséhez elõször érdemes a következõket kipróbálni:
+
+[source,bash]
+....
+# sysctl debug.bootverbose=1
+# sysctl debug.acpi.suspend_bounce=1
+# acpiconf -s 3
+....
+
+Ezzel a módszerrel tesztelni tudjuk az összes meghajtó felfüggesztési és folytatási rutinjait anélkül, hogy ténylegesen `S3` állapotba helyeznénk az eszközt. Bizonyos esetekben ezzel könnyen elcsíphetõ a hiba (például a firmware állapotának elvesztése, watchdog time out, megállás nélküli újrapróbálkozások). A rendszer ilyenkor nem vált `S3` állapotra, vagyis az eszköz nem kerül energiatakarékos állapotba, és eltérõen a valós `S3` állapottól továbbra is mûködik még abban az esetben is, amikor a szükséges felfüggesztési és folytatási rutinok teljesen hiányoznak.
+
+Komolyabb esetben további segédeszközökre lesz szükségünk, vagyis soros portra és kábelre a soros vonali nyomkövetéshez, vagy Firewire portra és kábelre a man:dcons[4] használatához, valamint némi tapasztalatra a rendszermagon belüli hibakeresésben.
+
+A problémát nagy mértékben segíti különválasztani, ha igyekszünk minél több meghajtót kivenni a rendszermagból. Ha így javul a helyzet, akkor már könnyen le lehet szûkíteni arra a meghajtóra a kört, aminek betöltésével esetleg gondok akadhatnak. Általában ilyenek a bináris meghajtók, mint például az [.filename]#nvidia.ko#, az X11 megjelenítésért felelõs és az USB eszközök meghajtói, miközben az Ethernet eszközök remekül szoktak mûködni. Ha különösebb gond nélkül képesek vagyunk betölteni és eltávolítani ezeket a meghajtókat, akkor ezt a folyamatot önállósítani is tudjuk úgy, hogy az [.filename]#/etc/rc.suspend# és [.filename]#/etc/rc.resume# szkriptekbe beillesztjük az ehhez szükséges parancsokat. Ezekben egyébként találunk is egy megjegyzésbe rakott példát a meghajtók betöltésérõl és eltávolításáról. Ha az ébresztés után elszemetelõdik a képernyõ tartalma, akkor állítsuk át a `hw.acpi.reset_video` változó értékét nullára (`0`). Sokat segíthet meg az is, ha a `hw.acpi.sleep_delay` értékét csökkentjük vagy növeljük.
+
+Megpróbálhatjuk azt is, hogy elindítunk egy frissebb Linux disztribúciót ACPI támogatással és ugyanazon a hardveren kipróbáljuk az általa felkínált felfüggesztési és folytatási lehetõséget. Ha Linux alatt ez megbízhatóan mûködik, akkor nagy a valószínûsége, hogy ez FreeBSD alatt az egyik meghajtó hibájából fakadóan nem használható. Így fokozatosan le is tudjuk szûkíteni, hogy pontosan melyikkel lehet a gond, és ezzel a fejlesztõk munkáját segítjük. Megjegyeznénk, hogy az ACPI-t karbantartó fejlesztõk általában nem foglalkoznak más meghajtókkal (például hangkártya vagy ATA stb.), ezért az adott meghajtóval kapcsolatos hibáról javasolt értesíteni a {freebsd-current} listát és a meghajtóért felelõs fejlesztõt is. Ha van egy kis kedvünk és idõnk, mi magunk is belebiggyeszthetünk a meghajtóba néhány man:printf[3] függvényt annak kiderítésére, pontosan hol is fagy le a folytatási funkció.
+
+Végül megpróbálkozhatunk az ACPI kikapcsolásával is, és áttérhetünk helyette az APM használatára. Ha az APM-mel mûködnek a készenléti állapotok, akkor érdemes inkább azzal dolgozni, különösen a régebbi (2000 elõtti) hardverek esetében. A gyártóknak eltartott egy ideig, amíg rendes ACPI támogatást voltak képesek adni, ezért a régebbi hardvereknél inkább a BIOS-nak akadnak gondjai az ACPI-val.
+
+==== A rendszer lemerevedik (ideiglenesen vagy teljesen)
+
+A legtöbb rendszer olyankor akad meg, amikor sok megszakítás elveszik, vagy amikor éppen sok megszakítás érkezik egyszerre. A chipkészleteknek számos baja származik abból, hogy a BIOS milyen módon állítja be a rendszer indítása elõtt a megszakításokat, mennyire helyes az APIC (MADT) táblázata és hogyan vezérli a _Rendszervezérlõ megszakítást_ (System Control Interrupt, SCI).
+
+A megszakítás-viharok a `vmstat -i` parancs kimenetében szereplõ elveszett megszakításokból azonosíthatók be, ahol keressünk rá az `acpi0` sorra. Ha ez a számláló másodpercenként kettõnél többel növekszik, akkor a megszakításaink viharba keveredtek. Ha a rendszer látszólag lefagyott, próbáljuk meg elõhívni a DDB-t (konzolban a kbd:[CTRL+ALT+ESC]) és gépeljük be, hogy `show interrupts`.
+
+A megszakítási problémákkal kapcsolatban egyetlen reményünk az APIC támogatás kikapcsolása lehet a [.filename]#loader.conf# állományban a `hint.apic.0.disabled="1"` sor hozzáadásával.
+
+==== Végzetes hibák
+
+Az ACPI-vel kapcsolatos végzetes hibák viszonylag ritkák, és javításuk a legfontosabb. Ilyenkor az elsõ teendõnk elkülöníteni a hiba reprodukálásának egyes lépéseit és (ha lehetséges) lekérni a hívási láncot. Kövessük az `options DDB` és a soros vonali konzol beállításához adott tanácsokat (lásd crossref:serialcomms[serialconsole-ddb,A DDB elérése a soros vonalról]) vagy hozzunk létre egy man:dump[8] partíciót. A DDB-ben a hívási láncot a `tr` parancs segítségével kérhetjük le. Ha kézzel írjuk le láncot, akkor legalább az alsó öt (5) és a felsõ öt (5) sorát mindenképpen jegyezzük fel!
+
+Ezután próbáljuk meg úgy szûkíteni a probléma lehetõségét, hogy az ACPI használata nélkül indítjuk a rendszert. Ha ezzel nincs semmi gond, akkor a `debug.acpi.disable` változó értékének megfelelõ beállításával egyenként meg tudjuk figyelni az ACPI alrendszer egyes részeit. Ehhez példákat az man:acpi[4] man oldalon találunk.
+
+==== Felfüggesztés vagy leállítás után elindul a rendszer
+
+Elõször is próbáljuk meg a `hw.acpi.disable_on_poweroff` változó értékét `0`-ra állítani a man:loader.conf[5] állományban. Ezzel távoltartjuk az ACPI alrendszert a rendszer leállítási folyamatától. Egyes rendszereknek valamilyen okból kifolyólag szükségük van itt az `1` (az alapértelmezett) értékre. Ez többnyire megoldja a problémát, amikor a rendszer váratlanul elindul a készenléti mód aktiválásákor vagy kikapcsoláskor.
+
+==== Egyéb problémák
+
+Ha más gondjaink lennének az ACPI-val (dokkoló állomásunk van, egyes eszközöket nem vesz észre stb.), akkor természetesen errõl is küldjünk egy leírást a levelezési listára. Azonban vegyük figyelembe, hogy egyes problémák a ACPI alrendszer eddig még nem implementált, befejezetlen részeihez kötõdnek, ezért azok megoldása még várat magára. Kérünk mindenkit, hogy legyen türelemmel és álljon készen a kiküldött javítások tesztelésére!
+
+[[ACPI-aslanddump]]
+=== ASL, `acpidump` és IASL
+
+A problémák leggyakoribb forrása, hogy a BIOS-gyártók rossz (vagy kifejezetten hibás!) bytekódokat adnak. Ez általában a következõhöz hasonló rendszerüzenetbõl derül ki:
+
+[source,bash]
+....
+ACPI-1287: *** Error: Method execution failed [\\_SB_.PCI0.LPC0.FIGD._STA] \\
+(Node 0xc3f6d160), AE_NOT_FOUND
+....
+
+Az ilyen jellegû hibákat gyakran úgy lehet orvosolni, ha a BIOS-unkat frissítjük a legújabb verzióra. A legtöbb ilyen üzenet teljesen ártalmatlan, de ha vannak más problémáink is, például az akkumulátor állapota nem olvasható le, akkor elõször az AML környékén érdemes kutakodnunk. A bytekód, más néven AML, az ASL elnevezésû forrásnyelvbõl származik. Az AML egy DSDT néven ismert táblázatban található meg. Az ASL másolatát az man:acpidump[8] paranccsal készíthetjük el. Paraméterként egyaránt adjuk meg a `-t` (megmutatja a rögzített táblák tartalmát) és `-d` (visszafejti az AML kódokat az ASL nyelvére) kapcsolókat. A felírás pontos formátumát a <<ACPI-submitdebug,A nyomkövetési információk beküldése>> címû szakaszban olvashatjuk.
+
+Elsõként próbáljuk meg újrafordítani az így nyert ASL programot és keressünk benne hibákat. A figyelmeztetések általában nyugodtan figyelmen kívül hagyhatóak, azonban a hibák olyan implementációs hibákra utalnak, amelyek akadályozzák az ACPI helyes mûködését. Az ASL újrafordítását az alábbi paranccsal tudjuk elvégezni:
+
+[source,bash]
+....
+# iasl saját.asl
+....
+
+[[ACPI-fixasl]]
+=== Az ASL kijavítása
+
+Végeredményben az a célunk, hogy az ACPI megfelelõ mûködéséhez senkinek se kelljen hozzányúlnia semmihez. Azonban még mindig szükség van BIOS-gyártók által elkövetett gyakori hibák elkerülésének kifejlesztésére. A Microsoft(R) értelmezõje ([.filename]#acpi.sys# és [.filename]#acpiec.sys#) nem ellenõrzi szigorúan a szabvány szerinti megfelelést, ezért számos olyan BIOS-gyártó, akik csak Windows(R) alatt tesztelik az ACPI implementációjukat, soha nem fogják kijavítani a ASL kódjukban ejtett hibáikat. Reménykedünk, hogy folyamatosan sikerül felderíteni és dokumentálni a Microsoft(R) értelmezõje által eltûrt szabványon kívüli viselkedést és leutánozni FreeBSD alatt is, hogy így ne kelljen a felhasználóknak kézzel a saját ASL forrásaikat javítgatni. Az ebbõl fakadó hibákat úgy tudjuk elkerülni és segíteni a fejlesztõknek azonosítani a hozzá társuló viselkedést, hogy magunk javítjuk az ASL-ben felfedezett hibákat. Ha ez beválik, akkor küldjük el a régi és új ASL közti man:diff[1]-et a fejlesztõknek, akik így majd az ACPI-CA-ban ki tudnak dolgozni egy megoldást a hibás viselkedésre, ezzel a javításunk szükségtelenné válik.
+
+Most pedig következzenek a legismertebb hibaüzenetek, az okaik és javításuk:
+
+==== Operációs rendszeri függõségek
+
+Néhány AML úgy gondolja, hogy a világ csak a különbözõ Windows(R) verziókból áll. A FreeBSD-nek megadható, hogy másik operációs rendszernek adja ki magát, és ezzel talán meg is szüntethetõ pár hiba. Ezt a legegyszerûbb úgy tudjuk megtenni, ha a [.filename]#/boot/loader.conf# állományhoz hozzáfûzzük a `hw.acpi.osname="Windows 2001"` sort, vagy itt egy olyan karakterláncot adunk meg, amit az ASL forrásban láttunk.
+
+==== Hiányzó visszatérési érték
+
+Bizonyos módszerek a szabvány szerint elvártaktól eltérõen nem adnak vissza explicit módon értéket. Mivel az ACPI-CA ezt nem kezeli le, ezért a FreeBSD részérõl tartalmaz egy olyan módosítást, amivel implicit módon is vissza lehet adni értéket. Ha biztosak akarunk lenni a visszaadni kívánt értékben, akkor helyezzünk el a megfelelõ helyekre explicit Return utasításokat. Az `iasl` a `-f` paraméterrel kényszeríthetõ az ilyen ASL források lefordítására.
+
+==== Az alapértelmezett AML felülbírálása
+
+Miután módosítottuk a [.filename]#saját.asl# állományunkat, így tudjuk lefordítani:
+
+[source,bash]
+....
+# iasl saját.asl
+....
+
+Az `-f` kapcsoló megadásával kikényszeríthetjük az AML létrehozását még abban az esetben is, amikor hibákat tartalmaz. Ügyeljünk rá, hogy bizonyos hibákat (például a hiányzó visszatérési értékeket) a fordító magától kikerül.
+
+Az `iasl` alapértelmezett kimenete a [.filename]#DSDT.aml# állomány. A [.filename]#/boot/loader.conf# átírásával így tudjuk ezzel helyettesíteni a BIOS-unk hibás változatát (ami még mindig megtalálható a flash memóriában):
+
+[.programlisting]
+....
+acpi_dsdt_load="YES"
+acpi_dsdt_name="/boot/DSDT.aml"
+....
+
+Ehhez ne felejtsük el a saját [.filename]#DSDT.aml# állományunkat bemásolni a [.filename]#/boot# könyvtárba.
+
+[[ACPI-debugoutput]]
+=== Nyomkövetési információk kinyerése az ACPI-bõl
+
+Az ACPI meghajtója nagyon rugalmas nyomkövetési lehetõségekkel rendelkezik. Ennek révén ugyanúgy megadhatjuk a nyomonkövetni kívánt alrendszert, mint ahogy annak mélységét is. A nyomkövetni kívánt alrendszereket "rétegekként" adjuk meg, valamint ezek ACPI-CA komponensekre (ACPI_ALL_COMPONENTS) és ACPI hardvertámogatásra (ACPI_ALL_DRIVERS) bomlanak le. A nyomkövetéskor keletkezõ kimenet részletességét a "szintként" adjuk meg, ami az ACPI_LV_ERROR-tól (csak a hibák) ACPI_LV_VERBOSE-ig (minden) terjedhet. A "szint" itt egy bitmaszk, ezért szóközzel elválasztva egyszerre több beállítás megadható. Ha túlságosan sok üzenet érkezik a konzol üzenetpufferébe, akkor szükségünk lehet a soros konzol keresztüli nyomkövetésre is. Az összes szint és réteg az man:acpi[4] man oldalon található meg.
+
+A nyomkövetés alapértelmezés szerint nem engedélyezett. Az engedélyezéséhez hozzá kell adnunk az `options ACPI_DEBUG` sort a rendszermagunk beállításait tartalmazó állományhoz, amennyiben a rendszermagba fordítjuk az ACPI támogatást. Ha az [.filename]#/etc/make.conf# állományba írjuk bele az `ACPI_DEBUG=1` sort, akkor azt globálisan engedélyezhetjük. Ha modulként használjuk, elegendõ csak a következõ módon újrafordítani az [.filename]#acpi.ko# modult:
+
+[source,bash]
+....
+# cd /sys/modules/acpi/acpi
+&& make clean &&
+make ACPI_DEBUG=1
+....
+
+Telepítsük fel a [.filename]#acpi.ko# modult a [.filename]#/boot/kernel# könyvtárba és állítsuk be a számunkra megfelelõ szintet és réteget a [.filename]#loader.conf# állományban. Az alábbi példában engedélyezzük az összes ACPI-CA komponens és az összes ACPI hardvermeghajtó (processzor, LID stb.) nyomkövetését. Csak a hibaüzeneteket írja ki részletesen.
+
+[.programlisting]
+....
+debug.acpi.layer="ACPI_ALL_COMPONENTS ACPI_ALL_DRIVERS"
+debug.acpi.level="ACPI_LV_ERROR"
+....
+
+Ha az általunk keresett információt egy adott esemény váltja ki (például egy felfüggesztés vagy egy ébresztés), akkor nem is fontos átírnunk hozzá a [.filename]#loader.conf# állományt, hanem helyette a rendszer indítása után használjuk a `sysctl` parancsot a réteg és a szint megadására akkor, amikor a rendszert felkészítjük az eseményre. A `sysctl` változókat ugyanúgy nevezték el, mint a [.filename]#loader.conf# állományban található beállításokat.
+
+[[ACPI-References]]
+=== Hivatkozások
+
+Az ACPI-rõl az alábbi helyeken találunk részletesebb információkat:
+
+* A {freebsd-acpi}
+* Az ACPI levelezési lista archívuma: http://lists.freebsd.org/pipermail/freebsd-acpi/[http://lists.freebsd.org/pipermail/freebsd-acpi/]
+* A korábbi ACPI levelezési lista archívuma: http://home.jp.FreeBSD.org/mail-list/acpi-jp/[http://home.jp.FreeBSD.org/mail-list/acpi-jp/]
+* Az ACPI 2.0 specifikációja: http://acpi.info/spec.htm[http://acpi.info/spec.htm]
+* A FreeBSD következõ man oldalai: man:acpi[4], man:acpi_thermal[4], man:acpidump[8], man:iasl[8], man:acpidb[8]
+* http://www.cpqlinux.com/acpi-howto.html#fix_broken_dsdt[ A DSDT nyomkövetése (angolul)]. (Példának a Compaqot hozza fel, de általánosságban véve hasznos.)

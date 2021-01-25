@@ -1,0 +1,933 @@
+---
+title: Kapitel 15. Verbindliche Zugriffskontrolle
+part: Teil III. Systemadministration
+prev: books/handbook/jails
+next: books/handbook/audit
+---
+
+[[mac]]
+= Verbindliche Zugriffskontrolle
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:table-caption: Tabelle
+:figure-caption: Abbildung
+:example-caption: Beispiel
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 15
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/mac/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/mac/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/mac/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/de/mailing-lists.adoc[]
+include::shared/de/teams.adoc[]
+include::shared/de/urls.adoc[]
+
+toc::[]
+
+[[mac-synopsis]]
+== Übersicht
+
+In FreeBSD 5.X wurden neue Sicherheits-Erweiterungen verfügbar, die aus dem TrustedBSD-Projekt übernommen wurden und auf dem Entwurf POSIX(R).1e basieren. Die beiden bedeutendsten neuen Sicherheits-Mechanismen sind Berechtigungslisten (Access Control Lists, ACL) und die verbindliche Zugriffskontrolle (Mandatory Access Control, MAC). Durch die MAC können Module geladen werden, die neue Sicherheitsrichtlinien bereitstellen. Mit Hilfe einiger Module kann beispielsweise ein eng umgrenzter Bereich des Betriebssystems gesichert werden, indem die Sicherheitsfunktionen spezieller Dienste unterstützt bzw. verstärkt werden. Andere Module wiederum betreffen in ihrer Funktion das gesamte System - alle vorhandenen Subjekte und Objekte. Das "Verbindliche" in der Namensgebung erwächst aus dem Fakt, dass die Kontrolle allein Administratoren und dem System obliegt und nicht dem Ermessen der Nutzer, wie es mit Hilfe der benutzerbestimmbaren Zugriffskontrolle (Discrectionary Access Control / DAC), dem Zugriffstandard für Dateien, gar der System V IPC in FreeBSD, normalerweise umgesetzt wird.
+
+Dieses Kapitel wird sich auf die Grundstruktur der Verbindlichen Zugriffskontrolle und eine Auswahl der Module, die verschiedenste Sicherheitsfunktionen zur Verfügung stellen, konzentrieren.
+
+Beim Durcharbeiten dieses Kapitels erfahren Sie:
+
+* Welche MAC Module für Sicherheitsrichtlinien derzeit in FreeBSD eingebettet sind und wie die entsprechenden Mechanismen funktionieren.
+* Was die einzelnen MAC Module an Funktionen realisieren und auch, was der Unterschied zwischen einer Richtlinie, die _mit_ Labels arbeitet, und einer, die _ohne_ Labels arbeitet, ist.
+* Wie Sie die MAC in ein System einbetten und effizient einrichten.
+* Wie die verschiedenen Richtlinienmodule einer MAC konfiguriert werden.
+* Wie mit einer MAC und den gezeigten Beispielen eine sicherere Umgebung erstellt werden kann.
+* Wie die Konfiguration einer MAC auf korrekte Einrichtung getestet wird.
+
+Vor dem Lesen dieses Kapitels sollten Sie bereits:
+
+* Grundzüge von UNIX(R) und FreeBSD verstanden haben. (crossref:basics[basics,Grundlagen des FreeBSD Betriebssystems]).
+* Mit den Grundzügen der Kernelkonfiguration und -kompilierung vertraut sein (crossref:kernelconfig[kernelconfig,Konfiguration des FreeBSD-Kernels]).
+* Einige Vorkenntnisse über Sicherheitskonzepte im Allgemeinen und deren Umsetzung in FreeBSD im Besonderen mitbringen (crossref:security[security,Sicherheit)]).
+
+[WARNING]
+====
+
+Der unsachgemäße Gebrauch der in diesem Kapitel enthaltenen Informationen kann den Verlust des Systemzugriffs, Ärger mit Nutzern oder die Unfähigkeit, grundlegende Funktionen des X-Windows-Systems zu nutzen, verursachen. Wichtiger noch ist, dass man sich nicht allein auf die MAC verlassen sollte, um ein System zu sichern. Die MAC verbessert und ergänzt lediglich die schon existierenden Sicherheits-Richtlinien - ohne eine gründliche und fundierte Sicherheitspraxis und regelmäßige Sicherheitsprüfungen wird Ihr System nie vollständig sicher sein.
+
+Außerdem sollte angemerkt werden, dass die Beispiele in diesem Kapitel auch genau dasselbe sein sollen, nämlich Beispiele. Es wird nicht empfohlen, diese bestimmten Beispiele auf einem Arbeitssystem umzusetzen. Das Einarbeiten der verschiedenen Sicherheitsmodule erfordert eine Menge Denkarbeit und viele Tests. Jemand, der nicht versteht, wie diese Module funktionieren, kann sich schnell darin wiederfinden, dass er (oder sie) das ganze System durchforsten und viele Dateien und Verzeichnisse neu konfigurieren muß.
+====
+
+=== Was in diesem Kapitel nicht behandelt wird
+
+Dieses Kapitel behandelt einen großen Teil sicherheitsrelevanter Themen, bezogen auf die Verbindliche Zugriffskontrolle (MAC). Die gegenwärtige Entwicklung neuer MAC Module ist nicht abgedeckt. Einige weitere Module, die im MAC Framework enthalten sind, haben besondere Charakteristika, die zum Testen und Entwickeln neuer Module gedacht sind. Dies sind unter anderem man:mac_test[4], man:mac_stub[4] und man:mac_none[4]. Für weitere Informationen zu diesen Modulen und den entsprechend angebotenen Funktionen lesen Sie bitte die Manpages.
+
+[[mac-inline-glossary]]
+== Schlüsselbegriffe
+
+Bevor Sie weiterlesen, müssen noch einige Schlüsselbegriffe geklärt werden. Dadurch soll jegliche auftretende Verwirrung von vornherein beseitigt und die plötzliche Einführung neuer Begriffe und Informationen vermieden werden.
+
+* _Verbund_: Ein Verbund ist ist ein Satz von Programmen und Daten, die speziell und zusammen abgeschottet wurden, um Nutzern Zugriff auf diese ausgewiesenen Systembereiche zu gewähren. Man kann sagen, ein solcher Verbund ist eine Gruppierung, ähnlich einer Arbeitsgruppe, einer Abteilung, einem Projekt oder einem Thema. Durch die Nutzung von Verbünden (_compartments_) kann man Sicherheitsrichtlinien erstellen, die alles notwendige Wissen und alle Werkzeuge zusammenfassen.
+* _Hochwassermarkierung_: Eine solche Richtlinie erlaubt die Erhöhung der Sicherheitsstufe in Abhängigkeit der Klassifikation der gesuchten bzw. bereitzustellenden Information. Normalerweise wird nach Abschluss des Prozesses die ursprüngliche Sicherheitsstufe wieder hergestellt. Derzeit enthält die MAC Grundstruktur keine Möglichkeit, eine solche Richtlinie umzusetzen, der Vollständigkeit halber ist die Definition hier jedoch aufgeführt.
+* _Integrität_: Das Schlüsselkonzept zur Klassifizierung der Vertraulichkeit von Daten nennt man Integrität. Je weiter die Integrität erhöht wird, umso mehr kann man den entsprechenden Daten vertrauen.
+* _Label_: Ein Label ist ein Sicherheitsmerkmal, welches mit Dateien, Verzeichnissen oder anderen Elementen im System verbunden wird. Man sollte es wie einen Vertraulichkeitsstempel auffassen, der Dateien angehört wie beispielsweise die Zugriffszeit, das Erstellungsdatum oder auch der Name; sobald Dateien derart gekennzeichnet werden, bezeichnen diese Label die sicherheitsrelevanten Eigenschaften. Zugriff ist nur noch dann möglich, wenn das zugreifende Subjekt eine korrespondierende Kennzeichnung trägt. Die Bedeutung und Verarbeitung der Label-Werte ist von der Einrichtung der Richtlinie abhängig: Während einige Richtlinien das Label zum Kennzeichnen der Vertraulichkeit oder Geheimhaltungsstufe eines Objekts nutzen, können andere Richtlinien an derselben Stelle Zugriffsregeln festschreiben.
+* _Level_: Eine erhöhte oder verminderte Einstellung eines Sicherheitsmerkmals. Wenn das Level erhöht wird, wird auch die ensprechende Sicherheitsstufe angehoben.
+* _Niedrigwassermarkierung_: Eine solche Richtlinie erlaubt das Herabstufen des Sicherheitslevels, um weniger sensible Daten verfügbar zu machen. In die meisten Fällen wird das ursprüngliche Sicherheitslevel des Nutzers wiederhergestellt, sobald der Vorgang abgeschlossen ist. Das einzige Modul in FreeBSD, welches von dieser Richtlinie Gebrauch macht, ist man:mac_lomac[4].
+* _Multilabel_: Die Eigenschaft `multilabel` ist eine Dateisystemoption, die entweder im Einzelbenutzermodus mit Hilfe des Werkzeugs man:tunefs[8], während des Bootvorgangs in der Datei man:fstab[5] oder aber beim Erstellen einen neues Dateisystems aktiviert werden kann. Diese Option erlaubt einem Administrator, verschiedenen Objekten unterschiedliche Labels zuzuordnen - kann jedoch nur zusammen mit Modulen angewendet werden, die auch tatsächlich mit Labels arbeiten.
+* _Objekt_: Ein Objekt oder auch Systemobjekt ist theoretisch eine Einheit, durch welche Information fließt, und zwar unter der Lenkung eines _Subjektes_. Praktisch schliesst diese Definition Verzeichnisse, Dateien, Felder, Bildschirme, Tastaturen, Speicher, Bandlaufwerke, Drucker und jegliche anderen Datenspeicher- oder -verarbeitungsgeräte ein. Im Prinzip ist ein Objekt ein Datenkontainer oder eine Systemressource - Zugriff auf ein _Objekt_ bedeutet, auf Daten zuzugreifen.
+* _Richtlinie_: Eine Sammlung von Regeln, die definiert, wie Zielvorgaben umgesetzt werden, nennt man Richtlinie. Eine _Richtlinie_ dokumentiert normalerweise, wie mit bestimmten Elementen umgegangen wird. Dieses Kapitel faßt den Begriff in diesem Kontext als _Sicherheitsrichtlinie_ auf; als eine Sammlung von Regeln, die den Fluß von Daten und Informationen kontrolliert und die gleichzeitig definiert, wer auf diese Daten und Informationen zugreifen darf.
+* _Anfälligkeit_: Dieser Begriff wird normalerweise verwendet, wenn man über MLS (Multi Level Security) spricht. Das Anfälligkeits-Level beschreibt, wie wichtig oder geheim die Daten sein sollen. Um so höher das Anfälligkeits-Level, um so wichtiger die Geheimhaltung bzw. Vertraulichkeit der Daten.
+* _Einzel-Label_: Von einem Einzel-Label spricht man, wenn für ein ganzes Dateisystem lediglich ein einziges Label verwendet wird, um Zugriffskontrolle über den gesamten Datenfluss zu erzwingen. Sobald diese Option verwendet wird - und das ist zu jeder Zeit, wenn die Option `multilabel` nicht explizit gesetzt wurde - sind alle Dateien und Verzeichnisse mit dem gleichen Label gekennzeichnet.
+* _Subjekt_: Ein Subjekt ist jedwede Einheit, die Information in Fluss zwischen Objekten bringt: Zum Beispiel ein Nutzer, ein Nutzerprozessor, ein Systemprozeß usw. In FreeBSD handelt es sich meistens um einen Thread, der als Prozeß im Namen eines Nutzers arbeitet.
+
+[[mac-initial]]
+== Erläuterung
+
+Mit all diesen neuen Begriffen im Kopf können wir nun überlegen, wie die Möglichkeiten der verbindlichen Zugriffskontrolle (MAC) die Sicherheit eines Betriebssystems als Ganzes erweitern. Die verschiedenen Module, die durch die MAC bereitgestellt werden, können verwendet werden, um das Netzwerk oder Dateisysteme zu schützen, Nutzern den Zugang zu bestimmten Ports oder Sockets zu verbieten und vieles mehr. Die vielleicht beste Weise, die Module zu verwenden, ist, sie miteinander zu kombinieren, indem mehrere Sicherheitsrichtlinienmodule gleichzeitig eine mehrschichtige Sicherheitsumgebung schaffen. Das ist etwas anderes als singuläre Richtlinien wie zum Beispiel die Firewall, die typischerweise Elemente eines Systems stabilisiert, das nur für einen speziellen Zweck verwendet wird. Der Verwaltungsmehraufwand ist jedoch von Nachteil, zum Beispiel durch die Verwendung von mehreren Labels oder dem eigenhändigen Erlauben von Netzwerkzugriffen für jeden einzelnen Nutzer.
+
+Solche Nachteile sind allerdings gering im Vergleich zum bleibenden Effekt der erstellten Struktur. Die Möglichkeit zum Beispiel, für konkrete Anwendungen genau die passenden Richtlinien auszuwählen und einzurichten, senkt gleichzeitig die Arbeitskosten. Wenn man unnötige Richtlinien aussortiert, kann man die Gesamtleistung des Systems genauso steigern wie auch eine höhere Anpassungsfähigkeit gewährleisten. Eine gute Umsetzung der MAC beinhaltet eine Prüfung der gesamten Sicherheitsanforderungen und einen wirksamen Einsatz der verschiedenen Module.
+
+Ein System, auf dem eine MAC verwendet wird, muß zumindest garantieren, dass einem Nutzer nicht gestattet wird, Sicherheitsmerkmale nach eigenem Ermessen zu verändern; dass Arbeitswerkzeuge, Programme und Skripte, innerhalb der Beschränkungen arbeiten können, welche die Zugriffsregeln der ausgewählten Module dem System auferlegen; und dass die volle Kontrolle über die Regeln der MAC beim Administrator ist und bleibt.
+
+Es ist die einsame Pflicht des zuständigen Administrators, die richtigen Module sorgfältig auszuwählen. Einige Umgebungen könnten eine Beschränkung der Zugriffe über die Netzwerkschnittstellen benötigen - hier wären die Module man:mac_portacl[4], man:mac_ifoff[4] und sogar man:mac_biba[4] ein guter Anfang. In anderen Fällen muß man sehr strenge Vertraulichkeit von Dateisystemobjekten gewährleisten - dafür könnte man man:mac_bsdextended[4] oder man:mac_mls[4] einsetzen.
+
+Die Entscheidung, welche Richtlinien angewandt werden, kann auch anhand der Netzwerk-Konfiguration getroffen werden. Nur bestimmten Benutzern soll erlaubt werden, via man:ssh[1] auf das Netzwerk oder Internet zuzugreifen - man:mac_portacl[4] wäre eine gute Wahl. Aber für was entscheidet man sich im Falle eines Dateisystems? Soll der Zugriff auf bestimmte Verzeichnisse von spezifischen Nutzern oder Nutzergruppen separiert werden? Oder wollen wir den Zugriff durch Nutzer oder Programme auf spezielle Dateien einschränken, indem wir gewisse Objekte als geheim einstufen?
+
+Der Zugriff auf Objekte kann einigen vertraulichen Nutzern gestattet werden, anderen wiederum verwehrt. Als Beispiel sei hierzu ein großes Entwicklerteam angeführt, das in kleine Gruppen von Mitarbeitern aufgeteilt wurde. Die Entwickler von Projekt A dürfen nicht auf Objekte zugreifen, die von den Entwicklern von Projekt B geschrieben wurden. Sie müssen aber trotzdem auf Objekte zugreifen können, die von einem dritten Entwicklerteam geschaffen wurden - alles in allem eine verzwickte Situation. Wenn man die verschiedenen Module der MAC richtig verwendet, können Anwender in solche Gruppen getrennt und ihnen der Zugriff zu den gewünschten Systemobjekten gestattet werden - ohne Angst haben zu müssen, dass Informationen in die falschen Hände geraten.
+
+So hat jedes Modul, das eine Sicherheitsrichtlinie verfügbar macht, einen eigenen Weg, die Sicherheit des Systems zu verstärken. Die Auswahl der Module sollte auf einem gut durchdachten Sicherheitskonzept gründen. In vielen Fällen muß das gesamte Konzept eines Systems überarbeitet und neu eingepflegt werden. Ein guter Überblick über die Möglichkeiten der verschiedenen von der MAC angebotenen Module hilft einem Administrator, die besten Richtlinien für seine spezielle Situation auszuwählen.
+
+Im FreeBSD-Standardkernel ist die Option zur Verwendung der MAC nicht enthalten. Daher muß die Zeile
+
+[.programlisting]
+....
+options      MAC
+....
+
+der Kernelkonfiguration hinzugefügt und der Kernel neu übersetzt und installiert werden.
+
+[CAUTION]
+====
+
+Verschiedenen Anleitungen für die MAC empfehlen, die einzelnen Module direkt in den Kernel einzuarbeiten. Dabei ist es jedoch möglich, das System aus dem Netzwerk auszusperren oder gar schlimmeres. Die Arbeit mit der MAC ist ähnlich der Arbeit mit einer Firewall - man muß, wenn man sich nicht selbst aus dem System aussperren will, genau aufpassen. Man sollte sich eine Möglichkeit zurechtlegen, wie man eine Implementation einer MAC rückgängig machen kann - genauso wie eine Ferninstallation über das Netzwerk nur mit äußerster Vorsicht vorgenommen werden sollte. Es wird daher empfohlen, die Module nicht in den Kernel einzubinden, sondern sie beim Systemstart via [.filename]#/boot/loader.conf# zu laden.
+====
+
+[[mac-understandlabel]]
+== MAC Labels verstehen
+
+MAC Label sind Sicherheitsmerkmale, die, wenn sie zum Einsatz kommen, allen Subjekten und Objekten im System zugeordnet werden.
+
+Wenn ein Administrator ein solches Merkmal bzw. Attribut setzen will, muß er/sie verstehen können, was da genau passiert. Die Attribute, die im speziellen Fall zu vergeben sind, hängen vom geladenen Modul und den darin jeweils implementierten Richtlinien ab. Jedes dieser Richtlinienmodule setzt die Arbeit mit seinen entsprechenden Attributen in individueller Weise um. Falls der Nutzer nicht versteht, was er da konfiguriert, oder auch, was seine Konfiguration für Begleiterscheinungen mit sich bringt, ergibt sich meist als Resultat ein unerwartetes, ja sogar unerwünschtes Verhalten des gesamten Systems.
+
+Ein Label, einem Objekt verliehen, wird verwendet, um anhand einer Richtlinie eine sicherheitsrelevante Entscheidung über Zugriffsrechte zu fällen. In einigen Richtlinien enthält bereits das Label selbst alle dafür nötigen Informationen. Andere Richtlinien verwenden diese Informationen, um zunächst ein komplexes Regelwerk abzuarbeiten.
+
+Wenn man zum Beispiel einer Datei das Attribut `biba/low` zuordnet, wird dieses durch das Biba Sicherheitsrichtlinienmodul, und zwar mit dem Wert "low", verarbeitet.
+
+Einige der Richtlinienmodule, die die Möglichkeit zum Vergeben von Labels unter FreeBSD unterstützen, bieten drei vordefinierte Labels an. Dieses nennen sich "high", "low" und "equal". Obwohl die verschiedenen Module die Zugriffskontrolle auf verschiedene Weisen regeln, kann man sich sicher sein, das das "low"-Label der untersten, unsichersten Einstellung entspricht, das "equal"-Label die Verwendung des Moduls für das jeweilige Objekt oder Subjekt deaktiviert - und das "high"-Label die höchstmögliche Einstellung erzwingt. Im Speziellen gilt diese Aussage für die Richtlinien(-module) MLS und Biba.
+
+In den meisten Umgebungen, sogenannten Single Label Environments, wird Objekten nur ein einzelnes Label zugewiesen. Dadurch wird nur ein Regelsatz für die Zugriffskontrolle auf das gesamte System verwendet - und das ist meistens auch tatsächlich ausreichend. Es gibt wenige Fälle, in denen mehrere Labels auf Dateisystemobjekte oder -subjekte verwendet werden. In einem solchen Fall muß das Dateisystem mit der man:tunefs[8]-Option `multilabel` angepaßt werden, da `single label` die Standardeinstellung ist.
+
+Bei der Verwendung von Biba oder MLS kann man numerische Labels vergeben, die genau das Level angeben, an welcher Stelle in der Hierarchie das Subjekt oder Objekt einzuordnen ist. Dieses numerische Level wird verwendet, um Informationen in verschiedene Gruppen aufzuteilen oder zu sortieren - damit zum Beispiel nur Subjekte, die zu einer gewissen Vertraulichkeitsstufe gehören, Zugang zu einer Gruppe von Objekten erhalten.
+
+In den meisten Fällen wird ein Administrator nur ein einzelnes Label für das gesamte Dateisystem verwenden.
+
+_Moment mal, dass ist doch dasselbe wie DAC! Ich dachte, MAC würde die Kontrolle strengstens an den Administrator binden!_ Diese Aussage hält immer noch stand - `root` ist derjenige, der die Kontrolle ausübt und die Richtlinie konfiguriert, so dass Nutzer in die entsprechenden, angemessenen Kategorien / Zugriffsklassen eingeordnet werden. Nunja, einige Module schränken `root` selbst ein. Die Kontrolle über Objekte wird dann einer Gruppe zugewiesen, jedoch hat `root` die Möglichkeit, die Einstellungen jederzeit zu widerrufen oder zu ändern. Dies ist das Hierarchie/Freigabe-Modell, das durch Richtlinien wie MLS oder Biba bereitgestellt wird.
+
+=== Konfigurieren der Labels
+
+Gewissermaßen alle Aspekte der Labelkonfiguration werden durch Werkzeuge das Basissystems umgesetzt. Die entsprechenden Kommandos bieten eine einfache Schnittstelle zum Konfigurieren, Manipulieren und auch Verifizieren der gekennzeichneten Objekte.
+
+Mit den beiden Kommandos man:setfmac[8] und man:setpmac[8] kann man eigentlich schon alles machen. Das Kommando `setfmac` wird verwendet, um ein MAC-Label auf einem Systemobjekt zu setzen, `setpmac` hingegen zum Setzen von Labels auf Systemsubjekte. Als Beispiel soll hier dienen:
+
+[source,bash]
+....
+# setfmac biba/high test
+....
+
+Wenn bei der Ausführung dieses Kommandos keine Fehler aufgetreten sind, gelangt man zur Eingabeaufforderung zurück. Nur wenn ein Fehler auftritt, verhalten sich diese Kommandos nicht still, ganz wie auch die Kommandos man:chmod[1] und man:chown[8]. In einigen Fällen wird dieser Fehler `Permission denied` lauten und gewöhnlich dann auftreten, wenn ein Label an einem Objekt angebracht oder verändert werden soll, das bereits (Zugriffs-)Beschränkungen unterliegt. Der Systemadministrator kann so eine Situation mit Hilfe der folgenden Kommandos überwinden:
+
+[source,bash]
+....
+# setfmac biba/high test
+Permission denied
+# setpmac biba/low setfmac biba/high test
+# getfmac test
+test: biba/high
+....
+
+Wie wir hier sehen, kann `setpmac` verwendet werden, um die vorhandene Einstellungen zu umgehen, indem dem gestarteten Prozeß ein anderes, valides Label zugeordnet wird. Das Werkzeug `getpmac` wird normalerweise auf gerade laufende Prozesse angewendet. Ähnlich sendmail: Als Argument wird statt eines Kommandos eine eine Prozeß-ID übergeben, es verbirgt sich doch dieselbe Logik dahinter. Wenn ein Nutzer versucht, eine Datei zu verändern, auf die er keinen Zugriff hat, entsprechend der Regeln eines geladenen Richtlinienmoduls, wird der Fehler `Operation not permitted` durch die Funktion `mac_set_link` angezeigt.
+
+==== Übliche Typen von Labeln
+
+Wenn man die Module man:mac_biba[4], man:mac_mls[4] und man:mac_lomac[4] verwendet, hat man die Möglichkeit, einfache Label zu vergeben. Diese nennen sich `high`, `low` und `equal`. Es folgt eine kurze Beschreibung, was diese Labels bedeuten:
+
+* Das Label `low` ist definitionsgemäß das niedrigeste Label, das einem Objekt oder Subjekt verliehen werden kann. Wird es gesetzt, kann die entsprechende Entität nicht mehr auf Entitäten zugreifen, die das Label `high` tragen.
+* Das Label `equal` wird Entitäten verliehen, die von der Richtlinie ausgenommen sein sollen.
+* Das Label `high` verleiht einer Entität die höchstmögliche Einstellung.
+
+Unter Beachtung jedes einzelnen Richtlinienmoduls moduliert und beschränkt jede dieser Einstellungen den Informationsfluß unterschiedlich. Genaue Erklärungen zu den Charakteristika der einfachen Labels in den verschiedenen Modulen finden sich im entsprechenden Unterabschnitt dieses Kapitels oder in den Manpages.
+
+===== Fortgeschrittene Label-Konfiguration
+
+Numerische klassifizierte Labels werden verwendet in der Form `Klasse:Verbund+Verbund`. Demnach ist das Label
+
+[.programlisting]
+....
+biba/10:2+3+6(5:2+3-15:2+3+4+5+6)
+....
+
+folgendermaßen zu lesen:
+
+"Biba Policy Label"/"effektive Klasse 10" :"Verbund 2,3 und 6": ("Low-Klasse 5:..."- "High-Klasse 15:...")
+
+In diesem Beispiel ist die erstgenannte Klasse als "effektive Klasse" zu bezeichnen. Ihr werden die "effektiven Verbünde" zugeordnet. Die zweite Klasse ist die "Low"-Klasse und die letzte die "high"-Klasse. Die allermeisten Konfigurationen kommen ohne die Verwendungen von solchen Klassen aus, nichtsdestotrotz kann man sie für erweiterte Konfigurationen verwenden.
+
+Sobald sie auf _Systemsubjekte_ angewendet werden, haben diese eine gegenwärtige Klasse/Verbund- Konfiguration und diese muß im definierten Rahmen gegebenenfalls angepaßt (erhöht oder gesenkt) werden. Im Gegensatz dazu haben _Systemobjekte_ alle eingestellten (effektive, High- und Low-Klasse) gleichzeitig. Dies ist notwendig, damit auf Sie von den _Systemsubjekten_ in den verschiedenen Klassen gleichzeitig zugegriffen werden kann.
+
+Die Klasse und und die Verbünde in einem Subjekt-Objekt-Paar werden zum Erstellen einer sogenannten Dominanz-Relation verwendet, in welcher entweder das Subjekt das Objekt, das Objekt das Subjekt, keines das andere dominiert oder sich beide gegenseitig dominieren. Der Fall, dass sich beide dominieren, tritt dann ein, wenn die beiden Labels gleich sind. Wegen der Natur des Informationsflusses in Biba kann man einem Nutzer Rechte für einen Reihe von Abteilungen zuordnen, die zum Beispiel mit entsprechenden Projekten korrespondieren. Genauso können aber auch Objekten mehrere Abteilungen zugeordnet sein. Die Nutzer müssen eventuell ihre gegenwärtigen Rechte mithilfe von `su` or `setpmac` anpassen um auf Objekte in einer Abteilung zuzugreifen, zu der sie laut ihrer effektiven Klasse nicht berechtigt sind.
+
+==== Nutzer- und Label-Einstellungen
+
+Nutzer selbst brauchen Labels damit ihre Dateien und Prozesse korrekt mit der Sicherheitsrichtlinie zusammenarbeitet, die für das System definiert wurde. Diese werden in der Datei [.filename]#login.conf# durch die Verwendung von Login- Klassen zugeordnet. Jedes Richtlinienmodul, das Label verwendet, arbeitet mit diesen Login-Klassen.
+
+Beispielhaft wird der folgende Eintrag, der für jede Richtlinie eine Einstellung enthält, gezeigt:
+
+[.programlisting]
+....
+default:\
+:copyright=/etc/COPYRIGHT:\
+:welcome=/etc/motd:\
+:setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+:path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:\
+:manpath=/usr/shared/man /usr/local/man:\
+:nologin=/usr/sbin/nologin:\
+:cputime=1h30m:\
+:datasize=8M:\
+:vmemoryuse=100M:\
+:stacksize=2M:\
+:memorylocked=4M:\
+:memoryuse=8M:\
+:filesize=8M:\
+:coredumpsize=8M:\
+:openfiles=24:\
+:maxproc=32:\
+:priority=0:\
+:requirehome:\
+:passwordtime=91d:\
+:umask=022:\
+:ignoretime@:\
+:label=partition/13,mls/5,biba/10(5-15),lomac/10[2]:
+....
+
+Die Label-Option in der letzten Zeile legt fest, welches Standard-Label für einen Nutzer erzwungen wird. Nutzern darf niemals gestattet werden, diese Werte selbst zu verändern, demnach haben Nutzer in dieser Beziehung auch keine Wahlfreiheit. In einer richtigen Konfiguration jedoch wird kein Administrator alle Richtlinienmodule aktivieren wollen. Es wird an dieser Stelle ausdrücklich empfohlen, dieses Kapitel zu Ende zu lesen, bevor irgendein Teil dieser Konfiguration ausprobiert wird.
+
+[NOTE]
+====
+Nutzer können ihr eigenes Label nach dem Loginvorgang durchaus ändern. Jedoch kann diese Änderung nur unter den Auflagen der gerade gültigen Richtlinie geschehen. Im Beispiel oben wird für die Biba-Richtlinie eine minimale Prozeßintegrität von 5, eine maximale von 15 angegeben, aber die Voreinstellung des tatsächlichen Labels ist 10. Der Nutzerprozeß läuft also mit einer Integrität von 10 bis das Label verändert wird, zum Beispiel durch eine Anwendung des Kommandos `setpmac`, welches jedoch auf den Bereich eingeschränkt wird, der zum Zeitpunkt des Logins angegeben wurde, in diesem Fall von 5 bis 15.
+====
+
+Nach einer Änderung der Datei [.filename]#login.conf# muß in jedem Fall die Befähigungsdatenbank mit dem Kommando `cap_mkdb` neu erstellt werden - und das gilt für alle im weiteren Verlauf gezeigten Beispiele und Diskussionspunkte.
+
+Es ist nützlich anzumerken, dass viele Einsatzorte eine große Anzahl von Nutzern haben, die wiederum viele verschiedenen Nutzerklassen angehören sollen. Hier ist eine Menge Planungsarbeit notwendig, da die Verwaltung sehr unübersichtlich und schwierig ist.
+
+==== Netzwerkschnittstellen und die zugehörigen Label
+
+Labels können auch, wenn man sie an Netzwerkschittstellen vergibt, helfen, den Datenfluß durch das Netzwerk zu kontrollieren. Das funktioniert in allen Fällen genau so wie mit Objekten. Nutzer, die in der Biba-Richtlinie das Label `high` tragen, dürfen nicht auf Schnittstellen zugreifen, die `low` markiert sind usw.
+
+Die Option `maclabel` wird via `ifconfig` übergeben. Zum Beispiel
+
+[source,bash]
+....
+# ifconfig bge0 maclabel biba/equal
+....
+
+belegt die Schnittstelle mit dem MAC Label `biba/equal`. Wenn eine komplexe Einstellung wie `biba/high(low-high)` verwendet wird, muß das gesamte Label in Anführungszeichen geschrieben werden, da sonst eine Fehlermeldung zurückgegeben wird.
+
+Jedes Richtlinienmodul, das die Vergabe von Labels unterstützt, stellt einen Parameter bereit, mit dem das MAC Label für Netzwerkschnittstellen deaktiviert werden kann. Das Label der Netzwerkschnittstelle auf `equal` zu setzen, führt zum selben Ergebnis. Beachten Sie die Ausgabe von `sysctl`, die Manpages der verschiedenen Richtlinien oder eben die Informationen, die im weiteren Verlauf dieses Kapitels angeboten werden, um mehr zu diesen Parametern zu erfahren.
+
+=== Single- oder Multilabel?
+
+Als Standardeinstellung verwendet das System die Option `single label`. Was bedeutet das für den Administrator? Es gibt einige Unterschiede zwischen `single label` und `multilabel`. In ihrer ureigenen Weise bieten beide Vor- und Nachteile bezogen auf die Flexibilität bei der Modellierung der Systemsicherheit.
+
+Die Option `single label` gibt jedem Subjekt oder Objekt genau ein einziges Label, zum Beispiel `biba/high`. Mit dieser Option hat man einen geringeren Verwaltungsaufwand, aber die Flexibilität beim Einsatzes von Richtlinien ist ebenso gering. Viele Administratoren wählen daher auch die Option `multilabel` im Sicherheitsmodell, wenn die Umstände es erfordern.
+
+Die Option `multilabel` gestattet, jedem einzelnen Subjekt oder Objekt seine eigenen unabhängigen Label zu zuzuordnen. Die Optionen `multilabel` und `singlelabel` betreffen jedoch nur die Richtlinien, die Labels als Leistungsmerkmal verwenden, einschließlich der Richtlinien Biba, Lomac, MLS und SEBSD.
+
+Wenn Richtlinien benutzt werden sollen, die ohne Labels auskommen, wird die Option `multilabel` nicht benötigt. Dies betrifft die Richtlinien `seeotheruids`, `portacl` und `partition`.
+
+Man sollte sich dessen bewußt sein, dass die Verwendung der Option `multilabel` auf einer Partition und die Erstellung eines Sicherheitsmodells auf der Basis der FreeBSD `multilevel` Funktionalität einen hohen Verwaltungsaufwand bedeutet, da alles im Dateisystem ein Label bekommt. Jedes Verzeichnis, jede Datei und genauso jede Schnittstelle.
+
+Das folgende Kommando aktiviert `multilabel` für ein Dateisystem. Dies funktioniert nur im Einzelbenutzermodus:
+
+[source,bash]
+....
+# tunefs -l enable /
+....
+
+In einer Swap-Partition wird dies nicht benötigt.
+
+[NOTE]
+====
+Falls Sie Probleme beim Setzen der Option `multilabel` auf der Root-Partition bemerken, lesen Sie bitte <<mac-troubleshoot>> dieses Kapitels.
+====
+
+[[mac-planning]]
+== Planung eines Sicherheitsmodells
+
+Wann immer eine neue Technologie eingepflegt werden soll, ist es wichtig, vorher einen Plan zu erstellen. In den verschiedenen Etappen der Planung sollte der Administrator nie das "Große Ganze" aus den Augen verlieren und mindestens die folgenden Punkte beachten:
+
+* Die Anforderungen
+* Die Ziele
+
+Wenn Sie MAC verwenden möchten, sind das im Besonderen folgende Punkte:
+
+* Wie werden Informationen und Ressourcen auf den Zielsystemen klassifiziert?
+* Welche Arten von Informationen bzw. Ressourcen sollen im Zugang beschränkt sein und welche Art Einschränkung soll verwendet werden?
+* Welche(s) MAC Modul(e) wählt man, um sein Ziel zu erreichen?
+
+Es ist immer möglich, die Einstellungen des Systems und der Systemressourcen im Nachhinein zu "optimieren". Es ist aber wirklich lästig, das gesamte Dateisystem zu durchsuchen, um Dateien oder Benutzerkonten zu reparieren. Eine gute Planung hilft dem Administrator, sich einer sorgenfreien und effizienten Umsetzung eines Sicherheitsmodells zu versichern. Testlauf des Sicherheitsmodells _vor_ dem Einsatz in seiner richtigen Arbeitsumgebung ist auf jeden Fall empfehlenswert. Die Idee, ein System mit einer MAC einfach loslaufen zu lassen, ist wie direkt auf einen Fehlschlag hinzuarbeiten.
+
+Jede Umgebung hat ihre eigenen Anforderungen. Ein tiefgreifendes und vollständiges Sicherheitsprofil zu erstellen spart weitere Änderungen, nachdem das System in Betrieb genommen wurde. Also werden die folgenden Abschnitte die verschiedenen Module vorstellen, die den Administratoren zur Verfügung gestellt werden, die Nutzung und Konfiguration der einzelnen Module beschreiben; und in einigen Fällen Einblicke gewähren, für welche Situationen welche Module besonders geeignet sind. Zum Beispiel ein Webserver kann von der Verwendung der man:mac_biba[4] oder der man:mac_bsdextended[4] Richtlinie profitieren. In anderen Fällen, an einem Rechner mit nur wenigen lokalen Benutzern, ist die man:mac_partition[4] die Richtlinie der Wahl.
+
+[[mac-modules]]
+== Modulkonfiguration
+
+Jedes Modul, das in der MAC enthalten ist, kann entweder direkt in den Kernel eingefügt werden oder als Kernelmodul in der Laufzeit des Systems geladen werden. Empfohlen wird, den Modulnamen in der Datei [.filename]#/boot/loader.conf# anzufügen, so dass das Modul am Anfang des Bootvorgangs eingebunden wird.
+
+Die folgenden Abschnitte werden verschiedene MAC Module und ihre jeweiligen Vor- und Nachteile vorstellen. Außerdem wird erklärt, wie sie in bestimmte Umgebungen eingearbeitet werden können. Einige Module unterstützen die Verwendung von `Labels`, das heißt Zugriffskontrolle durch hinzufügen einer Kennzeichnung in der Art von "dieses ist erlaubt, jenes aber nicht". Eine Label-Konfigurationdatei kontrolliert unter anderem, wie auf Dateien zugegriffen oder wie über das Netzwerk kommuniziert werden darf. Im vorangehenden Abschnitt wurde bereits erläutert, wie die Option `multilabel` auf Dateisysteme angewendet wird, um eine Zugriffskontrolle auf einzelne Dateien oder ganze Dateisysteme zu konfigurieren.
+
+Eine `single label` Konfiguration erzwingt ein einzelnes Label für das gesamte System. Daher wird die `tunefs`-Option `multilabel` genannt. 
+
+[[mac-seeotheruids]]
+== Das MAC Modul seeotheruids
+
+Modulename: [.filename]#mac_seeotheruids.ko#
+
+Parameter in der Kernelkonfiguration: `options MAC_SEEOTHERUIDS`
+
+Bootparameter: `mac_seeotheruids_load="YES"`
+
+Das Modul man:mac_seeotheruids[4] erweitert die `sysctl`-Variablen `security.bsd.see_other_uids` und `security.bsd.see_other_gids`. Diese Optionen benötigen keine im Vorhinein zu setzenden Labels und können leicht durchschaubar mit den anderen MAC-Modulen zusammenarbeiten.
+
+Nachdem das Modul geladen wurde, können die folgenden `sysctl` Variablen verwendet werden.
+
+* `security.mac.seeotheruids.enabled` dient zur Aktivierung des Moduls, zunächst mit den Standardeinstellungen. Diese verhindern, dass Nutzer Prozesse und Sockets sehen können, die ihnen nicht selbst gehöen.
+* `security.mac.seeotheruids.specificgid_enabled` kann eine spezifizierte Nutzergruppe von dieser Richtlinie ausnehmen. Die entsprechende Gruppe muß an den Parameter `security.mac.seeotheruids.specificgid=XXX` übergeben werden, wobei _XXX_ die ID der Gruppe ist, die von der Richtlinie ausgenommen werden soll.
+* `security.mac.seeotheruids.primarygroup_enabled` kann verwendet werden, um eine spezifische, _primäre_ Nutzergruppe von der Richtlinie auszuschliessen. Dieser Parameter und `security.mac.seeotheruids.specificgid_enabled` schließen einander aus.
+
+[[mac-bsdextended]]
+== Das MAC Modul bsdextended
+
+Modulname: [.filename]#mac_bsdextended.ko#
+
+Parameter in der Kernelkonfiguration: `options MAC_BSDEXTENDED`
+
+Bootparameter: `mac_bsdextended_load="YES"`
+
+Das Modul man:mac_bsdextended[4] erstellt eine Firewall für das Dateisystem und ist eine Erweiterung des sonst üblichen Rechtemodells. Es erlaubt einem Administrator einen Regelsatz zum Schutz von Dateien, Werkzeugen und Verzeichnissen in der Dateisystemhierarchie zu erstellen, der einer Firewall ähnelt. Sobald auf ein Objekt im Dateisystem zugegriffen werden soll, wird eine Liste von Regel abgearbeitet, bis eine passende Regel gefunden wird oder die Liste zu Ende ist. Das Verhalten kann durch die Änderung des man:sysctl[8] Parameters `security.mac.bsdextended.firstmatch_enabled` eingestellt werden. Ähnlich wie bei den anderen Firewallmodulen in FreeBSD wird eine Datei erstellt, welche die Zugriffsregeln enthält. Diese wird beim Systemstart durch eine Variable in man:rc.conf[5] eingebunden.
+
+Der Regelsatz kann mit dem Programm man:ugidfw[8] eingepflegt werden, welches eine Syntax bereitstellt, die der von man:ipfw[8] gleicht. Weitere Werkzeuge können auch selbst erstellt werden, indem die Funktionen der Bibliothek man:libugidfw[3] verwendet werden.
+
+Bei der Arbeit mit diesem Modul ist äußerste Vorsicht geboten - falscher Gebrauch kann den Zugriff auf Teile des Dateisystems komplett unterbinden.
+
+=== Beispiele
+
+Nachdem das Modul man:mac_bsdextended[4] erfolgreich geladen wurde, zeigt das folgende Kommando die gegenwärtig aktiven Regeln an:
+
+[source,bash]
+....
+# ugidfw list 0 slots, 0 rules
+....
+
+Wie erwartet, sind keine Regeln definiert. Das bedeutet, das auf alle Teile des Dateisystems zugegriffen werden kann. Um eine Regel zu definieren, die jeden Zugriff durch Nutzer blockiert und nur die Rechte von `root` unangetastet läßt, muß lediglich dieses Kommando ausgeführt werden:
+
+[source,bash]
+....
+# ugidfw add subject not uid root new object not uid root mode n
+....
+
+Das ist allerdings keine gute Idee, da nun allen Nutzern der Zugriff auf selbst die einfachsten Programme wie `ls` untersagt wird. Angemessener wäre etwas wie:
+
+[source,bash]
+....
+# ugidfw set 2 subject uid user1 object uid user2 mode n
+# ugidfw set 3 subject uid user1 object gid user2 mode n
+....
+
+Diese Befehle bewirken, dass `user1` keinen Zugriff mehr auf Dateien und Programme hat, die `_user2_` gehören. Dies schließt das Auslesen von Verzeichniseinträgen ein. 
+
+Anstelle `uid user1` könnte auch `not uid _user2_` als Parameter übergeben werden. Dies würde diesselben Einschränkungen für alle Nutzer bewirken anstatt nur einen einzigen.
+
+[NOTE]
+====
+`root` ist von diesen Einstellungen nicht betroffen.
+====
+
+Dies sollte als Überblick ausreichen, um zu verstehen, wie das Modul man:mac_bsdextended[4] helfen kann, das Dateisystem abzuschotten. Weitere Informationen bieten die Manpages man:mac_bsdextended[4] und man:ugidfw[8].
+
+[[mac-ifoff]]
+== Das MAC Modul ifoff
+
+Modulname: [.filename]#mac_ifoff.ko#
+
+Parameter für die Kernelkonfiguration: `options MAC_IFOFF`
+
+Bootparameter: `mac_ifoff_load="YES"`
+
+Das Modul man:mac_ifoff[4] ist einzig dazu da, Netzwerkschnittstellen im laufenden Betrieb zu deaktivieren oder zu verhindern, das Netzwerkschnittstellen während der Bootphase gestartet werden. Dieses Modul benötigt für seinen Betrieb weder Labels, die auf dem System eingerichtet werden müssen, noch hat es Abhängigkeiten zu anderen MAC Modulen.
+
+Der größte Teil der Kontrolle geschieht über die im folgenden aufgelisteten `sysctl`-Parameter:
+
+* `security.mac.ifoff.lo_enabled` schaltet den gesamten Netzwerkverkehr auf der Loopback-Schnittstelle man:lo[4] an bzw. aus.
+* `security.mac.ifoff.bpfrecv_enabled` macht das Gleiche für den Berkeley Paket Filter man:bpf[4].
+* `security.mac.ifoff.other_enabled` schaltet den Verkehr für alle anderen Netzwerkschnittstellen.
+
+Die wahrscheinlich häufigste Nutzung von man:mac_ifoff[4] ist die Überwachung des Netzwerks in einer Umgebung, in der kein Netzwerkverkehr während des Bootvorgangs erlaubt werden soll. Eine andere mögliche Anwendung wäre ein Script, das mit Hilfe von package:security/aide[] automatisch alle Schnittstellen blockiert, sobald Dateien in geschützten Verzeichnissen angelegt oder verändert werden.
+
+[[mac-portacl]]
+== Das MAC Modul portacl
+
+Modulname: [.filename]#mac_portacl.ko#
+
+Parameter für die Kernelkonfiguration: `options MAC_PORTACL`
+
+Bootparameter: `mac_portacl_load="YES"`
+
+Mit Hilfe des Moduls man:mac_portacl[4] können die Anbindungen an die lokalen TCP und UDP Ports durch eine Vielzahl von `sysctl` Variablen beschränkt werden. Genauer gesagt ermöglicht man:mac_portacl[4] Nutzern ohne `root`-Rechten den Zugriff auf zu bestimmende privilegierte Ports, also denen innerhalb der ersten 1024.
+
+Sobald das Modul geladen wurde, ist die Richtlinie für alle Sockets verfügbar. Die folgenden Variablen können für die Konfiguration verwendet werden:
+
+* `security.mac.portacl.enabled` schaltet die Anwendung der Richtlinie ein oder aus.
+* `security.mac.portacl.port_high` gibt den höchsten Port an, der von der Richtlinie man:mac_portacl[4] betroffen sein soll.
+* `security.mac.portacl.suser_exempt` nimmt, wenn es einen Wert ungleich Null zugewiesen bekommt, `root` von der Richtlinie aus.
+* `security.mac.portacl.rules` enthält als Wert die eigentliche `mac_portacl` Richtlinie.
+
+Die eigentliche Konfiguration der `mac_portacl` Richtlinie wird der `sysctl`-Variablen `security.mac.portacl.rules` als Zeichenkette der Form `rule[,rule,...]` übergeben. Jede einzelne Regel hat die Form `idtype:id:protocol:port`. Der Parameter [parameter]#idtype# ist entweder `uid` oder `gid` und wird verwendet, um den Parameter [parameter]#id# als Nutzer-ID oder Gruppen-ID zu kennzeichnen. Der Parameter [parameter]#protocol# gibt an, ob die Regel ür TCP oder UDP gelten soll (indem man den Wert auf `tcp` oder `udp` setzt). Und der letzte Parameter, [parameter]#port#, enthält die Nummer des Ports, auf den der angegebene Nutzer bzw. die angegebene Gruppe Zugriff erhalten soll.
+
+[NOTE]
+====
+Da der Regelsatz direkt vom Kernel ausgewertet wird, können nur Zahlenwerte übergeben werden. Das heißt, Namen von Nutzern, Gruppen oder Dienstnamen aus der Datei [.filename]#/etc/services# funktionieren nicht.
+====
+
+Auf UNIX(R)-artigen Betriebssystemen sind die Ports kleiner 1024 privilegierten Prozessen vorbehalten, müssen also mit als/von `root` gestartet werden und weiterhin laufen. Damit man:mac_portacl[4] die Vergabe von Ports kleiner als 1024 an nicht privilegierte Prozesse übernehmen kann, muß die UNIX(R) Standardeinstellung deaktiviert werden. Dazu ändert man die man:sysctl[8] Variablen `net.inet.ip.portrange.reservedlow` und `net.inet.ip.portrange.reservedhigh` auf den Wert "0".
+
+Weiterführende Informationen entnehmen Sie bitte den unten aufgeführten Beispielen oder der Man-Page man:mac_portacl[4]!
+
+=== Beispiele
+
+Die folgenden Beispiele sollten ein wenig Licht in die obige Diskussion bringen:
+
+[source,bash]
+....
+# sysctl security.mac.portacl.port_high=1023
+# sysctl net.inet.ip.portrange.reservedlow=0 net.inet.ip.portrange.reservedhigh=0
+....
+
+Zunächst bestimmen wir, dass man:mac_portacl[4] für alle privilegierten Ports gelten soll und deaktivieren die normale UNIX(R)-Beschränkung.
+
+[source,bash]
+....
+# sysctl security.mac.portacl.suser_exempt=1
+....
+
+Da `root` von dieser Richtlinie nicht beeinträchtigt werden soll, setzen wir hier `security.mac.portacl.suser_exempt` auf einen Wert ungleich Null. Das Modul man:mac_portacl[4] ist nun so eingerichtet, wie es UNIX(R)-artige Betriebssysteme normal ebenfalls tun.
+
+[source,bash]
+....
+# sysctl security.mac.portacl.rules=uid:80:tcp:80
+....
+
+Nun erlauben wir dem Nutzer mit der UID 80, normalerweise dem Nutzer `www`, den Port 80 zu verwenden. Dadurch kann der Nutzer `www` einen Webserver betreiben, ohne dafür mit `root`-Privilegien ausgestattet zu sein.
+
+[source,bash]
+....
+# sysctl security.mac.portacl.rules=uid:1001:tcp:110,uid:1001:tcp:995
+....
+
+Hier wird dem Nutzer mit der UID 1001 erlaubt, die TCP Ports 110 ("pop3") und 995 ("pop3s") zu verwenden. Dadurch kann dieser Nutzer einen Server starten, der Verbindungen an diesen beiden Ports annehmen kann.
+
+[[mac-partition]]
+== Das MAC Modul partition
+
+Modulname: [.filename]#mac_partition.ko#
+
+Parameter für die Kernelkonfiguration: `options MAC_PARTITION`
+
+Bootparameter `mac_partition_load="YES"`
+
+Die Richtlinie man:mac_partition[4] setzt Prozesse in spezielle "Partitionen", entsprechend dem zugewiesenen MAC Label. Man kann sich das vorstellen wie eine spezielle Art man:jail[8], auch wenn das noch kein wirklich guter Vergleich ist.
+
+Es wird empfohlen, dieses Modul durch einen Eintrag in man:loader.conf[5] zu aktivieren, so dass die Richtlinie während des Bootvorganges eingebunden wird.
+
+Der Großteil der Konfiguration geschieht mit dem Kommando man:setpmac[8], wie gleich erklärt wird. Außerdem gibt es folgenden `sysctl` Parameter für diese Richtlinie.
+
+* `security.mac.partition.enabled` erzwingt die Verwendung von MAC Prozeß-Partitionen.
+
+Sobald diese Richtlinie aktiv ist, sehen Nutzer nur noch ihre eigenen Prozesse, und alle anderen Prozesse, die ebenfalls derselben Prozeß-Partition zugeordnet sind. Sie können jedoch nicht auf Prozesse oder Werkzeuge außerhalb des Anwendungsbereich dieser Partition zugreifen. Das bedeutet unter anderem, das ein Nutzer, der einer Klasse `insecure` zugeordnet ist, nicht auf das Kommando `top` zugreifen kann - wie auch auf viele anderen Befehle, die einen eigenen Prozeß erzeugen.
+
+Um einen Befehl einer Prozeß-Partition zuzuordnen, muß dieser durch das Kommando `setpmac` mit einem Label versehen werden:
+
+[source,bash]
+....
+# setpmac partition/13 top
+....
+
+Diese Zeile fügt das Kommando `top` dem Labelsatz für Nutzer der Klasse `insecure` hinzu, sofern die Partition 13 mit der Klasse `insecure` übereinstimmt. Beachten Sie, dass alle Prozesse, die von Nutzern dieser Klasse erzeugt werden, das Label `partition/13` erhalten, und dieses auch nicht durch den Nutzer geändert werden kann.
+
+=== Beispiele
+
+Der folgende Befehl listet die vergebenen Label für Prozeß-Partitionen und die laufenden Prozesse auf.
+
+[source,bash]
+....
+# ps Zax
+....
+
+Das nächste Kommando liefert das Label der Prozeß-Partition eines anderen Nutzers `trhodes` und dessen gegenwärtig laufenden Prozesse zurück.
+
+[source,bash]
+....
+# ps -ZU trhodes
+....
+
+[NOTE]
+====
+Jeder Nutzer kann die Prozesse in der Prozeß-Partition von `root` betrachten, solange nicht die Richtlinie man:mac_seeotheruids[4] geladen wurde.
+====
+
+Eine ausgefeilte Umsetzung dieser Richtlinie deaktiviert alle Dienste in [.filename]#/etc/rc.conf# und startet diese dann später durch ein Skript, das jedem Dienst das passende Label zuordnet.
+
+[NOTE]
+====
+Die folgenden Richtlinien verwenden Zahlenwerte anstatt der drei Standardlabels. Diese Optionen, und ihre Grenzen, werden in den zugehörigen Manpages genauer erklärt.
+====
+
+[[mac-mls]]
+== Das MAC Modul Multi-Level Security
+
+Modulname: [.filename]#mac_mls.ko#
+
+Parameter für die Kernelkonfiguration: `options MAC_MLS`
+
+Bootparameter: `mac_mls_load="YES"`
+
+Die Richtlinie man:mac_mls[4] kontrolliert die Zugriffe zwischen Subjekten und Objekten, indem sie den Informationsfluß strengen Regeln unterwirft.
+
+In MLS Umgebungen wird jedem Subjekt oder Objekt ein "Freigabe"-Level zugeordnet, und diese werden wiederum zu einzelnen Verbünden zusammengefaßt. Da diese Freigabe- oder Anfälligkeits-Level Zahlen größer 6000 erreichen können, ist es für jeden Systemadministrator eine undankbare Aufgabe, jede Entität von Grund auf zu konfigurieren. Zum Glück gibt es 3 "instant" Labels, die in der Richtlinie zur Anwendung bereit stehen.
+
+Diese drei Labels heißen `mls/low`, `mls/equal` und `mls/high`. Da sie in den Manpages man:mac_mls[4] ausführlich beschrieben werden, gibt es hier nur einen kurzen Abriß:
+
+* Das Label `mls/low` ist eine niedrige Einstellung, die von allen anderen dominiert werden darf. Alles, was mit `mls/low` versehen wird, hat ein niedriges Freigabe-Level und darf auf keine Informationen zugreifen, denen ein höheres Freigabe-Level zugeordnet wurde. Einem Objekt mit diesem Label kann außerdem keine Information durch ein Objekt höherer Freigabe übergeben werden, es kann also auch nicht durch solche Objekte editiert oder überschrieben werden.
+* Das Label `mls/equal` wird an Objekte vergeben, die von dieser Richtlinie ausgenommen werden sollen.
+* Das Label `mls/high` verkörpert das höchstmögliche Freigabe-Level. Objekte, denen dieses Label zugeordnet wird, dominieren alle anderen Objekte des Systems. Trotzdem können sie Objekten mit einem niedrigeren Freigabe-Level keine Informationen zuspielen.
+
+MLS bietet:
+
+* Eine hierarchische Sicherheitsschicht und Zuordnung nichthierarchischer Kategorien;
+* Feste Regeln: kein "Read-Up", kein "Write-Down" (ein Subjekt kann nur Objekte gleicher oder _niedrigerer_ Stufe lesen, und es kann nur Objekte gleicher oder _höherer_ Stufe schreiben);
+* Geheimhaltung (indem unangemessene Offenlegung von Daten verhindert wird);
+* Eine Basis zum Entwerfen von Systemen, die Daten verschiedener Vertraulichkeitsebenen gleichzeitig handhaben sollen (ohne das geheime und vertrauliche Informationen untereinander ausgetauscht werden können).
+
+Nachfolgend werden die `sysctl`-Variablen vorgestellt, die für die Einrichtung spezieller Dienste und Schnittstellen vorhanden sind.
+
+* `security.mac.mls.enabled` schaltet die Richtlinie MLS ein (oder aus).
+* `security.mac.mls.ptys_equal` sorgt dafür, dass während der Initialisierung alle man:pty[4]-Geräte als `mls/equal` gekennzeichnet werden.
+* `security.mac.mls.revocation_enabled` sorgt dafür, dass die Zugriffsrechte von Objekten wieder zurückgesetzt werden, nachdem deren Label vorübergehend auf ein niedrigeres Freigabe-Level geändert wurde.
+* `security.mac.mls.max_compartments` gibt die maximale Anzahl von Verbünden an. Im Prinzip ist es die höchste Nummer eines Verbundes auf dem System.
+
+Um die Labels der MLS Richtlinie zu bearbeiten verwendet man man:setfmac[8]. Um ein Objekt zu kennzeichnen, benutzen Sie folgendes Kommando:
+
+[source,bash]
+....
+# setfmac mls/5 test
+....
+
+Um das MLS-Label der Datei [.filename]#test# auszulesen, verwenden Sie dieses Kommando:
+
+[source,bash]
+....
+# getfmac test
+....
+
+Dies ist eine Zusammenstellung der Merkmale von [.filename]#test#. Ein anderer Ansatz ist, für diese Richtlinie eine Konfigurationsdatei in [.filename]#/etc# abzulegen, die alle Informationen enthält und mit der dann das Kommando `setfmac` gefüttert wird. Diese Vorgehensweise wird erklärt, nachdem alle Richtlinien vorgestellt wurden.
+
+=== Verbindlicher Vertraulichkeit in der Planungsphase
+
+Mit dem Richtlinienmodul `Multi-Level Security` bereitet sich ein Administrator darauf vor, den Fluß vertraulicher Informationen zu kontrollieren. Beim Starten der Richtlinie ist immer `mls/low` voreingestellt - alles kann auf alles zugreifen. Der Administrator ändert dies während der eigentlichen Konfiguration, indem er die Vertraulichkeit bestimmter Objekte erhöht.
+
+Jenseits der drei Grundeinstellungen des Labels kann der Administrator einzelne Nutzer oder Nutzergruppen nach Bedarf zusammenschließen und den Informationsaustausch zwischen diesen gestatten oder unterbinden. Es ist sicher eine Vereinfachung, die Freigabe-Level mit Begriffen wie `vertraulich`, `geheim` oder `streng geheim` zu bezeichnen. Einige Administratoren erstellen einfach verschiedene Gruppen auf der Ebene von gegenwärtigen Projekten. Ungeachtet der Herangehensweise bei der Klassifizierung muß ein gut durchdachter Plan existieren, bevor eine derart einengende Richtlinie umgesetzt wird.
+
+Exemplarisch für die Anwendung dieses Moduls bzw. dieser Richtlinie seien angeführt:
+
+* Ein E-Commerce Webserver
+* Ein Dateiserver, der vertrauliche Informationen einer Firma oder eines Konzerns speichert
+* Umgebungen in Finanzeinrichtungen
+
+Der unsinnigste Einsatzort für diese Richtlinie wäre ein Arbeitsplatzrechner mit nur zwei oder drei Benutzern.
+
+[[mac-biba]]
+== Das MAC Modul Biba
+
+Modulname: [.filename]#mac_biba.ko#
+
+Parameter für die Kernelkonfiguration: `options MAC_BIBA`
+
+Bootparameter: `mac_biba_load="YES"`
+
+Das Modul man:mac_biba[4] lädt die MAC Biba Richtlinie. Diese ähnelt stark der MLS Richtlinie, nur das die Regeln für den Informationsfluß ein wenig vertauscht sind. Es wird in diesem Fall der absteigende Fluß sicherheitskritischer Information geregelt, während die MLS Richtlinie den aufsteigenden Fluß regelt. In gewissen Sinne treffen dieses und das vorangegangene Unterkapitel also auf beide Richtlinien zu.
+
+In einer Biba-Umgebung wird jedem Subjekt und jedem Objekt ein "Integritäts"-Label zugeordnet. Diese Labels sind in hierarchischen Klassen und nicht-hierarchischen Komponenten geordnet. Je höher die Klasse, um so höher die Integrität.
+
+Die unterstützten Labels heißen `biba/low`, `biba/equal` und `biba/high`. Sie werden im Folgenden erklärt:
+
+* `biba/low` ist die niedrigste Stufe der Integrität, die einem Objekt verliehen werden kann. Wenn sie einem Objekt oder Subjekt zugeordnet wird, kann dieses auf Objekte oder Subjekte, die biba/high markiert wurden, zwar lesend zugreifen, nicht jedoch schreibend.
+* Das Label `biba/equal` ist, wie der aufmerksame Leser sicherlich schon ahnt, für die Ausnahmen dieser Richtlinie gedacht und sollte nur diesen Ausnahmen entsprechenden Objekten verliehen werden.
+* `biba/high` markierte Subjekte und Objekte können Objekte niedrigerer Stufe schreiben , nicht jedoch lesen. Es wird empfohlen, dass dieses Label an Objekte vergeben wird, die sich auf Integrität des gesamten Systems auswirken.
+
+Biba stellt bereit:
+
+* Hierarchische Integritätsstufen mit einem Satz nichthierarchischer Integritätskategorien;
+* Festgeschriebene Regeln: kein "Write-Up", kein "Read-Down" (der Gegensatz zu MLS - ein Subjekt erhält schreibenden Zugriff auf Objekte gleicher oder geringerer Stufe, aber nicht bei höherer, und lesenden Zugriff bei gleicher Stufe oder höerer, aber nicht bei niedrigerer);
+* Integrität (es wird die Echtheit der Daten gewährleistet, indem unangemessene Veränderungen verhindert werden);
+* Eine Abstufung der Gewährleistung (im Gegensatz zu MLS, bei der eine Abstufung der Vertraulichkeit vorgenommen wird).
+
+Folgende `sysctl` Parameter werden zur Nutzung der Biba-Richtlinie angeboten:
+
+* `security.mac.biba.enabled` zum Aktivieren/Deaktivieren der Richtlinie auf dem Zielsystem.
+* `security.mac.biba.ptys_equal` wird verwendet, um die Biba-Richtlinie auf der man:pty[4]-Schnittstelle zu deaktivieren.
+* `security.mac.biba.revocation_enabled` erzwingt das Zurücksetzen des Labels, falls dieses zeitweise geändert wurde um ein Subjekt zu dominieren.
+
+Um Einstellungen der Biba Richtlinie für Systemobjekte zu verändern werden die Befehle `setfmac` und `getfmac` verwendet:
+
+[source,bash]
+....
+# setfmac biba/low test
+# getfmac test
+test: biba/low
+....
+
+=== Verbindliche Integrität in der Planungsphase
+
+Integrität garantiert, im Unterschied zu Sensitivität, dass Informationen nur durch vertraute Parteien verändert werden können. Dies schließt Informationen ein, die zwischen Subjekten ausgetauscht werden, zwischen Objekt, oder auch zwischen den beiden. Durch Integrität wird gesichert, das Nutzer nur Informationen verändern, oder gar nur lesen können, die sie explizit benötigen.
+
+Das Modul man:mac_biba[4] eröffnet einem Administrator die Möglichkeit zu bestimmen, welche Dateien oder Programme ein Nutzer oder eine Nutzergruppe sehen bzw. aufrufen darf. Gleichzeitig kann er zusichern, dass dieselben Programme und Dateien frei von Bedrohungen sind und das System die Echtheit gewährleistet - für diesen Nutzer oder die Nutzergruppe.
+
+Während der anfänglichen Phase der Planung muß der Administrator vorbereitet sein, Nutzer in Klassen, Stufen und Bereiche einzuteilen. Der Zugriff auf Dateien und insbesondere auch Programme wird verhindert sowohl vor als auch nachdem sie gestartet wurden. Das System selbst erhält als Voreinstellung das Label `biba/high` sobald das Modul aktiviert wird - und es liegt allein am Administrator, die verschiedenen Klassen und Stufen für die einzelnen Nutzer zu konfigurieren. Anstatt mit Freigaben zu arbeiten, wie weiter oben gezeigt wurde, könnte man auch Überbegriffe für Projekte oder Systemkomponenten entwerfen. Zum Beispiel, ausschließlich Entwicklern den Vollzugriff auf Quellcode, Compiler und Entwicklungswerkzeuge gewähren, während man andere Nutzer in Kategorien wie Tester, Designer oder einfach nur "allgemeiner Nutzer" zusammenfaßt, die für diese Bereiche lediglich lesenden Zugriff erhalten sollen.
+
+Mit seinem ursprünglichen Sicherheits-Standpunkt ist ein Subjekt niedrigerer Integrität unfähig, ein Subjekt höherer Integrität zu verändern. Ein Subjekt höherer Integrität kann ein Subjekt niedrigerer Integrität weder beobachten noch lesen. Wenn man ein Label für die niedrigstmögliche Klasse erstellt, kann man diese allen Subjekten verwehren. Einige weitsichtig eingerichtete Umgebungen, die diese Richtlinie verwenden, sind eingeschränkte Webserver, Entwicklungs- oder Test-Rechner oder Quellcode-Sammlungen. Wenig sinnvoll ist diese Richtlinie auf einer Arbeitsstation, oder auf Rechnern die als Router oder Firewall verwendet werden.
+
+[[mac-lomac]]
+== Das MAC Modul LOMAC
+
+Modulname: [.filename]#mac_lomac.ko#
+
+Parameter für die Kernelkonfiguration: `options MAC_LOMAC`
+
+Bootparameter: `mac_lomac_load="YES"`
+
+Anders als die Biba Richtlinie erlaubt die man:mac_lomac[4] Richtlinie den Zugriff auf Objekte niedrigerer Integrität nur, nachdem das Integritätslevel gesenkt wurde. Dadurch wird eine Störung derIntegritätsregeln verhindert.
+
+Die MAC Version der "Low-Watermark" Richtlinie, die nicht mit der älteren -Implementierung verwechselt werden darf, arbeitet fast genauso wie Biba. Anders ist, dass hier "schwebende" Label verwendet werden, die ein Herunterstufen von Subjekten durch Hilfsverbünde ermöglichen. Dieser zweite Verbund wird in der Form `[auxgrade]` angegeben und sollte in etwa aussehen wie `lomac/10[2]`, wobei die Ziffer zwei (2) hier den Hilfsverbund abbildet.
+
+Die MAC Richtlinie `LOMAC` beruht auf einer durchgängigen Etikettierung aller Systemobjekte mit Integritätslabeln, die Subjekten das Lesen von Objekten niedriger Integrität gestatten und dann das Label des Subjektes herunterstufen - um zukünftige Schreibvorgänge auf Objekte hoher Integrität zu unterbinden. Dies ist die Funktion der Option `[auxgrade]`, die eben vorgestellt wurde. Durch sie erhält diese Richtlinie eine bessere Kompatibilität und die Initialisierung ist weniger aufwändig als bei der Richtlinie Biba.
+
+=== Beispiele
+
+Wie schon bei den Richtlinien Biba und MLS werden die Befehle `setfmac` und `setpmac` verwendet, um die Labels an den Systemobjekten zu setzen:
+
+[source,bash]
+....
+# setfmac /usr/home/trhodes lomac/high[low]
+# getfmac /usr/home/trhodes lomac/high[low]
+....
+
+Beachten Sie, dass hier der Hilfswert auf `low` gesetzt wurde - dieses Leistungsmerkmal ist nur in der MAC `LOMAC` Richtlinie enthalten.
+
+[[mac-implementing]]
+== Beispiel 1: Nagios in einer MAC Jail
+
+Die folgende Demonstration setzt eine sichere Umgebung mithilfe verschiedener MAC Module und sorgfältig konfigurierter Richtlinien um. Es handelt sich jedoch nur um einen Test und sollte nicht als Antwort auf jedes Problem in Fragen Sicherheit gesehen werden. Eine Richtlinie nur umzusetzen und dann einfach laufen zu lassen, funktioniert nie und kann eine echte Arbeitsumgebung in eine Katastrophe stürzen.
+
+Bevor es losgeht, muß jedes Dateisystem mit der Option `multilabel`, wie weiter oben beschrieben, markiert werden. Dies nicht zu tun, führt zu Fehlern. Außerdem müssen die Ports package:net-mngt/nagios-plugins[], package:net-mngt/nagios[] und package:www/apache22[] installiert und konfiguriert sein, so dass sie ordentlich laufen.
+
+=== Erstellen einer Nutzerklasse `insecure`
+
+Beginnen wir die Prozedur mit dem Hinzufügen einer Nutzerklasse in der Datei [.filename]#/etc/login.conf#:
+
+[.programlisting]
+....
+insecure:\
+:copyright=/etc/COPYRIGHT:\
+:welcome=/etc/motd:\
+:setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+:path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin--
+:manpath=/usr/shared/man /usr/local/man:\
+:nologin=/usr/sbin/nologin:\
+:cputime=1h30m:\
+:datasize=8M:\
+:vmemoryuse=100M:\
+:stacksize=2M:\
+:memorylocked=4M:\
+:memoryuse=8M:\
+:filesize=8M:\
+:coredumpsize=8M:\
+:openfiles=24:\
+:maxproc=32:\
+:priority=0:\
+:requirehome:\
+:passwordtime=91d:\
+:umask=022:\
+:ignoretime@:\
+:label=biba/10(10-10):
+....
+
+Zusätzlich fügen wir beim Standardnutzer folgende Zeile hinzu:
+
+[.programlisting]
+....
+:label=biba/high:
+....
+
+Anschließend muß die Datenbank neu erstellt werden:
+
+[source,bash]
+....
+# cap_mkdb /etc/login.conf
+....
+
+=== Boot-Konfiguration
+
+Starten Sie den Rechner noch nicht neu. Fügen Sie zunächst noch die folgenden Zeilen in die Datei [.filename]#/boot/loader.conf# ein, damit die benötigten Module während des Systemstarts geladen werden:
+
+[.programlisting]
+....
+mac_biba_load="YES"
+mac_seeotheruids_load="YES"
+....
+
+=== Nutzer einrichten
+
+Ordnen Sie den Superuser `root` der Klasse `default` zu:
+
+[source,bash]
+....
+# pw usermod root -L default
+....
+
+Alle Nutzerkonten, die weder `root` noch Systemkonten sind, brauchen nun eine Loginklasse, da sie sonst keinen Zugriff auf sonst übliche Befehle erhalten, wie bspw. man:vi[1]. Das folgende `sh` Skript wird diese Aufgabe erledigen:
+
+[source,bash]
+....
+# for x in `awk -F: '($3 >= 1001) && ($3 != 65534) { print $1 }' \
+      /etc/passwd`; do pw usermod $x -L default; done;
+....
+
+Verschieben Sie die Nutzer `nagios` und `www` in die `insecure` Klasse:
+
+[source,bash]
+....
+# pw usermod nagios -L insecure
+....
+
+[source,bash]
+....
+# pw usermod www -L insecure
+....
+
+=== Die Kontextdatei erstellen
+
+Nun muß eine Kontextdatei erstellt werden. Die folgende Beispieldatei soll dazu in [.filename]#/etc/policy.contexts# gespeichert werden:
+
+[.programlisting]
+....
+# This is the default BIBA policy for this system.
+
+# System:
+/var/run                        biba/equal
+/var/run/*                      biba/equal
+
+/dev                            biba/equal
+/dev/*                          biba/equal
+
+/var      			biba/equal
+/var/spool                      biba/equal
+/var/spool/*                    biba/equal
+
+/var/log                        biba/equal
+/var/log/*                      biba/equal
+
+/tmp      			biba/equal
+/tmp/*      			biba/equal
+/var/tmp   	    		biba/equal
+/var/tmp/*      		biba/equal
+
+/var/spool/mqueue      	        biba/equal
+/var/spool/clientmqueue     	biba/equal
+
+# For Nagios:
+/usr/local/etc/nagios
+/usr/local/etc/nagios/*         biba/10
+
+/var/spool/nagios               biba/10
+/var/spool/nagios/*             biba/10
+
+# For apache
+/usr/local/etc/apache           biba/10
+/usr/local/etc/apache/*         biba/10
+....
+
+Die Richtlinie erzwingt Sicherheit, indem der Informationsfluß Einschränkungen unterworfen wird. In der vorliegenden Konfiguration kann kein Nutzer, weder `root` noch andere, auf Nagios zugreifen. Konfigurationsdateien und die Prozesse, die Teil von Nagios sind, werden durch unsere MAC vollständig abgegrenzt.
+
+Die Kontextdatei kann nun vom System eingelesen werden, indem folgender Befehl ausgeführt wird:
+
+[source,bash]
+....
+# setfmac -ef /etc/policy.contexts /
+# setfmac -ef /etc/policy.contexts /
+....
+
+[NOTE]
+====
+Das obenstehende Dateisystem-Layout kann, je nach Umgebung, sehr unterschiedlich aussehen. Außerdem muß es auf jedem einzelnen Dateisystem ausgeführt werden.
+====
+
+In die Datei [.filename]#/etc/mac.conf# müssen nun noch diese Änderungen eingetragen werden:
+
+[.programlisting]
+....
+default_labels file ?biba
+default_labels ifnet ?biba
+default_labels process ?biba
+default_labels socket ?biba
+....
+
+=== Netzwerke einbinden
+
+Tragen Sie die folgende Zeile in die Datei [.filename]#/boot/loader.conf# ein:
+
+[.programlisting]
+....
+security.mac.biba.trust_all_interfaces=1
+....
+
+Und das Folgende gehört in Datei [.filename]#rc.conf# zu den Optionen für die Netzwerkkarte. Falls die Netzwerkverbindung(-en) via DHCP konfiguriert werden, muß man dies nach jedem Systemstart eigenhändig nachtragen:
+
+[.programlisting]
+....
+maclabel biba/equal
+....
+
+=== Testen der Konfiguration
+
+Versichern Sie sich, dass der Webserver und Nagios nicht automatisch geladen werden und starten Sie den Rechner neu. Prüfen Sie nun, ob `root` wirklich keinen Zugriff auf die Dateien im Konfigurationsverzeichnis von Nagios hat. Wenn `root` den Befehl man:ls[1] auf [.filename]#/var/spool/nagios# ausführen kann, ist irgendwas schief gelaufen. Es sollte ein `permission denied` Fehler ausgegeben werden.
+
+Wenn alles gut aussieht, können Nagios, Apache und Sendmail gestartet werden - allerdings auf eine Weise, die unserer Richtlinie gerecht wird. Zum Beispiel durch die folgenden Kommandos:
+
+[source,bash]
+....
+# cd /etc/mail && make stop && \
+setpmac biba/equal make start && setpmac biba/10\(10-10\) apachectl start && \
+setpmac biba/10\(10-10\) /usr/local/etc/rc.d/nagios.sh forcestart
+....
+
+Versichern Sie sich lieber doppelt, dass alles ordentlich läuft. Wenn nicht, prüfen Sie die Logs und Fehlermeldungen. Verwenden Sie das man:sysctl[8] Werkzeug um die Sicherheitsrichtlinie man:sysctl[8] zu deaktivieren und versuchen Sie dann alles noch einmal zu starten.
+
+[NOTE]
+====
+Der Superuser kann den Vollzug der Richtlinie schalten und die Konfiguration ohne Furcht verändern. Folgender Befehl stuft eine neu gestartete Shell herunter:
+
+[source,bash]
+....
+# setpmac biba/10 csh
+....
+
+Um dies zu vermeiden, werden die Nutzer durch man:login.conf[5] eingeschränkt. Wenn man:setpmac[8] einen Befehl außerhalb der definierten Schranken ausführen soll, wird ein Fehler zurückgeliefert. In so einem Fall muß `root` auf `biba/high(high-high)` gesetzt werden.
+====
+
+[[mac-userlocked]]
+== Beispiel 2: User Lock Down
+
+Grundlage dieses Beispiels ist ein relativ kleines System zur Datenspeicherung mit weniger als 50 Benutzern. Diese haben die Möglichkeit, sich einzuloggen und dürfen nicht nur Daten speichern, sondern auch auf andere Ressourcen zugreifen.
+
+Die Richtlinien man:mac_bsdextended[4] und man:mac_seeotheruids[4] können gleichzeitig eingesetzt werden. Zusammen kann man mit ihnen nicht nur den Zugriff auf Systemobjekte einschränken, sondern auch Nutzerprozesse verstecken.
+
+Beginnen Sie, indem Sie die folgende Zeile in die Datei [.filename]#/boot/loader.conf# eintragen:
+
+[.programlisting]
+....
+mac_seeotheruids_load="YES"
+....
+
+Die Richtlinie man:mac_bsdextended[4] wird durch den anschließenden Eintrag in [.filename]#/etc/rc.conf# hinzugefügt:
+
+[.programlisting]
+....
+ugidfw_enable="YES"
+....
+
+Die Standardregeln, welche in [.filename]#/etc/rc.bsdextended# gespeichert sind, werden zum Systemstart geladen. Sie müssen aber noch angepaßt werden. Da dieser Computer nur Nutzern dienen soll und weitere Dienste gestartet werden, kann alles bis auf die beiden letzten Zeilen auskommentiert werden. Das sorgt dafür dass jeder Nutzer seine eigenen Systemobjekte erhält.
+
+Nun fügen wir alle benötigten Nutzer auf der Maschine hinzu und starten neu. Zum Testen der Einstellungen loggen Sie sich parallel zwei mal mit unterschiedlichen Nutzernamen ein und starten Sie das Kommando `ps aux`. Dort sehen Sie, dass Sie die Prozesse des anderen Nutzers nicht sehen können. Versuchen Sie, man:ls[1] auf das Heimatverzeichnis eines anderen Nutzers auszuführen. Auch dieser Versuch wird fehlschlagen.
+
+Solange nicht die speziellen `sysctl`-Variablen geändert wurden, hat der Superuser noch vollen Zugriff. Sobald auch diese Einstellungen angepaßt wurden, führen Sie ruhig auch den obigen Test als `root` aus.
+
+[NOTE]
+====
+Wenn ein neuer Benutzer hinzugefügt wird, ist für diesen zunächst keine man:mac_bsdextended[4] Regel im Regelsatz vorhanden. Schnelle Abhilfe schafft hier, einfach das Kernelmodul mit man:kldunload[8] zu entladen und mit man:kldload[8] erneut einzubinden.
+====
+
+[[mac-troubleshoot]]
+== Fehler im MAC beheben
+
+Während der Entwicklung des Frameworks haben einige Nutzer auf Probleme hingewiesen. Einige davon werden hier aufgeführt:
+
+=== Die Option `multilabel` greift nicht auf der [.filename]#/#-Partition
+
+Es scheint, dass etwa jedem fünfzigsten Nutzer dieses Problem widerfährt. Und in der Tat - auch wir kennen es aus der Entwicklung. Genauere Untersuchungen dieses "Bugs" machten uns glauben, dass es sich entweder um einen Fehler in oder eine fehlerhafte Interpretation der Dokumentation handelt. Warum auch immer dieser Fehler auftritt - er kann mit folgender Prozedur behoben werden:
+
+[.procedure]
+. Öffnen Sie die Datei [.filename]#/etc/fstab# und setzen Sie die Rootpartition auf `ro` wie "read-only".
+. Starten Sie in den Einzelnutzermodus.
+. Rufen Sie `tunefs -l enable` für [.filename]#/# auf.
+. Starten Sie in den Mehrbenutzermodus.
+. Führen Sie `mount -urw`[.filename]#/# aus und ändern Sie anschließend in der Datei [.filename]#/etc/fstab# die Option `ro` zurück in `rw`. Starten Sie das System noch einmal neu.
+. Achten Sie besonders auf die Ausgabe von `mount` um sich zu versichern, dass die `multilabel` korrekt für das root-Dateisystem gesetzt wurde.
+
+=== Mit der aktivierten MAC kann ich keinen X11 Server starten
+
+Dies kann durch die Richtlinie `partition` oder einer fehlerhaften Verwendung einer Richtlinie, die mit Labels arbeitet, auftreten. Zum debuggen versuchen Sie folgendes:
+
+[.procedure]
+. Schauen Sie sich die Fehlermeldungen genau an. Wenn der Nutzer einer `insecure` Klasse angehört, ist wahrscheinlich die Richtlinie `partition` die Ursache. Versuchen Sie, die Nutzerklasse auf `default` zu stellen und danach die Datenbank mit `cap_mkdb` zu erneuern. Wenn das Problem dadurch nicht gelöst wird, gehen Sie weiter zu Schritt 2.
+. Gehen Sie die Label-Richtlinien Schritt für Schritt nocheinmal durch. Achten Sie darauf, dass für den Nutzer, bei dem das Problem auftritt, für X11 und das Verzeichnis [.filename]#/dev# alle Einstellungen korrekt sind.
+. Falls all dies nicht helfen sollte, senden Sie die Fehlermeldung und eine Beschreibung ihrer Arbeitsumgebung an die (englisch-sprachige) TrustedBSD Diskussionsliste auf der http://www.TrustedBSD.org[TrustedBSD] Webseite oder an die {freebsd-questions} Mailingliste.
+
+=== Error: cannot stat [.filename]#.login_conf#
+
+Wenn ich versuche, von `root` zu einem anderen Nutzer des Systems zu wechseln, erhalte ich die Fehlermeldung `_secure_path: unable to state .login_conf`. 
+
+Diese Meldung wird gewöhnlich ausgegeben, wenn der Nutzer ein höhere Label-Einstellung hat als der, dessen Identität man annehmen möchte. Ausführlich: Wenn ein Nutzer `joe` als `biba/low` gelabelt wurde, kann `root`, der `biba/high` als Voreinstellung trägt, das Heimatverzeichnis von `joe` nicht einsehen. Das passiert unabhänig davon, ob `root` vorher mit `su` die Identität von `joe` angenommen hat oder nicht, da das Label sich nicht ändert. Hier haben wir also einen Fall, in dem das Gewährleistungsmodell von Biba verhindert, das der Superuser Objekte einer niedrigeren Integrität betrachten kann.
+
+=== Der Nutzer `root` ist kaputt!
+
+Im normalen oder sogar im Einzelbenutzermodus wird `root` nicht anerkannt. Das Kommando `whoami` liefert 0 (null) und `su` liefert `who are you?` zurück. Was geht da vor?
+
+Das kann passieren, wenn eine Label-Richtlinie ausgeschaltet wird - entweder durch man:sysctl[8] oder wenn das Richtlinienmodul entladen wurde. Wenn eine Richtlinie deaktiviert oder auch nur vorübergehen deaktiviert wird, muß die Befähigungsdatenbank neu konfiguriert werden, d.h. die `label` Option muß entfernt werden. Überprüfen Sie, ob alle `label` Einträge aus der Datei [.filename]#/etc/login.conf# entfernt wurden und bauen Sie die Datenbank mit `cap_mkdb` neu.
+
+Dieser Fehler kann auch auftreten, wenn eine Richtlinie den Zugriff auf die Datei [.filename]#master.passwd# einschränkt. Normalerweise passiert das nur, wenn ein Administrator ein Label an diese Datei vergibt, das mit der allgemeingültigen Richtlinie, die das System verwendet, in Konflikt steht. In solchen Fällen werden die Nutzerinformationen vom System ausgelesen und jeder weitere Zugriff wird blockiert, sobald das neue Label greift. Wenn man die Richtlinie via man:sysctl[8] ausschaltet, sollte es erstmal wieder gehen.

@@ -1,0 +1,106 @@
+---
+title: 第 9 章 测试您的 port
+prev: books/porters-handbook/pkg-files
+next: books/porters-handbook/port-upgrading
+---
+
+[[testing]]
+= 测试您的 port
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 9
+:toc-title: 目录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+[[make-describe]]
+== 运行 `make describe`
+
+许多 FreeBSD port 维护工具， 例如 man:portupgrade[1]， 会依赖于一个名为 [.filename]#/usr/ports/INDEX# 的数据库的正确性， 它提供了关于 port 的相关信息， 例如依赖关系等等。 [.filename]#INDEX# 是由顶级的 [.filename]#ports/Makefile# 通过 `make index` 来建立的， 这个命令会进入每一个 port 的子目录， 并在那里执行 `make describe`。 因此， 如果某个 port 的 `make describe` 失败， 就没有人能生成 [.filename]#INDEX#， 人们很快会变得不高兴。
+
+[NOTE]
+====
+无论在 [.filename]#make.conf# 中设置了什么选项， 这个文件都应能够正确地生成。 因此， 应避免在 (例如) 某个依赖关系无法满足时使用 `.error`。 (参见 <<dads-dot-error>>。)
+====
+
+如果 `make describe` 只是产生一个字符串， 而不是错误信息， 可能就没什么问题。 请参见 [.filename]#bsd.port.mk# 以了解所生成的串的意义。
+
+最后要说明的是， 新版本的 `portlint` (在下一节中将进行介绍) 将会自动地运行 `make describe`。
+
+[[testing-portlint]]
+=== Portlint
+
+在提交或 commit 之前， 应使用 <<porting-portlint,`portlint`>> 来进行检查。 `portlint` 会对常见的、 包括功能上的和格式上的错误给出警告。 对于新的 (或在 repocopy 代码库中复制的) port， `portlint -A` 可以完成全面检查； 对于暨存的 port， `portlint -C` 一般就足够了。
+
+由于 `portlint` 采用启发式方法来检查错误， 有时它会产生误警。 另外， 有时由于 port 框架的限制可能没有办法修正它指出的问题。 如果您有疑虑， 请写信询问 {freebsd-ports}。
+
+[[testing-porttools]]
+=== 使用 Port Tools 来完成测试
+
+在 Ports 套件中， 提供了一个 package:ports-mgmt/porttools[] 程序。
+
+`port` 是一个能够帮助您简化测试工具的前端脚本。 如果希望对新增的 port 或更新 port 时进行测试， 可以用 `port test` 来完成这些测试工作， 这也包含了 <<testing-portlint,`portlint`>> 检查。 这个命令会检测并列出没有在 [.filename]#pkg-plist# 中列出的文件。 具体用法请参见下面的例子：
+
+[source,bash]
+....
+# port test /usr/ports/net/csup
+....
+
+[[porting-prefix]]
+=== `PREFIX` (安装时的顶级目录名) 和 `DESTDIR`
+
+`PREFIX` 能够决定 port 安装时的目的位置。 一般情况下这个位置是 [.filename]#/usr/local# 或 [.filename]#/opt#， 但也可以设为其它的任意值。 您的 port 则必须遵循这个变量。
+
+除此之外， 如果用户配置了 `DESTDIR`， 则表示希望将 port 安装到另一个环境， 通常是 jail 或在 [.filename]#/# 以外的其他位置挂接的系统中。 实际上， port 会安装到 `DESTDIR`/`PREFIX`， 并注册到位于 `DESTDIR`/var/db/pkg 的预编译包数据库中。 由于 `DESTDIR` 是由 ports 框架藉由 man:chroot[8] 来实现的， 您在撰写符合 `DESTDIR` 规范的 ports 时并不需要什么额外的工作。
+
+一般而言 `PREFIX` 会设为 `LOCALBASE_REL` (默认是 [.filename]#/usr/local#)。 如果设置了 `USE_LINUX_PREFIX`， 则 `PREFIX` 会设为 `LINUXBASE_REL` (默认是 [.filename]#/compat/linux#)。
+
+避免将 [.filename]#/usr/local# 或 [.filename]#/usr/X11R6# 硬编码到源代码中， 能够大大提高 port 的灵活性， 并适应不同环境的需要。 对于使用 `imake` 的 X port， 这一工作是自动完成的； 其他情况下， 通常可以简单地将 port 所用到的 [.filename]#Makefile# 脚本中出现的 [.filename]#/usr/local# (或对于没有使用 imake 的 X port 而言， [.filename]#/usr/X11R6#) 替换为读取 `${PREFIX}` 变量就能达到目的了， 因为这个变量在联编和安装的过程中， 会自动向下传递。
+
+一定要避免让您的 port 在 [.filename]#/usr/local# 而不是正确的 `PREFIX` 中安装文件。 简单的测试方法是：
+
+[source,bash]
+....
+# make clean; make package PREFIX=/var/tmp/`make -V PORTNAME`
+....
+
+如果有文件安装到了 `PREFIX` 以外的地方， 打包过程将抱怨找不到这些文件。
+
+这一步骤并不能帮助发现内部引用， 或纠正在引用其它 port 中的文件时使用的 `LOCALBASE`。 您需要在 [.filename]#/var/tmp/`make -V PORTNAME`# 中测试安装好的软件， 才能够达到这样的目的。
+
+您可以在自己的 [.filename]#Makefile# 中改变 `PREFIX` 变量的值， 也可以通过用户环境变量来影响它。 然而， 一般情况下决不应该在 [.filename]#Makefile# 中明确设置它的值。
+
+此外， 引用其它 port 中的文件时， 应使用前面介绍的变量， 而不要直接指定它们的路径名。 例如， 如果您的 port 需要使用 `PAGER` 这个宏来指明 `less` 的完整路径， 应使用下面的编译选项： 
+
+[.programlisting]
+....
+-DPAGER=\"${LOCALBASE}/bin/less\"
+....
+
+而非 `-DPAGER=\"/usr/local/bin/less\"`。 这种方法能够增加在系统管理员把整个 [.filename]#/usr/local# 目录挪到其它位置时安装成功的机会。
+
+[[testing-tinderbox]]
+=== Tinderbox
+
+如果您是非常热心的 ports 参与者， 则可以看看 Tinderbox。 这是一个强大的用于联编和测试 ports 的系统， 它基于 <<build-cluster,Pointyhat>> 的脚本。 您可以使用 package:ports-mgmt/tinderbox[] port 来安装 Tinderbox。 请一定仔细阅读随它安装的文档， 因为配置并不简单。
+
+请访问 http://tinderbox.marcuscom.com/[Tinderbox 网站] 以了解进一步的细节。

@@ -1,0 +1,404 @@
+---
+title: Capítulo 16. Auditoria de Evento de Segurança
+part: Parte III. Administração do Sistema
+prev: books/handbook/mac
+next: books/handbook/disks
+---
+
+[[audit]]
+= Auditoria de Evento de Segurança
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Índice
+:table-caption: Tabela
+:figure-caption: Figura
+:example-caption: Exemplo
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 16
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/audit/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/audit/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/audit/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pt-br/mailing-lists.adoc[]
+include::shared/pt-br/teams.adoc[]
+include::shared/pt-br/urls.adoc[]
+
+toc::[]
+
+[[audit-synopsis]]
+== Sinopse
+
+O sistema operacional FreeBSD inclui suporte para auditoria de eventos de segurança. A auditoria de eventos oferece suporte a registros confiáveis, detalhados e configuráveis de diversos eventos do sistema relevantes para a segurança, incluindo logins, alterações de configuração e acesso a arquivos e rede. Esses registros de log podem ser inestimáveis para monitoramento de sistema em tempo real, detecção de intrusão e análise "post mortem". O FreeBSD implementa a Application Programming Interface (API) Basic Security Module (BSM) publicada pela Sun(TM) e o formato de arquivo, e é interoperável com as implementações de auditoria do Solaris(TM) e do Mac OS(TM) X.
+
+Este capítulo se concentra na instalação e configuração da auditoria de eventos. Ele explica as políticas de auditoria e fornece um exemplo de configuração de auditoria.
+
+Depois de ler este capítulo, você saberá:
+
+* O que é auditoria de eventos e como funciona.
+* Como configurar a auditoria de eventos no FreeBSD para usuários e processos.
+* Como revisar o caminho da auditoria usando as ferramentas de auditoria para redução e revisão.
+
+Antes de ler este capítulo, você deve:
+
+* Entender os fundamentos do UNIX(TM) e do FreeBSD (crossref:basics[basics, Fundamentos do FreeBSD]).
+* Familiarize-se com os conceitos básicos de configuração/compilação do kernel (crossref:kernelconfig[kernelconfig, Configurando o kernel do FreeBSD]).
+* Ter alguma familiaridade com segurança e como ela está presente no FreeBSD (crossref:security[security, Segurança]).
+
+[WARNING]
+====
+
+O recurso de auditoria possui algumas limitações conhecidas. Nem todos os eventos do sistema que são relevantes para a segurança são auditáveis, e também alguns mecanismos de login, como gerenciadores de exibição baseados em Xorg e daemons de terceiros, não configuram adequadamente a auditoria para sessões de login do usuário.
+
+O recurso de auditoria de eventos de segurança é capaz de gerar logs muito detalhados da atividade do sistema. Em um sistema muito utilizado, os dados do arquivo de rastreamento podem ser muito grandes quando configurados para grandes detalhes, excedendo gigabytes por semana em algumas configurações. Os administradores devem levar em consideração os requisitos de espaço em disco associados a configurações de auditoria de alto volume. Por exemplo, pode ser desejável dedicar um sistema de arquivos ao [.filename]#/var/audit# para que outros sistemas de arquivos não sejam afetados se o sistema de arquivos de auditoria ficar cheio.
+====
+
+[[audit-inline-glossary]]
+== Termos chave
+
+Os termos a seguir estão relacionados a auditoria de eventos de segurança:
+
+* _event_: um evento auditável é qualquer evento que pode ser registrado usando o subsistema de auditoria. Exemplos de eventos relevantes para a segurança incluem a criação de um arquivo, a construção de uma conexão de rede ou o logon de um usuário. Os eventos são "atribuíveis", o que significa que podem ser rastreados para um usuário autenticado, ou "não atribuível". Exemplos de eventos não atribuíveis são eventos que ocorrem antes da autenticação no processo de login, como tentativas de senha incorreta.
+* _class_: um conjunto nomeado de eventos relacionados que são usados em expressões de seleção. As classes de eventos comumente usadas incluem "file creation" (fc), "exec" (ex), e "login_logout" (lo).
+* _record_: uma entrada de log de auditoria que descreve um evento de segurança. Os registros contêm um tipo de evento de registro, informações sobre o assunto (usuário) executando a ação, informações de data e hora, informações sobre quaisquer objetos ou argumentos e uma condição de sucesso ou falha.
+* _trail_: um arquivo de log que consiste em uma série de registros de auditoria que descrevem eventos de segurança. As trilhas estão em ordem cronológica aproximada com relação aos eventos concluídos. Apenas processos autorizados podem enviar registros para a trilha de auditoria.
+* _selection expression_: uma string contendo uma lista de prefixos e nomes de classes de eventos de auditoria usados para combinar eventos.
+* _preselection_: o processo pelo qual o sistema identifica quais eventos são de interesse do administrador. A configuração de pré-seleção usa uma série de expressões de seleção para identificar quais classes de eventos auditar quais usuários, bem como configurações globais que se aplicam a processos autenticados e não autenticados.
+* _reduction_: o processo pelo qual os registros das trilhas de auditoria existentes são selecionados para preservação, impressão ou análise. Da mesma forma, o processo pelo qual os registros de auditoria indesejados são removidos da trilha de auditoria. Usando a redução, os administradores podem implementar políticas para a preservação de dados de auditoria. Por exemplo, trilhas de auditoria detalhadas podem ser mantidas por um mês, mas depois disso, as trilhas podem ser reduzidas para preservar apenas as informações de login para fins de arquivamento.
+
+[[audit-config]]
+== Configuração de Auditoria
+
+O suporte para auditoria de eventos no espaço do usuário é instalado como parte do sistema operacional básico do FreeBSD. O suporte a kernel está disponível no kernel [.filename]#GENERIC# por padrão, e man:auditd[8] pode ser ativado adicionando a seguinte linha no [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+auditd_enable="YES"
+....
+
+Em seguida, inicie o daemon de auditoria:
+
+[source,bash]
+....
+# service auditd start
+....
+
+Usuários que preferem compilar um kernel personalizado devem incluir a seguinte linha em seu arquivo de configuração de kernel personalizado:
+
+[.programlisting]
+....
+options	AUDIT
+....
+
+=== Expressões de Seleção de Eventos
+
+Expressões de seleção são usadas em vários lugares na configuração de auditoria para determinar quais eventos devem ser auditados. Expressões contêm uma lista de classes de eventos para correspondência. As expressões de seleção são avaliadas da esquerda para a direita e duas expressões são combinadas, acrescentando uma à outra.
+
+<<event-selection>> resume as classes de eventos de auditoria padrão:
+
+[[event-selection]]
+.Classes de Eventos de Auditoria Padrão
+[cols="1,1,1", frame="none", options="header"]
+|===
+| Nome da classe
+| Descrição
+| Ação
+
+|all
+|all
+|Corresponde todas as classes de eventos.
+
+|aa
+|autenticação e autorização
+|
+
+|ad
+|administrativo
+|Ações administrativas executadas no sistema como um todo.
+
+|ap
+|aplicação
+|Ação definida pela aplicação.
+
+|cl
+|file close
+|Auditar chamadas para a chamada de sistema `close`.
+
+|ex
+|exec
+|Execução do programa de auditoria. Auditoria de argumentos de linha de comando e variáveis de ambiente são controladas via man:audit_control[5] usando os parâmetros `argv` e `envv` para a configuração da `política`.
+
+|fa
+|acesso ao atributo de arquivo
+|Audite o acesso de atributos de objetos como man:stat[1] e man:pathconf[2].
+
+|fc
+|file create
+|Eventos de auditoria em que um arquivo é criado.
+
+|fd
+|file delete
+|Eventos de auditoria onde ocorre a exclusão de arquivos.
+
+|fm
+|file attribute modify
+|Eventos de auditoria onde ocorre a modificação do atributo do arquivo, como man:chown[8], man:chflags[1], e man:flock[2].
+
+|fr
+|file read
+|Eventos de auditoria nos quais dados são lidos ou arquivos são abertos para leitura.
+
+|fw
+|file write
+|Eventos de auditoria nos quais os dados são gravados ou os arquivos são gravados ou modificados.
+
+|io
+|ioctl
+|Auditar o uso da chamada de sistema `ioctl`.
+
+|ip
+|ipc
+|Auditar várias formas de comunicação entre processos, incluindo pipes POSIX e operações IPC do System V.
+
+|lo
+|login_logout
+|Audite os eventos man:login[1] e man:logout[1].
+
+|na
+|não atribuível
+|Auditar eventos não atribuíveis.
+
+|no
+|classe inválida
+|Não coincidir com eventos de auditoria.
+
+|nt
+|rede (network)
+|Eventos de auditoria relacionados a ações de rede, como man:connect[2] e man:accept[2].
+
+|ot
+|outros
+|Auditoria de eventos diversos.
+
+|pc
+|processo
+|Auditar operações de processos, como man:exec[3] e man:exit[3].
+|===
+
+Essas classes de eventos de auditoria podem ser personalizadas modificando os arquivos de configuração [.filename]#audit_class# e [.filename]#audit_event#.
+
+Cada classe de eventos de auditoria pode ser combinada com um prefixo indicando se as operações com êxito/falha são correspondidas e se a entrada está adicionando ou removendo a correspondência para a classe e o tipo. <<event-prefixes>> resume os prefixos disponíveis:
+[[event-prefixes]]
+.Prefixos para Classes de Eventos de Auditoria
+[cols="1,1", frame="none", options="header"]
+|===
+| Prefixo
+| Ação
+
+|+
+|Auditoria de eventos bem sucedidos nesta classe.
+
+|-
+|Auditoria de eventos com falha nesta classe.
+
+|^
+|Auditoria de eventos nem com sucesso e nem com falha nesta classe.
+
+|^+
+|Não faça auditoria de eventos bem-sucedidos nesta classe.
+
+|^-
+|Não audite eventos com falha nesta classe.
+|===
+
+Se nenhum prefixo estiver presente, as instâncias com êxito e com falha do evento serão auditadas.
+
+O seguinte exemplo de sequência de seleção seleciona eventos de login/logout bem-sucedidos e com falha, mas apenas eventos de execução bem-sucedidos:
+
+[.programlisting]
+....
+lo,+ex
+....
+
+=== Arquivos de Configuração
+
+Os seguintes arquivos de configuração para auditoria de eventos de segurança são encontrados em [.filename]#/etc/security#:
+
+* [.filename]#audit_class#: contém as definições das classes de auditoria.
+* [.filename]#audit_control#: controla os aspectos do subsistema de auditoria, como as classes de auditoria padrão, o espaço em disco mínimo a ser deixado no volume do log de auditoria e o tamanho máximo da trilha de auditoria.
+* [.filename]#audit_event#: nomes e descrições textuais de eventos de auditoria do sistema e uma lista de quais classes cada evento está.
+* [.filename]#audit_user#: requisitos de auditoria específicos do usuário a serem combinados com os padrões globais no login.
+* [.filename]#audit_warn#: um script de shell personalizável usado pelo man:auditd[8] para gerar mensagens de aviso em situações excepcionais, como quando o espaço para registros de auditoria está baixo ou quando o arquivo de trilha de auditoria foi rotacionado.
+
+[WARNING]
+====
+
+Os arquivos de configuração de auditoria devem ser editados e mantidos com cuidado, pois erros na configuração podem resultar no registro inadequado de eventos.
+====
+
+Na maioria dos casos, os administradores precisarão modificar apenas [.filename]#audit_control# e [.filename]#audit_user#. O primeiro arquivo controla as políticas e as propriedades de auditoria de todo o sistema, e o segundo arquivo pode ser usado para ajustar a auditoria pelo usuário.
+
+[[audit-auditcontrol]]
+==== O arquivo [.filename]#audit_control#
+
+Vários padrões para o subsistema de auditoria são especificados em [.filename]#audit_control#:
+
+[.programlisting]
+....
+dir:/var/audit
+dist:off
+flags:lo,aa
+minfree:5
+naflags:lo,aa
+policy:cnt,argv
+filesz:2M
+expire-after:10M
+....
+
+A entrada `dir` é usada para definir um ou mais diretórios onde os logs de auditoria serão armazenados. Se mais de uma entrada de diretório aparecer, elas serão usadas em ordem à medida que forem preenchidas. É comum configurar a auditoria para que os logs de auditoria sejam armazenados em um sistema de arquivos dedicado, para evitar a interferência entre o subsistema de auditoria e outros subsistemas, se o sistema de arquivos encher.
+
+Se o campo `dist` estiver definido como `on` ou `yes`, os links físicos serão criados para todos os arquivos de rastreio em [.filename]#/var/audit/dist#.
+
+O campo `flags` define a máscara de pré-seleção padrão para todo o sistema para eventos atribuíveis. No exemplo acima, eventos de login/logout bem-sucedidos e com falha, bem como autenticação e autorização, são auditados para todos os usuários.
+
+A entrada `minfree` define a porcentagem mínima de espaço livre para o sistema de arquivos no qual a trilha de auditoria está armazenada.
+
+A entrada `naflags` especifica as classes de auditoria a serem auditadas para eventos não atribuídos, como o processo de login/logout e autenticação e autorização.
+
+A entrada `policy` especifica uma lista separada por vírgula de sinalizadores de política que controla vários aspectos do comportamento de auditoria. O `cnt` indica que o sistema deve continuar em execução apesar de uma falha de auditoria (este sinalizador é altamente recomendado). O outro sinalizador, `argv`, faz com que os argumentos da linha de comando para a chamada de sistema man:execve[2] sejam auditados como parte de execução de comando.
+
+A entrada `filesz` especifica o tamanho máximo para uma trilha de auditoria antes de finalizar e rotacionar automaticamente o arquivo de trilha. Um valor de `0` desabilita a rotação automática de log. Se o tamanho do arquivo solicitado estiver abaixo do mínimo de 512k, ele será ignorado e uma mensagem de log será gerada.
+
+O campo `expire-after` especifica quando os arquivos de log de auditoria expirarão e serão removidos.
+
+[[audit-audituser]]
+==== O Arquivo [.filename]#audit_user#
+
+O administrador pode especificar requisitos adicionais de auditoria para usuários específicos em [.filename]#audit_user#. Cada linha configura a auditoria para um usuário através de dois campos: o campo `alwaysaudit` especifica um conjunto de eventos que devem sempre ser auditados para o usuário, e o campo `neveraudit` especifica um conjunto de eventos que nunca devem ser auditados para o usuário.
+
+As entradas de exemplo a seguir auditam os eventos de login/logout e a execução bem-sucedida do comando para `root` e criação de arquivos e execução de comando bem-sucedida para `www`. Se usado com o [.filename]#audit_control#, a entrada `lo` para `root` é redundante, e os eventos login/logout também serão auditados para `www`.
+
+[.programlisting]
+....
+root:lo,+ex:no
+www:fc,+ex:no
+....
+
+[[audit-administration]]
+== Trabalhando com Trilhas de Auditoria
+
+Como as trilhas de auditoria são armazenadas no formato binário BSM, várias ferramentas internas estão disponíveis para modificar ou converter essas trilhas em texto. Para converter arquivos de trilha em um formato de texto simples, use o `praudit`. Para reduzir o arquivo de trilha de auditoria para fins de análise, arquivamento ou impressão, use o `auditreduce`. Esse utilitário suporta vários parâmetros de seleção, incluindo tipo de evento, classe de evento, usuário, data ou hora do evento e o caminho ou objeto do arquivo em questão.
+
+Por exemplo, para baixar todo o conteúdo de um log de auditoria especificado em texto simples:
+
+[source,bash]
+....
+# praudit /var/audit/AUDITFILE
+....
+
+Onde _AUDITFILE_ é o log de auditoria a ser descarregado.
+
+As trilhas de auditoria consistem em uma série de registros de auditoria compostos por tokens, em que o `praudit` imprime sequencialmente, um por linha. Cada token é de um tipo específico, como `header` (um cabeçalho de registro de auditoria) ou `path` (um caminho de arquivo de uma pesquisa de nome). O seguinte é um exemplo de um evento `execve`:
+
+[.programlisting]
+....
+header,133,10,execve(2),0,Mon Sep 25 15:58:03 2006, + 384 msec
+exec arg,finger,doug
+path,/usr/bin/finger
+attribute,555,root,wheel,90,24918,104944
+subject,robert,root,wheel,root,wheel,38439,38032,42086,128.232.9.100
+return,success,0
+trailer,133
+....
+
+Esta auditoria representa uma chamada `execve` bem-sucedida, na qual o comando `finger doug` foi executado. O token `exec arg` contém a linha de comando processada apresentada pelo shell ao kernel. O token `path` contém o caminho para o executável conforme procurado pelo kernel. O token `attribute` descreve o binário e inclui o modo de arquivo. O token `subject` armazena o ID do usuário de auditoria, ID do usuário e ID do grupo, ID do usuário real e ID do grupo, ID do processo, ID da sessão, ID da porta e endereço de login. Observe que o ID do usuário de auditoria e o ID do usuário real são diferentes quando o usuário `robert` mudou para a conta `root` antes de executar este comando, mas é auditado usando o usuário original autenticado. O token `return` indica a execução bem-sucedida e o `trailer` conclui o registro.
+
+O formato de saída XML também é suportado e pode ser selecionado incluindo `-x`.
+
+Como os logs de auditoria podem ser muito grandes, um subconjunto de registros pode ser selecionado usando `auditreduce`. Este exemplo seleciona todos os registros de auditoria produzidos para o usuário `trhodes` armazenados em [.filename]#AUDITFILE#:
+
+[source,bash]
+....
+# auditreduce -u trhodes /var/audit/AUDITFILE | praudit
+....
+
+Os membros do grupo `audit` têm permissão para ler trilhas de auditoria em [.filename]#/var/audit#. Por padrão, esse grupo está vazio, portanto, apenas o usuário `root` pode ler trilhas de auditoria. Os usuários podem ser adicionados ao grupo `auditoria` para delegar direitos de revisão de auditoria. Como a capacidade de rastrear o conteúdo do log de auditoria fornece informações significativas sobre o comportamento dos usuários e processos, recomenda-se que a delegação dos direitos de revisão de auditoria seja executada com cautela.
+
+=== Monitoramento em Tempo Real Usando Pipes de Auditoria
+
+Pipes de auditoria são pseudo-dispositivos clones que permitem que os aplicativos acessem o fluxo de registro de auditoria em tempo real. Isto é principalmente de interesse para os autores de aplicações de detecção de intrusão e monitoramento de sistemas. No entanto, o dispositivo de canal de auditoria é uma maneira conveniente para o administrador permitir o monitoramento ao vivo sem incorrer em problemas com a propriedade do arquivo de trilha de auditoria ou a rotação de log interrompendo o fluxo de eventos. Para acompanhar o fluxo de eventos de auditoria em tempo real:
+
+[source,bash]
+....
+# praudit /dev/auditpipe
+....
+
+Por padrão, os nós de dispositivo dos pipes de auditoria são acessíveis apenas para o usuário `root`. Para torná-los acessíveis aos membros do grupo `audit`, adicione uma regra `devfs` para [.filename]#/etc/devfs.rules#:
+
+[.programlisting]
+....
+add path 'auditpipe*' mode 0440 group audit
+....
+
+Veja man:devfs.rules[5] para mais informações sobre como configurar o sistema de arquivos devfs.
+
+[WARNING]
+====
+
+É fácil produzir ciclos de feedback de evento de auditoria, nos quais a visualização de cada evento de auditoria resulta na geração de mais eventos de auditoria. Por exemplo, se toda a rede I/O for auditada e `praudit` for executada a partir de uma sessão SSH, um fluxo contínuo de eventos de auditoria será gerada em uma taxa alta, pois cada evento sendo impresso gerará outro evento. Por esse motivo, é aconselhável executar `praudit` em um dispositivo de pipe de auditoria a partir de sessões sem auditoria de I/O de baixa granularidade.
+====
+
+=== Rotação e Compactação de Arquivos de Trilha de Auditoria
+
+As trilhas de auditoria são gravadas pelo kernel e gerenciadas pelo daemon de auditoria, man:auditd[8]. Os administradores não devem tentar usar o man:newsyslog.conf[5] ou outras ferramentas para rotacionar diretamente os logs de auditoria. Em vez disso, o `audit` deve ser usado para encerrar a auditoria, reconfigurar o sistema de auditoria e executar a rotação de log. O comando a seguir faz com que o daemon de auditoria crie um novo log de auditoria e sinalize ao kernel para alternar para o novo log. O log antigo será finalizado e renomeado, podendo então ser manipulado pelo administrador:
+
+[source,bash]
+....
+# audit -n
+....
+
+Se man:auditd[8] não estiver em execução no momento, este comando falhará e uma mensagem de erro será apresentada.
+
+Adicionar a seguinte linha ao [.filename]#/etc/crontab# agendará essa rotação a cada doze horas:
+
+[.programlisting]
+....
+0     */12       *       *       *       root    /usr/sbin/audit -n
+....
+
+A alteração terá efeito quando o [.filename]#/etc/crontab# for salvo.
+
+A rotação automática do arquivo de trilha de auditoria com base no tamanho do arquivo é possível usando `filesz` em [.filename]#audit_control#, conforme descrito em <<audit-auditcontrol>>.
+
+Como os arquivos de trilha de auditoria podem se tornar muito grandes, geralmente é desejável compactar ou arquivar rastros depois que eles forem fechados pelo daemon de auditoria. O script [.filename]#audit_warn# pode ser usado para executar operações personalizadas para uma variedade de eventos relacionados à auditoria, incluindo a terminação limpa de trilhas de auditoria quando elas são rotacionadas. Por exemplo, o seguinte pode ser adicionado ao [.filename]#/etc/security/audit_warn# para compactar as trilhas de auditoria ao serem fechados:
+
+[.programlisting]
+....
+#
+# Compress audit trail files on close.
+#
+if [ "$1" = closefile ]; then
+        gzip -9 $2
+fi
+....
+
+Outras atividades de arquivamento podem incluir a cópia de arquivos de trilha para um servidor centralizado, a exclusão de arquivos de trilha antigos ou a redução da trilha de auditoria para remover registros desnecessários. Este script será executado somente quando os arquivos da trilha de auditoria forem finalizados de forma limpa, portanto, não serão executados em trilhas deixadas sem serem eliminadas após um desligamento incorreto.

@@ -1,0 +1,941 @@
+---
+title: Hoofdstuk 17. Verplichte Toegangscontrole (MAC)
+part: Deel III. Systeembeheer
+prev: books/handbook/jails
+next: books/handbook/audit
+---
+
+[[mac]]
+= Verplichte Toegangscontrole (MAC)
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Inhoudsopgave
+:table-caption: Tabel
+:figure-caption: Afbeelding
+:example-caption: Voorbeeld
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 17
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/mac/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/mac/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/mac/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/nl/mailing-lists.adoc[]
+include::shared/nl/teams.adoc[]
+include::shared/nl/urls.adoc[]
+
+toc::[]
+
+[[mac-synopsis]]
+== Overzicht
+
+In FreeBSD 5.X werden nieuwe beveiligingsuitbreidingen geïntroduceerd uit het TrustedBSD project, dat is gebaseerd op de POSIX(R).1e draft. Twee van de meest significante nieuwe beveiligingsmechanismen zijn faciliteiten voor Toegangscontrolelijsten voor bestandssystemen (ACLs) en Verplichte Toegangscontrole (Mandatory Access Control of MAC). Met Verplichte Toegangscontrole kunnen nieuwe toegangscontrolemodules geladen worden, waarmee nieuw beveiligingsbeleid opgelegd kan worden. Een aantal daarvan bieden beveiliging aan hele kleine onderdelen van het systeem, waardoor een bepaalde dienst weerbaarder wordt. Andere bieden allesomvattende gelabelde beveiliging op alle vlakken en objecten. Het verplichte deel van de definitie komt van het feit dat het opleggen van de controle wordt gedaan door beheerders en het systeem en niet wordt overgelaten aan de nukken van gebruikers, zoals wel wordt gedaan met toegangscontrole naar goeddunken (discretionary access control of DAC, de standaardrechten voor bestanden en System V IPC rechten in FreeBSD).
+
+In dit hoofdstuk wordt de nadruk gelegd op het Verplichte Toegangscontrole Raamwerk (MAC Framework) en een verzameling van te activeren beveiligingsbeleidsmodules waarmee verschillende soorten beveiligingsmechanismen wordt ingeschakeld.
+
+Na het lezen van dit hoofdstuk weet u:
+
+* Welke MAC beveiligingsbeleidsmodules op dit moment in FreeBSD beschikbaar zijn en welke mechanismen daarbij horen.
+* Wat MAC beveiligingsbeleidsmodules implementeren en het verschil tussen gelabeld en niet-gelabeld beleid.
+* Hoe een systeem efficiënt ingesteld kan worden om met het MAC-raamwerk te werken.
+* Hoe het beleid van de verschillende beveiligingsbeleidsmodules die in het MAC-raamwerk zitten ingesteld kunnen worden.
+* Hoe een veiligere omgeving gemaakt kan worden met het MAC-raamwerk en de getoonde voorbeelden;
+* Hoe de MAC-instellingen getest kunnen worden om er zeker van te zijn dat het raamwerk juist is geïmplementeerd.
+
+Aangeraden voorkennis:
+
+* Begrip van UNIX(R) en FreeBSD basiskennis (crossref:basics[basics,UNIX® beginselen]);
+* Bekend zijn met de beginselen van het instellen en compileren van de kernel (crossref:kernelconfig[kernelconfig,De FreeBSD-kernel instellen]);
+* Enigszins bekend zijn met beveiliging en wat dat te maken heeft met FreeBSD (crossref:security[security,Beveiliging]).
+
+[WARNING]
+====
+
+Het verkeerd gebruiken van de informatie die hierin staat kan leiden tot het niet langer toegang hebben tot een systeem, ergernis bij gebruikers, of het niet langer kunnen gebruiken van de mogelijkheden die X11 biedt. Nog belangrijker is dat niet alleen op MAC vertrouwd moet worden voor de beveiliging van een systeem. Het MAC-raamwerk vergroot alleen het bestaande beveiligingsbeleid; zonder goede beveiligingsprocedures en regelmatige beveiligingscontroles is een systeem nooit helemaal veilig.
+
+Het is ook van belang op te merken dat de voorbeelden in dit hoofdstuk alleen voorbeelden zijn. Het is niet aan te raden ze uit te rollen op een productiesysteem. Het implementeren van de verschillende beveiligingsbeleidsmodules dient goed overdacht en getest te worden. Iemand die niet helemaal begrijpt hoe alles werkt, komt er waarschijnlijk achter dat die het complete systeem van voor naar achter en weer terug doorloopt en vele bestanden en mappen opnieuw moet instellen.
+====
+
+=== Wat niet wordt behandeld
+
+In dit hoofdstuk wordt een brede reeks beveiligingsonderwerpen met betrekking tot het MAC-raamwerk behandeld. De ontwikkeling van nieuwe MAC-beveiligingsbeleidsmodules wordt niet behandeld. Een aantal modules die bij het MAC-raamwerk zitten hebben specifieke eigenschappen voor het testen en ontwikkelen van nieuwe modules. Daaronder vallen man:mac_test[4], man:mac_stub[4] en man:mac_none[4]. Meer informatie over deze beveiligingsbeleidsmodules en de mogelijkheden die ze bieden staan in de hulppagina's.
+
+[[mac-inline-glossary]]
+== Sleuteltermen in dit hoofdstuk
+
+Voordat dit hoofdstuk gelezen wordt, moeten er een aantal sleuteltermen toegelicht worden. Hiermee wordt hopelijk mogelijke verwarring en de abrupte introductie van nieuwe termen en informatie voorkomen.
+
+* _compartiment_: een compartiment is een verzameling van programma's en gegevens die gepartitioneerd of gescheiden dient te worden en waartoe gebruikers expliciet toegang moeten krijgen op een systeem. Een compartiment staat ook voor een groep, zoals een werkgroep, afdeling, project, of onderwerp. Door gebruik te maken van compartimenten is het mogelijk om een "need-to-know" beveiligingsbeleid in te stellen.
+* _hoogwatermarkering_: Een hoogwatermarkeringsbeleid is een beleid dat toestaat om beveiligingsniveaus te verhogen met het doel informatie dat op een hoger niveau aanwezig is te benaderen. In de meeste gevallen wordt het originele niveau hersteld nadat het proces voltooid is. Momenteel heeft het MAC-raamwerk van FreeBSD hier geen beleid voor, maar de definitie is voor de volledigheid opgenomen.
+* _integriteit_: integriteit, als sleutelconcept, is het niveau van vertrouwen dat in gegevens gesteld kan worden. Als de integriteit van gegevens wordt vergroot, dan geldt dat ook voor het vertrouwen dat in die gegevens gesteld kan worden.
+* _label_: een label is een beveiligingsattribuut dat toegepast kan worden op bestanden, mappen of andere onderdelen van een systeem. Het kan gezien worden als een vertrouwelijkheidsstempel: als er een label op een bestand is geplaatst, beschrijft dat de beveiligingseigenschappen voor dat specifieke bestand en is daarop alleen toegang voor bestanden, gebruikers, bronnen, enzovoort, met gelijke beveiligingsinstellingen. De betekenis en interpretatie van labelwaarden hangt af van de beleidsinstellingen: hoewel sommige beleidseenheden een label beschouwen als representatie van de integriteit of het geheimhoudingsniveau van een object, kunnen andere beleidseenheden labels gebruiken om regels voor toegang in op te slaan.
+* _niveau_: de verhoogde of verlaagde instelling van een beveiligingsattribuut. Met het stijgen van het niveau wordt ook aangenomen dat de veiligheid stijgt.
+* _laagwatermarkering_: Een laagwatermarkeringsbeleid is een beleid dat toestaat om de beveiligingsniveaus te verlagen met het doel informatie te benaderen die minder veilig is. In de meeste gevallen wordt het originele beveiligingsniveau van de gebruiker hersteld nadat het proces voltooid is. De enige beveiligingsbeleidsmodule in FreeBSD die dit gebruikt is man:mac_lomac[4].
+* _meervoudig label_: de eigenschap `multilabel` is een optie van het bestandssysteem die in enkelegebruikersmodus met man:tunefs[8], tijdens het opstarten via het bestand man:fstab[5] of tijdens het maken van een nieuw bestandssysteem ingesteld kan worden. Met deze optie wordt het voor een beheerder mogelijk om verschillende MAC-labels op verschillende objecten toe te passen. Deze optie is alleen van toepassing op beveiligingsbeleidsmodules die labels ondersteunen.
+* _object_: een object of systeemobject is een entiteit waar informatie doorheen stroomt op aanwijzing van een _subject_. Hieronder vallen mappen, bestanden, velden, schermen, toetsenborden, geheugen, magnetische opslag, printers en alle andere denkbare apparaten waarmee gegevens kunnen worden vervoerd of kunnen worden opgeslagen. In de basis is een object een opslageenheid voor gegevens of een systeembron; toegang tot een _object_ betekent in feite toegang tot de gegevens.
+* _beleidseenheid_: een verzameling van regels die aangeven hoe doelstellingen bereikt moeten worden. In een _beleidseenheid_ staat meestal beschreven hoe bepaalde eenheden behandeld dienen te worden. In dit hoofdstuk wordt de term _beleidseenheid_ in deze context gezien als een _beveiligingsbeleidseenheid_, wat zoveel wil zeggen als een verzameling regels die bepaalt hoe gegevens en informatie stroomt en aangeeft wie toegang tot welke gegevens en informatie heeft.
+* _gevoeligheid_: meestal gebruikt bij het bespreken van MLS. Een gevoeligheidsniveau is een term die gebruikt wordt om te beschrijven hoe belangrijk of geheim de gegevens horen te zijn. Met het stijgen van het gevoeligheidsniveau stijgt ook het belang van de geheimhouding of de vertrouwelijkheid van de gegevens.
+* _enkelvoudig label_: een enkelvoudig label wordt gebruikt als een heel bestandssysteem gebruik maakt van één label om het toegangsbeleid over de gegevensstromen af te dwingen. Als dit voor een bestandssysteem is ingesteld, wat geldt als er geen gebruik gemaakt wordt van de optie `multilabel`, dan gehoorzamen alle bestanden aan dezelfde labelinstelling.
+* _subject_: een subject is een gegeven actieve entiteit die het stromen van informatie tussen _objecten_ veroorzaakt, bijvoorbeeld een gebruiker, gebruikersprocessor, systeemproces, enzovoort. Op FreeBSD is dit bijna altijd een thread die in een proces namens een gebruiker optreedt.
+
+[[mac-initial]]
+== Uitleg over MAC
+
+Met al deze nieuwe termen in gedachten, kan overdacht worden hoe het MAC-raamwerk de complete beveiliging van een systeem kan vergroten. De verschillende beveiligingsbeleidsmodules die het MAC-raamwerk biedt zouden gebruikt kunnen worden om het netwerk en bestandssystemen te beschermen, gebruikers toegang tot bepaalde poorten en sockets kunnen ontzeggen, en nog veel meer. Misschien kunnen de beleidsmodules het beste gebruikt worden door ze samen in te zetten, door meerdere beveiligingsbeleidsmodules te laden om te komen tot een omgeving waarin de beveiliging uit meerdere lagen is opgebouwd. In een omgeving waarin de beveiliging uit meerdere lagen is opgebouwd zijn meerdere beleidsmodules actief om de beveiliging in de hand te houden. Deze aanpak is anders dan een beleid om de beveiliging sec beter te maken, omdat daarmee in het algemeen elementen in een systeem beveiligd worden dat voor een specifiek doel wordt gebruikt. Het enige nadeel is het benodigde beheer in het geval van meervoudige bestandssysteemlabels, het instellen van toegang tot het netwerk per gebruiker, enzovoort.
+
+De nadelen zijn wel minimaal als ze worden vergeleken met het immer durende effect van het raamwerk. Zo zorgt bijvoorbeeld de mogelijkheid om te kiezen welke beleidseenheden voor een specifiek gebruik nodig zijn voor het zo laag mogelijk houden van de beheerslast. Het terugdringen van ondersteuning voor onnodige beleidseenheden kan de beschikbaarheid van systemen verhogen en ook de keuzevrijheid vergroten. Voor een goede implementatie worden alle beveiligingseisen in beschouwing genomen en daarna worden de verschillende beveiligingsbeleidsmodules effectief door het raamwerk geïmplementeerd.
+
+Een systeem dat gebruik maakt van de mogelijkheden van MAC dient dus tenminste de garantie te bieden dat een gebruiker niet de mogelijkheid heeft naar eigen inzicht beveiligingsattributen te wijzigen. Alle gebruikersprogramma's en scripts moeten werken binnen de beperkingen die de toegangsregels voorschrijven volgens de geselecteerde beveiligingsbeleidsmodules. Het voorgaande impliceert ook dat de volledige controle over de MAC-toegangsregels bij de systeembeheerder ligt.
+
+Het is de taak van de systeembeheerder om zorgvuldig de juiste beveiligingsbeleidsmodules te kiezen. Voor sommige omgevingen kan het nodig zijn dat de toegang tot het netwerk wordt beperkt. In dat soort gevallen zijn de beleidsmodules man:mac_portacl[4], man:mac_ifoff[4] en zelfs man:mac_biba[4] goede startpunten. In andere gevallen kan de strikte vertrouwelijkheid van bestandssysteemobjecten van belang zijn. Dan zijn beleidsmodules zoals man:mac_bsdextended[4] en man:mac_mls[4] voor dit doel gemaakt.
+
+Beslissingen over beleid zouden gemaakt kunnen worden op basis van het netwerkontwerp. Wellicht wordt alleen bepaalde gebruikers toegestaan gebruik te maken van de mogelijkheden van man:ssh[1] om toegang te krijgen tot het netwerk of Internet. In dat geval is de juiste beleidsmodule man:mac_portacl[4]. Maar wat te doen voor bestandssystemen? Moet alle toegang tot bepaalde mappen worden afgesneden van andere gebruikersgroepen of specifieke gebruikers, of moeten de toegang voor gebruikers of programma's tot bepaalde bestanden worden ingesteld door bepaalde objecten als geheim te bestempelen?
+
+In het geval van het bestandssysteem, kan ervoor gekozen worden om de toegang voor sommige objecten voor bepaalde gebruikers als geheim te bestempelen, maar voor andere niet. Bijvoorbeeld: een groot ontwikkelteam wordt opgedeeld in kleinere eenheden van individuen. Ontwikkelaars in project A horen geen toegang te hebben tot objecten die zijn geschreven door ontwikkelaars in project B. Maar misschien moeten ze wel toegang hebben tot objecten die zijn geschreven door ontwikkelaars in project C. Dat is nogal wat. Door gebruik te maken van de verschillende beveiligingsbeleidsmodules in het MAC-raamwerk kunnen gebruikers in hun groepen worden opgedeeld en kan ze toegang gegeven worden tot de juiste locaties zonder dat er angst hoeft te zijn voor het lekken van informatie.
+
+Zo heeft dus iedere beveiligingsbeleidsmodule een unieke wijze om om te gaan met de totale beveiliging van een systeem. Het kiezen van modules hoort gebaseerd te zijn op een zorgvuldig uitgedacht beveiligingsbeleid. In veel gevallen wordt het totale beveiligingsbeleid aangepast en opnieuw toegepast op het systeem. Een goed begrip van de verschillende beveiligingsbeleidsmodules die het MAC-raamwerk biedt helpt beheerders bij het kiezen van de juiste beleidseenheden voor hun situatie.
+
+De standaard FreeBSD-kernel kent geen ondersteuning voor het MAC-raamwerk en daarom dient de volgende kerneloptie toegevoegd te worden voordat op basis van de voorbeelden of informatie uit dit hoofdstuk wijzigen worden gemaakt:
+
+[.programlisting]
+....
+options     MAC
+....
+
+Hierna dient de kernel herbouwd en opnieuw geïnstalleerd te worden.
+
+[CAUTION]
+====
+
+Hoewel in de verschillende hulppagina's voor MAC-beleidsmodules staat dat ze in de kernel gebouwd kunnen worden, is het mogelijk het systeem van het netwerk af te sluiten en meer. Het implementeren van MAC is net zoiets als het implementeren van een firewall en er moet opgepast worden dat een systeem niet totaal op slot gaat. Er dient rekening gehouden te worden met het teruggaan naar een vorige instelling en het op afstand implementeren van MAC dient bijzonder voorzichtig te gebeuren.
+====
+
+[[mac-understandlabel]]
+== MAC-labels begrijpen
+
+Een MAC-label is een beveiligingsattribuut dat toegepast kan worden op subjecten en objecten die door het systeem gaan.
+
+Bij het instellen van een label moet de gebruiker in staat zijn om precies te begrijpen wat er gebeurt. De attributen die voor een object beschikbaar zijn hangen af van de geladen beleidsmodule en die interpreteren hun attributen op nogal verschillende manieren. Het resultaat kan resulteren in onverwacht en wellicht ongewenst gedrag van een systeem als het beleid door een gebrek aan begrip verkeerd is ingesteld.
+
+Het beveiligingslabel op een object wordt gebruikt als onderdeel van een beveiligingstoegangscontrolebeslissing door een beleidseenheid. Voor sommige beleidseenheden bevat het label zelf alle informatie die nodig is voor het maken van een beslissing; in andere modellen kunnen de labels als onderdeel van een grotere verzameling verwerkt worden, enzovoort.
+
+Zo staat bijvoorbeeld het instellen van het label `biba/low` op een bestand voor een label dat wordt beheerd door de beveiligingsbeleidsmodule Biba, met een waarde van "low".
+
+Een aantal beleidsmodules die in FreeBSD de mogelijkheid voor labelen ondersteunen, bieden drie specifieke voorgedefinieerde labels: low, high en equal. Hoewel ze in verschillende beleidsmodules op een andere manier toegangscontrole afdwingen, is er de garantie dat het label `low` de laagst mogelijke instelling is, het label `equal` het subject of object uitschakelt of ongemoeid laat en het label `high` de hoogst mogelijk instelling afdwingt die beschikbaar is in de beleidsmodules Biba en MLS.
+
+Binnen een bestandssysteemomgeving met een enkelvoudig label kan er maar één label gebruikt worden op objecten. Hiermee wordt een verzameling van toegangsrechten op het hele systeem opgelegd en dat is voor veel omgevingen voldoende. Er zijn echter een aantal gevallen waarin het wenselijk is meervoudige labels in te stellen op subjecten of objecten in het bestandssysteem. In die gevallen kan de optie `multilabel` meegegeven worden aan man:tunefs[8].
+
+In het geval van Biba en MLS kan er een numeriek label gezet worden om het precieze niveau van de hiërarchische controle aan te geven. Dit numerieke niveau wordt gebruikt om informatie in verschillende groepen te partitioneren of te sorteren voor het classificeren voor het geven van toegang voor een bepaalde groep of een groep van een hoger niveau.
+
+In de meeste gevallen stelt een beheerder alleen maar een enkelvoudig label in dat door het hele bestandssysteem wordt gebruikt.
+
+_Wacht eens, dat klinkt net als DAC! MAC gaf de controle toch strikt aan de beheerder?_ Dat klopt nog steeds, `root` heeft nog steeds de controle in handen en is degene die het beleid instelt zodat gebruikers in de juiste categorie en/of toegangsniveaus worden geplaatst. Daarnaast kunnen veel beleidsmodules ook de gebruiker `root` beperkingen opleggen. Dan wordt de controle overgedragen aan een groep, maar kan `root` de instellingen op ieder gewenst moment intrekken of wijzigen. Dit is het hiërarchische of toegangsmodel dat wordt afgedekt door beleidseenheden zoals Biba en MLS.
+
+=== Labelinstellingen
+
+Vrijwel alle aspecten voor het instellen van labelbeleid worden uitgevoerd met basissysteemprogramma's. Die commando's bieden een eenvoudige interface voor object- of subjectinstellingen of de manipulatie en verificatie van de instellingen.
+
+Alle instellingen kunnen gemaakt worden met de hulpprogramma's man:setfmac[8] en man:setpmac[8]. Het commando `setfmac` wordt gebruikt om MAC labels op systeemobjecten in te stellen en `setpmac` voor het instellen van de labels op systeemsubjecten:
+
+[source,bash]
+....
+# setfmac biba/high test
+....
+
+Als het bovenstaande commando geen foutmeldingen heeft veroorzaakt, dan komt er een prompt terug. Deze commando's geven nooit uitvoer, tenzij er een fout is opgetreden; net als bij de commando's man:chmod[1] en man:chown[8]. In sommige gevallen kan de foutmelding `Permission denied` zijn en deze treedt meestal op als het label wordt ingesteld of gewijzigd op een object dat is beperkt.  De systeembeheerder kan de volgende commando's gebruiken om dit probleem te voorkomen:
+
+[source,bash]
+....
+# setfmac biba/high test
+Permission denied
+# setpmac biba/low setfmac biba/high test
+# getfmac test
+test: biba/high
+....
+
+Hierboven is te zien dat `setpmac` gebruikt kan worden om aan de instellingen van een beleidsmodules voorbij te gaan door een ander label toe te wijzen aan het aangeroepen proces. Het hulpprogramma `getpmac` wordt meestal toegepast op processen die al draaien, zoals sendmail: hoewel er een proces-ID nodig is in plaats van een commando, is de logica gelijk. Als gebruikers proberen een bestand te manipuleren waar ze geen toegang tot hebben, onderhevig aan de regels van de geladen beleidsmodules, dan wordt de foutmelding `Operation not permitted` weergegeven door de functie `mac_set_link`.
+
+==== Labeltypen
+
+Met de beleidsmodules man:mac_biba[4], man:mac_mls[4] en man:mac_lomac[4] is het mogelijk eenvoudige labels toe te wijzen. Die kunnen hoog, gelijk aan en laag zijn. Hieronder een beschrijving van wat die labels betekenen:
+
+* Het label `low` is de laagst mogelijke labelinstelling die een object of subject kan hebben. Deze instelling op objecten of subjecten blokkeert hun toegang tot objecten of subjecten met de markering hoog.
+* Het label `equal` hoort alleen ingesteld te worden op objecten die uitgesloten moeten worden van een beleidsinstelling.
+* Het label `high` geeft een object of subject de hoogst mogelijke instelling.
+
+Afhankelijke van iedere beleidsmodule heeft iedere instelling een ander informatiestroomdirectief tot gevolg. Het lezen van de hulppagina's die van toepassing zijn geeft inzicht in de precieze eigenschappen van de standaard labelinstellingen.
+
+===== Gevorderde labelinstellingen
+
+Dit zijn de labels met numerieke graden die gebruikt worden voor `vergelijking:afdeling+afdeling`.
+
+[.programlisting]
+....
+biba/10:2+3+6(5:2+3-20:2+3+4+5+6)
+....
+
+Het bovenstaande kan dus geïnterpreteerd worden als:
+
+"Biba-beleidslabel"/"Graad 10":"Afdelingen 2, 3 en 6": ("graad 5 ...")
+
+In dit voorbeeld is de eerste graad de "effectieve graad" met de "effectieve afdelingen", de tweede graad is de lage graad en de laatste is de hoge graad. In de meeste instellingen worden deze instellingen niet gebruikt. Ze zijn inderdaad instellingen voor gevorderden.
+
+Als ze worden toegepast op systeemobjecten, hebben ze alleen een huidige graad/afdeling in vergelijking met systeemsubjecten, omdat ze de reikwijdte van rechten in het systeem en op netwerkinterfaces aangeven, waar ze gebruikt worden voor toegangscontrole.
+
+De graad en afdelingen in een subject en object paar wordt gebruikt om een relatie te construeren die "dominantie" heet, waar een subject een object domineert, geen van beiden domineert, of beiden elkaar domineren. Het geval "beiden domineren" komt voor als de twee labels gelijk zijn. Vanwege de natuur van de informatiestroom van Biba, heeft een gebruiker rechten op een verzameling van afdelingen, "need to know", die overeen zouden kunnen komen met projecten, maar objecten hebben ook een verzameling van afdelingen. Gebruikers dienen wellicht hun rechten onder te verdelen met `su` of `setpmac` om toegang te krijgen tot objecten in een afdeling die geen verboden terrein voor ze zijn.
+
+==== Gebruikers en labelinstellingen
+
+Gebruikers moeten zelf labels hebben, zodat hun bestanden en processen juist kunnen samenwerken met het beveiligingsbeleid dat op een systeem is ingesteld. Dit wordt ingesteld via het bestand [.filename]#login.conf# door gebruik te maken van aanmeldklassen. Iedere beleidsmodule die labels gebruikt implementeert ook de instelling van de gebruikersklasse.
+
+Een voorbeeld dat iedere instelling uit de beleidsmodule bevat is hieronder te zien:
+
+[.programlisting]
+....
+default:\
+        :copyright=/etc/COPYRIGHT:\
+        :welcome=/etc/motd:\
+        :setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+        :path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:\
+        :manpath=/usr/shared/man /usr/local/man:\
+        :nologin=/usr/sbin/nologin:\
+        :cputime=1h30m:\
+        :datasize=8M:\
+        :vmemoryuse=100M:\
+        :stacksize=2M:\
+        :memorylocked=4M:\
+        :memoryuse=8M:\
+        :filesize=8M:\
+        :coredumpsize=8M:\
+        :openfiles=24:\
+        :maxproc=32:\
+        :priority=0:\
+        :requirehome:\
+        :passwordtime=91d:\
+        :umask=022:\
+        :ignoretime@:\
+        :label=partition/13,mls/5,biba/10(5-15),lomac/10[2]:
+....
+
+De optie `label` wordt gebruikt om het standaardlabel voor aanmeldklasse in te stellen dat door MAC wordt afgedwongen. Het wordt gebruikers nooit toegestaan deze waarde te wijzigen, dus kan het gezien worden als niet optioneel vanuit het perspectief van de gebruiker. In de echte wereld besluit een beheerder echter nooit iedere beleidsmodule te activeren. Het wordt sterk aangeraden de rest van die hoofdstuk te lezen alvorens (een deel van) de bovenstaande instellingen te implementeren.
+
+[NOTE]
+====
+Gebruikers kunnen hun label wijzigen na het initiële aanmelden, maar dit is wel afhankelijk van de beperkingen van een beleidsinstelling. Het bovenstaande voorbeeld vertelt de beleidseenheid Biba dat de minimale integriteit van een proces 5 en het maximum 15, maar dat het effectieve label standaard 10 is. Het proces draait op niveau 10, totdat het proces het label wijzigt, misschien door een gebruiker die `setpmac` gebruikt, bij het aanmelden beperkt tot de door Biba ingestelde reeks.
+====
+
+In alle gevallen dient de database met aanmeldklassemogelijkheden opnieuw gebouwd te worden met `cap_mkdb` na het wijzigen van [.filename]#login.conf#. Dit wordt ook in alle komende voorbeelden en beschrijvingen gedaan.
+
+Het is belangrijk op te merken dat in veel gevallen sites te maken hebben met bijzonder grote aantallen gebruikers waardoor er een aantal verschillende aanmeldklassen nodig zijn. Het is dan nodig gedetailleerd te plannen omdat dit anders bijzonder complex wordt om te onderhouden.
+
+==== Netwerkinterfaces en labelinstellingen
+
+Labels kunnen ook ingesteld worden op netwerkinterfaces om te assisteren bij het controleren van het stromen van gegevens over het netwerk. In alle gevallen werken ze op dezelfde wijze als het beleid werkt ten aanzien van objecten. Gebruikers met bijvoorbeeld een hoge instelling in `biba` krijgen geen toegang tot interfaces met een laag label.
+
+Het `maclabel` kan meegegeven worden aan `ifconfig` als het MAC-label op netwerkinterfaces wordt ingesteld:
+
+[source,bash]
+....
+# ifconfig bge0 maclabel biba/equal
+....
+
+In het bovenstaande voorbeeld wordt het MAC-label `biba/equal` ingesteld op de interface man:bge[4]. Als er een instelling wordt gebruikt die gelijkvormig is aan `biba/high(low-high)`, dan moet het volledige label worden ingegeven, anders treedt er een fout op.
+
+Iedere beleidsmodule die labels ondersteunt een instelling waarmee het MAC-label op netwerkinterfaces kan worden uitgeschakeld. Het label instellen op `equal` heeft hetzelfde effect. Deze instellingen zijn na te kijken in de uitvoer van `sysctl`, de hulppagina van het beleid en zelfs later in dit hoofdstuk.
+
+=== Enkelvoudig label of meervoudig label?
+
+Standaard gebruikt een systeem de optie `singlelabel`. Wat betekent dit voor een beheerder? Er zijn een aantal verschillen die allemaal hun eigen voor- en nadelen hebben voor de flexibiliteit in het beveiligingsmodel voor een systeem.
+
+Bij gebruik van `singlelabel` kan er maar één label, bijvoorbeeld `biba/high`, gebruikt worden voor ieder subject of object. Hierdoor is er minder beheer nodig, maar de flexibiliteit voor beleid dat labels ondersteunt daalt erdoor. Veel beheerders willen de optie `multilabel` gebruiken in hun beveiligingsmodel.
+
+De optie `multilabel` staat ieder subject of object toe om zijn eigen onafhankelijke MAC-label te hebben in plaats van de standaardoptie `singlelabel`, die maar één label toestaat op een hele partitie. De labelopties `multilabel` en `single` zijn alleen verplicht voor de beleidseenheden die de mogelijkheid bieden om te labelen, waaronder de beleidsmogelijkheden van Biba, Lomac, MLS en SEBSD.
+
+In veel gevallen hoeft `multilabel` niet eens ingesteld te worden. Stel er is de volgende situatie en beveiligingsmodel:
+
+* FreeBSD-webserver die gebruik maakt van het MAC-raamwerk en een mengeling van verschillende beleidseenheden.
+* De webserver heeft maar één label nodig, `biba/high`, voor alles in het systeem. Hier is de optie `multilabel` voor het bestandssysteem niet nodig, omdat een enkelvoudig label altijd van toepassing is.
+* Maar omdat de machine als webserver dienst gaat doen, dient de webserver te draaien als `biba/low` om administratiemogelijkheden te voorkomen. Later wordt beschreven hoe de beleidseenheid Biba werkt, dus als de voorgaande opmerking wat lastig te begrijpen is, lees dan verder en kom later nog een keer terug. De server zou een aparte partitie kunnen gebruiken waarop `biba/low` van toepassing kan zijn voor de meeste, zo niet alle, runtime-statussen. Er ontbreekt veel in dit voorbeeld, bijvoorbeeld de restricties op gegevens en (gebruikers)instellingen. Dit was slechts een snel voorbeeld om de hiervoor aangehaalde stelling te ondersteunen.
+
+Als er een niet-labelende beleidseenheid wordt gebruikt, dan is de optie `multilabel` nooit verplicht. Hieronder vallen de beleidseenheden `seeotheruids`, `portacl` en `partition`.
+
+Bij gebruik van `multilabel` voor een partitie en het neerzetten van een beveiligingsmodel gebaseerd op `multilabel` functionaliteit gaat de deur open voor hogere administratieve rompslomp, omdat alles in een bestandssysteem een label krijgt. Hieronder vallen mappen, bestanden en zelfs apparaatknooppunten.
+
+Het volgende commando stelt `multilabel` in op de bestandssystemen om meerdere labels te kunnen krijgen. Dit kan alleen uitgevoerd worden in enkele gebruikersmodus:
+
+[source,bash]
+....
+# tunefs -l enable /
+....
+
+Dit is geen criterium voor het wisselbestandssysteem.
+
+[NOTE]
+====
+Sommige gebruikers hebben problemen ondervonden met het instellen van de vlag `multilabel` op de rootpartitie. Als dit het geval is, kijk dan naar <<mac-troubleshoot>> van dit hoofdstuk.
+====
+
+[[mac-planning]]
+== De beveiligingsconfiguratie plannen
+
+Wanneer een nieuwe technologie wordt geïmplementeerd is een planningsfase altijd een goed idee. Tijdens de planningsfases zou een beheerder in het algemeen naar de "big picture" moeten kijken, en daarbij minstens het volgende in de gaten proberen te houden:
+
+* De implementatiebenodigdheden;
+* De implementatiedoelen;
+
+Voor MAC-installaties houden deze in:
+
+* Hoe de beschikbare informatie en bronnen die op het doelsysteem aanwezig zijn te classificeren.
+* Voor wat voor soort informatie of bronnen de toegang te beperken samen met het type van de beperkingen die dienen te worden toegepast.
+* Welke MAC-module(s) nodig zullen zijn om dit doel te bereiken.
+
+Het is altijd mogelijk om de systeembronnen en de beveiligingsinstellingen te veranderen en te herconfigureren, het komt vaak erg ongelegen om het systeem te doorzoeken en bestaande bestanden en gebruikersaccounts te repareren. Plannen helpt om zeker te zijn van een probleemloze en efficiënte systeemimplementatie. Het is vaak vitaal en zeker in uw voordeel om een proefronde van het vertrouwde systeem, inclusief de configuratie, te draaien _vóórdat_ een MAC-implementatie wordt gebruikt op productiesystemen. Het idee om een systeem met MAC gewoon los te laten is als het plannen van mislukkingen.
+
+Verschillende omgevingen kunnen verschillende behoeften en benodigdheden nodig hebben. Het opzetten van een diepgaand en compleet beveiligingsprofiel zal de noodzaak van verandering verminderen wanneer het systeem in gebruik wordt genomen. Zodoende zullen de toekomstige secties de verschillende modules die beschikbaar zijn voor beheerders behandelen; hun gebruik en configuratie beschrijven; en in sommige gevallen inzicht bieden in welke situaties ze het beste tot hun recht komen. Een webserver bijvoorbeeld zou de beleiden man:mac_biba[4] en man:mac_bsdextended[4] in gebruik nemen. In andere gevallen kan voor een machine met erg weinig lokale gebruikers man:mac_partition[4] een goede keuze zijn.
+
+[[mac-modules]]
+== Module-instellingen
+
+Iedere module uit het MAC-raamwerk kan zoals zojuist aangegeven in de kernel worden gecompileerd of als runtime-kernelmodule geladen worden. De geadviseerde methode is de naam van een module toevoegen aan het bestand [.filename]#/boot/loader.conf# zodat die wordt geladen tijdens de eerste fase van het starten van een systeem.
+
+In de volgende onderdelen worden de verschillende MAC-modules en hun mogelijkheden beschreven. De implementatie in een specifieke omgeving wordt ook in dit hoofdstuk beschreven. Een aantal modules ondersteunt het gebruik van labelen, wat het beperken van toegang is door een label als "dit is toegestaan en dat niet" af te dwingen. Een labelinstellingenbestand kan bepalen hoe bestanden kunnen worden benaderd, hoe netwerkcommunicatie wordt uitgewisseld, en meer. In het vorige onderdeel is beschreven hoe de vlag `multilabel` ingesteld kon worden op bestandssystemen om per bestand of per partitie toegangscontrole in te schakelen.
+
+Een instelling met een enkelvoudig label zou maar één label over een heel systeem afdwingen, daarom wordt de optie `tunefs multilabel` genoemd.
+
+[[mac-seeotheruids]]
+== MAC-module seeotheruids
+
+Modulenaam: [.filename]#mac_seeotheruids.ko#
+
+Kernelinstelling: `options MAC_SEEOTHERUIDS`
+
+Opstartoptie: `mac_seeotheruids_load="YES"`
+
+De module man:mac_seeotheruids[4] imiteert de `sysctl`-tunables `security.bsd.see_other_uids` en `security.bsd.see_other_gids` en breidt deze uit. Voor deze optie hoeven geen labels ingesteld te worden voor de instelling en hij werkt transparant met de andere modules.
+
+Na het laden van de module kunnen de volgende `sysctl`-tunables gebruikt worden om de opties te beheren:
+
+* `security.mac.seeotheruids.enabled` schakelt de opties van de module in en gebruikt de standaardinstellingen. Deze standaardinstellingen ontzeggen gebruikt de mogelijkheid processen en sockets te zien die eigendom zijn van andere gebruikers.
+* `security.mac.seeotheruids.specificgid_enabled` staat toe dat een bepaalde groep niet onder dit beleid valt. Om bepaalde groepen van dit beleid uit te sluiten, kan de `sysctl`-tunable `security.mac.seeotheruids.specificgid=XXX` gebruikt worden. In het bovenstaande voorbeeld dient _XXX_ vervangen te worden door het numerieke ID van een groep die uitgesloten moet worden van de beleidsinstelling.
+* `security.mac.seeotheruids.primarygroup_enabled` wordt gebruikt om specifieke primaire groepen uit te sluiten van dit beleid. Als deze tunable wordt gebruikt, mag `security.mac.seeotheruids.specificgid_enabled` niet gebruikt worden.
+
+[[mac-bsdextended]]
+== MAC-module bsdextended
+
+Modulenaam: [.filename]#mac_bsdextended.ko#
+
+Kernelinstelling: `options MAC_BSDEXTENDED`
+
+Opstartoptie: `mac_bsdextended_load="YES"`
+
+De module man:mac_bsdextended[4] dwingt de bestandssysteemfirewall af. Het beleid van deze module biedt een uitbreiding van het standaard rechtenmodel voor bestandssystemen, waardoor een beheerder een firewallachtige verzameling met regels kan maken om bestanden, programma's en mappen in de bestandssysteemhiërarchie te beschermen. Wanneer geprobeerd wordt om toegang tot een object in het bestandssysteem te krijgen, wordt de lijst met regels afgelopen totdat er òf een overeenkomstige regel is gevonden òf het einde van de lijst is bereikt. Dit gedrag kan veranderd worden door het gebruik van de man:sysctl[8]-parameter security.mac.bsdextended.firstmatch_enabled. Net zoals andere firewall-modules in FreeBSD kan een bestand dat regels voor toegangscontrole bevat tijdens het opstarten door het systeem worden aangemaakt en gelezen door een man:rc.conf[5]-variabele te gebruiken.
+
+De lijst met regels kan ingevoerd worden met het hulpprogramma man:ugidfw[8], dat een syntaxis heeft die lijkt op die van man:ipfw[8]. Meer hulpprogramma's kunnen geschreven worden met de functies in de bibliotheek man:libugidfw[3].
+
+Bij het werken met deze module dient bijzondere voorzichtigheid in acht te worden genomen. Verkeerd gebruik kan toegang tot bepaalde delen van het bestandssysteem blokkeren.
+
+=== Voorbeelden
+
+Nadat de module man:mac_bsdextended[4] is geladen, kan met het volgende commando de huidige regels getoond worden:
+
+[source,bash]
+....
+# ugidfw list
+0 slots, 0 rules
+....
+
+Zoals verwacht zijn er geen regels ingesteld. Dit betekent dat alles nog steeds volledig toegankelijk is. Om een regel te maken die alle toegang voor alle gebruikers behalve `root` ontzegt:
+
+[source,bash]
+....
+# ugidfw add subject not uid root new object not uid root mode n
+....
+
+Dit is een slecht idee, omdat het voorkomt dat alle gebruikers ook maar het meest eenvoudige commando kunnen uitvoeren, zoals `ls`. Een betere lijst met regels zou kunnen zijn:
+
+[source,bash]
+....
+# ugidfw set 2 subject uid gebruiker1 object uid gebruiker2 mode n
+# ugidfw set 3 subject uid gebruiker1 object gid gebruiker2 mode n
+....
+
+Hiermee wordt alle toegang, inclusief het tonen van mapinhoud, tot de thuismap van `_gebruiker2_` ontzegd voor de gebruikersnaam `gebruiker1`.
+
+In plaats van `gebruiker1`, zou `not uid _gebruiker2_` kunnen worden opgegeven. Hierdoor worden dezelfde restricties als hierboven actief voor alle gebruikers in plaats van voor slechts één gebruiker.
+
+[NOTE]
+====
+De gebruiker `root` blijft onaangetast door deze wijzigingen.
+====
+
+Met deze informatie zou een basisbegrip moeten zijn ontstaan over hoe de module man:mac_bsdextended[4] gebruikt kan worden om een bestandssysteem te beschermen. Meer informatie staat in de hulppagina's van man:mac_bsdextended[4] en man:ugidfw[8].
+
+[[mac-ifoff]]
+== MAC-module ifoff
+
+Modulenaam: [.filename]#mac_ifoff.ko#
+
+Kernelinstelling: `options MAC_IFOFF`
+
+Opstartoptie: `mac_ifoff_load="YES"`
+
+De module man:mac_ifoff[4] bestaat alleen om netwerkinterfaces tijdens het draaien uit te schakelen en om te verhinderen dat netwerkinterfaces tijdens het initiële opstarten worden geactiveerd. Er hoeven geen labels ingesteld te worden, noch is deze module afhankelijk van andere MAC-modules.
+
+Het meeste beheer wordt gedaan met de `sysctl`-tunables die hieronder zijn vermeld.
+
+* `security.mac.ifoff.lo_enabled` schakelt alle verkeer op het teruglusinterface (man:lo[4]) in of uit.
+* `security.mac.ifoff.bpfrecv_enabled` schakelt alle verkeer op het Berkeley Packet Filterinterface (man:bpf[4]) in of uit.
+* `security.mac.ifoff.other_enabled` schakelt alle verkeer op alle andere interfaces in of uit.
+
+man:mac_ifoff[4] wordt het meest gebruikt om netwerken te monitoren in een omgeving waar netwerkverkeer niet toegestaan zou moeten zijn tijdens het opstarten. Een ander voorgesteld gebruik zou het schrijven van een script zijn dat package:security/aide[] gebruikt om automatisch netwerkverkeer te blokkeren wanneer het nieuwe of veranderde bestanden in beschermde mappen vindt.
+
+[[mac-portacl]]
+== MAC-module portacl
+
+Modulenaam: [.filename]#mac_portacl.ko#
+
+Kernelinstelling: `MAC_PORTACL`
+
+Opstartoptie: `mac_portacl_load="YES"`
+
+De module man:mac_portacl[4] wordt gebruikt om het binden aan lokale TCP- en UDP-poorten te begrenzen door een waaier aan `sysctl`-variabelen te gebruiken. In essentie maakt man:mac_portacl[4] het mogelijk om niet-`root`-gebruikers in staat te stellen om aan gespecificeerde geprivilegieerde poorten te binden, dus poorten lager dan 1024.
+
+Eenmaal geladen zal deze module het MAC-beleid op alle sockets aanzetten. De volgende tunables zijn beschikbaar:
+
+* `security.mac.portacl.enabled` schakelt het beleid volledig in of uit.
+* `security.mac.portacl.port_high` stelt het hoogste poortnummer in waarvoor man:mac_portacl[4] bescherming biedt.
+* `security.mac.portacl.suser_exempt` sluit de gebruiker `root` uit van dit beleid wanneer het op een waarde anders dan nul wordt ingesteld.
+* `security.mac.portacl.rules` specificeert het eigenlijke beleid van mac_portacl; zie onder.
+
+Het eigenlijke beleid van `mac_portacl`, zoals gespecificeerd in de sysctl `security.mac.portacl.rules`, is een tekststring van de vorm: `regel[,regel,...]` met zoveel regels als nodig. Elke regel heeft de vorm: `idtype:id:protocol:poort`. De parameter [parameter]#idtype# kan `uid` of `gid` zijn en wordt gebruikt om de parameter [parameter]#id# als respectievelijk een gebruikers-id of groeps-id te interpreteren. De parameter [parameter]#protocol# wordt gebruikt om te bepalen of de regel op TCP of UDP moet worden toegepast door de parameter op `tcp` of `udp` in te stellen. De laatste parameter [parameter]#poort# is het poortnummer waaraan de gespecificeerde gebruiker of groep zich mag binden.
+
+[NOTE]
+====
+Aangezien de regelverzameling direct door de kernel wordt geïnterpreteerd kunnen alleen numerieke waarden voor de parameters voor de gebruikers-ID, groeps-ID, en de poort gebruikt worden. Voor gebruikers, groepen, en poortdiensten kunnen dus geen namen gebruikt worden.
+====
+
+Standaard kunnen op UNIX(R)-achtige systemen poorten lager dan 1024 alleen aan geprivilegieerde processen gebonden worden, dus diegenen die als `root` draaien. Om man:mac_portacl[4] toe te laten staan om ongeprivilegieerde processen aan poorten lager dan 1024 te laten binden moet deze standaard UNIX(R)-beperking uitgezet worden. Dit kan bereikt worden door de man:sysctl[8]-variabelen `net.inet.ip.portange.reservedlow` en `net.inet.ip.portrange.reservedhigh` op nul te zetten.
+
+Zie de onderstaande voorbeelden of bekijk de handleidingpagina voor man:mac_portacl[4] voor meer informatie.
+
+=== Voorbeelden
+
+De volgende voorbeelden zouden de bovenstaande discussie wat moeten toelichten:
+
+[source,bash]
+....
+# sysctl security.mac.portacl.port_high=1023
+# sysctl net.inet.ip.portrange.reservedlow=0 net.inet.ip.portrange.reservedhigh=0
+....
+
+Eerst wordt man:mac_portacl[4] ingesteld om de standaard geprivilegieerde poorten te dekken en worden de normale bindbeperkingen van UNIX(R) uitgeschakeld.
+
+[source,bash]
+....
+# sysctl security.mac.portacl.suser_exempt=1
+....
+
+De gebruiker `root` zou niet beperkt moeten worden door dit beleid, stel `security.mac.portacl.suser_exempt` dus in op een waarde anders dan nul. De module man:mac_portacl[4] is nu ingesteld om zich op de zelfde manier te gedragen als UNIX(R)-achtige systemen zich standaard gedragen.
+
+[source,bash]
+....
+# sysctl security.mac.portacl.rules=uid:80:tcp:80
+....
+
+Sta de gebruiker met UID 80 (normaliter de gebruiker `www`) toe om zich aan poort 80 te binden. Dit kan gebruikt worden om de gebruiker `www` toe te staan een webserver te draaien zonder ooit `root`-rechten te hebben.
+
+[source,bash]
+....
+# sysctl security.mac.portacl.rules=uid:1001:tcp:110,uid:1001:tcp:995
+....
+
+Sta de gebruiker met UID 1001 om zich aan de TCP-poorten 110 ("pop3") en 995 ("pop3s") te binden. Dit staat deze gebruiker toe om een server te starten die verbindingen accepteert op poorten 110 en 995.
+
+[[mac-partition]]
+== MAC-module partition
+
+Modulenaam: [.filename]#mac_partition.ko#
+
+Kernelinstelling: `options MAC_PARTITION`
+
+Opstartoptie: `mac_partition_load="YES"`
+
+Het beleid man:mac_partition[4] plaatst processen in specifieke "partities" gebaseerd op hun MAC-label. Zie dit als een speciaal soort man:jail[8], hoewel dit nauwelijks een waardige vergelijking is.
+
+Dit is één module die aan het bestand man:loader.conf[5] dient te worden toegevoegd zodat het het beleid tijdens het opstartproces laadt en aanzet.
+
+De meeste configuratie van dit beleid wordt gedaan met het gereedschap man:setpmac[8], wat hieronder zal worden uitgelegd. De volgende `sysctl`-tunable is beschikbaar voor dit beleid:
+
+* `security.mac.partition.enabled` zet het afdwingen van MAC-procespartities aan.
+
+Wanneer dit beleid aanstaat, mogen gebruikers alleen hun eigen processen zien, en elke andere in hun partitie, maar mogen niet met gereedschappen buiten deze partitie werken. Bijvoorbeeld, een gebruiker in de klasse `insecure` heeft geen toegang tot het commando `top` noch tot vele andere commando's die een proces moeten draaien.
+
+Gebruik het gereedschap `setpmac` om gereedschappen in te stellen of ze in een partitielabel te plaatsen:
+
+[source,bash]
+....
+# setpmac partition/13 top
+....
+
+Dit zal het commando `top` toevoegen aan het label dat voor gebruikers in de klasse `insecure` gebruikt wordt. Merk op dat alle processen gestart door gebruikers in de klasse `insecure` in het label `partition/13` zullen blijven.
+
+=== Voorbeelden
+
+Het volgende commando laat de partitielabel en de proceslijst zien:
+
+[source,bash]
+....
+# ps Zax
+....
+
+Het volgende commando staat toe om het procespartitielabel van een andere gebruiker en de momenteel draaiende processen van die gebruiker te zien:
+
+[source,bash]
+....
+# ps -ZU trhodes
+....
+
+[NOTE]
+====
+Gebruikers kunnen processen in het label van `root` zien tenzij het beleid man:mac_seeotheruids[4] is geladen.
+====
+
+Een echte vakmansimplementatie zou alle diensten in [.filename]#/etc/rc.conf# uitzetten en deze door een script met de juiste labeling laten starten.
+
+[NOTE]
+====
+De volgende beleiden ondersteunen integerinstellingen in plaats van de drie standaardlabels die aangeboden worden. Deze opties, inclusief hun beperkingen, worden verder uitgelegd in de handleidingpagina's van de modules.
+====
+
+[[mac-mls]]
+== MAC-module Multi-Level Security
+
+Modulenaam: [.filename]#mac_mls.ko#
+
+Kernelinstelling: `options MAC_MLS`
+
+Opstartoptie: `mac_mls_load="YES"`
+
+Het beleid man:mac_mls[4] beheert toegang tussen subjecten en objecten in het systeem door een strikt beleid voor informatiestromen af te dwingen.
+
+In MLS-omgevingen wordt een "toestemming"-niveau ingesteld in het label van elk subject of object, samen met compartimenten. Aangezien deze toestemmings- of zinnigheidsniveaus getallen groter dan zesduizend kunnen bereiken; zou het voor elke systeembeheerder een afschrikwekkende taak zijn om elk subject of object grondig te configureren. Gelukkig worden er al drie "kant-en-klare" bij dit beleid geleverd.
+
+Deze labels zijn `mls/low`, `mls/equal` en `mls/high`. Aangezien deze labels uitgebreid in de handleidingpagina worden beschreven, worden ze hier slechts kort beschreven:
+
+* Het label `mls/low` bevat een lage configuratie welke het toestaat om door alle andere objecten te worden gedomineerd. Alles dat met `mls/low` is gelabeld heeft een laag toestemmingsniveau en heeft geen toegang tot informatie van een hoger niveau. Ook voorkomt dit label dat objecten van een hoger toestemmingsniveau informatie naar hen schrijven of aan hen doorgeven.
+* Het label `mls/equal` dient geplaatst te worden op objecten die geacht te zijn uitgesloten van het beleid.
+* Het label `mls/high` is het hoogst mogelijke toestemmingsniveau. Objecten waaraan dit label is toegekend zijn dominant over alle andere objecten in het systeem; ze mogen echter geen informatie lekken naar objecten van een lagere klasse.
+
+MLS biedt:
+
+* Een hiërarchisch beveiligingsniveau met een verzameling niet-hiërarchische categoriën;
+* Vaste regels: niet naar boven lezen, niet naar beneden schrijven (een subject kan leestoegang hebben naar objecten op zijn eigen niveau of daaronder, maar niet daarboven. Evenzo kan een subject schrijftoegang hebben naar objecten op zijn eigen niveau of daarboven maar niet daaronder.);
+* Geheimhouding (voorkomt ongeschikte openbaarmaking van gegevens);
+* Een basis voor het ontwerp van systemen die gelijktijdig gegevens op verschillende gevoeligheidsniveaus behandelen (zonder informatie tussen geheim en vertrouwelijk te lekken).
+
+De volgende `sysctl`-tunables zijn beschikbaar voor de configuratie van speciale diensten en interfaces:
+
+* `security.mac.mls.enabled` wordt gebruikt om het MLS-beleid in en uit te schakelen.
+* `security.mac.mls.ptys_equal` labelt alle man:pty[4]-apparaten als `mls/equal` wanneer ze worden aangemaakt.
+* `security.mac.mls.revocation_enabled` wordt gebruikt om toegang tot objecten in te trekken nadat hun label in die van een lagere graad verandert.
+* `security.mac.mls.max_compartments` wordt gebruikt om het maximaal aantal compartimentniveaus met objecten in te stellen; in feite het maximale compartimentnummer dat op een systeem is toegestaan.
+
+Het commando man:setfmac[8] kan gebruikt worden om de MLS-labels te manipuleren. Gebruik het volgende commando om een label aan een object toe te kennen:
+
+[source,bash]
+....
+# setfmac mls/5 test
+....
+
+Gebruik het volgende commando om het MLS-label voor het bestand [.filename]#test# te verkrijgen:
+
+[source,bash]
+....
+# getfmac test
+....
+
+Dit is een samenvatting van de mogelijkheden van het beleid MLS. Een andere manier is om een meesterbeleidsbestand in [.filename]#/etc# aan te maken dat de MLS-informatie bevat en om dat bestand aan het commando `setfmac` te geven. Deze methode wordt uitgelegd nadat alle beleiden zijn behandeld.
+
+=== Verplichte Gevoeligheid plannen
+
+Met de beleidsmodule voor meerlaagse beveiliging plant een beheerder het beheren van gevoelige informatiestromen. Standaard zet het systeem met zijn natuur van lezen naar boven blokkeren en schrijven naar beneden blokkeren alles in een lage toestand. Alles is beschikbaar en een beheerder verandert dit langzaam tijdens de configuratiefase; waarbij de vertrouwelijkheid van de informatie toeneemt.
+
+Buiten de bovengenoemde drie basisopties voor labels, kan een beheerder gebruikers en groepen indelen als nodig om de informatiestroom tussen hun te blokkeren. Het is misschien gemakkelijker om naar de informatie te kijken in toestemmingsniveaus waarvoor bekende woorden bestaan, zoals `Vertrouwelijk`, `Geheim` en `Strikt Geheim`. Sommige beheerders zullen verschillende groepen aanmaken gebaseerd op verschillende projecten. Ongeacht de classificatiemethode moet er een goed overwogen plan bestaan voordat zo'n berperkend beleid wordt geïmplementeerd.
+
+Wat voorbeeldsituaties voor deze beveiligingsbeleidsmodule kunnen een e-commerce webserver, een bestandsserver die kritieke bedrijfsinformatie, en omgevingen van financiële instellingen zijn. De meest onwaarschijnlijke plaats zou een persoonlijk werkstation met slechts twee of drie gebruikers zijn.
+
+[[mac-biba]]
+== MAC-module Biba
+
+Modulenaam: [.filename]#mac_biba.ko#
+
+Kernelinstelling: `options MAC_BIBA`
+
+Opstartoptie: `mac_biba_load="YES"`
+
+De module man:mac_biba[4] laadt het beleid MAC Biba. Dit beleid werkt vaak zoals dat van MLS behalve dat de regels voor de informatiestroom lichtelijk zijn omgedraaid. Dit is gezegd om de neerwaartse stroom van gevoelige informatie te voorkomen terwijl het beleid MLS de opwaartse stroom van gevoelige informatie voorkomt; veel van deze sectie is dus op beide beleiden toepasbaar.
+
+In Biba-omgevingen wordt een "integriteits"-label op elk subject of object ingesteld. Deze labels bestaan uit hiërarchische graden, en niet-hiërarchische componenten. Een graad van een object of subject stijgt samen met de integriteit.
+
+Ondersteunde labels zijn `biba/low`, `biba/equal`, en `biba/high`; zoals hieronder uitgelegd:
+
+* Het label `biba/low` wordt gezien als de laagste integriteit die een object of subject kan hebben. Dit instellen op objecten of subjecten zal hun schrijftoegang tot objecten of subjecten die als hoog zijn gemarkeerd blokkeren. Ze hebben echter nog steeds leestoegang.
+* Het label `biba/equal` dient alleen geplaatst te worden op objecten die geacht te zijn uitgesloten van het beleid.
+* Het label `biba/high` staat schrijven naar objecten met een lager label toe maar sluit het lezen van dat object uit. Het wordt aangeraden om dit label te plaatsen op objecten die de integriteit van het gehele systeem beïnvloeden.
+
+Biba biedt:
+
+* Hiërarchische integriteitsniveaus met een verzameling niet-hiërarchische integriteitscategoriën;
+* Vaste regels: niet naar boven schrijven, niet naar beneden lezen (tegenovergestelde van MLS). Een subject kan schrijftoegang hebben naar objecten op hetzelfde niveau of daaronder, maar niet daarboven. Evenzo kan een subject leestoegang naar objecten op hetzelfde niveau of daarboven hebben, maar niet daaronder;
+* Integriteit (voorkomt oneigenlijk wijzigen van gegevens);
+* Integriteitsniveaus (in plaats van de gevoeligheidsniveaus van MLS)
+
+De volgende `sysctl`-tunables kunnen gebruikt worden om het Biba-beleid te manipuleren.
+
+* `security.mac.biba.enabled` kan gebruikt worden om het afdwingen van het Biba-beleid op de doelmachine aan en uit te zetten.
+* `security.mac.biba.ptys_equal` kan gebruikt worden om het Biba-beleid op man:pty[4]-apparaten uit te zetten.
+* `security.mac.biba.revocation_enabled` dwingt het herroepen van toegang tot objecten af als het label is veranderd om het subject te domineren.
+
+Gebruik de commando's `setfmac` en `getfmac` om de instellingen van het Biba-beleid op systeemobjecten te benaderen:
+
+[source,bash]
+....
+# setfmac biba/low test
+# getfmac test
+test: biba/low
+....
+
+=== Verplichte Integriteit plannen
+
+Integriteit, anders dan gevoeligheid, garandeert dat de informatie nooit door onvertrouwde gebruikers zal worden gemanipuleerd. Dit geldt ook voor informatie die tussen subjecten, objecten, of beiden wordt doorgegeven. Het verzekert dat gebruikers alleen de informatie kunnen wijzigen en in sommige gevallen zelfs benaderen die ze expliciet nodig hebben.
+
+De beveiligingsbeleidsmodule man:mac_biba[4] staat een beheerder in staat om te bepalen welke bestanden en programma's een gebruiker of gebruikers mogen zien en draaien terwijl het verzekert dat de programma's en bestanden vrij zijn van dreigingen en vertrouwt zijn door het systeem voor die gebruiker of groep van gebruikers.
+
+Tijdens de initiële planningsfase moet een beheerder bereid zijn om gebruikers in gradaties, niveaus, en gebieden in te delen. Gebruikers zal toegang tot niet alleen gegevens maar ook tot programma's en hulpmiddelen ontzegt worden zowel voordat en nadat ze beginnen. Het systeem zal standaard een hoog label instellen nadat deze beleidsmodule is ingeschakeld, en het is aan de beheerder om de verschillende gradaties en niveaus voor gebruikers in te stellen. In plaats van toestemmingsniveaus zoals boven beschreven te gebruiken, kan een goede planningsmethode onderwerpen bevatten. Bijvoorbeeld, geef alleen ontwikkelaars veranderingstoegang tot het broncoderepository, de broncodecompiler, en andere ontwikkelgereedschappen. Andere gebruikers zouden in andere groepen zoals testers, ontwerpers, of gewone gebruikers worden ingedeeld en zouden alleen leestoegang hebben.
+
+Met zijn natuurlijke beveiligingsbeheer kan een subject van lagere integriteit niet schijven naar een subject van hogere integriteit; een subject van hogere integriteit kan geen subject van lagere integriteit observeren of lezen. Een label op de laagst mogelijke graad instellen kan het ontoegankelijk voor subjecten maken. Sommige succesvolle omgevingen voor deze beveiligingsbeheermodule zijn een beperkte webserver, een ontwikkel- en testmachine, en broncoderepositories. Minder nuttige implementaties zouden een persoonlijk werkstation, een machine gebruikt als router, of een netwerkfirewall zijn.
+
+[[mac-lomac]]
+== MAC-module LOMAC
+
+Modulenaam: [.filename]#mac_lomac.ko#
+
+Kernelinstelling: `options MAC_LOMAC`
+
+Opstartoptie: `mac_lomac_load="YES"`
+
+In tegenstelling tot het beleid MAC Biba, staat het beleid man:mac_lomac[4] toegang tot objecten van lagere integriteit slechts toe nadat het integriteitsniveau is verlaagt om de integriteitsregels niet te verstoren.
+
+De MAC-versie van het laagwatermarkeringsintegreitsbeleid, niet te verwarren met de oudere implementatie van man:lomac[4], werkt bijna hetzelfde als Biba maar met de uitzondering dat er drijvende labels worden gebruikt om subjectdegradatie via een hulpcompartiment met graden te ondersteunen. Dit tweede compartiment heeft de vorm `[hulpgraad]`. Wanneer een lomac-beleid met een hulpgraad wordt toegekend, dient het er ongeveer uit te zien als: `lomac/10[2]` waar het getal twee (2) de hulpgraad is.
+
+Het beleid MAC LOMAC berust op het overal labelen van alle systeemobjecten met integriteitslabels, waardoor subjecten wordt toegestaan om te lezen van objecten van lage integriteit en om daarna het label op subject te degraderen om toekomstig schrijven naar objecten van hoge integriteit te voorkomen. Dit is de hierboven besproken optie `[hulpgraad]`, dus biedt het beleid grotere compatibiliteit en vereist het minder initiële configuratie dan Biba.
+
+=== Voorbeelden
+
+Net zoals bij de beleiden Biba en MLS kunnen de commando's `setfmac` en `setpmac` gebruikt worden om labels op systeemobjecten te plaatsen:
+
+[source,bash]
+....
+# setfmac /usr/home/trhodes lomac/high[low]
+# getfmac /usr/home/trhodes lomac/high[low]
+....
+
+Merk op dat de hulpgraad hier `low` is, dit is een mogelijkheid die alleen door het beleid MAC LOMAC wordt geboden.
+
+[[mac-implementing]]
+== Nagios in een MAC-jail
+
+De volgende demonstratie zal een veilige omgeving implementeren door verschillende MAC-modules te gebruiken met juist ingestelde beleiden. Dit is slechts een test en dient niet gezien te worden als het volledige antwoord op de beveiligingszorgen van iedereen. Gewoon een beleid implementeren en het verder negeren werkt nooit en kan rampzalig zijn in een productieomgeving.
+
+Voordat met dit proces wordt begonnen, moet de optie `multilabel` zijn geactiveerd op elk bestandssysteem zoals vermeld aan het begin van dit hoofdstuk. Nalatigheid zal in fouten resulteren. Zorg er ook voor dat de ports package:net-mgmt/nagios-plugins[], package:net-mgmt/nagios[], en package:www/apache22[] allemaal geïnstalleerde en geconfigureerd zijn en correct werken.
+
+=== Gebruikersklasse `insecure` maken
+
+Begin de procedure door de volgende gebruikersklasse toe te voegen aan het bestand [.filename]#/etc/login.conf#:
+
+[.programlisting]
+....
+insecure:\
+        :copyright=/etc/COPYRIGHT:\
+        :welcome=/etc/motd:\
+        :setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+        :path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+        :manpath=/usr/shared/man /usr/local/man:\
+        :nologin=/usr/sbin/nologin:\
+        :cputime=1h30m:\
+        :datasize=8M:\
+        :vmemoryuse=100M:\
+        :stacksize=2M:\
+        :memorylocked=4M:\
+        :memoryuse=8M:\
+        :filesize=8M:\
+        :coredumpsize=8M:\
+        :openfiles=24:\
+        :maxproc=32:\
+        :priority=0:\
+        :requirehome:\
+        :passwordtime=91d:\
+        :umask=022:\
+        :ignoretime@:\
+        :label=biba/10(10-10):
+....
+
+Voeg de volgende regel toe aan de standaard gebruikersklasse:
+
+[.programlisting]
+....
+:label=biba/high:
+....
+
+Wanneer dit voltooid is, moet het volgende commando gedraaid worden om de database te herbouwen:
+
+[source,bash]
+....
+# cap_mkdb /etc/login.conf
+....
+
+=== Opstartinstellingen
+
+Start nog niet opnieuw op, voeg alleen de volgende regels toe aan [.filename]#/boot/loader.conf# zodat de benodigde modules worden geladen tijdens systeeminitialisatie:
+
+[.programlisting]
+....
+mac_biba_load="YES"
+mac_seeotheruids_load="YES"
+....
+
+=== Gebruikers instellen
+
+Stel de gebruiker `root` in op de standaardklasse met:
+
+[source,bash]
+....
+# pw usermod root -L default
+....
+
+Alle gebruikersaccounts die geen `root` of systeemgebruikers zijn hebben nu een aanmeldklasse nodig. De aanmeldklasse is nodig om te voorkomen dat gebruikers geen toegang hebben tot gewone commando's als man:vi[1]. Het volgende `sh`-script zou moeten werken:
+
+[source,bash]
+....
+# for x in `awk -F: '($3 >= 1001) && ($3 != 65534) { print $1 }' \
+	/etc/passwd`; do pw usermod $x -L default; done;
+....
+
+Laat de gebruikers `nagios` en `www` in de klasse insecure vallen:
+
+[source,bash]
+....
+# pw usermod nagios -L insecure
+....
+
+[source,bash]
+....
+# pw usermod www -L insecure
+....
+
+=== Het contextbestand aanmaken
+
+Nu dient een contextbestand aangemaakt te worden; het volgende voorbeeld dient geplaatst te worden in [.filename]#/etc/policy.contexts#.
+
+[.programlisting]
+....
+# Dit is het standaard-BIBA-beleid voor dit systeem.
+# Systeem:
+/var/run                        biba/equal
+/var/run/*                      biba/equal
+
+/dev                            biba/equal
+/dev/*                          biba/equal
+
+/var                            biba/equal
+/var/spool                      biba/equal
+/var/spool/*                    biba/equal
+
+/var/log                        biba/equal
+/var/log/*                      biba/equal
+
+/tmp                            biba/equal
+/tmp/*                          biba/equal
+/var/tmp                        biba/equal
+/var/tmp/*                      biba/equal
+
+/var/spool/mqueue               biba/equal
+/var/spool/clientmqueue         biba/equal
+
+#Voor Nagios:
+/usr/local/etc/nagios
+/usr/local/etc/nagios/*         biba/10
+/var/spool/nagios               biba/10
+/var/spool/nagios/*             biba/10
+
+#Voor Apache:
+/usr/local/etc/apache           biba/10
+/usr/local/etc/apache/*         biba/10
+....
+
+Dit beleid zal beveiliging afdwingen door beperkingen aan de informatiestroom te stellen. In deze specifieke configuratie mogen gebruikers, inclusief `root`, nooit toegang hebben tot Nagios. Instellingenbestanden en processen die deel zijn van Nagios zullen geheel in zichzelf of in een jail zitten.
+
+Dit bestand kan nu in ons systeem worden gelezen door ons systeem door het volgende commando uit te voeren:
+
+[source,bash]
+....
+# setfsmac -ef /etc/policy.contexts /
+# setfsmac -ef /etc/policy.contexts /
+....
+
+[NOTE]
+====
+De bovenstaande indeling van het bestandssysteem kan afhankelijk van de omgeving verschillen; het moet echter op elk bestandssysteem gedraaid worden.
+====
+
+Het bestand [.filename]#/etc/mac.conf# dient als volgt in de hoofdsectie gewijzigd te worden:
+
+[.programlisting]
+....
+default_labels file ?biba
+default_labels ifnet ?biba
+default_labels process ?biba
+default_labels socket ?biba
+....
+
+=== Het netwerk activeren
+
+Voeg de volgende regel toe aan [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+security.mac.biba.trust_all_interfaces=1
+....
+
+En voeg het volgende toe aan de instellingen van de netwerkkaart opgeslagen in [.filename]#rc.conf#. Als de primaire Internetconfiguratie via DHCP wordt gedaan, kan het nodig zijn om dit handmatig te configureren telkens nadat het systeem is opgestart:
+
+[.programlisting]
+....
+maclabel biba/equal
+....
+
+=== De configuratie testen
+
+Controleer dat de webserver en Nagios niet tijdens de systeeminitialisatie worden gestart, en start opnieuw op. Controleer dat de gebruiker `root` geen enkel bestand in de instellingenmap van Nagios kan benaderen. Als `root` het commando man:ls[1] op [.filename]#/var/spool/nagios# kan uitvoeren, is er iets verkeerd. Anders zou er een fout "Permission denied" teruggegeven moeten worden.
+
+Als alles er goed uitziet, kunnen Nagios, Apache, en Sendmail nu gestart worden op een manier die past in het beveiligingsbeleid. De volgende commando's zorgen hiervoor:
+
+[source,bash]
+....
+# cd /etc/mail &↦ make stop && \
+setpmac biba/equal make start && setpmac biba/10\(10-10\) apachectl start && \
+setpmac biba/10\(10-10\) /usr/local/etc/rc.d/nagios.sh forcestart
+....
+
+Controleer nogmaals om er zeker van te zijn dat alles juist werkt. Indien niet, controleer dan de logbestanden of de foutmeldingen. Gebruik het hulpprogramma man:sysctl[8] om de beveiligingsbeleidsmodule man:mac_biba[4] uit te schakelen en probeer om alles opnieuw op te starten, zoals gewoonlijk.
+
+[NOTE]
+====
+De gebruiker `root` kan zonder angst de afgedwongen beveiliging veranderen en de instellingenbestanden bewerken. Het volgende commando staat toe om het beveiligingsbeleid naar een lagere graad te degraderen voor een nieuw voortgebrachte shell:
+
+[source,bash]
+....
+# setpmac biba/10 csh
+....
+
+Om te voorkomen dat dit gebeurt, kan de gebruiker via man:login.conf[5] in een bereik worden gedwongen. Als man:setpmac[8] probeert om een commando buiten het bereik van het compartiment te draaien, zal er een fout worden teruggegeven en wordt het commando niet uitgevoerd. Zet in dit geval root op `biba/high(high-high)`.
+====
+
+[[mac-userlocked]]
+== Gebruikers afsluiten
+
+Dit voorbeeld gaat over een relatief klein opslagsysteem met minder dan vijftig gebruikers. Gebruikers kunnen zich aanmelden, en mogen zowel gegevens opslaan als bronnen benaderen.
+
+Voor dit scenario kunnen man:mac_bsdextended[4] gecombineerd met man:mac_seeotheruids[4] naast elkaar bestaan en zowel toegang tot systeemobjecten als tot gebruikersprocessen ontzeggen.
+
+Begin door de volgende regel aan [.filename]#/boot/loader.conf# toe te voegen:
+
+[.programlisting]
+....
+mac_seeotheruids_load="YES"
+....
+
+Het beveiligingsbeleidsmodule man:mac_bsdextended[4] kan door volgende variabele in rc.conf geactiveerd worden:
+
+[.programlisting]
+....
+ugidfw_enable="YES"
+....
+
+De standaardregels in [.filename]#/etc/rc.bsdextended# zullen tijdens de systeeminitialisatie worden geladen; het kan echter nodig zijn om de standaardregels te wijzigen. Aangezien van deze machine alleen verwacht wordt dat het gebruikers bedient, kunnen alle regels uitgecommentarieerd blijven behalve de laatste twee. Deze forceren het standaard laden van systeemobjecten die eigendom zijn van gebruikers.
+
+Voeg de benodigde gebruikers toe aan deze machine en start opnieuw op. Probeer, voor testdoeleinden, u aan te melden als een andere gebruiker over twee consoles. Draai het commando `ps aux` om te zien of processen van andere gebruikers zichtbaar zijn. Probeer om man:ls[1] te draaien op de thuismap van een andere gebruiker, dit zou moeten mislukken.
+
+Probeer niet te testen met de gebruiker `root` tenzij de specifieke ``sysctl``'s om supergebruikertoegang te blokkeren zijn aangepast.
+
+[NOTE]
+====
+Wanneer een nieuwe gebruiker is toegevoegd, zit de man:mac_bsdextended[4]-regel van die gebruiker niet in de lijst van regelverzamelingen. Om de regelverzameling snel bij te werken, kan simpelweg de beveiligingsbeleidsmodule worden herladen met de gereedschappen man:kldunload[8] en man:kldload[8].
+====
+
+[[mac-troubleshoot]]
+== Problemen oplossen met het MAC-raamwerk
+
+Tijdens de ontwikkeling hebben een aantal gebruikers problemen aangegeven met normale instellingen. Hieronder worden een aantal van die problemen beschreven:
+
+=== De optie `multilabel` kan niet ingeschakeld worden op [.filename]#/#
+
+De vlag `multilabel` blijft niet ingeschakeld op de rootpartitie ([.filename]#/#)!
+
+Het lijkt er inderdaad op dat een paar procent van de gebruikers dit probleem heeft. Nadere analyse van het probleem doet vermoeden dat deze zogenaamde "bug" het resultaat is van òfwel onjuiste documentatie òfwel verkeerde interpretatie van de documentatie. Hoe het probleem ook is ontstaan, met de volgende stappen is het te verhelpen:
+
+[.procedure]
+====
+. Wijzig [.filename]#/etc/fstab# en stel de rootpartitie in op `ro` voor alleen-lezen.
+. Herstart in enkele-gebruikersmodus.
+. Draai `tunefs -l enable` op [.filename]#/#.
+. Herstart in normale modus.
+. Draai `mount -urw`[.filename]#/# en wijzig `ro` terug in `rw` in [.filename]#/etc/fstab# en start het systeem opnieuw.
+. Controleer de uitvoer van `mount` om zeker te zijn dat `multilabel` juist is ingesteld op het rootbestandssysteem.
+====
+
+=== X11-server start niet na MAC
+
+Na het instellen van een beveiligde omgeving met MAC start X niet meer!
+
+Dit kan komen door de MAC-beleidseenheid `partition` of door een verkeerde labeling van een van de MAC-labeling beleidseenheden. Probeer als volgt te debuggen:
+
+[.procedure]
+====
+. Controleer de foutmelding. Als de gebruiker in de klasse `insecure` zit, kan de beleidseenheid `partition` het probleem zijn. Zet de klasse voor de gebruiker terug naar de klasse `default` en herbouw de database met het commando `cap_mkdb`. Ga naar stap twee als hiermee het probleem niet is opgelost.
+. Controleer de labelbeleidseenheden nog een keer. Stel zeker dat het beleid voor de bewuste gebruiker, de X11-applicatie, en de onderdelen van [.filename]#/dev# juist zijn ingesteld.
+. Als geen van beide methodes het probleem oplossen, stuur dan de foutmelding en een beschrijving van de omgeving naar de TrustedBSD-discussielijsten van de http://www.TrustedBSD.org[TrustedBSD] website of naar de {freebsd-questions} mailinglijst.
+====
+
+=== Error: man:_secure_path[3] cannot stat [.filename]#.login_conf#
+
+Bij het wisselen van de gebruiker `root` naar een andere gebruiker in het systeem, verschijnt de foutmelding `_secure_path: unable to state .login_conf`.
+
+Deze melding komt meestal voor als de gebruiker een hogere labelinstelling heeft dan de gebruiker waarnaar wordt gewisseld. Als bijvoorbeeld gebruiker `joe` een standaardlabel `biba/low` heeft, dan kan gebruiker `root`, die een label `biba/high` heeft, de thuismap van `joe` niet zien. Dit gebeurt zonder rekening te houden met de mogelijkheid dat `root` met `su` de identiteit van `joe` heeft aangenomen. In dit scenario staat het integriteitsmodel van Biba niet toe dat `root` objecten kan zien van een lager integriteitsniveau.
+
+=== De gebruikersnaam `root` is stuk!
+
+In normale, of zelfs in enkelegebruikersmodus, wordt `root` niet herkend. Het commando `whoami` geeft 0 (nul) terug en `su` heeft als resultaat `who are you?`. Wat is er aan de hand?
+
+Dit kan gebeuren als een labelbeleid is uitgeschakeld, òfwel door man:sysctl[8] òf doordat de beleidsmodule niet meer is geladen. Als de beleidseenheid (tijdelijk) is uitgeschakeld dan moet de database met aanmeldmogelijkheden opnieuw worden ingesteld, waarbij de optie `label` wordt verwijderd. Er dient voor te worden zorggedragen dat het bestand [.filename]#login.conf# wordt ontdaan van alle opties met `label`, waarna de database opnieuw gebouwd kan worden met `cap_mkdb`.
+
+Dit kan ook gebeuren als een beleid toegang verhinderd tot het bestand of de database [.filename]#master.passwd#. Meestal wordt dit veroorzaakt door een beheerder die het bestand veranderd onder een label welke conflicteert met het globale beleid dat gebruikt wordt op het systeem. In deze gevallen wordt de gebruikersinformatie gelezen door het systeem en wordt de toegang geblokkeerd omdat het bestand het nieuwe label erft. Zet het beleid uit door middel van man:sysctl[8] en alles zou weer normaal moeten zijn.

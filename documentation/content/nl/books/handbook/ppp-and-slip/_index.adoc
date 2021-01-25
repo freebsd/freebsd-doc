@@ -1,0 +1,1923 @@
+---
+title: Hoofdstuk 27. PPP en SLIP
+part: Deel IV. Netwerkcommunicatie
+prev: books/handbook/serialcomms
+next: books/handbook/mail
+---
+
+[[ppp-and-slip]]
+= PPP en SLIP
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Inhoudsopgave
+:table-caption: Tabel
+:figure-caption: Afbeelding
+:example-caption: Voorbeeld
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 27
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/ppp-and-slip/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/ppp-and-slip/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/ppp-and-slip/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/nl/mailing-lists.adoc[]
+include::shared/nl/teams.adoc[]
+include::shared/nl/urls.adoc[]
+
+toc::[]
+
+[[ppp-and-slip-synopsis]]
+== Overzicht
+
+FreeBSD heeft een aantal manieren om de ene computer met de andere te verbinden. Om een netwerk of internet verbinding op te zetten door een inbelmodem, of om anderen toe te staan dit te doen door de machine heen vereist het gebruik van PPP en SLIP. Dit hoofdstuk beschrijft het opzetten van op modems gebaseerde diensten in meer detail.
+
+Na het lezen van dit hoofdstuk weet u:
+
+* Hoe gebruikers PPP opgezet kan worden.
+* Hoe kernel-PPP opgezet kan worden (alleen voor FreeBSD 7.X).
+* Hoe PPPoE opgezet kan worden (PPP over Ethernet).
+* Hoe PPPoA opgezet kan worden (PPP over ATM).
+* Hoe een SLIP-server en cliënt opgezet kan worden en hoe dat geconfigureerd wordt (alleen voor FreeBSD 7.X).
+
+Voordat dit hoofdstuk gelezen wordt, moet u:
+
+* Bekend zijn met basis netwerk terminologie.
+* De basis en doeleinden van een inbel verbinding en van PPP en/of SLIP.
+
+U kunt zich afvragen wat het verschil is tussen gebruiker-PPP en kernel-PPP. Het antwoord is simpel: gebruiker-PPP verwerkt inkomend en uitgaande data in het gebruikersland in plaats van in de kernel. Dit is duur in de zin van het kopiëren van de data tussen de kernel en het gebruikersland, maar levert meer mogelijkheden voor de PPP implementatie. Gebruikers PPP gebruikt het [.filename]#tun# apparaat om te communiceren met de buitenwereld. Kernel-PPP maakt gebruik van het [.filename]#ppp# apparaat.
+
+[NOTE]
+====
+Voor de rest van dit hoofdstuk, zal gebruiker-PPP gebruikt worden als ppp tenzij er onderscheid gemaakt moet worden met andere PPP software zoals pppd. Tenzij anders vermeld moeten alle uitgelegde commando's in dit hoofdstuk gestart worden als de `root` gebruiker.
+====
+
+[[userppp]]
+== Gebruikmaken van gebruiker-PPP
+
+=== Gebruiker-PPP
+
+==== Vereisten
+
+Dit document gaat er vanuit dat u de volgende punten beschikbaar heeft:
+
+* Een account bij een Internet Service Provider (ISP) waarmee verbinding gemaakt wordt door middel van PPP.
+* Een modem of een ander apparaat verbonden met uw PC en correct geconfigureerd zodat u verbinding kan maken met uw ISP.
+* De inbelnummers van uw ISP.
+* Uw loginnaam en wachtwoord (danwel een combinatie van een standaard UNIX(R)-stijl login en wachtwoord of een PAP of CHAP login en wachtwoordcombinatie).
+* Het IP-adres van één of meerdere naamservers. Normaal gesproken krijgt u twee IP adressen van uw ISP om te gebruiken. Als u er echter geen één gekregen heeft, kunt u het commando `enable dns` gebruiken in [.filename]#ppp.conf# en ppp zal de naamservers voor u configureren. Deze optie is afhankelijk van de PPP implementatie van de ISP, welke DNS onderhandeling moet ondersteunen.
+
+De volgende informatie kan aangeleverd worden door uw ISP maar is niet echt noodzakelijk:
+
+* Het IP-adres van de router van uw ISP. De router is de machine waarmee u verbinding maakt en welke ingesteld wordt als de _standaard route_. Als u deze informatie niet heeft, kunt u een willekeurig adres verzinnen waarna de PPP server van de ISP het juiste adres vertelt zodra u verbinding maakt.
++ 
+Dit IP-adres wordt door ppp `HISADDR` genoemd.
+* Het netwerkmasker wat gebruikt moet worden. Als uw ISP deze niet heeft opgegeven, kan `255.255.255.255` gebruikt worden.
+* Als uw ISP u een vast IP-adres en hostnaam levert, kunt u deze invoeren. In andere gevallen bepaalt de andere kant welk adres er uitgegeven wordt.
+
+Als u niet in bezit bent van de vereiste informatie, moet u contact opnemen met uw ISP.
+
+[NOTE]
+====
+Door de rest van dit hoofdstuk worden in veel van de voorbeelden configuratie bestanden genummerd per regel. Deze nummers dienen alleen als hulp voor de presentatie en discussie en zijn verder niet bedoeld om daadwerkelijk geïmplementeerd te worden. Een juiste inspringing met tabs en spaties zijn daarbij ook belangrijk.
+====
+
+==== Automatische configuratie van PPP
+
+Zowel `ppp` als `pppd` (de implementatie van PPP op kernel niveau) gebruiken de configuratie bestanden die zich in de map [.filename]#/etc/ppp# bevinden. Voorbeelden configuraties voor gebruiker-PPP kunnen gevonden worden in [.filename]#/usr/shared/examples/ppp/#.
+
+Het configureren van `ppp` vereist dat u een aantal bestanden bewerkt, afhankelijk van uw eisen. Wat u moet invoeren is deels afhankelijk van wat uw ISP u aanbied met oog op statische IP-adressen (lees u krijgt een statisch adres welke u altijd gebruikt) of dynamisch (lees: uw IP-adres veranderd elke keer als u verbinding maakt met uw ISP).
+
+[[userppp-staticIP]]
+===== PPP en statische IP-adressen
+
+U moet het [.filename]#/etc/ppp/ppp.conf# bewerken. Het zou dan als volgend eruit moeten zien:
+
+[NOTE]
+====
+Regels die eindigen met een `:` starten in de eerste kolom (het begin van de regel) - alle andere regels moeten inspringen zoals getoond door middel van spaties of tabs.
+====
+
+[.programlisting]
+....
+1     default:
+2       set log Phase Chat LCP IPCP CCP tun command
+3       ident user-ppp VERSION (built COMPILATIONDATE)
+4       set device /dev/cuau0
+5       set speed 115200
+6       set dial "ABORT BUSY ABORT NO\\sCARRIER TIMEOUT 5 \
+7                 \"\" AT OK-AT-OK ATE1Q0 OK \\dATDT\\T TIMEOUT 40 CONNECT"
+8       set timeout 180
+9       enable dns
+10
+11    provider:
+12      set phone "(123) 456 7890"
+13      set authname foo
+14      set authkey bar
+15      set login "TIMEOUT 10 \"\" \"\" gin:--gin: \\U word: \\P col: ppp"
+16      set timeout 300
+17      set ifaddr x.x.x.x y.y.y.y 255.255.255.255 0.0.0.0
+18      add default HISADDR
+....
+
+Regel 1:::
+Deze regel identificeert de standaard regel. Commando's in deze regel worden automatisch gestart zodra ppp gestart wordt.
+
+Regel 2:::
+Zet de log paramaters aan. Zodra de configuratie naar verwachting werkt, moet deze regel aangepast worden naar:
++
+[.programlisting]
+....
+set log phase tun
+....
++
+om te voorkomen dat er extreem grote log files gemaakt worden.
+
+Regel 3:::
+Vertelt PPP hoe het zich moet identificeren aan de router aan de andere kant, als deze problemen heeft met het onderhandelen en het opzetten van de link en het leveren van informatie die de beheerders van de andere kant nuttig kunnen vinden om zulke problemen te onderzoeken.
+
+Regel 4:::
+Identificeert het apparaat waarmee het modem verbonden is. [.filename]#COM1# is [.filename]#/dev/cuau0# en [.filename]#COM2# is [.filename]#/dev/cuau1#.
+
+Regel 5:::
+Stelt de snelheid in waarmee verbinding gemaakt wordt. Als 115200 niet werkt (wat wel zou moeten kunnen met elk nieuw modem), probeert u dan de instelling van 38400.
+
+Regels 6 & 7:::
+De inbelregel. Gebruiker-PPP gebruikt een "expect-send" syntax wat vergelijkbaar is met het man:chat[8] programma. Bekijk de handleiding voor meer informatie over de mogelijkheden van deze taal.
++
+Let op dat dit commando doorgaat op de volgende regel zodat deze leesbaar blijft. Elk commando in [.filename]#ppp.conf# kan dit doen als het laatste karakter op een regel, het \ karakter is.
+
+Regel 8:::
+Stelt de idle timeout in voor een link. 180 seconden is standaard, dus deze regel is puur cosmetisch.
+
+Regel 9:::
+Vertelt PPP om de andere kant te vragen om een bevestiging van de lokale naamserver instellingen. Als u een lokale naamserver draait moet deze regel uitgecommentarieërd of verwijderd worden.
+
+Regel 10:::
+Een blanco regel voor de leesbaarheid. Blanco regels worden door PPP genegeerd.
+
+Regel 11:::
+Identificeert een sectie voor de provider die "provider" genoemd wordt. Dit kan gewijzigd worden in de naam van uw provider zodat er later gebruik gemaakt van worden bij de optie `load _provider_` om een verbinding op te zetten.
+
+Regel 12:::
+Stelt het telefoonnummer in voor deze provider. Meerdere telefoonnummers kunnen gespecificeerd worden door gebruik te maken van de dubbele punt (`:`) of het pipe karakter (`|`) als scheidingsteken. Het verschil tussen de twee scheidingstekens wordt beschreven in de man:ppp[8] handleiding. Om samen te vatten, als u wilt rouleren tussen de nummers gebruikt u dan een dubbelepunt. Als u altijd het eerste nummer als eerste wilt draaien en alleen de andere nummers wilt draaien als het eerste nummer niet werkt, gebruik dan het pipe karakter. Quote altijd de hele set van telefoonnummers zoals getoond.
++
+U moet het telefoonnummer citeren met dubbele quotes (`"`) als er enige intentie is in het gebruik van spaties in het telefoonummer. Dit kan een simpele, maar subtiele fout creeëren.
+
+Regels 13 & 14:::
+Identificeert de gebruikersnaam en het wachtwoord. Wanneer gebruik gemaakt wordt van een UNIX(R) stijl login worden deze waarden verwezen door het `set login` commando door gebruik te maken van de \U en \P variabelen. Wanneer er verbinding gemaakt wordt door PPP en CHAP worden deze waardes gebruikt tijdens het authenticeren.
+
+Regels 15:::
+Als u gebruik maakt van PPP en CHAP, zal er geen login op dit moment zijn, en moet deze regel uitgecommentarieërd of verwijderd worden. Zie het <<userppp-PAPnCHAP,PAP en CHAP authenticatie>> hoofdstuk voor meer details.
++
+De login regel is hetzelfde als de chat-achtige syntax van de inbelregel. In dit voorbeeld werkt de reegl voor een dienst wiens login sessie als volgt eruit ziet:
++
+[source,bash]
+....
+J. Random Provider
+login: foo
+password: bar
+protocol: ppp
+....
++
+U moet dit script aanpassen om aan uw behoeften te voldoen. Wanneer u dit script voor het eerst schrijft, moet u ervoor zorgen dat u de "chat" log optie heeft aangezet zodat u kunt bepalen of de communicatie gaat zoals verwacht.
+
+Regel 16:::
+Selt de standaard idle timeout in (in seconden) voor de connectie. Hier wordt de connectie automatisch afgesloten na 300 seconden van inactiviteit. Als u nooit een timeout wilt krijgen, kunt u de waarde op nul zetten of gebruik maken van de optie `-ddial` op de commando regel.
+
+Regel 17:::
+Stelt het interface adres in. De regel _x.x.x.x_ moet vervangen worden door het IP-adres dat uw provider aan u heeft uitgegeven. De regel _y.y.y.y_ moet vervangen worden door het IP-adres dat uw provider aan u heeft gegeven voor de router (de machine waarmee u verbinding maakt). Als uw ISP u geen router adres heeft gegeven, gebruik dan `10.0.0.2/0`. Als u gebruik moet maken van een "gegokt", zorg ervoor dat er een regel staat in [.filename]#/etc/ppp/ppp.linkup# zoals beschreven in de instructies voor <<userppp-dynamicIP,PPP en dynamische IP adressen>>. Als deze regel weggelaten wordt kan `ppp` niet in `-auto` mode starten.
+
+Regel 18:::
+Voegt een standaard routering toe naar uw providers router. Het speciale `HISADDR` woord, wordt vervangen door het router adres zoals gespecificeerd op regel 17. Het is belangrijk dat deze regel na regel 17 komt, anders is `HISADDR` nog niet geïnitialiseerd.
++
+Als u ppp niet in `-auto` mode wilt draaien, moet deze regel verplaatst worden naar het [.filename]#ppp.linkup# bestand.
+
+Het is niet nodig om een regel toe te voegen aan [.filename]#ppp.linkup# wanneer u een statisch IP-adres krijgt en ppp met de `-auto` mode gestart is omdat uw routerings tabel al correcte regels heeft voordat u verbinding maakt. U kunt echter een regel aanmaken om programma's te starten nadat de verbinding opgezet is. Dit wordt later uitgelegd met een voorbeeld over sendmail.
+
+Voorbeeld van configuratiebestanden kunnen gevonden worden in de map [.filename]#usr/shared/examples/ppp#.
+
+[[userppp-dynamicIP]]
+===== PPP en dynamische IP-adressen
+
+Als uw provider geen statisch IP-adres aanlevert kan `ppp` geconfigureerd worden om het lokale en het remote adres te onderhandelen. Dit wordt gedaan door het "gokken" van een IP-adres en PPP toestaan dit adres te corrigeren door gebruik te maken van het IP Configuration Protocol (IPCP) nadat er een verbinding opgezet is. De [.filename]#ppp.conf# configuratie is verders hetzelfde als voor de <<userppp-staticIP,PPP en statische IP adressen>>, met de volgende wijziging:
+
+[.programlisting]
+....
+17      set ifaddr 10.0.0.1/0 10.0.0.2/0 255.255.255.255 0.0.0.0
+....
+
+Nogmaals, het regelnummer hoeft niet te worden toegevoegd, deze dient puur ter referentie. Indentatie van minstens één spatie is vereist.
+
+Regel 17:::
+Het nummer achter het `/` karakter is het aantal netwerk master bits van het adres die ppp eist. Het is mogelijk dat u IP-adressen wilt gebruiken die meer van toepassing zijn op uw situatie, maar bovenstaand voorbeeld zal altijd werken.
++
+Het laatste argument (`0.0.0.0`) vertelt PPP om te onderhandelen met het adres `0.0.0.0` in plaats van met `10.0.0.1` en is benodigd voor sommige ISPs. Gebruik `0.0.0.0` niet als eerste argument voor het commando `set ifaddr`, omdat dit ervoor zorgt dat PPP geen initiële route kan opzetten in `-auto` mode.
+
+Als u niet draait in `-auto` mode, moet u een nieuwe regel toevoegen aan [.filename]#/etc/ppp/ppp.linkup#. [.filename]#ppp.linkup# wordt uitgevoerd nadat een connectie is opgezet. Op dit moment krijgt `ppp` het interface adres en is het mogelijk om regels toe te voegen aan de route tabel:
+
+[.programlisting]
+....
+1     provider:
+2      add default HISADDR
+....
+
+Regel 1:::
+Bij het tot stand brengen van een verbinding zal `ppp` kijken voor een corresponderende regel in [.filename]#ppp.linkup# volgens de volgende criteria: Als eerste, probeert het hetzelfde label te vinden zoals gebruikt in [.filename]#ppp.conf#. Als dat mislukt, zoek dan een regel waarin het IP-adres van onze router in voorkomt. Deze regel bevat een IP stijl van 4 octetten. Als nu nog steeds geen corresponderende regel gevonden is wordt er gezocht naar de `HISADDR` regel.
+
+Regel 2:::
+Deze regel verteld `ppp` om een standaard routering toe te voegen die wijst richting `HISADDR`. `HISADDR` wordt vervangen door het IP-adres van de router zoals onderhandeld door IPCP.
+
+Zie de `pmdemand` regel in de bestanden [.filename]#/usr/shared/examples/ppp/ppp.conf.sample# en [.filename]#/usr/shared/examples/ppp/ppp.linkup.sample# voor een gedetailleerd voorbeeld.
+
+===== Het ontvangen van binnenkomende gesprekken
+
+Wanneer ppp geconfigureerd is om inkomende gesprekken te ontvangen op een machine die verbonden is met een LAN, moet u beslissen of er pakketten worden doorgestuurd naar het LAN. Als u dat doet, moet u de andere kant een IP-adres geven uit het subnet van uw LAN, en zult u gebruik moeten maken van het command `enable proxy` in het [.filename]#/etc/ppp/ppp.conf# bestand. U zult ook moeten controleren of het [.filename]#/etc/rc.conf# bestand het volgende bevat:
+
+[.programlisting]
+....
+gateway_enable="YES"
+....
+
+===== Welke getty?
+
+crossref:serialcomms[dialup,Het configureren van FreeBSD voor inbel diensten] levert een goede beschrijving van het inschakelen van inbeldiensten door gebruik te maken van man:getty[8].
+
+Een alternatief voor `getty` is http://mgetty.greenie.net/[mgetty] (van de port package:comms/mgetty+sendfax[]), een betere versie van `getty` ontworpen voor onder andere inbellijnen.
+
+De voordelen van het gebruik van `mgetty` is dat het actief _communiceert_ met modems, wat betekent dat als de port uitgeschakeld is in [.filename]#/etc/ttys#, het modem de telefoon niet zal beantwoorden.
+
+Latere versies van `mgetty` (vanaf 0.99beta en later) ondersteunen ook het automatisch detecteren van PPP stromen waardoor cliënten zonder extra scripting toegang kunnen krijgen tot uw server.
+
+Raadpleeg naar <<userppp-mgetty,Mgetty en AutoPPP>> voor meer informatie over `mgetty`.
+
+===== PPP Permissies
+
+Het `ppp` commando moet normaal gesproken gestart worden door de `root` gebruiker. Als u echter wilt toestaan dat `ppp` in server mode gestart wordt door een normale gebruiker door het uitvoeren van `ppp`, zoals beschreven hieronder, moet deze gebruiker permissie krijgen om `ppp` te starten. Dit kan gedaam worden door de gebruiker toe te voegen aan de `network` groep van het [.filename]#/etc/group# bestand.
+
+U moet de gebruiker ook toegang geven tot één of meerdere secties van het configuratie bestand door gebruik te maken van het `allow` commando:
+
+[.programlisting]
+....
+allow users fred mary
+....
+
+Als dit commando wordt gebruikt in de `default` sectie, geeft ppp alle opgegeevn gebruikers toegang tot alle opties.
+
+===== PPP shells voor dynamische IP-gebruikers
+
+Creeër een bestand genaamd [.filename]#/etc/ppp/ppp-shell# welke de volgende gegevens bevat:
+
+[.programlisting]
+....
+#!/bin/sh
+IDENT=`echo $0 | sed -e 's/^.*-\(.*\)$/\1/'`
+CALLEDAS="$IDENT"
+TTY=`tty`
+
+if [ x$IDENT = xdialup ]; then
+        IDENT=`basename $TTY`
+fi
+
+echo "PPP voor $CALLEDAS op $TTY"
+echo "Starten van PPP voor $IDENT"
+
+exec /usr/sbin/ppp -direct $IDENT
+....
+
+Dit script moet uitvoerbaar zijn. Ook moet er een symbolische link gemaakt worden naar dit script met de naam [.filename]#ppp-dialup# door gebruik te maken van de volgende commando's:
+
+[source,bash]
+....
+# ln -s ppp-shell /etc/ppp/ppp-dialup
+....
+
+U moet dit script gebruiken als de _shell_ voor al uw inbel gebruikers. Dit is een voorbeeld uit [.filename]#/etc/passwd# voor een PPP inbelgebruiker met de gebruikersnaam `pchilds` (Let op, u mag niet direct het wachtwoord bestand bewerken, gebruik daarom het programma man:vipw[8]).
+
+[.programlisting]
+....
+pchilds:*:1011:300:Peter Childs PPP:/home/ppp:/etc/ppp/ppp-dialup
+....
+
+Creeër vervolgens een map [.filename]#/home/ppp# die door iedereen gelezen en beschreven kan worden en zet daar de volgende 0 byte grote bestanden in:
+
+[source,bash]
+....
+-r--r--r--   1 root     wheel           0 May 27 02:23 .hushlogin
+-r--r--r--   1 root     wheel           0 May 27 02:22 .rhosts
+....
+
+welke voorkomen dat [.filename]#/etc/motd# getoond wordt.
+
+===== PPP shells voor statische IP-gebruikers
+
+Creeër het [.filename]#ppp-shell# bestand zoals hierboven, en voor elk account met een statisch toegewezen IP-adres creeërt u een symbolische link naar [.filename]#ppp-shell#.
+
+Als u bijvoorbeeld drie inbel gebruikers hebt genaamd `fred`, `sam` en `mary` waar u een /24 CIDR netwerk voor routeert, moet u het volgende typen:
+
+[source,bash]
+....
+# ln -s /etc/ppp/ppp-shell /etc/ppp/ppp-fred
+# ln -s /etc/ppp/ppp-shell /etc/ppp/ppp-sam
+# ln -s /etc/ppp/ppp-shell /etc/ppp/ppp-mary
+....
+
+Elk van deze inbelgebruikers moet de shell ingesteld hebben op de symbolische link die hierboven is gecreeërd (bijvoorbeeld ``mary``'s shell moet zijn [.filename]#/etc/ppp/ppp-mary#).
+
+===== Het instellen van [.filename]#ppp.conf# voor dynamische IP-gebruikers
+
+Het [.filename]#/etc/ppp/ppp.conf# bestand moet iets zoals hieronder bevatten:
+
+[.programlisting]
+....
+default:
+  set debug phase lcp chat
+  set timeout 0
+
+ttyu0:
+  set ifaddr 203.14.100.1 203.14.100.20 255.255.255.255
+  enable proxy
+
+ttyu1:
+  set ifaddr 203.14.100.1 203.14.100.21 255.255.255.255
+  enable proxy
+....
+
+[NOTE]
+====
+Het inspringen is belangrijk.
+====
+
+De `default:` sectie wordt altijd geladen. Voor elke inbellijn die ingeschakeld is in [.filename]#/etc/ttys# moet een soortgelijke regel worden gemaakt als die voor `ttyu0:` hierboven. Elke regel moet een uniek IP-adres krijgen van uw pool van IP-adressen voor dynamische gebruikers.
+
+===== Het instellen van [.filename]#ppp.conf# voor statische IP-gebruikers.
+
+Samen met de inhoud van het voorbeeld [.filename]#/usr/shared/examples/ppp/ppp.conf# bestand hierboven moet een sectie aangemaakt worden voor elke van de statisch ingestelde inbelgebruikers. We gaan door met ons `fred`, `sam` en `mary` voorbeeld.
+
+[.programlisting]
+....
+fred:
+  set ifaddr 203.14.100.1 203.14.101.1 255.255.255.255
+
+sam:
+  set ifaddr 203.14.100.1 203.14.102.1 255.255.255.255
+
+mary:
+  set ifaddr 203.14.100.1 203.14.103.1 255.255.255.255
+....
+
+Het [.filename]#/etc/ppp/ppp.linkup# bestand moet ook informatie over routeringen bevatten voor elke statische IP-gebruiker waar nodig. De regel hieronder voegt een routering toe voor het `203.14.201.0/24` netwerk via de ppp link van de gebruiker.
+
+[.programlisting]
+....
+fred:
+  add 203.14.101.0 netmask 255.255.255.0 HISADDR
+
+sam:
+  add 203.14.102.0 netmask 255.255.255.0 HISADDR
+
+mary:
+  add 203.14.103.0 netmask 255.255.255.0 HISADDR
+....
+
+[[userppp-mgetty]]
+===== `mgetty` en AutoPPP
+
+Standaard staat de optie `AUTO_PPP` in de port package:comms/mgetty+sendfax[] welke `mgetty` in staat stelt om de LCP fase van PPP connecties te detecteren en aan de hand daarvan automatisch een ppp shell te creeëren. Echter, de standaard login procedure vindt in deze mode niet plaats, waardoor het nodig is om de gebruikers te authenticeren door middel van PAP of CHAP.
+
+De volgende sectie gaat er vanuit dat u succesvol de port package:comms/mgetty+sendfax[] op uw systeem heeft gecompileerd en geïnstalleerd.
+
+Zorg ervoor dat uw [.filename]#/usr/local/etc/mgetty+sendfax/login.config# bestand de volgende inhoud heeft:
+
+[.programlisting]
+....
+/AutoPPP/ -     -		      /etc/ppp/ppp-pap-dialup
+....
+
+Dit verteld `mgetty` om het [.filename]#ppp-pap-dialup# script te starten wanneer er een PPP connectie gedetecteerd wordt.
+
+Creeër een bestand genaamd [.filename]#/etc/ppp/ppp-pap-dialup# met de volgende inhoud (het bestand moet uitvoerbaar zijn):
+
+[.programlisting]
+....
+#!/bin/sh
+exec /usr/sbin/ppp -direct pap$IDENT
+....
+
+Voor elke inbelregel die ingeschakeld is in [.filename]#/etc/ttys#, creeër een corresponderende regel in [.filename]#/etc/ppp/ppp.conf#. Dit gaat goed samen met de definities die hierboven gedaan zijn.
+
+[.programlisting]
+....
+pap:
+  enable pap
+  set ifaddr 203.14.100.1 203.14.100.20-203.14.100.40
+  enable proxy
+....
+
+Elke gebruiker die op deze manier inlogt moet een gebruikersnaam en wachtwoord hebben in het [.filename]#/etc/ppp/ppp.secret# bestand of de volgende optie moet worden toegevoegd om gebruikers te authenticeren via PAP vanuit het [.filename]#/etc/passwd# bestand.
+
+[.programlisting]
+....
+enable passwdauth
+....
+
+Als u een aantal gebruikers een statisch IP-adres wilt geven, kan dat gespecificeerd worden als het derde argument in [.filename]#/etc/ppp/ppp.secret#. Zie [.filename]#/usr/shared/examples/ppp/ppp.secret.sample# voor een voorbeeld.
+
+===== Microsoft(R) Extensies
+
+Het is mogelijk om PPP dusdanig te configuren dat deze DNS en NetBIOS naamserver adressen meegeeft.
+
+Om deze extensies in te schakelen met PPP versie 1.x kunnen de volgende regels toegevoegd worden aan de relevante sectie in [.filename]#/etc/ppp/ppp.conf#:
+
+[.programlisting]
+....
+enable msext
+set ns 203.14.100.1 203.14.100.2
+set nbns 203.14.100.5
+....
+
+en voor PPP versie 2 en hoger:
+
+[.programlisting]
+....
+accept dns
+set dns 203.14.100.1 203.14.100.2
+set nbns 203.14.100.5
+....
+
+Dit verteld de cliënt het primaire en secundaire naamserver adres, en geeft een NetBIOS naamserver adres.
+
+In versie 2 en hoger zal PPP gebruik maken van de instellingen in [.filename]#/etc/resolv.conf# als de regel `set dns` niet wordt gevonden.
+
+[[userppp-PAPnCHAP]]
+===== PAP en CHAP authenticatie
+
+Sommige providers stellen hun systemen dusdanig in dat het authenticatie gedeelte van uw verbinding wordt afgehandeld door het PAP of CHAP authenticatie mechanisme. Als dit het geval is zal uw provider u niet voorzien van een `login:` prompt wanneer u verbinding maakt maar zal deze meteen gaan communiceren over het PPP protocol.
+
+PAP is minder veilig dan CHAP, maar beveiliging is meestal geen probleem omdat wachtwoorden, ook al worden deze in platte tekst verstuurd met PAP, alleen worden verstuurd via een seriële lijn. Hier is maar weinig ruimte voor crackers om stiekem mee te luisteren.
+
+Terug verwijzende naar de <<userppp-staticIP,PPP en statische IP-adressen>> of <<userppp-dynamicIP,PPP en dynamische IP-adressen>> secties moeten de volgende aanpassingen gedaan worden:
+
+[.programlisting]
+....
+13      set authname Mijngebruikersnaam
+14      set authkey Mijnwachtwoord
+15      set login
+....
+
+Regel 13:::
+Deze regel geeft uw PPP/CHAP gebruikersnaam aan. U moet de juiste waardes invullen voor _Mijngebruikersnaam_.
+
+Regel 14:::
+Deze regel geeft uw PPP/CHAP wachtwoord aan. U moet de juiste waarde invullen voor _Mijnwachtwoord_. Misschien wilt u een extra regel toevoegen als:
++
+
+[.programlisting]
+....
+16      accept PAP
+....
+
++
+of
++
+
+[.programlisting]
+....
+16      accept CHAP
+....
+
++
+om duidelijk te maken op welke manier u wilt authenticeren, standaard worden zowel PAP als CHAP geaccepteerd.
+
+Regel 15:::
+Uw ISP zal normaal gesprokken niet eisen dat u op de server aanlogt als u gebruik maakt van PAP of CHAP. Daarom moet u de "set login" regel uitschakelen.
+
+===== Het aanpassen van uw `ppp` configuratie terwijl deze in gebruik is
+
+Het is mogelijk om tegen met het `ppp` programma te communiceren terwijl deze in gebruik is op de achtergrond, maar dat kan alleen als er een geschikte diagnostische poort ingesteld is. Om dit te kunnen doen moet de volgende regel worden toegevoegd aan de configuratie:
+
+[.programlisting]
+....
+set server /var/run/ppp-tun%d DiagnosticPassword 0177
+....
+
+Dit vertelt PPP om te luisteren naar het gespecificeerde UNIX(R) domein socket, waarbij de cliënten gevraagd worden om het opgegeven wachtwoord voordat toegang verleend kan worden. Het `%d` in de naam wordt vervangen door het [.filename]#tun# apparaat dat gebruikt wordt voor de verbinding.
+
+Zodra een socket ingesteld is kan het man:pppctl[8] programma gebruikt worden in scripts die het draaiende programma willen bewerken.
+
+[[userppp-nat]]
+==== De vertaalmogelijkheden van PPP voor netwerkadressen gebruiken
+
+PPP heeft de mogelijkheid om interne NAT te gebruiken zonder dat de kernel hiervoor iets hoeft te doen. Deze functionaliteit kan worden ingeschakeld door de volgende regel in [.filename]#/etc/ppp/ppp.conf#:
+
+[.programlisting]
+....
+nat enable yes
+....
+
+Ook kan PPP NAT ingeschakeld worden door de optie `-nat`. Er is ook een [.filename]#/etc/rc.conf# optie genaamd `ppp_nat` welke standaard ingeschakeld is.
+
+Als u gebruik wilt maken van deze optie, kunt u de volgende [.filename]#/etc/ppp/ppp.conf# opties ook nuttig vinden om binnenkomende connecties door te sturen:
+
+[.programlisting]
+....
+nat port tcp 10.0.0.2:ftp ftp
+nat port tcp 10.0.0.2:http http
+....
+
+of als u niets vertrouwd vanaf buitenaf:
+
+[.programlisting]
+....
+nat deny_incoming yes
+....
+
+[[userppp-final]]
+==== Laatste systeemconfiguratie
+
+U heeft nu `ppp` geconfigurerd, maar er moeten nog een aantal dingen gedaan worden voordat deze klaar is om te kunnen werken. Hiervoor moeten een aantal aanpassingen gedaan worden in het bestand [.filename]#/etc/rc.conf#.
+
+Van boven naar beneden kijkende zorgen we er als eerste voor dat de `hostname=` regel ingesteld is met bijvoorbeeld:
+
+[.programlisting]
+....
+hostname="foo.example.com"
+....
+
+Als uw provider u een statisch adres en een naam heeft gegeven is het waarschijnlijk handig dat u deze naam gebruikt als uw hostnaam.
+
+Zoek naar de `network_interfaces` variabele. Als u uw systeem wilt configuren om in te bellen bij uw provider wanneer nodig, zorg er dan voor dat het [.filename]#tun0# apparaat is toegevoegd aan deze lijst. Haal deze anders weg.
+
+[.programlisting]
+....
+network_interfaces="lo0 tun0"
+ifconfig_tun0=
+....
+
+[NOTE]
+====
+De `ifconfig_tun0` variabele moet leeg zijn, en een bestand genaamd [.filename]#/etc/start_if.tun0# moet aangemaakt worden met de volgende inhoud:
+
+[.programlisting]
+....
+ppp -auto mysystem
+....
+
+Dit script wordt uitgevoerd tijdens de netwerk configuratie, waarbij uw ppp daemon wordt gestart in automatische mode. Als u een LAN heeft waarvoor deze machine een router is wilt u wellicht ook de `-alias` meegeven. Bekijk de handleiding voor verdere details.
+====
+
+Zorg ervoor dat het router programma is ingesteld op `NO` door middel van de volgende regel in uw [.filename]#/etc/rc.conf# bestand:
+
+[.programlisting]
+....
+router_enable="NO"
+....
+
+Het is belangrijk dat de `routed` daemon niet gestart wordt, omdat `routed` de neiging heeft om de standaard routeringtabel regels die gemaakt worden door `ppp` te verwijderen.
+
+Het is waarschijnlijk een goed idee om te zorgen dat de `sendmail_flags` regel de `-q` optie niet wordt meegenomen, anders zal `sendmail` periodiek een zoek actie verrichten op het netwerk, wat ervoor zorgt dat uw machine gaat uitbellen. U kunt het volgende instellen:
+
+[.programlisting]
+....
+sendmail_flags="-bd"
+....
+
+Het nadeel hiervan is dat u `sendmail` moet forceren om de mailqueue periodiek te bekijken zodra de ppp link op is door het typen van:
+
+[source,bash]
+....
+# /usr/sbin/sendmail -q
+....
+
+U wilt wellicht gebruik maken van het `!bg` commando in [.filename]#ppp.linkup# om dit automatisch te doen:
+
+[.programlisting]
+....
+1     provider:
+2       delete ALL
+3       add 0 0 HISADDR
+4       !bg sendmail -bd -q30m
+....
+
+Als u dit niet wilt doen, is het mogelijk om een "dfiler" in te stellen welke SMTP verkeer blokkeert. Raadpleeg naar de voorbeeld bestanden voor verdere details.
+
+Alles wat nu nog nodig is, is het herstarten van de machine. Na het herstarten kunt het volgende typen:
+
+[source,bash]
+....
+# ppp
+....
+
+en daarna `dial provider` om de PPP sessie te starten, of u indien u dat wilt kan `ppp` automatisch sessies opzetten wanneer er uitgaand verkeer is (en wanneer u geen [.filename]#start_if.tun0# script heeft aangemaakt), typt u:
+
+[source,bash]
+....
+# ppp -auto provider
+....
+
+==== Samenvatting
+
+Om samen te vatten zijn de volgende stappen benodigd om PPP voor de eerste keer in te stellen:
+
+Aan de cliënt zijde:
+
+[.procedure]
+====
+. Zorg ervoor dat het [.filename]#tun# apparaat is ingeschakeld in uw kernel.
+. Zorg ervoor dat het apparaatbestand [.filename]#tunN# beschikbaar is in de map [.filename]#/dev#.
+. Creeër een regel in [.filename]#/etc/ppp/ppp.conf#. Het [.filename]#pmdemand# voorbeeld zou moeten volstaand voor de meeste providers.
+. Als u dynamische IP-adressen heeft, creeër een regel in [.filename]#/etc/ppp/ppp.linkup#.
+. Update uw [.filename]#/etc/rc.conf# bestand.
+. Creeër een [.filename]#start_if.tun0# script als u op verzoek wilt inbellen.
+====
+
+Aan de server zijde:
+
+[.procedure]
+====
+. Zorg ervoor dat het [.filename]#tun# apparaat is ingeschakeld in uw kernel.
+. Zorg ervoor dat het apparaatbestand [.filename]#tunN# beschikbaar is in de map [.filename]#/dev#.
+. Creeër een regel in [.filename]#/etc/passwd# (door gebruik te maken van het man:vipw[8] programma).
+. Creeër een profiel in deze gebruikers home directory die `ppp -direct direct-server` start of iets in die trant.
+. Creeër een regel in [.filename]#/etc/ppp/ppp.conf#. Het [.filename]#direct-server# voorbeeld zou moeten volstaan.
+. Creeër een regel in [.filename]#/etc/ppp/ppp.linkup#.
+. Update uw [.filename]#/etc/rc.conf# bestand.
+====
+
+[[ppp]]
+== Kernel-PPP gebruiken
+
+=== Het opzetten van kernel-PPP
+
+[WARNING]
+====
+
+Deze sectie geldt en is alleen geldig voor FreeBSD 7.X.
+====
+
+Voordat u begint met het opzetten van PPP op uw machine, zorg ervoor dat het `pppd` commando zich bevindt in de map [.filename]#/usr/sbin# en dat de map [.filename]#/etc/ppp# bestaat.
+
+`pppd` kan in twee verschillende modes werken:
+
+. Als een "cliënt" - u wilt uw machine verbinden met de buitenwereld via een seriële PPP-verbinding of een modemlijn.
+. Als een "server" - uw machine bevind zich in het netwerk en wordt gebruikt om andere computers te verbinden door middel van PPP.
+
+In beide gevallen moet u een bestand met opties instellen ([.filename]#/etc/ppp/options# of [.filename]#~/.ppprc# als er meer dan één gebruiker is op uw machine die gebruik maakt van PPP).
+
+U heeft ook enige modem/seriële software nodig (package:comms/kermit[] wordt aanbevolen), zodat u de andere kant kunt bellen en een verbinding kunt opzetten.
+
+=== Gebruik maken van `pppd` als cliënt
+
+De volgende [.filename]#/etc/ppp/options# kan gebruikt worden om met een Cisco terminal server PPP lijn verbinding te maken.
+
+[.programlisting]
+....
+crtscts         # Schakel hardware flow controle in
+modem           # modem controle lijn
+noipdefault     # De PPP-server aan de andere kant moet uw IP-adres
+                # opgeven, als de machine aan de andere kant uw IP
+                # adres niet meegeeft tijdens de IPCP onderhandeling
+                # moet deze optie worden verwijderd
+passive         # Wacht op LCP pakketten
+domain ppp.foo.com      # Vul uw domein naam hier in
+
+:remote_ip    # Vul het IP-adres van de PPP
+                # server in deze wordt gebruikt om pakketten te
+                # routeren via de PPP link.  Als u de noipdefault optie
+                # niet heeft aangegeven verander dan deze regel in
+                # local_ip:remote_ip
+
+defaultroute    # Vul dit in als u wilt dat de PPP server de standaard
+                # router wordt
+....
+
+Om verbinding te maken:
+
+[.procedure]
+====
+
+. Bel naar de machine aan de andere kant door middel van Kermit (of een ander modem programma), en vul uw gebruikersnaam en wachtwoord in (of wat er ook nodig is om de verbinding op te brengen met de machine aan de andere kant).
+. Stop Kermit (zonder de lijn op te hangen).
+. Type het volgende:
++
+[source,bash]
+....
+# /usr/sbin/pppd /dev/tty01 19200
+....
++ 
+Wees er zeker van dat de juiste snelheid en het juiste apparaat wordt aangesproken.
+====
+
+Uw computer is nu verbonden met PPP. Als de connectie faalt, kan de `debug` optie worden meegegeven in het [.filename]#/etc/ppp/options# bestand waarna op de console berichten kunnen worden geraadpleegd om het probleem te achterhalen.
+
+Het volgende [.filename]#/etc/ppp/pppup# script zal alle drie de stappen automatisch doen:
+
+[.programlisting]
+....
+#!/bin/sh
+pgrep -l pppd
+pid=`pgrep pppd`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill ${pid}
+fi
+pgrep -l kermit
+pid=`pgrep kermit`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+kermit -y /etc/ppp/kermit.dial
+pppd /dev/tty01 19200
+....
+
+[.filename]#/etc/ppp/kermit.dial# is een Kermit script dat belt en alle benodigde authorisaties doet op de machine aan de andere kant (een voorbeeld van zo'n script is bijgevoegd aan het einde van dit document).
+
+Gebruik het volgende [.filename]#/etc/ppp/pppdown# script om de PPP lijn af te breken:
+
+[.programlisting]
+....
+#!/bin/sh
+pid=`pgrep pppd`
+if [ X${pid} != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill -TERM ${pid}
+fi
+
+pgrep -l kermit
+pid=`pgrep kermit`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+/sbin/ifconfig ppp0 down
+/sbin/ifconfig ppp0 delete
+kermit -y /etc/ppp/kermit.hup
+/etc/ppp/ppptest
+....
+
+Controleer of `pppd` nog steeds draait door het uitvoeren van [.filename]#/usr/etc/ppp/ppptest#, welke er als volgend uitziet:
+
+[.programlisting]
+....
+#!/bin/sh
+pid=`pgrep pppd`
+if [ X${pid} != "X" ] ; then
+        echo 'pppd running: PID=' ${pid-NONE}
+else
+        echo 'No pppd running.'
+fi
+set -x
+netstat -n -I ppp0
+ifconfig ppp0
+....
+
+Om het modem op te hangen, voer het [.filename]#/etc/ppp/kermit.hup# script uit welke het volgende bevat:
+
+[.programlisting]
+....
+set line /dev/tty01	; vul hier uw modem in
+set speed 19200
+set file type binary
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+
+pau 1
+out +++
+inp 5 OK
+out ATH0\13
+echo \13
+exit
+....
+
+Hier is een alternatieve methode welke gebruik maakt van `chat` in plaats van `kermit`:
+
+De volgende twee regels zijn voldoende om een `pppd` verbinding op te zetten.
+
+[.filename]#/etc/ppp/options#:
+
+[.programlisting]
+....
+/dev/cuad1 115200
+
+crtscts         # Schakel hardware flow controle in
+modem           # modem controle lijn
+connect "/usr/bin/chat -f /etc/ppp/login.chat.script"
+noipdefault     # De PPP server aan de andere kant moet uw IP-adres
+                # opgeven, als de machine aan de andere kant uw IP
+                # adres niet meegeeft tijdens de IPCP onderhandeling
+                # moet deze optie worden verwijderd
+passive         # Wacht op LCP pakketten
+domain your.domain   # Vul uw domein naam hier in
+
+:remote_ip    # Vul het IP-adres van de PPP
+                # server in deze wordt gebruikt om pakketten te
+                # routeren via de PPP link.  Als u de noipdefault optie
+                # niet heeft aangegeven verander dan deze regel in
+                # local_ip:remote_ip
+
+defaultroute    # Vul dit in als u wilt dat de PPP server de standaard
+                # router wordt
+....
+
+[.filename]#/etc/ppp/login.chat.script#:
+
+[NOTE]
+====
+Het volgende moet op één regel.
+====
+
+[.programlisting]
+....
+ABORT BUSY ABORT 'NO CARRIER' "" AT OK ATDTtelefoon.nummer
+  CONNECT "" TIMEOUT 10 ogin:-\\r-ogin: login-id
+  TIMEOUT 5 sword: password
+....
+
+Zodra deze zijn geïnstalleerd en correct aangepast is het enige dat gedaan moet worden, het starten van `pppd` zoals volgt:
+
+[source,bash]
+....
+# pppd
+....
+
+=== Gebruik maken van `pppd` als server
+
+[.filename]#/etc/ppp/options# moet ongeveer het volgende bevatten:
+
+[.programlisting]
+....
+crtscts                         # Hardware flow controle
+netmask 255.255.255.0           # netmask (niet vereist)
+192.114.208.20:192.114.208.165  # IP's van lokale en niet lokale hosten
+                                # het lokale IP moet anders zijn dan
+                                # degeen die is toegewezen aan de
+                                # Ethernet (of andere) interface op uw
+                                # machine.  remote IP is het IP-adres
+                                # dat wordt toegewezen aan de machine
+                                # aan de andere kant
+domain ppp.foo.com              # uw domein
+passive                         # Wacht op LCP
+modem                           # modem lijn
+....
+
+Het volgende [.filename]#/etc/ppp/pppserv# script zal pppd vertellen zich te gedragen als server:
+
+[.programlisting]
+....
+#!/bin/sh
+pgrep -l pppd
+pid=`pgrep pppd`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill ${pid}
+fi
+pgrep -l kermit
+pid=`pgrep kermit`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+# reset ppp interface
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+# enable autoanswer mode
+kermit -y /etc/ppp/kermit.ans
+
+# run ppp
+pppd /dev/tty01 19200
+....
+
+Gebruik dit [.filename]#/etc/ppp/pppservdown# script om de server te stoppen:
+
+[.programlisting]
+....
+#!/bin/sh
+pgrep -l pppd
+pid=`pgrep pppd`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill ${pid}
+fi
+pgrep -l kermit
+pid=`pgrep kermit`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+kermit -y /etc/ppp/kermit.noans
+....
+
+Het volgende Kermit script ([.filename]#/etc/ppp/kermit.ans#) zal het automatisch beantwoorden van uw modem in of uitschakelen. Het moet eruit zien als volgend:
+
+[.programlisting]
+....
+set line /dev/tty01
+set speed 19200
+set file type binary
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+
+pau 1
+out +++
+inp 5 OK
+out ATH0\13
+inp 5 OK
+echo \13
+out ATS0=1\13   ; Verander dit in out ATS0=0\13 als u automatisch
+                ; beantwoorden wilt uitschakelen
+inp 5 OK
+echo \13
+exit
+....
+
+Een script genaamd [.filename]#/etc/ppp/kermit.dial# wordt gebruikt voor het bellen en authenticeren van de machine aan de andere kant. U moet deze aanpassen aan uw wensen. Vul in dit script uw inlognaam en wachtwoord in, u moet ook het input statement aanpassen afhankelijk hoe uw modem antwoordt en de communicatie van de machine aan de andere kant.
+
+[.programlisting]
+....
+;
+; Vul de seriële lijn in welke verbonden is met het modem
+;
+set line /dev/tty01
+;
+; Stel het modem snelheid in:
+;
+set speed 19200
+set file type binary            ; volledige 8 bit bestands xfer
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+set modem hayes
+set dial hangup off
+set carrier auto                ; Daarna stel SET CARRIER in indien nodig
+set dial display on             ; Stel daarna SET DIAL in indien nodig
+set input echo on
+set input timeout proceed
+set input case ignore
+def \%x 0                       ; login prompt teller
+goto slhup
+
+:slcmd                          ; stel het modem in op commandomodus
+echo Stel het modem in op commandomodus.
+clear                           ; Verwijder ongelezen karakters uit de input buffer
+pause 1
+output +++                      ; hayes escape sequence
+input 1 OK\13\10                ; wacht op OK
+if success goto slhup
+output \13
+pause 1
+output at\13
+input 1 OK\13\10
+if fail goto slcmd              ; Als het modem niet antwoordt met OK, probeer het opnieuw
+
+:slhup                          ; hang de telefoon op
+clear                           ; Verwijder ongelezen karakters uit de input buffer
+pause 1
+echo De telefoon wordt opgehangen.
+output ath0\13                  ; hayes command voo on hook
+input 2 OK\13\10
+if fail goto slcmd              ; Als er geen OK antwoord is, stel het modem in op commandomodus
+
+:sldial                         ; Draai het nummer
+pause 1
+echo Bellen.
+output atdt9,550311\13\10               ; put phone number here
+assign \%x 0                    ; zero the time counter
+
+:look
+clear                           ; Verwijder ongelezen karakters uit de input buffer
+increment \%x                   ; Tel de seconden
+input 1 {CONNECT }
+if success goto sllogin
+reinput 1 {NO CARRIER\13\10}
+if success goto sldial
+reinput 1 {NO DIALTONE\13\10}
+if success goto slnodial
+reinput 1 {\255}
+if success goto slhup
+reinput 1 {\127}
+if success goto slhup
+if < \%x 60 goto look
+else goto slhup
+
+:sllogin                        ; login
+assign \%x 0                    ; Stel de tijd teller in op nul
+pause 1
+echo Zoeken naar de login prompt
+
+:slloop
+increment \%x                   ; Tel de seconden
+clear                           ; Verwijder ongelezen karakters uit de input buffer
+output \13
+;
+; Stel hier de verwachte login prompt in:
+;
+input 1 {Username: }
+if success goto sluid
+reinput 1 {\255}
+if success goto slhup
+reinput 1 {\127}
+if success goto slhup
+if < \%x 10 goto slloop         ; Probeer 10 x om een login prompt te krijgen
+else goto slhup                 ; Hang op en probeer het nogmaals als er 10 mislukte pogingen zijn
+
+:sluid
+;
+; Vul hier uw gebruikersnaam in:
+;
+output ppp-login\13
+input 1 {Password: }
+;
+; Vul hier uw wachtwoord in:
+;
+output ppp-password\13
+input 1 {Entering SLIP mode.}
+echo
+quit
+
+:slnodial
+echo \7Er is geen kiestoon, controleer de telefoon lijn!\7
+exit 1
+
+; local variables:
+; mode: csh
+; comment-start: "; "
+; comment-start-skip: "; "
+; end:
+....
+
+[[ppp-troubleshoot]]
+== Het problemen oplossen van PPP-verbindingen
+
+Deze sectie behandelt een paar problemen die kunnen optreden wanneer PPP wordt gebruikt over een modemverbinding. Bijvoorbeeld, misschien moet u exact weten wat de prompt is die het systeem waarop u inbelt presenteert. Sommige providers presenteren de `ssword` prompt terwijl anderen `password` tonen als het `ppp` script niet goed geschreven is en de inlogin poging faalt. De meest standaard manier om `ppp` verbindingen te onderzoeken op problemen is door handmatig een connectie op te zetten. De volgende informatie helpt u om stap voor stap een handmatige connectie op te zetten.
+
+=== Controleer de apparaatknooppunten
+
+Als er een eigen kernel gebruikt wordt, vergeet dan niet om de volgende regel in uw kernelinstellingenbestand op te nemen:
+
+[.programlisting]
+....
+device	uart
+....
+
+Het apparaat [.filename]#uart# is al in de kernel `GENERIC` opgenomen, dus zijn er in dit geval geen extra stappen nodig. Controleer de resultaten van het commando `dmesg` voor het modemapparaat door middel van:
+
+[source,bash]
+....
+# dmesg | grep uart
+....
+
+U zou enige informatie moeten ontvangen over de [.filename]#uart# apparaten. Deze bevinden zich op de COM-poorten die we nodig hebben. Als uw modem zich gedraagt als een standaard seriële poort zou u deze moeten vinden als zijnde [.filename]#uart1# of [.filename]#COM2#. Als dat klopt hoeft u de kernel niet opnieuw te bouwen. Wanneer u de sio-apparaten controleert en het modem is op [.filename]#uart1# te vinden of als [.filename]#COM2# als u zich onder MS-DOS(R) bevindt, dan is uw modemapparaat [.filename]#/dev/cuau1#.
+
+=== Handmatig verbinding maken
+
+Verbinding maken met het internet door handmatig controle te hebben over `ppp` is snel, makkelijk en een geweldige manier om problemen te vinden bij een verbinding of zelfs voor alleen het verkrijgen van inforamtie over hoe uw provider de `ppp` cliënt verbindingen behandelt. Laten we starten met PPP vanaf de commando regel. Let op dat in al onze voorbeelden we gebruik maken van _example_ als hostnaam van de machine die PPP draait. U start `ppp` door enkel het commando `ppp` te typen:
+
+[source,bash]
+....
+# ppp
+....
+
+We hebben nu `ppp` gestart.
+
+[source,bash]
+....
+ppp ON example> set device /dev/cuau1
+....
+
+We stellen ons modem in, in dit geval is dat [.filename]#cuau1#.
+
+[source,bash]
+....
+ppp ON example> set speed 115200
+....
+
+We stellen de verbindings snelheid in, in dit geval gebruiken we 115,200 kbps.
+
+[source,bash]
+....
+ppp ON example> enable dns
+....
+
+Vertel `ppp` om onze naam vertaler te configuren, en de juiste naamserver regels toe te voegen aan [.filename]#/etc/resolv.conf#. Als `ppp` onze hostnaam niet kan bepalen, kunnen we deze later instellen.
+
+[source,bash]
+....
+ppp ON example> term
+....
+
+Wissel naar "terminal" mode zodat we handmatig het modem kunnen bedienen.
+
+[.programlisting]
+....
+deflink: Entering terminal mode on /dev/cuau1
+type '~h' for help
+....
+
+[source,bash]
+....
+at
+OK
+atdt123456789
+....
+
+Gebruik `at` om het modem te initialiseren, en daarna `atdt` en het nummer voor uw provider om het inbel proces te beginnen.
+
+[source,bash]
+....
+CONNECT
+....
+
+Bevestiging van de verbinding, als we tegen problemen aanlopen met de verbinding, welke niet gerelateerd zijn aan de hardware, is dit de plek om te beginnen om de problemen op te lossen.
+
+[source,bash]
+....
+provider login:myusername
+....
+
+Hier wordt u gevraagd om een gebruikersnaam. Geef de gebruikersnaam op welke aangeleverd is door de provider.
+
+[source,bash]
+....
+provider pass:mypassword
+....
+
+Deze keer worden we gevraagd voor een wachtwoord. Vul uw wachtwoord in welke u is aangeleverd door de provider. Net zoals het aanloggen op FreeBSD zal het wachtwoord niet getoond worden.
+
+[source,bash]
+....
+Shell or PPP:ppp
+....
+
+Afhankelijk van uw provider wordt deze prompt wellicht nooit getoond. Hier wordt ons gevraagd of we een shell willen starten op de host van de provider, of dat we `ppp` willen starten. In dit geval is er gekozen voor `ppp` omdat we een internet verbinding willen.
+
+[source,bash]
+....
+Ppp ON example>
+....
+
+Let op dat in dit voorbeeld de eerste `p` een hoofdletter geworden is. Dit geeft aan dat we succesvol verbonden zijn met de provider.
+
+[source,bash]
+....
+PPp ON example>
+....
+
+We hebben ons succesvol geauthenticeerd bij onze provider en we wachten op een IP-adres dat ons wordt toegewezen.
+
+[source,bash]
+....
+PPP ON example>
+....
+
+We hebben een IP adres verkregen en hebben succesvol een verbinding opgebouwd.
+
+[source,bash]
+....
+PPP ON example>add default HISADDR
+....
+
+Hier wordt een standaard route toegevoegd. Deze moet worden toegevoegd voordat we kunnen communiceren met de buitenwereld aangezien de enige verbinding op dit moment met de andere machine is. Als dit niet lukt omdat er al een route bestaat, kan er een "bang" karakter (`!`) geplaatst worden voor de `add` optie. Als alternatief kan dit ook gedaan worden voordat de verbinding opgezet wordt, waarna een nieuwe route onderhandeld wordt.
+
+Als alles goed gegaan is, zou er nu een actieve verbinding moeten zijn met het internet, welke in de achtergrond gezet kan worden door kbd:[CTRL+z] te gebruiken. Als u ziet dat het commando `PPP` terugkeert naar `ppp` is de verbinding afgebroken. Dit is goed om te weten, aangezien dit de status van de verbinding toont. Hoofdletter P's betekenen dat er een verbinding is met de provider, en kleine letters betekend dat de verbinding verloren is gegaan om welke reden dan ook. `ppp` kent alleen deze twee statussen.
+
+==== Debuggen
+
+Als u een directe lijn heeft en geen verbinding kan maken, zet dan hardware flow CTS/RTS uit met de `set ctsrts off` optie. Dit is meestal het geval voor een PPP terminal server waar PPP hangt wanneer deze probeert te schrijven naar uw communicatie link, dus moet deze wachten op een CTS of een Clear To Send signaal welke misschien nooit komt. Als u deze optie gebruikt, moet u ook de `set accmap` optie gebruiken welke benodigd kan zijn om hardware afhankelijkheden te omzeilen door bepaalde karakters over en weer te sturen, meestal XON/XOFF. Zie de man:ppp[8] handleiding voor meer informatie over deze optie en hoe deze gebruikt kan worden.
+
+Als u een ouder modem heeft, kan het voorkomen dat u ook de `set parity even` optie moet gebruiken. De parity is standaard ingesteld op none maar wordt gebruikt voor fout controle (met als gevolg een grote verhoging van de hoeveelheid data) bij oudere modems en sommige providers. Dit is bijvoorbeeld een benodigde optie bij de Compuserve provider.
+
+Het kan voorkomen dat PPP niet terugkeert naar de commando mode, wat meestal betekent dat er een onderhandelings fout is waarbij de provider wacht op uw kant om de onderhandeling te kunnen beginnen. Op dit moment kunt u gebruik maken van het `~p` commando om ppp te forceren om de configuratie informatie te versturen.
+
+Als u nooit een inlogin prompt krijgt is het zeer waarschijnlijk dat u PAP of CHAP authenticatie moet gebruiken in plaats van de UNIX(R) stijl in het voorbeeld hierboven. Om gebruik te maken van PAP of CHAP voegt u het volgende opties toe aan PPP voordat u de terminal mode ingaat:
+
+[source,bash]
+....
+ppp ON example> set authname mijngebruikersnaam
+....
+
+Waarbij _mijngebruikersnaam_ moet worden vervangen met de gebruikersnaam die wordt toegewezen door de provider.
+
+[source,bash]
+....
+ppp ON example> set authkey mijnwachtwoord
+....
+
+Waarbij _mijnwachtwoord_ moet worden vervangen door het wachtwoord wat u is toegewezen door de provider.
+
+Als u een goed werkende verbinding kunt maken maar het onmogelijk lijkt om een domeinnaam te vinden, probeert u dan man:ping[8] te gebruiken met een IP adres en kijk of er enige informatie terugkomt. Als u 100 procent (100%) packet loss ziet is het zeer waarschijnlijk dat u geen default route heeft gekregen. Controleer nogmaals of de optie `add default HISADDR` ingesteld is tijdens de connectie. Als u verbinding kunt maken met een extern IP adres is het mogelijk dat een naamserver niet is toegevoegd aan het [.filename]#/etc/resolv.conf# bestand. Dit bestand moet er uitzien als volgend:
+
+[.programlisting]
+....
+domain example.com
+nameserver x.x.x.x
+nameserver y.y.y.y
+....
+
+Waar _x.x.x.x_ en _y.y.y.y_ moet worden vervangen door het IP adres van uw providers naamservers. Deze informatie kan mogelijk wel of niet geleverd zijn toen u zich inschreef, maar een snel telefoontje naar uw provider zou hierin uitkomst kunnen bieden.
+
+U kunt ook man:syslog[3] gebruiken om een log functie voor PPP aan te maken. Voeg het volgende toe aan [.filename]#/etc/syslog.conf#:
+
+[.programlisting]
+....
+!ppp
+*.*     /var/log/ppp.log
+....
+
+Deze functionaliteit bestaat in de meeste gevallen al.
+
+[[pppoe]]
+== PPP gebruiken over Ethernet (PPPoE)
+
+Deze sectie beschrijft hoe PPP over Ethernet opgezet kan worden (PPPoE).
+
+=== Het configureren van de kernel
+
+Inmiddels is het niet langer benodigd om de kernel configuratie aan te passen voor PPPoE. Als de benodigde netgraph ondersteuning niet in de kernel aanwezig is zal deze dynamisch geladen worden door ppp.
+
+=== Het instellen van [.filename]#ppp.conf#
+
+Hieronder volgt een voorbeeld van een werkende [.filename]#ppp.conf#:
+
+[.programlisting]
+....
+default:
+  set log Phase tun command # Er kan meer gedetailleerde logging ingeschakeld worden indien gewenst
+  set ifaddr 10.0.0.1/0 10.0.0.2/0
+
+name_of_service_provider:
+  set device PPPoE:xl1 # Vervang x11 met uw ethernet apparaat
+  set authname UWLOGINNAAM
+  set authkey UWWACHTWOORD
+  set dial
+  set login
+  add default HISADDR
+....
+
+=== Het draaien van ppp
+
+Als de `root` gebruiker kunt u het volgende draaien:
+
+[source,bash]
+....
+# ppp -ddial name_of_service_provider
+....
+
+=== Het pstarten van ppp tijdens het opstarten
+
+Voeg het volgende toe aan uw [.filename]#/etc/rc.conf# bestand:
+
+[.programlisting]
+....
+ppp_enable="YES"
+ppp_mode="ddial"
+ppp_nat="YES"	# Indien u nat wilt inschakelen voor het lokale netwerk, gebruik anders NO
+ppp_profile="naam_van_service_provider"
+....
+
+=== Gebruik maken van een PPPoE service label
+
+Soms is het nodig om een service tag te gebruiken om verbinding te kunnen maken. Service tags worden gebruikt om onderscheid te maken tussen de verschillende PPPoE servers die verbonden zijn met een netwerk.
+
+Uw provider zou u de juiste service tag gegevens verstrekt moeten hebben in de documentatie die opgeleverd is. Als u deze niet kunt vinden in de documentatie moet u deze opvragen bij uw technische support afdeling van uw provider.
+
+Als allerlaatste optie kunt u de aangerade methode gebruiken van het http://www.roaringpenguin.com/pppoe/[Roaring Penguin PPPoE] programma welke gevonden kan worden in de crossref:ports[ports,Ports Collectie]. Houd u echter in uw achterhoofd dat dit uw modem ernstige schade kan toebrengen, dus denkt u er goed over na voordat u het uitprobeert. Installeer simpelweg het programma dat is meegeleverd bij het modem door uw provider. Open hierna het menu:System[] menu vanuit het programma. De naam van uw profiel moet hier te vinden zijn. Meestal is deze _ISP_.
+
+De naam van het profiel (servicetag) zal worden gebruikt in de PPPoE configuratie regel van [.filename]#ppp.conf# in het provider gedeelte van het `set device` commando (zie de man:ppp[8] handleiding voor meer informatie hierover). Dit zou er als volgend uit moeten zien:
+
+[.programlisting]
+....
+set device PPPoE:xl1:ISP
+....
+
+Vergeet u niet om _xl1_ te vervangen door het juiste apparaat voor uw Ethernet kaart.
+
+Vergeet u niet om _ISP_ te vergangen door het profiel wat hierboven ingesteld is.
+
+Voor meer informatie zie:
+
+* http://renaud.waldura.com/doc/freebsd/pppoe/[Cheaper Broadband with FreeBSD on DSL] door Renaud Waldura.
+
+[[ppp-3com]]
+=== PPPoE met een 3Com(R) HomeConnect(TM) ADSL Modem Dual Link
+
+Dit modem volgt http://www.faqs.org/rfcs/rfc2516.html[RFC 2516] niet (_Een methode voor het versturen van PPP over Ethernet (PPPoE)_ geschreven door by L. Mamakos, K. Lidl, J. Evarts, D. Carrel, D. Simone, and R. Wheeler). Daarentegen is een ander type pakket code gebruikt voor de Ethernet frames. Klaagt u alstublift bij http://www.3com.com/[3Com] als u vind dat ze zich aan de PPPoE specificatie moeten houden.
+
+Om FreeBSD in staat te stellen om te communiceren met dit apparaat, moet er een sysctl ingesteld worden. Dit kan automatisch tijdens het opstarten gedaan worden door het bewerken van [.filename]#/etc/sysctl.conf#:
+
+[.programlisting]
+....
+net.graph.nonstandard_pppoe=1
+....
+
+Dit kan ook direct gedaan worden met het commando:
+
+[source,bash]
+....
+# sysctl net.graph.nonstandard_pppoe=1
+....
+
+Helaas is het, doordat dit een systeem brede instelling is, niet mogelijk om tegelijkertijd met een normale PPPoE cliënt of server en een 3Com(R) HomeConnect(TM) ADSL-modem te communiceren.
+
+[[pppoa]]
+== Gebruik maken van PPP over ATM (PPPoA)
+
+Het volgende beschrijft hoe PPP over ATM (PPPoA) opgezet kan worden. PPPoA is een populaire keuze binnen Europese DSL providers.
+
+=== Gebruik maken van PPPoA met de Alcatel SpeedTouch(TM) USB
+
+PPPoA ondersteuning voor dit apparaat wordt geleverd door middel van een port in FreeBSD omdat de firmware wordt gedistribueerd onder http://www.speedtouchdsl.com/disclaimer_lx.htm[Alcatel's licentie overeenkomst] en mag derhalve niet vrijelijk verspreid worden met het basis systeem van FreeBSD.
+
+Om de software te installeren, wordt simpelweg de <<ports,Ports Collectie>> gebruikt. Installeer de package:net/pppoa[] port en volg de instructies die meegeleverd worden.
+
+Zoals de meeste USB apparaten moet de Alcatel SpeedTouch(TM) USB zijn firmware downloaden van de host computer om correct te kunnen werken. Het is mogelijk om dit proces te automatiseren binnen FreeBSD zodat deze overdracht elke keer gebeurd als het apparaat in een USB poort wordt gestoken. De volgende informatie kan worden toegevoegd aan het [.filename]#/etc/usbd.conf# bestand om deze automatische overdracht in te schakelen. Dit bestand moet bewerkt worden door de `root` gebruiker.
+
+[.programlisting]
+....
+device "Alcatel SpeedTouch USB"
+    devname "ugen[0-9]+"
+    vendor 0x06b9
+    product 0x4061
+    attach "/usr/local/sbin/modem_run -f /usr/local/libdata/mgmt.o"
+....
+
+Om de USB daemon, usbd, te starten moet de volgende regel toegevoegd worden aan [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+usbd_enable="YES"
+....
+
+Het is ook mogelijk om ppp op te zetten om in te bellen tijdens het opstarten. Om dit te doen moet de volgende regel worden toegevoegd aan [.filename]#/etc/rc.conf#. Voor deze procedure moet er ook aangelogt zijn als de `root` gebruiker.
+
+[.programlisting]
+....
+ppp_enable="YES"
+ppp_mode="ddial"
+ppp_profile="adsl"
+....
+
+Om dit correct te laten werken moet het voorbeeld [.filename]#ppp.conf# bestand gebruikt worden welke geleverd wordt door de package:net/pppoa[] port.
+
+=== Gebruik maken van mpd
+
+U kunt mpd gebruiken om met een variateit aan diensten verbinding te maken, in het bijzonder PPTP diensten. U kunt mpd vinden in de Ports Collectie, package:net/mpd[]. Veel ADSL-modems vereisen dat er een PPTP tunnel wordt gecreeërd tussen het modem en de computer, een voorbeeld van zo'n modem is de Alcatel SpeedTouch(TM) Home.
+
+Eerst moet u de port installeren waarna mpd geconfigureerd kan worden om uw eisen en provider instellingen op te geven. De port plaatst een verzameling voorbeeldconfiguratiebestanden welke goed gedocumenteerd zijn in [.filename]#PREFIX/etc/mpd/#. Let op dat _PREFIX_ betekend dat dit de directory is waar uw ports in worden geïnstalleerd. Standaard is dit [.filename]#/usr/local/#. Een complete handleiding om mpd te configureren is beschikbaar in HTML formaat zodra de port geïnstalleerd is. Deze wordt geplaatst in [.filename]#PREFIX/shared/doc/mpd/#. Hieronder staat een voorbeeld configuratie om verbinding te maken met een ADSL dienstverlener door het gebruik van mpd. De configuratie is verspreid over twee bestanden, allereerst het [.filename]#mpd.conf# bestand:
+
+[NOTE]
+====
+Dit voorbeeld van het bestand [.filename]#mpd.conf# werkt alleen met mpd 4.X.
+====
+
+[.programlisting]
+....
+default:
+    load adsl
+
+adsl:
+    new -i ng0 adsl adsl
+    set bundle authname gebruikersnaam <.>
+    set bundle password wachtwoord <.>
+    set bundle disable multilink
+
+    set link no pap acfcomp protocomp
+    set link disable chap
+    set link accept chap
+    set link keep-alive 30 10
+
+    set ipcp no vjcomp
+    set ipcp ranges 0.0.0.0/0 0.0.0.0/0
+
+    set iface route default
+    set iface disable on-demand
+    set iface enable proxy-arp
+    set iface idle 0
+
+    open
+....
+
+<.> De gebruikersnaam die gebruikt wordt om uzelf te authenticeren aan uw provider.
+
+<.> Het wachtwoord wat gebruikt wordt om uzelf te authenticeren aan uw provider.
+
+Het [.filename]#mpd.links# bestand bevat informatie over de link, of linken waarmee u verbinding wilt maken. Een voorbeeld [.filename]#mpd.links# wat bij bovenstaand voorbeeld hoort is hieronder gegeven:
+
+[.programlisting]
+....
+adsl:
+    set link type pptp
+    set pptp mode active
+    set pptp enable originate outcall
+    set pptp self 10.0.0.1 <.>
+    set pptp peer 10.0.0.138 <.>
+....
+
+<.> Het IP-adres van uw FreeBSD computer waar vanaf mpd gebruikt wordt.
+
+<.> Het IP-adres van uw ADSL-modem. Voor de Alcatel SpeedTouch(TM) Home is dit adres standaard `10.0.0.138`.
+
+Het is mogelijk om de verbinding makkelijk te initialiseren door het volgende commando als `root` uit te voeren:
+
+[source,bash]
+....
+# mpd -b adsl
+....
+
+U kunt de status van de verbinding zien met het volgende commando:
+
+[source,bash]
+....
+% ifconfig ng0
+ng0: flags=88d1<UP,POINTOPOINT,RUNNING,NOARP,SIMPLEX,MULTICAST> mtu 1500
+     inet 216.136.204.117 --> 204.152.186.171 netmask 0xffffffff
+....
+
+Het gebruik van mpd is de aangeraden manier om met een ADSL dienst te verbinden met FreeBSD.
+
+=== Gebruik maken van pptpclient
+
+Het is ook mogelijk om FreeBSD te gebruiken om naar een andere PPPoA dienstenm verbinding te maken door middel van de package:net/pptpclient[] port.
+
+Om gebruik te maken van package:net/pptpclient[] om naar een DSL dienst verbinding te maken, installeert u de port of package en bewerkt u [.filename]#/etc/ppp/ppp.conf# U moet dit onder de `root` gebruiker doen, om beide acties uit te voeren. Een voorbeeld sectie van [.filename]#ppp.conf# is hieronder gegeven. Voor meer informatie over [.filename]#ppp.conf# consulteert u de man:ppp[8] handleiding.
+
+[.programlisting]
+....
+adsl:
+ set log phase chat lcp ipcp ccp tun command
+ set timeout 0
+ enable dns
+ set authname gebruikersnaam <.>
+ set authkey wachtwoord <.>
+ set ifaddr 0 0
+ add default HISADDR
+....
+
+<.> De gebruikersnaam van uw account bij uw DSL provider.
+
+<.> Het wachtwoord voor uw account.
+
+[WARNING]
+====
+
+Omdat u het wachtwoord van uw account in het [.filename]#ppp.conf# bestand in leesbare vorm moet plaatsen, moet u ervoor zorgen dat niemand anders de inhoud van dit bestand kan lezen. De volgende serie van commando's zorgt ervoor dat het bestand alleen leesbaar is door de `root` gebruiker. Raadpleeg de handleidingen van man:chmod[1] en man:chown[8] voor verdere informatie.
+
+[source,bash]
+....
+# chown root:wheel /etc/ppp/ppp.conf
+# chmod 600 /etc/ppp/ppp.conf
+....
+
+====
+
+Dit opent een tunnel voor een PPP sessie naar uw DSL router. Ethernet DSL-modems hebben een voor geconfigureerd LAN IP adres waarmee u verbinding maakt. In het geval van de Alcatel SpeedTouch(TM) home is `10.0.0.138` het adres. Uw router documentatie vertelt u welk adres uw apparaat gebruikt. Om de tunnel te openen en om een PPP sessie op te zetten, start u het volgende commando:
+
+[source,bash]
+....
+# pptp address adsl
+....
+
+[TIP]
+====
+
+Het kan wenselijk zijn om een ampersand ("&") toe te voegen aan het einde van het vorige commando, omdat pptp uw prompt niet teruggeeft.
+====
+
+Er wordt een [.filename]#tun# virtueel tunnel apparaat gecreeërd voor interactie tussen de pptp en ppp processen. Zodra u terugbent op uw prompt, of als pptp bevestigd dat er een verbinding is, kunt u de tunnel als volgend inzien:
+
+[source,bash]
+....
+% ifconfig tun0
+tun0: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 1500
+        inet 216.136.204.21 --> 204.152.186.171 netmask 0xffffff00
+        Opened by PID 918
+....
+
+Als het niet mogelijk is om verbinding te maken, controleert u de configuratie van uw router, welke meestal bereikbaar is door middel van telnet of via een web browser. Als u nog steeds geen verbinding kunt maken moet u de resultaten van het `pptp` onderzoeken en de inhoud van het ppp log bestand, [.filename]#/var/log/ppp.log# voor meer hints over wat er mis kan zijn.
+
+[[slip]]
+== Gebruik maken van SLIP
+
+[WARNING]
+====
+
+Deze sectie geldt en is alleen geldig voor FreeBSD 7.X.
+====
+
+[[slipc]]
+=== Het opzetten van een SLIP-cliënt
+
+Het volgende is één manier om een FreeBSD machine in te stellen voor gebruik met SLIP op een statisch host netwerk. Voor dynamische hostnaam toewijzing (uw adres veranderd elke keer als u inbelt), heeft u waarschijnlijk een meer complexe opzet nodig.
+
+Bepaal eerst aan welke seriële poort uw modem verbonden is. Veel mensen gebruiken hiervoor een symbolische link zoals [.filename]#/dev/modem# welke verwijst naar de echte naam van het apparaat [.filename]#/dev/cuadN#. Dit geeft de mogelijkheid om naam abstract te houden, voor het geval het modem ooit verplaatst wordt naar een andere poort. Het kan best een vervelende klus zijn wanneer er een aantal bestanden in [.filename]#/etc# en [.filename]#.kermrc# bestanden verspreid over het gehele systeem gerepareerd moeten worden!
+
+[NOTE]
+====
+[.filename]#/dev/cuad0# is [.filename]#COM1#, [.filename]#cuad1# is [.filename]#COM2#, etc.
+====
+
+Zorg ervoor dat u het volgende in uw kernel configuratie bestand hebt:
+
+[.programlisting]
+....
+device   sl
+....
+
+Deze is standaard opgenomen in de [.filename]#GENERIC# kernel, dus dat zou geen problemen moeten opleveren tenzij u deze verwijderd heeft.
+
+==== Dingen die u maar eenmalig hoeft uit te voeren
+
+[.procedure]
+====
+
+. Voeg uw machine, de router en de naamservers toe aan uw [.filename]#/etc/hosts# bestand. Ons bestand ziet er als volgend uit:
++
+[.programlisting]
+....
+127.0.0.1               localhost loghost
+136.152.64.181          water.CS.Example.EDU water.CS water
+136.152.64.1            inr-3.CS.Example.EDU inr-3 slip-gateway
+128.32.136.9            ns1.Example.EDU ns1
+128.32.136.12           ns2.Example.EDU ns2
+....
++
+. Zorg ervoor dat u `files` voor `dns` in de `hosts:` sectie van uw [.filename]#/etc/nsswitch.conf# bestand. Zonder deze parameters zouden er interessante dingen kunnen gebeuren.
+. Bewerk het [.filename]#/etc/rc.conf# bestand.
+.. Stel uw hostnaam in door de regel te bewerken die aangeeft:
++
+[.programlisting]
+....
+hostname="myname.my.domain"
+....
++ 
+De volledig gekwalificeerde internet hostnaam moet hier geplaatst worden.
+.. Stel de standaard router in door het aanpassen van de volgende regel van:
++
+[.programlisting]
+....
+defaultrouter="NO"
+....
++ 
+naar:
++
+[.programlisting]
+....
+defaultrouter="slip-gateway"
+....
++
+. Creeër en bestand genaamd [.filename]#/etc/resolv.conf# welke het volgende bevat:
++
+[.programlisting]
+....
+domain CS.Example.EDU
+nameserver 128.32.136.9
+nameserver 128.32.136.12
+....
++ 
+Zoals u kunt zien, stellen deze de naamserver hosten in. Uiteraard is het echte domein en adres afhankelijk van uw omgeving.
+. Stel het wachtwoord in voor de `root` en de `toor` gebruikers (en elke andere gebruiker die geen wachtwoord heeft).
+. Herstart de machine en controleeer of deze opkomt met de correcte hostnaam.
+====
+
+==== Het opzetten van een SLIP-verbinding
+
+[.procedure]
+====
+
+. Bel in, type `slip` op de prompt en voer uw machine naam en wachtwoord in. Wat is vereist, is afhankelijk van uw omgeving. Als u gebruik maakt van Kermit kan een script als de volgende gebruikt worden:
++
+[.programlisting]
+....
+# kermit setup
+set modem hayes
+set line /dev/modem
+set speed 115200
+set parity none
+set flow rts/cts
+set terminal bytesize 8
+set file type binary
+# De volgende macro zal inbellen en ons inloggen.
+define slip dial 643-9600, input 10 =>, if failure stop, -
+output slip\x0d, input 10 Username:, if failure stop, -
+output silvia\x0d, input 10 Password:, if failure stop, -
+output ***\x0d, echo \x0aCONNECTED\x0a
+....
++ 
+Uiteraard moet u uw gebruikersnaam en wachtwoord wijzigen zodat deze overeenkomen met die van u. Nadat dit gedaan is kunt u `slip` invullen op de Kermit prompt om verbinding te maken.
++
+[NOTE]
+======
+Het achterlaten van uw wachtwoord in leesbare tekst waar dan ook op het bestandssysteem is zeker een _slecht_ idee. Doe dit op eigen risico.
+======
++
+. Laat Kermit daar (het programma kan tijdelijk uitgeschakeld worden door kbd:[Ctrl+z]) en type vervolgens als `root`:
++
+[source,bash]
+....
+# slattach -h -c -s 115200 /dev/modem
+....
++ 
+Als u in staat bent om andere hosten met `ping` te benaderen aan de andere kant van de router, bent u verbonden! Als dit niet werkt kunt u wellicht de `-a` gebruiken in plaats van de `-c` als argument voor `slattach`.
+====
+
+==== Hoe de verbinding afgebroken moet worden
+
+Doe het volgende::
+
+[source,bash]
+....
+# kill -INT `cat /var/run/slattach.modem.pid`
+....
+
+om `slattach` te stoppen. Houd in uw achterhoofd dat u dit als `root` moet doen. Ga hierna terug naar `kermit` (door het intypen van `fg` als u deze tijdelijk uitgeschakeld had) en verlaat de applicatie (kbd:[q]).
+
+De man:slattach[8] handleiding zegt dat `ifconfig sl0 down` uitgevoerd moet worden om de interface uit te schakelen, maar dit lijkt geen verschil op te leveren. (`ifconfig sl0` lijkt hetzelfde resultaat te geven.)
+
+Soms kan het gebeuren dat het modem weigert om de carrier los te laten. Start in dat geval simpelweg `kermit` en stop deze wederom. Meestal stopt het met de tweede poging.
+
+==== Problemen oplossen
+
+Als dit niet werkt, voelt u zich dan vrij om rond te vragen op de link:{freebsd-net-url}[freebsd-net] mailing lijst. De volgende dingen zijn mensen al eens tegen aangelopen:
+
+* Het niet gebruiken van de `-c` of `-a` optie voor `slattach` (Dit zou niet fataal moeten zijn, maar sommige mensen hebben aangegeven dat het de problemen oplostte.)
+* Het intypen van `s10` in plaats van `sl0` (het verschil is wellicht lastig te zien met sommige fonts).
+* Probeer `ifconfig sl0` uit te voeren om de interface status te zien. U kunt bijvoorbeeld krijgen:
++
+[source,bash]
+....
+# ifconfig sl0
+sl0: flags=10<POINTOPOINT>
+        inet 136.152.64.181 --> 136.152.64.1 netmask ffffff00
+....
+
+* Als u `no route to host` krijgt van het man:ping[8] commando, is er mogelijk een probleem met uw route tabel. U kunt het `netstat -r` commando uitvoeren om de huidige routes te zien:
++
+[source,bash]
+....
+# netstat -r
+Routing tables
+Destination      Gateway            Flags     Refs     Use  IfaceMTU    Rtt    Netmasks:
+
+(root node)
+(root node)
+
+Route Tree for Protocol Family inet:
+(root node) =>
+default          inr-3.Example.EDU  UG          8   224515  sl0 -      -
+localhost.Exampl localhost.Example. UH          5    42127  lo0 -       0.438
+inr-3.Example.ED water.CS.Example.E UH          1        0  sl0 -      -
+water.CS.Example localhost.Example. UGH        34 47641234  lo0 -       0.438
+(root node)
+....
++ 
+Het voorgaand voorbeeld komt van een relatief druk systeem. De getallen op uw systeem zullen anders zijn naar gelang de netwerk activiteiten.
+
+[[slips]]
+=== Het opzetten van een SLIP-server
+
+Dit document levert suggesties voor het opzetten van een SLIP-server op een FreeBSD systeem, welke meestal betekent het configureren van uw systeem om automatisch verbindingen op te zetten wanneer er wordt ingelogt met remote SLIP cliënten.
+
+[[slips-prereqs]]
+==== Eisen vooraf
+
+Deze sectie is vrij technisch van aard, dus achtergrond informatie is vereist. Er wordt aangenomen dat u bekend bent met het TCP/IP-netwerk protocol, en in dan in het bijzonder met netwerk en node adresseringen, netwerk adres maskers, subnetten, routes en dynamische routering protocollen zoals RIP. Het configureren van een SLIP-dienst op een inbel server vereist kennis van deze concepten en als u daarmee niet bekend bent, leest u dan aub een versie van of Craig Hunt's _TCP/IP Network Administration_ gepubliceerd door O'Reilly & Associates, Inc. (ISBN Number 0-937175-82-X), of Douglas Comer's boeken over het TCP/IP protocol.
+
+Daarnaast wordt er vanuit gegaan dat u reeds uw modem(s) heeft geconfigureerd en dat u de juiste systeem bestanden heeft aangepast zodat er logins mogelijk zijn door uw modem(s) heen. Als u dat nog niet heeft gedaan, zie dan crossref:serialcomms[dialup,Inbeldienst] voor details over het opzetten van inbel diensten. Wellicht wilt u ook de handleiding bekijken voor man:sio[4] voor meer informatie over de seriële port device driver en de man:ttys[5], man:gettytab[5], man:getty[8], & man:init[8] handleidingen voor informatie die relevant zijn voor het configureren van het systeem zodat logins mogelijk worden op modems, en wellicht man:stty[1] voor informatie over het instellen van de seriële poort (zoals `clocal` voor direct verbonden seriële interfaces).
+
+==== Snel overzicht
+
+In een typische configuratie, werkt het gebruik van FreeBSD als een SLIP-server als volgend: een SLIP-gebruiker belt in op uw FreeBSD SLIP-server systeem en logt in met een speciaal SLIP-login ID dat gebruik maakt van [.filename]#/usr/sbin/sliplogin#. Het `sliplogin` programma leest door het [.filename]#/etc/sliphome/slip.hosts# bestand om een corresponderende regel te vinden voor de speciale gebruiker en als deze een match vindt verbind het de seriële lijn met een beschikbare SLIP-interface waarna het shellscript [.filename]#/etc/sliphome/slip.login# wordt uitgevoerd om de SLIP-interface te configureren.
+
+===== Een voorbeeld van SLIP-server login
+
+Bijvoorbeeld, als een SLIP-user-ID `Shelmerg` is, kan ``Shelmerg``'s regel in [.filename]#/etc/master.passwd# er als volgt uitzien:
+
+[.programlisting]
+....
+Shelmerg:password:1964:89::0:0:Guy Helmer - SLIP:/usr/users/Shelmerg:/usr/sbin/sliplogin
+....
+
+Wanneer `Shelmerg` inlogt, zoekt het `sliplogin` programma in het [.filename]#/etc/sliphome/slip.hosts# bestand voor een regel dat een corresponderende user ID heeft, er kan bijvoorbeeld een regel staan in [.filename]#/etc/sliphome/slip.hosts# dat eruit ziet als volgend:
+
+[.programlisting]
+....
+Shelmerg        dc-slip sl-helmer       0xfffffc00		  autocomp
+....
+
+`sliplogin` zal de corresponderende regel vinden en de seriële lijn koppelen aan de eerste beschikbare SLIP-interface, waarna [.filename]#/etc/sliphome/slip.login# wordt uitgevoerd zoals volgend:
+
+[.programlisting]
+....
+/etc/sliphome/slip.login 0 19200 Shelmerg dc-slip sl-helmer 0xfffffc00 autocomp
+....
+
+Als alles goed gaat, zal [.filename]#/etc/sliphome/slip.login# een `ifconfig` commando uitvoeren voor de SLIP interface waaraan `sliplogin` zichzelf koppelt (SLIP-interface 0 zoals in bovenstaand voorbeeld was de eerste parameter in de lijst welke gegeven is aan [.filename]#slip.login#) om een lokaal IP-adres in te stellen (`dc-slip`), een remote IP adres (`sl-helmer`), een netwerk master voor de SLIP-interface (`0xfffffc00`), en enkele additionele vlaggen (`autocomp`). Als er iets misgaat zal `sliplogin` meestal voldoende goede informatie loggen via de syslogd daemon faciliteiten, welke meestal logt naar [.filename]#/var/log/messages# (zie de handleidingen van man:syslogd[8] en man:syslog.conf[5] en controleer het [.filename]#/etc/syslog.conf# bestand om te zien wat syslogd logt en waar dit naartoe gelogt wordt).
+
+==== Kernel-configuratie
+
+FreeBSD's standaard kernel ([.filename]#GENERIC#) heeft reeds ondersteuning voor SLIP (man:sl[4]), in het geval van een custom kernel moet de volgende regel worden toegevoegd aan de kernel configuratie:
+
+[.programlisting]
+....
+device   sl
+....
+
+Standaard zal uw FreeBSD machine geen pakketten doorsturen. Als u wilt dat uw FreeBSD SLIP-server zich gedraagt als router zult u het bestand [.filename]#/etc/rc.conf# moeten bewerken en de instelling van de `gateway_enable` variabele moeten aanpassen naar `YES`. Dit zorgt ervoor dat de machine na een herstart zich zal blijven gedragen als router.
+
+Om de instellingen meteen actief te maken kunt u het volgende commando als `root` uitvoeren:
+
+[source,bash]
+....
+# service routing start
+....
+
+Raadpleeg aub crossref:kernelconfig[kernelconfig,De FreeBSD-kernel instellen] over het configureren van de FreeBSD kernel voor meer hulp over het herconfigureren van uw kernel.
+
+==== Sliplogin-configuratie
+
+Zoals eerder vermeld, zijn er drie bestanden in de map [.filename]#/etc/sliphome# die onderdeel zijn van de configuratie voor [.filename]#/usr/sbin/sliplogin# (zie man:sliplogin[8] voor de actuele handleiding voor `sliplogin`): [.filename]#slip.hosts#, welke de SLIP-gebruikers definieert en de gekoppelde IP adressen; [.filename]#slip.login#, welke meestal de SLIP-interface configureert en (optioneel) [.filename]#slip.logout#, welke de effecten van [.filename]#slip.login# ongedaan maakt wanneer de seriële verbinding verbroken wordt.
+
+===== [.filename]#slip.hosts# configuratie
+
+[.filename]#/etc/sliphome/slip.hosts# bevat regels welke minstens vier onderdelen heeft die gescheiden worden door een spatie:
+
+* SLIP-gebruikers login ID
+* Lokale adres (lokaal voor de SLIP-server) van de SLIP-link
+* Remote adres van de SLIP-link
+* Netwerk masker
+
+De lokale en remote adressen mogen host namen zijn (Welke naar IP-adressen vertaald kunnen worden door [.filename]#/etc/hosts# of door de DNS diensten, afhankelijk van uw specificaties in het [.filename]#/etc/nsswitch.conf#, het netwerk masker mag een naam zijn dat vertaald kan worden door een zoek opdracht in [.filename]#/etc/networks#. Op een voorbeeld systeem ziet het [.filename]#/etc/sliphome/slip.hosts# bestand er als volgt uit:
+
+[.programlisting]
+....
+#
+# login local-addr      remote-addr     mask            opt1    opt2
+#                                               (normal,compress,noicmp)
+#
+Shelmerg  dc-slip       sl-helmerg      0xfffffc00      autocomp
+....
+
+Aan het einde van deze regel staan één of meerdere opties:
+
+* `normal` - geen compressie van de header
+* `compress` - comprimeer headers
+* `autocomp` - comprimeer de headers als de remote kant dit accepteert
+* `noicmp` - schakelt ICMP pakketten uit (dus alle "ping" pakketten worden geweigerd in plaats van dat deze bandbreedte verbruiken)
+
+Uw keuze van een lokaal en remote adres voor uw SLIP verbindingen is afhankelijk van of u een speciaal toegewezen TCP/IP-subnet gebruikt, of dat u gebruik gaat maken van "proxy ARP" op uw SLIP-server (het is geen echte "proxy ARP", maar het is de terminologie welke in deze sectie gebruikt wordt om het te beschrijven). Als u niet zeker bent welke methode u moet kiezen, of hoe u IP-adressen moet toewijzen, raadpleegt u dan de TCP/IP boeken die vermeld worden in de SLIP vereisten (<<slips-prereqs>>) en/of vraag uw IP-netwerk manager om hulp.
+
+Als u gebruik gaat maken van een separaat subnet voor uw SLIP-cliënten, moet u een subnet alloceren uit de voor u toegewezen IP-ruimte, en elke SLIP-cliënt een IP-adres geven uit dat subnet. Daarna moet u waarschijnlijk een statische route configureren voor uw SLIP-subnet via uw SLIP-server naar de dichtsbijzijnde IP-router.
+
+In het andere geval moet u gebruik maken van de "proxy ARP" methode, u moet elke SLIP cliënt een IP-adres geven uit het Ethernet-subnet van uw SLIP-server, daarnaast moet u het [.filename]#/etc/sliphome/slip.login# en het [.filename]#/etc/sliphome/slip.logout# script aanpassen om gebruik te maken van man:arp[8] om de "proxy ARP" regels te beheren in de SLIP servers ARP tabel.
+
+===== [.filename]#slip.login# configuratie
+
+Een typisch [.filename]#/etc/sliphome/slip.login# bestand ziet er als volgend uit:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       @(#)slip.login  5.1 (Berkeley) 7/1/90
+
+#
+# generiek loginbestand voor een SLIP-lijn.  sliplogin voert deze uit
+# met de volgende parameters:
+#      1        2         3        4          5         6     7-n
+#   slipunit ttyspeed loginname local-addr remote-addr mask opt-args
+#
+/sbin/ifconfig sl$1 inet $4 $5 netmask $6
+....
+
+Dit [.filename]#slip.login# bestand start alleen het `ifconfig` commando voor de betreffende SLIP-interace met het lokale en remote adres met het netwerkmasker van de SLIP-interface.
+
+Als u besloten heeft om gebruik te maken van de "proxy ARP" methode (in plaats van het gebruiken van een apart subnet voor uw SLIP-cliënten) moet u het [.filename]#/etc/sliphome/slip.login# bestand aanpassen zodat deze er ongeveer als volgend uitziet:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       @(#)slip.login  5.1 (Berkeley) 7/1/90
+
+#
+# generiek loginbestand voor een SLIP-lijn.  sliplogin voert deze uit
+# met de volgende parameters:
+#      1        2         3        4          5         6     7-n
+#   slipunit ttyspeed loginname local-addr remote-addr mask opt-args
+#
+/sbin/ifconfig sl$1 inet $4 $5 netmask $6
+# Beantwoord ARP Verzoeken voor de SLIP-cliënt met ons Ethernet
+# adres
+/usr/sbin/arp -s $5 00:11:22:33:44:55 pub
+....
+
+De extra regel in het [.filename]#slip.login# bestand, `arp -s $5 00:11:22:33:44:55 pub`, creeërt een ARP-regel in de ARP-tabel van de SLIP-server. Deze ARP regel zorgt ervoor dat de SLIP-server antwoord geeft met het Ethernet MAC adres van de SLIP-server wanneer een andere IP-node op het Ethernet vraagt om te communiceren met het IP-adres van de SLIP-cliënt.
+
+Wanneer u gebruik maakt van het voorbeeld hierboven, wees u er dan zeker van dat u het Ethernet MAC adres (`00:11:22:33:44:55`) veranderd in het MAC adres van uw systeem's Ethernet kaart, anders werkt uw "proxy ARP" zeker niet! U kunt het Ethernet MAC adres van uw SLIP-server achterhalen door het bekijken van het resultaat van `netstat -i`; de tweede regel met resultaten moet er ongeveer als volgend uitzien:
+
+[source,bash]
+....
+ed0   1500  <Link>0.2.c1.28.5f.4a         191923	0   129457     0   116
+....
+
+Dit geeft aan dat het specifieke Ethernet MAC adres van het systeem is `00:02:c1:28:5f:4a` - de punten in het Ethernet MAC adres welke gegeven wordt door `netstat -i` moet worden veranderd in dubbele punten (":") en voorloop nullen moeten worden toegevoegd aan elk enkel hexadecimaal getal om het adres te converteren naar de vorm die man:arp[8] wenst; zie de handleiding van man:arp[8] voor een compleet overzicht van het gebruik hiervan.
+
+[NOTE]
+====
+Wanneer u [.filename]#/etc/sliphome/slip.login# en [.filename]#/etc/sliphome/slip.logout#, aanmaakt moet het "uitvoerbare" bitje gezet zijn (bijvoorbeeld `chmod 755 /etc/sliphome/slip.login /etc/sliphome/slip.logout`) anders is `sliplogin` niet in staat om deze uit te voeren.
+====
+
+===== [.filename]#slip.logout# configuratie
+
+[.filename]#/etc/sliphome/slip.logout# is niet strict noodzakelijk (tenzij u "proxy ARP" implementeert), maar als beslist om deze aan te maken is dit een voorbeeld basis [.filename]#slip.logout# script:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       slip.logout
+
+#
+# uitlogbestand voor een SLIP-regel.  sliplogin voert deze uit met de
+# parameters:
+#      1        2         3        4          5         6     7-n
+#   slipunit ttyspeed loginname local-addr remote-addr mask opt-args
+#
+/sbin/ifconfig sl$1 down
+....
+
+Als u gebruik maakt van "proxy ARP" wilt u waarschijnlijk dat het [.filename]#/etc/sliphome/slip.logout# bestand de ARP regel weghaalt voor de SLIP-cliënt:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       @(#)slip.logout
+
+#
+# uitlogbestand voor een SLIP-regel.  sliplogin voert deze uit met de
+# parameters:
+#      1        2         3        4          5         6     7-n
+#   slipunit ttyspeed loginname local-addr remote-addr mask opt-args
+#
+/sbin/ifconfig sl$1 down
+# Stop met het beantwoorden van ARP verzoeken voor de SLIP-cliënt
+/usr/sbin/arp -d $5
+....
+
+Het `arp -d $5` verwijderd de ARP regel, die "proxy ARP" heeft toegevoegd toen de SLIP-cliënt inlogde.
+
+Het is belangrijk om dit te herhalen: zorg ervoor [.filename]#/etc/sliphome/slip.logout# het uitvoerbare bitje heeft gezet nadat deze gecreeërd is (b.v. `chmod 755 /etc/sliphome/slip.logout`).
+
+==== Routering-overwegingen
+
+Als u geen gebruik maakt van de "proxy ARP" voor het routeren van pakketten tussen uw SLIP-cliënten en de rest van uw netwerk (en wellicht het internet), moeten er misschien een aantal statische routeringen naar de best bereikbare standaard router ingesteld worden om uw SLIP cliënts te routeren via uw SLIP0server.
+
+===== Statische routeringen
+
+Het toevoegen van statische routeringen naar de dichts bijzijnde router kan problematisch zijn (of zelfs onmogelijk als u niet de bevoegdheden heft om dit te doen). Als u een netwerk heeft met meerdere routers binnen uw organisatie kan het zijn dat sommige routers, zoals die van Cisco en Proteon , niet alleen geconfigureerd moeten worden met de statische route naar het SLIP-subnet, maar deze moeten dan ook geconfigureerd worden over welke statische routes aan andere routers verteld moeten worden. Enige expertise en fine tunen kan nodig zijn om statische routing te laten werken.

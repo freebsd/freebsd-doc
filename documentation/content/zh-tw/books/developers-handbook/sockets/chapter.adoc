@@ -1,0 +1,889 @@
+---
+title: 章 7. Sockets
+authors:
+  - author: G. Adam Stanislav
+prev: books/developers-handbook/testing
+next: books/developers-handbook/ipv6
+---
+
+[[sockets]]
+= Sockets
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:part-signifier: 部分
+:chapter-signifier: 第
+:appendix-caption: 附录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例 
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 7
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-tw/mailing-lists.adoc[]
+include::shared/zh-tw/urls.adoc[]
+:imagesdir: ../../../../images/books/developers-handbook/
+
+toc::[]
+
+[[sockets-synopsis]]
+== Synopsis
+
+BSD sockets take interprocess communications to a new level. It is no longer necessary for the communicating processes to run on the same machine. They still _can_, but they do not have to.
+
+Not only do these processes not have to run on the same machine, they do not have to run under the same operating system. Thanks to BSD sockets, your FreeBSD software can smoothly cooperate with a program running on a Macintosh(R), another one running on a Sun(TM) workstation, yet another one running under Windows(R) 2000, all connected with an Ethernet-based local area network.
+
+But your software can equally well cooperate with processes running in another building, or on another continent, inside a submarine, or a space shuttle.
+
+It can also cooperate with processes that are not part of a computer (at least not in the strict sense of the word), but of such devices as printers, digital cameras, medical equipment. Just about anything capable of digital communications.
+
+[[sockets-diversity]]
+== Networking and Diversity
+
+We have already hinted on the _diversity_ of networking. Many different systems have to talk to each other. And they have to speak the same language. They also have to _understand_ the same language the same way.
+
+People often think that _body language_ is universal. But it is not. Back in my early teens, my father took me to Bulgaria. We were sitting at a table in a park in Sofia, when a vendor approached us trying to sell us some roasted almonds.
+
+I had not learned much Bulgarian by then, so, instead of saying no, I shook my head from side to side, the "universal" body language for _no_. The vendor quickly started serving us some almonds.
+
+I then remembered I had been told that in Bulgaria shaking your head sideways meant _yes_. Quickly, I started nodding my head up and down. The vendor noticed, took his almonds, and walked away. To an uninformed observer, I did not change the body language: I continued using the language of shaking and nodding my head. What changed was the _meaning_ of the body language. At first, the vendor and I interpreted the same language as having completely different meaning. I had to adjust my own interpretation of that language so the vendor would understand.
+
+It is the same with computers: The same symbols may have different, even outright opposite meaning. Therefore, for two computers to understand each other, they must not only agree on the same _language_, but on the same _interpretation_ of the language.
+
+[[sockets-protocols]]
+== Protocols
+
+While various programming languages tend to have complex syntax and use a number of multi-letter reserved words (which makes them easy for the human programmer to understand), the languages of data communications tend to be very terse. Instead of multi-byte words, they often use individual _bits_. There is a very convincing reason for it: While data travels _inside_ your computer at speeds approaching the speed of light, it often travels considerably slower between two computers.
+
+Because the languages used in data communications are so terse, we usually refer to them as _protocols_ rather than languages.
+
+As data travels from one computer to another, it always uses more than one protocol. These protocols are _layered_. The data can be compared to the inside of an onion: You have to peel off several layers of "skin" to get to the data. This is best illustrated with a picture:
+
+image::layers.png[Protocol Layers]
+
+In this example, we are trying to get an image from a web page we are connected to via an Ethernet.
+
+The image consists of raw data, which is simply a sequence of RGB values that our software can process, i.e., convert into an image and display on our monitor.
+
+Alas, our software has no way of knowing how the raw data is organized: Is it a sequence of RGB values, or a sequence of grayscale intensities, or perhaps of CMYK encoded colors? Is the data represented by 8-bit quanta, or are they 16 bits in size, or perhaps 4 bits? How many rows and columns does the image consist of? Should certain pixels be transparent?
+
+I think you get the picture...
+
+To inform our software how to handle the raw data, it is encoded as a PNG file. It could be a GIF, or a JPEG, but it is a PNG.
+
+And PNG is a protocol.
+
+At this point, I can hear some of you yelling, _"No, it is not! It is a file format!"_
+
+Well, of course it is a file format. But from the perspective of data communications, a file format is a protocol: The file structure is a _language_, a terse one at that, communicating to our _process_ how the data is organized. Ergo, it is a _protocol_.
+
+Alas, if all we received was the PNG file, our software would be facing a serious problem: How is it supposed to know the data is representing an image, as opposed to some text, or perhaps a sound, or what not? Secondly, how is it supposed to know the image is in the PNG format as opposed to GIF, or JPEG, or some other image format?
+
+To obtain that information, we are using another protocol: HTTP. This protocol can tell us exactly that the data represents an image, and that it uses the PNG protocol. It can also tell us some other things, but let us stay focused on protocol layers here.
+
+So, now we have some data wrapped in the PNG protocol, wrapped in the HTTP protocol. How did we get it from the server?
+
+By using TCP/IP over Ethernet, that is how. Indeed, that is three more protocols. Instead of continuing inside out, I am now going to talk about Ethernet, simply because it is easier to explain the rest that way.
+
+Ethernet is an interesting system of connecting computers in a _local area network_ (LAN). Each computer has a _network interface card_ (NIC), which has a unique 48-bit ID called its _address_. No two Ethernet NICs in the world have the same address.
+
+These NICs are all connected with each other. Whenever one computer wants to communicate with another in the same Ethernet LAN, it sends a message over the network. Every NIC sees the message. But as part of the Ethernet _protocol_, the data contains the address of the destination NIC (among other things). So, only one of all the network interface cards will pay attention to it, the rest will ignore it.
+
+But not all computers are connected to the same network. Just because we have received the data over our Ethernet does not mean it originated in our own local area network. It could have come to us from some other network (which may not even be Ethernet based) connected with our own network via the Internet.
+
+All data is transferred over the Internet using IP, which stands for _Internet Protocol_. Its basic role is to let us know where in the world the data has arrived from, and where it is supposed to go to. It does not _guarantee_ we will receive the data, only that we will know where it came from _if_ we do receive it.
+
+Even if we do receive the data, IP does not guarantee we will receive various chunks of data in the same order the other computer has sent it to us. So, we can receive the center of our image before we receive the upper left corner and after the lower right, for example.
+
+It is TCP (_Transmission Control Protocol_) that asks the sender to resend any lost data and that places it all into the proper order.
+
+All in all, it took _five_ different protocols for one computer to communicate to another what an image looks like. We received the data wrapped into the PNG protocol, which was wrapped into the HTTP protocol, which was wrapped into the TCP protocol, which was wrapped into the IP protocol, which was wrapped into the Ethernet protocol.
+
+Oh, and by the way, there probably were several other protocols involved somewhere on the way. For example, if our LAN was connected to the Internet through a dial-up call, it used the PPP protocol over the modem which used one (or several) of the various modem protocols, et cetera, et cetera, et cetera...
+
+As a developer you should be asking by now, _"How am I supposed to handle it all?"_
+
+Luckily for you, you are _not_ supposed to handle it all. You _are_ supposed to handle some of it, but not all of it. Specifically, you need not worry about the physical connection (in our case Ethernet and possibly PPP, etc). Nor do you need to handle the Internet Protocol, or the Transmission Control Protocol.
+
+In other words, you do not have to do anything to receive the data from the other computer. Well, you do have to _ask_ for it, but that is almost as simple as opening a file.
+
+Once you have received the data, it is up to you to figure out what to do with it. In our case, you would need to understand the HTTP protocol and the PNG file structure.
+
+To use an analogy, all the internetworking protocols become a gray area: Not so much because we do not understand how it works, but because we are no longer concerned about it. The sockets interface takes care of this gray area for us:
+
+image::slayers.png[Sockets Covered Protocol Layers]
+
+We only need to understand any protocols that tell us how to _interpret the data_, not how to _receive_ it from another process, nor how to _send_ it to another process.
+
+[[sockets-model]]
+== The Sockets Model
+
+BSD sockets are built on the basic UNIX(R) model: _Everything is a file._ In our example, then, sockets would let us receive an _HTTP file_, so to speak. It would then be up to us to extract the _PNG file_ from it.
+
+Because of the complexity of internetworking, we cannot just use the `open` system call, or the `open()` C function. Instead, we need to take several steps to "opening" a socket.
+
+Once we do, however, we can start treating the _socket_ the same way we treat any _file descriptor_: We can `read` from it, `write` to it, `pipe` it, and, eventually, `close` it.
+
+[[sockets-essential-functions]]
+== Essential Socket Functions
+
+While FreeBSD offers different functions to work with sockets, we only _need_ four to "open" a socket. And in some cases we only need two.
+
+[[sockets-client-server]]
+=== The Client-Server Difference
+
+Typically, one of the ends of a socket-based data communication is a _server_, the other is a _client_.
+
+[[sockets-common-elements]]
+==== The Common Elements
+
+[[sockets-socket]]
+===== `socket`
+
+The one function used by both, clients and servers, is man:socket[2]. It is declared this way:
+
+[.programlisting]
+....
+int socket(int domain, int type, int protocol);
+....
+
+The return value is of the same type as that of `open`, an integer. FreeBSD allocates its value from the same pool as that of file handles. That is what allows sockets to be treated the same way as files.
+
+The `domain` argument tells the system what _protocol family_ you want it to use. Many of them exist, some are vendor specific, others are very common. They are declared in [.filename]#sys/socket.h#.
+
+Use `PF_INET` for UDP, TCP and other Internet protocols (IPv4).
+
+Five values are defined for the `type` argument, again, in [.filename]#sys/socket.h#. All of them start with "`SOCK_`". The most common one is `SOCK_STREAM`, which tells the system you are asking for a _reliable stream delivery service_ (which is TCP when used with `PF_INET`).
+
+If you asked for `SOCK_DGRAM`, you would be requesting a _connectionless datagram delivery service_ (in our case, UDP).
+
+If you wanted to be in charge of the low-level protocols (such as IP), or even network interfaces (e.g., the Ethernet), you would need to specify `SOCK_RAW`.
+
+Finally, the `protocol` argument depends on the previous two arguments, and is not always meaningful. In that case, use `0` for its value.
+
+[NOTE]
+.The Unconnected Socket
+====
+Nowhere, in the `socket` function have we specified to what other system we should be connected. Our newly created socket remains _unconnected_.
+
+This is on purpose: To use a telephone analogy, we have just attached a modem to the phone line. We have neither told the modem to make a call, nor to answer if the phone rings.
+====
+
+[[sockets-sockaddr]]
+===== `sockaddr`
+
+Various functions of the sockets family expect the address of (or pointer to, to use C terminology) a small area of the memory. The various C declarations in the [.filename]#sys/socket.h# refer to it as `struct sockaddr`. This structure is declared in the same file:
+
+[.programlisting]
+....
+/*
+ * Structure used by kernel to store most
+ * addresses.
+ */
+struct sockaddr {
+	unsigned char	sa_len;		/* total length */
+	sa_family_t	sa_family;	/* address family */
+	char		sa_data[14];	/* actually longer; address value */
+};
+#define	SOCK_MAXADDRLEN	255		/* longest possible addresses */
+....
+
+Please note the _vagueness_ with which the `sa_data` field is declared, just as an array of `14` bytes, with the comment hinting there can be more than `14` of them.
+
+This vagueness is quite deliberate. Sockets is a very powerful interface. While most people perhaps think of it as nothing more than the Internet interface-and most applications probably use it for that nowadays-sockets can be used for just about _any_ kind of interprocess communications, of which the Internet (or, more precisely, IP) is only one.
+
+The [.filename]#sys/socket.h# refers to the various types of protocols sockets will handle as _address families_, and lists them right before the definition of `sockaddr`:
+
+[.programlisting]
+....
+/*
+ * Address families.
+ */
+#define	AF_UNSPEC	0		/* unspecified */
+#define	AF_LOCAL	1		/* local to host (pipes, portals) */
+#define	AF_UNIX		AF_LOCAL	/* backward compatibility */
+#define	AF_INET		2		/* internetwork: UDP, TCP, etc. */
+#define	AF_IMPLINK	3		/* arpanet imp addresses */
+#define	AF_PUP		4		/* pup protocols: e.g. BSP */
+#define	AF_CHAOS	5		/* mit CHAOS protocols */
+#define	AF_NS		6		/* XEROX NS protocols */
+#define	AF_ISO		7		/* ISO protocols */
+#define	AF_OSI		AF_ISO
+#define	AF_ECMA		8		/* European computer manufacturers */
+#define	AF_DATAKIT	9		/* datakit protocols */
+#define	AF_CCITT	10		/* CCITT protocols, X.25 etc */
+#define	AF_SNA		11		/* IBM SNA */
+#define AF_DECnet	12		/* DECnet */
+#define AF_DLI		13		/* DEC Direct data link interface */
+#define AF_LAT		14		/* LAT */
+#define	AF_HYLINK	15		/* NSC Hyperchannel */
+#define	AF_APPLETALK	16		/* Apple Talk */
+#define	AF_ROUTE	17		/* Internal Routing Protocol */
+#define	AF_LINK		18		/* Link layer interface */
+#define	pseudo_AF_XTP	19		/* eXpress Transfer Protocol (no AF) */
+#define	AF_COIP		20		/* connection-oriented IP, aka ST II */
+#define	AF_CNT		21		/* Computer Network Technology */
+#define pseudo_AF_RTIP	22		/* Help Identify RTIP packets */
+#define	AF_IPX		23		/* Novell Internet Protocol */
+#define	AF_SIP		24		/* Simple Internet Protocol */
+#define	pseudo_AF_PIP	25		/* Help Identify PIP packets */
+#define	AF_ISDN		26		/* Integrated Services Digital Network*/
+#define	AF_E164		AF_ISDN		/* CCITT E.164 recommendation */
+#define	pseudo_AF_KEY	27		/* Internal key-management function */
+#define	AF_INET6	28		/* IPv6 */
+#define	AF_NATM		29		/* native ATM access */
+#define	AF_ATM		30		/* ATM */
+#define pseudo_AF_HDRCMPLT 31		/* Used by BPF to not rewrite headers
+					 * in interface output routine
+					 */
+#define	AF_NETGRAPH	32		/* Netgraph sockets */
+#define	AF_SLOW		33		/* 802.3ad slow protocol */
+#define	AF_SCLUSTER	34		/* Sitara cluster protocol */
+#define	AF_ARP		35
+#define	AF_BLUETOOTH	36		/* Bluetooth sockets */
+#define	AF_MAX		37
+....
+
+The one used for IP is AF_INET. It is a symbol for the constant `2`.
+
+It is the _address family_ listed in the `sa_family` field of `sockaddr` that decides how exactly the vaguely named bytes of `sa_data` will be used.
+
+Specifically, whenever the _address family_ is AF_INET, we can use `struct sockaddr_in` found in [.filename]#netinet/in.h#, wherever `sockaddr` is expected:
+
+[.programlisting]
+....
+/*
+ * Socket address, internet style.
+ */
+struct sockaddr_in {
+	uint8_t		sin_len;
+	sa_family_t	sin_family;
+	in_port_t	sin_port;
+	struct	in_addr sin_addr;
+	char	sin_zero[8];
+};
+....
+
+We can visualize its organization this way:
+
+image::sain.png[sockaddr_in]
+
+The three important fields are `sin_family`, which is byte 1 of the structure, `sin_port`, a 16-bit value found in bytes 2 and 3, and `sin_addr`, a 32-bit integer representation of the IP address, stored in bytes 4-7.
+
+Now, let us try to fill it out. Let us assume we are trying to write a client for the _daytime_ protocol, which simply states that its server will write a text string representing the current date and time to port 13. We want to use TCP/IP, so we need to specify `AF_INET` in the address family field. `AF_INET` is defined as `2`. Let us use the IP address of `192.43.244.18`, which is the time server of US federal government (`time.nist.gov`).
+
+image::sainfill.png[Specific example of sockaddr_in]
+
+By the way the `sin_addr` field is declared as being of the `struct in_addr` type, which is defined in [.filename]#netinet/in.h#:
+
+[.programlisting]
+....
+/*
+ * Internet address (a structure for historical reasons)
+ */
+struct in_addr {
+	in_addr_t s_addr;
+};
+....
+
+In addition, `in_addr_t` is a 32-bit integer.
+
+The `192.43.244.18` is just a convenient notation of expressing a 32-bit integer by listing all of its 8-bit bytes, starting with the _most significant_ one.
+
+So far, we have viewed `sockaddr` as an abstraction. Our computer does not store `short` integers as a single 16-bit entity, but as a sequence of 2 bytes. Similarly, it stores 32-bit integers as a sequence of 4 bytes.
+
+Suppose we coded something like this:
+
+[.programlisting]
+....
+sa.sin_family      = AF_INET;
+sa.sin_port        = 13;
+sa.sin_addr.s_addr = (((((192 << 8) | 43) << 8) | 244) << 8) | 18;
+....
+
+What would the result look like?
+
+Well, that depends, of course. On a Pentium(R), or other x86, based computer, it would look like this:
+
+image::sainlsb.png[sockaddr_in on an Intel system]
+
+On a different system, it might look like this:
+
+image::sainmsb.png[sockaddr_in on an MSB system]
+
+And on a PDP it might look different yet. But the above two are the most common ways in use today.
+
+Ordinarily, wanting to write portable code, programmers pretend that these differences do not exist. And they get away with it (except when they code in assembly language). Alas, you cannot get away with it that easily when coding for sockets.
+
+Why?
+
+Because when communicating with another computer, you usually do not know whether it stores data _most significant byte_ (MSB) or _least significant byte_ (LSB) first.
+
+You might be wondering, _"So, will sockets not handle it for me?"_
+
+It will not.
+
+While that answer may surprise you at first, remember that the general sockets interface only understands the `sa_len` and `sa_family` fields of the `sockaddr` structure. You do not have to worry about the byte order there (of course, on FreeBSD `sa_family` is only 1 byte anyway, but many other UNIX(R) systems do not have `sa_len` and use 2 bytes for `sa_family`, and expect the data in whatever order is native to the computer).
+
+But the rest of the data is just `sa_data[14]` as far as sockets goes. Depending on the _address family_, sockets just forwards that data to its destination.
+
+Indeed, when we enter a port number, it is because we want the other computer to know what service we are asking for. And, when we are the server, we read the port number so we know what service the other computer is expecting from us. Either way, sockets only has to forward the port number as data. It does not interpret it in any way.
+
+Similarly, we enter the IP address to tell everyone on the way where to send our data to. Sockets, again, only forwards it as data.
+
+That is why, we (the _programmers_, not the _sockets_) have to distinguish between the byte order used by our computer and a conventional byte order to send the data in to the other computer.
+
+We will call the byte order our computer uses the _host byte order_, or just the _host order_.
+
+There is a convention of sending the multi-byte data over IP _MSB first_. This, we will refer to as the _network byte order_, or simply the _network order_.
+
+Now, if we compiled the above code for an Intel based computer, our _host byte order_ would produce:
+
+image::sainlsb.png[Host byte order on an Intel system]
+
+But the _network byte order_ requires that we store the data MSB first:
+
+image::sainmsb.png[Network byte order]
+
+Unfortunately, our _host order_ is the exact opposite of the _network order_.
+
+We have several ways of dealing with it. One would be to _reverse_ the values in our code:
+
+[.programlisting]
+....
+sa.sin_family      = AF_INET;
+sa.sin_port        = 13 << 8;
+sa.sin_addr.s_addr = (((((18 << 8) | 244) << 8) | 43) << 8) | 192;
+....
+
+This will _trick_ our compiler into storing the data in the _network byte order_. In some cases, this is exactly the way to do it (e.g., when programming in assembly language). In most cases, however, it can cause a problem.
+
+Suppose, you wrote a sockets-based program in C. You know it is going to run on a Pentium(R), so you enter all your constants in reverse and force them to the _network byte order_. It works well.
+
+Then, some day, your trusted old Pentium(R) becomes a rusty old Pentium(R). You replace it with a system whose _host order_ is the same as the _network order_. You need to recompile all your software. All of your software continues to perform well, except the one program you wrote.
+
+You have since forgotten that you had forced all of your constants to the opposite of the _host order_. You spend some quality time tearing out your hair, calling the names of all gods you ever heard of (and some you made up), hitting your monitor with a nerf bat, and performing all the other traditional ceremonies of trying to figure out why something that has worked so well is suddenly not working at all.
+
+Eventually, you figure it out, say a couple of swear words, and start rewriting your code.
+
+Luckily, you are not the first one to face the problem. Someone else has created the man:htons[3] and man:htonl[3] C functions to convert a `short` and `long` respectively from the _host byte order_ to the _network byte order_, and the man:ntohs[3] and man:ntohl[3] C functions to go the other way.
+
+On _MSB-first_ systems these functions do nothing. On _LSB-first_ systems they convert values to the proper order.
+
+So, regardless of what system your software is compiled on, your data will end up in the correct order if you use these functions.
+
+[[sockets-client-functions]]
+==== Client Functions
+
+Typically, the client initiates the connection to the server. The client knows which server it is about to call: It knows its IP address, and it knows the _port_ the server resides at. It is akin to you picking up the phone and dialing the number (the _address_), then, after someone answers, asking for the person in charge of wingdings (the _port_).
+
+[[sockets-connect]]
+===== `connect`
+
+Once a client has created a socket, it needs to connect it to a specific port on a remote system. It uses man:connect[2]:
+
+[.programlisting]
+....
+int connect(int s, const struct sockaddr *name, socklen_t namelen);
+....
+
+The `s` argument is the socket, i.e., the value returned by the `socket` function. The `name` is a pointer to `sockaddr`, the structure we have talked about extensively. Finally, `namelen` informs the system how many bytes are in our `sockaddr` structure.
+
+If `connect` is successful, it returns `0`. Otherwise it returns `-1` and stores the error code in `errno`.
+
+There are many reasons why `connect` may fail. For example, with an attempt to an Internet connection, the IP address may not exist, or it may be down, or just too busy, or it may not have a server listening at the specified port. Or it may outright _refuse_ any request for specific code.
+
+[[sockets-first-client]]
+===== Our First Client
+
+We now know enough to write a very simple client, one that will get current time from `192.43.244.18` and print it to [.filename]#stdout#.
+
+[.programlisting]
+....
+/*
+ * daytime.c
+ *
+ * Programmed by G. Adam Stanislav
+ */
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+int main() {
+  register int s;
+  register int bytes;
+  struct sockaddr_in sa;
+  char buffer[BUFSIZ+1];
+
+  if ((s = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
+    perror("socket");
+    return 1;
+  }
+
+  bzero(&sa, sizeof sa);
+
+  sa.sin_family = AF_INET;
+  sa.sin_port = htons(13);
+  sa.sin_addr.s_addr = htonl((((((192 << 8) | 43) << 8) | 244) << 8) | 18);
+  if (connect(s, (struct sockaddr *)&sa, sizeof sa) < 0) {
+    perror("connect");
+    close(s);
+    return 2;
+  }
+
+  while ((bytes = read(s, buffer, BUFSIZ)) > 0)
+    write(1, buffer, bytes);
+
+  close(s);
+  return 0;
+}
+....
+
+Go ahead, enter it in your editor, save it as [.filename]#daytime.c#, then compile and run it:
+
+[source,bash]
+....
+% cc -O3 -o daytime daytime.c
+% ./daytime
+
+52079 01-06-19 02:29:25 50 0 1 543.9 UTC(NIST) *
+%
+....
+
+In this case, the date was June 19, 2001, the time was 02:29:25 UTC. Naturally, your results will vary.
+
+[[sockets-server-functions]]
+==== Server Functions
+
+The typical server does not initiate the connection. Instead, it waits for a client to call it and request services. It does not know when the client will call, nor how many clients will call. It may be just sitting there, waiting patiently, one moment, The next moment, it can find itself swamped with requests from a number of clients, all calling in at the same time.
+
+The sockets interface offers three basic functions to handle this.
+
+[[sockets-bind]]
+===== `bind`
+
+Ports are like extensions to a phone line: After you dial a number, you dial the extension to get to a specific person or department.
+
+There are 65535 IP ports, but a server usually processes requests that come in on only one of them. It is like telling the phone room operator that we are now at work and available to answer the phone at a specific extension. We use man:bind[2] to tell sockets which port we want to serve.
+
+[.programlisting]
+....
+int bind(int s, const struct sockaddr *addr, socklen_t addrlen);
+....
+
+Beside specifying the port in `addr`, the server may include its IP address. However, it can just use the symbolic constant INADDR_ANY to indicate it will serve all requests to the specified port regardless of what its IP address is. This symbol, along with several similar ones, is declared in [.filename]#netinet/in.h#
+
+[.programlisting]
+....
+#define	INADDR_ANY		(u_int32_t)0x00000000
+....
+
+Suppose we were writing a server for the _daytime_ protocol over TCP/IP. Recall that it uses port 13. Our `sockaddr_in` structure would look like this:
+
+image::sainserv.png[Example Server sockaddr_in]
+
+[[sockets-listen]]
+===== `listen`
+
+To continue our office phone analogy, after you have told the phone central operator what extension you will be at, you now walk into your office, and make sure your own phone is plugged in and the ringer is turned on. Plus, you make sure your call waiting is activated, so you can hear the phone ring even while you are talking to someone.
+
+The server ensures all of that with the man:listen[2] function.
+
+[.programlisting]
+....
+int listen(int s, int backlog);
+....
+
+In here, the `backlog` variable tells sockets how many incoming requests to accept while you are busy processing the last request. In other words, it determines the maximum size of the queue of pending connections.
+
+[[sockets-accept]]
+===== `accept`
+
+After you hear the phone ringing, you accept the call by answering the call. You have now established a connection with your client. This connection remains active until either you or your client hang up.
+
+The server accepts the connection by using the man:accept[2] function.
+
+[.programlisting]
+....
+int accept(int s, struct sockaddr *addr, socklen_t *addrlen);
+....
+
+Note that this time `addrlen` is a pointer. This is necessary because in this case it is the socket that fills out `addr`, the `sockaddr_in` structure.
+
+The return value is an integer. Indeed, the `accept` returns a _new socket_. You will use this new socket to communicate with the client.
+
+What happens to the old socket? It continues to listen for more requests (remember the `backlog` variable we passed to `listen`?) until we `close` it.
+
+Now, the new socket is meant only for communications. It is fully connected. We cannot pass it to `listen` again, trying to accept additional connections.
+
+[[sockets-first-server]]
+===== Our First Server
+
+Our first server will be somewhat more complex than our first client was: Not only do we have more sockets functions to use, but we need to write it as a daemon.
+
+This is best achieved by creating a _child process_ after binding the port. The main process then exits and returns control to the shell (or whatever program invoked it).
+
+The child calls `listen`, then starts an endless loop, which accepts a connection, serves it, and eventually closes its socket.
+
+[.programlisting]
+....
+/*
+ * daytimed - a port 13 server
+ *
+ * Programmed by G. Adam Stanislav
+ * June 19, 2001
+ */
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+#define BACKLOG 4
+
+int main() {
+    register int s, c;
+    int b;
+    struct sockaddr_in sa;
+    time_t t;
+    struct tm *tm;
+    FILE *client;
+
+    if ((s = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
+        perror("socket");
+        return 1;
+    }
+
+    bzero(&sa, sizeof sa);
+
+    sa.sin_family = AF_INET;
+    sa.sin_port   = htons(13);
+
+    if (INADDR_ANY)
+        sa.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    if (bind(s, (struct sockaddr *)&sa, sizeof sa) < 0) {
+        perror("bind");
+        return 2;
+    }
+
+    switch (fork()) {
+        case -1:
+            perror("fork");
+            return 3;
+            break;
+        default:
+            close(s);
+            return 0;
+            break;
+        case 0:
+            break;
+    }
+
+    listen(s, BACKLOG);
+
+    for (;;) {
+        b = sizeof sa;
+
+        if ((c = accept(s, (struct sockaddr *)&sa, &b)) < 0) {
+            perror("daytimed accept");
+            return 4;
+        }
+
+        if ((client = fdopen(c, "w")) == NULL) {
+            perror("daytimed fdopen");
+            return 5;
+        }
+
+        if ((t = time(NULL)) < 0) {
+            perror("daytimed time");
+
+            return 6;
+        }
+
+        tm = gmtime(&t);
+        fprintf(client, "%.4i-%.2i-%.2iT%.2i:%.2i:%.2iZ\n",
+            tm->tm_year + 1900,
+            tm->tm_mon + 1,
+            tm->tm_mday,
+            tm->tm_hour,
+            tm->tm_min,
+            tm->tm_sec);
+
+        fclose(client);
+    }
+}
+....
+
+We start by creating a socket. Then we fill out the `sockaddr_in` structure in `sa`. Note the conditional use of INADDR_ANY:
+
+[.programlisting]
+....
+if (INADDR_ANY)
+        sa.sin_addr.s_addr = htonl(INADDR_ANY);
+....
+
+Its value is `0`. Since we have just used `bzero` on the entire structure, it would be redundant to set it to `0` again. But if we port our code to some other system where INADDR_ANY is perhaps not a zero, we need to assign it to `sa.sin_addr.s_addr`. Most modern C compilers are clever enough to notice that INADDR_ANY is a constant. As long as it is a zero, they will optimize the entire conditional statement out of the code.
+
+After we have called `bind` successfully, we are ready to become a _daemon_: We use `fork` to create a child process. In both, the parent and the child, the `s` variable is our socket. The parent process will not need it, so it calls `close`, then it returns `0` to inform its own parent it had terminated successfully.
+
+Meanwhile, the child process continues working in the background. It calls `listen` and sets its backlog to `4`. It does not need a large value here because _daytime_ is not a protocol many clients request all the time, and because it can process each request instantly anyway.
+
+Finally, the daemon starts an endless loop, which performs the following steps:
+
+[.procedure]
+====
+. Call `accept`. It waits here until a client contacts it. At that point, it receives a new socket, `c`, which it can use to communicate with this particular client.
+. It uses the C function `fdopen` to turn the socket from a low-level _file descriptor_ to a C-style `FILE` pointer. This will allow the use of `fprintf` later on.
+. It checks the time, and prints it in the _ISO 8601_ format to the `client` "file". It then uses `fclose` to close the file. That will automatically close the socket as well.
+====
+
+We can _generalize_ this, and use it as a model for many other servers:
+
+image::serv.png[Sequential Server]
+
+This flowchart is good for _sequential servers_, i.e., servers that can serve one client at a time, just as we were able to with our _daytime_ server. This is only possible whenever there is no real "conversation" going on between the client and the server: As soon as the server detects a connection to the client, it sends out some data and closes the connection. The entire operation may take nanoseconds, and it is finished.
+
+The advantage of this flowchart is that, except for the brief moment after the parent ``fork``s and before it exits, there is always only one _process_ active: Our server does not take up much memory and other system resources.
+
+Note that we have added _initialize daemon_ in our flowchart. We did not need to initialize our own daemon, but this is a good place in the flow of the program to set up any `signal` handlers, open any files we may need, etc.
+
+Just about everything in the flow chart can be used literally on many different servers. The _serve_ entry is the exception. We think of it as a _"black box"_, i.e., something you design specifically for your own server, and just "plug it into the rest."
+
+Not all protocols are that simple. Many receive a request from the client, reply to it, then receive another request from the same client. Because of that, they do not know in advance how long they will be serving the client. Such servers usually start a new process for each client. While the new process is serving its client, the daemon can continue listening for more connections.
+
+Now, go ahead, save the above source code as [.filename]#daytimed.c# (it is customary to end the names of daemons with the letter `d`). After you have compiled it, try running it:
+
+[source,bash]
+....
+% ./daytimed
+bind: Permission denied
+%
+....
+
+What happened here? As you will recall, the _daytime_ protocol uses port 13. But all ports below 1024 are reserved to the superuser (otherwise, anyone could start a daemon pretending to serve a commonly used port, while causing a security breach).
+
+Try again, this time as the superuser:
+
+[source,bash]
+....
+# ./daytimed
+#
+....
+
+What... Nothing? Let us try again:
+
+[source,bash]
+....
+# ./daytimed
+
+bind: Address already in use
+#
+....
+
+Every port can only be bound by one program at a time. Our first attempt was indeed successful: It started the child daemon and returned quietly. It is still running and will continue to run until you either kill it, or any of its system calls fail, or you reboot the system.
+
+Fine, we know it is running in the background. But is it working? How do we know it is a proper _daytime_ server? Simple:
+
+[source,bash]
+....
+% telnet localhost 13
+
+Trying ::1...
+telnet: connect to address ::1: Connection refused
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+2001-06-19T21:04:42Z
+Connection closed by foreign host.
+%
+....
+
+telnet tried the new IPv6, and failed. It retried with IPv4 and succeeded. The daemon works.
+
+If you have access to another UNIX(R) system via telnet, you can use it to test accessing the server remotely. My computer does not have a static IP address, so this is what I did:
+
+[source,bash]
+....
+% who
+
+whizkid          ttyp0   Jun 19 16:59   (216.127.220.143)
+xxx              ttyp1   Jun 19 16:06   (xx.xx.xx.xx)
+% telnet 216.127.220.143 13
+
+Trying 216.127.220.143...
+Connected to r47.bfm.org.
+Escape character is '^]'.
+2001-06-19T21:31:11Z
+Connection closed by foreign host.
+%
+....
+
+Again, it worked. Will it work using the domain name?
+
+[source,bash]
+....
+% telnet r47.bfm.org 13
+
+Trying 216.127.220.143...
+Connected to r47.bfm.org.
+Escape character is '^]'.
+2001-06-19T21:31:40Z
+Connection closed by foreign host.
+%
+....
+
+By the way, telnet prints the _Connection closed by foreign host_ message after our daemon has closed the socket. This shows us that, indeed, using `fclose(client);` in our code works as advertised.
+
+[[sockets-helper-functions]]
+== Helper Functions
+
+FreeBSD C library contains many helper functions for sockets programming. For example, in our sample client we hard coded the `time.nist.gov` IP address. But we do not always know the IP address. Even if we do, our software is more flexible if it allows the user to enter the IP address, or even the domain name.
+
+[[sockets-gethostbyname]]
+=== `gethostbyname`
+
+While there is no way to pass the domain name directly to any of the sockets functions, the FreeBSD C library comes with the man:gethostbyname[3] and man:gethostbyname2[3] functions, declared in [.filename]#netdb.h#.
+
+[.programlisting]
+....
+struct hostent * gethostbyname(const char *name);
+struct hostent * gethostbyname2(const char *name, int af);
+....
+
+Both return a pointer to the `hostent` structure, with much information about the domain. For our purposes, the `h_addr_list[0]` field of the structure points at `h_length` bytes of the correct address, already stored in the _network byte order_.
+
+This allows us to create a much more flexible-and much more useful-version of our daytime program:
+
+[.programlisting]
+....
+/*
+ * daytime.c
+ *
+ * Programmed by G. Adam Stanislav
+ * 19 June 2001
+ */
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+int main(int argc, char *argv[]) {
+  register int s;
+  register int bytes;
+  struct sockaddr_in sa;
+  struct hostent *he;
+  char buf[BUFSIZ+1];
+  char *host;
+
+  if ((s = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
+    perror("socket");
+    return 1;
+  }
+
+  bzero(&sa, sizeof sa);
+
+  sa.sin_family = AF_INET;
+  sa.sin_port = htons(13);
+
+  host = (argc > 1) ? (char *)argv[1] : "time.nist.gov";
+
+  if ((he = gethostbyname(host)) == NULL) {
+    herror(host);
+    return 2;
+  }
+
+  bcopy(he->h_addr_list[0],&sa.sin_addr, he->h_length);
+
+  if (connect(s, (struct sockaddr *)&sa, sizeof sa) < 0) {
+    perror("connect");
+    return 3;
+  }
+
+  while ((bytes = read(s, buf, BUFSIZ)) > 0)
+    write(1, buf, bytes);
+
+  close(s);
+  return 0;
+}
+....
+
+We now can type a domain name (or an IP address, it works both ways) on the command line, and the program will try to connect to its _daytime_ server. Otherwise, it will still default to `time.nist.gov`. However, even in this case we will use `gethostbyname` rather than hard coding `192.43.244.18`. That way, even if its IP address changes in the future, we will still find it.
+
+Since it takes virtually no time to get the time from your local server, you could run daytime twice in a row: First to get the time from `time.nist.gov`, the second time from your own system. You can then compare the results and see how exact your system clock is:
+
+[source,bash]
+....
+% daytime ; daytime localhost
+
+52080 01-06-20 04:02:33 50 0 0 390.2 UTC(NIST) *
+2001-06-20T04:02:35Z
+%
+....
+
+As you can see, my system was two seconds ahead of the NIST time.
+
+[[sockets-getservbyname]]
+=== `getservbyname`
+
+Sometimes you may not be sure what port a certain service uses. The man:getservbyname[3] function, also declared in [.filename]#netdb.h# comes in very handy in those cases:
+
+[.programlisting]
+....
+struct servent * getservbyname(const char *name, const char *proto);
+....
+
+The `servent` structure contains the `s_port`, which contains the proper port, already in _network byte order_.
+
+Had we not known the correct port for the _daytime_ service, we could have found it this way:
+
+[.programlisting]
+....
+struct servent *se;
+  ...
+  if ((se = getservbyname("daytime", "tcp")) == NULL {
+    fprintf(stderr, "Cannot determine which port to use.\n");
+    return 7;
+  }
+  sa.sin_port = se->s_port;
+....
+
+You usually do know the port. But if you are developing a new protocol, you may be testing it on an unofficial port. Some day, you will register the protocol and its port (if nowhere else, at least in your [.filename]#/etc/services#, which is where `getservbyname` looks). Instead of returning an error in the above code, you just use the temporary port number. Once you have listed the protocol in [.filename]#/etc/services#, your software will find its port without you having to rewrite the code.
+
+[[sockets-concurrent-servers]]
+== Concurrent Servers
+
+Unlike a sequential server, a _concurrent server_ has to be able to serve more than one client at a time. For example, a _chat server_ may be serving a specific client for hours-it cannot wait till it stops serving a client before it serves the next one.
+
+This requires a significant change in our flowchart:
+
+image::serv2.png[Concurrent Server]
+
+We moved the _serve_ from the _daemon process_ to its own _server process_. However, because each child process inherits all open files (and a socket is treated just like a file), the new process inherits not only the _"accepted handle,"_ i.e., the socket returned by the `accept` call, but also the _top socket_, i.e., the one opened by the top process right at the beginning.
+
+However, the _server process_ does not need this socket and should `close` it immediately. Similarly, the _daemon process_ no longer needs the _accepted socket_, and not only should, but _must_ `close` it-otherwise, it will run out of available _file descriptors_ sooner or later.
+
+After the _server process_ is done serving, it should close the _accepted socket_. Instead of returning to `accept`, it now exits.
+
+Under UNIX(R), a process does not really _exit_. Instead, it _returns_ to its parent. Typically, a parent process ``wait``s for its child process, and obtains a return value. However, our _daemon process_ cannot simply stop and wait. That would defeat the whole purpose of creating additional processes. But if it never does `wait`, its children will become _zombies_-no longer functional but still roaming around.
+
+For that reason, the _daemon process_ needs to set _signal handlers_ in its _initialize daemon_ phase. At least a SIGCHLD signal has to be processed, so the daemon can remove the zombie return values from the system and release the system resources they are taking up.
+
+That is why our flowchart now contains a _process signals_ box, which is not connected to any other box. By the way, many servers also process SIGHUP, and typically interpret as the signal from the superuser that they should reread their configuration files. This allows us to change settings without having to kill and restart these servers.

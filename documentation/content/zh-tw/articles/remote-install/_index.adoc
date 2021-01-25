@@ -1,0 +1,324 @@
+---
+title: 遠端安裝 FreeBSD 作業系統而不必接 Remote Console
+authors:
+  - author: Daniel Gerzo
+    email: danger@FreeBSD.org
+copyright: 2008 The FreeBSD Documentation Project
+releaseinfo: "$FreeBSD$" 
+trademarks: ["freebsd", "general"]
+---
+
+= 遠端安裝 FreeBSD 作業系統而不必接 Remote Console
+:doctype: article
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:toc-title: 目录
+:part-signifier: 部分
+:chapter-signifier: 第
+:appendix-caption: 附录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例 
+
+include::shared/authors.adoc[]
+include::shared/zh-tw/urls.adoc[]
+
+[.abstract-title]
+摘要
+
+本文介紹如何在沒辦法連到遠端 console 的機器做 FreeBSD 遠端安裝。 本文構想來自於作者與 `{mm}` 的合作成果， 以及 `{pjd}` 所投注的諸多心血。
+
+'''
+
+toc::[]
+
+[[background]]
+== 緣起
+
+世上有許多 server hosting provider，但其中有官方支援 FreeBSD 則不是相當多。 他們通常會在所提供的機器上有 Linux(R) distribution 的安裝支援。
+
+有些會讓您可選擇喜好的 Linux(R) distribution 來裝， 像這種情況就可以試著安裝 FreeBSD。 而有些則是會提供救急用的系統， 這種也可以用來安裝 FreeBSD。
+
+本文介紹這些遠端基本安裝 FreeBSD 的方式，以及 RAID-1 與 ZFS 設定步驟。
+
+[[intro]]
+== 介紹
+
+茲摘錄一下本文的目的以及闡述這邊所涵蓋的東西。 對於無官方支援 FreeBSD 的代管服務(colocation)用戶而言， 本文中所介紹到的指令會相當有用。
+
+[.procedure]
+. 正如先前 <<background>> 所提到的，許多名聲還不賴的 server hosting 公司會提供一些救急用系統，可以透過 LAN 方式開機，也可以透過 SSH 方式進行管理。 通常會有該加值服務， 以讓他們的客戶可以連進來修復有問題的作業系統。 本節之後將介紹如何透過救急系統來安裝 FreeBSD。
++
+. 下一節會介紹如何在本機設定以及打造最小巧的 FreeBSD ---- 該版最後會在遠端機器上透過 ramdisk 方式啟動，並以 Sysinstall 從 FTP mirror 站來安裝完整的 FreeBSD 作業系統。
+. 本文其餘部分將介紹安裝程序，以及 ZFS 檔案系統的設定。
+
+[[requirements]]
+=== 需求
+
+為了成功完成遠端安裝，必須要有：
+
+* 要有可以上網的作業系統，並且 SSH 可以連線。
+* 瞭解 FreeBSD 的安裝程序
+* 熟悉如何使用 man:sysinstall[8]
+* 有 FreeBSD 安裝光碟片或者 ISO image 檔
+
+[[preparation]]
+== 準備 - mfsBSD
+
+在裝 FreeBSD 之前，要先打造最小化的 FreeBSD 作業系統 image 檔， 以便可以從硬碟上開機。 如此一來，新的系統就可以透過網路來操作， 而剩下來的安裝部分即可不必透過 console。
+
+而 mfsBSD 這套工具就是用來打造小型的 FreeBSD image 檔。 mfsBSD (名字其中 "mfs" 就是 "memory file system")所建造出來的 整套系統會透過 ramdisk 方式來運作。 由於此一特色，硬碟的部分就不受限， 因此可以用來安裝完整的 FreeBSD 作業系統。 mfsBSD 的首頁位於 http://people.freebsd.org/\~mm/mfsbsd/[http://people.freebsd.org/~mm/mfsbsd/]， 其中連結有該工具的最新 release 部分。
+
+請注意：mfsBSD 內部運作方式的細節，不 在本文介紹範圍之內。 若對這方面有興趣的讀者，可至 mfsBSD 官網查閱相關文件。
+
+首先下載最新的 mfsBSD 並解壓縮之， 然後切到解壓縮後的工作目錄，也就是 mfsBSD script 檔所在處：
+
+[source,bash]
+....
+# fetch http://people.freebsd.org/~mm/mfsbsd/mfsbsd-latest.tar.gz
+# tar xvzf mfsbsd-1.0-beta1.tar.gz
+# cd mfsbsd-1.0-beta1/
+....
+
+[[mfsbsd-config]]
+=== 設定 mfsBSD
+
+在將 mfsBSD 開機之前， 有幾個重要設定要先設妥。 此時最重要的設定，很明顯就是網路設定。 到底網路怎麼設最好，則取決於所處的網路環境， 以及該網路卡會以哪一種驅動程式載入而定。 我們將會看到 mfsBSD 如何在任何網路情況下進行設定。
+
+另一件重要事就是設定 `root` 密碼。 這點可以透過 [.filename]#conf/rootpw.conf# 來完成。 請切記：該檔密碼是以明文方式存放，因此不建議放真正平常有在用的密碼。 然而這密碼只是臨時密碼而已，可以在之後開機時再做更換。
+
+==== 設定網路([.filename]#conf/interfaces.conf# 方式)
+
+若對要裝的機器網卡為何還不知道是哪一款，但可以善加利用 mfsBSD 的自動偵測功能。 mfsBSD 的開機 script 會根據網卡的 MAC 位址範圍來偵測正確的驅動程式，像是下列的 [.filename]#conf/interfaces.conf# 設定內容：
+
+[.programlisting]
+....
+initconf_interfaces="ext1"
+initconf_mac_ext1="00:00:00:00:00:00"
+initconf_ip_ext1="192.168.0.2"
+initconf_netmask_ext1="255.255.255.0"
+....
+
+別忘了在 [.filename]#conf/rc.conf# 內要加上 `defaultrouter` 的相關設定：
+
+[.programlisting]
+....
+defaultrouter="192.168.0.1"
+....
+
+==== 設定網路([.filename]#conf/rc.conf# 方式)
+
+若已經知道網卡是哪一種，那麼要設定網路的話直接改 [.filename]#conf/rc.conf# 會比較方便。 該檔設定語法與 FreeBSD 標準的 man:rc.conf[5] 是一致的。
+
+舉個例子，若知道該機器網卡是用 man:re[4]，那麼就在 [.filename]#conf/rc.conf# 做下列類似設定：
+
+[.programlisting]
+....
+defaultrouter="192.168.0.1"
+ifconfig_re0="inet 192.168.0.2 netmask 255.255.255.0"
+....
+
+[[mfsbsd-build]]
+=== 打造 mfsBSD image
+
+打造 mfsBSD image 檔的過程相當簡單。
+
+首先是把 FreeBSD 安裝光碟或者安裝用的 ISO image 檔丟到 [.filename]#/cdrom#。 為維持所有例子的一致，本文假設都是用 FreeBSD 7.0-RELEASE ISO。 而把 ISO image 檔掛載到 [.filename]#/cdrom# 目錄相當簡單， 就是用 man:mdconfig[8]：
+
+[source,bash]
+....
+# mdconfig -a -t vnode -u 10 -f 7.0-RELEASE-amd64-disc1.iso
+# mount_cd9660 /dev/md10 /cdrom
+....
+
+接著就開始打造可開機的 mfsBSD image：
+
+[source,bash]
+....
+# make BASE=/cdrom/7.0-RELEASE
+....
+
+[NOTE]
+====
+上述的 make 指令要在 mfsBSD 的最上層目錄執行，比方說 [.filename]#~/mfsbsd-1.0-beta1/#。
+====
+
+=== mfsBSD 開動
+
+現在 mfsBSD image 已經備妥， 要上傳到遠端機器的救急系統或者預先安裝的 Linux(R) distribution。 要完成這工作最適合的工具就是 scp：
+
+[source,bash]
+....
+# scp disk.img root@192.168.0.2:.
+....
+
+為了能順利啟動 mfsBSD image， 要把檔案放在欲安裝機器的第一顆(可開機)硬碟上。 假設例子的第一顆開機硬碟代號為 [.filename]#sda#， 那麼作法就類似下面這樣：
+
+[source,bash]
+....
+# dd if=/root/disk.img of=/dev/sda bs=1m
+....
+
+若一切順利，該 image 檔現在應該會在第一顆硬碟的 MBR 磁區並可以開始進行重開機了。 可以用 man:ping[8] 工具來檢測該機器開機完畢與否。 一旦 ping 到之後， 就可以透過 man:ssh[1] 連進去，並且用 `root` 以及剛設定的密碼登入。
+
+[[installation]]
+== FreeBSD 作業系統的安裝
+
+現在 mfsBSD 已順利啟動，並且應該可以透過 man:ssh[1] 方式來連。 本節將介紹如何建立 slice 分割、設定 gmirror 以作 RAID-1、如何以 Sysinstall 來安裝 FreeBSD 作業系統的最小化安裝。
+
+=== 準備硬碟
+
+首先要作的是配置硬碟空間給 FreeBSD，像是建立 slice 跟分割區。 很明顯地，目前在跑的作業系統是載入到系統記憶體內執行， 因此要對硬碟配置並無任何問題。 這些工作可以用 Sysinstall 或者以 man:fdisk[8] 搭配 man:bsdlabel[8] 來完成。
+
+首先先把各硬碟都先清空。 請對各硬碟作下列指令：
+
+[source,bash]
+....
+# dd if=/dev/zero of=/dev/ad0 count=2
+....
+
+接著，以您慣用的工具來建立 slice 以及設定 label。 通常會建議以 的 Sysinstall 工具來作會比較輕鬆， 或者是強而又不太會出槌的文字介面 UNIX(R) 標準工具(像是 man:fdisk[8], man:bsdlabel[8])，這部分稍後也會一併介紹。 前者部分在 FreeBSD Handbook 的 link:{handbook}#install-steps[安裝 FreeBSD] 章節有相當詳盡的介紹，所以這邊主要要介紹的是如何建立 RAID-1 系統以及 ZFS。 這邊會介紹建立以 man:gmirror[8] 做成的小型 mirrored 檔案系統： [.filename]#/# (根目錄), [.filename]#/usr# 以及 [.filename]#/var#，而硬碟的其餘剩餘空間則通通以 man:zpool[8] 做成 ZFS 的 mirrored 檔案系統 。 請注意：必須要先把 FreeBSD 作業系統裝好並開完機後，才能進行設定 ZFS 檔案系統。
+
+下面的例子會介紹如何建立 slice 以及 label、在每個分割區上啟用 man:gmirror[8]、如何在每個 mirrored 分割區上建立 UFS2 檔案系統：
+
+[source,bash]
+....
+# fdisk -BI /dev/ad0 <.>
+# fdisk -BI /dev/ad1
+# bsdlabel -wB /dev/ad0s1 <.>
+# bsdlabel -wB /dev/ad1s1
+# bsdlabel -e /dev/ad0s1 <.>
+# bsdlabel /dev/ad0s1 > /tmp/bsdlabel.txt && bsdlabel -R /dev/ad1s1 /tmp/bsdlabel.txt <.>
+# gmirror label root /dev/ad[01]s1a <.>
+# gmirror label var /dev/ad[01]s1d
+# gmirror label usr /dev/ad[01]s1e
+# gmirror label -F swap /dev/ad[01]s1b <.>
+# newfs /dev/mirror/root <.>
+# newfs /dev/mirror/var
+# newfs /dev/mirror/usr
+....
+
+<.> 對該硬碟建立 slice 並且在第零軌處將開機表作初始。 請對該機器所有硬碟都作此一動作。
+
+<.> 對各硬碟寫入 label 以及 bootstrap 碼。
+
+<.> 現在手動修改該硬碟的 label，至於如何建立分割區(partitions) 請參閱 man:bsdlabel[8] 說明。 分割區分別建立：`a` 是給 [.filename]#/# (根目錄)， `b` 給 swap， `d` 給 [.filename]#/var#， `e` 給 [.filename]#/usr#， 最後，會在稍後步驟把 `f` 給 ZFS 使用。
+
+<.> 把剛剛的 label 設定先匯出，再匯入到第二顆硬碟上， 如此一來兩邊的硬碟 label 設定就會同樣。
+
+<.> 在各分割區上啟用 man:gmirror[8]
+
+<.> 請注意：`-F` 選項是用在 swap 上。 這參數會讓 man:gmirror[8] 認為該硬體是處於可靠狀態， 即使發生電源故障或系統當掉，也不會去同步。
+
+<.> 在各個有做 mirror 的分割區上建立 UFS2 檔案系統
+
+=== 系統安裝
+
+這裡是最重要的一環， 本節介紹實際上如何在先前一節所做好的硬碟安裝最小化的 FreeBSD， 為了完成此一目標，所有檔案系統都必須掛載妥當，才能讓 Sysinstall 可以把 FreeBSD 裝到硬碟內：
+
+[source,bash]
+....
+# mount /dev/mirror/root /mnt
+# mkdir /mnt/var /mnt/usr
+# mount /dev/mirror/var /mnt/var
+# mount /dev/mirror/usr /mnt/usr
+....
+
+做完上述動作之後，請執行 man:sysinstall[8]。 請從主選單中選擇 [.guimenuitem]#Custom# 安裝，選 [.guimenuitem]#Options# 按 kbd:[Enter]。 然後以方向鍵移動到 `Install Root` 處，按 kbd:[Space] 鍵然後改為 [.filename]#/mnt#，再按 kbd:[Enter] 鍵以將修改值存起來，然後按 kbd:[q] 鍵即可離開這個 [.guimenuitem]#Options# 畫面。
+
+[WARNING]
+====
+請注意：本步驟極為重要，若忽略的話那麼 Sysinstall 就沒辦法安裝 FreeBSD。
+====
+
+接著選 [.guimenuitem]#Distributions#，然後移動游標到 `Minimal` 處，按 kbd:[Space] 鍵。 本文之所以介紹最小化安裝是為了要節省網路流量，因為系統安裝是透過 ftp 方式來進行。 要離開本畫面，請選 `Exit` 即可。
+
+[NOTE]
+====
+至於 [.guimenuitem]#Partition# 及 [.guimenuitem]#Label# 步驟則可略過， 因為這些目前已經都設定完畢了。
+====
+
+在 [.guimenuitem]#Media# 選單中請選 `FTP`。 請選最近的 mirror 站，並且讓 Sysinstall 假設網路已經設妥。 接下來就會回到 [.guimenuitem]#Custom# 選單。
+
+最後，按下 [.guimenuitem]#Commit# 即可開始進行安裝。 完成安裝後，即可離開 Sysinstall。
+
+=== 後續安裝步驟
+
+此時 FreeBSD 作業系統應該已經裝完，然而還有些後續流程要做。 必須要做一些後續設定，才能讓 FreeBSD 可以開機跟登入。
+
+現在必須要用 man:chroot[8] 以切到剛剛新裝好的系統內。 指令如下：
+
+[source,bash]
+....
+# chroot /mnt
+....
+
+然後再打下列指令以繼續完成：
+
+* 把 `GENERIC` kernel 複製到 [.filename]#/boot/kernel# 目錄：
++
+[source,bash]
+....
+# cp -Rp /boot/GENERIC/* /boot/kernel
+....
+
+* 建立 [.filename]#/etc/rc.conf#, [.filename]#/etc/resolv.conf# 及 [.filename]#/etc/fstab# 檔案。 別忘了，要記得在 [.filename]#/etc/rc.conf# 檔設相關網路設定，以及把 sshd 啟用。 此外， [.filename]#/etc/fstab# 檔應該會長像下面這樣：
++
+[.programlisting]
+....
+# Device                Mountpoint      FStype  Options         Dump    Pass#
+/dev/mirror/swap        none            swap    sw              0       0
+/dev/mirror/root        /               ufs     rw              1       1
+/dev/mirror/usr         /usr            ufs     rw              2       2
+/dev/mirror/var         /var            ufs     rw              2       2
+/dev/cd0                /cdrom          cd9660  ro,noauto       0       0
+....
+* 新增 [.filename]#/boot/loader.conf# 檔， 並且內容填入下列：
++
+[.programlisting]
+....
+geom_mirror_load="YES"
+zfs_load="YES"
+....
+* 執行下列指令，以在下次開機時啟用 ZFS ：
++
+[source,bash]
+....
+# echo 'zfs_enable="YES"' >> /etc/rc.conf
+....
+
+* 使用 man:adduser[8] 工具來新增其他使用者帳號。 別忘了， 至少要有一個帳號得加入 `wheel` 群組， 才能在重開機後以該帳號切換為 root。
+* 再次檢查上述相關的設定，是否有遺漏或打錯。
+
+現在該系統終於可以重開機了，請用 man:reboot[8] 指令以重開機。
+
+[[zfs]]
+== ZFS
+
+系統重開機完畢之後，應該就可以登入了。 歡迎使用全新的 FreeBSD 安裝方式， 完全透過遠端而不必接上 remote console！
+
+接下來只剩要調整 man:zpool[8] 以及建立 man:zfs[8] 檔案系統而已。 ZFS 的建立及管理是相當淺顯易懂。 首先， 建立 mirrored pool：
+
+[source,bash]
+....
+# zpool create tank mirror /dev/ad[01]s1f
+....
+
+接著，建立檔案系統：
+
+[source,bash]
+....
+# zfs create tank/ports
+# zfs create tank/src
+# zfs set compression=gzip tank/ports
+# zfs set compression=on tank/src
+# zfs set mountpoint=/usr/ports tank/ports
+# zfs set mountpoint=/usr/src tank/src
+....
+
+一切就是這樣簡單。 若對 FreeBSD 上的 ZFS 細節部分有興趣，請參閱 FreeBSD Wiki 上的 http://wiki.freebsd.org/ZFS[ZFS] 一節說明。

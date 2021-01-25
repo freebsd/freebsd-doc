@@ -1,0 +1,465 @@
+---
+title: Chapter 13. Dos and Don'ts
+prev: books/porters-handbook/security
+next: books/porters-handbook/porting-samplem
+---
+
+[[porting-dads]]
+= Dos and Don'ts
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:part-signifier: 部分
+:chapter-signifier: 第
+:appendix-caption: 附录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例 
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:freebsd-version: __FreeBSD_version
+:freebsd: __FreeBSD__
+:sectnumoffset: 13
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-tw/mailing-lists.adoc[]
+include::shared/zh-tw/urls.adoc[]
+
+toc::[]
+
+[[dads-intro]]
+== Introduction
+
+Here is a list of common dos and don'ts that are encountered during the porting process. Check the port against this list, but also check ports in the https://bugs.FreeBSD.org/search/[PR database] that others have submitted. Submit any comments on ports as described in link:{contributing}#CONTRIB-GENERAL[Bug Reports and General Commentary]. Checking ports in the PR database will both make it faster for us to commit them, and prove that you know what you are doing.
+
+[[porting-wrkdir]]
+== `WRKDIR`
+
+Do not write anything to files outside `WRKDIR`. `WRKDIR` is the only place that is guaranteed to be writable during the port build (see link:{handbook}#PORTS-CD[ installing ports from a CDROM] for an example of building ports from a read-only tree). The [.filename]##pkg-*## files can be modified by <<pkg-names,redefining a variable>> rather than overwriting the file.
+
+[[porting-wrkdirprefix]]
+== `WRKDIRPREFIX`
+
+Make sure the port honors `WRKDIRPREFIX`. Most ports do not have to worry about this. In particular, when referring to a `WRKDIR` of another port, note that the correct location is [.filename]#WRKDIRPREFIXPORTSDIR/subdir/name/work# not [.filename]#PORTSDIR/subdir/name/work# or [.filename]#.CURDIR/../../subdir/name/work# or some such.
+
+Also, if defining `WRKDIR`, make sure to prepend `${WRKDIRPREFIX}${.CURDIR}` in the front.
+
+[[porting-versions]]
+== Differentiating Operating Systems and OS Versions
+
+Some code needs modifications or conditional compilation based upon what version of FreeBSD Unix it is running under. The preferred way to tell FreeBSD versions apart are the `{freebsd-version}` and `{freebsd}` macros defined in https://svnweb.freebsd.org/base/head/sys/sys/param.h?view=markup[sys/param.h]. If this file is not included add the code,
+
+[.programlisting]
+....
+#include <sys/param.h>
+....
+
+to the proper place in the [.filename]#.c# file.
+
+`{freebsd}` is defined in all versions of FreeBSD as their major version number. For example, in FreeBSD 9.x, `{freebsd}` is defined to be `9`.
+
+[.programlisting]
+....
+#if __FreeBSD__ >= 9
+#  if __FreeBSD_version >= 901000
+	 /* 9.1+ release specific code here */
+#  endif
+#endif
+....
+
+A complete list of `{freebsd-version}` values is available in <<versions>>.
+
+[[dads-after-port-mk]]
+== Writing Something After [.filename]#bsd.port.mk#
+
+Do not write anything after the `.include <bsd.port.mk>` line. It usually can be avoided by including [.filename]#bsd.port.pre.mk# somewhere in the middle of the [.filename]#Makefile# and [.filename]#bsd.port.post.mk# at the end.
+
+[IMPORTANT]
+====
+Include either the [.filename]#bsd.port.pre.mk#/[.filename]#bsd.port.post.mk# pair or [.filename]#bsd.port.mk# only; do not mix these two usages.
+====
+
+[.filename]#bsd.port.pre.mk# only defines a few variables, which can be used in tests in the [.filename]#Makefile#, [.filename]#bsd.port.post.mk# defines the rest.
+
+Here are some important variables defined in [.filename]#bsd.port.pre.mk# (this is not the complete list, please read [.filename]#bsd.port.mk# for the complete list).
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Variable
+| Description
+
+|`ARCH`
+|The architecture as returned by `uname -m` (for example, `i386`)
+
+|`OPSYS`
+|The operating system type, as returned by `uname -s` (for example, `FreeBSD`)
+
+|`OSREL`
+|The release version of the operating system (for example, `2.1.5` or `2.2.7`)
+
+|`OSVERSION`
+|The numeric version of the operating system; the same as <<versions,`{freebsd-version}`>>.
+
+|`LOCALBASE`
+|The base of the "local" tree (for example, `/usr/local`)
+
+|`PREFIX`
+|Where the port installs itself (see <<porting-prefix,more on `PREFIX`>>).
+|===
+
+[NOTE]
+====
+When `MASTERDIR` is needed, always define it before including [.filename]#bsd.port.pre.mk#.
+====
+
+Here are some examples of things that can be added after [.filename]#bsd.port.pre.mk#:
+
+[.programlisting]
+....
+# no need to compile lang/perl5 if perl5 is already in system
+.if ${OSVERSION} > 300003
+BROKEN=	perl is in system
+.endif
+....
+
+Always use tab instead of spaces after `BROKEN=`.
+
+[[dads-sh-exec]]
+== Use the `exec` Statement in Wrapper Scripts
+
+If the port installs a shell script whose purpose is to launch another program, and if launching that program is the last action performed by the script, make sure to launch the program using the `exec` statement, for instance:
+
+[.programlisting]
+....
+#!/bin/sh
+exec %%LOCALBASE%%/bin/java -jar %%DATADIR%%/foo.jar "$@"
+....
+
+The `exec` statement replaces the shell process with the specified program. If `exec` is omitted, the shell process remains in memory while the program is executing, and needlessly consumes system resources.
+
+[[dads-rational]]
+== Do Things Rationally
+
+The [.filename]#Makefile# should do things in a simple and reasonable manner. Making it a couple of lines shorter or more readable is always better. Examples include using a make `.if` construct instead of a shell `if` construct, not redefining `do-extract` if redefining `EXTRACT*` is enough, and using `GNU_CONFIGURE` instead of `CONFIGURE_ARGS += --prefix=${PREFIX}`.
+
+If a lot of new code is needed to do something, there may already be an implementation of it in [.filename]#bsd.port.mk#. While hard to read, there are a great many seemingly-hard problems for which [.filename]#bsd.port.mk# already provides a shorthand solution.
+
+[[dads-cc]]
+== Respect Both `CC` and `CXX`
+
+The port must respect both `CC` and `CXX`. What we mean by this is that the port must not set the values of these variables absolutely, overriding existing values; instead, it may append whatever values it needs to the existing values. This is so that build options that affect all ports can be set globally.
+
+If the port does not respect these variables, please add `NO_PACKAGE=ignores either cc or cxx` to the [.filename]#Makefile#.
+
+Here is an example of a [.filename]#Makefile# respecting both `CC` and `CXX`. Note the `?=`:
+
+[.programlisting]
+....
+CC?= gcc
+....
+
+[.programlisting]
+....
+CXX?= g++
+....
+
+Here is an example which respects neither `CC` nor `CXX`:
+
+[.programlisting]
+....
+CC= gcc
+....
+
+[.programlisting]
+....
+CXX= g++
+....
+
+Both `CC` and `CXX` can be defined on FreeBSD systems in [.filename]#/etc/make.conf#. The first example defines a value if it was not previously set in [.filename]#/etc/make.conf#, preserving any system-wide definitions. The second example clobbers anything previously defined.
+
+[[dads-cflags]]
+== Respect `CFLAGS`
+
+The port must respect `CFLAGS`. What we mean by this is that the port must not set the value of this variable absolutely, overriding the existing value. Instead, it may append whatever values it needs to the existing value. This is so that build options that affect all ports can be set globally.
+
+If it does not, please add `NO_PACKAGE=ignores cflags` to the [.filename]#Makefile#.
+
+Here is an example of a [.filename]#Makefile# respecting `CFLAGS`. Note the `+=`:
+
+[.programlisting]
+....
+CFLAGS+= -Wall -Werror
+....
+
+Here is an example which does not respect `CFLAGS`:
+
+[.programlisting]
+....
+CFLAGS= -Wall -Werror
+....
+
+`CFLAGS` is defined on FreeBSD systems in [.filename]#/etc/make.conf#. The first example appends additional flags to `CFLAGS`, preserving any system-wide definitions. The second example clobbers anything previously defined.
+
+Remove optimization flags from the third party [.filename]##Makefile##s. The system `CFLAGS` contains system-wide optimization flags. An example from an unmodified [.filename]#Makefile#:
+
+[.programlisting]
+....
+CFLAGS= -O3 -funroll-loops -DHAVE_SOUND
+....
+
+Using system optimization flags, the [.filename]#Makefile# would look similar to this example:
+
+[.programlisting]
+....
+CFLAGS+= -DHAVE_SOUND
+....
+
+[[dads-verbose-logs]]
+== Verbose Build Logs
+
+Make the port build system display all commands executed during the build stage. Complete build logs are crucial to debugging port problems.
+
+Non-informative build log example (bad):
+
+[.programlisting]
+....
+  CC     source1.o
+  CC     source2.o
+  CCLD   someprogram
+....
+
+Verbose build log example (good):
+
+[.programlisting]
+....
+cc -O2 -pipe -I/usr/local/include -c -o source1.o source1.c
+cc -O2 -pipe -I/usr/local/include -c -o source2.o source2.c
+cc -o someprogram source1.o source2.o -L/usr/local/lib -lsomelib
+....
+
+Some build systems such as CMake, ninja, and GNU configure are set up for verbose logging by the ports framework. In other cases, ports might need individual tweaks.
+
+[[dads-feedback]]
+== Feedback
+
+Do send applicable changes and patches to the upstream maintainer for inclusion in the next release of the code. This makes updating to the next release that much easier.
+
+[[dads-readme]]
+== [.filename]#README.html#
+
+[.filename]#README.html# is not part of the port, but generated by `make readme`. Do not include this file in patches or commits.
+
+[NOTE]
+====
+If `make readme` fails, make sure that the default value of `ECHO_MSG` has not been modified by the port.
+====
+
+[[dads-noinstall]]
+== Marking a Port Not Installable with `BROKEN`, `FORBIDDEN`, or `IGNORE`
+
+In certain cases, users must be prevented from installing a port. There are several variables that can be used in a port's [.filename]#Makefile# to tell the user that the port cannot be installed. The value of these make variables will be the reason that is shown to users for why the port refuses to install itself. Please use the correct make variable. Each variable conveys radically different meanings, both to users and to automated systems that depend on [.filename]##Makefile##s, such as <<build-cluster,the ports build cluster>>, <<freshports,FreshPorts>>, and <<portsmon,portsmon>>.
+
+[[dads-noinstall-variables]]
+=== Variables
+
+* `BROKEN` is reserved for ports that currently do not compile, install, deinstall, or run correctly. Use it for ports where the problem is believed to be temporary.
++ 
+If instructed, the build cluster will still attempt to try to build them to see if the underlying problem has been resolved. (However, in general, the cluster is run without this.)
++ 
+For instance, use `BROKEN` when a port:
+
+** does not compile
+** fails its configuration or installation process
+** installs files outside of [.filename]#${PREFIX}#
+** does not remove all its files cleanly upon deinstall (however, it may be acceptable, and desirable, for the port to leave user-modified files behind)
+** has runtime issues on systems where it is supposed to run fine.
+
+* `FORBIDDEN` is used for ports that contain a security vulnerability or induce grave concern regarding the security of a FreeBSD system with a given port installed (for example, a reputably insecure program or a program that provides easily exploitable services). Mark ports as `FORBIDDEN` as soon as a particular piece of software has a vulnerability and there is no released upgrade. Ideally upgrade ports as soon as possible when a security vulnerability is discovered so as to reduce the number of vulnerable FreeBSD hosts (we like being known for being secure), however sometimes there is a noticeable time gap between disclosure of a vulnerability and an updated release of the vulnerable software. Do not mark a port `FORBIDDEN` for any reason other than security.
+* `IGNORE` is reserved for ports that must not be built for some other reason. Use it for ports where the problem is believed to be structural. The build cluster will not, under any circumstances, build ports marked as `IGNORE`. For instance, use `IGNORE` when a port:
+
+** does not work on the installed version of FreeBSD
+** has a distfile which may not be automatically fetched due to licensing restrictions
+** does not work with some other currently installed port (for instance, the port depends on package:www/apache20[] but package:www/apache22[] is installed)
++
+[NOTE]
+====
+If a port would conflict with a currently installed port (for example, if they install a file in the same place that performs a different function), <<conflicts,use `CONFLICTS` instead>>. `CONFLICTS` will set `IGNORE` by itself.
+====
+
+[[dads-noinstall-notes]]
+=== Implementation Notes
+
+Do not quote the values of `BROKEN`, `IGNORE`, and related variables. Due to the way the information is shown to the user, the wording of messages for each variable differ:
+
+[.programlisting]
+....
+BROKEN=	fails to link with base -lcrypto
+....
+
+[.programlisting]
+....
+IGNORE=	unsupported on recent versions
+....
+
+resulting in this output from `make describe`:
+
+[.programlisting]
+....
+===>  foobar-0.1 is marked as broken: fails to link with base -lcrypto.
+....
+
+[.programlisting]
+....
+===>  foobar-0.1 is unsupported on recent versions.
+....
+
+[[dads-arch]]
+== Architectural Considerations
+
+[[dads-arch-general]]
+=== General Notes on Architectures
+
+FreeBSD runs on many more processor architectures than just the well-known x86-based ones. Some ports have constraints which are particular to one or more of these architectures.
+
+For the list of supported architectures, run:
+
+[.programlisting]
+....
+cd ${SRCDIR}; make targets
+....
+
+The values are shown in the form `TARGET`/`TARGET_ARCH`. The ports read-only makevar `ARCH` is set based on the value of `TARGET_ARCH`. Port [.filename]##Makefile##s should test the value of this Makevar.
+
+[[dads-arch-neutral]]
+=== Marking a Port as Architecture Neutral
+
+Ports that do not have any architecture-dependent files or requirements are identified by setting `NO_ARCH=yes`.
+
+[[dads-arch-ignore]]
+=== Marking a Port as Ignored Only On Certain Architectures
+
+* To mark a port as ``IGNORE``d only on certain architectures, there are two other convenience variables that will automatically set `IGNORE`: `ONLY_FOR_ARCHS` and `NOT_FOR_ARCHS`. Examples:
++
+[.programlisting]
+....
+ONLY_FOR_ARCHS=	i386 amd64
+....
++
+[.programlisting]
+....
+NOT_FOR_ARCHS=	ia64 sparc64
+....
++ 
+A custom `IGNORE` message can be set using `ONLY_FOR_ARCHS_REASON` and `NOT_FOR_ARCHS_REASON`. Per architecture entries are possible with `ONLY_FOR_ARCHS_REASON_ARCH` and `NOT_FOR_ARCHS_REASON_ARCH`.
+
+[[dads-arch-i386]]
+* If a port fetches i386 binaries and installs them, set `IA32_BINARY_PORT`. If this variable is set, [.filename]#/usr/lib32# must be present for IA32 versions of libraries and the kernel must support IA32 compatibility. If one of these two dependencies is not satisfied, `IGNORE` will be set automatically.
+
+[[dads-arch-cluster]]
+=== Cluster-Specific Considerations
+
+* Some ports attempt to tune themselves to the exact machine they are being built on by specifying `-march=native` to the compiler. This should be avoided: either list it under an off-by-default option, or delete it entirely.
++ 
+Otherwise, the default package produced by the build cluster might not run on every single machine of that `ARCH`.
+
+[[dads-deprecated]]
+== Marking a Port for Removal with `DEPRECATED` or `EXPIRATION_DATE`
+
+Do remember that `BROKEN` and `FORBIDDEN` are to be used as a temporary resort if a port is not working. Permanently broken ports will be removed from the tree entirely.
+
+When it makes sense to do so, users can be warned about a pending port removal with `DEPRECATED` and `EXPIRATION_DATE`. The former is a string stating why the port is scheduled for removal; the latter is a string in ISO 8601 format (YYYY-MM-DD). Both will be shown to the user.
+
+It is possible to set `DEPRECATED` without an `EXPIRATION_DATE` (for instance, recommending a newer version of the port), but the converse does not make any sense.
+
+There is no set policy on how much notice to give. Current practice seems to be one month for security-related issues and two months for build issues. This also gives any interested committers a little time to fix the problems.
+
+[[dads-dot-error]]
+== Avoid Use of the `.error` Construct
+
+The correct way for a [.filename]#Makefile# to signal that the port cannot be installed due to some external factor (for instance, the user has specified an illegal combination of build options) is to set a non-blank value to `IGNORE`. This value will be formatted and shown to the user by `make install`.
+
+It is a common mistake to use `.error` for this purpose. The problem with this is that many automated tools that work with the ports tree will fail in this situation. The most common occurrence of this is seen when trying to build [.filename]#/usr/ports/INDEX# (see <<make-describe>>). However, even more trivial commands such as `make maintainer` also fail in this scenario. This is not acceptable.
+
+[[dot-error-breaks-index]]
+.How to Avoid Using `.error`
+[example]
+====
+
+The first of the next two [.filename]#Makefile# snippets will cause `make index` to fail, while the second one will not:
+
+[.programlisting]
+....
+.error "option is not supported"
+....
+
+[.programlisting]
+....
+IGNORE=option is not supported
+....
+
+====
+
+[[dads-sysctl]]
+== Usage of [.filename]#sysctl#
+
+The usage of [.filename]#sysctl# is discouraged except in targets. This is because the evaluation of any ``makevar``s, such as used during `make index`, then has to run the command, further slowing down that process.
+
+Only use man:sysctl[8] through `SYSCTL`, as it contains the fully qualified path and can be overridden, if one has such a special need.
+
+[[dads-rerolling-distfiles]]
+== Rerolling Distfiles
+
+Sometimes the authors of software change the content of released distfiles without changing the file's name. Verify that the changes are official and have been performed by the author. It has happened in the past that the distfile was silently altered on the download servers with the intent to cause harm or compromise end user security.
+
+Put the old distfile aside, download the new one, unpack them and compare the content with man:diff[1]. If there is nothing suspicious, update [.filename]#distinfo#.
+
+[IMPORTANT]
+====
+Be sure to summarize the differences in the PR and commit log, so that other people know that nothing bad has happened.
+====
+
+Contact the authors of the software and confirm the changes with them.
+
+[[dads-use-posix-standards]]
+== Use POSIX Standards
+
+FreeBSD ports generally expect POSIX compliance. Some software and build systems make assumptions based on a particular operating system or environment that can cause problems when used in a port.
+
+Do not use [.filename]#/proc# if there are any other ways of getting the information. For example, `setprogname(argv[0])` in `main()` and then man:getprogname[3] to know the executable name.
+
+Do not rely on behavior that is undocumented by POSIX.
+
+Do not record timestamps in the critical path of the application if it also works without. Getting timestamps may be slow, depending on the accuracy of timestamps in the OS. If timestamps are really needed, determine how precise they have to be and use an API which is documented to just deliver the needed precision.
+
+A number of simple syscalls (for example man:gettimeofday[2], man:getpid[2]) are much faster on Linux(R) than on any other operating system due to caching and the vsyscall performance optimizations. Do not rely on them being cheap in performance-critical applications. In general, try hard to avoid syscalls if possible.
+
+Do not rely on Linux(R)-specific socket behavior. In particular, default socket buffer sizes are different (call man:setsockopt[2] with `SO_SNDBUF` and `SO_RCVBUF`, and while Linux(R)'s man:send[2] blocks when the socket buffer is full, FreeBSD's will fail and set `ENOBUFS` in errno.
+
+If relying on non-standard behavior is required, encapsulate it properly into a generic API, do a check for the behavior in the configure stage, and stop if it is missing.
+
+Check the https://www.freebsd.org/cgi/man.cgi[man pages] to see if the function used is a POSIX interface (in the "STANDARDS" section of the man page).
+
+Do not assume that [.filename]#/bin/sh# is bash. Ensure that a command line passed to man:system[3] will work with a POSIX compliant shell.
+
+A list of common bashisms is available https://wiki.ubuntu.com/DashAsBinSh[here].
+
+Check that headers are included in the POSIX or man page recommended way. For example, [.filename]#sys/types.h# is often forgotten, which is not as much of a problem for Linux(R) as it is for FreeBSD.
+
+[[dads-misc]]
+== Miscellanea
+
+Always double-check [.filename]#pkg-descr# and [.filename]#pkg-plist#. If reviewing a port and a better wording can be achieved, do so.
+
+Do not copy more copies of the GNU General Public License into our system, please.
+
+Please be careful to note any legal issues! Do not let us illegally distribute software!

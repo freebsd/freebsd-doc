@@ -1,0 +1,2174 @@
+---
+title: Capítulo 17. Armazenamento
+part: Parte III. Administração do Sistema
+prev: books/handbook/audit
+next: books/handbook/geom
+---
+
+[[disks]]
+= Armazenamento
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Índice
+:table-caption: Tabela
+:figure-caption: Figura
+:example-caption: Exemplo
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 17
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/disks/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/disks/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/disks/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pt-br/mailing-lists.adoc[]
+include::shared/pt-br/teams.adoc[]
+include::shared/pt-br/urls.adoc[]
+
+toc::[]
+
+[[disks-synopsis]]
+== Sinopse
+
+Este capítulo aborda o uso de discos e mídia de armazenamento no FreeBSD. Isso inclui discos SCSI e IDE, mídias de CD e DVD, discos com suporte de memória e dispositivos de armazenamento USB.
+
+Depois de ler este capítulo, você saberá:
+
+* Como adicionar discos rígidos adicionais a um sistema FreeBSD.
+* Como aumentar o tamanho da partição de um disco no FreeBSD.
+* Como configurar o FreeBSD para usar dispositivos de armazenamento USB.
+* Como usar mídias de CD e DVD em um sistema FreeBSD.
+* Como usar os programas de backup disponíveis no FreeBSD.
+* Como configurar discos de memória.
+* O que são snapshots de sistema de arquivos e como usá-los com eficiência.
+* Como usar cotas para limitar o uso de espaço em disco.
+* Como criptografar discos e swap para protegê-los contra invasores.
+* Como configurar uma rede de armazenamento altamente disponível.
+
+Antes de ler este capítulo, você deve:
+
+* Saiba como crossref:kernelconfig[kernelconfig,configurar e instalar um novo kernel do FreeBSD].
+
+[[disks-adding]]
+== Adicionando Discos
+
+Esta seção descreve como adicionar um novo disco SATA a uma máquina que atualmente possui apenas uma única unidade. Primeiro, desligue o computador e instale a unidade no computador seguindo as instruções do fabricante do computador, controladora e unidade. Reinicialize o sistema e torne-se `root`.
+
+Inspecione o arquivo [.filename]#/var/run/dmesg.boot# para garantir que o novo disco foi encontrado. Neste exemplo, a unidade SATA recém-adicionada aparecerá como [.filename]#ada1#.
+
+Para este exemplo, uma única partição grande será criada no novo disco. O esquema de particionamento http://en.wikipedia.org/wiki/GUID_Partition_Table[GPT] será usado ao invés do esquema MBR, mais antigo e menos versátil.
+
+[NOTE]
+====
+Se o disco a ser adicionado não estiver em branco, as informações antigas da partição podem ser removidas com `gpart delete`. Veja man:gpart[8] para detalhes.
+====
+
+O esquema de partição é criado e, em seguida, uma única partição é adicionada. Para melhorar o desempenho em discos mais recentes com tamanhos maiores de blocos de hardware, a partição está alinhada a divisões de um megabyte:
+
+[source,bash]
+....
+# gpart create -s GPT ada1
+# gpart add -t freebsd-ufs -a 1M ada1
+....
+
+Dependendo do uso, várias partições menores podem ser desejadas. Veja man:gpart[8] para opções para criar partições menores que um disco inteiro.
+
+As informações da partição de disco podem ser visualizadas com `gpart show`:
+
+[source,bash]
+....
+% gpart show ada1
+=>        34  1465146988  ada1  GPT  (699G)
+          34        2014        - free -  (1.0M)
+        2048  1465143296     1  freebsd-ufs  (699G)
+  1465145344        1678        - free -  (839K)
+....
+
+Um sistema de arquivos é criado em uma nova partição no novo disco:
+
+[source,bash]
+....
+# newfs -U /dev/ada1p1
+....
+
+Um diretório vazio é criado como um _ponto de montagem_, um local para montar o novo disco no sistema de arquivos do disco original:
+
+[source,bash]
+....
+# mkdir /newdisk
+....
+
+Finalmente, uma entrada é adicionada ao arquivo [.filename]#/etc/fstab# para que o novo disco seja montado automaticamente na inicialização:
+
+[.programlisting]
+....
+/dev/ada1p1	/newdisk	ufs	rw	2	2
+....
+
+O novo disco pode ser montado manualmente, sem reiniciar o sistema:
+
+[source,bash]
+....
+# mount /newdisk
+....
+
+[[disks-growing]]
+== Redimensionando e Ampliando Discos
+
+A capacidade de um disco pode aumentar sem alterações nos dados já presentes. Isso acontece normalmente com máquinas virtuais, quando o disco virtual torna-se muito pequeno e é ampliado. Às vezes, uma imagem de disco é gravada em um cartão de memória USB, mas não usa toda a capacidade. Aqui nós descrevemos como redimensionar ou _ampliar_ o conteúdo do disco para aproveitar a capacidade aumentada.
+
+Determine o nome do dispositivo do disco a ser redimensionado inspecionando o arquivo [.filename]#/var/run/dmesg.boot#. Neste exemplo, há apenas um disco SATA no sistema, portanto a unidade aparecerá como [.filename]#ada0#.
+
+Liste as partições no disco para ver a configuração atual:
+
+[source,bash]
+....
+# gpart show ada0
+=>      34  83886013  ada0  GPT  (48G) [CORRUPT]
+        34       128     1  freebsd-boot  (64k)
+       162  79691648     2  freebsd-ufs  (38G)
+  79691810   4194236     3  freebsd-swap  (2G)
+  83886046         1        - free -  (512B)
+....
+
+[NOTE]
+====
+Se o disco foi formatado com o esquema de particionamento http://en.wikipedia.org/wiki/GUID_Partition_Table[GPT], ele pode ser exibido como "corrompido" porque a tabela de partições de backup GPT não está mais no final da unidade. Corrija a tabela de partições de backup com o `gpart`:
+
+[source,bash]
+....
+# gpart recover ada0
+ada0 recovered
+....
+
+====
+
+Agora, o espaço adicional no disco está disponível para uso por uma nova partição ou uma partição existente pode ser expandida:
+
+[source,bash]
+....
+# gpart show ada0
+=>       34  102399933  ada0  GPT  (48G)
+         34        128     1  freebsd-boot  (64k)
+        162   79691648     2  freebsd-ufs  (38G)
+   79691810    4194236     3  freebsd-swap  (2G)
+   83886046   18513921        - free -  (8.8G)
+....
+
+As partições só podem ser redimensionadas para um espaço livre contíguo. Aqui, a última partição no disco é a partição swap, mas a segunda partição é aquela que precisa ser redimensionada. As partições de Swap contêm apenas dados temporários, portanto, podem ser desmontadas, excluídas e, em seguida, recriadas a terceira partição após redimensionar a segunda partição.
+
+Desative a partição de swap:
+
+[source,bash]
+....
+# swapoff /dev/ada0p3
+....
+
+Exclua a terceira partição, especificada pela flag `-i`, do disco _ada0_.
+
+[source,bash]
+....
+# gpart delete -i 3 ada0
+ada0p3 deleted
+# gpart show ada0
+=>       34  102399933  ada0  GPT  (48G)
+         34        128     1  freebsd-boot  (64k)
+        162   79691648     2  freebsd-ufs  (38G)
+   79691810   22708157        - free -  (10G)
+....
+
+[WARNING]
+====
+
+Existe o risco de perda de dados ao modificar a tabela de partições de um sistema de arquivos montado. É melhor executar as etapas a seguir em um sistema de arquivos desmontado durante a execução de um dispositivo CD-ROM ou USB live. No entanto, se for absolutamente necessário, um sistema de arquivos montado pode ser redimensionado depois de desativar os recursos de segurança do GEOM:
+
+[source,bash]
+....
+# sysctl kern.geom.debugflags=16
+....
+
+====
+
+Redimensione a partição, deixando espaço para recriar uma partição swap do tamanho desejado. A partição a ser redimensionada é especificada com `-i` e o novo tamanho desejado com `-s`. Opcionalmente, o alinhamento da partição é controlado com `-a`. Isso só modifica o tamanho da partição. O sistema de arquivos na partição será expandido em uma etapa separada.
+
+[source,bash]
+....
+# gpart resize -i 2 -s 47G -a 4k ada0
+ada0p2 resized
+# gpart show ada0
+=>       34  102399933  ada0  GPT  (48G)
+         34        128     1  freebsd-boot  (64k)
+        162   98566144     2  freebsd-ufs  (47G)
+   98566306    3833661        - free -  (1.8G)
+....
+
+Recrie a partição swap e ative-a. Se nenhum tamanho for especificado com `-s`, todo o espaço restante será usado:
+
+[source,bash]
+....
+# gpart add -t freebsd-swap -a 4k ada0
+ada0p3 added
+# gpart show ada0
+=>       34  102399933  ada0  GPT  (48G)
+         34        128     1  freebsd-boot  (64k)
+        162   98566144     2  freebsd-ufs  (47G)
+   98566306    3833661     3  freebsd-swap  (1.8G)
+# swapon /dev/ada0p3
+....
+
+Aumente o sistema de arquivos UFS para usar a nova capacidade da partição redimensionada:
+
+[source,bash]
+....
+# growfs /dev/ada0p2
+Device is mounted read-write; resizing will result in temporary write suspension for /.
+It's strongly recommended to make a backup before growing the file system.
+OK to grow file system on /dev/ada0p2, mounted on /, from 38GB to 47GB? [Yes/No] Yes
+super-block backups (for fsck -b #) at:
+ 80781312, 82063552, 83345792, 84628032, 85910272, 87192512, 88474752,
+ 89756992, 91039232, 92321472, 93603712, 94885952, 96168192, 97450432
+....
+
+Se o sistema de arquivos for ZFS, o redimensionamento será acionado pela execução do subcomando `online` com `-e`:
+
+[source,bash]
+....
+# zpool online -e zroot /dev/ada0p2
+....
+
+Tanto a partição quanto o sistema de arquivos foram redimensionados para usar o espaço em disco recém-disponível.
+
+[[usb-disks]]
+== Dispositivos de Armazenamento USB
+
+Muitas soluções de armazenamento externo, como discos rígidos, thumbdrives USB e gravadores de CD e DVD, usam o Universal Serial Bus ( USB ). O FreeBSD fornece suporte para dispositivos USB 1.x, 2.0 e 3.0.
+
+[NOTE]
+====
+O suporte a USB 3.0 não é compatível com alguns hardwares, incluindo os chipsets Haswell (Lynx Point). Se o FreeBSD inicializar com uma mensagem `falhou com erro 19`, desative xHCI/USB3 na BIOS.
+====
+
+O suporte para dispositivos de armazenamento USB é embutido no kernel [.filename]#GENERIC#. Para um kernel personalizado, certifique-se de que as seguintes linhas estejam presentes no arquivo de configuração do kernel:
+
+[.programlisting]
+....
+device scbus	# SCSI bus (required for ATA/SCSI)
+device da	# Direct Access (disks)
+device pass	# Passthrough device (direct ATA/SCSI access)
+device uhci	# provides USB 1.x support
+device ohci	# provides USB 1.x support
+device ehci	# provides USB 2.0 support
+device xhci	# provides USB 3.0 support
+device usb	# USB Bus (required)
+device umass	# Disks/Mass storage - Requires scbus and da
+device cd	# needed for CD and DVD burners
+....
+
+O FreeBSD usa o driver man:umass[4] que usa o subsistema SCSI para acessar o armazenamento de dispositivos USB. Como qualquer dispositivo USB será visto como um dispositivo SCSI pelo sistema, se o dispositivo USB for um gravador de CD ou DVD, _não_ inclua `device atapicam` em um arquivo de configuração do kernel personalizado.
+
+O restante desta seção demonstra como verificar se um dispositivo de armazenamento USB é reconhecido pelo FreeBSD e como configurar o dispositivo para que ele possa ser usado.
+
+=== Configuração de Dispositivo
+
+Para testar a configuração USB, conecte o dispositivo USB. Use `dmesg` para confirmar que a unidade aparece no buffer de mensagens do sistema. Deve parecer algo como isto:
+
+[source,bash]
+....
+umass0: <STECH Simple Drive, class 0/0, rev 2.00/1.04, addr 3> on usbus0
+umass0:  SCSI over Bulk-Only; quirks = 0x0100
+umass0:4:0:-1: Attached to scbus4
+da0 at umass-sim0 bus 0 scbus4 target 0 lun 0
+da0: <STECH Simple Drive 1.04> Fixed Direct Access SCSI-4 device
+da0: Serial Number WD-WXE508CAN263
+da0: 40.000MB/s transfers
+da0: 152627MB (312581808 512 byte sectors: 255H 63S/T 19457C)
+da0: quirks=0x2<NO_6_BYTE>
+....
+
+A marca, o nó de dispositivo ([.filename]#da0#), a velocidade e o tamanho serão diferentes de acordo com o dispositivo.
+
+Como o dispositivo USB é visto como um SCSI, o `camcontrol` pode ser usado para listar os dispositivos de armazenamento USB conectados ao sistema:
+
+[source,bash]
+....
+# camcontrol devlist
+<STECH Simple Drive 1.04>          at scbus4 target 0 lun 0 (pass3,da0)
+....
+
+Alternativamente, o `usbconfig` pode ser usado para listar o dispositivo. Consulte o man:usbconfig[8] para obter mais informações sobre este comando.
+
+[source,bash]
+....
+# usbconfig
+ugen0.3: <Simple Drive STECH> at usbus0, cfg=0 md=HOST spd=HIGH (480Mbps) pwr=ON (2mA)
+....
+
+Se o dispositivo não tiver sido formatado, consulte <<disks-adding>> para obter instruções sobre como formatar e criar partições na unidade USB. Se a unidade vier com um sistema de arquivos, ela pode ser montada pelo `root` usando as instruções em crossref:basics[mount-unmount,Montando e Desmontando Sistemas de Arquivos].
+
+[WARNING]
+====
+
+Permitir que usuários não confiáveis montem mídia arbitrária, ativando `vfs.usermount` como descrito abaixo, não deve ser considerado seguro do ponto de vista da segurança. A maioria dos sistemas de arquivos não foi criada para proteger contra dispositivos maliciosos.
+====
+
+Para tornar o dispositivo montável como um usuário normal, uma solução é tornar todos os usuários do dispositivo membros do grupo `operator` usando man:pw[8]. Em seguida, certifique-se de que `operator` possa ler e gravar o dispositivo adicionando estas linhas ao [.filename]#/etc/devfs.rules#:
+
+[.programlisting]
+....
+[localrules=5]
+add path 'da*' mode 0660 group operator
+....
+
+[NOTE]
+====
+Se discos internos SCSI também estiverem instalados no sistema, altere a segunda linha da seguinte maneira:
+
+[.programlisting]
+....
+add path 'da[3-9]*' mode 0660 group operator
+....
+
+Isso excluirá os três primeiros discos SCSI ([.filename]#da0# para [.filename]#da2#) pertencentes ao grupo `operator`. Substitua _3_ pelo número de discos SCSI internos. Consulte man:devfs.rules[5] para obter mais informações sobre esse arquivo.
+====
+
+Em seguida, ative o conjunto de regras no arquivo [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+devfs_system_ruleset="localrules"
+....
+
+Em seguida, instrua o sistema para permitir que usuários comuns montem sistemas de arquivos incluindo a seguinte linha no arquivo [.filename]#/etc/sysctl.conf#:
+
+[.programlisting]
+....
+vfs.usermount=1
+....
+
+Como isso só entra em vigor após a próxima reinicialização, use `sysctl` para definir essa variável agora:
+
+[source,bash]
+....
+# sysctl vfs.usermount=1
+vfs.usermount: 0 -> 1
+....
+
+A etapa final é criar um diretório no qual o sistema de arquivos deve ser montado. Esse diretório precisa pertencer ao usuário que deve montar o sistema de arquivos. Uma maneira de fazer isso é para o `root` criar um subdiretório de propriedade daquele usuário como [.filename]#/mnt/username#. No exemplo a seguir, substitua _username_ pelo nome de login do usuário e _usergroup_ pelo grupo principal do usuário:
+
+[source,bash]
+....
+# mkdir /mnt/username
+# chown username:usergroup /mnt/username
+....
+
+Suponha que um thumbdrive USB esteja conectado e um dispositivo [.filename]#/dev/da0s1# apareça. Se o dispositivo estiver formatado com um sistema de arquivos FAT, o usuário poderá montá-lo usando:
+
+[source,bash]
+....
+% mount -t msdosfs -o -m=644,-M=755 /dev/da0s1 /mnt/username
+....
+
+Antes que o dispositivo possa ser desconectado, ele _deve_ ser desmontado primeiro:
+
+[source,bash]
+....
+% umount /mnt/username
+....
+
+Após a remoção do dispositivo, o buffer de mensagens do sistema mostrará mensagens semelhantes às seguintes:
+
+[source,bash]
+....
+umass0: at uhub3, port 2, addr 3 (disconnected)
+da0 at umass-sim0 bus 0 scbus4 target 0 lun 0
+da0: <STECH Simple Drive 1.04> s/n WD-WXE508CAN263          detached
+(da0:umass-sim0:0:0:0): Periph destroyed
+....
+
+=== Montando Automaticamente Uma Mídia Removível
+
+Dispositivos USB podem ser montados automaticamente removendo o comentário desta linha no arquivo [.filename]#/etc/auto_master#:
+
+[source,bash]
+....
+/media		-media		-nosuid
+....
+
+Então adicione estas linhas ao arquivo [.filename]#/etc/devd.conf#:
+
+[source,bash]
+....
+notify 100 {
+	match "system" "GEOM";
+	match "subsystem" "DEV";
+	action "/usr/sbin/automount -c";
+};
+....
+
+Recarregue a configuração se man:autofs[5] e man:devd[8] já estiverem em execução:
+
+[source,bash]
+....
+# service automount restart
+# service devd restart
+....
+
+man:autofs[5] pode ser configurado para iniciar no boot, adicionando esta linha ao arquivo [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+autofs_enable="YES"
+....
+
+man:autofs[5] requer que o man:devd[8] esteja ativado, como é por padrão.
+
+Inicie os serviços imediatamente com:
+
+[source,bash]
+....
+# service automount start
+# service automountd start
+# service autounmountd start
+# service devd start
+....
+
+Cada sistema de arquivos que pode ser montado automaticamente aparece como um diretório em [.filename]#/media/#. O diretório é nomeado após o rótulo do sistema de arquivos. Se o rótulo estiver ausente, o diretório será nomeado após o nó do dispositivo.
+
+O sistema de arquivos é montado de forma transparente no primeiro acesso e desmontado após um período de inatividade. Unidades montadas automaticamente também podem ser desmontadas manualmente:
+
+[source,bash]
+....
+# automount -fu
+....
+
+Este mecanismo é normalmente usado para cartões de memória e cartões de memória USB. Pode ser usado com qualquer dispositivo de bloco, incluindo unidades ópticas ou iSCSILUNs.
+
+[[creating-cds]]
+== Criando e Usando Mídia em CD
+
+A mídia em disco compacto (CD) fornece vários recursos que os diferenciam dos discos convencionais. Eles são projetados para que possam ser lidos continuamente sem atrasos para mover a cabeça entre as trilhas. Embora a mídia CD tenha faixas, elas se referem a uma seção de dados a ser lida continuamente e não a uma propriedade física do disco. O sistema de arquivos ISO 9660 foi projetado para lidar com essas diferenças.
+
+A Coleção de Ports do FreeBSD fornece vários utilitários para gravar e duplicar áudio e dados de CDs. Este capítulo demonstra o uso de vários utilitários de linha de comando. Para o software de gravação de CD com um utilitário gráfico, considere instalar os pacotes ou ports package:sysutils/xcdroast[] ou package:sysutils/k3b[].
+
+[[atapicam]]
+=== Dispositivos Suportados
+
+O kernel [.filename]#GENERIC# fornece suporte para SCSI, USB, e leitores e gravadores de CDATAPI. Se um kernel personalizado for usado, as opções que precisam estar presentes no arquivo de configuração do kernel variam de acordo com o tipo de dispositivo.
+
+Para um gravador SCSI, verifique se essas opções estão presentes:
+
+[.programlisting]
+....
+device scbus	# SCSI bus (required for ATA/SCSI)
+device da	# Direct Access (disks)
+device pass	# Passthrough device (direct ATA/SCSI access)
+device cd	# needed for CD and DVD burners
+....
+
+Para um gravador de USB, verifique se essas opções estão presentes:
+
+[.programlisting]
+....
+device scbus	# SCSI bus (required for ATA/SCSI)
+device da	# Direct Access (disks)
+device pass	# Passthrough device (direct ATA/SCSI access)
+device cd	# needed for CD and DVD burners
+device uhci	# provides USB 1.x support
+device ohci	# provides USB 1.x support
+device ehci	# provides USB 2.0 support
+device xhci	# provides USB 3.0 support
+device usb	# USB Bus (required)
+device umass	# Disks/Mass storage - Requires scbus and da
+....
+
+Para um gravador ATAPI, verifique se essas opções estão presentes:
+
+[.programlisting]
+....
+device ata	# Legacy ATA/SATA controllers
+device scbus	# SCSI bus (required for ATA/SCSI)
+device pass	# Passthrough device (direct ATA/SCSI access)
+device cd	# needed for CD and DVD burners
+....
+
+[NOTE]
+====
+Nas versões do FreeBSD anteriores a 10.x, esta linha também é necessária no arquivo de configuração do kernel se o gravador for um dispositivo ATAPI:
+
+[.programlisting]
+....
+device atapicam
+....
+
+Como alternativa, esse driver pode ser carregado no momento da inicialização adicionando a seguinte linha ao arquivo [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+atapicam_load="YES"
+....
+
+Isso exigirá uma reinicialização do sistema, pois esse driver só pode ser carregado no momento da inicialização.
+====
+
+Para verificar se o FreeBSD reconhece o dispositivo, execute o `dmesg` e procure por uma entrada para o dispositivo. Nos sistemas anteriores a 10.x, o nome do dispositivo na primeira linha da saída será [.filename]#acd0# em vez de [.filename]#cd0#.
+
+[source,bash]
+....
+% dmesg | grep cd
+cd0 at ahcich1 bus 0 scbus1 target 0 lun 0
+cd0: <HL-DT-ST DVDRAM GU70N LT20> Removable CD-ROM SCSI-0 device
+cd0: Serial Number M3OD3S34152
+cd0: 150.000MB/s transfers (SATA 1.x, UDMA6, ATAPI 12bytes, PIO 8192bytes)
+cd0: Attempt to query device size failed: NOT READY, Medium not present - tray closed
+....
+
+[[cdrecord]]
+=== Gravando um CD
+
+No FreeBSD, `cdrecord` pode ser usado para gravar CDs. Este comando é instalado com o pacote ou port package:sysutils/cdrtools[].
+
+Enquanto o `cdrecord` tem muitas opções, o uso básico é simples. Especifique o nome do arquivo ISO para gravar e, se o sistema tiver vários dispositivos de gravação, especifique o nome do dispositivo a ser usado:
+
+[source,bash]
+....
+# cdrecord dev=device imagefile.iso
+....
+
+Para determinar o nome do dispositivo do gravador, use `-scanbus`, que pode produzir resultados como este:
+
+[source,bash]
+....
+# cdrecord -scanbus
+ProDVD-ProBD-Clone 3.00 (amd64-unknown-freebsd10.0) Copyright (C) 1995-2010 Jörg Schilling
+Using libscg version 'schily-0.9'
+scsibus0:
+        0,0,0     0) 'SEAGATE ' 'ST39236LW       ' '0004' Disk
+        0,1,0     1) 'SEAGATE ' 'ST39173W        ' '5958' Disk
+        0,2,0     2) *
+        0,3,0     3) 'iomega  ' 'jaz 1GB         ' 'J.86' Removable Disk
+        0,4,0     4) 'NEC     ' 'CD-ROM DRIVE:466' '1.26' Removable CD-ROM
+        0,5,0     5) *
+        0,6,0     6) *
+        0,7,0     7) *
+scsibus1:
+        1,0,0   100) *
+        1,1,0   101) *
+        1,2,0   102) *
+        1,3,0   103) *
+        1,4,0   104) *
+        1,5,0   105) 'YAMAHA  ' 'CRW4260         ' '1.0q' Removable CD-ROM
+        1,6,0   106) 'ARTEC   ' 'AM12S           ' '1.06' Scanner
+        1,7,0   107) *
+....
+
+Localize a entrada para o gravador de CD e use os três números separados por vírgulas como o valor para `dev`. Nesse caso, o dispositivo gravador Yamaha é `1,5,0`, portanto, a entrada apropriada para especificar esse dispositivo é `dev=1,5,0`. Consulte a página de manual do `cdrecord` para outras formas de especificar este valor e informações sobre como gravar faixas de áudio e controlar a velocidade de gravação.
+
+Como alternativa, execute o seguinte comando para obter o endereço do dispositivo do gravador:
+
+[source,bash]
+....
+# camcontrol devlist
+<MATSHITA CDRW/DVD UJDA740 1.00>   at scbus1 target 0 lun 0 (cd0,pass0)
+....
+
+Use os valores numéricos para `scbus`, `target` e `lun`. Para este exemplo, `1,0,0` é o nome do dispositivo a ser usado.
+
+[[mkisofs]]
+=== Escrevendo Dados em um Sistema de Arquivos ISO
+
+Para produzir um CD de dados, os arquivos de dados que compõem as faixas no CD devem ser preparados antes que possam ser gravados no CD. No FreeBSD, package:sysutils/cdrtools[] instala o `mkisofs`, que pode ser usado para produzir um sistema de arquivos ISO 9660 que é uma imagem de uma árvore de diretórios dentro um sistema de arquivos UNIX(TM). O uso mais simples é especificar o nome do arquivo ISO para criar e o caminho para os arquivos a serem colocados no sistema de arquivos ISO 9660:
+
+[source,bash]
+....
+# mkisofs -o imagefile.iso /path/to/tree
+....
+
+Este comando mapeia os nomes dos arquivos no caminho especificado para os nomes que se ajustam às limitações do sistema de arquivos padrão ISO 9660 e excluirá arquivos que não atendem ao padrão para o sistemas de arquivos ISO.
+
+Várias opções estão disponíveis para superar as restrições impostas pelo padrão. Em particular, `-R` permite que as extensões Rock Ridge comuns aos sistemas UNIX(TM) e `-J` ativem as extensões Joliet usadas por sistemas Microsoft(TM).
+
+Para CDs que serão usados apenas em sistemas FreeBSD, `-U` pode ser usado para desabilitar todas as restrições de nome de arquivo. Quando usado com `-R`, ele produz uma imagem do sistema de arquivos que é idêntica à árvore FreeBSD especificada, mesmo se violar o padrão ISO 9660.
+
+A última opção de uso geral é `-b`. Isso é usado para especificar a localização de uma imagem de inicialização para uso na produção de um CD inicializável "El Torito". Essa opção usa um argumento que é o caminho para uma imagem de inicialização a partir do topo da árvore que está sendo gravada no CD. Por padrão, o `mkisofs` cria uma imagem ISO no modo de "emulação de disquete" e, portanto, espera que a imagem de inicialização tenha exatamente 1200, 1440 ou 2880 KB de tamanho. Alguns gerenciadores de inicialização, como o usado pela mídia de distribuição do FreeBSD, não utilizam o modo de emulação. Nesse caso, `-no-emul-boot` deve ser usado. Então, se [.filename]#/tmp/myboot# possuir um sistema FreeBSD inicializável com a imagem de inicialização em [.filename]#/tmp/myboot/boot/cdboot#, este comando produziria [.filename]#/tmp/bootable.iso#:
+
+[source,bash]
+....
+# mkisofs -R -no-emul-boot -b boot/cdboot -o /tmp/bootable.iso /tmp/myboot
+....
+
+A imagem ISO resultante pode ser montada como um disco de memória com:
+
+[source,bash]
+....
+# mdconfig -a -t vnode -f /tmp/bootable.iso -u 0
+# mount -t cd9660 /dev/md0 /mnt
+....
+
+Pode-se então verificar se [.filename]#/mnt# e [.filename]#/tmp/myboot# são idênticos.
+
+Existem muitas outras opções disponíveis para `mkisofs` para ajustar seu comportamento. Consulte man:mkisofs[8] para obter detalhes.
+
+[NOTE]
+====
+É possível copiar um CD de dados para um arquivo de imagem que seja funcionalmente equivalente ao arquivo de imagem criado com `mkisofs`. Para fazer isso, use [.filename]#dd# com o nome do dispositivo como o arquivo de entrada e o nome do ISO para criar como o arquivo de saída:
+
+[source,bash]
+....
+# dd if=/dev/cd0 of=file.iso bs=2048
+....
+
+O arquivo de imagem resultante pode ser gravado em CD, conforme descrito em <<cdrecord>>.
+====
+
+[[mounting-cd]]
+=== Usando CDs de Dados
+
+Uma vez que uma ISO tenha sido gravada em um CD, ela pode ser montada especificando o tipo de sistema de arquivos, o nome do dispositivo que contém o CD e um ponto de montagem existente:
+
+[source,bash]
+....
+# mount -t cd9660 /dev/cd0 /mnt
+....
+
+Como `mount` assume que um sistema de arquivos é do tipo `ufs`, um erro `Incorrect super block` ocorrerá se `-t cd9660` não está incluído ao montar um arquivo de dados CD.
+
+Embora qualquer CD de dados possa ser montado dessa forma, discos com determinadas extensões ISO 9660 podem se comportar de maneira estranha. Por exemplo, os discos Joliet armazenam todos os nomes de arquivos em caracteres Unicode de dois bytes. Se alguns caracteres não ingleses aparecerem como pontos de interrogação, especifique o conjunto de caracteres local com `-C`. Para mais informações, consulte man:mount_cd9660[8].
+
+[NOTE]
+====
+Para fazer esta conversão de caracteres com a ajuda de `-C`, o kernel requer que o módulo [.filename]#cd9660_iconv.ko# seja carregado. Isto pode ser feito adicionando esta linha ao arquivo [.filename]#loader.conf#:
+
+[.programlisting]
+....
+cd9660_iconv_load="YES"
+....
+
+e reinicializando a máquina, ou carregando diretamente o módulo com `kldload`.
+====
+
+Ocasionalmente, `Device not configured` será exibido ao tentar montar um CD de dados. Isso geralmente significa que a unidade de CD não detectou um disco na bandeja ou que a unidade não está visível no barramento. Pode levar alguns segundos para que uma unidade de CD detecte a mídia, por isso, seja paciente.
+
+Às vezes, uma unidade de CDSCSI pode ser perdida porque não teve tempo suficiente para responder à reinicialização do barramento. Para resolver isso, um kernel personalizado pode ser criado, o que aumenta o delay SCSI padrão. Adicione a seguinte opção ao arquivo de configuração do kernel personalizado e reconstrua o kernel usando as instruções em crossref:kernelconfig[kernelconfig-building,Criando e Instalando um Kernel Customizado]:
+
+[.programlisting]
+....
+options SCSI_DELAY=15000
+....
+
+Isso faz com que o barramento SCSI faça uma pausa de 15 segundos durante a inicialização, para dar à unidade de CD todas as chances possíveis de responder à reinicialização do barramento.
+
+[NOTE]
+====
+É possível gravar um arquivo diretamente no CD, sem criar um sistema de arquivos ISO 9660. Isso é conhecido como gravação de dados brutos em CD e algumas pessoas fazem isso para fins de backup.
+
+Este tipo de disco não pode ser montado como um CD de dados normal. Para recuperar os dados gravados em um CD, os dados devem ser lidos no nó do dispositivo bruto. Por exemplo, este comando irá extrair um arquivo tar compactado localizado no segundo dispositivo de CD para o diretório de trabalho atual:
+
+[source,bash]
+....
+# tar xzvf /dev/cd1
+....
+
+Para montar um CD de dados, os dados devem ser escritos usando `mkisofs`.
+====
+
+[[duplicating-audiocds]]
+=== Duplicando CDs de Áudio
+
+Para duplicar um CD de áudio, extraia os dados de áudio do CD para uma série de arquivos e, em seguida, grave esses arquivos em um CD em branco.
+
+<<using-cdrecord,Duplicando um CD de Áudio>> descreve como duplicar e gravar um CD de áudio. Se a versão do FreeBSD for menor que 10.0 e o dispositivo for ATAPI, o módulo `atapicam` deve ser carregado primeiro usando as instruções em <<atapicam>>.
+
+[[using-cdrecord]]
+[.procedure]
+====
+*Procedure: Duplicando um CD de Áudio*
+
+. O pacote ou port package:sysutils/cdrtools[] instala o `cdda2wav`. Este comando pode ser usado para extrair todas as faixas de áudio, com cada faixa gravada em um arquivo WAV separado no diretório de trabalho atual:
++
+[source,bash]
+....
+% cdda2wav -vall -B -Owav
+....
++ 
+Um nome de dispositivo não precisa ser especificado se houver apenas um dispositivo de CD no sistema. Consulte a página de manual `cdda2wav` para obter instruções sobre como especificar um dispositivo e aprender mais sobre as outras opções disponíveis para este comando.
+. Use o `cdrecord` para escrever os arquivos [.filename]#.wav#:
++
+[source,bash]
+....
+% cdrecord -v dev=2,0 -dao -useinfo  *.wav
+....
++ 
+Certifique-se de que _2,0_ esteja configurado adequadamente, conforme descrito em <<cdrecord>>.
+====
+
+[[creating-dvds]]
+== Criando e Usando Mídia de DVD
+
+Comparado ao CD, o DVD é a próxima geração de tecnologia de armazenamento de mídia ótica. O DVD pode conter mais dados do que qualquer CD e é o padrão para publicação de vídeos.
+
+Cinco formatos graváveis físicos podem ser definidos para um DVD gravável:
+
+* DVD-R: Este foi o primeiro formato gravável disponível em DVD. O padrão DVD-R é definido pelo http://www.dvdforum.org/forum.shtml[DVD Forum]. Este formato é escrito uma vez.
+* DVD-RW: Esta é a versão regravável do padrão DVD-R. Um DVD-RW pode ser reescrito cerca de 1000 vezes.
+* DVD-RAM: Este é um formato regravável que pode ser visto como um disco rígido removível. No entanto, esta mídia não é compatível com a maioria das unidades e reprodutores de DVD-Video DVD-ROM, pois apenas alguns gravadores de DVD suportam o formato DVD-RAM. Consulte <<creating-dvd-ram>> para mais informações sobre o uso de DVD-RAM.
+* DVD+RW: Este é um formato regravável definido pelo https://en.wikipedia.org/wiki/DVD%2BRW_Alliance[ DVD+RW Alliance]. Um DVD+RW pode ser reescrito cerca de 1000 vezes.
+* DVD+R: Este formato é a variação de gravação do formato DVD+RW.
+
+Um DVD gravável de camada única pode armazenar até 4.700.000.000 bytes, o que é, na verdade, 4,38 GB ou 4485 MB, pois 1 kilobyte é 1024 bytes.
+
+[NOTE]
+====
+Uma distinção deve ser feita entre a mídia física e a aplicação. Por exemplo, um DVD-Vídeo é um layout de arquivo específico que pode ser gravado em qualquer mídia física DVD gravável, como DVD-R, DVD+R ou DVD-RW. Antes de escolher o tipo de mídia, verifique se o gravador e o reprodutor de DVD-Video são compatíveis com a mídia em questão.
+====
+
+=== Configuração
+
+Para executar a gravação de um DVD, use man:growisofs[1]. Este comando é parte dos utilitários package:sysutils/dvd+rw-tools[] que suportam todos os tipos de mídia DVD.
+
+Estas ferramentas usam o subsistema SCSI para acessar os dispositivos, portanto <<atapicam,suporte a ATAPI/CAM>> deve ser carregado ou estaticamente compilado no kernel. Este suporte não é necessário se o gravador usar a interface USB. Consulte <<usb-disks>> para mais detalhes sobre a configuração do dispositivo USB.
+
+O acesso DMA também deve estar ativado para dispositivos ATAPI, adicionando a seguinte linha ao arquivo [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+hw.ata.atapi_dma="1"
+....
+
+Antes de tentar usar dvd+rw-tools, consulte o http://fy.chalmers.se/~appro/linux/DVD+RW/hcn.html[Notas de compatibilidade de hardware].
+
+[NOTE]
+====
+Para uma interface gráfica de usuário, considere o uso de package:sysutils/k3b[] que fornece uma interface amigável para man:growisofs[1] e muitas outras ferramentas de gravação.
+====
+
+=== Gravando DVDs de Dados
+
+Já que man:growisofs[1] é um front-end para <<mkisofs,mkisofs>>, ele invocará man:mkisofs[8] para criar o layout do sistema de arquivos e executar a gravação no DVD . Isso significa que uma imagem dos dados não precisa ser criada antes do processo de gravação.
+
+Para gravar em um DVD+R ou DVD-R os dados em [.filename]#/path/to/data#, use o seguinte comando:
+
+[source,bash]
+....
+# growisofs -dvd-compat -Z /dev/cd0 -J -R /path/to/data
+....
+
+Neste exemplo, `-J -R` é passado para man:mkisofs[8] para criar um sistemas de arquivos ISO 9660 com extensões Joliet e Rock Ridge. Consulte o man:mkisofs[8] para obter mais detalhes.
+
+Para a gravação inicial da sessão, `-Z` é usado para sessões únicas e múltiplas. Substitua _/dev/cd0_, com o nome do dispositivo de DVD. O uso de `-dvd-compat` indica que o disco será fechado e que a gravação será inaplicável. Isso também deve fornecer melhor compatibilidade de mídia com unidades DVD-ROM.
+
+Para gravar uma imagem pré-masterizada, como _imagefile.iso_, use:
+
+[source,bash]
+....
+# growisofs -dvd-compat -Z /dev/cd0=imagefile.iso
+....
+
+A velocidade de gravação deve ser detectada e configurada automaticamente de acordo com a mídia e a unidade que está sendo usada. Para forçar a velocidade de gravação, use `-speed=`. Consulte o man:growisofs[1] para exemplos de uso.
+
+[NOTE]
+====
+Para suportar arquivos de trabalho maiores que 4.38GB, um sistema de arquivos híbrido UDF/ISO-9660 deve ser criado passando `-udf -iso-level 3` para man:mkisofs[8] e todos os programas relacionados, como man:growisofs[1]. Isso é necessário apenas ao criar um arquivo de imagem ISO ou ao gravar arquivos diretamente em um disco. Como um disco criado dessa maneira deve ser montado como um sistema de arquivos UDF com man:mount_udf[8], ele será utilizável apenas em um sistema operacional com suporte a UDF. Caso contrário, parecerá que contém arquivos corrompidos.
+
+Para criar este tipo de arquivo ISO:
+
+[source,bash]
+....
+% mkisofs -R -J -udf -iso-level 3 -o imagefile.iso /path/to/data
+....
+
+Para gravar arquivos diretamente em um disco:
+
+[source,bash]
+....
+# growisofs -dvd-compat -udf -iso-level 3 -Z /dev/cd0 -J -R /path/to/data
+....
+
+Quando uma imagem ISO já contém arquivos grandes, nenhuma opção adicional é necessária para o man:growisofs[1] gravar a imagem em um disco.
+
+Certifique-se de usar uma versão atualizada do port package:sysutils/cdrtools[], que contenha o man:mkisofs[8], como uma versão mais antiga pode não conter suporte a arquivos grandes. Se a versão mais recente não funcionar, instale o package:sysutils/cdrtools-devel[] e leia o man:mkisofs[8].
+====
+
+=== Gravando um  DVD -Video
+
+Um DVD-Video é um layout de arquivo específico baseado nas especificações ISO 9660 e micro-UDF (M-UDF). Como o DVD-Video apresenta uma hierarquia de estrutura de dados específica, um programa específico como package:multimedia/dvdauthor[] é necessário para criar o DVD.
+
+Se uma imagem do sistema de arquivos DVD-Video já existir, ela poderá ser gravada da mesma maneira que qualquer outra imagem. Se o `dvdauthor` foi usado para criar o DVD e o resultado está em [.filename]#/path/to/video#, o seguinte comando deve ser usado para gravar o DVD-Vídeo:
+
+[source,bash]
+....
+# growisofs -Z /dev/cd0 -dvd-video /path/to/video
+....
+
+`-dvd-video` é passado para o man:mkisofs[8] para instruí-lo a criar um sistemas de arquivos com layout DVD-Video. Esta opção implica na opção `-dvd-compat` do man:growisofs[1].
+
+=== Usando um DVD+RW
+
+Ao contrário do CD-RW, um DVD+RW virgem precisa ser formatado antes do primeiro uso. É _recomendado_ para permitir que man:growisofs[1] cuide disso automaticamente sempre que apropriado. No entanto, é possível usar `dvd+rw-format` para formatar o DVD+RW:
+
+[source,bash]
+....
+# dvd+rw-format /dev/cd0
+....
+
+Somente execute esta operação uma vez e tenha em mente que apenas mídias DVD+RW virgens precisam ser formatadas. Uma vez formatado, o DVD+RW pode ser gravado como de costume.
+
+Para gravar um sistema de arquivos totalmente novo e não apenas acrescentar alguns dados em um DVD+RW, a mídia não precisa ser apagada primeiro. Em vez disso, escreva sobre a gravação anterior assim:
+
+[source,bash]
+....
+# growisofs -Z /dev/cd0 -J -R /path/to/newdata
+....
+
+O formato DVD+RW suporta anexar dados a uma gravação anterior. Essa operação consiste em mesclar uma nova sessão à existente, pois ela não é considerada como gravação de várias sessões. man:growisofs[1] vai _ampliar_ o sistema de arquivos ISO 9660 presente na mídia.
+
+Por exemplo, para anexar dados a um DVD+RW, use o seguinte:
+
+[source,bash]
+....
+# growisofs -M /dev/cd0 -J -R /path/to/nextdata
+....
+
+As mesmas opções do man:mkisofs[8] usadas para gravar a sessão inicial devem ser usadas durante as próximas gravações.
+
+[NOTE]
+====
+Use `-dvd-compat` para melhor compatibilidade de mídia com as unidades de DVD-ROM. Ao usar DVD+RW, essa opção não impedirá a adição de dados.
+====
+
+Para apagar a mídia, use:
+
+[source,bash]
+....
+
+# growisofs -Z /dev/cd0=/dev/zero
+....
+
+=== Usando um DVD-RW
+
+Um DVD-RW aceita dois formatos de disco: sequencial incremental e substituição restrita. Por padrão, os discos DVD-RW estão em formato sequencial.
+
+Um DVD-RW virgem pode ser escrito diretamente sem ser formatado. No entanto, um DVD-RW não-virgem em formato sequencial precisa ser apagado antes de escrever uma nova sessão inicial.
+
+Para apagar um DVD-RW em modo sequencial:
+
+[source,bash]
+....
+# dvd+rw-format -blank=full /dev/cd0
+....
+
+[NOTE]
+====
+Um preenchimento completo usando `-blank=full` levará cerca de uma hora em uma mídia 1x. Um limpeza rápida pode ser executada usando `-blank`, se o DVD-RW for gravado no modo Disk-At-Once (DAO). Para gravar o DVD-RW no modo DAO, use o comando:
+
+[source,bash]
+....
+# growisofs -use-the-force-luke=dao -Z /dev/cd0=imagefile.iso
+....
+
+Como o man:growisofs[1] tenta automaticamente detectar a mídia rapidamente em branco e ativar a gravação do DAO, `-use-the-force -luke=dao` não deve ser requerido.
+
+Em vez disso, deve-se usar o modo de sobrescrita restrita com qualquer DVD-RW, pois esse formato é mais flexível do que o padrão de sequencial incremental.
+====
+
+Para escrever dados em um DVD-RW seqüencial, use as mesmas instruções que para os outros formatos de DVD:
+
+[source,bash]
+....
+# growisofs -Z /dev/cd0 -J -R /path/to/data
+....
+
+Para acrescentar alguns dados a uma gravação anterior, use `-M` com o man:growisofs[1]. No entanto, se os dados forem anexados em um DVD-RW no modo sequencial incremental, uma nova sessão será criada no disco e o resultado será um disco multi-sessão.
+
+Um DVD-RW no formato de sobrescrita restrita não precisa ser em apagado antes de uma nova sessão inicial. Em vez disso, sobrescreva o disco com `-Z`. Também é possível aumentar um sistema de arquivos ISO 9660 existente escrito no disco com `-M`. O resultado será um DVD de uma sessão.
+
+Para colocar um DVD-RW no formato de sobrescrita restrita, o seguinte comando deve ser usado:
+
+[source,bash]
+....
+# dvd+rw-format /dev/cd0
+....
+
+Para voltar ao formato sequencial, use:
+
+[source,bash]
+....
+# dvd+rw-format -blank=full /dev/cd0
+....
+
+=== Multi-Sessão
+
+Poucas unidades de DVD-ROM suportam DVDs multi-sessão e na maioria das vezes apenas lêem a primeira sessão. DVD+R, DVD-R e DVD-RW em formato sequencial podem aceitar várias sessões. A noção de várias sessões não existe para os formatos de sobrescrita restrita DVD+RW e DVD-RW.
+
+Usando o seguinte comando após uma sessão inicial não fechada em um DVD+R, DVD-R ou DVD-RW em formato sequencial, será adicionada uma nova sessão ao disco:
+
+[source,bash]
+....
+# growisofs -M /dev/cd0 -J -R /path/to/nextdata
+....
+
+Usando este comando com um DVD+RW ou um DVD-RW no modo de sobrescrita restrita adicionará dados ao mesclar a nova sessão à existente. O resultado será um disco de sessão única. Use este método para adicionar dados após uma gravação inicial nesses tipos de mídia.
+
+[NOTE]
+====
+Como algum espaço na mídia é usado entre cada sessão para marcar o final e o início das sessões, deve-se adicionar sessões com uma grande quantidade de dados para otimizar o espaço da mídia. O número de sessões é limitado a 154 para um DVD+R, cerca de 2000 para um DVD-R e 127 para um DVD+R Double Layer.
+====
+
+=== Para Maiores Informações
+
+Para obter mais informações sobre um DVD, use o `dvd+rw-mediainfo _/dev/cd0_` enquanto o disco estiver na unidade especificada.
+
+Mais informações sobre dvd+rw-tools podem ser encontradas em man:growisofs[1], no http://fy.chalmers.se/~appro/linux/DVD+RW/[site de dvd+rw-tools], e nos arquivos do http://lists.debian.org/cdwrite/[cdwrite mailing list].
+
+[NOTE]
+====
+Ao criar um relatório de problemas relacionado ao uso de dvd+rw-tools, inclua sempre a saída de `dvd+rw-mediainfo`.
+====
+
+[[creating-dvd-ram]]
+=== Usando um DVD-RAM
+
+Os gravadores de DVD-RAM podem usar uma interface SCSI ou ATAPI. Para dispositivos ATAPI, o acesso DMA deve ser ativado adicionando a seguinte linha ao arquivo [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+hw.ata.atapi_dma="1"
+....
+
+Um DVD-RAM pode ser visto como um disco rígido removível. Como qualquer outro disco rígido, o DVD-RAM deve ser formatado antes de poder ser usado. Neste exemplo, todo o espaço em disco será formatado com um sistema de arquivos UFS2 padrão:
+
+[source,bash]
+....
+# dd if=/dev/zero of=/dev/acd0 bs=2k count=1
+# bsdlabel -Bw acd0
+# newfs /dev/acd0
+....
+
+O dispositivo DVD, [.filename]#acd0#, deve ser alterado de acordo com a configuração.
+
+Uma vez que o DVD-RAM tenha sido formatado, ele pode ser montado como um disco rígido normal:
+
+[source,bash]
+....
+# mount /dev/acd0 /mnt
+....
+
+Uma vez montado, o DVD-RAM será legível e gravável.
+
+[[floppies]]
+== Criando e Usando Disquetes
+
+Esta seção explica como formatar um disquete de 3.5 polegadas no FreeBSD.
+
+[.procedure]
+====
+*Procedure: Etapas para Formatar um Disquete*
+
+Um disquete precisa ser formatado em baixo nível antes de poder ser usado. Isso geralmente é feito pelo fornecedor, mas a formatação é uma boa maneira de verificar a integridade da mídia. Para o formato de baixo nível do disquete no FreeBSD, use man:fdformat[1]. Ao usar esse utilitário, anote todas as mensagens de erro, pois elas podem ajudar a determinar se o disco está bom ou ruim.
+
+. Para formatar o disquete, insira um novo disquete de 3.5 polegadas na primeira unidade de disquete e digite:
++
+[source,bash]
+....
+# /usr/sbin/fdformat -f 1440 /dev/fd0
+....
++
+. Após a formatação de baixo nível do disco, crie um rótulo de disco conforme requerido pelo sistema para determinar o tamanho do disco e sua geometria. Os valores de geometria suportados estão listados no arquivo [.filename]#/etc/disktab#.
++ 
+Para escrever o rótulo do disco, use man:bsdlabel[8]:
++
+[source,bash]
+....
+# /sbin/bsdlabel -B -w /dev/fd0 fd1440
+....
++
+. O disquete agora está pronto para ser formatado em alto nível com um sistema de arquivos. O sistema de arquivos do disquete pode ser UFS ou FAT, onde o FAT geralmente é uma opção melhor para disquetes.
++ 
+Para formatar o disquete com o FAT, digite:
++
+[source,bash]
+....
+# /sbin/newfs_msdos /dev/fd0
+....
+====
+
+O disco está agora pronto para uso. Para usar o disquete, monte-o com man:mount_msdosfs[8]. Também é possível instalar e usar package:emulators/mtools[] da coleção de ports.
+
+[[backup-basics]]
+== Noções Básicas de Backup
+
+A implementação de um plano de backup é essencial para que seja possível recuperar de uma falha de disco, exclusão acidental de arquivos, corrupção aleatória de arquivos ou destruição completa da máquina, incluindo a destruição de backups no local.
+
+O tipo e a programação do backup variam, dependendo da importância dos dados, da granularidade necessária para as restaurações de arquivos e da quantidade de tempo de inatividade aceitável. Algumas técnicas de backup possíveis incluem:
+
+* Arquivos de todo o sistema, protegidos por meio de backups em mídias permanentes, armazenados off-site. Isso fornece proteção contra todos os problemas listados acima, mas é lento e inconveniente para restaurar, especialmente para usuários sem privilégios.
+* Snapshots do sistema de arquivos, que são úteis para restaurar arquivos excluídos ou versões anteriores de arquivos.
+* Cópias de sistemas de arquivos inteiros ou discos que são sincronizados com outro sistema na rede usando um package:net/rsync[] agendado.
+* RAID por hardware ou software, que minimiza ou evita paralisações quando um disco falha.
+
+Normalmente, uma mistura de técnicas de backup é usada. Por exemplo, pode-se criar um agendamento semanal para automatizar um backup completo do sistema e armazená-lo off-site e para suplementá-lo, snapshots do ZFS tirados a cada hora. Além disso, é possível fazer um backup manual de diretórios ou arquivos individuais antes de fazer edições ou exclusões de arquivos.
+
+Esta seção descreve alguns dos utilitários que podem ser usados para criar e gerenciar backups em um sistema FreeBSD.
+
+=== Backups do Sistema de Arquivos
+
+Os programas tradicionais UNIX(TM) para fazer backup de um sistema de arquivos são man:dump[8], que cria o backup, e man:restore[8], que restaura o backup. Esses utilitários funcionam no nível do bloco do disco, abaixo das abstrações dos arquivos, links e diretórios criados pelos sistemas de arquivos. Ao contrário de outros softwares de backup, `dump` faz backup de todo um sistema de arquivos e não é capaz de fazer backup de apenas parte de um sistema de arquivos ou de uma árvore de diretórios que abrange vários sistemas de arquivos. Em vez de gravar arquivos e diretórios, `dump` grava os blocos de dados brutos que compreendem arquivos e diretórios.
+
+[NOTE]
+====
+Se o `dump` for usado no diretório raiz, ele não fará o backup de [.filename]#/home#, [.filename]#/usr# ou de muitos outros diretórios, pois eles são tipicamente pontos de montagem para outros sistemas de arquivos ou links simbólicos nesses sistemas de arquivos.
+====
+
+Quando usado para restaurar dados, `restore` armazena arquivos temporários em [.filename]#/tmp/# por padrão. Ao usar um disco de recuperação com um pequeno [.filename]#/tmp#, configure `TMPDIR` para um diretório com mais espaço livre para que a restauração seja bem-sucedida.
+
+Ao usar `dump`, esteja ciente de que algumas peculiaridades permanecem desde seus primeiros dias na versão 6 do AT&T UNIX(TM), por volta de 1975. Os parâmetros padrão assumem um backup para uma fita de 9 faixas, em vez de para outro tipo de mídia ou para as fitas de alta densidade disponíveis atualmente. Esses padrões devem ser substituídos na linha de comando.
+
+É possível fazer backup de um sistema de arquivos pela rede para outro sistema ou para uma unidade de fita conectada a outro computador. Enquanto os utilitários man:rdump[8] e man:rrestore[8] possam ser usado para este propósito, eles não são considerados seguros.
+
+Em vez disso, pode-se usar `dump` e `restore` de uma maneira mais segura em uma conexão SSH. Este exemplo cria um backup completo e compactado de [.filename]#/usr# e envia o arquivo de backup para o host especificado em uma conexão SSH.
+
+.Usando `dump` sobre ssh
+[example]
+====
+
+[source,bash]
+....
+# /sbin/dump -0uan -f - /usr | gzip -2 | ssh -c blowfish \
+          targetuser@targetmachine.example.com dd of=/mybigfiles/dump-usr-l0.gz
+....
+
+====
+
+Este exemplo configura `RSH` para gravar o backup em uma unidade de fita em um sistema remoto através de uma conexão SSH:
+
+.Usando o `dump` sobre ssh com o `RSH` configurado
+[example]
+====
+
+[source,bash]
+....
+# env RSH=/usr/bin/ssh /sbin/dump -0uan -f targetuser@targetmachine.example.com:/dev/sa0 /usr
+....
+
+====
+
+=== Backups de Diretório
+
+Vários utilitários integrados estão disponíveis para backup e restauração de arquivos e diretórios especificados, conforme necessário.
+
+Uma boa alternativa para fazer backup de todos os arquivos em um diretório é o man:tar[1]. Este utilitário remonta à versão 6 do AT&T UNIX(TM) e, por padrão, assume um backup recursivo para um dispositivo de fita local. Redirecionadores podem ser utilizados para especificar o nome de um arquivo de backup.
+
+Este exemplo cria um backup compactado do diretório atual e o salva no arquivo [.filename]#/tmp/mybackup.tgz#. Ao criar um arquivo de backup, verifique se o backup não está salvo no mesmo diretório em que está sendo feito backup.
+
+.Fazendo Backup do Diretório Atual com o `tar`
+[example]
+====
+
+[source,bash]
+....
+# tar czvf /tmp/mybackup.tgz .
+....
+
+====
+
+Para restaurar o backup inteiro, `cd` no diretório para restaurar e especificar o nome do backup. Observe que isso sobrescreverá qualquer versão mais nova de arquivos no diretório de restauração. Em caso de dúvida, restaure para um diretório temporário ou especifique o nome do arquivo dentro do backup a ser restaurado.
+
+.Restaurando o Diretório Atual com o `tar`
+[example]
+====
+
+[source,bash]
+....
+# tar xzvf /tmp/mybackup.tgz
+....
+
+====
+
+Existem dezenas de opções disponíveis, descritas em man:tar[1]. Esse utilitário também suporta o uso de padrões de exclusão para especificar quais arquivos não devem ser incluídos ao fazer backup do diretório especificado ou restaurar arquivos de um backup.
+
+Para criar um backup usando uma lista especificada de arquivos e diretórios, man:cpio[1] é uma boa escolha. Ao contrário do `tar`, o `cpio` não sabe como percorrer a árvore de diretórios e deve fornecer a lista de arquivos para backup.
+
+Por exemplo, uma lista de arquivos pode ser criada usando `ls` ou `find`. Este exemplo cria uma listagem recursiva do diretório atual que é então canalizado para o `cpio` para criar um arquivo de backup de saída chamado [.filename]#/tmp/mybackup.cpio#.
+
+.Usando `ls` e `cpio` para Criar um Backup Recursivo do Diretório Atual
+[example]
+====
+
+[source,bash]
+....
+# ls -R | cpio -ovF /tmp/mybackup.cpio
+....
+
+====
+
+Um utilitário de backup que tenta conectar os recursos fornecidos pelo `tar` e `cpio` é man:pax[1]. Ao longo dos anos, as várias versões do `tar` e do `cpio` tornaram-se ligeiramente incompatíveis. POSIX(TM) criou `pax` que tenta ler e escrever muitos dos vários formatos `cpio` e `tar`, além de novos formatos próprios.
+
+O `pax` equivalente aos exemplos anteriores seria:
+
+.Fazendo Backup do Diretório Atual com `pax`
+[example]
+====
+
+[source,bash]
+....
+# pax -wf /tmp/mybackup.pax .
+....
+
+====
+
+[[backups-tapebackups]]
+=== Usando Fitas de Dados para Backups
+
+Embora a tecnologia de fitas tenha continuado a evoluir, os sistemas de backup modernos tendem a combinar backups externos com mídias removíveis locais. O FreeBSD suporta qualquer unidade de fita que use SCSI, como LTO ou DAT. Há suporte limitado para as unidades de fita SATA e USB.
+
+Para dispositivos de fita SCSI, o FreeBSD usa o driver man:sa[4] e os dispositivos [.filename]#/dev/sa0#, [.filename]#/dev/nsa0# e [.filename]#/dev/esa0#. O nome do dispositivo físico é [.filename]#/dev/sa0#. Quando [.filename]#/dev/nsa0# é usado, o aplicativo de backup não rebobina a fita depois de gravar um arquivo, o que permite gravar mais de um arquivo em uma fita. O uso de [.filename]#/dev/esa0# ejeta a fita após o dispositivo ser fechado.
+
+No FreeBSD, o `mt` é usado para controlar as operações da unidade de fita, como procurar arquivos em uma fita ou gravar marcas de controle na fita. Por exemplo, os três primeiros arquivos em uma fita podem ser preservados, ignorando-os antes de gravar um novo arquivo:
+
+[source,bash]
+....
+# mt -f /dev/nsa0 fsf 3
+....
+
+Este utilitário suporta muitas operações. Consulte man:mt[1] para detalhes.
+
+Para gravar um único arquivo em fita usando `tar`, especifique o nome do dispositivo de fita e o arquivo para backup:
+
+[source,bash]
+....
+# tar cvf /dev/sa0 file
+....
+
+Para recuperar arquivos de um arquivo `tar` em fita no diretório atual:
+
+[source,bash]
+....
+# tar xvf /dev/sa0
+....
+
+Para fazer backup de um sistema de arquivos UFS, use `dump`. Este exemplo faz o backup de [.filename]#/usr# sem rebobinar a fita quando terminar:
+
+[source,bash]
+....
+# dump -0aL -b64 -f /dev/nsa0 /usr
+....
+
+Para restaurar arquivos interativamente de um arquivo `dump` em fita no diretório atual:
+
+[source,bash]
+....
+# restore -i -f /dev/nsa0
+....
+
+[[backups-programs-amanda]]
+=== Utilitários de Backup de Terceiros
+
+A Coleção de Ports do FreeBSD fornece muitos utilitários de terceiros que podem ser usados para agendar a criação de backups, simplificar o backup em fita e tornar os backups mais fáceis e convenientes. Muitos desses aplicativos são baseados em cliente/servidor e podem ser usados para automatizar os backups de um único sistema ou de todos os computadores em uma rede.
+
+Os utilitários populares incluem Amanda, Bacula, rsync e duplicity.
+
+=== Recuperação de Emergência
+
+Além dos backups regulares, é recomendável executar as etapas a seguir como parte de um plano de preparação para emergências.
+
+Crie uma cópia impressa da saída dos seguintes comandos:
+
+* `gpart show`
+* `more /etc/fstab`
+* `dmesg`
+
+Armazene esta saída e uma cópia da mídia de instalação em um local seguro. Se uma restauração de emergência for necessária, inicialize na mídia de instalação e selecione `Live CD` para acessar um shell de recuperação. Esse modo de recuperação pode ser usado para exibir o estado atual do sistema e, se necessário, reformatar discos e restaurar dados de backups.
+
+[NOTE]
+====
+A mídia de instalação do FreeBSD/i386 11.2-RELEASE não inclui um shell de recuperação. Para esta versão, baixe e grave uma imagem do Livefs CD de link:ftp://ftp.FreeBSD.org/pub/FreeBSD/releases/i386/ISO-IMAGES/11.2/FreeBSD-11.2-RELEASE-i386-livefs.iso[ftp://ftp.FreeBSD.org/pub/FreeBSD/releases/i386/ISO-IMAGES/11.2/FreeBSD-11.2-RELEASE-i386-livefs.iso].
+====
+
+Em seguida, teste o shell de recuperação e os backups. Faça anotações do procedimento. Armazene estas notas com a mídia, as impressões e os backups. Estas notas podem impedir a destruição inadvertida dos backups, enquanto sob o estresse de realizar uma recuperação de emergência.
+
+Para uma medida adicional de segurança, armazene o backup mais recente em um local remoto, fisicamente separado dos computadores e das unidades de disco por uma distância significativa.
+
+[[disks-virtual]]
+== Discos de Memória
+
+Além de discos físicos, o FreeBSD também suporta a criação e uso de discos de memória. Um uso possível para um disco de memória é acessar o conteúdo de um sistema de arquivos ISO sem a sobrecarga de primeiro gravá-lo em um CD ou DVD e, em seguida, montar a mídia CD/DVD .
+
+No FreeBSD, o driver man:md[4] é usado para fornecer suporte para discos de memória. O kernel [.filename]#GENERIC# inclui este driver. Ao usar um arquivo de configuração de kernel personalizado, certifique-se de incluir esta linha:
+
+[.programlisting]
+....
+device md
+....
+
+[[disks-mdconfig]]
+=== Anexando e Desanexando Imagens Existentes
+
+Para montar uma imagem do sistema de arquivos existente, use o `mdconfig` para especificar o nome do arquivo ISO e um número de unidade livre. Em seguida, consulte esse número de unidade para montá-lo em um ponto de montagem existente. Uma vez montado, os arquivos na imagem ISO aparecerão no ponto de montagem. Este exemplo anexa o arquivo _diskimage.iso_ ao dispositivo de memória [.filename]#/dev/md0# e monta o dispositivo de memória em [.filename]#/mnt#:
+
+[source,bash]
+....
+# mdconfig -f diskimage.iso -u 0
+# mount -t cd9660 /dev/md0 /mnt
+....
+
+Note que `-t cd9660` foi usado para montar uma imagem ISO. Se um número de unidade não for especificado com `-u`, o `mdconfig` alocará automaticamente um dispositivo de memória não utilizado e exibirá o nome da unidade alocada, como [.filename]#md4#. Consulte man:mdconfig[8] para mais detalhes sobre este comando e suas opções.
+
+Quando um disco de memória não está mais em uso, seus recursos devem ser liberados de volta ao sistema. Primeiro, desmonte o sistema de arquivos e use o `mdconfig` para desanexar o disco do sistema e liberar seus recursos. Para continuar este exemplo:
+
+[source,bash]
+....
+# umount /mnt
+# mdconfig -d -u 0
+....
+
+Para determinar se algum disco de memória ainda está conectado ao sistema, digite `mdconfig -l`.
+
+[[disks-md-freebsd5]]
+=== Criando um Disco Virtual Baseado em Arquivo ou Memória
+
+O FreeBSD também suporta discos virtuais onde o armazenamento a ser utilizado é alocado a partir de um disco rígido ou de uma área de memória. O primeiro método é comumente referido como um disco virtual baseado em arquivo e o segundo como um disco virtual baseado em memória. Ambos os tipos podem ser criados usando o `mdconfig`.
+
+Para criar um novo disco virtual baseado em memória, especifique um tipo de `swap` e o tamanho do disco de memória a ser criado. Em seguida, formate o disco de memória com um sistema de arquivos e monte como de costume. Este exemplo cria um disco de memória de 5M na unidade `1`. Esse disco de memória é formatado com o sistema de arquivos UFS antes de ser montado:
+
+[source,bash]
+....
+# mdconfig -a -t swap -s 5m -u 1
+# newfs -U md1
+/dev/md1: 5.0MB (10240 sectors) block size 16384, fragment size 2048
+        using 4 cylinder groups of 1.27MB, 81 blks, 192 inodes.
+        with soft updates
+super-block backups (for fsck -b #) at:
+ 160, 2752, 5344, 7936
+# mount /dev/md1 /mnt
+# df /mnt
+Filesystem 1K-blocks Used Avail Capacity  Mounted on
+/dev/md1        4718    4  4338     0%    /mnt
+....
+
+Para criar um novo disco virtual baseado em arquivo, primeiro aloque a área que será usada para o disco. Esse exemplo cria um arquivo vázio de 5MB chamado [.filename]#newimage#:
+
+[source,bash]
+....
+# dd if=/dev/zero of=newimage bs=1k count=5k
+5120+0 records in
+5120+0 records out
+....
+
+Em seguida, anexe esse arquivo a um disco de memória, rotule o disco de memória e formate-o com o sistema de arquivos UFS, monte o disco de memória e verifique o tamanho do disco com backup de arquivo:
+
+[source,bash]
+....
+# mdconfig -f newimage -u 0
+# bsdlabel -w md0 auto
+# newfs -U md0a
+/dev/md0a: 5.0MB (10224 sectors) block size 16384, fragment size 2048
+        using 4 cylinder groups of 1.25MB, 80 blks, 192 inodes.
+super-block backups (for fsck -b #) at:
+ 160, 2720, 5280, 7840
+# mount /dev/md0a /mnt
+# df /mnt
+Filesystem 1K-blocks Used Avail Capacity  Mounted on
+/dev/md0a       4710    4  4330     0%    /mnt
+....
+
+São necessários vários comandos para criar um disco virtual baseado em arquivo ou memória usando `mdconfig`. O FreeBSD também vem com o `mdmfs` que configura automaticamente um disco de memória, formata-o com o sistema de arquivos UFS e o monta. Por exemplo, depois de criar _newimage_ com `dd`, esse comando é equivalente a executar os comandos `bsdlabel`, `newfs` e `mount` mostrados acima:
+
+[source,bash]
+....
+# mdmfs -F newimage -s 5m md0 /mnt
+....
+
+Para criar um novo disco virtual baseado em memória com o `mdmfs`, use este comando:
+
+[source,bash]
+....
+# mdmfs -s 5m md1 /mnt
+....
+
+Se o número da unidade não for especificado, o `mdmfs` selecionará automaticamente um dispositivo de memória não utilizado. Para mais detalhes sobre `mdmfs`, consulte man:mdmfs[8].
+
+[[snapshots]]
+== Snapshots de Sistemas de Arquivos
+
+O FreeBSD oferece um recurso em conjunto com crossref:cutting-edge[soft-updates,Atualizações Soft]: snapshots do sistema de arquivos.
+
+Os Snapshots de UFS permitem que um usuário crie imagens de sistemas de arquivos especificados e as trate como um arquivo. Os arquivos de snapshot devem ser criados no sistema de arquivos no qual a ação é executada e um usuário pode criar no máximo 20 snapshots por sistema de arquivos. Os snapshots ativos são registradas no superbloco, de modo que são persistentes nas operações de desmontagem e remontagem, juntamente com reinicializações do sistema. Quando um snapshot não é mais necessário, ele pode ser removido usando man:rm[1]. Embora os snapshots possam ser removidos em qualquer ordem, todo o espaço usado pode não ser adquirido porque outro snapshot possivelmente reivindicará alguns dos blocos liberados.
+
+A flag de arquivo `snapshot` não alterável é definida por man:mksnap_ffs[8] após a criação inicial de um arquivo de snapshot. O man:unlink[1] cria uma exceção para arquivos de snapshots, pois permite que sejam removidos.
+
+Os snapshots são criados usando man:mount[8]. Para colocar um snapshot de [.filename]#/var# no arquivo [.filename]#/var/snapshot/snap#, use o seguinte comando:
+
+[source,bash]
+....
+# mount -u -o snapshot /var/snapshot/snap /var
+....
+
+Como alternativa, use man:mksnap_ffs[8] para criar o snapshot:
+
+[source,bash]
+....
+# mksnap_ffs /var /var/snapshot/snap
+....
+
+É possível encontrar arquivos de snapshots em um sistema de arquivos, como [.filename]#/var#, usando man:find[1]:
+
+[source,bash]
+....
+# find /var -flags snapshot
+....
+
+Depois que um snapshot foi criado, ele tem vários usos:
+
+* Alguns administradores usarão um arquivo de snapshot para fins de backup, porque o snapshot pode ser transferido para um CDs ou fita.
+* O verificador de integridade do sistema de arquivos, man:fsck[8], pode ser executado em um snapshot. Supondo que o sistema de arquivos estava limpo quando foi montado, isso deve sempre fornecer um resultado limpo e imutável.
+* Executando man:dump[8] em um snapshot produzirá um arquivo de dump que seja consistente com o sistema de arquivos e o registro de data e hora do snapshot. man:dump[8] também pode criar um snapshot, criar uma imagem de dump e remover o snapshot em um comando usando `-L`.
+* O snapshot pode ser montado como uma imagem congelada do sistema de arquivos. Para montar o snapshot use man:mount[8] passando o nome do snapshot [.filename]#/var/snapshot/snap#:
++
+[source,bash]
+....
+# mdconfig -a -t vnode -o readonly -f /var/snapshot/snap -u 4
+# mount -r /dev/md4 /mnt
+....
+
+O [.filename]#/var# congelado agora está disponível através de [.filename]#/mnt#. Tudo estará inicialmente no mesmo estado que estava quando o snapshot foi criado. A única exceção é que os snapshots anteriores aparecerão como arquivos com comprimento zero. Para desmontar o snapshot, use:
+
+[source,bash]
+....
+# umount /mnt
+# mdconfig -d -u 4
+....
+
+Para obter mais informações sobre `softupdates` e snapshots do sistema de arquivos, incluindo documentos técnicos, visite o site do Marshall Kirk McKusick em http://www.mckusick.com/[http://www.mckusick.com/].
+
+[[quotas]]
+== Cotas de Disco
+
+As cotas de disco podem ser usadas para limitar a quantidade de espaço em disco ou o número de arquivos que um usuário ou membros de um grupo podem alocar em uma base por sistema de arquivos. Isso impede que um usuário ou grupo de usuários consuma todo o espaço em disco disponível.
+
+Esta seção descreve como configurar cotas de disco para o sistema de arquivos UFS. Para configurar cotas no sistema de arquivos ZFS, consulte crossref:zfs[zfs-zfs-quota,Cotas para Datasets, Usuários e Grupos]
+
+=== Habilitando Cotas de Disco
+
+Para determinar se o kernel do FreeBSD fornece suporte para cotas de disco:
+
+[source,bash]
+....
+% sysctl kern.features.ufs_quota
+kern.features.ufs_quota: 1
+....
+
+Neste exemplo, o `1` indica suporte à cota. Se o valor for `0`, adicione a seguinte linha a um arquivo de configuração de kernel personalizado e reconstrua o kernel usando as instruções em crossref:kernelconfig[kernelconfig, Configurando o kernel do FreeBSD]:
+
+[.programlisting]
+....
+options QUOTA
+....
+
+Em seguida, habilite as cotas de disco no arquivo [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+quota_enable="YES"
+....
+
+Normalmente, na inicialização, a integridade da cota de cada sistema de arquivos é verificada por man:quotacheck[8]. Esse programa garante que os dados no banco de dados de cotas reflitam adequadamente os dados no sistema de arquivos. Este é um processo demorado que afetará significativamente o tempo que o sistema leva para inicializar. Para pular este passo, adicione esta variável ao arquivo [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+check_quotas="NO"
+....
+
+Por fim, edite o arquivo [.filename]#/etc/fstab# para habilitar as cotas de disco por sistema de arquivos. Para habilitar cotas por usuário em um sistema de arquivos, adicione `userquota` ao campo de opções na entrada [.filename]#/etc/fstab# para o sistema de arquivos ativar as cotas. Por exemplo:
+
+[.programlisting]
+....
+/dev/da1s2g   /home    ufs rw,userquota 1 2
+....
+
+Para ativar cotas de grupo, use `groupquota`. Para ativar cotas de usuários e grupos, separe as opções com uma vírgula:
+
+[.programlisting]
+....
+/dev/da1s2g    /home    ufs rw,userquota,groupquota 1 2
+....
+
+Por padrão, os arquivos de cota são armazenados no diretório raiz do sistema de arquivos como [.filename]#quota.user# e [.filename]#quota.group#. Consulte man:fstab[5] para obter mais informações. Especificar um local alternativo para os arquivos de cotas não é recomendado.
+
+Quando a configuração estiver concluída, reinicialize o sistema e o [.filename]#/etc/rc# executará automaticamente os comandos apropriados para criar os arquivos de cotas iniciais para todas as cotas ativadas em [.filename]#/etc/fstab#.
+
+No curso normal das operações, não deve haver necessidade de executar manualmente o man:quotacheck[8], man:quotaon[8], ou man:quotaoff[8]. No entanto, deve-se ler estas páginas de manual para se familiarizar com sua operação.
+
+=== Definindo Limites de Cota
+
+Para verificar se as cotas estão ativadas, execute:
+
+[source,bash]
+....
+# quota -v
+....
+
+Deve haver um resumo de uma linha sobre o uso de disco e limites de cota atuais para cada sistema de arquivos em que as cotas estão ativadas.
+
+O sistema agora está pronto para receber limites de cota com `edquota`.
+
+Várias opções estão disponíveis para impor limites à quantidade de espaço em disco que um usuário ou grupo pode alocar e quantos arquivos eles podem criar. As alocações podem ser limitadas com base no espaço em disco (cotas de bloco), no número de arquivos (cotas de inode) ou em uma combinação de ambos. Cada limite é subdividido em duas categorias: limites rígidos e flexíveis.
+
+Um limite rígido não pode ser excedido. Quando um usuário atinge um limite rígido, nenhuma outra alocação pode ser feita nesse sistema de arquivos por esse usuário. Por exemplo, se o usuário tiver um limite rígido de 500 kbytes em um sistema de arquivos e estiver usando atualmente 490 kbytes, o usuário poderá alocar apenas 10 kbytes adicionais. A tentativa de alocar 11 kbytes adicionais falhará.
+
+Os limites flexíveis podem ser excedidos por um período de tempo limitado, conhecido como período de tolerância, que é uma semana por padrão. Se um usuário permanecer acima do limite por mais tempo do que o período de carência, o limite flexível se tornará um limite rígido e nenhuma outra alocação será permitida. Quando o usuário cai abaixo do limite flexível, o período de carência é zerado.
+
+No exemplo a seguir, a cota da conta `test` está sendo editada. Quando `edquota` é invocado, o editor especificado por `EDITOR` é aberto para editar os limites de cota. O editor padrão é configurado para vi.
+
+[source,bash]
+....
+# edquota -u test
+Quotas for user test:
+/usr: kbytes in use: 65, limits (soft = 50, hard = 75)
+        inodes in use: 7, limits (soft = 50, hard = 60)
+/usr/var: kbytes in use: 0, limits (soft = 50, hard = 75)
+        inodes in use: 0, limits (soft = 50, hard = 60)
+....
+
+Normalmente, há duas linhas para cada sistema de arquivos com cotas ativadas. Uma linha representa os limites do bloco e a outra representa os limites do inode. Altere o valor para modificar o limite de cota. Por exemplo, para aumentar o limite de blocos em [.filename]#/usr# para um limite flexível de `500` e um limite rígido de `600`, altere os valores nesse campo. linha da seguinte forma:
+
+[.programlisting]
+....
+/usr: kbytes in use: 65, limits (soft = 500, hard = 600)
+....
+
+Os novos limites de cotas entram em vigor ao sair do editor.
+
+Às vezes, é desejável definir limites de cota em vários usuários. Isso pode ser feito primeiro atribuindo o limite de cota desejado a um usuário. Em seguida, use `-p` para duplicar essa cota para um intervalo especificado de IDs de usuário (UIDs). O comando a seguir duplicará esses limites de cota para UIDs de `10.000` até `19.999`:
+
+[source,bash]
+....
+# edquota -p test 10000-19999
+....
+
+Para mais informações, consulte man:edquota[8].
+
+=== Verificando Limites de Cota e Uso de Disco
+
+Para verificar cotas individuais de usuários ou de grupos e uso de disco, use man:quota[1]. Um usuário só pode examinar sua própria cota e a cota de um grupo do qual é membro. Somente o superusuário pode visualizar todas as cotas de usuários e grupos. Para obter um resumo de todas as cotas e uso de disco para sistemas de arquivos com cotas ativadas, use man:repquota[8].
+
+Normalmente, os sistemas de arquivos nos quais o usuário não está usando nenhum espaço em disco não serão exibidos na saída de `quota`, mesmo que o usuário tenha um limite de cota atribuído a esse sistema de arquivos. Use `-v` para exibir esses sistemas de arquivos. A seguir está a saída de amostra de `quota -v` para um usuário que possui limites de cota em dois sistemas de arquivos.
+
+[.programlisting]
+....
+Disk quotas for user test (uid 1002):
+     Filesystem  usage    quota   limit   grace   files   quota   limit   grace
+           /usr      65*     50      75   5days       7      50      60
+       /usr/var       0      50      75               0      50      60
+....
+
+Neste exemplo, o usuário está atualmente 15 kbytes sobre o limite flexível de 50 kbytes em [.filename]#/usr# e tem 5 dias de período de carência restante. O asterisco `*` indica que o usuário está atualmente acima do limite de cota.
+
+=== Quotas sobre o NFS
+
+As cotas são impostas pelo subsistema de cotas no servidor NFS. O daemon man:rpc.rquotad[8] disponibiliza informações de quota para `quota` em clientes NFS, permitindo que os usuários nessas máquinas visualizem suas estatísticas de cota.
+
+No servidor NFS, ative o `rpc.rquotad` removendo o `#` desta linha em [.filename]##/etc/inetd.conf##:
+
+[.programlisting]
+....
+rquotad/1      dgram rpc/udp wait root /usr/libexec/rpc.rquotad rpc.rquotad
+....
+
+Em seguida, reinicie o `inetd`:
+
+[source,bash]
+....
+# service inetd restart
+....
+
+[[disks-encrypting]]
+== Criptografando Partições de Disco
+
+O FreeBSD oferece excelentes proteções on-line contra acesso não autorizado a dados. As permissões de arquivo e o crossref:mac[mac,Mandatory Access Control] (MAC) ajudam a impedir que usuários não autorizados acessem dados enquanto o sistema operacional está ativo e o computador está ligado. No entanto, as permissões impostas pelo sistema operacional são irrelevantes se um invasor tiver acesso físico a um computador e puder mover o disco rígido do computador para outro sistema para copiar e analisar os dados.
+
+Independentemente de como um invasor pode ter acesso a um disco rígido ou um computador desligado, os subsistemas criptográficos baseados em GEOM incorporados ao FreeBSD são capazes de proteger os dados nos sistemas de arquivos do computador contra atacantes super motivados com recursos significativos. Ao contrário dos métodos de criptografia que criptografam arquivos individuais, os utilitários incorporados `gbde` e `geli` podem ser usados para criptografar de forma transparente sistemas de arquivos inteiros. Nenhum dado aberto sequer toca na bandeja do disco rígido.
+
+Este capítulo demonstra como criar um sistema de arquivos criptografado no FreeBSD. Primeiro ele demonstra o processo usando o `gbde` e depois demonstra o mesmo exemplo usando `geli`.
+
+=== Criptografia de Disco com gbde
+
+O objetivo do utilitário man:gbde[4] é fornecer um desafio formidável para que um invasor que tenha acesso ao conteúdo de um dispositivo de armazenamento _frio_. No entanto, se o computador for comprometido enquanto estiver em funcionamento e o dispositivo de armazenamento estiver ativamente conectado, ou se o invasor tiver acesso a uma frase secreta válida, ele não oferecerá proteção ao conteúdo do dispositivo de armazenamento. Portanto, é importante fornecer segurança física enquanto o sistema está em execução e proteger a frase secreta usada pelo mecanismo de criptografia.
+
+Este recurso oferece várias barreiras para proteger os dados armazenados em cada setor de disco. Ele criptografa o conteúdo de um setor de disco usando o AES de 128 bits no modo CBC. Cada setor no disco é criptografado com uma chave AES diferente. Para obter mais informações sobre o design criptográfico, incluindo como as chaves do setor são derivadas da frase secreta fornecida pelo usuário, consulte man:gbde[4].
+
+O FreeBSD fornece um módulo do kernel para gbde, que pode ser carregado com este comando:
+
+[source,bash]
+....
+# kldload geom_bde
+....
+
+Se estiver usando um arquivo de configuração de kernel personalizado, certifique-se de que ele contenha esta linha:
+
+`options GEOM_BDE`
+
+O exemplo a seguir demonstra a adição de um novo disco rígido a um sistema que conterá uma única partição criptografada que será montada como [.filename]#/private#.
+
+[.procedure]
+====
+*Procedure: Criptografando uma Partição com gbde*
+
+. Adicione o Novo Disco Rígido
++ 
+Instale a nova unidade no sistema, conforme explicado em <<disks-adding>>. Para propósitos deste exemplo, uma nova partição de disco rígido foi adicionada como [.filename]#/dev/ad4s1c# e [.filename]#/dev/ad0s1*# representa o existente partições padrão do FreeBSD.
++
+[source,bash]
+....
+# ls /dev/ad*
+/dev/ad0        /dev/ad0s1b     /dev/ad0s1e     /dev/ad4s1
+/dev/ad0s1      /dev/ad0s1c     /dev/ad0s1f     /dev/ad4s1c
+/dev/ad0s1a     /dev/ad0s1d     /dev/ad4
+....
++
+. Criar um diretório para conter os arquivos de lock do `gbde`
++
+[source,bash]
+....
+# mkdir /etc/gbde
+....
++ 
+O arquivo de lock gbde contém informações que o gbde requer para acessar partições criptografadas. Sem acesso ao arquivo de lock, o gbde não poderá descriptografar os dados contidos na partição criptografada sem intervenção manual significativa que não seja suportada pelo software. Cada partição criptografada usa um arquivo de lock separado.
+. Inicialize a Partição `gbde`
++ 
+Uma partição gbde deve ser inicializada antes de poder ser usada. Essa inicialização precisa ser executada apenas uma vez. Esse comando abrirá o editor padrão, para definir várias opções de configuração em um modelo. Para uso com o sistema de arquivos UFS, defina o sector_size como 2048:
++
+[source,bash]
+....
+# gbde init /dev/ad4s1c -i -L /etc/gbde/ad4s1c.lock
+# $FreeBSD: head/pt_BR.ISO8859-1/books/handbook/book.xml 53984 2020-03-15 16:03:31Z dbaio $
+#
+# Sector size is the smallest unit of data which can be read or written.
+# Making it too small decreases performance and decreases available space.
+# Making it too large may prevent filesystems from working.  512 is the
+# minimum and always safe.  For UFS, use the fragment size
+#
+sector_size	=	2048
+[...]
+....
++ 
+Depois que a edição for salva, o usuário será solicitado a digitar duas vezes a frase secreta usada para proteger os dados. A frase secreta deve ser a mesma em ambas as vezes. A capacidade de gbde de proteger os dados depende inteiramente da qualidade da frase secreta. Para obter dicas sobre como selecionar uma frase secreta que seja fácil de lembrar, consulte http://world.std.com/\~reinhold/diceware.html[http://world.std.com/~reinhold/diceware.htm].
++ 
+Essa inicialização cria um arquivo de lock para a partição do gbde. Neste exemplo, ele é armazenado como [.filename]#/etc/gbde/ad4s1c.lock#. Os arquivos de lock devem terminar em ".lock" para serem corretamente detectados pelo script de inicialização do [.filename]#/etc/rc.d/gbde#.
++
+[CAUTION]
+======
+
+Arquivos de lock _devem_ ter backups junto com o conteúdo de qualquer partição criptografada. Sem o arquivo de lock, o proprietário legítimo não poderá acessar os dados na partição criptografada.
+======
++
+. Anexando a Partição Criptografada ao Kernel
++
+[source,bash]
+....
+# gbde attach /dev/ad4s1c -l /etc/gbde/ad4s1c.lock
+....
++ 
+Este comando solicitará a entrada da senha que foi selecionada durante a inicialização da partição criptografada. O novo dispositivo criptografado aparecerá em [.filename]#/dev# como [.filename]#/dev/device_name.bde#:
++
+[source,bash]
+....
+# ls /dev/ad*
+/dev/ad0        /dev/ad0s1b     /dev/ad0s1e     /dev/ad4s1
+/dev/ad0s1      /dev/ad0s1c     /dev/ad0s1f     /dev/ad4s1c
+/dev/ad0s1a     /dev/ad0s1d     /dev/ad4        /dev/ad4s1c.bde
+....
++
+. Criando um Sistema de Arquivos no Dispositivo Criptografado
++ 
+Uma vez que o dispositivo criptografado tenha sido anexado ao kernel, um sistema de arquivos pode ser criado no dispositivo. Este exemplo cria um sistema de arquivos UFS com atualizações soft ativadas. Certifique-se de especificar a partição que possui uma extensão [.filename]#*.bde#:
++
+[source,bash]
+....
+# newfs -U /dev/ad4s1c.bde
+....
++
+. Montando a Partição Criptografada
++ 
+Crie um ponto de montagem e monte o sistema de arquivos criptografados:
++
+[source,bash]
+....
+# mkdir /private
+# mount /dev/ad4s1c.bde /private
+....
++
+. Verificar se o sistema de arquivos criptografados está disponível
++ 
+O sistema de arquivos criptografados agora deve estar visível e disponível para uso:
++
+[source,bash]
+....
+% df -H
+Filesystem        Size   Used  Avail Capacity  Mounted on
+/dev/ad0s1a      1037M    72M   883M     8%    /
+/devfs            1.0K   1.0K     0B   100%    /dev
+/dev/ad0s1f       8.1G    55K   7.5G     0%    /home
+/dev/ad0s1e      1037M   1.1M   953M     0%    /tmp
+/dev/ad0s1d       6.1G   1.9G   3.7G    35%    /usr
+/dev/ad4s1c.bde   150G   4.1K   138G     0%    /private
+....
+====
+
+Após cada inicialização, todos os sistemas de arquivos criptografados devem ser reconectados manualmente ao kernel, verificados quanto a erros e montados antes que os sistemas de arquivos possam ser usados. Para configurar estas etapas, adicione as seguintes linhas ao arquivo [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+gbde_autoattach_all="YES"
+gbde_devices="ad4s1c"
+gbde_lockdir="/etc/gbde"
+....
+
+Isso requer que a frase secreta seja inserida no console no momento da inicialização. Depois de digitar a senha correta, a partição criptografada será montada automaticamente. Opções adicionais de inicialização do gbde estão disponíveis e listadas em man:rc.conf[5].
+
+[NOTE]
+====
+O sysinstall é incompatível com os dispositivos criptografados com gbde. Todos os dispositivos [.filename]#*.bde# devem ser desanexado do kernel antes de iniciar o sysinstall ou ele irá travar durante a análise inicial dos dispositivos. Para desanexar o dispositivo criptografado usado no exemplo, use o seguinte comando:
+
+[source,bash]
+....
+# gbde detach /dev/ad4s1c
+....
+
+====
+
+[[disks-encrypting-geli]]
+=== Criptografia de Disco com `geli`
+
+Uma classe criptográfica alternativa GEOM está disponível usando `geli`. Este utilitário de controle adiciona alguns recursos e usa um esquema diferente para fazer trabalho criptográfico. Ele fornece os seguintes recursos:
+
+* Utiliza o framework man:crypto[9] e usa automaticamente o hardware criptográfico quando ele está disponível.
+* Suporta vários algoritmos criptográficos, como AES, Blowfish e 3DES.
+* Permite que a partição raiz seja criptografada. A frase secreta usada para acessar a partição root criptografada será solicitada durante a inicialização do sistema.
+* Permite o uso de duas chaves independentes.
+* É rápido, pois executa criptografia simples de setor a setor.
+* Permite backup e restauração de chaves mestras. Se um usuário destruir suas chaves, ainda é possível obter acesso aos dados restaurando as chaves do backup.
+* Permite que um disco seja anexado com uma chave única aleatória que é útil para partições swap e sistemas de arquivos temporários.
+
+Mais recursos e exemplos de uso podem ser encontrados em man:geli[8].
+
+O exemplo a seguir descreve como gerar um arquivo de chave que será usado como parte da chave mestra para o provedor criptografado montado em [.filename]#/private#. O arquivo chave fornecerá alguns dados aleatórios usados para criptografar a chave mestra. A chave mestra também será protegida por uma frase secreta. O tamanho do setor do provedor será de 4kB. O exemplo descreve como se conectar ao provedor `geli`, criar um sistema de arquivos, montá-lo, trabalhar com ele e, finalmente, como desanexá-lo.
+
+[.procedure]
+====
+*Procedure: Criptografando uma Partição com `geli`*
+
+. Carregando o suporte ao `geli`
++ 
+O suporte para `geli` está disponível como um módulo de kernel carregável. Para configurar o sistema para carregar automaticamente o módulo no momento da inicialização, adicione a seguinte linha ao arquivo [.filename]#/boot/loader.conf#:
++
+[.programlisting]
+....
+geom_eli_load="YES"
+....
++ 
+Para carregar o módulo do kernel agora:
++
+[source,bash]
+....
+# kldload geom_eli
+....
++ 
+Para um kernel customizado, assegure-se de que o arquivo de configuração do kernel contenha estas linhas:
++
+[.programlisting]
+....
+options GEOM_ELI
+device crypto
+....
++
+. Gerando a Chave Mestra
++ 
+Os seguintes comandos geram uma chave mestra ([.filename]#/root/da2.key#) que é protegida com uma frase secreta. A fonte de dados para o arquivo de chave é [.filename]#/dev/random# e o tamanho do setor do provedor ([.filename]#/dev/da2.eli#) é de 4kB, pois um tamanho de setor maior fornece melhor desempenho:
++
+[source,bash]
+....
+# dd if=/dev/random of=/root/da2.key bs=64 count=1
+# geli init -s 4096 -K /root/da2.key /dev/da2
+Enter new passphrase:
+Reenter new passphrase:
+....
++ 
+Não é obrigatório o uso de uma frase secreta e de um arquivo de chave, pois cada método de proteger a chave mestra pode ser usado isoladamente.
++ 
+Se o arquivo de chave é dado como "-", a entrada padrão será usada. Por exemplo, este comando gera três arquivos principais:
++
+[source,bash]
+....
+# cat keyfile1 keyfile2 keyfile3 | geli init -K - /dev/da2
+....
++
+. Anexando o Provedor com a Chave Gerada
++ 
+Para anexar o provedor, especifique o arquivo de chave, o nome do disco e a frase secreta:
++
+[source,bash]
+....
+# geli attach -k /root/da2.key /dev/da2
+Enter passphrase:
+....
++ 
+Isso cria um novo dispositivo com uma extensão [.filename]#.eli#:
++
+[source,bash]
+....
+# ls /dev/da2*
+/dev/da2  /dev/da2.eli
+....
++
+. Criando o Novo Sistema de Arquivos
++ 
+Em seguida, formate o dispositivo com o sistema de arquivos UFS e monte-o em um ponto de montagem existente:
++
+[source,bash]
+....
+# dd if=/dev/random of=/dev/da2.eli bs=1m
+# newfs /dev/da2.eli
+# mount /dev/da2.eli /private
+....
++ 
+O sistema de arquivos criptografado agora deve estar disponível para uso:
++
+[source,bash]
+....
+# df -H
+Filesystem     Size   Used  Avail Capacity  Mounted on
+/dev/ad0s1a    248M    89M   139M    38%    /
+/devfs         1.0K   1.0K     0B   100%    /dev
+/dev/ad0s1f    7.7G   2.3G   4.9G    32%    /usr
+/dev/ad0s1d    989M   1.5M   909M     0%    /tmp
+/dev/ad0s1e    3.9G   1.3G   2.3G    35%    /var
+/dev/da2.eli   150G   4.1K   138G     0%    /private
+....
+====
+
+Uma vez que o trabalho na partição criptografada é feito, e a partição [.filename]#/private# não é mais necessária, é prudente colocar o dispositivo no armazenamento frio desmontando e desanexando a partição `geli` criptografada do kernel:
+
+[source,bash]
+....
+# umount /private
+# geli detach da2.eli
+....
+
+Um script [.filename]#rc.d# é fornecido para simplificar a montagem de dispositivos criptografados `geli` no momento da inicialização. Para este exemplo, adicione estas linhas ao arquivo [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+geli_devices="da2"
+geli_da2_flags="-k /root/da2.key"
+....
+
+Isto configura o [.filename]#/dev/da2# como um provedor `geli` com uma chave mestra de [.filename]#/root/da2.key#. O sistema irá desanexando automaticamente o provedor do kernel antes que o sistema seja desligado. Durante o processo de inicialização, o script solicitará a frase secreta antes de conectar o provedor. Outras mensagens do kernel podem ser mostradas antes e depois do prompt da frase secreta. Se o processo de inicialização parecer travar, procure cuidadosamente o prompt de senha entre as outras mensagens. Depois que a frase secreta correta é inserida, o provedor é anexado. O sistema de arquivos é então montado, normalmente por uma entrada em [.filename]#/etc/fstab#. Consulte crossref:basics[mount-unmount,Montando e Desmontando Sistemas de Arquivos] para obter instruções sobre como configurar um sistema de arquivos para montar no momento da inicialização.
+
+[[swap-encrypting]]
+== Criptografando Swap
+
+Como a criptografia de partições de disco, a criptografia do espaço swap é usada para proteger informações confidenciais. Considere um aplicativo que lida com senhas. Contanto que essas senhas permaneçam na memória física, elas não serão gravadas no disco e serão apagadas após a reinicialização. No entanto, se o FreeBSD iniciar a troca de páginas de memória para liberar espaço, as senhas podem ser gravadas no disco não criptografadas. O espaço de troca de criptografia pode ser uma solução para esse cenário.
+
+Esta seção demonstra como configurar uma partição swap criptografada usando criptografia man:gbde[8] ou man:geli[8]. Ele assume que [.filename]#/dev/ada0s1b# é a partição swap.
+
+=== Configurando Swap Criptografada
+
+As partições de swap não são criptografadas por padrão e devem ser limpas de quaisquer dados confidenciais antes de continuar. Para sobrescrever a partição swap atual com lixo aleatório, execute o seguinte comando:
+
+[source,bash]
+....
+# dd if=/dev/random of=/dev/ada0s1b bs=1m
+....
+
+Para criptografar a partição swap usando man:gbde[8], adicione o sufixo `.bde` à linha de swap no [.filename]#/etc/fstab#:
+
+[.programlisting]
+....
+# Device		Mountpoint	FStype	Options		Dump	Pass#
+/dev/ada0s1b.bde	none		swap	sw		0	0
+....
+
+Para criptografar a partição swap usando man:geli[8], use o sufixo `.eli`:
+
+[.programlisting]
+....
+# Device		Mountpoint	FStype	Options		Dump	Pass#
+/dev/ada0s1b.eli	none		swap	sw		0	0
+....
+
+Por padrão, man:geli[8] usa o algoritmo AES com um comprimento de chave de 128 bits. Normalmente, as configurações padrão serão suficientes. Se desejado, estes padrões podem ser alterados no campo de opções no arquivo [.filename]#/etc/fstab#. As possíveis flags são:
+
+aalgo::
+Algoritmo de verificação de integridade de dados usado para garantir que os dados criptografados não tenham sido adulterados. Veja man:geli[8] para obter uma lista dos algoritmos suportados.
+
+ealgo::
+Algoritmo de criptografia usado para proteger os dados. Veja man:geli[8] para obter uma lista dos algoritmos suportados.
+
+keylen::
+O comprimento da chave usada para o algoritmo de criptografia. Veja man:geli[8] para os comprimentos de chave que são suportados por cada algoritmo de criptografia.
+
+sectorsize::
+O tamanho em que o blocos de dados é dividido antes de ser criptografado. Tamanhos de setor maiores aumentam o desempenho ao custo de maior sobrecarga de armazenamento. O tamanho recomendado é de 4096 bytes.
+
+Este exemplo configura uma partição swap criptografada usando o algoritmo Blowfish com um comprimento de chave de 128 bits e um setor de tamanho de 4 kilobytes:
+
+[.programlisting]
+....
+# Device		Mountpoint	FStype	Options				Dump	Pass#
+/dev/ada0s1b.eli	none		swap	sw,ealgo=blowfish,keylen=128,sectorsize=4096	0	0
+....
+
+=== Verificação de Swap Criptografada
+
+Depois que o sistema for reinicializado, a operação adequada da swap criptografada poderá ser verificada usando `swapinfo`.
+
+Se man:gbde[8] estiver sendo usado:
+
+[source,bash]
+....
+% swapinfo
+Device          1K-blocks     Used    Avail Capacity
+/dev/ada0s1b.bde   542720        0   542720     0%
+....
+
+Se man:geli[8] estiver sendo usado:
+
+[source,bash]
+....
+% swapinfo
+Device          1K-blocks     Used    Avail Capacity
+/dev/ada0s1b.eli   542720        0   542720     0%
+....
+
+[[disks-hast]]
+== Alta Disponibilidade de Armazenamento (HAST)
+
+A alta disponibilidade é um dos principais requisitos em aplicativos de negócios sérios e o armazenamento altamente disponível é um componente-chave nesses ambientes. No FreeBSD, o framework Alta Disponiblidade de Armazenamento (HAST) permite o armazenamento transparente dos mesmos dados em várias máquinas fisicamente separadas conectadas por uma rede TCP/IP. HAST pode ser entendido como um RAID1 (mirror) baseado em rede, e é similar ao sistema de armazenamento DRBD(R) usado na plataforma GNU/Linux(TM). Em combinação com outros recursos de alta disponibilidade do FreeBSD, como o CARP, o HAST possibilita a criação de um cluster de armazenamento altamente disponível, resistente a falhas de hardware.
+
+A seguir estão as principais características do HAST:
+
+* Pode ser usado para mascarar erros de I/O em discos rígidos locais.
+* Agnóstico a sistema de arquivos, pois funciona com qualquer sistema de arquivos suportado pelo FreeBSD.
+* Ressincronização eficiente e rápida, pois somente os blocos que foram modificados durante o tempo de inatividade de um nó são sincronizados.
+* Pode ser usado em um ambiente já implantado para adicionar redundância adicional.
+* Juntamente com o CARP, Heartbeat, ou outras ferramentas, ele pode ser usado para construir um sistema de armazenamento robusto e durável.
+
+Depois de ler esta seção, você saberá:
+
+* O que é HAST, como ele funciona e quais recursos ele fornece.
+* Como configurar e usar o HAST no FreeBSD.
+* Como integrar CARP e man:devd[8] para criar um sistema de armazenamento robusto.
+
+Antes de ler esta seção, você deve:
+
+* Entender os fundamentos do UNIX(TM) e do FreeBSD (crossref:basics[basics, Fundamentos do FreeBSD]).
+* Saber como configurar interfaces de rede e outros subsistemas principais do FreeBSD (crossref:config[config-tuning, Configuração e Ajuste]).
+* Ter uma boa compreensão da rede do FreeBSD (crossref:partiv[network-communication,Comunicação de rede]).
+
+O projeto HAST foi patrocinado pela Fundação FreeBSD com o apoio de http://www.omc.net/[http://www.omc.net/] e http://www.transip.nl/[http://www.transip.nl/].
+
+=== Operação HAST
+
+O HAST fornece replicação síncrona em nível de bloco entre duas máquinas físicas: o _primário_, também conhecido como o nó _master_, e o _secundário_, ou nó _slave_. Essas duas máquinas juntas são chamadas de cluster.
+
+Como o HAST funciona em uma configuração primária-secundária, ele permite que apenas um dos nós do cluster esteja ativo a qualquer momento. O nó primário, também chamado de _active_, é aquele que irá lidar com todas as solicitações de I/O para dispositivos gerenciados por HAST. O nó secundário é automaticamente sincronizado a partir do nó primário.
+
+Os componentes físicos do sistema HAST são o disco local no nó primário e o disco no nó secundário remoto.
+
+O HAST opera de forma síncrona em um nível de bloco, tornando-o transparente para sistemas de arquivos e aplicativos. O HAST fornece provedores GEOM regulares em [.filename]#/dev/hast/# para uso por outras ferramentas ou aplicativos. Não há diferença entre o uso de dispositivos HAST e discos ou partições brutas.
+
+Cada operação de gravação, exclusão ou liberação é enviada para o disco local e para o disco remoto sobre TCP/IP . Cada operação de leitura é fornecida a partir do disco local, a menos que o disco local não esteja atualizado ou ocorra um erro de I/O. Nesses casos, a operação de leitura é enviada para o nó secundário.
+
+HAST tenta fornecer recuperação rápida de falhas. Por esse motivo, é importante reduzir o tempo de sincronização após a interrupção de um nó. Para fornecer sincronização rápida, o HAST gerencia um bitmap no disco de extensões sujas e sincroniza apenas aquelas durante uma sincronização regular, com exceção da sincronização inicial.
+
+Existem muitas maneiras de lidar com a sincronização. O HAST implementa vários modos de replicação para lidar com diferentes métodos de sincronização:
+
+* _memsync_: Este modo reporta uma operação de gravação como concluída quando a operação de gravação local é finalizada e quando o nó remoto reconhece a chegada dos dados, mas antes de realmente armazenar os dados. Os dados no nó remoto serão armazenados diretamente após o envio da confirmação. Este modo destina-se a reduzir a latência, mas ainda fornece boa confiabilidade. Este modo é o padrão.
+* _fullsync_: Este modo relata uma operação de gravação como concluída quando a gravação local e a gravação remota são concluídas. Este é o modo de replicação mais seguro e mais lento.
+* _async_: Este modo relata uma operação de gravação como concluída quando a gravação local é concluída. Este é o modo de replicação mais rápido e mais perigoso. Ele deve ser usado somente ao replicar para um nó distante, onde a latência é muito alta para outros modos.
+
+=== Configuração do HAST
+
+O framework HAST consiste em vários componentes:
+
+* O daemon man:hastd[8] que fornece sincronização de dados. Quando este daemon é iniciado, ele carregará automaticamente `geom_gate.ko`.
+* O utilitário de gerenciamento de usuário, man:hastctl[8].
+* O arquivo de configuração man:hast.conf[5]. Este arquivo deve existir antes de iniciar o hastd.
+
+Usuários que preferem construir estaticamente o suporte a `GEOM_GATE` no kernel devem adicionar esta linha ao arquivo de configuração do kernel personalizado e reconstruir o kernel usando as instruções em crossref:kernelconfig[kernelconfig, Configurando o kernel do FreeBSD]:
+
+[.programlisting]
+....
+options	GEOM_GATE
+....
+
+O exemplo a seguir descreve como configurar dois nós na operação mestre-escravo/primário-secundário usando HAST para replicar os dados entre os dois. Os nós serão chamados `hasta`, com um endereço IP `172.16.0.1`, e `hastb`, com um endereço IP `172.16.0.2`. Ambos os nós terão um disco rígido dedicado [.filename]#/dev/ad6# do mesmo tamanho para a operação HAST. O conjunto HAST, por vezes referido como um recurso ou o provedor GEOM em [.filename]#/dev/hast/#, será chamado `test`.
+
+A configuração do HAST é feita usando o arquivo [.filename]#/etc/hast.conf#. Este arquivo deve ser idêntico nos dois nós. A configuração mais simples é:
+
+[.programlisting]
+....
+resource test {
+	on hasta {
+		local /dev/ad6
+		remote 172.16.0.2
+	}
+	on hastb {
+		local /dev/ad6
+		remote 172.16.0.1
+	}
+}
+....
+
+Para uma configuração mais avançada, consulte man:hast.conf[5].
+
+[TIP]
+====
+
+Também é possível usar nomes de host nas instruções `remote` se os hosts forem resolvidos e definidos no arquivo [.filename]#/etc/hosts# ou no DNS local.
+====
+
+Uma vez que a configuração exista em ambos os nós, o conjunto HAST pode ser criado. Execute esses comandos nos dois nós para colocar os metadados iniciais no disco local e para iniciar man:hastd[8]:
+
+[source,bash]
+....
+# hastctl create test
+# service hastd onestart
+....
+
+[NOTE]
+====
+_Não_ é possível usar os provedores GEOM com um sistema de arquivos existente ou converter um armazenamento existente em um pool gerenciado por HAST. Esse procedimento precisa armazenar alguns metadados no provedor e não haverá espaço suficiente disponível em um provedor existente.
+====
+
+Um nó HAST `primário` ou `secundário` é selecionado por um administrador, ou software como Heartbeat, usando man:hastctl[8]. No nó primário, `hasta`, execute este comando:
+
+[source,bash]
+....
+# hastctl role primary test
+....
+
+Execute este comando no nó secundário, `hastb`:
+
+[source,bash]
+....
+# hastctl role secondary test
+....
+
+Verifique o resultado executando `hastctl` em cada nó:
+
+[source,bash]
+....
+# hastctl status test
+....
+
+Verifique a linha `status` na saída. Se disser `degraded`, algo está errado com o arquivo de configuração. Ele deve dizer `complete` em cada nó, o que significa que a sincronização entre os nós foi iniciada. A sincronização é concluída quando `hastctl status` relata 0 bytes de extensões `sujas`.
+
+O próximo passo é criar um sistema de arquivos no provedor GEOM e montá-lo. Isso deve ser feito no nó `primário`. A criação do sistema de arquivos pode levar alguns minutos, dependendo do tamanho do disco rígido. Este exemplo cria um sistema de arquivos UFS em [.filename]#/dev/hast/test#:
+
+[source,bash]
+....
+# newfs -U /dev/hast/test
+# mkdir /hast/test
+# mount /dev/hast/test /hast/test
+....
+
+Uma vez que o framework HAST esteja configurado corretamente, o passo final é garantir que o HAST seja iniciado automaticamente durante a inicialização do sistema. Adicione esta linha ao [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+hastd_enable="YES"
+....
+
+==== Configuração de Failover
+
+O objetivo deste exemplo é construir um sistema de armazenamento robusto que seja resistente à falha de qualquer nó. Se o nó primário falhar, o nó secundário estará lá para assumir o controle, verificar e montar o sistema de arquivos e continuar a trabalhar sem perder um único bit de dados.
+
+Para realizar essa tarefa, o Protocolo de Redundância de Endereços Comuns (CARP) é usado para fornecer failover automático na camada IP. O CARP permite que vários hosts no mesmo segmento de rede compartilhem um endereço IP. Configure o CARP em ambos os nós do cluster de acordo com a documentação disponível em crossref:advanced-networking[carp,Protocolo Comum de Redundância de Endereços (CARP)]. Neste exemplo, cada nó terá seu próprio endereço de gerenciamento IP e um endereço IP compartilhado de _172.16.0.254_. O nó principal HAST do cluster deve ser o nó mestre CARP.
+
+O pool HAST criado na seção anterior está agora pronto para ser exportado para os outros hosts da rede. Isso pode ser feito exportando-o através do NFS ou Samba, usando o endereço IP_172.16.0.254_ compartilhado. O único problema que permanece não resolvido é um failover automático caso o nó primário falhe.
+
+Caso as interfaces do CARP subam ou desçam, o sistema operacional FreeBSD gera um evento man:devd[8], tornando possível observar mudanças de estado nas interfaces do CARP. Uma alteração de estado na interface CARP é uma indicação de que um dos nós falhou ou voltou a ficar online. Esses eventos de mudança de estado tornam possível executar um script que manipulará automaticamente o failover HAST.
+
+Para capturar mudanças de estado nas interfaces do CARP, adicione esta configuração ao [.filename]#/etc/devd.conf# em cada nó:
+
+[.programlisting]
+....
+notify 30 {
+	match "system" "IFNET";
+	match "subsystem" "carp0";
+	match "type" "LINK_UP";
+	action "/usr/local/sbin/carp-hast-switch master";
+};
+
+notify 30 {
+	match "system" "IFNET";
+	match "subsystem" "carp0";
+	match "type" "LINK_DOWN";
+	action "/usr/local/sbin/carp-hast-switch slave";
+};
+....
+
+[NOTE]
+====
+Se os sistemas estiverem executando o FreeBSD 10 ou superior, substitua [.filename]#carp0# pelo nome da interface configurada CARP.
+====
+
+Reinicie o man:devd[8] em ambos os nós para colocar a nova configuração em vigor:
+
+[source,bash]
+....
+# service devd restart
+....
+
+Quando o estado da interface especificada é alterado subindo ou descendo, o sistema gera uma notificação, permitindo que o subsistema man:devd[8] execute o script de failover automático especificado, [.filename]#/usr/local/sbin/carp-hast-switch#. Para maiores esclarecimentos sobre esta configuração, consulte man:devd.conf[5].
+
+Aqui está um exemplo de um script de failover automatizado:
+
+[.programlisting]
+....
+#!/bin/sh
+
+# Original script by Freddie Cash <fjwcash@gmail.com>
+# Modified by Michael W. Lucas <mwlucas@BlackHelicopters.org>
+# and Viktor Petersson <vpetersson@wireload.net>
+
+# The names of the HAST resources, as listed in /etc/hast.conf
+resources="test"
+
+# delay in mounting HAST resource after becoming master
+# make your best guess
+delay=3
+
+# logging
+log="local0.debug"
+name="carp-hast"
+
+# end of user configurable stuff
+
+case "$1" in
+	master)
+		logger -p $log -t $name "Switching to primary provider for ${resources}."
+		sleep ${delay}
+
+		# Wait for any "hastd secondary" processes to stop
+		for disk in ${resources}; do
+			while $( pgrep -lf "hastd: ${disk} \(secondary\)" > /dev/null 2>&1 ); do
+				sleep 1
+			done
+
+			# Switch role for each disk
+			hastctl role primary ${disk}
+			if [ $? -ne 0 ]; then
+				logger -p $log -t $name "Unable to change role to primary for resource ${disk}."
+				exit 1
+			fi
+		done
+
+		# Wait for the /dev/hast/* devices to appear
+		for disk in ${resources}; do
+			for I in $( jot 60 ); do
+				[ -c "/dev/hast/${disk}" ] && break
+				sleep 0.5
+			done
+
+			if [ ! -c "/dev/hast/${disk}" ]; then
+				logger -p $log -t $name "GEOM provider /dev/hast/${disk} did not appear."
+				exit 1
+			fi
+		done
+
+		logger -p $log -t $name "Role for HAST resources ${resources} switched to primary."
+
+		logger -p $log -t $name "Mounting disks."
+		for disk in ${resources}; do
+			mkdir -p /hast/${disk}
+			fsck -p -y -t ufs /dev/hast/${disk}
+			mount /dev/hast/${disk} /hast/${disk}
+		done
+
+	;;
+
+	slave)
+		logger -p $log -t $name "Switching to secondary provider for ${resources}."
+
+		# Switch roles for the HAST resources
+		for disk in ${resources}; do
+			if ! mount | grep -q "^/dev/hast/${disk} on "
+			then
+			else
+				umount -f /hast/${disk}
+			fi
+			sleep $delay
+			hastctl role secondary ${disk} 2>&1
+			if [ $? -ne 0 ]; then
+				logger -p $log -t $name "Unable to switch role to secondary for resource ${disk}."
+				exit 1
+			fi
+			logger -p $log -t $name "Role switched to secondary for resource ${disk}."
+		done
+	;;
+esac
+....
+
+Em poucas palavras, o script executa essas ações quando um nó se torna mestre:
+
+* Promove o pool de HAST para primário no outro nó.
+* Verifica o sistema de arquivos no pool HAST.
+* Monta o pool.
+
+Quando um nó se torna secundário:
+
+* Desmonta o conjunto HAST.
+* Degrada o pool HAST para secundário.
+
+[CAUTION]
+====
+
+Este é apenas um script de exemplo que serve como prova de conceito. Ele não manipula todos os cenários possíveis e pode ser estendido ou alterado de qualquer forma, por exemplo, para iniciar ou interromper os serviços necessários.
+====
+
+[TIP]
+====
+
+Para este exemplo, foi utilizado um sistema de arquivos padrão UFS. Para reduzir o tempo necessário para a recuperação, é possível usar um sistema de arquivos UFS ou ZFS com journal ativado.
+====
+
+Informações mais detalhadas com exemplos adicionais podem ser encontradas em http://wiki.FreeBSD.org/HAST[http://wiki.FreeBSD.org/HAST].
+
+=== Solução de problemas
+
+O HAST geralmente deve funcionar sem problemas. No entanto, como acontece com qualquer outro produto de software, pode haver momentos em que ele não funciona como deveria. As origens dos problemas podem ser diferentes, mas a regra geral é garantir que o horário esteja sincronizado entre os nós do cluster.
+
+Quando estiver fazendo troubleshooting no HAST, o nível de depuração de man:hastd[8] deve ser aumentado iniciando `hastd` com `-d`. Esse argumento pode ser especificado várias vezes para aumentar ainda mais o nível de depuração. Considere também usar `-F`, que inicia o `hastd` em primeiro plano.
+
+[[disks-hast-sb]]
+==== Recuperando-se da Condição de Split-brain
+
+_Split-brain_ ocorre quando os nós do cluster não conseguem se comunicar entre si e ambos são configurados como primários. Esta é uma condição perigosa porque permite que ambos os nós façam alterações incompatíveis nos dados. Esse problema deve ser corrigido manualmente pelo administrador do sistema.
+
+O administrador deve decidir qual nó tem alterações mais importantes ou executar a mesclagem manualmente. Então, deixe o HAST executar a sincronização completa do nó que possui os dados quebrados. Para fazer isso, emita esses comandos no nó que precisa ser ressincronizado:
+
+[source,bash]
+....
+# hastctl role init test
+# hastctl create test
+# hastctl role secondary test
+....

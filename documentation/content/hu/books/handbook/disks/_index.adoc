@@ -1,0 +1,2330 @@
+---
+title: 18. Fejezet - Háttértárak
+part: III. Rész Rendszeradminisztráció
+prev: books/handbook/audit
+next: books/handbook/geom
+---
+
+[[disks]]
+= Háttértárak
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 18
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/disks/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/disks/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/disks/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[disks-synopsis]]
+== Áttekintés
+
+Ez a fejezet arról szól, hogy miként használjuk a lemezeinket a FreeBSD-vel. Itt többek közt szó esik a memória (alapú) lemezekrõl, a hálózaton keresztül csatlakoztatott meghajtókról, a szabványos SCSI/IDE tárolóeszközökrõl és az USB felületet használó eszközökrõl.
+
+A fejezet elolvasása során megismerjük:
+
+* a FreeBSD által alkalmazott terminológiát, amivel a fizikai lemezeken elhelyezkedõ adatokat írja le (partíciók és slice-ok);
+* hogyan bõvítsük rendszerünket további merevlemezekkel;
+* hogyan állítsuk be a FreeBSD-t USB tárolóeszközök használatára;
+* hogyan állítsunk be virtuális állományrendszereket, például memórialemezeket;
+* hogyan használjuk a kvótákat a lemezterület használatának korlátozására;
+* hogyan védjüket meg lemezeinket titkosítással az illetéktelenektõl;
+* FreeBSD alatt hogyan készítsünk és írjuk CD-ket, DVD-ket;
+* a biztonsági mentések készítésének különbözõ lehetõségeit;
+* hogyan használjuk a FreeBSD alatt rendelkezésünkre álló, biztonsági mentést készítõ programokat;
+* hogyan mentsünk floppy lemezekre;
+* mik az állományrendszerek pillanatképei és hogyan kell ezeket hatékonyan használni.
+
+A fejezet elolvasásához ajánlott:
+
+* a FreeBSD rendszermag beállításának és telepítésének ismerete (crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása])
+
+[[disks-naming]]
+== Az eszközök elnevezései
+
+A most következõ listában felsoroljuk a FreeBSD által ismert fizikai tárolóeszközöket és a hozzájuk tartozó elnevezéseket.
+
+[[disk-naming-physical-table]]
+.A fizikai lemezek elnevezésének szabályai
+[cols="1,1", frame="none", options="header"]
+|===
+| A meghajtó típusa
+| A meghajtóeszköz neve
+
+|IDE merevlemezek
+|`ad`
+
+|IDE CD-meghajtók
+|`acd`
+
+|SCSI merevlemezek és USB tárolóeszközök
+|`da`
+
+|SCSI CD-meghajtók
+|`cd`
+
+|Különbözõ nem szabványos CD-meghajtók
+|`mcd` (Mitsumi CD-ROM) és `scd` (Sony CD-ROM) 
+
+|Floppy meghajtók
+|`fd`
+
+|SCSI szalagos meghajtók
+|`sa`
+
+|IDE szalagos meghajtók
+|`ast`
+
+|Flash meghajtó
+|`fla` (DiskOnChip(R) Flash eszköz)
+
+|RAID meghajtók
+|`aacd` (Adaptec(R) AdvancedRAID), `mlxd` és `mlyd` (Mylex(R)), `amrd` (AMI MegaRAID(R)), `idad` (Compaq Smart RAID), `twed` (3ware(R) RAID).
+|===
+
+[[disks-adding]]
+== Lemezek hozzáadása
+
+Ebben a szakaszban arról lesz szó, hogy a jelenleg egyetlen meghajtót tartalmazó rendszerünket hogyan tudjuk bõvíteni egy új SCSI-lemez hozzáadásával. Ehhez elsõként kapcsoljuk ki a számítógépünket és szereljük be a helyére az új meghajtót a számítógép, a lemezvezérlõ és a meghajtó gyártójának utasításai alapján. Mivel ezt a mûveletet rengeteg módon lehet elvégezni, ezért ennek pontos részleteivel ez a leírás most nem foglalkozik.
+
+Jelentkezzünk be `root` felhasználóként. Miután beszereltük a meghajtót, a [.filename]#/var/run/dmesg.boot# állomány végignézésével bizonyosodjuk meg róla, hogy a rendszer valóban megtalálta a lemezt. A példánk szerint ez a meghajtó tehát a [.filename]#da1# nevet fogja viselni, amelyet a [.filename]#/1# könyvtárba akarunk csatlakoztatni (ha IDE-meghajtót telepítünk, akkor a hozzá tartozó eszköz neve [.filename]#ad1# lesz).
+
+Mivel a FreeBSD IBM PC kompatibilis számítógépeken fut, ezért nem szabad figyelmen kívül hagynunk a PC BIOS partícióit is. Ezek eltérnek a hagyományos BSD partícióktól. Egy PC-s lemeznek négy BIOS-os partícióbejegyzése lehet. Ha egy lemezt tényleg csak a FreeBSD-nek szánunk, akkor használhatjuk az ún. _dedikált_ módot. Minden más esetben a FreeBSD-nek egy PC BIOS partícióban kell elhelyezkednie. A FreeBSD a PC BIOS partícióit _slice_-nak nevezi, ezzel különbözteti ezeket a hagyományos BSD partícióktól. Dedikált esetekben is használhatjuk, de elsõsorban akkor kap fontosabb szerepet, amikor a FreeBSD-nek más operációs rendszerekkel kell megosztani a helyet. Ezzel el tudjuk kerülni, hogy a más operációs rendszerekben megtalálható, nem FreeBSD alapú `fdisk` parancs megzavarodjon.
+
+A slice-ok használatakor a meghajtó [.filename]#/dev/da1s1e# néven kerül hozzáadásra. Így kell olvasni: egyes SCSI lemezes egység (második SCSI lemez), elsõ slice (elsõ PC BIOS partíció) és [.filename]#e# BSD partíció. A dedikált esetben a meghajtó neve viszont egyszerûen csak [.filename]#/dev/da1e#.
+
+Mivel a man:bsdlabel[8] 32 bites egész számokat használ a szektorok számának tárolására, ezért lemezenként csak 2^32-1 szektort tud ábrázolni, ami az esetek többségében 2 TB méretû címezhetõ területet jelent. Az man:fdisk[8] formátuma szerint sem a kezdõszektor, sem a hossz nem lehet 2^32-1-nél több, amivel így a partíciókat 2 TB, a lemezeket pedig 4 TB méretûre korlátozza. A man:sunlabel[8] formátuma partíciónként 2^32-1 szektort enged meg és összesen 8 partíciót, amely ezáltal 16 TB terület lefedését teszi lehetõvé. Nagyobb lemezekhez man:gpt[8] partíciók használatosak.
+
+=== A man:sysinstall[8] használatával
+
+[.procedure]
+====
+
+. Közlekedés a sysinstall programban
++ 
+A `sysinstall` könnyen használható menüinek segítségével az új lemezen pillanatok alatt létre tudunk hozni partíciókat és megcímkézni ezeket. Ehhez vagy `root` felhasználóként jelentkezzünk be a rendszerbe, vagy adjuk ki a `su` parancsot. A `sysinstall` parancs kiadása után lépjünk be a `Configure` (Beállítások) menübe. A `FreeBSD Configuration Menu` menüben ezután keressük meg és válasszuk ki az `Fdisk` menüpontot.
+. Az fdisk partíciószerkesztõ
++ 
+Miután eljutottunk az fdisk alkalmazáshoz, az kbd:[A] lenyomásával felajánlhatjuk az egész lemezt a FreeBSD számára. Amikor elõkerül a kérdés, hogy "remain cooperative with any future possible operating systems" ("mûködõképes maradjon-e a késõbbiekben telepítendõ operációs rendszerekkel"), akkor válaszoljuk rá `YES`-szel (tehát igen). A kbd:[W] gomb lenyomásával írjuk a lemezre a most elvégzett változtatásokat. Ezután már a kbd:[Q] használatával ki is léphetünk az FDISK szerkesztõbõl. A következõ lépésben a "Master Boot Record"-ról fognak minket megkérdezni. Mivel most egy már mûködõ rendszert bõvítünk, ezért a válaszunk erre `None` lesz.
+. A lemezcímkék szerkesztése
++ 
+Most lépjünk ki a sysinstall alkalmazásból és indítsuk el újra. Kövessük az iménti útmutatásokat, de ezúttal a `Label` menüpontot válasszuk ki. Ezzel a `Disk Label Editor`-ba vagyis a lemezcímkék szerkesztõjéhez jutunk. Itt fogjuk létrehozni a hagyományos BSD partíciókat. Egy lemezen nyolc ilyen partíció lehet, `a`-tól `h`-ig. Közülük néhány partíció címkéjét megkülönböztetjük. Az `a` partíció jelöli a rendszer indításához használt partíciót, a gyökérpartíciót ([.filename]#/#). Tehát `a` partíció csak a rendszerlemezünkön szerepelhet (tehát ahonnan indul a rendszer). A `b` partíció a lapozáshoz használt partíciókat jelöli és több lemezen is szerepelhet. A `c` partíción keresztül lehet elérni az egészt lemezt dedikált módban vagy az egész FreeBSD slice-ot slice módban. A többi partíció tetszõlegesen felhasználható.
++ 
+A sysinstall címkeszerkesztõje az `e` betûvel szereti megjelölni a sem nem rendszerindító, sem nem lapozó partíciókat. A címkeszerkesztõben egyetlen állományrendszert a kbd:[C] lenyomásával lehet készíteni. Amikor erre válaszul megkérdezi a típusát (FS (állományrendszer) vagy swap (lapozóterület) legyen), akkor válasszuk az `FS` beállítást és adjuk meg a csatlakozási pontját (például [.filename]#/mnt#). Amikor a lemezt telepítés után (post-install) adjuk hozzá, akkor a sysinstall valójában nem hoz létre hozzá bejegyzéseket az [.filename]#/etc/fstab# állományban, ezért a csatlakozási pont megadása nem is feltétlenül fontos.
++ 
+Most már készen állunk arra, hogy rögzítsük az új címkét a lemezre és létrehozzunk vele egy állományrendszert. Ehhez nyomjuk le a kbd:[W] gombot. Ne foglalkozzunk vele, ha a sysinstall nem képes csatlakoztatni az új partíciót. Ha ezzel megvagyunk, akkor lépjünk ki a címkeszerkesztõbõl és a sysinstallból is.
+. Befejezés
++ 
+Most már csak annyi teendõnk maradt, hogy felvegyük az [.filename]#/etc/fstab# állományba az új lemezhez tartozó bejegyzést.
+====
+
+=== Parancssoros eszközök használatával
+
+==== Slice módban
+
+Ezzel a beállítással a lemezünkre késõbb más operációs rendszereket is telepíthetünk, és nem okoz gondot a saját `fdisk` segédprogramjaik mûködésében. Az új lemezek telepítésénél ezt a módszer ajánlatos követni. A dedikált módot viszont csak abban az esetben használjuk, ha erre nyomós okunk van!
+
+[source,bash]
+....
+# dd if=/dev/zero of=/dev/da1 bs=1k count=1
+# fdisk -BI da1 # inicializáljuk az új lemezt
+# bsdlabel -B -w da1s1 auto # címkézzük meg
+# bsdlabel -e da1s1 # szerkeszzük át a frissen létrehozott címkét és vegyünk fel egy új partíciót
+# mkdir -p /1
+# newfs /dev/da1s1e # ismételjük meg minden létrehozott partícióhoz
+# mount /dev/da1s1e /1 # csatlakoztassuk a partíció(ka)t
+# vi /etc/fstab # vegyük fel a megfelelő bejegyzés(eke)t az /etc/fstab állományba
+....
+
+IDE-lemezek esetén az[.filename]##ad## eszközt a [.filename]#da# eszközzel helyettesítsük.
+
+==== Dedikált módban
+
+Amennyiben az új meghajtót nem akarjuk megosztani egyetlen más operációs rendszerrel sem, használhatjuk a `dedicated` (dedikált) módot. Ne felejtsük el azonban, hogy ez képes összezavarni a Microsoft operációs rendszereit, habár ebbõl semmilyen kárunk nem fog származni. Az IBM OS/2(R) operációs rendszere azonban "kisajátít" minden olyan partíciót, amelyet nem tud olvasni.
+
+[source,bash]
+....
+# dd if=/dev/zero of=/dev/da1 bs=1k count=1
+# bsdlabel -Bw da1 auto
+# bsdlabel -e da1				# létrehozzuk az `e' partíciót
+# newfs /dev/da1e
+# mkdir -p /1
+# vi /etc/fstab				# felvesszük a /dev/da1e partíciót
+# mount /1
+....
+
+Egy másik megoldás:
+
+[source,bash]
+....
+# dd if=/dev/zero of=/dev/da1 count=2
+# bsdlabel /dev/da1 | bsdlabel -BR da1 /dev/stdin
+# newfs /dev/da1e
+# mkdir -p /1
+# vi /etc/fstab					# felvesszük a /dev/da1e partíciót
+# mount /1
+....
+
+[[raid]]
+== RAID
+
+[[raid-soft]]
+=== Szoftveres RAID
+
+[[ccd]]
+==== Összefûzött lemezek beállítása
+
+A nagyobb méretû háttértárolók kiválasztásánál a legfontosabb tényezõk a sebesség, megbízhatóság és a költség. Nagyon ritkán lehet csak ezt a hármat egyensúlyba hozni: általában a gyors és megbízható tárolóeszközök sok pénzbe kerülnek, valamint a költségek megtakarításához vagy a sebességet vagy pedig a megbízhatóságot kell feláldoznunk.
+
+A továbbiakban egy olyan rendszert mutatunk be, ahol a elsõsorban a költségek, majd csak ezután a sebesség és megbízhatóság kerültek elõtérben. A rendszer adatátviteli sebességét a hálózat korlátozza. Habár emellett a megbízhatóság is nagyon fontos, a tárgyalt összefûzött meghajtó (Concenated Disk, CCD) csak adatokat szolgáltat és a teljes tartalma bármikor visszaállítható, mivel rendelkezésre áll CD-n.
+
+A feladat elvégzésére alkalmas háttértároló kiválasztásában elsõként a saját elvárásainkat kell tudnunk megfogalmazni. Ha nekünk jobban számít az árnál a sebesség vagy a megbízhatóság, akkor a mostaniaktól némileg eltérõ konfigurációt kell majd építenünk.
+
+[[ccd-installhw]]
+===== A hardver telepítése
+
+A rendszert tartalmazó IDE-lemez mellett három darab, egyenként 30 GB-os 5400-as percenkénti fordulatszámú Western Digital gyártmányú merevlemez alkotja majd a létrehozni kívánt, kb. 90 GB összméretû összefûzött lemezt. Ideális esetben minden IDE-lemez saját külön vezérlõn és kábelen van, de a költségek csökkentése miatt nem használtunk további IDE-vezérlõket. Ehelyett inkább jumperekkel úgy állítottuk be a lemezeket, hogy minden vezérlõre egy mester (master) és egy szolga (slave) módú merevlemez kapcsolódjon.
+
+A beszerelés után beállítottuk a rendszer BIOS-át, hogy automatikusan felismerje a csatlakoztatott lemezeket. De ami még fontosabb, hogy a FreeBSD is észlelte ezeket az indítás során:
+
+[.programlisting]
+....
+ad0: 19574MB <WDC WD205BA> [39770/16/63] at ata0-master UDMA33
+ad1: 29333MB <WDC WD307AA> [59598/16/63] at ata0-slave UDMA33
+ad2: 29333MB <WDC WD307AA> [59598/16/63] at ata1-master UDMA33
+ad3: 29333MB <WDC WD307AA> [59598/16/63] at ata1-slave UDMA33
+....
+
+[NOTE]
+====
+Ha a FreeBSD nem látná az összes lemezt, akkor ellenõrizzük a jumperek helyes beállítását. Napjainkban a legtöbb IDE-meghajtón találunk egy "Cable Select" jumpert is. Ezzel _nem_ a mester/szolga módot állítjuk be! A megfelelõ jumper beazonosításához olvassuk el a meghajtóhoz tartozó dokumentációt.
+====
+
+A következõ lépésben azt vesszük nagyító alá, hogyan lehet ezeket az állományrendszer részévé tenni. Ezzel kapcsolatban a man:vinum[8] (crossref:vinum[vinum-vinum,A Vinum kötetkezelő]) és a man:ccd[4] elolvasása ajánlatos. Erre a célra itt most a man:ccd[4] használatát választottuk.
+
+[[ccd-setup]]
+===== A CCD beállítása
+
+A man:ccd[4] meghajtó segítségével több ugyanolyan lemezt tudunk összefûzni egyetlen logikai állományrendszerré. A man:ccd[4] használatához arra is szükségünk van, hogy a man:ccd[4] támogatása jelen legyen a rendszermagban. A következõ sor tegyük bele a rendszermag konfigurációs állományába, fordítsuk újra és telepítsük a rendszermagot:
+
+[.programlisting]
+....
+device   ccd
+....
+
+A man:ccd[4] támogatása modulként is betölthetõ.
+
+A man:ccd[4] beállításához elõször a man:bsdlabel[8] programmal meg fel kell címkéznünk a lemezeket:
+
+[.programlisting]
+....
+bsdlabel -w ad1 auto
+bsdlabel -w ad2 auto
+bsdlabel -w ad3 auto
+....
+
+Így létrejön egy-egy BSD típusú címke a [.filename]#ad1c#, [.filename]#ad2c# és [.filename]#ad3c# eszközökre, amely így lefedi a lemez egész területét.
+
+Most pedig változtassuk meg a lemezcímke típusát. Ehhez használjuk ismét a man:bsdlabel[8] programot:
+
+[.programlisting]
+....
+bsdlabel -e ad1
+bsdlabel -e ad2
+bsdlabel -e ad3
+....
+
+Az `EDITOR` környezeti változóban megadott szövegszerkesztõvel (ez általában a man:vi[1]) megnyílik minden egyes lemezhez a jelenlegi lemezcímke.
+
+Egy módosítatlan lemezcímke valahogy így néz ki:
+
+[.programlisting]
+....
+8 partitions:
+#        size   offset    fstype   [fsize bsize bps/cpg]
+  c: 60074784        0    unused        0     0     0   # (Cyl.    0 - 59597)
+....
+
+A man:ccd[4] számára hozzunk létre egy új `e` partíciót. Ezt lényegében a `c` partíció lemásolásával keletkezik, de nála az `fstype` (az állományrendszer típusa) oszlopban mindenképpen `4.2BSD` szerepeljen! A lemezcímke most már valahogy így fog kinézni:
+
+[.programlisting]
+....
+8 partitions:
+#        size   offset    fstype   [fsize bsize bps/cpg]
+  c: 60074784        0    unused        0     0     0   # (Cyl.    0 - 59597)
+  e: 60074784        0    4.2BSD        0     0     0   # (Cyl.    0 - 59597)
+....
+
+[[ccd-buildingfs]]
+===== Az állományrendszer kiépítése
+
+Most, miután felcímkéztük az összes lemezünket, lássunk neki a man:ccd[4] kiépítésének. Ezt a man:ccdconfig[8] meghívásával és az alábbihoz hasonló paraméterek átadásával tehetjük meg:
+
+[.programlisting]
+....
+ccdconfig ccd0 32 0 /dev/ad1e /dev/ad2e /dev/ad3e
+....
+
+A paraméterek rövid leírása és használata:
+* Az elsõ paraméter a létrehozandó eszköz, ami jelen esetünkben a [.filename]#/dev/ccd0c#. A [.filename]#/dev/# részt nem kötelezõ megadni.
+* A kihagyás nagysága az állományrendszerben. A kihagyás határozza meg a lemezblokkban alkalmazott csíkozás (striping) vastagságát, ami általában 512 byte. Ennek megfelelõen a 32-es kihagyás 16 384 byte-os csíkokat ad meg.
+* A man:ccdconfig[8] beállításai. Ha engedélyezni akarjuk a lemezek tükrözését, akkor itt megadhatjuk. Mivel ez a konfiguráció most nem nyújt tükrözést a man:ccd[4] számára, ezért állítsuk nullára (0).
+* A man:ccdconfig[8] parancsnak utolsóként azokat az eszközöket kell felsorolni, amelyeket tömbbe akarunk fûzni. Minden eszközt teljes elérési úttal adjuk meg.
+
+A man:ccdconfig[8] futtatása után a man:ccd[4] beállítódik. Most már állományrendszert is rakhatunk rá. A man:newfs[8] man oldalról szedjük össze a szükséges paraméterezést, vagy egyszerûen csak gépeljünk be ennyit:
+
+[.programlisting]
+....
+newfs /dev/ccd0c
+....
+
+[[ccd-auto]]
+===== Az egész önmûködõvé tétele
+
+A man:ccd[4] eszközt általában minden egyes indítás után használni akarjuk. Ennek eléréséhez elõször ezt be kell állítanunk. Az alábbi parancs kiadásával írassuk be a jelenlegi beállítasainkat tükrözõ [.filename]#/etc/ccd.conf# állományt:
+
+[.programlisting]
+....
+ccdconfig -g > /etc/ccd.conf
+....
+
+Az újraindítás során az `/etc/rc` parancs futtatja le a `ccdconfig -C` parancsot, ha az [.filename]#/etc/ccd.conf# állomány létezik. Ez automatikusan beállítja a man:ccd[4] eszközöket, így ilyenkor tudjuk csatlakoztatni is ezeket.
+
+[NOTE]
+====
+Ha egyfelhasználós módban indítjuk a rendszert, mielõtt még a man:mount[8] paranccsal csatlakoztatni tudnánk a man:ccd[4] eszközt, a tömb beállításához meg kell hívnunk a következõ parancsot:
+
+[.programlisting]
+....
+ccdconfig -C
+....
+
+====
+
+Ha a rendszerindításkor automatikusan csatlakoztatni akarjuk a man:ccd[4] eszközt, akkor az [.filename]#/etc/fstab# állományba helyezzünk el egy hozzá tartozó bejegyzést:
+
+[.programlisting]
+....
+/dev/ccd0c              /media       ufs     rw      2       2
+....
+
+[[vinum]]
+==== A Vinum kötetkezelõ
+
+A Vinum kötetkezelõ egy blokkos eszközmeghajtó, ami virtuális lemezes meghajtókat valósít meg. Elkülöníti a lemezes hardvereszközöket a blokkos eszközmeghajtók felületétõl és a kettõ között úgy képezi le az adatokat, hogy a hagyományos lemezes tárolással szemben megnövekedett rugalmasságot, teljesítményt és megbízhatóságot kapunk. A man:vinum[8] ismeri a RAID-0, RAID-1 és RAID-5 modelleket egyaránt, melyeket önmagukban és együttesen kombinálva is használhatunk.
+
+A crossref:vinum[vinum-vinum,A Vinum kötetkezelő] bõvebben ismerteti a man:vinum[8] rendszerét.
+
+[[raid-hard]]
+=== Hardveres RAID
+
+A FreeBSD rengeteg különbözõ típusú hardveres RAID-vezérlõt ismer. Ezek az eszközök a FreeBSD külön erre a célra szánt támogatása nélkül képesek vezérelni a RAID-alrendszert.
+
+A rajta levõ BIOS segítségével a kártya a legtöbb lemezmûveletet egyedül kezeli. A következõkben egy Promise IDERAID vezérlõt alkalmazó rendszert fogunk beállítani. Miután telepítettük a kártyát és indítjuk a rendszert, bekéri a szükséges információkat. Kövessük az utasításokat és lépjünk be a kártya beállító képernyõjére. Itt tudjuk kombinálni az összes csatlakoztatott meghajtónkat. Amikor ezzel a végeztünk, a lemezek egyetlen lemezként fognak a FreeBSD számára viselkedni. A többi RAID-szint is ehhez hasonlóan állítható be.
+
+=== Az ATA RAID-1 tömbök újraszervezése
+
+A FreeBSD lehetõséget a tömbben levõ meghibásodott eszközök menet közben elvégezhetõ cseréjére. Ehhez arra van szükségünk, hogy még újraindítás elõtt elcsípjük a hibát.
+
+Hiba esetén valami hasonlót fogunk látni a [.filename]#/var/log/messages# állományban vagy a man:dmesg[8] kimenetében:
+
+[.programlisting]
+....
+ad6 on monster1 suffered a hard error.
+ad6: READ command timeout tag=0 serv=0 - resetting
+ad6: trying fallback to PIO mode
+ata3: resetting devices .. done
+ad6: hard error reading fsbn 1116119 of 0-7 (ad6 bn 1116119; cn 1107 tn 4 sn 11)\\
+status=59 error=40
+ar0: WARNING - mirror lost
+....
+
+További információkat az man:atacontrol[8] programtól szerezhetünk:
+
+[source,bash]
+....
+# atacontrol list
+ATA channel 0:
+	Master:      no device present
+	Slave:   acd0 <HL-DT-ST CD-ROM GCR-8520B/1.00> ATA/ATAPI rev 0
+
+ATA channel 1:
+	Master:      no device present
+	Slave:       no device present
+
+ATA channel 2:
+	Master:  ad4 <MAXTOR 6L080J4/A93.0500> ATA/ATAPI rev 5
+	Slave:       no device present
+
+ATA channel 3:
+	Master:  ad6 <MAXTOR 6L080J4/A93.0500> ATA/ATAPI rev 5
+	Slave:       no device present
+
+# atacontrol status ar0
+ar0: ATA RAID1 subdisks: ad4 ad6 status: DEGRADED
+....
+
+[.procedure]
+====
+. A lemez biztonságos eltávolításához elõször válasszuk le (detach) a meghibásodott lemezhez tartozó csatornát:
++
+[source,bash]
+....
+# atacontrol detach ata3
+....
++
+. Cseréljük ki a lemezt.
+. Csatlakoztassuk újra (attach) az ATA csatornát:
++
+[source,bash]
+....
+# atacontrol attach ata3
+Master:  ad6 <MAXTOR 6L080J4/A93.0500> ATA/ATAPI rev 5
+Slave:   no device present
+....
++
+. Tartalékként (spare) adjuk hozzá az új lemezt a tömbhöz:
++
+[source,bash]
+....
+# atacontrol addspare ar0 ad6
+....
++
+. Szervezzük újra (rebuild) a tömböt:
++
+[source,bash]
+....
+# atacontrol rebuild ar0
+....
++
+. A folyamat elõrehaladását a következõ parancs begépelésével tudjuk figyelni:
++
+[source,bash]
+....
+# dmesg | tail -10
+[a kimenet többi része]
+ad6: removed from configuration
+ad6: deleted from ar0 disk1
+ad6: inserted into ar0 disk1 as spare
+
+# atacontrol status ar0
+ar0: ATA RAID1 subdisks: ad4 ad6 status: REBUILDING 0% completed
+....
++
+. Várjunk a mûvelet befejezõdéséig.
+====
+
+[[usb-disks]]
+== USB tárolóeszközök
+
+Manapság már számos külsõ tárolóeszköz az USB (Universal Serial Bus) közvetítésével csatlakozik a számítógéphez: merevlemezek, pen drive-ok, CD-írók stb. A FreeBSD ezeket az eszközöket is ismeri.
+
+=== Beállítás
+
+A USB tárolóeszközöket kezelõ meghajtó, az man:umass[4] felelõs az USB alapú tárolóeszközök támogatásáért. Ha a [.filename]#GENERIC# rendszermagot használjuk, akkor semmit sem kell változtatnunk. Ha saját rendszermagunk van, akkor gondoskodjunk róla, hogy a következõ sorokat beraktuk a rendszermag beállításait tartalmazó állományba:
+
+[.programlisting]
+....
+device scbus
+device da
+device pass
+device uhci
+device ehci
+device usb
+device umass
+....
+
+Az man:umass[4] meghajtó a SCSI alrendszeren keresztül éri el az USB tárolóeszközöket, tehát az USB eszközeinket a rendszer SCSI eszközként látja. Az alaplapon található USB chipkészlet típusától függõen vagy csak a `device uhci`, vagy USB 1._X_ esetén pedig a `device ohci` bejegyzésre lesz szükségünk. De abból sem származik kárunk, ha mind a kettõt meghagyjuk. Az USB 2.0 szabványú vezérlõket a man:ehci[4] meghajtó (`device ehci`) támogatja. Ha módosítani kellett a konfigurációs állományt, akkor ne felejtsük el újrafordítani és telepíteni sem a rendszermagot.
+
+[NOTE]
+====
+Ha az USB eszközünk egy CD- vagy DVD-író, akkor a következõ sorral a SCSI CD-meghajtók meghajtóját, a man:cd[4] eszközt kell beépítenünk a rendszermagba:
+
+[.programlisting]
+....
+device cd
+....
+
+Mivel az író is SCSI eszközként látszik, ezért az man:atapicam[4] nem szerepelhet a rendszermag beállításai között.
+====
+
+=== A beállítások kipróbálása
+
+A beállításaink készen állnak a kipróbálásra: csatlakoztassuk a számítógéphez az USB eszközünket és a rendszerüzeneteket tároló pufferben (man:dmesg[8]) hamarosan meg is jelenik a hozzá tartozó meghajtó:
+
+[source,bash]
+....
+umass0: USB Solid state disk, rev 1.10/1.00, addr 2
+GEOM: create disk da0 dp=0xc2d74850
+da0 at umass-sim0 bus 0 target 0 lun 0
+da0: <Generic Traveling Disk 1.11> Removable Direct Access SCSI-2 device
+da0: 1.000MB/s transfers
+da0: 126MB (258048 512 byte sectors: 64H 32S/T 126C)
+....
+
+Természetesen a gyártóra, márkára, az eszköz leírójára ([.filename]#da0#) és egyebekre vonatkozó részletek eltérhetnek.
+
+Mivel az USB eszköz SCSI eszközként látszik, ezért a `camcontrol` parancs használható a rendszerhez csatlakoztatott USB tárolóeszközök listázásához:
+
+[source,bash]
+....
+# camcontrol devlist
+<Generic Traveling Disk 1.11>      at scbus0 target 0 lun 0 (da0,pass0)
+....
+
+Ha a meghajtón állományrendszer is található, akkor képesek vagyunk csatlakoztatni. A <<disks-adding>> elolvasása segíthet az USB meghajtón partíciókat kialakítani és formázni, amennyiben szükséges.
+
+[WARNING]
+====
+
+A rendszer biztonsága szempontjából nem tekinthetõ megbízhatónak, ha olyan felhasználók számára is engedélyezzük tetszõleges meghajtók csatlakoztatását (például a `vfs.usermount` engedelyézesével), amelyekben nem bízunk meg. A FreeBSD által támogatott állományrendszerek döntõ többsége nem nyújt védelmet a káros szándékkal telepített eszközök ellen.
+====
+
+Ha az eszközt normál felhasználókkal is csatlakoztathatóvá akarjuk tenni, akkor további lépések megtételére is szükségünk lesz. Elõször is a felhasználóknak valahogy el kell tudniuk érniük az USB tárolóeszköz csatlakoztatásakor keletkezõ eszközöket. Ezt úgy tudjuk megoldani, ha az érintett felhasználókat felvesszük az `operator` csoportba. Ebben a man:pw[8] lehet a segítségünkre. Másodsorban amikor ezek az eszközök létrejönnek, az `operator` csoportnak tudniuk kell ezeket olvasniuk és írniuk. Ezt úgy tudjuk megvalósítani, ha felvesszük a következõ sorokat az [.filename]#/etc/devfs.rules# állományba:
+
+[.programlisting]
+....
+[localrules=5]
+add path 'da*' mode 0660 group operator
+....
+
+[NOTE]
+====
+Ha viszont vannak SCSI lemezeink is rendszerben, akkor a helyzet egy kicsit megváltozik. Tehát például a rendszerben már eleve vannak [.filename]#da0#, [.filename]#da1# és [.filename]#da2# néven lemezek, akkor a második sort ennek megfelelõen változtassuk meg:
+
+[.programlisting]
+....
+add path 'da[3-9]*' mode 0660 group operator
+....
+
+Ezzel kizárunk minden, korábban már létezõ lemezt az `operator` csoportból.
+====
+
+Emellett még az [.filename]#/etc/rc.conf# állományban engedélyeznünk kell a saját man:devfs.rules[5] szabályrendszerünket is:
+
+[.programlisting]
+....
+devfs_system_ruleset="usb_rules"
+....
+
+Ezt követõen be kell állítanunk a rendszermagban, hogy a hagyományos felhasználók képesek legyenek állományrendszereket csatlakoztatni. Ezt a legkönnyebb úgy tudjuk megtenni, ha az [.filename]#/etc/sysctl.conf# állományba felvesszük a következõ sort:
+
+[.programlisting]
+....
+vfs.usermount=1
+....
+
+Azonban ne felejtsük el, hogy ez csak a rendszer következõ indításától él. De a man:sysctl[8] parancs használatával is beállíthatjuk ezt az értéket.
+
+Az utolsó lépésben hozzunk létre egy könyvtárat az állományrendszer csatlakoztatásához. Ezt a könyvtárat az a felhasználó fogja birtokolni, aki az állományrendszert csatlakoztatnia akarja. Ez például `root` felhasználóként úgy tudjuk megtenni, ha a felhasználónak létrehozunk egy könyvtárat [.filename]#/mnt/felhasználó# néven (ahol a _felhasználó_ nevet cseréljük a tényleges felhasználó nevére, a _csoport_ nevet pedig a felhasználóhoz tartozó elsõdleges csoport nevére):
+
+[source,bash]
+....
+# mkdir /mnt/felhasználó
+# chown felhasználó:csoport /mnt/felhasználó
+....
+
+Most tegyük fel, hogy csatlakoztatnuk egy USB pen drive-ot és ennek megfelelõen megjelenik a [.filename]#/dev/da0s1# eszköz. Mivel az ilyen eszközökre általában gyárilag FAT állományrendszert tesznek, ezért így kell ezeket csatlakoztatni a man:mount[8] paranccsal:
+
+[source,bash]
+....
+% mount -t msdosfs -o -m=644,-M=755 /dev/da0s1 /mnt/felhasználó
+....
+
+Ha leválasztjuk az eszközt (miután kiadtuk a man:umount[8] parancsot), akkor a rendszerüzenetek között valami ilyesmit fogunk látni:
+
+[source,bash]
+....
+umass0: at uhub0 port 1 (addr 2) disconnected
+(da0:umass-sim0:0:0:0): lost device
+(da0:umass-sim0:0:0:0): removing device entry
+GEOM: destroy disk da0 dp=0xc2d74850
+umass0: detached
+....
+
+=== A témáról bõvebben
+
+A <<disks-adding,Lemezek hozzáadása>> és az crossref:basics[mount-unmount,Állományrendszerek csatlakoztatása és leválasztása] címû szakaszok elolvasása mellett a következõ man oldalakat is ajánljuk: man:umass[4], man:camcontrol[8] és man:usbconfig[8] FreeBSD 8._X_ esetében, vagy man:usbdevs[8] a FreeBSD korábbi változatainál.
+
+[[creating-cds]]
+== Lézeres tárolóeszközök (CD-k) létrehozása és használata
+
+=== Bevezetés
+
+A CD-k számos lehetõségünkben eltérnek a hagyományos lemezektõl. Kezdetben a felhasználók nem is voltak képesek írni ezeket. Olyannak tervezték, hogy a fejek sávok közti mozgásából fakadó késleltetés nélkül lehessen folyamatosan olvasni. A szállítása a maga idejében sokkal könnyebb volt minden vele egyforma méretû eszköznél.
+
+A CD-ken is találhatunk sávokat, azonban ez csak a folyamatosan olvasható adat egy szakaszát jelenti, nem pedig a lemez fizikai tulajdonságát. Ha FreeBSD-n akarunk CD-t készíteni, akkor ehhez elõször össze kell állítanunk a CD egyes sávjaira kerülõ adatokat és ezután rögzíteni ezeket a sávokat a CD-n.
+
+Az ISO 9660 állományrendszert úgy tervezték, hogy megbirkózzon ezekkel az eltérésekkel. Sajnos ezzel együtt kõbe vésték az állományrendszerek akkoriban érvényes korlátozásait is. Szerencsére lehetõséget ad bõvítésre, ezáltal a helyesen megírt CD-k képesek úgy átlépni ezeket a határokat, hogy közben az általuk alkalmazott kiterjesztéseket nem ismerõ rendszerekkel is együtt tudnak mûködni.
+
+A package:sysutils/cdrtools[] port tartalmaz egy man:mkisofs[8] nevû programot, amellyel létre tudunk hozni ISO 9660 típusú állományrendszert tartalmazó adatállományt. Többféle kiterjesztést is ismer, amit majd a lentebb ismertett opciókkal érhetünk el.
+
+A CD írásához használt konkrét segédeszköz attól függ, hogy ATAPI vagy esetleg másmilyen írónk van. Az ATAPI CD-írók az alaprendszer részeként elérhetõ `burncd` programon keresztül használhatóak. A SCSI és USB CD-írók esetén pedig a package:sysutils/cdrtools[] portban megtalálható `cdrecord` programot használhatjuk. Az <<atapicam,ATAPI/CAM modul>> segítségével a `cdrecord` és más SCSI-írókra készült programokat is tudunk használni ATAPI hardvereken.
+
+Ha a CD-író szoftverünket grafikus felhasználói felületen keresztül szeretnénk használni, akkor az X-CD-Roast vagy a K3b alkalmazásokat érdemes szemügyre vennünk. Ezek az eszközök elérhetõek csomagként vagy a package:sysutils/xcdroast[] és package:sysutils/k3b[] portokból. ATAPI hardver esetén az X-CD-Roast és a K3b alkalmazások használatához szükségünk lesz az <<atapicam,ATAPI/CAM modul>>ra.
+
+[[mkisofs]]
+=== mkisofs
+
+A package:sysutils/cdrtools[] port részeként elérhetõ man:mkisofs[8] program képes a UNIX(R) típusú állományrendszer könyvtárszerkezete alapján egy ISO 9660 típusú állományrendszert tartalmazó image-et készíteni. Legegyszerûbb módon így használhatjuk:
+
+[source,bash]
+....
+# mkisofs -o image.iso /az/elérési/út
+....
+
+Ezzel a paranccsal egy olyan _image.iso_ nevû állományt hozunk létre, amely _/az/elérési/út_ által megadott helyen található könyvtárszerkezetet mintázza ISO 9660 állományrendszer formájában. A folyamat során minden olyan állományt leképez szabványos ISO 9660 állományrendszerbeli névre, amely megfelel a szabvány elvárásainak, és kihagy minden olyan állományt, amely nem jellemzõ az ISO állományrendszerekre.
+
+Számos opció lehet segítségünkre az ilyenkor felbukkanó akadályok leküzdésében. Ezek közül különösen fontos az `-R`, amely a UNIX(R) rendszerek számára megszokott Rock Ridge kiterjesztéseket, valamint a `-J`, amely a Microsoft rendszerekben használt Joliet kiterjesztéseit, és végül a `-hfs`, amely a Mac OS(R) alatt létrehozott HFS állományrendszerek kiterjesztéseit engedélyezi.
+
+A kizárólag csak FreeBSD rendszereken használt CD-k esetében a `-U` megadásával kapcsolhatjuk ki az állománynevek mindenféle korlátozását. Az `-R` beállítás használatával olyan állományrendszer képét hozzuk létre, amely teljesen megegyezik a parancsban megadott könyvtárból induló fa tartalmával, habár több módon is sérti az ISO 9660 szabvány elõírásait.
+
+Az utolsó általános jelleggel használható beállítás a `-b`. Ezzel lehet megadni az "El Torito" szabványnak megfelelõ rendszerindító CD készítéséhez szükséges rendszerindító image elérését. Ennél a beállításnál tehát meg kell adni a rendszerindításhoz használt lemez image-ét, amely a CD tartalmát magában foglaló könyvtárszerkezetben található valahol. A man:mkisofs[8] alapértelmezés szerint egy ún. "floppy emulációs" módban hozza létre az ISO image-et, ezért a rendszerindításhoz használatos lemez image-ének pontosan 1200, 1440 vagy 2880 KB méretûnek kell lennie. Egyes rendszerbetöltõk, mint amilyen például a FreeBSD terjesztéséhez használt lemezeken található, nem használják ezt az emulációt. Ilyen helyzetekben a `-no-emul-boot` kapcsolót kell megadni. Tehát ha a [.filename]#/tmp/sajátboot# könyvtárban van egy indítható FreeBSD rendszerünk, amelyben a [.filename]#/tmp/sajátboot/boot/cdboot# a rendszerindító lemez image-e, akkor egy [.filename]#/tmp/indítható.iso# nevû ISO 9660 formátumú állományrendszert tartalmazó image-et például így tudunk elkészíteni:
+
+[source,bash]
+....
+# mkisofs -R -no-emul-boot -b boot/cdboot -o /tmp/indítható.iso /tmp/sajátboot
+....
+
+Miután ezt megtettük, és a rendszermagunkban benne van az [.filename]#md# eszköz támogatása, csatlakoztathatjuk is az állományrendszert:
+
+[source,bash]
+....
+# mdconfig -a -t vnode -f /tmp/indítható.iso -u 0
+# mount -t cd9660 /dev/md0 /mnt
+....
+
+Ezután már össze tudjuk vetni az [.filename]#/mnt# és [.filename]#/tmp/sajátboot# könyvtárak egyezõségét.
+
+A man:mkisofs[8] viselkedését több más opcióval tudjuk finomhangolni, mint például az ISO 9660 kiosztás módosítása vagy a Joliet és HFS lemezek készítése. A man:mkisofs[8] man oldalon mindezekrõl bõvebben olvashatunk.
+
+[[burncd]]
+=== burncd
+
+Ha ATAPI CD-írónk van, akkor a `burncd` paranccsal írhatjuk az ISO image-et a lemezre. A `burncd` az alaprendszer része, és [.filename]#/usr/sbin/burncd# néven érhetõ el. A használata igen egyszerû, csupán pár paramétere van:
+
+[source,bash]
+....
+# burncd -f eszköz data image.iso fixate
+....
+
+Ezzel a paranccsal rámásoljuk az _image.iso_ állományt az _eszköz_ eszközre. Az alapértelmezett eszköz a [.filename]#/dev/acd0#. A man:burncd[8] man oldalán találjuk meg az írási sebességgel, a CD írás utáni kiadásával és az audio lemezek írásával kapcsolatos beállításokat.
+
+[[cdrecord]]
+=== cdrecord
+
+Ha nincs ATAPI CD-írónk, akkor az íráshoz a `cdrecord` parancsot kell használnunk. A `cdrecord` nem az alaprendszer része: vagy a package:sysutils/cdrtools[] portból vagy a neki megfelelõ csomagból kell telepítenünk. Az alaprendszerben végbemenõ változások miatt a program bináris változatai hibázhatnak, aminek következtében csak "poháralátéteket" fogunk tudni gyártani. Ezért a rendszerrel együtt érdemes frissíteni ezt a portot is. Vagy ha a crossref:cutting-edge[stable,-STABLE verziót használjuk], akkor mindig érdemes a port elérhetõ legújabb verziójára frissíteni.
+
+Miközben a `cdrecord` számos paraméterrel rendelkezik, az alapvetõ használata mégis egyszerûbb a `burncd` parancsénál. Egy ISO 9660 formátumú image-et ugyanis a következõ módon tudunk felírni lemezre:
+
+[source,bash]
+....
+# cdrecord dev=eszköz image.iso
+....
+
+A `cdrecord` használatának trükkös része a megfelelõ eszköz megtalálása, tehát a `dev` beállítás helyes megadása. Ehhez használjuk a `cdrecord-scanbus` paraméterét, amely az alábbihoz hasonló eredményt fog produkálni:
+
+[source,bash]
+....
+# cdrecord -scanbus
+Cdrecord-Clone 2.01 (i386-unknown-freebsd7.0) Copyright (C) 1995-2004 Jörg Schilling
+Using libscg version 'schily-0.1'
+scsibus0:
+        0,0,0     0) 'SEAGATE ' 'ST39236LW       ' '0004' Disk
+        0,1,0     1) 'SEAGATE ' 'ST39173W        ' '5958' Disk
+        0,2,0     2) *
+        0,3,0     3) 'iomega  ' 'jaz 1GB         ' 'J.86' Removable Disk
+        0,4,0     4) 'NEC     ' 'CD-ROM DRIVE:466' '1.26' Removable CD-ROM
+        0,5,0     5) *
+        0,6,0     6) *
+        0,7,0     7) *
+scsibus1:
+        1,0,0   100) *
+        1,1,0   101) *
+        1,2,0   102) *
+        1,3,0   103) *
+        1,4,0   104) *
+        1,5,0   105) 'YAMAHA  ' 'CRW4260         ' '1.0q' Removable CD-ROM
+        1,6,0   106) 'ARTEC   ' 'AM12S           ' '1.06' Scanner
+        1,7,0   107) *
+....
+
+Itt felsorolásra kerülnek a `dev` beállítás értékeként felhasználható eszközök. Keressük meg köztük a CD írónkat és a `dev` értékének a három vesszõvel elválasztott számot adjuk meg. Ebben az esetben a CD-író eszköz most az 1,5,0 lesz, tehát itt a helyes paraméterezés `dev=1,5,0`. Ezt az értékét könnyebben is meg lehet adni. Ennek részleteirõl a man:cdrecord[1] man oldalán olvashatunk. Abban az esetben is érdemes fellapoznunk, ha az audio sávok írásáról, az írási sebesség korlátozásáról vagy más hasonló dolgokról akarunk olvasni.
+
+[[duplicating-audiocds]]
+=== Audio CD-k másolása
+
+Audio CD-t úgy tudunk másolni, ha elõször állományok sorozatába mentjük a lemez tartalmát, majd ezeket az állományokat egy üres CD-re írjuk. Ennek konkrét folyamata azonban némileg eltér az ATAPI- és SCSI-meghajtók használata során.
+
+[.procedure]
+====
+*Procedure: SCSI-meghajtók esetén*
+
+. A `cdda2wav` programmal mentsük le a lemez tartalmát.
++
+[source,bash]
+....
+% cdda2wav -vall -D2,0 -B -Owav
+....
++
+. A `cdrecord` paranccsal írjuk fel a [.filename]#.wav# kiterjesztésû állományokat.
++
+[source,bash]
+....
+% cdrecord -v dev=2,0 -dao -useinfo  *.wav
+....
++ 
+Gondoskodjunk róla, hogy a _2,0_ értéket a <<cdrecord>>nak megfelelõen helyesen állítottuk be.
+====
+
+[.procedure]
+====
+*Procedure: ATAPI-meghajtók esetén*
+
+[NOTE]
+======
+Az <<atapicam,ATAPI/CAM modul>> segítségével a `cdda2wav` parancs ATAPI meghajtókkal is használható. Ez a megoldás általában kedvezõbb (a hibák és bytesorrend ügyesebb kezelése, stb.) a legtöbb felhasználó számára, mint az itt ismertetett.
+======
+
+. Az ATAPI CD meghajtója az egyes sávokat [.filename]#/dev/acddtnn# néven teszi elérhetõvé, ahol a _d_ a meghajtó sorszáma, a _nn_ a sáv két számjeggyel kiírt sorszáma, amelyet szükség szerint balról nullával egészítenek ki. Így tehát az elsõ meghajtó elsõ sávja a [.filename]#/dev/acd0t01#, a második a [.filename]#/dev/acd0t02#, a harmadik a [.filename]#/dev/acd0t03# és így tovább.
++ 
+Ellenõrizzük, hogy ezek az eszközök jelen vannak a [.filename]#/dev# könyvtárban. Amennyiben hiányoznának, kényszerítsük ki a lemez újbóli beolvasását:
++
+[source,bash]
+....
+# dd if=/dev/acd0 of=/dev/null count=1
+....
++
+. Szedjük le az egyes sávokat a man:dd[1] használatával. A parancs kiadásakor meg kell adnunk egy blokkméretet is:
++
+[source,bash]
+....
+# dd if=/dev/acd0t01 of=track1.cdr bs=2352
+# dd if=/dev/acd0t02 of=track2.cdr bs=2352
+...
+....
++
+. A `burncd` használatával írjuk fel a lemezre az imént lementett állományokat. Meg kell adnunk, hogy ezek audio állományok, és hogy a `burncd` a munka befejeztével zárja le (fixate) a lemezt.
++
+[source,bash]
+....
+# burncd -f /dev/acd0 audio track1.cdr track2.cdr ... fixate
+....
+====
+
+[[imaging-cd]]
+=== Adat CD-k másolása
+
+Az adatot tartalmazó CD-ket le tudjuk másolni egy olyan image-be, amely funkcionálisan megegyezik egy man:mkisofs[8] által létrehozott image-dzsel és amivel le tudunk másolni bármilyen adat CD-t. Az itt megadott példa azt feltételezi, hogy a CD-meghajtónk neve [.filename]#acd0#. Helyére a saját CD-meghajtónk nevét kell behelyettesíteni.
+
+[source,bash]
+....
+# dd if=/dev/acd0 of=állomány.iso bs=2048
+....
+
+Most miután lementettük az image-et, írjuk fel CD-re a fentiek szerint.
+
+[[mounting-cd]]
+=== Adat CD-k használata
+
+Most, hogy már készítettünk egy szabványos adat CD-t, valószínûleg szeretnénk is valamilyen csatlakoztatni és elérni a rajta levõ adatokat. Alapértelmezés szerint a man:mount[8] mindig azt feltételezi, hogy az állományrendszerek `ufs` típusúak. Ezért ha valami ilyesmivel próbálkozunk:
+
+[source,bash]
+....
+# mount /dev/cd0 /mnt
+....
+
+akkor egy `Incorrect super block` szövegû hibaüzenetet lesz a jutalmunk, és természetesen nem tudjuk csatlakoztatni a CD-t. Mivel a CD nem `UFS` állományrendszert tartalmaz, ezért az ilyen jellegû kísérleteink mind kudarcba fognak fulladni. Valahogy fel kell világosítanunk a man:mount[8] parancsot arról, hogy itt most egy `ISO9660` típusú állományrendszert akarunk csatlakoztatni, és akkor minden a helyére kerül. Ezt úgy tudjuk megtenni, ha a man:mount[8] parancsnak megadjuk a `-t cd9660` paramétert. Például, ha a [.filename]#/dev/acd0# néven elérhetõ CD-meghajtóban levõ lemezt akarjuk a [.filename]#/mnt# könyvtárba csatlakoztatni, akkor ezt kell begépelnünk:
+
+[source,bash]
+....
+# mount -t cd9660 /dev/cd0 /mnt
+....
+
+Vegyük észre, hogy az eszköz neve (ez ebben a példában most [.filename]#/dev/cd0#) lehet más is attól függõen, hogy milyen csatolófelületet használ a CD-meghajtónk. Sõt, a `-t cd9660` valójában csak a man:mount_cd9660[8] parancsot indítja el. Ennek tükrében tehát az elõbbi példát így rövidíthetjük le:
+
+[source,bash]
+....
+# mount_cd9660 /dev/cd0 /mnt
+....
+
+Ezen a módon bármilyen gyártmányú adat CD-t képesek vagyunk csatlakoztatni. Egyes ISO 9660 kiterjesztéseket használó lemezek azonban esetleg furcsán mûködhetnek. Például Joliet lemezek az összes állomány nevét kétbyte-os Unicode karakterben tárolják. A FreeBSD rendszermagja ugyan nem beszéli a Unicode-ot, de a FreeBSD CD9660 meghajtója képes menetközben átkonvertálni a Unicode karaktereket. Ha bizonyos nem angol karakterek kérdõjelekként jelennének meg, akkor a `-C` beállítás használatával még egy helyi kódlapot is meg kell adnunk. Ezzel kapcsolatban bõvebb tájékoztatásért forduljunk a man:mount_cd9660[8] man oldalhoz.
+
+[NOTE]
+====
+A `-C` beállítás segítségével csak akkor lesz képes a rendszermag elvégezni ezt az átalakítást, ha elõtte betöltjük a [.filename]#cd9660_iconv.ko# modult. Ezt megtehetjük úgy, hogy ha felvesszük a következõ sort a [.filename]#loader.conf# állományba:
+
+[.programlisting]
+....
+cd9660_iconv_load="YES"
+....
+
+Indítsuk újra a számítógépünket, vagy közvetlenül töltsük be a modult a man:kldload[8] használatával.
+====
+
+Estenként elõfordulhat, hogy kapunk egy `Device not configured` hibaüzenetet a CD-k csatlakoztatásakor. Ez általában arra utal, hogy a CD-meghajtó nem érzékeli a berakott lemezt, vagy éppen a meghajtó nem látható a buszon. A CD-meghajtók esetében pár másodpercig eltarthat, amíg felismeri a berakott lemezt, ilyenkor mindig legyünk türelemmel.
+
+Néha a SCSI CD-meghajtó nem látható, mert nem volt elég ideje válaszolni busz újraindítása elõtt. Ha SCSI CD-meghajtónk van, akkor a következõ beállítást tegyük hozzá a rendszermagunk konfigurációjához és crossref:kernelconfig[kernelconfig-building, fordítsuk újra a rendszermagukat].
+
+[.programlisting]
+....
+options SCSI_DELAY=15000
+....
+
+Ezzel utasítjuk a SCSI buszunkat egy 15 másodperces várakozásra a rendszer indítása során, és így ezzel elég esélyt adunk arra, hogy a CD-meghajtó válaszolni tudjon a busz újraindítása elõtt.
+
+[[rawdata-cd]]
+=== Nyers adat CD-k írása
+
+Írhatunk közvetlenül is állományokat a CD-re, ISO 9660 formátumú állományrendszer használata nélkül. Sokan így oldják meg a mentést. Ezt sokkal gyorsabban lebonyolítható egy szabványos CD esetében:
+
+[source,bash]
+....
+# burncd -f /dev/acd1 -s 12 data archive.tar.gz fixate
+....
+
+Az ezen a módon megírt CD-ket szintén nyers módon kell olvasnunk:
+
+[source,bash]
+....
+# tar xzvf /dev/acd1
+....
+
+Az ilyen lemezeket nem tudjuk a normális CD-khez hasonlóan csatlakoztatni. Sõt, az ilyen CD-ket csak FreeBSD alatt tudjuk olvasni. Ha csatlakoztathatóvá akarjuk tenni a lemezt, vagy más operációs rendszerek alól is szeretnénk olvasni, akkor erre a célra a fentebb bemutatott man:mkisofs[8] parancsot kell használnunk.
+
+[[atapicam]]
+=== Az ATAPI/CAM meghajtó használata
+
+Ez a meghajtó lehetõvé teszi az ATAPI eszközök (CD-ROM, CD-RW, DVD meghajtók stb...) számára, hogy a SCSI alrendszeren keresztül legyenek elérhetõek, így esetünkben is használhatóvá válnak olyan alkalmazások, mint például package:sysutils/cdrdao[] vagy a man:cdrecord[1].
+
+A meghajtó használatához a következõ sort kell a [.filename]#/boot/loader.conf# állományba illeszteni:
+
+[.programlisting]
+....
+atapicam_load="YES"
+....
+
+Indítsuk újra a számítógépet.
+
+[NOTE]
+====
+Amennyiben a rendszermagban az man:atapicam[4] statikus támogatását szeretnénk használni, úgy a következõ sort kell a rendszermag konfigurációs állományába felvenni:
+
+[.programlisting]
+....
+device atapicam
+....
+
+Továbbá a következõ sorokra lesz még szükségünk:
+
+[.programlisting]
+....
+device ata
+device scbus
+device cd
+device pass
+....
+
+Ezeknek már eleve ott kell szerepelnie. Ezután fordítsuk újra és telepítsük a rendszermagot, majd indítsuk újra a számítógépet.
+====
+
+A rendszer indulásakor az írónak ehhez hasonló módon kell megjelennie:
+
+[source,bash]
+....
+acd0: CD-RW <MATSHITA CD-RW/DVD-ROM UJDA740> at ata1-master PIO4
+cd0 at ata1 bus 0 target 0 lun 0
+cd0: <MATSHITA CDRW/DVD UJDA740 1.00> Removable CD-ROM SCSI-0 device
+cd0: 16.000MB/s transfers
+cd0: Attempt to query device size failed: NOT READY, Medium not present - tray closed
+....
+
+A meghajtó most már elérhetõ a [.filename]#/dev/cd0# eszközön keresztül, és például ennyi begépelésével csatlakoztatni tudunk róla egy CD-t a [.filename]#/mnt# könyvtárba:
+
+[source,bash]
+....
+# mount -t cd9660 /dev/cd0 /mnt
+....
+
+`root` felhasználóként a következõ paranccsal tudjuk lekérdezi az író SCSI címét:
+
+[source,bash]
+....
+# camcontrol devlist
+<MATSHITA CDRW/DVD UJDA740 1.00>   at scbus1 target 0 lun 0 (pass0,cd0)
+....
+
+Eszerint a `1,0,0` lesz az eszköz SCSI címe, amelyet a man:cdrecord[1] és más SCSI alkalmazások esetén adunk meg.
+
+Az ATAPI/CAM és SCSI rendszerek tekintetében olvassuk el az man:atapicam[4] és man:cam[4] man oldalakat.
+
+[[creating-dvds]]
+== Lézeres tárolóeszközök (DVD-k) létrehozása és használata
+
+=== Bevezetés
+
+A DVD a CD-hez képest a lézeres tárolóeszközök technológiájának újabb generációját képviseli. A DVD bármelyik CD-nél több adatot képes tárolni és napjaink ez a videók kiadásának szabványa.
+
+Öt fizikailag írható formátummal határozhatjuk meg az írható DVD fogalmát:
+
+* DVD-R: Ez volt az elsõ elérhetõ írható DVD formátum. A DVD-R szabványát a http://www.dvdforum.com/forum.shtml[ DVD Fórum] fektette le. Ez a formátum csak egyszer írható.
+* DVD-RW: Ez a DVD-R szabvány újraírható változata. A DVD-RW körülbelül 1000 alkalommal írható újra.
+* DVD-RAM: Ez is a DVD Fórum által támogatott újraírható formátum. A DVD-RAM cserélhetõ merevlemeznek látzsik. Azonban ez típusú adathordozó nem kompatibilis legtöbb DVD-ROM hajtóval és DVD-Video lejátszóval. Csupán csak néhány DVD-író ismeri a DVD-RAM formátumot. A DVD-RAM használatáról a <<creating-dvd-ram>>ban találunk bõvebben információkat.
+* DVD+RW: Ezt az újraírható formátumot a http://www.dvdrw.com/[DVD+RW szövetség] alkotta meg. A DVD+RW lemezek nagyjából 1000 alkalommal írhatóak újra.
+* DVD+R: Ez a formátum a DVD+RW formátum egyszer írható változata.
+
+Az egyrétegû írható DVD-k összesen 4 700 000 000 byte-ot képesek rögzíteni, ami 4,38 GB vagy 4 485 MB (1 kilobyte itt 1024 byte).
+
+[NOTE]
+====
+Meg kell különböztetnünk fizikai tárolóeszközt és az alkalmazást. Például a DVD-Video állományok olyan jellegû elrendezését írja elõ, ami bármelyik írható fizikai DVD eszközön megjelenhet: DVD-R, DVD+R, DVD-RW stb. Mielõtt kiválasztanánk az eszköz típusát, biztosnak kell lennünk benne, hogy az író és a DVD-Video lejátszó (ez lehet egy önálló lejátszó vagy egy számítógép DVD-ROM meghajtója) kompatibilis a szóbanforgó lemezzel.
+====
+
+=== Beállítás
+
+A man:growisofs[1] programot fogjuk a DVD rögzítésére használni. Ez a program a dvd+rw-tools segédprogramok (package:sysutils/dvd+rw-tools[]) gyûjteményének része. A dvd+rw-tools az összes DVD médium típusát ismeri.
+
+Ezek a segédprogramok a SCSI alrendszeren keresztül érik az eszközöket, ezért a használhatukhoz a rendszermagban szükségünk lesz az <<atapicam,ATAPI/CAM támogatásra>>. Ha az írónk USB felületen csatlakozik, akkor mindez szükségtelen, és ehelyett a <<usb-disks>>t kell elolvasnunk az USB eszközök beállításához.
+
+Engedélyeznünk kell az ATAPI eszközök DMA hozzáférését is, amit a [.filename]#/boot/loader.conf# állományban a következõ sor hozzáadásával tudunk megtenni:
+
+[.programlisting]
+....
+hw.ata.atapi_dma="1"
+....
+
+A dvd+rw-tools használatának megkezdése elõtt a DVD-írónkkal kapcsolatban érdemes átolvasnunk a http://fy.chalmers.se/~appro/linux/DVD+RW/hcn.html[dvd+rw-tools hardverkompatibilitási jegyzeteit (angolul)].
+
+[NOTE]
+====
+Ha grafikus felületet szeretnénk használni, akkor érdemes egy pillanatást vetnünk a K3bre (package:sysutils/k3b[]), amely egy felhasználóbarát felületet ad a man:growisofs[1] és sok más íróprogram felé.
+====
+
+=== Adat DVD-k írása
+
+A man:growisofs[1] a <<mkisofs,mkisofs>> parancs elõlapja, tehát az állományrendszer létrehozásához a man:mkisofs[8] programot fogja meghívni és ezt írja fel a DVD-re. Ez azt jelenti, hogy az írási folyamat megkezdése elõtt nem kell semmilyen image-et létrehoznunk.
+
+A [.filename]#/az/elérési/út# könyvtárból a következõ paranccsal tudjuk kiírni az adatokat DVD+R vagy DVD-R lemezre:
+
+[source,bash]
+....
+# growisofs -dvd-compat -Z /dev/cd0 -J -R /az/elérési/út
+....
+
+A `-J -R` beállítások a man:mkisofs[8] programhoz kerülnek át az állományrendszer létrehozásakor (itt most egy ISO 9660 állományrendszert hozunk létre, Joliet és Rock Ridge kiterjesztésekkel), használatának részleteit lásd man:mkisofs[8].
+
+A `-Z` beállítást a kezdõmenetek létrehozásakor használjuk: több menetben akarjuk írni a lemezt vagy sem. A DVD eszközt, amely itt most a _/dev/cd0_, a saját konfigurációnknak megfelelõen kell megadni. A `-dvd-compat` paraméterrel lezárjuk a lemezt, így ezután további írás már nem lehetséges. Ezért cserébe jobb kompatibilitást kapunk a DVD-ROM meghajtókkal.
+
+Elõre legyártott image-dzsel is dolgozhatunk, tehát például, ha az _image.iso_ állományt akarjuk kiírni, akkor ezt kell lefuttatnunk:
+
+[source,bash]
+....
+# growisofs -dvd-compat -Z /dev/cd0=image.iso
+....
+
+Az írási sebességet magától beállítja a lemez és meghajtó képességeinek megfelelõen. Az írási sebesség felülbírálásához használjuk a `-speed=` paramétert. A paraméterek lehetõségeirõl a man:growisofs[1] man oldaláról tudhatunk meg többet.
+
+[NOTE]
+====
+4,38 GB-nál több adat írásához egy hibrid UDF/ISO-9660 típusú állományrendszert kell létrehoznunk. Ezt úgy tudjuk elérni, ha man:mkisofs[8] és a többi hasonló program (például man:growisofs[1]) hívásakor még hozzátesszük az `-udf -iso-level 3` paramétereket. Ezekre csak lemezképek készítésekor vagy az állományok közvetlen lemezre írásakor van szükségünk. Az így létrehozott lemezeket a man:mount_udf[8] segédprogram segítségével UDF állományrendszerként tudjuk csatlakoztatni. Ezért csak olyan operációs rendszereken használható, amelyek ismerik ezt a formátumot, ellenkezõ esetben csak hibás állományokat fogunk látni a lemezen.
+
+Példa ilyen lemezkép létrehozására:
+
+[source,bash]
+....
+# growisofs -dvd-compat -udf -iso-level 3 -Z /dev/cd0 -J -R /az/új/adat/helye
+....
+
+Ha a lemezkép már eleve nagyobb méretû állományokat tartalmaz, a lemez írásakor a man:growisofs[1] programnak már nem kell további paramétereket átadnunk.
+
+Lehetõleg mindig a package:sysutils/cdrtools[] legfrissebb verzióját használjuk (amely a man:mkisofs[8] programot is tartalmazza), mivel a régebbi verziók nem támogatják a nagyobb méretû állományokat. Ha problémák adódnak a programok használata során, akkor próbálkozzunk a fejlesztõi változattal (package:sysutils/cdrtools-devel[]) és olvassuk el a man:mkisofs[8] man oldalát.
+====
+
+=== DVD-Video írása
+
+A DVD-Video az állományok speciális szervezésére utal, amely az ISO 9660 és az mikró UDF (M-UDF) specifikációkon alapszik. A DVD-Video emellett egy adott adatszerkezeti hierarchiát is takar, ezért kell egy külön programmal, például a package:multimedia/dvdauthor[] segítségével összeállítani egy DVD-t.
+
+Ha már a birtokunkban van egy DVD-Video állományrendszer képe, akkor az eddigiek szerint egyszerûen csak írjuk fel egy lemezre, ahogy azt az elõzõ szakaszban is láthattuk. Ha összeállítottuk a DVD anyagát és például a [.filename]#/a/videó/elérési/útja# könyvtárba raktuk, akkor a következõ paranccsal írathatjuk ki a DVD-Video formátumú lemezt:
+
+[source,bash]
+....
+# growisofs -Z /dev/cd0 -dvd-video /a/videó/elérési/útja
+....
+
+A `-dvd-video` paramétert kell átadni a man:mkisofs[8] programnak, amelynek hatására létrehoz egy DVD-Video formátumú állományrendszert. Emellett a `-dvd-video` beállítás maga után vonja a man:growisofs[1] `-dvd-compat` beállítását is.
+
+=== A DVD+RW használata
+
+Eltérõen a CD-RW-tõl, egy érintetlen DVD+RW-t az elsõ használat elõtt meg kell formázni. A man:growisofs[1] program errõl az elsõ adandó alkalommal gondoskodik, és ez az _ajánlott_. Azonban a DVD+RW formázására használhatjuk a `dvd+rw-format` parancsot is:
+
+[source,bash]
+....
+# dvd+rw-format /dev/cd0
+....
+
+Ezt a mûveletet csak egyszer kell elvégezni, hiszen ne feledjük, hogy csak a szûz DVD+RW lemezeket kell megformázni. Ezután a DVD+RW-t a korábbi szakaszoknak megfelelõen tudjuk írni.
+
+Ha a DVD+RW-re új adatot akarunk írni (egy teljesen új állományrendszert, nem pedig adatokat hozzáfûzni), akkor nem kell üressé tenni a lemezt, egyszerûen csak elegendõ felülírni az elõzõeket (egy új kezdõmenet létrehozásával) valahogy így:
+
+[source,bash]
+....
+# growisofs -Z /dev/cd0 -J -R /az/új/adat/helye
+....
+
+A DVD+RW formátum felajánlja annak lehetõségét is, hogy könnyedén hozzá lehessen fûzni adatokat az elõzõ íráshoz. A mûvelet során az új menetet összefûzi a meglévõvel, tehát ez nem egy többmenetes írás, hanem a man:growisofs[1] _megnöveli_ a lemezen található ISO 9660 állományrendszert.
+
+Például, ha egy korábban megírt DVD+RW lemezen levõ adatokhoz akarunk hozzáírni, akkor a következõ parancsot kell kiadnunk:
+
+[source,bash]
+....
+# growisofs -M /dev/cd0 -J -R /az/új/adat/helye
+....
+
+A man:mkisofs[8] beállításainál a kezõmenetnél megadottakat érdemes ismét megadni.
+
+[NOTE]
+====
+Ha kompatibilisek akarunk maradni a többi DVD-meghajtóval, akkor adjuk meg `-dvd-compat` paramétert. Ez a DVD+RW esetében annyit jelent, hogy nem tudunk további adatokat hozzáfûzni.
+====
+
+Ha valamilyen okból mégis üressé szeretnénk tenni a lemez, akkor ír járhatunk el:
+
+[source,bash]
+....
+# growisofs -Z /dev/cd0=/dev/zero
+....
+
+=== A DVD-RW használata
+
+A DVD-RW két lemezformátumot fogad el: a inkrementális soros hozzáférést és a korlátozott felülírást. Alapértelmezés szerint a DVD-RW lemezek soros elérésûek.
+
+A még fel nem használt DVD-RW lemezek közvetlenül írhatóak külön formázás nélkül, habár a korábban már soros formátumban használt DVD-RW lemezeket egy új kezdõmenet létrehozása elõtt üressé kell tenni.
+
+Soros módban így kell letörölni egy DVD-RW lemezt:
+
+[source,bash]
+....
+# dvd+rw-format -blank=full /dev/cd0
+....
+
+[NOTE]
+====
+A teljes törlés (`-blank=full`) egy 1x média esetén körülbelül egy órát vesz igénybe. A `-blank` beállítással egy gyorsított törlés zajlik le, amennyiben a DVD-RW lemezt Disk-At-Once (DAO) módban írjuk. A DVD-RW lemezeket az alábbi paranccsal tudjuk DAO módban írni:
+
+[source,bash]
+....
+# growisofs -use-the-force-luke=dao -Z /dev/cd0=image.iso
+....
+
+A `-use-the-force-luke=dao` beállítást nem kötelezõ megadni, mivel a man:growisofs[1] igyekszik a lehetõ leggyorsabban törölni a lemezt és megkezdeni a DAO módú írást.
+
+A DVD-RW esetében valójában a korlátozott felülírást lenne érdemes használnunk, mivel ez a formátum sokkal rugalmasabb az alapértelmezés szerint felkínált inkrementális soros elérésnél.
+====
+
+A soros DVD-RW lemezekre ugyanúgy tudunk adatokat rögzíteni, mint az összes többi formátum esetében:
+
+[source,bash]
+....
+# growisofs -Z /dev/cd0 -J -R /az/adat/helye
+....
+
+Ha az elõzõ íráshoz akarunk még hozzáfûzni adatokat, akkor ehhez a man:growisofs[1] `-M` beállítását kell használnunk. Azonban ha a DVD-RW lemezhet inkrementális soros módban adunk hozzá adatot, akkor ezzel egy új menetet hozunk létre a lemezen és így egy többmenetes lemezt kapunk.
+
+A korlátozott felülírású DVD-RW formátum használata esetén nem kell mindegyik kezdõmenet elõtt törölni a lemezt, egyszerûen csak felül kell írni a `-Z` beállítással, hasonlóan a DVD+RW esetéhez. A DVD+RW `-M` beállításához hasonlóan lehetõségünk van a lemezen található ISO 9660 formátumú állományrendszer növelésére. Ennek az eredménye egy egymenetes DVD.
+
+A következõ paranccsal tudjuk a DVD-RW lemezt korlátozott felülírású módba tenni:
+
+[source,bash]
+....
+# dvd+rw-format /dev/cd0
+....
+
+Így tudunk visszaváltani a soros formátum használatára:
+
+[source,bash]
+....
+# dvd+rw-format -blank=full /dev/cd0
+....
+
+=== Több menet használata
+
+Nagyon kevés DVD-ROM meghajtó ismeri a többmenetes DVD-ket, és legtöbbször is csak általában az elsõ menetet olvassák. A DVD+R, DVD-R és DVD-RW formátumok soros formátumban képesek több mentetet is befogadni, viszont a DVD+RW és DVD-RW korlátozott felülírású formátuma esetén nem létezik több menet.
+
+Az alábbi parancs egy újabb menetet ad hozzá egy megkezdett (le nem zárt) DVD+R, DVD-R vagy DVD-RW soros formátumú lemezhez:
+
+[source,bash]
+....
+# growisofs -M /dev/cd0 -J -R /az/új/adat/helye
+....
+
+Ha ezt a parancsot egy korlátozott felülírású DVD+RW vagy DVD-RW lemez esetén adjuk ki, akkor az új adatokat úgy fûzi hozzá, hogy egy új menetet összefésüli a meglévõvel. Ezzel egy egymenetes lemez keletkezik. Ilyenkor így bõvítik a megkezdett lemezeket.
+
+[NOTE]
+====
+A menetek kezdése és befejezése általában felhasznál valamennyi helyet a lemezen. Ezért úgy tudjuk optimalizálni a lemez helykihasználtságát, hogy kevés menetben sok adatot viszünk fel rá. A DVD+R esetén 154, a DVD-R-nél körülbelül 2000, és a dupla rétegû DVD+R lemezeknél 127 menetet tudunk létrehozni.
+====
+
+=== További olvasnivalók
+
+A DVD lemezrõl részletesebb információkat a `dvd+rw-mediainfo /dev/cd0` parancs kiadásával tudunk lekérdezni.
+
+A dvd+rw-tools használatáról a man:growisofs[1] man oldalon találunk információt, valamint a http://fy.chalmers.se/~appro/linux/DVD+RW/[dvd+rw-tools honlapján (angolul)] és a http://lists.debian.org/cdwrite/[cdwrite levelezési lista] archívumaiban (angolul).
+
+[NOTE]
+====
+Futassuk `dvd+rw-mediainfo` parancsot minden olyan esetben, amikor gondunk akad valamilyen lemez írásával. A kimenete nélkül szinte lehetetlen segítenünk bárkinek is.
+====
+
+[[creating-dvd-ram]]
+=== A DVD-RAM használata
+
+==== Beállítás
+
+A DVD-RAM írók SCSI vagy ATAPI csatolófelülettel rendelkeznek. Az ATAPI eszközök esetén engedélyezni kell a DMA elérését, amit a [.filename]#/boot/loader.conf# állományban az alábbi sor hozzáadásával tudunk megtenni:
+
+[.programlisting]
+....
+hw.ata.atapi_dma="1"
+....
+
+==== A lemez elõkészítése
+
+Ahogy arra már korábban utaltunk a fejezet bevezetésében, a DVD-RAM úgy látható, mint egy cserélhetõ merevlemez. A hagyományos merevlemezekhez hasonlóan a DVD-RAM-ot is "elõ kell készíteni" az elsõ használatához. Ebben a példában a lemez teljes területét egy szabványos UFS2 állományrendszerrel töltjük fel:
+
+[source,bash]
+....
+# dd if=/dev/zero of=/dev/acd0 bs=2k count=1
+# bsdlabel -Bw acd0
+# newfs /dev/acd0
+....
+
+A DVD eszköz nevét, vagyis az [.filename]#acd0# eszközt a saját rendszerünknek megfelelõen kell módosítani.
+
+==== A lemez használata
+
+Miután az elõbbi mûveletet elvégeztük a DVD-RAM lemezen, már tudjuk is normális merevlemezként csatlakoztatni:
+
+[source,bash]
+....
+# mount /dev/acd0 /mnt
+....
+
+Ezt követõen a DVD-RAM egyaránt olvasható és írható.
+
+[[floppies]]
+== Hajlékonylemezek létrehozása és használata
+
+Néha hasznos lehet, ha az adatokat floppy lemezeken tároljuk, például olyankor, amikor más cserélhetõ tárolóeszköz már nem jöhet számításba, vagy amikor kis mennyiségû adatot kell átvinnünk az egyik számítógéprõl a másikra.
+
+Ebben a szakaszban bemutatjuk hogyan kell FreeBSD alatt floppy lemezeket használni. Elsõsorban a 3,5 colos DOS lemezek formázásával és használatával foglalkozik, de ezek fogalmak a többi hajlékonylemezes formátum esetében is hasonlóak.
+
+=== A hajlékonylemezek formázása
+
+==== Az eszköz
+
+A floppy lemezek a többi eszközhöz hasonlóan a [.filename]#/dev# könyvtárban érhetõek el. A nyers floppy lemezek eléréséhez egyszerûen csak használjuk a [.filename]#/dev/fdN# hivatkozást.
+
+==== A formázás
+
+Használat elõtt a floppy lemezeket alacsony szinten meg kell formázni. Ezt általában maga a gyártó végzi el, de a formázás gyakran hasznos lehet a lemez sértetlenségének ellenõrzésére. A legtöbb floppy lemez hivatalos kapacitása 1440 KB, de használhatjuk nagyobb (és kisebb) méretekben is.
+
+A floppy lemezek alacsony szintû formázására az man:fdformat[1] parancsot használhatjuk. Ez a segédprogram paraméterként az eszköz nevét várja.
+
+Figyeljünk a menetközben megjelenõ hibaüzenetekre, mivel ezek segítik eldönteni, hogy a lemez használható vagy sem.
+
+===== A hajlékonylemezek formázása
+
+A [.filename]#/dev/fdN# eszközök segítségével tudunk megformázni egy floppy lemezt. Tegyünk be egy 3,5 colos floppy lemezt a meghajtóba, majd adjuk ki a következõ parancsot:
+
+[source,bash]
+....
+# /usr/sbin/fdformat -f 1440 /dev/fd0
+....
+
+=== A lemez címkézése
+
+Miután alacsony szinten formáztuk a lemezt, tennünk kell rá egy lemezcímkét is. Ez a lemezcímke késõbb meg fog semmisülni, de a rendszernek szüksége van rá, hogy pontosan meg tudja állapítani a lemez méretét és geometriáját.
+
+Az új lemezcímke lefedi az egész lemezt, és tartalmazni fogja az összes információt a floppy geometriájáról. A lemezcímkék geometriaértékeit az [.filename]#/etc/disktab# állományban találjuk meg felsorolva.
+
+Most már futtathatjuk is a man:bsdlabel[8] parancsot:
+
+[source,bash]
+....
+# /sbin/bsdlabel -B -w /dev/fd0 fd1440
+....
+
+=== Az állományrendszer
+
+A hajlékonylemez most már készen áll a magas szintû formázásra. Ennek során egy új állományrendszert teszünk rá, amelyet a FreeBSD képes írni és olvasni. Miután létrejött ez az új állományrendszer, a lemezcímke megsemmisül, így tehát ha újra meg akarjuk formázni a lemezt, akkor újra létre kell majd hoznunk a lemezcímkét.
+
+A floppy állományrendszere lehet UFS vagy FAT. A FAT általánosságban véve jobb választás a floppy lemezek számára.
+
+Az alábbi módon tudunk új állományrendszert tenni a floppyra:
+
+[source,bash]
+....
+# /sbin/newfs_msdos /dev/fd0
+....
+
+A lemez most már készen áll a használatra.
+
+=== A hajlékonylemezek használata
+
+A floppy lemezt használatához a man:mount_msdosfs[8] paranccsal kell csatlakoztatnunk. Ugyanerre a célra használhatjuk a Portgyûjteménybõl elérhetõ package:emulators/mtools[] portot is.
+
+[[backups-tapebackups]]
+== Szalagok létrehozása és használata
+
+A legfontosabb szalagos adathordozók a 4 mm-es, 8 mm-es, QIC, a minikazettás és a DLT.
+
+[[backups-tapebackups-4mm]]
+=== 4 mm-es (Digitális adattároló, avagy DDS: Digital Data Storage)
+
+A 4 mm-es szalagok a QIC-szalagokat váltják fel a munkaállomások biztonsági mentésének eszközeként. Ez a tendencia csak tovább növekedett, ahogy a Conner felvásárolta az Archive-ot, a QIC típusú meghajtók legnagyobb gyártóját, majd leállított a QIC-meghajtók gyártását. A 4 mm-es meghajtók mérete kicsi és csendben is dolgoznak, de a megbízhatóság terén nem tudhatják maguknak mindazt a sikert, amit a 8 mm-es társaiknál könyvelhettünk el. A kazetták is sokkal olcsóbbak és kisebbek (3 x 2 x 0,5 col, ami 76 x 51 x 12 mm) a 8 mm-es kiadásénál. A 4 mm-es feje, hasonlóan a 8 mm-eséhez, valamilyen okból szintén viszonylag rövid ideig bírja, és mind a kettõ spirális pásztázást használ.
+
+Ezeknél a meghajtóknál az adatátvitel nagyjából 150 KB/mp-nél kezdõdik és 500 KB/mp-nél végzõdik. Az adattárolási képességük 1,3 GB-tól indul és 2,0 GB-ig tart. A hardveres tömörítés, ami a legtöbb ilyen típusú meghajtónál elérhetõ, közel megduplázza a kapacitást. A többmeghajtós szalagos könyvtár egységek egyetlen szekrényben 6 meghajtót képes befogadni, a szalagok automatikus cserélgetésével. Az ilyen könyvtárak kapacitása a 240 GB-ot is elérheti.
+
+A DDS-3 szabvány most már akár 12 GB (vagy tömörítve 24 GB) kapacitást is elérhetõvé tesz.
+
+A 4 mm-es meghajtók, hasonlóan a 8 mm-es meghajtókhoz, spirális pásztázást alkalmaznak. A spirális pásztázás összes elõnye és hátránya ezért egyaránt él a 4 mm-es és 8 mm-es meghajtók esetén.
+
+A szalagok 2 000 menet vagy 100 teljes mentes után kopnak el.
+
+[[backups-tapebackups-8mm]]
+=== 8 mm-es (Exabyte)
+
+A 8 mm-es szalagok a legelterjedtebb szalagos SCSI-meghajtók. A szalagok használatára ez a legjobb választás. Szinte mindegyik rendszerben egy 2 GB-os 8 mm-es Exabyte szalagos meghajtót használnak. A 8 mm-es meghajtók megbízhatóak, kényelmesek és csendesek. A kazetták olcsók és kicsik (4,8 x 3,3 x 0,6 col, azaz 122 x 84 x 15 mm). A 8 mm-es szalagok feje viszonylag csak rövid ideig bírja a szalag nagy mértékû oda-vissza mozgása miatt.
+
+Az adatátvitel sebessége 250 KB/mp-tõl 500 KB/mp-ig terjed, valamint a 300 MB-tól egészen 7 GB-os méretig találkozhatunk velük. A meghajtókban elérhetõ hardveres tömörítés képes közel megduplázni a kapacitást. Ezek a meghajtók önálló egységként is beszerezhetõek vagy egy 6 egységbõl álló és 120 szalagos szalagos könyvtár részeként. Ezek az egységek önállóan váltják a szalagokat. Az ilyen könyvtárak kapacitása eléri a közel 840 GB-ot.
+
+Az Exabyte "Mammoth" modellje szalagonként 12 GB (tömörítéssel pedig 24 GB) adatot képes tárolni, viszont a hagyományos szalagos meghajtóknál nagyjából kétszer többe kerül.
+
+Az adatok spirális pásztázással kerülnek a szalagra, és a fejek adott (nagyjából 6 fokos) szögben állnak a szalag felett. A szalag a fejeket tartó orsó köré tekeredik, körülbelül 270 fokban. Ennek eredményképpen nagyobb adatsûrûség és szorosan zárt sávok jönnek létre, ahogy ebben a szögben a fej eljut a szalag egyik élérõl a másikra.
+
+[[backups-tapebackups-qic]]
+=== QIC
+
+A QIC-150 meghajtók és szalagok talán a legelterjedtebb szalagos egységek és adathordozók. A QIC szalagos meghajtók a legolcsóbb "komolynak tekinthetõ" biztonsági mentésre alkalmas meghajtók. Az olcsóság azonban megköveteli a maga árát. A QIC-szalagok a 4 és 8 mm-es szalagokkal szemben akár ötször is drágábbak lehetnek gigabyte-onként. De ha megelégszünk csupán féltucat szalaggal is, akkor a QIC jó vásárnak tûnhet. A QIC a _leginkább_ elterjedtebb szalagos meghajtó. Minden rendszerben biztonsan találunk valamilyen minõségben QIC-meghajtót. A QIC fizikailag hasonló (és gyakran azonos) felépítésû szalagokat gyárt rengeteg különbözõ adatsûrûséggel. Az ilyenkor keletkezõ súrlódások miatt a QIC-meghajtók egyáltalán nem nevezhetõek csendesnek. Az ilyen típusú meghajtók az adatok rögzítése elõtt külön hangjelenség kíséretében keresik meg a megfelelõ pozíciót és tisztán hallható, ahogy olvasnak, írnak és keresnek. A QIC-szalagok mérete 6 x 4 x 0,7 col (avagy 152 x 102 x 17 mm).
+
+Az adatátviteli sebesség nagyjából 150 KB/mp-tõl 500 KB/mp-ig terjedhet. A kapacitás szalagonként 40 MB és 15 GB között változhat. A legtöbb újabb QIC-meghajtó támogatja a hardveres tömörítést. QIC-meghajtókat azonban egyre kevésbé találhatunk, helyüket szépen lassan mindenhol átveszik a DAT-meghajtók.
+
+A szalagokra sávokban rögzítik az adatokat. Ezek a sávok szalag felületének hosszanti tengelyén futnak az egyik végétõl a másikig. A sávok száma valamint a sávok vastagsága a szalagok kapacitásától függõen változnak. Ha nem is összes legújabb, de a legtöbb meghajtó legalább olvasás szintjén kompatibilis a régebbi típusokkal (de gyakran írásban is). A QIC híresen megbízható az adatbiztonság tekintetében (a mechanikája sokkal egyszerûbb és strapabíróbb a spirális pásztázással mûködõ meghajtókénál).
+
+A szalagokat 5000 mentés után érdemes lecserélni.
+
+[[backups-tapebackups-dlt]]
+=== DLT
+
+A DLT rendelkezik a legnagyobb adatátviteli sebességgel az itt összefoglalt mezõnyben. A 1/2 colos (12,5 mm-es) szalag egy egyorsós tokban foglal helyet (mérete 4 x 4 x 1 col, azaz 100 x 100 x 25 mm). A tok egyik oldalán végig egy csúszó kapu található. A meghajtó ezt a kaput nyitja ki és ezen keresztül húzza be a szalagot. A szalag elején található egy ovális lyuk, amibe a meghajtó "bele tud akaszkodni". A feszítõ orsó a szalagos meghajtóban foglal helyet. Az összes többi szalag esetén (kivéve egyedül a 9 sávos szalagokat) mind a segéd- és feszítõ orsók magában a kazettában találhatóak.
+
+Az adatátviteli sebessége megközelítõleg 1,5 MB/mp, tehát háromszor nagyobb bármelyik 4 mm-es, 8 mm-es vagy QIC-szalagos egységénél. Az adattároló képessége kazettánként 10 GB-tól 20 GB-ig terjedhet. A meghajtók egyaránt elérhetõek többkazettás, cserélgetõs és többkazettás, többmeghajtós könyvtárakban is, melyek 5 kazettától egészen 900 kazettáig, illetve 1 meghajtótól 20 meghajtóig képesek befogadni, így teljes tárterületük 50 GB-tól 9 TB-ig terjed.
+
+A DLT Type V formátum tömörítéssel közel 70 GB-os kapacitást képes elérni.
+
+A szalagra az adatok a haladási iránnyal párhuzamosan kerülnek fel (akárcsak a QIC-szalagok esetében). Egyszerre két sávot rögzít. A író/olvasó fejek élettartama viszonylag nagy. Ahogy a szalag megáll, a fej és a szalag között nincs szükség további relatív mozgásra.
+
+=== AIT
+
+Az AIT a Sony új formátuma, ami egészen 50 GB mennyiségû adatot képes tárolni (tömörítéssel) egyetlen szalagon. A szalagokat memóriachipekkel látják el, melyek a szalag tartalmát indexelik. Az indexek felhasználásával aztán a szalagos meghajtó villámgyorsan képes meghatározni a szalagon található állományok helyét, szemben az ilyenkor megszokott többperces mûvelettel. A SAMS:Alexandria és a hozzá hasonló szoftverek negyven vagy több AIT-szalagos könyvtárral is képesek egyszerre dolgozni, és közvetlenül a szalagok memóriájával veszik fel a kapcsolatot a tartalmuk megjelenítéséhez, a mentett állományok rendszerezéséhez, a helyes szalag megkereséséhez, betöltéséhez és visszatöltéséhez.
+
+Az ilyen könyvtárak a 20 000 dolláros (kb. 3,5 millió forintos) árkategóriába tartoznak, ami miatt csak egy kicsivel csúsznak ki a hobbi kategóriából.
+
+=== Az új szalagok elsõ használata
+
+Amikor az elsõ alkalommal akarunk beolvasni vagy írni egy új, teljesen üres szalagot, hibára fogunk futni. Egy ehhez hasonló konzolüzenet fog megjelenni:
+
+[source,bash]
+....
+sa0(ncr1:4:0): NOT READY asc:4,1
+sa0(ncr1:4:0):  Logical unit is in process of becoming ready
+....
+
+A szalag nem tartalmaz azonosító blokkot (Identifier Block) a nulladik blokkban. A QIC-525 szabvány átvétele óta mindegyik QIC szalagos meghajtó létrehozza ezt az azonosító blokkot. Tehát két megoldás létezik:
+
+* Az `mt fsf 1` paranccsal felírunk egy ilyen azonosító blokkot a szalagra.
+* A meghajtó elõlapján található gomb segítségével dobassuk ki a szalagot.
++ 
+Rakjuk vissza a szalagot és hajtsunk végre rajta egy `dump` parancsot.
++ 
+A `dump` parancs erre egy `DUMP: End of tape detected` ("szalag vége") hibaüzenetet ad, majd a következõ jelenik meg a konzolon: `HARDWARE FAILURE info:280 asc:80,96`.
++ 
+Tekertessük vissza a szalagot az `mt rewind` paranccsal.
++ 
+A szalag következõ mûvelete most már sikeres lesz.
+
+[[backups-floppybackups]]
+== Biztonsági mentés hajlékonylemezekre
+
+[[floppies-using]]
+=== Hajlékonylemezre is lehet biztonsági mentést készíteni?
+
+A floppy lemezek nem igazán felelnek meg biztonsági mentés készítésére, mivel:
+
+* Nem megbízható adathordozók, különösen hosszabb idõre.
+* Esetükben a mentés és visszaállítás nagyon lassú.
+* Kapacitásuk erõsen korlátozott (annak már régen elmúlt az ideje, amikor egész merevlemezeket tudtunk lementeni egy tucat floppyra).
+
+Habár ha máshogy nem tudunk biztonsági mentést készíteni, akkor a floppy lemezekkel még mindig jobban járunk, mint nélkülük.
+
+Ha már mindenképpen floppy lemezeket kell használnunk, akkor igyekezzünk minél jobb minõségûeket beszerezni. Tehát az olyan floppyk, amik már évek óta kavarognak az irodában, erre a célra nem éppen bizonyulnak a legjobb választásnak. Ideális esetben egy megbízható gyártótól származó új floppykat használunk.
+
+[[floppies-creating]]
+=== Tehát akkor hogyan mentsük az adatokat hajlékonylemezre?
+
+Legegyszerûbban a man:tar[1] `-M` (többkötetes) opciójával tudunk floppy lemezre menteni, aminek használatával több floppyra kiterjedõ mentéseket is készíthetünk.
+
+Az aktuális könyvtár és a benne levõ alkönyvtárak tartalmát (`root`) felhasználóként a következõ paranccsal tudjuk lementeni:
+
+[source,bash]
+....
+# tar Mcvf /dev/fd0 *
+....
+
+Amikor az elsõ floppy megtelik, a man:tar[1] kérni fogja a következõ kötetet (volume) (mivel a man:tar[1] adathordozótól független módon hivatkozik a kötetekre, tehát ebben a környezetben a kötet egy floppy lemezt jelent):
+
+[source,bash]
+....
+Prepare volume #2 for /dev/fd0 and hit return:
+....
+
+Az üzenet fordítása:
+
+[source,bash]
+....
+Készítse elő a 2. kötetet a /dev/fd0 eszközön és nyomja le a
+return billentyűt
+....
+
+A folyamat egészen addig ismétlõdik (a kötetek számának növekedésével), amíg az összes állomány lementésre nem kerül.
+
+[[floppies-compress]]
+=== Lehet tömöríteni a mentéseket?
+
+Sajnos a man:tar[1] többkötetes mentések esetén nem engedi a `-z` beállítás használatát. Természetesen ettõl függetlenül a man:gzip[1] segítségével még be tudjuk tömöríteni az összes állományt, a man:tar[1] paranccsal floppyra menteni ezeket, majd a man:gunzip[1] paranccsal kitömöríteni.
+
+[[floppies-restoring]]
+=== Hogyan állítsuk vissza a biztonsági mentéseket?
+
+Az egész mentés visszaállításához adjuk ki a következõ parancsot:
+
+[source,bash]
+....
+# tar Mxvf /dev/fd0
+....
+
+Két módon tudunk csak bizonyos állományokat visszaállítani. Elõször is, tegyük be a mentés elsõ lemezét és adjuk ki a következõ parancsot:
+
+[source,bash]
+....
+# tar Mxvf /dev/fd0 állomány
+....
+
+A man:tar[1] segédprogram ezután sorban kérni fogja a többi lemezt egészen addig, amíg meg nem találja a keresett állományt.
+
+Vagy ha pontosan tudjuk, hogy melyik lemezen található a keresett állomány, akkor az iménti parancs használatát azzal a lemezzel kezdjük. Vigyázzunk, mert ha a lemezen található elsõ állomány az elõzõ lemezen kezdõdik, akkor a man:tar[1] figyelmeztetni fog minket, hogy nem állítja vissza még akkor sem, ha erre nem is kértük!
+
+[[backup-strategies]]
+== Mentési stratégiák
+
+Egy biztonsági mentés kidolgozása során az elsõ követelmény gondoskodnunk az alábbi problémákról:
+
+* Lemezhiba
+* Az állományok véletlen törlése
+* Az állományok véletlenszerû károsodása
+* Számítógépek teljes megsemmisülése (például tûz által), belértve a közelében tárolt összes biztonsági mentést
+
+Tökéletesen megoldható, hogy egyes rendszerek a fentebb felsorolt problémák mindegyikét teljesen eltérõ technikával oldják meg. A nagyon személyes rendszerektõl és a nagyon értéktelen adatoktól eltekintve szinte egyértelmûen kizárt, hogy egyetlen technika képes lefedni az összes problémát.
+
+Kelléktárunk néhány alapvetõ eszköze:
+
+* Az egész rendszer mentése, amit egy megbízható helyre elzárt, tartós adattárolóra készítünk. Ez tulajdonképpen védelmet biztosít a fentebb megemlített összes probléma esetében, de lassú és kényelmetlen róla visszaállítani az adatokat. A közelben és/vagy neten is tarthatunk errõl másolatokat, de még így is kényelmetlen az állományok visszaállítása, különösen az egyszerû felhasználók számára.
+* Pillanatképek készítése az állományrendszerrõl. Ez valójában csak olyan esetekben lehet a segítségünkre, amikor véletlenül töröltünk állományokat, ám ilyenkor _határozottan_ jól jön, mivel igen gyorsan és könnyen lehet vele dolgozni.
+* Az egész állományrendszer és/vagy az összes lemez másolata (például az man:rsync[1] idõszakos alkalmazása a komplett gépre). Az általában az egyedi igényekkel bíró hálózatok esetében eshet a kezünkre. A lemezhiba ellen védelemben ez a megoldás általában a RAID alatt áll. A véletlenül törölt állományok visszaállításának tekintetében az UFS pillanatképeivel mérhetõ össze, de ez leginkább a saját igényeinktõl függ.
+* RAID alkalmazása. A lemezek meghibásodása esetén segíti minimalizálni vagy elkerülni a kiesést, ugyan gyakori lemezhibák árán (mivel ilyenkor több lemezt használunk) de kisebb sürgõsséggel.
+* Az állományok ujjlenyomatának ellenõrzése. Az man:mtree[8] segédprogram nagyon hasznos tud lenni ebben az esetben. Habár ez nem egy mentési technika, mégis segít megállapítani, hogy mikor kell nyugdíjba küldenünk a biztonsági mentéseinket. Ez különösen az aktív nem használt mentésekre vonatkozik, ezeket bizonyos idõ elteltével mindig érdemes ellenõrizni.
+
+Nagyon könnyû lenne további technikákat is felsorolni, melyek legtöbbje az iméntiek valamilyen kombinációja lenne. A speciális igények általában speciális technikákat eredményeznek (például egy éles adatbázis biztonsági mentése általában az adott adatbáziskezelõ rendszer közremûködését is elvárja). Mindig fontos tudni, hogy milyen veszélyek ellen védekezünk és hogyan kezeljük le ezeket.
+
+[[backup-basics]]
+== Alapvetõ tudnivalók a biztonsági mentésrõl
+
+A man:dump[8], man:tar[1] és man:cpio[1] a három legfontosabb biztonsági mentésekkel kapcsolatos program.
+
+=== Mentés és helyreállítás
+
+A UNIX(R) típusú rendszerekben a biztonsági mentést hagyományosan a `dump` és `restore` programok végzik. A meghajtókat lemezblokkok összeségeként kezelik, az állományrendszerek által létrehozott állományok, linkek és könyvtárak szintje alatt. Eltérõen más, biztonsági mentést végzõ szoftverektõl, a `dump` az adott eszközön egy egész állományrendszert képes lementeni. Nem képes csak az állományrendszer vagy egy több állományrendszerre kiterjedõ könyvtárszerkezet egy részét lementeni. A `dump` nem állományokat és könyvtárakat ír a szalagra, hanem nyers adatblokkokat, amelyek állományokat és könyvtárakat formáznak. A `restore` parancs az adatokat alapértelmezés szerint a [.filename]#/tmp# könyvtárba tömöríti ki. Ha nem lenne elegendõ helyünk a [.filename]#/tmp# könyvtárban, akkor a `TMPDIR` környezeti változó átállításával ehelyett megadhatunk egy olyat, ahol már kellõ mennyiségû terület áll rendelkezésre a `restore` akadálytalan lefutásához.
+
+[NOTE]
+====
+Ha a `dump` parancsot a gyökér könyvtárban adjuk ki, akkor nem fogja lementeni a [.filename]#/home# vagy [.filename]#/usr# vagy bármilyen más könyvtárat, mivel ezek jellemzõ módon más állományrendszerek csatlakozási pontja vagy más állományrendszerekre mutató szimbolikus linkek.
+====
+
+A `dump` parancsnak vannak olyan rigolyái, amelyek még az AT&T UNIX 6. verziójából (1975 környékérõl) maradtak vissza. Az alapértelmezett paraméterezése 9 sávos szalagokat feltételezi (6250 bpi), nem pedig a napjainkban elterjedt nagy írássûrûsségû (egészen 62 182 ftpi-s) adathordozókat. Ezek az alapértelmezések természetesen paranccsorból felülbírálhatóak, és így a manapság alkalmazott szalagos meghajtók teljes kapacitása is kihasználható vele.
+
+Emellett az `rdump` és `rrestore` programok segítségével hálózaton keresztül is le tudjuk menteni az adatainkat egy másik számítógépre csatlakoztatott szalagos egységre. Mind a két program az man:rcmd[3] és a man:ruserok[3] parancsokat használja a távoli szalagos meghajtó eléréséhez. Az `rdump` és `rrestore` paramétereinek a távoli számítógép használatához kell illeszkedniük. Amikor egy FreeBSD rendszerû számítógépet az `rdump` paranccsal egy Sun rendszerû, `komodo` nevû számítógépre mentünk, amelyhez egy Exabyte szalagos meghajtó csatlakozik, akkor ezt a írjuk be:
+
+[source,bash]
+....
+# /sbin/rdump 0dsbfu 54000 13000 126 komodo:/dev/nsa8 /dev/da0a 2>&1
+....
+
+Figyelem: az [.filename]#.rhosts# állományon keresztül hitelesítésnek megvannak a maga biztonsági kockázatai. Ne felejtsük el felmérni ezt a saját környezetünkben sem.
+
+A `dump` és `restore` parancsokat az `ssh` használatával még biztonságosabbá tehetjük.
+
+.A `dump` használata az ssh alkalmazással
+[example]
+====
+
+[source,bash]
+....
+# /sbin/dump -0uan -f - /usr | gzip -2 | ssh -c blowfish \
+          célfelhasználó@cél.gép.hu dd of=/nagyállományok/dump-usr-l0.gz
+....
+
+====
+
+Vagy az `RSH` környezeti változó megfelelõ beállításával használhatjuk a `dump` beépített módszerét:
+
+.A `dump` használata az ssh alkalmazással, az `RSH` környezeti változó beállításával
+[example]
+====
+
+[source,bash]
+....
+# RSH=/usr/bin/ssh /sbin/dump -0uan -f célfelhasználó@cél.gép.hu:/dev/sa0 /usr
+....
+
+====
+
+=== `tar`
+
+A man:tar[1] is az AT&T UNIX 6. verziójáig nyúlik vissza (tehát nagyjából 1975-ig). A `tar` az állományrendszerrel szoros együttmûködésben dolgozik, állományokat és könyvtárakat ír a szalagra. A `tar` ugyan nem ismeri a man:cpio[1] által felkínált összes lehetõséget, de nincs is szüksége olyan szokatlan paranccsoros összekapcsolásokra, mint a `cpio` parancsnak.
+
+A FreeBSD 5.3 vagy késõbbi változataiban a GNU `tar` és az alapértelmezés szerinti `bsdtar` egyaránt elérhetõ. A GNU változat a `gtar` paranccsal hívható meg. Az `rdump` parancshoz hasonló felírásban képes kezelni a távoli eszközöket. Tehát így tudjuk használni a `tar` parancsot a `komodo` nevû Sun számítógép Exabíte szalagos meghajtójának elérésére:
+
+[source,bash]
+....
+# /usr/bin/gtar cf komodo:/dev/nsa8 . 2>&1
+....
+
+Ugyanez eltérhetõ a `bsdtar` használatával is, amikor az `rsh` programmal összekapcsolva küldünk át a távoli szalagos egységre.
+
+[source,bash]
+....
+# tar cf - . | rsh hálózati-név dd of=szalagos-eszköz obs=20b
+....
+
+Ha a hálózaton keresztül mentés során fontos számunkra a biztonság, akkor az `rsh` parancs helyett az `ssh` parancsot használjuk.
+
+=== `cpio`
+
+A man:cpio[1] eredetileg a UNIX(R) szalagos programjai és szalagos egységei között közvetített. A `cpio` parancs (többek közt) képes a byte-ok sorrendjének felcserélésére, több különbözõ archívum formátuma szerint írni és adatokat közvetíteni más programok felé. Ez utóbbi lehetõsége miatt a `cpio` kíválóan alkalmas a telepítõeszközök számára. A `cpio` nem képes bejárni a könyvtárszerkezetet, és az állományok listáját a szabványos bemeneten keresztül kell megadni neki.
+
+A `cpio` nem támogatja a biztonsági mentés átküldését a hálózaton. Programok összekapcsolásával és az `rsh` használatával tudunk adatokat küldeni távoli szalagos meghajtókra.
+
+[source,bash]
+....
+# for f in könyvtár_lista; do
+find $f >> mentési.lista
+done
+# cpio -v -o --format=newc < backup.list | ssh felhasználó@gép "cat > mentőeszköz"
+....
+
+Ahol a _könyvtár_lista_ a menteni kívánt könyvtárak listája, a _felhasználó_@_gép_ a mentést végzõ gép felhasználójának és hálózati nevének együttese, valamint a _mentõeszköz_, ahova a mentés kerül (például [.filename]#/dev/nsa0#).
+
+=== `pax`
+
+A man:pax[1] az IEEE/POSIX(R) válasza a `tar` és `cpio` programokra. Az évek során a `tar` és a `cpio` különbözõ változatai egy kissé inkompatibilissé váltak. Ezért a szabványosításuk kiharcolása helyett inkább a POSIX(R) létrehozott egy új archiváló segédprogramot. A `pax` megpróbálja írni és olvasni a `cpio` és `tar` formátumok legtöbb változatát, valamint emellett további saját formátumokat is kezel. A parancskészlete inkább a `cpio` parancséra emlékeztet, mintsem a `tar` parancséra.
+
+[[backups-programs-amanda]]
+=== Amanda
+
+Az Amanda (Advanced Maryland Network Disk Archiver) egy kliens-szerver alapú mentési rendszer, nem pedig egy önálló program. Az Amanda szerver menti tetszõleges számú számítógép adatát egyetlen szalagra, melyek az Amanda klienst futtatják és hálózaton keresztül hozzá csatlakoznak. A nagy mennyiségû és nagy kapacitású lemezekkel rendelkezõ rendszerekben közvetlenül a mentéshez szükséges idõ nem áll rendelkezésre a feladat elvégzéséhez. Az Amanda viszont képes megoldani ezt a problémát. Az Amanda képes egy "saját lemez" használatával egyszerre több állományrendszerrõl is biztonsági mentést készíteni. Az Amanda"archívumkészleteket" hoz létre: az Amanda konfigurációs állományában megadott állományrendszerekrõl készít teljes mentést egy adott idõ alatt egy adott mennyiségû szalagra. Az "archívumkészlet" ezenkívül még tartalmaz egy napi inkrementális (vagy különbözeti) mentést is minden egyes állományrendszerrõl. A sérült állományrendszerek visszaállításához mindig a legújabb teljes biztonsági mentésre és a hozzá tartozó inkrementális mentésekre van szükségünk.
+
+A konfigurációs állomány segítségével precíz irányítást gyakorolhatunk a létrehozott mentések és az Amanda által keltett hálózati forgalom felett. Az Amanda a fentiek közül bármelyik programmal képes az adatokat szalagra rögzíteni. Az Amanda portként vagy csomagként is elérhetõ, alapértelmezés szerint nem települ.
+
+=== Ne csináljunk semmit
+
+A "Ne csináljunk semmit" nem egy újabb számítógépes program, hanem egy igen gyakran alkalmazott mentési stratégia. Nem kell beruházni. Nem kell semmilyen biztonsági mentési rendet követni. Egyszerûen semmit se csinálunk. Ha véletlenül valami történne az adatainkkal, akkor csak mosolyogjunk és törõdjünk bele!
+
+Amennyiben az idõnk és adataink keveset vagy éppen semmit se érnek, akkor a "Ne csináljunk semmit" az elérhetõ legjobb biztonsági mentési megoldás számítógépünk számára. De legyünk óvatosak, mert a UNIX(R) egy igen hasznos eszköz, és fél éven belül könnyen úgy találhatjuk magunkat, hogy mégis csak vannak értékes adataink.
+
+A "Ne csináljunk semmit" tökéletesen megfelelõ mentési módszer a [.filename]#/usr/obj# és a hozzá hasonló módon a számítógépen automatikusan generált könyvtárak és állományok esetében. Ugyanilyen példa lehetne a kézikönyv HTML vagy PostScript(R) változata. Ezek a formátumok ugyanis az SGML források alapján keletkeznek, így a HTML vagy PostScript(R) állományok mentése nem életbevágó. Az SGML állományokat viszont már annál inkább mentsük!
+
+=== Melyik a legjobb?
+
+man:dump[8] _Pont._ Elizabeth D. Zwicky komolyan letesztelte az itt felsorolt összes programot. A UNIX(R) állományrendszerek jellegzetességeinek és rajtuk az összes adatunk megõrzésének egyértelmûen a `dump` felel meg a legjobban. Elizabeth a minden egyes program tesztjéhez olyan állományrendszereket hozott létre, amelyek rengeteg különféle szokatlan helyzetet tartalmaztak (valamint néhány nem annyira szokatlant). Az érintett jellegzetességek: lyukas állományok, lyukas állományok és egy halom nulla, állományok érdekes karakterekkel a nevükben, olvashatatlan és írhatatlan állományok, eszközök, a mentés közben méretüket változtató állományok, a mentés közben keletkezõ és megszûnõ állományok és még sok minden más. Az eredményeit a LISA V-ben jelentette meg 1991 októberében. Lásd http://www.coredumps.de/doc/dump/zwicky/testdump.doc.html[ A biztonsági mentéshez és archiváláshoz használt programok tesztje (angolul)].
+
+=== Az adatok helyreállítása vészhelyzetben
+
+==== A katasztrófa elõtt
+
+Csupán négy lépést kell megtennünk az esetleges katasztrófák bekövetkezésének esetére.
+
+Elõször is két példányban nyomtassuk ki az egyes lemezek lemezcímkéjét (például a `bsdlabel da0 | lpr` paranccsal) valamint az állományrendszerek táblázatát (az [.filename]#/etc/fstab# állományt) és az összes rendszerindításkor megjelenõ üzenetet.
+
+A második lépésben készítenünk kell egy "élõ" rendszerrel rendelkezõ CD-lemezt. Ezen a lemezen megtalálható minden, ami el tudunk indítani egy helyreállításhoz elegendõ rendszert. Ekkor a felhasználó futtatni tudja például a man:dump[8], man:restore[8], man:fdisk[8], man:bsdlabel[8], man:newfs[8], man:mount[8] és a többi segédprogramot. Ez az image a FreeBSD/i386 {rel120-current}-RELEASE kiadáshoz az link:ftp://ftp.FreeBSD.org/pub/FreeBSD/releases/i386/ISO-IMAGES/{rel120-current}/FreeBSD-{rel120-current}-RELEASE-i386-livefs.iso[ftp://ftp.FreeBSD.org/pub/FreeBSD/releases/i386/ISO-IMAGES/{rel120-current}/FreeBSD-{rel120-current}-RELEASE-i386-livefs.iso] címrõl tölthetõ le.
+
+A harmadik lépésben igyekezzünk minél gyakrabban szalagra menteni. Mindig gondoljuk arra, hogy a legutolsó mentés óta létrehozott változatásaink teljesen el fognak veszni. A mentéseket tartalmazó szalagokat tegyük írásvédetté.
+
+A negyedik lépésben ellenõrizzük a a második lépésben készített helyreállító lemezünket és a biztonsági mentéseket tartalmazó szalagokat. Jegyezzük le az eljárást. Ezeket a jegyzeteket is rakjuk el rendszerindító lemezzel, a kinyomtatott adatokkal és a mentéseket tartalmazó szalagokkal együtt. Ezek a jegyzetek megvédenek minket attól, hogy a helyreállítás közbeni kétségbeesésünkben nehogy véletlenül tönkretegyük a biztonsági mentéseinket. (Hogy miként is? Például ha a `tar xvf /dev/sa0` parancs helyett izgalmunkban a `tar cvf /dev/sa0` parancsot gépeljük be, akkor azzal felülírjuk a biztonsági mentéseinket).
+
+A fokozott biztonság kedvéért minden alkalommal készítsünk rendszerindító lemezt és legalább két mentést. Az egyiket valamilyen távoli helyen tároljuk. Ez a távoli hely NE ugyanannak az épületnek az alagsora legyen! Számos cég alaposan megtanulta ezt a szabályt a Világkereskedelmi központ tragédiája kapcsán. Ez a távoli hely számítógépeinkbõl és merevlemezes meghajtóinkól is fizikailag jól elkülöníthetõ, jelentõs távolságban legyen.
+
+==== A katasztrófa után
+
+Az alapvetõ kérdés: a hardver túlélte? Ha rendszeresen készítettünk biztonsági mentéseket, akkor a szoftverek miatt egyáltalán nem kell aggódnunk.
+
+Ha a hardver megsérült, akkor a számítógép használatának újból megkezdése elõtt javasolt cserélni a meghibásodott alkatrészeket.
+
+Ha a hardverrel minden rendben találtunk, akkor helyzezzük be a helyreállításhoz használatos "élõ" rendszert tartalmazó lemezt a CD-meghajtóba, és indítsuk el vele a számítógépet. Ezután nemsokára a telepítési menü jelenik meg. Itt a megfelelõ ország után a [.guimenuitem]#Fixit -- Repair mode with CDROM/DVD/floppy or start a shell# ("Helyreállítás CD/DVD/floppy használatával, vagy parancssor indítása"), majd a [.guimenuitem]#CDROM/DVD -- Use the live filesystem CDROM/DVD# ("A CD/DVD-n található élõ rendszer használata") menüpontokat válasszuk. A `restore` és a többi segédprogram a [.filename]#/mnt2/rescue# könyvtárban lesznek elérhetõek.
+
+Egyenként állítsuk vissza az egyes állományrendszereket.
+
+A `mount` paranccsal próbáljuk meg csatlakoztatni az elsõ lemezünk rendszerindító partícióját (például `mount /dev/da0a /mt`). Ha a lemezcímke megsérült, akkor `bsdlabel` alkalmazásával partícionáljuk újra a lemezt és címkézzük meg a korábban kinyomtatott címke adatainak megfelelõen. A `newfs` segítségével újra hozzuk létre az állományrendszereket. Írható-olvasható módban csatlakoztassuk újra a lemez rendszerinító partícióját (`mount -u -o rw /mnt`). A biztonság mentést végzõ program és a biztonsági mentést tartalmazó szalagok használatával állítsuk helyre az állományrendszer tartalmát (például `restore vrf /dev/sa0`). Válasszuk le az állományrendszert (például `umount /mnt`). Mindegyik sérült állományrendszerre ismételjük a folyamatot.
+
+Ahogy mûködõképessé vált a rendszerünk, mentsük az adatainkat új szalagokra. Akármi is okozta a rendszer összeomlását vagy az adatvesztést, ismét lecsaphat. Ha most áldozunk erre még egy órát, akkor azzal a késõbbiekben számos kellemetlenségtõl óvhatjuk meg magunkat.
+
+[[disks-virtual]]
+== Hálózat, memória és állomány alapú állományrendszerek
+
+A számítógépünkben létezõ fizikai lemezek, például floppyk, CD-k, merevlemezek és egyebek mellett a lemezek egy másik formáját is képes megérteni a FreeBSD - a _virtuális lemezeket_.
+
+A virtuális lemeznek tekinthetõek többek közt az olyan hálózati állományrendszerek, mint például a crossref:network-servers[network-nfs, Hálózati állományrendszer] (Network File System, NFS) és a Coda, valamint a memóriában és állományokban létrehozott állományrendszerek.
+
+Attól függõen, hogy a FreeBSD melyik változatát használjuk, az állomány és memória alapú állományrendszerek létrehozásához, illetve használatához különbözõ segédprogramokra lesz szükségünk.
+
+[NOTE]
+====
+A man:devfs[5] a felhasználó számára láthatatlan módon hozza létre az eszközök leíróit.
+====
+
+[[disks-mdconfig]]
+=== Állomány alapú állományrendszerek
+
+FreeBSD alatt az man:mdconfig[8] segédprogram segítségével tudunk memórialemezeket (man:md[4]) beállítani és engedélyezni. Az man:mdconfig[8] használatához be kell töltenünk az man:md[4] modult vagy hozzá kell tennünk a rendszermagunk beállításait tartalmazó állományhoz:
+
+[.programlisting]
+....
+device md
+....
+
+Az man:mdconfig[8] parancs háromféle memória alapú virtuális lemezt ismer: a man:malloc[9], állományok vagy lapozóterület használatával létrehozott memórialemezeket. Így lehet például csatlakoztatni a floppyk vagy CD-k állományokban tárolt image-eit.
+
+Egy meglevõ állományrendszer image-ének csatlakoztatása:
+
+.Egy meglevõ állományrendszer image-ének csatlakoztatása az `mdconfig` paranccsal
+[example]
+====
+
+[source,bash]
+....
+# mdconfig -a -t vnode -f image -u 0
+# mount /dev/md0 /mnt
+....
+
+====
+
+Új állományrendszer létrehozása az man:mdconfig[8] használatával:
+
+.Új állomány alapú lemez létrehozása az `mdconfig` paranccsal
+[example]
+====
+
+[source,bash]
+....
+# dd if=/dev/zero of=új-image bs=1k count=5k
+5120+0 records in
+5120+0 records out
+# mdconfig -a -t vnode -f új-image -u 0
+# bsdlabel -w md0 auto
+# newfs md0a
+/dev/md0a: 5.0MB (10224 sectors) block size 16384, fragment size 2048
+        using 4 cylinder groups of 1.25MB, 80 blks, 192 inodes.
+super-block backups (for fsck -b #) at:
+ 160, 2720, 5280, 7840
+# mount /dev/md0a /mnt
+# df /mnt
+Filesystem 1K-blocks Used Avail Capacity  Mounted on
+/dev/md0a       4710    4  4330     0%    /mnt
+....
+
+====
+
+Ha az `-u` beállítással nem adjuk meg az egység számát, akkor az man:mdconfig[8] az man:md[4] automatikus kiosztásán keresztül fog egy használatban még nem levõ eszközt kiválasztani. Az így kiosztott egység neve az [.filename]#md4# névhez hasonlóan jelenik meg a szabványos kimeneten. Az man:mdconfig[8] használatának részleteirõl olvassuk el a hozzá tartozó man oldalt.
+
+Az man:mdconfig[8] egy nagyon sokoldalú segédeszköz, habár használatakor viszonylag sok parancsot kell kiadni egy állomány alapú állományrendszer létrehozásához. A FreeBSD azonban alapból tartalmaz még egy man:mdmfs[8] nevû segédprogramot is, ami az man:md[4] lemezeket az man:mdconfig[8] segítségével állítja be, létrehoz rajtuk egy UFS típusú állományrendszert a man:newfs[8] segítségével és csatlakoztatja a man:mount[8] paranccsal. Így például, ha az iménti állományrendszert akarjuk létrehozni és csatlakoztatni, akkor egyszerûen csak gépeljünk be ennyit:
+
+.Állomány alapú lemezek beállítása és csatlakoztatása az `mdmfs` paranccsal
+[example]
+====
+
+[source,bash]
+....
+# dd if=/dev/zero of=új-image bs=1k count=5k
+5120+0 records in
+5120+0 records out
+# mdmfs -F új-image -s 5m md0 /mnt
+# df /mnt
+Filesystem 1K-blocks Used Avail Capacity  Mounted on
+/dev/md0        4718    4  4338     0%    /mnt
+....
+
+====
+
+Ha az `md` paramétert az egység száma nélkül adjuk meg, akkor man:mdmfs[8] az man:md[4] automatikus kiosztására támaszkodva fog egy addig még nem használt eszközt kiválasztani. A man:mdmfs[8] használatának pontos részleteivel kapcsolatban lásd a hozzá tartozó man oldalt.
+
+[[disks-md-freebsd5]]
+=== Memória alapú állományrendszerek
+
+A memória alapú állományrendszerek esetében általában a "lapozóállomány alapú" megközelítést alkalmazzák. A lapozóállomány alapúság nem arra utal, hogy a memórialemezt alapból kilapozzák lemezre, hanem inkább arra, hogy a memórialemez olyan területen jön létre, amelyet szükség esetén lemezre lehet lapozni. Memória alapú lemezeket a (rendszermag szintû) man:malloc[9] használatával is létre lehet hozni, de a malloc alapú memórialemezeknél, különösen a nagyon nagyok esetében, a rendszer könnyen össze tud omlani, ha kifut a rendelkezésére álló memóriából.
+
+.Új memória alapú lemez létrehozása az `mdconfig` paranccsal
+[example]
+====
+
+[source,bash]
+....
+# mdconfig -a -t swap -s 5m -u 1
+# newfs -U md1
+/dev/md1: 5.0MB (10240 sectors) block size 16384, fragment size 2048
+        using 4 cylinder groups of 1.27MB, 81 blks, 192 inodes.
+        with soft updates
+super-block backups (for fsck -b #) at:
+ 160, 2752, 5344, 7936
+# mount /dev/md1 /mnt
+# df /mnt
+Filesystem 1K-blocks Used Avail Capacity  Mounted on
+/dev/md1        4718    4  4338     0%    /mnt
+....
+
+====
+
+.Új memória alapú lemez létrehozása az `mdmfs` paranccsal
+[example]
+====
+
+[source,bash]
+....
+# mdmfs -s 5m md2 /mnt
+# df /mnt
+Filesystem 1K-blocks Used Avail Capacity  Mounted on
+/dev/md2        4846    2  4458     0%    /mnt
+....
+
+====
+
+=== Memórialemezek leválasztása a rendszerrõl
+
+Amikor már nem akarunk tovább használni egy memória vagy állomány alapú állományrendszert, érdemes visszaadnunk az általuk felhasznált erõforrásokat a rendszernek. Elsõként válasszuk le magát az állományrendszert, majd az man:mdconfig[8] segítségével kapcsoljuk le a lemezt a rendszerrõl és szabadítsuk fel az általa felhasznált erõforrásokat.
+
+Például az [.filename]#/dev/md4# eszközt így lehet lekapcsolni és felszabadítani:
+
+[source,bash]
+....
+# mdconfig -d -u 4
+....
+
+A beállított man:md[4] eszközökkel kapcsolatos többi információt az `mdconfig -l` paranccsal tudjuk lekérdezni.
+
+[[snapshots]]
+== Az állományrendszerek pillanatképei
+
+A FreeBSD a crossref:config[soft-updates,Soft Updates] mellett felkínál egy másik lehetõséget: az állományrendszerekrõl készíthetõ pillanatfelvételeket.
+
+Ezek a pillanatképek lehetõvé teszik a felhasználók számára, hogy adott állományrendszerekrõl képeket hozzanak létre és azt állományként kezeljék. A pillanatképeket az adott állományrendszerben kell létrehozni, és a felhasználók állományrendszerenként húsznál többet nem hozhatnak belõlük létre. Az aktív pillanatképek a szuperblokkban kerülnek rögzítésre, ezért az állományrendszerek leválasztása és újracsatlakoztatása esetén is megmaradnak, még újraindítás után is. Amikor egy pillanatképre már nincs tovább szükségünk, egy szimpla man:rm[1] paranccsal eltávolítható. A pillanatképek tetszõleges sorrendben eltávolíthatóak, habár ilyenkor az összes általuk lefoglalt hely nem szabadul fel, mivel más pillanatképeknek még szüksége lehet bizonyos blokkjaira.
+
+Miután az man:mksnap_ffs[8] paranccsal létrehoztunk egy pillanatképet tartalmazó állományt, beállítódik rá a módosíthatatlanságot jelentõ `snapshot` állományjelzõ. Egyedül az man:unlink[1] parancs képez ez alól kivételt, mivel segítségével a pillanatképek eltávolíthatóak.
+
+A pillanatképek a man:mount[8] paranccsal hozhatóak létre. A következõ módon tudjuk a [.filename]#/var# egy pillanatképét elkészíteni a [.filename]#/var/snapshot/snap# állományban:
+
+[source,bash]
+....
+# mount -u -o snapshot /var/snapshot/snap /var
+....
+
+Vagy a man:mksnap_ffs[8] meghívásával is készíthetünk pillanatképeket:
+
+[source,bash]
+....
+# mksnap_ffs /var /var/snapshot/snap
+....
+
+Az állományrendszeren (például [.filename]#/var#) a pillanatképeket tartalmazó állományokat a man:find[1] paranccsal kereshetjük meg:
+
+[source,bash]
+....
+# find /var -flags snapshot
+....
+
+Ahogy elkészítettünk egy pillanatképet, több mindenre is felhasználhatjuk:
+
+* Egyes rendszergazdák a pillanatképeket biztonsági mentésekhez használják, mivel ezek gond nélkül áttehetõek CD-re vagy szalagra.
+* Az állományrendszerek sértetlenségét ellenõrzõ program, az man:fsck[8] is lefuttatható egy ilyen pillanatképen. Feltéve, hogy az állományrendszer csatlakoztatásakor tiszta volt, mindig egy tiszta (és változásokat nem tartalmazó) eredményt kell kapnunk. Ennek megléte elengedhetetlen a háttérben futtatható man:fsck[8] mûködéséhez.
+* Futassuk le a man:dump[8] segédprogramot a pillanatképen. Az így létrehozott mentés megegyezik az állományrendszer adott pillanatban felvett állapotával. Az `-L` beállítás megadásával maga a man:dump[8] is képes egyetlen parancsban pillanatfelvételt készíteni, ebbõl létrehozni a mentést, majd eltávolítani.
+* A pillanatképet képesek vagyunk a man:mount[8] paranccsal az állományrendszer befagyasztott változataként csatlakoztatni:
++
+
+[source,bash]
+....
+# mdconfig -a -t vnode -f /var/snapshot/snap -u 4
+# mount -r /dev/md4 /mnt
+....
+
+Így már a [.filename]#/mnt# könyvtárba csatlakoztatva be tudjuk járni a befagyasztott [.filename]#/var# állományrendszert. Minden a pillanatfelvétel készítésének idõpontjának megfelelõ állapotban fog maradni. Az egyetlen kivétel talán annyi, hogy korábbi pillanatképek nulla méretû állományként fognak megjelenni. Mikor befejeztük a pillanatképek használatát, a man:umount[8] paranccsal le tudjuk választani:
+
+[source,bash]
+....
+# umount /mnt
+# mdconfig -d -u 4
+....
+
+A `softupdates` és az állományrendszerek pillanatképeinek használatával, illetve mûszaki leírásukkal kapcsolatban látogassuk meg Marshall Kirk McKusick honlapját a http://www.mckusick.com/[http://www.mckusick.com/] címen (angolul).
+
+[[quotas]]
+== Az állományrendszerek kvótái
+
+A kvóták használata az operációs rendszerben egy olyan választható lehetõség, aminek segítségével állományrendszerenként korlátozni tudjuk az egyes felhasználók vagy csoporttagok által elhasznált lemezterület és/vagy állományok mennyiségét. Ezt leggyakrabban olyan idõosztásos rendszerekben használják ki, ahol szükség lehet az egyes felhasználókra vagy csoportokra esõ erõforrások mennyiségének szabályozására. Ezzel tudjuk megakadályozni, hogy a felhasználók vagy csoportok elfogyasszák az összes rendelkezésre álló lemezterületet.
+
+=== A kvóták használatának beállítása
+
+Mielõtt nekilátnánk a kvóták használatának, meg kell gyõzõdnünk róla, hogy a rendszermagunkban megvan hozzá a szükséges támogatás. A kvótákat a következõ sorral lehet engedélyezni a rendszermag beállításait tartalmazó állományban:
+
+[.programlisting]
+....
+options QUOTA
+....
+
+A gyári [.filename]#GENERIC# rendszermag ezt alapból nem engedélyezi, ezért ehhez mindenképpen be kell állítani, le kell fordítani és telepíteni egy kell saját rendszermagot. A saját rendszermag létrehozásához kövessük a crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása] utasításait.
+
+Ha ezzel megvagyunk, akkor a következõ sorral bõvítsük ki az [.filename]#/etc/rc.conf# állományt:
+
+[.programlisting]
+....
+enable_quotas="YES"
+....
+
+A kvótákat kezelõ rendszer indításának finomabb szabályozására létezik még egy további beállítási lehetõség is. A rendszer indítása során általában az egyes állományrendszerek kvótáját a man:quotacheck[8] program ellenõrzi. A man:quotacheck[8] gondoskodik róla, hogy a kvótákat tároló adatbázis ténylegesen az állományrendszeren található adatokat tükrözi. Ez egy nagyon idõigényes folyamat, ami rányomja bélyegét a rendszer elindulásához szükséges idõ mennyiségére is. Amennyiben szeretnénk megtakarítani ezt a lépést, tegyük bele az [.filename]#/etc/rc.conf# állományba a direkt erre a célra kialakított beállítást:
+
+[.programlisting]
+....
+check_quotas="NO"
+....
+
+Végezetül az állományrendszereken az [.filename]#/etc/fstab# megfelelõ módosításával tudjuk egyenként engedélyezni a lemezkvóták használatát. Itt lehet bekapcsolni az állományrendszerek felhasználókra vagy csoportokra, esetleg mind a kettõjükre vonatkozó kvótáikat.
+
+Ha felhasználói szintû kvótákat akarunk engedélyezni egy állományrendszeren, akkor az [.filename]#/etc/fstab# állományban az állományrendszer beállításai közé vegyük fel a `userquota` opciót. Például így:
+
+[.programlisting]
+....
+/dev/da1s2g   /home    ufs rw,userquota 1 2
+....
+
+Ehhez hasonlóan tudjuk engedélyezni a `userquota` helyett a `groupquota` opció használatával a csoportszintû kvótákat is. A felhasználói- és csoportszintû kvóták együttes engedélyezéséhez így kell átírni az állományrendszer bejegyzését:
+
+[.programlisting]
+....
+/dev/da1s2g    /home    ufs rw,userquota,groupquota 1 2
+....
+
+Alapértelmezés szerint az állományrendszerekhez tartozó kvóták a gyökerükben található [.filename]#quota.user# valamint [.filename]#quota.group# állományokban tárolódnak. Errõl részletesebben az man:fstab[5] man oldalon olvashatunk. Noha még az man:fstab[5] man oldala szerint is megadható más elérési út a kvótákat tároló állományokhoz, semmiképpen sem javasoljuk ezt, mert úgy tûnik, hogy a kvótákat kezelõ különbözõ segédprogramok ezzel nem képesek rendesen megbirkózni.
+
+Most kell újraindítani a rendszerünket az új rendszermaggal. Az [.filename]#/etc/rc# magától le fogja futtatni a kezdeti kvótaállományok létrehozásához szükséges parancsokat az [.filename]#/etc/fstab# állományban megadott állományrendszereken. Ennek megfelelõen tehát nem nekünk kell kézzel létrehoznunk ezeket az állományokat.
+
+Hétköznapi esetben egyáltalán nem kell manuális futtatnunk a man:quotacheck[8], man:quotaon[8] vagy man:quotaoff[8] parancsokat. Habár ha tisztában szeretnénk lenni a pontos mûködésükkel, akkor mindenképpen lapozzuk fel a hozzájuk tartozó man oldalakat.
+
+=== A kvóták beállítása
+
+Ahogy sikerült beállítani a kvóták használatát, egybõl ellenõrizzük is a mûködõképességüket. Ezt legegyszerûbben a következõ paranccsal tehetjük meg:
+
+[source,bash]
+....
+# quota -v
+....
+
+Itt egy sorban összefoglalva láthatjuk a jelenlegi lemezhasználatot és az egyes állományrendszereken engedélyezett kvóták korlátait.
+
+Most már készenállunk arra, hogy az man:edquota[8] paranccsal végre korlátokat is beállítsunk a kvótákhoz.
+
+Számos beállítás áll rendelkezésünkre a felhasználók vagy csoportok által lefoglalható lemezterület vagy a létrehozható állományok számának korlátozását illetõen. A helyfoglalást szabályozhatjuk lemezterület alapján (blokk kvóta) vagy az állományok száma szerint (állományleíró kvóta), esetleg a kettõ kombinációjával. A korlátok további két kategóriára bonthatóak: erõsre és gyengére.
+
+Az erõs korlátot (hard limit) nem lehet túllépni. Ahogy a felhasználó eléri a számára kiszabott erõs korlátot, semmilyen további területet nem használhat fel a kérdéses állományrendszeren. Például, ha a felhasználónak az állományrendszeren 500 kilobyte-os erõs korlátot állítottunk be, és éppen 490 kilobyte-nál tart, akkor a felhasználó innen már csak 10 kilobyte-nyi helyet foglalhat le. 11 kilobyte lefoglalása már nem fog sikerrel járni.
+
+Ezzel szemben a gyenge korlátok (soft limit) egy adott ideig átléphetõek. Ezt az idõt türelmi idõnek (grace period) nevezik, ami alapértelmezés szerint egy hét. Ha a felhasználó a gyenge korláton felül marad a türelmi idõ után is, akkor ezt a gyenge korlát erõssé válik és semmilyen további helyfoglalásra nem lesz lehetõsége. Amikor a felhasználók újra a gyenge korlát alá kerül, a türelmi idõ is visszaáll a beállított értékére.
+
+A most következõ példában az man:edquota[8] parancsot mutatjuk be. Amikor meghívjuk az man:edquota[8] parancsot, akkor elindul az `EDITOR` környezeti változónak megfelelõ szövegszerkesztõ, illetve ennek hiányában a vi, és lehetõségünk nyílik a kvóta korlátainak módosítására.
+
+[source,bash]
+....
+# edquota -u teszt
+....
+
+[.programlisting]
+....
+Quotas for user teszt:
+/usr: kbytes in use: 65, limits (soft = 50, hard = 75)
+        inodes in use: 7, limits (soft = 50, hard = 60)
+/usr/var: kbytes in use: 0, limits (soft = 50, hard = 75)
+        inodes in use: 0, limits (soft = 50, hard = 60)
+....
+
+Normális esetben minden kvótával rendelkezõ állományrendszerhez két sort kapunk. Közülük az egyik sorban szerepelnek a blokkok korlátai, a másikban az állományleírók korlátai. Ha valamelyiküket meg akarjuk változtatni, akkor egyszerûen csak át kell írnunk az adott korlát értékét. Például növeljük meg a felhasználók 50-es gyenge és 75-ös erõs blokk korlátját 500-as gyenge és 600-as erõs korlátra. Ehhez szerkesszük át a
+
+[.programlisting]
+....
+/usr: kbytes in use: 65, limits (soft = 50, hard = 75)
+....
+
+sort erre:
+
+[.programlisting]
+....
+/usr: kbytes in use: 65, limits (soft = 500, hard = 600)
+....
+
+Az új korlátok akkor fognak érvénybe lépni, miután kiléptünk a szövegszerkesztõbõl.
+
+Néha hasznos lehet a korlátokat adott felhasználói azonosítókhoz beállítani. Ezt az man:edquota[8] parancs `-p` paraméterével tudjuk elvégezni. Elõször is állítsuk be egy felhasználónak a beállítani kívánt korlátokat, majd futtassuk le az `edquota -p teszt kezdõuid-véguid` parancsot. Például ha a `teszt` nevû felhasználónak állítottuk be a számunkra megfelelõ korlátokat, akkor a következõ paranccsal lehet a rá vonatkozó korlátokat kiterjeszteni a 10 000 és 19 999 közötti azonosítójú felhasználókra:
+
+[source,bash]
+....
+# edquota -p teszt 10000-19999
+....
+
+Errõl bõvebben az man:edquota[8] man oldalán kaphatunk felvilágosítást.
+
+=== A kvóták korlátainak és a lemezhasználat ellenõrzése
+
+A kvóták korlátait és a lemez jelenlegi kihasználtságát a man:quota[1] vagy man:repquota[8] parancsokkal is ellenõrizhetjük. A man:quota[1] parancs segítségével ellenõrizhetõ az egyes felhasználók vagy csoportok kvótája és lemezhasználata. A felhasználók csak a saját adataikhoz férhetnek hozzá, illetve mindazon csoportokéhoz, aminek tagjai. Egyedül a rendszeradminisztrátor képes látni az összes felhasználó és csoport kvótáját. A man:repquota[8] paranccsal kérdezhetõ le az összes kvóta és lemezhasználat rövid kimutatása minden olyan állományrendszeren, ahol azok engedélyezettek.
+
+A következõ kimenet a `quota -v` parancstól származik, ahol a felhasználónak két állományrendszeren is vannak kvótái:
+
+[.programlisting]
+....
+Disk quotas for user teszt (uid 1002):
+     Filesystem  usage    quota   limit   grace   files   quota   limit   grace
+           /usr      65*     50      75   5days       7      50      60
+       /usr/var       0      50      75               0      50      60
+....
+
+A fenti példában látható, hogy a felhasználó a [.filename]#/usr# állományrendszeren pillanatnyilag 15 kilobyte-tal van az 50 kilobyte-os gyenge korlátja felett és 5 napja van hátra a türelmi idõbõl. Vegyük észre a szám mellett levõ csillagot (`*`), amivel a rendszer jelzi, hogy a felhasználó túllépte a korlátját.
+
+A man:quota[1] parancs kimenetében általában nem jelennek meg azok az állományrendszerek, amelyeken a felhasználónak ugyan vannak kvótái, de nem foglal rajtuk lemezterületet. A `-v` beállítás megadásával ezek az állományrendszerek is láthatóvá válnak, mint ahogy azt a fenti példában is megfigyelhettük a [.filename]#/usr/var# esetében.
+
+=== Kvóták NFS-en keresztül
+
+A kvóták az NFS szerver kvótákért felelõs alrendszerében is engedélyezhetõek. Az man:rpc.rquotad[8] démon teszi az NFS klienseken futtatott man:quota[1] parancsok számára elérhetõvé a kvótákkal kapcsolatos információkat, aminek köszönhetõen a felhasználók távolról is képesek lekérdezni a kvótáikat.
+
+Az `rpc.rquotad` aktivilásához a következõt kell beállítani az [.filename]#/etc/inetd.conf# állományban:
+
+[.programlisting]
+....
+rquotad/1      dgram rpc/udp wait root /usr/libexec/rpc.rquotad rpc.rquotad
+....
+
+Majd ne felejtsük el újraindítani az `inetd` démont sem:
+
+[source,bash]
+....
+# /etc/rc.d/inetd restart
+....
+
+[[disks-encrypting]]
+== A lemezpartíciók titkosítása
+
+A FreeBSD kitûnõ futásközbeni védelmet ajánl fel az adatok illetéktelen hozzáférése ellen. Az állományok engedélyei és a kötelezõ hozzáférés-vezérlés (Mandatory Access Control, MAC, lásd crossref:mac[mac,Kötelező hozzáférés-vezérlés (MAC)]) segítenek megvédeni érzékeny adatainkat az illéktelenek ellen az operációs rendszer futása és a számítógép mûködése során. Azonban az operációs rendszerben kezelt engedélyek teljesen hatástalanok abban az esetben, ha a támadó fizikailag is képes hozzáférni a számítógépünkhöz, eltávolítani a merevlemezt és egy másik operációs rendszer segítségével kielemezni a rajta található fontos adatainkat.
+
+Függetlenül attól, hogy a támadó valójában miként is férkõzött hozzá a merevlemezünkhöz, vagy miként kapcsolta le a számítógépünket, a FreeBSD megtalálható GEOM alapú lemeztitkosítás (gbde) és a `geli` titkosítási alrendszer egyaránt képes védelmet nyújtani a számítógépen található állományrendszerek számára az értékes adatok után kutató igen motivált betörõk ellen. A csupán egyes állományokra kiterjedõ körmönfont titkosítási módszerekkel szemben a `gbde` és a `geli` az egész állományrendszert észrevétlen módon titkosítja. Titkosítatlan adat nem is kerül a merevlemezre.
+
+=== A lemez titkosítása a gbde használatával
+
+[.procedure]
+====
+
+. Váljunk `root` felhasználóvá
++ 
+A gbde beállításához rendszeradminisztrátori jogosultságokra lesz szükségünk.
++
+[source,bash]
+....
+% su -
+Password:
+....
++
+. Adjuk hozzá a man:gbde[4] támogatását a rendszermag konfigurációs állományához
++ 
+Tegyük a következõ sort a rendszermag beállításait tartalmazó állományba:
++ 
+`options GEOM_BDE`
++ 
+Fordítsuk újra a rendszermagot a crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]ben leírtak szerint.
++ 
+Indítsuk el a számítógépet az új rendszermaggal.
+. A rendszermag újrafordítása helyett a `kldload` paranccsal is betölthetjük a man:gbde[4] modulját:
++
+[source,bash]
+....
+# kldload geom_bde
+....
+====
+
+==== A titkosított merevlemez elõkészítése
+
+A következõ példa azt feltételezi, hogy a rendszerünkhöz egy új merevlemezt adunk hozzá, amin egyetlen titkosított partíció foglal helyet. Ezt a partíciót a [.filename]#/private# könyvtárba fogjuk csatlakoztatni. A gbde használható a [.filename]#/home# és a [.filename]#/var/mail# titkosítására is, de ennek megvalósítása olyan bonyolult utasításokat igényel, amelyek meghaladják ennek a bevezetésnek a kereteit.
+
+[.procedure]
+====
+
+. Az új merevlemez hozzáadása
++ 
+A <<disks-adding>>ban bemutatottak szerint adjuk hozzá a rendszerünkhöz az új merevlemezt. A példában az új lemez partícióját a [.filename]#/dev/ad4s1c# néven fogjuk tudni elérni. A [.filename]#/dev/ad0s1*# eszközök a példában szereplõ FreeBSD rendszer szabványos partícióit jelölik.
++
+[source,bash]
+....
+# ls /dev/ad*
+/dev/ad0        /dev/ad0s1b     /dev/ad0s1e     /dev/ad4s1
+/dev/ad0s1      /dev/ad0s1c     /dev/ad0s1f     /dev/ad4s1c
+/dev/ad0s1a     /dev/ad0s1d     /dev/ad4
+....
++
+. Hozzunk létre egy könyvtárat a gbde zárolásainak tárolásához
++
+[source,bash]
+....
+# mkdir /etc/gbde
+....
++ 
+A gbdenek azért van szüksége a zárolásokat rögzítõ állományokra, hogy hozzá tudjon férni a titkosított partíciókhoz. Amennyiben ezt nem tudja megtenni, a gbde anélkül nem lesz képes visszafejteni a titkosított partíciókon tárolt adatokat, hogy az ezeket elérni akaró szoftvereknek ne kelljen jelentõsebb mértékben manuálisan beavatkoznia. Mindegyik titkosított partíció külön zároló állományt használ.
++
+. A gbde partíció inicializálása
++ 
+A gbde által használt partíciókat használatuk elõtt inicializálni kell. Ezt a mûveletet azonban csak egyszer kell elvégezni:
++
+[source,bash]
+....
+# gbde init /dev/ad4s1c -i -L /etc/gbde/ad4s1c.lock
+....
++ 
+A man:gbde[8] ekkor elindít egy szövegszerkesztõt és benne egy sablon segítségével be tudjuk állítani a különbözõ konfigurációs értékeket. Az UFS1 vagy UFS2 használata esetén állítsuk a szektorméretet 2048-ra:
++
+[.programlisting]
+....
+$FreeBSD: src/sbin/gbde/template.txt,v 1.1 2002/10/20 11:16:13 phk Exp $
+#
+# Sector size is the smallest unit of data which can be read or written.
+# Making it too small decreases performance and decreases available space.
+# Making it too large may prevent filesystems from working.  512 is the
+# minimum and always safe.  For UFS, use the fragment size
+#
+sector_size     =       2048
+[...]
+....
++ 
+A megjegyzés fordítása:
++
+[.programlisting]
+....
+A szektorméret az adatok írásának és olvasásának legkisebb egysége.  Ha
+túlságosan kicsire választjuk meg, akkor csökken a teljesítmény és csökken a
+rendelkezésre álló hely.  Ha viszont túlságosan nagyra hagyjuk, akkor azzal
+akadályozzuk az állományrendszerek munkáját.  512 a legkisebb érték, amely mindig
+megbízható.  Az UFS esetén használjuk a fragmensek méretét.
+....
++ 
+A man:gbde[8] kétszer is rá fog kérdeni az adatok titkosítására használt jelmondatra. A jelmondatnak természetesen mind a kétszer ugyanannak kell lennie. A gbde védelmének hatékonysága teljesen mértékben az általunk választott jelmondat minõségétõl függ .
++ 
+A `gbde init` parancs létrehoz egy zároló állományt a gbde partícióhoz, amely ebben a példában az [.filename]#/etc/gbde/ad4s1c.lock# néven keletkezett. A gbde zároló állományainak ".lock" névre kell végzõdniük, mivel az [.filename]#/etc/rc.d/gbde# indítószkript csak ebben az esetben észleli rendesen.
++
+[CAUTION]
+======
+
+A gbde zároló állományait a titkosított partíciók tartalmával együtt _kell_ lementeni. Miközben a zároló állomány törlése nem tudja megakadályozni, hogy az elszánt támadó visszafejtse a gbde által titkosított partíciót, addig a zároló állomány nélkül a jogos tulajdonos órási mennyiségû munka befektetése nélkül képtelen lesz hozzáférni a rajta levõ adatokhoz. Ez utóbbitól egyébként a man:gbde[8] és a rendszer tervezõje is totálisan elhatárolja magát.
+======
++
+. A titkosított partíció illesztése a rendszermaghoz
++
+[source,bash]
+....
+# gbde attach /dev/ad4s1c -l /etc/gbde/ad4s1c.lock
+....
++ 
+Ekkor a titkosított partíció illesztéséhez a rendszer kérni fogja az inicializálás során választott jelmondatot. Ezután az új titkosított eszköz megjelenik a [.filename]#/dev# könyvtárban [.filename]#/dev/eszköznév.bde# néven:
++
+[source,bash]
+....
+# ls /dev/ad*
+/dev/ad0        /dev/ad0s1b     /dev/ad0s1e     /dev/ad4s1
+/dev/ad0s1      /dev/ad0s1c     /dev/ad0s1f     /dev/ad4s1c
+/dev/ad0s1a     /dev/ad0s1d     /dev/ad4        /dev/ad4s1c.bde
+....
++
+. Állományrendszer kialakítása egy titkosított eszközön
++ 
+Ahogy sikerült a titkosított eszközt illeszteni a rendszermaghoz, létre is tudunk hozni egy állományrendszert rajta. Erre a célra a man:newfs[8] remekül használható. Mivel egy új UFS2 állományrendszerek inicializálása sokkal gyorsabb a régi UFS1 állományrendszerek inicializálásánál, ezért a man:newfs[8] használata esetén az `-O2` beállítás megadása ajánlott.
++
+[source,bash]
+....
+# newfs -U -O2 /dev/ad4s1c.bde
+....
++
+[NOTE]
+======
+A man:newfs[8] parancsot egy illesztett gbde partíción kell végrehajtani, amit onnan ismerhetünk meg, hogy az eszköz nevében szerepel a [.filename]#*.bde# kiterjesztés.
+======
++
+. A titkosított partíció csatlakoztatása
++ 
+Hozzunk létre egy csatlakozási pontot a titkosított állományrendszer számára.
++
+[source,bash]
+....
+# mkdir /privát
+....
++ 
+Csatlakoztassuk a titkosított állományrendszert.
++
+[source,bash]
+....
+# mount /dev/ad4s1c.bde /privát
+....
++
+. Ellenõrizzük a titkosított állományrendszer mûködõképességét
++ 
+A titkosított állományrendszert most már látja a man:df[1] program és készen áll a használatra.
++
+[source,bash]
+....
+% df -H
+Filesystem        Size   Used  Avail Capacity  Mounted on
+/dev/ad0s1a      1037M    72M   883M     8%    /
+/devfs            1.0K   1.0K     0B   100%    /dev
+/dev/ad0s1f       8.1G    55K   7.5G     0%    /home
+/dev/ad0s1e      1037M   1.1M   953M     0%    /tmp
+/dev/ad0s1d       6.1G   1.9G   3.7G    35%    /usr
+/dev/ad4s1c.bde   150G   4.1K   138G     0%    /private
+....
+====
+
+==== Létezõ titkosított állományrendszerek csatlakoztatása
+
+A rendszer minden egyes indítása után az összes titkosított állományrendszert tényleges használata elõtt újra illeszteni kell a rendszermaghoz, ellenõrizni az épségét és csatlakoztatni. Az ehhez szükséges parancsokat `root` felhasználóként kell kiadni.
+
+[.procedure]
+====
+
+. A gbde partíció illesztése a rendszermaghoz
++
+[source,bash]
+....
+# gbde attach /dev/ad4s1c -l /etc/gbde/ad4s1c.lock
+....
++ 
+A gbde partíció inicializálása során megadott jelmondatot kell megadnunk a mûvelet elvégzéséhez.
+. Az állományrendszer épségének ellenõrzése
++ 
+Mivel a titkosított állományrendszerek az automatikus csatlakoztatáshoz még nem szerepeltethetõek az [.filename]#/etc/fstab# állományban, ezért az ilyen állományrendszereket csatlakoztatásuk elõtt manuálisan ellenõriztetni kell a man:fsck[8] lefuttatásával.
++
+[source,bash]
+....
+# fsck -p -t ffs /dev/ad4s1c.bde
+....
++
+. A titkosított állományrendszer csatlakoztatása
++
+[source,bash]
+....
+# mount /dev/ad4s1c.bde /privát
+....
++ 
+A titkosított állományrendszer most már készen áll a használatra.
+====
+
+===== A titkosított partíciók önálló csatlakoztatása
+
+Lehet írni olyan szkriptet, amely a titkosított partíciókat magától illeszti, ellenõrzi és csatlakoztatja, de biztonsági megfontolásokból semmi esetben sem szabad tartalmaznia a man:gbde[8] jelszavát. Ehelyett azt javasoljuk, hogy az ilyen szkripteknek külön meg kelljen adni a jelszót konzolon vagy az man:ssh[1] használatán keresztül.
+
+De használhatjuk a mellékelt [.filename]#rc.d# szkriptet is. A szkript paramétereit az man:rc.conf[5] állományon keresztül adhatjuk meg, például:
+
+[.programlisting]
+....
+gbde_autoattach_all="YES"
+gbde_devices="ad4s1c"
+gbde_lockdir="/etc/gbde"
+....
+
+Ilyenkor a gbde által használt jelmondatot a rendszer indításakor kell megadni. Miután begépeltük a megfelelõ jelmondatot, a titkosított gbde partíció magától csatlakoztatásra kerül. Ez akkor lehet hasznos, ha a gbde megoldását hordozható számítógépeken alkalmazzuk.
+
+==== A gbde által alkalmazott titkosítási módszerek
+
+A man:gbde[8] a szektorok tartalmát 128 bites AES használatával CBC módban titkosítja. A lemezen található minden egyes szektort eltérõ AES kulccsal kódolja. A gbde kriptográfiai felépítését, valamint mindazt, hogy az egyes szektorok kulcsai miként származtathatóak a felhasználó által megadott jelmondatból, a man:gbde[4] man oldalán olvashatjuk.
+
+==== Kompatibilitási problémák
+
+A man:sysinstall[8] nem kompatibilis a gbde által titkosított eszközökkel. A man:sysinstall[8] indítása elõtt minden [.filename]#*.bde# eszközt ki kell iktatni a rendszermagból, különben az eszközök keresése során össze fog omlani. A példánkban használt titkosított eszközt a következõ paranccsal kell lekapcsolni:
+
+[source,bash]
+....
+# gbde detach /dev/ad4s1c
+....
+
+Továbbá megjegyezzük azt is, hogy a man:vinum[4] nem használja a man:geom[4] alrendszert, ezért a gbde alkalmazása során nem használhatunk Vinum-köteteket.
+
+=== A lemezek titkosítása a `geli` használatával
+
+A FreeBSD 6.0 változatától kezdve egy új kriptográfiai GEOM osztály is a rendelkezésünkre áll, melyet pillanatnyilag {pjd} fejleszt. A `geli` segédprogram némileg különbözõ a `gbde` megoldásától - más lehetõségeket kínál fel és a titkosítást is egy eltérõ séma mentén valósítja meg.
+
+A man:geli[8] legfontosabb jellemzõi a következõk:
+
+* A man:crypto[9] keretrendszerét használja - tehát ha rendelkezünk kriptográfiai hardverrel, akkor a `geli` automatikusan használni fogja.
+* Több kriptográfiai algoritmust is ismer (melyek jelenleg az AES, Blowfish és a 3DES).
+* Segítségével a rendszerindításhoz használt (gyökér) partíció is titkosítható. Ilyenkor a szükséges jelmondatot a rendszer indításakor kell megadni.
+* Két független kulcsot (például egy "kulcsot" és egy "céges kulcsot") is használhatunk vele.
+* A `geli` gyors - egyszerûen csak szektorról szektorra titkosít.
+* Lehetõvé teszi a mesterkulcsok mentését is visszaállítását. Ha a felhasználó véletlenül megsemmisítené a kulcsát, akkor a biztonsági mentésbõl helyreállított kulcsok segítségével vissza tudjuk szerezni az adatainkat is.
+* Segítségével a lemezeket véletlenszerû, egyszeri jelszavakkal is illeszthetjük - ez különösen fontos lapozóterületek és ideiglenes állományrendszerek esetében.
+
+A `geli` által felkínált lehetõségekrõl a man:geli[8] man oldalán találhatunk többet.
+
+A következõ lépések bemutatják, hogyan lehet a FreeBSD rendszermagjában engedélyezni a `geli` támogatását, és hogyan lehet létrehozni és használni egy `geli` titkosítással rendelkezõ adathordozót.
+
+A `geli` alkalmazásához legalább a FreeBSD 6.0-RELEASE vagy késõbbi változatára van szükségünk. Mivel a rendszermagot is módosítanunk kell, ezért rendszeradminisztrátori jogosultságok kellenek a mûveletek elvégzéséhez.
+
+[.procedure]
+====
+
+. A `geli` támogatásának hozzáadása a rendszermaghoz
++ 
+Vegyük hozzá a következõ sorokat a rendszermag beállításait tartalmazó állományhoz:
++
+[.programlisting]
+....
+options GEOM_ELI
+device crypto
+....
++ 
+Fordítsuk újra a rendszermagot a crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]ben leírtak szerint.
++ 
+Betölthetjük a `geli` modulját is a rendszer indításakor. Ehhez a következõ sort kell betenni a [.filename]#/boot/loader.conf# állományba:
++
+[.programlisting]
+....
+geom_eli_load="YES"
+....
++ 
+A man:geli[8] most már használható a rendszermagban.
++
+. A mesterkulcs legenerálása
++ 
+A most következõ példában egy kulcsot tartalmazó állomány létrehozását illusztráljuk, amit a [.filename]#/privát# könyvtárba csatlakoztatott titkosított adathordozó mesterkulcsához fogunk használni. A kulcs állomány a mesterkulcs titkosításához felhasznált véletlenszerû adatot fogja tartalmazni, valamint rajta kívül még a mesterkulcsot egy jelmondattal is védjük. Az adathordozó szektormérete 4 kilobyte-os lesz. Emellett még bemutatjuk, hogyan kell illeszteni egy `geli`-adathordozót, állományrendszert létrehozni rajta, csatlakoztatni, dolgozni vele és lekapcsolni.
++ 
+A nagyobb teljesítmény érdekében javasolt nagyobb szektorméretet választani (mint például 4 kilobyte).
++ 
+A mesterkulcsot egy jelmondattal fogjuk védeni és a kulcsok készítéséhez használt adatforrás a [.filename]#/dev/random# lesz. A [.filename]#/dev/da2.eli#, amelyet mit csak adathordozónak fogunk csak hívni, szektorainak mérete 4 kilobyte lesz.
++
+[source,bash]
+....
+# dd if=/dev/random of=/root/da2.key bs=64 count=1
+# geli init -s 4096 -K /root/da2.key /dev/da2
+Enter new passphrase:
+Reenter new passphrase:
+....
++ 
+Nem kötelezõ egyszerre használni a jelmondatot és a kulcs állományt. A mesterkulcs elzárásának bebiztosítására bármelyik módszer alkalmas.
++ 
+Ha a kulcs állomány a "-" paraméterrel adjuk meg, akkor a szabványos bemenetrõl olvassa be a program. Ez a példa több kulcs használatát mutatja be.
++
+[source,bash]
+....
+# cat kulcs1 kulcs2 kulcs3 | geli init -K - /dev/da2
+....
++
+. Az adathordozó illesztése a generált kulccsal
++
+[source,bash]
+....
+# geli attach -k /root/da2.key /dev/da2
+Enter passphrase:
+....
++ 
+Az új titkosítatlan eszköz neve [.filename]#/dev/da2.eli# lesz.
++
+[source,bash]
+....
+# ls /dev/da2*
+/dev/da2  /dev/da2.eli
+....
++
+. Az új állományrendszer kialakítása
++
+[source,bash]
+....
+# dd if=/dev/random of=/dev/da2.eli bs=1m
+# newfs /dev/da2.eli
+# mount /dev/da2.eli /privát
+....
++ 
+A titkosított állományrendszer most már man:df[1] számára is látszik és használható:
++
+[source,bash]
+....
+# df -H
+Filesystem     Size   Used  Avail Capacity  Mounted on
+/dev/ad0s1a    248M    89M   139M    38%    /
+/devfs         1.0K   1.0K     0B   100%    /dev
+/dev/ad0s1f    7.7G   2.3G   4.9G    32%    /usr
+/dev/ad0s1d    989M   1.5M   909M     0%    /tmp
+/dev/ad0s1e    3.9G   1.3G   2.3G    35%    /var
+/dev/da2.eli   150G   4.1K   138G     0%    /private
+....
++
+. Az adathordozó leválasztása és lekapcsolása
++ 
+Miután befejeztük a munkát a titkosított partíción, és a [.filename]#/privát# partícióra már nincs tovább szükségünk, érdemes leválasztanunk és kiiktatnunk a `geli` titkosítású partíciót a rendszermagból.
++
+[source,bash]
+....
+# umount /privát
+# geli detach da2.eli
+....
+====
+
+A man:geli[8] használatáról bõvebben a saját man oldalán tájékozódhatunk.
+
+==== A [.filename]#geli# [.filename]#rc.d# szkriptjének használata
+
+A `geli` mellett találhatunk egy saját [.filename]#rc.d# szkriptet, amely jelentõsen leegyszerûsíti a `geli` használatát. A `geli` például így paraméterezhetõ az man:rc.conf[5] állományon keresztül:
+
+[.programlisting]
+....
+geli_devices="da2"
+geli_da2_flags="-p -k /root/da2.key"
+....
+
+Ennek segítségével a [.filename]#/dev/da2# eszközt `geli` adathordozóként állítjuk be a [.filename]#/root/da2.key# állományban található mesterkulcs felhasználásával, de az illesztéskor a `geli` nem kér jelmondatot (ezt csak akkor fogja tenni, ha a `geli init` parancs kiadásához hozzátesszük a `-P` beállítást). A rendszer leállítása elõtt pedig a `geli` adathordozó így automatikusan leválasztásra kerül.
+
+Az [.filename]#rc.d# beállításával kapcsolatos tudnivalókat a kézikönyv crossref:config[configtuning-rcd,rc.d] szkriptekrõl szóló szakaszában ismerhetjük meg.
+
+[[swap-encrypting]]
+== A lapozóterület titkosítása
+
+A FreeBSD-ben a lapozóterület titkosítása nagyon könnyen beállítható és már a FreeBSD 5.3-RELEASE változata óta elérhetõ. Attól függõen, hogy konkrétan a FreeBSD melyik verzióját használjuk, a konfigurációhoz kapcsolódó beállítások némileg eltérhetnek. A FreeBSD 6.0-RELEASE változatától kezdõdõen a man:gbde[8] és a man:geli[8] alrendszerek is használhatóak a lapozóterület titkosítására. A korábbi verziókban egyedül csak a man:gbde[8] érhetõ el. Mind a két rendszer az [.filename]#encswap# crossref:config[configtuning-rcd,rc.d] szkriptet használja.
+
+Az elõzõ szakaszban, vagyis a <<disks-encrypting, A lemezpartíciók titkosításá>>ban már röviden összefoglaltuk a különbözõ titkosítással foglalkozó alrendszereket.
+
+=== Miért kellene titkosítanunk a lapozóterületet?
+
+Hasonlóan a lemezpartíciók titkosításához, a lapozóterület titkosításának is az a célja, hogy védjük az érzékeny információkat. Képzeljük el, hogy egy olyan alkalmazással dolgozunk, amely jelszavakat kezel. Amíg ezek a jelszavak a memóriában maradnak, addig minden a legnagyobb rendben van. Azonban amikor az operációs rendszer nekilát a fizikai memória felszabadításához kilapozni ezeket az adatokat, a jelszavak titkosítatlanul kerülnek a lemez felületére és egy támadó számára könnyû prédává válnak. Ilyen helyzetekben csak lapozóterület titkosítása jelenthet megoldást.
+
+=== Elõkészületek
+
+[NOTE]
+====
+A szakasz további részében a [.filename]#ad0s1b# lesz a lapozásra használt partíció.
+====
+
+Egészen mostanáig nem titkosítottuk a lapozóterületet. Így elképzelhetõ, hogy a lemezre már titkosítatlanul kikerültek jelszavak vagy bármilyen más érzékeny adatok. A csorba kiköszörülésére a lapozóterületen található összes adatot írjuk felül véletlenszerûen generált szeméttel:
+
+[source,bash]
+....
+# dd if=/dev/random of=/dev/ad0s1b bs=1m
+....
+
+=== A lapozóterület titkosítása a man:gbde[8] használatával
+
+Ha a FreeBSD 6.0-RELEASE vagy újabb változatát használjuk, akkor az [.filename]#/etc/fstab# állományban tegyük hozzá a `.bde` utótagot az a lapozóterülethez tartozó eszköz nevéhez.
+
+[.programlisting]
+....
+
+# Device                Mountpoint      FStype  Options         Dump    Pass#
+/dev/ad0s1b.bde         none            swap    sw              0       0
+....
+
+A FreeBSD 6.0-RELEASE elõtti kiadások esetében a következõ sort is hozzá kell tennünk az [.filename]#/etc/rc.conf# állományhoz:
+
+[.programlisting]
+....
+gbde_swap_enable="YES"
+....
+
+=== A lapozóterület titkosítása a man:geli[8] használatával
+
+A man:gbde[8] használatához hasonlóan a man:geli[8] által felajánlott titkosítást is alkalmazhatjuk a lapozóterület védelmére. Ilyenkor az [.filename]#/etc/fstab# állományban az `.eli` utótagot kell hozzátenni a lapozóterülethez tartozó eszköz névhez.
+
+[.programlisting]
+....
+
+# Device                Mountpoint      FStype  Options         Dump    Pass#
+/dev/ad0s1b.eli         none            swap    sw              0       0
+....
+
+Az man:geli[8] az AES algoritmust alapértelmezés szerint 256 bites kulccsal használja.
+
+Ezek az alapértelmezések megváltoztathatóak az [.filename]#/etc/rc.conf# állományban a `geli_swap_flags` beállítás használatával. A következõ sor arra utasítja az [.filename]#encswap# rc.d szkriptet, hogy a man:geli[8] és a Blowfish algoritmus használatával hozzon létre egy lapozópartíciót 128 bites kulccsal, 4 kilobyte-os szektormérettel és a "detach on last close" ("lekapcsolás használat után") beállítással:
+
+[.programlisting]
+....
+geli_swap_flags="-e blowfish -l 128 -s 4096 -d"
+....
+
+A FreeBSD 6.2-RELEASE verzió elõtti rendszerekben a következõ sort kell használni:
+
+[.programlisting]
+....
+geli_swap_flags="-a blowfish -l 128 -s 4096 -d"
+....
+
+A többi beállításhoz a man:geli[8] man oldalán a `onetime` parancs leírását érdemes áttanulmányozni.
+
+=== Ellenõrizzük a mûködését
+
+Miután újraindítottuk a rendszert, a titkosított lapozóterület helyes mûködését a `swapinfo` paranccsal ellenõrizhetjük le.
+
+A man:gbde[8] esetében:
+
+[source,bash]
+....
+% swapinfo
+Device          1K-blocks     Used    Avail Capacity
+/dev/ad0s1b.bde    542720        0   542720     0%
+....
+
+Valamint a man:geli[8] esetében:
+
+[source,bash]
+....
+% swapinfo
+Device          1K-blocks     Used    Avail Capacity
+/dev/ad0s1b.eli    542720        0   542720     0%
+....

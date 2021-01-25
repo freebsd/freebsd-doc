@@ -1,0 +1,560 @@
+---
+title: "19. Fejezet - GEOM: A moduláris lemezszervező rendszer"
+part: III. Rész Rendszeradminisztráció
+prev: books/handbook/disks
+next: books/handbook/filesystems
+---
+
+[[geom]]
+= GEOM: A moduláris lemezszervező rendszer
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 19
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../../images/books/handbook/geom/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/geom/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/geom/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[GEOM-synopsis]]
+== Áttekintés
+
+Ez a fejezet a FreeBSD-ben található GEOM rendszert mutatja be. Ez a rendszer tömöríti az általa is alkalmazott fontosabb RAID-vezérlõ segédprogramokat. A fejezet nem részletezi, hogy a GEOM konkrétan milyen módon kezeli és vezérli az I/O-t, ahogy azt sem, hogyan mûködik az alapjául szolgáló alrendszer vagy hogy néz ki annak forráskódja. Az ilyen jellegû információk a man:geom[4] man oldalon, valamint az ott felsorolt helyeken találhatóak meg. Továbbá, ez a fejezet magukról a RAID-konfigurációkról sem ad pontos tájékoztatást. Kizárólag csak a GEOM által is támogatott RAID-besorolásokról esik szó.
+
+A fejezet elolvasása során megismerjük:
+
+* a GEOM segítségével milyen fajtájú RAID támogatást érhetünk el;
+* hogyan kell használni a rendszer által nyújtott alapvetõ segédeszközöket a különféle RAID-szintek konfigurálásához, karbantartásához és kezeléséhez;
+* hogyan kell a GEOM-on keresztül tükrözni, csíkozni, titkosítani és távolról összekapcsolni lemezes eszközöket;
+* hogyan kell a GEOM rendszerben összekapcsolt lemezeknél felmerülõ hibákat felderíteni.
+
+A fejezet elolvasásához ajánlott:
+
+* megérteni, hogyan kezeli a FreeBSD a lemezes eszközöket (crossref:disks[disks,Háttértárak]);
+* ismerni, hogyan konfiguráljunk és telepítsünk egy új FreeBSD rendszermagot (crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]).
+
+[[GEOM-intro]]
+== A GEOM bemutatása
+
+A GEOM rendszer adatszolgáltatókon vagy speciális [.filename]#/dev#-állományokon keresztül hozzáférést és vezérlést tesz lehetõvé bizonyos osztályokhoz - Master Boot Recordokhoz, BSD-címkékhez stb. Számos szoftveres RAID konfiguráció támogatásával a GEOM transzparens elérést tesz lehetõvé mind az operációs rendszer, mind pedig az általa felkínált segédprogramok számára.
+
+[[GEOM-striping]]
+== RAID0 - Csíkozás
+
+A csíkozás módszerét használjuk abban az esetben, amikor több lemezmeghajtót akarunk egyetlen kötetté összevonni. A GEOM lemezalrendszer szoftveres támogatást nyújt a RAID0, más néven a lemezcsíkozás megvalósításához.
+
+Egy RAID0 rendszerben az adatokat blokkokra bontva írjuk fel a tömbben található lemezek között szétosztva. Így ahelyett, hogy meg kellene várnunk 256 kb-nyi adat egyetlen lemezre írását, egy RAID0 rendszerben egyszerre íródik 64 kb-nyi adat négy különbözõ lemezre, és ezáltal gyorsabb elérést szolgáltat. Ez a gyorsaság további lemezvezérlõk használatával még jobban fokozható.
+
+Az egy RAID0-csíkozásban résztvevõ lemezek mindegyikének azonos méretûnek kell lennie, mivel az írásra és olvasásra irányuló I/O-kérések a párhuzamos kiszolgálás érdekében összefésülõdnek.
+
+image::striping.png[Példa lemezcsíkozásra]
+
+[.procedure]
+====
+*Procedure: Csíkozás kialakítása formázatlan ATA-lemezekkel*
+
+. Töltsük be a [.filename]#geom_stripe.ko# modult:
++
+[source,bash]
+....
+# kldload geom_stripe
+....
++
+. Bizonyosodjuk meg róla, hogy a rendszerünkben található egy szabad csatlakozási pont. Ha majd ezt a kötetet szánjuk rendszerünk gyökérpartíciójának, használjunk erre a célra egy másik könyvtárat, például a [.filename]#/mnt#-ot:
++
+[source,bash]
+....
+# mkdir /mnt
+....
++
+. Keressük meg a csíkozásra felhasználni kívánt lemezek eszközneveit, és hozzunk létre belõlük egy új csíkozott eszközt. Például, ha két használatban nem levõ, particionálatlan ATA-lemezt, név szerint a [.filename]#/dev/ad2# és [.filename]#/dev/ad3# eszközöket akarjunk csíkozni:
++
+[source,bash]
+....
+# gstripe label -v st0 /dev/ad2 /dev/ad3
+Metadata value stored on /dev/ad2.
+Metadata value stored on /dev/ad3.
+Done.
+....
++
+. Az így létrejött új köteten most hozzunk létre egy általános címkét, vagy más néven egy partíciós táblát, és telepítsük fel rá a rendszer alapértelmezett rendszerindító programját:
++
+[source,bash]
+....
+# bsdlabel -wB /dev/stripe/st0
+....
++
+. Ezzel meg kellett jelennie további másik két eszköznek is a [.filename]#/dev/stripe# könyvtárban, a [.filename]#st0# eszköz mellett. Ezek többek közt az [.filename]#st0a# és az [.filename]#st0c#. Itt már ki is tudunk alakítani egy állományrendszert az [.filename]#st0a# eszközön a `newfs` használatával:
++
+[source,bash]
+....
+# newfs -U /dev/stripe/st0a
+....
++ 
+Sok-sok számot fogunk látni cikázni a képernyõn, majd néhány másodperc múlva befejezõdik a folyamat. Létrehoztuk a kötetet, ami most már készen áll a becsatolásra.
+====
+
+A kialakított lemezcsíkozást így tudjuk kézzel csatlakoztatni:
+
+[source,bash]
+....
+# mount /dev/stripe/st0a /mnt
+....
+
+A csíkozott állományrendszert a rendszerindítás folyamán automatikusan becsatlakoztathatjuk, ha elhelyezzük az alábbi kötetinformációkat az [.filename]#/etc/fstab# állományba. Erre a célra [.filename]#stripe# néven létrehozunk egy állandó csatlakozási pontot:
+
+[source,bash]
+....
+# mkdir /stripe
+# echo "/dev/stripe/st0a /stripe ufs rw 2 2" \
+      >> /etc/fstab
+....
+
+A [.filename]#geom_stripe.ko# modult is automatikusan be kell tölteni a rendszerindítás során. Ehhez a következõ sort kell hozzáadni a [.filename]#/boot/loader.conf# állományhoz:
+
+[source,bash]
+....
+# echo 'geom_stripe_load="YES"' >> /boot/loader.conf
+....
+
+[[GEOM-mirror]]
+== RAID1 - Tükrözés
+
+A tükrözés számos vállalatnál és háztartásban alkalmazott technológia, amely az adatok megszakítás nélküli lementésére használatos. Amikor tükrözést használunk, az egyszerûen csak arra utal, hogy a B lemez ugyanazokat az adatokat tartalmazza, mint az A lemez. Vagy amikor a C és D lemez tartalma egyezik meg az A és B lemezekével. Függetlenül a lemezek kiosztásától, itt az a lényeg, hogy az egyik lemez teljes területe vagy az egyik partíciója le van másolva. Késõbb az ezen a módon lementett adatok könnyen visszaállíthatóak anélkül, hogy ez a szolgáltatásban vagy az elérhetõségben bármilyen kimaradást okozna, és akár még fizikailag is biztonságosan tárolhatóak.
+
+Elõször is szereznünk kell két egyforma méretû lemezt, valamint a példák feltételezik, hogy ezek a lemezek közvetlen elérésû (man:da[4]) SCSI-lemezek.
+
+=== Az elsõdleges lemezek tükrözése
+
+Tegyük fel, hogy a FreeBSD az elsõ, [.filename]#da0# nevû lemezmeghajtón található, és a man:gmirror[8] számára ezt szeretnénk megadni az elsõdleges adatok tárolásához.
+
+A tükrözés létrehozásának megkezdése elõtt a `kern.geom.debugflags` man:sysctl[8] változó megfelelõ beállításával engedélyezzünk további nyomkövetési információkat és hozzáférést az eszközhöz:
+
+[source,bash]
+....
+# sysctl kern.geom.debugflags=17
+....
+
+Most építsük fel a tükrözést. Kezdjük az egészet a metaadatok elhelyezésével az elsõdleges lemezmeghajtón, tehát tulajdonképpen az alábbi parancs segítségével hozzuk létre a [.filename]#/dev/mirror/gm# eszközt:
+
+[WARNING]
+====
+
+A rendszerindító meghajtóról készített tükrözés adatvesztést okozhat a lemez utolsó szektorában. Ennek kockázata csökkenthetõ, ha közvetlenül a FreeBSD friss telepítése után állítjuk be a tükrözést.
+====
+
+[source,bash]
+....
+# gmirror label -vb round-robin gm0 /dev/da0
+....
+
+Erre a rendszernek a következõ módon kell reagálnia:
+
+[source,bash]
+....
+Metadata value stored on /dev/da0.
+Done.
+....
+
+A GEOM inicializálásához szükségünk lesz a [.filename]#/boot/kernel/geom_mirror.ko# modul betöltésére:
+
+[source,bash]
+....
+# gmirror load
+....
+
+[NOTE]
+====
+A parancs sikeres lefutása után a [.filename]#/dev/mirror# könyvtárban létrehoz egy [.filename]#gm0# eszközleírót.
+====
+
+A [.filename]#geom_mirror.ko# modul betöltését így tudjuk engedélyezni a rendszer indításakor:
+
+[source,bash]
+....
+# echo 'geom_mirror_load="YES"' >> /boot/loader.conf
+....
+
+Nyissuk meg az [.filename]#/etc/fstab# állományt, és cseréljük le benne az összes korábbi [.filename]#da0# hivatkozást az újonnan kialakított [.filename]#gm0# tükrözés eszközleírójával.
+
+[NOTE]
+====
+Ha man:vi[1] szövegszerkesztõt használjuk, akkor a következõ módon tudjuk ezt egyszerûen megtenni:
+
+[source,bash]
+....
+# vi /etc/fstab
+....
+
+A man:vi[1] indítása után a `:w /etc/fstab.bak` kiadásával készítsünk az [.filename]#fstab# állomány jelenlegi tartalmáról másolatot. Ezután a `:%s/da/mirror\/gm/g` parancs használatával cseréljük ki az összes [.filename]#da0# hivatkozást a [.filename]#gm0# eszköz nevére.
+====
+
+Az így keletkezõ [.filename]#fstab# állomány nagyjából következõ módon fog kinézni. Most teljesen független, hogy SCSI vagy ATA meghajtókkal dolgozunk, a RAID eszköz neve mindig [.filename]#gm# lesz:
+
+[.programlisting]
+....
+# Eszköz                Csatlakozási pont   Típus   Beállítások  Dump   Menet
+/dev/mirror/gm0s1b      none                swap    sw           0      0
+/dev/mirror/gm0s1a      /                   ufs     rw           1      1
+/dev/mirror/gm0s1d      /usr                ufs     rw           0      0
+/dev/mirror/gm0s1f      /home               ufs     rw           2      2
+#/dev/mirror/gm0s2d     /store              ufs     rw           2      2
+/dev/mirror/gm0s1e      /var                ufs     rw           2      2
+/dev/acd0               /cdrom              cd9660  ro,noauto    0      0
+....
+
+Indítsuk újra a rendszert:
+
+[source,bash]
+....
+# shutdown -r now
+....
+
+Ennek megfelelõen a rendszer indítása közben a [.filename]#da0# eszköz helyett a [.filename]#gm0# eszközt fogjuk használni. Miután sikeresen befejezõdött a rendszerindítás, a `mount` parancs kiadásával a saját szemünkkel is meggyõzõdhetünk az eredményrõl:
+
+[source,bash]
+....
+# mount
+Filesystem         1K-blocks    Used    Avail Capacity  Mounted on
+/dev/mirror/gm0s1a   1012974  224604   707334    24%    /
+devfs                      1       1        0   100%    /dev
+/dev/mirror/gm0s1f  45970182   28596 42263972     0%    /home
+/dev/mirror/gm0s1d   6090094 1348356  4254532    24%    /usr
+/dev/mirror/gm0s1e   3045006 2241420   559986    80%    /var
+devfs                      1       1        0   100%    /var/named/dev
+....
+
+A parancs kimenete az elvárásainknak megfelelõen remekül néz ki. Zárásképpen a szinkronizálás megkezdéséhez a következõ paranccsal illesszük be a [.filename]#da1# eszközt a tükrözésbe:
+
+[source,bash]
+....
+# gmirror insert gm0 /dev/da1
+....
+
+A tükrözés állapota a létrejöttét követõen az alábbi paranccsal ellenõrizhetõ:
+
+[source,bash]
+....
+# gmirror status
+....
+
+Az iménti parancs eredményének nagyjából a következõnek kell lennie miután a felépítettük a tükrözést és szinkronizáltuk az adatokat:
+
+[source,bash]
+....
+      Name    Status  Components
+mirror/gm0  COMPLETE  da0
+                      da1
+....
+
+Hiba esetén a tükrözés továbbra is folytatódik, azonban ilyenkor a példában szereplõ `COMPLETE` helyett a `DEGRADED` jelzést fogjuk látni.
+
+=== Hibakeresés
+
+==== A rendszer nem hajlandó elindulni
+
+Ha a rendszerünk ehhez hasonló módon indul:
+
+[.programlisting]
+....
+ffs_mountroot: can't find rootvp
+Root mount failed: 6
+mountroot>
+....
+
+Indítsuk újra a gépünket a kikapcsoló gomb vagy a reset segítségével. A rendszerindító menüben válasszuk a hatodik opciót (6). Ennek eredményeképpen megkapjuk a man:loader[8] parancssorát. Töltsük be a modult manuálisan:
+
+[source,bash]
+....
+OK? load geom_mirror
+OK? boot
+....
+
+Ha ez beválik, akkor valamiért a modult nem sikerült rendesen betölteni. Ellenõrizzük, hogy a [.filename]#/boot/loader.conf# állományban a neki szereplõ megfelelõ bejegyzés helyesen szerepel. Amennyiben a probléma továbbra is fennáll, helyezzük el a következõ sort a rendszermag konfigurációs állományába, majd fordítsuk újra és telepítsük:
+
+[.programlisting]
+....
+options	GEOM_MIRROR
+....
+
+Ezzel várhatóan orvosoltuk a problémát.
+
+=== A meghibásodott lemezek cseréje
+
+A lemezek tükrözésének egyik legcsodálatosabb elõnye, hogy a menet közben meghibásodott meghajtókat gond, és így feltehetõen adatvesztés nélkül ki tudjuk cserélni.
+
+Vegyük az iménti RAID-1 konfigurációt, és tételezzük fel, hogy a [.filename]#da1# eszköz felmondta a szolgáltatot és cserére szorul. A meghajtó leváltásához keressük meg a hibás eszközt, majd állítsuk le a rendszert. Tegyük be a helyére az újat és indítsuk újra a rendszerünket. Miután elindult az operációs rendszer, a következõ parancsok kiadásával tudjuk logikailag is lecserélni a meghibásodott lemezt:
+
+[source,bash]
+....
+# gmirror forget gm0
+# gmirror insert gm0 /dev/da1
+....
+
+Innen a `gmirror status` parancsával kísérhetjük figyelemmel a tükrözés újraszervezésének menetét. Csupán ennyi az egész.
+
+[[geom-ggate]]
+== Eszközök hálózati illesztése a GEOM-ban
+
+A GEOM távoli eszközök, például lemezek, CD-meghajtók stb. használatát is támogatja a hálózati illesztést szolgáló segédprogramjaival, hasonlóan az NFS-hez.
+
+Kezdésként létre kell hozni a megosztást elõsegítõ állományt. Ez az állomány határozza meg, ki és milyen szinten jogosult használni a megosztott erõforrásokat. Például ha megosztjuk az elsõ SCSI-lemezen a negyedik slice-ot, az alábbi [.filename]#/etc/gg.exports# állomány tökéletesen megfelel:
+
+[.programlisting]
+....
+192.168.1.0/24 RW /dev/da0s4d
+....
+
+Ezzel a belsõ hálózaton levõ összes számítógép képes lesz elérni a [.filename]#da0s4d# partíción található állományrendszert.
+
+Az eszköz megosztásához elõször gondoskodnunk kell róla, hogy ne legyen csatlakoztatva, majd ezután indítsuk el a man:ggated[8] szerver démonját:
+
+[source,bash]
+....
+# ggated
+....
+
+Ezt követõen a `mount` felhasználásával csatoljuk az eszközt a kliensen, az alábbi parancs kiadásával:
+
+[source,bash]
+....
+# ggatec create -o rw 192.168.1.1 /dev/da0s4d
+ggate0
+# mount /dev/ggate0 /mnt
+....
+
+Innentõl kezdve az eszköz elérhetõ lesz a [.filename]#/mnt# csatlakozási ponton keresztül.
+
+[NOTE]
+====
+Fontos kiemelnünk, hogy ez a mûvelet eredménytelen, ha az adott eszközt vagy maga a szerver, vagy pedig valamelyik másik kliens már korábban csatolta.
+====
+
+Amikor az eszközre már nincs tovább szükségünk, biztonságosan le tudjuk választani az man:umount[8] paranccsal, hasonlóan bármelyik más lemezes eszközhöz.
+
+[[geom-glabel]]
+== A lemezes eszközök címkézése
+
+A rendszer indítása közben a FreeBSD rendszermagja a talált eszközöknek megfelelõen mindegyiknek létrehoz egy-egy eszközleírót. Ezzel a próbálgatásos módszerrel együtt jár néhány gond, például mi történik akkor, ha az új lemezes eszközt USB-n keresztül adjuk a rendszerhez? Nagyon valószínû, hogy ez az eszköz megkapja a [.filename]#da0# nevet és ezzel az eredeti [.filename]#da0# eszköz eltolódik a [.filename]#da1# névhez. Ennek köszönhetõen az [.filename]#/etc/fstab# állományban felsorolt állományrendszerek csatolása veszélybe kerül, aminek következtében akár meghiúsulhat a rendszerindulás is.
+
+Az egyik lehetséges megoldása a problémának, ha sorbafûzzük a SCSI eszközeinket, és így a SCSI-kártyához kapcsolt újabb eszköz egy addig nem használt számot fog birtokba venni. Mi helyzet azonban az USB-s eszközökkel, amelyek kiüthetik az elsõdleges SCSI-lemezeinket? Ez egyébként azért történhet meg, mert az USB-s eszközöket általában hamarabb keresi a rendszer, mint a SCSI kártyán levõ eszközöket. Megoldhatjuk úgy ezt a gondot, hogy csak azután csatlakoztatjuk az említett eszközöket, miután a rendszer elindult. Megoldhatjuk viszont úgy is, hogy csak egyetlen ATA-meghajtót használunk és soha nem soroljuk fel a SCSI eszközöket az [.filename]#/etc/fstab# állományban.
+
+Ezeknél kínálkozik azonban egy jobb megoldás! A `glabel` nevû segédprogrammal a rendszergazda vagy a felhasználó úgy tudja címkézni a lemezmeghajtókat, hogy azok a [.filename]#/etc/fstab# állományban szereplõ címkéket használják. Mivel a `glabel` a címkét az adott szolgáltató utolsó szektorában tárolja el, ez a címke megmarad az újraindítás után is. Ha ezt a címkét eszközként használjuk, az állományrendszerek mindig ugyanarról a meghajtóról fognak csatolódni, függetlenül attól, hogy milyen eszközleírón keresztül érjük el ezeket.
+
+[NOTE]
+====
+Egyáltalán nem állítottuk, hogy egy címke csak állandó lehet. A `glabel` segítségével egyaránt létre lehet hozni állandó és átmeneti címkéket, de csak az állandó címke képes az újraindítás után is megmaradni. A két címketípus közti különbségeket a man:glabel[8] man oldal tárgyalja részletesebben.
+====
+
+=== Címketípusok és példák
+
+A címkéknek két típusa létezik, az általános címke és az állományrendszer-címke. A címkék lehetnek állandóak vagy ideiglenesek. Az állandó címkék a man:tunefs[8] vagy man:newfs[8] parancsokkal hozhatóak létre. Ezek a címkék az adott állományrendszer típusa alapján elnevezett alkönyvtárakban jönnek létre a [.filename]#/dev# könyvtáron belül. Például az UFS2 állományrendszer-címkék a [.filename]#/dev/ufs# könyvtárban keletkeznek. Állandó címkék a `glabel label` paranccsal hozhatóak létre. Az ilyen címkék nem függenek az állományrendszerek típusától, a [.filename]#/dev/label# könyvtárban jönnek létre.
+
+Az ideiglenes címkék a következõ induláskor elvesznek. Ezek a címkék a [.filename]#/dev/label# könyvtárban keletkeznek, és ideálisak a kísérletezgetésre. Ideiglenes címkéket a `glabel create` paranccsal hozhatunk létre. Ezzel kapcsolatosan részletesebb felvilágosítást a man:glabel[8] man oldalon találhatunk.
+
+Ha egy UFS2 állományrendszerre szeretnénk tenni egy állandó címkét az adataink megsemmisítése nélkül, adjuk ki a következõ parancsot:
+
+[source,bash]
+....
+# tunefs -L home /dev/da3
+....
+
+[WARNING]
+====
+
+Ha az érintett állományrendszeren nincs üres hely, ennek a parancsnak a használata adatvesztéshez vezethet. Ilyen esetben inkább a felesleges állományok eltávolításával kellene törõdnünk, nem pedig címkék hozzáadásával.
+====
+
+Ezután egy címkének kell megjelennie a [.filename]#/dev/ufs# könyvtárban, amelyet vegyünk is fel az [.filename]#/etc/fstab# állományba:
+
+[.programlisting]
+....
+/dev/ufs/home		/home            ufs     rw              2      2
+....
+
+[NOTE]
+====
+Az állományrendszert tilos csatolni a `tunefs` futtatása alatt!
+====
+
+Most már a megszokott módon csatolhatjuk az állományrendszert:
+
+[source,bash]
+....
+# mount /home
+....
+
+Ettõl a ponttól kezdve, amíg a [.filename]#geom_label.ko# modul betöltõdik a rendszerindítás során a [.filename]#/boot/loader.conf# állományon keresztül, vagy a `GEOM_LABEL` opció megtalálható a rendszermag konfigurációs állományában, az eszközleíró a rendszerre nézve minden komolyabb következmény nélkül megváltozhat.
+
+Állományrendszereket létrehozhatunk alapértelmezett címkével is a `newfs -L` paraméterével. Errõl részletesebben a man:newfs[8] man oldalon olvashatunk.
+
+Az alábbi paranccsal tudjuk törölni a címkét:
+
+[source,bash]
+....
+# glabel destroy home
+....
+
+A következõ példában azt láthatjuk, hogyan címkézzük fel a rendszerindító lemezünk partícióit.
+
+.Partíciók címkézése a rendszerindító lemezen
+[example]
+====
+A rendszerindításra használt lemezen levõ partíciók felcímkézésével a rendszer képes lesz akkor is minden probléma nélkül elindulni, amikor áthelyezzük egy másik vezérlõre vagy átrakjuk egy másik számítógépbe. Például most tegyük fel, hogy van egy ATA csatolós lemezünk, amelyet a rendszer [.filename]#ad0# néven ismert fel. Továbbá azt is feltételezzük, hogy a FreeBSD telepítése esetén megszokott partícionálási sémát választottuk, ahol [.filename]#/#, [.filename]#/var#, [.filename]#/usr# és [.filename]#/tmp# állományrendszereink, valamint egy lapozóterületünk van.
+
+Indítsuk újra a rendszerünket és a man:loader[8] menüjében a kbd:[4] billentyû lenyomásával válasszuk az egyfelhasználós módot. Ezt követõen adjuk ki a következõ parancsokat:
+
+[source,bash]
+....
+# glabel label rootfs /dev/ad0s1a
+GEOM_LABEL: Label for provider /dev/ad0s1a is label/rootfs
+# glabel label var /dev/ad0s1d
+GEOM_LABEL: Label for provider /dev/ad0s1d is label/var
+# glabel label usr /dev/ad0s1f
+GEOM_LABEL: Label for provider /dev/ad0s1f is label/usr
+# glabel label tmp /dev/ad0s1e
+GEOM_LABEL: Label for provider /dev/ad0s1e is label/tmp
+# glabel label swap /dev/ad0s1b
+GEOM_LABEL: Label for provider /dev/ad0s1b is label/swap
+# exit
+....
+
+A rendszer indítása ezután többfelhasználós módban folytatódik. A rendszerindítás befejezõdése után nyissuk meg az [.filename]#/etc/fstab# állományt és írjuk át a hagyományos eszközneveket a hozzájuk tartozó címkékre. Az [.filename]#/etc/fstab# végleges változata ennek megfelelõen körülbelül így fog kinézni:
+
+[.programlisting]
+....
+# Eszköz                 Csatlakozási pont  Típus   Beállítások     Dump    Menet
+/dev/label/swap          none               swap    sw              0        0
+/dev/label/rootfs        /                  ufs     rw              1        1
+/dev/label/tmp           /tmp               ufs     rw              2        2
+/dev/label/usr           /usr               ufs     rw              2        2
+/dev/label/var           /var               ufs     rw              2        2
+....
+
+A rendszer most már újraindítható. Ha mindent jól csináltunk, akkor a rendszer indítása problémáktól mentesen fog zajlani és a `mount` parancs eredménye a következõ lesz:
+
+[source,bash]
+....
+# mount
+/dev/label/rootfs on / (ufs, local)
+devfs on /dev (devfs, local)
+/dev/label/tmp on /tmp (ufs, local, soft-updates)
+/dev/label/usr on /usr (ufs, local, soft-updates)
+/dev/label/var on /var (ufs, local, soft-updates)
+....
+
+====
+
+A FreeBSD 7.2 kiadásától kezdõdõen a man:glabel[8] osztály az UFS esetén támogatja az `ufsid`, az állományrendszer egyedi rendszerszintû azonosítójából származtatott új címketípus használatát. Ezek a címkék a rendszer indítása során a [.filename]#/dev/ufsid# könyvtárban jönnek automatikusan létre. Az `ufsid` címkéken keresztül tudunk az [.filename]#/etc/fstab# állományban állományrendszereket csatlakoztatni. A jelenleg aktív állományrendszereket és azok `ufsid` azonosítóit a `glabel status` paranccsal tudjuk lekérdezni:
+
+[source,bash]
+....
+% glabel status
+                  Name  Status  Components
+ufsid/486b6fc38d330916     N/A  ad4s1d
+ufsid/486b6fc16926168e     N/A  ad4s1f
+....
+
+Ebben a példában az [.filename]#ad4s1d# képviseli a [.filename]#/var# állományrendszert, míg a [.filename]#ad4s1f# a [.filename]#/usr# állományrendszert. Az adott `ufsid` értékek megadásával az [.filename]#/etc/fstab# állományban a következõképpen tudjuk csatlakoztatni ezeket az állományrendszereket:
+
+[.programlisting]
+....
+/dev/ufsid/486b6fc38d330916        /var        ufs        rw        2      2
+/dev/ufsid/486b6fc16926168e        /usr        ufs        rw        2      2
+....
+
+Minden `ufsid` címkével rendelkezõ partíció csatlakoztatható ezen a módon. Ekkor nem kell manuálisan létrehoznunk a számunkra állandó címkéket, így automatikusan élvethezhetjük az eszköznévtõl független csatlakoztatás elõnyeit.
+
+[[geom-gjournal]]
+== Naplózó UFS GEOM-on keresztül
+
+A FreeBSD 7.0-ás verziójának megjelenésével egy rég várt kiegészítés, a naplózás vált végre elérhetõvé vált. Maga az implementáció a GEOM alrendszeren keresztül érhetõ el, és a man:gjournal[8] segédprogram segítségével könnyedén beállítható.
+
+Mit is jelent a naplózás? A naplózás támogatásával a rendszer egy naplót vezet az állományrendszert érintõ tranzakciókról - például az olyan változtatásokról, amelyek egy komplett írási mûveletet eredményeznek - mielõtt még a metaadatok és lemezírási mûveletek szabályosan befejezõdnének. Ez a könyvelés késõbb visszajátszható az állományrendszerben lezajlott tranzakciók reprodukálásához, és ezzel megelõzhetõek az állományrendszerben keletkezõ esetleges ellentmondások.
+
+Ez egy újabb módszer az adatvesztés és az állományrendszerben elõforduló ellentmondások elkerülésére. Eltérõen a Soft Updates módszertõl, ahol a metaadatok frissítését biztosítják és követik nyomon, vagy a Snapshots módszertõl, ahol pillanatképeket tárolunk az állományrendszerrõl, itt egy konkrét naplót tárolunk a lemez erre a célra fenntartott részén, amely bizonyos esetekben akár egy teljes külön merevlemez is lehet.
+
+Ellentétben a többi naplózó állományrendszertõl, a `gjournal` módszere blokk alapú és nem az állományrendszer részeként került implementálásra - csupán a GEOM egyik bõvítménye.
+
+A `gjournal` támogatásához a FreeBSD rendszermag konfigurációs állományában be kell állítani a következõ opciót - amely a 7.0 és késõbbi rendszereken alapbeállítás:
+
+[.programlisting]
+....
+options	UFS_GJOURNAL
+....
+
+Amennyiben naplózással rendelkezõ köteteket szeretnénk a rendszerindítás során csatlakoztatni, a [.filename]#/boot/loader.conf# állományban következõ sor hozzáadásával töltessük be a [.filename]#geom_journal.ko# modult:
+
+[.programlisting]
+....
+geom_journal_load="YES"
+....
+
+Szükség esetén ezt a funkciót akár a rendszermagba is beépíthetjük, ha felvesszük a következõ sort a rendszermag konfigurációs állományába:
+
+[.programlisting]
+....
+options	GEOM_JOURNAL
+....
+
+Ha ezt aktiváltuk, egy szabad állományrendszeren az alábbi lépéseken keresztül tudunk létrehozni egy naplót, feltéve, hogy a [.filename]#da4# egy új SCSI-meghajtó:
+
+[source,bash]
+....
+# gjournal load
+# gjournal label /dev/ad4
+....
+
+Ennél a pontnál lennie kell egy [.filename]#/dev/da4# és egy [.filename]#/dev/da4.journal# eszközleírónak. Hozzunk létre egy állományrendszert ezen az eszközön:
+
+[source,bash]
+....
+# newfs -O 2 -J /dev/da4.journal
+....
+
+Ez a parancs létrehoz egy UFS2 állományrendszert a naplóval rendelkezõ eszközön.
+
+Csatoljuk is be a `mount` segítségével az eszközt kívánt csatlakozási pontra:
+
+[source,bash]
+....
+# mount /dev/da4.journal /mnt
+....
+
+[NOTE]
+====
+Ha több slice-unk is van, akkor a napló mindegyik slice-hoz külön létrejön. Például, ha az [.filename]#ad4s1# és [.filename]#ad4s2# egyaránt slice-ok, akkor a `gjournal` legyártja az [.filename]#ad4s1.journal# és [.filename]#ad4s2.journal# eszközleírókat.
+====
+
+A jobb teljesítmény elérése érdekében kívánatos lehet a naplót egy másik lemezen tartani. Ilyen esetekben a naplózás bekapcsolásához a naplót biztosító szolgáltatót vagy tárolóeszközt a naplózni kívánt eszköz után kell szerepeltetni. A naplózás akár az aktuálisan használt állományrendszeren is aktiválható a `tunefs` használatával. Az állományrendszer módosításakor viszont mindig érdemes biztonsági másolatot készíteni! Az esetek többségében a `gjournal` hibát fog jelezni, mivel nem tudja létrehozni a naplót, azonban ez nem védi meg az adatainkat a `tunefs` helytelen használata által okozott sérülésektõl.
+
+A rendszerindító lemezen is lehet naplózást használni. Ennek részleit a link:{gjournal-desktop}[Naplózó UFS használata asztali számítógépeken] címû cikkbõl ismerhetjük meg.

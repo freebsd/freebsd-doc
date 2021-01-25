@@ -1,0 +1,243 @@
+---
+title: 第 3 章 内核对象
+prev: books/arch-handbook/locking
+next: books/arch-handbook/jail
+---
+
+[[kernel-objects]]
+= 内核对象
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:part-signifier: 部分
+:appendix-caption: 附录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 3
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+内核对象，也就是__Kobj__，为内核提供了一种面向对象 的C语言编程方式。被操作的数据也承载操作它的方法。 这使得在不破坏二进制兼容性的前提下，某一个接口能够增/减相应的操作。
+
+[[kernel-objects-term]]
+== 术语
+
+对象::
+数据集合-数据结构-数据分配的集合
+
+方法::
+某一种操作-函数
+
+类::
+一种或多种方法
+
+接口::
+一种或多种方法的一个标准集合
+
+[[kernel-objects-operation]]
+== Kobj的工作流程
+
+[TIP]
+.译者注
+====
+这一小节两段落中原作者的用词有些含混， 请参考我在括号中的注释阅读。
+====
+
+Kobj工作时，产生方法的描述。每个描述有一个唯一的标识和一个缺省函数。 某个描述的地址被用来在一个类的方法表里唯一的标识方法。
+
+构建一个类，就是要建立一张方法表，并将这张表关联到一个或多个函数(方法)； 这些函数(方法)都带有方法描述。使用前，类要被编译。编译时要为这个类分配一些缓存。 在方法表中的每个方法描述都会被指派一个唯一的标识， 除非已经被其它引用它的类在编译时指派了标识。对于每个将要被使用的方法， 都会由脚本生成一个函数(方法查找函数)，以解析外来参数， 并在被查询时给出方法描述的地址。被生成的函数(方法查找函数) 凭着那个方法描述的唯一标识按Hash的方法查找对象的类的缓存。 如果这个方法不在缓存中，函数会查找使用类的方法表。如果这个方法被找到了， 类里的相关函数(也就是某个方法的实现代码)就会被使用。 否则，这个方法描述的缺省函数将被使用。
+
+这些过程可被表示如下：
+
+[.programlisting]
+....
+对象-缓存-类
+....
+
+[[kernel-objects-using]]
+== 使用Kobj
+
+=== 结构
+
+[.programlisting]
+....
+struct kobj_method
+....
+
+=== 函数
+
+[.programlisting]
+....
+void kobj_class_compile(kobj_class_t cls);
+void kobj_class_compile_static(kobj_class_t cls, kobj_ops_t ops);
+void kobj_class_free(kobj_class_t cls);
+kobj_t kobj_create(kobj_class_t cls, struct malloc_type *mtype, int mflags);
+void kobj_init(kobj_t obj, kobj_class_t cls);
+void kobj_delete(kobj_t obj, struct malloc_type *mtype);
+....
+
+=== 宏
+
+[.programlisting]
+....
+KOBJ_CLASS_FIELDS
+KOBJ_FIELDS
+DEFINE_CLASS(name, methods, size)
+KOBJMETHOD(NAME, FUNC)
+....
+
+=== 头文件
+
+[.programlisting]
+....
+sys/param.h
+sys/kobj.h
+....
+
+=== 建立一个接口的模板
+
+使用Kobj的第一步是建立一个接口。建立接口包括建立模板的工作。 建立模板可用脚本[.filename]##src/sys/kern/makeobjops.pl##完成， 它会产生申明方法的头文件和代码，脚本还会生成方法查找函数。
+
+在这个模板中如下关键词会被使用: `#include`, `INTERFACE`, `CODE`, `METHOD`, `STATICMETHOD`, 和 `DEFAULT`.
+
+``#include``语句的整行内容将被一字不差的 复制到被生成的代码文件的头部。
+
+例如:
+
+[.programlisting]
+....
+#include sys/foo.h
+....
+
+关键词``INTERFACE``用来定义接口名。 这个名字将与每个方法名接合在一起，形成 [interface name]_[method name]。 语法是：INTERFACE [接口名];
+
+例如:
+
+[.programlisting]
+....
+INTERFACE foo;
+....
+
+关键词``CODE``会将它的参数一字不差的复制到代码文件中。 语法是``CODE { [任何代码] };``
+
+例如:
+
+[.programlisting]
+....
+CODE {
+	struct foo * foo_alloc_null(struct bar *)
+	{
+		return NULL;
+}
+};
+....
+
+关键词``METHOD``用来描述一个方法。语法是: ``METHOD [返回值类型] [方法名] { [对象 [, 参数若干]] };``
+
+例如:
+
+[.programlisting]
+....
+METHOD int bar {
+	struct object *;
+	struct foo *;
+	struct bar;
+};
+....
+
+关键词``DEFAULT``跟在关键词``METHOD``之后， 是对关键词``METHOD``的补充。它给这个方法补充上缺省函数。语法是： `METHOD [返回值类型] [方法名] { [对象; [其它参数]] }DEFAULT [缺省函数];`
+
+例如:
+
+[.programlisting]
+....
+METHOD int bar {
+	struct object *;
+	struct foo *;
+	int bar;
+} DEFAULT foo_hack;
+....
+
+关键词``STATICMETHOD``类似关键词``METHOD``。 对于每个Kobj对象，一般其头部都有一些Kobj专有的数据。 ``METHOD``定义的方法就假设这些专有数据位于对象头部； 假如对象头部没有这些专有数据，这些方法对这个对象的访问就可能出错。 而``STATICMETHOD``定义的对象可以不受这个限制： 这样描述出的方法，其操作的数据不由这个类的某个对象实例给出， 而是全都由调用这个方法时的操作数(译者注:即参数)给出。 这也对于在某个类的方法表之外调用这个方法有用。 
+
+[TIP]
+.译者注
+====
+这一段的语言与原文相比调整很大。 静态方法是不依赖于对象实例的方法。 参看C++类中的"``静态函数``"的概念。
+====
+
+其它完整的例子:
+
+[.programlisting]
+....
+src/sys/kern/bus_if.m
+src/sys/kern/device_if.m
+....
+
+=== 建立一个类
+
+使用Kobj的第二步是建立一个类。一个类的组有名字、方法表； 假如使用了Kobj的"``对象管理工具``"(Object Handling Facilities)， 类中还包含对象的大小。建立类时使用宏``DEFINE_CLASS()``。 建立方法表时，须建立一个kobj_method_t数组，用NULL项结尾。 每个非NULL项可用宏``KOBJMETHOD()``建立。
+
+例如:
+
+[.programlisting]
+....
+DEFINE_CLASS(fooclass, foomethods, sizeof(struct foodata));
+
+kobj_method_t foomethods[] = {
+	KOBJMETHOD(bar_doo, foo_doo),
+	KOBJMETHOD(bar_foo, foo_foo),
+	{ NULL, NULL}
+};
+....
+
+类须被"编译"。根据该类被初始化时系统的状态， 将要用到一个静态分配的缓存和"操作数表"(ops table， 译者注：即"参数表")。这些操作可通过声明一个结构体 ``struct kobj_ops``并使用 ``kobj_class_compile_static()``， 或是只使用``kobj_class_compile()``来完成。
+
+=== 建立一个对象
+
+使用Kobj的第三步是定义对象。Kobj对象建立程序假定Kobj 专有数据在一个对象的头部。如果不是如此，应当先自行分配对象， 再使用``kobj_init()``初始化对象中的Kobj专有数据； 其实可以使用``kobj_create()``分配对象， 并自动初始化对象中的Kobj专有内容。``kobj_init()`` 也可以用来改变一个对象所使用的类。
+
+将Kobj的数据集成到对象中要使用宏KOBJ_FIELDS。
+
+例如
+
+[.programlisting]
+....
+struct foo_data {
+	KOBJ_FIELDS;
+	foo_foo;
+	foo_bar;
+};
+....
+
+=== 调用方法
+
+使用Kobj的最后一部就是通过生成的函数调用对象类中的方法。 调用时，接口名与方法名用'_'接合，而且全部使用大写字母。
+
+例如，接口名为foo，方法为bar，调用就是:
+
+[.programlisting]
+....
+[返回值 = ] FOO_BAR(对象 [, 其它参数]);
+....
+
+=== 善后处理
+
+当一个用``kobj_create()``不再需要被使用时， 可对这个对象调用``kobj_delete()``。 当一个类不再需要被使用时， 可对这个类调用``kobj_class_free()``。

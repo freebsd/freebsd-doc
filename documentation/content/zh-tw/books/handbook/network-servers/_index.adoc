@@ -1,0 +1,2465 @@
+---
+title: 章 29. 網路伺服器
+part: 部 IV. 網路通訊
+prev: books/handbook/mail
+next: books/handbook/firewalls
+---
+
+[[network-servers]]
+= 網路伺服器
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例 
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 29
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/network-servers/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/network-servers/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/network-servers/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-tw/mailing-lists.adoc[]
+include::shared/zh-tw/urls.adoc[]
+include::shared/zh-tw/teams.adoc[]
+
+toc::[]
+
+[[network-servers-synopsis]]
+== 概述
+
+本章節涵蓋一些在 UNIX(TM) 系統常用的網路服務，包含安裝、設定、測試及維護各種不同類型的網路服務。本章會提供範例設定檔以供參考。
+
+讀完本章，您將了解：
+
+* 如何管理 inetd Daemon。
+* 如何設定網路檔案系統 (Network File System, NFS)。
+* 如何設定網路資訊伺服器 (Network Information Server, NIS) 來集中管理及共用使用者帳號。
+* 如何設定 FreeBSD 成為 LDAP 伺服器或客戶端
+* 如何設定使用 DHCP 自動網路設定。
+* 如何設定網域名稱伺服器 (Domain Name Server, DNS)。
+* 如何設定 ApacheHTTP 伺服器。
+* 如何設定檔案傳輸協定 (File Transfer Protocol, FTP) 伺服器。
+* 如何設定 Samba 檔案與列印伺服器供 Windows(TM) 客戶端使用。
+* 如何同步時間與日期，並使用網路時間協定 (Network Time Protocol, NTP) 設定時間伺服器。
+* 如何設定 iSCSI。
+
+本章假設您有以下基礎知識：
+
+* [.filename]#/etc/rc# Script。
+* 網路術語。
+* 安裝其他第三方軟體 (crossref:ports[ports,安裝應用程式：套件與 Port])。
+
+[[network-inetd]]
+== inetd 超級伺服器
+
+The man:inetd[8] daemon is sometimes referred to as a Super-Server because it manages connections for many services. Instead of starting multiple applications, only the inetd service needs to be started. When a connection is received for a service that is managed by inetd, it determines which program the connection is destined for, spawns a process for that program, and delegates the program a socket. Using inetd for services that are not heavily used can reduce system load, when compared to running each daemon individually in stand-alone mode.
+
+Primarily, inetd is used to spawn other daemons, but several trivial protocols are handled internally, such as chargen, auth, time, echo, discard, and daytime.
+
+This section covers the basics of configuring inetd.
+
+[[network-inetd-conf]]
+=== 設定檔
+
+Configuration of inetd is done by editing [.filename]#/etc/inetd.conf#. Each line of this configuration file represents an application which can be started by inetd. By default, every line starts with a comment (`#`), meaning that inetd is not listening for any applications. To configure inetd to listen for an application's connections, remove the `#` at the beginning of the line for that application.
+
+After saving your edits, configure inetd to start at system boot by editing [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+inetd_enable="YES"
+....
+
+To start inetd now, so that it listens for the service you configured, type:
+
+[source,bash]
+....
+# service inetd start
+....
+
+Once inetd is started, it needs to be notified whenever a modification is made to [.filename]#/etc/inetd.conf#:
+
+[[network-inetd-reread]]
+.重新庫入 inetd 設定檔
+[example]
+====
+
+[source,bash]
+....
+# service inetd reload
+....
+
+====
+
+Typically, the default entry for an application does not need to be edited beyond removing the `#`. In some situations, it may be appropriate to edit the default entry.
+
+As an example, this is the default entry for man:ftpd[8] over IPv4:
+
+[.programlisting]
+....
+ftp     stream  tcp     nowait  root    /usr/libexec/ftpd       ftpd -l
+....
+
+The seven columns in an entry are as follows:
+
+[.programlisting]
+....
+service-name
+socket-type
+protocol
+{wait|nowait}[/max-child[/max-connections-per-ip-per-minute[/max-child-per-ip]]]
+user[:group][/login-class]
+server-program
+server-program-arguments
+....
+
+where:
+
+service-name::
+The service name of the daemon to start. It must correspond to a service listed in [.filename]#/etc/services#. This determines which port inetd listens on for incoming connections to that service. When using a custom service, it must first be added to [.filename]#/etc/services#.
+
+socket-type::
+Either `stream`, `dgram`, `raw`, or `seqpacket`. Use `stream` for TCP connections and `dgram` for UDP services.
+
+protocol::
+Use one of the following protocol names:
++
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Protocol Name
+| Explanation
+
+|tcp or tcp4
+|TCP IPv4
+
+|udp or udp4
+|UDP IPv4
+
+|tcp6
+|TCP IPv6
+
+|udp6
+|UDP IPv6
+
+|tcp46
+|Both TCP IPv4 and IPv6
+
+|udp46
+|Both UDP IPv4 and IPv6
+|===
+{wait|nowait}[/max-child[/max-connections-per-ip-per-minute[/max-child-per-ip]]]::
+In this field, `wait` or `nowait` must be specified. `max-child`, `max-connections-per-ip-per-minute` and `max-child-per-ip` are optional.
++
+`wait|nowait` indicates whether or not the service is able to handle its own socket. `dgram` socket types must use `wait` while `stream` daemons, which are usually multi-threaded, should use `nowait`. `wait` usually hands off multiple sockets to a single daemon, while `nowait` spawns a child daemon for each new socket.
++
+The maximum number of child daemons inetd may spawn is set by `max-child`. For example, to limit ten instances of the daemon, place a `/10` after `nowait`. Specifying `/0` allows an unlimited number of children.
++
+`max-connections-per-ip-per-minute` limits the number of connections from any particular IP address per minute. Once the limit is reached, further connections from this IP address will be dropped until the end of the minute. For example, a value of `/10` would limit any particular IP address to ten connection attempts per minute. `max-child-per-ip` limits the number of child processes that can be started on behalf on any single IP address at any moment. These options can limit excessive resource consumption and help to prevent Denial of Service attacks.
++
+An example can be seen in the default settings for man:fingerd[8]:
++
+
+[.programlisting]
+....
+finger stream  tcp     nowait/3/10 nobody /usr/libexec/fingerd fingerd -k -s
+....
+
+user::
+The username the daemon will run as. Daemons typically run as `root`, `daemon`, or `nobody`.
+
+server-program::
+The full path to the daemon. If the daemon is a service provided by inetd internally, use `internal`.
+
+server-program-arguments::
+Used to specify any command arguments to be passed to the daemon on invocation. If the daemon is an internal service, use `internal`.
+
+[[network-inetd-cmdline]]
+=== 指令列選項
+
+Like most server daemons, inetd has a number of options that can be used to modify its behavior. By default, inetd is started with `-wW -C 60`. These options enable TCP wrappers for all services, including internal services, and prevent any IP address from requesting any service more than 60 times per minute.
+
+To change the default options which are passed to inetd, add an entry for `inetd_flags` in [.filename]#/etc/rc.conf#. If inetd is already running, restart it with `service inetd restart`.
+
+The available rate limiting options are:
+
+-c maximum::
+Specify the default maximum number of simultaneous invocations of each service, where the default is unlimited. May be overridden on a per-service basis by using `max-child` in [.filename]#/etc/inetd.conf#.
+
+-C rate::
+Specify the default maximum number of times a service can be invoked from a single IP address per minute. May be overridden on a per-service basis by using `max-connections-per-ip-per-minute` in [.filename]#/etc/inetd.conf#.
+
+-R rate::
+Specify the maximum number of times a service can be invoked in one minute, where the default is `256`. A rate of `0` allows an unlimited number.
+
+-s maximum::
+Specify the maximum number of times a service can be invoked from a single IP address at any one time, where the default is unlimited. May be overridden on a per-service basis by using `max-child-per-ip` in [.filename]#/etc/inetd.conf#.
+
+Additional options are available. Refer to man:inetd[8] for the full list of options.
+
+[[network-inetd-security]]
+=== 安全注意事項
+
+Many of the daemons which can be managed by inetd are not security-conscious. Some daemons, such as fingerd, can provide information that may be useful to an attacker. Only enable the services which are needed and monitor the system for excessive connection attempts. `max-connections-per-ip-per-minute`, `max-child` and `max-child-per-ip` can be used to limit such attacks.
+
+By default, TCP wrappers is enabled. Consult man:hosts_access[5] for more information on placing TCP restrictions on various inetd invoked daemons.
+
+[[network-nfs]]
+== 網路檔案系統 (NFS)
+
+FreeBSD supports the Network File System (NFS), which allows a server to share directories and files with clients over a network. With NFS, users and programs can access files on remote systems as if they were stored locally.
+
+NFS has many practical uses. Some of the more common uses include:
+
+* Data that would otherwise be duplicated on each client can be kept in a single location and accessed by clients on the network.
+* Several clients may need access to the [.filename]#/usr/ports/distfiles# directory. Sharing that directory allows for quick access to the source files without having to download them to each client.
+* On large networks, it is often more convenient to configure a central NFS server on which all user home directories are stored. Users can log into a client anywhere on the network and have access to their home directories.
+* Administration of NFS exports is simplified. For example, there is only one file system where security or backup policies must be set.
+* Removable media storage devices can be used by other machines on the network. This reduces the number of devices throughout the network and provides a centralized location to manage their security. It is often more convenient to install software on multiple machines from a centralized installation media.
+
+NFS consists of a server and one or more clients. The client remotely accesses the data that is stored on the server machine. In order for this to function properly, a few processes have to be configured and running.
+
+These daemons must be running on the server:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Daemon
+| 說明
+
+|nfsd
+|The NFS daemon which services requests from NFS clients.
+
+|mountd
+|The NFS mount daemon which carries out requests received from nfsd.
+
+|rpcbind
+| This daemon allows NFS clients to discover which port the NFS server is using.
+|===
+
+Running man:nfsiod[8] on the client can improve performance, but is not required.
+
+[[network-configuring-nfs]]
+=== 設定伺服器
+
+The file systems which the NFS server will share are specified in [.filename]#/etc/exports#. Each line in this file specifies a file system to be exported, which clients have access to that file system, and any access options. When adding entries to this file, each exported file system, its properties, and allowed hosts must occur on a single line. If no clients are listed in the entry, then any client on the network can mount that file system.
+
+The following [.filename]#/etc/exports# entries demonstrate how to export file systems. The examples can be modified to match the file systems and client names on the reader's network. There are many options that can be used in this file, but only a few will be mentioned here. See man:exports[5] for the full list of options.
+
+This example shows how to export [.filename]#/cdrom# to three hosts named _alpha_, _bravo_, and _charlie_:
+
+[.programlisting]
+....
+/cdrom -ro alpha bravo charlie
+....
+
+The `-ro` flag makes the file system read-only, preventing clients from making any changes to the exported file system. This example assumes that the host names are either in DNS or in [.filename]#/etc/hosts#. Refer to man:hosts[5] if the network does not have a DNS server.
+
+The next example exports [.filename]#/home# to three clients by IP address. This can be useful for networks without DNS or [.filename]#/etc/hosts# entries. The `-alldirs` flag allows subdirectories to be mount points. In other words, it will not automatically mount the subdirectories, but will permit the client to mount the directories that are required as needed.
+
+[.programlisting]
+....
+/usr/home  -alldirs  10.0.0.2 10.0.0.3 10.0.0.4
+....
+
+This next example exports [.filename]#/a# so that two clients from different domains may access that file system. The `-maproot=root` allows `root` on the remote system to write data on the exported file system as `root`. If `-maproot=root` is not specified, the client's `root` user will be mapped to the server's `nobody` account and will be subject to the access limitations defined for `nobody`.
+
+[.programlisting]
+....
+/a  -maproot=root  host.example.com box.example.org
+....
+
+A client can only be specified once per file system. For example, if [.filename]#/usr# is a single file system, these entries would be invalid as both entries specify the same host:
+
+[.programlisting]
+....
+# Invalid when /usr is one file system
+/usr/src   client
+/usr/ports client
+....
+
+The correct format for this situation is to use one entry:
+
+[.programlisting]
+....
+/usr/src /usr/ports  client
+....
+
+The following is an example of a valid export list, where [.filename]#/usr# and [.filename]#/exports# are local file systems:
+
+[.programlisting]
+....
+# Export src and ports to client01 and client02, but only
+# client01 has root privileges on it
+/usr/src /usr/ports -maproot=root    client01
+/usr/src /usr/ports               client02
+# The client machines have root and can mount anywhere
+# on /exports. Anyone in the world can mount /exports/obj read-only
+/exports -alldirs -maproot=root      client01 client02
+/exports/obj -ro
+....
+
+To enable the processes required by the NFS server at boot time, add these options to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+rpcbind_enable="YES"
+nfs_server_enable="YES"
+mountd_flags="-r"
+....
+
+The server can be started now by running this command:
+
+[source,bash]
+....
+# service nfsd start
+....
+
+Whenever the NFS server is started, mountd also starts automatically. However, mountd only reads [.filename]#/etc/exports# when it is started. To make subsequent [.filename]#/etc/exports# edits take effect immediately, force mountd to reread it:
+
+[source,bash]
+....
+# service mountd reload
+....
+
+=== 設定客戶端
+
+To enable NFS clients, set this option in each client's [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+nfs_client_enable="YES"
+....
+
+Then, run this command on each NFS client:
+
+[source,bash]
+....
+# service nfsclient start
+....
+
+The client now has everything it needs to mount a remote file system. In these examples, the server's name is `server` and the client's name is `client`. To mount [.filename]#/home# on `server` to the [.filename]#/mnt# mount point on `client`:
+
+[source,bash]
+....
+# mount server:/home /mnt
+....
+
+The files and directories in [.filename]#/home# will now be available on `client`, in the [.filename]#/mnt# directory.
+
+To mount a remote file system each time the client boots, add it to [.filename]#/etc/fstab#:
+
+[.programlisting]
+....
+server:/home	/mnt	nfs	rw	0	0
+....
+
+Refer to man:fstab[5] for a description of all available options.
+
+=== 鎖定
+
+Some applications require file locking to operate correctly. To enable locking, add these lines to [.filename]#/etc/rc.conf# on both the client and server:
+
+[.programlisting]
+....
+rpc_lockd_enable="YES"
+rpc_statd_enable="YES"
+....
+
+Then start the applications:
+
+[source,bash]
+....
+# service lockd start
+# service statd start
+....
+
+If locking is not required on the server, the NFS client can be configured to lock locally by including `-L` when running mount. Refer to man:mount_nfs[8] for further details.
+
+[[network-amd]]
+=== 使用 man:amd[8] 自動掛載
+
+The automatic mounter daemon, amd, automatically mounts a remote file system whenever a file or directory within that file system is accessed. File systems that are inactive for a period of time will be automatically unmounted by amd.
+
+This daemon provides an alternative to modifying [.filename]#/etc/fstab# to list every client. It operates by attaching itself as an NFS server to the [.filename]#/host# and [.filename]#/net# directories. When a file is accessed within one of these directories, amd looks up the corresponding remote mount and automatically mounts it. [.filename]#/net# is used to mount an exported file system from an IP address while [.filename]#/host# is used to mount an export from a remote hostname. For instance, an attempt to access a file within [.filename]#/host/foobar/usr# would tell amd to mount the [.filename]#/usr# export on the host `foobar`.
+
+.使用 amd 掛載 Export
+[example]
+====
+In this example, `showmount -e` shows the exported file systems that can be mounted from the NFS server, `foobar`:
+
+[source,bash]
+....
+% showmount -e foobar
+Exports list on foobar:
+/usr                               10.10.10.0
+/a                                 10.10.10.0
+% cd /host/foobar/usr
+....
+
+====
+
+The output from `showmount` shows [.filename]#/usr# as an export. When changing directories to [.filename]#/host/foobar/usr#, amd intercepts the request and attempts to resolve the hostname `foobar`. If successful, amd automatically mounts the desired export.
+
+To enable amd at boot time, add this line to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+amd_enable="YES"
+....
+
+To start amd now:
+
+[source,bash]
+....
+# service amd start
+....
+
+Custom flags can be passed to amd from the `amd_flags` environment variable. By default, `amd_flags` is set to:
+
+[.programlisting]
+....
+amd_flags="-a /.amd_mnt -l syslog /host /etc/amd.map /net /etc/amd.map"
+....
+
+The default options with which exports are mounted are defined in [.filename]#/etc/amd.map#. Some of the more advanced features of amd are defined in [.filename]#/etc/amd.conf#.
+
+Consult man:amd[8] and man:amd.conf[5] for more information.
+
+[[network-autofs]]
+=== 使用 man:autofs[5] 自動掛載
+
+[NOTE]
+====
+The man:autofs[5] automount facility is supported starting with FreeBSD 10.1-RELEASE. To use the automounter functionality in older versions of FreeBSD, use man:amd[8] instead. This chapter only describes the man:autofs[5] automounter.
+====
+
+The man:autofs[5] facility is a common name for several components that, together, allow for automatic mounting of remote and local filesystems whenever a file or directory within that file system is accessed. It consists of the kernel component, man:autofs[5], and several userspace applications: man:automount[8], man:automountd[8] and man:autounmountd[8]. It serves as an alternative for man:amd[8] from previous FreeBSD releases. Amd is still provided for backward compatibility purposes, as the two use different map format; the one used by autofs is the same as with other SVR4 automounters, such as the ones in Solaris, MacOS X, and Linux.
+
+The man:autofs[5] virtual filesystem is mounted on specified mountpoints by man:automount[8], usually invoked during boot.
+
+Whenever a process attempts to access file within the man:autofs[5] mountpoint, the kernel will notify man:automountd[8] daemon and pause the triggering process. The man:automountd[8] daemon will handle kernel requests by finding the proper map and mounting the filesystem according to it, then signal the kernel to release blocked process. The man:autounmountd[8] daemon automatically unmounts automounted filesystems after some time, unless they are still being used.
+
+The primary autofs configuration file is [.filename]#/etc/auto_master#. It assigns individual maps to top-level mounts. For an explanation of [.filename]#auto_master# and the map syntax, refer to man:auto_master[5].
+
+There is a special automounter map mounted on [.filename]#/net#. When a file is accessed within this directory, man:autofs[5] looks up the corresponding remote mount and automatically mounts it. For instance, an attempt to access a file within [.filename]#/net/foobar/usr# would tell man:automountd[8] to mount the [.filename]#/usr# export from the host `foobar`.
+
+.使用 man:autofs[5] 掛載 Export
+[example]
+====
+In this example, `showmount -e` shows the exported file systems that can be mounted from the NFS server, `foobar`:
+
+[source,bash]
+....
+% showmount -e foobar
+Exports list on foobar:
+/usr                               10.10.10.0
+/a                                 10.10.10.0
+% cd /net/foobar/usr
+....
+
+====
+
+The output from `showmount` shows [.filename]#/usr# as an export. When changing directories to [.filename]#/host/foobar/usr#, man:automountd[8] intercepts the request and attempts to resolve the hostname `foobar`. If successful, man:automountd[8] automatically mounts the source export.
+
+To enable man:autofs[5] at boot time, add this line to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+autofs_enable="YES"
+....
+
+Then man:autofs[5] can be started by running:
+
+[source,bash]
+....
+# service automount start
+# service automountd start
+# service autounmountd start
+....
+
+The man:autofs[5] map format is the same as in other operating systems. Information about this format from other sources can be useful, like the http://web.archive.org/web/20160813071113/http://images.apple.com/business/docs/Autofs.pdf[Mac OS X document].
+
+Consult the man:automount[8], man:automountd[8], man:autounmountd[8], and man:auto_master[5] manual pages for more information.
+
+[[network-nis]]
+== 網路資訊系統 (NIS)
+
+Network Information System (NIS) is designed to centralize administration of UNIX(TM)-like systems such as Solaris(TM), HP-UX, AIX(TM), Linux, NetBSD, OpenBSD, and FreeBSD. NIS was originally known as Yellow Pages but the name was changed due to trademark issues. This is the reason why NIS commands begin with `yp`.
+
+NIS is a Remote Procedure Call (RPC)-based client/server system that allows a group of machines within an NIS domain to share a common set of configuration files. This permits a system administrator to set up NIS client systems with only minimal configuration data and to add, remove, or modify configuration data from a single location.
+
+FreeBSD uses version 2 of the NIS protocol.
+
+=== NIS 術語與程序
+
+Table 28.1 summarizes the terms and important processes used by NIS:
+
+.NIS 術語
+[cols="1,1", frame="none", options="header"]
+|===
+| 術語
+| 說明
+
+|NIS domain name
+|NIS servers and clients share an NIS domain name. Typically, this name does not have anything to do with DNS.
+
+|man:rpcbind[8]
+|This service enables RPC and must be running in order to run an NIS server or act as an NIS client.
+
+|man:ypbind[8]
+|This service binds an NIS client to its NIS server. It will take the NIS domain name and use RPC to connect to the server. It is the core of client/server communication in an NIS environment. If this service is not running on a client machine, it will not be able to access the NIS server.
+
+|man:ypserv[8]
+|This is the process for the NIS server. If this service stops running, the server will no longer be able to respond to NIS requests so hopefully, there is a slave server to take over. Some non-FreeBSD clients will not try to reconnect using a slave server and the ypbind process may need to be restarted on these clients.
+
+|man:rpc.yppasswdd[8]
+|This process only runs on NIS master servers. This daemon allows NIS clients to change their NIS passwords. If this daemon is not running, users will have to login to the NIS master server and change their passwords there.
+|===
+
+=== 主機類型
+
+There are three types of hosts in an NIS environment:
+
+* NIS master server
++ 
+This server acts as a central repository for host configuration information and maintains the authoritative copy of the files used by all of the NIS clients. The [.filename]#passwd#, [.filename]#group#, and other various files used by NIS clients are stored on the master server. While it is possible for one machine to be an NIS master server for more than one NIS domain, this type of configuration will not be covered in this chapter as it assumes a relatively small-scale NIS environment.
+* NIS slave servers
++ 
+NIS slave servers maintain copies of the NIS master's data files in order to provide redundancy. Slave servers also help to balance the load of the master server as NIS clients always attach to the NIS server which responds first.
+* NIS clients
++ 
+NIS clients authenticate against the NIS server during log on.
+
+Information in many files can be shared using NIS. The [.filename]#master.passwd#, [.filename]#group#, and [.filename]#hosts# files are commonly shared via NIS. Whenever a process on a client needs information that would normally be found in these files locally, it makes a query to the NIS server that it is bound to instead.
+
+=== 規劃注意事項
+
+This section describes a sample NIS environment which consists of 15 FreeBSD machines with no centralized point of administration. Each machine has its own [.filename]#/etc/passwd# and [.filename]#/etc/master.passwd#. These files are kept in sync with each other only through manual intervention. Currently, when a user is added to the lab, the process must be repeated on all 15 machines.
+
+The configuration of the lab will be as follows:
+
+[.informaltable]
+[cols="1,1,1", frame="none", options="header"]
+|===
+| Machine name
+| IP 位址
+| Machine role
+
+|`ellington`
+|`10.0.0.2`
+|NIS master
+
+|`coltrane`
+|`10.0.0.3`
+|NIS slave
+
+|`basie`
+|`10.0.0.4`
+|Faculty workstation
+
+|`bird`
+|`10.0.0.5`
+|Client machine
+
+|`cli[1-11]`
+|`10.0.0.[6-17]`
+|Other client machines
+|===
+
+If this is the first time an NIS scheme is being developed, it should be thoroughly planned ahead of time. Regardless of network size, several decisions need to be made as part of the planning process.
+
+==== 選擇 NIS 網域名稱
+
+When a client broadcasts its requests for info, it includes the name of the NIS domain that it is part of. This is how multiple servers on one network can tell which server should answer which request. Think of the NIS domain name as the name for a group of hosts.
+
+Some organizations choose to use their Internet domain name for their NIS domain name. This is not recommended as it can cause confusion when trying to debug network problems. The NIS domain name should be unique within the network and it is helpful if it describes the group of machines it represents. For example, the Art department at Acme Inc. might be in the "acme-art"NIS domain. This example will use the domain name `test-domain`.
+
+However, some non-FreeBSD operating systems require the NIS domain name to be the same as the Internet domain name. If one or more machines on the network have this restriction, the Internet domain name _must_ be used as the NIS domain name.
+
+==== 實體伺服器需求
+
+There are several things to keep in mind when choosing a machine to use as a NIS server. Since NIS clients depend upon the availability of the server, choose a machine that is not rebooted frequently. The NIS server should ideally be a stand alone machine whose sole purpose is to be an NIS server. If the network is not heavily used, it is acceptable to put the NIS server on a machine running other services. However, if the NIS server becomes unavailable, it will adversely affect all NIS clients.
+
+=== 設定 NIS Master 伺服器
+
+The canonical copies of all NIS files are stored on the master server. The databases used to store the information are called NIS maps. In FreeBSD, these maps are stored in [.filename]#/var/yp/[domainname]# where [.filename]#[domainname]# is the name of the NIS domain. Since multiple domains are supported, it is possible to have several directories, one for each domain. Each domain will have its own independent set of maps.
+
+NIS master and slave servers handle all NIS requests through man:ypserv[8]. This daemon is responsible for receiving incoming requests from NIS clients, translating the requested domain and map name to a path to the corresponding database file, and transmitting data from the database back to the client.
+
+Setting up a master NIS server can be relatively straight forward, depending on environmental needs. Since FreeBSD provides built-in NIS support, it only needs to be enabled by adding the following lines to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+nisdomainname="test-domain"	<.>
+nis_server_enable="YES"		<.>
+nis_yppasswdd_enable="YES"	<.>
+....
+
+<.> This line sets the NIS domain name to `test-domain`.
+
+<.> This automates the start up of the NIS server processes when the system boots.
+
+<.> This enables the man:rpc.yppasswdd[8] daemon so that users can change their NIS password from a client machine.
+
+Care must be taken in a multi-server domain where the server machines are also NIS clients. It is generally a good idea to force the servers to bind to themselves rather than allowing them to broadcast bind requests and possibly become bound to each other. Strange failure modes can result if one server goes down and others are dependent upon it. Eventually, all the clients will time out and attempt to bind to other servers, but the delay involved can be considerable and the failure mode is still present since the servers might bind to each other all over again.
+
+A server that is also a client can be forced to bind to a particular server by adding these additional lines to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+nis_client_enable="YES" # run client stuff as well
+nis_client_flags="-S NIS domain,server"
+....
+
+After saving the edits, type `/etc/netstart` to restart the network and apply the values defined in [.filename]#/etc/rc.conf#. Before initializing the NIS maps, start man:ypserv[8]:
+
+[source,bash]
+....
+# service ypserv start
+....
+
+==== 初始化 NIS 對應表
+
+NIS maps are generated from the configuration files in [.filename]#/etc# on the NIS master, with one exception: [.filename]#/etc/master.passwd#. This is to prevent the propagation of passwords to all the servers in the NIS domain. Therefore, before the NIS maps are initialized, configure the primary password files:
+
+[source,bash]
+....
+# cp /etc/master.passwd /var/yp/master.passwd
+# cd /var/yp
+# vi master.passwd
+....
+
+It is advisable to remove all entries for system accounts as well as any user accounts that do not need to be propagated to the NIS clients, such as the `root` and any other administrative accounts.
+
+[NOTE]
+====
+Ensure that the [.filename]#/var/yp/master.passwd# is neither group or world readable by setting its permissions to `600`.
+====
+
+After completing this task, initialize the NIS maps. FreeBSD includes the man:ypinit[8] script to do this. When generating maps for the master server, include `-m` and specify the NIS domain name:
+
+[source,bash]
+....
+ellington# ypinit -m test-domain
+Server Type: MASTER Domain: test-domain
+Creating an YP server will require that you answer a few questions.
+Questions will all be asked at the beginning of the procedure.
+Do you want this procedure to quit on non-fatal errors? [y/n: n] n
+Ok, please remember to go back and redo manually whatever fails.
+If not, something might not work.
+At this point, we have to construct a list of this domains YP servers.
+rod.darktech.org is already known as master server.
+Please continue to add any slave servers, one per line. When you are
+done with the list, type a <control D>.
+master server   :  ellington
+next host to add:  coltrane
+next host to add:  ^D
+The current list of NIS servers looks like this:
+ellington
+coltrane
+Is this correct?  [y/n: y] y
+
+[..output from map generation..]
+
+NIS Map update completed.
+ellington has been setup as an YP master server without any errors.
+....
+
+This will create [.filename]#/var/yp/Makefile# from [.filename]#/var/yp/Makefile.dist#. By default, this file assumes that the environment has a single NIS server with only FreeBSD clients. Since `test-domain` has a slave server, edit this line in [.filename]#/var/yp/Makefile# so that it begins with a comment (`#`):
+
+[.programlisting]
+....
+NOPUSH = "True"
+....
+
+==== 新增使用者
+
+Every time a new user is created, the user account must be added to the master NIS server and the NIS maps rebuilt. Until this occurs, the new user will not be able to login anywhere except on the NIS master. For example, to add the new user `jsmith` to the `test-domain` domain, run these commands on the master server:
+
+[source,bash]
+....
+# pw useradd jsmith
+# cd /var/yp
+# make test-domain
+....
+
+The user could also be added using `adduser jsmith` instead of `pw useradd smith`.
+
+=== 設定 NIS Slave 伺服器
+
+To set up an NIS slave server, log on to the slave server and edit [.filename]#/etc/rc.conf# as for the master server. Do not generate any NIS maps, as these already exist on the master server. When running `ypinit` on the slave server, use `-s` (for slave) instead of `-m` (for master). This option requires the name of the NIS master in addition to the domain name, as seen in this example:
+
+[source,bash]
+....
+coltrane# ypinit -s ellington test-domain
+
+Server Type: SLAVE Domain: test-domain Master: ellington
+
+Creating an YP server will require that you answer a few questions.
+Questions will all be asked at the beginning of the procedure.
+
+Do you want this procedure to quit on non-fatal errors? [y/n: n]  n
+
+Ok, please remember to go back and redo manually whatever fails.
+If not, something might not work.
+There will be no further questions. The remainder of the procedure
+should take a few minutes, to copy the databases from ellington.
+Transferring netgroup...
+ypxfr: Exiting: Map successfully transferred
+Transferring netgroup.byuser...
+ypxfr: Exiting: Map successfully transferred
+Transferring netgroup.byhost...
+ypxfr: Exiting: Map successfully transferred
+Transferring master.passwd.byuid...
+ypxfr: Exiting: Map successfully transferred
+Transferring passwd.byuid...
+ypxfr: Exiting: Map successfully transferred
+Transferring passwd.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring group.bygid...
+ypxfr: Exiting: Map successfully transferred
+Transferring group.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring services.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring rpc.bynumber...
+ypxfr: Exiting: Map successfully transferred
+Transferring rpc.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring protocols.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring master.passwd.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring networks.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring networks.byaddr...
+ypxfr: Exiting: Map successfully transferred
+Transferring netid.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring hosts.byaddr...
+ypxfr: Exiting: Map successfully transferred
+Transferring protocols.bynumber...
+ypxfr: Exiting: Map successfully transferred
+Transferring ypservers...
+ypxfr: Exiting: Map successfully transferred
+Transferring hosts.byname...
+ypxfr: Exiting: Map successfully transferred
+
+coltrane has been setup as an YP slave server without any errors.
+Remember to update map ypservers on ellington.
+....
+
+This will generate a directory on the slave server called [.filename]#/var/yp/test-domain# which contains copies of the NIS master server's maps. Adding these [.filename]#/etc/crontab# entries on each slave server will force the slaves to sync their maps with the maps on the master server:
+
+[.programlisting]
+....
+20      *       *       *       *       root   /usr/libexec/ypxfr passwd.byname
+21      *       *       *       *       root   /usr/libexec/ypxfr passwd.byuid
+....
+
+These entries are not mandatory because the master server automatically attempts to push any map changes to its slaves. However, since clients may depend upon the slave server to provide correct password information, it is recommended to force frequent password map updates. This is especially important on busy networks where map updates might not always complete.
+
+To finish the configuration, run `/etc/netstart` on the slave server in order to start the NIS services.
+
+=== 設定 NIS 客戶端
+
+An NIS client binds to an NIS server using man:ypbind[8]. This daemon broadcasts RPC requests on the local network. These requests specify the domain name configured on the client. If an NIS server in the same domain receives one of the broadcasts, it will respond to ypbind, which will record the server's address. If there are several servers available, the client will use the address of the first server to respond and will direct all of its NIS requests to that server. The client will automatically ping the server on a regular basis to make sure it is still available. If it fails to receive a reply within a reasonable amount of time, ypbind will mark the domain as unbound and begin broadcasting again in the hopes of locating another server.
+
+To configure a FreeBSD machine to be an NIS client:
+
+[.procedure]
+====
+
+. Edit [.filename]#/etc/rc.conf# and add the following lines in order to set the NIS domain name and start man:ypbind[8] during network startup:
++
+[.programlisting]
+....
+nisdomainname="test-domain"
+nis_client_enable="YES"
+....
++
+. To import all possible password entries from the NIS server, use `vipw` to remove all user accounts except one from [.filename]#/etc/master.passwd#. When removing the accounts, keep in mind that at least one local account should remain and this account should be a member of `wheel`. If there is a problem with NIS, this local account can be used to log in remotely, become the superuser, and fix the problem. Before saving the edits, add the following line to the end of the file:
++
+[.programlisting]
+....
++:::::::::
+....
++ 
+This line configures the client to provide anyone with a valid account in the NIS server's password maps an account on the client. There are many ways to configure the NIS client by modifying this line. One method is described in <<network-netgroups>>. For more detailed reading, refer to the book `Managing NFS and NIS`, published by O'Reilly Media.
++
+. To import all possible group entries from the NIS server, add this line to [.filename]#/etc/group#:
++
+[.programlisting]
+....
++:*::
+....
+====
+
+To start the NIS client immediately, execute the following commands as the superuser:
+
+[source,bash]
+....
+# /etc/netstart
+# service ypbind start
+....
+
+After completing these steps, running `ypcat passwd` on the client should show the server's [.filename]#passwd# map.
+
+=== NIS 安全性
+
+Since RPC is a broadcast-based service, any system running ypbind within the same domain can retrieve the contents of the NIS maps. To prevent unauthorized transactions, man:ypserv[8] supports a feature called "securenets" which can be used to restrict access to a given set of hosts. By default, this information is stored in [.filename]#/var/yp/securenets#, unless man:ypserv[8] is started with `-p` and an alternate path. This file contains entries that consist of a network specification and a network mask separated by white space. Lines starting with `#` are considered to be comments. A sample [.filename]##securenets## might look like this:
+
+[.programlisting]
+....
+# allow connections from local host -- mandatory
+127.0.0.1     255.255.255.255
+# allow connections from any host
+# on the 192.168.128.0 network
+192.168.128.0 255.255.255.0
+# allow connections from any host
+# between 10.0.0.0 to 10.0.15.255
+# this includes the machines in the testlab
+10.0.0.0      255.255.240.0
+....
+
+If man:ypserv[8] receives a request from an address that matches one of these rules, it will process the request normally. If the address fails to match a rule, the request will be ignored and a warning message will be logged. If the [.filename]#securenets# does not exist, `ypserv` will allow connections from any host.
+
+crossref:security[tcpwrappers,TCP Wrapper] is an alternate mechanism for providing access control instead of [.filename]#securenets#. While either access control mechanism adds some security, they are both vulnerable to "IP spoofing" attacks. All NIS-related traffic should be blocked at the firewall.
+
+Servers using [.filename]#securenets# may fail to serve legitimate NIS clients with archaic TCP/IP implementations. Some of these implementations set all host bits to zero when doing broadcasts or fail to observe the subnet mask when calculating the broadcast address. While some of these problems can be fixed by changing the client configuration, other problems may force the retirement of these client systems or the abandonment of [.filename]#securenets#.
+
+The use of TCP Wrapper increases the latency of the NIS server. The additional delay may be long enough to cause timeouts in client programs, especially in busy networks with slow NIS servers. If one or more clients suffer from latency, convert those clients into NIS slave servers and force them to bind to themselves.
+
+==== 阻擋部份使用者
+
+In this example, the `basie` system is a faculty workstation within the NIS domain. The [.filename]#passwd# map on the master NIS server contains accounts for both faculty and students. This section demonstrates how to allow faculty logins on this system while refusing student logins.
+
+To prevent specified users from logging on to a system, even if they are present in the NIS database, use `vipw` to add `-_username_` with the correct number of colons towards the end of [.filename]#/etc/master.passwd# on the client, where _username_ is the username of a user to bar from logging in. The line with the blocked user must be before the `+` line that allows NIS users. In this example, `bill` is barred from logging on to `basie`:
+
+[source,bash]
+....
+basie# cat /etc/master.passwd
+root:[password]:0:0::0:0:The super-user:/root:/bin/csh
+toor:[password]:0:0::0:0:The other super-user:/root:/bin/sh
+daemon:*:1:1::0:0:Owner of many system processes:/root:/usr/sbin/nologin
+operator:*:2:5::0:0:System &:/:/usr/sbin/nologin
+bin:*:3:7::0:0:Binaries Commands and Source,,,:/:/usr/sbin/nologin
+tty:*:4:65533::0:0:Tty Sandbox:/:/usr/sbin/nologin
+kmem:*:5:65533::0:0:KMem Sandbox:/:/usr/sbin/nologin
+games:*:7:13::0:0:Games pseudo-user:/usr/games:/usr/sbin/nologin
+news:*:8:8::0:0:News Subsystem:/:/usr/sbin/nologin
+man:*:9:9::0:0:Mister Man Pages:/usr/shared/man:/usr/sbin/nologin
+bind:*:53:53::0:0:Bind Sandbox:/:/usr/sbin/nologin
+uucp:*:66:66::0:0:UUCP pseudo-user:/var/spool/uucppublic:/usr/libexec/uucp/uucico
+xten:*:67:67::0:0:X-10 daemon:/usr/local/xten:/usr/sbin/nologin
+pop:*:68:6::0:0:Post Office Owner:/nonexistent:/usr/sbin/nologin
+nobody:*:65534:65534::0:0:Unprivileged user:/nonexistent:/usr/sbin/nologin
+-bill:::::::::
++:::::::::
+
+basie#
+....
+
+[[network-netgroups]]
+=== 使用 Netgroups
+
+Barring specified users from logging on to individual systems becomes unscaleable on larger networks and quickly loses the main benefit of NIS: _centralized_ administration.
+
+Netgroups were developed to handle large, complex networks with hundreds of users and machines. Their use is comparable to UNIX(TM) groups, where the main difference is the lack of a numeric ID and the ability to define a netgroup by including both user accounts and other netgroups.
+
+To expand on the example used in this chapter, the NIS domain will be extended to add the users and systems shown in Tables 28.2 and 28.3:
+
+.其他使用者
+[cols="1,1", frame="none", options="header"]
+|===
+| 使用者名稱
+| 說明
+
+|`alpha`, `beta`
+|IT department employees
+
+|`charlie`, `delta`
+|IT department apprentices
+
+|`echo`, `foxtrott`, `golf`, ...
+|employees
+
+|`able`, `baker`, ...
+|interns
+|===
+
+.其他系統
+[cols="1,1", frame="none", options="header"]
+|===
+| 機器名稱
+| 說明
+
+|`war`, `death`, `famine`, `pollution`
+|Only IT employees are allowed to log onto these servers.
+
+|`pride`, `greed`, `envy`, `wrath`, `lust`, `sloth`
+|All members of the IT department are allowed to login onto these servers.
+
+|`one`, `two`, `three`, `four`, ...
+|Ordinary workstations used by employees.
+
+|`trashcan`
+|A very old machine without any critical data. Even interns are allowed to use this system.
+|===
+
+When using netgroups to configure this scenario, each user is assigned to one or more netgroups and logins are then allowed or forbidden for all members of the netgroup. When adding a new machine, login restrictions must be defined for all netgroups. When a new user is added, the account must be added to one or more netgroups. If the NIS setup is planned carefully, only one central configuration file needs modification to grant or deny access to machines.
+
+The first step is the initialization of the NIS `netgroup` map. In FreeBSD, this map is not created by default. On the NIS master server, use an editor to create a map named [.filename]#/var/yp/netgroup#.
+
+This example creates four netgroups to represent IT employees, IT apprentices, employees, and interns:
+
+[.programlisting]
+....
+IT_EMP  (,alpha,test-domain)    (,beta,test-domain)
+IT_APP  (,charlie,test-domain)  (,delta,test-domain)
+USERS   (,echo,test-domain)     (,foxtrott,test-domain) \
+        (,golf,test-domain)
+INTERNS (,able,test-domain)     (,baker,test-domain)
+....
+
+Each entry configures a netgroup. The first column in an entry is the name of the netgroup. Each set of brackets represents either a group of one or more users or the name of another netgroup. When specifying a user, the three comma-delimited fields inside each group represent:
+
+. The name of the host(s) where the other fields representing the user are valid. If a hostname is not specified, the entry is valid on all hosts.
+. The name of the account that belongs to this netgroup.
+. The NIS domain for the account. Accounts may be imported from other NIS domains into a netgroup.
+
+If a group contains multiple users, separate each user with whitespace. Additionally, each field may contain wildcards. See man:netgroup[5] for details.
+
+Netgroup names longer than 8 characters should not be used. The names are case sensitive and using capital letters for netgroup names is an easy way to distinguish between user, machine and netgroup names.
+
+Some non-FreeBSD NIS clients cannot handle netgroups containing more than 15 entries. This limit may be circumvented by creating several sub-netgroups with 15 users or fewer and a real netgroup consisting of the sub-netgroups, as seen in this example:
+
+[.programlisting]
+....
+BIGGRP1  (,joe1,domain)  (,joe2,domain)  (,joe3,domain) [...]
+BIGGRP2  (,joe16,domain)  (,joe17,domain) [...]
+BIGGRP3  (,joe31,domain)  (,joe32,domain)
+BIGGROUP  BIGGRP1 BIGGRP2 BIGGRP3
+....
+
+Repeat this process if more than 225 (15 times 15) users exist within a single netgroup.
+
+To activate and distribute the new NIS map:
+
+[source,bash]
+....
+ellington# cd /var/yp
+ellington# make
+....
+
+This will generate the three NIS maps [.filename]#netgroup#, [.filename]#netgroup.byhost# and [.filename]#netgroup.byuser#. Use the map key option of man:ypcat[1] to check if the new NIS maps are available:
+
+[source,bash]
+....
+ellington% ypcat -k netgroup
+ellington% ypcat -k netgroup.byhost
+ellington% ypcat -k netgroup.byuser
+....
+
+The output of the first command should resemble the contents of [.filename]#/var/yp/netgroup#. The second command only produces output if host-specific netgroups were created. The third command is used to get the list of netgroups for a user.
+
+To configure a client, use man:vipw[8] to specify the name of the netgroup. For example, on the server named `war`, replace this line:
+
+[.programlisting]
+....
++:::::::::
+....
+
+with
+
+[.programlisting]
+....
++@IT_EMP:::::::::
+....
+
+This specifies that only the users defined in the netgroup `IT_EMP` will be imported into this system's password database and only those users are allowed to login to this system.
+
+This configuration also applies to the `~` function of the shell and all routines which convert between user names and numerical user IDs. In other words, `cd ~_user_` will not work, `ls -l` will show the numerical ID instead of the username, and `find . -user joe -print` will fail with the message `No such user`. To fix this, import all user entries without allowing them to login into the servers. This can be achieved by adding an extra line:
+
+[.programlisting]
+....
++:::::::::/usr/sbin/nologin
+....
+
+This line configures the client to import all entries but to replace the shell in those entries with [.filename]#/usr/sbin/nologin#.
+
+Make sure that extra line is placed _after_ `+@IT_EMP:::::::::`. Otherwise, all user accounts imported from NIS will have [.filename]#/usr/sbin/nologin# as their login shell and no one will be able to login to the system.
+
+To configure the less important servers, replace the old `+:::::::::` on the servers with these lines:
+
+[.programlisting]
+....
++@IT_EMP:::::::::
++@IT_APP:::::::::
++:::::::::/usr/sbin/nologin
+....
+
+The corresponding lines for the workstations would be:
+
+[.programlisting]
+....
++@IT_EMP:::::::::
++@USERS:::::::::
++:::::::::/usr/sbin/nologin
+....
+
+NIS supports the creation of netgroups from other netgroups which can be useful if the policy regarding user access changes. One possibility is the creation of role-based netgroups. For example, one might create a netgroup called `BIGSRV` to define the login restrictions for the important servers, another netgroup called `SMALLSRV` for the less important servers, and a third netgroup called `USERBOX` for the workstations. Each of these netgroups contains the netgroups that are allowed to login onto these machines. The new entries for the NIS `netgroup` map would look like this:
+
+[.programlisting]
+....
+BIGSRV    IT_EMP  IT_APP
+SMALLSRV  IT_EMP  IT_APP  ITINTERN
+USERBOX   IT_EMP  ITINTERN USERS
+....
+
+This method of defining login restrictions works reasonably well when it is possible to define groups of machines with identical restrictions. Unfortunately, this is the exception and not the rule. Most of the time, the ability to define login restrictions on a per-machine basis is required.
+
+Machine-specific netgroup definitions are another possibility to deal with the policy changes. In this scenario, the [.filename]#/etc/master.passwd# of each system contains two lines starting with "+". The first line adds a netgroup with the accounts allowed to login onto this machine and the second line adds all other accounts with [.filename]#/usr/sbin/nologin# as shell. It is recommended to use the "ALL-CAPS" version of the hostname as the name of the netgroup:
+
+[.programlisting]
+....
++@BOXNAME:::::::::
++:::::::::/usr/sbin/nologin
+....
+
+Once this task is completed on all the machines, there is no longer a need to modify the local versions of [.filename]#/etc/master.passwd# ever again. All further changes can be handled by modifying the NIS map. Here is an example of a possible `netgroup` map for this scenario:
+
+[.programlisting]
+....
+# Define groups of users first
+IT_EMP    (,alpha,test-domain)    (,beta,test-domain)
+IT_APP    (,charlie,test-domain)  (,delta,test-domain)
+DEPT1     (,echo,test-domain)     (,foxtrott,test-domain)
+DEPT2     (,golf,test-domain)     (,hotel,test-domain)
+DEPT3     (,india,test-domain)    (,juliet,test-domain)
+ITINTERN  (,kilo,test-domain)     (,lima,test-domain)
+D_INTERNS (,able,test-domain)     (,baker,test-domain)
+#
+# Now, define some groups based on roles
+USERS     DEPT1   DEPT2     DEPT3
+BIGSRV    IT_EMP  IT_APP
+SMALLSRV  IT_EMP  IT_APP    ITINTERN
+USERBOX   IT_EMP  ITINTERN  USERS
+#
+# And a groups for a special tasks
+# Allow echo and golf to access our anti-virus-machine
+SECURITY  IT_EMP  (,echo,test-domain)  (,golf,test-domain)
+#
+# machine-based netgroups
+# Our main servers
+WAR       BIGSRV
+FAMINE    BIGSRV
+# User india needs access to this server
+POLLUTION  BIGSRV  (,india,test-domain)
+#
+# This one is really important and needs more access restrictions
+DEATH     IT_EMP
+#
+# The anti-virus-machine mentioned above
+ONE       SECURITY
+#
+# Restrict a machine to a single user
+TWO       (,hotel,test-domain)
+# [...more groups to follow]
+....
+
+It may not always be advisable to use machine-based netgroups. When deploying a couple of dozen or hundreds of systems, role-based netgroups instead of machine-based netgroups may be used to keep the size of the NIS map within reasonable limits.
+
+=== 密碼格式
+
+NIS requires that all hosts within an NIS domain use the same format for encrypting passwords. If users have trouble authenticating on an NIS client, it may be due to a differing password format. In a heterogeneous network, the format must be supported by all operating systems, where DES is the lowest common standard.
+
+To check which format a server or client is using, look at this section of [.filename]#/etc/login.conf#:
+
+[.programlisting]
+....
+default:\
+	:passwd_format=des:\
+	:copyright=/etc/COPYRIGHT:\
+	[Further entries elided]
+....
+
+In this example, the system is using the DES format. Other possible values are `blf` for Blowfish and `md5` for MD5 encrypted passwords.
+
+If the format on a host needs to be edited to match the one being used in the NIS domain, the login capability database must be rebuilt after saving the change:
+
+[source,bash]
+....
+# cap_mkdb /etc/login.conf
+....
+
+[NOTE]
+====
+The format of passwords for existing user accounts will not be updated until each user changes their password _after_ the login capability database is rebuilt.
+====
+
+[[network-ldap]]
+== 輕量級目錄存取協定 (LDAP)
+
+輕量級目錄存取協定 (Lightweight Directory Access Protocol, LDAP) 是一個利用分散式目錄資訊服務來做到存取、修改與認証物件的應用層通訊協定，可以想像成是一本可以儲存數個階層、同質資訊的電話簿或記錄簿。它用在 Active Directory 及 OpenLDAP 網路，允許使用者利用一個帳號來存取數個階層的內部資訊，例如：電子郵件認証、取得員工聯絡資訊及內部網站的認証皆可使用 LDAP 伺服器資料庫中的單一使用者帳號來存取。
+
+本章節將介紹在 FreeBSD 系統上如何快速的設定一個 LDAP 伺服器。本章節假設管理者已做好規劃，這包含：要儲存何種類型的資訊、這些資訊要來做什麼、那些使用者擁有存取這些資訊的權限以及如何確保這些資訊不會被未經授權存取。
+
+=== LDAP 術語與結構
+
+LDAP 使用了數個術語在開始設置之前必須先了解。所有的目錄項目由一群屬性 (_attributes_) 所組成，每個屬性集皆有一個獨特的辨識碼稱為辨識名稱 (_Distinguished Name_, DN)，這個辨識碼會由數個其他的屬性，如：常用或相對辨識名稱 (_Relative Distinguished Name_, RDN) 所組成，這就像目錄有絕對路徑與相對路徑，可以把 DN 當做絕對路徑，RDN 當做相對路徑。
+
+LDAP 項目的例子如下。這個例子會搜尋指定使用者帳號 (`uid`)、組織單位 (`ou`) 及組織的項目 (`o`)：
+
+[source,bash]
+....
+% ldapsearch -xb "uid=trhodes,ou=users,o=example.com"
+# extended LDIF
+#
+# LDAPv3
+# base <uid=trhodes,ou=users,o=example.com> with scope subtree
+# filter: (objectclass=*)
+# requesting: ALL
+#
+
+# trhodes, users, example.com
+dn: uid=trhodes,ou=users,o=example.com
+mail: trhodes@example.com
+cn: Tom Rhodes
+uid: trhodes
+telephoneNumber: (123) 456-7890
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 2
+# numEntries: 1
+....
+
+這個範例項目會顯示 `dn`, `mail`, `cn`, `uid` 以及 `telephoneNumber` 屬性的數值。而 cn 屬性則是 RDN。
+
+更多有關 LDAP 以及其術語的資訊可在 http://www.openldap.org/doc/admin24/intro.html[http://www.openldap.org/doc/admin24/intro.html] 找到。
+
+[[ldap-config]]
+=== 設定 LDAP 伺服器
+
+FreeBSD 並未提供內建的 LDAP 伺服器，要開始設定前請先安裝 package:net/openldap-server[] 套件或 Port：
+
+[source,bash]
+....
+# pkg install openldap-server
+....
+
+在link:{linux-users}#software[套件]中已開啟了許多的預設選項，可以透過執行 `pkg info openldap-server` 來查看已開啟的選項，若有不足的地方 (例如需要開啟 SQL 的支援)，請考慮使用適當的crossref:ports[ports-using,方式]重新編譯該 Port。
+
+安裝程序會建立目錄 [.filename]#/var/db/openldap-data# 來儲存資料，同時需要建立儲存憑證的目錄：
+
+[source,bash]
+....
+# mkdir /usr/local/etc/openldap/private
+....
+
+接下來是設定憑証機構 (Certificate authority)。以下指令必須在 [.filename]#/usr/local/etc/openldap/private# 下執行，這很重要是由於檔案權限須要被限制且其他使用者不應有這些檔案的存取權限，更多有關憑証的詳細資訊以及相關的參數可在 crossref:security[openssl,OpenSSL] 中找到。要建立憑証授權，需先輸人這個指令並依提示操作：
+
+[source,bash]
+....
+# openssl req -days 365 -nodes -new -x509 -keyout ca.key -out ../ca.crt
+....
+
+提示輸入的項目__除了__通用名稱 (`Common Name`) 外其他是可以一樣的，這個項目必須使用跟系統主機名稱 _不同_ 的名稱。若這是一個自行簽署的憑証 (Self signed certificate)，則在憑証機構 `CA` 的前面加上主機名稱。
+
+接下來的工作是建立一個伺服器的憑証簽署請求與一個私鑰。請輸入以下指令然後依提示操作：
+
+[source,bash]
+....
+# openssl req -days 365 -nodes -new -keyout server.key -out server.csr
+....
+
+在憑証產生程序的過程中請確認 `Common Name` 屬性設定正確。憑証簽署請求 (Certificate Signing Request) 必須經過憑証機構簽署後才會成為有效的憑証：
+
+[source,bash]
+....
+# openssl x509 -req -days 365 -in server.csr -out ../server.crt -CA ../ca.crt -CAkey ca.key -CAcreateserial
+....
+
+在憑証產生程序的最後一步是產生並簽署客戶端憑証：
+
+[source,bash]
+....
+# openssl req -days 365 -nodes -new -keyout client.key -out client.csr
+# openssl x509 -req -days 3650 -in client.csr -out ../client.crt -CA ../ca.crt -CAkey ca.key
+....
+
+記得當提示時要使用同樣的 `Common Name` 屬性。完成之後，請確認執行的指令產生了 8 個新檔案。
+
+OpenLDAP 伺服器所執行的 Daemon 為 [.filename]#slapd#，OpenLDAP 是透過 [.filename]#slapd.ldif# 來做設定， OpenLDAP 官方已停止採用舊的 [.filename]#slapd.conf# 格式。
+
+這裡有些 [.filename]#slapd.ldif# 的 http://www.openldap.org/doc/admin24/slapdconf2.html[設定檔範例] 可以使用，同時您也可以在 [.filename]#/usr/local/etc/openldap/slapd.ldif.sample# 找到範例資訊。相關可用的選項在 slapd-config(5) 文件會有說明。[.filename]#slapd.ldif# 的每個段落，如同其他 LDAP 屬性設定一樣會透過獨一無二 DN 來辨識，並請確保 `dn:` 描述與其相關屬性之間沒有空行。以下的範例中會實作一個使用 TLS 的安全通道，首先是全域的設定：
+
+[.programlisting]
+....
+#
+# See slapd-config(5) for details on configuration options.
+# This file should NOT be world readable.
+#
+dn: cn=config
+objectClass: olcGlobal
+cn: config
+#
+#
+# Define global ACLs to disable default read access.
+#
+olcArgsFile: /var/run/openldap/slapd.args
+olcPidFile: /var/run/openldap/slapd.pid
+olcTLSCertificateFile: /usr/local/etc/openldap/server.crt
+olcTLSCertificateKeyFile: /usr/local/etc/openldap/private/server.key
+olcTLSCACertificateFile: /usr/local/etc/openldap/ca.crt
+#olcTLSCipherSuite: HIGH
+olcTLSProtocolMin: 3.1
+olcTLSVerifyClient: never
+....
+
+這個檔案中必須指定憑証機構 (Certificate Authority)、伺服器憑証 (Server Certificate) 與伺服器私鑰 (Server Private Key)，建議可讓客戶端決定使用的安全密碼 (Security Cipher)，略過 `olcTLSCipherSuite` 選項 (此選項不相容 [.filename]#openssl# 以外的 TLS 客戶端)。選項 `olcTLSProtocolMin` 讓伺服器可要求一個安全等級的最低限度，建議使用。伺服器有進行驗証的必要，但客戶端並不需要，因此可設定 `olcTLSVerifyClient: never`。
+
+第二個部份是設定後端要採用的模組有那些，可使用以下方式設定：
+
+[.programlisting]
+....
+#
+# Load dynamic backend modules:
+#
+dn: cn=module,cn=config
+objectClass: olcModuleList
+cn: module
+olcModulepath:	/usr/local/libexec/openldap
+olcModuleload:	back_mdb.la
+#olcModuleload:	back_bdb.la
+#olcModuleload:	back_hdb.la
+#olcModuleload:	back_ldap.la
+#olcModuleload:	back_passwd.la
+#olcModuleload:	back_shell.la
+....
+
+第三個部份要載入資料庫所需的 `ldif` 綱要 (Schema)，這個動作是必要的。
+
+[.programlisting]
+....
+dn: cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: schema
+
+include: file:///usr/local/etc/openldap/schema/core.ldif
+include: file:///usr/local/etc/openldap/schema/cosine.ldif
+include: file:///usr/local/etc/openldap/schema/inetorgperson.ldif
+include: file:///usr/local/etc/openldap/schema/nis.ldif
+....
+
+接下來是前端設定的部份：
+
+[.programlisting]
+....
+# Frontend settings
+#
+dn: olcDatabase={-1}frontend,cn=config
+objectClass: olcDatabaseConfig
+objectClass: olcFrontendConfig
+olcDatabase: {-1}frontend
+olcAccess: to * by * read
+#
+# Sample global access control policy:
+#	Root DSE: allow anyone to read it
+#	Subschema (sub)entry DSE: allow anyone to read it
+#	Other DSEs:
+#		Allow self write access
+#		Allow authenticated users read access
+#		Allow anonymous users to authenticate
+#
+#olcAccess: to dn.base="" by * read
+#olcAccess: to dn.base="cn=Subschema" by * read
+#olcAccess: to *
+#	by self write
+#	by users read
+#	by anonymous auth
+#
+# if no access controls are present, the default policy
+# allows anyone and everyone to read anything but restricts
+# updates to rootdn.  (e.g., "access to * by * read")
+#
+# rootdn can always read and write EVERYTHING!
+#
+olcPasswordHash: {SSHA}
+# {SSHA} is already the default for olcPasswordHash
+....
+
+再來是__設定後端__的部份，之後唯一能夠存取 OpenLDAP 伺服器設定的方式是使用全域超級使用者。
+
+[.programlisting]
+....
+dn: olcDatabase={0}config,cn=config
+objectClass: olcDatabaseConfig
+olcDatabase: {0}config
+olcAccess: to * by * none
+olcRootPW: {SSHA}iae+lrQZILpiUdf16Z9KmDmSwT77Dj4U
+....
+
+預設的管理者使用者名稱是 `cn=config`，可在 Shell 中輸入 [.filename]#slappasswd#，決定要使用的密碼並將其產生的編碼放到 `olcRootPW` 欄位中。若這個選項在這時沒有設定好，在匯入 [.filename]#slapd.ldif# 之後將沒有任何人有辦法修改__全域的設定__。
+
+最後一個部份是有關資料庫後端的設定：
+
+[.programlisting]
+....
+#######################################################################
+# LMDB database definitions
+#######################################################################
+#
+dn: olcDatabase=mdb,cn=config
+objectClass: olcDatabaseConfig
+objectClass: olcMdbConfig
+olcDatabase: mdb
+olcDbMaxSize: 1073741824
+olcSuffix: dc=domain,dc=example
+olcRootDN: cn=mdbadmin,dc=domain,dc=example
+# Cleartext passwords, especially for the rootdn, should
+# be avoided.  See slappasswd(8) and slapd-config(5) for details.
+# Use of strong authentication encouraged.
+olcRootPW: {SSHA}X2wHvIWDk6G76CQyCMS1vDCvtICWgn0+
+# The database directory MUST exist prior to running slapd AND
+# should only be accessible by the slapd and slap tools.
+# Mode 700 recommended.
+olcDbDirectory:	/var/db/openldap-data
+# Indices to maintain
+olcDbIndex: objectClass eq
+....
+
+這裡指定的資料庫即__實際用來保存__LDAP 目錄的資料，也可以使用 `mdb` 以外的項目，資料庫的超級使用者可在這裡設定 (與全域的超級使用者是不同的東西)：`olcRootDN`　需填寫使用者名稱 (可自訂)，`olcRootPW` 需填寫該使用者編碼後的密碼，將密碼編碼可使用 [.filename]#slappasswd# 如同前面所述。
+
+這裡有個link:http://www.openldap.org/devel/gitweb.cgi?p=openldap.git;a=tree;f=tests/data/regressions/its8444;h=8a5e808e63b0de3d2bdaf2cf34fecca8577ca7fd;hb=HEAD[檔案庫]內有四個 [.filename]#slapd.ldif# 的範例，要將現有的 [.filename]#slapd.conf# 轉換成 [.filename]#slapd.ldif# 格式，可參考link:http://www.openldap.org/doc/admin24/slapdconf2.html[此頁] (注意，這裡面的說明也會介紹一些不常用的選項)。
+
+當設定完成之後，需將 [.filename]#slapd.ldif# 放在一個空的目錄當中，建議如以下方式建立：
+
+[source,bash]
+....
+# mkdir /usr/local/etc/openldap/slapd.d/
+....
+
+匯入設定資料庫：
+
+[source,bash]
+....
+# /usr/local/sbin/slapadd -n0 -F /usr/local/etc/openldap/slapd.d/ -l /usr/local/etc/openldap/slapd.ldif
+....
+
+啟動 [.filename]#slapd# Daemon：
+
+[source,bash]
+....
+# /usr/local/libexec/slapd -F /usr/local/etc/openldap/slapd.d/
+....
+
+選項 `-d` 可以用來除錯使用，如同 slapd(8) 中所說明的，若要檢驗伺服器是否正常執行與運作可以：
+
+[source,bash]
+....
+# ldapsearch -x -b '' -s base '(objectclass=*)' namingContexts
+# extended LDIF
+#
+# LDAPv3
+# base <> with scope baseObject
+# filter: (objectclass=*)
+# requesting: namingContexts
+#
+
+#
+dn:
+namingContexts: dc=domain,dc=example
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 2
+# numEntries: 1
+....
+
+伺服器端仍必須受到信任，若在此之前未做過這個動作，請依照以下指示操作。安裝 OpenSSL 套件或 Port：
+
+[source,bash]
+....
+# pkg install openssl
+....
+
+進入 [.filename]#ca.crt# 所在的目錄 (以這邊使用的例子來說則是 [.filename]#/usr/local/etc/openldap#)，執行：
+
+[source,bash]
+....
+# c_rehash .
+....
+
+現在 CA 與伺服器憑証可以依其用途被辨識，可進入 [.filename]#server.crt# 所在的目錄執行以下指令來檢查：
+
+[source,bash]
+....
+# openssl verify -verbose -CApath . server.crt
+....
+
+若 [.filename]#slapd# 已正在執行，就重新啟動它。如同 [.filename]#/usr/local/etc/rc.d/slapd# 所述，要讓 [.filename]#slapd# 開機時可正常執行，須要加入以下行到 [.filename]#/etc/rc.conf#：
+
+[.programlisting]
+....
+lapd_enable="YES"
+slapd_flags='-h "ldapi://%2fvar%2frun%2fopenldap%2fldapi/
+ldap://0.0.0.0/"'
+slapd_sockets="/var/run/openldap/ldapi"
+slapd_cn_config="YES"
+....
+
+開機啟動 [.filename]#slapd# 並不會提供除錯的功能，您可以檢查 [.filename]#/var/log/debug.log#, [.filename]#dmesg -a# 及 [.filename]#/var/log/messages# 檢確認是否有正常運作。
+
+以下範例會新增群組 `team` 及使用者 `john` 到 `domain.example` LDAP 資料庫，而該資料庫目前是空的。首先要先建立 [.filename]#domain.ldif# 檔：
+
+[source,bash]
+....
+# cat domain.ldif
+dn: dc=domain,dc=example
+objectClass: dcObject
+objectClass: organization
+o: domain.example
+dc: domain
+
+dn: ou=groups,dc=domain,dc=example
+objectClass: top
+objectClass: organizationalunit
+ou: groups
+
+dn: ou=users,dc=domain,dc=example
+objectClass: top
+objectClass: organizationalunit
+ou: users
+
+dn: cn=team,ou=groups,dc=domain,dc=example
+objectClass: top
+objectClass: posixGroup
+cn: team
+gidNumber: 10001
+
+dn: uid=john,ou=users,dc=domain,dc=example
+objectClass: top
+objectClass: account
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: John McUser
+uid: john
+uidNumber: 10001
+gidNumber: 10001
+homeDirectory: /home/john/
+loginShell: /usr/bin/bash
+userPassword: secret
+....
+
+請查看 OpenLDAP 說明文件取得更詳細的資訊，使用 [.filename]#slappasswd# 來將純文字的密碼 `secret` 更改為已編碼的型式來填寫 `userPassword` 欄位。在 `loginShell` 所指定的路徑，必須在所有可讓 `john` 登入的系統中存在。最後是使用 `mdb` 管理者修改資料庫：
+
+[source,bash]
+....
+# ldapadd -W -D "cn=mdbadmin,dc=domain,dc=example" -f domain.ldif
+....
+
+要修改__全域設定__只能使用全域的超及使用者。例如，假設一開始採用了 `olcTLSCipherSuite: HIGH:MEDIUM:SSLv3` 選項，但最後想要把它移除，可以建立一個有以下內容的檔案：
+
+[source,bash]
+....
+# cat global_mod
+dn: cn=config
+changetype: modify
+delete: olcTLSCipherSuite
+....
+
+然後套用修改內容：
+
+[source,bash]
+....
+# ldapmodify -f global_mod -x -D "cn=config" -W
+....
+
+當提示輸入密碼時，提供當時在__設定後端__一節所設定的密碼，在這裡無須填寫使用者名稱，`cn=config` 代表要修改資料庫資料的位置。也可以使用 `ldapmodify` 刪除其中一行屬性，或是 `ldapdelete` 刪除整筆資料。
+
+若有問題無法正常執行，或是全域的超級使用者無法存取後端的設定，可以刪除並重建整個後端設定：
+
+[source,bash]
+....
+# rm -rf /usr/local/etc/openldap/slapd.d/
+....
+
+可以修改 [.filename]#slapd.ldif# 後再重新匯入一次。請注意，這個步驟只在沒有其他方式可用時才使用。
+
+本章節的設定說明只針對伺服器端的部份，在同一台主機中也可以同時有安裝 LDAP 客戶端但需要額外做設定。
+
+[[network-dhcp]]
+== 動態主機設置協定 (DHCP)
+
+動態主機設置協定 (Dynamic Host Configuration Protocol, DHCP) 可分配必要的位置資訊給一個連線到網路的系統以在該網路通訊。FreeBSD 內含 OpenBSD 版本的 `dhclient`，可用來做為客戶端來取得位置資訊。FreeBSD 預設並不會安裝 DHCP 伺服器，但在 FreeBSD Port 套件集中有許多可用的伺服器。有關 DHCP 通訊協定的完整說明位於 http://www.freesoft.org/CIE/RFC/2131/[RFC 2131]，相關資源也可至 http://www.isc.org/downloads/dhcp/[isc.org/downloads/dhcp/] 取得。
+
+本節將介紹如何使用內建的 DHCP 客戶端，接著會介紹如何安裝並設定一個 DHCP 伺服器。
+
+[NOTE]
+====
+在 FreeBSD 中，man:bpf[4] 裝置同時會被 DHCP 伺服器與 DHCP 客戶端所使用。這個裝置會在 [.filename]#GENERIC# 核心中被引用並隨著 FreeBSD 安裝。想要建立自訂核心的使用者若要使用 DHCP 則須保留這個裝置。
+
+另外要注意 [.filename]#bpf# 也會讓有權限的使用者在該系統上可執行網路封包監聽程式。
+====
+
+=== 設定 DHCP 客戶端
+
+DHCP 客戶端內含在 FreeBSD 安裝程式當中，這讓在新安裝的系統上設定自動從 DHCP 伺服器接收網路位置資訊變的更簡單。請參考 crossref:bsdinstall[bsdinstall-post,安裝後注意事項] 取得網路設置的範例。
+
+當 `dhclient` 在客戶端機器上執行時，它便會開始廣播請求取得設置資訊。預設這些請求會使用 UDP 埠號 68。而伺服器則會在 UDP 埠號 67 來回覆，將 IP 位址與其他相關的網路資訊，如：子網路遮罩、預設閘道及 DNS 伺服器位址告訴客戶端，詳細的清單可在 man:dhcp-options[5] 找到。
+
+預設當 FreeBSD 系統開機時，其 DHCP 客戶端會在背景執行或稱非同步 (_Asynchronously_) 執行，在完成 DHCP 程序的同時其他啟動 Script 會繼續執行，來加速系統啟動。
+
+背景 DHCP 在 DHCP 伺服器可以快速的回應客戶端請求時可運作的很好。然而 DHCP 在某些系統可能需要較長的時間才能完成，若網路服務嘗試在 DHCP 尚未分配網路位置資訊前執行則會失敗。使用同步 (_Synchronous_) 模式執行 DHCP 可避免這個問題，因為同步模式會暫停啟動直到 DHCP 已設置完成。
+
+在 [.filename]#/etc/rc.conf# 中的這行用來設定採用背景 (非同步模式)：
+
+[.programlisting]
+....
+ifconfig_fxp0="DHCP"
+....
+
+若系統已經在安裝時設定使用 DHCP，這行可能會已存在。替換在例子中的 _fxp0_ 為實際要動態設置的網路介面名稱，如 crossref:config[config-network-setup,設定網路介面卡] 中的說明。
+
+要改設定系統採用同步模式，在啟動時暫停等候 DHCP 完成，使用 "`SYNCDHCP`"：
+
+[.programlisting]
+....
+ifconfig_fxp0="SYNCDHCP"
+....
+
+尚有其他可用的客戶端選項，請在 man:rc.conf[5] 搜尋 `dhclient` 來取得詳細資訊。
+
+DHCP 客戶端會使用到以下檔案：
+
+* [.filename]#/etc/dhclient.conf#
++ 
+`dhclient` 用到的設定檔。通常這個檔案只會有註解，因為預設便適用大多數客戶端。這個設定檔在 man:dhclient.conf[5] 中有說明。
+* [.filename]#/sbin/dhclient#
++ 
+有關指令本身的更多資訊可於 man:dhclient[8] 找到。
+* [.filename]#/sbin/dhclient-script#
++ 
+FreeBSD 特定的 DHCP 客戶端設定 Script。在 man:dhclient-script[8] 中有說明，但應不須做任何修改便可正常運作。
+* [.filename]#/var/db/dhclient.leases.interface#
++ 
+DHCP 客戶端會在這個檔案中儲存有效租約的資料，寫入的格式類似日誌，在 man:dhclient.leases[5] 有說明。
+
+[[network-dhcp-server]]
+=== 安裝並設定 DHCP 伺服器
+
+本節將示範如何設定 FreeBSD 系統成為 DHCP 伺服器，使用 Internet Systems Consortium (ISC) 所實作的 DHCP 伺服器，這個伺服器及其文件可使用 package:net/isc-dhcp43-server[] 套件或 Port 安裝。
+
+package:net/isc-dhcp43-server[] 的安裝程式會安裝一份範例設定檔，複製 [.filename]#/usr/local/etc/dhcpd.conf.example# 到 [.filename]#/usr/local/etc/dhcpd.conf# 並在這個新檔案做編輯。
+
+這個設定檔內容包括了子網路及主機的宣告，用來定義要提供給 DHCP 客戶端的資訊。如以下行設定：
+
+[.programlisting]
+....
+option domain-name "example.org";<.>
+option domain-name-servers ns1.example.org;<.>
+option subnet-mask 255.255.255.0;<.>
+
+default-lease-time 600;<.>
+max-lease-time 72400;<.>
+ddns-update-style none;<.>
+
+subnet 10.254.239.0 netmask 255.255.255.224 {
+  range 10.254.239.10 10.254.239.20;<.>
+  option routers rtr-239-0-1.example.org, rtr-239-0-2.example.org;<.>
+}
+
+host fantasia {
+  hardware ethernet 08:00:07:26:c0:a5;<.>
+  fixed-address fantasia.fugue.com;<.>
+}
+....
+
+<.> 這個選項指定了要提供給客戶端的預設搜尋網域。請參考 man:resolv.conf[5] 取得更多資訊。
+
+<.> 這個選項指定了客戶端應使用的 DNS 伺服器清單 (以逗號分隔)。如範例中所示，可使用伺服器的完整網域名稱 (Fully Qualified Domain Names, FQDN) 或伺服器的 IP 
+位址。
+<.> 要提供給客戶端的子網路遮罩。
+
+<.> 預設租約到期時間 (秒)。客戶端可以自行設定覆蓋這個數值。
+
+<.> 一個租約最多允許的時間長度 (秒)。若客戶端請求更長的租約，仍會發出租約，但最多只會在 `max-lease-time` 內有效。
+
+<.> 預設的 `none` 會關閉動態 DNS 更新。更改此值為 `interim` 可讓 DHCP 伺服器每當發出一個租約便通知 DNS 伺服器更新，如此一來 DNS 伺服器便知道網路中該電腦的 IP 位址。不要更改此預設值，除非 DNS 伺服器已設定為支援動態 DNS。
+
+<.> 此行會建立一個可用 IP 位址的儲存池來保留這些要分配給 DHCP 客戶端的位址。位址範圍必須在前一行所指定的網路或子網路中有效。
+
+<.> 宣告在開始的 `{` 括號之前所指定的網路或子網路中有效的預設通訊閘。
+
+<.> 指定客戶端的硬體 MAC 位址，好讓 DHCP 伺服器在客戶端發出請求時可以辨識客戶端。
+
+<.> 指定這個主機應分配相同的 IP 位址。在此處用主機名稱是正確的，由於 DHCP 伺服器會在回傳租約資訊前先解析主機名稱。
+
+此設定檔還支援其他選項，請參考隨伺服器一併安裝的 dhcpd.conf(5) 來取得詳細資訊與範例。
+
+完成 [.filename]#dhcpd.conf# 的設定之後，在 [.filename]#/etc/rc.conf# 啟動 DHCP 伺服器：
+
+[.programlisting]
+....
+dhcpd_enable="YES"
+dhcpd_ifaces="dc0"
+....
+
+替換 `dc0` 為 DHCP 伺服器要傾聽 DHCP 客戶端請求的網路介面 (多個介面可以空白分隔)。
+
+執行以下指令來啟動伺服器：
+
+[source,bash]
+....
+# service isc-dhcpd start
+....
+
+往後任何對伺服器設定的變更會需要使用 man:service[8] 中止 dhcpd 服務然後啟動。
+
+DHCP 伺服器會使用到以下檔案。注意，操作手冊會與伺服器軟體一同安裝。
+
+* [.filename]#/usr/local/sbin/dhcpd#
++ 
+更多有關 dhcpd 伺服器的資訊可在 dhcpd(8) 找到。
+* [.filename]#/usr/local/etc/dhcpd.conf#
++ 
+伺服器設定檔需要含有所有要提供給客戶端的資訊以及有關伺服器運作的資訊。在 dhcpd.conf(5) 有此設定檔的說明。
+* [.filename]#/var/db/dhcpd.leases#
++ 
+DHCP 伺服器會儲存一份已發出租約的資料於這個檔案，寫入的格式類似日誌。參考 dhcpd.leases(5) 會有更完整的說明。
+* [.filename]#/usr/local/sbin/dhcrelay#
++ 
+這個 Daemon 會用在更進階的環境中，在一個 DHCP 伺服器要轉發來自客戶端的請求到另一個網路的另一個 DHCP 伺服器的環境。若需要使用此功能，請安裝 package:net/isc-dhcp43-relay[] 套件或 Port，安裝會包含 dhcrelay(8)，裡面有提供更詳細的資訊。
+
+[[network-dns]]
+== 網域名稱系統 (DNS)
+
+網域名稱系統 (Domain Name System, DNS) 是一種協定用來轉換網域名稱為 IP 位址，反之亦然。DNS 會協調網際網路上有權的根節點 (Authoritative root)、最上層網域 (Top Level Domain, TLD) 及其他小規模名稱伺服器來取得結果，而這些伺服器可管理與快取個自的網域資訊。要在系統上做 DNS 查詢並不需要架設一個名稱伺服器。
+
+以下表格會說明一些與 DNS 有關的術語：
+
+.DNS 術語
+[cols="1,1", frame="none", options="header"]
+|===
+| 術語
+| 定義
+
+|正向 DNS (Forward DNS)
+|將主機名稱對應 IP 位址的動作。
+
+|源頭 (Origin)
+|代表某個轄區檔案中所涵蓋的網域。
+
+|解析器 (Resolver)
+|主機向名稱伺服器查詢轄區資訊的系統程序。
+
+|反向 DNS (Reverse DNS)
+|將 IP 對應主機名稱的動作。
+
+|根轄區 (Root zone)
+|網際網路轄區階層的最開始，所有的轄區會在根轄區之下，類似在檔案系統中所有的檔案會在根目錄底下。
+
+|轄區 (Zone)
+|獨立的網域、子網域或或由相同授權 (Authority) 管理的部分 DNS。
+|===
+
+轄區範例：
+
+* `.` 是一般在文件中表達根轄區的方式。
+* `org.` 是一個在根轄區底下的最上層網域 (Top Level Domain , TLD)。
+* `example.org.` 是一個在 `org.` TLD 底下的轄區。
+* `1.168.192.in-addr.arpa` 是一個轄區用來代表所有在 `192.168.1.*` IP 位址空間底下的 IP 位址。
+
+如您所見，更詳細的主機名稱會加在左方，例如 `example.org.` 比 `org.` 更具體，如同 `org.` 比根轄區更具體，主機名稱每一部份的架構很像檔案系統：[.filename]#/dev# 目錄在根目錄底下，以此類推。
+
+=== 要架設名稱伺服器的原因
+
+名稱伺服器通常有兩種形式：有權的 (Authoritative) 名稱伺服器與快取 (或稱解析) 名稱伺服器。
+
+以下情況會需要一台有權的名稱伺服器：
+
+* 想要提供 DNS 資訊給全世界，做為官方回覆查詢。
+* 已經註冊了一個網域，例如 `example.org`，且要將 IP 位址分配到主機名稱下。
+* 一段 IP 位址範圍需要反向 DNS 項目 (IP 轉主機名稱)。
+* 要有一台備援或次要名稱伺服器用來回覆查詢。
+
+以下情況會需要一台快取名稱伺服器：
+
+* 比起查詢外部的名稱伺服器本地 DNS 伺服器可以快取並更快的回應。
+
+當查詢 `www.FreeBSD.org` 時，解析程式通常會查詢上游 ISP 的名稱伺服器然後接收其回覆，使用本地、快取 DNS 伺服器，只需要由快取 DNS 伺服器對外部做一次查詢，其他的查詢則不需要再向區域網路之外查詢，因為這些資訊已經在本地被快取了。
+
+=== DNS 伺服器設定
+
+Unbound 由 FreeBSD 基礎系統提供，預設只會提供本機的 DNS 解析，雖然基礎系統的套件可被設定提供本機以外的解析服務，但要解決這樣的需求仍建議安裝 FreeBSD Port 套件集中的 Unbound。
+
+要開啟 Unbound 可加入下行到 [.filename]#/etc/rc.conf#：
+
+[.programlisting]
+....
+local_unbound_enable="YES"
+....
+
+任何已存在於 [.filename]#/etc/resolv.conf# 中的名稱伺服器會在新的 Unbound 設定中被設為追隨者 (Forwarder)。
+
+[NOTE]
+====
+若任一個列在清單中的名稱伺服器不支援 DNSSEC，則本地的 DNS 解析便會失敗，請確認有測試每一台名稱伺服器並移除所有測試失敗的項目。以下指令會顯示出信認樹或在 `192.168.1.1` 上執行失敗的名稱伺服器：
+====
+
+[source,bash]
+....
+% drill -S FreeBSD.org @192.168.1.1
+....
+
+確認完每一台名稱伺服器都支援 DNSSEC 後啟動 Unbound：
+
+[source,bash]
+....
+# service local_unbound onestart
+....
+
+這將會更新 [.filename]#/etc/resolv.conf# 來讓查詢已用 DNSSEC 確保安全的網域現在可以運作，例如，執行以下指令來檢驗 FreeBSD.org DNSSEC 信任樹：
+
+[source,bash]
+....
+% drill -S FreeBSD.org
+;; Number of trusted keys: 1
+;; Chasing: freebsd.org. A
+
+DNSSEC Trust tree:
+freebsd.org. (A)
+|---freebsd.org. (DNSKEY keytag: 36786 alg: 8 flags: 256)
+    |---freebsd.org. (DNSKEY keytag: 32659 alg: 8 flags: 257)
+    |---freebsd.org. (DS keytag: 32659 digest type: 2)
+        |---org. (DNSKEY keytag: 49587 alg: 7 flags: 256)
+            |---org. (DNSKEY keytag: 9795 alg: 7 flags: 257)
+            |---org. (DNSKEY keytag: 21366 alg: 7 flags: 257)
+            |---org. (DS keytag: 21366 digest type: 1)
+            |   |---. (DNSKEY keytag: 40926 alg: 8 flags: 256)
+            |       |---. (DNSKEY keytag: 19036 alg: 8 flags: 257)
+            |---org. (DS keytag: 21366 digest type: 2)
+                |---. (DNSKEY keytag: 40926 alg: 8 flags: 256)
+                    |---. (DNSKEY keytag: 19036 alg: 8 flags: 257)
+;; Chase successful
+....
+
+[[network-apache]]
+== Apache HTTP 伺服器
+
+開放源碼的 Apache HTTP Server 是目前最廣泛被使用的網頁伺服器，FreeBSD 預設並不會安裝這個網頁伺服器，但可從 package:www/apache24[] 套件或 Port 安裝。
+
+本節將會摘要如何設定並啟動在 FreeBSD 上 2._x_ 版的 Apache HTTP Server，要取得有關 Apache 更詳細的資訊及其設定項目請參考 http://httpd.apache.org/[httpd.apache.org]。
+
+=== 設定並啟動 Apache
+
+在 FreeBSD 中，主 Apache HTTP Server 設定檔會安裝於 [.filename]#/usr/local/etc/apache2x/httpd.conf#，其中 _x_ 代表版號，這份 ASCII 文字檔中以 `#` 做為行首的是註解，而最常需修改的項目有：
+
+`ServerRoot "/usr/local"`::
+指定該 Apache 的預設安裝路徑，Binary 檔會儲存在伺服器根目錄 (Server root) 下的 [.filename]#bin# 與 [.filename]#sbin# 子目錄，而設定檔會儲存在 [.filename]#etc/apache2x# 子目錄。
+
+`ServerAdmin you@example.com`::
+更改此項目為您要接收問題回報的電子郵件位址，這個位址也會顯示在一些伺服器產生的頁面上，如：錯誤頁面。
+
+`ServerName www.example.com:80`::
+讓管理者可以設定伺服器要回傳給客戶端的主機名稱 (Hostname)，例如，`www` 可以更改為實際的主機名稱，若系統並未有註冊的 DNS 名稱，則可改輸入其 IP 位址，若伺服器需要傾聽其他埠號，可更改 `80` 為其他埠號。
+
+`DocumentRoot "/usr/local/www/apache2__x__/data"`::
+提供文件的目錄，預設所有的請求均會到此目錄，但可以使用符號連結與別名來指向其他地方。
+
+在對 Apache 設定檔做變更之前，建議先做備份，在 Apache 設定完成之後，儲存讓檔案並使用 `apachectl` 檢驗設定，執行 `apachectl configtest` 的結果應回傳 `Syntax OK`。
+
+要在系統啟動時執行 Apache，可加入下行到 [.filename]#/etc/rc.conf#：
+
+[.programlisting]
+....
+apache24_enable="YES"
+....
+
+若 Apache 要使用非預設的選項啟動，可加入下行到 [.filename]#/etc/rc.conf# 來指定所需的旗標參數：
+
+[.programlisting]
+....
+apache24_flags=""
+....
+
+若 apachectl 未回報設定錯，則可啟動 `httpd`：
+
+[source,bash]
+....
+# service apache24 start
+....
+
+`httpd` 服務可以透過在網頁瀏覽器中輸入 `http://_localhost_` 來測試，將 _localhost_ 更改為執行 `httpd` 那台主機的完整網域名稱 (Fully-qualified domain name)。預設會顯示的網頁為 [.filename]#/usr/local/www/apache24/data/index.html#。
+
+後續若有在 `httpd` 執行中時修改 Apache 設定檔可使用以下指令來測試是否有誤：
+
+[source,bash]
+....
+# service apache24 configtest
+....
+
+[NOTE]
+====
+注意，`configtest` 並非採用 man:rc[8] 標準，不應預期其可在所有的啟動 Script 中正常運作。
+====
+
+=== 虛擬主機
+
+虛擬主機允許在一個 Apache 伺服器執行多個網站，虛擬主機可以是以 IP 為主 (_IP-based_) 或以名稱為主 (_name-based_)。以 IP 為主的虛擬主機中的每一個網站要使用不同的 IP 位址。以名稱為主的虛擬主機會使用客戶端的 HTTP/1.1 標頭來判斷主機名稱，這可讓不同的網站共用相同的 IP 位址。
+
+要設定 Apache 使用以名稱為主的虛擬主機可在每一個網站加入 `VirtualHost` 區塊，例如，有一個名稱為 `www.domain.tld` 的主機擁有一個 `www.someotherdomain.tld` 的虛擬網域，可加入以下項目到 [.filename]#httpd.conf#：
+
+[.programlisting]
+....
+<VirtualHost *>
+    ServerName www.domain.tld
+    DocumentRoot /www/domain.tld
+</VirtualHost>
+
+<VirtualHost *>
+    ServerName www.someotherdomain.tld
+    DocumentRoot /www/someotherdomain.tld
+</VirtualHost>
+....
+
+每一個虛擬主機均需更改其 `ServerName` 與 `DocumentRoot` 的值為實際要使用的值。
+
+更多有關設定虛擬主機的資訊，可參考 Apache 官方說明文件於：link:http://httpd.apache.org/docs/vhosts/[http://httpd.apache.org/docs/vhosts/]。
+
+=== Apache 模組
+
+Apache 使用模組 (Module) 來擴充伺服器所提供的功能。請參考 http://httpd.apache.org/docs/current/mod/[http://httpd.apache.org/docs/current/mod/] 來取得可用模組的完整清單與設定詳細資訊。
+
+在 FreeBSD 中有些模組可以隨著 package:www/apache24[] Port 編譯，只要在 [.filename]#/usr/ports/www/apache24# 輸入 `make config` 便可查看有那一些模組是預設開啟的，若模組未與 Port 一併編譯，FreeBSD Port 套件集也提供了一個簡單的方式可安裝各種模組，本節將介紹最常使用的三個模組。
+
+==== [.filename]#mod_ssl#
+
+[.filename]#mod_ssl# 模組利用了 OpenSSL 透過 Secure Sockets Layer (SSLv3) 與 Transport Layer Security (TLSv1) 通訊協定來提供強大的加密，這個模組提供了向受信認的憑証簽署機構申請簽章憑証所需的任何東西，讓 FreeBSD 上能夠執行安全的網頁伺服器。
+
+在 FreeBSD 中 [.filename]#mod_ssl# 模組預設在套件與 Port 均是開啟的，可用的設定項目在 http://httpd.apache.org/docs/current/mod/mod_ssl.html[http://httpd.apache.org/docs/current/mod/mod_ssl.html] 會說明。
+
+==== [.filename]#mod_perl#
+
+[.filename]#mod_perl# 模組讓您可以使用 Perl 撰寫 Apache 模組，除此之外，嵌入到伺服器的直譯器可避免啟動外部直譯器的額外開銷與 Perl 耗費的啟動時間。
+
+[.filename]#mod_perl# 可以使用 package:www/mod_perl2[] 套件或 Port 安裝，有關使用此模組的說明文件可在 http://perl.apache.org/docs/2.0/index.html[http://perl.apache.org/docs/2.0/index.html] 中找到。
+
+==== [.filename]#mod_php#
+
+_PHP: Hypertext Preprocessor_ (PHP) 是一般用途的腳本 (Script) 語言，特別適用於網站開發，能夠嵌入在 HTML 當中，它的語法參考自 C, Java(TM) 及 Perl，目的在讓網頁開發人員能快速的寫出動態網頁。
+
+要在 Apache 網頁伺服器上加入對 PHP5 的支援，可安裝 package:www/mod_php56[] 套件或 Port，這會安裝並設定支援動態 PHP 應用程式所需的模組。安裝過程會自動加入下行到 [.filename]#/usr/local/etc/apache24/httpd.conf#：
+
+[.programlisting]
+....
+LoadModule php5_module        libexec/apache24/libphp5.so
+....
+
+接著，執行 graceful 重新啟動來載入 PHP 模組：
+
+[source,bash]
+....
+# apachectl graceful
+....
+
+由 package:www/mod_php56[] 所提供的 PHP 支援是有限的，若需要額外的支援可以使用 package:lang/php56-extensions[] Port 來安裝，該 Port 提供了選單介面來選擇可用的 PHP 擴充套件。
+
+或者，可以找到適當的 Port 來安裝各別的擴充套件，例如，要增加 PHP 對 MySQL 資料庫伺服器的支援可安裝 package:databases/php56-mysql[]。
+
+在安裝完擴充套件之後，必須重新載入 Apache 伺服器來使用新的設定值：
+
+[source,bash]
+....
+# apachectl graceful
+....
+
+=== 動態網站
+
+除了 mod_perl 與 mod_php 外，也有其他語言可用來建立動態網頁內容，這包含了 Django 與 Ruby on Rails。
+
+==== Django
+
+Django 是以 BSD 授權的框架 (Framework)，指在讓開發人員能快速的寫出高效、優雅的網頁應用程式。它提供了物件關聯對應器 (Object-relational mapper)，所以各種資料型態可當做 Python 的物件來開發，且提供了豐富的動態資料庫存取 API 給這些物件，讓開發人員不再需要寫 SQL。它也同時提供了可擴充的樣板系統，來讓應用程式的邏輯與 HTML 呈現能夠被拆開。
+
+Django 需要 [.filename]#mod_python#，以及一個 SQL 資料庫引擎才能運作。在 FreeBSD 中的 package:www/py-django[] Port 會自動安裝 [.filename]#mod_python# 以及對 PostgreSQL, MySQL 或 SQLite 資料庫的支援，預設為 SQLite，要更改資料庫引擎可在 [.filename]#/usr/ports/www/py-django# 輸入 `make config` 然後再安裝該 Port。
+
+Django 安裝完成之後，應用程式會需要一個專案目錄並搭配 Apache 設定才能使用內嵌的 Python 直譯器，此直譯器會用來呼叫網站上指定 URL 的應用程式。
+
+要設定 Apache 傳遞某個 URL 請求到網站應用程式，可加入下行到 [.filename]#httpd.conf# 來指定專案目錄的完整路徑：
+
+[.programlisting]
+....
+<Location "/">
+    SetHandler python-program
+    PythonPath "['/dir/to/the/django/packages/'] + sys.path"
+    PythonHandler django.core.handlers.modpython
+    SetEnv DJANGO_SETTINGS_MODULE mysite.settings
+    PythonAutoReload On
+    PythonDebug On
+</Location>
+....
+
+請參考 https://docs.djangoproject.com[https://docs.djangoproject.com] 來取得如何使用 Django 的更多資訊。
+
+==== Ruby on Rails
+
+Ruby on Rails 是另外一套開放源碼的網站框架 (Framework)，提供了完整的開發堆疊，這使得網頁開發人員可以更有生產力且能夠快速的寫出強大的應用程式，在 FreeBSD 它可以使用 package:www/rubygem-rails[] 套件或 Port 安裝。
+
+請參考 http://guides.rubyonrails.org[http://guides.rubyonrails.org] 來取得更多有關如何使用 Ruby on Rails 的資訊。
+
+[[network-ftp]]
+== 檔案傳輸協定 (FTP)
+
+檔案傳輸協定 (File Transfer Protocol, FTP) 提供了使用一個簡單的方式能夠將檔案傳輸到與接收自 FTP 伺服器，FreeBSD 內建了 FTP 伺服器軟體 ftpd 在基礎系統 (Base system) 中。
+
+FreeBSD 提供了多個設定檔來控制對 FTP 伺服器的存取，本節將摘要這些檔案的設定方式，請參考 man:ftpd[8] 來取得更多有關內建 FTP 伺服器的詳細資訊。
+
+=== 設定
+
+最重要的一個設定步驟便是決定那些帳號能夠存取 FTP 伺服器，FreeBSD 系統有數個系統帳號，這些帳號不應該能夠擁有 FTP 存取權，不允許存取 FTP 的使用者清單可在 [.filename]#/etc/ftpusers# 找到，預設該檔案內會有所有的系統帳號，其他不應允許存取 FTP 的使用者也可在此加入。
+
+在某些情況可能會布望限制某些使用者的存取，而不是完全避免這些使用者使用 FTP，這可以透過建立 [.filename]#/etc/ftpchroot# 來完成，詳如 man:ftpchroot[5] 所述，這個檔案會列出受到 FTP 存取限制的使用者與群組。
+
+要在伺服器上開啟匿名 FTP 存取權，可在 FreeBSD 系統上建立一個名稱為 `ftp` 使用者，使用者將能夠使用 `ftp` 或 `anonymous` 使用者名稱來登入 FTP 伺服器，當提示輸入密碼時，輸入任何值都會被接受，但是慣例上應使用電子郵件位址來當做密碼。當匿名使用者登入時 FTP 伺服器會呼叫 man:chroot[2] 來限制使用者只能存取 `ftp` 使用者的家目錄。
+
+要設定顯示給 FTP 客戶端的歡迎訊息有兩個文字檔可以建立，[.filename]#/etc/ftpwelcome# 的內容會在收到登入提示前顯示給使用者看，登入成功能後，則會顯示 [.filename]#/etc/ftpmotd# 的內容。注意，這個檔案的路徑是相對於登入環境的，所以 [.filename]#~ftp/etc/ftpmotd# 的內容只會對匿名使用者顯示。
+
+設定完 FTP 伺服器之後，在 [.filename]#/etc/rc.conf# 設定適當的變數來在開機時啟動該服務：
+
+[.programlisting]
+....
+ftpd_enable="YES"
+....
+
+要立即啟動服務可：
+
+[source,bash]
+....
+# service ftpd start
+....
+
+要測試到 FTP 伺服器的連線可輸入：
+
+[source,bash]
+....
+% ftp localhost
+....
+
+ftpd daemon 會使用 man:syslog[3] 來記錄訊息，預設，系統記錄 Daemon 會寫入有關 FTP 的訊息到 [.filename]#/var/log/xferlog#，FTP 記錄的位置可以透過更改 [.filename]#/etc/syslog.conf# 中下行來做修改：
+
+[.programlisting]
+....
+ftp.info      /var/log/xferlog
+....
+
+[NOTE]
+====
+要注意啟動匿名 FTP 伺服器可能的潛藏問題，尤其是要讓匿名使用者上傳檔案時要再次確認，因為這可能讓該 FTP 站變成用來交換未授權商業軟體的交流平台或者更糟的狀況。若真的需要匿名 FTP 上傳，那麼請檢查權限設定，讓這些檔案在尚未被管理者審查前不能夠被其他匿名使用者讀取。
+====
+
+[[network-samba]]
+== Microsoft(TM)Windows(TM) 用戶端檔案與列印服務 (Samba)
+
+Samba 是熱門的開放源碼軟體套件，使用 SMB/CIFS 通訊協定提供檔案與列印服務，此通訊協定內建於 Microsoft(TM) Windows(TM) 系統，在非 Microsoft(TM) Windows(TM) 的系統可透過安裝 Samba 客戶端程式庫來支援此協定。此通訊協定讓客戶端可以存取共享的資料與印表機，這些共享的資源可掛載到一個本機的磁碟機，而共享的印表機則可以當做本機的印表機使用。
+
+在 FreeBSD 上，可以使用 package:net/samba48[] Port 或套件來安裝 Samba 客戶端程式庫，這個客戶端提供了讓 FreeBSD 系統能存取 SMB/CIFS 在 Microsoft(TM) Windows(TM) 網路中共享的資源。
+
+FreeBSD 系統也可以透過安裝 package:net/samba48[] Port 或套件來設定成 Samba 伺服器，這讓管理者可以在 FreeBSD 系統上建立 SMB/CIFS 的共享資源，讓執行 Microsoft(TM) Windows(TM) 或 Samba 客戶端程式庫的客戶端能夠存取。
+
+=== 伺服器設定
+
+Samba 的設定位於 [.filename]#/usr/local/etc/smb4.conf#，必須先設定這個檔案才可使用 Samba。
+
+要共享目錄與印表機給在工作群組中的 Windows(TM) 客戶端的簡易 [.filename]#smb4.conf# 範例如下。對於涉及 LDAP 或 Active Directory 的複雜安裝，可使用 man:samba-tool[8] 來建立初始的 [.filename]#smb4.conf#。
+
+[.programlisting]
+....
+[global]
+workgroup = WORKGROUP
+server string = Samba Server Version %v
+netbios name = ExampleMachine
+wins support = Yes
+security = user
+passdb backend = tdbsam
+
+# Example: share /usr/src accessible only to 'developer' user
+[src]
+path = /usr/src
+valid users = developer
+writable  = yes
+browsable = yes
+read only = no
+guest ok = no
+public = no
+create mask = 0666
+directory mask = 0755
+....
+
+==== 全域設定
+
+在 [.filename]#/usr/local/etc/smb4.conf# 中加入用來描述網路環境的設定有：
+
+`workgroup`::
+要提供的工作群組名稱。
+
+`netbios name`::
+Samba 伺服器已知的 NetBIOS 名稱，預設為主機的 DNS 名稱第一節。
+
+`server string`::
+會顯示於 `net view` 輸出結果以及其他會尋找伺服器描述文字並顯示的網路工具的文字。
+
+`wins support`::
+不論 Samba 是否要作為 WINS 伺服器，請不要在網路上開啟超過一台伺服器的 WINS 功能。
+
+==== 安全性設定
+
+在 [.filename]#/usr/local/etc/smb4.conf# 中最重要的設定便是安全性模式以及後端密碼格式，以下項目管控的選項有：
+
+`security`::
+最常見的設定為 `security = share` 以及 `security = user`，若客戶端使用的使用者名稱與在 FreeBSD 主機上使用的使用者名稱相同，則應該使用使用者 (user) 層級的安全性，這是預設的安全性原則且它會要求客戶端在存取共享資源前先登入。
++
+安全性為共享 (share) 層級時，客戶端存取共享資源不需要先使用有效的使用者名稱與密碼登入伺服器，在是在舊版 Samba 所採用的預設安全性模式。
+
+`passdb backend`::
+Samba 支援數種不同的後端認証模式，客戶端可以使用 LDAP, NIS+, SQL 資料庫或修改過的密碼檔來認証，建議的認証方式是 `tdbsam`，適用於簡易的網路環境且在此處說明，對於較大或更複雜的網路則較建議使用 `ldapsam`，而 `smbpasswd` 是舊版的預設值，現在已廢棄不使用。
+
+==== Samba 使用者
+
+FreeBSD 使用者帳號必須對應 `SambaSAMAccount` 資料庫， 才能讓 Windows(TM) 客戶端存取共享資源，要對應既有的 FreeBSD 使用者帳號可使用 man:pdbedit[8]：
+
+[source,bash]
+....
+# pdbedit -a username
+....
+
+本節只會提到一些最常用的設定，請參考 http://www.samba.org/samba/docs/man/Samba-HOWTO-Collection/[官方 Samba HOWTO] 來取得有關可用設定選項的額外資訊。
+
+=== 啟動 Samba
+
+要在開機時啟動 Samba，可加入下行到 [.filename]#/etc/rc.conf#：
+
+[.programlisting]
+....
+samba_server_enable="YES"
+....
+
+要立即啟動 Samba：
+
+[source,bash]
+....
+# service samba_server start
+Performing sanity check on Samba configuration: OK
+Starting nmbd.
+Starting smbd.
+....
+
+Samba 由三個獨立的 Daemon 所組成，nmbd 與 smbd daemon 可透過 `samba_enable` 來啟動，若同時也需要 winbind 名稱解析服務則需額外設定：
+
+[.programlisting]
+....
+winbindd_enable="YES"
+....
+
+Samba 可以隨時停止，要停止可輸入：
+
+[source,bash]
+....
+# service samba_server stop
+....
+
+Samba 是一套擁有能整合 Microsoft(TM) Windows(TM) 網路功能的複雜軟體套件，除了在此處說明的基礎設定，要取得更多的功能資訊，請參考 http://www.samba.org[http://www.samba.org]。
+
+[[network-ntp]]
+== NTP 時間校對
+
+隨著使用時間，電腦的時鐘會逐漸偏移，這對需要網路上電腦有相同準確度時間的許多網路服務來說是一個大問題。準確的時間同樣能確保檔案時間戳記的一致性。網路時間協定 (Network Time Protocol, NTP) 是一種在網路上可以確保時間準確的方式。
+
+FreeBSD 內含 man:ntpd[8] 可設定來查詢其他 NTP 伺服器來同步電腦的時間或提供時間服務給其他在網路上的電腦。
+
+本節將會介紹如何設定 FreeBSD 上的 ntpd，更進一步的說明文件可於 [.filename]#/usr/shared/doc/ntp/# 找到 HTML 格式的版本。
+
+=== NTP 設定
+
+在 FreeBSD，內建的 ntpd 可用來同步系統的時間，Ntpd 要使用 man:rc.conf[5] 中的變數以及下一節會詳細說明的 [.filename]#/etc/ntp.conf# 來設定。
+
+Ntpd 與網路中各節點的通訊採用 UDP 封包，在伺服器與 NTP 各節點間的防火牆必須設定成可允許進/出埠 123 的 UDP 封包。
+
+==== [.filename]#/etc/ntp.conf# 檔
+
+Ntpd 會讀取 [.filename]#/etc/ntp.conf# 來得知要從那些 NTP 伺服器查詢時間，建議可設定多個 NTP 伺服器，來避免萬一其中一個伺服器無法連線或是時間不可靠的問題，當 ntpd 收到回應，它會偏好先採用較可信賴的伺服器。查詢的伺服器可以是來自本地網路的 ISP 所提供，也可從link:http://support.ntp.org/bin/view/Servers/WebHome[線上可公開存取的NTP 伺服器清單]中挑選，您可以選擇一個離您地理位置較近的伺服器並閱讀它的使用規則。也有 http://support.ntp.org/bin/view/Servers/NTPPoolServers[可公開存取的 NTP 池線上清單]可用，由一個地理區域所組織，除此之外 FreeBSD 提供了計劃贊助的伺服器池，`0.freebsd.pool.ntp.org`。
+
+.[.filename]#/etc/ntp.conf# 範例
+[example]
+====
+這份簡單的 [.filename]#ntp.conf# 範例檔可以放心的使用，其中包含了建議的 `restrict` 選項可避免伺服器被公開存取。
+
+[.programlisting]
+....
+# Disallow ntpq control/query access.  Allow peers to be added only
+# based on pool and server statements in this file.
+restrict default limited kod nomodify notrap noquery nopeer
+restrict source  limited kod nomodify notrap noquery
+
+# Allow unrestricted access from localhost for queries and control.
+restrict 127.0.0.1
+restrict ::1
+
+# Add a specific server.
+server ntplocal.example.com iburst
+
+# Add FreeBSD pool servers until 3-6 good servers are available.
+tos minclock 3 maxclock 6
+pool 0.freebsd.pool.ntp.org iburst
+
+# Use a local leap-seconds file.
+leapfile "/var/db/ntpd.leap-seconds.list"
+....
+
+====
+
+這個檔案的格式在 man:ntp.conf[5] 有詳細說明，以下的說明僅快速的帶過以上範例檔有用到的一些關鍵字。
+
+預設 NTP 伺服器是可以被任何網路主機所存取，`restrict` 關鍵字可以控制有那些系統可以存取伺服器。`restrict` 支援設定多項，每一項可再更進一步調整前面所做的設定。範例中的設定授權本地系統有完整的查詢及控制權限，而遠端系統只有查詢時間的權限。要了解更詳細的資訊請參考 man:ntp.conf[5] 中的 `Access Control Support` 一節。
+
+`server` 關鍵字可指定要查詢的伺服器，設定檔中可以使用多個 server 關鍵字，一個伺服器列一行。`pool` 關鍵字可指定伺服器池，Ntpd 會加入該伺服器池中的一或多台伺服器，直到數量滿足 `tos minclock` 的設定。`iburst` 關鍵字會指示 ntpd 在建立連線時執行 8 連發快速封包交換，可以更快的同步系統時間。
+
+`leapfile` 關鍵字用來指定含有閏秒 (Leap second) 資訊的檔案位置，該檔案是由 man:periodic[8] 自動更新。這個關鍵字指定的檔案位置必須與 [.filename]#/etc/rc.conf# 中設定的 `ntp_db_leapfile` 相同。
+
+==== 在 [.filename]#/etc/rc.conf# 中的 NTP 設定項目
+
+設定 `ntpd_enable="YES"` 可讓開機時會啟動 ntpd。將 `ntpd_enable=YES` 加到 [.filename]#/etc/rc.conf# 之後，可輸入以下指令讓 ntpd 不需重新開機立即啟動：
+
+[source,bash]
+....
+# service ntpd start
+....
+
+要使用 ntpd 必須設定 `ntpd_enable`，以下所列的 [.filename]#rc.conf# 變數可視所需請況設定。
+
+設定 `ntpd_sync_on_start=YES` 可讓 ntpd 可以在系統啟動時一次同步任何差距的時間，正常情況若時鐘的差距超過 1000 秒便會記錄錯誤並且中止。這個設定項目在沒有電池備援的時鐘上特別有用。
+
+設定 `ntpd_oomprotect=YES` 可保護 ntpd daemon 被系統中止並嘗試從記憶體不足 (Out Of Memory, OOM) 的情況恢復運作。
+
+設定 `ntpd_config=` 可更改 [.filename]#ntp.conf# 檔案的位置。
+
+設定 `ntpd_flags=` 可設定使用任何其他所需 ntpd 參數，但要避免使用由 [.filename]#/etc/rc.d/ntpd# 內部控管的參數如下：
+
+* `-p` (pid 檔案位置)
+* `-c` (改用 `ntpd_config=` 設定)
+
+==== 使用無特權的 `ntpd` 使用者執行 Ntpd
+
+在 FreeBSD 上的 Ntpd 現在可以使用無特權的使用者啟動並執行，要達到這個功能需要 man:mac_ntpd[4] 規則模組。[.filename]#/etc/rc.d/ntpd# 啟動 Script 會先檢查 NTP 的設定，若可以的話它會載入 `mac_ntpd` 模組，然後以無特權的使用者 `ntpd` (user id 123) 來啟動 ntpd。為了避免檔案與目錄存取權限的問題，當設定中有任何檔案相關的選項時，啟動 Script 不會自動以 `ntpd` 身份啟動 ntpd。
+
+在 `ntpd_flags` 若出現以下任何參數則需要以最下面的方式手動設定才能以 `ntpd` 使用者的身份執行：
+
+* -f 或 --driftfile
+* -i 或 --jaildir
+* -k 或 --keyfile
+* -l 或 --logfile
+* -s 或 --statsdir
+
+在 [.filename]#ntp.conf# 若出現以下任何關鍵字則需要以最下面的方式手動設定才能以 `ntpd` 使用者的身份執行：
+
+* crypto
+* driftfile
+* key
+* logdir
+* statsdir
+
+要手動設定以使用者 `ntpd` 身份執行 ntpd 你必須：
+
+* 確保 `ntpd` 使用者有權限存取所有在設定檔中指定的檔案與目錄。
+* 讓 `mac_ntpd` 模組載入或編譯至核心，請參考 man:mac_ntpd[4] 取得詳細資訊。
+* 在 [.filename]#/etc/rc.conf# 中設定 `ntpd_user="ntpd"`
+
+=== 在 PPP 連線使用 NTP
+
+ntpd 並不需要永久的網際網路連線才能正常運作，若有一個 PPP 連線是設定成需要時撥號，那麼便需要避免 NTP 的流量觸發撥號或是保持連線不中斷，這可在 [.filename]#/etc/ppp/ppp.conf# 使用 `filter` 項目設定，例如：
+
+[.programlisting]
+....
+set filter dial 0 deny udp src eq 123
+# Prevent NTP traffic from initiating dial out
+set filter dial 1 permit 0 0
+set filter alive 0 deny udp src eq 123
+# Prevent incoming NTP traffic from keeping the connection open
+set filter alive 1 deny udp dst eq 123
+# Prevent outgoing NTP traffic from keeping the connection open
+set filter alive 2 permit 0/0 0/0
+....
+
+要取得更詳細的資訊，請參考於 man:ppp[8] 的 `PACKET FILTERING` 小節以及在 [.filename]#/usr/shared/examples/ppp/# 中的範例。
+
+[NOTE]
+====
+部份網際網路存取提供商會封鎖較小編號的埠，這會讓 NTP 無法運作，因為回應永遠無到傳送到該主機。
+====
+
+[[network-iscsi]]
+== iSCSI Initiator 與 Target 設定
+
+iSCSI is a way to share storage over a network. Unlike NFS, which works at the file system level, iSCSI works at the block device level.
+
+In iSCSI terminology, the system that shares the storage is known as the _target_. The storage can be a physical disk, or an area representing multiple disks or a portion of a physical disk. For example, if the disk(s) are formatted with ZFS, a zvol can be created to use as the iSCSI storage.
+
+The clients which access the iSCSI storage are called _initiators_. To initiators, the storage available through iSCSI appears as a raw, unformatted disk known as a LUN. Device nodes for the disk appear in [.filename]#/dev/# and the device must be separately formatted and mounted.
+
+FreeBSD provides a native, kernel-based iSCSI target and initiator. This section describes how to configure a FreeBSD system as a target or an initiator.
+
+[[network-iscsi-target]]
+=== 設定 iSCSI Target
+
+To configure an iSCSI target, create the [.filename]#/etc/ctl.conf# configuration file, add a line to [.filename]#/etc/rc.conf# to make sure the man:ctld[8] daemon is automatically started at boot, and then start the daemon.
+
+The following is an example of a simple [.filename]#/etc/ctl.conf# configuration file. Refer to man:ctl.conf[5] for a more complete description of this file's available options.
+
+[.programlisting]
+....
+portal-group pg0 {
+	discovery-auth-group no-authentication
+	listen 0.0.0.0
+	listen [::]
+}
+
+target iqn.2012-06.com.example:target0 {
+	auth-group no-authentication
+	portal-group pg0
+
+	lun 0 {
+		path /data/target0-0
+		size 4G
+	}
+}
+....
+
+The first entry defines the `pg0` portal group. Portal groups define which network addresses the man:ctld[8] daemon will listen on. The `discovery-auth-group no-authentication` entry indicates that any initiator is allowed to perform iSCSI target discovery without authentication. Lines three and four configure man:ctld[8] to listen on all IPv4 (`listen 0.0.0.0`) and IPv6 (`listen [::]`) addresses on the default port of 3260.
+
+It is not necessary to define a portal group as there is a built-in portal group called `default`. In this case, the difference between `default` and `pg0` is that with `default`, target discovery is always denied, while with `pg0`, it is always allowed.
+
+The second entry defines a single target. Target has two possible meanings: a machine serving iSCSI or a named group of LUNs. This example uses the latter meaning, where `iqn.2012-06.com.example:target0` is the target name. This target name is suitable for testing purposes. For actual use, change `com.example` to the real domain name, reversed. The `2012-06` represents the year and month of acquiring control of that domain name, and `target0` can be any value. Any number of targets can be defined in this configuration file.
+
+The `auth-group no-authentication` line allows all initiators to connect to the specified target and `portal-group pg0` makes the target reachable through the `pg0` portal group.
+
+The next section defines the LUN. To the initiator, each LUN will be visible as a separate disk device. Multiple LUNs can be defined for each target. Each LUN is identified by a number, where LUN 0 is mandatory. The `path /data/target0-0` line defines the full path to a file or zvol backing the LUN. That path must exist before starting man:ctld[8]. The second line is optional and specifies the size of the LUN.
+
+Next, to make sure the man:ctld[8] daemon is started at boot, add this line to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ctld_enable="YES"
+....
+
+To start man:ctld[8] now, run this command:
+
+[source,bash]
+....
+# service ctld start
+....
+
+As the man:ctld[8] daemon is started, it reads [.filename]#/etc/ctl.conf#. If this file is edited after the daemon starts, use this command so that the changes take effect immediately:
+
+[source,bash]
+....
+# service ctld reload
+....
+
+==== 認證
+
+The previous example is inherently insecure as it uses no authentication, granting anyone full access to all targets. To require a username and password to access targets, modify the configuration as follows:
+
+[.programlisting]
+....
+auth-group ag0 {
+	chap username1 secretsecret
+	chap username2 anothersecret
+}
+
+portal-group pg0 {
+	discovery-auth-group no-authentication
+	listen 0.0.0.0
+	listen [::]
+}
+
+target iqn.2012-06.com.example:target0 {
+	auth-group ag0
+	portal-group pg0
+	lun 0 {
+		path /data/target0-0
+		size 4G
+	}
+}
+....
+
+The `auth-group` section defines username and password pairs. An initiator trying to connect to `iqn.2012-06.com.example:target0` must first specify a defined username and secret. However, target discovery is still permitted without authentication. To require target discovery authentication, set `discovery-auth-group` to a defined `auth-group` name instead of `no-authentication`.
+
+It is common to define a single exported target for every initiator. As a shorthand for the syntax above, the username and password can be specified directly in the target entry:
+
+[.programlisting]
+....
+target iqn.2012-06.com.example:target0 {
+	portal-group pg0
+	chap username1 secretsecret
+
+	lun 0 {
+		path /data/target0-0
+		size 4G
+	}
+}
+....
+
+[[network-iscsi-initiator]]
+=== 設定 iSCSI Initiator
+
+[NOTE]
+====
+The iSCSI initiator described in this section is supported starting with FreeBSD 10.0-RELEASE. To use the iSCSI initiator available in older versions, refer to man:iscontrol[8].
+====
+
+The iSCSI initiator requires that the man:iscsid[8] daemon is running. This daemon does not use a configuration file. To start it automatically at boot, add this line to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+iscsid_enable="YES"
+....
+
+To start man:iscsid[8] now, run this command:
+
+[source,bash]
+....
+# service iscsid start
+....
+
+Connecting to a target can be done with or without an [.filename]#/etc/iscsi.conf# configuration file. This section demonstrates both types of connections.
+
+==== 不使用設定檔連線到 Target
+
+To connect an initiator to a single target, specify the IP address of the portal and the name of the target:
+
+[source,bash]
+....
+# iscsictl -A -p 10.10.10.10 -t iqn.2012-06.com.example:target0
+....
+
+To verify if the connection succeeded, run `iscsictl` without any arguments. The output should look similar to this:
+
+[.programlisting]
+....
+Target name                                     Target portal   State
+iqn.2012-06.com.example:target0                 10.10.10.10     Connected: da0
+....
+
+In this example, the iSCSI session was successfully established, with [.filename]#/dev/da0# representing the attached LUN. If the `iqn.2012-06.com.example:target0` target exports more than one LUN, multiple device nodes will be shown in that section of the output:
+
+[source,bash]
+....
+Connected: da0 da1 da2.
+....
+
+Any errors will be reported in the output, as well as the system logs. For example, this message usually means that the man:iscsid[8] daemon is not running:
+
+[.programlisting]
+....
+Target name                                     Target portal   State
+iqn.2012-06.com.example:target0                 10.10.10.10     Waiting for iscsid(8)
+....
+
+The following message suggests a networking problem, such as a wrong IP address or port:
+
+[.programlisting]
+....
+Target name                                     Target portal   State
+iqn.2012-06.com.example:target0                 10.10.10.11     Connection refused
+....
+
+This message means that the specified target name is wrong:
+
+[.programlisting]
+....
+Target name                                     Target portal   State
+iqn.2012-06.com.example:target0                 10.10.10.10     Not found
+....
+
+This message means that the target requires authentication:
+
+[.programlisting]
+....
+Target name                                     Target portal   State
+iqn.2012-06.com.example:target0                 10.10.10.10     Authentication failed
+....
+
+To specify a CHAP username and secret, use this syntax:
+
+[source,bash]
+....
+# iscsictl -A -p 10.10.10.10 -t iqn.2012-06.com.example:target0 -u user -s secretsecret
+....
+
+==== 使用設定檔連線到 Target
+
+To connect using a configuration file, create [.filename]#/etc/iscsi.conf# with contents like this:
+
+[.programlisting]
+....
+t0 {
+	TargetAddress   = 10.10.10.10
+	TargetName      = iqn.2012-06.com.example:target0
+	AuthMethod      = CHAP
+	chapIName       = user
+	chapSecret      = secretsecret
+}
+....
+
+The `t0` specifies a nickname for the configuration file section. It will be used by the initiator to specify which configuration to use. The other lines specify the parameters to use during connection. The `TargetAddress` and `TargetName` are mandatory, whereas the other options are optional. In this example, the CHAP username and secret are shown.
+
+To connect to the defined target, specify the nickname:
+
+[source,bash]
+....
+# iscsictl -An t0
+....
+
+Alternately, to connect to all targets defined in the configuration file, use:
+
+[source,bash]
+....
+# iscsictl -Aa
+....
+
+To make the initiator automatically connect to all targets in [.filename]#/etc/iscsi.conf#, add the following to [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+iscsictl_enable="YES"
+iscsictl_flags="-Aa"
+....

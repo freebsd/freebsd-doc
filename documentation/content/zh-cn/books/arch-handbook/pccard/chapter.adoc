@@ -1,0 +1,204 @@
+---
+title: 第 16 章 PC Card
+prev: books/arch-handbook/sound
+next: books/arch-handbook/bibliography
+---
+
+[[pccard]]
+= PC Card
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:part-signifier: 部分
+:appendix-caption: 附录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 16
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+本章将讨论FreeBSD为编写PC Card或CardBus设备的驱动程序而提供的机制。 但目前本文只记录了如何向现有的pccard驱动程序中添加驱动程序。
+
+[[pccard-adddev]]
+== 添加设备
+
+向所支持的pccard设备列表中添加新设备的步骤已经与系统在FreeBSD 4 中使用的方法不同了。在以前的版本中，需要编辑 [.filename]##/etc##中的一个文件来列出设备。从FreeBSD 5.0开始， 设备驱动程序知道它们支持什么设备。现在内核中有一个受支持设备的表， 驱动程序用它来连接设备。
+
+[[pccard-overview]]
+=== 概览
+
+可以有两种方法来识别PC Card，他们都基于卡上的 CIS信息。第一种方法是使用制造商和产品的数字编号。 第二种方法是使用人可读的字符串，字符串也是包含在CIS中。PC Card总线 使用集中式数据库和一些宏来提供一个易用的设计模式，让驱动程序的编写 者很容易地确定匹配其驱动程序的设备。
+
+一个很普遍的实际情况是，某个公司为一款PC Card产品开发出参考 设计，然后把这个设计卖给另外的公司，以便在市场上出售。那些公司改进 原设计，把向他们的目标客户群或地理区域出售产品，并将他们自己的名字 放到卡中。然而所谓的对现有卡的改进，即使做过任何修改，这些修改通常 也微乎其微。然而，为了强化他们自己版本的品牌，这些供货商常常会把他们 公司的名字放入CIS空间的可读字符串中，却不会改动制造商和产品的ID。 
+
+鉴于以上情况，对于FreeBSD来说使用数字ID可以减小工作量。同时也 会减小将ID加入到系统的过程中所带来的复杂性。必须仔细检查谁是卡的 真正制造者，尤其当提供原卡的供货商在中心数据库中已经有一个不同的ID 时。Linksys，D-Link和NetGear是经常出售相同设计的几个美国制造商。 相同的设计可能在日本以诸如Buffalo和Corega的名字出售。然而，这些 设备常常具有相同的制造商和产品ID。
+
+PC Card总线在其中心数据库 [.filename]##/sys/dev/pccard/pccarddevs##中保存了卡的信息， 但不包含哪个驱动程序与它们关联的信息。它也提供了一套宏，以允许在 驱动程序用来声明设备的表中容易地创建简单条目。
+
+最后，某些非常低端的设备根本不包含制造商标识。这些设备需要使用 可读CIS字符串来匹配它们。如果我们不需要这种应急办法该有多好，但对于 某些非常低端却非常流行的CD-ROM播放器来说却是必需的。通常应当避免 使用这种方法，但本节中还是列出了很多设备，因为它们是在认识到PC Card商业的OEM本质之前加入的，应当优先使用 数字方法。
+
+[[pccard-pccarddevs]]
+=== [.filename]##pccarddevs##的格式
+
+[.filename]##pccarddevs##文件有四节。第一节为使用 它们的那些供货商列出了制造商号码。本节按数字排序。下一节包含了 这些供货商使用的所有产品，包括他们的产品ID号码和描述字符串。 描述字符串通常不会被使用（相反，即使我们可以匹配数字版本号，我们 仍然基于人可读的CIS设置设备的描述）。然后为使用字符串匹配方法的 那些设备重复这两节的东西。最后，文件任何地方可以使用C风格的注释。 
+
+文件的第一节包含供货商ID。请保持列表按数字排序。此外，为了 能有一个通用清晰的保存地来方便地保存这些信息，我们与NetBSD共享此 文件，因此请协调对此文件的任何更改。例如：
+
+[.programlisting]
+....
+vendor FUJITSU			0x0004  Fujitsu Corporation
+vendor NETGEAR_2		0x000b  Netgear
+vendor PANASONIC		0x0032	Matsushita Electric Industrial Co.
+vendor SANDISK			0x0045	Sandisk Corporation
+....
+
+显示了几个供货商ID。很凑巧的是``NETGEAR_2`` 实际上是NETGEAR从其购买卡的OEM，对那些卡提供支持的作者那时并不知道 NETgear使用的是别人的ID。这些条目相当直接易懂。每行上都有供货商 关键字来指示本行的类别。也有供货商的名字。名字将会在pccarddevs文件 的后面重复出现，名字也会用在驱动程序的匹配表中，因此保持它的短小 并且是有效的C标识符。还有一个给供货商的十六进制数字ID。不要添加 ``0xffffffff``或``0xffff``形式的ID， 因为它们是保留ID（前者是'空ID集合'，而后者有时会在质量极其差的卡中 看到，用来指示none）。最后还有关于制卡公司的描述字符串。这个字符串 在FreeBSD中除了用于注释目的外并没有被使用过。
+
+文件的第二节包含产品. 如你在下面例子中看到的: 
+
+[.programlisting]
+....
+/* Allied Telesis K.K. */
+product ALLIEDTELESIS LA_PCM	0x0002 Allied Telesis LA-PCM
+
+/* Archos */
+product	ARCHOS ARC_ATAPI	0x0043 MiniCD
+....
+
+格式与供货商的那些行相似。其中有产品关键字。然后是供货商名字， 由上面重复而来。后面跟着产品名字，此名字在驱动程序中使用，且应当 是一个有效C标识符，但可以以数字开头。然后是卡的十六进制产品ID。 供货商通常对``0xffffffff``和 ``0xffff``有相同的约定。最后是关于设备自身的字符串 描述。由于FreeBSD的pccard总线驱动程序会从人可读的CIS条目创建一个 字符串，因此这个字符串在FreeBSD中通常不被使用，但某些CIS条目不能 满足要求的情况下还可能使用。产品按制造商的字母顺序排序，然后再按 产品ID的数字排序。每个制造商条目前有一条C注释，条目之间有一个空行。 
+
+第三节很象前面的供货商一节，但所由的制造商ID为 ``-1``。``-1``在FreeBSD pccard总线 代码中意味着"匹配发现的任何东西"。由于它们是C标识符， 它们的名字必须唯一。除此之外格式等同于文件的第一节。
+
+最后一节包含那些必须用字符串匹配的卡。这一节的格式与通用 节的格式有点不同：
+
+[.programlisting]
+....
+product ADDTRON AWP100		{ "Addtron", "AWP-100spWirelessspPCMCIA", "Versionsp01.02", NULL }
+product ALLIEDTELESIS WR211PCM	{ "AlliedspTelesisspK.K.", "WR211PCM", NULL, NULL } Allied Telesis WR211PCM
+....
+
+我们已经熟悉了产品关键字，后跟供货商名字，然后再跟卡的名字， 就象在文件第二节中那样。然而，这之后就与那格式不同了。有一个 {}分组，后跟几个字符串。这些字符串对应CIS_INFO三元组中定义的 供货商，产品和额外信息。这些字符串被产生 [.filename]##pccarddevs.h##的程序过滤，将 sp替换为 实际的空格。空条目意味着条目的这部分应当被忽略。在我选择的例子中 有一个错误的条目。除非对卡的操作来说至关重要，否则不应当在其中 包含版本号。有时供货商在这个字段中会有卡的很多不同版本，这些版本 都能工作，这种情况下那些信息只会让那些拥有相似卡的人在FreeBSD中 更难以使用。有时当供货商出于市场考虑（可用性，价格等等），希望出售 同一品牌下的很多不同部分时，这也是有必要的。如果这样，则在那些 供货商仍然保持相同的制造商/产品对的少见情况下，能否区分开卡至关 重要. 此时不能使用正则表达式匹配。
+
+[[pccard-probe]]
+=== 探测例程样例
+
+要懂得如何向所支持的设备列表中添加设备，就必须懂得很多驱动程序 都有的探测和/或匹配例程。由于也为老卡提供了一个兼容层，这在 FreeBSD 5.x中有一点复杂。由于只是window-dressing不同，这儿给出了 一个理想化的版本。
+
+[.programlisting]
+....
+static const struct pccard_product wi_pccard_products[] = {
+	PCMCIA_CARD(3COM, 3CRWE737A, 0),
+	PCMCIA_CARD(BUFFALO, WLI_PCM_S11, 0),
+	PCMCIA_CARD(BUFFALO, WLI_CF_S11G, 0),
+	PCMCIA_CARD(TDK, LAK_CD011WL, 0),
+	{ NULL }
+};
+
+static int
+wi_pccard_probe(dev)
+	device_t	dev;
+{
+	const struct pccard_product *pp;
+
+	if ((pp = pccard_product_lookup(dev, wi_pccard_products,
+	    sizeof(wi_pccard_products[0]), NULL)) != NULL) {
+		if (pp-pp_name != NULL)
+			device_set_desc(dev, pp-pp_name);
+		return (0);
+	}
+	return (ENXIO);
+}
+....
+
+这儿我们有一个可以匹配少数几个设备的简单pccard探测例程。如上面 所提到，名字可能不同（如果不是 ``foo_pccard_probe()``则就是 ``foo_pccard_match()``）。函数 ``pccard_product_lookup()``是一个通用函数，它遍历 表并返回指向它所匹配的第一项的指针。一些驱动程序可能使用这个机制来 将某些卡的附加信息传递到驱动程序的其它部分，因此表中可能有些变体。 唯一的要求就是如果你有一个不同的表，则让表的结构的第一个元素为 结构pccard_product。
+
+观察一下表``wi_pccard_products``就会发现， 所有条目都是 ``PCMCIA_CARD(_foo_， _bar_， _baz_)``的形式。 __foo__部分为来自 [.filename]##pccarddevs##的制造商ID。 __bar__部分为产品。 __baz__为此卡所期望的功能号。许多pccards 可以有多个功能，需要有办法区分开功能1和功能0。你可以看一下 ``PCMCIA_CARD_D``，它包括了来自 [.filename]##pccarddevs##文件的设备描述。你也可以看看 ``PCMCIA_CARD2``和 ``PCMCIA_CARD2_D``，当你需要按 "使用默认描述"和"从pccarddevs中取得" 做法，同时匹配CIS字符串和制造商号码时就会用到它们。
+
+[[pccard-add]]
+=== 将它合在一起
+
+因此，为了一个增加新设备，必须进行下面步骤。首先，必须从设备 获得标识信息。完成这个最容易的方法就是将设备插入到PC Card或CF槽中， 并发出``devinfo -v``。你可能会看到一些类似下面的 东西：
+
+[.programlisting]
+....
+        cbb1 pnpinfo vendor=0x104c device=0xac51 subvendor=0x1265 subdevice=0x0300 class=0x060700 at slot=10 function=1
+          cardbus1
+          pccard1
+            unknown pnpinfo manufacturer=0x026f product=0x030c cisvendor="BUFFALO" cisproduct="WLI2-CF-S11" function_type=6 at function=0
+....
+
+作为输出的一部分。制造商和产品为产品的数字ID。而cisvender和 cisproduct为CIS中提供的描述本产品的字符串。
+
+由于我们首先想优先使用数字选项，因此首先尝试创建基于此的条目。 为了示例，上面的卡已经被稍稍虚构化了。我们看到的供货商为BUFFALO， 它已经有一个条目了：
+
+[.programlisting]
+....
+vendor BUFFALO			0x026f	BUFFALO (Melco Corporation)
+....
+
+这样我们就可以了。为这个卡查找一个条目，但我们没有发现。但我们 发现：
+
+[.programlisting]
+....
+/* BUFFALO */
+product BUFFALO WLI_PCM_S11	0x0305	BUFFALO AirStation 11Mbps WLAN
+product BUFFALO LPC_CF_CLT	0x0307	BUFFALO LPC-CF-CLT
+product	BUFFALO	LPC3_CLT	0x030a	BUFFALO LPC3-CLT Ethernet Adapter
+product BUFFALO WLI_CF_S11G	0x030b	BUFFALO AirStation 11Mbps CF WLAN
+....
+
+我们就可以向[.filename]##pccarddevs##中添加：
+
+[.programlisting]
+....
+product BUFFALO WLI2_CF_S11G	0x030c	BUFFALO AirStation ultra 802.11b CF
+....
+
+目前，需要一个手动步骤来 重新产生[.filename]##pccarddevs.h##，用来将这些标识符转换 到客户驱动程序。你在驱动程序中使用它们之前必须完成下面步骤： 
+
+[source,bash]
+....
+# cd src/sys/dev/pccard
+# make -f Makefile.pccarddevs
+
+....
+
+一旦完成了这些步骤，你就可以向驱动程序中添加卡了。这只是一个 添加一行的简单操作：
+
+[.programlisting]
+....
+static const struct pccard_product wi_pccard_products[] = {
+	PCMCIA_CARD(3COM, 3CRWE737A, 0),
+	PCMCIA_CARD(BUFFALO, WLI_PCM_S11, 0),
+	PCMCIA_CARD(BUFFALO, WLI_CF_S11G, 0),
++	PCMCIA_CARD(BUFFALO, WLI_CF2_S11G, 0),
+	PCMCIA_CARD(TDK, LAK_CD011WL, 0),
+	{ NULL }
+};
+....
+
+注意，我在我添加的行前面包含了``+``，但这只是 用来强调这一行。不要把它添加到实际驱动程序中。一旦你添加了这行，就 可以重新编译内核或模块，并试着看它是否能识别设备。如果它识别出设备 并能工作，请提交补丁。如果它不工作，请找出让它工作所需要的东西并 提交一个补丁。如果它根本不识别设备，那么你可能做错了什么，应当重新 检查每一步。
+
+如果你是一个FreeBSD源代码的committer，并且所有东西看起来都 正常工作，则你应当把这些改变提交到树中。然而有些小技巧的东西你 需要考虑。首先，你必须提交[.filename]##pccarddevs##文件到 树中。完成后，你必须重新产生[.filename]##pccarddevs.h## 并将它作为另一次提交来提交（这是为了确保正确的 $FreeBSD$标签会留在后面的文件中）。最后，你需要把 其它东西提交到驱动程序。
+
+[[pccard-pr]]
+=== 提交新设备
+
+很多人直接把新设备的条目发送给作者。请不要那样做。请将它们作为 PR来提交，并将PR号码发送给作者用于记录。这样确保条目不会丢失。提交 PR时，补丁中没有必要包含[.filename]##pccardevs.h##的diff， 因为那些东西可以重新产生。包含设备的描述和客户驱动程序的补丁是必要 的。如果你不知道名字，使用OEM99作为名字，作者将会调查后相应地调整 OEM99。提交者不应当提交OEM99，而应该找到最高的OEM条目并提交高于那个 的一个。

@@ -1,0 +1,1671 @@
+---
+title: 第19章 PPP と SLIP
+part: パートIV. ネットワーク通信
+prev: books/handbook/serialcomms
+next: books/handbook/mail
+---
+
+[[ppp-and-slip]]
+= PPP と SLIP
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目次
+:table-caption: 表
+:figure-caption: 図
+:example-caption: 例 
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 19
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/ppp-and-slip/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/ppp-and-slip/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/ppp-and-slip/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/ja/mailing-lists.adoc[]
+include::shared/ja/teams.adoc[]
+include::shared/ja/urls.adoc[]
+
+toc::[]
+
+== この章では
+
+もしあなたがモデムを使ってインターネットに接続したり, 他の人々に FreeBSD によるインターネットへのダイヤルアップ接続を 提供しようとしているのでしたら, PPP または SLIP 接続を選択することができます.
+
+この節では 3 種類の PPP について説明しています. それは _ユーザ_, _カーネル_, そして _PPPoE_ (PPP オーバイーサネット) です. また SLIP のクライアントとサーバの設定についても記述しています.
+
+最初に説明するのは, ユーザ PPP です. ユーザ PPP は FreeBSD に 2.0.5-RELEASE の時に, 既に存在していたカーネル実装の PPP に加えて導入されました.
+
+ユーザ PPP とカーネル PPP の主な違いは何かと疑問に思われるかも 知れませんが, その答えは簡単です. ユーザ PPP はデーモンとしては実行されず 必要に応じて実行されるのです. PPP インタフェイスを組み込んだカーネルは 必要ではなく, ユーザプロセスとして実行されカーネルとのデータの やり取りにはトンネルデバイスドライバ ([.filename]#tun#) を 使用します.
+
+この節ではこれ以降ユーザ PPP のことは, `pppd` のような他の PPP ソフトウエアと特に区別する必要がある場合を除いて, 単に ppp と記述します. またこの節に記述されているコマンドは すべて root で実行されなければなりません.
+
+[[userppp]]
+== ユーザ ppp の利用
+
+=== ユーザ PPP
+
+==== 前提条件
+
+以下の情報を手に入れておく必要があるでしょう:
+
+* PPP で接続するインターネットサービスプロバイダ (ISP) のアカウント. さらに, 接続済みのモデム (またはその他のデバイス) があり, プロバイダとの接続が可能なように正しく設定されている.
+* プロバイダの電話番号.
+* ログイン名とパスワード. これは通常の unix 形式のログイン名と パスワードの組という場合もありますし, PPP PAP または CHAP の ログイン名とパスワードの組という場合もあります.
+* 一つ以上のネームサーバの IP アドレス. 通常, プロバイダから IP アドレスを二つ指示されている はずです. 一つすら提供されていないならば, [.filename]#ppp.conf# ファイル中で `enable dns` コマンドを使って ppp にネームサーバを設定するよう 指示できます.
+
+プロバイダからは以下の情報が提供されているはずですが, どうしても必要というわけではありません: 
+
+* プロバイダのゲートウェイの IP アドレス. ゲートウェイとは, あなたがそこに接続をおこなって, _デフォルトルート_ として設定することになるマシンです. プロバイダがこのアドレスを明示していなくても, 最初は 適当に設定しておいて, 接続時にプロバイダの PPP サーバから 正しいアドレスを教えてもらうことができます.
++ 
+このアドレスは, ppp から ``HISADDR``として参照されます.
+* プロバイダのネットマスク設定. プロバイダが明示していないとしても, ネットマスクとして `255.255.255.0` を使用しておけば問題ありません.
+* もしプロバイダから固定の IP アドレスとホスト名の割り当てを 受けていれば, その情報を指定しておくこともできます. 割り当てを受けていなければ, 接続先から適切な IP アドレスを指定してもらいます. 
+
+もし, 必要な情報が不足していれば, プロバイダに連絡を取って 確認しておいてください.
+
+==== ppp 対応カーネルの構築
+
+説明でも述べているように, `ppp` はカーネルの [.filename]#tun# デバイスを使います. 使っているカーネルがどれであっても, [.filename]#tun# デバイスを設定しなければなりません. FreeBSDに付属しているデフォルトの [.filename]#GENERIC# カーネルに合うように [.filename]#tun# デバイスは前もって設定されています. しかしながら, 自分で修正したカーネルをインストールするのであれば, pppが正しく動くよう, カーネルが設定されているか確認しなくてはいけません.
+
+これを確認するには, カーネルコンパイルディレクトリ ([.filename]#/sys/i386/conf# または [.filename]#/sys/pc98/conf#) に移動して, カーネルコンフィグレーションファイルを調べます. 以下の行がどこかに含まれている必要があります.
+
+[.programlisting]
+....
+pseudo-device tun 1
+....
+
+この行がカーネルコンフィグレーションファイルに 含まれていない場合, この行を追加して カーネルの再コンパイルとインストールをおこなう必要があります. 元々の [.filename]#GENERIC# カーネルは 標準でこれを含んでいますので, カスタムカーネルをインストールしているのではなかったり, [.filename]#/sys# ディレクトリが存在しないのであれば, 何も変更する必要はありません. カーネルコンフィグレーションの詳細については, crossref:kernelconfig[kernelconfig,FreeBSD カーネルのコンフィグレーション] を参照してください.
+
+以下のコマンドを実行することで, 現在のカーネルにトンネルデバイスが いくつ組み込まれているかを調べることができます:
+
+[source,bash]
+....
+# ifconfig -a
+tun0: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 1500
+	inet 200.10.100.1 --> 203.10.100.24 netmask 0xffffffff
+tun1: flags=8050<POINTOPOINT,RUNNING,MULTICAST> mtu 576
+tun2: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 1500
+	inet 203.10.100.1 --> 203.10.100.20 netmask 0xffffffff
+tun3: flags=8010<POINTOPOINT,MULTICAST> mtu 1500
+....
+
+[NOTE]
+====
+FreeBSD 4.0やより最近のリリースでは, すでに使われている [.filename]#tun# デバイスしか見つけることが できないでしょう. これは, __全く__ [.filename]##tun## デバイスを見つけることが できないかもしれないということです. しかし, もしこうなって しまっても, 心配することはありません. そのデバイスは `ppp` が使おうとする時に動的に作られるはず だからです. 
+====
+
+この例ではトンネルデバイスが四つ存在し, そのうち二つに 設定がおこなわれ, 使用中であることがわかります. 上の例で `RUNNING` フラグがオンになっている ものがありますが, これは そのインタフェースが何かに使用されていることを示している だけであるということに注意してください. つまり, `RUNNING` になっていない インタフェースがあったとしても, それはエラーではありません. 
+
+トンネルデバイスがカーネルに組み込まれておらず, 何らかの理由で カーネルの再構築ができない場合でも, 方法がないわけではありません. 動的にデバイスをロードすることができるはずです. 詳細については man:modload[8] や man:lkm[4] など, 適切なマニュアルを参照してください.
+
+==== tun デバイスの確認
+
+ほとんどのユーザは [.filename]#tun# デバイス ([.filename]#/dev/tun0#) が一つあれば充分でしょう. より多くのデバイスを使う場合 (すなわち, カーネルコンフィグレーション ファイルで `pseudo-device tun` の行に `1` 以外の数値を指定している場合), 以下で [.filename]#tun0# と書かれている部分をすべて, あなたが使うデバイスの番号に あわせて読みかえてください.
+
+[.filename]#tun0# デバイスが正しく作成されていることを確認する最も簡単な方法は, それを作り直すことです. そのためには, 以下のコマンドを実行します:
+
+[source,bash]
+....
+# cd /dev
+# ./MAKEDEV tun0
+....
+
+カーネルに 16 個のトンネルデバイスを組み込んだのであれば, [.filename]#tun0# だけでなく他の tun デバイスも作成しておく必要があるでしょう:
+
+[source,bash]
+....
+# cd /dev
+# ./MAKEDEV tun15
+....
+
+また, カーネルが正しく設定されているかどうかを調べるために 以下のコマンドを実行して, このような出力が得られることを確認します:
+
+[source,bash]
+....
+# ifconfig tun0
+tun0: flags=8050<POINTOPOINT,RUNNING,MULTICAST> mtu 1500
+....
+
+まだ `RUNNING` フラグがセットされていない場合もあります. その時は以下のような出力が得られるでしょう: 
+
+[source,bash]
+....
+# ifconfig tun0
+tun0: flags=8010<POINTOPOINT,MULTICAST> mtu 1500
+....
+
+前述したように, FreeBSD 4.0 以降のリリースでは [.filename]#tun# デバイスは要求に応じて 作られるので, もしそのデバイスがまだ使われていなければ, 見つけられないかもしれないということを思い出してください.
+
+==== 名前の解決に関する設定
+
+リゾルバ (resolver) はシステムの一部分で, IP アドレスとホスト名との 変換をおこないます. IP アドレスとホスト名を対応させるためのマップを, 二つの場所のうちの一つから探すように設定できます. 一つめは [.filename]#/etc/hosts# (`man 5 hosts`) と呼ばれるファイルです.  二つめはインターネット ドメインネームサービス (DNS) と呼ばれる 分散データベースですが, これに関する議論は このドキュメントで扱う範囲を 越えていますので, これについての説明はおこないません.
+
+リゾルバは名前のマッピングを おこなうシステムコールの集合体です. ただし どこからマッピング情報を見つけるのかは, 最初に指示しておく必要があります. これは まず [.filename]#/etc/host.conf# ファイルを編集することでおこないます. 混乱の元になりますので, このファイルを [.filename]##/etc/hosts.conf##と 呼んだりしては__いけません__ (余分な `s` がついていますね).
+
+===== [.filename]#/etc/host.conf# ファイルの編集
+
+このファイルには 以下の 2 行が (この順番で) 書かれているはずです:
+
+[.programlisting]
+....
+hosts
+bind
+....
+
+これは, 最初に [.filename]#/etc/hosts# ファイルを調べ, そこで目的の名前が 見つけられなかった場合に DNS を引きにいくようリゾルバに指示します.
+
+===== /etc/hosts(5) ファイルの編集
+
+このファイルはローカルネットワーク上に存在するマシンの IP アドレスと ホスト名を含んでいるはずです. 最低でも ppp を動作させるマシンのエントリが 含まれている必要があります. そのマシンのホスト名が `foo.bar.com` で, IP アドレスが `10.0.0.1` であると仮定すると, [.filename]#/etc/hosts# は 以下の行を含んでいなければいけません:
+
+[.programlisting]
+....
+127.0.0.1	localhost.bar.com	localhost
+127.0.0.1	localhost.bar.com.
+10.0.0.1	foo.bar.com		foo
+10.0.0.1	foo.bar.com.
+....
+
+一つめの行は `localhost` を現在のマシンの別名として定義しています. マシン固有の IP アドレスが何であっても, この行の IP アドレスは 常に `127.0.0.1` でなければいけません. 二つめの行はホスト名 `foo.bar.com` (と, その省略形 `foo`) を IP アドレス `10.0.0.1` にマップします.
+
+もしプロバイダから固定の IP アドレスとホスト名を割り当てられて いるのであれば, それを `10.0.0.1` エントリのかわりに使ってください.
+
+===== [.filename]#/etc/resolv.conf# ファイルの編集
+
+[.filename]#/etc/resolv.conf# はリゾルバの振舞いを指定します. もし自前の DNS サーバを走らせているのなら, このファイルは空のままに しておくこともできます. 通常は, 以下のように書いておく必要があるでしょう:
+
+[.programlisting]
+....
+domain bar.com
+nameserver x.x.x.x
+nameserver y.y.y.y
+....
+
+`_x.x.x.x_` と `_y.y.y.y_` はプロバイダから指示されたアドレスで, 接続するプロバイダが提供しているネームサーバを すべて書いてください. `domain` に指定するのは このマシンのデフォルトのドメイン名で, おそらく 書かなくても問題は無いでしょう. このファイルの各エントリの詳細については, [.filename]#resolv.conf# のマニュアルページを参照してください.
+
+バージョン 2 以降の ppp を使用している場合には, `enable dns` コマンドを使用してネームサーバのアドレスを プロバイダに問い合わせるように指示することができます. 上の指定とは異なるアドレスをプロバイダが指定してきた場合 (または [.filename]#/etc/resolv.conf# でネームサーバが指定されていない場合), ppp はプロバイダが指定したアドレスで [.filename]#resolv.conf# を書きかえます. 
+
+==== `ppp` の設定
+
+ユーザ ppp と `pppd` (カーネルレベルの PPP 実装) は どちらも [.filename]#/usr/shared/examples/ppp# ディレクトリに置かれた設定ファイルを使います. ここには設定ファイルのサンプルが用意されていて, ユーザ ppp の設定を おこなう際に大変参考になりますので, 削除したりしないでください.
+
+`ppp` の設定をするためには, 必要に応じていくつかのファイルを編集する必要が あります. 書き込む内容は, プロバイダが静的に IP アドレスを割り当てる (つまり, 固定の IP アドレスを一つ与えられて, 常にそれを使う) か, または動的に IP アドレスを割り当てる (つまり, PPP セッションごとに IP アドレスが変化する可能性がある) かということに ある程度依存します.
+
+[[userppp-staticIP]]
+===== 静的 IP アドレスによる PPP 接続
+
+まず [.filename]#/etc/ppp/ppp.conf# という設定ファイルを作成する必要があります. これは以下の例とほとんど同じようなものになるでしょう.
+
+[NOTE]
+====
+`:` で終る行は 1 カラム目から始め, その他の行はスペースまたはタブで以下の例のように 段をつける (インデントする) 必要があります.
+====
+
+[.programlisting]
+....
+1     default:
+2       set device /dev/cuaa0
+3       set speed 115200
+4       set dial "ABORT BUSY ABORT NO\\sCARRIER TIMEOUT 5 \"\" ATE1Q0 OK-AT-OK \\dATDT\\TTIMEOUT 40 CONNECT"
+5     provider:
+6       set phone "(123) 456 7890"
+7       set login "TIMEOUT 10 \"\" \"\" gin:--gin: foo word: bar col: ppp"
+8       set timeout 300
+9       set ifaddr x.x.x.x y.y.y.y 255.255.255.0 0.0.0.0
+10      add default HISADDR
+11      enable dns
+....
+
+ファイルでは行番号を取り除いておいてください. これは解説の際に参照する行を示すためにつけたものです.
+
+Line 1:::
+デフォルトエントリを指定します. このエントリ中のコマンドは ppp が起動された際に自動的に実行されます.
+
+Line 2:::
+モデムが接続されているデバイスを指定します. [.filename]#COM1:# は [.filename]#/dev/cuaa0# に, [.filename]#COM2:# は [.filename]#/dev/cuaa1# になります.
+
+Line 3:::
+通信速度 (DTE 速度) を指定します. もし 115200 が使えない (最近のモデムなら大抵使えるはずですが) 場合には, かわりに 38400 を指定してみてください.
+
+Line 4:::
+ダイアルスクリプトを指定します. ユーザ PPP は man:chat[8] 言語に似た, 受信待ち文字列と 送信文字列の対からなるスクリプトを使用します. この言語の機能に関しては, マニュアルページを参照してください.
+
+Line 5:::
+接続するプロバイダの名前 "provider" を エントリ名として指定します.
+
+Line 6:::
+このプロバイダの電話番号を指定します. 複数の電話番号を `:` や `|` で区切って指定することができます. これら区切り文字の違いについては, man:ppp[8] に 詳しく書かれています. 要約すると, 毎回違う番号に かけたいのであれば `:` を使います. 常に まず先頭の番号にかけてみて, つながらない時にだけ 2 番目以降の番号に かけたいのであれば `|` を使います. 例に示されているように, 常に電話番号全体を引用符で くくって (クォートして) おきます.
+
+Line 7:::
+ダイアルスクリプトと同様に, ログインスクリプトも chat 言語風の記述をおこないます. この例は, 以下のようなログインセッションを使用する プロバイダのためのものです:
++
+[source,bash]
+....
+J. Random Provider
+login: foo
+password: bar
+protocol: ppp
+....
++
+このスクリプトは必要に応じて 書きかえなければならないでしょう. 初めてスクリプトを書く時には, 予想した通りに 処理が進んだかどうかを確認するため, "chat" ログを とるようにしておいた方が良いでしょう. 
++
+PAP や CHAP を使用する場合には, ここでログインすることは ありませんから, ログイン文字列は空白のままにしておくべきです. 詳細については <<userppp-PAPnCHAP,PAP および CHAP による認証>>を参照してください.
+
+Line 8:::
+デフォルトの接続タイムアウト時間を (秒数で) 指定します. この例では, 300 秒間 通信がおこなわれなければ 自動的に接続を切るように指定しています. タイムアウトさせたくない場合には, この値を 0 に設定します.
+
+Line 9:::
+インタフェースのアドレスを指定します. 文字列 _x.x.x.x_ は プロバイダに割り当てられた IP アドレスで置きかえてください. 文字列 _y.y.y.y_ はプロバイダから指示されたゲートウェイ (接続先となるマシン) の IP アドレスで置きかえてください. プロバイダがゲートウェイのアドレスを 指示していない場合は, `10.0.0.2/0` を使用しておいてください. もし "仮の" アドレスを使用する必要がある場合には, <<userppp-dynamicIP,動的 IP アドレスによる PPP 接続>>に関する指示に従って, [.filename]#/etc/ppp/ppp.linkup# にエントリを作成していることを 確認してください. この行が省略されている場合, ppp を `-auto` モードで動作させることはできません. 
+
+Line 10:::
+プロバイダのゲートウェイへの経路を デフォルトルートとして 追加します. 特殊文字列 `HISADDR` は, 9 行目で指定された ゲートウェイのアドレスで置きかえられます. `HISADDR` は 9 行目までは初期化されていませんので, その行よりも後でしか使えないことに 注意してください.
+
+Line 11:::
+ネームサーバのアドレスが正しいか どうかを確認するため, プロバイダに問い合わせをおこなうよう ppp に指示します. プロバイダがこの機能をサポートしていれば, ppp は [.filename]#/etc/resolv.conf# のネームサーバエントリを 正しいアドレスに更新することができます. 
+
+静的な IP アドレスを持っていて, 接続が完了する前にルーティングテーブルの エントリが正しく設定されているのであれば, [.filename]#ppp.linkup# に エントリを追加する必要はありません. しかし, この場合でもエントリを追加して, 接続が完了した時点で プログラムを呼び出したいことがあるかもしれません. これについては後ほど sendmail を例として説明します.
+
+これらの設定ファイルのサンプルが [.filename]#/usr/shared/examples/ppp# ディレクトリに 置かれています.
+
+[[userppp-dynamicIP]]
+===== 動的 IP アドレスによる PPP 接続
+
+プロバイダが静的な IP アドレスの割り当てをおこなっていない場合, `ppp` が相手側のホスト (ゲートウェイ) と交渉して, こちら側と相手側のアドレスを 決めるように設定することができます. これは, 起動時には"仮の"アドレスを使っておいて, 接続後に IP コンフィグレーション プロトコル (IPCP) を使用して `ppp` が IP アドレスを正しく設定できるようにすることで実現されます. <<userppp-staticIP,静的 IP アドレスによる PPP 接続>>に 以下の変更を加える以外は, [.filename]#ppp.conf# の設定は同じです:
+
+[.programlisting]
+....
+9       set ifaddr 10.0.0.1/0 10.0.0.2/0 255.255.255.0
+....
+
+繰り返しますが, 行番号は取り除いておいてください. これは解説の際に参照する行を示すためにつけたものです. なお, 少なくともスペース 1 個分の段づけ (インデント) が必要です.
+
+Line 9:::
+`/` 文字の後ろの数字は, アドレス交渉の際に固定しておきたい ビットの数です. 場合によっては, もっと適切な IP アドレスを 指定しておきたいこともあるかもしれませんが, ほとんどの場合には 上の例の通りで問題ありません. 
++
+最後の引数 (`0.0.0.0`) は, アドレスの交渉の際に `10.0.0.1` ではなく `0.0.0.0` を使用するよう ppp に指示するためのものです. `set ifaddr` コマンドの最初の引数として `0.0.0.0` を指定してはいけません. さもないと, `-auto` モードで動作させる際に 初期経路を設定することができなくなります. 
+
+バージョン 1.X の ppp を使用する場合, [.filename]#/etc/ppp/ppp.linkup# にもエントリを作成しておく必要があります. [.filename]#ppp.linkup# は接続が確立された後に使用されます. この時点では, `ppp` は__実際に__どの IP アドレスを使うべきなのか わかっているはずです. 以下のエントリは存在する仮の経路を削除し, 正しい経路を作成します:
+
+[.programlisting]
+....
+1     provider:
+2       delete ALL
+3       add default HISADDR
+....
+
+Line 1:::
+接続を確立する際に, `ppp` は以下のルールに従って [.filename]#ppp.linkup# のエントリを検索します: まず [.filename]#ppp.conf# で使用されたのと同じラベルを探します. もし見つからなければ, ゲートウェイの IP アドレスのエントリを 探します. このエントリは 4 オクテットの IP アドレス形式の ラベルです. それでも まだエントリが見つからなければ, `MYADDR` エントリを探します.
+
+Line 2:::
+この行は, 使用する tun インタフェースに関する既存の経路を (ダイレクトルートのエントリを除き) すべて削除するよう `ppp` に指示します.
+
+Line 3:::
+この行は `HISADDR` への経路をデフォルトルートとして 追加するように ppp に指示します. `HISADDR` は IPCP で 決定されたゲートウェイの IP アドレスで置きかえられます.
+
+詳細なサンプルについては, [.filename]#/usr/shared/examples/ppp/ppp.conf.sample# ファイル中のpmdemand エントリと [.filename]#/usr/shared/examples/ppp/ppp.linkup.sample# を参照してください.
+
+バージョン 2 の ppp から "sticky routes" が導入されました. `MYADDR` や `HISADDR` を含む `add` コマンドと `delete` コマンドを記憶して, `MYADDR` や `HISADDR` の アドレスが変化した際には経路の再設定をおこないます. したがって, これらのコマンドを [.filename]#ppp.linkup# に 繰り返し記述する必要は無くなりました. 
+
+===== かかってきた電話を `ppp` で受けるには
+
+かかってきた電話を `ppp` が受けるように設定する際に, そのマシンが LAN に接続されているのであれば, パケットを LAN に転送するかどうかを決定する必要があります. 転送をおこなう場合には, その LAN のサブネットから IP アドレスを ppp クライアントに割り当て, 以下のコマンドを指定するのが良いでしょう. 
+
+[.programlisting]
+....
+gateway_enable=YES
+....
+
+====== どの getty を使いますか?
+
+getty でダイアルアップサービスをおこなう場合の優れた解説が crossref:serialcomms[dialup,FreeBSD でダイアルアップサービスをおこなうための設定 ]にあります.
+
+`getty` に代わるものとしては, http://www.leo.org/~doering/mgetty/index.html[mgetty] があります. これは `getty` をより柔軟にしたもので, ダイアルアップ回線での使用を意図して 設計されています.
+
+`mgetty` を使う場合の利点は, `mgetty` が積極的にモデムと__通信する__ ということです. つまり, もし [.filename]#/etc/ttys# でポートを閉じている場合, モデムは電話をとらなくなります.
+
+最近のバージョンの `mgetty` (0.99beta 以降) では, PPP ストリームの 自動検出もサポートされています. これにより, クライアント側で スクリプトを準備しなくてもサーバに アクセスすることができます.
+
+`mgetty` に関する, より詳細な情報については <<userppp-mgetty,Mgetty と AutoPPP>> を参照してください.
+
+====== ppp の実行許可
+
+`ppp` は通常, ID 0 のユーザ (root) として動作しなければいけませんが, 以下で説明するように, `ppp` を通常のユーザとしてサーバモードで実行させたい 場合には, そのユーザを [.filename]#/etc/group# の `network` グループに 追加して, ppp を実行する許可を与えておかなければいけません.
+
+また, そのユーザが設定ファイル内の目的のエントリに アクセスできるように, 以下のように `allow` コマンドで許可を与えておく必要があります: 
+
+[.programlisting]
+....
+allow users fred mary
+....
+
+このコマンドがデフォルトエントリに 書かれている場合には, 指定されたユーザは すべてのエントリをアクセスできるようになります.
+
+====== 動的 IP ユーザのための ppp シェルの設定
+
+[.filename]#/etc/ppp/ppp-shell# という名前で, 以下のような内容のファイルを 作成します:
+
+[.programlisting]
+....
+#!/bin/sh
+IDENT=`echo $0 | sed -e 's/^.*-\(.*\)$/\1/'`
+CALLEDAS="$IDENT"
+TTY=`tty`
+
+if [ x$IDENT = xdialup ]; then
+	IDENT=`basename $TTY`
+fi
+
+echo "PPP for $CALLEDAS on $TTY"
+echo "Starting PPP for $IDENT"
+
+exec /usr/sbin/ppp -direct $IDENT
+....
+
+このスクリプトには実行可能属性をつけておきます. 次に, 以下のコマンドを実行し, [.filename]#ppp-dialup# という名前で このスクリプトへのリンクを作成します:
+
+[source,bash]
+....
+# ln -s ppp-shell /etc/ppp/ppp-dialup
+....
+
+すべてのダイアルアップ ppp ユーザのログイン__シェル__として このスクリプトを使用します. 以下は `pchilds` というユーザ名の ダイアルアップユーザを [.filename]#/etc/password# へ登録した場合の例です. (パスワードファイルを直接エディタで編集したりせず, `vipw` を使ってください)
+
+[.programlisting]
+....
+pchilds:*:1011:300:Peter Childs PPP:/home/ppp:/etc/ppp/ppp-dialup
+....
+
+任意のユーザが読むことのできる, [.filename]#/home/ppp# ディレクトリを 作成します. [.filename]#/etc/motd# が表示されないようにするため, このディレクトリには以下のように大きさが 0 バイトのファイルを 作成しておきます.
+
+[source,bash]
+....
+-r--r--r--   1 root     wheel           0 May 27 02:23 .hushlogin
+-r--r--r--   1 root     wheel           0 May 27 02:22 .rhosts
+....
+
+====== 静的 IP ユーザのための PPP シェルの設定
+
+上記と同じように [.filename]#ppp-shell# ファイルを作成し, 静的な IP アドレスを割り当てるアカウントそれぞれについて [.filename]#ppp-shell# へのシンボリックリンクを作成します.
+
+例えば, クラス C ネットワークの経路制御を必要とする, 三人のダイアルアップユーザ `fred`, `sam`, `mary` がいるとすると, 以下のコマンドを実行することになります:
+
+[source,bash]
+....
+# ln -s /etc/ppp/ppp-shell /etc/ppp/ppp-fred
+# ln -s /etc/ppp/ppp-shell /etc/ppp/ppp-sam
+# ln -s /etc/ppp/ppp-shell /etc/ppp/ppp-mary
+....
+
+これらのユーザのダイアルアップアカウントでは, 上で作成した それぞれのシンボリックリンクを ログインシェルとして設定しておきます. (つまり, ユーザ `mary` のログインシェルは [.filename]#/etc/ppp/ppp-mary# に なります).
+
+====== 動的 IP ユーザのための ppp.conf の設定
+
+[.filename]#/etc/ppp/ppp.conf# ファイルは, 大体以下のような内容になるでしょう:
+
+[.programlisting]
+....
+default:
+  set debug phase lcp chat
+  set timeout 0
+
+ttyd0:
+  set ifaddr 203.14.100.1 203.14.100.20 255.255.255.255
+  enable proxy
+
+ttyd1:
+  set ifaddr 203.14.100.1 203.14.100.21 255.255.255.255
+  enable proxy
+....
+
+[NOTE]
+====
+上の例のように段をつける (インデントする) 必要があることに注意してください.
+====
+
+`default:` エントリはセッションごとにロードされます. [.filename]#/etc/ttys# で有効にしてある各ダイアルアップ回線ごとに一つ, 上記の `ttyd0:` のようなエントリを作成します. 各行の相手側アドレスとして, それぞれ別の IP アドレスを 動的 IP ユーザのための IP アドレスのプールから割り当てておく必要があります.
+
+====== 静的 IP ユーザのための [.filename]#ppp.conf# の設定
+
+上のサンプルの [.filename]#/usr/shared/examples/ppp/ppp.conf# の内容に加えて, 静的に IP を割り当てられたダイアルアップユーザ それぞれのためのエントリを追加する必要があります. ここでも `fred`, `sam`, `mary` の例を使うことにしましょう.
+
+[.programlisting]
+....
+fred:
+  set ifaddr 203.14.100.1 203.14.101.1 255.255.255.255
+
+sam:
+  set ifaddr 203.14.100.1 203.14.102.1 255.255.255.255
+
+mary:
+  set ifaddr 203.14.100.1 203.14.103.1 255.255.255.255
+....
+
+必要であれば, それぞれの静的 IP ユーザに対する経路制御情報も [.filename]#/etc/ppp/ppp.linkup# ファイルに書いておくべきでしょう. 以下の例ではクライアントの PPP リンクを経由する, クラス C の `203.14.101.0` ネットワークへの経路を追加しています.
+
+[.programlisting]
+....
+fred:
+  add 203.14.101.0 netmask 255.255.255.0 HISADDR
+
+sam:
+  add 203.14.102.0 netmask 255.255.255.0 HISADDR
+
+mary:
+  add 203.14.103.0 netmask 255.255.255.0 HISADDR
+....
+
+===== `mgetty`, AutoPPP, マイクロソフト拡張の詳細
+
+[[userppp-mgetty]]
+====== `mgetty` と AutoPPP
+
+`AUTO_PPP` オプションつきでコンパイルした `mgetty` を使えば, `mgetty` が PPP 接続の LCP フェーズを検出して, 自動的に PPP シェルを起動するように 設定することができます. しかし この場合, デフォルトの login/password シーケンスは発生しないので, ユーザの認証は PAP または CHAP を使っておこなう必要があります.
+
+このセクションでは, ユーザ (あなた) が問題なく `AUTO_PPP` オプションつきの `mgetty` (v0.99beta またはそれ以降) の設定, コンパイル, インストールができているものと仮定しています.
+
+[.filename]#/usr/local/etc/mgetty+sendfax/login.config# ファイルが 以下の行を含んでいることを確認してください:
+
+[.programlisting]
+....
+/AutoPPP/ -     -       /etc/ppp/ppp-pap-dialup
+....
+
+これにより, PPP 接続を検出したら `mgetty` が [.filename]#ppp-pap-dialup# スクリプトを実行するようになります.
+
+[.filename]#/etc/ppp/ppp-pap-dialup# という名前で, 以下のような内容のファイルを 作成します (このファイルには実行可能属性を つけておく必要があります):
+
+[.programlisting]
+....
+#!/bin/sh
+exec /usr/sbin/ppp -direct pap
+....
+
+さらに, かかってきた電話すべてを自分で扱うエントリを [.filename]#/etc/ppp/ppp.conf# に作成します.
+
+[.programlisting]
+....
+pap:
+  enable pap
+  set ifaddr 203.14.100.1 203.14.100.20-203.14.100.40
+  enable proxy
+....
+
+この方法でログインする それぞれのユーザは, PAP によるユーザ認証を おこなうために [.filename]#/etc/ppp/ppp.secret# ファイルにユーザ名とパスワードを 書いておくか, または [.filename]#/etc/password# ファイルを使うように,
+
+[.programlisting]
+....
+enable passwdauth
+....
+
+ユーザに静的な IP アドレスを割り当てる場合には, そのアドレスを [.filename]#/etc/ppp/ppp.secret# の第三引数として指定することができます. サンプルについては, [.filename]#/usr/shared/examples/ppp/ppp.secret.sample# を参照してください.
+
+====== マイクロソフト拡張
+
+クライアントからの要求に応じて, ppp が DNS や NetBIOS ネームサーバの アドレスを通知するように 設定をおこなうこともできます.
+
+バージョン 1.X の ppp で これらの拡張機能を有効にするには, 以下の行を [.filename]#/etc/ppp/ppp.conf# の適切なセクションに追加する必要があるでしょう. 
+
+[.programlisting]
+....
+enable msext
+set ns 203.14.100.1 203.14.100.2
+set nbns 203.14.100.5
+....
+
+バージョン 2 以降の ppp では, 以下のようになります:
+
+[.programlisting]
+....
+accept dns
+set dns 203.14.100.1 203.14.100.2
+set nbns 203.14.100.5
+....
+
+これにより, クライアントはプライマリと セカンダリのネームサーバアドレス および NetBIOS ネームサーバホストを知ることができます.
+
+バージョン 2 以降の ppp では, `set dns` の行を省略した場合には [.filename]#/etc/resolv.conf# に書かれているネームサーバのアドレスを使用します. 
+
+[[userppp-PAPnCHAP]]
+===== PAP および CHAP による認証
+
+いくつかのプロバイダでは, PAP または CHAP のいずれかの認証メカニズムを 使用して接続時の認証をおこなうように システムを設定しています. この場合, プロバイダは接続の際に `login:` プロンプトを送信せず, 最初から PPP で通信を始めようとするでしょう.
+
+PAP ではパスワードがそのまま送られてしまうため, CHAP に比べると安全性が 低くなりますが, このパスワードはシリアル回線のみを通して送られます. そのため, クラッカーが "盗み聞き" する余地は多くないので, 通常ここの セキュリティは問題にはなりません.
+
+<<userppp-staticIP,静的 IP アドレスによる PPP 接続>>または <<userppp-dynamicIP,動的 IP アドレスによる PPP 接続>>の セクションに戻って, 以下の変更をおこないます:
+
+[.programlisting]
+....
+7       set login
+...
+12      set authname MyUserName
+13      set authkey MyPassword
+....
+
+これまでと同様に, 行番号は取り除いておいてください. これは解説の際に参照する行を示すためにつけたものです. なお, 少なくともスペース 1 個分の段づけ (インデント) が必要です.
+
+Line 7:::
+PAP または CHAP を使用する場合, 通常 プロバイダはサーバへの ログインを必要としません. そのため, "set login" 文字列を 無効にしておかなければいけません.
+
+Line 12:::
+この行は PAP/CHAP ユーザ名を指定します. _MyUserName_ に 正しい値を入れておく必要があります.
+
+Line 13:::
+この行は PAP/CHAP パスワードを指定します. _MyPassword_ に 正しい値を入れておく必要があります. PAP と CHAP はデフォルトで両方とも 受け付けられるようになって いますが, PAP や CHAP を使用するという 意思を明示するために, 
++
+[.programlisting]
+....
+15      accept PAP
+....
+ または 
+[.programlisting]
+....
+15      accept CHAP
+....
+ という行を追加しておくのも良いでしょう.
+
+===== 動作中の ppp の設定変更
+
+適切な診断ポートが設定されている場合には, バックグラウンドで動作中の `ppp` プログラムと通信することができます. この設定をおこなうためには, 以下の行を設定ファイルに追加しておきます: 
+
+[.programlisting]
+....
+set server /var/run/ppp-tun%d DiagnosticPassword 0177
+....
+
+これにより, ppp は指定された unix ドメインの ソケットをモニタして, クライアントから正しいパスワードを受け取った後に アクセスを許可します. このソケット名に含まれる `%d` は, この ppp が使用している [.filename]#tun# デバイスの デバイス番号で置きかえられます.
+
+一旦ソケットの設定が終了したら, スクリプト中で man:pppctl[8] を 使用して, 動作中の ppp を操作することができるでしょう.
+
+[[userppp-final]]
+==== システムの最終設定
+
+これで `ppp` の設定は終りました. しかし `ppp` を動かす前に, まだ少し必要なことがあります. それらの設定は, すべて [.filename]#/etc/rc.conf# ファイルを 編集することでおこないます. (このファイルは以前には [.filename]#/etc/sysconfig# と呼ばれていました)
+
+このファイルを上から順に設定していきます. まずは `hostname=` の行が設定されていることを確認します. 例えば以下のように:
+
+[.programlisting]
+....
+hostname="foo.bar.com"
+....
+
+もしプロバイダが静的な IP アドレスとホスト名を割り当てているのなら, ホスト名としてそれを使うのが おそらくベストでしょう.
+
+次に `network_interfaces` 変数を調べます. 必要に応じて (on demand) プロバイダにダイアルするようにシステムを設定したい場合には, [.filename]#tun0# デバイスがこのリストに追加されていることを確認しておきます. それ以外の場合には, tun0 デバイスをリストから削除しておきます.
+
+[.programlisting]
+....
+network_interfaces="lo0 tun0" ifconfig_tun0=
+....
+
+[NOTE]
+====
+`ifconfig_tun0` 変数が空で, [.filename]#/etc/start_if.tun0# という名前の ファイルが作成されていなければなりません. このファイルの内容は以下のようになります.
+
+[.programlisting]
+....
+ppp -auto mysystem
+....
+
+このスクリプトはネットワークの設定時に実行され, ppp デーモンを自動モードで立ち上げます. このマシンがもし LAN のゲートウェイであれば, `-alias` スイッチも使用したいと思うかもしれません. 詳細に関しては, マニュアルページを参照してください.
+====
+
+以下のようにルータプログラムを `NO` に設定します.
+
+[.programlisting]
+....
+router_enable="NO"
+....
+
+`routed` は, `ppp` が作成したデフォルトのルーティングテーブル エントリを削除してしまう場合がありますので, (初期設定では起動されるようになっている) `routed` デーモンが 起動されないようにしておくことが重要です.
+
+`sendmail_flags` 行が `-q` オプションを含まないように 設定しておいた方がよいでしょう. さもないと, `sendmail` が アドレスを調べようとして発信をおこなってしまう場合があります. 以下のような設定で良いでしょう:
+
+[.programlisting]
+....
+sendmail_flags="-bd"
+....
+
+この結果, PPP リンクを立ち上げた時には いつでも以下のコマンドを実行して, キューにたまっているメールを `sendmail` に送信させる作業が必要になるでしょう.
+
+[source,bash]
+....
+# /usr/sbin/sendmail -q
+....
+
+[.filename]#ppp.linkup# 中で `!bg` コマンドを使用することで, これを自動的に おこなうこともできます:
+
+[.programlisting]
+....
+1     provider:
+2       delete ALL
+3       add 0 0 HISADDR
+4       !bg sendmail -bd -q30m
+....
+
+こうするのが嫌であれば, SMTP トラフィックをブロックするように "dfilter" を設定しておくこともできます. 詳細についてはサンプルファイルを参照してください.
+
+後はマシンをリブートするだけです.
+
+リブートが終ったら,
+
+[source,bash]
+....
+# ppp
+....
+
+コマンドを実行し, 続いて PPP セッションを開始させるために `dial provider` と入力することもできますし, ([.filename]#start_if.tun0# スクリプトを作成していない場合に), 外部へのトラフィックが発生した時に, `ppp` が自動的に セッションを確立してくれるようにしたいのであれば, 以下のコマンドを実行することもできます.
+
+[source,bash]
+....
+# ppp -auto provider
+....
+
+==== まとめ
+
+要約すると, 初めて ppp を設定する際には, 以下のステップが不可欠です:
+
+クライアント側:
+
+[.procedure]
+====
+. カーネルに [.filename]#tun# デバイスが組み込まれていることを確認.
+. [.filename]#/dev# ディレクトリに [.filename]#tunX# デバイスファイルが 存在することを確認.
+. [.filename]#/etc/ppp/ppp.conf# にエントリを作成. ほとんどのプロバイダでは, [.filename]#pmdemand# の例で充分でしょう.
+. 動的 IP アドレスを使用するなら, [.filename]#/etc/ppp/ppp.linkup# に エントリを作成.
+. [.filename]#/etc/rc.conf# (または [.filename]#sysconfig#) ファイルを更新.
+. 必要に応じてダイヤル (demand dialing) したいのであれば, [.filename]#start_if.tun0# スクリプトを作成.
+====
+
+サーバ側:
+
+[.procedure]
+====
+. カーネルに [.filename]#tun# デバイスが組み込まれていることを確認.
+. [.filename]#/dev# ディレクトリに [.filename]#tunX# デバイスファイルが 存在することを確認.
+. (man:vipw[8] コマンドを使って) [.filename]#/etc/passwd# にエントリを作成.
+. このユーザのホームディレクトリに `ppp -direct direct-server` か何かを実行するプロファイルを作成.
+. [.filename]#/etc/ppp/ppp.conf# にエントリを作成. [.filename]#direct-server# の例で充分でしょう.
+. [.filename]#/etc/ppp/ppp.linkup# にエントリを作成.
+. [.filename]##/etc/rc.conf##ファイルを更新.
+====
+
+[[ppp]]
+== カーネル PPP の利用
+
+=== カーネル PPP の設定
+
+PPP の設定を始める前に, `pppd` が [.filename]#/usr/sbin# にあり, また [.filename]#/etc/ppp# という ディレクトリが存在することを確認してください.
+
+`pppd` はふたつのモードで動作します.
+
+. "クライアント" モード. シリアル接続やモデムを利用して, そのマシンを 外部のネットワークに PPP 接続したい場合に用います.
+. "サーバ" モード. そのマシンがネットワーク上にあるときに, PPP を使って ほかのコンピュータを接続する際に用います.
+
+どちらの場合でも, オプションファイルを設定する必要があります ([.filename]#/etc/ppp/options# または, そのマシン上で PPP を使用する人が 複数いる場合には [.filename]#~/.ppprc#).
+
+また, ダイヤルとリモートホストへの接続をおこなうために, シリアル接続やモデムを 操作する, なんらかのソフトウェアが必要です (kermit が適しているでしょう).
+
+=== PPP クライアントとしての動作
+
+わたしは, CISCO ターミナルサーバの PPP 回線に接続するために, 下記のような [.filename]#/etc/ppp/options# を使用しています.
+
+[.programlisting]
+....
+crtscts         # enable hardware flow control
+modem           # modem control line
+noipdefault     # remote PPP server must supply your IP address.
+                # if the remote host doesn't send your IP during IPCP
+                # negotiation , remove this option
+passive         # wait for LCP packets
+domain ppp.foo.com      # put your domain name here
+
+:<remote_ip>    # put the IP of remote PPP host here
+                # it will be used to route packets via PPP link
+                # if you didn't specified the noipdefault option
+                # change this line to <local_ip>:<remote_ip>
+
+defaultroute    # put this if you want that PPP server will be your
+                # default router
+....
+
+接続方法:
+
+[.procedure]
+====
+. kermit (またはその他のモデム操作プログラム) を使ってリモートホストに ダイヤルし, 接続してください. そして, あなたのユーザ名とパスワード (必要 であれば, その他にもリモートホストで PPP を有効にするための操作) を入力 します.
+. kermit を抜けてください. (回線を切断せずに)
+. 下記のように入力します: 
++
+[source,bash]
+....
+# /usr/src/usr.sbin/pppd.new/pppd /dev/tty01 19200
+....
++ 
+(通信速度とデバイス名には, あなたの環境に適したものを入れてください)
+====
+
+これでこのコンピュータは PPP で接続されました. もし, なんらかの理由で 接続に失敗したならば, [.filename]#/etc/ppp/options# ファイルに `debug` オプションを追加して, 問題点を突き止めるために, コンソールに表示される メッセージを調べてください.
+
+下記の [.filename]#/etc/ppp/pppup# スクリプトは, 上記の作業を すべて自動的におこないます:
+
+[.programlisting]
+....
+#!/bin/sh
+ps ax |grep pppd |grep -v grep
+pid=`ps ax |grep pppd |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill ${pid}
+fi
+ps ax |grep kermit |grep -v grep
+pid=`ps ax |grep kermit |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+kermit -y /etc/ppp/kermit.dial
+pppd /dev/tty01 19200
+....
+
+[.filename]#/etc/ppp/kermit.dial# は kermit 用のスクリプトで, ダイヤルして, リモートホストでの認証に必要なすべての処理をおこないます. (そのようなスクリプトの例は この文書の終わりに添付してあります)
+
+PPP 接続を切断するには, 下記のような [.filename]#/etc/ppp/pppdown# スクリプトを 使用します:
+
+[.programlisting]
+....
+#!/bin/sh
+pid=`ps ax |grep pppd |grep -v grep|awk '{print $1;}'`
+if [ X${pid} != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill -TERM ${pid}
+fi
+
+ps ax |grep kermit |grep -v grep
+pid=`ps ax |grep kermit |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+/sbin/ifconfig ppp0 down
+/sbin/ifconfig ppp0 delete
+kermit -y /etc/ppp/kermit.hup
+/etc/ppp/ppptest
+....
+
+PPP が動作中かどうかを調べます ([.filename]#/usr/etc/ppp/ppptest#):
+
+[.programlisting]
+....
+#!/bin/sh
+pid=`ps ax| grep pppd |grep -v grep|awk '{print $1;}'`
+if [ X${pid} != "X" ] ; then
+        echo 'pppd running: PID=' ${pid-NONE}
+else
+        echo 'No pppd running.'
+fi
+set -x
+netstat -n -I ppp0
+ifconfig ppp0
+....
+
+モデム回線を切断します ([.filename]#/etc/ppp/kermit.hup#):
+
+[.programlisting]
+....
+set line /dev/tty01	; put your modem device here
+set speed 19200
+set file type binary
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+
+pau 1
+out +++
+inp 5 OK
+out ATH0\13
+echo \13
+exit
+....
+
+次は `kermit` の代わりに `chat` を使う方法です.
+
+pppd 接続を確立するためには, 次の二つのファイルの設定だけで十分です.
+
+[.filename]#/etc/ppp/options#:
+
+[.programlisting]
+....
+/dev/cuaa1 115200
+
+crtscts		# enable hardware flow control
+modem		# modem control line
+connect "/usr/bin/chat -f /etc/ppp/login.chat.script"
+noipdefault	# remote PPP serve must supply your IP address.
+	        # if the remote host doesn't send your IP during
+                # IPCP negotiation, remove this option
+passive         # wait for LCP packets
+domain <your.domain>	# put your domain name here
+
+:		# put the IP of remote PPP host here
+	        # it will be used to route packets via PPP link
+                # if you didn't specified the noipdefault option
+                # change this line to <local_ip>:<remote_ip>
+
+defaultroute	# put this if you want that PPP server will be
+	        # your default router
+....
+
+[.filename]#/etc/ppp/login.chat.script#:
+
+[NOTE]
+====
+(実際には一行になります.)
+====
+
+[.programlisting]
+....
+ABORT BUSY ABORT 'NO CARRIER' "" AT OK ATDT<phone.number>
+ CONNECT "" TIMEOUT 10 ogin:-\\r-ogin: <login-id>
+ TIMEOUT 5 sword: <password>
+....
+
+正しくインストールし編集した後は, 必要な事はこれだけです
+
+[source,bash]
+....
+# pppd
+....
+
+このサンプルは主に Trev Roydhouse <Trev.Roydhouse@f401.n711.z3.fidonet.org> から寄せられた情報に基づいており, 承諾を得て使用しています.
+
+=== PPP サーバとしての動作
+
+[.filename]#/etc/ppp/options#:
+
+[.programlisting]
+....
+crtscts                         # Hardware flow control
+netmask 255.255.255.0           # netmask ( not required )
+192.114.208.20:192.114.208.165  # ip's of local and remote hosts
+                                # local ip must be different from one
+                                # you assigned to the ethernet ( or other )
+                                # interface on your machine.
+                                # remote IP is ip address that will be
+                                # assigned to the remote machine
+domain ppp.foo.com              # your domain
+passive                         # wait for LCP
+modem                           # modem line
+....
+
+下記のような [.filename]#/etc/ppp/pppserv# スクリプトで, そのマシンを PPP サーバにすることができます.
+
+[.programlisting]
+....
+#!/bin/sh
+ps ax |grep pppd |grep -v grep
+pid=`ps ax |grep pppd |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill ${pid}
+fi
+ps ax |grep kermit |grep -v grep
+pid=`ps ax |grep kermit |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+# reset ppp interface
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+# enable autoanswer mode
+kermit -y /etc/ppp/kermit.ans
+
+# run ppp
+pppd /dev/tty01 19200
+....
+
+PPP サーバを終了するには, この [.filename]#/etc/ppp/pppservdown# スクリプト を使用します:
+
+[.programlisting]
+....
+#!/bin/sh
+ps ax |grep pppd |grep -v grep
+pid=`ps ax |grep pppd |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill ${pid}
+fi
+ps ax |grep kermit |grep -v grep
+pid=`ps ax |grep kermit |grep -v grep|awk '{print $1;}'`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+kermit -y /etc/ppp/kermit.noans
+....
+
+下記の kermit スクリプトは, モデムの自動応答機能を有効, または無効にします ([.filename]#/etc/ppp/kermit.ans#):
+
+[.programlisting]
+....
+set line /dev/tty01
+set speed 19200
+set file type binary
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+
+pau 1
+out +++
+inp 5 OK
+out ATH0\13
+inp 5 OK
+echo \13
+out ATS0=1\13   ; change this to out ATS0=0\13 if you want to disable
+                ; autoanswer mod
+inp 5 OK
+echo \13
+exit
+....
+
+この [.filename]#/etc/ppp/kermit.dial# スクリプトは, リモートホストに ダイヤルし, 認証手続きをするのに使用します. あなたは必要に応じて, これを 変更しないといけないでしょう. あなたのユーザ名とパスワードをこの スクリプトに書かなければいけませんし, モデムやリモートホストからの 応答によっては, 入力待ちの文を変更する必要もあります.
+
+[.programlisting]
+....
+;
+; put the com line attached to the modem here:
+;
+set line /dev/tty01
+;
+; put the modem speed here:
+;
+set speed 19200
+set file type binary            ; full 8 bit file xfer
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+set modem hayes
+set dial hangup off
+set carrier auto                ; Then SET CARRIER if necessary,
+set dial display on             ; Then SET DIAL if necessary,
+set input echo on
+set input timeout proceed
+set input case ignore
+def \%x 0                       ; login prompt counter
+goto slhup
+
+:slcmd                          ; put the modem in command mode
+echo Put the modem in command mode.
+clear                           ; Clear unread characters from input buffer
+pause 1
+output +++                      ; hayes escape sequence
+input 1 OK\13\10                ; wait for OK
+if success goto slhup
+output \13
+pause 1
+output at\13
+input 1 OK\13\10
+if fail goto slcmd              ; if modem doesn't answer OK, try again
+
+:slhup                          ; hang up the phone
+clear                           ; Clear unread characters from input buffer
+pause 1
+echo Hanging up the phone.
+output ath0\13                  ; hayes command for on hook
+input 2 OK\13\10
+if fail goto slcmd              ; if no OK answer, put modem in command mode
+
+:sldial                         ; dial the number
+pause 1
+echo Dialing.
+output atdt9,550311\13\10               ; put phone number here
+assign \%x 0                    ; zero the time counter
+
+:look
+clear                           ; Clear unread characters from input buffer
+increment \%x                   ; Count the seconds
+input 1 {CONNECT }
+if success goto sllogin
+reinput 1 {NO CARRIER\13\10}
+if success goto sldial
+reinput 1 {NO DIALTONE\13\10}
+if success goto slnodial
+reinput 1 {\255}
+if success goto slhup
+reinput 1 {\127}
+if success goto slhup
+if < \%x 60 goto look
+else goto slhup
+
+:sllogin                        ; login
+assign \%x 0                    ; zero the time counter
+pause 1
+echo Looking for login prompt.
+
+:slloop
+increment \%x                   ; Count the seconds
+clear                           ; Clear unread characters from input buffer
+output \13
+;
+; put your expected login prompt here:
+;
+input 1 {Username: }
+if success goto sluid
+reinput 1 {\255}
+if success goto slhup
+reinput 1 {\127}
+if success goto slhup
+if < \%x 10 goto slloop         ; try 10 times to get a login prompt
+else goto slhup                 ; hang up and start again if 10 failures
+
+:sluid
+;
+; put your userid here:
+;
+output ppp-login\13
+input 1 {Password: }
+;
+; put your password here:
+;
+output ppp-password\13
+input 1 {Entering SLIP mode.}
+echo
+quit
+
+:slnodial
+echo \7No dialtone.  Check the telephone line!\7
+exit 1
+
+; local variables:
+; mode: csh
+; comment-start: "; "
+; comment-start-skip: "; "
+; end:
+....
+
+[[pppoe]]
+== PPP オーバイーサネット (PPPoE) の利用
+
+以下の解説は, PPPoE として知られる, PPP オーバイーサネットの設定法です.
+
+=== 必要なもの
+
+あなたのシステムで PPPoE を適切に機能させるためには, 以下のものが必要です.
+
+* FreeBSD 3.4やそれより新しいバージョンのカーネルソース
+* FreeBSD 3.4やそれより新しいバージョンのppp
+
+=== カーネルコンフィギュレーション
+
+以下に示すオプションをカーネルコンフィギュレーションファイルに 追加して, その後 crossref:kernelconfig[kernelconfig,新しいカーネルを コンパイルする]必要があります.
+
+* options NETGRAPH
+
+以下は任意
+
+* options NETGRAPH_PPPOE
+* options NETGRAPH_SOCKET
+
+この機能は実行時には有効ではありませんが, 要求に応じて ppp は関係のあるモジュールを 読み込みます. 
+
+=== [.filename]#ppp.conf# の設定
+
+これは動作している [.filename]#ppp.conf# の 例です:
+
+[.programlisting]
+....
+default: # or name_of_service_provider
+  set device PPPoE:xl1 # replace xl1 with your ethernet device
+  set mru 1492
+  set mtu 1492
+  set authname YOURLOGINNAME
+  set authkey YOURPASSWORD
+  set log Phase tun command # you can add more detailed logging if you wish
+  set dial
+  set login
+  set ifaddr 10.0.0.1/0 10.0.0.2/0
+  add default HISADDR
+  nat enable yes # if you want to enable nat for your local net
+
+papchap:
+  set authname YOURLOGINNAME
+  set authkey YOURPASSWORD
+....
+
+link:{faq}#PPPoEwithNAT[-nat オプションを付けてPPPoE ]を起動する際には注意するべきです. 
+
+=== PPP の起動
+
+以下を root 権限において実行することで, 起動させることができます:
+
+[source,bash]
+....
+# ppp -ddial name_of_service_provider
+....
+
+=== システム起動時に PPP を立ち上げる
+
+[.filename]#/etc/rc.conf# ファイルに以下の行を追加 してください:
+
+[.programlisting]
+....
+ppp_enable="YES"
+ppp_mode="ddial"
+ppp_nat="YES"
+ppp_profile="default" # or your provider
+....
+
+[[slip]]
+== SLIP の利用
+
+[[slipc]]
+=== SLIPクライアントのセットアップ
+
+ここには FreeBSD マシンを静的アドレスのネットワークにつなげる場合の SLIPのセットアップの一つの方法を書いてあります. ホスト名を動的に割り当てる(つまり, ダイヤルアップするたびにアドレスが かわる)ためには, おそらくもっと凝ったことが必要です.
+
+まず, モデムがどのシリアルポートにつながっているか決めましょう. 私は [.filename]##/dev/cuaa1## から [.filename]##/dev/modem##へというシンボリックリンクを張り, コンフィグレーションではその名前だけを使っています. [.filename]##/etc## や[.filename]##.kermrc## など, システム全体に散らばっているファイルを修正する 必要がでるとまったく煩わしいのです!
+
+[NOTE]
+====
+ここで, [.filename]##/dev/cuaa0##は [.filename]##COM1##であり, [.filename]##cuaa1##は[.filename]##COM2##です.
+====
+
+カーネルのコンフィグレーションファイルに 
+[.programlisting]
+....
+pseudo-device   sl      1
+....
+
+という記述があるのを確認してください. これは [.filename]#GENERIC# カーネルに含まれている ので削除していない限り大丈夫でしょう.
+
+==== 最初の設定
+
+[.procedure]
+====
+
+. [.filename]#/etc/hosts# ファイルにあなたのマシンのゲートウェイとネームサーバ を加えてください. 私のは以下のようになっています.
++
+[.programlisting]
+....
+127.0.0.1               localhost loghost
+136.152.64.181          silvia.HIP.Berkeley.EDU silvia.HIP silvia
+136.152.64.1            inr-3.Berkeley.EDU inr-3 slip-gateway
+128.32.136.9            ns1.Berkeley.edu ns1
+128.32.136.12           ns2.Berkeley.edu ns2
+....
++
+. [.filename]#/etc/host.conf# ファイル中で ``hosts``が``bind`` よりも前にあること を確認してください. さもないとヘンなことが起こるかもしれません.
+. [.filename]#/etc/rc.conf# ファイルを編集してください. なお, お使いの FreeBSD が 2.2.2 よりも前のバージョンのものの場合は, [.filename]#/etc/sysconfig# を編集してください.
+.. 行
++
+[.programlisting]
+....
+hostname=myname.my.domain
+....
++ 
+を編集してホスト名をセットしてください. 完全なInternetホスト名を与えるべきです.
+.. 行
++
+[.programlisting]
+....
+network_interfaces="lo0"
+....
++ 
+を
++
+[.programlisting]
+....
+network_interfaces="lo0 sl0"
+....
++ 
+へ変更することにより ネットワークインタフェースのリストに sl0 を加えてください.
+.. 行
++
+[.programlisting]
+....
+ifconfig_sl0="inet ${hostname} slip-gateway netmask 0xffffff00 up"
+....
++ 
+を加えて sl0 のスタートアップフラグをセットしてください.
+.. 行
++
+[.programlisting]
+....
+defaultrouter=NO
+....
++ 
+を
++
+[.programlisting]
+....
+defaultrouter=slip-gateway
+....
++ 
+へ変更してデフォルトのルータを 指定してください.
++
+. 次の
++
+[.programlisting]
+....
+domain HIP.Berkeley.EDU
+nameserver 128.32.136.9
+nameserver 128.32.136.12
+....
++ 
+という内容を含むファイル [.filename]#/etc/resolv.conf# を作ってください. 見ればわかるように, これらはネームサーバホストを設定しています. もちろん, 実際のドメイン名やアドレスは あなたの環境に依存します.
+. root と toor (及びパスワードを持っていない他のアカウントすべて) のパスワード を設定してください. passwdコマンドを使いましょう. [.filename]#/etc/passwd# や [.filename]#/etc/master.passwd# といったファイルを編集してはいけません!
+. マシンを再起動して正しいホスト名で 立ち上がることを確認してください.
+====
+
+==== SLIP接続をおこなう
+
+[.procedure]
+====
+. モデムを起動, つながったらプロンプトで ``slip``とタイプし, マシン名と パスワードを入力してください. 入力する必要があるものは環境に よって異なります. 私は次のようなスクリプトでkermitを使っています.
++
+[.programlisting]
+....
+# kermit setup
+set modem hayes
+set line /dev/modem
+set speed 115200
+set parity none
+set flow rts/cts
+set terminal bytesize 8
+set file type binary
+# The next macro will dial up and login
+define slip dial 643-9600, input 10 =>, if failure stop, -
+output slip\x0d, input 10 Username:, if failure stop, -
+output silvia\x0d, input 10 Password:, if failure stop, -
+output ***\x0d, echo \x0aCONNECTED\x0a
+....
++ 
+(もちろん, ホスト名とパスワードは変える必要があります). 接続するためには kermit のプロンプトで ``slip``とタイプするだけです.
++
+[NOTE]
+======
+ファイルシステムのどんなところにもプレインテキスト にパスワードを書いておくのは一般的にはよくありません. 覚悟の上で やってください. 私は単に不精なだけです.
+======
++
+. ここでkermitから抜け出し (``z``でkermitをサスペンドできます), root で
++
+[source,bash]
+....
+# slattach -h -c -s 115200 /dev/modem
+....
++ 
+と入力しましょう. もしルータの向う側のホストへ ``ping`` できるなら接続成功です! もしうまく いかなければslattachへの引数として ``-c`` の代わりに``-a``とやってみてください.
+====
+
+==== 接続の切り方
+
+slattachを殺すためにrootで 
+
+[source,bash]
+....
+# kill -INT `cat /var/run/slattach.modem.pid`
+....
+
+とタイプしてください. そして kermit に戻り (もしkermitをサスペンドしていたなら `fg`), kermitから抜けてください (`q`).
+
+slattachのマニュアルページにはインタフェースを落すために ``ifconfig sl0 down``をしなければいけないと書いていますが, 私には差がないように見えます. (``ifconfig sl0``とやっても同じ結果が得られる.)
+
+時にはモデムがキャリアを落すのを 拒絶するかもしれません(私のは よくそうなります). その時は単にkermitをスタートしてまた終了 してください. 普通は2回目で落ちます.
+
+==== トラブルシューティング
+
+もし動かなければ自由に私に質問してください. 今までいろんな人がつまずいた のは次のようなことです.
+
+* slattach で `-c` や `-a` を使わなかった(私はなぜこれが致命的になり得るのか わかりませんが, このフラグを付けることで少なくとも一人の 問題は解決しました.)
+* `sl0` の代わりに `s10` を使った(いくつかのフォントでは見分けるのは難しい かもしれません).
+* インタフェースの状態を見るために `ifconfig sl0` をやってみてください. 私は,
++
+[source,bash]
+....
+# ifconfig sl0
+sl0: flags=10<POINTOPOINT>
+        inet 136.152.64.181 --> 136.152.64.1 netmask ffffff00
+....
++ 
+となります.
+* また, pingが "no route to host" というメッセージを返す時には ``netstat -r``でルーティングテーブルを確認しましょう. 私のは,
++
+[source,bash]
+....
+# netstat -r
+Routing tables
+Destination      Gateway            Flags     Refs     Use  IfaceMTU    Rtt
+Netmasks:
+(root node)
+(root node)
+
+Route Tree for Protocol Family inet:
+(root node) =>
+default          inr-3.Berkeley.EDU UG          8   224515  sl0 -      -
+localhost.Berkel localhost.Berkeley UH          5    42127  lo0 -       0.438
+inr-3.Berkeley.E silvia.HIP.Berkele UH          1        0  sl0 -      -
+silvia.HIP.Berke localhost.Berkeley UGH        34 47641234  lo0 -       0.438
+(root node)
+....
++ 
+となります. (これはたくさんのファイルを転送した後でのもので, あなたの見る数字はもっと小さいかも しれません).
+
+[[slips]]
+=== SLIPサーバのセットアップ方法
+
+この文書の目的は, SLIPサーバ機能を FreeBSDシステムのもとで設定するため の助言を提供することです. SLIPサーバ機能を設定するということは, リモー トの SLIPクライアントがログインできるようにするために, 自動的に接続処 理をおこなうようにすることです. この文書は著者の経験に基づいておりますが, 実際のシステム構成や要望は異なりますから, すべての疑問にこの文書が答え ることはできません. なお, ここでの助言を試みた結果, あなたのシステムへ の悪影響やデータの損失が生じたとしても, 著者が責任を持つことはできませ んのでご了解をお願いします.
+
+[[slips-prereqs]]
+==== 前提
+
+この文書の内容はテクニカルなものなので, 前提知識が必要です. すなわち, TCP/IPネットワークプロトコルについての知識, 特に, ネットワークとノード のアドレス指定をはじめ, ネットワークアドレスマスク, サブネット化, ルー ティング, および RIPなどのルーティングプロトコルなどに関する知識を前提 としています. ダイヤルアップサーバで SLIP機能を設定するためには, これ らの概念についての知識が必要ですから, もし不案内であると思われる方は, O'Reilly & Associates, Inc.から出版されている Craig Hunt氏の _TCP/IP Network Administration_ (ISBN 0-937175-82-X)か, または Douglas Comer氏の TCP/IPプロトコルに関する一連の書籍をお読みください.
+
+前提知識に加え, さらに, モデムの設定が完了しており, そのモデムを経由し てログインできるように, システムファイル群が適切に記述できているものと 仮定しています. もしモデムの準備ができていないときには, あらかじめダイヤ ルアップ機能の設定についてのチュートリアルをお読みください. Webブラ ウザが使えるのであれば http://www.FreeBSD.org/[ http://www.FreeBSD.org/ ] におけるチュー トリアルの一覧を調べてください. あるいは, この文書を見つけた場所を調べ て, [.filename]#dialup.txt# やそれに類似した名前の文書をお読みください. 関連す るマニュアルページとしては, シリアルポート向けデバイスドライバについて の man:sio[4] をはじめ, モデムからのログインを 受理できるようにシステ ムを設定するための man:ttys[5], man:gettytab[5], man:getty[8], man:init[8] など, さらには, シリアルポート関連パラメータ ( たと えば直接接続シリアルインタフェースの `clocal` ) についての man:stty[1] なども助けになるかもしれません.
+
+==== 概要
+
+一般的な設定内容で FreeBSDを SLIPサーバとして利用すると, その動作は次 のようになります. まず, SLIPユーザが FreeBSD による SLIPサーバへ電話し て, SLIP専用IDでログインします. なお, このIDを持ったユーザはシェルとし て [.filename]#/usr/sbin/sliplogin# を使います. この `sliplogin` は, ファイル [.filename]#/etc/sliphome/slip.hosts# の中から, ログインIDと一致する 記述行を探します. もし一致する行があれば, ログインしたシリアル回線を, 利用可能な SLIPインタフェースへ接続し, その後にシェルスクリプト [.filename]#/etc/sliphome/slip.login# で SLIPインタフェースを設定します.
+
+===== SLIPサーバへのログイン例
+
+仮に SLIPユーザIDが `Shelmerg` とします. すると, [.filename]#/etc/master.passwd# における `Shelmerg` のエントリは次のよ うなものになります (実際には一つの行に続いている) .
+
+[.programlisting]
+....
+Shelmerg:password:1964:89::0:0:Guy Helmer - SLIP:/usr/users/Shelmerg:/usr/sbin/sliplogin
+....
+
+`Shelmerg` がログインすると, `sliplogin` は, ファイル [.filename]#/etc/sliphome/slip.hosts# からユーザIDと一致する行を探しま す. いま仮に, [.filename]#/etc/sliphome/slip.hosts# に次のような記述がなされていたとします.
+
+[.programlisting]
+....
+Shelmerg        dc-slip sl-helmer       0xfffffc00      autocomp
+....
+
+`sliplogin` が上記のエントリを見つけると, _Shelmerg_ が使用して いるシリアル回線を, 利用可能な SLIPインタフェースのなかの最初のものへ 接続し, 次の内容の [.filename]#/etc/sliphome/slip.login# を実行します.
+
+[.programlisting]
+....
+/etc/sliphome/slip.login 0 19200 Shelmerg dc-slip sl-helmer 0xfffffc00 autocomp
+....
+
+もし上記の手順が正常に処理されると, [.filename]#/etc/sliphome/slip.login# は, `sliplogin` が割り当てた SLIPインタフェース (この例では [.filename]#slip.login# で与えられたパラメータのうちで最初の値である SLIP インタフェース0である) に対して `ifconfig` を実行し, ローカル IPアドレス (`dc-slip`)をはじめ, リモート IPアドレス (`sl-helmer`), SLIPインタフェースへのネットワークマスク (`0xfffffc00`), およびその他のフラグ (`autocomp`)を設定 します. 逆に, さきほどの手順が正常に終了しなかった場合, 通常は `sliplogin` は十分な情報を syslog の `daemon` 機能経由で [.filename]#/var/log/messages# へ記録します ( man:syslogd[8] や man:syslog.conf[5] のマニュアルページを参照のうえ, さらに [.filename]#/etc/syslog.conf# を調べて `syslogd` がどのファイルへ記 録するかを確認のこと) .
+
+例はこのくらいにして, さっそくシステムのセットアップを始めてみましょう.
+
+==== カーネルのコンフィグレーション
+
+FreeBSD のデフォルトのカーネルには, 通常, 二つの SLIPインタフェースが 準備されています ([.filename]#sl0# と [.filename]#sl1#) . これらのインタフェー スが使用中のカーネルに準備されているかどうかを調べるには, `netstat -i` を実行してください.
+
+`netstat -i` の出力例
+
+[source,bash]
+....
+Name  Mtu   Network     Address            Ipkts Ierrs    Opkts Oerrs  Coll
+ed0   1500  <Link>0.0.c0.2c.5f.4a         291311     0   174209     0   133
+ed0   1500  138.247.224 ivory             291311     0   174209     0   133
+lo0   65535 <Link>                            79     0       79     0     0
+lo0   65535 loop        localhost             79     0       79     0     0
+sl0*  296   <Link>                             0     0        0     0     0
+sl1*  296   <Link>                             0     0        0     0     0
+....
+
+`netstat -i` の出力に [.filename]#sl0# と [.filename]#sl1# のインタフェー スが含まれているということから, カーネルには二つの SLIPインタフェー スが組み込まれているということを示しています. (`sl0` と `sl1` に付いたアスタリスクは, `netstat -i` の実行時点で はインタフェースが "ダウン" していることを表しています. )
+
+なお, パケットのフォワード機能は FreeBSD のデフォルトのカーネルでは設定 されていません (すなわちルータとしては動作しない) . もしインターネット 接続ホストについての RFC要件 ( RFC 1009 [Requirements for Internet Gateways] と 1122 [Requirements for Internet Hosts - Communication Layers], おそらく 1127 [A Perspective on the Host Requirements RFCs] も ) に準拠して, FreeBSDによる SLIPサー バをルータとして動作させたいときには, [.filename]#/etc/rc.conf# (バージョ ン 2.2.2 より前の FreeBSD では [.filename]#/etc/sysconfig#) ファイル の `gateway_enable` 変数を `YES` としてください. もし古いシステ ムで [.filename]#/etc/sysconfig# ファイルすらないときには, 次のコマン ドを [.filename]#/etc/rc.local# へ追加してください.
+
+[.programlisting]
+....
+sysctl -w net.inet.ip.forwarding = 1
+....
+
+この新しい設定を有効とするには, リブートする必要があります.
+
+デフォルトのカーネルコンフィグレーションファイル ([.filename]#/sys/i386/conf/GENERIC#) の最後の部分に, 次のような行がありま す.
+
+[.programlisting]
+....
+pseudo-device sl 2
+....
+
+この行によって, 使用可能な SLIPデバイスの総数が決まります. すなわち, 行 末の数値が, 同時に動作可能な SLIP接続の最大数となります.
+
+カーネルの再構築については, crossref:kernelconfig[kernelconfig,FreeBSDカー ネルのコンフィグレーション] を参照ください.
+
+==== Sliploginのコンフィグレーション
+
+すでにご説明したように, [.filename]##/usr/sbin/sliplogin## のコンフィグレー ションのために, 3種類のファイルが[.filename]##/etc/sliphome## ディレクトリに あります (`sliplogin` についての実際のマニュアルページとしては man:sliplogin[8] を参照のこと) . ファイル [.filename]##slip.hosts## は SLIPユーザおよびその IPアドレスを決めます. 通常, ファイル [.filename]##slip.login## は, SLIPインタフェースを設定することだけに使 用します. [.filename]##slip.logout## はオプションのファイルで, [.filename]##slip.login## で設定した内容を, シリアル接続が終了した時点で解除 するときに使用します.
+
+===== [.filename]#slip.hosts# のコンフィグレーション
+
+[.filename]#/etc/sliphome/slip.hosts# には, 少なくとも 4 つの項目をホワイ トスペース (スペースやタブ) で区切って指定します.
+
+* SLIPユーザのログインID
+* SLIPリンクのローカル (SLIPサーバ側) アドレス
+* SLIPリンクのリモートアドレス
+* ネットワークマスク
+
+ホスト名をローカルおよびリモートのアドレスとして 記述できます (IPアドレ スの決定は, [.filename]#/etc/host.conf# の指定内容に応じて, [.filename]#/etc/hosts# か DNSのいずれかによって決定される) . また, ネット ワークマスクも [.filename]#/etc/networks# ファイルに記述された名前を参照す ることで, 指定することもできると思います. これまでの例としてあげたシス テムでの [.filename]#/etc/sliphome/slip.hosts# は次のようになります.
+
+[.programlisting]
+....
+#
+# login local-addr      remote-addr     mask            opt1    opt2
+#                                               (normal,compress,noicmp)
+#
+Shelmerg  dc-slip       sl-helmerg      0xfffffc00      autocomp
+....
+
+それぞれの行の最後には, 次に示すオプションを一つ以上指定できます.
+
+* `normal` - ヘッダを圧縮しない
+* `compress` - ヘッダを圧縮する
+* `autocomp` - リモートの設定に応じて, ヘッダを圧縮する
+* `noicmp` - ICMPパケットを禁止する ( "ping" パケットは送出されず, バンド幅を占有しない)
+
+なお, FreeBSDバージョン2の初期リリースの `sliplogin` は, 旧 FreeBSD 1.xでは有効であった上記のオプションを無視していましたので, `normal`, `compress`, `autocomp`, そして `noicmp` などのオプションは FreeBSD 2.2でサポートされるまでは効果がありませんでした (た だしこれらのフラグを使うためには [.filename]#slip.login# スクリプトへ記述する 必要がある) .
+
+SLIPリンクでのローカルとリモート向けのアドレスの 選び方は, TCP/IPサブネッ トを専用に割り当てるか, または "プロキシ ARP" を SLIPサーバへ用いるかによって違います ( "プロキシ ARP" という用語のここでの使い方は本来のものではないが, 説明のためにこの用語を使う) . もし, どちらの方式を選ぶべきか判らなかったり, IPアドレスの割り当て方が不明のときには, 上述の <<slips-prereqs,前提>> の節で紹介した TCP/IP関連書籍を参考になさるか, またはあなたの IPネットワークを管理している方に相談なさると よいでしょう.
+
+独立したサブネットを SLIPクライアントへ適用するときには, すでに割り当てられている IPネットワーク番号の範囲からサブネット番号を割り当て, 同 時にそのサブネットの範囲内で有効な IPアドレスを SLIPクライアントの IP 番号として割り当てる必要があります. さらに, この SLIPサブネットから SLIPサーバを経由して最も近い IPルータへの経路を静的に設定するか, または `gated` を FreeBSDによる SLIPサーバへインストールして, 適当 なルーティングプロトコルを使って, SLIPサーバ経由のサブネットへの経路情 報をルータ群へ通知できるように設定するか, のいずれかをおこなう必要があります.
+
+"プロキシ ARP" 方式を採用するときには, SLIPクライアント向けの IPアドレス として, SLIPサーバのサブネットの範囲から 選んで割り当てるとともに, man:arp[8] コマンドを使うために [.filename]##/etc/sliphome/slip.login## と[.filename]##/etc/sliphome/slip.logout## のスクリプトを修正して, SLIPサー バにおける ARPテーブル内のプロキシ ARPエントリへ 反映させる必要がありま す.
+
+===== [.filename]#slip.login# のコンフィグレーション
+
+ファイル [.filename]#/etc/sliphome/slip.login# の一般的な内容は次にようになります.
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#	@(#)slip.login  5.1 (Berkeley) 7/1/90
+
+#
+# generic login file for a slip line.  sliplogin invokes this with
+# the parameters:
+#      1        2         3        4          5         6     7-n
+#   slipunit ttyspeed loginname local-addr remote-addr mask opt-args
+#
+/sbin/ifconfig sl$1 inet $4 $5 netmask $6
+....
+
+この [.filename]#slip.login# ファイルの役目は単に, SLIPインタフェースにつ いてのローカルとリモートのアドレス, およびそのネットワークマスクを `ifconfig` コマンドで設定することです.
+
+もし "プロキシ ARP" 方式を採用する (SLIPクライアントへ独立したサブネットを使わない) ときには, ファイル [.filename]#/etc/sliphome/slip.login# は次のような内容になります.
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#	@(#)slip.login  5.1 (Berkeley) 7/1/90
+
+#
+# generic login file for a slip line.  sliplogin invokes this with
+# the parameters:
+#      1        2         3        4          5         6     7-n
+#   slipunit ttyspeed loginname local-addr remote-addr mask opt-args
+#
+/sbin/ifconfig sl$1 inet $4 $5 netmask $6
+# Answer ARP requests for the SLIP client with our Ethernet addr
+/usr/sbin/arp -s $5 00:11:22:33:44:55 pub
+....
+
+この [.filename]#slip.login# で追加された行 `arp -s $5 00:11:22:33:44:55 pub` は, SLIPサーバにおける ARPテーブルへ新たなエントリを作ります. SLIPサーバ は, この ARPエントリが作られると, SLIPクライアントの IPアドレスと話し たい他の IPノードが要求してきたときにはいつも, SLIPサーバ の Ethernet MACアドレスを返すようになります.
+
+上記の例を実際に流用なさるときには, 例にある Ethernet MACアドレス (`00:11:22:33:44:55`) を, あなたのシステムの実際のEthernetカー ドの MACアドレスと置き換えなければ "プロキシ ARP" はうまく動作しません! SLIPサーバの Ethernet MACアドレスを調べるには `netstat -i` コマ ンドを利用してください. 実行結果の第2行は次のようなものになるはずです.
+
+[source,bash]
+....
+ed0   1500  <Link>0.2.c1.28.5f.4a         191923     0   129457     0   116
+....
+
+この例での Ethernet MACアドレスは `00:02:c1:28:5f:4a` であると 読みます. なお man:arp[8] における MAC アドレスの指定に際しては, コマンド `netstat -i` が付けた Ethernet MACアドレスのピリオド記 号をコロン記号と置き換え, かつ単一桁の 16 進数にはゼロを先頭に加える必 要があります. この指定についての正確な情報は man:arp[8] を参照く ださい.
+
+[NOTE]
+====
+[.filename]#/etc/sliphome/slip.login# と [.filename]#/etc/sliphome/slip.logout# を作成したならば, ファイル属性の "実行" ビット (すなわち `chmod 755 /etc/sliphome/slip.login /etc/sliphome/slip.logout`) を 設定しなければなりません. さもなければ `sliplogin` が うまく実行されません.
+====
+
+===== [.filename]#slip.logout# のコンフィグレーション
+
+ファイル [.filename]#/etc/sliphome/slip.logout# は必ずしも必要なものではあ りません (ただし "プロキシ ARP" を利用する場合を除く) . もしこのファイルを 作成するときには, 次に示す標準的な [.filename]#slip.logout# スクリプト例を 参考にしてください.
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#	slip.logout
+
+#
+# logout file for a slip line.  sliplogin invokes this with
+# the parameters:
+#      1        2         3        4          5         6     7-n
+#   slipunit ttyspeed loginname local-addr remote-addr mask opt-args
+#
+/sbin/ifconfig sl$1 down
+....
+
+"プロキシ ARP" を利用する場合, この [.filename]#/etc/sliphome/slip.logout# を 使って, 特定の SLIPクライアント向けの ARPエントリを削除したくなるようなときがあります.
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       @(#)slip.logout
+
+#
+# logout file for a slip line.  sliplogin invokes this with
+# the parameters:
+#      1        2         3        4          5         6     7-n
+#   slipunit ttyspeed loginname local-addr remote-addr mask opt-args
+#
+/sbin/ifconfig sl$1 down
+# Quit answering ARP requests for the SLIP client
+/usr/sbin/arp -d $5
+....
+
+コマンド `arp -d $5` は, SLIPクライアントがログインした 際に, "プロキシ ARP" を使った [.filename]#slip.login# によって追加され た ARPエントリを削除します.
+
+これによって, 繰り返して利用することができるわけです. 必ず, [.filename]#/etc/sliphome/slip.logout# を作成した後に, 実行ビットを設定し てください ( `chmod 755 /etc/sliphome/slip.logout` ) .
+
+==== ルーティングについての考慮点
+
+"プロキシ ARP" 方式を利用せずに SLIPクライアントとその他のネットワーク (Internetも含む) の構成要素との間でパケットをルーティングするときには, SLIPサーバ経由で SLIPクライアントが属するサブネットまでの経路を, 最も 近いデフォルトのルータ群へ静的な経路情報として 追加しなければならないか, または `gated` を FreeBSDによる SLIPサーバへインストールして, SLIP サブネットについての経路情報を, 適当なルーティングプロトコルでルー タ群へ通知できるように設定するか, のどちらかをおこなわなければなりません.
+
+===== 静的な経路
+
+静的な経路を最も近いデフォルトの ルータ群へ追加することが困難なことがあ ります (経路情報を追加できる権限がなければそもそも不可能となる). もし あなたの組織に複数のルータで構成された ネットワークがあるならば, ある種 のルータ (たとえば Ciscoや Proteonなど) は, 静的な経路を SLIPサブネッ トへ使うようにルータを設定しなければならないだけでなく, その静的経路を 他のどのルータへ知らせるのかもあらかじめ 指定しておく必要がありますから, 静的経路に基づくルーティングを軌道に乗せるには それなりの専門的技術やト ラブルシューティングやコツが必要だと思います.
+
+===== ``gated``の稼働
+
+静的経路についての頭痛への代替手段は, `gated` を FreeBSDによる SLIPサー バへインストールして, 適切なルーティングプロトコル (RIP/OSPF/BGP/EGP) を使って SLIPサブネットについての経路情報を他のルータへ知らせるように 設定することです. crossref:ports[ports,ports コレクション]から `gated` を用いることもできますし, link:ftp://ftp.gated.merit.edu/research.and.development/gated/[GateD 匿名 FTP サイト] から探して自分自身で構築することもで きます. この文章を執筆時点の最新バージョンは [.filename]#gated-R3_5Alpha_8.tar.Z# であり, このファイル "だけで" FreeBSDで 動作させることができます. `gated` についてのすべての情報と文書 は http://www.gated.merit.edu/[Merit GateD コンソーシアム] からはじまる Web 上で入手でき ます. `gated` のコンパイルとインストールを行ったならば, 独自の 設定のために [.filename]#/etc/gated.conf# ファイルを記述してください. 次の 例は, 筆者が FreeBSDによる SLIP サーバで使っている内容と類似のものです.
+
+[.programlisting]
+....
+#
+# gated configuration file for dc.dsu.edu; for gated version 3.5alpha5
+# Only broadcast RIP information for xxx.xxx.yy out the ed Ethernet interface
+#
+#
+# tracing options
+#
+traceoptions "/var/tmp/gated.output" replace size 100k files 2 general ;
+
+rip yes {
+ interface sl noripout noripin ;
+ interface ed ripin ripout version 1 ;
+ traceoptions route ;
+} ;
+
+#
+# Turn on a bunch of tracing info for the interface to the kernel:
+kernel {
+ traceoptions remnants request routes info interface ;
+} ;
+
+#
+# Propagate the route to xxx.xxx.yy out the Ethernet interface via RIP
+#
+
+export proto rip interface ed {
+        proto direct {
+                xxx.xxx.yy mask 255.255.252.0 metric 1; # SLIP connections
+        } ;
+} ;
+
+#
+# Accept routes from RIP via ed Ethernet interfaces
+
+import proto rip interface ed {
+        all ;
+} ;
+....
+
+この [.filename]#gated.conf# ファイルの例では, SLIPのサブネット _xxx.xxx.yy_ についての経路情報を RIPを使って Ethernetへブロー ドキャストしています. もし [.filename]#ed# ドライバ以外の Ethernetドライバを使うのであれば, [.filename]#ed# インタフェースの記述を適切なものに置き換えてくだ さい. またこの例では, ``gated``の動作をデバッグするために, [.filename]#/var/tmp/gated.output# へトレース情報を出力するように指示して います. ``gated`` が希望通りに動作したならば, このトレースオプショ ンを止めることができます. なお, 例における _xxx.xxx.yy_ を, あ なた自身の SLIPサブネットのネットワークアドレスに換えてください (また ``proto direct`` 部分のネットワークマスクも換えることを忘れないこ と) .
+
+``gated`` のコンパイルとインストールが終了し, コンフィグレーショ ンファイルの作成も完了したら, FreeBSDシステムではデフォルトの ``routed``に代わって ``gated`` を起動してください. そのため には, [.filename]#/etc/netstart# の [.filename]#routed/gated# 起動パラメータを 適切な値に設定してください. ``gated`` のコマンドラインパラメータにつ いての情報は, ``gated`` のマニュアルページを参照してください.

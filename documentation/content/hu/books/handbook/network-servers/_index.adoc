@@ -1,0 +1,2833 @@
+---
+title: 29. Fejezet - Hálózati szerverek
+part: IV. Rész Hálózati kommunikáció
+prev: books/handbook/mail
+next: books/handbook/firewalls
+---
+
+[[network-servers]]
+= Hálózati szerverek
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 29
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/network-servers/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/network-servers/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/network-servers/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[network-servers-synopsis]]
+== Áttekintés
+
+Ebben a fejezetben a UNIX(R) típusú rendszerekben leggyakrabban alkalmazott hálózati szolgáltatások közül fogunk néhányat bemutatni. Ennek során megismerjük a hálózati szolgáltatások különbözõ típusainak telepítését, beállítását, tesztelését és karbantartását. A fejezet tartalmát folyamatosan példákkal igyekszünk illusztrálni.
+
+A fejezet elolvasása során megismerjük:
+
+* hogyan dolgozzunk az inetd démonnal;
+* hogyan állítsuk be a hálózati állományrendszereket;
+* hogyan állítsunk be egy hálózati információs szervert a felhasználói hozzáférések megosztására;
+* hogyan állítsuk be automatikusan a hálózati hozzáférésünket a DHCP használatával;
+* hogyan állítsunk be névfeloldó szervereket;
+* hogyan állítsuk be az Apache webszervert;
+* hogyan állítsuk be az állományok átviteléért felelõs (FTP) szervert;
+* a Samba használatával hogyan állítsunk be Windows(R)-os kliensek számára állomány- és nyomtatószervert;
+* az NTP protokoll segítségével hogyan egyeztessük az idõt és dátumot, hogyan állítsunk be egy idõszervert;
+* a szabványos naplózó démon, a `syslogd` beállítását hálózati keresztüli naplózásra.
+
+A fejezet elolvasásához ajánlott:
+
+* az [.filename]#/etc/rc# szkriptek alapjainak ismerete;
+* az alapvetõ hálózati fogalmak ismerete;
+* a külsõ szoftverek telepítésének ismerete (crossref:ports[ports,Alkalmazások telepítése. csomagok és portok]).
+
+[[network-inetd]]
+== Az inetd"szuperszerver"
+
+[[network-inetd-overview]]
+=== Áttekintés
+
+Az man:inetd[8] démont gyakran csak "internet szuperszerverként" nevezik, mivel a helyi szolgáltatások kapcsolatainak kezeléséért felelõs. Amikor az inetd fogad egy csatlakozási kérelmet, akkor eldönti róla, hogy ez melyik programhoz tartozik és elindít egy példányt belõle, majd átadja neki a socketet (az így meghívott program a szabvány bemenetéhez, kimenetéhez és hibajelzési csatornájához kapja meg a socket leíróit). Az inetd használatával úgy tudjuk csökkenteni a rendszerünk terhelését, hogy a csak alkalmanként meghívott szolgáltatásokat nem futtatjuk teljesen független önálló módban.
+
+Az inetd démont elsõsorban más démonok elindítására használjuk, de néhány triviális protokollt közvetlenül is képes kezelni, mint például a chargen, auth és a daytime.
+
+Ebben a fejezetben az inetd beállításának alapjait foglaljuk össze mind parancssoros módban, mind pedig az [.filename]#/etc/inetd.conf# konfigurációs állományon keresztül.
+
+[[network-inetd-settings]]
+=== Beállítások
+
+Az inetd mûködése az man:rc[8] rendszeren keresztül inicializálható. Az `inetd_enable` ugyan alapból a `NO` értéket veszi fel, vagyis tiltott, de a sysinstall használatával már akár a telepítés során bekapcsolható attól függõen, hogy a felhasználó milyen konfigurációt választott. Ha tehát a:
+
+[.programlisting]
+....
+inetd_enable="YES"
+....
+
+vagy
+
+[.programlisting]
+....
+inetd_enable="NO"
+....
+
+sort tesszük az [.filename]#/etc/rc.conf# állományba, akkor azzal az inetd démont indíthatjuk el vagy tilthatjuk le a rendszer indítása során. Az
+
+[source,bash]
+....
+# /etc/rc.d/inetd rcvar
+....
+
+paranccsal lekérdezhetjük a pillanatnyilag érvényes beállítást.
+
+Emellett még az inetd démonnak az `inetd_flags` változón keresztül különbözõ parancssori paramétereket is át tudunk adni.
+
+[[network-inetd-cmdline]]
+=== Parancssori paraméterek
+
+Hasonlóan a legtöbb szerverhez, az inetd viselkedését is befolyásolni tudjuk a parancssorban átadható különbözõ paraméterekkel. Ezek teljes listája a következõ:
+
+`inetd [-d] [-l] [-w] [-W] [-c maximum] [-C arány] [-a cím | név] [-p állomány] [-R arány] [-s maximum] [konfigurációs állomány]`
+
+Ezek a paraméterek az [.filename]#/etc/rc.conf# állományban az `inetd_flags` segítségével adhatóak meg az inetd részére. Alapértelmezés szerint az `inetd_flags` értéke `-wW -C 60`, ami az inetd által biztosított szolgáltatások TCP protokollon keresztüli wrappelését kapcsolja be, illetve egy IP-címrõl nem engedi a felkínált szolgáltatások elérését percenként hatvannál többször.
+
+A kezdõ felhasználók örömmel nyugtázhatják, hogy ezeket az alapbeállításokat nem szükséges módosítaniuk. A késõbbiekben majd fény derül arra, hogy a kiszolgálás gyakoriságának szabályozása remek védekezést nyújthat túlzottan nagy mennyiségû kapcsolódási kérelem ellen. A megadható paraméterek teljes listája az man:inetd[8] man oldalán olvasható.
+
+-c _maximum_::
+Az egyes szolgáltatásokhoz egyszerre felépíthetõ kapcsolatok alapértelmezett maximális számát adja meg. Alapból ezt a démont nem korlátozza. A `max-child` beállítással ez akár szolgáltatásonként külön is megadható.
+
+-C _arány_::
+Korlátozza, hogy egyetlen IP-címrõl alapból hányszor hívhatóak meg az egyes szolgáltatások egy percen belül. Ez az érték alapból korlátlan. A `max-connections-per-ip-per-minute` beállítással ez szolgáltatásonként is definiálható.
+
+-R _arány_::
+Megadja, hogy egy szolgáltatást egy perc alatt mennyiszer lehet meghívni. Ez az érték alapértelmezés szerint 256. A 0 megadásával eltöröljük ezt a típusú korlátozást.
+
+-s _maximum_::
+Annak maximumát adja meg, hogy egyetlen IP-címrõl egyszerre az egyes szolgáltatásokat mennyiszer tudjuk elérni. Alapból ez korlátlan. Szolgáltatásonként ezt a `max-child-per-ip` paraméterrel tudjuk felülbírálni.
+
+[[network-inetd-conf]]
+=== Az [.filename]#inetd.conf# állomány
+
+Az inetd beállítását az [.filename]#/etc/inetd.conf# konfigurációs állományon keresztül végezhetjük el.
+
+Amikor az [.filename]#/etc/inetd.conf# állományban módosítunk valamit, az inetd démont a következõ paranccsal meg kell kérnünk, hogy olvassa újra:
+
+[[network-inetd-reread]]
+.Az inetd konfigurációs állományának újraolvasása
+[example]
+====
+
+[source,bash]
+....
+# /etc/rc.d/inetd reload
+....
+
+====
+
+A konfigurációs állomány minden egyes sora egy-egy démont ír le. A megjegyzéseket egy "#" jel vezeti be. Az [.filename]##/etc/inetd.conf## állomány bejegyzéseinek formátuma az alábbi:
+
+[.programlisting]
+....
+szolgáltatás-neve
+socket-típusa
+protokoll
+{wait|nowait}[/max-child[/max-connections-per-ip-per-minute[/max-child-per-ip]]]
+felhasználó[:csoport][/bejelentkezési-osztály]
+szerver-program
+szerver-program-paraméterei
+....
+
+Az IPv4 protokollt használó man:ftpd[8] démon bejegyzése például így néz ki:
+
+[.programlisting]
+....
+ftp     stream  tcp     nowait  root    /usr/libexec/ftpd       ftpd -l
+....
+
+szolgáltatás-neve::
+Ez az adott démon által képviselt szolgáltatást nevezi meg, amelynek szerepelnie kell az [.filename]#/etc/services# állományban. Ez határozza meg, hogy az inetd milyen porton figyelje a beérkezõ kapcsolatokat. Ha egy új szolgáltatást hozunk létre, akkor azt elõször az [.filename]#/etc/services# állományba kell felvennünk.
+
+csatlakozás-típusa::
+Ennek az értéke `stream`, `dgram`, `raw`, vagy `seqpacket` lehet. A `stream` típust használja a legtöbb kapcsolat-orientált TCP démon, miközben a `dgram` típus az UDP szállítási protokollt alkalmazó démonok esetében használatos.
+
+protokoll::
+Valamelyik a következõk közül:
++
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Protokoll
+| Magyarázat
+
+|tcp, tcp4
+|TCP IPv4
+
+|udp, udp4
+|UDP IPv4
+
+|tcp6
+|TCP IPv6
+
+|udp6
+|UDP IPv6
+
+|tcp46
+|TCP IPv4 és v6
+
+|udp46
+|UDP IPv4 és v6
+|===
+{wait|nowait}[/max-child[/max-connections-per-ip-per-minute[/max-child-per-ip]]]::
+A `wait|nowait` beállítás mondja meg, hogy az inetd démonból meghívott démon saját maga képes-e kezelni kapcsolatokat. A `dgram` típusú kapcsolatok esetében egyértelmûen a `wait` beállítást kell használni, miközben a `stream` esetén, ahol általában több szálon dolgozunk, a `nowait` megadása javasolt. A `wait` hatására általában egyetlen démonnak adunk át több socketet, míg a `nowait` minden sockethez egy újabb példányt indít el.
++
+Az inetd által indítható példányokat a `max-child` megadásával korlátozhatjuk. Ha tehát például az adott démon számára legfeljebb példány létrehozását engedélyezzük, akkor a `nowait` után `/10` beállítást kell megadnunk. A `/0` használatával korlátlan mennyiségû példányt engedélyezhetünk.
++
+A `max-child` mellett még további két másik beállítás jöhet számításba az egyes démonok által kezelhetõ kapcsolatok maximális számának korlátozásában. A `max-connections-per-ip-per-minute` az egyes IP-címekrõl befutó lekezelhetõ kapcsolatok percenkénti számát szabályozza, így például ha itt a tizes értéket adjuk meg, akkor az adott szolgáltatáshoz egy IP-címrõl percenként csak tízszer férhetünk hozzá. A `max-child-per-ip` az egyes IP-címekhez egyszerre elindítható példányok számára ír elõ egy korlátot. Ezek a paraméterek segítenek megóvni rendszerünket az erõforrások akaratos vagy akaratlan kimerítésétõl és a DoS (Denial of Service) típusú támadásoktól.
++
+Ebben a mezõben a `wait` vagy `nowait` valamelyikét kötelezõ megadni. A `max-child`, `max-connections-per-ip-per-minute` és `max-child-per-ip` paraméterek ellenben elhagyhatóak.
++
+A `stream` típusú több szálon futó démonok a `max-child`, `max-connections-per-ip-per-minute` vagy `max-child-per-ip` korlátozása nélkül egyszerûen csak így adhatóak meg: `nowait`.
++
+Ha ugyanezt a démont tíz kapcsolatra lekorlátozzuk, akkor a következõt kell megadnunk: `nowait/10`.
++
+Amikor pedig IP-címenként 20 kapcsolatot engedélyezünk percenként és mindössze 10 példányt, akkor: `nowait/10/20`.
++
+Az iménti beállítások a man:fingerd[8] démon alapértelmezett paramétereinél is megtalálhatóak:
++
+[.programlisting]
+....
+finger stream  tcp     nowait/3/10 nobody /usr/libexec/fingerd fingerd -s
+....
++
+Végezetül engedélyezzük 100 példányt, melyek közül IP-címenként 5 használható: `nowait/100/0/5`.
+
+felhasználó::
+Ezzel azt a felhasználót adjuk meg, akinek a nevében az adott démon futni fog. Az esetek túlnyomó részében a démonokat a `root` felhasználó futtatja. Láthatjuk azonban, hogy biztonsági okokból bizonyos démonok a `daemon` vagy a legkevesebb joggal rendelkezõ `nobody` felhasználóval futnak.
+
+szerver-program::
+A kapcsolat felépülésekor az itt teljes elérési úttal megadott démon indul el. Ha ezt a szolgáltatást maga az inetd belsõleg valósítja meg, akkor ebben a mezõben az `internal` értéket adjuk meg.
+
+szerver-program-paraméterei::
+Ez a `szerver-program` beállítással együtt mûködik, és ebben a mezõben a démon meghívásakor alkalmazandó paramétereket tudjuk rögzíteni, amelyet a démon nevével kezdünk. Ha a démont a parancssorból a `sajátdémon -d` paranccsal hívnánk meg, akkor a `sajátdémon -d` lesz `szerver-program-paraméterei` beállítás helyes értéke is. Természetesen, ha a démon egy belsõleg megvalósított szolgáltatás, akkor ebben a mezõben is az `internal` fog megjelenni.
+
+[[network-inetd-security]]
+=== Védelem
+
+Attól függõen, hogy a telepítés során mit választottunk, az inetd által támogatott szolgáltatások egyes része talán alapból engedélyezett is. Amennyiben egy adott démont konkrétan nem használunk, akkor érdemes megfontolni a letiltását. A kérdéses démon sorába tegyünk egy "#" jelet az [.filename]##/etc/inetd.conf## állományba, majd <<network-inetd-reread,olvastassuk újra az inetd beállításait>>. Egyes démonok, mint például az fingerd használata egyáltalán nem ajánlott, mivel a támadók számára hasznos információkat tudnak kiszivárogtatni.
+
+Más démonok nem ügyelnek a védelemre, és a kapcsolatokhoz rendelt lejárati idejük túlságosan hosszú vagy éppen nincs is. Ezzel a támadónak lehetõsége van lassú kapcsolatokkal leterhelni az adott démont, ezáltal kimeríteni a rendszer erõforrásait. Ha úgy találjuk, hogy túlságosan sok az ilyen kapcsolat, akkor jó ötletnek bizonyulhat a démonok számára a `max-connections-per-ip-per-minute`, `max-child` vagy `max-child-per-ip` korlátozások elrendelése.
+
+Alapértelmezés szerint a TCP kapcsolatok wrappelése engedélyezett. A man:hosts_access[5] man oldalon találhatjuk meg az inetd által meghívható különféle démonok TCP-alapú korlátozásainak lehetõségeit.
+
+[[network-inetd-misc]]
+=== Egyéb lehetõségek
+
+A daytime, time, echo, discard, chargen és auth szolgáltatások feladatainak mindegyikét maga az inetd is képes ellátni.
+
+Az auth szolgáltatás a hálózati keresztül azonosítást teszi lehetõvé és bizonyos mértékig beállítható. A többit egyszerûen csak kapcsoljuk ki vagy be.
+
+A témában az man:inetd[8] man oldalán tudunk még jobban elmerülni.
+
+[[network-nfs]]
+== A hálózati állományrendszer (NFS)
+
+A FreeBSD több állományrendszert ismer, köztük a hálózati állományrendszert (Network File System, NFS) is. Az NFS állományok és könyvtárak megosztását teszi lehetõvé a hálózaton keresztül. Az NFS használatával a felhasználók és a programok képesek majdnem úgy elérni a távoli rendszereken található állományokat, mintha helyben léteznének.
+
+Íme az NFS néhány legjelentõsebb elõnye:
+
+* A helyi munkaállomások kevesebb tárterületet használnak, mivel a közös adatokat csak egyetlen számítógépen tároljuk és megosztjuk mindenki között.
+* A felhasználóknak nem kell a hálózat minden egyes gépén külön felhasználói könyvtárral rendelkezniük. Ezek ugyanis az NFS segítségével akár egy szerveren is beállíthatóak és elérhetõvé tehetõek a hálózaton keresztül.
+* A különbözõ háttértárak, mint például a floppy lemezek, CD-meghajtók és Zip(R) meghajtók a hálózaton több számítógép között megoszthatóak. Ezzel csökkenteni tudjuk a hálózatunkban szükséges cserélhetõ lemezes eszközök számát.
+
+=== Ahogy az NFS mûködik
+
+Az NFS legalább két fõ részbõl rakható össze: egy szerverbõl és egy vagy több kliensbõl. A kliensek a szerver által megosztott adatokhoz képesek távolról hozzáférni. A megfelelõ mûködéshez mindössze csak néhány programot kell beállítani és futtatni.
+
+A szervernek a következõ démonokat kell mûködtetnie:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Démon
+| Leírás
+
+|nfsd
+|Az NFS démon, amely kiszolgálja az NFS kliensektõl érkezõ kéréseket.
+
+|mountd
+|Az NFS csatlakoztató démonja, amely végrehajtja az man:nfsd[8] által átküldött kéréseket.
+
+|rpcbind
+|Ez a démon lehetõvé teszi az NFS kliensek számára, hogy fel tudják deríteni az NFS szerver által használt portot.
+|===
+
+A kliensen is futnia kell egy démonnak, amelynek a neve nfsiod. Az nfsiod démon az NFS szerver felõl érkezõ kéréseket szolgálja ki. A használata teljesen opcionális, csupán a teljesítményt hívatott javítani, de a normális és helyes mûködéshez nincs rá szükségünk. Az man:nfsiod[8] man oldalán errõl többet is megtudhatunk.
+
+[[network-configuring-nfs]]
+=== Az NFS beállítása
+
+Az NFS beállítása viszonylag egyértelmûen adja magát. A mûködéséhez szükséges programok automatikus elindítása csupán néhány apró módosítást igényel az [.filename]#/etc/rc.conf# állományban.
+
+Az NFS szerveren gondoskodjunk róla, hogy az alábbi beállítások szerepeljenek az [.filename]#/etc/rc.conf# állományban:
+
+[.programlisting]
+....
+rpcbind_enable="YES"
+nfs_server_enable="YES"
+mountd_flags="-r"
+....
+
+A mountd magától el fog indulni, ha az NFS szervert engedélyezzük.
+
+A kliensen a következõ beállítást kell felvennünk az [.filename]#/etc/rc.conf# állományba:
+
+[.programlisting]
+....
+nfs_client_enable="YES"
+....
+
+Az [.filename]#/etc/exports# állomány adja meg, hogy az NFS milyen állományrendszereket exportáljon (vagy másképpen szólva "osszon meg"). Az [.filename]#/etc/exports# állományban tehát a megosztani kívánt állományrendszereket kell szerepeltetnünk, és azt, hogy melyik számítógépekkel tudjuk ezeket elérni. A gépek megnevezése mellett a hozzáférésre további megszorításokat írhatunk fel. Ezek részletes leírását az man:exports[5] man oldalon találjuk meg.
+
+Lássunk néhány példát az [.filename]#/etc/exports# állományban megjelenõ bejegyzésekre:
+
+A most következõ példákban az állományrendszerek exportálásának finomságait igyekszünk érzékeltetni, noha a konkrét beállítások gyakran a rendszerünktõl és a hálózati konfigurációtól függenek. Például, ha a [.filename]#/cdrom# könytárat akarjuk három gép számára megosztani, akik a szerverrel megegyezõ tartományban találhatóak (ezért nem is kell megadnunk a tartományt) vagy mert egyszerûen megtalálhatók az [.filename]#/etc/hosts# állományunkban. Az `-ro` beállítás az exportált állományrendszereket írásvédetté teszi. Ezzel a beállítással a távoli rendszerek nem lesznek képesek módosítani az exportált állományrendszer tartalmát.
+
+[.programlisting]
+....
+/cdrom -ro gép1 gép2 gép3
+....
+
+A következõ sorban a [.filename]#/home# könyvtárat három gép számára osztjuk meg, melyeket IP-címekkel adtunk meg. Ez olyan helyi hálózat esetén hasznos, ahol nem állítottunk be névfeloldást. Esetleg a belsõ hálózati neveket az [.filename]#/etc/hosts# állományban is tárolhatjuk. Ezzel utóbbival kapcsolatban a man:hosts[5] man oldalt érdemes fellapoznunk. Az `-alldirs` beállítás lehetõvé teszi, hogy az alkönyvtárak is csatlakozási pontok lehessenek. Más szóval, nem fogja csatlakoztatni az alkönyvtárakat, de megengedi a kliensek számára, hogy csak azokat a könyvtárakat csatlakoztassák, amelyeket kell vagy amelyekre szükségünk van.
+
+[.programlisting]
+....
+/home  -alldirs  10.0.0.2 10.0.0.3 10.0.0.4
+....
+
+A következõ sorban az [.filename]#/a# könyvtárat úgy exportáljuk, hogy az állományrendszerhez két különbözõ tartományból is hozzá lehessen férni. A `-maproot=root` beállítás hatására a távoli rendszer `root` felhasználója az exportált állományrendszeren szintén `root` felhasználóként fogja írni az adatokat. Amennyiben a `-maproot=root` beállítást nem adjuk meg, akkor a távoli rendszeren hiába `root` az adott felhasználó, az exportált állományrendszeren nem lesz képes egyetlen állományt sem módosítani.
+
+[.programlisting]
+....
+/a  -maproot=root  gep.minta.com doboz.haz.org
+....
+
+A kliensek is csak a megfelelõ engedélyek birtokában képesek elérni a megosztott állományrendszereket. Ezért a klienst ne felejtsük el felvenni a szerver [.filename]#/etc/exports# állományába.
+
+Az [.filename]#/etc/exports# állományban az egyes sorok az egyes állományrendszerekre és az egyes gépekre vonatkoznak. A távoli gépek állományrendszerenként csak egyszer adhatóak meg, és csak egy alapértelmezett bejegyzésük lehet. Például tegyük fel, hogy a [.filename]#/usr# egy önálló állományrendszer. Ennek megfelelõen az alábbi bejegyzések az [.filename]#/etc/exports# állományban érvénytelenek:
+
+[.programlisting]
+....
+# Nem használható, ha a /usr egy állományrendszer:
+/usr/src   kliens
+/usr/ports kliens
+....
+
+Egy állományrendszerhez, vagyis itt a [.filename]#/usr# partícióhoz, két export sort is megadtunk ugyanahhoz a `kliens` nevû géphez. Helyesen így kell megoldani az ilyen helyzeteket:
+
+[.programlisting]
+....
+/usr/src /usr/ports  kliens
+....
+
+Az adott géphez tartozó egy állományrendszerre vonatkozó exportoknak mindig egy sorban kell szerepelniük. A kliens nélkül felírt sorok egyetlen géphez tartozónak fognak számítani. Ezzel az állományrendszerek megosztását tudjuk szabályozni, de legtöbbek számára nem jelent gondot.
+
+Most egy érvényes exportlista következik, ahol a [.filename]#/usr# és az [.filename]#/exports# mind helyi állományrendszerek:
+
+[.programlisting]
+....
+# Osszuk meg az src és ports könyvtárakat a kliens01 és kliens02 részére, de csak a
+# kliens01 férhessen hozzá rendszeradminisztrátori jogokkal:
+/usr/src /usr/ports -maproot=root    kliens01
+/usr/src /usr/ports               kliens02
+# A kliensek az /exports könyvtárban teljes joggal rendelkeznek és azon belül
+# bármit tudnak csatlakoztatni. Rajtuk kívül mindenki csak írásvédetten képes
+# elérni az /exports/obj könyvtárat:
+/exports -alldirs -maproot=root      kliens01 kliens02
+/exports/obj -ro
+....
+
+A mountd démonnal az [.filename]#/etc/exports# állományt minden egyes módosítása után újra be kell olvastatni, mivel a változtatásaink csak így fognak érvényesülni. Ezt megcsinálhatjuk úgy is, hogy küldünk egy HUP (hangup, avagy felfüggesztés) jelzést a már futó démonnak:
+
+[source,bash]
+....
+# kill -HUP `cat /var/run/mountd.pid`
+....
+
+vagy meghívjuk a `mountd` man:rc[8] szkriptet a megfelelõ paraméterrel:
+
+[source,bash]
+....
+# /etc/rc.d/mountd onereload
+....
+
+Az crossref:config[configtuning-rcd,Az rc használata FreeBSD alatt]ban tudhatunk meg részleteket az rc szkriptek használatáról.
+
+Ezek után akár a FreeBSD újraindításával is aktiválhatjuk a megosztásokat, habár ez nem feltétlenül szükséges. Ha `root` felhasználónként kiadjuk a következõ parancsokat, akkor azzal minden szükséges programot elindítunk.
+
+Az NFS szerveren tehát:
+
+[source,bash]
+....
+# rpcbind
+# nfsd -u -t -n 4
+# mountd -r
+....
+
+Az NFS kliensen pedig:
+
+[source,bash]
+....
+# nfsiod -n 4
+....
+
+Ezzel most már minden készen áll a távoli állományrendszer csatlakoztatására. A példákban a szerver neve `szerver` lesz, valamint a kliens neve `kliens`. Ha csak ideiglenesen akarunk csatlakoztatni egy állományrendszert vagy egyszerûen csak ki akarjuk próbálni a beállításainkat, a kliensen `root` felhasználóként az alábbi parancsot hajtsuk végre:
+
+[source,bash]
+....
+# mount szerver:/home /mnt
+....
+
+Ezzel a szerveren található [.filename]#/home# könyvtárat fogjuk a kliens [.filename]#/mnt# könyvtárába csatlakoztatni. Ha mindent jól beállítottunk, akkor a kliensen most már be tudunk lépni az [.filename]#/mnt# könyvtárba és láthatjuk a szerveren található állományokat.
+
+Ha a számítógép indításával automatikusan akarunk hálózati állományrendszereket csatlakoztatni, akkor vegyük fel ezeket az [.filename]#/etc/fstab# állományba. Erre íme egy példa:
+
+[.programlisting]
+....
+szerver:/home	/mnt	nfs	rw	0	0
+....
+
+Az man:fstab[5] man megtalálhatjuk az összes többi beállítást.
+
+=== Zárolások
+
+Bizonyos alkalmazások (például a mutt) csak akkor mûködnek megfelelõen, ha az állományokat a megfelelõ módon zárolják. Az NFS esetében az rpc.lockd használható az ilyen zárolások megvalósítására. Az engedélyezéséhez mind a szerveren és a kliensen vegyük fel a következõ sort az [.filename]#/etc/rc.conf# állományba (itt már feltételezzük, hogy az NFS szervert és klienst korábban beállítottuk):
+
+[.programlisting]
+....
+rpc_lockd_enable="YES"
+rpc_statd_enable="YES"
+....
+
+A következõ módon indíthatjuk el:
+
+[source,bash]
+....
+# /etc/rc.d/lockd start
+# /etc/rc.d/statd start
+....
+
+Ha nincs szükségünk valódi zárolásra az NFS kliensek és az NFS szerver között, akkor megcsinálhatjuk azt is, hogy az NFS kliensen a man:mount_nfs[8] programnak az `-L` paraméter átadásával csak helyileg végzünk zárolást. Ennek további részleterõl a man:mount_nfs[8] man oldalon kaphatunk felvilágosítást.
+
+=== Gyakori felhasználási módok
+
+Az NFS megoldását a gyakorlatban rengeteg esetben alkalmazzák. Ezek közül most felsoroljuk a legelterjedtebbeket:
+
+* Több gép között megosztunk egy telepítõlemezt vagy más telepítõeszközt. Ez így sokkal olcsóbb és gyakorta kényelmes megoldás abban az esetben, ha egyszerre több gépre akarjuk ugyanazt a szoftvert telepíteni.
+* Nagyobb hálózatokon sokkal kényelmesebb lehet egy központi NFS szerver használata, ahol a felhasználók könyvtárait tároljuk. Ezek a felhasználói könyvtárak aztán megoszthatóak a hálózaton keresztül, így a felhasználók mindig ugyanazt a könyvárat kapják függetlenül attól, hogy milyen munkaállomásról is jelentkeztek be.
+* Több géppel is képes így osztozni az [.filename]#/usr/ports/distfiles# könyvtáron. Ezen a módon sokkal gyorsabban tudunk portokat telepíteni a gépekre, mivel nem kell külön mindegyikre letölteni az ehhez szükséges forrásokat.
+
+[[network-amd]]
+=== Automatikus csatlakoztatás az amd használatával
+
+Az man:amd[8] (automatikus csatlakoztató démon, az automatic mounter daemon) önmûködõen csatlakoztatja a távoli állományrendszereket, amikor azokon belül valamelyik állományhoz vagy könyvtárhoz próbálunk hozzáférni. Emellett az amd az egy ideje már inaktív állományrendszereket is automatikusan leválasztja. Az amd használata egy remek alternatívát kínál az általában az [.filename]#/etc/fstab# állományban megjelenõ állandóan csatlakoztatott állományrendszerekkel szemben.
+
+Az amd úgy mûködik, hogy kapcsolódik egy NFS szerver [.filename]#/host# és [.filename]#/net# könyvtáraihoz. Amikor egy állományt akarunk elérni ezeken a könyvtárakon belül, az amd kikeresi a megfelelõ távoli csatlakoztatást és magától csatlakoztatja. A [.filename]#/net# segítségével egy IP-címrõl tudunk exportált állományrendszereket csatlakoztatni, miközben a [.filename]#/host# a távoli gép hálózati neve esetében használatos.
+
+Ha tehát a [.filename]#/host/izemize/usr# könyvtárban akarunk elérni egy állományt, akkor az amd démonnak ahhoz elõször az `izemize` nevû géprõl exportált [.filename]#/usr# könyvtárat kell csatlakoztatnia.
+
+.Egy exportált állományrendszer csatlakoztatása az amd használatával
+[example]
+====
+Egy távoli számítógép által rendelkezésre bocsátott megosztásokat a `showmount` paranccsal tudjuk lekérdezni. Például az `izemize` gépen elérhetõ exportált állományrendszereket így láthatjuk:
+
+[source,bash]
+....
+% showmount -e izemize
+Exports list on izemize:
+/usr                               10.10.10.0
+/a                                 10.10.10.0
+% cd /host/izemize/usr
+....
+
+====
+
+Ahogy a példában látjuk is, a `showmount` parancs a [.filename]#/usr# könyvtárat mutatja megosztásként. Amikor tehát belépünk a [.filename]#/host/izemize/usr# könyvtárba, akkor amd magától megpróbálja feloldani az `izemize` hálózati nevet és csatlakoztatni az elérni kívánt exportált állományrendszert.
+
+Az amd az indító szkripteken keresztül az [.filename]#/etc/rc.conf# alábbi beállításával engedélyezhetõ:
+
+[.programlisting]
+....
+amd_enable="YES"
+....
+
+Emellett még az `amd_flags` használatával további paraméterek is átadható az amd felé. Alapértelmezés szerint az `amd_flags` tartalmaz az alábbi:
+
+[.programlisting]
+....
+amd_flags="-a /.amd_mnt -l syslog /host /etc/amd.map /net /etc/amd.map"
+....
+
+Az [.filename]#/etc/amd.map# állomány adja meg az exportált állományrendszerek alapértelmezett beállításait. Az [.filename]#/etc/amd.conf# állományban az amd további lehetõségeit konfigurálhatjuk..
+
+Ha többet is szeretnénk tudni a témáról, akkor az man:amd[8] és az man:amd.conf[8] man oldalakat javasolt elolvasnunk.
+
+[[network-nfs-integration]]
+=== Problémák más rendszerek használatakor
+
+Némely PC-s ISA buszos Ethernet kártyákra olyan korlátozások érvényesek, melyek komoly hálózati problémák keletkezéséhez vezethetnek, különösen az NFS esetében. Ez a nehézség nem FreeBSD-függõ, de a FreeBSD rendszereket is érinti.
+
+Ez gond általában majdnem mindig akkor merül fel, amikor egy (FreeBSD-s) PC egy hálózatba kerül többek közt a Silicon Graphic és a Sun Microsystems által gyártott nagyteljesítményû munkaállomásokkal. Az NFS csatlakoztatása és bizonyos mûveletek még hibátlanul végrehajtódnak, azonban hirtelen a szerver látszólag nem válaszol többet a kliens felé úgy, hogy a többi rendszertõl folyamatosan dolgozza felfele a kéréseket. Ez a kliens rendszeren tapasztalható csak, amikor a kliens FreeBSD vagy egy munkaállomás. Sok rendszeren egyszerûen rendesen le sem lehet állítani a klienst, ha a probléma egyszer már felütötte a fejét. Egyedüli megoldás gyakran csak a kliens újraindítása marad, mivel az NFS-ben kialakult helyzetet máshogy nem lehet megoldani.
+
+Noha a "helyes" megoldás az lenne, ha beszereznénk egy nagyobb teljesítményû és kapacitású kártyát a FreeBSD rendszer számára, azonban egy jóval egyszerûbb kerülõút is található a kielégítõ mûködés eléréséhez. Ha a FreeBSD rendszer képviseli a _szervert_, akkor a kliensnél adjuk meg a `-w=1024` beállítást is a csatlakoztatásnál. Ha a FreeBSD rendszer a _kliens_ szerepét tölti be, akkor az NFS állományrendszert az `-r=1024` beállítással csatlakoztassuk róla. Ezek a beállítások az [.filename]#fstab# állomány negyedik mezõjében is megadhatóak az automatikus csatlakoztatáshoz, vagy manuális esetben a man:mount[8] parancsnak a `-o` paraméterrel.
+
+Hozzá kell azonban tennünk, hogy létezik egy másik probléma, amit gyakran ezzel tévesztenek össze, amikor az NFS szerverek és kliensek nem ugyanabban a hálózatban találhatóak. Ilyen esetekben mindenképpen _gyõzõdjünk meg róla_, hogy az útválasztók rendesen továbbküldik a mûködéshez szükséges UDP információkat, különben nem sokat tudunk tenni a megoldás érdekében.
+
+A most következõ példákban a `gyorsvonat` lesz a nagyteljesítményû munkaállomás (felület) neve, illetve a `freebsd` pedig a gyengébb teljesítményû Ethernet kártyával rendelkezõ FreeBSD rendszer (felület) neve. A szerveren az [.filename]#/osztott# nevû könyvtárat fogjuk NFS állományrendszerként exportálni (lásd man:exports[5]), amelyet majd a [.filename]#/projekt# könyvtárba fogunk csatlakoztatni a kliensen. Minden esetben érdemes lehet még megadnunk a `hard` vagy `soft`, illetve `bg` opciókat is.
+
+Ebben a példában a FreeBSD rendszer (`freebsd`) lesz a kliens, és az [.filename]#/etc/fstab# állományában így szerepel az exportált állományrendszer:
+
+[.programlisting]
+....
+gyorsvonat:/osztott /projekt nfs rw,-r=1024 0 0
+....
+
+És így tudjuk manuálisan csatlakoztatni:
+
+[source,bash]
+....
+# mount -t nfs -o -r=1024 gyorsvonat:/osztott /projekt
+....
+
+Itt a FreeBSD rendszer lesz a szerver, és a `gyorsvonat`[.filename]#/etc/fstab# állománya így fog kinézni:
+
+[.programlisting]
+....
+freebsd:/osztott /projekt nfs rw,-w=1024 0 0
+....
+
+Manuálisan így csatlakoztathatjuk az állományrendszert:
+
+[source,bash]
+....
+# mount -t nfs -o -w=1024 freebsd:/osztott /projekt
+....
+
+Szinte az összes 16 bites Ethernet kártya képes mûködni a fenti írási vagy olvasási korlátozások nélkül is.
+
+A kíváncsibb olvasók számára eláruljuk, hogy pontosan miért is következik be ez a hiba, ami egyben arra is magyarázatot ad, hogy miért nem tudjuk helyrehozni. Az NFS általában 8 kilobyte-os "blokkokkal" dolgozik (habár kisebb méretû darabkákat is tud készíteni). Mivel az Ethernet által kezelt legnagyobb méret nagyjából 1500 byte, ezért az NFS "blokkokat" több Ethernet csomagra kell osztani - még olyankor is, ha ez a program felsõbb rétegeiben osztatlan egységként látszik - ezt aztán fogadni kell, összerakni és _nyugtázni_ mint egységet. A nagyteljesítményû munkaállomások a szabvány által még éppen megengedett szorossággal képesek ontani magukból az egy egységhez tartozó csomagokat, közvetlenül egymás után. A kisebb, gyengébb teljesítményû kártyák esetében azonban az egymáshoz tartozó, késõbb érkezõ csomagok ráfutnak a korábban megkapott csomagokra még pontosan azelõtt, hogy elérnék a gépet, így az egységek nem állíthatóak össze vagy nem nyugtázhatóak. Ennek eredményeképpen a munkaállomás egy adott idõ múlva megint próbálkozik, de ismét az egész 8 kilobyte-os blokkot küldi el, ezért ez a folyamat a végtelenségig ismétlõdik.
+
+Ha a küldendõ egységek méretét az Ethernet által kezelt csomagok maximális mérete alá csökkentjük, akkor biztosak lehetünk benne, hogy a teljes Ethernet csomag egyben megérkezik és nyugtázódik, így elkerüljük a holtpontot.
+
+A nagyteljesítményû munkaállomások természetesen továbbra is küldhetnek a PC-s rendszerek felé túlfutó csomagokat, de egy jobb kártyával az ilyen túlfutások nem érintik az NFS által használt "egységeket". Amikor egy ilyen túlfutás bekövetkezik, az érintett egységet egyszerûen újra elküldik, amelyet a rákövetkezõ alkalommal nagy valószínûséggel már tudunk rendesen fogadni, összerakni és nyugtázni.
+
+[[network-nis]]
+== Hálózati információs rendszer (NIS/YP)
+
+=== Mi ez?
+
+A hálózati információs szolgáltatást (Network Information Service, avagy NIS) a Sun Microsystems fejlesztette ki a UNIX(R) (eredetileg SunOS(TM)) rendszerek központosított karbantartásához. Mostanra már lényegében ipari szabvánnyá nõtte ki magát, hiszen az összes nagyobb UNIX(R)-szerû rendszer (a Solaris(TM), HP-UX, AIX(R), Linux, NetBSD, OpenBSD, FreeBSD stb.) támogatja a NIS használatát.
+
+A NIS régebben sárga oldalak (Yellow Pages) néven volt ismert, de a különbözõ jogi problémák miatt késõbb ezt a Sun megváltoztatta. A régi elnevezést (és a yp rövidítést) azonban még napjainkban is lehet néhol látni.
+
+Ez egy RPC alapján mûködõ, kliens/szerver felépítésû rendszer, amely az egy NIS tartomány belül levõ számítógépek számára teszi lehetõvé ugyanazon konfigurációs állományok használatát. Segítségével a rendszergazda a NIS klienseket a lehetõ legkevesebb adat hozzáadásával, eltávolításával vagy módosításával képes egyetlen helyrõl beállítani.
+
+Hasonló a Windows NT(R) tartományaihoz, és habár a belsõ implementációt tekintve már akadnak köztük jelentõs eltérések is, az alapvetõ funkciók szintjén mégis összevethetõek.
+
+=== A témához tartozó fogalmak és programok
+
+A NIS telepítése számos fogalom és fontos felhasználói program kerül elõ FreeBSD-n, akár egy NIS szervert akarunk beállítani, akár csak egy NIS klienst:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Fogalom
+| Leírás
+
+|NIS tartománynév
+|A NIS központi szerverei és az összes hozzájuk tartozó kliens (beleértve az alárendelt szervereket) rendelkezik egy NIS tartománynévvel. Hasonló a Windows NT(R) által használt tartománynevekhez, de a NIS tartománynevei semmilyen kapcsolatban nem állnak a névfeloldással.
+
+|rpcbind
+|Az RPC (Remote Procedure Call, a NIS által használt egyik hálózati protokoll) engedélyezéséhez lesz rá szükségünk. Ha az rpcbind nem fut, akkor sem NIS szervert, sem pedig NIS klienst nem tudunk mûködtetni.
+
+|ypbind
+|A NIS klienst "köti össze" a hozzá tartozó NIS szerverrel. A NIS tartománynevet a rendszertõl veszi, és az RPC használatával csatlakozik a szerverhez. Az ypbind a NIS környezet kliens és szerver közti kommunikációjának magját alkotja. Ha az ypbind leáll a kliens gépén, akkor nem tudjuk elérni a NIS szervert.
+
+|ypserv
+|Csak a NIS szervereken szabad futnia, mivel ez maga a NIS szerver programja. Ha az man:ypserv[8] leáll, akkor a szerver nem lesz képes tovább kiszolgálni a NIS kéréseket (szerencsére az alárendelt szerverek képesek átvenni ezeket). A NIS bizonyos változatai (de nem az, amelyik a FreeBSD-ben is megjelenik) nem próbálnak meg más szerverekhez csatlakozni, ha bedöglik az aktuális használt szerver. Ezen gyakran egyedül csak a szervert képviselõ program (vagy akár az egész szerver) újraindítása segíthet, illetve az ypbind újraindítása a kliensen.
+
+|rpc.yppasswdd
+|Ez egy olyan program, amelyet csak a NIS központi szerverein kell csak futtatni. Ez a démon a NIS kliensek számára a NIS jelszavaik megváltoztatását teszi lehetõvé. Ha ez a démon nem fut, akkor a felhasználók csak úgy tudják megváltoztatni a jelszavukat, ha bejelentkeznek a központi NIS szerverre.
+|===
+
+=== Hogyan mûködik?
+
+A NIS környezetekben háromféle gép létezik: a központi szerverek, az alárendelt szerverek és a kliensek. A szerverek képezik a gépek konfigurációs információinak központi tárhelyét. A központi szerverek tárolják ezen információk hiteles másolatát, míg ezt az alárendelt szerverek redundánsan tükrözik. A kliensek a szerverekre támaszkodnak ezen információk beszerzéséhez.
+
+Sok állomány tartalma megosztható ezen a módon. Például a [.filename]#master.passwd#, a [.filename]#group# és [.filename]#hosts# állományokat meg szokták osztani NFS-en. Amikor a kliensen futó valamelyik programnak olyan információra lenne szüksége, amely általában ezekben az állományokban nála megtalálható lenne, akkor helyette a NIS szerverhez fordul.
+
+==== A gépek típusai
+
+* A _központi NIS szerver_. Ez a szerver, amely leginkább a Windows NT(R) elsõdleges tartományvezérlõjéhez hasonlítható tartja karban az összes, NIS kliensek által használt állományt. A [.filename]#passwd#, [.filename]#group#, és összes többi ehhez hasonló állomány ezen a központi szerveren található meg.
++
+[NOTE]
+====
+Egy gép akár több NIS tartományban is lehet központi szerver. Ezzel a lehetõséggel viszont itt most nem foglalkozunk, mivel most csak egy viszonylag kis méretû NIS környezetet feltételezünk.
+====
+
+* Az _alárendelt NIS szerverek_. A Windows NT(R) tartalék tartományvezérlõihez hasonlítanak, és az alárendelt NIS szerverek feladata a központi NIS szerveren tárolt adatok másolatainak karbantartása. Az alárendelt NIS szerverek a redundancia megvalósításában segítenek, aminek leginkább a fontosabb környezetekben van szerepe. Emellett a központi szerver terhelésének kiegyenlítését is elvégzik. A NIS kliensek elsõként mindig ahhoz a NIS szerverhez csatlakoznak, amelytõl elõször választ kapnak, legyen akár az egy alárendelt szerver.
+* A _NIS kliensek_. A NIS kliensek, hasonlóan a Windows NT(R) munkaállomásokhoz, a NIS szerveren (amely a Windows NT(R) munkaállomások esetében a tartományvezérlõ) keresztül jelentkeznek be.
+
+=== A NIS/YP használata
+
+Ebben a szakaszban egy példa NIS környezetet állítunk be.
+
+==== Tervezés
+
+Tegyük fel, hogy egy aprócska egyetemi labor rendszergazdái vagyunk. A labor, mely 15 FreeBSD-s gépet tudhat magáénak, jelen pillanatban még semmilyen központosított adminisztráció nem létezik. Mindegyik gép saját [.filename]#/etc/passwd# és [.filename]#/etc/master.passwd# állománnyal rendelkezik. Ezeket az állományokat saját kezûleg kell szinkronban tartani. Tehát ha most felveszünk egy felhasználót a laborhoz, akkor az `adduser` parancsot mind a 15 gépen ki kell adni. Egyértelmû, hogy ez így nem maradhat, ezért úgy döntöttük, hogy a laborban NIS-t fogunk használni, és két gépet kinevezünk szervernek.
+
+Az iméntieknek megfelelõen a labor most valahogy így néz ki:
+
+[.informaltable]
+[cols="1,1,1", frame="none", options="header"]
+|===
+| A gép neve
+| IP-cím
+| A gép szerepe
+
+|`ellington`
+|`10.0.0.2`
+|központi NIS
+
+|`coltrane`
+|`10.0.0.3`
+|alárendelt NIS
+
+|`basie`
+|`10.0.0.4`
+|tanszéki munkaállomás
+
+|`bird`
+|`10.0.0.5`
+|kliensgép
+
+|`cli[1-11]`
+|`10.0.0.[6-17]`
+|a többi kliensgép
+|===
+
+Ha még nincs tapasztalatunk a NIS rendszerek összeállításában, akkor elõször jó ötlet lehet végiggondolni, miként is akarjuk kialakítani. A hálózatunk méretétõl függetlenül is akadnak olyan döntések, amelyeket mindenképpen meg kell hoznunk.
+
+===== A NIS tartománynév megválasztása
+
+Ez nem az a "tartománynév", amit megszokhattunk. Ennek a pontos neve "NIS tartománynév". Amikor a kliensek kérnek valamilyen információt, akkor megadják annak a NIS tartománynak a nevét is, amelynek részei. Így tud egy hálózaton több szerver arról dönteni, hogy melyikük melyik kérést válaszolja meg. A NIS által használt tartománynévre tehát inkább úgy érdemes gondolni, mint egy valamilyen módon összetartozó gépek közös nevére.
+
+Elõfordul, hogy egyes szervezetek az interneten is nyilvántartott tartománynevüket választják NIS tartománynévnek. Ez alapvetõen nem ajánlott, mivel a hálózati problémák felderítése közben félreértéseket szülhet. A NIS tartománynévnek a hálózatunkon belül egyedinek kell lennie, és lehetõleg minél jobban írja le az általa csoportba sorolt gépeket. Például a Kis Kft. üzleti osztályát tegyük a "kis-uzlet" NIS tartományba. Ebben a példában most a `proba-tartomany` nevet választottuk.
+
+A legtöbb operációs rendszer azonban (köztük a SunOS(TM)) a NIS tartománynevet használja internetes tartománynévként is. Ha a hálózatunkon egy vagy több ilyen gép is található, akkor a NIS tartomány nevének az internetes tartománynevet _kell_ megadnunk.
+
+===== A szerverek fizikai elvárásai
+
+Nem árt néhány dolgot fejben tartani, amikor a NIS szervernek használt gépet kiválasztjuk. Az egyik ilyen szerencsétlen dolog az a szintû függõség, ami a NIS kliensek felõl megfigyelhetõ a szerverek felé. Ha egy kliens nem tudja a NIS tartományon belül felvenni a kapcsolatot valamelyik szerverrel, akkor az a gép könnyen megbízhatatlanná válhat. Felhasználói- és csoportinformációk nélkül a legtöbb rendszer egy idõre le is merevedik. Ennek figyelembevételével tehát olyan gépet kell szervernek választanunk, amelyet nem kell gyakran újraindítani, és nem végzünk rajta semmilyen komoly munkát. A célnak legjobban megfelelõ NIS szerverek valójában olyan gépek, amelyek egyedüli feladata csak a NIS kérések kiszolgálása. Ha a hálózatunk nem annyira leterhelt, akkor még a NIS szerver mellett más programokat is futtathatunk, de ne feledjük, hogy ha a NIS szolgáltatás megszûnik, akkor az az _összes_ NIS kliensen éreztetni fogja kedvezõtlen hatását.
+
+==== A NIS szerverek
+
+A NIS rendszerben tárolt összes információ általános példánya egyetlen gépen található meg, amelyet a központi NIS szervernek hívunk. Az információk tárolására szánt adatbázis pedig NIS táblázatoknak (NIS map) nevezzük. FreeBSD alatt ezek a táblázatok a [.filename]#/var/yp/tartománynév# könyvtárban találhatóak, ahol a [.filename]#tartománynév# a kiszolgált NIS tartományt nevezi meg. Egyetlen NIS szerver egyszerre akár több tartományt is kiszolgálhat, így itt több könyvtár is található, minden támogatott tartományhoz egy. Minden tartomány saját, egymástól független táblázatokkal rendelkezik.
+
+A központi és alárendelt NIS szerverek az `ypserv` démon segítségével dolgozzák fel a NIS kéréseket. Az `ypserv` felelõs a NIS kliensektõl befutó kérések fogadásáért, és a kért tartomány valamint táblázat nevébõl meghatározza az adatbázisban tárolt állományt, majd innen visszaküldi a hozzá tartozó adatot a kliensnek.
+
+===== A központi NIS szerver beállítása
+
+A központi NIS szerver beállítása viszonylag magától értetõdõ, de a nehézségét az igényeink szabják meg. A FreeBSD alapból támogatja a NIS használatát. Ezért mindössze annyit kell tennünk, hogy a következõ sorokat betesszük az [.filename]#/etc/rc.conf# állományba, és a FreeBSD gondoskodik a többirõl.
+
+[.procedure]
+====
+
+[.programlisting]
+....
+nisdomainname="proba-tartomany"
+....
+
+. Ez a sor adja meg a hálózati beállítások (vagy például az újraindítás) során a NIS tartomány nevét, amely a korábbiak szerint itt most a `proba-tartomany`.
+
+[.programlisting]
+....
+nis_server_enable="YES"
+....
+. Ezzel utasítjuk a FreeBSD-t, hogy a hálózati alkalmazások következõ indításakor a NIS szervert is aktiválja.
+
+[.programlisting]
+....
+nis_yppasswdd_enable="YES"
+....
+
+Ezzel engedélyezzük az `rpc.yppasswdd` démont, amely a korábban említettek szerint lehetõvé teszi a felhasználók számára, hogy a közvetlenül a kliensekrõl változtassák meg a NIS jelszavukat.
+====
+
+[NOTE]
+====
+A konkrét NIS beállításainktól függõen további bejegyzések felvételére is szükségünk lehet. Erre késõbb még <<network-nis-server-is-client,"az olyan NIS szervereknél, amelyek egyben NIS kliensek">>, vissza fogunk térni.
+====
+
+Miután ezeket beállítottuk, rendszeradminisztrátorként adjuk ki az `/etc/netstart` parancsot. Az [.filename]#/etc/rc.conf# állományban szereplõ adatok alapján mindent beállít magától. Még mielõtt inicializálnánk a NIS táblázatokat, indítsuk el manuálisan az ypserv démont:
+
+[source,bash]
+....
+# /etc/rc.d/ypserv start
+....
+
+===== A NIS táblázatok inicializálása
+
+A _NIS táblázatok_ lényegében a [.filename]#/var/yp# könyvtárban tárolt adatbázisok. A központi NIS szerver [.filename]#/etc# könyvtárában található konfigurációs állományokból állítódnak elõ, egyetlen kivétellel: ez az [.filename]#/etc/master.passwd# állomány. Ennek megvan a maga oka, hiszen nem akarjuk a `root` és az összes többi fontosabb felhasználóhoz tartozó jelszót az egész NIS tartománnyal megosztani. Ennek megfelelõen a NIS táblázatok inicializálásához a következõt kell tennünk:
+
+[source,bash]
+....
+# cp /etc/master.passwd /var/yp/master.passwd
+# cd /var/yp
+# vi master.passwd
+....
+
+El kell távolítanunk az összes rendszerszintû (`bin`, `tty`, `kmem`, `games`, stb), és minden olyan egyéb hozzáférést, amelyeket nem akarjuk közvetíteni a NIS kliensek felé (például a `root` és minden más nullás, vagyis rendszeradminisztrátori azonosítóval ellátott hozzáférést).
+
+[NOTE]
+====
+Gondoskodjunk róla, hogy az [.filename]#/var/yp/master.passwd# állomány sem a csoport, sem pedig bárki más számára nem olvasható (600-as engedély)! Ennek beállításához használjuk az `chmod` parancsot, ha szükséges.
+====
+
+Ha végeztünk, akkor már tényleg itt az ideje inicializálni NIS táblázatainkat. A FreeBSD erre egy `ypinit` nevû szkriptet ajánl fel (errõl a saját man oldalán tudhatunk meg többet). Ez a szkript egyébként a legtöbb UNIX(R) típusú operációs rendszeren megtalálható, de nem az összesen. A Digital UNIX/Compaq Tru64 UNIX rendszereken ennek a neve `ypsetup`. Mivel most a központi NIS szerver táblázatait hozzuk létre, azért az `ypinit` szkriptnek át kell adnunk a `-m` opciót is. A NIS táblázatok elõállításánál feltételezzük, hogy a fentebb ismertetett lépéseket már megtettük, majd kiadjuk ezt a parancsot:
+
+[source,bash]
+....
+ellington# ypinit -m proba-tartomany
+Server Type: MASTER Domain: proba-tartomany
+Creating an YP server will require that you answer a few questions.
+Questions will all be asked at the beginning of the procedure.
+Do you want this procedure to quit on non-fatal errors? [y/n: n] n
+Ok, please remember to go back and redo manually whatever fails.
+If you don't, something might not work.
+At this point, we have to construct a list of this domains YP servers.
+rod.darktech.org is already known as master server.
+Please continue to add any slave servers, one per line. When you are
+done with the list, type a <control D>.
+master server   :  ellington
+next host to add:  coltrane
+next host to add:  ^D
+The current list of NIS servers looks like this:
+ellington
+coltrane
+Is this correct?  [y/n: y] y
+
+[ .. a táblázatok generálása .. ]
+
+NIS Map update completed.
+ellington has been setup as an YP master server without any errors.
+....
+
+Az üzenetek fordítása:
+
+[source,bash]
+....
+A szerver típusa: KÖZPONTI, tartomány: proba-tartomany
+Az YP szerver létrehozásához meg kell válaszolni néhány kérdést az
+eljárás megkezdése előtt.
+Szeretnénk, ha az eljárás megszakadna a nem végzetes hibák esetén is? [i/n: n] n
+Rendben, akkor ne felejtsük el manuálisan kijavítani a hibát, ha
+valamivel gond lenne.  Ha nem tesszük meg, akkor előfordulhat, hogy
+valami nem fog rendesen működni.  Most össze kell állítanunk egy listát
+a tartomány YP szervereiről.
+Jelenleg a rod.darktech.org a központi szerver.
+Kérjünk, adjon meg további alárendelt szervereket, soronként egyet.
+Amikor ezt befejeztük, a <control D> lenyomásával tudunk
+kilépni.
+központi szerver : ellington
+következő gép    : coltrane
+következő gép    : ^D
+A NIS szerverek listája jelenleg a következő:
+ellington
+coltrane
+Ez megfelelő?  [i/n: i] i
+
+[ .. a táblázatok generálása .. ]
+
+A NIS táblázatok sikeressen frissültek.
+Az elligon szervert minden hiba nélkül sikerült központi szerverként
+beállítani.
+....
+
+Az `ypinit` a [.filename]#/var/yp/Makefile.dist# állományból létrehozza a [.filename]#/var/yp/Makefile# állományt. Amennyiben ez létrejött, az állomány feltételezi, hogy csak FreeBSD-s gépek részvételével akarunk kialakítani egy egyszerveres NIS környezetet. Mivel a `proba-tartomany` még egy alárendelt szervert is tartalmaz, ezért át kell írnunk a [.filename]#/var/yp/Makefile# állományt:
+
+[source,bash]
+....
+ellington# vi /var/yp/Makefile
+....
+
+Ezt a sort kell megjegyzésbe tennünk:
+
+[.programlisting]
+....
+NOPUSH = "True"
+....
+
+(ha még nem lenne úgy).
+
+===== Az alárendelt NIS szerverek beállítása
+
+Az alárendelt NIS szerverek beállítása még a központinál is egyszerûbb. Jelentkezzünk be az alárendelt szerverre és az eddigieknek megfelelõen írjuk át az [.filename]#/etc/rc.conf# állományt. Az egyetlen különbség ezúttal csupán annyi lesz, hogy az `ypinit` lefuttatásakor a `-s` opciót kell megadnunk (mint slave, vagyis alárendelt). A `-s` opció használatához a központi NIS szerver nevét is át kell adnunk, ezért a konkrét parancs valahogy így fog kinézni:
+
+[source,bash]
+....
+coltrane# ypinit -s ellington proba-tartomany
+
+Server Type: SLAVE Domain: test-domain Master: ellington
+
+Creating an YP server will require that you answer a few questions.
+Questions will all be asked at the beginning of the procedure.
+
+Do you want this procedure to quit on non-fatal errors? [y/n: n]  n
+
+Ok, please remember to go back and redo manually whatever fails.
+If you don't, something might not work.
+There will be no further questions. The remainder of the procedure
+should take a few minutes, to copy the databases from ellington.
+Transferring netgroup...
+ypxfr: Exiting: Map successfully transferred
+Transferring netgroup.byuser...
+ypxfr: Exiting: Map successfully transferred
+Transferring netgroup.byhost...
+ypxfr: Exiting: Map successfully transferred
+Transferring master.passwd.byuid...
+ypxfr: Exiting: Map successfully transferred
+Transferring passwd.byuid...
+ypxfr: Exiting: Map successfully transferred
+Transferring passwd.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring group.bygid...
+ypxfr: Exiting: Map successfully transferred
+Transferring group.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring services.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring rpc.bynumber...
+ypxfr: Exiting: Map successfully transferred
+Transferring rpc.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring protocols.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring master.passwd.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring networks.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring networks.byaddr...
+ypxfr: Exiting: Map successfully transferred
+Transferring netid.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring hosts.byaddr...
+ypxfr: Exiting: Map successfully transferred
+Transferring protocols.bynumber...
+ypxfr: Exiting: Map successfully transferred
+Transferring ypservers...
+ypxfr: Exiting: Map successfully transferred
+Transferring hosts.byname...
+ypxfr: Exiting: Map successfully transferred
+
+coltrane has been setup as an YP slave server without any errors.
+Don't forget to update map ypservers on ellington.
+....
+
+Most már lennie kell egy [.filename]#/var/yp/proba-tartomany# nevû könyvtárunknak is. A központi NIS szerver táblázatainak másolata itt fognak tárolódni. Ezeket soha ne felejtsük el frissen tartani. Az alárendelt szervereken a következõ [.filename]#/etc/crontab# bejegyzések pontosan ezt a feladatot látják el:
+
+[.programlisting]
+....
+20      *       *       *       *       root   /usr/libexec/ypxfr passwd.byname
+21      *       *       *       *       root   /usr/libexec/ypxfr passwd.byuid
+....
+
+Ez a két sor gondoskodik róla, hogy az alárendelt szerverek ne felejtsék el egyeztetni a táblázataikat a központi szerver táblázataival. Ezek a bejegyzések nem nélkülözhetetlenek a megfelelõ mûködéshez, mivel a központi szerver automatikusan feltölti az alárendelt szerverekre a létrejött változásokat. Mivel azonban a jelszavak létfontosságúak a szervertõl függõ rendszerek számára, ezért ajánlott explicit módon is elõírni a frissítést. Ez a forgalmasabb hálózatokon nagyobb jelentõséggel bír, mivel ott a táblázatok frissítése nem mindig fejezõdik be rendesen.
+
+Most pedig futassuk le a `/etc/netstart` parancsot az alárendelt szervereken is, amivel így elindul a NIS szerver.
+
+==== A NIS kliensek
+
+A NIS kliens az `ypbind` démon segítségével egy kötésnek (bind) nevezett kapcsolatot épít ki egy adott NIS szerverrel. Az `ypbind` ellenõrzi a rendszer alapértelmezett tartományát (ezt a `domainname` paranccsal állítottunk be), majd RPC kéréseket kezd szórni a helyi hálózaton. Ezek a kérések annak a tartománynak a nevét tartalmazzák, amelyhez az `ypbind` megpróbál kötést létrehozni. Ha az adott tartomány kiszolgálására beállított szerver észleli ezeket a kéréseket, akkor válaszol az `ypbind` démonnak, amely pedig feljegyzi a szerver címét. Ha több szerver is elérhetõ (például egy központi és több alárendelt), akkor az `ypbind` az elsõként válaszoló címét fogja rögzíteni. Innentõl kezdve a kliens közvetlenül ennek a szervernek fogja küldeni a NIS kéréseit. Az `ypbind` idõnként "megpingeli" a szervert, hogy meggyõzõdjön az elérhetõségérõl. Ha az `ypbind` egy adott idõn belül nem kap választ a ping kéréseire, akkor megszünteti a kötést a tartományhoz és nekilát keresni egy másik szervert.
+
+===== A NIS kliensek beállítása
+
+Egy FreeBSD-s gépet NIS kliensként meglehetõsen egyszerûen lehet beállítani.
+
+[.procedure]
+====
+. Nyissuk meg az [.filename]#/etc/rc.conf# állományt és a NIS tartománynév beállításához, valamint az `ypbind` elindításához a következõket írjuk bele:
++
+[.programlisting]
+....
+nisdomainname="proba-tartomany"
+nis_client_enable="YES"
+....
++
+. A NIS szerveren található jelszavak importálásához távolítsuk el az összes felhasználói hozzáférést az [.filename]#/etc/master.passwd# állományunkból és a `vipw` segítségével adjuk hozzá az alábbi sort az állomány végéhez:
++
+[.programlisting]
+....
++:::::::::
+....
++
+[NOTE]
+======
+Ez a sor beenged bárkit a rendszerünkre, akinek a NIS szervereken van érvényes hozzáférése. A NIS klienseket ezzel a sorral sokféle módon tudjuk állítani. A <<network-netgroups,hálózati csoportokról szóló szakaszban>> találunk majd errõl több információt. A téma mélyebb megismeréséhez az O'Reilly `Managing NFS and NIS` címû könyvét ajánljuk.
+======
++
+[NOTE]
+======
+Legalább helyi hozzáférést (vagyis amit nem NIS-en keresztül importálunk) azonban mindenképpen hagyjunk meg az [.filename]#/etc/master.passwd# állományunkban, és ez a hozzáférés legyen a `wheel` csoport tagja. Ha valami gond lenne a NIS használatával, akkor ezen a hozzáférésen keresztül tudunk a gépre távolról bejelentkezni, majd innen `root` felhasználóra váltva megoldani a felmerült problémákat.
+======
++
+. A NIS szerverrõl az összes lehetséges csoport-bejegyzést az [.filename]#/etc/group# állományban így tudjuk importálni:
++
+[.programlisting]
+....
++:*::
+....
+====
+
+Miután elvégeztük ezeket a lépéseket, képesek leszünk futtatni az `ypcat passwd` parancsot, és látni a NIS szerver jelszavakat tartalmazó táblázatát.
+
+=== A NIS biztonsága
+
+Általában tetszõleges távoli felhasználó küldhet RPC kéréseket az man:ypserv[8] számára és kérheti le a NIS táblázatok tartalmát, feltéve, hogy ismeri a tartomány nevét. Az ilyen hitelesítés nélküli mûveletek ellen az man:ypserv[8] úgy védekezik, hogy tartalmaz egy "securenets" nevû lehetõséget, amellyel az elérhetõségüket tudjuk leszûkíteni gépek egy csoportjára. Az man:ypserv[8] indításakor ezeket az információkat a [.filename]#/var/yp/securenets# állományból próbálja meg betölteni.
+
+[NOTE]
+====
+Az elérési útvonala megadható a `-p` opció használatával. Ez az állomány olyan bejegyzéseket tartalmaz, amelyekben egy hálózati cím és tõle láthatatlan karakterekkel elválasztva egy hálózati maszk szerepel. A "#" karakterrel kezdõdõ sorokat megjegyzésnek nyilvánítjuk. Egy minta securenets állomány valahogy így nézne ki:
+====
+
+[.programlisting]
+....
+# Engedélyezzük önmagunkról a csatlakozást -- kell!
+127.0.0.1     255.255.255.255
+# Engedélyezzük a 192.168.128.0 hálózatról érkezõ csatlakozásokat:
+192.168.128.0 255.255.255.0
+# Engedélyezzük a laborban található 10.0.0.0 és 10.0.15.255 közti
+# címekkel rendelkezõ gépek csatlakozását:
+10.0.0.0      255.255.240.0
+....
+
+Ha az man:ypserv[8] olyan címrõl kap kérést, amely illeszkedik az elõírt címek valamelyikére, akkor a szokásos módon feldolgozza azt. Ellenkezõ esetben a kérést figyelmen kívül hagyja és egy figyelmeztetést vesz fel hozzá a naplóba. Ha a [.filename]#/var/yp/securenets# állomány nem létezik, akkor az `ypserv` tetszõleges géprõl engedélyezi a csatlakozást.
+
+Az `ypserv` lehetõséget ad a Wietse Venema által fejlesztett TCP Wrapper csomag használatára is. Ezzel a rendszergazda a [.filename]#/var/yp/securenets# állomány helyett a TCP Wrapper konfigurációs állományai alapján képes szabályozni az elérhetõséget.
+
+[NOTE]
+====
+Miközben mind a két módszer nyújt valamilyen fajta védelmet, de a privilegizált portok teszteléséhez hasonlóan az "IP álcázásával" (IP spoofing) sebezhetõek. Ezért az összes NIS-hez tartozó forgalmat tûzfallal kell blokkolnunk.
+
+Az [.filename]#/var/yp/securenets# állományt használó szerverek nem képesek az elavult TCP/IP implementációkat használó érvényes klienseket rendesen kiszolgálni. Egyes ilyen implementációk a címben a géphez tartozó biteket nullára állítják az üzenetszóráshoz, és/vagy ezért az üzenetszóráshoz használt cím kiszámításakor nem tudja észleli a hálózati maszkot. A legtöbb ilyen probléma megoldható a kliens konfigurációjának megváltoztatásával, míg más problémák megoldása a kérdéses kliensek nyugdíjazását kívánják meg, vagy a [.filename]#/var/yp/securenets# használatának elhagyását.
+
+Egy régebbi TCP/IP implementációval üzemelõ szerveren pedig a [.filename]#/var/yp/securenets# állomány használata kifejezetten rossz ötlet, és a hálózatunk nagy részében képes használhatatlanná tenni a NIS funkcióit.
+
+A TCP Wrapper csomag alkalmazása a NIS szerverünk válaszadáshoz szükséges idejét is segít csökkenteni. Az ilyenkor jelentkezõ plusz késlekedés mellesleg elég nagy lehet ahhoz, hogy a klienseknél idõtúllépés következzen be, különösen a terheltebb hálózatokon vagy a lassú NIS szerverek esetében. Ha egy vagy több kliensünk is ilyen tüneteket mutat, akkor érdemes a kérdéses kliens rendszereket alárendelt NIS szerverekké alakítani és önmagukhoz rendelni.
+====
+
+=== Egyes felhasználók bejelentkezésének megakadályozása
+
+A laborunkban van egy `basie` nevû gép, amely a tanszék egyetlen munkaállomása. Ezt a gépet nem akarjuk kivenni a NIS tartományból, de a központi NIS szerver [.filename]#passwd# állománya mégis egyaránt tartalmazza a hallgatók és az oktatók eléréseit. Mit lehet ilyenkor tenni?
+
+Adott felhasználók esetében le tudjuk tiltani a bejelentkezést a gépen még olyankor is, ha léteznek a NIS adatbázisában. Ehhez mindössze a kliensen az [.filename]#/etc/master.passwd# állomány végére be kell tennünk egy `-felhasználónév` sort, ahol a _felhasználónév_ annak a felhasználónak a neve, akit nem akarunk beengedni a gépre. Ezt leginkább a `vipw` használatán keresztül érdemes megtennünk, mivel a `vipw` az [.filename]#/etc/master.passwd# állomány alapján végez némi ellenõrzést, valamint a szerkesztés befejeztével magától újragenerálja a jelszavakat tároló adatbázist. Például, ha a `bill` nevû felhasználót ki akarjuk tiltani a `basie` nevû géprõl, akkor:
+
+[source,bash]
+....
+basie# vipw
+[vegyük fel a -bill sort a végére, majd lépjünk ki]
+vipw: rebuilding the database...
+vipw: done
+
+basie# cat /etc/master.passwd
+
+root:[jelszó]:0:0::0:0:The super-user:/root:/bin/csh
+toor:[jelszó]:0:0::0:0:The other super-user:/root:/bin/sh
+daemon:*:1:1::0:0:Owner of many system processes:/root:/sbin/nologin
+operator:*:2:5::0:0:System &:/:/sbin/nologin
+bin:*:3:7::0:0:Binaries Commands and Source,,,:/:/sbin/nologin
+tty:*:4:65533::0:0:Tty Sandbox:/:/sbin/nologin
+kmem:*:5:65533::0:0:KMem Sandbox:/:/sbin/nologin
+games:*:7:13::0:0:Games pseudo-user:/usr/games:/sbin/nologin
+news:*:8:8::0:0:News Subsystem:/:/sbin/nologin
+man:*:9:9::0:0:Mister Man Pages:/usr/shared/man:/sbin/nologin
+bind:*:53:53::0:0:Bind Sandbox:/:/sbin/nologin
+uucp:*:66:66::0:0:UUCP pseudo-user:/var/spool/uucppublic:/usr/libexec/uucp/uucico
+xten:*:67:67::0:0:X-10 daemon:/usr/local/xten:/sbin/nologin
+pop:*:68:6::0:0:Post Office Owner:/nonexistent:/sbin/nologin
+nobody:*:65534:65534::0:0:Unprivileged user:/nonexistent:/sbin/nologin
++:::::::::
+-bill
+
+basie#
+....
+
+[[network-netgroups]]
+=== A hálózati csoportok alkalmazása
+
+Az elõzõ szakaszban ismertetett módszer viszonylag jól mûködik olyan esetekben, amikor nagyon kevés felhasználóra és/vagy számítógépre kell alkalmaznunk speciális megszorításokat. A nagyobb hálózatokban szinte _biztos_, hogy elfelejtünk kizárni egyes felhasználókat az érzékeny gépekrõl, vagy az összes gépen egyenként kell ehhez a megfelelõ beállításokat elvégezni, és ezzel lényegében elvesztjük a NIS legfontosabb elõnyét, vagyis a _központosított_ karbantarthatóságot.
+
+A NIS fejlesztõi erre a problémára a _hálózati csoportokat_ létrehozásával válaszoltak. A céljuk és mûködésük szempontjából leginkább a UNIX(R)-os állományrendszerekben található csoportokhoz mérhetõek. A legnagyobb eltérés a numerikus azonosítók hiányában mutatkozik meg, valamint a hálózati csoportokat a felhasználókon kívül további hálózati csoportok megadásával is ki lehet alakítani.
+
+A hálózati csoportok a nagyobb, bonyolultabb, többszáz felhasználós hálózatok számára jöttek létre. Egy részrõl ez nagyon jó dolog, különösen akkor, ha egy ilyen helyzettel kell szembenéznünk. Másrészrõl ez a mértékû bonyolultság szinte teljesen lehetetlenné teszi a hálózati csoportok egyszerû bemutatását. A szakasz további részében használt példa is ezt a problémát igyekszik illusztrálni.
+
+Tételezzük fel, hogy laborunkban a NIS sikeres bevezetése felkeltette a fõnökeink figyelmét. Így a következõ feladatunk az lett, hogy terjesszük ki a NIS tartományt az egyetemen található néhány másik gépre is. Az alábbi két táblázatban az új felhasználók és az új számítógép neveit találjuk, valamint a rövid leírásukat.
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Felhasználók nevei
+| Leírás
+
+|`alpha`, `beta`
+|az IT tanszék hétköznapi dolgozói
+
+|`charlie`, `delta`
+|az IT tanszék újdonsült dolgozói
+
+|`echo`, `foxtrott`, `golf`, ...
+|átlagos dolgozók
+
+|`able`, `baker`, ...
+|ösztöndíjasok
+|===
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Gépek nevei
+| Leírás
+
+|`haboru`, `halal`, `ehseg`, `szennyezes`
+|A legfontosabb szervereink. Csak az IT tanszék dolgozói férhetnek hozzájuk.
+
+|`buszkeseg`, `kapzsisag`, `irigyseg`, `harag`, `bujasag`, `lustasag`
+|Kevésbé fontos szerverek. Az IT tankszék összes tagja el tudja érni ezeket a gépeket.
+
+|`egy`, `ketto`, `harom`, `negy`, ...
+|Átlagos munkaállomások. Egyedül csak a _valódi_ dolgozók jelentkezhetnek be ezekre a gépekre.
+
+|`szemetes`
+|Egy nagyon régi gép, semmi értékes adat nincs rajta. Akár még az öszöndíjasok is nyúzhatják.
+|===
+
+Ha ezeket az igényeket úgy próbáljuk meg teljesíteni, hogy a felhasználókat egyenként blokkoljuk, akkor minden rendszer [.filename]#passwd# állományába külön fel kell vennünk a `-felhasználó` sorokat a letiltott felhasználókhoz. Ha csak egyetlen bejegyzést is kihagyunk, akkor könnyen bajunk származhat belõle. Ez a rendszer kezdeti beállítása során még talán nem okoz gondot, de az új felhasználókat _biztosan_ el fogjuk felejteni felvenni a megfelelõ csoportokba. Elvégre Murphy is optimista volt.
+
+A hálózati csoportok használata ilyen helyzetekben számos elõnyt rejt. Nem kell az egyes felhasználókat külön felvenni, egy felhasználót felveszünk valamelyik csoportba vagy csoportokba, és a csoportok összes tagjának egyszerre tudjuk tiltani vagy engedélyezni a hozzáféréseket. Ha hozzáadunk egy új gépet a hálózatunkhoz, akkor mindössze a hálózati csoportok bejelentkezési korlátozásait kell beállítani. Ha új felhasználót veszünk fel, akkor a felhasználót kell vennünk egy vagy több hálózati csoportba. Ezek a változtatások függetlenek egymástól, és nincs szükség "minden felhasználó és minden gép összes kombinációjára". Ha a NIS beállításainkat elõzetesen körültekintõen megterveztük, akkor egyetlen központi konfigurációs állományt kell módosítani a gépek elérésének engedélyezéséhez vagy tiltásához.
+
+Az elsõ lépés a hálózati csoportokat tartalmazó NIS táblázat inicializálása. A FreeBSD man:ypinit[8] programja alapértelmezés szerint nem hozza létre ezt a táblázatot, de ha készítünk egy ilyet, akkor a NIS implementációja képes kezelni. Egy ilyen üres táblázat elkészítéséhez ennyit kell begépelni:
+
+[source,bash]
+....
+ellington# vi /var/yp/netgroup
+....
+
+Ezután elkezdhetjük felvenni a tartalmát. A példánk szerint legalább négy hálózati csoportot kell csinálnunk: az IT dolgozóinak, az IT új dolgozóinak, a normál dolgozóknak és az öszöndíjasoknak.
+
+[.programlisting]
+....
+IT_DOLG       (,alpha,proba-tartomany)    (,beta,proba-tartomany)
+IT_UJDOLG     (,charlie,proba-tartomany)  (,delta,proba-tartomany)
+FELHASZNALO   (,echo,proba-tartomany)     (,foxtrott,proba-tartomany) \
+              (,golf,proba-tartomany)
+OSZTONDIJAS   (,able,proba-tartomany)     (,baker,proba-tartomany)
+....
+
+Az `IT_DOLG`, `IT_UJDOLG` stb. a hálózati csoportok nevei lesznek. Minden egyes zárójelezett csoport egy vagy több felhasználói hozzáférést tartalmaz. A csoportokban szereplõ három mezõ a következõ:
+
+. Azon gépek neve, amelykre a következõ elemek érvényesek. Ha itt nem adunk meg neveket, akkor a bejegyzés az összes gépre vonatkozik. Ha megadjuk egy gép nevét, akkor jutalmunk a teljes sötétség, a rettegetés és totális megtébolyodás.
+. A csoporthoz tartozó hozzáférés neve.
+. A hozzáféréshez kapcsolódó NIS tartomány. A csoportba más NIS tartományokból is át tudunk hozni hozzáféréseket, ha netalán éppen olyan szerencsétlenek lennénk, hogy több NIS tartományt is felügyelnünk kell.
+
+A mezõk mindegyike tartalmazhat dzsókerkaraktereket. Errõl részletesebben a man:netgroup[5] man oldalon olvashatunk.
+
+[NOTE]
+====
+A hálózati csoportoknak lehetõleg ne adjunk 8 karakternél hosszabb nevet, különösen abban az esetben, ha a NIS tartományban más operációs rendszereket is használunk. A nevekben eltérnek a kis- és nagybetûk. Ha a hálózati csoportokat nevét nagybetûkkel írjuk, akkor könnyen különbséget tudunk tenni a felhasználók, gépek és hálózati csoportok nevei között.
+
+Egyes (nem FreeBSD alapú) NIS kliensek nem képesek kezelni a nagyon sok bejegyzést tartalmazó hálózati csoportokat. Például a SunOS(TM) néhány korábbi verziója fennakad rajta, ha egy hálózati csoport 15 _bejegyzésnél_ többet tartalmaz. Az ilyen korlátozások alól úgy tudunk kibújni, ha 15 felhasználónként újabb hálózati csoportokat hozunk létre, amelyekkel az eredeti hálózati csoportot építjük fel:
+
+[.programlisting]
+....
+NAGYCSP1  (,joe1,tartomany)  (,joe2,tartomany)  (,joe3,tartomany) [...]
+NAGYCSP2  (,joe16,tartomany)  (,joe17,tartomany) [...]
+NAGYCSP3  (,joe31,tartomany)  (,joe32,tartomany)
+NAGYCSOPORT  NAGYCSP1 NAGYCSP2 NAGYCSP3
+....
+
+Ugyanez a folyamat javasolt olyan esetekben is, ahol 225 felhasználónál többre lenne szükség egyetlen hálózati csoporton belül.
+====
+
+Az így létrehozott új NIS táblázat szétküldése meglehetõsen könnyû feladat:
+
+[source,bash]
+....
+ellington# cd /var/yp
+ellington# make
+....
+
+Ez a parancs létrehoz három NIS táblázatot: [.filename]#netgroup#, [.filename]#netgroup.byhost# és [.filename]#netgroup.byuser#. Az man:ypcat[1] paranccsal ellenõrizni is tudjuk az új NIS táblázatainkat:
+
+[source,bash]
+....
+ellington% ypcat -k netgroup
+ellington% ypcat -k netgroup.byhost
+ellington% ypcat -k netgroup.byuser
+....
+
+Az elsõ parancs kimenete a [.filename]#/var/yp/netgroup# állomány tartalmára emlékeztethet minket. A második parancsnak nincs semmilyen kimenete, hacsak nem adtunk meg valamilyen gépfüggõ hálózati csoportot. A harmadik parancs a hálózati csoportokat listázza ki a felhasználókhoz.
+
+A kliensek beállítása tehát nagyon egyszerû. A `haboru` nevû szerver beállításához indítsuk el a man:vipw[8] programot, és cseréljük a
+
+[.programlisting]
+....
++:::::::::
+....
+
+sort erre:
+
+[.programlisting]
+....
++@IT_DOLG:::::::::
+....
+
+Innentõl kezdve kizárólag csak az `IT_DOLG` csoportban található felhasználók fognak bekerülni a `haboru` jelszó adatbázisába, és csak ezek a felhasználók tudnak ide bejelentkezni.
+
+Sajnos ez a korlátozás a parancsértelmezõ `~` funkciójára és összes olyan rutinra is vonatkozik, amelyet a felhasználói nevek és azok numerikus azonosító között képez le. Más szóval a `cd ~felhasználó` parancs nem fog mûködni, és az `ls -l` parancs kimenetében a felhasználói nevek helyett csak numerikus azonosítók jelennek meg, továbbá a `find . -user joe -print No such user` (`Nincs ilyen felhasználó`) hibát fog visszaadni. Ez úgy tudjuk megjavítani, ha úgy importáljuk a szerverre az összes felhasználó bejegyzését, hogy _közben tiltjuk a hozzáférésüket_.
+
+Ehhez vegyünk fel egy újabb sort az [.filename]#/etc/master.passwd# állományba. A sor valahogy így fog kinézni:
+
+`+:::::::::/sbin/nologin`, amely annyit tesz, hogy "importáljuk az összes bejegyzést, de a hozzájuk tartozó parancsértelmezõ a [.filename]#/sbin/nologin# legyen". A `passwd` állományban tetszõleges mezõ tartalmát le tudjuk úgy cserélni, ha megadunk neki egy alapértelmezett értéket az [.filename]#/etc/master.passwd# állományban.
+
+[WARNING]
+====
+
+Vigyázzunk, hogy a `+:::::::::/sbin/nologin` sort az `+@IT_DOLG:::::::::` sor után írjuk. Ha nem így teszünk, akkor a NIS-bõl importált összes felhasználói hozzáférés a [.filename]#/sbin/nologin# parancsértelmezõt kapja.
+====
+
+Miután elvégeztük ezt a változtatást, minden újabb dolgozó felvétele után csupán egyetlen táblázatot kell megváltoztatnunk. Ugyanezt a taktikát követhetjük a kevésbé fontosabb szerverek esetében is, hogy ha a helyi [.filename]#/etc/master.passwd# állományukban a korábbi `+:::::::::` bejegyzést valami ilyesmivel helyettesítjük:
+
+[.programlisting]
+....
++@IT_DOLG:::::::::
++@IT_UJDOLG:::::::::
++:::::::::/sbin/nologin
+....
+
+Az egyszerû munkaállomások esetében pedig ezekre a sorokra lesz szükségünk:
+
+[.programlisting]
+....
++@IT_DOLG:::::::::
++@FELHASZNALOK:::::::::
++:::::::::/sbin/nologin
+....
+
+Minden remekül üzemel egészen addig, amíg néhány hét múlva ismét változik a házirend: az IT tanszékre ösztöndíjasok érkeznek. Az IT ösztöndíjasai a munkaállomásokat és a kevésbé fontosabb szervereket tudják használni. Az új IT dolgozók már a központi szerverekre is bejelentkezhetnek. Így tehát létrehozunk egy új hálózati csoportot `IT_OSZTONDIJAS` néven, majd felvesszük ide az új IT ösztöndíjasokat, és nekilátunk végigzongorázni az összes gép összes konfigurációs állományát... Ahogy azonban egy régi mondás is tartja: "A központosított tervezésben ejtett hibák teljes káoszhoz vezetnek".
+
+A NIS az ilyen helyzeteket úgy igyekszik elkerülni, hogy megengedi újabb hálózati csoportok létrehozását más hálózati csoportokból. Egyik ilyen lehetõség a szerep alapú hálózati csoportok kialakítása. Például, ha a fontosabb szerverek bejelentkezési korlátozásai számára hozzunk létre egy `NAGYSRV` nevû csoportot, valamint egy másik hálózati csoportot `KISSRV` néven a kevésbé fontosabb szerverekhez, végül `MUNKA` néven egy harmadik hálózati csoportot a munkaállomásokhoz. Mindegyik ilyen hálózati csoport tartalmazza azokat a csoportokat, amelyek engedélyezik a gépek elérését. A hálózati csoportok leírását tartalmazó NIS táblázat most valahogy így fog kinézni:
+
+[.programlisting]
+....
+NAGYSRV  IT_DOLG IT_UJDOLG
+KISSRV   IT_DOLG IT_UJDOLG IT_OSZTONDIJAS
+MUNKA    IT_DOLG IT_OSZTONDIJAS FELHASZNALOK
+....
+
+A bejelentkezési megszorítások ilyen típusú megadása viszonylag jól mûködik, hogy ha azonos korlátozások alá esõ gépek csoportjait akarjuk felírni. Bánatunk ez a kivétel, és nem a szabály. Az esetek nagy többségében ugyanis a bejelentkezésre vonatkozó korlátozásokat gépenként kell egyesével megadni.
+
+A hálózati csoportok gépfüggõ megadása tehát az iménti házirendhez társuló igények kielégítésének egyik módja. Ebben a forgatókönyvben az [.filename]#/etc/master.passwd# állomány minden számítógépen két "+"-os sorral kezdõdik. Közülük az elsõ a gépen engedélyezett hozzáféréseket tartalmazó hálózati csoportra vonatkozik, a második pedig az összes többi hozzáféréshez az [.filename]#/sbin/nologin# parancsértelmezõt kapcsolja hozzá. Itt jó ötlet, ha a gép nevének "VÉGIG-NAGYBETûS" változatát adjuk meg a hozzá tartozó hálózati csoport nevének:
+
+[.programlisting]
+....
++@GÉPNÉV:::::::::
++:::::::::/sbin/nologin
+....
+
+Miután elvégeztük ezt a feladatot minden egyes gépen, az [.filename]#/etc/master.passwd# állomány helyi változatait soha többé nem kell módosítanunk. Az összes többi változtatást a NIS táblázaton keresztül tudjuk keresztül vinni. Íme a felvázolt forgatókönyvhöz tartozó hálózati csoportok kiépítésének egyik lehetséges változata, egy-két finomsággal kiegészítve:
+
+[.programlisting]
+....
+# Elõször a felhasználók csoportjait adjuk meg:
+IT_DOLG         (,alpha,proba-tartomany)    (,beta,proba-tartomany)
+IT_UJDOLG       (,charlie,proba-tartomany)  (,delta,proba-tartomany)
+TANSZ1          (,echo,proba-tartomany)     (,foxtrott,proba-tartomany)
+TANSZ2          (,golf,proba-taromany)      (,hotel,proba-tartomany)
+TANSZ3          (,india,proba-taromany)     (,juliet,proba-tartomany)
+IT_OSZTONDIJAS  (,kilo,proba-tartomany)     (,lima,proba-tartomany)
+D_OSZTONDIJAS   (,able,proba-tartomany)     (,baker,proba-tartomany)
+#
+# Most pedig hozzunk létre csoportokat szerepek szerint:
+FELHASZNALOK     TANSZ1   TANSZ2          TANSZ3
+NAGYSRV          IT_DOLG  IT_UJDOLG
+KISSRV           IT_DOLG  IT_UJDOLG       IT_OSZTONDIJAS
+MUNKA            IT_DOLG  IT_OSZTONDIJAS  FELHASZNALOK
+#
+# Következzenek a speciális feladatokhoz tartozó csoportok:
+# Az echo és a golf tudja elérni a vírusvédelemért felelõs gépet:
+VEDELEM          IT_DOLG  (,echo,proba-tartomany)  (,golf,proba-tartomany)
+#
+# Gép alapú hálózati csoportok
+# A fõ szervereink:
+HABORU      NAGYSRV
+EHSEG       NAGYSRV
+# Az india nevû felhasználó hozzá szeretné ehhez férni:
+SZENNYEZES  NAGYSRV  (,india,proba-tartomany)
+#
+# Ez valóban fontos és komolyan szabályoznunk kell:
+HALAL       IT_DOLG
+#
+# Az elõbb említett vírusvédelmi gép:
+EGY         VEDELEM
+#
+# Egyetlen felhasználóra korlátozzuk le ezt a gépet:
+KETTO       (,hotel,proba-tartomany)
+# [...és itt folytatódik a többi csoporttal]
+....
+
+Ha a felhasználói hozzáféréseinket valamilyen adatbázisban tároljuk, akkor a táblázat elsõ részét akár az adatbázis lekérdezésein keresztül is elõ tudjuk állítani. Ezzel a módszerrel az új felhasználók automatikusan hozzáférnek a gépekhez.
+
+Legyünk viszont óvatosak: nem mindig javasolt gépeken alapuló hálózati csoportokat készíteni. Ha a hallgatói laborokba egyszerre több tucat vagy akár több száz azonos konfigurációjú gépet telepítünk, akkor a gép alapú csoportok helyett inkább szerep alapú csoportokat építsünk fel, mivel így a NIS táblázatok méretét egy elfogadható méreten tudjuk tartani.
+
+=== Amit feltétlenül észben kell tartanunk
+
+Még mindig akad néhány olyan dolog, amit másképpen kell csinálnunk azután, hogy most már NIS környezetben vagyunk.
+
+* Amikor egy új felhasználót akarunk felvenni a laborba, akkor _csak_ a központi NIS szerverre kell felvennünk, és _újra kell generáltatnunk a NIS táblázatokat_. Ha ezt elfelejtjük megtenni, akkor az új felhasználó a központi NIS szerveren kívül sehova sem lesz képes bejelentkezni. Például, ha fel akarjuk venni a `jsmith` nevû felhasználót a laborba, akkor ezt kell tennünk:
++
+
+[source,bash]
+....
+# pw useradd jsmith
+# cd /var/yp
+# make proba-tartomany
+....
+
++ 
+Vagy a `pw useradd jsmith` parancs helyett az `adduser jsmith` parancsot is használhatjuk.
+* _A rendszergazdai szintû hozzáféréseket ne tároljuk a NIS táblázatokban_. Olyan gépekre egyáltalán ne is küldjünk olyan karbantartáshoz használt hozzáféréseket, amelynek a felhasználói hivatalosan nem is férhetnének hozzájuk.
+* _A központi NIS szervert és az alárendelt szervereket óvjuk minél jobban, és igyekezzünk minimalizálni a kieséseiket_. Ha valaki feltöri vagy egyszerûen csak kikapcsolja ezeket a gépeket, akkor ezzel lényegében mindenkit megakadályoz abban, hogy be tudjon jelentkezni a laborban.
++ 
+Ezek a központosított vezérlésû rendszerek legfõbb gyengeségei. Ha nem védjük kellõen a NIS szervereinket, akkor azzal nagyon ellenséget szerezhetünk magunknak!
+
+=== Kompatibilitás a NIS elsõ változatával
+
+A FreeBSD-ben megtalálható ypserv szolgáltatás valamennyire képes ellátni a NIS elsõ változatát használó klienseket is. A FreeBSD NIS implementációja csak a NIS v2 protokollt használja, azonban mivel más implementációk kompatibilisek kívánnak maradni a régebbi rendszerekkel, ismerik a v1 protokollt is. Az ilyen rendszerekhez tartozó ypbind démonok még olyankor is megpróbálnak v1-es NIS szerverekhez kötést létrehozni, amikor valójában nincs is rá szükségük (és gyakran még akkor is ilyet keresnek, amikor az üzenetükre már válaszolt egy v2-es szerver). Hozzátennénk, hogy bár az ypserver ezen változata a normál klienshívásokat képes feldolgozni, a táblázatokat már nem tudja átküldeni a v1-es klienseknek. Ebbõl következik, hogy a központi vagy alárendelt szerverek nem tudnak együttmûködni olyan NIS szerverekkel, amelyek csak a v1-es protokollt beszélik. Szerencsére ilyen szervereket manapság már alig használnak.
+
+[[network-nis-server-is-client]]
+=== NIS szerverek, melyek egyben NIS kliensek
+
+Óvatosan kell bánnunk az ypserv elindításával olyan többszerveres tartományokban, ahol a szerverek maguk is NIS kliensek. Alapvetõen nincs abban semmi kivetnivaló, ha a szervereket saját magukhoz kötjük ahelyett, hogy engednénk nekik a kötési kérések küldését és így egymáshoz kötnénk ezeket. Különös hibák tudnak származni olyan helyzetekben, amikor az egyik szerver leáll, miközben a többiek pedig függenek tõle. Végül is ilyenkor minden kliens szépen kivárja a szükséges idõt, aztán megpróbál más szerverekhez kötõdni, de az itt fellépõ késlekedés jelentõs mennyiségû lehet, és ez a hibajelenség ismét fennállhat, mivel elõfordulhat, hogy a szerverek megint egymáshoz kapcsolódnak.
+
+A klienst úgy tudjuk egy adott szerverhez kötni, ha az `ypbind` parancsot a `-S` beállítással indítjuk. Ha mindezt nem akarjuk manuálisan megtenni a NIS szerver minden egyes újraindításakor, akkor vegyük fel a következõ sorokat az [.filename]#/etc/rc.conf# állományba:
+
+[.programlisting]
+....
+nis_client_enable="YES"	# elindítjuk a klienst is
+nis_client_flags="-S NIS tartomány,szerver"
+....
+
+Részletesebb lásd az man:ypbind[8] man oldalát.
+
+=== A jelszavak formátuma
+
+A NIS rendszerek kiépítése során az emberek leggyakrabban a jelszavak formátumával kapcsolatban tapasztalnak nehézségeket. Ha a szerverünk DES titkosítású jelszavakat használ, akkor csak olyan klienseket fog tudni támogatni, amelyek szintén így kódolják ezeket. Például, ha a hálózaton vannak Solaris(TM) rendszerû NIS klienseink, akkor szinte biztos, hogy DES titkosítást kell használnunk.
+
+A szerverek és a kliensek által használt formátumokat az [.filename]#/etc/login.conf# állományba tekintve deríthetjük ki. Ha a gépek többségén a DES titkosítást látjuk, akkor a `default` osztálynak egy ilyen bejegyzést kell tartalmaznia:
+
+[.programlisting]
+....
+default:\
+	:passwd_format=des:\
+	:copyright=/etc/COPYRIGHT:\
+	[a többit most nem mutatjuk]
+....
+
+A `passwd_format` tulajdonság további lehetséges értékei lehetnek a `blf` és az `md5` (melyek rendre a Blowfish és MD5 titkosítású jelszavakat adják meg).
+
+Ha változtattunk valamit az [.filename]#/etc/login.conf# állományban, akkor a bejelentkezési tulajdonságok adatbázisát is újra kell generálni, melyet `root` felhasználóként a következõ módon tehetünk meg:
+
+[source,bash]
+....
+# cap_mkdb /etc/login.conf
+....
+
+[NOTE]
+====
+Az [.filename]#/etc/master.passwd# állományban jelenlevõ jelszavak formátuma azonban nem frissítõdik egészen addig, amíg a felhasználók a bejelentkezési adatbázis újragenerálása _után_ meg nem változtatják a jelszavaikat.
+====
+
+Úgy tudjuk még biztosítani, hogy a jelszavak megfelelõ formátumban kódolódjanak, ha az [.filename]#/etc/auth.conf# állományban megkeressük a `crypt_default` sort, amelyben a választható jelszóformátumok felhasználásái sorrendjét találhatjuk meg. Itt tehát mindössze annyit kell tennünk, hogy a kiszemelt formátumot a lista elejére tesszük. Például, ha a DES titkosítású jelszavakat akarunk használni, akkor ez a bejegyzés így fog kinézni:
+
+[.programlisting]
+....
+crypt_default	=	des blf md5
+....
+
+Ha a fenti lépéseket követjük az összes FreeBSD alapú NIS szervernél és kliensnél, akkor biztosra mehetünk abban, hogy a hálózatunkon belül ugyanazt a jelszóformátumot fogják használni. Ha gondunk akadna a NIS kliensek hitelesítésével, akkor itt érdemes kezdeni a hiba felderítését. Ne felejtsük: ha egy NIS szervert egy heterogén hálózatba akarunk telepíteni, akkor valószínûleg az összes rendszeren a DES titkosítást kell választani, mivel általában ez a közös nevezõ ebben a tekintetben.
+
+[[network-dhcp]]
+== A hálózat automatikus beállítása (DHCP)
+
+=== Mi az a DHCP?
+
+A Dinamikus állomáskonfigurációs protokoll, avagy Dynamic Host Configuration Protocol (DHCP) annak eszközeit írja le, hogy egy rendszer miként tud csatlakozni egy hálózathoz és miként tudja azon belül megszerezni a kommunikációhoz szükséges információkat. A FreeBSD 6.0 elõtti változatai az ISC (Internet Systems Consortium, vagyis az internetes rendszerkonzorcium) által kidolgozott DHCP kliens (man:dhclient[8]) implementációját tartalmazzák. A késõbbi verziókban pedig az OpenBSD 3.7 verziójából átvett `dhclient` paranccsal dolgozhatunk. Ebben a szakaszban a `dhclient` parancsra vonatkozó összes információ egyaránt érvényes az ISC és az OpenBSD által fejlesztett DHCP kliensekre. A DHCP szerver az ISC-tõl származik.
+
+=== Mivel foglalkozik ez a szakasz
+
+Ebben a szakaszban az ISC és az OpenBSD DHCP klienseinek kliens- és szerver oldali komponsenseit mutatjuk be. A kliens oldali program neve a `dhclient`, amely a FreeBSD részeként érkezik, és a szerver oldali elem pedig a package:net/isc-dhcp31-server[] porton keresztül érhetõ el. A lentebb említett hivatkozások mellett a témában még a man:dhclient[8], man:dhcp-options[5] és a man:dhclient.conf[5] man adhatnak bõvebb felvilágosítást a témában.
+
+=== Ahogyan mûködik
+
+Amikor a `dhclient`, vagyis a DHCP kliens elindul egy kliensgépen, akkor a hálózaton üzenetszórással próbálja meg elkérni a konfigurációjához szükséges adatokat. Alapértelmezés szerint ezek a kérések a 68-as UDP porton keresztül mennek. A szerver ezekre a 67-es UDP porton válaszol, ahol visszaad a kliensnek egy IP-címet és a hálózat használatához szükséges további információkat, mint például a hálózati maszkot, az alapértelmezett átjáró és a névfeloldásért felelõs szerverek címét. Az összes ilyen jellegû adat egy DHCP "bérlet" (lease) formájában érkezik meg, amely csak egy adott ideig érvényes (ezt a DHCP szerver karbantartója állítja be). Így a hálózaton a kliens nélküli IP-címeket egy idõ után automatikusan visszanyerjük.
+
+A DHCP kliensek rengeteg információt képes elkérni a szervertõl. Ezek teljes listáját a man:dhcp-options[5] man oldalán olvashatjuk el.
+
+=== Használat a FreeBSD-n belül
+
+A FreeBSD teljes egészében tartalmazza az ISC vagy az OpenBSD DHCP kliensét, a `dhclient` programot (attól függõen, hogy a FreeBSD melyik változatát használjuk). A DHCP kliensek támogatása a telepítõben és az alaprendszerben is megtalálható, és ezzel mentesülünk minden konkrét hálózati beállítás alól a DHCP szervereket alkalmazó hálózatokon. A `dhclient` a FreeBSD 3.2 változata óta megtalálható a rendszerben.
+
+DHCP használatát a sysinstall is lehetõvé teszi. Amikor egy hálózati felületet a sysinstall programon belül állítunk be, akkor a második kérdés mindig ez szokott lenni: "Do you want to try DHCP configuration of the interface?" ("Megpróbáljuk DHCP használatával beállítani a felületet?") Ha erre igennel válaszolunk, akkor azzal lényegében a `dhclient` parancsot indítjuk el, és ha mindez sikerrel zárul, akkor szinte magától kitöltõdik az összes hálózati beállításunk.
+
+A DHCP használatához két dolgot kell beállítanunk a rendszerünkön:
+
+* Gondoskodjunk róla, hogy a [.filename]#bpf# eszköz része a rendszermagunknak. Ha még nem lenne benne, akkor a rendszermag beállításait tartalmazó állományba vegyük fel a `device bpf` sort és fordítsuk újra a rendszermagot. A rendszermagok fordításáról a crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]ben tudhatunk meg többet.
++ 
+A [.filename]#bpf# eszköz alapból megtalálható a [.filename]#GENERIC# rendszermagokban, így ha ezt használjuk, akkor nem kell saját verziót készítenünk a DHCP használatához.
++
+[NOTE]
+====
+Azok számára viszont, akik biztonsági szempontból aggódnak a rendszerük miatt, meg kell említenünk, hogy a [.filename]#bpf# egyben az az eszköz, amely a csomagok lehallgatását is lehetõvé teszi (habár az ilyeneket `root` felhasználóként lehet csak elindítani). A [.filename]#bpf#_kell_ a DHCP használatához, azonban ha nagyon fontos nekünk a rendszerünk biztonsága, akkor a [.filename]#bpf# eszközt érdemes kivennünk a rendszermagból, ha még pillanatnyilag nem használunk ilyet.
+====
+
+* Az [.filename]#/etc/rc.conf# állományunkat az alábbiak szerint kell módosítani:
++
+[.programlisting]
+....
+ifconfig_fxp0="DHCP"
+....
+
++
+[NOTE]
+====
+Az `fxp0` eszközt ne felejtsük el kicserélni arra a felületre, amelyet automatikusan akarunk beállítani. Ennek mikéntje a crossref:config[config-network-setup,A hálózati kártyák beállítása]ban olvasható.
+====
+
++ 
+Ha a `dhclient` a rendszerünkben máshol található, vagy egyszerûen csak további beállításokat akarunk átadni a `dhclient` parancsnak, akkor adjuk meg a következõt is (változtassuk meg igényeink szerint):
++
+[.programlisting]
+....
+dhclient_program="/sbin/dhclient"
+dhclient_flags=""
+....
+
+A DHCP szerver, a dhcpd a package:net/isc-dhcp31-server[] port részeként érhetõ el. Az a port tartalmazza az ISC DHCP szerverét és a hozzá tartozó dokumentációt.
+
+=== Állományok
+
+* [.filename]#/etc/dhclient.conf#
++ 
+A `dhclient` mûködéséhez szükség lesz egy konfigurációs állományra, aminek a neve [.filename]#/etc/dhclient.conf#. Ez az állomány általában csak megjegyzéseket tartalmaz, mivel az alapértelmezett értékek többnyire megfelelõek. Ezt a konfigurációs állományt a man:dhclient.conf[5] man oldal írja le.
+* [.filename]#/sbin/dhclient#
++ 
+A `dhclient` statikusan linkelt és az [.filename]#/sbin# könyvtárban található. A man:dhclient[8] man oldal tud róla részletesebb felvilágosítást adni.
+* [.filename]#/sbin/dhclient-script#
++ 
+A `dhclient-script` a FreeBSD-ben levõ DHCP kliens konfigurációs szkriptje. Mûködését a man:dhclient-script[8] man oldal írja le, de a felhasználók részérõl semmilyen módosítást nem igényel.
+* [.filename]#/var/db/dhclient.leases#
++ 
+A DHCP kliens az érvényes bérleteket tartja nyilván ezekben az állományban és naplóként használja. A man:dhclient.leases[5] man oldal ezt valamivel bõvebben kifejti.
+
+=== További olvasnivalók
+
+A DHCP protokoll mûködését az http://www.freesoft.org/CIE/RFC/2131/[RFC 2131] mutatja be. A témához kapcsolódóan http://www.dhcp.org/[ itt] tudunk még leírásokat találni.
+
+[[network-dhcp-server]]
+=== A DHCP szerverek telepítése és beállítása
+
+==== Mirõl szól ez a szakasz
+
+Ebben a szakaszban arról olvashatunk, hogy miként kell egy FreeBSD típusú rendszert DHCP szervernek beállítani, ha az ISC (internetes rendszerkonzorcium) DHCP szerverét használjuk.
+
+Ez a szerver nem része a FreeBSD-nek, ezért a szolgáltatás elindításához elõször fel kell raknunk a package:net/isc-dhcp31-server[] portot. A Portgyûjtemény használatára vonatkozóan a crossref:ports[ports,Alkalmazások telepítése. csomagok és portok] lehet segítségünkre.
+
+==== A DHCP szerver telepítése
+
+Ha a FreeBSD rendszerünket DHCP szerverként akarjuk beállítani, akkor ehhez elsõként a man:bpf[4] eszköz jelenlétét kell biztosítani a rendszermagban. Ehhez vegyük fel a `device bpf` sort a rendszermagunk beállításait tartalmazó állományba, majd fordítsuk újra a rendszermagot. A rendszermag lefordításáról a crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]ben olvashatunk.
+
+A [.filename]#bpf# eszköz a FreeBSD-hez alapból adott [.filename]#GENERIC# rendszermag része, ezért a DHCP használatához nem kell feltétlenül újat fordítanunk.
+
+[NOTE]
+====
+A biztonsági szempontok miatt aggódó felhasználók részére megjegyezzük, hogy a [.filename]#bpf# eszköz egyben a csomagok lehallgatását is lehetõvé teszi (habár az ilyen témájú programok futtatásához megfelelõ jogokra is szükség van). A [.filename]#bpf# használata _kötelezõ_ a DHCP mûködtetéséhez, de ha nagyon kényesek vagyunk a biztonságot illetõen, akkor minden olyan esetben, amikor nem használjuk ki ezt a lehetõséget, távolítsuk el a rendszermagból.
+====
+
+A következõ lépésben át kell szerkesztenünk a mintaként mellékelt [.filename]#dhcpd.conf# állományt, amelyet a package:net/isc-dhcp31-server[] port rakott fel. Ez alapértelmezés szerint a [.filename]#/usr/local/etc/dhcpd.conf.sample# néven található meg, és mielõtt bármit is változtatnánk rajta, másoljuk le [.filename]#/usr/local/etc/dhcpd.conf# néven.
+
+==== A DHCP szerver beállítása
+
+A [.filename]#dhcpd.conf# az alhálózatokat illetve a gépeket érintõ deklarációkat tartalmazza, és talán a legkönnyebben a következõ példa alapján mutatható be:
+
+[.programlisting]
+....
+option domain-name "minta.com";<.>
+option domain-name-servers 192.168.4.100;<.>
+option subnet-mask 255.255.255.0;<.>
+
+default-lease-time 3600;<.>
+max-lease-time 86400;<.>
+ddns-update-style none;<.>
+
+subnet 192.168.4.0 netmask 255.255.255.0 {
+  range 192.168.4.129 192.168.4.254;<.>
+  option routers 192.168.4.1;<.>
+}
+
+host mailhost {
+  hardware ethernet 02:03:04:05:06:07;<.>
+  fixed-address levelezes.minta.com;<.>
+}
+....
+
+<.> Ez a beállítás adja meg a kliensek számára az alapértelmezett keresési tartományt (search domain). A man:resolv.conf[5] tud ezzel kapcsolatban részletesebb információkat adni.
+
+<.> Ez a beállítás adja meg a kliensek által használt névfeloldó szerverek vesszõvel elválasztott felsorolását.
+
+<.> A kliensekhez tartozó hálózati maszk.
+
+<.> A kliens egy adott idõre kérhet bérleti jogot, egyébként a szerver dönt a bérlet lejárati idejérõl (másodpercekben).
+
+<.> Ez az a maximális idõ, amennyire a szerver hajlandó bérbe adni IP-címet. A kliens ugyan hosszabb idõre is kérheti és meg is kapja, de legfeljebb csak `max-lease-time` másodpercig lesz érvényes.
+
+<.> Ez a beállítás határozza meg, hogy a DHCP szervernek frissítse-e a névoldási információkat a bérlések elfogadásánál vagy visszamondásánál. Az ISC implementációjánál ez a beállítás _kötelezõ_.
+
+<.> Ezzel adjuk meg milyen tartományból tudunk IP-címeket kiosztani a kliensek számára. A kezdõ címet is beleértve, innen fogunk kiutalni egyet a klienseknek.
+
+<.> A kliensek felé elküldött alapértelmezett átjáró címe.
+
+<.> A gép hardveres MAC-címe (így a DHCP szerver képes felismerni a kérés küldõjét).
+
+<.> Ennek megadásával a gépek mindig ugyanazt az IP-címet kapják. Itt már megadhatunk egy hálózati nevet, mivel a bérlethez tartozó információk visszaküldése elõtt maga a DHCP szerver fogja feloldani a gép nevét.
+
+Miután befejeztük a [.filename]#dhcpd.conf# módosítását, a DHCP szerver az [.filename]#/etc/rc.conf# állományban tudjuk engedélyezni, vagyis tegyük bele a következõt:
+
+[.programlisting]
+....
+dhcpd_enable="YES"
+dhcpd_ifaces="dc0"
+....
+
+A `dc0` felület nevét helyettesítsük annak a felületnek (vagy whitespace karakterekkel elválasztott felületeknek) a nevével, amelyen keresztül a DHCP szerver várni fogja a kliensek kéréseit.
+
+Ezután a következõ parancs kiadásával indítsuk el a szervert:
+
+[source,bash]
+....
+# /usr/local/etc/rc.d/isc-dhcpd start
+....
+
+Amikor a jövõben valamit változtatunk a konfigurációs állományon, akkor ezzel kapcsolatban fontos megemlíteni, hogy ha csak egy `SIGHUP` jelzést küldünk a dhcpd démonnak, akkor az a többi démontól eltérõen önmagában még _nem_ eredményezi a konfigurációs adatok újraolvasását. Helyette a `SIGTERM` jelzéssel kell leállítani a programot, majd újraindítani a fenti paranccsal.
+
+==== Állományok
+
+* [.filename]#/usr/local/sbin/dhcpd#
++ 
+A dhcpd statikusan linkelt és a [.filename]#/usr/local/sbin# könyvtárban található. A porttal együtt felkerülõ man:dhcpd[8] man oldal ad részletesebb útmutatást dhcpd használatáról.
+* [.filename]#/usr/local/etc/dhcpd.conf#
++ 
+Mielõtt a dhcpd megkezdhetné mûködését, egy konfigurációs állományra is szükségünk lesz, amely a [.filename]#/usr/local/etc/dhcpd.conf#. Ez az állomány tartalmazza az összes olyan információt, ami kell a kliensek megfelelõ kiszolgálásához valamint a szerver mûködéséhez. Ez a konfigurációs állomány porthoz tartozó man:dhcpd.conf[5] man oldalon kerül ismertetésre.
+* [.filename]#/var/db/dhcpd.leases#
++ 
+A DHCP szerver ebben az állományba tartja nyilván a kiadott bérleteket, egy napló formájában. A porthoz kapcsolódó man:dhcpd.leases[5] man oldalon errõl többet is megtudhatunk.
+* [.filename]#/usr/local/sbin/dhcrelay#
++ 
+A dhcrelay állománynak olyan komolyabb környezetekben van szerepe, ahol a DHCP szerver a kliensektõl érkezõ kéréseket egy másik hálózaton található DHCP szerverhez továbbítja. Ha szükség lenne erre a lehetõségre, akkor telepítsük fel a package:net/isc-dhcp31-relay[] portot. A porthoz tartozó man:dhcrelay[8] man oldal ennek részleteit taglalja.
+
+[[network-dns]]
+== Névfeloldás (DNS)
+
+=== Áttekintés
+
+A FreeBSD alapértelmezés szerint a BIND (Berkeley Internet Name Domain) egyik verzióját tartalmazza, amely a névfeloldási (Domain Name System, DNS) protokoll egyik elterjedt implementációja. A DNS protokollon keresztül tudunk az IP-címekhez neveket rendelni és fordítva. Például a `www.FreeBSD.org` névre a FreeBSD Projekt webszerverének IP-címét kapjuk meg, miközben a `ftp.FreeBSD.org` pedig a hozzá tartozó FTP szerver IP-címét fogja visszaadni. Ehhez hasonlóan a fordítottja is megtörténhet, vagyis egy IP-címhez is kérhetjük a hálózati név feloldását. A névfeloldási kérések kiszolgálásához nem feltétlenül szükséges névszervert futtatni a rendszerünkön.
+
+A FreeBSD jelen pillanatban alapból a BIND9 névszervert tartalmazza. A benne szereplõ változata több biztonsági javítást, új állományrendszeri kiosztást és automatizált man:chroot[8] beállítást is magában foglal.
+
+Az interneten keresztüli névfeloldást legfelsõ szintû tartományoknak (Top Level Domain, TLD) nevezett hitelesített tövek némileg bonyolult rendszerén alapszik, valamint más egyéb olyan névszervereken, amelyek további egyéni információkat tárolnak és táraznak.
+
+A BIND fejlesztését jelenleg az Internet Systems Consortium (http://www.isc.org/[http://www.isc.org/]) felügyeli.
+
+=== Alapfogalmak
+
+A leírás megértéséhez be kell mutatnunk néhány névfeloldással kapcsolatos fogalmat.
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Fogalom
+| Meghatározás
+
+|Közvetlen névfeloldás (forward DNS)
+|A hálózati nevek leképezése IP-címekre.
+
+|õs (origin)
+|Egy adott zóna állományban szereplõ tartományra vonatkozik.
+
+|named, BIND
+|A FreeBSD-n belüli BIND névszerver különbözõ megnevezései.
+
+|Névfeloldó (resolver)
+|Az a program a rendszerben, amelyhez a hálózaton levõ gépek a zónák adatainak elérésével kapcsolatban fordulnak.
+
+|Inverz névfeloldás (reverse DNS)
+|Az IP-címek leképzése hálózati nevekre.
+
+|Gyökérzóna (root zone)
+|Az interneten található zónák hierarchiájának töve. Minden zóna ebbe a gyökérzónába esik, ahhoz hasonlóan, ahogy egy állományrendszerben az állományok a gyökérkönyvtárba.
+
+|Zóna (zone)
+|Egy különálló tartomány, altartomány vagy a névfeloldás azon része, amelyet egyazon fennhatóság alatt tartanak karban.
+|===
+
+Példák zónákra:
+
+* A gyökérzónára a leírásokban általában `.` néven szoktak hivatkozni.
+* A `org.` egy legfelsõ szintû tartomány (TLD) a gyökérzónán belül.
+* A `minta.org.` a `org.` TLD tartomány alatti zóna.
+* A `1.168.192.in-addr.arpa` egy olyan zóna, amelyek a `192.168.1.*` IP-címtartományban szereplõ összes címet jelöli.
+
+Mint láthatjuk, a hálózati nevek balról kiegészülve pontosodnak. Tehát például a `minta.org.` sokkal pontosabb meghatározás, mint a `org.`, ahogy az `org.` magánál a gyökérzónánál jelent többet. A hálózati nevek felosztása leginkább egy állományrendszerhez hasonlítható, például a [.filename]#/dev# könyvtár a gyökéren belül található, és így tovább.
+
+=== Miért érdemes névszervert futtatni
+
+A névszerverek általában két alakban jelennek meg. Egyikük a hitelesített névszerver, a másikuk a gyorsítótárazó névszerver.
+
+Egy hitelesített névszerverre akkor van szükségünk, ha:
+
+* a világ többi része felé akarunk hiteles névfeloldási információkat szolgáltatni;
+* regisztráltunk egy tartományt (például `minta.org`) és az alatta levõ hálózati nevekhez is szeretnénk IP-címeket rendeltetni;
+* a IP-címtartományunkban szükség van inverz névfeloldási bejegyzésekre (amely IP-címbõl ad meg hálózati nevet) is;
+* a kérések teljesítéséhez egy tartalék avagy második, alárendelt (slave) névszerver kell.
+
+A gyorsítótárazó névszerverre akkor van szükségünk, ha:
+
+* egy helyi névfeloldó szerver felhasználásával fel akarjuk gyorsítani az egyébként a külsõ névszerver felé irányuló kérések kiszolgálását.
+
+Amikor valaki lekérdezi a `www.FreeBSD.org` címét, akkor a névfeloldó elõször általában a kapcsolatot rendelkezésre bocsátó internet-szolgáltató névszerverét kérdezi meg és onnan kapja meg a választ. Egy helyi, gyorsítótárazó névszerver használata esetén azonban egy ilyen kérést csak egyszer kell kiadni a külsõ névszervernek. Ezután már minden további ilyen kérés el sem hagyja a belsõ hálózatunkat, mivel a válasz szerepel a gyorsítótárban.
+
+=== Ahogyan mûködik
+
+FreeBSD alatt a BIND démon nyilvánvaló okokból named néven érhetõ el.
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Állomány
+| Leírás
+
+|man:named[8]
+|A BIND démon.
+
+|man:rndc[8]
+|A névszervert vezérlõ segédprogram.
+
+|[.filename]#/etc/namedb#
+|A BIND által kezelt zónák adatait tároló könyvtár.
+
+|[.filename]#/etc/namedb/named.conf#
+|A démon konfigurációs állománya.
+|===
+
+Attól függõen, hogy miként állítjuk be az adott zónát a szerveren, a hozzá tartozó állományok a [.filename]#/etc/namedb# könyvtáron belül a [.filename]#master#, [.filename]#slave# vagy [.filename]#dynamic# alkönyvtárban foglalnak helyet. Az itt tárolt állományokban levõ névfeloldási információk alapján válaszol a névszerver a felé intézett kérésekre.
+
+=== A BIND elindítása
+
+Mivel a BIND alapból elérhetõ a rendszerben, viszonylag könnyen be tudjuk állítani.
+
+A named alapértelmezett beállítása szerint egy man:chroot[8] környezetben futó egyszerû névfeloldást végzõ szerver, amely a helyi IPv4 interfészen (127.0.0.1) fogadja a kéréseket. Ezzel a beállítással a következõ parancson keresztül tudjuk elindítani:
+
+[source,bash]
+....
+# /etc/rc.d/named onestart
+....
+
+Ha engedélyezni akarjuk a named démont minden egyes rendszerindításkor, tegyük a következõ sort az [.filename]#/etc/rc.conf# állományba:
+
+[.programlisting]
+....
+named_enable="YES"
+....
+
+Értelemszerûen az [.filename]#/etc/namedb/named.conf# tele van olyan beállítási lehetõségekkel, amelyek meghaladják ennek a leírásnak a kereteit. Ha viszont kíváncsiak vagyunk a FreeBSD-ben a named indításához használt beállításokra, akkor az [.filename]#/etc/defaults/rc.conf# állományban nézzük meg `named_*` változókat és olvassuk át az man:rc.conf[5] man oldalt. Emellett még a crossref:config[configtuning-rcd,Az rc használata FreeBSD alatt]t is hasznos lehet elolvasni.
+
+=== A konfigurációs állományok
+
+A named beállításait tartalmazó állományok pillanatnyilag az [.filename]#/etc/namedb# könyvtárban találhatóak és hacsak nem egy egyszerû névfeloldóra tartunk igényt, akkor a használata elõtt módosítanunk is kell. Itt ejtjük meg a beállítások nagy részét.
+
+==== [.filename]#/etc/namedb/named.conf#
+
+[.programlisting]
+....
+// $FreeBSD$
+//
+// Részletesebb leírást a named.conf(5) és named(8) man oldalakon, valamint
+// a /usr/shared/doc/bind9 könyvtárban találhatunk.
+//
+// Ha egy hitelesített szervert akarunk beállítani, akkor igyekezzünk
+// a névfeloldás összes finom részletével pontosan tisztában lenni.
+// Ugyanis még a legkisebb hibákkal is egyrészt elvághatunk gépeket az
+// internet-lérésétõl, vagy másrészt felesleges forgalmat tudunk
+// generálni
+//
+
+options {
+	// A chroot könyvtárhoz relatív elérési út, amennyiben létezik
+	directory	"/etc/namedb";
+	pid-file	"/var/run/named/pid";
+	dump-file	"/var/dump/named_dump.db";
+	statistics-file	"/var/stats/named.stats";
+
+// Ha a named démont csak helyi névfeloldóként használjuk, akkor ez
+// egy biztonságos alapbeállítás. Ha viszont a named démon az egész
+// hálózatunkat is kiszolgálja, akkor ezt a beállítást tegyük
+// megjegyzésbe, vagy adjunk meg egy rendes IP-címet, esetleg
+// töröljük ki.
+	listen-on	{ 127.0.0.1; };
+
+// Ha rendszerünkön engedélyezett az IPv6 használata, akkor a helyi
+// névfeloldó használatához ezt a sort vegyük ki a megjegyzésbõl.
+// A hálózatunk többi részérõl pedig úgy lehet elérni, ha itt megadunk
+// egy IPv6 címet, vagy az "any" kulcsszót.
+//	listen-on-v6	{ ::1; };
+
+// Az alábbi zónákat már a lentebb található üres zónák eleve lefedik.
+// Ha tehát a lenti üres zónákat kivesszük a konfigurációból, akkor
+// ezeket a sorokat is tegyük megjegyzésbe.
+	disable-empty-zone "255.255.255.255.IN-ADDR.ARPA";
+	disable-empty-zone "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.IP6.ARPA";
+	disable-empty-zone "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.IP6.ARPA";
+
+// Ha a szolgáltatónk névszervert is elérhetõvé tett számunkra, akkor
+// itt adjuk meg annak az IP-címét és engedélyezzük az alábbi sort.
+// Ezzel egyben kihasználjuk a gyorsítótárat is, így mérsékeljük az
+// internet felé mozgó névfeloldásokat.
+/*
+	forwarders {
+		127.0.0.1;
+	};
+*
+
+// Ha a 'forwarders' rész nem üres, akkor alapértelmezés szerint a
+// 'forward first' értékkel rendelkezik.  Ekkor a kérést a helyi szerver
+// kapja abban az esetben, amikor a 'forwarders' részben megadott
+// szerverek nem tudják megválaszolni.  Emellett a névszerverben a
+// következõ sor hozzáadásával letilthatjuk, hogy önmagától ne
+// kezdeményezzen kéréseket:
+//     forward only;
+
+// Ha a kérések továbbítását az /etc/resolv.conf állományban megadott
+// bejegyzések mentén szeretnénk automatikusan konfigurálni, akkor vegyük
+// ki a megjegyzésbõl az alábbi sort és adjuk hozzá az /etc/rc.conf
+// állományhoz a name_auto_forward=yes sort.  Emellett használható még a
+// named_auto_forward_only beállítás is (amely fentebb leírt funkciót
+// valósítja meg).
+//     include "/etc/namedb/auto_forward.conf";
+....
+
+Ahogy arról a megjegyzésekben is szó esik, úgy tudjuk aktiválni a gyorsítótárat, ha megadjuk a `forwarders` beállítást. Normális körülmények között a névszerver az interneten az egyes névszervereket rekurzívan fogja keresni egészen addig, amíg meg nem találja a keresett választ. Az iménti beállítás engedélyezésével azonban elõször a szolgáltató névszerverét (vagy az általa kijelölt névszervert) fogjuk megkérdezni, a saját gyorsítótárából. Ha a szolgáltató kérdéses névszervere egy gyakran használt, gyors névszerver, akkor ezt érdemes bekapcsolnunk.
+
+[WARNING]
+====
+
+Itt a `127.0.0.1` megadása _nem_ mûködik. Mindenképpen írjuk át a szolgáltatónk névszerverének IP-címére.
+====
+
+[.programlisting]
+....
+	/*
+	   A BIND legújabb változataiban alapértelmezés szerint minden egyes
+	   kimenõ kérésnél más, véletlenszerûen választott UDP portot
+	   használnak, ezáltal jelentõs mértékben csökkenthetõ a gyorsítótár
+	   meghamisíthatóságának (cache poisoning) esélye.  Javasoljuk
+	   mindenkinek, hogy használják ki ezt a lehetõséget és eszerint
+	   állítsák be a tûzfalakat.
+
+	   Ha nem sikerül a tûzfalat hozzáigazítani ehhez a
+	   viselkedéshez AKKOR ÉS CSAK IS AKKOR engedélyezzük a lenti
+	   beállítást.  Alkalmazásával sokkal kevésbé lesz ellenálló a
+	   névszerver a különbözõ hamisítási kísérletekkel szemben,
+	   ezért lehetõség szerint kerüljük el.
+
+	   Az NNNNN helyére egy 49160 és 65530 közti számot kell
+	   beírnunk.
+	 */
+	 // query-source address * port NNNNN;
+};
+
+// Ha engedélyezzük a helyi névszervert, akkor az /etc/resolv.conf
+// állományban elsõ helyen megadni a 127.0.0.1 címet. Sõt, az
+// /etc/rc.conf állományból se felejtsük ki.
+
+// A hagyományos "root-hints" megoldás.  Használjuk ezt VAGY a lentebb
+// megadott alárendelt zónákat.
+zone "." { type hint; file "named.root"; };
+
+/*	Több szempontból is elõnyös, ha a következõ zónákat alárendeljük a
+	gyökér névfeloldó szervereknek:
+	1. A helyi felhasználók kéréseit gyorsabban tudjuk feloldalni.
+	2. A gyökérszerverek felé nem megy semmilyen hamis forgalom.
+	3. A gyökérszerverek meghibásodása vagy elosztott DoS támadás
+	   esetén rugalmasabban tudunk reagálni.
+
+	Másfelöl azonban ez a módszer a "hints" állomány alkalmazásával
+	szemben több felügyeletet igényel, mivel figyelnünk kell, nehogy
+	egy váratlan meghibásodás mûködésképtelenné tegye a
+	szerverünket.  Ez a megoldás leginkább a sok klienst kiszolgáló
+	névszerverek esetén bizonyulhat jövedelmezõbbnek.  Óvatosan
+	bánjunk vele!
+
+	A módszer alkalmazásához vegyük ki a megjegyzésbõl a következõ
+	bejegyzéseket és tegyük megjegyzésbe a fenti hint zónát.
+*/
+
+zone "." {
+	type slave;
+	file "slave/root.slave";
+	masters {
+		192.5.5.241;	// F.ROOT-SERVERS.NET.
+	};
+	notify no;
+};
+
+zone "arpa" {
+	type slave;
+	file "slave/arpa.slave";
+	masters {
+		192.5.5.241;	// F.ROOT-SERVERS.NET.
+	};
+	notify no;
+}
+
+zone "in-addr.arpa" {
+	type slave;
+	file "slave/in-addr.arpa.slave";
+	masters {
+		192.5.5.241;	// F.ROOT-SERVERS.NET.
+	};
+	notify no;
+};
+*/
+
+/*	Az alábbi zónák helyi kiszolgálásával meg tudjuk akadályozni, hogy
+	a belõlük indított kérések elhagyják a hálózatunkat és a elérjük
+	a gyökér névfeloldó szervereket.  Ez a megközelítés két komoly
+	elõnnyel rendelkezik:
+	1. A helyi felhasználók kéréseit gyorsabban tudjuk
+	   megválaszolni.
+	2. A gyökérszerverek felé nem továbbítódik semmilyen hamis
+	   forgalom.
+*/
+// RFC 1912
+zone "localhost"	{ type master; file "master/localhost-forward.db"; };
+zone "127.in-addr.arpa"	{ type master; file "master/localhost-reverse.db"; };
+zone "255.in-addr.arpa"	{ type master; file "master/empty.db"; };
+
+// A helyi IPv6 címek részére létrehozott RFC 1912-szerû zóna
+zone "0.ip6.arpa"	{ type master; file "master/localhost-reverse.db"; };
+
+// "Ez" a hálózat (RFC 1912 és 3330)
+zone "0.in-addr.arpa"		{ type master; file "master/empty.db"; };
+
+// Magáncélú hálózatok (RFC 1918)
+zone "10.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "16.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "17.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "18.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "19.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "20.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "21.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "22.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "23.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "24.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "25.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "26.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "27.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "28.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "29.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "30.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "31.172.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "168.192.in-addr.arpa"	{ type master; file "master/empty.db"; };
+
+// Helyi link/APIPA (RFC 3330 és 3927)
+zone "254.169.in-addr.arpa"	{ type master; file "master/empty.db"; };
+
+// Dokumentációs próbahálózat (RFC 3330)
+zone "2.0.192.in-addr.arpa"	{ type master; file "master/empty.db"; };
+
+// Útválasztási teljesítmény tesztelésére (RFC 3330)
+zone "18.198.in-addr.arpa"	{ type master; file "master/empty.db"; };
+zone "19.198.in-addr.arpa"	{ type master; file "master/empty.db"; };
+
+// Az IANA részére fentartott - a régi E osztályú címtér
+zone "240.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "241.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "242.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "243.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "244.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "245.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "246.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "247.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "248.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "249.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "250.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "251.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "252.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "253.in-addr.arpa"		{ type master; file "master/empty.db"; };
+zone "254.in-addr.arpa"		{ type master; file "master/empty.db"; };
+
+// Hozzárendelés nélküli IPv6-címek (RFC 4291)
+zone "1.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "3.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "4.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "5.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "6.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "7.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "8.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "9.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "a.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "b.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "c.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "d.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "e.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "0.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "1.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "2.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "3.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "4.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "5.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "6.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "7.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "8.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "9.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "a.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "b.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "0.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "1.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "2.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "3.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "4.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "5.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "6.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "7.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+
+// IPv6 ULA (RFC 4193)
+zone "c.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "d.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+
+// IPv6 helyi link (RFC 4291)
+zone "8.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "9.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "a.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "b.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+
+// Elavult IPv6 helyi címek (RFC 3879)
+zone "c.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "d.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "e.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+zone "f.e.f.ip6.arpa"		{ type master; file "master/empty.db"; };
+
+// Az IP6.INT már elavult (RFC 4159)
+zone "ip6.int"			{ type master; file "master/empty.db"; };
+
+// FONTOS: Ne használjuk ezeket az IP-címeket, mert nem valódiak,
+// csupán illusztrációs és dokumentációs célokból adtuk meg!
+//
+// Az alárendelt zónák beállításaira vonatkozó bejegyzések. Érdemes
+// ilyet beállítani legalább ahhoz a zónához, amelyhez a tartományunk is
+// tartozik. Az elsõdleges névszerverhez tartozó IP-címet érdeklõdjük meg
+// az illetékes hálózati rendszergazdától.
+//
+// Soha ne felejtsünk el megadni zónát az inverz kereséshez!  A neve az IP-cím
+// tagjainak fordított sorrendjébõl // származik, amelyhez hozzátoldunk még egy
+// ".IN-ADDR.ARPA" (illetve IPv6 esetén ".IP6.ARPA") részt.
+//
+// Mielõtt nekilátnánk egy elsõdleges zóna beállításának, gondoljuk
+// végig, hogy tényleg a megfelelõ szinten ismerjük a névfeloldás és
+// a BIND mûködését. Gyakran ugyanis egyáltalán nem nyilvánvaló
+// csapdákba tudunk esni.  Egy alárendelt zóna beállítása általában sokkal egyszerûbb feladat.
+//
+// FONTOS: Ne kövessük vakon a most következõ példát :-) Helyette inkább
+// valódi neveket és címeket adjunk meg.
+
+/* Példa dinamikus zónára
+key "mintaorgkulcs" {
+	algorithm hmac-md5;
+	secret "sf87HJqjkqh8ac87a02lla==";
+};
+zone "minta.org" {
+	type master;
+	allow-update {
+		key "mintaorgkulcs";
+	};
+	file "dynamic/minta.org";
+};
+*/
+
+/* Példa inverz alárendelt zónákra
+zone "1.168.192.in-addr.arpa" {
+	type slave;
+	file "slave/1.168.192.in-addr.arpa";
+	masters {
+		192.168.1.1;
+	};
+};
+*/
+....
+
+A [.filename]#named.conf# állományban tehát így adhatunk meg közvetlen és inverz alárendelt zónákat.
+
+Minden egyes újabb kiszolgált zónához az egy új bejegyzést kell felvenni a [.filename]#named.conf# állományban.
+
+Például a `minta.org` címhez tartozó legegyszerûbb ilyen bejegyzés így néz ki:
+
+[.programlisting]
+....
+zone "minta.org" {
+	type master;
+	file "master/minta.org";
+};
+....
+
+Ez egy központi zóna, ahogy arról a `type` mezõ, vagyis a típusa is árulkodik. Továbbá a `file` mezõben láthatjuk, hogy a hozzá tartozó információkat az [.filename]#/etc/namedb/master/minta.org# állományban tárolja.
+
+[.programlisting]
+....
+zone "minta.org" {
+	type slave;
+	file "slave/minta.org";
+};
+....
+
+Az alárendelt esetben a zónához tartozó információkat a zóna központi szerverétõl kapjuk meg és megadott állományban mentjük el. Ha valamiért a központi szerver leáll vagy nem érhetõ el, akkor az alárendelt szerver az átküldött zóna információk alapján képes helyette kiszolgálni a kéréseket.
+
+==== A zóna állományok
+
+A `minta.org` címhez tartozó példa központi zóna állomány (amely az [.filename]#/etc/namedb/master/néven.org# érhetõ el) tartalma az alábbi:
+
+[.programlisting]
+....
+$TTL 3600        ; alapértelmezés szerint 1 óra
+minta.org.      IN      SOA      ns1.minta.org. admin.minta.org. (
+                                2006051501      ; sorozatszám
+                                10800           ; frissítés
+                                3600            ; ismétlés
+                                604800          ; lejárat
+                                300             ; TTL negatív válasz
+                        )
+
+; névszerverek
+                IN      NS      ns1.minta.org.
+                IN      NS      ns2.minta.org.
+
+; MX rekordok
+                IN      MX 10   mx.minta.org.
+                IN      MX 20   levelezes.minta.org.
+
+                IN      A       192.168.1.1
+
+; a gépek nevei
+localhost       IN      A       127.0.0.1
+ns1             IN      A       192.168.1.2
+ns2             IN      A       192.168.1.3
+mx              IN      A       192.168.1.4
+levelezes       IN      A       192.168.1.5
+
+; álnevek
+www             IN      CNAME   minta.org.
+....
+
+A "."-ra végzõdõ hálózati nevek abszolút nevek, míg minden más "." nélküli név az õsére vezehetõ vissza (tehát relatív). Például az `ns1` névbõl az `ns1.minta.org` keletkezik.
+
+A zóna állományok felépítése a következõ:
+
+[.programlisting]
+....
+rekordnév      IN rekordtípus   érték
+....
+
+A névfeloldásban leggyakrabban alkalmazott rekordok típusai:
+
+SOA::
+a zóna fennhatóságának kezdete
+
+NS::
+egy hitelesített névszerver
+
+A::
+egy gép címe
+
+CNAME::
+egy álnév kanonikus neve
+
+MX::
+levélváltó
+
+PTR::
+mutató a tartománynévre (az inverz feloldás használja)
+
+[.programlisting]
+....
+
+minta.org. IN SOA ns1.minta.org. admin.minta.org. (
+                        2006051501      ; sorozatszám
+                        10800           ; 3 óránként frissítsünk
+                        3600            ; 1 óra után próbálkozzunk újra
+                        604800          ; 1 hét után jár le
+                        300 )           ; TTL negatív válasz
+....
+
+`minta.org.`::
+a tartomány neve, amely egyben a zóna õse
+
+`ns1.minta.org.`::
+a zóna elsõdleges/hitelesített névszervere
+
+`admin.minta.org.`::
+a zónáért felelõs személy neve, akinek az e-mail címét a "@" behelyettesítésével kapjuk meg. (Tehát a mailto:admin@example.org[admin@example.org] címbõl `admin.example.org` lesz.)
+
+`2006051501`::
+az állomány sorozatszáma. Ezt a zóna állomány módosításakor mindig növelnünk kell. Manapság a rendszergazdák a sorozatszámot `ééééhhnnvv` alakban adják meg. A `2006051501` tehát azt jelenti, hogy az állományt 2006. május 15-én módosították utoljára, és a `01` pedig arra utal, hogy aznap elõször. A sorozatszám megadása fontos az alárendelt névszerverek számára, mivel így tudják megállapítani, hogy a zóna mikor változott utoljára.
+
+[.programlisting]
+....
+
+                IN NS           ns1.minta.org.
+....
+
+Ez egy NS bejegyzés. A zónához tartozó minden hitelesített névszervernek lennie kell legalább egy ilyen bejegyzésének.
+
+[.programlisting]
+....
+localhost       IN      A       127.0.0.1
+ns1             IN      A       192.168.1.2
+ns2             IN      A       192.168.1.3
+mx              IN      A       192.168.1.4
+levelezes       IN      A       192.168.1.5
+....
+
+Az A rekord egy gép nevét adja meg. Ahogy a fenti példából is kiderül, az `ns1.minta.org` név a `192.168.1.2` címre képzõdik le.
+
+[.programlisting]
+....
+                IN      A       192.168.1.1
+....
+
+Ez a sor `192.168.1.1` címet rendeli az aktuális õshöz, amely jelen esetünkben az `example.org`.
+
+[.programlisting]
+....
+www             IN CNAME        @
+....
+
+A kanonikus neveket tároló rekordokat általában egy gép álneveihez használjuk. Ebben a példában a `www` a "fõgép" egyik álneve, amely itt éppenséggel a `minta.org` (`192.168.1.1`) tartományneve. A CNAME rekordok mellé más típusú rekordokat ugyanarra a hálózati névre soha ne adjunk meg.
+
+[.programlisting]
+....
+                IN MX   10      levelezes.minta.org.
+....
+
+Az MX rekord adja meg, hogy milyen levelezõ szerverek felelõsek a zónába érkezõ levelek fogadásáért. A `levelezes.minta.org` a levelezõ szerver hálózati neve, ahol a 10 az adott levelezõ szerver prioritása.
+
+Több levelezõ szerver is megadható 10-es, 20-as stb. prioritásokkal. A `minta.org` tartományon belül elõször mindig a legnagyobb MX prioritással rendelkezõ levelezõ szervernek próbáljuk meg továbbítani a leveleket (a legkisebb prioritási értékkel rendelkezõ rekord), majd ezután a második legnagyobbnak stb. egészen addig, amíg a levelet tovább nem küldtük.
+
+Az in-addr.arpa zóna állományok (inverz DNS) esetén ugyanez a felépítés, kivéve, hogy a PTR típusú bejegyzések szerepelnek az A és CNAME helyett.
+
+[.programlisting]
+....
+$TTL 3600
+
+1.168.192.in-addr.arpa. IN SOA ns1.minta.org. admin.minta.org. (
+                        2006051501      ; sorozatszám
+                        10800           ; frissítés
+                        3600            ; ismétlés
+                        604800          ; lejárat
+                        300 )           ; TTL negatív válasz
+
+        IN      NS      ns1.minta.org.
+        IN      NS      ns2.minta.org.
+
+1       IN      PTR     minta.org.
+2       IN      PTR     ns1.minta.org.
+3       IN      PTR     ns2.minta.org.
+4       IN      PTR     mx.minta.org.
+5       IN      PTR     levelezes.minta.org.
+....
+
+Ez az állomány írja le tehát a kitalált tartományunkon belül az IP-címek és hálózati nevek összerendelését.
+
+Érdemes megemlíteni, hogy a PTR rekordok jobb oldalán álló nevek mindegyikének teljes hálózati névnek kell lennie (vagyis "." karakterrel kell végzõdnie).
+
+=== A gyorsítótárazó névszerver
+
+A gyorsítótárazó névszerver az a névszerver, amely elsõdleges feladata a rekurzív kérések kiszolgálása. Egyszerûen továbbítja a beérkezõ kéréseket, majd megjegyzi azokat, így késõbb közvetlenül tud válaszolni.
+
+=== Biztonság
+
+Habár a névfeloldás szempontjából a BIND a legelterjedtebb, a biztonságosságával azért akadnak gondok. Gyakran találnak benne potenciális és kihasználható biztonsági réseket.
+
+A FreeBSD azonban a named démont automatikusan egy man:chroot[8] környezetbe helyezi. Emellett még léteznek további más védelmi mechanizmusok is, amelyek segítségével el tudjuk kerülni a névfeloldást célzó esetleges támadásokat.
+
+Sosem árt olvasgatni a http://www.cert.org/[CERT] által kiadott biztonsági figyelmeztetéseket és feliratkozni a {freebsd-security-notifications} címére, hogy folyamatosan értesüljünk az interneten és a FreeBSD-ben talált különbözõ biztonsági hibákról.
+
+[TIP]
+====
+
+Ha valamilyen gondunk támadna, akkor esetleg próbálkozzunk meg a forrásaink frissítésével és a named újrafordításával.
+====
+
+=== Egyéb olvasnivalók
+
+A BIND/named man oldalai: man:rndc[8] man:named[8] man:named.conf[8]
+
+* http://www.isc.org/software/bind[Az ISC BIND hivatalos honlapja (angolul)]
+* http://www.isc.org/software/guild[Az ISC BIND hivatalos fóruma (angolul)]
+* http://www.oreilly.com/catalog/dns5/[O'Reilly DNS and BIND 5th Edition]
+* http://www.rfc-editor.org/rfc/rfc1034.txt[RFC1034 - Domain Names - Concepts and Facilities]
+* http://www.rfc-editor.org/rfc/rfc1035.txt[RFC1035 - Domain Names - Implementation and Specification]
+
+[[network-apache]]
+== Az Apache webszerver
+
+=== Áttekintés
+
+A FreeBSD szolgálja ki a legforgalmasabb honlapok nagy részét szerte a világban. A mögöttük álló webszerverek általában az Apache webszervert alkalmazzák. Az Apache használatához szükséges csomagok megtalálhatóak a FreeBSD telepítõlemezén is. Ha a FreeBSD elsõ telepítésekor még nem telepítettük volna az Apache szerverét, akkor a package:www/apache13[] vagy package:www/apache12[] portból tudjuk feltenni.
+
+Az Apache szervert sikeres telepítését követõen be kell állítanunk.
+
+[NOTE]
+====
+Ebben a szakaszban az Apache webszerver 1.3.X változatát mutatjuk be, mivel ezt használják a legtöbben FreeBSD alatt. Az Apache 2.X rengeteg új technológiát vezetett be, de ezekkel itt most nem foglalkozunk. Az Apache 2.X változatával kapcsolatban keressük fel a http://httpd.apache.org/[http://httpd.apache.org/] oldalt.
+====
+
+=== Beállítás
+
+Az Apache webszerver konfigurációs állománya FreeBSD alatt [.filename]#/usr/local/etc/apache/httpd.conf# néven található. Ez az állomány egy szokványos UNIX(R)-os szöveges konfigurációs állomány, ahol a megjegyzéseket egy `#` karakterrel vezetjük be. Az itt használható összes lehetséges beállítási lehetõség átfogó ismertetése meghaladná az egész kézikönyv határait, ezért most csak a leggyakrabban módosított direktívákat fogjuk ismertetni.
+
+`ServerRoot "/usr/local"`::
+Ez adja meg az Apache számára az alapértelmezett könyvtárat. A binárisai ezen belül a [.filename]#bin# és [.filename]#sbin# alkönyvtárakban, a konfigurációs állományai pedig az [.filename]#etc/apache# könyvtárban tárolódnak.
+
+`ServerAdmin saját@címünk.az.interneten`::
+Erre a címre küldhetik nekünk a szerverrel kapcsolatos hibákat. Ez a cím egyes szerver által generált oldalakon jelenik meg, például hibák esetében.
+
+`ServerName www.minta.com`::
+A `ServerName` segítségével meg tudjuk adni, hogy milyen nevet küldjön vissza a szerver a klienseknek olyankor, ha az nem egyezne meg a jelenlegivel (vagyis a `www` nevet használjuk a gépünk valódi neve helyett).
+
+`DocumentRoot "/usr/local/www/data"`::
+A `DocumentRoot` adja meg azt a könyvtárat, ahonnan kiszolgáljuk a dokumentumokat. Alapértelmezés szerint az összes kérés erre a könyvtárra fog vonatkozni, de a szimbolikus linkek és az álnevek akár más helyekre is mutathatnak.
+
+A változtatások végrehajtása elõtt mindig is jó ötlet biztonsági másolatot készíteni az Apache konfigurációs állományairól. Ahogy sikerült összerakni egy számunkra megfelelõ konfigurációt, készen is állunk az Apache futtatására.
+
+=== Az Apache futtatása
+
+A többi hálózati szervertõl eltérõen az Apache nem az inetd szuperszerverbõl fut. A kliensektõl érkezõ HTTP kérések minél gyorsabb kiszolgálásának érdekében úgy állítottuk be, hogy önállóan fusson. Ehhez egy szkriptet is mellékeltünk, amellyel igyekeztünk a lehetõ legjobban leegyszerûsíteni a szerver indítását, leállítását és újraindítását. Az Apache elsõ indításához adjuk ki a következõ parancsot:
+
+[source,bash]
+....
+# /usr/local/sbin/apachectl start
+....
+
+Így pedig a szervert bármikor leállíthatjuk:
+
+[source,bash]
+....
+# /usr/local/sbin/apachectl stop
+....
+
+Ha valamilyen okból megváltoztattuk volna a szerver beállításait, akkor ezen a módon tudjuk újraindítani:
+
+[source,bash]
+....
+# /usr/local/sbin/apachectl restart
+....
+
+Ha a jelenleg megnyitott kapcsolatok felbontása nélkül akarjuk újraindítani az Apache szervert, akkor ezt írjuk be:
+
+[source,bash]
+....
+# /usr/local/sbin/apachectl graceful
+....
+
+Mindezekrõl az man:apachectl[8] man oldalon találunk bõvebb leírást.
+
+Amennyiben szükségünk lenne az Apache elindítására a rendszer indításakor, akkor a következõ sort vegyünk fel az [.filename]#/etc/rc.conf# állományba:
+
+[.programlisting]
+....
+apache_enable="YES"
+....
+
+Az Apache 2.2 esetében:
+
+[.programlisting]
+....
+apache22_enable="YES"
+....
+
+Amikor az Apache `httpd` nevû programjának szeretnénk további paranccsori paramétereket átadni a rendszer indítása során, akkor ezeket így tudjuk megadni az [.filename]#rc.conf# állományban:
+
+[.programlisting]
+....
+apache_flags=""
+....
+
+Most, miután a webszerverünk mûködik, a böngészõnkkel mindezt ellenõrizni is tudjuk a `http://localhost/` cím beírásával. Ilyenkor az alapértelmezés szerinti [.filename]#/usr/local/www/data/index.html# állomány tartalmát láthatjuk.
+
+=== Virtuális nevek
+
+Az Apache a virtuális nevek használatának két különbözõ módját ismeri. Ezek közül az elsõ módszer a név alapú virtualizáció (Name-based Virtual Hosting). Ilyenkor a kliens HTTP/1.1 fejlécébõl próbálja meg a szerver megállapítani a hivatkozási nevet. Segítségével több tartomány is osztozhat egyetlen IP-címen.
+
+Az Apache név alapú virtualizációjának beállításához az alábbi beállítást kell hozzátennünk a [.filename]#httpd.conf# állományhoz:
+
+[.programlisting]
+....
+NameVirtualHost *
+....
+
+Ha a webszerverünk neve `www.tartomany.hu`, és hozzá egy `www.valamilyenmasiktartomany.hu` virtuális nevet akarunk megadni, akkor azt a következõképpen tehetjük meg a [.filename]#httpd.conf# állományon belül:
+
+[source,bash]
+....
+<VirtualHost *>
+ServerName www.tartomany.hu
+DocumentRoot /www/tartomany.hu
+</VirtualHost>
+
+<VirtualHost *>
+ServerName www.valamilyenmasiktartomany.hu
+DocumentRoot /www/valamilyenmasiktartomany.hu
+</VirtualHost>
+....
+
+A címek és elérési utak helyére helyettesítsük be a használni kívánt címeket és elérési utakat.
+
+A virtuális nevek beállításának további részleteivel kapcsolatosan keressük fel az Apache hivatalos dokumentációját a http://httpd.apache.org/docs/vhosts/[http://httpd.apache.org/docs/vhosts/] címen (angolul).
+
+=== Apache-modulok
+
+Az alap szerver képességeinek kiegészítéséhez több különbözõ Apache modul áll rendelkezésünkre. A FreeBSD Portgyûjteménye az Apache telepítése mellett lehetõséget ad a népszerûbb bõvítményeinek telepítésére is.
+
+==== mod_ssl
+
+A mod_ssl modul az OpenSSL könyvtár használatával valósít meg erõs titkosítást a biztonságos socket réteg második, illetve harmadik verziójával (Secure Sockets Layer, SSL v2/v3) és a biztonságos szállítási rétegbeli (Transport Layer Security v1) protokoll segítségével. Ez a modul mindent biztosít ahhoz, hogy a megfelelõ hatóságok által aláírt tanúsítványokat tudjunk kérni, és ezáltal egy védett webszervert futtassunk FreeBSD-n.
+
+Ha még nem telepítettünk volna fel az Apache szervert, akkor a package:www/apache13-modssl[] porton keresztül a mod_ssl modullal együtt is fel tudjuk rakni az Apache 1.3.X változatát. Az SSL támogatása pedig már az Apache 2.X package:www/apache22[] porton keresztül elérhetõ változataiban alapértelmezés szerint engedélyezett.
+
+==== Kapcsolódás nyelvekhez
+
+Mindegyik nagyobb szkriptnyelvhez létezik egy külön Apache-modul, amelyek segítségével komplett Apache-modulokat tudunk készíteni az adott nyelven. Gyakran a dinamikus honlapok is így próbálják a szerverbe épített belsõ értelmezõn keresztül a külsõ értelmezõ indításából és benne a szkriptek lefuttatásából fakadó költségeket megspórolni, ahogy errõl a következõ szakaszokban olvashatunk.
+
+=== Dinamikus honlapok
+
+Az utóbbi évtizedben egyre több vállalkozás fordult az internet felé bevételeik és részesedéseinek növelésének reményében, amivel egyre jobban megnõtt az igény a dinamikus honlapokra is. Miközben bizonyos cégek, mint például a Microsoft(R), a saját fejlesztésû termékeikbe építettek be ehhez támogatást, addig a nyílt forrásokkal foglalkozó közösség sem maradt tétlen és felvette a kesztyût. A dinamikus tartalom létrehozásához többek közt Django, Ruby on Rails, a mod_perl és a mod_php modulok használhatóak.
+
+==== Django
+
+A Django egy BSD típusú licensszel rendelkezõ keretrendszer, amelynek használatával nagy teljesítményû és elegáns webes alkalmazásokat tudunk gyorsan kifejleszteni. Tartalmaz egy objektum-relációs leképezõt, így az adattípusokat Python-objektumokként tudjuk leírni, és ezekhez az objektumokhoz egy sokrétû, dinamikus adatbázis hozzáférést nyújtó alkalmazásfejlesztõi felületet, így a fejlesztõknek egyetlen SQL utasítást sem kell megírniuk. Találhatunk még benne továbbá egy bõvíthetõ sablonrendszert, amelynek köszönhetõen az alkalmazás belsõ mûködése elválasztható a HTML-beli megjelenésétõl.
+
+A Django mûködéséhez a mod_python modulra, az Apache szerverre és egy tetszõlegesen választott SQL alapú adatbázisrendszerre van szükség. A hozzá tartozó FreeBSD port mindezeket automatikusan telepíti a megadott beállítások szerint.
+
+[[network-www-django-install]]
+.A Django telepítése az Apache, mod_python3 és a PostgreSQL használatával
+[example]
+====
+
+[source,bash]
+....
+# cd /usr/ports/www/py-django; make all install clean -DWITH_MOD_PYTHON3 -DWITH_POSTGRESQL
+....
+
+====
+
+Miután a Django és a hozzá szükséges komponensek felkerültek rendszerünkre, hozzunk létre egy könyvtárat a leendõ Django projektünknek és állítsuk be az Apache szervert, hogy az oldalunk belül a megadott linkekre a saját alkalmazásunkat hívja meg a beágyazott Python-értelmezõn keresztül.
+
+[[network-www-django-apache-config]]
+.Az Apache beállítása a Django és mod_python használatához
+[example]
+====
+A következõ sort kell hozzátennünk a [.filename]#httpd.conf# állományhoz, hogy az Apache bizonyos linkeket a webes alkalmazás felé irányítson át:
+
+[source,bash]
+....
+<Location "/">
+    SetHandler python-program
+    PythonPath "['/a/django/csomagok/helye/'] + sys.path"
+    PythonHandler django.core.handlers.modpython
+    SetEnv DJANGO_SETTINGS_MODULE azoldalam.beallitasai
+    PythonAutoReload On
+    PythonDebug On
+</Location>
+....
+
+====
+
+==== Ruby on Rails
+
+A Ruby on Rails egy olyan másik nyílt forráskódú keretrendszer, amivel lényegében egy teljes fejlesztõi készletet kapunk és amelyet kifejezetten arra élezték ki, hogy segítségével a webfejlesztõk sokkal gyorsabban tudjanak haladni és a komolyabb alkalmazások gyorsabb elkészítése se okozzon nekik gondot. A Portrgyûjteménybõl pillanatok alatt telepíthetõ.
+
+[source,bash]
+....
+# cd /usr/ports/www/rubygem-rails; make all install clean
+....
+
+==== mod_perl
+
+Az Apache és Perl egyesítésén fáradozó projekt a Perl programozási nyelv és az Apache webszerver erejének összehangolásán dolgozik. A mod_perl modulon keresztül Perlben vagyunk képesek modulokat készíteni az Apache szerverhez. Ráadásul a szerverben egy belsõ állandó értelmezõ is található hozzá, ezzel igyekeznek megspórolni a külsõ értelmezõ és a Perl indításából keletkezõ többletköltségeket.
+
+A mod_perl több különbözõ módon állítható munkába. A mod_perl használatához nem szabad elfelejtenünk, hogy a mod_perl 1.0-ás verziója csak az Apache 1.3 változatával mûködik, és a mod_perl 2.0-ás változata pedig csak az Apache 2.X változataival. A mod_perl 1.0 a package:www/mod_perl[] portból telepíthetõ, valamint a statikusan beépített változata a package:www/apache13-modperl[] portban található. A mod_perl 2.0 a package:www/mod_perl2[] portból rakható fel.
+
+==== mod_php
+
+A PHP, vagy másik nevén "PHP, a hipertext feldolgozó" egy általános célú szkriptnyelv, amelyet kifejezetten honlapok fejlesztéséhez hoztak létre. A szabványos HTML ágyazható nyelv felépítésében a C, Java(TM) és Perl nyelveket ötvözi annak elérése érdekében, hogy ezzel segítse a fejlesztõket a dinamikusan generált oldalak minél gyorsabb megírásában.
+
+A PHP5 támogatását úgy tudjuk hozzáadni az Apache webszerverhez, ha telepítjük a package:lang/php5[] portot.
+
+Ha a package:lang/php5[] portot most telepítjük elõször, akkor a vele kapcsolatos beállításokat tartalmazó `OPTIONS` menü automatikusan megjelenik. Ha ezzel nem találkoznánk, mert például valamikor korábban már felraktuk volna a package:lang/php5[] portot, akkor a port könyvtárában következõ parancs kiadásával tudjuk újra visszahozni:
+
+[source,bash]
+....
+# make config
+....
+
+A beállítások között jelöljük be az `APACHE` opciót, amelynek eredményeképpen létrejön az Apache webszerverhez használható mod_php5 betölthetõ modul.
+
+[NOTE]
+====
+A PHP4 modult még ma is rengeteg szerver használja több különbözõ okból (például kompatibilitási problémák vagy a már korábban kiadott tartalom miatt). Ha tehát a mod_php5 helyett inkább a mod_php4 modulra lenne szükségünk, akkor a package:lang/php4[] portot használjuk. A package:lang/php4[] portnál is megtalálhatjuk a package:lang/php5[] fordítási idejû beállításainak nagy részét.
+====
+
+Az iméntiek révén települnek és beállítódnak a dinamikus PHP alkalmazások támogatásához szükséges mouldok. Az [.filename]#/usr/local/etc/apache/httpd.conf# állományban ellenõrizni is tudjuk, hogy az alábbi részek megjelentek-e:
+
+[.programlisting]
+....
+LoadModule php5_module        libexec/apache/libphp5.so
+....
+
+[.programlisting]
+....
+AddModule mod_php5.c
+    <IfModule mod_php5.c>
+        DirectoryIndex index.php index.html
+    </IfModule>
+    <IfModule mod_php5.c>
+        AddType application/x-httpd-php .php
+        AddType application/x-httpd-php-source .phps
+    </IfModule>
+....
+
+Ahogy befejezõdött a mûvelet, a PHP modul betöltéséhez mindösszesen az `apachectl` paranccsal kell óvatosan újraindítanunk a webszervert:
+
+[source,bash]
+....
+# apachectl graceful
+....
+
+A PHP jövõbeni frissítéseihez már nem lesz szükségünk a `make config` parancsra, mivel a korábban kiválasztott `OPTIONS` menün belüli beállítasainkat a FreeBSD Portgyûjteményéhez tartozó keretrendszer automatikusan elmenti.
+
+A PHP FreeBSD-ben megtalálható támogatása kifejezetten moduláris, ezért az alap telepítése igencsak korlátozott. A további elemek hozzáadásához a package:lang/php5-extensions[] portot tudjuk használni. A port egy menüvezérelt felületet nyújt a PHP különbözõ bõvítményeinek telepítéséhez. Az egyes bõvítményeket azonban a megfelelõ portok használatával is fel tudjuk rakni.
+
+Például PHP5 modulhoz úgy tudunk támogatást adni a MySQL adatbázis szerverhez, ha telepítjük a [.filename]#databases/php5-mysql# portot.
+
+Miután telepítettünk egy bõvítményt, az Apache szerverrel újra be kell töltetnünk a megváltozott beállításokat:
+
+[source,bash]
+....
+# apachectl graceful
+....
+
+[[network-ftp]]
+== Állományok átvitele (FTP)
+
+=== Áttekintés
+
+Az adatállomány átviteli protokoll (File Transfer Protocol, FTP) a felhasználók számára lehetõséget ad az ún. FTP szerverekre állományokat feltölteni, illetve onnan állományokat letölteni. A FreeBSD alaprendszere is tartalmaz egy ilyen FTP szerverprogramot, ftpd néven. Ezért FreeBSD alatt egy FTP szerver beállítása meglehetõsen egyszerû.
+
+=== Beállítás
+
+A beállítás legfontosabb lépése, hogy eldöntsük milyen hozzáféréseken át lehet elérni az FTP szervert. Egy hétköznapi FreeBSD rendszerben rengeteg hozzáférés a különbözõ démonokhoz tartozik, de az ismeretlen felhasználók számára nem kellene megengednünk ezek használatát. Az [.filename]#/etc/ftpusers# állományban szerepelnek azok a felhasználók, akik semmilyen módon nem érhetik el az FTP szolgáltatást. Alapértelmezés szerint itt találhatjuk az elõbb említett rendszerszintû hozzáféréseket is, de ide minden további nélkül felvehetjük azokat a felhasználókat, akiknél nem akarjuk engedni az FTP elérését.
+
+Más esetekben elõfordulhat, hogy csak korlátozni akarjuk egyes felhasználók FTP elérését. Ezt az [.filename]#/etc/ftpchroot# állományon keresztül tehetjük meg. Ebben az állományban a lekorlátozni kívánt felhasználókat és csoportokat írhatjuk bele. Az man:ftpchroot[5] man oldalán olvashatjuk el ennek részleteit, ezért ennek pontos részleteit itt most nem tárgyaljuk.
+
+Ha az FTP szerverünkhöz névtelen (anonim) hozzáférést is engedélyezni akarunk, akkor ahhoz elõször készítenünk kell egy `ftp` nevû felhasználót a FreeBSD rendszerünkben. A felhasználók ezután az `ftp` vagy `anonymous` nevek, valamint egy tetszõleges jelszó (ez a hagyományok szerint a felhasználó e-mail címe) használatával is képesek lesznek bejelentkezni. Az FTP szerver ezután a névtelen felhasználók esetében meghívja a man:chroot[2] rendszerhívást, és ezzel lekorlátozza hozzáférésüket az `ftp` felhasználó könyvtárára.
+
+Két szöveges állományban adhatunk meg a becsatlakozó FTP kliensek számára üdvözlõ üzeneteket. Az [.filename]#/etc/ftpwelcome# állomány tartalmát még a bejelentkezés elõtt látni fogják a felhasználók, a sikeres bejelentkezést követõen pedig az [.filename]#/etc/ftpmotd# állomány tartalmát látják. Vigyázzunk, mert ennek az állománynak már a bejelentkezési környezethez képest relatív az elérése, ezért a névtelen felhasználók esetében ez konkrétan az [.filename]#~ftp/etc/ftpmotd# állomány lesz.
+
+Ahogy beállítottuk az FTP szervert, az [.filename]#/etc/inetd.conf# állományban is engedélyeznünk kell. Itt mindössze annyira lesz szükségünk, hogy eltávolítsuk a megjegyzést jelzõ "#" karaktert a már meglevõ ftpd sor elõl:
+
+[.programlisting]
+....
+ftp	stream	tcp	nowait	root	/usr/libexec/ftpd	ftpd -l
+....
+
+Ahogy arról már a <<network-inetd-reread>> szót ejtett, az inetd beállításait újra be kell olvastatnunk a konfigurációs állomány megváltoztatása után. A <<network-inetd-settings>> írja le az inetd engedélyezésének részleteit.
+
+Az ftpd önálló szerverként is elindítható. Ehhez mindössze elegendõ csak a megfelelõ változót beállítani az [.filename]#/etc/rc.conf# állományban:
+
+[.programlisting]
+....
+ftpd_enable="YES"
+....
+
+Miután megadtuk az iménti változót, a szerver el fog indulni a rendszer következõ indítása során. Szükség esetén természetesen `root` felhasználóként a következõ paranccsal is közvetlenül elindítható:
+
+[source,bash]
+....
+# /etc/rc.d/ftpd start
+....
+
+Most már be is tudunk jelentkezni az FTP szerverre:
+
+[source,bash]
+....
+% ftp localhost
+....
+
+=== Karbantartás
+
+Az ftpd démon a man:syslog[3] használatával naplózza az üzeneteket. Alapértelmezés szerint a rendszernaplózó démon az FTP mûködésére vonatkozó üzeneteket az [.filename]#/var/log/xferlog# állományba írja. Az FTP naplóinak helyét az [.filename]#/etc/syslog.conf# állományban tudjuk módosítani:
+
+[.programlisting]
+....
+ftp.info      /var/log/xferlog
+....
+
+Legyünk körültekintõek a névtelen FTP szerverek üzemeltetésekor. Azt pedig kétszer is gondoljuk meg, hogy engedélyezzük-e a névtelen felhasználók számára állományok feltöltését, hiszen könnyen azon kaphatjuk magunkat, hogy az FTP oldalunk illegális állománycserék színterévé válik vagy esetleg valami sokkal rosszabb történik. Ha mindenképpen szükségünk lenne erre a lehetõségre, akkor állítsunk be olyan engedélyeket a feltöltött állományokra, hogy a többi névtelen felhasználó ezeket a tartalmuk tüzetes ellenõrzéséig ne is olvashassa.
+
+[[network-samba]]
+== Állomány- és nyomtatási szolgáltatások Microsoft(R) Windows(R) kliensek számára (Samba)
+
+=== Áttekintés
+
+A Samba egy olyan elterjedt nyílt forráskódú szoftver, ami Microsoft(R) Windows(R) kliensek számára tesz lehetõvé állomány- és nyomtatási szolgáltatásokat. Az ilyen kliensek általa helyi meghajtóként képesek elérni a FreeBSD állományrendszerét, vagy helyi nyomtatóként a FreeBSD általt kezelt nyomtatókat.
+
+A Samba csomagja általában megtalálható a FreeBSD telepítõeszközén. Ha a FreeBSD-vel együtt nem raktuk fel a Samba csomagját, akkor ezt késõbb package:net/samba3[] port vagy csomag telepítésével pótolhatjuk.
+
+=== Beállítás
+
+A Samba konfigurációs állománya a telepítés után [.filename]#/usr/local/shared/examples/samba/smb.conf.default# néven található meg. Ezt kell lemásolnunk [.filename]#/usr/local/etc/smb.conf# néven, amelyet aztán a Samba tényleges használata elõtt módosítanunk kell.
+
+Az [.filename]#smb.conf# állomány a Samba futásához használt beállításokat tartalmazza, mint például Windows(R) kliensek számára felkínált a nyomtatók és "megosztások" adatait. A Samba csomagban ezen kívül találhatunk még egy swat nevû webes eszközt, amellyel egyszerû módon tudjuk az [.filename]#smb.conf# állományt állítgatni.
+
+==== A Samba webes adminisztrációs eszköze (SWAT)
+
+A Samba webes adminisztrációs segédeszköze (Samba Web Administration Tool, SWAT) az inetd démonon keresztül fut démonként. Ennek megfelelõn az [.filename]#/etc/inetd.conf# állományban a következõ sort kell kivennünk megjegyzésbõl, mielõtt a swat segítségével megkezdenénk a Samba beállítását:
+
+[.programlisting]
+....
+swat   stream  tcp     nowait/400      root    /usr/local/sbin/swat    swat
+....
+
+Ahogy azt a <<network-inetd-reread>> is mutatja, az inetd démont újra kell indítanunk a megváltozott konfigurációs állományának újbóli beolvasásához.
+
+Miután az [.filename]#inetd.conf# állományban a swat engedélyezésre került, a böngészõnk segítségével próbáljunk meg a http://localhost:901[http://localhost:901] címre csatlakozni. Elõször a rendszer `root` hozzáférésével kell bejelentkeznünk.
+
+Miután sikeresen bejelentkeztünk a Samba beállításait tárgyaló lapra, el tudjuk olvasni a rendszer dokumentációját, vagy a menu:Globals[] fülre kattintva nekiláthatunk a beállítások elvégzésének. A menu:Globals[] részben található opciók az [.filename]#/usr/local/etc/smb.conf# állomány `[global]` szekciójában található változókat tükrözik.
+
+==== Általános beállítások
+
+Akár a swat eszközzel, akár a [.filename]#/usr/local/etc/smb.conf# közvetlen módosításával dolgozunk, a Samba beállítása során a következõkkel mindenképpen össze fogunk futni:
+
+`workgroup`::
+A szervert elérni kívánó számítógépek által használt NT tartomány vagy munkacsoport neve.
+
+`netbios name`::
+A Samba szerver NetBIOS neve. Alapértelmezés szerint ez a név a gép hálózati nevének elsõ tagja.
+
+`server string`::
+Ez a szöveg jelenik meg akkor, ha például a `net view` paranccsal vagy valamilyen más hálózati segédprogrammal kérdezzük le a szerver beszédesebb leírását.
+
+==== Biztonsági beállítások
+
+A [.filename]#/usr/local/etc/smb.conf# állományban a két legfontosabb beállítás a választott biztonsági modell és a kliensek felhasználói jelszavainak tárolásához használt formátum. Az alábbi direktívák vezérlik ezeket:
+
+`security`::
+Itt a két leggyakoribb beállítás a `security = share` és a `security = user`. Ha a kliensek a FreeBSD gépen található felhasználói neveiket használják, akkor felhasználói szintû védelemre van szükségünk (tehát a user beállításra). Ez az alapértelmezett biztonsági házirend és ilyenkor a klienseknek elõször be kell jelentkezniük a megosztott erõforrások eléréséhez.
++
+A megosztás (share) szintû védelem esetében, a klienseknek nem kell a szerveren érvényes felhasználói névvel és jelszóval rendelkezniük a megosztott erõforrások eléréséhez. Ez volt az alapbeállítás a Samba korábbi változataiban.
+
+`passdb backend`::
+A Samba számos különbözõ hitelesítési modellt ismer. A klienseket LDAP, NIS+, SQL adatbázis vagy esetleg egy módosított jelszó állománnyal is tudjuk hitelesíteni. Az alapértelmezett hitelesítési módszer a `smbpasswd`, így itt most ezzel foglalkozunk.
+
+Ha feltesszük, hogy az alapértelmezett `smbpasswd` formátumot választottuk, akkor a Samba úgy fogja tudni hitelesíteni a klienseket, ha elõtte létrehozzuk a [.filename]#/usr/local/private/smbpasswd# állományt. Ha a Windows(R)-os kliensekkel is el akarjuk érni a UNIX(R)-os felhasználói hozzáféréseinket, akkor használjuk a következõ parancsot:
+
+[source,bash]
+....
+# smbpasswd -a felhasználónév
+....
+
+[NOTE]
+====
+A Samba a 3.0.23c verziójától kezdõdõen a hitelesítéshez szükséges állományokat a [.filename]#/usr/local/etc/samba# könyvtárban tárolja. A felhasználói hozzáférések hozzáadására innentõl már a `tdbsam` parancs használata javasolt:
+
+[source,bash]
+....
+# pdbedit -a -u felhasználónév
+....
+
+====
+
+A http://www.samba.org/samba/docs/man/Samba-HOWTO-Collection/[ hivatalos Samba HOGYAN] ezekrõl a beállításokról szolgál további információkkal (angolul). Viszont az itt vázolt alapok viszont már elegendõek a Samba elindításához.
+
+=== A Samba elindítása
+
+A package:net/samba3[] port a Samba irányítására egy új indító szkriptet tartalmaz. A szkript engedélyezéséhez, tehát általa a Samba elindításának, leállításának és újraindításának lehetõvé tételéhez vegyük fel a következõ sort az [.filename]#/etc/rc.conf# állományba:
+
+[.programlisting]
+....
+samba_enable="YES"
+....
+
+Ha még finomabb irányításra vágyunk:
+
+[.programlisting]
+....
+nmbd_enable="YES"
+....
+
+[.programlisting]
+....
+smbd_enable="YES"
+....
+
+[NOTE]
+====
+Ezzel egyben a rendszer indításakor automatikusan be is indítjuk a Samba szolgáltatást.
+====
+
+A Samba a következõkkel bármikor elindítható:
+
+[source,bash]
+....
+# /usr/local/etc/rc.d/samba start
+Starting SAMBA: removing stale tdbs :
+Starting nmbd.
+Starting smbd.
+....
+
+Az rc szkriptekkel kapcsolatban a crossref:config[configtuning-rcd,Az rc használata FreeBSD alatt]t ajánljuk elolvasásra.
+
+A Samba jelen pillanatban három különálló démonból áll. Láthatjuk is, hogy az nmbd és smbd démonokat elindította a [.filename]#samba# szkript. Ha az [.filename]#smb.conf# állományban engedélyeztük a winbind névfeloldási szolgáltatást is, akkor láthatjuk, hogy ilyenkor a winbindd démon is elindul.
+
+A Samba így állítható le akármikor:
+
+[source,bash]
+....
+# /usr/local/etc/rc.d/samba stop
+....
+
+A Samba egy összetett szoftvercsomag, amely a Microsoft(R) Windows(R) hálózatokkal kapcsolatos széles körû együttmûködést tesz lehetõvé. Az általa felkínált alapvetõ lehetõségeken túl a többit a http://www.samba.org[http://www.samba.org] honlapon ismerhetjük meg (angolul).
+
+[[network-ntp]]
+== Az órák egyeztetése az NTP használatával
+
+=== Áttekintés
+
+Idõvel a számítógép órája hajlamos elmászni. A hálózati idõ protokoll (Network Time Protocol, NTP) az egyik módja az óránk pontosan tartásának.
+
+Rengeteg internetes szolgáltatás elvárja vagy éppen elõnyben részesíti a számítógép órájának pontosságát. Például egy webszervertõl megkérdezhetik, hogy egy állományt adott ideje módosítottak-e. A helyi hálózatban az egyazon állományszerveren megosztott állományok ellentmondásmentes dátumozása érdekében szinte elengedhetetlen az órák szinkronizálása. Az olyan szolgáltatások, mint a man:cron[8] is komolyan építkeznek a pontosan járó rendszerórára, amikor egy adott pillanatban kell lefuttatniuk parancsokat.
+
+A FreeBSD alapból az man:ntpd[8] NTP szervert tartalmazza, amellyel más NTP szerverek segítségével tudjuk beállítani gépünk óráját, vagy éppen idõvel kapcsolatos információkat szolgáltatni másoknak.
+
+=== A megfelelõ NTP szerverek kiválasztása
+
+Az óránk egyeztetéséhez egy vagy több NTP szerverre lesz szükségünk. Elõfordulhat, hogy a hálózati rendszergazdánk vagy az internet-szolgáltatónk már beállított egy ilyen szervert erre a célra. Ezzel kapcsolatban olvassuk el a megfelelõ leírásokat. A http://ntp.isc.org/bin/view/Servers/WebHome[nyilvánosan elérhetõ NTP szerverekrõl készült egy lista], ahonnan könnyedén ki tudjuk keresni a számunkra leginkább megfelelõ (hozzánk legközelebbi) szervert. Ne hagyjuk figyelmen kívül a szerverre vonatkozó házirendet és kérjünk engedélyt a használatához, amennyiben ez szükséges.
+
+Több, egymással közvetlen kapcsolatban nem álló NTP szerver választásával járunk jól, ha netalán az egyikük váratlanul elérhetetlenné vagy az órája pontatlanná válna. Az man:ntpd[8] a visszakapott válaszokat intelligensen használja fel, mivel esetükben a megbízható szervereket részesíti elõnyben.
+
+=== A gépünk beállítása
+
+==== Alapvetõ beállítások
+
+Ha a számítógépünk indításakor akarjuk egyeztetni az óránkat, akkor erre az man:ntpdate[8] nevû programot használhatjuk. Ez olyan asztali gépek számára megfelelõ választás, amelyeket gyakran indítanak újra és csak idõnként kell szinkronizálnunk. A legtöbb gépnek viszont az man:ntpd[8] használatára van szüksége.
+
+Az man:ntpdate[8] elindítása olyan esetekben is hasznos, ahol az man:ntpd[8] is fut. Az man:ntpd[8] az órát fokozatosan állítja, ellenben az man:ntpdate[8] az eltérés mértékétõl és irányától függetlenül egyszerûen átállítja a gép óráját a pontos idõre.
+
+Az man:ntpdate[8] elindítását úgy tudjuk engedélyezni a rendszer indításakor, ha az [.filename]#/etc/rc.conf# állományba berakjuk az `ntpdate_enable="YES"` sort. Emellett még `ntpdate_flags` változóban meg kell adnunk az alkalmazott beállítások mellett azokat a szervereket, amelyekkel szinkronizálni akarunk.
+
+==== Általános beállítások
+
+Az NTP az [.filename]#/etc/ntp.conf# állományon keresztül állítható, amelyek felépítését az man:ntp.conf[5] man oldal tárgyalja. Íme erre egy egyszerû példa:
+
+[.programlisting]
+....
+server ntplocal.minta.com prefer
+server timeserver.minta.org
+server ntp2a.minta.net
+
+driftfile /var/db/ntp.drift
+....
+
+A `server` beállítás adja meg az egyeztetéshez használt szervereket, soronként egyet. Ha egy szerver mellett szerepel még a `prefer` paraméter is, ahogy azt a példában a `ntplocal.minta.com` mellett láthattuk, akkor a többivel szemben azt a szervert fogjuk elõnyben részesíteni. Az így kiemelt szervertõl érkezõ választ abban az esetben viszont eldobjuk, hogy a többi szervertõl kapott válasz jelentõs mértékben eltér tõle. Minden más esetben a õ válasza lesz a mérvadó. A `prefer` paramétert általában olyan NTP szerverekhez használják, amelyek közismerten nagy pontosságúak, tehát például külön erre a célra szánt felügyeleti eszközt is tartalmaznak.
+
+A `driftfile` beállítással azt az állományt adjuk meg, amiben a rendszeróra frekvencia eltolódásait tároljuk. Az man:ntpd[8] program ezzel ellensúlyozza automatikusan az óra természetes elmászását, ezáltal lehetõvé téve, hogy egy viszonylag pontos idõt kapjuk még abban az esetben is, amikor egy kis idõre külsõ idõforrások nélkül maradnánk.
+
+A `driftfile` beállítással egyben azt az állományt jelöljük ki, amely az NTP szervertõl kapott korábbi válaszokat tárolja. Ez az NTP mûködéséhez szükséges belsõ adatokat tartalmaz, ezért semmilyen más programnak nem szabad módosítania.
+
+==== A szerverünk elérésének szabályozása
+
+Alapértelmezés szerint az NTP szerverünket bárki képes elérni az interneten. Az [.filename]#/etc/ntp.conf# állományban szereplõ `restrict` beállítás segítségével azonban meg tudjuk mondani, milyen gépek érhetik el a szerverünket.
+
+Ha az NTP szerverünk felé mindenféle próbálkozást el akarunk utasítani, akkor az [.filename]#/etc/ntp.conf# állományba a következõ sort kell felvennünk:
+
+[.programlisting]
+....
+restrict default ignore
+....
+
+[NOTE]
+====
+Ezzel egyben azonban a helyi beállításainkban szereplõ szerverek elérését is megakadályozzuk. Ha külsõ NTP szerverekkel is szeretnénk szinkronizálni, akkor itt is engedélyezünk kell ezeket. Errõl bõvebben lásd az man:ntp.conf[5] man oldalon.
+====
+
+Ha csak a belsõ hálózatunkban levõ gépek számára szeretnénk elérhetõvé tenni az órák egyeztetését, de sem a szerver állapotának módosítását nem engedélyezzük, sem pedig azt, hogy a vele egyenrangú szerverekkel szinkronizáljon, akkor az iménti helyett a
+
+[.programlisting]
+....
+restrict 192.168.1.0 mask 255.255.255.0 nomodify notrap
+....
+
+sort írjuk bele, ahol a `192.168.1.0` a belsõ hálózatunk IP-címe és a `255.255.255.0` a hozzá tartozó hálózati maszk.
+
+Az [.filename]#/etc/ntp.conf# több `restrict` típusú beállítást is tartalmazhat. Ennek részleteirõl az man:ntp.conf[5] man oldalon, az `Access Control Support` címû szakaszban olvashatunk.
+
+=== Az NTP futtatása
+
+Úgy tudjuk az NTP szervert elindítani a rendszerünkkel együtt, ha az [.filename]#/etc/rc.conf# állományban szerepeltetjük az `ntpd_enable="YES"` sort. Ha az man:ntpd[8] számára további beállításokat is át akarunk adni, akkor az [.filename]#/etc/rc.conf# állományban adjuk meg az `ntpd_flags` paramétert.
+
+Ha a gépünk újraindítása nélkül akarjuk elindítani a szerver, akkor az `ntpd` parancsot adjuk ki az [.filename]#/etc/rc.conf# állományban a `ntpd_flags` változóhoz megadott paraméterekkel. Mint például:
+
+[source,bash]
+....
+# ntpd -p /var/run/ntpd.pid
+....
+
+=== Az ntpd használati idõleges internet csatlakozással
+
+Az man:ntpd[8] program megfelelõ mûködéséhez nem szükséges állandó internet kapcsolat. Ha azonban igény szerinti tárcsázással építjünk fel ideiglenes kapcsolatot, akkor érdemes letiltani az NTP forgalmát, nehogy feleslegesen aktiválja vagy tartsa életben a vonalat. Ha PPP típusú kapcsolatunk van, akkor az [.filename]#/etc/ppp/ppp.conf# állományban a `filter` direktívával tudjuk ezt leszabályozni. Például:
+
+[.programlisting]
+....
+ set filter dial 0 deny udp src eq 123
+ # Nem engedjük az NTP által küldött adatoknak, hogy tárcsázást
+ # kezdeményezzenek:
+ set filter dial 1 permit 0 0
+ set filter alive 0 deny udp src eq 123
+ # Nem engedjük az NTP adatainak, hogy fenntartsák a kapcsolatot:
+ set filter alive 1 deny udp dst eq 123
+ set filter alive 2 permit 0/0 0/0
+....
+
+Mindenezekrõl részletesebb felvilágosítást a man:ppp[8] man oldal `PACKET FILTERING` címû szakaszában és a [.filename]#/usr/shared/examples/ppp/# könyvtárban található példákban kaphatunk.
+
+[NOTE]
+====
+Egyes internet-szolgáltatók blokkolják az alacsonyabb portokat, ezáltal az NTP nem használható, mivel a válaszok nem fogják elérni a gépünket.
+====
+
+=== További olvasnivalók
+
+Az NTP szerver dokumentációja HTML formátumban a [.filename]#/usr/shared/doc/ntp/# könyvtárban található.
+
+[[network-syslogd]]
+== Távoli gépek naplózása `syslogd` használatával
+
+A rendszernaplókkal kapcsolatos mûveletek egyaránt fontosak a biztonság és a karbantartás szempontjából. Ha közepes vagy nagyobb méretû, esetleg különbözõ típusú hálózatokban adminisztrálunk több gépet, akkor könnyen átláthatatlanná válhat a naplók rendszeres felügyelete. Ilyen helyzetekben a távoli naplózás beállításával az egész folyamatot sokkal kényelmesebbé tehetjük.
+
+Némileg képesek vagyunk enyhíteni a naplóállományok kezelésének terhét, ha egyetlen központi szerverre küldjük át az adatokat. Ekkor a FreeBSD alaprendszerében megtalálható alapeszközökkel, mint például a man:syslogd[8] vagy a man:newsyslog[8] felhasználásával egyetlen helyen be tudjuk állítani a naplók összegyûjtését, összefésülését és cseréjét. A most következõ példa konfigurációban az `A` gép, a `naploszerver.minta.com` fogja gyûjteni a helyi hálózatról érkezõ naplóinformációkat. A `B` gép, a `naplokliens.minta.com` pedig a szervernek küldi a naplózandó adatokat. Éles környezetben mind a két gépnek rendelkeznie kell megfelelõ DNS bejegyzésekkel, vagy legalább szerepelniük kell egymás [.filename]#/etc/hosts# állományaiban. Ha ezt elmulasztjuk, a szerver nem lesz hajlandó adatokat fogadni.
+
+=== A naplószerver beállítása
+
+A naplószerverek olyan gépek, amelyeket úgy állítottunk be, hogy naplózási információkat tudjanak fogadni távoli számítógépekrõl. A legtöbb esetben így egyszerûsíteni tudunk a konfiguráción, vagy olykor egyszerûen csak hasznos, ha ezt a megoldást alkalmazzuk. Függetlenül attól, hogy miért használjuk, a továbblépés elõtt néhány elõkészületet meg kell tennünk.
+
+Egy rendesen beállított naplószervernek legalább a következõ követelményeknek kell eleget tennie:
+
+* az 514-es UDP portot engedélyezni kell mind a kliensen, mind pedig a szerveren futó tûzfal szabályrendszerében;
+* a man:syslogd[8] képes legyen a távoli kliens gépekrõl érkezõ üzeneteket fogadni;
+* a man:syslogd[8] szervernek és az összes kliensnek rendelkeznie kell érvényes DNS (közvetlen és inverz) bejegyzésekkel vagy szerepelnie kell az [.filename]#/etc/hosts# állományban.
+
+A naplószerver beállításához mindegyik klienst fel kell vennünk az [.filename]#/etc/syslog.conf# állományba, valamint meg kell adnunk a megfelelõ funkciót (facility):
+
+[.programlisting]
+....
++naplokliens.minta.com
+*.*     /var/log/naplokliens.log
+....
+
+[NOTE]
+====
+A man:syslog.conf[5] man oldalán megtalálhatjuk a különbözõ támogatott és elérhetõ _funkciókat_.
+====
+
+Miután beállítottuk, az összes adott funkcióhoz tartozó üzenet az elõbb megadott állományba ([.filename]#/var/log/naplokliens.log#) fog kerülni.
+
+A szerveren továbbá meg kell adnunk a következõ sort az [.filename]#/etc/rc.conf# állományban:
+
+[.programlisting]
+....
+syslogd_enable="YES"
+syslogd_flags="-a naplokliens.minta.com -vv"
+....
+
+Az elsõ sorral engedélyezzük a `syslogd` elindítását a rendszerindítás során, majd a második sorral engedélyezzük, hogy a kliens naplózni tudjon a szerverre. Itt még látható a `-vv` opció, amellyel a naplózott üzenetek részletességét tudjuk növelni. Ennek nagyon fontos a szerepe a naplózási funkciók behangolásakor, mivel így a rendszergazdák pontosan láthatják milyen típusú üzenetek milyen funkcióval kerültek rögzítésre a naplóban.
+
+Befejezésképpen hozzuk létre a naplóállományt. Teljesen mindegy, hogy erre milyen megoldást alkalmazunk, például a man:touch[1] remekül megfelel:
+
+[source,bash]
+....
+# touch /var/log/naplokliens.log
+....
+
+Ezután indítsuk újra és ellenõrizzük a `syslogd` démont:
+
+[source,bash]
+....
+# /etc/rc.d/syslogd restart
+# pgrep syslog
+....
+
+Ha válaszul megkapjuk a futó démon azonosítóját, akkor sikerült újraindítanunk, elkezdhetjük a kliens beállítását. Ha valamiért nem indult volna újra a szerver, az [.filename]#/var/log/messages# állományból próbáljuk meg kideríteni az okát.
+
+=== A naplókliens beállítása
+
+A naplókliens az a gép, amely egy helyi naplópéldány karbantartása mellett továbbküldni a naplózandó információkat egy naplószervernek.
+
+Hasonlóan a naplószerverekhez, a klienseknek is teljesítenie bizonyos alapvetõ elvárásokat:
+
+* a man:syslogd[8] démon küldjön bizonyos típusú üzeneteket a naplószervernek, amely ezeket pedig képes legyen fogadni;
+* a hozzá tartozó tûzfal engedje át a forgalmat az 514-es UDP porton;
+* rendelkezzen mind közvetlen, mind pedig inverz DNS bejegyzéssel, vagy szerepeljenek az [.filename]#/etc/hosts# állományban.
+
+A kliens beállítása sokkal egyszerûbb a szerverhez képest. A kliensen adjuk hozzá a következõ sorokat az [.filename]#/etc/rc.conf# állományhoz:
+
+[.programlisting]
+....
+syslogd_enabled="YES"
+syslogd_flags="-s -vv"
+....
+
+A szerver beállításaihoz hasonlóan itt is engedélyezzük a `syslogd` démont és megnöveljük a naplózott üzenetek részletességét. A `-s` kapcsolóval pedig megakadályozzuk, hogy a kliens más gépekrõl is hajlandó legyen naplóüzeneteket elfogadni.
+
+A funkciók a rendszernek azon részét írják le, amelyhez létrejön az adott üzenet. Tehát például az `ftp` és `ipfw` egyaránt ilyen funkciók. Amikor keletkezik egy naplóüzenet valamelyikükhöz, általában megjelenik a nevük. A funkciókhoz tartozik még egy prioritás vagy szint is, amellyel az adott üzenet fontosságát jelzik. Ezek közül a leggyakoribb a `warning` (mint "figyelmeztetés") és `info` (mint "információ"). A használható funkciók és a hozzájuk tartozó prioritások teljes listáját a man:syslog[3] man oldalán olvashatjuk.
+
+A naplószervert meg kell adnunk a kliens [.filename]#/etc/syslog.conf# állományában. Itt a `@` szimbólummal jelezzük, hogy az adatokat egy távoli szerverre szeretnénk továbbküldeni, valahogy így:
+
+[.programlisting]
+....
+*.*               @naploszerver.minta.com
+....
+
+Ezután a beállítás érvényesítéséhez újra kell indítanunk a `syslogd` démont:
+
+[source,bash]
+....
+# /etc/rc.d/syslogd restart
+....
+
+A man:logger[1] használatával próbáljuk ki a kliensrõl a aplóüzenetek hálózaton keresztüli küldését, és küldjünk valamit a `syslogd` démonnak:
+
+[source,bash]
+....
+# logger "Udvozlet a naplokliensrol"
+....
+
+A parancs kiadása után az üzenetnek mind a kliens, mind pedig a szerver [.filename]#/var/log/messages# állományában meg kell jelennie.
+
+=== Hibakeresés
+
+Elõfordulhat, hogy a naplószerver valamiért nem kapja meg rendesen az üzeneteket, ezért valamilyen módon meg kell keresnünk a hiba okát. Ez több minden lehet, de általában két leggyakoribb ok valamilyen hálózati kapcsolódási vagy DNS beállítási hiba. Ezek teszteléséhez gondoskodjunk róla, hogy a gépek kölcsönösen elérhetõek egymásról az [.filename]#/etc/rc.conf# állományban megadott hálózati nevük szerint. Ha ezzel látszólag minden rendben van, akkor próbáljuk meg módosítani a `syslogd_flags` értékét az [.filename]#/etc/rc.conf# állományban.
+
+A most következõ példában a [.filename]#/var/log/naplokliens.log# teljesen üres, illetve a [.filename]#/var/log/messages# állomány semmilyen hibára utaló okot nem tartalmaz. A hibakereséshez még több információt a `syslogd_flags` átírásával tudunk kérni:
+
+[.programlisting]
+....
+syslogd_flags="-d -a naploklien.minta.com -vv"
+....
+
+Természetesen ne felejtsük el újraindítani a szervert:
+
+[source,bash]
+....
+# /etc/rc.d/syslogd restart
+....
+
+A démon újraindítása után közvetlenül az alábbiakhoz hasonló üzenetek árasztják el a képernyõt:
+
+[source,bash]
+....
+logmsg: pri 56, flags 4, from naploszerver.minta.com, msg syslogd: restart
+syslogd: restarted
+logmsg: pri 6, flags 4, from naploszerver.minta.com, msg syslogd: kernel boot file is /boot/kernel/kernel
+Logging to FILE /var/log/messages
+syslogd: kernel boot file is /boot/kernel/kernel
+cvthname(192.168.1.10)
+validate: dgram from IP 192.168.1.10, port 514, name naplokliens.minta.com;
+rejected in rule 0 due to name mismatch.
+....
+
+A diagnosztikai üzeneteket végigolvasva nyilvánvaló válik, hogy azért dobja el az üzeneteket a szerver, mert nem megfelelõ a gép neve. Miután átnézzük a beállításainkat, felfedezhetünk az [.filename]#/etc/rc.conf# állományban egy apró hibát:
+
+[.programlisting]
+....
+syslogd_flags="-d -a naploklien.minta.com -vv"
+....
+
+Láthatjuk, hogy ebben a sorban a `naplokliens` névnek kellene szerepelni, nem pedig a `naploklien` névnek. Miután elvégeztük a szükséges javításokat, indítsuk újra a szervert és vizsgáljuk meg az eredményt:
+
+[source,bash]
+....
+# /etc/rc.d/syslogd restart
+logmsg: pri 56, flags 4, from naploszerver.minta.com, msg syslogd: restart
+syslogd: restarted
+logmsg: pri 6, flags 4, from naploszerver.minta.com, msg syslogd: kernel boot file is /boot/kernel/kernel
+syslogd: kernel boot file is /boot/kernel/kernel
+logmsg: pri 166, flags 17, from naploszerver.minta.com, msg Dec 10 20:55:02 <syslog.err> naploszerver.minta.com syslogd: exiting on signal 2
+cvthname(192.168.1.10)
+validate: dgram from IP 192.168.1.10, port 514, name naplokliens.minta.com;
+accepted in rule 0.
+logmsg: pri 15, flags 0, from naplokliens.minta.com, msg Dec 11 02:01:28 pgj: Masodik teszt uzenet
+Logging to FILE /var/log/naplokliens.log
+Logging to FILE /var/log/messages
+....
+
+Itt már minden üzenet rendben megérkezett és a megfelelõ állományokba került (a [.filename]#/var/log/messages# a kliensen, és a [.filename]#/var/log/naplokliens.log# a szerveren)).
+
+=== Biztonsági megfontolások
+
+Mint minden hálózati szolgáltatás esetén, ilyenkor is figyelembe kell vennünk bizonyos biztonsági megfontolásokat a tényleges konfiguráció kiépítése elõtt. Olykor elõfordulhat, hogy a naplók különbözõ kényes információkat tartalmaznak, mint például a helyi rendszeren futó szolgáltatások nevei, felhasználói nevek vagy egyéb konfigurációs adatok. A kliens és a szerver között hálózaton utazó adatok viszont se nem titkosítottak, se nem jelszóval védettek. Ha titkosítást szeretnénk használni, akkor javasoljuk például a package:security/stunnel[] portot, amellyel egy titkosított tunnelen keresztül tudunk adatokat küldeni a hálózaton.
+
+A helyi rendszer biztonságának szavatolása is fontos lehet. A naplók sem a használat során, sem pedig a lecserélésük után nem kerülnek titkosításra. Emiatt a helyi rendszerhez hozzáférõ felhasználók kedvükre nyerhetnek ki belõlük a rendszerünket érintõ konfigurációs információkat. Ezért ilyenkor nagyon fontos, hogy mindig a megfelelõ engedélyeket állítsuk be a naplókra. A man:newsyslog[8] segédprogrammal be tudjuk állítani a frissen létrehozott és a lecserélt naplók engedélyeit. Tehát könnyen megakadályozhatjuk a helyi felhasználók kíváncsiskodását, ha itt a naplók engedélyeit például a `600` kóddal adjuk meg.

@@ -1,0 +1,1185 @@
+---
+title: Capítulo 27. Correo Electrónico
+part: Parte IV. Comunicaciones en red
+prev: books/handbook/firewalls
+next: books/handbook/network-servers
+---
+
+[[mail]]
+= Electronic Mail
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tabla de contenidos
+:table-caption: Tabla
+:figure-caption: Figura
+:example-caption: Ejemplo
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 27
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../../images/books/handbook/mail/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/mail/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/mail/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/es/mailing-lists.adoc[]
+include::shared/es/teams.adoc[]
+include::shared/es/urls.adoc[]
+
+toc::[]
+
+[[mail-synopsis]]
+== Sinopsis
+
+El "Correo Electrónico", o "email", es una de las formas de comunicación más usadas hoy en dia. Este capítulo es una introducción básica de cómo poner en marcha un servidor de correo en FreeBSD, aunque no es una guía completa y se han omitido muchos conceptos importantes. Si se necesita información exhaustiva sobre el tema puede recurrirse a los libros listados en crossref:bibliography[bibliography,Bibliografía].
+
+Después de leer este capítulo usted sabrá:
+
+* Qué software está involucrado en el envío y recepción de correo electrónico.
+* Dónde se encuentran en FreeBSD los ficheros básicos de configuración de sendmail.
+* Cómo bloquear a los "spammers" y evitar el uso no autorizado de su servidor de correo.
+* Cómo instalar y configurar agentes de transferencia de correo (MTA) en su sistema, para reemplazar sendmail.
+* Cómo resolver problemas comunes en servidores de correo.
+* Cómo usar SMTP con UUCP.
+* Cómo usar correo con una conexión dialup.
+* Cómo configurar SMTP con autentificación para más seguridad.
+
+Antes de leer este capítulo debería usted:
+
+* Configurar apropiadamente su conexión de red (crossref:advanced-networking[advanced-networking,Networking avanzado]).
+* Configurar apropiadamente la información de DNS de su servidor de correo (crossref:advanced-networking[advanced-networking,Networking avanzado]).
+* Saber como instalar software adicional (crossref:ports[ports,Instalación de aplicaciones: «packages» y ports]).
+
+[[mail-using]]
+== Utilización del correo electrónico
+
+Existen varios elementos relacionados con el intercambio de correo electrónico. A saber: <<mail-mua,El agente de usuario (Mail User Agent o MUA)>>, <<mail-mta,El agente de transporte de correo (Mail Transport Agent o MTA)>>, <<mail-dns,El DNS>>, <<mail-receive,Las carpetas de correo (Mailboxes)>>, y por supuesto, <<mail-host,la máquina servidora de correo (mail host)>>.
+
+[[mail-mua]]
+=== El Agente de Usuario
+
+Entre las opciones más conocidas tenemos: mutt, pine, elm, y `mail`, junto con programas con interfaz gráfica del estilo de balsa o xfmail por nombrar unos pocos. También existen lectores de correo basados en navegadores web. Los programas de correo basados en navegadores web actúan de pasarela para las transacciones de correo electrónico, entregando dichas transacciones al <<mail-host,"servidor de correo">> local, llamando a uno de los <<mail-mta,agentes de transporte de correo>> disponibles en la máquina local, o entregando dichas transacciones a un agente de transporte remoto utilizando el protocolo TCP.
+
+[[mail-mta]]
+=== Agente de Transporte de Correo
+
+FreeBSD viene con sendmail por defecto, pero también se soportan otros dæmones, entre los cuales se encuentran:
+
+* exim;
+* postfix;
+* qmail.
+
+El agente de transporte de correo normalmente posee dos funcionalidades, por un lado se responsabiliza de la recepción y por otro se encarga de entregar el correo de salida. _No_ es responsable de la recolección automática de correo mediante la utilización de protocolos como POP o IMAP, ni se utiliza para que el usuario pueda acceder a las carpetas de correo locales. Para realizar estas otras tareas, se necesitan <<mail-receive,dæmons>> adicionales.
+
+[WARNING]
+====
+
+Versiones antiguas de sendmail poseen varios problemas de seguridad que pueden facilitar a un atacante el acceso local o remoto a la máquina que ejecuta sendmail. Para evitar dichos problemas de seguridad se recomienda utilizar una versión actualizada de  sendmail. Tiene más opciones a la hora de elegir  MTA en los crossref:ports[ports,Ports de FreeBSD].
+====
+
+[[mail-dns]]
+=== Correo electrónico y DNS
+
+El Sistema de Nombres de Dominio (en inglés DNS) y su correspondiente dæmon (llamado `named`) constituyen una parte fundamental del procedimiento de entrega de correo electrónico. Para entregar el correo electrónico al destinatario adecuado el dæmon servidor de correo busca el sitio remoto dentro del sistema de DNS.
+
+El DNS es la entidad responsable de asociar nombres con direcciones IP, pero además se encarga de almacenar información específica relacionada con la entrega de correo mediante registros de tipo MX. Los registros MX (Mail eXchanger) especifican qué máquina o máquinas están encargadas de recibir correo electrónico para un determinado nombre de dominio. En caso de no existir ningún registro MX para el dominio del destinatario, se busca información almacenada en registros de tipo A para enviar el correo al destino final.
+
+Se pueden consultar los registros MX para cualquier dominio utilizando el comando man:host[1], como se puede observar en el siguiente ejemplo:
+
+[source,bash]
+....
+% host -t mx FreeBSD.org
+        FreeBSD.org mail is handled (pri=10) by mx1.FreeBSD.org
+....
+
+[[mail-receive]]
+=== Recepción de correo
+
+La recepción de correo electrónico para su dominio se realiza mediante lo que se conoce como la máquina de correo (mail host). Ésta máquina recoge todo el correo dirigido a su dominio y lo almacena en [.filename]#mbox# (el método por defecto para el almacenamiento de correo) o en formato Maildir, dependiendo de la configuración de la máquina. Una vez que el correo ha sido almacenado con éxito se puede leer en local utilizando aplicaciones como man:mail[1] o como mutt, o de forma remota mediante un conjunto de protocolos tales como POP o IMAP. Esto significa que si usted va a leer el correo de forma local no necesita instalar ningún servidor de POP o IMAP.
+
+[[pop-and-imap]]
+==== Acceso a carpetas de correo remotas mediante POP e IMAP
+
+Para poder acceder a carpetas de correo de forma remota se necesita tener acceso a un servidor de POP o IMAP. Éstos protocolos permiten a los usuarios conectarse a sus carpetas de correo desde ubicaciones remotas de una forma sencilla. Aunque ambos, POP y IMAP, permiten este acceso remoto IMAP ofrece algunas ventajas añadidas, algunas de las cuales son:
+
+* El acceso mediante IMAP permite almacenar los correos en el servidor remoto sin necesidad de extraerlos y tener que almacenarlos en local.
+* IMAP soporta actualizaciones concurrentes.
+* IMAP resulta ser extremadamente útil bajo enlaces de baja velocidad puesto que permite a los usuarios recuperar la estructura de los mensajes sin necesidad de bajarse todo el contenido. Además puede realizar tareas tales como búsquedas directas en el servidor con el fin de minimizar la utilización de la red.
+
+Para instalar un servidor de POP o de IMAP se deben dar los siguientes pasos:
+
+[.procedure]
+====
+
+. Seleccionar el servidor IMAP o POP que mejor cumpla a sus necesidades. Los siguientes servidores POP e IMAP son bien conocidos y son firmes candidatos para ello:
+
+** qpopper;
+** teapop;
+** imap-uw;
+** courier-imap;
+
+. Instalar el dæmon POP o IMAP de su elección desde el árbol de "ports".
+. Modifique donde sea necesario [.filename]#/etc/inetd.conf# para que el servidor POP o IMAP se ejecute automáticamente.
+====
+
+[WARNING]
+====
+
+Tenga en cuenta que tanto POP como IMAP transmiten información, en especial el usuario y la contraseña, en texto plano. Eso significa que si se desea seguridad en la transmisión de la información a través de la red se deben considerar mecanismos adicionales como por ejemplo el encapsulado de la sesión mediante man:ssh[1]. El encapsulado de sesiones se explica en crossref:security[security-ssh-tunneling,Túneles SSH].
+====
+
+[[local]]
+==== Acceso a carpetas de correo locales
+
+Las carpetas de correo pueden abrirse de forma local utilizando un agente de correo de usuario (MUA) en el servidor donde reside la carpeta. Se suelen usar los programas mutt or man:mail[1].
+
+[[mail-host]]
+=== El Servidor de Correo (Mail Host)
+
+El servidor de correo es el nombre que se usa para identificar a la máquina responsable de la entrega y recepción de correo electrónico dentro de una organización. Ésta máquina puede recibir correo de varios usuarios dentro de su dominio.
+
+[[sendmail]]
+== Configuración de sendmail
+
+man:sendmail[8] es el agente de transporte de correo (MTA) por defecto de FreeBSD. La responsabilidad de sendmail consiste en aceptar correo de agentes de correo de usuario (MUA) y en entregar dichos correos al agente de transporte de correo apropiado, según se especifique en su archivo de configuración. Sendmail también acepta conexiones de red provinientes de otros agentes de transporte y puede depositar el correo recibido en carpetas locales o o entregarlo a otros programas.
+
+sendmail utiliza los siguientes ficheros de configuración:
+
+[.informaltable]
+[cols="1,1", options="header"]
+|===
+| Filename
+| Function
+
+|[.filename]#/etc/mail/access#
+|Base de datos de accesos de sendmail
+
+|[.filename]#/etc/mail/aliases#
+|Carpeta de alias
+
+|[.filename]#/etc/mail/local-host-names#
+|Listados de máquinas para las que sendmailacepta correo
+
+|[.filename]#/etc/mail/mailer.conf#
+|Configuración del programa de correo
+
+|[.filename]#/etc/mail/mailertable#
+|Tabla de entregas de correo
+
+|[.filename]#/etc/mail/sendmail.cf#
+|Archivo de configuración principal de sendmail
+
+|[.filename]#/etc/mail/virtusertable#
+|Usuarios virtuales y tablas de dominio
+|===
+
+=== [.filename]#/etc/mail/access#
+
+La base de datos de accesos define qué máquinas o direcciones IP pueden acceder al servidor de correo y quée clase de acceso tienen permitido. Las máquinas se listan junto con las opciones `OK`, `REJECT`, `RELAY` o simplemente junto con un mensaje de error que se entrega a la rutina de gestión de excepciones de sendmail. Las máquinas que se listan junto con la opción `OK`, que es el valor por defecto, tienen permiso para enviar correo a la máquina servidora siempre y cuando la dirección de correo de destino sea la máquina servidora de correo. Las máquinas listadas junto con la opción `REJECT` tienen el acceso prohibido a conexiones de correo electrónico con el servidor. Por último las máquinas que poseen la etiqueta `RELAY` para sus nombres tienen permitido enviar correo para cualquier destino a través de la máquina servidora de correo.
+
+.Configuración de la base de datos de acceso de sendmail
+[example]
+====
+[.programlisting]
+....
+cyberspammer.com                550 We don't accept mail from spammers
+FUENTE.DE.CORREO.INDISCRIMINADO@ 550 We don't accept mail from spammers
+otra.fuente.de.spam             REJECT
+okay.cyberspammer.com           OK
+128.32                          RELAY
+....
+
+====
+
+En el ejemplo se pueden observar cinco entradas. Los generadores de correo que coinciden con la parte izquierda de la tabla se ven afectados por la parte acción especificada en la parte derecha. Los primeros dos ejemplos emiten un código de error para la rutina de excepciones de sendmail. El mensaje de error se transmite a la máquina remota cuando se recibe un correo que coincide con la parte izquierda de la tabla. La siguiente entrada rechaza correo de una determinada máquina de internet, `otra.fuente.de.spam`. La siguiente entrada acepta conexiones de correo de la máquina `okay.cyberspammer.com`, lo cual es más exacto que la línea de arriba de `cyberspammer.com`. Las coincidencias más completas tienen precedencia sobre las menos específicas. La última entrada permite actuar como "relay" o pasarela de correo electrónico para aquellas máquinas que posean una dirección IP que comience por `128.32`. Éstas máquinas podrían enviar correo destinado a otros servidores de correo utilizando el nuestro.
+
+Cuando se actualiza este fichero se debe ejecutar `make` dentro de [.filename]#/etc/mail/# para que se actualice la base de datos.
+
+=== [.filename]#/etc/mail/aliases#
+
+La base de datos de alias contiene una lista de directorios virtuales que son traducidas a otros usuarios, ficheros, programas o incluso otros alias. A continuación se muestran unos pocos ejemplos de la sintáxis que se puede utilizar dentro del fichero [.filename]#/etc/mail/aliases#:
+
+.Mail Aliases
+[example]
+====
+[.programlisting]
+....
+root: usuariolocal
+ftp-bugs: joe,eric,paul
+bit.bucket:  /dev/null
+procmail: "|/usr/local/bin/procmail"
+....
+
+====
+
+El formato del fichero es sencillo; el nombre de la carpeta de correo que aparece a la izquierda de los dos puntos se traduce al/los destinos de la derecha. El primer ejemplo simplemente traduce la carpeta `root` a la carpeta `usuariolocal`, la cual se examina de nuevo utilizando la misma base de datos de alias, y si no existe ninguna otra coincidencia el mensaje se entrega al usuario local `usuariolocal`. En el ejemplo siguiente se muestra una lista de correo. Todo correo que se envía a la carpeta `ftp-bugs` se traduce en un envío para tres carpetas locales diferentes: `joe`, `eric` y `paul`. Es importante señalar que también se pueden especificar carpetas remotas mediante la forma `usuario@ejemplo.com`. El siguiente ejemplo muestra la escritura del correo a un fichero, en este caso en [.filename]#/dev/null#. El último ejemplo muestra el envió de correo a un programa; en este caso el mensaje de correo se escribe en la entrada estándar del programa [.filename]#/usr/local/bin/procmail# utilizando una tubería (o " pipe") de UNIX(R).
+
+Cuando se actualiza este fichero se debe ejecutar `make` dentro de [.filename]#/etc/mail/# para actualizar la base de datos.
+
+=== [.filename]#/etc/mail/local-host-names#
+
+Este archivo es una lista de nombres de máquinas que man:sendmail[8] acepta como nombres locales. Se suele utilizar para escribir aquellos dominios o máquinas de los cuales sendmail va a recibir correo. Por ejemplo, si nuestro servidor de correo va a aceptar correo proveniente del dominio `ejemplo.com` y también de la máquina `mail.ejemplo.com` nuestro [.filename]#local-host-names# debería ser algo así:
+
+[.programlisting]
+....
+ejemplo.com
+mail.ejemplo.com
+....
+
+Cuando se actualiza este fichero man:sendmail[8] necesita ser reiniciado para que tenga en cuenta los cambios.
+
+=== [.filename]#/etc/mail/sendmail.cf#
+
+Archivo de configuración principal de  sendmail, controla el comportamiento global de sendmail, incluyendo cualquier tarea desde la reescritura de direcciones de correo electrónico hasta la devolución de mensajes de error a los servidores de correo remotos. Es evidente que con un abanico tan diverso el fichero de configuración acaba por ser bastante complejo y sus detalles quedan fuera de los objetivos de esta sección. Afortunadamente este fichero raras veces necesita ser modificado, al menos en lo que respecta a servidores de correo estándar. 
+
+El fichero de configuración principal de  sendmail se puede construir a partir de man:m4[1], es decir, macros que se utilizan para definir características y comportamientos específicos de sendmail. Se ruega al lector consultar [.filename]#/usr/src/contrib/sendmail/cf/README# para obtener más detalles acerca de las distintas macros que se pueden utilizar.
+
+Cuando se realizan cambios a este fichero sendmail debe ser reiniciado para que los cambios surtan efecto.
+
+=== [.filename]#/etc/mail/virtusertable#
+
+El fichero [.filename]#virtusertable# asocia direcciones de correo pertenecientes a dominios y carpetas virtuales con carpetas reales. Estas carpetas pueden ser locales, remotas, alias definidos en [.filename]#/etc/mail/aliases# o incluso ficheros.
+
+.Ejemplo de asociación de correo de dominio virtual
+[example]
+====
+[.programlisting]
+....
+root@ejemplo.com                root
+postmaster@ejemplo.com          postmaster@noc.ejemplo.net
+@ejemplo.com                    joe
+....
+
+====
+
+En el ejemplo superior se observa una asociación para el dominio `ejemplo.com`. Este fichero se procesa de arriba a abajo buscando la primera coincidencia. La primera entrada asocia `root@ejemplo.com` con la carpeta de correo local denominada `root`. La siguiente entrada asocia `postmaster@ejemplo.com` con la carpeta `postmaster` situada en la máquina `noc.ejemplo.net`. Por último, si no se ha encontrado ninguna coincidencia para `ejemplo.com` se le asigna la última asociación, la cual asocia cualquier mensaje de correo proveniente de `ejemplo.com` con la carpeta de correo local denominada `joe`.
+
+[[mail-changingmta]]
+== Sustitución del Agente de Transferencia de Correo
+
+Como ya se ha comentado FreeBSD viene con  sendmail ya instalado como agente de transferencia de correo por defecto. De esta forma sendmail se encarga de gestionar el correo entrante y saliente.
+
+No obstante, debido a distintas razones algunos administradores de sistemas prefieren utilizar otro MTA. Estas razones varían desde simplemente querer probar otros programas de transferencia de correo, hasta la necesidad de utilizar un determinado programa que hace uso de una función específica de un agente determinado. Por suerte cualesquiera que sean estas razones FreeBSD posee un sencillo procedimiento para sustituir a sendmail.
+
+=== Instalación de un nuevo MTA
+
+Existen una amplia gama de MTA alternativos a  sendmail. Un buen punto de partida es el crossref:ports[ports,Sistema de Ports de FreeBSD], donde se pueden localizar varios. Por supuesto el usuario tiene libertad para utilizar cualquier MTA, siempre y cuando se pueda ejecutar en FreeBSD sin problemas.
+
+Lo primero es instalar el nuevo MTA. Una vez que está instalado normalmente se tiene la oportunidad para decidir si realmente cubre las necesidades y también se tiene la oportunidad de configurar el nuevo software antes de sustituir a sendmail. El usuario debe tener en cuenta que el nuevo MTA puede sobreescribir algunos binarios del sistema como por ejemplo [.filename]#/usr/bin/sendmail#. En cualquier caso el nuevo software de correo suele entrar en funcionamiento con una configuración por defecto.
+
+Por favor, recuerde que se recomienda leer la documentación del MTA seleccionado para obtener más información.
+
+=== Desactivación de la aplicación  sendmail
+
+El procedimiento utilizado para ejecutar sendmail cambió significativamente entre las releases 4.5-RELEASE y 4.6-RELEASE. De esta forma el procedimiento utilizado para la desactivación hoy en día es sutílmente distinto al utilizado en dichas distribuciones.
+
+==== FreeBSD 4.5-STABLE antes de 2002/4/4 y anteriores (Incluyendo 4.5-RELEASE y anteriores)
+
+Introducir:
+
+[.programlisting]
+....
+sendmail_enable="NO"
+....
+
+dentro de [.filename]#/etc/rc.conf#. Esta variable desactiva el servicio de recepción de correo de sendmail, pero salvo que se modifique (ver más adelante) el fichero [.filename]#/etc/mail/mailer.conf# sendmail todavía será la aplicación elegida para enviar correo electrónico.
+
+==== FreeBSD 4.5-STABLE desde de 2002/4/4 (Incluyendo 4.6-RELEASE y posteriores)
+
+Para poder desactivar completamente sendmail haga lo siguiente:
+
+[.programlisting]
+....
+sendmail_enable="NONE"
+....
+
+dentro del fichero [.filename]#/etc/rc.conf.#
+
+[WARNING]
+====
+
+Se desactiva el servicio de correo de salida de sendmail. Es importanque que se reemplace con un sistema de entrega de correo alternativo que sea totalmente funcional. En caso contrario funciones del sistema FreeBSD tales como man:periodic[8] no podrán entregar sus resultados por correo eletrónico tal y como normalmente hacen. Varias partes del sistema FreeBSD esperan disponer de un sistema de correo funcional compatible con sendmail. Si las aplicaciones continúan utilizando los binarios de sendmail para realizar envíos de correo después de su desactivación el correo podría ser almacenado en una cola inactiva de sendmail, en cuyo caso nunca se entregaría.
+====
+
+Si sólo se quiere desactivar el servicio de correo de entrada de sendmail, basta con establecer la variable:
+
+[.programlisting]
+....
+sendmail_enable="NO"
+....
+
+dentro de [.filename]#/etc/rc.conf#. En man:rc.sendmail[8] tiene más información sobre las opciones de arranque de  sendmail.
+
+=== Ejecución del nuevo MTA en el arranque
+
+Existen dos métodos alternativos para ejecutar el nuevo MTA en el arranque, dependiendo de la versión de FreeBSD que se esté ejecutando.
+
+==== FreeBSD 4.5-STABLE antes de 2002/4/11 (Incluyendo 4.5-RELEASE y anteriores)
+
+Se debe añadir un script en [.filename]#/usr/local/etc/rc.d/# cuyo nombre termine en [.filename]#.sh# y que sea ejecutable por `root`. El script debe aceptar los parámetros `start` y `stop`. Cuando el sistema FreeBSD se está inicializando, los scripts de arranque ejecutarán el siguiente comando:
+
+[.programlisting]
+....
+/usr/local/etc/rc.d/supermailer.sh start
+....
+
+La misma orden se puede utilizar también para ejecutar el servidor de forma manual. Cuando el sistema se está reiniciando los scripts del sistema ejecutan los ficheros ubicados en [.filename]#/usr/local/etc/rc.d/# utilizando la opción `stop`, en nuestro caso:
+
+[.programlisting]
+....
+/usr/local/etc/rc.d/supermailer.sh stop
+....
+
+Dicho comando tambíen se puede utilizar para detener el servidor de correo de forma manual cuando el sistema FreeBSD se ejecuta con normalidad.
+
+==== FreeBSD 4.5-STABLE después de 2002/4/11 (Incluyendo 4.6-RELEASE y posteriores)
+
+Con las últimas versiones de FreeBSD se puede utilizar el método anterior pero también se puede especificar
+
+[.programlisting]
+....
+mta_start_script="nombre_de_fichero"
+....
+
+dentro de [.filename]#/etc/rc.conf#, donde _nombre_de_fichero_ es el nombre de algún script que se ejecuta en tiempo de arranque para inicializar el nuevo MTA.
+
+=== Sustitución de sendmail como el agente de transporte de correo predeterminado.
+
+El programa sendmail es tan imprescindible y es utilizado por tal multitud de programas en los sistemas UNIX(R) que algunos programas simplemente asumen que sendmail se encuentra instalado y configurado dentro del sistema. Por esta razón varios MTAs alternativos proporcionan su propia implementación de la interfaz de línea de comandos que posée sendmail; esto facilita que se puedan utilizar como sustitutos de sendmail sin mayores dificultades.
+
+Por lo tanto si desea utilizar un agente de transporte de correo alternativo debe asegurarse de que todo software que intente ejecutar binario de sendmail estándar, [.filename]#/usr/bin/sendmail#, realmente ejecute el nuevo MTA en su lugar. Por fortuna FreeBSD proporciona un sistema llamado man:mailwrapper[8] que realiza precisamente esta tarea.
+
+Cuando sendmail está funcionando se debe localizar algo como lo siguiente dentro del fichero [.filename]#/etc/mail/mailer.conf#:
+
+[.programlisting]
+....
+sendmail	 /usr/libexec/sendmail/sendmail
+send-mail	/usr/libexec/sendmail/sendmail
+mailq		/usr/libexec/sendmail/sendmail
+newaliases	/usr/libexec/sendmail/sendmail
+hoststat	/usr/libexec/sendmail/sendmail
+purgestat	/usr/libexec/sendmail/sendmail
+....
+
+Esto significa que cuando cualquiera de estos comandos (por ejemplo [.filename]#sendmail# mísmamente) se ejecutan el sistema ejecutará en su lugar una copia del el sistema ejecuta en su lugar una copia del " mailwrapper" denominada [.filename]#sendmail# que chequea el fichero [.filename]#mailer.conf# y ejecuta [.filename]#/usr/libexec/sendmail/sendmail#. Este sistema permite cambiar de una forma sencilla los binarios que se ejecutan realmente cuando se invocan las funciones de [.filename]#sendmail#.
+
+Si se quiere que ejecutar [.filename]#/usr/local/supermailer/bin/sendmail-compat# en lugar de sendmail se puede cambiar el fichero [.filename]#/etc/mail/mailer.conf# para que contenga lo siguiente:
+
+[.programlisting]
+....
+sendmail	 /usr/local/supermailer/bin/sendmail-compat
+send-mail	/usr/local/supermailer/bin/sendmail-compat
+mailq		/usr/local/supermailer/bin/mailq-compat
+newaliases	/usr/local/supermailer/bin/newaliases-compat
+hoststat	/usr/local/supermailer/bin/hoststat-compat
+purgestat	/usr/local/supermailer/bin/purgestat-compat
+....
+
+=== Últimos Pasos
+
+Una vez que todo estáconfigurado a su gusto hay que matar los procesos de sendmail que ya no se necesitan y ejecutar los procesos pertenecientes al nuevo software de MTA, o utilizar la opción más sencilla: reiniciar la máquina. Reinicar la máquina nos brinda la oportunidad de comprobar que se ha configurado correctamente el arranque del sistema para que ejecute de forma automática el nuevo MTA.
+
+[[mail-trouble]]
+== Depuración de Problemas
+
+=== ?Por qué tengo que utilizar el FQDN para las máquinas de mi organización?
+
+Probablemente se deba a que la máquina de correo se encuentra en un dominio diferente; si por ejemplo la máquina de correo se encuentra en `foo.bar.edu` y se desea alcanzar una máquina llamada `mumble` en el dominio `bar.edu` se tiene que referir a ella mediante un nombre de dominio completo ("fully-quailified domain name" o FQDN), en éste caso `mumble.bar.edu` en lugar de referirse a ella simplemente como `mumble`.
+
+Tradicionalmente, la referencia incompleta era posible utilizando "resolvers" de BSD BIND. No obstante la versión de BIND que en la actualidad se ofrece con FreeBSD ya no permite por defecto el uso de dichas abreviaturas salvo para aquellas máquinas que pertenecen al dominio al que su sistema pertenezca. Una máquina como `mumble` será buscada como `mumble.foo.bar.edu` o la búsqueda será redireccionada al servidor de dominio raíz del DNS.
+
+Esto es distinto a lo que ocurría en versiones anteriores de BIND, donde la búsqueda se producía a través de `mumble.bar.edu` y de `mumble.edu`. Se recomienda consultar a la RFC 1535 para conocer el motivo que se considerara una práctica errónea o incluso un agujero de seguridad.
+
+Una buena solución a este problema puede ser incluír la siguiente línea 
+[.programlisting]
+....
+search foo.bar.edu bar.edu
+....
+
+en lugar de 
+
+[.programlisting]
+....
+domain foo.bar.edu
+....
+
+dentro del fichero [.filename]#/etc/resolv.conf#. No obstante se debe asegurar de que el orden de búsqueda no se expande más allá del "límite entre la administración local y la administración pública", tal y como se le denomina en la RFC 1535.
+
+=== sendmail dice mail loops back to myself (el correo vuelve a mis manos)
+
+Esta pregunta se responde en las FAQ de sendmail de la siguiente forma:
+
+[.programlisting]
+....
+Estoy obteniendo los siguientes mensajes de error:
+
+553 MX list for domain.net points back to relay.domain.net
+554 <user@domain.net>... Local configuration error
+
+¿Cómo puedo solucionar esto?
+
+Usted ha especificado que el correo para el dominio (por ejemplo,
+para el dominio dominio.net) sea reenviado a una máquina determinada
+(en este caso relay.dominio.net), para lo que se utiliza un registro
+de DNS de tipo MXMX record,
+pero la máquina que actúa de relay no se
+reconoce a sí misma como perteneciente al dominio dominio.net.
+Se debe añadir dominio.net al fichero /etc/mail/local-host-names,
+que recibe el nombre de /etc/sendmail.cw en versiones de sendmail previas
+a la 8.10.  Se puede utilizar la macro FEATURE(use_cw_file) para indicar
+dónde se encuentra el fichero local-host-names; también se
+puede añadir Cw dominio.net directamente
+al fichero /etc/mail/sendmail.cf
+....
+
+Las FAQ de sendmail se pueden encontrar en http://www.sendmail.org/faq/[http://www.sendmail.org/faq/] y son de lectura obligada si se quiere depurar el comportamiento y la configuración de sendmail. 
+
+=== ?Cómo puedo ejecutar un servidor de correo utilizando una máquina que se conecta a internet mediante modem analógico (dial-up) ?
+
+Se quiere conectar una máquina FreeBSD dentro de una LAN a Internet. La máquina FreeBSD será una pasarela de correo para dicha LAN. La conexión mediante PPP no es dedicada.
+
+Existen al menos dos formas distintas de hacerlo. Una de ellas consiste en utilizar UUCP.
+
+Otra forma consiste en hacerse con un servidor de internet a tiempo completo para proporcionar servicios de agente de transporte secundario para nuestro dominio. Si por ejemplo el dominio de nuestra compañía es `ejemplo.com`, nuestro proveedor de acceso a internet puede instalar lo siguiente en el DNS:
+
+[.programlisting]
+....
+ejemplo.com.          MX        10      ejemplo.com.
+                      MX        20      ejemplo.net.
+....
+
+Nótese que el agente de correo primario es nuestro dominio, ejemplo.com, y además se encuentra configurado un agente de transporte secundario en la máquina ejemplo.net. En este caso sólamente se debe especificar una máquina como receptor final de correo (añadiendo `Cw ejemplo.com`) al fichero [.filename]#/etc/mail/sendmail.cf# de la máquina `example.com`)
+
+Cuando el `sendmail` que está enviando el correo trata de entregar dicho correo primero intentará conectarse con nosotros (`ejemplo.com`) utilizando el enlace de modem. Lo más probable es que la operación termine después de un tiempo de espera debido a que el enlace modem esté caído. La aplicación sendmail automáticamente entregará el correo al servidor especificado como agente de transporte de correo secundario (segundo registro MX), es decir, entregará el correo a nuestro proveedor de servicios de internet (`ejemplo.net`). El sitio MX secundario tratará de conectarse con nuestra máquina de una forma periódica con el objeto de entregar el correo a la máquina que actúa como agente servidor de correo primario (`ejemplo.com`).
+
+Puede ser de mucha utilidad un script de "login" como el que se muestra a continuación:
+
+[.programlisting]
+....
+#!/bin/sh
+# Ponme en /usr/local/bin/pppmiconexion
+( sleep 60 ; /usr/sbin/sendmail -q ) &
+/usr/sbin/ppp -direct pppmiconexion
+....
+
+Si vamos a crear un script de "login" separado para un usuario determinado se puede utilizar `sendmail -qRejemplo.com` en lugar del script anterior. Esto obliga a que se procesen de forma inmediata todos los correos que se encuentren en la cola de `ejemplo.com`.
+
+Vamos a dar una vuelta más de tuerca a la situación:
+
+Mensaje robado a la {freebsd-isp}.
+
+[.programlisting]
+....
+
+> Nosotros proporcionamos servicio de MX secundario a un cliente nuestro.
+> El cliente se conecta a nuestro servidor varias veces al día
+> de  forma automática para recoger sus correos para almacenarlos en
+> su servidor MX primario (nosotros no llamamos a su organización
+> justo cuando nos llega un correo suyo).
+> Nuestro sendmail envía la cola de correos cada 30 minutos. En
+> estos momentos nuestro cliente tiene que estar al menos 30 minutos
+> conectado para asegurarnos de que todo su correo ha sido enviado al
+> servidor MX primario.
+>
+> ?Existe algún comando que permita indicar a sendmail que
+> envíe todos los correos de la cola cuando quiera el cliente?
+> El cliente no tiene permisos de superusuario en la máquina que
+> alberga nuestro agente de transporte, por supuesto.
+
+En la sección de privacy flags del fichero sendmail.cf
+existe una definición como ésta:
+Opgoaway,restrictqrun
+
+Basta con eliminar restrictqrun para permitir que usuarios sin permisos de
+superusuario arranquen el procesamiento de la cola.
+Sería conveniente además que reordenaran los registros MX.
+Nosotros somos el primer MX para nuestros clientes.
+Además de esto hay que especificar:
+
+# Si somos el mejor MX para una determinada máquina, intenta
+# utilizarnos directamente en vez de generar un error de
+# configuración local.
+OwTrue
+
+en el archivo de configuración de sendmail.
+Mediante la configuración anterior,
+una organización remota entregará sus correos directamente a
+usted, sin necesidad de intentar conectarse primero a través de
+la conexión del cliente.  La etiqueta "OwTrue" se necesita para evitar
+que sendmail genere un mensaje de error.
+A continuación ustedes se encargan de entregar el
+correo a su(s) respectivo(s) cliente(s) tal como vienen haciendo.
+
+Esta configuración sólo funciona para
+máquinas individuales,
+de tal forma que se necesita que el cliente especifique su servidor de correo
+mediante entradas de tipo A en el DNS.  En concreto se necesita una entrada de
+tipo A en el DNS para el dominio del cliente (cliente.com).
+....
+
+=== ?Por qué me siguen saliendo mensajes de error del tipo Relaying Denied cuando se trata de enviar correo proveniente de otras máquinas?
+
+En las instalaciones del sistema FreeBSD por defecto sendmail se configura para enviar correo sólamente desde la máquina en la cual se está ejecutando. Por ejemplo si un servidor POP está disponible los usuarios serán capaces de consultar su correo desde la universidad, el trabajo u otras localizaciones remotas, pero dichos usuarios podrán enviar correo desde dichas ubicaciones. Es habitual que unos instantes después del envío del correo dichos usuarios reciban un mensaje proveniente del MAILER-DAEMON con un error como `5.7 Relaying Denied`.
+
+Existen varias formas de solventar este problema. La más sencilla consiste en escribir la dirección IP de su proveedor de servicios dentro del fichero [.filename]#/etc/mail/relay-domains#. Una forma rápida de hacerlo sería: 
+
+[source,bash]
+....
+# echo "un.isp.ficticio.com" > /etc/mail/relay-domains
+....
+
+Después de crear o editar dicho fichero se debe reiniciar sendmail. Esto funciona perfectamente si usted es el administrador del servidor y no desea enviar correo localmente o si prefiere utilizar un cliente de correo o cualquier otro sistema en otra máquina distinta a la que alberga el servidor de correo. Es muy útil sobre todo cuando sólamente se tienen una o dos direcciones de correo eletrónico. Si hay en liza un gran número de direcciones de correo, edite el fichero anterior con su editor de texto favorito y añada uno a uno los correspondientes dominios.
+
+[.programlisting]
+....
+un.isp.ficticio.com
+otro.isp.ficticio.net
+y.otro.isp.ficticio.org
+www.ejemplo.org
+....
+
+Ahora, cualquier correo enviado a través de su sistema por cualquier máquina que se encuentre en este fichero (siempre y cuando el usuario tenga una cuenta en nuestro sistema) podrá ser enviado con éxito. Es una manera elegante de permitir a los usuarios enviar correo eletrónico desde nuestro servidor de correo sin permitir al resto del mundo que haga lo mismo (lo que se conoce como SPAM).
+
+[[mail-advanced]]
+== Conceptos Avanzados
+
+La siguiente sección trata conceptos más específicos relacionados con la configuración del correo y la implantación del servicio de correo en una organización.
+
+[[mail-config]]
+=== Configuración Básica
+
+Por defecto debemos ser capaces de enviar correo a máquinas externas, siempre y cuando tengamos nuestro [.filename]#/etc/resolv.conf# bien configurado o ejecutemos nuestro propio servidor de nombres. Si queremos que el correo para nuestra máquina se nos entregue en nuestra propia máquina, es decir, a nuestro propio sendmail, en lugar de tener que ir a recogerlo al servidor de correo de nuestra organización, podemos usar dos métodos:
+
+* Ejecutar nuestro propio servidor de nombres y comprar nuestro propio dominio. Por ejemplo `FreeBSD.org`
+* Conseguir la entrega de correo directa hacia nuestra máquina. Esto se logra entregando el correo a la dirección IP que se asocia al nombre de DNS de nuestra máquina. Por ejemplo `ejemplo.FreeBSD.org`.
+
+Independientemente de la opción elegida para tener entrega directa en nuestra máquina debemos poseer una dirección IP estática (a diferencia de las direcciones dinámicas, que son utilizadas en configuraciones donde se utiliza el protocolo PPP). Si nos encontramos detrás de un cortafuegos se debe permitir el tráfico SMTP (puerto 25) hacia nuestra máquina. Si además queremos recibir correo directamente en nuestra máquina se deben cumplir los siguientes requisitos:
+
+* Asegurar que el registro MX de menor numeración de nuestro DNS apunta a la dirección IP de nuestra máquina.
+* Asegurar que no existe ninguna entrada MX en nuestro DNS para nuestra máquina. Es decir, mientras que el registro MX del punto anterior hace referencia al dominio administrativo que gestionamos con nuestro servidor de nombres, en este apartado se quiere destacar que no debe existir ningún registro MX específico para el nombre concreto de nuestra máquina.
+
+Cumpliendo las dos puntualizaciones anteriores podemos recibir correo electrónico mediante entrega directa en nuestra máquina.
+
+Por ejemplo:
+
+[source,bash]
+....
+# hostname
+ejemplo.FreeBSD.org
+# host ejemplo.FreeBSD.org
+ejemplo.FreeBSD.org has address 204.216.27.XX
+....
+
+Si se observa esta configuración la entrega directa de correo para mailto:su_login@ejemplo.FreeBSD.org[su_login@ejemplo.FreeBSD.org] debería funcionar sin problemas (suponiendo que  sendmail se está ejecutando correctamente en `ejemplo.FreeBSD.org`).
+
+Si en lugar de lo anterior ve algo como esto:
+
+[source,bash]
+....
+# host ejemplo.FreeBSD.org
+ejemplo.FreeBSD.org has address 204.216.27.XX
+ejemplo.FreeBSD.org mail is handled (pri=10) by hub.FreeBSD.org
+....
+
+Todos los correos enviados a nuestro host (`ejemplo.FreeBSD.org`) serán recogidos por `hub` bajo el mismo nombre de usuario en lugar de ser enviados directamente a nuestra máquina.
+
+La información anterior se gestiona utilizando el servidor de DNS. El registro de DNS que transporta la información de encaminamiento de correo eletrónico es el registro __M__ail e__X__change. Si no existe ningún registro MX el correo se entregará a la dirección IP que se obtenga de resolver el nombre de dominio que se encuentre a continuación del nombre de usuario en la dirección de correo de destino (esto es, (después de la @).
+
+En un cierto momento la entrada MX para `freefall.FreeBSD.org` tenía este aspecto:
+
+[.programlisting]
+....
+freefall		MX	30	mail.crl.net
+freefall		MX	40	agora.rdrop.com
+freefall		MX	10	freefall.FreeBSD.org
+freefall		MX	20	who.cdrom.com
+....
+
+Como se puede observar, `freefall` tenía varias entradas MX. El número de MX más bajo es la máquina que recibe correo directamente si se encuentra disponible; si dicha máquina no está accesible por algún motivo las otras máquinas (llamadas también "MXs de backup") aceptarán los mensajes temporalmente, y los transmitirán de nuevo cuando alguna máquina perteneciente a alguna entrada MX de numeración más baja se encuentre disponible y el proceso se repetirá hasta que se alcance la máquina que tenga el registro MX más bajo.
+
+Las organizaciones donde residen los servidores (MX) de backup deberían poseer acceso a internet de una forma independiente para minimizar el riesgo de pérdida de conectividad. Nuestro ISP o cualquier otra organización independiente debería poder proporcionarnos este servicio sin problemas.
+
+[[mail-domain]]
+=== Correo para Nuestro Dominio
+
+Para establecer un "mailhost" (servidor de correo) en nuestra organización debemos ser capaces de redirigir el correo destinado a cualquier máquina de nuestra organización hacia nuestro servidor de correo. Básicamente queremos "reclamar" como nuestro cualquier correo destinado a cualquier máquina de nuestro dominio (en este caso `*.FreeBSD.org`) y desviarlo a nuestro servidor de tal forma que los usuario lean su correo utilizando nuestra máquina servidora.
+
+Para hacer las cosas lo más sencillas posible se debe crear una cuenta de usuario (con el mismo _nombre de usuario_) tanto en el servidor de correo como en la máquina del usuario o destinatario final del correo. man:adduser[8] puede usarse para ello.
+
+El servidor de correo debe funcionar como el agente de transporte predeterminado para todas las máquinas de nuestra organización. Esto se realiza mediante la siguiente configuración del DNS:
+
+[.programlisting]
+....
+ejemplo.FreeBSD.org	A	204.216.27.XX		; Workstation
+			MX	10 hub.FreeBSD.org	; Mailhost
+....
+
+Esta configuración redirigirá el correo para cualquier estación de trabajo hacia nuestro servidor de correo sin que tengan importancia las direcciones IP asignadas mediante el registro de tipo A. Recordemos que el correo siempre se encamina utilizando primero los registros de tipo MX.
+
+Normalmente no podremos realizar esta configuración salvo que estemos ejecutando nuestro propio servidor de DNS para nuestro dominio. Si no es el caso y no es posible ejecutar nuestro propio servidor de DNS debemos comunicarnos con nuestro proveedor de servicios o con quien pueda proporcionarnos servicio de DNS y solicitarle una modificación como la anterior.
+
+Si además ofrecemos servicios de alojamiento virtual de correo la siguiente información puede resultar útil. Asumiremos que tenemos un cliente con su propio dominio, por ejemplo `cliente1.org` y queremos que todo el correo enviado a `cliente1.org` sea redirigido hasta nuestro servidor de correo, `mail.nuestroservidor.com`. La entrada necesaria en el DNS debería ser la siguiente:
+
+[.programlisting]
+....
+cliente1.org		MX	10	mail.nuestroservidor.com
+....
+
+No necesitamos _ningún_ registro de tipo A para `cliente1.org` si sólamente queremos gestionar el correo para ese dominio. 
+
+[NOTE]
+====
+Tenga en cuenta que un ping a `cliente1.org` no funcionará a menos que exista un registro de tipo A para dicha máquina. 
+====
+
+La última cosa que debemos realizar en nuestro servidor de correo es comunicar a sendmail para qué dominios y/o máquinas debe aceptar correo. Existen varias formas en las que se puede realizar esta tarea. Cualquiera de las siguiente funcionará:
+
+* Añadir las máquinas deseadas al fichero [.filename]#/etc/mail/local-host-names# si se está utlizando la macro `FEATURE(use_cw_file)`. Si se está utilizando una versión de  sendmail anterior a la 8.10 el fichero que se debe utilizar es [.filename]#/etc/sendmail.cw#.
+* Añadir la línea `Cwsu.servidor.com` al fichero [.filename]#/etc/sendmail.cf# o [.filename]#/etc/mail/sendmail.cf# si se está utilizando una versión de  sendmail posterior a la versión 8.10.
+
+[[SMTP-UUCP]]
+== SMTP con UUCP
+
+La configuración de sendmail que se proporciona con la distribución de FreeBSD está diseñada para organizaciones que se conectan directamente a internet. Las organizaciones que deseén enviar y recibir sus correos utilizando UUCP deben instalar otro fichero de configuración para  sendmail.
+
+El ajuste de forma manual del archivo [.filename]#/etc/mail/sendmail.cf# es un tema para expertos. La versión 8 de sendmail genera ficheros de configuración mediante el preprocesador man:m4[1], gracias al que las opciones de configuración se pueden escribir utilizando un nivel de abstracción mayor. Los archivos de configuración de man:m4[1] se pueden encontrar en [.filename]#/usr/src/usr.sbin/sendmail/cf#.
+
+Si no se instaló el sistema base con todas las fuentes el conjunto de ficheros de configuración de  sendmail se puede obtener a partir de un paquete de fuentes determinado. Suponiendo que tengamos el CDROM con el código fuente de FreeBSD montado se puede ejecutar:
+
+[source,bash]
+....
+# cd /cdrom/src
+# cat scontrib.?? | tar xzf - -C /usr/src/contrib/sendmail
+....
+
+Este comando extrae sólamente unos pocos cientos de kilobytes. El fichero [.filename]#README# que hay en el directorio [.filename]#cf# puede servirle como una introducción básica a la configuración mediante man:m4[1].
+
+La mejor forma de soportar la entrega de correo mediante UUCP es utilizando la característica `mailertable`. Esta característica crea una base de datos que sendmail utiliza para tomar decisiones de encaminamiento.
+
+En primer lugar creamon el fichero [.filename]#.mc#. El directorio [.filename]#/usr/src/usr.sbin/sendmail/cf/cf# alberga varios ejemplos del mismo. Suponiendo que nuestro fichero configuración se llama [.filename]#foo.mc# para convertir dicho archivo en un fichero [.filename]#sendmail.cf# válido basta con ejecutar lo siguiente:
+
+[source,bash]
+....
+# cd /usr/src/usr.sbin/sendmail/cf/cf
+# make foo.cf
+# cp foo.cf /etc/mail/sendmail.cf
+....
+
+Un fichero [.filename]#.mc# suele tener este aspecto:
+
+[.programlisting]
+....
+VERSIONID(`Su número de versión') OSTYPE(bsd4.4)
+
+FEATURE(accept_unresolvable_domains)
+FEATURE(nocanonify)
+FEATURE(mailertable, `hash -o /etc/mail/mailertable')
+
+define(`UUCP_RELAY', su.relay.uucp)
+define(`UUCP_MAX_SIZE', 200000)
+define(`confDONT_PROBE_INTERFACES')
+
+MAILER(local)
+MAILER(smtp)
+MAILER(uucp)
+
+Cw    alias.de.su.servidor
+Cw    nombredesunodouucp.UUCP
+....
+
+Las líneas que contienen `accept_unresolvable_domains`, `nocanonify`, y `confDONT_PROBE_INTERFACES` prohíben la utilización del DNS durante la entrega de correo. La cláusula `UUCP_RELAY` es necesaria para soportar entrega mediante UUCP. Lo único que hay que hacer es escribir un nombre de máquina en ese punto. Dicha máquina debe ser capaz de gestionar las direcciones del pseudo-dominio .UUCP; en la mayoría de los casos se escribe en este punto el nombre de la máquina perteneciente al proveedor de servicios que hace de relay.
+
+Una vez que tenemos esto configurado se necesita un fichero [.filename]#/etc/mail/mailertable#. Si solamente tenemos un enlace con el exterior, que usamos para todos nuestro correos, basta una configuración como la que se muestra a continuación:
+
+[.programlisting]
+....
+#
+# makemap hash /etc/mail/mailertable.db < /etc/mail/mailertable
+.                             uucp-dom:su.relay.uucp
+....
+
+Un ejemplo más complejo puede parecerse al siguiente:
+
+[.programlisting]
+....
+#
+# makemap hash /etc/mail/mailertable.db < /etc/mail/mailertable
+#
+horus.interface-business.de   uucp-dom:horus
+.interface-business.de        uucp-dom:if-bus
+interface-business.de         uucp-dom:if-bus
+.heep.sax.de                  smtp8:%1
+horus.UUCP                    uucp-dom:horus
+if-bus.UUCP                   uucp-dom:if-bus
+.                             uucp-dom:
+....
+
+Las primeras tres líneas se encargan de manejar casos especiales en los que el correo dirigido directamente al dominio no se envía a la ruta por defecto sino a algún vecino UUCP para acortar el número de saltos involucrados en la entrega de dichos correos. La siguiente línea gestiona el correo para el dominio ethernet local, el cual puede ser entregado utilizando SMTP. Finalmente los vecinos UUCP se mencionan en la notación de pseudo-dominio .UUCP para permitir que un `vecino UUCP receptor` de correo pueda sobreescribir las reglas por defecto. La última línea siempre es un punto; se asocia con cualquier otra cosa que no ha sido tratada en reglas anteriores y donde se realiza entrega UUCP a un vecino UUCP que sirve como pasarela de correo universal para todo el mundo. Todos los nombres de máquinas bajo la clave `uucp-dom:` deben ser vecinos UUCP válidos, lo cual se puede verificar utilizando el comando `uuname`.
+
+Recuerde que este fichero debe convertirse en una base de datos DBM antes de que usarse. El comando que se utiliza para realizar esta tarea se suele especificar como un comentario al principio del fichero [.filename]#mailertable#. Cada vez que se modifique el fichero [.filename]#mailertable# se debe ejecutar dicho comando.
+
+Un consejo final: si dudamos sobre una determinada ruta de encaminamiento de correo se puede ejecutar  sendmail con el parámetro `-bt`. Este parámetro ejecuta sendmail en _modo prueba de direcciones_; simplemente basta con escribir `3,0` seguido por la dirección de correo de la que queremos comprobar su correcto encaminamiento. La última línea nos dice el agente de correo interno que se utiliza, la máquina de destino con que el agente será invocado y la dirección (posiblemente traducida) de correo. Se puede abandonar este modo de funcionamiento escribiendo kbd:[Ctrl+D].
+
+[source,bash]
+....
+% sendmail -bt
+ADDRESS TEST MODE (ruleset 3 NOT automatically invoked)
+Enter <ruleset> <address>
+> 3,0 prueba@ejemplo.com
+canonify           input: foo @ example . com
+...
+parse            returns: $# uucp-dom $@ su.relay.uucp $: prueba < @ ejemplo . com . >
+> ^D
+....
+
+[[outgoing-only]]
+== Configuración para sólamente enviar correo
+
+Existen multitud de casos en los que puede bastarnos con enviar nuestro correo a través de una pasarela o relay. He aquí algunos de ellos:
+
+* Nuestra computadora es una máquina de escritorio, pero queremos ser capaces de utilizar programas como man:send-pr[1]. Para ello se debería utilizar el relay de nuestro ISP.
+* Nuestra computadora es un servidor que no gestiona correo de forma local, si no que necesita pasar todos los correos recibidos una pasarela que se encarga de su procesamiento y entrega final.
+
+Casi cualquier MTA es capaz de actuar como pasarela o relay. Por desgracia configurar un MTA para que sólo gestione correo saliente puede ser muy complicado. Programas del estilo de sendmail y  postfix son demasiado pesados para realizar sólamente esta tarea.
+
+Si además estamos utilizando un servicio de acceso a internet típico nuestro contrato puede prohibir explícitamente la ejecución de un servidor de correo (o los puertos pueden estar filtrados).
+
+La forma más sencilla de utilizar un servicio de pasarela es mediante la instalación del port package:mail/ssmtp[]. Basta con ejecutar el siguiente comando como `root`:
+
+[source,bash]
+....
+# cd /usr/ports/mail/ssmtp
+# make install replace clean
+....
+
+Una vez que ha sido instalado package:mail/ssmtp[] podemos configurarlo mediante un fichero de sólo cuatro líneas ubicado en [.filename]#/usr/local/etc/ssmtp/ssmtp.conf#:
+
+[.programlisting]
+....
+root=sudireccionrealdecorreo@ejemplo.com
+mailhub=mail.ejemplo.com
+rewriteDomain=ejemplo.com
+hostname=_HOSTNAME_
+....
+
+Debemos asegurarnos de que se utiliza una dirección de correo real para `root`. Se debe introducir nuestra pasarela de correo en lugar de `mail.ejemplo.com` (algunos ISP llaman a la pasarela "servidor de correo saliente" o simplemente "servidor SMTP").
+
+Debemos asegurarnos de que se desactiva sendmail mediante `sendmail_enable="NONE"` en [.filename]#/etc/rc.conf#.
+
+package:mail/ssmtp[] acepta algunas otras opciones. Consulte el fichero de ejemplo que encontrará en [.filename]#/usr/local/etc/ssmtp#; consulte también la página de manual de ssmtp, en la que hay más ejemplos e información al respecto. 
+
+Ejecutar ssmtp de esta forma permite que cualquier software de nuestra computadora que necesite enviar correo funcione sin problemas y a la vez poder cumplir con las normas estipuladas en el contrato con nuestro ISP. Al mismo tiempo evitamos el uso de nuestro servidor de correo por parte de " spammers".
+
+[[SMTP-dialup]]
+== Utilización del correo con una conexión mediante módem analógico (dial-up)
+
+Si se dispone de una dirección IP privada no es necesario realizar ningún ajuste a partir de la configuración por defecto. Basta con asignar como nombre de nuestra máquina el nombre que tenemos registrado en el DNS y  sendmail se encargará del resto.
+
+Por otra parte si utilizamos una conexión temporal a internet mediante PPP y se nos asigna una dirección IP de forma dinámica, lo más normal es tener nuestras carpetas de correo alojadas en el servidor de correo de nuestro proveedor de servicios. Supongamos que el dominio de nuestro ISP es `ejemplo.net` y que nuestro nombre de usuario es `usuario`; además hemos llamado a nuestra `user`, además, hemos llamado a nuestra máquina `bsd.home`, y nuestro ISP nos ha comunicado que debemos utilizar como pasarela la máquina `relay.ejemplo.net`.
+
+Para recuperar correo de nuestra carpeta de correo se debe instalar un agente de recuperación automática de correo. fetchmail es una buena elección puesto que permite utilizar varios protocolos. Este programa está disponible como un paquete y también desde la colección de ports (package:mail/fetchmail[]). Normalmente nuestro ISP proporciona POPPOP. Si utilizamos ppp a nivel de usuario se puede recuperar automáticamente el correo cuando se establece la conexión ppp utilizando el fichero [.filename]#/etc/ppp/ppp.linkup#:
+
+[.programlisting]
+....
+MYADDR:
+!bg su user -c fetchmail
+....
+
+Si utilizamos sendmail (como se muestra más adelante) para entregar correo a cuentas remotas probablemente queramos que sendmail procese nuestras colas de correo tan pronto como nuestra conexión de internet se establezca. Para ello escriba el siguiente comando tras el comando de `fetchmail` que hemos escrito antes en el fichero [.filename]#/etc/ppp/ppp.linkup#:
+
+[.programlisting]
+....
+  !bg su user -c "sendmail -q"
+....
+
+Asumiendo que tenemos una cuenta para el usuario `usuario` en `bsd.home`. En el directorio "home" del usuario `usuario` en la máquina `bsd.home` debemos crear un fichero [.filename]#.fetchmailrc# con el siguiente contenido:
+
+[.programlisting]
+....
+poll ejemplo.net protocol pop3 fetchall pass Secr3To
+....
+
+Este fichero debe tener permisos de lectura sólo para el propio dueño ya que contiene la contraseña de acceso a nuestra cuenta de POP en nuestro ISP (`Secr3To`).
+
+Para poder enviar correo con la cabecera `from:` correcta, debemos decir a sendmail que utilice `usuario@ejemplo.net` en vez de `usuario@bsd.home`. Siguiendo con nuestro ejemplo es necesario decirle a sendmail que envíe todo el correo a través de la pasarela `relay.ejemplo.net`.
+
+El siguiente fichero de configuración [.filename]#.mc# debe ser suficiente para cumplir con las anteriores tareas:
+
+[.programlisting]
+....
+VERSIONID(`bsd.home.mc version 1.0')
+OSTYPE(bsd4.4)dnl
+FEATURE(nouucp)dnl
+MAILER(local)dnl
+MAILER(smtp)dnl
+Cwlocalhost
+Cwbsd.home
+MASQUERADE_AS(`ejemplo.net')dnl
+FEATURE(allmasquerade)dnl
+FEATURE(masquerade_envelope)dnl
+FEATURE(nocanonify)dnl
+FEATURE(nodns)dnl
+define(`SMART_HOST', `relay.ejemplo.net')
+Dmbsd.home
+define(`confDOMAIN_NAME',`bsd.home')dnl
+define(`confDELIVERY_MODE',`deferred')dnl
+....
+
+En la sección anterior se explica cómo convertir este fichero [.filename]#.mc# en un fichero de configuración para sendmail, [.filename]#sendmail.cf#. No debemos olvidar reiniciar sendmail después de mofidificar el fichero [.filename]#sendmail.cf#.
+
+[[SMTP-Auth]]
+== Autentificación utilizando SMTP
+
+La autentificación mediante SMTP puede proporcionarnos diversas ventajas. Añade una capa adicional de seguridad a a sendmail y además proporciona a los usuarios móviles (usuarios que cambian de máquina) la posibilidad de mantener el mismo servidor de correo sin necesidad de reconfigurar sus agentes de usuario de correo cada vez que se trasladan.
+
+[.procedure]
+====
+
+. Instalar package:security/cyrus-sasl[] desde los ports. Se puede encontrar dicho port en package:security/cyrus-sasl[]. package:security/cyrus-sasl[] posée varias opciones en tiempo de compilación pero para el método en particular que se va a explicar en esta sección basta con asegurarse de seleccionar la opción `pwcheck`.
+. Después de instalar package:security/cyrus-sasl[], edite [.filename]#/usr/local/lib/sasl/Sendmail.conf# (o créelo si no existe) y añada la siguiente línea:
++
+[.programlisting]
+....
+pwcheck_method: passwd
+....
++ 
+Este método activa la autentificación de sendmail contra nuestra base de datos de FreeBSD, [.filename]#passwd#. Esto nos evita el problema de tener que crear un nuevo conjunto de usuarios y contraseñas para cada usuario que necesite validarse mediante SMTP y además nos permite mantener el mismo "login" y contraseña que los usuarios utilizan para acceder a sus cuentas para el acceso al correo electrónico.
+. Editar [.filename]#/etc/make.conf# y añadir las siguientes líneas:
++
+[.programlisting]
+....
+SENDMAIL_CFLAGS=-I/usr/local/include/sasl1 -DSASL
+SENDMAIL_LDFLAGS=-L/usr/local/lib
+SENDMAIL_LDADD=-lsasl
+....
++ 
+Estas líneas proporcionan a  sendmail las opciones de configuración necesarias para enlazar con package:cyrus-sasl[] en tiempo de compilación. Debemos asegurarnos de que package:cyrus-sasl[] ha sido instalado correctamente recompilar sendmail.
+. Recompile sendmail utilizando el siguiente comando:
++
+[source,bash]
+....
+# cd /usr/src/usr.sbin/sendmail
+# make cleandir
+# make obj
+# make
+# make install
+....
++ 
+La compilación de sendmail no debería dar problemas siempre y cuando [.filename]#/usr/src# no haya cambiado sustancialmente y siempre y cuando las bibliotecas compartidas necesarias se encuentren disponibles.
+. Una vez que sendmail se ha compilado y reinstalado con correctamente debemos editar el fichero [.filename]#/etc/mail/freebsd.mc# (o el fichero que se utilice como [.filename]#.mc# de referencia. Hay administradores que escogen utilizar la salida de man:hostname[1] como el nombre del fichero [.filename]#.mc# que se utiliza para la configuración de sendmail por motivos de uniformidad ). Añada las siguientes líneas a dicho fichero:
++
+[.programlisting]
+....
+dnl set SASL options
+TRUST_AUTH_MECH(`GSSAPI DIGEST-MD5 CRAM-MD5 LOGIN')dnl
+define(`confAUTH_MECHANISMS', `GSSAPI DIGEST-MD5 CRAM-MD5 LOGIN')dnl
+define(`confDEF_AUTH_INFO', `/etc/mail/auth-info')dnl
+....
++ 
+Estas opciones configuran los distintos métodos de que dispone sendmail para validar a los usuarios de correo. Si se desea utilizar otro método distinto a pwcheck por favor consulte la documentación.
+. Para terminar ejecutamos man:make[1] mientras nos encontramos dentro de [.filename]#/etc/mail#. Este comando trata el fichero [.filename]#.mc# y crea el fichero [.filename]#.cf# correspondiente (con el mismo nombre que el anterior pero terminado en .cf). A continuación se utiliza el comando `make install restart`, el cual copia el fichero .cf recién generado al fichero [.filename]#sendmail.cf# y a continuación reinicia sendmail. Para más información sobre este proceso puede consultarse el contenido de [.filename]#/etc/mail/Makefile#.
+====
+
+Si todo lo anteriormente comentado ha funcionado correctamente deberíamos ser capaces de introducir la información de nuestro "login" en nuestro cliente de correo y enviar un mensaje de prueba. Para investigar más a fondo estos temas se puede habilitar la opción `LogLevel` de sendmail al valor 13 y observar detenidamente el archivo [.filename]#/var/log/maillog# en busca de posibles mensajes de error.
+
+Puede ser necesario añadir las siguientes líneas al fichero [.filename]#/etc/rc.conf# de modo que el servicio explicado en esta sección se encuentre disponible automáticamente desde el arranque:
+
+[.programlisting]
+....
+sasl_pwcheck_enable="YES"
+sasl_pwcheck_program="/usr/local/sbin/pwcheck"
+....
+
+Esto permite que la inicialización de SMTP_AUTH se produzca durante el arranque del sistema.
+
+Para más información por favor visite la página http://www.sendmail.org/~ca/email/auth.html[autentificación SMTP] de sendmail·
+
+[[mail-agents]]
+== Agente de Correo de Usuario
+
+Un agente de correo de usuario (MUA en inglés Mail User Agent) es una aplicación que se utiliza para enviar y recibir correo. Coomo el correo electrónico está en constante evolución y cada vez se vuelve más complejo y con más opciones, los MUAs son cada vez más complejos y potentes. Esto permite a los usuarios disponer de mayor flexibilidad y funcionalidad. FreeBSD admite para muchísimos agentes de correo de usuario, todos los cuales pueden instalarse desde los crossref:ports[ports,Ports]. Los usuarios pueden elegir entre lientes de correo con interfaz gráfica como evolution o balsa o entre clientes basados en consola como mutt, pine o `mail`, e incluso utilizar interfaces web.
+
+[[mail-command]]
+=== mail
+
+man:mail[1] es el agente de correo de usuario (MUA) que viene por defecto con FreeBSD. Es un MUA de consola que ofrece toda la funcionalidad básica necesaria para enviar y recibir correos, aunque resulta limitado limitado en su capacidad para manejar adjuntos y sólamente soporta carpetas de correo locales.
+
+Aunque `mail` no soporta de forma nativa la interacción con servidores de correo mediante POP o IMAP estas carpetas de correo remotas pueden descargarse a un fichero [.filename]#mbox# local utilizando una aplicación de descarga como fetchmail, que se describe en este mismo capítulo en (<<mail-fetchmail>>).
+
+Para enviar y recibir correo eletrónico basta con ejecutar el comando `mail`. Veamos un ejemplo:
+
+[source,bash]
+....
+% mail
+....
+
+El contenido de la carpeta de usuario en el directorio [.filename]#/var/mail# se leen automáticamente. Si la carpeta se encuentra vacía la aplicación termina su ejecución con un mensaje que indica que no ha podido encontrar correo. Una vez que la carpeta ha sido leída la interfaz de la aplicación entra en funcionamiento y se muestra por pantalla un listado de los mensajes recuperados. Los mensajes se numeran automáticamente y pueden leerse como se observa en el siguiente ejemplo:
+
+[source,bash]
+....
+Mail version 8.1 6/6/93.  Type ? for help.
+"/var/mail/marcs": 3 messages 3 new
+>N  1 root@localhost        Mon Mar  8 14:05  14/510   "test"
+ N  2 root@localhost        Mon Mar  8 14:05  14/509   "user account"
+ N  3 root@localhost        Mon Mar  8 14:05  14/509   "sample"
+....
+
+Los mensajes se pueden leer utilizando el comando kbd:[
+      t] de `mail` escribiendo a continuación el número del mensaje que queremos leer. En este ejemplo vamos a leer el primer correo:
+
+[source,bash]
+....
+% t 1
+Message 1:
+From root@localhost  Mon Mar  8 14:05:52 2004
+X-Original-To: marcs@localhost
+Delivered-To: marcs@localhost
+To: marcs@localhost
+Subject: test
+Date: Mon,  8 Mar 2004 14:05:52 +0200 (SAST)
+From: root@localhost (Charlie Root)
+
+This is a test message, please reply if you receive it.
+....
+
+Como podemos observar en el ejemplo anterior el comando kbd:[t] muestra el contenido del correo eletrónico con todas sus cabeceras. Para mostrar el listado con todos los correos de nuevo, se debe utilizar la tecla kbd:[h].
+
+Si el correo eletrónico requiere una contestación se puede utilizar la aplicación `mail` para responder utilizando la tecla kbd:[R] o kbd:[r]. La tecla kbd:[R] indica a `mail` que conteste sólo al origen (remitente) del correo, mientras que la tecla kbd:[r] tanto al remitente a los otros usuarios receptores del mensaje original. Además ambos comandos se pueden ejecutar escribiendo a continuación el número que identifica al mensaje que se quiere responder. Tras esto la respuesta puede redactarse , y se debe indicar el final del mensaje mediante un punto (kbd:[.]) a continuación de un salto de línea. Veamos un ejemplo:
+
+[source,bash]
+....
+% R 1
+To: root@localhost
+Subject: Re: test
+
+Thank you, I did get your email.
+.
+EOT
+....
+
+Para enviar nuevos correos eletrónicos se debe utilizar la tecla kbd:[m] seguida de la dirección de de correo del destinatario. Se pueden especificar varios destinatarios de correo separando cada dirección de correo con una coma ( kbd:[,] ). El asunto del mensaje de correo se puede escribir a continuación seguido por el cuerpo del mensaje. El final del mensaje se especifica como en el caso anterior, utilizando un kbd:[.] tras un saldo de línea y pulsando la tecla "enter".
+
+[source,bash]
+....
+% mail root@localhost
+Subject: I mastered mail
+
+Now I can send and receive email using mail ... :)
+.
+EOT
+....
+
+Mientras nos encontremos dentro de la `mail` el comando kbd:[?] puede utilizarse para mostrar la ayuda en línea aunque la principal fuente de información detallda sobre esta aplicación es la página man man:mail[1].
+
+[NOTE]
+====
+Tal y como se ha dicho ya la aplicación man:mail[1] no fue diseñada originalmente para gestionar adjuntos, por lo que su forma de gestionarlos resulta ser extremadamente mala. MUA más modernos como  mutt gestionan los adjuntos de correo de una forma mucho más inteligente. Si se desea utilizar el comando `mail` el port package:converters/mpack[] le puede resultar bastante útil.
+====
+
+[[mutt-command]]
+=== mutt
+
+mutt es un agente de correo de usuario pequeño pero muy potente, funcional y con excelentes características; veamos algunas:
+
+* La habilidad de agrupar mensajes en hilos.
+* Soporte de PGP para cifradon y firma digital de correos eletrónicos.
+* Soporte de tipos MIME.
+* Soporte de gestión de correo en formato Maildir.
+* Altamente configurable por el usuario.
+
+Toda estas características hacen de mutt uno de los agentes de correo más avanzados del momento. Consulte http://www.mutt.org[http://www.mutt.org] para más información sobre mutt.
+
+La versión estable de mutt se puede instalar usando el port package:mail/mutt[] mientras que la versión de desarrollo está en package:mail/mutt-devel[]. Una vez que se ha instalado el port, mutt puede ejecutarse mediante el siguiente comando:
+
+[source,bash]
+....
+% mutt
+....
+
+mutt lee automáticamente el contenido de la carpeta de correo del usuario dentro del directorio [.filename]#/var/mail# y muestra por pantalla su contenido. Si el directorio está vacío mutt quedará a la espera de los comandos que pueda pasarle el usuario. En el ejemplo que se muestra a continuación puede verse cómo mutt facilita la lista de mensajes al usuario:
+
+image::mutt1.png[]
+
+Para leer un correo basta con seleccionarlo usando las teclas de cursor, y presionando la tecla kbd:[Enter]. Veamos cómo muestra mutt un correo electrónico:
+
+image::mutt2.png[]
+
+Al igual que ocurre con man:mail[1] mutt permite que los usuarios contesten al remitente de cualquier mensaje así como a los demás receptores. Para responder sólo al remitente se puede utilizar la tecla kbd:[r]. Para responder a un grupo, es decir a todos los receptores y al remitente del correo eletrónico pulse kbd:[g].
+
+[NOTE]
+====
+mutt tiene man:vi[1] como editor por defecto para crear y responder a los mensajes de correo eletrónico. Si prefiere emplear otro editor modifique el valor de la variable `editor` en [.filename]#.muttrc#.
+====
+
+Para escribir un mensaje de correo presione la tecla kbd:[m]. Después de escribir el asunto mutt ejecuta man:vi[1] y el cuerpo del mensaje puede escribirse. Una vez escrito el correo salga de `vi` y mutt se ejecutará de nuevo mostrando por pantalla un resumen del correo que está a punto de ser enviado. Para enviar ese correo hay que pulsar kbd:[y]. Este es un ejemplo de uno de esos resúmenes:
+
+image::mutt3.png[]
+
+mutt también contiene una amplia ayuda a la que se accede desde la mayoría de los menús pulsando la tecla kbd:[?]. La primera lína de la pantalla también muestra las teclas de método abreviado cuando es posible utilizarlas.
+
+[[pine-command]]
+=== pine
+
+pine es una aplicación de correo enfocada a los usuarios principiantes o inexpertos pero también incluye algunas características avanzadas.
+
+[WARNING]
+====
+
+Se han descubierto en pine varias vulnerabilidades que pueden explotarse de forma remota. Esas vulnerabilidades permiten que atacantes remotos puedan ejecutar código como si fueran usuarios locales del sistema mediante el envío de correos con un formato determinado. Todos los problemas _conocidos_ se han resuelto pero el código de  pine está escrito de una forma insegura y el "Security Officer" de FreeBSD opina que es probable que existan todavía vulnerabilidades sin descubrir. Si decide instalar pine debe asumir los riesgos que ello puede implicar.
+====
+
+La versión actual de pine se puede instalar utilizando el port package:mail/pine4[]. Una vez que se ha instalado pine se puede ejecutar mediante el siguiente comando:
+
+[source,bash]
+....
+% pine
+....
+
+La primera vez que se ejecuta pine se muestra un mensaje de bienvenida con una pequeña introducción a la herramienta junto con una petición del equipo de desarrollo de pine en la que se solicita que se envíe un correo de forma anónima un correo de forma anónima para que puedan hacerse una idea s de cuántos usuarios están utilizando la herramienta. Para enviar dicho correo hay que presionar la tecla kbd:[Enter], o bien puede pulsar la tecla kbd:[E] para salir de la ventana de bienvenida sin enviar dicho correo. A continuación se muestra un ejemplo de la página de bienvenida:
+
+image::pine1.png[]
+
+Los usuarios disponen de un menú principal, que puede navegarse utilizando las flechas. Este menú proporciona atajos para la composición de nuevos correos, para navegar a través de las carpetas de correo, e incluso para la administración de la libreta de direcciones. Justo debajo del menú principal, se muestran las teclas de método abreviado (atajos) que pueden utilizarse en cada momento.
+
+El directorio por defecto que pine intenta abrir es [.filename]#inbox#. Para ver el índice de todos los mensajes recibidos pulse la tecla kbd:[I] o seleccione la opción de menú denominada [.guimenuitem]#MESSAGE INDEX# como se muestra a continuación:
+
+image::pine2.png[]
+
+El índice muestra los mensajes en el directorio actual y puede navegarse en él utilizando las teclas del cursor. El mensaje seleccionado se puede leer presionando la tecla kbd:[Enter].
+
+image::pine3.png[]
+
+En la captura de pantalla que se muestra a continuación se muestra un mensaje de ejemplo. Las teclas de atajo se muestran como referencia en la parte baja de la pantalla. Un ejemplo de dichas teclas de método abreviado es la tecla kbd:[r] que permite responder al mensaje que se muestra en dicho momento.
+
+image::pine4.png[]
+
+La contestación a un mensaje de correo eletrónico en pine se realiza mediante el editor pico, que se instala por defecto junto con pine. pico permite navegar de forma sencilla por los distintos mensajes de correo y es ligeramente más sencilla de manejar que man:vi[1], sobre todo para los usuarios noveles. Una vez que se ha escrito la réplica al correo se envía pulsando la tecla kbd:[Ctrl+X]. pine pedirá confirmación antes de enviarlo.
+
+image::pine5.png[]
+
+pine puede configurarse utilizando la entrada [.guimenuitem]#SETUP# del menú principal. Se ruega consultar http://www.washington.edu/pine/[http://www.washington.edu/pine/] para obtener más información.
+
+[[mail-fetchmail]]
+== Manejo de fetchmail
+
+fetchmail es un cliente de IMAP y POP que permite a los usuarios descargar automáticamente el correo de cuentas remotas en servidores IMAP y POP y almacenarlos en carpetas de correo locales; una vez en local, se puede acceder a los correos de una forma más sencilla y utilizando multitud de programas cliente. fetchmail se puede instalar a partir del port package:mail/fetchmail[]. Veamos algunas de sus características más útiles:
+
+* Suporte de POP3, APOP, KPOP, IMAP, ETRN y ODMR.
+* Puede reenviar correo utilizando SMTP lo que permite que las reglas de filtrado, reenvío y "aliasing" funcionen correctamente.
+* Se puede ejecutar en modo dæmon comprobar periódicamente el correo entrante.
+* Puede recuperar correo de múltiples carpetas y reenviarlos, en función de la configuración establecida, a varios usuarios locales.
+
+Queda fuera del objetivo de este documento explicar todas las características de fetchmail pero algunas de ellas se exponen a ontinuación. fetchmail usa un fichero de configuración denominado [.filename]#.fetchmailrc#. Este fichero incluye información sobre el servidor de correo remoto y los datos necesarios para poder hacer login en él. Debido a la naturaleza sensible de la información que se almacena en dicho fichero se recomienda modificar los permisos para que sea de sólo sea legible por su propietario. Lo conseguirá mediante el siguiente comando:
+
+[source,bash]
+....
+% chmod 600 .fetchmailrc
+....
+
+El siguiente ejemplo muestra un fichero de configuración [.filename]#.fetchmailrc#. Este ejemplo sirve para automatizar la descarga del correo de un determinado usuario mediante POP. El fichero de configuración hace que fetchmail se conecte a `ejemplo.com` utilizando como nombre de usuario `joesoap` y como contraseña `XXX`. En el ejemplo se asume que el usuario `joesoap` también es un usuario válido en el sistema local.
+
+[.programlisting]
+....
+poll ejemplo.com protocol pop3 username "joesoap" password "XXX"
+....
+
+El siguiente ejemplo permite a fetchmail conectarse a múltiples servidores POP e IMAP y redirige los correos a diferentes usuarios locales en función de la configuración establecida:
+
+[.programlisting]
+....
+poll ejemplo.com proto pop3:
+user "joesoap", with password "XXX", is "jsoap" here;
+user "andrea", with password "XXXX";
+poll ejemplo.net proto imap:
+user "john", with password "XXXXX", is "myth" here;
+....
+
+fetchmail se puede ejecutar en modo dæmon mediante el parámetro `-d` seguido seguido por un intervalo de tiempo (expresado en segundos) que indica cada cuánto tiempo debe fetchmail interrogar a los distintos servidores listados en [.filename]#.fetchmailrc#. El siguiente ejemplo hace que fetchmail interroge cada 60 segundos:
+
+[source,bash]
+....
+% fetchmail -d 60
+....
+
+Se puede encontrar más información sobre fetchmail en http://www.catb.org/\~esr/fetchmail/[http://www.catb.org/~esr/fetchmail/].
+
+[[mail-procmail]]
+== Uso de procmail
+
+procmail es una aplicación increíblemente potente que se utiliza para filtrar el correo de entrada. Permite a los usuarios definir "reglas" que se asocian con correos entrantes y que realizan funciones concretas, como reencaminar el correo a carpetas o direciones alternativas. procmail se puede instalar utilizando el port package:mail/procmail[]. Una vez instalado, se puede integrar directamente en la mayoría de los MTAs; por favor, consulte la documentación del MTA que utilice para saber más sobre la integración entre ambos. Por otro lado procmail se puede integrar con el MTA que prefiera de una forma sencilla añadiendo la siguiente línea al fichero [.filename]#.forward# dentro del directorio home del usuario que desée usar  procmail:
+
+[.programlisting]
+....
+"|exec /usr/local/bin/procmail || exit 75"
+....
+
+La siguiente sección muestra algunas reglas básicas de procmail, junto con una breve descripción de las acciones que realizan. Estas reglas, y muchas otras se deben insertar dentro del fichero [.filename]#.procmailrc# ubicado en el directorio home del usuario.
+
+En la página man de "procmailex" se explica la mayoría de estas reglas.
+
+Reenvío de todo el correo proveniente de `usuario@ejemplo.com` hacia la dirección externa `correodefiar@ejemplo.com`:
+
+[.programlisting]
+....
+:0
+* ^From.*usuario@ejemplo.com
+! correodefiar@ejemplo.com
+....
+
+Reenvío de todos los correos que ocupen menos de 1000 bytes a la dirección `corredefiar@ejemplo2.com`:
+
+[.programlisting]
+....
+:0
+* < 1000
+! correodefiar@ejemplo2.com
+....
+
+Envío de todos los correos dirigidos a `opcional@ejemplo.com` hacia una carpeta de correo llamada [.filename]#opcional#:
+
+[.programlisting]
+....
+:0
+* ^TOopcional@ejemplo.com
+opcional
+....
+
+Envío de todos los correos con un asunto que contenga la palabra "Spam" al dispositivo [.filename]#/dev/null#:
+
+[.programlisting]
+....
+:0
+^Subject:.*Spam
+/dev/null
+....
+
+Una útil receta para examinar mensajes de correo provenientes de listas de distribución de `FreeBSD.org` y poner cada mensaje en el directorio apropiado en función del origen del mensaje:
+
+[.programlisting]
+....
+:0
+* ^Sender:.owner-freebsd-\/[^@]+@FreeBSD.ORG
+{
+	LISTNAME=${MATCH}
+	:0
+	* LISTNAME??^\/[^@]+
+	FreeBSD-${MATCH}
+}
+....

@@ -1,0 +1,1131 @@
+---
+title: Hoofdstuk 28. Elektronische mail
+part: Deel IV. Netwerkcommunicatie
+prev: books/handbook/ppp-and-slip
+next: books/handbook/network-servers
+---
+
+[[mail]]
+= Elektronische mail
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Inhoudsopgave
+:table-caption: Tabel
+:figure-caption: Afbeelding
+:example-caption: Voorbeeld
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 28
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../../images/books/handbook/mail/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/mail/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/mail/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/nl/mailing-lists.adoc[]
+include::shared/nl/teams.adoc[]
+include::shared/nl/urls.adoc[]
+
+toc::[]
+
+[[mail-synopsis]]
+== Overzicht
+
+"Elektronische Mail", beter bekend als email, is tegenwoordig een van de meest gebruikte vormen van communicatie. Dit hoofdstuk geeft een algemene inleiding in het opzetten van een mailserver op FreeBSD, alsmede een introductie in het verzenden en ontvangen van email op FreeBSD; het is echter geen complete referentie en veel belangrijke overwegingen zullen buiten beschouwing worden gelaten. Voor een completere behandeling wordt de lezer gewezen op de vele uitstekende boeken welke worden vermeld in crossref:bibliography[bibliography,Bibliografie].
+
+In dit hoofdstuk wordt behandeld:
+
+* Welke software (componenten) gebruikt wordt(en) bij het verzenden en ontvangen van email.
+* Waar algemene sendmail instellingsbestanden worden opgeslagen in FreeBSD.
+* Het verschil tussen lokale en postbussen op-afstand.
+* Hoe spammers te verhinderen dat ze de mailserver illegaal gebruiken als "relay".
+* Hoe een andere MTA (Mail Transfer Agent) te installeren en configureren op het systeem, ter vervanging van  sendmail.
+* Hoe veel voorkomende problemen met mail servers worden opgelost.
+* Hoe SMTP met UUCP te gebruiken.
+* Hoe een systeem in te stellen om alleen mail te verzenden.
+* Hoe email te gebruiken met een inbelverbinding.
+* Hoe SMTP Authenticatie in te stellen voor verhoogde beveiliging.
+* Hoe een Mail User Agent zoals mutt te installeren om email te verzenden en te ontvangen.
+* Hoe mail te downloaden van een POP of IMAP server op afstand.
+* Hoe automatisch filters en sorteerregels op inkomende email toe te passen.
+
+Voordat dit hoofdstuk gelezen wordt, dienen:
+
+* De netwerkverbindingen correct ingesteld te zijn (crossref:advanced-networking[advanced-networking,Geavanceerd netwerken]).
+* De juiste DNS-informatie ingesteld te zijn voor de mailserver (crossref:network-servers[network-servers,Netwerkdiensten]).
+* Bekend te zijn hoe software van derde partijen te installeren (crossref:ports[ports,Applicaties installeren. pakketten en ports]).
+
+[[mail-using]]
+== Gebruik maken van elektronische mail
+
+Er zijn vijf belangrijke componenten betrokken bij het uitwisselen van email. Dit zijn: <<mail-mua,het gebruikersprogramma>>, <<mail-mta,de serverdaemon>>, <<mail-dns,DNS>>, <<mail-receive,"een postbus, lokaal of op afstand ">>, en natuurlijk <<mail-host,de mailhost zelf>>.
+
+[[mail-mua]]
+=== Het gebruikersprogramma
+
+Dit omvat opdrachtregelprogramma's zoals mutt, alpine, elm, en `mail`, en GUI programma's zoals balsa, xfmail, en iets "geavanceerders" zoals een webbrowser. Deze programma's doen niets anders dan de mail bezorgen bij de lokale <<mail-host,"mailhost">>, door deze af te leveren of bij een van de beschikbare <<mail-mta,serverdiensten>>, of via TCP.
+
+[[mail-mta]]
+=== Mailhost Server Daemon
+
+FreeBSD wordt standaard geleverd met de sendmail, maar ondersteunt meerdere andere mailserver daemons, zoals:
+
+* exim;
+* postfix;
+* qmail.
+
+De server daemon heeft meestal twee functies-het is verantwoordelijk voor het ontvangen van inkomende mail en het bezorgen van uitgaande mail. Het is _niet_ verantwoordelijk voor het verzamelen van mail door gebruik te maken van protocollen zoals POP of IMAP om mail te lezen, noch staat het toe om een verbinding te maken met een lokale [.filename]#mbox# of Maildir postbus. Het is mogelijk dat daarvoor een extra <<mail-receive,daemon>> voor nodig is.
+
+[WARNING]
+====
+
+Oudere versies van sendmail hebben serieuze beveiligingslekken welke kunnen leiden tot een situatie waarbij een aanvaller lokale of toegang van afstand tot de machine kan verkrijgen. Draai een actuele versie om deze problemen te voorkomen. Optioneel kan een alternatieve MTA van de crossref:ports[ports,FreeBSD Portscollectie] geïnstalleerd worden.
+====
+
+[[mail-dns]]
+=== Email en DNS
+
+Het Domein Naam Systeem (DNS) en de daemon `named` spelen een grote rol in het bezorgen van email. Om het mogelijk te maken email van de deze lokatie naar een andere lokatie te bezorgen, zal de serverdaemon de andere lokatie opzoeken in het DNS om zo de host te bepalen die de email voor de bestemming in ontvangst zal nemen. Dit gebeurt ook als email verzonden wordt vanaf een andere host naar de lokale mailserver.
+
+DNS is verantwoordelijk voor het koppelen van hostnamen aan IP-adressen, en voor het opslaan van specifieke informatie voor het bezorgen van mail, bekend als MX-regels. De MX-regel (Mail eXchanger) specificeert welke host(s) mail zullen ontvangen voor een specifiek domein. Als er geen MX-regel is voor deze hostnaam of dit domein, dan zal de mail direct bij de host worden afgeleverd, mits er een A-regel is die deze hostnaam aan dit IP-adres koppelt.
+
+De MX-regels van een willekeurig domein kunnen worden bekeken door gebruik te maken van het commando man:host[1], zoals te zien is in het onderstaande voorbeeld:
+
+[source,bash]
+....
+% host -t mx FreeBSD.org
+FreeBSD.org mail is handled (pri=10) by mx1.FreeBSD.org
+....
+
+[[mail-receive]]
+=== Mail ontvangen
+
+De mailhost verzorgt het ontvangen van mail voor het domein. Deze zal alle mail verzonden aan het domein verzamelen en deze afhankelijk van de configuratie opslaan in òf [.filename]#mbox# (de standaardmanier om mail op te slaan) òf in Maildir-formaat. Wanneer de mail eenmaal is opgeslagen, kan het òf lokaal gelezen worden door toepassingen als man:mail[1] of mutt , of op afstand bekeken en verzameld worden middels protocollen als POP of IMAP. Dit betekent, dat als mail alleen lokaal wordt gelezen, er geen POP- of IMAP-server geïnstalleerd hoeft te worden.
+
+[[pop-and-imap]]
+==== Op afstand toegang tot de postbus krijgen door gebruik te maken van POP en IMAP
+
+Om op afstand toegang te krijgen tot postbussen is het nodig toegang te hebben tot een POP- of IMAP -server. Deze protocollen stellen gebruikers in staat hun postbus gemakkelijk op afstand te benaderen. Hoewel zowel POP als IMAP gebruikers in staat stellen op afstand een postbus te bereiken, biedt IMAP veel voordelen, waaronder:
+
+* IMAP kan berichten zowel op de server op afstand opslaan als ze ophalen.
+* IMAP ondersteunt gelijktijdig actualiseren.
+* IMAP kan uitstekend worden gebruikt over langzame verbindingen omdat het gebruikers in staat stelt de structuur van berichten te bekijken zonder deze binnen te halen; het kan ook worden gebruikt om te zoeken op de server om zo de gegevensoverdracht tussen client en server te minimaliseren.
+
+Om een POP- of IMAP- server te installeren, zijn de volgende stappen nodig:
+
+[.procedure]
+====
+. Kies een IMAP- of POP -server die het beste aan de eisen voldoet. De volgende POP- en IMAP -servers zijn zeer bekend en zijn goede voorbeelden:
++
+** qpopper;
+** teapop;
+** imap-uw;
+** courier-imap;
+** dovecot;
++
+. Installeer de gewenste POP- of IMAP-daemon vanuit de Portscollectie.
+. Wijzig indien nodig [.filename]#/etc/inetd.conf# om de POP- of IMAP - server te laden.
+====
+
+[WARNING]
+====
+
+Let er wel op dat zowel POP en IMAP informatie, waaronder gegevens over gebruikersnaam en wachtwoord, onversleuteld versturen. Dit betekent, dat wanneer het gewenst is dat de uitwisseling van gegevens over deze protocollen versleuteld is, het verstandig is om te overwegen de sessies over man:ssh[1] te tunnelen of SSL te gebruiken. Het tunnelen van sessies wordt beschreven in crossref:security[security-ssh-tunneling,SSH tunnels] en SSL in crossref:security[openssl,OpenSSL].
+====
+
+[[local]]
+==== Toegang tot lokale postbussen
+
+Postbussen kunnen lokaal benaderd worden door direct op de server waarop de postbus wordt bewaard MUAs te gebruiken. Dit kan gedaan worden door programma's zoals mutt of man:mail[1] te gebruiken.
+
+[[mail-host]]
+=== De mailhost
+
+De mailhost is de naam van de server welke verantwoordelijk is voor het afleveren en ontvangen van mail voor de server en mogelijk voor het netwerk.
+
+[[sendmail]]
+== sendmail instellen
+
+man:sendmail[8] is de standaard Mail Transfer Agent (MTA) in FreeBSD. sendmail's taak is het accepteren van mail van gebruikersprogramma's (MUA ) en deze te bezorgen bij de juiste mailer zoals gedefinieerd in het betreffende configuratiebestand. sendmail kan ook netwerkverbindingen accepteren en mail in lokale postbussen afleveren of bezorgen bij een ander programma.
+
+sendmail gebruikt de volgende configuratiebestanden:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Bestandsnaam
+| Functie
+
+|[.filename]#/etc/mail/access#
+|bestand met de toegangsdatabase van sendmail
+
+|[.filename]#/etc/mail/aliases#
+|Aliases voor postbussen
+
+|[.filename]#/etc/mail/local-host-names#
+|Lijst van servers waarvoor sendmail mail accepteert
+
+|[.filename]#/etc/mail/mailer.conf#
+|Configuratie voor het mailerprogramma
+
+|[.filename]#/etc/mail/mailertable#
+|Aflevertabel voor de mailer
+
+|[.filename]#/etc/mail/sendmail.cf#
+|Hoofdconfiguratiebestand van sendmail
+
+|[.filename]#/etc/mail/virtusertable#
+|Tabellen voor virtuele gebruikers en domeinen
+|===
+
+=== [.filename]#/etc/mail/access#
+
+De toegangsdatabase definieert welke host(s) of IP-adressen toegang hebben tot de lokale mailserver en wat voor soort toegang ze hebben. Hosts kunnen in de lijst als `OK`, `REJECT`, of `RELAY` staan, of worden doorgevoerd naar de foutafhandelingsprocedure van sendmail met een bepaalde mailerfout. Hosts welke vermeld staan als `OK`, wat de standaard is, kunnen mail versturen naar deze host zolang de eindbestemming van de mail de lokale machine is. Hosts welke vermeld staan als `REJECT` worden voor alle verbindingen geweigerd. Hosts met een `RELAY` vermelding wordt toegestaan om via deze server mail naar elke bestemming te sturen.
+
+.Configureren van de sendmail toegangsdatabase
+[example]
+====
+[.programlisting]
+....
+cyberspammer.com	550 We accepteren geen mail van spammers
+FREE.STEALTH.MAILER@	550 We accepteren geen mail van spammers
+another.source.of.spam	REJECT
+okay.cyberspammer.com	OK
+128.32	RELAY
+....
+
+====
+
+In dit voorbeeld staan vijf vermeldingen. Mailafzenders die overeenkomen met de linkerzijde van de tabel worden beïnvloed door de actie die vermeld staan aan de rechterzijde van de tabel. De eerste twee voorbeelden geven een foutcode af aan de foutafhandelingsroutine van sendmail. Het bericht wordt bij de externe host bekend gemaakt wanneer een mail voldoet aan de linkerzijde van de tabel. De volgende regel weigert mail van een specifieke host op het Internet, `another.source.of.spam`. De volgende regel accepteert mailverbindingen van een host `okay.cyberspammer.com`, welke nauwkeuriger is dan de regel met `cyberspammer.com` erboven. Specifiekere regels vervangen minder specifieke. De laatste regel staat het doorsturen van elektronische mail toe vanaf hosts waarvan de IP-adressen beginnen met `128.32`. Deze hosts zijn dan in staat om via deze mailserver naar een andere bestemming mail te versturen.
+
+Wanneer dit bestand is bijgewerkt, dient `make` in [.filename]#/etc/mail/# te gedraaid te worden om de database bij te werken.
+
+=== [.filename]#/etc/mail/aliases#
+
+De aliasdatabase bevat een lijst met virtuele postbussen die verwijzen naar andere gebruiker(s), bestand(en), programma('s) of andere aliassen. Hier zijn een paar voorbeelden die gebruikt kunnen worden in [.filename]#/etc/mail/aliases#:
+
+.Mailaliassen
+[example]
+====
+[.programlisting]
+....
+root: localuser
+ftp-bugs: joe,eric,paul
+bit.bucket:  /dev/null
+procmail: "|/usr/local/bin/procmail"
+....
+
+====
+
+Het bestandsformaat is simpel; de postbusnaam aan de linkerzijde van de dubbele punt wordt verder uitgewerkt naar de doel(en) aan de rechterzijde. Het eerste voorbeeld breidt de postbus van `root` uit naar de postbus `localuser`, welke dan vervolgens weer wordt opgezocht in de aliasdatabase. Als er geen verdere overeenkomst wordt gevonden, dan wordt het bericht afgeleverd bij de lokale gebruiker `localuser`. Het volgende voorbeeld toont een mailinglijst. Mail voor de postbus `ftp-bugs` wordt doorverwezen naar de drie lokale postbussen `joe`, `eric` en `paul`. Merk op dat een externe postbus gespecificeerd kan worden als mailto:user@example.com[user@example.com]. Het volgende voorbeeld toont het schrijven van mail naar een bestand, in dit geval [.filename]#/dev/null#. Het laatste voorbeeld toont het sturen van mail naar een programma, in dit geval wordt het mailbericht doorgestuurd naar de standaard invoer van [.filename]#/usr/local/bin/procmail# via een UNIX(R) pijp.
+
+Wanneer dit bestand is bijgewerkt, dient `make` in [.filename]#/etc/mail/# gedraaid te worden om de database bij te werken.
+
+=== [.filename]#/etc/mail/local-host-names#
+
+Dit is een lijst van hostnamen die man:sendmail[8] moet accepteren als de lokale hostnaam. Hierin dienen alle hostnamen geplaatst te worden waarvoor sendmail mail moet ontvangen. Als deze mailserver mail moet ontvangen voor het domein `example.com` en de hostnaam is `mail.example.com`, dan ziet [.filename]#local-host-names# er ongeveer zo uit:
+
+[.programlisting]
+....
+example.com
+mail.example.com
+....
+
+Wanneer dit bestand is bijgewerkt, dient man:sendmail[8] opnieuw gestart te worden zodat het de veranderingen kan lezen.
+
+=== [.filename]#/etc/mail/sendmail.cf#
+
+Het hoofdinstellingenbestand van sendmail , [.filename]#sendmail.cf# controleert het algemene gedrag van sendmail, inclusief alles van het herschrijven van emailadressen tot het sturen van weigeringsberichten naar externe mailservers. Met zo'n diverse rol is dit instellingenbestand redelijk complex en vallen de details buiten het bereik van dit hoofdstuk. Gelukkig hoeft dit bestand maar zelden aangepast te worden voor standaard mailservers.
+
+Het hoofdinstellingenbestand van sendmail  kan gebouwd worden met man:m4[1] macro's die het gedrag en de mogelijkheden van sendmail  specificeren. Lees [.filename]#/usr/src/contrib/sendmail/cf/README# voor meer details.
+
+Wanneer dit bestand is bijgewerkt, dient man:sendmail[8] opnieuw gestart te worden om de wijzigingen door te voeren.
+
+=== [.filename]#/etc/mail/virtusertable#
+
+De [.filename]#virtusertable# verbindt mailadressen voor virtuele domeinen en postbussen met echte postbussen. Deze postbussen kunnen lokaal, op afstand, aliassen gedefinieerd in [.filename]#/etc/mail/aliases#, of bestanden zijn.
+
+.Voorbeeld van een mailtabel voor een virtueel domein
+[example]
+====
+[.programlisting]
+....
+root@example.com	root
+postmaster@example.com	postmaster@noc.example.net
+@example.com	joe
+....
+
+====
+
+In het voorbeeld hierboven staat een tabel voor een domein `example.com`. Dit bestand wordt van boven naar beneden verwerkt, en de eerste overeenkomende regel wordt gebruikt. De eerste regel verbindt mailto:root@example.com[root@example.com] met de lokale postbus `root`. De volgende regel verbindt mailto:postmaster@example.com[postmaster@example.com] met de postbus `postmaster` op de host `noc.example.net`. Als geen van de vorige regels van `example.com` overeenkomen, zal de laatste regel gebruikt worden, die alle andere post geadresseerd aan iemand bij `example.com` opvangt en naar de lokale postbus `joe` stuurt.
+
+[[mail-changingmta]]
+== De Mail Transfer Agent vervangen
+
+Zoals eerder vermeld wordt FreeBSD geleverd met  sendmail voorgeïnstalleerd als MTA (Mail Transfer Agent). Daarom regelt het standaard uitgaande en binnenkomende mail.
+
+In sommige gevallen willen systeembeheerders wegens uiteenlopende redenen hun MTA vervangen. Deze redenen variëren van het uitproberen van een andere MTA tot het installeren van een bepaalde functionaliteit of pakket dat afhankelijk is van een andere MTA.
+
+=== Een nieuwe MTA installeren
+
+Er is een waaier van MTA's beschikbaar. Een goed startpunt is de crossref:ports[ports,FreeBSD Ports Collectie] waar er veel gevonden kunnen worden. Het is natuurlijk mogelijk iedere MTA te gebruiken vanaf iedere locatie, zolang het draait op FreeBSD.
+
+Begin met het installeren van de nieuwe MTA. Als de MTA eenmaal geïnstalleerd is wordt er de kans gegeven te beslissen of de nieuwe MTA echt voldoet aan de eisen, en is het mogelijk de nieuwe software te configureren voordat deze het werk van sendmail overneemt. Bevestig voordat de MTA geïnstalleerd wordt dat de nieuwe software geen poging onderneemt systeemtoepassingen zoals [.filename]#/usr/bin/sendmail# te overschrijven, anders wordt de nieuwe software onmiddellijk in gebruik genomen voordat het is geconfigureerd.
+
+Neem de documentatie van de gekozen MTA door voor meer informatie over het configureren van de software.
+
+[[mail-disable-sendmail]]
+=== sendmail uitschakelen
+
+[WARNING]
+====
+
+Als sendmail's uitgaande emaildienst uitgeschakeld wordt, is het belangrijk dat het vervangen wordt door een alternatief systeem. Als ervoor gekozen wordt dit niet te doen, zullen systeemfunctionaliteiten zoals man:periodic[8] niet in staat zijn hun resultaten te bezorgen per email, zoals ze normaliter verwachten te kunnen doen. Vele delen van het systeem zullen verwachten een werkend systeem aan te treffen dat compatibel is met sendmail. Als toepassingen binaries van sendmail  blijven gebruiken om mail te versturen nadat deze uitgeschakeld werden, kan de mail in een inactieve sendmail wachtrij geplaatst worden, en nooit bezorgd worden.
+====
+
+Om sendmail volledig uit te schakelen, inclusief de uitgaande emaildienst, dient
+
+[.programlisting]
+....
+sendmail_enable="NO"
+sendmail_submit_enable="NO"
+sendmail_outbound_enable="NO"
+sendmail_msp_queue_enable="NO"
+....
+
+toegevoegd te worden aan [.filename]#/etc/rc.conf#.
+
+Als enkel sendmail's ingaande emaildienst uitgeschakeld dient te worden, dient
+
+[.programlisting]
+....
+sendmail_enable="NO"
+....
+
+toegevoegd te worden aan [.filename]#/etc/rc.conf#. Meer informatie over de opstartopties van  sendmail is beschikbaar in de hulppagina man:rc.sendmail[8].
+
+=== De nieuwe MTA starten tijdens het opstarten
+
+De nieuwe MTA kan gestart worden door deze instellingsregel toe te voegen aan [.filename]#/etc/rc.conf#, zoals het volgende voorbeeld voor postfix:
+
+[source,bash]
+....
+# echo 'postfix_enable=“YES”' >> /etc/rc.conf
+....
+
+De MTA zal nu automatisch tijdens het opstarten worden gestart.
+
+=== sendmail vervangen als de standaard systeemmailer
+
+Het programma sendmail is zo vanzelfsprekend als standaard software op UNIX(R) systemen dat sommige softwarepakketten ervan uitgaan dat  sendmail reeds geïnstalleerd en geconfigureerd is. Daarom voorzien vele alternatieve MTA's in compatibele implementaties van de opdrachtregelinterface van sendmail; dit vergemakkelijkt het gebruik van alternatieve MTA's als vervanging voor  sendmail.
+
+Bij het gebruiken van een alternatieve MTA moet men er zeker van zijn dat software die probeert de standaardtoepassingen van sendmail zoals [.filename]#/usr/bin/sendmail# te gebruiken, ook daadwerkelijk de gekozen alternatieve mailer gebruikt. Gelukkig heeft FreeBSD hiervoor een systeem, man:mailwrapper[8], dat deze taak van de systeembeheerder overneemt.
+
+Als sendmail werkt zoals origineel geïnstalleerd, bevat [.filename]#/etc/mail/mailer.conf# bij benadering het volgende:
+
+[.programlisting]
+....
+sendmail	/usr/libexec/sendmail/sendmail
+send-mail	/usr/libexec/sendmail/sendmail
+mailq		/usr/libexec/sendmail/sendmail
+newaliases	/usr/libexec/sendmail/sendmail
+hoststat	/usr/libexec/sendmail/sendmail
+purgestat	/usr/libexec/sendmail/sendmail
+....
+
+Dit wil zeggen dat wanneer een van deze algemene opdrachten (zoals [.filename]#sendmail# zelf) uitgevoerd wordt, het systeem in werkelijkheid een kopie van de mailwrapper genaamd [.filename]#sendmail# uitvoert, dat [.filename]#mailer.conf# controleert en [.filename]#/usr/libexec/sendmail/sendmail# uitvoert. Dit systeem maakt het eenvoudiger te specificeren welke toepassingen daadwerkelijk uitgevoerd worden wanneer deze standaard [.filename]#sendmail# functies aangeroepen worden.
+
+Als men bijvoorbeeld wil dat [.filename]#/usr/local/supermailer/bin/sendmail-compat# uitgevoerd wordt in plaats van sendmail, kan men [.filename]#/etc/mail/mailer.conf# als volgt aanpassen:
+
+[.programlisting]
+....
+sendmail	/usr/local/supermailer/bin/sendmail-compat
+send-mail	/usr/local/supermailer/bin/sendmail-compat
+mailq		/usr/local/supermailer/bin/mailq-compat
+newaliases	/usr/local/supermailer/bin/newaliases-compat
+hoststat	/usr/local/supermailer/bin/hoststat-compat
+purgestat	/usr/local/supermailer/bin/purgestat-compat
+....
+
+=== Afwerking
+
+Wanneer alles correct geconfigureerd is, dienen ofwel alle ongebruikte sendmail processen gestopt te worden en de processen behorend aan de nieuwe software gestart te worden, ofwel dient het systeem opnieuw gestart te worden. Herstarten geeft ook de mogelijkheid te controleren of de nieuwe MTA correct geconfigureerd is om tijdens het opstartproces gestart te worden.
+
+[[mail-trouble]]
+== Problemen oplossen
+
+=== Waarom is het nodig om de FQDN te gebruiken voor hosts op de site?
+
+Het is waarschijnlijk dat de host zich in een ander domein bevindt; bijvoorbeeld als het gewenst is om host `mompel` in het domein `bar.edu` vanuit domein `foo.bar.edu` te bereiken, is het nodig om er met de volledig gekwalificeerde domeinnaam naar te verwijzen, `mompel.bar.edu`, in plaats van slechts `mompel`.
+
+Traditioneel werd dit door BSD BIND resolvers toegestaan. De huidige versie van BIND die met FreeBSD wordt geleverd levert niet langer standaard afkortingen voor onvolledig gekwalificeerde domeinnamen anders dan het huidige domein. Dus moet een ongekwalificeerde host `mompel` òf als `mompel.foo.bar.edu` gevonden worden, òf wordt er naar gezocht in het root-domein.
+
+Dit verschilt van het vorige gedrag, waar de zoektocht doorging over `mompel.bar.edu`, en `bar.edu`. Zie RFC 1535 voor de redenen waarom dit als een slechte gewoonte en zelfs als beveiligingslek werd beschouwd.
+
+Als een goede tussenoplossing kan deze regel:
+
+[.programlisting]
+....
+search foo.bar.edu bar.edu
+....
+
+in plaats van het voorgaande:
+
+[.programlisting]
+....
+domain foo.bar.edu
+....
+
+in [.filename]#/etc/resolv.conf# geplaatst worden. Ben er echter zeker van dat de zoekvolgorde niet verder gaat dan de "grens tussen lokale en publieke regelgeving", zoals RFC 1535 het noemt.
+
+=== sendmail zegt mail loops back to myself
+
+Dit wordt in de FAQ van sendmail als volgt beantwoord:
+
+[.programlisting]
+....
+Deze foutmeldingen verschijnen:
+
+553 MX list for domain.net points back to relay.domain.net
+554 <user@domain.net>... Local configuration error
+
+Hoe kan dit probleem worden opgelost?
+
+Er is gevraagd om mail van het domein (bijvoorbeeld domain.net) naar een
+specifieke host door te sturen (in dit geval relay.domain.net) door
+gebruik te maken van een MX-regel, maar de machine die het door moet
+sturen herkent zichzelf niet als domain.net.  Voeg domain.net toe aan
+/etc/mail/local-host-names [bekend als /etc/sendmail.cw voor versies
+eerder dan 8.10] (als FEATURE(use_cw_file) gebruikt wordt) of voeg
+Cw domain.net toe aan /etc/mail/sendmail.cf.
+....
+
+De FAQ van sendmail is te vinden op http://www.sendmail.org/faq/[http://www.sendmail.org/faq/] en wordt aangeraden om te lezen indien enig "tweaken " van de mailinstallatie gewenst is.
+
+=== Hoe kan een mailserver op een inbel-PPP-host gedraaid worden?
+
+Het is gewenst om een FreeBSD-computer in een LAN met het Internet te verbinden. De FreeBSD-computer zal en mail-gateway voor het LAN zijn. De PPP-verbinding is niet toegewijd.
+
+Er zijn minstens twee manieren om dit te doen. Eén manier is om UUCP te gebruiken.
+
+Een andere manier is ervoor te zorgen dat een server die altijd met het Internet verbonden is secundaire MX-diensten voor het domein biedt. Als het domein bijvoorbeeld `example.com` is en de internetprovider `example.net` heeft ingesteld om secundaire MX-diensten voor het domein te bieden:
+
+[.programlisting]
+....
+example.com.		MX	10	example.com.
+			MX	20	example.net.
+....
+
+Er dient slechts één host als de uiteindelijke ontvanger gespecificeerd te worden (voeg `CW example.com` toe aan [.filename]#/etc/mail/sendmail.cf# op `example.com>`).
+
+Wanneer de verzendende `sendmail` probeert om mail af te leveren zal het proberen met `example.com` te verbinden via de modemverbinding. Waarschijnlijk zal dit een time-out geven omdat de computer niet online is. Het programma sendmail zal het automatisch aan de secundaire MX-site, de internetprovider (`example.net`) afleveren. De secundaire MX zal dan periodiek proberen om een verbinding te maken met de computer en de mail aan de primaire MX-host leveren (`example.com`).
+
+Het kan wenselijk zijn om iets als het onderstaande als inlogscript te gebruiken:
+
+[.programlisting]
+....
+#!/bin/sh
+# Zet mij in /usr/local/bin/pppmyisp
+( sleep 60 ; /usr/sbin/sendmail -q ) &
+/usr/sbin/ppp -direct pppmyisp
+....
+
+Indien er een apart inlogscript voor een gebruiker wordt aangemaakt, kan `sendmail -qRexample.com` gebruikt worden in plaats van het bovenstaande script. Dit zorgt ervoor dat alle mail in de mailrij voor `example.com` onmiddellijk verwerkt wordt.
+
+Een verdere verfijning van de situatie is deze:
+
+Bericht gestolen van de {freebsd-isp}.
+
+[.programlisting]
+....
+> we bieden de secundaire MX voor een klant.
+> De klant maakt automatisch verschillende keren per dag een verbinding
+> met onze diensten om de mailberichten naar zijn primaire MX te
+> sturen (we bellen zijn site niet indien er een mail voor zijn
+> domein arriveert).  Onze sendmail verstuurt de mailrij om de 30
+> minuten.  Op het moment moet de klant 30 minuten online blijven om
+> er zeker van te zijn dat alle mail naar de primaire MX is gegaan.
+>
+> Is er een commando dat sendmail er toe aanzet om alle mailberichten
+> nu te versturen?  De gebruiker heeft uiteraard geen root-rechten op
+> onze machine.
+
+In de sectie privacy flags van sendmail.cf staat een
+definitie Opgoaway,restrictqrun
+
+Verwijder restrictqrun om niet-root-gebruikers toe te staan te beginnen
+de rij te verwerken.  Het kan ook wenselijk zijn om de MXs opnieuw te
+rangschikken.  Wij zijn zo de eerste MX voor onze klanten, en we hebben
+dit gedefinieerd:
+
+# Als we de beste MX voor een host zijn, probeer direct in plaats van
+# een lokale configuratiefout te genereren.
+OwTrue
+
+Op deze manier zal een site op afstand rechtstreeks hier afleveren,
+zonder de verbinding van de klant te proberen.  Vervolgens wordt er naar
+de klant verstuurd.  Dit werkt alleen voor hosts, dus
+dient de klant hun mailcomputer customer.com te noemen en
+hostname.customer.com in de DNS de plaatsen.  Plaats een
+A-regel in de DNS voor customer.com.
+....
+
+=== Waarom blijven er fouten als Relaying Denied verchijnen wanneer er mail van andere hosts wordt verstuurd?
+
+In standaard FreeBSD-installaties is sendmail  geconfigureerd om alleen mail te versturen van de host waarop het draait. Als bijvoorbeeld een POP-server beschikbaar is, kunnen gebruikers mail controleren vanuit school, werk, of andere lokaties op afstand, maar zullen ze nog steeds niet in staat zijn om uitgaande emails van lokaties van buitenaf te versturen. Gewoonlijk zal er na enkele ogenblikken na de poging een email van MAILER-DAEMON worden verzonden met een foutbericht `5.7 Relaying Denied`.
+
+Er zijn verschillende manieren om dit te omzeilen. De oplossing die het meest voor de hand ligt, is om het adres van de internetprovider in een bestand relay-domains op [.filename]#/etc/mail/relay-domains# te zetten. Een snelle manier om dit te doen is:
+
+[source,bash]
+....
+# echo "your.isp.example.com" > /etc/mail/relay-domains
+....
+
+Nadat dit bestand is aangemaakt of bewerkt dient sendmail opnieuw gestart te worden. Dit werkt prima indien u een serverbeheerder bent en het niet wenselijk is om mail lokaal te verzenden, of indien het gewenst is om een point-en-click client/systeem op een andere machine of zelfs bij een andere internetprovider te gebruiken. Het is ook erg bruikbaar indien er slechts enkele email-accounts zijn aangemaakt. Als er een groot aantal adressen dient te worden toegevoegd, kan dit bestand in een tekstverwerker worden geopend en de domeinen worden toegevoegd, één per regel:
+
+[.programlisting]
+....
+your.isp.example.com
+other.isp.example.net
+users-isp.example.org
+www.example.org
+....
+
+Nu zal het verzenden van elke mail door dit systeem, verstuurd door elke host in deze lijst, lukken (aangenomen dat de gebruiker een account op het systeem heeft). Dit is een aardige manier om gebruikers toe te staan op afstand mail vanaf het systeem te verzenden zonder dat mensen wordt toegestaan om spam vanaf het systeem te verzenden.
+
+[[mail-advanced]]
+== Geavanceerde onderwerpen
+
+De volgende sectie behandelt meer ervaren onderwerpen zoals mailinstellingen en het instellen van mail voor het gehele domein.
+
+[[mail-config]]
+=== Basisinstellingen
+
+Het verzenden van email naar externe hosts zou onmiddellijk moeten werken, zolang [.filename]#/etc/resolv.conf# is aangemaakt of zolang er een nameserver wordt gedraaid. Indien het gewenst is dat mail voor de host aan de MTA (bijvoorbeeld sendmail) geleverd dient te worden op de FreeBSD-host, zijn er twee methoden:
+
+* Draai een eigen nameserver op een eigen domein, bijvoorbeeld `FreeBSD.org`
+* Zorg ervoor dat mail direct aan de host geleverd wordt. Dit wordt gedaan door mail direct aan de huidige DNS-naam voor de machine, bijvoorbeeld `example.FreeBSD.org`, te leveren.
+
+Onafhankelijk van de hierboven gekozen methode, dient de host, om er direct mail aan geleverd te krijgen, een permanent statisch IP-adres te hebben (niet een dynamisch adres, zoals dat bij de meeste PPP-inbelverbindingen het geval is). Indien er een firewall actief is, dient het SMTP-verkeer naar de host door te geven. Indien het gewenst is dat de host direct mail ontvangt, dient één van de twee onderstaande dingen geregeld te zijn:
+
+* Zorg ervoor dat de (laagstgenummerde) MX-regel in het DNS naar het IP-adres van de host wijst.
+* Zorg ervoor dat er geen MX-regel in het DNS is voor de host.
+
+Met elk van de bovenstaanden kan mail direct op de host ontvangen worden.
+
+Probeer dit:
+
+[source,bash]
+....
+# hostname
+example.FreeBSD.org
+# host example.FreeBSD.org
+example.FreeBSD.org has address 204.216.27.XX
+....
+
+Indien dit verschijnt, zal mail die direct naar mailto:yourlogin@example.FreeBSD.org[yourlogin@example.FreeBSD.org] zonder problemen moeten werken (aangenomen dat sendmail correct werkt op `example.FreeBSD.org`).
+
+Indien in plaats daarvan zoiets als dit verschijnt:
+
+[source,bash]
+....
+# host example.FreeBSD.org
+example.FreeBSD.org has address 204.216.27.XX
+example.FreeBSD.org mail is handled (pri=10) by hub.FreeBSD.org
+....
+
+zal alle mail die naar de host (`example.FreeBSD.org`) verzameld worden op `hub` onder dezelfde gebruikersnaam in plaats van direct naar de host verstuurd te worden.
+
+Bovenstaande informatie wordt door de DNS-server afgehandeld. De DNS-regel die informatie over het routen van mail bevat is de __M__ail e__X__change regel. Indien er geen MX-regel is, zal mail direct aan de host worden afgeleverd door middel van het IP-adres.
+
+De MX-regel voor `freefall.FreeBSD.org` zag er eens als volgt uit:
+
+[.programlisting]
+....
+freefall		MX	30	mail.crl.net
+freefall		MX	40	agora.rdrop.com
+freefall		MX	10	freefall.FreeBSD.org
+freefall		MX	20	who.cdrom.com
+....
+
+Te zien is dat `freefall` vele MX-regels had. Het laagste MX-getal hoort bij de host die de mail direct ontvangt indien beschikbaar; indien het om een of andere reden niet beschikbaar is, accepteren de anderen (soms " reserve-MXs" genoemd) tijdelijk berichten en geven ze die door wanneer een lager-genummerde host beschikbaar is, om uiteindelijk aan de laagstgenummerde host af te leveren.
+
+Alternatieve MX-sites zouden andere Internetverbindingen dan die van de host moeten hebben om het nuttigst te zijn. De internetprovider of een andere vriendelijke site zouden geen problemen moeten hebben met het leveren van deze dienst.
+
+[[mail-domain]]
+=== Mail voor het domein
+
+Om een "mailhost" (ook bekend als een mailserver) te installeren, is het nodig om mail die verzonden wordt naar de verschillende werkstations ernaar toe te leiden.  In principe dient alle mail voor elke hostnaam in het domein (in dit geval `*.FreeBSD.org`) geclaimd te worden en naar de mailserver omgeleid te worden zodat gebruikers hun mail op de hoofdmailserver kunnen ontvangen.
+
+Het gemakkelijkste is het indien er een gebruikersaccount met dezelfde _gebruikersnaam_ op beide machines bestaat. Hiervoor dient man:adduser[8] gebruikt te worden.
+
+De mailhost die het meest gebruikt zal worden is de toegewezen mailuitwisselaar voor elk werkstation in het netwerk. Dit wordt in de DNS-instellingen als volgt gedaan:
+
+[.programlisting]
+....
+example.FreeBSD.org	A	204.216.27.XX	; werkstation
+		MX	10	hub.FreeBSD.org	; mailhost
+....
+
+Dit zal mail voor het werkstation naar de mailhost leiden onafhankelijk van waar de A-regel naar toe wijst. De mail wordt naar de MX-host verzonden.
+
+Om dit te doen is het nodig om een eigen DNS-server te draaien. Neem, indien dit niet het geval is of het niet mogelijk is om een eigen DNS-server te draaien, contact op met degene die de DNS levert.
+
+De volgende informatie is nuttig indien email virtueel gehost wordt. In dit voorbeeld wordt aangenomen dat er een klant is met een eigen domein, in dit geval `customer1.org`, en dat alle mail voor `customer1.org` naar de mailhost `mail.myhost.com` verzonden dient te worden. De regel in het DNS dient er als volgt uit te zien:
+
+[.programlisting]
+....
+customer1.org		MX	10	mail.myhost.com
+....
+
+Het is _niet_ nodig om een A-regel voor `customer1.org` te hebben als er voor dat domein alleen email afgehandeld dient te worden.
+
+[NOTE]
+====
+Let erop dat `customer1.org` pingen niet werkt tenzij er een A-regel voor bestaat.
+====
+
+Als laatste dient sendmail op de mailhost te weten voor welke domeinen en/of hostnamen het mail dient te accepteren. Er bestaan enkele verschillende manieren om dit te doen. Elk van de volgende manieren zal werken:
+
+* Voeg de hosts toe aan het bestand [.filename]#/etc/mail/local-host-names# indien `FEATURE(use_cw_literal)`. Indien er een versie van sendmail wordt gebruikt die ouder is dan 8.10, is het te gebruiken bestand [.filename]#/etc/sendmail.cw#.
+* Voeg een regel met `Cwyour.host.com` toe aan [.filename]#/etc/sendmail.cf# of aan [.filename]#/etc/mail/sendmail.cf# indien versie 8.10 of nieuwer van sendmail wordt gebruikt.
+
+[[SMTP-UUCP]]
+== SMTP met UUCP
+
+De instellingen van sendmail die met FreeBSD worden geleverd zijn ontworpen voor sites die een directe verbinding met het Internet hebben. Sites waarvoor de mail via UUCP willen uitwisselen dienen een ander instellingenbestand voor sendmail te installeren.
+
+Het handmatig bijstellen van [.filename]#/etc/mail/sendmail.cf# is een geavanceerd onderwerp. Versie 8 van sendmail genereert instellingenbestanden via man:m4[1] preprocessing, waarbij het eigenlijke instellen op een hoger abstractieniveau plaatsvindt. De instellingenbestanden voor man:m4[1] kunnen onder [.filename]#/usr/shared/sendmail/cf# gevonden worden. Het bestand [.filename]#README# in de map [.filename]#cf# kan dienen als een basisintroductie tot het instellen van man:m4[1].
+
+De beste manier om UUCP te ondersteunen is het gebruiken van de eigenschap `mailertable`. Dit maakt een database aan die sendmail kan gebruiken om beslissingen over routes te nemen.
+
+Als eerste dient het [.filename]#.mc#-bestand aangemaakt te worden. De map [.filename]#/usr/shared/sendmail/cf/cf# bevat enkele voorbeelden. Indien het bestand [.filename]#foo.mc# heet, hoeft slechts het volgende gedaan te worden om het in een geldig [.filename]#sendmail.cf# om te zetten:
+
+[source,bash]
+....
+# cd /etc/mail
+# make foo.cf
+# cp foo.cf /etc/mail/sendmail.cf
+....
+
+Een typisch [.filename]#.mc#-bestand kan er als volgt uitzien:
+
+[.programlisting]
+....
+VERSIONID(`Uw versienummer') OSTYPE(bsd4.4)
+
+FEATURE(accept_unresolvable_domains)
+FEATURE(nocanonify)
+FEATURE(mailertable, `hash -o /etc/mail/mailertable')
+
+define(`UUCP_RELAY', uw.uucp.relay)
+define(`UUCP_MAX_SIZE', 200000)
+define(`confDONT_PROBE_INTERFACES')
+
+MAILER(local)
+MAILER(smtp)
+MAILER(uucp)
+
+Cw	uw.alias.host.naam
+Cw	uwuucpnodenaam.UUCP
+....
+
+De regels die de eigenschappen `accept_unresolvable_domains`, `nocanonify`, en `confDONT_PROBE_INTERFACES` bevatten zorgen ervoor dat er geen gebruik wordt gemaakt van het DNS tijdens het afleveren van mail. De clausule `UUCP_REPLAY` is nodig om UUCP-aflevering te ondersteunen. Hier dient een hostnaam op het Internet ingevuld te worden die .UUCP pseudo-domeinadressen kan afhandelen, waarschijnlijk zal dit de mailrelay van de Internetprovider zijn.
+
+Nadat dit gedaan is, is er een bestand [.filename]#/etc/mail/mailertable# nodig. Indien er slechts één verbinding naar buiten is die voor alle mails gebruikt wordt, zal het volgende bestand volstaan:
+
+[.programlisting]
+....
+#
+# makemap hash /etc/mail/mailertable.db < /etc/mail/mailertable
+.				uucp-dom:uw.uucp.relay
+....
+
+Een complexer voorbeeld kan er als volgt uitzien:
+
+[.programlisting]
+....
+#
+# makemap hash /etc/mail/mailertable.db < /etc/mail/mailertable
+#
+horus.interface-business.de    uucp-dom:horus
+.interface-business.de         uucp-dom:if-bus
+interface-business.de          uucp-dom:if-bus
+.heep.sax.de                   smtp8:%1
+horus.UUCP                     uucp-dom:horus
+if-bus.UUCP                    uucp-dom:if-bus
+.                              uucp-dom:
+....
+
+De eerste drie regels behandelen speciale gevallen waarbij domein-geadresseerde mail niet naar de standaardroute verzonden dient te worden, maar in plaats daarvan naar een UUCP-buur om het afleverpad "af te snijden". De volgende regel handelt mail naar het lokale Ethernetdomein die met SMTP afgeleverd kan worden af. Als laatste worden UUCP-buren in de .UUCP-pseudodomeinnotatie genoemd, om een `uucp-buur!ontvanger`-overname toe te staan. De laatste regel bestaat altijd uit een enkele punt, dat met al het andere matcht, met UUCP-aflevering naar een UUCP-buur die als universele mail-gateway naar de wereld dient. Alle nodenamen achter het sleutelwoord `uucp-dom:` dienen geldige UUCP-buren te zijn, dat met het commando `uuname` gecontroleerd kan worden.
+
+Dit bestand dient naar een DBM-database omgezet te worden voor gebruik. De opdrachtregel om dit te doen kan het beste als commentaar bovenaan het bestand [.filename]#mailertable# gezet worden. Deze opdracht dient telkens wanneer het bestand [.filename]#mailertable# wordt gewijzigd uitgevoerd te worden.
+
+Laatste tip: indien de werking van een zekere mailroute niet zeker is, kan de optie `-bt` van sendmail gebruikt worden. Het start sendmail in _adrestestmodus_ op; voer `3,0` gevolgd door het adres dat voor de mailrouting getest dient te worden in. De laatste regel bevat de gebruikte interne mailagent, de bestemmingshost waarmee deze agent aangeroepen wordt, en het (mogelijk vertaalde) adres. Deze modus kan door het typen van kbd:[Ctrl+D] verlaten worden.
+
+[source,bash]
+....
+% sendmail -bt
+ADDRESS TEST MODE (ruleset 3 NOT automatically invoked)
+Enter <ruleset> <address>
+> 3,0 foo@example.com
+canonify           input: foo @ example . com
+...
+parse            returns: $# uucp-dom $@ uw.uucp.relay $: foo < @ example . com . >
+> ^D
+....
+
+[[outgoing-only]]
+== Instellen om alleen te versturen
+
+Er zijn veel gevallen waarbij het gewenst is om enkel mail te verzenden via een relay. Voorbeelden hiervan zijn:
+
+* De computer is een desktop, maar het is gewenst om programma's als man:send-pr[1] te gebruiken. Hiervoor dient de mailrelay van de internetprovider gebruikt te worden.
+* De computer is een server welke mail niet lokaal verwerkt, maar alle mail voor verwerking doorstuurt.
+
+Zowat elke MTA kan deze specifieke taak vervullen. Helaas kan het erg moeilijk zijn om een MTA  met alle mogelijkheden correct in te stellen om alleen uitgaande mail te behandelen. Programma's als  sendmail en postfix zijn hiervoor grotendeels overbodig.
+
+Ook kan het zijn dat de overeenkomst van een typisch internetabonnement het draaien van een "mail server" verbiedt.
+
+De gemakkelijkste manier om aan deze behoeften te voldoen is door de port package:mail/ssmtp[] te installeren. Voer als `root` de volgende opdrachten uit:
+
+[source,bash]
+....
+# cd /usr/ports/mail/ssmtp
+# make install replace clean
+....
+
+Eenmaal geïnstalleerd kan package:mail/ssmtp[] door middel van het vier-regelige bestand [.filename]#/usr/local/etc/ssmtp/ssmtp.conf# ingesteld worden:
+
+[.programlisting]
+....
+root=uwechteemail@example.com
+mailhub=mail.example.com
+rewriteDomain=example.com
+hostname=_HOSTNAME_
+....
+
+Let erop dat het echte emailadres voor `root` gebruikt wordt. Vervang `mail.example.com` door de uitgaande mail relay van de internetprovider (ook wel de "uitgaande mailserver" of "SMTP-server" genoemd).
+
+Let erop dat sendmail uitgeschakeld wordt, inclusief de uitgaande maildienst. Raadpleeg <<mail-disable-sendmail>> voor details.
+
+package:mail/ssmtp[] heeft nog meer mogelijkheden. Raadpleeg het voorbeeldinstelbestand [.filename]#/usr/local/etc/ssmtp# of de hulppagina van ssmtp voor enkele voorbeelden en meer informatie.
+
+Door ssmtp op deze manier in te stellen kan alle software op de computer welke mail dient te versturen correct functioneren, zonder dat het beleid van de internetprovider geschonden wordt of dat de computer gekaapt kan worden om spam mee te versturen.
+
+[[SMTP-dialup]]
+== Mail gebruiken met een inbelverbinding
+
+Indien het IP-adres statisch is, is het niet nodig om de standaardwaarden aan te passen. De toegewezen Internetnaam dient als hostnaam gebruikt te worden waarna sendmail  de rest kan doen.
+
+Indien het IP-adres dynamisch is en er een inbelverbinding naar het Internet gebruikt wordt, is de postbus waarschijnlijk op de mailserver van de Internetprovider geplaatst. Stel dat het domein van de Internetprovider `example.net` is, dat de gebruikersnaam `gebruiker` is, dat de machine `bsd.home` is, en dat volgens de Internetprovider `relay.example.net` als mailrelay gebruikt kan worden.
+
+Om mail van de postbus te ontvangen, dient er een ontvangstagent geïnstalleerd te worden. Het gereedschap fetchmail is een goede keuze omdat het veel verschillende protocollen ondersteunt. Dit programma is als pakket of vanuit de Portscollectie ( package:mail/fetchmail[]) beschikbaar. Normaliter levert de Internetprovider POP. Indien gebruikers-PPP gebruikt wordt, kan de mail automatisch worden opgehaald wanneer er een verbinding met Internet tot stand is gebracht door middel van de volgende regel in [.filename]#/etc/ppp/ppp.linkup#:
+
+[.programlisting]
+....
+MYADDR:
+!bg su gebruiker -c fetchmail
+....
+
+Indien sendmail gebruikt wordt ( zoals hieronder te zien is) om mail aan niet-lokale accounts af te leveren, is het waarschijnlijk gewenst dat sendmail  de mailrij verwerkt zodra er een Internetverbinding tot stand is gebracht. Hiervoor dient de volgende opdracht na de `fetchmail`-opdracht in [.filename]#/etc/ppp/ppp.linkup# geplaatst te worden:
+
+[.programlisting]
+....
+  !bg su gebruiker -c "sendmail -q"
+....
+
+Aangenomen wordt dat er een account voor `gebruiker` op `bsd.home` aanwezig is. In de thuismap van `gebruiker` op `bsd.home` dient een bestand [.filename]#.fetchmailrc# aangemaakt te worden:
+
+[.programlisting]
+....
+poll example.net protocol pop3 fetchall pass MijnGeheim
+....
+
+Dit bestand dient alleen voor `gebruiker` leesbaar te zijn aangezien dit bestand het wachtwoord `MijnGeheim` bevat.
+
+Om mail met de correcte `from:`-header te versturen, dient sendmail mailto:gebruiker@example.net[gebruiker@example.net] in plaats van mailto:gebruiker@bsd.home[gebruiker@bsd.home] te gebruiken. Het kan ook wenselijk zijn om sendmail alle mail via `relay.example.net` te versturen, om sneller mail te verzenden.
+
+Het volgende [.filename]#.mc# zou voldoende moeten zijn:
+
+[.programlisting]
+....
+VERSIONID(`bsd.home.mc version 1.0')
+OSTYPE(bsd4.4)dnl
+FEATURE(nouucp)dnl
+MAILER(local)dnl
+MAILER(smtp)dnl
+Cwlocalhost
+Cwbsd.home
+MASQUERADE_AS(`example.net')dnl
+FEATURE(allmasquerade)dnl
+FEATURE(masquerade_envelope)dnl
+FEATURE(nocanonify)dnl
+FEATURE(nodns)dnl
+define(`SMART_HOST', `relay.example.net')
+Dmbsd.home
+define(`confDOMAIN_NAME', `bsd.home')dnl
+define(`confDELIVERY_MODE', `deferred')dnl
+....
+
+In de vorige sectie staan de details over het omzetten van een [.filename]#.mc#-bestand in bestand [.filename]#sendmail.cf#. Ook dient sendmail herstart te worden na het wijzigen van [.filename]#sendmail.cf#.
+
+[[SMTP-Auth]]
+== SMTP-authenticatie
+
+Het hebben van SMTP-authenticatie op een mailserver heeft een aantal voordelen. SMTP- authenticatie kan een extra beveiligingslaag toevoegen aan sendmail, en het geeft mobiele gebruikers die van hosts wisselen de mogelijkheid om dezelfde mailserver te gebruiken zonder dat ze telkens de instellingen van hun mailclient moeten veranderen.
+
+[.procedure]
+====
+
+. Installeer package:security/cyrus-sasl2[] vanuit de ports. Deze port is te vinden in package:security/cyrus-sasl2[]. De port package:security/cyrus-sasl2[] ondersteund een aantal opties tijdens de compilatie. Voor de SMTP-authenticatiemethode die hier gebruikt wordt, dient de optie `LOGIN` te zijn uitgezet.
+. Voeg nadat package:security/cyrus-sasl2[] is geïnstalleerd deze regel toe aan [.filename]#/usr/local/lib/sasl2/Sendmail.conf#:
++
+[.programlisting]
+....
+pwcheck_method: saslauthd
+....
++
+. Installeer vervolgens package:security/cyrus-sasl2-saslauthd[], en voeg de volgende regel toe aan [.filename]#/etc/rc.conf#:
++
+[.programlisting]
+....
+saslauthd_enable="YES"
+....
++ 
+en start vervolgens het saslauthd-daemon op:
++
+[source,bash]
+....
+# service saslauthd start
+....
++ 
+Deze daemon fungeert als een onderhandelaar voor sendmail die zich tegen de FreeBSD [.filename]#passwd#-database authenticeert. Dit bespaart de moeite van het opnieuw creëren van een nieuwe verzameling gebruikersnamen en wachtwoorden voor elke gebruiker die SMTP-authenticatie nodig heeft, en het houdt de wachtwoorden voor het inloggen en de mail hetzelfde.
+. Voeg de volgende regels toe aan [.filename]#/etc/make.conf#:
++
+[.programlisting]
+....
+SENDMAIL_CFLAGS=-I/usr/local/include/sasl -DSASL
+SENDMAIL_LDFLAGS=-L/usr/local/lib
+SENDMAIL_LDADD=-lsasl2
+....
++ 
+Deze regels geven sendmail de juiste instelopties om tijdens het compileren met package:cyrus-sal2[] te linken. Zorg ervoor dat package:cyrus-sasl2[] is geïnstalleerd voordat sendmail wordt gehercompileerd.
+. Hercompileer sendmail door de volgende opdrachten uit te voeren:
++
+[source,bash]
+....
+# cd /usr/src/lib/libsmutil
+# make cleandir && make obj && make
+# cd /usr/src/lib/libsm
+# make cleandir && make obj && make
+# cd /usr/src/usr.sbin/sendmail
+# make cleandir && make obj && make && make install
+....
++ 
+Het compileren van sendmail zou geen problemen moeten geven indien [.filename]#/usr/src# niet veel veranderd is en dat de benodigde gedeelde bibliotheken aanwezig zijn.
+. Nadat sendmail is gecompileerd en opnieuw is gecompileerd, dient [.filename]#/etc/mail/freebsd.mc# (of het plaatselijke [.filename]#.mc#-bestand) gewijzigd te worden. Veel beheerders kiezen ervoor om de uitvoer van man:hostname[1] als [.filename]#.mc#-bestandsnaam te gebruiken vanwege de uniciteit. Voeg deze regels toe:
++
+[.programlisting]
+....
+dnl set SASL options
+TRUST_AUTH_MECH(`GSSAPI DIGEST-MD5 CRAM-MD5 LOGIN')dnl
+define(`confAUTH_MECHANISMS', `GSSAPI DIGEST-MD5 CRAM-MD5 LOGIN')dnl
+....
++ 
+Deze opties stellen de verschillende beschikbare methoden voor sendmail in om gebruikers te authenticeren. Gebruik de bijgeleverde documentatie indien een andere methode dan pwcheck gewenst is.
+. Voer als laatste man:make[1] in [.filename]#/etc/mail# uit. Hierdoor wordt het nieuwe [.filename]#.mc#-bestand uitgevoerd en wordt een bestand [.filename]#freebsd.cf# (of de plaatselijke variant ervan) aangemaakt. Voer hierna de opdracht `make install restart` uit, wat het bestand naar [.filename]#sendmail.cf# kopieert en sendmail  op de juiste manier herstart. In [.filename]#/etc/mail/Makefile# staat meer informatie over dit proces.
+====
+
+Indien alles goed is gegaan, moet het mogelijk zijn om de inloginformatie in de mailclient in te voeren en een testbericht te versturen. Zet voor verdere onderzoekingen de `LogLevel` van sendmail op 13 en houdt [.filename]#/var/log/maillog# in de gaten voor foutmeldingen.
+
+Refereer naar de sendmail-pagina betreffende http://www.sendmail.org/~ca/email/auth.html[ SMTP-authenticatie] voor meer informatie.
+
+[[mail-agents]]
+== Mail User Agents
+
+Een mail user agent (MUA) is een toepassing die wordt gebruikt om email te versturen en te ontvangen. Bovendien, omdat email "evolueert" en steeds complexer wordt, worden MUAs steeds krachtiger in de manier waarop ze met email omgaan; dit biedt gebruikers verhoogde functionaliteit en flexibiliteit. FreeBSD ondersteunt verschillende mail user agents die allemaal eenvoudig geïnstalleerd kunnen worden door de crossref:ports[ports, FreeBSD Ports Collectie] te gebruiken. Gebruikers kunnen kiezen tussen grafische emailclients zoals evolution  of balsa, op de console gebaseerde clients zoals mutt, alpine of `mail`, of de webinterface die door sommige grote organisaties wordt gebruikt.
+
+[[mail-command]]
+=== mail
+
+man:mail[1] is de standaard mail user agent (MUA) in FreeBSD. Het is een consolegebaseerde MUA die alle basisfunctionaliteit biedt die nodig is om tekstgebaseerde email te verzenden en te ontvangen, maar het is beperkt in de mogelijkheden om met bijlagen om te gaan en het ondersteunt alleen plaatselijke postbussen.
+
+Hoewel `mail` van huis uit geen ondersteuning voor POP- of IMAP -servers biedt, kunnen deze postbussen gedownload worden naar een lokaal [.filename]#mbox#-bestand door een toepassing als fetchmail te gebruiken, welke later in dit hoofdstuk behandeld wordt (<<mail-fetchmail>>).
+
+Draai `mail` om email te versturen en te ontvangen:
+
+[source,bash]
+....
+% mail
+....
+
+De inhoud van de gebruikerspostbus in [.filename]#/var/mail# wordt automatisch gelezen door het programma `mail`. Indien de postbus leeg is, eindigt het programma het een melding dat er geen mail gevonden kon worden. Wanneer de postbus is gelezen, wordt de applicatie-interface gestart, en wordt er een berichtenlijst weergegeven. Berichten worden automatisch genummerd, zoals in het volgende voorbeeld te zien is:
+
+[source,bash]
+....
+Mail version 8.1 6/6/93.  Type ? for help.
+"/var/mail/marcs": 3 messages 3 new
+>N  1 root@localhost        Mon Mar  8 14:05  14/510   "test"
+ N  2 root@localhost        Mon Mar  8 14:05  14/509   "user account"
+ N  3 root@localhost        Mon Mar  8 14:05  14/509   "sample"
+....
+
+Berichten kunnen nu worden gelezen door middel van het commando kbd:[t] van `mail`, gevolgd door het gewenste berichtnummer. In dit voorbeeld wordt de eerste email gelezen:
+
+[source,bash]
+....
+& t 1
+Message 1:
+From root@localhost  Mon Mar  8 14:05:52 2004
+X-Original-To: marcs@localhost
+Delivered-To: marcs@localhost
+To: marcs@localhost
+Subject: test
+Date: Mon,  8 Mar 2004 14:05:52 +0200 (SAST)
+From: root@localhost (Charlie Root)
+
+This is a test message, please reply if you receive it.
+....
+
+Zoals in bovenstaand voorbeeld te zien is, zorgt de toets kbd:[t] ervoor dat het bericht met volledige headers wordt getoond. Om de berichtenlijst nogmaals weer te geven, dient de toets kbd:[h] gebruikt te worden.
+
+Er kan met `mail` op een email gereageerd worden, door gebruik te maken één van de toetsen kbd:[R] of kbd:[r]. De toets kbd:[R] vertelt `mail` dat er alleen aan de verzender van het bericht geantwoord dient te worden, terwijl de toets kbd:[r] niet alleen aan de verzender antwoordt, maar ook aan andere ontvangers van het bericht. Het is ook mogelijk om achter deze commando's het berichtnummer te plaatsen waarop gereageerd dient te worden. Nadat dit gedaan is , dient het antwoord gegeven te worden, en dient het einde van het bericht aangegeven te worden met een enkele kbd:[.] op een nieuwe regel. Een voorbeeld staat hieronder:
+
+[source,bash]
+....
+& R 1
+To: root@localhost
+Subject: Re: test
+
+Thank you, I did get your email.
+.
+EOT
+....
+
+Om een nieuwe email te verzenden, dient de toets kbd:[m] gebruikt te worden, gevolgd door het adres van de ontvanger. Er kunnen meerdere ontvangers gespecificeerd worden door ze met een kbd:[,] te scheiden. Hierna kan het onderwerp van het bericht worden gegeven, gevolgd door de inhoud van het bericht. Het einde van het bericht dient te worden aangegeven door een enkele kbd:[.] op een nieuwe regel te plaatsen.
+
+[source,bash]
+....
+& mail root@localhost
+Subject: I mastered mail
+
+Now I can send and receive email using mail ... :)
+.
+EOT
+....
+
+Binnen het programma `mail` kan op elk moment de opdracht kbd:[?] gebruikt worden om hulp weer te geven, hiervoor kan ook de hulppagina man:mail[1] worden geraadpleegd.
+
+[NOTE]
+====
+Zoals eerder is aangegeven, is het programma man:mail[1] van origine niet ontworpen om met bijlagen om te gaan, dus behandelt het deze slecht. Nieuwere MUAs zoals mutt gaan veel intelligenter met bijlagen om. Maar indien het programma `mail` nog steeds geprefereerd wordt, kan de port package:converters/mpack[] van aanzienlijk nut zijn.
+====
+
+[[mutt-command]]
+=== mutt
+
+mutt is een kleine doch zeer krachtige mail user agent, met uitstekende mogelijkheden, waaronder:
+
+* De mogelijkheid om berichten te threaden;
+* PGP-ondersteuning voor het digitaal ondertekenen en versleutelen van email;
+* MIME-ondersteuning;
+* Maildir-ondersteuning;
+* Erg goed aan te passen.
+
+Al deze eigenschappen zorgen ervoor dat mutt  een van de meest geavanceerde beschikbare mail user agents is. Op http://www.mutt.org[http://www.mutt.org] staat meer informatie.
+
+De stabiele versie van mutt kan geïnstalleerd worden door de port package:mail/mutt[] te gebruiken, terwijl de huidige ontwikkelaarsversie geïnstalleerd kan worden via de port package:mail/mutt-devel[]. Nadat de port is geïnstalleerd, kan mutt gestart worden met het volgende commando:
+
+[source,bash]
+....
+% mutt
+....
+
+mutt zal automatisch de inhoud van de gebruikerspostbus in [.filename]#/var/mail# lezen en de inhoud weergeven indien van toepassing. Indien er geen mails gevonden zijn in de gebruikerspostbus, zal mutt  wachten voor opdrachten van de gebruiker. Het onderstaande voorbeeld laat zien hoe mutt  een lijst berichten weergeeft:
+
+image::mutt1.png[]
+
+Selecteer om een email te lezen deze met de cursortoetsen, en sla de toets kbd:[Enter] aan. Een voorbeeld waarbij mutt email laat zien staat hieronder:
+
+image::mutt2.png[]
+
+Net zoals het commando man:mail[1] staat mutt  gebruikers toe om alleen de afzender alsook alle ontvangers te beantwoorden. Om alleen de afzender van de email te antwoorden, wordt de toets kbd:[r] gebruikt. Om aan een groep te antwoorden, welke aan zowel de originele afzender als aan alle berichtontvangers wordt gestuurd, wordt de toets kbd:[g] gebruikt.
+
+[NOTE]
+====
+mutt maakt gebruikt van het programma man:vi[1] als tekstverwerker voor het aanmaken en beantwoorden van emails. De gebruiker kan dit aanpassen door een eigen [.filename]#.muttrc# aan te maken in hun thuismap en de variabele `editor` of de omgevingsvariabele `EDITOR` aan te passen. Zie http://www.mutt.org/[http://www.mutt.org/] voor meer informatie over het instellen van mutt.
+====
+
+Voor het opstellen van een nieuw mailbericht wordt de toets kbd:[m] gebruikt. Nadat er een geldig bericht is gegeven, start mutt man:vi[1] op en kan de mail geschreven worden. Nadat de inhoud van de mail is geschreven, zal mutt nadat `vi` verlaten is, zichzelf hervatten en een overzichtsscherm van de te verzenden mail afbeelden. Om de mail te versturen wordt de toets kbd:[y] gebruikt. Een voorbeeld van het overzichtsscherm is hieronder te zien:
+
+image::mutt3.png[]
+
+mutt bevat ook uitgebreide hulp, welke in de meeste menu's geactiveerd kan worden door de toets kbd:[?] aan te slaan. De bovenste regel geeft ook de relevante toetsen aan.
+
+[[alpine-command]]
+=== alpine
+
+alpine richt zich op de beginnende gebruiker, maar bevat ook geavanceerde mogelijkheden.
+
+[WARNING]
+====
+
+Er zijn in het verleden verschillende kwetsbaarheden voor alpine ontdekt, welke aanvallers op afstand in staat stelden om willekeurige code als gebruikers op het lokale systeem uit te voeren, door een speciaal voorbereide email te versturen. Alle _bekende_ problemen van dit type zijn gerepareerd, maar de code van alpine is op een zeer onveilige manier geschreven en de beveiligingsofficier van FreeBSD gelooft dat het waarschijnlijk is dat er nog meer onontdekte kwetsbaarheden zijn. Installeer alpine op eigen risico.
+====
+
+De huidige versie van alpine kan door middel van de port package:mail/alpine[] geïnstalleerd worden. Wanneer de port geïnstalleerd is, kan alpine met het volgende commando gestart worden:
+
+[source,bash]
+....
+% alpine
+....
+
+De eerste keer dat alpine wordt gedraaid geeft het een welkomstpagina met een korte introductie weer, alsmede een verzoek van het ontwikkelteam van alpine om een anoniem emailbericht te versturen wat ze in staat stelt om te beoordelen hoeveel gebruikers hun client gebruiken. Druk op kbd:[Enter] om dit anonieme bericht te versturen, of druk op kbd:[E] om het welkomstscherm te verlaten zonder een anoniem bericht te versturen. Een voorbeeld van het welkomstscherm is hieronder te zien:
+
+image::pine1.png[]
+
+Vervolgens wordt het hoofdmenu getoond, waarin gemakkelijk met de cursortoetsen kan worden genavigeerd. Dit hoofdmenu biedt afkortingen voor het schrijven van nieuwe mail, het doorbladeren van mailmappen, en zelfs het beheren van het adresboek. Onder het hoofdmenu worden relevante toetscombinaties voor de huidige taak getoond.
+
+De standaardmap die door alpine wordt geopend is de [.filename]#inbox#. Gebruik de toets kbd:[I] om de berichtenindex te zien, of selecteer de optie [.guimenuitem]#MESSAGE INDEX# zoals hieronder te zien is:
+
+image::pine2.png[]
+
+De berichtenindex geeft de berichten in de huidige map weer, en kan met de cursortoetsen worden genavigeerd. Gemarkeerde berichten kunnen worden gelezen door op kbd:[Enter] te drukken.
+
+image::pine3.png[]
+
+In onderstaand screenshot wordt een voorbeeldbericht door alpine weergegeven. Toetsencombinaties worden ter referentie aan de onderkant van het scherm weergegeven. Een voorbeeld van een van deze combinaties is de toets kbd:[r], welke de MUA vertelt op het huidige bericht te antwoorden.
+
+image::pine4.png[]
+
+Voor het beantwoorden van een bericht wordt in alpine gebruikt gemaakt van de tekstverwerker pico, welke standaard bij alpine wordt geïnstalleerd. Het programma pico maakt het gemakkelijk om in het bericht te navigeren en is meer vergevingsgezind voor nieuwe gebruikers dan man:vi[1] of man:mail[1]. Wanneer het antwoord voltooid is, kan het bericht worden verzonden door kbd:[Ctrl+X] te gebruiken. Het programma alpine zal om bevestiging vragen.
+
+image::pine5.png[]
+
+Het programma alpine kan worden aangepast door de optie [.guimenuitem]#SETUP# van het hoofdmenu te gebruiken. Raadpleeg http://www.washington.edu/pine/[http://www.washington.edu/pine/] voor meer informatie.
+
+[[mail-fetchmail]]
+== fetchmail gebruiken
+
+fetchmail is een volwaardige client voor IMAP en POP welke gebruikers in staat stelt om automatisch mail van  IMAP- en  POP-servers op afstand naar plaatselijke postbussen te downloaden; daar kan het gemakkelijker worden benaderd. fetchmail  kan met de port package:mail/fetchmail[] worden geïnstalleerd, en biedt verschillende mogelijkheden, waaronder:
+
+* Ondersteuning voor POP3, APOP, KPOP, IMAP, ETRN, en ODMR protocollen.
+* De mogelijkheid om mail via SMTP door te sturen, wat filteren, doorsturen, en aliassen toestaat om normaal te functioneren.
+* Kan in daemon-modus gedraaid worden om periodiek op nieuwe berichten te controleren.
+* Kan verschillende postbussen ophalen en ze afhankelijk van de instellingen naar verschillende plaatselijke gebruikers doorsturen.
+
+Hoewel het niet de bedoeling van dit document is om alle mogelijkheden van fetchmail uit te leggen, zullen sommige basismogelijkheden worden uitgelegd. Het gereedschap fetchmail heeft een instellingenbestand [.filename]#.fetchmailrc# nodig om correct te kunnen werken. Dit bestand bevat zowel informatie over de server als de inloggegevens. Vanwege de gevoelige aard van de inhoud van dit bestand is het aan te raden om het met het volgende commando alleen leesbaar te maken voor de eigenaar ervan :
+
+[source,bash]
+....
+% chmod 600 .fetchmailrc
+....
+
+Het volgende [.filename]#.fetchmailrc# dient als een voorbeeld voor het downloaden van een postbus van een enkele gebruiker via POP. Het vertelt  fetchmail om met `example.com` te verbinden als gebruiker `joesoap` met wachtwoord `XXX`. Dit voorbeeld gaat ervan uit dat de gebruiker `joesoap` ook een gebruiker is op het plaatselijke systeem.
+
+[.programlisting]
+....
+poll example.com protocol pop3 username "joesoap" password "XXX"
+....
+
+Het volgende voorbeeld legt verbinding met meerdere  POP- en IMAP-servers en stuurt de mail door naar verschillende plaatselijke gebruikers indien van toepassing:
+
+[.programlisting]
+....
+poll example.com proto pop3:
+user "joesoap", with password "XXX", is "jsoap" here;
+user "andrea", with password "XXXX";
+poll example2.net proto imap:
+user "john", with password "XXXXX", is "myth" here;
+....
+
+Het gereedschap fetchmail kan in daemon-modus worden gedraaid met de vlag `-d` gevolgd door het interval (in seconden) waarmee  fetchmail de servers die in het bestand [.filename]#.fetchmailrc# vermeld staan dient te vragen. Het volgende voorbeeld zorgt ervoor dat fetchmail  elke 600 seconden vraagt:
+
+[source,bash]
+....
+% fetchmail -d 600
+....
+
+Meer informatie over fetchmail is te vinden op http://fetchmail.berlios.de/[http://fetchmail.berlios.de/].
+
+[[mail-procmail]]
+== procmail gebruiken
+
+Het gereedschap procmail is een zeer krachtig gereedschap voor het filteren van binnenkomende mail. Het stelt gebruikers in staat om "regels" te definiëren welke aan binnenkomende mail gekoppeld kunnen worden om specifieke taken uit te voeren of om de mail naar alternatieve postbussen en/of emailadressen door te sturen. procmail kan met de port package:mail/procmail[] geïnstalleerd worden. Eenmaal geïnstalleerd kan het direct met de meeste MTAs geïntegreerd worden; raadpleeg de documentatie van de MTA voor meer informatie. Als alternatief kan procmail geïntegreerd worden door de volgende regel aan het bestand [.filename]#.forward# in de thuismap van de gebruiker die procmail gebruikt toe te voegen:
+
+[.programlisting]
+....
+"|exec /usr/local/bin/procmail || exit 75"
+....
+
+De volgende sectie geeft wat basisregels van  procmailmet een korte beschrijving ervan. Deze, en andere, regels dienen in het bestand [.filename]#.procmailrc# geplaatst te worden, welke zich in de thuismap van de gebruiker dient te bevinden.
+
+De meerderheid van deze regels kan ook in de hulppagina man:procmailex[5] gevonden worden.
+
+Stuur alle mail van mailto:user@example.com[user@example.com] door naar het externe adres mailto:goodmail@example2.com[goodmail@example2.com]:
+
+[.programlisting]
+....
+:0
+* ^From.*user@example.com
+! goodmail@example2.com
+....
+
+Stuur alle mails korten dan 1000 bytes door naar het externe adres mailto:goodmail@example2.com[goodmail@example2.com]:
+
+[.programlisting]
+....
+:0
+* < 1000
+! goodmail@example2.com
+....
+
+Stuur alle mail verzonden aan mailto:alternate@example.com[alternate@example.com] door naar een postbus [.filename]#alternate#:
+
+[.programlisting]
+....
+:0
+* ^TOalternate@example.com
+alternate
+....
+
+Stuur alle mail met het onderwerp "Spam" door naar [.filename]#/dev/null#:
+
+[.programlisting]
+....
+:0
+^Subject:.*Spam
+/dev/null
+....
+
+Een handig recept dat binnenkomende `FreeBSD.org` mailinglijsten parseert en elke lijst in en eigen postbus plaatst:
+
+[.programlisting]
+....
+:0
+* ^Sender:.owner-freebsd-\/[^@]+@FreeBSD.ORG
+{
+	LISTNAME=${MATCH}
+	:0
+	* LISTNAME??^\/[^@]+
+	FreeBSD-${MATCH}
+}
+....

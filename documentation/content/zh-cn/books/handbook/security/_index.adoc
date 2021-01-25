@@ -1,0 +1,1769 @@
+---
+title: 第 15 章 安全
+part: 部分 III. 系统管理
+prev: books/handbook/users
+next: books/handbook/jails
+---
+
+[[security]]
+= 安全
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 15
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../../images/books/handbook/security/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/security/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/security/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+[[security-synopsis]]
+== 概述
+
+这一章将对系统安全的基本概念进行介绍， 除此之外， 还将介绍一些好的习惯， 以及 FreeBSD 下的一些更深入的话题。 这章的许多内容对于一般的系统和 Internet 安全也适用。 如今， Internet 已经不再像以前那样是一个人人都愿意与您作好邻居的 "友善" 的地方。 让系统更加安全， 将保护您的数据、 智力财产、 时间， 以及其他很多东西不至于被入侵者或心存恶意的人所窃取。
+
+FreeBSD 提供了一系列工具和机制来保证您的系统和网络的完整及安全。
+
+读完这章，您将了解：
+
+* 基本的 FreeBSD 系统安全概念。
+* FreeBSD 中众多可用的密码学设施，例如 DES 和 MD5。
+* 如何设置一次性口令验证机制。
+* 如何配置 TCP Wrappers 以便与 inetd 配合使用。
+* 如何在 FreeBSD 上设置 Kerberos5。
+* 如何配置 IPsec 并在 FreeBSD/Windows(R) 机器之间建构 VPN。
+* 如何配置并使用 OpenSSH，以及 FreeBSD 的 SSH 执行方式。
+* 系统 ACL 的概念，以及如何使用它们。
+* 如何使用 Portaudit 工具来审核从 Ports Collection 安装的第三方软件包的安全性。
+* 如何从 FreeBSD 的安全公告中获得有用信息并采取相应措施。
+* 对于进程记帐功能的感性认识， 并了解如何在 FreeBSD 中启用它。
+
+在开始阅读这章之前，您需要：
+
+* 理解基本的 FreeBSD 和 Internet 概念。
+
+其他安全方面的话题， 则贯穿本书的始终。 例如， 强制性访问控制 (MAC) 在 crossref:mac[mac,强制访问控制] 中进行了介绍， 而 Internet 防火墙则在 crossref:firewalls[firewalls,防火墙] 中进行了讨论。
+
+[[security-intro]]
+== 介绍
+
+安全是系统管理员自始至终的基本要求。 由于所有的 BSD UNIX(R) 多用户系统都提供了与生俱来的安全性， 因此建立和维护额外的安全机制， 确保用户的 "诚实" 可能也就是最需要系统管理员考虑的艰巨的工作了。 机器的安全性取决于您设置的安全设施， 而许多安全方面的考虑， 则会与人们使用计算机时的便利性相矛盾。 一般来说， UNIX(R) 系统能够胜任数目众多进程并发地处理各类任务， 这其中的许多进程是以服务身份运行的 - 这意味着， 外部实体能够与它们互联并产生会话交互。 如今的桌面系统， 已经能够达到许多昔日的小型机甚至主机的性能， 而随着这些计算机的联网和在更大范围内完成互联， 安全也成为了一个日益严峻的课题。
+
+系统的安全也应能够应付各种形式的攻击， 这也包括那些使系统崩溃， 或阻止其正常运转， 并不仅限于试图窃取 `root` 帐号 ("破译 root") 的攻击形式。 安全问题大体可分为以下几类：
+
+. 拒绝服务攻击。
+. 窃取其他用户的帐户。
+. 通过可访问服务窃取root帐户。
+. 通过用户帐户窃取root帐户。
+. 建立后门。
+
+拒绝式服务攻击是侵占机器所需资源的一种行为。 通常， DoS 攻击采用暴力(brute-force)手段通过压倒性的流量来破坏服务器和网络栈， 以使机器崩溃或无法使用。 某些 DoS 攻击则利用在网络栈中的错误， 仅用一个简单的信息包就可以让机器崩溃， 这类情况通常只能通过给内核打补丁来修复。 在一些不利的条件下， 对服务器的攻击能够被修复， 只要适当地修改一下系统的选项来限制系统对服务器的负荷。 顽强的网络攻击是很难对付的。 例如，一个欺骗性信息包的攻击， 无法阻止入侵者切断您的系统与Internet的连接。 它不会使您的机器死掉，但它会把Internet连接占满。
+
+窃取用户帐户要比D.o.S.攻击更加普遍。 许多系统管理员仍然在他们的服务器上运行着基本的 telnetd，rlogind， rshd 和 ftpd 服务。 这些服务在默认情况下不会以加密连接来操作。 结果是如果您的系统有中等规模大小的用户群， 在通过远程登录的方式登录到您系统的用户中， 一些人的口令会被人窃取。 仔细的系统管理员会从那些成功登录系统的远程访问日志中寻找可疑的源地址。
+
+通常必须假定，如果一个入侵者已经访问到了一个用户的帐户， 那么它就可能使自己成为 `root`。 然而， 事实是在一个安全和维护做得很好的系统中， 访问用户的帐户不一定会让入侵者成为 `root`。 这个差别是很重要的，因为没有成为 `root` 则入侵者通常是无法隐藏它的轨迹的， 而且， 如果走运的话， 除了让用户的文件乱掉和系统崩溃之外， 它不能做什么别的事情。 窃取用户帐户是很普遍的事情， 因为用户往往不会对系统管理员的警告采取措施。
+
+系统管理员必须牢牢记住，可能有许多潜在的方法会使他们机器上的 `root` 用户受到威胁。入侵者可能知道 `root` 的口令，而如果在以 `root` 权限运行的服务器上找到一个缺陷 (bug)， 就可以通过网络连接到那台服务器上达到目的；另外， 一旦入侵者已经侵入了一个用户的帐户， 可以在自己的机器上运行一个 suid-root 程序来发现服务器的漏洞， 从而让他侵入到服务器并获取 `root`。 攻击者找到了入侵一台机器上 `root` 的途径之后， 他们就不再需要安装后门了。许多 `root` 漏洞被发现并修正之后， 入侵者会想尽办法去删除日志来消除自己的访问痕迹， 所以他们会安装后门。 后门能给入侵者提供一个简单的方法来重新获取访问系统的 `root` 权限， 但它也会给聪明的系统管理员一个检测入侵的简便方法。 让入侵者无法安装后门事实上对您的系统安全是有害的， 因为这样并不会修复那些侵入系统的入侵者所发现的新漏洞。
+
+安全的管理方法应当使用像 "洋葱皮" 一样多层次的方法来实现， 这些措施可以按下面的方式进行分类：
+
+. 确保 `root` 和维护人员帐户的安全。
+. 确保 `root` - 以root用户权限运行的服务器和suid/sgid可执行程序的安全。
+. 确保用户帐户的安全。
+. 确保口令文件的安全。
+. 确保内核中核心组件、直接访问设备和文件系统的安全。
+. 快速检测系统中发生的不适当的变化。
+. 做个偏执狂。
+
+这一章的下一节将比较深入地讲述上面提到的每一个条目。
+
+[[securing-freebsd]]
+== 确保 FreeBSD 的安全
+
+[NOTE]
+.命令与协议
+====
+在这份文档中，我们使用 粗体 来表示应用程序， 并使用 `单倍距` 字体来表示命令。 这样的排版区分能够有效地区分类似 ssh 这样的概念， 因为它既可以表示命令，又可以表示协议。
+====
+
+接下来的几节中， 将介绍在这一章中 <<security-intro,前一节>> 中所介绍的那些加强 FreeBSD 系统安全性的手段。
+
+[[securing-root-and-staff]]
+=== 确保 `root` 和维护人员帐户的安全
+
+首先，如果您没有确保 `root` 帐户的安全， 就没必要先劳神确保用户帐户的安全了。绝大多数系统都会指派一个口令给 `root` 帐户。 我们的第一个假定是，口令 _总是_ 不安全的。 这并不意味着您要把口令删掉。 口令通常对访问机器的控制台来说是必须的。 也就是说， 您应该避免允许在控制台以外的地方使用口令， 甚至包括使用 man:su[1] 命令的情形。 例如，确信您的 pty 终端在 [.filename]#/etc/ttys# 文件中被指定为 insecure (不安全)，这将使直接通过 `telnet` 或 `rlogin` 登录 `root` 会不被接受。 如果使用如 sshd 这样的其他登录服务， 也要确认直接登录 root 是关闭的。您可以通过编辑 [.filename]#/etc/ssh/sshd_config# 文件来做到这一点，确信 `PermitRootLogin` 被设置成 `no`。 考虑到每一种访问方法 - 如FTP这样的服务， 以免因为它们而导致安全性的损失。 直接登录 `root` 只有通过系统控制台才被允许。
+
+当然， 作为一个系统管理员， 您应当获得 ``root``身份， 因此， 我们开了一些后门来允许自己进入。 但这些后门只有在经过了额外的口令确认之后才能使用。 一种让 `root` 可访问的方法是增加适当的用户帐户到 `wheel` 组 (在 [.filename]#/etc/group# 中)。`wheel` 组中的用户成员可以使用 `su` 命令来成为 `root`。 绝对不应该通过在口令项中进行设置来赋予维护人员天然的 `wheel` 组成员身份。 维护人员应被放置在 `staff` 组中，然后通过 [.filename]#/etc/group# 文件加入到 `wheel` 组。事实上，只有那些需要以 `root` 身份进行操作的用户才需要放进 `wheel` 组中。 当然，也可以通过 某种其它的验证手段，例如 Kerberos，可以通过 `root` 帐户中的 [.filename]#.k5login# 文件来允许执行 man:ksu[1] 成为 `root` ，而不必把它们放进 `wheel` 组。 这可能是一种更好的解决方案， 因为 `wheel` 机制仍然可能导致入侵者获得 `root` ，如果他拿到了口令文件，并能够进入职员的帐户。 尽管有 `wheel` 比什么都没有要强一些， 但它并不是一种绝对安全的办法。
+
+可以使用 man:pw[8] 命令来完全禁止某一个帐号：
+
+[source,bash]
+....
+# pw lock staff
+....
+
+这将阻止用户使用任何方法登录，包括 man:ssh[1]。
+
+另一个阻止某个帐户访问的方法是使用一个 "`*`" 字符替换掉加密后的口令。 这将不会与任何加密后的口令匹配，从而阻止了用户的访问。 举例说明：
+
+[.programlisting]
+....
+foobar:R9DT/Fa1/LV9U:1000:1000::0:0:Foo Bar:/home/foobar:/usr/local/bin/tcsh
+....
+
+应被改为：
+
+[.programlisting]
+....
+foobar:*:1000:1000::0:0:Foo Bar:/home/foobar:/usr/local/bin/tcsh
+....
+
+这会阻止用户 `foobar` 使用传统的方式登录。 但是对于使用了 Kerberos 或者配置了 man:ssh[1] 公钥/密钥对的情况下，用户依然可以访问。
+
+这些安全机制同样假定， 从严格受限的机器向限制更宽松的机器上登录。 例如， 如果您的服务器运行了所有的服务，那么，工作站应该什么都不运行。 为了让工作站尽可能地安全，应该避免运行任何没有必要的服务， 甚至不运行任何服务。 另外， 也应该考虑使用带口令保护功能的屏幕保护程序。 毋庸置疑， 如果攻击者能够物理地接触您的工作站， 那么他就有能力破坏任何安全设施，这确实是我们需要考虑的一个问题，但同样地， 真正能够物理接触您的工作站或服务器并实施攻击的人在现实生活中并不常见， 绝大多数攻击来自于网络， 而攻击者往往无法物理地接触服务器或工作站。
+
+使用类似 Kerberos 这样的工具，也为我们提供了使用一个工具来禁用某个用户， 或修改他们的口令， 并在所有机器上立即生效的方法。 如果员工的帐号被窃取， 能够在所有的其他机器上生效的口令变更将很有意义。如果口令分散地保存在多个机器上， 一次修改 N 台机器上的口令很可能是一件痛苦的事情。 此外， Kerberos 还能够提供更多的限制，除了 Kerberos 令牌有很好的过期机制之外， 它还能够强制用户在某个特定的期限内修改口令(比如说，每月一次). 
+
+=== 确保以root用户权限运行的服务器和suid/sgid可执行程序的安全
+
+谨慎的管理员只运行他们需要的服务， 不多， 不少。 要当心第三方的服务程序很可能有更多的问题。 例如， 运行旧版的 imapd 或 popper 无异于将 `root` 令牌拱手送给全世界的攻击者。 永远不要运行那些您没有仔细检查过的服务程序， 另外也要知道， 许多服务程序并不需要以 `root` 的身份运行。 例如， ntalk、 comsat， 以及 finger 这些服务， 都能够以一种被称作 _沙盒_ 的特殊用户的身份运行。 除非您已经解决掉了许多麻烦的问题， 否则沙盒就不是完美的， 但洋葱式安全规则仍然成立： 如果有人设法攻破了在沙盒中运行的程序， 那么在做更多坏事之前， 他们还必须想办法攻破沙盒本身的限制。 攻击者需要攻破的层次越多， 他们成功的可能性就越小。 过去， 破解 root 的漏洞几乎在所有以 `root` 身份运行的服务上都发现过， 包括那些基本的系统服务。 如果您的机器只打算向外界提供 sshd 登录， 而用户不会使用 telnetd 或 rshd 甚至 rlogind 登录， 就应该毫不犹豫地关闭它们！
+
+FreeBSD 现在默认在沙盒中运行 ntalkd, comsat, 以及 finger。此外， man:named[8] 也可以这样运行。 [.filename]#/etc/defaults/rc.conf# 中包括了如何如此运行 named 的方法，只是这些内容被注释掉了。 如何升级或安装系统将决定这些沙盒所使用的特殊用户是否被自动安装。 谨慎的系统管理员将根据需要研究并实现沙盒。
+
+此外，还有一些服务通常并不在沙盒中运行： sendmail, popper, imapd, ftpd, 以及一些其他的服务。当然，它们有一些替代品，但安装那些服务可能需要做更多额外的工作。 可能必须以 `root` 身份运行这些程序， 并通过其他机制来检测入侵。
+
+系统中另一个比较大的 `root` 漏洞 是安装在其中的 suid-root 和 sgid 的可执行文件。 绝大多数这类程序， 例如 rlogin 会放在 [.filename]#/bin#、 [.filename]#/sbin#、 [.filename]#/usr/bin#， 或 [.filename]#/usr/sbin# 目录中。 尽管并没有 100% 的安全保证，但系统默认的 suid 和 sgid 可执行文件通常是相对安全的。 当然，偶尔也会发现一些存在于这些可执行文件中的 `root` 漏洞。1998年，`Xlib` 中发现了一处 `root` 漏洞，这使得 xterm (通常是做了suid的) 变得可以入侵。 做得安全些， 总比出现问题再后悔要强。 因此，谨慎的管理员通常会限制 suid 可执行文件， 并保证只有员工帐号能够执行它们，或只开放给特定的用户组，甚至彻底干掉 (`chmod 000`) 任何 suid 可执行文件， 以至于没有人能够执行它们。没有显示设备的服务器通常不会需要 xterm 可执行文件。 sgid 可执行文件通常同样地危险。 一旦入侵者攻克了sgid-kmem，那么他就能够读取 [.filename]#/dev/kmem# 并进而读取经过加密的口令文件， 从而窃取任何包含口令的帐号。另外，攻破了 `kmem` 的入侵者能够监视通过 pty 传送的按键序列，即使用户使用的是安全的登录方式。 攻破了 `tty` 组的用户则能够向几乎所有用户的 tty 写入数据。如果用户正在运行一个终端程序，或包含了键盘模拟功能的终端仿真程序， 那么，入侵者能够以那个用户的身份执行任何命令。
+
+[[secure-users]]
+=== 确保用户帐户的安全
+
+用户帐号的安全通常是最难保证的。虽然您可以为您的员工设置严苛的登录限制， 并用 "星号" 替换掉他们的口令， 但您可能无法对普通的用户这么做。 如果有足够的决策权， 那么在保证用户帐号安全的斗争中或许会处于优势， 但如果不是这样， 您能做的只是警惕地监控这些帐号的异动。 让用户使用 ssh 或 Kerberos 可能会有更多的问题， 因为需要更多的管理和技术支持， 尽管如此， 与使用加密的口令文件相比， 这仍不失为一个好办法。
+
+=== 确保口令文件的安全
+
+能够确保起作用的唯一一种方法， 是将口令文件中尽可能多的口令用星号代替， 并通过 ssh 或 Kerberos 来使用这些账号。 即使只有 `root` 用户能够读取加密过的口令文件 ([.filename]#/etc/spwd.db#)， 入侵者仍然可能设法读到它的内容， 即使他暂时还无法写入这个文件。
+
+您的安全脚本应该经常检查并报告口令文件的异动 (参见后面的 <<security-integrity,检查文件完整性>> 一节)。
+
+=== 确保内核中内核设备、直接访问设备和文件系统的安全
+
+如果攻击者已经拿到了 `root` 那么他就有能力作任何事情， 当然， 有一些事情是他们比较喜欢干的。 例如， 绝大多数现代的内核都包括一个内建的听包设备。 在 FreeBSD 中，这个设备被称作 [.filename]#bpf# 。攻击者通常会尝试在攻克的系统上运行它。 如果您不需要 [.filename]#bpf# 设备提供的功能，那么，就不要把它编入内核。
+
+但是， 即使您关闭了 [.filename]#bpf# 设备， 仍需要关注 [.filename]#/dev/mem# 和 [.filename]#/dev/kmem#。 就事论事地说， 入侵者仍然能通过直接访问的方式写入磁盘设备。 另外， 还有一个称作模块加载器的内核机制， man:kldload[8]。 有进取心的入侵者， 可以经由这一机制， 在正在运行的内核中通过 KLD 模块来安装自己的 [.filename]#bpf#， 或其它听包设备。 为了避免这些问题， 您必须将内核的安全级别提高到至少 1。
+
+内核的安全级别可以通过多种方式来设置。 最简单的设置正在运行的内核安全级的方法， 是使用 `sysctl` 来设置内核变量 `kern.securelevel`：
+
+[source,bash]
+....
+# sysctl kern.securelevel=1
+....
+
+默认情况下， FreeBSD 内核启动时的安全级别是 -1。 除非管理员或 man:init[8] 由于启动脚本加以改变， 安全级别会继续保持为 -1。 在系统启动过程中， 可以在 [.filename]#/etc/rc.conf# 文件中， 将变量 `kern_securelevel_enable` 变量设置为 `YES` 并将 `kern_securelevel` 变量设置为希望的安全级别来提高它。
+
+默认情况下， 在启动脚本执行完之后， FreeBSD 的安全级别设置是 -1。 这称作 "不安全模式"， 因为文件的不可修改标记 (immutable flag) 可以改为关闭， 而且全部设备可以直接进行读写， 等等。
+
+一旦将安全级别设置为 1 或更高， 则只允许追加 (append-only) 和不可修改标记会被执行， 而且不可以关闭。 直接访问裸设备则会被拒绝。 更高的安全级别会施加进一步的访问限制。 关于安全级别的完整介绍， 请参阅联机手册 man:security[7] (对于 FreeBSD 7.0 之前的版本， 则是联机手册 man:init[8])。
+
+[NOTE]
+====
+将安全级别调整到 1 或更高可能会导致 X11 (访问 [.filename]#/dev/io# 会被阻止)， 或从源代码联编 FreeBSD (这一过程中的 `installworld` 部分需要临时取消一些文件上的只允许追加和不可修改标记) 出现一些问题， 并导致一些其他小问题。 有些时候， 例如 X11 的情况， 可以通过在引导过程中较早的阶段启动 man:xdm[1] 来绕过， 因为这时安全级别还很低。 类似这样的方法， 对于某些安全级别或限制有可能不可用。 提前做好计划可能会是个好主意。 理解不同的安全级别所施加的限制非常重要， 因为一些限制可能让系统变得很难使用。 另外， 了解它们也有助于理性地配置默认设定。
+====
+
+如果内核的安全级别设为 1 或更高， 在重要的启动程序、 目录和脚本文件上设置 `schg` 标记 (也就是在系统启动到设置安全级别之前运行的程序和它们的配置) 就有意义了。 然而， 这样做也可能有些过火， 而由于系统运行于较高的安全级别， 升级系统也会变得困难的多。 作为妥协， 可以让系统以较高的安全级别运行， 但并不将所有的启动文件都配置 `schg` 标记。 另一种方法是将 [.filename]#/# 和 [.filename]#/usr# 以只读模式挂载。 请注意， 过分严苛的安全配置很可能限制您检测入侵的能力。
+
+[[security-integrity]]
+=== 检查文件完整性: 可执行文件，配置文件和其他文件
+
+当实施严格的限制时，往往会在使用的方便性上付出代价。例如，使用 `chflags` 来把 `schg` 标记 应用到 [.filename]#/# 和 [.filename]#/usr# 中的绝大多数文件上可能会起到反作用， 因为尽管它能够保护那些文件， 但同时也使入侵检测无法进行。 层次化安全的最后一层可能也是最重要的 - 检测。 如果无法检测出潜在的入侵行为， 那么安全的其他部分可能相对来讲意义可能就不那么大了 (或者，更糟糕的事情是， 那些措施会给您安全的假象)。 层次化安全最重要的功能是减缓入侵者， 而不是彻底不让他们入侵， 这样才可能当场抓住入侵者。
+
+检测入侵的一种好办法是查找那些被修改、 删除或添加的文件。 检测文件修改的最佳方法是与某个 (通常是中央的) 受限访问的系统上的文件进行比对。 在一台严格限制访问的系统上撰写您的安全脚本通常不能够被入侵者察觉， 因此，这非常重要。为了最大限度地发挥这一策略的优势，通常会使用只读的 NFS， 或者设置 ssh 钥匙对以便为其他机器提供访问。除了网络交互之外， NFS可能是一种很难被察觉的方法 - 它允许您监控每一台客户机上的文件系统， 而这种监控几乎是无法察觉的。如果一台严格受限的服务器和客户机是通过交换机连接的， 那么 NFS 将是一种非常好的方式。 不过，如果那台监控服务器和客户机之间通过集线器 (Hub)，或经过许多层的路由来连接，则这种方式就很不安全了， 此时，应考虑使用 ssh ，即使这可以在审计记录中查到。
+
+一旦为这个受限的机器赋予了至少读取它应监控的客户系统的权限， 就应该为实际的监控撰写脚本。以 NFS 挂接为例，可以用类似 man:find[1] 和 man:md5[1] 这样的命令为基础来完成我们所需的工作。 最好能够每天对被控机的所有执行文件计算一遍 md5，同时，还应以更高的频率测试那些 [.filename]#/etc# 和 [.filename]#/usr/local/etc# 中的控制文件。一旦发现了不匹配的情形，监控机应立即通知系统管理员。 好的安全脚本也应该检查在系统分区，如 [.filename]#/# 和 [.filename]#/usr# 中是否有新增或删除的可执行文件，以及不适宜的 suid 。
+
+如果打算使用 ssh 来代替 NFS，那么撰写安全脚本将变得困难许多。 本质上，需要在脚本中使用 `scp` 在客户端复制文件， 另一方面，用于检查的执行文件 (例如 find) 也需要使用 `scp` 传到客户端，因为 ssh 客户程序很可能已经被攻陷。 总之，在一条不够安全的链路上 ssh 可能是必须的， 但也必须应付它所带来的难题。
+
+安全脚本还应该检查用户以及职员成员的权限设置文件： [.filename]#.rhosts#、 [.filename]#.shosts#、 [.filename]#.ssh/authorized_keys# 等等。 这些文件可能并非通过 `MD5` 来进行检查。
+
+如果您的用户磁盘空间很大， 检查这种分区上面的文件可能非常耗时。 这种情况下， 采用标志来禁止使用 suid 可执行文件将是一个好主意。 您可能会想看看 `nosuid` 选项 （参见 man:mount[8]）。 尽管如此， 这些扫描仍然应该至少每周进行一次， 这样做的意义并不是检测有效的攻击， 而是检查攻击企图。
+
+进程记帐 (参见 man:accton[8]) 是一种相对成本较低的， 可以帮助您在被入侵后评估损失的机制。 对于找出入侵者是如何进入系统的这件事情来说， 它会非常的有所助益，特别是当入侵者什么文件都没有修改的情况下。
+
+最后， 安全脚本应该处理日志文件， 而日志文件本身应该通过尽可能安全的方法生成 - 远程 syslog 可能非常有用。 入侵者会试图掩盖他们的踪迹， 而日志文件对于希望了解入侵发生时间的系统管理员来说则显得尤为重要。 保持日志文件的永久性记录的一种方法是在串口上运行系统控制台， 并在一台安全的机器上收集这些信息。
+
+=== 偏执
+
+带点偏执不会带来伤害。作为一种惯例， 系统管理员在不影响使用的便利的前提下可以启用任何安全特性，此外， 在经过深思熟虑之后，也可以增加一些 _确实会_ 让使用变得不那么方便的安全特性。 更重要的是，有安全意识的管理员应该学会混合不同的安全策略 - 如果您逐字逐句地按照这份文档来配置您的机器， 那无异于向那些同样能得到这份文档的攻击者透露了更多的信息。
+
+=== 拒绝服务攻击
+
+这一节将介绍拒绝服务攻击。 DoS 攻击通常是基于数据包的攻击， 尽管几乎没有任何办法来阻止大量的伪造数据包耗尽网络资源， 但通常可以通过一些手段来限制这类攻击的损害，使它们无法击垮服务器：
+
+. 限制服务进程 fork。
+. 限制 springboard 攻击 (ICMP 响应攻击， ping 广播，等等)。
+. 使内核路由缓存过载。
+
+一种比较常见的 DoS 攻击情形， 是通过攻击复制进程 (fork) 的服务， 使其产生大量子进程， 从而是其运行的机器耗尽内存、 文件描述符等资源， 直到服务器彻底死掉。 inetd (参见 man:inetd[8]) 提供了许多选项来限制这类攻击。 需要注意的是， 尽管能够阻止一台机器彻底垮掉， 但通常无法防止服务本身被击垮。 请仔细阅读 inetd 的联机手册， 特别是它的 `-c`、 `-C` 以及 `-R` 这三个选项。 伪造 IP 攻击能够绕过 inetd 的 `-C` 选项， 因此， 这些选项需要配合使用。 某些独立的服务器也有类似的限制参数。
+
+例如， Sendmail 就提供了自己的 `-OMaxDaemonChildren` 选项， 它通常比 Sendmail 的负载限制选项更为有效， 因为服务器负载的计算有滞后性。 您可以在启动 sendmail 时指定一个 `MaxDaemonChildren` 参数； 把它设的足够高以便承载您所需要的负荷， 当然， 不要高到足以让运行 Sendmail 的机器死掉。 此外， 以队列模式 (`-ODeliveryMode=queued`) 运行 Sendmail 并把服务程序 (`sendmail -bd`) 和队列执行程序分别执行 (`sendmail -q15m`) 也是一个好主意。 如果您希望保证队列的实时性， 可以考虑使用更短的间隔， 例如 `-q1m`， 但同时也需要指定一个合理的子进程数， 也就是通过 `MaxDaemonChildren` 选项以免 __那个__Sendmail 造成重叠的故障。
+
+Syslogd 可以被直接地攻击，因此， 强烈建议只要可行，就在启动它的时候加上 `-s` 参数， 其他情况下，则至少应该加上 `-a`。
+
+对于基于连接的服务，例如 TCP Wrapper 的 reverse-identd， 都应该格外的小心， 因为它们都可能直接遭受攻击。 一般情况下， 基于安全考虑， 不应使用 TCP Wrapper 所提供的 reverse-ident 这样的功能。
+
+此外， 将内部服务保护起来， 阻止来自其他主机的访问也十分重要， 这些工作可以通过设置边界路由器来完成。 主要的想法， 是阻止来自您的 LAN 以外的访问， 这有助于避免 `root` 受到攻击。 尽可能配置排他式的防火墙， 例如， "用防火墙阻止所有的网络流量 _除了_ 端口 A、B、 C、D，以及 M-Z"。 通过采用这种方法， 您可以很容易地将低端口的访问阻止在外， 而又不难配置使防火墙放过那些明确需要开放的服务， 例如 named (如果您的机器准备作为域的主要解析服务器)， ntalkd， sendmail，以及其他可以从 Internet 访问的服务。 如果您尝试以其他方式配置防火墙 - 采用比较宽松的策略， 那么您将很有可能忘记 "关掉" 一两个服务， 或者在增加了一些服务之后忘记更新防火墙策略。 尽管如此， 仍然可以考虑允许让数据进入编号较高的那一部分端口， 这将保证那些需要这样特性的服务能够正常工作， 而又不影响低端口服务的安全性。 此外， 还应注意到 FreeBSD 允许您来控制动态绑定的端口的范围， 即一系列 `net.inet.ip.portrange` 变量，通过 `sysctl` 来完成设置。 (`sysctl -a | fgrep portrange`)。 这使得您完成较复杂的防火墙策略变得易如反掌。 例如， 您可能希望普通的高段端口的起止范围是 4000 到 5000， 而更高范围则是 49152 到 65535， 随后在防火墙中阻止低于 4000 的所有端口 (当然， 除了那些特地为 Internet 访问而开设的端口)。
+
+另一种常被称作 springboard 的攻击也是非常常见的 DoS 攻击 - 它通过使服务器产生其无法处理的响应来达到目的。 最常见的攻击就是 _ICMP ping 广播攻击_。 攻击者通过伪造 ping 包， 将其源 IP 设置为希望攻击的机器的 IP。 如果您的边界路由器没有进行禁止 ping 广播地址的设置， 则您的网络将最终陷于响应伪造的 ping 包之中， 特别是当攻击者同时使用了多个不同的网络时。 广播攻击能够产生超过 120 兆位的瞬时流量。 另一种常见的针对 ICMP 错误报告系统的 springboard 攻击， 通过建立可以生成 ICMP 出错响应的包， 攻击者能够攻击服务器的网络下行资源， 并导致其上行资源耗尽。 这种类型的攻击也可以通过耗尽内存来使得使得被攻击的服务器崩溃， 特别是当这些服务器无法足够快地完成 ICMP 响应的时候。 较新的内核可以通过调整 sysctl 变量 `net.inet.icmp.icmplim` 来限制这种攻击。 最后一类主要的 springboard 是针对某些 inetd 的内部服务， 例如 udp echo 服务进行的。 攻击者简单地伪造一个来自服务器 A 的 echo 口的 UDP 包， 然后将这个包发到 B 的 echo 口。 于是， 两台服务器将不停地将包弹给对方。 攻击者能够将两台服务器的这种服务都耗竭， 并且通过这种方式， 只需要很少的包就可以让 LAN 超载。 类似的问题对 chargen 口也是存在的。 好的系统管理员应该关闭这些 inetd 的测试服务。
+
+伪造的包攻击也可以用来使内核的路由缓存过载。 请参考 `net.inet.ip.rtexpire`， `rtminexpire`， 以及 `rtmaxcache sysctl` 参数。 伪造的包可以用随机的源 IP 攻击， 使得内核在路由表中产生一个临时的缓存项， 它可以通过 `netstat -rna | fgrep W3` 看到。 这些路由通常需要 1600 秒才会过期。 如果内核发现路由表变得太大， 它会动态地降低 `rtexpire` 但以 `rtminexpire` 为限。 这引发了两个问题：
+
+. 在访问量不大的服务器上， 内核对于突然袭击的反应不够快。
+. `rtminexpire` 的值没有低到让内核在此类攻击时活下去的程度。
+
+如果您的服务器通过 T3 或更快的线路接入 Internet， 那么通过 man:sysctl[8] 来手动地降低 `rtexpire` 和 `rtminexpire` 就非常必要。 当然，绝不要把它们设置为零 (除非您想让机器崩溃) 将这两个参数设置为 2 通常已经足以抵御这类攻击了。
+
+=== Kerberos 和 SSH 的访问问题
+
+如果您打算使用， 那么 Kerberos 和 ssh 都有一些需要解决的问题。 Kerberos 5 是一个很棒的验证协议， 但使用了它的 telnet 和 rlogin 应用程序有一些 bug， 使得它们不适合处理二进制流。 而且， 除非使用了 `-x` 选项， 否则默认情况下 Kerberos 并不加密会话。 ssh 在默认时加密所有的会话内容。
+
+除了默认转发加密密钥之外， ssh 在所有的其他方面都做得很好。 这意味着如果您持有供您访问系统其他部分密钥的工作站作了很好的安全防护， 而您连到了一台不安全的机器上， 则您的密钥可能被别人获得。 尽管实际的密钥并没有被泄漏， 但由于 ssh 会在您登录的过程中启用一个转发端口， 如果攻击者拿到那台不安全的机器上的 `root` 那么他将能够利用那个端口来使用您的密钥， 从而访问您能够访问的那些机器。
+
+我们建议您在使用 ssh 时配合 Kerberos 来完成工作人员的登录过程。 Ssh 在编译时可以加入 Kerberos 支持。 在减少了潜在地暴露 ssh 密钥的机会的同时， 它还能够通过 Kerberos 来保护口令。 Ssh 密钥只有在做过安全防护的机器上执行自动操作时才应使用 (这是 Kerberos 不适合的情形)。 此外，我们还建议您要么在 ssh 配置中关闭密钥转发， 要么在 [.filename]#authorized_keys# 中增加 `from=IP/DOMAIN` 选项， 来限制这些密钥能够登录的来源机器。
+
+[[crypt]]
+== DES、 Blowfish、 MD5， 以及 Crypt
+
+UNIX(R) 系统上的每个用户都有一个与其帐户关联的口令。 很显然， 密码只需要被这个用户和操作系统知道。 为了保证口令的私密性， 采用了一种称为 "单向散列" 的方法来处理口令， 简单地说， 很容易从口令推算出散列值， 反之却很难。 其实， 刚才那句话可能并不十分确切： 因为操作系统本身并不 _真的_ 知道您的口令。 它只知道口令 _经过加密的形式_。 获取口令对应 "明文" 的唯一办法是采用暴力在口令可能的区间内穷举。
+
+不幸的是，当 UNIX(R) 刚刚出现时，安全地加密口令的唯一方法基于DES， 数据加密标准 ( the Data Encryption Standard )。 于是这给那些非美国居民带来了问题， 因为 DES 的源代码在当时不能被出口到美国以外的地方， FreeBSD 必须找到符合美国法律，但又要与其他那些使用 DES 的 UNIX(R) 版本兼容的办法。
+
+解决方案是把加密函数库分割为两个， 于是美国的用户可以安装并使用 DES 函数库， 而国际用户则使用另外一套库提供的一种可以出口的加密算法。 这就是 FreeBSD 为什么使用 MD5 作为它的默认加密算法的原因。 MD5 据信要比 DES 更安全，因此，安装 DES 更多地是出于兼容目的。
+
+=== 识别您采用的加密算法
+
+现在这个库支持 DES、 MD5 和 Blowfish 散列函数。默认情况下， FreeBSD 使用 MD5 来加密口令。
+
+可以很容易地识别 FreeBSD 使用哪种加密方法。 检查 [.filename]#/etc/master.passwd# 文件中的加密密码是一种方法。 用 MD5 散列加密的密码通常要比用 DES 散列得到的长一些， 并且以 `$1$` 字符开始。 以 `$2a$` 开始的口令是通过 Blowfish 散列函数加密的。 DES 密码字符没有任何可以用于鉴别的特征， 但他们要比 MD5 短， 并且以不包括 `$` 在内的 64 个可显示字符来表示， 因此相对比较短的、没有以美元符号开头的字符串很可能是一个 DES 口令。
+
+新口令所使用的密码格式是由 [.filename]#/etc/login.conf# 中的 `passwd_format` 来控制的， 可供选择的算法包括 `des`, `md5` 和 `blf`。 请参考 man:login.conf[5] 联机帮助以获得更进一步的详情。
+
+[[one-time-passwords]]
+== 一次性口令
+
+默认情况下， FreeBSD 提供了 OPIE (One-time Passwords In Everything) 支持， 它默认使用 MD5 散列。
+
+下面将介绍三种不同的口令。 第一种是您常用的 UNIX(R) 风格或 Kerberos 口令； 我们在后面的章节中将称其为 "UNIX(R) 口令"。 第二种是使用 OPIE 的 man:opiekey[1] 程序生成， 并为 man:opiepasswd[1] 以及登录提示所接受的一次性口令，我们称其为 "一次性口令"。 最后一类口令是您输入给 `opiekey` 程序 (有些时候是 `opiepasswd` 程序) 用以产生一次性口令的秘密口令，我们称其为 "秘密口令" 或通俗地简称为 "口令"。
+
+秘密口令和您的 UNIX(R) 口令毫无关系， 尽管可以设置为相同的， 但不推荐这么做。 OPIE 秘密口令并不像旧式的 UNIX(R) 口令那样只能限于8位以内。 您想要用多长的口令都可以。 有六、七个词的短句是很常见的选择。 在绝大多数时候， OPIE 系统和 UNIX(R) 口令系统完全相互独立地工作。
+
+除了口令之外， 对于 OPIE 还有两组至关重要的数据。 其一被称作 "种子" 或 "key"， 它包括两个字符和五个数字。 另一个被称作 "迭代轮数"， 这是一个 1 到 100 之间的数字。 OPIE 通过将种子加到秘密口令后面， 并执行迭代轮数那么多次的 MD4/MD5 散列运算来得到结果， 并将结果表示为 6 个短的英文单词。 这 6 个英文单词就是您的一次性口令。 验证系统 (主要是 PAM) 会记录上次使用的一次性口令， 如果用户提供的口令的散列值与上次一致， 则可以通过身份验证。 由于使用了单向的散列函数， 因此即使截获了上次使用的口令， 也没有办法恢复出下次将要使用的口令； 每次成功登录都将导致迭代轮数递减， 这样用户和登录程序将保持同步。 每当迭代轮数减少到 1 时， 都必须重新初始化 OPIE。
+
+接下来将讨论和每个系统有关的三个程序。 `opiekey` 程序能够接收带迭代计数， 种子和秘密口令， 并生成一个一次性口令， 或一张包含连续的一组一次性口令的表格。 `opiepasswd` 程序用于初始化 OPIE， 并修改口令、 迭代次数、种子和一次性口令。 和 `opieinfo` 程序可以用于检查相应的验证数据文件 ([.filename]#/etc/opiekeys#) 并显示执行命令的用户当前的迭代轮数和种子。
+
+我们将介绍四种不同的操作。 在安全的连接上通过 `opiepasswd` 来第一次设置一次性口令， 或修改口令及种子。 第二类操作是在不安全的连接上使用 `opiepasswd` 辅以在安全连接上执行的 `opiekey` 来完成同样的工作。 第三类操作是在不安全的连接上使用 `opiekey` 来登录。 最后一类操作是采用 `opiekey` 来生成大批的密码， 以便抄下来或打印出来，在没有安全连接的地方使用。
+
+=== 安全连接的初始化
+
+第一次初始化 OPIE 时， 可以使用 `opiepasswd` 命令：
+
+[source,bash]
+....
+% opiepasswd -c
+[grimreaper] ~ $ opiepasswd -f -c
+Adding unfurl:
+Only use this method from the console; NEVER from remote. If you are using
+telnet, xterm, or a dial-in, type ^C now or exit with no password.
+Then run opiepasswd without the -c parameter.
+Using MD5 to compute responses.
+Enter new secret pass phrase:
+Again new secret pass phrase:
+ID unfurl OTP key is 499 to4268
+MOS MALL GOAT ARM AVID COED
+....
+
+在 `Enter new secret pass phrase:` 或 `Enter secret password:` 提示之后， 应输入一个密码或口令字。 请留意， 这并不是您用于登录的口令， 它用于生成一次性的登录密钥。 "ID" 这一行给出了所需的参数： 您的登录名， 迭代轮数， 以及种子。 登录系统时， 它能够记住这些参数并呈现给您， 因此无需记忆它们。 最后一行给出了与您的秘密口令对应的、用于登录的一个一次性口令； 如果您立即重新登录， 则它将是您需要使用的那个口令。
+
+=== 不安全连接初始化
+
+如果您需要通过一个不安全的连接来初始化， 则应首先在安全连接上执行过一次 `opiekey`； 您可能希望在可信的机器的 shell 提示符下完成。 此外还需要指定一个迭代轮数 (100 也许是一个较好的选择) 也可以选择一个自己的种子， 或让计算机随机生成一个。 在不安全的连接上 (当然是连到您希望初始化的机器上)，使用 `opiepasswd` 命令：
+
+[source,bash]
+....
+% opiepasswd
+
+Updating unfurl:
+You need the response from an OTP generator.
+Old secret pass phrase:
+        otp-md5 498 to4268 ext
+        Response: GAME GAG WELT OUT DOWN CHAT
+New secret pass phrase:
+        otp-md5 499 to4269
+        Response: LINE PAP MILK NELL BUOY TROY
+
+ID mark OTP key is 499 gr4269
+LINE PAP MILK NELL BUOY TROY
+....
+
+为了接受默认的种子， 按下 kbd:[Return] （回车）。 在输入访问口令之前， 到一个有安全连接的机器上， 并给它同样的参数：
+
+[source,bash]
+....
+% opiekey 498 to4268
+Using the MD5 algorithm to compute response.
+Reminder: Don't use opiekey from telnet or dial-in sessions.
+Enter secret pass phrase:
+GAME GAG WELT OUT DOWN CHAT
+....
+
+现在回到不安全的连接， 并将生成的一次性口令粘贴到相应的应用程序中。
+
+=== 生成一个一次性密码
+
+一旦初始化过 OPIE， 当您登录时将看到类似这样的提示：
+
+[source,bash]
+....
+% telnet example.com
+Trying 10.0.0.1...
+Connected to example.com
+Escape character is '^]'.
+
+FreeBSD/i386 (example.com) (ttypa)
+
+login: <username>
+otp-md5 498 gr4269 ext
+Password: 
+....
+
+另外， OPIE 提示有一个很有用的特性 (这里没有表现出来)： 如果您在口令提示处按下 kbd:[Return] (回车) 系统将回显刚键入的口令， 您可以藉此看到自己所键入的内容。 如果试图手工键入一个一次性密码， 这会非常有用。
+
+此时您需要生成一个一次性密码来回答这一提示。 这项工作必须在一个可信的系统上执行 `opiekey` 来完成。 (也可以找到 DOS、 Windows(R) 以及 Mac OS(R) 等操作系统上运行的版本)。 这个程序需要将迭代轮数和种子提供给它。 您可以从登录提示那里复制和粘贴它们。
+
+在可信的系统上：
+
+[source,bash]
+....
+% opiekey 498 to4268
+Using the MD5 algorithm to compute response.
+Reminder: Don't use opiekey from telnet or dial-in sessions.
+Enter secret pass phrase:
+GAME GAG WELT OUT DOWN CHAT
+....
+
+现在就可以用刚刚获得的一次性口令登录了。
+
+=== 产生多个一次性口令
+
+有时，会需要到不能访问可信的机器或安全连接的地方。 这种情形下， 可以使用 `opiekey` 命令来一次生成许多一次性口令。 例如：
+
+[source,bash]
+....
+% opiekey -n 5 30 zz99999
+Using the MD5 algorithm to compute response.
+Reminder: Don't use opiekey from telnet or dial-in sessions.
+Enter secret pass phrase: <secret password>
+26: JOAN BORE FOSS DES NAY QUIT
+27: LATE BIAS SLAY FOLK MUCH TRIG
+28: SALT TIN ANTI LOON NEAL USE
+29: RIO ODIN GO BYE FURY TIC
+30: GREW JIVE SAN GIRD BOIL PHI
+....
+
+`-n 5` 按顺序请求 5 个口令， `30` 则指定了最后一个迭代轮数应该是多少。 注意这些口令将按与使用顺序相反的顺序来显示。 如果您比较偏执， 可以手工写下这些结果； 一般来说把它粘贴到 `lpr` 就可以了。 注意，每一行都显示迭代轮数及其对应的一次性的密码； 一些人建议用完一个就划掉一个。
+
+=== 限制使用 UNIX(R) 口令
+
+OPIE 可以对 UNIX(R) 口令的使用进行基于 IP 的登录限制。 对应的文件是 [.filename]#/etc/opieaccess#， 这个文件默认情况下就是存在的。 请参阅 man:opieaccess[5] 以了解关于这个文件进一步的情况， 以及安全方面需要进行的一些考虑。
+
+下面是一个示范的 [.filename]#opieaccess# 文件：
+
+[.programlisting]
+....
+permit 192.168.0.0 255.255.0.0
+....
+
+这行允许指定 IP 地址的用户 (再次强调这种地址容易被伪造) 在任何时候使用 UNIX(R) 口令登录。
+
+如果 [.filename]#opieaccess# 中没有匹配的规则， 则将默认拒绝任何非 OPIE 登录。
+
+[[tcpwrappers]]
+== TCP Wrappers
+
+每一个熟悉 man:inetd[8] 都应该听说过 TCP Wrappers， 但几乎没有人对它在网络环境中的作用有全面的理解。 几乎每个人都会安装防火墙来处理网络连接， 然而虽然防火墙有非常广泛的用途， 它却不是万能的， 例如它无法处理类似向连接发起者发送一些文本这样的任务。 而 TCP Wrappers 软件能够完成它以及更多的其他事情。 接下来的几段中将讨论许多 TCP Wrappers 提供的功能， 并且， 还给出了一些配置实例。
+
+TCP Wrappers 软件扩展了 inetd 为受其控制的服务程序实施控制的能力。 通过使用这种方法， 它能够提供日志支持、 返回消息给联入的连接、 使得服务程序只接受内部连接， 等等。 尽管防火墙也能够完成其中的某些功能， 但这不仅增加了一层额外的保护， 也提供了防火墙无法提供的功能。
+
+然而， 由 TCP Wrappers 提供的一些额外的安全功能， 不应被视为好的防火墙的替代品。 TCP Wrappers 应结合防火墙或其他安全加强设施一并使用， 为系统多提供一层安全防护。
+
+由于这些配置是对于 inetd 的扩展， 因此， 读者应首先阅读 crossref:network-servers[network-inetd,配置 inetd] 这节。
+
+[NOTE]
+====
+尽管由 man:inetd[8] 运行的程序并不是真正的 "服务程序"， 但传统上也把它们称为服务程序。 下面仍将使用这一术语。
+====
+
+=== 初始配置
+
+在 FreeBSD 中使用 TCP Wrappers 的唯一要求是确保 inetd 在从 [.filename]#rc.conf# 中启动时包含了 `-Ww` 选项； 这是默认的设置。 当然， 还需要对 [.filename]#/etc/hosts.allow# 进行适当的配置， 但 man:syslogd[8] 在配置不当时会在系统日志中记录相关消息。
+
+[NOTE]
+====
+与其它的 TCP Wrappers 实现不同， 使用 [.filename]#hosts.deny# 在这里被认为是不推荐和过时的做法。 所有的配置选项应放到 [.filename]#/etc/hosts.allow# 中。
+====
+
+在最简单的配置中， 服务程序的连接策略是根据 [.filename]#/etc/hosts.allow# 允许或阻止。 FreeBSD 中的默认配置是允许一切发到由 inetd 所启动的服务的连接请求。 在基本配置之后将讨论更复杂的情况。
+
+基本配置的形式通常是 `服务 : 地址 : 动作`。 这里 `服务` 是从 `inetd` 启动的服务程序的名字。 而 `地址` 可以是任何有效的主机名、 一个 IP 或由方括号 ([ ]) 括起来的 IPv6 地址。 `动作` 字段可以使 `allow` 或 `deny`， 分别用于允许和禁止相应的访问。 在配置时您需要注意所有的配置都是按照第一个匹配的规则运转的， 这表示配置文件将按照顺序查找匹配规则， 而一旦找到匹配， 则搜索也就停止了。
+
+另外也有许多其他选项， 这些将在后面介绍。 简单的配置行从上面这些描述之中可以很容易得出。 例如， 允许 POP3 连接通过 package:mail/qpopper[] 服务， 应把下面的行添加到 [.filename]#hosts.allow#：
+
+[.programlisting]
+....
+# This line is required for POP3 connections:
+qpopper : ALL : allow
+....
+
+增加这样之后， 需要重新启动 inetd。 可以通过使用 man:kill[1] 命令来完成这项工作， 或使用 [.filename]#/etc/rc.d/inetd# 的 [parameter]#restart# parameter 参数。
+
+=== 高级配置
+
+TCP Wrappers 也有一些高级的配置选项； 它们能够用来对如何处理连接实施更多的控制。 一些时候， 返回一个说明到特定的主机或请求服务的连接可能是更好的办法。 其他情况下， 记录日志或者发送邮件给管理员可能更为适合。 另外， 一些服务可能只希望为本机提供。 这些需求都可以通过使用 `通配符`， 扩展字符以及外部命令来实现。 接下来的两节将介绍这些。
+
+==== 外部命令
+
+假设由于发生了某种状况， 而导致连接应该被拒绝掉， 而将其原因发送给发起连接的人。 如何完成这样的任务呢？ 这样的动作可以通过使用 `twist` 选项来实现。 当发起了连接请求时， `twist` 将调用一个命令或脚本。 在 [.filename]#hosts.allow# 文件中已经给出了一个例子：
+
+[.programlisting]
+....
+# The rest of the daemons are protected.
+ALL : ALL \
+        : severity auth.info \
+        : twist /bin/echo "You are not welcome to use %d from %h."
+....
+
+这个例子将把消息 "You are not allowed to use `daemon` from `hostname`." 返回给访问先前没有配置过允许访问的服务客户。 对于希望把消息反馈给连接发起者， 然后立即切断这样的需求来说， 这样的配置非常有用。 请注意所有反馈信息 _必须_ 被引号 `"` 包围； 这一规则是没有例外的。
+
+[WARNING]
+====
+
+如果攻击者向服务程序发送大量的连接请求， 则可能发动一次成功的拒绝服务攻击。
+====
+
+另一种可能是针对这种情况使用 `spawn`。 类似 `twist`， `spawn` 选项也暗含拒绝连接， 并可以用来执行外部命令或服务。 与 `twist` 不同的是， `spawn` 不会向连接发起者发送回应。 考虑下面的配置：
+
+[.programlisting]
+....
+# We do not allow connections from example.com:
+ALL : .example.com \
+	: spawn (/bin/echo %a from %h attempted to access %d >> \
+	  /var/log/connections.log) \
+	: deny
+....
+
+这将拒绝来自 `*.example.com` 域的所有连接； 同时还将记录主机名， IP 地址， 以及对方所尝试连接的服务名字到 [.filename]#/var/log/connections.log# 文件中。
+
+除了前面已经介绍过的转义字符， 例如 `%a` 之外， 还有一些其它的转义符。 参考 man:hosts_access[5] 联机手册可以获得完整的列表。
+
+==== 通配符选项
+
+前面的例子都使用了 `ALL`。 其它选项能够将功能扩展到更远。 例如， `ALL` 可以被用来匹配每一个服务、 域，或 IP 地址。 另一些可用的通配符包括 `PARANOID`， 它可以用来匹配任何来自可能被伪造的 IP 地址的主机。 换言之， `paranoid` 可以被用来定义来自 IP 与其主机名不符的客户。 下面的例子将给您更多的感性认识：
+
+[.programlisting]
+....
+# Block possibly spoofed requests to sendmail:
+sendmail : PARANOID : deny
+....
+
+在这个例子中， 所有连接 `sendmail` 的 IP 地址与其主机名不符的主机都将被拒绝。
+
+[CAUTION]
+====
+
+如果服务器和客户机有一方的 DNS 配置不正确， 使用 `PARANOID` 可能会严重地削弱服务。 在设置之前， 管理员应该谨慎地考虑。
+====
+
+要了解关于通配符和他们的功能， 请参考 man:hosts_access[5] 联机手册。
+
+为了使设置能够生效， 应该首先把 [.filename]#hosts.allow# 的第一行配置注释掉。 这节的开始部分已经说明了这一点。
+
+[[kerberos5]]
+== Kerberos5
+
+Kerberos 是一组附加的网络系统/协议， 用以让用户通过一台安全服务器提供的服务来验证身份。 包括远程登录、远程复制、在系统间安全地复制文件， 以及其它高危险性的操作， 由于其存在而显著地提高了安全型并且更加可控。
+
+Kerberos 可以理解为一种身份验证代理系统。 它也被描述为一种以受信第三方为主导的身份验证系统。 Kerberos 只提供一种功能 - 在网络上安全地完成用户的身份验证。 它并不提供授权功能 (也就是说用户能够做什么操作) 或审计功能 (记录用户作了什么操作)。 一旦客户和服务器都使用了 Kerberos 来证明各自的身份之后， 他们还可以加密全部的通讯以保证业务数据的私密性和完整性。
+
+因此， 强烈建议将 Kerberos 同其它提供授权和审计服务的安全手段联用。
+
+接下来的说明可以用来指导如何安装 FreeBSD 所附带的 Kerberos。 不过， 您仍然需要参考相应的联机手册以获得完整的描述。
+
+为了展示 Kerberos 的安装过程， 我们约定：
+
+* DNS 域 ("zone") 为 example.org。
+* Kerberos 领域是 EXAMPLE.ORG。
+
+[NOTE]
+====
+在安装 Kerberos 时请使用实际的域名即使您只是想在内部网上用一用。 这可以避免 DNS 问题并保证了同其它 Kerberos 之间的互操作性。
+====
+
+=== 历史
+
+Kerberos 最早由 MIT 作为解决网络安全问题的一个方案提出。 Kerberos 协议采用了强加密， 因此客户能够在不安全的网络上向服务器 (以及相反地) 验证自己的身份。
+
+Kerberos 是网络验证协议名字， 同时也是用以表达实现了它的程序的形容词。 (例如 Kerberos telnet)。 目前最新的协议版本是 5，在 RFC 1510 中有所描述。
+
+该协议有许多免费的实现， 这些实现涵盖了许多种不同的操作系统。 最初研制 Kerberos 的麻省理工学院 (MIT) 也仍然在继续开发他们的 Kerberos 软件包。 在 US 它被作为一种加密产品使用， 因而历史上曾经受到 US 出口管制。 MITKerberos 可以通过 port (package:security/krb5[]) 来安装和使用。 Heimdal Kerberos 是另一种第 5 版实现， 并且明确地在 US 之外的地区开发， 以避免出口管制 (因此在许多非商业的类 UNIX(R) 系统中非常常用。 Heimdal Kerberos 软件包可以通过 port (package:security/heimdal[]) 安装， 最新的 FreeBSD 的最小安装也会包含它。
+
+为使尽可能多的读者从中受益， 这份说明以 FreeBSD 附带的 Heimdal 软件包为准。
+
+=== 配置 Heimdal KDC
+
+密钥分发中心 (KDC) 是 Kerberos 提供的集中式验证服务 - 它是签发 Kerberos tickets 的那台计算机。 KDC 在 Kerberos 领域中的其它机器看来是 "受信的"， 因此必须格外注意其安全性。
+
+需要说明 Kerberos 服务器只需要非常少的计算资源， 尽管如此， 基于安全理由仍然推荐使用独占的机器来扮演 KDC 的角色。
+
+要开始配置 KDC， 首先请确认您的 [.filename]#/etc/rc.conf# 文件包含了作为一个 KDC 所需的设置 (您可能需要适当地调整路径以适应自己系统的情况)：
+
+[.programlisting]
+....
+kerberos5_server_enable="YES"
+kadmind5_server_enable="YES"
+....
+
+接下来需要修改 Kerberos 的配置文件， [.filename]#/etc/krb5.conf#：
+
+[.programlisting]
+....
+[libdefaults]
+    default_realm = EXAMPLE.ORG
+[realms]
+    EXAMPLE.ORG = {
+        kdc = kerberos.example.org
+        admin_server = kerberos.example.org
+    }
+[domain_realm]
+    .example.org = EXAMPLE.ORG
+....
+
+请注意这个 [.filename]#/etc/krb5.conf# 文件假定您的 KDC 有一个完整的主机名， 即 `kerberos.example.org`。 如果您的 KDC 主机名与它不同， 则应添加一条 CNAME (别名) 项到 zone 中去。
+
+[NOTE]
+====
+对于有正确地配置过的 BINDDNS 服务器的大型网络， 上述例子可以精简为：
+
+[.programlisting]
+....
+[libdefaults]
+      default_realm = EXAMPLE.ORG
+....
+
+将下面的内容加入到 `example.org` zone 数据文件中：
+
+[.programlisting]
+....
+_kerberos._udp      IN  SRV     01 00 88 kerberos.example.org.
+_kerberos._tcp      IN  SRV     01 00 88 kerberos.example.org.
+_kpasswd._udp       IN  SRV     01 00 464 kerberos.example.org.
+_kerberos-adm._tcp  IN  SRV     01 00 749 kerberos.example.org.
+_kerberos           IN  TXT     EXAMPLE.ORG
+....
+
+====
+
+[NOTE]
+====
+要让客户机能够找到 Kerberos 服务， 就 _必须_ 首先配置完整或最小配置的 [.filename]#/etc/krb5.conf#_并且_ 正确地配置 DNS 服务器。
+====
+
+接下来需要创建 Kerberos 数据库。 这个数据库包括了使用主密码加密的所有实体的密钥。 您并不需要记住这个密码， 它会保存在一个文件 ([.filename]#/var/heimdal/m-key#) 中。 要创建主密钥， 需要执行 `kstash` 并输入一个口令。
+
+主密钥一旦建立， 您就可以用 `kadmin` 程序的 `-l` 参数 (表示 "local") 来初始化数据库了。 这个选项让 `kadmin` 直接地修改数据库文件而不是通过 `kadmind` 的网络服务。 这解决了在数据库创建之前连接它的鸡生蛋的问题。 进入 `kadmin` 提示符之后， 用 `init` 命令来创建领域的初始数据库。
+
+最后， 仍然在 `kadmin` 中， 使用 `add` 命令来创建第一个 principal。 暂时使用全部的默认设置， 随后可以在任何时候使用 `modify` 命令来修改这些设置。 另外， 也可以用 `?` 命令来了解可用的选项。
+
+典型的数据库创建过程如下：
+
+[source,bash]
+....
+# kstash
+Master key: xxxxxxxx
+Verifying password - Master key: xxxxxxxx
+
+# kadmin -l
+kadmin> init EXAMPLE.ORG
+Realm max ticket life [unlimited]:
+kadmin> add tillman
+Max ticket life [unlimited]:
+Max renewable life [unlimited]:
+Attributes []:
+Password: xxxxxxxx
+Verifying password - Password: xxxxxxxx
+....
+
+现在是启动 KDC 服务的时候了。 运行 `/etc/rc.d/kerberos start` 以及 `/etc/rc.d/kadmind start` 来启动这些服务。 尽管此时还没有任何正在运行的 Kerberos 服务， 但您仍然可以通过获取并列出您刚刚创建的那个 principal (用户) 的 ticket 来验证 KDC 确实在正常工作， 使用 KDC 本身的功能：
+
+[source,bash]
+....
+% kinit tillman
+tillman@EXAMPLE.ORG's Password:
+
+% klist
+Credentials cache: FILE:/tmp/krb5cc_500
+	Principal: tillman@EXAMPLE.ORG
+
+  Issued           Expires          Principal
+Aug 27 15:37:58  Aug 28 01:37:58  krbtgt/EXAMPLE.ORG@EXAMPLE.ORG
+....
+
+完成所需的操作之后， 可以撤消这一 ticket：
+
+[source,bash]
+....
+% kdestroy
+....
+
+=== 为 Kerberos 启用 Heimdal 服务
+
+首先我们需要一份 Kerberos 配置文件 [.filename]#/etc/krb5.conf# 的副本。 只需简单地用安全的方式 (使用类似 man:scp[1] 的网络工具， 或通过软盘) 复制 KDC 上的版本， 并覆盖掉客户机上的对应文件就可以了。
+
+接下来需要一个 [.filename]#/etc/krb5.keytab# 文件。 这是提供 Kerberos 服务的服务器和工作站的一个主要区别 - 服务器必须有 [.filename]#keytab# 文件。 这个文件包括了服务器的主机密钥， 这使得 KDC 得以验证它们的身份。 此文件必须以安全的方式传到服务器上， 因为如果密钥被公之于众， 则安全也就毁于一旦。 也就是说， 通过明文的通道， 例如 FTP 是非常糟糕的想法。
+
+一般来说， 您会希望使用 `kadmin` 程序来把 [.filename]#keytab# 传到服务器上。 由于也需要使用 `kadmin` 来为主机建立 principal (KDC 一端的 [.filename]#krb5.keytab#)， 因此这并不复杂。
+
+注意您必须已经获得了一个 ticket 而且这个 ticket 必须许可使用 [.filename]#kadmind.acl# 中的 `kadmin` 接口。 请参考 Heimdal info 中的 "Remote administration(远程管理)" 一节 (`info heimdal`) 以了解如何设计访问控制表。 如果不希望启用远程的 `kadmin` 操作， 则可以简单地采用安全的方式连接 KDC (通过本机控制台， man:ssh[1] 或 Kerberos man:telnet[1]) 并使用 `kadmin -l` 在本地执行管理操作。
+
+安装了 [.filename]#/etc/krb5.conf# 文件之后， 您就可以使用 Kerberos 上的 `kadmin` 了。 `add --random-key` 命令可以用于添加主机 principal， 而 `ext` 命令则允许导出服务器的主机 principal 到它的 keytab 中。 例如：
+
+[source,bash]
+....
+# kadmin
+kadmin> add --random-key host/myserver.example.org
+Max ticket life [unlimited]:
+Max renewable life [unlimited]:
+Attributes []:
+kadmin> ext host/myserver.example.org
+kadmin> exit
+....
+
+注意 `ext` 命令 (这是 "extract" 的简写) 默认会把导出的密钥放到 [.filename]#/etc/krb5.keytab# 中。
+
+如果您由于没有在 KDC 上运行 `kadmind` (例如基于安全理由) 因而无法远程地使用 `kadmin` 您可以直接在 KDC 上添加主机 principal (`host/myserver.EXAMPLE.ORG`) 随后将其导出到一个临时文件中 (以免覆盖 KDC 上的 [.filename]#/etc/krb5.keytab#)， 方法是使用下面的命令：
+
+[source,bash]
+....
+# kadmin
+kadmin> ext --keytab=/tmp/example.keytab host/myserver.example.org
+kadmin> exit
+....
+
+随后需要把 keytab 复制到服务器上 (例如使用 `scp` 或软盘)。 一定要指定一个不同于默认的 keytab 名字以免覆盖 KDC 上的 keytab。
+
+到现在您的服务器已经可以同 KDC 通讯了 (因为已经配置了 [.filename]#krb5.conf# 文件)， 而且它还能够证明自己的身份 (由于配置了 [.filename]#krb5.keytab# 文件)。 现在可以启用一些 Kerberos 服务。 在这个例子中， 我们将在 [.filename]#/etc/inetd.conf# 中添加下面的行来启用 `telnet` 服务， 随后用 `/etc/rc.d/inetd restart` 重启 man:inetd[8] 服务来使设置生效：
+
+[.programlisting]
+....
+telnet    stream  tcp     nowait  root    /usr/libexec/telnetd  telnetd -a user
+....
+
+关键的部分是 `-a` (表示验证) 类型设置为用户 (user)。 请参考 man:telnetd[8] 联机手册以了解细节。
+
+=== 使用 Heimdal 来启用客户端 Kerberos
+
+设置客户机是非常简单的。 在正确配置了 Kerberos 的网络中， 只需要将位于 [.filename]#/etc/krb5.conf# 的配置文件进行一下设置就可以了。 这一步骤可以简单地通过安全的方式将文件从 KDC 复制到客户机上来完成。
+
+尝试在客户机上执行 `kinit`、 `klist`， 以及 `kdestroy` 来测试获取、 显示并删除 刚刚为 principal 建立的 ticket 是否能够正常进行， 如果能， 则用其它的 Kerberos 应用程序来连接启用了 Kerberos 的服务。 如果应用程序不能正常工作而获取 ticket 正常， 则通常是服务本身， 而非客户机或 KDC 有问题。
+
+在测试类似 `telnet` 的应用程序时， 应考虑使用抓包程序 (例如 man:tcpdump[1]) 来确认您的口令没有以明文方式传输。 尝试使用 `telnet` 的 `-x` 参数， 它将加密整个数据流 (类似 `ssh`)。
+
+许多非核心的 Kerberos 客户应用程序也是默认安装的。 在 Hemidal 的 "最小" 安装理念下， `telnet` 是唯一一个采用了 Kerberos 的服务。
+
+Heimdal port 则提供了一些默认不安装的客户应用程序， 例如启用了 Kerberos 版本的 `ftp`、 `rsh`、 `rcp`、 `rlogin` 以及一些更不常用的程序。 MIT port 也包括了一整套 Kerberos 客户应用程序。
+
+=== 用户配置文件： [.filename]#.k5login# 和 [.filename]#.k5users#
+
+在某个领域中的用户往往都有自己的 Kerberos principal (例如 `tillman@EXAMPLE.ORG`) 并映射到本机用户帐户 (例如本机上名为 `tillman` 的帐户)。 客户端应用程序， 如 `telnet` 通常并不需要用户名或 principal。
+
+不过, 有时您可能会需要赋予某些没有匹配 Kerberos principal 的人使用本地用户帐户的权限。 例如 `tillman@EXAMPLE.ORG` 可能需要访问本地的 `webdevelopers` 用户帐号。 其它 principal 可能也会需要访问这个本地帐号。
+
+用户 home 目录中的 [.filename]#.k5login# 和 [.filename]#.k5users# 这两个文件可以配合 [.filename]#.hosts# 和 [.filename]#.rhosts# 来有效地解决这个问题。 例如， 如果 [.filename]#.k5login# 中有如下内容：
+
+[source,bash]
+....
+tillman@example.org
+jdoe@example.org
+....
+
+并放到了本地用户 `webdevelopers` 的 home 目录中， 则列出的两个 principals 都可以使用那个帐号， 而无须共享口令。
+
+建议您在开始实施之前首先阅读这些命令的联机帮助。 特别地， `ksu` 的联机手册包括了 [.filename]#.k5users# 的相关内容。
+
+=== Kerberos 提示、技巧和故障排除
+
+* 当使用 Heimdal 或 MITKerberos ports 时， 需要确认 `PATH` 环境变量把 Kerberos 客户应用列在系统自带的版本之前。
+* 同一领域内的所有计算机的时间设置是否同步？ 如果不是的话， 则身份验证可能会失败。 crossref:network-servers[network-ntp,通过 NTP 进行时钟同步] 描述了如何使用 NTP 来同步时钟。
+* MIT 和 Heimdal 能够很好地互操作。 一个例外是 `kadmin`， 因为这个协议没有被标准化。
+* 如果您改变了主机名， 您还需要修改您的 `host/` principal 并更新 keytab。 这一规律也适用于类似 Apache 的 package:www/mod_auth_kerb[] 所使用的 `www/` principal 这样的特殊 keytab 项。
+* 您的领域中的每一台主机必须在 DNS (或至少在 [.filename]#/etc/hosts# 中) 可以解析 (同时包括正向和反向)。 CNAME 能够正常使用， 但必须有正确的对应 A 和 PTR 记录。 此时给出的错误信息可能很让人困惑： `Kerberos5 refuses authentication because Read req failed: Key table entry not found`。
+* 某些作为客户使用您的 KDC 的操作系统可能没有将 `ksu` 设置为 setuid `root` 的权限。 这意味着 `ksu` 将不能够正常工作， 从安全角度说这是一个不错的主意， 但可能令人烦恼。 这类问题并不是 KDC 的错误。
+* 使用 MITKerberos 时， 如果希望允许一个 principal 拥有超过默认的十小时有效期的 ticket 则必须使用 `kadmin` 中的 `modify_principal` 来修改 principal 本身以及 `krbtgt` 的 maxlife(最大有效期)。 此后， principal 可以使用 `kinit` 的 `-l` 参数来请求一个有更长有效期的 ticket。
+*
+[NOTE]
+====
+如果在 KDC 上运行了听包程序， 并在工作站上执行 `kinit`， 您可能会注意到 TGT 是在 `kinit` 一开始执行的时候就发出了的 - 甚至在您输入口令之前！ 关于这个现象的解释是 Kerberos 服务器可以无限制地收发 TGT (Ticket Granting Ticket) 给任何未经授权的请求； 但是， 每一个 TGT 都是使用用户的口令派生出来的密钥进行加密的。 因此， 当用户输入口令时它并不会发送给 KDC， 而是直接用于解密 `kinit` 所拿到的 TGT。 如果解密过程得到了一个包含合法的时间戳的有效 ticket， 则说明用户的 Kerberos 凭据有效。 这些凭据包含了一个会话密钥用以在随后建立 Kerberos 服务器的加密通讯， 传递由服务器自己的私钥加密的实际的 ticket-granting ticket。 这个第二层加密对于用户来说是看不到的， 但它使得 Kerberos 服务器能够验证每一个 TGT 的真实性。
+====
+
+* 如果需要有效期更长的 ticket (例如一周) 而且您使用 OpenSSH 连接保存您的 ticket 的机器， 请确认 [.filename]#sshd_config# 中的 Kerberos `TicketCleanup` 被设置为 `no` 否则在注销时会自动删除所有的 ticket。
+* 切记主机的 principals 的 ticket 有效期一定要比用户的长。 如果您的用户 principal 的有效期是一周， 而所连接的主机的有效期是九个小时， 则缓存的主机 principal 将先行过期， 结果是 ticket 缓存无法正常工作。
+* 当配置 [.filename]#krb5.dict# 文件来防止使用特定的简单口令 (`kadmind` 的联机手册中简要介绍了它)， 请切记只有指定了口令策略的 principals 才会使用它们。 [.filename]#krb5.dict# 文件的格式很简单： 每个串占一行。 创建一个到 [.filename]#/usr/shared/dict/words# 的符号连接会很有用。
+
+=== 与 MIT port 的区别
+
+MIT 和 Heimdal 主要的区别在于 `kadmin` 程序使用不同 (尽管等价) 的命令和协议。 如果您的 KDC 是 MIT 的， 则其影响是不能使用 Heimdal 的 `kadmin` 程序来远程管理 KDC (或相反)。
+
+完成同样工作的命令可能会有些许的不同。 推荐按照 MITKerberos 的网站 (http://web.mit.edu/Kerberos/www/[http://web.mit.edu/Kerberos/www/]) 上的说明来操作。 请小心关于路径的问题， MIT port 会默认安装到 [.filename]#/usr/local/#， 您因此可能会执行 "普通的" 系统应用程序而非 MIT, 如果您的 `PATH` 环境变量把 把系统目录放在前面的话。
+
+[NOTE]
+====
+如果使用 FreeBSD 提供的 MITpackage:security/krb5[] port， 一定要仔细阅读 port 所安装的 [.filename]#/usr/local/shared/doc/krb5/README.FreeBSD#， 如果您想知道为什么通过 `telnetd` 和 `klogind` 登录时会出现一些诡异的现象的话。 最重要地， "incorrect permissions on cache file(缓存文件权限不正确)" 行为需要使用 `login.krb5` 来进行验证， 才能够正确地修改转发凭据的属主。
+====
+
+除此之外， 还应修改 [.filename]#rc.conf# 并加入下列配置：
+
+[.programlisting]
+....
+kerberos5_server="/usr/local/sbin/krb5kdc"
+kadmind5_server="/usr/local/sbin/kadmind"
+kerberos5_server_enable="YES"
+kadmind5_server_enable="YES"
+....
+
+这样做的原因是， MIT kerberos 会将可执行文件装到 [.filename]#/usr/local# 之下。
+
+=== 缓解 Kerberos 的限制
+
+==== Kerberos 是一种 all-or-nothing 方式
+
+在网络上启用的每个服务都必须进行修改以便让其能够配合 Kerberos 工作 (否则就只能使用其它方法来保护它们不受网络攻击的侵害)， 如果不是这样， 则用户的凭据就有可能被窃取并再次使用。 一个例子是对所有的远程 shell (例如通过 `rsh` 和 `telnet`) 启用了 Kerberos 但没有将使用明文验证的 POP3 邮件服务器 Kerberos化。
+
+==== Kerberos 是为单用户工作站设计的
+
+在多用户环境中 Kerberos 的安全性会被削弱。 这是因为它把 ticket 保存到 [.filename]#/tmp# 目录中， 而这个目录可以被任何用户读取。 如果有用户与其它人同时共享一台计算机 (也就是 multi-user)， 则这个用户的 ticket 就可能被其它用户窃取 (复制)。
+
+可以通过使用 `-c` 文件名 这样的命令行选项， 或者(推荐的)改变 `KRB5CCNAME` 环境变量来避免这个问题， 但很少有人这么做。原则上， 将 ticket 保存到用户的 home 目录并简单地设置权限就能够缓解这个问题。
+
+==== KDC 会成为单点崩溃故障点
+
+根据设计， KDC 必须是安全的， 因为主密码数据库保存在它上面。 决不应该在 KDC上面运行其它服务， 而且还应确保它的物理安全。 由于 Kerberos 使用同一个密钥 (传说中的那个 "主" 密钥) 来加密所有的密码， 而将这个文件保存在 KDC， 因此其安全尤为重要
+
+不过， 主密钥的泄露并没有想象中的那么可怕。 主密钥只用来加密 Kerberos 数据库以及产生随机数发生器的种子。 只要 KDC 是安全的， 即使攻击者拿到了主密钥也做不了什么。
+
+另外， 如果 KDC 不可用 (例如由于拒绝服务攻击或网络故障) 则网络服务将由于验证服务无法进行而不能使用， 从而导致更大范围的拒绝服务攻击。 通过部署多个 KDC (一个主服务器， 配合一个或多个从服务器) 并采用经过仔细设计和实现的备用验证方式可以避免这种问题 (PAM 是一个不错的选择)。
+
+==== Kerberos 的不足
+
+Kerberos 允许用户、主机和服务之间进行相互认证。 但它并没有提供机制来向用户、主机或服务验证 KDC。 这意味着种过木马的程序，例如 `kinit` 有可能记录用户所有的用户名和密码。 尽管如此， 可以用类似 package:security/tripwire[] 这样的文件系统完整性检查工具来避免此类情况的发生。
+
+=== 相关资源和其它资料
+
+* http://www.faqs.org/faqs/Kerberos-faq/general/preamble.html[ The Kerberos FAQ]
+* http://web.mit.edu/Kerberos/www/dialogue.html[Designing an Authentication System: a Dialog in Four Scenes]
+* http://www.ietf.org/rfc/rfc1510.txt?number=1510[RFC 1510, The Kerberos Network Authentication Service (V5)]
+* http://web.mit.edu/Kerberos/www/[MIT Kerberos home page]
+* http://www.pdc.kth.se/heimdal/[Heimdal Kerberos home page]
+
+[[openssl]]
+== OpenSSL
+
+许多用户可能并没有注意到 FreeBSD 所附带的 OpenSSL 工具包的功能。 OpenSSL 提供了建立在普通的通讯层基础上的加密传输层； 这些功能为许多网络应用和服务程序所广泛使用。
+
+对 OpenSSL 的一些常见用法包括加密邮件客户的身份验证过程， 基于 Web 的交易如信用卡等等。 许多 ports 如 package:www/apache13-ssl[]， 以及 package:mail/claws-mail[] 等等都提供了编译进 OpenSSL 支持的方法。
+
+[NOTE]
+====
+绝大多数情况下 Ports Collection 会试图使用 package:security/openssl[] 除非明确地将 `WITH_OPENSSL_BASE` make 变量设置为 "yes"。
+====
+
+FreeBSD 中附带的 OpenSSL 版本能够支持 安全套接字层 v2/v3 (SSLv2/SSLv3) 和 安全传输层 v1 (TLSv1) 三种网络协议， 并可作为通用的密码学函数库使用。
+
+[NOTE]
+====
+尽管 OpenSSL 支持 IDEA 算法， 但由于美国专利， 它在默认情况下是不编译的。 如果想使用它， 请查阅相应的授权， 如果认为授权可以接受， 则可以在 [.filename]#make.conf# 中设置 `MAKE_IDEA`。
+====
+
+为应用软件提供证书是 OpenSSL 最为常用的功能之一。 证书是一种能够确保公司或个人有效身份不被伪造的凭据。 如果证书没有被众多 "权威发证机构"， 或 CA 中的某一个确认， 则会产生一个警告。 权威发证机构通常是一家公司， 例如 http://www.verisign.com[VeriSign]， 它能够通过签署来证明个人或公司证书的有效性。 这个过程是需要付费的， 当然， 这不是使用证书的必要条件； 然而， 这样做会让那些比较偏执的用户感到轻松。
+
+=== 生成证书
+
+为了生成证书， 需要使用下面的命令：
+
+[source,bash]
+....
+# openssl req -new -nodes -out req.pem -keyout cert.pem
+Generating a 1024 bit RSA private key
+................++++++
+.......................................++++++
+writing new private key to 'cert.pem'
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:US
+State or Province Name (full name) [Some-State]:PA
+Locality Name (eg, city) []:Pittsburgh
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:My Company
+Organizational Unit Name (eg, section) []:Systems Administrator
+Common Name (eg, YOUR name) []:localhost.example.org
+Email Address []:trhodes@FreeBSD.org
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:SOME PASSWORD
+An optional company name []:Another Name
+....
+
+请注意， 在 "Common Name" 提示后面我们输入的是一个域名。 这个提示要求输入服务器的名字， 这个名字今后将用于完成验证过程； 如果在这里输入域名以外的内容， 那么证书也就失去其意义了。 您还可以指定一些其他的选项， 比如证书的有效期， 以及使用的加密算法等等。 这些选项的完整列表， 可以在 man:openssl[1] 联机手册中找到。
+
+在您执行前述命令的目录中将生成两个文件。 证书申请， 即 [.filename]#req.pem#， 可以发给一家发证机构， 它将验证您输入的凭据的真实性， 并对申请进行签名， 再把证书返还给您。 第二个文件的名字将是 [.filename]#cert.pem#， 它包含了证书的私钥， 应被全力保护； 如果它落入别人手中， 则可以被用来伪造您 (或您的服务器)。
+
+如果不需要来自 CA 的签名， 也可以创建自行签名的证书。 首先， 需要生成 RSA 密钥：
+
+[source,bash]
+....
+# openssl dsaparam -rand -genkey -out myRSA.key 1024
+....
+
+接下来， 生成 CA 密钥：
+
+[source,bash]
+....
+# openssl gendsa -des3 -out myca.key myRSA.key
+....
+
+然后用这个密钥来创建证书：
+
+[source,bash]
+....
+# openssl req -new -x509 -days 365 -key myca.key -out new.crt
+....
+
+上述步骤将在当前目录中生成两个新文件： 一个是权威发证机构的签名文件， [.filename]#myca.key#； 另一个是证书本身， [.filename]#new.crt#。 这些文件应该放到同一个目录中， 一般而言， 推荐放到 [.filename]#/etc#， 并且只允许 `root` 读取。 建议把权限设置为 0700， 这可以通过 `chmod` 工具来完成。
+
+=== 使用证书的一个例子
+
+那么有了这些文件可以做些什么呢？ 一个比较典型的用法是用来加密 SendmailMTA 的通讯连接。 这可以解决用户通过本地 MTA 发送邮件时使用明文进行身份验证的问题。
+
+[NOTE]
+====
+这个用法可能并不完美， 因为某些 MUA 会由于没有在本地安装证书而向用户发出警告。 请参考那些软件的说明了解关于安装证书的信息。
+====
+
+下面的设置应添加到本地的 [.filename]#.mc# 文件
+
+[.programlisting]
+....
+dnl SSL Options
+define(`confCACERT_PATH',`/etc/certs')dnl
+define(`confCACERT',`/etc/certs/new.crt')dnl
+define(`confSERVER_CERT',`/etc/certs/new.crt')dnl
+define(`confSERVER_KEY',`/etc/certs/myca.key')dnl
+define(`confTLS_SRV_OPTIONS', `V')dnl
+....
+
+这里， [.filename]#/etc/certs/# 是准备用来在本地保存证书和密钥的位置。 最后， 需要重新生成本地的 [.filename]#.cf# 文件。 这一工作可以简单地通过在 目录中执行 `make``install` 来完成。 接下来， 可以使用 `make``restart` 来重新启动 Sendmail 服务程序。
+
+如果一切正常的话， 在 [.filename]#/var/log/maillog# 中就不会出现错误提示， Sendmail 也应该出现在进程列表中。
+
+做一个简单的测试， 使用 man:telnet[1] 来连接邮件服务器：
+
+[source,bash]
+....
+# telnet example.com 25
+Trying 192.0.34.166...
+Connected to example.com.
+Escape character is '^]'.
+220 example.com ESMTP Sendmail 8.12.10/8.12.10; Tue, 31 Aug 2004 03:41:22 -0400 (EDT)
+ehlo example.com
+250-example.com Hello example.com [192.0.34.166], pleased to meet you
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-8BITMIME
+250-SIZE
+250-DSN
+250-ETRN
+250-AUTH LOGIN PLAIN
+250-STARTTLS
+250-DELIVERBY
+250 HELP
+quit
+221 2.0.0 example.com closing connection
+Connection closed by foreign host.
+....
+
+如果输出中出现了 "STARTTLS" 则说明一切正常。
+
+[[ipsec]]
+== IPsec 上的 VPN
+
+使用 FreeBSD 网关在两个被 Internet 分开的网络之间架设 VPN。
+
+=== 理解 IPsec
+
+这一节将指导您完成架设 IPsec。为了配置 IPsec， 您应当熟悉如何编译一个定制的内核的一些概念 (参见 crossref:kernelconfig[kernelconfig,配置FreeBSD的内核])。
+
+_IPsec_ 是一种建立在 Internet 协议 (IP) 层之上的协议。 它能够让两个或更多主机以安全的方式来通讯 (并因此而得名)。 FreeBSD IPsec "网络协议栈" 基于 http://www.kame.net/[KAME] 的实现， 它支持两种协议族， IPv4 和 IPv6。
+
+IPsec 包括了两个子协议：
+
+* _Encapsulated Security Payload (ESP)_, 保护 IP 包数据不被第三方介入， 通过使用对称加密算法 (例如 Blowfish、 3DES)。
+* _Authentication Header (AH)_, 保护 IP 包头不被第三方介入和伪造， 通过计算校验和以及对 IP 包头的字段进行安全散列来实现。 随后是一个包含了散列值的附加头， 以便能够验证包。
+
+ESP 和 AH 可以根据环境的不同， 分别或者一同使用。
+
+IPsec 既可以用来直接加密主机之间的网络通讯 (也就是 _传输模式_)； 也可以用来在两个子网之间建造 "虚拟隧道" 用于两个网络之间的安全通讯 (也就是 _隧道模式_)。 后一种更多的被称为是 _虚拟专用网 (VPN)_。 man:ipsec[4] 联机手册提供了关于 FreeBSD 中 IPsec 子系统的详细信息。
+
+要把 IPsec 支持放进内核， 应该在配置文件中加入下面的选项：
+
+[source,bash]
+....
+options   IPSEC        IP security
+device    crypto
+....
+
+如果需要 IPsec 的调试支持， 还应增加：
+
+[source,bash]
+....
+options   IPSEC_DEBUG  debug for IP security
+....
+
+=== 问题
+
+由于对如何建立 VPN 并不存在标准， 因此 VPN 可以采用许多种不同的技术来实现， 每种技术都有其强项和弱点。 这篇文章将展现一个具体的应用情景， 并为它设计了适合的 VPN。
+
+=== 情景： 两个网络，一个家庭的网络和一个公司的网络。 都接入了 Internet，并且通过这条 VPN 就像在同一个网络一样。
+
+现有条件如下：
+
+* 至少有两个不同的站点
+* 每个站点都使用内部的 IP
+* 两个站点都通过运行 FreeBSD 的网关接入 Internet。
+* 每个网络上的网关至少有一个公网的 IP 地址。
+* 网络的内部地址可以是公网或私有的 IP 地址， 这并不是问题。它们并不冲突，比如它们不同时使用 `192.168.1.x` 这样的地址。
+
+=== 在 FreeBSD 上配置 IPsec
+
+开始需先从 Ports Collection 安装 package:security/ipsec-tools[]。 这个第三方软件提供了一些能够帮助配置的应用程序。
+
+下一步是创建两个 man:gif[4] 伪设备用来在两个网络间传输数据包的 "隧道"。 使用 `root` 身份运行以下命令， 并用真实的内部外部网关替换命令中的 _internal_ 和 _external_ 项：
+
+[source,bash]
+....
+# ifconfig gif0 create
+....
+
+[source,bash]
+....
+# ifconfig gif0 internal1 internal2
+....
+
+[source,bash]
+....
+# ifconfig gif0 tunnel external1 external2
+....
+
+比如，公司 LAN 对外的 IP 地址是 `172.16.5.4`， 内部的 IP 地址为 `10.246.38.1`。 家庭 LAN 对外的 IP 地址是 `192.168.1.12`， 内部的 IP 地址为 `10.0.0.5`。
+
+这看起来可能有些混乱，所以我们通过 man:ifconfig[8] 命令输出再回顾一下：
+
+[.programlisting]
+....
+Gateway 1:
+
+gif0: flags=8051 mtu 1280
+tunnel inet 172.16.5.4 --> 192.168.1.12
+inet6 fe80::2e0:81ff:fe02:5881%gif0 prefixlen 64 scopeid 0x6
+inet 10.246.38.1 --> 10.0.0.5 netmask 0xffffff00
+
+Gateway 2:
+
+gif0: flags=8051 mtu 1280
+tunnel inet 192.168.1.12 --> 172.16.5.4
+inet 10.0.0.5 --> 10.246.38.1 netmask 0xffffff00
+inet6 fe80::250:bfff:fe3a:c1f%gif0 prefixlen 64 scopeid 0x4
+....
+
+一旦完成以后，两个私有的 IP 地址都应该能像下面 man:ping[8] 命令输出那样互相访问。
+
+[.programlisting]
+....
+priv-net# ping 10.0.0.5
+PING 10.0.0.5 (10.0.0.5): 56 data bytes
+64 bytes from 10.0.0.5: icmp_seq=0 ttl=64 time=42.786 ms
+64 bytes from 10.0.0.5: icmp_seq=1 ttl=64 time=19.255 ms
+64 bytes from 10.0.0.5: icmp_seq=2 ttl=64 time=20.440 ms
+64 bytes from 10.0.0.5: icmp_seq=3 ttl=64 time=21.036 ms
+--- 10.0.0.5 ping statistics ---
+4 packets transmitted, 4 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 19.255/25.879/42.786/9.782 ms
+
+corp-net# ping 10.246.38.1
+PING 10.246.38.1 (10.246.38.1): 56 data bytes
+64 bytes from 10.246.38.1: icmp_seq=0 ttl=64 time=28.106 ms
+64 bytes from 10.246.38.1: icmp_seq=1 ttl=64 time=42.917 ms
+64 bytes from 10.246.38.1: icmp_seq=2 ttl=64 time=127.525 ms
+64 bytes from 10.246.38.1: icmp_seq=3 ttl=64 time=119.896 ms
+64 bytes from 10.246.38.1: icmp_seq=4 ttl=64 time=154.524 ms
+--- 10.246.38.1 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 28.106/94.594/154.524/49.814 ms
+....
+
+正如预期的那样，两边都有从私有地址发送和接受 ICMP 数据包的能力。下面， 两个网关都必须配置路由规则以正确传输两边的网络流量。 下面的命令可以实现这个：
+
+[source,bash]
+....
+# corp-net# route add 10.0.0.0 10.0.0.5 255.255.255.0
+....
+
+[source,bash]
+....
+# corp-net# route add net 10.0.0.0: gateway 10.0.0.5
+....
+
+[source,bash]
+....
+# priv-net# route add 10.246.38.0 10.246.38.1 255.255.255.0
+....
+
+[source,bash]
+....
+# priv-net# route add host 10.246.38.0: gateway 10.246.38.1
+....
+
+此刻，不论从网关还是网关后的机器都能访问内部的网络。 这很容易通过以下的例子确认：
+
+[.programlisting]
+....
+corp-net# ping 10.0.0.8
+PING 10.0.0.8 (10.0.0.8): 56 data bytes
+64 bytes from 10.0.0.8: icmp_seq=0 ttl=63 time=92.391 ms
+64 bytes from 10.0.0.8: icmp_seq=1 ttl=63 time=21.870 ms
+64 bytes from 10.0.0.8: icmp_seq=2 ttl=63 time=198.022 ms
+64 bytes from 10.0.0.8: icmp_seq=3 ttl=63 time=22.241 ms
+64 bytes from 10.0.0.8: icmp_seq=4 ttl=63 time=174.705 ms
+--- 10.0.0.8 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 21.870/101.846/198.022/74.001 ms
+
+priv-net# ping 10.246.38.107
+PING 10.246.38.1 (10.246.38.107): 56 data bytes
+64 bytes from 10.246.38.107: icmp_seq=0 ttl=64 time=53.491 ms
+64 bytes from 10.246.38.107: icmp_seq=1 ttl=64 time=23.395 ms
+64 bytes from 10.246.38.107: icmp_seq=2 ttl=64 time=23.865 ms
+64 bytes from 10.246.38.107: icmp_seq=3 ttl=64 time=21.145 ms
+64 bytes from 10.246.38.107: icmp_seq=4 ttl=64 time=36.708 ms
+--- 10.246.38.107 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 21.145/31.721/53.491/12.179 ms
+....
+
+配置 "隧道" 是比较容易的部分。 配置一条安全链接则是个更加深入的过程。 下面的配置是使用 pre-shared （PSK） RSA 密钥。除了 IP 地址外，两边的 [.filename]#/usr/local/etc/racoon/racoon.conf# 也几乎相同。
+
+[.programlisting]
+....
+path    pre_shared_key  "/usr/local/etc/racoon/psk.txt"; #location of pre-shared key file
+log     debug;	#log verbosity setting: set to 'notify' when testing and debugging is complete
+
+padding	# options are not to be changed
+{
+        maximum_length  20;
+        randomize       off;
+        strict_check    off;
+        exclusive_tail  off;
+}
+
+timer	# timing options. change as needed
+{
+        counter         5;
+        interval        20 sec;
+        persend         1;
+#       natt_keepalive  15 sec;
+        phase1          30 sec;
+        phase2          15 sec;
+}
+
+listen	# address [port] that racoon will listening on
+{
+        isakmp          172.16.5.4 [500];
+        isakmp_natt     172.16.5.4 [4500];
+}
+
+remote  192.168.1.12 [500]
+{
+        exchange_mode   main,aggressive;
+        doi             ipsec_doi;
+        situation       identity_only;
+        my_identifier   address 172.16.5.4;
+        peers_identifier        address 192.168.1.12;
+        lifetime        time 8 hour;
+        passive         off;
+        proposal_check  obey;
+#       nat_traversal   off;
+        generate_policy off;
+
+                        proposal {
+                                encryption_algorithm    blowfish;
+                                hash_algorithm          md5;
+                                authentication_method   pre_shared_key;
+                                lifetime time           30 sec;
+                                dh_group                1;
+                        }
+}
+
+sainfo  (address 10.246.38.0/24 any address 10.0.0.0/24 any)	# address $network/$netmask $type address $network/$netmask $type ( $type being any or esp)
+{								# $network must be the two internal networks you are joining.
+        pfs_group       1;
+        lifetime        time    36000 sec;
+        encryption_algorithm    blowfish,3des,des;
+        authentication_algorithm        hmac_md5,hmac_sha1;
+        compression_algorithm   deflate;
+}
+....
+
+解释所有可用的选项， 连同这些例子里列出的都超越了这份文档的范围。 在 racoon 配置手册页中有着丰富的相关信息。
+
+SPD 策略也需要配置一下， 这样 FreeBSD 和 racoon 就能够加密和解密主机间的网络流量了。
+
+这可以通过在公司的网关上运行一个类似下面简单的 shell 脚本实现。保存到 [.filename]#/usr/local/etc/racoon/setkey.conf#， 这个文件会被在系统初始化的时候用到。
+
+[.programlisting]
+....
+flush;
+spdflush;
+# To the home network
+spdadd 10.246.38.0/24 10.0.0.0/24 any -P out ipsec esp/tunnel/172.16.5.4-192.168.1.12/use;
+spdadd 10.0.0.0/24 10.246.38.0/24 any -P in ipsec esp/tunnel/192.168.1.12-172.16.5.4/use;
+....
+
+一旦完成后，便使用下面的命令在两边的网关上都启动 racoon：
+
+[source,bash]
+....
+# /usr/local/sbin/racoon -F -f /usr/local/etc/racoon/racoon.conf -l /var/log/racoon.log
+....
+
+输出将会类似这样的：
+
+[.programlisting]
+....
+corp-net# /usr/local/sbin/racoon -F -f /usr/local/etc/racoon/racoon.conf
+Foreground mode.
+2006-01-30 01:35:47: INFO: begin Identity Protection mode.
+2006-01-30 01:35:48: INFO: received Vendor ID: KAME/racoon
+2006-01-30 01:35:55: INFO: received Vendor ID: KAME/racoon
+2006-01-30 01:36:04: INFO: ISAKMP-SA established 172.16.5.4[500]-192.168.1.12[500] spi:623b9b3bd2492452:7deab82d54ff704a
+2006-01-30 01:36:05: INFO: initiate new phase 2 negotiation: 172.16.5.4[0]192.168.1.12[0]
+2006-01-30 01:36:09: INFO: IPsec-SA established: ESP/Tunnel 192.168.1.12[0]->172.16.5.4[0] spi=28496098(0x1b2d0e2)
+2006-01-30 01:36:09: INFO: IPsec-SA established: ESP/Tunnel 172.16.5.4[0]->192.168.1.12[0] spi=47784998(0x2d92426)
+2006-01-30 01:36:13: INFO: respond new phase 2 negotiation: 172.16.5.4[0]192.168.1.12[0]
+2006-01-30 01:36:18: INFO: IPsec-SA established: ESP/Tunnel 192.168.1.12[0]->172.16.5.4[0] spi=124397467(0x76a279b)
+2006-01-30 01:36:18: INFO: IPsec-SA established: ESP/Tunnel 172.16.5.4[0]->192.168.1.12[0] spi=175852902(0xa7b4d66)
+....
+
+确认一下 "隧道" 能正常工作， 切换到另外一个控制台用如下的 man:tcpdump[1] 命令查看网络流量。根据需要替换掉下面的 `em0` 网卡界面。
+
+[source,bash]
+....
+# tcpdump -i em0 host 172.16.5.4 and dst 192.168.1.12
+....
+
+控制台上能看到如下类似的输出。如果不是这样的话， 可能就有些问题了，调试的话需要用到返回的数据。
+
+[.programlisting]
+....
+01:47:32.021683 IP corporatenetwork.com > 192.168.1.12.privatenetwork.com: ESP(spi=0x02acbf9f,seq=0xa)
+01:47:33.022442 IP corporatenetwork.com > 192.168.1.12.privatenetwork.com: ESP(spi=0x02acbf9f,seq=0xb)
+01:47:34.024218 IP corporatenetwork.com > 192.168.1.12.privatenetwork.com: ESP(spi=0x02acbf9f,seq=0xc)
+....
+
+此刻，两个网络就好像是同一个网络的一部分一样。 而且这两个网络很可能也应该有防火墙的保护。 要使得这两个网络能互相访问，就需要添加一些进出包的规则。 就 man:ipfw[8] 来说，加入下面的几行进配置文件：
+
+[.programlisting]
+....
+ipfw add 00201 allow log esp from any to any
+ipfw add 00202 allow log ah from any to any
+ipfw add 00203 allow log ipencap from any to any
+ipfw add 00204 allow log udp from any 500 to any
+....
+
+[NOTE]
+====
+规则号可能需要根据现有机器上的配置做相应的修改。
+====
+
+对于 man:pf[4] 或者 man:ipf[8] 的用户， 下面的几行规则应该可行：
+
+[.programlisting]
+....
+pass in quick proto esp from any to any
+pass in quick proto ah from any to any
+pass in quick proto ipencap from any to any
+pass in quick proto udp from any port = 500 to any port = 500
+pass in quick on gif0 from any to any
+pass out quick proto esp from any to any
+pass out quick proto ah from any to any
+pass out quick proto ipencap from any to any
+pass out quick proto udp from any port = 500 to any port = 500
+pass out quick on gif0 from any to any
+....
+
+最后，要允许机器初始化的时候开始 VPN 支持，在 [.filename]#/etc/rc.conf# 中加入以下的几行：
+
+[.programlisting]
+....
+ipsec_enable="YES"
+ipsec_program="/usr/local/sbin/setkey"
+ipsec_file="/usr/local/etc/racoon/setkey.conf" # allows setting up spd policies on boot
+racoon_enable="yes"
+....
+
+[[openssh]]
+== OpenSSH
+
+OpenSSH 是一组用于安全地访问远程计算机的连接工具。 它可以作为 `rlogin`、 `rsh rcp` 以及 `telnet` 的直接替代品使用。 更进一步， 其他任何 TCP/IP 连接都可以通过 SSH 安全地进行隧道/转发。 OpenSSH 对所有的传输进行加密， 从而有效地阻止了窃听、 连接劫持， 以及其他网络级的攻击。
+
+OpenSSH 由 OpenBSD project 维护， 它基于 SSH v1.2.12 并包含了最新的错误修复和更新。 它同时兼容 SSH 协议的 1 和 2 两个版本。
+
+=== 使用 OpenSSH 的好处
+
+一般说来， 在使用 man:telnet[1] 或 man:rlogin[1] 时， 数据是以未经加密的明文的形式发送的。 这样一来， 在客户机和服务器之间的网络上运行的听包程序， 便可以在会话中窃取到传输的用户名/密码和数据。 OpenSSH 提供了多种的身份验证和加密方法来防止这种情况的发生。
+
+=== 启用 sshd
+
+sshd 的启用是作为 FreeBSD 安装中 `Standard` 安装过程中的一步来进行的。 要查看 sshd 是否已被启用， 请检查 [.filename]#rc.conf# 文件中的：
+
+[source,bash]
+....
+sshd_enable="YES"
+....
+
+这表示在下次系统启动时加载 OpenSSH 的服务程序 man:sshd[8]。 此外， 也可以手动使用 man:rc[8] 脚本 [.filename]#/etc/rc.d/sshd# 来启动 OpenSSH：
+
+[.programlisting]
+....
+/etc/rc.d/sshd start
+....
+
+=== SSH 客户
+
+man:ssh[1] 的工作方式和 man:rlogin[1] 非常类似。
+
+[source,bash]
+....
+# ssh user@example.com
+Host key not found from the list of known hosts.
+Are you sure you want to continue connecting (yes/no)? yes
+Host 'example.com' added to the list of known hosts.
+user@example.com's password: *******
+....
+
+登录过程和使用 `rlogin` 或 `telnet` 建立的会话非常类似。 在连接时， SSH 会利用一个密钥指纹系统来验证服务器的真实性。 只有在第一次连接时， 用户会被要求输入 `yes`。 之后的连接将会验证预先保存下来的密钥指纹。 如果保存的指纹与登录时接收到的不符， 则将会给出警告。 指纹保存在 [.filename]#~/.ssh/known_hosts# 中， 对于 SSH v2 指纹， 则是 [.filename]#~/.ssh/known_hosts2#。
+
+默认情况下， 较新版本的 OpenSSH 只接受 SSH v2 连接。 如果能用版本 2 则客户程序会自动使用， 否则它会返回使用版本 1 的模式。 此外， 也可以通过命令行参数 `-1` 或 `-2` 来相应地强制使用版本 1 或 2。 保持客户端的版本 1 能力是为了考虑较早版本的兼容性。
+
+=== 安全复制
+
+man:scp[1] 命令和 man:rcp[1]; 的用法类似， 它用于将文件复制到远程的机器上， 或复制过来， 区别是它是安全的。
+
+[source,bash]
+....
+#  scp user@example.com:/COPYRIGHT COPYRIGHT
+user@example.com's password: *******
+COPYRIGHT            100% |*****************************|  4735
+00:00
+#
+....
+
+由于先前的例子中已经保存了指纹， 使用 man:scp[1] 时会自动地加以验证。
+
+man:scp[1] 使用的参数同 man:cp[1] 类似。 第一个参数是一个或一组文件， 然后是复制的目标。 由于文件是通过 SSH 在网上传递的， 因此某些文件的名字需要写成 `用户名@主机名:<远程文件路径>`。
+
+=== 配置
+
+针对 OpenSSH 服务程序和客户端的系统级配置文件在 [.filename]#/etc/ssh# 目录中。
+
+[.filename]#ssh_config# 用于配置客户端的设定， 而 [.filename]#sshd_config# 则用于配置服务器端。
+
+另外 `sshd_program` (默认是 [.filename]#/usr/sbin/sshd#)， 以及 `sshd_flags` 这两个 [.filename]#rc.conf# 选项提供了更多的配置选择。
+
+[[security-ssh-keygen]]
+=== ssh-keygen
+
+用于取代口令的一种方法是使用 man:ssh-keygen[1] 来生成 DSA 或 RSA 密钥对用于验证用户的身份：
+
+[source,bash]
+....
+% ssh-keygen -t dsa
+Generating public/private dsa key pair.
+Enter file in which to save the key (/home/user/.ssh/id_dsa):
+Created directory '/home/user/.ssh'.
+Enter passphrase (empty for no passphrase):
+Enter same passphrase again:
+Your identification has been saved in /home/user/.ssh/id_dsa.
+Your public key has been saved in /home/user/.ssh/id_dsa.pub.
+The key fingerprint is:
+bb:48:db:f2:93:57:80:b6:aa:bc:f5:d5:ba:8f:79:17 user@host.example.com
+....
+
+man:ssh-keygen[1] 会生成一个包含公私钥对用于验证身份。 私钥将保存到 [.filename]#~/.ssh/id_dsa# 或 [.filename]#~/.ssh/id_rsa#， 而公钥则被存放到 [.filename]#~/.ssh/id_dsa.pub# 或 [.filename]#~/.ssh/id_rsa.pub#， 文件名取决于您选择的 DSA 和 RSA 密钥类型。 RSA 或者 DSA 公钥必须被存放到远程机器上的 [.filename]#~/.ssh/authorized_keys# 才能够使系统正确运转。 
+
+这将允许从远程连接时以基于 SSH 密钥的验证来代替口令验证。
+
+如果在 man:ssh-keygen[1] 中使用了通行字， 则每次使用私钥时都需要输入它。 man:ssh-agent[1] 能够缓解多次输入长通行字的压力， 并将在接下来的 <<security-ssh-agent>> 予以详述。
+
+[WARNING]
+====
+
+选项和配置文件可能随 OpenSSH 的版本不同而不同； 为了避免出现问题， 您应参考 man:ssh-keygen[1] 联机手册。
+====
+
+这将使到远程机器的连接基于 SSH 密钥而不是口令。
+
+如果在运行 man:ssh-keygen[1] 时使用了通行字， 每次使用私钥的时候用户都将被要求输入通行字。 man:ssh-agent[1] 能够减缓重复输入较长通行字的负担， 有关更详细的探究在 <<security-ssh-agent>> 下一节 .
+
+[WARNING]
+====
+
+随着你系统上的 OpenSSH 版本的不同，各种选项和配置文件也会不同； 为了避免此类问题， 你需要参阅 man:ssh-keygen[1] 联机手册。
+====
+
+[[security-ssh-agent]]
+=== ssh-agent 和 ssh-add
+
+man:ssh-agent[1] 和 man:ssh-add[1] 这两个工具， 提供了一种将 SSH 秘钥加载到内存中以便使用， 而不必每次都输入通行字的方法。
+
+man:ssh-agent[1] 工具能够使用加载到其中的私钥来处理验证过程。 man:ssh-agent[1] 应被用于启动另一个应用程序。 最基本的用法是， 使用它来启动 shell， 而高级一些的用法则是用它来启动窗口管理器。
+
+要在 shell 中使用 man:ssh-agent[1]， 首先应把 shell 作为参数来启动它。 随后， 应通过 man:ssh-add[1] 并输入通行字， 来向它提供身份验证信息。 一旦这些步骤都做完了， 用户就应该能够 man:ssh[1] 到任何一个安装了对应公钥的机器了。 例如：
+
+[source,bash]
+....
+% ssh-agent csh
+% ssh-add
+Enter passphrase for /home/user/.ssh/id_dsa:
+Identity added: /home/user/.ssh/id_dsa (/home/user/.ssh/id_dsa)
+%
+....
+
+要在 X11 中使用 man:ssh-agent[1]， 调用 man:ssh-agent[1] 的过程应置于 [.filename]#~/.xinitrc# 之中。 这将把 man:ssh-agent[1] 服务提供给所有在 X11 中运行的程序。 下面是一个 [.filename]#~/.xinitrc# 文件的实例：
+
+[.programlisting]
+....
+exec ssh-agent startxfce4
+....
+
+这将启动 man:ssh-agent[1]， 而后者将在每次 X11 启动时运行 XFCE。 作完这些之后就可以重启 X11 以便使修改生效。 随后您就可以运行 man:ssh-add[1] 来加载全部 SSH 密钥了。
+
+[[security-ssh-tunneling]]
+=== SSH 隧道
+
+OpenSSH 能够创建隧道以便用加密的会话来封装其他协议。
+
+下面的命令告诉 man:ssh[1] 为 telnet 创建一个隧道：
+
+[source,bash]
+....
+% ssh -2 -N -f -L 5023:localhost:23 user@foo.example.com
+%
+....
+
+上述 `ssh` 命令使用了下面这些选项：
+
+`-2`::
+强制 `ssh` 使用第2版的协议 (如果需要和较老的 SSH 一同工作请不要使用这个选项)。
+
+`-N`::
+表示不使用命令行， 或者说只使用隧道。 如果省略， `ssh` 将同时初始化会话。
+
+`-f`::
+强制 `ssh` 在后台执行。
+
+`-L`::
+表示产生一条 _本地端口:远程主机:远程端口_ 形式的隧道。
+
+`user@foo.example.com`::
+远程 SSH 服务器。
+
+SSH 隧道通过监听 `localhost` 上面指定端口来完成工作。 它将把本机主机/端口上接收到的连接通过 SSH 连接转发到远程主机/端口。
+
+本例中， 位于 `localhost` 的 _5023_ 端口 被用于转发 `localhost` 的连接到远程主机的 _23_ 端口。 由于 _23_ 是 telnet 使用的， 因此它将通过 SSH 隧道完成 telnet 会话。
+
+这可以用来封装任意不安全的 TCP 协议， 例如 SMTP、 POP3、 FTP等等。
+
+.使用 SSH 为 SMTP 创建安全隧道
+[example]
+====
+
+[source,bash]
+....
+% ssh -2 -N -f -L 5025:localhost:25 user@mailserver.example.com
+user@mailserver.example.com's password: *****
+% telnet localhost 5025
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+220 mailserver.example.com ESMTP
+....
+这可以与 man:ssh-keygen[1] 以及额外的用户帐号配合来建立一个更透明的 SSH 隧道环境。 密钥可以被用在需要输入口令的地方， 而且可以为不同的用户配置不同的隧道。
+====
+
+==== 实用的 SSH 通道例子
+
+===== 加强 POP3 服务的安全
+
+工作时， 有一个允许外来连接的 SSH 服务器。 同一个办公网络中有一个邮件服务器提供 POP3 服务。 这个网络， 或从您家到办公室的网络可能不， 或不完全可信。 基于这样的原因， 您需要以安全的方式来查看邮件。 解决方法是创建一个到办公室 SSH 服务器的连接， 并通过这个连接来访问 POP3 服务：
+
+[source,bash]
+....
+% ssh -2 -N -f -L 2110:mail.example.com:110 user@ssh-server.example.com
+user@ssh-server.example.com's password: ******
+....
+
+当这个通道连上时， 您可以把 POP3 请求发到 `localhost` 端口 2110。 这个连接将通过通道安全地转发到 `mail.example.com`。
+
+===== 绕过严厉的防火墙
+
+一些大脑长包的网络管理员会使用一些极端的防火墙策略， 不仅过滤进入的连接， 而且也过滤连出的连接。 一些时候您可能只能连接远程机器 22 端口，以及 80 端口用来进行 SSH 和网页浏览。
+
+您可能希望访问一些其它的 (也许与工作无关的) 服务， 例如提供音乐的 Ogg Vorbis 流媒体服务器。 如果 Ogg Vorbis server 在 22 或 80 端口以外的端口播放音乐， 则您将无法访问它。
+
+解决方法是建立一个到您的网络的防火墙之外的网络上的 SSH 服务器， 并通过它提供的通道连接到 Ogg Vorbis 服务器上。
+
+[source,bash]
+....
+% ssh -2 -N -f -L 8888:music.example.com:8000 user@unfirewalled-system.example.org
+user@unfirewalled-system.example.org's password: *******
+....
+
+现在您可以把客户程序指定到 `localhost` 的 8888 端口， 它将把请求转发给 `music.example.com` 的 8000 端口， 从而绕过防火墙。
+
+=== 允许用户登录 `AllowUsers` 选项
+
+通常限制哪些用户能够登录， 以及从何处登录会是好主意。 采用 `AllowUsers` 选项能够方便地达到这一目的。 例如， 想要只允许 `root` 用户从 `192.168.1.32` 登录， 就可以在 [.filename]#/etc/ssh/sshd_config# 文件中加入下述设置：
+
+[.programlisting]
+....
+AllowUsers root@192.168.1.32
+....
+
+要允许用户 `admin` 从任何地方登录， 则只需列出用户名：
+
+[.programlisting]
+....
+AllowUsers admin
+....
+
+可以在同一行指定多个用户， 例如：
+
+[.programlisting]
+....
+AllowUsers root@192.168.1.32 admin
+....
+
+[NOTE]
+====
+列出需要登录机器的用户很重要； 否则他们将被锁在外面。
+====
+
+在完成对 [.filename]#/etc/ssh/sshd_config# 的修改之后您必须告诉 man:sshd[8] 重新加载其配置文件， 方法是执行：
+
+[source,bash]
+....
+# /etc/rc.d/sshd reload
+....
+
+=== 进一步的资料
+
+http://www.openssh.com/[OpenSSH]
+
+man:ssh[1] man:scp[1] man:ssh-keygen[1] man:ssh-agent[1] man:ssh-add[1] man:ssh_config[5]
+
+man:sshd[8] man:sftp-server[8] man:sshd_config[5]
+
+[[fs-acl]]
+== 文件系统访问控制表
+
+与文件系统在其他方面的加强， 如快照等一道， FreeBSD 提供了通过文件系统访问控制表 (ACL) 实现的安全机制。
+
+访问控制表以高度兼容 (POSIX(R).1e) 的方式扩展了标准的 UNIX(R) 权限模型。 这一特性使得管理员能够利用其优势设计更为复杂的安全模型。
+
+如果想为 UFS 文件系统启用 ACL 支持， 则需要添加下列选项：
+
+[.programlisting]
+....
+options UFS_ACL
+....
+
+并重新编译内核。 如果没有将这个选项编译进内核， 则在挂接支持 ACL 的文件系统时将会收到警告。 这个选项在 [.filename]#GENERIC# 内核中已经包含了。 ACL 依赖于在文件系统上启用扩展属性。 在新一代的 UNIX(R) 文件系统， UFS2 中内建了这种支持。
+
+[NOTE]
+====
+在 UFS1 上配置扩展属性需要比 UFS2 更多的管理开销。 而且， 在 UFS2 上的扩展属性的性能也有极大的提高。 因此， 如果想要使用访问控制表， 推荐使用 UFS2 而不是 UFS1。
+====
+
+ACL 可以在挂接时通过选项 `acls` 来启动， 它可以加入 [.filename]#/etc/fstab#。 另外， 也可以通过使用 man:tunefs[8] 修改超级块中的 ACL 标记来持久性地设置自动的挂接属性。 一般而言， 后一种方法是推荐的做法， 其原因是：
+
+* 挂接时的 ACL 标记无法被重挂接 (man:mount[8] `-u`) 改变， 只有完整地 man:umount[8] 并做一次新的 man:mount[8] 才能改变它。 这意味着 ACL 状态在系统启动之后就不可能在 root 文件系统上发生变化了。 另外也没有办法改变正在使用的文件系统的这个状态。
+* 在超级块中的设置将使得文件系统总被以启用 ACL 的方式挂接， 即使在 [.filename]#fstab# 中的对应项目没有作设置， 或设备顺序发生变化时也是如此。 这避免了不慎将文件系统以没有启用 ACL 的状态挂接， 从而避免没有强制 ACL 这样的安全问题。
+
+[NOTE]
+====
+可以修改 ACL 行为， 以允许在没有执行一次全新的 man:mount[8] 的情况下启用它， 但我们认为， 不鼓励在未启用 ACL 时这么做是有必要的， 因为如果启用了 ACL， 然后关掉它， 然后在没有刷新扩展属性的情况下重新启用它是很容易造成问题的。 一般而言， 一旦启用了文件系统的 ACL 就不应该再关掉它， 因为此时的文件系统的保护措施可能和用户所期待的样子不再兼容， 而重新启用 ACL 将重新把先前的 ACL 附着到文件上， 而由于它们的权限发生了变化， 就很可能造成无法预期的行为。
+====
+
+在查看目录时， 启用了 ACL 的文件将在通常的属性后面显示 `+` (加号)。 例如：
+
+[.programlisting]
+....
+drwx------  2 robert  robert  512 Dec 27 11:54 private
+drwxrwx---+ 2 robert  robert  512 Dec 23 10:57 directory1
+drwxrwx---+ 2 robert  robert  512 Dec 22 10:20 directory2
+drwxrwx---+ 2 robert  robert  512 Dec 27 11:57 directory3
+drwxr-xr-x  2 robert  robert  512 Nov 10 11:54 public_html
+....
+
+这里我们看到了 [.filename]#directory1#、 [.filename]#directory2#， 以及 [.filename]#directory3# 目录使用了 ACL。 而 [.filename]#public_html# 则没有。
+
+=== 使用 ACL
+
+文件系统 ACL 可以使用 man:getfacl[1] 工具来查看。 例如， 如果想查看 [.filename]#test# 的 ACL 设置， 所用的命令是：
+
+[source,bash]
+....
+% getfacl test
+	#file:
+	#owner:1001
+	#group:1001
+	user::rw-
+	group::r--
+	other::r--
+....
+
+要修改这个文件上的 ACL 设置， 则需要使用 man:setfacl[1] 工具。 例如：
+
+[source,bash]
+....
+% setfacl -k test
+....
+
+`-k` 参数将把所有当前定义的 ACL 从文件或文件系统中删除。 一般来说应该使用 `-b` 因为它会保持让 ACL 正常工作的那些项不变。
+
+[source,bash]
+....
+% setfacl -m u:trhodes:rwx,group:web:r--,o::--- test
+....
+
+在前面的命令中， `-m` 选项被用来修改默认的 ACL 项。由于已经被先前的命令 删除，因此没有预先定义的项，于是默认的选项被恢复，并附加上指定的选项。 请小心地检查，如果您加入了一个不存在的用户或组，那么将会在 [.filename]#stdout# 得到一条 `Invalid argument` 的错误提示。
+
+[[security-portaudit]]
+== 监视第三方安全问题
+
+过去几年中， 安全领域在如何处理漏洞的评估方面取得了长足的进步。 几乎每一个操作系统都越来越多地安装和配置了第三方工具， 而系统被入侵的威胁也随之增加。
+
+漏洞的评估是安全的一个关键因素， 尽管 FreeBSD 会发布基本系统的安全公告， 然而为每一个第三方工具都发布安全公告则超出了 FreeBSD Project 的能力。 在这一前提下， 一种减轻第三方漏洞的威胁， 并警告管理员存在已知的安全问题的方法也就应运而生。 名为 Portaudit 的 FreeBSD 附加工具能够帮助您达成这一目的。
+
+package:ports-mgmt/portaudit[] port 会下载一个数据库， 这一数据库是由 FreeBSD Security Team 和 ports 开发人员维护的， 其中包含了已知的安全问题。
+
+要开始使用 Portaudit， 需要首先从 Ports Collection 安装它：
+
+[source,bash]
+....
+# cd /usr/ports/ports-mgmt/portaudit && make install clean
+....
+
+在安装过程中， man:periodic[8] 的配置文件将被修改， 以便让 Portaudit 能够在每天的安全审计过程中运行。 一定要保证发到 `root` 帐号的每日安全审计邮件确实有人在读。 除此之外不需要进行更多的配置了。
+
+安装完成之后， 管理员可以通过下面的命令来更新数据库， 并查看目前安装的软件包中所存在的已知安全漏洞：
+
+[source,bash]
+....
+# portaudit -Fda
+....
+
+[NOTE]
+====
+由于每天执行 man:periodic[8] 时都会自动更新数据库， 因此， 运行这条命令是可选的。 在这里只是作为例子给出。
+====
+
+在任何时候， 如果希望对通过 Ports Collection 安装的第三方软件工具进行审计， 管理员都可以使用下面的命令：
+
+[source,bash]
+....
+# portaudit -a
+....
+
+针对存在漏洞的软件包， Portaudit 将生成类似下面的输出：
+
+[.programlisting]
+....
+Affected package: cups-base-1.1.22.0_1
+Type of problem: cups-base -- HPGL buffer overflow vulnerability.
+Reference: <http://www.FreeBSD.org/ports/portaudit/40a3bca2-6809-11d9-a9e7-0001020eed82.html>
+
+1 problem(s) in your installed packages found.
+
+You are advised to update or deinstall the affected package(s) immediately.
+....
+
+通过访问上面给出的 URL， 管理员能够了解关于那个漏洞的进一步信息。 这些信息通常包括受到影响的 FreeBSD Port 版本， 以及其他可能包含安全公告的网站。
+
+简而言之， Portaudit 是一个强大的工具， 并能够配合 Portupgrade port 来非常有效地工作。
+
+[[security-advisories]]
+== FreeBSD 安全公告
+
+像其它具有产品级品质的操作系统一样， FreeBSD 会发布 "安全公告"。 通常这类公告会只有在相应的发行版本已经正确地打过补丁之后发到安全邮件列表并在勘误中说明。 本节将介绍什么是安全公告， 如何理解它， 以及为系统打补丁的具体步骤。
+
+=== 安全公告看上去是什么样子？
+
+FreeBSD 安全公告的样式类似下面的范例， 这一例子来自 {freebsd-security-notifications} 邮件列表。
+
+[.programlisting]
+....
+=============================================================================
+FreeBSD-SA-XX:XX.UTIL                                       Security Advisory
+                                                          The FreeBSD Project
+
+Topic:          denial of service due to some problem<.>
+
+Category:       core<.>
+Module:         sys<.>
+Announced:      2003-09-23<.>
+Credits:        Person<.>
+Affects:        All releases of FreeBSD<.>
+                FreeBSD 4-STABLE prior to the correction date
+Corrected:      2003-09-23 16:42:59 UTC (RELENG_4, 4.9-PRERELEASE)
+                2003-09-23 20:08:42 UTC (RELENG_5_1, 5.1-RELEASE-p6)
+                2003-09-23 20:07:06 UTC (RELENG_5_0, 5.0-RELEASE-p15)
+                2003-09-23 16:44:58 UTC (RELENG_4_8, 4.8-RELEASE-p8)
+                2003-09-23 16:47:34 UTC (RELENG_4_7, 4.7-RELEASE-p18)
+                2003-09-23 16:49:46 UTC (RELENG_4_6, 4.6-RELEASE-p21)
+                2003-09-23 16:51:24 UTC (RELENG_4_5, 4.5-RELEASE-p33)
+                2003-09-23 16:52:45 UTC (RELENG_4_4, 4.4-RELEASE-p43)
+                2003-09-23 16:54:39 UTC (RELENG_4_3, 4.3-RELEASE-p39)<.>
+CVE Name:       CVE-XXXX-XXXX<.>
+
+For general information regarding FreeBSD Security Advisories,
+including descriptions of the fields above, security branches, and the
+following sections, please visit
+http://www.FreeBSD.org/security/.
+
+I.   Background<.>
+
+II.  Problem Description<.>
+
+III. Impact<.>
+
+IV.  Workaround<.>
+
+V.   Solution<.>
+
+VI.  Correction details<.>
+
+VII. References<.>
+....
+
+<.> `Topic`(标题) 一栏说明了问题到底是什么。 它基本上是对所发现的安全问题及其所涉及的工具的描述。
+
+<.> `Category` (分类) 是指系统中受到影响的组件， 这一栏可能是 `core`、 `contrib`， 或者 `ports` 之一。 `core` 分类表示安全弱点影响到了 FreeBSD 操作系统的某个核心组件。 `contrib` 分类表示弱点存在于某个捐赠给 FreeBSD Project 的软件， 例如 sendmail。 最后是 `ports`， 它表示该弱点影响了 Ports Collection 中的某个第三方软件。
+
+<.> `Module`(模块) 一栏给出了组件的具体位置， 例如 `sys`。 在这个例子中， 可以看到 `sys` 模块是存在问题的； 因此， 这个漏洞会影响某个在内核中的组件。
+
+<.> `Announced`(发布时间) 一栏反映了与安全公告有关的数据是什么时候公之于众的。 这说明安全团队已经证实问题确实存在， 而补丁已经写入了 FreeBSD 的代码库。
+
+<.> `Credits`(作者) 一栏给出了注意到问题存在并报告它的个人或团体。
+
+<.> The `Affects`(影响范围) 一栏给出了 FreeBSD 的哪些版本存在这个漏洞。 对于内核来说， 检视受影响的文件上执行的 `ident` 输出可以帮助确认文件版本。 对于 ports， 版本号在 [.filename]#/var/db/pkg# 里面的 port 的名字后面列出。 如果系统没有与 FreeBSD CVS 代码库同步并每日构建， 它很可能是有问题的。
+
+<.> `Corrected`(修正时间) 一栏给出了发行版本中修正问题的具体日期、时间和时差。
+在公共漏洞数据库 (Common Vulnerabilities Database) 系统中预留的， 用于查看漏洞的标识信息。
+
+<.> `Background`(技术背景) 一栏提供了受影响的组件的作用。 多数时候这一部分会说明为什么 FreeBSD 中包含了它， 它的作用， 以及它的一些原理。
+
+<.> `Problem Description`(问题描述) 一栏深入阐述安全漏洞的技术细节。 这部分有时会包括有问题的代码相关的详细情况， 甚至是这个部件如何能够被恶意利用并打开漏洞的细节。
+
+<.> `Impact`(影响) 一栏描述了问题能够造成的影响类型。 例如， 可能导致拒绝服务攻击， 权限提升， 甚至导致得到超级用户的权限。
+
+<.> `Workaround`(应急方案) 一栏给出了系统管理员在暂时无法升级系统时可以采取的临时性对策。 这些原因可能包括时间限制， 网络资源的限制， 或其它因素。 不过无论如何， 安全不能够被轻视， 有问题的系统要么应该打补丁， 要么应该实施这种应急方案。
+
+<.> `Solution`(解决方案) 一栏提供了如何给有问题的系统打补丁的方法。 这是经过逐步测试和验证过的给系统打补丁并让其安全地工作的方法。
+
+<.> =`Correction Details`(修正细节) 一栏展示了针对 CVS 分支或某个发行版的修正特征。 同时也提供了每个分支上相关文件的版本号。
+
+<.> `References`(文献) 一栏通常会给出其它信息的来源。 这可能包括 URL， 书籍、 邮件列表以及新闻组。
+
+[[security-accounting]]
+== 进程记帐
+
+进程记帐是一种管理员可以使用的跟踪系统资源使用情况的手段， 包括它们分配给了哪些用户、 提供系统监视手段， 并且可以精细到用户执行的每一个命令。
+
+当然， 这种做法是兼有利弊的。 它的好处是， 查找入侵时可以迅速把范围缩小到攻击者进入的时刻； 而这样做的缺点， 则是记帐会产生大量的日志， 因而需要很多磁盘空间来存储它们。 这一节将带领管理员一步一步地配置基本的进程记帐。
+
+=== 启用并利用进程记帐
+
+在使用进程记帐之前， 必须先启用它。 要完成这项工作， 需要运行下面的命令：
+
+[source,bash]
+....
+# touch /var/account/acct
+
+# accton /var/account/acct
+
+# echo 'accounting_enable="YES"' >> /etc/rc.conf
+....
+
+一旦启用之后， 记帐就会开始跟踪 CPU 统计数据、 命令， 等等。 所有的记帐日志不是以可读的方式记录的， 要查看它们， 需要使用 man:sa[8] 这个工具。 如果没有给出其他参数， 则 `sa` 将按用户， 以分钟为单位显示他们所使用的时间、 总共的 CPU 和用户时间， 以及平均的 I/O 操作数目， 等等。
+
+要显示关于刚刚发出的命令的相关信息， 则应使用 man:lastcomm[1] 工具。 `lastcomm` 命令可以用来显示在某一 man:ttys[5] 上的用户信息， 例如：
+
+[source,bash]
+....
+# lastcomm ls
+	trhodes ttyp1
+....
+
+将会显示出所有已知的 `trhodes` 在 `ttyp1` 终端上执行 `ls` 的情况。
+
+更多的可用选项在联机手册 man:lastcomm[1]、 man:acct[5] 和 man:sa[8] 中有所介绍。

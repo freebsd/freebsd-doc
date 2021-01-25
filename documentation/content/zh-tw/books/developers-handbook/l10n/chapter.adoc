@@ -1,0 +1,213 @@
+---
+title: 章 4. Localization and Internationalization - L10N and I18N
+prev: books/developers-handbook/secure
+next: books/developers-handbook/policies
+---
+
+[[l10n]]
+= Localization and Internationalization - L10N and I18N
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:part-signifier: 部分
+:chapter-signifier: 第
+:appendix-caption: 附录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例 
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 4
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-tw/mailing-lists.adoc[]
+include::shared/zh-tw/urls.adoc[]
+
+toc::[]
+
+[[l10n-programming]]
+== Programming I18N Compliant Applications
+
+To make your application more useful for speakers of other languages, we hope that you will program I18N compliant. The GNU gcc compiler and GUI libraries like QT and GTK support I18N through special handling of strings. Making a program I18N compliant is very easy. It allows contributors to port your application to other languages quickly. Refer to the library specific I18N documentation for more details.
+
+In contrast with common perception, I18N compliant code is easy to write. Usually, it only involves wrapping your strings with library specific functions. In addition, please be sure to allow for wide or multibyte character support.
+
+=== A Call to Unify the I18N Effort
+
+It has come to our attention that the individual I18N/L10N efforts for each country has been repeating each others' efforts. Many of us have been reinventing the wheel repeatedly and inefficiently. We hope that the various major groups in I18N could congregate into a group effort similar to the Core Team's responsibility.
+
+Currently, we hope that, when you write or port I18N programs, you would send it out to each country's related FreeBSD mailing list for testing. In the future, we hope to create applications that work in all the languages out-of-the-box without dirty hacks.
+
+The {freebsd-i18n} has been established. If you are an I18N/L10N developer, please send your comments, ideas, questions, and anything you deem related to it.
+
+=== Perl and Python
+
+Perl and Python have I18N and wide character handling libraries. Please use them for I18N compliance.
+
+[[posix-nls]]
+== Localized Messages with POSIX.1 Native Language Support (NLS)
+
+Beyond the basic I18N functions, like supporting various input encodings or supporting national conventions, such as the different decimal separators, at a higher level of I18N, it is possible to localize the messages written to the output by the various programs. A common way of doing this is using the POSIX.1 NLS functions, which are provided as a part of the FreeBSD base system.
+
+[[nls-catalogs]]
+=== Organizing Localized Messages into Catalog Files
+
+POSIX.1 NLS is based on catalog files, which contain the localized messages in the desired encoding. The messages are organized into sets and each message is identified by an integer number in the containing set. The catalog files are conventionally named after the locale they contain localized messages for, followed by the `.msg` extension. For instance, the Hungarian messages for ISO8859-2 encoding should be stored in a file called [.filename]#hu_HU.ISO8859-2#.
+
+These catalog files are common text files that contain the numbered messages. It is possible to write comments by starting the line with a `$` sign. Set boundaries are also separated by special comments, where the keyword `set` must directly follow the `$` sign. The `set` keyword is then followed by the set number. For example:
+
+[.programlisting]
+....
+$set 1
+....
+
+The actual message entries start with the message number and followed by the localized message. The well-known modifiers from man:printf[3] are accepted:
+
+[.programlisting]
+....
+15 "File not found: %s\n"
+....
+
+The language catalog files have to be compiled into a binary form before they can be opened from the program. This conversion is done with the man:gencat[1] utility. Its first argument is the filename of the compiled catalog and its further arguments are the input catalogs. The localized messages can also be organized into more catalog files and then all of them can be processed with man:gencat[1].
+
+[[nls-using]]
+=== Using the Catalog Files from the Source Code
+
+Using the catalog files is simple. To use the related functions, [.filename]#nl_types.h# must be included. Before using a catalog, it has to be opened with man:catopen[3]. The function takes two arguments. The first parameter is the name of the installed and compiled catalog. Usually, the name of the program is used, such as grep. This name will be used when looking for the compiled catalog file. The man:catopen[3] call looks for this file in [.filename]#/usr/shared/nls/locale/catname# and in [.filename]#/usr/local/shared/nls/locale/catname#, where `locale` is the locale set and `catname` is the catalog name being discussed. The second parameter is a constant, which can have two values:
+
+* `NL_CAT_LOCALE`, which means that the used catalog file will be based on `LC_MESSAGES`.
+* `0`, which means that `LANG` has to be used to open the proper catalog.
+
+The man:catopen[3] call returns a catalog identifier of type `nl_catd`. Please refer to the manual page for a list of possible returned error codes.
+
+After opening a catalog man:catgets[3] can be used to retrieve a message. The first parameter is the catalog identifier returned by man:catopen[3], the second one is the number of the set, the third one is the number of the messages, and the fourth one is a fallback message, which will be returned if the requested message cannot be retrieved from the catalog file.
+
+After using the catalog file, it must be closed by calling man:catclose[3], which has one argument, the catalog id.
+
+[[nls-example]]
+=== A Practical Example
+
+The following example will demonstrate an easy solution on how to use NLS catalogs in a flexible way.
+
+The below lines need to be put into a common header file of the program, which is included into all source files where localized messages are necessary:
+
+[.programlisting]
+....
+#ifdef WITHOUT_NLS
+#define getstr(n)	 nlsstr[n]
+#else
+#include nl_types.h
+
+extern nl_catd		 catalog;
+#define getstr(n)	 catgets(catalog, 1, n, nlsstr[n])
+#endif
+
+extern char		*nlsstr[];
+....
+
+Next, put these lines into the global declaration part of the main source file:
+
+[.programlisting]
+....
+#ifndef WITHOUT_NLS
+#include nl_types.h
+nl_catd	 catalog;
+#endif
+
+/*
+ * Default messages to use when NLS is disabled or no catalog
+ * is found.
+ */
+char    *nlsstr[] = {
+        "",
+/* 1*/  "some random message",
+/* 2*/  "some other message"
+};
+....
+
+Next come the real code snippets, which open, read, and close the catalog:
+
+[.programlisting]
+....
+#ifndef WITHOUT_NLS
+	catalog = catopen("myapp", NL_CAT_LOCALE);
+#endif
+
+...
+
+printf(getstr(1));
+
+...
+
+#ifndef WITHOUT_NLS
+	catclose(catalog);
+#endif
+....
+
+==== Reducing Strings to Localize
+
+There is a good way of reducing the strings that need to be localized by using libc error messages. This is also useful to just avoid duplication and provide consistent error messages for the common errors that can be encountered by a great many of programs.
+
+First, here is an example that does not use libc error messages:
+
+[.programlisting]
+....
+#include err.h
+...
+if (!S_ISDIR(st.st_mode))
+	errx(1, "argument is not a directory");
+....
+
+This can be transformed to print an error message by reading `errno` and printing an error message accordingly:
+
+[.programlisting]
+....
+#include err.h
+#include errno.h
+...
+if (!S_ISDIR(st.st_mode)) {
+	errno = ENOTDIR;
+	err(1, NULL);
+}
+....
+
+In this example, the custom string is eliminated, thus translators will have less work when localizing the program and users will see the usual "Not a directory" error message when they encounter this error. This message will probably seem more familiar to them. Please note that it was necessary to include [.filename]#errno.h# in order to directly access `errno`.
+
+It is worth to note that there are cases when `errno` is set automatically by a preceding call, so it is not necessary to set it explicitly:
+
+[.programlisting]
+....
+#include err.h
+...
+if ((p = malloc(size)) == NULL)
+	err(1, NULL);
+....
+
+[[nls-mk]]
+=== Making use of [.filename]#bsd.nls.mk#
+
+Using the catalog files requires few repeatable steps, such as compiling the catalogs and installing them to the proper location. In order to simplify this process even more, [.filename]#bsd.nls.mk# introduces some macros. It is not necessary to include [.filename]#bsd.nls.mk# explicitly, it is pulled in from the common Makefiles, such as [.filename]#bsd.prog.mk# or [.filename]#bsd.lib.mk#.
+
+Usually it is enough to define `NLSNAME`, which should have the catalog name mentioned as the first argument of man:catopen[3] and list the catalog files in `NLS` without their `.msg` extension. Here is an example, which makes it possible to to disable NLS when used with the code examples before. The `WITHOUT_NLS` man:make[1] variable has to be defined in order to build the program without NLS support.
+
+[.programlisting]
+....
+.if !defined(WITHOUT_NLS)
+NLS=	es_ES.ISO8859-1
+NLS+=	hu_HU.ISO8859-2
+NLS+=	pt_BR.ISO8859-1
+.else
+CFLAGS+=	-DWITHOUT_NLS
+.endif
+....
+
+Conventionally, the catalog files are placed under the [.filename]#nls# subdirectory and this is the default behavior of [.filename]#bsd.nls.mk#. It is possible, though to override the location of the catalogs with the `NLSSRCDIR` man:make[1] variable. The default name of the precompiled catalog files also follow the naming convention mentioned before. It can be overridden by setting the `NLSNAME` variable. There are other options to fine tune the processing of the catalog files but usually it is not needed, thus they are not described here. For further information on [.filename]#bsd.nls.mk#, please refer to the file itself, it is short and easy to understand.

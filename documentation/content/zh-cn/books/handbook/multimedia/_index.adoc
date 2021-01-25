@@ -1,0 +1,1119 @@
+---
+title: 第 8 章 多媒体
+part: 部分 II. 常见的任务
+prev: books/handbook/desktop
+next: books/handbook/kernelconfig
+---
+
+[[multimedia]]
+= 多媒体
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 8
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/multimedia/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/multimedia/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/multimedia/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+[[multimedia-synopsis]]
+== 概述
+
+FreeBSD 广泛地支持各种声卡， 让您可以从容地享受来自您的计算机的高保真输出。 这包括了录制和播放 MPEG Audio Layer 3 (MP3)、 WAV、 以及 Ogg Vorbis 等许多种格式声音的能力。 FreeBSD 同时也包括了许多的应用程序，让您可以录音、 增加声音效果以及控制附加的MIDI设备。
+
+要是乐于动手， FreeBSD 也能支持播放一般的视频文件和 DVD。 对各种视频媒体进行编码、 转换和播放的应用程序比起处理声音的应用程序略少一些。 例如， 在撰写这章时， FreeBSD Ports Collection 中还没有类似 package:audio/sox[] 那样好的重编码工具能够用来在不同的格式之间转换。 不过， 这个领域的软件研发进展是很快的。
+
+本章将介绍配置声卡的必要步骤。 X11 的安装和配置 (crossref:x11[x11,X Window 系统]) 里已经考虑到了您显卡的问题， 但要想有更好的播放效果， 仍需要调整一些东西。
+
+读了本章后，您将知道：
+
+* 如何配置系统识别声卡。
+* 测试声卡是否正常工作的方法。
+* 如何排除声卡安装中的问题。
+* 如何播放和编码MP3以及其它格式的音频。
+* X 服务器如何支持视频。
+* 哪些好的视频播放/压缩"ports"。
+* 如何播放 DVD、 [.filename]#.mpg# 以及 [.filename]#.avi# 文件。
+* 如何从 CD 和 DVD 中提取文件。
+* 怎样配置电视卡。
+* 如何配置图像扫描仪。
+
+在读本章这前，您应该：
+
+* 知道如何配置、安装一个新的内核 (crossref:kernelconfig[kernelconfig,配置FreeBSD的内核])
+
+[WARNING]
+====
+
+用man:mount[8] 命令去装载CD光盘，至少会产生一个错误， 更糟的情况下会产生 _kernel panic_。 这种媒体所用的编码与通常的ISO文件系统是不同的。
+====
+
+[[sound-setup]]
+== 安装声卡
+
+[[sound-device]]
+=== 配置系统
+
+在开始之前，您应该清楚声卡类型、所用的芯片以及它是 PCI 还是 ISA 卡。 FreeBSD 支持种类繁多的 PCI 和 ISA 卡。检查 link:{u-rel120-hardware}[硬件兼容说明] 中支持的音频设备列表看看是否支持您的声卡， 硬件兼容说明也会说明支持您声卡的是哪个驱动程序。
+
+要使用声卡， 就应装载正确的驱动程序。完成的方式有两种： 最简单的是使用命令 man:kldload[8] 来装载一个内核模块，在命令行输入
+
+[source,bash]
+....
+# kldload snd_emu10k1
+....
+
+或者在文件 [.filename]#/boot/loader.conf# 里加入一行，内容如下
+
+[.programlisting]
+....
+snd_emu10k1_load="YES"
+....
+
+上边实例用于 Creative SoundBlaster(R) Live! 声卡。 其它可装载的模块列在文件 [.filename]#/boot/defaults/loader.conf# 里边。 如果不知道应该使用哪个驱动， 您可以尝试加载 [.filename]#snd_driver# module:
+
+[source,bash]
+....
+# kldload snd_driver
+....
+
+这是个 meta 驱动，一次加载了最常见的设备驱动。 这会提高搜索正确驱动的速度。也可以通过 [.filename]#/boot/loader.conf# 工具来加载所有的声卡驱动。
+
+如果希望在加载了 [.filename]#snd_driver# meta 驱动之后了解到底选择了哪种声卡， 可以通过使用 `cat /dev/sndstat` 来查询 [.filename]#/dev/sndstat# 文件。
+
+另外，您也可以把支持您声卡的代码静态地编译到内核里去。 下一节就采用这种方式支持硬件给出提示。 关于重新编译内核，请参考 crossref:kernelconfig[kernelconfig,配置FreeBSD的内核]。
+
+==== 定制内核使其支持声卡
+
+要做的第一件事情就是添加通用音频框架驱动 man:sound[4] 到内核中， 您需要添加下面这行到内核配置文件中：
+
+[.programlisting]
+....
+device sound
+....
+
+接下来就是加入对我们所用声卡的支持了。 首先需要确定我们的声卡需要使用哪一个驱动。 您可以参考 link:{u-rel120-hardware}[硬件兼容列表] 所列出的音频设备， 以确定您声卡的驱动。 例如， Creative SoundBlaster(R) Live! 声卡由 man:snd_emu10k1[4] 驱动来支持。 要添加它， 需要在内核编译配置文件中加入下面一行：
+
+[.programlisting]
+....
+device snd_emu10k1
+....
+
+一定要阅读驱动的联机手册了解如何使用它们。 关于内核配置文件中声卡驱动的具体写法， 也可以在 [.filename]#/usr/src/sys/conf/NOTES# 文件中找到。
+
+非即插即用的 ISA 卡可能需要您为内核提供一些关于声卡配置的信息 (IRQ、 I/O 端口， 等等)， 这一点与其他不支持即插即用的 ISA 卡类似。 这项工作可以通过 [.filename]#/boot/device.hints# 文件来完成。 系统启动时， man:loader[8] 将读取这个文件， 并将其中的配置传给内核。 例如， 旧式的 Creative SoundBlaster(R) 16 ISA 非即插即用卡需要使用 man:snd_sbc[4] 驱动并配合 snd_sb16(4)。 您可以在内核编译配置文件中增加如下配置：
+
+[.programlisting]
+....
+device snd_sbc
+device snd_sb16
+....
+
+还有下面这些到 [.filename]##/boot/device.hints##中：
+
+[.programlisting]
+....
+hint.sbc.0.at="isa"
+hint.sbc.0.port="0x220"
+hint.sbc.0.irq="5"
+hint.sbc.0.drq="1"
+hint.sbc.0.flags="0x15"
+....
+
+这样，声卡使用 `0x220` I/O 端口和 IRQ `5`。
+
+在 [.filename]#/boot/device.hints# 文件中所使用的语法， 在 man:sound[4] 联机手册中以及所用的具体声卡驱动的联机手册中， 会进行进一步的讲解。
+
+上面所展示的是默认的配置。 有时候， 您可能需要更改 IRQ 或其他配置， 以适应声卡的实际情况。 查看 man:snd_sbc[4] 联机手册了解更多信息。
+
+[[sound-testing]]
+=== 测试声卡
+
+用修改过的内核重起，或者加载了需要的模块之后， 声卡将会出现在您的系统消息缓存中 (man:dmesg[8])，就像这样：
+
+[source,bash]
+....
+pcm0: <Intel ICH3 (82801CA)> port 0xdc80-0xdcbf,0xd800-0xd8ff irq 5 at device 31.5 on pci0
+pcm0: [GIANT-LOCKED]
+pcm0: <Cirrus Logic CS4205 AC97 Codec>
+....
+
+声卡的状态可以通过 [.filename]#/dev/sndstat# 文件来查询：
+
+[source,bash]
+....
+# cat /dev/sndstat
+FreeBSD Audio Driver (newpcm)
+Installed devices:
+pcm0: <Intel ICH3 (82801CA)> at io 0xd800, 0xdc80 irq 5 bufsz 16384
+kld snd_ich (1p/2r/0v channels duplex default)
+....
+
+您系统的输出可能与此不同。如果没有看到 [.filename]#pcm# 设备，回顾并检查一下前面做的。 重新检查您的内核配置文件并保证选择了正确的设备。 常见问题列在 <<troubleshooting>> 一节。
+
+如果一切正常，您现在应该拥有一个多功能声卡了。 如果您的 CD-ROM 或者 DVD-ROM 驱动器的音频输出线已经与声卡连在一起， 您可以把 CD 放入驱动器并用 man:cdcontrol[1] 来播放：
+
+[source,bash]
+....
+% cdcontrol -f /dev/acd0 play 1
+....
+
+许多应用程序，比如 package:audio/workman[] 可以提供一个友好的界面。 您可能想要安装一个应用程序比如 package:audio/mpg123[] 来听 MP3 音频文件。
+
+另一种快速测试声卡的方法， 是将数据发送到 [.filename]#/dev/dsp#， 像这样做：
+
+[source,bash]
+....
+% cat filename > /dev/dsp
+....
+
+这里 [.filename]#filename# 可以是任意文件。 这行命令会产生一些噪音，证明声卡果真在工作。
+
+[NOTE]
+====
+设备节点 [.filename]#/dev/dsp*# 会在需要的时候自动产生。 如果没有使用它们， 则它们不会出现在 man:ls[1] 的输出中。
+====
+
+声卡混音级别可以通过 man:mixer[8] 命令更改。 更多细节可以在 man:mixer[8] 联机手册中找到。
+
+[[troubleshooting]]
+==== 常见问题
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| 错误信息
+| 解决方法
+
+|`sb_dspwr(XX) timed out`
+|
+
+I/O端口没有设置正确。
+
+|`bad irq XX`
+|
+
+IRQ设置不正确。确信设定的IRQ和声卡的IRQ是一样的。
+
+|`xxx: gus pcm not attached, out of memory`
+|
+
+没有足够的内存空间供设置使用。
+
+|`xxx: can't open /dev/dsp!`
+|
+
+使用命令 `fstat | grep dsp` 进行检查是否有其它的程序打开了设备。 值得注意的是 esound 和 KDE 提供的声卡支持经常是造成麻烦的祸根。
+|===
+
+另一个问题是许多新式的显卡本身包含它们自己的声音驱动， 用以配合 HDMI 这样的设备使用。 这个声音设备有时会在真正的声卡之前被探测到， 从而成为默认的回放设备， 而使真正的声卡无法发声。 要检查这种情况， 运行 dmesg 并观察 `pcm`。 其输出类似下面这样：
+
+[.programlisting]
+....
+...
+hdac0: HDA Driver Revision: 20100226_0142
+hdac1: HDA Driver Revision: 20100226_0142
+hdac0: HDA Codec #0: NVidia (Unknown)
+hdac0: HDA Codec #1: NVidia (Unknown)
+hdac0: HDA Codec #2: NVidia (Unknown)
+hdac0: HDA Codec #3: NVidia (Unknown)
+pcm0: <HDA NVidia (Unknown) PCM #0 DisplayPort> at cad 0 nid 1 on hdac0
+pcm1: <HDA NVidia (Unknown) PCM #0 DisplayPort> at cad 1 nid 1 on hdac0
+pcm2: <HDA NVidia (Unknown) PCM #0 DisplayPort> at cad 2 nid 1 on hdac0
+pcm3: <HDA NVidia (Unknown) PCM #0 DisplayPort> at cad 3 nid 1 on hdac0
+hdac1: HDA Codec #2: Realtek ALC889
+pcm4: <HDA Realtek ALC889 PCM #0 Analog> at cad 2 nid 1 on hdac1
+pcm5: <HDA Realtek ALC889 PCM #1 Analog> at cad 2 nid 1 on hdac1
+pcm6: <HDA Realtek ALC889 PCM #2 Digital> at cad 2 nid 1 on hdac1
+pcm7: <HDA Realtek ALC889 PCM #3 Digital> at cad 2 nid 1 on hdac1
+...
+....
+
+此处显卡 (`NVidia`) 先于真正的声卡 (`Realtek ALC889`) 被探测到。 要使用声卡作为默认的回放设备， 将 `hw.snd.default_unit` 改为对应的设备编号：
+
+[source,bash]
+....
+# sysctl hw.snd.default_unit=n
+....
+
+这里的 `n` 是希望使用的声音设备编号， 在这个例子中是 `4`。 您可以在 [.filename]#/etc/sysctl.conf# 中写上这个配置来令其永久性生效：
+
+[.programlisting]
+....
+hw.snd.default_unit=4
+....
+
+[[sound-multiple-sources]]
+=== 利用多个声源
+
+通常而言， 会希望多个音源能够同时播放， 例如， esound 或者 artsd 就可能不支持与其它程序共享音频设备。
+
+FreeBSD 可以通过 _虚拟声道(Virtual Sound Channels)_ 来达到这样的效果， 它可以用 man:sysctl[8] 来启用。 虚拟的声道可以能过在内核里混合声音来混合声卡里播放的声道。
+
+使用三条sysctl命令来设置虚拟声道的数目。 如果您是 `root` 用户， 执行下面的操作：
+
+[source,bash]
+....
+# sysctl dev.pcm.0.play.vchans=4
+# sysctl dev.pcm.0.rec.vchans=4
+# sysctl hw.snd.maxautovchans=4
+....
+
+上面的实例设定了4个虚拟声道，这也是实际上所使用的数目。 `dev.pcm.0.play.vchans=4` 和 `dev.pcm.0.rec.vchans=4` 是 [.filename]#pcm0# 用来播放与录音的虚拟声道数， 一当链接上一个设备它就可配置了。 `hw.snd.maxautovchans` 是分配给新的音频设备的虚拟声道数， 此时这个设备要用 man:kldload[8] 来链接。 因为 [.filename]#pcm# 模块可以独立装载许多硬件驱动程序， 因此 `hw.snd.maxautovchans` 也就可以存储分配给以后链接到的设备的虚拟声道数。 可参阅 man:pcm[4] 手册页义获取更多细节。
+
+[NOTE]
+====
+您不能在使用某个设备的时候改变其虚拟通道数。 首先需要关闭所有使用该设备的程序， 如音乐播放器或声音服务。
+====
+
+当应用程序请求 [.filename]#/dev/dsp0# 时， 系统会自动为其分配正确的 [.filename]#pcm# 设备。
+
+=== 如何设置混音器通道值
+
+不同的混音通道的默认音量是硬编码进 man:pcm[4] 驱动程序的。 同时， 也有很多应用或服务程序提供了允许用户直接设置并记住这些值的功能。 不过这并不是一个很好的解决方案， 您可能希望在驱动一级有一个可以设置的默认值。 这可以通过在 [.filename]#/boot/device.hints# 定义适当的值来实现。 例如：
+
+[.programlisting]
+....
+hint.pcm.0.vol="50"
+....
+
+这将在 man:pcm[4] 模块加载时， 将通道音量设置为默认的 50。
+
+[[sound-mp3]]
+== MP3音频
+
+MP3 (MPEG Layer 3 Audio)达到过CD音质的效果，FreeBSD工作站没理由会缺少这样的好东东。
+
+[[mp3-players]]
+=== MP3播放器
+
+目前为止， 最为流行的 X11 MP3 播放器是 XMMS (X 多媒体系统)。 Winamp 的肤面可以直接用于 XMMS， 因为它的 GUI 几乎和 Nullsoft 的 Winamp 完全一样。 另外， XMMS 也提供了内建的插件支持。
+
+XMMS 可以通过 package:multimedia/xmms[] port 或 package 来安装。
+
+XMMS 的界面很直观， 它提供了播放列表、 图形化均衡器等等。 如果您熟悉 Winamp， 就会感觉 XMMS 很容易使用。
+
+package:audio/mpg123[] port 提供了一个命令行界面的 MP3 播放器。
+
+mpg123 可以在执行时通过命令行指定声音设备和要播放的 MP3 文件， 假设你的声音设备是 [.filename]#/dev/dsp1.0# 并且你想要播放的 MP3 文件为 _Foobar-GreatestHits.mp3_ 你可以键入以下的命令：
+
+[source,bash]
+....
+# mpg123 -a /dev/dsp1.0 Foobar-GreatestHits.mp3
+High Performance MPEG 1.0/2.0/2.5 Audio Player for Layer 1, 2 and 3.
+Version 0.59r (1999/Jun/15). Written and copyrights by Michael Hipp.
+Uses code from various people. See 'README' for more!
+THIS SOFTWARE COMES WITH ABSOLUTELY NO WARRANTY! USE AT YOUR OWN RISK!
+
+Playing MPEG stream from Foobar-GreatestHits.mp3 ...
+MPEG 1.0 layer III, 128 kbit/s, 44100 Hz joint-stereo
+....
+
+[[rip-cd]]
+=== 抓取CD音轨
+
+在对CD或CD音轨编码成MP3之前， CD上的音频数据应先抓到硬盘里。 这个可以通过复制原始的CDDA(CD数字音频)数据成为波形(WAV)文件。
+
+工具 `cdda2wav` 是 package:sysutils/cdrtools[] 套件的一部份，可用来从CD中获取音频及其相关信息。
+
+把CD放到光驱里，下面的命令可以完成 (作为 `root`用户) 把整张 CD 分割成单个 (每个音轨) 的WAV文件：
+
+[source,bash]
+....
+# cdda2wav -D 0,1,0 -B
+....
+
+cdda2wav 支持 ATAPI (IDE)光驱。 从IDE光驱中抓取音轨， 需要用设备名称代替SCSI的单元号。 例如， 想从 IDE 光驱中抓取第7道音轨：
+
+[source,bash]
+....
+# cdda2wav -D /dev/acd0 -t 7
+....
+
+参数 `-D _0,1,0_` 表示 SCSI 设备 [.filename]#0,1,0#， 与命令 `cdrecord -scanbus` 的输出相对应。
+
+抓取单轨，要使用选项 `-t`，如下所示：
+
+[source,bash]
+....
+# cdda2wav -D 0,1,0 -t 7
+....
+
+这个实例用于抓取第七个音轨。要抓取一定范围的音轨，如从1到7：
+
+[source,bash]
+....
+# cdda2wav -D 0,1,0 -t 1+7
+....
+
+利用man:dd[1]也可以从ATAPI光驱中抓取音轨，从 crossref:disks[duplicating-audiocds,复制音频 CD] 可以了解更多。
+
+[[mp3-encoding]]
+=== MP3 编码
+
+现今，可选的MP3编码器是 lame。 Lame 可以从ports树里的 package:audio/lame[] 处找到。
+
+利用抓取的WAV文件，下边的命令就可以把 [.filename]#audio01.wav# 转换成 [.filename]#audio01.mp3#：
+
+[source,bash]
+....
+# lame -h -b 128 \
+--tt "Foo Song Title" \
+--ta "FooBar Artist" \
+--tl "FooBar Album" \
+--ty "2001" \
+--tc "Ripped and encoded by Foo" \
+--tg "Genre" \
+audio01.wav audio01.mp3
+....
+
+128 kbits 是标准的MP3位率(bitrate)。 许多人可能喜欢更高的品质例如 160 或 192。 更高的位率， 会使 MP3 占用更多的磁盘空间--但音质会更高。选项 `-h` 控制 "高品质但低速度 (higher quality but a little slower)" 模式的开关。 选项 `--t` 表示把 ID3 标签--通常包含了歌曲的信息， 植入到MP3文件里。 其它的编码选项可以查询 lame 的联机手册。
+
+[[mp3-decoding]]
+=== MP3 解码
+
+要把MP3歌曲刻录成音乐CD，就需要把它转换成非压缩的波形(WAV)格式。 XMMS 和 mpg123 都支持把MP3输出成非压缩格式文件。
+
+在 XMMS 中输出到磁盘：
+
+[.procedure]
+====
+. 启动 XMMS.
+. 在窗口里右击鼠标，弹出 XMMS 菜单。
+. 在 `选项(Options)` 里选择 `设定(Preference)`。
+. 改变输出插件成 "写磁盘插件(Disk Writer Plugin)"。
+. 按 `配置(Configure)`。
+. 输入或选择一个目录用于存放解压的文件。
+. 象平常一样，把MP3文件装入到 XMMS 里边， 把音量调节到100%并且关掉EQ设定。
+. 按一下 `播放(Play)` - XMMS 如同在播放mp3一样，只是听不到声音。 实际上是在播放mp3到一个文件里。
+. 要想再听MP3歌曲，记得把默认的输出插件设回原来的值。
+====
+
+用 mpg123 进行标准输出：
+
+[.procedure]
+====
+. 执行 ` mpg123 -s audio01.mp3 > audio01.pcm`
+====
+
+XMMS 输出的文件是波形(WAV)格式， 而 mpg123 则把MP3转换成无压缩的PCM 音频数据。两种格式都支持用 cdrecord 刻录成音乐CD。 使用 man:burncd[8] 您就必须使用无压缩的PCM。 如果选择波形格式， 就要注意在每道开始时的一小点杂音， 这段声音是波形文件的头部份。 可以使用工具 SoX 来轻松去除。 SoX 可从 package:audio/sox[] port 或包(package)中安装得到：
+
+[source,bash]
+....
+% sox -t wav -r 44100 -s -w -c 2 track.wav track.raw
+....
+
+阅读 crossref:disks[creating-cds,创建和使用光学介质(CD)] 这部份可以了解到更多在 FreeBSD 里刻盘的信息。
+
+[[video-playback]]
+== 视频回放
+
+视频回放是个很新并且迅速发展中的应用领域。 一定要有耐心，因为不是所有的事情都象处音频那么顺利。
+
+在开始之前，您要了解显卡的类型以及它所用的芯片的类型。 尽管 Xorg 支持大量的显卡， 但能达到好的回放效果的却寥寥无几。 在X11运行时，您可以使用命令 man:xdpyinfo[1] 获得使用您的显卡的X服务器所支持的扩展列表。
+
+为了评估各种播放器和设置，您需要有一小段用作测试的MPEG文件。 由于一些DVD播放器会默认地在 [.filename]#/dev/dvd# 里去找DVD文件， 因此， 您会发现建立符号链接到恰当的设备会很有用：
+
+[source,bash]
+....
+# ln -sf /dev/acd0 /dev/dvd
+# ln -sf /dev/acd0 /dev/rdvd
+....
+
+注意：由于 man:devfs[5] 本身的原因， 像这样手工建立的链接在重启后将不会存在。 想要无论什么时候您启动系统都能自动建立符号链接， 那就把下边这行加到 [.filename]#/etc/devfs.conf# 里边：
+
+[.programlisting]
+....
+link acd0 dvd
+link acd0 rdvd
+....
+
+另外，DVD解密要求调用专用的DVD-ROM函数，要求把许可定到DVD设备里。
+
+为了改善 X11 界面使用共享内存的能力， 建议提高一些 man:sysctl[8] 变量的值：
+
+[.programlisting]
+....
+kern.ipc.shmmax=67108864
+kern.ipc.shmall=32768
+....
+
+[[video-interface]]
+=== 测定视频的性能
+
+在X11下有几种可以显示图像的方式。 到底哪个能工作很大程度上依赖于硬件。 首先， 下边描述的每一种方法在不同的硬件上都会有不同的品质。 其次， 在X11里的图像显示近来引起普遍的关注， 随着 Xorg 的每一个版本， 都会有很大的突破。
+
+常见图像接口列表：
+
+. X11: 一般性的使用共享内存的X11输出。
+. XVideo: 一种X11接口扩展，支持任何X11图像的可拖拉。
+. SDL: 简单直接媒体层。
+. DGA: 直接图片存取。
+. SVGAlib: 低层次掌控图片层。
+
+[[video-interface-xvideo]]
+==== XVideo
+
+Xorg 有种扩展叫做 _XVideo_ (或称Xvideo, Xv, xv)， 它可以通过一个特殊的加速器直接把图像显示在可拖拉的对象里。 即使在低端的计算机 (例如我的PIII 400 Mhz膝上电脑)， 这个扩展也提供了很好的播放质量。
+
+要了解这一扩展是否在正常工作， 使用 `xvinfo` 命令：
+
+[source,bash]
+....
+% xvinfo
+....
+
+如果显示结果如下，那您的显卡就支持XVideo：
+
+[source,bash]
+....
+X-Video Extension version 2.2
+screen #0
+  Adaptor #0: "Savage Streams Engine"
+    number of ports: 1
+    port base: 43
+    operations supported: PutImage
+    supported visuals:
+      depth 16, visualID 0x22
+      depth 16, visualID 0x23
+    number of attributes: 5
+      "XV_COLORKEY" (range 0 to 16777215)
+              client settable attribute
+              client gettable attribute (current value is 2110)
+      "XV_BRIGHTNESS" (range -128 to 127)
+              client settable attribute
+              client gettable attribute (current value is 0)
+      "XV_CONTRAST" (range 0 to 255)
+              client settable attribute
+              client gettable attribute (current value is 128)
+      "XV_SATURATION" (range 0 to 255)
+              client settable attribute
+              client gettable attribute (current value is 128)
+      "XV_HUE" (range -180 to 180)
+              client settable attribute
+              client gettable attribute (current value is 0)
+    maximum XvImage size: 1024 x 1024
+    Number of image formats: 7
+      id: 0x32595559 (YUY2)
+        guid: 59555932-0000-0010-8000-00aa00389b71
+        bits per pixel: 16
+        number of planes: 1
+        type: YUV (packed)
+      id: 0x32315659 (YV12)
+        guid: 59563132-0000-0010-8000-00aa00389b71
+        bits per pixel: 12
+        number of planes: 3
+        type: YUV (planar)
+      id: 0x30323449 (I420)
+        guid: 49343230-0000-0010-8000-00aa00389b71
+        bits per pixel: 12
+        number of planes: 3
+        type: YUV (planar)
+      id: 0x36315652 (RV16)
+        guid: 52563135-0000-0000-0000-000000000000
+        bits per pixel: 16
+        number of planes: 1
+        type: RGB (packed)
+        depth: 0
+        red, green, blue masks: 0x1f, 0x3e0, 0x7c00
+      id: 0x35315652 (RV15)
+        guid: 52563136-0000-0000-0000-000000000000
+        bits per pixel: 16
+        number of planes: 1
+        type: RGB (packed)
+        depth: 0
+        red, green, blue masks: 0x1f, 0x7e0, 0xf800
+      id: 0x31313259 (Y211)
+        guid: 59323131-0000-0010-8000-00aa00389b71
+        bits per pixel: 6
+        number of planes: 3
+        type: YUV (packed)
+      id: 0x0
+        guid: 00000000-0000-0000-0000-000000000000
+        bits per pixel: 0
+        number of planes: 0
+        type: RGB (packed)
+        depth: 1
+        red, green, blue masks: 0x0, 0x0, 0x0
+....
+
+同时注意：列出来的格式(YUV2, YUV12, 等等) 并不总是随着 XVdieo的每一次执行而存在。没有它们可能会迷惑某些人。
+
+如果结果看起来是这样：
+
+[source,bash]
+....
+X-Video Extension version 2.2
+screen #0
+no adaptors present
+....
+
+那么您的显卡可以就不支持XVideo功能。
+
+如果您的卡不支持XVideo， 则只是说明您的显示器在满足刷新图像的计算要求上存在更大的困难。 尽管显卡和处理器很重要，您仍然会有个不错的显示效果。 此外， 您也可以参考我们提供的文献， 在 <<video-further-reading>> 中有所介绍。
+
+[[video-interface-SDL]]
+==== 简单直接媒体层
+
+简单直接媒体层(SDL)，原意是做为 Microsoft(R) Windows(R)、BeOS 以及 UNIX(R) 之间的端口层，允许跨平台应用发展，更高效地利用声卡和图形卡。SDL 层可以在低层访问硬件， 有时这样做就比 X11 接口层更为高效。
+
+关于 SDL， 可以参考 package:devel/sdl12[]。
+
+[[video-interface-DGA]]
+==== 直接图形存取
+
+直接图形存取 (Direct Graphics Access) 是一种 X11 扩展， 通过它， 应用程序能够绕过 X 服务， 并直接修改画面缓存 (framebuffer)。 由于它依赖一种底层的内存映射来实现其功能， 因此使用它的程序必须以 `root` 身份来执行。
+
+DGA 扩展可以通过 man:dga[1] 来完成测试和性能测量。 运行 `dga` 时， 它将随按键改变现实的颜色。 按 kbd:[q] 退出这个程序。
+
+[[video-ports]]
+=== Ports 和 包(Packages) 对视频的解决
+
+这部份主要讨论在 FreeBSD Ports 集中提供的可用于视频回放的软件。 视频回放在软件发展中是个很活跃的领域， 并且各种不同程序的功能可能与这里的描述不尽相同。
+
+首先要弄清楚的重要一点是在 FreeBSD 上使用的视频程序其发展与在 Linux 里使用的是一样的。 大部份程序都还处在β阶段。使用 FreeBSD 的包可能面对的问题：
+
+. 一个应用程序不能播放其它程序制作的文件。
+. 一个应用程序不能播放其自已制作的文件。
+. 不同机上的同样的程序，各自重新建立(rebuild)了一次， 播放同一个文件结果也会有不同。
+. 一个看起来没什么的过滤器， 如图像尺寸的调整， 也有可能因为一个调整例程的问题变得很不象样。
+. 应用程序频繁地留下垃圾(dumps core)。
+. 没有随 port 一起安装的文档可以在网上或者 port 的 [.filename]#work# 目录中找到。
+
+这些程序中许多也体现了 "Linux主义"。即， 有些问题来自于(程序)使用的标准库存在于Linux的发行版中， 或者有些是 Linux 内核的功能， 而该程序的作者事先所假定了的是 Linux内核。这些问题并不总是被 port 编护人员注意到或处理过， 这也就可能导致如下问题：
+
+. 使用[.filename]##/proc/cpuinfo##去检测处理器的特性。
+. 滥用线程可能导致一个程序悬挂完成，而不是完全中止。
+. 软件还不属于FreeBSD Ports集，而又与其它程序经常地一起使用。
+
+现在，这些程序的开发人员也已同 port 的维护人员进行了联合， 以减少制作port时出错。
+
+[[video-mplayer]]
+==== MPlayer
+
+MPlayer 是近来开发的同时也正迅速发展着的一个视频播放器。 MPlayer 团队的目标是在 Linux 和其它 UNIX 系统中的速度和机动性能。 在团队的创始人实在受不了当时可用的播放器的性能时， 这个计划就开始了。 有人也许会说图形接口已经成为新型设计的牺牲品。 但是一旦您习惯了命令行选项和按键控制方式，它就能表现得很好。
+
+[[video-mplayer-building]]
+===== 创建MPlayer
+
+MPlayer 可以从 package:multimedia/mplayer[] 找到。 MPlayer 在联编过程中会进行许多硬件检测， 而得到的可执行文件因此将无法移植到其他系统中使用。 因此， 从 ports 完成联编而不是安装预编译的包就很重要。 另外， 在 `make` 命令行还可以指定许多选项， 在 [.filename]#Makefile# 中有所描述， 接下来我们开始联编：
+
+[source,bash]
+....
+# cd /usr/ports/multimedia/mplayer
+# make
+N - O - T - E
+
+Take a careful look into the Makefile in order
+to learn how to tune mplayer towards you personal preferences!
+For example,
+make WITH_GTK1
+builds MPlayer with GTK1-GUI support.
+If you want to use the GUI, you can either install
+/usr/ports/multimedia/mplayer-skins
+or download official skin collections from
+http://www.mplayerhq.hu/homepage/dload.html
+....
+
+默认的 port 选项对于绝大多数用户来说是够用了。 不过， 如果您需要 XviD 编解码器， 则必须指定 `WITH_XVID` 这个命令行选项。 默认的 DVD 设备也可以用 `WITH_DVD_DEVICE` 选项来定义， 其默认值是 [.filename]#/dev/acd0#。
+
+撰写这一章的时候， MPlayer port 的联编过程包括了 HTML 文档和两个可执行文件， `mplayer` 和 `mencoder`， 后者是一个视频再编码工具。
+
+MPlayer 的 HTML 文档提供了丰富的内容。 如果读者发现本章中缺少关于视频硬件的一些信息， 则 MPlayer 的文档将是十分详尽的补充。 如果您正在找关于 UNIX(R) 中的视频支持的资料， 您绝对应该花一些时间来阅读 MPlayer 的文档。
+
+[[video-mplayer-using]]
+===== 使用MPlayer
+
+任何 MPlayer 用户必须在其用户主目录下建立一个叫 [.filename]#.mplayer# 的子目录。 输入下边的内容来建立这个必须的子目录：
+
+[source,bash]
+....
+% cd /usr/ports/multimedia/mplayer
+% make install-user
+....
+
+在 `mplayer` 的手册里列出了它的命令选项。 HTML文档里有更为详细的信息。 这部份里， 我们只是描述了很少的常见应用。
+
+要播放一个文件，如 [.filename]#testfile.avi#， 可以通过各种视频接口当中的某一个去设置 `-vo` 选项：
+
+[source,bash]
+....
+% mplayer -vo xv testfile.avi
+....
+
+[source,bash]
+....
+% mplayer -vo sdl testfile.avi
+....
+
+[source,bash]
+....
+% mplayer -vo x11 testfile.avi
+....
+
+[source,bash]
+....
+# mplayer -vo dga testfile.avi
+....
+
+[source,bash]
+....
+# mplayer -vo 'sdl:dga' testfile.avi
+....
+
+所有这些选项都是值得一试的， 因为它们的性能依赖很多因素，并且都与硬件密切相关。
+
+要播放 DVD， 需要把 [.filename]#testfile.avi# 改为 `dvd://_N_ -dvd-device _DEVICE_`。 这里 _N_ 是要播放的节目编号， 而 [.filename]#DEVICE# 则是 DVD-ROM 的设备节点。 例如， 要播放 [.filename]#/dev/dvd# 的第三个节目：
+
+[source,bash]
+....
+# mplayer -vo xv dvd://3 -dvd-device /dev/dvd
+....
+
+[NOTE]
+====
+可以在编译 MPlayer 时， 通过 `WITH_DVD_DEVICE` 来指定默认的 DVD 设备。 系统内定的默认设备是 [.filename]#/dev/acd0#。 更多细节， 请参考 port 的 [.filename]#Makefile#。
+====
+
+要停止、暂停、前进等等，可以参考设定的按键---这些可以通过 `mplayer -h` 得到或查看手册。
+
+另外，回放的重要选项是：用于全屏模式的 `-fs -zoom` 和起辅助完成作用的`-framedrop`。
+
+为了让 mplayer 的命令行不是太长，使用者可以通过建立一个文件 [.filename]#.mplayer/config# 来设定如下默认选项：
+
+[.programlisting]
+....
+vo=xv
+fs=yes
+zoom=yes
+....
+
+最后，`mplayer` 可以把DVD题目(title)抓取成为 [.filename]#.vob# 文件。为了从DVD中导出第二个题目，请输入：
+
+[source,bash]
+....
+# mplayer -dumpstream -dumpfile out.vob dvd://2 -dvd-device /dev/dvd
+....
+
+输出文件 [.filename]#out.vob# 将是 MPEG 并且可以被这部份描述的其它 "包" 利用。
+
+[[video-mencoder]]
+===== mencoder
+
+在使用 `mencoder` 之前， 首先熟悉其 HTML 文档中所介绍的选项是一个不错的主意。 它提供了联机手册， 但如果没有 HTML 文档则帮助不大。 有无数种方法来提高视频品质、 降低比特率、 修改格式， 而这些技巧可能会影响性能。 下面是几个例子， 第一个是简单地复制：
+
+[source,bash]
+....
+% mencoder input.avi -oac copy -ovc copy -o output.avi
+....
+
+不正确的命令选项组合可能使生成的文件不能被 `mplayer` 播放。因此，如果您只是想抓取文件， 一定在 `mplayer` 里使用 "`-dumpfile`"。
+
+转换 [.filename]#input.avi# 成为带有MPEG3音频编码 (要求 package:audio/lame[] ) 的MPEG4编码：
+
+[source,bash]
+....
+% mencoder input.avi -oac mp3lame -lameopts br=192 \
+	 -ovc lavc -lavcopts vcodec=mpeg4:vhq -o output.avi
+....
+
+这样就产生了可被 `mplayer` 和 `xine`播放的输出。
+
+[.filename]#input.avi# 可以换成 `dvd://1 -dvd-device /dev/dvd` 并以 `root` 的身份来执行， 以重新对 DVD 节目进行编码。 由于您第一次做这样的工作时很可能会对结果不太满意， 建议您首先把节目复制成文件， 然后对它进行操作。
+
+[[video-xine]]
+==== xine视频播放器
+
+xine 视频播放器是一个关注范围很广的项目， 它不仅看准多合一的视频解决， 而且出品了一个可再用的基本库和一个可扩展插件的可执行模块。 发行有 "包" 和port版本-- package:multimedia/xine[]。
+
+xine 播放器仍然很粗糙， 但这很显然与好开头无关。实际上 xine 要求你有快速的 CPU 和快速的显卡来运行，或者需要支持 XVideo 扩展。 图形界面(GUI)可以使用，但很勉强。
+
+到写这章时，还没有可用于播放CSS编码的DVD文件的输入模块随同 xine 一起发行。 第三方的建造(builds)里内建有这样的模块， 但都不属于FreeBSD Ports 集。
+
+与MPlayer 相比， xine 为用户考虑得更多， 但同时，对用户来说也少了很多有条理的控制方式。 xine 播放器在XVideo接口上做得不错。
+
+默认情况下，播放器 xine 启动的时候会使用图形界面。那么就可以使用菜单打开指定的文件：
+
+[source,bash]
+....
+% xine
+....
+
+另外，没有图形界面也可以使用如下命令立即打开播放文件：
+
+[source,bash]
+....
+% xine -g -p mymovie.avi
+....
+
+[[video-ports-transcode]]
+==== 使用transcode
+
+transcode 这个软件并不是播放器， 而是一系列用于对视频和音频文件进行重新编码的工具。 通过使用 transcode， 就可以拥有使用带 [.filename]#stdin/stdout# 接口的命令行工具来合并视频文件， 以及修复坏损文件的能力。
+
+在联编 package:multimedia/transcode[] port 时可以指定大量选项， 我们建议使用下面的命令行来构建 transcode：
+
+[source,bash]
+....
+# make WITH_OPTIMIZED_CFLAGS=yes WITH_LIBA52=yes WITH_LAME=yes WITH_OGG=yes \
+WITH_MJPEG=yes -DWITH_XVID=yes
+....
+
+对于多数用户而言， 前述配置已经足够了。
+
+为了说明 `transcode` 的功能， 下面的例子展示了如何将 DivX 转换为 PAL MPEG-1 文件 (PAL VCD)：
+
+[source,bash]
+....
+% transcode -i input.avi -V --export_prof vcd-pal -o output_vcd
+% mplex -f 1 -o output_vcd.mpg output_vcd.m1v output_vcd.mpa
+....
+
+生成的 MPEG 文件， [.filename]#output_vcd.mpg#， 可以通过 MPlayer 来播放。 您甚至可以直接将这个文件刻录到 CD-R 介质上来创建 Video CD， 如果希望这样做的话， 需要安装 package:multimedia/vcdimager[] 和 package:sysutils/cdrdao[] 这两个程序。
+
+`transcode` 提供了联机手册， 但您仍应参考 http://www.transcoding.org/cgi-bin/transcode[transcode wiki] 以了解更多信息和例子。
+
+[[video-further-reading]]
+=== 进一步了解
+
+FreeBSD里不同的视频软件包正迅速发展中。 很可能在不久的将来，这里所谈到的问题都将得到解决。 同时，有些人想超越FreeBSD的音/像(A/V)能力， 那他们就不得不从一些FAQ和指南里学知识， 并使用一些不同的应用程序。 这里就给这些读者指出一些补充信息。
+
+http://www.mplayerhq.hu/DOCS/[MPlayer 文档 ] 是很技术性的。 这些文档可以给那些希望获得关于UNIX(R)视频高级技术的人们提供参考。 MPlayer 邮件列表很不喜欢没耐心阅读文档的人， 如果您发现什么问题想报告给他们，请首先RTFM。
+
+http://dvd.sourceforge.net/xine-howto/en_GB/html/howto.html[xine HOWTO] 里边有一章是关于提高性能的，对所有的播放器都很适应。
+
+最后是一些很有前途的程序，读者可以试一下：
+
+* http://avifile.sourceforge.net/[Avifile]，它就是 package:multimedia/avifile[] port。
+* http://www.dtek.chalmers.se/groups/dvd/[Ogle] 它就是 package:multimedia/ogle[] port。
+* http://xtheater.sourceforge.net/[Xtheater]
+* package:multimedia/dvdauthor[]， 一个制作 DVD 节目的源码开放包。
+
+[[tvcard]]
+== 安装电视卡
+
+=== 介绍
+
+电视卡可以让您在您的计算机里观看到无线或有线电视。 许多卡是通过RCA或S-video输入接收复合视频， 而且有些卡还带有调频广播接收器。
+
+FreeBSD 通过man:bktr[4]驱动程序，提供了对基于PCI的电视卡的支持， 要求这些卡使用的是Brooktree Bt848/849/878/879 或 Conexant CN-878/Fusion 878a视频采集芯片。 您还要确保这个板上带的有被支持的调谐器， 参考man:bktr[4]手册查看所支持的调谐器列表。
+
+=== 增加驱动程序
+
+要使用您的卡，您就要装载man:bktr[4]驱动程序。 这个可以通过往 [.filename]#/boot/loader.conf# 里边添加下边一行来实现。象这样：
+
+[.programlisting]
+....
+bktr_load="YES"
+....
+
+另外，您也可以把这个驱动编译进内核， 要是这样的话，就把下边几行加到内核配置里去：
+
+[.programlisting]
+....
+device	 bktr
+device	iicbus
+device	iicbb
+device	smbus
+....
+
+这些附加的设备驱动程序是必须的， 因为卡的各组成部分是能过一根I2C总线相互连接在一起的。 然后建立安装新的内核。
+
+一旦这个支持被加到了您的系统里，您须要重启系统。 在启动过程中，您的电视卡应该显示为up(启动)，象这样：
+
+[.programlisting]
+....
+bktr0: <BrookTree 848A> mem 0xd7000000-0xd7000fff irq 10 at device 10.0 on pci0
+iicbb0: <I2C bit-banging driver> on bti2c0
+iicbus0: <Philips I2C bus> on iicbb0 master-only
+iicbus1: <Philips I2C bus> on iicbb0 master-only
+smbus0: <System Management Bus> on bti2c0
+bktr0: Pinnacle/Miro TV, Philips SECAM tuner.
+....
+
+当然，这些信息可能因您的硬件不同而有所区别。 但是您应该能检查那个调制器是否被正确检测到了， 可能要忽略一些检测到的同man:sysctl[8] MIB（管理系统库）和内核配置文件选项一起的参数。 例如，如果您想强制使用Philips(飞利浦) SECAM制式的调谐器 ， 您就应把下列行加到内核配置文件里：
+
+[.programlisting]
+....
+options OVERRIDE_TUNER=6
+....
+
+或者，您直接使用man:sysctl[8]：
+
+[source,bash]
+....
+# sysctl hw.bt848.tuner=6
+....
+
+请参见 man:bktr[4] 手册和 [.filename]#/usr/src/sys/conf/NOTES# 文件， 以了解更多详细关于可用选项的资料。
+
+=== 有用的应用程序
+
+要使用您的电视卡，您需要安装下列应用程序之一：
+
+* package:multimedia/fxtv[] 提供 "窗口电视(TV-in-a-window)" 功能和图像/声音/图像采集功能。
+* package:multimedia/xawtv[] 也是一款电视应用程序，功能同 fxtv 一样。
+* package:misc/alevt[] 解码和显示Videotext/Teletext。
+* package:audio/xmradio[]， 一款用于一些电视卡的调频电台调谐器的程序。
+* package:audio/wmtune[]， 一款用于电台调谐器的便捷的桌面程序。
+
+更多的程序在FreeBSD Ports Collection(Ports 集)里。
+
+=== 问题解决
+
+如果您的电视卡遇到了什么问题， 您应该首先检查一下您的视频采集芯片和调谐器是不是真正的被man:bktr[4] 驱动程序支持，并且是不是使用了正确的配置选项。 想得到更多支持和关于您的电视卡的各种问题， 您可以接触和使用link:{freebsd-multimedia} 邮件列表的压缩包。
+
+[[scanners]]
+== 图象扫描仪
+
+=== 介绍
+
+在 FreeBSD 中， 访问扫描仪的能力， 是通过 SANE (Scanner Access Now Easy) API 提供的。 SANE 也会使用一些 FreeBSD 设备驱动来访问扫描仪硬件。
+
+FreeBSD 支持 SCSI 和 USB 扫描仪。 在做任何配置之前请确保您的扫描仪被 SANE 支持。 SANE 有一个 http://www.sane-project.org/sane-supported-devices.html[ 支持的设备] 列表， 可以为您提供有关扫描仪的支持情况和状态的信息。 在 FreeBSD 8.X 之前版本的系统中， man:uscanner[4] 手册页也提供了系统支持的 USB 扫描仪列表。
+
+=== 内核配置
+
+上面提到 SCSI 和 USB 接口都是支持的。 取决于您的扫描仪接口， 需要不同的设备驱动程序。
+
+[[scanners-kernel-usb]]
+==== USB 接口
+
+默认的 [.filename]#GENERIC# 内核包含了支持 USB 扫描仪需要的设备驱动。 如果您决定使用一个定制的内核， 确保下面在您的内核配置文件中存在下面这些行：
+
+[.programlisting]
+....
+device usb
+device uhci
+device ohci
+device ehci
+....
+
+在 FreeBSD 8.X 之前的版本中， 还需要下面这行配置：
+
+[.programlisting]
+....
+device uscanner
+....
+
+在这些 FreeBSD 版本中， 是通过设备驱动程序 man:uscanner[4] 来提供对 USB 扫描仪的支持的。 从 FreeBSD 8.0 开始， 这些支持则直接由 man:libusb[3] 函数库提供。
+
+使用正确的内核重新引导系统之后， 插入 USB 扫描仪。 系统消息缓冲区 (使用 man:dmesg[8] 查看) 中会出现下面的信息， 表示检测到了扫描仪：
+
+[source,bash]
+....
+ugen0.2: <EPSON> at usbus0
+....
+
+或者， 对于 FreeBSD 7.X 系统而言：
+
+[source,bash]
+....
+uscanner0: EPSON EPSON Scanner, rev 1.10/3.02, addr 2
+....
+
+随 FreeBSD 版本不同， 这些信息表示扫描仪设备位于设备节点 [.filename]#/dev/ugen0.2# 或 [.filename]#/dev/uscanner0#。 在这个例子中， 我们使用的是 EPSON Perfection(R) 1650 USB 扫描仪。
+
+==== SCSI 接口
+
+如果您的扫描仪是 SCSI 接口的， 重要的是要知道您使用哪种 SCSI 控制器。 取决于所使用的 SCSI 芯片， 您需要调整内核配置文件。 [.filename]#GENERIC# 的内核支持最常用的 SCSI 控制器。 请阅读 [.filename]#NOTES# 文件并在您的内核配置文件中添加正确的行。 除了 SCSI 适配器驱动之外， 您还需要在内核配置文件中增加下述配置：
+
+[.programlisting]
+....
+device scbus
+device pass
+....
+
+在正确地联编并安装了内核之后， 就应该可以在系统启动时， 从系统消息缓冲中看到这些设备：
+
+[source,bash]
+....
+pass2 at aic0 bus 0 target 2 lun 0
+pass2: <AGFA SNAPSCAN 600 1.10> Fixed Scanner SCSI-2 device
+pass2: 3.300MB/s transfers
+....
+
+如果您的扫描仪没有在系统启动的时候加电， 很可能还需要强制手动检测一下，用 man:camcontrol[8] 命令执行一次 SCSI 总线扫描：
+
+[source,bash]
+....
+# camcontrol rescan all
+Re-scan of bus 0 was successful
+Re-scan of bus 1 was successful
+Re-scan of bus 2 was successful
+Re-scan of bus 3 was successful
+....
+
+然后扫描仪就会出现在 SCSI 设备列表里：
+
+[source,bash]
+....
+# camcontrol devlist
+<IBM DDRS-34560 S97B>              at scbus0 target 5 lun 0 (pass0,da0)
+<IBM DDRS-34560 S97B>              at scbus0 target 6 lun 0 (pass1,da1)
+<AGFA SNAPSCAN 600 1.10>           at scbus1 target 2 lun 0 (pass3)
+<PHILIPS CDD3610 CD-R/RW 1.00>     at scbus2 target 0 lun 0 (pass2,cd0)
+....
+
+有关 SCSI 设备的更多细节， 可查看 man:scsi[4] 和 man:camcontrol[8] 手册页。
+
+=== SANE 配置
+
+SANE 系统分为两部分： 后端 (package:graphics/sane-backends[]) 和前端 (package:graphics/sane-frontends[])。 后端部分提供到扫描仪自身的访问。 SANE 的link:http://www.sane-project.org/sane-supported-devices.html[ 支持设备]列表详细说明了哪一个后端可以支持您的图象扫描仪。 如果您想使用您的设备，就必须为您的扫描仪选定正确的后端。 前端部分提供图形化的扫描界面 (xscanimage)。
+
+要做的第一步就是安装 package:graphics/sane-backends[] port 或者 package。然后，使用 `sane-find-scanner` 命令来检查 SANE 系统做的扫描仪检测：
+
+[source,bash]
+....
+# sane-find-scanner -q
+found SCSI scanner "AGFA SNAPSCAN 600 1.10" at /dev/pass3
+....
+
+输出显示了扫描仪的接口类型和扫描仪连接到系统上的设备节点。 生产厂家和产品型号可能没有显示，不过不重要。
+
+[NOTE]
+====
+一些 USB 扫描仪需要您加载固件，后端的手册页中有这方面的解释。 您也应该阅读 man:sane-find-scanner[1] 和 man:linprocfs[7] 手册页。
+====
+
+现在我们需要检查扫描仪是否可以被扫描前端识别。 默认情况下， SANE 后端自带一个叫做 man:sane[1] 的命令行工具。 这个命令允许您列出设备以及从命令行执行图片扫描。 `-L` 选项用来列出扫描仪设备：
+
+[source,bash]
+....
+# scanimage -L
+device `snapscan:/dev/pass3' is a AGFA SNAPSCAN 600 flatbed scanner
+....
+
+或者， 如果使用的是 <<scanners-kernel-usb>> 中的 USB 扫描仪：
+
+[source,bash]
+....
+# scanimage -L
+device 'epson2:libusb:/dev/usb:/dev/ugen0.2' is a Epson GT-8200 flatbed scanner
+....
+
+上述输出来自于 FreeBSD 8.X 系统。 `'epson2:libusb:/dev/usb:/dev/ugen0.2'` 给出了扫描仪所使用的后台名字 (`epson2`) 和设备节点 (`/dev/ugen0.2`)。
+
+[NOTE]
+====
+如果没有输出任何信息， 或提示没有识别到扫描仪， 则说明 man:sane[1] 无法识别它。 如果发生这种情况， 您就需要修改扫描仪支持后端的配置文件， 并定义所使用的扫描设备。 [.filename]#/usr/local/etc/sane.d/# 目录中包含了所有的后端配置文件。 这类识别问题经常会在某些 USB 扫描仪上发生。
+
+ linkend="scanners-kernel-usb"> 中所使用的 USB 扫描仪， `sane-find-scanner` 会给出下面的信息：
+
+例如， 对于在 <<scanners-kernel-usb>>， 在 FreeBSD 8.X 中， 扫描仪已经被很好地识别并能够正常工作了； 而对于更早版本的 FreeBSD 而言 (使用 man:uscanner[4] 驱动程序) `sane-find-scanner` 则会给出这样的信息：
+
+[source,bash]
+....
+# sane-find-scanner -q
+found USB scanner (UNKNOWN vendor and product) at device /dev/uscanner0
+....
+
+扫描仪被正确的探测到了，它使用 USB 接口，连接在 [.filename]#/dev/uscanner0# 设备节点上。 我们现在可以检查看看扫描仪是否被正确的识别：
+
+[source,bash]
+....
+# scanimage -L
+No scanners were identified. If you were expecting something different,
+check that the scanner is plugged in, turned on and detected by the
+sane-find-scanner tool (if appropriate). Please read the documentation
+which came with this software (README, FAQ, manpages).
+....
+
+由于扫描仪没有识别成功， 我们就需要编辑 [.filename]#/usr/local/etc/sane.d/epson2.conf# 文件。 所用的扫描仪型号是 EPSON Perfection(R) 1650， 这样我们知道扫描仪应使用 `epson` 后端。确保阅读后端配置文件中的帮助注释。 改动非常简单：注释掉导致您的扫描仪使用错误接口的所有行 (在我们这种情况下，我们将注释掉从 `scsi` 开始的所有行，因为我们的扫描仪使用 USB 接口)，然后在文件的结尾添加指定的接口和所用的设备节点。 这种情况下， 添加下面这行：
+
+[.programlisting]
+....
+usb /dev/uscanner0
+....
+
+请确保阅读后端配置文件提供的注释以及后端手册页了解更多细节， 并使用正确的语法。我们现在可以检验扫描仪是否被识别到了：
+
+[source,bash]
+....
+# scanimage -L
+device `epson:/dev/uscanner0' is a Epson GT-8200 flatbed scanner
+....
+
+我们的 USB 扫描仪被识别到了。 此时如果商标和型号与扫描仪的实际情况不符， 并不会带来太大的麻烦。 您需要关注的是 ``epson:/dev/uscanner0'` 字段， 这个给了我们正确地后端名称和正确的设备节点。
+====
+
+一旦 `scanimage -L` 命令可以看到扫描仪， 配置就完成了。设备现在准备好等待扫描了。
+
+man:sane[1] 允许我们从命令行执行图片扫描， 相比之下使用图形用户界面来执行图片扫描会更好。 SANE 提供了一个简单但实用的图形界面： xscanimage (package:graphics/sane-frontends[])。
+
+Xsane (package:graphics/xsane[])是另一个流行的图形扫描前端。 这个前端提供了一些高级特性， 比如多样的扫描模式(photocopy，fax，等。)， 色彩校正，批量扫描，等等。这两个程序都可以作为 GIMP 的插件使用。
+
+=== 授权其他用户访问扫描仪
+
+前面所有的操作都是用 `root` 权限来完成的。 然而您可能需要让其他的用户也可以访问扫描仪。 用户需要有扫描仪所用的设备节点的读和写权限。 比如，我们的 USB 扫描仪使用设备节点 [.filename]#/dev/ugen0.2# 实际上只是到实际设备节点 [.filename]#/dev/usb/0.2.0# 的符号连接 (可以通过查看 [.filename]#/dev# 目录的内容来确认这一点)。 设备节点本身和这个符号连接分别属于 `wheel` 和 `operator` 组。 将用户 `_joe_` 添加到 这些组中， 就可以允许他使用扫描仪了， 不过， 出于显而易见的安全方面的原因， 在将用户加到特定的用户组， 特别是 `wheel` 组时， 无疑需三思而后行。 更好的解决方法是创建一个专门用于访问 USB 设备的组， 并让这个组的成员能够访问 USB 设备。
+
+这里作为示例， 我们将会使用名为 `_usb_` 的组。 第一步是借助 man:pw[8] 命令来创建它：
+
+[source,bash]
+....
+# pw groupadd usb
+....
+
+接下来， 令 [.filename]#/dev/ugen0.2# 符号连接和 [.filename]#/dev/usb/0.2.0# 设备节点能够以 `usb` 组的身份来访问， 具体而言是配置正确的写权限 (`0660` 或 `0664`)， 因为默认情况下只有属主 (`root`) 才能写这些设备。 这些配置是通过在 [.filename]#/etc/devfs.rules# 文件中添加如下的设置来实现的：
+
+[.programlisting]
+....
+[system=5]
+add path ugen0.2 mode 0660 group usb
+add path usb/0.2.0 mode 0666 group usb
+....
+
+FreeBSD 7.X 用户需要将上面的配置改为使用与之对应的 [.filename]#/dev/uscanner0#：
+
+[.programlisting]
+....
+[system=5]
+add path uscanner0 mode 660 group usb
+....
+
+随后您还需要在 [.filename]#/etc/rc.conf# 中添加下面的内容并重新启动：
+
+[.programlisting]
+....
+devfs_system_ruleset="system"
+....
+
+关于这些配置的进一步细节请参考联机手册 man:devfs[8]。
+
+现在， 只需将用户添加到 `_usb_` 组， 就可以使用扫描仪了：
+
+[source,bash]
+....
+# pw groupmod usb -m joe
+....
+
+更多详情， 请参见联机手册 man:pw[8]。

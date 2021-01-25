@@ -1,0 +1,2462 @@
+---
+title: 9. Fejezet - Nyomtatás
+part: II. Rész Gyakori feladatok
+prev: books/handbook/kernelconfig
+next: books/handbook/linuxemu
+---
+
+[[printing]]
+= Nyomtatás
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 9
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/printing/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/printing/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/printing/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[printing-synopsis]]
+== Áttekintés
+
+A FreeBSD a nyomtatók széles skálájával képes együttmûködni, a legrégebbi vegyszeres nyomtatótól kezdve egészen napjaink lézernyomtatójáig, aminek köszönhetõen alkalmazásainkkal nagyon jó minõségû nyomtatásokat tudunk készíteni.
+
+A FreeBSD a helyi hálózaton nyomtatószervernek is beállítható. Ekkor a vele közös hálózatra csatlakozó többi, FreeBSD, Windows(R) vagy Mac OS(R) rendszerû számítógéptõl képes nyomtatási kéréseket elfogadni. A FreeBSD gondoskodik róla, hogy egyszerre csak egy nyomtatás készüljön el, számon tartja, hogy mely felhasználók és számítógépek nyomtatnak a legtöbbet, és minden feladathoz "munkalapot" (banner page) készít, amiben többek közt megtalálhatjuk, hogy kihez tartozik.
+
+A fejezet elolvasása során megismerjük:
+
+* hogyan állítsuk be a FreeBSD nyomtatási sorát;
+* hogyan telepítsünk nyomtatási szûrõket, hogyan kezeljünk különbözõ speciális nyomtatási feladatokat, tehát például miként alakítsuk át a beérkezõ dokumentumokat olyan nyomtatási formátumra, amelyet a nyomtatónk is megért;
+* hogyan engedélyezzük a fejléc- vagy nyomtatási információk kinyomtatását;
+* hogyan nyomtassunk más számítógépekhez csatlakoztatott nyomtatókkal;
+* hogyan nyomtassunk a hálózatra közvetlenül kapcsolt nyomtatókkal;
+* hogyan állítsuk be a nyomtatási korlátozásokat, például a nyomtatási feladatok méretét, amivel egyes felhasználók nyomtatását visszafoghatjuk;
+* hogyan készítsünk nyomtatási kimutatásokat és nyilvántartást a nyomtató használatáról;
+* hogyan keressük meg a nyomtatás során felmerülõ problémák okait.
+
+A fejezet elolvasásához ajánlott:
+
+* egy új rendszermag beállításának és telepítésének ismerete (crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]).
+
+[[printing-intro-spooler]]
+== Bevezetés
+
+A FreeBSD-ben a nyomtatók mûködéséhez be kell állítani az LPD nyomtatási rendszert. Ez a Berkeley sornyomtatási rendszere, amelyet ezentúl röviden csak LPD-nek fogunk hívni. Ez a FreeBSD alapértelmezett szabványos nyomtatásvezérlõ rendszere. Ebben a fejezetben az LPD és annak konfigurációja kerül bemutatásra.
+
+Ha már találkoztunk az LPD-vel vagy hozzá hasonló rendszerekkel, akkor innen nyugodtan ugorhatunk a <<printing-intro-setup,Kezdeti beállítások>> címû szakaszra.
+
+Az LPD vezérli a számítógéphez csatlakoztatott nyomtató összes funkcióját. Számos feladata van:
+
+* Felügyeli a lokálisan és hálózaton keresztül csatlakoztatott nyomtatók hozzáféréseit.
+* Lehetõvé teszi az átküldött állományok kinyomtatását, amelyeket _nyomtatási feladatoknak_ nevezünk.
+* Minden nyomtatóhoz fenntart egy nyomtatási _sort_, amivel meg tudja akadályozni, hogy egyszerre több felhasználó is hozzá tudjon férni az egyes nyomtatókhoz.
+* A _fejléceket_ (vagy más néven _munka-_ vagy _elválasztó lapokat_) nyomtat, így a felhasználók könnyen megtalálják a saját nyomtatásaikat a többi közt.
+* Felügyeli a soros portokon csatlakozó nyomtatók kommunikációs beállításait.
+* A hálózaton keresztül átküldi a nyomtatási feladatokat egy másik számítógép LPD sorába.
+* A nyomtatási feladatok formázásához lefuttatja az adott nyomtató nyelvéhez és képességeihez illeszkedõ speciális szûrõket.
+* Nyilvántartja a nyomtató kihasználtságát.
+
+A beállításait tartalmazó állomány ([.filename]#/etc/printcap#) és a speciális szûrõprogramok segítségével az LPD sokféle nyomtatón képes az összes említett feladatot vagy annak egy részét megvalósítani.
+
+[[printing-intro-why]]
+=== Amiért nyomtatási sort érdemes használni
+
+Amikor csak egyedül vagyunk a rendszerben, felmerülhet bennünk a kérdés, hogy minek is kellene nekünk veszõdni a nyomtatási sor beállításával, hiszen nincs szükségünk sem a hozzáférések vezérlésére, sem fejlécekre, sem pedig nyilvántartásra. Noha akár közvetlenül is el tudjuk érni a nyomtatót, néhány okból azért mégis érdemes nyomtatási sort használni:
+
+* Az LPD a háttérben nyomtat, ezért ilyenkor nem kell megvárni, amíg az adat átmásolódik a nyomtatóra.
+* Az LPD tetszõlegesen tudja alakítani a nyomtatási feladatokat: hozzájuk tud tenni különbözõ adatokat (dátum és idõ), vagy a speciális állományokat (például a TeX DVI formátumát) képes megértetni a nyomtatóval, és nem nekünk kell mindezeket a lépéseket elvégeznünk.
+* Számos nyomtatási lehetõséggel rendelkezõ szabad és kereskedelmi program arra számít, hogy a rendszerünkben nyomtatási sor található, ezért annak beállításával sokkal könnyebb használni ezeket a szoftvereket.
+
+[[printing-intro-setup]]
+== Kezdeti beállítások
+
+Úgy tudjuk használni a nyomtatókat az LPD nyomtatási rendszerével, ha egyaránt beállítjuk a nyomtatót és magát az LPD-t is. Itt a beállítás két szintjét tárgyaljuk:
+
+* Az <<printing-simple,Alacsonyszintû nyomtatóbeállítás>> címû szakaszból megtudhatjuk, hogyan tudunk csatlakoztatni egy nyomtatót, hogyan adjuk meg az LPD-nek, miként kommunikáljon vele, hogyan nyomtassunk ki egyszerû szöveges állományokat a nyomtatón.
+* A <<printing-advanced,Magasszintû nyomtatóbeállítás>> szakaszban bemutatjuk, hogyan nyomtassunk ki különféle speciális állományokat, hogyan készíttessünk fejléceket, hogyan nyomtassunk hálózaton keresztül, hogyan vezéreljük a nyomtatók hozzáférését és hogyan tartsuk nyilván a nyomtató használatát.
+
+[[printing-simple]]
+=== Alacsonyszintû nyomtatóbeállítás
+
+Ebben a szakaszban láthatjuk, miképpen kell beállítani a nyomtatónkat és az LPD hogyan lesz képes azt használatba venni. Az alapoktól kezdünk:
+
+* A <<printing-hardware,Hardveres beállítás>> címû szakaszban abban kapunk segítséget, hogyan kell a nyomtatót a számítógéphez csatlakoztatni.
+* A <<printing-software,Szoftveres beállítás>> címû szakaszban az LPD nyomtatási rendszer beállítását tartalmazó állományt ([.filename]#/etc/printcap#) vesszük sorra.
+
+Amennyiben olyan nyomtatót akarunk beállítani, amely nem helyileg, hanem valamilyen hálózati protokollon keresztül csatlakozik, nézzük meg a <<printing-advanced-network-net-if,Nyomtatók hálózati adatcsatlakozással>> címû szakaszt.
+
+Habár ez a szakasz nevében csupán "Alacsonyszintû nyomtatóbeállításról" szól, meglehetõsen szerteágazó tud lenni. A nyomtató hardveres és szoftveres életre keltése az egyik legnehezebb feladat. Ha van egy mûködõ nyomtatónk, a fejlécek és a nyilvántartás beállítása tulajdonképpen már gyerekjáték.
+
+[[printing-hardware]]
+==== Hardveres beállítás
+
+Ebben a szakaszban a nyomtatók csatlakoztatásának lehetséges módozatairól esik szó. Beszélni fogunk mindenféle portokról és kábelekrõl, és a FreeBSD rendszermagjának az egyes nyomtatók használatához szükséges beállításairól is.
+
+Ha korábban tudtuk csatlakoztatni a nyomtatónkat, és más operációs rendszerekkel már sikeresen nyomtattunk is vele, akkor rögtön ugorhatunk is a <<printing-software,Szoftveres beállítás>>okat tartalmazó szakaszra.
+
+[[printing-ports]]
+===== Portok és kábelek
+
+A személyi számítógépekhez kapható nyomtatók általában a következõ három csatolófelület egyikével rendelkeznek:
+
+* A _soros_, más néven RS-232-es vagy COM porton keresztül kommunikáló felületek a számítógép soros portján küldenek adatot a nyomtatónak. A soros csatolófelületek igen elterjedtek a számítógépiparban, könnyen tudunk ilyen kábelt szerezni, gyorsan is gyártható. Elõfordulhat, hogy a soros csatolófelületek használatához valamilyen különleges kábelre, valamint bonyolult kommunikációs beállítások megadására van szükség. A legtöbb soros port által elérhetõ legnagyobb adatátviteli sebesség másodpercenként 115 200 bit, ami miatt azonban a komolyabb grafikai tartalmak nyomtatása szinte lehetetlen.
+* A _párhuzamos_ csatolófelületek a számítógépünk párhuzamos portjával küldenek adatokat a nyomtatónak. A párhuzamos felületek gyorsabbak az RS-232 soros felületnél, és a számítógéppiacon is gyakran megtalálhatóak. Könnyen tudunk ilyen kábelt szerezni, azonban kézileg nehezebb elkészíteni. A párhuzamos csatolófelületekhez általában nem tartoznak kommunikációs beállítások, ezért rendkívül egyszerûen el lehet boldogulni velük.
++ 
+A párhuzamos felületekre olykor "Centronics" csatolófelületként is hivatkoznak, amelyet egy nyomtatótípus után neveztek el.
+* A Universal Serial Bus (Univerzális soros busz) rövidítéseként használt USB elnevezésû csatolófelület a párhuzamos és a soros felületeknél jóval nagyobb sebességre képes. A hozzá tartozó kábelek felépítése egyszerû és az áruk olcsó. Habár a nyomtatás terén az USB hivatott leváltani az RS-232-es soros és a párhuzamos felületeket, nem mindegyik UNIX(R) rendszer támogatja kellõképpen. Ezt a problémát például úgy kerülhetjük el, ha olyan nyomtatót vásárolunk, amelyen a legtöbbhöz hasonlóan a párhuzamos és az USB csatlakozás is megtalálható.
+
+A párhuzamos felületeken általában csak egy irányban tudunk üzeneteket küldeni (a számítógéptõl a nyomtatóhoz), miközben az USB és a soros felület használatával mind a két irányban is. FreeBSD alatt viszont már az újabb (EPP és ECP) párhuzamos portok egy IEEE 1284 szabványú kábellel képesek oda-vissza kommunikálni.
+
+A párhuzamos nyomtatók kétirányú kommunikációját általában két mód közül az egyiken szokták megvalósítani. Az elsõ esetben a FreeBSD a nyomtatóhoz egy speciális meghajtót használ, amely ismeri az általa beszélt nyelvet. Ilyenek a tintasugaras nyomtatók, amelyek más egyéb állapotinformációk mellett ezen keresztül képesek jelezni a tintapatronokban levõ tinta mennyiségét. A második esetben a nyomtató ismeri a PostScript(R) nyelvet.
+
+A PostScript(R) nyelvû nyomtatási feladatok valójában a nyomtatónak küldött programok. Használatukhoz még papírra sincs feltétlenül szükség, és elõfordulhat, hogy közvetlenül a számítógépnek válaszolnak. A PostScript(R) is kétirányú kommunikáción keresztül értesíti a számítógépet az olyan gondokról, mint például a PostScript(R) programokban levõ hibák vagy a papír beakadása, amely információnak a felhasználók szoktak örülni. Hovatovább ez a kétirányú kommunikáció a kulcsa a PostScript(R) nyomtatók hatékony nyilvántartásának is: egyszerûen lekérdezzük a nyomtatótól a lapszámlálót (ami megadja, hogy a nyomtató eddig mennyi lapot nyomtatott ki), kiküldjük a felhasználóhoz tartozó feladatot és ismét lekérdezzük a lapszámlálót. A két érték kivonásából tájékozódhatunk a felhasználó által igényelt lapok mennyiségérõl.
+
+[[printing-parallel]]
+===== Párhuzamos portok
+
+A párhuzamos csatolófelületen érintkezõ nyomtató használatához kapcsoljunk össze számítógépünket és nyomtatónkat egy párhuzamos kábellel. Az erre vonatkozó konkrét utasítások a nyomtató és/vagy a számítógép kézikönyvében olvashatóak.
+
+Jegyezzük meg, hogy a számítógép melyik párhuzamos portjára csatlakoztattuk a kábelt. FreeBSD alatt az elsõ ilyen port a [.filename]#ppc0# eszköz, a második pedig a [.filename]#ppc1# eszköz lesz és így tovább. A nyomtatóeszköz elnevezése ugyanezt a sémát követi: a [.filename]#/dev/lpt0# lesz az elsõ párhuzamos porton levõ nyomtató stb.
+
+[[printing-serial]]
+===== Soros portok
+
+A soros csatolófelületet használó nyomtatók beüzemeléséhez elõször egy soros kábel segítségével kapcsoljuk össze a számítógépünkkel. Ennek pontos részleteit a nyomtató és/vagy a számítógépünk kézikönyvében találhatjuk meg.
+
+Ha nem vagyunk benne biztosak, hogy milyen a "megfelelõ soros kábel", próbáljunk az alábbiak alapján dönteni:
+
+* A _modem_ kábele a két oldalán levõ, egymásnak megfelelõ tüskéket közvetlenül összeköti. Ezt a típust nevezik "DTE-DCE" kábelnek.
+* A _null-modem_ kábel bizonyos érintkezõket rendesen, másokat pedig fordítva köt össze (például a küldõt a fogadóval), illetve némelyeket rövidre zár közvetlenül a csatlakozón belül. Ez a típus a "DTE-DTE" kábel.
+* Néhány speciális nyomtató esetén elõfordul még a __soros nyomtató__kábel, amely leginkább a null-modem kábelekhez hasonlít, azonban az ott rövidre zárt csatornák itt a nekik megfelelõ érintkezõknek továbbítanak jeleket.
+
+Emellett még a nyomtató elõlapján vagy az alján található kapcsolók segítségével be kell állítanunk a nyomtatóhoz tartozó kommunikációs paramétereket is. Itt válasszuk azt a `bps` (a bitek száma másodpercenként) értéket, amelyet még a számítógépünk és a nyomtatónk is egyaránt képes támogatni. Válasszunk 7 vagy 8 adatbitet, páros, páratlan vagy kikapcsolt paritásbitet és 1 vagy 2 stopbitet. Ekkor tudjuk megadni a forgalomirányítási protokollt is: lehet kikapcsolt, XON/XOFF (ez az ún. "sávon belüli" vagy "szoftveres") forgalomirányítás. Ne felejtsük el ezeket a beállításokat a most következõ szoftveres beállítások elvégzése során sem.
+
+[[printing-software]]
+==== Szoftveres beállítás
+
+Ebben a fejezetben tárgyaljuk a FreeBSD-ben található LPD nyomtatási rendszer mûködéséhez és a nyomtatáshoz szükséges szoftveres beállításokat.
+
+Íme az elvégzendõ lépések rövid vázlata:
+
+[.procedure]
+====
+. Amennyiben szükséges, állítsuk be a rendszermagunkat a nyomtató által használt portra. Ehhez <<printing-kernel,A rendszermag beállítása>> szakaszban olvashatjuk el, mit is kell pontosan tenni.
+. Ha párhuzamos portot használunk, akkor állítsuk be, hogy a párhuzamos port miként fog kommunikálni. <<printing-parallel-port-mode,A párhuzamos port kommunikációs módjának beállítása>> címû szakasz tárja fel ennek részleteit.
+. Próbáljuk ki, hogy ezek után az operációs rendszer képes-e adatot küldeni a nyomtatónak. <<printing-testing,A nyomtató kommunikációjának ellenõrzése>> szakaszban kapunk erre pár javaslatot.
+. Az [.filename]#/etc/printcap# állomány felhasználásával állítsuk be a nyomtatónkhoz az LPD-t. Errõl a fejezet további részei adnak majd felvilágosítást.
+====
+
+[[printing-kernel]]
+===== A rendszermag beállítása
+
+Az operációs rendszer magja eszközök egy adott csoportjával képes együttmûködni, amelyben a soros és párhuzamos felületen csatlakozó nyomtatók is megtalálhatóak. Azonban ha a rendszermag nem ismeri fel még valamelyiket, akkor a soros vagy párhuzamos portok használatához külön támogatásra van szükség.
+
+Így tudjuk megnézni, hogy a jelenleg használt rendszermag támogatja-e a soros csatolófelületet:
+
+[source,bash]
+....
+# grep sioN /var/run/dmesg.boot
+....
+
+Itt az _N_ nullától kezdõdõen adja meg a soros port sorszámát. Amennyiben látunk valami ilyesmit:
+
+[source,bash]
+....
+sio2 at port 0x3e8-0x3ef irq 5 on isa
+sio2: type 16550A
+....
+
+Ez azt jelenti, hogy a rendszermag sikeresen észlelte a portot.
+
+A párhuzamos csatolófelület támogatásáról így gyõzõdhetünk meg:
+
+[source,bash]
+....
+# grep ppcN /var/run/dmesg.boot
+....
+
+Itt az _N_ nullától kezdõdõen sorszámozza a párhuzamos portot. Ha eredményül valami hasonlót kapunk:
+
+[source,bash]
+....
+ppc0: <Parallel port> at port 0x378-0x37f irq 7 on isa0
+ppc0: SMC-like chipset (ECP/EPP/PS2/NIBBLE) in COMPATIBLE mode
+ppc0: FIFO with 16/16/8 bytes threshold
+....
+
+Ez arra utal, hogy a rendszermagunk tud a portról.
+
+Elõfordulhat azonban, hogy az operációs rendszer csak akkor fogja észrevenni a nyomtatásra használt soros vagy párhuzamos portot, ha átállítjuk a rendszermagunkat.
+
+A soros port támogatásának beállításához olvassuk el a rendszermag beállításáról szóló szakaszt. A párhuzamos port támogatásához szintén olvassuk el ugyanazt a szakaszt _és_ a most következõt.
+
+[[printing-parallel-port-mode]]
+==== A párhuzamos port kommunikációs módjának beállítása
+
+A párhuzamos csatolófelület használata esetén választhatunk, hogy a FreeBSD milyen módon tartsa a kapcsolatot a nyomtatóval: megszakításokkal vezérelje (interrupt-driven), vagy esetleg folyamatosan kérdezgesse (polled). A FreeBSD általános meghajtója (man:lpt[4]) a man:ppbus[4] alrendszert használja, ami a portot a man:ppc[4] meghajtón keresztül vezérli.
+
+* A _megszakítás alapú_ módszer a GENERIC rendszermagban alapértelmezés. Ilyenkor az operációs rendszer egy megszakításkérés felhasználásával értesül arról, hogy a nyomtató mikor áll készen adatok fogadására.
+* A _lekérdezéses_ módszer használata során az operációs rendszer folyamatosan érdeklõdik a nyomtató rendelkezésre állásáról. Amikor erre pozitív megerõsítést kap, akkor a rendszermag újabb adatokat küld.
+
+A megszakításos módszer valamivel gyorsabb, azonban cserébe lefoglal egy értékes IRQ vonalat. A HP újabb nyomtatói állítólag nem mûködnek megfelelõen ilyen módban, valamilyen (pillanatnyilag még nem teljesen tisztázott) idõzítési probléma miatt. Ezért az ilyen nyomtatóknak is valószínûleg a lekérdezéses módszert kell használniuk. Más nyomtatók pedig, habár mûködnek mind a két módszerrel, hihetetlenül lassúak a megszakításokkal.
+
+Kétféleképpen állíthatjuk be a kommunikációs módot: a rendszermagon keresztül, vagy az man:lptcontrol[8] segédprogrammal.
+
+_A rendszermagban így állíthatjuk be a kommunikációt:_
+
+[.procedure]
+====
+. Írjuk át a rendszermag beállításait tartalmazó állományt. Keressük meg benne a használt párhuzamos portnak megfelelõen a `ppc0`, `ppc1` (második párhuzamos port) vagy `ppc2` (harmadik párhuzamos port) bejegyzést, és engedélyezzük.
++
+** A megszakításos mód használatához nyissuk meg a [.filename]#/boot/device.hints# állományt, és az _N_ helyére írjuk be a
++
+[.programlisting]
+....
+hint.ppc.0.irq="N"
+....
++ 
+sorba a megfelelõ IRQ számát. A rendszermag beállításait tartalmazó állománynak tartalmaznia kell a man:ppc[4] meghajtót is:
++
+[source,bash]
+....
+device ppc
+....
++
+** A lekérdezéses mód használatához a [.filename]#/boot/device.hints# állományból távolítsuk el a következõ sort:
++
+[.programlisting]
+....
+hint.ppc.0.irq="N"
+....
++ 
+Némely esetben azonban ennyi még nem lesz elég a port lekérdezéses beállításához. Ugyanis ha a hozzá tartozó meghajtó az man:acpi[4], akkor ez fogja felismerni, kezelni és a nyomtatóhoz tartozó portok hozzáférési módját vezérelni. A problémát ezért gyakran érdemes az man:acpi[4] beállításai között is keresni.
++
+. Mentsük el az állományt. Konfiguráljuk be, fordítsuk le és telepítsük az új rendszermagot. Ennek pontos részleteit crossref:kernelconfig[kernelconfig,a rendszermag beállításáról] szóló fejezetben olvashatjuk.
+====
+
+_A kommunikáció módjának beállítása_ az man:lptcontrol[8] programmal:
+
+[.procedure]
+====
+
+. A megszakításos mód beállításához írjuk be:
++
+[source,bash]
+....
+# lptcontrol -i -d /dev/lptN
+....
++ 
+ahol az `lptN` a nyomtatóhoz tartozó eszköz neve.
+. A lekérdezéses mód beállításához írjuk be:
++
+[source,bash]
+....
+# lptcontrol -p -d /dev/lptN
+....
++ 
+ahol az `lptN` a nyomtatóhoz tartozó eszköz neve.
+====
+
+Ha ezeket a parancsokat berakjuk az [.filename]#/etc/rc.local# állományunkba, akkor azzal a rendszer minden egyes indítása során beállítjuk a számunkra megfelelõ módot. Errõl többet az man:lptcontrol[8] man oldaláról tudhatunk meg.
+
+[[printing-testing]]
+==== A kommunikáció ellenõrzése
+
+Még mielõtt nekilátnánk a nyomtatási rendszer beállításának, bizonyosodjuk meg róla, hogy az operációs rendszer képes adatokat továbbítani a nyomtatónak. Sokkal könnyebb egymástól függetlenül megvizsgálni a kommunikáció és a nyomtatási rendszer mûködését.
+
+A nyomtatót úgy tudjuk kipróbálni, ha küldünk neki valamilyen szöveget. Az man:lptest[1] tökéletesen megfelelõ akkor, ha olyan nyomtatónk van, amely azonnal kinyomtatja a kapott szöveget. Ez a program 96 sorban létrehozza mind a 96 kinyomtatható ASCII karaktert.
+
+A PostScript(R) (vagy más egyéb nyelvet ismerõ) nyomtatóknak azonban ennél kifinomultabb próbára van szüksége. Erre a célra tökéletesen megfelel egy olyan kisebb PostScript(R) programocska, mint például ez:
+
+[.programlisting]
+....
+%!PS
+100 100 moveto 300 300 lineto stroke
+310 310 moveto /Helvetica findfont 12 scalefont setfont
+(Remek! Ez mukodik!) show
+showpage
+....
+
+Ezt a PostScript(R) kódot nyugodtan elmenthetjük egy állományba, amelyet aztán a késõbbi szakaszokban megjelenõ példák szerint használni is tudunk majd.
+
+[NOTE]
+====
+A kézikönyvben a nyomtató nyelve alatt leginkább egy PostScript(R)-szerû nyelvet értünk, nem pedig a Hewlett Packard PCL típusú nyelvét. Habár a PCL nagyon sokra képes, hiszen keverhetjük még benne akár a programokat és a nyers szövegeket is. Ezzel szemben a PostScript(R) nem képes nyers szöveget kinyomtatni, ezért az ilyen típusú nyomtatók mûködtetéséhez külön támogatásra van szükségünk.
+====
+
+[[printing-checking-parallel]]
+===== A párhuzamos nyomtató ellenõrzése
+
+Ebben a szakaszban megtudhatjuk, hogy FreeBSD alatt miként ellenõrizzük a párhuzamos portra csatlakozó nyomtatók mûködését.
+
+_A párhuzamos porton levõ nyomtató kipróbálásához:_
+
+[.procedure]
+====
+
+. A man:su[1] segítségével váljunk `root` felhasználóvá.
+. Küldjünk a nyomtatónak valamilyen adatot.
++
+** Ha a nyomtató képes nyers szöveget fogadni, akkor használjuk az man:lptest[1] programot. Ehhez gépeljük be:
++
+[source,bash]
+....
+# lptest > /dev/lptN
+....
++ 
+ahol az _N_ nullától kezdõdõen a párhuzamos port sorszáma.
+** Ha a nyomtató PostScript(R) vagy más nyomtatási nyelvet ismer, akkor egy apró programot kell küldenünk neki. Ehhez írjuk be:
++
+[source,bash]
+....
+# cat > /dev/lptN
+....
++ 
+Ezután soronként írjuk be a programot, de _vigyázzunk_, mert az kbd:[Enter] vagy a kbd:[Return] lenyomása után már nem tudjuk kijavítani! A program begépelése után nyomjuk meg a kbd:[Ctrl+D] vagy bármely más olyan billentyûkombinációt, amivel ki tudunk lépni.
++ 
+Ezt a programot belerakhatjuk egy állományba is, amire aztán adjuk ki az alábbi parancsot:
++
+[source,bash]
+....
+# cat állomány > /dev/lptN
+....
++ 
+ahol az _állomány_ a nyomtatóra küldendõ program neve lesz.
+====
+
+Ezután a nyomtató megkezdi a nyomtatást. Ne aggódjunk, ha netalán valami furcsán nézne ki, mert a késõbbiekben ezt még úgyis rendbetesszük.
+
+[[printing-checking-serial]]
+===== A soros nyomtató ellenõrzése
+
+Ebben a szakaszban megtudhatjuk, hogyan ellenõrizzük a FreeBSD és soros portra kötött nyomtató kapcsolódását.
+
+_Így tudjuk kipróbálni a soros porton csatlakozó nyomtatónkat:_
+
+[.procedure]
+====
+
+. A man:su[1] paranccsal váljunk `root` felhasználóvá.
+. Nyissuk meg az [.filename]#/etc/remote# állományt. Tegyük hozzá a következõ sort:
++
+[.programlisting]
+....
+printer:dv=/dev/port:br#bps:pa=paritás
+....
++ 
+ahol a _port_ a soros porthoz tartozó eszközleíró neve (`ttyd0`, `ttyd1`, stb.), a _bps_ a nyomtató által használt adatátviteli sebesség, végül a _paritás_ a nyomtatóhoz használt paritás (ami lehet `even` (páros), `odd` (páratlan), `none` (nincs), vagy `zero` (nulla)).
++ 
+Íme egy olyan soros nyomtató beállítása (`printer` néven), amely sebessége 19 200 bps, a harmadik portra csatlakozik és nem használ paritást:
++
+[.programlisting]
+....
+printer:dv=/dev/ttyd2:br#19200:pa=none
+....
++
+. Kapcsolódjunk a nyomtatóhoz a man:tip[1] segítségével. Ennek parancsa:
++
+[source,bash]
+....
+# tip printer
+....
++ 
+Ha az iménti lépés nem mûködne, próbálkozzunk az [.filename]#/etc/remote# állomány újbóli módosításával, és a [.filename]#/dev/cuaaN# eszköz helyett használjuk a [.filename]#/dev/ttydN# eszközt!
+. Küldjünk adatot a nyomtatónak.
++
+** Ha a nyomtató képes nyers szöveget nyomtatni, akkor használjuk az man:lptest[1] segédprogramot. Gépeljük be:
++
+[source,bash]
+....
+% $lptest
+....
++
+** Ha a nyomtató a PostScript(R) vagy egy hozzá hasonló nyomtatási nyelven kommunikál, akkor a nyomtatónak egy rövid programot kell küldenünk. Soronként gépeljük be a programot, azonban _vigyázzunk_ arra, hogy a törlés és minden más szerkesztésre használt billentyû a nyomtató számára is értelmes lehet. Az is elõfordulhat, hogy a program küldését egy speciális jelsorozattal tudjuk csak lezárni. A PostScript(R) nyomtatók esetén ilyenkor elegendõ a kbd:[Ctrl+D] billentyûk együttes lenyomása.
++ 
+Vagy tehetjük az egész programot egy állományba, amihez aztán írjuk be ezt:
++
+[source,bash]
+....
+% >állomány
+....
++ 
+ahol az _állomány_ a programot tartalmazó állomány neve. Miután a man:tip[1] elküldte az állományt, nyomjuk le a lezáráshoz szükséges billentyûkombinációt.
+====
+
+Most már meg kellene jelennie valaminek a nyomtatón. Az még nem számít, pontosan mi is lesz az - késõbb még majd úgyis beállítjuk.
+
+[[printing-printcap]]
+==== A nyomtatási rendszer aktiválása: a [.filename]#/etc/printcap# állomány
+
+Csatlakoztattuk a nyomtatónkat, a mûködtetéséhez beállítottuk a rendszermagot (amennyiben erre szükségünk volt), és tudtunk neki adatokat küldeni. Most már készen állunk arra, hogy LDP alkalmazáson keresztül beállítsuk a nyomtató hozzáférésének vezérlését.
+
+Az LPD beállításait az [.filename]#/etc/printcap# állományban találjuk. Az LPD nyomtatási rendszer minden egyes mûvelet elõtt beolvassa ezt az állományt, ezért a benne végzett módosítások szinte azonnal életbe is lépnek.
+
+A man:printcap[5] tartalma könnyen érthetõ, a [.filename]#/etc/printcap# állományt egyszerûen módosíthatjuk a kedvenc szövegszerkesztõnkkel. A felépítése teljesen megegyezik a többi hozzá hasonló állományéval: ilyenek például a [.filename]#/usr/shared/misc/termcap# és a [.filename]#/etc/remote#. Az itt alkalmazott formátum teljes leírását a man:cgetent[3] man oldalon találjuk.
+
+A nyomtatási rendszer egyszerû beállítása az alábbi lépésekbõl áll:
+
+[.procedure]
+====
+. Adjunk nevet (és még néhány álnevet) a nyomtatónak, írjuk ezeket az [.filename]#/etc/printcap# állományba. A nevekrõl <<printing-naming,A nyomtató elnevezése>> címû szakaszban kapunk felvilágosítást.
+. A(z alapból bekapcsolt) fejléclapokat az `sh` tulajdonság megadásával kapcsolhatjuk ki. A részleteket <<printing-no-header-pages,A fejléclapok letiltása>> címû szakaszban találjuk.
+. Hozzunk létre egy nyomtatási könyvtárat, és adjuk meg a helyét az `sd` tulajdonság beállításával. <<printing-spooldir,A nyomtatási könyvtár létrehozása>> címû szakaszban fogunk errõl többet mondani.
+. Állítsunk be egy nyomtató által használt [.filename]#/dev# könyvtárbeli leírót, és az `lp` tulajdonsággal adjuk meg az [.filename]#/etc/printcap# állományban. Errõl részletesebben <<printing-device,A nyomtatóeszköz azonosítása>> címû szakaszban olvashatunk. Ha a nyomtató soros porton keresztül csatlakozik, az `ms#` tulajdonsággal még meg kell adnunk <<printing-commparam,A nyomtatási rendszer kommunikációs paraméterei>> szakaszban tárgyaltakat is.
+. Helyezzünk el egy szûrõt a beérkezõ nyers szövegek számára. Errõl <<printing-textfilter,A szövegszûrõ telepítése>> címû szakasz értekezik.
+. Az man:lpr[1] parancs segítségével próbáljuk ki a nyomtatást. Ennek pontos részleteit a <<printing-trying,Próbáljuk ki!>> és a <<printing-troubleshooting,Hibakeresés>> címû fejezetekben találhatjuk meg.
+====
+
+[NOTE]
+====
+A magasabb szintû nyomtatók, mint például a PostScript(R) nyomtatók nem képesek közvetlenül nyers szöveget nyomtatni. Az imént felvázolt egyszerû beállítási séma feltételezi, hogy csak olyan állományokat fogunk nyomtatni a nyomtatón, amelyeket meg is ért.
+====
+
+A felhasználók gyakran arra számítanak, hogy bármelyik általuk elérhetõ nyomtatón képesek nyers szöveget kinyomtatni. Az LPD alkalmazással kapcsolatban álló programok is általában ugyanezt az elgondolást követik. Ha egy saját nyelvvel rendelkezõ nyomtatót akarunk telepíteni, de a nyomtató saját nyelvén _és_ a nyers szöveg formájában érkezõ nyomtatási feladatok is rendesen ki akarjuk nyomtatni, akkor mindenképpen javasoljuk, hogy illeszünk még egy további lépést is ebbe a sorba: illesszünk a rendszerbe egy nyers szövegrõl automatikusan PostScript(R) (vagy más egyéb) nyelvre tolmácsoló programot. Errõl a <<printing-advanced-if-conversion,Szöveges nyomtatási feladatok PostScript(R) nyomtatókon>> címû fejezetben olvashatunk.
+
+[[printing-naming]]
+===== A nyomtató elnevezése
+
+Az elsõ (egyszerû) lépés a nyomtatónk nevének kiválasztása. Igazából nem számít, mennyire kifejezõ vagy éppen hóbortos nevet adunk neki, hiszen emellett még számos álnévvel is illethetjük.
+
+Az [.filename]#/etc/printcap# állományban megtalálható nyomtatók egyikének legalább az `lp` álnévvel rendelkeznie kell, mivel ez lesz az alapértelmezett nyomtató neve. Tehát ha a felhasználó nem adja meg sem a `PRINTER` környezeti változót, sem pedig az LPD-vel kapcsolatban álló aktuális parancsban a használni kívánt nyomtató nevét, akkor a rendszer az `lp` nevût fogja keresni.
+
+Ezenkívül általában még gyakran adnak egy olyan álnevet is a nyomtatónak, ahol annak teljes leírása, többek közt a gyártmánya és a típusa szerepel.
+
+Ahogy sikerült nevet és álneveket adni a nyomtatónak, írjuk is be ezeket az [.filename]#/etc/printcap# állományba. Itt a nyomtató neveit balról kezdjük felsorolni, mindegyik álnevet egy függõleges vonallal válasszunk el, és az utolsó után tegyünk pontosvesszõt.
+
+A most következõ példában egy olyan vázt mutatunk be az [.filename]#/etc/printcap# állományhoz, amelyben két nyomtatót (egy Diablo 630 márkájú sornyomtatót és egy Panasonic KX-P4455 típusú PostScript(R) lézernyomtatót) adunk meg:
+
+[.programlisting]
+....
+#
+#  /etc/printcap (rose)
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:
+....
+
+Ebben a példában az elsõ nyomtató neve `rattan`, és ehhez tartozik még a `line`, `diablo`, `lp`, és `Diablo 630 Line Printer` álnév. Mivel itt soroltuk fel az `lp` álnevet is, ezért a rendszerben ez lesz az alapértelmezett nyomtató. A második nyomtató neve `bamboo`, és álnevei többek közt a `ps`, `PS`, `S`, `panasonic`, valamint a `Panasonic KX-P4455 PostScript v51.4`.
+
+[[printing-no-header-pages]]
+===== A fejléclapok letiltása
+
+Az LPD nyomtatási rendszer alapértelmezés szerint minden egyes feladathoz _fejléclapot_ készít. Ez a lap szép nagy betûkkel tartalmazza a nyomtatási feladatot kiadó felhasználó nevét, a gépet, amirõl küldték, és a feladat nevét. Sajnálatos módon ez azonban inkább akadályozza a hibakeresést a nyomtató beállításában, ezért most inkább kapcsoljuk ki ezeket.
+
+Ha le akarjuk tiltani a fejléclapokat, az [.filename]#/etc/printcap# állományban adjuk meg az `sh` (úgymint "suppress header pages") tulajdonságot. Íme egy példa az `sh` tulajdonsággal bõvített [.filename]#/etc/printcap# állományra:
+
+[.programlisting]
+....
+#
+#  /etc/printcap (rose) - sehol sem lesznek fejléclapok
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:
+....
+
+Ebben a példában megfigyelhetjük a helyes felírási módot: az elsõ sor a bal szélsõ oszlopban kezdõdik, az azt követõ sorok pedig bentebb. Minden bejegyzésben az utolsó kivételével mindegyik sor egy visszaper (backslash) karakterrel zárul.
+
+[[printing-spooldir]]
+===== A nyomtatási könyvtár létrehozása
+
+A nyomtatási rendszerünk beállításának következõ lépése a _nyomtatási könyvtár_ létrehozása. Ez egy olyan könyvtár, ahová a különbözõ nyomtatási feladatok kerülnek a feldolgozásuk elõtt, valamint ahol a nyomtatási rendszer többi állománya lakozik.
+
+A nyomtatási rendszer adatait tároló könyvtárakat tartalmuk gyakori változása miatt általában a [.filename]#/var/spool# könyvtárba szokás tenni. Ezen könyvtárak tartalmát nem szükséges menteni sem. Az man:mkdir[1] parancs futtatásával egyszerûen újra létre tudjuk hozni.
+
+Általában minden nyomtatóhoz külön létre szoktak hozni egy könyvtárat az adott nyomtató nevén. Erre példa:
+
+[source,bash]
+....
+# mkdir /var/spool/nyomtatónév
+....
+
+Azonban ha a hálózatunkon rengeteg nyomtató található, akkor érdemes inkább egyetlen könyvtárat használni, amelyet az LPD számára tartunk fenn.
+
+[source,bash]
+....
+# mkdir /var/spool/lpd
+# mkdir /var/spool/lpd/rattan
+# mkdir /var/spool/lpd/bamboo
+....
+
+[NOTE]
+====
+Amennyiben fontos nekünk a felhasználói nyomtatások titkosságának megóvása, érdemes levédenünk a nyomtatási könyvtárat, így az nem lesz mindenki által elérhetõ. A nyomtatási könyvtárak tulajdonosa egyedül és kizárólag a `daemon` felhasználó és a `daemon` csoport legyen, és hozzá olvasási, írási és keresési engedélyekkel rendelkezzen. Ezt fogjuk most beállítani a példáinkban szereplõ nyomtatóinkhoz is:
+
+[source,bash]
+....
+# chown daemon:daemon /var/spool/lpd/rattan
+# chown daemon:daemon /var/spool/lpd/bamboo
+# chmod 770 /var/spool/lpd/rattan
+# chmod 770 /var/spool/lpd/bamboo
+....
+
+====
+
+Végezetül az [.filename]#/etc/printcap# állományban ezeket a könyvtárakat se felejtsük el megadni az LPD-nek. Itt a nyomtatási könyvtár nevét az `sd` tulajdonsággal írjuk le:
+
+[.programlisting]
+....
+#
+#  /etc/printcap (rose) - a nyomtatási könyvtárak hozzáadása
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:sd=/var/spool/lpd/rattan:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:
+....
+
+Vegyük észre, hogy a nyomtató neve ugyan a sor elején kezdõdik, azonban a hozzá tartozó összes többi sor mind bentebb kezdõdik és egy visszaper (backslash) karakterrel választjuk le.
+
+Ha az `sd` tulajdonsággal nem adunk meg semmilyen nyomtatási könyvtárat, akkor ennek az értéke alapértelmezés szerint a [.filename]#/var/spool/lpd# lesz.
+
+[[printing-device]]
+===== A nyomtatóeszköz azonosítása
+
+A <<printing-hardware,Hardveres beállítás>> címû szakaszban már beazonosítottuk, hogy a FreeBSD a [.filename]#/dev# könyvtárban melyik eszközleírón keresztül fogja megszólítani a nyomtatót. Most ideje ugyanezt tudatni az LPD démonnal is. Így amikor a nyomtatási rendszer végre szeretne hajtani egy nyomtatási feladatot, a szûrõprogram nevében ezt az eszközt nyitja meg (ahol a szûrõn keresztül továbbítjuk az adatokat a nyomtató felé).
+
+Az `lp` tulajdonság segítségével a [.filename]#/etc/printcap# állományban soroljuk fel a nyomtatók [.filename]#/dev# könyvtárban található leíróit.
+
+Az eddig használt példánkban most tételezzük fel, hogy a `rattan` nevû nyomtató az elsõ párhuzamos porton található, míg a `bamboo` nevû a hatodik soros porton. Ebben a helyzetben így kellene kiegészítenünk az [.filename]#/etc/printcap# állományunkat:
+
+[.programlisting]
+....
+#
+#  /etc/printcap (rose) - a használni kívánt eszközök
+#  beazonosítása
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:sd=/var/spool/lpd/rattan:\
+        :lp=/dev/lpt0:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:\
+        :lp=/dev/ttyd5:
+....
+
+Az LPD alapértelmezés szerint a [.filename]#/dev/lp# eszközt fogja használni, ha nem adjuk meg az `lp` tulajdonságot az [.filename]#/etc/printcap# állományban. A [.filename]#/dev/lp# azonban a FreeBSD-ben jelenleg nem létezik.
+
+Ha a telepítendõ nyomtatónk valamelyik párhuzamos portra csatlakozik, akkor innen akár tovább is léphetünk <<printing-textfilter,A szövegszûrõ telepítése>> címû szakaszra. Ha viszont nem, kövessük a most következõ szakaszban szereplõ utasításokat.
+
+[[printing-commparam]]
+===== A nyomtatási rendszer kommunikációs paraméterei
+
+A soros portra csatlakozó nyomtatóknál az LPD képes beállítani az adatátviteli sebességet, a paritást, valamint más egyéb olyan kommunikációs paramétereket, amelyekkel a szûrõprogram adatokat tud továbbítani a nyomtató felé. Ez több szempontból is elõnyös, mivel:
+
+* Egyszerûen az [.filename]#/etc/printcap# állomány átírásával ki tudunk próbálni több kommunikációs beállítást, nem kell magát a szûrõprogramot újrafordítanunk.
+* A nyomtatási rendszer képes ugyanazt a szûrõt több, különbözõ kommunikációs beállítást alkalmazó nyomtatóhoz is használni.
+
+Az [.filename]#/etc/printcap# állományban az `lp` tulajdonsággal megadott eszközök soros kommunikációjának beállításait az alábbi tulajdonságok határozzák meg:
+
+`br#sebesség`::
+Beállítja az eszköz adatátviteli sebességét a _sebesség_ értékre, ahol a _sebesség_ lehet 50, 75, 110, 134, 150, 200, 300, 600, 1200, 1800, 2400, 4800, 9600, 19 200, 38 400, 57 600 vagy 115 200 bit másodpercenként (bps).
+
+`ms#stty-mód`::
+Beállítja az eszköz megnyitása után használt termináleszköz mûködésének paramétereit. Az man:stty[1] man oldalon többet is megtudhatunk róluk.
+
+Miután az LPD megnyitja az `lp` tulajdonsággal megadott eszközt, beállítja az `ms#` tulajdonság értéke szerint annak jellemzõit. Itt a `parenb`, `parodd`, `cs5`, `cs6`, `cs7`, `cs8`, `cstopb`, `crtscts`, és `ixon` módok lehetnek lényegesek, melyekrõl az man:stty[1] man oldalon többet is megtudhatunk.
+
+Állítsuk most be az egyik képzeletbeli nyomtatónkat a hatodik soros portra. Az adatátviteli sebessége 38 400 bps lesz. A kommunikáció módjánál kapcsoljuk ki a paritást (`-parenb`), 8 bites karakterek legyenek (`cs8`), ne legyen modemes vezérlés (`clocal`) és a hardveres forgalomirányítás legyen `crtscts`:
+
+[.programlisting]
+....
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:\
+        :lp=/dev/ttyd5:ms#-parenb cs8 clocal crtscts:
+....
+
+[[printing-textfilter]]
+===== A szövegszûrõ telepítése
+
+Most már utasíthatjuk az LPD-t, hogy milyen szövegszûrõt használjon a nyomtatási feladatok eszközre küldéséhez. A _szövegszûrõ_ (text filter), vagy más néven _bemeneti szûrõ_ (input filter) egy olyan program, amelyet az LPD egy nyomtatási feladat elvégzésekor lefuttat. Amikor az LPD lefuttatja a nyomtatóhoz tartozó szövegszûrõt, a szûrõ szabványos bemenetére elküldi az elvégzendõ nyomtatási feladatot, és a szabványos kimenetét pedig átirányítja az `lp` tulajdonság által megadott nyomtatóeszközre. Ennek megfelelõen a szûrõnek a szabványos bemenetrõl kell olvasnia az elvégzendõ feladatot, a szabványos kimenetre pedig a ténylegesen nyomtatandót kell kiírnia. A szövegszûrõk részleteirõl a <<printing-advanced-filters,Hogyan mûködnek a szûrõk?>> szakasz szól.
+
+A mi esetünkben most szövegszûrõnek tökéletesen megfelel egy olyan rövid szkript, ami a nyomtatóra a nyomtatási feladatot a `/bin/cat` paranccsal küldi ki. A FreeBSD-ben még találhatunk egy másik szûrõt is, amelynek a neve [.filename]#lpf#. Ez képes a törlést és aláhúzást jelzõ karaktereket érthetõvé tenni bizonyos nyomtatók számára. Természetesen itt használhatunk kedvünk szerinti szûrõt is. Az `lpf` szûrõ mûködésének részleteit <<printing-advanced-lpf,Az lpf szövegszûrõ>> címû szakaszban fejtjük ki bõvebben.
+
+Elõször is készítsünk egy [.filename]#/usr/local/libexec/if-simple# nevû egyszerû szövegszûrõ szkriptet. A kedvenc szövegszerkesztõnkkel írjuk bele a következõ sorokat:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+# if-simple - egyszerû szövegszûrõ szkript az lpd-hez
+# Helye: /usr/local/libexec/if-simple
+#
+# Egyszerûen átmásolja a kimenetére a bemenetérõl érkezõ adatokat; nem
+# fogad el semmilyen paramétert.
+
+/bin/cat && exit 0
+exit 2
+....
+
+Tegyük indíthatóvá:
+
+[source,bash]
+....
+# chmod 555 /usr/local/libexec/if-simple
+....
+
+Ezután tájékoztassuk róla az LPD-t az [.filename]#/etc/printcap# állományban található `if` tulajdonság megadásával. Itt most a példánkban szereplõ mind a két nyomtatóhoz beillesztjük:
+
+[.programlisting]
+....
+#
+#  /etc/printcap (rose) - a szövegszûrõ hozzáadása
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:sd=/var/spool/lpd/rattan:\
+        :lp=/dev/lpt0:\
+        :if=/usr/local/libexec/if-simple:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:\
+        :lp=/dev/ttyd5:ms#-parenb cs8 clocal crtscts:\
+        :if=/usr/local/libexec/if-simple:
+....
+
+[NOTE]
+====
+Az [.filename]#if-simple# szkript megtalálható a [.filename]#/usr/shared/examples/printing# könyvtárban.
+====
+
+===== Az LPD elindítása
+
+Az man:lpd[8] az [.filename]#/etc/rc# szkriptbõl, az `lpd_enable` változó értékének megfelelõen indul el. Ennek értéke alapból `NO`, vagyis nem. Ha eddig még nem tettük volna meg, akkor az [.filename]#/etc/rc.conf# állományba most vegyük fel a következõ sort:
+
+[.programlisting]
+....
+lpd_enable="YES"
+....
+
+Ezután vagy indítsuk újra a számítógépünket, vagy pedig adjuk ki az man:lpd[8] parancsot:
+
+[source,bash]
+....
+# lpd
+....
+
+[[printing-trying]]
+===== Próbáljuk ki!
+
+Elérkeztünk az LPD egyszerû beállításának utolsó lépéséhez. Sajnos azonban még nem gratulálhatunk, hiszen hátra van még a nyomtató kipróbálása és az esetlegesen elõforduló hibák kijavítása. A beállítást úgy tudjuk a legegyszerûbben letesztelni, ha megpróbálunk valamit kinyomtatni. Az LPD rendszerben az man:lpr[1] parancs használatával tudunk nyomtatási feladatokat kiadni.
+
+<<printing-testing,A kommunikáció ellenõrzése>> címû szakaszban megtalálhatjuk, hogy hozzunk létre tesztelésre alkalmas szövegeket az man:lpr[1] és az man:lptest[1] programok segítségével.
+
+_Az LPD beállításainak egyszerû tesztelése:_
+
+Írjuk be:
+
+[source,bash]
+....
+# lptest 20 5 | lpr -Pnyomtatónév
+....
+
+ahol a _nyomtatónév_ az [.filename]#/etc/printcap# állományban megadott egyik nyomtató neve (vagy álneve) lehet. Az alapértelmezett nyomtató kipróbálásához ne adjunk meg az man:lpr[1] parancsnak semmilyen `-P` paramétert. Még egyszer megemlítenénk, hogy amennyiben PostScript(R) nyomtatót tesztelünk, az elõbbi helyett az man:lptest[1] paranccsal küldjünk ki egy PostScript(R) programot. Ehhez tegyük a tesztelõ programunkat egy állományba, majd írjuk be az `lpr állománynév` parancsot.
+
+A PostScript(R) nyomtató esetén a kiküldött program eredményét kell látnunk. Amennyiben az man:lptest[1] parancsot használjuk, valami ilyesmire kell számítanunk:
+
+[source,bash]
+....
+!"#$%&'()*+,-./01234
+"#$%&'()*+,-./012345
+#$%&'()*+,-./0123456
+$%&'()*+,-./01234567
+%&'()*+,-./012345678
+....
+
+A nyomtató kimerítõbb teszteléséhez próbáljunk meg nagyobb programokat keríteni valahonnan (ha a nyomtatónk valamilyen nyelven kommunikál) vagy adjunk meg az man:lptest[1] parancsnak más paramétereket. Például az `lptest 80 60` soronként 80 karaktert írat ki 60 sorban.
+
+Amennyiben a nyomtató nem mûködne, nézzük meg a <<printing-troubleshooting,Hibakeresés>>hez tartozó szakaszt.
+
+[[printing-advanced]]
+== Magasszintû nyomtatóbeállítás
+
+Ebben a szakaszban olyan szûrõket mutatunk be, amelyek speciálisan formázott állományok, fejléclapok, hálózati nyomtatás, nyomtatási nyilvántartás vagy szabályozás esetén használhatóak.
+
+[[printing-advanced-filter-intro]]
+=== Szûrõk
+
+Noha az LPD képes hálózati protokollokat, nyomtatási sorokat, hozzáférést és sok minden más nyomtatási feladatot kezelni, a _tényleges_ munka legnagyobb része a _szûrõkben_ (filter) történik. A szûrõk olyan programok, amelyek tartják a kapcsolatot a nyomtatóval és megbirkóznak annak eszközfüggõségeivel és különleges igényeivel. Az egyszerû beállítás során egy primitív szövegszûrõt állítottunk be (lásd <<printing-textfilter,A szövegszûrõ telepítése>>) - ami annyira egyszerû, hogy szinte minden nyomtatón mûködnie kell.
+
+Azonban mindahhoz, hogy ki tudjuk használni a különbözõ átalakítási, nyilvántartási lehetõségeket, valamint a nyomtatók különlegességeit és egyebeit, meg kell értenünk a szûrõk pontos mûködését. Az elõbb említett feladatok ugyanis teljesen a szûrõ kezében vannak. Ezzel kapcsolatban azonban rossz hír, hogy ezeket a szûrõket _nekünk_ kell megírnunk. A jó hír ellenben az, hogy könnyen találunk ilyen szûrõket, vagy ha éppen nem lelnénk valamelyiket, akkor is gyorsan meg tudjuk ezeket írni.
+
+Sõt, a FreeBSD alapból tartalmaz is egyet, amit a [.filename]#/usr/libexec/lpr/lpf# helyen találunk meg, és sok olyan nyomtatóval képes együttmûködni, amelyek nyers szöveget tudnak nyomtatni. (Kezeli az állományokban felbukkanó törléseket és tabulálásokat, valamint képes nyilvántartást vezetni, de semmi többet.) Rajta kívül még számos szûrõt és szûrõelemet is találhatunk a FreeBSD Portgyûjteményében.
+
+Lássuk, mit tartogat számunkra ez a rész:
+
+* A <<printing-advanced-filters,Hogyan mûködnek a szûrõk?>> címû szakaszban megpróbálunk egyfajta áttekintést adni a szûrõk nyomtatási folyamatban betöltött szerepérõl. Mindenképpen érdemes elolvasnunk ezt a szakaszt, mivel ebben derül ki, hogy valójában mi is történik a "függöny mögött", vagyis amikor az LPD használja ezeket a szûrõket. Ezzel a tudással el tudjuk kerülni vagy éppen nyakon tudjuk csípni azokat a problémákat, amelyek a nyomtatóinkhoz telepített szûrõk hozzáadása során adódhatnak.
+* Az LPD alapból arra számít, hogy minden nyomtató képes nyers szöveget nyomtatni. Ez gondot okoz a PostScript(R) (és minden más nyelv alapú) nyomtatók esetén, mivel azok nem képesek nyers szöveget nyomtatni. <<printing-advanced-if-conversion, Szöveges nyomtatási feladatok PostScript(R) nyomtatókon>> címû szakaszban viszont fény derül rá, hogyan kerekedjünk felül ezen. Feltétlenül olvassuk el, ha PostScript(R) nyomtatónk van.
+* A PostScript(R) számos program közkedvelt kimeneti formátuma, sõt gyakran maguk a felhasználók is szeretnek ilyen programokat írni. Sajnos azonban a PostScript(R) nyomtatók egyáltalán nem olcsók. A <<printing-advanced-ps,PostScript(R) szimulációja nem PostScript(R) nyomtatókon>> címû szakaszban megtudhatjuk, miképp tudjuk úgy módosítani a szûrõt, hogy _nem PostScript(R)_ nyomtatókon is tudjunk PostScript(R) programokkal nyomtatni. Ezt a szakaszt akkor érdemes elolvasni, ha nincs PostScript(R) nyomtatónk.
+* A <<printing-advanced-convfilters,Konverziós szûrõk>> címû szakaszban eláruljuk, miként lehetséges automatizálni a különbözõ állományformátumok és a nyomtatók által érthetõ formátumok közti konverziókat, legyen az grafikus vagy betûszedésre vonatkozó adat. A szakasz elolvasása során megismerjük, hogyan tudjuk a nyomtatónkat képessé tenni az `lpr -t` paranccsal troff adatok, vagy a `lpr -d` paranccsal a TeX DVI állományainak, esetleg az `lpr -v` paranccsal raszteres képek nyomtatására és így tovább. Csak ajánlani tudjuk ennek elolvasását.
+* A <<printing-advanced-of,Kimeneti szûrõk>> címû szakaszban kivesézzük az LPD egyik kevésbé használt lehetõségét is, a kimeneti szûrõket. Hacsak nem fejléclapokat akarunk készíteni (lásd <<printing-advanced-header-pages,Fejléclapok>>), akkor ezt a szakaszt nyugodtan kihagyhatjuk.
+* <<printing-advanced-lpf,Az lpf szövegszûrõ>> szakaszban bemutatásra kerül a FreeBSD-ben alapból megtalálható `lpf` szûrõ, amely egy sornyomtatóknál (vagy az így viselkedõ lézernyomtatóknál) használható egyszerû szövegszûrõ. Ha nyers szövegek nyomtatásánál meg akarjuk oldani a nyomtatási feladatok nyilvántartását, vagy a törlés karakter láttán a nyomtatónk füstölni kezdene, akkor mindenképpen érdemes belemerülnünk az `lpf` titkaiba.
+
+[NOTE]
+====
+A most következõ szkriptek mindegyike megtalálható a [.filename]#/usr/shared/examples/printing# könyvtárban.
+====
+
+[[printing-advanced-filters]]
+==== Hogyan mûködnek a szûrõk?
+
+Ahogy már korábban is jeleztük, a szûrõ egy olyan végrehajtható program, amelyet az LPD indít el, amikor a nyomtatóval eszközfüggetlen módon kommunikál.
+
+Amikor az LPD egy feladat elvégzése során ki akar nyomtatni egy állományt, akkor elindít egy ilyen szûrõprogramot. A szûrõ szabványos bemenetére elküldi a kinyomtatandó állományt, a szabványos kimenetét a nyomtatóra, a szabványos hibajelzéseit pedig egy naplóállományba irányítja (ez utóbbit az [.filename]#/etc/printcap# állományban az `lf` tulajdonsággal adhatjuk meg, vagy alapértelmezés szerinti a [.filename]#/dev/console# állományba kerül).
+
+Az LPD a használni kívánt szûrõt és annak paramétereit az [.filename]#/etc/printcap# állományban felsoroltak vagy az man:lpr[1] parancssorában megadottak szerint választja ki. Például, ha a felhasználó a `lpr -t` parancsot adja ki, akkor az LPD a célként megadott nyomtatónál szereplõ `tf` tulajdonság által megadott troff szûrõt kezdi el használni. Amennyiben a felhasználó egyszerûen csak nyers szöveget akar nyomtatni, akkor az `if` szûrõnek kellene elindulnia (ez viszont csak részben igaz: lásd <<printing-advanced-of,Kimeneti szûrõk>>). 
+
+Háromfajta szûrõ jelenhet meg az [.filename]#/etc/printcap# állományban:
+
+* A _szövegszûrõ_ (text filter), ami a hagyományos szöveges nyomtatásért felelõs, és amit az LPD dokumentációjában érdekes módon _bemeneti szûrõnek_ (input filter) hívnak. Mivel az LPD arra számít, hogy minden nyomtató alapból képes kinyomtatni bármilyen nyers szöveget, ezért a szövegszûrõ feladata, hogy a nyomtató számára gondoskodjon a tabulátorok, törlések és más egyéb speciális karakterek megfelelõ kezelésérõl. Emellett ha olyan helyen vagyunk, ahol szükség van a nyomtatási feladatok nyilvántartására is, a szövegszûrõ ennek megoldására is képes, méghozzá úgy, hogy összeszámolja a kinyomtatott sorokat, és elosztja ezeket a nyomtató által oldalanként nyomtatott sorok számával. Egy szövegszûrõ a következõ paraméterekkel indulhat:
++
+`szûrõnév [ -c ] -w _szélesség_ -l _hossz_ -i _behúzás_ -n _hozzáférés_ -h _gépnév_ _nyilvántartás_`
++ 
+ahol a
++
+`-c`:::
+akkor jelenik meg, ha egy nyomtatási feladatot az `lpr -l` paranccsal adunk át
+
+_szélesség_:::
+az [.filename]#/etc/printcap# állományban definiált `pw` (page width, avagy oldalszélesség) tulajdonság értéke, ami alapbeállítás szerint 132
+
+_hossz_:::
+a `pl` (page length, avagy oldalhossz) tulajdonság értéke, amely az alapbeállítás szerint 66
+
+_behúzás_:::
+az `lpr -i` parancs megadása során használt behúzás mértéke, ami alapból 0
+
+_hozzáférés_:::
+a nyomtatást végzõ felhasználó hozzáférésének megnevezése
+
+_gépnév_:::
+a gép neve, amirõl a nyomtatási feladat érkezett
+
+_nyilvántartás_:::
+ez a nyilvántartást tároló állomány `af` tulajdonsággal definiált neve
+
+* A _konverziós szûrõk_ (conversion filter) egy adott állományformátumot hoznak a nyomtató számára értelmes formára. Például ditroff adatok közvetlenül ugyan nem nyomtathatóak, azonban a ditroff állományokhoz tudunk telepíteni egy olyan szûrõt, amely a ditroff adatokat a nyomtató számára is emészthetõ és nyomtatható formájúvá teszi. A <<printing-advanced-convfilters,Konverziós szûrõk>> címû szakasz tud ezekrõl többet mondani. Ilyen esetekben kérhetünk nyilvántartást. A konverziós szûrõk az alábbi paraméterekkel indulhatnak:
++
+`szûrõnév -x _pixelszélesség_ -y _pixelmagasság_ -n _hozzáférés_ -h _gépnév_ _nyilvántartás_`
++ 
+ahol a _pixelszélesség_ a `px` tulajdonság értékébõl (ami alapból 0), a _pixelmagasság_ a `py` tulajdonság értékébõl (ami alapból szintén 0) származik.
+* A _kimeneti szûrõ_ (output filter), ami csak akkor aktív, ha a szövegszûrõ nem, vagy ha engedélyeztük fejléclapok nyomtatását. Tapasztalatom szerint az ilyen szûrõket ritkán használják. A <<printing-advanced-of,Kimeneti szûrõk>> címû szakasz mutatja be a mûködésüket. Ekkor csupán két paraméterünk van:
++
+`szûrõnév -w _szélesség_ -l _hosszúság_`
++ 
+amik rendre megegyeznek a szövegszûrõk `-w` és `-l` paramétereivel.
+
+A szûrõk _ki is tudnak lépni_ a következõ kódokkal (exit status):
+
+0::
+A szûrõ sikeresen kinyomtatta az állományt.
+
+1::
+A szûrõnek nem sikerült kinyomtatnia az állományt, azonban szeretné, ha az LPD újból megpróbálkozna vele. Az LPD tehát ebben az esetben újraindítja a szûrõt.
+
+2::
+A szûrõnek nem sikerült kinyomtatnia az állományt, és nem is kívánja újra megpróbálni. Ekkor az LPD eldobja az állományt.
+
+A FreeBSD kiadásokban megtalálható [.filename]#/usr/libexec/lpr/lpf# szövegszûrõ képes a kapott szélesség és hossz paraméterekkel megállapítani az oldaltöréseket és a nyomtató használatát nyilvántartani, amihez a hozzáférés, gépnév és nyilvántartás adatait használja fel.
+
+Amikor majd igyekszünk mellé újabb szûrõket beszerezni, ne felejtsük el ellenõrizni, hogy együtt tudnak-e mûködni az LPD-vel. Ha a válasz igen, akkor a fentebb említett paraméterek mindegyikét ismerniük kell. Az általános használatra készült szûrõk készítése során mi magunknak is be kell tartanunk ezeket az elvárásokat.
+
+[[printing-advanced-if-conversion]]
+==== Szöveges nyomtatási feladatok PostScript(R) nyomtatókon
+
+Ha csak egyedül dolgozunk a számítógépen és PostScript(R) (vagy bármilyen más nyelvet ismerõ) nyomtatónk van, valamint megígérjük, hogy soha nem küldünk sem mi, sem pedig nem küldetünk semmilyen más programmal nyers szöveget a nyomtatóra, akkor átléphetjük ezt a szakaszt.
+
+Ha viszont egyaránt akarunk küldeni PostScript(R) programot és nyers szöveget tartalmazó nyomtatási feladatot a nyomtatónak, akkor ehhez kénytelenek vagyunk a rendszerünket beállítani. Elõször is szükségünk van szövegszûrõre, ami megállapítja, hogy a frissen érkezett nyomtatási feladat nyers szöveget vagy PostScript(R) programot tartalmaz-e. Minden PostScript(R)-alapú feladat a `%!` karaktersorozattal kezdõdik (a többi esetben olvassuk a nyomtató leírását). Szóval, ha a nyomtatandó állomány elsõ két karaktere ilyen, akkor egy PostScript(R) programmal van dolgunk és közvetlenül továbbküldhetjük a nyomtatási feladatot a nyomtatónak. Minden más esetben a szûrõnek elõbb át kell alakítania a szöveget PostScript(R) nyelvre.
+
+Hogyan érhetjük el mindezt?
+
+Ha soros nyomtatónk van, akkor erre a feladatra az `lprps` parancs tökéletes. Az `lprps` egy olyan PostScript(R) szûrõ, amely mind a két irányban képes közvetíteni. Folyamatosan rögzíti egy állományba a nyomtató állapotát, így a felhasználók és rendszergazdák pontosan látják a nyomtató jelenlegi állapotát (például `toner low` (a toner hamarosan kifogy) vagy `paper jam` (a papír beragadt)). Ami viszont sokkal lényegesebb, hogy a `psif` nevû program képes megmondani az érkezõ nyomtatási feladat valódi típusát, és ennek megfelelõen meg tudja hívni nyers szöveg átalakítására a `textps` (egy másik program, amit a `lprps` mellé kapunk) parancsot. Ezután az `lprps` elküldi a feladatot a nyomtatónak.
+
+Az `lprps` a FreeBSD Portgyûjteményének része (lásd crossref:ports[ports,A Portgyûjtemény]), ezért a használni kívánt papír méretétõl függõen pillanatok alatt magunk is letölhetjük, fordíthatjuk és telepíthetjük a package:print/lprps-a4[] és package:print/lprps-letter[] csomagok valamelyikét. Az `lprps` telepítése után egyszerûen csak adjuk meg a `psif` elérési útvonalát. Ha tehát telepítettük a Portgyûjteménybõl az `lprps` csomagot, akkor egy soros portra csatlakozó PostScript(R) nyomtató esetén ezt kell beírnunk az [.filename]#/etc/printcap# állományba:
+
+[.programlisting]
+....
+:if=/usr/local/libexec/psif:
+....
+
+Ezenkívül még az `rw` tulajdonsággal meg kell mondanunk az LPD-nek, hogy a nyomtatót írásra és olvasásra nyissa meg.
+
+Amennyiben a PostScript(R) nyomtatónk a párhuzamos porton csatlakozik (és amiért a nyomtatónk nem képes az `lprps` által igényelt kétirányú kommunikációra), szövegszûrõként a következõ szkriptet fogjuk használni:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  psif - PostScript vagy nyers szöveg nyomtatása PostScript nyomtatón
+#  Ez a szkriptes változat, NEM pedig az lprps-hez mellékelt szûrõ
+#  (a /usr/local/libexec/psif állomány)!
+#
+
+IFS="" read -r first_line
+first_two_chars=`expr "$first_line" : '\(..\)'`
+
+if [ "$first_two_chars" = "%!" ]; then
+    #
+    #  PostScript: nyomtassuk ki.
+    #
+    echo "$first_line" && cat && printf "\004" && exit 0
+    exit 2
+else
+    #
+    #  Nyers szöveg: alakítsuk át, majd nyomtassuk ki.
+    #
+    ( echo "$first_line"; cat ) | /usr/local/bin/textps && printf "\004" && exit 0
+    exit 2
+fi
+....
+
+A fentebb szereplõ szkriptben a `textps` programot használjuk a nyers szövegek PostScript(R) programokra alakításához, de helyette bármilyen más konvertáló programot is igénybe vehetünk. A FreeBSD Portgyûjteményében (lásd crossref:ports[ports, A Portgyûjtemény]) találhatunk erre a célra egy `a2ps` nevû programot is, amit esetleg érdemes lehet közelebbrõl megnéznünk.
+
+[[printing-advanced-ps]]
+==== PostScript(R) szimulációja nem PostScript(R) nyomtatókon
+
+A PostScript(R) a magas színvonalú betûszedés és nyomtatás _de facto_ szabványa. Emellett azonban a PostScript(R) egy _költséges_ szabvány is. Az Aladdin Enterprises-nak hála azonban létezik egy hozzá hasonló szabad szoftver, a Ghostscript, amely képes FreeBSD-n is futni. A Ghostscript képes a legtöbb PostScript(R) állomány olvasására, megjelenítésére mindenféle eszközökön, beleértve a PostScript(R)et nem ismerõ nyomtatókat is. A Ghostscript és egy speciális szövegszûrõ telepítésével el tudjuk érni, hogy egy nem PostScript(R) nyomtató valódi PostScript(R) nyomtatóként viselkedjen.
+
+Ha telepíteni szeretnénk, a Ghostscript megtalálható a FreeBSD Portgyûjteményében. Innen tehát magunk is könnyedén le tudjuk tölteni, fordítani és telepíteni.
+
+A PostScript(R) nyomtatás szimulációjához elõször egy szûrõ segítségével észre kell vennünk, hogy egy PostScript(R) formátumú állományt készülünk kinyomtatni. Ha nem ilyen a nyomtatási feladat, akkor egyenesen a nyomtatóra küldjük, azonban minden más esetben elõször a Ghostscript segítségével átalakítjuk egy olyan formátumba, amit a nyomtató is képes feldolgozni.
+
+Nézzünk erre egy példát: a most következõ szövegszûrõ a Hewlett Packard DeskJet 500-as nyomtatóihoz használható. Más nyomtató esetén cseréljük ki a `gs` (Ghostscript) parancs `-sDEVICE` paraméterét a neki megfelelõre. (A telepített Ghostscript által ismert nyomtatók listáját a `gs -h` paranccsal kérdezhetjük le.)
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  ifhp - Ghostscripttel szimulált Postscript nyomtatás DeskJet 500-on
+#  Helye: /usr/local/libexec/ifhp
+
+#
+#  LF karaktereket CR+LF-ként kezeljük (elkerülve ezzel a HP/PCL
+#  nyomtatókon a "lépcsõzést"):
+#
+printf "\033&k2G" || exit 2
+
+#
+#  Az állomány elsõ két karakterének beolvasása
+#
+IFS="" read -r first_line
+first_two_chars=`expr "$first_line" : '\(..\)'`
+
+if [ "$first_two_chars" = "%!" ]; then
+    #
+    #  Ez PostScript: küldjük át a Ghostscripten és nyomtassuk ki.
+    #
+    /usr/local/bin/gs -dSAFER -dNOPAUSE -q -sDEVICE=djet500 \
+      -sOutputFile=- - && exit 0
+else
+    #
+    #  Nyers szöveg vagy HP/PCL, ezért küldjük át közvetlenül. Az utolsó
+    #  lap kidobásához küldünk még egy lapdobást is.
+    #
+    echo "$first_line" && cat && printf "\033&l0H" &&
+exit 0
+fi
+
+exit 2
+....
+
+Befejezésül az `if` tulajdonságon keresztül értesítenünk kell errõl a szûrõrõl az LPD-t is:
+
+[.programlisting]
+....
+:if=/usr/local/libexec/ifhp:
+....
+
+Készen is vagyunk! Most már nyugodtan beírhatjuk, hogy `lpr sima.szöveg` vagy `lpr akármi.ps`, mind a kettõnek ki kell tudnia nyomtatódnia.
+
+[[printing-advanced-convfilters]]
+==== Konverziós szûrõk
+
+Miután elvégeztük az <<printing-simple,Alacsonyszintû nyomtatóbeállítás>> címû szakaszban leírt beállításokat, a (nyers ASCII szöveg mellett) kedvenc állományformátumainkhoz is minden bizonnyal szeretnénk telepíteni néhány konverziós szûrõt.
+
+===== Miért használjunk konverziós szûrõket?
+
+A konverziós szûrõk segítségével állományok mindenféle formátumait könnyen ki tudjuk nyomtatni. Például tegyük fel, hogy sokat dolgozunk a TeX betûszedõ rendszerrel és egy PostScript(R) nyomtatónk van. Minden alkalommal, amikor egy DVI állományt hozunk létre a TeX forrásból, azt közvetlenül még nem tudjuk a nyomtatóra küldeni. Ehhez a következõ parancsokat kell kiadnunk:
+
+[source,bash]
+....
+% dvips hínár-elemzés.dvi
+% lpr hínár-elemzés.ps
+....
+
+Ha telepítünk egy konverziós szûrõt a DVI állományokhoz, meg tudjuk spórolni ezt a manuális átalakítási lépést azzal, hogy átadjuk ezt a feladatot az LPD-nek. Így ezután mindig, amikor egy DVI állományt akarunk kinyomtatni, csupán egyetlen lépésre lesz szükségünk:
+
+[source,bash]
+....
+% lpr -d hínár-elemzés.dvi
+....
+
+Az LPD-nek a `-d` paraméterrel adjuk meg, hogy a nyomtatás elõtt hajtsa végre a DVI átalakítását. A <<printing-lpr-options-format,Formázási és konverziós beállítások>> címû szakaszban találjuk meg a többi konverziós opciót.
+
+Minden olyan konverziós beállításhoz, amit használni szeretnénk a nyomtatóval, telepítenünk kell egy _konverziós szûrõt_ (conversion filter) és meg kell adnunk a nevét az [.filename]#/etc/printcap# állományban. A konverziós szûrõk az egyszerû nyomtatóbeállításnál szereplõ szövegszûrõkhöz hasonlítanak (lásd <<printing-textfilter,A szövegszûrõ telepítése>> szakasz) azzal a kivétellel, hogy a nyers szövegek kinyomtatása helyett ezek a szûrõk a nyomtató számára értelmes formátumra alakítják az állományokat.
+
+===== Milyen konverziós szûrõket érdemes telepíteni?
+
+Olyan konverziós szûrõket telepítsünk, amelyekre gyakran szükségünk lehet. Ha például sok DVI adatot szeretnénk nyomtatni a jövõben, akkor használjunk DVI konverziós szûrõt, vagy ha sok troff formátumú adatot nyomtatunk, akkor minden bizonnyal jól fog jönni egy troff szûrõ.
+
+A következõ táblázat foglalja össze azokat a szûrõket, amelyekkel az LPD képes együttmûködni. Megtudhatjuk, hogy az [.filename]#/etc/printcap# állományban melyik tulajdonság tartozik hozzájuk és hogyan hívjuk meg ezeket az `lpr` paranccsal:
+
+[.informaltable]
+[cols="1,1,1", frame="none", options="header"]
+|===
+| Állománytípus
+| Tulajdonság az /etc/printcap állományban
+| Az lpr kapcsolója
+
+|cifplot
+|`cf`
+|`-c`
+
+|DVI
+|`df`
+|`-d`
+
+|plot
+|`gf`
+|`-g`
+
+|ditroff
+|`nf`
+|`-n`
+
+|FORTRAN forrás
+|`rf`
+|`-f`
+
+|troff
+|`tf`
+|`-f`
+
+|raster
+|`vf`
+|`-v`
+
+|nyers szöveg
+|`if`
+|nincs, `-p`, vagy `-l`
+|===
+
+A példánkban tehát a `lpr -d` parancs használata arra utal, hogy a nyomtatónak az [.filename]#/etc/printcap# állományból a `df` tulajdonságára van szüksége.
+
+Minden hadakozás ellenére állíthatjuk, hogy a FORTRAN források és a plot által használt szövegek formátuma napjainkra már elavultnak tekinthetõ. Ezért ezekhez az opciókhoz a saját szûrõinkkel tetszõleges formázási lehetõségeket rendelhetünk. Például, ha Printerleaf (az Interleaf asztali kiadványszerkesztõ formátuma) állományokat szeretnénk közvetlenül nyomtatni, akkor valószínûleg nem lesz szükségünk plot állományokra. Ezért a `gf` tulajdonságnak megadhatunk egy Printerleaf konverziós szûrõt, amelyen keresztül aztán a felhasználók az `lpr -g` paranccsal Printerleaf állományokat tudnak nyomtatni.
+
+===== Konverziós szûrõk telepítése
+
+Mivel a konverziós szûrõk az alap FreeBSD rendszeren kívülre kerülnek, ezért ezeket minden valószínûség szerint valahol a [.filename]#/usr/local# könyvtárban találjuk meg. Ezen belül is általában a [.filename]#/usr/local/libexec# könyvtárban fordulnak elõ, mivel ezeket csak az LPD futtatja, senki másnak nincs rájuk szüksége.
+
+A konverziós szûrõk aktiválásához az [.filename]#/etc/printcap# állományban egyszerûen adjuk meg az alkalmas tulajdonságoknak megfelelõ szûrõk elérési útvonalait.
+
+A példánkban most felveszünk egy DVI konverziós szûrõt a `bamboo` nevû nyomtatóhoz. Itt ismét láthatjuk a korábban használt [.filename]#/etc/printcap# állományt, ahol most azonban a `bamboo` nevû nyomtatónál hozzáadtunk egy `df` tulajdonságot:
+
+[.programlisting]
+....
+#
+#  /etc/printcap (rose) -  egy df szûrõ hozzáadása a bamboo
+#  nevû nyomtatóhoz
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:sd=/var/spool/lpd/rattan:\
+        :lp=/dev/lpt0:\
+        :if=/usr/local/libexec/if-simple:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:\
+        :lp=/dev/ttyd5:ms#-parenb cs8 clocal crtscts:rw:\
+        :if=/usr/local/libexec/psif:\
+        :df=/usr/local/libexec/psdf:
+....
+
+A DVI szûrõ ebben az esetben a [.filename]#/usr/local/libexec/psdf# néven elérhetõ aprócska szkript. Ezt találhatjuk benne:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  psdf - DVI szûrõ PostScript nyomtatóhoz
+#  Helye: /usr/local/libexec/psdf
+#
+# Az lpr -d parancs hatására hívódik meg
+#
+exec /usr/local/bin/dvips -f | /usr/local/libexec/lprps "$@"
+....
+
+A szkript a `dvips` parancsot szûrõként futtatja (az `-f` paraméterrel) a szabványos bemenetrõl, ahova a nyomtatási feladatot is kapja. Ezután elindítja az `lprps` PostScript(R) szûrõt (lásd a <<printing-advanced-if-conversion,Szöveges nyomtatási feladatok PostScript(R) nyomtatókon>> címû szakaszt) az LPD által átadott paraméterekkel. Az `lprps` parancs ezekkel a paraméterekkel tartja nyilván az így kinyomtatott lapokat.
+
+===== További példák konverziós szûrõkre
+
+A konverziós szûrõk telepítésének nincs bevált receptje, ezért ebben a szakaszban bemutatunk rájuk néhány mûködõ illusztrációt. Ezeket tudjuk felhasználni saját szûrõk elkészítésére. Vagy ha megtehetjük, használjuk közvetlenül ezeket.
+
+Ebben a példa szkriptben Hewlett Packard LaserJet III-Si nyomtatókhoz hozunk létre raszteres (pontosabban GIF formátumú) konverziós szûrõt:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  hpvf - GIF állományokat konvertál át HP/PCL-be, majd kinyomtatja
+#  Helye: /usr/local/libexec/hpvf
+
+PATH=/usr/X11R6/bin:$PATH; export PATH
+giftopnm | ppmtopgm | pgmtopbm | pbmtolj -resolution 300 \
+    && exit 0 \
+    || exit 2
+....
+
+Úgy mûködik, hogy a GIF állományt elõször PNM (portable anymap), utána PGM (portable graymap), majd PBM (portable bitmap) formátumúra alakítja, amibõl végül LaserJet/PCL-kompatibilis adat lesz.
+
+Ez lesz a hozzá tartozó [.filename]#/etc/printcap# állomány:
+
+[.programlisting]
+....
+#
+#  /etc/printcap (orchid)
+#
+teak|hp|laserjet|Hewlett Packard LaserJet 3Si:\
+        :lp=/dev/lpt0:sh:sd=/var/spool/lpd/teak:mx#0:\
+        :if=/usr/local/libexec/hpif:\
+        :vf=/usr/local/libexec/hpvf:
+....
+
+A most következõ szkript a groff betûszedû rendszerbõl érkezõ troff adatokat alakítja át a `bamboo` nevû PostScript(R) nyomtató számára:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  pstf - a groff troff adait alakítja PS-re, majd kinyomtatja
+#  Helye: /usr/local/libexec/pstf
+#
+exec grops | /usr/local/libexec/lprps "$@"
+....
+
+A szkript az `lprps` parancs segítségével kommunikál a nyomtatóval. Ha a nyomtatónk párhuzamos porton csatlakozik, akkor helyette ezt a szkriptet használjuk:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  pstf - a groff troff adatait alakítja PS-re, majd kinyomtatja
+#  Helye: /usr/local/libexec/pstf
+#
+exec grops
+....
+
+Kész is! A szûrõ életrekeltéséhez mindössze ennyit kell beillesztenünk az [.filename]#/etc/printcap# állományba:
+
+[.programlisting]
+....
+:tf=/usr/local/libexec/pstf:
+....
+
+Most pedig jöjjön a FORTRAN szerelmeseinek szívét megmelengetõ szkript. Ez egy olyan szövegszûrõ, amely bármelyik nyers szöveget közvetlenül kezelni tudó nyomtató esetén mûködik. A `teak` nevû nyomtatóhoz helyezzük be:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+# hprf - FORTRAN szövegszûrõ LaserJet 3si-hez
+# Helye: /usr/local/libexec/hprf
+#
+
+printf "\033&k2G" && fpr && printf "\033&l0H" &&
+ exit 0
+exit 2
+....
+
+Az [.filename]#/etc/printcap# állományban a `teak` nyomtatóhoz a következõ sor beírásával tudjuk engedélyezni ezt a szûrõt:
+
+[.programlisting]
+....
+:rf=/usr/local/libexec/hprf:
+....
+
+Most pedig következzen egy utolsó, de az eddigieknél valamivel összetettebb példa. Ebben a korábban bemutatott `teak` nevû LaserJet nyomtatóhoz fogunk hozzáadni egy DVI szûrõt. Elõször is következzen a mûvelet egyszerûbb része: bõvítsük ki az [.filename]#/etc/printcap# állományt a DVI szûrõ helyének megadásával:
+
+[.programlisting]
+....
+:df=/usr/local/libexec/hpdf:
+....
+
+Ezután következzék a nehezebb rész: a szûrõ elkészítése. Ehhez szükségünk lesz egy DVI-rõl LaserJet/PCL-re alakító programra. A FreeBSD Portgyûjteményében (lásd crossref:ports[ports,A Portgyûjtemény]) találunk is egyet: a csomag neve package:print/dvi2xx[]. A csomag telepítésével megkapjunk a nekünk kellõ `dvilj2p` programot, ami képes DVI-t LaserJet IIp, LaserJet III és a LaserJet 2000 típusok által ismert kódokra fordítani.
+
+A `dvilj2p` felhasználásától függetlenül a `hpdf` néven létrehozni kívánt szûrõnk még így is bonyolult lesz, hiszen a `dvilj2p` nem tud olvasni a szabványos bemenetrõl, hanem mindenáron egy állománnyal akar dolgozni. Sõt, olyan állománnyal, amelynek [.filename]#.dvi# kiterjesztése van, ezért még a [.filename]#/dev/fd/0# (vagyis a szabványos bemenethez tartozó eszközleíró) használata is akadályokba ütközik.
+
+Üröm még az örömünkben, hogy a [.filename]#/tmp# könyvtárat sem tudjuk felhasználni ideiglenes link létrehozására: a szimbolikus linkeket a `bin` felhasználó és csoport birtokolja, a szûrõt pedig a `daemon` felhasználó futtatja. A [.filename]#/tmp# könyvtárban rááadásul csak a tulajdonosaik képesek állományokat átnevezni vagy törölni (sticky bit). Ezért a szûrõ ugyan létre tudna hozni egy linket, azonban ezt a feladata végeztével nem lesz majd képes törölni, mivel a link egy másik felhasználóhoz tartozik.
+
+Ezért a szûrõ az aktuális könyvtárban fogja létrehozni ezt a szimbolikus linket, ami jelen esetünkben a nyomtatási rendszer által használt könyvtár lesz (ezt az [.filename]#/etc/printcap# állomány `sd` tulajdonságával adjuk meg). Itt remekül el tudják végezni a feladataikat a szûrõk, különösen mivel (néha) több hely van itt, mint a [.filename]#/tmp# könyvtárban.
+
+Végül lássuk magát a szûrõt:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  hpdf - DVI adat nyomtatása HP/PCL nyomtatón
+#  Helye: /usr/local/libexec/hpdf
+
+PATH=/usr/local/bin:$PATH; export PATH
+
+#
+#  Létrehozunk egy függvényt az átmeneti állományok törlésére. Ezek
+#  az aktuális könyvtárban jönnek létre, ami pedig a nyomtatási
+#  rendszer adott nyomtatóhoz tartozó könyvtára lesz.
+#
+cleanup() {
+   rm -f hpdf$$.dvi
+}
+
+#
+#  Létrehozunk egy függvényt a súlyos hibák kezelésére: írassunk ki
+#  egy adott üzenetet és lépjünk ki a 2-es hibakóddal.  Ezzel üzenünk
+#  az LPD-nek, hogy ne hajtsa végre újra a nyomtatási feladatot.
+#
+fatal() {
+    echo "$@" 1>&2
+    cleanup
+    exit 2
+}
+
+#
+#  Ha a felhasználó eltávolítja a nyomtatási feladatot a sorból, akkor az
+#  LPD egy SIGINT jelzést fog küldeni, ezért próbáljuk meg azt elkapni
+#  (néhány más egyéb jelzéssel együtt), így még tudjuk törölni az
+#  ideiglenesen # létrehozott állományokat.
+#
+trap cleanup 1 2 15
+
+#
+#  Gondoskodjunk róla, hogy a feladat megkezdésekor még egyetlen
+#  használt állomány sem létezik.
+#
+cleanup
+
+#
+#  Kössük össze a szabványos bemenetet egy DVI állománnyal (amit
+#  majd nyomtatni akarunk).
+#
+ln -s /dev/fd/0 hpdf$$.dvi || fatal "Cannot symlink /dev/fd/0"
+
+#
+#  LF = CR+LF
+#
+printf "\033&k2G" || fatal "Cannot initialize printer"
+
+#
+#  Alakítsuk át az adatot és nyomtassunk. A dvilj2p által visszaadott érték
+#  nem túlságosan megbízható, ezért ne is foglalkozzunk vele.
+#
+dvilj2p -M1 -q -e- dfhp$$.dvi
+
+#
+#  Takarítsunk el magunk után és lépjünk ki szabályosan
+#
+cleanup
+exit 0
+....
+
+[[printing-advanced-autoconv]]
+===== Automatikus konverziók: a konverziós szûrõk helyett
+
+A konverziós szûrõk sokat segítenek egy kényelmes nyomtatási környezet kialakításában, azonban a használatukhoz a felhasználóknak (az man:lpr[1] parancson keresztül) egyenként hivatkozniuk kell rájuk. Ha a rendszerünk felhasználói nem eléggé mûveltek számítástechnikai téren, akkor még egy szûrõ megadása is zavaró lehet számukra. Ami még ennél is rosszabb, hogy egy rosszul megadott szûrõ hatására a nyomtató sem fogja jól kezelni az adott állomány formátumát és erre válaszul akár többszáz lapot is pillanatok alatt kiköphet magából.
+
+A konverziós szûrõk telepítése helyett gyakran csak egy (alapértelmezett) szövegszûrõre van szükségünk, amely kideríti a nyomtatandó állomány pontos formátumát és magától elindítja a neki megfelelõ konverziós szûrõt. Ilyen esetekben például a `file` parancs pont a hasznunkra válhat. Persze _bizonyos_ állománytípusok közt nagyon nehéz különbséget tenni - de ezekre továbbra is adhatunk még külön konverziós szûrõket.
+
+A FreeBSD Portgyûjteményében találhatunk egy `apsfilter` elnevezésû szövegszûrõt (package:print/apsfilter[]), ami képes ilyen automatikus konverzióra. Képes felismerni a nyers szöveget, PostScript(R) programokat, DVI és szinte bármilyen formátumú állományokat, lefuttatni rájuk a megfelelõ átalakításokat, majd kinyomtatni ezeket.
+
+[[printing-advanced-of]]
+==== Kimeneti szûrõk
+
+Az LPD nyomtatási rendszer kezel egy eddig még nem tárgyalt szûrõtípust is: ez a kimeneti szûrõ. A kimeneti szûrõ a szövegszûrõhöz hasonlóan csak nyers szöveg nyomtatására használatos, de tartalmaz néhány egyszerûsítést. Ha kizárólag csak kimeneti szûrõket alkalmazunk, akkor:
+
+* Az LPD az egész nyomtatási feladathoz egyetlen kimeneti szûrõt fog használni, nem pedig minden állományhoz külön.
+* Az LPD a kimeneti szûrõ számára nem nyújt semmilyen segítséget a nyomtatási feladaton belül szereplõ állományok kezdetének vagy végének megállapításában.
+* Az LPD a szûrõnek nem adja át sem a felhasználó hozzáférését, sem pedig gépnevét, ezért nyilvántartásra nem alkalmas. Mindent összegezve lényegében csak két paramétert kap meg:
++
+`szûrõnév -w_szélesség_ -l_hossz_`
++ 
+ahol a _szélesség_ a kérdéses nyomtató `pw` tulajdonságából, a _hossz_ pedig a `pl` tulajdonságából származik.
+
+Ne bûvöljön el minket a szûrõ egyszerûsége! Ha például a nyomtatási feladatban minden állományt újabb lapon szeretnénk kezdeni, akkor azt kimeneti szûrõvel _nem tudjuk megoldani_. Erre a célra használjunk szövegszûrõt (másik nevén bemeneti szûrõt), lásd <<printing-textfilter,A szövegszûrõ telepítése>> szakaszt. Továbbá, a kimeneti szûrõ valójában _sokkal bonyolultabb_ abban a tekintetben, hogy a beérkezõ adatok közül neki kell kikeresnie a speciális jelentéssel bíró karaktereket ugyanúgy, ahogy az LPD helyett saját magának kell küldenie a jelzéseket.
+
+Azonban a kimeneti szûrõk használata _elkerülhetetlen_, ha például fejléclapokat akarunk nyomtatni, és esetleg még különbözõ inicializálásra használatos speciális kódokat vagy karakterláncokat akarunk ez elõtt kiküldeni. (Ellenben _badarság_ a fejléclapoktól követelni a felhasználó adatait, hiszen az LPD a kimeneti szûrõnek nem ad semmilyen erre vonatkozó információt.)
+
+Egyetlen nyomtató esetén az LPD egyaránt lehetõvé teszi kimeneti, szöveg- és más egyéb szûrõk használatát. Ilyenkor az LPD a kimeneti szûrõn keresztül csak a fejlécet tartalmazó oldal (lásd a <<printing-advanced-header-pages,Fejléclapok>> szakaszt) nyomtatását indítja el. Ezt követõen az LPD arra számít, hogy a kimeneti szûrõ két karakter, az ASCII 031 és az ezt követõ ASCII 001, hatására _leállítja magát_. Amikor tehát a kimeneti szûrõ érzékeli ezt a két karaktert (031, 001), akkor a `SIGSTOP` jelzéssel le kell állnia. Miután az LPD lefuttatta a többi szûrõt, a `SIGCONT` jelzéssel újraindítja a kimeneti szûrõt.
+
+Ha van kimeneti szûrõnk, de _nincs_ szövegszûrõnk, akkor az LPD minden további feldolgozás nélkül továbbadja a nyomtatási feladatot a kimeneti szûrõnek. Ahogy már korábban is említettük, a kimeneti szûrõ a nyomtatási feladatban levõ összes állományt egymás után nyomtatja ki, lapdobások vagy bármilyen más papírmozgatás nélkül, ezért valószínûleg _nem_ ez kell nekünk. Az esetek túlnyomó részében ehhez elég egy szövegszûrõ.
+
+A korábban szövegszûrõként beharangozott `lpf` program kimeneti szûrõként is képes funkcionálni. Ha szükségünk lenne egy gyorsan összecsapható kimeneti szûrõre, és nem akarunk a speciális karakterek, valamint a jelzések küldésével elidõzni, akkor próbálkozzunk az `lpf` használatával. Az `lpf` parancsot mellesleg becsomagolhatjuk egy olyan szkriptbe is, amely elvégzi a nyomtató számára szükséges inicializálást.
+
+[[printing-advanced-lpf]]
+==== Az `lpf` szövegszûrõ
+
+A FreeBSD bináris terjesztéséhez mellékelt [.filename]#/usr/libexec/lpr/lpf# program egy szövegszûrõ (bemeneti szûrõ), amely képes (az `lpr -i` paranccsal hozzáadott nyomtatási feladatokat) tabulálni, (az `lpr -l` paranccsal felvett nyomtatási feladatokban) a vezérlõkaraktereket figyelemen kívül hagyni, a nyomtatási feladatban elõforduló törlések és behúzások nyomtatási pozícióját igazítani és nyilvántartani a kinyomtatott lapokat. Kimeneti szûrõként is tud viselkedni.
+
+Az `lpf` szûrõ rengeteg nyomtatási környezetben felhasználható. Habár nem képes a nyomtatónak inicializáló jelsorozatokat küldeni, mégis könnyû olyan szkriptet írni, amely elvégzi ezeket a hiányzó kezdeti beállításokat, majd lefuttatja az `lpf` szûrõt.
+
+Az `lpf` akkor lesz képes helyesen számolni a kinyomtatott lapokat, ha ehhez az [.filename]#/etc/printcap# állományban jól töltjük ki a `pw` és `pl` tulajdonságokat. Ezen értékek segítségével határozható meg ugyanis, hogy mennyi szöveg fért rá egy lapra és így mennyi lapot emésztett fel az adott felhasználó által küldött nyomtatási feladat. A nyomtatás nyilvántartásával kapcsolatban <<printing-advanced-acct,A nyomtató használatának nyilvántartása>> címû szakaszt érdemes elolvasni.
+
+[[printing-advanced-header-pages]]
+=== Fejléclapok
+
+Ha _nagyon sok_ felhasználónk van, és sok különbözõ nyomtatót is használnak, akkor elõbb vagy utóbb minden bizonnyal elkerülhetetlenné fog válni a _fejléclapok_ használata.
+
+A fejléc-, vagy más néven _munka-_ vagy _elválasztó lapok_ segítik elõ az elvégzett nyomtatási feladatok azonosítását. A többi dokumentumtól eltérõ módon, általában dekoratív keretben, nagy, vastag betûkkel nyomtatódnak ki, hogy a halomnyi papír között a felhasználók könnyedén megtalálhassák az elküldött nyomtatási feladataik eredményét. Természetesen a fejléclapok nyilvánvaló hátulütõje, hogy így minden nyomtatási feladathoz még egy lappal többet kell elhasználni és mivel gyakorlatilag néhány percnél tovább nincs is rájuk szükség, meglehetõsen hamar a kukába kerülnek. (A fejléclapok nyomtatási feladatonként jönnek létre, nem pedig a nyomtatási feladatokban levõ állományokhoz egyenként, ezért nem is akkora pazarlás ez.)
+
+Az LPD rendszer képes magától fejléclapokat készíteni a nyomtatásokhoz, _amennyiben_ a nyomtatónk képes közvetlenül nyers szöveget nyomtatni. Ha PostScript(R) nyomtatónk van, akkor ennek legyártásához egy külsõ programra van szükségünk, lásd a <<printing-advanced-header-pages-ps,Fejléclapok PostScript(R) nyomtatókon>> szakaszt.
+
+[[printing-advanced-header-pages-enabling]]
+==== A fejléclapok engedélyezése
+
+Az <<printing-simple,Alacsonyszintû nyomtatóbeállítás>> címû szakaszban az [.filename]#/etc/printcap# állományban a `sh` (úgy mint "suppress header") tulajdonsággal kikapcsoltuk a fejléclapokat. A fejléclapok engedélyezéséhez mindössze el kell távolítanunk ezt az `sh` tulajdonságot.
+
+Ez túl egyszerû, nemde?
+
+Igen, ez így van. _Elõfordulhat_, hogy szükségünk van még egy olyan kimeneti szûrõre is, amely inicializáló karaktereket küld a nyomtatónak. Íme egy példa ehhez a Hewlett Packard PCL-kompatibilis nyomtatói esetére:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  hpof - Kimeneti szûrõ Hewlett Packard PCL-kompatibilis nyomtatókhoz
+#  Helye: /usr/local/libexec/hpof
+
+printf "\033&k2G" || exit 2
+exec /usr/libexec/lpr/lpf
+....
+
+Az `of` tulajdonsággal adjuk meg a kimeneti szûrõt. A <<printing-advanced-of,Kimeneti szûrõk>> szakaszban errõl részletesebben is olvashatunk.
+
+A korábban ismertetett `teak` nevû nyomtatóhoz most az alábbi minta [.filename]#/etc/printcap# állományt mellékeljük. Itt engedélyeztük a fejléclapokat és hozzátettük az iménti kimeneti szûrõt:
+
+[.programlisting]
+....
+#
+#  /etc/printcap (orchid)
+#
+teak|hp|laserjet|Hewlett Packard LaserJet 3Si:\
+        :lp=/dev/lpt0:sd=/var/spool/lpd/teak:mx#0:\
+        :if=/usr/local/libexec/hpif:\
+        :vf=/usr/local/libexec/hpvf:\
+        :of=/usr/local/libexec/hpof:
+....
+
+Mostantól kezdve, amikor a felhasználók a `teak` nyomtatón akarnak nyomtatni, minden nyomtatási feladathoz kapni fognak egy fejléclapot. Amennyiben a kedves felhasználók mégis keresgetni akarják a nyomtatásaikat, az `lpr -h` paranccsal tetszõleges módon letilthatják azokat. Az man:lpr[1] többi hasonló opcióját <<printing-lpr-options-misc,A fejléclapokhoz tartozó beállítások>> szakaszban találjuk.
+
+[NOTE]
+====
+Az LPD minden fejléclap után egy lapdobást küld. Ha erre a célra a nyomtatónk egy eltérõ karaktert vagy karaktersorozatot használ, akkor azt az [.filename]#/etc/printcap# állomány `ff` tulajdonságával határozhatjuk meg.
+====
+
+[[printing-advanced-header-pages-controlling]]
+==== A fejléclapok vezérlése
+
+A fejléclapok engedélyezésével az LPD egy ún. _hosszú fejlécet_ fog készíteni, vagyis a felhasználót, a gépet és a nyomtatási feladatot jól azonosító, egész lapot kitöltõ óriási betûket. Erre egy példa (amiben a `rose` nevû géprõl `kelly` küldte az "outline" elnevezésû nyomtatási feladatot):
+
+[source,bash]
+....
+      k                   ll       ll
+      k                    l        l
+      k                    l        l
+      k   k     eeee       l        l     y    y
+      k  k     e    e      l        l     y    y
+      k k      eeeeee      l        l     y    y
+      kk k     e           l        l     y    y
+      k   k    e    e      l        l     y   yy
+      k    k    eeee      lll      lll     yyy y
+                                               y
+                                          y    y
+                                           yyyy
+
+                                   ll
+                          t         l        i
+                          t         l
+       oooo    u    u   ttttt       l       ii     n nnn     eeee
+      o    o   u    u     t         l        i     nn   n   e    e
+      o    o   u    u     t         l        i     n    n   eeeeee
+      o    o   u    u     t         l        i     n    n   e
+      o    o   u   uu     t  t      l        i     n    n   e    e
+       oooo     uuu u      tt      lll      iii    n    n    eeee
+
+      r rrr     oooo     ssss     eeee
+      rr   r   o    o   s    s   e    e
+      r        o    o    ss      eeeeee
+      r        o    o      ss    e
+      r        o    o   s    s   e    e
+      r         oooo     ssss     eeee
+
+                                              Job:  outline
+                                              Date: Sun Sep 17 11:04:58 1995
+....
+
+Ezt követõen az LPD elküld még egy lapdobást is, ezért maga a nyomtatási feladat eredménye egy új oldalon fog kezdõdni (kivéve, ha az [.filename]#/etc/printcap# állományban az adott nyomtatóhoz tartozó bejegyzésben megadtuk az `sf` (úgy mint "suppress form feeds", vagyis a lapdobások letiltása) tulajdonságot.
+
+Ha úgy jobban tetszik, akkor az [.filename]#/etc/printcap# állományban a `sb` tulajdonsággal az LPD utasítható _rövid fejlécek_ készítésére is. Ilyenkor a fejléclap tartalma mindössze ennyi lesz:
+
+[source,bash]
+....
+rose:kelly  Job: outline  Date: Sun Sep 17 11:07:51 1995
+....
+
+Alapértelmezés szerint az LPD elõször a fejléclapot, majd a nyomtatási feladatot végzi el. Ezt a sorrendet az [.filename]#/etc/printcap# állományban a `hl` (header last) tulajdonsággal meg tudjuk fordítani.
+
+[[printing-advanced-header-pages-accounting]]
+==== A nyomtató használatának nyilvántartása
+
+Az LPD által felkínált fejléclapok használata során egyetlen irányelv érvényesül a nyilvántartásukban: a fejléclapok _költségmentesek_.
+
+De miért?
+
+Azért, mert kizárólag csak a kimeneti szûrõ képes a fejléclapok viselkedését irányítani, ami viszont nem képes semmiféle nyilvántartásra, hiszen nem kapja meg az ehhez szükséges _felhasználói- vagy gépnév_ információkat, illetve nyilvántartásokat. Emiatt fogalma sincs róla, hogy kit terhel az adott nyomtató használata. Úgy sem tudjuk megoldani a problémát, ha a szöveg- vagy konverziós szûrõkben (ahol már rendelkezésünkre állnak a felhasználó és a gépének adatai) "növeljük a lapok számát eggyel" a nyomtatási feladatban, mivel a felhasználók az `lpr -h` parancs használatával kedvük szerint letilthatják a fejléclapokat. Ezt ugyan alapvetõen a természetet óvni kívánó felhasználók részesítik elõnyben, de ettõl függetlenül sem erõszakolhatjuk rá mindenkire.
+
+_Az sem elég_, ha minden szûrõ létrehozza a saját fejlécét (amiért aztán pénzt kérhetnénk). Mivel ha a felhasználók az `lpr -h` paranccsal le akarják tiltani a fejlécek használatát, attól a szûrõkhöz még mindig létrejönnek, hiszen az LPD a `-h` opcióról semmilyen értesítést nem küld át a szûrõknek.
+
+Nos, ilyenkor mitévõk legyünk?
+
+A lehetõségeink:
+
+* Elfogadjuk az LPD elvét, és nem számítunk fel költséget a fejléclapokra.
+* Az LPD helyett egy másik nyomtatási rendszert használunk, például az LPRng rendszert. A <<printing-lpd-alternatives,Más nyomtatási rendszerek>> címû szakaszban kiderül, milyen alternatívák érhetõek el az LPD kiváltására.
+* Írjunk mi magunk egy _intelligens_ kimeneti szûrõt. Normális esetben a kimeneti szûrõk nem valók másra, csupán a nyomtató alaphelyzetbe hozására vagy egyszerûbb karakterkonverziók elvégzésére. Fejléclapokhoz és nyers szöveget tartalmazó nyomtatási feladathoz remekül használható (ahol nincs szöveg- (avagy bemeneti) szûrõ). Azonban ha a nyers szövegekhez van szövegszûrõnk, akkor az LPD a kimeneti szûrõt csak a fejléclapokhoz indítja el. Emellett a kimeneti szûrõ az LPD által generált fejléc szövegébõl képes megmondani, melyik felhasználóhoz és géphez tartozik a szóbanforgó fejléc. A módszer egyetlen bökkenõje, hogy a nyilvántartásokat tároló állományról viszont még így se tudunk semmilyen információt szerezni (mivel nem kapjuk meg az `af` tulajdonsággal beállított állomány nevét). Ha azonban egy rendszerszinten elérhetõ állományba mentjük ezeket az adatokat, akkor akár bele is drótozhatjuk ezt a kimeneti szûrõbe. A kimeneti szûrõnek az adatok megtalálásában ilyenkor úgy tudunk segíteni, ha az [.filename]#/etc/printcap# állományban az `sh` (rövid fejléc) tulajdonságot állítjuk be. De ez igazából sok hûhó semmiért, és a felhasználók is jobban megbecsülik az olyan nagylelkû rendszergazdát, aki nem számítja fel nekik a fejléclapokat.
+
+[[printing-advanced-header-pages-ps]]
+==== Fejléclapok PostScript(R) nyomtatókon
+
+Ahogy arról már korábban is szó esett, az LPD képes többféle nyomtató számára is megfelelõ, nyers szövegû fejléclapokat készíteni. Persze a PostScript(R) közvetlenül nem képes nyers szövegek nyomtatására, ezért az LPD ezen lehetõsége lényegében használhatatlan - többnyire.
+
+Ilyen helyzetben a fejléclapok használatának nyilvánvaló módja, hogy minden szövegszûrõt fejlécek gyártására utasítunk. Ezek a szûrõk a felhasználóról és a gépérõl kapott információkból össze tudják állítani a megfelelõ fejléclapot. A megoldás hátránya, hogy ez még olyankor is megtörténik, amikor a felhasználók az `lpr -h` paranccsal küldik a nyomtatási feladataikat.
+
+Kísérletezzünk egy kicsit ezzel a módszerrel! A most következõ szkript három paramétert fogad el (a felhasználó hozzáférést, a gép és a nyomtatási feladat nevét), majd ezekbõl létrehoz egy egyszerû PostScript(R) formátumú fejlécet:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  make-ps-header - PostScript fejléc létrehozása a szabvány kimenetre
+#  Helye: /usr/local/libexec/make-ps-header
+#
+
+#
+#  Ezek itt a PostScript által használt egységekben vannak megadva
+#  (72/col vagy 28/cm).  Írjuk át az általunk használt papírméretre,
+#  A4-re vagy amit éppen használunk:
+#
+page_width=612
+page_height=792
+border=72
+
+#
+#  A paraméterek ellenõrzése.
+#
+if [ $# -ne 3 ]; then
+    echo "Usage: `basename $0` <user> <host> <job>" 1>&2
+    exit 1
+fi
+
+#
+#  Mentsük el ezeket, leginkább az olvashatóság miatt.
+#
+user=$1
+host=$2
+job=$3
+date=`date`
+
+#
+#  Küldjük el a PostScript-kódot a szabványos kimenetre.
+#
+exec cat <<EOF
+%!PS
+
+%
+%  Gondoskodjunk róla, hogy ne zavarjuk az utánunk következõ
+%  felhasználó nyomtatási feladatának végrehajtását.
+%
+save
+
+%
+%  Csináljunk egy csúf vastag szegélyt, körbe a papíron.
+%
+$border $border moveto
+$page_width $border 2 mul sub 0 rlineto
+0 $page_height $border 2 mul sub rlineto
+currentscreen 3 -1 roll pop 100 3 1 roll setscreen
+$border 2 mul $page_width sub 0 rlineto closepath
+0.8 setgray 10 setlinewidth stroke 0 setgray
+
+%
+%  Jelenítsük meg a felhasználó azonosítóját szép, feltûnõ
+%  betûkkel.
+%
+/Helvetica-Bold findfont 64 scalefont setfont
+$page_width ($user) stringwidth pop sub 2 div $page_height 200 sub moveto
+($user) show
+
+%
+%  Most pedig mutassuk az unalmas részleteket.
+%
+/Helvetica findfont 14 scalefont setfont
+/y 200 def
+[ (Job:) (Host:) (Date:) ] {
+200 y moveto show /y y 18 sub def }
+forall
+
+/Helvetica-Bold findfont 14 scalefont setfont
+/y 200 def
+[ ($job) ($host) ($date) ] {
+        270 y moveto show /y y 18 sub def
+} forall
+
+%
+% Ennyi lett volna.
+%
+restore
+showpage
+EOF
+....
+
+Ezzel a szkripttel pedig mindegyik konverziós és szövegszûrõ elõször létrehoz egy fejléclapot, majd elvégzi a felhasználó nyomtatási feladatát. Íme egy korábban már bemutatott DVI szûrõ, amit most kiegészítünk a fejléclapok használatával:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  psdf - DVI szûrõ PostScript nyomtatóhoz
+#  Helye: /usr/local/libexec/psdf
+#
+#  Az lpr -d parancs hatására hívódik meg.
+#
+
+orig_args="$@"
+
+fail() {
+    echo "$@" 1>&2
+    exit 2
+}
+
+while getopts "x:y:n:h:" option; do
+    case $option in
+        x|y)  ;; # Ignore
+        n)    login=$OPTARG ;;
+        h)    host=$OPTARG ;;
+        *)    echo "LPD started `basename $0` wrong." 1>&2
+              exit 2
+              ;;
+    esac
+done
+
+[ "$login" ] || fail "No login name"
+[ "$host" ] || fail "No host name"
+
+( /usr/local/libexec/make-ps-header $login $host "DVI File"
+  /usr/local/bin/dvips -f ) | eval /usr/local/libexec/lprps $orig_args
+....
+
+Láthatjuk, hogy a szûrõnek a felhasználói- és a gépnév megállapításához végig kell néznie a paraméterek listáját. Ez lényegében minden más konverziós szûrõnél ugyanígy néz ki. Ez a lista azonban a szövegszûrõk esetén némileg eltér (lásd a <<printing-advanced-filters,Hogyan mûködnek a szûrõk?>> szakaszt).
+
+Már az elõbbiekben is tárgyaltuk, hogy ez a megoldás, habár eléggé egyszerû, az `lpr` számára nem teszi lehetõvé a fejléclapok letiltását (a `-h` opció). Ha a felhasználóink kímélni akarják a fákat (vagy meg akarják úszni a fejléclapok égbeszökõ költségeit), akkor ezt nem tudják megtenni, hiszen a szûrõk minden nyomtatási feladathoz készíteni fognak fejléceket.
+
+Ezt a korlátozást csak úgy tudjuk elsöpörni, ha bevetjük a <<printing-advanced-header-pages-accounting,A nyomtató használatának nyilvántartása>> szakaszban leírt cselt, tehát készítünk egy olyan kimeneti szûrõt, amely megkeresi az LPD-vel generált fejléceket és létrehozza azok PostScript(R) változatát. Ha valaki az `lpr -h` paranccsal küld nyomtatnivalót, akkor LPD nem készít hozzá fejléclapot, ahogy a kimeneti szûrõnk sem. A kimeneti szûrõ minden más esetben beolvassa az LPD által küldött szöveget és átküldi a neki megfelelõ PostScript(R) kódot a nyomtatóra.
+
+Ha soros PostScript(R) nyomtatónk van, akkor használhatjuk a `psof` kimeneti szûrõhöz tartozó `lprps` parancsot is, ami pontosan az elõbbit végzi el. Hozzátennénk azonban, hogy a `psof` nem számolja a fejléclapokat.
+
+[[printing-advanced-network-printers]]
+=== Hálózati nyomtatás
+
+A FreeBSD tud hálozaton is nyomtatni, vagyis tud távoli számítógépeknek is nyomtatási feladatot küldeni. A hálózati nyomtatás kifejezés általánosságban véve két különbözõ dologra utalhat:
+
+* Egy távoli számítógéphez kapcsolt nyomtató hozzáférését. A géphez a nyomtató a hagyományos soros vagy párhuzamos csatolófelületen keresztül kapcsolódik, amit aztán az LPD alkalmas beállításával a hálózaton mindenki számára elérhetõvé teszünk. A <<printing-advanced-network-rm,Távoli számítógépekre csatlakoztatott nyomtatók>> címû szakasz errõl szól.
+* Egy közvetlenül a hálózatra kapcsolt nyomtató hozzáférését. A nyomtató tehát rendelkezik még egy hálózati csatlakozással is a hagyományos soros vagy párhuzamos felület mellett (vagy éppen helyett). Egy ilyen nyomtató a következõképpen mûködhet:
+
+** Elfogadja az LPD kéréseit, és még képes nyomtatási feladatokat is tárolni. Ebben az esetben teljesen egyenértékû egy LPD alkalmazást futtató számítógéppel. Ekkor nincs más teendõnk, csak követnünk kell a <<printing-advanced-network-rm,Távoli számítógépeken telepített nyomtatók>> címû szakasz utasításait.
+** Hálózati adatfolyamokkal dolgozik. Ebben az esetben a nyomtatót "hozzá kell kapcsolnunk" a hálózaton található egyik számítógéphez, ami majd a nyomtatási feladatok tárolásáért és folyamatos küldéséért lesz felelõs. A <<printing-advanced-network-net-if,Nyomtatók hálózati adatcsatlakozással>> szakasz az ilyen fajtájú nyomtatók telepítésére tesz néhány javaslatot.
+
+[[printing-advanced-network-rm]]
+==== Távoli számítógépekre csatlakoztatott nyomtatók
+
+Az LPD nyomtatási rendszer alapból képes más, szintén LPD-t (vagy vele kompatibilis rendszert) futtató számítógépekre nyomtatási feladatokat küldeni. Ezzel lényegében az egyik géphez hozzá tudunk kapcsolni egy nyomtatót, amit aztán a többiek számára elérhetõvé teszünk. Ez olyan nyomtatók esetében is mûködik, amelyek ismerik az LPD által alkalmazott protokollt.
+
+A távoli nyomtatáshoz elõször telepítsük a nyomtatót valamelyik számítógépre az <<printing-simple,Alacsonyszintû nyomtatóbeállítás>> szakaszban leírtak szerint, és ezzel az lesz a _nyomtatószerverünk_. Ezután, amennyiben szükségesnek találjuk, végezzünk <<printing-advanced,magasabb szintû nyomtatóbeállítások>>at is. Ne felejtsük el kipróbálni a nyomtatón, hogy rendesen mûködik az LPD mindegyik olyan beállításával, amit engedélyeztünk. Emellett gondoskodjunk minden olyan jogosultságról is, amivel a _helyi számítógéprõl_ el tudjuk érni a _távoli számítógép_ által felkínált LPD szolgáltatást (lásd <<printing-advanced-restricting-remote,Távoli számítógépekrõl érkezõ kérések szabályozása>>).
+
+Ha olyan nyomtatót használunk, aminek a hálózati felülete kompatibilis az LPD rendszerrel, akkor az elõbb említett _nyomtatószerver_ lényegében maga lesz a nyomtató, valamint a _nyomtató neve_ a rajta beállított név. Ezzel kapcsolatban olvassuk el a nyomtatóhoz és/vagy a hálózati csatolójához mellékelt dokumentációt.
+
+[TIP]
+====
+
+Amikor a Hewlett Packard Laserjet típusú nyomtatóit használjuk, a `text` nevû nyomtatónév magától elvégzi a LF és CRLF formátumú sortörések közti átalakítást, ezért ilyenkor nincs szükségünk a [.filename]#hpif# szkriptre.
+====
+
+Ezután ha szeretnénk más gépek részére is elérhetõvé tenni a frissen telepített nyomtatónkat, adjuk meg mindegyikük [.filename]#/etc/printcap# állományában a következõket:
+
+. Tetszõlegesen választott nevet, álneveket. Az egyszerûség kedvéért azonban itt érdemes ugyanazokat a neveket választani, mint amit a nyomtatószerveren is használunk.
+. Szándékosan hagyjuk az `lp` tulajdonságot üresen (`:lp=:`).
+. Hozzunk létre egy nyomtatási könyvtárat, és jelöljük meg a helyét az `sd` tulajdonsággal. Az LPD itt fogja összegyûjteni a nyomtatási feladatokat, mielõtt elküldené azokat a nyomtatószervernek.
+. Adjuk meg a nyomtatószerver nevét az `rm` tulajdonság segítségével.
+. Az `rp` tulajdonsággal adjuk meg a _nyomtatószerverre_ csatlakoztatott nyomtató nevét.
+
+Kész! Az [.filename]#/etc/printcap# állományban már nem kell megadni konverziós szûrõket, oldalbeállításokat és semmi más egyebet.
+
+Lássunk mindezekre egy példát. A `rose` nevû számítógéphez két nyomtató csatlakozik, a `bamboo` és a `rattan`. Most pedig beállítjuk, hogy az `orchid` nevû gép felhasználói képesek legyenek ezekkel a nyomtatókkal dolgozni. Ekkor a most következõk szerint fog kinézni az `orchid` (a <<printing-advanced-header-pages-enabling, Fejléclapok engedélyezése>> szakaszban bemutatott) [.filename]#/etc/printcap# állománya. Tartalmazza a `teak` nevû nyomtató beállításait is, és ehhez fogjuk hozzáadni a `rose` másik két nyomtatóját:
+
+[.programlisting]
+....
+#
+#  /etc/printcap (orchid) - a rose két (távoli) nyomtatójának
+#  hozzáadása
+#
+
+#
+#  A "teak" egy helyi nyomtató, közvetlenül az orchidhoz
+#  csatlakozik:
+#
+teak|hp|laserjet|Hewlett Packard LaserJet 3Si:\
+        :lp=/dev/lpt0:sd=/var/spool/lpd/teak:mx#0:\
+        :if=/usr/local/libexec/ifhp:\
+        :vf=/usr/local/libexec/vfhp:\
+        :of=/usr/local/libexec/ofhp:
+
+#
+#  A "rattan" rose-hoz csatlakozik, így küldhetünk neki nyomtatási
+#  feladatot:
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :lp=:rm=rose:rp=rattan:sd=/var/spool/lpd/rattan:
+
+#
+#  A "bamboo" is a rose-hoz tartozik:
+#
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :lp=:rm=rose:rp=bamboo:sd=/var/spool/lpd/bamboo:
+....
+
+Ezután már csak létre kell hoznunk a megfelelõ nyomtatási könyvtárakat az `orchid` nevû gépen:
+
+[source,bash]
+....
+# mkdir -p /var/spool/lpd/rattan /var/spool/lpd/bamboo
+# chmod 770 /var/spool/lpd/rattan /var/spool/lpd/bamboo
+# chown daemon:daemon /var/spool/lpd/rattan /var/spool/lpd/bamboo
+....
+
+Mostantól kezdve az `orchid` felhasználói képesek lesznek nyomtatni a `rattan` és `bamboo` nevû nyomtatókon is. Ezért, ha az `orchid` egyik felhasználója beírja, hogy:
+
+[source,bash]
+....
+% lpr -P bamboo -d sushi-leírás.dvi
+....
+
+Az `orchid` gépen mûködõ LPD rendszer ezt a nyomtatási feladatot a bemásolja a [.filename]#/var/spool/lpd/bamboo# nevû nyomtatási könyvtárba és feljegyzi róla, hogy a nyomtatásához DVI szûrõre lesz szükség. Ahogy `rose` gépen található `bamboo` nyomtatási könyvtárában elegendõ hely keletkezik, a két LPD átküldi egymás közt a `rose` nevû gépre az állományt. Ezután az állomány egészen addig várakozik a `rose` nyomtatási sorában, amíg végezetül kinyomtatásra nem kerül. A `rose` fogja átalakítani DVI-rõl PostScript(R) formátumra átalakítani (mivel a `bamboo` egy PostScript(R) nyomtató).
+
+[[printing-advanced-network-net-if]]
+==== Nyomtatók hálózati adatcsatlakozással
+
+Amikor hálózati kártyát vásárolunk a nyomtatónkhoz, általában két változatukkal találkozhatunk: az egyikük nyomtatási rendszerként mûködik (ez a drágább), a másikuk pedig egyszerûen csak soros vagy párhuzamos csatlakozón továbbítandó adatként közvetíti az adatokat a nyomtató felé (az olcsóbb). A drágábbik változatot az elõzõ, <<printing-advanced-network-rm,Távoli számítógépekre csatlakoztatott nyomtatók>> címû szakaszban leírtak szerint tudjuk használni.
+
+Az [.filename]#/etc/printcap# állományban ugyan meg tudjuk adni, hogy a nyomtató soros vagy párhuzamos portra csatlakozik, és azon keresztül milyen adatátviteli sebességgel (amennyiben soros), forgalomirányítással, tabulálással, sortörési konvenció szerint stb. kommunikáljunk vele. Azonban TCP/IP vagy más hálózati porton ülõ nyomtatók adatait itt nem tudjuk kifejteni.
+
+A hálózatra kötött nyomtatók használatához lényegében egy olyan külön kifejlesztett kommunikációs programra van szükségünk, amely a szöveg- vagy konverziós szûrõkhöz hasonló módon hívható meg. Erre rögtön adunk is egy példát: a `netprint` szkript a szabványos bemenetrõl beolvassa az összes kinyomtatandó adatot és átküldi azokat a hálózatra csatlakoztatott nyomtatónak. A szkript elsõ paramétereként a nyomtató hálózati nevét adjuk meg, másodiknak pedig portot. Azonban megjegyezzünk, hogy ez csak egyirányú kommunikációt tesz lehetõvé (a FreeBSD-tõl a nyomtatóig). Sok hálózati nyomtató viszont két irányban is képes kommunikálni, ezért érdemes lehet ezt kihasználni (a nyomtató állapotának lekérdezésére, nyilvántartások készítésére stb).
+
+[.programlisting]
+....
+#!/usr/bin/perl
+#
+#  netprint - A hálózatra csatlakoztatott nyomtató szövegszûrõje
+#  Helye: /usr/local/libexec/netprint
+#
+$#ARGV eq 1 || die "Usage: $0 <printer-hostname> <port-number>";
+
+$printer_host = $ARGV[0];
+$printer_port = $ARGV[1];
+
+require 'sys/socket.ph';
+
+($ignore, $ignore, $protocol) = getprotobyname('tcp');
+($ignore, $ignore, $ignore, $ignore, $address)
+    = gethostbyname($printer_host);
+
+$sockaddr = pack('S n a4 x8', &AF_INET, $printer_port, $address);
+
+socket(PRINTER, &PF_INET, &SOCK_STREAM, $protocol)
+    || die "Can't create TCP/IP stream socket: $!";
+connect(PRINTER, $sockaddr) || die "Can't contact $printer_host: $!";
+while (<STDIN>) { print PRINTER; }
+exit 0;
+....
+
+Rengeteg szûrõben fel tudjuk használni ezt a szkriptet. Például tegyük fel, hogy egy Diablo 750-N típusú sornyomtatót csatlakoztattunk a hálózatra, amely az 5100-as porton várja a nyomtatandó adatokat. A hálózati neve most `scrivener` lesz. Íme a hozzá tartozó szövegszûrõ:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  diablo-if-net - Az 5100-as porton figyelõ `scrivener' nevû Diablo
+#  nyomtató szövegszûrõje. Helye: /usr/local/libexec/diablo-if-net
+#
+exec /usr/libexec/lpr/lpf "$@" | /usr/local/libexec/netprint scrivener 5100
+....
+
+[[printing-advanced-restricting]]
+=== A nyomtató használatának szabályozása
+
+Ebben a szakaszban a nyomtató használatának korlázásáról írunk. Az LPD rendszeren keresztül meghatározhatjuk, hogy ki képes helyben vagy távolról hozzáférni a nyomtatóhoz, mennyi másolatot nyomtathat, mennyi és egyenként mekkora nyomtatási feladatokat küldhet.
+
+[[printing-advanced-restricting-copies]]
+==== A másolatok számának szabályozása
+
+Az LPD segítségével a felhasználók egy állományt könnyen ki tudnak nyomtatni akár többször is. Ha (például) a felhasználó egy nyomtatási feladat kiküldéséhez az `lpr -#5` parancsot használja, akkor a nyomtatási feladatban levõ összes állományból öt példányt kap. Ennek létjogosultságát azonban nekünk kell megítélni.
+
+Amennyiben úgy érezzük, hogy a további példányok készítése csupán felesleges papír- és tintapazarlás, akkor az `sc` tulajdonság megadásával az [.filename]#/etc/printcap# állományban kikapcsolhatjuk az man:lpr[1] `-#` lehetõség használatát. Így amikor a felhasználók a `-#` kapcsolóval küldenek el feladatokat a nyomtatóra, a következõt fogják tapasztalni:
+
+[source,bash]
+....
+lpr: multiple copies are not allowed
+....
+
+Fordítása:
+
+[source,bash]
+....
+lpr: másolatok nyomtatása nem engedélyezett
+....
+
+Vigyázzunk arra, hogy ha távoli számítógépen zajlik a nyomtatás (lásd <<printing-advanced-network-rm,Távoli számítógépekre csatlakoztatott nyomtatók>>), akkor az `sc` tulajdonságot a távoli számítógép [.filename]#/etc/printcap# állományában is be kell állítani, máskülönben a felhasználók egy másik számítógéprõl mindig képesek lesznek több példány nyomtatására.
+
+Nézzünk erre egy példát. Itt most a `rose` nevû számítógép [.filename]#/etc/printcap# állományát vesszük szemügyre. Ebben a `rattan` egy nagyon szívélyes nyomtató lesz, ezért engedélyezi a másolatok nyomtatását, azonban a `bamboo` nevû lézernyomtató nála már sokkal válogatósabb lesz, ezért a beállításai közt az `sc` tulajdonsággal kikapcsoljuk a másodpéldányok nyomtatását:
+
+[.programlisting]
+....
+#
+#  /etc/printcap (rose) - A másolatok korlátozása a "bamboo"
+#  nevû nyomtatón
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:sd=/var/spool/lpd/rattan:\
+        :lp=/dev/lpt0:\
+        :if=/usr/local/libexec/if-simple:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:sc:\
+        :lp=/dev/ttyd5:ms#-parenb cs8 clocal crtscts:rw:\
+        :if=/usr/local/libexec/psif:\
+        :df=/usr/local/libexec/psdf:
+....
+
+Az `sc` tulajdonságot az `orchid`[.filename]#/etc/printcap# állományában is meg kell adni (és ha már itt vagyunk, akkor tegyük meg ugyanezt a `teak` esetében is):
+
+[.programlisting]
+....
+#
+#  /etc/printcap (orchid) - Nincsenek másodpéldányok sem a helyi
+#  "teak" nyomtatón, sem pedig a távoli "bamboo" nyomtatón
+teak|hp|laserjet|Hewlett Packard LaserJet 3Si:\
+        :lp=/dev/lpt0:sd=/var/spool/lpd/teak:mx#0:sc:\
+        :if=/usr/local/libexec/ifhp:\
+        :vf=/usr/local/libexec/vfhp:\
+        :of=/usr/local/libexec/ofhp:
+
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :lp=:rm=rose:rp=rattan:sd=/var/spool/lpd/rattan:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :lp=:rm=rose:rp=bamboo:sd=/var/spool/lpd/bamboo:sc:
+....
+
+Az `sc` tulajdonság használatával ugyan megakadályozzuk az `lpr -#` parancs teljesítését, azonban ez még mindig nem óv meg minket attól, hogy a felhasználók képesek legyenek többször egymás után lefuttatni az man:lpr[1] parancsot, vagy éppen egyetlen nyomtatási feladatban több állományt is elküldeni:
+
+[source,bash]
+....
+% lpr forsale.sign forsale.sign forsale.sign forsale.sign forsale.sign
+....
+
+Számos módszer kínálkozik az effajta visszaélések kivédésére (beleértve a figyelmen kívül hagyást is), lehet velük kísérletezgetni!
+
+[[printing-advanced-restricting-access]]
+==== A nyomtatók hozzáférésének szabályozása
+
+A UNIX(R) csoportkezelésével és az [.filename]#/etc/printcap# állományban található `rg` tulajdonság felhasználásával korlátozni tudjuk, ki milyen nyomtatón dolgozhat. Ehhez mindössze annyit kell tennünk, hogy besoroljuk egy csoportba azokat a felhasználókat, amelyek hozzáférhetnek a nyomtatóhoz, és az `rg` tulajdonsággal megnevezzük azt.
+
+A csoporton kívüli felhasználókat (köztük magát a `root` felhasználót is) pedig ezután így üdvözli a rendszer, ha megpróbálnak valamit kinyomtatni egy korlátozott felhasználású nyomtatón:
+
+[source,bash]
+....
+lpr: Not a member of the restricted group
+....
+
+Az üzenet fordítása:
+
+[source,bash]
+....
+lpr: Nem jogosult felhasználó
+....
+
+Ha erre a távoli számítógépek esetén szükségünk lenne (lásd <<printing-advanced-network-rm,Távoli számítógépekre csatlakoztatott nyomtatók>>), akkor tegyük ugyanazt, mint amit az `sc` (a másodpéldányok letiltása, "suppress multiple copies") tulajdonság esetén is, vagyis az `rg` tulajdonságot adjuk meg azokon a távoli számítógépeken is, amelyek hozzá tudnak férni a megosztott nyomtatóhoz.
+
+Például megengedjük, hogy a `rattan` nevû nyomtatót bárki használhassa, azonban a `bamboo` nyomtatót csak az `artists` nevû csoport használhatja. Következzen hát akkor a `rose` korábbról már ismert [.filename]#/etc/printcap# állománya:
+
+[.programlisting]
+....
+#
+#  /etc/printcap (rose) - A bamboo hozzáférésének korlátozása
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:sd=/var/spool/lpd/rattan:\
+        :lp=/dev/lpt0:\
+        :if=/usr/local/libexec/if-simple:
+
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:sc:rg=artists:\
+        :lp=/dev/ttyd5:ms#-parenb cs8 clocal crtscts:rw:\
+        :if=/usr/local/libexec/psif:\
+        :df=/usr/local/libexec/psdf:
+....
+
+Most ne bántsuk a másik (az `orchid` nevû gépen levõ) [.filename]#/etc/printcap# állományt. Így persze az `orchid` bármelyik felhasználója nyomtathat a `bamboo` nyomtatón. De ez most egy olyan eset, ahol egyébként lekorlátozzuk a `orchid` elérését is, ezért az ott beengedett felhasználók már akár használhatják is a nyomtatót. Vagy sem.
+
+[NOTE]
+====
+Minden nyomtatóhoz csak egy ilyen csoportot adhatunk meg.
+====
+
+[[printing-advanced-restricting-sizes]]
+==== A beküldött nyomtatási feladatok méretének szabályozása
+
+Ha sok felhasználó szeretne a nyomtatóinkhoz hozzáférni, akkor minden bizonnyal meg akarunk adni egy felsõ határt a felhasználók által beküldhetõ nyomtatások méretére vonatkozóan. Mivel a nyomtatási könyvtáraknak otthont adó állományrendszer is egyszer betelhet, ezért mindenképpen érdemes gondoskodni arról, hogy mindenki nyomtatási feladatát el tudjuk rendesen tárolni.
+
+Az LPD az `mx` tulajdonsággal lehetõséget ad arra, hogy lekorlátozzuk a nyomtatási feladatokban található egyes állományok méretét. Ennek mértékegysége egy `BUFSIZ` blokk, ami pedig 1024 byte. Ha értékül nullát adunk meg, akkor nincs korlátozás, viszont ha semmit sem rögzítünk, akkor az `mx` tulajdonság alapértéke, vagyis 1000 blokk lesz a határ.
+
+[NOTE]
+====
+Ez az érték a nyomtatási feladatokban levõ _egyes állományok_ méretére vonatkozik, _nem_ pedig a nyomtatási feladatok teljes méretére.
+====
+
+Fontos tudni, hogy az LPD nem dobja vissza a méreten felüli állományokat. Ehelyett a méret alatti részt szépen berakja a sorba és kinyomtatja, a többi pedig elhagyja. Lehetne rajta vitázni, hogy ez mennyire helyes cselekedet.
+
+Példaképpen definiáljunk a korábban használt `rattan` és `bamboo` nyomtatóinkhoz ilyen korlátokat. Mivel az `artists` csoport tagjai hajlamosak nagy PostScript(R) állományokat küldeni, ezért most lekorlátozzuk ezt öt megabyte-ra. A szöveges nyomtatónk esetén azonban nem lesz semmilyen határ:
+
+[.programlisting]
+....
+#
+#  /etc/printcap (rose)
+#
+
+#
+#  Itt nincs korlát a nyomtatási feladatokra:
+#
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:mx#0:sd=/var/spool/lpd/rattan:\
+        :lp=/dev/lpt0:\
+        :if=/usr/local/libexec/if-simple:
+
+#
+#  Öt megabyte a PostScript:
+#
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:sc:rg=artists:mx#5000:\
+        :lp=/dev/ttyd5:ms#-parenb cs8 clocal crtscts:rw:\
+        :if=/usr/local/libexec/psif:\
+        :df=/usr/local/libexec/psdf:
+....
+
+Ismét hozzátesszük, hogy ezek a korlátok csak a helyi felhasználókra vonatkoznak. Amennyiben távolról is el lehet érni ezt a nyomtatót, a távoli felhasználókat nem fog semmilyen korlátozás érinteni. Azokon a számítógépeken is meg kell adnunk az [.filename]#/etc/printcap# állományban az `mx` tulajdonságot. Ehhez a <<printing-advanced-network-rm,Távoli számítógépekre csatlakoztatott nyomtatók>> címû szakaszban találunk segítséget.
+
+Van még egy speciális módszer, amivel képesek vagyunk szabályozni a távolról érkezõ kérések méretét. Errõl a <<printing-advanced-restricting-remote,Távoli számítógépekrõl érkezõ kérések szabályozása>> szakaszban olvashatunk.
+
+[[printing-advanced-restricting-remote]]
+==== Távoli számítógépekrõl érkezõ kérések szabályozása
+
+Az LPD nyomtatási rendszer több módot is szolgáltat a távolról érkezõ nyomtatási feladatok szabályozására:
+
+Az elérés szabályozása::
+Az [.filename]#/etc/hosts.equiv# és [.filename]#/etc/hosts.lpd# állományok segítségével beállíthatjuk, hogy mely távoli számítógépektõl fogadjon el kéréseket az LPD. Az LPD minden kérés elfogadásakor ellenõrzi, hogy a küldõ számítógép címe szerepel-e az említett állományok valamelyikében. Ha nem, akkor az LPD visszautasítja a kérést.
++
+A két állomány felépítése egyszerû, mert bennük minden sorban egy-egy hálózati nevet adunk meg. Hozzátennénk azonban, hogy legyünk óvatosak, mivel az [.filename]#/etc/hosts.equiv# állományt az man:ruserok[3] protokoll is használja, ezért ennek módosítása hatással van az man:rsh[1] és man:rcp[1] programok mûködésére.
++
+Például most nézzük meg a `rose`[.filename]#/etc/hosts.lpd# állományát:
++
+[.programlisting]
+....
+orchid
+violet
+madrigal.fishbaum.de
+....
++
+Ennek megfelelõen tehát a `rose` elfogadja az `orchid`, `violet` és `madrigal.fishbaum.de` nevû távoli számítógépek kéréseit. Ha bármilyen más gép próbál hozzáférni a `rose` által felkínált LPD szolgáltatáshoz, visszautasítja.
+
+A méret szabályozása::
+Szabályozhatjuk többek közt azt is, hogy mennyi szabad területnek kell fennmaradnia a nyomtatási könyvtárnak otthont adó állományrendszeren. A helyi nyomtató könyvtárában ehhez hozzunk létre egy [.filename]#minfree# nevû állományt. Ide írjuk be, mennyi szabad lemezblokk (512 byte-os egység a lemezen) szükségeltetik egy távolról beérkezõ nyomtatási feladat fogadásához.
++
+Így gondoskodhatunk róla, hogy a távoli felhasználók nem fogják eltömíteni az állományrendszerünket, illetve ezzel egyúttal adhatunk némi elõnyt a helyi felhasználóknak is: õk ugyanis még azután is képesek lesznek nyomtatási feladatokat küldeni a nyomtatónak, miután az állományrendszeren található szabad terület mennyisége már rég a [.filename]#minfree# állományban szereplõ érték alá csökkent.
++
+Példaként most a `bamboo` nevû nyomtatónkhoz adjunk meg egy ilyen [.filename]#minfree# állományt. Ehhez az [.filename]#/etc/printcap# állományból tudjuk kideríteni a hozzá tartozó nyomtatási könyvtárat. Lássuk tehát belõle a `bamboo` bejegyzését:
++
+[.programlisting]
+....
+bamboo|ps|PS|S|panasonic|Panasonic KX-P4455 PostScript v51.4:\
+        :sh:sd=/var/spool/lpd/bamboo:sc:rg=artists:mx#5000:\
+        :lp=/dev/ttyd5:ms#-parenb cs8 clocal crtscts:rw:mx#5000:\
+        :if=/usr/local/libexec/psif:\
+        :df=/usr/local/libexec/psdf:
+....
++
+A nyomtatási könyvtárat az `sd` tulajdonság határozza meg. Úgy állítjuk most be, hogy az LPD számára a távoli nyomtatási feladatok fogadásához ebben a könyvtárban legalább három megabyte (6144 blokk) szabad területnek mindig lennie kell:
++
+[source,bash]
+....
+# echo 6144 > /var/spool/lpd/bamboo/minfree
+....
+
+A felhasználók szabályozása::
+Az [.filename]#/etc/printcap# állományban megadható `rs` tulajdonság segítségével korlátozhatjuk a helyi nyomtatókhoz hozzáférni képes távoli felhasználókat. Amikor az `rs` tulajdonság szerepel egy helyben csatlakozó nyomtató leírásánál, akkor az LPD csak abban az esetben fogad el távoli felhasználóktól nyomtatási feladatot, _ha_ az adott feladatot küldõ felhasználónak ugyanazon a néven van a helyi gépen is hozzáférése. Máskülönben az LPD vissza fogja utasítani a kérést.
++
+Ez a tulajdonság különösen fontos olyan környezetben, ahol (például) több szervezeti egység használ egyetlen közös hálózatot és bizonyos felhasználók képesek átlépni szervezeti egységük határait, mivel ha a hozzáférést adunk nekik a rendszereinkhez, akkor képesek a saját helyükrõl használni ezeket. Ha ehelyett _csupán_ a nyomtatóinkat és a számítógépünk összes erõforrását akarjuk megosztani, akkor létrehozhatunk a számukra olyan "token" hozzáféréseket is, amikhez nem tartozik sem felhasználói könyvtár, sem pedig parancsértelmezõ (pontosabban a [.filename]#/usr/bin/false#).
+
+[[printing-advanced-acct]]
+=== A nyomtató használatának nyilvántartása
+
+Tehát szükségünk lenne a nyomtatások költségének elszámolására. Miért is ne tennénk ilyet? A papír és a tinta bizony pénzbe kerül, amihez még hozzájárulnak más egyéb karbantartási költségek is - a nyomtatók dugig vannak mindenféle mozgó alkatrésszel, amelyek elõbb-utóbbi el is romlanak. Tegyük fel, hogy a nyomtatóink kapacitása, kihasználtsága és karbantartási költsége alapján már megállapítottunk egy elszámolási egységet (oldalanként, méterenként, akárminként). De hogyan lássunk hozzá a nyomtatások költségének tényleges nyilvántartásához?
+
+Van egy rossz hírünk: az LPD nyomtatási rendszer önmaga nem tud segíteni ebben a feladatban. A nyilvántartás nagyban függ a használt nyomtatóktól, a nyomtatott formátumoktól és nyomtató _általunk_ kiszabott költségeitõl.
+
+A nyilvántartás létrehozásához át kell írnunk a nyomtatóhoz tartozó szûrõt (a nyers szövegek költségének felszámításához) és konverziós szûrõket (a különféle formátumok költségei miatt), amikkel aztán számolhatjuk vagy lekérdezhetjük a kinyomtatott lapokat. Egyetlen kimeneti szûrõ használatával szinte semmire se megyünk, mivel az nem képes nyilvántartás vezetésére. Errõl bõvebb útmutatást a <<printing-advanced-filter-intro,Szûrõk>> szakaszban találhatunk.
+
+Általánosságban véve két módon vezethetünk nyilvántartást:
+
+* Az _idõszakos elszámolás_ a gyakoribb, mivel ez az egyszerûbb. Amikor valaki végrehajt egy nyomtatási feladatot, a szûrõ a nyilvántartást tároló állományba feljegyzi a felhasználó azonosítóját, a gépének nevét és a kinyomtatott oldalakat. Ezután minden hónapban, félévben, évben vagy akár tetszõleges idõközönként összegyûjtjük a nyomtatók nyilvántartásait és külön feljegyezzük az egyes felhasználók nyomtatásait, majd benyújtjuk róla a számlát. Töröljük az összes naplóállományt, és tiszta lappal kezdjük a következõ idõszakot.
+* Az _azonnali elszámolás_ már nem annyira népszerû, mivel nehezebb megvalósítani. Ekkor a felhasználók már közvetlenül a nyomtatás után megkapják a számlát, hasonlóan a lemezkvótákhoz. Meg tudjuk akadályozni ezzel azt is, hogy a felhasználók túlléphessék az elõre kiszabott "nyomtatási kvótájukat", amit persze menet közben lehet ellenõrizni és állítgatni. A felhasználók és kvótájuk nyomonkövetéséhez viszont szükségünk lesz egy kis adatbáziskezelésre is.
+
+Az LPD nyomtatási rendszer mind a két módszer kivitelezéséhez tud segítséget nyújtani, hiszen amikor szûrõket állítunk be (vagyis szinte mindig), lehetõségünk van a nyilvántartást végzõ programrészleteket is beilleszteni. És ami feltétlenül elõnyös: óriási mértékû rugalmasságot ajánl fel a nyilvántartás megvalósításához. Például magunk választhatjuk ki, hogy idõszakos vagy azonnali elszámolást alkalmazunk. Meg tudjuk adni, milyen információkat rögzítsünk: felhasználói neveket, számítógépek neveit, a nyomtatási feladatok típusát, vagy a kinyomtatott oldalakat, a felhasznált lapok területét, a nyomtatások idõbeli igényeit és így tovább. Ehhez mindössze csak a szûrõket kell módosítani.
+
+==== Nyilvántartás gyorsan és egyszerûen
+
+A FreeBSD-ben egybõl találunk is két programot, amivel pillanatok alatt ki tudunk alakítani egy egyszerû idõszakos elszámolási rendszert. Ezek <<printing-advanced-lpf,Az lpf szövegszûrõ>> címû szakaszban ismertetett `lpf` és a nyomtatók nyilvántartásait tartalmazó állományok adatainak összegyûjtését és kiértékelését végzõ man:pac[8].
+
+Ahogy korábban már leírtuk a szûrõkrõl szóló szakaszban (<<printing-advanced-filters,Szûrõk>>), az LPD a szöveg- és konverziós szûrõket parancssorból a nyilvántartást tároló állomány nevével indítja el. Ezt a paramétert a szûrõk aztán fel tudják használni a nyilvántartások feljegyzéséhez. Az állomány nevét az [.filename]#/etc/printcap# állományban szereplõ `af` tulajdonsággal tudjuk megadni, vagy teljes elérési úttal, vagy pedig a nyomtatási könyvtárhoz viszonyítva.
+
+Az LPD az `lpf` szûrõt a lap szélességének és hosszának megadásával indítja el (ezeket az értékeket a `pw` és `pl` tulajdonságokból származtatja). Az `lpf` ezek felhasználásával meg tudja mondani, mennyi papírt használtunk el. Miután kiküldte az állományt a nyomtatóra, nyilvántartásba is veszi. Ezek a típusú bejegyzések valahogy így néznek ki:
+
+[.programlisting]
+....
+2.00 rose:andy
+3.00 rose:kelly
+3.00 orchid:mary
+5.00 orchid:mary
+2.00 orchid:zhang
+....
+
+Minden nyomtatóhoz érdemes külön nyilvántartást vezetni, mivel az `lpf` nem tartalmaz semmilyen beépített zárolási megoldást, ezért két `lpf` párhuzamos futtatása könnyen összezagyválhatja a közösen használt nyilvántartások tartalmát. Az [.filename]#/etc/printcap# állományban az `af=acct` tulajdonság megadásával könnyen létre tudunk hozni minden nyomtatóhoz külön nyilvántartást. Ilyenkor minden nyomtató könyvtárában megjelenik egy [.filename]#acct# nevû állomány.
+
+Amikor elérkezünk a nyomtatások kiszámlázásához, futtassuk le a man:pac[8] programot. Ehhez mindössze annyit kell tennünk, hogy átlépünk az elszámolni kívánt nyomtató könyvtárába és begépeljük a `pac` parancsot. Ekkor kapunk egy ehhez hasonló, dollár alapú kimutatást:
+
+[source,bash]
+....
+  Login               pages/feet   runs    price
+orchid:kelly                5.00    1   $  0.10
+orchid:mary                31.00    3   $  0.62
+orchid:zhang                9.00    1   $  0.18
+rose:andy                   2.00    1   $  0.04
+rose:kelly                177.00  104   $  3.54
+rose:mary                  87.00   32   $  1.74
+rose:root                  26.00   12   $  0.52
+
+total                     337.00  154   $  6.74
+....
+
+A man:pac[8] a következõ paramétereket várja:
+
+`-P _nyomtató_`::
+Az kiértékelendõ _nyomtató_ neve. Ez a paraméter csak akkor használható, ha az [.filename]#/etc/printcap# állományban az `af` tulajdonságnak teljes elérési utat adtunk meg.
+
+`-c`::
+A felhasználók nevei helyett a fizetendõ összeg szerint rendezze a listát.
+
+`-m`::
+Hagyja figyelmen kívül a nyilvántartásban szereplõ gépek hálózati neveit. Ennek hatására az `alpha` géprõl nyomtató `smith` meg fog egyezni a `gamma` géprõl nyomtatóval. A beállítás nélkül ez a két felhasználó el fog térni.
+
+`-p _ár_`::
+A paraméterként megadott _ár_ dollár értékkel számol oldalanként vagy lábanként az [.filename]#/etc/printcap# állományban megadott `pc` tulajdonság értéke helyett (ami alapból két cent). Az _ár_ lebegõpontos (valós) számként is megadható.
+
+`-r`::
+A rendezési sorrend megfordítása.
+
+`-s`::
+Hozzon létre egy elszámolást, majd törölje a hozzá kapcsolódó nyilvántartási adatokat.
+
+_név..._::
+Csak az adott _nevû_ felhasználók adatait értékelje ki.
+
+A man:pac[8] által alapértelmezés szerint generált kimutatásban láthatjuk az egyes gépekrõl származó egyes felhasználók kinyomtatott oldalait. Ha nekünk viszont nem számít, hogy honnan küldték a kéréseket (mivel bárhonnan lehet küldeni), akkor a `pac -m` paranccsal az alábbi táblázatot készíttethetjük el:
+
+[source,bash]
+....
+  Login               pages/feet   runs    price
+andy                        2.00    1   $  0.04
+kelly                     182.00  105   $  3.64
+mary                      118.00   35   $  2.36
+root                       26.00   12   $  0.52
+zhang                       9.00    1   $  0.18
+
+total                     337.00  154   $  6.74
+....
+
+Itt megtaláljuk a ténylegesen kifizetendõ összegeket is, amik kiszámításához a man:pac[8] az [.filename]#/etc/printcap# állomány `pc` tulajdonságát használja (ez alapból 200, avagy 2 cent oldalanként). Ezzel a tulajdonsággal tehát egy cent századrészében mérve tudjuk megadni az oldalakénti vagy lábankénti árakat. Ezt a beállítást természetesen a man:pac[8] `-p` opciójával felül tudjuk bírálni. Arra azonban vigyázzunk, hogy a `-p` után dollárban kell megadnunk az árat. Emiatt tehát a
+
+[source,bash]
+....
+# pac -p1.50
+....
+
+parancs szerint minden egyes oldal másfél dollárba fog kerülni. Ezzel az opcióval aztán alaposan megdönthetjük az árakat.
+
+Végezetül megemlítjük, hogy a `pac -s` parancs az általa létrehozott elszámolást egy külön állományba menti, amelynek a neve nagyjából megegyezik a nyilvántartást végzõével, de `_sum`-ra (mint "summary", azaz elszámolás) végzõdik. Ezután nullázza a nyilvántartást. Amikor a man:pac[8] programot újra lefuttatjuk, újból beolvassa a korábban elmentett elszámolásokat, majd hozzászámolja a többit a hagyományos nyilvántartási adatokból.
+
+==== Hogyan tudjuk számolni a kinyomtatott lapokat?
+
+A nyilvántartás pontos vezetéséhez még távolról is valamilyen módon meg kell tudnunk mondani, hogy mennyi lapot használt egy nyomtatási feladat végrehajtása. Ez a nyomtatás nyilvántartásának egyik alapvetõ problémája.
+
+A nyers szövegek esetében ez nem is annyira bonyolult: egyszerûen számoljuk össze, hogy a nyomtatási feladatban mennyi sor kinyomtatására lesz szükség és vessük össze ezt a nyomtató által lapoként kinyomtatott sorok számálva. Ne felejtsük el számításba venni a szövegben felbukkanó törlések hatását, vagy az olyan hosszú sorokat, amelyek a valóságban több sorban fognak megjelenni.
+
+Viszont (<<printing-advanced-lpf,Az lpf szövegszûrõ>> címû szakaszban bemutatott) `lpf` program ezeket mind lekezeli a nyilvántartások készítése során. Ezért ha szintén egy nyilvántartást vezetni képes szövegszûrõt akarunk írni, akkor mindenképpen érdemes megnéznünk az `lpf` forráskódját.
+
+De hogyan bánjunk el a többi formátummal?
+
+Nos, a DVI-Laserjet és DVI-PostScript(R) közti átalakítások esetén a kinyomtatott lapok számának megállapításához meg kell tanítanunk a szûrõnket értelmezni a `dvilj` vagy `dvips` parancsok kimenetét. Ugyanezt meg tudjuk tenni más formátumok és más konverziós programok használata során is.
+
+Azonban ezek a módszerek nem veszik számításba, hogy a nyomtató egyáltalán kinyomtatta-e az összes elküldött oldalt. Sok minden történhet még addig, például beragadhat a papír, kifogyhat a tinta vagy akár felrobbanhat a nyomtató - a felhasználónak ettõl függetlenül még fizetnie kell.
+
+Mit lehet ilyenkor tenni?
+
+A _precíz_ nyilvántartásnak csak egyetlen _biztos_ módja létezik. Olyan nyomtatót szerezzünk be, amely képes megmondani, mennyi lapot használt el a nyomtatás során, majd egy ilyet csatlakoztassunk soros porton vagy hálózaton keresztül. Szinte majdnem az összes PostScript(R) nyomtató támogatja ezt a lehetõséget, ahogy sok más gyártmány és típus is (például a hálózati Imagen lézernyomtatók). A nyomtatóhoz tartozó szûrõt ehhez úgy kell módosítani, hogy lekérdezzük a kinyomtatott lapok számát a nyomtatás után és _kizárólag_ erre az értékre alapozva készítünk nyilvántartást. Itt nincs szükség sem a sorok számolására, sem pedig az állományok (könnyen elhibázható) átvizsgálására.
+
+Természetesen lehetünk nagylelkûek és ne számítsunk fel semmit a nyomtatásért.
+
+[[printing-using]]
+== A nyomtatók használata
+
+Ebbõl a szakaszból megtudhatjuk, hogyan használjuk a FreeBSD-n beállított nyomtatónkat. Röviden most itt foglaljuk össze az ide tartozó felhasználói parancsokat:
+
+man:lpr[1]::
+Nyomtatási feladatokat hajt végre.
+
+man:lpq[1]::
+Ellenõrzi a nyomtatási sorokat.
+
+man:lprm[1]::
+Feladatokat vesz ki a nyomtatási sorokból.
+
+Ezek mellett létezik még a nyomtatók és a hozzájuk tartozó sorok irányítására alkalmas parancs is, az man:lpc[8], amelyre a <<printing-lpc,A nyomtatók vezérlése>> címû szakaszban fogunk részleteiben kitérni.
+
+A nyomtatók/sorok [.filename]#/etc/printcap# állományban szereplõ nevük szerinti megadásához az man:lpr[1], man:lprm[1] és man:lpq[1] parancsok közül mindegyik elfogadja a `-P _nyomtatónév_` paramétert. Ennek köszönhetõen képesek vagyunk nyomtatási feladatokat küldeni, eltávolítani vagy felügyelni az egyes nyomtatók soraiban. Ha nem használjuk a `-P` kapcsolót, akkor az érintett nyomtató a `PRINTER` környezeti változó által meghatározott lesz. Végül, ha a `PRINTER` nevû környezeti változót sem állítottuk be, akkor a parancsok alapértelmezett módon az `lp` nevû nyomtatót fogják használni.
+
+A továbbiakban az _alapértelmezett nyomtató_ kifejezés a `PRINTER` környezeti változó által megnevezett nyomtatóra fog utalni, illetve ha ezt nem definiáltuk, akkor az `lp` nevû nyomtatóra.
+
+[[printing-lpr]]
+=== Nyomtatási feladatok végrehajtása
+
+Az állományok kinyomtatásához írjuk be:
+
+[source,bash]
+....
+% lpr állománynév ...
+....
+
+Ezzel kinyomtatjuk az összes felsorolt állományt az alapértelmezett nyomtatón. Ha nem adunk meg állományokat, akkor az man:lpr[1] parancs a szabványos bemenetrõl várja a nyomtatandó adatokat. Például ezzel a paranccsal néhány igen fontos rendszerállományt tudunk kinyomtatni:
+
+[source,bash]
+....
+% lpr /etc/host.conf /etc/hosts.equiv
+....
+
+A nyomtató megválasztásához így adjuk ki a parancsot:
+
+[source,bash]
+....
+% lpr -P nyomtatónév állománynév ...
+....
+
+Ez a példa kinyomtatja az aktuális könyvtár részletes listáját a `rattan` nevû nyomtatón:
+
+[source,bash]
+....
+% ls -l | lpr -P rattan
+....
+
+Mivel egyetlen állományt sem adtunk meg az man:lpr[1] programnak, az `lpr` parancs a nyomtatandó adatokat a szabványos bemenetrõl várja, ami jelen esetünkben a `ls -l` parancs kimenete.
+
+Az man:lpr[1] ezeken felül még képes értelmezni rengeteg formázásra, konverzióra, másolatok készítésére stb. utasító kapcsolót is. Errõl bõvebben a <<printing-lpr-options,Nyomtatási beállítások>> címû szakaszban lesz szó.
+
+[[printing-lpq]]
+=== Nyomtatási feladatok felügyelete
+
+Amikor az man:lpr[1] programmal nyomtatunk, az összes nyomtatandónk egy "nyomtatási feladatnak" nevezett csomagba kerül, ami pedig az LPD nyomtatási rendszerébe. Minden nyomtatóhoz tartozik egy nyomtatási sor, ahol részünkrõl és mások által eddig kiadott nyomtatási feladatokat találhatjuk. A nyomtató ezután ezeket érkezési sorrend szerint dolgozza fel.
+
+Az alapértelmezett nyomtatóhoz tartozó sor állapotát az man:lpq[1] programmal tudjuk megnézni. Ha egy adott nyomtatóra vagyunk kíváncsiak, akkor használjuk a `-P` kapcsolót. Például a
+
+[source,bash]
+....
+% lpq -P bamboo
+....
+
+parancs a `bamboo` nevû nyomtató sorát fogja megmutatni. Példaképpen lássuk is ilyen esetben az `lpq` parancs eredményét:
+
+[source,bash]
+....
+bamboo is ready and printing
+Rank   Owner    Job  Files                              Total Size
+active kelly    9    /etc/host.conf, /etc/hosts.equiv   88 bytes
+2nd    kelly    10   (standard input)                   1635 bytes
+3rd    mary     11   ...                                78519 bytes
+....
+
+Itt három nyomtatási feladatot láthatunk a `bamboo` nyomtatási sorában. Az elsõ nyomtatási feladat, amit a `kelly` nevû felhasználó küldött, a 9-es "feladatszámot" kapta. A nyomtatóhoz tartozó összes feladat kap egy ilyen egyedi számot. Többnyire nyugodtan figyelmen kívül hagyhatjuk, azonban szükségünk lehet rá, ha éppen törölni kívánjuk a hozzá tartozó nyomtatási feladatot. Ezzel majd a <<printing-lprm,Nyomtatási feladatok eltávolítása>> címû szakaszban foglalkozunk.
+
+A kilences számú nyomtatási feladat két állományt tartalmaz: ha a parancssorban több állományt adunk meg az man:lpr[1] programnak, akkor az egy nyomtatási feladatnak számít. Ez egyben a pillanatnyilag aktív nyomtatási feladat (ezt a "Rank" oszlopban szereplõ `active` érték jelzi), tehát a nyomtató éppen ezzel foglalatoskodik. A második nyomtatási feladat közvetlenül az man:lpr[1] szabványos bemenetére érkezett. A harmadik a `mary` nevû felhasználótól jött, és ez egy nagyobb méretû nyomtatási feladat. A nyomtatandó állomány elérési útvonala túlságosan hosszú ahhoz, hogy ki lehessen írni, ezért az man:lpr[1] csak három pontot jelez ki helyette.
+
+Az man:lpq[1] kimenetének elsõ sorai is nagyon hasznos információt tartalmaz: megtudhatjuk, mit csinál éppen (legalább is az LPD szerint) a nyomtató.
+
+A `-l` kapcsolóval az man:lpq[1] parancstól kérhetünk sokkal részletesebb listázást is. Például így nézhet ki a `lpq -l` parancs eredménye:
+
+[source,bash]
+....
+waiting for bamboo to become ready (offline ?)
+kelly: 1st				 [job 009rose]
+       /etc/host.conf                    73 bytes
+       /etc/hosts.equiv                  15 bytes
+
+kelly: 2nd				 [job 010rose]
+       (standard input)                  1635 bytes
+
+mary: 3rd                                [job 011rose]
+      /home/orchid/mary/research/venus/alpha-regio/mapping 78519 bytes
+....
+
+[[printing-lprm]]
+=== Nyomtatási feladatok eltávolítása
+
+Ha meggondoltuk volna magunkat egy nyomtatási feladattal kapcsolatban, az man:lprm[1] paranccsal még törölni tudjuk a sorból. Az man:lprm[1] gyakran még a folyamatban levõ nyomtatási feladatot is képes eltávolítani, azonban elõfordulhat, hogy a nyomtatási feladat egy része már elvégzésre került.
+
+Az alapértelmezett nyomtató sorából csak úgy tudunk nyomtatási feladatokat törölni, ha elõször az man:lpq[1] segítségével megkeressük a számukat. Ha ez megvan, írjuk be:
+
+[source,bash]
+....
+% lprm feladatám
+....
+
+Adott nyomtatóról a `-P` kapcsoló segítségével tudunk nyomtatási feladatot törölni. A most következõ parancs a `bamboo` nevû nyomtatóról törli a 10-es számú nyomtatási feladatot:
+
+[source,bash]
+....
+% lprm -P bamboo 10
+....
+
+Az man:lprm[1] parancs esetén még használhatóak az alábbi rövidítések is:
+
+lprm -::
+Eltávolítja a hozzánk tartozó az összes nyomtatási feladatot (az alapértelmezett nyomtatón).
+
+lprm _felhasználó_::
+Eltávolítja az adott __felhasználó__hoz tartozó összes nyomtatási feladatot (az alapértelmezett nyomtatón). Kizárólag a rendszergazdák képesek erre, a rendes felhasználók csak a saját nyomtatási feladataikat törölhetik.
+
+lprm::
+A nyomtatási feladat száma, a felhasználói név vagy a ``-``megadása nélkül az man:lprm[1] törli az alapértelmezett nyomtatón éppen aktív nyomtatási feladatot, amennyiben az a miénk. Csak a rendszergazdák képesek bármilyen aktív nyomtatási feladatot törölni.
+
+Ha kiegészítjük az imént említett rövidítéséket a `-P` paraméter megadásával, akkor az alapértelmezett nyomtató helyett bármelyik másikat is használhatjuk. Például ez a parancs eltávolítja az aktuális felhasználó összes nyomtatási feladatot a `rattan` nevû nyomtatón:
+
+[source,bash]
+....
+% lprm -P rattan -
+....
+
+[NOTE]
+====
+Hálózati környezetben az man:lprm[1] csak arról a géprõl engedi törölni a nyomtatási feladatokat, amelyrõl küldték ezeket, még abban az esetben is, amikor ugyanaz a nyomtató más számítógépekrõl is elérhetõ. A következõ parancssorozat ezt igyekszik szemléltetni:
+
+[source,bash]
+....
+% lpr -P rattan myfile
+% rlogin orchid
+% lpq -P rattan
+Rank   Owner	  Job  Files                          Total Size
+active seeyan	  12	...                           49123 bytes
+2nd    kelly      13   myfile                         12 bytes
+% lprm -P rattan 13
+rose: Permission denied
+% logout
+% lprm -P rattan 13
+dfA013rose dequeued
+cfA013rose dequeued
+....
+
+====
+
+[[printing-lpr-options]]
+=== Túl a nyers szövegen: nyomtatási beállítások
+
+Az man:lpr[1] parancs számos olyan beállítást enged, amelyekkel a szövegek formázását, grafikák átalakítását illetve más állományformátumok használatát, másolatok készítését, nyomtatási feladatok irányítását és még sok minden mást el tudunk végezni. Ebben a szakaszban pontosan ezekrõl a kapcsolókról lesz szó.
+
+[[printing-lpr-options-format]]
+==== Formázási és konverziós beállítások
+
+Az man:lpr[1] most következõ opciói a nyomtatási feladatokban található állományok formázását vezérlik. Akkor használjuk ezeket a beállításokat, ha a nyomtatási feladat nem tartalmaz nyers szöveget, vagy ha nyers szöveget akarunk formázni a man:pr[1] segédprogrammal.
+
+Például az alábbi parancs kinyomtat egy [.filename]#halászati-jelentés.dvi# nevû (a TeX betûszedû rendszerbõl már jól ismert) DVI állományt a `bamboo` nevû nyomtatón:
+
+[source,bash]
+....
+% lpr -P bamboo -d halászati-jelentés.dvi
+....
+
+Ezek a beállítások a nyomtatási feladatban szereplõ minden egyes állományra vonatkoznak, ezért nem keverhetjük (például) a DVI és ditroff formátumú állományokat egy nyomtatási feladaton belül. Ehelyett külön nyomtatási feladatokban kell elküldenünk az eltérõ formátumú állományokat, és mindegyik nyomtatási feladathoz külön konverziós beállításokat kell megadnunk.
+
+[NOTE]
+====
+A `-p` és `-T` kapcsolók kivételével az itt felsorolt összes beállításnak a kiválasztott nyomtatóhoz szüksége van a megfelelõ konverziós szûrõre. Például a `-d` opció használatához kell egy konverziós szûrõ a DVI formátumhoz. A <<printing-advanced-convfilters,Konverziós szûrõk>> címû szakasz errõl ad bõvebb tájékoztatást.
+====
+
+`-c`::
+Cifplot állományok nyomtatása.
+
+`-d`::
+DVI állományok nyomtatása.
+
+`-f`::
+FORTRAN forrás nyomtatása.
+
+`-g`::
+Plot formátumú adatok nyomtatása.
+
+`-i _szám_`::
+A kinyomtatott szöveg behúzásának növelése a _szám_ értékével. Ha nem adjuk meg a _számot_, akkor ennek értéke 8 lesz. Ez a beállítás csak bizonyos konverziós szûrõkkel mûködik.
++
+[NOTE]
+====
+Ne hagyjunk helyet az `-i` és a szám között.
+====
+
+`-l`::
+A szöveg formázás nélküli nyomtatása, vezérlõkarakterekkel együtt.
+
+`-n`::
+Ditroff (eszközfüggetlen troff) adat nyomtatása.
+
+-p::
+Nyomtatás elõtt a szöveg formázása a man:pr[1] programmal. Lásd man:pr[1].
+
+`-T _cím_`::
+Az állomány neve helyett a fejlécben a _címet_ jeleníti meg a man:pr[1]. Ennek a beállításnak csak a `-p` opcióval együtt van hatása.
+
+`-t`::
+Troff adat nyomtatása.
+
+`-v`::
+Raszteres adatok nyomtatása.
+
+Vegyünk az iméntiekre egy példát. A következõ parancs az man:ls[1] szépen megformázott man oldalát nyomtatja ki az alapértelmezett nyomtatón:
+
+[source,bash]
+....
+% zcat /usr/shared/man/man1/ls.1.gz | troff -t -man | lpr -t
+....
+
+A man:zcat[1] kitömöríti az man:ls[1] man oldalának forrását és átadja a man:troff[1] parancsnak, ami ebbõl létrehoz a GNU troff formátumának megfelelõ kimenetet és továbbadja az man:lpr[1] parancsnak, ami végül elküldi a nyomtatási feladatot az LPD nyomtatási rendszernek. Mivel az man:lpr[1] parancsnak megadtuk az `-t` kapcsolót, a nyomtatási rendszer a GNU troff formátumban érkezõ adatokat magától át fogja alakítani olyan formátumra, amit a nyomtató is képes lesz megérteni.
+
+[[printing-lpr-options-job-handling]]
+==== Nyomtatási feladatok kezelése
+
+Az man:lpr[1] most felsorolandó beállításaival az LPD rendszert arra tudjuk utasítani, hogy a nyomtatási feladatot különleges módon kezelje:
+
+-# _példányszám_::
+Egyetlen példány helyett hozzon létre _példányszám_ számú példányt a nyomtatási feladatban található összes állományból. A rendszergazda a nyomtató kímélése érdekében ezt a lehetõséget letilthatja, amivel inkább a fénymásoló használatára ösztönzi a felhasználókat. Lásd <<printing-advanced-restricting-copies,A másolatok számának szabályozása>> szakasz.
++
+A beállítás illusztrálásaként most az alapértelmezett nyomtatón elõször nyomtassunk ki három példányt a [.filename]#parser.c#, majd ezután a [.filename]#parser.h# állományokból:
++
+[source,bash]
+....
+% lpr -#3 parser.c parser.h
+....
+
+-m::
+A rendszer küldjön levelet a nyomtatási feladat teljesítése után. Ekkor az LPD a nyomtatási feladat elvégzése után levelet küld a helyi postafiókunkba. A levélben kifejti, hogy sikeres volt-e a nyomtatás, vagy esetleg valamilyen hiba keletkezett, és ha hiba történt, akkor pontosan mi is volt az.
+
+-s::
+Ne másolja közvetlenül az állományokat a nyomtatási könyvtárba, hanem készítsen hozzájuk szimbolikus linkeket.
++
+Egy nagyobb nyomtatási feladat elvégzése esetén javasolt használni ezt a kapcsolót. Ezzel a megoldással helyet tudunk spórolni a nyomtatási könyvtárban (amikor a nyomtatási feladatok könnyen megtelítheti a nyomtatási könyvtárat tároló állományrendszert). Emellett idõt is takarítunk meg, mivel az LPD-nek nem kell a nyomtatási feladat minden egyes bitjét átmásolni a nyomtatási könyvtárba.
++
+Van azonban egy hátránya: mivel az LPD ekkor közvetlenül az eredeti állományra fog hivatkozni, ezért a nyomtatás befejezéséig azt nem módosíthatjuk vagy törölhetjük.
++
+[NOTE]
+====
+Ha egy távoli nyomtatónak küldjük a nyomtatási feladatot, akkor az LPD a helyi és a távoli számítógép között mégis kénytelen lesz átmásolni a nyomtatási feladatot, így a `-s` kapcsoló egyedül csak a helyi nyomtatási könyvtárban fog helyet spórolni. Ettõl eltekintve még ilyenkor is hasznunkra válhat.
+====
+
+-r::
+Törölje a nyomtatási feladatban szereplõ állományokat, miután átmásolta ezeket a nyomtatási könyvtárba, vagy miután a `-s` kapcsoló használatával kinyomtatta ezeket. Nagy körültekintéssel használjuk!
+
+[[printing-lpr-options-misc]]
+==== A fejléclapok beállításai
+
+Az man:lpr[1] most következõ beállításai a nyomtatási feladatok fejlécében megjelenõ szövegekre vannak hatással. Így ha letiltottuk a fejléclapok használatát, akkor ezek a kapcsolók lényegében semmit sem állítanak. A <<printing-advanced-header-pages,Fejléclapok>> címû szakaszból tudhatunk meg többet ezek beállításáról.
+
+-C _szöveg_::
+A fejléclapon megjelenõ hálózati név helyett a _szöveg_ fog szerepelni. A hálózati név általában annak a gépnek a neve, ahonnan a nyomtatási feladatot küldték.
+
+-J _szöveg_::
+A fejléclapon megjelenõ nyomtatási feladat neve helyett a _szöveg_ fog megjelenni. A nyomtatási feladat neve általában a benne szereplõ elsõ állomány nevével egyezik meg, ha a szabványos bemenetrõl nyomtatunk, akkor egyszerûen csak [.filename]#stdin#.
+
+-h::
+Ne nyomtasson fejléclapot.
++
+[NOTE]
+====
+Bizonyos helyeken elõfordulhat, hogy ennek a kapcsolónak nincs semmilyen hatása a fejléclapok létrehozásának módszerébõl fakadóan. A részleteket lásd a <<printing-advanced-header-pages,Fejléclapok>> szakaszban.
+====
+
+[[printing-lpc]]
+=== A nyomtatók vezérlése
+
+A nyomtatóink rendszergazdájaként nekünk kell telepítenük, üzembe helyeznünk és kipróbálnunk ezeket. Az man:lpc[8] parancs használatával még jobban képesek vagyunk kapcsolatba lépni velük. Az man:lpc[8] paranccsal:
+
+* el tudjuk indítani és le tudjuk állítani a nyomtatókat;
+* be- és ki tudjuk kapcsolni a nyomtatási soraikat;
+* át tudjuk rendezni az egyes sorokban található nyomtatási feladatokat.
+
+Elõször is essen pár szó a fogalmakról: ha a nyomtató _leállt_, akkor semmit sem fog kinyomtatni a sorából. A felhasználók továbbra is képesek nyomtatási feladatokat küldeni, amik azonban egészen addig fognak várakozni, amíg a nyomtatót _el nem indítjuk_ vagy a sorát ki nem ürítjük.
+
+Ha egy sort _kikapcsolunk_, akkor (a `root` kivételével) egyetlen felhasználó sem képes nyomtatási feladatokat küldeni a nyomtatónak. A _bekapcsolt_ sorok képesek csak nyomtatási feladatot fogadni. A nyomtató _elindítható_ kikapcsolt sorral is, ilyenkor egészen addig folytatja a nyomtatási feladatok elvégzését, amíg a sor ki nem ürül.
+
+Általánosan elmondható, hogy az man:lpc[8] parancs használatához a `root` felhasználó jogosultságaira van szükségünk. Az man:lpc[8] parancsot minden más esetben csak a nyomtató állapotának ellenõrzésére vagy a megakadt nyomtató újraindítására használhatjuk.
+
+Foglaljuk röviden össze az man:lpc[8] parancsait. A legtöbb parancs kiadásához még szükséges egy _nyomtatónév_ paraméter megadása is, amivel megnevezzük az utasítani kívánt nyomtatót. Helyette használható az `all` szó is, amivel az [.filename]#/etc/printcap# állományban szereplõ összes nyomtatót egyszerre utasíthatjuk.
+
+`abort nyomtatónév`::
+Az aktuális nyomtatási feladat megszakítása és a nyomtató leállítása. Ha a nyomtatási sort még nem kapcsoltuk ki, a felhasználók küldhetnek további nyomtatási feladatokat.
+
+`clean nyomtatónév`::
+A nyomtató könyvtárából töröljük a régi állományokat. Esetenként adódhat, hogy bizonyos nyomtatási feladatok állományait nem takarította el az LPD, különösen abban az esetben, amikor a nyomtatás vagy az adminisztrálás során keletkezett valamilyen hiba. Ez a parancs segít megtalálni a nyomtatási könyvtárból már kikopott állományokat és törli ezeket.
+
+`disable nyomtatónév`::
+Az újonnan érkezõ nyomtatási feladatok besorolásának kikapcsolása. Ha a nyomtató még mûködik, akkor folytatni fogja a sorban még bennmaradt nyomtatási feladatok elvégzését. A rendszergazda (a `root`) még a kikapcsolt sorok esetén is küldhet nyomtatási feladatokat.
++
+Ez a parancs valójában akkor hasznos, ha egy új nyomtató vagy egy új szûrõ mûködését próbálgatjuk: ilyenkor érdemes kikapcsolni a nyomtatási sort és `root` felhasználóként nyomtatási feladatokat küldeni. A többi felhasználó a tesztelés befejezéséig nem tud majd nyomtatási feladatokat küldeni, vagyis egészen addig, amíg a nyomtatási sort vissza nem kapcsoljuk az `enable` paranccsal.
+
+`down nyomtatónév üzenet`::
+A nyomtató üzemen kívül helyezése. Lényegében megegyezik egy `disable` és utána egy `stop` parancs kiadásával. Az _üzenet_ akkor jelenik meg, amikor a valaki megpróbálja lekérdezni a nyomtató állapotát az `lpc status` paranccsal, vagy amikor megnézi a nyomtatási sorát az man:lpq[1] paranccsal.
+
+`enable nyomtatónév`::
+A nyomtatóhoz tartozó nyomtatási sor bekapcsolása. A felhasználók ezután már képesek lesznek a nyomtatónak feladatokat küldeni, azonban egészen addig nem nyomtatódik ki semmi, amíg a nyomtatót el nem indítjuk.
+
+`help parancsnév`::
+Megmutatja a _parancsnév_ parancshoz tartozó súgót. A _parancsnév_ megadása nélkül a rendelkezésre álló parancsok listáját kapjuk meg.
+
+`restart nyomtatónév`::
+Elindítja a nyomtatót. A felhasználók ezt a parancsot tudják használni abban az esetben, amikor valamilyen megmagyarázhatatlan okból az LPD mûködése megáll, viszont ezzel nem tudják elindítani a `stop` vagy `down` parancsokkal leállított nyomtatót. A `restart` parancs megegyezik az `abort` és a `start` egymás utáni kiadásával.
+
+`start nyomtatónév`::
+Elindítja a nyomtatót, és a nyomtató nekilát kinyomtatni a sorában levõ nyomtatási feladatokat.
+
+`stop nyomtatónév`::
+Leállítja a nyomtatót, és a nyomtató az aktuális nyomtatási feladat befejezése után már nem kezd neki újabbnak. Ettõl függetlenül a felhasználók még továbbra is képesek feladatokat küldeni a nyomtatási sorába.
+
+`topq nyomtatónév feladat-vagy-felhasználónév`::
+Átrendezi a _nyomtatónév_ nevû nyomtató sorát úgy, hogy a megadott azonosítójú _feladatot_ vagy a megadott _felhasználónévhez_ tartozó nyomtatási feladatokat a sor elejére teszi. Ennél a parancsnál _nyomtatónévnek_ nem adhatjuk meg az `all` értéket.
+
+`up nyomtatónév`::
+Üzembe helyezi a nyomtatót, tulajdonképpen a `down` parancs ellentéte. Megegyezik egy egymás után kiadott `start` és `enable` paranccsal.
+
+Az man:lpc[8] a fenti parancsokat a parancssorból fogadja el. Ha itt nem adunk meg neki semmilyen parancsot, akkor az man:lpc[8] interaktív módba vált, ahol ugyanezeket a parancsokat adhatjuk ki, egészen az `exit`, `quit` parancsok vagy az állományvége jelzés begépeléséig.
+
+[[printing-lpd-alternatives]]
+== Más nyomtatási rendszerek
+
+Ha derekasan végigolvastuk eddig ezt a fejezetet, akkor mostanra már valószínûleg mindent tudunk a FreeBSD-ben található LPD nyomtatási rendszerrõl. Ezzel együtt tisztában vagyunk a hiányosságaival is, aminek kapcsán természetes módon felmerülhet bennünk a kérdés: "Milyen más (FreeBSD-vel is mûködni képes) nyomtatási rendszerek léteznek még?"
+
+LPRng::
+Az LPRng, aminek jelentése "LPR Next Generation" (Az LPR következõ generációja), a PLP teljesen újraírt változata. Patrick Powell és Justin Mason (a PLP eredeti karbantartója) együttes munkájának gyümölcse az LPRng. Az LPRng honlapja: http://www.lprng.org/[http://www.lprng.org/].
+
+CUPS::
+A CUPS, vagy más néven a "Common UNIX Printing System" (Közös UNIX(R)-os nyomtatási rendszer), egy hordozható nyomtatási réteget nyújt a UNIX(R)-alapú operációs rendszerek számára. Az Easy Software Products fejlesztése és szinte az összes UNIX(R) gyártó és felhasználó szemében elfogadott szabványos nyomtatási rendszer.
++
+A CUPS a nyomtatási feladatok és sorok kezelését az internetes nyomtatási protokollon (Internet Printing Protocol, IPP) használatával oldja meg. Csökkentett képességekkel ugyan, de a sornyomtató démon (Line Printer Daemon, LPD), szerverüzenet-blokk (Server Message Block, SMB), és AppSocket (más néven JetDirect) protokollokat is ismeri. A CUPS a komolyabb UNIX(R)-os nyomtatási feladatokhoz ezeken felül még a hálózati nyomtatók közti választást és PostScript nyomtatók leírásán (PostScript Printer Description, PPD) alapuló nyomtatási beállításokat is támogatja.
++
+A CUPS honlapja: http://www.cups.org/[http://www.cups.org/].
+
+HPLIP::
+A HPLIP, másnéven HP Linux(R) Imaging and Printing, egy HP által kidolgozott programcsalád, amely támogatja a HP eszközök nyomtatási, lapolvasási és faxolási lehetõségeit. A benne található programok bizonyos nyomtatási feladatokhoz backendként a CUPS nyomtatási rendszert használják.
++
+A HPLIP honlapja a http://hplipopensource.com/hplip-web/index.html[http://hplipopensource.com/hplip-web/index.html] címen érhetõ el.
+
+[[printing-troubleshooting]]
+== Hibakeresés
+
+Miután az man:lptest[1] programmal elvégeztünk néhány egyszerû próbát, a várt helyett a következõk egyikét kaphatjuk eredményül:
+
+Egy kis idõ után minden remekül mûködött, vagy nem dobta ki az egész lapot.::
+A nyomtató nyomtatott egy keveset, aztán egy ideig csendben maradt és nem csinált semmit. Ilyenkor a nyomtatnivalók megjelenéséhez minden bizonnyal meg kell nyomnunk a nyomtatón levõ "PRINT REMAINING" vagy "FORM FEED" feliratú gombokat.
++
+Ebben az esetben a nyomtató valószínûleg még arra várt, hogy még a nyomtatás megkezdése elõtt érkezik valamilyen további adat. Ettõl a gondtól úgy szabadulhatunk meg, ha beállítunk egy szövegszûrõt, amely minden (szükséges) esetben küld egy "FORM FEED" (lapdobás) jelzést is a nyomtatónak. Ez kell általában ahhoz, hogy a szövegnek a nyomtató belsõ pufferében megmaradt része azonnal kinyomtatódjon. Akkor is a javunkra válhat ez, ha minden egyes nyomtatási feladatot külön lapon akarunk kezdeni, mivel így a következõ nyomtatási feladat sosem közvetlenül ott kezdõdik, ahol az elõzõ feladat befejezte a nyomtatást.
++
+A [.filename]#/usr/local/libexec/if-simple# szûrõ helyett a következõ szkript használhatával tudunk minden nyomtatási feladat elvégzése után elküldeni egy lapdobást:
++
+[.programlisting]
+....
+#!/bin/sh
+#
+# if-simple - Egyszerû lpd szövegszûrõ
+# Helye: /usr/local/libexec/if-simple
+#
+# Egyszerûen átmásolja a szabvány bemenetet a szabvány kimenetre, és
+# figyelmen kívül hagyja az összes többi paramétert.  Minden nyomtatási
+# nyomtatási feladat elvégzése után küld egy lapdobást (\f).
+
+/bin/cat && printf "\f" && exit 0
+exit 2
+....
+
+"Lépcsõsen" jelentek meg a sorok.::
+Ekkor a következõt látjuk a lapon:
++
+[source,bash]
+....
+!"#$%&'()*+,-./01234
+                "#$%&'()*+,-./012345
+                                 #$%&'()*+,-./0123456
+....
++
+Az ún. _lépcsõhatás_ áldozatává váltunk, amelyet a sortörést jelzõ karakter eltérõ értelmezései okoznak. A UNIX(R) stílusú operációs rendszerek erre mindössze egyetlen karaktert használnak: ez a 10-es kódú ASCII karakter (sordobás, Line Feed, LF). Az MS-DOS(R), OS/2(R) és mások pedig két karakterrel oldják meg ezt a feladatot: a 10-es _és_ 13-as kódú (kocsivissza, Carriage Return, CR) ASCII karakterekkel. A sortöréseknél sok nyomtató az MS-DOS(R) szokásait követi.
++
+Amikor a FreeBSD-vel nyomtatunk, akkor csak egyetlen karaktert használunk sortörésre. Ennek láttán a nyomtató lépteti a sort, azonban a fej vízszintes pozícióját nem változtatja meg a következõ sor nyomtatásának megkezdésekor. Erre lenne a kocsivissza karakter, vagyis ennek hatására fogja a nyomtató a papír bal oldalára visszaállítani a következõ nyomtatandó karakter pozícióját.
++
+A FreeBSD így szeretné utasítani a nyomtatót:
++
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|A nyomtató kocsivisszát kap
+|A nyomtató visszalépteti a pozíciót
+
+|A nyomtató sordobást kap
+|A nyomtató új sort kezd
+|===
++
+Néhány módszer ennek kiváltására:
++
+** A nyomtatón található kapcsolók vagy vezérlõpanel segítségével próbáljuk meg átállítani a vezérlõkarakterek nyomtató szerinti értelmezését. Keressük meg a nyomtató kézikönyvében, hogyan tudjuk ezt megcsinálni.
++
+[NOTE]
+====
+Ha a FreeBSD mellett más operációs rendszerekkel is használni akarjuk a nyomtatót, akkor azok indítása elõtt mindig _át kell állítani_ a nyomtatót a megfelelõ értelmezés alkalmazására. Ilyenkor valószínûleg a lentebb szereplõ megoldásokat részesítjük majd inkább elõnyben.
+====
+
+** Állítsuk be úgy a FreeBSD soros vonali meghajtóját, hogy magától alakítsa át az LF karaktereket CR+LF párokká. Természetesen ez a megoldás _csak_ a soros portra csatlakozó nyomtatók esetében mûködhet. Ehhez az [.filename]#/etc/printcap# állományban a nyomtató leírásánál az `ms#` tulajdonságnál adjuk meg az `onlcr` módot.
+** Küldjünk olyan _kódot_ a nyomtatónak, amelynek hatására ideiglenesen máshogy fogja kezelni az LF karaktereket. Nézzük meg a nyomtatóhoz mellékelt útmutatóban, hogy milyen kódokat tudunk ilyen célra használni. Ha találtunk ilyen kódot, akkor írjuk át úgy a hozzá tartozó szövegszûrõt, hogy a nyomtatási feladatok elõtt mindig elküldjük azt.
++ 
+Most bemutatjuk egy olyan szövegszûrõ kódját, amely a Hewlett-Packard PCL kódjait ismerõ nyomtatókhoz készült. Ebben a szûrõben elõször kiadjuk, hogy az LF karaktereket LF és CR karakterek kombinációjának tekintse a nyomtató, majd elküldjük magát a nyomtatási feladatot, és a nyomtatási feladat eredményének utolsó lapja után elküldünk egy lapdobást. Szinte az összes Hewlett Packard nyomtatóval mûködnie kell.
++
+[.programlisting]
+....
+#!/bin/sh
+#
+# hpif - Egyszerû lpd bemeneti szûrõ a HP-PCL alapú nyomtatókhoz
+# Helye: /usr/local/libexec/hpif
+#
+# Egyszerûen átmásolja a szabvány kimenetet a szabvány bemenetre, és
+# figyelmen kívül hagyja a paramétereket. Elküldi a nyomtatónak, hogy
+# az LF karaktereket CR+LF-ként kezelje, majd a feladat befejeztével
+# lapot dobat.
+
+printf "\033&k2G" && cat && printf "\033&l0H" && exit 0
+exit 2
+....
++ 
+Példaként megadjuk még az `orchid` nevû számítógép [.filename]#/etc/printcap# állományát is. Ebben egyetlen nyomtató csatlakozik a párhuzamos portra, amelynek a típusa LaserJet 3Si és a neve `teak`. Az elõbb bemutatott szövegszûrõt használja:
++
+[.programlisting]
+....
+#
+#  /etc/printcap (orchid)
+#
+teak|hp|laserjet|Hewlett Packard LaserJet 3Si:\
+        :lp=/dev/lpt0:sh:sd=/var/spool/lpd/teak:mx#0:\
+        :if=/usr/local/libexec/hpif:
+....
+
+Egymásra írja a sorokat.::
+A nyomtató nem lépteti a sorokat, ezért az összes sor egymáson jelenik meg.
++
+Ez pontosan a ritka "ellentéte" a fentebb leírt lépcsõhatásnak. A FreeBSD által sortörésre használt LF karakterek valamiért CR karakterekként viselkednek, ezért a nyomtató nem sort vált, hanem a lap bal szélére állítja a fejet.
++
+A nyomtatón található kapcsolókkal vagy vezérlõpanellel így állítsuk be a sordobás és kocsivissza karakterek értelmezését:
++
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Amit a nyomtató kap
+| Arra a nyomtató nyomtat
+
+|CR
+|CR
+
+|LF
+|CR + LF
+|===
+A nyomtató elhagy karaktereket.::
+Miközben nyomtatunk, a nyomtató bizonyos karaktereket nem hajlandó megjeleníteni. A probléma ennél nagyobb, ha a nyomtató mûködése közben egyre több és több karaktert hagy ki.
++
+Itt az a gond, hogy a nyomtató nem képes tartani az iramot a számítógép által a soros vonalon átküldött adatok sebességével (ez a probléma nem jelentkezhet a párhuzamos nyomtatók esetén). Két módon kerekedhetünk felül ezen:
+
+** Ha a nyomtató ismeri a XON/XOFF típusú forgalomirányítást, akkor az `ms#` tulajdonságnál adjuk meg a FreeBSD számára az `ixon` beállítást.
+** Ha a nyomtató ismeri a "Request to Send / Clear to Send" alapú hardveres kézfogást (más néven `RTS/CTS` forgalomirányítást), akkor az `ms#` tulajdonságnál a `crtscts` beállítást adjuk meg. Gondoskodjunk róla, hogy a számítógépet és a nyomtatót összekötõ kábel meg tudjon majd birkózni ezzel a típusú forgalomirányítással.
+
+Mindenféle szemetet nyomtat.::
+A nyomtató nem a nyomtatni kívánt szöveget hozza létre, hanem összevissza nyomtat.
++
+Ez a soros nyomtatók helytelen kommunikációs beállításának egy másik jellemzõ tünete. Ellenõrizzük a `br` tulajdonságnál megadott adatátviteli sebességet és az `ms#` tulajdonságnál megadott paritási beállításokat. Egyeztessük a nyomtató saját és az [.filename]#/etc/printcap# állományban tárolt beállításait.
+
+Semmi sem történik.::
+Ha semmi sem történt, akkor a gond magával a FreeBSD-vel lehet, nem pedig a hardverrel. Az [.filename]#/etc/printcap# állományba a vizsgálni kívánt nyomtató leírásához (az `lf` tulajdonsággal) illesszünk be naplózást. Például így fog kinézni a `rattan` nevû nyomtató bejegyzése az `lf` tulajdonság megadásával kibõvítve:
++
+[.programlisting]
+....
+rattan|line|diablo|lp|Diablo 630 Line Printer:\
+        :sh:sd=/var/spool/lpd/rattan:\
+        :lp=/dev/lpt0:\
+        :if=/usr/local/libexec/if-simple:\
+        :lf=/var/log/rattan.log
+....
++
+Miután ezt megcsináltuk, próbálkozzunk újra. Nézzük meg a naplóállományban (ami a példánkban a [.filename]#/var/log/rattan.log# nevén érhetõ el), hogy látunk-e valamilyen hibaüzenetet. Az itt tapasztalt hibaüzenetek nyomán elindulva igyekezzünk megszüntetni a probléma forrását.
++
+Ha nem adjuk meg az `lf` tulajdonságot, akkor az LPD erre a célra alapértelmezés szerint a [.filename]#/dev/console# állományt használja.

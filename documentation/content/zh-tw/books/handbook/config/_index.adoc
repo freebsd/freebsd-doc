@@ -1,0 +1,1562 @@
+---
+title: 章 11. 設定與調校
+part: 部 III. 系統管理
+prev: books/handbook/partiii
+next: books/handbook/boot
+---
+
+[[config-tuning]]
+= 設定與調校
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例 
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 11
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/x11/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/x11/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/x11/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-tw/mailing-lists.adoc[]
+include::shared/zh-tw/urls.adoc[]
+include::shared/zh-tw/teams.adoc[]
+
+toc::[]
+
+[[config-synopsis]]
+== 概述
+
+在 FreeBSD 使用過程中，相當重要的環節之一就是如何正確設定系統。 本章著重於介紹 FreeBSD 的設定流程，包括一些可以調整 FreeBSD 效能的參數設定。
+
+讀完這章，您將了解：
+
+* [.filename]#rc.conf# 設定的基礎概念及 [.filename]#/usr/local/etc/rc.d# 啟動 Script。
+* 如何設定並測試網路卡。
+* 如何在網路裝置上設定虛擬主機。
+* 如何使用在 [.filename]#/etc# 中的各種設定檔。
+* 如何使用 man:sysctl[8] 變數調校 FreeBSD。
+* 如何調校磁碟效能及修改核心限制。
+
+在開始閱讀這章之前，您需要：
+
+* 了解 UNIX(TM) 及 FreeBSD 基礎 (crossref:basics[basics,FreeBSD 基礎])。
+* 熟悉核心設定與編譯的基礎 (crossref:kernelconfig[kernelconfig,設定 FreeBSD 核心])。
+
+[[configtuning-starting-services]]
+== 啟動服務
+
+許多使用者會使用 Port 套件集安裝第三方軟體到 FreeBSD 且需要安裝服務在系統初始化時可啟動該軟體。服務，例如 package:mail/postfix[] 或 package:www/apache22[] 僅只是在眾多需要在系統初始化時啟動的軟體之中的兩個。本章節將說明可用來啟動第三方軟體的程序。
+
+在 FreeBSD 大多數內建的服務，例如 man:cron[8] 也是透過系統啟動 Script 來執行。
+
+=== 延伸應用程式設定
+
+現在 FreeBSD 會引用 [.filename]#rc.d#，設定應用程式啟動變的更簡單且提供更多的功能。使用於 <<configtuning-rcd>> 所提到的關鍵字，可以設定應用程式在其他特定服務之後啟動且可以透過 [.filename]#/etc/rc.conf# 來傳遞額外的旗標來取代寫死在啟動 Script 中的旗標。一個基本的 Script 可能會如下例所示：
+
+[.programlisting]
+....
+#!/bin/sh
+#
+# PROVIDE: utility
+# REQUIRE: DAEMON
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name=utility
+rcvar=utility_enable
+
+command="/usr/local/sbin/utility"
+
+load_rc_config $name
+
+#
+# DO NOT CHANGE THESE DEFAULT VALUES HERE
+# SET THEM IN THE /etc/rc.conf FILE
+#
+utility_enable=${utility_enable-"NO"}
+pidfile=${utility_pidfile-"/var/run/utility.pid"}
+
+run_rc_command "$1"
+....
+
+這個 Script 會確保要執行的 `utility` 會在虛構的服務 `DAEMON` 之後啟動，也同時提供設定與追蹤程序 ID (Process ID, PID) 的方法。
+
+接著此應用程式便可將下行放到 [.filename]#/etc/rc.conf# 中：
+
+[.programlisting]
+....
+utility_enable="YES"
+....
+
+使用這種方式可以簡單的處理指令列參數、引用 [.filename]#/etc/rc.subr# 所提供的預設函數、與 man:rcorder[8] 相容並可在 [.filename]#rc.conf# 簡單的設定。
+
+=== 使用服務來啟動其他服務
+
+其他的服務可以使用 man:inetd[8] 來啟動，在 crossref:network-servers[network-inetd,inetd 超級伺服器] 有如何使用 man:inetd[8] 以及其設定的深入說明。
+
+在某些情況更適合使用 man:cron[8] 來啟動系統服務，由於 man:cron[8] 會使用 man:crontab[5] 的擁有者來執行這些程序，所以這個方法有不少優點，這讓一般的使用者也可以啟動與維護自己的應用程式。
+
+man:cron[8] 的 `@reboot` 功能，可用來替代指定詳細的時間，而該工作會在系統初始化時執行 man:cron[8] 後執行。
+
+[[configtuning-cron]]
+== 設定 man:cron[8]
+
+在 FreeBSD 其中最有用的其中一項工具便是 cron，這個工具會在背景執行並且定期檢查 [.filename]#/etc/crontab# 是否有要執行的工作然後搜尋 [.filename]#/var/cron/tabs# 是否有自訂的 crontab 檔案，這些檔案用來安排要讓 cron 在指定的時間執行的工作，crontab 中的每一個項目定義了一個要執行的工作，又稱作 _cron job_。
+
+這裡使用了兩種類型的設定檔：其一是系統 crontab，系統 crontab 不應該被修改，其二為使用者 crontab，使用者 crontab 可以依需要建立與編輯。這兩種檔案的格式在 man:crontab[5] 有說明。系統 crontab [.filename]#/etc/crontab# 的格式含有在使用者 crontab 所沒有的 `who` 欄位，在系統 crontab，cron 會依據該欄位所指定的使用者來執行指令，而在使用者 crontab，會以建立 crontab 的使用者來執行指令。
+
+使用者 crontab 讓個別使用者可以安排自己的工作，`root` 使用者也可有自己的使用者 [.filename]#crontab# 來安排不在系統 [.filename]#crontab# 中的工作。
+
+以下為系統 crontab [.filename]#/etc/crontab# 的範例項目：
+
+[.programlisting]
+....
+# /etc/crontab - root's crontab for FreeBSD
+#
+# $FreeBSD: head/zh_TW.UTF-8/books/handbook/book.xml 53653 2019-12-03 17:05:41Z rcyu $
+## <.>
+SHELL=/bin/sh
+PATH=/etc:/bin:/sbin:/usr/bin:/usr/sbin <.>
+#
+#minute	hour	mday	month	wday	who	command <.>
+#
+*/5	*	*	*	*	root	/usr/libexec/atrun <.>
+....
+
+<.> 以 `#` 字元為首的行代表註解。可在檔案中放置註解提醒要執行什麼動作及為何要執行。註解不可與指令同行，否則會被當做指令的一部份，註解必須在新的一行，空白行則會被忽略掉。
+
+<.> 等號 (`=`) 字元用來定義任何環境設定。在這個例子當中，使用了等號來定義 `SHELL` 及 `PATH`。若 `SHELL` 被省略，cron 則會使用預設的 Bourne shell。若 `PATH` 被省略，則必須指定指令或 Script 的完整路徑才能執行。
+
+<.> 此行定義了在系統 crontab 會使用到的七個欄位：`minute`, `hour`, `mday`, `month`, `wday`, `who` 以及 `command`。`minute` 欄位是指定指令要執行的時間中的分，`hour` 指定指令要執行的時，`mday` 是月裡面的日，`month` 是月，以及 `wday` 是週裡面的日。這些欄位必須數值代表 24 小時制的時間或 `\*` 來代表所有可能的值。`who` 這個欄位只有系統 crontab 才有，用來指定要用那一個使用者來執行指令。最後一個欄位則是要執行的指令。
+
+<.> 這個項目定義了該工作所使用的數值，`\*/5` 後接著數個 `*` 字元指的是每個月的每一週的每一日的每個小時的每 5 分鐘會使用 `root` 執行 `/usr/libexec/atrun`。指令可含任何數量的參數，但若指令要使用多行則需以反斜線 "\" 連線字元換行。
+
+[[configtuning-installcrontab]]
+=== 建立使用者的 Crontab
+
+要建立一個使用者 crontab 可使用編輯模式執行 `crontab`：
+
+[source,bash]
+....
+% crontab -e
+....
+
+這樣會使用預設的文字編輯器來開啟使用者的 crontab，使用者第一次執行這個指令會開啟一個空的檔案，使用者建立 crontab 之後這個指令則會開啟已建立的 crontab 供編輯。
+
+加入這些行到 crontab 檔的最上方來設定環境變數以及備忘在 crontab 中欄位的意思非常有用：
+
+[.programlisting]
+....
+SHELL=/bin/sh
+PATH=/etc:/bin:/sbin:/usr/bin:/usr/sbin
+# Order of crontab fields
+# minute	hour	mday	month	wday	command
+....
+
+然後每一個要執行的指令或 Script 加入一行，指定要執行指令的時間。這個例子會每天在下午 2 點執行指定的自訂 Bourne shell script，由於沒有在 `PATH` 指定 Script 的路徑，所以必須給予完整的 Script 路徑：
+
+[.programlisting]
+....
+0	14	*	*	*	/usr/home/dru/bin/mycustomscript.sh
+....
+
+[TIP]
+====
+
+在使用自訂的 Script 之前，請先確定該 Script 可以執行並且使用 cron 在有限的環境變數下測試。要複製一個用來執行上述 cron 項目的環境可以使用：
+
+[.programlisting]
+....
+env -i SHELL=/bin/sh PATH=/etc:/bin:/sbin:/usr/bin:/usr/sbin HOME=/home/dru LOGNAME=dru /usr/home/dru/bin/mycustomscript.sh
+....
+
+在 man:crontab[5] 有討論 cron 使用的環境變數，若 Script 中含有任何會使用萬用字元刪除檔案的指令，那麼檢查 Script 可正常在 cron 的環境運作非常重要。
+====
+
+編輯完成 crontab 之後儲存檔案，編輯完的 crontab 會被自動安裝且 cron 會讀取該 crontab 並在其指定的時指執行其 cron job。要列出 crontab 中有那一些 cron job 可以使用此指令：
+
+[source,bash]
+....
+% crontab -l
+0	14	*	*	*	/usr/home/dru/bin/mycustomscript.sh
+....
+
+要移除使用在使用者 crontab 中的 cron job 可：
+
+[source,bash]
+....
+% crontab -r
+remove crontab for dru? y
+....
+
+[[configtuning-rcd]]
+== 管理 FreeBSD 中的服務
+
+FreeBSD 在系統初始化時使用 man:rc[8] 系統的啟動 Script。列於 [.filename]#/etc/rc.d# 的 Script 提供了基本的服務可使用 man:service[8] 加上 `start`, `stop` 以及 `restart` 選項來控制。例如，使用以下指令可以重新啟動 man:sshd[8]：
+
+[source,bash]
+....
+# service sshd restart
+....
+
+這個程序可以用來在執行中的系統上啟動服務，而在 man:rc.conf[5] 中有指定的服務則會在開機時自動啟動。例如，要在系統啟動時開啟 man:natd[8]，可入下行到 [.filename]#/etc/rc.conf#：
+
+[.programlisting]
+....
+natd_enable="YES"
+....
+
+若 `natd_enable="NO"` 行已存在，則將 `NO` 更改為 `YES`，在下次開機時 man:rc[8] script 便會自動載入任何相依的服務，詳細如下所述。
+
+由於 man:rc[8] 系統主要用於在系統開機與關機時啟動與停止服務，只有當有服務的變數設定在 [.filename]#/etc/rc.conf# 時 `start`, `stop` 以及 `restart` 才會有作用。例如 `sshd restart` 只會在 [.filename]#/etc/rc.conf# 中的 `sshd_enable` 設為 `YES` 時才會運作，若要不透過 [.filename]#/etc/rc.conf# 的設定來 `start`, `stop` 或 `restart` 一個服務則需要在指令前加上 "one"，例如要不透過目前在 [.filename]#/etc/rc.conf# 的設定重新啟動 man:sshd[8] 可執行以下指令：
+
+[source,bash]
+....
+# service sshd onerestart
+....
+
+要檢查一個服務是否有在 [.filename]#/etc/rc.conf# 開啟，可執行服務的 man:rc[8] Script 加上 `rcvar`。這個例子會檢查 man:sshd[8] 是否在 [.filename]#/etc/rc.conf# 已經開啟：
+
+[source,bash]
+....
+# service sshd rcvar
+# sshd
+#
+sshd_enable="YES"
+#   (default: "")
+....
+
+[NOTE]
+====
+行 `# sshd` 的輸出來自上述指令，而非 `root` console。
+====
+
+要判斷是一個服務是否正在執行，可使用 `status`，例如要確認 man:sshd[8] 是否正常在執行：
+
+[source,bash]
+....
+# service sshd status
+sshd is running as pid 433.
+....
+
+在某些情況，也可以 `reload` 一個服務。這個動作會嘗試發送一個信號給指定的服務，強制服務重新載入其設定檔，在大多數的情況下，發送給服務的信號是 `SIGHUP`。並不是每個服務都有支援此功能。
+
+man:rc[8] 系統會用在網路服務及也應用在大多數的系統初化 。例如執行 [.filename]#/etc/rc.d/bgfsck# Script 會列印出以下訊息：
+
+[source,bash]
+....
+Starting background file system checks in 60 seconds.
+....
+
+這個 Script 用來在背景做檔案系統檢查，只有在系統初始化時要執行。
+
+許多系統服務會相依其他服務來運作，例如 man:yp[8] 及其他以 RPC 為基礎的服務在 man:rpcbind[8] 服務啟動前可能會啟動失敗。要解決這種問題，就必須在啟動 Script 上方的註解中加入相依及其他 meta-data。在系統初始化時會用 man:rcorder[8] 程式分析這些註解來決定要以什麼順序來執行系統服務以滿足相依。
+
+因 man:rc.subr[8] 的需要，以下的關鍵字必須加入到所有的啟動 Script 方可 "enable" 啟動 Script：
+
+* `PROVIDE`: 設定此檔案所提供的服務。
+
+以下關鍵字可能會在每個啟動 Script 的上方引用，雖然非必要，但是對於 man:rcorder[8] 是非常有用的提示：
+
+* `REQUIRE`: 列出此服務需要引用的服務。有使用此關鍵字的 Script 會在指定服務啟動 _之後_ 才執行。
+* `BEFORE`: 列出相依此服務的服務。有使用此關鍵字的 Script 會在指定的服務啟動 _之前_ 執行。
+
+透過仔細的設定每個啟動 Script 的這些關鍵字，管理者便可對 Script 的啟動順序進行微調，而不需使用到其他 UNIX(TM) 作業系統所使用的 "runlevels"。
+
+額外的資訊可在 man:rc[8] 以及 man:rc.subr[8] 中找到。請參考 link:{rc-scripting}[此文章] 來取得如何建立自訂 man:rc[8] Script 的操作說明。
+
+[[configtuning-core-configuration]]
+=== 管理系統特定的設定
+
+系統設定資訊的主要位於 [.filename]#/etc/rc.conf#，這個檔案的設定資訊範圍非常廣且會在系統啟動時讀取來設定系統，它也提供設定資訊給 [.filename]#rc*# 檔案使用。
+
+在 [.filename]#/etc/rc.conf# 中的設定項目會覆蓋在 [.filename]#/etc/defaults/rc.conf# 的預設設定，不應直接編輯該檔案中的預設設定，所有系統特定的設定應到 [.filename]#/etc/rc.conf# 所修改。
+
+在叢集應用時要將系統特定的設定與各站特定的設定分開，藉此減少管理成本有好幾種方法，建議的方法是將系統特定的設定放置在 [.filename]#/etc/rc.conf.local#，例如以下將要套用到所有系統的設定項目放在 [.filename]#/etc/rc.conf#：
+
+[.programlisting]
+....
+sshd_enable="YES"
+keyrate="fast"
+defaultrouter="10.1.1.254"
+....
+
+而只套用到此系統的設定放在 [.filename]#/etc/rc.conf.local#：
+
+[.programlisting]
+....
+hostname="node1.example.org"
+ifconfig_fxp0="inet 10.1.1.1/8"
+....
+
+使用應用程式如 rsync 或 puppet 將 [.filename]#/etc/rc.conf# 散布到每個系統，而在各系統保留自己的 [.filename]#/etc/rc.conf.local#。
+
+升級系統並不會覆寫 [.filename]#/etc/rc.conf#，所以系統設定資訊不會因此遺失。
+
+[TIP]
+====
+
+[.filename]#/etc/rc.conf# 以及 [.filename]#/etc/rc.conf.local# 兩個檔案都會使用 man:sh[1] 解析，這讓系統操作者能夠建立較複雜的設定方案。請參考 man:rc.conf[5] 來取得更多有關此主題的資訊。
+====
+
+[[config-network-setup]]
+== 設定網路介面卡
+
+對 FreeBSD 管理者來說加入與設定網路介面卡 (Network Interface Card, NIC) 會是一件常見的工作。
+
+=== 找到正確的驅動程式
+
+首先，要先確定 NIC 的型號及其使用的晶片。FreeBSD 支援各種 NIC，可檢查該 FreeBSD 發佈版本的硬體相容性清單來查看是否有支援該 NIC。
+
+若有支援該 NIC，接著要確定該 NIC 所要需要的 FreeBSD 驅動程式名稱。請參考 [.filename]#/usr/src/sys/conf/NOTES# 及 [.filename]#/usr/src/sys/arch/conf/NOTES# 來取得 NIC 驅動程式清單及其支援的晶片組相關資訊。當有疑問是，請閱讀該驅動程式的操作手冊，會有提供更多有關支援硬體及該驅動程式已知問題的資訊。
+
+[.filename]#GENERIC# 核心已有內含常見 NIC 的驅動程式 ，意思是在開機時應該會偵測到 NIC。可以輸入 `more /var/run/dmesg.boot` 來檢視系統的開機訊息並使用空白鍵捲動文字。在此例中，兩個乙太網路 NIC 使用系統已有的 man:dc[4] 驅動程式：
+
+[source,bash]
+....
+dc0: <82c169 PNIC 10/100BaseTX> port 0xa000-0xa0ff mem 0xd3800000-0xd38
+000ff irq 15 at device 11.0 on pci0
+miibus0: <MII bus> on dc0
+bmtphy0: <BCM5201 10/100baseTX PHY> PHY 1 on miibus0
+bmtphy0:  10baseT, 10baseT-FDX, 100baseTX, 100baseTX-FDX, auto
+dc0: Ethernet address: 00:a0:cc:da:da:da
+dc0: [ITHREAD]
+dc1: <82c169 PNIC 10/100BaseTX> port 0x9800-0x98ff mem 0xd3000000-0xd30
+000ff irq 11 at device 12.0 on pci0
+miibus1: <MII bus> on dc1
+bmtphy1: <BCM5201 10/100baseTX PHY> PHY 1 on miibus1
+bmtphy1:  10baseT, 10baseT-FDX, 100baseTX, 100baseTX-FDX, auto
+dc1: Ethernet address: 00:a0:cc:da:da:db
+dc1: [ITHREAD]
+....
+
+若在 [.filename]#GENERIC# 中沒有該 NIC 的驅動程式，但有可用的驅動程式，那麼在設定及使用 NIC 前要先載入該驅動程式，有兩種方式可以完成這件事：
+
+* 最簡單的方式是使用 man:kldload[8] 載入 NIC 要使用的核心模組。要在開機時自動載入，可加入適當的設定到 [.filename]#/boot/loader.conf#。不是所有 NIC 驅動程式皆可當做模組使用。
+* 或者，靜態編譯對 NIC 的支援到自訂核心，請參考 [.filename]#/usr/src/sys/conf/NOTES#, [.filename]#/usr/src/sys/arch/conf/NOTES# 及驅動程式的操作手冊來了解要在自訂核心設定檔中要加入那些設定。要取得更多有關重新編譯核心的資訊可參考 crossref:kernelconfig[kernelconfig,設定 FreeBSD 核心]。若在開機時有偵測到 NIC，就不需要再重新編譯核心。
+
+[[config-network-ndis]]
+==== 使用 Windows(TM)NDIS 驅動程式
+
+很不幸的，仍有很多供應商並沒有提供它們驅動程式的技術文件給開源社群，因為這些文件有涉及商業機密。因此，FreeBSD 及其他作業系統的開發人員只剩下兩種方案可以選擇：透過長期與艱苦的過程做逆向工程來開發驅動程式或是使用現有供 Microsoft(TM) Windows(TM) 平台用的驅動程式 Binary。
+
+FreeBSD 對 Network Driver Interface Specification (NDIS) 有提供 "原生" 的支援，這包含了 man:ndisgen[8] 可用來轉換 Windows(TM) XP 驅動程式成可在 FreeBSD 上使用的格式。由於 man:ndis[4] 驅動程式使用的是 Windows(TM) XP binary，所以只能在 i386(TM) 及 amd64 系統上執行。PCI, CardBus, PCMCIA 以及 USB 裝置也都有支援。
+
+要使用 man:ndisgen[8] 需要三樣東西：
+
+. FreeBSD 核心原始碼。
+. 一個 [.filename]#.SYS# 附檔名的 Windows(TM) XP 驅動程式 Binary。
+. 一個 [.filename]#.INF# 附檔名的 Windows(TM) XP 驅動程式設定檔。
+
+下載供指定 NIC 使用的 [.filename]#.SYS# 及 [.filename]#.INF# 檔。通常這些檔案可以在驅動程式 CD 或者供應商的網站上找到。以下範例會使用 [.filename]#W32DRIVER.SYS# 及 [.filename]#W32DRIVER.INF#。
+
+驅動程式的位元寬度必須與 FreeBSD 的版本相符。例如 FreeBSD/i386 需要使用 Windows(TM) 32-bit 驅動程式，而 FreeBSD/amd64 則需要使用 Windows(TM) 64-bit 驅動程式。
+
+下個步驟是編譯驅動程式 Binary 成可載入的核心模組。以 `root` 身份使用 man:ndisgen[8]：
+
+[source,bash]
+....
+# ndisgen /path/to/W32DRIVER.INF /path/to/W32DRIVER.SYS
+....
+
+這個指令是互動式的，會提示輸入任何所需的額外資訊，新的核心模組會被產生在目前的目錄，使用 man:kldload[8] 來載入新的模組：
+
+[source,bash]
+....
+# kldload ./W32DRIVER_SYS.ko
+....
+
+除了產生的核心模組之外，[.filename]#ndis.ko# 以及 [.filename]#if_ndis.ko# 也必須載入，會在任何有相依 man:ndis[4] 的模組被載入時一併自動載入。若沒有自動載入，則需使用以下指令手動載入：
+
+[source,bash]
+....
+# kldload ndis
+# kldload if_ndis
+....
+
+第一個指令會載入 man:ndis[4] miniport 驅動程式包裝程式，而第二個指令會載入產生的 NIC 驅動程式。
+
+檢查 man:dmesg[8] 查看是否有任何載入錯誤，若一切正常，輸出結果應會如下所示：
+
+[source,bash]
+....
+ndis0: <Wireless-G PCI Adapter> mem 0xf4100000-0xf4101fff irq 3 at device 8.0 on pci1
+ndis0: NDIS API version: 5.0
+ndis0: Ethernet address: 0a:b1:2c:d3:4e:f5
+ndis0: 11b rates: 1Mbps 2Mbps 5.5Mbps 11Mbps
+ndis0: 11g rates: 6Mbps 9Mbps 12Mbps 18Mbps 36Mbps 48Mbps 54Mbps
+....
+
+到此之後 [.filename]#ndis0# 可以像任何其他 NIC 設定使用。
+
+要設定系統於開機時載入 man:ndis[4] 模組，可複製產生的模組 [.filename]#W32DRIVER_SYS.ko# 到 [.filename]#/boot/modules#。然後加入下行到 [.filename]#/boot/loader.conf#：
+
+[.programlisting]
+....
+W32DRIVER_SYS_load="YES"
+....
+
+=== 設定網路卡
+
+載入正確的 NIC 驅動程式之後，接著需要設定介面卡，這個動作可能在安裝時已經使用 man:bsdinstall[8] 設定過了。
+
+要查看 NIC 設定可輸入以下指令：
+
+[source,bash]
+....
+% ifconfig
+dc0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=80008<VLAN_MTU,LINKSTATE>
+        ether 00:a0:cc:da:da:da
+        inet 192.168.1.3 netmask 0xffffff00 broadcast 192.168.1.255
+        media: Ethernet autoselect (100baseTX <full-duplex>)
+        status: active
+dc1: flags=8802<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=80008<VLAN_MTU,LINKSTATE>
+        ether 00:a0:cc:da:da:db
+        inet 10.0.0.1 netmask 0xffffff00 broadcast 10.0.0.255
+        media: Ethernet 10baseT/UTP
+        status: no carrier
+lo0: flags=8049<UP,LOOPBACK,RUNNING,MULTICAST> metric 0 mtu 16384
+        options=3<RXCSUM,TXCSUM>
+        inet6 fe80::1%lo0 prefixlen 64 scopeid 0x4
+        inet6 ::1 prefixlen 128
+        inet 127.0.0.1 netmask 0xff000000
+        nd6 options=3<PERFORMNUD,ACCEPT_RTADV>
+....
+
+在這個例子中列出了以下裝置：
+
+* [.filename]#dc0#: 第一個乙太網路介面。
+* [.filename]#dc1#: 第二個乙太網路介面。
+* [.filename]#lo0#: Loopback 裝置。
+
+FreeBSD 會使用驅動程式名稱接著開機時所偵測到的介面卡順序來命名 NIC。例如 [.filename]#sis2# 是指在系統上使用 man:sis[4] 驅動程式的第三個 NIC。
+
+在此例中，[.filename]#dc0# 已經上線並且執行中。主要的依據有：
+
+. `UP` 代表介面卡已設定好並且準備就緒。
+. 介面卡有網際網路 (`inet`) 位址，`192.168.1.3`。
+. 介面卡有一個有效的子網路遮罩 (`netmask`)，其中 `0xffffff00` 等同於 `255.255.255.0`。
+. 介面卡有一個有效的廣播位址，`192.168.1.255`。
+. 介面卡 (`ether`) 的 MAC 位址是 `00:a0:cc:da:da:da`。
+. 實體媒介選擇為自動選擇模式 (`media: Ethernet autoselect (100baseTX <full-duplex>)`)。在本例中 [.filename]#dc1# 被設定使用 `10baseT/UTP` 媒介。要取得更多有關可用的驅動程式媒介類型請參考操作手冊。
+. 連結的狀態 (`status`) 為使用中 (`active`)，代表有偵測到載波信號 (Carrier Signal)。若 [.filename]#dc1# 所代表的介面卡未插入乙太網路線則狀態為 `status: no carrier` 是正常的。
+
+若 man:ifconfig[8] 的輸出結果如下：
+
+[source,bash]
+....
+dc0: flags=8843<BROADCAST,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	options=80008<VLAN_MTU,LINKSTATE>
+	ether 00:a0:cc:da:da:da
+	media: Ethernet autoselect (100baseTX <full-duplex>)
+	status: active
+....
+
+則代表尚未設定介面卡。
+
+介面卡必須以 `root` 來設定。NIC 的設定可在指令列執行 man:ifconfig[8] 來完成，但重新開機之後變會消失，除非將設定也加到 [.filename]#/etc/rc.conf#。若在 LAN 中有 DHCP 伺服器，則只需加入此行：
+
+[.programlisting]
+....
+ifconfig_dc0="DHCP"
+....
+
+替換 _dc0_ 為該系統的正確值。
+
+加入這行之後，接著依據 <<config-network-testing>> 指示操作。
+
+[NOTE]
+====
+若網路在安裝時已設定，可能會已經有 NIC 的設定項目。在加入任何設定前請再次檢查 [.filename]#/etc/rc.conf#。
+====
+
+在這個例中，沒有 DHCP 伺服器，必須手動設定 NIC。提每一個在系統上的 NIC 加入一行設定，如此例：
+
+[.programlisting]
+....
+ifconfig_dc0="inet 192.168.1.3 netmask 255.255.255.0"
+ifconfig_dc1="inet 10.0.0.1 netmask 255.255.255.0 media 10baseT/UTP"
+....
+
+替換 [.filename]#dc0# 及 [.filename]#dc1# 以及 IP 位址資訊為系統的正確值。請參考驅動程式的操作手冊、man:ifconfig[8] 以及 man:rc.conf[5] 取得更多有關可用的選項及 [.filename]#/etc/rc.conf# 的語法。
+
+若網路沒有使用 DNS，則編輯 [.filename]#/etc/hosts# 加入 LAN 上主機的名稱與 IP 位址。要取得更多資訊請參考 man:hosts[5] 及 [.filename]#/usr/shared/examples/etc/hosts#。
+
+[NOTE]
+====
+若沒有 DHCP 伺服器且需要存取網際網路，那麼需要手動設定預設閘道及名稱伺服器：
+
+[source,bash]
+....
+# echo 'defaultrouter="your_default_router"' >> /etc/rc.conf
+# echo 'nameserver your_DNS_server' >> /etc/resolv.conf
+....
+
+====
+
+[[config-network-testing]]
+=== 測試與疑難排解
+
+必要的變更儲存到 [.filename]#/etc/rc.conf# 之後，需要重新啟動系統來測試網路設定並檢查系統重新啟動是否沒有任何設定錯誤。或者使用這個指令將設定套用到網路系統：
+
+[source,bash]
+....
+# service netif restart
+....
+
+[NOTE]
+====
+若預設的通訊閘已設定於 [.filename]#/etc/rc.conf# 也同樣要下這個指令：
+
+[source,bash]
+....
+# service routing restart
+....
+
+====
+
+網路系統重新啟動後，便可接著測試 NIC。
+
+==== 測試乙太網路卡
+
+要檢查乙太網路卡是否已正確設定可 man:ping[8] 介面卡自己，然後 man:ping[8] 其他於 LAN 上的主機：
+
+[source,bash]
+....
+% ping -c5 192.168.1.3
+PING 192.168.1.3 (192.168.1.3): 56 data bytes
+64 bytes from 192.168.1.3: icmp_seq=0 ttl=64 time=0.082 ms
+64 bytes from 192.168.1.3: icmp_seq=1 ttl=64 time=0.074 ms
+64 bytes from 192.168.1.3: icmp_seq=2 ttl=64 time=0.076 ms
+64 bytes from 192.168.1.3: icmp_seq=3 ttl=64 time=0.108 ms
+64 bytes from 192.168.1.3: icmp_seq=4 ttl=64 time=0.076 ms
+
+--- 192.168.1.3 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 0.074/0.083/0.108/0.013 ms
+....
+
+[source,bash]
+....
+% ping -c5 192.168.1.2
+PING 192.168.1.2 (192.168.1.2): 56 data bytes
+64 bytes from 192.168.1.2: icmp_seq=0 ttl=64 time=0.726 ms
+64 bytes from 192.168.1.2: icmp_seq=1 ttl=64 time=0.766 ms
+64 bytes from 192.168.1.2: icmp_seq=2 ttl=64 time=0.700 ms
+64 bytes from 192.168.1.2: icmp_seq=3 ttl=64 time=0.747 ms
+64 bytes from 192.168.1.2: icmp_seq=4 ttl=64 time=0.704 ms
+
+--- 192.168.1.2 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 0.700/0.729/0.766/0.025 ms
+....
+
+要測試網路解析，可使用主機名稱來替代 IP 位址。若在網路上沒有 DNS 伺服器則必須先設定 [.filename]#/etc/hosts#，若主機尚未設定到 [.filename]#/etc/hosts# 中，則需編輯 [.filename]#/etc/hosts# 加入 LAN 上主機的名稱及 IP 位址，要取得更多資訊請參考 man:hosts[5] 及 [.filename]#/usr/shared/examples/etc/hosts#。
+
+==== 疑難排解
+
+在排除硬體及軟體設定問題時，要先檢查幾件簡單的事。網路線插上了沒？網路的服務都正確設定了嗎？防火牆設定是否正確？FreeBSD 是否支援該 NIC？在回報問題之前，永遠要先檢查 Hardware Notes、更新 FreeBSD 到最新的 STABLE 版本、檢查郵遞論壇封存記錄以及上網查詢。
+
+若介面卡可以運作，但是效能很差，請閱讀 man:tuning[7]，同時也要檢查網路設定，因為不正確的網路設定會造成連線速度緩慢。
+
+部份使用者會遇到一次或兩次 `device timeout` 的訊息，在對某些介面卡是正常的。若訊息持續發生或很煩的，請確認是否有與其他的裝置衝突，再次檢查網路線，或考慮使用其他介面卡。
+
+要解決 `watchdog timeout` 錯誤，先檢查網路線。許多介面卡需要使用支援 Bus Mastering 的 PCI 插槽，在一些舊型的主機板，只會有一個 PCI 插槽支援，通常是插槽 0。檢查 NIC 以及主機板說明文件來確定是否為此問題。
+
+若系統無法路由傳送封包到目標主機則會出現 `No route to host` 訊息，這可能是因為沒有指定預設的路由或未插上網路線。請檢查 `netstat -rn` 的輸出並確認有一個有效的路由可連線至主機，若沒有，請閱讀 crossref:advanced-networking[network-routing,通訊閘與路由]。
+
+造成 `ping: sendto: Permission denied` 錯誤訊息的原因通常是防火牆設定錯誤。若在 FreeBSD 上有開啟防火牆，但卻未定義任何的規則，預設的原則是拒絕所有傳輸，即使是用 man:ping[8]。請參考 crossref:firewalls[firewalls,防火牆] 取得更多資訊。
+
+有時介面卡的效能很差或低於平均值，在這種情況可嘗試設定媒介選擇模式由 `autoselect` 更改為正確的媒介選項，雖然這在大部份硬體可運作，但可能無法解決問題，同樣的，檢查所有網路設定並參考 man:tuning[7]。
+
+[[configtuning-virtual-hosts]]
+== 虛擬主機
+
+FreeBSD 最常見的用途之一就是虛擬網站代管，即以一台伺服器在網路上扮演多台伺服器，這可以透過指定多個網路位置到一個網路介面來做到。
+
+一個網路介面會有一個 "真實 (Real)" 位址且可以有許多個 "別名 (Alias)" 位址。一般會在 [.filename]#/etc/rc.conf# 中放置別名項目來增加別名，如下例：
+
+[.programlisting]
+....
+ifconfig_fxp0_alias0="inet xxx.xxx.xxx.xxx netmask xxx.xxx.xxx.xxx"
+....
+
+別名項目必須以 `alias__0__` 開頭，使用連續數字例如 `alias0`, `alias1` 以此類推，設定程序會在第一個遇到缺號的地方中止。
+
+要注意別名網路遮罩 (Netmask) 的計算，使用的介面必須至少有一個正確的填寫網路遮罩的位址，而其他所有在此網路中的位址則必須使用全部 `1` 的網路遮罩，可用 `255.255.255.255` 或 `0xffffffff` 來表示。
+
+舉例來說，有一個 [.filename]#fxp0# 介面連結到兩個網路：`10.1.1.0` 使用網路遮罩 `255.255.255.0` 以及 `202.0.75.16` 使用網路遮罩 `255.255.255.240`。而系統將要設定使用範圍 `10.1.1.1` 到 `10.1.1.5` 以及 `202.0.75.17` 到 `202.0.75.20`。在指定的網路範圍中只有第一個位址應使用真實的網路遮罩，其餘 (`10.1.1.2` 到 `10.1.1.5` 及 `202.0.75.18` 到 `202.0.75.20`) 則必須設定使用 `255.255.255.255` 的遮罩。
+
+在此情境下正確設定網路介面的方式如下 [.filename]#/etc/rc.conf# 中的項目：
+
+[.programlisting]
+....
+ifconfig_fxp0="inet 10.1.1.1 netmask 255.255.255.0"
+ifconfig_fxp0_alias0="inet 10.1.1.2 netmask 255.255.255.255"
+ifconfig_fxp0_alias1="inet 10.1.1.3 netmask 255.255.255.255"
+ifconfig_fxp0_alias2="inet 10.1.1.4 netmask 255.255.255.255"
+ifconfig_fxp0_alias3="inet 10.1.1.5 netmask 255.255.255.255"
+ifconfig_fxp0_alias4="inet 202.0.75.17 netmask 255.255.255.240"
+ifconfig_fxp0_alias5="inet 202.0.75.18 netmask 255.255.255.255"
+ifconfig_fxp0_alias6="inet 202.0.75.19 netmask 255.255.255.255"
+ifconfig_fxp0_alias7="inet 202.0.75.20 netmask 255.255.255.255"
+....
+
+有一種更簡單的方式可以表達這些設定，便是使用以空白分隔的 IP 位址清單。只有第一個位址會使用指定的子網路遮罩，其他的位址則會使用 `255.255.255.255` 的子網路遮罩。
+
+[.programlisting]
+....
+ifconfig_fxp0_aliases="inet 10.1.1.1-5/24 inet 202.0.75.17-20/28"
+....
+
+[[configtuning-syslog]]
+== 設定系統日誌
+
+產生與讀取系統日誌對系統管理來說是一件非常重要的事，在系統日誌中的資訊可以用來偵測硬體與軟體的問題，同樣也可以偵測應用程式與系統設定的錯誤。這些資訊在安全性稽查與事件回應也同樣扮演了重要的角色，大多數系統 Daemon 與應用程式都會產生日誌項目。
+
+FreeBSD 提供了一個系統日誌程式 syslogd 用來管理日誌。預設 syslogd 會與系統開機時啟動。這可使用在 [.filename]#/etc/rc.conf# 中的變數 `syslogd_enable` 來控制。而且有數個應用程式參數可在 [.filename]#/etc/rc.conf# 使用 `syslogd_flags` 來設定。請參考 man:syslogd[8] 來取得更多可用參數的資訊。
+
+此章節會介紹如何設定 FreeBSD 系統日誌程式來做本地與遠端日誌並且介紹如何執行日誌翻轉 (Log rotation) 與日誌管理。
+
+=== 設定本地日誌
+
+設定檔 [.filename]#/etc/syslog.conf# 控制 syslogd 收到日誌項目時要做的事情，有數個參數可以用來控制接收到事件時的處理方式。_設施 (facility)_ 用來描述記錄產生訊息的子系統 (subsystem)，如核心或者 Daemon，而 _層級 (level)_ 用來描述所發生的事件嚴重性。也可以依據應用程式所發出的訊息及產生日誌事件機器的主機名稱來決定後續處置的動作。
+
+此設定檔中一行代表一個動作，每一行的格式皆為一個選擇器欄位 (Selector field) 接著一個動作欄位 (Action field)。選擇器欄位的格式為 _facility.level_ 可以用來比對來自 _facility_ 於層級 _level_ 或更高層的日誌訊息，也可以在層級前加入選擇性的比對旗標來更確切的指定記錄的內容。同樣一個動作可以使用多個選擇器欄位並使用分號 (`;`) 來分隔。用 `*` 可以比對任何東西。動作欄位可用來指定傳送日誌訊息的目標，如一個檔案或遠端日誌主機。範例為以下為 FreeBSD 預設的 [.filename]#syslog.conf#：
+
+[.programlisting]
+....
+# $FreeBSD: head/zh_TW.UTF-8/books/handbook/book.xml 53653 2019-12-03 17:05:41Z rcyu $
+#
+#       Spaces ARE valid field separators in this file. However,
+#       other *nix-like systems still insist on using tabs as field
+#       separators. If you are sharing this file between systems, you
+#       may want to use only tabs as field separators here.
+#       Consult the syslog.conf(5) manpage.
+*.err;kern.warning;auth.notice;mail.crit                /dev/console
+*.notice;authpriv.none;kern.debug;lpr.info;mail.crit;news.err   /var/log/messages
+security.*                                      /var/log/security
+auth.info;authpriv.info                         /var/log/auth.log
+mail.info                                       /var/log/maillog
+lpr.info                                        /var/log/lpd-errs
+ftp.info                                        /var/log/xferlog
+cron.*                                          /var/log/cron
+!-devd
+*.=debug                                        /var/log/debug.log
+*.emerg                                         *
+# uncomment this to log all writes to /dev/console to /var/log/console.log
+#console.info                                   /var/log/console.log
+# uncomment this to enable logging of all log messages to /var/log/all.log
+# touch /var/log/all.log and chmod it to mode 600 before it will work
+#*.*                                            /var/log/all.log
+# uncomment this to enable logging to a remote loghost named loghost
+#*.*                                            @loghost
+# uncomment these if you're running inn
+# news.crit                                     /var/log/news/news.crit
+# news.err                                      /var/log/news/news.err
+# news.notice                                   /var/log/news/news.notice
+# Uncomment this if you wish to see messages produced by devd
+# !devd
+# *.>=info
+!ppp
+*.*                                             /var/log/ppp.log
+!*
+....
+
+在這個範例中：
+
+* 第 8 行會找出所有符合 `err` 或以上層級的訊息，還有 `kern.warning`, `auth.notice` 與 `mail.crit` 的訊息，然後將這些日誌訊息傳送到 Console ([.filename]#/dev/console#)。
+* 第 12 行會找出所有符合 `mail` 設施中於 `info` 或以上層級的訊息，並記錄訊息至 [.filename]#/var/log/maillog#。
+* 第 17 行使用了比較旗標 (`=`) 來只找出符合 `debug` 層級的訊息，並將訊息記錄至 [.filename]#/var/log/debug.log#。
+* 第 33 行是指定程式的範例用法。這可以讓在該行以下的規則只對指定的程式生效。在此例中，只有由 ppp 產生的訊息會被記錄到 [.filename]#/var/log/ppp.log#。
+
+所以可用層級從最嚴重到最不嚴重的順序為 `emerg`, `alert`, `crit`, `err`, `warning`, `notice`, `info` 以及 `debug`。
+
+設施 (facility) 則無特定順序，可用的有 `auth`, `authpriv`, `console`, `cron`, `daemon`, `ftp`, `kern`, `lpr`, `mail`, `mark`, `news`, `security`, `syslog`, `user`, `uucp` 及 `local0` 到 `local7`。要注意在其他作業系統的設施可能會不同。
+
+要記錄所有所有 `notice` 與以上層級的訊息到 [.filename]#/var/log/daemon.log# 可加入以下項目：
+
+[.programlisting]
+....
+daemon.notice                                        /var/log/daemon.log
+....
+
+要取得更多有關不同的層級與設施的資訊請參考 man:syslog[3] 及 man:syslogd[8]。要取得更多有關 [.filename]#/etc/syslog.conf#、語法以及更多進階用法範例的資訊請參考 man:syslog.conf[5]。
+
+=== 日誌管理與翻轉
+
+日誌檔案會成長的非常快速，這會消耗磁碟空間並且會更難在日誌中找到有用的資訊，日誌管理便是為了嘗試減緩這種問題。在 FreeBSD 可以使用 newsyslog 來管理日誌檔案，這個內建的程式會定期翻轉 (Rotate) 與壓縮日誌檔案，並且可選擇性的建立遺失的日誌檔案並在日誌檔案被移動位置時通知程式。日誌檔案可能會由 syslogd 產生或由其他任何會產生日誌檔案的程式。newsyslog 正常會由 man:cron[8] 來執行，它並非一個系統 Daemon，預設會每個小時執行一次。
+
+newsyslog 會讀取其設定檔 [.filename]#/etc/newsyslog.conf# 來決定其要採取的動作，每個要由 newsyslog 所管理的日誌檔案會在此設定檔中設定一行，每一行要說明檔案的擁有者、權限、何時要翻轉該檔案、選用的日誌翻轉旗標，如：壓縮，以及日誌翻轉時要通知的程式。以下為 FreeBSD 的預設設定：
+
+[.programlisting]
+....
+# configuration file for newsyslog
+# $FreeBSD: head/zh_TW.UTF-8/books/handbook/book.xml 53653 2019-12-03 17:05:41Z rcyu $
+#
+# Entries which do not specify the '/pid_file' field will cause the
+# syslogd process to be signalled when that log file is rotated.  This
+# action is only appropriate for log files which are written to by the
+# syslogd process (ie, files listed in /etc/syslog.conf).  If there
+# is no process which needs to be signalled when a given log file is
+# rotated, then the entry for that file should include the 'N' flag.
+#
+# The 'flags' field is one or more of the letters: BCDGJNUXZ or a '-'.
+#
+# Note: some sites will want to select more restrictive protections than the
+# defaults.  In particular, it may be desirable to switch many of the 644
+# entries to 640 or 600.  For example, some sites will consider the
+# contents of maillog, messages, and lpd-errs to be confidential.  In the
+# future, these defaults may change to more conservative ones.
+#
+# logfilename          [owner:group]    mode count size when  flags [/pid_file] [sig_num]
+/var/log/all.log                        600  7     *    @T00  J
+/var/log/amd.log                        644  7     100  *     J
+/var/log/auth.log                       600  7     100  @0101T JC
+/var/log/console.log                    600  5     100  *     J
+/var/log/cron                           600  3     100  *     JC
+/var/log/daily.log                      640  7     *    @T00  JN
+/var/log/debug.log                      600  7     100  *     JC
+/var/log/kerberos.log                   600  7     100  *     J
+/var/log/lpd-errs                       644  7     100  *     JC
+/var/log/maillog                        640  7     *    @T00  JC
+/var/log/messages                       644  5     100  @0101T JC
+/var/log/monthly.log                    640  12    *    $M1D0 JN
+/var/log/pflog                          600  3     100  *     JB    /var/run/pflogd.pid
+/var/log/ppp.log        root:network    640  3     100  *     JC
+/var/log/devd.log                       644  3     100  *     JC
+/var/log/security                       600  10    100  *     JC
+/var/log/sendmail.st                    640  10    *    168   B
+/var/log/utx.log                        644  3     *    @01T05 B
+/var/log/weekly.log                     640  5     1    $W6D0 JN
+/var/log/xferlog                        600  7     100  *     JC
+....
+
+每一行的開始為要翻轉的日誌名稱、接著是供翻轉與新建檔案使用的擁有者及群組 (選填)。`mode` 欄位可設定日誌檔案的權限，`count` 代表要保留多少個翻轉過的日誌檔案，而 `size` 與 `when` 欄位會告訴 newsyslog 何時要翻轉該檔案。日誌檔案會在當其檔案超過 `size` 欄位的大小或已超過 `when` 欄位指定的時間時翻轉，可使用星號 (`*`) 忽略該欄位。_flags_ 欄位可以給予進階的參數，例如：如何壓縮翻轉後檔案或建立遺失的日誌檔案。最後兩個欄位皆為選填，可指定程序的程序 ID (PID) 檔名稱以及檔案翻轉後要傳送給該程序的信號 (Signal) 編號。
+
+要取的更多有關所有欄位、可用的旗標及如何指定翻轉時間，請參考 man:newsyslog.conf[5]。由於 newsyslog 是由 man:cron[8] 執行，因此無法比其在 man:cron[8] 中所排定的時間間距內更頻繁的執行翻轉檔案。
+
+[[network-syslogd]]
+=== 設定遠端日誌
+
+Monitoring the log files of multiple hosts can become unwieldy as the number of systems increases. Configuring centralized logging can reduce some of the administrative burden of log file administration.
+
+In FreeBSD, centralized log file aggregation, merging, and rotation can be configured using syslogd and newsyslog. This section demonstrates an example configuration, where host `A`, named `logserv.example.com`, will collect logging information for the local network. Host `B`, named `logclient.example.com`, will be configured to pass logging information to the logging server.
+
+==== 日誌伺服器設定
+
+A log server is a system that has been configured to accept logging information from other hosts. Before configuring a log server, check the following:
+
+* If there is a firewall between the logging server and any logging clients, ensure that the firewall ruleset allows UDP port 514 for both the clients and the server.
+* The logging server and all client machines must have forward and reverse entries in the local DNS. If the network does not have a DNS server, create entries in each system's [.filename]#/etc/hosts#. Proper name resolution is required so that log entries are not rejected by the logging server.
+
+On the log server, edit [.filename]#/etc/syslog.conf# to specify the name of the client to receive log entries from, the logging facility to be used, and the name of the log to store the host's log entries. This example adds the hostname of `B`, logs all facilities, and stores the log entries in [.filename]#/var/log/logclient.log#.
+
+.日誌伺服器設定範例
+[example]
+====
+[.programlisting]
+....
++logclient.example.com
+*.*     /var/log/logclient.log
+....
+
+====
+
+When adding multiple log clients, add a similar two-line entry for each client. More information about the available facilities may be found in man:syslog.conf[5].
+
+Next, configure [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+syslogd_enable="YES"
+syslogd_flags="-a logclient.example.com -v -v"
+....
+
+The first entry starts syslogd at system boot. The second entry allows log entries from the specified client. The `-v -v` increases the verbosity of logged messages. This is useful for tweaking facilities as administrators are able to see what type of messages are being logged under each facility.
+
+Multiple `-a` options may be specified to allow logging from multiple clients. IP addresses and whole netblocks may also be specified. Refer to man:syslogd[8] for a full list of possible options.
+
+Finally, create the log file:
+
+[source,bash]
+....
+# touch /var/log/logclient.log
+....
+
+At this point, syslogd should be restarted and verified:
+
+[source,bash]
+....
+# service syslogd restart
+# pgrep syslog
+....
+
+If a PID is returned, the server restarted successfully, and client configuration can begin. If the server did not restart, consult [.filename]#/var/log/messages# for the error.
+
+==== 日誌客戶端設定
+
+A logging client sends log entries to a logging server on the network. The client also keeps a local copy of its own logs.
+
+Once a logging server has been configured, edit [.filename]#/etc/rc.conf# on the logging client:
+
+[.programlisting]
+....
+syslogd_enable="YES"
+syslogd_flags="-s -v -v"
+....
+
+The first entry enables syslogd on boot up. The second entry prevents logs from being accepted by this client from other hosts (`-s`) and increases the verbosity of logged messages.
+
+Next, define the logging server in the client's [.filename]#/etc/syslog.conf#. In this example, all logged facilities are sent to a remote system, denoted by the `@` symbol, with the specified hostname:
+
+[.programlisting]
+....
+*.*		@logserv.example.com
+....
+
+After saving the edit, restart syslogd for the changes to take effect:
+
+[source,bash]
+....
+# service syslogd restart
+....
+
+To test that log messages are being sent across the network, use man:logger[1] on the client to send a message to syslogd:
+
+[source,bash]
+....
+# logger "Test message from logclient"
+....
+
+This message should now exist both in [.filename]#/var/log/messages# on the client and [.filename]#/var/log/logclient.log# on the log server.
+
+==== 日誌伺服器除錯
+
+If no messages are being received on the log server, the cause is most likely a network connectivity issue, a hostname resolution issue, or a typo in a configuration file. To isolate the cause, ensure that both the logging server and the logging client are able to `ping` each other using the hostname specified in their [.filename]#/etc/rc.conf#. If this fails, check the network cabling, the firewall ruleset, and the hostname entries in the DNS server or [.filename]#/etc/hosts# on both the logging server and clients. Repeat until the `ping` is successful from both hosts.
+
+If the `ping` succeeds on both hosts but log messages are still not being received, temporarily increase logging verbosity to narrow down the configuration issue. In the following example, [.filename]#/var/log/logclient.log# on the logging server is empty and [.filename]#/var/log/messages# on the logging client does not indicate a reason for the failure. To increase debugging output, edit the `syslogd_flags` entry on the logging server and issue a restart:
+
+[.programlisting]
+....
+syslogd_flags="-d -a logclient.example.com -v -v"
+....
+
+[source,bash]
+....
+# service syslogd restart
+....
+
+Debugging data similar to the following will flash on the console immediately after the restart:
+
+[source,bash]
+....
+logmsg: pri 56, flags 4, from logserv.example.com, msg syslogd: restart
+syslogd: restarted
+logmsg: pri 6, flags 4, from logserv.example.com, msg syslogd: kernel boot file is /boot/kernel/kernel
+Logging to FILE /var/log/messages
+syslogd: kernel boot file is /boot/kernel/kernel
+cvthname(192.168.1.10)
+validate: dgram from IP 192.168.1.10, port 514, name logclient.example.com;
+rejected in rule 0 due to name mismatch.
+....
+
+In this example, the log messages are being rejected due to a typo which results in a hostname mismatch. The client's hostname should be `logclient`, not `logclien`. Fix the typo, issue a restart, and verify the results:
+
+[source,bash]
+....
+# service syslogd restart
+logmsg: pri 56, flags 4, from logserv.example.com, msg syslogd: restart
+syslogd: restarted
+logmsg: pri 6, flags 4, from logserv.example.com, msg syslogd: kernel boot file is /boot/kernel/kernel
+syslogd: kernel boot file is /boot/kernel/kernel
+logmsg: pri 166, flags 17, from logserv.example.com,
+msg Dec 10 20:55:02 <syslog.err> logserv.example.com syslogd: exiting on signal 2
+cvthname(192.168.1.10)
+validate: dgram from IP 192.168.1.10, port 514, name logclient.example.com;
+accepted in rule 0.
+logmsg: pri 15, flags 0, from logclient.example.com, msg Dec 11 02:01:28 trhodes: Test message 2
+Logging to FILE /var/log/logclient.log
+Logging to FILE /var/log/messages
+....
+
+At this point, the messages are being properly received and placed in the correct file.
+
+==== 安全注意事項
+
+As with any network service, security requirements should be considered before implementing a logging server. Log files may contain sensitive data about services enabled on the local host, user accounts, and configuration data. Network data sent from the client to the server will not be encrypted or password protected. If a need for encryption exists, consider using package:security/stunnel[], which will transmit the logging data over an encrypted tunnel.
+
+Local security is also an issue. Log files are not encrypted during use or after log rotation. Local users may access log files to gain additional insight into system configuration. Setting proper permissions on log files is critical. The built-in log rotator, newsyslog, supports setting permissions on newly created and rotated log files. Setting log files to mode `600` should prevent unwanted access by local users. Refer to man:newsyslog.conf[5] for additional information.
+
+[[configtuning-configfiles]]
+== 設定檔
+
+=== [.filename]#/etc# 配置
+
+有數個目錄中儲存著設定資訊，這些目錄有：
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|[.filename]#/etc#
+|通用系統特定的設定資訊。
+
+|[.filename]#/etc/defaults#
+|系統設定檔的預設版本。
+
+|[.filename]#/etc/mail#
+|man:sendmail[8] 額外的設定以及其他 MTA 設定檔。
+
+|[.filename]#/etc/ppp#
+|user- 及 kernel-ppp 程式的設定。
+
+|[.filename]#/usr/local/etc#
+|已安裝應用程式的設定檔，可能會有以應用程式區分的子目錄。
+
+|[.filename]#/usr/local/etc/rc.d#
+|已安裝應用程式的 man:rc[8] Script。
+
+|[.filename]#/var/db#
+|自動產生的系統特定資料庫檔案，例如套件資料庫以及 man:locate[1] 資料庫。
+|===
+
+=== 主機名稱
+
+==== [.filename]#/etc/resolv.conf#
+
+FreeBSD 要如何存取網際網路網域名稱系統 (Internet Domain Name System, DNS) 是由 man:resolv.conf[5] 來控制。
+
+[.filename]#/etc/resolv.conf# 中最常用的項目為：
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|`nameserver`
+|解析程式 (Resolver) 要查詢的名稱伺服器 IP 位置，這些伺服器會依所列的順序來查詢，最多可以有三個。
+
+|`search`
+|主機名稱查詢使用的搜尋清單。這通常會使用本機主機名稱所在的網域。
+
+|`domain`
+|本地網域名稱。
+|===
+
+典型的 [.filename]#/etc/resolv.conf# 會如下：
+
+[.programlisting]
+....
+search example.com
+nameserver 147.11.1.11
+nameserver 147.11.100.30
+....
+
+[NOTE]
+====
+`search` 與 `domain` 選項應擇一使用。
+====
+
+當使用 DHCP 時，man:dhclient[8] 通常會使用從 DHCP 伺服器所接收到的資訊覆寫 [.filename]#/etc/resolv.conf#。
+
+==== [.filename]#/etc/hosts#
+
+[.filename]#/etc/hosts# 是簡單的文字資料庫，會與 DNS 及 NIS 一併使用來提供主機名稱與 IP 位址的對應。可將透過 LAN 所連結的在地電腦項目加入到這個檔案做最簡單的命名，來替代設定一個 man:named[8] 伺服器。除此之外 [.filename]#/etc/hosts# 可以用來提供本地的網際網路名稱記錄，來減少常用名稱向外部 DNS 伺服器查詢的需求。
+
+[.programlisting]
+....
+# $FreeBSD: head/zh_TW.UTF-8/books/handbook/book.xml 53653 2019-12-03 17:05:41Z rcyu $
+#
+#
+# Host Database
+#
+# This file should contain the addresses and aliases for local hosts that
+# share this file.  Replace 'my.domain' below with the domainname of your
+# machine.
+#
+# In the presence of the domain name service or NIS, this file may
+# not be consulted at all; see /etc/nsswitch.conf for the resolution order.
+#
+#
+::1			localhost localhost.my.domain
+127.0.0.1		localhost localhost.my.domain
+#
+# Imaginary network.
+#10.0.0.2		myname.my.domain myname
+#10.0.0.3		myfriend.my.domain myfriend
+#
+# According to RFC 1918, you can use the following IP networks for
+# private nets which will never be connected to the Internet:
+#
+#	10.0.0.0	-   10.255.255.255
+#	172.16.0.0	-   172.31.255.255
+#	192.168.0.0	-   192.168.255.255
+#
+# In case you want to be able to connect to the Internet, you need
+# real official assigned numbers.  Do not try to invent your own network
+# numbers but instead get one from your network provider (if any) or
+# from your regional registry (ARIN, APNIC, LACNIC, RIPE NCC, or AfriNIC.)
+#
+....
+
+[.filename]#/etc/hosts# 的格式如下：
+
+[.programlisting]
+....
+[Internet address] [official hostname] [alias1] [alias2] ...
+....
+
+例如：
+
+[.programlisting]
+....
+10.0.0.1 myRealHostname.example.com myRealHostname foobar1 foobar2
+....
+
+請參考 man:hosts[5] 取得更多資訊。
+
+[[configtuning-sysctl]]
+== 使用 man:sysctl[8] 調校
+
+man:sysctl[8] 可用來更改執行中的 FreeBSD 系統，這包含許多 TCP/IP 堆疊及虛擬記憶體系統的進階選項，讓有經驗的系統管理者能夠簡單的提升效能。有超過五百個系統變數可以使用 man:sysctl[8] 來讀取與設定。
+
+man:sysctl[8] 主要提供兩個功能：讀取與修改系統設定。
+
+檢視所有可讀取的變數：
+
+[source,bash]
+....
+% sysctl -a
+....
+
+要讀取特定變數只要指定其名稱：
+
+[source,bash]
+....
+% sysctl kern.maxproc
+kern.maxproc: 1044
+....
+
+要設定特定變數可使用 _variable_=_value_ 語法：
+
+[source,bash]
+....
+# sysctl kern.maxfiles=5000
+kern.maxfiles: 2088 -> 5000
+....
+
+sysctl 的設定值通常為字串、數字或布林值，其中布林值的 `1` 代表是，`0` 代表否。
+
+要在每次機器開機時自動設定一些變數可將其加入到 [.filename]#/etc/sysctl.conf#。要取得更多的資訊請參考 man:sysctl.conf[5] 及 <<configtuning-sysctlconf>>。
+
+[[configtuning-sysctlconf]]
+=== [.filename]#sysctl.conf#
+
+man:sysctl[8] 的設定檔於 [.filename]#/etc/sysctl.conf#，內容很像 [.filename]#/etc/rc.conf#，設定數值使用 `variable=value` 格式。指定的數值會在系統進入多使用者模式時設定，但並非所有變數皆可在此模式設定。
+
+例如，要關閉嚴重信號 (Fatal signal) 中止的記錄並避免使用者看到其他使用者所執行的程序，可加入以下設定到 [.filename]#/etc/sysctl.conf#：
+
+[.programlisting]
+....
+# Do not log fatal signal exits (e.g., sig 11)
+kern.logsigexit=0
+
+# Prevent users from seeing information about processes that
+# are being run under another UID.
+security.bsd.see_other_uids=0
+....
+
+[[sysctl-readonly]]
+=== 唯讀 man:sysctl[8]
+
+在有些情況可能會需要修改唯讀的 man:sysctl[8] 數值，而這會需要重新啟動系統。
+
+例如，某些筆電型號的 man:cardbus[4] 裝置無法偵測到記憶體範圍而且會失效並有類似以下的錯誤：
+
+[source,bash]
+....
+cbb0: Could not map register memory
+device_probe_and_attach: cbb0 attach returned 12
+....
+
+這個修正需要修改唯讀的 man:sysctl[8] 設定。加入 `hw.pci.allow_unsupported_io_range=1` 到 [.filename]#/boot/loader.conf# 然後重新啟動。現在 man:cardbus[4] 應可正常運作。
+
+[[configtuning-disk]]
+== 調校磁碟
+
+接下來的章節會討論在磁碟裝置上各種可調校的機制與選項。在大多數案例中，有使用機械元件的硬碟，如 SCSI 磁碟機，會成為導致整體系統效能低下的瓶頸。雖然已經有不使用機械元件的磁碟機解決方案，如，固態硬碟，但使用機械元件的磁碟機短期內並不會消失。在調校磁碟時，建議可以利用 man:iostat[8] 指令的功能來測試各種對系統的變更，這個指令可讓使用者取得系統 IO 相關的有用資訊。
+
+=== Sysctl 變數
+
+==== `vfs.vmiodirenable`
+
+The `vfs.vmiodirenable` man:sysctl[8] variable may be set to either `0` (off) or `1` (on). It is set to `1` by default. This variable controls how directories are cached by the system. Most directories are small, using just a single fragment (typically 1 K) in the file system and typically 512 bytes in the buffer cache. With this variable turned off, the buffer cache will only cache a fixed number of directories, even if the system has a huge amount of memory. When turned on, this man:sysctl[8] allows the buffer cache to use the VM page cache to cache the directories, making all the memory available for caching directories. However, the minimum in-core memory used to cache a directory is the physical page size (typically 4 K) rather than 512  bytes. Keeping this option enabled is recommended if the system is running any services which manipulate large numbers of files. Such services can include web caches, large mail systems, and news systems. Keeping this option on will generally not reduce performance, even with the wasted memory, but one should experiment to find out.
+
+==== `vfs.write_behind`
+
+The `vfs.write_behind` man:sysctl[8] variable defaults to `1` (on). This tells the file system to issue media writes as full clusters are collected, which typically occurs when writing large sequential files. This avoids saturating the buffer cache with dirty buffers when it would not benefit I/O performance. However, this may stall processes and under certain circumstances should be turned off.
+
+==== `vfs.hirunningspace`
+
+The `vfs.hirunningspace` man:sysctl[8] variable determines how much outstanding write I/O may be queued to disk controllers system-wide at any given instance. The default is usually sufficient, but on machines with many disks, try bumping it up to four or five _megabytes_. Setting too high a value which exceeds the buffer cache's write threshold can lead to bad clustering performance. Do not set this value arbitrarily high as higher write values may add latency to reads occurring at the same time.
+
+There are various other buffer cache and VM page cache related man:sysctl[8] values. Modifying these values is not recommended as the VM system does a good job of automatically tuning itself.
+
+==== `vm.swap_idle_enabled`
+
+The `vm.swap_idle_enabled` man:sysctl[8] variable is useful in large multi-user systems with many active login users and lots of idle processes. Such systems tend to generate continuous pressure on free memory reserves. Turning this feature on and tweaking the swapout hysteresis (in idle seconds) via `vm.swap_idle_threshold1` and `vm.swap_idle_threshold2` depresses the priority of memory pages associated with idle processes more quickly then the normal pageout algorithm. This gives a helping hand to the pageout daemon. Only turn this option on if needed, because the tradeoff is essentially pre-page memory sooner rather than later which eats more swap and disk bandwidth. In a small system this option will have a determinable effect, but in a large system that is already doing moderate paging, this option allows the VM system to stage whole processes into and out of memory easily.
+
+==== `hw.ata.wc`
+
+Turning off IDE write caching reduces write bandwidth to IDE disks, but may sometimes be necessary due to data consistency issues introduced by hard drive vendors. The problem is that some IDE drives lie about when a write completes. With IDE write caching turned on, IDE hard drives write data to disk out of order and will sometimes delay writing some blocks indefinitely when under heavy disk load. A crash or power failure may cause serious file system corruption. Check the default on the system by observing the `hw.ata.wc` man:sysctl[8] variable. If IDE write caching is turned off, one can set this read-only variable to `1` in [.filename]#/boot/loader.conf# in order to enable it at boot time.
+
+For more information, refer to man:ata[4].
+
+==== `SCSI_DELAY` (`kern.cam.scsi_delay`)
+
+The `SCSI_DELAY` kernel configuration option may be used to reduce system boot times. The defaults are fairly high and can be responsible for `15` seconds of delay in the boot process. Reducing it to `5` seconds usually works with modern drives. The `kern.cam.scsi_delay` boot time tunable should be used. The tunable and kernel configuration option accept values in terms of _milliseconds_ and _not seconds_.
+
+[[soft-updates]]
+=== 軟更新
+
+To fine-tune a file system, use man:tunefs[8]. This program has many different options. To toggle Soft Updates on and off, use:
+
+[source,bash]
+....
+# tunefs -n enable /filesystem
+# tunefs -n disable /filesystem
+....
+
+A file system cannot be modified with man:tunefs[8] while it is mounted. A good time to enable Soft Updates is before any partitions have been mounted, in single-user mode.
+
+Soft Updates is recommended for UFS file systems as it drastically improves meta-data performance, mainly file creation and deletion, through the use of a memory cache. There are two downsides to Soft Updates to be aware of. First, Soft Updates guarantee file system consistency in the case of a crash, but could easily be several seconds or even a minute behind updating the physical disk. If the system crashes, unwritten data may be lost. Secondly, Soft Updates delay the freeing of file system blocks. If the root file system is almost full, performing a major update, such as `make installworld`, can cause the file system to run out of space and the update to fail.
+
+==== 有關軟更新的更多詳細資訊
+
+Meta-data updates are updates to non-content data like inodes or directories. There are two traditional approaches to writing a file system's meta-data back to disk.
+
+Historically, the default behavior was to write out meta-data updates synchronously. If a directory changed, the system waited until the change was actually written to disk. The file data buffers (file contents) were passed through the buffer cache and backed up to disk later on asynchronously. The advantage of this implementation is that it operates safely. If there is a failure during an update, meta-data is always in a consistent state. A file is either created completely or not at all. If the data blocks of a file did not find their way out of the buffer cache onto the disk by the time of the crash, man:fsck[8] recognizes this and repairs the file system by setting the file length to `0`. Additionally, the implementation is clear and simple. The disadvantage is that meta-data changes are slow. For example, `rm -r` touches all the files in a directory sequentially, but each directory change will be written synchronously to the disk. This includes updates to the directory itself, to the inode table, and possibly to indirect blocks allocated by the file. Similar considerations apply for unrolling large hierarchies using `tar -x`.
+
+The second approach is to use asynchronous meta-data updates. This is the default for a UFS file system mounted with `mount -o async`. Since all meta-data updates are also passed through the buffer cache, they will be intermixed with the updates of the file content data. The advantage of this implementation is there is no need to wait until each meta-data update has been written to disk, so all operations which cause huge amounts of meta-data updates work much faster than in the synchronous case. This implementation is still clear and simple, so there is a low risk for bugs creeping into the code. The disadvantage is that there is no guarantee for a consistent state of the file system. If there is a failure during an operation that updated large amounts of meta-data, like a power failure or someone pressing the reset button, the file system will be left in an unpredictable state. There is no opportunity to examine the state of the file system when the system comes up again as the data blocks of a file could already have been written to the disk while the updates of the inode table or the associated directory were not. It is impossible to implement a man:fsck[8] which is able to clean up the resulting chaos because the necessary information is not available on the disk. If the file system has been damaged beyond repair, the only choice is to reformat it and restore from backup.
+
+The usual solution for this problem is to implement _dirty region logging_, which is also referred to as _journaling_. Meta-data updates are still written synchronously, but only into a small region of the disk. Later on, they are moved to their proper location. Because the logging area is a small, contiguous region on the disk, there are no long distances for the disk heads to move, even during heavy operations, so these operations are quicker than synchronous updates. Additionally, the complexity of the implementation is limited, so the risk of bugs being present is low. A disadvantage is that all meta-data is written twice, once into the logging region and once to the proper location, so performance "pessimization" might result. On the other hand, in case of a crash, all pending meta-data operations can be either quickly rolled back or completed from the logging area after the system comes up again, resulting in a fast file system startup.
+
+Kirk McKusick, the developer of Berkeley FFS, solved this problem with Soft Updates. All pending meta-data updates are kept in memory and written out to disk in a sorted sequence ("ordered meta-data updates"). This has the effect that, in case of heavy meta-data operations, later updates to an item "catch" the earlier ones which are still in memory and have not already been written to disk. All operations are generally performed in memory before the update is written to disk and the data blocks are sorted according to their position so that they will not be on the disk ahead of their meta-data. If the system crashes, an implicit "log rewind" causes all operations which were not written to the disk appear as if they never happened. A consistent file system state is maintained that appears to be the one of 30 to 60 seconds earlier. The algorithm used guarantees that all resources in use are marked as such in their blocks and inodes. After a crash, the only resource allocation error that occurs is that resources are marked as "used" which are actually "free". man:fsck[8] recognizes this situation, and frees the resources that are no longer used. It is safe to ignore the dirty state of the file system after a crash by forcibly mounting it with `mount -f`. In order to free resources that may be unused, man:fsck[8] needs to be run at a later time. This is the idea behind the _background man:fsck[8]_: at system startup time, only a _snapshot_ of the file system is recorded and man:fsck[8] is run afterwards. All file systems can then be mounted "dirty", so the system startup proceeds in multi-user mode. Then, background man:fsck[8] is scheduled for all file systems where this is required, to free resources that may be unused. File systems that do not use Soft Updates still need the usual foreground man:fsck[8].
+
+The advantage is that meta-data operations are nearly as fast as asynchronous updates and are faster than _logging_, which has to write the meta-data twice. The disadvantages are the complexity of the code, a higher memory consumption, and some idiosyncrasies. After a crash, the state of the file system appears to be somewhat "older". In situations where the standard synchronous approach would have caused some zero-length files to remain after the man:fsck[8], these files do not exist at all with Soft Updates because neither the meta-data nor the file contents have been written to disk. Disk space is not released until the updates have been written to disk, which may take place some time after running man:rm[1]. This may cause problems when installing large amounts of data on a file system that does not have enough free space to hold all the files twice.
+
+[[configtuning-kernel-limits]]
+== 調校核心限制
+
+[[file-process-limits]]
+=== 檔案/程序限制
+
+[[kern-maxfiles]]
+==== `kern.maxfiles`
+
+The `kern.maxfiles` man:sysctl[8] variable can be raised or lowered based upon system requirements. This variable indicates the maximum number of file descriptors on the system. When the file descriptor table is full, `file: table is full` will show up repeatedly in the system message buffer, which can be viewed using man:dmesg[8].
+
+Each open file, socket, or fifo uses one file descriptor. A large-scale production server may easily require many thousands of file descriptors, depending on the kind and number of services running concurrently.
+
+In older FreeBSD releases, the default value of `kern.maxfiles` is derived from `maxusers` in the kernel configuration file. `kern.maxfiles` grows proportionally to the value of `maxusers`. When compiling a custom kernel, consider setting this kernel configuration option according to the use of the system. From this number, the kernel is given most of its pre-defined limits. Even though a production machine may not have 256 concurrent users, the resources needed may be similar to a high-scale web server.
+
+The read-only man:sysctl[8] variable `kern.maxusers` is automatically sized at boot based on the amount of memory available in the system, and may be determined at run-time by inspecting the value of `kern.maxusers`. Some systems require larger or smaller values of `kern.maxusers` and values of `64`, `128`, and `256` are not uncommon. Going above `256` is not recommended unless a huge number of file descriptors is needed. Many of the tunable values set to their defaults by `kern.maxusers` may be individually overridden at boot-time or run-time in [.filename]#/boot/loader.conf#. Refer to man:loader.conf[5] and [.filename]#/boot/defaults/loader.conf# for more details and some hints.
+
+In older releases, the system will auto-tune `maxusers` if it is set to `0`. . When setting this option, set `maxusers` to at least `4`, especially if the system runs Xorg or is used to compile software. The most important table set by `maxusers` is the maximum number of processes, which is set to `20 + 16 * maxusers`. If `maxusers` is set to `1`, there can only be `36` simultaneous processes, including the `18` or so that the system starts up at boot time and the `15` or so used by Xorg. Even a simple task like reading a manual page will start up nine processes to filter, decompress, and view it. Setting `maxusers` to `64` allows up to `1044` simultaneous processes, which should be enough for nearly all uses. If, however, the  error is displayed when trying to start another program, or a server is running with a large number of simultaneous users, increase the number and rebuild.
+
+[NOTE]
+====
+`maxusers` does _not_ limit the number of users which can log into the machine. It instead sets various table sizes to reasonable values considering the maximum number of users on the system and how many processes each user will be running.
+====
+
+==== `kern.ipc.soacceptqueue`
+
+The `kern.ipc.soacceptqueue` man:sysctl[8] variable limits the size of the listen queue for accepting new `TCP` connections. The default value of `128` is typically too low for robust handling of new connections on a heavily loaded web server. For such environments, it is recommended to increase this value to `1024` or higher. A service such as man:sendmail[8], or Apache may itself limit the listen queue size, but will often have a directive in its configuration file to adjust the queue size. Large listen queues do a better job of avoiding Denial of Service (DoS) attacks.
+
+[[nmbclusters]]
+=== 網路限制
+
+The `NMBCLUSTERS` kernel configuration option dictates the amount of network Mbufs available to the system. A heavily-trafficked server with a low number of Mbufs will hinder performance. Each cluster represents approximately 2 K of memory, so a value of `1024` represents `2` megabytes of kernel memory reserved for network buffers. A simple calculation can be done to figure out how many are needed. A web server which maxes out at `1000` simultaneous connections where each connection uses a 6 K receive and 16 K send buffer, requires approximately 32 MB worth of network buffers to cover the web server. A good rule of thumb is to multiply by `2`, so 2x32 MB / 2 KB = 64 MB / 2 kB = `32768`. Values between `4096` and `32768` are recommended for machines with greater amounts of memory. Never specify an arbitrarily high value for this parameter as it could lead to a boot time crash. To observe network cluster usage, use `-m` with man:netstat[1].
+
+The `kern.ipc.nmbclusters` loader tunable should be used to tune this at boot time. Only older versions of FreeBSD will require the use of the `NMBCLUSTERS` kernel man:config[8] option.
+
+For busy servers that make extensive use of the man:sendfile[2] system call, it may be necessary to increase the number of man:sendfile[2] buffers via the `NSFBUFS` kernel configuration option or by setting its value in [.filename]#/boot/loader.conf# (see man:loader[8] for details). A common indicator that this parameter needs to be adjusted is when processes are seen in the `sfbufa` state. The man:sysctl[8] variable `kern.ipc.nsfbufs` is read-only. This parameter nominally scales with `kern.maxusers`, however it may be necessary to tune accordingly.
+
+[IMPORTANT]
+====
+Even though a socket has been marked as non-blocking, calling man:sendfile[2] on the non-blocking socket may result in the man:sendfile[2] call blocking until enough ``struct sf_buf``'s are made available.
+====
+
+==== `net.inet.ip.portrange.*`
+
+The `net.inet.ip.portrange.*` man:sysctl[8] variables control the port number ranges automatically bound to `TCP` and `UDP` sockets. There are three ranges: a low range, a default range, and a high range. Most network programs use the default range which is controlled by `net.inet.ip.portrange.first` and `net.inet.ip.portrange.last`, which default to `1024` and `5000`, respectively. Bound port ranges are used for outgoing connections and it is possible to run the system out of ports under certain circumstances. This most commonly occurs when running a heavily loaded web proxy. The port range is not an issue when running a server which handles mainly incoming connections, such as a web server, or has a limited number of outgoing connections, such as a mail relay. For situations where there is a shortage of ports, it is recommended to increase `net.inet.ip.portrange.last` modestly. A value of `10000`, `20000` or `30000` may be reasonable. Consider firewall effects when changing the port range. Some firewalls may block large ranges of ports, usually low-numbered ports, and expect systems to use higher ranges of ports for outgoing connections. For this reason, it is not recommended that the value of `net.inet.ip.portrange.first` be lowered.
+
+==== `TCP` 頻寬延遲乘積
+
+`TCP` bandwidth delay product limiting can be enabled by setting the `net.inet.tcp.inflight.enable` man:sysctl[8] variable to `1`. This instructs the system to attempt to calculate the bandwidth delay product for each connection and limit the amount of data queued to the network to just the amount required to maintain optimum throughput.
+
+This feature is useful when serving data over modems, Gigabit Ethernet, high speed `WAN` links, or any other link with a high bandwidth delay product, especially when also using window scaling or when a large send window has been configured. When enabling this option, also set `net.inet.tcp.inflight.debug` to `0` to disable debugging. For production use, setting `net.inet.tcp.inflight.min` to at least `6144` may be beneficial. Setting high minimums may effectively disable bandwidth limiting, depending on the link. The limiting feature reduces the amount of data built up in intermediate route and switch packet queues and reduces the amount of data built up in the local host's interface queue. With fewer queued packets, interactive connections, especially over slow modems, will operate with lower _Round Trip Times_. This feature only effects server side data transmission such as uploading. It has no effect on data reception or downloading.
+
+Adjusting `net.inet.tcp.inflight.stab` is _not_ recommended. This parameter defaults to `20`, representing 2 maximal packets added to the bandwidth delay product window calculation. The additional window is required to stabilize the algorithm and improve responsiveness to changing conditions, but it can also result in higher man:ping[8] times over slow links, though still much lower than without the inflight algorithm. In such cases, try reducing this parameter to `15`, `10`, or `5` and reducing `net.inet.tcp.inflight.min` to a value such as `3500` to get the desired effect. Reducing these parameters should be done as a last resort only.
+
+=== 虛擬記憶體
+
+==== `kern.maxvnodes`
+
+A vnode is the internal representation of a file or directory. Increasing the number of vnodes available to the operating system reduces disk I/O. Normally, this is handled by the operating system and does not need to be changed. In some cases where disk I/O is a bottleneck and the system is running out of vnodes, this setting needs to be increased. The amount of inactive and free RAM will need to be taken into account.
+
+To see the current number of vnodes in use:
+
+[source,bash]
+....
+# sysctl vfs.numvnodes
+vfs.numvnodes: 91349
+....
+
+To see the maximum vnodes:
+
+[source,bash]
+....
+# sysctl kern.maxvnodes
+kern.maxvnodes: 100000
+....
+
+If the current vnode usage is near the maximum, try increasing `kern.maxvnodes` by a value of `1000`. Keep an eye on the number of `vfs.numvnodes`. If it climbs up to the maximum again, `kern.maxvnodes` will need to be increased further. Otherwise, a shift in memory usage as reported by man:top[1] should be visible and more memory should be active.
+
+[[adding-swap-space]]
+== 增加交換空間
+
+有時系統會需要更多的交換 (Swap) 空間，本章節會介紹兩種增加交換空間的方式：一種是在既有的分割區或新的硬碟增加交換空間，另一種則是在既有的分割區中建立一個交換檔。
+
+要取得更多有關如何加密交換空間的資訊、有那些可用的選項以及為何要做加密，可參考 crossref:disks[swap-encrypting,交換空間加密]。
+
+[[new-drive-swap]]
+=== 使用新硬碟或既有分割區增加交換空間
+
+在新的磁碟上增加交換空間比起使用既有硬碟上的分割區會有較佳的效率。設定分割區與硬碟在 crossref:disks[disks-adding,加入磁碟] 中有說明，另外 crossref:bsdinstall[configtuning-initial,規劃分割區配置] 會討論到分割區的配置與交換分割區大小需考量的事項。
+
+使用 `swapon` 來增加交換分割區到系統，例：
+
+[source,bash]
+....
+# swapon /dev/ada1s1b
+....
+
+[WARNING]
+====
+
+可以使用任何尚未掛載過、甚至已經有內含資料的分割區做為交換空間，但在含有資料的分割區上使用 `swapon` 會覆寫並清除該分割區上所有的資料，請在執行 `swapon` 之前確認真的要使用該分割區增加交換空間。
+====
+
+要在開機時自動加入此交換分割區，可加入以下項目到 [.filename]#/etc/fstab#：
+
+[.programlisting]
+....
+/dev/ada1s1b	none	swap	sw	0	0
+....
+
+請參考 man:fstab[5] 來取得在 [.filename]#/etc/fstab# 中項目的說明。更多有關 `swapon` 的資訊 可以在 man:swapon[8] 找到。
+
+[[create-swapfile]]
+=== 建立交換檔
+
+以下例子會建立一個 64M 的交換檔於 [.filename]#/usr/swap0# 來替代使用分割區建立交換空間。
+
+使用交換檔開啟交換空間前需要在核心編譯或載入 man:md[4] 所需的模組，請參考 crossref:kernelconfig[kernelconfig,設定 FreeBSD 核心] 了解有關編譯自訂核心的資訊。
+
+[[swapfile-10-and-later]]
+.建立交換檔於 FreeBSD 10._X_ 及以後版本
+[example]
+====
+
+[.procedure]
+======
+. 建立交換檔：
++
+[source,bash]
+....
+# dd if=/dev/zero of=/usr/swap0 bs=1m count=64
+....
++
+. 在新檔案設定適當的權限：
++
+[source,bash]
+....
+# chmod 0600 /usr/swap0
+....
++
+. 加入行到 [.filename]#/etc/fstab# 以讓系統知道交換檔的資訊：
++
+[.programlisting]
+....
+md99	none	swap	sw,file=/usr/swap0,late	0	0
+....
++ 
+已使用 man:md[4] 裝置的 [.filename]#md99#，保留較低的裝置編號供互動操作時使用。
+. 交換空間會於系統啟動時增加。若要立即增加交換空間，請參考 man:swapon[8]：
++
+[source,bash]
+....
+# swapon -aL
+....
+======
+====
+
+[[swapfile-9-and-earlier]]
+.建立交換檔於 FreeBSD 9._X_ 及先前版本
+[example]
+====
+
+[.procedure]
+======
+. 建立交換檔 [.filename]#/usr/swap0#：
++
+[source,bash]
+....
+# dd if=/dev/zero of=/usr/swap0 bs=1m count=64
+....
++
+. 設定適當的權限於 [.filename]#/usr/swap0#：
++
+[source,bash]
+....
+# chmod 0600 /usr/swap0
+....
++
+. 在 [.filename]#/etc/rc.conf# 開啟交換檔：
++
+[.programlisting]
+....
+swapfile="/usr/swap0"   # Set to name of swap file
+....
++
+. 交換空間會於系統啟動時增加。若要立即增加交換空間，可指定一個未使用的記憶體裝置。請參考 crossref:disks[disks-virtual,記憶體磁碟] 取得更多有關記憶體裝置的資訊。
++
+[source,bash]
+....
+# mdconfig -a -t vnode -f /usr/swap0 -u 0 && swapon /dev/md0
+....
+======
+====
+
+[[acpi-overview]]
+== 電源與資源管理
+
+以有效率的方式運用硬體資源是很重要的，電源與資源管理讓作業系統可以監控系統的限制，並且在系統溫度意外升高時能夠發出警報。早期提供電源管理的規範是進階電源管理 (Advanced Power Management, APM)，APM 可根據系統的使用狀況來來控制電源用量。然而，使用 APM 要作業系統來管理系統的電源用量和溫度屬性是困難且沒有彈性的，因為硬體是由 BIOS 所管理，使用者對電源管理設定只有有限的設定性與可見性，且 APMBIOS 是由供應商提供且特定於某些硬體平台，而作業系統中必透過 APM 驅動程式做為中介存取 APM 軟體介面才能夠管理電源等級。
+
+在 APM 有四個主要的問題。第一，電源管理是由供應商特定的 BIOS 來完成，與作業系統是分開的。例如，使用者可在 APMBIOS 設定硬碟的閒置時間值，在超過時間時 BIOS 可在未徵得作業系統的同意下降低硬碟的轉速。第二，APM 的邏輯是內嵌在 BIOS 當中的，並且在作業系統範圍之外運作，這代表使用者只能夠透過燒錄新的韌體到 ROM 來修正 APMBIOS 中的問題，而這樣的程序是危險的，若失敗，可能會讓系統進入無法復原的狀態。第三，APM 是供應商特定的技術，這代表有許多重複的工作，在一個供應商的 BIOS 找到的問題在其他的供應商卻沒有解決。最後一點，APMBIOS 並沒有足夠的空間來實作複雜的電源管理政策或可良好適應主機用途的程式。
+
+Plug and Play BIOS (PNPBIOS) 在很多情況下並不可靠，PNPBIOS 是 16 位元的技術，所以作業系統必須模擬 16 位元才能存取 PNPBIOS。FreeBSD 提供了一個 APM 驅動程式來做 APM，應可用在 2000 年之前所製造的系統，該驅動程式的說明於 man:apm[4]。
+
+APM 的後繼者是進階設置與電源介面 (Advanced Configuration and Power Interface, ACPI)。ACPI 是一套由供應商聯盟所搛寫出的標準，提供了硬體資源與電源管理的介面，它是 _作業系統直接設置與電源管理 (Operating System-directed configuration and Power Management)_ 關鍵的要素，提供了作業系統更多的控制方式與彈性。
+
+本章節將示範如何在 FreeBSD 設定 ACPI，然後提供一些如何對 ACPI 除錯的提示以及如何提交包含除錯資訊的問題回報，讓開發人員能夠診斷並修正 ACPI 的問題。
+
+[[acpi-config]]
+=== 設定 ACPI
+
+在 FreeBSD man:acpi[4] 驅動程式預設會在系統開始時載入，且__不__應被編譯到核心當中。這個驅動程式在開機之後無法被卸載，因為系統匯流排會使用它做各種硬體互動。雖然如此，若系統遇到問題，ACPI 還是可以被關閉，在 [.filename]#/boot/loader.conf# 中設定 `hint.acpi.0.disabled="1"` 之後重新開機或在載入程式提示時設定這個變數，如 crossref:boot[boot-loader,階段三] 中的說明。
+
+[NOTE]
+====
+ACPI 與 APM 不能同時存在且應分開使用，若有偵測到有另一個正在執行，要載入的後者將會中斷。
+====
+
+ACPI 可以用來讓系統進入睡眠模式，使用 `acpiconf` 與 `-s` 旗標再加上由 `1` 到 `5` 的數字。大多數使用者只需使用 `1` (快速待命到 RAM) 或 `3` (待命到 RAM)，選項 `5` 會執行軟關機 (Soft-off)，如同執行 `halt -p` 一樣。
+
+其他的選項可使用 `sysctl` 來設定，請參考 man:acpi[4] 以及 man:acpiconf[8] 以取得更多資訊。
+
+[[ACPI-comprob]]
+=== 常見問題
+
+ACPI is present in all modern computers that conform to the ia32 (x86), ia64 (Itanium), and amd64 (AMD) architectures. The full standard has many features including CPU performance management, power planes control, thermal zones, various battery systems, embedded controllers, and bus enumeration. Most systems implement less than the full standard. For instance, a desktop system usually only implements bus enumeration while a laptop might have cooling and battery management support as well. Laptops also have suspend and resume, with their own associated complexity.
+
+An ACPI-compliant system has various components. The BIOS and chipset vendors provide various fixed tables, such as FADT, in memory that specify things like the APIC map (used for SMP), config registers, and simple configuration values. Additionally, a bytecode table, the Differentiated System Description Table DSDT, specifies a tree-like name space of devices and methods.
+
+The ACPI driver must parse the fixed tables, implement an interpreter for the bytecode, and modify device drivers and the kernel to accept information from the ACPI subsystem. For FreeBSD, Intel(TM) has provided an interpreter (ACPI-CA) that is shared with Linux(TM) and NetBSD. The path to the ACPI-CA source code is [.filename]#src/sys/contrib/dev/acpica#. The glue code that allows ACPI-CA to work on FreeBSD is in [.filename]#src/sys/dev/acpica/Osd#. Finally, drivers that implement various ACPI devices are found in [.filename]#src/sys/dev/acpica#.
+
+For ACPI to work correctly, all the parts have to work correctly. Here are some common problems, in order of frequency of appearance, and some possible workarounds or fixes. If a fix does not resolve the issue, refer to <<ACPI-submitdebug>> for instructions on how to submit a bug report.
+
+==== 滑鼠問題
+
+In some cases, resuming from a suspend operation will cause the mouse to fail. A known work around is to add `hint.psm.0.flags="0x3000"` to [.filename]#/boot/loader.conf#.
+
+==== 待機/喚醒
+
+ACPI has three suspend to RAM (STR) states, `S1`-`S3`, and one suspend to disk state (STD), called `S4`. STD can be implemented in two separate ways. The ``S4``BIOS is a BIOS-assisted suspend to disk and ``S4``OS is implemented entirely by the operating system. The normal state the system is in when plugged in but not powered up is "soft off" (`S5`).
+
+Use `sysctl hw.acpi` to check for the suspend-related items. These example results are from a Thinkpad:
+
+[source,bash]
+....
+hw.acpi.supported_sleep_state: S3 S4 S5
+hw.acpi.s4bios: 0
+....
+
+Use `acpiconf -s` to test `S3`, `S4`, and `S5`. An `s4bios` of one (`1`) indicates ``S4``BIOS support instead of `S4` operating system support.
+
+When testing suspend/resume, start with `S1`, if supported. This state is most likely to work since it does not require much driver support. No one has implemented `S2`, which is similar to `S1`. Next, try `S3`. This is the deepest STR state and requires a lot of driver support to properly reinitialize the hardware.
+
+A common problem with suspend/resume is that many device drivers do not save, restore, or reinitialize their firmware, registers, or device memory properly. As a first attempt at debugging the problem, try:
+
+[source,bash]
+....
+# sysctl debug.bootverbose=1
+# sysctl debug.acpi.suspend_bounce=1
+# acpiconf -s 3
+....
+
+This test emulates the suspend/resume cycle of all device drivers without actually going into `S3` state. In some cases, problems such as losing firmware state, device watchdog time out, and retrying forever, can be captured with this method. Note that the system will not really enter `S3` state, which means devices may not lose power, and many will work fine even if suspend/resume methods are totally missing, unlike real `S3` state.
+
+Harder cases require additional hardware, such as a serial port and cable for debugging through a serial console, a Firewire port and cable for using man:dcons[4], and kernel debugging skills.
+
+To help isolate the problem, unload as many drivers as possible. If it works, narrow down which driver is the problem by loading drivers until it fails again. Typically, binary drivers like [.filename]#nvidia.ko#, display drivers, and USB will have the most problems while Ethernet interfaces usually work fine. If drivers can be properly loaded and unloaded, automate this by putting the appropriate commands in [.filename]#/etc/rc.suspend# and [.filename]#/etc/rc.resume#. Try setting `hw.acpi.reset_video` to `1` if the display is messed up after resume. Try setting longer or shorter values for `hw.acpi.sleep_delay` to see if that helps.
+
+Try loading a recent Linux(TM) distribution to see if suspend/resume works on the same hardware. If it works on Linux(TM), it is likely a FreeBSD driver problem. Narrowing down which driver causes the problem will assist developers in fixing the problem. Since the ACPI maintainers rarely maintain other drivers, such as sound or ATA, any driver problems should also be posted to the http://lists.FreeBSD.org/mailman/listinfo/freebsd-current[freebsd-current] list and mailed to the driver maintainer. Advanced users can include debugging man:printf[3]s in a problematic driver to track down where in its resume function it hangs.
+
+Finally, try disabling ACPI and enabling APM instead. If suspend/resume works with APM, stick with APM, especially on older hardware (pre-2000). It took vendors a while to get ACPI support correct and older hardware is more likely to have BIOS problems with ACPI.
+
+==== 系統無回應
+
+Most system hangs are a result of lost interrupts or an interrupt storm. Chipsets may have problems based on boot, how the BIOS configures interrupts before correctness of the APIC (MADT) table, and routing of the System Control Interrupt (SCI).
+
+Interrupt storms can be distinguished from lost interrupts by checking the output of `vmstat -i` and looking at the line that has `acpi0`. If the counter is increasing at more than a couple per second, there is an interrupt storm. If the system appears hung, try breaking to DDB (kbd:[CTRL+ALT+ESC] on console) and type `show interrupts`.
+
+When dealing with interrupt problems, try disabling APIC support with `hint.apic.0.disabled="1"` in [.filename]#/boot/loader.conf#.
+
+==== 當機
+
+Panics are relatively rare for ACPI and are the top priority to be fixed. The first step is to isolate the steps to reproduce the panic, if possible, and get a backtrace. Follow the advice for enabling `options DDB` and setting up a serial console in crossref:serialcomms[serialconsole-ddb,從序列線路 (Serial Line) 進入 DDB 除錯程式] or setting up a dump partition. To get a backtrace in DDB, use `tr`. When handwriting the backtrace, get at least the last five and the top five lines in the trace.
+
+Then, try to isolate the problem by booting with ACPI disabled. If that works, isolate the ACPI subsystem by using various values of `debug.acpi.disable`. See man:acpi[4] for some examples.
+
+==== 系統在待機或關機後仍開機
+
+First, try setting `hw.acpi.disable_on_poweroff="0"` in [.filename]#/boot/loader.conf#. This keeps ACPI from disabling various events during the shutdown process. Some systems need this value set to `1` (the default) for the same reason. This usually fixes the problem of a system powering up spontaneously after a suspend or poweroff.
+
+[[ACPI-aslanddump]]
+==== BIOS 含有有問題的 Bytecode
+
+Some BIOS vendors provide incorrect or buggy bytecode. This is usually manifested by kernel console messages like this:
+
+[source,bash]
+....
+ACPI-1287: *** Error: Method execution failed [\\_SB_.PCI0.LPC0.FIGD._STA] \\
+(Node 0xc3f6d160), AE_NOT_FOUND
+....
+
+Often, these problems may be resolved by updating the BIOS to the latest revision. Most console messages are harmless, but if there are other problems, like the battery status is not working, these messages are a good place to start looking for problems.
+
+=== 覆蓋預設的 AML
+
+The BIOS bytecode, known as ACPI Machine Language (AML), is compiled from a source language called ACPI Source Language (ASL). The AML is found in the table known as the Differentiated System Description Table (DSDT).
+
+The goal of FreeBSD is for everyone to have working ACPI without any user intervention. Workarounds are still being developed for common mistakes made by BIOS vendors. The Microsoft(TM) interpreter ([.filename]#acpi.sys# and [.filename]#acpiec.sys#) does not strictly check for adherence to the standard, and thus many BIOS vendors who only test ACPI under Windows(TM) never fix their ASL. FreeBSD developers continue to identify and document which non-standard behavior is allowed by Microsoft(TM)'s interpreter and replicate it so that FreeBSD can work without forcing users to fix the ASL.
+
+To help identify buggy behavior and possibly fix it manually, a copy can be made of the system's ASL. To copy the system's ASL to a specified file name, use `acpidump` with `-t`, to show the contents of the fixed tables, and `-d`, to disassemble the AML:
+
+[source,bash]
+....
+# acpidump -td > my.asl
+....
+
+Some AML versions assume the user is running Windows(TM). To override this, set `hw.acpi.osname=_"Windows 2009"_` in [.filename]#/boot/loader.conf#, using the most recent Windows(TM) version listed in the ASL.
+
+Other workarounds may require [.filename]#my.asl# to be customized. If this file is edited, compile the new ASL using the following command. Warnings can usually be ignored, but errors are bugs that will usually prevent ACPI from working correctly.
+
+[source,bash]
+....
+# iasl -f my.asl
+....
+
+Including `-f` forces creation of the AML, even if there are errors during compilation. Some errors, such as missing return statements, are automatically worked around by the FreeBSD interpreter.
+
+The default output filename for `iasl` is [.filename]#DSDT.aml#. Load this file instead of the BIOS's buggy copy, which is still present in flash memory, by editing [.filename]#/boot/loader.conf# as follows:
+
+[.programlisting]
+....
+acpi_dsdt_load="YES"
+acpi_dsdt_name="/boot/DSDT.aml"
+....
+
+Be sure to copy [.filename]#DSDT.aml# to [.filename]#/boot#, then reboot the system. If this fixes the problem, send a man:diff[1] of the old and new ASL to http://lists.FreeBSD.org/mailman/listinfo/freebsd-acpi[freebsd-acpi] so that developers can work around the buggy behavior in [.filename]#acpica#.
+
+[[ACPI-submitdebug]]
+=== 取得與回報除錯資訊
+
+The ACPI driver has a flexible debugging facility. A set of subsystems and the level of verbosity can be specified. The subsystems to debug are specified as layers and are broken down into components (`ACPI_ALL_COMPONENTS`) and ACPI hardware support (`ACPI_ALL_DRIVERS`). The verbosity of debugging output is specified as the level and ranges from just report errors (`ACPI_LV_ERROR`) to everything (`ACPI_LV_VERBOSE`). The level is a bitmask so multiple options can be set at once, separated by spaces. In practice, a serial console should be used to log the output so it is not lost as the console message buffer flushes. A full list of the individual layers and levels is found in man:acpi[4].
+
+Debugging output is not enabled by default. To enable it, add `options ACPI_DEBUG` to the custom kernel configuration file if ACPI is compiled into the kernel. Add `ACPI_DEBUG=1` to [.filename]#/etc/make.conf# to enable it globally. If a module is used instead of a custom kernel, recompile just the [.filename]#acpi.ko# module as follows:
+
+[source,bash]
+....
+# cd /sys/modules/acpi/acpi && make clean && make ACPI_DEBUG=1
+....
+
+Copy the compiled [.filename]#acpi.ko# to [.filename]#/boot/kernel# and add the desired level and layer to [.filename]#/boot/loader.conf#. The entries in this example enable debug messages for all ACPI components and hardware drivers and output error messages at the least verbose level:
+
+[.programlisting]
+....
+debug.acpi.layer="ACPI_ALL_COMPONENTS ACPI_ALL_DRIVERS"
+debug.acpi.level="ACPI_LV_ERROR"
+....
+
+If the required information is triggered by a specific event, such as a suspend and then resume, do not modify [.filename]#/boot/loader.conf#. Instead, use `sysctl` to specify the layer and level after booting and preparing the system for the specific event. The variables which can be set using `sysctl` are named the same as the tunables in [.filename]#/boot/loader.conf#.
+
+Once the debugging information is gathered, it can be sent to http://lists.FreeBSD.org/mailman/listinfo/freebsd-acpi[freebsd-acpi] so that it can be used by the FreeBSD ACPI maintainers to identify the root cause of the problem and to develop a solution.
+
+[NOTE]
+====
+Before submitting debugging information to this mailing list, ensure the latest BIOS version is installed and, if available, the embedded controller firmware version.
+====
+
+When submitting a problem report, include the following information:
+
+* Description of the buggy behavior, including system type, model, and anything that causes the bug to appear. Note as accurately as possible when the bug began occurring if it is new.
+* The output of `dmesg` after running `boot -v`, including any error messages generated by the bug.
+* The `dmesg` output from `boot -v` with ACPI disabled, if disabling ACPI helps to fix the problem.
+* Output from `sysctl hw.acpi`. This lists which features the system offers.
+* The URL to a pasted version of the system's ASL. Do _not_ send the ASL directly to the list as it can be very large. Generate a copy of the ASL by running this command:
++
+[source,bash]
+....
+# acpidump -dt > name-system.asl
+....
++ 
+Substitute the login name for _name_ and manufacturer/model for _system_. For example, use [.filename]#njl-FooCo6000.asl#.
+
+Most FreeBSD developers watch the http://lists.FreeBSD.org/mailman/listinfo/freebsd-current[FreeBSD-CURRENT mailing list], but one should submit problems to http://lists.FreeBSD.org/mailman/listinfo/freebsd-acpi[freebsd-acpi] to be sure it is seen. Be patient when waiting for a response. If the bug is not immediately apparent, submit a bug report. When entering a PR, include the same information as requested above. This helps developers to track the problem and resolve it. Do not send a PR without emailing http://lists.FreeBSD.org/mailman/listinfo/freebsd-acpi[freebsd-acpi] first as it is likely that the problem has been reported before.
+
+[[ACPI-References]]
+=== 參考文獻
+
+More information about ACPI may be found in the following locations:
+
+* The FreeBSD ACPI Mailing List Archives (https://lists.freebsd.org/pipermail/freebsd-acpi/[https://lists.freebsd.org/pipermail/freebsd-acpi/])
+* The ACPI 2.0 Specification (http://acpi.info/spec.htm[http://acpi.info/spec.htm])
+* man:acpi[4], man:acpi_thermal[4], man:acpidump[8], man:iasl[8], and man:acpidb[8]

@@ -1,0 +1,665 @@
+---
+title: Kapitel 10. Kernel-Fehlersuche
+authors:
+  - author: Paul Richards
+  - author: Jörg Wunsch
+  - author: Robert Watson
+prev: books/developers-handbook/kernelbuild
+next: books/developers-handbook/x86
+---
+
+[[kerneldebug]]
+= Kernel-Fehlersuche
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:table-caption: Tabelle
+:figure-caption: Abbildung
+:example-caption: Beispiel
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 10
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/de/mailing-lists.adoc[]
+include::shared/de/teams.adoc[]
+include::shared/de/urls.adoc[]
+
+toc::[]
+
+[[kerneldebug-obtain]]
+== Besorgen eines Speicherauszugs nach einem Kernel-Absturz (Kernel-Crash-Dump)
+
+Wenn ein Entwicklungs-Kernel (z.B. FreeBSD-CURRENT) wie zum Beispiel ein Kernel unter Extrembedingungen (z.B. sehr hohe Belastungsraten (Load), eine äußerst hohe Anzahl an gleichzeitigen Benutzern, Hunderte man:jail[8]s usw.) eingesetzt oder eine neue Funktion oder ein neuer Gerätetreiber in FreeBSD-STABLE verwendet wird (z.B. PAE), tritt manchmal eine Kernel-Panic ein. In einem solchen Fall zeigt dieses Kapitel, wie dem Absturz nützliche Informationen entnommen werden können.
+
+Bei Kernel-Panics ist ein Neustart unvermeidlich. Nachdem ein System neu gestartet wurde, ist der Inhalt des physikalischen Speichers (RAM), genauso wie jedes Bit, das sich vor der Panic auf dem Swap-Gerät befand, verloren. Um die Bits im physikalischen Speicher zu erhalten, zieht der Kernel Nutzen aus dem Swap-Gerät als vorübergehenden Ablageort, wo die Bits, welche sich im RAM befinden, auch nach einem Neustart nach einem Absturz verfügbar sind. Durch diese Vorgehensweise kann ein Kernel-Abbild, wenn FreeBSD nach einem Absturz startet, abgezogen und mit der Fehlersuche begonnen werden.
+
+[NOTE]
+====
+Ein Swap-Gerät, das als Ausgabegerät (Dump-Device) konfiguriert wurde, verhält sich immer noch wie ein Swap-Gerät. Die Ausgabe auf Nicht-Swap-Geräte (wie zum Beispiel Bänder oder CDRWs) wird zur Zeit nicht unterstützt. Ein "Swap-Gerät" ist gleichbedeutend mit einer "Swap-Partition".
+====
+
+Es stehen verschiedene Arten von Speicherabzügen zur Verfügung: komplette Speicherabzüge (full memory dumps), welche den gesamten Inhalt des physischen Speichers beinhalten, Miniauszüge (minidumps), die nur die gerade verwendeten Speicherseiten des Kernels enthalten (FreeBSD 6.2 und höhere Versionen) und Textauszüge (textdumps), welche geskriptete oder Debugger-Ausgaben enthalten (FreeBSD 7.1 und höher). Miniauszüge sind der Standardtyp der Abzüge seit FreeBSD 7.0 und fangen in den meisten Fällen alle nötigen Informationen ein, die in einem kompletten Kernel-Speicherabzug enthalten sind, da die meisten Probleme nur durch den Zustand des Kernels isoliert werden können.
+
+[[config-dumpdev]]
+=== Konfigurieren des Ausgabegeräts
+
+Bevor der Kernel den Inhalt seines physikalischen Speichers auf einem Ausgabegerät ablegt, muss ein solches konfiguriert werden. Ein Ausgabegerät wird durch Benutzen des man:dumpon[8]-Befehls festgelegt, um dem Kernel mitzuteilen, wohin die Speicherauszüge bei einem Kernel-Absturz gesichert werden sollen. Das man:dumpon[8]-Programm muss aufgerufen werden, nachdem die Swap-Partition mit man:swapon[8] konfiguriert wurde. Dies wird normalerweise durch Setzen der `dumpdev`-Variable in man:rc.conf[5] auf den Pfad des Swap-Geräts (der empfohlene Weg, um einen Kernel-Speicherauszug zu entnehmen) bewerkstelligt, oder über `AUTO`, um die erste konfigurierte Swap-Partition zu verwenden. In HEAD ist die Standardeinstellung für `dumpdev`[.filename]#AUTO# und änderte sich in den RELENG_*-Zweigen (mit Ausnahme von RELENG_7, bei dem `AUTO` beibehalten wurde) auf `NO`. In FreeBSD 9.0-RELEASE und späteren Versionen fragt bsdinstall, ob Speicherauszüge für das Zielsystem während des Installationsvorgangs aktiviert werden sollen.
+
+[TIP]
+====
+
+Vergleichen Sie [.filename]#/etc/fstab# oder man:swapinfo[8] für eine Liste der Swap-Geräte.
+====
+
+[IMPORTANT]
+====
+Stellen Sie sicher, dass das in man:rc.conf[5] festgelegte `dumpdir` vor einem Kernel-Absturz vorhanden ist.
+
+[source,bash]
+....
+# mkdir /var/crash
+# chmod 700 /var/crash
+....
+
+Denken Sie auch daran, dass der Inhalt von [.filename]#/var/crash# heikel ist und sehr wahrscheinlich vertrauliche Informationen wie Passwörter enthält.
+====
+
+[[extract-dump]]
+=== Entnehmen eines Kernel-Speicherauszugs (Kernel-Dump)
+
+Sobald ein Speicherauszug auf ein Ausgabegerät geschrieben wurde, muss er entnommen werden, bevor das Swap-Gerät eingehängt wird. Um einen Speicherauszug aus einem Ausgabegerät zu entnehmen, benutzen Sie das man:savecore[8]-Programm. Falls `dumpdev` in man:rc.conf[5] gesetzt wurde, wird man:savecore[8] automatisch beim ersten Start in den Multiuser-Modus nach dem Absturz und vor dem Einhängen des Swap-Geräts aufgerufen. Der Speicherort des entnommenen Kernels ist im man:rc.conf[5]-Wert `dumpdir`, standardmäßig [.filename]#/var/crash#, festgelegt und der Dateiname wird [.filename]#vmcore.0# sein.
+
+In dem Fall, dass bereits eine Datei mit dem Namen [.filename]#vmcore.0# in [.filename]#/var/crash# (oder auf was auch immer `dumpdir` gesetzt ist) vorhanden ist, erhöht der Kernel die angehängte Zahl bei jedem Absturz um eins und verhindert damit, dass ein vorhandener [.filename]#vmcore# (z.B. [.filename]#vmcore.1#) überschrieben wird. Während der Fehlersuche, möchten Sie höchst wahrscheinlich den [.filename]#vmcore# mit der höchsten Version in [.filename]#/var/crash# benutzen, wenn Sie den passenden [.filename]#vmcore# suchen.
+
+[TIP]
+====
+
+Falls Sie einen neuen Kernel testen, aber einen anderen starten müssen, um Ihr System wieder in Gang zu bringen, starten Sie es nur in den Singleuser-Modus, indem Sie das `-s`-Flag an der Boot-Eingabeaufforderung benutzen, und nehmen dann folgende Schritte vor:
+
+[source,bash]
+....
+# fsck -p
+# mount -a -t ufs       # make sure /var/crash is writable
+# savecore /var/crash /dev/ad0s1b
+# exit                  # exit to multi-user
+....
+
+Dies weist man:savecore[8] an, einen Kernel-Speicherauszug aus [.filename]#/dev/ad0s1b# zu entnehmen und den Inhalt in [.filename]#/var/crash# abzulegen. Vergessen Sie nicht sicherzustellen, dass das Zielverzeichnis [.filename]#/var/crash# genug freien Speicherplatz für den Speicherauszug zur Verfügung hat. Vergessen Sie auch nicht, den korrekten Pfad des Swap-Geräts anzugeben, da es sehr wahrscheinlich anders als [.filename]#/dev/ad0s1b# lautet!
+====
+
+[[kerneldebug-gdb]]
+== Fehlersuche in einem Speicherauszug nach einem Kernel-Absturz mit `kgdb`
+
+[NOTE]
+====
+Dieser Abschnitt deckt man:kgdb[1] ab, wie es in FreeBSD 5.3 und später zu finden ist. In früheren Versionen muss `gdb -k` benutzt werden, um einen Kernspeicherauszug auszulesen.
+====
+
+Sobald ein Speicherauszug zur Verfügung steht, ist es recht einfach nützliche Informationen für einfache Probleme daraus zu bekommen. Bevor Sie sich auf die Interna von man:kgdb[1] stürzen, um die Fehler im Kernspeicherauszug zu suchen und zu beheben, machen Sie die Debug-Version Ihres Kernels (normalerweise [.filename]#kernel.debug# genannt) und den Pfad der Quelldateien, die zum Bau Ihres Kernels verwendet wurden (normalerweise [.filename]#/usr/obj/usr/src/sys/KERNCONF#, wobei [.filename]#KERNCONF# das in einer Kernel-man:config[5] festgelegte `ident` ist), ausfindig. Mit diesen beiden Informationen kann die Fehlersuche beginnen.
+
+Um in den Debugger zu gelangen und mit dem Informationserhalt aus dem Speicherauszug zu beginnen, sind zumindest folgende Schritte nötig:
+
+[source,bash]
+....
+# cd /usr/obj/usr/src/sys/KERNCONF
+# kgdb kernel.debug /var/crash/vmcore.0
+....
+
+Sie können Fehler im Speicherauszug nach dem Absturz suchen, indem Sie die Kernel-Quellen benutzen, genauso wie Sie es bei jedem anderen Programm können.
+
+Dieser erste Speicherauszug ist aus einem 5.2-BETA-Kernel und der Absturz ist tief im Kernel begründet. Die Ausgabe unten wurde dahingehend bearbeitet, dass sie nun Zeilennummern auf der linken Seite einschließt. Diese erste Ablaufverfolgung (Trace) untersucht den Befehlszeiger (Instruction-Pointer) und beschafft eine Zurückverfolgung (Back-Trace). Die Adresse, die in Zeile 41 für den `list`-Befehl benutzt wird, ist der Befehlszeiger und kann in Zeile 17 gefunden werden. Die meisten Entwickler wollen zumindest dies zugesendet bekommen, falls Sie das Problem nicht selber untersuchen und beheben können. Falls Sie jedoch das Problem lösen, stellen Sie sicher, dass Ihr Patch seinen Weg in den Quellbaum mittels eines Fehlerberichts, den Mailinglisten oder ihres Privilegs, zu committen, findet!
+
+[source,bash]
+....
+ 1:# cd /usr/obj/usr/src/sys/KERNCONF
+ 2:# kgdb kernel.debug /var/crash/vmcore.0
+ 3:GNU gdb 5.2.1 (FreeBSD)
+ 4:Copyright 2002 Free Software Foundation, Inc.
+ 5:GDB is free software, covered by the GNU General Public License, and you are
+ 6:welcome to change it and/or distribute copies of it under certain conditions.
+ 7:Type "show copying" to see the conditions.
+ 8:There is absolutely no warranty for GDB.  Type "show warranty" for details.
+ 9:This GDB was configured as "i386-undermydesk-freebsd"...
+10:panic: page fault
+11:panic messages:
+12:---
+13:Fatal trap 12: page fault while in kernel mode
+14:cpuid = 0; apic id = 00
+15:fault virtual address   = 0x300
+16:fault code:             = supervisor read, page not present
+17:instruction pointer     = 0x8:0xc0713860
+18:stack pointer           = 0x10:0xdc1d0b70
+19:frame pointer           = 0x10:0xdc1d0b7c
+20:code segment            = base 0x0, limit 0xfffff, type 0x1b
+21:                        = DPL 0, pres 1, def32 1, gran 1
+22:processor eflags        = resume, IOPL = 0
+23:current process         = 14394 (uname)
+24:trap number             = 12
+25:panic: page fault
+26      cpuid = 0;
+27:Stack backtrace:
+28
+29:syncing disks, buffers remaining... 2199 2199 panic: mi_switch: switch in a critical section
+30:cpuid = 0;
+31:Uptime: 2h43m19s
+32:Dumping 255 MB
+33: 16 32 48 64 80 96 112 128 144 160 176 192 208 224 240
+34:---
+35:Reading symbols from /boot/kernel/snd_maestro3.ko...done.
+36:Loaded symbols for /boot/kernel/snd_maestro3.ko
+37:Reading symbols from /boot/kernel/snd_pcm.ko...done.
+38:Loaded symbols for /boot/kernel/snd_pcm.ko
+39:#0  doadump () at /usr/src/sys/kern/kern_shutdown.c:240
+40:240             dumping++;
+41:(kgdb) list *0xc0713860
+42:0xc0713860 is in lapic_ipi_wait (/usr/src/sys/i386/i386/local_apic.c:663).
+43:658                     incr = 0;
+44:659                     delay = 1;
+45:660             } else
+46:661                     incr = 1;
+47:662             for (x = 0; x < delay; x += incr) {
+48:663                     if ((lapic->icr_lo & APIC_DELSTAT_MASK) == APIC_DELSTAT_IDLE)
+49:664                             return (1);
+50:665                     ia32_pause();
+51:666             }
+52:667             return (0);
+53:(kgdb) backtrace
+54:#0  doadump () at /usr/src/sys/kern/kern_shutdown.c:240
+55:#1  0xc055fd9b in boot (howto=260) at /usr/src/sys/kern/kern_shutdown.c:372
+56:#2  0xc056019d in panic () at /usr/src/sys/kern/kern_shutdown.c:550
+57:#3  0xc0567ef5 in mi_switch () at /usr/src/sys/kern/kern_synch.c:470
+58:#4  0xc055fa87 in boot (howto=256) at /usr/src/sys/kern/kern_shutdown.c:312
+59:#5  0xc056019d in panic () at /usr/src/sys/kern/kern_shutdown.c:550
+60:#6  0xc0720c66 in trap_fatal (frame=0xdc1d0b30, eva=0)
+61:    at /usr/src/sys/i386/i386/trap.c:821
+62:#7  0xc07202b3 in trap (frame=
+63:      {tf_fs = -1065484264, tf_es = -1065484272, tf_ds = -1065484272, tf_edi = 1, tf_esi = 0, tf_ebp = -602076292, tf_isp = -602076324, tf_ebx = 0, tf_edx = 0, tf_ecx = 1000000, tf_eax = 243, tf_trapno = 12, tf_err = 0, tf_eip = -1066321824, tf_cs = 8, tf_eflags = 65671, tf_esp = 243, tf_ss = 0})
+64:    at /usr/src/sys/i386/i386/trap.c:250
+65:#8  0xc070c9f8 in calltrap () at {standard input}:94
+66:#9  0xc07139f3 in lapic_ipi_vectored (vector=0, dest=0)
+67:    at /usr/src/sys/i386/i386/local_apic.c:733
+68:#10 0xc0718b23 in ipi_selected (cpus=1, ipi=1)
+69:    at /usr/src/sys/i386/i386/mp_machdep.c:1115
+70:#11 0xc057473e in kseq_notify (ke=0xcc05e360, cpu=0)
+71:    at /usr/src/sys/kern/sched_ule.c:520
+72:#12 0xc0575cad in sched_add (td=0xcbcf5c80)
+73:    at /usr/src/sys/kern/sched_ule.c:1366
+74:#13 0xc05666c6 in setrunqueue (td=0xcc05e360)
+75:    at /usr/src/sys/kern/kern_switch.c:422
+76:#14 0xc05752f4 in sched_wakeup (td=0xcbcf5c80)
+77:    at /usr/src/sys/kern/sched_ule.c:999
+78:#15 0xc056816c in setrunnable (td=0xcbcf5c80)
+79:    at /usr/src/sys/kern/kern_synch.c:570
+80:#16 0xc0567d53 in wakeup (ident=0xcbcf5c80)
+81:    at /usr/src/sys/kern/kern_synch.c:411
+82:#17 0xc05490a8 in exit1 (td=0xcbcf5b40, rv=0)
+83:    at /usr/src/sys/kern/kern_exit.c:509
+84:#18 0xc0548011 in sys_exit () at /usr/src/sys/kern/kern_exit.c:102
+85:#19 0xc0720fd0 in syscall (frame=
+86:      {tf_fs = 47, tf_es = 47, tf_ds = 47, tf_edi = 0, tf_esi = -1, tf_ebp = -1077940712, tf_isp = -602075788, tf_ebx = 672411944, tf_edx = 10, tf_ecx = 672411600, tf_eax = 1, tf_trapno = 12, tf_err = 2, tf_eip = 671899563, tf_cs = 31, tf_eflags = 642, tf_esp = -1077940740, tf_ss = 47})
+87:    at /usr/src/sys/i386/i386/trap.c:1010
+88:#20 0xc070ca4d in Xint0x80_syscall () at {standard input}:136
+89:---Can't read userspace from dump, or kernel process---
+90:(kgdb) quit
+....
+
+Diese nächste Ablaufverfolgung ist ein älterer Speicherauszug aus FreeBSD 2-Zeiten, aber ist komplizierter und zeigt mehr der `gdb`-Funktionen. Lange Zeilen wurden gefaltet, um die Lesbarkeit zu verbessern, und die Zeilen wurden zur Verweisung nummeriert. Trotzdem ist es eine reale Fehlerverfolgung (Error-Trace), die während der Entwicklung des pcvt-Konsolentreibers entstanden ist.
+
+[source,bash]
+....
+ 1:Script started on Fri Dec 30 23:15:22 1994
+ 2:# cd /sys/compile/URIAH
+ 3:# gdb -k kernel /var/crash/vmcore.1
+ 4:Reading symbol data from /usr/src/sys/compile/URIAH/kernel
+...done.
+ 5:IdlePTD 1f3000
+ 6:panic: because you said to!
+ 7:current pcb at 1e3f70
+ 8:Reading in symbols for ../../i386/i386/machdep.c...done.
+ 9:(kgdb) backtrace
+10:#0  boot (arghowto=256) (../../i386/i386/machdep.c line 767)
+11:#1  0xf0115159 in panic ()
+12:#2  0xf01955bd in diediedie () (../../i386/i386/machdep.c line 698)
+13:#3  0xf010185e in db_fncall ()
+14:#4  0xf0101586 in db_command (-266509132, -266509516, -267381073)
+15:#5  0xf0101711 in db_command_loop ()
+16:#6  0xf01040a0 in db_trap ()
+17:#7  0xf0192976 in kdb_trap (12, 0, -272630436, -266743723)
+18:#8  0xf019d2eb in trap_fatal (...)
+19:#9  0xf019ce60 in trap_pfault (...)
+20:#10 0xf019cb2f in trap (...)
+21:#11 0xf01932a1 in exception:calltrap ()
+22:#12 0xf0191503 in cnopen (...)
+23:#13 0xf0132c34 in spec_open ()
+24:#14 0xf012d014 in vn_open ()
+25:#15 0xf012a183 in open ()
+26:#16 0xf019d4eb in syscall (...)
+27:(kgdb) up 10
+28:Reading in symbols for ../../i386/i386/trap.c...done.
+29:#10 0xf019cb2f in trap (frame={tf_es = -260440048, tf_ds = 16, tf_\
+30:edi = 3072, tf_esi = -266445372, tf_ebp = -272630356, tf_isp = -27\
+31:2630396, tf_ebx = -266427884, tf_edx = 12, tf_ecx = -266427884, tf\
+32:_eax = 64772224, tf_trapno = 12, tf_err = -272695296, tf_eip = -26\
+33:6672343, tf_cs = -266469368, tf_eflags = 66066, tf_esp = 3072, tf_\
+34:ss = -266427884}) (../../i386/i386/trap.c line 283)
+35:283                             (void) trap_pfault(&frame, FALSE);
+36:(kgdb) frame frame->tf_ebp frame->tf_eip
+37:Reading in symbols for ../../i386/isa/pcvt/pcvt_drv.c...done.
+38:#0  0xf01ae729 in pcopen (dev=3072, flag=3, mode=8192, p=(struct p\
+39:roc *) 0xf07c0c00) (../../i386/isa/pcvt/pcvt_drv.c line 403)
+40:403             return ((*linesw[tp->t_line].l_open)(dev, tp));
+41:(kgdb) list
+42:398
+43:399             tp->t_state |= TS_CARR_ON;
+44:400             tp->t_cflag |= CLOCAL;  /* cannot be a modem (:-) */
+45:401
+46:402     #if PCVT_NETBSD || (PCVT_FREEBSD >= 200)
+47:403             return ((*linesw[tp->t_line].l_open)(dev, tp));
+48:404     #else
+49:405             return ((*linesw[tp->t_line].l_open)(dev, tp, flag));
+50:406     #endif /* PCVT_NETBSD || (PCVT_FREEBSD >= 200) */
+51:407     }
+52:(kgdb) print tp
+53:Reading in symbols for ../../i386/i386/cons.c...done.
+54:$1 = (struct tty *) 0x1bae
+55:(kgdb) print tp->t_line
+56:$2 = 1767990816
+57:(kgdb) up
+58:#1  0xf0191503 in cnopen (dev=0x00000000, flag=3, mode=8192, p=(st\
+59:ruct proc *) 0xf07c0c00) (../../i386/i386/cons.c line 126)
+60:       return ((*cdevsw[major(dev)].d_open)(dev, flag, mode, p));
+61:(kgdb) up
+62:#2  0xf0132c34 in spec_open ()
+63:(kgdb) up
+64:#3  0xf012d014 in vn_open ()
+65:(kgdb) up
+66:#4  0xf012a183 in open ()
+67:(kgdb) up
+68:#5  0xf019d4eb in syscall (frame={tf_es = 39, tf_ds = 39, tf_edi =\
+69: 2158592, tf_esi = 0, tf_ebp = -272638436, tf_isp = -272629788, tf\
+70:_ebx = 7086, tf_edx = 1, tf_ecx = 0, tf_eax = 5, tf_trapno = 582, \
+71:tf_err = 582, tf_eip = 75749, tf_cs = 31, tf_eflags = 582, tf_esp \
+72:= -272638456, tf_ss = 39}) (../../i386/i386/trap.c line 673)
+73:673             error = (*callp->sy_call)(p, args, rval);
+74:(kgdb) up
+75:Initial frame selected; you cannot go up.
+76:(kgdb) quit
+....
+
+Kommentare zum Skript oben:
+
+Zeile 6:::
+Dies ist ein Speicherauszug, der innerhalb von DDB genommen wurde (siehe unten), deswegen der Kommentar zur Panic "because you said to!" und die eher lange Stack-Ablaufverfolgung (Stack-Trace); der anfängliche Grund für das Starten von DDB war jedoch ein Seitenfehler-Trap (Page-Fault-Trap).
+
+Zeile 20:::
+Dies ist die Position der Funktion `trap()` in der Stack-Ablaufverfolgung.
+
+Zeile 36:::
+Erzwingt die Benutzung eines neuen Stack-Frames; dies ist nicht mehr notwendig. Die Stack-Frames sollen jetzt an die richtige Stelle im Speicher zeigen, selbst im Falle eines Traps. Nach einem Blick auf den Code in Zeile 403 ergibt sich mit hoher Wahrscheinlichkeit, dass entweder der Zeigerzugriff auf "tp" fehlerbehaftet oder der Array-Zugriff unerlaubt war.
+
+Zeile 52:::
+Der Zeiger scheint verdächtig, aber besitzt zufällig eine gültige Adresse.
+
+Zeile 56:::
+Jedoch zeigt er offensichtlich auf nichts und so haben wir unseren Fehler gefunden! (Für diejenigen, die nichts mit diesem speziellen Stück Code anfangen können: `tp->t_line` verweist hier auf das Zeilenverhalten (Line-Discipline) des Konsolen-Geräts, was eine ziemlich kleine Ganzzahl (Integer) sein muss.)
+
+[TIP]
+====
+
+Falls Ihr System regelmäßig abstürzt und und Sie bald keinen freien Speicherplatz mehr zur Verfügung haben, könnte das Löschen alter [.filename]#vmcore#-Dateien in [.filename]#/var/core# einen beträchtlichen Betrag an Speicherplatz einsparen.
+====
+
+[[kerneldebug-ddd]]
+== Fehlersuche in einem Speicherauszug nach einem Absturz mit DDD
+
+Die Untersuchung eines Speicherauszugs nach einem Kernel-Absturz mit einem grafischen Debugger wie `ddd` ist auch möglich (Sie müssen den package:devel/ddd[]-Port installieren, um den `ddd`-Debugger benutzen zu können). Nehmen Sie die `-k` mit in die `ddd`-Kommandozeile auf, die Sie normalerweise benutzen würden. Zum Beispiel:
+
+[source,bash]
+....
+# ddd --debugger kgdb kernel.debug /var/crash/vmcore.0
+....
+
+Sie sollten nun in der Lage sein, die Untersuchung des Speicherauszugs nach dem Absturz unter Benutzung der grafischen Schnittstelle von `ddd` anzugehen.
+
+[[kerneldebug-online-ddb]]
+== Online-Kernel-Fehlersuche mit DDB
+
+Während `kgdb` als Offline-Debugger eine Benutzerschnittstelle auf höchster Ebene bietet, gibt es einige Dinge, die es nicht kann. Die wichtigsten sind das Setzen von Breakpoints und das Abarbeiten des Kernel-Codes in Einzelschritten (Single-Stepping).
+
+Falls Sie eine systemnahe Fehlersuche an Ihrem Kernel vorhaben, steht Ihnen ein Online-Debugger mit dem Namen DDB zur Verfügung. Er erlaubt Ihnen das Setzen von Breakpoints, die Abarbeitung von Kernel-Funktionen in Einzelschritten, das Untersuchen und Verändern von Kernel-Variablen usw. Jedoch hat er keinen Zugriff auf Kernel-Quelldateien, sondern kann nur, im Gegensatz zu `gdb`, welches auf die ganzen Informationen zur Fehlersuche zurückgreifen kann, auf globale und statische Symbole zugreifen.
+
+Um DDB in Ihren Kernel einzubinden, fügen Sie die Optionen 
+[.programlisting]
+....
+options KDB
+....
+
+[.programlisting]
+....
+options DDB
+....
+
+Ihrer Konfigurationsdatei hinzu und bauen Sie den Kernel neu. (Details zur Konfiguration des FreeBSD-Kernels finden Sie im link:{handbook}[FreeBSD-Handbuch]).
+
+[NOTE]
+====
+Falls Sie eine ältere Version des Boot-Blocks haben, könnte es sein, dass Ihre Symbole zur Fehlersuche noch nicht einmal geladen werden. Aktualisieren Sie den Boot-Block; aktuelle Versionen laden die DDB-Symbole automatisch.
+====
+
+Sobald Ihr Kernel mit DDB startet, gibt es mehrere Wege, um in DDB zu gelangen. Der erste und früheste Weg ist, das Boot-Flag `-d` gleich an der Boot-Eingabeaufforderung einzugeben. Der Kernel startet dann in den Debug-Modus und betritt DDB noch vor jedweder Gerätesuche. Somit können Sie Funktionen zur Gerätesuche/-bereitstellung auf Fehler untersuchen. FreeBSD-CURRENT-Benutzer müssen die sechste Option im Boot-Menü auswählen, um an eine Eingabeaufforderung zu gelangen.
+
+Das zweite Szenario ist der Gang in den Debugger, sobald das System schon gestartet ist. Es gibt zwei einfache Wege dies zu erreichen. Falls Sie von der Eingabeaufforderung aus in den Debugger gelangen möchten, geben Sie einfach folgenden Befehl ab:
+
+[source,bash]
+....
+# sysctl debug.kdb.enter=1
+....
+
+[NOTE]
+====
+Um eine schnelle Panic zu erzwingen, geben Sie das folgende Kommando ein:
+
+[source,bash]
+....
+# sysctl debug.kdb.panic=1
+....
+
+====
+
+Anderenfalls können Sie ein Tastenkürzel auf der Tastatur benutzen, wenn Sie an der Systemkonsole sind. Die Voreinstellung für die break-to-debugger-Sequenz ist kbd:[Ctrl+Alt+ESC]. In syscons kann diese Sequenz auf eine andere Tastenkombination gelegt werden (remap) und manche der verfügbaren Tastaturlayouts tun dies, stellen Sie also sicher, dass Sie die richtige Sequenz kennen, die benutzt werden soll. Für serielle Konsolen ist eine Option vorhanden, die die Benutzung einer Unterbrechung der seriellen Verbindung (BREAK) auf der Kommandozeile erlaubt, um in DDB zu gelangen (`options BREAK_TO_DEBUGGER` in der Kernel-Konfigurationsdatei). Dies ist jedoch nicht der Standard, da viele serielle Adapter in Verwendung sind, die grundlos eine BREAK-Bedingung erzeugen, zum Beispiel bei Ziehen des Kabels.
+
+Die dritte Möglichkeit ist, dass jede Panic-Bedingung in DDB springt, falls der Kernel hierfür konfiguriert ist. Aus diesem Grund ist es nicht sinnvoll einen Kernel mit DDB für ein unbeaufsichtigtes System zu konfigurieren.
+
+Um die unbeaufsichtigte Funktionsweise zu erreichen fügen Sie:
+
+[.programlisting]
+....
+options	KDB_UNATTENDED
+....
+
+der Kernel-Konfigurationsdatei hinzu und bauen/installieren Sie den Kernel neu.
+
+Die DDB-Befehle ähneln grob einigen `gdb`-Befehlen. Das Erste, das Sie vermutlich tun müssen, ist einen Breakpoint zu setzen:
+
+[source,bash]
+....
+ break function-name address
+....
+
+Zahlen werden standardmäßig hexadezimal angegeben, aber um sie von Symbolnamen zu unterscheiden, muss Zahlen, die mit den Buchstaben `a-f` beginnen, `0x` vorangehen (dies ist für andere Zahlen beliebig). Einfache Ausdrücke sind erlaubt, zum Beispiel: `function-name + 0x103`.
+
+Um den Debugger zu verlassen und mit der Abarbeitung fortzufahren, geben Sie ein:
+
+[source,bash]
+....
+ continue
+....
+
+Um eine Stack-Ablaufverfolgung zu erhalten, benutzen Sie:
+
+[source,bash]
+....
+ trace
+....
+
+[NOTE]
+====
+Beachten Sie, dass wenn Sie DDB mittels einer Schnelltaste betreten, der Kernel zurzeit einen Interrupt bereitstellt, sodass die Stack-Ablaufverfolgung Ihnen nicht viel nützen könnte.
+====
+
+Falls Sie einen Breakpoint entfernen möchten, benutzen Sie
+
+[source,bash]
+....
+ del
+ del address-expression
+....
+
+Die erste Form wird direkt, nachdem ein Breakpoint anschlug, angenommen und entfernt den aktuellen Breakpoint. Die zweite kann jeden Breakpoint löschen, aber Sie müssen die genaue Adresse angeben; diese kann bezogen werden durch:
+
+[source,bash]
+....
+ show b
+....
+
+oder:
+
+[source,bash]
+....
+ show break
+....
+
+Um den Kernel in Einzelschritten auszuführen, probieren Sie:
+
+[source,bash]
+....
+ s
+....
+
+Dies springt in Funktionen, aber Sie können DDB veranlassen, diese schrittweise zu verfolgen, bis die passende Rückkehranweisung (Return-Statement) erreicht ist. Nutzen Sie hierzu:
+
+[source,bash]
+....
+ n
+....
+
+[NOTE]
+====
+Dies ist nicht das gleiche wie die ``next``-Anweisung von ``gdb``; es ist wie ``gdb``s ``finish``. Mehrmaliges Drücken von kbd:[n] führt zu einer Fortsetzung.
+====
+
+Um Daten aus dem Speicher zu untersuchen, benutzen Sie (zum Beispiel): 
+
+[source,bash]
+....
+x/wx 0xf0133fe0,40
+x/hd db_symtab_space
+x/bc termbuf,10
+x/s stringbuf
+....
+
+für Word/Halfword/Byte-Zugriff und Hexadezimal/Dezimal/Character/String-Ausgabe. Die Zahl nach dem Komma ist der Objektzähler. Um die nächsten 0x10 Objekte anzuzeigen benutzen Sie einfach:
+
+[source,bash]
+....
+ x ,10
+....
+
+Gleichermaßen benutzen Sie 
+
+[source,bash]
+....
+ x/ia foofunc,10
+....
+
+um die ersten 0x10 Anweisungen aus `foofunc` zu zerlegen (disassemble) und Sie zusammen mit ihrem Adressabstand (Offset) vom Anfang von `foofunc` auszugeben.
+
+Um Speicher zu verändern benutzen Sie den Schreibbefehl:
+
+[source,bash]
+....
+ w/b termbuf 0xa 0xb 0
+ w/w 0xf0010030 0 0
+....
+
+Die Befehlsoption (`b`/`h`/`w`) legt die Größe der Daten fest, die geschrieben werden sollen, der erste Ausdruck danach ist die Adresse, wohin geschrieben werden soll, und der Rest wird als Daten verarbeitet, die in aufeinander folgende Speicherstellen geschrieben werden.
+
+Falls Sie die aktuellen Register wissen möchten, benutzen Sie:
+
+[source,bash]
+....
+ show reg
+....
+
+Alternativ können Sie den Inhalt eines einzelnen Registers ausgeben mit z.B. 
+
+[source,bash]
+....
+ p $eax
+....
+
+und ihn bearbeiten mit:
+
+[source,bash]
+....
+ set $eax new-value
+....
+
+Sollten Sie irgendeine Kernel-Funktion aus DDB heraus aufrufen wollen, geben Sie einfach ein:
+
+[source,bash]
+....
+ call func(arg1, arg2, ...)
+....
+
+Der Rückgabewert wird ausgegeben.
+
+Für eine Zusammenfassung aller laufenden Prozesse im Stil von man:ps[1] benutzen Sie:
+
+[source,bash]
+....
+ ps
+....
+
+Nun haben Sie herausgefunden, warum Ihr Kernel fehlschlägt, und möchten neu starten. Denken Sie daran, dass, abhängig von der Schwere vorhergehender Störungen, nicht alle Teile des Kernels wie gewohnt funktionieren könnten. Führen Sie eine der folgenden Aktionen durch, um Ihr System herunterzufahren und neu zu starten:
+
+[source,bash]
+....
+ panic
+....
+
+Dies wird Ihren Kernel dazu veranlassen abzustürzen, einen Speicherauszug abzulegen und neu zu starten, sodass Sie den Kernspeicherauszug später auf höherer Ebene mit `gdb` auswerten können. Diesem Befehl muss normalerweise eine weitere `continue`-Anweisung folgen.
+
+[source,bash]
+....
+ call boot(0)
+....
+
+Dürfte ein guter Weg sein, um das laufende System sauber herunterzufahren, alle Festplatten mittels `sync()` zu schreiben und schließlich, in manchen Fällen, neu zu starten. Solange die Festplatten- und Dateisystemschnittstellen des Kernels nicht beschädigt sind, könnte dies ein guter Weg für ein beinahe sauberes Abschalten sein.
+
+[source,bash]
+....
+ call cpu_reset()
+....
+
+Dies ist der letzte Ausweg aus der Katastrophe und kommt beinahe dem Drücken des Ausschaltknopfes gleich.
+
+Falls Sie eine kurze Zusammenfassung aller Befehle benötigen, geben Sie einfach ein:
+
+[source,bash]
+....
+ help
+....
+
+Es ist strengstens empfohlen, eine ausgedruckte Version der man:ddb[4]-Manualpage während der Fehlersuche neben sich liegen zu haben. Denken Sie daran, dass es schwer ist, die Online-Hilfe zu lesen, während der Ausführung des Kernels in Einzelschritten.
+
+[[kerneldebug-online-gdb]]
+== Online-Kernel-Fehlersuche mit GDB auf einem entfernten System
+
+Diese Funktion wird seit FreeBSD 2.2 unterstützt und ist wirklich sehr geschickt.
+
+GDB unterstützt _die Fehlersuche von einem entfernten System aus_ bereits einige Zeit. Dies geschieht unter Benutzung eines sehr einfachen Protokolls über eine serielle Verbindung. Anders als bei den anderen, oben beschriebenen, Vorgehensweisen werden hier zwei Systeme benötigt. Das eine ist das Hostsystem, welches die Umgebung zur Fehlersuche, einschließlich aller Quellen und einer Kopie der Kernel-Binärdatei mit allen Symbolen bereitstellt, und das andere das Zielsystem, welches einfach nur eine Kopie desselben Kernels ausführt (ohne die Informationen zur Fehlersuche).
+
+Sie sollten den Kernel im Zweifelsfall mit `config -g` konfigurieren, `DDB` in die Konfiguration aufnehmen und den Kernel, wie sonst auch, kompilieren. Dies ergibt, aufgrund der zusätzlichen Informationen zur Fehlersuche, eine umfangreiche Binärdatei. Kopieren Sie diesen Kernel auf das Zielsystem, entfernen Sie die Symbole zur Fehlersuche mit `strip -x` und starten Sie ihn mit der `-d`-Boot-Option. Stellen Sie die serielle Verbindung zwischen dem Zielsystem, welches "flags 80" für dessen sio-Gerät gesetzt hat, und dem Hostsystem, welches die Fehlersuche übernimmt, her. Nun wechseln Sie auf dem Hostsystem in das Bauverzeichnis des Ziel-Kernels und starten `gdb`:
+
+[source,bash]
+....
+% kgdb kernel
+GDB is free software and you are welcome to distribute copies of it
+ under certain conditions; type "show copying" to see the conditions.
+There is absolutely no warranty for GDB; type "show warranty" for details.
+GDB 4.16 (i386-unknown-freebsd),
+Copyright 1996 Free Software Foundation, Inc...
+(kgdb) 
+....
+
+Stellen Sie die entfernte Sitzung zur Fehlersuche ein mit (angenommen, der erste serielle Port ist in Verwendung):
+
+[source,bash]
+....
+(kgdb) target remote /dev/cuaa0
+....
+
+Jetzt geben Sie auf dem Zielsystem, welches noch vor Beginn der Gerätesuche in DDB gelangt ist, ein:
+
+[source,bash]
+....
+Debugger("Boot flags requested debugger")
+Stopped at Debugger+0x35: movb  $0, edata+0x51bc
+db> gdb
+....
+
+DDB antwortet dann mit:
+
+[source,bash]
+....
+Next trap will enter GDB remote protocol mode
+....
+
+Jedesmal wenn Sie `gdb` eingeben, wird zwischen dem lokalen DDB und entfernten GDB umgeschaltet. Um einen nächsten Trap sofort zu erzwingen, geben Sie einfach `s` (step) ein. Ihr GDB auf dem Hostsystem erhält nun die Kontrolle über den Ziel-Kernel:
+
+[source,bash]
+....
+Remote debugging using /dev/cuaa0
+Debugger (msg=0xf01b0383 "Boot flags requested debugger")
+    at ../../i386/i386/db_interface.c:257
+(kgdb)
+....
+
+Sie können mit dieser Sitzung wie mit jeder anderen GDB-Sitzung umgehen, einschließlich vollem Zugriff auf die Quellen, Starten im gud-Modus innerhalb eines Emacs-Fensters (was Ihnen automatische Quelltext-Ausgabe in einem weiteren Emacs-Fenster bietet), usw.
+
+[[kerneldebug-console]]
+== Fehlersuche bei einem Konsolen-Treiber
+
+Da Sie nunmal einen Konsolen-Treiber benötigen, um DDB zu starten, ist alles ein wenig komplizierter, sobald der Konsolen-Treiber selbst versagt. Sie erinnern sich vielleicht an die Benutzung einer seriellen Konsole (entweder durch Verändern des Boot-Blocks oder Eingabe von `-h` an der `Boot:`-Eingabeaufforderung) und das Anschließen eines Standard-Terminals an Ihren ersten seriellen Port. DDB funktioniert auf jedem konfigurierten Konsolen-Treiber, auch auf einer seriellen Konsole.
+
+[[kerneldebug-deadlocks]]
+== Fehlersuche bei Deadlocks
+
+Sie erleben vielleicht mal sogenannte Deadlocks, wobei ein System aufhört, nützliche Arbeit zu machen. Um in einer solchen Situation einen hilfreichen Fehlerbericht zu liefern, benutzen Sie man:ddb[4], wie oben beschrieben. Hängen Sie die Ausgabe von `ps` und `trace` für verdächtige Prozesse an den Bericht an.
+
+Falls möglich, versuchen Sie, weitere Untersuchungen anzustellen. Der Empfang der Ausgaben unten ist besonders dann nützlich, wenn Sie den Auslöser für die Blockade des Systems auf VFS-Ebene vermuten. Fügen Sie die folgenden Optionen 
+[.programlisting]
+....
+makeoptions		DEBUG=-g
+	options		INVARIANTS
+	options		INVARIANT_SUPPORT
+	options		WITNESS
+	options		DEBUG_LOCKS
+	options		DEBUG_VFS_LOCKS
+	options		DIAGNOSTIC
+....
+
+der Kernel-Konfigurationsdatei hinzu. Wenn die Blockade ausgelöst wird, stellen Sie, zusätzlich der Ausgabe vom `ps`-Befehl, die Informationen aus `show pcpu`, `show allpcpu`, `show locks`, `show alllocks`, `show lockedvnods` und `alltrace` bereit.
+
+Um aussagekräftige Zurückverfolgungen von in Threads aufgeteilten Prozesse zu erhalten, benutzen Sie `thread thread-id`, um zum Thread-Stack zu wechseln und eine Zurückverfolgung mit `where` anzustellen.
+
+[[kerneldebug-options]]
+== Glossar der Kernel-Optionen zur Fehlersuche
+
+Dieser Abschnitt bietet ein kurzes Glossar der zur Kompilierzeit verfügbaren Kernel-Optionen, die die Fehlersuche unterstützen:
+
+* `options KDB`: Kompiliert das Kernel-Debugger-Framework ein. Wird von `options DDB` und `options GDB` benötigt. Kein oder nur geringer Leistungs-Overhead. Standardmäßig wird bei einer Panic der Debugger gestartet, anstatt automatisch neu zu starten.
+* `options KDB_UNATTENDED`: Setzt den Standard des `debug.debugger_on_panic`-sysctl-Werts auf 0, welcher regelt, ob der Debugger bei einer Panic gestartet wird. Solange `options KDB` nicht in den Kernel einkompiliert ist, wird bei einer Panic automatisch neu gestartet; sobald es in den Kernel einkompiliert ist, wird standardmäßig der Debugger gestartet, solange `options KDB_UNATTENDED` nicht einkompiliert ist. Falls Sie den Kernel-Debugger in den Kernel einkompiliert lassen wollen, aber möchten, dass das System neu startet, wenn Sie nicht zur Stelle sind, um den Debugger zur Diagnose zu benutzen, wählen Sie diese Option.
+* `options KDB_TRACE`: Setzt den Standard des `debug.trace_on_panic`-sysctl-Werts auf 1, welcher regelt, ob der Debugger bei einer Panic automatisch eine Stack-Ablaufverfolgung ausgibt. Besonders wenn der Kernel mit `KDB_UNATTENDED` läuft, kann dies hilfreich sein, um grundlegende Informationen zur Fehlersuche auf der seriellen oder Firewire-Konsole zu erhalten, während immer noch zur Wiederherstellung neu gestartet wird.
+* `options DDB`: Kompiliert die Unterstützung für den Konsolen-Debugger DDB ein. Dieser interaktive Debugger läuft auf was auch immer die aktive Konsole des Systems auf niedrigster Ebene ist, dazu gehören die Video-, serielle und Firewire-Konsole. Er bietet grundlegende, eingebaute Möglichkeiten zur Fehlersuche wie zum Beispiel das Erstellen von Stack-Ablaufverfolgungen, das Auflisten von Prozessen und Threads, das Ablegen des Lock-, VM- und Dateisystemstatus und die Verwaltung des Kernel-Speichers. DDB benötigt keine Software, die auf einem zweiten System läuft, oder die Fähigkeit, einen Kernspeicherauszug oder Kernel-Symbole zur vollen Fehlersuche zu erzeugen und bietet detaillierte Fehlerdiagnose des Kernels zur Laufzeit. Viele Fehler können allein unter Benutzung der DDB-Ausgabe untersucht werden. Diese Option hängt von `options KDB` ab.
+* `options GDB`: Kompiliert die Unterstützung für den Debugger GDB ein, welcher von einem entfernten System aus über ein serielles Kabel oder Firewire agieren kann. Wenn der Debugger gestartet ist, kann GDB dazu verwendet werden, um Struktur-Inhalte einzusehen, Stack-Ablaufverfolgungen zu erzeugen, usw. Bei manchem Kernel-Status ist der Zugriff ungeschickter als mit DDB, welcher dazu in der Lage ist, nützliche Zusammenfassungen des Kernel-Status automatisch zu erstellen wie zum Beispiel das automatische Abgehen der Lock-Fehlersuche oder der Strukturen zur Kernel-Speicher-Verwaltung, und es wird ein zweites System benötigt. Auf der anderen Seite verbindet GDB Informationen aus den Kernel-Quellen mit vollständigen Symbolen zur Fehlersuche, erkennt komplette Datenstrukturdefinitionen, lokale Variablen und ist in Skripten einsetzbar. Diese Option hängt von `options KDB` ab, ist aber nicht zur Benutzung von GDB auf einem Kernel-Kernspeicherauszug nötig.
+* `options BREAK_TO_DEBUGGER`, `options ALT_BREAK_TO_DEBUGGER`: Erlaubt ein Abbruch- oder Alternativ-Signal auf der Konsole, um in den Debugger zu gelangen. Falls sich das System ohne eine Panic aufhängt, ist dies ein nützlicher Weg, um den Debugger zu erreichen. Aufgrund der aktuellen Verriegelung durch den Kernel ist ein Abbruch-Signal, das auf einer seriellen Konsole erzeugt wurde, deutlich vertrauenswürdiger beim Gelangen in den Debugger und wird allgemein empfohlen. Diese Option hat kaum oder keine Auswirkung auf den Durchsatz.
+* `options INVARIANTS`: Kompiliert eine große Anzahl an Aussageprüfungen und -tests (Assertion-Checks und -Tests) ein, welche ständig die Intaktheit der Kernel-Datenstrukturen und die Invarianten der Kernel-Algorithmen prüfen. Diese Tests können aufwendig sein und sind deswegen nicht von Anfang an einkompiliert, aber helfen nützliches "fail stop"-Verhalten, wobei bestimmte Gruppen nicht erwünschten Verhaltens den Debugger öffnen, bevor Beschädigungen an Kernel-Daten auftreten, bereitzustellen, welches es einfacher macht, diese auf Fehler hin zu untersuchen. Die Tests beinhalten Säubern von Speicher und use-after-free-Prüfungen, was eine der bedeutenderen Quellen von Overhead ist. Diese Option hängt von `options INVARIANT_SUPPORT` ab.
+* `options INVARIANT_SUPPORT`: Viele der in `options INVARIANTS` vorhandenen Tests benötigen veränderte Datenstrukturen und zusätzliche Kernel-Symbole, die festgelegt werden müssen.
+* `options WITNESS`: Diese Option aktiviert Verfolgung und Prüfung von Lock-Anforderungen zur Laufzeit und ist als Werkzeug für die Deadlock-Diagnose von unschätzbarem Wert. WITNESS pflegt ein Diagramm mit erworbenen Lock-Anträgen nach Typ geordnet und prüft bei jedem Erwerb nach Zyklen (implizit oder explizit). Falls ein Zyklus entdeckt wird, werden eine Warnung und eine Stack-Ablaufverfolgung erzeugt und als Hinweis, dass ein möglicher Deadlock gefunden wurde, auf der Konsole ausgegeben. WITNESS wird benötigt, um die DDB-Befehle `show locks`, `show witness` und `show alllocks` benutzen zu können. Diese Debug-Option hat einen bedeutenden Leistung-Overhead, welcher ein ein wenig durch Benutzung von `options WITNESS_SKIPSPIN` gemildert werden kann. Detaillierte Dokumentation kann in man:witness[4] gefunden werden.
+* `options WITNESS_SKIPSPIN`: Deaktiviert die Prüfung von Spinlock-Lock-Anforderungen mit WITNESS zur Laufzeit. Da Spinlocks am häufigsten im Scheduler angefordert werden und Scheduler-Ereignisse oft auftreten, kann diese Option Systeme, die mit WITNESS laufen, merklich beschleunigen. Diese Option hängt von `options WITNESS` ab.
+* `options WITNESS_KDB`: Setzt den Standard des `debug.witness.kdb`-sysctl-Werts auf 1, was bewirkt, dass WITNESS den Debugger aufruft, sobald eine Lock-Anforderungsverletzung vorliegt, anstatt einfach nur eine Warnung auszugeben. Diese Option hängt von `options WITNESS` ab.
+* `options SOCKBUF_DEBUG`: Führt umfassende Beschaffenheitsprüfungen in Socket-Puffern durch, was nützlich zur Fehlersuche bei Socket-Fehlern und Anzeichen für Ressourceblockaden (Race) in Protokollen und Gerätetreibern, die mit Sockets arbeiten, sein kann. Diese Option hat bedeutende Auswirkung auf die Netzwerkleistung und kann die Zeitverhältnisse bei gegenseitiger Ressourceblockade in Gerätetreibern ändern.
+* `options DEBUG_VFS_LOCKS`: Verfolgt Lock-Anforderungs-Einzelheiten bei lockmgr/vnode-Locks, was die Menge der Informationen, die von `show lockdevnods` in DDB angezeigt werden, vergrößert. Diese Option hat messbare Auswirkung auf die Leistung.
+* `options DEBUG_MEMGUARD`: Ein Ersatz für die Kernel-Speicher-Zuweisung durch man:malloc[9], die das VM-System benutzt, um Lese- und Schreibzugriffe auf zugewiesenen Speicher nach der Freigabe zu entdecken. Details können in man:memguard[9] gefunden werden. Diese Option hat bedeutende Auswirkung auf die Leistung, aber kann sehr nützlich bei der Fehlersuche sein, wenn Kernel-Speicher-Beschädigungen durch Fehler verursacht werden.
+* `options DIAGNOSTIC`: Aktiviert zusätzliche, aufwendigere Diagnosetests analog zu `options INVARIANTS`.

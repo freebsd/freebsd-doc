@@ -1,0 +1,331 @@
+---
+title: Hoofdstuk 18. Security Event Auditing
+part: Deel III. Systeembeheer
+prev: books/handbook/mac
+next: books/handbook/disks
+---
+
+[[audit]]
+= Security Event Auditing
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Inhoudsopgave
+:table-caption: Tabel
+:figure-caption: Afbeelding
+:example-caption: Voorbeeld
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 18
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/audit/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/audit/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/audit/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/nl/mailing-lists.adoc[]
+include::shared/nl/teams.adoc[]
+include::shared/nl/urls.adoc[]
+
+toc::[]
+
+[[audit-synopsis]]
+== Overzicht
+
+Het besturingssysteem FreeBSD heeft ondersteuning voor diepgaande beveiligingsauditing van evenementen. Evenement auditing maakt het mogelijk dat er diepgaande en configureerbare logging van een variateit aan beveiligings-gerelateerde systeem evenementen, waaronder logins, configuratie wijzigingen, bestands- en netwerk toegang. Deze log regels kunnen erg belangrijk zijn voor live systeem monitoring, intrusion detection en postmortem analyse. FreeBSD implementeert Sun(TM)'s gepubliceerde BSM API en bestandsformaat en is uitwisselbaar met zowel Sun(TM)'s Solaris(TM) als Apple(R)'s Mac OS(R) X audit implementaties.
+
+Dit hoofdstuk richt zich op de installatie en configuratie van evenement auditing. Het legt audit policies uit en geeft voorbeelden van audit configuraties.
+
+Na het lezen van dit hoofdstuk weet de lezer:
+
+* Wat evenement auditing is en hoe het werkt.
+* Hoe evenement auditing geconfigureerd kan worden voor FreeBSD voor gebruikers en processen.
+* Hoe de audittrail bekeken kan worden door gebruik te maken van de audit reduction en onderzoek programma's.
+
+Voordat verder gegaan wordt moet het volgende bekend zijn:
+
+* UNIX(R) en FreeBSD basishandelingen begrijpen (crossref:basics[basics,UNIX® beginselen]).
+* Bekend zijn met de basishandelingen van kernel configuratie/compilatie (crossref:kernelconfig[kernelconfig,De FreeBSD-kernel instellen]).
+* Bekend zijn met beveiliging en hoe dat relateert aan FreeBSD (crossref:security[security,Beveiliging]).
+
+[WARNING]
+====
+
+De audit-faciliteiten hebben enkele bekende beperkingen waaronder dat niet alle beveiligings-relevante systeemevenementen geaudit kunnen worden en dat sommige login-mechanismes, zoals X11-gebaseerde display managers en programma's van erde partijen geen (goede) ondersteuning bieden voor het auditen van login-sessies van gebruikers.
+
+De beveiligings evenement auditing faciliteit is in staat om erg gedetailleerde logs van systeem activiteiten op een druk systeem te genereren, trail bestands data kan erg groot worden wanneer er erg precieze details worden gevraagd, wat enkele gigabytes per week kan behalen in sommige configuraties. Beheerders moeten rekening houden met voldoende schijfruimte voor grote audit configuraties. Bijvoorbeeld het kan gewenst zijn om eigen bestandsysteem aan [.filename]#/var/audit# toe te wijzen zo dat andere bestandssystemen geen hinder ondervinden als het audit bestandssysteem onverhoopt vol raakt.
+====
+
+[[audit-inline-glossary]]
+== Sleutelwoorden in dit hoofdstuk
+
+Voordat dit hoofdstuk gelezen kan worden, moeten er een aantal audit gerelateerde termen uitgelegd worden:
+
+* _evenement_: Een auditbaar evenement is elk evenement dat gelogged kan worden door het audit subsysteem. Voorbeelden van beveiligings gerelateerde evenementen zijn het creëeren van een bestand, het opzetten van een netwerk verbinding, of van een gebruiker die aanlogt. Evenementen zijn ofwel "attributable" wat betekend dat ze getraceerd kunnen worden naar een geauthoriseerde gebruiker, of "non-attributable" voor situaties waarin dat niet mogelijk is. Voorbeelden van non-attributable evenementen zijn elk evenement dat gebeurd voordat authorisatie plaatsvind in het login proces, zoals bij foutieve inlog pogingen.
+* _class_: Evenement klassen zijn benoemde sets van gerelateerde evenementen en worden gebruikt in selectie expressies. Veel gebruikte klassen van evenementen zijn "bestands creatie" (fc), "exec" (ex) en "login_logout" (lo).
+* _record_: Een record is een audit log regel die het beveiligings evenement beschrijft. Records bevatten een record evenement type, informatie over het onderwerp (de gebruiker) welke de actie uitvoerd, de datum en de tijd, informatie over de objecten of argumenten, en een conditie die aangeeft of de actie geslaagd of mislukt is.
+* _trail_: Een audit trail, of log bestand bestaat uit een serie van audit records welke beveiligings evenementen beschrijft. Meestal lopen deze trails in chronologische orde, gebaseerd op de tijd dat het evenement optrad. Alleen geauthoriseerde processen mogen records toevoegen aan de audit trail.
+* _selection expression_: Een selectie expressie is een string welke een lijst bevat van prefixes en audit evenement klasse namen die overeenkomen met evenementen.
+* _preselection_: Het proces waarbij het systeem bepaald welke evenementen interessant zijn voor de beheerder, zodat wordt voorkomen dat er audit records worden gegenereerd voor evenementen die niet interessant zijn. De "preselection" configuratie gebruikt een serie van selectie expressies om te identificeren welke klassen van evenementen van toepassing zijn op gebruikers en globale instellingen voor zowel geauthoriseerde als ongeauthoriseerde processen.
+* _reduction_: Het proces waarbij records van bestaande audit trails worden geselecteerd voor bewaring, uitprinten of analyse. Ook is dit het proces waarbij ongewenste audit records worden verwijderd uit het audit trail. Door gebruik te maken van reduction kunnen beheerders policies implementeren die het bewaren van audit data verzorgen. Bijvoorbeeld gedetailleerde audit trails kunnen één maand bewaard worden maar erna worden trails gereduceerd zodat alleen login informatie bewaard worden voor archiverings redenen.
+
+[[audit-install]]
+== Installeren van audit ondersteuning.
+
+Ondersteuning in de gebruikersomgeving voor evenement auditing wordt geïnstalleerd als onderdeel van het basis FreeBSD besturingssysteem. Kernel-ondersteuning voor evenement-auditing wordt standaard meegenomen tijdens compilatie, maar moet expliciet in de kernel gecompileerd worden door de volgende regel toe te voegen aan het configuratiebestand van de kernel:
+
+[.programlisting]
+....
+options	AUDIT
+....
+
+Bouw en herinstalleer de kernel volgens het normale proces zoals beschreven in crossref:kernelconfig[kernelconfig,De FreeBSD-kernel instellen].
+
+Zodra een audit ondersteunende kernel is gebouwd en geïnstalleerd en deze is opgestart kan de audit daemon aangezet worden door de volgende regel aan man:rc.conf[5] toe te voegen:
+
+[.programlisting]
+....
+auditd_enable="YES"
+....
+
+Audit ondersteuning moet daarna aangezet worden door een herstart van het systeem of door het handmatig starten van de audit daemon:
+
+[.programlisting]
+....
+service auditd start
+....
+
+[[audit-config]]
+== Audit Configuratie
+
+Alle configuratie bestanden voor beveiligings audit kunnen worden gevonden in [.filename]#/etc/security#. De volgende bestanden moeten aanwezig zijn voor de audit daemon wordt gestart:
+
+* [.filename]#audit_class# - Bevat de definities van de audit klasses.
+* [.filename]#audit_control# - Controleert aspecten van het audit subsysteem, zoals de standaard audit klassen, minimale hoeveelheid diskruimte die moet overblijven op de audit log schijf, de maximale audit trail grootte, etc.
+* [.filename]#audit_event# - Tekst namen en beschrijvingen van systeem audit evenementen, evenals een lijst van klassen waarin elk evenement zich bevind.
+* [.filename]#audit_user# - Gebruiker specifieke audit benodigdheden welke gecombineerd worden met de globale standaarden tijdens het inloggen.
+* [.filename]#audit_warn# - Een bewerkbaar shell script gebruikt door de auditd applicatie welke waarschuwings berichten genereert in bijzondere situaties zoals wanneer de ruimte voor audit records te laagis of wanneer het audit trail bestand is geroteerd.
+
+[WARNING]
+====
+
+Audit configuratie bestanden moeten voorzichtig worden bewerkt en onderhouden, omdat fouten in de configuratie kunnen resulteren in het verkeerd loggen van evenementen.
+====
+
+=== Evenement selectie expressies
+
+Selectie expressies worden gebruikt op een aantal plaatsen in de audit configuratie om te bepalen welke evenementen er geaudit moeten worden. Expressies bevatten een lijst van evenement klassen welke gelijk zijn aan een prefix welke aangeeft of gelijke records geaccepteerd moeten worden of genegeerd en optioneel om aan te geven of de regel is bedoeld om succesvolle of mislukte operaties te matchen. Selectie expressies worden geevalueerd van links naar rechts en twee expressies worden gecombineerd door de één aan de ander toe te voegen.
+
+De volgende lijst bevat de standaard audit evenement klassen welke aanwezig zijn in het [.filename]#audit_class# bestand:
+
+* `all` - _all_ - Matched alle evenement klasses.
+* `ad` - _administrative_ - Administratieve acties welke uitgevoerd worden op het gehele systeem.
+* `ap` - _application_ - Applicatie gedefinieerde acties.
+* `cl` - _file close_ - Audit aanroepen naar de `close` systeem aanroep.
+* `ex` - _exec_ - Audit programma uitvoer. Het auditen van command line argumenten en omgevings variabelen wordt gecontroleerd via man:audit_control[5] door gebruik te maken van de `argv` en `envv` parameters in de `policy` setting.
+* `fa` - _file attribute access_ - Audit de toevoeging van object attributen zoals man:stat[1], man:pathconf[2] en gelijkwaardige evenementen.
+* `fc` - _file create_ - Audit evenementen waar een bestand wordt gecreëerd als resultaat.
+* `fd` - _file delete_ - Audit evenementen waarbij bestanden verwijderd worden.
+* `fm` - _file attribute modify_ - Audit evenementen waarbij bestandsattribuut wijzigingen plaatsvinden zoals bij man:chown[8], man:chflags[1], man:flock[2], etc.
+* `fr` - _file read_ - Audit evenementen waarbij data wordt gelezen, bestanden worden geopend voor lezen etc.
+* `fw` - _file write_ - Audit evenementen waarbij data wordt geschreven, bestanden worden geschreven of gewijzigd, etc.
+* `io` - _ioctl_ - Audit het gebruik van de man:ioctl[2] systeem aanroep.
+* `ip` - _ipc_ - Audit verschillende vormen van Inter-Process Communication, zoals POSIX pipes en System V IPC operaties.
+* `lo` - _login_logout_ - Audit man:login[1] en man:logout[1] evenementen die plaatsvinden op het systeem.
+* `na` - _non attributable_ - Audit non-attributable evenementen.
+* `no` - _invalid class_ - Matched geen enkel audit evenement.
+* `nt` - _network_ - Audit evenementen die gerelateerd zijn aan netwerk acties zoals man:connect[2] en man:accept[2].
+* `ot` - _other_ - Audit diverse evenementen.
+* `pc` - _process_ - Audit process operaties zoals man:exec[3] en man:exit[3]
+
+Deze audit evenement klassen kunnen veranderd worden door het wijzigingen van de [.filename]#audit_class# en [.filename]#audit_event# configuratie bestanden.
+
+Elke audit klasse in de lijst wordt gecombineerd met een voorzetsel welke aangeeft of er succesvolle of mislukte operaties hebben plaatsgevonden en of de regel wordt toegevoegd of verwijderd van het matchen van de klasse en het type.
+
+* (none) Audit zowel succesvolle als mislukte informatie van het evenement.
+* `+` Audit succesvolle evenementen in deze klasse.
+* `-` Audit mislukte evenementen in deze klasse.
+* `^` Audit geen enkele succesvolle of mislukte evenementen in deze klasse.
+* `^+` Audit geen succesvolle evenementen in deze klasse.
+* `^-` Audit geen mislukte evenementen in deze klasse.
+
+De volgende voorbeeld selectie strings selecteren zowel succesvolle als mislukte login/logout evenementen, maar alleen succesvolle uitvoer evenementen:
+
+[.programlisting]
+....
+lo,+ex
+....
+
+=== Configuratie bestanden
+
+In de meeste gevallen moet een beheerder twee bestanden wijzigingen wanneer het audit systeem wordt geconfigureerd: [.filename]#audit_control# en [.filename]#audit_user#. Het eerste controleert systeem brede audit eigenschappen en policies, het tweede kan gebruikt worden om diepgaande auditing per gebruiker uit te voeren.
+
+[[audit-auditcontrol]]
+==== Het [.filename]#audit_control# bestand
+
+Het [.filename]#audit_control# bestand specificeert een aantal standaarden van het audit subsysteem. Als de inhoud bekeken wordt van dit bestand is het volgende te zien:
+
+[.programlisting]
+....
+dir:/var/audit
+flags:lo
+minfree:20
+naflags:lo
+policy:cnt
+filesz:0
+....
+
+De `dir` optie wordt gebruikt om één of meerdere directories te specificeren die gebruikt worden voor de opslag van audit logs. Als er meer dan één directory wordt gespecificeerd, worden ze op volgorde gebruikt naarmate ze gevuld worden. Het is standaard dat audit geconfigureerd wordt dat audit logs worden bewaard op een eigen bestandssysteem, om te voorkomen dat het audit subsysteem en andere subsystemen met elkaar botsen als het bestandssysteem volraakt.
+
+Het `flags` veld stelt de systeem brede standaard preselection maskers voor attributable evenementen in. In het voorbeeld boven worden succesvolle en mislukte login en logout evenementen geaudit voor alle gebruikers.
+
+De `minfree` optie definieerd het minimale percentage aan vrije ruimte voor dit bestandssysteem waar de audit trails worden opgeslagen. Wanneer deze limiet wordt overschreven wordt er een waarschuwing gegenereerd. In het bovenstaande voorbeeld wordt de minimale vrije ruimte ingesteld op 20 procent.
+
+De `naflags` optie specificeerd audit klasses welke geaudit moeten worden voor non-attributed evenementen zoals het login proces en voor systeem daemons.
+
+De `policy` optie specificeert een komma gescheiden lijst van policy vlaggen welke diverse aspecten van het audit proces beheren. De standaard `cnt` vlag geeft aan dat het systeem moet blijven draaien ook al treden er audit fouten op (deze vlag wordt sterk aangeraden). Een andere veel gebruikte vlag is `argv`, wat het mogelijk maakt om command line argumenten aan de man:execve[2] systeem aanroep te auditen als onderdeel van het uitvoeren van commando's.
+
+De `filesz` optie specificeert de maximale grootte in bytes hoeveel een audit trail bestand mag groeien voordat het automatisch getermineerd en geroteerd wordt. De standaard, 0, schakelt automatische log rotatie uit. Als de gevraagde bestands grootte niet nul is en onder de minimale 512k zit, wordt de optie genegeerd en wordt er een log bericht gegenereerd.
+
+[[audit-audituser]]
+==== Het [.filename]#audit_user# bestand
+
+Het [.filename]#audit_user# bestand staat de beheerder toe om verdere audit benodigdheden te specificeren voor gebruikers. Elke regel configureert auditing voor een gebruiker via twee velden, het eerste is het `alwaysaudit` veld, welke een set van evenementen specificeert welke altijd moet worden geaudit voor de gebruiker, en de tweede is het `neveraudit` veld, welke een set van evenementen specificeerd die nooit geaudit moeten worden voor de gebruiker.
+
+Het volgende voorbeeld [.filename]#audit_user# bestand audit login/logout evenementen en succesvolle commando uitvoer voor de `root` gebruiker, en audit bestands creatie en succesvolle commando uitvoer voor de `www` gebruiker. Als dit gebruikt wordt in combinatie met het voorbeeld [.filename]#audit_control# bestand hierboven, is de `root` regel dubbelop en zullen login/logout evenementen ook worden geaudit voor de `www` gebruiker.
+
+[.programlisting]
+....
+root:lo,+ex:no
+www:fc,+ex:no
+....
+
+[[audit-administration]]
+== Het audit subsysteem beheren.
+
+=== Audit trails inzien
+
+Audit trails worden opgeslagen in het BSM binaire formaat, dus ondersteunende programma's moeten worden gebruikt om de informatie te wijzigen of converteren naar tekst. Het man:praudit[1] commando converteert trail bestanden naar een simpel tekst formaat; het man:auditreduce[1] commando kan gebruikt worden om de audit trail te reduceren voor analyse, archivering of voor het uitprinten van de data. `auditreduce` ondersteund een variateit aan selectie parameters, zoals evenement type, evenement klasse, gebruiker, datum of tijd van het evenement en het bestandspad of object dat gebruikt wordt.
+
+Bijvoorbeeld, het `praudit` programma zal een dump maken van de volledige inhoud van een gespecificeerd audit log bestand in normale tekst:
+
+[source,bash]
+....
+# praudit /var/audit/AUDITFILE
+....
+
+Waar [.filename]#AUDITFILE# het audit bestand is dat ingelezen moet worden.
+
+Audit trails bestaan uit een serie van audit records die gevormd worden door tokens, welke `praudit` sequentieel print één per regel. Elke token is van een specifiek type, zoals een `header` welke de audit record header bevat, of `path` welke het bestandspad bevat van een lookup. Het volgende is een voorbeeld van een `execve` evenement:
+
+[.programlisting]
+....
+header,133,10,execve(2),0,Mon Sep 25 15:58:03 2006, + 384 msec
+exec arg,finger,doug
+path,/usr/bin/finger
+attribute,555,root,wheel,90,24918,104944
+subject,robert,root,wheel,root,wheel,38439,38032,42086,128.232.9.100
+return,success,0
+trailer,133
+....
+
+Deze audit representeert een succesvolle `execve` aanroep, waarbij het commando `finger doug` is aangeroepen. Het argument token bevat beide commando's gerepresenteerd door de shell aan de kernel. Het `path` token bevat het pad naar het uitvoerbare bestand zoals opgezocht door de kernel. Het `attribute` token beschrijft de binary en om precies te zijn bevat het de bestands mode welke gebruikt kan worden om te zien of het bestand setuid was. Het `subject` token beschrijft het onderwerp proces en bevat sequentieel het audit gebruikers ID, effectieve gebruikers ID en groep ID, echte gebruikers ID, groep ID, proces ID, sessie ID, port ID en login adres. Let op dat het audit gebruikers ID en het echte gebruikers ID van elkaar verschillen omdat de gebruiker `robert` veranderd is naar de `root` gebruiker voordat het commando werd uitgevoerd, maar welke geaudit wordt als de originele geauthoriseerde gebruiker. Als laatste wordt de `return` token gebruikt om aan te geven dat er een succesvolle uitvoer is geweest en `trailer` geeft het einde aan van het record.
+
+`praudit` ook een XML output formaat, welke geselecteerd kan worden door gebruik te maken van het `x` argument.
+
+=== Het reduceren van audit trails
+
+Omdat audit logs erg groot kunnen worden, zal de beheerder waarschijnlijk een subset van records willen selecteren om te gebruiken, zoals records die gekoppeld zijn aan een specifieke gebruiker:
+
+[source,bash]
+....
+# auditreduce -u trhodes /var/audit/AUDITFILE | praudit
+....
+
+Dit selecteert alle audit records die geproduceert zijn voor de gebruiker `trhodes` die opgeslagen is in het [.filename]#AUDITFILE# bestand.
+
+=== Delegeren van audit onderzoek rechten
+
+Leden van de `audit` groep krijgen permissie om de audit trails te lezen in [.filename]#/var/audit#; standaard is deze groep leeg en kan alleen de `root` gebruiker deze audit trails lezen. Gebruikers kunnen toegevoegd worden aan de `audit` groep zodat onderzoek rechten kunnen worden gedelegeerd aan de geruiker. Omdat de mogelijkheid van het inzien van audit log inhoud significante inzicht kan geven in het gedrag van gebruikers en processen, wordt het aangeraden dat de delagatie van onderzoek rechten eerst goed overdacht wordt.
+
+=== Live monitoren door gebruik van audit pipes
+
+Audit pipes zijn gecloonde pseudo-devices in het device bestands systeem, welke applicaties toestaat om een tap te plaatsen in de live audit record stream. Dit is primair interessant voor schrijvers van intrusion detection en systeem monitoring applicaties. Echter, voor een beheerder is het audit pipe device een makkelijke manier om live monitoring toe te staan zonder dat er problemen kunnen ontstaan met het eigenaarschap van het audit trail bestand, of dat een log rotatie de evenementen stroom in de weg zit. Om de live audit evenementen stroom te kunnen inzien is het volgende commando benodigd:
+
+[source,bash]
+....
+# praudit /dev/auditpipe
+....
+
+Standaard zijn de audit pipe device nodes alleen toegankelijk voor de `root` gebruiker. Om deze toegankelijk te maken voor leden van de `audit` groep, moet een `devfs` regel toegevoegd worden aan het [.filename]#devfs.rules# bestand:
+
+[.programlisting]
+....
+add path 'auditpipe*' mode 0440 group audit
+....
+
+Zie man:devfs.rules[5] voor meer informatie over het configureren van het devfs bestands systeem.
+
+[WARNING]
+====
+
+Het is makkelijk om audit evenement terugkoppeling cyclussen te creëeren, waarbij het tonen van elk audit evenement resulteert in het genereren van nog meer audit evenementen. Bijvoorbeeld, als alle netwerk I/O wordt geaudit en man:praudit[1] wordt gestart vanuit een SSH sessie, wordt er een grote continue stroom aan audit evenementen gegenereert doordat elk getoond evenement een nieuw evenement genereert. Het is verstandig om `praudit` te draaien op een audit pipe device voor sessies zonder diepgaande I/O auditing om te voorkomen dat dit gebeurd.
+====
+
+=== Het roteren van audit trail bestanden
+
+Audit trails worden alleen beschreven door de kernel en alleen beheerd worden door de audit daemon, auditd. Beheerders mogen geen gebruik maken van man:newsyslog.conf[5] of soortgelijke programma's om de audit files te roteren. In plaats daarvan kan het `audit` management programma gebruikt worden om auditing te stoppen, het audit systeem te herconfigureren en log rotatie uit te voeren. Het volgende commando zorgt ervoor dat de audit daemon een nieuwe audit log maakt, en vervolgens de kernel een signaal stuurt om het nieuwe logbestand te gaan gebruiken. Het oude logbestand wordt getermineerd en hernoemd, waarna het bestand gemanipuleerd kan worden door de beheerder.
+
+[source,bash]
+....
+# audit -n
+....
+
+[WARNING]
+====
+
+Als de auditd daemon op dit moment niet actief is, zal het commando falen en zal er een error bericht worden geproduceerd.
+====
+
+Als de volgende regel wordt toegevoegd aan het [.filename]#/etc/crontab# bestand, zal er elke twaalf uur een rotatie plaatsvinden door middel van man:cron[8]:
+
+[.programlisting]
+....
+0     */12       *       *       *       root    /usr/sbin/audit -n
+....
+
+Deze wijziging wordt van kracht op het moment dat het nieuwe [.filename]#/etc/crontab# bestand wordt opgeslagen.
+
+Automatische rotatie van het audit trail bestand gebaseerd op de bestand grootte is mogelijk via de `filesz` optie in man:audit_control[5] en wordt beschreven in de configuratie bestanden sectie van dit hoofdstuk.
+
+=== Audit trails comprimeren
+
+Omdat audit trail bestanden erg groot kunnen worden, is het meestal gewenst om de trails te comprimeren of op een andere manier te archiveren zodra ze afgesloten zijn door de audit daemon. Het [.filename]#audit_warn# script kan gebruikt worden om bewerkte operaties te doen voor een variateit aan audit gerelateerde evenementen inclusief een nette terminatie van audit trails wanneer deze geroteerd worden. Bijvoorbeeld het volgende kan worden toegevoegd aan het [.filename]#audit_warn# script, dat de audit trails comprimeert zodra ze afgesloten worden:
+
+[.programlisting]
+....
+#
+# Compress audit trail files on close.
+#
+if [ "$1" = closefile ]; then
+        gzip -9 $2
+fi
+....
+
+Andere archiverings activiteiten kunnen zijn het kopieren van trail bestanden naar een gecentraliseerde server, het verwijderen van oude trail bestanden of het reduceren van de audit trail om onnodige records te verwijderen. Het script zal alleen draaien als audit trail bestanden netjes worden afgesloten, wat betekend dat het script niet uitgevoerd wordt op trails die niet netjes afgesloten zijn, waardoor bestanden corrupt kunnen raken.

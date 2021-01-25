@@ -1,0 +1,1160 @@
+---
+title: 28. Fejezet - Elektronikus levelezés
+part: IV. Rész Hálózati kommunikáció
+prev: books/handbook/ppp-and-slip
+next: books/handbook/network-servers
+---
+
+[[mail]]
+= Elektronikus levelezés
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 28
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../../images/books/handbook/mail/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/mail/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/mail/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[mail-synopsis]]
+== Áttekintés
+
+Az "elektronikus levelezés", más néven e-mail, a kommunikáció egyik legjobban elterjedt formája. Ebben a fejezetben bemutatjuk, hogyan futtassunk FreeBSD-n levelezõ szervert, illetve hogyan küldjünk és fogadjunk e-maileket a FreeBSD használatával. Ez azonban semmiképpen sem tekinthetõ egy teljes referenciának és tulajdonképpen számos fontos tényezõrõl szót sem ejtünk. A témára úgy kaphatunk egy sokkal átfogóbb rálátást, ha a crossref:bibliography[bibliography,Irodalomjegyzék]ben felsorolt remek könyveket is elolvassuk.
+
+A fejezet elolvasása során megismerjük:
+
+* milyen szoftverkomponensek játszanak szerepet az elektronikus levelek küldésében és fogadásában;
+* FreeBSD-ben hol találhatóak a sendmail konfigurációs állományai;
+* mi a különbség a helyi és távoli postaládák között;
+* hogyan akadályozzuk meg, hogy a levelezõ szerverünk a kéretlen levélszemetet továbbítson;
+* rendszerünkön hogyan telepítsünk és állítsunk be más levelezõ szervereket a sendmail helyett;
+* hogyan oldjuk meg a levelezõ szerverekkel kapcsolatban felmerülõ általános problémákat;
+* hogyan használjuk az SMTP protokollt az UUCP protokollal;
+* hogyan kell rendszerüket csak levélküldésre beállítani;
+* hogyan levelezzünk betárcsázós kapcsolattal;
+* hogyan növeljük rendszerünk védelmét az SMTP hitelesítésének engedélyezésével;
+* hogyan telepítsünk és használjunk a levelek küldésére és fogadására például a mutthoz hasonló levelezõ klienseket;
+* hogyan töltsük le leveleinket egy távoli POP vagy IMAP szerverrõl;
+* hogyan alkalmazzunk automatikusan adott szabályokat vagy szûrõket az érkezõ levelekre.
+
+A fejezet elolvasása elõtt ajánlott:
+
+* az internet-csatlakozásunk megfelelõ beállítása (crossref:advanced-networking[advanced-networking,Egyéb haladó hálózati témák]);
+* a névfeloldás beállítása (crossref:network-servers[network-servers,Hálózati szerverek]);
+* a külsõ fejlesztésû alkalmazások telepítésének ismerete (crossref:ports[ports,Alkalmazások telepítése. csomagok és portok]).
+
+[[mail-using]]
+== Az elektronikus levelezés használata
+
+Öt fontosabb részre bonthatjuk a levelezést. Ezek: <<mail-mua,a felhasználói program (mail user agent)>>, <<mail-mta,a levélküldõ démon (mail transfer agent)>>, <<mail-dns,a névfeloldás>>, <<mail-receive,a helyi vagy távoli postaláda>> és természetesen <<mail-host,maga a levelezõ szerver (mail host)>>.
+
+[[mail-mua]]
+=== A felhasználói program
+
+Ide soroljuk a különbözõ parancssoros programokat, mint például a mutt, pine, elm és `mail`, valamint a különféle grafikus alkalmazásokat, mint például a balsa és az xfmail, csak hogy felsoroljuk néhány újabb, egy webböngészõhöz hasonlóan "kifinomult" eszközt is. Ezek a programok egyszerûen átküldik az elektronikus levelekkel kapcsolatos tranzakciókat a helyi <<mail-host,"levelezõ szervernek">> vagy meghívják valamelyik <<mail-mta,levélküldõ démont>>, esetleg közvetlenül a TCP protokollon keresztül kézbesítenek.
+
+[[mail-mta]]
+=== A levélküldõ démon
+
+A FreeBSD alapból a sendmail nevû programot ajánlja fel erre a célra, de támogat más levelezõ szervereket is, ezek közül meg is említünk néhányat ízelítõként:
+
+* exim
+* postfix
+* qmail
+
+Ez a démon általában két feladatot lát el - a beérkezõ levelek fogadásáért és a kimenõ levelek elküldéséért felelõs. _Nem_ tartozik azonban a feladatai közé, hogy a POP vagy IMAP protokollokhoz hasonlóan olvashatóvá tegye a leveleinket, illetve csatlakozni engedjen a helyi [.filename]#mbox# vagy Maildir formátumú postaládáinkhoz. Ezekhez a mûveletekhez egy külön <<mail-receive,démon>> szükségeltetik.
+
+[WARNING]
+====
+
+A sendmail régebbi változatai tartalmaznak olyan komoly biztonsági hibákat, amelyek kihasználásával az illetéktelen behatolók helyi és/vagy távoli hozzáférést tudnak szerezni a gépünkön. Az ilyen jellegû problémák elkerülése érdekében igyekezzünk mindig a legfrissebb verzióját használni. Vagy a crossref:ports[ports,FreeBSD Portgyûjteményébõl] telepítsünk fel egy másik levélküldõ démont.
+====
+
+[[mail-dns]]
+=== Az elektronikus levelek és a névfeloldás
+
+A névfeloldás (Domain Name System, DNS) és a hozzá tartozó `named` démon nagy szerepet játszik az elektronikus levelek továbbításában. A démon a leveleket úgy küldi át az egyik géprõl a másikra, hogy a névfeloldáson keresztül megkeresi azt a távoli gépet, amelynek a leveleket címezték. Ez a folyamat szintén végbemegy, amikor egy távoli géprõl levelet küldenek a mi szerverünkre.
+
+A DNS valósítja meg a hálózati nevek és az IP-címek összerendelését valamint ez tárolja el a levélküldésre vonatkozó információkat is, amelyeket MX rekordoknak hívnak. Az MX (Mail eXchanger, "levélváltó") rekord adja meg azt a gépet vagy azokat a gépeket, amelyek az adott névtartományban fogadják a leveleket. Ha a hálózati nevünkhöz vagy tartományunkhoz nem tartozik MX rekord, akkor a levél közvetlenül a gépünkre vándorol feltéve, hogy rendelkezik olyan A rekorddal, amely összerendeli a gépünk nevét az IP-címével.
+
+A man:host[1] parancs használatával az alábbi példához hasonlóan tetszõleges tartomány MX rekordját meg tudjuk nézni:
+
+[source,bash]
+....
+% host -t mx
+FreeBSD.org FreeBSD.org mail is handled (pri=10) by
+mx1.FreeBSD.org
+....
+
+[[mail-receive]]
+=== Az elektronikus levelek fogadása
+
+A tartományunkhoz tartozó leveleket fogadását a levelezõ szerver végzi. Összegyûjti a tartományunkba küldött összes levelet és ezeket a beállításainktól függõen vagy [.filename]#mbox# (a levelek tárolásának alapértelmezett módja) vagy pedig Maildir formátumban eltárolja. Ahogy eltárolt egy levelet, úgy helyben egybõl el is tudjuk olvasni például a man:mail[1] vagy a mutt használatával, illetve távolról a POP vagy IMAP és a hasonló protokollokkal tudjuk elérni és begyûjteni. Ezért tehát ha csak a helyi gépen kívánjuk olvasni a leveleinket, akkor ahhoz egyáltalán nem kell POP vagy IMAP szervert telepítenünk.
+
+[[pop-and-imap]]
+==== Távoli postaládák elérése a POP és IMAP használatával
+
+A távoli postaládák eléréséhez tudnunk kell csatlakozni egy POP vagy IMAP szerverhez. Ezeken a protokollokon keresztül tudják a felhasználók minden különösebb nehézség nélkül elérni távolról a helyi postaládáikat. Noha a POP és az IMAP segítségével egyaránt el tudjuk így érni a postaládákat, az IMAP használatának mégis több elõnye van, íme néhány közülük:
+
+* Az IMAP a levelek leszedése mellett tárolni is képes a távoli szerveren.
+* Az IMAP támogat párhuzamos lekéréseket.
+* Az IMAP hihetetlenül hasznos tud lenni lassabb összeköttetések esetében, mivel lehetõvé teszi a felhasználók számára, hogy csak az üzenetek vázát töltsék le és ne az egészet. Továbbá a szerver és a kliens közti adatmozgás csökkentése érdekében képes bizonyos feladatokat a szerveren elvégezni, például keresni.
+
+Egy POP vagy IMAP szerver telepítéséhez az alábbi lépések megtétele szükséges:
+
+[.procedure]
+====
+. Válasszuk ki az igényeinket legjobban kielégítõ IMAP vagy POP szervert. A következõ POP és IMAP szerverek eléggé elterjedtek és egyben remek példák:
++
+** qpopper
+** teapop
+** imap-uw
+** courier-imap
++
+. A Portgyûjteménybõl telepítsük fel a kiválasztott POP vagy IMAP démont.
+. Ha szükséges, akkor a POP vagy IMAP szerver betöltéséhez írjuk át az [.filename]#/etc/inetd.conf# állományt.
+====
+
+[WARNING]
+====
+
+Meg kell említenünk, hogy mind a POP és az IMAP az összes információt, tehát belértve a felhasználók neveit és jelszavait titkosítatlan formában továbbítja. Ez azt jelenti, hogy ha ezeket a protokollokat biztonságos módon szeretnénk elérni, akkor az man:ssh[1] használatával hozzunk létre hozzá egy tunnelt és azon keresztül használjuk. Errõl részletesebben a crossref:security[security-ssh-tunneling,Tunnelezés SSH-val]ban olvashatunk.
+====
+
+[[local]]
+==== A helyi postaládák elérése
+
+A helyi postaládákat a szerveren levõ levelezõ kliensek közvetlen használatával érhetjük el. Ilyen alkalmazások például a mutt vagy a man:mail[1].
+
+[[mail-host]]
+=== A levelezõ szerver
+
+A levelezõ szerver az a szerver, amely a gépünk vagy akár az egész hálózatunk irányába érkezõ levelek fogadásáért és elküldéséért felelõs.
+
+[[sendmail]]
+== A sendmail beállítása
+
+A man:sendmail[8] a FreeBSD alapértelmezett levéltovábbító ügynöke (Mail Transfer Agent, MTA). A sendmail feladata fogadni a levelezõ kliensektõl (Mail User Agent, MUA) érkezõ leveleket és kézbesíteni azokat a konfigurációs állományában megadott megfelelõ levelezõnek. A sendmail hálózati kapcsolatokat is fogad, képes a helyi postaládákba vagy akár más programoknak is leveleket továbbítani.
+
+A sendmail a következõ állományban tárolja beállításait:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Állomány
+| Szerep
+
+|[.filename]#/etc/mail/access#
+|A sendmail által engedélyezett hozzáféréseket tároló adatbázis
+
+|[.filename]#/etc/mail/aliases#
+|A postaládák álnevei
+
+|[.filename]#/etc/mail/local-host-names#
+|Azon nevek felsorolása, amelyek számára a sendmail leveleket fogad
+
+|[.filename]#/etc/mail/mailer.conf#
+|A levelezõ programok beállításai
+
+|[.filename]#/etc/mail/mailertable#
+|A levelezõ programok kézbesítési táblázata
+
+|[.filename]#/etc/mail/sendmail.cf#
+|A sendmail központi beállításait tároló állomány
+
+|[.filename]#/etc/mail/virtusertable#
+|Virtuális felhasználók és tartományok táblázatai
+|===
+
+=== [.filename]#/etc/mail/access#
+
+Az engedélyezett hozzáféréseket tároló adatbázis tartalmazza milyen hálózati neveken vagy IP-címeken lehet elérni a helyi levelezõ szervert és azok milyen típusú hozzáférést kapnak. A gépek az `OK` (rendben), `REJECT` (visszautasít), `RELAY` (továbbítás) beállításokat alkalmazhatjuk, vagy egyszerûen meghívhatjuk hozzájuk a sendmail hibakezelõ rutinját egy adott kézbesítési hibával. Ha egy gépet az `OK` beállítással veszük fel a listára, ami egyébként alapértelmezés, akkor ez a gép levelet tud küldeni egészen addig, amíg a végsõ cél a helyi gép marad. A `REJECT` beállítással felsorolt gépek számára semmiféle levelezés nem engedélyezett. Ha pedig egy gép mellett a `RELAY` beállítás jelenik meg, akkor a szerveren keresztül tetszõleges címre küldhet.
+
+.A sendmail elérését szabályozó adatbázis beállítása
+[example]
+====
+[.programlisting]
+....
+cyberspammer.com                550 Nem szeretjuk a spammereket
+FREE.STEALTH.MAILER@            550 Nem szeretjuk a spammereket
+another.source.of.spam          REJECT
+okay.cyberspammer.com           OK
+128.32                          RELAY
+....
+
+====
+
+Ebben a példában öt bejegyzést láthatunk. A táblázat bal felének valamelyik sorára illeszkedõ küldõkre a táblázatban a sor jobb felén megjelenõ cselekvés érvényesül. Az elsõ két sorban a sendmail hibakezelõ rutinjának adunk át hibakódokat. A hozzá tartozó üzenet akkor fog megjelenni a távoli gépen, amikor a tõle érkezõ levél illeszkedik a bal oldali szabályra. Az ezeket követõ bejegyzésben visszalökünk minden olyan levelet, amely az internetrõl egy adott számítógéptõl érkezik, például az `another.source.of.spam` címrõl. A következõ bejegyzésben az `okay.cyberspammer.com` címrõl elfogadjuk a kapcsolódást, ami viszont sokkal pontosabb megjelölés a fentebb szereplõ `cyberspammer.com` sornál. A pontosabban kifejtett nevek felülbírálják a kevésbé pontosan megnevezetteket. Végül az utolsó bejegyzésben engedélyezzük a levelek továbbküldését minden olyan gép számára, amelynek címe a `128.32` elõtaggal kezdõdik. Ezek tehát képesek ezen a levelezõ szerveren keresztül bárhova leveleket küldeni.
+
+Az állomány módosítása után az adatbázis frissítéséhez mindig le kell futtatnunk egy `make` parancsot az [.filename]#/etc/mail/# könyvtárban.
+
+=== [.filename]#/etc/mail/aliases#
+
+Az álneveket tartalmazó adatbázis virtuális postaládákat sorol fel, amelyek más felhasználókra, állományokra, programokra vagy további álnevekre vonatkozhatnak. Íme néhány példa az [.filename]#/etc/mail/aliases# állományban szereplõ bejegyzésekre:
+
+.Virtuális postaládák
+[example]
+====
+[.programlisting]
+....
+root: localuser
+ftp-bugs: joe,eric,paul
+bit.bucket:  /dev/null
+procmail: "|/usr/local/bin/procmail"
+....
+
+====
+
+A formai szabályok egyszerûek: a kettõspont bal oldalára kell írni azt a postaládát, amely a jobb oldalán levõ célokra bomlik. A példa elsõ sorában egyszerûen megfeleltetjük a `root` postaládáját a `localuser` postaládájának, majd ezt a nevet keressük az álnevek adatbázisában. Ha nem találunk már rá illeszkedést, akkor az üzenetet a `localuser` nevû helyi felhasználónak továbbítjuk. A következõ sorban címek listáját láthatjuk. Ennek megfelelõen a `ftp-bugs` postaláda címére küldött levelek három további helyi postaládára mennek tovább: ezek név szerint a `joe`, `eric` és `paul` felhasználók postaládái. Itt a távoli postaládák mailto:felhasználó@példa.hu[felhasználó@példa.hu] alakban adhatóak meg. A következõ sor az állományok használatát példázza, ahol konkrétan a [.filename]#/dev/null# állományba irányítjuk át az adott címre érkezõ leveleket. Az utolsó sorban pedig a programok használatára láthatunk példát, ahol ebben az esetben a levél egy UNIX(R)-os csövön keresztül a [.filename]#/usr/local/bin/procmail# szabványos bemenetére kerül.
+
+Ha megváltoztatjuk ezt az állományt, akkor utána az adatbázis frissítéséhez ne felejtsük el meghívni a `make` parancsot az [.filename]#/etc/mail/# könyvtárban.
+
+=== [.filename]#/etc/mail/local-host-names#
+
+Ebben az állományban adhatjuk meg, hogy a man:sendmail[8] milyen hálózati neveket fogadjon el helyi hálózati névként. Ide kell raknunk azokat a tartományokat vagy címeket, amelyektõl a sendmail leveleket fogad el. Például, ha a levelezõ szerver az `minta.com` tartományból és a `level.minta.com` címrõl fogad el leveleket, akkor a [.filename]#local-host-names# valahogy így fog kinézni:
+
+[.programlisting]
+....
+minta.com
+level.minta.com
+....
+
+Az állomány módosításakor a man:sendmail[8] programot újra kell indítani a változások érvényesítéséhez.
+
+=== [.filename]#/etc/mail/sendmail.cf#
+
+Ahogy a sendmail központi konfigurációs állománya, a [.filename]#sendmail.cf# irányítja a sendmail átfogó viselkedését, beleértve mindent az e-mail címek átírásától kezdve a távoli szervereknek küldött elutasító üzenetek küldéséig. Mivel ennyire sokfajta szerepet tölt be egyszerre, ezért ez a konfigurációs állomány meglehetõsen összetett és a részletezése meghaladná ennek a leírásnak a határait. Szerencsére az átlagos levelezõ szerverek esetében ezt az állományt nagyon ritkán kell módosítani.
+
+A sendmail központi konfigurációs állománya a sendmail lehetõségeit és viselkedését meghatározó man:m4[1] makrókból építhetõ fel. A pontosabb részleteket a [.filename]#/usr/src/contrib/sendmail/cf/README# állományban találjuk meg.
+
+Az állomány megváltoztatása után a módosítások érvényesítéséhez újra kell indítani a sendmail programot.
+
+=== [.filename]#/etc/mail/virtusertable#
+
+A [.filename]#virtusertable# állomány képezi le a virtuális tartományokhoz tartozó címeket valódi postaládák címeire. Ezek a postaládák lehetnek helyiek, távoliak, az [.filename]#/etc/mail/aliases# állományban megadott álnevek vagy állományok.
+
+.Példa a virtuális tartományok leképezésére
+[example]
+====
+[.programlisting]
+....
+root@minta.com                root
+postmaster@minta.com          postmaster@noc.minta.net
+@minta.com                    joe
+....
+
+====
+
+A fenti példában megadtunk egy leképezést a `minta.com` tartományhoz. Ez az állomány úgy dolgozódik fel, hogy fentrõl lefelé illesztõdnek a címek, egészen az elsõ egyezésig. Az elsõ bejegyzés szerint a mailto:root@minta.com[root@minta.com] a helyi `root` felhasználó postaládájára képzõdik le. A következõ bejegyzés szerint a mailto:postmaster@minta.com[postmaster@minta.com] a `noc.minta.net` címen található `postmaster` nevû felhasználó postaládájára képzõdik le. Végezetül, ha a `minta.com` címrõl eddig még semmi sem illeszkedett volna, akkor az utolsó leképezés veszi át, amely az `minta.com` tartományon belül az összes többi címre küldött levelet a helyi `joe` nevû felhasználó postaládájára képezi le.
+
+[[mail-changingmta]]
+== A levéltovábbító ügynök megváltoztatása
+
+Ahogy arról már korábban szó esett, a FreeBSD alapból tartalmazza a sendmail programot mint levéltovábbító ügynököt (MTA, Mail Transfer Agent). Ennélfogva alapértelmezés szerint ez a felelõs a kimenõ és beérkezõ levelek kezeléséért.
+
+Számtalan okból eredõen egyes rendszergazdák azonban mégis szeretnék lecserélni a rendszerükhöz tartozó levéltovábbítót. Ennek oka lehet egyszerûen csak annyi, hogy ki akarunk próbálni egy másik programot vagy éppen egy olyan eszközre van szükségünk, amely kizárólag csak máshol található meg. Szerencsére a FreeBSD megkönnyíti ezt a váltást.
+
+=== Az új levéltovábbító telepítése
+
+A levéltovábbítók széles köre elérhetõ. A crossref:ports[ports,FreeBSD Portgyûjteményébõl] elindulva sok ilyen programot találhatunk. Természetesen teljesen mindegy, hogy melyik levéltovábbítót választjuk egészen addig, amíg képesek vagyunk FreeBSD alatt rendesen futtatni.
+
+Kezdjük tehát az új levéltovábbító telepítésével. Miután sikerült telepíteni, lehetõségünk van eldönteni, hogy valóban eleget tesz-e az igényeinknek, sõt az új szoftvert még az elõtt be tudjuk állítani, hogy átvenné a sendmail helyét. Vigyázzunk azonban, hogy az új szoftver telepítésekor ne írjon felül olyan rendszerszintû binárisokat, mint például a [.filename]#/usr/bin/sendmail#. Másrészt az új levelezõ szoftvert szolgálatba helyezése elõtt mindenképpen fontos megfelelõen beállítanunk.
+
+A kiválasztott levéltovábbító beállításával kapcsolatban olvassuk el a hozzá tartozó dokumentációt.
+
+[[mail-disable-sendmail]]
+=== A sendmail letiltása
+
+[WARNING]
+====
+
+Amikor letiltjuk a sendmail kimenõ levél szolgáltatását, soha ne felejtsük el pótolni valamilyen más levelezõ rendszerrel. Ha nem így cselekszünk, akkor például a man:periodic[8] és a hozzá hasonló programok nem lesznek képesek a tõlük megszokott módon e-mailben elküldeni a futásuk eredményét. A rendszer bizonyos részei ráadásul egy mûködõ, sendmail-kompatibilis rendszert feltételeznek. Ha letiltása után az alkalmazások továbbra is a sendmail segítségével próbálnak levelet küldeni, akkor ez a levél a sendmail inaktív sorába kerülhet, ahonnan soha nem kerül kézbesítésre.
+====
+
+A sendmail teljes leállításához, beleértve a kimenõ levelekhez tartozó szolgáltatást is, a következõket kell megadni az [.filename]#/etc/rc.conf# állományban:
+
+[.programlisting]
+....
+sendmail_enable="NO"
+sendmail_submit_enable="NO"
+sendmail_outbound_enable="NO"
+sendmail_msp_queue_enable="NO"
+....
+
+Ha csak a sendmail beérkezõ levelekre vonatkozó szolgáltatását akarjuk tiltani, akkor ahhoz az [.filename]#/etc/rc.conf# állományban a következõt állítsuk be:
+
+[.programlisting]
+....
+sendmail_enable="NO"
+....
+
+A sendmail indításával kapcsolatos további beállításokat az man:rc.sendmail[8] man oldalon találjuk.
+
+=== Az új levéltovábbító elindítása a rendszerrel együtt
+
+Az új levéltovábbítót úgy tudjuk elindítani a rendszerrel együtt, ha az [.filename]#/etc/rc.conf# állományba felvesszük a következõ sort, például a postfix esetében:
+
+[source,bash]
+....
+# echo 'postfix_enable="YES"' >> /etc/rc.conf
+....
+
+Az új levéltovábbító így most már magától el fog indulni a rendszer indításakor.
+
+=== A sendmail mint a rendszer alapértelmezett levelezõ eszközének lecserélése
+
+A sendmail annyira elterjedt szabványos szoftver a UNIX(R) rendszereken, hogy egyes szoftverek egyszerûen feltételezik a jelenlétét. Emiatt sok levéltovábbítóhoz tartozik egy sendmail kompatibilis parancssoros felület is, amellyel igyekeznek megkönnyíteni a sendmail"gyors" lecserélését.
+
+Ennek következtében tehát, ha egy másik levelezõ eszközt használunk, akkor valamilyen módon meg kell bizonyosodnunk róla, hogy a szabványos sendmail binárisok, mint például a [.filename]#/usr/bin/sendmail#, valóban a kiválasztott levéltovábbítot fogják aktiválni. Szerencsére a FreeBSD pontosan emiatt tartalmaz egy man:mailwrapper[8] nevû rendszert.
+
+Amikor a sendmail telepítése szerint mûködik, valami hasonlót fogunk találni az [.filename]#/etc/mail/mailer.conf# állományban:
+
+[.programlisting]
+....
+sendmail	/usr/libexec/sendmail/sendmail
+send-mail	/usr/libexec/sendmail/sendmail
+mailq		/usr/libexec/sendmail/sendmail
+newaliases	/usr/libexec/sendmail/sendmail
+hoststat	/usr/libexec/sendmail/sendmail
+purgestat	/usr/libexec/sendmail/sendmail
+....
+
+Ez azt jelenti, hogy amikor az itt felsorolt általános parancsok közül lefuttatjuk valamelyiket (például magát a [.filename]#sendmail# parancsot), akkor a rendszer magától meghívja a [.filename]#sendmail# néven szereplõ wrapper programot, amely pedig a [.filename]#mailer.conf# alapján kideríti, hogy az adott esetben a [.filename]#/usr/libexec/sendmail/sendmail# hívására van szükség. Ez a rendszer megkönnyíti az alapértelmezett [.filename]#sendmail# funkciók helyében lefuttatandó binárisok átállítását.
+
+Így tehát, ha a [.filename]#/usr/local/supermailer/bin/sendmail-compat# állományt akarjuk futtatni a megszokott sendmail helyében, akkor az [.filename]#/etc/mail/mailer.conf# állományt a következõképpen kell módosítanunk:
+
+[.programlisting]
+....
+sendmail	/usr/local/kedvenclevelezõ/bin/sendmail-compat
+send-mail	/usr/local/kedvenclevelezõ/bin/sendmail-compat
+mailq		/usr/local/kedvenclevelezõ/bin/mailq-compat
+newaliases	/usr/local/kedvenclevelezõ/bin/newaliases-compat
+hoststat	/usr/local/kedvenclevelezõ/bin/hoststat-compat
+purgestat	/usr/local/kedvenclevelezõ/bin/purgestat-compat
+....
+
+=== A mûvelet befejezése
+
+Ahogy a céljainknak megfelelõen mindent beállítottunk, akkor vagy egyszerûen leállítjuk a sendmail neve alatt futó programokat és helyettük elindítjuk az új szoftverhez tartozókat, vagy csak újraindítjuk a gépet. Az újraindítással mellesleg ellenõrizhetjük azt is, hogy jól állítottuk be a rendszerünket és az új levélküldõ tényleg elindul a rendszerünkkel együtt.
+
+[[mail-trouble]]
+== A hibák elhárítása
+
+=== Miért kell teljes hálózati neveket megadni a gépemen?
+
+Elõfordulhat, hogy a hivatkozni kívánt gép valójában egy másik tartományban szerepel. Például, ha az `ize.mize.edu` gépen vagyunk és a `vagyis` nevû gépet akarjunk innen elérni a `mize.edu` tartományban, akkor a teljes hálózati nevével, vagyis a `vagyis.mize.edu` néven kell rá hivatkoznunk, nem pedig egyszerûen csak `vagyis` néven.
+
+Régebben egyébként ezt a BSD-típusú BIND névfeloldók megengedték. A FreeBSD jelenlegi változatai azonban már olyan BIND verziót tartalmaznak, amelyek alapértelmezés szerint már nem engedik a tartományunkon kívüli relatív nevek használatát. Tehát a `vagyis` vagy a `vagyis.ize.mize.edu` gép lesz, vagy a legfelsõ, gyökér tartományban keresi a rendszer.
+
+Ez eltér a korábbi viselkedéstõl, ahol a keresés folytatódott a `vagyis.mize.edu` és `vagyis.edu` tartományokban is. Az RFC 1535 elolvasásából ki fog derülni, hogy miért nem vált be ez a gyakorlat és hogy miért tekinthetõ még akár biztonsági résnek is.
+
+Ezt a problémát egyébként megoldhatjuk annyival, hogy az [.filename]#/etc/resolv.conf# állományba a
+
+[.programlisting]
+....
+search ize.mize.edu mize.edu
+....
+
+sor helyett a
+
+[.programlisting]
+....
+domain ize.mize.edu
+....
+
+sort írjuk be. Arra viszont ügyeljünk, hogy a keresési rend ne lépje át a "helyi és nyilvános adminisztráció között meghúzódó határt", ahogy azt az RFC 1535 nevezi.
+
+=== A sendmail szerint a levél a saját farkába harap
+
+Ezt a sendmail gyakran ismértelt kérdései között a következõképpen válaszolták meg:
+
+[.programlisting]
+....
+A következõ hibaüzenetet kapom:
+
+553 MX list for taromány.net points back to felé.tartomány.net
+554 felhasználó@tartomány.net... Local configuration error
+
+Hogyan oldható meg ez a probléma?
+
+Azt kértük, hogy a tartományba (például tartomány.net) küldött levél
+az MXMX rekord rekord felhasználásával egy adott gépre legyen átirányítva
+(ebben az esetben ez a felé.tartomány.net), de a továbbítást végzõ gép
+nem ismeri fel magát a tartomány.net címen. Vegyük fel a tartomány.net
+tartományt az /etc/mail/local-host-names állományba [melyet a 8.10 elõtti
+verziókban /etc/sendmail.cw állománynak hívnak] (ha a
+FEATURE(use_cw_file) beállítást használjuk) vagy tegyük hozzá a
+Cw tartomány.net sort az /etc/mail/sendmail.cf
+állományhoz.
+....
+
+A sendmail GYIK a http://www.sendmail.org/faq/[http://www.sendmail.org/faq/] címen található meg (angolul) és mindenképpen javasolt elolvasni, ha "fel szeretnénk piszkálni" a levelezõ rendszerünk beállításait.
+
+=== Hogyan tudok levelezõ szervert futtatni egy betárcsázós PPPPPP kapcsolat esetében?
+
+Egy helyi hálózaton levõ FreeBSD-s gépet akarunk tehát az internethez kapcsolni. Ez a FreeBSD-s gép lesz a helyi hálózat leveleket továbbító átjárója. A PPP kapcsolat nem dedikált.
+
+Legalább két módon meg tudjuk oldani. Az egyik módszer szerint az UUCP használatára lesz szükségünk.
+
+A másik módszer szerint szereznünk kell egy éjjel-nappal üzemelõ internetes szervert, amely majd szolgáltatja a másodlagos MX rekordot a tartományunkhoz. Például, ha a cégünk tartománya a `_cég.hu_` és az internet-szolgáltatónk a `_szolgáltató.net_` névre beállította a tartományunkhoz a másodlagos MX rekordokat:
+
+[.programlisting]
+....
+cég.hu.          MX        10      cég.hu.
+                 MX        20      szolgáltató.net.
+....
+
+Végsõ címzettként csak egy gépet kell megadni (az [.filename]#/etc/mail/sendmail.cf# állományba a `_cég.hu_` címhez tegyük hozzá a `Cw cég.hu` sort).
+
+Amikor a leveleket küldeni akaró `sendmail` megpróbál kézbesíteni, elõször hozzánk (`_cég.hu_`) próbál csatlakozni a modemes összeköttetésen keresztül. Ez valószínûleg idõtúllépéssel befejezõdik, mivel nem vagyunk fenn minden pillanatban a neten. A sendmail ekkor automatikusan a másodlagos MX rekord által megadott címre küldi a levelet, tehát a szolgáltatónkhoz (`_szolgáltató.net_`). Ez a másodlagos MX cím próbálja majd idõlegesen elérni a gépünket és kézbesíteni a leveleket az elsõdleges MX rekord által megadott gépre (`_cég.hu_`).
+
+A bejelentkezéskor ezért egy hasonló szkriptet kell lefuttatnunk:
+
+[.programlisting]
+....
+#!/bin/sh
+# Tegyük a /usr/local/bin/pppmyisp állományba:
+( sleep 60 ; /usr/sbin/sendmail -q ) &
+/usr/sbin/ppp -direct pppmyisp
+....
+
+Ha készítünk egy külön bejelentkezõ szkriptet a felhasználók számára, akkor a `sendmail -qRcég.hu` parancsot is használhatjuk a fenti szkript helyett. Ezzel a `_cég.hu_` sorában található összes levél azonnal feldolgozásra kerül.
+
+A helyzetet így lehetne még jobban pontosítani:
+
+Az alábbi üzenet a {freebsd-isp} archívumából származik.
+
+[.programlisting]
+....
+> we provide the secondary MX for a customer. The customer connects to
+> our services several times a day automatically to get the mails to
+> his primary MX (We do not call his site when a mail for his domains
+> arrived). Our sendmail sends the mailqueue every 30 minutes. At the
+> moment he has to stay 30 minutes online to be sure that all mail is
+> gone to the primary MX.
+>
+> Is there a command that would initiate sendmail to send all the mails
+> now? The user has not root-privileges on our machine of course.
+
+In the privacy flags section of sendmail.cf, there is a
+definition Opgoaway,restrictqrun
+
+Remove restrictqrun to allow non-root users to start the queue processing.
+You might also like to rearrange the MXs. We are the 1st MX for our
+customers like this, and we have defined:
+
+# If we are the best MX for a host, try directly instead of generating
+# local config error.
+OwTrue
+
+That way a remote site will deliver straight to you, without trying
+the customer connection.  You then send to your customer.  Only works for
+hosts, so you need to get your customer to name their mail
+machine customer.com as well as
+hostname.customer.com in the DNS.  Just put an A record in
+the DNS for customer.com.
+....
+
+Az idézet fordítása:
+
+[.programlisting]
+....
+> Másodlagos MX rekordot biztosítunk az ügyfeleinknek.  Az ügyfelek ezután automatikusan
+> csatlakoznak naponta akár többször is a szolgáltatásunkhoz és leszedik az elsõdleges MX
+> rekordhoz tartozó leveleket.  (Nem szólunk neki, amikor a tartományához levél
+> érkezik.) A sendmail programunk minden 30 percben elküldi a sorban felhalmozódott
+> leveleket.  Tehát jelen pillanatban legalább 30 percig fenn kell lennie az ügyfélnek, hogy
+> rendben megkapja az elsõdlegesre MX rekordra.
+>
+> Létezik valamilyen parancs a sendmail programhoz, amellyel azonnal lekérhetjük az összes
+> levelünket?  A felhasználómnak természetesen nincsenek rendszergazdai jogosultságai az adott
+> gépen.
+
+A sendmail.cf privacy flags beállításai között van egy definíció, az
+Opgoaway,restrictqrun.
+
+Vegyük ki innen a restrictqrun beállítást, amivel a nem root felhasználók is megindíthatják a
+sor feldolgozását.  Valószínûleg az MX-ek átrendezésére is szükség lesz.  Mi vagyunk az elsõ MX
+az ilyen típusú ügyfelek számára, és ezt adtuk meg:
+
+# Ha mi vagyunk a legjobb MX a levél számára, akkor ne generáljunk
+# helyi beállítási hibát, hanem próbálkozzunk közvetlenül.
+OwTrue
+
+Ezzel már a távoli gép közvetlenül nekünk küld anélkül, hogy próbálkozna az ügyfél kapcsolatával.
+Ezt majd továbbküldjünk az ügyfélnek.  Ez csak hálózati nevek esetében mûködik, tehát az ügyfelünknek
+el kell neveznie a leveleket fogadó gépét customer.com-nak, valamint a fel kell venni a
+hostname.customer.com címet is a DNS-be.  Ehhez egyszerûen csak elegendõ egy A rekordot
+betenni a customer.com-hoz.
+....
+
+=== Miért kapok folyton Relaying Denied hibát, amikor más gépekrõl küldök levelet?
+
+A FreeBSD alapértelmezett telepítése során a sendmail úgy állítódik be, hogy csak arról a géprõl küldhetünk vele levelet, ahol fut. Például, ha POP szerver is elérhetõ, akkor a felhasználók meg tudják nézni a leveleiket az iskolából, munkából vagy bármilyen más távoli helyrõl, de leveleket onnan továbbra sem tudnak küldeni. Általában pár pillanattal a próbálkozás után a MAILER-DAEMON küldeni fog egy `5.7 Relaying Denied` (`5.7 A továbbítás nem engedélyezett`) üzenetet.
+
+Több lehetõségünk is van ennek megkerülésére. Az a legegyszerûbb módszer, ha az internet-szolgáltatónk címét felvesszük az [.filename]#/etc/mail/relay-domains# állományba. Például így:
+
+[source,bash]
+....
+# echo "az.internet.szolgáltató.net" > /etc/mail/relay-domains
+....
+
+Az állomány létrehozása vagy módosítása után újra kell indítanunk a sendmail programot. Ez remekül mûködik abban az esetben, ha rendszergazdák vagyunk és nem akarunk a helyi géprõl levelet küldeni, vagy egy másik gépen vagy akár másik internet-szolgáltatóval akarunk valamilyen kattingatós levelezõ programot használni. Olyankor is nagyon hasznos lehet, amikor csak egy vagy két e-mail hozzáférést állítottunk be. Ha egyszerre több címet is fel szeretnénk venni, akkor nyissuk meg ezt az állományt a kedvenc szövegszerkesztõnkkel és írjuk be a tartományokat, soronként egyet:
+
+[.programlisting]
+....
+saját.internet.szolgáltató.net
+másik.internet.szolgáltató.com
+felhasználók-internet.szolgáltató.ja
+www.minta.org
+....
+
+Innentõl kezdve a listában szereplõ bármelyik géprõl tudunk levelet küldeni (feltéve, hogy az adott felhasználó hozzáfér a gépünkhöz). Ezzel gyönyörûen megoldhatjuk, hogy a felhasználóink képesek legyenek távolról is levelet küldeni a rendszerünkön keresztül anélkül, hogy mások pedig szemetet küldenének át rajtunk.
+
+[[mail-advanced]]
+== Komolyabb témák
+
+A következõ szakaszban szóba kerülnek olyan komolyabb témák, mint például a levelek konfigurációja és a levelezés beállítása az egész tartomány számára.
+
+[[mail-config]]
+=== Alapvetõ beállítások
+
+Alapból képesnek kell lennünk leveleket küldeni külsõ gépekre egészen addig, amíg az [.filename]#/etc/resolv.conf# állomány a megfelelõ beállításokat tartalmazza vagy egy saját névszervert futtatunk. Ha szeretnénk, hogy a gépünkre érkezõ levelek elérjék a FreeBSD-s gépünkön futó levéltovábbító ügynököt (például a sendmail programot), akkor erre két módszer kínálkozik:
+
+* Futtassunk saját névszervert és hozzunk létre magunknak egy tartományt. Például `FreeBSD.org`.
+* Közvetlenül a gépünkre küldessük a leveleket. Ezt úgy tehetjük meg, ha egybõl a gépünkhöz tartozó DNS névre küldetjük a leveleket. Például az `enyem.FreeBSD.org` címre.
+
+Függetlenül attól, hogy a fentiek közül melyik megoldást választjuk, a levelek csak akkor tudnak eljutni közvetlenül a gépünkre, ha állandó, statikus IP-címmel rendelkezünk (tehát nem dinamikus címmel, amit általában a betárcsázós PPP kapcsolatokhoz szoktak kiosztani). Ha tûzfal mögött vagyunk, akkor valamilyen módon felénk kell irányítani az SMTP forgalmat is. Ha közvetlenül a gépünkön akarjuk fogadni a leveleket, akkor a következõ kettõ közül az egyik mindenképpen kelleni fog:
+
+* Gondoskodjunk róla, hogy a hozzánk tartozó DNS-ben (legkisebb sorszámú) MX rekord a gépünk IP-címére mutat.
+* Gondoskodjunk róla, hogy a hozzánk tartozó DNS-ben nincs semmilyen MX rekord a gépünkhöz.
+
+A fentiek közül bármelyik elég ahhoz, hogy közvetlenül a gépünkre érkezzen meg a levél.
+
+Próbáljuk ki:
+
+[source,bash]
+....
+# hostname
+enyem.FreeBSD.org
+# host enyem.FreeBSD.org
+enyem.FreeBSD.org has address 204.216.27.XX
+....
+
+Ha ezt látjuk, akkor minden gond nélkül lehet küldeni levelet a mailto:nevem@enyem.FreeBSD.org[nevem@enyem.FreeBSD.org] a címre (feltételezve, hogy a sendmail megfelelõen mûködik az `enyem.FreeBSD.org` címen).
+
+Ha viszont ehhez hasonlót tapasztalunk:
+
+[source,bash]
+....
+# host enyem.FreeBSD.org
+enyem.FreeBSD.org has address 204.216.27.XX
+enyem.FreeBSD.org mail is handled (pri=10) by kozpont.FreeBSD.org
+....
+
+A gépünkre (`enyem.FreeBSD.org`) küldött összes levelet a `kozpont` szedi össze ugyanazon felhasználói névvel ahelyett, hogy közvetlenül a gépünkre küldeni ezeket.
+
+Az iménti adatokat a DNS szerver határozza meg. A levelek továbbításával kapcsolatos információkat az __MX__ mint __M__ail e__X__change DNS-rekord tárolja. Ha nincs ilyen MX rekord, akkor az IP-cím alapján közvetlenül az adott géphez kerül a levél.
+
+Például a `freefall.FreeBSD.org` MX rekordja hajdanán így nézett ki:
+
+[.programlisting]
+....
+freefall		MX	30	mail.crl.net
+freefall		MX	40	agora.rdrop.com
+freefall		MX	10	freefall.FreeBSD.org
+freefall		MX	20	who.cdrom.com
+....
+
+Láthatjuk, hogy a `freefall` esetében több MX bejegyzés is szerepel. A legalacsonyabb MX-számú gép fogja kapni az erre a címre beérkezõ leveleket, amennyiben elérhetõ. Ha valamilyen okból nem érhetõ el, akkor helyette ideiglenesen a többiek (melyeket néha csak "tartalék MX-eknek" neveznek) veszik át a levelet és átadják a legalacsonyabb számúnak, amint az újra elérhetõvé válik.
+
+A tartalék jelleggel megadott MX gépek akkor érnek ténylegesen valamit, ha teljesen máshonnan csatlakoznak az internethez. Az internet szolgáltató vagy egy ismerõsünk gépe valószínûleg minden további nélkül segít ennek megoldásában.
+
+[[mail-domain]]
+=== Egy egész tartomány leveleinek kezelése
+
+Egy levelezõ szerver beállításához valahogy meg kell tudnunk oldalni, hogy a különbözõ munkaállomásokra küldött levelek közvetlenül hozzá fussanak be. Alapvetõen tehát arról lenne szó, hogy a tartományunkon (ez ebben az esetben a `*.FreeBSD.org`) belüli gépekre címzett levelekre ez a gép "tart igényt" és így ezek ide irányítódnak át, majd a felhasználók errõl a központi levelezõ szerverrõl kapják meg a leveleiket.
+
+Az életünk megkönnyítéséhez minden felhasználónak létrehozzuk a saját _felhasználói nevét_ a levelezõ szerveren is. Ezt az man:adduser[8] paranccsal gyorsan el is végezhetjük.
+
+A levelezõ szerver lesz a hálózat összes munkaállomásához kirendelt levélváltó. Ezt a DNS beállításai között így adhatjuk meg:
+
+[.programlisting]
+....
+enyem.FreeBSD.org	A	204.216.27.XX		; Munkaállomás
+			MX	10 kozpont.FreeBSD.org	; Levelezõ szerver
+....
+
+Ezzel lényegében az A rekord figyelmen kívül hagyásával átirányítjuk a munkaállomások számára érkezõ összes levelet a levelezõ szerverre. A levelek tehát az MX rekord által mutatott címre mennek ki.
+
+Ezt önállóan nem tudjuk elvégezni, hacsak nem futattunk egy saját DNS szervert. Ha nincsen vagy nem is tudunk DNS szervert futtatni, akkor ebben a kérdésben egyeztessünk az internet-szolgáltatónkkal vagy bárkivel, aki a DNS beállításaiért felelõs.
+
+Ha virtuális e-mail címket is kezelünk, akkor a most következõ információ még a hasznunkra lehet. A példa kedvéért most feltesszük, hogy a tartományunkban van egy ügyfelünk, jelen esetben az `ugyfel1.org`, és azt akarjuk, hogy az `ugyfel1.org` címére küldött levelek a saját levelezõ szerverünkre kerüljenek át, a `level.sajat.com` címre. A DNS-t ehhez így kell beállítani:
+
+[.programlisting]
+....
+ugyfel1.org		MX	10	level.sajat.com
+....
+
+Ha csak az `ugyfel1.org` levelezését akarjuk kezelni, akkor ahhoz _nem_ kell külön A rekord.
+
+[NOTE]
+====
+Vigyázzunk, mert az `ugyfel1.org` csak akkor pingelhetõ, ha létezik hozzá A rekord.
+====
+
+Befejezésül a levelezõ szerverünkön futó sendmail számára is fel kell tárnunk, hogy milyen tartományokhoz és/vagy hálózati nevekhez fogadjon leveleket. Ezt több módon is elvégezhetjük. A következõk bármelyik megfelel erre a célra:
+
+* A `FEATURE(use_cw_file)` használata esetén vegyük fel a címeket az [.filename]#/etc/mail/local-host-names# állományba. Ha a sendmail 8.10 elõtti változatai esetében ehhez az [.filename]#/etc/sendmail.cw# állományra lesz szükségünk.
+* Tegyük be a `Cwsajat.cimunk.com` sort az [.filename]#/etc/sendmail.cf# vagy a sendmail 8.10 és késõbbi változatai esetén az [.filename]#/etc/mail/sendmail.cf# állományba.
+
+[[SMTP-UUCP]]
+== SMTP és az UUCP
+
+A FreeBSD-hez tartozó sendmail olyan gépek számára lett kialakítva, amelyek közvetlenül az internethez csatlakoznak. Az UUCP használatával levelezõ rendszerek számára egy másik konfigurációs állományt kell telepíteni a sendmail számára.
+
+Az [.filename]#/etc/mail/sendmail.cf# állítása kézzel egyáltalán nem könnyû. A sendmail 8. változata ráadásul a konfigurációs állományokat az man:m4[1] elõfeldolgozó segítségével gyártja le, ahol a tényleges beállítások egy magasabb absztrakciós szinten jelennek meg. Az man:m4[1] típusú konfigurációs állományok a [.filename]#/usr/shared/sendmail/cf# könyvtárban találhatóak. A [.filename]#cf# alkönyvtárban levõ [.filename]#README# állomány igyekszik a felhasználót bevezetni az man:m4[1] alapú beállítások világába.
+
+A `mailertable` nevû lehetõség használatával tudjuk a legjobban támogatni az UUCP protokollon keresztüli kézbesítést. Ezzel felépül egy olyan adatbázis, amelyet a sendmail fel tud használni a továbbítást érintõ döntésekben.
+
+Ehhez elsõként hozzuk is létre a saját [.filename]#.mc# állományunkat. Ehhez a [.filename]#/usr/shared/sendmail/cf/cf# könyvtár tartalmaz néhány példát. Hívjuk most ezt az állomnyunkat [.filename]#ize.mc# néven. A következõ módszerrel tudjuk egy valós [.filename]#sendmail.cf# állománnyá alakítani:
+
+[source,bash]
+....
+# cd /etc/mail
+# make ize.cf
+# cp ize.cf /etc/mail/sendmail.cf
+....
+
+Egy átlagos [.filename]#.mc# állomány egyébként valahogy így épül fel:
+
+[.programlisting]
+....
+VERSIONID(`verziószám') OSTYPE(bsd4.4)
+
+FEATURE(accept_unresolvable_domains)
+FEATURE(nocanonify)
+FEATURE(mailertable, `hash -o /etc/mail/mailertable')
+
+define(`UUCP_RELAY', sajat.uucp.relay)
+define(`UUCP_MAX_SIZE', 200000)
+define(`confDONT_PROBE_INTERFACES')
+
+MAILER(local)
+MAILER(smtp)
+MAILER(uucp)
+
+Cw    sajat.al.nev
+Cw    azuucpgepneve.UUCP
+....
+
+Az `accept_unresolvable_domains`, `nocanonify` és `confDONT_PROBE_INTERFACES` lehetõségekre hivatkozó sorok megakadályozzák, hogy a levél kézbesítésében a DNS is szerepet játsszon. Az `UUCP_RELAY` az UUCP alapú kézbesítés támogatását engedélyezi. Egyszerûen csak írjunk ide egy internetes hálózati nevet, amely képes feldolgozni az .UUCP áltartomány címeit. Az esetek többségében ide az internet-szolgáltatónk levelek továbbküldéséért felelõs gépe kerül.
+
+Miután ezzel végeztünk, szükségünk lesz még az [.filename]#/etc/mail/mailertable# állományra is. Ha a külvilág felé csak egyetlen összeköttetést használunk a levelekhez, akkor az alábbi pontosan megfelel:
+
+[.programlisting]
+....
+#
+# makemap hash /etc/mail/mailertable.db < /etc/mail/mailertable
+.                             uucp-dom:sajat.uucp.relay
+....
+
+Egy bonyolultabb példa pedig így néz ki:
+
+[.programlisting]
+....
+#
+# makemap hash /etc/mail/mailertable.db < /etc/mail/mailertable
+#
+horus.interface-business.de   uucp-dom:horus
+.interface-business.de        uucp-dom:if-bus
+interface-business.de         uucp-dom:if-bus
+.heep.sax.de                  smtp8:%1
+horus.UUCP                    uucp-dom:horus
+if-bus.UUCP                   uucp-dom:if-bus
+.                             uucp-dom:
+....
+
+Az elsõ három sor azokat a speciális eseteket kezeli, ahol a tartomány felé küldött levelek nem az alapértelmezett úton visszük tovább, hanem valamelyik UUCP szomszéd felé és így "le tudjuk rövidíteni" a kézbesítés útvonalát. Az ezeket követõ sor dolgozza fel a helyi Ethernet tartomány felé STMP protokollal továbbítható leveleket. Végül az UUCP szomszédokat is felsoroljuk az .UUCP áltartomány jelölése szerint, így megengedjük, hogy a `uucp-szomszéd! címzett` felülbírálja az alapértelmezett szabályokat. Az utolsó sorban mindig egyetlen pont szerepel, ami minden másra illeszkedik, így az UUCP kézbesítés egy olyan UUCP szomszéd felé halad, amely a világ felé egy univerzális levelezõ átjárónak tekinthetõ. A `uucp-dom:` kulcsszó mögött szereplõ összes csomópont nevének érvényes UUCP szomszédra kell utalnia, amelyet a `uuname` paranccsal le is tudunk ellenõrizni.
+
+A feladatból már csak annyi maradt hátra, hogy használat elõtt ezt az állományt át kell alakítani DBM adatbázis formátumba. Az ehhez szükséges parancsot érdemes [.filename]#mailertable# állomány elejére bejegyzésben felírni. A [.filename]#mailertable# megváltoztatásakor mindig le kell futtatni ezt a parancsot.
+
+Utolsó jótanács: ha nem lennénk biztosak valamelyik kézbesítési útvonal mûködésében, ne felejtsük el a sendmail `-bt` beállítását. Ezzel a sendmail az ún. _címtesztelõ módban_ (address test mode) indul el. Gépeljük be, hogy `3,0`, majd írjuk be a tesztelni kívánt címet. Az utolsó sorban láthatjuk a felhasznált belsõ levéltovábbító ügynököt, a célgépet, amellyel ezt meghívjuk, és a (valószínûleg az átfordított) címet. Innen a kbd:[Ctrl+D] billentyûkombinációval léphetünk ki.
+
+[source,bash]
+....
+% sendmail -bt
+ADDRESS TEST MODE (ruleset 3 NOT automatically invoked)
+Enter <ruleset> <address>
+> 3,0 ize@pelda.com
+canonify           input: ize @ pelda . com
+...
+parse            returns: $# uucp-dom $@ sajat.uucp.relay $: ize < @ pelda . com . >
+> ^D
+....
+
+[[outgoing-only]]
+== Csak küldés beállítása
+
+Gyakran elõfordulhat, hogy csak leveleket akarunk továbbküldeni. Mint például:
+
+* Asztali számítógépünk van, de használni akarunk olyan programokat, mint például a man:send-pr[1]. Ehhez az internet-szolgáltatón keresztül kell továbbküldeni a levelet.
+* A számítógépünk egy olyan szerver, amely nem helyben kezeli a leveleket, ezért az összeset átküldi feldolgozásra.
+
+Szinte bármelyik levélküldõ ügynök képes betölteni ezt az ûrt. Sajnos eléggé bonyolult helyesen beállítani úgy egy bármire képes levélküldõt, hogy egyszerûen csak szabaduljon meg a levelektõl. Ilyenkor a sendmail vagy a postfix használatával tulajdonképpen ágyúval lövünk verébre.
+
+Továbbá, ha egy átlagos internet-hozzáféréssel rendelkezünk, adódhat, hogy a szerzõdés egyszerûen tiltja a "levelezõ szerver" futtatását.
+
+Legegyszerûbben úgy tudjuk kielégíteni az ilyen jellegû igényeket, ha feltelepítjük a package:mail/ssmtp[] portot. A `root` felhasználóval adjuk ki a következõ parancsokat:
+
+[source,bash]
+....
+# cd /usr/ports/mail/ssmtp
+# make install replace clean
+....
+
+Telepítése után a package:mail/ssmtp[] portot a mindössze négysoros [.filename]#/usr/local/etc/ssmtp/ssmtp.conf# állománnyal állíthatjuk be:
+
+[.programlisting]
+....
+root=valodiemail@minta.com
+mailhub=level.minta.com
+rewriteDomain=minta.com
+hostname=_GEPNEV_
+....
+
+A `root` felhasználó számára feltétlenül egy valódi e-mail címet adjuk meg. A `level.minta.com` helyére az internet-szolgáltatónk kimenõ leveleket továbbító szerverét adjuk meg (bizonyos szolgáltatók ezt "kimenõ levelezõ szervernek" vagy "SMTP szervernek" nevezik).
+
+Ne felejtsük el sendmail démont sem letiltani, beleértve a kimenõ levelek kezelését. Ennek részleteit lásd a <<mail-disable-sendmail>>ban.
+
+A package:mail/ssmtp[] használatánál még adhatunk meg további beállításokat is. A [.filename]#/usr/local/etc/ssmtp# állományban vagy az ssmtp man oldalán találhatunk példákat és olvashatunk bõvebben a témáról.
+
+Az ssmtp ilyen fajta beállításával a számítógépünkön levõ szoftverek is helyesen fognak mûködni, miközben nem sértjük meg az internet-szolgáltató elõírásait és nem tesszük lehetõvé, hogy a számítógépünkrõl levélszemetet küldhessenek.
+
+[[SMTP-dialup]]
+== Levelezés betárcsázós kapcsolattal
+
+Ha statikus IP-címünk van, akkor az alapértelmezett beállítások tökéletesen megfelelõek számunkra. Csupán a gépünkhöz tartozó internetes címet kell megadnunk a gépünk nevének és a sendmail elvégzi a többit.
+
+Ha viszont dinamikusan kiosztott IP-címmel rendelkezünk és betárcsázós PPP kapcsolaton keresztül csatlakozunk az internethez, akkor valószínûleg az internet-szolgáltató levelezõ szerverén van egy postaládánk. Most tegyük fel, hogy a internet-szolgáltató tartománya a `szolgaltato.net` és a felhasználói név a `felhasznalo`, a gépünk neve pedig `otthoni.bsdm`, valamint az internet-szolgáltató részérõl levelezésre a `relay.szolgaltato.net` gépet használhatjuk.
+
+A postaládánkból úgy tudjuk letölteni a leveleket, ha telepítünk hozzá egy programot. Erre a feladatra a fetchmail hibátlanul alkalmas, mivel több különbözõ protokollt ismer. Ez a program csomagként vagy a Portgyûjteménybõl (package:mail/fetchmail[]) is elérhetõ. Az internet-szolgáltatók erre általában a POP protokollt ajánlják fel. Ha a felhasználói PPP alkalmazást használjuk, állítsuk be az [.filename]#/etc/ppp/ppp.linkup# állományt a következõ módon és így a csatlakozáskor maguktól letöltõdnek a leveleink:
+
+[.programlisting]
+....
+MYADDR:
+  !bg su felhasznalo -c fetchmail
+....
+
+Ha a sendmail segítségével küldjük tovább a leveleket a nem helyi hozzáférések felé (ahogy azt lentebb is láthatjuk), akkor minden bizonnyal a csatlakozáskor arra is szükségünk lesz, hogy a leveleket tároló sor is feldolgozódjon. Ezt úgy oldhatjuk meg, ha az [.filename]#/etc/ppp/ppp.linkup# állományba a `fetchmail` parancs után a következõt tesszük:
+
+[.programlisting]
+....
+  !bg su felhasznalo -c "sendmail -q"
+....
+
+Ez a példa feltételezi, hogy az `otthoni.bsdm` gépen van egy `felhasznalo` nevû felhasználónk. Az `otthoni.bsdm` gépen a `felhasznalo` felhasználói könyvtárában hozzunk létre egy [.filename]#.fetchmailrc# állományt:
+
+[.programlisting]
+....
+poll szolgaltato.net protocol pop3 fetchall pass TitkosJelszo
+....
+
+Ezt az állományt csak és kizárólag a `felhasznalo` olvashatja, mivel szerepel benne a hozzá tartozó `TitkosJelszo`.
+
+Úgy tudunk a megfelelõ `from:` fejléccel küldeni, ha felvilágosítjuk a sendmail programot, hogy ne az mailto:felhasznalo@otthoni.bsdm[felhasznalo@otthoni.bsdm] címet, hanem a mailto:felhasznalo@szolgaltato.net[felhasznalo@szolgaltato.net] címet használja. Sõt, a gyorsítás kedvéért a sendmail számára érdemes elárulni, hogy a `relay.szolgaltato.net` címen keresztül küldjön.
+
+A munka elvégzéséhez elegendõ az alábbi [.filename]#.mc# állomány:
+
+[.programlisting]
+....
+VERSIONID(`otthoni.bsdm.mc 1.0')
+OSTYPE(bsd4.4)dnl
+FEATURE(nouucp)dnl
+MAILER(local)dnl
+MAILER(smtp)dnl
+Cwlocalhost
+Cwotthoni.bsdm
+MASQUERADE_AS(`szolgaltato.net')dnl
+FEATURE(allmasquerade)dnl
+FEATURE(masquerade_envelope)dnl
+FEATURE(nocanonify)dnl
+FEATURE(nodns)dnl
+define(`SMART_HOST', `relay.szolgaltato.net')
+Dmotthoni.bsdm
+define(`confDOMAIN_NAME',`otthoni.bsdm')dnl
+define(`confDELIVERY_MODE',`deferred')dnl
+....
+
+Az elõzõ szakaszban találhatjuk meg annak a módját, hogy miként varázsoljunk ebbõl az [.filename]#.mc# állományból egy [.filename]#sendmail.cf# állományt. A [.filename]#sendmail.cf# frissítése után pedig ne felejtsük el a sendmail újraindítását!
+
+[[SMTP-Auth]]
+== Az SMTP hitelesítése
+
+Levelezõ szerverünkön az SMTP protokoll hitelesítésének (SMTP Authentication) engedélyezése több szempontból is elõnyökkel bír. Az SMTP hitelesítésének bekapcsolása egy újabb réteget képez a sendmail védelmében, és az olyan állandóan mozgásban levõ felhasználók számára is megoldást nyújt, akik anélkül képesek használni ugyanazt a levelezõ szervert, hogy minden alkalommal újrakonfigurálnák a levelezõ kliensüket.
+
+[.procedure]
+====
+. Telepítsük fel a package:security/cyrus-sasl2[] portot. A package:security/cyrus-sasl2[] port több fordítási idejû beállítást támogat. Itt most az SMTP hitelesítését fogjuk használni, ezért gondoskodjunk a `LOGIN` opció engedélyezésérõl.
+. A package:security/cyrus-sasl2[] telepítés után nyissuk meg szerkesztésre a [.filename]#/usr/local/lib/sasl2/Sendmail.conf# állományt (vagy ha még nem létezne, hozzuk létre), és benne vegyük fel a következõ sort:
++
+[.programlisting]
+....
+pwcheck_method: saslauthd
+....
++
+. Ezt követõen telepítsük a package:security/cyrus-sasl2-saslauthd[] portot, és tegyük bele az [.filename]#/etc/rc.conf# állományba ezt a sort:
++
+[.programlisting]
+....
+saslauthd_enable="YES"
+....
++ 
+Végezetül indítsuk el a saslauthd démont:
++
+[source,bash]
+....
+# /usr/local/etc/rc.d/saslauthd start
+....
++ 
+Ez a démon fog közvetíteni a sendmail és a FreeBSD [.filename]#passwd# adatbázisa közti hitelesítésben. Ezzel elkerülhetjük az új felhasználói nevek és jelszavak felvételét az SMTP hitelesítés használatához, így a hozzáférések és a levelezés jelszava ugyanaz marad.
+. Most pedig írjuk hozzá az alábbi sorokat az [.filename]#/etc/make.conf# állományhoz:
++
+[.programlisting]
+....
+SENDMAIL_CFLAGS=-I/usr/local/include/sasl -DSASL
+SENDMAIL_LDFLAGS=-L/usr/local/lib
+SENDMAIL_LDADD=-lsasl2
+....
++ 
+Ezek a sorok állítják be a sendmail számára, hogy fordítás közben a package:cyrus-sasl2[] függvényeit használja. A sendmail újrafordítása elõtt mindenképpen legyen fenn a package:cyrus-sasl2[] port.
+. A sendmail újrafordítását a következõ parancsok végrehajtásával intézhetjük el:
++
+[source,bash]
+....
+# cd /usr/src/lib/libsmutil
+# make cleandir && make obj && make
+# cd /usr/src/lib/libsm
+# make cleandir && make obj && make
+# cd /usr/src/usr.sbin/sendmail
+# make cleandir && make obj && make && make install
+....
++ 
+A sendmail fordítása esetén semmilyen problémának nem szabadna elõfordulnia, kivéve ha a [.filename]#/usr/src# könyvtárat és a szükséges osztott könyvtárakat nem változtatjuk idõközben túlságosan gyakran.
+. A sendmail lefordítása és újratelepítése után szerkesszük át az [.filename]#/etc/mail/freebsd.mc# állományt (vagy azt az [.filename]#.mc# állományt, amelyet éppen használunk). Sok rendszergazda a man:hostname[1] parancs válaszát használja fel az [.filename]#.mc# típusú állományok egyedi elnevezéséhez). Írjuk bele a következõ sorokat:
++
+[.programlisting]
+....
+dnl set SASL options
+TRUST_AUTH_MECH(`GSSAPI DIGEST-MD5 CRAM-MD5 LOGIN')dnl
+define(`confAUTH_MECHANISMS', `GSSAPI DIGEST-MD5 CRAM-MD5 LOGIN')dnl
+....
++ 
+Ezek állítják be a sendmail számára a felhasználók hitelesítésére alkalmas különbözõ módszereket. Ha a pwcheck módszer helyett valami mást akarunk használni, akkor járjunk utána a dokumentációban.
+. Zárásul futassuk le a man:make[1] parancsot az [.filename]#/etc/mail# könyvtárban. Így lefut az új [.filename]#.mc# állományunk és létrejön egy [.filename]#freebsd.cf# (vagy amilyen nevet az [.filename]#.mc# állománynak megadtunk) [.filename]#.cf# állomány. Ezután a `make install restart` parancs kiadásával másoltassuk át ezt a [.filename]#sendmail.cf# helyére és szabályosan indítassuk újra a sendmail szolgáltatást. A folyamatról részletesebb tájékoztatást az [.filename]#/etc/mail/Makefile# állomány tud nyújtani.
+====
+
+Ha eddig minden a legnagyobb rendben történt, akkor most már képesek vagyunk bejelentkezési információt is átadni a levelezõ kliensnek és elküldeni egy tesztüzenetet. A hibák kiszûréséhez állítsuk a sendmail `LogLevel` opcióját az 13 értékre és figyeljük a [.filename]#/var/log/maillog# állományt.
+
+További felvilágosításért olvassuk el a sendmail http://www.sendmail.org/\~ca/email/auth.html[SMTP hitelesítéssel] foglalkozó oldalát (angolul).
+
+[[mail-agents]]
+== Levelezõ kliensek
+
+A levelezõ kliens (Mail User Agent, MUA) egy olyan alkalmazás, amelyik elektronikus levelek küldésére és fogadására használható. Azonkívül, ahogy az e-mail "fejlõdik" és egyre bonyolultabbá válik, a levelezõ kliensek is egyre inkább erõsebbé válnak abban a tekintetben, ahogy az e-maileket kezelik. Ezzel együtt a felhasználók is egyre több lehetõséget és rugalmasságot kapnak. A FreeBSD számos levelezõ klienst támogat, mindegyikük könnyedén telepíthetõ a crossref:ports[ports,FreeBSD Portgyûjteménye] segítségével. A felhasználók választhatnak a grafikus kliensek, mint például az evolution vagy a balsa és a konzolos kliensek, például a mutt, pine vagy `mail` között, esetleg használhatják a nagyobb szervezetek részérõl felkínált webes felületeket is.
+
+[[mail-command]]
+=== mail
+
+A man:mail[1] a FreeBSD alapértelmezett levelezõ kliense. Egy olyan konzolos alkalmazás, amelyben elérhetjük az e-mailek küldéséhez és fogadásához szükséges összes alapvetõ funkciót, habár a csatolmányokat csak korlátozottan képes kezelni és csak a helyi postaládákat kezeli.
+
+Annak ellenére, hogy a `mail` önmaga nem képes kommunikálni POP vagy IMAP szerverekkel, az ilyen postaládák tartalmát egy fetchmail-szerû alkalmazással (lásd <<mail-fetchmail>>) le tudjuk tölteni a számára is elérhetõ helyi [.filename]#mbox# állományba.
+
+A levelek küldéséhez és fogadásához egyszerûen hívjuk be a `mail` programot a következõ módon:
+
+[source,bash]
+....
+% mail
+....
+
+Ezután a [.filename]#/var/mail# könyvtárban található felhasználói postaládánk tartalmát automatikusan beolvassa a `mail` segédprogram. Ha a postaláda üres, akkor a program egybõl befejezi futását és közli, hogy nem talált levelet. Amikor viszont tudott beolvasni leveleket, megjelenik egy felület, ahol a beérkezett üzenetek listáját láthatjuk. Az üzenetek automatikusan sorszámozódnak, ahogy ezt az alábbi példa is szemlélteti:
+
+[source,bash]
+....
+Mail version 8.1 6/6/93.  Type ? for help.
+"/var/mail/marcs": 3 messages 3 new
+>N  1 root@localhost        Mon Mar  8 14:05  14/510   "proba"
+ N  2 root@localhost        Mon Mar  8 14:05  14/509   "felhasznaloi hozzaferes"
+ N  3 root@localhost        Mon Mar  8 14:05  14/509   "minta"
+....
+
+Az üzenetek olvasásának a kbd:[t] paranccsal kezdhetünk neki, amelyet az elolvasandó üzenet sorszáma követ. Ebben a példában az elsõ e-mailt nyitjuk meg:
+
+[source,bash]
+....
+& t 1
+Message 1:
+From root@localhost  Mon Mar  8 14:05:52 2004
+X-Original-To: marcs@localhost
+Delivered-To: marcs@localhost
+To: marcs@localhost
+Subject: proba
+Date: Mon,  8 Mar 2004 14:05:52 +0200 (SAST)
+From: root@localhost (Charlie Root)
+
+Ezt az uzenetet probabol kuldom, valaszolj ra, ha megkaptad.
+....
+
+Ahogy az a fenti példából is látszik, a kbd:[t] billentyû hatására az üzenet a teljes fejlécével együtt jelenik meg. Az üzenetek listáját a kbd:[h] billentyûvel hozhatjuk vissza.
+
+Ha egy levélre válaszolni szeretnénk, akkor ezt a `mail` paranccsal is megtehetjük, vagy az kbd:[R] vagy az kbd:[r] parancsokkal. Az kbd:[R] arra utasítja a `mail` programot, hogy csak az üzenet küldõjének válaszoljon, míg az kbd:[r] hatására nem csupán a küldõ, hanem az üzenet összes címzettje megkapja a válaszunkat. A parancshoz hozzátûzhetjük egy levél sorszámát is, ekkor az adott levélre fogunk válaszolni. Miután kiadtuk a parancsot, írjuk meg a válaszunkat és új sorban kezdve zárjuk le az üzenetet egyetlen kbd:[.] beírásával. Valahogy így:
+
+[source,bash]
+....
+& R 1
+To: root@localhost
+Subject: Re: proba
+
+Koszonom, megkaptam a leveledet.
+.
+EOT
+....
+
+Új levelet az kbd:[m] segítségével tudunk küldeni, ami után meg kell adnunk a címzettet. Egyszerre több címzettet is meg tudunk adni, ha a címzett helyén címeiket egy kbd:[,] karakterrel elválasztva soroljuk fel. Ezután a levél témája is megadható, amit végül a levél szövege követ. Az üzenetet egy új sorban megadott egyetlen kbd:[.] segítségével zárhatjuk le.
+
+[source,bash]
+....
+& mail root@localhost
+Subject: Elsajatitottam a mail hasznalatat
+
+Most mar en is tudok levelet irni es fogadni a mail hasznalataval... :)
+.
+EOT
+....
+
+Amikor a `mail` segédprogramban vagyunk, a kbd:[?] használatával bármikor segítséget kérhetünk, valamint a `mail` mûködésével kapcsolatban a man:mail[1] man oldalát érdemes felkeresni.
+
+[NOTE]
+====
+Ahogy azt már korábban is említettük, a man:mail[1] parancsot eredetileg nem készítették fel az csatolt állományok kezelésére, ezért igen gyengén bánik velük. Az újabb levelezõ kliensek, mint például a mutt, a csatolt állományokat sokkal intelligensebb módon kezelik. Ha viszont ragaszkodunk a `mail` használatához, akkor a package:converters/mpack[] port használatát érdemes megfontolnunk.
+====
+
+[[mutt-command]]
+=== mutt
+
+A mutt apró mérete ellenére egy igen komoly levelezõ kliens és remek lehetõségeket ajánl fel. Íme ízelítésképpen közülük néhány:
+
+* Képes az üzeneteket szálakba rendezni
+* Az e-mailek titkosítására és elektronikus aláírására támogatja a PGP használatát
+* MIME támogatás
+* Maildir támogatás
+* Nagyfokú testreszabhatóság
+
+Ezen lehetõségei révén a mutt ez egyik legfejlettebb levelezõ kliens. A mutt részletesebb bemutatását a http://www.mutt.org[http://www.mutt.org] címen találjuk (angolul).
+
+A mutt stabil változata a package:mail/mutt[] port használatával telepíthetõ fel, miközben a fejlesztés alatt levõ változatot a package:mail/mutt-devel[] port telepíti. Miután a portot sikerült felraknunk, a mutt az alábbi parancs begépelésével indítható el:
+
+[source,bash]
+....
+% mutt
+....
+
+A mutt indulása után automatikusan beolvassa a [.filename]#/var/mail# könyvtárban megtalálható felhasználói postaládát és ha lehetséges, akkor megjeleníti a tartalmát. Ha nincsen levél a felhasználó postaládájában, akkor a mutt a felhasználó parancsaira vár. Ezen a képen a mutt üzenetlistája látható:
+
+image::mutt1.png[]
+
+A levelek elolvasásához egyszerûen csak válasszuk ki a kurzorral és nyomjuk meg az kbd:[Enter] billentyût. Ezután a mutt így mutatja a levelet:
+
+image::mutt2.png[]
+
+Ahogy azt már a man:mail[1] parancsnál is megszokhattuk, a mutt is lehetõvé teszi, hogy vagy csak a küldõnek, vagy pedig rajta kívül még az összes címzettnek is válaszoljunk. A levél küldõjének az kbd:[r] lenyomásával tudunk válaszolni. A csoportos válaszadáshoz pedig, ahol tehát a küldõn kívül a címzettek is megkapják a levelünket, a kbd:[g] billentyût kell használni.
+
+[NOTE]
+====
+A mutt az e-mailek létrehozásához és megválaszolásához a man:vi[1] szövegszerkesztõt használja. Ezt úgy tudjuk átállítani, ha a könyvtárunkban található [.filename]#.muttrc# állományban átírjuk az `editor` változót, vagy értéket adunk az `EDITOR` környezeti változónak. A mutt beállításáról többet a http://www.mutt.org[http://www.mutt.org] címen tudhatunk meg.
+====
+
+Egy új levél megírásához nyomjuk le az kbd:[m] gombot. Miután elláttuk érvényes témával a levelet, a mutt elindítja a man:vi[1] szövegszerkesztõt és nekiláthatunk a levél szövegének. Amint befejeztük, mentsük el és lépjünk ki a `vi` szerkesztõbõl. Ezután visszakapjuk a mutt felületét, ahol a küldendõ e-mail összefoglalását láthatjuk. A levelet végül az kbd:[y] lenyomásával küldhetjük el. Erre a következõ képen láthatunk egy példát:
+
+image::mutt3.png[]
+
+A mutt ezenkívül még rengeteg segítséget is tartalmaz, amelyet a legtöbb menübõl a kbd:[?] gomb lenyomásával érhetünk el. A felsõ sorban mindig láthatjuk a kiadható parancsok rövid összefoglalását.
+
+[[pine-command]]
+=== pine
+
+A pine alapvetõen a kezdõ felhasználók számára íródott, de számos komolyabb lehetõséget is támogat.
+
+[WARNING]
+====
+
+A pine szoftverrel kapcsolatban a múltban már rengeteg távolról kihasználható sebezhetõség látott napvilágot, és ennek köszönhetõen a támadók megfelelõen elõkészített e-mailek segítségével tetszõleges kódot tudnak futtatni a rendszeren levõ helyi felhasználókon keresztül. Noha az összes ilyen _ismert_ hibát javították, de a FreeBSD biztonsági tisztje szerint a pine kódját biztonság szempontjából annyira hanyag módon írták, hogy további, eddig még felfedezetlen sebezhetõségeket is magában rejt. Ennek megfelelõen tehát a pine használata mindenkinek csak saját felelõsségre javasolt.
+====
+
+A pine jelenlegi verziója a package:mail/pine4[] porton keresztül telepíthetõ. A telepítés lezajlása után a pine a következõ paranccsal indítható:
+
+[source,bash]
+....
+% pine
+....
+
+A pine elsõ futtatása során egy üdvözlõ üzenetet és egy rövid bemutatkozást jelenít meg, valamint a pine fejlesztõi arra kérik a felhasználókat, hogy küldjenek nekik egy névtelen üzenetet, amibõl le tudják szûrni mennyien használják a kliensüket. A névtelen üzenet elküldéséhez a kbd:[Enter] lenyomásával járulhatunk hozzá vagy az kbd:[E] használatával enélkül tudunk kilépni a képernyõrõl. Ezt az üdvözlõ képernyõt itt láthatjuk:
+
+image::pine1.png[]
+
+A felhasználó ezután a fõmenübe kerül, ahol a kurzorbillentyûkkel minden gond nélkül tudunk mozogni. Ebben a fõmenüben a levelek megírására, a leveleket tároló könyvtárak tallózására vagy éppen a címjegyzék karbantartására gyorsbillentyûket is használhatuk. A fõmenü alatt szerepel az adott menüben végrehajtható feladatokhoz tartozó gyorsbillentyûk rövid felsorolása.
+
+A pine alapértelmezés szerint az [.filename]#inbox# könyvtárat nyitja meg. A bennelévõ üzenetek listájának megtekintéséhez nyomjuk a kbd:[I] gombot vagy válasszuk ki a lentihez hasonló módon a [.guimenuitem]#MESSAGE INDEX# menüpontot:
+
+image::pine2.png[]
+
+Az üzenetek listájában az adott könyvtárban található üzenetek láthatjuk, és köztük a kurzorbillentyûkkel mozoghatunk. A kiemelt üzenet az kbd:[Enter] lenyomásával olvasható el.
+
+image::pine3.png[]
+
+A lenti képen egy ilyen példa üzenetet láthatunk a pine programban. A rendelkezésünkre álló gyorsbillentyûk ilyenkor is a képernyõ alján megjelennek referenciaként. Ilyen gyorsbillentyû többek közt az kbd:[r] gomb, amelynek hatására a klienssel megválaszolhatjuk a éppen látható üzenetet.
+
+image::pine4.png[]
+
+A pine kliensen belül a pico szövegszerkesztõ segítségével tudunk megválaszolni egy e-mailt, amely alapból a pine mellé települ. A pico megkönnyíti a navigációt az üzenetekben és sokkal elnézõbb a kezdõ felhasználókkal, mint például a man:vi[1] vagy a man:mail[1]. Ha befejeztük a választ, az üzenetet a kbd:[Ctrl+X] billentyûkombinációval tudjuk elküldeni. A pine erre megerõsítést fog kérni.
+
+image::pine5.png[]
+
+A pine alkalmazás a fõmenübõl elérhetõ [.guimenuitem]#SETUP# menüpont meghívásával szabható testre. A további részleteket a http://www.washington.edu/pine[http://www.washington.edu/pine] oldalon találhatjuk (angolul).
+
+[[mail-fetchmail]]
+== A fetchmail használata
+
+A fetchmail egy mindentudó IMAP és POP kliens, amely lehetõvé teszi a felhasználók számára, hogy automatikusan töltsenek le leveleket távoli IMAP és POP szerverekrõl és lementsék azokat a helyi postaládáikba. Így a levelek sokkal könnyebben elérhetõek. A fetchmail a package:mail/fetchmail[] port segítségével telepíthetõ, és számos lehetõséget ajánl fel, többek közt:
+
+* A POP3, APOP, KPOP, IMAP, ETRN és az ODMR protokollok ismerete.
+* Képes SMTP használatával levelet továbbítani, és ennek révén a szûrés, továbbküldés és az álnevek használata a megszokott módon mûködik.
+* Démonként futtatva képes adott idõközönként ellenõrizni a frissen érkezõ üzeneteket.
+* Képes egyszerre több postaládát is kezelni, majd ezek tartalmát a beállításainak megfelelõen továbbküldeni a különbözõ helyi felhasználóknak.
+
+Noha a fetchmail összes lehetõségének aprólékos bemutatása meghaladná ennek a leírásnak a kereteit, azért szót kerítünk néhány alapvetõ funkciójára. A fetchmail segédprogramnak a megfelelõ mûködéshez egy [.filename]#.fetchmailrc# nevû konfigurációs állományra van szüksége. Ez az állomány tárolja a szerverekre vonatkozó, valamint a bejelentkezéshez szükséges információkat. Az állomány kényes tartalmára tekintettel azt javasoljuk, hogy csak a tulajdonosának engedélyezzük az olvasását:
+
+[source,bash]
+....
+% chmod 600 .fetchmailrc
+....
+
+Az alább ismertetésre kerülõ [.filename]#.fetchmailrc# állományban azt láthatjuk, ahogy egyetlen felhasználó postaládáját érjük el a POP protokoll használatával. Arra utasítja a fetchmail programot, hogy csatlakozzon a `levelezes.com` címre a `joska` felhasználóval és az `XXX` jelszóval. Ebben a példában feltételezzük, hogy a `joska` nevû felhasználó létezik a rendszerünkben is.
+
+[.programlisting]
+....
+poll levelezes.com protocol pop3 username "joska" password "XXX"
+....
+
+A következõ példában több POP és IMAP szerverhez csatlakozunk és ahol lehet, több helyi felhasználónak irányítjuk át a leveleket:
+
+[.programlisting]
+....
+poll levelezes.com proto pop3:
+user "joska", with password "XXX", is "jozsi" here;
+user "andrea", with password "XXXX";
+poll levelezes2.net proto imap:
+user "jani", with password "XXXXX", is "hardstuff" here;
+....
+
+A fetchmail program a `-d` beállítás megadásával démonként is elindítható, amely után meg kell adni (másodpercekben) azt az idõközt, aminek elteltével a fetchmail lekérdi a [.filename]#.fetchmailrc# állományban felsorolt szervereket. Az alábbi példában a fetchmail 600 másodpercenként kéri el a leveleket:
+
+[source,bash]
+....
+% fetchmail -d 600
+....
+
+A fetchmail további lehetõségeirõl és mûködésérõl a http://fetchmail.berlios.de/[http://fetchmail.berlios.de/] oldalon olvashatunk (angolul).
+
+[[mail-procmail]]
+== A procmail használata
+
+A procmail segédprogram egy hihetetlenül erõs alkalmazás, mellyel a beérkezõ leveleinket tudjuk szûrni. A felhasználók számára olyan "szabályok" megadását teszi lehetõvé, amelyekre aztán a rendszer illeszti a bejövõ leveleket, és az eredménynek megfelelõen elvégez bizonyos feladatokat vagy átirányítja a levelet más postaladákba és/vagy e-mail címekre. A procmail a package:mail/procmail[] porttal telepíthetõ fel. Miután ez sikerült, akár közvetlenül be is építhetjük a legtöbb levelezõ kliensbe. Errõl az adott levelezõ kliens dokumentációjában olvashatunk többet. A procmail úgy is integrálható, ha a felvesszük a következõ sort a procmail szolgáltatára igényt tartó felhasználó könyvtárában található [.filename]#.forward# állományba:
+
+[.programlisting]
+....
+"|exec /usr/local/bin/procmail || exit 75"
+....
+
+A következõ szakaszban láthatjuk a procmail néhány alapvetõ szabályát, valamint ezek rövid leírását. Ezeket a szabályokat a [.filename]#.procmailrc# állományba kell beleírni, amely szintén a felhasználó könyvtárában leledzik.
+
+Ezen szabályok többsége a man:procmailex[5] man oldalon is olvasható.
+
+A mailto:felhasznalo@levelezes.com[felhasznalo@levelezes.com] címrõl érkezõ leveleket irányítsuk át a mailto:jocim@levelezes2.com[jocim@levelezes2.com] külsõ címre:
+
+[.programlisting]
+....
+:0
+* ^From.*felhasznalo@levelezes.com
+! jocim@levelezes2.com
+....
+
+Minden 1000 byte-nál kisebb levelet küldjünk át a mailto:jocim@levelezes2.com[jocim@levelezes2.com] külsõ címre:
+
+[.programlisting]
+....
+:0
+* < 1000
+! jocim@levelezes2.com
+....
+
+Küldjük át az összes mailto:masik@levelezes.com[masik@levelezes.com] címre küldött levelet a [.filename]#masik# postaládába:
+
+[.programlisting]
+....
+:0
+* ^TOmasik@levelezes.com
+masik
+....
+
+Küldjük az összes olyan levelet a [.filename]#/dev/null# eszközre, amelyek a témájában szerepel a "Spam" szó:
+
+[.programlisting]
+....
+:0
+^Subject:.*Spam
+/dev/null
+....
+
+Egy hasznos szabály, amellyel el tudjuk kapni a `FreeBSD.org` levelezési listáiról érkezõ leveleket és el tudjuk raktározni ezeket a saját postaládájukba:
+
+[.programlisting]
+....
+:0
+* ^Sender:.owner-freebsd-\/[^@]+@FreeBSD.ORG
+{
+	LISTNAME=${MATCH}
+	:0
+	* LISTNAME??^\/[^@]+
+	FreeBSD-${MATCH}
+}
+....

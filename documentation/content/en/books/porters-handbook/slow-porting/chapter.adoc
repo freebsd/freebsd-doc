@@ -1,0 +1,284 @@
+---
+title: Chapter 4. Slow Porting
+prev: books/porters-handbook/quick-porting
+next: books/porters-handbook/makefiles
+---
+
+[[slow-porting]]
+= Slow Porting
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 4
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/en/mailing-lists.adoc[]
+include::shared/en/teams.adoc[]
+include::shared/en/urls.adoc[]
+
+toc::[]
+
+Okay, so it was not that simple, and the port required some modifications to get it to work. In this section, we will explain, step by step, how to modify it to get it to work with the ports paradigm.
+
+[[slow-work]]
+== How Things Work
+
+First, this is the sequence of events which occurs when the user first types `make` in the port's directory. Having [.filename]#bsd.port.mk# in another window while reading this really helps to understand it.
+
+But do not worry, not many people understand exactly how [.filename]#bsd.port.mk# is working... _:-)_
+
+[.procedure]
+. The `fetch` target is run. The `fetch` target is responsible for making sure that the tarball exists locally in `DISTDIR`. If `fetch` cannot find the required files in `DISTDIR` it will look up the URL `MASTER_SITES`, which is set in the Makefile, as well as our FTP mirrors where we put distfiles as backup. It will then attempt to fetch the named distribution file with `FETCH`, assuming that the requesting site has direct access to the Internet. If that succeeds, it will save the file in `DISTDIR` for future use and proceed.
+. The `extract` target is run. It looks for the port's distribution file (typically a compressed tarball) in `DISTDIR` and unpacks it into a temporary subdirectory specified by `WRKDIR` (defaults to [.filename]#work#).
+. The `patch` target is run. First, any patches defined in `PATCHFILES` are applied. Second, if any patch files named [.filename]#patch-*# are found in `PATCHDIR` (defaults to the [.filename]#files# subdirectory), they are applied at this time in alphabetical order.
+. The `configure` target is run. This can do any one of many different things.
+.. If it exists, [.filename]#scripts/configure# is run.
+.. If `HAS_CONFIGURE` or `GNU_CONFIGURE` is set, [.filename]#WRKSRC/configure# is run.
+
+. The `build` target is run. This is responsible for descending into the port's private working directory (`WRKSRC`) and building it.
+. The `stage` target is run. This puts the final set of built files into a temporary directory (`STAGEDIR`, see <<staging,Staging>>). The hierarchy of this directory mirrors that of the system on which the package will be installed.
+. The `package` target is run. This creates a package using the files from the temporary directory created during the `stage` target and the port's [.filename]#pkg-plist#.
+. The `install` target is run. This installs the package created during the `package` target into the host system.
+
+The above are the default actions. In addition, define targets `pre-_something_` or `post-_something_`, or put scripts with those names, in the [.filename]#scripts# subdirectory, and they will be run before or after the default actions are done.
+
+For example, if there is a `post-extract` target defined in the [.filename]#Makefile#, and a file [.filename]#pre-build# in the [.filename]#scripts# subdirectory, the `post-extract` target will be called after the regular extraction actions, and [.filename]#pre-build# will be executed before the default build rules are done. It is recommended to use [.filename]#Makefile# targets if the actions are simple enough, because it will be easier for someone to figure out what kind of non-default action the port requires.
+
+The default actions are done by the `do-_something_` targets from [.filename]#bsd.port.mk#. For example, the commands to extract a port are in the target `do-extract`. If the default target does not do the job right, redefine the `do-_something_` target in the [.filename]#Makefile#.
+
+[NOTE]
+====
+The "main" targets (for example, `extract`, `configure`, etc.) do nothing more than make sure all the stages up to that one are completed and call the real targets or scripts, and they are not intended to be changed. To fix the extraction, fix `do-extract`, but never ever change the way `extract` operates! Additionally, the target `post-deinstall` is invalid and is not run by the ports infrastructure.
+====
+
+Now that what goes on when the user types `make install` is better understood, let us go through the recommended steps to create the perfect port.
+
+[[slow-sources]]
+== Getting the Original Sources
+
+Get the original sources (normally) as a compressed tarball ([.filename]#foo.tar.gz# or [.filename]#foo.tar.bz2#) and copy it into `DISTDIR`. Always use _mainstream_ sources when and where possible.
+
+Set the variable `MASTER_SITES` to reflect where the original tarball resides. Shorthand definitions exist for most mainstream sites in [.filename]#bsd.sites.mk#. Please use these sites-and the associated definitions-if at all possible, to help avoid the problem of having the same information repeated over again many times in the source base. As these sites tend to change over time, this becomes a maintenance nightmare for everyone involved. See <<makefile-master_sites,`MASTER_SITES`>> for details.
+
+If there is no FTP/HTTP site that is well-connected to the net, or can only find sites that have irritatingly non-standard formats, put a copy on a reliable FTP or HTTP server (for example, a home page).
+
+If a convenient and reliable place to put the distfile cannot be found, we can "house" it ourselves on `ftp.FreeBSD.org`; however, this is the least-preferred solution. The distfile must be placed into [.filename]#~/public_distfiles/# of someone's `freefall` account. Ask the person who commits the port to do this. This person will also set `MASTER_SITES` to `LOCAL/_username_` where `_username_` is their FreeBSD cluster login.
+
+If the port's distfile changes all the time without any kind of version update by the author, consider putting the distfile on a home page and listing it as the first `MASTER_SITES`. Try to talk the port author out of doing this; it really does help to establish some kind of source code control. Hosting a specific version will prevent users from getting `checksum mismatch` errors, and also reduce the workload of maintainers of our FTP site. Also, if there is only one master site for the port, it is recommended to house a backup on a home page and list it as the second `MASTER_SITES`.
+
+If the port requires additional patches that are available on the Internet, fetch them too and put them in `DISTDIR`. Do not worry if they come from a site other than where the main source tarball comes, we have a way to handle these situations (see the description of <<porting-patchfiles,PATCHFILES>> below).
+
+[[slow-modifying]]
+== Modifying the Port
+
+Unpack a copy of the tarball in a private directory and make whatever changes are necessary to get the port to compile properly under the current version of FreeBSD. Keep _careful track_ of steps, as they will be needed to automate the process shortly. Everything, including the deletion, addition, or modification of files has to be doable using an automated script or patch file when the port is finished.
+
+If the port requires significant user interaction/customization to compile or install, take a look at one of Larry Wall's classic Configure scripts and perhaps do something similar. The goal of the new ports collection is to make each port as "plug-and-play" as possible for the end-user while using a minimum of disk space.
+
+[NOTE]
+====
+Unless explicitly stated, patch files, scripts, and other files created and contributed to the FreeBSD ports collection are assumed to be covered by the standard BSD copyright conditions.
+====
+
+[[slow-patch]]
+== Patching
+
+In the preparation of the port, files that have been added or changed can be recorded with man:diff[1] for later feeding to man:patch[1]. Doing this with a typical file involves saving a copy of the original file before making any changes using a [.filename]#.orig# suffix.
+
+[source,bash]
+....
+% cp file file.orig
+....
+
+After all changes have been made, `cd` back to the port directory. Use `make makepatch` to generate updated patch files in the [.filename]#files# directory.
+
+[TIP]
+====
+
+Use `BINARY_ALIAS` to substitute hardcoded commands during the build and avoid patching build files. See <<binary-alias,Use `BINARY_ALIAS` to Rename Commands Instead of Patching the Build>> for more information.
+====
+
+[[slow-patch-rules]]
+=== General Rules for Patching
+
+Patch files are stored in `PATCHDIR`, usually [.filename]#files/#, from where they will be automatically applied. All patches must be relative to `WRKSRC`. Typically `WRKSRC` is a subdirectory of `WRKDIR`, the directory where the distfile is extracted. Use `make -V WRKSRC` to see the actual path. The patch names are to follow these rules:
+
+* Avoid having more than one patch modify the same file. For example, having both [.filename]#patch-foobar.c# and [.filename]#patch-foobar.c2# making changes to [.filename]#${WRKSRC}/foobar.c# makes them fragile and difficult to debug.
+* When creating names for patch files, replace each underscore (`\_`) with two underscores (`\__`) and each slash (`/`) with one underscore (`_`). For example, to patch a file named [.filename]#src/freeglut_joystick.c#, name the corresponding patch [.filename]#patch-src_freeglut__joystick.c#. Do not name patches like [.filename]#patch-aa# or [.filename]#patch-ab#. Always use the path and file name in patch names. Using `make makepatch` automatically generates the correct names.
+* A patch may modify multiple files if the changes are related and the patch is named appropriately. For example, [.filename]#patch-add-missing-stdlib.h#.
+* Only use characters `[-+.\_a-zA-Z0-9]` for naming patches. In particular, __do not use `::` as a path separator,__ use `_` instead.
+
+Minimize the amount of non-functional whitespace changes in patches. It is common in the Open Source world for projects to share large amounts of a code base, but obey different style and indenting rules. When taking a working piece of functionality from one project to fix similar areas in another, please be careful: the resulting patch may be full of non-functional changes. It not only increases the size of the ports repository but makes it hard to find out what exactly caused the problem and what was changed at all.
+
+If a file must be deleted, do it in the `post-extract` target rather than as part of the patch.
+
+[[slow-patch-manual]]
+=== Manual Patch Generation
+
+[NOTE]
+====
+Manual patch creation is usually not necessary. Automatic patch generation as described earlier in this section is the preferred method. However, manual patching may be required occasionally.
+====
+
+Patches are saved into files named [.filename]#patch-*# where * indicates the pathname of the file that is patched, such as [.filename]#patch-Imakefile# or [.filename]#patch-src-config.h#.
+
+After the file has been modified, man:diff[1] is used to record the differences between the original and the modified version. `-u` causes man:diff[1] to produce "unified" diffs, the preferred form.
+
+[source,bash]
+....
+% diff -u file.orig file > patch-pathname-file
+....
+
+When generating patches for new, added files, `-N` is used to tell man:diff[1] to treat the non-existent original file as if it existed but was empty:
+
+[source,bash]
+....
+% diff -u -N newfile.orig newfile > patch-pathname-newfile
+....
+
+Do not add `$FreeBSD$` RCS strings in patches. When patches are added to the Subversion repository with `svn add`, the `fbsd:nokeywords` property is set to `yes` automatically so keywords in the patch are not modified when committed. The property can be added manually with `svn propset fbsd:nokeywords yes _files..._`.
+
+Using the recurse (`-r`) option to man:diff[1] to generate patches is fine, but please look at the resulting patches to make sure there is no unnecessary junk in there. In particular, diffs between two backup files, [.filename]##Makefile##s when the port uses `Imake` or GNU `configure`, etc., are unnecessary and have to be deleted. If it was necessary to edit [.filename]#configure.in# and run `autoconf` to regenerate `configure`, do not take the diffs of `configure` (it often grows to a few thousand lines!). Instead, define `USES=autoreconf` and take the diffs of [.filename]#configure.in#.
+
+[[slow-patch-automatic-replacements]]
+=== Simple Automatic Replacements
+
+Simple replacements can be performed directly from the port [.filename]#Makefile# using the in-place mode of man:sed[1]. This is useful when changes use the value of a variable:
+
+[.programlisting]
+....
+post-patch:
+	@${REINPLACE_CMD} -e 's|/usr/local|${PREFIX}|g' ${WRKSRC}/Makefile
+....
+
+[IMPORTANT]
+====
+Only use man:sed[1] to replace variable content. You must use patch files instead of man:sed[1] to replace static content.
+====
+
+Quite often, software being ported uses the CR/LF convention in source files. This may cause problems with further patching, compiler warnings, or script execution (like `/bin/sh^M not found`.) To quickly convert all files from CR/LF to just LF, add this entry to the port [.filename]#Makefile#:
+
+[.programlisting]
+....
+USES=	dos2unix
+....
+
+A list of specific files to convert can be given:
+
+[.programlisting]
+....
+USES=	dos2unix
+DOS2UNIX_FILES=	util.c util.h
+....
+
+Use `DOS2UNIX_REGEX` to convert a group of files across subdirectories. Its argument is a man:find[1]-compatible regular expression. More on the format is in man:re_format[7]. This option is useful for converting all files of a given extension. For example, convert all source code files, leaving binary files intact:
+
+[.programlisting]
+....
+USES=	dos2unix
+DOS2UNIX_REGEX=	.*\.([ch]|cpp)
+....
+
+A similar option is `DOS2UNIX_GLOB`, which runs `find` for each element listed in it.
+
+[.programlisting]
+....
+USES=	dos2unix
+DOS2UNIX_GLOB=	*.c *.cpp *.h
+....
+
+The base directory for the conversion can be set. This is useful when there are multiple distfiles and several contain files which require line-ending conversion.
+
+[.programlisting]
+....
+USES=	dos2unix
+DOS2UNIX_WRKSRC=	${WRKDIR}
+....
+
+[[slow-patch-extra]]
+=== Patching Conditionally
+
+Some ports need patches that are only applied for specific FreeBSD versions or when a particular option is enabled or disabled. Conditional patches are specified by placing the full paths to the patch files in `EXTRA_PATCHES`.
+
+[[slow-patch-extra-ex1]]
+.Applying a Patch for a Specific FreeBSD Version
+[example]
+====
+[.programlisting]
+....
+.include <bsd.port.options.mk>
+
+# Patch in the iconv const qualifier before this
+.if ${OPSYS} == FreeBSD && ${OSVERSION} < 1100069
+EXTRA_PATCHES=	${PATCHDIR}/extra-patch-fbsd10
+.endif
+
+.include <bsd.port.mk>
+....
+
+====
+
+[[slow-patch-extra-ex2]]
+.Optionally Applying a Patch
+[example]
+====
+When an <<makefile-options,option>> requires a patch, use ``opt_EXTRA_PATCHES`` and ``opt_EXTRA_PATCHES_OFF`` to make the patch conditional on the `opt` option. See <<options-variables,Generic Variables Replacement, `OPT_VARIABLE` and `OPT_VARIABLE_OFF`>> for more information.
+
+[.programlisting]
+....
+OPTIONS_DEFINE=	  FOO BAR
+FOO_EXTRA_PATCHES=  ${PATCHDIR}/extra-patch-foo
+BAR_EXTRA_PATCHES_OFF=	${PATCHDIR}/extra-patch-bar.c \
+		${PATCHDIR}/extra-patch-bar.h
+....
+
+====
+
+[[slow-patch-extra-ex-dirs]]
+.Using `EXTRA_PATCHES` With a Directory
+[example]
+====
+Sometime, there are many patches that are needed for a feature, in this case, it is possible to point `EXTRA_PATCHES` to a directory, and it will automatically apply all files named [.filename]#patch-*# in it.
+
+Create a subdirectory in [.filename]#${PATCHDIR}#, and move the patches in it. For example:
+
+[source,bash]
+....
+% ls -l files/foo-patches
+-rw-r--r--  1 root  wheel    350 Jan 16 01:27 patch-Makefile.in
+-rw-r--r--  1 root  wheel   3084 Jan 18 15:37 patch-configure
+....
+
+Then add this to the [.filename]#Makefile#:
+
+[.programlisting]
+....
+OPTIONS_DEFINE=	FOO
+FOO_EXTRA_PATCHES=	${PATCHDIR}/foo-patches
+....
+
+The framework will then use all the files named [.filename]#patch-*# in that directory.
+====
+
+[[slow-configure]]
+== Configuring
+
+Include any additional customization commands in the [.filename]#configure# script and save it in the [.filename]#scripts# subdirectory. As mentioned above, it is also possible do this with [.filename]#Makefile# targets and/or scripts with the name [.filename]#pre-configure# or [.filename]#post-configure#.
+
+[[slow-user-input]]
+== Handling User Input
+
+If the port requires user input to build, configure, or install, set `IS_INTERACTIVE` in the [.filename]#Makefile#. This will allow "overnight builds" to skip it. If the user sets the variable `BATCH` in their environment (and if the user sets the variable `INTERACTIVE`, then _only_ those ports requiring interaction are built). This will save a lot of wasted time on the set of machines that continually build ports (see below).
+
+It is also recommended that if there are reasonable default answers to the questions, `PACKAGE_BUILDING` be used to turn off the interactive script when it is set. This will allow us to build the packages for CDROMs and FTP.

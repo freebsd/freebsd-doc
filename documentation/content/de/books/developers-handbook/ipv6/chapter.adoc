@@ -1,0 +1,685 @@
+---
+title: Kapitel 8. IPv6 Internals
+prev: books/developers-handbook/sockets
+next: books/developers-handbook/kernelbuild
+---
+
+[[ipv6]]
+= IPv6 Internals
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:appendix-caption: Anhang
+:table-caption: Tabelle
+:figure-caption: Abbildung
+:example-caption: Beispiel
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 8
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/de/mailing-lists.adoc[]
+include::shared/de/teams.adoc[]
+include::shared/de/urls.adoc[]
+
+toc::[]
+
+[[ipv6-implementation]]
+== IPv6/IPsec-Implementierung
+
+Dieser Abschnitt erklärt die von der IPv6- und IPsec-Implementierung abhängigen Internas. Die Funktionalitäten wurden vom http://www.kame.net/[KAME-Projekt] abgeleitet
+
+[[ipv6details]]
+=== IPv6
+
+==== Konformität
+
+Die IPv6 abhängigen Funktionen richten sich nach, oder versuchen sich nach den neuesten IPv6-Spezifikationen zu richten. (_Achtung_: Dies ist keine vollständige Liste - es wäre zu aufwändig, diese zu pflegen...).
+
+Für weitere Details beachten sie bitte die entsprechenden Kapitel, RFCs, manual pages, oder Kommentare in den Quelltexten.
+
+Konformitätsprüfungen wurden basierend auf KAME-STABLE-Kit des TAHI-Projekts durchgeführt. Die Ergebnisse können unter http://www.tahi.org/report/KAME/[http://www.tahi.org/report/KAME/] eingesehen werden. In der Vergangenheit begleiteten wir auch Tests mit unseren älteren "Snapshots" an der Univ. of New Hampshire IOL (http://www.iol.unh.edu/[http://www.iol.unh.edu/]).
+
+* RFC1639: FTP Operation Over Big Address Records (FOOBAR)
+
+** RFC2428 wird gegenüber RFC1639 bevorzugt. FTP-Clients versuchen zuerst RFC2428, dann im Fehlerfall RFC1639.
+
+* RFC1886: DNS Extensions to support IPv6
+* RFC1933: Transition Mechanisms for IPv6 Hosts and Routers
+
+** IPv4 kompatible Adressen werden nicht unterstützt.
+** Automatisches Tunneln (beschrieben in 4.3 dieses RFC) wird nicht unterstützt.
+** Die man:gif[4]-Schnittstelle implementiert einen IPv[46]-over-IPv[46] Tunnel in einer allgemeinen Art und Weise und es umfaßt "configured tunnel" wie in der Spezifikation beschrieben. Siehe auch <<gif,23.5.1.5>> in diese Dokument für weitere Details.
+
+* RFC1981: Path MTU Discovery for IPv6
+* RFC2080: RIPng for IPv6
+
+** usr.sbin/route6d unterstützt dies.
+
+* RFC2292: Advanced Sockets API for IPv6
+
+** Unterstützte Bibliotheksfunktionen bzw. Kernel-APIs, siehe auch [.filename]#sys/netinet6/ADVAPI#.
+
+* RFC2362: Protocol Independent Multicast-Sparse Mode (PIM-SM)
+
+** RFC2362 definiert Paketformate für PIM-SM. [.filename]#draft-ietf-pim-ipv6-01.txt# wurde basierend auf diesem RFC verfaßt.
+
+* RFC2373: IPv6 Addressing Architecture
+
+** Unterstützt vom Knoten erforderliche Adressen und richtet sich nach den Erfordernissen des Bereichs.
+
+* RFC2374: An IPv6 Aggregatable Global Unicast Address Format
+
+** Unterstützt die 64-Bit-Breite einer Interface ID.
+
+* RFC2375: IPv6 Multicast Address Assignments
+
+** Userland-Applikationen nutzen die bekannten Adressen, die in den RFC festgelegt sind.
+
+* RFC2428: FTP Extensions for IPv6 and NATs
+
+** RFC2428 wird gegenüber RFC1639 bevorzugt. FTP-Clients versuchen zuerst RFC2428, dann im Fehlerfall RFC1639.
+
+* RFC2460: IPv6 specification
+* RFC2461: Neighbor discovery for IPv6
+
+** Siehe auch <<neighbor-discovery,23.5.1.2>> in diesem Dokument für weitere Details.
+
+* RFC2462: IPv6 Stateless Address Autoconfiguration
+
+** Siehe auch <<ipv6-pnp,23.5.1.4>> in diesem Dokument für weitere Details.
+
+* RFC2463: ICMPv6 for IPv6 specification
+
+** Siehe auch <<icmpv6,23.5.1.9>> in diesem Dokument für weitere Details.
+
+* RFC2464: Transmission of IPv6 Packets over Ethernet Networks
+* RFC2465: MIB for IPv6: Textual Conventions and General Group
+
+** Notwendige Statistiken werden vom Kernel gesammelt. Die aktuelle IPv6-MIB-Unterstützung wird als Patch-Sammlung für ucd-snmp bereitgestellt.
+
+* RFC2466: MIB for IPv6: ICMPv6 group
+
+** Notwendige Statistiken werden vom Kernel gesammelt. Die aktuelle IPv6-MIB-Unterstützung wird als Patch-Sammlung für ucd-snmp bereitgestellt.
+
+* RFC2467: Transmission of IPv6 Packets over FDDI Networks
+* RFC2497: Transmission of IPv6 packet over ARCnet Networks
+* RFC2553: Basic Socket Interface Extensions for IPv6
+
+** IPv4 mapped address (3.7) and special behavior of IPv6 wildcard bind socket (3.8) are supported. See <<ipv6-wildcard-socket,23.5.1.12>> in this document for details.
+
+* RFC2675: IPv6 Jumbogramms
+
+** Siehe auch <<ipv6-jumbo,23.5.1.7>> in diesem Dokument für weitere Details.
+
+* RFC2710: Multicast Listener Discovery for IPv6
+* RFC2711: IPv6 router alert option
+* [.filename]#draft-ietf-ipngwg-router-renum-08#: Router renumbering for IPv6
+* [.filename]#draft-ietf-ipngwg-icmp-namelookups-02#: IPv6 Name Lookups Through ICMP
+* [.filename]#draft-ietf-ipngwg-icmp-name-lookups-03#: IPv6 Name Lookups Through ICMP
+* [.filename]#draft-ietf-pim-ipv6-01.txt#: PIM for IPv6
+
+** man:pim6dd[8] implementiert dense mode. man:pim6sd[8] implementiert sparse mode.
+
+* [.filename]#draft-itojun-ipv6-tcp-to-anycast-00#: Unterbrechen einer TCP-Verbindung toward IPv6 anycast address
+* [.filename]#draft-yamamoto-wideipv6-comm-model-00#
+
+** Beachte <<ipv6-sas,23.5.1.6>> in deisem Dokument für weitere Deatils.
+
+* [.filename]#draft-ietf-ipngwg-scopedaddr-format-00.txt#: Eine Erweiterung des Format for IPv6 Scoped Addresses
+
+[[neighbor-discovery]]
+==== Neighbor Discovery
+
+Neighbor Discovery ist weitestgehend stabil. Zur Zeit werden Addressauflösung, Duplicated Address Detection (DAD), und Neighbor Unreachability Detection (NUD) unterstützt. In der näheren Zukunft werden wir Proxy Neighbor Advertisement Unterstützung in den Kernel einbauen und Unsolicited Neighbor Advertisement Übertragungskommandos als Verwaltungsprogramm zur Verfügung stellen.
+
+Falls DAD versagt, wird die Adresse als "duplicated" markiert und eine Nachricht wird erzeugt, die an Syslog gesandt wird (und für gewöhnlich an die Konsole). Die "duplicated"-Markierung kann mit man:ifconfig[8] überprüft werden. Es liegt in der Verantwortung des Administrators, auf DAD-Fehler zu achten und diese zu beheben. Dieses Verhalten sollte in der näheren Zukunft verbessert werden.
+
+Manche Netzwerktreiber verbinden Multicast-Pakete mit sich selbst, sogar, wenn es vorgeschrieben ist, es nicht zu tun (vor allem im Promiscuous-Modus). In solchen Fällen könnte DAD versagen, weil die DAD-Steuerung ein inbound NS packet sieht (eigentlich vom Knoten selber) und betrachtet es als ein Duplikat. Sie könnten sich die #if-Bedingung ansehen, die in sys/netinet6/nd6_nbr.c:nd6_dad_timer() als "Workaround" mit "heuristics" markiert ist (Beachte, dass das Kodefragment im Abschnitt "heuristics" nicht der Spezifikation entspricht).
+
+Neighbor Discovery specification (RFC2461) kommuniziert in den folgenden Fällen nicht über neighbor cache handling:
+
+. Der Knoten empfing ein unverlangtes RS/NS/NA/redirect-Paket ohne Link-Layer-Adresse, wenn kein neighbor cache-Eintrag vorhanden ist.
+. neighbor cache handling bei Geräten ohne Link-Layer-Adresse (wir benötigen einen neighbor cache Eintrag für das IsRouter-Bit)
+
+Im ersten Fall implemenierten wir einen Workaround basierend auf Diskussionen in der IETF-Ipngwg-Mailing-Liste. Für weitere Details beachten Sie die Kommentare im Quelltext und im Email-Thread, der bei (IPng 7155) mit dem Datum vom 6. Feb 1999 gestartet wurde.
+
+IPv6 on-link Erkennungsregel (RFC2461) ist recht unterschiedlich zu Übernahmen im BSD-Netzwerkkode. Zur Zeit wird keine on-link Erkennungsregel unterstützt, bei der die Defaultrouter-Liste leer ist (RFC2461, Abschnitt 5.2, letzter Satz im zweiten Absatz - beachte, dass die Spezifikation das Wort "host" und "Knoten" an mehreren Stellen im Abschnitt mißbraucht).
+
+Um mögliche DoS-Attacken und unendliche Schleifen zu verhindern, werden bis jetzt nur 10 Optionen bei ND-Paketen akzeptiert. Deshalb werden nur die ersten 10 Präfixe berücksichtigt, wenn man 20-Präfixoptionen zu RA hinzugefügt hat. Falls das zu Schwierigkeiten führen sollte, dann sollte in der FREEBSD-CURRENT-Mailing-Liste gefragt werden und/oder die Variable nd6_maxndopt in [.filename]#sys/netinet6/nd6.c# modifizieren. Falls die Nachfrage groß genug ist, könnte man einen sysctl-Knopf für die Variable vorsehen.
+
+[[ipv6-scope-index]]
+==== Bereichsindex
+
+IPv6 benutzt Adressbereiche (Scoped Addresses). Deshalb ist es sehr wichtig, mit einer IPv6-Adresse einen Bereichsindex anzugeben (Schnittstellenindex für link-local-Adresse, oder einen Lageindex für site-local-Adressen). Ohne einen Bereichsindex ist ein IPv6-Adressbereich für den Kernel zweideutig und dem Kernel ist es nicht möglich, die Ausgabeschnittstelle für ein Paket festzustellen.
+
+Gewöhnliche Userland-Anwendungen sollten die erweiterte Programmierschnittstelle (RFC2292) benutzen, um den Bereichsindex oder Schnittstellenindex festzulegen. Für ähnliche Zwecke wurde in RFC2553 sin6_scope_id member in der sockaddr_in6-Struktur definiert. Wie auch immer, die Semantik für sin6_scope_id ist ziemlich wage. Wenn man auf Portierbarkeit der Anwendung achten muß, dann schlagen wir vor, die erweiterte Programmierschnittstelle anstelle von sin6_scope_id zu benutzen.
+
+Im Kernel ist ein Schnittstellenindex für link-local scoped-Adressen in das zweite 16bit-Wort (drittes und viertes Byte) der IPv6-Adresse eingebettet. Zum Beispiel sieht man folgendes
+
+[source,bash]
+....
+fe80:1::200:f8ff:fe01:6317
+....
+
+in der Routing-Tabelle und in der Schnittstellenadress-Struktur (structin6_ifaddr). Oben genannte Adresse ist eine "link-local unicast address" die zu einer Netzwerkschnittstelle gehört, deren Schnittstellenbezeichner 1 (eins) ist. Der eingebettete Index ermöglicht es, IPv6 link local-Adressen über mehrere Schnittstellen hinweg effektiv und mit wenig Änderungen am Kode zu identifizieren.
+
+Routing-Dämonen und Konfigurationsprogramme wie man:route6d[8] und man:ifconfig[8] werden den "eingebetteten" Bereichsindex verändern müssen. Diese Programme benutzen routing sockets und ioctls (wie SIOCGIFADDR_IN6) und die Kernel-Programmierschnittstelle wird IPv6-Adressen, dessen zweites 16-Bit-Word gesetzt ist, zurückgeben. Diese Programmierschnittstellen dienen zur Änderung der Kernel-internen Struktur. Programme, die diese Programmierschnittstellen benutzen, müssen ohnehin auf Unterschiede in den Kerneln vorbereitet sein.
+
+Wenn man einen Adressbereich in der Kommandozeile angibt, schreibt man niemals die eingebettete Form (so etwas wie ff02:1::1 or fe80:2::fedc). Man erwartet nicht, dass es funktioniert. Man benutzt immer die Standardform wie ff02::1 oder fe80::fedc, zusammen mit der Kommandozeilenoption, die die Schnittstelle festlegt (wie `ping6 -I ne0 ff02::1`). Allgemein gilt, wenn ein Kommando keine Kommandozeilenoption hat, um die Ausgabeschnittstelle zu definieren, ist dieses Kommando noch nicht für Adressbereiche bereit. Dies scheint der Prämisse von IPv6 entgegenzustehen. Wir glauben, dass die Spezifikationen einige Verbesserungen benötigen.
+
+Einige der Userland-Werkzeuge unterstützen die erweiterte numerische IPv6-Syntax wie sie in [.filename]#draft-ietf-ipngwg-scopedaddr-format-00.txt# beschrieben ist. Man kann die ausgehende Verbindung angeben, indem man den Namen der ausgehenden Schnittstelle wie folgt benutzt: "fe80::1%ne0". Auf diese Art und Weise ist man in der Lage, eine link-local scoped Adresse ohne viele Schwierigkeiten anzugeben.
+
+Um die Erweiterungen im eigenen Programm zu nutzen, muss man man:getaddrinfo[3] und man:getnameinfo[3] mit NI_WITHSCOPEID verwenden. Die Implementierung setzt im Moment eine 1-zu-1 Beziehung zwischen einer Verbindung und einer Schnittstelle voraus, die stärker ist, als es die Spezifikationen beschreiben.
+
+[[ipv6-pnp]]
+==== Plug and Play
+
+Der grösste Teil der statuslosen IPv6-Adress-Autokonfiguration ist im Kernel implementiert. Neighbor-Discovery-Funktionen sind als ganzes im Kernel implementiert. Router-Advertisement (RA) Eingabe für Hosts ist im Kernel implementiert. Router-Solicitation (RS) Ausgabe für Hosts, RS-Eingabe für Router und RA-Ausgabe für Router ist im Userland implementiert.
+
+===== Zuweisung von link-local und speziellen Adressen
+
+Die IPv6 link-local-Adresse wird aus einer IEEE802-Adresse (Ethernet MAC address) erzeugt. Jeder Schnittstelle wird automatisch eine IPv6 link-local-Adresse zugewiesen, sobald die Schnittstelle aktiv ist (IFF_UP). Ebenso wird eine direkte Route für die link-local-Adresse zur Routing-Tabelle hinzugefügt.
+
+Hier ist eine Ausgabe des netstat-Kommandos:
+
+[source,bash]
+....
+Internet6:
+Destination                   Gateway                   Flags      Netif Expire
+fe80:1::%ed0/64               link#1                    UC          ed0
+fe80:2::%ep0/64               link#2                    UC          ep0
+....
+
+Schnittstellen, die keine IEEE802-Adresse haben (Pseudo-Schnittstellen wie Tunnel-Schnittstellen oder ppp-Schnittstellen), borgen sich eine IEEE802-Adresse von anderen Schnittstellen wie Ethernet-Schnittstellen aus, wann immer das möglich ist. Wenn keine IEEE802-Geräte eingebaut sind, wird als letzte Möglichkeit eine Pseudo-Zufallszahl - MD5(hostname) - als Quelle für eine link-local-Adresse benutzt. Falls diese für den Einsatz nicht geeignet sein sollte, dann muss man eine link-local-Adresse manuell konfigurieren.
+
+Falls eine Schnittstelle nicht imstande ist, IPv6-Adressen zu handhaben (wie fehlende Unterstützung des multicast), wird keine link-local-Adresse der Schnittstelle zugewiesen. Siehe Abschnitt 2 für weitere Details.
+
+Jede Schnittstelle verbindet die solicited multicast Adresse und link-local all-nodes multicast-Adressen (z.B. fe80::1:ff01:6317 und ff02::1, jeweils zu der Verbindung, an die die Schnittstelle verbunden ist). zusätzlich zu einer link-local-Adresse wird eine loopback-Adresse (::1) einer loopback-Schnittstelle zugewiesen. Außerdem werden ::1/128 und ff01::/32 automatisch zur Routing-Tabelle hinzugefügt und die loopback-Schnittstelle verbindet sich mit der node-local multicast Gruppe ff01::1.
+
+===== Stateless address autoconfiguration beim Host
+
+In der IPv6-Spezifikation werden Knoten in zwei Kategorien unterteilt: _Router_ und _Hosts_. Router leiten Pakete, die an andere adressiert sind, weiter, Hosts leiten Pakete nicht weiter. net.inet6.ip6.forwarding definiert, ob dieser Knoten ein Router oder ein Host ist (Router falls es 1 ist, Host, falls es 0 ist).
+
+Sobald ein Host ein Router-Advertisement vom Router hört, kann er sich selbst mit statusloser automatischer Adressen konfigurieren. Dieses Verhalten kann mit net.inet6.ip6.accept_rtadv (der Host konfiguriert sich selber, wenn es auf 1 gesetzt ist) beeinflusst werden. Bei einer automatischen Konfiguration wird das Netzwerkadresspräfix für die empfangende Schnittstelle (für gewöhnlich das globale Adresspräfix) hinzugefügt. Die Standard-Route wird ebenso konfiguriert. Router erzeugen periodisch Router-Advertisement-Pakete. Um einen benachbarten Router aufzufordern, ein RA-Paket zu erzeugen, kann eine Host-Router-Solicitation übertragen werden. Um jederzeit ein RS-Paket zu erzeugen, benutzt man das _rtsol_-Kommando. Ein man:rtsold[8]-Dämon ist ebenso verfügbar. man:rtsold[8] erzeugt Router-Solicitation, wann immer es notwendig ist und es funktioniert großartig "bei normadischem Einsatz" (Notebooks/Laptops). Falls jemand Router-Advertisements zu ignorieren wünscht, setzt man mit sysctl et.inet6.ip6.accept_rtadv auf 0.
+
+Um Router-Advertisement von einem Router aus zu erzeugen, benutzt man den man:rtadvd[8]-Dämon.
+
+Beachte, dass die IPv6-Spezifikation von folgenden Punkte ausgeht und nicht konforme Fälle werden als nicht spezifiziert ausgelassen:
+
+* Nur Hosts hören auf Router-Angebote
+* Hosts haben eine einzige Netzwerk-Schnittstelle (außer loopback)
+
+Deshalb ist es unklug, net.inet6.ip6.accept_rtadv bei Routern oder bei Hosts mit mehreren Schnittstellen einzuschalten. Ein falsch konfigurierter Knoten kann sich seltsam verhalten (nicht konforme Konfiguration ist für diejenigen erlaubt, die Experimente durchführen möchten).
+
+Eine Zusammenfassung des sysctl-Angaben:
+
+[source,bash]
+....
+	accept_rtadv forwarding Rolle des Knotens
+   ---	   ---    ---
+    0       0    Host (wird manuell konfiguriert)
+    0       1    Router
+    1       0    automatisch konfigurierter Host
+	             (Die Spezifikation setzt voraus, dass der Host nur eine einzelne Schnittstelle hat, ein automatisch konfigurierter Host mit mehreren Schnittstellen ist außerhalb der Betrachtung)
+    1       1    ungültig, oder für Experimentierzwecke (außerhalb der Spezifikation)
+....
+
+RFC2462 hat eine Überprüfungsregel gegen eingehende RA-prefix-information-option, in 5.5.3 (e). Dies dient zum Schutz des Hosts vor schlecht oder falsch konfigurierten Routern, die eine sehr kurze Präfixlebenszeit ankündigen. Es gab Aktualisierungen von Jim Bound in der ipngwg-Mailing-Liste (suche nach "(ipng 6712)" im Archive) und es wurde Jims Aktualisierung implementiert.
+
+Siehe auch <<neighbor-discovery,23.5.1.2>> im Dokument für das Verhältnis zwischen DAD und autoconfiguration.
+
+[[gif]]
+==== Generische Tunnel-Schnittstelle
+
+GIF (Generische Schnittstelle) ist eine Pseudoschnittstelle für konfigurierte Tunnel. Details sind in man:gif[4] beschrieben. Im Moment sind
+
+* v6 in v6
+* v6 in v4
+* v4 in v6
+* v4 in v4
+
+verfügbar. Benutze man:gifconfig[8], um die physikalische (außerhalb liegende) Quelle und die Zieladresse den gif-Schnittstellen zuzuweisen. Eine Konfiguration, die die selbe Adressfamilie für innere und äußere IP-Header (v4 in v4, oder v6 in v6) benutzt, ist gefährlich. Es ist sehr leicht, Schnittstellen und Routing-Tabellen so zu konfigurieren, dass eine unendliche Ebene von Tunneln ausgeführt wird. _Seien Sie also gewarnt_.
+
+gif kann ECN-freundlich konfiguriert werden. Beachte <<ipsec-ecn,23.5.4.5>> für eine ECN-Freundlichkeit von Tunneln und man:gif[4] wie man sie konfiguriert.
+
+Falls man einen IPv4-in-IPv6-Tunnel mit einer gif-Schnittstelle konfigurieren möchte, sollte man man:gif[4] sorgfältig lesen. Man muss die IPv6 link-local Adresse, die automatisch der gif-Schnittstelle zugewiesen wird, entfernen.
+
+[[ipv6-sas]]
+==== Source Address Selection
+
+Im Moment ist die Regel zur Auswahl der Quelle bereichsorientiert (es gibt einige Ausnahmen - siehe unten). Für ein gegebenes Ziel wird eine Quell-IPv6-Adresse durch folgende Regel ausgewählt:
+
+. Falls die Quelladresse explizit durch den Benutzer angegeben ist (z.B. über das erweiterte API), dann wird die angegebene Adresse benutzt.
+. Falls eine Adresse der ausgehenden Schnittstelle zugewiesen wird, die den selben Bereich wie die Zieladresse hat (was normalerweise durch einen Blick in die Routing-Tabelle festgestellt werden kann), dann wird diese Adresse benutzt.
++ 
+Dies ist ein typischer Fall.
+. Falls keine Adresse der obigen Bedingung genügt, dann wählt man eine globale Adresse, die einer der Schnittstellen des sendenden Knotens zugewiesen ist.
+. Falls keine Adresse der obigen Bedingung genügt und die Zieladresse ist im site local-Bereich, dann wählt man eine eine site local-Adresse, die einer der Schnittstellen des sendenden Knotens zugewiesen ist.
+. Falls keine Adresse der obigen Bedingung genügt, dann wählt man eine Adresse, die mit einem Eintrag in der Routing-Tabelle für das Ziel verbunden ist. Dies ist die letzte Möglichkeit, die eine Bereichsverletzung verursachen könnte.
+
+Zum Beispiel, ::1 ist ausgewählt für ff01::1, fe80:1::200:f8ff:fe01:6317 für fe80:1::2a0:24ff:feab:839b (beachte den eingebetteten Schnittstelleindex - beschrieben in <<ipv6-scope-index,23.5.1.3>> - er hilft uns, die richtige Quelladresse auszuwählen. Diese eingebetteten Indexe werden nicht übertragen). Falls die ausgehende Schnittstelle mehrere Adressen für einen Bereich hat, wird die Quelle gewählt, die die breiteste passende Basis hat (Regel 3). Angenommen 2001:0DB8:808:1:200:f8ff:fe01:6317 und 2001:0DB8:9:124:200:f8ff:fe01:6317 sind einer ausgehenden Schnittstelle zugewiesen. 2001:0DB8:808:1:200:f8ff:fe01:6317 wird als Quelle für das Ziel 2001:0DB8:800::1 ausgewählt.
+
+Beachte, dass obige Regel nicht in der IPv6-Spezifikation dokumentiert ist. Es wird als "up to implementation"-Punkt betrachtet. Es gibt einige Fälle, bei denen die obige Regel nicht benutzt werden soll. Ein Beispiel ist die verbundene TCP-Sitzung und man benutzt die Adresse, die in tcb als Quelle gehalten wird. Ein anderes Beispiel ist die Quelladresse für Neighbor Advertisement. Laut Spezifikation (RFC2461 7.2.2) sollte die Quelle des NA die Zieladresse des korrespondierenden Ziel des NS sein. In diesem Fall folgen wir eher der Spezifikation, als der obigen longest-match-Regel.
+
+Für neue Verbindungen werden (wenn Regel eins nicht zutrifft) abgelehnte Adressen (Adressen mit bevorzugter Lebenszeit = 0) nicht ausgewählt, wenn andere Auswahlmöglichkeiten bestehen. Wenn keine anderen Auswahlmöglichkeiten bestehen, werden abgelehnte Adressen als letzte Möglichkeit benutzt. Falls mehrere Auswahlmöglichkeiten für abgelehnte Adressen bestehen, dann wird ogige Regel verwendet, um aus diesen abgelehnten Adressen auszuwählen. Falls man aus bestimmten Gründen die Benutzung abgelehnter Adressen unterbinden möchte, dann setzt man net.inet6.ip6.use_deprecated auf 0. Der Punkt bezüglich der abgelehnten Adressen ist in RFC2462 5.5.4 beschrieben (Beachte: Im Moment wird in der IETF ipngwg darüber debatiert, wie angelehnte Adressen benutzt werden sollen).
+
+[[ipv6-jumbo]]
+==== Jumbo Payload
+
+Die Jumbo-Payload hop-by-hop-Option ist implementiert und kann benutzt werden, um IPv6-Pakete mit Datenpaketen größer als 65.535 Oktette. Aber im Moment wird keine physikalische Schnittstelle unterstützt, deren MTU größer ist als 65.536, so dass diese Datenpakete nur bei den loopback-Schnittstellen zu finden sind (z.B. lo0).
+
+Falls man die Jumbo Payloads testen möchte, muss man zunächst den Kernel rekonfigurieren, so dass die MTU der loopback-Schnittstelle grösser 65.535 Bytes sein kann. Füge folgende Zeile zur Kernel-Konfiguration hinzu:
+
+`options "LARGE_LOMTU" #Um Jumbo Payload zu testen`
+
+und dann kompiliere den Kernel neu.
+
+Dann kann man die Jumbo-Payloads mittels man:ping6[8]-Kommando mit den Optionen -b und -s testen. Die Option -b muss angegeben werden, um die Größe des Socket-Puffers zu erhön, und die Option -s gibt die Größe des Pakets an, die größer als 65.535 sein sollte. Beispielsweise gibt man folgendes ein:
+
+[source,bash]
+....
+% ping6 -b 70000 -s 68000 ::1
+....
+
+Die IPv6-Spezifikation verlangt, dass die Jumbo-Payload-Option nicht in einem Paket verwendet werden darf, das einen fragmentierten Header hat. Falls diese Bedingung nicht zutrifft, dann muss eine ICMPv6-Parameter-Problem-Nachricht an den Absender geschickt werden. Die Spezifikation ist befolgt, aber man kann normalerweise nicht einen ICMPv6-Fehler sehen, der durch diese Forderung hervorgerufen wird.
+
+Wenn ein IPv6-Paket empfangen wird, dann wird die Rahmenlänge geprüft und sie wird mit der Größe verglichen, die im Datenfeld für die Paketgröße des IPv6-Headers oder im Wert für die Jumbo-Payload-Option angegeben ist, sofern vorhanden. Falls ersterer kleiner als letzterer ist, dann wird das Paket abgelehnt und die Statistiken werden erhöht. Man kann die Statistik als Ausgabe des man:netstat[8]-Kommandos mit der ``-s -p ip6``-Option sehen:
+
+[source,bash]
+....
+% netstat -s -p ip6
+	  ip6:
+		(snip)
+		1 with data size < data length
+....
+
+So, der Kernel sendet keinen ICMPv6-Fehler, außer das fehlerhafte Paket ist ein aktuelles Jumbo-Payload, dessen Paketgröße größer als 65,535 Bytes ist. Wie oben beschrieben, gibt es momentan keine physikalische Schnittstelle, die eine so riesige MTU unterstützt, daher gibt es so selten einen ICMPv6-Fehler.
+
+TCP/UDP over Jumbogramm wird im Moment nicht unterstützt. Dies kommt daher, weil wir kein Medium (außer loopback) haben, dies zu testen. Melden Sie sich, falls Sie es benötigen.
+
+IPsec funktioniert nicht mit Jumbogramm. Dies ist bedingt durch einige Änderungen an der Spezifikation, welche die Unterstützung von AH mit Jumbogramm betrifft (AH-Header-Größe beeinflusst die Länge des Datenpakets und das macht es richtig schwierig, ein eingehendes Paket mit Jumbo-Payload-Option so gut zu authentifizieren wie ein AH).
+
+Es gibt grundlegende Punkte in der *BSD-Unterstützung für Jumbogramms. Wir würden jene gerne ansprechen, aber wir benötigen mehr Zeit diese fertig zu stellen. Um ein paar zu benennen:
+
+* mbuf pkthdr.len-Feld ist in 4.4BSD typisiert als "int", so dass es kein Jumbogramm mit len > 2G bei 32Bit-Architekturen aufnehmen kann. Wenn wir Jumbogramme geeignet unterstützen wollten, dann muss das Feld erweitert werden, damit es 4G + IPv6-Header + link-layer-Header aufnehmen kann. Deshalb muss es schließlich auf int64_t (u_int32_t ist NICHT genug) erweitert werden.
+* Irrigerweise benutzen wir "int" an vielen Stellen, um die Paketlänge aufzunehmen. Wir müssen sie in einen größeren ganzzahligen Typ konvertieren. Es braucht große Vorsicht, weil wir sonst einen Überlauf während der Berechnung der Paketlänge erleben können.
+* Irrigerweise prüfen wir das ip6_plen-Feld des IPv6-Header für packet payload length an verschiedenen Stellen. Wir sollten mbuf pkthdr.len stattdessen prüfen. ip6_input() wird bei der Eingabe eine Prüfung der Jumbo -Payload-Option durchführen und wir können danach mbuf pkthdr.len sicher benutzen.
+* Natürlich braucht der TCP-Kode an einigen Stellen eine sorgfältige Aktualisierung.
+
+==== Verhindern von Schleifen beim Verarbeiten von Headern
+
+Die IPv6-Spezifikation erlaubt eine willkürliche Zahl von Erweiterungs-Headern, die in einem Paket platziert werden können. Wenn wir IPv6-Kode für die Paketverarbeitung auf die Art und Weise implementieren wie wir es beim BSD-IPv4-Kode geschehen ist, dann würde wegen einer lange Kette von Funktionsaufrufen der Kernel-Stack überlaufen. sys/netinet6-Kode ist behutsam entwickelt wurden, um einen Überlauf des Kernel-Stacks zu verhindern. Deswegen definiert der sys/netinet6-Kode seine eigene Protocol-Switch-Struktur "struct ip6protosw" (siehe auch [.filename]#netinet6/ip6protosw.h#). Aus Gründen der Kompatibilität gibt es keine solche Aktualisierung im IPv4-Teil (sys/netinet), aber eine kleine Änderung ist zum pr_input()-Prototyp hinzugefügt worden. So ist "struct ipprotosw" ebenso definiert. Deswegen kann der Kernel-Stack sich aufblähen, wenn man ein IPsec-over-IPv4-Paket mit einer massiven Zahl von IPSec-Header empfängt. IPsec-over-IPv6 ist in Ordnung. (Natürlich muss für all diese zu verarbeitenden IPSec-Header jeder einzelne IPSec-Header jede IPSec-Prüfung durchlaufen. So wird es einem anonymen Angreifer unmöglich gemacht eine Attacke durchzuführen.)
+
+[[icmpv6]]
+==== ICMPv6
+
+Nachdem RFC2463 veröffentlicht worden war, hat die IETF-ipngwg beschlossen ICMPv6-Fehler-Pakete gegen ICMPv6 umzuleiten, um einen ICMPv6-Sturm auf einem Netzwerkmedium zu unterbinden. Dies ist bereits im Kernel implementiert.
+
+==== Anwendungen
+
+Für Programmierung des Userland unterstützen wir das IPv6-Socket-API wie es in RFC2553, RFC2292 und in aufkommenden Internet-Konzepten beschrieben ist.
+
+TCP/UDP über IPv6 ist verfügbar und ziemlich stabil. Man kann sich an man:telnet[1], man:ftp[1], man:rlogin[1], man:rsh[1], man:ssh[1], usw. erfreuen. Diese Anwendungen sind unabhängig vom Protokoll. Das liegt daran, weil diese Programme automatisch IPv4 oder IPv6 entsprechend des DNS auswählen.
+
+==== Kernel Interna
+
+Während ip_forward() ip_output() aufruft, ruft ip6_forward() direkt if_output() auf, da Router IPv6-Pakete nicht in Fragmente teilen dürfen.
+
+ICMPv6 sollte das original Paket so lang wie möglich bis maximal 1280 halten. UDP6/IP6 port unreach, zum Beispiel, sollte alle Erweiterungs-Header und die unveränderten UDP6- und IP6-Header enthalten. Um das originale Paket zu erhalten, konvertieren alle IP6-Funktionen außer TCP niemals Network-Byte-Order in Host-Byte-Order.
+
+tcp_input(), udp6_input() und icmp6_input() können nicht voraussetzen, dass der IP6-Header vor dem Transport-Header, der zum Extension-Header gehört, kommt. Deshalb wurde in6_cksum() implementiert, um Pakete, deren IP6-Header und Transport-Header nicht fortlaufend ist, zu behandeln. Weder TCP/IP6- noch UDP6/IP6-Header-Strukturen existieren, um eine Prüsumme zu bilden.
+
+Um IP6-Header, Extension-Header und Transport-Headers leichter verarbeiten zu können, werden nun Netzwerktreiber benötigt, die Pakete in einem internen mbuf oder in einem oder mehreren externen mbuf speichern können. Ein typischer alter Treiber legt zwei interne mbuf für 96 - 204 Bytes an Daten an, wie auch immer wird ein solches Paket jetzt in einem externen mbuf gespeichert.
+
+`netstat -s -p ip6` ermittelt, ob der Treiber sich nach solchen Erfordernissen richtet, oder nicht. Im folgenden Beispiel verletzt "cce0" dies Erfordernisse (Für weitere Informationen, siehe Abschnitt 2.).
+
+[source,bash]
+....
+Mbuf statistics:
+                317 one mbuf
+                two or more mbuf::
+                        lo0 = 8
+			cce0 = 10
+                3282 one ext mbuf
+                0 two or more ext mbuf
+....
+
+Jede Eingabefunktion ruft IP6_EXTHDR_CHECK am Anfang auf, um zu prüfen, ob der Bereich zwischen IP6 und seinen Header durchgehend ist. IP6_EXTHDR_CHECK ruft m_pullup() nur dann auf, wenn mbuf das M_LOOP-Flag gestzt hat, weil das Paket von der Loopback-Schnittstelle kommt. m_pullup() wird niemals aufgerufen, wenn Pakete von physikalischen Netzwerkschnittstellen kommen.
+
+IP- und IP6-Reassemble-Funktionen rufen niemals m_pullup() auf.
+
+[[ipv6-wildcard-socket]]
+==== IPv4-Mapped-Address und IPv6-Wildcard-Socket
+
+RFC2553 beschreibt IPv4-Mapped-Address (3.7) und die spezielle Verhaltensweise des IPv6-Wildcard-Bind-Socket (3.8). Die Spezifikation gestattet es:
+
+* IPv4-Verbindungen von AF_INET6-Wildcard-Bind-Socket zu erlauben.
+* IPv4-Pakete über AF_INET6-Socket zu transportieren, indem eine spezielle Form der Adresse wie ::ffff:10.1.1.1 benutzt wird.
+
+Aber die Spezifikation ist sehr kompliziert und spezifiziert nicht, wie der Socket-Layer sich verhalten soll. Darauf Bezug nehmend nennen wir hier ersteren "hörende Seite" und letzteren "beginnende Seite".
+
+Man kann einen Wildcard-Bind auf demselben Port bei beiden Adressfamilien durchführen.
+
+Die folgende Tabelle zeigt das Verhalten von FreeBSD 4.x.
+
+[source,bash]
+....
+Hörende Seite          Beginnende Seite
+                (AF_INET6-Wildcard-      (Verbindung zu ::ffff:10.1.1.1)
+                Socket erreicht IPv4 Verb.)
+                ---                     ---
+FreeBSD 4.x     Konfigurierbar            unterstützt
+                Standard: erlaubt
+....
+
+Die folgende Abschnitte zeigen mehr Details und wie man das Verhalten konfigurieren kann.
+
+Kommentare auf der hörenden Seite:
+
+Es sieht so aus, dass RFC2553 zu wenig zu den Punkten über Wildcard-Bind erläutert, speziell zum Punkt über Port-Space, Fehler-Modus und Beziehung zwischen AF_INET/INET6 wildcard bind. Es kann mehrere unterschiedliche Interpretationen zu diesem RFC geben, die sich nach diesen richten, aber sich unterschiedlich verhalten. Um eine portable Anwendung zu implementieren, sollte man deshalb nicht ein bestimmtes Verhalten des Kernels voraussetzen. Der Einsatz von man:getaddrinfo[3] ist der sicherste Weg. Port number space und wildcard bind issues wurden Mitte Mai 1999 detailliert in der Ipv6imp-Mailing-Liste diskutiert und es sieht so aus, als ob es keinen konkreten Konsens gab (means, up to implementers). Vielleicht sollte man die Archive der Mailing-Liste prüfen.
+
+Wenn eine Server-Anwendung IPv4- und IPv6-Verbindungen annehmen möchte, dann gibt es zwei Alternativen.
+
+Eine benutzt AF_INET- und AF_INET6-Socket (man benötigt zwei Sockets). Benutze man:getaddrinfo[3] mit gesetztem AI_PASSIVE-Bit in ai_flags, man:socket[2] und man:bind[2] für alle zurückgegebenen Adressen. Mit dem öffnen mehrerer Sockets kann man Verbindungen an dem Socket mit der richtigen Adressfamilie annehmen. IPv4-Verbindungen werden vom AF_INET-Socket und IPv6-Verbindungen vom AF_INET6-Socket angenommen.
+
+Ein anderer Weg ist einen AF_INET6 wildcard bind-Socket zu verwenden. Man benutzt man:getaddrinfo[3] mit AI_PASSIVE in ai_flags, mit AF_INET6 in ai_family, man setzt das erste Argument hostname auf NULL, man:socket[2] und man:bind[2] auf die zurückgegebene Adresse (es sollte eine unspezifizierte IPv6-Adresse sein). Man kann IPv4- und IPv6-Paket über diesen Socket annehmen.
+
+Um nur IPv6-Datenverkehr portabel an AF_INET6 wildcard gebundenen Socket zu unterstützen, prüft man, sobald die Verbindung Zustande gekommen ist, immer die Peer-Adresse gegen den hörenden AF_INET6-Socket. Wenn die Adresse eine IPv4-Mapped-Adresse ist, dann sollte man die Verbindung zurückweisen. Man kann die Bedingung mit dem IN6_IS_ADDR_V4MAPPED()-Makro prüfen.
+
+Um diesen Punkt leichter lösen zu können, gibt es für man:setsockopt[2] die System abhängige Option IPV6_BINDV6ONLY, die wie folgt benutzt wird.
+
+[source,bash]
+....
+	int on;
+
+	setsockopt(s, IPPROTO_IPV6, IPV6_BINDV6ONLY,
+		   (char *)&on, sizeof (on)) < 0));
+....
+
+Wenn der Aufruf erfolgreich ist, dann empfängt dieser Socket nur IPv6-Pakete.
+
+Kommentare zur sendenden Seite:
+
+Ratschlag an Anwendungsentwickler: um eine portable IPv6-Anwendung zu implementieren (die mit verschiedenen IPv6-Kerneln funktioniert), ist das Folgende der Schlüssel zum Erfolg wie wir glauben:
+
+* NIEMALS AF_INET oder AF_INET6 hart kodieren.
+* Benutze man:getaddrinfo[3] und man:getnameinfo[3] überall im System. Benutze niemals gethostby*(), getaddrby*(), inet_*() oder getipnodeby*() (Um bestehende Applikationen leicht IPv6 fähig zu machen, wird getipnodeby*() manchmal nützlich sein. Falss es aber möglich sein sollte, versuche den Kode neu zu schreiben und man:getaddrinfo[3] und man:getnameinfo[3] zu benutzen)
+* Wenn man sich an ein Ziel verbinden möchte, benutze man:getaddrinfo[3] und versuche alle zurückgegebenen Ziele, wie man:telnet[1] es macht.
+* Einige IPv6-Stacks sind mit fehlerhafter man:getaddrinfo[3] verschickt worden. Man verschickt als letzte Möglichkeit eine minimal arbeitende Version der Anwendung.
+
+Wenn man einen AF_INET6-Socket für jeweils eine ausgehende IPv4- und IPv6-Verbingung benutzen möchte, dann muss man man:getipnodebyname[3] benutzen. Wenn man seine existierende Anwendung mit wenig Aufwand IPv6-fähig machen möchte, dann sollte dieser Versuch gewählt werden. Aber beachte bitte, dass dies eine temporäre Lösung ist, weil man:getipnodebyname[3] selber noch zu empfehlen ist, da es noch keine Adressbereiche verarbeitet. Für eine IPv6-NAmensauflösung ist man:getaddrinfo[3] das bevorzugte API. Deshalb sollte man seine Anwendung so umschreiben, dass man:getaddrinfo[3] benutzt wird, wann man Zeit dazu hat.
+
+Wenn man Anwendungen schreibt, die ausgehende Verbindungen herstellen, wird die Geschichte viel einfacher, wenn man AF_INET und AF_INET6 als total getrennte Adressfamilien behandelt. {set,get}sockopt funktioniert viel einfacher, DNS-Angelegenheiten werden einfacher gemacht. Wir empfehlen sich nicht auf IPv4-Mapped-Adressen zu verlassen.
+
+===== Einheitlicher TCP-und INPCB-Kode
+
+FreeBSD 4.x benutzt shared TCP-Kode zwischen IPv4 und IPv6 (von sys/netinet/tcp*) und separaten udp4/6-Kode. Es benutzt eine vereinheitlichte inpcb-Struktur.
+
+Die Plattform kann für eine Unterstützung von IPv4-mapped-Adressen konfiguriert werden. Die Kernel-Konfiguration läßt sich wie folgt zusammenfassen:
+
+* By default, AF_INET6 socket will grab IPv4 connections in certain condition, and can initiate connection to IPv4 destination embedded in IPv4 mapped IPv6 address.
+* Man kann es wie unten beschrieben abschalten.
++ 
+`sysctl net.inet6.ip6.mapped_addr=0`
+
+====== Hörende Seite
+
+Jeder Socket kann für eine Unterstützung eines speziellen AF_INET6 wildcard bind (Standardmäßig eingeschaltet) konfiguriert werden. Man kann es auf Socket-Basis mit man:setsockopt[2] wie unten beschrieben abschalten.
+
+[source,bash]
+....
+	int on;
+
+	setsockopt(s, IPPROTO_IPV6, IPV6_BINDV6ONLY,
+		   (char *)&on, sizeof (on)) < 0));
+....
+
+Wildcard-AF_INET6-Socket schnappt sich die IPv4-Verbindung, wenn, und nur wenn folgende Bedingungen erfüllt sind::
+
+* Es gibt keinen AF_INET-Socket, der zu einer IPv4-Verbindung passt
+* Der AF_INET6-Socket ist so konfiguriert, dass er IPv4-Datenverkehr akzeptiert, z.B. gibt getsockopt(IPV6_BINDV6ONLY) 0 zurück.
+
+Es gibt kein Problem mit der Öffnen/Schließen-Reihenfolge.
+
+====== initiating side
+
+FreeBSD 4.x unterstützt ausgehende Verbindungen zu IPv4 mapped Adressen (::ffff:10.1.1.1), falls der Knoten so konfiguriert ist, dass er IPv4 mapped Adressen unterstützt.
+
+==== sockaddr_storage
+
+Als RFC2553 kurz vor der Vollendung stand, gab es eine Diskussion, wie struct sockaddr_storage Mitglieder benannt werden sollten. Ein Vorschlag war "__" den Mitgliedern (wie "__ss_len") voranzustellen und es sollten sie nicht verändert werden. Der andere Vorschlag war, nichts voranzustellen (wie "ss_len") also mußten wir solche Mitglieder direkt verändern. Es gab keinen klaren Konsens.
+
+Als Ergebnis definiert RFC2553 die Struktur sockaddr_storage wie folgt:
+
+[source,bash]
+....
+	struct sockaddr_storage {
+		u_char	__ss_len;	/* address length */
+		u_char	__ss_family;	/* address family */
+		/* and bunch of padding */
+	};
+....
+
+Im Gegensatz dazu definiert der XNET-Entwurf die Struktur wie folgt:
+
+[source,bash]
+....
+	struct sockaddr_storage {
+		u_char	ss_len;		/* address length */
+		u_char	ss_family;	/* address family */
+		/* and bunch of padding */
+	};
+....
+
+Im Dezember 1999 kam man überein, dass RFC2553bis letztere Definition (XNET) aufnehmen sollte.
+
+Die aktuelle Implementierung ist konform zur XNET-Definition basierend auf der RFC2553bis Diskussion.
+
+Wenn man mehrere IPv6-Implementierungen betrachtet, wird man beide Definitionen sehen. Für Userland-Programmierer ist der folgende Weg der meist portable um damit umzugehen:
+
+. Man versichert sich, dass ss_family und/oder ss_len für die Plattform verfügbar sind, indem man GNU autoconf verwendet,
+. Man benutzet -Dss_family=__ss_family um alle Vorkommen (einschließlich der Header-Files) zu __ss_family zu vereinheitlichen, oder
+. Man benutzt niemals __ss_family. Man führe einen Typecast nach sockaddr * durch und verwendet sa_family wie folgt:
++
+[source,bash]
+....
+	struct sockaddr_storage ss;
+	family = ((struct sockaddr *)&ss)->sa_family
+....
+
+=== Netzwerktreiber
+
+Die beiden folgenden Dinge müssen zwingend von Standardtreibern unterstützt werden:
+
+. Mbuf-Clustering-Erfordernis. In diesem stabilen Release haben wir für alle Betriebssystem MINCLSIZE in MHLEN+1 geändert, damit sich alle Treiber wie erwartet verhalten.
+. Multicast. Falls man:ifmcstat[8] keine Multicast-Gruppe für die Schnittstelle liefert, dann muss diese Schnittstelle überarbeitet werden.
+
+Falls keiner der Treiber die Erfordernisse erfüllt, dann können die Treiber nicht für IPv6/IPSec-Kommunikation verwendet werden. Falls man ein Problem beim Einsatz von IPv6/IPSec mit seiner Karte hat, dann melde es bitte bei {freebsd-bugs}.
+
+(Beachte: In der Vergangenheit haben wir gefordert, dass alle PCMCIA-Treiber einen Aufruf nach in6_ifattach() haben. Inzwischen haben wir keine solche Forderung mehr)
+
+=== Translator
+
+Wir kategorisieren einen IPv4/IPv6-Translator in 4 Typen:
+
+* _Translator A_ --- Er wird im frühen Stadium des Übergangs benutzt um es zu ermöglichen, dass eine Verbindung von einem IPv6-Host auf einer IPv6-Insel zu einem IPv4-Host im IPv4-Ozean hergestellt wird.
+* _Translator B_ --- Er wird im frühen Stadium des Übergangs benutzt um es zu ermöglichen, dass eine Verbindung von einem IPv4-Host im IPv4-Ozean zu einem IPv6-Host auf einer IPv6-Insel hergestellt wird.
+* _Translator C_ --- Er wird im frühen Stadium des Übergangs benutzt um es zu ermöglichen, dass eine Verbindung von einem IPv4-Host auf einer IPv4-Insel zu einem IPv6-Host im IPv6-Ozean hergestellt wird.
+* _Translator D_ --- Er wird im frühen Stadium des Übergangs benutzt um es zu ermöglichen, dass eine Verbindung von einem IPv6-Host im IPv6-Ozean zu einem IPv4-Host auf einer IPv4-Insel hergestellt wird.
+
+Ein TCP-Relay-Translator der Kategorie A wird unterstützt. Er wird "FAITH" genannt. Wir stellen ebenso einen IP-Header-Translator der Kataegorie A zur Verfügung (Letzterer ist noch nicht in FreeBSD 4.x übernommen).
+
+==== FAITH TCP-Relay-Translator
+
+Das FAITH-System benutzt mit Hilfe des Kernels den man:faithd[8] genannten TCP-Relay-Daemon. FAITH wird einen IPv6-Adress-Präfix reservieren und eine TCP-Verbindungen an diesen Präfix zum IPv4-Ziel weiterleiten.
+
+Wenn beispielsweise der IPv6-Präfix 2001:0DB8:0200:ffff:: ist und das IPv6-Ziel für TCP-Verbindungen 2001:0DB8:0200:ffff::163.221.202.12 ist, dann wird die Verbindung an das IPv4-Ziel 163.221.202.12 weitergeleitet.
+
+[source,bash]
+....
+	IPv4-Ziel-Knoten (163.221.202.12)
+	  ^
+	  | IPv4 tcp toward 163.221.202.12
+	FAITH-relay dual stack node
+	  ^
+	  | IPv6 TCP toward 2001:0DB8:0200:ffff::163.221.202.12
+	source IPv6 node
+....
+
+man:faithd[8] muss auf FAITH-relay dual stack node aufgerufen werden.
+
+Für weitere Details siehe [.filename]#src/usr.sbin/faithd/README#
+
+[[ipsec-implementation]]
+=== IPsec
+
+IPsec besteht hauptsächlich aus drei Komponenten.
+
+. Policy Management
+. Key Management
+. AH und ESP Behandlung
+
+==== Regel Management
+
+Im Kernel ist experimenteller Kode für Regel-Management implementiert. Es gibt zwei Wege eine Sicherheitsregel zu handhaben. Einer ist eine Regel für jeden Socket mithilfe von man:setsockopt[2] zu konfigurieren. Für diesen Fall ist die Konfiguration der Regel in man:ipsec_set_policy[3] beschrieben. Der andere Weg ist eine auf einem Kernel-Packet-Filter basierende Regel mithilfe der PF_KEY-Schnittstelle mittels man:setkey[8] zu konfigurieren.
+
+Der Regeleintrag mit seinen Indices wird nicht sortiert, so dass es sehr wichtig ist, wann ein Eintrag hinzugefügt wird.
+
+==== Key Management
+
+Der in dieser Bibliothek (sys/netkey) implementierte Kode für das key management ist eine Eigenentwicklung der PFKEYv2-Implementierung. Er ist konform zu RFC2367.
+
+Die Eigenentwicklung des IKE-Daemons "racoon" ist in der Bibliothek (kame/kame/racoon) implementiert. Grundsätzlich muss man racoon als Dämonprozess laufen lassen, dann setzt man eine Regel auf, die Schlüssel erwartet (ähnlich wie `ping -P 'out ipsec esp/transport//use'`). Der Kernel wird den racoon-Dämon wegen des notwendigen Austauschs der Schlüssel kontaktieren.
+
+==== AH- und ESP-Handhabung
+
+Das IPsec-Modul ist als "hook" in die Standard-IPv4/IPv6-Verarbeitung implementiert. Sobald ein Paket gesendet wird, prüft ip{,6_output(), ob eine ESP/AH-Verarbeitung notwendig ist. Es findet eine Überprüfung statt, ob eine passende SPD (Security Policy Database) gefunden wurde. Wenn ESP/AH benötigt wird, dann wird {esp,ah}{4,6}_output() aufgerufen und mbuf wird folglich aktualisiert. Wenn ein Paket empfangen wird, dann wird {esp,ah}4_input() basierend auf der Protokollnummer aufgerufen, z.B. (*inetsw[proto])(). {esp,ah}4_input() entschlüsselt/prüft die Authentizität des Pakets und entfernt den daisy-chained-Header und das Padding des ESP/AH. Es ist sicherer den ESP/AH-Header beim Empfang zu entfernen, weil man das empfangene Paket niemals so wie es ist benutzt.
+
+Mit der Verwendung von ESP/AH wird die effektive TCP4/6-Datensegmentgröße durch weitere von ESP/AH eingefügte Daisy-chained-Headers beeinflußt. Unser Kode berücksichtigt dies.
+
+Grundlegende Crypto-Funktionen sind im Verzeichnis "sys/crypto" zu finden. ESP/AH-Umformungen sind zusammen mit den Wrapper-Funktionen in {esp,ah}_core.c gelistet. Wenn man einige Algorithmen hinzufügen möchte, dann fügt man in {esp,ah}_core.c eine Wrapper-Funktion hinzu und trägt seinen Crypto-Algorithmus in sys/crypto ein.
+
+Der Tunnel-Modus wird in diesem Release teilweise mit den folgenden Restriktionen unterstützt:
+
+* Der IPsec-Tunnel ist nicht mit der generischen Tunnelschnittstelle kombiniert. Man muss sehr vorsichtig sein, weil man sonst eine Endlosschleife zwischen ip_output() und tunnelifp->if_output() aufbaut. Die Meinungen gehen auseinander, ob es besser ist dies zu vereinheitlichen, oder nicht.
+* Die Betrachtung von MTU und des "Don't Fragment"-Bits (IPv4) müssen mehr geprüft werden, aber grundsätzlichen arbeiten sie gut.
+* Das Authentifizierungsmodel für einen AH-Tunnel muss überarbeitet werden. Man muss eventuell die "policy management engine" überarbeiten.
+
+==== Konformität zu RFCs und IDs
+
+Der IPsec-Kode im Kernel ist konform (oder versucht konform zu sein) zu den folgenden Standards:
+
+Die "alte IPsec"-Spezifikation, die in [.filename]#rfc182[5-9].txt# dokumentiert ist
+
+Die "neue IPsec"-Spezifikation, die [.filename]#rfc240[1-6].txt#, [.filename]#rfc241[01].txt#, [.filename]#rfc2451.txt# und [.filename]#draft-mcdonald-simple-ipsec-api-01.txt# (Der Entwurf ist erloschen, aber man kann ihn sich von link:ftp://ftp.kame.net/pub/internet-drafts/[ ftp://ftp.kame.net/pub/internet -drafts/] holen) dokumentiert ist (Beachte: Die IKE-Spezifikationen [.filename]#rfc241[7-9].txt# sind im Userland als "racoon"-IKE-Daemon implementiert).
+
+Aktuell werden folgende Algorithmen unterstützt:
+
+* altes IPsec-AH
+
+** null crypto Prüfsumme (Kein Dokument, nur für Debug-Zwecke)
+** keyed MD5 mit 128bit crypto Prüfsumme ([.filename]#rfc1828.txt#)
+** keyed SHA1 mit 128bit crypto Prüfsumme (kein Document)
+** HMAC MD5 mit 128bit crypto Prüfsumme ([.filename]#rfc2085.txt#)
+** HMAC SHA1 mit 128bit crypto Prüfsumme (kein Dokument)
+
+* altes IPsec-ESP
+
+** null encryption (kein Dokument, ähnlich zu [.filename]#rfc2410.txt#)
+** DES-CBC-Modus ([.filename]#rfc1829.txt#)
+
+* neues IPsec-AH
+
+** null crypto Prüfsumme (kein Dokument, nur für Debug-Zwecke)
+** keyed MD5 mit 96bit crypto Prüfsumme (kein Dokument)
+** keyed SHA1 mit 96bit crypto Prüfsumme (kein Dokument)
+** HMAC MD5 mit 96bit crypto Prüfsumme ([.filename]#rfc2403.txt#)
+** HMAC SHA1 mit 96bit crypto Prüfsumme ([.filename]#rfc2404.txt#)
+
+* neues IPsec-ESP
+
+** null encryption ([.filename]#rfc2410.txt#)
+** DES-CBC mit abgeleiteter IV ([.filename]#draft-ietf-ipsec-ciph-des-derived-01.txt#, Entwurf abgelaufen)
+** DES-CBC mit expliziter IV ([.filename]#rfc2405.txt#)
+** 3DES-CBC mit expliziter IV ([.filename]#rfc2451.txt#)
+** BLOWFISH CBC ([.filename]#rfc2451.txt#)
+** CAST128 CBC ([.filename]#rfc2451.txt#)
+** RC5 CBC ([.filename]#rfc2451.txt#)
+** Jeder Algorithmus kann kombiniert werden mit:
+
+*** ESP-Beglaubigung mit HMAC-MD5(96bit)
+*** ESP-Beglaubigung mit HMAC-SHA1(96bit)
+
+Die folgenden Algorithmen werden NICHT unterstützt:
+
+* altes IPsec-AH
+
+** HMAC MD5 mit 128bit crypto Prüfsumme + 64bit replay prevention ([.filename]#rfc2085.txt#)
+** keyed SHA1 mit 160bit crypto Prüfsumme + 32bit padding ([.filename]#rfc1852.txt#)
+
+IPsec (im Kernel) und IKE (im Userland als "racoon") wurden bei unterschiedlichen Interoperabilitätstests geprüft und es ist bekannt, dass es mit vielen anderen Implementierungen gut zusammenarbeitet. Außerdem wurde die IPsec-Implementierung sowie die breite Abdeckung mit IPsec-Crypto-Algorithmen, die in den RFCs dokumentiert sind, geprüft (es werden nur Algorithmen ohne intellektuelle Besitzansprüche behandelt).
+
+[[ipsec-ecn]]
+==== ECN-Betrachtung von IPsec-Tunneln
+
+ECN-freundliche IPsec-Tunnel werden unterstützt wie es in [.filename]#draft-ipsec-ecn-00.txt# beschrieben ist.
+
+Normale IPsec-Tunnel sind in RFC2401 beschrieben. Für eine Kapselung wird das IPv4-TOS-Feld (oder das IPv6-Traffic-Class-Feld) vom inneren in den äußeren IP-Header kopiert. Für eine Entkapselung wird der ässere IP-Header einfach verworfen. Die Entkapselungsregel ist nicht mit ECN kompatibel, sobald das ECN-Bit im äußeren IP-TOS/Traffic-Class-Feld verloren geht.
+
+Um einen IPsec-Tunnel ECN-freundlich zu machen, sollte man die Kapselungs- und Entkapselungsprozeduren modifizieren. Dies ist in http://www.aciri.org/floyd/papers/draft-ipsec-ecn-00.txt[ http://www.aciri.org/floyd/papers/draft-ipsec-ecn-00.txt], Kapitel 3, beschrieben.
+
+Die IPsec-Tunnel-Implementierung kann drei Zustände annehmen, indem man net.inet.ipsec.ecn (oder net.inet6.ipsec6.ecn) auf diese Werte setzt:
+
+* RFC2401: Keine Betrachtung von ECN (Sysctl-Wert -1)
+* ECN verboten (Sysctl-Wert 0)
+* ECN erlaubt (Sysctl-Wert 1)
+
+Beachte, dass dieses Verhalten per-node konfigurierbar ist und nicht per-SA (draft-ipsec-ecn-00 möchte per-SA Konfiguration).
+
+Das Verhalten ist wie folgt zusammengefaßt (man beachte auch den Quelltext für weitere Details):
+
+[source,bash]
+....
+                encapsulate                     decapsulate
+                ---                             ---
+RFC2401         kopiere alle TOS-Bits               lösche TOS-Bits im äußeren
+                von innen nach außen.            (benutze innere TOS-Bits so wie sie sind)
+
+ECN verboten   kopiere TOS-Bits außer für ECN    lösche TOS-Bits im äußeren
+                (maskiert mit 0xfc) von innen   (benutze innere TOS-Bits so wie sie sind)
+                nach außen.  Setze ECN-Bits auf 0.
+
+ECN erlaubt     kopiere TOS-Bits außer für ECN    benutze innere TOS-Bits mit einigen Änderungen.
+                CE (maskiert mit 0xfe) von      Wenn das äußere ECN-CE-Bit 1 ist,
+                innen nach außen.                 setze das ECN-CE-Bit im
+                Setze ECN-CE-Bit auf 0.            Inneren.
+....
+
+Allgemeine Strategie zur Konfiguration:
+
+* Wenn beide IPsec-Tunnel-Endpunkte ein ECN-freundliches Verhalten beherrschen, dann sollte man besser beide Endpunkte auf "ECN allowed" (Sysctl-Wert 1) setzen.
+* Wenn das andere Ende das TOS-Bit sehr strikt handhabt, dann benutzt man "RFC2401" (Sysctl-Wert -1).
+* in den anderen Fällen benutzt man "ECN verboten" (Sysctl-Wert 0).
+
+Der Standard ist "ECN verboten" (Sysctl-Wert 0).
+
+Für weitere Informationen siehe auch:
+
+http://www.aciri.org/floyd/papers/draft-ipsec-ecn-00.txt[ http://www.aciri.org/floyd/papers/draft-ipsec-ecn-00.txt], RFC2481 (Explicit Congestion Notification), src/sys/netinet6/{ah,esp}_input.c
+
+(Dank gebührt Kenjiro Cho mailto:kjc@csl.sony.co.jp[kjc@csl.sony.co.jp] für seine detailliert Analyse)
+
+==== Interoperabilität
+
+Hier sind einige Plattformen angegeben, die in der Vergangenheit die IPsec/IKE-Interoperabilität mit dem KAME-Kode getestet haben. Beachte, dass beide Enden vielleicht ihre Implementierung verändert haben, deshalb sollte man folgende Liste nur für Referenzzwecke benutzen.
+
+Altiga, Ashley-laurent (vpcom.com), Data Fellows (F-Secure), Ericsson ACC, FreeS/WAN, HITACHI, IBM AIX(R), IIJ, Intel, Microsoft(R) Windows NT(R), NIST (linux IPsec + plutoplus), Netscreen, OpenBSD, RedCreek, Routerware, SSH, Secure Computing, Soliton, Toshiba, VPNet, Yamaha RT100i

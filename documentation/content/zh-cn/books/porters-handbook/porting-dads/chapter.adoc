@@ -1,0 +1,2772 @@
+---
+title: 第 12 章 该做什么和不该做什么
+prev: books/porters-handbook/security
+next: books/porters-handbook/porting-samplem
+---
+
+[[porting-dads]]
+= 该做什么和不该做什么
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 12
+:toc-title: 目录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+[[dads-intro]]
+== 介绍
+
+这里是一些在移植软件时可能会遇到的常见问题。 您应按照这个列表检查自己的 port， 同样地， 您也可以帮助检查 http://www.FreeBSD.org/cgi/query-pr-summary.cgi?query[PR 数据库] 中由其它人提交的 port。 请按照在 link:{contributing}#CONTRIB-GENERAL[问题报告和一般性注释] 中介绍的方法提交您的看法。 帮助检查 PR 数据库中的 ports 即能够帮助我们更快地 commit 它们， 也能证明您清楚地了解如何完成这些工作。
+
+[[porting-wrkdir]]
+== `WRKDIR` (联编时使用的临时目录)
+
+任何时候都不要在 `WRKDIR` 以外的位置写文件。 `WRKDIR` 是在 port 联编过程中唯一的一处一定可写的地方 (参见 link:{handbook}#PORTS-CD[如何从 CDROM 安装 port] 以了解从只读的目录中联编和安装 port 的例子)。 如果您需要改变 [.filename]##pkg-*## 文件， 请按照 <<porting-pkgfiles,重新定义某个变量>> 介绍的方法， 而不是覆盖它们来实现。
+
+[[porting-wrkdirprefix]]
+== `WRKDIRPREFIX` (用于联编的临时目录的父目录名)
+
+一定要确保您的 port 尊重 `WRKDIRPREFIX` 的设置。 绝大多数 port 并不需要担心这个。 具体说来， 当引用其它 port 的 `WRKDIR` 时， 需要注意正确的位置应该是 [.filename]#WRKDIRPREFIXPORTSDIR/subdir/name/work# 而不是 [.filename]#PORTSDIR/subdir/name/work# 或 [.filename]#.CURDIR/../../subdir/name/work#， 或别的什么。
+
+另外， 如果您自行定义了 `WRKDIR`， 也要把 `${WRKDIRPREFIX}${.CURDIR}` 放到前面。
+
+[[porting-versions]]
+== 区分不同的操作系统， 以及 OS 的版本
+
+在不同版本的 Unix 下可能需要对代码进行一些修改或增加少许编译选项， 才能够正确地编译和运行。 如果您需要根据一些条件来对代码进行修改， 请尽可能让这些修改通用， 这样， 我们就能够将这些代码移植回更早的 FreeBSD 系统， 并交叉移植到其它 BSD 系统， 例如来自 CSRG 的 4.4BSD， BSD/386， 386BSD， NetBSD 和 OpenBSD。
+
+推荐的获得 4.3BSD/Reno (1990) 以及更新版本 BSD 代码版本号的方式， 是使用 http://cvsweb.freebsd.org/src/sys/sys/param.h[sys/param.h] 中所定义的 `BSD` 宏的值。 一般来说这个文件已经被引用了； 如果没有的话， 增加下述代码：
+
+[.programlisting]
+....
+#if (defined(__unix__) || defined(unix)) && !defined(USG)
+#include <sys/param.h>
+#endif
+....
+
+到 [.filename]#.c# 文件中合适的地方。 我们相信所有定义了这两个符号的系统中， 都提供了 [.filename]#sys/param.h#。 如果您发现有不这样做的系统， 请通过致信 {freebsd-ports} 让我们了解这一情况。
+
+另一种方法是使用 GNU Autoconf 风格的方式：
+
+[.programlisting]
+....
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+....
+
+采用这种方法时， 不要忘了把 `-DHAVE_SYS_PARAM_H` 加到 [.filename]#Makefile# 中的 `CFLAGS` 里。
+
+一旦引用了 [.filename]#sys/param.h#， 您就可以使用：
+
+[.programlisting]
+....
+#if (defined(BSD) && (BSD >= 199103))
+....
+
+来检测代码是否正在 4.3 Net2 代码基础， 或更新的系统上编译 (例如 FreeBSD 1.x， 4.3/Reno， NetBSD 0.9， 386BSD， BSD/386 1.1 以及更高版本)。
+
+使用：
+
+[.programlisting]
+....
+#if (defined(BSD) && (BSD >= 199306))
+....
+
+来检测代码是否正在 4.4 或更新的系统 (例如 FreeBSD 2.x， 4.4， NetBSD 1.0、 BSD/386 2.0 或更高版本)。
+
+对于 4.4BSD-Lite2 代码系来说， `BSD` 宏的值应该是 `199506`。 这里只是作为信息提供， 您不应使用它来区分基于 4.4-Lite 的 FreeBSD 和基于 4.4-Lite2 的版本。 这些情况下， 您应使用 {freebsd} 宏。
+
+保守地使用：
+
+* {freebsd} 在所有版本的 FreeBSD 中皆有定义。 如果您正进行的修改 _只_ 影响 FreeBSD， 则应使用这个宏。 类似 `sys_errlist[]` 之于 `strerror()` 这样的移植问题是伯克利代码系公用的， 而并非 FreeBSD 所专有。
+* 在 FreeBSD 2.x 中， {freebsd} 定义为 `2`。 更早版本中， 它曾经是 `1`。 新的版本都会在主要的版本号变化时变更它。
+* 如果您需要区分 FreeBSD 1.x 系统和 FreeBSD 2.x 及更高版本的区别， 通常应使用前述的 `BSD` 宏来进行。 如果事实上需要一个 FreeBSD 专有的修改 (例如， 在使用 `ld` 时需要特殊的共享库选项)， 则可以用 {freebsd} 和 #if {freebsd} > 1 来检测 FreeBSD 2.x 和新系统上的变化。 如果需要更细粒度地检测 FreeBSD 2.0-RELEASE 之后版本的变化， 则可以使用：
++
+[.programlisting]
+....
+#if __FreeBSD__ >= 2
+#include <osreldate.h>
+#    if __FreeBSD_version >= 199504
+	 /* 适用于 2.0.5+ 版本的代码 */
+#    endif
+#endif
+....
+
+在已有的数百个 port 中， 只有一两个应该使用 {freebsd}。 早期的 port 在不适当的地方使用了它并引发问题， 并不意味着您也必定如此。
+
+[[freebsd-versions]]
+== __FreeBSD_version 值
+
+下面是在 http://cvsweb.freebsd.org/src/sys/sys/param.h[sys/param.h]`__FreeBSD_version` 中定义的值及其意义的列表， 这里给出以方便您查阅：
+
+.__FreeBSD_version 值
+[cols="1,1,1", frame="none", options="header"]
+|===
+| 值
+| 日期
+| 版本
+
+|119411
+|
+|2.0-RELEASE
+
+|199501, 199503
+|March 19, 1995
+|2.1-CURRENT
+
+|199504
+|April 9, 1995
+|2.0.5-RELEASE
+
+|199508
+|August 26, 1995
+|2.1 之前的 2.2-CURRENT
+
+|199511
+|November 10, 1995
+|2.1.0-RELEASE
+
+|199512
+|November 10, 1995
+|2.1.5 之前的 2.2-CURRENT
+
+|199607
+|July 10, 1996
+|2.1.5-RELEASE
+
+|199608
+|July 12, 1996
+|2.1.6 之前的 2.2-CURRENT
+
+|199612
+|November 15, 1996
+|2.1.6-RELEASE
+
+|199612
+|
+|2.1.7-RELEASE
+
+|220000
+|February 19, 1997
+|2.2-RELEASE
+
+|(not changed)
+|
+|2.2.1-RELEASE
+
+|(无变化)
+|
+|在 2.2.1-RELEASE 之后的 2.2-STABLE
+
+|221001
+|April 15, 1997
+|texinfo-3.9 之后的 2.2-STABLE
+
+|221002
+|April 30, 1997
+|top 之后的 2.2-STABLE
+
+|222000
+|May 16, 1997
+|2.2.2-RELEASE
+
+|222001
+|May 19, 1997
+|2.2.2-RELEASE 之后的 2.2-STABLE
+
+|225000
+|October 2, 1997
+|2.2.5-RELEASE
+
+|225001
+|November 20, 1997
+|2.2.5-RELEASE 之后的 2.2-STABLE
+
+|225002
+|December 27, 1997
+|合并 ldconfig -R 之后的 2.2-STABLE
+
+|226000
+|March 24, 1998
+|2.2.6-RELEASE
+
+|227000
+|July 21, 1998
+|2.2.7-RELEASE
+
+|227001
+|July 21, 1998
+|2.2.7-RELEASE 之后的 2.2-STABLE
+
+|227002
+|September 19, 1998
+|man:semctl[2] 修改之后的 2.2-STABLE
+
+|228000
+|November 29, 1998
+|2.2.8-RELEASE
+
+|228001
+|November 29, 1998
+|2.2.8-RELEASE 之后的 2.2-STABLE
+
+|300000
+|February 19, 1996
+|man:mount[2] 修改之前的 3.0-CURRENT
+
+|300001
+|September 24, 1997
+|man:mount[2] 修改之后的 3.0-CURRENT
+
+|300002
+|June 2, 1998
+|man:semctl[2] 修改之后的 3.0-CURRENT
+
+|300003
+|June 7, 1998
+|ioctl 参数变化之后的 3.0-CURRENT
+
+|300004
+|September 3, 1998
+|ELF 变换之后的 3.0-CURRENT
+
+|300005
+|October 16, 1998
+|3.0-RELEASE
+
+|300006
+|October 16, 1998
+|3.0-RELEASE 之后的 3.0-CURRENT
+
+|300007
+|January 22, 1999
+|3/4切分之后的 3.0-STABLE
+
+|310000
+|February 9, 1999
+|3.1-RELEASE
+
+|310001
+|March 27, 1999
+|3.1-RELEASE 之后的 3.1-STABLE
+
+|310002
+|April 14, 1999
+|C++ 构建/析构函数顺序变化之后的 3.1-STABLE
+
+|320000
+|
+|3.2-RELEASE
+
+|320001
+|May 8, 1999
+|3.2-STABLE
+
+|320002
+|August 29, 1999
+|二进制不兼容的 IPFW 和 socket 变化之后的 3.2-STABLE
+
+|330000
+|September 2, 1999
+|3.3-RELEASE
+
+|330001
+|September 16, 1999
+|3.3-STABLE
+
+|330002
+|November 24, 1999
+|libc 中加入 man:mkstemp[3] 之后的 3.3-STABLE
+
+|340000
+|December 5, 1999
+|3.4-RELEASE
+
+|340001
+|December 17, 1999
+|3.4-STABLE
+
+|350000
+|June 20, 2000
+|3.5-RELEASE
+
+|350001
+|July 12, 2000
+|3.5-STABLE
+
+|400000
+|January 22, 1999
+|3/4切分之后的 4.0-CURRENT
+
+|400001
+|February 20, 1999
+|修改动态连接器处理方式之后的 4.0-CURRENT
+
+|400002
+|March 13, 1999
+|C++ 构建/析构函数顺序变化之后的
+
+|400003
+|March 27, 1999
+|提供 man:dladdr[3] 之后的 4.0-CURRENT
+
+|400004
+|April 5, 1999
+|修正了 __deregister_frame_info 的 4.0-CURRENT (也表示在 EGCS 1.1.2 集成之后的 4.0-CURRENT) 
+
+|400005
+|April 27, 1999
+|man:suser[9] API 变化之后的 4.0-CURRENT (也表示 newbus 之后的 4.0-CURRENT)
+
+|400006
+|May 31, 1999
+|cdevsw 注册机制改变之后的 4.0-CURRENT
+
+|400007
+|June 17, 1999
+|加入了 socket 级凭据的 so_cred 之后的 4.0-CURRENT
+
+|400008
+|June 20, 1999
+|在 libc_r 中加入 poll 系统调用接口之后的 4.0-CURRENT
+
+|400009
+|July 20, 1999
+|将内核中 `dev_t` 类型改为 `struct specinfo` 指针之后的 4.0-CURRENT
+
+|400010
+|September 25, 1999
+|修正了一处 man:jail[2] 漏洞之后的 4.0-CURRENT
+
+|400011
+|September 29, 1999
+|`sigset_t` 数据类型改变之后的 4.0-CURRENT
+
+|400012
+|November 15, 1999
+|切换到 GCC 2.95.2 编译器之后的 4.0-CURRENT
+
+|400013
+|December 4, 1999
+|加入了可插的 linux模式 ioctl 处理程序后的 4.0-CURRENT
+
+|400014
+|January 18, 2000
+|引入 OpenSSL 之后的 4.0-CURRENT
+
+|400015
+|January 27, 2000
+|GCC 2.95.2 中 ABI 默认值从 -fvtable-thunks 改为 -fno-vtable-thunks 之后的 4.0-CURRENT
+
+|400016
+|February 27, 2000
+|引入 OpenSSH 之后的 4.0-CURRENT
+
+|400017
+|March 13, 2000
+|4.0-RELEASE
+
+|400018
+|March 17, 2000
+|4.0-RELEASE 之后的 4.0-STABLE
+
+|400019
+|May 5, 2000
+|引入延迟校验和之后的 4.0-STABLE
+
+|400020
+|June 4, 2000
+|将 libxpg4 的代码并入 libc 之后的 4.0-STABLE
+
+|400021
+|July 8, 2000
+|Binutils 升级到 2.10.0 之后的 4.0-STABLE， ELF 标志变化， 以及将 tcsh 引入基本系统
+
+|410000
+|July 14, 2000
+|4.1-RELEASE
+
+|410001
+|July 29, 2000
+|4.1-RELEASE 之后的 4.1-STABLE
+
+|410002
+|September 16, 2000
+|man:setproctitle[3] 从 libutil 移入 libc 之后的 4.1-STABLE
+
+|411000
+|September 25, 2000
+|4.1.1-RELEASE
+
+|411001
+|
+|4.1.1-RELEASE 之后的 4.1.1-STABLE
+
+|420000
+|October 31, 2000
+|4.2-RELEASE
+
+|420001
+|January 10, 2001
+|合并 libgcc.a 和 libgcc_r.a， 并修改了相关的 GCC 连接方式之后的 4.2-STABLE
+
+|430000
+|March 6, 2001
+|4.3-RELEASE
+
+|430001
+|May 18, 2001
+|引入 wint_t 之后的 4.3-STABLE
+
+|430002
+|July 22, 2001
+|PCI 电源状态 API 合并之后的 4.3-STABLE
+
+|440000
+|August 1, 2001
+|4.4-RELEASE
+
+|440001
+|October 23, 2001
+|引入 d_thread_t 之后的 4.4-STABLE
+
+|440002
+|November 4, 2001
+|mount 结构改变之后的 4.4-STABLE (影响文件系统 kld)
+
+|440003
+|December 18, 2001
+|用户态部分的 smbfs 被引入之后的 4.4-STABLE
+
+|450000
+|December 20, 2001
+|4.5-RELEASE
+
+|450001
+|February 24, 2002
+|usb 结构元素改名之后的 4.5-STABLE
+
+|450004
+|April 16, 2002
+|在 man:rc.conf[5] 变量 `sendmail_enable` 默认值改为 `NONE` 之后的 4.5-STABLE
+
+|450005
+|April 27, 2002
+|默认将 XFree86 4 用于预编译包联编之后的 4.5-STABLE
+
+|450006
+|May 1, 2002
+|accept 过滤器修正了安全问题并且不再会轻易被 DoS 之后的 4.5-STABLE
+
+|460000
+|June 21, 2002
+|4.6-RELEASE
+
+|460001
+|June 21, 2002
+|修正了 man:sendfile[2] 以吻合文档， 而不再根据发出的头计算发出数据量之后的 4.6-STABLE
+
+|460002
+|July 19, 2002
+|4.6.2-RELEASE
+
+|460100
+|June 26, 2002
+|4.6-STABLE
+
+|460101
+|June 26, 2002
+|MFC `sed -i` 之后的 4.6-STABLE
+
+|460102
+|September 1, 2002
+|MFC 许多 pkg_install 新特性之后的 4.6-STABLE
+
+|470000
+|October 8, 2002
+|4.7-RELEASE
+
+|470100
+|October 9, 2002
+|4.7-STABLE
+
+|470101
+|November 10, 2002
+|开始生成 __std{in,out,err}p 引用， 而不是 __sF。 这将 std{in,out,err} 从编译时表达式变成了运行时值。
+
+|470102
+|January 23, 2003
+|MFC mbuf 相关的将 m_aux mbuf 改为 m_tag 的修改之后的 4.7-STABLE
+
+|470103
+|February 14, 2003
+|OpenSSL 升级到 0.9.7 之后的 4.7-STABLE
+
+|480000
+|March 30, 2003
+|4.8-RELEASE
+
+|480100
+|April 5, 2003
+|4.8-STABLE
+
+|480101
+|May 22, 2003
+|man:realpath[3] 变为线程安全的之后的 4.8-STABLE
+
+|480102
+|August 10, 2003
+|对 twe 的 3ware API 修改之后的 4.8-STABLE
+
+|490000
+|October 27, 2003
+|4.9-RELEASE
+
+|490100
+|October 27, 2003
+|4.9-STABLE
+
+|490101
+|January 8, 2004
+|kinfo_eproc 中加入 e_sid 之后的 4.9-STABLE
+
+|490102
+|February 4, 2004
+|MFC rtld 的 libmap 功能之后的 4.9-STABLE
+
+|491000
+|May 25, 2004
+|4.10-RELEASE
+
+|491100
+|June 1, 2004
+|4.10-STABLE
+
+|491101
+|August 11, 2004
+|MFC 20040629 版本的包维护工具之后的 4.10-STABLE
+
+|491102
+|November 16, 2004
+|修正了 VM 当解除 wire 不存在页面时的问题之后的 4.10-STABLE
+
+|492000
+|December 17, 2004
+|4.11-RELEASE
+
+|492100
+|December 17, 2004
+|4.11-STABLE
+
+|492101
+|April 18, 2006
+|将 libdata/ldconfig 目录加入 mtree 文件之后的 4.11-STABLE。
+
+|500000
+|March 13, 2000
+|5.0-CURRENT
+
+|500001
+|April 18, 2000
+|加入 ELF 头字段， 并改变我们的 ELF 执行文件标记方式之后的 5.0-CURRENT
+
+|500002
+|May 2, 2000
+|kld 元数据修改之后的 5.0-CURRENT
+
+|500003
+|May 18, 2000
+|buf/bio 修改之后的 5.0-CURRENT
+
+|500004
+|May 26, 2000
+|binutils 升级后的 5.0-CURRENT
+
+|500005
+|June 3, 2000
+|将 libxpg4 并入 libc， 以及引入 TASKQ 之后的 5.0-CURRENT
+
+|500006
+|June 10, 2000
+|加入 AGP 接口之后的 5.0-CURRENT
+
+|500007
+|June 29, 2000
+|Perl 升级到 5.6.0 之后的 5.0-CURRENT
+
+|500008
+|July 7, 2000
+|KAME 代码升级到 2000/07 之后的 5.0-CURRENT
+
+|500009
+|July 14, 2000
+|ether_ifattach() 和 ether_detach() 修改之后的 5.0-CURRENT
+
+|500010
+|July 16, 2000
+|将 mtree 改为原先的默认值， 并使用 -L 来跟随符号连接之后的 5.0-CURRENT
+
+|500011
+|July 18, 2000
+|kqueue API 修改之后的 5.0-CURRENT
+
+|500012
+|September 2, 2000
+|man:setproctitle[3] 从 libutil 挪到 libc 之后的 5.0-CURRENT
+
+|500013
+|September 10, 2000
+|首个 SMPng commit 之后的 5.0-CURRENT
+
+|500014
+|January 4, 2001
+|<sys/select.h> 改为 <sys/selinfo.h> 之后的 5.0-CURRENT
+
+|500015
+|January 10, 2001
+|libgcc.a 和 libgcc_r.a 以及 GCC 连接方式变动之后的 5.0-CURRENT
+
+|500016
+|January 24, 2001
+|修改以允许 libc 和 libc_r 连接到一起， 不再鼓励使用 -pthread 之后的 5.0-CURRENT
+
+|500017
+|February 18, 2001
+|从 struct ucred 切换到 struct xucred 以便使内核为 mountd 等程序导出的 API 稳定下来之后的 5.0-CURRENT
+
+|500018
+|February 24, 2001
+|加入 CPUTYPE 用于 CPU 专用的优化的 make 变量之后的 5.0-CURRENT
+
+|500019
+|June 9, 2001
+|machine/ioctl_fd.h 改为 sys/fdcio.h 之后的 5.0-CURRENT
+
+|500020
+|June 15, 2001
+|locale 名称改变之后的 5.0-CURRENT
+
+|500021
+|June 22, 2001
+|引入 bzip2 之后的 5.0-CURRENT， 同时也代表删去了 S/Key
+
+|500022
+|July 12, 2001
+|加入 SSE 支持之后的 5.0-CURRENT
+
+|500023
+|September 14, 2001
+|KSE 第2个里程碑之后的 5.0-CURRENT
+
+|500024
+|October 1, 2001
+|d_thread_t 之后的 5.0-CURRENT， 同时 UUCP 被移入 ports
+
+|500025
+|October 4, 2001
+|64-位平台上的描述符和 creds API 变化之后的 5.0-CURRENT
+
+|500026
+|October 9, 2001
+|采用 XFree86 4 作为默认的预编译包， 以及加入 strnstr() libc 函数之后的 5.0-CURRENT
+
+|500027
+|October 10, 2001
+|加入 strcasestr() libc 函数之后的 5.0-CURRENT
+
+|500028
+|December 14, 2001
+|引入了用户态的 smbfs 组件之后的 5.0-CURRENT
+
+|(未予增加)
+|
+|加入了新的 C99 指定位宽整形变量之后的 5.0-CURRENT
+
+|500029
+|January 29, 2002
+|修改了 man:sendfile[2] 的返回值之后的 5.0-CURRENT
+
+|500030
+|February 15, 2002
+|引入适合表达文件标志的 `fflags_t` 类型之后的 5.0-
+
+|500031
+|February 24, 2002
+|usb 结构元素改名之后的 5.0-CURRENT
+
+|500032
+|March 16, 2002
+|引入 Perl 5.6.1 之后的 5.0-CURRENT
+
+|500033
+|April 3, 2002
+|man:rc.conf[5] 变量 `sendmail_enable` 默认值改为 `NONE` 之后的 5.0-CURRENT
+
+|500034
+|April 30, 2002
+|mtx_init() 增加了第三个参数之后的 5.0-CURRENT
+
+|500035
+|May 13, 2002
+|包含 Gcc 3.1 的 5.0-CURRENT
+
+|500036
+|May 17, 2002
+|在 /usr/src 中删去了 Perl 的 5.0-CURRENT
+
+|500037
+|May 29, 2002
+|加入 man:dlfunc[3] 之后的 5.0-CURRENT
+
+|500038
+|July 24, 2002
+|一些 struct sockbuf 的成员变为结构， 并重新排列顺序之后的 5.0-CURRENT
+
+|500039
+|September 1, 2002
+|引入 GCC 3.2.1 之后的 5.0-CURRENT。 头文件也不再使用 _BSD_FOO_T_ 而开始使用 _FOO_T_DECLARED。 这个值还可以用于作为一个包含使用 man:bzip2[1] 的预编译包支持的预期点。
+
+|500040
+|September 20, 2002
+|以去掉对 disklabel 结构内容的依赖的名义， 对磁盘相关的函数进行了许多修改之后的 5.0-CURRENT
+
+|500041
+|October 1, 2002
+|libc 中加入 man:getopt_long[3] 之后的 5.0-CURRENT
+
+|500042
+|October 15, 2002
+|Binutils 2.13 升级， 包含了新的 FreeBSD 模拟， vec 以及输出格式之后的 5.0-CURRENT
+
+|500043
+|November 1, 2002
+|libc 中加入了弱 pthread_XXX 符号之后的 5.0-CURRENT， 从而淘汰了 libXThrStub.so。 5.0-RELEASE。
+
+|500100
+|January 17, 2003
+|创建 RELENG_5_0 分支之后的 5.0-CURRENT
+
+|500101
+|February 19, 2003
+|<sys/dkstat.h> 变成了一个空文件， 不应再被引用
+
+|500102
+|February 25, 2003
+|修改 d_mmap_t 接口之后的 5.0-CURRENT
+
+|500103
+|February 26, 2003
+|taskqueue_swi 以无全局锁的方式运行之后的 5.0-CURRENT， 同时还加入了使用全局锁的 taskqueue_swi_giant
+
+|500104
+|February 27, 2003
+|去掉了 cdevsw_add() 和 cdevsw_remove() 出现 MAJOR_AUTO 分配机制
+
+|500105
+|March 4, 2003
+|采用新的 cdevsw 初始化方法之后的 5.0-CURRENT
+
+|500106
+|March 8, 2003
+|devstat_add_entry() 被 devstat_new_entry() 取代
+
+|500107
+|March 15, 2003
+|修改 devstat 接口； 请参见 sys/sys/param.h 1.149
+
+|500108
+|March 15, 2003
+|改变了 Token-Ring 接口
+
+|500109
+|March 25, 2003
+|加入 vm_paddr_t
+
+|500110
+|March 28, 2003
+|将 man:realpath[3] 改为线程安全之后的 5.0-CURRENT
+
+|500111
+|April 9, 2003
+|man:usbhid[3] 与 NetBSD 同步之后的 5.0-CURRENT
+
+|500112
+|April 17, 2003
+|加入新的 NSS 实现， 以及 POSIX.1 getpw*_r, getgr*_r 函数之后的 5.0-CURRENT
+
+|500113
+|May 2, 2003
+|删去旧式 rc 系统之后的 5.0-CURRENT
+
+|501000
+|June 4, 2003
+|5.1-RELEASE.
+
+|501100
+|June 2, 2003
+|创建 RELENG_5_1 分支之后的 5.1-CURRENT
+
+|501101
+|June 29, 2003
+|改正 sigtimedwait(2) 和 sigwaitinfo(2) 语义之后的 5.1-CURRENT
+
+|501102
+|July 3, 2003
+|在 man:bus_dma_tag_create[9] 中加入了 lockfunc 和 lockfuncarg 字段之后的 5.1-CURRENT
+
+|501103
+|July 31, 2003
+|集成了 GCC 3.3.1-pre 20030711 之后的 5.1-CURRENT
+
+|501104
+|August 5, 2003
+|twe 中 3ware API 变化之后的 5.1-CURRENT
+
+|501105
+|August 17, 2003
+|允许动态连接 /bin 和 /sbin， 以及将某些库移动到 /lib 之后的 5.1-CURRENT
+
+|501106
+|September 8, 2003
+|增加内核级 Coda 6.x 支持之后的 5.1-CURRENT
+
+|501107
+|September 17, 2003
+|将 16550 UART 常量从 [.filename]#<dev/sio/sioreg.h># 挪到 [.filename]#<dev/ic/ns16550.h># 之后的 5.1-CURRENT。 此外， rtld 也从此无条件支持 libmap 功能
+
+|501108
+|September 23, 2003
+|更新 PFIL_HOOKS API 之后的 5.1-CURRENT
+
+|501109
+|September 27, 2003
+|增加 kiconv(3) 之后的 5.1-CURRENT
+
+|501110
+|September 28, 2003
+|默认的 cdevsw open 和 close 操作变化之后的 5.1-CURRENT
+
+|501111
+|October 16, 2003
+|cdevsw 的布局变化之后的 5.1-CURRENT
+
+|501112
+|October 16, 2003
+|增加 kobj 多继承之后的 5.1-CURRENT
+
+|501113
+|October 31, 2003
+|修改 struct ifnet 中的 if_xname 之后的 5.1-CURRENT
+
+|501114
+|November 16, 2003
+|将 /bin 和 /sbin 改为动态连接之后的 5.1-CURRENT
+
+|502000
+|December 7, 2003
+|5.2-RELEASE
+
+|502010
+|February 23, 2004
+|5.2.1-RELEASE
+
+|502100
+|December 7, 2003
+|创建 RELENG_5_2 分支之后的 5.2-CURRENT
+
+|502101
+|December 19, 2003
+|libc 中加入了 __cxa_atexit/__cxa_finalize 两个函数之后的 5.2-CURRENT
+
+|502102
+|January 30, 2004
+|默认线程库从 libc_r 改为 libpthread 之后的 5.2-CURRENT
+
+|502103
+|February 21, 2004
+|设备驱动 API 大规模翻修之后的 5.2-CURRENT
+
+|502104
+|February 25, 2004
+|增加 getopt_long_only() 之后的 5.2-CURRENT
+
+|502105
+|March 5, 2004
+|C 的 NULL 定义改为 ((void *)0) 之后的 5.2-CURRENT， 这会产生更多的编译警告
+
+|502106
+|March 8, 2004
+|pf 连入联编和安装过程之后的 5.2-CURRENT 
+
+|502107
+|March 10, 2004
+|在 sparc64 上将 time_t 改为 64-位 值之后的 5.2-CURRENT 
+
+|502108
+|March 12, 2004
+|在一些头文件修改以支持 Intel C/C++ 编译器， 以及让 execve(2) 更严格地符合 POSIX 之后的 5.2-CURRENT
+
+|502109
+|March 22, 2004
+|引入 bus_alloc_resource_any API 之后的 5.2-CURRENT 
+
+|502110
+|March 27, 2004
+|加入 UTF-8 locale 之后的 5.2-CURRENT
+
+|502111
+|April 11, 2004
+|删去 getvfsent(3) API 之后的 5.2-CURRENT
+
+|502112
+|April 13, 2004
+|为 make(1) 增加 .warning 语句之后的 5.2-CURRENT
+
+|502113
+|June 4, 2004
+|所有串口设备都强制使用 ttyioctl() 之后的 5.2-CURRENT
+
+|502114
+|June 13, 2004
+|引入 ALTQ 框架之后的 5.2-CURRENT
+
+|502115
+|June 14, 2004
+|修改 sema_timedwait(9) 使其成功时返回 0， 失败时返回非 0 的错误代码之后的 5.2-CURRENT
+
+|502116
+|June 16, 2004
+|将内核 dev_t 改为指向 struct cdev * 的指针之后的 5.2-CURRENT
+
+|502117
+|June 17, 2004
+|将内核 udev_t 改为 dev_t 之后的 5.2-CURRENT
+
+|502118
+|June 17, 2004
+|为 clock_gettime(2) 和 clock_getres(2) 增加 CLOCK_VIRTUAL 和 CLOCK_PROF 支持之后的 5.2-CURRENT
+
+|502119
+|June 22, 2004
+|对网络接口复制进行全面修改之后的 5.2-CURRENT
+
+|502120
+|July 2, 2004
+|package 工具升级为 20040629 之后的 5.2-CURRENT
+
+|502121
+|July 9, 2004
+|不再将蓝牙代码标记为 i386 专用之后的 5.2-CURRENT
+
+|502122
+|July 11, 2004
+|引入 KDB 调试器框架之后的 5.2-CURRENT。 同时还引入了 DDB 作为后台， 以及 GDB 后台。
+
+|502123
+|July 12, 2004
+|修改 VFS_ROOT 和 vflush 使其使用一个 struct thread 参数之后的 5.2-CURRENT。 struct kinfo_proc 增加了一个用户数据指针。 同时， 默认的 X 实现切换为 `xorg`
+
+|502124
+|July 24, 2004
+|将使用 rc.d 和传统脚本的 port 分别启动之后的 5.2-CURRENT
+
+|502125
+|July 28, 2004
+|取消前一修改之后的 5.2-CURRENT
+
+|502126
+|July 31, 2004
+|删除 kmem_alloc_pageable() 并引入 gcc 3.4.2 的 5.2-CURRENT
+
+|502127
+|August 2, 2004
+|修改 UMA 内核 API 允许构建函数和初始化失败之后的 5.2-CURRENT
+
+|502128
+|August 8, 2004
+|vfs_mount 签名和全局替换 suser(9) API 的 PRISON_ROOT 为 SUSER_ALLOWJAIL 之后的 5.2-CURRENT
+
+|503000
+|August 23, 2004
+|pfil API 修改之前的 5.3-BETA/RC
+
+|503001
+|September 22, 2004
+|5.3-RELEASE
+
+|503100
+|October 16, 2004
+|创建 RELENG_5_3 分支之后的 5.3-STABLE
+
+|503101
+|December 3, 2004
+|加入了 glibc 风格的 man:strftime[3] 填充选项的 5.3-STABLE
+
+|503102
+|February 13, 2005
+|MFC OpenBSD 的 nc(1) 之后的 5.3-STABLE
+
+|503103
+|February 27, 2005
+|在 MFC 了 [.filename]#<src/include/stdbool.h># 和 [.filename]#<src/sys/i386/include/_types.h># 用于兼容 GCC 和 Intel C/C++ 编译器的修正之后的 5.4-PRERELEASE
+
+|503104
+|February 28, 2005
+|MFC 了将 ifi_epoch 由 wall 时钟时间改为 uptime 之后的 5.4-PRERELEASE
+
+|503105
+|March 2, 2005
+|MFC 了 vswprintf(3) 中的 EOVERFLOW 检查的 5.4-PRERELEASE
+
+|504000
+|April 3, 2005
+|5.4-RELEASE.
+
+|504100
+|April 3, 2005
+|创建 RELENG_5_4 分支之后的 5.4-STABLE
+
+|504101
+|May 11, 2005
+|加大默认线程堆栈尺寸之后的 5.4-STABLE
+
+|504102
+|June 24, 2005
+|加入 sha256 之后的 5.4-STABLE
+
+|504103
+|October 3, 2005
+|MFC if_bridge 之后的 5.4-STABLE
+
+|504104
+|November 13, 2005
+|bsdiff 和 portsnap MFC 之后的 5.4-STABLE
+
+|504105
+|January 17, 2006
+|在 MFC 了 ldconfig_local_dirs 修改之后的 5.4-STABLE。
+
+|505000
+|May 12, 2006
+|5.5-RELEASE.
+
+|505100
+|May 12, 2006
+|在创建 RELENG_5_5 分支之后的 5.5-STABLE
+
+|600000
+|August 18, 2004
+|6.0-CURRENT
+
+|600001
+|August 27, 2004
+|内核中永久性启用 PFIL_HOOKS 之后的 6.0-CURRENT
+
+|600002
+|August 30, 2004
+|最初将 ifi_epoch 加入 if_data 结构之后的 6.0-CURRENT。 此后不久即被撤销。 请不要使用这个值。
+
+|600003
+|September 8, 2004
+|if_data 中再次加入 ifi_epoch 成员之后的 6.0-CURRENT
+
+|600004
+|September 29, 2004
+|将 struct inpcb 参数加入 pfil API 之后的 6.0-CURRENT
+
+|600005
+|October 5, 2004
+|newsyslog 加入了 "-d DESTDIR" 参数之后的 6.0-CURRENT
+
+|600006
+|November 4, 2004
+|加入了 glibc 风格的 man:strftime[3] 填充选项之后的 6.0-CURRENT
+
+|600007
+|December 12, 2004
+|加入了 802.11 框架更新之后的 6.0-CURRENT
+
+|600008
+|January 25, 2005
+|修改 VOP_*VOBJECT() 并为无全局锁的文件系统引入 MNTK_MPSAFE 标志之后的 6.0-CURRENT
+
+|600009
+|February 4, 2005
+|加入 cpufreq 框架和驱动之后的 6.0-CURRENT
+
+|600010
+|February 6, 2005
+|引入 OpenBSD 的 nc(1) 之后的 6.0-CURRENT
+
+|600011
+|February 12, 2005
+|删去并不存在的 SVID2 `matherr()` 支持之后的 6.0-CURRENT
+
+|600012
+|February 15, 2005
+|增大默认线程堆栈尺寸之后的 6.0-CURRENT
+
+|600013
+|February 19, 2005
+|增加了针对 [.filename]#<src/include/stdbool.h># 和 [.filename]#<src/sys/i386/include/_types.h># 的用于 Intel C/C++ 编译器的 GCC-兼容性修正。
+
+|600014
+|February 21, 2005
+|修正了 vswprintf(3) 的 EOVERFLOW 检查之后的 6.0-CURRENT
+
+|600015
+|February 25, 2005
+|将 struct if_data 成员 ifi_epoch 从 wall 时钟时间改为 uptime 之后的 6.0-CURRENT
+
+|600016
+|February 26, 2005
+|修改 LC_CTYPE 磁盘格式之后的 6.0-CURRENT
+
+|600017
+|February 27, 2005
+|修改 NLS 编录磁盘格式之后的 6.0-CURRENT
+
+|600018
+|February 27, 2005
+|修改 LC_COLLATE 磁盘格式之后的 6.0-CURRENT
+
+|600019
+|February 28, 2005
+|将 acpica 头文件安装到 /usr/include
+
+|600020
+|March 9, 2005
+|为 send(2) API 加入了 MSG_NOSIGNAL
+
+|600021
+|March 17, 2005
+|在 cdevsw 上增加了一些字段
+
+|600022
+|March 21, 2005
+|基本系统中删去了 gtar
+
+|600023
+|April 13, 2005
+|unix(4) 中加入了 LOCAL_CREDS, LOCAL_CONNWAIT 两个 socket 选项
+
+|600024
+|April 19, 2005
+|加入了 man:hwpmc[4] 及其相关工具之后的 6.0-CURRENT
+
+|600025
+|April 26, 2005
+|加入 struct icmphdr 之后的 6.0-CURRENT
+
+|600026
+|May 3, 2005
+|pf 更新到了 3.7
+
+|600027
+|May 6, 2005
+|引入了内核 libalias 和 ng_nat
+
+|600028
+|May 13, 2005
+|将 ttyname_r(3) 接口改为符合 POSIX 标准， 并通过 unistd.h 和 libc
+
+|600029
+|May 29, 2005
+|将 libpcap 升级为 v0.9.1 alpha 096 之后的 6.0-CURRENT
+
+|600030
+|June 5, 2005
+|引入 NetBSD 的 if_bridge(4) 之后的 6.0-CURRENT
+
+|600031
+|June 10, 2005
+|将 struct ifnet 从驱动的 softc 中拆出之后的 6.0-CURRENT。
+
+|600032
+|July 11, 2005
+|引入了 libpcap v0.9.1 之后的 6.0-CURRENT。
+
+|600033
+|July 25, 2005
+|所有自 RELENG_5 以来没有修改过的共享库的版本递增之后的 6.0-STABLE。
+
+|600034
+|August 13, 2005
+|为 dev_clone 事件处理函数增加身份信息参数之后的 6.0-STABLE。 6.0-RELEASE。
+
+|600100
+|November 1, 2005
+|6.0-RELEASE 之后的 6.0-STABLE
+
+|600101
+|December 21, 2005
+|将 local_startup 目录中的脚本集成到基本系统的 man:rcorder[8] 之后的 6.0-STABLE。
+
+|600102
+|December 30, 2005
+|更新 ELF 类型和常量之后的 6.0-STABLE。
+
+|600103
+|January 15, 2006
+|MFC 了 pidfile(3) API 之后的 6.0-STABLE。
+
+|600104
+|January 17, 2006
+|在 MFC 了 ldconfig_local_dirs 修改之后的 6.0-STABLE。
+
+|600105
+|February 26, 2006
+|在 csh(1) 中加入了 NLS 目录支持之后的 6.0-STABLE。
+
+|601000
+|May 6, 2006
+|6.1-RELEASE
+
+|601100
+|May 6, 2006
+|6.1-RELEASE 之后的 6.1-STABLE。
+
+|601101
+|June 22, 2006
+|引入 csup 之后的 6.1-STABLE。
+
+|601102
+|July 11, 2006
+|更新了 iwi(4) 之后的 6.1-STABLE。
+
+|601103
+|July 17, 2006
+|将域名解析函数更新至 BIND9， 并导出了可重入版本的 netdb 函数之后的 6.1-STABLE。
+
+|601104
+|August 8, 2006
+|在 OpenSSL 中启用了 DSO (动态共享库) 支持之后的 6.1-STABLE。
+
+|601105
+|September 2, 2006
+|由于 802.11 修正变动了 IEEE80211_IOC_STA_INFO ioctl API 之后的 6.1-STABLE。
+
+|602000
+|November 15, 2006
+|6.2-RELEASE
+
+|602100
+|September 15, 2006
+|6.2-RELEASE 之后的 6.2-STABLE。
+
+|602101
+|December 12, 2006
+|加入 Wi-Spy quirk 之后的 6.2-STABLE。
+
+|602102
+|December 28, 2006
+|增加 pci_find_extcap() 之后的 6.2-STABLE。
+
+|602103
+|January 16, 2007
+|MFC 了对 dlsym 进行修改， 使其在指定 dso 及其暗指的依赖中查找符号之后的 6.2-STABLE。
+
+|602104
+|January 28, 2007
+|MFC 了 netgraph 节点 ng_deflate(4) 和 ng_pred1(4) 以及用于 ng_ppp(4) 节点的新压缩及加密模式之后的 6.2-STABLE。
+
+|602105
+|February 20, 2007
+|MFC 了从 NetBSD 移植的 BSD 授权的 man:gzip[1] 之后的 6.2-STABLE。
+
+|602106
+|March 31, 2007
+|MFC 了 PCI MSI 和 MSI-X 支持之后的 6.2-STABLE。
+
+|602107
+|April 6, 2007
+|MFC 了包含宽字符支持的 ncurses 5.6 之后的 6.2-STABLE。
+
+|602108
+|April 11, 2007
+|MFC 了实现 Linux SCSI SG 直通设备 API 子集的 CAM 'SG' 设备之后的 6.2-STABLE。
+
+|602109
+|April 17, 2007
+|MFC 了 readline 5.2 patchset 002 之后的 6.2-STABLE。
+
+|602110
+|May 2, 2007
+|MFC 了用于 amd64 和 i386 的 pmap_invalidate_cache()、 pmap_change_attr()、 pmap_mapbios()、 pmap_mapdev_attr()、 and pmap_unmapbios() 之后的 6.2-STABLE。
+
+|602111
+|June 11, 2007
+|由于 MFC 了 BOP_BDFLUSH 导致文件系统模块 KBI 变化之后的 6.2-STABLE。
+
+|602112
+|September 21, 2007
+|一系列 libutil(3) MFC 之后的 6.2-STABLE。
+
+|602113
+|October 25, 2007
+|MFC 了宽字符和单字节 ctype 函数分拆之后的 6.2-STABLE。 新编译的引用了 ctype.h 的可执行文件， 可能会需要一个在旧系统上不存在的新增符号 __mb_sb_limit。
+
+|602114
+|October 30, 2007
+|恢复了 ctype ABI 向前兼容性之后的 6.2-STABLE。
+
+|602115
+|November 21, 2007
+|回退了宽字符和单字节 ctype 分拆之后的 6.2-STABLE。
+
+|603000
+|November 25, 2007
+|6.3-RELEASE
+
+|603100
+|November 25, 2007
+|在 6.3-RELEASE 之后的 6.3-STABLE。
+
+|603101
+|December 7, 2007
+|修正了 bit macro 的多字节支持之后的 6.3-STABLE。
+
+|603102
+|April 24, 2008
+|为 flock 结构加入 l_sysid 之后的 6.3-STABLE。
+
+|603103
+|May 27, 2008
+|MFC 了 `memrchr` 函数之后的 6.3-STABLE。
+
+|603104
+|June 15, 2008
+|为 make(1) MFC `:u` 变量修饰符之后的 6.3-STABLE。
+
+|604000
+|October 4, 2008
+|6.4-RELEASE
+
+|604100
+|October 4, 2008
+|6.4-RELEASE 之后的 6.4-STABLE。
+
+|700000
+|July 11, 2005
+|7.0-CURRENT。
+
+|700001
+|July 23, 2005
+|所有自 RELENG_5 以来没有修改过的共享库的版本递增之后的 7.0-CURRENT。
+
+|700002
+|August 13, 2005
+|为 dev_clone 事件处理函数中增加身份信息参数之后的 7.0-CURRENT。
+
+|700003
+|August 25, 2005
+|将 memmem(3) 加入 libc 之后的 7.0-CURRENT。
+
+|700004
+|October 30, 2005
+|将 solisten(9) 改为接受一 backlog 参数之后的 7.0-CURRENT。
+
+|700005
+|November 11, 2005
+|将 IFP2ENADDR() 改为返回一 IF_LLADDR() 指针之后的 7.0-CURRENT。
+
+|700006
+|November 11, 2005
+|在 `struct ifnet` 中增加 `if_addr` 成员， 并删除 IFP2ENADDR() 之后的 7.0-CURRENT。
+
+|700007
+|December 2, 2005
+|将 local_startup 目录中的脚本集成到基本系统的 man:rcorder[8] 之后的 7.0-CURRENT。
+
+|700008
+|December 5, 2005
+|去掉 MNT_NODEV 挂接选项之后的 7.0-CURRENT。
+
+|700009
+|December 19, 2005
+|对 ELF-64 类型和符号版本进行变更之后的 7.0-CURRENT。
+
+|700010
+|December 20, 2005
+|增加 hostb 和 vgapci 驱动、 pci_find_extcap()， 并将 AGP 驱动改为不再影射 aperature 之后的 7.0-CURRENT。
+
+|700011
+|December 31, 2005
+|除 Alpha 之外的所有平台上 tv_sec 改为 time_t 之后的 7.0-CURRENT。
+
+|700012
+|January 8, 2006
+|修改 ldconfig_local_dirs 之后的 7.0-CURRENT。
+
+|700013
+|January 12, 2006
+|在修改了 [.filename]#/etc/rc.d/abi# 以支持 [.filename]#/compat/linux/etc/ld.so.cache# 以某只读文件系统上的符号连接形式存在之后的 7.0-CURRENT。
+
+|700014
+|January 26, 2006
+|引入 pts 之后的 7.0-CURRENT。
+
+|700015
+|March 26, 2006
+|在引入 man:hwpmc[4] 的第 2 版 ABI 之后的 7.0-CURRENT。
+
+|700016
+|April 22, 2006
+|在 libc 中加入了 man:fcloseall[3] 之后的 7.0-CURRENT。
+
+|700017
+|May 13, 2006
+|删去 ip6fw 之后的 7.0-CURRENT。
+
+|700018
+|July 15, 2006
+|引入了 snd_emu10kx 之后的 7.0-CURRENT。
+
+|700019
+|July 29, 2006
+|引入了 OpenSSL 0.9.8b 之后的 7.0-CURRENT。
+
+|700020
+|September 3, 2006
+|增加了 bus_dma_get_tag 函数之后的 7.0-CURRENT。
+
+|700021
+|September 4, 2006
+|在引入了 libpcap 0.9.4 和 tcpdump 3.9.4 之后的 7.0-CURRENT。
+
+|700022
+|September 9, 2006
+|在对 dlsym 进行修改， 使其在指定 dso 及其暗指的依赖中查找符号之后的 7.0-CURRENT。
+
+|700023
+|September 23, 2006
+|为 OSSv4 混音器 API 加入新的声音 IOCTL 之后的 7.0-CURRENT。
+
+|700024
+|September 28, 2006
+|汇入 OpenSSL 0.9.8d 之后的 7.0-CURRENT。
+
+|700025
+|November 11, 2006
+|加入了 libelf 之后的 7.0-CURRENT。
+
+|700026
+|November 26, 2006
+|对音效相关的 sysctl 进行大幅调整之后的 7.0-CURRENT。
+
+|700027
+|November 30, 2006
+|加入 Wi-Spy quirk 之后的 7.0-CURRENT。
+
+|700028
+|December 15, 2006
+|在 libc 中加入 sctp 调用之后的 7.0-CURRENT。 
+
+|700029
+|January 26, 2007
+|将 GNU man:gzip[1] 实现替换为从 NetBSD 移植的采用 BSD 授权版本之后的 7.0-CURRENT。
+
+|700030
+|February 7, 2007
+|在 IPv4 多播转发代码中删去了 IPIP 隧道封装 (VIFF_TUNNEL) 之后的 7.0-CURRENT。
+
+|700031
+|February 23, 2007
+|修改了 bus_setup_intr() (newbus) 之后的 7.0-CURRENT。 
+
+|700032
+|March 2, 2007
+|引入了 ipw(4) 和 iwi(4) 固件之后的 7.0-CURRENT。 
+
+|700033
+|March 9, 2007
+|在 ncurses 中引入了宽字符支持之后的 7.0-CURRENT。 
+
+|700034
+|March 19, 2007
+|修改了 insmntque()、 getnewvnode() 以及 vfs_hash_insert() 工作方式之后的 7.0-CURRENT。 
+
+|700035
+|March 26, 2007
+|增加 CPU 频率变动通知机制之后的 7.0-CURRENT。 
+
+|700036
+|April 6, 2007
+|引入了 ZFS 文件系统之后的 7.0-CURRENT。
+
+|700037
+|April 8, 2007
+|新增了实现 Linux SCSI SG 直通设备 API 子集的 CAM 'SG' 设备之后的 7.0-CURRENT。
+
+|700038
+|April 30, 2007
+|将 man:getenv[3]、 man:putenv[3]、 man:setenv[3] 和 man:unsetenv[3] 改为符合 POSIX 之后的 7.0-CURRENT。
+
+|700039
+|May 1, 2007
+|回退了 700038 中的变动之后的 7.0-CURRENT。
+
+|700040
+|May 10, 2007
+|在 libutil 中增加了 man:flopen[3] 之后的 7.0-CURRENT。
+
+|700041
+|May 13, 2007
+|启用了符号版本， 并将 libthr 改为默认线程库之后的 7.0-CURRENT。
+
+|700042
+|May 19, 2007
+|引入了 gcc 4.2.0 之后的 7.0-CURRENT。
+
+|700043
+|May 21, 2007
+|将 RELENG_6 之后未修改过版本的共享库版本增加之后的 7.0-CURRENT。
+
+|700044
+|June 7, 2007
+|将 vn_open()/VOP_OPEN() 的参数由文件描述符数组下标改为 struct file * 之后的 7.0-CURRENT。
+
+|700045
+|June 10, 2007
+|修改 man:pam_nologin[8] 使其向 PAM 框架提供帐号管理功能而非身份验证功能之后的 7.0-CURRENT。
+
+|700046
+|June 11, 2007
+|更新 802.11 无线支持之后的 7.0-CURRENT。
+
+|700047
+|June 11, 2007
+|增加 TCP LRO 网络接口能力之后的 7.0-CURRENT。
+
+|700048
+|June 12, 2007
+|在 IPv4 协议栈中加入了 RFC 3678 API 支持之后的 7.0-CURRENT。 先前 IP_MULTICAST_IF ioctl 的 RFC 1724 行为被删去； 0.0.0.0/8 不再能够用于指定接口索引下标， 而应使用 struct ipmreqn 代替。
+
+|700049
+|July 3, 2007
+|引入 OpenBSD 4.1 的 pf 之后的 7.0-CURRENT。
+
+|(not changed)
+|
+|为 FAST_IPSEC 增加 IPv6 支持， 删去 KAME IPSEC， 并将 FAST_IPSEC 更名为 IPSEC 之后的 7.0-CURRENT。 (未变动)
+
+|700050
+|July 4, 2007
+|将 setenv/putenv/等等调用， 从传统 BSD 改为 POSIX 标准之后的 7.0-CURRENT。
+
+|700051
+|July 4, 2007
+|增加新的 mmap/lseek/等等这些系统调用之后的 7.0-CURRENT。
+
+|700052
+|July 6, 2007
+|将 I4B 头文件移动到 include/i4b 之后的 7.0-CURRENT。
+
+|700053
+|September 30, 2007
+|增加了 PCI domain 支持之后的 7.0-CURRENT。
+
+|700054
+|October 25, 2007
+|MFC 了宽字符和单字节字符 ctype 分拆之后的 7.0-CURRENT。
+
+|700055
+|October 28, 2007
+|7.0-RELEASE， 以及 MFC 了恢复对 FreeBSD 4/5/6 版本的 PCIOCGETCONF、 PCIOCREAD 和 PCIOCWRITE IOCTL ABI 向下兼容之后的 7.0-CURRENT， 这一变动导致 PCIOCGETCONF IOCTL 的 ABI 再次发生变化。
+
+|700100
+|December 22, 2007
+|7.0-RELEASE 之后的 7.0-STABLE
+
+|700101
+|February 8, 2008
+|MFC m_collapse() 之后的 7.0-STABLE。
+
+|700102
+|March 30, 2008
+|MFC kdb_enter_why() 之后的 7.0-STABLE。
+
+|700103
+|April 10, 2008
+|为 flock 结构加入 l_sysid 之后的 7.0-STABLE。
+
+|700104
+|April 11, 2008
+|在 procstat(1) MFC 之后的 7.0-STABLE。
+
+|700105
+|April 11, 2008
+|在 MFC umtx 特性之后的 7.0-STABLE。
+
+|700106
+|April 15, 2008
+|为 man:psm[4] MFC man:write[2] 支持之后的 7.0-STABLE。
+
+|700107
+|April 20, 2008
+|为 man:fcntl[2] MFC F_DUP2FD 之后的 7.0-STABLE。
+
+|700108
+|May 5, 2008
+|对 man:lockmgr[9] 做了一些修改之后的 7.0-STABLE， 在使用 man:lockmgr[9] 时必需包含 [.filename]#sys/lock.h#。
+
+|700109
+|May 27, 2008
+|MFC 了 `memrchr` 函数之后的 7.0-STABLE。
+
+|700110
+|August 5, 2008
+|MFC 了内核 NFS locked 客户端之后的 7.0-STABLE。
+
+|700111
+|August 20, 2008
+|加入了对物理连续巨帧支持之后的 7.0-STABLE。
+
+|700112
+|August 27, 2008
+|在 MFC 内核 DTrace 支持之后的 7.0-STABLE。
+
+|701000
+|November 25, 2008
+|7.1-RELEASE
+
+|701100
+|November 25, 2008
+|7.1-RELEASE 之后的 7.1-STABLE。
+
+|701101
+|January 10, 2009
+|合并了 `strndup` 之后的 7.1-STABLE。
+
+|701102
+|January 17, 2009
+|加入了 cpuctl(4) 支持之后的 7.1-STABLE。
+
+|701103
+|February 7, 2009
+|合并了 多/无-IPv4/v6 jail 之后的 7.1-STABLE。
+
+|701104
+|February 14, 2009
+|在 struct mount 中保存了挂起属主， 以及在 struct vfsops 中引入了 vfs_susp_clean 方法之后的 7.1-STABLE。
+
+|701105
+|March 12, 2009
+|对 kern.ipc.shmsegs sysctl 变量不兼容的修改， 以允许在 64bit 构架上分配更多的 SysV 共享内存段之后的 7.1-STABLE。
+
+|701106
+|March 14, 2009
+|合并了一个对 POSIX semaphore 等待操作修正之后的 7.1-STABLE。
+
+|702000
+|April 15, 2009
+|7.2-RELEASE
+
+|702100
+|April 15, 2009
+|7.2-RELEASE 之后的 7.2-STABLE。
+
+|702101
+|May 15, 2009
+|ichsmb(4) 改为使用左邻接辅编址来保持与其它 SMBus 控制器驱动一致性之后的 7.2-STABLE。
+
+|702102
+|May 28, 2009
+|MFC 了 `fdopendir` 函数之后的 7.2-STABLE。
+
+|702103
+|June 06, 2009
+|MFC 了 PmcTools 之后的 7.2-STABLE。
+
+|702104
+|July 14, 2009
+|MFC 了 `closefrom` 系统调用之后的 7.2-STABLE。
+
+|702105
+|July 31, 2009
+|MFC 了 SYSVIPC ABI 改动之后的 7.2-STABLE。
+
+|702106
+|September 14, 2009
+|MFC 了 x86 PAT 增强， 并新增了 d_mmap_single() 以及 scatter/gather 型 VM 对象类型之后的 7.2-STABLE。
+
+|703000
+|February 9, 2010
+|7.3-RELEASE
+
+|703100
+|February 9, 2010
+|7.3-RELEASE 之后的 7.3-STABLE。
+
+|704000
+|December 22, 2010
+|7.4-RELEASE
+
+|704100
+|December 22, 2010
+|7.4-RELEASE 之后的 7.4-STABLE。
+
+|800000
+|October 11, 2007
+|8.0-CURRENT。 分拆了宽字符和单字节字符 ctype。
+
+|800001
+|October 16, 2007
+|引入了 libpcap 0.9.8 和 tcpdump 3.9.8 之后的 8.0-CURRENT。
+
+|800002
+|October 21, 2007
+|将 kthread_create() 系列函数改名为 kproc_create() 之后的 8.0-CURRENT。
+
+|800003
+|October 24, 2007
+|恢复了对 FreeBSD 4/5/6 版本的 PCIOCGETCONF、 PCIOCREAD 和 PCIOCWRITE IOCTL ABI 向下兼容之后的 8.0-CURRENT， 这一变动导致 PCIOCGETCONF IOCTL 的 ABI 再次发生变化。
+
+|800004
+|November 12, 2007
+|将 agp(4) 驱动从 src/sys/pci 挪到 src/sys/dev/agp 之后的 8.0-CURRENT。
+
+|800005
+|December 4, 2007
+|http://www.freebsd.org/cgi/cvsweb.cgi/src/sys/kern/kern_mbuf.c#rev1.35[修改了 jumbo frame 分配器之后的] 8.0-CURRENT。
+
+|800006
+|December 7, 2007
+|在给 man:hwpmc[4] 加入了 callgraph 捕捉功能后的 8.0-CURRENT
+
+|800007
+|December 25, 2007
+|kdb_enter() 增加 "why" 参数之后的 8.0-CURRENT。
+
+|800008
+|December 28, 2007
+|在去除 LK_EXCLUPGRADE 选项后的 8.0-CURRENT。
+
+|800009
+|January 9, 2008
+|引入 man:lockmgr_disown[9] 之后的 8.0-CURRENT。
+
+|800010
+|January 10, 2008
+|修改 man:vn_lock[9] 原型之后的 8.0-CURRENT。
+
+|800011
+|January 13, 2008
+|修改 man:VOP_LOCK[9] 和 man:VOP_UNLOCK[9] 原型之后的 8.0-CURRENT。
+
+|800012
+|January 19, 2008
+|引入 man:lockmgr_recursed[9]、 man:BUF_RECURSED[9] 和 man:BUF_ISLOCKED[9] 并删除了 `BUF_REFCNT()` 之后的 8.0-CURRENT。
+
+|800013
+|January 23, 2008
+|引入 "ASCII" 编码之后的 8.0-CURRENT。
+
+|800014
+|January 24, 2008
+|修改 man:lockmgr[9] 并删除了 `lockcount()` 和 `LOCKMGR_ASSERT()` 之后的 8.0-CURRENT。
+
+|800015
+|January 26, 2008
+|扩展了 man:fts[3] 数据结构之后的 8.0-CURRENT。
+
+|800016
+|February 1, 2008
+|为 MEXTADD(9) 增加了一个参数之后的 8.0-CURRENT。
+
+|800017
+|February 6, 2008
+|为 man:lockmgr[9] 引入 LK_NODUP 和 LK_NOWITNESS 选项后的 8.0-CURRENT。
+
+|800018
+|February 8, 2008
+|引入 m_collapse 之后的 8.0-CURRENT。
+
+|800019
+|February 9, 2008
+|为 sysctl 变量 kern.proc.filedesc 加入 当前工作目录，root 目录和 jail 目录支持之后的 8.0-CURRENT。
+
+|800020
+|February 13, 2008
+|引入 man:lockmgr_assert[9] 之后的 8.0-CURRENT。
+
+|800021
+|February 15, 2008
+|引入 man:lockmgr_args[9] 和移除 LK_INTERNAL 标志之后的 8.0-CURRENT。
+
+|800022
+|(backed out)
+|把 BSD man:ar[1] 作为系统默认的 ar 之后的 8.0-CURRENT。
+
+|800023
+|February 25, 2008
+|修改了 man:lockstatus[9] 和 man:VOP_ISLOCKED[9]; 原型，特别时去掉 `struct thread` 参数之后的 8.0-CURRENT。
+
+|800024
+|March 1, 2008
+|砍掉了 `lockwaiters` 和 `BUF_LOCKWAITERS` 函数， `brelvp` 的返回值从 void 修改成 int，并引入 man:lockinit[9] 新标志之后的 8.0-CURRENT。
+
+|800025
+|March 8, 2008
+|为 man:fcntl[2] 引入 F_DUP2FD 之后的 8.0-CURRENT。
+
+|800026
+|March 12, 2008
+|修改了 cv_broadcastpri 优先权参数之后的 8.0-CURRENT，比如 0 表示无优先权。
+
+|800027
+|March 24, 2008
+|修改了 bpf 监测 ABI, 加入了 zerocopy bpf buffer 之后的 8.0-CURRENT。
+
+|800028
+|March 26, 2008
+|为 flock 结构增加了 l_sysid 之后的 8.0-CURRENT。
+
+|800029
+|March 28, 2008
+|重新整合了 `BUF_LOCKWAITERS` 函数并加入 man:lockmgr_waiters[9] 之后的 8.0-CURRENT。
+
+|800030
+|April 1, 2008
+|引入 man:rw_try_rlock[9] 和 man:rw_try_wlock[9] 之后的 8.0-CURRENT。
+
+|800031
+|April 6, 2008
+|引入 `lockmgr_rw` 和 `lockmgr_args_rw` 函数之后的 8.0-CURRENT。
+
+|800032
+|April 8, 2008
+|实现了 openat 和相关的系统调用，为 man:open[2] 引入了 O_EXEC 标志，和提供了相应的 linux 兼容的系统调用之后的 8.0-CURRENT。
+
+|800033
+|April 8, 2008
+|为 man:psm[4] 增加了原生的 man:write[2] 支持之后的 8.0-CURRENT。 现在任意命令可写入 [.filename]#/dev/psm%d# 并读出状态。
+
+|800034
+|April 10, 2008
+|引入 `memrchr` 函数之后的 8.0-CURRENT。
+
+|800035
+|April 16, 2008
+|引入 `fdopendir` 函数之后的 8.0-CURRENT
+
+|800036
+|April 20, 2008
+|无线部分转向 multi-bss (也叫做 vaps) 支持之后的 8.0-CURRENT。
+
+|800037
+|May 9, 2008
+|加入多路由表支持 (也就是 setfib(1)、 stfib(2)） 后的 8.0-CURRENT。
+
+|800038
+|May 26, 2008
+|删去了 netatm 和 ISDN4BSD 后的 8.0-CURRENT。 这个版本也表示增加了 Compact C Type (CTF) 工具。
+
+|800039
+|June 14, 2008
+|移除 sgtty 之后的 8.0-CURRENT。
+
+|800040
+|June 26, 2008
+|增加了内核级 NFS lockd 客户端的 8.0-CURRENT。
+
+|800041
+|July 22, 2008
+|增加了 arc4random_buf(3) 和 arc4random_uniform(3) 之后的 8.0-CURRENT。
+
+|800042
+|August 8, 2008
+|增加了 cpuctl(4) 之后的 8.0-CURRENT。
+
+|800043
+|August 13, 2008
+|修改 bpf(4) 使用单一的设备节点而不是克隆之后的 8.0-CURRENT。
+
+|800044
+|August 17, 2008
+|在提交了 vimage 项目第一步之后的 8.0-CURRENT。把全局变量重命名为虚拟化带 V_ 前缀并用宏映射到原来的全局名称。
+
+|800045
+|August 20, 2008
+|引入 MPSAFE TTY 层之后的 8.0-CURRENT， 包括对相关驱动和工具的修改。
+
+|800046
+|September 8, 2008
+|将 amd64 架构上 GDT 拆分到不同 CPU 之后的 8.0-CURRENT。
+
+|800047
+|September 10, 2008
+|删去了 VSVTX、 VSGID 和 VSUID 之后的 8.0-CURRENT。
+
+|800048
+|September 16, 2008
+|将内核中 NFS 挂接部分的代码改为能够通过 nmount() iovec， 而不再是大的 nfs_args 结构体作为参数之后的 8.0-CURRENT。
+
+|800049
+|September 17, 2008
+|删去了 man:suser[9] 和 man:suser_cred[9] 之后的 8.0-CURRENT。
+
+|800050
+|October 20, 2008
+|修改了缓冲存储器 API 之后的 8.0-CURRENT。
+
+|800051
+|October 23, 2008
+|删去了 man:MALLOC[9] 和 man:FREE[9] 宏之后的 8.0-CURRENT。
+
+|800052
+|October 28, 2008
+|引入了 accmode_t 和重新命名 VOP_ACCES 'a_mode' 为 a_accmode 之后的 8.0-CURRENT。
+
+|800053
+|November 2, 2008
+|修改了 man:vfs_busy[9] 原型并引入了 MBF_NOWAIT 和 MBF_MNTLSTLOCK 标志之后的 8.0-CURRENT。
+
+|800054
+|November 22, 2008
+|增加了 buf_ring、 内存栅以及 ifnet 函数， 以方便撰写支持多硬件传输队列的驱动， 以及无锁环形缓冲实现的驱动程序， 并更高效地管理包队列功能之后的 8.0-CURRENT。
+
+|800055
+|November 27, 2008
+|引入了 man:hwpmc[4] 对于 Intel(TM) Core，Core2 和 Atom 的支持之后的 8.0-CURRENT。
+
+|800056
+|November 29, 2008
+|引入了 multi-/no-IPv4/v6 jail 之后的 8.0-CURRENT。
+
+|800057
+|December 1, 2008
+|将 ath hal 改为使用源代码之后的 8.0-CURRENT。
+
+|800058
+|December 12, 2008
+|引入了 VOP_VPTOCNP 操作之后的 8.0-CURRENT。
+
+|800059
+|December 15, 2008
+|引入了新的 arp-v2 重写之后的 8.0-CURRENT。
+
+|800060
+|December 19, 2008
+|引入了 makefs 之后的 8.0-CURRENT。
+
+|800061
+|January 15, 2009
+|引入了 TCP Appropriate Byte Counting 之后的 8.0-CURRENT。
+
+|800062
+|January 28, 2009
+|删去了 minor()、 minor2unit()、 unit2minor() 等之后的 8.0-CURRENT。
+
+|800063
+|February 18, 2009
+|在 GENERIC 配置中改为使用 USB2 栈之后的 8.0-CURRENT； 这个数值同时也标志新增了 fdevname(3)。
+
+|800064
+|February 23, 2009
+|将 USB2 栈移动并替换 dev/usb 之后的 8.0-CURRENT。
+
+|800065
+|February 26, 2009
+|在对 libmp(3) 中所有函数更名之后的 8.0-CURRENT。
+
+|800066
+|February 27, 2009
+|更改了 USB devfs 管理和布局之后的 8.0-CURRENT。
+
+|800067
+|February 28, 2009
+|加入了 getdelim()， getline()， stpncpy()， strnlen()， wcsnlen()， wcscasecmp()， 和 wcsncasecmp() 之后的 8.0-CURRENT。
+
+|800068
+|March 2, 2009
+|在 usbhub devclass 更名为 uhub 之后的 8.0-CURRENT。
+
+|800069
+|March 9, 2009
+|重命名 libusb20.so.1 为 libusb.so.1 之后的 8.0-CURRENT。
+
+|800070
+|March 9, 2009
+|合并 IGMPv3 和 Source-Specific Multicast (SSM) 入 IPv4 栈之后的 8.0-CURRENT。
+
+|800071
+|March 14, 2009
+|为 gcc 打上了在 c99 和 gnu99 模式中使用 C99 inline 语义补丁之后的 8.0-CURRENT。
+
+|800072
+|March 15, 2009
+|移除了 IFF_NEEDSGIANT 标志; 不再支持非线程安全的网络设备驱动之后的 8.0-CURRENT。
+
+|800073
+|March 18, 2009
+|实现了 rpath 动态字符替换之后的 8.0-CURRENT.
+
+|800074
+|March 24, 2009
+|引入了 tcpdump 4.0.0 和 libpcap 1.0.0 之后的 8.0-CURRENT。
+
+|800075
+|April 6, 2009
+|修改了 structs vnet_net、 vnet_inet 和 vnet_ipfw 结构布局之后的 8.0-CURRENT。
+
+|800076
+|April 9, 2009
+|为 dummynet 新增了延迟评估工具之后的 8.0-CURRENT。
+
+|800077
+|April 14, 2009
+|删去了 VOP_LEASE() 和 vop_vector.vop_lease 之后的 8.0-CURRENT
+
+|800078
+|April 15, 2009
+|在 struct rt_metrics 和 struct rt_metrics_lite 中添加了 rt_weight 字段， 导致其结构发生变化之后的 8.0-CURRENT。 此后 RTM_VERSION 增加， 但又回退了。
+
+|800079
+|April 15, 2009
+|在 struct route 和 struct_in6 中添加了 struct llentry 指针之后的 8.0-CURRENT。
+
+|800080
+|April 15, 2009
+|改变了 struct inpcb 布局之后的 8.0-CURRENT。
+
+|800081
+|April 19, 2009
+|改变了 malloc_type 布局之后的 8.0-CURRENT。
+
+|800082
+|April 21, 2009
+|改变了 struct ifnet 布局， 并增加了 if_ref() 和 if_rele() 引用计数维护功能之后的 8.0-CURRENT。
+
+|800083
+|April 22, 2009
+|实现了底层蓝牙 HCI API 之后的 8.0-CURRENT。
+
+|800084
+|April 29, 2009
+|修改了 IPv6 SSM 和 MLDv2 之后的 8.0-CURRENT。
+
+|800085
+|April 30, 2009
+|启用了包括一个活跃映像的 VIMAGE 内核支持之后的 8.0-CURRENT。
+
+|800086
+|May 8, 2009
+|为 patch(1) 增加任意长输入行支持之后的 8.0-CURRENT。
+
+|800087
+|May 11, 2009
+|修改了一些 VFS KPI 之后的 8.0-CURRENT。 VFS 的 FSD 部分中删去了线程参数。 `VFS_*` 函数并不需要这些上下文信息， 因为它总是与 `curthread` 相关。 在某些特殊情况中， 则保留了原先的行为。
+
+|800088
+|May 20, 2009
+|对 net80211 监视模式进行调整之后的 8.0-CURRENT。
+
+|800089
+|May 23, 2009
+|增加了 UDP 控制块支持之后的 8.0-CURRENT。
+
+|800090
+|May 23, 2009
+|将网络接口克隆虚拟化之后的 8.0-CURRENT。
+
+|800091
+|May 27, 2009
+|增加了层次式 jail 并取消全局 securelevel 之后的 8.0-CURRENT。
+
+|800092
+|May 29, 2009
+|修改了 `sx_init_flags()` KPI 之后的 8.0-CURRENT。 [constant]#SX_ADAPTIVESPIN# 退役， 而新增的 [constant]#SX_NOADAPTIVE# 标志则表达相反语义。
+
+|800093
+|May 29, 2009
+|为 struct mount 增加 mnt_xflag 之后的 8.0-CURRENT。
+
+|800094
+|May 30, 2009
+|新增了 man:VOP_ACCESSX[9] 之后的 8.0-CURRENT。
+
+|800095
+|May 30, 2009
+|调整轮询 KPI (polling KPI) 之后的 8.0-CURRENT。 轮询处理程序会返回处理过的包的数量。 新增的 [constant]#IFCAP_POLLING_NOCOUNT# 则表示返回值不重要， 并跳过计数。
+
+|800096
+|June 1, 2009
+|对新的 netisr 进行了改进， 并调整了保存和存取 FIB 方式之后的 8.0-CURRENT。
+
+|800097
+|June 8, 2009
+|引入了 vnet 析构挂钩和相关基础设施之后的 8.0-CURRENT。
+
+|800097
+|June 11, 2009
+|引入了 netgraph 输出到输入路径调用检测和排队机制， 并调整了 struct thread 布局之后的 8.0-CURRENT。
+
+|800098
+|June 14, 2009
+|引入了 OpenSSL 0.9.8k 之后的 8.0-CURRENT。
+
+|800099
+|June 22, 2009
+|更新了 NGROUPS 并将路由虚拟化挪到它自己的 VImage 模块之后的 8.0-CURRENT。
+
+|800100
+|June 24, 2009
+|修改了 SYSVIPC ABI 之后的 8.0-CURRENT。
+
+|800101
+|June 29, 2009
+|删去了与网络接口一一对应的 /dev/net/* 字符设备之后的 8.0-CURRENT。
+
+|800102
+|July 12, 2009
+|在 struct sackhint、 struct tcpcb 以及 struct tcpstat 上增加占位元素之后的 8.0-CURRENT。
+
+|800103
+|July 13, 2009
+|将 TOE 驱动接口中的 struct tcpopt 替换为 TCP syncache 中的 struct toeopt 之后的 8.0-CURRENT。
+
+|800104
+|July 14, 2009
+|新增了基于 linker-set 的 per-vnet 分配器之后的 8.0-CURRENT。
+
+|800105
+|July 19, 2009
+|递增了所有未使用符号版本的动态连接库版本之后的 8.0-CURRENT。
+
+|800106
+|July 24, 2009
+|引入 VM 对象类型 OBJT_SG 之后的 8.0-CURRENT。
+
+|800107
+|August 2, 2009
+|通过加入 newbus sxlock 使 newbus 子系统不再使用 Giant， 以及 8.0-RELEASE。
+
+|800108
+|November 21, 2009
+|实现了 EVFILT_USER kevent 过滤器之后的 8.0-STABLE。
+
+|800500
+|January 7, 2010
+|令 `pkg_add -r` 使用 packages-8-stable 的 `__FreeBSD_version` 版本变化的 8.0-STABLE。
+
+|800501
+|January 24, 2010
+|调整了 `scandir(3)` 和 `alphasort(3)` 函数原型， 使其符合 SUSv4 之后的 8.0-STABLE。
+
+|800502
+|January 31, 2010
+|新增了 `sigpause(3)` 之后的 8.0-STABLE。
+
+|800503
+|February 25, 2010
+|新增了用于管理网络接口说明的 SIOCGIFDESCR 和 SIOCSIFDESCR ioctl 之后的 8.0-STABLE。 这组接口受到了 OpenBSD 的启发。
+
+|800504
+|March 1, 2010
+|MFC 了 x86emu， 来自 OpenBSD 的 x86 CPU 实模式模拟器之后的 8.0-STABLE。
+
+|800505
+|May 18, 2010
+|MFC 了添加 liblzma, xz, xzdec 以及 lzmainfo 之后的 8.0-STABLE。
+
+|801000
+|June 14, 2010
+|8.1-RELEASE
+
+|801500
+|June 14, 2010
+|8.1-RELEASE 之后的 8.1-STABLE。
+
+|801501
+|November 3, 2010
+|用于 PL_FLAG_SCE/SCX/EXEC/SI 的 struct sysentvec 的 KBI 以及 用于 ptrace(PT_LWPINFO) 的 pl_siginfo 的 KBI 改变之后的 8.1-STABLE。
+
+|802000
+|December 22, 2010
+|8.2-RELEASE
+
+|802500
+|December 22, 2010
+|8.2-RELEASE 之后的 8.2-STABLE。
+
+|802501
+|February 28, 2011
+|合并了 DTrace 变动， 包含用户态跟踪支持之后的 8.2-STABLE。
+
+|802502
+|March 6, 2011
+|在 libm 中合并了 log2 和 log2f 之后的 8.2-STABLE。
+
+|802503
+|May 1, 2011
+|将 gcc 升级至 FSF gcc-4_2-branch 最后一个 GPLv2 版本之后的 8.2-STABLE。
+
+|802504
+|May 28, 2011
+|引入模块化拥塞控制支持基础设施和 KPI 之后的 8.2-STABLE。
+
+|802505
+|May 28, 2011
+|引入了 Hhook 和 Khelp KPI 之后的 8.2-STABLE。
+
+|802506
+|May 28, 2011
+|在 tcpcb 结构中增加 OSD 之后的 8.2-STABLE。
+
+|802507
+|June 6, 2011
+|引入 ZFS v28 之后的 8.2-STABLE。
+
+|802508
+|June 8, 2011
+|删去了 sv_schedtail struct sysvec 方法之后的 8.2-STABLE。
+
+|802509
+|July 14, 2011
+|在 binutils 中合并了 SSE3 支持之后的 8.2-STABLE。
+
+|802510
+|July 19, 2011
+|为 `rfork(2)` 添加了 RFTSIGZMB 标志之后的 8.2-STABLE。
+
+|900000
+|August 22, 2009
+|9.0-CURRENT。
+
+|900001
+|September 8, 2009
+|引入了 x86emu， 来自 OpenBSD 的 x86 CPU 实模式模拟器之后的 9.0-CURRENT。
+
+|900002
+|September 23, 2009
+|实现了 EVFILT_USER kevent 过滤器之后的 9.0-CURRENT。
+
+|900003
+|December 2, 2009
+|新增了 `sigpause(3)` 以及 csu 的 PIE 支持之后的 9.0-CURRENT。
+
+|900004
+|December 6, 2009
+|新增了 libulog 及其 libutempter 兼容接口之后的 9.0-CURRENT。
+
+|900005
+|December 12, 2009
+|新增了用于查询指定休眠队列上等待者数量的 `sleepq_sleepcnt()` 函数之后的 9.0-CURRENT。
+
+|900006
+|January 4, 2010
+|调整了 `scandir(3)` 和 `alphasort(3)` 函数原型， 使其符合 SUSv4 之后的 9.0-CURRENT。
+
+|900007
+|January 13, 2010
+|删去了 utmp(5) 并增加了 utmpx (参阅 `getutxent(3)`) 以改善用户登录日志和系统事件支持之后的 9.0-CURRENT。
+
+|900008
+|January 20, 2010
+|9.0-CURRENT 引入了 BSD 授权的 bc/dc 并将 GNU bc/dc 标注为过时之后的 9.0-CURRENT。
+
+|900009
+|January 26, 2010
+|新增了用于管理网络接口说明的 SIOCGIFDESCR 和 SIOCSIFDESCR ioctl 之后的 9.0-CURRENT。 这组接口受到了 OpenBSD 的启发。
+
+|900010
+|March 22, 2010
+|引入了 zlib 1.2.4 之后的 9.0-CURRENT。
+
+|900011
+|April 24, 2010
+|添加了 soft-updates 日志功能之后的 9.0-CURRENT。
+
+|900012
+|May 10, 2010
+|添加了 liblzma, xz, xzdec 以及 lzmainfo 之后的 9.0-CURRENT。
+
+|900013
+|May 24, 2010
+|添加了针对 linux(4) 的 USB 修正之后的 9.0-CURRENT。
+
+|900014
+|Jun 10, 2010
+|添加了 Clang 之后的 9.0-CURRENT。
+
+|900015
+|July 22, 2010
+|引入了 BSD grep 之后的 9.0-CURRENT。
+
+|900016
+|July 28, 2010
+|在 struct malloc_type_internal 中加入了 mti_zone 之后的 9.0-CURRENT。
+
+|900017
+|August 23, 2010
+|默认 grep 改回使用 GNU grep 并增加 WITH_BSD_GREP 开关之后的 9.0-CURRENT。
+
+|900018
+|August 24, 2010
+|将 `pthread_kill(3)` 产生的信号在 si_code 中改为使用 SI_LWP 标记之后的 9.0-CURRENT。 之前， si_code 对应的标志为 SI_USER。
+
+|900019
+|August 28, 2010
+|为 `mmap(2)` 新增了 MAP_PREFAULT_READ 标志之后的 9.0-CURRENT。
+
+|900020
+|September 9, 2010
+|为 sbuf 增加了 drain 功能并改变了 struct sbuf 布局之后的 9.0-CURRENT。
+
+|900021
+|September 13, 2010
+|DTrace 增加用户态跟踪支持之后的 9.0-CURRENT。
+
+|900022
+|October 2, 2010
+|新增了 BSDL man 工具， 并淘汰 GNU/GPL man 工具之后的 9.0-CURRENT。
+
+|900023
+|October 11, 2010
+|引入 20101010 git 快照版本 xz 之后的 9.0-CURRENT。
+
+|900024
+|November 11, 2010
+|将 libgcc.a 替换为 libcompiler_rt.a 之后的 9.0-CURRENT。
+
+|900025
+|November 12, 2010
+|引入了模块化拥塞控制之后的 9.0-CURRENT。
+
+|900026
+|November 30, 2010
+|引入串行管理协议 (SMP) 直通， 以及与之对应的 CAM CCB XPT_SMP_IO 和 XPT_GDEV_ADVINFO 之后的 9.0-CURRENT。
+
+|900027
+|December 5, 2010
+|在 libm 中增加 log2 之后的 9.0-CURRENT。
+
+|900028
+|December 21, 2010
+|添加了 Hhook (Helper Hook)、 Khelp (Kernel Helpers) 和 Object Specific Data (OSD) KPI 之后的 9.0-CURRENT。
+
+|900029
+|December 28, 2010
+|修改 TCP 协议栈使其允许 Khelp 模块通过 helper hook 指针， 与 TCP 控制块交互并保存连接数据之后的 9.0-CURRENT。
+
+|900030
+|January 12, 2011
+|将 libdialog 更新至版本 20100428 之后的 9.0-CURRENT。
+
+|900031
+|February 7, 2011
+|添加了 `pthread_getthreadid_np(3)` 之后的 9.0-CURRENT。
+
+|900032
+|February 8, 2011
+|删除了 uio_yield 函数原型和符号之后的 9.0-CURRENT。
+
+|900033
+|February 18, 2011
+|将 binutils 更新至 2.17.50 之后的 9.0-CURRENT。
+
+|900034
+|March 8, 2011
+|修改了 struct sysvec (sv_schedtail) 之后的 9.0-CURRENT。
+
+|900035
+|March 29, 2011
+|将基本系统中 gcc 和 libstdc++ 升级至最后的 GPLv2 授权版本之后的 9.0-CURRENT。
+
+|900036
+|April 18, 2011
+|在基本系统中删去了 libobjc 和 Objective-C 支持之后的 9.0-CURRENT。
+
+|900037
+|May 13, 2011
+|在基本系统中引入了 libprocstat(3) 函数库以及 fuser(1) 工具之后的 9.0-CURRENT。
+
+|900038
+|May 22, 2011
+|为 VFS_FHTOVP(9) 添加锁标志参数之后的 9.0-CURRENT。
+
+|900039
+|June 28, 2011
+|引入了来自 OpenBSD 4.5 的 pf 之后的 9.0-CURRENT。
+
+|900040
+|July 19, 2011
+|将 amd64 和 ia64 平台上的 MAXCPU 提高到 64， 并把 XLP (mips) 上的值提高到 128 之后的 9.0-CURRENT。
+
+|900041
+|August 13, 2011
+|实现了 Capsicum capabilities 之后的 9.0-CURRENT。 fget(9) 新增了权限参数。
+
+|900042
+|August 28, 2011
+|提高修改过 ABI 的动态连接库版本号之后的 9.0-CURRENT。
+
+|900043
+|September 2, 2011
+|增加了对不支持 SCSI 快取缓存同步功能的 USB 大容量存储设备自动检测功能之后的 9.0-CURRENT。
+
+|900044
+|September 10, 2011
+|重构了 auto-quirk 之后的 9.0-CURRENT。
+
+|900045
+|Oct 13, 2011
+|将非兼容性系统调用入口点全部增加 sys_ 前缀之后的 9.0-CURRENT。
+|===
+
+[NOTE]
+====
+请注意， 2.2.5-RELEASE 之后有一段时间的 2.2-STABLE 会声称自己是 "2.2.5-STABLE"。 这种模式的版本号表示的是年月。 但随后， 我们决定， 从 2.2 开始， 将它改为更为简洁的 主/次 版本号的形式来命名版本。 这是因为并行地在多个分支上进行开发， 使得通过实际的发布日期来区分不同的版本变得不再现实。 如果您正在做新的 port， 应该不需要担心较早的 -CURRENT； 在此列出仅供参考。
+====
+
+[[dads-after-port-mk]]
+== 在 [.filename]#bsd.port.mk# 之后写一些内容
+
+不要在 `.include <bsd.port.mk>` 这行之后增加任何内容。 这通常可以通过在您的 [.filename]#Makefile# 中间的某处引用 [.filename]#bsd.port.pre.mk#， 并在结尾的地方引用 [.filename]#bsd.port.post.mk# 来避免。
+
+[NOTE]
+====
+只能够采用 [.filename]#bsd.port.pre.mk#/[.filename]#bsd.port.post.mk# 或 [.filename]#bsd.port.mk# 两种写法之一； 任何时候都不要同时使用两种写法。
+====
+
+[.filename]#bsd.port.pre.mk# 只定义了很少的变量， 它们可以在 [.filename]#Makefile# 中用于进行一些测试， 而 [.filename]#bsd.port.post.mk# 则定义了所有其它的变量。
+
+下面是一些由 [.filename]#bsd.port.pre.mk# 定义的比较重要的变量 (这并不是一份完整的列表， 您可以阅读 [.filename]#bsd.port.mk# 以获得全部变量的名字)。
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| 变量
+| 描述
+
+|`ARCH`
+|由 `uname -m` 输出得到的硬件架构的名字 (例如， `i386`)
+
+|`OPSYS`
+|由 `uname -s` 返回的操作系统类型 (例如， `FreeBSD`)
+
+|`OSREL`
+|操作系统的版本号 (例如 `2.1.5` 或 `2.2.7`)
+
+|`OSVERSION`
+|操作系统的版本号的数值形式； 它等于 <<freebsd-versions,`__FreeBSD_version`>>。
+
+|`PORTOBJFORMAT`
+|系统默认的执行文件格式 (`elf` 或 `aout`； 请注意， "现代的" FreeBSD 版本中， `aout` 已在淘汰之列。)
+
+|`LOCALBASE`
+|"local" 目录的根 (例如， `/usr/local/`)
+
+|`PREFIX`
+|port 应被安装到哪里 (参见 <<porting-prefix,关于 `PREFIX` 的更多说明>>)。
+|===
+
+[NOTE]
+====
+如果您需要定义 `USE_IMAKE`， `USE_X_PREFIX`， 或 `MASTERDIR` 这些变量， 则应在引用 [.filename]#bsd.port.pre.mk# 之前完成。
+====
+
+下面是一些在引用 [.filename]#bsd.port.pre.mk# 之后可以进行的判断：
+
+[.programlisting]
+....
+# 如果 perl5 已经在系统中提供， 则不必编译 lang/perl5
+.if ${OSVERSION} > 300003
+BROKEN= perl is in system
+.endif
+
+# ELF 只使用一个 shlib 版本
+.if ${PORTOBJFORMAT} == "elf"
+TCL_LIB_FILE=  ${TCL_LIB}.${SHLIB_MAJOR}
+.else
+TCL_LIB_FILE=  ${TCL_LIB}.${SHLIB_MAJOR}.${SHLIB_MINOR}
+.endif
+
+# 软件会自动为 ELF 创建符号链接， 但 a.out 则需要另行创建
+post-install:
+.if ${PORTOBJFORMAT} == "aout"
+       ${LN} -sf liblinpack.so.1.0 ${PREFIX}/lib/liblinpack.so
+.endif
+....
+
+您还记得应该在 `BROKEN=` 和 `TCL_LIB_FILE=` 后面使用制表符， 而不是空格， 对吧？ :-)
+
+[[dads-sh-exec]]
+== 在 wrapper 脚本中使用 `exec` 语句
+
+如果 port 安装了用以启动其他程序的脚本， 并且运行其他程序是这些脚本的最后一项操作， 请务必使用 `exec` 语句来运行这些程序， 例如：
+
+[.programlisting]
+....
+#!/bin/sh
+exec %%LOCALBASE%%/bin/java -jar %%DATADIR%%/foo.jar "$@"
+....
+
+使用 `exec` 语句表示执行指定的程序来取代 shell 进程。 如果省略了 `exec`， 则 shell 进程会一直在内存中， 从而不必要地消耗了额外的系统资源。
+
+[[dads-rational]]
+== 理性行事
+
+任何 [.filename]#Makefile# 都应该简单并理性地行事。 如果您能让其中的条目更为简单和易读， 一定要这样做。 例如， 使用 make 提供的 `.if` 结构， 而不要使用 shell 的 `if`， 只要能重定义 `EXTRACT*` 就不要重载 `do-extract`， 尽量使用 `GNU_CONFIGURE` 而不是 `CONFIGURE_ARGS += --prefix=${PREFIX}`。
+
+如果您在尝试做什么事情的时候发现不得不写大量的代码， 请回过头来复审一下 [.filename]#bsd.port.mk#， 看看是否有您正打算做的事情的现成实现。 尽管读起来可能很费劲， 但有很多貌似很难的问题， 在 [.filename]#bsd.port.mk# 中都给出了十分简便的解决方案。
+
+[[dads-cc]]
+== 遵循 `CC` 和 `CXX` 设置
+
+port 应遵循 `CC` 和 `CXX` 变量的设置。 这也就是说， port 不应使用绝对的方式来设置这个变量的值， 而罔顾已经存在的设置； 与此相反， 它应该在其值后加入需要的其它值。 这样， 就可以设置全局的联编选项， 令其影响所有的 port 联编过程了。
+
+如果实在无法这样做， 请在 [.filename]#Makefile# 中加入 `NO_PACKAGE=ignores cflags`。
+
+下面的 [.filename]#Makefile# 实例给出了如何遵循 `CC` 和 `CXX` 变量的设置。 注意这里用到的 `?=`：
+
+[.programlisting]
+....
+CC?= gcc
+....
+
+[.programlisting]
+....
+CXX?= g++
+....
+
+下面则是没有遵循 `CC` 和 `CXX` 的例子：
+
+[.programlisting]
+....
+CC= gcc
+....
+
+[.programlisting]
+....
+CXX= g++
+....
+
+在 FreeBSD 系统中， `CC` 和 `CXX` 这两个变量都可以在 [.filename]#/etc/make.conf# 中自行定义。 第一个例子只有在 [.filename]#/etc/make.conf# 中没有定义时才对这两个变量进行定义， 从而保持了系统范围的配置。 而第二个例子则会覆盖任何现有的配置。
+
+[[dads-cflags]]
+== 遵循 `CFLAGS`
+
+您的 port 应遵循 `CFLAGS` 变量的设置。 这也就是说， port 不应使用绝对的方式来设置这个变量的值， 而罔顾已经存在的设置； 与此相反， 它应该在其值后加入需要的其它值， 这样， 就可以设置全局的联编选项， 令其影响所有的 port 联编过程了。
+
+如果实在无法这样做， 请在 [.filename]#Makefile# 中加入 `NO_PACKAGE=ignores cflags`。
+
+下面的 [.filename]#Makefile# 例子， 可以帮助我们理解如何遵循 `CFLAGS` 的设置。 注意所用的 `+=`：
+
+[.programlisting]
+....
+CFLAGS+= -Wall -Werror
+....
+
+下面是一个未能遵循 `CFLAGS` 设置的例子：
+
+[.programlisting]
+....
+CFLAGS= -Wall -Werror
+....
+
+一般来说， `CFLAGS` 在 FreeBSD 系统中是在 [.filename]#/etc/make.conf# 里配置的。 第一个例子在 `CFLAGS` 变量中增加了一些参数， 并保持了所有系统预定义的标志。 而第二个例子， 则会覆盖掉任何先前定义的参数。
+
+您应从第三方软件的 [.filename]#Makefile# 中去掉特殊的优化设置。 系统的 `CFLAGS` 给出了全系统范围内的优化设置参数。 下面是一个未经修改的 [.filename]#Makefile# 实例：
+
+[.programlisting]
+....
+CFLAGS= -O3 -funroll-loops -DHAVE_SOUND
+....
+
+如果使用系统的优化参数， 则 [.filename]#Makefile# 中的设置应该类似下面这样：
+
+[.programlisting]
+....
+CFLAGS+= -DHAVE_SOUND
+....
+
+[[dads-pthread]]
+== 线程库
+
+在 FreeBSD 上， 线程库必须通过特殊的连接器参数 `-pthread` 连接到可执行文件。 如果 port 一定要直接连接 `-lpthread` 或 `-lc_r`， 则应将其改为使用由 ports 框架提供的 `PTHREAD_LIBS`。 这个变量的值通常是 `-pthread`， 但在某些特定平台上的 FreeBSD 版本中， 它可能是其它值， 因此， 不要将 `-pthread` 硬编码到您的补丁中， 而应使用 `PTHREAD_LIBS` 变量。
+
+[NOTE]
+====
+如果设置了 `PTHREAD_LIBS`， 而在联编时出现 `unrecognized option '-pthread'` 这样的错误， 可能需要通过将 `CONFIGURE_ENV` 设为 `LD=${CC}` 来使用 `gcc` 作为连接器。 `-pthread` 这一选项并不为 `ld` 所直接支持。
+====
+
+[[dads-freedback]]
+== 反馈
+
+如果进行了一些很好的修改和补丁， 一定要把它们发回给原作者， 或维护者， 以便在下一版本的代码中包含它们。 这会让您在软件发布新版本的时候变得轻松一些。
+
+[[dads-readme]]
+== [.filename]#README.html#
+
+不要包含 [.filename]#README.html# 文件。 这个文件并非 CVS 代码库中的一部分， 它是由 `make readme` 命令生成的。 
+
+[[dads-noinstall]]
+== 使用 `BROKEN`、 `FORBIDDEN` 或 `IGNORE` 阻止用户安装 port
+
+某些时候会需要阻止用户安装某个 port。 想要告诉用户某个 port 不应被安装， 有许多可以在 port 的 [.filename]#Makefile# 中使用的 `make` 变量。 下列 `make` 的值， 将是在用户试图安装时得到的提示信息。 务请使用正确的 `make` 变量， 因为每一个都表达了截然不同的意义， 而且许多自动化系统， 例如 <<build-cluster,port 联编集群>>、 <<freshports,FreshPorts>>， 以及 <<portsmon,portsmon>>， 都依赖于 [.filename]#Makefile# 的正确性。
+
+[[dads-noinstall-variables]]
+=== 变量
+
+* `BROKEN` 专门用于表达目前无法正确编译、 安装或卸载这类问题。 如果是临时性的问题， 则可以使用它。
++ 
+如果进行了相关的配置， 则联编集群仍将尝试联编它， 以确认导致问题的深层问题是否已被解决。 (不过， 一般情况下， 联编集群并不会这样做。)
++ 
+举例来说， 当 port 发生下述情况时， 应使用 `BROKEN`：
+
+** 无法编译 (does not compile)
+** 无法正确进行配置或安装操作
+** 在 [.filename]#${LOCALBASE}# 以外的地方安装文件
+** 卸载时无法删除所安装的全部文件 (不过， 留下用户改过的文件可接受的， 因为可能希望这样作)
+
+* `FORBIDDEN` 用于表示 ports 中包含安全漏洞， 或者可能会给安装了这个 port 的 FreeBSD 系统带来严重的安全隐患 (例如： 一个很不安全的程序， 或包含了能够被轻易攻陷的服务的软件)。 如果发现了安全漏洞， 而其作者没有发布升级版本， 则应立即把那个 port 标记为 `FORBIDDEN`。 理想情况下， 包含安全漏洞的 port 应被尽快升级， 以便减少包含漏洞的 FreeBSD 主机的数量 (我们希望保持良好的安全记录)， 然而， 有时在安全漏洞的披露和软件更新之间可能会有一个间隔， 此时应予以说明。 除了安全之外， 请不要以任何其它理由将 port 标记为 `FORBIDDEN`。
+* `IGNORE` 用来表示 port 由于某些其它原因不应予以联编。 如果认为发生了结构性的问题， 则应使用它。 任何情况下， 联编集群都不会联编标记为 `IGNORE` 的 port。 以下是使用 `IGNORE` 的一些例子：
+
+** 能够编译但无法正常运行
+** 无法与运行的 FreeBSD 版本一同工作
+** 联编时需要 FreeBSD 内核的源代码， 但用户没有安装它们
+** 由于授权原因， 必须手工下载 distfile
+** 无法与的某个已安装的 port 一同工作 (例如， port 依赖于 package:www/apache21[] 而安装的则是 package:www/apache13[])
+
++
+[NOTE]
+====
+如果 port 与某个已经安装的 port 冲突 (例如， 它们在同一位置安装同名但功能不同的文件)， 则应 <<conflicts,使用 `CONFLICTS` 来标记它>>。 `CONFLICTS` 将自动地设置 `IGNORE`。
+====
+
+* 如果 port 只应在某些平台上标记为 `IGNORE`， 还有另外两个方便使用的 `IGNORE` 变量可供选择： `ONLY_FOR_ARCHS` 和 `NOT_FOR_ARCHS`。 例如：
++
+[.programlisting]
+....
+ONLY_FOR_ARCHS= i386 amd64
+....
+
++
+[.programlisting]
+....
+NOT_FOR_ARCHS= alpha ia64 sparc64
+....
+
++ 
+可以使用 `ONLY_FOR_ARCHS_REASON` 和 `NOT_FOR_ARCHS_REASON` 来配置定制的 `IGNORE` 消息。 此外， 还可以使用 `ONLY_FOR_ARCHS_REASON__ARCH_` 和 `NOT_FOR_ARCHS_REASON__ARCH_` 来分别指定与具体平台有关的信息。
+* 如果 port 会下载并安装用于 i386 的预编译二进制文件， 则应设置 `IA32_BINARY_PORT`。 如果设置了这个变量， 则系统会检查是否已经在 [.filename]#/usr/lib32# 目录中安装了 IA32 版本的函数库， 以及内核是否提供了 IA32 兼容支持。 如果这些依赖条件不满足， 则会自动设置 `IGNORE`。
+
+[[dads-noinstall-notes]]
+=== 实现说明
+
+这些字串不应使用引号括起来。 此外， 由于显示给用户的方式不同， 这些字串的措辞也应有所不同。 例如：
+
+[.programlisting]
+....
+BROKEN= this port is unsupported on FreeBSD 5.x
+....
+
+[.programlisting]
+....
+IGNORE= is unsupported on FreeBSD 5.x
+....
+
+它们分别会在 `make describe` 时产生下面的输出：
+
+[.programlisting]
+....
+===>  foobar-0.1 is marked as broken: this port is unsupported on FreeBSD 5.x.
+....
+
+[.programlisting]
+....
+===>  foobar-0.1 is unsupported on FreeBSD 5.x.
+....
+
+[[dads-deprecated]]
+== 使用 `DEPRECATED` 或 `EXPIRATION_DATE` 表示某个 port 将被删除
+
+一定要记得 `BROKEN` 和 `FORBIDDEN` 只应作为当某个 port 无法正常工作时的临时解决方案。 永久性地坏掉了的 port 应被从 ports tree 中完全删除。
+
+需要时还可以使用 `DEPRECATED` 和 `EXPIRATION_DATE` 来通知用户某个 port 不应被使用， 并即将被删除。 前一个变量用来表达为什么计划删除 port； 而后一个是则是一个 ISO 8601 格式的日期 (YYYY-MM-DD)。 两者都会向用户呈现。
+
+也可以设置 `DEPRECATED` 而不给出 `EXPIRATION_DATE` (例如， 建议使用某个新版本的 port)， 但反之则没有意义。
+
+目前还没有确切的关于需要给出多少通知的政策。 当前的实践是， 对于与安全有关的问题为一个月， 而与联编有关的问题则为两个月。 这也让有兴趣的 committer 能够有一点时间来修正问题。
+
+[[dads-dot-error]]
+== 避免使用 `.error` 结构
+
+在 [.filename]#Makefile# 中给出信号， 表示由于某种外界因素 (例如， 用户指定了无效的联编选项) 而无法安装的方法是将变量 `IGNORE` 设为一非空值。 这个值将被格式化， 并在用户执行 `make install` 是给出提示。
+
+用 `.error` 实现这一目的是一种常见的误用。 这样做的问题是， 许多在 ports 树上运行的自动化工具会因此而失败。 最常见的情况见于联编 [.filename]#/usr/ports/INDEX# 的过程 (参见 <<make-describe>>)。 然而， 即使十分普通的命令， 例如 `make maintainer`， 在这种情况下也会失败。 这是不可接受的。
+
+[[dot-error-breaks-index]]
+.怎样避免使用 `.error`
+[example]
+====
+考虑有人在 [.filename]#make.conf# 中设置了 
+[.programlisting]
+....
+USE_POINTYHAT=yes
+....
+
+的情形。 接下来的例子中， 第一个 [.filename]#Makefile# 中的问题将导致 `make index` 失败， 而第二个则不会：
+
+[.programlisting]
+....
+.if USE_POINTYHAT
+.error "POINTYHAT is not supported"
+.endif
+....
+
+[.programlisting]
+....
+.if USE_POINTYHAT
+IGNORE=POINTYHAT is not supported
+.endif
+....
+
+====
+
+[[dads-sysctl]]
+== 对于 [.filename]#sysctl# 的使用
+
+除了在 target 中之外， 是不鼓励使用 [.filename]#sysctl# 的。 这是因为计算 `makevar`， 例如在 `make index` 中所进行的那种， 都不得不运行一条命令， 这会使这一操作变得更慢。
+
+在使用 man:sysctl[8] 时， 务必通过 `SYSCTL` 变量来进行， 因为此变量将展开成命令的完整路径， 并且用户可以根据需要另行指定。
+
+[[dads-rerolling-distfiles]]
+== 重新发布的 distfiles
+
+有时， 一些软件的作者会修改业已发布的 distfile 的内容， 而并不修改文件名。 这种情况下， 您需要验证这些变动是来自软件作者的官方改动。 在过去， 曾经发生过下载服务器上的 distfile 被悄悄换成注入过恶意代码的版本， 并给用户安全造成威胁或损害的事情。
+
+您应保留一份旧的 distfile， 并下载一份新的， 分别展开， 用 man:diff[1] 来对比其内容。 如果没有发现可疑的变动， 就可以更新 [.filename]#distinfo# 了。 请务必在您的 PR 或 commit log 中对这些差异进行描述， 以便让别人了解您已经仔细对比过差异， 并确认没有问题了。
+
+除此之外， 也可以联系软件的作者， 以确认这些修改是否是他们做的。
+
+[[dads-misc]]
+== 杂记
+
+需要仔细地反复检查 [.filename]#pkg-descr# 和 [.filename]#pkg-plist# 这两个文件。 如果您正在复审一个 port， 并认为这两个文件应该改进， 请一定要这样做。
+
+请不要在系统中复制多份 GNU General Public License。
+
+一定要非常小心地处理法律问题！ 不要让我们发布没有得到合法授权的软件！

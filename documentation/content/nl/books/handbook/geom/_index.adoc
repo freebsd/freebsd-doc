@@ -1,0 +1,953 @@
+---
+title: "Hoofdstuk 20. GEOM: Modulair schijftransformatie raamwerk"
+part: Deel III. Systeembeheer
+prev: books/handbook/disks
+next: books/handbook/filesystems
+---
+
+[[geom]]
+= GEOM. Modulair schijftransformatie raamwerk
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Inhoudsopgave
+:table-caption: Tabel
+:figure-caption: Afbeelding
+:example-caption: Voorbeeld
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 20
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../../images/books/handbook/geom/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/geom/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/geom/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/nl/mailing-lists.adoc[]
+include::shared/nl/teams.adoc[]
+include::shared/nl/urls.adoc[]
+
+toc::[]
+
+[[geom-synopsis]]
+== Overzicht
+
+Dit hoofdstuk beschrijft het gebruik van schijven in het GEOM raamwerk in FreeBSD. Hieronder vallen de belangrijkste RAID besturingsprogramma's die het raamwerk gebruikt voor instellingen. In dit hoofdstuk wordt niet diepgaand beschreven hoe GEOM omgaat met I/O, het onderliggende subsysteem of code. Die informatie staat in het hulppagina voor man:geom[4] en de verscheidene "SEE ALSO" referenties. Dit hoofdstuk is ook geen definitief stuk over het instellen van RAID. Alleen de door GEOM ondersteunde RAID-classificaties worden beschreven.
+
+Na het lezen van dit hoofdstuk weet de lezer:
+
+* Welk type RAID-ondersteuning via GEOM beschikbaar is;
+* Hoe de basisgereedschappen te gebruiken om de verschillende RAID-niveaus in te stellen, te onderhouden en te wijzigen;
+* Hoe schijfapparaten via GEOM te spiegelen, aaneen te schakelen, te versleutelen en vanaf afstand schijven aan te sluiten;
+* Hoe problemen op te lossen met schijven die via het GEOM raamwerk zijn aangesloten.
+
+Veronderstelde voorkennis:
+
+* Begrijpen hoe FreeBSD omgaat met schijfapparaten (crossref:disks[disks,Stockage des données]);
+* Weten hoe een nieuwe FreeBSD kernel in te stellen en te installeren (crossref:kernelconfig[kernelconfig,De FreeBSD-kernel instellen]).
+
+[[GEOM-intro]]
+== GEOM inleiding
+
+GEOM staat toegang en controle toe op klassen, Master Boot Records, BSD labels, enzovoort, door gebruik te maken van diensten of de speciale bestanden in [.filename]#/dev#. GEOM ondersteunt verschillende software RAID instellingen en biedt transparante toegang tot het besturingssysteem en de hulpprogramma's.
+
+[[GEOM-striping]]
+== RAID0 - aaneengeschakeld
+
+Aaneenschakelen is een methode die gebruikt wordt om meerdere schijven te combineren tot een enkele volume. In veel gevallen wordt dit gedaan met hardware controllers. Het GEOM subsysteem biedt softwareondersteuning voor RAID0, ook wel bekend als aaneenschakelen ("disk striping").
+
+In een RAID0-systeem worden gegevens opgedeeld in blokken die verdeeld worden over de schijven in een reeks. In plaats van te hoeven wachten tot een systeem 256k naar één schijf heeft geschreven, kan een RAID0-systeem tegelijkertijd 64k naar vier verschillende schijven schrijven, waardoor superieure I/O prestaties worden bereikt. Deze prestaties kunnen nog verbeterd worden door meerdere schijfcontrollers te gebruiken.
+
+Iedere schijf in een RAID0-aaneenschakeling moet van dezelfde grootte zijn, omdat I/O-verzoeken altijd zijn opgebouwd uit precies gelijk over de schijven verdeelde verzoeken tot lezen of schrijven.
+
+image::striping.png[Illustratie aaneengeschakelde schijven]
+
+[.procedure]
+====
+*Procedure: Ongeformatteerde ATA-schijven aaneenschakelen*
+
+. Laad de module [.filename]#geom_stripe.ko#:
++
+[source,bash]
+....
+# kldload geom_stripe
+....
++
+. Zorg ervoor dat er een koppelpunt beschikbaar is. Als dit volume een rootpartitie wordt, gebruikt dan tijdelijk een ander koppelpunt zoals [.filename]#/mnt#:
++
+[source,bash]
+....
+# mkdir /mnt
+....
++
+. Stel de apparaatnamen voor de schijven vast die aaneen worden geschakeld en maak het nieuwe apparaat aan. Om twee ongebruikte, ongepartitioneerde ATA schijven aaneen te schakelen ([.filename]#/dev/ad2# en [.filename]#/dev/ad3#):
++
+[source,bash]
+....
+# gstripe label -v st0 /dev/ad2 /dev/ad3
+Metadata value stored on /dev/ad2.
+Metadata value stored on /dev/ad3.
+Done.
+....
++
+. Schrijf een standaard label naar de nieuwe partitie, ook wel bekend als een partitietabel en installeer de standaard opstart code:
++
+[source,bash]
+....
+# bsdlabel -wB /dev/stripe/st0
+....
++
+. Dit proces hoort twee nieuwe apparaten gemaakt te hebben in de map [.filename]#/dev/stripe# naast het apparaat [.filename]#st0#, te weten [.filename]#st0a# en [.filename]#st0c#. Vanaf nu kan er een bestandssysteem op [.filename]#st0a# worden gezet met behulp van de `newfs` applicatie:
++
+[source,bash]
+....
+# newfs -U /dev/stripe/st0a
+....
++ 
+Na het uitvoeren van het bovenstaande commando rollen er veel getallen over het scherm en na een aantal seconden is het proces afgerond. Het volume is gereed en klaar om aangekoppeld te worden.
+====
+
+Om de nieuwe aaneengeschakelde schijf handmatig te koppelen moet het volgende gedaan worden:
+
+[source,bash]
+....
+# mount /dev/stripe/st0a /mnt
+....
+
+Om dit aaneengeschakelde bestandssysteem automatisch aan te koppelen bij het opstarten wordt de volume-informatie in [.filename]#/etc/fstab# gezet. Voor dit doel wordt een permanent koppelpunt, genaamd [.filename]#stripe#, aangemaakt:
+
+[source,bash]
+....
+# mkdir /stripe
+# echo "/dev/stripe/st0a /mnt ufs rw 2 2" \
+      >> /etc/fstab
+....
+
+Laadt de module [.filename]#geom_stripe.ko# ook automatisch bij het initialiseren van een systeem door de volgende regel toe te voegen aan [.filename]#/boot/loader.conf#:
+
+[source,bash]
+....
+# echo 'geom_stripe_load="YES"' >> /boot/loader.conf
+....
+
+[[GEOM-mirror]]
+== RAID1 - spiegelen
+
+RAID1, of _spiegelen_, is de techniek om dezelfde gegevens naar meer dan één schijf te schrijven. Spiegels worden normaliter gebruikt om tegen gegevensverlies te beschermen indien een schijf kapot gaat. Elke schijf in een spiegel bevat een identieke kopie van de gegevens. Wanneer een individuele schijf het begeeft, blijft de spiegel functioneren, en levert het gegevens van de schijven die nog wel functioneren. De computer blijft draaien en de beheerder heeft tijd om de kapotte schijf te vervangen zonder onderbreking voor de gebruikers.
+
+Twee veelvoorkomende situaties worden in deze voorbeelden getoond. Het eerste is het maken van een spiegel van twee nieuwe schijven en het als vervanging voor een bestaande enkele schijf te gebruiken. Het tweede voorbeeld maakt een spiegel op een enkele nieuwe schijf aan, kopieert de gegevens van de oude schijf er naar toe, en plaatst daarna de oude schijf in de spiegel. Hoewel deze procedure iets moeilijker is, is er maar één nieuwe schijf nodig.
+
+Traditioneel zijn de twee schijven in een spiegel van hetzelfde model en hebben ze dezelfde capaciteit, maar man:gmirror[8] verplicht dit niet. Spiegels die met ongelijke schijven zijn gemaakt zullen de capaciteit van de kleinste schijf in de spiegel aannemen. Extra schijfruimte op grotere schijven zal ongebruikt blijven. Schijven die later in de spiegel worden geplaatst moeten tenminste evenveel capaciteit hebben als de kleinste schijf die reeds in de spiegel zit.
+
+[WARNING]
+====
+
+De procedures voor het spiegelen die hier getoond worden zijn niet-destructief, maar maak zoals bij elke grote schijfoperatie eerst een volledige back-up.
+====
+
+[[GEOM-mirror-metadata]]
+=== Kwesties met meta-gegevens
+
+Veel schijfsystemen slaan meta-gegevens op aan het einde van elke schijf. Oude meta-gegevens dienen gewist te worden voordat de schijf herbruikt wordt voor een spiegel. De meeste problemen worden veroorzaakt door twee soorten van achtergebleven meta-gegevens: GPT-partitietabellen en oude meta-gegevens van man:gmirror[8] van een vorige spiegel.
+
+GPT-meta-gegevens kunnen gewist worden met man:gpart[8]. Dit voorbeeld wist zowel de primaire als de back-up GPT-partitietabellen van schijf [.filename]#ada8#:
+
+[source,bash]
+....
+# gpart destroy -F ada8
+....
+
+man:gmirror[8] kan in één stap een schijf uit een actieve spiegel halen en de meta-gegevens wissen. Hier wordt de voorbeeldschijf [.filename]#ada8# uit de actieve spiegel [.filename]#gm4# gehaald:
+
+[source,bash]
+....
+# gmirror remove gm4 ada8
+....
+
+Gebruik, als de spiegel niet draait maar er nog oude meta-gegevens van de spiegel op de schijf staan, `gmirror clear` om deze te verwijderen:
+
+[source,bash]
+....
+# gmirror clear ada8
+....
+
+man:gmirror[8] slaat één blok aan meta-gegevens aan het einde van de schijf op. Omdat GPT-partitieschema's ook meta-gegevens aan het einde van de schijf opslaan, wordt het spiegelen van volledige GPT-schijven met man:gmirror[8] niet aangeraden. Hier wordt MBR-partitionering gebruikt omdat het alleen een partitietabel aan het begin van de schijf opslaat en niet conflicteert met man:gmirror[8].
+
+=== Een spiegel met twee nieuwe schijven maken
+
+In dit voorbeeld is FreeBSD reeds op een enkele schijf [.filename]#ada0# geïnstalleerd. Twee nieuwe schijven, [.filename]#ada1# en [.filename]#ada2# zijn met het systeem verbonden. Er zal een nieuwe spiegel op deze twee schijven aangemaakt worden die de oude enkele schijf zal vervangen.
+
+man:gmirror[8] heeft een kernelmodule [.filename]#geom_mirror.ko# nodig, ingebouwd in de kernel of geladen tijdens het opstarten of draaien. Laadt nu handmatig de kernelmodule:
+
+[source,bash]
+....
+# gmirror load
+....
+
+Maak de spiegel aan met de twee nieuwe schijven:
+
+[source,bash]
+....
+# gmirror label -v gm0 /dev/ada1 /dev/ada2
+....
+
+[.filename]#gm0# is een door de gebruiker gekozen apparaatnaam die aan de nieuwe spiegel wordt toegekend. Nadat de spiegel is gestart, zal deze apparaatnaam verschijnen in de map [.filename]#/dev/mirror/#.
+
+Nu kunnen er met man:gpart[8] MBR- en bsdlabel-partitietabellen op de spiegel worden aangemaakt. Hier wordt er een traditioneel schema van een gesplitst bestandssysteem getoond, met partities voor [.filename]#/#, swap, [.filename]#/var#, [.filename]#/tmp# en [.filename]#/usr#. Dit werkt ook voor een enkel bestandssysteem met enkel [.filename]#/# en een wisselpartitie.
+
+Partities op de spiegel hoeven niet dezelfde grootte te hebben als die op de bestaande schijf, maar moeten groot genoeg zijn om alle gegevens die reeds op [.filename]#ada0# staan te kunnen bevatten.
+
+[source,bash]
+....
+# gpart create -s MBR mirror/gm0
+# gpart add -t freebsd -a 4k mirror/gm0
+# gpart show mirror/gm0
+=>       63  156301423  mirror/gm0  MBR  (74G)
+         63         63                    - free -  (31k)
+        126  156301299                 1  freebsd  (74G)
+  156301425         61                    - free -  (30k)
+....
+
+[source,bash]
+....
+# gpart create -s BSD mirror/gm0s1
+# gpart add -t freebsd-ufs  -a 4k -s 2g mirror/gm0s1
+# gpart add -t freebsd-swap -a 4k -s 4g mirror/gm0s1
+# gpart add -t freebsd-ufs  -a 4k -s 2g mirror/gm0s1
+# gpart add -t freebsd-ufs  -a 4k -s 1g mirror/gm0s1
+# gpart add -t freebsd-ufs  -a 4k       mirror/gm0s1
+# gpart show mirror/gm0s1
+=>        0  156301299  mirror/gm0s1  BSD  (74G)
+          0          2                      - free -  (1.0k)
+          2    4194304                   1  freebsd-ufs  (2.0G)
+    4194306    8388608                   2  freebsd-swap  (4.0G)
+   12582914    4194304                   4  freebsd-ufs  (2.0G)
+   16777218    2097152                   5  freebsd-ufs  (1.0G)
+   18874370  137426928                   6  freebsd-ufs  (65G)
+  156301298          1                      - free -  (512B)
+....
+
+Maak de spiegel opstartbaar door opstartcode in het MBR en bsdlabel te installeren en de actieve slice in te stellen:
+
+[source,bash]
+....
+# gpart bootcode -b /boot/mbr mirror/gm0
+# gpart set -a active -i 1 mirror/gm0
+# gpart bootcode -b /boot/boot mirror/gm0s1
+....
+
+Formatteer de bestandssystemen op de nieuwe spiegel en zet daarbij soft-updates aan.
+
+[source,bash]
+....
+# newfs -U /dev/mirror/gm0s1a
+# newfs -U /dev/mirror/gm0s1d
+# newfs -U /dev/mirror/gm0s1e
+# newfs -U /dev/mirror/gm0s1f
+....
+
+Bestandssystemen van de originele schijf ([.filename]#ada0#) kunnen nu met man:dump[8] en man:restore[8] naar de spiegel gekopieerd worden:
+
+[source,bash]
+....
+# mount /dev/mirror/gm0s1a /mnt
+# dump -C16 -b64 -0aL -f - / | (cd /mnt && restore -rf -)
+# mount /dev/mirror/gm0s1d /mnt/var
+# mount /dev/mirror/gm0s1e /mnt/tmp
+# mount /dev/mirror/gm0s1f /mnt/usr
+# dump -C16 -b64 -0aL -f - /var | (cd /mnt/var && restore -rf -)
+# dump -C16 -b64 -0aL -f - /tmp | (cd /mnt/tmp && restore -rf -)
+# dump -C16 -b64 -0aL -f - /usr | (cd /mnt/usr && restore -rf -)
+....
+
+[.filename]#/mnt/etc/fstab# moet bewerkt worden om naar de nieuwe bestandssystemen op de spiegel te wijzen:
+
+[.programlisting]
+....
+# Device		Mountpoint	FStype	Options	Dump	Pass#
+/dev/mirror/gm0s1a	/		ufs	rw	1	1
+/dev/mirror/gm0s1b	none		swap	sw	0	0
+/dev/mirror/gm0s1d	/var		ufs	rw	2	2
+/dev/mirror/gm0s1e	/tmp		ufs	rw	2	2
+/dev/mirror/gm0s1f	/usr		ufs	rw	2	2
+....
+
+Als de kernelmodule man:gmirror[8] niet in de kernel is ingebouwd, wordt [.filename]#/mnt/boot/loader.conf# bewerkt om de module tijdens het opstarten te laden:
+
+[.programlisting]
+....
+geom_mirror_load="YES"
+....
+
+Herstart het systeem om de nieuwe spiegel te testen en te verifiëren dat alle gegevens zijn gekopieerd. Het BIOS zal de spiegel als twee individuele schijven zien in plaats van als een spiegel. Omdat de schijven identiek zijn, maakt het niet uit vanaf welke schijf wordt opgestart.
+
+Bekijk de sectie <<gmirror-troubleshooting,Problemen oplossen>> als er problemen zijn tijdens het opstarten. Door de originele [.filename]#ada0# uit te schakelen en los te koppelen kan het als offline back-up bewaard worden.
+
+Tijdens het gebruik zal de spiegel zich net zoals de originele enkele schijf gedragen.
+
+=== Een spiegel met een bestaande schijf aanmaken
+
+In dit voorbeeld is FreeBSD reeds geïnstalleerd op een enkele schijf, [.filename]#ada0#. Een nieuwe schijf, [.filename]#ada1#, is met het systeem verbonden. Er zal een spiegel van één schijf worden aangemaakt op de nieuwe schijf, het bestaande systeem zal ernaar worden gekopieerd, en daarna zal de oude schijf in de spiegel worden geplaatst. Deze enigszins complexe procedure is nodig omdat man:gmirror[8] een blok van 512 bytes aan meta-gegevens aan het einde van elke schijf moet plaatsen en de bestaande [.filename]#ada0# meestal alle ruimte reeds heeft toegewezen.
+
+Laadt de kernelmodule man:gmirror[8]:
+
+[source,bash]
+....
+# gmirror load
+....
+
+Controleer de mediagrootte van de originele schijf met man:diskinfo[8]:
+
+[source,bash]
+....
+# diskinfo -v ada0 | head -n3
+/dev/ada0
+	512             # sectorsize
+	1000204821504   # mediasize in bytes (931G)
+....
+
+Maak een spiegel aan op de nieuwe schijf. Om er zeker van te zijn dat de capaciteit van de spiegel niet groter is dan die van de originele schijf, wordt man:gnop[8] gebruikt om een nepschijf van precies dezelfde grootte aan te maken. Deze schijf slaat geen gegevens op, maar wordt alleen gebruikt om de grootte van de spiegel te begrenzen. Wanneer man:gmirror[8] de spiegel aanmaakt, zal het de capaciteit beperken tot de grootte van [.filename]#gzero.nop# zelfs als de nieuwe schijf ([.filename]#ada1#) meer ruimte heeft. Merk op dat de _1000204821504_ op de tweede regel gelijk moet zijn aan de mediagrootte van [.filename]#ada0# zoals hierboven door man:diskinfo[8] is getoond.
+
+[source,bash]
+....
+# geom zero load
+# gnop create -s 1000204821504 gzero
+# gmirror label -v gm0 gzero.nop ada1
+# gmirror forget gm0
+....
+
+[.filename]#gzero.nop# slaat geen gegevens op, dus ziet de spiegel het niet als verbonden. De spiegel wordt verteld om componenten die niet verbonden zijn te "vergeten", waarbij referenties naar [.filename]#gzero.nop# worden verwijderd. Het resultaat is een spiegelapparaat dat slechts één enkele schijf, [.filename]#ada1#, bevat.
+
+Bekijk de partitietabel van [.filename]#ada0# nadat [.filename]#gm0# is aangemaakt.
+
+Deze uitvoer komt van een schijf van 1 TB. Als er wat niet-toegewezen ruimte aanwezig is aan het einde van de schijf, kan de inhoud direct van [.filename]#ada0# naar de nieuwe spiegel worden gekopieerd.
+
+Als de uitvoer echter toont dat alle ruimte op de schijf is toegewezen zoals in de volgende lijst, is er geen ruimte over voor de 512 bytes aan meta-gegevens van man:gmirror[8] aan het einde van de schijf.
+
+[source,bash]
+....
+# gpart show ada0
+=>        63  1953525105        ada0  MBR  (931G)
+          63  1953525105           1  freebsd  [active]  (931G)
+....
+
+In dit geval moet de partitietabel worden bewerkt om de capaciteit op [.filename]#mirror/gm0# met één sector te verminderen. De procedure hiervoor wordt later uitgelegd.
+
+In beide gevallen dienen de partitietabellen op de primaire schijf eerst gekopieerd te worden. Dit kan gedaan worden met de subcommando's `backup` en `restore` van man:gpart[8].
+
+[source,bash]
+....
+# gpart backup ada0 > table.ada0
+# gpart backup ada0s1 > table.ada0s1
+....
+
+Deze subcommando's maken twee bestanden aan, [.filename]#table.ada0# en [.filename]#table.ada0s1#. Dit voorbeeld komt van een schijf van 1 TB af:
+
+[source,bash]
+....
+# cat table.ada0
+MBR 4
+1 freebsd         63 1953525105   [active]
+....
+
+[source,bash]
+....
+# cat table.ada0s1
+BSD 8
+1  freebsd-ufs          0    4194304
+2 freebsd-swap    4194304   33554432
+4  freebsd-ufs   37748736   50331648
+5  freebsd-ufs   88080384   41943040
+6  freebsd-ufs  130023424  838860800
+7  freebsd-ufs  968884224  984640881
+....
+
+Als de gehele schijf was gebruikt in de uitvoer van man:gpart[8] `show`, dan moet de capaciteit in deze partitietabellen met één sector verminderd worden. Bewerk de twee bestanden zodat de grootte van zowel de slice als de laatste partitie met één verminderd wordt. Dit zijn de laatste getallen in elke lijst.
+
+[source,bash]
+....
+# cat table.ada0
+MBR 4
+1 freebsd         63 1953525104   [active]
+....
+
+[source,bash]
+....
+# cat table.ada0s1
+BSD 8
+1  freebsd-ufs          0    4194304
+2 freebsd-swap    4194304   33554432
+4  freebsd-ufs   37748736   50331648
+5  freebsd-ufs   88080384   41943040
+6  freebsd-ufs  130023424  838860800
+7  freebsd-ufs  968884224  984640880
+....
+
+Als er tenminste één sector aan het einde van de schijf niet was toegewezen, kunnen deze twee bestanden ongewijzigd gebruikt worden.
+
+Herstel nu de partitietabel naar [.filename]#mirror/gm0#.
+
+[source,bash]
+....
+# gpart restore mirror/gm0 < table.ada0
+# gpart restore mirror/gm0s1 < table.ada0s1
+....
+
+Controleer de partitietabel met man:gpart[8] `show`. Dit voorbeeld heeft [.filename]#gm0s1a# voor [.filename]#/#, [.filename]#gm0s1d# voor [.filename]#/var#, [.filename]#gm0s1e# voor [.filename]#/usr#, [.filename]#gm0s1f# voor [.filename]#/data1# en [.filename]#gm0s1g# voor [.filename]#/data2#.
+
+[source,bash]
+....
+# gpart show mirror/gm0
+=>        63  1953525104  mirror/gm0  MBR  (931G)
+          63  1953525042           1  freebsd  [active]  (931G)
+  1953525105          62              - free -  (31k)
+
+# gpart show mirror/gm0s1
+=>         0  1953525042  mirror/gm0s1  BSD  (931G)
+           0     2097152             1  freebsd-ufs  (1.0G)
+     2097152    16777216             2  freebsd-swap  (8.0G)
+    18874368    41943040             4  freebsd-ufs  (20G)
+    60817408    20971520             5  freebsd-ufs  (10G)
+    81788928   629145600             6  freebsd-ufs  (300G)
+   710934528  1242590514             7  freebsd-ufs  (592G)
+  1953525042          63                - free -  (31k)
+....
+
+Zowel de slice als de laatste partitie dienen wat vrije ruimte aan het einde van elke schijf te hebben.
+
+Maak bestandssystemen aan op deze nieuwe partities. Het aantal partities zal variëren, overeenkomend met de partities op de originele schijf, [.filename]#ada0#.
+
+[source,bash]
+....
+# newfs -U /dev/mirror/gm0s1a
+# newfs -U /dev/mirror/gm0s1d
+# newfs -U /dev/mirror/gm0s1e
+# newfs -U /dev/mirror/gm0s1f
+# newfs -U /dev/mirror/gm0s1g
+....
+
+Maak de spiegel opstartbaar door opstartcode in het MBR en bsdlabel te installeren en de actieve slice in te stellen:
+
+[source,bash]
+....
+# gpart bootcode -b /boot/mbr mirror/gm0
+# gpart set -a active -i 1 mirror/gm0
+# gpart bootcode -b /boot/boot mirror/gm0s1
+....
+
+Pas [.filename]#/etc/fstab# aan zodat het de nieuwe partities op de spiegel gebruikt. Maak eerst een kopie van dit bestand als [.filename]#/etc/fstab.orig#.
+
+[source,bash]
+....
+# cp /etc/fstab /etc/fstab.orig
+....
+
+Wijzig [.filename]#/etc/fstab# door [.filename]#/dev/ada0# door [.filename]#mirror/gm0# te vervangen.
+
+[.programlisting]
+....
+# Device		Mountpoint	FStype	Options	Dump	Pass#
+/dev/mirror/gm0s1a	/		ufs	rw	1	1
+/dev/mirror/gm0s1b	none		swap	sw	0	0
+/dev/mirror/gm0s1d	/var		ufs	rw	2	2
+/dev/mirror/gm0s1e	/usr		ufs	rw	2	2
+/dev/mirror/gm0s1f	/data1		ufs	rw	2	2
+/dev/mirror/gm0s1g	/data2		ufs	rw	2	2
+....
+
+Als de kernelmodule man:gmirror[8] niet in de kernel is gebouwd, wijzig dan [.filename]#/boot/loader.conf# om het te laden:
+
+[.programlisting]
+....
+geom_mirror_load="YES"
+....
+
+Bestandssystemen van de originele schijf kunnen nu met man:dump[8] en man:restore[8] naar de spiegel gekopieerd worden. Merk op dat het maken van een snapshot voor elk bestandssysteem dat met `dump -L` gedumpt is even kan duren.
+
+[source,bash]
+....
+# mount /dev/mirror/gm0s1a /mnt
+# dump -C16 -b64 -0aL -f - /    | (cd /mnt && restore -rf -)
+# mount /dev/mirror/gm0s1d /mnt/var
+# mount /dev/mirror/gm0s1e /mnt/usr
+# mount /dev/mirror/gm0s1f /mnt/data1
+# mount /dev/mirror/gm0s1g /mnt/data2
+# dump -C16 -b64 -0aL -f - /usr | (cd /mnt/usr && restore -rf -)
+# dump -C16 -b64 -0aL -f - /var | (cd /mnt/var && restore -rf -)
+# dump -C16 -b64 -0aL -f - /data1 | (cd /mnt/data1 && restore -rf -)
+# dump -C16 -b64 -0aL -f - /data2 | (cd /mnt/data2 && restore -rf -)
+....
+
+Start het systeem opnieuw op vanaf [.filename]#ada1#. Als alles werkt, zal het systeem opstarten vanaf [.filename]#mirror/gm0#, wat nu dezelfde gegevens bevat die [.filename]#ada0# eerder bevatte. Zie de sectie <<gmirror-troubleshooting,Problemen oplossen>> als er problemen zijn met het opstarten.
+
+Op dit moment bestaat de spiegel nog steeds alleen uit de enkele schijf [.filename]#ada1#.
+
+Nadat er succesvol van [.filename]#mirror/gm0# is opgestart, is de laatste stap het plaatsen van [.filename]#ada0# in de spiegel.
+
+[IMPORTANT]
+====
+Als [.filename]#ada0# in de spiegel wordt geplaatst, zal de vorige inhoud worden overschreven door gegevens in de spiegel. Ben er zeker van dat [.filename]#mirror/gm0# dezelfde gegevens bevat als [.filename]#ada0# voordat [.filename]#ada0# aan de spiegel wordt toegevoegd. Als er iets mis is met de gegevens die door man:dump[8] en man:restore[8] gekopieerd zijn, draai dan [.filename]#/etc/fstab# terug om de bestandssystemen op [.filename]#ada0# aan te koppelen, start opnieuw op, en probeer de hele procedure nogmaals.
+====
+
+[source,bash]
+....
+# gmirror insert gm0 ada0
+GEOM_MIRROR: Device gm0: rebuilding provider ada0
+....
+
+De synchronisatie tussen de twee schijven zal onmiddellijk beginnen. man:gmirror[8] `status` toont de voortgang.
+
+[source,bash]
+....
+# gmirror status
+      Name    Status  Components
+mirror/gm0  DEGRADED  ada1 (ACTIVE)
+                      ada0 (SYNCHRONIZING, 64%)
+....
+
+Na een tijd zal de synchronisatie voltooid zijn.
+
+[source,bash]
+....
+GEOM_MIRROR: Device gm0: rebuilding provider ada0 finished.
+# gmirror status
+      Name    Status  Components
+mirror/gm0  COMPLETE  ada1 (ACTIVE)
+                      ada0 (ACTIVE)
+....
+
+[.filename]#mirror/gm0# bestaat nu uit de twee schijven [.filename]#ada0# en [.filename]#ada1#, en de inhoud wordt automatisch met elkaar gesynchroniseerd. In het gebruik zal [.filename]#mirror/gm0# zich net zo gedragen als de originele enkele schijf.
+
+[[gmirror-troubleshooting]]
+=== Problemen oplossen
+
+==== Problemen met opstarten
+
+===== BIOS-instellingen
+
+Mogelijk is het nodig om de BIOS-instellingen te wijzigen om van één van de nieuwe gespiegelde schijven op te starten. Beide spiegelschijven kunnen gebruikt worden voor het opstarten. Als componenten van een spiegel bevatten ze identieke gegevens.
+
+===== Opstartproblemen
+
+Als het opstarten met dit bericht stopt, is er iets mis met het spiegelapparaat:
+
+[source,bash]
+....
+Mounting from ufs:/dev/mirror/gm0s1a failed with error 19.
+
+Loader variables:
+  vfs.root.mountfrom=ufs:/dev/mirror/gm0s1a
+  vfs.root.mountfrom.options=rw
+
+Manual root filesystem specification:
+  <fstype>:<device> [options]
+      Mount <device> using filesystem <fstype>
+      and with the specified (optional) option list.
+
+    eg. ufs:/dev/da0s1a
+        zfs:tank
+        cd9660:/dev/acd0 ro
+          (which is equivalent to: mount -t cd9660 -o ro /dev/acd0 /)
+
+  ?               List valid disk boot devices
+  .               Yield 1 second (for background tasks)
+  <empty line>    Abort manual input
+
+mountroot>
+....
+
+Het vergeten om de module [.filename]#geom_mirror# in [.filename]#/boot/loader.conf# te laden kan dit probleem veroorzaken. Start op vanaf een FreeBSD-9 of nieuwere CD of USB-stick en kies `Shell` op de eerste prompt om dit op te lossen. Laadt daarna de spiegelmodule en en koppel het spiegelapparaat aan:
+
+[source,bash]
+....
+# gmirror load
+# mount /dev/mirror/gm0s1a /mnt
+....
+
+Voeg een regel om de spiegelmodule te laden toe aan [.filename]#/mnt/boot/loader.conf#:
+
+[.programlisting]
+....
+geom_mirror_load="YES"
+....
+
+Sla het bestand op en start opnieuw op.
+
+Andere problemen die `error 19` veroorzaken zijn lastiger om op te lossen. Typ `ufs:/dev/ada0s1a` in op de prompt. Hoewel het systeem van [.filename]#ada0# zou moeten opstarten, verschijnt er een andere prompt om een shell uit te kiezen omdat [.filename]#/etc/fstab# onjuist is. Druk op de prompt op de Enter-toets. Draai de wijzigingen tot nu toe terug door [.filename]#/etc/fstab# terug te draaien, waardoor de bestandssystemen vanaf de originele schijf ( [.filename]#ada0#) in plaats vanaf de spiegel worden aangekoppeld. Start het systeem opnieuw op en probeer de procedure nogmaals.
+
+[source,bash]
+....
+Enter full pathname of shell or RETURN for /bin/sh:
+# cp /etc/fstab.orig /etc/fstab
+# reboot
+....
+
+=== Herstellen van falende schijven
+
+Het mooie aan het spiegelen van schijven is dat een individuele schijf kan falen zonder dat de spiegel gegevens verliest.
+
+[.filename]#ada0# is één van de twee schijven die de spiegel in het vorige voorbeeld vormen. Als [.filename]#ada0# faalt zal de spiegel blijven werken en gegevens leveren van de overgebleven werkende schijf, [.filename]#ada1#.
+
+Om de kapotte schijf te vervangen wordt de computer uitgezet en de kapotte schijf fysiek vervangen door een nieuwe schijf van gelijke of grotere capaciteit. Fabrikanten passen enigszins willekeurige waarden toe om schijven in gigabytes aan te duiden, de enige manier om er echt zeker van te zijn is om de totale hoeveelheid aan sectors aangegeven door `diskinfo -v` te vergelijken. Een schijf met een grotere capaciteit dan in de spiegel zal werken, alhoewel de extra ruimte op de nieuwe schijf niet gebruikt zal worden.
+
+Nadat de computer opnieuw is aangezet, zal de spiegel in een "degraded" toestand met slechts één schijf draaien. De spiegel wordt verteld om schijven die momenteel niet verbonden zijn te vergeten:
+
+[source,bash]
+....
+# gmirror forget gm0
+....
+
+Alle oude meta-gegevens zouden <<GEOM-mirror-metadata,van de vervangende schijf gewist>> moeten zijn. Daarna wordt de schijf, in dit voorbeeld [.filename]#ada4#, in de spiegel geplaatst:
+
+[source,bash]
+....
+# gmirror insert gm0 /dev/ada4
+....
+
+De hersynchronisatie begint wanneer de nieuwe schijf in de spiegel wordt geplaatst. Het kopiëren van gegevens van de spiegel naar een nieuwe schijf kan een tijd duren. De prestaties van de spiegel zullen tijdens het kopiëren sterk verminderd zijn, dus is het het beste om nieuwe schijven in te voegen wanneer de vraag op de computer laag is.
+
+De voortgang kan met `gmirror status` gevolgd worden, wat de schijven die gesynchroniseerd en het percentage van de voltooiing laat zien. Tijdens de hersynchronisatie zal de status `DEGRADED` zijn en veranderen in `COMPLETE` wanneer het proces is voltooid.
+
+[[GEOM-raid3]]
+== RAID3 - Striping op byte-niveau met toegewijde pariteit
+
+RAID3 is een methode om verschillende schijven te combineren in een enkel volume met een toegewijde schijf voor de pariteit. In een RAID3-systeem worden de gegevens opgesplitst in een aantal bytes die over alle schijven in de rij worden geschreven, behalve naar één schijf die als een toegewijde schijf voor de pariteit dient. Dit betekent dat het lezen van 1024 kB van een RAID3-implementatie alle schijven in de rij zal benaderen. De prestatie kan worden verhoogd door meerdere schijfcontrollers te gebruiken. De RAID3-rij biedt een fouttolerantie van 1 schijf, terwijl het een capaciteit van 1 - 1/n maal de totale capaciteit biedt van alle schijven in de rij, waarbij n het aantal harde schijven in de rij is. Zulke configuraties zijn meestal geschikt voor het opslaan van gegevens van grotere groottes, bijvoorbeeld multimedia-bestanden.
+
+Er zijn minstens 3 fysieke harde schijven nodig om een RAID3-rij te bouwen. Elke schijf moet van dezelfde grootte zijn, aangezien I/O-verzoeken worden verweven om parallel naar meerdere schijven te lezen of schrijven. Bovendien moet vanwege de aard van RAID3 het aantal schijven gelijk zijn aan 3, 5, 9, 17, enzovoorts (dus 2^n + 1).
+
+=== Een toegewijde RAID3-rij aanmaken.
+
+In FreeBSD is ondersteuning voor RAID3 geïmplementeerd in de GEOM-klasse man:graid3[8]. Voor het aanmaken van een toegewijde RAID3-rij op FreeBSD zijn deze stappen nodig.
+
+[NOTE]
+====
+Hoewel het theoretisch mogelijk is om op FreeBSD van een RAID3-rij op te starten, is deze configuratie ongebruikelijk en niet aangeraden.
+====
+
+[.procedure]
+====
+
+. Laad ten eerste de kernelmodule [.filename]#geom_raid3.ko# door de volgende opdracht uit te voeren:
++
+[source,bash]
+....
+# graid3 load
+....
++ 
+Het is ook mogelijk om handmatig de module [.filename]#geom_raid3.ko# te laden:
++
+[source,bash]
+....
+# kldload geom_raid3.ko
+....
++
+. Zorg ervoor dat er een geschikt aankoppelpunt bestaat of maak het aan:
++
+[source,bash]
+....
+# mkdir /multimedia/
+....
++
+. Bepaal de apparaatnamen voor de schijven die aan de rij worden toegevoegd en maak het nieuwe RAID3-apparaat aan. Het laatst vermelde apparaat zal dienst doen als de toegewijde schijf voor de pariteit. Dit voorbeeld gebruikt drie ongepartitioneerde ATA-schijven: [.filename]#ada1# en [.filename]#ada2# voor gegevens en [.filename]#ada3# voor pariteit.
++
+[source,bash]
+....
+# graid3 label -v gr0 /dev/ada1 /dev/ada2 /dev/ada3
+Metadata value stored on /dev/ada1.
+Metadata value stored on /dev/ada2.
+Metadata value stored on /dev/ada3.
+Done.
+....
++
+. Partitioneer het nieuw aangemaakte apparaat [.filename]#gr0# en zet er een UFS-bestandssysteem op:
++
+[source,bash]
+....
+# gpart create -s GPT /dev/raid3/gr0
+# gpart add -t freebsd-ufs /dev/raid3/gr0
+# newfs -j /dev/raid3/gr0p1
+....
++ 
+Vele getallen zullen over het scherm lopen, en na wat tijd zal het proces voltooid zijn. Het volume is aangemaakt en is klaar om aangekoppeld te worden.
+. De laatste stap is het aankoppelen van het bestandssysteem:
++
+[source,bash]
+....
+# mount /dev/raid3/gr0p1 /multimedia/
+....
++ 
+De RAID3-rij is nu klaar voor gebruik.
+====
+
+Aanvullende configuratie is nodig om de bovenstaande opstelling te behouden tussen het opnieuw starten van het systeem.
+
+[.procedure]
+====
+
+. De module [.filename]#geom_raid3.ko# moet geladen zijn voordat de rij kan worden aangekoppeld. Voeg de volgende regel toe aan [.filename]#/boot/loader.conf# om de kernelmodule automatisch tijdens de initialisatie van het systeem te laden:
++
+[.programlisting]
+....
+geom_raid3_load="YES"
+....
++
+. De volgende volume-informatie moet aan het bestand [.filename]#/etc/fstab# worden toegevoegd om het bestandssysteem van de rij automatisch aan de koppelen tijdens het opstarten van het systeem:
++
+[.programlisting]
+....
+/dev/raid3/gr0p1	/multimedia	ufs	rw	2	2
+....
+====
+
+[[geom-ggate]]
+== GEOM Gate netwerk apparaten
+
+GEOM ondersteund het op afstand gebruiken van apparaten, zoals schijven, CD-ROMs, bestanden, etcetera door het gebruik van de gate-applicaties. Dit is vergelijkbaar met NFS.
+
+Om te beginnen moet er een exports bestand gemaakt worden. Dit bestand specificeert wie de geëxporteerde bron mag benaderen en welke rechten er op dat moment verleend worden. Bijvoorbeeld om de vierde slice te exporteren van de eerste SCSI schijf, moet het volgende in [.filename]#/etc/gg.exports# gezet worden:
+
+[.programlisting]
+....
+192.168.1.0/24 RW /dev/da0s4d
+....
+
+Dit staat alle machines in het privé netwerk toe om het bestandssysteem op [.filename]#da0s4d# te benaderen.
+
+Om dit apparaat te kunnen exporteren is het van belang dat de schijf nog niet gekoppeld is en moet de man:ggated[8] dienst gestart worden.
+
+[source,bash]
+....
+# ggated
+....
+
+Om vervolgens het apparaat aan een client machine te koppelen moet het volgende gedaan worden:
+
+[source,bash]
+....
+# ggatec create -o rw 192.168.1.1 /dev/da0s4d
+ggate0
+# mount /dev/ggate0 /mnt
+....
+
+Vanaf dit moment kan de schijf benaderd worden via het koppelpunt [.filename]#/mnt#.
+
+[NOTE]
+====
+Let op, dit mislukt als de schijf reeds gekoppeld is op de server machine of als deze reeds gekoppeld is aan een andere machine op het netwerk.
+====
+
+Zodra het apparaat niet langer nodig is, kan het veilig ontkoppeld worden met behulp van man:umount[8] net zoals met elke andere schijf.
+
+[[geom-glabels]]
+== Het labelen van schijven
+
+Tijdens het initialiseren van het systeem zal de FreeBSD kernel apparaatknooppunten creëren nadat het een apparaat gevonden heeft. Deze manier om te zoeken naar apparaten levert wat problemen op bijvoorbeeld wanneer er een nieuwe schijf wordt toegevoegd via USB. Het is hoogst waarschijnlijk dat een flash apparaat een apparaatknooppunt krijgt van [.filename]#da0#, waarna de originele [.filename]#da0# op schuift naar [.filename]#da1#. Dit levert problemen op als bestandssystemen worden gekoppeld als ze gedefinieerd zijn in [.filename]#/etc/fstab#, dit kan zelfs ertoe leiden dat het systeem niet opstart.
+
+Een mogelijke oplossing hiervoor is om de SCSI schijven een vaste plek te geven op een bepaalde volgorde, zodat zodra er een nieuwe schijf geplaatst wordt, deze een ongebruikt apparaatknooppunt toegewezen krijgt. Maar wat als er USB apparaten zijn die de primaire SCSI schijf vervangt? Dit gebeurd omdat USB apparaten meestal eerder gevonden worden dan een SCSI kaart. Een oplossing hiervoor is om de apparaten pas toe te voegen als het systeem reeds gestart is, een andere methode kan zijn om alleen een enkele ATA schijf te koppelen en nooit SCSI schijven door middel van [.filename]#/etc/fstab#.
+
+Maar er is een betere oplossing beschikbaar. Door het gebruik van `glabel` kunnen beheerders en gebruikers een label toevoegen aan een schijf, en deze labels gebruiken in [.filename]#/etc/fstab#. Omdat `glabel` het label bewaard in de laatste sector van de schijf, kan het label bewaard blijven ook na een reboot en kan het bestandssysteem altijd gekoppeld worden ongeacht welk apparaatknooppunt toegekend is aan het apparaat.
+
+[NOTE]
+====
+Uiteraard hoeft een label niet permanent te zijn, het `glabel` programma kan zowel tijdelijke als permanente labels aanmaken. Alleen een permanent label blijft beschikbaar ook na een reboot. Zie de man:glabel[8] handleiding voor meer informatie over de verschillen tussen de labeltypes.
+====
+
+=== Label types en voorbeelden
+
+Er zijn twee type labels: een generiek label en een bestandssysteemlabel. Labels kunnen permanent of tijdelijk zijn. Permanente labels kunnen met de commando's man:tunefs[8] of man:newfs[8] aangemaakt worden. Ze zullen vervolgens worden aangemaakt in een submap van [.filename]#/dev#, welke genoemd wordt naar het bestandssysteemtype. Bijvoorbeeld UFS2 labels worden geplaatst in de map [.filename]#/dev/ufs#. Permanente labels kunnen ook worden aangemaakt met het commando `glabel label`. Deze zijn niet specifiek voor het bestandssysteem, en zullen in de map [.filename]#/dev/label# aangemaakt worden.
+
+Een tijdelijk label verdwijnt na een herstart van het systeem. Deze labels worden gecreëerd in [.filename]#/dev/label# en zijn perfect voor experimenten. Een tijdelijk kan met het commando `glabel create` worden aangemaakt. Lees voor meer informatie de handleidingpagina van man:glabel[8].
+
+Om een permanent label te schrijven voor een UFS2-bestandssysteem zonder de huidige data te vernietigen:
+
+[source,bash]
+....
+# tunefs -L home /dev/da3
+....
+
+[WARNING]
+====
+
+Als het bestandssyteem vol is kan dit leiden tot data corruptie; echter als het bestandssysteem vol is zou het hoofddoel moeten zijn om oude achtergebleven bestanden weg te halen in plaats van het toevoegen van labels.
+====
+
+Er zou nu een label moeten bestaan in [.filename]#/dev/ufs#, welke toegevoegd kan worden aan het [.filename]#/etc/fstab# bestand:
+
+[.programlisting]
+....
+/dev/ufs/home	/home            ufs     rw              2      2
+....
+
+[NOTE]
+====
+Het bestandssysteem mag niet aangekoppeld zijn op het moment dat `tunefs` gebruikt wordt.
+====
+
+Nu kan het bestandssysteem net als normaal worden gekoppeld:
+
+[source,bash]
+....
+# mount /home
+....
+
+Vanaf dit moment is het mogelijk om, zolang de [.filename]#geom_label.ko# geladen wordt tijdens het opstarten van het systeem, of als deze is meegecompileerd door middel van de `GEOM_LABEL` optie in de kernel, het apparaatknooppunt te wijzigen zonder ernstige gevolgen voor het systeem.
+
+Bestandssystemen kunnen ook een standaard label mee krijgen door gebruik te maken van de `-L` optie met het `newfs` commando. Zie de man:newfs[8] handleiding voor meer informatie.
+
+Het volgende commando kan worden gebruikt om een label te verwijderen:
+
+[source,bash]
+....
+# glabel destroy home
+....
+
+Het volgende voorbeeld laat zien hoe de partities van een opstartschijf gelabeld worden.
+
+.Partities op de opstartschijf labelen
+[example]
+====
+Door de partities op de opstartschijf permanent te labelen zou het systeem in staat moeten zijn om normaal door te gaan met opstarten, zelfs als de schijf verplaatst is naar een andere controller of is overgeplaatst naar een ander systeem. In dit voorbeeld wordt aangenomen dat er een enkele ATA-schijf wordt gebruikt, die momenteel als [.filename]#ad0# door het systeem wordt herkend. Het wordt ook aangenomen dat het standaard partitieschema van FreeBSD wordt gebruikt, met de bestandssystemen [.filename]#/#, [.filename]#/var#, [.filename]#/usr#, en [.filename]#/tmp#, alsmede een wisselpartitie.
+
+Start het systeem opnieuw op, en druk bij de man:loader[8]-prompt op 4 om in enkele gebruikersmodus op te starten. Geef dan de volgende commando's:
+
+[source,bash]
+....
+# glabel label rootfs /dev/ad0s1a
+GEOM_LABEL: Label for provider /dev/ad0s1a is label/rootfs
+# glabel label var /dev/ad0s1d
+GEOM_LABEL: Label for provider /dev/ad0s1d is label/var
+# glabel label usr /dev/ad0s1f
+GEOM_LABEL: Label for provider /dev/ad0s1f is label/usr
+# glabel label tmp /dev/ad0s1e
+GEOM_LABEL: Label for provider /dev/ad0s1e is label/tmp
+# glabel label swap /dev/ad0s1b
+GEOM_LABEL: Label for provider /dev/ad0s1b is label/swap
+# exit
+....
+
+Het systeem zal doorgaan met opstarten in meergebruikersmodus. Bewerk, nadat het opstarten is voltooid, [.filename]#/etc/fstab# en vervang de conventionele namen door de respectievelijke labels. Het uiteindelijke bestand [.filename]#/etc/fstab# zal er als volgt uitzien:
+
+[.programlisting]
+....
+# Device                Mountpoint      FStype  Options         Dump    Pass#
+/dev/label/swap          none            swap    sw              0       0
+/dev/label/rootfs        /               ufs     rw              1       1
+/dev/label/tmp           /tmp            ufs     rw              2       2
+/dev/label/usr           /usr            ufs     rw              2       2
+/dev/label/var           /var            ufs     rw              2       2
+....
+
+Het systeem kan nu worden herstart. Als alles goed ging, zal het normaal opstarten en zal `mount` dit laten zien:
+
+[source,bash]
+....
+# mount
+/dev/label/rootfs on / (ufs, local)
+devfs on /dev (devfs, local)
+/dev/label/tmp on /tmp (ufs, local, soft-updates)
+/dev/label/usr on /usr (ufs, local, soft-updates)
+/dev/label/var on /var (ufs, local, soft-updates)
+....
+
+====
+
+Beginnend met FreeBSD 7.2 ondersteunt de klasse man:glabel[8] een nieuw labeltype voor UFS-bestandssystemen, gebaseerd op het unieke id van het bestandssysteem, `ufsid`. Deze labels kunnen in de map [.filename]#/dev/ufsid# gevonden worden en worden automatisch tijdens het opstarten aangemaakt. Het is mogelijk om de `ufsid`-labels te gebruiken om partities aan te koppelen door middel van de faciliteit [.filename]#/etc/fstab#. Gebruik `glabel status` om een lijst van bestandssystemen en hun overeenkomende `ufsid`-labels te ontvangen:
+
+[source,bash]
+....
+% glabel status
+                  Name  Status  Components
+ufsid/486b6fc38d330916     N/A  ad4s1d
+ufsid/486b6fc16926168e     N/A  ad4s1f
+....
+
+In het bovenstaande voorbeeld representeert [.filename]#ad4s1d# het bestandssysteem [.filename]#/var#, terwijl [.filename]#ad4s1f# het bestandssysteem [.filename]#/usr# representeert. Door gebruik te maken van de gegeven `ufsid`-waarden kunnen deze partities nu aangekoppeld worden met de volgende regels in [.filename]#/etc/fstab#:
+
+[.programlisting]
+....
+/dev/ufsid/486b6fc38d330916	/var	ufs	rw	2	2
+/dev/ufsid/486b6fc16926168e	/usr	ufs	rw	2	2
+....
+
+Elke partitie met een `ufsid`-label kan op deze manier worden aangekoppeld, waardoor het niet meer nodig is om handmatig permanente labels voor ze aan te maken, terwijl er nog steeds van de voordelen van apparaatnaam-onafhankelijk aankoppelen genoten kan worden.
+
+[[geom-gjournal]]
+== UFS logboeken door middel van GEOM
+
+Met de komst van FreeBSD 7.0 komt ook de langverwachte optie van UFS logboeken. De implementatie zelf is gedaan door middel van het GEOM subsysteem, welke makkelijk geconfigureerd kan worden met behulp van de man:gjournal[8] applicatie.
+
+Wat is logboeken? Logboek mogelijkheden betekend het opslaan van bestandssysteem transacties, zoals wijzigingen die een complete schrijfactie zijn, voor er meta-data wordt toegevoegd en voor de wijzigingen op schijf worden gezet. Deze transactie log kan later opnieuw afgespeeld worden om te voorkomen dat er bestandssysteem inconsistenties voorkomen.
+
+Deze methode is een extra manier om te beschermen tegen gegevensverlies en inconsistenties van het bestandssysteem. In tegenstelling tot Soft Updates, welke bijhoud welke meta-data wijzigingen er worden uitgevoerd en Snapshots, wat een beeld bestand is van het bestandssysteem, wordt er een complete log bewaard in de schijfruimte die speciaal voor deze taak is gereserveerd, en in sommige gevallen op een compleet andere schijf.
+
+In tegenstelling tot andere logboek implementaties is de `gjournal` methode blok gebaseerd en niet geïmplementeerd als onderdeel van het bestandssysteem maar als uitbreiding op GEOM.
+
+Om ondersteuning in te schakelen voor `gjournal`, moet de kernel over de volgende optie beschikken, welke standaard is op FreeBSD 7.X-systemen:
+
+[.programlisting]
+....
+options        UFS_GJOURNAL
+....
+
+Indien gejournalde volumes tijdens het opstarten aangekoppeld moeten worden, moet de kernelmodule [.filename]#geom_journal.ko# ook geladen zijn, door de volgende regel aan [.filename]#/boot/loader.conf# toe te voegen:
+
+[.programlisting]
+....
+geom_journal_load="YES"
+....
+
+Ook kan deze functie in een eigen kernel worden ingebouwd, door de volgende regel aan het kernelinstellingenbestand toe te voegen:
+
+[.programlisting]
+....
+options    GEOM_JOURNAL
+....
+
+Het creëren van een logboek op een vrij en beschikbaar bestandssysteem kan nu gedaan worden met behulp van de volgende stappen, ervan uitgaande dat [.filename]#da4# de nieuwe beschikbare SCSI schijf is:
+
+[source,bash]
+....
+# gjournal load
+# gjournal label /dev/da4
+....
+
+Op dit moment zou er een [.filename]#ad4# apparaatknooppunt en een [.filename]#ad4.journal# apparaatknooppunt moeten zijn. Nu kan er een bestandssysteem op gezet worden:
+
+[source,bash]
+....
+# newfs -O 2 -J /dev/da4.journal
+....
+
+Het hiervoor ingevoerde commando zal een UFS2 bestandssysteem met logboek ondersteuning aanmaken.
+
+Koppel het apparaat op een gewenst koppelpunt met:
+
+[source,bash]
+....
+# mount /dev/da4.journal /mnt
+....
+
+[NOTE]
+====
+In het geval dat er meerdere slices zijn, zal er een logboek voor elke slice gecreëerd worden. Bijvoorbeeld, als [.filename]#ad4s1# en [.filename]#ad4s2# allebei slices zijn, dan zal `gjournal` een [.filename]#ad4s1.journal# en een [.filename]#ad4s2.journal# creëeren.
+====
+
+Voor performance doeleinden is het gewenst om het logboek op een andere schijf te bewaren. Voor deze gevallen moet de logboekleverancier of het opslagapparaat gespecificeerd worden achter het apparaat waarop de logboek functionaliteit aangebracht moet worden. De logboekfunctionaliteit kan ook worden ingeschakeld op een reeds bestaand systeem met behulp van `tunefs`. Maak echter altijd een back-up voor dat dit soort dingen uitgeprobeerd worden. In de meeste gevallen zal `gjournal` falen als het geen actueel logboek kan maken, maar het voorkomt geen dataverlies als gevolg van verkeerd gebruik van `tunefs`.
+
+Het is ook mogelijk om een journal van de opstartschijf van een FreeBSD-systeem bij te houden. Voor gedetailleerde instructies over deze taak wordt naar het artikel link:{gjournal-desktop}[Implementing UFS Journaling on a Desktop PC] verwezen.

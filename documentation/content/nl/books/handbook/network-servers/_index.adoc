@@ -1,0 +1,3003 @@
+---
+title: Hoofdstuk 29. Netwerkdiensten
+part: Deel IV. Netwerkcommunicatie
+prev: books/handbook/mail
+next: books/handbook/firewalls
+---
+
+[[network-servers]]
+= Netwerkdiensten
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Inhoudsopgave
+:table-caption: Tabel
+:figure-caption: Afbeelding
+:example-caption: Voorbeeld
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 29
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/network-servers/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/network-servers/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/network-servers/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/nl/mailing-lists.adoc[]
+include::shared/nl/teams.adoc[]
+include::shared/nl/urls.adoc[]
+
+toc::[]
+
+[[network-servers-synopsis]]
+== Overzicht
+
+Dit hoofdstuk behandelt een aantal veelgebruikte netwerkdiensten op UNIX(R) systemen. Er wordt ingegaan op de installatie, het instellen, testen en beheren van verschillende typen netwerkdiensten. Overal in dit hoofdstuk staan voorbeeldbestanden met instellingen waar de lezer zijn voordeel mee kan doen.
+
+Na het lezen van dit hoofdstuk weet de lezer:
+
+* Hoe om te gaan met de inetd daemon;
+* Hoe een netwerkbestandssysteem opgezet kan worden;
+* Hoe een netwerkinformatiedienst (NIS) opgezet kan worden voor het delen van gebruikersaccounts;
+* Hoe automatische netwerkinstellingen gemaakt kunnen worden met DHCP;
+* Hoe een domeinnaam server opgezet kan worden;
+* Hoe een Apache HTTP Server opgezet kan worden;
+* Hoe een File Transfer Protocol (FTP) Server opgezet kan worden;
+* Hoe een bestand-- en printserver voor Windows(R) cliënten opgezet kan worden met Samba;
+* Hoe datum en tijd gesynchroniseerd kunnen worden en hoe een tijdserver opgezet kan worden met het NTP-protocol.
+* Hoe het standaard log-daemon `syslogd` in te stellen om logs van hosts op afstand te accepteren.
+
+Veronderstelde voorkennis:
+
+* Basisbegrip van de scripts in [.filename]#/etc/rc#;
+* Bekend zijn met basis netwerkterminologie;
+* Kennis van de installatie van software van derde partijen (crossref:ports[ports,Applicaties installeren. pakketten en ports]).
+
+[[network-inetd]]
+== De inetd"Super-Server"
+
+[[network-inetd-overview]]
+=== Overzicht
+
+man:inetd[8] wordt soms de "Internet Super-Server" genoemd, omdat het verbindingen voor meerdere diensten beheert. Als door inetd een verbinding wordt ontvangen, bepaalt die voor welk programma de verbinding bedoeld is, splitst het dat proces af en delegeert de socket (het programma wordt gestart met de socket van de dienst als zijn standaardinvoer, -uitvoer en -foutbeschrijvingen). Het draaien van inetd voor servers die niet veel gebruikt worden kan de algehele werklast verminderen in vergelijking met het draaien van elke daemon individueel in stand-alone modus.
+
+inetd wordt primair gebruikt om andere daemons aan te roepen, maar het handelt een aantal triviale protocollen direct af, zoals chargen, auth en daytime.
+
+In deze paragraaf worden de basisinstellingen van inetd behandeld met de opties vanaf de commandoregel en met het instellingenbestand [.filename]#/etc/inetd.conf#.
+
+[[network-inetd-settings]]
+=== Instellingen
+
+inetd wordt gestart door het man:rc[8]-systeem. De optie `inetd_enable` staat standaard op `NO`, maar kan tijdens de installatie door sysinstall worden aangezet. Door het plaatsen van
+
+[.programlisting]
+....
+inetd_enable="YES"
+....
+
+of
+
+[.programlisting]
+....
+inetd_enable="NO"
+....
+
+in [.filename]#/etc/rc.conf# wordt inetd bij het opstarten van een systeem wel of niet ingeschakeld. Het commando:
+
+[source,bash]
+....
+# service inetd rcvar
+....
+
+kan gedraaid worden om de huidige effectieve instellingen weer te geven.
+
+Dan kunnen er ook nog een aantal commandoregelopties aan inetd meegegeven worden met de optie `inetd_flags`.
+
+[[network-inetd-cmdline]]
+=== Commandoregelopties
+
+Zoals de meeste serverdaemons heeft inetd een aantal opties die doorgegeven kunnen worden om het gedrag aan te passen. Zie de handleidingpagina man:inetd[8] voor een volledige lijst van de opties.
+
+Opties kunnen door middel van de optie `inetd_flags` in [.filename]#/etc/rc.conf# aan inetd worden doorgegeven. Standaard staat `inetd_flags` ingesteld op `-wW -C 60`, dat TCP-wrapping aanzet voor de diensten van inetd, en voorkomt dat elk enkelvoudig IP-adres enige dienst meer dan 60 keer per minuut opvraagt.
+
+Ook al worden er hieronder rate-limiting opties besproken, beginnende gebruikers kunnen blij zijn met het feit dat deze parameters gewoonlijk niet hoeven te worden aangepast. Deze opties kunnen interessant zijn wanneer er een buitensporige hoeveelheid verbindingen worden opgezet. Een volledige lijst van opties staat in de hulppagina man:inetd[8].
+
+-c maximum::
+Geeft het maximale aantal gelijktijdige verzoeken voor iedere dienst aan. De standaard is ongelimiteerd. Kan per dienst ter zijde geschoven worden met de parameter `max-child`.
+
+-C rate::
+Geeft het maximale aantal keren aan dat een dienst vanaf een bepaald IP-adres per minuut aangeroepen kan worden. Kan per dienst ter zijde geschoven worden met de parameter `max-connections-per-ip-per-minute`.
+
+-R rate::
+Geeft het maximale aantal keren aan dat een dienst per minuut aangeroepen kan worden. De standaard is 256. De instelling `0` geeft aan dat er geen limiet is.
+
+-s maximum::
+Specificeert het maximaal aantal keer per minuut dat een dienst aangeroepen kan worden vanuit een enkelvoudig IP-adres; de standaard is onbeperkt. Kan worden overstemd op een per-dienst-basis met de parameter `max-child-per-ip`.
+
+[[network-inetd-conf]]
+=== [.filename]#inetd.conf#
+
+De instellingen van inetd worden beheerd in [.filename]#/etc/inetd.conf#.
+
+Als er een wijziging wordt aangebracht in [.filename]#/etc/inetd.conf#, dan kan inetd gedwongen worden om de instellingen opnieuw in te lezen door dit commando te draaien:
+
+[[network-inetd-reread]]
+.Het instellingenbestand van inetd herladen
+[example]
+====
+
+[source,bash]
+....
+# service inetd reload
+....
+
+====
+
+Iedere regel in het bestand met instellingen heeft betrekking op een individuele daemon. Commentaar wordt vooraf gegaan door een `#`. De opmaak van elke regel van [.filename]##/etc/inetd.conf## is als volgt:
+
+[.programlisting]
+....
+service-name
+socket-type
+protocol
+{wait|nowait}[/max-child[/max-connections-per-ip-per-minute[/max-child-per-ip]]]
+user[:group][/login-class]
+server-program
+server-program-arguments
+....
+
+Een voorbeeldregel voor de daemon man:ftpd[8] met IPv4 kan eruit zien als:
+
+[.programlisting]
+....
+ftp     stream  tcp     nowait  root    /usr/libexec/ftpd       ftpd -l
+....
+
+service-name::
+Dit is de dienstnaam van een daemon. Die moet overeenkomen met een dienst uit [.filename]#/etc/services#. Hiermee kan de poort waarop inetd moet luisteren aangegeven worden. Als er een nieuwe dienst wordt gemaakt, moet die eerst in [.filename]#/etc/services# gezet worden.
+
+socket-type::
+Dit is `stream`, `dgram`, `raw` of `seqpacket`. `stream` moet gebruikt worden voor verbindingsgebaseerde TCP-daemons, terwijl `dgram` wordt gebruikt voor daemons die gebruik maken van het transportprotocol UDP.
+
+protocol::
+Een van de volgende:
++
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Protocol
+| Toelichting
+
+|tcp, tcp4
+|TCP IPv4
+
+|udp, udp4
+|UDP IPv4
+
+|tcp6
+|TCP IPv6
+
+|udp6
+|UDP IPv6
+
+|tcp46
+|Zowel TCP IPv4 als v6
+
+|udp46
+|Zowel UDP IPv4 als v6
+|===
+{wait|nowait}[/max-child[/max-connections-per-ip-per-minute[/max-child-per-ip]]]::
+`wait|nowait` geeft aan of de daemon die door inetd wordt aangesproken zijn eigen sockets kan afhandelen of niet. `dgram` sockettypen moeten de optie `wait` gebruiken, terwijl streamsocket daemons, die meestal multi-threaded zijn, de optie `nowait` horen te gebruiken. `wait` geeft meestal meerdere sockets aan een daemon, terwijl `nowait` een kinddaemon draait voor iedere nieuwe socket.
++
+Het maximum aantal kinddaemons dat inetd mag voortbrengen kan ingesteld worden met de optie `max-child`. Als een limiet van tien instanties van een bepaalde daemon gewenst is, dan zou er `/10` achter `nowait` gezet worden. Door `/0` wordt een onbeperkt aantal kinderen toegestaan.
++
+Naast `max-child` zijn er nog twee andere opties waarmee het maximale aantal verbindingen van een bepaalde plaats naar een daemon ingesteld kan worden. `max-connections-per-ip-per-minute` beperkt het aantal verbindingen per minuut voor enig IP-adres, een waarde van tien betekent hier dat er van ieder IP-adres maximaal tien verbindingen naar een bepaalde dienst tot stand gebracht kunnen worden. `max-child-per-ip` beperkt het aantal kindprocessen dat namens enig IP-adres op enig moment gestart kan worden. Deze opties kunnen zijn nuttig om bedoeld en onbedoeld buitensporig bronnengebruik van en Denial of Service (DoS) aanvallen op een machine te voorkomen.
++
+In dit veld is één van `wait` of `nowait` verplicht. `max-child`, `max-connections-per-ip-per-minute` en `max-child-per-ip` zijn optioneel.
++
+Een stream-type multi-threaded daemon zonder één van de limieten `max-child`, `max-connections-per-ip-per-minute` of `max-child-per-ip` is eenvoudigweg: `nowait`.
++
+Dezelfde daemon met een maximale limiet van tien daemons zou zijn: `nowait/10`.
++
+Dezelfde instellingen met een limiet van twintig verbindingen per IP-adres per minuut en een totaal maximum van tien kinddaemons zou zijn: `nowait/10/20`.
++
+Deze opties worden allemaal gebruikt door de standaardinstellingen van de daemon man:fingerd[8]:
++
+[.programlisting]
+....
+finger stream  tcp     nowait/3/10 nobody /usr/libexec/fingerd fingerd -s
+....
++
+Als afsluiting, een voorbeeld in dit veld met een maximum van 100 kinderen in totaal, met een maximum van 5 voor enig IP-adres zou zijn: `nowait/100/0/5`.
+
+user::
+Dit is de gebruikersnaam waar een daemon onder draait. Daemons draaien meestal als de gebruiker `root`. Om veiligheidsredenen draaien sommige daemons onder de gebruiker `daemon` of de gebruiker met de minste rechten: `nobody`.
+
+server-program::
+Het volledige pad van de daemon die uitgevoerd moet worden als er een verbinding wordt ontvangen. Als de daemon een dienst is die door inetd intern wordt geleverd, dan moet de optie `internal` gebruikt worden.
+
+server-program-arguments::
+Deze optie werkt samen met de optie `server-program` en hierin worden de argumenten ingesteld, beginnend met `argv[0]`, die bij het starten aan de daemon worden meegegeven. Als `mijndaemon -d` de commandoregel is, dan zou `mijndaemon -d` de waarde van `server-program-arguments` zijn. Hier geldt ook dat als de daemon een interne dienst is, hier de optie `internal` moet worden.
+
+[[network-inetd-security]]
+=== Beveiliging
+
+Afhankelijk van keuzes gemaakt tijdens de installatie, kunnen veel van de diensten van inetd standaard ingeschakeld zijn. Het is verstandig te overwegen om een daemon dat niet noodzakelijk is uit te schakelen. Plaats een `#` voor de daemon in [.filename]##/etc/inetd.conf## en <<network-inetd-reread,herlaad vervolgens de instellingen van inetd>>. Sommige daemons, zoals fingerd, zijn wellicht helemaal niet gewenst omdat ze informatie geven die nuttig kan zijn voor een aanvaller.
+
+Sommige daemons zijn zich niet echt bewust van beveiliging en hebben lange of niet bestaande timeouts voor verbindingspogingen. Hierdoor kan een aanvaller langzaam veel verbindingen maken met een daemon en zo beschikbare bronnen verzadigen. Het is verstandig voor die daemons de limietopties `max-connections-per-ip-per-minute`, `max-child` of `max-child-per-ip` te gebruiken als ze naar uw smaak teveel verbindingen hebben.
+
+TCP-wrapping staat standaard aan. Er staat meer informatie over het zetten van TCP-restricties op de verschillende daemons die door inetd worden aangesproken in man:hosts_access[5].
+
+[[network-inetd-misc]]
+=== Allerlei
+
+daytime, time, echo, discard, chargen en auth zijn allemaal interne diensten van inetd.
+
+De dienst auth biedt identiteitsnetwerkdiensten en is tot op een bepaald niveau instelbaar, terwijl de anderen eenvoudigweg aan of uit staan.
+
+Meer diepgaande informatie staat in man:inetd[8].
+
+[[network-nfs]]
+== Netwerkbestandssysteem (NFS)
+
+Het Netwerkbestandssysteem (Network File System) is een van de vele bestandssystemen die FreeBSD ondersteunt. Het staat ook wel bekend als NFS. Met NFS is het mogelijk om mappen en bestanden met anderen in een netwerk te delen. Door het gebruik van NFS kunnen gebruikers en programma's bij bestanden op andere systemen op bijna dezelfde manier als bij hun eigen lokale bestanden.
+
+De grootste voordelen van NFS zijn:
+
+* Lokale werkstations gebruiken minder schijfruimte omdat veel gebruikte data op één machine opgeslagen kan worden en nog steeds toegankelijk is voor gebruikers via het netwerk;
+* Gebruikers hoeven niet op iedere machine een thuismap te hebben. Thuismappen kunnen op de NFS server staan en op het hele netwerk beschikbaar zijn;
+* Opslagapparaten als floppydisks, CD-ROM drives en Zip(R) drives kunnen door andere machines op een netwerk gebruikt worden. Hierdoor kan het aantal drives met verwijderbare media in een netwerk verkleind worden.
+
+=== Hoe NFS werkt
+
+NFS bestaat uit tenminste twee hoofdonderdelen: een server en een of meer cliënten. De cliënt benadert de gegevens die op een servermachine zijn opgeslagen via een netwerk. Om dit mogelijk te maken moeten er een aantal processen ingesteld en gestart worden.
+
+Op de server moeten de volgende daemons draaien:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Daemon
+| Beschrijving
+
+|nfsd
+|De NFS-daemon die verzoeken van de NFS cliënten afhandelt.
+
+|mountd
+|De NFS koppeldaemon die doorgestuurde verzoeken van man:nfsd[8] uitvoert.
+
+|rpcbind
+|Deze daemon geeft voor NFS-cliënten aan welke poort de NFS-server gebruikt.
+|===
+
+Op de cliënt kan ook een daemon draaien: nfsiod. De daemon nfsiod handelt verzoeken van de NFS-server af. Dit is optioneel en kan de prestaties verbeteren, maar het is niet noodzakelijk voor een normale en correcte werking. Meer informatie staat in man:nfsiod[8].
+
+[[network-configuring-nfs]]
+=== NFS instellen
+
+NFS instellen gaat redelijk rechtlijnig. Alle processen die moeten draaien kunnen meestarten bij het opstarten door een paar wijzigingen in [.filename]#/etc/rc.conf#.
+
+Op de NFS server dienen de volgende opties in [.filename]#/etc/rc.conf# te staan:
+
+[.programlisting]
+....
+rpcbind_enable="YES"
+nfs_server_enable="YES"
+mountd_flags="-r"
+....
+
+mountd start automatisch als de NFS server is ingeschakeld.
+
+Op de cliënt dient de volgende optie in [.filename]#/etc/rc.conf# te staan:
+
+[.programlisting]
+....
+nfs_client_enable="YES"
+....
+
+In het bestand [.filename]#/etc/exports# staat beschreven welke bestandssystemen NFS moet exporteren (soms heet dat ook wel delen of "sharen"). Iedere regel in [.filename]#/etc/exports# slaat op een bestandssysteem dat wordt geëxporteerd en welke machines toegang hebben tot dat bestandssysteem. Samen met machines die toegang hebben, kunnen ook toegangsopties worden aangegeven. Er zijn veel opties beschikbaar, maar hier worden er maar een paar beschreven. Alle opties staan beschreven in man:exports[5].
+
+Nu volgen een aantal voorbeelden voor [.filename]#/etc/exports#:
+
+Het volgende voorbeeld geeft een beeld van hoe een bestandssysteem te exporteren, hoewel de instellingen afhankelijk zijn van de omgeving en het netwerk. Om bijvoorbeeld de map [.filename]#/cdrom# te exporteren naar drie machines die dezelfde domeinnaam hebben als de server (vandaar dat de machinenamen geef domeinachtervoegsel hebben) of in [.filename]#/etc/hosts# staan. De vlag `-ro` exporteert het bestandssysteem als alleen-lezen. Door die vlag kan een ander systeem niet schrijven naar het geëxporteerde bestandssysteem.
+
+[.programlisting]
+....
+/cdrom -ro host1 host2 host3
+....
+
+Het volgende voorbeeld exporteert [.filename]#/home# naar drie hosts op basis van IP-adres. Dit heeft zin als er een privaat netwerk bestaat, zonder dat er een DNS server is ingesteld. Optioneel kan [.filename]#/etc/hosts# gebruikt worden om interne hostnamen in te stellen. Er is meer informatie te vinden in man:hosts[5]. Met de vlag `-alldirs` mogen submappen ook koppelpunten zijn. De submap wordt dan niet feitelijk aangekoppeld, maar de cliënt koppelt dan alleen de submappen aan die verplicht of nodig zijn.
+
+[.programlisting]
+....
+/home  -alldirs  10.0.0.2 10.0.0.3 10.0.0.4
+....
+
+Het volgende voorbeeld exporteert [.filename]#/a# zo dat twee cliënten uit verschillende domeinen bij het bestandssysteem mogen. Met de vlag `-maproot=root` mag de gebruiker op het andere systeem gegevens naar het geëxporteerde bestandssysteem schrijven als `root`. Als de vlag `-maproot=root` niet wordt gebruikt, dan kan een gebruiker geen bestanden wijzigen op het geëxporteerde bestandssysteem, zelfs niet als een gebruiker daar `root` is.
+
+[.programlisting]
+....
+/a  -maproot=root  host.example.com box.example.org
+....
+
+Om een cliënt toegang te geven tot een geëxporteerd bestandssysteem, moet die cliënt daar rechten voor hebben. De cliënt moet daarvoor genoemd worden in [.filename]#/etc/exports#.
+
+In [.filename]#/etc/exports# staat iedere regel voor de exportinformatie van één bestandssysteem naar één host. Per bestandssysteem mag een host maar één keer genoemd worden en mag maar één standaard hebben. Stel bijvoorbeeld dat [.filename]#/usr# een enkel bestandssysteem is. Dan is de volgende [.filename]#/etc/exports# niet geldig:
+
+[.programlisting]
+....
+# Werkt niet als /usr 1 bestandssysteem is
+/usr/src   client
+/usr/ports client
+....
+
+Eén bestandssysteem, [.filename]#/usr#, heeft twee regels waarin exports naar dezelfde host worden aangegeven, `client`. In deze situatie is de juiste instelling:
+
+[.programlisting]
+....
+/usr/src /usr/ports  client
+....
+
+De eigenschappen van een bestandssysteem dat naar een bepaalde host wordt geëxporteerd moeten allemaal op één regel staan. Regels waarop geen cliënt wordt aangegeven worden behandeld als een enkele host. Dit beperkt hoe bestandssysteem geëxporteerd kunnen worden, maar dat blijkt meestal geen probleem te zijn.
+
+Het volgende voorbeeld is een geldige exportlijst waar [.filename]#/usr# en [.filename]#/exports# lokale bestandssystemen zijn:
+
+[.programlisting]
+....
+# Exporteer src en ports naar client01 en client02,
+# maar alleen client01 heeft er rootprivileges
+/usr/src /usr/ports -maproot=root    client01
+/usr/src /usr/ports               client02
+# De cliëntmachines hebben rootrechten en kunnen overal aankoppelen
+# op /exports. Iedereen in de wereld kan /exports/obj als alleen-lezen aankoppelen.
+/exports -alldirs -maproot=root      client01 client02
+/exports/obj -ro
+....
+
+De daemon mountd moet gedwongen worden om het bestand [.filename]#/etc/exports# te controleren steeds wanneer het is aangepast, zodat de veranderingen effectief kunnen worden. Dit kan worden bereikt door òfwel een HUP-signaal naar de draaiende daemon te sturen:
+
+[source,bash]
+....
+# kill -HUP `cat /var/run/mountd.pid`
+....
+
+of door het man:rc[8] script `mountd` met de juiste parameter aan te roepen:
+
+[source,bash]
+....
+# service mountd onereload
+....
+
+Raadpleeg crossref:config[configtuning-rcd,Gebruik van rc met FreeBSD] voor meer informatie over het gebruik van rc-scripts.
+
+Het is ook mogelijk een machine te herstarten, zodat FreeBSD alles netjes in kan stellen, maar dat is niet nodig. Het uitvoeren van de volgende commando's als `root` hoort hetzelfde resultaat te hebben.
+
+Op de NFS server:
+
+[source,bash]
+....
+# rpcbind
+# nfsd -u -t -n 4
+# mountd -r
+....
+
+Op de NFS cliënt:
+
+[source,bash]
+....
+# nfsiod -n 4
+....
+
+Nu is alles klaar om feitelijk het netwerkbestandssysteem aan te koppelen. In de volgende voorbeelden is de naam van de server `server` en de naam van de cliënt is `client`. Om een netwerkbestandssysteem slechts tijdelijk aan te koppelen of om alleen te testen, kan een commando als het onderstaande als `root` op de cliënt uitgevoerd worden:
+
+[source,bash]
+....
+# mount server:/home /mnt
+....
+
+Hiermee wordt de map [.filename]#/home# op de server aangekoppeld op [.filename]#/mnt# op de cliënt. Als alles juist is ingesteld, zijn nu in [.filename]#/mnt# op de cliënt de bestanden van de server zichtbaar.
+
+Om een netwerkbestandssysteem iedere keer als een computer opstart aan te koppelen, kan het bestandssysteem worden toegevoegd aan het bestand [.filename]#/etc/fstab#:
+
+[.programlisting]
+....
+server:/home	/mnt	nfs	rw	0	0
+....
+
+Alle beschikbare opties staan in man:fstab[5].
+
+=== Op slot zetten
+
+Voor sommige applicaties (b.v. mutt) is het nodig dat bestanden op slot staan om correct te werken. In het geval van NFS, kan rpc.lockd worden gebruikt voor het op slot zetten van bestanden. Voeg het volgende toe aan het bestand [.filename]#/etc/rc.conf# op zowel de cliënt als de server om het aan te zetten (het wordt aangenomen dat de NFS-cliënt en -server reeds zijn geconfigureerd):
+
+[.programlisting]
+....
+rpc_lockd_enable="YES"
+rpc_statd_enable="YES"
+....
+
+Start de applicatie met:
+
+[source,bash]
+....
+# service lockd start
+# service statd start
+....
+
+Als echt op slot zetten tussen de NFS-cliënten en de NFS-server niet nodig is, is het mogelijk om de NFS-cliënt bestanden lokaal op slot te laten zetten door `-L` aan man:mount_nfs[8] door te geven. In de handleidingpagina man:mount_nfs[8] staan verdere details.
+
+=== Mogelijkheden voor gebruik
+
+NFS is voor veel doeleinden in te zetten. Een aantal voorbeelden:
+
+* Een aantal machines een CD-ROM of andere media laten delen. Dat is goedkoper en vaak ook handiger, bijvoorbeeld bij het installeren van software op meerdere machines;
+* Op grote netwerken kan het praktisch zijn om een centrale NFS server in te richten, waarop alle thuismappen staan. Die thuismappen kunnen dan geëxporteerd worden, zodat gebruikers altijd dezelfde thuismap hebben, op welk werkstation ze ook aanmelden;
+* Meerdere machines kunnen een gezamenlijke map [.filename]#/usr/ports/distfiles# hebben. Dan is het mogelijk om een port op meerdere machines te installeren, zonder op iedere machine de broncode te hoeven downloaden.
+
+[[network-amd]]
+=== Automatisch aankoppelen met amd
+
+man:amd[8] (de automatic mounter daemon) koppelt automatisch netwerkbestandssystemen aan als er aan een bestand of map binnen dat bestandssysteem wordt gerefereerd. amd ontkoppelt ook bestandssystemen die een bepaalde tijd niet gebruikt worden. Het gebruikt van amd is een aantrekkelijk en eenvoudig alternatief ten opzichte van permanente koppelingen, die meestal in [.filename]#/etc/fstab# staan.
+
+amd werkt door zichzelf als NFS-server te koppelen aan de mappen [.filename]#/host# en [.filename]#/net#. Als binnen die mappen een bestand wordt geraadpleegd, dan zoekt amd de bijbehorende netwerkkoppeling op en koppelt die automatisch aan. [.filename]#/net# wordt gebruikt om een geëxporteerd bestandssysteem van een IP-adres aan te koppelen, terwijl [.filename]#/host# wordt gebruikt om een geëxporteerd bestandssysteem van een hostnaam aan te koppelen.
+
+Het raadplegen van een bestand in [.filename]#/host/foobar/usr# geeft amd aan dat die moet proberen de [.filename]#/usr# export op de host `foobar` aan te koppelen.
+
+.Een export aankoppelen met amd
+[example]
+====
+De beschikbare koppelingen van een netwerkhost zijn te bekijken met `showmount`. Om bijvoorbeeld de koppelingen van de host `foobar` te bekijken:
+
+[source,bash]
+....
+% showmount -e foobar
+Exports list on foobar:
+/usr                               10.10.10.0
+/a                                 10.10.10.0
+% cd /host/foobar/usr
+....
+
+====
+
+Zoals in het bovenstaande voorbeeld te zien is, toont `showmount`[.filename]#/usr# als een export. Als er naar de map [.filename]#/host/foobar/usr# wordt gegaan, probeert amd de hostnaam `foobar` te resolven en de gewenste export automatisch aan te koppelen.
+
+amd kan gestart worden door de opstartscript door de volgende regel in [.filename]#/etc/rc.conf# te plaatsen:
+
+[.programlisting]
+....
+amd_enable="YES"
+....
+
+Er kunnen ook nog opties meegegeven worden aan amd met de optie `amd_flags`. Standaard staat `amd_flags` ingesteld op:
+
+[.programlisting]
+....
+amd_flags="-a /.amd_mnt -l syslog /host /etc/amd.map /net /etc/amd.map"
+....
+
+In het bestand [.filename]#/etc/amd.map# staan de standaardinstellingen waarmee exports aangekoppeld worden. In het bestand [.filename]#/etc/amd.conf# staan een aantal van de meer gevorderde instellingen van amd.
+
+In man:amd[8] en man:amd.conf[8] staat meer informatie.
+
+[[network-nfs-integration]]
+=== Problemen bij samenwerking met andere systemen
+
+Bepaalde Ethernet adapters voor ISA PC systemen kennen limieten die tot serieuze netwerkproblemen kunnen leiden, in het bijzonder met NFS. Dit probleem is niet specifiek voor FreeBSD, maar het kan op FreeBSD wel voor komen.
+
+Het probleem ontstaat bijna altijd als (FreeBSD) PC-systemen netwerken met hoog presterende werkstations, zoals van Silicon Graphics, Inc. en Sun Microsystems, Inc. De NFS-koppeling werkt prima en wellicht lukken een aantal acties ook, maar dan ineens lijkt de server niet meer te reageren voor de cliënt, hoewel verzoeken van en naar andere systemen gewoon verwerkt worden. Dit gebeurt op een cliëntsysteem, of de cliënt nu het FreeBSD systeem is of het werkstation. Op veel systemen is er geen manier om de cliënt netjes af te sluiten als dit probleem is ontstaan. Vaak is de enige mogelijkheid een reset van de cliënt, omdat het probleem met NFS niet opgelost kan worden.
+
+Hoewel de enige "correcte" oplossing de aanschaf van een snellere en betere Ethernet adapter voor het FreeBSD systeem is, is er zo om het probleem heen te werken dat het werkbaar is. Als FreeBSD de _server_ is, kan de optie `-w=1024` gebruikt worden bij het aankoppelen door de cliënt. Als het FreeBSD systeem de _cliënt_ is, dan dient het NFS-bestandssysteem aangekoppeld te worden met de optie `r=1024`. Deze opties kunnen het vierde veld zijn in een regel in [.filename]#fstab# voor automatische aankoppelingen en bij handmatige aankoppelingen met man:mount[8] kan de parameter `-o` gebruikt worden.
+
+Soms wordt een ander probleem voor dit probleem versleten, als servers en cliënten zich op verschillende netwerken bevinden. Als dat het geval is, dan dient _vastgesteld_ te worden dat routers de UDP informatie op de juiste wijze routeren, omdat er anders nooit NFS-verkeer gerouteerd kan worden.
+
+In de volgende voorbeelden is `fastws` de host(interface)naam van een hoog presterend werkstation en `freebox` is de host(interface)naam van een FreeBSD systeem met een Ethernet adapter die mindere prestaties levert. [.filename]#/sharedfs# wordt het geëxporteerde NFS-bestandssysteem (zie man:exports[5]) en [.filename]#/project# wordt het koppelpunt voor het geëxporteerde bestandssysteem op de cliënt.
+
+[NOTE]
+====
+In sommige gevallen kunnen applicaties beter draaien als extra opties als `hard` of `soft` en `bg` gebruikt worden.
+====
+
+Voorbeelden voor het FreeBSD systeem (`freebox`) als de cliënt in [.filename]#/etc/fstab# op `freebox`:
+
+[.programlisting]
+....
+fastws:/sharedfs /project nfs rw,-r=1024 0 0
+....
+
+Als een handmatig aankoppelcommando op `freebox`:
+
+[source,bash]
+....
+# mount -t nfs -o -r=1024 fastws:/sharedfs /project
+....
+
+Voorbeelden voor het FreeBSD systeem als de server in [.filename]#/etc/fstab# op `fastws`:
+
+[.programlisting]
+....
+freebox:/sharedfs /project nfs rw,-w=1024 0 0
+....
+
+Als een handmatig aankoppelcommando op `fastws`:
+
+[source,bash]
+....
+# mount -t nfs -o -w=1024 freebox:/sharedfs /project
+....
+
+Bijna iedere 16-bit Ethernet adapter werkt zonder de hierboven beschreven restricties op de lees- en schrijfgrootte.
+
+Voor wie het wil weten wordt nu beschreven wat er gebeurt als de fout ontstaan, wat ook duidelijk maakt waarom het niet hersteld kan worden. NFS werkt meestal met een "block"grootte van 8 K (hoewel het mogelijk is dat er kleinere fragmenten worden verwerkt). Omdat de maximale grootte van een Ethernet pakket rond de 1500 bytes ligt, wordt een "block" opgesplitst in meerdere Ethernetpakketten, hoewel het hoger in de code nog steeds één eenheid is, en wordt ontvangen, samengevoegd en _bevestigd_ als een eenheid. De hoog presterende werkstations kunnen de pakketten waaruit een NFS-eenheid bestaat bijzonder snel naar buiten pompen. Op de kaarten met minder capaciteit worden de eerdere pakketten door de latere pakketten van dezelfde eenheid ingehaald voordat ze bij die host zijn aangekomen en daarom kan de eenheid niet worden samengesteld en bevestigd. Als gevolg daarvan ontstaat er op het werkstation een timeout en probeert die de eenheid opnieuw te sturen, maar dan weer de hele eenheid van 8 K, waardoor het proces wordt herhaald, ad infinitum.
+
+Door de grootte van de eenheid kleiner te houden dan de grootte van een Ethernet pakket, is het zeker dat elk Ethernetpakket dat compleet is aangekomen bevestigd kan worden, zodat de deadlock niet ontstaat.
+
+Toch kan een PC systeem nog wel overrompeld worden als hoog presterende werkstations er op inhakken, maar met de betere netwerkkaarten valt het dan in ieder geval niet om door de NFS "eenheden". Als het systeem toch wordt overrompeld, dan worden de betrokken eenheden opnieuw verstuurd en dan is de kans groot dat ze worden ontvangen, samengevoegd en bevestigd.
+
+[[network-nis]]
+== Netwerkinformatiesysteem (NIS/YP)
+
+=== Wat is het?
+
+NIS, dat staat voor Netwerkinformatiediensten (Network Information Services), is ontwikkeld door Sun Microsystems om het beheer van UNIX(R) (origineel SunOS(TM)) systemen te centraliseren. Tegenwoordig is het eigenlijk een industriestandaard geworden. Alle grote UNIX(R) achtige systemen (Solaris(TM), HP-UX, AIX(R), Linux(R), NetBSD, OpenBSD, FreeBSD, enzovoort) ondersteunen NIS.
+
+NIS stond vroeger bekend als Yellow Pages, maar vanwege problemen met het handelsmerk heeft Sun de naam veranderd. De oude term, en yp, wordt nog steeds vaak gebruikt.
+
+Het is een op RPC-gebaseerd cliënt/serversysteem waarmee een groep machines binnen een NIS-domein een gezamenlijke verzameling met instellingenbestanden kan delen. Hierdoor kan een beheerder NIS-systemen opzetten met een minimaal aantal instellingen en vanaf een centrale lokatie instellingen toevoegen, verwijderen en wijzigen.
+
+Het is te vergelijken met het Windows NT(R) domeinsysteem en hoewel de interne implementatie van de twee helemaal niet overeenkomt, is de basisfunctionaliteit vergelijkbaar.
+
+=== Termen en processen om te onthouden
+
+Er zijn een aantal termen en belangrijke gebruikersprocessen die een rol spelen bij het implementeren van NIS op FreeBSD, zowel bij het maken van een NIS-server als bij het maken van een systeem dan NIS-cliënt is:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Term
+| Beschrijving
+
+|NIS-domeinnaam
+|Een NIS-masterserver en al zijn cliënten (inclusief zijn slave master) hebben een NIS-domeinnaam. Vergelijkbaar met een Windows NT(R) domeinnaam, maar de NIS-domeinnaam heeft niets te maken met DNS.
+
+|rpcbind
+|Moet draaien om RPC (Remote Procedure Call in te schakelen, een netwerkprotocol dat door NIS gebruikt wordt). Als rpcbind niet draait, dan kan er geen NIS-server draaien en kan een machine ook geen NIS-cliënt zijn.
+
+|ypbind
+|"Verbindt" een NIS-cliënt aan zijn NIS-server. Dat gebeurt door met de NIS-domeinnaam van het systeem en door het gebruik van RPC te verbinden met de server. ypbind is de kern van cliënt-server communicatie in een NIS-omgeving. Als ypbind op een machine stopt, dan kan die niet meer bij de NIS-server komen.
+
+|ypserv
+|Hoort alleen te draaien op NIS-servers. Dit is het NIS-serverproces zelf. Als man:ypserv[8] stopt, dan kan de server niet langer reageren op NIS-verzoeken (hopelijk is er dan een slaveserver om het over te nemen). Er zijn een aantal implementaties van NIS, maar niet die op FreeBSD, die geen verbinding met een andere server proberen te maken als de server waarmee ze verbonden waren niet meer reageert. In dat geval is vaak het enige dat werkt het serverproces herstarten (of zelfs de hele server) of het ypbind-proces op de cliënt.
+
+|rpc.yppasswdd
+|Nog een proces dat alleen op NIS-masterservers hoort te draaien. Dit is een daemon waarbij NIS-cliënten hun NIS-wachtwoorden kunnen wijzigen. Als deze daemon niet draait, moeten gebruikers zich aanmelden op de NIS-masterserver en daar hun wachtwoord wijzigen.
+|===
+
+=== Hoe werkt het?
+
+Er zijn drie typen hosts in een NIS-omgeving: master servers, slaveservers en cliënten. Servers zijn het centrale depot voor instellingen voor een host. Masterservers bevatten de geautoriseerd kopie van die informatie, terwijl slaveservers die informatie spiegelen voor redundantie. Cliënten verlaten zich op de servers om hun die informatie ter beschikking te stellen.
+
+Op deze manier kan informatie uit veel bestanden gedeeld worden. De bestanden [.filename]#master.passwd#, [.filename]#group# en [.filename]#hosts# worden meestal via NIS gedeeld. Als een proces op een cliënt informatie nodig heeft die normaliter in een van die lokale bestanden staat, dan vraagt die het in plaats daarvan aan de NIS-servers waarmee hij verbonden is.
+
+==== Soorten machines
+
+* Een _NIS-masterserver_. Deze server onderhoudt, analoog aan een Windows NT(R) primaire domeincontroller, de bestanden die door alle NIS-cliënten gebruikt worden. De bestanden [.filename]#passwd#, [.filename]#group# en andere bestanden die door de NIS-cliënten gebruikt worden staan op de masterserver.
++
+[NOTE]
+====
+Het is mogelijk om één machine master server te laten zijn voor meerdere NIS-domeinen. Dat wordt in deze inleiding echter niet beschreven, omdat die uitgaat van een relatief kleine omgeving.
+====
+
+* _NIS-slaveservers_. Deze zijn te vergelijken met Windows NT(R) backup domain controllers. NIS-slaveservers beheren een kopie van de bestanden met gegevens op de NIS-master. NIS-slaveservers bieden redundantie, die nodig is in belangrijke omgevingen. Ze helpen ook om de belasting te verdelen met de master server: NIS-cliënten maken altijd een verbinding met de NIS-server die het eerst reageert en dat geldt ook voor antwoorden van slaveservers.
+* _NIS-cliënten_. NIS-cliënten authenticeren, net als de meeste Windows NT(R) werkstations, tegen de NIS-server (of de Windows NT(R) domain controller in het geval van Windows NT(R) werkstations) bij het aanmelden.
+
+=== NIS/YP gebruiken
+
+Dit onderdeel behandelt het opzetten van een NIS-voorbeeldomgeving.
+
+==== Plannen
+
+Er wordt uitgegaan van een beheerder van een klein universiteitslab. Dat lab, dat bestaat uit FreeBSD machines, kent op dit moment geen centraal beheer. Iedere machine heeft zijn eigen [.filename]#/etc/passwd# en [.filename]#/etc/master.passwd#. Die bestanden worden alleen met elkaar in lijn gehouden door handmatige handelingen. Als er op dit moment een gebruiker aan het lab wordt toegevoegd, moet `adduser` op alle 15 machines gedraaid worden. Dat moet natuurlijk veranderen en daarom is besloten het lab in te richten met NIS, waarbij twee machines als server worden gebruikt.
+
+Het lab ziet er ongeveer als volgt uit:
+
+[.informaltable]
+[cols="1,1,1", frame="none", options="header"]
+|===
+| Machinenaam
+| IP-adres
+| Rol Machine
+
+|`ellington`
+|`10.0.0.2`
+|NIS-master
+
+|`coltrane`
+|`10.0.0.3`
+|NIS-slave
+
+|`basie`
+|`10.0.0.4`
+|Wetenschappelijk werkstation
+
+|`bird`
+|`10.0.0.5`
+|Cliënt machine
+
+|`cli[1-11]`
+|`10.0.0.[6-17]`
+|Andere cliënt machines
+|===
+
+Bij het voor de eerste keer instellen van een NIS-schema is het verstandig eerst na te denken over hoe dat opgezet moet worden. Hoe groot een netwerk ook is, er moeten een aantal beslissingen gemaakt worden.
+
+===== Een NIS-domeinnaam kiezen
+
+Dit is wellicht niet de bekende "domeinnaam". Daarom wordt het ook de "NIS-domeinnaam" genoemd. Bij de broadcast van een cliënt om informatie wordt ook de naam van het NIS-domein waar hij onderdeel van uitmaakt meegezonden. Zo kunnen meerdere servers op een netwerk bepalen of er antwoord gegeven dient te worden op een verzoek. De NIS-domeinnaam kan voorgesteld worden als de naam van een groep hosts die op een of andere manier aan elkaar gerelateerd zijn.
+
+Sommige organisaties kiezen hun Internet-domeinnaam als NIS-domeinnaam. Dat wordt niet aangeraden omdat het voor verwarring kan zorgen bij het debuggen van netwerkproblemen. De NIS-domeinnaam moet uniek zijn binnen een netwerk en het is handig als die de groep machines beschrijft waarvoor hij geldt. Zo kan bijvoorbeeld de financiële afdeling van Acme Inc. als NIS-domeinnaam "acme-fin" hebben. In dit voorbeeld wordt de naam `test-domain` gekozen.
+
+Sommige besturingssystemen gebruiken echter (met name SunOS(TM)) hun NIS-domeinnaam als hun Internet-domeinnaam. Als er machines zijn op een netwerk die deze restrictie kennen, dan _moet_ de Internet-domeinnaam als de naam voor het NIS-domeinnaam gekozen worden.
+
+===== Systeemeisen
+
+Bij het kiezen van een machine die als NIS-server wordt gebruikt zijn er een aantal aandachtspunten. Een van de onhandige dingen aan NIS is de afhankelijkheid van de cliënten van de server. Als een cliënt de server voor zijn NIS-domein niet kan bereiken, dan wordt die machine vaak onbruikbaar. Door het gebrek aan gebruiker- en groepsinformatie bevriezen de meeste systemen. Daarom moet er een machine gekozen worden die niet vaak herstart hoeft te worden of wordt gebruikt voor ontwikkeling. De NIS-server is in het meest ideale geval een alleenstaande server die als enige doel heeft NIS-server te zijn. Als een netwerk niet zwaar wordt gebruikt, kan de NIS-server op een machine die ook andere diensten aanbiedt gezet worden, maar het blijft belangrijk om ervan bewust te zijn dat als de NIS-server niet beschikbaar is, dat nadelige invloed heeft op _alle_ NIS-cliënten.
+
+==== NIS-servers
+
+De hoofdversies van alle NIS-informatie staan opgeslagen op één machine die de NIS-masterserver heet. De databases waarin de informatie wordt opgeslagen heten NIS-afbeeldingen. In FreeBSD worden die afbeeldingen opgeslagen in [.filename]#/var/yp/[domeinnaam]# waar [.filename]#[domeinnaam]# de naam is van het NIS-domein dat wordt bediend. Een enkele NIS-server kan tegelijkertijd meerdere NIS-domeinen ondersteunen en het is dus mogelijk dat er meerdere van zulke mappen zijn, een voor ieder ondersteund domein. Ieder domein heeft zijn eigen onafhankelijke verzameling afbeeldingen.
+
+In NIS-master- en -slaveservers worden alle NIS-verzoeken door de daemon `ypserv` afgehandeld. `ypserv` is verantwoordelijk voor het ontvangen van inkomende verzoeken van NIS-cliënten, het vertalen van de gevraagde domeinnaam en mapnaam naar een pad naar het corresponderende databasebestand en het terugsturen van de database naar de cliënten.
+
+===== Een NIS-masterserver opzetten
+
+Het opzetten van een master NIS-server kan erg eenvoudig zijn, afhankelijk van de behoeften. FreeBSD heeft ondersteuning voor NIS als basisfunctie. Alleen de volgende regels hoeven aan [.filename]#/etc/rc.conf# toegevoegd te worden en FreeBSD doet de rest:
+
+[.procedure]
+====
+
+[.programlisting]
+....
+nisdomainname="test-domain"
+....
+
+. Deze regel stelt de NIS-domeinnaam in op `test-domain` bij het instellen van het netwerk (bij het opstarten).
++
+[.programlisting]
+....
+nis_server_enable="YES"
+....
++
+. Dit geeft FreeBSD aan de NIS-serverprocessen te starten als het netwerk de volgende keer wordt opgestart.
++
+[.programlisting]
+....
+nis_yppasswdd_enable="YES"
+....
+. Dit schakelt de daemon `rpc.yppasswdd` in die, zoals al eerder aangegeven, cliënten toestaat om hun NIS-wachtwoord vanaf een cliënt-machine te wijzigen.
+====
+
+[NOTE]
+====
+Afhankelijk van de inrichting van NIS, kunnen er nog meer instellingen nodig zijn. In het onderdeel <<network-nis-server-is-client,NIS-servers die ook NIS-cliënten zijn>> staan meer details.
+====
+
+Draai na het instellen van bovenstaande regels het commando `/etc/netstart` als supergebruiker. Het zal alles voor u instellen, gebruikmakende van de waarden die u in [.filename]#/etc/rc.conf# heeft ingesteld. Start als laatste stap, voor het initialiseren van de NIS-afbeeldingen, de daemon ypserv handmatig:
+
+[source,bash]
+....
+# service ypserv start
+....
+
+===== NIS-afbeeldingen initialiseren
+
+Die _NIS-afbeeldingen_ zijn databasebestanden die in de map [.filename]#/var/yp# staan. Ze worden gemaakt uit de bestanden met instellingen uit de map [.filename]#/etc# van de NIS-master, met één uitzondering: [.filename]#/etc/master.passwd#. Daar is een goede reden voor, want het is niet wenselijk om de wachtwoorden voor `root` en andere administratieve accounts naar alle servers in het NIS-domein te sturen. Daar moet voor het initialiseren van de NIS-afbeeldingen het volgende uitgevoerd worden:
+
+[source,bash]
+....
+# cp /etc/master.passwd /var/yp/master.passwd
+# cd /var/yp
+# vi master.passwd
+....
+
+Dan horen alle systeemaccounts verwijderd te worden (`bin`, `tty`, `kmem`, `games`, enzovoort) en alle overige accounts waarvoor het niet wenselijk is dat ze op de NIS-cliënten terecht komen (bijvoorbeeld `root` en alle andere UID 0 (supergebruiker) accounts).
+
+[NOTE]
+====
+[.filename]#/var/yp/master.passwd# hoort niet te lezen te zijn voor een groep of voor de wereld (dus modus 600)! Voor het aanpassen van de rechten kan `chmod` gebruikt worden.
+====
+
+Als dat is gedaan, kunnen de NIS-afbeeldingen geïnitialiseerd worden. Bij FreeBSD zit een script `ypinit` waarmee dit kan (in de hulppagina staat meer informatie). Dit script is beschikbaar op de meeste UNIX(R) besturingssystemen, maar niet op allemaal. Op Digital UNIX/Compaq Tru64 UNIX heet het `ypsetup`. Omdat er afbeeldingen voor een NIS-master worden gemaakt, wordt de optie `-m` meegegeven aan `ypinit`. Aangenomen dat de voorgaande stappen zijn uitgevoerd, kunnen de NIS-afbeeldingen gemaakt worden op de volgende manier:
+
+[source,bash]
+....
+ellington# ypinit -m test-domain
+Server Type: MASTER Domain: test-domain
+Creating an YP server will require that you answer a few questions.
+Questions will all be asked at the beginning of the procedure.
+Do you want this procedure to quit on non-fatal errors? [y/n: n] n
+Ok, please remember to go back and redo manually whatever fails.
+If you don't, something might not work.
+At this point, we have to construct a list of this domains YP servers.
+rod.darktech.org is already known as master server.
+Please continue to add any slave servers, one per line. When you are
+done with the list, type a <control D>.
+master server   :  ellington
+next host to add:  coltrane
+next host to add:  ^D
+The current list of NIS servers looks like this:
+ellington
+coltrane
+Is this correct?  [y/n: y] y
+
+[..uitvoer van het maken van de afbeeldingen..]
+
+NIS Map update completed.
+ellington has been setup as an YP master server without any errors.
+....
+
+`ypinit` hoort [.filename]#/var/yp/Makefile# gemaakt te hebben uit [.filename]#/var/yp/Makefile.dist#. Als dit bestand is gemaakt, neemt dat bestand aan dat er in een omgeving met een enkele NIS-server wordt gewerkt met alleen FreeBSD-machines. Omdat `test-domain` ook een slaveserver bevat, dient [.filename]#/var/yp/Makefile# gewijzigd te worden:
+
+[source,bash]
+....
+ellington# vi /var/yp/Makefile
+....
+
+Als de onderstaande regel niet al uitgecommentarieerd is, dient dat alsnog te gebeuren:
+
+[.programlisting]
+....
+NOPUSH = "True"
+....
+
+===== Een NIS-slaveserver opzetten
+
+Het opzetten van een NIS-slaveserver is nog makkelijker dan het opzetten van de master. Dit kan door aan te melden op de slaveserver en net als voor de masterserver [.filename]#/etc/rc.conf# te wijzigen. Het enige verschil is dat nu de optie `-s` gebruikt wordt voor het draaien van `ypinit`. Met de optie `-s` moet ook de naam van de NIS-master meegegeven worden. Het commando ziet er dus als volgt uit:
+
+[source,bash]
+....
+coltrane# ypinit -s ellington test-domain
+
+Server Type: SLAVE Domain: test-domain Master: ellington
+
+Creating an YP server will require that you answer a few questions.
+Questions will all be asked at the beginning of the procedure.
+
+Do you want this procedure to quit on non-fatal errors? [y/n: n]  n
+
+Ok, please remember to go back and redo manually whatever fails.
+If you don't, something might not work.
+There will be no further questions. The remainder of the procedure
+should take a few minutes, to copy the databases from ellington.
+Transferring netgroup...
+ypxfr: Exiting: Map successfully transferred
+Transferring netgroup.byuser...
+ypxfr: Exiting: Map successfully transferred
+Transferring netgroup.byhost...
+ypxfr: Exiting: Map successfully transferred
+Transferring master.passwd.byuid...
+ypxfr: Exiting: Map successfully transferred
+Transferring passwd.byuid...
+ypxfr: Exiting: Map successfully transferred
+Transferring passwd.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring group.bygid...
+ypxfr: Exiting: Map successfully transferred
+Transferring group.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring services.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring rpc.bynumber...
+ypxfr: Exiting: Map successfully transferred
+Transferring rpc.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring protocols.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring master.passwd.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring networks.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring networks.byaddr...
+ypxfr: Exiting: Map successfully transferred
+Transferring netid.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring hosts.byaddr...
+ypxfr: Exiting: Map successfully transferred
+Transferring protocols.bynumber...
+ypxfr: Exiting: Map successfully transferred
+Transferring ypservers...
+ypxfr: Exiting: Map successfully transferred
+Transferring hosts.byname...
+ypxfr: Exiting: Map successfully transferred
+
+coltrane has been setup as an YP slave server without any errors.
+Don't forget to update map ypservers on ellington.
+....
+
+Nu hoort er een map [.filename]#/var/yp/test-domain# te zijn waarin kopieë van de NIS-masterserver afbeeldingen staan. Die moeten bijgewerkt blijven. De volgende regel in [.filename]#/etc/crontab# op de slaveservers regelt dat:
+
+[.programlisting]
+....
+20      *       *       *       *       root   /usr/libexec/ypxfr passwd.byname
+21      *       *       *       *       root   /usr/libexec/ypxfr passwd.byuid
+....
+
+Met de bovenstaande twee regels wordt de slave gedwongen zijn afbeeldingen met de afbeeldingen op de masterserver te synchroniseren. Dit is niet verplicht omdat de masterserver automatisch probeert veranderingen aan de NIS-afbeeldingen door te geven aan zijn slaves. Echter, vanwege het belang van correcte wachtwoordinformatie op andere cliënten die van de slaveserver afhankelijk zijn, is het aanbevolen om specifiek de wachtwoordafbeeldingen vaak tot bijwerken te dwingen. Dit is des te belangrijker op drukke netwerken, omdat daar het bijwerken van afbeeldingen niet altijd compleet afgehandeld hoeft te worden.
+
+Nu kan ook op de slaveserver het commando `/etc/netstart` uitgevoerd worden, dat op zijn beurt de NIS-server start.
+
+==== NIS-cliënten
+
+Een NIS-cliënt maakt wat heet een verbinding (binding) met een NIS-server met de daemon `ypbind`. `ypbind` controleert het standaarddomein van het systeem (zoals ingesteld met `domainname`) en begint met het broadcasten van RPC-verzoeken op het lokale netwerk. Die verzoeken bevatten de naam van het domein waarvoor `ypbind` een binding probeert te maken. Als een server die is ingesteld om het gevraagde domein te bedienen een broadcast ontvangt, dan antwoordt die aan `ypbind` dat dan het IP-adres van de server opslaat. Als er meerdere servers beschikbaar zijn, een master en bijvoorbeeld meerdere slaves, dan gebruikt `ypbind` het adres van de eerste server die antwoord geeft. Vanaf dat moment stuurt de cliënt alle NIS-verzoeken naar die server. `ypbind` "pingt" de server zo nu en dan om te controleren of die nog draait. Als er na een bepaalde tijd geen antwoord komt op een ping, dan markeert `ypbind` het domein als niet verbonden en begint het broadcasten opnieuw, in de hoop dat er een andere server wordt gelocaliseerd.
+
+===== Een NIS-cliënt opzetten
+
+Het opzetten van een FreeBSD machine als NIS-cliënt is redelijk doorzichtig:
+
+[.procedure]
+====
+
+. Wijzig [.filename]#/etc/rc.conf# en voeg de volgende regels toe om de NIS-domeinnaam in te stellen en `ypbind` mee te laten starten bij het starten van het netwerk:
++
+[.programlisting]
+....
+nisdomainname="test-domain"
+nis_client_enable="YES"
+....
++
+. Om alle mogelijke regels voor accounts uit de NIS-server te halen, dienen alle gebruikersaccounts uit [.filename]#/etc/master.passwd# verwijderd te worden en dient met `vipw` de volgende regel aan het einde van het bestand geplaatst te worden:
++
+[.programlisting]
+....
++:::::::::
+....
++
+[NOTE]
+======
+Door deze regel wordt alle geldige accounts in de wachtwoordafbeelding van de NIS-server toegang gegeven. Er zijn veel manieren om de NIS-cliënt in te stellen door deze regel te veranderen. In het onderdeel <<network-netgroups,netgroepen>> hieronder staat meer informatie. Zeer gedetailleerde informatie staat in het boek `NFS en NIS beheren` van O'Reilly.
+======
++
+[NOTE]
+======
+Er moet tenminste één lokale account behouden blijven (dus niet geïmporteerd via NIS) in [.filename]#/etc/master.passwd# en die hoort ook lid te zijn van de groep `wheel`. Als er iets mis is met NIS, dan kan die account gebruikt worden om via het netwerk aan te melden, `root` te worden en het systeem te repareren.
+======
++
+. Om alle groepen van de NIS-server te importeren, kan de volgende regel aan [.filename]#/etc/group# toegevoegd worden:
++
+[.programlisting]
+....
++:*::
+....
+====
+
+Voer, om de NIS-cliënt onmiddelijk te starten, de volgende commando's als supergebruiker uit:
+
+[source,bash]
+....
+# /etc/netstart
+# service ypbind start
+....
+
+Na het afronden van deze stappen zou met `ypcat passwd` de passwd map van de NIS-server te zien moeten zijn.
+
+=== NIS-beveiliging
+
+In het algemeen kan iedere netwerkgebruiker een RPC-verzoek doen uitgaan naar man:ypserv[8] en de inhoud van de NIS-afbeeldingen ontvangen, mits die gebruiker de domeinnaam kent. Omdat soort ongeautoriseerde transacties te voorkomen, ondersteunt man:ypserv[8] de optie "securenets", die gebruikt kan worden om de toegang te beperken tot een opgegeven aantal hosts. Bij het opstarten probeert man:ypserv[8] de securenets informatie te laden uit het bestand [.filename]#/var/yp/securenets#.
+
+[NOTE]
+====
+Dit pad kan verschillen, afhankelijk van het pad dat opgegeven is met de optie `-p`. Dit bestand bevat regels die bestaan uit een netwerkspecificatie en een netwerkmasker, gescheiden door witruimte. Regels die beginnen met `#` worden als commentaar gezien. Een voorbeeld van een securenetsbestand zou er zo uit kunnen zien:
+====
+
+[.programlisting]
+....
+# allow connections from local host -- mandatory
+127.0.0.1     255.255.255.255
+# allow connections from any host
+# on the 192.168.128.0 network
+192.168.128.0 255.255.255.0
+# allow connections from any host
+# between 10.0.0.0 to 10.0.15.255
+# this includes the machines in the testlab
+10.0.0.0      255.255.240.0
+....
+
+Als man:ypserv[8] een verzoek ontvangt van een adres dat overeenkomt met een van de bovenstaande regels, dan wordt dat verzoek normaal verwerkt. Als er geen enkele regel op het verzoek van toepassing is, dan wordt het verzoek genegeerd en wordt er een waarschuwing gelogd. Als het bestand [.filename]#/var/yp/securenets# niet bestaat, dan accepteert `ypserv` verbindingen van iedere host.
+
+Het programma `ypserv` ondersteunt ook het pakket TCP Wrapper van Wietse Venema. Daardoor kan een beheerder de instellingenbestanden van TCP Wrapper gebruiken voor toegangsbeperking in plaats van [.filename]#/var/yp/securenets#.
+
+[NOTE]
+====
+Hoewel beide methoden van toegangscontrole enige vorm van beveiliging bieden, zijn ze net als de geprivilegieerde poorttest kwetsbaar voor "IP spoofing" aanvallen. Al het NIS-gerelateerde verkeer hoort door een firewall tegengehouden te worden.
+
+Servers die gebruik maken van [.filename]#/var/yp/securenets# kunnen wellicht legitieme verzoeken van NIS-cliënten weigeren als die gebruik maken van erg oude TCP/IP-implementaties. Sommige van die implementaties zetten alle host bits op nul als ze een broadcast doen en/of kijken niet naar het subnetmasker als ze het broadcastadres berekenen. Hoewel sommige van die problemen opgelost kunnen worden door de instellingen op de cliënt aan te passen, zorgen andere problemen voor het noodgedwongen niet langer kunnen gebruiker van NIS voor die cliënt of het niet langer gebruiken van [.filename]#/var/yp/securenets#.
+
+Het gebruik van [.filename]#/var/yp/securenets# op een server met zo'n oude implementatie van TCP/IP is echt een slecht idee en zal leiden tot verlies van NIS-functionaliteit voor grote delen van een netwerk.
+
+Het gebruik van het pakket TCP Wrapper leidt tot langere wachttijden op de NIS-server. De extra vertraging kan net lang genoeg zijn om een timeout te veroorzaken in cliëntprogramma's, in het bijzonder als het netwerk druk is of de NIS-server traag is. Als een of meer cliënten last hebben van dat symptoom, dan is het verstandig om de cliëntsysteem in kwestie NIS-slaveserver te maken en naar zichzelf te laten wijzen.
+====
+
+=== Aanmelden voor bepaalde gebruikers blokkeren
+
+In het lab staat de machine `basie`, die alleen faculteitswerkstation hoort te zijn. Het is niet gewenst die machine uit het NIS-domein te halen, maar het [.filename]#passwd# bestand op de master NIS-server bevat nu eenmaal accounts voor zowel de faculteit als de studenten. Hoe kan dat opgelost worden?
+
+Er is een manier om het aanmelden van specifieke gebruikers op een machine te weigeren, zelfs als ze in de NIS-database staan. Daarvoor hoeft er alleen maar `-gebruikersnaam` met het juiste aantal dubbele punten (zoals bij andere regels) aan het einde van [.filename]#/etc/master.passwd# op de cliëntmachine toegevoegd te worden, waar _gebruikersnaam_ de gebruikersnaam van de gebruiker die niet mag aanmelden is. De regel met de geblokkeerde gebruiker moet voor de regel met `+` staan om NIS-gebruikers toe te staan. Dit gebeurt bij voorkeur met `vipw`, omdat `vipw` de wijzigingen aan [.filename]#/etc/master.passwd# controleert en ook de wachtwoord database opnieuw bouwt na het wijzigen. Om bijvoorbeeld de gebruiker `bill` te kunnen laten aanmelden op `basie`:
+
+[source,bash]
+....
+basie# vipw
+[voeg -bill::::::::: aan het einde toe, exit]
+vipw: rebuilding the database...
+vipw: done
+
+basie# cat /etc/master.passwd
+
+root:[password]:0:0::0:0:The super-user:/root:/bin/csh
+toor:[password]:0:0::0:0:The other super-user:/root:/bin/sh
+daemon:*:1:1::0:0:Owner of many system processes:/root:/sbin/nologin
+operator:*:2:5::0:0:System &:/:/sbin/nologin
+bin:*:3:7::0:0:Binaries Commands and Source,,,:/:/sbin/nologin
+tty:*:4:65533::0:0:Tty Sandbox:/:/sbin/nologin
+kmem:*:5:65533::0:0:KMem Sandbox:/:/sbin/nologin
+games:*:7:13::0:0:Games pseudo-user:/usr/games:/sbin/nologin
+news:*:8:8::0:0:News Subsystem:/:/sbin/nologin
+man:*:9:9::0:0:Mister Man Pages:/usr/shared/man:/sbin/nologin
+bind:*:53:53::0:0:Bind Sandbox:/:/sbin/nologin
+uucp:*:66:66::0:0:UUCP pseudo-user:/var/spool/uucppublic:/usr/libexec/uucp/uucico
+xten:*:67:67::0:0:X-10 daemon:/usr/local/xten:/sbin/nologin
+pop:*:68:6::0:0:Post Office Owner:/nonexistent:/sbin/nologin
+nobody:*:65534:65534::0:0:Unprivileged user:/nonexistent:/sbin/nologin
+-bill:::::::::
++:::::::::
+
+basie#
+....
+
+[[network-netgroups]]
+=== Netgroups gebruiken
+
+De methode uit het vorige onderdeel werkt prima als er maar voor een beperkt aantal gebruikers en/of machines speciale regels nodig zijn. Op grotere netwerken _gebeurt_ het gewoon dat er wordt vergeten om een aantal gebruikers de aanmeldrechten op gevoelige machines te ontnemen of dat zelfs iedere individuele machine aangepast moet worden, waardoor het voordeel van NIS teniet wordt gedaan: _centraal_ beheren.
+
+De ontwikkelaars van NIS hebben dit probleem opgelost met _netgroepen_. Het doel en de semantiek kunnen vergeleken worden met de normale groepen die gebruikt worden op UNIX(R) bestandssystemen. De belangrijkste verschillen zijn de afwezigheid van een numeriek ID en de mogelijkheid om een netgroep aan te maken die zowel gebruikers als andere netgroepen bevat.
+
+Netgroepen zijn ontwikkeld om gebruikt te worden voor grote, complexe netwerken met honderden gebruikers en machines. Aan de ene kant is dat iets Goeds. Aan de andere kant is het wel complex en bijna onmogelijk om netgroepen met een paar eenvoudige voorbeelden uit te leggen. Dat probleem wordt in de rest van dit onderdeel duidelijk gemaakt.
+
+Stel dat de succesvolle implementatie van NIS in het lab de interesse heeft gewekt van een centrale beheerclub. De volgende taak is het uitbreiden van het NIS-domein met een aantal andere machines op de campus. De onderstaande twee tabellen bevatten de namen van de nieuwe gebruikers en de nieuwe machines met een korte beschijving.
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Gebruikersnamen
+| Beschrijving
+
+|`alpha`, `beta`
+|Gewone medewerkers van de IT-afdeling
+
+|`charlie`, `delta`
+|Junior medewerkers van de IT-afdeling
+
+|`echo`, `foxtrott`, `golf`, ...
+|Gewone medewerkers
+
+|`able`, `baker`, ...
+|Stagiairs
+|===
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Machinenamen
+| Beschrijving
+
+|`war`, `death`, `famine`, `pollution`
+|De belangrijkste servers. Alleen senior medewerkers van de IT-afdeling mogen hierop aanmelden.
+
+|`pride`, `greed`, `envy`, `wrath`, `lust`, `sloth`
+|Minder belangrijke servers. Alle leden van de IT-afdeling mogen aanmelden op deze machines.
+
+|`one`, `two`, `three`, `four`, ...
+|Gewone werkstations. Alleen _echte_ medewerkers mogen zich op deze machines aanmelden.
+
+|`trashcan`
+|Een erg oude machine zonder kritische data. Zelfs de stagiair mag deze doos gebruiken.
+|===
+
+Als deze restricties ingevoerd worden door iedere gebruiker afzonderlijk te blokkeren, dan wordt er een `-user` regel per systeem toegevoegd aan de [.filename]#passwd# voor iedere gebruiker die niet mag aanmelden op dat systeem. Als er maar één regel wordt vergeten, kan dat een probleem opleveren. Wellicht lukt het nog dit juist in te stellen bij de bouw van een machine, maar het wordt _echt_ vergeten de regels toe te voegen voor nieuwe gebruikers in de productiefase. Murphy was tenslotte een optimist.
+
+Het gebruik van netgroepen biedt in deze situatie een aantal voordelen. Niet iedere gebruiker hoeft separaat afgehandeld te worden. Een gebruik kan aan een of meer groepen worden toegevoegd en aanmelden kan voor alle leden van zo'n groep worden toegestaan of geweigerd. Als er een nieuwe machine wordt toegevoegd, dan hoeven alleen de aanmeldrestricties voor de netgroepen te worden ingesteld. Als er een nieuwe gebruiker wordt toegevoegd, dan hoeft die alleen maar aan de juiste netgroepen te worden toegevoegd. Die veranderingen zijn niet van elkaar afhankelijk: geen "voor iedere combinatie van gebruiker en machine moet het volgende ...". Als de NIS-opzet zorgvuldig is gepland, dan hoeft er maar één instellingenbestand gewijzigd te worden om toegang tot machines te geven of te ontnemen.
+
+De eerst stap is het initialiseren van de NIS-afbeelding netgroup. man:ypinit[8] van FreeBSD maakt deze map niet standaard, maar als die is gemaakt, ondersteunt de NIS-implementatie hem wel. Een lege map wordt als volgt gemaakt:
+
+[source,bash]
+....
+ellington# vi /var/yp/netgroup
+....
+
+Nu kan hij gevuld worden. In het gebruikte voorbeeld zijn tenminste vier netgroepen: IT-medewerkers, IT-junioren, gewone medewerkers en stagiars.
+
+[.programlisting]
+....
+IT_MW   (,alpha,test-domain)    (,beta,test-domain)
+IT_APP  (,charlie,test-domain)  (,delta,test-domain)
+USERS   (,echo,test-domain)     (,foxtrott,test-domain) \
+        (,golf,test-domain)
+STAGS   (,able,test-domain)     (,baker,test-domain)
+....
+
+`IT_MW`, `IT_APP` enzovoort, zijn de namen van de netgroepen. Iedere groep tussen haakjes bevat een of meer gebruikersnamen voor die groep. De drie velden binnen een groep zijn:
+
+. De naam van de host of namen van de hosts waar de volgende onderdelen geldig zijn. Als er geen hostnaam wordt opgegeven dan is de regel geldig voor alle hosts. Als er wel een hostnaam wordt opgegeven, dan wordt een donker, spookachtig en verwarrend domein betreden.
+. De naam van de account die bij deze netgroep hoort.
+. Het NIS-domein voor de account. Er kunnen accounts uit andere NIS-domeinen geïmporteerd worden in een netgroep als een beheerder zo ongelukkig is meerdere NIS-domeinen te hebben.
+
+Al deze velden kunnen jokerkarakters bevatten. Details daarover staan in man:netgroup[5].
+
+[NOTE]
+====
+De naam van een netgroep mag niet langer zijn dan acht karakters, zeker niet als er andere besturingssystemen binnen een NIS-domein worden gebruikt. De namen zijn hoofdlettergevoelig: alleen hoofdletters gebruiken voor de namen van netgroepen is een makkelijke manier om onderscheid te kunnen maken tussen gebruikers-, machine- en netgroepnamen.
+
+Sommige NIS-cliënten (andere dan die op FreeBSD draaien) kunnen niet omgaan met netgroepen met veel leden. Sommige oudere versies van SunOS(TM) gaan bijvoorbeeld lastig doen als een netgroep meer dan 15 _leden_ heeft. Dit kan omzeild worden door meerdere subnetgroepen te maken met 15 gebruikers of minder en een echte netgroep die de subnetgroepen bevat:
+
+[.programlisting]
+....
+BIGGRP1  (,joe1,domain)  (,joe2,domain)  (,joe3,domain) [...]
+BIGGRP2  (,joe16,domain)  (,joe17,domain) [...]
+BIGGRP3  (,joe31,domain)  (,joe32,domain)
+BIGGROUP  BIGGRP1 BIGGRP2 BIGGRP3
+....
+
+Dit proces kan herhaald worden als er meer dan 225 gebruikers in een netgroep moeten.
+====
+
+Het activeren en distribueren van de nieuwe NIS-map is eenvoudig:
+
+[source,bash]
+....
+ellington# cd /var/yp
+ellington# make
+....
+
+Hiermee worden drie nieuwe NIS-afbeeldingen gemaakt: [.filename]#netgroup#, [.filename]#netgroup.byhost# en [.filename]#netgroup.byuser#. Met man:ypcat[1] kan bekeken worden op de nieuwe NIS-afbeeldingen beschikbaar zijn:
+
+[source,bash]
+....
+ellington% ypcat -k netgroup
+ellington% ypcat -k netgroup.byhost
+ellington% ypcat -k netgroup.byuser
+....
+
+De uitvoer van het eerste commando hoort te lijken op de inhoud van [.filename]#/var/yp/netgroup#. Het tweede commando geeft geen uitvoer als er geen host-specifieke netgroepen zijn ingesteld. Het derde commando kan gebruikt worden om een lijst van netgroepen voor een gebruiker op te vragen.
+
+Het instellen van de cliënt is redelijk eenvoudig. Om de server `war` in te stellen hoeft alleen met man:vipw[8] de volgende regel in de regel daarna vervangen te worden:
+
+[.programlisting]
+....
++:::::::::
+....
+
+Vervang de bovenstaande regel in de onderstaande.
+
+[.programlisting]
+....
++@IT_MW:::::::::
+....
+
+Nu worden alleen de gebruikers die in de netgroep `IT_MW` geïmporteerd in de wachtwoorddatabase van de host `war`, zodat alleen die gebruikers zich kunnen aanmelden.
+
+Helaas zijn deze beperkingen ook van toepassing op de functie `~` van de shell en alle routines waarmee tussen gebruikersnamen en numerieke gebruikers ID's wordt gewisseld. Met andere woorden: `cd ~user` werkt niet, `ls -l` toont het numerieke ID in plaats van de gebruikersnaam en `find . -user joe -print` faalt met de foutmelding `No such user`. Om dit te repareren moeten alle gebruikers geïmporteerd worden, _zonder ze het recht te geven aan te melden op een server_.
+
+Dit kan gedaan worden door nog een regel aan [.filename]#/etc/master.passwd# toe te voegen:
+
+[.programlisting]
+....
++:::::::::/sbin/nologin
+....
+
+Dit betekent "importeer alle gebruikers, maar vervang de shell door [.filename]#/sbin/nologin#". Ieder veld in een `passwd` regel kan door een standaardwaarde vervangen worden in [.filename]#/etc/master.passwd#.
+
+[WARNING]
+====
+
+De regel `+:::::::::/sbin/nologin` moet na `+@IT_MW:::::::::` komen. Anders krijgen alle gebruikers die uit NIS-komen [.filename]#/sbin/nologin# als aanmeldshell.
+====
+
+Na deze wijziging hoeft er nog maar één NIS-afbeelding gewijzigd te worden als er een nieuwe medewerker komt bij de IT-afdeling. Dezelfde aanpak kan gebruikt worden voor de minder belangrijke servers door de oude regel `+:::::::::` in de lokale versie van [.filename]#/etc/master.passwd# door iets als het volgende te vervangen:
+
+[.programlisting]
+....
++@IT_MW:::::::::
++@IT_APP:::::::::
++:::::::::/sbin/nologin
+....
+
+Voor normale werkstations zijn het de volgende regels:
+
+[.programlisting]
+....
++@IT_MW:::::::::
++@USERS:::::::::
++:::::::::/sbin/nologin
+....
+
+En dat zou allemaal leuk en aardig zijn als er niet na een paar weken een beleidsverandering komt: de IT-afdeling gaat stagiairs aannemen. De IT-stagiairs mogen de normale werkstations en de minder belangrijke servers gebruiken en de juniorbeheerders mogen gaan aanmelden op de hoofdservers. Dat kan door een nieuwe groep `IT_STAG` te maken en de nieuwe IT-stagiairs toe te voegen aan die netgroep en dan de instellingen op iedere machine te gaan veranderen. Maar zoals het spreekwoord zegt: "Fouten in een centrale planning leiden tot complete chaos."
+
+Deze situaties kunnen voorkomen worden door gebruik te maken van de mogelijkheid in NIS om netgroepen in netgroepen op te nemen. Het is mogelijk om rolgebaseerde netgroepen te maken. Er kan bijvoorbeeld een netgroep `BIGSRV` gemaakt worden om het aanmelden op de belangrijke servers te beperken en er kan een andere netgroep `SMALLSRV` voor de minder belangrijke servers zijn en een derde netgroep met de naam `USERBOX` voor de normale werkstations. Al die netgroepen kunnen de netgroepen bevatten die op die machines mogen aanmelden. De nieuwe regels in de NIS-afbeelding netgroup zien er dan zo uit:
+
+[.programlisting]
+....
+BIGSRV    IT_MW  IT_APP
+SMALLSRV  IT_MW  IT_APP  ITSTAG
+USERBOX   IT_MW  ITSTAG USERS
+....
+
+Deze methode voor het instellen van aanmeldbeperkingen werkt redelijk goed als er groepen van machines gemaakt kunnen worden met identieke beperkingen. Helaas blijkt dat eerder uitzondering dan regel. Meestal moet het mogelijk zijn om per machine in te stellen wie zich wel en wie zich niet mogen aanmelden.
+
+Daarom is het ook mogelijk om via machinespecifieke netgroepen de hierboven aangegeven beleidswijziging op te vangen. In dat scenario bevat [.filename]#/etc/master.passwd# op iedere machine twee regels die met "+" beginnen. De eerste voegt de netgroep toe met de accounts die op de machine mogen aanmelden en de tweede voegt alle andere accounts toe met [.filename]#/sbin/nologin# als shell. Het is verstandig om als naam van de netgroep de machinenaam in "HOOFDLETTERS" te gebruiken. De regels zien er ongeveer als volgt uit:
+
+[.programlisting]
+....
++@MACHINENAAM:::::::::
++:::::::::/sbin/nologin
+....
+
+Als dit voor alle machines is gedaan, dan hoeven de lokale versies van [.filename]#/etc/master.passwd# nooit meer veranderd te worden. Alle toekomstige wijzigingen kunnen dan gemaakt worden door de NIS-afbeelding te wijzigen. Hieronder staat een voorbeeld van een mogelijke netgroep map voor het beschreven scenario met een aantal toevoegingen:
+
+[.programlisting]
+....
+# Definieer eerst de gebruikersgroepen
+IT_MW     (,alpha,test-domain)    (,beta,test-domain)
+IT_APP    (,charlie,test-domain)  (,delta,test-domain)
+DEPT1     (,echo,test-domain)     (,foxtrott,test-domain)
+DEPT2     (,golf,test-domain)     (,hotel,test-domain)
+DEPT3     (,india,test-domain)    (,juliet,test-domain)
+ITSTAG    (,kilo,test-domain)     (,lima,test-domain)
+D_STAGS   (,able,test-domain)     (,baker,test-domain)
+#
+# En nu een aantal groepen op basis van rollen
+USERS     DEPT1   DEPT2     DEPT3
+BIGSRV    IT_MW   IT_APP
+SMALLSRV  IT_MW   IT_APP    ITSTAG
+USERBOX   IT_MW   ITSTAG    USERS
+#
+# Een een groep voor speciale taken.
+# Geef echo en golf toegang tot de anti-virus machine.
+SECURITY  IT_MW   (,echo,test-domain)  (,golf,test-domain)
+#
+# Machinegebaseerde netgroepen
+# Hoofdservers
+WAR       BIGSRV
+FAMINE    BIGSRV
+# Gebruiker india heeft toegang tot deze server nodig.
+POLLUTION  BIGSRV  (,india,test-domain)
+#
+# Deze is erg belangrijk en heeft strengere toegangseisen nodig.
+DEATH     IT_MW
+#
+# De anti-virus machine als hierboven genoemd.
+ONE       SECURITY
+#
+# Een machine die maar door 1 gebruiker gebruikt mag worden.
+TWO       (,hotel,test-domain)
+# [...hierna volgen de andere groepen]
+....
+
+Als er een soort database wordt gebruikt om de gebruikersaccounts te beheren, dan is het in ieder geval nodig dat ook het eerste deel van de afbeelding met de databaserapportagehulpmiddelen gemaakt kan worden. Dan krijgen nieuwe gebruikers automatisch toegang tot de machines.
+
+Nog een laatste waarschuwing: het is niet altijd aan te raden gebruik te maken van machinegebaseerde netgroepen. Als er tientallen of zelfs honderden gelijke machines voor bijvoorbeeld studentenruimtes worden uitgerold, dan is het verstandiger rolgebaseerde netgroepen te gebruiken in plaats van machinegebaseerde netgroepen om de grootte van de NIS-afbeelding binnen de perken te houden.
+
+=== Belangrijk om te onthouden
+
+In een NIS-omgeving werken een aantal dingen wel anders.
+
+* Als er een gebruiker toegevoegd moet worden, dan moet die _alleen_ toegevoegd worden aan de master NIS-server en _mag niet vergeten worden dat de NIS-afbeeldingen herbouwd moeten worden_. Als dit wordt vergeten, dan kan de nieuwe gebruiker nergens anders aanmelden dan op de NIS-master. Als bijvoorbeeld een nieuwe gebruiker `jsmith` toegevoegd moet worden:
++
+
+[source,bash]
+....
+# pw useradd jsmith
+# cd /var/yp
+# make test-domain
+....
+
++ 
+Er kan ook `adduser jsmith` in plaats van `pw useradd jsmith` gebruikt worden.
+* _De beheeraccounts moeten buiten de NIS-afbeeldingen gehouden worden_. Het is niet handig als de beheeraccounts en wachtwoorden naar machines waarop gebruikers zich aanmelden die geen toegang tot die informatie horen te hebben zouden gaan.
+* _De NIS-master en slave moeten veilig blijven en zo min mogelijk niet beschikbaar zijn_. Als de machine wordt gehackt of als hij wordt uitgeschakeld, dan kunnen er in theorie nogal wat mensen niet meer aanmelden.
++ 
+Dit is de belangrijkste zwakte van elk gecentraliseerd beheersysteem. Als de NIS-servers niet goed beschermd worden, dan worden veel gebruikers boos!
+
+=== NIS v1-compatibiliteit
+
+ypserv voor FreeBSD biedt wat ondersteuning voor NIS v1 cliënten. De NIS-implementatie van FreeBSD gebruikt alleen het NIS v2 protocol, maar andere implementaties bevatten ondersteuning voor het v1 protocol voor achterwaartse compatibiliteit met oudere systemen. De ypbind-daemons die bij deze systemen zitten proberen een binding op te zetten met een NIS v1 server, hoewel dat niet per se ooit nodig is (en ze gaan misschien nog wel door met broadcasten nadat ze een antwoord van een v2 server hebben ontvangen). Het is belangrijk om te melden dat hoewel ondersteuning voor gewone cliëntoproepen aanwezig is, deze versie van ypserv geen overdrachtsverzoeken voor v1-afbeeldingen af kan handelen. Daarom kan ypserv niet gebruikt worden als master of slave in combinatie met oudere NIS-servers die alleen het v1 protocol ondersteunen. Gelukkig worden er in deze tijd niet meer zoveel van deze servers gebruikt.
+
+[[network-nis-server-is-client]]
+=== NIS-servers die ook NIS-cliënten zijn
+
+Het is belangrijk voorzichtig om te gaan met het draaien van ypserv in een multi-server domein waar de server machines ook NIS-cliënten zijn. Het is in het algemeen verstandiger om de servers te dwingen met zichzelf te binden dan ze toe te staan een bindverzoek te broadcasten en het risico te lopen dat ze een binding met elkaar maken. Er kunnen vreemde fouten optreden als een van de servers plat gaat als er andere servers van die server afhankelijk zijn. Na verloop van tijd treedt op de cliënten wel een timeout op en verbinden ze met een andere server, maar de daarmee gepaard gaande vertraging kan aanzienlijk zijn en de foutmodus is nog steeds van toepassing, omdat de servers dan toch weer opnieuw een verbinding met elkaar kunnen vinden.
+
+Het is mogelijk een host aan een specifieke server te binden door aan `ypbind` de vlag `-S` mee te geven. Om dit niet iedere keer handmatig na een herstart te hoeven uitvoeren, kan de volgende regel worden opgenomen in [.filename]#/etc/rc.conf# van de NIS-server:
+
+[.programlisting]
+....
+nis_client_enable="YES"	# start ook het cliënt gedeelte
+nis_client_flags="-S NIS domain,server"
+....
+
+In man:ypbind[8] staat meer informatie.
+
+=== Wachtwoordformaten
+
+Een van de meest voorkomende problemen bij het implementeren van NIS is de compatibiliteit van het wachtwoordformaat. Als een NIS-server wachtwoorden gebruikt die met DES gecodeerd zijn, dan kunnen alleen cliënten die ook DES gebruiken ondersteund worden. Als er bijvoorbeeld Solaris(TM) NIS-cliënten in een netwerk zijn, dan moet er vrijwel zeker gebruik gemaakt worden van met DES gecodeerde wachtwoorden.
+
+Van welk formaat cliënten en servers gebruik maken is te zien in [.filename]#/etc/login.conf#. Als een host gebruik maakt van met DES gecodeerde wachtwoorden, dan staat er in de klasse `default` een regel als de volgende:
+
+[.programlisting]
+....
+default:\
+	:passwd_format=des:\
+	:copyright=/etc/COPYRIGHT:\
+	[Overige regels weggelaten]
+....
+
+Andere mogelijke waarden voor `passwd_format` zijn `blf` en `md5` (respectievelijk voor Blowfish en MD5 gecodeerde wachtwoorden).
+
+Als er wijzigingen gemaakt zijn aan [.filename]#/etc/login.conf# dan moet de login capability database herbouwd worden door het volgende commando als `root` uit te voeren:
+
+[source,bash]
+....
+# cap_mkdb /etc/login.conf
+....
+
+[NOTE]
+====
+Het formaat van de wachtwoorden die al in [.filename]#/etc/master.passwd# staan worden niet bijgewerkt totdat een gebruiker zijn wachtwoord voor de eerste keer wijzigt _nadat_ de login capability database is herbouwd.
+====
+
+Om te zorgen dat de wachtwoorden in het gekozen formaat zijn gecodeerd, moet daarna gecontroleerd worden of de waarde `crypt_default` in [.filename]#/etc/auth.conf# de voorkeur geeft aan het gekozen formaat. Om dat te realiseren dient het gekozen formaat vooraan gezet te worden in de lijst. Als er bijvoorbeeld gebruik gemaakt wordt van DES gecodeerde wachtwoorden, dan hoort de regel er als volgt uit te zien:
+
+[.programlisting]
+....
+crypt_default	=	des blf md5
+....
+
+Als de bovenstaande stappen op alle FreeBSD gebaseerde NIS-servers en cliënten zijn uitgevoerd, dan is het zeker dat ze het allemaal eens zijn over welk wachtwoordformaat er op het netwerk wordt gebruikt. Als er problemen zijn bij de authenticatie op een NIS-cliënt, dan is dit een prima startpunt voor het uitzoeken waar de problemen vandaan komen. Nogmaals: als er een NIS-server in een heterogene omgeving wordt geplaatst, dan is het waarschijnlijk dat er gebruik gemaakt moet worden van DES op alle systemen, omdat dat de laagst overeenkomende standaard is.
+
+[[network-dhcp]]
+== Automatisch netwerk instellen (DHCP)
+
+=== Wat is DHCP?
+
+DHCP, het Dynamic Host Configuration Protocol, schrijft voor hoe een systeem verbinding kan maken met een netwerk en hoe het de benodigde informatie kan krijgen om met dat netwerk te communiceren. FreeBSD gebruikt de OpenBSD `dhclient` welke uit OpenBSD 3.7 komt. Alle informatie over `dhclient` kan zowel voor de ISC als de OpenBSD DHCP-cliënt gebruikt worden. De DHCP-server zit bij de ISC-distributie.
+
+=== Wat behandeld wordt
+
+In dit onderdeel worden de cliëntcomponenten van de ISC en OpenBSD DHCP-cliënt en de servercomponenten van het ISC DHCP-systeem beschreven. Het programma voor de cliënt, `dhclient`, zit standaard in FreeBSD en de server is beschikbaar via de port package:net/isc-dhcp42-server[]. Naast de onderstaande informatie, zijn de hulppagina's van man:dhclient[8], man:dhcp-options[5] en man:dhclient.conf[5] bruikbare bronnen.
+
+=== Hoe het werkt
+
+Als `dhclient`, de DHCP-cliënt, wordt uitgevoerd op een cliëntmachine, dan begint die met het broadcasten van verzoeken om instellingeninformatie. Standaard worden deze verzoeken op UDP poort 68 gedaan. De server antwoordt op UDP 67 en geeft de cliënt een IP-adres en andere relevante netwerkinformatie, zoals een netmasker, router en DNS-servers. Al die informatie komt in de vorm van een DHCP "lease" en is voor een bepaalde tijd geldig (die is ingesteld door de beheerder van de DHCP-server). Op die manier kunnen IP-adressen voor cliënten die niet langer met het netwerk verbonden zijn (stale) automatisch weer ingenomen worden.
+
+DHCP-cliënten kunnen veel informatie van de server krijgen. Er staat een uitputtende lijst in man:dhcp-options[5].
+
+=== FreeBSD integratie
+
+FreeBSD integreert de OpenBSD DHCP-cliënt `dhclient` volledig. Er is ondersteuning voor de DHCP-cliënt in zowel het installatieprogramma als in het basissysteem, waardoor het niet noodzakelijk is om kennis te hebben van het maken van netwerkinstellingen voor het netwerk waar een DHCP-server draait.
+
+DHCP wordt ondersteund door sysinstall. Bij het instellen van een netwerkinterface binnen sysinstall is de tweede vraag: "Wil je proberen de interface met DHCP in te stellen?" Als het antwoord bevestigend luidt, dan wordt `dhclient` uitgevoerd en als dat succesvol verloopt, dan worden de netwerkinstellingen automatisch ingevuld.
+
+Voor het gebruiken van DHCP bij het opstarten van het systeem zijn twee instellingen nodig:
+
+* Het apparaat [.filename]#bpf# moet in de kernel gecompileerd zijn. Dit kan door `device bpf` aan het bestand met kernelinstellingen toe te voegen en de kernel te herbouwen. Meer informatie over het bouwen van een kernel staat in crossref:kernelconfig[kernelconfig,De FreeBSD-kernel instellen].
++ 
+Het apparaat [.filename]#bpf# is al onderdeel van de [.filename]#GENERIC# kernel die bij FreeBSD zit, dus als er geen sprake is van een aangepaste kernel, dan hoeft er geen nieuwe gemaakt te worden om DHCP aan te praat te krijgen.
++
+[NOTE]
+====
+Voor de lezer die bijzonder begaan is met beveiliging, is het belangrijk aan te geven dat [.filename]#bpf# ook het apparaat is waardoor pakketsnuffelaars hun werk kunnen doen (hoewel ze nog steeds als `root` moeten draaien). [.filename]#bpf#_is_ noodzakelijk voor DHCP, maar als beveiliging bijzonder belangrijk is, dan hoort [.filename]#bpf# waarschijnlijk niet in een kernel te zitten omdat de verwachting dat er in de toekomst ooit DHCP gebruikt gaat worden.
+====
+
+* Standaard draait de DHCP-synchronisatie op FreeBSD in de achtergrond, of _asynchroon_. Andere opstartscripten gaan verder terwijl DHCP wordt voltooid, wat het opstarten van het systeem versnelt.
++ 
+DHCP in de achtergrond werkt goed als de DHCP-server snel op verzoeken reageert en het DHCP-configuratieproces snel gaat. Op sommige systemen kan het lang duren voordat DHCP klaar is. Als netwerkdiensten proberen te draaien voordat DHCP voltooid is, zullen ze falen. Door DHCP in _synchrone_ modus te draaien wordt dit probleem voorkomen en wordt het opstarten gepauzeerd totdat de DHCP-configuratie voltooid is.
++ 
+Gebruik om in de achtergrond verbinding te maken met een DHCP-server terwijl andere opstartscripts verder gaan (asynchrone modus) de waarde "`DHCP`" in [.filename]#/etc/rc.conf#:
++
+[.programlisting]
+....
+ifconfig_fxp0="DHCP"
+....
++ 
+Gebruik om het opstarten te pauzeren totdat DHCP voltooid is de synchrone modus met waarde "`SYNDHCP`":
++
+[.programlisting]
+....
+ifconfig_fxp0="SYNDHCP"
+....
++
+[NOTE]
+====
+Vervang _fxp0_ zoals getoond in deze voorbeelden met de naam van de interface dat dynamisch geconfigureerd moet worden, zoals getoond in crossref:config[config-network-setup,Netwerkkaarten instellen].
+====
++ 
+Als er een andere lokatie voor `dhclient` wordt gebruikt of als er extra parameters aan `dhclient` meegegeven moeten worden, dan dient ook iets als het volgende toegevoegd te worden:
++
+[.programlisting]
+....
+dhclient_program="/sbin/dhclient"
+dhclient_flags=""
+....
+
+De DHCP-server, dhcpd, zit bij de port package:net/isc-dhcp42-server[] in de Portscollectie. Deze port bevat de ISC DHCP-server en documentatie.
+
+=== Bestanden
+
+* [.filename]#/etc/dhclient.conf#
++ 
+Voor `dhclient` is een instellingenbestand [.filename]#/etc/dhclient.conf# nodig. Dat bestand bevat meestal alleen maar commentaar, omdat de standaardinstellingen redelijk zinvol zijn. Dit bestand wordt beschreven in man:dhclient.conf[5].
+* [.filename]#/sbin/dhclient#
++ 
+`dhclient` is statisch gelinkt en staat in [.filename]#/sbin#. Er staat meer informatie over `dhclient` in man:dhclient[8].
+* [.filename]#/sbin/dhclient-script#
++ 
+`dhclient-script` is het FreeBSD-specifieke DHCP-cliënt instellingenscript. Het wordt beschreven in man:dhclient-script[8], maar het is niet nodig het te wijzigen om goed te werken.
+* [.filename]#/var/db/dhclient.leases.interface#
++ 
+De DHCP-cliënt houdt in dit bestand een database bij van geldige leases, die naar een logboekbestand worden geschreven. In man:dhclient.leases[5] staat een iets uitgebreidere beschrijving.
+
+=== Verder lezen
+
+Het DHCP-protocol staat volledig beschreven in http://www.freesoft.org/CIE/RFC/2131/[RFC 2131]. Er is nog een bron van informatie ingesteld op http://www.dhcp.org/[http://www.dhcp.org/].
+
+[[network-dhcp-server]]
+=== Een DHCP-server installeren en instellen
+
+==== Wat behandeld wordt
+
+In dit onderdeel wordt beschreven hoe een FreeBSD systeem zo ingesteld kan worden dat het opereert als DHCP-server door gebruik te maken van de ISC (Internet Systems Consortium) implementatie van de DHCP-server.
+
+De server wordt niet geleverd als deel van FreeBSD en om deze dienst aan te bieden dient de port package:net/isc-dhcp42-server[] geïnstalleerd te worden. In crossref:ports[ports,Applicaties installeren. pakketten en ports] staat meer informatie over de Portscollectie.
+
+==== DHCP-serverinstallatie
+
+Om een FreeBSD systeem in te stellen als DHCP-server moet het apparaat man:bpf[4] in de kernel zijn opgenomen. Om dit te doen dient `device bpf` aan het bestand met kernelinstellingen toegevoegd te worden en dient de kernel herbouwd te worden. Meer informatie over het bouwen van kernels staat in crossref:kernelconfig[kernelconfig,De FreeBSD-kernel instellen].
+
+Het apparaat [.filename]#bpf# is al onderdeel van de [.filename]#GENERIC# kernel die bij FreeBSD, dus het is meestal niet nodig om een aangepaste kernel te bouwen om DHCP aan de praat te krijgen.
+
+[NOTE]
+====
+Het is belangrijk te vermelden dat [.filename]#bpf# ook het apparaat is waardoor pakketsnuffelaars kunnen werken (hoewel de programma's die er gebruik van maken wel bijzondere toegang nodig hebben). [.filename]#bpf#_is_ verplicht voor DHCP, maar als beveiliging van belang is, dan is het waarschijnlijk niet verstandig om [.filename]#bpf# in een kernel op te nemen alleen omdat er in de toekomst misschien ooit DHCP gebruikt gaat worden.
+====
+
+Hierna dient het standaardbestand [.filename]#dhcpd.conf# dat door de port package:net/isc-dhcp42-server[] is geïnstalleerd gewijzigd te worden. Standaard is dit [.filename]#/usr/local/etc/dhcpd.conf.sample# en dit bestand dient gekopieerd te worden naar [.filename]#/usr/local/etc/dhcpd.conf# voordat de wijzigingen worden gemaakt.
+
+==== De DHCP-server instellen
+
+[.filename]#dhcpd.conf# is opgebouwd uit declaraties over subnetten en hosts en is wellicht het meest eenvoudig te beschrijven met een voorbeeld:
+
+[.programlisting]
+....
+option domain-name "example.com"; <.>
+option domain-name-servers 192.168.4.100; <.>
+option subnet-mask 255.255.255.0; <.>
+
+default-lease-time 3600; <.>
+max-lease-time 86400; <.>
+ddns-update-style none; <.>
+
+subnet 192.168.4.0 netmask 255.255.255.0 {
+  range 192.168.4.129 192.168.4.254; <.>
+  option routers 192.168.4.1; <.>
+}
+
+host mailhost {
+  hardware ethernet 02:03:04:05:06:07; <.>
+  fixed-address mailhost.example.com; <.>
+}
+....
+
+<.> Deze optie geeft het domein aan dat door cliënten als standaard zoekdomein wordt gebruikt. In man:resolv.conf[5] staat meer over wat dat betekent.
+
+<.> Deze optie beschrijft een door komma's gescheiden lijst met DNS-servers die de cliënt moet gebruiken.
+
+<.> Het netmasker dat aan de cliënten wordt voorgeschreven.
+
+<.> Een cliënt kan om een bepaalde duur vragen die een lease geldig is. Anders geeft de server aan wanneer de lease vervalt (in seconden).
+
+<.> Dit is de maximale duur voor een lease die de server toestaat. Als een cliënt vraagt om een langere lease, dan wordt die wel verstrekt, maar is de maar geldig gedurende `max-lease-time` seconden.
+
+<.> Deze optie geeft aan of de DHCP-server moet proberen de DNS-server bij te werken als een lease is geaccepteerd of wordt vrijgegeven. In de ISC implementatie is deze optie _verplicht_.
+
+<.> Dit geeft aan welke IP-adressen in de groep met adressen zitten die zijn gereserveerd om uitgegeven te worden aan cliënten. Alle IP-adressen tussen de aangegeven adressen en die adressen zelf worden aan cliënten uitgegeven.
+
+<.> Geeft de default gateway aan die aan de cliënten wordt voorgeschreven.
+
+<.> Het hardware MAC-adres van een host, zodat de DHCP-server een host kan herkennen als die een verzoek doet.
+
+<.> Geeft een host aan die altijd hetzelfde IP-adres moet krijgen. Hier kan een hostnaam gebruikt worden, omdat de DHCP-server de hostnaam zelf opzoekt voordat de lease-informatie terug wordt gegeven.
+
+Wanneer u klaar bent met het schrijven van uw [.filename]#dhcpd.conf#, dient u de DHCP-server in [.filename]#/etc/rc.conf# aan te zetten, door het volgende toe te voegen:
+
+[.programlisting]
+....
+dhcpd_enable="YES"
+dhcpd_ifaces="dc0"
+....
+
+Vervang de interfacenaam `dc0` door de interface (of interfaces, gescheiden door witruimtes) waarop uw DHCP-server moet luisteren naar DHCP-verzoeken van cliënten.
+
+Daarna kunt u doorgaan met het starten van de server door het volgende commando te geven:
+
+[source,bash]
+....
+# service isc-dhcpd start
+....
+
+Als er later wijzigingen in de instellingen gemaakt moeten worden, dan is het belangrijk te onthouden dat het sturen van een `SIGHUP` signaal naar dhcpd_niet_ resulteert in het opnieuw laden van de instellingen, zoals voor de meeste daemons geldt. Voor deze daemon dient een signaal `SIGTERM` gestuurd te worden om het proces te stoppen. Daarna dient de daemon met het hiervoor beschreven commando weer gestart worden.
+
+==== Bestanden
+
+* [.filename]#/usr/local/sbin/dhcpd#
++ 
+dhcpd is statisch gelinkt en staat in [.filename]#/usr/local/sbin#. In de hulppagina voor man:dhcpd[8] die meekomt met de port staat meer informatie over dhcpd.
+* [.filename]#/usr/local/etc/dhcpd.conf#
++ 
+dhcpd heeft een instellingenbestand, [.filename]#/usr/local/etc/dhcpd.conf#, nodig voordat de daemon diensten aan cliënten kan leveren. Het bestand moet alle informatie bevatten die aan cliënten gegeven moet worden en de informatie die nodig is voor het draaien van de dienst. Dit instellingenbestand staat beschreven in de hulppagina voor man:dhcpd.conf[5] die meekomt met de port.
+* [.filename]#/var/db/dhcpd.leases#
++ 
+De DHCP-server houdt in dit bestand een database bij met leases die zijn uitgegeven en die naar een logboek worden geschreven. In de hulppagina man:dhcpd.leases[5] die bij de port zit wordt dit uitvoeriger beschreven.
+* [.filename]#/usr/local/sbin/dhcrelay#
++ 
+dhcrelay wordt in uitgebreidere omgevingen gebruikt waar de ene DHCP-server een verzoek van een cliënt naar een andere DHCP-server op een ander netwerk doorstuurt. Als deze functionaliteit nodig is, kan die beschikbaar komen door de port package:net/isc-dhcp42-relay[] te installeren. De hulppagina voor man:dhcrelay[8] die bij de port zit bevat meer details.
+
+[[network-dns]]
+== Domeinnaamsysteem (DNS)
+
+=== Overzicht
+
+FreeBSD gebruikt standaard een versie van BIND (Berkeley Internet Name Domain), wat de meest gebruikte implementatie van het DNS-protocol is. DNS is het protocol waarmee namen aan IP-adressen gebonden worden en vice versa. Zo wordt bijvoorbeeld op een zoekopdracht voor `www.FreeBSD.org` geantwoord met het IP-adres van de webserver van het FreeBSD Project en op een zoekopdracht voor `ftp.FreeBSD.org` wordt geantwoord met het IP-adres van de bijbehorende FTP-machine. Het tegenovergestelde kan ook gebeuren. Een zoekopdracht voor een IP-adres kan de bijbehorende hostnaam opleveren. Het is niet nodig om een naamserver te draaien om op een systeem zoekopdrachten met DNS uit te voeren.
+
+FreeBSD wordt momenteel standaard geleverd met de BIND9 DNS-serversoftware. Onze installatie biedt verbeterde beveilingsmogelijkheden, een nieuwe indeling van het bestandssysteem en geautomatiseerde configuratie van man:chroot[8].
+
+DNS wordt op Internet onderhouden door een enigszins complex systeem van autoritaire root, Top Level Domain (TLD), en andere kleinschaligere naamservers die individuele domeininformatie hosten en cachen.
+
+Op dit moment wordt BIND beheerd door het Internet Systems Consortium https://www.isc.org/[https://www.isc.org/].
+
+=== Terminologie
+
+Om dit document te begrijpen moeten een aantal termen gerelateerd aan DNS begrepen worden.
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Term
+| Definitie
+
+|Voorwaartse DNS
+|Het afbeelden van hostnamen op IP-adressen.
+
+|Herkomst (origin)
+|Verwijst naar het domein dat door een bepaald zonebestand wordt gedekt.
+
+|named, BIND
+|Vaak gebruikte namen voor het naamserverpakket BIND in FreeBSD.
+
+|Resolver
+|Een systeemproces waarmee een machine zoekopdrachten om zoneinformatie aan een naamserver geeft.
+
+|Reverse DNS
+|Het afbeelden van IP-adressen op hostnamen.
+
+|Rootzone
+|Het begin van de Internet zonehiërarchie. Alle zones vallen onder de rootzone, net zoals alle bestanden in een bestandssysteem onder de rootmap vallen.
+
+|Zone
+|Een individueel domein, subdomein of een deel van de DNS die door dezelfde autoriteit wordt beheerd.
+|===
+
+Voorbeelden van zones:
+
+* `.` is hoe de rootzone normaliter in de documentatie genoemd wordt.
+* `org.` is een Top Level Domain (TLD) onder de rootzone.
+* `example.org.` is een zone onder het TLD `org.`.
+* `1.168.192.in-addr.arpa` is een zone die naar alle IP-adressen verwijst die onder de IP-adresruimte `192.168.1.*` vallen.
+
+Zoals te zien is staat het specifiekere deel van een hostnaam aan de linkerkant. Zo is bijvoorbeeld `example.org.` specifieker dan `org.` en is `org.` specifieker dan de rootzone. De indeling van ieder deel van een hostnaam lijkt veel op een bestandssysteem: de map [.filename]#/dev# valt onder de root, enzovoort.
+
+=== Redenen om een naamserver te draaien
+
+Naamservers bestaan in het algemeen in twee smaken: autoratieve naamservers en caching (ook bekend als resolving) naamservers.
+
+Er is een autoratieve naamserver nodig als:
+
+* Het gewenst is om DNS-informatie aan te bieden aan de wereld om met autoriteit op verzoeken te antwoorden.
+* Een domein, zoals `example.org`, is geregistreerd en er IP-adressen aan hostnamen die daaronder liggen toegewezen moeten worden.
+* Een IP-adresblok omgekeerde DNS-ingangen nodig heeft (IP naar hostnaam).
+* Een omgekeerde of tweede naamserver, die een slaaf wordt genoemd, moet antwoorden op verzoeken.
+
+Er is een caching naamserver nodig als:
+
+* Een lokale DNS-server kan cachen en wellicht sneller kan antwoorden dan een naamserver die verder weg staat.
+
+Als er een verzoek wordt gedaan voor `www.FreeBSD.org`, dan doet de resolver meestal een verzoek bij de naamserver van de ISP die de uplink levert en ontvangt daarop een antwoord. Met een lokale, caching DNS-server hoeft het verzoek maar één keer door de caching DNS-server naar de buitenwereld gedaan te worden. Voor aanvullende verzoeken hoeft niet buiten het lokale netwerk te gaan omdat het al lokaal in de cache staat.
+
+=== Hoe het werkt
+
+De daemon BIND heet in FreeBSD named.
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Bestand
+| Beschrijving
+
+|man:named[8]
+|De daemon BIND.
+
+|man:rndc[8]
+|Naamserverbeheerprogramma.
+
+|[.filename]#/etc/namedb#
+|Map waar zoneinformatie van BIND staat.
+
+|[.filename]#/etc/namedb/named.conf#
+|Instellingenbestand van de daemon.
+|===
+
+Afhankelijk van hoe en gegeven zone op de server is geconfigureerd, staan de bestanden gerelateerd aan die zone in de submappen [.filename]#master#, [.filename]#slave#, of [.filename]#dynamic# van de map [.filename]#/etc/namedb#. Deze bestanden bevatten de DNS-informatie die door de naamserver als antwoord op zoekopdrachten gegeven zal worden.
+
+=== BIND starten
+
+Omdat BIND standaard wordt geïnstalleerd, is het instellen relatief eenvoudig.
+
+De standaardconfiguratie van named is die van een eenvoudige resolverende naamserver, draaiende in een man:chroot[8]-omgeving, en beperkt tot het luisteren op het lokale IPv4-teruglusadres (127.0.0.1). Gebruik het volgende commando om de server eenmaal met deze configuratie te starten:
+
+[source,bash]
+....
+# service named onestart
+....
+
+Om er zeker van te zijn dat de daemon named elke keer bij het opstarten gestart wordt, moet de volgende regel in [.filename]#/etc/rc.conf# gezet worden:
+
+[.programlisting]
+....
+named_enable="YES"
+....
+
+Het is duidelijk dat er vele instelopties voor [.filename]#/etc/namedb/named.conf# zijn die buiten het bereik van dit document vallen. Als u echter geïnteresseerd bent in de opstartopties voor named op FreeBSD, bekijk dan de `named_*`-vlaggen in [.filename]#/etc/defaults/rc.conf# en raadpleeg de handleidingpagina man:rc.conf[5]. De sectie crossref:config[configtuning-rcd,Gebruik van rc met FreeBSD] is ook nuttig om te lezen.
+
+=== Instellingenbestanden
+
+Instellingenbestanden voor named bevinden zich momenteel in [.filename]#/etc/namedb# en moeten gewijzigd worden voor gebruik, tenzij er alleen een eenvoudige resolver nodig is. Hier vindt de meeste configuratie plaats.
+
+==== [.filename]#/etc/namedb/named.conf#
+
+[.programlisting]
+....
+// $FreeBSD$
+//
+// In de handleidingpagina's named.conf(5) en named(8), en in de
+// documentatie in /usr/shared/doc/bind9 zijn meer details te vinden.
+//
+// Voor het opzetten van een autoratieve server is een grondig begrip
+// van de werking van DNS noodzakelijk.  Zelfs eenvoudige fouten kunnen // de werking verstoren voor beïnvloede partijen of veel onnodig
+// Internetverkeer veroorzaken.
+
+options {
+       // Alle namen van bestanden en paden zijn relatief aan de chroot-map,
+       // indien aanwezig, en moeten volledig gekwalificeerd zijn.
+       directory       "/etc/namedb/working";
+       pid-file        "/var/run/named/pid"
+       dump-file       "/var/dump/named_dump.db"
+       statistics-file "/var/stats/named.stats"
+
+// Als named alleen als een lokale resolver gebruikt wordt, is dit een
+// veilige standaardinstelling.  Om named toegang tot het netwerk te
+// verschaffen, dient deze optie gecommentarieerd te worden, het
+// juiste IP-adres opgegeven te worden, of dient deze optie verwijderd
+// te worden.
+       listen-on       { 127.0.0.1; };
+
+// Als u IPv6 aan heeft staan op dit systeem, dient deze optie
+// uitgecommentarieerd te worden om als lokale resolver te dienen.  Om
+// toegang tot het netwerk te verschaffen, dient een IPv6-adres of het
+// sleutelwoord "any" gegeven te worden.
+//     listen-on-v6    { ::1; };
+
+// Deze zones zijn reeds opgenomen door de lege zones die hieronder
+// staan.  Als u de gerelateerde lege zones hieronder verwijdert,
+// dienen deze regels uitgecommentarieerd te worden.
+        disable-empty-zone "255.255.255.255.IN-ADDR.ARPA";
+        disable-empty-zone "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.IP6.ARPA";
+        disable-empty-zone "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.IP6.ARPA";
+
+// Als er een DNS-server beschikbaar is bij een upstream provider dan
+// kan het IP-adres op de regel hieronder ingegeven worden en kan die
+// geactiveerd worden.  Hierdoor wordt voordeel gehaald uit de cache,
+// waardoor het algehele DNS-verkeer op het Internet vermindert.
+/*
+       forwarders {
+               127.0.0.1;
+       };
+
+*/
+
+// Als de 'forwarders'-clausule niet leeg is, is de standaard om "forward
+// first" te gebruiken, welke terug zal vallen op het versturen van een
+// verzoek naar uw lokale server als de naamservers in 'forwarders' het
+// antwoord niet weten.  Als alternatief kunt u uw naamserver dwingen om
+// nooit zelf verzoeken in te dienen door de volgende regel aan te
+// zetten:
+//     forward only;
+
+// Als u forwarding automatisch wilt configureren gebaseerd op de regels
+// in /etc/resolv.conf, verwijder dan het commentaar van de volgende
+// regel en stel in /etc/rc.conf named_auto_forward=yes in.  U kunt ook
+// named_auto_forward_only aanzetten (het effect hiervan is hierboven
+// beschreven).
+//      include "/etc/namedb/auto_forward.conf";
+....
+
+Zoals al in het commentaar staat kan van een cache in de uplink geprofiteerd worden als `forwarders` ingeschakeld worden. Onder normale omstandigheden maakt een naamserver recursief verzoeken tot het Internet op zoek naar zekere naamservers tot er een antwoord komt waar het naar op zoek is. Door de bovenstaande optie in te schakelen wordt eerst de uplink naamserver (of de opgegeven naamserver) gevraagd, waardoor er gebruik gemaakt kan worden van de cache van die server. Als die uplink naamserver een drukke, snelle naamserver is, kan het erg de moeite waard zijn om dit aan te zetten.
+
+[WARNING]
+====
+
+`127.0.0.1` werkt hier _niet_. Verander dit IP-adres in een naamserver in de uplink.
+====
+
+[.programlisting]
+....
+/*
+	  Moderne versies van BIND gebruiken standaard een random
+	  UDP-poort voor elk uitgaand verzoek om de kans op cache
+	  poisoning drastisch te verminderen.  Alle gebruikers wordt met
+	  klem verzocht om deze mogelijkheid te gebruiken en hun
+	  firewalls overeenkomstig aan te passen.
+
+	  ALS EEN LAATSTE UITVLUCHT om een beperkende firewall te
+	  omzeilen kunt u proberen om onderstaande optie aan te zetten.
+	  Het gebruik van deze optie vermindert uw kans om een cache
+	  poisoning aanval te weerstaan aanzienlijk, en dient indien
+	  mogelijk te worden vermeden.
+
+	  Vervang NNNNN in het voorbeeld door een getal tussen 49160 en
+	  65530.
+	*/
+	// query-source address * port NNNNN;
+};
+
+// Als er een lokale naamserver wordt gebruikt, vergeet dan niet om
+// eerst 127.0.0.1 in /etc/resolv.conf te zetten zodat die gevraagd
+// wordt.  Controleer ook dat het in /etc/rc.conf is aangezet.
+
+// Het traditionele root-hint-mechanisme.  Gebruik dit OF de
+// onderstaande slaafzones.
+zone "." { type hint; file "/etc/namedb/named.root"; };
+
+/*	Het slaaf maken van de volgende zones vanaf de root-naamservers
+	heeft een aantal aanzienlijke voordelen:
+	1. Snellere lokale resolutie voor uw gebruikers
+	2. Geen vals verkeer dat vanaf uw netwerk naar de roots wordt verzonden
+	3. Betere weerstand tegen elke mogelijk falen van de rootserver/DDoS
+
+	Wel is het zo dat deze methode meer toezicht vraagt dan het
+	hintbestand om er zeker van te zijn dat een onverwachte
+	faalmodus uw server niet heeft lamgelegd.  Naamservers die
+	veel clienten serveren zullen meer voordeel uit deze aanpak
+	halen dan individuele hosts.  Met zorg gebruiken.
+
+	Verwijder het commentaar uit de onderstaande regels en
+	commentarieer de bovenstaande hintzone om dit mechanisme te
+	gebruiken.
+
+	Zoals gedocumenteerd op http://dns.icann.org/services/axfr/ zijn deze
+	zones: "." (de root), ARPA, IN-ADDR.ARPA, IP6.ARPA en ROOT-SERVERS.NET
+	beschikbaar voor AXFR van deze servers op IPv4 en IPv6:
+	xfr.lax.dns.icann.org, xfr.cjr.dns.icann.org
+*/
+
+zone "." {
+	type slave;
+	file "/etc/namedb/slave/root.slave";
+	masters {
+		192.5.5.241;	// F.ROOT-SERVERS.NET.
+	};
+	notify no;
+};
+
+zone "arpa" {
+	type slave;
+	file "/etc/namedb/slave/arpa.slave";
+	masters {
+		192.5.5.241;	// F.ROOT-SERVERS.NET.
+	};
+	notify no;
+};
+
+/*	Het lokaal serveren van de volgende zones voorkomt dat enig
+	verzoek voor deze zones uw netwerk verlaat en naar de
+	root-naamservers gaat.  Dit heeft twee aanzienlijke voordelen:
+	1. Snellere lokale resolutie voor uw gebruikers
+	2. Er zal geen vals verkeer vanaf uw netwerk naar de roots worden verzonden
+*/
+// RFCs 1912 en 5735 (en BCP32 voor localhost)
+zone "localhost"	{ type master; file "/etc/namedb/master/localhost-forward.db"; };
+zone "127.in-addr.arpa"	{ type master; file "/etc/namedb/master/localhost-reverse.db"; };
+zone "255.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+
+// RFC 1912-stijl zone voor IPv6 localhost adres
+zone "0.ip6.arpa"	{ type master; file "/etc/namedb/master/localhost-reverse.db"; };
+
+// "Dit" netwerk (RFCs 1912 en 5735)
+zone "0.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+
+// Netwerken voor privaat gebruik (RFC 1918 en 5735)
+zone "10.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "16.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "17.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "18.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "19.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "20.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "21.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "22.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "23.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "24.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "25.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "26.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "27.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "28.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "29.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "30.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "31.172.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "168.192.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+
+// Lokale link/APIPA (RFCs 3927 en 5735)
+zone "254.169.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+
+// IETF protocol-toewijzingen (RFCs 5735 en 5736)
+zone "0.0.192.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+
+// TEST-NET-[1-3] voor documentatie (RFCs 5735 en 5737)
+zone "2.0.192.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "100.51.198.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+zone "113.0.203.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+
+// IPv6-bereik voor documentatie (RFC 3849)
+zone "8.b.d.0.1.0.0.2.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; };
+
+// Domeinnamen voor documentatie en testen (BCP 32)
+zone "test" { type master; file "/etc/namedb/master/empty.db"; };
+zone "example" { type master; file "/etc/namedb/master/empty.db"; };
+zone "invalid" { type master; file "/etc/namedb/master/empty.db"; };
+zone "example.com" { type master; file "/etc/namedb/master/empty.db"; };
+zone "example.net" { type master; file "/etc/namedb/master/empty.db"; };
+zone "example.org" { type master; file "/etc/namedb/master/empty.db"; };
+
+// Router benchmarken (RFC 2544 en 5735)
+zone "18.198.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "19.198.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+
+// Gereserveerd door IANA - oude ruimte van klasse E (RFC 5735)
+zone "240.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "241.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "242.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "243.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "244.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "245.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "246.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "247.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "248.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "249.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "250.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "251.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "252.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "253.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "254.in-addr.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+
+// Niet-toegewezen IPv6-adressen (RFC 4291)
+zone "1.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "2.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "3.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "4.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "5.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "6.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "7.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "8.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "9.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "a.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "b.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "c.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "d.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "e.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "0.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "1.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "2.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "3.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "4.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "5.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "6.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "7.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "8.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "9.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "a.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "b.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "0.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "1.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "2.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "3.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "4.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "5.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "6.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "7.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+
+// IPv6 ULA (RFC 4193)
+zone "c.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "d.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+
+// IPv6 lokale link (RFC 4291)
+zone "8.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "9.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "a.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "b.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+
+// IPv6 verouderde site-lokale adressen (RFC 3879)
+zone "c.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "d.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "e.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+zone "f.e.f.ip6.arpa"	{ type master; file "/etc/namedb/master/empty.db"; }
+
+// IP6.INT is verouderd (RFC 4159)
+zone "ip6.int"	{ type master; file "/etc/namedb/master/empty.db"; }
+
+// NB: De IP-adressen hieronder zijn bedoeld als voorbeeld en dienen
+//     niet gebruikt te worden!
+//
+// Voorbeeld instellingen voor slaafzones.  Het kan handig zijn om
+// tenminste slaaf te worden voor de zone waar de host onderdeel van
+// uitmaakt.  Bij uw netwerkbeheerder kan het IP-adres van de
+// verantwoordelijke meester-naamserver nagevraagd worden.
+//
+// Vergeet niet om de omgekeerde lookup-zone op te nemen!
+// Dit is genoemd na de eerste bytes van het IP-adres, in omgekeerde
+// volgorde, met daarachter ".IN-ADDR.ARPA", of "IP6.ARPA" voor IPv6.
+//
+// Het is van groot belang om de werking van DNS en BIND te begrijpen
+// voordat er een meester-zone wordt opgezet.  Er zijn nogal wat
+// onverwachte valkuilen.  Het opzetten van een slaafzone is
+// gewoonlijk eenvoudiger.
+//
+// NB: Zet de onderstaande voorbeelden niet blindelings aan. :-)
+// Gebruik in plaats hiervan echte namen en adressen.
+/* Een voorbeeld van een dynamische zone
+key "exampleorgkey" {
+       algorithm hmac-md5;
+       secret "sf87HJqjkqh8ac87a02lla==";
+};
+
+zone "example.org" {
+       type master;
+       allow-update {
+               key "exampleorgkey";
+       };
+       file "/etc/namedb/dynamic/example.org";
+};
+*/
+
+/* Voorbeeld van een omgekeerde slaafzone
+zone "1.168.192.in-addr.arpa" {
+       type slave;
+       file "/etc/namedb/slave/1.168.192.in-addr.arpa";
+       masters {
+               192.168.1.1;
+       };
+};
+*/
+....
+
+In [.filename]#named.conf# zijn dit voorbeelden van slaafregels voor een voorwaartse en een omgekeerde zone.
+
+Voor iedere nieuwe zone die wordt aangeboden dient een nieuwe instelling voor de zone aan [.filename]#named.conf# toegevoegd te worden.
+
+De eenvoudigste instelling voor de zone `example.org` kan er als volgt uitzien:
+
+[.programlisting]
+....
+zone "example.org" {
+	type master;
+	file "master/example.org";
+};
+....
+
+De zone is een master, zoals aangegeven door het statement `type`, waarvan de zoneinformatie in [.filename]#/etc/namedb/example.org# staat, zoals het statement `file` aangeeft.
+
+[.programlisting]
+....
+zone "example.org" {
+	type slave;
+	file "slave/example.org";
+};
+....
+
+In het geval van de slaaf wordt de zoneinformatie voor een zone overgedragen van de master naamserver en opgeslagen in het ingestelde bestand. Als de masterserver het niet meer doet of niet bereikbaar is, dan heeft de slaveserver de overgedragen zoneinformatie nog en kan het die aanbieden.
+
+==== Zonebestanden
+
+Een voorbeeldbestand voor een masterzone voor `example.org` (bestaande binnen [.filename]#/etc/namedb/master/example.org#) ziet er als volgt uit:
+
+[.programlisting]
+....
+$TTL 3600        ; 1 uur standaard TTL
+example.org.     IN      SOA      ns1.example.org. admin.example.org. (
+                                 2006051501      ; Serienummer
+                                 10800           ; Verversen
+                                 3600            ; Opnieuw proberen
+                                 604800          ; Verlopen
+                                 300             ; Negatieve antwoord-TTL
+                         )
+
+; DNS Servers
+                 IN      NS      ns1.example.org.
+                 IN      NS      ns2.example.org.
+
+; MX Records
+                 IN      MX 10   mx.example.org.
+                 IN      MX 20   mail.example.org.
+
+                 IN      A       192.168.1.1
+
+; Machinenamen
+localhost        IN      A       127.0.0.1
+ns1              IN      A       192.168.1.2
+ns2              IN      A       192.168.1.3
+mail             IN      A       192.168.1.4
+mx               IN      A       192.168.1.5
+
+; Aliases
+www              IN      CNAME   example.org.
+....
+
+Iedere hostnaam die eindigt op een "." is een exacte hostnaam, terwijl alles zonder een "." op het einde relatief is aan de oorsprong. Zo wordt `ns1` bijvoorbeeld vertaald naar `ns1.example.org.`.
+
+De regels in een zonebestand volgen de volgende opmaak:
+
+[.programlisting]
+....
+recordnaam      IN recordtype   waarde
+....
+
+De meest gebruikte DNS-records:
+
+SOA::
+begin van autoriteit (start of authority)
+
+NS::
+een bevoegde (autoratieve) name server
+
+A::
+een hostadres
+
+CNAME::
+de canonieke naam voor een alias
+
+MX::
+mail exchanger
+
+PTR::
+een domeinnaam pointer (gebruikt in omgekeerde DNS)
+
+[.programlisting]
+....
+example.org. IN SOA ns1.example.org. admin.example.org. (
+                        2006051501      ; Serienummer
+                        10800           ; Ververs na 3 uur
+                        3600            ; Opnieuw proberen na 1 uur
+                        604800          ; Verlopen na 1 week
+                        300             ; Negatieve antwoord-TTL
+....
+
+`example.org.`::
+de domeinnaam, ook de oorsprong voor dit zonebestand.
+
+`ns1.example.org.`::
+de primaire/bevoegde naamserver voor deze zone.
+
+`admin.example.org.`::
+de persoon die verantwoordelijk is voor deze zone, emailadres met "@" vervangen. mailto:admin@example.org[admin@example.org] wordt `admin.example.org`.
+
+`2006051501`::
+het serienummer van het bestand. Dit moet iedere keer als het zonebestand wordt aangepast opgehoogd worden. Tegenwoordig geven veel beheerders de voorkeur aan de opmaak `yyyymmddrr` voor het serienummer. `2006051501` betekent dan dat het voor het laatst is aangepast op 15-05-2006, de laatste `01` betekent dat het zonebestand die dag voor het eerst is aangepast. Het serienummer is belangrijk omdat het slaafnaamservers aangeeft dat een zone is bijgewerkt.
+
+[.programlisting]
+....
+       IN NS           ns1.example.org.
+....
+
+Hierboven staat een NS-regel. Voor iedere naamserver die bevoegde antwoorden moet geven voor de zone hoort er zo'n regel te zijn.
+
+[.programlisting]
+....
+localhost       IN      A       127.0.0.1
+ns1             IN      A       192.168.1.2
+ns2             IN      A       192.168.1.3
+mx              IN      A       192.168.1.4
+mail            IN      A       192.168.1.5
+....
+
+Een A-record geeft een machinenaam aan. Hierboven is te zien dat `ns1.example.org` zou resolven naar `192.168.1.2`.
+
+[.programlisting]
+....
+       IN      A       192.168.1.1
+....
+
+Deze regel kent IP-adres `192.168.1.1` toe aan de huidige oorsprong, in dit geval `example.org`.
+
+[.programlisting]
+....
+www             IN CNAME        @
+....
+
+Een canoniek naamrecord wordt meestal gebruikt voor het geven van aliassen aan een machine. In het voorbeeld is `www` een alias naar de "master" machine waarvan de naam gelijk is aan de domeinnaam `example.org` (`192.168.1.1`). CNAME's kunnen nooit samen met een ander soort record voor dezelfde hostnaam gebruikt worden.
+
+[.programlisting]
+....
+               IN MX   10      mail.example.org.
+....
+
+MX records geven aan welke mailservers verantwoordelijk zijn voor het afhandelen van inkomende mail voor de zone. `mail.example.org` is de hostnaam van een mailserver en 10 is de prioriteit voor die mailserver.
+
+Het is mogelijk meerdere mailservers in te stellen met prioriteiten 10, 20, enzovoorts. Een mailserver die probeert mail af te leveren voor `example.org` probeert dat eerst bij de MX met de hoogste prioriteit (het record met het laagste prioriteitsnummer), daarna de tweede hoogste, enzovoort, totdat de mail afgeleverd kan worden.
+
+Voor in-addr.arpa zonebestanden (omgekeerd DNS) wordt dezelfde opmaak gebruikt, maar dan met PTR-regels in plaats van A of CNAME.
+
+[.programlisting]
+....
+$TTL 3600
+
+1.168.192.in-addr.arpa. IN SOA ns1.example.org. admin.example.org. (
+                        2006051501      ; Serienummer
+                        10800           ; Ververs
+                        3600            ; Opnieuw proberen
+                        604800          ; Verlopen
+                        300 )           ; Negatieve antwoord-TTL
+
+        IN      NS      ns1.example.org.
+        IN      NS      ns2.example.org.
+
+1       IN      PTR     example.org.
+2       IN      PTR     ns1.example.org.
+3       IN      PTR     ns2.example.org.
+4       IN      PTR     mx.example.org.
+5       IN      PTR     mail.example.org.
+....
+
+Dit bestand geeft de juiste IP-adressen voor hostnamen in het voorbeelddomein hierboven.
+
+Het is het vernoemen waard dat alle namen aan de rechterkant van een PTR-record volledig gekwalificeerd dienen te zijn (i.e., met een "." eindigen).
+
+=== Caching naamserver
+
+Een caching naamserver is een naamserver wiens primaire rol het oplossen van recursieve verzoeken is. Het dient simpelweg zelf verzoeken in en onthoudt de antwoorden voor later gebruik.
+
+=== DNSSEC
+
+Domain Name Security System Extensions, ofwel DNSSEC, is een verzameling van specificaties om resolvende naamservers te beschermen tegen valse DNS-gegevens, zoals vervalste DNS-records. Door digitale handtekeningen te gebruiken kan een resolver de integriteit van een record controleren. Merk op dat DNSSEC alleen integriteit biedt via het digitaal ondertekenen van het Resource Record (RRs). Het biedt noch betrouwbaarheid noch bescherming tegen onjuiste aannames van eindgebruikers. Dit betekent dat het mensen niet kan beschermen tegen het bezoeken van `example.net` in plaats van `example.com`. Het enige wat DNSSEC doet is authenticeren dat de gegevens niet tijdens het transport zijn gecompromitteerd. De beveiliging van DNSSEC is een belangrijke stap in het beveiligen van het internet in het algemeen. De relevante RFCs zijn een goed beginpunt voor meer gedetailleerde gegevens over hoe DNSSEC werkt. Raadpleeg de lijst in <<dns-read>>.
+
+De volgende secties laten zien hoe DNSSEC voor een autoratieve DNS-server en een recursieve (of caching) DNS-server die BIND 9 draait kan worden bewerkstelligd. Hoewel alle versies van BIND 9 DNSSEC ondersteunen, is tenminste versie 9.6.2 nodig om gebruik te kunnen maken van de ondertekende rootzones tijdens het valideren van DNS-verzoeken. Dit komt doordat eerdere versies de benodigde algoritmes om validatie met de sleutel voor de rootzone te uit te voeren niet hebben. Het wordt sterk aangeraden om de nieuwste versie van BIND 9.7 te gebruiken om gebruik te kunnen maken van automatische sleutel-updates voor de rootsleutel en van andere mogelijkheden om zones ondertekend en sleutel up-to-date te houden. Wanneer configuraties tussen 9.6.2 en 9.7 en later verschillen, zullen deze worden toegelicht.
+
+==== Configuratie van een recursieve DNS-server
+
+Het aanzetten van DNSSEC-validatie van verzoeken die door een recursieve DNS-server worden uitgevoerd heeft enkele aanpassingen aan [.filename]#named.conf# nodig. Voordat deze wijzigingen worden gemaakt dient de rootzone-sleutel, of vertrouwensanker, te worden opgehaald. Momenteel is de rootzone-sleutel niet beschikbaar in een bestandsformaat dat BIND begrijpt, dus moet het handmatig in het juiste formaat omgezet worden. De sleutel zelf kan verkregen worden door de rootzone ervoor met dig te ondervragen. Door
+
+[source,bash]
+....
+% dig +multi +noall +answer DNSKEY . > root.dnskey
+....
+
+te draaien, wordt de sleutel in [.filename]#root.dnskey# opgeslagen. De inhoud dient er ongeveer als volgt uit te zien:
+
+[.programlisting]
+....
+. 93910 IN DNSKEY 257 3 8 (
+	AwEAAagAIKlVZrpC6Ia7gEzahOR+9W29euxhJhVVLOyQ
+	bSEW0O8gcCjFFVQUTf6v58fLjwBd0YI0EzrAcQqBGCzh
+	/RStIoO8g0NfnfL2MTJRkxoXbfDaUeVPQuYEhg37NZWA
+	JQ9VnMVDxP/VHL496M/QZxkjf5/Efucp2gaDX6RS6CXp
+	oY68LsvPVjR0ZSwzz1apAzvN9dlzEheX7ICJBBtuA6G3
+	LQpzW5hOA2hzCTMjJPJ8LbqF6dsV6DoBQzgul0sGIcGO
+	Yl7OyQdXfZ57relSQageu+ipAdTTJ25AsRTAoub8ONGc
+	LmqrAmRLKBP1dfwhYB4N7knNnulqQxA+Uk1ihz0=
+	) ; key id = 19036
+. 93910 IN DNSKEY 256 3 8 (
+	AwEAAcaGQEA+OJmOzfzVfoYN249JId7gx+OZMbxy69Hf
+	UyuGBbRN0+HuTOpBxxBCkNOL+EJB9qJxt+0FEY6ZUVjE
+	g58sRr4ZQ6Iu6b1xTBKgc193zUARk4mmQ/PPGxn7Cn5V
+	EGJ/1h6dNaiXuRHwR+7oWh7DnzkIJChcTqlFrXDW3tjt
+	) ; key id = 34525
+....
+
+Schrik niet als de verkregen sleutels anders zijn dan in dit voorbeeld. Ze kunnen zijn veranderd nadat deze instructies voor het laatst waren bijgewerkt. De uitvoer bevat in feite twee sleutels. De eerste sleutel, met de waarde 257 na het DNSKEY-recordtype, is degene die nodig is. Deze waarde geeft aan dat dit een Secure Entry Point ( SEP) is, beter bekend als een Key Signing Key (KSK). De tweede sleutel, met de waarde 256, is een deelsleutel, beter bekend als een Zone Signing Key (ZSK). Meer over de verschillende soorten sleutels komt aan bod in <<dns-dnssec-auth>>.
+
+Nu moet de sleutel gecontroleerd en geformatteerd worden zodat BIND deze kan gebruiken. Maak om de sleutel te controleren een DS - RR-paar aan. Maak een bestand aan dat deze RRs bevat aan met
+
+[source,bash]
+....
+% dnssec-dsfromkey -f root-dnskey . > root.ds
+....
+
+Deze records gebruiken respectievelijk SHA-1 en SHA-256, en dienen er als het volgende voorbeeld uit te zien, waarbij het langere record SHA-256 gebruikt.
+
+[.programlisting]
+....
+. IN DS 19036 8 1 B256BD09DC8DD59F0E0F0D8541B8328DD986DF6E
+. IN DS 19036 8 2 49AAC11D7B6F6446702E54A1607371607A1A41855200FD2CE1CDDE32F24E8FB5
+....
+
+Het SHA-256 RR kan nu worden vergeleken met de digest in https://data.iana.org/root-anchors/root-anchors.xml[https://data.iana.org/root-anchors/root-anchors.xml]. Om er absoluut zeker van te zijn dat er niet geknoeid is met de sleutel kunnen de gegevens in het XML-bestand worden gecontroleerd met de PGP-handtekening in https://data.iana.org/root-anchors/root-anchors.asc[https//data.iana.org/root-anchors/root-anchors.asc].
+
+Vervolgens dient de sleutel juist geformateerd te worden. Dit verschilt een beetje tussen versie 9.6.2 en versie 9.7 en later van BIND. In versie 9.7 is ondersteuning toegevoegd om automatisch veranderingen aan de sleutel te volgen en deze bij te werken indien nodig. Dit wordt gedaan met `managed-keys` zoals in het volgende voorbeeld te zien is. Als de oudere versie gebruikt wordt, wordt de sleutel toegevoegd met een commando `trusted-keys` en dient deze handmatig bijgewerkt te worden. Voor BIND 9.6.2 ziet het formaat er uit als:
+
+[.programlisting]
+....
+trusted-keys {
+	"." 257 3 8
+	"AwEAAagAIKlVZrpC6Ia7gEzahOR+9W29euxhJhVVLOyQbSEW0O8gcCjF
+	FVQUTf6v58fLjwBd0YI0EzrAcQqBGCzh/RStIoO8g0NfnfL2MTJRkxoX
+	bfDaUeVPQuYEhg37NZWAJQ9VnMVDxP/VHL496M/QZxkjf5/Efucp2gaD
+	X6RS6CXpoY68LsvPVjR0ZSwzz1apAzvN9dlzEheX7ICJBBtuA6G3LQpz
+	W5hOA2hzCTMjJPJ8LbqF6dsV6DoBQzgul0sGIcGOYl7OyQdXfZ57relS
+	Qageu+ipAdTTJ25AsRTAoub8ONGcLmqrAmRLKBP1dfwhYB4N7knNnulq
+	QxA+Uk1ihz0=";
+};
+....
+
+Voor versie 9.7 ziet het formaat er echter zo uit:
+
+[.programlisting]
+....
+managed-keys {
+	"." initial-key 257 3 8
+	"AwEAAagAIKlVZrpC6Ia7gEzahOR+9W29euxhJhVVLOyQbSEW0O8gcCjF
+	FVQUTf6v58fLjwBd0YI0EzrAcQqBGCzh/RStIoO8g0NfnfL2MTJRkxoX
+	bfDaUeVPQuYEhg37NZWAJQ9VnMVDxP/VHL496M/QZxkjf5/Efucp2gaD
+	X6RS6CXpoY68LsvPVjR0ZSwzz1apAzvN9dlzEheX7ICJBBtuA6G3LQpz
+	W5hOA2hzCTMjJPJ8LbqF6dsV6DoBQzgul0sGIcGOYl7OyQdXfZ57relS
+	Qageu+ipAdTTJ25AsRTAoub8ONGcLmqrAmRLKBP1dfwhYB4N7knNnulq
+	QxA+Uk1ihz0=";
+};
+....
+
+De rootsleutel kan nu aan [.filename]#named.conf# worden toegevoegd, ofwel direct of door een bestand dat de sleutel bevat te includen. Stel na deze stappen BIND in zodat het DNSSEC-validatie uitvoert op verzoeken door [.filename]#named.conf# te bewerken en het volgende aan de directief `options` toe te voegen:
+
+[.programlisting]
+....
+dnssec-enable yes;
+dnssec-validation yes;
+....
+
+Om te controleren dat het ook echt werkt, kan dig gebruikt worden om een verzoek op een ondertekende zone uit te voeren met de zojuist geconfigureerde resolver. Een succesvol antwoord zal de vlag `AD` bevatten om aan te geven dat de gegevens zijn geautenticeerd. Een verzoek als
+
+[source,bash]
+....
+% dig @resolver +dnssec se ds
+....
+
+zou het DSRR paar voor de `.se`-zone moeten teruggeven. In de sectie `flags:` moet de vlag `AD` te zien zijn, als in:
+
+[.programlisting]
+....
+...
+;; flags: qr rd ra ad; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1
+...
+....
+
+De resolver is nu in staat om DNS-verzoeken te autenticeren.
+
+[[dns-dnssec-auth]]
+==== Configuratie van een autoratieve DNS-server
+
+Om een autoratieve naamserver een met DNSSEC ondertekende zone te laten serveren is wat meer werk nodig. Een zone wordt ondertekend met cryptografische sleutels die aangemaakt moeten worden. Het is mogelijk om hier slechts één sleutel voor te gebruiken. De methode die de voorkeur verdient is echter om een sterke, goed beschermde Key Signing Key (KSK) die niet vaak wordt geroteerd en een Zone Signing Key (ZSK) die vaker wordt geroteerd te hebben. Informatie over aanbevolen procedures staat in http://tools.ietf.org/rfc/rfc4641.txt[RFC 4641: DNSSEC Operational Practices]. Procedures betreffende de rootzone staan in http://www.root-dnssec.org/wp-content/uploads/2010/06/icann-dps-00.txt[DNSSEC Practice Statement for the Root Zone KSK operator] en http://www.root-dnssec.org/wp-content/uploads/2010/06/vrsn-dps-00.txt[DNSSEC Practice Statement for the Root Zone ZSK operator]. De KSK wordt gebruikt om een autoriteitsketen voor de te valideren gegevens op te bouwen en wordt daarom ook een Secure Entry Point (SEP)-sleutel genoemd. Een bericht-digest van deze sleutel, dat Delegation Signer (DS)-record genoemd wordt, moet gepubliceerd zijn in de ouderzone om een vertrouwensketen op te bouwen. Hoe dit bereikt wordt hangt af van de eigenaar van de ouderzone. De ZSK wordt gebruikt om de zone te ondertekenen, en hoeft alleen daar gepubliceerd te worden.
+
+Om DNSSEC aan te zetten voor de zone `example.com` zoals beschreven in de voorgaande voorbeelden, dient als eerste dnssec-keygen gebruikt te worden om het sleutelpaar met de KSK en ZSK te genereren. Dit sleutelpaar kan verschillende cryptografische algoritmes gebruiken. Het wordt aanbevolen om RSA/SHA-256 voor de sleutels te gebruiken, een sleutellengte van 2048 bits zou voldoende moeten zijn. Om de KSK voor `example.com` te genereren:
+
+[source,bash]
+....
+% dnssec-keygen -f KSK -a RSASHA256 -b 2048 -n ZONE example.com
+....
+
+en om de ZSK te genereren:
+
+[source,bash]
+....
+% dnssec-keygen -a RSASHA256 -b 2048 -n ZONE example.com
+....
+
+dnssec-keygen maakt twee bestanden, de publieke en private sleutels in bestanden met namen als [.filename]#Kexample.com.+005+nnnnn.key# (publiek) en [.filename]#Kexample.com.+005+nnnnn.private# (privaat). Het gedeelte `nnnnn` van de bestandsnaam is een sleutel-ID van vijf cijfers. Houd bij welke sleutel-ID bij welke sleutel hoort. Dit is in het bijzonder van belang wanneer er meerdere sleutels per zone zijn. Het is ook mogelijk om de sleutels te hernoemen. Voor elk KSK-bestand:
+
+[source,bash]
+....
+% mv Kexample.com.+005+nnnnn.key Kexample.com.+005+nnnn.KSK.key
+% mv Kexample.com.+005+nnnnn.private Kexample.com.+005+nnnnn.KSK.private
+....
+
+Voor ZSK-bestanden dient `KSK` waar nodig door `ZSK` vervangen te worden. De bestanden kunnen nu worden opgenomen in het zonebestand, door de opdracht `$include` te gebruiken. Het zou er ongeveer als volgt uit moeten zien:
+
+[.programlisting]
+....
+$include Kexample.com.+005+nnnnn.KSK.key ; KSK
+$include Kexample.com.+005+nnnnn.ZSK.key ; ZSK
+....
+
+Onderteken tenslotte de zone en vertel BIND om het ondertekende zonebestand te gebruiken. Voor het ondertekenen van een zone wordt dnssec-signzone gebruikt. Het commando om de zone `example.com`, dat zich in [.filename]#example.com.db# bevindt, zou er ongeveer zo uit moeten zien:
+
+[source,bash]
+....
+% dnssec-signzone -o example.com -k Kexample.com.+005+nnnnn.KSK example.com.db Kexample.com.+005+nnnnn.ZSK.key
+....
+
+De sleutel die aan het argument `-k` wordt meegegeven is de KSK en het andere sleutelbestand is de ZSK dat bij het ondertekenen gebruikt moet worden. Het is mogelijk om meer dan één KSK en ZSK op te geven, wat tot gevolg heeft dat de zone met alle meegegeven sleutels wordt ondertekend. Dit kan nodig zijn om zonegegevens aan te leveren die met meerdere algoritmes zijn ondertekend. De uitvoer van dnssec-signzone is een zonebestand met daarin alle RRs ondertekend. Deze uitvoer komt in een bestand met de extensie `.signed` terecht, zoals [.filename]#example.com.db.signed#. De DS-records worden ook naar een apart bestand [.filename]#dsset-example.com# geschreven. Om deze ondertekende zone te gebruiken hoeft alleen de zone-directief in [.filename]#named.conf# veranderd te worden om [.filename]#example.com.db.signed#. Standaard zijn de ondertekeningen slechts 30 dagen geldig, wat betekent dat de zone over ongeveer 15 dagen hertekend moet worden om er zeker van te zijn dat resolvers geen records met oude ondertekeningen cachen. Het is mogelijk om hiervoor een script en een crontaak te maken. Bekijk de relevante handleidingen voor details.
+
+Zorg ervoor dat de private sleutels veilig blijven, zoals met alle cryptografische sleutels. Bij het veranderen van een sleutel kan het beste de nieuwe sleutel in de zone opgenomen worden, en nog met de oude sleutel te ondertekenen, en om daarna over te stappen op de nieuwe sleutel. Nadat deze handelingen zijn voltooid kan de oude sleutel uit de zone worden verwijderd. Wanneer dit niet wordt gedaan kunnen de DNS-gegevens tijdelijk onbeschikbaar zijn totdat de nieuwe sleutel door de DNS-hiërarchie is gepropageerd. Meer informatie over sleutelwisselingen en andere praktijken rondom DNSSEC staan in http://www.ietf.org/rfc/rfc4641.txt[RFC 4641: DNSSEC Operational practices].
+
+==== Automatisering met BIND 9.7 of nieuwer
+
+In versie 9.7 van BIND is een nieuwe mogelijkheid genaamd _Smart Signing_ geïntroduceerd. Deze mogelijkheid heeft als doel om het sleutelbeheer en ondertekenproces eenvoudiger te maken door delen van deze taken te automatiseren. Door de sleutels in een _sleutelreservoir_ te stoppen en de nieuwe optie `auto-dnssec` te gebruiken, is het mogelijk om een dynamische zone aan te maken welke opnieuw getekend wordt indien dat nodig is. Gebruik om deze zone bij te werken nsupdate met de nieuwe `-l`. rndc kan nu ook zones ondertekenen met sleutels uit het sleutelreservoir door de optie `sign` te gebruiken. Voeg, om BIND dit automatische ondertekenen en bijwerken van zones te laten gebruiken voor `example.com`, het volgende aan [.filename]#named.conf# toe:
+
+[.programlisting]
+....
+zone example.com {
+	type master;
+	key-directory "/etc/named/keys";
+	update-policy local;
+	auto-dnssec maintain;
+	file "/etc/named/dynamic/example.com.zone";
+};
+....
+
+Nadat deze veranderingen gemaakt zijn, dienen de sleutels voor de zone aangemaakt te worden zoals uitgelegd in <<dns-dnssec-auth>>, deze sleutels in het sleutelreservoir gestopt te worden dat als argument aan de `key-directory` in het zoneconfiguratie is meegegeven, waarna de zone automatisch zal worden ondertekend. Zones die op deze manier zijn geconfigureerd dienen met nsupdate te worden gedaan, dat voor het opnieuw ondertekenen van de zone met de nieuw toegevoegde gegevens zal zorgen. Zie voor meer details <<dns-read>> en de BIND-documentatie.
+
+=== Beveiliging
+
+Hoewel BIND de meest gebruikte implementatie van DNS is, is er altijd nog het beveiligingsvraagstuk. Soms worden er mogelijke en te misbruiken beveiligingsgaten gevonden.
+
+Hoewel FreeBSD named automatisch in een man:chroot[8]-omgeving plaatst; zijn er verschillende andere beveiligingsmechanismen actief die zouden kunnen helpen om mogelijke aanvallen op de DNS-dienst af te wenden.
+
+Het is altijd verstandig om de http://www.cert.org/[CERT] beveiligingswaarschuwingen te lezen en een abonnement te nemen op de {freebsd-security-notifications} om bij te blijven met de beveiligingsproblemen wat betreft Internet en FreeBSD.
+
+[TIP]
+====
+
+Als er problemen ontstaan, kan het bijwerken van broncode en het opnieuw bouwen van named hulp bieden.
+====
+
+[[dns-read]]
+=== Verder lezen
+
+BIND/named hulppagina's: man:rndc[8] man:named[8] man:named.conf[8] man:nsupdate[8] man:dnssec-signzone[8] man:dnssec-keygen[8]
+
+* https://www.isc.org/software/bind/[Officiële ISC BIND pagina]
+* https://www.isc.org/software/guild/[Officieel ISC BIND Forum]
+* http://www.oreilly.com/catalog/dns5/[O'Reilly DNS en BIND 5e Editie]
+* http://www.root-dnssec.org/documentation/[Root DNSSEC]
+* http://data.iana.org/root-anchors/draft-icann-dnssec-trust-anchor.html[ DNSSEC Trust Anchor Publication for the Root Zone]
+* http://tools.ietf.org/html/rfc1034[RFC1034 - Domain Names - Concepts and Facilitities]
+* http://tools.ietf.org/html/rfc1035[RFC1035 - Domain Names - Implementation and Specification]
+* http://tools.ietf.org/html/rfc4033[RFC4033 - DNS Security Introduction and Requirements]
+* http://tools.ietf.org/html/rfc4034[RFC4034 - Resource Records for the DNS Security Extensions]
+* http://tools.ietf.org/html/rfc4035[RFC4035 - Protocol Modifications for the DNS Security Extensions]
+* http://tools.ietf.org/html/rfc4641[RFC4641 - DNSSEC Operational Practices]
+* http://tools.ietf.org/html/rfc5011[RFC5011 - Automated Updates of DNS Security (DNSSEC Trust Anchors)]
+
+[[network-apache]]
+== Apache HTTP server
+
+=== Overzicht
+
+FreeBSD wordt gebruikt om een paar van de drukste websites ter wereld te draaien. De meeste webservers op Internet maken gebruik van de Apache HTTP Server. Apache softwarepakketten staan op de FreeBSD installatiemedia. Als Apache niet bij de oorspronkelijke installatie van FreeBSD is meegeïnstalleerd, dan kan dat vanuit de port package:www/apache22[].
+
+Als Apache succesvol is geïnstalleerd, moeten er instellingen gemaakt worden.
+
+[NOTE]
+====
+In dit onderdeel wordt versie 2.2.X van de Apache HTTP Server behandeld omdat die het meest gebruikt wordt op FreeBSD. Meer gedetailleerde informatie over Apache 2.X dat buiten het bereik van dit document valt is te vinden op http://httpd.apache.org/[http://httpd.apache.org/].
+====
+
+=== Instellen
+
+Het belangrijkste bestand met instellingen voor de Apache HTTP Server op FreeBSD is [.filename]#/usr/local/etc/apache22/httpd.conf#. Dit bestand is een typisch UNIX(R) tekstgebaseerd instellingenbestand waarin regels met commentaar beginnen met het karakter `#`. Het uitputtend beschrijven van alle mogelijke instellingen valt buiten het bereik van dit boek, dus worden alleen de meest gebruikte directieven beschreven.
+
+`ServerRoot "/usr/local"`::
+Hierin wordt de standaard mappenhiërarchie voor de Apache installatie aangegeven. Binaire bestanden staan in de submappen [.filename]#bin# en [.filename]#sbin# van de serverroot en bestanden met instellingen staan in [.filename]#etc/apache#.
+
+`ServerAdmin beheerder@beheer.adres`::
+Het adres waaraan problemen met de server gemaild kunnen worden. Dit adres verschijnt op een aantal door de server gegenereerde pagina's, zoals documenten met foutmeldingen.
+
+`ServerName www.example.com`::
+Met `ServerName` kan een hostnaam ingesteld worden die wordt teruggezonden aan de cliënten als de naam van de server anders is dan diegene is ingesteld (gebruik bijvoorbeeld `www` in plaats van de echte hostnaam).
+
+`DocumentRoot "/usr/local/www/apache22/data"`::
+`DocumentRoot`: de map waaruit de documenten worden geserveerd. Standaard worden alle verzoeken uit deze map gehaald, maar er kunnen symbolische links en aliassen gebruikt worden om naar andere locaties te wijzen.
+
+Het is altijd een goed idee om reservekopieën te maken van het instellingenbestand voor Apache vóór het maken van wijzigingen. Als de juiste instellingen gemaakt zijn, kan Apache gestart worden.
+
+=== Apache draaien
+
+De port package:www/apache2[] installeert een man:rc[8]-script dat helpt met het starten, stoppen en herstarten van Apache en is te vinden in [.filename]#/usr/local/etc/rc.d/#.
+
+Om Apache met het systeem mee te starten kan de volgende regel aan [.filename]#/etc/rc.conf# worden toegevoegd:
+
+[.programlisting]
+....
+apache22_enable="YES"
+....
+
+Als het nodig is Apache met afwijkende opties op te starten, kan de volgende regel aan [.filename]#/etc/rc.conf# worden toegevoegd:
+
+[.programlisting]
+....
+apache22_flags=""
+....
+
+De configuratie van Apache kan worden getest op fouten voordat het daemon `httpd` voor de eerste keer wordt gestart, of na het maken van wijzigingen aan de instellingen terwijl `httpd` draait. Dit kan direct door het man:rc[8]-script worden gedaan, of door het gereedschap man:service[8] door één van de volgende commando's op te geven:
+
+[source,bash]
+....
+# service apache22 configtest
+....
+
+[NOTE]
+====
+Het is belangrijk om op te merken dat `configtest` geen man:rc[8]-standaard is, verwacht niet dat het met alle man:rc[8]-opstartscripts werkt.
+====
+
+Als Apache geen instellingsfouten meldt, kan Apache `httpd` gestart worden met man:service[8]:
+
+[source,bash]
+....
+# service apache22 start
+....
+
+De dienst `httpd` kan getest worden door `http://localhost` in een webbrowser te typen, waarbij _localhost_ door de volledig gekwalificeerde domeinnaam wordt vervangen van de machine die `httpd` draait, als het niet de lokale machine is. De standaard webpagina die afgebeeld wordt is [.filename]#/usr/local/www/apache22/data/index.html#.
+
+=== Virtuele hosting
+
+Apache ondersteunt twee verschillende manieren van Virtuele Hosting. De eerste methode is Naamgebaseerde Virtuele Hosting. Naamgebaseerde Virtuele Hosting gebruikt de HTTP/1.1 headers van de cliënten om de hostnaam uit te zoeken. Hierdoor kunnen meerdere domeinen hetzelfde IP-adres delen.
+
+Om Apache gebruik te laten maken van Naamgebaseerde Virtuele Hosting kan een regel als de volgende in [.filename]#httpd.conf# worden opgenomen:
+
+[.programlisting]
+....
+NameVirtualHost *
+....
+
+Als een webserver `www.domein.tld` heet en er moet een virtueel domein voor `www.anderdomein.tld` gaan draaien, dan kunnen de volgende regels aan [.filename]#httpd.conf# worden toegevoegd:
+
+[source,bash]
+....
+<VirtualHost *>
+    ServerName www.domein.tld
+    DocumentRoot /www/domein.tld
+</VirtualHost>
+
+<VirtualHost *>
+    ServerName www.anderdomein.tld
+    DocumentRoot /www/anderdomein.tld
+</VirtualHost>
+....
+
+De adressen en de paden uit dit voorbeeld kunnen in echte implementaties uiteraard gewijzigd worden.
+
+Meer informatie over het opzetten van virtuele hosts staat in de officiële documentatie voor Apache op http://httpd.apache.org/docs/vhosts/[http://httpd.apache.org/docs/vhosts/]
+
+=== Apache modules
+
+Er zijn veel verschillende Apache modules die functionaliteit toevoegen aan de basisdienst. De FreeBSD Portscollectie biedt op een eenvoudige manier de mogelijkheid om Apache samen met de meeste populaire add-on modules te installeren.
+
+==== mod_ssl
+
+De module mod_ssl gebruikt de bibliotheek OpenSSL om sterke cryptografie te leveren via de protocollen Secure Sockets Layer (SSL v2/v3) en Transport Layer Security (TLS v1). Deze module levert alles wat nodig is om een getekend certificaat aan te vragen bij een vertrouwde certificaatautoriteit om een veilige webserver onder FreeBSD te kunnen draaien.
+
+De module mod_ssl wordt standaard gebouwd, maar kan worden aangezet door tijdens het compileren `-DWITH_SSL` op te geven.
+
+==== Taalbindingen
+
+Er zijn Apache-modules beschikbare voor de meeste grote scriptingtalen. Deze modules maken het typisch mogelijk om Apache-modules geheel in een scriptingtaal te schrijven. Ze worden ook vaak gebruikt als een persistente interpreter die in de server zit en die de rompslomp van het starten van een externe interpreter en de opstartvertraging voor dynamische websites vermijdt, zoals beschreven in de volgende sectie.
+
+=== Dynamische websites
+
+In het afgelopen decennium hebben steeds meer bedrijven zich op Internet gericht om hun omzet te verhogen en hun zichtbaarheid te vergroten. Hiermee is ook de behoefte aan interactieve webinhoud toegenomen. Hoewel sommige bedrijven zoals Microsoft(R) oplossingen hebben geïntroduceerd voor hun eigen (propriëtaire) producten, heeft ook de open source gemeenschap een antwoord op de vraag gegeven. Moderne opties voor dynamische webinhoud zijn onder andere Django, Ruby on Rails, mod_perl2, en mod_php.
+
+==== Django
+
+Django is een BSD-gelicenseerd raamwerk ontworpen om ontwikkelaars in staat te stellen om snel hoog presterende, elegante webapplicaties te schrijven. Het biedt een vertaling van objecten naar relaties zodat datatypes ontwikkeld kunnen worden als Python-objecten, en er een rijke dynamische databasetoegang voor die objecten kan worden geboden zonder dat de ontwikkelaar ooit SQL hoeft te schrijven. Het biedt ook een uitbreidbaar sjabloonsysteem zodat de applicatielogica is gescheiden van de HTML-presentatie.
+
+Django is afhankelijk van mod_python, Apache, en een SQL-database-engine naar keuze. De FreeBSD-port zal al deze vereisten met de juiste vlaggen voor u installeren.
+
+[[network-www-django-install]]
+.Django installeren met Apache2, mod_python3 en PostgreSQL
+[example]
+====
+
+[source,bash]
+....
+# cd /usr/ports/www/py-django; make all install clean -DWITH_MOD_PYTHON3 -DWITH_POSTGRESQL
+....
+
+====
+
+Als Django en deze vereisten eenmaal zijn geïnstalleerd, dient u een Django-projectmap te maken en vervolgens Apache te configureren om de ingebakken Python-interpreter te gebruiken om uw applicatie voor specifieke URL's op uw site aan te roepen.
+
+[[network-www-django-apache-config]]
+.Apache-configuratie voor Django/mod_python
+[example]
+====
+U moet een regel aan het Apache-bestand [.filename]#httpd.conf# toevoegen om Apache in te stellen om verzoeken voor bepaalde URL's aan uw webapplicatie door te geven:
+
+[source,bash]
+....
+<Location "/">
+    SetHandler python-program
+    PythonPath "['/map/naar/uw/django-pakketten/'] + sys.path"
+    PythonHandler django.core.handlers.modpython
+    SetEnv DJANGO_SETTINGS_MODULE mijnsite.settings
+    PythonAutoReload On
+    PythonDebug On
+</Location>
+....
+
+====
+
+==== Ruby on Rails
+
+Ruby on Rails is een ader opensource webraamwerk dat een volledige ontwikkelstack biedt en geoptimaliseerd is om webontwikkelaars productiever te maken en snel krachtige applicaties te laten ontwikkelen. Het kan eenvoudig vanuit het portssysteem geïnstalleerd worden.
+
+[source,bash]
+....
+# cd /usr/ports/www/rubygem-rails; make all install clean
+....
+
+==== mod_perl2
+
+Het Apache/Perl integratieproject brengt de volledige kracht van de programmeertaal Perl en de Apache HTTP Server samen. Met de module mod_perl2 is het mogelijk om Apache-modules volledig in Perl te schrijven. Daarnaast voorkomt een ingebouwde persistente interpreter in de server de rompslomp van het starten van een externe interpreter en de nadelen van de opstarttijd van Perl.
+
+mod_perl2 is beschikbaar in de port package:www/mod_perl2[].
+
+==== mod_php
+
+PHP, ook bekend als "PHP: Hypertext Preprocessor", is een algemene scripttaal die bijzonder geschikt is voor webontwikkeling. Het is mogelijk de taal in te bedden in HTML en de syntaxis is afgeleid van C, Java(TM) en Perl met de bedoeling webontwikkelaars in staat te stellen om snel dynamisch samengestelde pagina's te schrijven.
+
+Om ondersteuning voor PHP5 toe te voegen aan de Apache webserver kan eerst de port package:lang/php5[] geïnstalleerd worden.
+
+Als de port package:lang/php5[] voor het eerst geïnstalleerd wordt, worden automatisch de beschikbare `OPTIONS` weergegeven. Als er geen menu wordt weergegeven, omdat de port package:lang/php5[] reeds in het verleden is geïnstalleerd, is het altijd mogelijk om het optiedialoog weer te laten verschijnen door
+
+[source,bash]
+....
+# make config
+....
+
+uit te voeren in de map van de port.
+
+Controleer in het optiedialoog dat de optie `APACHE` mod_php5 als een laadbare module voor de webserver Apache bouwt.
+
+[NOTE]
+====
+Een heleboel sites draaien nog steeds PHP4 om verschillende redenen (compatibiliteitszaken of reeds in gebruik genomen webapplicaties). Als mod_php4 nodig is in plaats van mod_php5, gebruik dan de port package:lang/php4[]. De port package:lang/php4[] ondersteunt een groot deel van de configuratie- en bouwopties van de port package:lang/php5[].
+====
+
+Hiermee worden de modules die nodig zijn voor de ondersteuning van dynamische PHP-applicaties geïnstalleerd en ingesteld. Controleer dat de volgende secties aan [.filename]#/usr/local/etc/apache22/httpd.conf# zijn toegevoegd:
+
+[.programlisting]
+....
+LoadModule php5_module        libexec/apache/libphp5.so
+....
+
+[.programlisting]
+....
+AddModule mod_php5.c
+    IfModule mod_php5.c
+        DirectoryIndex index.php index.html
+    /IfModule
+    IfModule mod_php5.c
+        AddType application/x-httpd-php .php
+        AddType application/x-httpd-php-source .phps
+    /IfModule
+....
+
+Na voltooiing is een eenvoudige aanroep van het commando `apachectl` voor een nette herstart nodig om de module PHP te laden:
+
+[source,bash]
+....
+# apachectl graceful
+....
+
+Voor toekomstig bijwerken van PHP zal het commando `make config` niet nodig zijn; de geselecteerde `OPTIONS` worden automatisch bewaard door het FreeBSD Ports raamwerk.
+
+De ondersteuning voor PHP in FreeBSD is extreem modulair waardoor de basisinstallatie zeer beperkt is. Het is heel gemakkelijk om ondersteuning toe te voegen door de port package:lang/php5-extensions[] te gebruiken. Deze port biedt een menugestuurde interface voor de installatie van PHP-uitbreidingen. Als alternatief kunnen individuele uitbreidingen worden geïnstalleerd door de juiste port te gebruiken.
+
+Om bijvoorbeeld ondersteuning voor de MySQL databaseserver aan PHP5 toe te voegen kan gewoonweg de port [.filename]#databases/php5-mysql# geïnstalleerd worden:
+
+Na de installatie van een uitbreiding moet de Apache-server herladen worden om de nieuwe veranderingen in de configuratie op te pikken:
+
+[source,bash]
+....
+# apachectl graceful
+....
+
+[[network-ftp]]
+== File Transfer Protocol (FTP)
+
+=== Overzicht
+
+Het File Transfer Protocol (FTP) biedt gebruikers een eenvoudige manier om bestanden van en naar een FTP server te verplaatsen. FreeBSD bevat FTP server software, ftpd, in het basissysteem. Hierdoor is het opzetten en beheren van een FTP server op FreeBSD erg overzichtelijk.
+
+=== Instellen
+
+De belangrijkste stap bij het instellen is de beslissing welke accounts toegang krijgen tot de FTP server. Een normaal FreeBSD systeem heeft een aantal systeemaccounts die gebruikt worden voor daemons, maar onbekende gebruikers mag niet toegestaan worden van die accounts gebruikt te maken. In [.filename]#/etc/ftpusers# staat een lijst met gebruikers die geen FTP toegang hebben. Standaard staan daar de voorgenoemde accounts in, maar het is ook mogelijk om daar gebruikers toe te voegen die geen FTP toegang mogen hebben.
+
+Het kan ook wenselijk zijn de FTP toegang voor sommige gebruikers te beperken, maar niet onmogelijk te maken. Dit kan met [.filename]#/etc/ftpchroot#. In dat bestand staan gebruikers en groepen waarop FTP toegangsbeperkingen van toepassing zijn. In man:ftpchroot[5] staan alle details die hier niet beschreven zijn.
+
+Om anonieme FTP toegang voor een server in te schakelen, dient er een gebruiker `ftp` op een FreeBSD systeem aangemaakt te worden. Dan kunnen gebruikers op de server aanmelden met de gebruikersnaam `ftp` of `anonymous` en met ieder wachtwoord (de geldende conventie schrijft voor dat dit een emailadres van de gebruiker is). De FTP server roep bij een anonieme aanmelding man:chroot[2] aan, zodat er alleen toegang is tot de thuismap van de gebruiker `ftp`.
+
+Er zijn twee tekstbestanden waarin welkomstberichten voor de FTP-cliënten gezet kunnen worden. De inhoud van [.filename]#/etc/ftpwelcome# wordt getoond voordat gebruikers een aanmeldprompt zien. Na een succesvolle aanmelding wordt de inhoud van [.filename]#/etc/ftpmotd# getoond. Het genoemde pad is relatief ten opzichte van de aanmeldomgeving, dus voor anonieme gebruikers wordt [.filename]#~ftp/etc/ftpmotd# getoond.
+
+Als een FTP server eenmaal correct is ingesteld, moet die ingeschakeld worden in [.filename]#/etc/inetd.conf#. Daar moet het commentaarkarakter `#` voor de bestaande ftpd regel verwijderd worden:
+
+[.programlisting]
+....
+ftp	stream	tcp	nowait	root	/usr/libexec/ftpd	ftpd -l
+....
+
+Zoals is uitgelegd in <<network-inetd-reread>>, moet de configuratie van inetd worden herladen nadat dit instellingenbestand is gewijzigd. Details over het aanzetten van inetd op uw systeem staan in <<network-inetd-settings>>.
+
+Als alternatief kan ftpd ook gestart worden als een op zichzelf staande dienst. In dat geval volstaat het om de juiste variabele in te stellen in [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ftpd_enable="YES"
+....
+
+Na het instellen van de bovenstaande variabele zal de op zichzelf staande server gestart worden nadat de computer opnieuw is opgestart, of het kan handmatig worden gestart door het volgende commando als `root` uit te voeren:
+
+[source,bash]
+....
+# service ftpd start
+....
+
+Nu kan aangemeld worden op de FTP-server met:
+
+[source,bash]
+....
+% ftp localhost
+....
+
+=== Beheren
+
+De ftpd daemon gebruikt man:syslog[3] om berichten te loggen. Standaard plaatst de systeemlogdaemon berichten over FTP in [.filename]#/var/log/xferlog#. De lokatie van het FTP logboek kan gewijzigd worden door de volgende regels in [.filename]#/etc/syslog.conf# te wijzigen:
+
+[.programlisting]
+....
+ftp.info      /var/log/xferlog
+....
+
+Het is verstandig na te denken over de gevaren die op de loer liggen bij het draaien van een anonieme FTP server. Dat geldt in het bijzonder voor het laten uploaden ven bestanden. Het is dan goed mogelijk dat een FTP site een forum wordt om commerciële software zonder licenties uit te wisselen of erger. Als anonieme uploads toch nodig zijn, dan horen de rechten op die bestanden zo te staan dat ze niet door andere anonieme gebruikers gelezen kunnen worden tot er door een beheerder naar gekeken is.
+
+[[network-samba]]
+== Bestands- en printdiensten voor Microsoft(R) Windows(R) cliënten (Samba)
+
+=== Overzicht
+
+Samba is een populair open source softwarepakket dat bestands- en printdiensten voor Microsoft(R) Windows(R) cliënten biedt. Die cliënten kunnen dan ruimte op een FreeBSD bestandssysteem gebruiken alsof het een lokale schijf is en FreeBSD printers gebruiken alsof het lokale printers zijn.
+
+Samba softwarepakketten horen op de FreeBSD installatiemedia te staan. Als Samba bij de basisinstallatie niet mee is geïnstalleerd, dan kan dat alsnog via de package:net/samba34[] port of met het pakket.
+
+=== Instellen
+
+Een standaardbestand met instellingen voor Samba wordt geïnstalleerd als [.filename]#/usr/local/shared/examples/samba34/smb.conf.default#. Dit bestand dient gekopieerd te worden naar [.filename]#/usr/local/etc/smb.conf# en voordat Samba gebruikt kan worden, moeten er aanpassingen aan worden gemaakt.
+
+[.filename]#smb.conf# bevat de instellingen voor Samba, zoals die voor de printers en de "gedeelde bestandssystemen" die gedeeld worden met Windows(R) cliënten. Het pakket Samba bevat een webgebaseerde beheermodule die swat heet, waarmee [.filename]#smb.conf# op een eenvoudige manier ingesteld kan worden.
+
+==== De Samba webbeheermodule gebruiken (SWAT)
+
+De Samba Webbeheermodule (SWAT) draait als een daemon vanuit inetd. Daarom dient inetd aangezet te worden zoals beschreven in <<network-inetd>> en dient voor de volgende regel uit [.filename]#/etc/inetd.conf# het commentaarkarakter verwijderd te worden voordat swat gebruikt kan worden om Samba in te stellen:
+
+[.programlisting]
+....
+swat   stream  tcp     nowait/400      root    /usr/local/sbin/swat    swat
+....
+
+Zoals is uitgelegd in <<network-inetd-reread>>, moet de configuratie van inetd worden herladen nadat dit instellingenbestand is gewijzigd.
+
+Als swat is ingeschakeld in [.filename]#inetd.conf#, kan de module gebruikt worden door met een browser een verbinding te maken met http://localhost:901[http://localhost:901]. Er dient aangemeld te worden met het `root` account van het systeem.
+
+Na succesvol aanmelden op de hoofdpagina voor de Samba instellingen, is het mogelijk de systeemdocumentatie te bekijken of te starten door op het tabblad menu:Globals[] te klikken. Het onderdeel menu:Globals[] correspondeert met de sectie `[global]` in [.filename]#/usr/local/etc/smb.conf#.
+
+==== Systeembrede instellingen
+
+Of Samba nu wordt ingesteld door [.filename]#/usr/local/etc/smb.conf# direct te bewerken of met swat, de eerste instellingen die gemaakt moeten worden zijn de volgende:
+
+`workgroup`::
+NT Domeinnaam of Werkgroepnaam voor de computers die verbinding gaan maken met de server.
+
+`netbiosnaam`::
+Hiermee wordt de NetBIOS naam waaronder de Samba server bekend zal zijn ingesteld. Standaard is de naam het eerste gedeelte van de DNS-naam van een host.
+
+`server string`::
+Hiermee wordt de string ingesteld die te zien is als het commando `net view` en een aantal andere commando's die gebruik maken van de beschrijvende tekst voor de server gebruikt worden.
+
+==== Beveiligingsinstellingen
+
+Twee van de belangrijkste instellingen in [.filename]#/usr/local/etc/smb.conf# zijn het gekozen beveiligingsmodel en het wachtwoord voor cliëntgebruikers. Deze worden met de volgende instellingen gemaakt:
+
+`security`::
+De twee meest gebruikte mogelijkheden hier zijn `security = share` en `security = user`. Als de cliënten gebruikersnamen hebben die overeenkomen met hun gebruikersnaam op de FreeBSD machine, dan is het verstandig om te kiezen voor beveiliging op gebruikersniveau. Dit is het standaard beveiligingsbeleid en kent als voorwaarde dat gebruikers zich eerst moeten aanmelden voordat ze toegang krijgen tot gedeelde bronnen.
++
+Bij beveiliging op shareniveau hoeft een cliënt niet met een geldige gebruikersnaam en wachtwoord aan te melden op de server voor het mogelijk is om een verbinding te proberen te krijgen met een gedeelde bron. Dit was het standaardbeveiligingsmodel voor oudere versies van Samba.
+
+`passdb backend`::
+Samba kent aan de achterkant verschillende authenticatiemodellen. Cliënten kunnen authenticeren met LDAP, NIS+, een SQL-database of een aangepast wachtwoordbestand. De standaard authenticatiemethode is `smbpasswd`. Meer wordt hier niet behandeld.
+
+Als aangenomen wordt dat de standaard achterkant `smbpasswd` wordt gebruikt, dan moet [.filename]#/usr/local/etc/samba/smbpasswd# gemaakt worden om Samba in staat te stellen cliënten te authenticeren. Als het gewenst is om uw UNIX(R) gebruikersaccounts toegang te geven vanaf Windows(R) cliënten, gebruik dan het volgende commando:
+
+[source,bash]
+....
+# smbpasswd -a gebruikersnaam
+....
+
+[NOTE]
+====
+De aanbevolen backend is nu `tdbsam`, en het volgende command moet gebruikt worden om gebruikersaccounts toe te voegen:
+
+[source,bash]
+....
+# pdbedit -a -u gebruikersnaam
+....
+
+====
+
+In de http://www.samba.org/samba/docs/man/Samba-HOWTO-Collection[Official Samba HOWTO] staat meer informatie over instelopties. Met de hier gegeven basisuitleg moet het mogelijk zijn Samba draaiende te krijgen.
+
+=== Samba starten
+
+De port package:net/samba34[] voegt een nieuw opstartscript toe, dat gebruikt kan worden om Samba te beheren. Om dit script te activeren, zodat het bijvoorbeeld gebruikt kan worden om Samba te starten, stoppen, of te herstarten, dient de volgende regel aan [.filename]#/etc/rc.conf# toegevoegd te worden:
+
+[.programlisting]
+....
+samba_enable="YES"
+....
+
+Of, voor fijnkorrelig beheer:
+
+[.programlisting]
+....
+nmbd_enable="YES"
+....
+
+[.programlisting]
+....
+smbd_enable="YES"
+....
+
+[NOTE]
+====
+Dit stelt Samba ook in om automatisch tijdens het opstarten te starten.
+====
+
+Vervolgens is het mogelijk om Samba op elk moment te starten door dit te typen:
+
+[source,bash]
+....
+# service samba start
+Starting SAMBA: removing stale tdbs :
+Starting nmbd.
+Starting smbd.
+....
+
+Refereer aan crossref:config[configtuning-rcd,Gebruik van rc met FreeBSD] voor meer informatie over het gebruikt van rc-scripts.
+
+Samba bestaat feitelijk uit drie afzonderlijke daemons. Het script [.filename]#samba# start de daemons nmbd en smbd. Als de winbind naamresolutiediensten in [.filename]#smb.conf# zijn ingeschakeld, dan start ook de daemon winbindd.
+
+Samba kan op ieder moment gestopt worden met:
+
+[source,bash]
+....
+# service samba stop
+....
+
+Samba is een complexe softwaresuite met functionaliteit waarmee verregaande integratie met Microsoft(R) Windows(R) netwerken mogelijk wordt. Informatie die verder gaat dan de basisinstallatie staat op http://www.samba.org[http://www.samba.org].
+
+[[network-ntp]]
+== Tijd synchroniseren met NTP
+
+=== Overzicht
+
+Na verloop van tijd gaat de tijd van een computer meestal uit de pas lopen. Het Netwerk Tijd Protocol (NTP) kan ervoor zorgen dat de tijd accuraat blijft.
+
+Veel diensten op Internet zijn afhankelijk, of hebben veel voordeel, van het betrouwbaar zijn van de tijd. Zo ontvangt een webserver bijvoorbeeld veel verzoeken om een bestand te sturen als dat gewijzigd is sinds een bepaald moment. In een LAN-omgeving is het van groot belang dat computers die bestanden delen van eenzelfde server gesynchroniseerde tijd hebben zodat de tijdstempels consistent blijven. Diensten zoals man:cron[8] zijn ook afhankelijk van een betrouwbare systeemtijd om commando's op het ingestelde moment uit te voeren.
+
+Bij FreeBSD zit de man:ntpd[8] NTP server die gebruikt kan worden om bij andere NTP servers de tijd op te vragen om de eigen klok gelijk te zetten of om de juiste tijd te verstrekken aan andere apparaten.
+
+=== Passende NTP-servers kiezen
+
+Om de tijd te synchroniseren moeten er één of meer NTP-servers beschikbaar zijn. Een lokale systeembeheerder of een ISP heeft wellicht een NTP-server voor dit doel opgezet. Het is verstandig om documentatie te raadplegen en te bekijken of dat het geval is. Er is een http://support.ntp.org/bin/view/Servers/WebHome[online lijst van publiek toegankelijke NTP-servers] waarop een NTP-server gezocht kan worden die in geografische zin dichtbij een te synchroniseren computer ligt. Het is belangrijk te voldoen aan het beleid voor de betreffende server en toestemming te vragen als dat in de voorwaarden staat.
+
+Het is verstandig meerdere, niet van elkaar afhankelijke, NTP-servers te kiezen voor het geval een van de servers niet langer betrouwbaar is of niet bereikbaar is. man:ntpd[8] gebruikt de antwoorden die van andere servers ontvangen worden op intelligente wijze: betrouwbare servers krijgen voorrang boven onbetrouwbare servers.
+
+=== Machine instellen
+
+==== Basisinstellingen
+
+Als het alleen de bedoeling is de tijd te synchroniseren bij het opstarten van een machine, dan kan man:ntpdate[8] gebruikt worden. Dit kan van toepassing zijn op desktops die regelmatig herstart worden en niet echt regelmatig gesynchroniseerd hoeven te worden. Op sommige machines hoort echter man:ntpd[8] te draaien.
+
+Het gebruik van man:ntpdate[8] bij het opstarten is ook een goed idee voor machines waarop man:ntpd[8] draait. De man:ntpd[8] wijzigt de tijd geleidelijk, terwijl man:ntpdate[8] gewoon de tijd instelt, hoe groot het verschil tussen de bestaande tijd van een machine en de correcte tijd ook is.
+
+Om man:ntpdate[8] tijdens het opstarten in te schakelen kan `ntpdate_enable="YES"` aan [.filename]#/etc/rc.conf# worden toegevoegd. Alle voor de synchronisatie te gebruiken servers moeten dan, samen met eventuele opties voor man:ntpdate[8], in `ntpdate_flags` aangegeven worden.
+
+==== Algemene instellingen
+
+NTP wordt ingesteld met het bestand [.filename]#/etc/ntp.conf# in het formaat dat beschreven staat in man:ntp.conf[5]. Hieronder volgt een eenvoudig voorbeeld:
+
+[.programlisting]
+....
+server ntplocal.example.com prefer
+server timeserver.example.org
+server ntp2a.example.net
+
+driftfile /var/db/ntp.drift
+....
+
+De optie `server` geeft aan welke servers er gebruikt moeten worden, met op elke regel een server. Als de server wordt ingesteld met het argument `prefer`, zoals bij `ntplocal.example.com`, dan krijgt die server de voorkeur boven de andere. Een antwoord van een voorkeursserver wordt genegeerd als dat significant afwijkt van de antwoorden van de andere servers. In andere gevallen wordt het gebruikt zonder rekening te houden met de andere antwoorden. Het argument `prefer` wordt meestal gebruikt voor NTP-servers waarvan bekend is dat ze erg betrouwbaar zijn, zoals die met speciale tijdbewakingshardware.
+
+De optie `driftfile` geeft aan welk bestand gebruikt wordt om de offset van de klokfrequentie van het systeem op te slaan. man:ntpd[8] gebruikt die om automatisch te compenseren voor het natuurlijke afwijken van de tijd, zodat er zelfs bij gebrek aan externe bronnen een redelijke accurate tijdsinstelling mogelijk is.
+
+De optie `driftfile` geeft aan welk bestand gebruikt wordt om informatie over eerdere antwoorden van NTP-servers die gebruikt worden op te slaan. Dit bestand bevat interne informatie voor NTP. Het hoort niet door andere processen gewijzigd te worden.
+
+==== Toegang tot een server instellen
+
+Een NTP-server is standaard toegankelijk voor alle hosts op een netwerk. De optie `restrict` in [.filename]#/etc/ntp.conf# maakt het mogelijk om aan te geven welke machines de dienst mogen benaderen.
+
+Voor het blokkeren van toegang voor alle andere machines kan de volgende regel aan [.filename]#/etc/ntp.conf# toegevoegd worden:
+
+[.programlisting]
+....
+restrict default ignore
+....
+
+[NOTE]
+====
+Dit zal ook toegang van uw server naar alle servers die vermeld staan in uw lokale configuratie verhinderen. Als u uw NTP-server moet synchroniseren met een externe NTP-server, dient u deze specifieke server toe te staan. Lees de handleiding voor man:ntp.conf[5] voor meer informatie.
+====
+
+Om alleen machines op bijvoorbeeld het lokale netwerk toe te staan hun tijd te synchroniseren met een server, maar ze tegelijkertijd niet toe te staan om de server te draaien of de server als referentie voor synchronisatie te gebruiken, kan de volgende regel toegevoegd worden:
+
+[.programlisting]
+....
+restrict 192.168.1.0 mask 255.255.255.0 nomodify notrap
+....
+
+Hierboven is `192.168.1.0` een IP-adres op een LAN en `255.255.255.0` is het bijbehorende netwerkmasker.
+
+[.filename]#/etc/ntp.conf# mag meerdere regels met `restrict` bevatten. Meer details staan in het onderdeel `Access Control Support` van man:ntp.conf[5].
+
+=== De NTP-server draaien
+
+De NTP-server kan bij het opstarten gestart worden door de regel `ntpd_enable="YES"` aan [.filename]#/etc/rc.conf# toe te voegen. Om extra opties aan man:ntpd[8] mee te geven kan de parameter `ntpd_flags` in [.filename]#/etc/rc.conf# gebruikt worden.
+
+Om de server zonder een herstart van de machine te starten kan `ntpd` uitgevoerd worden, met toevoeging van de parameters uit `ntpd_flags` in [.filename]#/etc/rc.conf#. Bijvoorbeeld:
+
+[source,bash]
+....
+# ntpd -p /var/run/ntpd.pid
+....
+
+=== ntpd gebruiken met een tijdelijke Internetverbinding
+
+man:ntpd[8] heeft geen permanente verbinding met een netwerk nodig om goed te werken. Maar als er gebruik gemaakt wordt van een inbelverbinding, is het wellicht verstandig om ervoor te zorgen dat uitgaande NTP-verzoeken geen uitgaande verbinding kunnen starten. Als er gebruik gemaakt wordt van gebruikers-PPP, kunnen er `filter` commando's ingesteld worden in [.filename]#/etc/ppp/ppp.conf#. Bijvoorbeeld:
+
+[.programlisting]
+....
+set filter dial 0 deny udp src eq 123
+# NTP-verkeer zorgt niet voor uitbellen
+set filter dial 1 permit 0 0
+set filter alive 0 deny udp src eq 123
+# Inkomend NTP-verkeer houdt de verbinding niet open
+set filter alive 1 deny udp dst eq 123
+# Uitgaand NTP-verkeer houdt de verbinding niet open
+set filter alive 2 permit 0/0 0/0
+....
+
+Meer details staan in de sectie `PACKET FILTERING` in man:ppp[8] en in de voorbeelden in [.filename]#/usr/shared/examples/ppp/#.
+
+[NOTE]
+====
+Sommige Internetproviders blokkeren lage poorten, waardoor NTP niet kan werken omdat er nooit een antwoord ontvangen kan worden door een machine.
+====
+
+=== Meer informatie
+
+HTML-documentatie voor de NTP-server staat in [.filename]#/usr/shared/doc/ntp/#.
+
+[[network-syslogd]]
+== Hosts op afstand loggen met `syslogd`
+
+Het omgaan met systeemlogs is een cruciaal aspect van zowel beveiligings- als systeembeheer. Het in de gaten houden van logbestanden van meerdere hosts kan nogal onhandelbaar worden als deze hosts over (middel)grote netwerken zijn verspreid, of wanneer ze deel zijn van verschillende soorten netwerken. In deze gevallen kan het op afstand loggen het gehele proces een stuk aangenamer maken.
+
+Het centraal loggen naar een specifieke loghost kan wat van de administratieve last van het beheren van logbestanden wegnemen. Het aggregeren, samenvoegen, en roteren van logbestanden kan op één enkele plaats worden ingesteld, door gebruik te maken van de eigen gereedschappen van FreeBSD, zoals man:syslogd[8] en man:newsyslog[8]. In de volgende voorbeeldconfiguratie zal host `A`, genaamd `logserv.example.com`, loginformatie voor het plaatselijke netwerk verzamelen. Host `B`, genaamd `logclient.example.com`, zal loginformatie aan het serversysteem doorgeven. In echte configuraties hebben beide hosts degelijke voor- en terugwaartse DNS of regels in [.filename]#/etc/hosts# nodig. Anders worden de gegevens geweigerd door de server.
+
+=== Configuratie van de logserver
+
+Logservers zijn machines die zijn geconfigureerd om loginformatie van hosts op afstand te accepteren. In de meeste gevallen is dit om de configuratie te vergemakkelijken, in andere gevallen kan het gewoon een beheersbeslissing zijn. Ongeacht de reden zijn er enkele eisen voordat er verder wordt gegaan.
+
+Een juist geconfigureerde logserver voldoet aan de volgende minimale eisen:
+
+* De regels van de firewall staan toe dat UDP wordt doorgegeven op poort 514 van zowel de cliënt als de server;
+* syslogd is ingesteld om berichten op afstand van cliëntmachines te accepteren;
+* De syslogd-server en alle cliëntmachines moeten geldige regels hebben voor zowel voorwaartse als terugwaartse DNS, of correct zijn geconfigureerd in [.filename]#/etc/hosts#.
+
+Om de logserver te configureren, moet de cliënt vermeld zijn in [.filename]#/etc/syslog.conf#, en moet de logfaciliteit zijn gespecificeerd:
+
+[.programlisting]
+....
++logclient.example.com
+*.*	/var/log/logclient.log
+....
+
+[NOTE]
+====
+Meer informatie over de verschillende ondersteunde en beschikbare _faciliteiten_ kan gevonden worden in de handleidingpagina man:syslog.conf[5].
+====
+
+Eenmaal toegevoegd worden alle `faciliteits`-berichten gelogd naar het eerder gespecificeerde bestand, [.filename]#/var/log/logclient.log#.
+
+De servermachine moet ook het volgende in [.filename]#/etc/rc.conf# hebben staan:
+
+[.programlisting]
+....
+syslogd_enable="YES"
+syslogd_flags="-a logclient.example.com -v -v"
+....
+
+De eerste optie zet de daemon `syslogd` aan tijdens het opstarten, en de tweede regel staat toe dat gegevens van de cliënt op deze server worden geaccepteerd. Het laatste gedeelte, dat `-v -v` gebruikt, verhoogt de verbositeit van gelogde berichten. Dit is extreem handig voor het optimaal instellen van faciliteiten aangezien beheerders kunnen zien welk soort berichten onder welke faciliteit worden gelogd.
+
+Er kunnen meerdere opties `-a` worden gespecificeerd om logging vanuit meerdere cliënten toe te staan. IP-adressen en hele netblokken mogen ook worden gespecificeerd, bekijk de hulppagina man:syslog[3] voor een volledige lijst van mogelijke opties.
+
+Als laatste dient het logbestand gecreëerd te worden. De gebruikte manier maakt niet uit, maar man:touch[1] werkt prima in dit soort situaties:
+
+[source,bash]
+....
+# touch /var/log/logclient.log
+....
+
+Nu dient het `syslogd`-daemon herstart en geverifieerd worden:
+
+[source,bash]
+....
+# service syslogd restart
+# pgrep syslog
+....
+
+Als er een PID wordt teruggegeven, dan is de server succesvol herstart, en kan er begonnen worden met de configuratie van de cliënt. Raadpleeg de log [.filename]#/var/log/messages# voor uitvoer als de server niet is herstart.
+
+=== Configuratie van de logcliënt
+
+Een logcliënt is een machine die loginformatie naar een logserver verstuurt en daarnaast lokale kopieën bewaart.
+
+Net als logservers moeten logcliënten ook aan enkele minimumeisen voldoen:
+
+* man:syslogd[8] moet zijn ingesteld om berichten van bepaalde soorten naar een logserver te sturen, die ze moet accepteren;
+* De firewall moet UDP-pakketten doorlaten op poort 514;
+* Zowel voorwaartse als terugwaartse DNS moeten geconfigureerd zijn of juiste regels in [.filename]#/etc/hosts# hebben.
+
+De configuratie van cliënten is wat soepeler dan die van servers. De cliëntmachine moet de volgende regels in [.filename]#/etc/rc.conf# hebben:
+
+[.programlisting]
+....
+syslogd_enable="YES"
+syslogd_flags="-s -v -v"
+....
+
+Net als eerder zullen deze regels de daemon `syslogd` tijdens het opstarten aanzetten, en de verbositeit van gelogde berichten verhogen. De optie `-s` voorkomt dat logs van deze cliënt vanuit andere hosts worden geaccepteerd.
+
+Faciliteiten beschrijven het systeemgedeelte waarvoor een bericht is gegenereerd. ftp en ipfw bijvoorbeeld zijn beide faciliteiten. Wanneer er logberichten worden gegenereerd voor deze twee diensten, zullen ze normaalgesproken deze twee gereedschappen in elk logbericht opnemen. Faciliteiten worden vergezeld van een prioriteit of niveau, welke wordt gebruikt om aan te geven hoe belangrijk een logbericht is. De meest voorkomende zullen `warning` en `info` zijn. Bekijk de handleidingpagina man:syslog[3] voor een volledige lijst van beschikbare faciliteiten en prioriteiten.
+
+De logserver moet in [.filename]#/etc/syslog.conf# van de cliënt zijn gedefinieerd. In dit geval wordt het symbool `@` gebruikt om loggegevens naar een server op afstand te sturen en zou er ongeveer als de volgende regel uit moeten zien:
+
+[.programlisting]
+....
+*.*	@logserv.example.com
+....
+
+Eenmaal toegevoegd moet `syslogd` worden herstart zodat de veranderingen effect hebben:
+
+[source,bash]
+....
+# service syslogd restart
+....
+
+Om te testen of logberichten over het netwerk worden verzonden, wordt man:logger[1] op de cliënt gebruikt om een bericht naar `syslogd` te sturen:
+
+[source,bash]
+....
+# logger "Testbericht van logclient"
+....
+
+Dit bericht dient nu zowel in [.filename]#/var/log/messages# op de cliënt als [.filename]#/var/log/logclient.log# op de logserver te staan.
+
+=== Logservers debuggen
+
+In bepaalde gevallen kan het nodig zijn om te debuggen als berichten niet door de logserver worden ontvangen. Er zijn verschillende redenen waarom dit kan gebeuren; de twee meest voorkomende zijn echter voorvallen met de netwerkverbinding en DNS. Om deze gevallen te testen, dient te worden nagegaan dat beide hosts elkaar kunnen bereiken door de hostnaam in [.filename]#/etc/rc.conf# te gebruiken. Als dit juist lijkt te werken, dient de optie `syslogd_flags` in [.filename]#/etc/rc.conf# te worden veranderd.
+
+In het volgende voorbeeld is [.filename]#/var/log/logclient.log# leeg, en noemt [.filename]#/var/log/messages# geen reden waarom het mislukt. Verander de optie `syslogd_flags` zoals in het volgende voorbeeld en herstart om de debuguitvoer te verhogen:
+
+[.programlisting]
+....
+syslogd_flags="-d -a logclien.example.com -v -v"
+....
+
+[source,bash]
+....
+# service syslogd restart
+....
+
+Debuggegevens zoals de volgende zullen meteen na de herstart over het scherm vliegen:
+
+[source,bash]
+....
+logmsg: pri 56, flags 4, from logserv.example.com, msg syslogd: restart
+syslogd: restarted
+logmsg: pri 6, flags 4, from logserv.example.com, msg syslogd: kernel boot file is /boot/kernel/kernel
+Logging to FILE /var/log/messages
+syslogd: kernel boot file is /boot/kernel/kernel
+cvthname(192.168.1.10)
+validate: dgram from IP 192.168.1.10, port 514, name logclient.example.com;
+rejected in rule 0 due to name mismatch.
+....
+
+Het is duidelijk dat de berichten worden geweigerd wegens een niet-overeenkomende naam. Na de configuratie grondig te hebben herzien, lijkt het of een typefout in de volgende regel in [.filename]#/etc/rc.conf# een probleem heeft:
+
+[.programlisting]
+....
+syslogd_flags="-d -a logclien.example.com -v -v"
+....
+
+De regel dient `logclient`, niet `logclien` te bevatten. Nadat de juiste wijzigingen zijn gemaakt, wordt er herstart met de verwachte resultaten:
+
+[source,bash]
+....
+# service syslogd restart
+logmsg: pri 56, flags 4, from logserv.example.com, msg syslogd: restart
+syslogd: restarted
+logmsg: pri 6, flags 4, from logserv.example.com, msg syslogd: kernel boot file is /boot/kernel/kernel
+syslogd: kernel boot file is /boot/kernel/kernel
+logmsg: pri 166, flags 17, from logserv.example.com,
+msg Dec 10 20:55:02 <syslog.err> logserv.example.com syslogd: exiting on signal 2
+cvthname(192.168.1.10)
+validate: dgram from IP 192.168.1.10, port 514, name logclient.example.com;
+accepted in rule 0.
+logmsg: pri 15, flags 0, from logclient.example.com, msg Dec 11 02:01:28 trhodes: Test message 2
+Logging to FILE /var/log/logclient.log
+Logging to FILE /var/log/messages
+....
+
+Nu worden de berichten juist ontvangen en in het correcte bestand geplaatst.
+
+=== Beveiligingsoverwegingen
+
+Zoals bij alle netwerkdiensten, dienen beveiligingseisen in acht te worden genomen voordat deze configuratie wordt geïmplementeerd. Soms kunnen logbestanden gevoelige gegevens bevatten over diensten die aanstaan op de lokale host, gebruikersaccounts, en configuratiegegevens. Netwerkgegevens die van de cliënt naar de server worden verzonden worden niet versleuteld noch met een wachtwoord beveiligd. Als versleuteling nodig is, kan package:security/stunnel[] worden gebruikt, wat gegevens over een versleutelde tunnel verstuurt.
+
+Aan lokale beveiliging moet ook gedacht worden. Logbestanden worden niet versleuteld tijdens gebruik of na logrotatie. Lokale gebruikers kunnen deze bestanden benaderen om aanvullende inzichten over de systeemconfiguratie op te doen. In deze gevallen is het van kritiek belang om de juiste rechten op deze bestanden in te stellen. Het gereedschap man:syslogd[8] ondersteunt het instellen van rechten op nieuw aangemaakte en geroteerde logbestanden. Het instellen van logbestanden op modus `600` dient al het ongewenste spieken door lokale gebruikers te verhinderen.

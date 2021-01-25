@@ -1,0 +1,233 @@
+---
+title: Rozdział 25. DTrace
+part: Część III. Administracja systemem
+prev: books/handbook/cutting-edge
+next: books/handbook/usb-device-mode
+---
+
+[[dtrace]]
+= DTrace
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Spis treści
+:table-caption: Tabela
+:figure-caption: Rysunek
+:example-caption: Przykład
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 25
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/dtrace/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/dtrace/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/dtrace/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pl/mailing-lists.adoc[]
+include::shared/pl/urls.adoc[]
+include::shared/pl/teams.adoc[]
+
+toc::[]
+
+[[dtrace-synopsis]]
+== Synopsis
+
+DTrace, also known as Dynamic Tracing, was developed by Sun(TM) as a tool for locating performance bottlenecks in production and pre-production systems. In addition to diagnosing performance problems, DTrace can be used to help investigate and debug unexpected behavior in both the FreeBSD kernel and in userland programs.
+
+DTrace is a remarkable profiling tool, with an impressive array of features for diagnosing system issues. It may also be used to run pre-written scripts to take advantage of its capabilities. Users can author their own utilities using the DTrace D Language, allowing them to customize their profiling based on specific needs.
+
+The FreeBSD implementation provides full support for kernel DTrace and experimental support for userland DTrace. Userland DTrace allows users to perform function boundary tracing for userland programs using the `pid` provider, and to insert static probes into userland programs for later tracing. Some ports, such as package:databases/postgresql12-server[] and package:lang/php74[] have a DTrace option to enable static probes.
+
+The official guide to DTrace is maintained by the Illumos project at http://dtrace.org/guide[DTrace Guide].
+
+After reading this chapter, you will know:
+
+* What DTrace is and what features it provides.
+* Differences between the Solaris(TM) DTrace implementation and the one provided by FreeBSD.
+* How to enable and use DTrace on FreeBSD.
+
+Before reading this chapter, you should:
+
+* Understand UNIX(R) and FreeBSD basics (crossref:basics[basics,FreeBSD Basics]).
+* Have some familiarity with security and how it pertains to FreeBSD (crossref:security[security,Security]).
+
+[[dtrace-implementation]]
+== Implementation Differences
+
+While the DTrace in FreeBSD is similar to that found in Solaris(TM), differences do exist. The primary difference is that in FreeBSD, DTrace is implemented as a set of kernel modules and DTrace can not be used until the modules are loaded. To load all of the necessary modules:
+
+[source,bash]
+....
+# kldload dtraceall
+....
+
+Beginning with FreeBSD 10.0-RELEASE, the modules are automatically loaded when `dtrace` is run.
+
+FreeBSD uses the `DDB_CTF` kernel option to enable support for loading `CTF` data from kernel modules and the kernel itself. `CTF` is the Solaris(TM) Compact C Type Format which encapsulates a reduced form of debugging information similar to `DWARF` and the venerable stabs. `CTF` data is added to binaries by the `ctfconvert` and `ctfmerge` build tools. The `ctfconvert` utility parses `DWARF``ELF` debug sections created by the compiler and `ctfmerge` merges `CTF``ELF` sections from objects into either executables or shared libraries.
+
+Some different providers exist for FreeBSD than for Solaris(TM). Most notable is the `dtmalloc` provider, which allows tracing `malloc()` by type in the FreeBSD kernel. Some of the providers found in Solaris(TM), such as `cpc` and `mib`, are not present in FreeBSD. These may appear in future versions of FreeBSD. Moreover, some of the providers available in both operating systems are not compatible, in the sense that their probes have different argument types. Thus, `D` scripts written on Solaris(TM) may or may not work unmodified on FreeBSD, and vice versa.
+
+Due to security differences, only `root` may use DTrace on FreeBSD. Solaris(TM) has a few low level security checks which do not yet exist in FreeBSD. As such, the [.filename]#/dev/dtrace/dtrace# is strictly limited to `root`.
+
+DTrace falls under the Common Development and Distribution License (`CDDL`) license. To view this license on FreeBSD, see [.filename]#/usr/src/cddl/contrib/opensolaris/OPENSOLARIS.LICENSE# or view it online at http://opensource.org/licenses/CDDL-1.0[http://opensource.org/licenses/CDDL-1.0]. While a FreeBSD kernel with DTrace support is `BSD` licensed, the `CDDL` is used when the modules are distributed in binary form or the binaries are loaded.
+
+[[dtrace-enable]]
+== Enabling DTrace Support
+
+In FreeBSD 9.2 and 10.0, DTrace support is built into the [.filename]#GENERIC# kernel. Users of earlier versions of FreeBSD or who prefer to statically compile in DTrace support should add the following lines to a custom kernel configuration file and recompile the kernel using the instructions in crossref:kernelconfig[kernelconfig,Configuring the FreeBSD Kernel]:
+
+[.programlisting]
+....
+options         KDTRACE_HOOKS
+options         DDB_CTF
+makeoptions	DEBUG=-g
+makeoptions	WITH_CTF=1
+....
+
+Users of the AMD64 architecture should also add this line:
+
+[.programlisting]
+....
+options         KDTRACE_FRAME
+....
+
+This option provides support for `FBT`. While DTrace will work without this option, there will be limited support for function boundary tracing.
+
+Once the FreeBSD system has rebooted into the new kernel, or the DTrace kernel modules have been loaded using `kldload dtraceall`, the system will need support for the Korn shell as the DTrace Toolkit has several utilities written in `ksh`. Make sure that the package:shells/ksh93[] package or port is installed. It is also possible to run these tools under package:shells/pdksh[] or package:shells/mksh[].
+
+Finally, install the current DTrace Toolkit, a collection of ready-made scripts for collecting system information. There are scripts to check open files, memory, `CPU` usage, and a lot more. FreeBSD 10 installs a few of these scripts into [.filename]#/usr/shared/dtrace#. On other FreeBSD versions, or to install the full DTrace Toolkit, use the package:sysutils/DTraceToolkit[] package or port.
+
+[NOTE]
+====
+The scripts found in [.filename]#/usr/shared/dtrace# have been specifically ported to FreeBSD. Not all of the scripts found in the DTrace Toolkit will work as-is on FreeBSD and some scripts may require some effort in order for them to work on FreeBSD.
+====
+
+The DTrace Toolkit includes many scripts in the special language of DTrace. This language is called the D language and it is very similar to C++. An in depth discussion of the language is beyond the scope of this document. It is covered extensively in the http://www.dtrace.org/guide[Illumos Dynamic Tracing Guide].
+
+[[dtrace-using]]
+== Using DTrace
+
+DTrace scripts consist of a list of one or more _probes_, or instrumentation points, where each probe is associated with an action. Whenever the condition for a probe is met, the associated action is executed. For example, an action may occur when a file is opened, a process is started, or a line of code is executed. The action might be to log some information or to modify context variables. The reading and writing of context variables allows probes to share information and to cooperatively analyze the correlation of different events.
+
+To view all probes, the administrator can execute the following command:
+
+[source,bash]
+....
+# dtrace -l | more
+....
+
+Each probe has an `ID`, a `PROVIDER` (dtrace or fbt), a `MODULE`, and a `FUNCTION NAME`. Refer to man:dtrace[1] for more information about this command.
+
+The examples in this section provide an overview of how to use two of the fully supported scripts from the DTrace Toolkit: the [.filename]#hotkernel# and [.filename]#procsystime# scripts.
+
+The [.filename]#hotkernel# script is designed to identify which function is using the most kernel time. It will produce output similar to the following:
+
+[source,bash]
+....
+# cd /usr/local/shared/dtrace-toolkit
+# ./hotkernel
+Sampling... Hit Ctrl-C to end.
+....
+
+As instructed, use the kbd:[Ctrl+C] key combination to stop the process. Upon termination, the script will display a list of kernel functions and timing information, sorting the output in increasing order of time:
+
+[source,bash]
+....
+kernel`_thread_lock_flags                                   2   0.0%
+0xc1097063                                                  2   0.0%
+kernel`sched_userret                                        2   0.0%
+kernel`kern_select                                          2   0.0%
+kernel`generic_copyin                                       3   0.0%
+kernel`_mtx_assert                                          3   0.0%
+kernel`vm_fault                                             3   0.0%
+kernel`sopoll_generic                                       3   0.0%
+kernel`fixup_filename                                       4   0.0%
+kernel`_isitmyx                                             4   0.0%
+kernel`find_instance                                        4   0.0%
+kernel`_mtx_unlock_flags                                    5   0.0%
+kernel`syscall                                              5   0.0%
+kernel`DELAY                                                5   0.0%
+0xc108a253                                                  6   0.0%
+kernel`witness_lock                                         7   0.0%
+kernel`read_aux_data_no_wait                                7   0.0%
+kernel`Xint0x80_syscall                                     7   0.0%
+kernel`witness_checkorder                                   7   0.0%
+kernel`sse2_pagezero                                        8   0.0%
+kernel`strncmp                                              9   0.0%
+kernel`spinlock_exit                                       10   0.0%
+kernel`_mtx_lock_flags                                     11   0.0%
+kernel`witness_unlock                                      15   0.0%
+kernel`sched_idletd                                       137   0.3%
+0xc10981a5                                              42139  99.3%
+....
+
+This script will also work with kernel modules. To use this feature, run the script with `-m`:
+
+[source,bash]
+....
+# ./hotkernel -m
+Sampling... Hit Ctrl-C to end.
+^C
+MODULE                                                  COUNT   PCNT
+0xc107882e                                                  1   0.0%
+0xc10e6aa4                                                  1   0.0%
+0xc1076983                                                  1   0.0%
+0xc109708a                                                  1   0.0%
+0xc1075a5d                                                  1   0.0%
+0xc1077325                                                  1   0.0%
+0xc108a245                                                  1   0.0%
+0xc107730d                                                  1   0.0%
+0xc1097063                                                  2   0.0%
+0xc108a253                                                 73   0.0%
+kernel                                                    874   0.4%
+0xc10981a5                                             213781  99.6%
+....
+
+The [.filename]#procsystime# script captures and prints the system call time usage for a given process `ID` (`PID`) or process name. In the following example, a new instance of [.filename]#/bin/csh# was spawned. Then, [.filename]#procsystime# was executed and remained waiting while a few commands were typed on the other incarnation of `csh`. These are the results of this test:
+
+[source,bash]
+....
+# ./procsystime -n csh
+Tracing... Hit Ctrl-C to end...
+^C
+
+Elapsed Times for processes csh,
+
+         SYSCALL          TIME (ns)
+          getpid               6131
+       sigreturn               8121
+           close              19127
+           fcntl              19959
+             dup              26955
+         setpgid              28070
+            stat              31899
+       setitimer              40938
+           wait4              62717
+       sigaction              67372
+     sigprocmask             119091
+    gettimeofday             183710
+           write             263242
+          execve             492547
+           ioctl             770073
+           vfork            3258923
+      sigsuspend            6985124
+            read         3988049784
+....
+
+As shown, the `read()` system call used the most time in nanoseconds while the `getpid()` system call used the least amount of time.

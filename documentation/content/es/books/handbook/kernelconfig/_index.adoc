@@ -1,0 +1,1143 @@
+---
+title: Capítulo 8. Configuración del kernel de FreeBSD
+part: Parte II. Tareas comunes
+prev: books/handbook/multimedia
+next: books/handbook/printing
+---
+
+[[kernelconfig]]
+= Configuración del kernel de FreeBSD
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tabla de contenidos
+:table-caption: Tabla
+:figure-caption: Figura
+:example-caption: Ejemplo
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 8
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/kernelconfig/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/kernelconfig/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/kernelconfig/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/es/mailing-lists.adoc[]
+include::shared/es/teams.adoc[]
+include::shared/es/urls.adoc[]
+
+toc::[]
+
+== Sinopsis
+
+El kernel de FreeBSD es el corazón del sistema operativo. Es el responsable de la gestión y control de la memoria, reforzamiento de los controles de seguridad, gestión de redes, acceso a dispositivos y muchas cosas más. FreeBSD es un sistema dinámico y configurable, pero a veces sigue siendo necesario reconfigurar y recompilar un kernel hecho a la medida de nuestras necesidades.
+
+Una vez leido este capítulo sabrá usted:
+
+* Por qué puede ser necesario que compile un kernel personalizado.
+* Cómo crear un fichero de configuración del kernel, o bien editar un fichero existente.
+* Cómo utilizar el fichero de configuración para crear y compilar un nuevo kernel.
+* Cómo instalar su nuevo kernel.
+* Cómo resolver algunos problemas si algo sale mal.
+
+== ¿Qué razones hay para compilar un kernel personalizado?
+
+Tradicionalmente FreeBSD ha contado con lo que se conoce como un kernel "monolítico". Esto quiere decir que el kernel era un gran y único programa que se comunicaba con una lista previa de dispositivos, y que si se deseaba modificar el comportamiento del kernel se debía compilar un nuevo kernel y reiniciar el sistema con el nuevo kernel.
+
+Hoy en día FreeBSD evoluciona muy rápidamente hacia un modelo donde la funcionalidad del kernel se basa en módulos, los cuales pueden cargarse y descargarse dinámicamente de acuerdo a las necesidades del kernel. Esto permite al kernel adaptarse al nuevo hardware que sale al mercado (como las tarjetas PCMCIA en sistemas portátiles), o bien añadir nuevas funcionalidades al kernel que no eran al compilarlo la vez anterior. Esto es lo que conocemos como kernel modular.
+
+A pesar de lo dicho aún es necesario llevar a cabo cierta configuración estática en la configuración del kernel. A veces se debe a que la funcionalidad del sistema está tan ligada al kernel que no puede hacerse mediante carga dinámica de módulos. En otros casos puede tratarse simplemente de que nadie ha programado un módulo para esa funcionalidad concreta que pueda cargarse dinámicamente en el kernel.
+
+Compilar un kernel personalizado es uno de los ritos de iniciación más importantes a los que los usuarios de casi todos los BSD han de enfrentarse. Este proceso lleva su tiempo, pero le aportará grandes beneficios a su sistema FreeBSD. A diferencia del kernel [.filename]#GENERIC#, con el que puede funcionar una cantidad apabullante de hardware disponible en el mercado, un kernel personalizado contiene únicamente lo necesario para que funcione el hardware de _su_ sistema. Obviamente esto tiene sus ventajas:
+
+* Mayor rapidez en el arranque del sistema. Dado que el kernel sólo tiene que probar el hardware que realmente está en el sistema el tiempo que necesitará para arrancar se reducirá visiblemente.
+* Menor uso de memoria. Generalmente un kernel personalizado utiliza menos memoria que un kernel `GENERIC`, lo cual es importante ya que el kernel debe encontrarse siempre en memoria real. Por ésta razón un kernel personalizado puede ser de gran utilidad en sistemas con una cantidad limitada de memoria RAM.
+* Hacer funcionar hardware específico. Un kernel personalizado le permite añadir al sistema dispositivos como tarjetas de sonido, que no están incluidas en el kernel `GENERIC`. 
+
+[[kernelconfig-devices]]
+== Inventario de hardware del sistema
+
+Antes de aventurarnos en la configuración del kernel nunca está de más disponer de un inventario completo del hardware que hay en la máquina. En los casos en los que FreeBSD no es el sistema operativo principal de la máquina puede conseguir el inventario consultando la configuración de otro sistema operativo. Por ejemplo, el Gestor de dispositivos de Microsoft(R) suele contener información importante sobre los dispositivos que haya en la máquina. El Gestor de dispositivos está en el panel de control.
+
+[NOTE]
+====
+Algunas versiones de Microsoft(R) Windows(R) tienen un icono de Sistema con forma de pantalla desde el que se puede acceder al Gestor de dispositivos.
+====
+
+Si no hay otro sistema operativo en la máquina el administrador tendrá que conseguir la información por su cuenta. Una forma de hacerlo es mediante man:dmesg[8] y man:man[1]. La mayoría de los controladores de dispositivo que hay en FreeBSD tienen una página de manual, que suele incluir una lista del hardware que puede hacer funcionar. En la prueba del sistema durante el arranque va apareciendo una lista del harware que hay en la máquina. Por ejemplo, las siguientes líneas indican que el controlador [.filename]#psm# ha encontrado un ratón:
+
+[.programlisting]
+....
+psm0: <PS/2 Mouse> irq 12 on atkbdc0
+psm0: [GIANT-LOCKED]
+psm0: [ITHREAD]
+psm0: model Generic PS/2 mouse, device ID 0
+....
+
+Puede añadir este controlador al fichero de configuración de su kernel personalizado o cargarlo utilizando man:loader.conf[5].
+
+A veces los datos que muestra `dmesg` solamente muestran mensajes del sistema en lugar de la salida de la prueba de arranque. En esos casos puede ver la verdadera salida de `dmesg` en el fichero [.filename]#/var/run/dmesg.boot#.
+
+Otro método para identificar el hardware del sistema es usar man:pciconf[8], que tiene una salida mucho más verbosa. Veamos un ejemplo:
+
+[.programlisting]
+....
+ath0@pci0:3:0:0:        class=0x020000 card=0x058a1014 chip=0x1014168c rev=0x01 hdr=0x00
+    vendor     = 'Atheros Communications Inc.'
+    device     = 'AR5212 Atheros AR5212 802.11abg wireless'
+    class      = network
+    subclass   = ethernet
+....
+
+Este fragmento, obtenido con `pciconf -lv` muestra cómo el controlador [.filename]#ath# ha encontrado un dispositivo Ethernet inalámbrico. Escriba `man ath` para consultar la página de manual de man:ath[4].
+
+La opción `-k` de man:man[1] le suministrará valiosa información. Sigamos con el ejemplo anterior:
+
+[source,bash]
+....
+# man -k Atheros
+....
+
+Con esto obtendremos una lista de páginas de manual que contienen esa palabra en particular:
+
+[.programlisting]
+....
+ath(4)                   - Atheros IEEE 802.11 wireless network driver
+ath_hal(4)               - Atheros Hardware Access Layer (HAL)
+....
+
+Una vez que tenemos nuestra flamante lista de hardware del sistema el proceso de compilar un kernel personalizado debería parecer un poco menos inquietante.
+
+[[kernelconfig-modules]]
+== Controladores del kernel, subsistemas y módulos
+
+Antes de compilar un kernel personalizado conviene pensar antes los motivos. Si lo que se necesita es añadir hardware específico al sistema es posible que sea posible utilizarlo mediante un módulo.
+
+Los módulos del kernel están en el directorio [.filename]#/boot/kernel# y se pueden cargar dinámicamente en un kernel en funcionamiento con man:kldload[8]. La mayoría, por no decir todos, los controladores del kernel tienen un módulo específico y una página de manual. Por ejemplo, en la sección anterior hablábamos del controlador Ethernet inalámbrico [.filename]#ath#. La página de manual de este dispositivo contiene la siguiente información:
+
+[.programlisting]
+....
+Alternatively, to load the driver as a module at boot time, place the
+     following line in loader.conf(5):
+
+           if_ath_load="YES"
+....
+
+Si hace lo que dice ahí, es decir, añadir la línea `if_ath_load="YES"` al fichero [.filename]#/boot/loader.conf# hará que el módulo se cargue dinámicamente cada vez que el sistema arranque.
+
+Hay casos, no obstante, en los que no existe el módulo correspondiente. Esto sucede con ciertos subsistemas y con controladores muy importantes, como por ejemplo el de FFS, que necesita el kernel. Igual sucede con la posibilidad de utilizar redes (INET). Por desgracia, en estos casos la única forma de saber si hace falta un controlador es buscar el módulo.
+
+[WARNING]
+====
+
+Es sumamente fácil quitar un dispositivo o una opción del kernel y encontrarse de manos a boca con un kernel que no funciona. Por ejemplo, si elimina el controlador man:ata[4] del fichero de configuración del kernel un sistema que utilice unidades de disco ATA no podrá arrancar a menos que se añada la línea correspondiente al fichero [.filename]#loader.conf#. Si tiene dudas busque el módulo y deje el kernel como está.
+====
+
+[[kernelconfig-building]]
+== Compilación e instalación de un kernel personalizado
+
+En primer lugar, hagamos un breve recorrido por el directorio donde se lleva a cabo la compilación del kernel. Todos los directorios mencionados hacen referencia al directorio principal, que es [.filename]#/usr/src/sys#, al que también podemos acceder desde [.filename]#/sys#. Existen gran cantidad de subdirectorios que representan diferentes partes del kernel, pero el más importante para lo que deseamos hacer son [.filename]#arch# y [.filename]#/conf#, que es donde se llevara a cabo la edición del fichero de configuración y la compilación propiamente dicha del mismo, el punto de partida para la personalización del kernel. El directorio [.filename]#arch# representa la arquitectura del sistema, por lo que puede ser [.filename]#i386#, [.filename]#alpha#, [.filename]#amd64#, [.filename]#ia64#, [.filename]#powerpc#, [.filename]#sparc64# o [.filename]#pc98# (una arquitectura alternativa, similar a PC y muy popular en Japón). Todo lo que existe dentro de un directorio de una arquitectura en particular, es específico para dicha arquitectura; el resto del código es común para todas las plataformas en las que FreeBSD puede funcionar. Observe la organización lógica de la estructura de los directorios, con cada dispositivo utilizable en el sistema, sistema de ficheros y opciones, cada cosa en su propio subdirectorio.
+
+A lo largo de este capítulo asumiremos que está utilizando la arquitectura i386, puesto que sobre ella son los ejemplos que vamos a ir exponiendo. Si no es este su caso debe hacer los cambios adecuados a su arquitectura de hardware en las rutas que vayamos utilizando.
+
+[NOTE]
+====
+Si _no existe_ el directorio [.filename]#/usr/src/sys# en su sistema quiere decir que no están instaladas las fuentes del kernel. La forma más sencilla de tenerlas es mediante `/stand/sysinstall`. Como usuario `root` seleccione `Configure`, luego `Distributions`, después `src` y finalmente `sys`. Si no le gusta mucho sysinstall y tiene acceso a un CDROM "oficial" de FreeBSD puede instalar las fuentes por medio de la siguiente línea de órdenes:
+
+[source,bash]
+....
+# mount /cdrom
+# mkdir -p /usr/src/sys
+# ln -s /usr/src/sys /sys
+# cat /cdrom/sys/ssys.[a-d]* | tar -xzvf
+....
+
+====
+
+Ahora vaya al al directorio [.filename]#arch/conf# y copie el fichero de configuración [.filename]#GENERIC# con el nombre que desee. Por ejemplo:
+
+[source,bash]
+....
+# cd /usr/src/sys/i386/conf
+# cp GENERIC MIKERNEL
+....
+
+Por tradición el nombre se escribe con mayúsuculas y si tiene varias maquinas FreeBSD, con diferente hardware es recomendable darle a cada kernel el mismo nombre que la máquina en la que va a ejecutarse. En este ejemplo usaremos el nombre de [.filename]#MIKERNEL# .
+
+[TIP]
+====
+
+Guardar su fichero de configuración directamente bajo el directorio [.filename]#/usr/src#, puede que no sea una idea muy astuta. Si empieza a tener problemas puede ser muy tentador borrar [.filename]#/usr/src# y comenzar desde cero. Cinco segundos después de haber hecho esto se dará cuenta de que ha eliminado el fichero de configuración de su kernel, en el que quizás llevaba horas trabajando.
+
+Le proponemos una alternativa: guardar su fichero de configuración cualquier otro sitio y crear un enlace simbólico al fichero que hay en el directorio [.filename]#i386#.
+
+Por ejemplo:
+
+[source,bash]
+....
+# cd /usr/src/sys/i386/conf
+# mkdir /root/kernels
+# cp GENERIC /root/kernels/MIKERNEL
+# ln -s /root/kernels/MIKERNEL
+....
+
+====
+
+Ahora edite el fichero de configuración [.filename]#MIKERNEL# con su editor de textos favorito. Si se trata de una instalación reciente probablemente el único editor disponible sea vi, del cual es complicado explicar su uso detallado en este documento, pero existen bastantes libros que detallan su uso; puede ver algunos en la crossref:bibliography[bibliography,bibliografía]. FreeBSD dispone de un editor de uso muy sencillo, llamado ee; si es usted principiante le será de mucha ayuda. Cambie los comentarios al principio del fichero con algo que refleje los cambios realizados o al menos para diferenciarlo del fichero [.filename]#GENERIC#.
+
+Si ha compilado un kernel en SunOS(TM) o algún otro sistema operativo BSD seguramente la mayor parte de fichero le será muy familiar. Si viene usted de otros sistemas operativos como DOS, el fichero [.filename]#GENERIC# puede parecerle intimidante, así que siga las instrucciones descritas en <<kernelconfig-config,El Fichero de Configuración>> detenidamente y con sumo cuidado.
+
+[NOTE]
+====
+Asegúrese siempre de verificar el fichero [.filename]#/usr/src/UPDATING# antes de realizar cualquier actualización del sistema si ha crossref:cutting-edge[cutting-edge,sincronizado sus fuentes] para disponer de la última versión de los mismos. En el fichero [.filename]#/usr/src/UPDATING# está toda la información importante sobre las actualizaciones. Al distribuirse con FreeBSD dicha información deberá estar más actualizada que la que hay en este mismo texto.
+====
+
+Ahora es momento de llevar a cabo la compilación del código fuente del kernel.
+
+[.procedure]
+.Procedure: Compilación del kernel
+. Vaya al directorio [.filename]#/usr/src#:
++
+
+[source,bash]
+....
+# cd /usr/src
+....
+
+. Compile el kernel:
++
+
+[source,bash]
+....
+# make buildkernel KERNCONF=MIKERNEL
+....
+
+. Instale el nuevo kernel:
++
+
+[source,bash]
+....
+# make installkernel KERNCONF=MIKERNEL
+....
+
+[NOTE]
+====
+Es imprescindible que disponga del código fuente completo de FreeBSD para poder compilar el kernel.
+====
+
+[TIP]
+====
+
+Por omisión, si compila un kernel personalizado _todos_ los módulos del kernel serán recompilados también. Si quiere que la actualización de su kernel sea mucho más rápida o compilar solamente ciertos módulos personalizados, edite kernel modules will be rebuilt as well. [.filename]#/etc/make.conf# antes de compilar el kernel:
+
+[.programlisting]
+....
+MODULES_OVERRIDE = linux acpi sound/sound sound/driver/ds1 ntfs
+....
+
+Esta variable crea una lista de módulos listos para ser compilados, sin tocar los demás.
+
+[.programlisting]
+....
+WITHOUT_MODULES = linux acpi sound/sound sound/driver/ds1 ntfs
+....
+
+Esta variable crea una lista de módulos que serán excluidos del proceso de compilación. Hay otras variables que pueden resultarle útiles durante este proceso; consulte la página de manual de man:make.conf[5].
+====
+
+El nuevo kernel se copiará al directorio raíz como [.filename]#/kernel# y el kernel viejo tendrá el nombre de [.filename]#/kernel.old#. Ahora reinicie su sistema para poder probar su nuevo kernel. En caso de que se presente algun problema hay algunos consejos para la <<kernelconfig-trouble,resolución de problemas>> al final de este capítulo. Asegúrese de leer la sección que explica cómo recuperar el sistema en caso de que su kernel <<kernelconfig-noboot,no quiera arrancar>>.
+
+[NOTE]
+====
+Ciertos ficheros relacionados con el proceso de arranque, como man:loader[8]y su configuración, se guardan en [.filename]#/boot#. Los módulos personalizados o de terceros se suelen guardar en [.filename]#/boot/kernel#, aunque debe tener presente que es muy importante que los módulos y el kernel estén sincronizados. Si intenta usar módulos con un kernel para el que no están destinados puede haber errores o incluso producirse intesatabilidades.
+====
+
+[[kernelconfig-config]]
+== El fichero de configuración
+
+El formato de un fichero de configuración es bastante simple. Cada línea contiene una palabra clave con uno o más argumentos. Para simplificar, hay muchas líneas que solamente contienen un argumento. Cualquier cosa detrás de un `\#` se considerará un comentario y en consecuencia será ignorado. Las siguientes secciones describen todas las palabras clave en el orden en el que aparecen en [.filename]##GENERIC##. [[kernelconfig-options]] Si quiere una lista exhaustiva de de opciones dependientes de arquitectura y de dispositivos puede consultar el fichero [.filename]##NOTES## en el mismo directorio donde está el fichero [.filename]##GENERIC##. Si quiere ver las opciones independientes de arquitectura consulte [.filename]##/usr/src/sys/conf/NOTES##.
+
+[NOTE]
+====
+Puede generar un fichero que contenga todas las opciones disponibles en un kernel. Esto es algo que solamente se usa para hacer pruebas. Si quiere generarlo ejecute, como `root`, lo siguiente:
+
+[source,bash]
+....
+# cd /usr/src/sys/i386/conf && make LINT
+....
+
+====
+
+A continuación veremos un ejemplo de fichero de configuración de un kernel [.filename]#GENERIC# al que se han añadido comentarios adicionales donde se ha visto que era necesario abundar un poco para mayor claridad. Este ejemplo es igual (o, en el peor de los casos, casi igual) que la copia del mismo que tiene usted en [.filename]#/usr/src/sys/i386/conf/GENERIC#. 
+
+[.programlisting]
+....
+machine		i386
+....
+
+Esta es la arquitectura de la máquina. Debe ser `alpha`, `amd64`, `i386`, `ia64`, `pc98`, `powerpc` o `sparc64`.
+
+[.programlisting]
+....
+cpu          I486_CPU
+cpu          I586_CPU
+cpu          I686_CPU
+....
+
+Las opciones anteriores definen el tipo de CPU que haya en su sistema. Puede dejar varias líneas de CPU (si, por ejemplo, no está seguro de usar `I586_CPU` o `I686_CPU`), pero si está personalizando su kernel es mucho mejor que solamente ponga la CPU que tenga. Si no está seguro de la CPU que tiene busque en los mensajes de arranque que se guardan en [.filename]#/var/run/dmesg.boot#.
+
+[.programlisting]
+....
+ident          GENERIC
+....
+
+Este es el identificador del kernel. Modifíquelo para que cuadre con el nombre que le haya dado a su kernel, es decir, `MIKERNEL` si ha seguido los ejemplos anteriores. El valor que asigne a la cadena `ident` será el que se muestre cuando arranque con su kernel, así que es útil darle a su kernel un nombre distintivo que permita distinguirlo fácilmente de otros, por ejemplo, si está compilando un kernel experimental.
+
+[.programlisting]
+....
+#To statically compile in device wiring instead of /boot/device.hints
+#hints          "GENERIC.hints"         # Default places to look for devices.
+....
+
+man:device.hints[5] se usa para configurar opciones de controladores de dispositivo. La ubicación por defecto en la que man:loader[8] buscará durante el arranque es [.filename]#/boot/device.hints#. Si usa la opción `hints` puede compilar el contenido de [.filename]#device.hints# en su kernel, lo que hará innecesario crear ese fichero en [.filename]#/boot#.
+
+[.programlisting]
+....
+makeoptions     DEBUG=-g          # Build kernel with gdb(1) debug symbols
+....
+
+El proceso normal de compilación en FreeBSD incluye información de depuración de errores si se compila un kernel con la opción `-g`, que activa la información de depuración de errores al pasar a man:gcc[1].
+
+[.programlisting]
+....
+options          SCHED_4BSD         # 4BSD scheduler
+....
+
+El planificador de tareas tradicional y por omisión de FreeBSD. Déjelo como está.
+
+[.programlisting]
+....
+options          PREEMPTION         # Enable kernel thread preemption
+....
+
+Permite que hilos que están en el kernel puedan asociarse con hilos cuya prioridad sea más alta. Ayuda con la interactividad y permite que los hilos interrumpidos puedan ejecutarse antes en lugar de tener que esperar.
+
+[.programlisting]
+....
+options          INET              # InterNETworking
+....
+
+Networking. Deje esto como está, incluso si no tiene en mente conectar la máquina a una red. Muchos programas necesitan al menos disponer de lo que se llama «loopback networking» (esto es, poder efectuar conexiones de red con su propia máquina) así que tener esto es obligatorio.
+
+[.programlisting]
+....
+options          INET6             # IPv6 communications protocols
+....
+
+Activa los protocolos de comunicación IPv6.
+
+[.programlisting]
+....
+options          FFS               # Berkeley Fast Filesystem
+....
+
+El sistema de ficheros básico para discos duros. Debe dejarlo como está si pretende poder arrancar desde disco duro.
+
+[.programlisting]
+....
+options          SOFTUPDATES       # Enable FFS Soft Updates support
+....
+
+Activa Soft Updates en el kernel, lo que acelerará los accesos de escritura a sus discos. Esta funcionalidad la facilita el kernel, pero debe activarse para cada disco de forma específica. Revise la salida de man:mount[8] y verá si Soft Updates está activado en los discos de su sistema. Si no aparece la opción `soft-updates` actívela mediante man:tunefs[8] (para sistemas de ficheros ya existentes) o man:newfs[8] (en el caso de sistemas de ficheros nuevos).
+
+[.programlisting]
+....
+options          UFS_ACL           # Support for access control lists
+....
+
+Esta opción activa en el kernel las listas de control de acceso. Consiste en el uso de atributos extendidos y UFS2 junto con las características que se describen detalladamente en la crossref:security[fs-acl,Listas de control de acceso a sistemas de ficheros]. Las ACL por omisión están activadas, y no deben desactivarse del kernel una vez que hayan sido usadas en un sistema de ficheros puesto que eliminará las listas de control de acceso y el modo en el que se protegen esos ficheros de un modo totalmente fuera de control.
+
+[.programlisting]
+....
+options          UFS_DIRHASH       # Improve performance on big directories
+....
+
+This option includes functionality to speed up disk operations on large directories, at the expense of using additional memory. You would normally keep this for a large server, or interactive workstation, and remove it if you are using FreeBSD on a smaller system where memory is at a premium and disk access speed is less important, such as a firewall.
+
+[.programlisting]
+....
+options          MD_ROOT           # MD is a potential root device
+....
+
+Esta opción permite que la partición raíz esté en un disco virtual basado en memoria.
+
+[.programlisting]
+....
+options          NFSCLIENT         # Network Filesystem Client
+options          NFSSERVER         # Network Filesystem Server
+options          NFS_ROOT          # NFS usable as /, requires NFSCLIENT
+....
+
+NFS, el sistema de ficheros en red. Salvo que tenga intención de montar particiones de sistemas de ficheros UNIX(R) de un servidor a través de TCP/IP puede comentar estas opciones.
+
+[.programlisting]
+....
+options          MSDOSFS           # MSDOS Filesystem
+....
+
+El sistema de ficheros MS-DOS(R). Salvo que tenga en mente montar particiones de disco duro con formato DOS durante el arranque puede comentar esta opción. En caso de necesidad esta funcionalidad se cargará automáticamente. También tiene a su package:emulators/mtools[], que le permitirá acceder a disquetes DOS sin tener que montarlos y desmontarlos (y ni siquiera requiere `MSDOSFS`).
+
+[.programlisting]
+....
+options          CD9660            # ISO 9660 Filesystem
+....
+
+El sistema de ficheros ISO 9660 para CDROM. Coméntelo si no tiene unidad CDROM o solamente monta CD muy de vez en cuando; cuando lo necesite el sistema lo cargará dinámicamente. Los CD de sonido no utilizan este sistema de ficheros.
+
+[.programlisting]
+....
+options          PROCFS            # Process filesystem (requires PSEUDOFS)
+....
+
+El sistema de ficheros de procesos. Es un sistema de ficheros "simulado" que se monta en [.filename]#/proc# y permite a programas como man:ps[1] suministrar más información sobre qué procesos están ejecutándose. En la mayoaría de los casos no es necesario usar `PROCFS`, puesto que la mayoría de las herramientas de monitorización y depuración han sido adaptadas para que funcionen sin `PROCFS`. De hecho aunque lo instale el sistema no lo montará por omisión.
+
+[.programlisting]
+....
+options          PSEUDOFS          # Pseudo-filesystem framework
+....
+
+Los kernel 6.X pueden usar `PSEUDOFS` al utilizar `PROCFS`.
+
+[.programlisting]
+....
+options          GEOM_GPT          # GUID Partition Tables.
+....
+
+Con esta opción se puede tener una gran cantidad de particiones en un único disco.
+
+[.programlisting]
+....
+options          COMPAT_43         # Compatible with BSD 4.3 [KEEP THIS!]
+....
+
+Compatibilidad con 4.3BSD. Déjelo como está; ciertos programas pueden comportarse de formas muy extrañas si comenta esta opción.
+
+[.programlisting]
+....
+options          COMPAT_FREEBSD4   # Compatible with FreeBSD4
+....
+
+FreeBSD 5.X en sistemas i386(TM) y Alpha necesita esta opción para poder usar aplicaciones compiladas en versiones antiguas de FreeBSD que utilizan, por tanto, llamadas al sistema más antiguas. Esta opción no es necesaria en plataformas en las que funciona FreeBSD desde 5.X, como ia64 y sparc64.
+
+[.programlisting]
+....
+options          COMPAT_FREEBSD5   # Compatible with FreeBSD5
+....
+
+Esta opción hace falta en sistemas FreeBSD 6.X y versiones posteriores para poder ejecutar aplicaciones compiladas en FreeBSD 5.X, que usan interfaces de llamada al sistema FreeBSD 5.X.
+
+[.programlisting]
+....
+options          SCSI_DELAY=5000  # Delay (in ms) before probing SCSI
+....
+
+Hace que el kernel haga una pausa de 5 segundos antes de probar los dispositivos SCSI del sistema. Si solamente tiene discos IDE puede ignorar esta opción, o también puede asignarle un valor menos para evitar el retardo en el arranque. Si lo hace y FreeBSD tiene problemas para reconocer dispositivos SCSI en el sistema es obvio que tendrá que incrementar el valor.
+
+[.programlisting]
+....
+options          KTRACE            # ktrace(1) support
+....
+
+Activa las trazas en el kernel, algo muy útil para la depuración de errores.
+
+[.programlisting]
+....
+options          SYSVSHM           # SYSV-style shared memory
+....
+
+Facilita memoria compartida System V. El uso más habitual es la extensión XSHM de X, que utiliza la mayoría de programas que hacen uso intensivo de los gráficos para incrementar la velocidad. Si usa X es casi seguro que le vendrá bien esta opción.
+
+[.programlisting]
+....
+options          SYSVMSG           # SYSV-style message queues
+....
+
+Mensajes System V. Esta opción añade solamente unos cuantos bytes al kernel.
+
+[.programlisting]
+....
+options          SYSVSEM           # SYSV-style semaphores
+....
+
+Semáforos System V. No es demasiado frecuente que se utilicen, pero solamente añaden unos cuantos cientos de bytes al kernel.
+
+[NOTE]
+====
+La opción `-p` de man:ipcs[1] le mostrará una lista de procesos que estén utilizando características System V.
+====
+
+[.programlisting]
+....
+options 	     _KPOSIX_PRIORITY_SCHEDULING # POSIX P1003_1B real-time extensions
+....
+
+Extensiones en tiempo real añadidas en 1993 POSIX(R). Ciertas aplicaciones de la Colección de Ports las utilizan, por ejemplo StarOffice(TM).
+
+[.programlisting]
+....
+options          KBD_INSTALL_CDEV  # install a CDEV entry in /dev
+....
+
+This option is required to allow the creation of keyboard device nodes in [.filename]#/dev#.
+
+[.programlisting]
+....
+options          ADAPTIVE_GIANT    # Giant mutex is adaptive.
+....
+
+Giant es un mecanismo de exclusión mutua («sleep mutex») que protege un gran conjunto de recursos del kernel. Hoy en dia no es asumible tener un cuello de botella así por el impacto que tiene en el rendimiento, así que está siendo reemplazado por bloqueos que protegen los recursos de manera individual. `ADAPTIVE_GIANT` hace que Giant sea incluido en un conjunto de «mutextes» que va rotando Esto es, cuando un hilo quiere bloquear el Giant mutex (pero ya está bloqueado por un hilo de otra CPU) el primer hilo seguirá ejecutándose a la espera de que se libere el bloqueo. Generalmente el hilo volverá al estado de reposo y esperará hasta que aparezca otra oportunidad de ejecutarse. Si no está seguro de lo que está haciendo es mejor que deje esta opción tal y como está.
+
+[NOTE]
+====
+Tenga en cuenta que en FreeBSD 8.0-CURRENT y versiones siguientes todos los «mutexes» son adaptables por omisión, salvo que se use la opción `NO_ADAPTIVE_MUTEXES`. El resultado evidente que es Giant es adaptable por omisión, así que la opción `ADAPTIVE_GIANT` ha sido eliminada de la configuración.
+====
+
+[.programlisting]
+....
+device          apic               # I/O APIC
+....
+
+El dispositivo apic activa la E/S APIC en la entrega de interrupciones. El dispositivo apic puede usarse tanto en kernels para un procesador (UP) como para sistemas multiprocesador (SMP). Si añada `options SMP` funcionará en sistemas multiprocesador.
+
+[NOTE]
+====
+El dispositivo apic existe solamente en la arquitectura i386, de modo que no debe usarse esta línea en otras arquitecturas.
+====
+
+[.programlisting]
+....
+device          eisa
+....
+
+Use esta opción si tiene una placa base EISA. Activa la detección automática y permite la configuración de todos los dispositivos que estén en el bus EISA.
+
+[.programlisting]
+....
+device          pci
+....
+
+Use esta opción si tiene una placa PCI. Permite la detección automática de tarjetas PCI y permite la configuración entre el bus ISA y el PCI.
+
+[.programlisting]
+....
+# Floppy drives
+device          fdc
+....
+
+Este dispositivo es el controlador de la unidad de disquetes.
+
+[.programlisting]
+....
+# ATA and ATAPI devices
+device          ata
+....
+
+Este controlador permite utilizar dispositivos ATA y ATAPI. Si añade al kernel one `device ata` éste detectará cualquier dispositivo ATA/ATAPI PCI que conecte a una máquina moderna.
+
+[.programlisting]
+....
+device          atadisk                 # ATA disk drives
+....
+
+Si usa `device ata` tendrá que añadir también esto para poder usar unidades de disco ATA.
+
+[.programlisting]
+....
+device          ataraid                 # ATA RAID drives
+....
+
+Si usa `device ata` tendrá que añadir también esto para poder usar unidades de disco ATA RAID.
+
+[.programlisting]
+....
+
+device          atapicd                 # ATAPI CDROM drives
+....
+
+Si usa `device ata` tendrá que añadir también esto para poder usar unidades ATAPI CDROM.
+
+[.programlisting]
+....
+device          atapifd                 # ATAPI floppy drives
+....
+
+Si usa `device ata` tendrá que añadir también esto para poder usar unidades de disquete ATAPI.
+
+[.programlisting]
+....
+device          atapist                 # ATAPI tape drives
+....
+
+Si usa `device ata` tendrá que añadir también esto para poder usar unidades de cinta ATAPI.
+
+[.programlisting]
+....
+options         ATA_STATIC_ID           # Static device numbering
+....
+
+Con esta opción hace que el número de controladores sea estático; si no se usa los números de dispositivo se asignan dinámicamente.
+
+[.programlisting]
+....
+# SCSI Controllers
+device          ahb        # EISA AHA1742 family
+device          ahc        # AHA2940 and onboard AIC7xxx devices
+options         AHC_REG_PRETTY_PRINT    # Print register bitfields in debug
+                                        # output.  Adds ~128k to driver.
+device          ahd        # AHA39320/29320 and onboard AIC79xx devices
+options         AHD_REG_PRETTY_PRINT    # Print register bitfields in debug
+                                        # output.  Adds ~215k to driver.
+device          amd        # AMD 53C974 (Teckram DC-390(T))
+device          isp        # Qlogic family
+#device         ispfw      # Firmware for QLogic HBAs- normally a module
+device          mpt        # LSI-Logic MPT-Fusion
+#device         ncr        # NCR/Symbios Logic
+device          sym        # NCR/Symbios Logic (newer chipsets + those of `ncr')
+device          trm        # Tekram DC395U/UW/F DC315U adapters
+
+device          adv        # Advansys SCSI adapters
+device          adw        # Advansys wide SCSI adapters
+device          aha        # Adaptec 154x SCSI adapters
+device          aic        # Adaptec 15[012]x SCSI adapters, AIC-6[23]60.
+device          bt         # Buslogic/Mylex MultiMaster SCSI adapters
+
+device          ncv        # NCR 53C500
+device          nsp        # Workbit Ninja SCSI-3
+device          stg        # TMC 18C30/18C50
+....
+
+Controladoras SCSI. Coméntelas si no las tiene en su sistema. Si en su sistema tiene solamente unidades IDE puede borrarlas todas. Las líneas `*_REG_PRETTY_PRINT` son opciones de depuración de errores de sus respectivos controladores de dispositivo.
+
+[.programlisting]
+....
+# SCSI peripherals
+device          scbus      # SCSI bus (required for SCSI)
+device          ch         # SCSI media changers
+device          da         # Direct Access (disks)
+device          sa         # Sequential Access (tape etc)
+device          cd         # CD
+device          pass       # Passthrough device (direct SCSI access)
+device          ses        # SCSI Environmental Services (and SAF-TE)
+....
+
+Periféricos SCSI. Estos también puede borrarlos sin problemas si no los tiene en su sistema o si solamente tiene hardware IDE.
+
+[NOTE]
+====
+El controlador USB man:umass[4] (y unos cuantos controladores más) utilizan el subsistema SCSI aunque no sean dispositivos SCSI reales. No elimine el subsistema SCSI del kernel si va a utilizar cualquiera de estos controladores.
+====
+
+[.programlisting]
+....
+# RAID controllers interfaced to the SCSI subsystem
+device          amr        # AMI MegaRAID
+device          arcmsr     # Areca SATA II RAID
+device          asr        # DPT SmartRAID V, VI and Adaptec SCSI RAID
+device          ciss       # Compaq Smart RAID 5*
+device          dpt        # DPT Smartcache III, IV - See NOTES for options
+device          hptmv      # Highpoint RocketRAID 182x
+device          rr232x     # Highpoint RocketRAID 232x
+device          iir        # Intel Integrated RAID
+device          ips        # IBM (Adaptec) ServeRAID
+device          mly        # Mylex AcceleRAID/eXtremeRAID
+device          twa        # 3ware 9000 series PATA/SATA RAID
+
+# RAID controllers
+device          aac        # Adaptec FSA RAID
+device          aacp       # SCSI passthrough for aac (requires CAM)
+device          ida        # Compaq Smart RAID
+device          mfi        # LSI MegaRAID SAS
+device          mlx        # Mylex DAC960 family
+device          pst        # Promise Supertrak SX6000
+device          twe        # 3ware ATA RAID
+....
+
+Controladoras RAID que pueden utilizarse en FreeBSD. Si no las tiene en su sistema puede borrarlas.
+
+[.programlisting]
+....
+# atkbdc0 controls both the keyboard and the PS/2 mouse
+device          atkbdc     # AT keyboard controller
+....
+
+El controlador de teclado (`atkbdc`) ofrece servicios de E/S con teclados AT y ratones PS/2. El controlador de teclado (`atkbd`) y el controlador de ratón PS/2 (`psm`) necesitan este dispositivo.
+
+[.programlisting]
+....
+device          atkbd      # AT keyboard
+....
+
+El controlador `atkbd`, junto con el controlador `atkbdc`, permiten utilizar el teclado AT 84 u otros tipos de teclados AT mejorados que se conecten mediante el controlador de teclado AT.
+
+[.programlisting]
+....
+device          psm        # PS/2 mouse
+....
+
+Utilice este dispositivo si conecta su ratón en el puerto PS/2.
+
+[.programlisting]
+....
+device          kbdmux        # keyboard multiplexer
+....
+
+Funcionalidad básica para múltiples teclados. Si no tiene en mente usar más de un teclado en el sistema puede borrar esta línea sin mayor problema.
+
+[.programlisting]
+....
+device          vga        # VGA video card driver
+....
+
+El controlador de la tarjeta gráfica.
+
+[.programlisting]
+....
+
+device          splash     # Splash screen and screen saver support
+....
+
+«Splash screen» en el arranque. Los salvapantallas necesitan este dispositivo.
+
+[.programlisting]
+....
+# syscons is the default console driver, resembling an SCO console
+device          sc
+....
+
+`sc` por omisión es el controlador de dispositivo de la consola; se parece mucho a una consola de SCO. Dado que muchos programas de pantalla completa acceden a la consola a través de la biblioteca de bases de datos de terminal [.filename]#termcap# no tiene demasiada importancia si usa `vt`, el controlador de consola compatible `VT220`. Cuando acceda al sistema asigne a su variable `TERM` el valor `scoansi` si los programas a pantalla completa tienen algún problema para acceder a la consola.
+
+[.programlisting]
+....
+# Enable this for the pcvt (VT220 compatible) console driver
+#device          vt
+#options         XSERVER          # support for X server on a vt console
+#options         FAT_CURSOR       # start with block cursor
+....
+
+El controlador de dispositivo VT220-compatible; es compatible con VT100/102, anterior a él. Funciona bien en ciertos sistemas portátiles que adolecen de incompatibilidad de harware con `sc`. Asigne a su variable de entorno `TERM` el valor `vt100` o `vt220` cuando acceda al sistema. Este controlador le puede ser de utilidad si tiene que acceder a gran cantidad de máquinas a través de una red, una situación en la que suele suceder que [.filename]#termcap# o [.filename]#terminfo# no están ahí para que las use `sc`. `vt100`, por el contrario, debería aparecer en práticamente cualquier plataforma.
+
+[.programlisting]
+....
+device          agp
+....
+
+Utilice esta opción si tiene en el sistema una tarjeta AGP. Activará AGP y también AGP GART si su tarjeta puede usarla.
+
+[.programlisting]
+....
+# Power management support (see NOTES for more options)
+#device          apm
+....
+
+Gestión avanzada de la energía. Muy útil en sistemas portátiles. Viene desactivada por omisión en el kernel [.filename]#GENERIC# .
+
+[.programlisting]
+....
+# Add suspend/resume support for the i8254.
+device           pmtimer
+....
+
+Controlador del reloj para eventos de gestión de la energía, como APM y ACPI.
+
+[.programlisting]
+....
+# PCCARD (PCMCIA) support
+# PCMCIA and cardbus bridge support
+device          cbb               # cardbus (yenta) bridge
+device          pccard            # PC Card (16-bit) bus
+device          cardbus           # CardBus (32-bit) bus
+....
+
+Dispositivos PCMCIA. Si el sistema es portátil necesita tener esto activado.
+
+[.programlisting]
+....
+# Serial (COM) ports
+device          sio               # 8250, 16[45]50 based serial ports
+....
+
+Estos son los puertos serie a los que se conoce como puertos [.filename]#COM# en entornos MS-DOS(R)/Windows(R).
+
+[NOTE]
+====
+Si tiene un módem interno en [.filename]#COM4# un puerto serie en [.filename]#COM2# tendrá que asignar a la IRQ del módem el 2 (por razones técnicas ignotas IRQ2 = IRQ 9) para que pueda acceder al dispositivo desde FreeBSD. Si tiene una tarjeta serie multipuerto consulte la página de manual de man:sio[4] si quiere más detalles sobre los valores que debe añadir a [.filename]#/boot/device.hints#. Algunas tarjetas gráficas (sobre todo las que usan chips S3) utilizan direcciones IO del tipo `0x*2e8` y dado que muchas tarjetas serie de baja calidad no decodifican correctamente el espacio de direcciones de 16 bits chocan con estas tarjetas, haciendo que el puerto [.filename]#COM4# sea prácticamente inútil.
+
+Es necesario que cada puerto serie tenga una IRQ única (salvo que use una tarjeta multipuerto que permita compartir interrupciones), así que las IRQ de [.filename]#COM3# y de [.filename]#COM4# no se pueden utilizar.
+====
+
+[.programlisting]
+....
+# Parallel port
+device          ppc
+....
+
+El interfaz del puerto paralelo de bus ISA.
+
+[.programlisting]
+....
+device          ppbus      # Parallel port bus (required)
+....
+
+El bus del puerto paralelo.
+
+[.programlisting]
+....
+device          lpt        # Printer
+....
+
+Permite usar el puerto paralelo para conectar impresoras.
+
+[NOTE]
+====
+Necesitará disponer de los tres anteriores para poder utilizar impresoras mediante el puerto paralelo.
+====
+
+[.programlisting]
+....
+device          plip       # TCP/IP over parallel
+....
+
+Este controlador es para la interfaz de red a través del puerto paralelo.
+
+[.programlisting]
+....
+device          ppi        # Parallel port interface device
+....
+
+La E/S de propósito general (conocida también como "puerto geek") + E/S IEEE1284.
+
+[.programlisting]
+....
+#device         vpo        # Requires scbus and da
+....
+
+Este dispositivo se usa con unidades Iomega Zip. Necesita `scbus` y `da` . El mejor rendimiento se alcanza con el uso de los puertos en modo EPP 1.9.
+
+[.programlisting]
+....
+#device         puc
+....
+
+Puede utilizar este dispositivo si tiene una tarjeta PCI "tonta" (por puerto serie o paralelo) que funcione mediante el controlador man:puc[4].
+
+[.programlisting]
+....
+# PCI Ethernet NICs.
+device          de         # DEC/Intel DC21x4x (Tulip)
+device          em         # Intel PRO/1000 adapter Gigabit Ethernet Card
+device          ixgb       # Intel PRO/10GbE Ethernet Card
+device          txp        # 3Com 3cR990 (Typhoon)
+device          vx         # 3Com 3c590, 3c595 (Vortex)
+....
+
+Diversos controladores para tarjetas de red PCI. Puede borrar todas las que no estén en su sistema.
+
+[.programlisting]
+....
+# PCI Ethernet NICs that use the common MII bus controller code.
+# NOTE: Be sure to keep the 'device miibus' line in order to use these NICs!
+device          miibus     # MII bus support
+....
+
+El poder utilizar bus MII es necesario para ciertas tarjetas Ethernet PCI 10/100, más concretamente las que usan transceptores compatibles con MII o implementan interfaces de control de transceptores que funcionan como si fueran MII. Si incluye `device miibus` al kernel dispondrá de la API miibus genérica y todos los controladores PHY, incluyendo uno que hará funcionar hardware que, siendo del tipo PHY, no está bajo ninguno de los controladores PHY específicos.
+
+[.programlisting]
+....
+device          bce        # Broadcom BCM5706/BCM5708 Gigabit Ethernet
+device          bfe        # Broadcom BCM440x 10/100 Ethernet
+device          bge        # Broadcom BCM570xx Gigabit Ethernet
+device          dc         # DEC/Intel 21143 and various workalikes
+device          fxp        # Intel EtherExpress PRO/100B (82557, 82558)
+device          lge        # Level 1 LXT1001 gigabit ethernet
+device          msk        # Marvell/SysKonnect Yukon II Gigabit Ethernet
+device          nge        # NatSemi DP83820 gigabit ethernet
+device          nve        # nVidia nForce MCP on-board Ethernet Networking
+device          pcn        # AMD Am79C97x PCI 10/100 (precedence over 'lnc')
+device          re         # RealTek 8139C+/8169/8169S/8110S
+device          rl         # RealTek 8129/8139
+device          sf         # Adaptec AIC-6915 (Starfire)
+device          sis        # Silicon Integrated Systems SiS 900/SiS 7016
+device          sk         # SysKonnect SK-984x & SK-982x gigabit Ethernet
+device          ste        # Sundance ST201 (D-Link DFE-550TX)
+device          stge       # Sundance/Tamarack TC9021 gigabit Ethernet
+device          ti         # Alteon Networks Tigon I/II gigabit Ethernet
+device          tl         # Texas Instruments ThunderLAN
+device          tx         # SMC EtherPower II (83c170 EPIC)
+device          vge        # VIA VT612x gigabit ethernet
+device          vr         # VIA Rhine, Rhine II
+device          wb         # Winbond W89C840F
+device          xl         # 3Com 3c90x (Boomerang, Cyclone)
+....
+
+Controladores que utilizan el código del controlador de bus MII.
+
+[.programlisting]
+....
+# ISA Ethernet NICs.  pccard NICs included.
+device          cs         # Crystal Semiconductor CS89x0 NIC
+# 'device ed' requires 'device miibus'
+device          ed         # NE[12]000, SMC Ultra, 3c503, DS8390 cards
+device          ex         # Intel EtherExpress Pro/10 and Pro/10+
+device          ep         # Etherlink III based cards
+device          fe         # Fujitsu MB8696x based cards
+device          ie         # EtherExpress 8/16, 3C507, StarLAN 10 etc.
+device          lnc        # NE2100, NE32-VL Lance Ethernet cards
+device          sn         # SMC's 9000 series of Ethernet chips
+device          xe         # Xircom pccard Ethernet
+
+# ISA devices that use the old ISA shims
+#device         le
+....
+
+Controladores Ethernet ISA. Consulte [.filename]#/usr/src/sys/i386/conf/NOTES# para más detalles sobre qué tarjetas hace funcionar qué controlador.
+
+[.programlisting]
+....
+# Wireless NIC cards
+device          wlan            # 802.11 support
+....
+
+802.11 genérico. Necesitará esta línea si va a usar redes inalámbricas.
+
+[.programlisting]
+....
+device          wlan_wep        # 802.11 WEP support
+device          wlan_ccmp       # 802.11 CCMP support
+device          wlan_tkip       # 802.11 TKIP support
+....
+
+Criptografía en dispositivos 802.11. Necesita estas líneas si quiere utilizar criptografía y protocolos de seguridad 802.11.
+
+[.programlisting]
+....
+device          an         # Aironet 4500/4800 802.11 wireless NICs.
+device          ath             # Atheros pci/cardbus NIC's
+device          ath_hal         # Atheros HAL (Hardware Access Layer)
+device          ath_rate_sample # SampleRate tx rate control for ath
+device          awi        # BayStack 660 and others
+device          ral        # Ralink Technology RT2500 wireless NICs.
+device          wi         # WaveLAN/Intersil/Symbol 802.11 wireless NICs.
+#device         wl         # Older non 802.11 Wavelan wireless NIC.
+....
+
+Diversas tarjetas inalámbricas.
+
+[.programlisting]
+....
+# Pseudo devices
+device   loop          # Network loopback
+....
+
+El dispositivo de «loopback» para TCP/IP. Si accede por telnet o FTP or FTP to `localhost` también conocido como `127.0.0.1`) lo hará a través de este dispositivo. Es _imprescindible_ tenerlo en el sistema.
+
+[.programlisting]
+....
+device   random        # Entropy device
+....
+
+Generador de números criptográficamente seguro.
+
+[.programlisting]
+....
+device   ether         # Ethernet support
+....
+
+`ether` solo es necesario si tiene alguna tarjeta Ethernet. Incluye código genérico del protocolo Ethernet.
+
+[.programlisting]
+....
+device   sl            # Kernel SLIP
+....
+
+`sl` permite utilizar SLIP. Ha sido sustituido casi totalmente por PPP, que es más fácil de usar, está mejor capacitado para la conexión de módem a módem y es, en general, claramente mejor.
+
+[.programlisting]
+....
+device   ppp           # Kernel PPP
+....
+
+Este dispositivo incluye en el kernel la capacidad de gestionar conexiones de llamada entrante «dial-up». Hay también una versión de PPP implementada como aplicación de usuario; utiliza `tun` y ofrece más flexibilidad y características como la llamada bajo petición.
+
+[.programlisting]
+....
+device   tun           # Packet tunnel.
+....
+
+Este dispositivo lo usa el software PPP de usuario. Consulte la sección sobre crossref:ppp-and-slip[userppp,PPP] de este mismo libro.
+
+[.programlisting]
+....
+
+device   pty           # Pseudo-ttys (telnet etc)
+....
+
+Este dispositivo es una "pseudoterminal", o un puerto de entrada al sistema simulado. Se usa en sesiones entrantes de `telnet` y `rlogin`; también lo usan xterm y otras aplicaciones, entre las que encontramos a Emacs.
+
+[.programlisting]
+....
+device   md            # Memory disks
+....
+
+Pseudodispositivos de disco basados en memoria.
+
+[.programlisting]
+....
+device   gif           # IPv6 and IPv4 tunneling
+....
+
+Este dispositivo implementa túneles de IPv6 sobre IPv4, IPv4 sobre IPv6, IPv4 sobre IPv4 e IPv6 sobre IPv6. El dispositivo `gif` se puede clonar a sí mismo, así que los nodos de dispositivo se van creando a medida que van haciendo falta.
+
+[.programlisting]
+....
+device   faith         # IPv6-to-IPv4 relaying (translation)
+....
+
+Este pseudodispositivo captura paquetes que se le hayan enviado y los dirige hacia el dæmon de traducción IPv4/IPv6.
+
+[.programlisting]
+....
+# The `bpf' device enables the Berkeley Packet Filter.
+# Be aware of the administrative consequences of enabling this!
+# Note that 'bpf' is required for DHCP.
+device   bpf           # Berkeley packet filter
+....
+
+El filtro de paquetes de Berkeley. Este pseudodispositivo permite poner interfaces de red en modo promíscuo, lo que significa que capturan todos los paquetes que circulen por una red broadcast (por ejemplo una Ethernet). Dichos paquetes pueden guardarse en disco para su posterior examen mediante man:tcpdump[1] (el análisis con man:tcpdump[1] no puede hacerse directamente también).
+
+[NOTE]
+====
+El dispositivo man:bpf[4] también lo usa man:dhclient[8] para obtener direcciones IP del encaminador (gateway) por omisión. Si usa DHCP deje esta opción como está.
+====
+
+[.programlisting]
+....
+# USB support
+device          uhci          # UHCI PCI->USB interface
+device          ohci          # OHCI PCI->USB interface
+device          ehci          # EHCI PCI->USB interface (USB 2.0)
+device          usb           # USB Bus (required)
+#device         udbp          # USB Double Bulk Pipe devices
+device          ugen          # Generic
+device          uhid          # Human Interface Devices
+device          ukbd          # Keyboard
+device          ulpt          # Printer
+device          umass         # Disks/Mass storage - Requires scbus and da
+device          ums           # Mouse
+device          ural          # Ralink Technology RT2500USB wireless NICs
+device          urio          # Diamond Rio 500 MP3 player
+device          uscanner      # Scanners
+# USB Ethernet, requires mii
+device          aue           # ADMtek USB Ethernet
+device          axe           # ASIX Electronics USB Ethernet
+device          cdce          # Generic USB over Ethernet
+device          cue           # CATC USB Ethernet
+device          kue           # Kawasaki LSI USB Ethernet
+device          rue           # RealTek RTL8150 USB Ethernet
+....
+
+Diversos dispositivos USB.
+
+[.programlisting]
+....
+# FireWire support
+device          firewire      # FireWire bus code
+device          sbp           # SCSI over FireWire (Requires scbus and da)
+device          fwe           # Ethernet over FireWire (non-standard!)
+....
+
+Diversos dispositivos Firewire.
+
+Tiene más información y una lista con más dispositivos que funcionan en FreeBSD consulte [.filename]#/usr/src/sys/i386/conf/NOTES#.
+
+=== Configuraciones con grandes cantidades de memoria (PAE)
+
+Las máquinas que tienen configuraciones con grandes cantidades de memoria necesitan acceder a más de 4 gigabytes de espacio de direcciones KVA (User+Kernel Virtual Address). Debido a esta limitación Intel añadió a las CPU Pentium(R) Pro y modelos posteriores la posibilidad de acceso al espacio de direcciones físicas de 36 bits.
+
+PAE (Physical Address Extension) a las CPU Intel(R) Pentium(R) Pro y los modelos posteriores configuraciones de memoria de hasta 64 gigabytes. Para poder aprovechar esto en FreeBSD existe la opción del kernel `PAE`, disponible en todas las versiones modernas de FreeBSD. A causa de esta limitación de memoria en los Intel no hay nada que distinga de algún modo la memoria situada por debajo del límite de los 4 gigabytes. La memoria que esté por encima de los 4 gigabytes se coloca en el «pool» de memoria disponible.
+
+Si quiere activar PAE en el kernel tiene que añadir la siguiente liínea al fichero de configuración del kernel:
+
+[.programlisting]
+....
+options		    PAE
+....
+
+[NOTE]
+====
+En FreeBSD PAE solamente existe en procesadores Intel(R) IA-32. Hemos de advertirle de que PAE no ha sido probado todo lo necesario, así que debe considerarse de calidad beta, sobre todo si se le compara con otras características de FreeBSD.
+====
+
+PAE en FreeBSD tiene varias limitaciones:
+
+* Un solo proceso no puede acceder a más de 4 gigabytes de espacio VM.
+* No puede cargar módulos KLD en un kernel que tenga PAE activado debido a las diferencias existentes entre el «framework» de compilación del módulo y el del kernel mismo.
+* Los controladores de dispositivo que utilizan el interfaz man:bus_dma[9] pueden provocar corrupción de datos en un kernel con PAE activado, una excelente razón para no utilizarlos. Esta es la razón de que FreeBSD incorpore un fichero de configuración de un kernel [.filename]#PAE# del que se han extraído todos los módulos que se sabe que no funcionan en un kernel con PAE activado.
+* Algunos «system tunables» determinan el uso de recursos de memoria basándose en la memoria física disponible. Estos «tunables» pueden asignar más memoria de la que realmente debieran debido a que el sistema PAE está íntimamente ligado a cantidades bastante importantes de memoria. Un ejemplo de esto es la sysctl `kern.maxvnodes`, que controla el número máximo de vnodes permitidos en el kernel. Le recomendamos que ajuste este y otros tunables dentro valores razonables.
+* Es posible que tenga que aumentar el espacio virtual de direcciones del kernel (el KVA) o reducir la cantidad de recursos exclusivos del kernel que se utilicen exhaustivamente (ver más arriba) para evitar que KVA literalmente se ahogue. La opción del kernel `KVA_PAGES` permite incrementar el espacio KVA.
+
+Si quiere saber más sobre la estabilidad del sistema consulte la página de manual de man:tuning[7]. La página de manual de man:pae[4] contiene información actualizada sobre PAE y FreeBSD.
+
+[[kernelconfig-trouble]]
+== Qué hacer si algo va mal
+
+Hay cuatro categorías de problemas que podemos encontrarnos en el proceso de compilación de un kernel personalizado:
+
+Fallo de `config`:::
+Si man:config[8] falla cuando le pasa la descripción de su kernel seguramente ha cometido algún pequeño error. Por suerte man:config[8] les mostrará el número de la línea que le está dando problemas, así que no tendrá mayor problema para localizarla. Veamos un ejemplo:
++
+[source,bash]
+....
+config: line 17: syntax error
+....
++
+Si ve algo así asegúrese de que ha tecleado la palabra clave que hay en esa lína. Compare la de su fichero de configuración del kernel con la de [.filename]#GENERIC#.
+
+Fallo de `make`:::
+If the `make` command fails, it usually signals an error in your kernel description which is not severe enough for man:config[8] to catch. Again, look over your configuration, and if you still cannot resolve the problem, send mail to the link:mailto:http://lists.freebsd.org/mailman/listinfo/freebsd-questions[lista de correo para preguntas generales sobre FreeBSD] with your kernel configuration, and it should be diagnosed quickly.
+
+El kernel no arranca:[[kernelconfig-noboot]]::
+Si su nuevo kernel no arranca o no reconoce sus dispositivos de hardware no desespere. FreeBSD dispone de excelentes mecanismos de recuperación ante kernels defectuosos. Elija el kernel con el que quiere arrancar en el gestor de arranque de FreeBSD. Puede acceder al gestor de arranque en el momento en el que aparece el menú de arranque. Elija la opción número seis, "Escape to a loader prompt" option, Escriba en el prompt `unload kernel` y después escriba `boot /boot/kernel.old/kernel`, o el nombre de cualquier otro kernel que tenga en el sistema y del que sepa que puede fiarse. Si va a reconfigurar un kernel es una buenísima idea guardar un kernel que sepa que funciona.
++
+Tras arrancar con un kernel de fiar verifique el fichero de configuración e intente de nuevo una compilación. El fichero [.filename]#/var/log/messages# es una fuente de información muy valiosa puesto que registra, entre otras cosas, todos los mensajes que deja el kernel cada vez que hay un arranque satisfactorio. man:dmesg[8] le mostrará los mensajes que el kernel ha generado durante el último arranque.
++
+[NOTE]
+====
+Si tiene problemas compilando un kernel recuerde que es de vital importancia que guarde una copia de un kernel [.filename]#GENERIC# u otro del que pueda fiarse y que (esto es muy importante) tenga un nombre distinto de [.filename]#kernel.old# para evitar que el sistema lo borre una vez que termine una nueva compilación. No puede confiar en su kernel [.filename]#kernel.old# porque al instalar un nuevo kernel (que aún no sabe si será el que funcione tal y como espera de él) el kernel [.filename]#kernel.old# se sobreescribe con el kernel que instale. Otra cosa importante es que copie ese kernel de fiar a [.filename]#/boot/kernel#, o ciertas herramientas como man:ps[1] no funcionarán. Basta con que haga lo siguiente:
+
+[source,bash]
+....
+# mv /boot/kernel /boot/kernel.malo
+# mv /boot/kernel.bueno /boot/kernel
+....
+
+====
+
+El kernel funciona, pero man:ps[1] no:::
+Si el kernel que tiene instalado es de una versión de FreeBSD y las utilidades del sistema son de otra, por ejemplo un kernel -CURRENT en una -RELEASE, hay muchas herramientas de monitorización del sistema como man:ps[1] y man:vmstat[8] no funcionarán. Ejecute un crossref:cutting-edge[makeworld,make buildworld y un make install world] con la misma versión de código fuente con la que ha compilado su kernel. Esta es una de las razones por las que no es una idea demasiado buena utilizar versiones diferentes de kernel y de sistema operativo.

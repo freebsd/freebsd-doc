@@ -1,0 +1,598 @@
+---
+title: Capítulo 8. Prácticas Avançadas de [.filename]#pkg-plist#
+prev: books/porters-handbook/flavors
+next: books/porters-handbook/pkg-files
+---
+
+[[plist]]
+= Prácticas Avançadas de [.filename]#pkg-plist#
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 8
+:toc-title: Índice
+:table-caption: Tabela
+:figure-caption: Figura
+:example-caption: Exemplo
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pt-br/mailing-lists.adoc[]
+include::shared/pt-br/teams.adoc[]
+include::shared/pt-br/urls.adoc[]
+
+toc::[]
+
+[[plist-sub]]
+== Alterando o [.filename]#pkg-plist# Baseado em Variáveis Make
+
+Alguns ports, particularmente os `p5-` ports, precisam mudar seus [.filename]#pkg-plist# dependendo de quais opções eles são configurados com (ou versão de `perl`, no caso de `p5-` ports). Para tornar isso fácil, todas as instâncias [.filename]#pkg-plist# de `%%OSREL%%`, `%%PERL_VER%%` e `%%PERL_VERSION%%` serão substituídas apropriadamente. O valor de `%%OSREL%%` é a revisão numérica do sistema operacional (por exemplo,`4.9`). `%%PERL_VERSION%%` e `%%PERL_VER%%` é o número completo da versão `perl` (por exemplo,`5.8.9`). Muitos outros `%%_VARS_%%` relacionados aos arquivos de documentação do port são descritos na <<install-documentation,seção relevante>>.
+
+Para fazer outras substituições, defina `PLIST_SUB` com uma lista de pares `_VAR_=_VALOR_` e as instâncias de `%%_VAR_%%` serão substituídas por _VALOR_ no [.filename]#pkg-plist#.
+
+Por exemplo, se um port instalar muitos arquivos em um subdiretório específico da versão, use um placeholder para a versão de modo que o [.filename]#pkg-plist# não precise ser gerado novamente toda vez que o port é atualizado. Por exemplo:
+
+[.programlisting]
+....
+OCTAVE_VERSION=	${PORTREVISION}
+PLIST_SUB=	OCTAVE_VERSION=${OCTAVE_VERSION}
+....
+
+no [.filename]#Makefile# e use `%%OCTAVE_VERSION%%` onde quer que a versão apareça em [.filename]#pkg-plist#. Quando o port é atualizado, não será necessário editar dezenas (ou em alguns casos, centenas) de linhas no [.filename]#pkg-plist#.
+
+Se os arquivos são instalados condicionalmente pelas opções definidas no port, a maneira usual de lidar com isso é prefixando as linhas [.filename]#pkg-plist# com `%%OPT%%` para linhas necessárias quando a opção está ativada ou `%%NO_OPT%%` quando a opção está desativada e adicionando `OPTIONS_SUB=yes` ao [.filename]#Makefile#. Veja <<options_sub>> para mais informações.
+
+Por exemplo, se houver arquivos que são instalados apenas quando a opção `X11` está ativada, e o [.filename]#Makefile# tem:
+
+[.programlisting]
+....
+OPTIONS_DEFINE=	X11
+OPTIONS_SUB=	yes
+....
+
+No [.filename]#pkg-plist#, insira `%%X11%%` no início das linhas que serão instaladas apenas quando a opção estiver habilitada, assim:
+
+[.programlisting]
+....
+%%X11%%bin/foo-gui
+....
+
+Esta substituição será feita entre os targets `pre-install` e `do-install`, lendo a partir do [.filename]#PLIST# e escrevendo em [.filename]#TMPPLIST# (padrão:[.filename]##WRKDIR/.PLIST.mktmp##). Então, se o port gera o [.filename]#PLIST# na hora da compilação, faça isso em ou antes do `pre-install`. Além disso, se o port precisar editar o arquivo resultante, faça-o em `post-install` em um arquivo chamado [.filename]#TMPPLIST#.
+
+Outra maneira de modificar a lista de empacotamento de um port é baseada na configuração das variáveis `PLIST_FILES` e `PLIST_DIRS`. O valor de cada variável é considerado como uma lista de nomes de caminho para gravar no [.filename]#TMPPLIST# junto com conteúdo do [.filename]#PLIST#. Enquanto os nomes listados no `PLIST_FILES` e `PLIST_DIRS` estão sujeitos a substituição do `%%_VAR_%%` conforme descrito acima, é melhor usar o `${_VAR_}` diretamente. Exceto por isso, os nomes contidos no `PLIST_FILES` aparecerão inalterados na lista final de packing, enquanto o `@dir` será anexado aos nomes do `PLIST_DIRS`. Para fazer efeito, o `PLIST_FILES` e o `PLIST_DIRS` devem ser definidos antes que o [.filename]#TMPPLIST# seja escrito, isto é, no `pre-install` ou antes.
+
+De vez em quando, usar `OPTIONS_SUB` não é o suficiente. Nesses casos, adicionar uma `_TAG_` para `PLIST_SUB` dentro do [.filename]#Makefile# com um valor especial `@comment`, faz as ferramentas de pacote ignorar a linha. Por exemplo, se alguns arquivos são instalados apenas quando a opção `X11` está habilitada e a arquitetura é `i386`:
+
+[.programlisting]
+....
+.include <bsd.port.pre.mk>
+
+.if ${PORT_OPTIONS:MX11} && ${ARCH} == "i386"
+PLIST_SUB+=	X11I386=""
+.else
+PLIST_SUB+=	X11I386="@comment "
+.endif
+....
+
+[[plist-cleaning]]
+== Diretórios Vazios
+
+[[plist-dir-cleaning]]
+=== Limpando Diretórios Vazios
+
+Ao ser desinstalado, um port deve remover os diretórios vazios que ele criou. A maioria desses diretórios são removidos automaticamente pelo man:pkg[8], mas para os diretórios criados fora do [.filename]#${PREFIX}#, ou diretórios vazios, mais alguns passos precisam ser feitos. Isso geralmente é realizando adicionando entradas `@dir` para esses diretórios.Os subdiretórios devem ser excluídos antes de excluir os diretórios pai.
+
+[.programlisting]
+....
+[...]
+@dir /var/games/oneko/saved-games
+@dir /var/games/oneko
+....
+
+[[plist-dir-empty]]
+=== Criando Diretórios Vazios
+
+Os diretórios vazios criados durante a instalação do port precisam de atenção especial. Eles devem estar presentes quando o pacote é criado. Se eles não forem criados pelo código do port, crie-os no [.filename]#Makefile#:
+
+[.programlisting]
+....
+post-install:
+	${MKDIR} ${STAGEDIR}${PREFIX}/some/directory
+....
+
+Adicione o diretório ao [.filename]#pkg-plist# como qualquer outro. Por exemplo:
+
+[.programlisting]
+....
+@dir some/directory
+....
+
+[[plist-config]]
+== Arquivos de Configuração
+
+Se o port instalar arquivos de configuração em [.filename]#PREFIX/etc# (ou em outro lugar) _não_ liste-os em [.filename]#pkg-plist#. Isso fará com que `pkg delete` remova os arquivos que foram cuidadosamente editados pelo usuário, e uma reinstalação irá eliminá-los.
+
+Em vez disso, instale arquivos de exemplo com uma extensão [.filename]#filename.sample#. A macro `@sample` automatiza isso, consulte <<plist-keywords-sample>> para entender o que ela faz exatamente. Para cada arquivo de exemplo, adicione uma entrada no [.filename]#pkg-plist#:
+
+[.programlisting]
+....
+@sample etc/orbit.conf.sample
+....
+
+Se houver uma boa razão para não instalar um arquivo de configuração por padrão, liste apenas o nome do arquivo de exemplo em [.filename]#pkg-plist#, sem o `@sample` seguido por um espaço e adicione uma <<porting-message,mensagem>> ressaltando que o usuário deve copiar e editar o arquivo antes que o software seja executado.
+
+[TIP]
+====
+Quando um port instala sua configuração em um subdiretório de [.filename]#${PREFIX}/etc#, usar `ETCDIR`, cujo padrão é `${PREFIX}/etc/${PORTNAME}`, pode ser substituído nos [.filename]#Makefile# dos ports se houver uma convenção para o port usar algum outro diretório. A macro `%%ETCDIR%%` será usado em seu lugar em [.filename]#pkg-plist#.
+====
+
+[NOTE]
+====
+Os arquivos de configuração de exemplo devem sempre ter o sufixo [.filename]#.sample#. Se, por algum motivo histórico, o uso do sufixo padrão não for possível ou se os arquivos de exemplo vierem de algum outro diretório, use esta construção:
+
+[.programlisting]
+....
+@sample etc/orbit.conf-dist etc/orbit.conf
+....
+
+ou
+
+[.programlisting]
+....
+@sample %%EXAMPLESDIR%%/orbit.conf etc/orbit.conf
+....
+
+O formato é `@sample sample-file actual-config-file`.
+====
+
+[[plist-dynamic]]
+== Lista de Pacotes Estática versus Dinâmica
+
+Uma _lista de pacotes estáticos_ é uma lista de pacotes que está disponível na Coleção de Ports ou como [.filename]#pkg-plist# (com ou sem substituição de variável), ou embutido no [.filename]#Makefile# através do `PLIST_FILES` e do `PLIST_DIRS`. Mesmo se o conteúdo for gerado automaticamente por uma ferramenta ou um taget no Makefile _antes_ da inclusão na Coleção de Ports por um committer (por exemplo, usando `make makeplist`), isso ainda é considerado uma lista estática, já que é possível examiná-la sem ter que baixar ou compilar o distfile.
+
+Uma _lista de pacotes dinâmicos_ é uma lista de pacotes que é gerada no momento em que o port é compilado com base nos arquivos e diretórios que estão instalados. Não é possível examiná-lo antes que o código-fonte do aplicativo portado seja baixado e compilado, ou após executar um `make clean`.
+
+Embora o uso de listas de pacotes dinâmicos não seja proibido, os mantenedores devem usar listas de pacotes estáticos sempre que possível, já que isso permite aos usuários utilizar man:grep[1] nos de ports disponíveis para descobrir, por exemplo, qual port instala um determinado arquivo. Listas dinâmicas devem ser usadas principalmente para ports complexos onde a lista de pacotes muda drasticamente com base nos recursos opcionais do port (e assim manter uma lista de pacotes estática é impraticável), ou ports que alteram a lista de pacotes com base na versão do software dependente usado. Por exemplo, ports que geram documentos com Javadoc.
+
+[[plist-autoplist]]
+== Criação Automatizada da Lista de Pacotes
+
+Primeiro, verifique se o port está quase completo, faltando apenas o [.filename]#pkg-plist#. Executar o comando `make makeplist` irá mostrar um exemplo para o [.filename]#pkg-plist#. A saída do `makeplist` deve ser checada duas vezes quanto à correção, pois ela tenta adivinhar automaticamente algumas coisas e pode errar.
+
+Os arquivos de configuração do usuário devem ser instalados como [.filename]#filename.sample#, como é descrito em <<plist-config>>. O [.filename]#info/dir# não deve ser listado e entradas apropriadas [.filename]#install-info# devem ser adicionadas conforme a seção <<makefile-info,arquivos de informação>>. Quaisquer bibliotecas instaladas pelo port devem ser listadas conforme especificado na seção <<porting-shlibs,bibliotecas compartilhadas>>.
+
+[[plist-autoplist-regex]]
+=== Expansão do `PLIST_SUB` com Expressões Regulares
+
+As strings a serem substituídas às vezes precisam ser muito específicas para evitar substituições indesejadas. Esse é um problema comum com valores mais curtos.
+
+Para resolver este problema, para cada `PLACEHOLDER=value`, um `PLACEHOLDER_regex =regex` pode ser definido, com o _regex_ do `_value_` correspondendo mais precisamente.
+
+[[plist-autoplist-regex-ex1]]
+.Usando PLIST_SUB com Expressões Regulares
+[example]
+====
+Os ports Perl podem instalar arquivos dependentes da arquitetura em uma árvore específica. No FreeBSD para facilitar a portabilidade, esta árvore é chamada de `mach`. Por exemplo, um port que instala um arquivo cujo caminho contém `mach` poderia ter essa parte da sequência do caminho substituída pelos valores incorretos. Considere este [.filename]#Makefile#:
+
+[.programlisting]
+....
+PORTNAME=	Machine-Build
+DISTVERSION=	1
+CATEGORIES=	devel perl5
+MASTER_SITES=	CPAN
+PKGNAMEPREFIX=	p5-
+
+MAINTAINER=	perl@FreeBSD.org
+COMMENT=	Building machine
+
+USES=		perl5
+USE_PERL5=	configure
+
+PLIST_SUB=	PERL_ARCH=mach
+....
+
+Os arquivos instalados pelo port são:
+
+[.programlisting]
+....
+/usr/local/bin/machine-build
+/usr/local/lib/perl5/site_perl/man/man1/machine-build.1.gz
+/usr/local/lib/perl5/site_perl/man/man3/Machine::Build.3.gz
+/usr/local/lib/perl5/site_perl/Machine/Build.pm
+/usr/local/lib/perl5/site_perl/mach/5.20/Machine/Build/Build.so
+....
+
+Executar o `make makeplist` gera incorretamente:
+
+[.programlisting]
+....
+bin/%%PERL_ARCH%%ine-build
+%%PERL5_MAN1%%/%%PERL_ARCH%%ine-build.1.gz
+%%PERL5_MAN3%%/Machine::Build.3.gz
+%%SITE_PERL%%/Machine/Build.pm
+%%SITE_PERL%%/%%PERL_ARCH%%/%%PERL_VER%%/Machine/Build/Build.so
+....
+
+Altere a linha `PLIST_SUB` do [.filename]#Makefile# para:
+
+[.programlisting]
+....
+PLIST_SUB=	PERL_ARCH=mach \
+		PERL_ARCH_regex=\bmach\b
+....
+
+Agora o `make makeplist` gera corretamente:
+
+[.programlisting]
+....
+bin/machine-build
+%%PERL5_MAN1%%/machine-build.1.gz
+%%PERL5_MAN3%%/Machine::Build.3.gz
+%%SITE_PERL%%/Machine/Build.pm
+%%SITE_PERL%%/%%PERL_ARCH%%/%%PERL_VER%%/Machine/Build/Build.so
+....
+
+====
+
+[[plist-keywords]]
+== Expandindo a Lista de Pacotes com Keywords
+
+Todas as keywords também podem ter argumentos opcionais entre parênteses. Os argumentos são owner, group e mode. Esse argumento é usado no arquivo ou diretório referenciado. Para alterar o dono, o grupo e o modo de um arquivo de configuração, use:
+
+[.programlisting]
+....
+@sample(games,games,640) etc/config.sample
+....
+
+Os argumentos são opcionais. Se apenas o grupo e o modo precisarem ser alterados, use:
+
+[.programlisting]
+....
+@sample(,games,660) etc/config.sample
+....
+
+[WARNING]
+====
+
+Se uma keyword for utilizada em uma entrada de <<makefile-options,opção>>, ela precisa ser adicionada após o assistente:
+
+[.programlisting]
+....
+%%FOO%%@sample etc/orbit.conf.sample
+....
+
+Isso é porque os assistentes plist das opções são utilizados para comentar as linhas, e por isso eles precisam ser inseridos no início. Veja <<options_sub>> para maiores informações.
+====
+
+[[plist-keywords-desktop-file-utils]]
+=== `@desktop-file-utils`
+
+Irá executar o `update-desktop-database -q` após a instalação e desinstalação. _Nunca_ use diretamente, adicione <<uses-desktop-file-utils,`USES=utilitários de arquivo de desktop`>> ao [.filename]#Makefile#.
+
+[[plist-keywords-fc]]
+=== `@fc` _directory_
+
+Adiciona uma entrada `@dir` para o diretório passado como um argumento, e executa `fc-cache -fs` nesse diretório após a instalação e desinstalação.
+
+[[plist-keywords-fcfontsdir]]
+=== `@fcfontsdir` _directory_
+
+Adiciona uma entrada `@dir` para o diretório passado como um argumento, e executa `fc-cache -fs`, `mkfontscale` e `mkfontdir` nesse diretório após a instalação e desinstalação. Além disso, na desinstalação, ele remove os arquivos de cache [.filename]#fonts.scale# e [.filename]#fonts.dir#, se estiverem vazios. Esta keyword é equivalente a adicionar o diretório <<plist-keywords-fc,``@fc``>> e o diretório <<plist-keywords-fontsdir,``@fontsdir``>>.
+
+[[plist-keywords-fontsdir]]
+=== `@fontsdir` _directory_
+
+Adiciona um entrada `@dir` para o diretório passado como um argumento, e executa `mkfontscale` e `mkfontdir` nesse diretório após a instalação e desinstalação. Além disso, na desinstalação, ele remove os arquivos de cache [.filename]#fonts.scale# e [.filename]#fonts.dir#, se estiverem vazios.
+
+[[plist-keywords-glib-schemas]]
+=== `@glib-schemas`
+
+Executa `glib-compile-schemas` na instalação e desinstalação.
+
+[[plist-keywords-info]]
+=== `@info` _file_
+
+Adiciona o arquivo passado como argumento ao plist e atualiza o índice do documento info na instalação e desinstalação. Além disso, ele remove o índice se estiver vazio na desinstalação. Isso nunca deve ser usado manualmente, mas sempre `INFO`. Veja <<makefile-info>> para maiores informações.
+
+[[plist-keywords-kld]]
+=== `@kld` _directory_
+
+Executa o `kldxref` no diretório na instalação e desinstalação. Além disso, na desinstalação, ele removerá o diretório se estiver vazio.
+
+[[plist-keywords-rmtry]]
+=== `@rmtry` _file_
+
+O arquivo será removido na desinstalação, e não dará um erro se o arquivo não estiver lá.
+
+[[plist-keywords-sample]]
+=== `@sample` __file__[__file__]
+
+Isso é usado para lidar com a instalação de arquivos de configuração, através de arquivos de exemplo empacotados com o pacote. O arquivo "atual", não-amostra, ou é o segundo nome do arquivo, se presente, ou o primeiro nome de arquivo sem a extensão [.filename]#.sample#.
+
+Isso faz três coisas. Primeiro, adiciona o primeiro arquivo passado como argumento, o arquivo de exemplo, ao plist. Então, na instalação, se o arquivo real não for encontrado, copia o arquivo de exemplo para o arquivo real. E, finalmente, na desinstalação, remove o arquivo atual se ele não tiver sido modificado. Veja <<plist-config>> para maiores informações.
+
+[[plist-keywords-shared-mime-info]]
+=== `@shared-mime-info` _directory_
+
+Executa `update-mime-database` no diretório na instalação e desinstalação.
+
+[[plist-keywords-shell]]
+=== `@shell` _file_
+
+Adiciona o arquivo passado como argumento ao plist.
+
+Na instalação, adiciona o caminho completo do _file_ em [.filename]#/etc/shells#, certificando-se que não é adicionado duas vezes. Na desinstalação, remove-o de [.filename]#/etc/shells#.
+
+[[plist-keywords-terminfo]]
+=== `@terminfo`
+
+Não use sozinho. Se o port for instalar arquivos [.filename]#*.terminfo#, adicione <<uses-terminfo,USES=terminfo>> no seu [.filename]#Makefile#.
+
+Na instalação e desinstalação, se o `tic` estiver presente, atualize o [.filename]#${PREFIX}/shared/misc/terminfo.db# a partir dos arquivos [.filename]#*.terminfo# disponíveis em [.filename]#${PREFIX}/shared/misc#.
+
+[[plist-keywords-base]]
+=== Keywords Básicas
+
+Existem algumas keywords que são codificadas e documentadas em man:pkg-create[8]. Por uma questão de completude, elas também estão documentadas aqui.
+
+[[plist-keywords-base-empty]]
+==== `@` [__file__]
+
+A keyword vazia é um espaço reservado para ser usado quando o proprietário, grupo ou modo do arquivo precisam ser alterados. Por exemplo, para definir o grupo de um arquivo como `games` e adicionar o bit setgid, adicione:
+
+[.programlisting]
+....
+@(,games,2755) sbin/daemon
+....
+
+[[plist-keywords-base-exec]]
+==== `@preexec` _command_, `@postexec` _command_, `@preunexec` _command_, `@postunexec` _command_
+
+Executa o _command_ como parte do processo de instalação ou desinstalação.
+
+`@preexec` _command_::
+Executar o _command_ como parte dos scripts [.filename]#pre-install#.
+
+`@postexec` _command_::
+Executar o _command_ como parte dos scripts [.filename]#post-install#.
+
+`@preunexec` _command_::
+Executar o _command_ como parte dos scripts [.filename]#pre-deinstall#.
+
+`@postunexec` _command_::
+Executar o _command_ como parte dos scripts [.filename]#post-deinstall#.
+
+E se o _command_ contém qualquer uma dessas sequências em algum lugar, elas são expandidas em linha. Para estes exemplos, assuma que `@cwd` está configurado para [.filename]#/usr/local# e o último arquivo extraído foi [.filename]#bin/emacs#.
+
+`%F`::
+Expandir para o último nome de arquivo extraído (conforme especificado). No caso do exemplo [.filename]#bin/emacs#.
+
+`%D`::
+Expandir para o prefixo do diretório atual, como definido no `@cwd`. No caso do exemplo [.filename]#/usr/local#.
+
+`%B`::
+Expandir para o nome de base do nome completo do arquivo, ou seja, o prefixo do diretório atual mais o último arquivo, menos o nome do arquivo final. No exemplo, isso seria [.filename]#/usr/local/bin#.
+
+`%f`::
+Expandir para a parte do nome do arquivo do nome totalmente qualificado, ou o inverso de `%B`. No caso do exemplo, [.filename]#emacs#.
+
+[IMPORTANT]
+====
+Essas keywords estão aqui para ajudá-lo a configurar o pacote para que ele esteja tão pronto quanto possível. Elas _não devem_ ser abusadas para iniciar serviços, interromper serviços ou executar quaisquer outros comandos que modificarão o sistema em execução.
+====
+
+[[plist-keywords-base-mode]]
+==== `@mode` _mode_
+
+Define a permissão padrão para todos os arquivos extraídos posteriormente para _mode_. O formato é o mesmo usado por man:chmod[1]. Use sem um argumento para voltar às permissões padrão (modo do arquivo enquanto estava sendo empacotado).
+
+[IMPORTANT]
+====
+Este deve ser um modo numérico, como `644`, `4755` ou `600`. Não pode ser um modo relativo como `u+s`.
+====
+
+[[plist-keywords-base-owner]]
+==== `@owner` _user_
+
+Define a propriedade padrão para todos os arquivos subsequentes para _user_. Use sem um argumento para voltar à propriedade padrão (`root`).
+
+[[plist-keywords-base-group]]
+==== `@group` _group_
+
+Define a propriedade de grupo padrão para todos os arquivos subsequentes para _group_. Use sem um argumento para retornar à propriedade do grupo padrão (`wheel`).
+
+[[plist-keywords-base-comment]]
+==== `@comment` _string_
+
+Esta linha é ignorada no momento de empacotar.
+
+[[plist-keywords-base-dir]]
+==== `@dir` _directory_
+
+Declara o nome do diretório. Por padrão, os diretórios criados sob `PREFIX` por uma instalação de pacote são automaticamente removidos. Use isto quando um diretório vazio sob `PREFIX` precisa ser criado ou quando o diretório precisa ter proprietário, grupo ou modo não padrão. Diretórios fora de `PREFIX` precisam ser registrados. Por exemplo, [.filename]#/var/db/${PORTNAME}# precisa ter uma entrada `@dir` enquanto [.filename]#${PREFIX}/shared/${PORTNAME}# não, se contiver arquivos ou usar o proprietário, grupo e modo padrão.
+
+[[plist-keywords-base-exec-deprecated]]
+==== `@exec` _command_, `@unexec` _command_ (Descontinuado)
+
+Executa o _command_ como parte do processo de instalação ou desinstalação. Por favor, use <<plist-keywords-base-exec>> no lugar.
+
+[[plist-keywords-base-dirrm]]
+==== `@dirrm` _directory_ (Descontinuado)
+
+Declara o nome do diretório a ser excluído na desinstalação. Por padrão, os diretórios criados sob `PREFIX` por uma instalação de pacote são excluídos quando o pacote é desinstalado.
+
+[[plist-keywords-base-dirrmtry]]
+==== `@dirrmtry` _directory_ (Descontinuado)
+
+Declara o nome do diretório a ser removido, como para a keyword `@dirrm`, mas não emite um aviso se o diretório não puder ser removido.
+
+[[plist-keywords-creating-new]]
+=== Criando Novas Keywords
+
+Os arquivos da lista de pacotes podem ser estendidos por keywords definidas no diretório [.filename]#${PORTSDIR}/Keywords#. As configurações de cada keyword são armazenadas em um arquivo UCL chamado [.filename]#keyword.ucl#. O arquivo deve conter pelo menos uma destas seções:
+
+* `attributes`
+* `action`
+* `pre-install`
+* `post-install`
+* `pre-deinstall`
+* `post-deinstall`
+* `pre-upgrade`
+* `post-upgrade`
+
+[[plist-keywords-attributes]]
+==== `attributes`
+
+Altera o dono, grupo ou modo usado pela keyword. Contém uma matriz associativa em que as chaves possíveis são `owner`, `group` e `mode`. Os valores são, respectivamente, um nome de usuário, um nome de grupo e um modo de arquivo. Por exemplo:
+
+[.programlisting]
+....
+attributes: { owner: "games", group: "games", mode: 0555 }
+....
+
+[[plist-keywords-action]]
+==== `action`
+
+Define o que acontece com o parâmetro da keyword. Contém uma matriz onde os valores possíveis são:
+
+`setprefix`::
+Define o prefixo para as próximas entradas do plist.
+
+`dir`::
+Registra um diretório para ser criado na instalação e removido na desinstalação.
+
+`dirrm`::
+Registra um diretório a ser excluído na desinstalação. Descontinuado.
+
+`dirrmtry`::
+Registra um diretório para tentar deletar na desinstalação. Descontinuado.
+
+`file`::
+Registra um arquivo.
+
+`setmode`::
+Define o modo para as próximas entradas do plist.
+
+`setowner`::
+Define o dono para as próximas entradas do plist.
+
+`setgroup`::
+Define o grupo para as próximas entradas do plist.
+
+`comment`::
+Não faz nada, é o equivalente a não entrar em uma seção `action`.
+
+`ignore_next`::
+Ignora a próxima entrada no plist.
+
+[[plist-keywords-arguments]]
+==== `arguments`
+
+Se definido para `true`, adiciona manipulação de argumentos, dividindo toda a linha, `%@`, em argumentos numerados,`%1`, `%2`, e assim por diante. Por exemplo, para esta linha:
+
+[.programlisting]
+....
+@foo some.content other.content
+....
+
+`%1` e `%2` irão conter:
+
+[.programlisting]
+....
+some.content
+other.content
+....
+
+Também afeta como a entrada <<plist-keywords-action,`action`>> funciona. Quando há mais de um argumento, o número do argumento deve ser especificado. Por exemplo:
+
+[.programlisting]
+....
+actions: [file(1)]
+....
+
+[[plist-keywords-pre-post]]
+==== `pre-install`, `post-install`, `pre-deinstall`, `post-deinstall`, `pre-upgrade`, `post-upgrade`
+
+Essas keywords contêm um script man:sh[1] a ser executado antes ou depois da instalação, desinstalação, ou atualização do pacote. Além do habitual placeholder `@exec %foo` descrito em <<plist-keywords-base-exec>>, há um novo `%@`, que representa o argumento da keyword.
+
+[[plist-keywords-examples]]
+==== Exemplos de Keywords Customizadas
+
+[[plist-keywords-fc-example]]
+.Exemplo de uma Keyword `@dirrmtryecho`
+[example]
+====
+Esta keyword faz duas coisas, adiciona uma linha `@dirrmtry _directory_` na lista de empacotamento, e escreve no log quando o diretório é removido ao desinstalar o pacote.
+
+[.programlisting]
+....
+actions: [dirrmtry]
+post-deinstall: <<EOD
+  echo "Directory %D/%@ removed."
+EOD
+....
+
+====
+
+[[plist-keywords-sample-example]]
+.Exemplo na vida real, como o `@sample` é implementado
+[example]
+====
+Esta keyword faz três coisas. Ela adiciona o primeiro _filename_ passado como um argumento para `@sample` na lista de empacotamento, ele adiciona instruções ao script de `post-install` para copiar o exemplo para o arquivo de configuração real, se ele ainda não existir, e adiciona instruções ao script `post-deinstall` para remover o arquivo de configuração se ele não tiver sido modificado.
+
+[.programlisting]
+....
+actions: [file(1)]
+arguments: true
+post-install: <<EOD
+  case "%1" in
+  /*) sample_file="%1" ;;
+  *) sample_file="%D/%1" ;;
+  esac
+  target_file="${sample_file%.sample}"
+  set -- %@
+  if [ $# -eq 2 ]; then
+      target_file=${2}
+  fi
+  case "${target_file}" in
+  /*) target_file="${target_file}" ;;
+  *) target_file="%D/${target_file}" ;;
+  esac
+  if ! [ -f "${target_file}" ]; then
+    /bin/cp -p "${sample_file}" "${target_file}" && \
+      /bin/chmod u+w "${target_file}"
+  fi
+EOD
+pre-deinstall: <<EOD
+  case "%1" in
+  /*) sample_file="%1" ;;
+  *) sample_file="%D/%1" ;;
+  esac
+  target_file="${sample_file%.sample}"
+  set -- %@
+  if [ $# -eq 2 ]; then
+      set -- %@
+      target_file=${2}
+  fi
+  case "${target_file}" in
+  /*) target_file="${target_file}" ;;
+  *) target_file="%D/${target_file}" ;;
+  esac
+  if cmp -s "${target_file}" "${sample_file}"; then
+    rm -f "${target_file}"
+  else
+    echo "You may need to manually remove ${target_file} if it is no longer needed."
+  fi
+EOD
+....
+
+====

@@ -1,0 +1,294 @@
+---
+title: Kapitel 8. Konfiguration des FreeBSD-Kernels
+part: Teil II. Oft benutzte Funktionen
+prev: books/handbook/multimedia
+next: books/handbook/printing
+---
+
+[[kernelconfig]]
+= Konfiguration des FreeBSD-Kernels
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:table-caption: Tabelle
+:figure-caption: Abbildung
+:example-caption: Beispiel
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 8
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/kernelconfig/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/kernelconfig/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/kernelconfig/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/de/mailing-lists.adoc[]
+include::shared/de/teams.adoc[]
+include::shared/de/urls.adoc[]
+
+toc::[]
+
+[[kernelconfig-synopsis]]
+== Übersicht
+
+Der Kernel ist das Herz des FreeBSD-Betriebssystems. Er ist verantwortlich für die Speicherverwaltung, das Durchsetzen von Sicherheitsdirektiven, Netzwerkfähigkeit, Festplattenzugriffen und vieles mehr. Obwohl FreeBSD es ermöglicht, dynamisch konfiguriert zu werden, ist es ab und an notwendig, einen angepassten Kernel zu konfigurieren und zu kompilieren.
+
+Nachdem Sie dieses Kapitel gelesen haben, werden Sie Folgendes wissen:
+
+* Wann Sie einen angepassten Kernel kompilieren sollten.
+* Wie Sie eine Hardware-Inventur durchführen.
+* Wie Sie eine Kernelkonfigurationsdatei verändern.
+* Wie Sie mit der Konfigurationsdatei einen neuen Kernel kompilieren.
+* Wie Sie den neuen Kernel installieren.
+* Was zu tun ist, falls etwas schiefgeht.
+
+Alle Kommandos, aus den Beispielen dieses Kapitels, müssen mit `root`-Rechten ausgeführt werden.
+
+[[kernelconfig-custom-kernel]]
+== Wieso einen eigenen Kernel bauen?
+
+Traditionell besaß FreeBSD einen monolithischen Kernel. Der Kernel war ein einziges großes Programm, das eine bestimmte Auswahl an Hardware unterstützte. Um das Kernelverhalten zu ändern, musste man einen neuen Kernel kompilieren und dann den neuen Kernel booten.
+
+Heutzutage befinden sich die meisten Funktionen des FreeBSD-Kernels in Modulen, die je nach Bedarf dynamisch geladen und entladen werden können. Dies erlaubt es, einen laufenden Kernel anzupassen, um sofort neue Hardware und neue Funktionen zu unterstützen. Dies ist als modularer Kernel bekannt.
+
+Gelegentlich ist es noch notwendig, eine statische Kernelkonfigurationen durchzuführen. In einigen Fällen ist die Funktion zu systemnah, um durch ein Modul realisiert zu werden. Andere Umgebungen verhindern vielleicht das Laden und Entladen von Kernelmodulen und erfordern, dass nur die benötigte Funktionalität statisch in den Kernel kompiliert wird.
+
+Das Erstellen eines angepassten Kernels ist eines der Rituale für erfahrene BSD-Benutzer. Obwohl dieser Prozess recht viel Zeit in Anspruch nimmt, kann er doch viele Vorteile für das FreeBSD-System bringen. Im Gegensatz zum [.filename]#GENERIC#-Kernel, der eine Vielzahl von Hardware unterstützen muss, kann ein angepasster Kernel so eingeschränkt werden, dass er nur noch die Hardware des Rechners unterstützt. Dies hat einige Vorteile:
+
+* Schnellerer Bootvorgang. Da der Kernel nur nach der Hardware des Systems sucht, kann sich die Zeit für einen Systemstart verkürzen.
+* Geringerer Speicherbedarf. Ein eigener Kernel benötigt in der Regel weniger Speicher als ein [.filename]#GENERIC#-Kernel durch das Entfernen von Funktionen und Gerätetreibern. Das ist vorteilhaft, denn der Kernel verweilt immer im RAM und verhindert dadurch, dass dieser Speicher von Anwendungen genutzt wird. Deshalb ist ein angepasster Kernel auf einem System mit wenig RAM sinnvoll.
+* Zusätzliche Hardwareunterstützung. Ein angepasster Kernel kann Unterstützung für Geräte bieten, die im [.filename]#GENERIC#-Kernel nicht enthalten sind.
+
+Bevor Sie einen angepassten Kernel erstellen, überlegen Sie sich bitte, warum Sie dies tun wollen. Wenn Sie lediglich eine bestimmte Hardwareunterstützung benötigen, existiert diese vielleicht schon als Kernelmodul.
+
+Kernelmodule existieren in [.filename]#/boot/kernel# und können mit man:kldload[8] dynamisch in den laufenden Kernel geladen werden. Die meisten Kerneltreiber verfügen über ein ladbares Modul und eine Manualpage. Der drahtlose Ethernet-Treiber man:ath[4] hat die folgenden Informationen in seiner Manualpage:
+
+[source,bash,subs="macros"]
+....
+Alternatively, to load the driver as a module at boot time, place the
+following line in loader.conf(5):
+
+    if_ath_load="YES"
+....
+
+Durch das Hinzufügen von `if_ath_load="YES"` in [.filename]#/boot/loader.conf# wird das Modul dynamisch beim Systemstart geladen.
+
+In manchen Fällen gibt es kein entsprechendes Modul in [.filename]#/boot/kernel#. Dies gilt insbesondere für bestimmte Subsysteme.
+
+[[kernelconfig-devices]]
+== Informationen über die vorhandene Hardware beschaffen
+
+Bevor die Kernelkonfigurationsdatei bearbeitet wird, ist es empfehlenswert eine Bestandsaufnahme der Hardware des Systems durchzuführen. Auf einem Dual-Boot-System können diese Informationen aus dem anderen Betriebssystem ermittelt werden. Microsoft(R)s Gerätemanager enthält beispielsweise Informationen über die installierte Hardware.
+
+[NOTE]
+====
+Einige Versionen von Microsoft(R) Windows(R) verfügen über ein System-Icon auf dem Desktop, über das Sie den Gerätemanager direkt aufrufen können.
+====
+
+Wenn FreeBSD das einzige installierte Betriebssystem ist, dann listet man:dmesg[8] die Hardware auf, die während des Systemstarts gefunden wurde. Die meisten FreeBSD-Gerätetreiber haben eine eigene Manualpage, die Informationen über die unterstützte Hardware enthält. Die folgenden Zeilen zeigen beispielsweise an, dass der man:psm[4]-Treiber eine angeschlossene Maus gefunden hat:
+
+[source,bash]
+....
+psm0: <PS/2 Mouse> irq 12 on atkbdc0
+psm0: [GIANT-LOCKED]
+psm0: [ITHREAD]
+psm0: model Generic PS/2 mouse, device ID 0
+....
+
+Da diese Hardware vorhanden ist, sollte dieser Treiber nicht aus einer angepassten Kernelkonfigurationsdatei entfernt werden.
+
+Wenn `dmesg` keine Informationen zur gefundenen Hardware anzeigt, können diese Informationen auch aus [.filename]#/var/run/dmesg.boot# entnommen werden.
+
+Ein weiteres Werkzeug für die Suche nach Hardware ist man:pciconf[8], das ausführliche Informationen bereitstellt. Ein Beispiel:
+
+[source,bash]
+....
+% pciconf -lv
+ath0@pci0:3:0:0:        class=0x020000 card=0x058a1014 chip=0x1014168c rev=0x01 hdr=0x00
+    vendor     = 'Atheros Communications Inc.'
+    device     = 'AR5212 Atheros AR5212 802.11abg wireless'
+    class      = network
+    subclass   = ethernet
+....
+
+Die Ausgabe zeigt, dass der Treiber [.filename]#ath# eine drahtlose Ethernetkarte gefunden hat.
+
+Die Option `-k` von man:man[1] kann verwendet werden, um nützliche Informationen zu erhalten. Um beispielsweise eine Liste von Manualpages zu erhalten, welche ein spezifisches Wort enthalten:
+
+[source,bash]
+....
+# man -k Atheros
+ath(4)                   - Atheros IEEE 802.11 wireless network driver
+ath_hal(4)               - Atheros Hardware Access Layer (HAL)
+....
+
+Mit einer Inventarliste der Hardware können Sie dann sicherstellen, dass Sie die Treiber der installierten Hardware nicht versehentlich entfernen, wenn Sie die Kernelkonfigurationsdatei bearbeiten.
+
+[[kernelconfig-config]]
+== Die Kernelkonfigurationsdatei
+
+Bevor eine angepasste Kernelkonfigurationsdatei erstellt werden kann, muss zuerst der vollständige FreeBSD Quellcodebaum installiert werden.
+
+Falls [.filename]#/usr/src/# nicht existiert oder leer ist, sind die Kernelquellen nicht installiert. Die Quellen können mit Subversion und der Anleitung im crossref:mirrors[svn,“Benutzen von Subversion”] installiert werden.
+
+Sobald die Quellen installiert sind, können Sie sich einen Überblick über [.filename]#/usr/src/sys# verschaffen. Dieses Verzeichnis enthält eine Reihe von Unterverzeichnissen, einschließlich Verzeichnisse für die unterstützten Architekturen [.filename]#amd64#, [.filename]#i386#, [.filename]#powerpc# und [.filename]#sparc64#. Alles in diesen Verzeichnissen ist nur für die jeweilige Architektur relevant. Der Rest des Codes ist maschinenunabhängig und für alle Architekturen gleich. Jede unterstützte Architektur hat ein Unterverzeichnis [.filename]#conf#, das die [.filename]#GENERIC# Kernelkonfigurationsdatei für diese Architektur enthält.
+
+Bearbeiten Sie [.filename]#GENERIC# nicht direkt. Kopieren Sie stattdessen die Datei unter einem anderen Namen und machen dann die Änderungen an dieser Kopie. Traditionell besteht der Name des Kernels immer aus Großbuchstaben. Wenn Sie mehrere FreeBSD-Maschinen mit unterschiedlicher Hardware betreuen, ist es eine gute Idee, die Konfigurationsdatei nach den Hostnamen der Maschinen zu benennen. In diesem Beispiel wird eine Kopie der [.filename]#GENERIC# Kernelkonfigurationsdatei, namens [.filename]#MYKERNEL#, für die [.filename]#amd64#-Architektur erstellt:
+
+[source,bash]
+....
+# cd /usr/src/sys/amd64/conf
+# cp GENERIC MYKERNEL
+....
+
+[.filename]#MYKERNEL# kann jetzt mit einem Texteditor bearbeitet werden. Der Standard-Editor ist vi, jedoch steht mit ee ein weiterer, einfach zu bedienender Editor bereit.
+
+Das Format der Konfigurationsdatei ist einfach. Jede Zeile enthält ein Schlüsselwort, das ein Gerät oder ein Subsystem repräsentiert, ein Argument und eine kurze Beschreibung. Jeder Text, der hinter einem `#` steht, gilt als Kommentar und wird ignoriert. Um die Kernel-Unterstützung für ein Gerät oder Subsystem zu entfernen, muss ein `#` an den Anfang der Zeile, die dieses Gerät oder Subsystem repräsentiert, gesetzt werden. Verändern Sie keine Zeilen, die Sie nicht genau verstehen.
+
+Neben den Kurzbeschreibungen in dieser Datei, finden Sie zusätzliche Erklärungen in [.filename]#NOTES#, die sich in demselben Verzeichnis wie [.filename]#GENERIC# für die jeweilige Architektur befindet. Von der Architektur unabhängige Optionen sind in [.filename]#/usr/src/sys/conf/NOTES# aufgeführt.
+
+[TIP]
+====
+
+Wenn Sie die Kernelkonfigurationsdatei fertig bearbeitet haben, sollten Sie eine Sicherungskopie außerhalb von [.filename]#/usr/src# speichern
+
+Alternativ kann die Kernelkonfigurationsdatei an anderer Stelle gespeichert, und ein symbolischer Link auf die Datei erstellt werden:
+
+[source,bash]
+....
+# cd /usr/src/sys/amd64/conf
+# mkdir /root/kernels
+# cp GENERIC /root/kernels/MYKERNEL
+# ln -s /root/kernels/MYKERNEL
+....
+
+====
+
+Es ist möglich, eine `include`-Anweisung in die Kernelkonfigurationsdatei aufzunehmen. Diese erlaubt das lokale Einfügen von anderen Konfigurationsdateien in die aktuelle, was es einfacher macht, kleinere Änderungen an einer existierenden Datei zu vollziehen. Wenn Sie einen [.filename]#GENERIC#-Kernel mit nur einer kleinen Anzahl von zusätzlichen Optionen und Treibern benötigen, brauchen Sie mit den folgenden Zeilen nur ein kleines Delta im Vergleich zu GENERIC anpassen, wie in diesem Beispiel zu sehen:
+
+[.programlisting]
+....
+include GENERIC
+ident MYKERNEL
+
+options         IPFIREWALL
+options         DUMMYNET
+options         IPFIREWALL_DEFAULT_TO_ACCEPT
+options         IPDIVERT
+....
+
+Diese Methode zeigt die Unterschiede der lokalen Konfigurationsdatei zu einem [.filename]#GENERIC#-Kernel an. Sobald Aktualisierungen durchgeführt werden, können neue Eigenschaften, die zu [.filename]#GENERIC# hinzugefügt werden, auch dem lokalen Kernel angehängt werden, es sei denn, es wird durch `nooptions` oder `nodevice` unterbunden. Eine umfassende Liste von Konfigurationseinstellungen und deren Beschreibungen finden Sie in man:config[5].
+
+[NOTE]
+====
+Um einen Kernel mit allen möglichen Optionen zu bauen, führen Sie als `root` die folgenden Befehle aus:
+
+[source,bash]
+....
+# cd /usr/src/sys/arch/conf && make LINT
+....
+
+====
+
+[[kernelconfig-building]]
+== Einen angepassten Kernel bauen und installieren
+
+Nachdem die Änderungen an der angepassten Kernelkonfigurationsdatei gespeichert sind, kann der Quellcode für den Kernel mit den folgenden Schritten übersetzt werden:
+
+[.procedure]
+====
+*Procedure: Einen Kernel bauen*
+
+. Wechseln Sie das Verzeichnis:
++
+[source,bash]
+....
+# cd /usr/src
+....
+
+. Bauen Sie den Kernel, indem Sie den Namen der Kernelkonfigurationsdatei angeben:
++
+[source,bash]
+....
+# make buildkernel KERNCONF=MYKERNEL
+....
+
+. Installieren Sie den neuen Kernel. Dieser Befehl wird den neuen Kernel nach [.filename]#/boot/kernel/kernel# kopieren, und den alten Kernel nach [.filename]#/boot/kernel.old/kernel# speichern:
++
+[source,bash]
+....
+# make installkernel KERNCONF=MYKERNEL
+....
+
+. Fahren Sie das System herunter und starten Sie den neuen Kernel. Wenn etwas nicht funktioniert, lesen Sie <<kernelconfig-noboot,Der Kernel bootet nicht>>.
+====
+
+In der Voreinstellung werden beim Bau eines angepassten Kernels stets alle Kernelmodule neu gebaut. Um einen Kernel schneller zu bauen, oder um nur bestimmte Module zu bauen, bearbeiten Sie [.filename]#/etc/make.conf#, bevor Sie den Kernel neu bauen.
+
+In diesem Beispiel werden über eine Variable nur die Kernelmodule definiert, die auch tatsächlich gebaut werden sollen. In der Voreinstellung werden alle Module gebaut:
+
+[.programlisting]
+....
+MODULES_OVERRIDE = linux acpi
+....
+
+Alternativ kann auch eine Variable verwendet werden, die bestimmte Kernelmodule vom Bauprozess ausschließt:
+
+[.programlisting]
+....
+WITHOUT_MODULES = linux acpi sound
+....
+
+Weitere Variablen und deren Beschreibung finden Sie in man:make.conf[5].
+
+[[kernelconfig-trouble]]
+== Wenn etwas schiefgeht
+
+Es gibt vier Hauptfehlerquellen beim Erstellen eines angepassten Kernels:
+
+`config` verursacht Fehler:::
+Wenn `config` fehlschlägt, zeigt es die Nummer der Zeile an, die das Problem verursacht. Bei der folgenden Fehlermeldung sollten Sie die angegebene Zeile mit [.filename]#GENERIC# oder [.filename]#NOTES# vergleichen und sicherstellen, dass das Schlüsselwort in Zeile 17 richtig geschrieben ist:
++
+[source,bash]
+....
+config: line 17: syntax error
+....
+
+`make` verursacht Fehler:::
+Wenn `make` fehlschlägt, liegen meistens Fehler in der Konfigurationsdatei vor, die aber nicht schwerwiegend genug für `config` waren. Überprüfen Sie die Konfiguration und wenn Sie keinen Fehler entdecken können, schicken Sie eine E-Mail mit der Kernelkonfigurationsdatei an die Mailingliste {de-questions}.
+[[kernelconfig-noboot]]
+Der Kernel bootet nicht:::
+Wenn der neue Kernel nicht bootet oder die Geräte nicht erkannt werden, ist das noch kein Grund zur Panik. Glücklicherweise besitzt FreeBSD einen exzellenten Mechanismus zur Wiederherstellung nach dem Einsatz inkompatibler Kernel. Wählen Sie einfach den zu bootenden Kernel im FreeBSD Bootloader aus. Dazu wählen Sie im Bootmenü die Option "Escape to a loader prompt". Danach geben Sie am Prompt `boot _kernel.old_` oder den Namen eines anderen Kernels ein, der sauber bootet.
++
+Nun kann die Konfiguration noch einmal überprüft und der Kernel neu kompiliert werden. Dazu ist [.filename]#/var/log/messages# sehr nützlich, da hier sämtliche Kernelmeldungen von jedem erfolgreichen Bootvorgang gespeichert werden. man:dmesg[8] gibt die Kernelmeldungen vom letzten Bootvorgang aus.
++
+[NOTE]
+====
+Wenn Sie Probleme beim Kernelbau bekommen, heben Sie sich immer eine Kopie von [.filename]#GENERIC# oder einen anderen Kernel, der garantiert bootet, auf. Dies ist sehr wichtig, weil jedes Mal, wenn ein neuer Kernel installiert wird, [.filename]#kernel.old# mit dem zuletzt installierten Kernel überschrieben wird und dieser möglicherweise nicht bootfähig ist. Verschieben Sie daher den funktionierenden Kernel so schnell wie möglich, indem Sie das Verzeichnis mit dem funktionierenden Kernel umbenennen:
+
+[source,bash]
+....
+# mv /boot/kernel /boot/kernel.bad
+# mv /boot/kernel.good /boot/kernel
+....
+
+====
+
+Der Kernel funktioniert, aber `ps` nicht::
+Wenn Sie eine andere Version des Kernels installiert haben als die, mit der Ihre Systemwerkzeuge gebaut wurden, beispielsweise einen Kernel aus den -CURRENT-Quellen auf einem -RELEASE-System, werden Programme wie man:ps[1] und man:vmstat[8] nicht mehr funktionieren. Um dies zu beheben, sollten Sie das crossref:cutting-edge[makeworld,komplette System neu bauen und installieren]. Achten Sie darauf, dass die Quellen, aus denen das System gebaut wird, zum installierten Kernel passt. Man sollte niemals einen Kernel benutzen, der nicht zur Systemversion passt.

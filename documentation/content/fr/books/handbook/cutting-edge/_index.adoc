@@ -1,0 +1,1198 @@
+---
+title: Chapitre 25. Mise à jour de FreeBSD
+part: Partie III. Administration Système
+prev: books/handbook/l10n
+next: books/handbook/dtrace
+---
+
+[[updating-upgrading]]
+= Mise à jour de FreeBSD
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Table des matières
+:table-caption: Tableau
+:example-caption: Exemple
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 25
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/cutting-edge/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/cutting-edge/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/cutting-edge/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/fr/mailing-lists.adoc[]
+include::shared/fr/teams.adoc[]
+include::shared/fr/urls.adoc[]
+
+toc::[]
+
+[[updating-upgrading-synopsis]]
+== Synopsis
+
+FreeBSD est en constant développement entre deux versions. Certains utilisateurs préfèrent utiliser les versions publiées officiellement alors que d'autres voudront rester à jour avec les tous derniers développements. Mêmes les versions officielles sont souvent mises à jour avec les correctifs de problèmes critiques et de sécurité. Indépendamment de la version utilisée, FreeBSD fournit tous les outils nécessaires à la mise à jour de votre système, et permet également des mises à jour aisées entre versions. Ce chapitre vous aidera à décider si vous voulez suivre les développements, ou vous en tenir aux versions publiées. Les outils de base pour le maintien à jour de votre système seront également présentés.
+
+Après la lecture de ce chapitre, vous connaîtrez:
+
+* Quels utilitaires peuvent être employés pour mettre à jour le système et le catalogue des logiciels portés.
+* Comment maintenir votre système à jour avec freebsd-update, CVSup, CVS, ou CTM.
+* Comment comparer l'état d'un système installé avec une copie de confiance.
+* La différence entre les deux branches de développement: FreeBSD-STABLE et FreeBSD-CURRENT.
+* Comment recompiler et réinstaller l'intégralité du système de base avec la commande `make buildworld` (etc.).
+
+Avant de lire ce chapitre, vous devrez:
+
+* Correctement configurer votre connexion réseau (crossref:advanced-networking[advanced-networking,Administration réseau avancée]).
+* Savoir comment installer des logiciels tiers (crossref:ports[ports,Installer des applications. les logiciels pré-compilés et les logiciels portés]).
+
+[NOTE]
+====
+Tout au long de ce chapitre, la commande `cvsup` sera utilisée pour récupérer et mettre à jour les sources de FreeBSD. Pour l'utiliser, vous devrez installer un logiciel porté ou pré-compilé tel que package:net/cvsup-without-gui[]. Si vous utilisez FreeBSD 6.2-RELEASE ou une version ultérieure, vous pouvez remplacer cette commande par man:csup[1], qui fait désormais partie du système de base.
+====
+
+[[updating-upgrading-freebsdupdate]]
+== Mise à jour de FreeBSD
+
+Appliquer des correctifs de sécurité est une part importante de la maintenance de logiciels informatiques tout particulièrement dans le cas du système d'exploitation. Pendant très longtemps sous FreeBSD, ce processus n'était pas aisé. Les correctifs devaient être appliqués au code source, le code ensuite recompilé sous forme de binaires, et enfin les binaires devaient être ré-installés.
+
+Ce processus n'est plus de mise comme FreeBSD dispose désormais d'un utilitaire appelé simplement `freebsd-update`. Cet utilitaire fournit deux fonctions distinctes. Tout d'abord, il permet l'application de mises à jour de correction et de sécurité sur le système de base de FreeBSD sans nécessiter une compilation et une ré-installation. En second lieu, l'utilitaire supporte les mises à jour mineures et majeures des versions publiées.
+
+[NOTE]
+====
+Les mise à jour binaires sont disponibles pour toutes les architectures actuellement supportées par l'équipe de sécurité. Avant de mettre à jour vers une nouvelle version, les annonces concernant la version devront être passées en revue sachant qu'elles peuvent contenir des informations importantes au sujet de cette version. Ces annonces peuvent être consultées à l'adresse suivante: http://www.FreeBSD.org/releases/[http://www.FreeBSD.org/releases/].
+====
+
+S'il existe une table `crontab` utilisant `freebsd-update`, elle doit être désactivée avant de démarrer les opérations qui vont suivre.
+
+[[freebsdupdate-config-file]]
+=== Le fichier de configuration
+
+Certains utilisateurs peuvent souhaiter adapter le fichier de configuration par défaut [.filename]#/etc/freebsd-update.conf#, permettant un meilleur contrôle du processus. Les options sont très bien documentées, mais les suivantes demandent un peu plus d'explication:
+
+[.programlisting]
+....
+# Composants du système de base qui doivent être maintenus à jour.
+Components src world kernel
+....
+
+Ce paramètre contrôle quelles sont les parties de FreeBSD qui seront mises à jour. Par défaut on met à jour le code source, l'intégralité du système de base et le noyau. Les composants sont les mêmes que ceux disponibles durant l'installation, par exemple, ajouter `world/games` ici permettrait d'appliquer les correctifs relatifs aux jeux. Utiliser `src/bin` permettrait la mise à jour du code source du répertoire [.filename]#src/bin#.
+
+La meilleure option est de laisser telle quelle la configuration par défaut car la modifier pour ajouter des éléments particuliers demandera à l'utilisateur de lister chaque élément qu'il désire mettre à jour. Cela pourrait avoir des conséquences désastreuses puisque le code source et les binaires peuvent à terme ne plus être en phase.
+
+[.programlisting]
+....
+# Les chemins d'accès commençant par quelque chose correspondant à une
+# entrée de type IgnorePaths seront ignorés.
+IgnorePaths
+....
+
+Ajoute les chemins d'accès comme [.filename]#/bin# ou [.filename]#/sbin# pour préserver intacts ces répertoires durant le processus de mise à jour. Cette option peut être utilisée pour empêcher `freebsd-update` d'écraser des modifications locales.
+
+[.programlisting]
+....
+# Les chemins d'accès qui commencent par quelque chose correspondant à
+# une entrée de type UpdateIfUnmodified seront mis à jour que si le
+# contenu du fichier n'a pas été modifié par l'utilisateur (à moins
+# que les modifications ne soient fusionnées; voir plus bas).
+UpdateIfUnmodified /etc/ /var/ /root/ /.cshrc /.profile
+....
+
+Met à jour les fichiers de configuration dans les répertoires désignés seulement s'ils n'ont pas été modifiés. Tout changement effectué par l'utilisateur invalidera automatiquement la mise à jour de ces fichiers. Il existe une autre option `KeepModifiedMetadata` qui indiquera à `freebsd-update` de sauvegarder les changements durant la fusion.
+
+[.programlisting]
+....
+# Quand on met à jour vers une nouvelle version de FreeBSD, les fichiers
+# correspondant à une entrée de type MergeChanges verront leurs
+# différences locales fusionnées avec le fichier de la nouvelle
+# version de FreeBSD.
+MergeChanges /etc/ /var/named/etc/
+....
+
+Liste des répertoires avec des fichiers de configuration que `freebsd-update` devrait tenter de fusionner. Le processus de fusion des fichiers est l'application d'une série de correctifs man:diff[1] similaires à ceux de man:mergemaster[8] avec cependant moins d'options, les fusions sont soit acceptées, ouvrant un éditeur, soit abandonnées par `freebsd-update`. En cas de doute, sauvegardez [.filename]#/etc# et acceptez les fusions. Consultez la section sur <<mergemaster>> pour plus d'information sur la commande `mergemaster`.
+
+[.programlisting]
+....
+# Répertoire dans lequel stocker les mise à jour téléchargées et les
+# fichiers temporaires utilisés par la mise à jour de FreeBSD.
+# WorkDir /var/db/freebsd-update
+....
+
+Ce répertoire est l'endroit où tous les correctifs et les fichiers temporaires seront placés. Dans les cas où l'utilisateur effectue une mise à jour de version, cet emplacement doit disposer d'au moins un gigaoctet d'espace disponible.
+
+[.programlisting]
+....
+# Lors de mises à jour entre versions de FreeBSD, doit-on lire la liste
+# de composants de manière stricte (StrictComponents yes)
+# ou tout simplement comme une liste de composants qui *pourraient*
+# être installés et pour lesquels la mise à jour de FreeBSD devrait
+# déterminer lesquels sont effectivement installés et les mettre à
+# jour (StrictComponents no)?
+# StrictComponents no
+....
+
+Cette option fixée à `yes`, `freebsd-update` supposera que la liste de composants est complète et n'essaiera pas d'effectuer des modifications en dehors de cette liste. Concrètement, `freebsd-update` tentera de mettre à jour chaque fichier appartenant à la liste de composants.
+
+[[freebsdupdate-security-patches]]
+=== Correctifs de sécurité
+
+Les correctifs de sécurité sont stockés sur une machine distante et peuvent être téléchargés et installés en utilisant la commande suivante:
+
+[source,bash]
+....
+# freebsd-update fetch
+# freebsd-update install
+....
+
+Si des correctifs ont été appliqués au noyau le système devra être redémarré. Si tout s'est bien passé le système est corrigé et `freebsd-update` pourra être exécuté chaque nuit via un processus man:cron[8]. Une entrée dans le fichier [.filename]#/etc/crontab# devrait être suffisante pour accomplir cette tâche:
+
+[.programlisting]
+....
+@daily                                  root    freebsd-update cron
+....
+
+Cette entrée indique qu'une fois par jour, l'utilitaire `freebsd-update` sera exécuté. De cette manière, en employant l'option `cron`, `freebsd-update` vérifiera seulement l'existence de mises à jour. Si des correctifs existent, il seront automatiquement téléchargés sur le disque local mais non-appliqués. L'utilisateur `root` sera contacté par courrier électronique, il pourra ainsi les installer manuellement.
+
+Si quelque s'est mal passé, `freebsd-update` a la capacité d'annuler le dernier ensemble de changements avec la commande suivante:
+
+[source,bash]
+....
+# freebsd-update rollback
+....
+
+Une fois la commande achevée, le système devra être redémarré si le noyau ou un de ses modules ont été modifiés. Cela permettra à FreeBSD de charger en mémoire les nouveaux binaires.
+
+L'utilitaire `freebsd-update` peut mettre à jour uniquement et automatiquement le noyau `GENERIC`. Si un noyau personnalisé est utilisé, il devra être recompilé et réinstallé après que la commande `freebsd-update` ait achevé l'installation du reste des mises à jour. Cependant `freebsd-update` détectera et mettra à jour le noyau `GENERIC` dans [.filename]#/boot/GENERIC# (s'il existe), et cela même si ce n'est pas le noyau actuel (qui tourne) du système.
+
+[NOTE]
+====
+C'est toujours une bonne idée de conserver une copie du noyau `GENERIC` dans [.filename]#/boot/GENERIC#. Cela sera utile pour diagnostiquer une variété de problèmes, et lors des mises à jour utilisant `freebsd-update` comme décrit dans la <<freebsdupdate-upgrade>>.
+====
+
+A moins que la configuration par défaut présente dans [.filename]#/etc/freebsd-update.conf# n'ait été modifiée, `freebsd-update` installera les sources du noyau mises à jour avec le reste des mises à jour. La recompilation et la réinstallation d'un noyau personnalisé peuvent effectuées de la manière classique.
+
+[NOTE]
+====
+Les mises à jour distribuées via `freebsd-update`, n'impliquent pas toujours le noyau. Il ne sera pas nécessaire de recompiler votre noyau personnalisé si les sources du noyau n'ont pas été modifiées par l'exécution de `freebsd-update install`. Cependant `freebsd-update` met toujours à jour le fichier [.filename]#/usr/src/sys/conf/newvers.sh#. Le niveau ou la version de correctifs (comme indiqué par le nombre `-p` rapporté par `uname -r`) est obtenu à partir de ce fichier. Recompiler votre noyau personnalisé, même si rien d'autre n'a changé, permettra à la commande man:uname[1] de rapporter précisément le niveau de correctifs du système. C'est particulièrement utile quand on gère de multiples systèmes, car cela permet une évaluation rapide des mises à jour présentes sur chacun d'eux.
+====
+
+[[freebsdupdate-upgrade]]
+=== Mises à jour mineures et majeures
+
+Ce processus supprimera les anciens fichiers objets et bibliothèques qui rendent inutilisables la plupart des applications tierce-partie. Il est recommandé que tous les logiciels portés soient supprimés et réinstallés ou mis à jour ultérieurement en utilisant l'outil package:ports-mgmt/portupgrade[]. La plupart des utilisateurs voudront lancer une compilation test à l'aide de la commande suivante:
+
+[source,bash]
+....
+# portupgrade -af
+....
+
+Cela garantira que tout sera réinstallé correctement. Notez que fixer la variable d'environnement `BATCH` à `yes` répondra `yes` à toute question lors de ce processus, supprimant ainsi la nécessité d'une intervention humaine durant le processus de compilation.
+
+Si un noyau personnalisé est utilisé, le processus de mise à jour est un peu plus complexe. Une copie du noyau `GENERIC` est nécessaire et devrait être placée dans le répertoire [.filename]#/boot/GENERIC#. Si le noyau `GENERIC` n'est pas présent sur le système, il peut être obtenu en utilisant une des méthodes suivantes:
+
+* Si un noyau personnalisé a déjà été compilé, le noyau présent dans [.filename]#/boot/kernel.old# est en fait le noyau `GENERIC`. Renommer ce répertoire en [.filename]#/boot/GENERIC#.
+* En supposant qu'un accès physique à la machine est possible, une copie du noyau `GENERIC` peut être installé à partir d'un CD-ROM. Insérer votre disque d'installation et utiliser les commandes suivantes:
++
+[source,bash]
+....
+# mount /cdrom
+# cd /cdrom/X.Y-RELEASE/kernels
+# ./install.sh GENERIC
+....
++ 
+Remplacer [.filename]#X.Y-RELEASE# avec la version que vous utilisez. Le noyau `GENERIC` sera installé par défaut dans [.filename]#/boot/GENERIC#.
+* En dehors de ce qui précède le noyau `GENERIC` peut être recompilé et installé à partir des sources:
++
+[source,bash]
+....
+# cd /usr/src
+# env DESTDIR=/boot/GENERIC make kernel
+# mv /boot/GENERIC/boot/kernel/* /boot/GENERIC
+# rm -rf /boot/GENERIC/boot
+....
++ 
+Pour que ce noyau soit pris en compte comme `GENERIC` par `freebsd-update`, le fichier de configuration `GENERIC` devra ne pas avoir été modifié. Il est également suggéré qu'il soit compilé sans aucune option particulière (de préférence avec un fichier [.filename]#/etc/make.conf# vide).
+
+Redémarrer avec le noyau `GENERIC` n'est pas nécessaire à ce stade.
+
+Les mises à jour de versions majeures et mineures peuvent être effectuées en passant à la commande `freebsd-update` la version vers laquelle on désire mettre à jour, par exemple, la commande suivante effectuera la mise à jour vers FreeBSD 8.1:
+
+[source,bash]
+....
+# freebsd-update -r 8.1-RELEASE upgrade
+....
+
+La commande `freebsd-update` analysera le fichier de configuration et le système afin de récupérer les informations nécessaires à la mise à jour du système. A l'écran s'affichera quels sont les composants détectés et quels sont ceux qui n'ont pas été détectés. Par exemple:
+
+[source,bash]
+....
+Looking up update.FreeBSD.org mirrors... 1 mirrors found.
+Fetching metadata signature for 8.0-RELEASE from update1.FreeBSD.org... done.
+Fetching metadata index... done.
+Inspecting system... done.
+
+The following components of FreeBSD seem to be installed:
+kernel/smp src/base src/bin src/contrib src/crypto src/etc src/games
+src/gnu src/include src/krb5 src/lib src/libexec src/release src/rescue
+src/sbin src/secure src/share src/sys src/tools src/ubin src/usbin
+world/base world/info world/lib32 world/manpages
+
+The following components of FreeBSD do not seem to be installed:
+kernel/generic world/catpages world/dict world/doc world/games
+world/proflibs
+
+Does this look reasonable (y/n)? y
+....
+
+A ce niveau `freebsd-update` tentera de télécharger tous les fichiers nécessaires à la mise à jour. Dans certains cas l'utilisateur sera interrogé sur ce qu'il faut installer ou sur comment procéder à certaines actions.
+
+Si un noyau personnalisé est utilisé, l'étape précédente produira un avertissement semblable au suivant:
+
+[source,bash]
+....
+WARNING: This system is running a "MYKERNEL" kernel, which is not a
+kernel configuration distributed as part of FreeBSD 8.0-RELEASE.
+This kernel will not be updated: you MUST update the kernel manually
+before running "/usr/sbin/freebsd-update install"
+....
+
+Cet avertissement peut sans risque être ignoré à ce niveau. Le noyau [.filename]#GENERIC# mis à jour sera utilisé comme une étape intermédiaire dans le processus de mise à jour.
+
+Une fois l'ensemble des correctifs téléchargé sur le système local, ils seront appliqués. Ce processus peut prendre plus ou moins de temps en fonction de la vitesse et de la charge de la machine. Les fichiers de configuration seront fusionnés - cette partie du processus demande l'intervention de l'utilisateur car un fichier peut être automatiquement fusionné ou en cas de besoin un éditeur peut apparaître sur l'écran pour une fusion manuelle. Les résultats des fusions réussies seront affichés au fur et à mesure que se déroule l'opération. Un échec ou une fusion ignorée provoqueront l'arrêt du processus. Certains utilisateurs peuvent vouloir conserver une sauvegarde du répertoire [.filename]#/etc# et fusionner plus tard à la main les fichiers importants comme [.filename]#master.passwd# ou [.filename]#group#.
+
+[NOTE]
+====
+Le système n'a pas encore été réellement modifié, les fusions et l'application des correctifs ont lieu dans un autre répertoire. Quand tous les correctifs ont été appliqués avec succès, que tous les fichiers de configuration ont été fusionnés et que le processus s'est déroulé sans problème, les modifications devront être appliquées définitivement au système par l'utilisateur.
+====
+
+Une fois les opérations précédentes achevées, la mise à jour peut être appliquée en utilisant la commande suivante:
+
+[source,bash]
+....
+# freebsd-update install
+....
+
+Le noyau et les modules seront corrigés les premiers. A ce moment la machine doit être obligatoirement redémarrée. Si le système utilisait un noyau personnalisé, utiliser la commande man:nextboot[8] pour indiquer le noyau [.filename]#/boot/GENERIC# (qui a été mis à jour) pour le prochain démarrage:
+
+[source,bash]
+....
+# nextboot -k GENERIC
+....
+
+[WARNING]
+====
+
+Avant de redémarrer sur le noyau `GENERIC`, assurez-vous qu'il contient tous les pilotes nécessaires pour que votre système démarre correctement (et se connecte au réseau, si la mise à jour de la machine se fait à distance). En particulier, si le noyau précédemment utilisé contient des fonctions généralement fournies par des modules, faites en sorte de charger temporairement ces modules avec le noyau [.filename]#GENERIC# à l'aide de [.filename]#/boot/loader.conf#. Vous pouvez également avoir intérêt à désactiver les services non-indispensables, les montages réseaux ou disques, etc. avant que le processus de mise à jour ne soit achevé.
+====
+
+La machine doit maintenant être redémarrée avec le noyau mis à jour:
+
+[source,bash]
+....
+# shutdown -r now
+....
+
+Une fois la machine de nouveau active, `freebsd-update` devra être lancée à nouveau. L'état du processus de mise à jour a été sauvegardé, et donc `freebsd-update` ne recommencera pas au début, mais supprimera les anciens fichiers objet et bibliothèques partagées. Afin de poursuivre les opérations, taper la commande suivante:
+
+[source,bash]
+....
+# freebsd-update install
+....
+
+[NOTE]
+====
+En fonction d'un changement ou non de numérotation d'une ou plusieurs bibliothèques, il pourra y avoir deux phases d'installation au lieu de trois.
+====
+
+Tous les logiciels tierce-partie doivent être maintenant recompilés et réinstallés. Cela est nécessaire comme certains logiciels peuvent dépendre de bibliothèques qui ont été supprimées lors du processus de mise à jour. La commande package:ports-mgmt/portupgrade[] peut être employée pour automatiser la chose. Les commandes suivantes peuvent être utilisées pour initier le processus:
+
+[source,bash]
+....
+# portupgrade -f ruby
+# rm /var/db/pkg/pkgdb.db
+# portupgrade -f ruby18-bdb
+# rm /var/db/pkg/pkgdb.db /usr/ports/INDEX-*.db
+# portupgrade -af
+....
+
+Une fois cela effectué, terminer le processus de mise à jour avec un dernier appel à `freebsd-update`. Taper la commande suivante pour régler les derniers détails:
+
+[source,bash]
+....
+# freebsd-update install
+....
+
+Si le noyau `GENERIC` a été utilisé temporairement, il est temps de compiler et d'installer un nouveau noyau personnalisé suivant la méthode habituelle.
+
+Redémarrer la machine avec la nouvelle version de FreeBSD. Le processus de mise à jour est terminé.
+
+[[freebsdupdate-system-comparison]]
+=== Comparaison de l'état du système
+
+L'utilitaire `freebsd-update` peut être utilisé pour comparer l'état du système FreeBSD installé avec une copie de confiance. Cette fonctionnalité inspecte la version actuelle des utilitaires système, des bibliothèques et des fichiers de configuration. Pour lancer la comparaison, utiliser la commande suivante:
+
+[source,bash]
+....
+# freebsd-update IDS >> outfile.ids
+....
+
+[WARNING]
+====
+
+Bien que le nom de la commande soit IDS, elle ne devrait en aucun cas être considérée comme un système de détection d'intrusion du type de package:security/snort[]. Etant donné que `freebsd-update` stocke des données sur le disque, le risque de modification des données est évident. Alors que cette possibilité peut être minimisée en utilisant le paramétrage `kern.securelevel` et en stockant les données `freebsd-update` sur un système de fichiers en lecture seule quand elles ne sont pas utilisées, une bien meilleure solution serait de comparer le système avec un disque sécurisé comme un DVD ou un disque USB conservé à l'extérieur.
+====
+
+Le système sera analysé, et une liste de fichiers ainsi que la valeur de leur empreinte numérique man:sha256[1], celle de la version d'origine et celle de la version actuellement installée, seront affichés. C'est pour cela que cet affichage est copié dans le fichier [.filename]#outfile.ids#. L'affichage défile trop rapidement une comparaison visuelle et remplira rapidement le tampon de la console.
+
+Ces lignes sont également très longues mais le format de sortie peut être facilement passé par une analyse syntaxique. Par exemple, pour obtenir une liste des fichiers qui diffèrent avec ceux de la version d'origine, utiliser la commande suivante:
+
+[source,bash]
+....
+# cat outfile.ids | awk '{ print $1 }' | more
+/etc/master.passwd
+/etc/motd
+/etc/passwd
+/etc/pf.conf
+....
+
+La sortie de cette commande a été tronquée, bien plus de fichiers sont concernés. Certains de ces fichiers sont naturellement modifiés, le fichier [.filename]#/etc/passwd# a été modifié en raison de l'ajout d'utilisateurs au système. Dans certains cas, d'autres fichiers apparaîtrons, comme les modules du noyau, qui diffèrent puisque `freebsd-update` peut les avoir mis à jour. Pour exclure des fichiers ou des répertoires spécifiques, ajoutez-les au paramètre `IDSIgnorePaths` dans le fichier [.filename]#/etc/freebsd-update.conf#.
+
+Ce système peut prendre part à une méthode de mise à jour élaboré, en dehors de ce qui a été présenté précédemment.
+
+[[updating-upgrading-portsnap]]
+== Portsnap: un outil de mise à jour du catalogue des logiciels portés
+
+Le système de base de FreeBSD dispose également d'un utilitaire pour la mise à jour du catalogue des logiciels portés: man:portsnap[8]. Lors de son exécution, il se connectera sur un site distant, contrôlera la clé de sécurité et téléchargera une nouvelle copie du catalogue des logiciels portés. La clé est utilisée pour vérifier l'intégrité de tous les fichiers téléchargés, s'assurant qu'ils n'ont pas été modifiés au vol. Pour récupérer les tout derniers fichiers du catalogue des logiciels portés, utiliser la commande suivante:
+
+[source,bash]
+....
+# portsnap fetch
+Looking up portsnap.FreeBSD.org mirrors... 3 mirrors found.
+Fetching snapshot tag from portsnap1.FreeBSD.org... done.
+Fetching snapshot metadata... done.
+Updating from Wed Aug  6 18:00:22 EDT 2008 to Sat Aug 30 20:24:11 EDT 2008.
+Fetching 3 metadata patches.. done.
+Applying metadata patches... done.
+Fetching 3 metadata files... done.
+Fetching 90 patches.....10....20....30....40....50....60....70....80....90. done.
+Applying patches... done.
+Fetching 133 new ports or files... done.
+....
+
+Cet exemple nous montre que man:portsnap[8] a trouvé et contrôlé plusieurs mises à jour pour les données actuelles du catalogue. Est également indiqué si l'utilitaire a été précédemment exécuté, si cela avait été une première exécution, le catalogue aurait été tout simplement téléchargé.
+
+Lorsque man:portsnap[8] termine avec succès une opération de récupération (`fetch`), le catalogue des logiciels portés et ses mises à jour sont présents sur le système. A la première exécution de `portsnap` vous devez utiliser la commande `extract` pour installer les fichiers téléchargés:
+
+[source,bash]
+....
+# portsnap extract
+/usr/ports/.cvsignore
+/usr/ports/CHANGES
+/usr/ports/COPYRIGHT
+/usr/ports/GIDs
+/usr/ports/KNOBS
+/usr/ports/LEGAL
+/usr/ports/MOVED
+/usr/ports/Makefile
+/usr/ports/Mk/bsd.apache.mk
+/usr/ports/Mk/bsd.autotools.mk
+/usr/ports/Mk/bsd.cmake.mk
+...
+....
+
+Pour mettre à jour un catalogue des logiciels portés déjà installé utilisez la commande `portsnap update`:
+
+[source,bash]
+....
+# portsnap update
+....
+
+Le processus est maintenant terminé et les applications peuvent être installées ou mises à jour à l'aide du catalogue à jour.
+
+Les opérations `fetch` et `extract` ou `update` peuvent être exécutées à la suite comme montré dans l'exemple suivant:
+
+[source,bash]
+....
+# portsnap fetch update
+....
+
+Cette commande téléchargera la dernière version du catalogue des logiciels portés et mettra à jour votre version locale située dans [.filename]#/usr/ports#.
+
+[[updating-upgrading-documentation]]
+== Updating the Documentation Set ** Traduction en Cours **
+
+[[updating-installed-documentation]]
+=== Updating Documentation from Source
+
+[[doc-ports-install-package]]
+=== Updating Documentation from Ports
+
+[[current-stable]]
+== Suivre une branche de développement
+
+Il existe deux branches de développement de FreeBSD: FreeBSD-CURRENT et FreeBSD-STABLE. Cette section détaillera un peu chacune d'elles et décrira comment garder à jour votre système avec chaque arborescence respective. FreeBSD-CURRENT sera tout d'abord traité, suivit de FreeBSD-STABLE.
+
+[[current]]
+=== Se synchroniser avec la version -CURRENT de FreeBSD
+
+En lisant ces lignes, gardez à l'esprit que FreeBSD-CURRENT représente "les tout derniers" développement de FreeBSD. On attend des utilisateurs de FreeBSD-CURRENT un degré élevé de compétences techniques, et devraient être capables de résoudre des problèmes système compliqués par eux-mêmes. Si vous êtes nouveau à FreeBSD, pensez à deux fois avant de l'installer.
+
+==== Qu'est-ce que FreeBSD-CURRENT?
+
+FreeBSD-CURRENT est la toute dernière version des sources de FreeBSD en cours de développement. Cela inclut des évolutions en cours, des modifications expérimentales, et des mécanismes de transition qui feront ou ne feront pas partie de la prochaine version officielle du logiciel. Bien que de nombreux développeurs de FreeBSD compilent les sources de FreeBSD-CURRENT quotidiennement, il arrive que celles-ci ne soient pas compilables pendant une certaine période de temps. Ces problèmes sont résolus aussi rapidement que possible, mais que FreeBSD-CURRENT soit à l'origine d'un désastre ou de l'apport d'une nouvelle fonctionnalité attendue peut parfois dépendre que du moment auquel vous avez chargé le code source.
+
+==== Qui a besoin de FreeBSD-CURRENT?
+
+FreeBSD-CURRENT est mis à disposition pour 3 types de personnes:
+
+. Les membres de la communauté FreeBSD qui travaillent activement sur une partie de l'arborescence des sources et pour qui rester constamment à jour est une nécessité absolue.
+. Les membres de la communauté FreeBSD qui participent activement aux tests et sont disposés à passer du temps à résoudre les problèmes pour garantir que FreeBSD-CURRENT reste aussi saine que possible. Il y a également ceux qui désirent faire des suggestions dans certains domaines sur les modifications à faire et la direction générale que prend FreeBSD, et soumettent des correctifs pour les implémenter.
+. Ceux qui veulent simplement garder un oeil sur les évolutions, ou utiliser les dernières sources comme référence (e.g. pour les _lire_, et non pour les utiliser). Ces personnes font parfois des remarques ou contribuent au code.
+
+==== Qu'est-ce que _n'est pas_ FreeBSD-CURRENT?
+
+. Un raccourci pour se procurer des pré-versions parce que vous avez entendu dire qu'il y a de nouvelles fonctionnalités géniales et que vous voulez être le premier du coin à les avoir. Etre le premier à avoir la nouvelle fonctionnalité signifie être le premier à avoir les nouveaux bogues également.
+. Une moyen rapide d'avoir des corrections de bogues. N'importe quelle version de FreeBSD-CURRENT apportera probablement de nouveaux bogues comme elle corrigera ceux déjà présents.
+. Nous ne le "supportons officiellement" en aucun cas. Nous faisons du mieux que nous pouvons pour aider les personnes qui font vraiment partie des trois groupes "légitimes" à qui s'adresse FreeBSD-CURRENT, mais nous n'avons tout simplement "pas le temps" de fournir un support technique. Ce n'est pas parce que nous sommes des personnes détestables qui n'aiment pas aider les autres (nous ne ferions pas FreeBSD si tel était le cas), nous ne pouvons simplement pas répondre à des centaines de messages par jour _et_ travailler sur FreeBSD! Entre améliorer FreeBSD et répondre à de nombreuses questions sur le code expérimental, les développeurs optent pour le premier choix.
+
+==== Utiliser FreeBSD-CURRENT
+
+. Inscrivez-vous à la {freebsd-current} et la {svn-src-head}. Ce n'est pas seulement une bonne idée, c'est _indispensable_. Si vous n'êtes pas sur la liste _{freebsd-current}_, vous ne verrez pas les commentaires qui sont faits sur l'état courant du système et vous vous retrouverez probablement confrontés à de nombreux problèmes que d'autres ont déjà identifiés et résolus. Encore plus grave, vous manqueriez des bulletins importants potentiellement critiques pour la bonne santé de votre système.
++ 
+La liste {svn-src-head} vous permettra de voir les courriers de trace des soumissions de toutes les modifications dès qu'elles sont faites et des informations pertinentes sur les éventuels effets de bord.
++ 
+Pour vous inscrire à ces listes, ou à une autre, rendez vous à {mailman-lists-url} et cliquez sur la liste à laquelle vous désirez vous inscrire. Des instructions sur le reste de la procédure sont alors données. Si vous êtes intéressé par le suivi des modifications appliquées à l'ensemble de l'arborescence des sources, nous vous recommandons de vous inscrire à {svn-src-all}.
+. Récupérez les sources sur un crossref:mirrors[mirrors,site miroir] FreeBSD. Vous pouvez le faire de deux manières:
+.. Utilisez le programme crossref:mirrors[cvsup,cvsup] avec le fichier [.filename]#supfile# nommé [.filename]#standard-supfile# disponible dans le répertoire [.filename]#/usr/shared/examples/cvsup#. C'est la méthode recommandée, puisqu'elle permet de récupérer la totalité des sources la première fois et par la suite uniquement ce qui a été modifié. De nombreuses personnes exécutent `cvsup` depuis `cron` et maintiennent ainsi automatiquement à jour leurs sources. Vous devez personnaliser l'exemple de [.filename]#supfile# précédent, et configurer crossref:mirrors[cvsup,cvsup] pour votre environnement.
++
+[NOTE]
+====
+Le fichier d'exemple [.filename]#standard-supfile# est destiné au suivi d'une branche de sécurité FreeBSD spécifique et non pas à celui de FreeBSD-CURRENT. Vous devrez éditer ce fichier et remplacer la ligne suivante:
+
+[.programlisting]
+....
+*default release=cvs tag=RELENG_X_Y
+....
+
+Par celle-ci:
+
+[.programlisting]
+....
+*default release=cvs tag=.
+....
+
+Pour une explication détaillée des étiquettes utilisables, veuillez vous référer à la section crossref:mirrors[cvs-tags,Etiquettes CVS] de ce manuel.
+====
+
+.. Utilisez CTM. Si vous disposez d'une mauvaise connexion (connexions chères ou seulement un accès au courrier électronique) CTM est une bonne solution. Cependant, c'est une source de problèmes et peut donner lieu à des fichiers endommagés. C'est pourquoi cette méthode est rarement utilisée, ce qui augmente les chances que cela ne fonctionne pas pendant d'assez longue périodes. Nous recommandons d'utiliser CVSup à tous ceux disposant d'un modem 9600 bps ou d'une connexion plus rapide. 
+
+. Si vous récupérez les sources pour compiler un système opérationnel, et pas simplement pour les lire, alors récupérez _tout_ FreeBSD-CURRENT, et pas uniquement certaines portions. La raison de cela est que diverses parties des sources dépendent de modifications effectuées ailleurs, et si vous essayez de compiler juste une partie des source, il est quasiment certain que vous aurez des problèmes.
+. Avant de compiler FreeBSD-CURRENT, lisez attentivement le [.filename]#Makefile# dans [.filename]#/usr/src#. Vous devriez au moins la première fois <<makeworld,installer un nouveau noyau et recompiler le système>>, comme étape nécessaire à votre processus de mise à jour. La lecture de la {freebsd-current} et du fichier [.filename]#/usr/src/UPDATING# vous tiendra au courant des autres procédures de transition qui sont parfois nécessaires lorsque nous préparons la prochaine version.
+. Participez! Si vous utilisez FreeBSD-CURRENT, nous aimerions savoir ce que vous en pensez, tout particulièrement si vous avez des améliorations à nous suggérer ou des corrections de bogues à nous soumettre. Les suggestions accompagnées de code sont accueillies avec enthousiasme!
+
+[[stable]]
+=== Se synchroniser avec la version -STABLE de FreeBSD
+
+==== Qu'est-ce que FreeBSD-STABLE?
+
+FreeBSD-STABLE est notre branche de développement à partir de laquelle sont extraites les versions majeures. Les modifications sur cette branche se font à une allure différente, et en supposant généralement qu'elles ont été tout d'abord testées sur FreeBSD-CURRENT. Cela reste cependant _toujours_ une branche de développement, et cela signifie qu'à certains moments, les sources de FreeBSD-STABLE pourront être ou pas utilisables pour une quelconque raison. C'est tout simplement une autre branche de mise au point, et non pas une ressource pour l'utilisateur final.
+
+==== Qui a besoin de FreeBSD-STABLE?
+
+Si vous désirez suivre ou contribuer au processus de développement de FreeBSD, tout particulièrement si cela a rapport avec la prochaine version de FreeBSD, alors vous devriez penser à suivre FreeBSD-STABLE.
+
+Bien qu'il soit vrai que les correctifs de sécurité vont également dans la branche FreeBSD-STABLE, vous n'avez pas _besoin_ de suivre FreeBSD-STABLE pour cela. Chaque rapport de sécurité concernant FreeBSD explique comment corriger le problème sur les versions affectées  , et suivre intégralement une branche de développement juste pour des raisons de sécurité apportera également de nombreux changements non désirés.
+
+Bien que nous tentons de nous assurer que la branche FreeBSD-STABLE soit compilable et constamment stable, cela ne peut être garanti. De plus, alors que le code est développé sous FreeBSD-CURRENT avant de l'inclure dans FreeBSD-STABLE, le nombre de personnes utilisant FreeBSD-STABLE est plus nombreux que celui utilisant FreeBSD-CURRENT, aussi il est inévitable que des bogues et des problèmes pourront parfois apparaître sous FreeBSD-STABLE alors qu'ils n'existaient pas sous FreeBSD-CURRENT.
+
+Pour ces raisons, nous ne recommandons _pas_ de suivre aveuglément FreeBSD-STABLE, et il est tout particulièrement important que vous ne mettiez pas à jour des serveurs de production sous FreeBSD-STABLE sans avoir tout d'abord testé le code dans votre environnement de travail.
+
+Si vous ne disposez pas des ressources pour faire cela alors nous recommandons que vous utilisiez la version de FreeBSD la plus récente, et que vous utilisiez le mécanisme de mise à jour binaire pour passer d'une version à une autre.
+
+==== Utiliser FreeBSD-STABLE
+
+. Inscrivez-vous à à la liste {freebsd-stable}. Vous serez tenu au courant des dépendances de compilation qui peuvent apparaître dans la branche FreeBSD-STABLE ou de tout autre problème demandant une attention particulière. Les développeurs publieront également des annonces sur cette liste lorsqu'ils envisagent une correction ou modification controversée, offrant la possibilité aux utilisateurs de répondre s'ils ont des questions à soulever en rapport avec la modification proposée.
++ 
+Inscrivez-vous à la liste SVN correspondant à la branche que vous suivez. Par exemple, si vous suivez la branche 7-STABLE, inscrivez-vous à la liste link:{svn-src-stable-7-url}[svn-src-stable-7]. Cela vous permettra de lire les courriers de trace des soumissions de toutes les modifications dès qu'elles sont faites et des informations pertinentes sur les éventuels effets de bord.
++ 
+Pour vous inscrire à ces listes, ou à une autre, rendez vous à {mailman-lists-url} et cliquez sur la liste à laquelle vous désirez vous inscrire. Des instructions sur le reste de la procédure sont alors données. Si vous êtes intéressé par le suivi des modifications appliquées à l'ensemble de l'arborescence des sources, nous vous recommandons de vous inscrire à {svn-src-all}.
+. Si vous installez un nouveau système et vous voulez qu'il utilise le dernier instantané publié tous les mois à partir de la branche FreeBSD-STABLE, consultez la page sur les link:https://www.FreeBSD.org/snapshots/[instantanés] pour plus d'information. D'autre part, vous pouvez installer la version FreeBSD-STABLE la plus récente à partir des crossref:mirrors[mirrors,sites miroirs] et suivre les instructions ci-dessous pour mettre à jour votre système avec les sources FreeBSDstable; les plus récentes.
++ 
+Si vous faites tourner une version précédente de FreeBSD et que vous désirez mettre à jour via les sources vous pouvez aisément le faire à partir d'un crossref:mirrors[mirrors,site miroir] FreeBSD. Cela peut être fait de deux manières:
+.. Utilisez le programme crossref:mirrors[cvsup,cvsup] avec le fichier [.filename]#supfile# nommé [.filename]#stable-supfile# disponible dans le répertoire [.filename]#/usr/shared/examples/cvsup#. C'est la méthode recommandée, puisqu'elle permet de récupérer la totalité des sources la première fois et par la suite uniquement ce qui a été modifié. De nombreuses personnes exécutent `cvsup` depuis `cron` et maintiennent ainsi automatiquement à jour leurs sources. Vous devez personnaliser l'exemple de [.filename]#supfile# précédent, et configurer crossref:mirrors[cvsup,cvsup] pour votre environnement.
+.. Utilisez CTM. Si vous ne disposez pas d'une connexion Internet rapide et peu coûteuse, c'est la méthode que vous devriez penser à utiliser.
+
+. Avant tout, si vous avez besoin d'un accès rapide à la demande aux sources et que la bande passante n'est pas un problème, utilisez `cvsup` ou `ftp`. Sinon, utilisez CTM.
+. Avant de compiler FreeBSD-STABLE, lisez attentivement le [.filename]#Makefile# dans [.filename]#/usr/src#. Vous devriez au moins la première fois <<makeworld,installer un nouveau noyau et recompiler le système>>, comme étape nécessaire à votre processus de mise à jour. La lecture de la {freebsd-stable} et du fichier [.filename]#/usr/src/UPDATING# vous tiendra au courant des autres procédures de transition qui sont parfois nécessaires lorsque nous préparons la prochaine version.
+
+[[synching]]
+== Synchroniser vos sources
+
+Il existe différentes façons d'utiliser une connexion Internet (ou le courrier électronique) pour garder à jour les sources de n'importe quelle partie, ou de l'ensemble, du projet FreeBSD, selon ce qui vous intéresse. Les principaux services que nous fournissons sont le crossref:mirrors[anoncvs,CVS anonyme], crossref:mirrors[cvsup,CVSup], et crossref:mirrors[ctm,CTM].
+
+[WARNING]
+====
+
+Alors qu'il est possible de mettre à jour seulement certaines parties de l'arbre des sources, la seule procédure de mise à jour supportée est celle consistant à mettre à jour l'intégralité de l'arborescence et de recompiler les sources des applicatifs de base-"userland" (i.e., tous les programmes qui tournent dans l'espace utilisateur, comme ceux des répertoires [.filename]#/bin# et [.filename]#/sbin#) et du noyau. Ne mettre à jour qu'une partie des sources, uniquement le noyau, ou seul le "userland" mènera souvent à des problèmes. Ces problèmes pourront aller d'erreurs de compilation à des paniques du noyau ou même des corruptions de données.
+====
+
+CVS anonyme et CVSup utilisent une méthode de mise à jour pilotée par le client-_pull_. Dans le cas de CVSup, l'utilisateur (ou une procédure `cron`) appelle le programme `cvsup`, qui interagit avec un serveur `cvsupd` distant, pour mettre à jour vos fichiers. Les mises à jour que vous recevez sont les plus récentes, et vous ne les recevez seulement lorsque vous le désirez. Vous pouvez aisément restreindre vos mises à jour aux fichiers ou répertoires particuliers qui vous intéressent. Les mises à jour sont générées à la volée par le serveur, en fonction de ce que vous avez déjà et de ce que vous voulez. CVS anonyme est plus simpliste que CVSup, car ce n'est qu'une extension de CVS qui permet de récupérer des modifications directement d'une archive CVS distante. Pour cela, CVSup est bien plus efficace mais CVS anonyme est plus facile à utiliser.
+
+CTM, à l'inverse, ne compare pas interactivement les sources dont vous disposez avec celles qui sont sur l'archive de référence. Au lieu de cela, une procédure qui identifie les modifications intervenues depuis qu'elle a été exécutée pour la dernière fois, est lancée plusieurs fois par jour sur la machine CTM de référence (maître), les modifications détectées sont compressées, affectées d'un numéro de séquence et encodées pour pouvoir être envoyées par courrier électronique (en ASCII imprimable uniquement). Une fois reçus, ces "deltas CTM" peuvent être passés à l'utilitaire man:ctm_rmail[1] qui décodera, contrôlera et appliquera automatiquement les modifications à l'exemplaire des sources de l'utilisateur. Cette méthode est beaucoup plus efficace que CVSup et consomme beaucoup moins de ressources sur notre serveur, parce que c'est un modèle piloté par le serveur-_push_ plutôt que par l'utilisateur-_pull_.
+
+Il y a, bien sûr, quelques contreparties. Si vous effacez par inadvertance des parties de votre archive, CVSup s'en apercevra et vous reconstruira les parties endommagées. CTM ne le fera pas, et si vous effacez des parties de votre l'arborescence des sources (et que vous n'avez pas fait de sauvegarde) alors vous devrez repartir de zéro (à partir du plus récent "delta de base" CVS) et tout reconstituer avec CTM ou CVS anonyme, effacer les parties endommagées et resynchroniser.
+
+[[makeworld]]
+== Recompiler le système
+
+Une fois que vous avez synchronisé votre arborescence des sources avec une version donnée de FreeBSD (FreeBSD-STABLE, FreeBSD-CURRENT, et ainsi de suite) vous pouvez alors utiliser cette arborescence des sources pour recompiler le système.
+
+[WARNING]
+.Faites une sauvegarde
+====
+On n'insistera jamais assez sur l'importance de faire une sauvegarde de votre système _avant_ tout autre chose. Bien qu'il soit facile de "refaire le monde" (recompiler FreeBSD), si vous suivez ces instructions, vous ferez inévitablement des erreurs à un moment ou un autre, ou d'autres feront des erreurs au niveau de l'arborescence des sources qui empêcheraient votre système de redémarrer.
+
+Assurez-vous que vous avez bien fait une sauvegarde. Ayez une disquette de maintenance, ou un CD démarrable à portée de la main. Vous ne l'utiliserez probablement pas, mais prudence est mère de sûreté!
+====
+
+[WARNING]
+.S'abonner à la bonne liste de diffusion
+====
+Les branches FreeBSD-STABLE et FreeBSD-CURRENT sont, par nature, _en développement_. Les personnes qui participent à FreeBSD sont des humains, et des erreurs se produisent occasionnellement.
+
+Ces erreurs sont parfois bénignes, provocant simplement l'affichage d'un nouveau message d'avertissement par votre système. Elles peuvent aussi être catastrophiques, et empêcher votre système de redémarrer ou détruire vos systèmes de fichiers (ou pire).
+
+Quand de tels problèmes se produisent, un avertissement "heads up" est posté sur la liste de diffusion appropriée, décrivant la nature du problème et quels systèmes sont concernés. Un message "all clear" est posté quand le problème est résolu.
+
+Si vous tentez de suivre FreeBSD-STABLE ou FreeBSD-CURRENT et que vous ne lisez pas la {freebsd-stable} ou la {freebsd-current}, vous allez au devant d'ennuis.
+====
+
+[WARNING]
+.N'utilisez pas la commande `make world`
+====
+De nombreuses anciennes documentations préconisent d'utiliser la commande `make world`. Cette commande n'effectue pas un certain nombre d'étapes importantes et ne devrait être utilisée que si vous êtes sûr de ce que vous faites. Dans presque tout les cas `make world` n'est pas une bonne chose à faire, et la procédure décrite dans la suite de ce document devrait être utilisée à la place.
+====
+
+=== La méthode générique de mise à jour du système
+
+Pour mettre à jour votre système, vous devriez consulter [.filename]#/usr/src/UPDATING# pour toute opération préliminaire nécessaire en fonction de la version de vos sources et ensuite utiliser la procédure suivante:
+
+[source,bash]
+....
+# cd /usr/src
+# make buildworld
+# make buildkernel
+# make installkernel
+# shutdown -r now
+....
+
+[NOTE]
+====
+Dans quelques rares cas, il est nécessaire de lancer un `mergemaster -p` avant l'étape `buildworld`. Ces cas sont décrits dans le fichier [.filename]#UPDATING#. Généralement, vous pouvez omettre cette opération si vous ne mettez pas à jour d'une version majeure de FreeBSD à une autre.
+====
+
+Une fois l'opération `installkernel` terminée avec succès, vous devrez démarrer en mode mono-utilisateur (en utilisant par exemple la commande `boot -s` à l'invite du chargeur). Exécutez ensuite:
+
+[source,bash]
+....
+# mount -a -t ufs
+# mergemaster -p
+# cd /usr/src
+# make installworld
+# mergemaster
+# reboot
+....
+
+[WARNING]
+.Lisez les explications supplémentaires
+====
+La séquence décrite ci-dessus n'est qu'un court résumé pour vous aider à démarrer. Vous devriez cependant lire les sections suivantes afin de comprendre clairement chaque étape, tout particulièrement si vous désirez utiliser une configuration du noyau personnalisée.
+====
+
+=== Lire [.filename]#/usr/src/UPDATING#
+
+Avant tout autre chose, lisez [.filename]#/usr/src/UPDATING# (ou le fichier équivalent en fonction de l'endroit où se trouve vos sources). Ce fichier devrait contenir les informations importantes au sujet des problèmes que vous pourriez rencontrer, ou indique l'ordre dans lequel vous devriez exécuter certaines commandes. Si le fichier [.filename]#UPDATING# contredit quelque chose d'écrit ici, [.filename]#UPDATING# prime sur tout le reste.
+
+[IMPORTANT]
+====
+La lecture du fichier [.filename]#UPDATING# n'est pas un substitut à l'abonnement à la liste de diffusion correcte, comme décrit précédemment. Ces deux prérequis sont complémentaires, et non pas exclusifs.
+====
+
+=== Contrôler [.filename]#/etc/make.conf#
+
+Contrôlez les fichiers [.filename]#/usr/shared/examples/etc/make.conf# et [.filename]#/etc/make.conf#. Le premier contient des paramètres par défaut - la plupart étant placés en commentaires. Pour les utiliser quand vous recompilez votre système à partir des sources, rajoutés-les au fichier [.filename]#/etc/make.conf#. Gardez à l'esprit que tout ce que vous ajoutez au fichier [.filename]#/etc/make.conf# est utilisé chaque fois que vous invoquez la commande `make`, il est donc bon de s'assurer que les valeurs par défaut sont appropriées à votre système.
+
+Un utilisateur typique voudra probablement copier les lignes `CFLAGS` et `NO_PROFILE` se trouvant dans [.filename]#/usr/shared/examples/etc/make.conf# vers [.filename]#/etc/make.conf# et les décommenter.
+
+Examinez les autres définitions (`COPTFLAGS`, `NOPORTDOCS` et ainsi de suite) et décidez si elles vous conviennent.
+
+=== Mettre à jour les fichiers dans [.filename]#/etc#
+
+Le répertoire [.filename]#/etc# contient la plupart des informations de configuration de votre système, ainsi que les procédures de démarrage. Certaines de ces procédures changent d'une version à l'autre de FreeBSD.
+
+Certains fichiers de configuration sont également utilisés en permanence par le système. En particulier [.filename]#/etc/group#.
+
+Il est arrivé que la phase d'installation `make installworld` ait besoin que certains utilisateurs et groupes existent. Il y a de fortes chances qu'ils n'aient pas été définis avant la mise à jour. C'est une source de problèmes. Dans certains cas `make buildworld` contrôlera si ces utilisateurs ou groupes existent.
+
+Un exemple de cela fut l'addition de l'utilisateur `smmsp`. Le processus d'installation échouait quand `mtree` tentait de créer [.filename]#/var/spool/clientmqueue#.
+
+La solution est d'exécuter man:mergemaster[8] dans le mode pré-"buildworld" en ajoutant l'option `-p`. Cela effectuera la comparaison uniquement des fichiers essentiels pour le succès de la procédure `buildworld` ou `installworld`. Si votre vieille version de `mergemaster` ne supporte pas l'option `-p`, utilisez la nouvelle version présente dans l'arborescence des sources quand vous l'exécutez pour la première fois:
+
+[source,bash]
+....
+# cd /usr/src/usr.sbin/mergemaster
+# ./mergemaster.sh -p
+....
+
+[TIP]
+====
+
+Si vous êtes particulièrement paranoïaque, vous pouvez contrôler votre système afin de voir quels fichiers appartiennent au groupe que vous renommez ou effacez:
+
+[source,bash]
+....
+# find / -group GID -print
+....
+
+affichera les fichiers appartenant au groupe _GID_ (qui peut être soit un nom de groupe ou un identifiant numérique de groupe).
+====
+
+[[makeworld-singleuser]]
+=== Passer en mode mono-utilisateur
+
+Il vaut mieux recompiler le système en mode mono-utilisateur. En dehors du fait que cela sera légèrement plus rapide, la réinstallation va modifier un grand nombre de fichiers systèmes importants, tous les binaires de base du système, les bibliothèques, les fichiers d'include et ainsi de suite. Les modifier sur un système en fonctionnement (en particulier s'il y a des utilisateurs connectés à ce moment là), c'est aller au devant de problèmes.
+
+Une autre méthode consiste à compiler le système en mode multi-utilisateurs, et passer dans le mode mono-utilisateur pour l'installation. Si vous désirez utiliser cette méthode, conservez les étapes suivantes pour le moment où la compilation sera terminée. Vous pouvez reporter le passage en mode mono-utilisateur jusqu'à l'exécution de `installkernel` ou `installworld`.
+
+En tant que super-utilisateur, vous pouvez exécuter la commande:
+
+[source,bash]
+....
+# shutdown now
+....
+
+sur un système en fonctionnement, pour passer en mode mono-utilisateur.
+
+Ou bien, redémarrer le système, et à l'invite de démarrage, sélectionnez l'option "single user". Le système démarrera alors en mode mono-utilisateur. A l'invite de l'interpréteur de commandes, exécutez alors:
+
+[source,bash]
+....
+# fsck -p
+# mount -u /
+# mount -a -t ufs
+# swapon -a
+....
+
+Cela effectue une vérification des systèmes de fichiers, remonte [.filename]#/# en mode lecture/écriture, et monte tous les autres systèmes de fichiers UFS listés dans le fichier [.filename]#/etc/fstab#, puis active la pagination.
+
+[NOTE]
+====
+Si votre horloge CMOS est réglée sur l'heure locale et non pas sur le fuseau GMT (cela est vrai si la sortie de la commande `date` ne donne pas l'heure et le fuseau correct), vous aurez également peut-être besoin d'exécuter la commande suivante:
+
+[source,bash]
+....
+# adjkerntz -i
+....
+
+Cela permettra de s'assurer que vos paramètres de fuseaux horaires sont correctement configurés - sans cela, vous risquez de faire face, plus tard, à des problèmes. 
+====
+
+=== Effacer [.filename]#/usr/obj#
+
+Au fur et à mesure que les différentes parties du système sont recompilées, elles sont placées dans des répertoires qui (par défaut) sont sous [.filename]#/usr/obj#. Les répertoires sont agencés comme sous [.filename]#/usr/src#.
+
+Vous pouvez accélérer le processus `make buildworld`, et également vous éviter d'éventuels problèmes de dépendances en effaçant ce répertoire.
+
+Certains fichiers dans [.filename]#/usr/obj# peuvent avoir l'indicateur immuable positionné (consultez la page de manuel man:chflags[1] pour plus d'informations) qui doit être retiré en premier.
+
+[source,bash]
+....
+# cd /usr/obj
+# chflags -R noschg *
+# rm -rf *
+....
+
+[[updating-upgrading-compilebase]]
+=== Recompiler le système de base
+
+==== Enregistrer la sortie
+
+C'est une bonne idée d'enregistrer la sortie de man:make[1] dans un fichier. Si quelque chose se passe mal, vous aurez une trace des messages d'erreur. Même si cela ne vous aide pas à diagnostiquer ce qui n'a pas fonctionné, cela peut aider les autres si vous postez votre problème sur une des listes de diffusion de FreeBSD.
+
+La méthode la plus aisée pour faire cela est d'utiliser la commande man:script[1], avec en paramètre le nom du fichier où enregistrer les résultats. Vous devez faire cela immédiatement juste avant de recompiler le système, et taper `exit` une fois que c'est terminé.
+
+[source,bash]
+....
+# script /var/tmp/mw.out
+Script started, output file is /var/tmp/mw.out
+# make TARGET
+… compile, compile, compile …
+# exit
+Script done, …
+....
+
+Si vous le faites, _n'enregistrez pas_ le résultat dans [.filename]#/tmp#. Ce répertoire peut être vidé au prochain redémarrage du système. Un meilleur endroit de sauvegarde est [.filename]#/var/tmp# (comme dans l'exemple précédent) ou dans le répertoire utilisateur de `root`.
+
+[[make-buildworld]]
+==== Compiler le nouveau système
+
+Vous devez être dans le répertoire [.filename]#/usr/src#:
+
+[source,bash]
+....
+# cd /usr/src
+....
+
+(à moins, bien sûr, que votre code source ne soit ailleurs, auquel cas vous devrez aller dans le répertoire correspondant).
+
+Pour recompiler le système, on utilise la commande man:make[1]. Cette commande lit ses instructions dans le fichier [.filename]#Makefile#, qui décrit comment devraient être reconstruits les programmes qui constituent FreeBSD, dans quel ordre, et ainsi de suite.
+
+Le format général de la ligne de commande que vous taperez sera la suivante:
+
+[source,bash]
+....
+# make -x -DVARIABLE cible
+....
+
+Dans cet exemple, `-_x_` est une option que vous passez à man:make[1]. Reportez-vous à la page de manuel pour un exemple d'options que vous pouvez passer.
+
+`-D_VARIABLE_` transmet un variable au fichier [.filename]#Makefile#. Le comportement du [.filename]#Makefile# est défini par ces variables. Ce sont les mêmes variables que l'on trouve dans [.filename]#/etc/make.conf#, et c'est un autre moyen de les positionner.
+
+[source,bash]
+....
+# make -DNO_PROFILE cible
+....
+
+est une autre manière de dire qu'il ne faut pas compiler les bibliothèques profilées et correspond à la ligne:
+
+[.programlisting]
+....
+NO_PROFILE=    true	#    Avoid compiling profiled libraries
+....
+
+dans [.filename]#/etc/make.conf#.
+
+_cible_ indique à man:make[1] ce que vous voulez faire. Chaque [.filename]#Makefile# définit un certain nombre de "cibles", et votre choix de cible détermine ce qui se passe.
+
+Certaines cibles listées dans le fichier [.filename]#Makefile#, ne doivent pas être employées. Ce sont des étapes intermédiaires utilisées par le processus de recompilation pour décomposer les étapes importantes de la recompilation du système en sous-étapes.
+
+La plupart du temps, vous n'aurez pas besoin de passer de paramètres à man:make[1], et votre commande ressemblera à ceci:
+
+[source,bash]
+....
+# make cible
+....
+
+Où _cible_ sera une des nombreuses options de compilation. La première cible devrait toujours être `buildworld`.
+
+Comme leurs noms l'indiquent, `buildworld` reconstruit la nouvelle arborescence dans [.filename]#/usr/obj#, et `installworld`, une autre cible, l'installe sur la machine.
+
+Disposer d'options séparées est très utile pour deux raisons. Tout d'abord cela vous permet de recompiler en toute sûreté en sachant qu'aucun composant du système actuel ne sera affecté. La compilation est "autonome". En raison de cela vous pouvez exécuter `buildworld` sur une machine en mode multi-utilisateurs sans redouter d'effets fâcheux. Il est néanmoins recommandé de toujours exécuter l'étape `installworld` en mode mono-utilisateur.
+
+En second lieu, cela vous permet d'utiliser des systèmes montés par NFS pour mettre à jour plusieurs machines de votre réseau. Si vous avez trois machines `A`, `B` et `C` que vous voulez mettre à jour, exécutez `make buildworld` et `make installworld` sur `A`. `B` et `C` doivent ensuite monter par NFS [.filename]#/usr/src# et [.filename]#/usr/obj# depuis `A`, et vous pouvez alors exécuter `make installworld` pour installer le système recompilé sur `B` et `C`.
+
+Bien que la cible `world` existe toujours, vous êtes fortement encouragé à ne pas l'utiliser.
+
+Exécutez:
+
+[source,bash]
+....
+# make buildworld
+....
+
+Il est possible de passer l'option `-j` à man:make[1] ce qui lui permettra d'exécuter plusieurs processus simultanément. C'est particulièrement utile sur une machine avec plusieurs processeurs. Cependant, comme la compilation est plus gourmande en E/S plutôt qu'en CPU, c'est également utile sur des machines mono-processeur.
+
+Typiquement sur une machine mono-processeur, vous exécuteriez:
+
+[source,bash]
+....
+# make -j4 buildworld
+....
+
+man:make[1] pourra exécuter jusqu'à 4 processus simultanément. Des constatations empiriques postées sur les listes de diffusion montrent que c'est en général ce qui apporte le plus de gain en performances.
+
+Si vous avez une machine multi-processeurs et que vous avez configuré un noyau SMP, essayez des valeurs entre 6 et 19 et voyez quel bénéfice vous en tirez.
+
+==== Durée
+
+De nombreux facteurs influencent la durée de compilation, mais les machines récentes devraient mettrent seulement de une à deux heures pour compiler l'arborescence FreeBSD-STABLE, sans modification ni raccourcis durant le processus. Une arborescence FreeBSD-CURRENT nécessitera un peu plus de temps.
+
+=== Compiler et installer un nouveau noyau
+
+Pour tirer pleinement parti de votre nouveau système, vous devrez recompiler le noyau. C'est pratiquement indispensable, parce que certaines structures mémoires peuvent avoir changées, et des programmes comme man:ps[1] et man:top[1] ne fonctionneront pas tant que le système et le noyau n'utilisent pas les mêmes versions de code source.
+
+La manière la plus simple et la plus sûre est de compiler et installer un noyau basé sur le noyau [.filename]#GENERIC#. Alors que le noyau [.filename]#GENERIC# peut ne pas comporter les pilotes de périphériques nécessaires pour votre système, il devrait contenir tout ce qui est nécessaire pour faire démarrer votre système en mode mono-utilisateur. C'est une bonne façon de tester le fonctionnement de votre nouveau système. Après avoir démarré à partir du noyau [.filename]#GENERIC# et vérifié que votre système fonctionne vous pouvez alors compiler un nouveau noyau basé sur votre fichier de configuration normal du noyau.
+
+Sur FreeBSD, il est important de <<make-buildworld,recompiler le système>> avant de compiler un nouveau noyau.
+
+[NOTE]
+====
+Si vous désirez compiler un noyau personnalisé, et que vous avez déjà un fichier de configuration, utilisez juste `KERNCONF=_MONNOYAU_` comme suit:
+
+[source,bash]
+....
+# cd /usr/src
+# make buildkernel KERNCONF=MONNOYAU
+# make installkernel KERNCONF=MONNOYAU
+....
+
+====
+
+Notez que si vous avez augmenté la variable `kern.securelevel` à une valeur supérieure à 1 _et_ que vous avez positionné l'indicateur `noschg` ou similaire sur votre noyau, il sera intéressant de passer en mode mono-utilisateur pour utiliser `installkernel`. Sinon vous devriez être en mesure d'exécuter ces commandes à partir du mode multi-utilisateur sans problèmes. Voir la page de manuel de man:init[8] pour plus de détails à propos de `kern.securelevel` et la page man:chflags[1] pour des informations sur les différents indicateurs de fichiers.
+
+=== Redémarrer en mode mono-utilisateur
+
+Vous devriez redémarrer en mode mono-utilisateur pour tester le fonctionnement du nouveau noyau. Pour cela suivez les instructions de <<makeworld-singleuser>>.
+
+[[make-installworld]]
+=== Installer les nouveaux binaires système
+
+Si vous avez compilé une version de FreeBSD assez récente pour avoir utilisé `make buildworld` alors vous devriez utiliser maintenant `installworld` pour installer les nouveaux binaires système.
+
+Lancez:
+
+[source,bash]
+....
+# cd /usr/src
+# make installworld
+....
+
+[NOTE]
+====
+Si vous spécifiez des variables sur la ligne de commande de `make buildworld`, vous devez utiliser les mêmes variables avec la commande `make installworld`. Cela ne reste pas forcément vrai pour d'autres options; par exemple, `-j` ne doit jamais être utilisée avec `installworld`.
+
+Par exemple, si vous exécutez:
+
+[source,bash]
+....
+# make -DNO_PROFILE buildworld
+....
+
+vous devrez ensuite installer les résultats avec:
+
+[source,bash]
+....
+# make -DNO_PROFILE installworld
+....
+
+sinon il essayera d'installer les bibliothèques profilées qui n'ont pas été recompilées à l'étape `make buildworld`.
+====
+
+=== Mettre à jour les fichiers non modifiés par `make installworld`
+
+La recompilation du système ne mettra pas à jour certains répertoires (en particulier, [.filename]#/etc#, [.filename]#/var# et [.filename]#/usr#) avec les fichiers nouveaux ou modifiés.
+
+La manière la plus simple de mettre à jour ces fichiers est d'utiliser man:mergemaster[8], bien qu'il soit possible de le faire manuellement si vous le désirez. Indépendamment de la manière que vous choisissez, assurez-vous de faire une sauvegarde du répertoire [.filename]#/etc# au cas où quelque chose se passerait mal.
+
+[[mergemaster]]
+==== `mergemaster`
+
+L'utilitaire man:mergemaster[8] est une procédure Bourne qui vous aidera à déterminer les différences entre vos fichiers de configuration dans le répertoire [.filename]#/etc#, et les fichiers de configuration dans l'arborescence des sources [.filename]#/usr/src/etc#. C'est la solution recommandée pour maintenir à jour les fichiers de configuration du système avec ceux situés dans l'arborescence des sources.
+
+Pour commencer, tapez simplement `mergemaster` à l'invite, et observez-le travailler. `mergemaster` commencera à constituer une arborescence temporaire, à partir de [.filename]#/#, et la remplira avec divers fichiers de configuration. Ces fichiers sont alors comparés avec ceux actuellement installés sur votre système. A ce point, les fichiers qui diffèrent seront affichés dans le format man:diff[1], avec le signe `+` représentant les lignes modifiées ou ajoutées, et le `-` représentant les lignes qui seront soit complètement supprimées, soit remplacées avec une nouvelle ligne. Voir la page de manuel man:diff[1] pour plus d'informations au sujet de la syntaxe man:diff[1] et comment sont affichées les différences.
+
+man:mergemaster[8] vous affichera ensuite chaque fichier présentant des différences, et vous aurez à ce moment-là le choix de soit supprimer le nouveau fichier (le fichier temporaire), soit d'installer le fichier temporaire non modifié, soit de fusionner le fichier temporaire et le fichier actuellement installé, soit enfin de revoir les résultats de l'opération man:diff[1].
+
+Choisir de supprimer le fichier temporaire indiquera à man:mergemaster[8] que nous désirons conserver notre fichier actuel intacte, et effacera la nouvelle version. Cette option n'est pas recommandée, à moins que vous ne voyez aucune raison de modifier le fichier actuel. Vous pouvez obtenir de l'aide à n'importe quel moment en tapant kbd:[?] à l'invite de man:mergemaster[8]. Si l'utilisateur choisit de passer un fichier, il sera présenté à nouveau une fois que tous les autres fichiers auront été traités.
+
+Choisir d'installer un fichier temporaire intact remplacera le fichier actuel avec le nouveau. Pour la plupart des fichiers non modifiées, c'est la meilleure option.
+
+Choisir de fusionner le fichier, vous affichera un éditeur de texte, et le contenu des deux fichiers. Vous pouvez maintenant les fusionner en les visionnant côte à côte sur l'écran, et en sélectionnant des parties des deux fichiers pour créer un fichier final. Quand les fichiers sont comparés côte à côte, la touche kbd:[l] sélectionnera le contenu de gauche et la touche kbd:[r] sélectionnera celui de droite. Le résultat final sera un fichier constitué des deux parties, qui peut alors être installé. Cette option est habituellement utilisée pour les fichiers où les des paramètres ont été modifiés par l'utilisateur.
+
+Choisir de revoir les résultats de l'opération man:diff[1] vous affichera les différences entre fichiers tout comme la fait man:mergemaster[8] avant de vous demander un choix.
+
+Après que man:mergemaster[8] en ait terminé avec les fichiers système, il vous proposera de nouvelles opérations. man:mergemaster[8] vous demandera si vous désirez reconstruire le fichier des mots de passe et terminera en vous proposant de supprimer les fichiers temporaires restants.
+
+==== Mise à jour manuelle
+
+Si vous désirez faire la mise à jour manuellement, vous ne pouvez cependant pas vous contenter de copier les fichiers de [.filename]#/usr/src/etc# dans [.filename]#/etc# pour que cela fonctionne. Certains de ces fichiers doivent d'abord être "installés". En effet le répertoire [.filename]#/usr/src/etc# "n'est pas" une copie de ce que devrait contenir votre répertoire [.filename]#/etc#. De plus, il a des fichiers qui doivent être dans [.filename]#/etc# et qui ne sont pas dans [.filename]#/usr/src/etc#.
+
+Si vous utilisez man:mergemaster[8] (comme recommandé), vous pouvez passer cette section et aller directement à la <<updating-upgrading-rebooting,section suivante>>.
+
+La façon la plus simple de procéder est d'installer les fichiers dans un nouveau répertoire, puis de passer en revue les différences.
+
+[WARNING]
+.Sauvegardez votre répertoire [.filename]#/etc# actuel
+====
+Bien qu'en principe rien ne sera modifié automatiquement dans ce répertoire, prudence est mère de sûreté. Copiez donc votre répertoire [.filename]#/etc# dans un endroit sûr. Quelque chose du genre:
+
+[source,bash]
+....
+# cp -Rp /etc /etc.old
+....
+
+conviendra; l'option `-R` fait une copie récursive, `-p` préserve la date, les autorisations des fichiers et ainsi de suite.
+====
+
+Vous devez créer un ensemble de répertoires provisoires pour y installer les fichiers du répertoire [.filename]#/etc# et autres. [.filename]#/var/tmp/root# est un bon choix, il y a un certain nombre de sous-répertoires à créer également:
+
+[source,bash]
+....
+# mkdir /var/tmp/root
+# cd /usr/src/etc
+# make DESTDIR=/var/tmp/root distrib-dirs distribution
+....
+
+Cela va créer l'arborescence nécessaire et y installera les fichiers. Un grand nombre des sous-répertoires créés dans [.filename]#/var/tmp/root# sont vides et devront être supprimés. La façon la plus simple de le faire est:
+
+[source,bash]
+....
+# cd /var/tmp/root
+# find -d . -type d | xargs rmdir 2>/dev/null
+....
+
+Ceci supprimera tous les répertoires vides (la sortie d'erreur standard est redirigée vers [.filename]#/dev/null# pour empêcher les avertissements à propos des répertoires non vides).
+
+[.filename]#/var/tmp/root# contient maintenant tous les fichiers à installer à l'endroit requis sous [.filename]#/#. Vous devez maintenant examiner chacun de ces fichiers pour déterminer en quoi ils diffèrent de vos propres fichiers.
+
+Notez que certains des fichiers qui seront installés dans [.filename]#/var/tmp/root# commencent par un ".". Au moment où sont écrites ces lignes, les seuls fichiers concernés sont les fichiers d'initialisation des interpréteurs de commandes dans [.filename]#/var/tmp/root/# et [.filename]#/var/tmp/root/root/#, mais il pourrait y en avoir d'autres (cela dépend de quand vous lirez ces lignes). Assurez-vous d'utiliser la commande `ls -a` pour ne pas les oublier.
+
+La manière la plus simple de procéder est d'utiliser la commande man:diff[1] pour comparer les deux fichiers:
+
+[source,bash]
+....
+# diff /etc/shells /var/tmp/root/etc/shells
+....
+
+Cela vous indiquera les différences entre votre fichier [.filename]#/etc/shells# et le nouveau fichier [.filename]#/var/tmp/root//etc/shells#. A partir de là, décidez si vous aller reporter les modifications que vous y avez apportée ou si vous allez simplement recopier le nouveau fichier.
+
+[TIP]
+.Donnez au nouveau répertoire racine ([.filename]#/var/tmp/root#) un nom qui inclue une date, pour pouvoir facilement comparer les différentes versions
+====
+Si vous recompilez fréquemment votre système, cela signifie que vous devez également souvent mettre à jour le répertoire [.filename]#/etc#, ce qui peut rapidement devenir une corvée.
+
+Vous pouvez accélérer le processus en conservant une copie du dernier ensemble de fichiers modifiés que vous avez reportés dans [.filename]#/etc#. La procédure suivante présente une façon de faire.
+
+[.procedure]
+======
+. Recompilez le système comme à l'accoutumé. Au moment de mettre à jour [.filename]#/etc# et les autre répertoires, donnez au répertoire cible un nom basé sur la date du jour. Si vous faisiez cela le 14 février 1998, vous pourriez procéder comme suit:
++
+[source,bash]
+....
+# mkdir /var/tmp/root-19980214
+# cd /usr/src/etc
+# make DESTDIR=/var/tmp/root-19980214 \
+    distrib-dirs distribution
+....
++
+. Reporter les modifications depuis ce répertoire comme décrit plus haut.
++ 
+_Ne supprimez pas_ le répertoire [.filename]#/var/tmp/root-19980214# quand vous aurez terminé.
+. Quand vous récupérez la dernière version des sources et la recompilerez, suivez l'étape 1. Vous aurez alors un nouveau répertoire, qui pourrait s'appeler [.filename]#/var/tmp/root-19980221# (si vous faites une mise à jour chaque semaine).
+. Vous pouvez maintenant voir les modifications intervenues d'une semaine à l'autre en utilisant man:diff[1] pour afficher les différences entre tous les fichiers deux répertoires:
++
+[source,bash]
+....
+# cd /var/tmp
+# diff -r root-19980214 root-19980221
+....
++ 
+Généralement, il y aura beaucoup moins de différences qu'entre [.filename]#/var/tmp/root-19980221/etc# et [.filename]#/etc#. Comme il y a beaucoup moins de différences, il est beaucoup plus facile de les reporter dans le répertoire [.filename]#/etc#.
+. Vous pouvez maintenant supprimer le plus ancien des deux répertoires [.filename]#/var/tmp/root-*#:
++
+[source,bash]
+....
+# rm -rf /var/tmp/root-19980214
+....
++
+. Répétez l'opération chaque fois que vous devez reporter des modifications dans [.filename]#/etc#.
+======
+
+Vous pouvez utiliser man:date[1] pour automatiser la génération des noms de répertoires:
+
+[source,bash]
+....
+# mkdir /var/tmp/root-`date "+%Y%m%d"`
+....
+
+====
+
+[[updating-upgrading-rebooting]]
+=== Redémarrer
+
+Vous en avez terminé. Après avoir vérifié que tout semble être en place, vous pouvez alors redémarrez votre système. Un simple man:shutdown[8] devrait suffire:
+
+[source,bash]
+....
+# shutdown -r now
+....
+
+=== C'est fini
+
+Vous devriez maintenant avoir mis à jour avec succès votre système FreeBSD. Félicitations.
+
+Si les choses se sont légèrement mal passées, il est facile de recompiler un élément particulier du système. Par exemple, si vous avez accidentellement effacé [.filename]#/etc/magic# lors de la mise à jour de [.filename]#/etc#, la commande man:file[1] ne fonctionnerait plus. Dans ce cas, la solution serait d'exécuter:
+
+[source,bash]
+....
+# cd /usr/src/usr.bin/file
+# make all install
+....
+
+=== Questions
+
+=== Dois-je refaire le monde à chaque évolution?
+
+Il n'y a pas de réponse toute faite à cette question, tout dépend de la nature des évolutions. Par exemple, si vous venez juste d'exécuter CVSup, et que les fichiers suivants on été mis à jour:
+
+[source,bash]
+....
+src/games/cribbage/instr.c
+src/games/sail/pl_main.c
+src/release/sysinstall/config.c
+src/release/sysinstall/media.c
+src/shared/mk/bsd.port.mk
+....
+
+cela ne vaut probablement pas la peine de recompiler tout le système. Vous pouvez tout simplement aller dans les sous-répertoires appropriés, exécuter `make all install`, et c'est à peu près tout. Mais s'il y a des évolutions importantes, par exemple sur [.filename]#src/lib/libc/stdlib# alors vous devrez soit refaire le monde, ou recompiler au moins toutes les parties du système qui sont liées statiquement (de même que tout ce vous pourriez avoir ajouté qui y serait lié statiquement).
+
+C'est à vous de voir. Vous préférerez peut-être recompiler votre système tous les quinze jours, et laisser les modifications s'empiler pendant quinze jours. Ou bien vous préférerez ne recompiler que ce qui a changé et vous faire confiance pour tout ce qui en dépend.
+
+Et, bien sûr, cela dépend de la fréquence avec laquelle vous voulez faire vos mises à jour, et de si vous suivez la branche FreeBSD-STABLE ou FreeBSD-CURRENT.
+
+=== Ma compilation échoue avec de nombreuses erreurs "signal 11" signal 11 (ou tout autre numéro de signal). Que s'est-il passé?
+
+Cela indique généralement un problème matériel. (Re)compiler le système est un bon moyen de mettre votre matériel sous pression, et mettra souvent en évidence des défaillances de la mémoire vive. Elles se manifestent normalement d'elles-mêmes, la compilation échouant lors de la réception de mystérieux signaux.
+
+Un bon indicateur de cet état de fait, est que vous pouvez relancer la compilation et qu'elle échouera en un endroit différent.
+
+Dans ce cas, vous ne pouvez guère faire autre chose que d'intervertir les différents composants de votre matériel pour déterminer lequel est en cause.
+
+=== Puis-je effacer /usr/obj après avoir fini?
+
+Une réponse courte est oui.
+
+[.filename]#/usr/obj# contient tous les fichiers objets générés à la compilation. Normalement, une des premières étapes de `make buildworld` est de supprimer ce répertoire et de repartir à zéro. Dans ce cas, conserver le répertoire [.filename]#/usr/obj# après avoir terminé ne sert pas à grand chose, alors que vous économiseriez pas mal d'espace disque (actuellement environ 340 MO).
+
+Cependant, si vous savez ce que vous faites, vous pouvez faire en sorte que `make buildworld` saute cette étape. Cela rendra les compilations ultérieures plus rapides, puisque la plupart des sources n'auront pas besoin d'être recompilées. Le revers de la médaille est que des problèmes subtils de dépendance peuvent se manifester, provoquant l'échec de votre compilation de manière étrange. Cela génère fréquemment du bruit sur les listes de diffusion de FreeBSD, quand quelqu'un se plaint que sa mise à jour a échoué, sans réaliser que c'est parce qu'il a tenté de brûler les étapes.
+
+=== Une recompilation interrompue peut-elle être reprise?
+
+Tout dépend de jusqu'où vous êtes aller avant de rencontrer un problème.
+
+_En général_ (et ceci n'est pas une règle absolue) `make buildworld` crée de nouveaux exemplaires des outils indispensables (comme man:gcc[1] et man:make[1]) et des bibliothèques système. Ces outils et bibliothèques sont ensuite installés. Puis ils sont utilisés pour se reconstruire eux-mêmes, et installés de nouveau. L'intégralité du système (y compris maintenant les programmes utilisateurs classiques, comme man:ls[1] ou man:grep[1]) est alors recompilé avec les nouveaux fichiers système.
+
+Si vous êtes à cette dernière étape, et que vous le savez (parce que vous avez consulté les résultats que vous avez enregistrés) alors vous pouvez (sans trop de risque) faire:
+
+[source,bash]
+....
+… fix the problem …
+# cd /usr/src
+# make -DNO_CLEAN all
+....
+
+Cela ne détruira pas les résultats du travail qu'à déjà effectué `make buildworld`.
+
+Si vous voyez le message:
+
+[source,bash]
+....
+--------------------------------------------------------------
+Building everything..
+--------------------------------------------------------------
+....
+
+dans les comptes-rendus de `make buildworld` alors cette façon de procéder est probablement bonne.
+
+Si vous ne voyez pas ce message, ou que vous doutez de vous, alors prudence est mère de sûreté, et il vaut mieux tout reprendre depuis le début.
+
+=== Comment puis-je accélérer la compilation du système?
+
+* Passez en mode mono-utilisateur.
+* Mettez les répertoires [.filename]#/usr/src# et [.filename]#/usr/obj# sur des systèmes de fichiers et des disques différents. Si possible, installez ces disques sur des contrôleurs différents.
+* Encore mieux, mettez ces systèmes de fichiers sur plusieurs disques utilisant le système man:ccd[4] (pilote de disques concaténés).
+* Ne compilez pas les bibliothèques profilées (mettez "NO_PROFILE=true" dans le fichier [.filename]#/etc/make.conf#). Vous n'en avez certainement pas besoin.
+* Egalement dans [.filename]#/etc/make.conf#, positionnez `CFLAGS` à quelque chose comme `-O -pipe`. L'optimisation `-O2` est bien plus lente, et la différence d'optimisation entre `-O` et `-O2` est en général négligeable. `-pipe` demande au compilateur d'utiliser des tuyaux à la place de fichiers temporaires, ce qui économise des accès disque (mais utilise plus de mémoire).
+* Passez l'option `-j__n__` à man:make[1] pour permettre l'exécution de plusieurs processus en parallèle. Cela améliore généralement les choses, que vous ayez une machine mono- ou multi-processeurs.
+* Le système de fichiers qui contient [.filename]#/usr/src# peut être monté (ou remonté) avec l'option `noatime`. Cela empêche l'enregistrement des dates d'accès aux fichiers par le système de fichiers. Vous n'avez de toute façon probablement pas besoin de cette information.
++
+[source,bash]
+....
+# mount -u -o noatime /usr/src
+....
++
+[WARNING]
+====
+
+Cet exemple suppose que [.filename]#/usr/src# constitue à lui seul un système de fichiers. Si ce n'est pas le cas (s'il fait partie de [.filename]#/usr# par exemple) vous devez alors indiquer le point de montage de ce système de fichiers, et non [.filename]#/usr/src#.
+====
+
+* Le système de fichiers où se trouve [.filename]#/usr/obj# peut être monté (ou remonté) avec l'option `async`. Les écritures sur le disque se feront alors de façon asynchrone. En d'autres termes, le programme reprend immédiatement la main, et l'écriture des données sur le disque se fait quelques secondes plus tard. Cela permet le groupement des écritures sur le disque, et le gain en performance peut être spectaculaire.
++
+[WARNING]
+====
+
+Gardez à l'esprit que cette option rend votre système de fichiers plus fragile. Avec cette option, les risques ne sont accrus qu'en cas de coupure d'alimentation, le système de fichiers soit irrécupérable quand la machine redémarrera.
+
+S'il n'y a que [.filename]#/usr/obj# sur ce système de fichiers, ce n'est alors pas un problème. Si vous avez d'autres données importantes sur ce système de fichiers, assurez-vous que vos sauvegardes soient à jour avant d'activer cette option.
+====
++
+[source,bash]
+....
+# mount -u -o async /usr/obj
+....
++
+[WARNING]
+====
+
+Comme auparavant, si [.filename]#/usr/obj# ne constitue pas un système de fichiers en soit, remplacez-le dans l'exemple par le nom du point de montage approprié.
+====
+
+=== Que faire si quelque chose se passe mal?
+
+Soyez absolument sûr que votre environnement ne contient pas des restes de compilation précédentes. Cela est plutôt simple:
+
+[source,bash]
+....
+# chflags -R noschg /usr/obj/usr
+# rm -rf /usr/obj/usr
+# cd /usr/src
+# make cleandir
+# make cleandir
+....
+
+En effet, `make cleandir` doit vraiment être exécutée deux fois.
+
+Ensuite relancez l'ensemble du processus, en commençant avec `make buildworld`.
+
+Si vous avez toujours des problèmes, envoyez l'erreur et le résultat de la commande `uname -a` à la {freebsd-questions}. Tenez-vous prêt à répondre à d'autres concernant votre configuration!
+
+[[small-lan]]
+== Suivre les mises à jour pour plusieurs machines
+
+Si vous avez plusieurs machines dont vous voulez maintenir à jour l'arborescence des sources, alors faire télécharger et recompiler à chacune d'entre elles les sources semble un gaspillage de ressources: espace disque, bande passante réseau, et cycles CPU. C'est en effet bien le cas, et la solution est d'avoir une machine qui fait la majeure partie du travail, pendant que le reste des machines montent ce travail par NFS. Cette section décrit une façon de le faire.
+
+[[small-lan-preliminaries]]
+=== Préliminaires
+
+Premièrement, identifiez un ensemble de machines qui va utiliser le même ensemble de binaires, que nous appellerons un _ensemble de compilation_. Chaque machine peut avoir un noyau personnalisé, mais elles exécuteront les mêmes binaires utilisateur du système de base. Dans cet ensemble de machine, choisissez une machine qui sera la _machine de compilation_. Cela sera la machine sur laquelle le monde et le noyau seront compilés. Idéalement, cela devrait être une machine rapide avec un CPU suffisamment disponible pour exécuter la commande `make buildworld` et `make buildkernel`. Vous voudrez également utiliser une _machine de test_, qui testera les mises à jour logicielles avant d'être utilisées en production. Cela _doit_ être une machine que vous pouvez vous permettre d'avoir hors service pour une longue période. Cela peut être la machine de compilation, mais cela n'est pas obligatoire.
+
+Toutes les machines de cet ensemble de compilation doivent monter [.filename]#/usr/obj# et [.filename]#/usr/src# à partir de la même machine, et du même point de montage. Idéalement, ces derniers sont sur deux disques différents sur la machine de compilation, mais peuvent également être montés par NFS sur cette machine. Si vous avez plusieurs ensembles de compilation, [.filename]#/usr/src# devrait être sur une machine de compilation, et monté par NFS sur les autres.
+
+Finalement assurez-vous que [.filename]#/etc/make.conf# et [.filename]#/etc/src.conf# sur toutes les machines de l'ensemble de compilation sont en accord avec la machine de compilation. Cela signifie que la machine de compilation doit compiler toutes les parties du système de base que toute machine de l'ensemble de compilation va installer. De plus, chaque machine de compilation devra avoir son nom de noyau défini avec `KERNCONF` dans [.filename]#/etc/make.conf#, et la machine de compilation devrait tous les lister dans `KERNCONF`, en listant son noyau en premier. La machine de compilation doit avoir les fichiers de configuration des noyaux de chaque machine dans [.filename]#/usr/src/sys/arch/conf# si elle va compiler leur noyau.
+
+=== Le système de base
+
+Maintenant que tout est configuré, vous êtes fin prêt pour tout compiler. Compilez le noyau et le monde sur la machine de compilation comme décrit dans la <<make-buildworld>>, mais n'installez rien. La compilation une fois terminée, allez sur la machine de test, et installez le noyau que vous venez juste de compiler. Si la machine monte [.filename]#/usr/src# et [.filename]#/usr/obj# via NFS, quand vous redémarrez en mode mono-utilisateur vous devrez activer le réseau et monter ces répertoires. La méthode la plus simple est de démarrer en mode multi-utilisateur, puis exécutez `shutdown now` pour passer en mode mono-utilisateur. Une fois à ce niveau, vous pouvez installer le nouveau noyau et monde puis exécuter `mergemaster` comme vous le feriez habituellement. Une fois cela effectué, redémarrez pour retourner en mode multi-utilisateur pour cette machine.
+
+Après que vous soyez certain que tout fonctionne correctement sur la machine de test, utilisez la même procédure pour installer le nouvel ensemble logiciel sur chacune des autres machines de l'ensemble de compilation.
+
+=== Les logiciels portés
+
+La même idée peut être utilisée pour le catalogue des logiciels portés. La première étape critique est de monter [.filename]#/usr/ports# depuis la même machine vers toutes les machines de l'ensemble de compilation. Vous pouvez alors configurer correctement [.filename]#/etc/make.conf# pour partager les archives. Vous devrez faire pointer `DISTDIR` sur un répertoire de partage commun dans lequel peut écrire n'importe quel utilisateur utilisé pour correspondance de l'utilisateur `root` par vos montages NFS. Chaque machine devrait faire pointer `WRKDIRPREFIX` sur une répertoire de compilation local. Et enfin, si vous projetez de compiler et distribuer des logiciels précompilés, vous devriez fixer `PACKAGES` sur un répertoire similaire à `DISTDIR`.

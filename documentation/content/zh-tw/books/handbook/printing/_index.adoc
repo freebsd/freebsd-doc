@@ -1,0 +1,755 @@
+---
+title: 章 9. 列印
+part: 部 II. 一般作業
+prev: books/handbook/kernelconfig
+next: books/handbook/linuxemu
+---
+
+[[printing]]
+= 列印
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例 
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 9
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/printing/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/printing/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/printing/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-tw/mailing-lists.adoc[]
+include::shared/zh-tw/urls.adoc[]
+include::shared/zh-tw/teams.adoc[]
+
+toc::[]
+
+儘管很多人試圖淘汰列印功能，但列印資訊到紙上仍是一個重要的功能。列印由兩個基本元件組成，包含了資料傳送到印表機的方式以及印表機可以理解的資料形式。
+
+[[printing-quick-start]]
+== 快速開始
+
+基本的列印功能可以快速設定完成，列印機必須能夠列印純 ASCII 文字。若要列印其他類型的檔案，請參考 <<printing-lpd-filters>>。
+
+[.procedure]
+====
+. 建立一個目錄來儲存要被列印的檔案：
++
+[source,bash]
+....
+# mkdir -p /var/spool/lpd/lp
+# chown daemon:daemon /var/spool/lpd/lp
+# chmod 770 /var/spool/lpd/lp
+....
++
+. 以 `root` 建立 [.filename]#/etc/printcap# 內容如下：
++
+[.programlisting]
+....
+lp:\
+	:lp=/dev/unlpt0:\  <.>
+	:sh:\
+	:mx#0:\
+	:sd=/var/spool/lpd/lp:\
+	:lf=/var/log/lpd-errs:
+....
++
+<.> 此行是針對連接到 USB 埠的印表機。連接到並列或 "印表器 (Printer)" 埠的印表機要使用：直接連接到網路的印表機要使用：替換 _network-printer-name_ 為網路印表機的 DNS 主機名稱。
+. 編輯 [.filename]#/etc/rc.conf# 加入下行來開啟 `lpd`：
++
+[.programlisting]
+....
+lpd_enable="YES"
+....
++ 
+啟動服務：
++
+[source,bash]
+....
+# service lpd start
+Starting lpd.
+....
++
+. 測試列印：
++
+[source,bash]
+....
+# printf "1. This printer can print.\n2. This is the second line.\n" | lpr
+....
++
+[TIP]
+======
+
+若列印的兩行未從左邊界開始，而是呈現 "階梯狀 (Stairstep)"，請參考 <<printing-lpd-filters-stairstep>>。
+======
++ 
+現在可以使用 `lpr` 來列印文字檔，只要在指令列給序檔案名稱，或者將輸出使用管線符號 (Pipe) 傳送給 `lpr`。
++
+[source,bash]
+....
+% lpr textfile.txt
+% ls -lh | lpr
+....
+====
+
+[[printing-connections]]
+== 印表機連線
+
+印表機有許多方式可以連接到電腦，小型的桌面印表機會直接連接到電腦的 USB 埠，舊式的印表機會連接到並列 (Parallel) 或 "印表機 (Printer)" 埠，而有一部份印表機則是直接連接網路，讓印表機能夠給多台電腦共享使用，還有少部分印表機則是連接到較罕見的序列 (Serial) 埠。
+
+FreeBSD 可以與這些類型的印表機溝通。
+
+[[printing-connections-usb]]
+USB::
+USB 印表機可以連接到電腦上任何可用的 USB 埠。
++
+當 FreeBSD 偵測到 USB 印表機，會建立兩個裝置項目：[.filename]#/dev/ulpt0# 以及 [.filename]#/dev/unlpt0#，傳送到兩者任一裝置的資料都會被轉發到印表機。在每個列印工作完成後 [.filename]#ulpt0# 便會重設 USB 埠，重設 USB 埠可能會在部份印表機造成問題，因此通常可以改使用 [.filename]#unlpt0# 裝置。[.filename]#unlpt0# 不會重設 USB 埠。
+
+[[printing-connections-parallel]]
+並列 (IEEE-1284)::
+並列埠裝置使用 [.filename]#/dev/lpt0#，此裝置不論印表機是否連接上都會存在，它並不會自動偵測。
++
+供應商已不再採用這種 "舊式" 連接埠，且有許多電腦甚至已沒有這種連接埠。可以用轉接器來連接並列印表機到 USB 埠，有了轉接器，並列印表機可以被當作 USB 印表機使用。有另一種稱作 _列印伺服器 (Print server)_ 的裝置也可用來連接並列印表機到網路。
+
+[[printing-connections-serial]]
+序列 (RS-232)::
+序列埠也是另一種舊式連接埠，已很少用在印表機上，除了某些特殊的應用外，纜線、接頭與需要的佈線方式依需求變化性很大。
++
+內建在主機板的序列埠的序列裝置名稱為 [.filename]#/dev/cuau0# 或 [.filename]#/dev/cuau1#。也有序列 USB 轉接器可使用，而裝置的的名稱則會是 [.filename]#/dev/cuaU0#。
++
+要與序列印表機通訊必須知道數個通訊參數，其中最重要的是 _傳輸速率 (Baud rate)_ 或 BPS (Bits Per Second) 以及 _同位檢查 (Parity)_。數值有數種，但一般序列印表機會使用 的傳輸速率是 9600 且無同位檢查。
+
+[[printing-connections-network]]
+網路::
+網路印表機可直接連接到區域網路。
++
+若印表機透過 DHCP 分配動態位址，則必須要知道 DNS 主機名稱，DNS 應動態更新來讓主機名稱能夠對應到正確的 IP 位址。指定網路印表機一個靜態的 IP 位址可避免這個問題。
++
+大多數網路印表機可以認得使用 LPD 通訊協定所送出的列印工作，列印佇列 (Print queue) 的名稱也會在這時指定。部份印表機會依據使用的佇列來決定處理資料的方式，例如 `raw` 佇列會列印原始資料，而 `text` 佇列則會在純文字上增加換行符號 (Carriage return)。
++
+大部份網路印表機也可列印直接傳送到埠號 9100 的資料。
+
+[[printing-connections-summary]]
+=== 摘要
+
+有線網路連線通常是安裝最簡單的方式，且可以提供快速的列印。若要直接連接到電腦，較建議使用 USB，由於較快速、簡單。並列連線仍然可以使用，但有纜線長度與速度上的限制。而序列連線則比較難設定，不同型號的纜線佈線方式不同，且通訊參數如傳輸速率及同位檢查增加了複雜性，所幸序列印表機並不多。
+
+[[printing-pdls]]
+== 常見的頁面描述語言
+
+傳送給印表機的資料必須使用印表機能夠理解的語言，這些語言稱為頁面描述語言 (Page Description Languages) 或 PDL。
+
+[[print-pdls-ascii]]
+ASCII::
+純 ASCII 文字是傳送資料到印表機最簡單的方式，一個字元對應一個要列印的文字：資料中的 `A` 會列印一個 `A` 在頁面。可以使用的格式非常少，沒有辦法選擇字型或者比例間距。強迫使用簡單的純 ASCII 為的是讓文字可以直接從電腦列印只需一點或甚至不需要編碼或轉譯，列印的結果可直接對應傳送的內容。
++
+部份便宜印表機無法列印純 ASCII 文字，這讓這些印表機較難設定。
+
+[[print-pdls-postscript]]
+PostScript(TM)::
+PostScript(TM) 與 ASCII 幾乎相反，與簡單的文字不同，PostScript(TM) 程式語言有一套指令可以繪出最終所要的文件，可以使用不同的字型與圖形，但是，這樣強大的功能是有代價的，繪製頁面需要搛寫程式語言，通常這個程式語言會由應用程式產生，所以使用者是看不到的。
++
+便宜的印表機有時會移除 PostScript(TM) 的相容性來節省成本。
+
+[[print-pdls-pcl]]
+PCL (Printer Command Language)::
+PCL 由 ASCII 延伸而來，加入了跳脫序列 (Escape sequence) 來標示格式、選擇字型以及列印圖型。大部份印表機都支援 PCL5，少數支援較新的 PCL6 或 PCLXL，這些後來的版本是 PCL5 的超集合 (Superset)，並可以提供更快的列印速度。
+
+[[print-pdls-host-based]]
+以主機為基礎 (Host-Based)::
+製造商可能會使用簡單的處理器和較小的記憶體來降低印表機的成本，這些印表機無法列印純文字，相反的，文字與圖形會先在機器上的驅動程式畫完後傳送到印表機。這些稱為__以主機為基礎 (Host-based)__ 的印表機。
++
+驅動程式與以主機為基礎的印表機通訊通常會透過專用或無文件的通訊協定，這讓這些印表機只能在最常用的作業系統上運作。
+
+[[print-pdls-table]]
+=== 轉換 PostScript(TM) 至其他 PDL
+
+Port 套件集與 FreeBSD 工具集有許多可以處理 PostScript(TM) 輸出的應用程式，此表整理出了可轉換 PostScript(TM) 成其他常用 PDL 的工具：
+
+[[print-pdls-ps-to-other-tbl]]
+.輸出 PDL 格式
+[cols="1,1,1", frame="none", options="header"]
+|===
+<| 輸出 PDL
+<| 產生由
+<| 說明
+
+|PCL 或 PCL5
+|package:print/ghostscript9-base[]
+|單色使用 `-sDEVICE=ljet4`、彩色使用 `-sDEVICE=cljet5`
+
+|PCLXL 或 PCL6
+|package:print/ghostscript9-base[]
+|單色使用 `-sDEVICE=pxlmono`、彩色使用 `-sDEVICE=pxlcolor`
+
+|ESC/P2
+|package:print/ghostscript9-base[]
+|`-sDEVICE=uniprint`
+
+|XQX
+|package:print/foo2zjs[]
+|
+|===
+
+[[print-pdls-summary]]
+=== 摘要
+
+要可以列印最簡單的方式就是選擇支援 PostScript(TM) 的印表機，再來是支援 PCL 的印表機，有了 package:print/ghostscript9-base[] 這些印表機也可像原生支援 PostScript(TM) 的印表機一般使用。有直接支援 PostScript(TM) 或 PCL 的印表機通常也會直接支援純 ASCII 文字檔案。
+
+行列式印表機如同典型的噴墨式印表機通常不支援 PostScript(TM) 或 PCL，這種印表機通常可以列印純 ASCII 文字檔案。package:print/ghostscript9-base[] 支援部份這種印表機使用的 PDL，不過要在這種印表機上列印完全以圖型為基礎的頁面通常會非常緩慢，由於需要傳送大量的資料並列印。
+
+以主機為基礎的印表機通常較難設定，有些會因為用了專用的 PDL 而無法使用，盡可能避免使用這類的印表機。
+
+有關各種 PDL 的介紹可至 http://www.undocprint.org/formats/page_description_languages[]。各種型號印表機所使用的特定 PDL 可至 http://www.openprinting.org/printers[] 查詢。
+
+[[printing-direct]]
+== 直接列印
+
+對於偶爾列印，檔案可以直接傳送到印表機裝置，無需做任何設定。例如，要傳送一個名稱為 [.filename]#sample.txt# 的檔案到 USB 印表機：
+
+[source,bash]
+....
+# cp sample.txt /dev/unlpt0
+....
+
+要直接使用網路印表機列印需看該印表機支援的功能，但大多數會接受埠號 9100 的列印作業，可使用 man:nc[1] 來完成。要使用 DNS 主機名稱為 _netlaser_ 的印表機列印與上述相同的檔案可：
+
+[source,bash]
+....
+# nc netlaser 9100 < sample.txt
+....
+
+[[printing-lpd]]
+== LPD (行列式印表機 Daemon)
+
+在背景列印一個檔案稱作 _Spooling_，緩衝程式 (Spooler) 讓使用者能夠繼續執行電腦的其他程式而不需要等候印表機緩慢的完成列印工作。
+
+FreeBSD 內含的緩衝程式 (Spooler) 稱作 man:lpd[8]，而列印工作會使用 man:lpr[1] 來提交。
+
+[[printing-lpd-setup]]
+=== 初始設定
+
+建立要用來儲存列印工作的目錄、設定擁有關係以及權限來避免其他使用者可以檢視這些檔案的內容：
+
+[source,bash]
+....
+# mkdir -p /var/spool/lpd/lp
+# chown daemon:daemon /var/spool/lpd/lp
+# chmod 770 /var/spool/lpd/lp
+....
+
+印表機會定義在 [.filename]#/etc/printcap#，每台印表機項目所包含的詳細資料有名稱、連接的接頭以及各種其他設定。建立 [.filename]#/etc/printcap# 使用以下內容：
+
+[.programlisting]
+....
+lp:\				<.>
+	:lp=/dev/unlpt0:\	<.>
+	:sh:\			<.>
+	:mx#0:\			<.>
+	:sd=/var/spool/lpd/lp:\	<.>
+	:lf=/var/log/lpd-errs:	<.>
+....
+
+<.> 印表機的名稱。 man:lpr[1] 會傳送列印工作到 `lp` 印表機，除非有使用 `-P` 來指定其他印表機，所以預的印表機名稱應使用 `lp`。
+<.> 印表機所連接到裝置。替換此行為正確的連線類型，如此處所示。
+<.> 在列印工作開始時不列印首頁。
+<.> 不限制列印工作的最大尺寸。
+<.> 此印表機的緩衝 (Spooling) 目錄路徑，每台印表機會自己使用一個獨立的緩衝 (Spooling) 目錄。
+<.> 回報此印表機的錯誤的日誌檔。
+
+在建立 [.filename]#/etc/printcap# 之後，使用 man:chkprintcap[8] 測試印表機是否有錯誤：
+
+[source,bash]
+....
+# chkprintcap
+....
+
+在繼續之前修正任何回報的問題。
+
+開啟 [.filename]#/etc/rc.conf# 中的 man:lpd[8]：
+
+[.programlisting]
+....
+lpd_enable="YES"
+....
+
+啟動服務：
+
+[source,bash]
+....
+# service lpd start
+....
+
+[[printing-lpd-lpr]]
+=== 使用 man:lpr[1] 列印
+
+Documents are sent to the printer with `lpr`. A file to be printed can be named on the command line or piped into `lpr`. These two commands are equivalent, sending the contents of [.filename]#doc.txt# to the default printer:
+
+[source,bash]
+....
+% lpr doc.txt
+% cat doc.txt | lpr
+....
+
+Printers can be selected with `-P`. To print to a printer called _laser_:
+
+[source,bash]
+....
+% lpr -Plaser doc.txt
+....
+
+[[printing-lpd-filters]]
+=== 過濾器
+
+The examples shown so far have sent the contents of a text file directly to the printer. As long as the printer understands the content of those files, output will be printed correctly.
+
+Some printers are not capable of printing plain text, and the input file might not even be plain text.
+
+_Filters_ allow files to be translated or processed. The typical use is to translate one type of input, like plain text, into a form that the printer can understand, like PostScript(TM) or PCL. Filters can also be used to provide additional features, like adding page numbers or highlighting source code to make it easier to read.
+
+The filters discussed here are _input filters_ or _text filters_. These filters convert the incoming file into different forms. Use man:su[1] to become `root` before creating the files.
+
+Filters are specified in [.filename]#/etc/printcap# with the `if=` identifier. To use [.filename]#/usr/local/libexec/lf2crlf# as a filter, modify [.filename]#/etc/printcap# like this:
+
+[.programlisting]
+....
+lp:\
+	:lp=/dev/unlpt0:\
+	:sh:\
+	:mx#0:\
+	:sd=/var/spool/lpd/lp:\
+	:if=/usr/local/libexec/lf2crlf:\   <.>
+	:lf=/var/log/lpd-errs:
+....
+
+<.> `if=` identifies the _input filter_ that will be used on incoming text.
+
+[TIP]
+====
+
+The backslash _line continuation_ characters at the end of the lines in [.filename]#printcap# entries reveal that an entry for a printer is really just one long line with entries delimited by colon characters. An earlier example can be rewritten as a single less-readable line:
+
+[.programlisting]
+....
+lp:lp=/dev/unlpt0:sh:mx#0:sd=/var/spool/lpd/lp:if=/usr/local/libexec/lf2crlf:lf=/var/log/lpd-errs:
+....
+
+====
+
+[[printing-lpd-filters-stairstep]]
+==== 避免在純文字印表機階梯狀列印
+
+Typical FreeBSD text files contain only a single line feed character at the end of each line. These lines will "stairstep" on a standard printer:
+
+[.programlisting]
+....
+A printed file looks
+                    like the steps of a staircase
+                                                 scattered by the wind
+....
+
+A filter can convert the newline characters into carriage returns and newlines. The carriage returns make the printer return to the left after each line. Create [.filename]#/usr/local/libexec/lf2crlf# with these contents:
+
+[.programlisting]
+....
+#!/bin/sh
+CR=$'\r'
+/usr/bin/sed -e "s/$/${CR}/g"
+....
+
+Set the permissions and make it executable:
+
+[source,bash]
+....
+# chmod 555 /usr/local/libexec/lf2crlf
+....
+
+Modify [.filename]#/etc/printcap# to use the new filter:
+
+[.programlisting]
+....
+:if=/usr/local/libexec/lf2crlf:\
+....
+
+Test the filter by printing the same plain text file. The carriage returns will cause each line to start at the left side of the page.
+
+[[printing-lpd-filters-enscript]]
+==== 使用 package:print/enscript[] 在 PostScript(TM) 印表機美化純文字內容
+
+GNUEnscript converts plain text files into nicely-formatted PostScript(TM) for printing on PostScript(TM) printers. It adds page numbers, wraps long lines, and provides numerous other features to make printed text files easier to read. Depending on the local paper size, install either package:print/enscript-letter[] or package:print/enscript-a4[] from the Ports Collection.
+
+Create [.filename]#/usr/local/libexec/enscript# with these contents:
+
+[.programlisting]
+....
+#!/bin/sh
+/usr/local/bin/enscript -o -
+....
+
+Set the permissions and make it executable:
+
+[source,bash]
+....
+# chmod 555 /usr/local/libexec/enscript
+....
+
+Modify [.filename]#/etc/printcap# to use the new filter:
+
+[.programlisting]
+....
+:if=/usr/local/libexec/enscript:\
+....
+
+Test the filter by printing a plain text file.
+
+[[printing-lpd-filters-ps2pcl]]
+==== 列印 PostScript(TM) 到 PCL 印表機
+
+Many programs produce PostScript(TM) documents. However, inexpensive printers often only understand plain text or PCL. This filter converts PostScript(TM) files to PCL before sending them to the printer.
+
+由 Port 套件集安裝 Ghostscript PostScript(TM) 直譯器，package:print/ghostscript9-base[]。
+
+Create [.filename]#/usr/local/libexec/ps2pcl# with these contents:
+
+[.programlisting]
+....
+#!/bin/sh
+/usr/local/bin/gs -dSAFER -dNOPAUSE -dBATCH -q -sDEVICE=ljet4 -sOutputFile=- -
+....
+
+Set the permissions and make it executable:
+
+[source,bash]
+....
+# chmod 555 /usr/local/libexec/ps2pcl
+....
+
+PostScript(TM) input sent to this script will be rendered and converted to PCL before being sent on to the printer.
+
+Modify [.filename]#/etc/printcap# to use this new input filter:
+
+[.programlisting]
+....
+:if=/usr/local/libexec/ps2pcl:\
+....
+
+Test the filter by sending a small PostScript(TM) program to it:
+
+[source,bash]
+....
+% printf "%%\!PS \n /Helvetica findfont 18 scalefont setfont \
+72 432 moveto (PostScript printing successful.) show showpage \004" | lpr
+....
+
+[[printing-lpd-filters-smart]]
+==== 智慧過濾器
+
+A filter that detects the type of input and automatically converts it to the correct format for the printer can be very convenient. The first two characters of a PostScript(TM) file are usually `%!`. A filter can detect those two characters. PostScript(TM) files can be sent on to a PostScript(TM) printer unchanged. Text files can be converted to PostScript(TM) with Enscript as shown earlier. Create [.filename]#/usr/local/libexec/psif# with these contents:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+#  psif - Print PostScript or plain text on a PostScript printer
+#
+IFS="" read -r first_line
+first_two_chars=`expr "$first_line" : '\(..\)'`
+
+case "$first_two_chars" in
+%!)
+    # %! : PostScript job, print it.
+    echo "$first_line" && cat && exit 0
+    exit 2
+    ;;
+*)
+    # otherwise, format with enscript
+    ( echo "$first_line"; cat ) | /usr/local/bin/enscript -o - && exit 0
+    exit 2
+    ;;
+esac
+....
+
+Set the permissions and make it executable:
+
+[source,bash]
+....
+# chmod 555 /usr/local/libexec/psif
+....
+
+Modify [.filename]#/etc/printcap# to use this new input filter:
+
+[.programlisting]
+....
+:if=/usr/local/libexec/psif:\
+....
+
+Test the filter by printing PostScript(TM) and plain text files.
+
+[[printing-lpd-filters-othersmart]]
+==== 其他智慧過濾器
+
+Writing a filter that detects many different types of input and formats them correctly is challenging. package:print/apsfilter[] from the Ports Collection is a smart "magic" filter that detects dozens of file types and automatically converts them to the PDL understood by the printer. See http://www.apsfilter.org[] for more details.
+
+[[printing-lpd-queues]]
+=== 多序列
+
+The entries in [.filename]#/etc/printcap# are really definitions of _queues_. There can be more than one queue for a single printer. When combined with filters, multiple queues provide users more control over how their jobs are printed.
+
+As an example, consider a networked PostScript(TM) laser printer in an office. Most users want to print plain text, but a few advanced users want to be able to print PostScript(TM) files directly. Two entries can be created for the same printer in [.filename]#/etc/printcap#:
+
+[.programlisting]
+....
+textprinter:\
+	:lp=9100@officelaser:\
+	:sh:\
+	:mx#0:\
+	:sd=/var/spool/lpd/textprinter:\
+	:if=/usr/local/libexec/enscript:\
+	:lf=/var/log/lpd-errs:
+
+psprinter:\
+	:lp=9100@officelaser:\
+	:sh:\
+	:mx#0:\
+	:sd=/var/spool/lpd/psprinter:\
+	:lf=/var/log/lpd-errs:
+....
+
+Documents sent to `textprinter` will be formatted by the [.filename]#/usr/local/libexec/enscript# filter shown in an earlier example. Advanced users can print PostScript(TM) files on `psprinter`, where no filtering is done.
+
+This multiple queue technique can be used to provide direct access to all kinds of printer features. A printer with a duplexer could use two queues, one for ordinary single-sided printing, and one with a filter that sends the command sequence to enable double-sided printing and then sends the incoming file.
+
+[[printing-lpd-monitor]]
+=== 監視與控制列印
+
+Several utilities are available to monitor print jobs and check and control printer operation.
+
+[[printing-lpd-monitor-lpq]]
+==== man:lpq[1]
+
+man:lpq[1] shows the status of a user's print jobs. Print jobs from other users are not shown.
+
+Show the current user's pending jobs on a single printer:
+
+[source,bash]
+....
+% lpq -Plp
+Rank   Owner      Job  Files                                 Total Size
+1st    jsmith     0    (standard input)                      12792 bytes
+....
+
+Show the current user's pending jobs on all printers:
+
+[source,bash]
+....
+% lpq -a
+lp:
+Rank   Owner      Job  Files                                 Total Size
+1st    jsmith     1    (standard input)                      27320 bytes
+
+laser:
+Rank   Owner      Job  Files                                 Total Size
+1st    jsmith     287  (standard input)                      22443 bytes
+....
+
+[[printing-lpd-monitor-lprm]]
+==== man:lprm[1]
+
+man:lprm[1] is used to remove print jobs. Normal users are only allowed to remove their own jobs. `root` can remove any or all jobs.
+
+Remove all pending jobs from a printer:
+
+[source,bash]
+....
+# lprm -Plp -
+dfA002smithy dequeued
+cfA002smithy dequeued
+dfA003smithy dequeued
+cfA003smithy dequeued
+dfA004smithy dequeued
+cfA004smithy dequeued
+....
+
+Remove a single job from a printer. man:lpq[1] is used to find the job number.
+
+[source,bash]
+....
+% lpq
+Rank   Owner      Job  Files                                 Total Size
+1st    jsmith     5    (standard input)                      12188 bytes
+% lprm -Plp 5
+dfA005smithy dequeued
+cfA005smithy dequeued
+....
+
+[[printing-lpd-monitor-lpc]]
+==== man:lpc[8]
+
+man:lpc[8] is used to check and modify printer status. `lpc` is followed by a command and an optional printer name. `all` can be used instead of a specific printer name, and the command will be applied to all printers. Normal users can view status with man:lpc[8]. Only `root` can use commands which modify printer status.
+
+Show the status of all printers:
+
+[source,bash]
+....
+% lpc status all
+lp:
+	queuing is enabled
+	printing is enabled
+	1 entry in spool area
+	printer idle
+laser:
+	queuing is enabled
+	printing is enabled
+	1 entry in spool area
+	waiting for laser to come up
+....
+
+Prevent a printer from accepting new jobs, then begin accepting new jobs again:
+
+[source,bash]
+....
+# lpc disable lp
+lp:
+	queuing disabled
+# lpc enable lp
+lp:
+	queuing enabled
+....
+
+Stop printing, but continue to accept new jobs. Then begin printing again:
+
+[source,bash]
+....
+# lpc stop lp
+lp:
+	printing disabled
+# lpc start lp
+lp:
+	printing enabled
+	daemon started
+....
+
+Restart a printer after some error condition:
+
+[source,bash]
+....
+# lpc restart lp
+lp:
+	no daemon to abort
+	printing enabled
+	daemon restarted
+....
+
+Turn the print queue off and disable printing, with a message to explain the problem to users:
+
+[source,bash]
+....
+# lpc down lp Repair parts will arrive on Monday
+lp:
+	printer and queuing disabled
+	status message is now: Repair parts will arrive on Monday
+....
+
+Re-enable a printer that is down:
+
+[source,bash]
+....
+# lpc up lp
+lp:
+	printing enabled
+	daemon started
+....
+
+See man:lpc[8] for more commands and options.
+
+[[printing-lpd-shared]]
+=== 分享印表機
+
+Printers are often shared by multiple users in businesses and schools. Additional features are provided to make sharing printers more convenient.
+
+[[printing-shared-aliases]]
+==== 別名
+
+The printer name is set in the first line of the entry in [.filename]#/etc/printcap#. Additional names, or _aliases_, can be added after that name. Aliases are separated from the name and each other by vertical bars:
+
+[.programlisting]
+....
+lp|repairsprinter|salesprinter:\
+....
+
+Aliases can be used in place of the printer name. For example, users in the Sales department print to their printer with
+
+[source,bash]
+....
+% lpr -Psalesprinter sales-report.txt
+....
+
+Users in the Repairs department print to _their_ printer with
+
+[source,bash]
+....
+% lpr -Prepairsprinter repairs-report.txt
+....
+
+All of the documents print on that single printer. When the Sales department grows enough to need their own printer, the alias can be removed from the shared printer entry and used as the name of a new printer. Users in both departments continue to use the same commands, but the Sales documents are sent to the new printer.
+
+[[printing-shared-headers]]
+==== 頁首
+
+It can be difficult for users to locate their documents in the stack of pages produced by a busy shared printer. _Header pages_ were created to solve this problem. A header page with the user name and document name is printed before each print job. These pages are also sometimes called _banner_ or _separator_ pages.
+
+Enabling header pages differs depending on whether the printer is connected directly to the computer with a USB, parallel, or serial cable, or is connected remotely over a network.
+
+Header pages on directly-connected printers are enabled by removing the `:sh:\` (Suppress Header) line from the entry in [.filename]#/etc/printcap#. These header pages only use line feed characters for new lines. Some printers will need the [.filename]#/usr/shared/examples/printing/hpif# filter to prevent stairstepped text. The filter configures PCL printers to print both carriage returns and line feeds when a line feed is received.
+
+Header pages for network printers must be configured on the printer itself. Header page entries in [.filename]#/etc/printcap# are ignored. Settings are usually available from the printer front panel or a configuration web page accessible with a web browser.
+
+[[printing-lpd-references]]
+=== 參考文獻
+
+Example files: [.filename]#/usr/shared/examples/printing/#.
+
+The _4.3BSD Line Printer Spooler Manual_, [.filename]#/usr/shared/doc/smm/07.lpd/paper.ascii.gz#.
+
+Manual pages: man:printcap[5], man:lpd[8], man:lpr[1], man:lpc[8], man:lprm[1], man:lpq[1].
+
+[[printing-other]]
+== 其他列印系統
+
+Several other printing systems are available in addition to the built-in man:lpd[8]. These systems offer support for other protocols or additional features.
+
+[[printing-other-cups]]
+=== CUPS (Common UNIX(TM) Printing System)
+
+CUPS is a popular printing system available on many operating systems. Using CUPS on FreeBSD is documented in a separate article: link:{cups}[CUPS]
+
+[[printing-other-hplip]]
+=== HPLIP
+
+Hewlett Packard provides a printing system that supports many of their inkjet and laser printers. The port is package:print/hplip[]. The main web page is at http://hplipopensource.com/hplip-web/index.html[]. The port handles all the installation details on FreeBSD. Configuration information is shown at http://hplipopensource.com/hplip-web/install/manual/hp_setup.html[].
+
+[[printing-other-lprng]]
+=== LPRng
+
+LPRng was developed as an enhanced alternative to man:lpd[8]. The port is package:sysutils/LPRng[]. For details and documentation, see http://www.lprng.com/[].

@@ -1,0 +1,654 @@
+---
+title: "第 20 章 GEOM: 模块化磁盘变换框架"
+part: 部分 III. 系统管理
+prev: books/handbook/disks
+next: books/handbook/filesystems
+---
+
+[[geom]]
+= GEOM: 模块化磁盘变换框架
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 20
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../../images/books/handbook/geom/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/geom/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/geom/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+[[GEOM-synopsis]]
+== 概述
+
+本章将介绍以 FreeBSD GEOM 框架来使用磁盘。 这包括了使用这一框架来配置的主要的 RAID 控制工具。 这一章不会深入讨论 GEOM 如何处理或控制 I/O、 其下层的子系统或代码。 您可以从 man:geom[4] 联机手册及其众多 SEE ALSO 参考文献中得到这些信息。 这一章也不是对 RAID 配置的权威介绍， 它只介绍由 支持GEOM 的 RAID 级别。
+
+读完这章， 您将了解：
+
+* 通过 GEOM 支持的 RAID 类型。
+* 如何使用基本工具来配置和管理不同的 RAID 级别。
+* 如何通过 GEOM 使用镜像、 条带、 加密和挂接在远程的磁盘设备。
+* 如何排除挂接在 GEOM 框架上的磁盘设备的问题。
+
+阅读这章之前， 您应：
+
+* 理解 FreeBSD 如何处理磁盘设备 (crossref:disks[disks,存储])。
+* 了解如何配置和安装新的 FreeBSD 内核 (crossref:kernelconfig[kernelconfig,配置FreeBSD的内核])。
+
+[[GEOM-intro]]
+== GEOM 介绍
+
+GEOM 允许访问和控制类 (classes) - 主引导记录、 BSD 标签 (label)， 等等 - 通过使用 provider， 或在 [.filename]#/dev# 中的特殊文件。 它支持许多软件 RAID 配置， GEOM 能够向操作系统， 以及在其上运行的工具提供透明的访问方式。
+
+[[GEOM-striping]]
+== RAID0 - 条带
+
+条带是一种将多个磁盘驱动器合并为一个卷的方法。 许多情况下， 这是通过硬件控制器来完成的。 GEOM 磁盘子系统提供了 RAID0 的软件支持， 它也成为磁盘条带。
+
+在 RAID0 系统中， 数据被分为多个块， 这些块将分别写入阵列的所有磁盘。 与先前需要等待系统将 256k 数据写到一块磁盘上不同， RAID0 系统， 能够同时分别将打碎的 64k 写到四块磁盘上， 从而提供更好的 I/O 性能。 这一性能提升还能够通过使用多个磁盘控制器来进一步改进。
+
+在 RAID0 条带中的每一个盘的尺寸必须一样， 因为 I/O 请求是分散到多个盘上的， 以便让这些盘上的读写并行完成。
+
+image::striping.png[磁盘条带图]
+
+[.procedure]
+====
+*Procedure: 在未格式化的 ATA 磁盘上建立条带*
+
+. 加载 [.filename]#geom_stripe.ko# 模块：
++
+[source,bash]
+....
+# kldload geom_stripe
+....
++
+. 确信存在合适的挂接点 (mount point)。 如果这个卷将成为根分区， 那么暂时把它挂接到其他位置i， 如 [.filename]#/mnt#：
++
+[source,bash]
+....
+# mkdir /mnt
+....
++
+. 确定将被做成条带卷的磁盘的设备名， 并创建新的条带设备。 举例而言， 要将两个未用的、 尚未分区的 ATA 磁盘 [.filename]#/dev/ad2# 和 [.filename]#/dev/ad3# 做成一个条带设备：
++
+[source,bash]
+....
+# gstripe label -v st0 /dev/ad2 /dev/ad3
+Metadata value stored on /dev/ad2.
+Metadata value stored on /dev/ad3.
+Done.
+....
++
+. 接着需要写标准的 label， 也就是通常所说的分区表到新卷上， 并安装标准的引导代码：
++
+[source,bash]
+....
+# bsdlabel -wB /dev/stripe/st0
+....
++
+. 上述过程将在 [.filename]#/dev/stripe# 目录中的 [.filename]#st0# 设备基础上建立两个新设备。 这包括 [.filename]#st0a# 和 [.filename]#st0c#。 这时， 就可以在 [.filename]#st0a# 设备上用下述 `newfs` 命令来建立文件系统了：
++
+[source,bash]
+....
+# newfs -U /dev/stripe/st0a
+....
++ 
+在屏幕上将滚过一些数字， 整个操作应该能在数秒内完成。 现在可以挂接刚刚做好的卷了。
+====
+
+要挂接刚创建的条带盘：
+
+[source,bash]
+....
+# mount /dev/stripe/st0a /mnt
+....
+
+要在启动过程中自动挂接这个条带上的文件系统， 需要把关于卷的信息放到 [.filename]#/etc/fstab# 文件中。为达到此目的， 需要创建一个叫 [.filename]#stripe# 的永久的挂载点：
+
+[source,bash]
+....
+# mkdir /stripe
+# echo "/dev/stripe/st0a /stripe ufs rw 2 2" \
+    >> /etc/fstab
+....
+
+此外， [.filename]#geom_stripe.ko# 模块也必须通过在 [.filename]#/boot/loader.conf# 中增加下述设置， 以便在系统初始化过程中自动加载：
+
+[source,bash]
+....
+# echo 'geom_stripe_load="YES"' >> /boot/loader.conf
+....
+
+[[GEOM-mirror]]
+== RAID1 - 镜像
+
+镜像是许多公司和家庭用户使用的一种无须中断的备份技术。 简单地说， 镜像的概念就是 磁盘B 是同步复制 (replicate) 的 磁盘A 的副本， 或者 磁盘C+D 是 diskA+B 的同步复制副本， 等等。 无论磁盘配置如何， 这种技术的共同特点都是一块磁盘或分区的内容会同步复制到另外的地方。 这样， 除了能够很容易地恢复信息之外， 还能够在无须中断服务或访问的情况下进行备份， 甚至直接将副本送到数据保安公司异地储存。
+
+在开始做这件事之前， 首先请准备两个容量相同的磁盘驱动器， 下面的例子假定它们都是使用直接访问方式 (Direct Access， man:da[4]) 的 SCSI 磁盘。
+
+=== 对主磁盘进行镜像
+
+假定您现有系统中的 FreeBSD 安装到了第一个， 也就是 [.filename]#da0# 盘上， 则应告诉 man:gmirror[8] 将主要数据保存在这里。
+
+在开始构建镜像卷之前， 可以启用更多的调试信息， 并应开放对设备的完全访问。 这可以通过将 man:sysctl[8] 变量 `kern.geom.debugflags` 设置为下面的值来实现：
+
+[source,bash]
+....
+# sysctl kern.geom.debugflags=17
+....
+
+接下来需要创建镜像。 这个过程的第一步是在主磁盘上保存元数据信息， 也就是用下面的命令来创建 [.filename]#/dev/mirror/gm# 设备：
+
+[WARNING]
+====
+
+在引导用的设备基础上新建镜像时， 有可能会导致保存在磁盘上最后一个扇区的数据丢失。 在新安装 FreeBSD 之后立即创建镜像可以减低此风险。 下面的操作与默认的 FreeBSD 9._X_ 安装过程不兼容， 因为它采用了新的 GPT 分区格式。 GEOM 会覆盖 GPT 元数据， 这会导致数据丢失， 并有可能导致系统无法引导。
+====
+
+[source,bash]
+....
+# gmirror label -vb round-robin gm0 /dev/da0
+....
+
+系统应给出下面的回应：
+
+[source,bash]
+....
+Metadata value stored on /dev/da0.
+Done.
+....
+
+初始化 GEOM， 这步操作会加载内核模块 [.filename]#/boot/kernel/geom_mirror.ko#：
+
+[source,bash]
+....
+# gmirror load
+....
+
+[NOTE]
+====
+当这个命令运行完之后， 系统会在 [.filename]#/dev/mirror# 目录中创建设备节点 [.filename]#gm0#。
+====
+
+配置在系统初始化过程中自动加载 [.filename]#geom_mirror.ko#：
+
+[source,bash]
+....
+# echo 'geom_mirror_load="YES"' >> /boot/loader.conf
+....
+
+编辑 [.filename]#/etc/fstab# 文件， 将其中先前的 [.filename]#da0# 改为新的镜像设备 [.filename]#gm0#。
+
+[NOTE]
+====
+如果 man:vi[1] 是你喜欢的编辑器， 以下则是完成此项任务的一个简便方法：
+
+[source,bash]
+....
+# vi /etc/fstab
+....
+
+在 man:vi[1] 中备份现有的 [.filename]#fstab# 内容， 具体操作是 `:w /etc/fstab.bak`。 接着， 把所有旧的 [.filename]#da0# 替换成 [.filename]#gm0#， 也就是输入命令 `:%s/da/mirror\/gm/g`。
+====
+
+修改完后的 [.filename]#fstab# 文件应该是下面的样子。 磁盘驱动器是 SCSI 或 ATA 甚至 RAID 都没有关系， 最终的结果都是 [.filename]#gm#。
+
+[.programlisting]
+....
+# Device		Mountpoint	FStype	Options		Dump	Pass#
+/dev/mirror/gm0s1b	none		swap	sw		0	0
+/dev/mirror/gm0s1a	/		ufs	rw		1	1
+/dev/mirror/gm0s1d	/usr		ufs	rw		0	0
+/dev/mirror/gm0s1f	/home		ufs	rw		2	2
+#/dev/mirror/gm0s2d	/store		ufs	rw		2	2
+/dev/mirror/gm0s1e	/var		ufs	rw		2       2
+/dev/acd0		/cdrom		cd9660	ro,noauto	0	0
+....
+
+重启系统：
+
+[source,bash]
+....
+# shutdown -r now
+....
+
+在系统初始化过程中， 新建的 [.filename]#gm0# 会代替 [.filename]#da0# 设备工作。 系统完成初始化之后， 可以通过检查 `mount` 命令的输出来查看效果：
+
+[source,bash]
+....
+# mount
+Filesystem         1K-blocks    Used    Avail Capacity  Mounted on
+/dev/mirror/gm0s1a   1012974  224604   707334    24%    /
+devfs                      1       1        0   100%    /dev
+/dev/mirror/gm0s1f  45970182   28596 42263972     0%    /home
+/dev/mirror/gm0s1d   6090094 1348356  4254532    24%    /usr
+/dev/mirror/gm0s1e   3045006 2241420   559986    80%    /var
+devfs                      1       1        0   100%    /var/named/dev
+....
+
+这个输出是正常的。 最后， 使用下面的命令将 [.filename]#da1# 磁盘加到镜像卷中， 以开始同步过程：
+
+[source,bash]
+....
+# gmirror insert gm0 /dev/da1
+....
+
+在构建镜像卷的过程中， 可以用下面的命令查看状态：
+
+[source,bash]
+....
+# gmirror status
+....
+
+一旦镜像卷的构建操作完成， 这个命令的输出就会变成这样：
+
+[source,bash]
+....
+      Name    Status  Components
+mirror/gm0  COMPLETE  da0
+                      da1
+....
+
+如果有问题或者构建仍在进行， 输出中的 `COMPLETE` 就会是 `DEGRADED`。
+
+=== 故障排除
+
+==== 系统拒绝引导
+
+如果系统引导时出现类似下面的提示：
+
+[.programlisting]
+....
+ffs_mountroot: can't find rootvp
+Root mount failed: 6
+mountroot>
+....
+
+这种情况应使用电源或复位按钮重启机器。 在引导菜单中， 选择第六 (6) 个选项。 这将让系统进入 man:loader[8] 提示符。 在此处手工加载内核模块：
+
+[source,bash]
+....
+OK? load geom_mirror
+OK? boot
+....
+
+如果这样做能解决问题， 则说明由于某种原因模块没有被正确加载。 检查 [.filename]#/boot/loader.conf# 中相关条目是否正确。 如果问题仍然存在，可以在内核配置文件中加入：
+
+[.programlisting]
+....
+options	GEOM_MIRROR
+....
+
+然后重新编译和安装内核来解决这个问题。
+
+=== 从磁盘故障中恢复
+
+磁盘镜像的一大好处是在当其中一个磁盘出现故障时， 可以很容易地将其替换掉， 并且通常不会丢失数据。
+
+考虑前面的 RAID1 配置， 假设 [.filename]#da1# 出现了故障并需要替换， 要替换它， 首先确定哪个磁盘出现了故障， 并关闭系统。 此时， 可以用换上新的磁盘， 并重新启动系统。 这之后可以用下面的命令来完成磁盘的替换操作：
+
+[source,bash]
+....
+# gmirror forget gm0
+....
+
+[source,bash]
+....
+# gmirror insert gm0 /dev/da1
+....
+
+在重建过程中可以用 `gmirror status` 命令来监看进度。 就是这样简单。
+
+[[GEOM-raid3]]
+== RAID3 - 使用专用校验设备的字节级条带
+
+RAID3 是一种将多个磁盘组成一个卷的技术， 在这个配置中包含一个专用于校验的盘。 在 RAID3 系统中， 数据会以字节为单位拆分并写入除校验盘之外的全部驱动器中。 这意味着从 RAID3 中读取数据时将会访问所有的驱动器。 采用多个磁盘控制器可以进一步改善性能。 RAID3 阵列最多可以容忍其中的 1 个驱动器出现故障， 它可以提供全部驱动器总容量的 1 - 1/n， 此处 n 是阵列中的磁盘数量。 这类配置比较适合保存大容量的数据， 例如多媒体文件。
+
+在建立 RAID3 阵列时， 至少需要 3 块磁盘。 所有的盘的尺寸必须一致， 因为 I/O 请求会并发分派到不同的盘上。 另外， 由于 RAID3 本身的设计， 盘的数量必须恰好是 3, 5, 9, 17, 等等 (2^n + 1)。
+
+=== 建立专用的 RAID3 阵列
+
+在 FreeBSD 中， RAID3 是通过 man:graid3[8] GEOM class 实现的。 在 FreeBSD 中建立专用的 RAID3 阵列需要下述步骤。
+
+[NOTE]
+====
+虽然理论上从 RAID3 阵列启动 FreeBSD 是可行的， 但这并不常见， 也不推荐您这样做。
+====
+
+[.procedure]
+====
+
+. 首先， 在引导加载器中用下面的命令加载 [.filename]#geom_raid3.ko# 内核模块：
++
+[source,bash]
+....
+# graid3 load
+....
++ 
+此外， 也可以通过命令行手工加载 [.filename]#geom_raid3.ko# 模块：
++
+[source,bash]
+....
+# kldload geom_raid3.ko
+....
++
+. 创建用于挂载卷的挂点目录：
++
+[source,bash]
+....
+# mkdir /multimedia/
+....
++
+. 确定将要加入阵列的磁盘设备名， 并创建新的 RAID3 设备。 最终， 这个设备将代表整个阵列。 下面的例子使用三个未经分区的 ATA 磁盘： [.filename]#ada1# 和 [.filename]#ada2# 保存数据， 而 [.filename]#ada3# 用于校验。
++
+[source,bash]
+....
+# graid3 label -v gr0 /dev/ada1 /dev/ada2 /dev/ada3
+Metadata value stored on /dev/ada1.
+Metadata value stored on /dev/ada2.
+Metadata value stored on /dev/ada3.
+Done.
+....
++
+. 为新建的 [.filename]#gr0# 设备分区， 并在其上创建 UFS 文件系统：
++
+[source,bash]
+....
+# gpart create -s GPT /dev/raid3/gr0
+# gpart add -t freebsd-ufs /dev/raid3/gr0
+# newfs -j /dev/raid3/gr0p1
+....
++ 
+屏幕上会滚过许多数字， 这个过程需要一段时间才能完成。 此后， 您就完成了创建卷的全部操作， 可以挂载它了。
+. 最后一步是挂载文件系统：
++
+[source,bash]
+....
+# mount /dev/raid3/gr0p1 /multimedia/
+....
++ 
+现在可以使用 RAID3 阵列了。
+====
+
+为了让上述配置在系统重启后继续可用， 还需要进行一些额外的配置操作。
+
+[.procedure]
+====
+. 在挂载卷之前必须首先加载 [.filename]#geom_raid3.ko# 模块。 将下面的配置添加到 [.filename]#/boot/loader.conf# 文件中， 可以让系统在引导过程中自动加载这个模块：
++
+[.programlisting]
+....
+geom_raid3_load="YES"
+....
+
+. 您需要在 [.filename]#/etc/fstab# 文件中加入下列配置， 以便让系统引导时自动挂载阵列上的文件系统：
++
+[.programlisting]
+....
+/dev/raid3/gr0p1	/multimedia	ufs	rw	2	2
+....
+====
+
+[[geom-ggate]]
+== GEOM Gate 网络设备
+
+通过 gate 工具， GEOM 支持以远程方式使用设备， 例如磁盘、 CD-ROM、 文件等等。 这和 NFS 类似。
+
+在开始工作之前， 首先要创建一个导出文件。 这个文件的作用是指定谁可以访问导出的资源， 以及提供何种级别的访问授权。 例如， 要把第一块 SCSI 盘的第四个 slice 导出， 对应的 [.filename]#/etc/gg.exports# 会是类似下面的样子：
+
+[.programlisting]
+....
+192.168.1.0/24 RW /dev/da0s4d
+....
+
+这表示允许同属私有子网的所有机器访问 [.filename]#da0s4d# 分区上的文件系统。
+
+要导出这个设备， 首先请确认它没有被挂接， 然后是启动 man:ggated[8] 服务：
+
+[source,bash]
+....
+# ggated
+....
+
+现在我们将在客户机上 `mount` 该设备， 使用下面的命令：
+
+[source,bash]
+....
+# ggatec create -o rw 192.168.1.1 /dev/da0s4d
+ggate0
+# mount /dev/ggate0 /mnt
+....
+
+到此为止， 设备应该已经可以通过挂接点 [.filename]#/mnt# 访问了。
+
+[NOTE]
+====
+请注意， 如果设备已经被服务器或网络上的任何其他机器挂接， 则前述操作将会失败。
+====
+
+如果不再需要使用这个设备， 就可以使用 man:umount[8] 命令来安全地将其卸下了， 这一点和其他磁盘设备类似。
+
+[[geom-glabel]]
+== 为磁盘设备添加卷标
+
+在系统初始化的过程中， FreeBSD 内核会为检测到的设备创建设备节点。 这种检测方式存在一些问题， 例如， 在通过 USB 添加设备时应如何处理？ 很可能有闪存盘设备最初被识别为 [.filename]#da0# 而在这之后， 则由 [.filename]#da0# 变成了 [.filename]#da1#。 而这则会在挂接 [.filename]#/etc/fstab# 中的文件系统时造成问题， 这些问题， 还可能在系统引导时导致无法正常启动。
+
+解决这个问题的一个方法是以连接拓扑方式链式地进行 SCSI 设备命名， 这样， 当在 SCSI 卡上增加新设备时， 这些设备将使用一个未用的编号。 但如果 USB 设备取代了主 SCSI 磁盘的位置呢？ 由于 USB 通常会在 SCSI 卡之前检测到， 因此很可能出现这种现象。 当然， 可以通过在系统引导之后再插入这些设备来绕过这个问题。 另一种绕过这个问题的方法， 则是只使用 ATA 驱动器， 并避免在 [.filename]#/etc/fstab# 中列出 SCSI 设备。
+
+还有一种更好的解决方法。 通过使用 `glabel` 工具， 管理员或用户可以为磁盘设备打上标签， 并在 [.filename]#/etc/fstab# 中使用这些标签。 由于 `glabel` 会将标签保存在对应 provider 的最后一个扇区， 在系统重启之后， 它仍会持续存在。 因此， 通过将具体的设备替换为使用标签表示， 无论设备节点变成什么， 文件系统都能够顺利地完成挂接。
+
+[NOTE]
+====
+这并不是说标签一定是永久性的。 `glabel` 工具既可以创建永久性标签， 也可以创建临时性标签。 在重启时， 只有永久性标签会保持。 请参见联机手册 man:glabel[8] 以了解两者之间的差异。
+====
+
+=== 标签类型和使用示范
+
+有两种类型的标签， 一种是普通标签， 另一种是文件系统标签。 标签可以是永久性的或暂时性的。永久性的标签可以通过 man:tunefs[8] 或 man:newfs[8] 命令创键。根据文件系统的类型， 它们将在 [.filename]#/dev# 下的一个子目录中被创建。例如， UFS2 文件系统的标签会创建到 [.filename]#/dev/ufs# 目录中。永久性的标签还可以使用 `glabel label` 创建。它们不再是文件系统特定的，而是会在 [.filename]#/dev/label# 目录中被创建。
+
+暂时性的标签在系统下次重启时会消失， 这些标签会创建到 [.filename]#/dev/label# 目录中， 很适合测试之用。可以使用 `glabel create` 创建暂时性的标签。请参阅 man:glabel[8] 手册页以获取更多详细信息。
+
+要为一个 UFS2 文件系统创建永久性标签， 而不破坏其上的数据，可以使用下面的命令：
+
+[source,bash]
+....
+# tunefs -L home /dev/da3
+....
+
+[WARNING]
+====
+
+如果文件系统满了， 这可能会导致数据损坏； 不过， 如果文件系统快满了， 此时应首先删除一些无用的文件， 而不是增加标签。
+====
+
+现在， 您应可以在 [.filename]#/dev/ufs# 目录中看到标签， 并将其加入 [.filename]#/etc/fstab#：
+
+[.programlisting]
+....
+/dev/ufs/home		/home            ufs     rw              2      2
+....
+
+[NOTE]
+====
+当运行 `tunefs` 时， 应首先卸下文件系统。
+====
+
+现在可以像平时一样挂接文件系统了：
+
+[source,bash]
+....
+# mount /home
+....
+
+现在， 只要在系统引导时通过 [.filename]#/boot/loader.conf# 配置加载了内核模块 [.filename]#geom_label.ko#， 或在联编内核时指定了 `GEOM_LABEL` 选项， 设备节点由于增删设备而顺序发生变化时， 就不会影响文件系统的挂接了。
+
+通过使用 `newfs` 命令的 `-L` 参数， 可以在创建文件系统时为其添加默认的标签。 请参见联机手册 man:newfs[8] 以了解进一步的详情。
+
+下列命令可以清除标签：
+
+[source,bash]
+....
+# glabel destroy home
+....
+
+以下的例子展示了如何为一个启动磁盘打上标签。
+
+.为启动磁盘打上标签
+[example]
+====
+为启动磁盘打上永久性标签， 系统应该能够正常启动， 即使磁盘被移动到了另外一个控制器或者转移到了一个不同的系统上。 此例中我们假设使用了一个 ATA 磁盘， 当前这个设备被系统识别为 [.filename]#ad0#。 还假设使用了标准的 FreeBSD 分区划分方案， [.filename]#/#, [.filename]#/var#, [.filename]#/usr# 和 [.filename]#/tmp# 文件系统， 还有一个 swap 分区。
+
+重启系统，在 man:loader[8] 提示符下键入 kbd:[4] 启动到单用户模式。 然后输入以下的命令：
+
+[source,bash]
+....
+# glabel label rootfs /dev/ad0s1a
+GEOM_LABEL: Label for provider /dev/ad0s1a is label/rootfs
+# glabel label var /dev/ad0s1d
+GEOM_LABEL: Label for provider /dev/ad0s1d is label/var
+# glabel label usr /dev/ad0s1f
+GEOM_LABEL: Label for provider /dev/ad0s1f is label/usr
+# glabel label tmp /dev/ad0s1e
+GEOM_LABEL: Label for provider /dev/ad0s1e is label/tmp
+# glabel label swap /dev/ad0s1b
+GEOM_LABEL: Label for provider /dev/ad0s1b is label/swap
+# exit
+....
+
+系统加继续启动进入多用户模式。 在启动完毕后， 编辑 [.filename]#/etc/fstab# 用各自的标签替换下常规的设备名。 最终 [.filename]#/etc/fstab# 看起来差不多是这样的：
+
+[.programlisting]
+....
+# Device                Mountpoint      FStype  Options         Dump    Pass#
+/dev/label/swap         none            swap    sw              0       0
+/dev/label/rootfs       /               ufs     rw              1       1
+/dev/label/tmp          /tmp            ufs     rw              2       2
+/dev/label/usr          /usr            ufs     rw              2       2
+/dev/label/var          /var            ufs     rw              2       2
+....
+
+现在可以重启系统了。 如果一切顺利的话， 系统可以正常启动并且 `mount` 命令显示：
+
+[source,bash]
+....
+# mount
+/dev/label/rootfs on / (ufs, local)
+devfs on /dev (devfs, local)
+/dev/label/tmp on /tmp (ufs, local, soft-updates)
+/dev/label/usr on /usr (ufs, local, soft-updates)
+/dev/label/var on /var (ufs, local, soft-updates)
+....
+
+====
+
+从 FreeBSD 7.2 开始， man:glabel[8] class 新增了一种用于 UFS 文件系统唯一标识符， `ufsid` 的标签支持。 这些标签可以在 [.filename]#/dev/ufsid# 目录中找到， 它们会在系统引导时自动创建。 在 [.filename]#/etc/fstab# 机制中， 也可以使用 `ufsid` 标签。 您可以使用 `glabel status` 命令来获得与文件系统对应的 `ufsid` 标签列表：
+
+[source,bash]
+....
+% glabel status
+                  Name  Status  Components
+ufsid/486b6fc38d330916     N/A  ad4s1d
+ufsid/486b6fc16926168e     N/A  ad4s1f
+....
+
+在上面的例子中 [.filename]#ad4s1d# 代表了 [.filename]#/var# 文件系统， 而 [.filename]#ad4s1f# 则代表了 [.filename]#/usr# 文件系统。 您可以使用这些 `ufsid` 值来挂载它们， 在 [.filename]#/etc/fstab# 中配置类似这样：
+
+[.programlisting]
+....
+/dev/ufsid/486b6fc38d330916        /var        ufs        rw        2      2
+/dev/ufsid/486b6fc16926168e        /usr        ufs        rw        2      2
+....
+
+所有包含了 `ufsid` 的标签都可以用这种方式挂载， 从而消除了需要手工创建永久性标签的麻烦， 而又能够提供提供与设备名无关的挂载方式的便利。
+
+[[geom-gjournal]]
+== 通过 GEOM 实现 UFS 日志
+
+随着 FreeBSD 7.0 的发布， 提供了长期为人们所期待的日志功能的实现。 这个实现采用了 GEOM 子系统， 可以很容易地使用 man:gjournal[8] 工具来进行配置。
+
+日志是什么？ 日志的作用是保存文件系统事务的记录， 换言之， 完成一次完整的磁盘写入操作所需的变动， 这些记录会在元数据以及文件数据写盘之前， 写入到磁盘中。 这种事务日志可以在随后用于重放并完成文件系统事务， 以避免文件系统出现不一致的问题。
+
+这种方法是另一种阻止文件系统丢失数据并发生不一致的方法。 与 Soft Updates 追踪并确保元数据更新顺序这种方法不同， 它会实际地将日志保存到指定为此项任务保留的磁盘空间上， 在某些情况下可全部存放到另外一块磁盘上。
+
+与其他文件系统的日志实现不同， `gjournal` 采用的是基于块， 而不是作为文件系统的一部分的方式 - 它只是作为一种 GEOM 扩展实现。
+
+如果希望启用 `gjournal`， FreeBSD 内核需要下列选项 - 这是 FreeBSD 7.0 以及更高版本系统上的默认配置：
+
+[.programlisting]
+....
+options	UFS_GJOURNAL
+....
+
+如果使用日志的卷需要在启动的时候被挂载， 还需加载 [.filename]#geom_journal.ko# 内核模块， 将以下这行加入 [.filename]#/boot/loader.conf#：
+
+[.programlisting]
+....
+geom_journal_load="YES"
+....
+
+这个功能也可被编译进一个定制的内核， 需在内核配置文件中加入以下这行：
+
+[.programlisting]
+....
+options	GEOM_JOURNAL
+....
+
+现在， 可以为空闲的文件系统创建日志了。 对于新增的 SCSI 磁盘 [.filename]#da4#， 具体的操作步骤为：
+
+[source,bash]
+....
+# gjournal load
+# gjournal label /dev/da4
+....
+
+这样， 就会出现一个与 [.filename]#/dev/da4# 设备节点对应的 [.filename]#/dev/da4.journal# 设备节点。 接下来， 可以在这个设备上建立文件系统：
+
+[source,bash]
+....
+# newfs -O 2 -J /dev/da4.journal
+....
+
+这个命令将建立一个包含日志设备的 UFS2 文件系统。
+
+然后就可以用 `mount` 命令来挂接设备了：
+
+[source,bash]
+....
+# mount /dev/da4.journal /mnt
+....
+
+[NOTE]
+====
+当磁盘包含多个 slice 时， 每个 slice 上都会建立日志。 例如， 如果有 [.filename]#ad4s1# 和 [.filename]#ad4s2# 这两个 slice， 则 `gjournal` 会建立 [.filename]#ad4s1.journal# 和 [.filename]#ad4s2.journal#。
+====
+
+出于性能考虑， 可能会希望在其他磁盘上保存日志。 对于这类情形， 应该在启用日志的设备后面，给出日志提供者或存储设备。 在暨存的文件系统上， 可以用 `tunefs` 来启用日志； 不过， 在尝试修改文件系统之前， 您应对其进行备份。 多数情况下， 如果无法创建实际的日志， `gjournal` 就会失败， 并且不会防止由于不当使用 `tunefs` 而造成的数据丢失。
+
+对于 FreeBSD 系统的启动磁盘使用日志也是可能的。 请参阅 link:{gjournal-desktop}[Implementing UFS Journaling on a Desktop PC] 以获得更多详细信息。

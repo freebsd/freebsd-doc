@@ -1,0 +1,219 @@
+---
+title: Chapitre 15. Environnements jail
+part: Partie III. Administration Système
+prev: books/handbook/security
+next: books/handbook/mac
+---
+
+[[jails]]
+= Jails
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Table des matières
+:table-caption: Tableau
+:example-caption: Exemple
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 15
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/jails/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/jails/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/jails/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/fr/mailing-lists.adoc[]
+include::shared/fr/teams.adoc[]
+include::shared/fr/urls.adoc[]
+
+toc::[]
+
+[[jails-synopsis]]
+== Synopsis
+
+Ce chapitre expliquera ce que sont les environnements jail (prisons) et comment les utiliser. Les environnements jail, souvent présentés comme une amélioration et un remplacement des _environnements chrootés_ sont des outils très puissants pour les administrateurs système, mais certaines de leurs fonctionnalités de base peuvent être également utiles aux utilisateurs avancés.
+
+Après avoir lu ce chapitre, vous connaîtrez:
+
+* Ce qu'est un environnement jail, et quelle utilité il peut avoir sur une installation FreeBSD.
+* Comment construire, démarrer et arrêter un environnement jail.
+* Les bases de l'administration d'un environnement jail, de l'intérieur et de l'extérieur de l'environnement.
+
+D'autres sources d'information utiles concernant les environnements jail sont:
+
+* La page de manuel man:jail[8]. C'est la référence pour l'emploi de l'utilitaire `jail` - l'outil d'administration qui peut être utilisé sous FreeBSD pour démarrer, arrêter, et contrôler les environnements jail FreeBSD.
+* Les listes de diffusion et leurs archives. Les archives de la {freebsd-questions} et d'autres listes hébergées par le {mailman-lists} contiennent déjà quantité d'information sur les environnements jail. Il sera toujours conseillé de chercher dans les archives ou de poster une nouvelle question sur la liste de diffusion link:{freebsd-questions-url}[freebsd-questions].
+
+[[jails-terms]]
+== Termes relatifs aux environnements jail
+
+Pour faciliter la compréhension des parties du système FreeBSD relatives aux jails, leurs mécanismes internes et la manière dont ils interagissent avec le reste de FreeBSD, les termes suivants seront utilisés tout au long de ce chapitre:
+
+man:chroot[2] (commande)::
+Un appel système FreeBSD, qui modifie le répertoire racine d'un processus et de tout ses descendants.
+
+man:chroot[2] (environnement)::
+Environnement des processus pour lesquels l'emplacement de la racine du système de fichier a été modifiée ("chrootée"). Cela comprend les ressources comme la partie du système de fichiers qui est visible, les identifiants utilisateur et groupe qui sont disponibles, les interfaces réseaux et autres mécanismes IPC, etc.
+
+man:jail[8] (commande)::
+L'utilitaire système d'administration qui permet le lancement de processus à l'intérieur d'un environnement jail.
+
+hôte (système, processus, utilisateur, etc.)::
+Le système de contrôle d'un environnement jail. Le système hôte a accès à toutes les ressources matérielles disponibles, et peut contrôler des processus à l'extérieur et à l'intérieur d'un environnement jail. Une des différences importantes entre le système hôte et l'environnement jail est que les limitations qui s'appliquent aux processus du super-utilisateur à l'intérieur de l'environnement jail ne s'appliquent pas aux processus du système hôte.
+
+hébergé (système, processus, utilisateur, etc.)::
+Un processus, un utilisateur ou toute autre entité, dont l'accès aux ressources est limité par un environnement jail FreeBSD.
+
+[[jails-intro]]
+== Introduction
+
+Comme l'administration système est une tâche difficile et déroutante, de nombreux outils ont été développés pour rendre la vie de l'administrateur plus simple. Ces outils apportent pour la plupart des améliorations dans la manière dont sont installés, configurés et maintenus les systèmes. Une partie des tâches dévolues à l'administrateur est la sécurisation du système, de façon à ce que le système puisse se consacrer aux tâches qui lui sont confiées sans toutefois mettre en péril sa propre sécurité.
+
+Un de ces outils pouvant être employé pour augmenter la sécurisation d'un système FreeBSD sont les environnements _jail_. Les environnements jail ont été introduits sous FreeBSD 4.X par {phk}, mais ils ont été fortement améliorés sous FreeBSD 5.X pour en faire des sous-systèmes flexibles et puissants. Des développements sont toujours en cours pour l'amélioration de leur utilité, performances, fiabilité et sécurité.
+
+[[jails-what]]
+=== Qu'est-ce qu'un environnement jail?
+
+Les systèmes BSD disposent de l'environnement man:chroot[2] depuis l'époque de 4.2BSD. L'utilitaire man:chroot[8] peut être employé pour changer le répertoire racine d'un ensemble de processus, créant ainsi un environnement sécurisé et séparé du reste du système. Les processus créés dans l'environnement chrooté ne peuvent accéder aux fichiers et aux ressources extérieures à cet environnement. Pour cette raison, si un attaquant compromet un service tournant dans un environnement chrooté, cela ne devrait pas lui permettre de compromettre l'intégralité du système. L'utilitaire man:chroot[8] est parfait pour des tâches simples qui ne demandent pas trop de flexibilité ou de fonctionnalités avancées et complexes. Depuis l'apparition du concept d'environnement chrooté, de nombreuses manières de s'échapper de ces environnements ont été découvertes, et bien que cela ait été corrigé dans les versions récentes du noyau FreeBSD, il est clair que l'environnement man:chroot[2] n'est pas la solution idéale pour la sécurisation des services. Un nouveau sous-système devait être implémenté.
+
+Ceci est une des raisons principales à l'origine du développement de l'environnement _jail_.
+
+Les environnements jail améliorent de plusieurs manières le concept d'environnement man:chroot[2]. Dans un environnement man:chroot[2] traditionnel, les processus ne sont limités que dans la partie du système de fichiers à laquelle ils ont accès. Le reste des ressources système (comme l'ensemble des utilisateurs système, les processus en cours d'exécution, ou le réseau) est partagé par les processus de l'environnement chrooté et les processus du système hôte. L'environnement jail étend ce modèle en virtualisant non seulement l'accès au système de fichiers mais également l'ensemble des utilisateurs, la partie réseau du noyau FreeBSD et quelques autres éléments du système. Un ensemble plus complet de contrôles fins pour optimiser l'accès à un environnement jail est décrit dans la <<jails-tuning>>.
+
+Un environnement jail est caractérisé par quatre éléments:
+
+* Une arborescence de répertoires - le point d'accès à l'environnement jail. Une fois à l'intérieur de l'environnement jail, un processus ne peut s'échapper hors de cette arborescence. Les traditionnels problèmes de sécurité qui grèvent l'architecture man:chroot[2] d'origine n'affecteront pas les environnements jail FreeBSD.
+* Un nom de machine - le nom de machine qui sera utilisé à l'intérieur de l'environnement jail. Les environnements jails sont principalement utilisés pour l'hébergement de services réseaux, par conséquent choisir un nom évocateur pour chaque environnement peut être d'une grande aide pour l'administrateur système.
+* Une adresse IP - elle sera assignée à l'environnement jail et ne peut, en aucun cas, être modifiée pendant toute la durée de vie de l'environnement. L'adresse IP d'un environnement jail est en général un alias d'une interface réseau existante, mais cela n'est pas forcément nécessaire.
+* Une commande - le chemin d'accès d'un exécutable à exécuter à l'intérieur de l'environnement jail. Il est relatif au répertoire racine de l'environnement jail, et peut beaucoup varier, en fonction du type d'environnement jail mis en oeuvre.
+
+En dehors de cela les environnements jail peuvent avoir leur propre ensemble d'utilisateurs et leur propre utilisateur `root`. Naturellement les pouvoirs de l'utilisateur `root` sont limités à l'environnement jail et, du point de vue du système hôte, l'utilisateur `root` de l'environnement jail n'est pas un utilisateur omnipotent. De plus, l'utilisateur `root` d'un environnement jail n'est pas autorisé à effectuer des opérations critiques au niveau du système en dehors de son environnement man:jail[8]. Plus d'information au sujet des possibilités et des restrictions de l'utilisateur `root` sera donnée dans la <<jails-tuning>> ci-après.
+
+[[jails-build]]
+== Création et contrôle de l'environnement jail
+
+Certains administrateurs divisent les environnements jail en deux catégories: les environnements jails "complets", qui ressemblent à un véritable système FreeBSD, et les environnements jails de "service", qui sont dédiés à une application ou un seul service, et tournant éventuellement avec des privilèges. Cette séparation est juste conceptuelle et n'affecte pas la création de l'environnement jail. La page de manuel man:jail[8] est très claire quant à la procédure de création d'un environnement jail:
+
+[source,bash]
+....
+# setenv D /here/is/the/jail
+# mkdir -p $D <.>
+# cd /usr/src
+# make world DESTDIR=$D <.>
+# cd etc/ [9]
+# make distribution DESTDIR=$D <.>
+# mount_devfs devfs $D/dev <.>
+....
+
+<.> Sélectionner un emplacement pour l'environnement est le meilleur point de départ. C'est l'endroit où l'environnement jail se trouvera dans le système de fichiers de la machine hôte. Un bon choix peut être [.filename]#/usr/jail/jailname#, où _jailname_ est le nom de machine identifiant l'environnement jail. Le système de fichiers [.filename]#/usr/# dispose généralement de suffisamment d'espace pour le système de fichiers de l'environnement jail, qui est pour les environnements "complets", essentiellement, une copie de chaque fichier présent dans une installation par défaut du système de base de FreeBSD.
+
+<.> Cette commande peuplera l'arborescence du répertoire choisi comme emplacement pour l'environnement jail avec les binaires, les bibliothèques, les pages de manuel, etc. nécessaires. Tout sera fait selon le style FreeBSD habituel - en premier lieu tout est compilé, puis ensuite installé à l'emplacement voulu.
+
+<.> La cible `distribution` pour make installe tous les fichiers de configuration nécessaires. Ou pour faire simple, cette commande installe tous les fichiers installables du répertoire [.filename]#/usr/src/etc/# vers le répertoire [.filename]#/etc# de l'environnement jail: [.filename]#$D/etc/#.
+
+<.> Le montage du système de fichiers man:devfs[8] à l'intérieur d'un environnement jail n'est pas requis. Cependant, toutes, ou presque toutes les applications nécessitent l'accès à au moins un périphérique, en fonction du rôle de l'application. Il est vraiment important de contrôler l'accès aux périphériques depuis l'intérieur d'un environnement jail, comme un mauvais paramétrage pourrait permettre à quelqu'un de malintentionné de faire de "mauvaises" choses dans l'environnement jail. Le contrôle sur man:devfs[8] est géré par l'intermédiaire d'un ensemble de règles qui est décrit dans les pages de manuel man:devfs[8] et man:devfs.conf[5].
+
+Une fois l'environnement jail installé, il peut être lancé en employant l'utilitaire man:jail[8]. Cet outil requiert obligatoirement quatre arguments qui sont décrits dans la <<jails-what>>. D'autres arguments peuvent également être utilisés, pour par exemple exécuter le processus avec les droits d'un utilisateur particulier. L'argument `_command_` dépend du type d'environnement; pour un _système virtuel_, [.filename]#/etc/rc# est un bon choix puisque la séquence de démarrage d'un véritable système FreeBSD sera dupliquée. Pour un environnement jail de type _service_, cela dépendra du service ou de l'application qui sera exécuté dans l'environnement jail.
+
+Les environnements jails sont souvent lancés au démarrage de la machine et le système [.filename]#rc# de FreeBSD propose une méthode simple pour cela.
+
+[.procedure]
+====
+
+. Une liste des environnements jail autorisés à être lancés au démarrage du système devrait être ajoutée au fichier man:rc.conf[5]:
++
+[.programlisting]
+....
+jail_enable="YES"   # Utiliser NO pour désactiver le lancement des environnements jail
+jail_list="www"     # Liste des noms des environnements jail séparés par une espace
+....
+
+. Pour chaque environnement listé dans `jail_list`, un ensemble de paramètres man:rc.conf[5], qui décrivent l'environnement jail, devrait être ajouté:
++
+[.programlisting]
+....
+jail_www_rootdir="/usr/jail/www"     # le répertoire racine de l'environnement jail
+jail_www_hostname="www.example.org"  # le nom de machine de l'environnement jail
+jail_www_ip="192.168.0.10"           # son adresse IP
+jail_www_devfs_enable="YES"          # monter devfs dans l'environnement jail
+jail_www_devfs_ruleset="www_ruleset" # les règles devfs à appliquer à l'environnement jail
+....
++ 
+Le démarrage par défaut des environnements jails, configuré dans man:rc.conf[5], exécutera la procédure [.filename]#/etc/rc# de l'environnement jail, ce qui suppose que l'environnement est un système virtuel complet. Pour les environnements jail de service, la commande de démarrage par défaut de l'environnement devrait être modifiée en configurant correctement l'option `jail__jailname__exec_start`.
++
+[NOTE]
+======
+Pour une liste complète des options disponibles, veuillez consulter la page de manuel man:rc.conf[5].
+======
+====
+
+La procedure [.filename]#/etc/rc.d/jail# peut être utilisée pour démarrer ou arrêter un environnement jail à la main si une entrée pour l'environnement existe dans le fichier [.filename]#rc.conf#:
+
+[source,bash]
+....
+# /etc/rc.d/jail start www
+# /etc/rc.d/jail stop www
+....
+
+Il n'existe pas pour le moment de méthode propre pour arrêter un environnement man:jail[8]. C'est dû au fait que les commandes normalement employées pour arrêter proprement un système ne peuvent être utilisées à l'intérieur d'un environnement jail. La meilleur façon d'arrêter un environnement jail est de lancer la commande suivante à l'intérieur de l'environnement ou en utilisant le programme man:jexec[8] depuis l'extérieur de l'environnement:
+
+[source,bash]
+....
+# sh /etc/rc.shutdown
+....
+
+Plus d'information à ce sujet peut être trouvé dans la page de manuel de man:jail[8].
+
+[[jails-tuning]]
+== Optimisation et administration
+
+Il existe plusieurs options qui peuvent être configurées pour n'importe quel environnement jail, et de nombreuses manières de combiner un système FreeBSD hôte avec des environnements jail pour donner naissance à des applications haut-niveau. Cette section présente:
+
+* Certaines des options disponibles pour l'optimisation du fonctionnement et des restrictions de sécurité implémentées par une installation jail.
+* Des applications de haut niveau pour la gestion des environnements jail, qui sont disponibles dans le catalogue des logiciels portés, et peuvent être utilisées pour implémenter des environnements jail complets.
+
+[[jails-tuning-utilities]]
+=== Outils systèmes pour l'optimisation d'un environnement jail sous FreeBSD
+
+L'optimisation de la configuration d'un environnement jail se fait principalement par le paramétrage de variables man:sysctl[8]. Une sous-catégorie spécifique de man:sysctl[8] existe pour toutes les options pertinentes: la hiérarchie `security.jail.*` d'options du noyau FreeBSD. Ci-dessous est donnée une liste des principales variables relatives aux environnements jail avec leur valeur par défaut. Leurs noms sont explicites, mais pour plus d'information, veuillez vous référer aux pages de manuel man:jail[8] et man:sysctl[8].
+
+* `security.jail.set_hostname_allowed: 1`
+* `security.jail.socket_unixiproute_only: 1`
+* `security.jail.sysvipc_allowed: 0`
+* `security.jail.enforce_statfs: 2`
+* `security.jail.allow_raw_sockets: 0`
+* `security.jail.chflags_allowed: 0`
+* `security.jail.jailed: 0`
+
+Ces variables peuvent être utilisées par l'administrateur du _système hôte_ pour ajouter ou retirer certaines limitations imposées par défaut à l'utilisateur `root`. Notez que certaines limitations ne peuvent être retirées. L'utilisateur `root` n'est pas autorisé à monter ou démonter des systèmes de fichiers à partir d'un environnement man:jail[8]. L'utilisateur `root` d'un environnement jail ne peut charger ou modifier des règles man:devfs[8], paramétrer des règles de pare-feu, ou effectuer des tâches d'administration qui nécessitent la modification de données du noyau, comme le paramétrage du niveau de sécurité `securelevel` du noyau.
+
+Le système de base de FreeBSD contient un ensemble d'outils basiques pour afficher les informations au sujet des environnements jail actifs, pour s'attacher à un environnement jail pour lancer des commandes d'administration. Les commandes man:jls[8] et man:jexec[8] font partie du système de base de FreeBSD et peuvent être utilisées pour effectuer les tâches simples suivantes:
+
+* Afficher une liste des environnements jail actifs et leur identifiant (JID), leur adresse IP, leur nom de machine et leur emplacement.
+* S'attacher à un environnement jail actif, à partir de son système hôte, et exécuter une commande à l'intérieur de l'environnement ou effectuer des tâches d'administration à l'intérieur de environnement lui-même. C'est tout particulièrement utile quand l'utilisateur `root` veut arrêter proprement un environnement. L'utilitaire man:jexec[8] peut également être employé pour lancer un interpréteur de commandes dans un environnement jail pour faire de l'administration; par exemple:
++
+[source,bash]
+....
+# jexec 1 tcsh
+....
+
+[[jails-tuning-admintools]]
+=== Outils d'administration haut niveau du catalogue des logiciels portés de FreeBSD
+
+Parmi les nombreux utilitaires tierce-partie pour l'administration des environnements jail, un des plus complet et utile est package:sysutils/jailutils[]. C'est un ensemble de petites applications qui aident à la gestion des environnements man:jail[8]. Veuillez consulter sa page Web pour plus d'information.

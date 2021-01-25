@@ -1,0 +1,261 @@
+---
+title: Chapitre 26. DTrace
+part: Partie III. Administration Système
+prev: books/handbook/cutting-edge
+next: books/handbook/partiv
+---
+
+[[dtrace]]
+= DTrace
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Table des matières
+:table-caption: Tableau
+:example-caption: Exemple
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 26
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/dtrace/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/dtrace/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/dtrace/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/fr/mailing-lists.adoc[]
+include::shared/fr/teams.adoc[]
+include::shared/fr/urls.adoc[]
+
+toc::[]
+
+[[dtrace-synopsis]]
+== Synopsis
+
+DTrace, également désigné sous le nom de système de trace dynamique, a été développé par Sun(TM) comme outil de localisation de problèmes de performance sur des systèmes de production et d'avant-production. Ce n'est, en aucune manière, un outil de débogage, mais un outil pour l'analyse système en temps réel pour localiser les problèmes de performance et autres.
+
+DTrace est un outil de profilage remarquable, avec une impressionnante multitude de fonctions pour diagnostiquer des problèmes système. Il peut également être utilisé avec des scripts pré-écrits pour pouvoir profiter de ses capacités. Les utilisateurs peuvent écrire leurs propres utilitaires en employant le langage de DTrace, D, leur permettant ainsi de personnaliser leur profilage en fonction de leurs besoins.
+
+Après la lecture de ce chapitre, vous connaîtrez:
+
+* Ce qu'est DTrace et quelles fonctionnalités il offre.
+* Les différences entre la version DTrace de Solaris(TM) et celle fournie par FreeBSD.
+* Comment activer et utiliser DTrace sur FreeBSD.
+
+Avant de lire ce chapitre, vous devrez:
+
+* Comprendre les fondements d'UNIX(R) et de FreeBSD (crossref:basics[basics,Quelques bases d'UNIX]).
+* Etre familier avec la configuration/compilation du noyau (crossref:kernelconfig[kernelconfig,Configurer le noyau de FreeBSD]).
+* Avoir une certaine connaissance concernant la sécurité et ses liens avec FreeBSD (crossref:security[security,Sécurité]).
+* Comprendre comment obtenir et recompiler les sources de FreeBSD (crossref:cutting-edge[updating-upgrading,Mise à jour de FreeBSD]).
+
+[WARNING]
+====
+
+Cette fonction est considérée comme expérimentale. Quelques options peuvent être absentes et d'autres ne fonctionneront peut-être pas du tout. A terme, cette fonction sera prête pour une utilisation en production, et cette documentation sera modifiée pour en tenir compte.
+====
+
+[[dtrace-implementation]]
+== Des différences de mise en oeuvre
+
+Bien que DTrace sous FreeBSD soit très semblable à DTrace sous Solaris(TM), des différences existent et devraient être expliquées avant de continuer. La différence principale que les utilisateurs remarqueront est que sur FreeBSD, DTrace doit être spécialement activé. Il y a des options de noyau et des modules qui doivent être activés pour que DTrace fonctionne correctement. Ces options seront expliquées plus tard.
+
+Il existe une option de noyau, `DDB_CTF`, qui est employée pour activer la prise en charge du chargement des données CTF depuis les modules de noyau et du noyau lui-même. CTF est le format Compact C de Solaris(TM), qui encapsule une forme réduite d'information de débogage, semblable à DWARF et ses vénérables tables de symboles. Ces données CTF sont ajoutées aux fichiers binaires par les outils de compilation `ctfconvert` et `ctfmerge`. L'utilitaire `ctfconvert` analyse les sections de débogage ELFDWARF crées par le compilateur et `ctfmerge` fusionne les sections ELFCTF qui sont sous forme objet vers soit des fichiers executables, soit des bibliothèques partagées. Plus d'informations sur comment activer cela pour le noyau et FreeBSD est à venir.
+
+Quelques fournisseurs différents existent pour FreeBSD par rapport à Solaris(TM). Le plus notable est le fournisseur `dtmalloc`, qui permet le traçage de la fonction `malloc()` par type dans le noyau FreeBSD.
+
+Seul l'utilisateur `root` peut utiliser DTrace sur FreeBSD. Ceci est lié aux différences de sécurité, Solaris(TM) dispose de quelques contrôles de sécurité de bas niveau qui n'existent pas encore sur FreeBSD. Ainsi [.filename]#/dev/dtrace/dtrace# est strictement limité uniquement à l'utilisateur `root`.
+
+Pour terminer, le logiciel DTrace est sous la licence de Sun(TM), CDDL. La `Common Development and Distribution License` est disponibles sous FreeBSD, voir le fichier [.filename]#/usr/src/cddl/contrib/opensolaris/OPENSOLARIS.LICENSE# ou vous pouvez le consulter sur Internet à http://www.opensolaris.org/os/licensing[http://www.opensolaris.org/os/licensing].
+
+Cette licence signifie qu'un noyau avec les options DTrace est toujours sous licence BSD; cependant, la licence CDDL est appliquée lorsque les modules sont distribués sous format binaire, ou quand les fichiers binaires sont chargés.
+
+[[dtrace-enable]]
+== Activer la prise en charge de DTrace
+
+Pour activer DTrace, il faut ajouter les lignes suivantes au fichier de configuration du noyau:
+
+[.programlisting]
+....
+options         KDTRACE_HOOKS
+options         DDB_CTF
+....
+
+[NOTE]
+====
+Les utilisateurs de l'architecture AMD64 devraient ajouter la ligne suivante à leur fichier de configuration de noyau:
+
+[.programlisting]
+....
+options         KDTRACE_FRAME
+....
+
+Cette option active la fonction FBT. DTrace fonctionnera sans cette option, mais il y aura des restrictions sur le traçage des limites des fonctions.
+====
+
+Les sources doivent être recompilées et installées avec les options CTF. Pour faire cela, recompiler les sources de FreeBSD en utilisant:
+
+[source,bash]
+....
+# cd /usr/src
+
+# make WITH_CTF=1 kernel
+....
+
+Le système aura besoin d'être redémarré.
+
+Après avoir redémarré et avoir laissé charger en mémoire le noyau, le support de l'interpréteur de commandes Korn devra être ajouté. Ceci est necessaire car la boîte à outils DTrace possède quelques utilitaires écrits en `ksh`. Il faut installer package:shells/ksh93[]. Il est également possible de faire fonctionner ces outils avec package:shells/pdksh[] ou package:shells/mksh[].
+
+Finalement, récupérer la boîte à outils DTrace la plus récente. La version actuelle est disponible à l'adresse http://www.opensolaris.org/os/community/dtrace/[http://www.opensolaris.org/os/community/dtrace/]. Un système d'installation est inclu dans l'archive; cependant, cette installation n'est pas obligatoire pour utiliser les outils fournis.
+
+[[dtrace-using]]
+== Utiliser DTrace
+
+Avant d'utiliser DTrace, il faut que le périphérique DTrace existe. Pour charger le périphérique, exécutez la commande suivante:
+
+[source,bash]
+....
+# kldload dtraceall
+....
+
+Le système devrait maintenant supporter DTrace. Pour afficher toutes les sondes, l'administrateur peut maintenant executer la commande:
+
+[source,bash]
+....
+# dtrace -l | more
+....
+
+Toutes les données sortantes de cette commande sont passées à l'utilitaire `more`, pour empêcher qu'elles saturent l'écran. A ce niveau, DTrace peut être considéré comme fonctionnel. On est maintenant prêt à passer en revue l'ensemble des outils disponibles.
+
+La boîte à outils est une collection de scripts prêts à fonctionner avec DTrace pour rassembler des informations systèmes. Il y a des scripts pour vérifier les fichiers ouvertes, la mémoire, l'usage du CPU et beaucoup plus. Il faut extraire les scripts avec la commande suivante:
+
+[source,bash]
+....
+# gunzip -c DTracetoolkit* | tar xvf -
+....
+
+Aller dans ce répértoire en utilisant `cd` et changer les permissions de tous les fichiers, les fichiers avec les noms en miniscules, à `755`.
+
+Chacun de ces scripts devra avoir son contenu modifié. Ceux qui font référence à [.filename]#/usr/bin/ksh# devront pointer sur [.filename]#/usr/local/bin/ksh#, les autres qui utilisent [.filename]#/usr/bin/sh# devront être modifiés pour qu'ils utilisent [.filename]#/bin/sh#, et finalement ceux qui utilisent [.filename]#/usr/bin/perl#, devront pointer sur [.filename]#/usr/local/bin/perl#.
+
+[IMPORTANT]
+====
+A ce point il est prudent de rappeler au lecteur que le support de DTrace sous FreeBSD _n'est pas complet_ et est encore _expérimental_. Un bon nombre de ces scripts ne fonctionneront pas, soit parce qu'ils sont trop spécifiques à Solaris(TM), soit parce qu'ils utilisent des sondes qui ne sont pas encore supportées.
+====
+
+Au moment de l'écriture de ces lignes, seuls deux des scripts de la boîte à outils DTrace sont totalement supportés sous FreeBSD: les outils [.filename]#hotkernel# et [.filename]#procsystime#. Ce sont ces deux outils que nous détaillerons dans la suite de cette section.
+
+L'outil [.filename]#hotkernel# est censé identifier quel fonction utilise le plus de temps noyau. Fonctionnant normalement, il affichera une liste comparable à la suivante:
+
+[source,bash]
+....
+# ./hotkernel
+Sampling... Hit Ctrl-C to end.
+....
+
+L'administrateur système doit utiliser la combinaison de touches kbd:[Ctrl+C] pour arrêter le processus. Le script affichera une liste de fonctions du noyau et des informations de temps, et les triera dans l'ordre croissant du temps consommé:
+
+[source,bash]
+....
+kernel`_thread_lock_flags                                   2   0.0%
+0xc1097063                                                  2   0.0%
+kernel`sched_userret                                        2   0.0%
+kernel`kern_select                                          2   0.0%
+kernel`generic_copyin                                       3   0.0%
+kernel`_mtx_assert                                          3   0.0%
+kernel`vm_fault                                             3   0.0%
+kernel`sopoll_generic                                       3   0.0%
+kernel`fixup_filename                                       4   0.0%
+kernel`_isitmyx                                             4   0.0%
+kernel`find_instance                                        4   0.0%
+kernel`_mtx_unlock_flags                                    5   0.0%
+kernel`syscall                                              5   0.0%
+kernel`DELAY                                                5   0.0%
+0xc108a253                                                  6   0.0%
+kernel`witness_lock                                         7   0.0%
+kernel`read_aux_data_no_wait                                7   0.0%
+kernel`Xint0x80_syscall                                     7   0.0%
+kernel`witness_checkorder                                   7   0.0%
+kernel`sse2_pagezero                                        8   0.0%
+kernel`strncmp                                              9   0.0%
+kernel`spinlock_exit                                       10   0.0%
+kernel`_mtx_lock_flags                                     11   0.0%
+kernel`witness_unlock                                      15   0.0%
+kernel`sched_idletd                                       137   0.3%
+0xc10981a5                                              42139  99.3%
+....
+
+Ce script fonctionnera aussi avec des modules de noyau. Pour utiliser ce fonction, exécutez le script avec l'option `-m`:
+
+[source,bash]
+....
+# ./hotkernel -m
+Sampling... Hit Ctrl-C to end.
+^C
+MODULE                                                  COUNT   PCNT
+0xc107882e                                                  1   0.0%
+0xc10e6aa4                                                  1   0.0%
+0xc1076983                                                  1   0.0%
+0xc109708a                                                  1   0.0%
+0xc1075a5d                                                  1   0.0%
+0xc1077325                                                  1   0.0%
+0xc108a245                                                  1   0.0%
+0xc107730d                                                  1   0.0%
+0xc1097063                                                  2   0.0%
+0xc108a253                                                 73   0.0%
+kernel                                                    874   0.4%
+0xc10981a5                                             213781  99.6%
+....
+
+Le script [.filename]#procsystime# capture et affiche le temps consommé en appels système pour un PID ou un processus donné. Dans l'exemple suivant, un nouvel exemplaire de [.filename]#/bin/csh# a été lancé. L'outil [.filename]#procsystime# a été exécuté et laissé en attente pendant que quelques commandes été tapées sur les autres incarnations de `csh`. Voici le résultat de ce test:
+
+[source,bash]
+....
+# ./procsystime -n csh
+Tracing... Hit Ctrl-C to end...
+^C
+
+Elapsed Times for processes csh,
+
+         SYSCALL          TIME (ns)
+          getpid               6131
+       sigreturn               8121
+           close              19127
+           fcntl              19959
+             dup              26955
+         setpgid              28070
+            stat              31899
+       setitimer              40938
+           wait4              62717
+       sigaction              67372
+     sigprocmask             119091
+    gettimeofday             183710
+           write             263242
+          execve             492547
+           ioctl             770073
+           vfork            3258923
+      sigsuspend            6985124
+            read         3988049784
+....
+
+Comme indiqué, l'appel système `read()` semble prendre le plus de temps en nanosecondes, alors que l'appel système `getpid()` prend très peu de temps.
+
+[[dtrace-language]]
+== Le langage D
+
+La boîte à outils DTrace comprend plusieurs scripts écrits dans le langage spécifique de DTrace. Ce langage est appelé le "langage D" dans la documentation de Sun(TM), et est très proche du C++. Une étude en profondeur de ce langage sort du cadre de ce document. Il est abordé de manière très détaillée à l'adresse http://wikis.sun.com/display/DTrace/Documentation[http://wikis.sun.com/display/DTrace/Documentation].

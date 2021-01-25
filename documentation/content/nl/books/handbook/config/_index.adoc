@@ -1,0 +1,1449 @@
+---
+title: Hoofdstuk 12. Instellingen en optimalisatie
+part: Deel III. Systeembeheer
+prev: books/handbook/partiii
+next: books/handbook/boot
+---
+
+[[config-tuning]]
+= Instellingen en optimalisatie
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Inhoudsopgave
+:table-caption: Tabel
+:figure-caption: Afbeelding
+:example-caption: Voorbeeld
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 12
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/config/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/config/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/config/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/nl/mailing-lists.adoc[]
+include::shared/nl/teams.adoc[]
+include::shared/nl/urls.adoc[]
+
+toc::[]
+
+[[config-synopsis]]
+== Overzicht
+
+Systeeminstellingen zijn een belangrijk aspect van FreeBSD. Correcte instellingen helpen moeilijkheden bij toekomstige upgrades te voorkomen. In dit hoofdstuk wordt het instellen van FreeBSD beschreven, alsmede een aantal prestatiebevorderende maatregelen waarmee een FreeBSD systeem geoptimaliseerd kan worden.
+
+Na het lezen van dit hoofdstuk weet de lezer:
+
+* Hoe efficiënt om te gaan met bestandssystemen en wisselpartities;
+* De grondbeginselen van het [.filename]#rc.conf# instellingensysteem en van het opstarten van toepassingen (diensten) met [.filename]#/usr/local/etc/rc.d#;
+* Hoe een netwerkkaart ingesteld en getest wordt;
+* Hoe virtuele hosts op netwerkapparatuur ingesteld worden;
+* Hoe de instellingenbestanden in [.filename]#/etc# gebruikt worden;
+* Hoe FreeBSD geoptimaliseerd kan worden met `sysctl`-variabelen;
+* Hoe schijfprestaties te verbeteren en hoe kernelbeperkingen gewijzigd kunnen worden.
+
+Veronderstelde voorkennis:
+
+* De grondbeginselen van UNIX(R) en FreeBSD (crossref:basics[basics,UNIX® beginselen]) begrijpen;
+* Bekend zijn met de grondbeginselen van kernelinstellingen en compilatie (crossref:kernelconfig[kernelconfig,De FreeBSD-kernel instellen]).
+
+[[configtuning-initial]]
+== Initiële instellingen
+
+=== Partitioneren
+
+==== Basispartities
+
+Bij het aanmaken van bestandssystemen met man:bsdlabel[8] of man:sysinstall[8] is het van belang dat op een harde schijf de gegevensoverdracht het snelst is aan de buitenste sporen en het langzaamst aan de binnenste. Kleinere en veelgebruikte bestandssystemen kunnen daarom het beste aan de buitenkant van de schijf geplaatst worden, terwijl grotere partities als [.filename]#/usr# meer naar de binnenkant van de schijf geplaatst kunnen worden. Het is een goed idee om partities aan te maken in deze of gelijksoortige volgorde: root, swap, [.filename]#/var#, [.filename]#/usr#.
+
+De grootte van de partitie [.filename]#/var# hangt af van de wijze waarop de machine gebruikt gaat worden. Het bestandssysteem [.filename]#/var# wordt gebruikt voor onder meer postbussen, logbestanden en printergegevens en -wachtrijen. Postbussen en logbestanden kunnen onverwacht groot worden, afhankelijk van het aantal systeemgebruikers en de bewaarduur van logbestanden. De meeste gebruikers zullen zelden meer dan ongeveer een gigabyte aan vrije schijfruimte op [.filename]#/var# nodig hebben.
+
+[NOTE]
+====
+Er zijn een aantal gevallen waar een grote hoeveelheid ruimte in [.filename]#/var/tmp# nodig is. Wanneer er nieuwe software wordt geïnstalleerd met man:pkg_add[1] pakken de pakketprogramma's een tijdelijke kopie van de pakketten uit in [.filename]#/var/tmp#. Grote softwarepakketten, zoals Firefox, OpenOffice of LibreOffice kunnen lastig zijn om te installeren wanneer er onvoldoende vrije schijfruimte beschikbaar is onder [.filename]#/var/tmp#.
+====
+
+De partitie [.filename]#/usr# bevat veel van de benodigde systeembestanden, waaronder de man:ports[7] collectie (aanbevolen) en de broncode (optioneel). Beide zijn optioneel tijdens de installatie, maar we raden voor deze partitie tenminste 2 gigabyte aan.
+
+Het is verstandig rekening te houden met de vereiste schijfruimte bij het kiezen van partitiegroottes. Als in een partitie onvoldoende vrije schijfruimte is, terwijl een andere vrijwel niet gebruikt wordt, is dat een vervelend en niet optimaal oplosbaar probleem.
+
+[NOTE]
+====
+man:sysinstall[8]'s `Auto-defaults` partitiekeuze kan in de ervaring van sommige gebruikers mogelijk te kleine [.filename]#/var# en [.filename]#/# partities opleveren. Partitioneren moet verstandig en niet te zuinig gebeuren.
+====
+
+[[swap-design]]
+==== Wisselpartities (swap)
+
+De vuistregel is dat het wisselbestand ongeveer het dubbele van de grootte van het systeemgeheugen (RAM) moet zijn. Als de machine bijvoorbeeld 128 megabytes geheugen heeft, kan het beste een wisselbestand van (tenminste) 256 megabytes gebruikt worden. Minder dan 256 megabytes swap is in dit geval af te raden. Systemen met weinig geheugen kunnen overigens beter functioneren met meer swap. Ook is het verstandig rekening te houden met eventuele geheugenuitbreiding in de toekomst. Bovendien zijn de VM paging-algoritmen van de kernel zo afgestemd dat ze het beste presteren bij een wisselbestand van tenminste tweemaal de grootte van het geheugen. Een te kleine swap kan dus inefficiënties in de VM-code tot gevolg hebben en mogelijk problemen veroorzaken als het systeemgeheugen uitgebreid wordt.
+
+Op grotere systemen met meerdere SCSI-schijven (of meerdere IDE-schijven op verschillende controllers) is het aan te raden om op elke schijf een wisselpartitie in te stellen (dit kan tot en met vier schijven), elk met ongeveer dezelfde grootte. De kernel kan met arbitraire groottes werken, maar interne datastructuren schalen tot viermaal de grootste swappartitie. De kernel kan de beschikbare ruimte voor het wisselbestand het meest optimaal indelen als de partities ongeveer even groot zijn. Een grote swap is prima, ook als ze zelden gebruikt wordt. Zo kan het gemakkelijker zijn om een (uit de hand gelopen) proces dat het systeem grotendeels bezet houdt te beëindigen, voordat er opnieuw opgestart moet worden.
+
+==== Waarom partitioneren?
+
+Waarom niet één enkele grote partitie gebruiken? Er zijn verscheidene redenen waarom dit niet zo'n goed idee is. De verschillende partities hebben hun eigen karakteristieke operationele gedrag en vereisten. Door ze te scheiden zijn er betere mogelijkheden om het systeem te optimaliseren. Vanaf de [.filename]#/# en [.filename]#/usr# partities wordt bijvoorbeeld vooral gelezen en er wordt weinig naar geschreven, terwijl er in [.filename]#/var# en [.filename]#/var/tmp# zowel veel gelezen als geschreven wordt.
+
+Door een systeem goed te partitioneren wordt vermeden dat fragmentatie die optreedt in de kleinere partities met veel schrijfactiviteit doorsijpelt naar partities die vooral lees-intensief zijn. Door schrijf-intensieve partities aan het begin van de schijf te plaatsen, zijn de prestaties wat betreft invoer/uitvoer het beste daar waar het het meest nodig is. Ofschoon er natuurlijk ook de best mogelijke in/uit prestaties wenselijk zijn in de grotere partities, weegt het plaatsen van deze bestandssystemen aan het begin van de schijf niet tegen de voordelen van het plaatsen van [.filename]#/var# aan het begin van de schijf (na root en swap) voor de totale snelheid van het systeem. Tenslotte zijn er veiligheidsoverwegingen. Een compacte en nette rootpartitie die vrijwel alleen-lezen is, heeft een betere kans om een nare crash te overleven.
+
+[[configtuning-core-configuration]]
+== Hoofdinstellingen
+
+De voornaamste lokatie voor systeeminstellingen is [.filename]#/etc/rc.conf#. Dit bestand bevat een scala aan instellingen, die gebruikt wordt om het systeem in te stellen bij het opstarten. De naam impliceert dit al. Het is informatie voor de [.filename]#rc*# bestanden (rc staat voor "resource configuration" of broninstellingen).
+
+De systeembeheerder wordt geacht regels toe te voegen aan [.filename]#rc.conf# om de standaardinstellingen uit [.filename]#/etc/defaults/rc.conf# aan te passen. Het standaardbestand moet niet letterlijk gekopiëerd worden naar [.filename]#/etc#. Het bevat standaardwaardes en is niet bedoeld als voorbeeld. Alle wijzigingen die specifiek zijn voor een systeem horen in [.filename]#/etc/rc.conf# thuis.
+
+In een clusterscenario is het nuttig om systeemspecifieke instellingen te scheiden van algemene instellingen die voor het hele cluster gelden. Hiervoor kunnen een aantal strategieën worden gebruikt. De aanbevolen benadering is om systeem-specifieke instellingen in [.filename]#/etc/rc.conf.local# te plaatsen. Een voorbeeld:
+
+* [.filename]#/etc/rc.conf#:
++
+[.programlisting]
+....
+sshd_enable="YES"
+keyrate="fast"
+defaultrouter="10.1.1.254"
+....
+
+* [.filename]#/etc/rc.conf.local#:
++
+[.programlisting]
+....
+hostname="node1.example.org"
+ifconfig_fxp0="inet 10.1.1.1/8"
+....
+
+[.filename]#rc.conf# kan vervolgens naar elk systeem gedistribueerd worden met `rsync` of een gelijksoortig programma, terwijl [.filename]#rc.conf.local# uniek blijft.
+
+Het actualiseren van het systeem met man:sysinstall[8] of `make world` overschrijft [.filename]#rc.conf# niet, zodat de bestaande systeeminstellingen niet verloren gaan.
+
+[TIP]
+====
+
+Het instellingenbestand [.filename]#/etc/rc.conf# wordt gelezen door man:sh[1]. Dit stelt systeembeheerders in staat om een zekere hoeveelheid logica aan dit bestand toe te voegen, dat kan helpen in het creëren van zeer ingewikkelde configuratiescenario's. Bekijk man:rc.conf[5] voor meer informatie over dit onderwerp.
+====
+
+[[configtuning-appconfig]]
+== Toepassingen instellen
+
+Geïnstalleerde toepassingen hebben meestal hun eigen instellingenbestanden, met hun eigen syntaxis, etc. Het is van belang deze bestanden apart te houden van het basissysteem, zodat ze makkelijk gelokaliseerd kunnen worden en beheerd kunnen worden met de hulpmiddelen voor pakketbeheer.
+
+Deze bestanden worden meestal geïnstalleerd in [.filename]#/usr/local/etc#. Als een toepassing een uitgebreide verzameling bestanden voor instellingen heeft, wordt er een submap voor aangemaakt.
+
+Bij de installatie van een port of pakket, worden normaliter ook voorbeeldbestanden met instellingen geïnstalleerd. Deze zijn doorgaans te herkennen aan een toevoegsel [.filename]#.default#. Als er geen bestaande instellingenbestanden voor de toepassing zijn, kunnen ze gemaakt worden door de [.filename]#.default#-bestanden te kopiëren.
+
+Een voorbeeld is de map [.filename]#/usr/local/etc/apache#:
+
+....
+-rw-r--r--  1 root  wheel   2184 May 20  1998 access.conf
+-rw-r--r--  1 root  wheel   2184 May 20  1998 access.conf.default
+-rw-r--r--  1 root  wheel   9555 May 20  1998 httpd.conf
+-rw-r--r--  1 root  wheel   9555 May 20  1998 httpd.conf.default
+-rw-r--r--  1 root  wheel  12205 May 20  1998 magic
+-rw-r--r--  1 root  wheel  12205 May 20  1998 magic.default
+-rw-r--r--  1 root  wheel   2700 May 20  1998 mime.types
+-rw-r--r--  1 root  wheel   2700 May 20  1998 mime.types.default
+-rw-r--r--  1 root  wheel   7980 May 20  1998 srm.conf
+-rw-r--r--  1 root  wheel   7933 May 20  1998 srm.conf.default
+....
+
+Aan de grootte van de bestanden is te zien dat alleen [.filename]#srm.conf# gewijzigd is. Als later de port Apache wordt vernieuwd, wordt dit bestand niet overschreven.
+
+[[configtuning-starting-services]]
+== Diensten starten
+
+Veel gebruikers kiezen ervoor om software van derden te installeren op FreeBSD vanuit de Portscollectie. In veel gevallen is het noodzakelijk om de software dusdanig in te stellen dat het opstart tijdens het opstarten van de computer. Diensten zoals package:mail/postfix[] of package:www/apache22[] zijn slechts twee voorbeelden van softwarepakketten die gestart kunnen worden tijdens de systeemstart. In deze paragraaf wordt toegelicht hoe software van derde partijen kan worden gestart.
+
+In FreeBSD worden de meeste diensten, zoals man:cron[8], door de opstartscripts van het systeem gestart. Deze scripts kunnen verschillen tussen FreeBSD en leverancierversies, echter het meest belangrijke aspect om in gedachten te houden is dat hun opstartinstellingen verwerkt kunnen worden door simpele opstartscripts.
+
+=== Uitgebreide applicatieinstellingen
+
+Nu FreeBSD [.filename]#rc.d# heeft, zijn de instellingen van applicaties die mee moeten opstarten versimpeld en rijker aan mogelijkheden. Door gebruik te maken van de sleutelwoorden die in de paragraaf <<configtuning-rcd,[.filename]#rc.d#>> behandeld worden, kunnen applicaties nu starten na andere diensten. DNS kan bijvoorbeeld extra opties meekrijgen van [.filename]#/etc/rc.conf# in plaats van hard ingestelde opties in het opstartscript. Een basisscript ziet er ongeveer als volgt uit:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+# PROVIDE: utility
+# REQUIRE: DAEMON
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name=utility
+rcvar=utility_enable
+
+command="/usr/local/sbin/utility"
+
+load_rc_config $name
+
+#
+# VERANDER DE STANDAARDWAARDEN HIER NIET
+# STEL ZE IN HET BESTAND /etc/rc.conf IN
+#
+utility_enable=${utility_enable-"NO"}
+pidfile=${utility_pidfile-"/var/run/utility.pid"}
+
+run_rc_command "$1"
+....
+
+Dit script zorgt ervoor dat utility wordt gestart na de pseudodienst `DAEMON`. Het biedt ook de mogelijkheid voor het instellingen en volgen van het PID of het proces-ID bestand.
+
+Voor deze applicatie kan dan de volgende regel in [.filename]#/etc/rc.conf# geplaatst worden:
+
+[.programlisting]
+....
+utility_enable="YES"
+....
+
+Deze methode maakt het volgende mogelijk: makkelijker commandoregelopties manipuleren, importeren van standaardfuncties uit [.filename]#/etc/rc.subr#, compatibiliteit met het gereedschap man:rcorder[8] en het levert makkelijkere configuratie via [.filename]#rc.conf#.
+
+=== Diensten met diensten starten
+
+Andere diensten, zoals POP3-server daemons, IMAP, enzovoort, kunnen gestart worden door gebruik te maken van man:inetd[8]. Daaraan is voorafgegaan dat die dienst uit de Portscollectie is geïstalleerd en dat er een regel met instellingen is toegevoegd aan [.filename]#/etc/inetd.conf# of één van de bestaande niet-actieve regels is geactiveerd. Werken met inetd en zijn instellingen wordt uitgebreid toegelicht in de paragraaf over crossref:network-servers[network-inetd,inetd].
+
+In sommige gevallen is het handiger om man:cron[8] te gebruiken om diensten te starten. Deze aanpak heeft een aantal voordelen omdat `cron` start als de eigenaar van [.filename]#crontab#. Dit stelt reguliere gebruikers in staat om sommige applicaties te starten en te onderhouden.
+
+`cron` levert een unieke optie: in plaats van een tijdsspecificatie kan `@reboot` gebruikt worden. Dit zorgt ervoor dat de taak gestart wordt als man:cron[8] gestart wordt, meestal tijdens een systeemstart.
+
+[[configtuning-cron]]
+== `cron` instellen
+
+Een zeer nuttig hulpprogramma in FreeBSD is man:cron[8]. De daemon `cron` draait op de achtergrond en controleert voortdurend [.filename]#/etc/crontab#. Ook controleert `cron` de map [.filename]#/var/cron/tabs#, op zoek naar nieuwe [.filename]#crontab# bestanden. Deze [.filename]#crontab# bestanden bevatten informatie over specifieke taken die `cron` moet verrichten op gezette tijden.
+
+`cron` gebruikt twee verschillende soorten instellingenbestanden: de systeemcrontab en gebruikerscrontabs. Deze formaten verschillen alleen in het zesde en verdere velden. In de systeemcrontab zal `cron` het commando draaien als de gebruiker die in het zesde veld is opgegeven. In een gebruikerscrontab draaien alle commando's onder de gebruiker die de crontab heeft aangemaakt, dus is het zesde veld het laatste veld; dit is een belangrijk beveiligingsaspect. Het laatste veld is altijd het commando dat gedraaid wordt.
+
+[NOTE]
+====
+Gebruikerscrontabs geven individuele gebruikers de mogelijkheid om bepaalde terugkerende taken automatisch te laten uitvoeren zonder dat `root`-rechten noodig zijn. Commando's in de crontab van een gebruiker worden uitgevoerd met de rechten van de eigenaar.
+
+`root` kan ook een gebruikerscrontab aanleggen net als elke andere gebruiker. Dit is niet dezelfde als [.filename]#/etc/crontab#, de systeemcrontab. Omdat de systeemcrontab in de praktijk de commando's als root uitvoert, is het doorgaans niet nodig om een gebruikerscrontab voor `root` te maken.
+====
+
+[.filename]#/etc/crontab# (de systeemcrontab) ziet er uit als volgt:
+
+[.programlisting]
+....
+# /etc/crontab - root's crontab for FreeBSD
+#
+# $FreeBSD: src/etc/crontab,v 1.32 2002/11/22 16:13:39 tom Exp $
+## <.>
+#
+SHELL=/bin/sh
+PATH=/etc:/bin:/sbin:/usr/bin:/usr/sbin <.>
+HOME=/var/log
+#
+#
+#minuut uur     mdag    maand   wdag    wie     commando <.>
+#
+#
+*/5     *       *       *       *       root    /usr/libexec/atrun <.>
+....
+
+<.> Zoals in de meeste instellingenbestanden van FreeBSD zijn regels die met het karakter `#` beginnen commentaar. Commentaar wordt gebruikt als uitleg en geheugensteun. Commentaar dient niet vermengd te worden met commando's, anders wordt het commentaar opgevat als deel van het commando. Blanco regels worden genegeerd.
+
+<.> Eerst worden omgevingsvariabelen gedefiniëerd. Hoervoor wordt het is-gelijk karakter (`=`) gebruikt. In het bovenstaande voorbeeld wordt het gebruikt voor de variabelen `SHELL`, `PATH` en `HOME`. Als de regel `SHELL` ontbreekt, gebruikt `cron` standaard `sh` als shell. Voor de omgevingsvariabele `PATH` bestaat geen standaardwaarde. Als `PATH` ontbreekt moeten absolute paden gebruikt worden. Als `HOME` ontbreekt, gebruikt `cron` de thuismap van de gebruiker die `cron` aanroept.
+
+<.> In deze commentaarregel staan de zeven velden van een crontabdefinitie. Dit zijn `minuut`, `uur`, `mdag`, `maand`, `wdag`, `wie` en `commando`. De betekenissen liggen voor de hand: `minuut` is het aantal minuten van het tijdstip waarop het commando moet worden uitgevoerd; `uur` geeft het uur aan; `mdag` staat voor de dag van de maand; `maand` staat voor het maandnummer en `wdag` geeft de dag van de week aan. Het veld `wie` is bijzonder en bestaat alleen in [.filename]#/etc/crontab#. Het geeft aan als welke gebruiker het commando uitgevoerd moet worden. Het laatste veld bevat het uit te voeren commando.
+
+<.> In deze regel worden aan de hierboven besproken opties waarden toegekend. Er wordt gebruik gemaakt van `*/5` en `*` karakters. Deze betekenen "eerst-laatst" en kunnen gezien worden als _telkens_. In deze regel staat dus dat `atrun` elke vijf minuten moet worden uitgevoerd door `root`, ongeacht welke dag of maand het is. Meer informatie over `atrun` staat in man:atrun[8].Commando's kunnen een willekeurig aantal opties of argumenten meekrijgen. Als commando's echter meerdere regels nodig hebben moeten deze regels afgebroken worden met een backslash "\" karakter, om aan te geven dat ze op de volgende regel vervolgd worden.
+
+Dit is de basisopzet voor elk [.filename]#crontab# bestand. De enige uitzondering is de aanwezigheid van veld zes, waar de gebruikersnaam wordt aangegeven. Dit veld bestaat alleen in de systeemversie van [.filename]#/etc/crontab#. Voor [.filename]#crontab#-bestanden van individuele gebruikers moet dit veld worden weggelaten.
+
+[[configtuning-installcrontab]]
+=== Een crontab installeren
+
+[IMPORTANT]
+====
+De onderstaande procedure moet niet gebruikt worden om de systeemcrontab [.filename]#/etc/crontab# te wijzigen of te installeren. Er kan een gewone editor gebruikt worden. `cron` ziet dat het bestand veranderd is en begint direct met het gebruiken van de nieuwe versie. link:{faq}#ROOT-NOT-FOUND-CRON-ERRORS[Deze FAQ vraag] geeft verdere uitleg.
+====
+
+Om een nieuwe [.filename]#crontab# te installeren moet eerst een bestand in het juiste formaat gemaakt worden en daarna moet het geiuml;nstalleerd worden met commando `crontab`:
+
+[source,bash]
+....
+# crontab crontabbestand
+....
+
+In dit voorbeeld is [.filename]#crontabbestand# de naam van een eerder gemaakt [.filename]#crontab#-bestand.
+
+Er bestaat ook een optie om een lijst van geïnstalleerde [.filename]#crontab#-bestanden op te vragen, namelijk de optie `-l` van `crontab`.
+
+Gebruikers die hun eigen crontabbestand willen schrijven zonder het gebruik van een sjabloon, kunnen gebruik maken van `crontab -e`. Dit opent de `EDITOR` met een leeg bestand. Als het bestand wordt opgeslagen en de editor wordt afgesloten, wordt het bestand automatisch als [.filename]#crontab# geïnstalleerd.
+
+Een gebruikers [.filename]#crontab# kan verwijderd worden door de met `crontab` de optie `-r` te gebruiken.
+
+[[configtuning-rcd]]
+== Gebruik van rc met FreeBSD
+
+Sinds 2002 gebruikt FreeBSD het NetBSD [.filename]#rc.d# systeem bij het opstarten van het systeem. Veel van de bestanden in [.filename]#/etc/rc.d# zijn scripts voor basisdiensten die werken met de opties `start`, `stop` en `restart`, analoog aan hoe diensten die via een port of pakket zijn geïnstalleerd gestart worden met de scripts in [.filename]#/usr/local/etc/rc.d#. man:sshd[8] kan bijvoorbeeld als volgt herstart worden:
+
+[source,bash]
+....
+# service restart
+....
+
+Deze procedure is vrijwel gelijk voor andere diensten. Uiteraard worden diensten meestal automatisch tijdens het opstarten van de computer gestart zoals in man:rc.conf[5] staat. Om de Network Address Translation daemon bij het opstarten te laten starten is de volgende regel in [.filename]#/etc/rc.conf# bijvoorbeeld voldoende:
+
+[.programlisting]
+....
+natd_enable="YES"
+....
+
+Als er reeds een `natd_enable="NO"` regel is, kan `NO` gewoon in `YES` veranderd worden. De rc scripts starten, voor zover nodig, automatisch andere afhankelijke diensten.
+
+Omdat het [.filename]#rc.d# systeem in eerste instantie bedoeld is om diensten te starten en stoppen bij het opstarten en afsluiten van het systeem, werken de standaardopties `start`, `stop` en `restart` alleen als de juiste variabelen in [.filename]#/etc/rc.conf# zijn ingesteld. Het commando `sshd restart` alleen dan als `sshd_enable` de waarde `YES` heeft in [.filename]#/etc/rc.conf#. Als er een dienst gestart, gestopt of herstart moet worden, ongeacht de definities in [.filename]#/etc/rc.conf#, moet het commando voorafgegaan worden door "one". Dus om `sshd` te herstarten ongeacht de instellingen in [.filename]#/etc/rc.conf#, voldoet het volgende commando:
+
+[source,bash]
+....
+# service sshd onerestart
+....
+
+Het is eenvoudig te controleren of een dienst is ingeschakeld is in [.filename]#/etc/rc.conf# door het bijpassende [.filename]#rc.d#-script uit te voeren met de optie `rcvar`. Voor `sshd`:
+
+[source,bash]
+....
+# service sshd rcvar
+# sshd
+$sshd_enable=YES
+....
+
+[NOTE]
+====
+De tweede regel (`# sshd`) is de uitvoer van `sshd`, geen `root`-console.
+====
+
+De optie `status` wordt gebruikt om vast te stellen of een dienst gestart is. Om bijvoorbeeld te controleren of `sshd` gestart is:
+
+[source,bash]
+....
+# service sshd status
+sshd is running as pid 433.
+....
+
+In sommige gevallen is het ook mogelijk om een dienst te herstarten met de optie `reload`. Dan wordt er getracht een signaal te sturen aan een individuele dienst, waarbij de dienst de bestanden met instellingen opnieuw in moet lezen. Meestal komt dit neer op het verzenden van het signaal `SIGHUP`. Deze optie wordt niet door alle diensten ondersteund.
+
+Het rc.d-systeem wordt niet alleen gebruikt voor netwerkdiensten, maar ook voor het merendeel van de systeemstart. In dit kader is bijvoorbeeld het bestand [.filename]#bgfsck# interessant. Als dit script wordt uitgevoerd, wordt de volgende boodschap getoond:
+
+[source,bash]
+....
+Starting background file system checks in 60 seconds.
+....
+
+Dit script wordt dus gebruikt voor bestandssysteemcontrole in de achtergrond, hetgeen alleen tijdens de systeemstart gebeurt.
+
+Veel systeemdiensten zijn afhankelijk van andere diensten om correct te kunnen functioneren. Zo starten NIS en andere RPC-gebaseerde diensten niet als de dienst `rpcbind` (portmapper) nog niet draait. Om dit te stroomlijnen wordt informatie over afhankelijkheden en andere metagegevens ingevoegd in het commentaar bovenaan het opstartscript. Deze commentaarregels worden vervolgens tijdens de systeemstart met man:rcorder[8] verwerkt om zo vast te stellen in welke volgorde de systeemdiensten gestart moeten worden.
+
+De volgende woorden moeten in alle opstartscripts staan (ze zijn benodigd door man:rc.subr[8] om het opstartscript te activeren):
+
+* `PROVIDE`: geeft aan in welke diensten dit bestand voorziet.
+* `REQUIRE`: geeft aan welke andere diensten vereist zijn voor deze dienst. Dit script wordt uitgevoerd _na_ de aangegeven diensten.
+* `BEFORE`: geeft diensten aan die afhankelijk zijn van deze dienst. Dit bestand wordt uitgevoerd _vóór_ de aangegeven diensten.
+
+Met deze methode kan een systeembeheerder gemakkelijk systeemdiensten besturen, zonder gedoe met "runlevels" zoals bij sommige andere UNIX(R) systemen.
+
+Meer informatie over het [.filename]#rc.d#-systeem staat in man:rc[8] en man:rc.subr[8]. Als u geïnteresseerd bent in het schrijven van uw eigen [.filename]#rc.d#-script of om de huidige scripts te verbeteren is wellicht link:{rc-scripting}[dit artikel] interessant.
+
+[[config-network-setup]]
+== Netwerkkaarten instellen
+
+Het is tegenwoordig nauwelijks voorstelbaar dat een computer geen netwerkverbinding heeft. Het toevoegen en instellen van een netwerkkaart is een gebruikelijke taak voor een FreeBSD-beheerder.
+
+=== Het juiste stuurprogramma vinden
+
+Voor het zoeken begint, moet duidelijk zijn om welke kaart het gaat, welke chip erop zit en of het een PCI- of ISA-kaart is. FreeBSD ondersteunt vele kaarten. Op de Hardware Compatibiliteitslijst voor de betreffende uitgave staan de kaarten die ondersteund worden.
+
+Als duidelijk is dat een kaart ondersteund wordt, moet vastgesteld worden wat het geschikte stuurprogramma is. In het bestand [.filename]#/usr/src/sys/conf/NOTES# staat een lijst van stuurprogramma's voor netwerkinterfaces met wat informatie over de ondersteunde chipsets of kaarten. In geval van twijfel biedt de hulppagina voor het stuurprogramma (`man`) vaak uitkomst. In het algemeen bevat deze meer informatie over de ondersteunde hardware en mogelijke problemen die kunnen optreden.
+
+Als een veelgebruikte kaart gebruikt wordt, hoeft meestal niet ver gezocht te worden. Stuurprogramma's voor veelvoorkomende netwerkinterfaces zijn al aanwezig in de algemene kernel [.filename]#GENERIC#. In dat geval wordt zo'n kaart al gevonden bij het opstarten, bijvoorbeeld met het volgende bericht:
+
+[source,bash]
+....
+dc0: <82c169 PNIC 10/100BaseTX> port 0xa000-0xa0ff mem 0xd3800000-0xd38
+000ff irq 15 at device 11.0 on pci0
+miibus0: <MII bus> on dc0
+bmtphy0: <BCM5201 10/100baseTX PHY> PHY 1 on miibus0
+bmtphy0:  10baseT, 10baseT-FDX, 100baseTX, 100baseTX-FDX, auto
+dc0: Ethernet address: 00:a0:cc:da:da:da
+dc0: [ITHREAD]
+dc1: <82c169 PNIC 10/100BaseTX> port 0x9800-0x98ff mem 0xd3000000-0xd30
+000ff irq 11 at device 12.0 on pci0
+miibus1: <MII bus> on dc1
+bmtphy1: <BCM5201 10/100baseTX PHY> PHY 1 on miibus1
+bmtphy1:  10baseT, 10baseT-FDX, 100baseTX, 100baseTX-FDX, auto
+dc1: Ethernet address: 00:a0:cc:da:da:db
+dc1: [ITHREAD]
+....
+
+In dit voorbeeld zitten er twee kaarten in het systeem die het stuurprogramma man:dc[4] gebruiken.
+
+Als het stuurprogramma voor een NIC geen onderdeel is van de kernel [.filename]#GENERIC#, dan dient het juiste stuurprogramma voor die NIC geladen te worden. Dit kan op twee manieren:
+
+* De meest eenvoudige manier is het laden van een kernelmodule voor een netwerkkaart met man:kldload[8] of automatisch tijdens het opstarten van het systeem door de benodigde regel toe te voegen aan [.filename]#/boot/loader.conf#. Niet alle NIC-stuurprogramma's zijn als module beschikbaar. Zo zijn er bijvoorbeeld geen modules beschikbaar voor ISA-kaarten.
+* Ondersteuning voor een kaart kan ook in de kernel gecompileerd worden. In [.filename]#/usr/src/sys/conf/NOTES#, [.filename]#/usr/src/sys/arch/conf/NOTES# en de hulppagina van het stuurprogramma is na te lezen wat er in het kernelinstellingenbestand moet staan. In crossref:kernelconfig[kernelconfig,De FreeBSD-kernel instellen] staat meer informatie over het compileren van een eigen kernel. Als een netwerkkaart al bij het opstarten wordt herkend door de kernel [.filename]#GENERIC#, is er geen reden om een andere kernel te bouwen.
+
+[[config-network-ndis]]
+==== Gebruik maken van Windows(R) NDIS-stuurprogramma's
+
+Helaas zijn er nog steeds veel leveranciers die geen schema's leveren voor stuurprogramma's aan de open-source gemeenschap, omdat ze deze informatie beschouwen als handelsgeheimen. Als gevolg daarvan hebben de ontwikkelaars van FreeBSD en andere projecten twee keuzes: zelf de stuurprogramma's ontwikkelen door een langdurig en pijnlijk proces van de huidige stuurprogramma's te ontcijferen, of door gebruik te maken van de huidige binaire bestanden voor het Microsoft(R) Windows(R) platform. De meeste ontwikkelaars, inclusief diegeen die gekoppeld zijn aan FreeBSD, hebben voor het laatste gekozen.
+
+Dankzij de bijdragen van Bill Paul (wpaul) is er "native" ondersteuning voor de Network Driver Interface Specification (NDIS). De FreeBSD NDISulator (ook wel bekend als Project Evil) neemt een binair Windows(R) stuurprogramma en doet net alsof deze in een Windows(R) systeem draait. Omdat het stuurprogramma man:ndis[4] een Windows(R) binary gebruikt; draait het alleen op i386(TM)- en amd64-systemen. PCI, CardBus, PCMCIA (PC-Card) en USB-apparaten worden ondersteund.
+
+Om de NDISulator te gebruiken zijn drie dingen nodig:
+
+. De bronbestanden van de kernel
+. Een Windows(R) XP stuurprogramma (met de extensie [.filename]#.SYS#)
+. Een instellingenbestand van het Windows(R) XP stuurprogramma (met de extensie [.filename]#.INF#)
+
+Lokaliseer de bestanden voor uw specifieke kaart. Over het algemeen kunnen deze gevonden worden op de bijgeleverde CD's of op de website van de leverancier. In de volgende voorbeelden maken we gebruik van [.filename]#W32DRIVER.SYS# en [.filename]#W32DRIVER.INF#.
+
+De bit-breedte van het stuurprogramma moet overeenkomen met die van het stuurprogramma. Gebruik voor FreeBSD/i386 een 32-bits Windows(R) stuurprogramma. Voor FreeBSD/amd64 is een 64-bits Windows(R) stuurprogramma nodig.
+
+De volgende stap is het compileren van het binaire stuurprogramma in een laadbare kernelmodule. Gebruik man:ndisgen[8] als `root`:
+
+[source,bash]
+....
+# ndisgen /pad/naar/W32DRIVER.INF
+/pad/naar/W32DRIVER.SYS
+....
+
+man:ndisgen[8] is interactief en vraagt om extra informatie als het dat nodig heeft. Een nieuwe kernel-module wordt in de huidige map geschreven. Gebruik man:kldload[8] om de nieuwe module te laden:
+
+[source,bash]
+....
+# kldload ./W32DRIVER_SYS.ko
+....
+
+Naast de gegenereerde kernelmodule, moeten ook de modules [.filename]#ndis.ko# en [.filename]#if_ndis.ko# geladen worden. Dit zou automatisch moeten gebeuren als er een module geladen wordt dit afhankelijk is van man:ndis[4]. Als ze handmatig ingeladen moeten worden gebruik dan de volgende commando's:
+
+[source,bash]
+....
+# kldload ndis
+# kldload if_ndis
+....
+
+Het eerste commando laadt de stuurprogrammawrapper voor de NDIS miniport, de tweede laadt de daadwerkelijke netwerkinterface.
+
+Controleer nu man:dmesg[8] om te zien of er ergens fouten voorkomen. Als alles goed gegaan is ziet u ongeveer het volgende:
+
+[source,bash]
+....
+ndis0: <Wireless-G PCI Adapter> mem 0xf4100000-0xf4101fff irq 3 at device 8.0 on pci1
+ndis0: NDIS API version: 5.0
+ndis0: Ethernet address: 0a:b1:2c:d3:4e:f5
+ndis0: 11b rates: 1Mbps 2Mbps 5.5Mbps 11Mbps
+ndis0: 11g rates: 6Mbps 9Mbps 12Mbps 18Mbps 36Mbps 48Mbps 54Mbps
+....
+
+Vanaf dit moment kan de [.filename]#ndis0# net zo gebruikt worden als elke andere netwerkkaart (bv. [.filename]#dc0#).
+
+Het systeem kan geconfigureerd worden zodat de NDIS-modules automatisch gestart worden tijdens het opstarten van het systeem, net zoals bij andere modules. Kopieer eerst de gegenereerde module [.filename]#W32DRIVER_SYS.ko# naar de map [.filename]#/boot/modules#. Voeg daarna de volgende regel toe aan [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+W32DRIVER_SYS_load="YES"
+....
+
+=== De netwerkkaart instellen
+
+Nadat een geschikt stuurprogramma geladen is, moet de kaart nog ingesteld worden. Mogelijk is dit al gebeurd door sysinstall tijdens de installatie.
+
+Om de instellen van de netwerkkaarten weer te geven:
+
+[source,bash]
+....
+% ifconfig
+dc0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=80008<VLAN_MTU,LINKSTATE>
+        ether 00:a0:cc:da:da:da
+        inet 192.168.1.3 netmask 0xffffff00 broadcast 192.168.1.255
+        media: Ethernet autoselect (100baseTX <full-duplex>)
+        status: active
+dc1: flags=8802<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=80008<VLAN_MTU,LINKSTATE>
+        ether 00:a0:cc:da:da:db
+        inet 10.0.0.1 netmask 0xffffff00 broadcast 10.0.0.255
+        media: Ethernet 10baseT/UTP
+        status: no carrier
+lo0: flags=8049<UP,LOOPBACK,RUNNING,MULTICAST> metric 0 mtu 16384
+        options=3<RXCSUM,TXCSUM>
+        inet6 fe80::1%lo0 prefixlen 64 scopeid 0x4
+        inet6 ::1 prefixlen 128
+        nd6 options=3<PERFORMNUD,ACCEPT_RTADV>
+....
+
+In dit voorbeeld werden de volgende apparaten weergegeven:
+
+* [.filename]#dc0#: de eerste Ethernet-interface;
+* [.filename]#dc1#: de tweede Ethernet-interface;
+* [.filename]#lo0#: het loopback-apparaat;
+
+FreeBSD gebruikt de naam van het stuurprogramma gevolgd door een nummer voor de volgorde waarop de kaarten gedetecteerd zijn bij het opstarten. [.filename]#sis2# is de derde netwerkkaart in het systeem die het stuurprogramma man:sis[4] gebruikt.
+
+In het vorige voorbeeld is het apparaat [.filename]#dc0# volledig operationeel. Dit blijkt uit de volgende indicatoren:
+
+. `UP` betekent dat de kaart ingesteld is en klaar is voor gebruik;
+. De kaart heeft een Internet (`inet`) adres (in dit geval `192.168.1.3`);
+. Het heeft een geldig subnetmasker (`netmask`; `0xffffff00` is hetzelfde als `255.255.255.0`);
+. Het heeft een geldig broadcastadres (in dit geval `192.168.1.255`);
+. Het MAC-adres van de kaart (`ether`) is `00:a0:cc:da:da:da`;
+. De fysieke mediaselectie staat in autoselectiemodus (`media: Ethernet autoselect (100baseTX full-duplex)`). [.filename]#dc1# is ingesteld om met `10baseT/UTP`-media te werken. Meer informatie over de mogelijke mediatypes staan in de hulppagina's voor het betreffende stuurprogramma.
+. De status van de verbinding (`status`) is `active`, dat wil zeggen dat de drager is gevonden. Bij [.filename]#dc1# staat echter `status: no carrier`. Dit is normaal als er geen Ethernetkabel in de kaart gestoken is.
+
+Als de uitvoer man:ifconfig[8] er ongeveer zoals hieronder uitziet, dan is de netwerkkaart nog niet ingesteld:
+
+[source,bash]
+....
+dc0: flags=8843<BROADCAST,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=80008<VLAN_MTU,LINKSTATE>
+        ether 00:a0:cc:da:da:da
+        media: Ethernet autoselect (100baseTX <full-duplex>)
+        status: active
+....
+
+Om de kaart in te stellen zijn `root`-rechten nodig. De netwerkkaart kan vanaf de console worden ingesteld met man:ifconfig[8], maar dan moet dat na elke herstart herhaald worden. Daarom wordt het vrijwel altijd in [.filename]#/etc/rc.conf# gezet.
+
+In [.filename]#/etc/rc.conf# moet voor elke netwerkkaart in een systeem een regel toegevoegd worden. In het huidige voorbeeld zou dat het volgende kunnen zijn:
+
+[.programlisting]
+....
+ifconfig_dc0="inet 192.168.1.3 netmask 255.255.255.0"
+ifconfig_dc1="inet 10.0.0.1 netmask 255.255.255.0 media 10baseT/UTP"
+....
+
+[.filename]#dc0#, [.filename]#dc1#, enzovoort, moeten vervangen worden door de correcte stuurprogramma's voor de netwerkkaarten, zo ook de IP-adressen. In de handleiding van het stuurprogramma en van man:ifconfig[8] staan meer details over de mogelijke opties en in man:rc.conf[5] staat meer informatie over [.filename]#/etc/rc.conf#.
+
+Als het netwerk al is ingesteld tijdens het installeren van FreeBSD staan er al enkele regels met betrekking tot de netwerkkaart(en) in [.filename]#/etc/rc.conf#. Het is dus handig [.filename]#/etc/rc.conf# te controleren voordat er regels toegevoegd worden.
+
+Ook [.filename]#/etc/hosts# moet worden gewijzigd om de namen en IP adressen van verschillende machines op het lokale netwerk, als ze er nog niet in staan. Meer informatie staat in man:hosts[5] en [.filename]#/usr/shared/examples/etc/hosts#.
+
+[NOTE]
+====
+Als internettoegang nodig is met dit apparaat, kan het zijn dat de default gateway en de naamserver handmatig moeten worden ingesteld:
+
+[source,bash]
+....
+# echo 'defaultrouter="your_default_router"' >> /etc/rc.conf
+# echo 'nameserver your_DNS_server' >> /etc/resolv.conf
+....
+
+====
+
+=== Testen en problemen oplossen
+
+Als de veranderingen in [.filename]#/etc/rc.conf# zijn gemaakt, moet het systeem opnieuw gestarten worden (of moeten nauwkeurig alle daemons gestart of herstart worden). Veranderingen aan de interface(s) worden dan toegepast en dan kan er controleerd worden of herstarten goed werkt zonder foutmeldingen. Als alternatief kan ook het netwerk systeem herstart worden:
+
+[source,bash]
+....
+# service netif restart
+....
+
+[NOTE]
+====
+Als er ook een default gateway ingesteld is in het [.filename]#/etc/rc.conf# bestand, moet ook onderstaand command worden gegeven:
+
+[source,bash]
+....
+# service routing restart
+....
+
+====
+
+Zodra het netwerk systeem is herstart, moeten de netwerk interfaces opnieuw getest worden.
+
+==== Testen van de netwerkkaart
+
+Om te controleren of een ethernet kaart goed geconfigureerd is, moeten er twee dingen gedaan worden. Allereerst, ping de interface zelf, en daarna een andere machine op het LAN.
+
+Test eerst de lokale interface:
+
+[source,bash]
+....
+% ping -c5 192.168.1.3
+PING 192.168.1.3 (192.168.1.3): 56 data bytes
+64 bytes from 192.168.1.3: icmp_seq=0 ttl=64 time=0.082 ms
+64 bytes from 192.168.1.3: icmp_seq=1 ttl=64 time=0.074 ms
+64 bytes from 192.168.1.3: icmp_seq=2 ttl=64 time=0.076 ms
+64 bytes from 192.168.1.3: icmp_seq=3 ttl=64 time=0.108 ms
+64 bytes from 192.168.1.3: icmp_seq=4 ttl=64 time=0.076 ms
+
+--- 192.168.1.3 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 0.074/0.083/0.108/0.013 ms
+....
+
+Nu kan er een andere machine op het LAN gepinged worden:
+
+[source,bash]
+....
+% ping -c5 192.168.1.2
+PING 192.168.1.2 (192.168.1.2): 56 data bytes
+64 bytes from 192.168.1.2: icmp_seq=0 ttl=64 time=0.726 ms
+64 bytes from 192.168.1.2: icmp_seq=1 ttl=64 time=0.766 ms
+64 bytes from 192.168.1.2: icmp_seq=2 ttl=64 time=0.700 ms
+64 bytes from 192.168.1.2: icmp_seq=3 ttl=64 time=0.747 ms
+64 bytes from 192.168.1.2: icmp_seq=4 ttl=64 time=0.704 ms
+
+--- 192.168.1.2 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 0.700/0.729/0.766/0.025 ms
+....
+
+Dit kan ook worden geprobeerd met de machine naam in plaats van met `192.168.1.2` als dit geconfigureerd is in [.filename]#/etc/hosts#.
+
+==== Problemen oplossen
+
+Het testen en zoeken van problemen is altijd een pijnpunt, welke verminderd kan worden door een aantal simpele dingen eerst te controleren. Is de netwerkkabel ingestoken? Zijn de netwerk instellingen correct opgegeven? Is de firewall goed geconfigureerd? Is de netwerkkaart ondersteund door FreeBSD? Controleer altijd de hardware notities voordat er een probleem rapport wordt verstuurd. Update naar de laatste -STABLE versie, en controleer de mailing lijsten en misschien zelfs het internet.
+
+Als de kaart werkt, maar de prestaties zijn slecht, dan kan het de moeite waard zijn om man:tuning[7] door te nemen. Incorrecte netwerkinstellingen kunnen ook tot langzame verbindingen leiden.
+
+Soms kunnen enkele `device timeouts` optreden. Met sommige kaarten is dit normaal gedrag. Maar als dit continu gebeurt of storend is, is het verstandig uit te zoeken of er geen sprake is van een hardwareconfict tussen de netwerkkaart en een ander apparaat. Ook dient nogmaals de bekabeling gecontroleerd te worden. Misschien zit er niets anders op dan een andere netwerkkaart te gebruiken.
+
+Het is ook mogelijk dat er `watchdog timeout` foutmeldingen optreden. Als eerste moet dan de netwerkkabel gecontroleerd worden. Veel kaarten hebben een PCI-slot nodig dat Bus Mastering ondersteunt. Sommige oudere moederborden hebben maar één PCI-slot waarmee dit kan (meestal slot 0). In de documentatie van de netwerkkaart en het moederbord is na te gaan of dit het probleem is.
+
+`No route to host` meldingen treden op als het systeem niet in staat is om een pakket naar de eindbestemming te routeren. Dit kan gebeuren als er geen standaardroute aangegeven is of als er een kabel niet verbonden is. De uitvoer van `netstat -rn` moet gecontroleerd worden of er een geldige route is naar de bestemming. Mocht dit niet het geval zijn, dan staat er meer informatie in crossref:advanced-networking[advanced-networking,Netwerken voor gevorderden].
+
+`ping: sendto: Permission denied` foutmeldingen worden vaak veroorzaakt door een verkeerd ingestelde firewall. Als de kernel `ipfw` activeert bij het opstarten zonder dat er firewallregels zijn gedefiniëerd, is het standaardbeleid om alle verkeer te weigeren, zelfs pings! In crossref:firewalls[firewalls,Firewalls] staat meer informatie.
+
+Er kan ook sprake zijn van onvoldoende prestaties doordat de instelling van de mediaselectie niet optimaal is. In dergelijke gevallen is het mogelijk om de mediaselectie niet als `autoselect` in te stellen, maar expliciet aan te geven wat de mediaselectie moet zijn, bijvoorbeeld 10baseT/UTP voor twisted pair. Hoewel dit voor de meeste hardware helpt, kan het zijn dat de problemen blijven. Dan moeten nogmaals de netwerkinstellingen gecontroleerd worden en geeft de man:tuning[7] handleiding wellicht meer informatie.
+
+[[configtuning-virtual-hosts]]
+== Virtuele hosts
+
+FreeBSD wordt veel gebruikt voor virtuele sitehosting, waarbij één fysieke server er op het netwerk uitziet alsof het meerdere servers zijn. Dit kan bereikt worden door meerdere IP-adressen toe te kennen aan dezelfde interface.
+
+Een bepaalde netwerkinterface heeft een "echt" adres en kan daarnaast een willekeurig aantal "alias"-adressen hebben. Normaliter worden dergelijke aliassen toegevoegd door aliasregels toe te voegen aan [.filename]#/etc/rc.conf#.
+
+Een aliasregel voor de interface [.filename]#fxp0# ziet er zo uit:
+
+[.programlisting]
+....
+ifconfig_fxp0_alias0="inet xxx.xxx.xxx.xxx netmask xxx.xxx.xxx.xxx"
+....
+
+De aliasregels moeten beginnen met `alias0` en moete elkaar dan opvolgen (bijvoorbeeld `_alias1,`, `_alias2`, enzovoort). Het instelproces stopt als er een nummer ontbreekt.
+
+Het is belangrijk dat aliassen het juiste netmasker hebben. Dit is eenvoudig: Een bepaalde interface moet altijd één adres hebben dat het netmasker van het netwerk correct representeert. Elk ander adres binnen dit netwerk op deze interface (alias) moet een netmasker van allemaal ``1``'en (bits) hebben (getoond als `255.255.255.255` of `0xffffffff`).
+
+Een voorbeeld. Stel de interface [.filename]#fxp0# is verbonden met twee netwerken, het netwerk `10.1.1.0` met masker `255.255.255.0` en het netwerk `202.0.75.16` met netmasker `255.255.255.240`. Het systeem moet ook de adressen `10.1.1.1` tot en met `10.1.1.5` en `202.0.75.17` tot en met `202.0.75.20` krijgen. Zoals hierboven vermeld, heeft alleen het eerste adres in een netwerkreeks (in dit geval `10.0.1.1` en `202.0.75.17`) een geldig netmasker. Alle overige (`10.1.1.2` tot en met `10.1.1.5` en `202.0.75.18` tot en met `202.0.75.20`) moeten ingesteld worden met het netmasker `255.255.255.255`.
+
+De volgende regels voor [.filename]#/etc/rc.conf# stellen een adapter in voor het bovenstaande scenario:
+
+[.programlisting]
+....
+ifconfig_fxp0="inet 10.1.1.1 netmask 255.255.255.0"
+ifconfig_fxp0_alias0="inet 10.1.1.2 netmask 255.255.255.255"
+ifconfig_fxp0_alias1="inet 10.1.1.3 netmask 255.255.255.255"
+ifconfig_fxp0_alias2="inet 10.1.1.4 netmask 255.255.255.255"
+ifconfig_fxp0_alias3="inet 10.1.1.5 netmask 255.255.255.255"
+ifconfig_fxp0_alias4="inet 202.0.75.17 netmask 255.255.255.240"
+ifconfig_fxp0_alias5="inet 202.0.75.18 netmask 255.255.255.255"
+ifconfig_fxp0_alias6="inet 202.0.75.19 netmask 255.255.255.255"
+ifconfig_fxp0_alias7="inet 202.0.75.20 netmask 255.255.255.255"
+....
+
+[[configtuning-syslog]]
+== De systeemlogger syslogd configureren
+
+Systeemlogging is een belangrijk aspect van systeembeheer. Het wordt zowel gebruikt voor het opsporen van hardware-problemen als voor software-problemen in het systeem. Het speelt ook zeer belangrijke rol bij het controleren van de beveiliging en het reageren op incidenten. Systeem-daemons die niet in een terminal beheerd worden, loggen gewoonlijk informatie naar een systeemlogfaciliteit of een ander logbestand.
+
+Deze sectie beschrijft hoe de FreeBSD systeemlogger, man:syslogd[8], te configureren en te gebruiken, en behandelt logrotatie en logbeheer met man:newsyslog[8]. De focus ligt bij het opzetten en gebruiken van `syslogd` op een lokale machine. Meer geavanceerdere opstellingen die een aparte loghost gebruiken staan in crossref:network-servers[network-syslogd,Hosts op afstand loggen met syslogd].
+
+=== syslogd gebruiken
+
+In de standaardconfiguratie van FreeBSD wordt man:syslogd[8] gestart tijdens het opstarten. Dit wordt bepaald door de variabele `syslogd_enable` in [.filename]#/etc/rc.conf#. Er zijn vele toepassingsargumenten die het gedrag van man:syslogd[8] beïnvloeden. Gebruik `syslogd_flags` in [.filename]#/etc/rc.conf# om ze te veranderen. Bekijk man:syslogd[8] voor meer informatie over de argumenten, en man:rc.conf[5], <<configtuning-core-configuration>> en <<configtuning-rcd>> voor meer informatie over [.filename]#/etc/rc.conf# en het deelsysteem man:rc[8].
+
+=== syslogd configureren
+
+Het configuratiebestand, standaard [.filename]#/etc/syslog.conf#, bepaalt wat man:syslogd[8] doet met de logregels nadat ze eenmaal ontvangen zijn. Er zijn verschillende parameters om de afhandeling van binnenkomende gebeurtenissen te beheren, waarvan de twee basaalste _faciliteit_ en _niveau_ zijn. De faciliteit beschrijft welk deelsysteem het bericht genereerde, zoals de kernel of een daemon, het niveau beschrijft de ernst van de opgetreden gebeurtenis. Dit maakt het mogelijk om het bericht naar verschillende logbestanden te loggen, of het weg te gooien, afhankelijk van de faciliteit en het niveau. Het is ook mogelijk om actie te nemen afhankelijk van de toepassing dat het bericht verstuurde, en in het geval van loggen op afstand, ook de hostnaam van de machine dat het logbericht genereerde.
+
+Het configureren van man:syslogd[8] is vrij rechttoe-rechtaan. Het configuratiebestand bevat één regel per actie, de syntaxis van elke regel is een selecteerderveld gevolgd door een actieveld. De syntaxis van het selecteerderveld is _faciliteit.niveau_ dat overeenkomt met logberichten van _faciliteit_ op niveau _niveau_ of hoger. Het is ook mogelijk om een optionele vergelijkingsvlag voor het niveau toe te voegen om meer precies te specificeren wat er gelogd wordt. Er kunnen meerdere selecteerdervelden worden gebruikt voor dezelfde actie, ze worden gescheiden door een puntkomma (`;`). Het gebruik van `*` zal met alles overeenkomen. Het actieveld bepaalt waar het logbericht naar toe wordt gezonden, zoals een bestand of een loghost op afstand. Als voorbeeld is hier de standaard [.filename]#syslog.conf# van FreeBSD:
+
+[.programlisting]
+....
+# $FreeBSD$
+#
+#       Spaces ARE valid field separators in this file. However,
+#       other *nix-like systems still insist on using tabs as field
+#       separators. If you are sharing this file between systems, you
+#       may want to use only tabs as field separators here.
+#       Consult the man:syslog.conf[5] manpage.
+*.err;kern.warning;auth.notice;mail.crit                /dev/console <.>
+*.notice;authpriv.none;kern.debug;lpr.info;mail.crit;news.err   /var/log/messages
+security.*                                      /var/log/security
+auth.info;authpriv.info                         /var/log/auth.log
+mail.info                                       /var/log/maillog <.>
+lpr.info                                        /var/log/lpd-errs
+ftp.info                                        /var/log/xferlog
+cron.*                                          /var/log/cron
+*.=debug                                        /var/log/debug.log <.>
+*.emerg                                         *
+# uncomment this to log all writes to /dev/console to /var/log/console.log
+#console.info                                   /var/log/console.log
+# uncomment this to enable logging of all log messages to /var/log/all.log
+# touch /var/log/all.log and chmod it to mode 600 before it will work
+#*.*                                            /var/log/all.log
+# uncomment this to enable logging to a remote loghost named loghost
+#*.*                                            @loghost
+# uncomment these if you're running inn
+# news.crit                                     /var/log/news/news.crit
+# news.err                                      /var/log/news/news.err
+# news.notice                                   /var/log/news/news.notice
+!ppp <.>
+*.*                                             /var/log/ppp.log
+!*
+....
+
+<.> Komt overeen met alle berichten met een `err` of hoger, alsook met `kern.warning`, `auth.notice` en `mail.crit`, en stuur deze logberichten naar de console ( [.filename]#/dev/console#).
+
+<.> Komt overeen met alle berichten van de faciliteit `mail` op niveau `info` of hoger, en logt de berichten in [.filename]#/var/log/maillog#.
+
+<.> Deze regel gebruikt een vergelijkingsvlag, `=` om alleen met de berichten op niveau `debug` overeen te komen en ze op te slaan in [.filename]#/var/log/debug.log#.
+
+<.> Hier volgt een gebruiksvoorbeeld van een _programmaspecificatie_. Dit zorgt ervoor dat de regels alleen geldig zijn voor het programma in de programmaspecificatie. In dit geval zorgen deze en de volgende regel ervoor dat alle berichten van `ppp`, maar niet van andere programma's, in [.filename]#/var/log/ppp.log# terechtkomen.
+
+Dit voorbeeld toont dat er vele niveaus en deelsystemen zijn. De niveaus zijn, in volgorde van meest naar minst kritisch: `emerg`, `alert`, `crit`, `err`, `warning`, `notice`, `info` en `debug`.
+
+De faciliteiten zijn, in geen specifieke volgorde: `auth`, `authpriv`, `console`, `cron`, `daemon`, `ftp`, `kern`, `lpr`, `mail`, `mark`, `news`, `security`, `syslog`, `user`, `uucp` en `local0` tot en met `local7`. Let erop dat andere besturingssystemen andere faciliteiten kunnen hebben.
+
+Met deze kennis is het eenvoudig om een nieuwe regel aan [.filename]#/etc/syslog.conf# toe te voegen om alles van de verschillende daemons op niveau `notice` en hoger naar [.filename]#/var/log/daemon.log# te loggen:
+
+[.programlisting]
+....
+daemon.notice                                        /var/log/daemon.log
+....
+
+Bekijk man:syslog[3] en man:syslogd[8] voor meer informatie over de verschillende niveaus en faciliteiten. Zie man:syslog.conf[5] en crossref:network-servers[network-syslogd,Hosts op afstand loggen met syslogd] voor meer informatie over [.filename]#syslog.conf#, de syntaxis, en geavanceerdere gebruiksvoorbeelden.
+
+=== Logbeheer en -rotatie met newsyslog
+
+Logbestanden hebben de neiging om snel te groeien en gestadig opgehoopt te raken. Dit leidt tot bestanden die vol zitten met minder direct bruikbare informatie en de harde schijf volmaken. Logbeheer kan gebruikt worden om dit te beheersen. In FreeBSD wordt man:newsyslog[8] gebruikt om logbestanden te beheren. Dit programma wordt gebruikt om periodiek logbestanden te roteren en te comprimeren en om optioneel ontbrekende logbestanden aan te maken en programma's te signaleren dat logbestanden zijn verplaatst. De logbestanden hoeven niet per sé van syslog afkomstig te zijn; man:newsyslog[8] werkt met elke log van elk programma. Het is belangrijk om op te merken dat `newsyslog` normaliter vanuit man:cron[8] wordt gedraaid en niet een systeem-daemon is. In de standaardconfiguratie wordt het elk uur gedraaid.
+
+==== newsyslog configureren
+
+Om te weten wat het moet doen leest man:newsyslog[8] zijn configuratiebestand, standaard is dit [.filename]#/etc/newsyslog.conf#. Dit configuratiebestand bevat één regel voor elk bestand dat man:newsyslog[8] beheert. Elke regel noemt de eigenaar van het bestand, rechten, en wanneer dat bestand te roteren, alsook optionele vlaggen die de logrotatie beïnvloeden (zoals compressie) en naar welke programma's een signaal te sturen wanner de log is geroteerd. Als voorbeeld is hier de standaard configuratie in FreeBSD:
+
+[.programlisting]
+....
+# configuration file for newsyslog
+# $FreeBSD$
+#
+# Entries which do not specify the '/pid_file' field will cause the
+# syslogd process to be signalled when that log file is rotated.  This
+# action is only appropriate for log files which are written to by the
+# syslogd process (ie, files listed in /etc/syslog.conf).  If there
+# is no process which needs to be signalled when a given log file is
+# rotated, then the entry for that file should include the 'N' flag.
+#
+# The 'flags' field is one or more of the letters: BCDGJNUXZ or a '-'.
+#
+# Note: some sites will want to select more restrictive protections than the
+# defaults.  In particular, it may be desirable to switch many of the 644
+# entries to 640 or 600.  For example, some sites will consider the
+# contents of maillog, messages, and lpd-errs to be confidential.  In the
+# future, these defaults may change to more conservative ones.
+#
+# logfilename          [owner:group]    mode count size when  flags [/pid_file] [sig_num]
+/var/log/all.log                        600  7     *    @T00  J
+/var/log/amd.log                        644  7     100  *     J
+/var/log/auth.log                       600  7     100  @0101T JC
+/var/log/console.log                    600  5     100  *     J
+/var/log/cron                           600  3     100  *     JC
+/var/log/daily.log                      640  7     *    @T00  JN
+/var/log/debug.log                      600  7     100  *     JC
+/var/log/init.log                       644  3     100  *     J
+/var/log/kerberos.log                   600  7     100  *     J
+/var/log/lpd-errs                       644  7     100  *     JC
+/var/log/maillog                        640  7     *    @T00  JC
+/var/log/messages                       644  5     100  @0101T JC
+/var/log/monthly.log                    640  12    *    $M1D0 JN
+/var/log/pflog                          600  3     100  *     JB    /var/run/pflogd.pid
+/var/log/ppp.log        root:network    640  3     100  *     JC
+/var/log/security                       600  10    100  *     JC
+/var/log/sendmail.st                    640  10    *    168   B
+/var/log/utx.log                        644  3     *    @01T05 B
+/var/log/weekly.log                     640  5     1    $W6D0 JN
+/var/log/xferlog                        600  7     100  *     JC
+....
+
+Elke regel begint met de naam van het bestand dat geroteerd moet worden, optioneel gevolgd door een eigenaar en groep voor zowel de geroteerde als nieuw aangemaakte bestanden. Het volgende veld, `mode` is de modus van de bestanden en `count` geeft aan hoeveel geroteerde logbestanden bewaard moeten worden. De velden `size` en `when` vertellen `newyslog` wanneer het bestand geroteerd moet worden. Een logbestand wordt geroteerd wanneer òfwel de grootte meer is dan de waarde in het veld `size`, òfwel wanneer de tijd in het veld `when` is verstreken. `*` geeft aan dat dit veld genegeerd wordt. Het veld _flags_ geeft man:newsyslog[8] verdere instructies, zoals hoe het geroteerde bestand te comprimeren of om het logbestand aan te maken als het ontbreekt. De laatste twee velden zijn optioneel en specificeren het PID-bestand van een proces en een naar dat proces te verzenden signaalnummer wanneer het bestand wordt geroteerd. Raadpleeg man:newsyslog.conf[5] voor meer informatie over alle velden, geldige vlaggen en hoe de rotatietijd te specificeren. Herinner dat `newsyslog` wordt gedraaid vanuit `cron` en niet vaker bestanden kan roteren dan dat het gedraaid wordt vanuit man:cron[8].
+
+[[configtuning-configfiles]]
+== Instellingenbestanden
+
+=== [.filename]#/etc# layout
+
+Instellingengegevens wordt in een aantal mappen bewaard. Daar zijn onder andere:
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|[.filename]#/etc#
+|Generieke systeeminstellingenbestanden, specifiek voor het systeem.
+
+|[.filename]#/etc/defaults#
+|De standaardversies van systeeminstellingenbestanden.
+
+|[.filename]#/etc/mail#
+|Extra man:sendmail[8] instellingenbestanden of instellingenbestanden voor andere MTAs.
+
+|[.filename]#/etc/ppp#
+|Instellingen voor zowel gebruiker- als kernel-ppp programma's.
+
+|[.filename]#/etc/namedb#
+|Standaardlocatie voor man:named[8] gegevens. Normaal gesproken bevinden zich hier [.filename]#named.conf# en zonebestanden.
+
+|[.filename]#/usr/local/etc#
+|Instellingenbestanden voor geïnstalleerde software. Kan submappen hebben waarin bij elkaar horende instellingengegevens van een applicatie gegroepeerd zijn.
+
+|[.filename]#/usr/local/etc/rc.d#
+|Start- en stopscripts voor geïnstalleerde diensten.
+
+|[.filename]#/var/db#
+|Automatisch gemaakte systeemspecifieke databasebestanden, zoals de pakketdatabase, de man:locate[1] database, enzovoort.
+|===
+
+=== Hostnamen
+
+==== [.filename]#/etc/resolv.conf#
+
+In [.filename]#/etc/resolv.conf# wordt voorgeschreven op welke wijze FreeBSD het Domain Name System (DNS) moet gebruiken.
+
+De meest voorkomende termen in [.filename]#resolv.conf# zijn:
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|`nameserver`
+|Het IP-adres van een naamserver die ondervraagd moet worden voor naam/IP-conversie. De servers worden in volgorde geprobeerd en het maximale aantal is drie.
+
+|`search`
+|Zoeklijst voor het opzoeken van hostnamen. Meestal wordt deze bepaald door het domein waarop de lokale hostnaam zich bevindt.
+
+|`domain`
+|De lokale domeinnaam.
+|===
+
+Een typisch [.filename]#resolv.conf# bestand:
+
+[.programlisting]
+....
+search example.com
+nameserver 147.11.1.11
+nameserver 147.11.100.30
+....
+
+[NOTE]
+====
+`search` en `domain` dienen niet tegelijk gebruikt te worden.
+====
+
+Als DHCP wordt gebruikt: man:dhclient[8] overschrijft meestal [.filename]#resolv.conf# met informatie ontvangen van de DHCP-server.
+
+==== [.filename]#/etc/hosts#
+
+[.filename]#/etc/hosts# is een eenvoudige tekstdatabase uit de dagen van het oude Internet. Het werkt samen met DNS en NIS om namen en IP adressen over en weer te vertalen. Lokale computers, verbonden via een LAN, kunnen hier het beste in opgenomen worden om zo op simpele wijze naam/IP conversie voor een LAN te hebben, zonder noodzaak voor een man:named[8] server. Ook kunnen naamaliassen toegekend worden (vergelijkbaar met CNAMES bij DNS). Op soortgelijke wijze kan [.filename]#/etc/hosts# gebruikt worden als een (zeer beperkte) lokale DNS cache.
+
+[.programlisting]
+....
+# $FreeBSD$
+#
+# Host Database
+# Dit bestand hoort de adressen en aliassen te bevatten
+# voor de lokale hosts die dit bestand gebruiken.
+# Bij gebruik van DNS of NIS hoeft dit bestand helemaal niet gebruikt
+# te worden.  Zie /etc/nsswitch.conf voor de volgorde van resolutie.
+#
+#
+::1                      localhost localhost.my.domain myname.my.domain
+127.0.0.1                localhost localhost.my.domain myname.my.domain
+
+#
+# Verzonnen netwerk.
+#10.0.0.2                myname.my.domain myname
+#10.0.0.3                myfriend.my.domain myfriend
+#
+# Volgens RFC 1918 mogen de volgende IP netwerken gebruikt worden
+# als private netwerken die niet met Internet verbonden zijn:
+#
+#        10.0.0.0        -   10.255.255.255
+#        172.16.0.0      -   172.31.255.255
+#        192.168.0.0     -   192.168.255.255
+#
+# Als er toch verbinding moet zijn met Internet, zijn echte
+# officieel toegewezen nummers nodig.  Probeer ECHT GEEN eigen
+# netwerknummers te verzinnen, maar vraag ze op bij de provider
+# (als die er is) of bij de Internet Registry (ftp naar
+# rs.internic.net, map `/templates').
+#
+....
+
+[.filename]#/etc/hosts# heeft als formaat:
+
+[.programlisting]
+....
+[Internet address] [official hostname] [alias1] [alias2] ...
+....
+
+Bijvoorbeeld:
+
+[.programlisting]
+....
+10.0.0.1 myRealHostname.example.com myRealHostname foobar1 foobar2
+....
+
+In man:hosts[5] staat meer informatie.
+
+[[configtuning-sysctlconf]]
+=== [.filename]#sysctl.conf#
+
+[.filename]#sysctl.conf# lijkt veel op [.filename]#rc.conf#. Waardetoekenning heeft weer de vorm `variable=value`. De ingestelde man:sysctl[8]-waarden worden doorgevoerd op het moment dat het systeem naar multi-user modus gaat. Niet alle variabelen kunnen in deze modus gewijzigd worden.
+
+Om te voorkomen dat er logregels geplaatst worden als processen crashen en om te voorkomen dat andere gebruikers kunnen zien welke processen er gestart zijn door een andere gebruiker, kunnen de volgende instellingen worden gezet in [.filename]#sysctl.conf#:
+
+[.programlisting]
+....
+#Log exits met fatale signalen niet (bv. sig 11)
+kern.logsigexit=0
+
+# Voorkom dat gebruikers informatie zien over processen die
+# worden gedraaid onder een ander UID.
+security.bsd.see_other_uids=0
+....
+
+[[configtuning-sysctl]]
+== Optimaliseren met sysctl
+
+man:sysctl[8] is een interface waarmee veranderingen gemaakt kunnen worden aan een draaiend FreeBSD-systeem. Er zijn onder meer vele geavanceerde opties voor de TCP/IP-stack en het virtuele geheugensysteem, waarmee een ervaren systeembeheerder de systeemprestaties drastisch kan verbeteren. Met man:sysctl[8] kunnen meer dan vijfhonderd systeemvariabelen opgevraagd en ingesteld worden.
+
+In essentie heeft man:sysctl[8] twee functies: het lezen en wijzigen van systeeminstellingen.
+
+Om alle leesbare variabelen te tonen:
+
+[source,bash]
+....
+% sysctl -a
+....
+
+Om een bepaalde variabele op te vragen, bijvoorbeeld `kern.maxproc`:
+
+[source,bash]
+....
+% sysctl kern.maxproc
+kern.maxproc: 1044
+....
+
+Om een bepaalde variabele toe te kennen (te wijzigen), is de syntaxis _variable_=_value_:
+
+[source,bash]
+....
+# sysctl kern.maxfiles=5000
+kern.maxfiles: 2088 -> 5000
+....
+
+Waarden van sysctl-variabelen zijn doorgaans strings (tekst), getallen of booleans (`1` als waar, `0` als onwaar).
+
+Om automatisch variabelen in te stellen als de machine start, kunnen ze toegevoegd worden aan [.filename]#/etc/sysctl.conf#. Meer informatie staat in man:sysctl.conf[5] en <<configtuning-sysctlconf>>.
+
+[[sysctl-readonly]]
+=== man:sysctl[8] alleen-lezen
+
+In sommige gevallen is het wenselijk om man:sysctl[8]-waarden die alleen-lezen zijn toch te wijzigen. Hoewel dit soms onontkoombaar is, kan het alleen bij een (her)start gedaan worden.
+
+Op sommige laptops is bijvoorbeeld het apparaat man:cardbus[4] niet in staat om geheugenregio's af te tasten, met als gevolg foutmeldingen als:
+
+[source,bash]
+....
+cbb0: Could not map register memory
+device_probe_and_attach: cbb0 attach returned 12
+....
+
+In dergelijke gevallen moeten er meestal enkele man:sysctl[8]-instellingen gewijzigd worden die alleen-lezen zijn en een standaardwaarde hebben. Dit kan bereikt worden door man:sysctl[8] "OIDs" in de lokale [.filename]#/boot/loader.conf# te zetten. Standaardinstellingen staan in [.filename]#/boot/defaults/loader.conf#.
+
+Om het bovenstaande probleem op te lossen moet in [.filename]#/boot/loader.conf#`hw.pci.allow_unsupported_io_range=1` ingesteld worden. Dan werkt man:cardbus[4] wel goed.
+
+[[configtuning-disk]]
+== Harde schijven optimaliseren
+
+=== Sysctl-variabelen
+
+==== `vfs.vmiodirenable`
+
+De sysctl-variabele `vfs.vmiodirenable` kan de waarde 0 (uit) of 1 (aan) hebben. De standaardwaarde is 1. Deze variabele bepaalt hoe mappen door het systeem in een cache bewaard worden. De meeste mappen zijn klein en gebruiken slechts een klein fragment (typisch 1 K) in het bestandssysteem en nog minder (typisch 512 bytes) in de buffercache. Als deze variabele uit staat (op 0) bewaart de buffercache slechts een bepaald aantal mappen in de cache, ook al is er een overvloed aan geheugen beschikbaar. Wanneer deze aan staat (op 1), wordt de VM paginacache gebruikt, waardoor voor het cachen van mappen al het geheugen kan worden gebruikt. Het is echter wel zo dat het minimale in-core geheugen dat gebruikt wordt om een map te cachen in dat geval de fysieke paginagrootte is (typisch 4 K) in plaats van 512 bytes. Het is aan te raden deze optie aan te laten staan als gebruik gemaakt wordt van diensten die met grote aantallen bestanden werken, zoals webcaches, grote mailsystemen en newsservers. Als deze optie aan blijft staan, verlaagt die de prestaties niet, ook al kost het meer geheugen. Door experimenteren is dit voor een systeem na te gaan.
+
+==== `vfs.write_behind`
+
+De sysctl-variabele `vfs.write_behind` staat standaard aan (`1`). Dit betekent dat het bestandssysteem gegevens naar het medium gaat schrijven op het moment dat er een volledig cluster aan gegevens verzameld is. Dit is meestal het geval bij het schrijven van grote sequentiële bestanden. Het idee is om te voorkomen dat de buffercache verzadigd raakt met vuile buffers zonder dat dit bijdraagt aan de I/O-prestaties. Dit kan echter processen ophouden en onder sommige omstandigheden is het wellicht beter deze sysctl uit te zetten.
+
+==== `vfs.hirunningspace`
+
+De sysctl-variabele `vfs.hirunningspace` bepaalt hoeveel nog te schrijven gegevens er in het complete systeem op elk moment in de wachtrij naar schijfcontrollers mag staan. De standaardwaarde is meestal voldoende, maar op machines met veel schijven, is het beter deze te verhogen naar vier of vijf _megabyte_. Het instellen van een te hoge waarde (groter dan de schrijfdrempel van de buffercache) kan leiden tot zeer slechte prestaties bij clustering. Stel deze waarde niet arbitrair hoog in! Hogere schrijfwaarden kunnen vertraging veroorzaken in het lezen, als dit tegelijk plaatsvindt.
+
+Er zijn verscheidene andere sysctl's voor buffercache en VM-pagecache. Het wordt afgeraden deze te wijzigen. Het VM-systeem is zeer goed in staat zichzelf automatisch te optimaliseren.
+
+==== `vm.swap_idle_enabled`
+
+De sysctl-variabele `vm.swap_idle_enabled` is nuttig in grote meergebruikersystemen met veel gebruikers die af- en aanmelden en veel onbenutte processen. Dergelijke systemen hebben de neiging om voortdurend de vrije geheugenreserves onder druk te zetten. Het is mogelijk om de prioriteit van geheugenpagina's die verband houden met onbenutte processen sneller te laten dalen dan met het normale pageout-algoritme, door deze sysctl aan te zetten en via `vm.swap_idle_threshold1` en `vm.swap_idle_threshold2` de swapout hysterese (in seconden onbenut) af te stemmen. Deze optie dient alleen gebruikt te worden als ze echt nodig is, want de andere kant van de medaille is dat dit eerder pre-page geheugen inhoudt in plaats van later, waardoor het meer wisselbestand- en schijfbandbreedte kost. In een klein systeem heeft deze optie een voorspelbaar effect, maar in grote systemen waar al sprake is van een matige paging kan deze optie het mogelijk maken voor het VM-systeem om hele processen gemakkelijk in en uit het geheugen te halen.
+
+==== `hw.ata.wc`
+
+Ten tijde van FreeBSD 4.3 is er geflirt met het uitzetten van IDE-schrijfcaching. Hierdoor neemt de bandbraadte naar IDE-schijven af, maar het werd als noodzakelijk beschouwd vanwege ernstige problemen met gegevensinconsistentie die door harde schijfproducenten geëintroduceerd waren. Het probleem is dat IDE-schijven niet de waarheid vertellen over wanneer een schrijfactie klaar is. Door IDE-schrijfcaching wordt data niet alleen ongeordend geschreven, maar soms kan zelfs het schrijven van sommige blokken voortdurend uitgesteld worden als er sprake is van een hoge schijfbelasting. Een crash of stroomstoring kan dan ernstige corruptie aan het bestandssysteem veroorzaken. Daarom werd de standaardinstelling van FreeBSD voor alle zekerheid gewijzigd. Helaas was het resultaat een groot verlies aan prestaties en na die uitgave is de standaardwaarde weer terug veranderd. Met de sysctl-variabele `hw.ata.wc` kan gecontroleerd worden of schrijfcaching aan of uit staat. Als schrijfcaching uit staat, kan het die weer aangezet worden door `hw.ata.wc` op 1 te zetten. Aangezien dit een kernelvariabele is, moet deze ingesteld worden vanuit de bootloader tijdens het opstarten. Nadat de kernel eenmaal opgestart is, heeft het wijzigen van deze sysctl geen effect.
+
+Meer informatie staat in man:ata[4].
+
+==== `SCSI_DELAY` (`kern.cam.scsi_delay`)
+
+De kernelinstelling `SCSI_DELAY` kan gebruikt worden om de opstarttijd te versnellen. De standaardwaarde is nogal hoog en kan `15` seconden vertraging veroorzaken. Met modernere SCSI-systemen is `5` seconden al voldoende (zeker met moderne schijven). De `kern.cam.scsi_delay` opstart variabele moet hier gebruikt worden. De variabele en kernelconfiguratie-optie accepteren waarden uitgedrukt in _milliseconden_ en _niet_ in _seconden_.
+
+[[soft-updates]]
+=== Softupdates
+
+man:tunefs[8] kan gebruikt worden om een bestandsysteem nauwkeurig af te stellen. Het heeft veel opties, maar nu wordt alleen het aan- en uitzetten van softupdates besproken. Dat gaat als volgt:
+
+[source,bash]
+....
+# tunefs -n enable /filesystem
+# tunefs -n disable /filesystem
+....
+
+Een bestandssysteem kan niet met man:tunefs[8] gewijzigd worden als het aangekoppeld is. Softupdates aanzetten wordt dus in het algemeen gedaan vanuit enkelegebruikermodus, voordat partities aangekoppeld zijn.
+
+Softupdates zorgen voor een drastische verbetering van de prestaties met betrekking tot metagegevens, met name het aanmaken en verwijderen van bestanden, door gebruik van een geheugencache. Het wordt dan ook aangeraden om op alle bestandssystemen softupdates te gebruiken. Er zijn twee nadelen aan softupdates: softupdates garanderen een consistent bestandssysteem in geval van een crash, maar het kan makkelijk enkele seconden (zelfs een minuut) achter liggen met het daadwerkelijk bijwerken op de fysieke harde schijf. Als een systeem crasht gaat wellicht meer werk verloren dan anders het geval zou zijn. Daarnaast vertragen softupdates het vrijgeven van bestandssysteemblokken. Als een bestandssysteem (zoals de rootpartitie) bijna vol is, dan kan het verrichten van een grote update, zoals `make installworld`, ertoe leiden dat het bestandssysteem ruimtegebrek krijgt en dat daardoor de operatie mislukt.
+
+==== Meer over softupdates
+
+Er zijn traditioneel twee methodes om de metagegevens van een bestandssysteem terug naar de schijf te schrijven. Het bijwerken van metagegevens houdt het bijwerken van van niet-inhoudelijke gegevens zoals inodes of mappen in.
+
+Historisch gezien was het gebruikelijk om updates aan metagegevens synchroon weg te schrijven. Als een map bijvoorbeeld gewijzigd was, wachtte het systeem totdat de verandering daadwerkelijk naar de schijf geschreven was. De gegevensbuffers (de inhoud van een bestand) werden doorgeschoven naar de buffercache en op een later moment asynchroon op de schijf opgeslagen. Het voordeel van deze benadering is dat ze altijd veilig is. Als het systeem faalt tijdens het bijwerken, zijn de metagegevens nog altijd consistent. Een bestand kan volledig gecreëerd zijn of helemaal niet. Als de gegevensblokken van een bestand nog niet van de buffercache naar de schijf geschreven zijn ten tijde van de crash, is man:fsck[8] in staat om dit te herkennen en het bestandssysteem te repareren door de lengte van het bestand nul te maken. Deze implementatie is ook helder en eenvoudig. Het nadeel is echter dat het wijzigen van metagegevens een traag proces is. Een `rm -r` benadert bijvoorbeeld alle bestanden in een map sequentiëel, maar elke mapverandering (verwijderen van een bestand) wordt synchroon naar de schijf geschreven. Dit omvat ook het bijwerken van de map zelf, van de inodetabel en mogelijk ook van indirecte blokken die voor het bestand in kwestie zijn gealloceerd. Gelijksoortige processen spelen zich af bij een commando als `tar -x`, waarbij een grote bestandshiëearchie wordt uitgepakt.
+
+De tweede mogelijkheid is om het bijwerken van metagegevens asynchroon weg te schrijven. Dit is standaard in Linux(R)/ext2fs en als een *BSD UFS-bestandssysteem met `mount -o async` aangekoppeld is, is de werking hetzelfde. Alle bijwerkingen aan metagegevens worden eenvoudigweg doorgegeven aan de buffercache en vermengd met inhoudelijke updates van de bestandsgegevens. Het voordeel is een grote winst aan snelheid, omdat er niet telkens gewacht hoeft te worden op het bijwerken van metagegevens tot deze daadwerkelijk naar de schijf geschreven zijn. De implementatie is ook in dit geval helder en eenvoudig. Het grote nadeel is uiteraard dat er geen enkele garantie is voor de consistentie van het bestandssysteem. Als het systeem faalt tijdens een operatie waarbij veel metagegevens worden bijgewerkt (bijvoorbeeld door een stroomstoring of iemand drukt op de resetknop), blijft het bestandssysteem in een onvoorspelbare toestand achter. Er is geen mogelijkheid om de toestand van het bestandssysteem te onderzoeken als het systeem weer opstart, want de gegevensblokken van een bestand kunnen al weggeschreven zijn geweest terwijl het wegschrijven van bijwerkingen aan de inodetabel of de bijhorende map nog niet plaats heeft gevonden. Het is zelfs onmogelijk om een `fsck` te implementeren die de overgebleven chaos kan opruimen: de benodigde informatie is gewoon niet volledig aanwezig op de schijf. Als een bestandssysteem op deze manier onherstelbaar beschadigd is, is de enige optie man:newfs[8] te gebruiken en vervolgens te herstellen van een back-up.
+
+De gebruikelijke oplossing voor dit probleem is het implementeren van _dirty region logging_, ook wel _journaling_ genoemd, hoewel deze term niet consistent gebruikt wordt en soms ook wordt gebruikt voor andere vormen van transactielogging. Het bijwerken van metagegevens wordt nog steeds synchroon geschreven, maar slechts naar een klein gebied van de schijf. Later worden ze dan naar de juiste locatie verplaatst. Omdat het loggebied klein is, hoeven de koppen van de schijf zelfs tijdens schrijfintensieve operaties nog maar over een kleine fysieke afstand te bewegen en door deze snellere respons zijn dit soort operaties sneller dan op de traditionele manier. De extra complexiteit van de implementatie is nogal beperkt, dus het risico van introductie van extra bugs valt mee. Een nadeel is dat alle metagegevens tweemaal geschreven worden (eerst naar het loggebied en later nog eens naar de definitieve locatie). Dus bij normaal gebruik kan er sprake zijn van wat men wel noemt een "performance pessimization". Anderzijds kunnen in geval van een crash alle nog uitstaande metagegevensoperaties snel worden teruggedraaid of vanuit het loggebied alsnog worden afgemaakt wanneer de machine weer opstart. Het bestandssysteem start dan snel op.
+
+Kirk McKusick, de vader van het Berkeley FFS, loste dit probleem op met softupdates, wat betekent dat alle uitstaande acties voor het bijwerken van metagegevens in het geheugen bewaard worden en dan geordend naar de schijf geschreven worden. Dit heeft het gevolg dat in geval van intensieve operaties met betrekking tot metagegevens, latere bijwerkingen aan een item eerdere bewerkingen opvangen ("catch") als deze nog in het geheugen zitten en nog niet weggeschreven waren. Dus alle operaties, op bijvoorbeeld een map, worden in het algemeen eerst in het geheugen uitgevoerd voordat er wordt bijgewerkt naar schijf. De gegevensblokken worden geordend conform hun positie, zodat ze nooit weggeschreven worden voordat hun metagegevens geschreven zijn. Als het systeem een crash ondervindt, veroorzaakt dat impliciet het terugdraaien van uitstaande operaties ("log rewind"): alle operaties die nog niet weggeschreven waren lijken nooit gebeurd te zijn. Zo wordt een consistent bestandssysteem in stand gehouden dat eruit ziet alsof het 30 tot 60 seconden eerder was. Het gebruikte algoritme garandeert dat alle bronnen die in gebruik zijn als zodanig gemarkeerd worden in hun daarvoor geschikte bitmaps: blokken en inodes. Na een crash is de enige allocatiefout die kan optreden dat bronnen gemarkeerd kunnen zijn als in gebruik ("used"), terwijl ze feitelijk alweer beschikbaar ("free") zijn. man:fsck[8] herkent deze situatie en stelt dergelijke vrij te maken bronnen opnieuw beschikbaar. Het is volkomen veilig om na een crash te negeren dat het bestandssysteem niet schoon is en het tot aankoppelen te dwingen met `mount -f`. Om niet langer gebruikte bronnen vrij te maken moet later man:fsck[8] uitgevoerd worden. Dit is dan ook het idee achter _background fsck_: op het moment dat het systeem aan het opstarten is, wordt er alleen een _snapshot_ van het systeem bewaard. `fsck` kan later uitgevoerd worden. Alle bestandssystemen kunnen "dirty" aangekoppeld worden en het systeem kan gewoon verder opstarten naar meergebruikermodus. Vervolgens zijn er ``fsck``s gepland die in de achtergrond draaien voor elk bestandssysteem dat niet schoon is en waarmee bezette bronnen vrijgegeven worden. Bestandssystemen die geen gebruik maken van softupdates moeten echter nog steeds gebruik maken van de normale `fsck` in de voorgrond.
+
+Het voordeel van softupdates is dat operaties op metagegevens bijna net zo snel zijn als asynchrone updates (dat wil zeggen sneller dan met _logging_, waarbij de metagegevens keer op keer geschreven worden). Nadelen zijn de complexiteit van de code (wat een groter risico op bugs impliceert in een gebied dat bijzonder gevoelig is voor verlies van gebruikersgegevens) en een groter geheugenverbruik. Tevens moet de gebruiker wennen aan enkele eigenaardigheden. Na een crash lijkt de toestand van het bestandssysteem wat "ouder". In situaties waar de standaard synchrone benadering een aantal lege bestanden zou hebben achtergelaten na `fsck`, is het met softupdates juist zo dat dergelijke bestanden er helemaal niet zijn, omdat de metagegevens of de bestandsinhoud nooit naar de schijf zijn geschreven. Schijfruimte wordt pas vrijgegeven als de bijwerkingen aan metagegevens en inhoudelijke bestandsgegevens weggeschreven zijn, wat mogelijk pas enige tijd na het uitvoeren van `rm` plaatsvindt. Dit kan problemen veroorzaken als er grote hoeveelheden gegevens naar een bestandssysteem geschreven worden dat onvoldoende vrije ruimte heeft om alle bestanden twee keer te kunnen bevatten (bijvoorbeeld in [.filename]#/tmp#).
+
+[[configtuning-kernel-limits]]
+== Fijnafstemming van kernellimieten
+
+[[file-process-limits]]
+=== Bestandsproceslimieten
+
+[[kern-maxfiles]]
+==== `kern.maxfiles`
+
+`kern.maxfiles` kan worden verhoogd of verlaagd, afhankelijk van de systeembehoeften. Deze variabele geeft het maximale aantal bestandsdescriptors op een systeem. Als de bestandsdescriptortabel vol is, toont de systeembuffer meerdere malen `file: table is full`, hetgeen achteraf te zien is met `dmesg`.
+
+Elk geopend bestand, socket of fifo heeft een bestandsdescriptor. Een grote produktieserver kan makkelijk enige duizenden bestandsdescriptors nodig hebben, afhankelijk van het soort en aantal diensten die tegelijk draaien.
+
+In oudere versies van FreeBSD werd de standaard waarde van `kern.maxfiles` afgeleid van de optie `maxusers` in het kernelconfiguratiebestand. `kern.maxfiles` groeit evenredig met de waarde van `maxusers`. Als een aangepaste kernel wordt gebouwd, is het een goed idee om deze kerneloptie in te stellen afhankelijk van het gebruikt van een systeem (maar niet te laag). Hoewel een produktieserver misschien niet 256 gelijktijdige gebruikers heeft, kunnen de benodigde systeembronnen het beste vergeleken worden met een grootschalige webserver.
+
+De optie `maxusers` stelt de grootte van een aantal belangrijke systeemtabellen in. Dit aantal moet ruwweg gelijk zijn aan het aantal gebruikers dat verwacht wordt gelijktijdig van de machine gebruik te maken.
+
+Vanaf FreeBSD 4.5 wordt `kern.maxusers` automatisch ingesteld tijdens het opstarten gebaseerd op de hoeveelheid beschikbare geheugen in het systeem en kan worden vastgesteld tijdens het draaien door te kijken naar de alleen-lezen sysctl `kern.maxusers`. Sommige configuraties hebben grotere of kleinere waarden nodig van `kern.maxusers`, deze kunnen worden gezet als een opstartvariabele. Waardes van 64, 128 en 256 zijn daarin niet ongewoon. We raden aan om niet boven de 256 te gaan tenzij er heel veel bestandsdescriptors benodigd zijn; veel van de aanpasbaare waarden die standaard worden bepaald door `kern.maxusers` kunnen individueel worden overschreven tijdens het opstarten en/of tijdens het draaien van het systeem in [.filename]#/boot/loader.conf# (zie de handleiding man:loader.conf[5] of [.filename]#/boot/defaults/loader.conf# voor een paar aanwijzingen) of zoals elders beschreven in dit document.
+
+Voor oudere versies stelt het systeem deze waarde zelf in als deze uitdrukkelijk op `0` is gezet.  Als het gewenst is om deze waarde zelf aan te geven, wordt aangeraden om `maxusers` minstens op 4 te zetten, met name als het X Window systeem in gebruik is of als er software gecompileerd wordt. De reden hiervoor is dat de belangrijkste tabel die door `maxusers` ingesteld wordt, het maximum aantal processen is, dat ingesteld wordt op `20 + 16 * maxusers`, dus als `maxusers` op 1 ingesteld wordt, zijn er maar 36 gelijktijdige processen mogelijk, inclusief de ongeveer achttien processen die door het systeem tijdens het opstarten start en de ongeveer vijftien processen die waarschijnlijk aangemaakt worden door het opstarten van het X Window systeem. Zelfs een eenvoudige taak als het afbeelden van een hulppagina start negen processen op om de pagina te filteren, te decomprimeren en af te beelden. Als `maxusers` op 64 ingesteld wordt, zijn er 1044 gelijktijdige processen mogelijk, wat genoeg moet zijn voor bijna alle soorten gebruik. Als echter de gevreesde fout  verschijnt als er geprobeerd wordt om een programma op te starten of als er een server gedraaid wordt met een groot aantal gelijktijdige gebruikers, zoals `ftp.FreeBSD.org`, kan het getal altijd verhoogd worden en kan de kernel opnieuw gebouwd worden.
+
+[NOTE]
+====
+`maxusers` stelt _geen_ grens aan het aantal gebruikers dat zich op de machine kan aanmelden. Het stelt gewoon verschillende tabelgroottes in op redelijke waardes, uitgaande van het maximum aantal gebruikers dat waarschijnlijk de machine gebruikt en van het aantal processen dat elk van deze gebruikers zal draaien. Een sleutelwoord dat _wel_ het aantal gelijktijdige aanmeldingen op afstand en X-terminalvensters begrensd is crossref:kernelconfig[kernelconfig-ptys,`pseudo-device pty 16`]. In FreeBSD 5.X kan dit getal genegeerd worden omdat daar het stuurprogramma man:pty[4] "auto-cloning" is. Er kan eenvoudig gebruik worden gemaakt van de regel `device pty` in het instellingenbestand.
+====
+
+==== `kern.ipc.somaxconn`
+
+De sysctl-variabele `kern.ipc.somaxconn` beparkt de grootte van de luisterwachtrij voor het accepteren van nieuwe TCP-verbindingen. De standaardwaarde van `128` is meestal te laag voor robuuste behandeling van nieuwe verbindingen in een zwaarbeladen webserveromgeving. Voor zulke omgevingen wordt aangeraden deze waarde te verhogen tot `1024` of hoger. De dienstdaemon beperkt misschien zelf de luisterwachtrij (bijvoorbeeld man:sendmail[8] of Apache), maar heeft vaak een mogelijkheid in een configuratiebestand de wachtrijgrootte aan te passen. Grote luisterwachtrijen zijn ook beter in het ontwijken van Ontzegging van Dienst () aanvallen.
+
+[[nmbclusters]]
+=== Netwerkbeperkingen
+
+De kerneloptie `NMBCLUSTERS` bepaalt het aantal netwerk-Mbufs dat beschikbaar is voor een systeem. Een veel bezochte server met een laag aantal Mbufs beperkt de mogelijkheden van FreeBSD. Elk cluster staat voor ongeveer 2 K geheugen, dus een waarde van 1024 stelt 2 megabyte aan kernelgeheugen voor, dat is gereserveerd voor netwerkbuffers. Een simpele berekening geeft aan hoeveel er nodig is. Stel dat een webserver met een maximum van 1000 simultane verbindingen voor elke verbinding 16 K aan ontvangstnetwerkbuffers en 16 K aan zendbuffers kost, dan is ongeveer 32 MB aan netbuffers nodig voor de webserver. Een goede vuistregel is te vermeniguldigen met twee, dus 2x32 MB / 2 KB = 64 MB / 2 kB = 32768. Voor machines met veel geheugen wordt 4096 tot 32768 aangeraden. Er moet in geen geval een arbitrair hoge waarde voor deze sysctl opgegeven worden, want dat kan leiden tot een crash tijdens het opstarten. Met de optie `-m` van man:netstat[1] kan het clustergebruik van het netwerk bekeken worden.
+
+De loaderparameter `kern.ipc.nmbclusters` moet gebruikt worden om dit tijdens het opstarten toe te passen. Alleen voor oudere versies van FreeBSD is het nodig om de kerneloptie `NMBCLUSTERS` te gebruiken.
+
+Voor drukke servers die extensief gebruik maken van de systeemaanroep man:sendfile[2], kan het nodig zijn het aantal man:sendfile[2]-buffers te verhogen via de kerneloptie `NSFBUFS` of door de waarde in te stellen in [.filename]#/boot/loader.conf# (in man:loader[8] staan details). Als er in de procestabel processen staan met een status `sfbufa` is dat een algemene indicator dat deze parameter aangepast moet worden. De sysctl-variabele `kern.ipc.nsfbufs` is alleen-lezen en laat zien op welke waarde deze kernelvariabele is ingesteld. Deze parameter schaalt engiszins met de variabele `kern.maxusers`, maar het kan nodig zijn om deze bij te stellen.
+
+[IMPORTANT]
+====
+Zelfs als een socket als non-blocking gemarkeerd is, dan nog kan het aanroepen van man:sendfile[2] op de non-blocking socket ertoe leiden dat er toch blokkade optreedt totdat er voldoende ``struct sf_buf``'s vrijgemaakt zijn.
+====
+
+==== `net.inet.ip.portrange.*`
+
+De sysctl-variabelen `net.inet.ip.portrange.*` bepalen welke reeks poortnummers automatisch gebonden wordt aan TCP- en UDP-sockets. Er zijn drie gebieden: een laag gebied, een (standaard) middengebied en een hoog gebied. De meeste netwerkprogramma's gebruiken het standaardbereik, wat begrensd wordt door `net.inet.ip.portrange.first` en `net.inet.ip.portrange.last` met standaardwaarden van respectievelijk 1024 en 5000. Gebonden poortreeksen worden gebruikt voor uitgaande verbindingen en het is onder bepaalde omstandigheden mogelijk dat poorten op raken. Dit gebeurt meestal in het geval van een zwaar belaste webproxy. Poortbereik is niet van belang als vooral diensten draaien die zich bezighouden met inkomende verbindingen, zoals een normale webserver, of als het aantal uitgaande verbindingen beperkt is, zoals bij een mailrelay. Voor situaties waarin een tekort aan poorten dreigt, wordt aangeraden om `net.inet.ip.portrange.last` bescheiden op te hogen. Een waarde van `10000`, `20000` of `30000` is redelijk. Er moet ook rekening met effecten op firewalls gehouden worden als de poortreeks gewijzigd wordt. Sommige firewalls kunnen grote poortreeksen blokkeren, meestal de lagere poorten, en verwachten dat andere systemen hogere poorten gebruiken voor uitgaande verbindingen. Om deze reden wordt het niet aanbevolen om `net.inet.ip.portrange.first` te verlagen.
+
+==== TCP Bandbreedtevertragingsproduct (TCP Bandwidth Delay Product)
+
+De TCP-bandbreedtevertragingsproductlimitatie lijkt op TCP/Vegas in NetBSD. Het kan aangezet worden door de sysctl-variabele `net.inet.tcp.inflight.enable` de waarde `1` te geven. Het systeem tracht dan het bandbreedtevertragingssprodukt te berekenen voor elke verbinding en beperkt dan de hoeveelheid gegevens in de wachtrij naar het netwerk tot de hoeveelheid die vereist is om maximale doorvoer te kunnen handhaven.
+
+Dit is nuttig bij gebruik van modems, Gigabit Ethernet of zelfs bij WAN-verbindingen met hoge snelheid (of elke andere verbinding met een groot bandbreedtevertragingsprodukt), in het bijzonder als ook windowschaling of een groot verzendwindow gebruikt wordt. Als deze optie aangezet wordt, dient ook `net.inet.tcp.inflight.debug` de waarde `0` te krijgen (geen debugging) en voor produktiegebruik kan het instellen van `net.inet.tcp.inflight.min` naar minstens `6144` voordeel opleveren. Het instellen van hoge minima kan effectief het beperken van bandbreedte ondermijnen, afhankelijk van de verbinding. De mogelijkheid tot limitering zorgt ervoor dat de hoeveelheid gegevens die opgebouwd wordt, in tussentijdse route- en switchwachtrijen verlaagd kan worden en tevens kan de hoeveelheid gegevens die opgebouwd wordt in de interfacewachtrij van de lokale host verlaagd worden. Met minder pakketten in wachtrijen kunnen interactieve verbindingen opereren met lagere _Round Trip_ tijden, met name over langzame modems. Deze optie gaat alleen over datatransmissie (upload / serverkant) en heeft geen effect gegevensontvangst (download / cliëntkant).
+
+Aanpassen van `net.inet.tcp.inflight.stab` wordt _niet_ aangeraden. Deze parameter krijgt standaard een waarde van 20, wat 2 maximale pakketten opgeteld bij de bandbreedtevensterberekening representeert. Het extra venster is nodig om het algoritme stabiel te houden en om de reactietijd bij veranderende omstandigheden te verbeteren, maar het kan ook leiden tot langere pingtijden over langzame verbindingen (zonder het inflight-algoritme kan dit echter nog erger zijn). In dergelijke gevallen kan deze parameter misschien verlaagd worden naar 15, 10 of 5 en misschien moet voor het gewenste effect ook `net.inet.tcp.inflight.min` verlaagd worden (bijvoorbeeld naar 3500). Het verlagen van deze parameters moet pas in laatste instantie overwogen worden.
+
+=== Virtueel Geheugen
+
+==== `kern.maxvnodes`
+
+Een vnode is de interne representatie van een bestand of een map. Het verlagen van het aantal beschikbare vnodes voor het besturingssysteem leidt dus tot een daling van schijf-I/O. Normaliter wordt dit door het besturingssysteem afgehandeld en hoeft de instelling niet gewijzigd te worden. Im sommige gevallen kan schijf-I/O de beperkende factor zijn en kan het systeem alle beschikbare vnodes in gebruik hebben. Dan dient deze instelling gewijzigd te worden. De hoeveelheid inactief en beschikbaar RAM dient meegenomen te worden in de beslissing.
+
+Het huidige aantal gebruikte vnodes kan als volgt bekeken worden:
+
+[source,bash]
+....
+# sysctl vfs.numvnodes
+vfs.numvnodes: 91349
+....
+
+Om het maximale aantal vnodes weer te geven:
+
+[source,bash]
+....
+# sysctl kern.maxvnodes
+kern.maxvnodes: 100000
+....
+
+Als het huidige aantal gebruikte vnodes dicht bij het maximale aantal ligt, is het verstandig om `kern.maxvnodes` op te hogen met 1.000. Ook `vfs.numvnodes` dient in de gaten gehouden te worden. Als de waarde weer tot aan het maximum stijgt, dan moet `kern.maxvnodes` verder opgehoogd worden. Er dient een verschuiving op te treden in het door man:top[1] gerapporteerde geheugengebruik. Er hoort meer geheugen actief te zijn.
+
+[[adding-swap-space]]
+== Wisselbestandruimte toevoegen
+
+Hoe goed er ook gepland wordt, soms draait een systeem gewoon niet zoals verwacht. Een oorzaak hiervoor kan een tekort aan wisselbestandruimte zijn. Als blijkt dat er meer wisselbestandruimte nodig is, kan dat eenvoudig. Er zijn drie manieren om de totale ruimte beschikbaar als wisselbestand te vergroten: een nieuwe harde schijf toevoegen, swappen over NFS of een wisselbestand maken op een bestaande (UFS of andere) partitie.
+
+Kijk voor informatie over het beveiligen van het wisselbestand, welke opties hiervoor bestaan, en waarom dit gedaan zou moeten worden in crossref:disks[swap-encrypting,Het versleutelen van de wisselbestand ruimte] van het handboek.
+
+[[new-drive-swap]]
+=== Swap op een nieuwe of bestaande harde schijf
+
+Een nieuwe harde schijf voor swap toevoegen geeft betere prestaties dan een partitie aan een bestaande schijf toevoegen. Het aanmaken van partities en harde schijven wordt uitgelegd in crossref:disks[disks-adding,Schijven toevoegen]. <<configtuning-initial>> bespreekt de overwegingen van partitie-indelingen en de grootte van swap-partities.
+
+Gebruik man:swapon[8] om een swap-partitie aan het systeem toe te voegen, bijvoorbeeld:
+
+[source,bash]
+....
+# swapon /dev/ada1s1b
+....
+
+[WARNING]
+====
+
+Het is mogelijk om elke partitie te gebruiken die momenteel niet aangekoppeld is, zelfs als deze al gegevens bevat. Het gebruik van man:swapon[8] op een partitie die gegevens bevat zal deze gegevens overschrijven en vernietigen. Zorg ervoor dat de partitie die als swap toegevoegd wordt echt de bedoelde partitie is voordat man:swapon[8] gebruikt wordt.
+====
+
+Voeg een regel toe aan [.filename]#/etc/fstab# voor de partitie om deze swap-partitie automatisch toe te voegen tijdens het opstarten:
+
+[.programlisting]
+....
+/dev/ada1s1b	none	swap	sw	0	0
+....
+
+Raadpleeg man:fstab[5] voor een uitleg over de regels in [.filename]#/etc/fstab#.
+
+[[nfs-swap]]
+=== Swappen over NFS
+
+In het algemeen wordt swappen over NFS niet aangeraden behalve als het onmogelijk is om naar een lokale schijf te swappen. NFS-swappen wordt gelimiteerd door de hoeveelheid beschikbare bandbreedte en belast het de NFS-server.
+
+[[create-swapfile]]
+=== Wisselbestanden
+
+Het is mogelijk om een bestand aan te maken van een bepaalde grootte en dit als swap te gebruiken. In dit voorbeeld wordt een bestand van 64 MB gebruikt, [.filename]#/usr/swap0#. Uiteraard kan een willekeurige naam gebruikt worden.
+
+.Een wisselbestand aanmaken op FreeBSD
+[example]
+====
+. De kernel [.filename]#GENERIC# bevat reeds het stuurprogramma voor geheugenschijven (man:md[4]) dat nodig is voor deze bewerking. Zorg ervoor dat tijdens het bouwen van een eigen kernel de volgende regel in uw configuratiebestand zit:
++
+[.programlisting]
+....
+device md
+....
++ 
+Kijk voor meer informatie over het bouwen van een eigen kernel in crossref:kernelconfig[kernelconfig,De FreeBSD-kernel instellen].
+. Het wisselbestand [.filename]#/usr/swap0# aanmaken:
++
+[source,bash]
+....
+# dd if=/dev/zero of=/usr/swap0 bs=1024k count=64
+....
++
+. De correcte rechten op [.filename]#/usr/swap0# instellen:
++
+[source,bash]
+....
+# chmod 0600 /usr/swap0
+....
++
+. Het wisselbestand opnemen in [.filename]#/etc/rc.conf#:
++
+[.programlisting]
+....
+swapfile="/usr/swap0"   # Instellen op naam van wisselbestand als hulpwisselbestand gewenst is
+....
++
+. De machine moet herstart worden of om het wisselbestand direct in te schakelen:
++
+[source,bash]
+....
+# mdconfig -a -t vnode -f /usr/swap0 -u 0  swapon /dev/md0
+....
+
+====
+
+[[acpi-overview]]
+== Energie- en bronnenbeheer
+
+Het is belangrijk om hardwarebronnen op een efficiënte wijze te benutten. Voordat ACPI geïntroduceerd werd was het lastig en onflexibel om het energieverbruik en de thermische eigenschappen van een systeem te beheersen. De hardware werd beheerst de BIOS en dus had de gebruiker minder controle en zichtbaarheid in de energiebeheerinstellingen. Enige gelimiteerde configuratie was mogelijk via _Advanced Power Management (APM)_. Energie- en bronnenbeheer is een belangrijk onderdeel van moderne machines. Het besturingssysteem moet bijvoorbeeld systeemlimieten in de gaten houdt (en mogelijk een SMS sturen of iets dergelijks) als de systeemtemperatuur onverwacht toeneemt.
+
+In dit deel van het FreeBSD handboek wordt uitgebreide informatie verschaft over ACPI. Aan het einde worden referenties geleverd naar meer leesmateriaal.
+
+[[acpi-intro]]
+=== Wat is ACPI?
+
+Advanced Configuration and Power Interface (ACPI) is een standaard die door een alliantie van producenten geschreven is, met als doel te voorzien in een standaardinterface voor hardwarebronnen- en energiebeheer. Een belangrijk element is dat het meer flexibiliteit en beheersmogelijkheden biedt aan het besturingssysteem (OS). Moderne systemen hebben de limieten van de huidige PNP-interfaces verder opgerekt dan wenselijk en misschien wel mogelijk was. ACPI is de directe opvolger van APM (Advanced Power Management). Centraal is het verleggen van hardwarebeheer en -monitoring naar de OS-laag in plaats van de zeer beperkte BIOS-laag.
+
+[[acpi-old-spec]]
+=== Tekortkomingen van APM
+
+Met de _Advanced Power Management (APM)_ faciliteit kan het energieverbruik van een systeem geregeld worden op basis van de systeemactiviteit. Het APM-BIOS wordt geleverd door de systeemproducent of -verkoper en het is specifiek voor dat betreffende hardwareplatform. Een APM-stuurprogramma in het besturingssysteem regelt vervolgens de toegang tot de _APM Software Interface_, die het besturen van vermogensniveau mogelijk maakt. APM dient nog steeds gebruikt te worden met systemen die gefabriceerd zijn voor het jaar 2000.
+
+Er zijn vier hoofdproblemen met APM te onderscheiden: ten eerste wordt het energiebeheer verricht door een BIOS (afhankelijk van producent) en het besturingssysteem heeft daar geen kennis van. De gebruiker die idle-time waarden instelt voor een harde schijf in het APM-BIOS is hier een voorbeeld van. Dan zal het BIOS de harde schijf langzamer kunnen laten draaien zonder dat het besturingssysteem de noodzaak ziet of het goedkeurt. Ten tweede: de APM-logica is ingebed in de BIOS, waardoor het buiten het besturingssysteem om opereert. Dit houdt in dat gebruikers problemen met hun APM-BIOS alleen kunnen verhelpen door een nieuw BIOS in het ROM te flashen, wat een gevaarlijke en mogelijk onherstelbare operatie is. Ten derde is APM een producent-specifieke technologie, in de zin dat er altijd een hoge mate van duplicatie zal zijn van al dan niet geslaagde pogingen om het wiel opnieuw uit te vinden en uiteraard ook van bugs. Er is geen enkele garantie dat het wegnemen van een bug door een producent ook een zelfde bug wegneemt bij een concurrent. Tenslotte is het van belang te weten dat de APM-BIOS in het algemeen gewoon te weing geheugen kon gebruiken om een ingewikkeld energiebeheer te kunnen implementeren. Laat staan dat deze goed aanpasbaar was aan veranderlijke doelstellingen voor de betreffende machine.
+
+_Plug-n-play BIOS (PNPBIOS)_ was in veel situaties onbetrouwbaar. PNPBIOS is 16-bitstechnologie, dus het besturingssysteem moet 16-bit emulatie gebruiken om met PNPBIOS-methoden te kunnen samenwerken.
+
+Het FreeBSD-stuurprogramma APM is gedocumenteerd in man:apm[4].
+
+[[acpi-config]]
+=== ACPI instellen
+
+Het stuurprogramma [.filename]#acpi.ko# wordt standaard geladen bij het opstarten door de man:loader[8] en hoeft _niet_ gecompileerd te worden. De redenatie is dat er met modules gemakkelijker gewerkt kan worden, bijvoorbeeld een andere [.filename]#acpi.ko# gebruiken zonder dat er een nieuwe kernel gebouwd moet worden. Dit heeft het voordeel dat testen eenvoudiger is. Een andere reden is dat het opstarten van ACPI nadat een systeem eenmaal volledig opgestart is meestal niet goed werkt. Mocht er hinder ondervonden worden, dan kan ACPI beter uitgeschakeld worden. Dit stuurprogramma kan niet gestopt worden als het eenmaal geladen is, omdat de systeembus het gebruikt voor allerlei interacties met hardware. ACPI kan uitgezet worden door het instellen van `hint.acpi.0.disabled="1"` in [.filename]#/boot/loader.conf# of in de man:loader[8] prompt.
+
+[NOTE]
+====
+ACPI en APM kunnen niet samenleven en moeten afzonderlijk en exclusief gebruikt worden. De laatste die gestart wordt bepaalt of het stuurprogramma de ander wel of niet ziet.
+====
+
+In haar eenvoudigste vorm kan ACPI gebruikt worden om het systeem in slaapmodus te zetten met man:acpiconf[8] met de vlag `-s` en een optie `1-5`. De meeste gebruikers hebben alleen `1` of `3` nodig. De optie `5` verricht een "soft-off", wat hetzelfde is als:
+
+[source,bash]
+....
+# halt -p
+....
+
+Andere opties zijn mogelijk via man:sysctl[8]. Zie de handleidingen van man:acpi[4] en man:acpiconf[8] voor meer informatie.
+
+[[ACPI-debug]]
+== FreeBSD ACPI gebruiken en debuggen
+
+ACPI is een totaal nieuwe manier om apparaten te ontdekken, om energieverbruik te beheren en om een gestandaardiseerde toegang te bieden tot allerlei apparaten die eerder via het BIOS beheerd werden. Er wordt voortdurend vooruitgang geboekt om ACPI op alle systemen te laten werken, maar bugs in de _ACPIMachine Language_ (AML) bytecode van sommige moederborden, onvolledigheden in de subsystemen van de kernel van FreeBSD en bugs in de Intel(R) ACPI-CA interpreter blijven opduiken.
+
+Deze tekst is bedoeld om u te helpen met het bijstaan van de FreeBSD ACPI beheerders met het vinden van de hoofdoorzaken van problemen die u opmerkt en met het debuggen en het vinden van een oplossing.
+
+[[ACPI-submitdebug]]
+=== Debuginformatie aanleveren
+
+[NOTE]
+====
+Voordat een probleem wordt gemeld, moet het zeker zijn dat de laatste BIOS versie draait en indien beschikbaar de geïntregeerde controller firmware versie.
+====
+
+Diegenen die meteen een probleem willen indienen, sturen de volgende informatie naar link:mailto:freebsd-acpi@FreeBSD.org[ freebsd-acpi@FreeBSD.org]:
+
+* Omschrijving van het foutieve gedrag, inclusief systeemtype en -model en alles wat de fout kan veroorzaken. Als het een nieuw fenomeen is, dan dient ook zo accuraat mogelijk aangegeven te worden wanneer de fout het eerst optrad.
+* De uitvoer van man:dmesg[8] van `boot -v`, inclusief foutmeldingen die gegenereerd worden als de fout optreedt.
+* De uitvoer van man:dmesg[8] van `boot -v` met ACPI uitgeschakeld, indien het uitzetten van ACPI het probleem oplost.
+* Uitvoer van `sysctl hw.acpi`. Dit is tevens een goede manier om uit te vinden welke ACPI-mogelijkheden een systeem heeft.
+* Een URL waar de _ACPISource Language_ (ASL) gevonden kan worden. De ASL dient _niet_ rechtstreeks naar de lijst gezonden te worden, omdat deze nogal groot kan zijn. Een kopie van een ASL kan gemaakt worden met het volgende commando:
++
+[source,bash]
+....
+# acpidump -dt > naam-systeem.asl
+....
++ 
+(Vervang uw aanmeldnaam door [.filename]#$NAME# en producent/model door [.filename]#$SYSTEM#. Bijvoorbeeld: [.filename]#njl-FooCo6000.asl#)
+
+De meeste FreeBSD-programmeurs lezen de {freebsd-current}, maar problemen gaan bij voorkeur ook naar {freebsd-acpi} zodat ze zeker gezien worden. Het kan enige tijd duren voordat er antwoord komt, omdat deze mensen elders ook nog volledige banen hebben. Als de bug niet meteen duidelijk is, komt er waarschijnlijk en verzoek om een PR in te dienen via man:send-pr[1]. Als er een PR moet worden opgesteld, dan dient alle hierboven gevraagde informatie vermeld te worden. Dit helpt om het probleem te kunnen volgen en oplossen. Het sturen van een PR zonder eerst {freebsd-acpi} te mailen is niet wenselijk, aangezien men PRs gebruikt als herinnering van bestaande problemen, niet als rapportagesysteem. Mogelijk is een probleem al eens door iemand anders gemeld.
+
+[[ACPI-background]]
+=== Achtergrond
+
+ACPI is aanwezig op alle moderne computers die voldoen aan de ia32 (x86), ia64 (Itanium) of amd64 (AMD) architecturen. De volledige standaard heeft vele mogelijkheden zoals CPU-prestatiebeheer, energiebeheer, thermische zones, diverse batterijsystemen, ingebedde controllers en busnummering. De meeste systemen implementeren minder dan de volledige standaard. Een desktopsysteem implementeert bijvoorbeeld meestal alleen busnummering, terwijl laptops mogelijk ook koeling- en batterijbeheer ondersteunen. Laptops hebben ook suspend en resume (slapen en wakker worden) met hun eigen aanverwante comlexiteit.
+
+Een ACPI-compliant systeem heeft verscheidene componenten. Het BIOS- en chipsetverkopers bieden verscheidene vaste tabellen aan zoals FADT in het geheugen die zaken als de APIC-afbeelding (gebruikt voor SMP), configuratieregisters, en eenvoudige configuratiewaarden specificeren. Ook wordt er een tabel van bytecode (de _Differentiated System Description Table_ of DSDT) geleverd die een op een boomstructuur lijkende namespace biedt voor apparaten en methoden.
+
+Het stuurprogramma ACPI moet de voorgedefinieerde tabellen verwerken, een interpreter voor de bytecode implementeren en apparaatstuurprogramma's en de kernel aanpassen om informatie van het ACPI-subsysteem te accepteren. Intel(R) heeft een interpreter beschikbaar gesteld (ACPI-CA) die door FreeBSD en ook door Linux(R) en NetBSD gebruikt wordt. De ACPI-CA-broncode staat in [.filename]#src/sys/contrib/dev/acpica#. De lijmcode die ACPI-CA laat werken met FreeBSD staat in [.filename]#src/sys/dev/acpica/Osd#. Stuurprogramma's die verscheidene ACPI-apparaten implementeren staan in [.filename]#src/sys/dev/acpica#.
+
+[[ACPI-comprob]]
+=== Algemene problemen
+
+Wil ACPI goed werken, dan moeten alle onderdelen goed werken. Hieronder staan enkele algemene problemen in volgorde van hoe vaak ze optreden en enkele mogelijke oplossingen of manieren om de problemen te vermijden.
+
+==== Muisproblemen
+
+Soms doet een muis het niet bij het opstarten uit de slaapstand. Een bekend lapmiddel is het toevoegen van `hint.psm.0.flags="0x3000"` aan [.filename]#/boot/loader.conf#. Als dat niet werkt, dan wordt aangeraden een bugrapport in te sturen, zoals eerder is beschreven.
+
+==== Suspend/resume
+
+ACPI heeft drie slaapstanden waarbij het geheugen (RAM) wordt ingezet. Dit zijn de STR-toestanden `S1`-`S3`, en nog een slaap-met-gebruik-van-harde-schijf toestand (`STD`) die `S4` heet. `S5` is "zacht uit" en is de normale status van een systeem als het is aangesloten maar niet is aangezet. `S4` kan feitelijk op twee manieren geïmplementeerd worden: ``S4``BIOS is een slaapstand naar schijf met behulp van het BIOS en ``S4``OS wordt volledig door het besturingssysteem geïmplenteerd.
+
+als eerste dienen de `sysctl hw.acpi` items die iets met de slaapstand te maken hebben gecontroleerd te worden. Hieronder staan de resultaten voor een Thinkpad:
+
+[source,bash]
+....
+hw.acpi.supported_sleep_state: S3 S4 S5
+hw.acpi.s4bios: 0
+....
+
+Dit betekent dat hier `acpiconf -s` gebruikt kan worden om `S3`, ``S4``OS en `S5` te testen. Als `s4bios` gelijk was aan (`1`), dan zou er ``S4``BIOS ondersteuning zijn in plaats van ``S4``OS.
+
+Als suspend/resume getest moet worden, dient, indien ondersteund, bij `S1` begonnen te worden. Deze toestand heeft de grootste kans om te werken, omdat deze niet veel stuurprogrammaondersteuning vereist. Niemand heeft nog `S2` geïmplementeerd, maar het is ongeveer hetzelfde als `S1`. Daarna wordt `S3` getest. Dit is het diepste STR-niveau en heeft uitgebreide ondersteuning van stuurprogramma's nodig om hardware goed opnieuw te kunnen starten. Mochten er blokkades optreden, dan kan naar de {freebsd-acpi} lijst gemaild worden. Er kan echter geen snelle oplossing verwacht worden, omdat er nog de nodige stuurprogramma's/hardware liggen om getest en bewerkt te worden.
+
+Een veelvoorkomend probleem met suspend/resume is dat veel apparaatstuurprogramma's hun firmware, registers of apparaatgeheugen niet fatsoenlijk opslaan, herstellen, of herinitialiseren. Een eerste poging om het probleem te vinden omvat:
+
+[source,bash]
+....
+# sysctl debug.bootverbose=1
+# sysctl debug.acpi.suspend_bounce=1
+# acpiconf -s 3
+....
+
+Deze test emuleert de suspend/resume-cyclus van alle apparaten zonder daadwerkelijk naar de toestand `S3` te gaan. In sommige gevallen kunt u zo eenvoudig problemen vaststellen (bijvoorbeeld het verliezen van de firmware-toestand, timeout van de apparaatwaakhond, en steeds opnieuw iets proberen). Merk op dat het systeem niet werkelijk naar de toestand `S3` gaat, wat inhoudt dat apparaten geen spanning verliezen waardoor velen prima zullen werken zelfs als de suspend/resume-methoden geheel ontbreken, dit in tegenstelling tot de echte toestand `S3`.
+
+Moeilijkere gevallen vereisen aanvullende hardware, dat is een serieële poort/kabel voor de serieële console of een Firewire poort/kabel voor man:dcons[4], en vaardigheden in het debuggen van de kernel.
+
+Om een probleem te kunnen isoleren helpt het om zoveel mogelijk stuurprogramma's uit de kernel te halen. Als dit werkt, kan er teruggewerkt worden naar het stuurprogramma dat schuldig is aan het falen. Meestal vertonen binaire stuurprogramma's als [.filename]#nvidia.ko#, X11 beeldschermstuurprogramma's en USB de meeste problemen, terwijl bijvoorbeeld Ethernet-interfaces meestal meteen goed werken. Als de stuurprogramma's zonder problemen geladen en verwijderd kunnen worden, dan is dit te automatiseren door de juiste commando's in [.filename]#/etc/rc.suspend# en [.filename]#/etc/rc.resume# te zetten. Er staat een voorbeeld (achter commentaartekens) voor het laden en verwijderen van een stuurprogramma. Als het beeldscherm er na wakker worden vreemd uitziet, kan geprobeerd worden `hw.acpi.reset_video` op nul te zetten. Met langere of kortere waarden voor `hw.acpi.sleep_delay` kan bekeken worden of dat helpt.
+
+In geval van problemen is het ook een optie om een recente Linux(R) distibutie met ondersteuning voor ACPI support te starten en daarvan de suspend/resume ondersteuning op dezelfde hardware uit te proberen. Als het werkt met Linux(R), dan is het waarschijnlijk een FreeBSD stuurprogrammaprobleem en als het mogelijk is uit te vinden over welk stuurprogramma het gaat, kan dat bijdragen aan het oplossen van het probleem. ACPI houdt zich in het algemeen niet bezig met andere stuurprogramma's zoals geluid, ATA, enzovoort. Als er dus een echt probleem met een stuurprogramma is, dan is waarchijnlijk uiteindelijk ook nodig naar de {freebsd-current} lijst te posten en naar de beheerder van het stuurprogramma. Voor degenen met moed is het vooral aan te raden een paar man:printf[3]s in problematische stukken van een stuurprogramma te plaatsen voor debugging om na te gaan waar de resumefunctie precies hangt.
+
+Tot slot kan geprobeerd worden om ACPI uit te zetten en in plaats daarvan APM aan te zetten. Als suspend/resume werkt met APM, is het wellicht verstandig het daarbij te houden, vooral met wat oudere apparatuur (voor 2000). Producenten hebben nogal wat tijd nodig gehad om ACPI ondersteuning goed te krijgen en voor oudere hardware is het waarschijnlijker dat er BIOS-problemen zijn met ACPI.
+
+==== Systeem hangt (tijdelijk of permanent)
+
+Meestal is het hangen van het systeem het gevolg van verloren interrupts of een interruptstorm. Chipsets kunnen een heleboel problemen hebben, afhankelijk van hoe het BIOS interrupts instelt voor het opstarten, of de APIC (MADT) tabel correct is en de routering van het _System Control Interrupt_ (SCI).
+
+Interruptstorms kunnen onderscheiden worden van verloren geraakte interrupts door de uitvoer van `vmstat -i` te controleren en de regel met `acpi0` goed te lezen. Als de teller in toenemende mate hoger staat dan enkele per seconde, dan is sprake van een interruptstorm. Als het systeem lijkt te hangen, is het wellicht nog mogelijk door te dringen tot de DDB (kbd:[CTRL+ALT+ESC]) en `show interrupts` uit te voeren.
+
+De beste hoop in geval van interruptproblemen is om APIC-ondersteuning uit te zetten met `hint.apic.0.disabled="1"` in [.filename]#loader.conf#.
+
+==== Panics
+
+Panics zijn relatief zeldzaam met ACPI en krijgen de hoogste prioriteit bij het oplossen. Eerst moeten de verschillende gebeurtenissen waarmee de panic (als mogelijk) te reproduceren is geïsoleerd worden en moet een backtrace gemaakt worden. `options DDB` dient aangezet te worden en er dient een seriële console (crossref:serialcomms[serialconsole-ddb,De debugger DDB gebruiken via de seriële verbinding]) of een man:dump[8] partitie te komen. In DDB is een backtrace te maken met `tr`. Als de backtrace handmatig opgeschreven moet worden, is het belangrijk dat in ieder geval de bovenste en onderste vijf (5) regels van de backtrace genoteerd worden.
+
+Daarna dient getracht te worden het systeem te starten zonder ACPI. Als dat werkt, is het ACPI-subsysteem geïsoleerd en kunnen de verschillende `debug.acpi.disable`-waarden uitgeprobeerd worden. In man:acpi[4] staan enkele voorbeelden.
+
+==== Systeem slaat aan na slaapstand of stop
+
+`hw.acpi.disable_on_poweroff="0"` kan uitgezet worden in man:loader.conf[5]. Hierdoor schakelt ACPI bepaalde gebeurtenissen tijdens het afsluitproces niet uit. Om dezelfde redenen moeten sommige systemen deze waarde altijd op `1` (standaard) hebben staan. In het algemeen lost dit een probleem op waarbij een systeem spontaan weer opkomt nadat het in slaapstand is gezet of geheel gestopt is.
+
+==== Overige problemen
+
+Als er nog andere problemen zijn met ACPI (met een docking station of apparaten niet gedetecteerd, enzovoort), dan kan een mail met beschijving naar de mailinglijst gezonden worden. Sommige zaken kunnen echter gerelateerd zijn aan delen van het ACPI-subsysteem die nog niet af zijn, dus het kan in sommige gevallen een tijd duren. Gebruikers moeten soms geduld en de bereidheid om eventuele patches uit te proberen hebben.
+
+[[ACPI-aslanddump]]
+=== ASL, `acpidump` en IASL
+
+Het grootste probleem is dat BIOS-producenten vaak incorrecte (of gewoon foutieve) bytecode leveren. Dit blijkt doorgaans uit kernelboodschappen als:
+
+[source,bash]
+....
+ACPI-1287: *** Error: Method execution failed [\\_SB_.PCI0.LPC0.FIGD._STA] \\
+(Node 0xc3f6d160), AE_NOT_FOUND
+....
+
+Vaak kunnen dergelijke problemen geoplost worden door de BIOS bij te werken tot de laatste revisie. De meeste consoleberichten zijn onschuldig, maar als er andere problemen zijn, zoals batterijstatus die niet werkt, dan ligt het voor de hand te zoeken naar problemen in de AML-code. De bytecode die AML genoemd wordt, wordt gecompileerd van een broncodetaal ASL. Deze staat weer in een tabel DSDT. Met man:acpidump[8] kan een kopie van de ASL gemaakt worden. Dan moeten zowel de opties `-t` (laat inhoud van vaste tabellen zien) als `-d` (disassembleer AML naar ASL) gebruikt worden. In <<ACPI-submitdebug,Debuginformatie aanleveren>> staat een voorbeeld.
+
+De eenvoudigste eerste controle is de ASL-code opnieuw compileren en kijken of er foutmeldingen optreden. Waarschuwingen kunnen doorgaans genegeerd worden, maar fouten zijn bugs die er meestal toe leiden dat ACPI niet correct werkt. Om ASL te hercompileren:
+
+[source,bash]
+....
+# iasl eigen.asl
+....
+
+[[ACPI-fixasl]]
+=== ASL repareren
+
+Op langere termijn is het de bedoeling dat voor vrijwel elke machine ACPI werkt zonder enig ingrijpen van de gebruiker. Op dit moment wordt er echter nog gewerkt aan oplossingen voor veel voorkomende vergissingen die BIOS-producenten maken. De Microsoft(R) interpreter ([.filename]#acpi.sys# en [.filename]#acpiec.sys#) controleert niet strikt of het BIOS volledig aan de standaard voldoet, waardoor het voorkomt dat BIOS-makers die alleen testen onder Windows(R) bepaalde fouten in hun ASL nooit correct repareren. FreeBSD hoopt door te gaan met de identificatie en documentatie van welk niet-standaard gedrag precies wordt toegelaten door Microsoft(R)'s interpreter en te dit te repliceren zodat FreeBSD kan werken zonder dat gebruikers zich gedwongen zien om de ASL te repareren. Als een tijdelijke oplossing en om te helpen met het in kaart brengen van bepaald gedrag, kan de ASL handmatig gerepareerd worden. Mocht dit lukken, dan wordt erop aangedrongen een man:diff[1] van de oude en de nieuwe ASL te mailen, zodat het foutieve gedrag mogelijk in ACPI-CA kan worden verwerkt, waardoor andere gebruikers niet meer handmatig met hun ASL aan de gang hoeven.
+
+Hieronder staat een lijst algemene foutmeldingen, hun oorzaken en hoe ze op te lossen:
+
+==== _OS afhankelijkheden
+
+Sommige AMLs gaan ervan uit dat de wereld enkel bestaat uit Windows(R) versies. FreeBSD kan zich voordoen als elk OS om te kijken of dit problemen oplost. Een gemakkelijke manier om dit te doen is `hw.acpi.osname="Windows 2001"` in te stellen in [.filename]#/boot/loader.conf# of andere gelijksoortige strings die in een ASL staan.
+
+==== Ontbrekende return-opdrachten
+
+Sommige methoden hebben geen specifieke returnwaarde, zoals wel vereist wordt door de standaard. Hoewel ACPI-CA hier niets mee doet, heeft FreeBSD de mogelijkheid tot impliciete returns. Er kunnen ook expliciete return-opdrachten toegevoegd worden waar vereist, als het bekend is welke waarden teruggevoerd moeten worden. Om `iasl` te dwingen tot compilatie van ASL kan de schakeloptie `-f` gebruikt worden.
+
+==== De standaard AML aanpassen
+
+Nadat [.filename]#eigen.asl# aangepast is, kan deze als volgt gecompileerd worden:
+
+[source,bash]
+....
+# iasl eigen.asl
+....
+
+Met de optie `-f` is af te dwingen dat de AML gemaakt wordt, zelfs als er compileerfouten optreden. Sommige fouten (zoals ontbrekende return-opdrachten) worden automatisch opgelost door de interpreter.
+
+[.filename]#DSDT.aml# is de standaardnaam voor het bestand dat door `iasl` wordt geproduceerd. Dit is in plaats van de foutieve versie uit het BIOS (die nog steeds aanwezig is in het flashgeneugen) te laden door [.filename]#/boot/loader.conf# als volgt te wijzigen:
+
+[.programlisting]
+....
+acpi_dsdt_load="YES"
+acpi_dsdt_name="/boot/DSDT.aml"
+....
+
+[.filename]#DSDT.aml# moet in de map [.filename]#/boot# staan.
+
+[[ACPI-debugoutput]]
+=== Debuguitvoer van ACPI verkrijgen
+
+Het stuurprogramma ACPI heeft een zeer flexibele debugfaciliteit. Er kan zowel een verzameling van subsystemen aangegeven worden als het niveau van uitvoerigheid. De te debuggen subsystemen worden aangegeven als lagen ("layers") en zijn opgedeeld in ACPI-CA-componenten (ACPI_ALL_COMPONENTS) en ACPI-hardware-ondersteuning (ACPI_ALL_DRIVERS). De uitvoerigheid van debuguitvoer wordt aangegeven als het niveau ("level") en gaat van CPI_LV_ERROR (alleen fouten rapporteren) tot ACPI_LV_VERBOSE (alles). Het niveau is een bitmasker en dus kunnen er meerdere opties tegelijk ingeschakeld worden (gescheiden door spaties). In de praktijk wordt wellicht een seriële console gebruikt om de uitvoer te loggen als deze zo omvangrijk is dat de console berichtbuffer vol loopt (misschien wel meerdere keren). Een complete lijst van de individuele lagen en niveaus staat in man:acpi[4].
+
+Debuguitvoer staat standaard niet aan. Door `options ACPI_DEBUG` toe te voegen aan het bestand met kernelinstellingen als ACPI als de kernel is gebouwd, wordt het ingeschakeld. Door `ACPI_DEBUG=1` toe te voegen aan [.filename]#/etc/make.conf# wordt het systeembreed ingeschakeld. Als ACPI als module wordt gebruikt (de normale situatie), dan hoeft slechts de module [.filename]#acpi.ko# opnieuw gecompileerd te worden:
+
+[source,bash]
+....
+# cd /sys/modules/acpi/acpi
+ make clean 
+make ACPI_DEBUG=1
+....
+
+[.filename]#acpi.ko# moet in [.filename]#/boot/kernel# komen te staan en de gewenste debuglaag en het gewenste niveau van uitvoerigheid dienen toegevoegd te worden aan [.filename]#loader.conf#. Hieronder een voorbeeld waarmee debuguitvoer wordt aangezet voor alle ACPI-CA-componenten en alle ACPI-hardware-stuurprogramma's (CPU, LID, enzovoort. Het niveau van uitvoerigheid is het laagst mogelijke. Er worden alleen fouten gemeld.
+
+[.programlisting]
+....
+debug.acpi.layer="ACPI_ALL_COMPONENTS ACPI_ALL_DRIVERS"
+debug.acpi.level="ACPI_LV_ERROR"
+....
+
+Als de gezochte informatie wordt veroorzaakt door een specifieke gebeurtenis (bijvoorbeeld in en uit slaapstand gaan), dan kunnen wijzigingen aan [.filename]#loader.conf# achterwege blijven en in plaats daarvan kan `sysctl` gebruikt worden om laag en niveau in te stellen na het opstarten en zo het systeem voor te bereiden op die specifieke gebeurtenis. De ``sysctl``s hebben dezelfde namen als de parameters in [.filename]#loader.conf#.
+
+[[ACPI-References]]
+=== Verwijzingen
+
+Meer informatie over ACPI staat op de volgende locaties:
+
+* De {freebsd-acpi}
+* De ACPI mailinglijst archieven http://lists.freebsd.org/pipermail/freebsd-acpi/[http://lists.freebsd.org/pipermail/freebsd-acpi/]
+* De oude ACPI mailinglijst archieven http://home.jp.FreeBSD.org/mail-list/acpi-jp/[http://home.jp.FreeBSD.org/mail-list/acpi-jp/]
+* De ACPI 2.0 specificatie http://acpi.info/spec.htm[http://acpi.info/spec.htm]
+* FreeBSD Handleidingen: man:acpi[4], man:acpi_thermal[4], man:acpidump[8], man:iasl[8], man:acpidb[8]
+* http://www.cpqlinux.com/acpi-howto.html#fix_broken_dsdt[ DSDT debugging informatie]. (Gebruikt Compaq als voorbeeld, maar van algemeen nut).

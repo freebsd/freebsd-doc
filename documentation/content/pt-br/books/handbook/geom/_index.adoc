@@ -1,0 +1,1142 @@
+---
+title: "Capítulo 18. GEOM: Framework de Transformação de Disco Modular"
+part: Parte III. Administração do Sistema
+prev: books/handbook/disks
+next: books/handbook/zfs
+---
+
+[[geom]]
+= GEOM: Framework de Transformação de Disco Modular
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Índice
+:table-caption: Tabela
+:figure-caption: Figura
+:example-caption: Exemplo
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 18
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/geom/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/geom/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/geom/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pt-br/mailing-lists.adoc[]
+include::shared/pt-br/teams.adoc[]
+include::shared/pt-br/urls.adoc[]
+
+toc::[]
+
+[[geom-synopsis]]
+== Sinopse
+
+No FreeBSD, o framework GEOM permite acesso e controle à classes, tais como Master Boot Records e labels BSD, através do uso de provedores, ou dos dispositivos de disco em [.filename]#/dev#. Ao suportar várias configurações de RAID via software, o GEOM fornece, de forma transparente, acesso ao sistema operacional e aos utilitários do sistema operacional.
+
+Este capítulo aborda o uso de discos sob o framework do GEOM no FreeBSD. Isso inclui os principais utilitários de controle RAID os quais usam o framework para configuração. Este capítulo não é um guia definitivo para as configurações de RAID e somente as classificações de RAID suportadas pelo GEOM são discutidas.
+
+Depois de ler este capítulo, você saberá:
+
+* Que tipo de suporte a RAID está disponível através do GEOM.
+* Como usar os utilitários da base para configurar, manter e manipular os vários níveis de RAID.
+* Como espelhar, distribuir, criptografar e conectar remotamente dispositivos de disco por meio do GEOM.
+* Como solucionar problemas de discos conectados ao framework do GEOM.
+
+Antes de ler este capítulo, você deve:
+
+* Entender como o FreeBSD trata os dispositivos de disco (crossref:disks[disks, Armazenamento]).
+* Saber como configurar e instalar um novo kernel (crossref:kernelconfig[kernelconfig, Configurando o kernel do FreeBSD]).
+
+[[geom-striping]]
+== RAID0 - Striping
+
+O striping combina várias unidades de disco em um único volume. O striping pode ser realizado através do uso de hardwares controladores de RAID. O subsistema de disco GEOM fornece suporte de software para striping de disco, também conhecido como RAID0, sem a necessidade de um controlador RAID de disco.
+
+No RAID0, os dados são divididos em blocos que são gravados em todas as unidades do array. Como pode ser visto na ilustração a seguir, em vez de esperar no sistema para gravar 256k em um disco, o RAID0 pode gravar 64k simultaneamente em cada um dos quatro discos do array, oferecendo um desempenho de I/O superior. Esse desempenho pode ser aprimorado ainda mais usando vários controladores de disco.
+
+image::striping.png[Disk Striping Illustration]
+
+Cada disco em um stripe RAID0 deve ser do mesmo tamanho, pois as solicitações de I/O são intercaladas para ler ou gravar em vários discos em paralelo.
+
+[NOTE]
+====
+O RAID0 _não_ fornece qualquer redundância. Isso significa que, se um disco no array falhar, todos os dados nos discos serão perdidos. Se os dados forem importantes, implemente uma estratégia de backup que salva regularmente os backups em um sistema ou dispositivo remoto.
+====
+
+O processo para criar um RAID0 por software, baseado no GEOM, em um sistema FreeBSD usando discos comuns é o seguinte. Uma vez que o stripe tiver sido criado, consulte man:gstripe[8] para obter maioress informações sobre como controlar uma stripe existente.
+
+[.procedure]
+====
+*Procedure: Criando um Stripe de Discos ATA Não Formatados*
+
+. Carregue o módulo [.filename]#geom_stripe.ko#:
++
+[source,bash]
+....
+# kldload geom_stripe
+....
++
+. Assegure-se de que exista um ponto de montagem adequado. Se esse volume se tornar uma partição root, use temporariamente outro ponto de montagem, como [.filename]#/mnt#.
+. Determine os nomes dos dispositivos para os discos que serão striped e crie o novo dispositivo de stripe. Por exemplo, para distribuir dois discos ATA não utilizados e não particionados com nomes de dispositivos [.filename]#/dev/ad2# e [.filename]#/dev/ad3#:
++
+[source,bash]
+....
+# gstripe label -v st0 /dev/ad2 /dev/ad3
+Metadata value stored on /dev/ad2.
+Metadata value stored on /dev/ad3.
+Done.
+....
++
+. Escreva um label padrão, também conhecido como tabela de partição, no novo volume e instale o código do bootstrap padrão:
++
+[source,bash]
+....
+# bsdlabel -wB /dev/stripe/st0
+....
++
+. Este processo deve criar dois outros dispositivos em [.filename]#/dev/stripe# além de [.filename]#st0#. Esses incluem o [.filename]#st0a# e o [.filename]#st0c#. Neste ponto, um sistema de arquivos UFS pode ser criado no [.filename]#st0a# usando o `newfs`:
++
+[source,bash]
+....
+# newfs -U /dev/stripe/st0a
+....
++ 
+Muitos números irão deslizar pela tela e, após alguns segundos, o processo será concluído. O volume foi criado e está pronto para ser montado.
+. Para montar manualmente o stripe de disco criado:
++
+[source,bash]
+....
+# mount /dev/stripe/st0a /mnt
+....
++
+. Para montar este sistema de arquivos distribuído automaticamente durante o processo de inicialização, coloque as informações do volume no arquivo [.filename]#/etc/fstab#. Neste exemplo, um ponto de montagem permanente, chamado [.filename]#stripe#, é criado:
++
+[source,bash]
+....
+# mkdir /stripe
+# echo "/dev/stripe/st0a /stripe ufs rw 2 2" \
+>> /etc/fstab
+....
++
+. O módulo [.filename]#geom_stripe.ko# também deve ser carregado automaticamente durante a inicialização do sistema, adicionando uma linha ao arquivo [.filename]#/boot/loader.conf#:
++
+[source,bash]
+....
+# sysrc -f /boot/loader.conf geom_stripe_load=YES
+....
+====
+
+[[geom-mirror]]
+== RAID1 - Espelhamento
+
+O RAID1, ou _espelhamento_, é a técnica de gravar os mesmos dados em mais de uma unidade de disco. Os espelhos são geralmente usados para proteger contra perda de dados devido a falhas na unidade. Cada unidade espelhada contém uma cópia idêntica dos dados. Quando uma unidade individual falha, o espelhamento continua a funcionar, fornecendo dados a partir das unidades que ainda estão funcionando. O computador continua funcionando e o administrador tem tempo para substituir a unidade com falha sem impactar o usuário.
+
+Duas situações comuns são ilustradas nesses exemplos. O primeiro cria um espelhamento de dois novos discos e usa-o como um substituto para um único disco existente. O segundo exemplo cria um espelho em um único disco novo, copia os dados do disco antigo para ele e insere o disco antigo no espelho. Embora esse procedimento seja um pouco mais complicado, ele requer apenas um novo disco.
+
+Tradicionalmente, os dois discos em um espelhamento são idênticos em modelo e capacidade, mas o man:gmirror[8] não requer isso. Os espelhamentos criados com discos diferentes terão uma capacidade igual à da menor unidade no espelhamento. O espaço extra em discos maiores não será usado. Os discos inseridos posteriormente no espelhamento devem ter pelo menos a mesma capacidade que o menor disco já existente no espelhamento.
+
+[WARNING]
+====
+
+Os procedimentos de espelhamento mostrados aqui são não-destrutivos, mas como em qualquer grande operação de disco, faça um backup completo primeiro.
+====
+
+[WARNING]
+====
+
+Embora o man:dump[8] seja usado nesses procedimentos para copiar sistemas de arquivos, ele não funciona em sistemas de arquivos com Soft Updates Journaling. Consulte o man:tunefs[8] para obter informações sobre como detectar e desativar o Soft Updates Journaling.
+====
+
+[[geom-mirror-metadata]]
+=== Problemas de Metadados
+
+Muitos sistemas de disco armazenam metadados no final de cada disco. Metadados antigos devem ser apagados antes de reutilizar o disco em um espelhamento. A maioria dos problemas é causada por dois tipos particulares de metadados residuais: tabelas de partição GPT e metadados antigos de um espelhamento anterior.
+
+Os metadados GPT podem ser apagados com man:gpart[8]. Este exemplo apaga as tabelas de partições primárias e de backup do GPT do disco [.filename]#ada8#:
+
+[source,bash]
+....
+# gpart destroy -F ada8
+....
+
+Um disco pode ser removido de um espelhamento ativo e os metadados apagados em uma etapa usando man:gmirror[8]. Aqui, o disco de exemplo [.filename]#ada8# é removido do espelhamento ativo [.filename]#gm4#:
+
+[source,bash]
+....
+# gmirror remove gm4 ada8
+....
+
+Se o espelhamento não estiver em execução, mas os metadados do espelhamento antigo ainda estiverem no disco, use o comando `gmirror clear` para removê-lo:
+
+[source,bash]
+....
+# gmirror clear ada8
+....
+
+O man:gmirror[8] armazena um bloco de metadados no final do disco. Como os esquemas de partição GPT também armazenam metadados no final do disco, espelhar discos GPT inteiros com man:gmirror[8] não é recomendado. O particionamento MBR é usado aqui porque armazena apenas uma tabela de partição no início do disco e não entra em conflito com os metadados espelhados.
+
+[[geom-mirror-two-new-disks]]
+=== Criando um Espelhamento com Dois Discos Novos
+
+Neste exemplo, o FreeBSD já foi instalado em um único disco, [.filename]#ada0#. Dois novos discos, [.filename]#ada1# e [.filename]#ada2#, foram conectados ao sistema. Um novo espelhamento será criado nesses dois discos e usado para substituir o antigo disco único.
+
+O módulo do kernel [.filename]#geom_mirror.ko# deve ser compilado no kernel ou carregado no boot ou em tempo de execução. Carregue manualmente o módulo do kernel agora:
+
+[source,bash]
+....
+# gmirror load
+....
+
+Crie o espelho com as duas novas unidades:
+
+[source,bash]
+....
+# gmirror label -v gm0 /dev/ada1 /dev/ada2
+....
+
+O [.filename]#gm0# é um nome de dispositivo escolhido pelo usuário atribuído ao novo espelhamento. Depois que o espelhamento for iniciado, o nome desse dispositivo aparecerá em [.filename]#/dev/mirror/#.
+
+As tabelas de partição MBR e bsdlabel agora podem ser criadas no mirror com o man:gpart[8]. Este exemplo usa um layout de sistema de arquivos tradicional, com partições para [.filename]#/#, swap, [.filename]#/var#, [.filename]#/tmp# e [.filename]#/usr#. Um único [.filename]#/# e uma partição swap também funcionarão.
+
+As partições no espelho não precisam ser do mesmo tamanho que as do disco existente, mas devem ser grandes o suficiente para conter todos os dados já presentes no disco [.filename]#ada0#.
+
+[source,bash]
+....
+# gpart create -s MBR mirror/gm0
+# gpart add -t freebsd -a 4k mirror/gm0
+# gpart show mirror/gm0
+=>       63  156301423  mirror/gm0  MBR  (74G)
+         63         63                    - free -  (31k)
+        126  156301299                 1  freebsd  (74G)
+  156301425         61                    - free -  (30k)
+....
+
+[source,bash]
+....
+# gpart create -s BSD mirror/gm0s1
+# gpart add -t freebsd-ufs  -a 4k -s 2g mirror/gm0s1
+# gpart add -t freebsd-swap -a 4k -s 4g mirror/gm0s1
+# gpart add -t freebsd-ufs  -a 4k -s 2g mirror/gm0s1
+# gpart add -t freebsd-ufs  -a 4k -s 1g mirror/gm0s1
+# gpart add -t freebsd-ufs  -a 4k       mirror/gm0s1
+# gpart show mirror/gm0s1
+=>        0  156301299  mirror/gm0s1  BSD  (74G)
+          0          2                      - free -  (1.0k)
+          2    4194304                   1  freebsd-ufs  (2.0G)
+    4194306    8388608                   2  freebsd-swap  (4.0G)
+   12582914    4194304                   4  freebsd-ufs  (2.0G)
+   16777218    2097152                   5  freebsd-ufs  (1.0G)
+   18874370  137426928                   6  freebsd-ufs  (65G)
+  156301298          1                      - free -  (512B)
+....
+
+Torne o espelhamento inicializável instalando o bootcode no MBR e no bsdlabel e definindo a slice ativa:
+
+[source,bash]
+....
+# gpart bootcode -b /boot/mbr mirror/gm0
+# gpart set -a active -i 1 mirror/gm0
+# gpart bootcode -b /boot/boot mirror/gm0s1
+....
+
+Formate os sistemas de arquivos no novo espelhamento, habilitando as atualizações simples.
+
+[source,bash]
+....
+# newfs -U /dev/mirror/gm0s1a
+# newfs -U /dev/mirror/gm0s1d
+# newfs -U /dev/mirror/gm0s1e
+# newfs -U /dev/mirror/gm0s1f
+....
+
+Os sistemas de arquivos do disco original [.filename]#ada0# agora podem ser copiados para o espelho com o man:dump[8] e o man:restore[8].
+
+[source,bash]
+....
+# mount /dev/mirror/gm0s1a /mnt
+# dump -C16 -b64 -0aL -f - / | (cd /mnt && restore -rf -)
+# mount /dev/mirror/gm0s1d /mnt/var
+# mount /dev/mirror/gm0s1e /mnt/tmp
+# mount /dev/mirror/gm0s1f /mnt/usr
+# dump -C16 -b64 -0aL -f - /var | (cd /mnt/var && restore -rf -)
+# dump -C16 -b64 -0aL -f - /tmp | (cd /mnt/tmp && restore -rf -)
+# dump -C16 -b64 -0aL -f - /usr | (cd /mnt/usr && restore -rf -)
+....
+
+Edite o arquivo [.filename]#/mnt/etc/fstab# para apontar para os novos sistemas de arquivos espelhados:
+
+[.programlisting]
+....
+# Device		Mountpoint	FStype	Options	Dump	Pass#
+/dev/mirror/gm0s1a	/		ufs	rw	1	1
+/dev/mirror/gm0s1b	none		swap	sw	0	0
+/dev/mirror/gm0s1d	/var		ufs	rw	2	2
+/dev/mirror/gm0s1e	/tmp		ufs	rw	2	2
+/dev/mirror/gm0s1f	/usr		ufs	rw	2	2
+....
+
+Se o módulo do kernel [.filename]#geom_mirror.ko# não foi compilado no kernel, o [.filename]#/mnt/boot/loader.conf# é editado para carregar o módulo na inicialização:
+
+[.programlisting]
+....
+geom_mirror_load="YES"
+....
+
+Reinicialize o sistema para testar o novo espelhamento e verifique se todos os dados foram copiados. A BIOS verá o espelhamento como duas unidades individuais em vez de um espelhamento. Como as unidades são idênticas, não importa qual seja selecionado para inicializar.
+
+Veja <<gmirror-troubleshooting>> se houver problemas ao inicializar. Desligar e desconectar o disco original [.filename]#ada0# permitirá que ele seja mantido como um backup offline.
+
+Em uso, o espelhamento se comportará exatamente como a unidade original.
+
+[[geom-mirror-existing-drive]]
+=== Criando um Espelhamento com Uma Unidade Existente
+
+Neste exemplo, o FreeBSD já foi instalado em um único disco, [.filename]#ada0#. Um novo disco, [.filename]#ada1#, foi conectado ao sistema. Um espelhamento de um disco será criado no novo disco, o sistema existente será copiado para ele e, em seguida, o disco antigo será inserido no espelho. Esse procedimento um pouco complexo é necessário porque o `gmirror` precisa colocar um bloco de metadados de 512 bytes no final de cada disco, e o [.filename]#ada0# geralmente possui todo o seu espaço já alocado.
+
+Carregue o módulo do kernel [.filename]#geom_mirror.ko#:
+
+[source,bash]
+....
+# gmirror load
+....
+
+Verifique o tamanho da mídia do disco original com `diskinfo`:
+
+[source,bash]
+....
+# diskinfo -v ada0 | head -n3
+/dev/ada0
+	512             # sectorsize
+	1000204821504   # mediasize in bytes (931G)
+....
+
+Crie um espelhamento no novo disco. Para garantir que a capacidade do espelhamento não seja maior do que a unidade [.filename]#ada0# original, man:gnop[8] é usado para criar uma unidade falsa exatamente do mesmo tamanho. Esta unidade não armazena dados, mas é usada apenas para limitar o tamanho do espelhamento. Quando o man:gmirror[8] cria o espelhamento, ele irá restringir a capacidade ao tamanho de [.filename]#gzero.nop#, mesmo se a nova unidade [.filename]#ada1# tiver mais espaço. Note que o _1000204821504_ na segunda linha é igual ao tamanho de mídia do [.filename]#ada0# como mostrado pelo comando `diskinfo` acima.
+
+[source,bash]
+....
+# geom zero load
+# gnop create -s 1000204821504 gzero
+# gmirror label -v gm0 gzero.nop ada1
+# gmirror forget gm0
+....
+
+Como o [.filename]#gzero.nop# não armazena nenhum dado, o espelhamento não o vê como conectado. É dito para o espelhamento "esquecer" os componentes desconectados, removendo referências para [.filename]#gzero.nop#. O resultado é um dispositivo espelhado contendo apenas um único disco, [.filename]#ada1#.
+
+Depois de criar o [.filename]#gm0#, veja a tabela de partições em [.filename]#ada0#. Esta saída é de uma unidade de 1 TB. Se houver algum espaço não alocado no final da unidade, o conteúdo pode ser copiado diretamente de [.filename]#ada0# para o novo espelho.
+
+No entanto, se a saída mostrar que todo o espaço no disco está alocado, como na listagem a seguir, não há espaço disponível para os 512-bytes de metadados de espelhamento no final do disco.
+
+[source,bash]
+....
+# gpart show ada0
+=>        63  1953525105        ada0  MBR  (931G)
+          63  1953525105           1  freebsd  [active]  (931G)
+....
+
+Neste caso, a tabela de partição deve ser editada para reduzir a capacidade de um setor em [.filename]#mirror/gm0#. O procedimento será explicado mais tarde.
+
+Em qualquer um dos casos, as tabelas de partição no disco principal devem ser primeiro copiadas usando `gpart backup` e `gpart restore`.
+
+[source,bash]
+....
+# gpart backup ada0 > table.ada0
+# gpart backup ada0s1 > table.ada0s1
+....
+
+Esses comandos criam dois arquivos, [.filename]#table.ada0# e [.filename]#table.ada0s1#. Este exemplo é de uma unidade de 1 TB:
+
+[source,bash]
+....
+# cat table.ada0
+MBR 4
+1 freebsd         63 1953525105   [active]
+....
+
+[source,bash]
+....
+# cat table.ada0s1
+BSD 8
+1  freebsd-ufs          0    4194304
+2 freebsd-swap    4194304   33554432
+4  freebsd-ufs   37748736   50331648
+5  freebsd-ufs   88080384   41943040
+6  freebsd-ufs  130023424  838860800
+7  freebsd-ufs  968884224  984640881
+....
+
+Se nenhum espaço livre for exibido no final do disco, o tamanho da slice e da última partição deve ser reduzido por um setor. Edite os dois arquivos, reduzindo o tamanho da fatia e da última partição em um. Estes são os últimos números em cada listagem.
+
+[source,bash]
+....
+# cat table.ada0
+MBR 4
+1 freebsd         63 1953525104   [active]
+....
+
+[source,bash]
+....
+# cat table.ada0s1
+BSD 8
+1  freebsd-ufs          0    4194304
+2 freebsd-swap    4194304   33554432
+4  freebsd-ufs   37748736   50331648
+5  freebsd-ufs   88080384   41943040
+6  freebsd-ufs  130023424  838860800
+7  freebsd-ufs  968884224  984640880
+....
+
+Se pelo menos um setor não foi alocado no final do disco, esses dois arquivos podem ser usados sem modificação.
+
+Agora restaure a tabela de partições em [.filename]#mirror/gm0#:
+
+[source,bash]
+....
+# gpart restore mirror/gm0 < table.ada0
+# gpart restore mirror/gm0s1 < table.ada0s1
+....
+
+Verifique a tabela de partições com o comando `gpart show`. Este exemplo tem [.filename]#gm0s1a# para [.filename]#/#, [.filename]#gm0s1d# para [.filename]#/var#, [.filename]#gm0s1e# para [.filename]#/usr#, [.filename]#gm0s1f# para [.filename]#/data1# e [.filename]#gm0s1g# para [.filename]#/data2#.
+
+[source,bash]
+....
+# gpart show mirror/gm0
+=>        63  1953525104  mirror/gm0  MBR  (931G)
+          63  1953525042           1  freebsd  [active]  (931G)
+  1953525105          62              - free -  (31k)
+
+# gpart show mirror/gm0s1
+=>         0  1953525042  mirror/gm0s1  BSD  (931G)
+           0     2097152             1  freebsd-ufs  (1.0G)
+     2097152    16777216             2  freebsd-swap  (8.0G)
+    18874368    41943040             4  freebsd-ufs  (20G)
+    60817408    20971520             5  freebsd-ufs  (10G)
+    81788928   629145600             6  freebsd-ufs  (300G)
+   710934528  1242590514             7  freebsd-ufs  (592G)
+  1953525042          63                - free -  (31k)
+....
+
+Tanto a fatia quanto a última partição devem ter pelo menos um bloco livre no final do disco.
+
+Crie sistemas de arquivos nessas novas partições. O número de partições varia de acordo com o disco original, [.filename]#ada0#.
+
+[source,bash]
+....
+# newfs -U /dev/mirror/gm0s1a
+# newfs -U /dev/mirror/gm0s1d
+# newfs -U /dev/mirror/gm0s1e
+# newfs -U /dev/mirror/gm0s1f
+# newfs -U /dev/mirror/gm0s1g
+....
+
+Torne o espelhamento inicializável instalando o bootcode no MBR e no bsdlabel e definindo a slice ativa:
+
+[source,bash]
+....
+# gpart bootcode -b /boot/mbr mirror/gm0
+# gpart set -a active -i 1 mirror/gm0
+# gpart bootcode -b /boot/boot mirror/gm0s1
+
+....
+
+Ajuste o arquivo [.filename]#/etc/fstab# para usar as novas partições no espelhamento.Primeiro faça o backup deste arquivo copiando ele para [.filename]#/etc/fstab.orig#.
+
+[source,bash]
+....
+# cp /etc/fstab /etc/fstab.orig
+....
+
+Edite o arquivo [.filename]#/etc/fstab#, substituindo [.filename]#/dev/ada0# por [.filename]#mirror/gm0#.
+
+[.programlisting]
+....
+# Device		Mountpoint	FStype	Options	Dump	Pass#
+/dev/mirror/gm0s1a	/		ufs	rw	1	1
+/dev/mirror/gm0s1b	none		swap	sw	0	0
+/dev/mirror/gm0s1d	/var		ufs	rw	2	2
+/dev/mirror/gm0s1e	/usr		ufs	rw	2	2
+/dev/mirror/gm0s1f	/data1		ufs	rw	2	2
+/dev/mirror/gm0s1g	/data2		ufs	rw	2	2
+....
+
+Se o módulo do kernel [.filename]#geom_mirror.ko# não foi carregado no kernel, edite o arquivo [.filename]#/boot/loader.conf# para carregá-lo no boot:
+
+[.programlisting]
+....
+geom_mirror_load="YES"
+....
+
+Os sistemas de arquivos do disco original agora podem ser copiados para o espelhamento com o man:dump[8] e o man:restore[8]. Cada sistema de arquivos copiados com o `dump -L` irá primeiro criar um snapshot, o que pode levar algum tempo.
+
+[source,bash]
+....
+# mount /dev/mirror/gm0s1a /mnt
+# dump -C16 -b64 -0aL -f - /    | (cd /mnt && restore -rf -)
+# mount /dev/mirror/gm0s1d /mnt/var
+# mount /dev/mirror/gm0s1e /mnt/usr
+# mount /dev/mirror/gm0s1f /mnt/data1
+# mount /dev/mirror/gm0s1g /mnt/data2
+# dump -C16 -b64 -0aL -f - /usr | (cd /mnt/usr && restore -rf -)
+# dump -C16 -b64 -0aL -f - /var | (cd /mnt/var && restore -rf -)
+# dump -C16 -b64 -0aL -f - /data1 | (cd /mnt/data1 && restore -rf -)
+# dump -C16 -b64 -0aL -f - /data2 | (cd /mnt/data2 && restore -rf -)
+....
+
+Reinicie o sistema, inicializando a partir do [.filename]#ada1#. Se tudo estiver funcionando, o sistema irá inicializar a partir de [.filename]#mirror/gm0#, que agora contém os mesmos dados que o [.filename]#ada0# tinha anteriormente. Veja <<gmirror-troubleshooting>> se houver problemas ao inicializar.
+
+Neste ponto, o espelhamento ainda consiste apenas no único disco [.filename]#ada1#.
+
+Após inicializar a partir de [.filename]#mirror/gm0# com sucesso, a etapa final é inserir [.filename]#ada0# no espelhamento.
+
+[IMPORTANT]
+====
+Quando o [.filename]#ada0# for inserido no espelhamento, seu conteúdo anterior será substituído pelos dados do espelhamento. Certifique-se de que [.filename]#mirror/gm0# tenha o mesmo conteúdo do [.filename]#ada0# antes de adicionar o [.filename]#ada0# ao espelhamento. Se o conteúdo anteriormente copiado pelo man:dump[8] e man:restore[8] não forem idênticos ao que estava em [.filename]#ada0#, reverta o arquivo [.filename]#/etc/fstab# para montar os sistemas de arquivos em [.filename]#ada0#, e reinicie todo o procedimento novamente.
+====
+
+[source,bash]
+....
+# gmirror insert gm0 ada0
+GEOM_MIRROR: Device gm0: rebuilding provider ada0
+....
+
+A sincronização entre os dois discos será iniciada imediatamente. Use `gmirror status` para visualizar o progresso.
+
+[source,bash]
+....
+# gmirror status
+      Name    Status  Components
+mirror/gm0  DEGRADED  ada1 (ACTIVE)
+                      ada0 (SYNCHRONIZING, 64%)
+....
+
+Depois de um tempo, a sincronização será concluída.
+
+[source,bash]
+....
+GEOM_MIRROR: Device gm0: rebuilding provider ada0 finished.
+# gmirror status
+      Name    Status  Components
+mirror/gm0  COMPLETE  ada1 (ACTIVE)
+                      ada0 (ACTIVE)
+....
+
+O [.filename]#mirror/gm0# agora consiste de dois discos [.filename]#ada0# e [.filename]#ada1#, e o conteúdo é automaticamente sincronizado entre eles. Em uso, o [.filename]#mirror/gm0# irá se comportar como a única unidade original.
+
+[[gmirror-troubleshooting]]
+=== Solução de problemas
+
+Se o sistema não inicializar mais, as configurações da BIOS podem ter que ser alteradas para inicializar a partir de uma das novas unidades espelhadas. Qualquer uma das unidades espelhadas pode ser usada para inicializar, pois elas contêm dados idênticos.
+
+Se a inicialização parar com esta mensagem, algo está errado com o dispositivo espelhado:
+
+[source,bash]
+....
+Mounting from ufs:/dev/mirror/gm0s1a failed with error 19.
+
+Loader variables:
+  vfs.root.mountfrom=ufs:/dev/mirror/gm0s1a
+  vfs.root.mountfrom.options=rw
+
+Manual root filesystem specification:
+  <fstype>:<device> [options]
+      Mount <device> using filesystem <fstype>
+      and with the specified (optional) option list.
+
+    eg. ufs:/dev/da0s1a
+        zfs:tank
+        cd9660:/dev/acd0 ro
+          (which is equivalent to: mount -t cd9660 -o ro /dev/acd0 /)
+
+  ?               List valid disk boot devices
+  .               Yield 1 second (for background tasks)
+  <empty line>    Abort manual input
+
+mountroot>
+....
+
+Esquecer de carregar o módulo [.filename]#geom_mirror.ko# no arquivo [.filename]#/boot/loader.conf# pode causar este problema. Para consertá-lo, inicialize a partir de uma mídia de instalação do FreeBSD e escolha `Shell` no primeiro prompt. Em seguida, carregue o módulo de espelhamento e monte o dispositivo espelhado:
+
+[source,bash]
+....
+# gmirror load
+# mount /dev/mirror/gm0s1a /mnt
+....
+
+Edite o arquivo [.filename]#/mnt/boot/loader.conf#, adicionando uma linha para carregar o módulo de espelhamento:
+
+[.programlisting]
+....
+geom_mirror_load="YES"
+....
+
+Salve o arquivo e reinicie.
+
+Outros problemas que causam o `error 19` requerem mais esforço para serem corrigidos. Embora o sistema deva inicializar a partir de [.filename]#ada0#, outro prompt para selecionar um shell aparecerá se o arquivo [.filename]#/etc/fstab# estiver incorreto. Digite `ufs:/dev/ada0s1a` no prompt do carregador de boot e pressione kbd:[Enter]. Desfaça as edições no arquivo [.filename]#/etc/fstab# e monte os sistemas de arquivos a partir do disco original ([.filename]#ada0#) em vez do espelhado. Reinicialize o sistema e tente o procedimento novamente.
+
+[source,bash]
+....
+Enter full pathname of shell or RETURN for /bin/sh:
+# cp /etc/fstab.orig /etc/fstab
+# reboot
+....
+
+=== Recuperando de Uma Falha de Disco
+
+O benefício do espelhamento de disco é que um disco individual pode falhar sem fazer com que o espelho perca qualquer dado. No exemplo acima, se [.filename]#ada0# falhar, o espelho continuará funcionando, fornecendo dados a partir do disco que continua operacional, [.filename]#ada1#.
+
+Para substituir a unidade com falha, desligue o sistema e substitua fisicamente a unidade com falha por uma nova unidade com capacidade igual ou maior. Os fabricantes usam valores um tanto arbitrários ao classificar drives em gigabytes, e a única maneira de realmente ter certeza é comparar a contagem total de setores mostrados por `diskinfo -v`. Uma unidade com maior capacidade que o espelho funcionará, embora o espaço extra na nova unidade não seja usado.
+
+Depois que o computador for ligado novamente, o espelho será executado em um modo "degradado" com apenas uma unidade. O espelho é avisado para esquecer as unidades que não estão conectadas no momento:
+
+[source,bash]
+....
+# gmirror forget gm0
+....
+
+Quaisquer metadados antigos devem ser apagados do disco de substituição usando as instruções em <<geom-mirror-metadata>>. Em seguida, o disco de substituição, [.filename]#ada4# para este exemplo, é inserido no espelho:
+
+[source,bash]
+....
+# gmirror insert gm0 /dev/ada4
+....
+
+A ressincronização começa quando a nova unidade é inserida no espelho. Esse processo de copiar dados espelhados para uma nova unidade pode demorar um pouco. O desempenho do espelho será bastante reduzido durante a cópia, portanto, a inserção de novos discos é deve ser executada quando houver pouca demanda no computador.
+
+O progresso pode ser monitorado com o comando `gmirror status`, que mostra as unidades que estão sendo sincronizadas e a porcentagem de conclusão. Durante a ressincronização, o status será `DEGRADED`, mudando para `COMPLETE` quando o processo for concluído.
+
+[[geom-raid3]]
+== RAID3 - Distribuição em Nível de Byte com Paridade Dedicada
+
+O RAID3 é um método usado para combinar várias unidades de disco em um único volume com um disco de paridade dedicado. Em um sistema RAID3, os dados são divididos em vários bytes que são escritos em todas as unidades da matriz, exceto por um disco que atua como um disco de paridade dedicado. Isso significa que as leituras de disco de uma implementação de RAID3 acessam todos os discos na matriz. O desempenho pode ser aprimorado usando vários controladores de disco. O array RAID3 fornece uma tolerância a falhas de 1 unidade, enquanto fornece uma capacidade de 1 - 1/n vezes a capacidade total de todas as unidades no array, onde n é o número de unidades de disco rígido no array. Essa configuração é adequada principalmente para armazenar dados de tamanhos maiores, como arquivos multimídia.
+
+Pelo menos 3 discos rígidos físicos são necessários para criar um array RAID3. Cada disco deve ter o mesmo tamanho, pois as solicitações de I/O são intercaladas para ler ou gravar em vários discos em paralelo. Além disso, devido à natureza do RAID3, o número de unidades deve ser igual a 3, 5, 9, 17 e assim por diante, ou 2^n + 1.
+
+Esta seção demonstra como criar um RAID3 via software em um sistema FreeBSD.
+
+[NOTE]
+====
+Embora seja teoricamente possível inicializar a partir de um array RAID3 no FreeBSD, essa configuração é incomum e não é recomendada.
+====
+
+=== Criando uma Matriz RAID3 Dedicada
+
+No FreeBSD, o suporte para RAID3 é implementado pela classe GEOMman:graid3[8]. Criar um array dedicado de RAID3 no FreeBSD requer os seguintes passos.
+
+[.procedure]
+====
+
+. Primeiro, carregue o módulo do kernel [.filename]#geom_raid3.ko# emitindo um dos seguintes comandos:
++
+[source,bash]
+....
+# graid3 load
+....
++ 
+ou:
++
+[source,bash]
+....
+# kldload geom_raid3
+....
++
+. Assegure-se de que exista um ponto de montagem adequado. Este comando cria um novo diretório para usar como ponto de montagem:
++
+[source,bash]
+....
+# mkdir /multimedia
+....
++
+. Determine os nomes dos dispositivos para os discos que serão adicionados à matriz e crie o novo dispositivo RAID3. O dispositivo final listado atuará como o disco de paridade dedicado. Este exemplo usa três unidades ATA não-particionadas: [.filename]#ada1# e [.filename]#ada2# para dados e [.filename]#ada3# para paridade.
++
+[source,bash]
+....
+# graid3 label -v gr0 /dev/ada1 /dev/ada2 /dev/ada3
+Metadata value stored on /dev/ada1.
+Metadata value stored on /dev/ada2.
+Metadata value stored on /dev/ada3.
+Done.
+....
++
+. Particione o dispositivo [.filename]#gr0# recém-criado e coloque um sistema de arquivos UFS:
++
+[source,bash]
+....
+# gpart create -s GPT /dev/raid3/gr0
+# gpart add -t freebsd-ufs /dev/raid3/gr0
+# newfs -j /dev/raid3/gr0p1
+....
++ 
+Muitos números irão ser exibios na tela e, após algum tempo, o processo será concluído. O volume foi criado e está pronto para ser montado:
++
+[source,bash]
+....
+# mount /dev/raid3/gr0p1 /multimedia/
+....
++ 
+A matriz RAID3 está agora pronta para uso.
+====
+
+Uma configuração adicional é necessária para manter essa configuração nas reinicializações do sistema.
+
+[.procedure]
+====
+. O módulo [.filename]#geom_raid3.ko# deve ser carregado antes que o array possa ser montado. Para carregar automaticamente o módulo do kernel durante a inicialização do sistema, adicione a seguinte linha ao arquivo [.filename]#/boot/loader.conf#:
++
+[.programlisting]
+....
+geom_raid3_load="YES"
+....
++
+. As seguintes informações de volume devem ser adicionadas ao arquivo [.filename]#/etc/fstab# para montar automaticamente o sistema de arquivos do array durante o processo de inicialização do sistema:
++
+[.programlisting]
+....
+/dev/raid3/gr0p1	/multimedia	ufs	rw	2	2
+....
+====
+
+[[geom-graid]]
+== Dispositivos RAID por Software
+
+Algumas placas-mãe e placas de expansão adicionam um hardware simples, geralmente apenas uma ROM, que permite que o computador inicialize a partir de um array RAID. Após a inicialização, o acesso ao array RAID é feito pelo software em execução no processador principal do computador. Este "RAID via software assistido por hardware" fornece arrays RAID que não dependem de nenhum sistema operacional em particular, e que são funcionais antes mesmo de um sistema operacional ser carregado.
+
+Vários níveis de RAID são suportados, dependendo do hardware em uso. Veja man:graid[8] para uma lista completa.
+
+O man:graid[8] requer o módulo do kernel [.filename]#geom_raid.ko#, que está incluído no kernel [.filename]#GENERIC# a partir do FreeBSD 9.1. Se necessário, ele pode ser carregado manualmente com o comando `graid load`.
+
+[[geom-graid-creating]]
+=== Criando um Array
+
+Os dispositivos de RAID via software geralmente têm um menu que pode ser acessado pressionando teclas especiais quando o computador está inicializando. O menu pode ser usado para criar e excluir arrays RAID. O man:graid[8] também pode criar arrays diretamente a partir da linha de comando.
+
+O `graid label` é usado para criar um novo array. A placa-mãe usada neste exemplo tem um chipset RAID da Intel, portanto, o formato de metadados da Intel é especificado. A nova matriz recebe um rótulo de [.filename]#gm0#, é um espelhamento (RAID1) e usa as unidades [.filename]#ada0# e [.filename]#ada1#.
+
+[CAUTION]
+====
+
+Algum espaço nas unidades será sobrescrito quando elas forem transformadas em um novo array. Faça o backup dos dados existentes primeiro!
+====
+
+[source,bash]
+....
+# graid label Intel gm0 RAID1 ada0 ada1
+GEOM_RAID: Intel-a29ea104: Array Intel-a29ea104 created.
+GEOM_RAID: Intel-a29ea104: Disk ada0 state changed from NONE to ACTIVE.
+GEOM_RAID: Intel-a29ea104: Subdisk gm0:0-ada0 state changed from NONE to ACTIVE.
+GEOM_RAID: Intel-a29ea104: Disk ada1 state changed from NONE to ACTIVE.
+GEOM_RAID: Intel-a29ea104: Subdisk gm0:1-ada1 state changed from NONE to ACTIVE.
+GEOM_RAID: Intel-a29ea104: Array started.
+GEOM_RAID: Intel-a29ea104: Volume gm0 state changed from STARTING to OPTIMAL.
+Intel-a29ea104 created
+GEOM_RAID: Intel-a29ea104: Provider raid/r0 for volume gm0 created.
+....
+
+Uma verificação de status mostra que o novo espelhamento está pronto para uso:
+
+[source,bash]
+....
+# graid status
+   Name   Status  Components
+raid/r0  OPTIMAL  ada0 (ACTIVE (ACTIVE))
+                  ada1 (ACTIVE (ACTIVE))
+....
+
+O dispositivo de array aparece em [.filename]#/dev/raid/#. O primeiro array é chamado de [.filename]#r0#. Arrays adicionais, se presentes, serão [.filename]#r1#, [.filename]#r2# e assim por diante.
+
+O menu da BIOS em alguns desses dispositivos pode criar arrays com caracteres especiais em seus nomes. Para evitar problemas com esses caracteres especiais, os arrays recebem nomes numerados simples como [.filename]#r0#. Para mostrar os rótulos reais, como [.filename]#gm0# no exemplo acima, use o man:sysctl[8]:
+
+[source,bash]
+....
+# sysctl kern.geom.raid.name_format=1
+....
+
+[[geom-graid-volumes]]
+=== Múltiplos Volumes
+
+Alguns dispositivos de RAID via software suportam mais de um _volume_ em um array. Os volumes funcionam como partições, permitindo que o espaço nas unidades físicas seja dividido e usado de diferentes maneiras. Por exemplo, os dispositivos RAID via software Intel suportam dois volumes. Este exemplo cria um espelho de 40G para armazenar com segurança o sistema operacional, seguido por um volume de 20G RAID0 (stripe) para armazenamento temporário rápido:
+
+[source,bash]
+....
+# graid label -S 40G Intel gm0 RAID1 ada0 ada1
+# graid add -S 20G gm0 RAID0
+....
+
+Os volumes aparecem como entradas adicionais [.filename]#rX# em [.filename]#/dev/raid/#. Um array com dois volumes mostrará [.filename]#r0# e [.filename]#r1#.
+
+Veja man:graid[8] para o número de volumes suportados por diferentes dispositivos RAID via software.
+
+[[geom-graid-converting]]
+=== Convertendo uma Única Unidade em um Espelho
+
+Sob certas condições específicas, é possível converter uma única unidade existente em um array man:graid[8] sem reformatar. Para evitar a perda de dados durante a conversão, a unidade existente deve atender a esses requisitos mínimos:
+
+* A unidade deve ser particionada com o esquema de particionamento MBR. O GPT ou outros esquemas de particionamento com metadados no final da unidade serão sobrescritos e corrompidos pelos metadados do man:graid[8].
+* Deve haver espaço não particionado e não utilizado o suficiente no final da unidade para conter os metadados do man:graid[8]. Esses metadados variam em tamanho, mas o maior ocupa 64M, então pelo menos este espaço livre é recomendado.
+
+Se a unidade atender a esses requisitos, comece fazendo um backup completo. Em seguida, crie um espelhamento de unidade única com essa unidade:
+
+[source,bash]
+....
+# graid label Intel gm0 RAID1 ada0 NONE
+....
+
+Os metadados do man:graid[8] foram gravados no final da unidade no espaço não utilizado. Uma segunda unidade pode agora ser inserida no espelhamento:
+
+[source,bash]
+....
+# graid insert raid/r0 ada1
+....
+
+Os dados da unidade original começarão imediatamente a ser copiados para a segunda unidade. O espelhamento operará em status degradado até que a cópia seja concluída.
+
+[[geom-graid-inserting]]
+=== Inserindo Novos Discos no Array
+
+As unidades podem ser inseridas em uma matriz como substitutos de unidades que falharam ou estão faltando. Se não houver unidades com falha ou ausentes, a nova unidade se tornará uma reserva. Por exemplo, inserir uma nova unidade em um espelhamento de duas unidades de trabalho resulta em um espelhamento de duas unidades com uma unidade sobressalente, não em um espelhamento de três unidades.
+
+No array de espelho do exemplo, os dados começam a ser copiados imediatamente para a unidade recém-inserida. Qualquer informação existente na nova unidade será substituída.
+
+[source,bash]
+....
+# graid insert raid/r0 ada1
+GEOM_RAID: Intel-a29ea104: Disk ada1 state changed from NONE to ACTIVE.
+GEOM_RAID: Intel-a29ea104: Subdisk gm0:1-ada1 state changed from NONE to NEW.
+GEOM_RAID: Intel-a29ea104: Subdisk gm0:1-ada1 state changed from NEW to REBUILD.
+GEOM_RAID: Intel-a29ea104: Subdisk gm0:1-ada1 rebuild start at 0.
+....
+
+[[geom-graid-removing]]
+=== Removendo Discos do Array
+
+Discos individuais podem ser permanentemente removidos de um array e seus metadados apagados:
+
+[source,bash]
+....
+# graid remove raid/r0 ada1
+GEOM_RAID: Intel-a29ea104: Disk ada1 state changed from ACTIVE to OFFLINE.
+GEOM_RAID: Intel-a29ea104: Subdisk gm0:1-[unknown] state changed from ACTIVE to NONE.
+GEOM_RAID: Intel-a29ea104: Volume gm0 state changed from OPTIMAL to DEGRADED.
+....
+
+[[geom-graid-stopping]]
+=== Parando o Array
+
+Um array pode ser interrompido sem remover os metadados das unidades. O array será reiniciado quando o sistema for inicializado.
+
+[source,bash]
+....
+# graid stop raid/r0
+....
+
+[[geom-graid-status]]
+=== Verificando o Status do Array
+
+O status do array pode ser verificado a qualquer momento. Depois que um disco foi adicionado ao espelho no exemplo acima, os dados estarão sendo copiados do disco original para o novo disco:
+
+[source,bash]
+....
+# graid status
+   Name    Status  Components
+raid/r0  DEGRADED  ada0 (ACTIVE (ACTIVE))
+                   ada1 (ACTIVE (REBUILD 28%))
+....
+
+Alguns tipos de arrays, como `RAID0` ou `CONCAT`, podem não ser mostrados no relatório de status se os discos falharem. Para ver esses arrays com falhas parciais, adicione `-ga`:
+
+[source,bash]
+....
+# graid status -ga
+          Name  Status  Components
+Intel-e2d07d9a  BROKEN  ada6 (ACTIVE (ACTIVE))
+....
+
+[[geom-graid-deleting]]
+=== Excluindo Arrays
+
+Arrays são destruídos, excluindo todos os volumes deles. Quando o último volume presente é excluído, o array é interrompido e os metadados são removidos dos discos:
+
+[source,bash]
+....
+# graid delete raid/r0
+....
+
+[[geom-graid-unexpected]]
+=== Excluindo Arrays Inesperados
+
+Os discos podem conter metadados man:graid[8] inesperados, originados no seu uso anterior ou em testes do fabricante. O man:graid[8] detectará estes discos e criará um array, interferindo no acesso ao disco individual. Para remover os metadados indesejados:
+
+[.procedure]
+====
+
+. Inicialize o sistema. No menu de inicialização, selecione `2` para o prompt do utilitário de boot. Entre:
++
+[source,bash]
+....
+OK set kern.geom.raid.enable=0
+OK boot
+....
++ 
+O sistema inicializará com o man:graid[8] desativado.
+. Fazer backup de todos os dados na unidade afetada.
+. Como solução alternativa, a detecção de arrays man:graid[8] pode ser desativada incluindo se a variável
++
+[.programlisting]
+....
+kern.geom.raid.enable=0
+....
++ 
+no arquivo [.filename]#/boot/loader.conf#.
++ 
+Para remover permanentemente os metadados man:graid[8] do disco afetado, inicialize uma instalação do FreeBSD usando um CD-ROM ou um memory stick e selecione a opção `Shell`. Use o comando `status` para encontrar o nome do array, normalmente `raid/r0`:
++
+[source,bash]
+....
+# graid status
+   Name   Status  Components
+raid/r0  OPTIMAL  ada0 (ACTIVE (ACTIVE))
+                  ada1 (ACTIVE (ACTIVE))
+....
++ 
+Exclua o volume pelo nome:
++
+[source,bash]
+....
+# graid delete raid/r0
+....
++ 
+Se houver mais de um volume exibido, repita o processo para cada volume. Após o último array ter sido excluído, o volume será destruído.
++ 
+Reinicialize e verifique os dados, restaurando a partir do backup, se necessário. Depois que os metadados forem removidos, a entrada `kern.geom.raid.enable=0` no arquivo [.filename]#/boot/loader.conf# também pode ser removida.
+====
+
+[[geom-ggate]]
+== GEOM Network Gate
+
+O GEOM fornece um mecanismo simples para fornecer acesso remoto a dispositivos como discos, CDs e sistemas de arquivos através do uso do daemon GEOM Network Gate, ggated. O sistema com o dispositivo executa o daemon do servidor que manipula solicitações feitas por clientes usando o ggatec. Os dispositivos não devem conter dados confidenciais, pois a conexão entre o cliente e o servidor não é criptografada.
+
+Semelhante ao NFS, que é discutido em crossref:network-servers[network-nfs,Network File System (NFS)], o ggated é configurado usando um arquivo de exportação. Este arquivo especifica quais sistemas têm permissão para acessar os recursos exportados e em qual nível de acesso eles são oferecidos. Por exemplo, para fornecer ao cliente `192.168.1.5` acesso de leitura e gravação à quarta slice do primeiro disco SCSI, crie o arquivo [.filename]#/etc/gg.exports# com esta linha:
+
+[.programlisting]
+....
+192.168.1.5 RW /dev/da0s4d
+....
+
+Antes de exportar o dispositivo, verifique se ele não está montado no momento. Em seguida, inicie o ggated:
+
+[source,bash]
+....
+# ggated
+....
+
+Várias opções estão disponíveis para especificar uma porta de escuta alternativa ou para alterar o local padrão do arquivo de exportação. Consulte man:ggated[8] para maiores detalhes.
+
+Para acessar o dispositivo exportado na máquina cliente, primeiro use o comando `ggatec` para especificar o endereço IP do servidor e o nome do dispositivo exportado. Se bem sucedido, este comando irá exibir um nome de dispositivo `ggate` para montar. Monte esse nome de dispositivo especificado em um ponto de montagem livre. Este exemplo conecta-se à partição [.filename]#/dev/da0s4d# no `192.168.1.1`, em seguida, monta o [.filename]#/dev/ggate0# em [.filename]#/mnt#:
+
+[source,bash]
+....
+# ggatec create -o rw 192.168.1.1 /dev/da0s4d
+ggate0
+# mount /dev/ggate0 /mnt
+....
+
+O dispositivo no servidor pode agora ser acessado por meio do [.filename]#/mnt# no cliente. Para maiores detalhes sobre o `ggatec` e alguns exemplos de uso, consulte man:ggatec[8].
+
+[NOTE]
+====
+A montagem falhará se o dispositivo estiver atualmente montado no servidor ou em qualquer outro cliente na rede. Se for necessário acesso simultâneo aos recursos de rede, use o NFS.
+====
+
+Quando o dispositivo não for mais necessário, desmonte-o com o `umount` para que o recurso fique disponível para outros clientes.
+
+[[geom-glabel]]
+== Rotulando Dispositivos de Disco
+
+Durante a inicialização do sistema, o kernel do FreeBSD cria nós de dispositivos conforme os dispositivos são encontrados. Esse método de detectar dispositivos gera alguns problemas. Por exemplo, e se um novo dispositivo de disco for adicionado via USB? É provável que um dispositivo flash receba o nome do dispositivo [.filename]#da0# e o [.filename]#da0# original alterado para [.filename]#da1#. Isso causará problemas ao montar sistemas de arquivos se eles estiverem listados no [.filename]#/etc/fstab#, o que também pode impedir que o sistema seja inicializado.
+
+Uma solução é encadear os dispositivos SCSI para que um novo dispositivo adicionado à placa SCSI receba números de dispositivo não utilizados. Mas e os dispositivos USB que podem substituir o disco principal SCSI? Isso acontece porque os dispositivos USB geralmente são examinados antes da placa SCSI. Uma solução é inserir esses dispositivos apenas após o sistema ter sido inicializado. Outro método é usar apenas uma única unidade ATA e nunca listar os dispositivos SCSI no arquivo [.filename]#/etc/fstab#.
+
+Uma solução melhor é usar o `glabel` para rotular os dispositivos de disco e usar os rótulos no arquivo [.filename]#/etc/fstab#. Como o `glabel` armazena o rótulo no último setor de um determinado provedor, o rótulo permanecerá persistente nas reinicializações. Ao usar esse rótulo como um dispositivo, o sistema de arquivos pode sempre ser montado independentemente do nó do dispositivo pelo qual ele é acessado.
+
+[NOTE]
+====
+O `glabel` pode criar rótulos transitórios e permanentes. Somente rótulos permanentes são consistentes nas reinicializações. Consulte man:glabel[8] para obter mais informações sobre as diferenças entre os rótulos.
+====
+
+=== Tipos de Rótulos e Exemplos
+
+Os rótulos permanentes podem ser um rótulo genérico ou de um sistema de arquivos. Rótulos de sistema de arquivos permanentes podem ser criados com man:tunefs[8] ou man:newfs[8]. Esses tipos de rótulos são criados em um subdiretório [.filename]#/dev# e serão nomeados de acordo com o tipo de sistema de arquivos. Por exemplo, os rótulos do sistema de arquivos UFS2 serão criados em [.filename]#/dev/ufs#. Rótulos permanentes genéricos podem ser criados com o `glabel label`. Estes não são específicos do sistema de arquivos e serão criados em [.filename]#/dev/label#.
+
+Os rótulos temporários são destruídos na próxima reinicialização. Esses rótulos são criados em [.filename]#/dev/label# e são adequados para experimentação. Um rótulo temporário pode ser criado usando `glabel create`.
+
+Para criar um rótulo permanente para um sistema de arquivos UFS2 sem destruir nenhum dado, emita o seguinte comando:
+
+[source,bash]
+....
+# tunefs -L home /dev/da3
+....
+
+Um rótulo deve agora existir em [.filename]#/dev/ufs# que pode ser adicionado ao arquivo [.filename]#/etc/fstab#:
+
+[.programlisting]
+....
+/dev/ufs/home		/home            ufs     rw              2      2
+....
+
+[NOTE]
+====
+O sistema de arquivos não deve ser montado durante a tentativa de executar o `tunefs`.
+====
+
+Agora o sistema de arquivos pode ser montado:
+
+[source,bash]
+....
+# mount /home
+....
+
+A partir deste ponto, desde que o módulo do kernel [.filename]#geom_label.ko# seja carregado na inicialização com o [.filename]#/boot/loader.conf# ou com a opção do kernel `GEOM_LABEL` estando presente, o nó do dispositivo pode mudar sem qualquer efeito negativo no sistema.
+
+Os sistemas de arquivos também podem ser criados com um rótulo padrão usando a flag `-L` com o comando `newfs`. Consulte man:newfs[8] para obter maiores informações.
+
+O seguinte comando pode ser usado para destruir o rótulo:
+
+[source,bash]
+....
+# glabel destroy home
+....
+
+O exemplo a seguir mostra como rotular as partições de um disco de inicialização.
+
+.Rotulando Partições no Disco de Inicialização
+[example]
+====
+Ao marcar permanentemente as partições no disco de inicialização, o sistema deve poder continuar a inicializar normalmente, mesmo se o disco for movido para outro controlador ou transferido para um sistema diferente. Para este exemplo, presume-se que um único disco ATA é usado, que é atualmente reconhecido pelo sistema como [.filename]#ad0#. Também é assumido que o esquema de partição padrão do FreeBSD é usado, com [.filename]#/#, [.filename]#/var#, [.filename]#/usr# e [.filename]#/tmp#, bem como uma partição de swap.
+
+Reinicialize o sistema e, no prompt do man:loader[8], pressione kbd:[4] para inicializar no modo de usuário único. Em seguida, insira os seguintes comandos:
+
+[source,bash]
+....
+# glabel label rootfs /dev/ad0s1a
+GEOM_LABEL: Label for provider /dev/ad0s1a is label/rootfs
+# glabel label var /dev/ad0s1d
+GEOM_LABEL: Label for provider /dev/ad0s1d is label/var
+# glabel label usr /dev/ad0s1f
+GEOM_LABEL: Label for provider /dev/ad0s1f is label/usr
+# glabel label tmp /dev/ad0s1e
+GEOM_LABEL: Label for provider /dev/ad0s1e is label/tmp
+# glabel label swap /dev/ad0s1b
+GEOM_LABEL: Label for provider /dev/ad0s1b is label/swap
+# exit
+....
+
+O sistema continuará com a inicialização multiusuário. Depois que a inicialização terminar, edite o arquivo [.filename]#/etc/fstab# e substitua os nomes de dispositivos convencionais por seus respectivos rótulos. No final o [.filename]#/etc/fstab# ficará assim:
+
+[.programlisting]
+....
+# Device                Mountpoint      FStype  Options         Dump    Pass#
+/dev/label/swap         none            swap    sw              0       0
+/dev/label/rootfs       /               ufs     rw              1       1
+/dev/label/tmp          /tmp            ufs     rw              2       2
+/dev/label/usr          /usr            ufs     rw              2       2
+/dev/label/var          /var            ufs     rw              2       2
+....
+
+O sistema agora pode ser reinicializado. Se tudo correr bem, ele aparecerá normalmente e o comando `mount` mostrará:
+
+[source,bash]
+....
+# mount
+/dev/label/rootfs on / (ufs, local)
+devfs on /dev (devfs, local)
+/dev/label/tmp on /tmp (ufs, local, soft-updates)
+/dev/label/usr on /usr (ufs, local, soft-updates)
+/dev/label/var on /var (ufs, local, soft-updates)
+....
+
+====
+
+A classe man:glabel[8] suporta um tipo de rótulo para sistemas de arquivos UFS, com base no ID do sistema de arquivos exclusivo `ufsid`. Esses rótulos podem ser encontrados em [.filename]#/dev/ufsid# e são criados automaticamente durante a inicialização do sistema. É possível usar rótulos `ufsid` para montar partições usando o [.filename]#/etc/fstab#. Use o `glabel status` para receber uma lista de sistemas de arquivos e seus rótulos `ufsid` correspondentes:
+
+[source,bash]
+....
+% glabel status
+                  Name  Status  Components
+ufsid/486b6fc38d330916     N/A  ad4s1d
+ufsid/486b6fc16926168e     N/A  ad4s1f
+....
+
+No exemplo acima, [.filename]#ad4s1d# representa [.filename]#/var#, enquanto [.filename]#ad4s1f# representa [.filename]#/usr#. Usando os valores `ufsid` mostrados, essas partições podem agora ser montadas com as seguintes entradas em [.filename]#/etc/fstab#:
+
+[.programlisting]
+....
+/dev/ufsid/486b6fc38d330916        /var        ufs        rw        2      2
+/dev/ufsid/486b6fc16926168e        /usr        ufs        rw        2      2
+....
+
+Quaisquer partições com rótulos `ufsid` podem ser montadas dessa forma, eliminando a necessidade de criar manualmente rótulos permanentes, enquanto ainda desfruta dos benefícios da montagem independente do nome do dispositivo.
+
+[[geom-gjournal]]
+== Journaling UFS através do  GEOM
+
+Suporte para journaling em sistemas de arquivos UFS está disponível no FreeBSD. A implementação é fornecida através do subsistema GEOM e é configurada usando o comando `gjournal`. Ao contrário de outras implementações de journaling de sistemas de arquivos, o método `gjournal` é baseado em blocos e não é implementado como parte do sistema de arquivos. É uma extensão do GEOM.
+
+O jornaling armazena um log de transações do sistema de arquivos, como alterações que compõem uma operação de gravação em disco completa, antes que os metadados e as gravações de arquivos sejam confirmados no disco. Esse log de transação pode ser repetido posteriormente para refazer as transações do sistema de arquivos, evitando inconsistências no sistema de arquivos.
+
+Esse método fornece outro mecanismo para proteger contra perda de dados e inconsistências do sistema de arquivos. Ao contrário das Soft Updates, que rastreiam e impõem atualizações de metadados e snapshots, que criam uma imagem do sistema de arquivos, um log é armazenado no espaço em disco especificamente para essa tarefa. Para melhor desempenho, o journal pode ser armazenado em outro disco. Nessa configuração, o provedor do journal ou o dispositivo de armazenamento deve ser listado após o dispositivo para ativar o journaling.
+
+O kernel [.filename]#GENERIC# fornece suporte para o `gjournal`. Para carregar automaticamente o módulo do kernel [.filename]#geom_journal.ko# no momento da inicialização, adicione a seguinte linha ao arquivo [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+geom_journal_load="YES"
+....
+
+Se um kernel personalizado for usado, certifique-se de que a linha a seguir esteja no arquivo de configuração do kernel:
+
+[.programlisting]
+....
+options	GEOM_JOURNAL
+....
+
+Depois que o módulo é carregado, um journal pode ser criado em um novo sistema de arquivos usando as etapas a seguir. Neste exemplo, [.filename]#da4# é um novo disco SCSI:
+
+[source,bash]
+....
+# gjournal load
+# gjournal label /dev/da4
+....
+
+Isto irá carregar o módulo e criar um nó de dispositivo [.filename]#/dev/da4.journal# em [.filename]#/dev/da4#.
+
+Um sistema de arquivos UFS pode agora ser criado no dispositivo journaled e depois montado em um ponto de montagem existente:
+
+[source,bash]
+....
+# newfs -O 2 -J /dev/da4.journal
+# mount /dev/da4.journal /mnt
+....
+
+[NOTE]
+====
+No caso de várias slices, será criado um journal para cada slice individual. Por exemplo, se [.filename]#ad4s1# e [.filename]#ad4s2# forem slices, o `gjournal` criará [.filename]#ad4s1.journal# e [.filename]#ad4s2.journal#.
+====
+
+O journaling também pode ser ativado nos sistemas de arquivos atuais usando o `tunefs`. No entanto, _sempre_ faça um backup antes de tentar alterar um sistema de arquivos existente. Na maioria dos casos, o `gjournal` falhará se não for possível criar o registro de log, mas isso não protege contra a perda de dados incorrida como resultado do uso indevido do `tunefs`. Consulte man:gjournal[8] e man:tunefs[8] para maiores informações sobre esses comandos.
+
+É possível fazer o journaling do disco de inicialização de um sistema FreeBSD. Consulte o artigo link:{gjournal-desktop}[Implementando o journaling do UFS em um PC de mesa] para obter instruções detalhadas.

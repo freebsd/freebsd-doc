@@ -1,0 +1,1478 @@
+---
+title: 26. Fejezet - Soros vonali kommunikáció
+part: IV. Rész Hálózati kommunikáció
+prev: books/handbook/partiv
+next: books/handbook/ppp-and-slip
+---
+
+[[serialcomms]]
+= Soros vonali kommunikáció
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 26
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/serialcomms/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/serialcomms/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/serialcomms/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[serial-synopsis]]
+== Áttekintés
+
+A UNIX(R) mindig is támogatta a soros vonali kommunikációt. Tulajdonképpen az elsõ UNIX(R)-os gépek is soros vonalon kapták a felhasználóktól a bemenetet és ugyanígy küldték vissza a kimenetet. Az idõk azóta már sokat változtak, hogy egy átlagos "terminál" mindössze egy 10 karakter per másodperc sebességû soros nyomtatóból és egy billentyûzetbõl állt. Ebben a fejezetben ismertetünk néhány olyan megoldást, amellyel a FreeBSD képes soros vonalon keresztül kommunikálni.
+
+A fejezet elolvasása során megismerjük:
+
+* hogyan kapcsoljunk terminálokat a FreeBSD rendszerünkre;
+* hogyan tárcsázzunk modem segítségével távoli számítógépeket;
+* hogyan tegyük lehetõvé gépünkre a bejelentkezést távoli felhasználók számára;
+* hogyan indítsuk a rendszerünket soros konzolról.
+
+A fejezet elolvasásához ajánlott:
+
+* egy új rendszermag beállításának és telepítésének ismerete (crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]);
+* a UNIX(R)-os engedélyek és a UNIX(R) alatt futtatott programok mûködtetésének megértése (crossref:basics[basics,A UNIX alapjai]);
+* annak a soros vonali hardvernek (modemnek vagy többportos kártyának a) kézikönyve, amelyet a FreeBSD-vel használni szeretnénk
+
+[[serial]]
+== Bevezetés
+
+[[serial-terminology]]
+=== Alapfogalmak
+
+bps::
+Bit per másodperc - az adatátvitel sebessége
+
+DTE::
+Adatterminál eszköz (Data Terminal Equipment) - ez például a számítógépünk
+
+DCE::
+Adatkommunikációs eszköz (Data Communications Equipment) - ez a modem
+
+RS-232::
+a hardveres soros vonali kommunikációhoz szükséges EIA szabványú kábel
+
+Amikor ebben a fejezetben az adatátvitel sebességérõl beszélünk, akkor szándékosan nem használjuk a "baud" fogalmát. A baud ugyanis a kommunikációs eszközben adott idõ alatt lezajló jelváltások mennyiségét jelöli, miközben itt a "bps" (bit per másodperc) kifejezés használata a _helyes_ (vagy legalább is a szõrszálhasogatók egyelõre megnyugodhatnak).
+
+[[serial-cables-ports]]
+=== Kábelek és portok
+
+Ha a FreeBSD rendszerünkhöz egy modemet vagy egy terminált akarunk csatlakoztatni, akkor ahhoz a számítógépünkben szükség lesz egy szabad soros portra és egy megfelelõ típusú kábelre. Ha már tisztában vagyunk a rendelkezésre álló hardverrel és a hozzá tartozó kábellel, akkor nyugodtan átléphetjük ezt a részt.
+
+[[term-cables]]
+==== A kábelek fajtái
+
+A soros kábeleknek több különbözõ típusa van. Közülük a céljainknak leginkább megfelelõ két legismertebb változatuk az ún. null-modem és a szabványos ("egyenes") RS-232-es soros kábelek. A hardverhez tartozó dokumentációban megtaláljuk, hogy pontosan melyik típus tartozik hozzá.
+
+[[term-cables-null]]
+===== A null-modem kábelek
+
+Egy null-modem kábel bizonyos jeleket, többek közt a "földet" (Signal Ground, SG), egyenesen küldi, másokat viszont felcserélten. Például az "átküldött adat" (Transmitted Data, TD) jelzésû tû a kábel másik végén a "fogadott adat" (Received Data, RD) tûhöz fut be.
+
+A terminálokhoz akár saját magunk is le tudunk gyártani egy null-modem kábelt (például ha a boltiakkal nem lennénk megelégedve). A következõ táblázatban az RS-232C <<serialcomms-signal-names,jeleit>> és érintkezõinek számozását láthatjuk egy DB-25-ös csatlakozó esetében. A szabvány a kábel két 1-es tûjét összekapcsoló vonalat _védõföldnek_ (Protective Ground, PD) nevezi, de ezt gyakran el is hagyják. Némely terminál remekül mûködik mindössze a 2-es, 3-as és 7-es tûk használatával, miközben mások az iménti példától eltérõ kiosztást igényelnek.
+
+.A DB-25 DB-25 közti null-modem kábel
+[cols="1,1,1,1,1", frame="none", options="header"]
+|===
+<| Jel
+<| Tû
+| 
+<| Tû
+<| Jel
+
+|SG
+|7
+|párja:
+|7
+|SG
+
+|TD
+|2
+|párja:
+|3
+|RD
+
+|RD
+|3
+|párja:
+|2
+|TD
+
+|RTS
+|4
+|párja:
+|5
+|CTS
+
+|CTS
+|5
+|párja:
+|4
+|RTS
+
+|DTR
+|20
+|párja:
+|6
+|DSR
+
+|DTR
+|20
+|párja:
+|8
+|DCD
+
+|DSR
+|6
+|párja:
+|20
+|DTR
+
+|DCD
+|8
+|párja:
+|20
+|DTR
+|===
+
+Íme a mostanság elterjedt másik két séma.
+
+.A DB-9 DB-9 közti null-modem kábel
+[cols="1,1,1,1,1", frame="none", options="header"]
+|===
+<| Jel
+<| Tû
+| 
+<| Tû
+<| Jel
+
+|RD
+|2
+|párja:
+|3
+|TD
+
+|TD
+|3
+|párja:
+|2
+|RD
+
+|DTR
+|4
+|párja:
+|6
+|DSR
+
+|DTR
+|4
+|párja:
+|1
+|DCD
+
+|SG
+|5
+|párja:
+|5
+|SG
+
+|DSR
+|6
+|párja:
+|4
+|DTR
+
+|DCD
+|1
+|párja:
+|4
+|DTR
+
+|RTS
+|7
+|párja:
+|8
+|CTS
+
+|CTS
+|8
+|párja:
+|7
+|RTS
+|===
+
+.DB-9 DB-25 közti null-modem kábel
+[cols="1,1,1,1,1", frame="none", options="header"]
+|===
+<| Jel
+<| Tû
+| 
+<| Tû
+<| Jel
+
+|RD
+|2
+|párja:
+|2
+|TD
+
+|TD
+|3
+|párja:
+|3
+|RD
+
+|DTR
+|4
+|párja:
+|6
+|DSR
+
+|DTR
+|4
+|párja:
+|8
+|DCD
+
+|SG
+|5
+|párja:
+|7
+|SG
+
+|DSR
+|6
+|párja:
+|20
+|DTR
+
+|DCD
+|1
+|párja:
+|20
+|DTR
+
+|RTS
+|7
+|párja:
+|5
+|CTS
+
+|CTS
+|8
+|párja:
+|4
+|RTS
+|===
+
+[NOTE]
+====
+Amikor egy tû az átellenes oldalon két másik tûhöz csatlakozik, akkor azt általában úgy valósítják meg, hogy a két tût a saját oldalukon összekötik, majd ezt kapcsolják hozzá a harmadik tûhöz.
+====
+
+Ezek a megoldások a legnépszerûbbek. Természetesen a tûk összekötésének több más variációja is létezik (ezekrõl az _RS-232 Made Easy_ c. könyvben olvashatunk bõvebben), ahol az SG párja az SG, a TD párja az RD, az RTS és a CTS párja az DCD, a DTR párja a DSR és ugyanezek fordítva.
+
+[[term-cables-std]]
+===== Szabványos RS-232C kábelek
+
+A szabványos soros kábel az összes RS-232C jelet közvetlenül átküldi. Vagyis a kábel egyik végén levõ "átküldött adat" tû a másik végén is az "átküldött adat" tûhöz csatlakozik. Az ilyen típusú kábeleket többnyire a számítógépek és a modemek között alkalmazzák, de egyes termináltípusok esetében is szükségünk lehet rá.
+
+[[term-ports]]
+==== A portok
+
+A soros port olyan eszköz, amelyen keresztül a FreeBSD-s gép és a terminál között adatokat tudunk közvetíteni. Ebben a szakaszban az ilyen portok különféle típusait és ezek használatát ismertetjük FreeBSD alatt.
+
+[[term-portkinds]]
+===== A portok típusai
+
+A soros portoknak több típusa létezik. Mielõtt vásárolnánk egy készítenénk egy soros kábelt, mindenképpen gyõzödjünk meg róla, hogy csatlakoztatni tudjuk majd a FreeBSD-s rendszerünkhöz és a terminálhoz egyaránt.
+
+A legtöbb terminálon DB-25-ös portot találunk. A személyi számítógépek, köztük azok, amelyeken FreeBSD fut, DB-25-ös és DB-9es portokkal rendelkeznek. Ha a gépünkben egy többportos soros kártya van, akkor ezeken kívül még RJ-12-es és RJ-45-ös portjaink is lehetnek.
+
+A hardverhez tartozó dokumentációból tudjuk kideríteni az adott port konkrét fajtáját, de gyakran a port vizuális vizsgálata is segíthet eldönteni a kérdést.
+
+[[term-portnames]]
+===== A portok nevei
+
+FreeBSD alatt az egyes soros portokat a [.filename]#/dev# könyvtárban található eszközleírókon keresztül tudjuk elérni. Ezeknek két típusa van:
+
+* A behíváshoz használt portok nevei [.filename]#/dev/ttydN# alakúak, ahol az _N_ a port sorszáma, ami nullától indul. A behívó portok alapvetõen a terminál esetében használatosak. A behívó portok használatához a soros vonalon az "vonal észlelése" (Data Carrier Detect, DCD) jelnek kell megbízhatóan mûködnie.
+* A híváshoz használt portok nevei [.filename]#/dev/cuadN# alakúak. A hívó portokat terminálok esetében ritkán alkalmazzák, helyettük inkább csak modemekhez használják. A hívó portokat akkor érdemes használni, ha a soros kábel vagy a terminál nem ismeri a DCD jelet.
+
+Ha a terminált az elsõ soros portra (ami MS-DOS(R)-ban a [.filename]#COM1#) csatlakoztattuk, akkor a [.filename]#/dev/ttyd0# segítségével fogunk rá hivatkozni. Ha viszont a második soros porton (más néven [.filename]#COM2#) található, akkor a [.filename]#/dev/ttyd1# eszközt használjuk, és így tovább.
+
+=== A rendszermag beállítása
+
+A FreeBSD alapból négy soros portot támogat. Az MS-DOS(R) világban ezeket rendre [.filename]#COM1#, [.filename]#COM2#, [.filename]#COM3# és [.filename]#COM4# portoknak nevezik. A FreeBSD jelen pillanatban ismeri még a "butább" többportos soros csatolókártyákat is, például a BocaBoard 1008 és 2016 típusokat, valamint több intelligensebb többportos kártyát, például a Digiboard és a Stallion Technologies gyártmányait. Az alap rendszermag azonban csak a szabványos COM portokat keresi.
+
+Ha ellenõrizni akarjuk, hogy a rendszermag rendben megtalálta a soros portokat, akkor figyelmesen olvassuk el a rendszerindítás során megjelenõ üzeneteket, vagy az `/sbin/dmesg` parancs kiadásával kérdezzük vissza a rendszermag üzeneteit. Különösen a `sio` kezdetû sorokra kell figyelnünk.
+
+[TIP]
+====
+
+Az alábbi paranccsal tudjuk leszûrni a `sio` szövegrészt tartalmazó sorokat:
+
+[source,bash]
+....
+# /sbin/dmesg | grep 'sio'
+....
+
+====
+
+Például, ha négy soros port található a rendszerünkben, akkor a rájuk vonatkozó rendszerüzenetek a következõk lesznek:
+
+[source,bash]
+....
+sio0 at 0x3f8-0x3ff irq 4 on isa
+sio0: type 16550A
+sio1 at 0x2f8-0x2ff irq 3 on isa
+sio1: type 16550A
+sio2 at 0x3e8-0x3ef irq 5 on isa
+sio2: type 16550A
+sio3 at 0x2e8-0x2ef irq 9 on isa
+sio3: type 16550A
+....
+
+Ha a rendszermagunk nem ismerte volna fel az összes soros portot, akkor valószínûleg a [.filename]#/boot/device.hints# állományt kell módosítanunk. Tegyük megjegyzésbe vagy akár teljesen távolítsuk is el azokat az eszközöket, amelyekkel nem rendelkezünk.
+
+A soros portok és a többportos kártyák beállításával kapcsolatban a man:sio[4] man oldalát olvassuk el. Óvatosan bánjunk a FreeBSD megelõzõ változataiból származó konfigurációs állományokkal, mert az eszközök vonatkozó beállításokat és azok formátuma megváltozhatott azóta.
+
+[NOTE]
+====
+Az `port IO_COM1` a `port 0x3f8`, az `IO_COM2` a `0x2f8`, az `IO_COM3` a `0x3e8` és az `IO_COM4` a `0x2e8` beállítást helyettesíti. Ezek az adott porthoz tartozó gyakori címeket képviselik. A 4-es, 3-as, 5-ös és 9 megszakítások is igen általánosak ezeknél. A hagyományos soros portok viszont az ISA buszos PC-k esetében _nem képesek_ a megszakításokon osztozni. (A többportos kártyák azonban lehetõvé teszik az 16550A számára, hogy mindössze egy vagy két megszakítást használjon.)
+====
+
+=== Speciális eszközállományok
+
+A rendszermagban található legtöbb eszköz az ún. "speciális eszközállományokon" keresztül érhetõ el, melyek a [.filename]#/dev# könyvtárban találhatóak. A [.filename]#sio# eszközök a [.filename]#/dev/ttydN# (behívó portok) és [.filename]#/dev/cuadN# (hívó portok) állományok használatával érhetõek el. A FreeBSD ezenkívül még külön eszközállományokat biztosít az inicializációhoz ([.filename]#/dev/cuadN.init#) és a zároláshoz ([.filename]#/dev/cuadN.lock#). Az inicializációs állományok a port megnyitásakor használhatóak a hozzá tartozó paraméterek beállítására, például így tudjuk elküldeni a `crtscts` utasítást az olyan modemeknek, amelyek a forgalom irányítását `RTS/CTS` jelzéseken keresztül valósítják meg. A zároló állományokkal a portokra vonatkozó zárolásokat állíthatjuk be, így a felhasználók vagy a programok nem lesznek képesek bizonyos paramétereket megváltoztatni. A man:termios[4], man:sio[4] és man:stty[1] man oldalakon olvashatunk részletesebben a terminálok beállításairól, valamint az eszközök zárolásáról és inicializálásáról.
+
+[[serial-hw-config]]
+=== A soros port beállítása
+
+A [.filename]#ttydN# (vagy [.filename]#cuadN#) lesz az az eszköz, amit majd az alkalmazásainkból el akarunk érni. Amikor egy futó program megnyit egy ilyen eszközt, mindig tartoznak hozzá alapértelmezett terminál I/O beállítások. Ezeket a következõ paranccsal tudjuk lekérdezni:
+
+[source,bash]
+....
+# stty -a -f /dev/ttyd1
+....
+
+Ha megváltoztatjuk az eszköz beállításait, akkor azok egészen addig érvényben is maradnak, amíg le nem zárjuk. Ha tehát ezután újra megnyitjuk, akkor minden visszaáll az alapértelmezett állapotra. Az alapértelmezett beállítások megváltoztatásához a "kezdeti állapotot" szimbolizáló eszközt kell megnyitnunk és átállítanunk. Például, ha alapból engedélyezni akarjuk a `CLOCAL` módot, a 8 bites kommunikációt és a `XON/XOFF` típusú forgalomirányítást a [.filename]#ttyd5# eszközön, akkor a következõt gépeljük be:
+
+[source,bash]
+....
+# stty -f /dev/ttyd5.init clocal cs8 ixon ixoff
+....
+
+A soros eszközök rendszerszintû inicializálását az [.filename]#/etc/rc.d/serial# állomány vezérli. Lényegében ez határozza meg az összes soros eszköz alapértelmezett beállítását.
+
+Ha bizonyos beállítások megváltoztatását tiltani szeretnénk az alkalmazások felé, akkor azt a "zárolt állapotot" tartalmazó eszközben kell rögzítenünk. Például, ha a [.filename]#ttyd5# eszköz sebességét fixen 57600 bps-ra akarjuk beállítani, akkor írjuk be ezt:
+
+[source,bash]
+....
+# stty -f /dev/ttyd5.lock 57600
+....
+
+Ezután ha egy alkalmazás megnyitja a [.filename]#ttyd5# eszközt és megpróbálja a port sebességét átállítani, akkor az továbbra is 57600 bps marad.
+
+A kezdeti és a zárolt állapotot képezõ eszközöket általában csak a `root` felhasználó számára szabad írhatóvá tenni.
+
+[[term]]
+== Terminálok
+
+A terminálok olyankor kínálnak kényelmes és költséghatékony hozzáférést a FreeBSD rendszerünkhöz, amikor sem a gép konzolját, sem pedig a hozzá tartozó hálózatot nem érjük el. Ebben a szakaszban olvashatjuk, miként kell terminálokat használni FreeBSD alatt.
+
+[[term-uses]]
+=== A terminálok alkalmazásai és típusai
+
+Az eredeti UNIX(R) rendszereknek nem voltak konzoljaik. Ehelyett az emberek a soros portokra csatlakoztatott terminálokon keresztül jelentkeztek be és így futtattak rajtuk programokat. Ez nagyon hasonlít ahhoz, mint amikor egy modem és egy terminálprogram felhasználásával betárcsázunk egy távoli gépre és vele szöveges módban dolgozunk.
+
+Napjaink személyi számítógépein azonban találhatunk már akár nagy felbontású megjelenítéssel megáldott konzolokat is, habár a soros porton keresztüli bejelentkezés lehetõsége még mind a mai napig elérhetõ a legtöbb UNIX(R)-alapú rendszerben. Ez alól a FreeBSD sem kivétel. Ha rákötünk egy terminált a gépünk egyik üres soros portjára, akkor a megszokott módon képesek vagyunk bejelentkezni a rendszerbe és futtatni bármilyen szöveges programot, hasonlóan ahhoz, ahogy azt a konzolban vagy az X Window Systemben egy `xterm` ablakban megtehetjük.
+
+Ha egy irodában vagyunk, akkor egy FreeBSD rendszerre több terminált is kapcsolhatunk, melyek az alkalmazottak asztalain foglalnak helyet. Otthoni használat esetén egy kiöregedett számítógép, például egy régi IBM PC vagy egy Macintosh(R) is ráköthetõ egy gyorsabb FreeBSD rendszerre. Ennek segítségével az egyébként egyfelhasználós számítógépünket egy valódi többfelhasználós rendszerré alakíthatjuk.
+
+A FreeBSD esetén háromféle terminálról beszélhetünk:
+
+* <<term-dumb,A buta (dumb) terminálok>>
+* <<term-pcs,A terminálként funkcionáló személyi számítógépek>>
+* <<term-x,Az X terminálok>>
+
+A most következõ alszakaszokban ezeket fejtjük ki részletesebben.
+
+[[term-dumb]]
+==== A buta terminálok
+
+A buta terminál alatt olyan speciálizált eszközt értünk, amellyel soros vonalon keresztül csatlakozunk számítógépekhez. Azért nevezik ezeket "butának", mert csupán annyi számítási teljesítményt zsúfoltak beléjük, hogy szöveget legyenek képesek küldeni, fogadni és megjeleníteni. Semmilyen program nem képes rajtuk futni. Helyette az a számítógép fogja a szövegszerkesztõt, fordítóprogramot, levelezõ klienst, játékot és a többit futtatni, amelyre vele kapcsolódtunk.
+
+A buta termináloknak többszáz, különbözõ gyártmányú fajtája létezik. Ilyenek például a Digital Equipment VT-100 vagy a Wyse WY-75 típusú termináljai. A FreeBSD szinte mindegyiküket ismeri. Egyes drágább terminálok még grafikus megjelenítésre is képesek, de ezeket a lehetõségeket csak bizonyos szoftverek tudják ténylegesen kihasználni.
+
+A buta terminálok leginkább olyan munkahelyeken terjedtek el, ahol az alkalmazottaknak nincs szükségük grafikus alkalmazások, tehát például az X Window System használatára.
+
+[[term-pcs]]
+==== Személyi számítógépek mint terminálok
+
+Ha egy <<term-dumb,buta terminál>> csupán szöveg küldésére, fogadására és megjelenítésére képes, akkor bármelyik személyi számítógép utána tudja mindezt csinálni. Ehhez mindössze egy megfelelõ kábelre és az adott gépen futó _terminál emulációs_ szoftverre van szükségünk.
+
+Az ilyen fajta megoldás nagyon elterjedt az otthoni használat esetén. Például, ha valamelyik családtagunk éppen szorgalmasan dolgozik a FreeBSD rendszerkonzolján, akkor a rákapcsolt terminálon keresztül még mi magunk is el tudunk végezni valamennyi szöveges felületet igénylõ munkát.
+
+Az alap FreeBSD rendszerben legalább két segédprogram használható a soros vonali kapcsolaton keresztüli munkára: a man:cu[1] és a man:tip[1].
+
+Egy FreeBSD rendszerû kliensrõl így tudunk csatlakozni egy másik rendszerre:
+
+[source,bash]
+....
+# cu -l soros-vonali-eszköz
+....
+
+Ahol a "soros-vonali-eszköz" a rendszerünkben a soros portot jelölõ speciális eszköz neve. Az ilyen eszközök neve [.filename]#/dev/cuadN#.
+
+Az eszköz nevében az "N"-es rész a soros port sorszámát adja meg.
+
+[NOTE]
+====
+A FreeBSD-ben az eszközök sorszámozása nullától kezdõdik, nem pedig egytõl (ellentétben tehát azzal, ahogy azt az MS-DOS(R) rendszerekben és leszármazottaikban már megszokhattuk). Ez azt jelenti, hogy amit az MS-DOS(R) alapú rendszerekben [.filename]#COM1#-nek hívnak, az a FreeBSD-ben általában a [.filename]#/dev/cuad0#.
+====
+
+[NOTE]
+====
+Egyes emberek más, többnyire a Portgyûjteménybõl is elérhetõ programokat szeretnek inkább használni. A portok között találhatunk elég sok olyan szoftvert, amely a man:cu[1] és a man:tip[1] programokhoz hasonlóan mûködik. Ilyen például a package:comms/minicom[].
+====
+
+[[term-x]]
+==== Az X terminálok
+
+Az X terminálok a terminálok közül a legfejlettebbek. Általában nem is soros porton, hanem hálózaton, például Etherneten keresztül csatlakoznak. Természetesen nem csak szöveges alkalmazásokat, hanem lényegében bármilyen X alkalmazást képesek megjeleníteni.
+
+Az X terminálokról itt most csak a teljesség kedvéért szólunk, de ebben a fejezetben _nem_ szándékozunk tárgyalni az X terminálok csatlakoztatását, beállítását és használatát.
+
+[[term-config]]
+=== Beállítás
+
+Ebben a fejezetben ismertetjük mindazt, ami ahhoz kell, hogy a FreeBSD rendszerünkön engedélyezni tudjuk a terminálon keresztüli bejelentkezéseket. Feltételezzük, hogy a rendszermagunk támogatja a terminálok által használt soros portokat, illetve, hogy ezeket már csatlakoztattuk is.
+
+Ha visszagondolunk a crossref:boot[boot,A FreeBSD rendszerindítási folyamata]re, akkor eszünkbe juthat, hogy a rendszer indításakor az `init` nevû program felelõs az összes futó program irányításáért és inicializálódásáért. Az `init` egyik feladata, hogy beolvassa az [.filename]#/etc/ttys# állományt és neki megfelelõen az elérhetõ terminálokon elindítsa a `getty` programot. A `getty` felelõs a bejelentkezéshez szükséges azonosító beolvasásáért és a `login` program elindításáért.
+
+Ennek megfelelõen tehát, ha a FreeBSD rendszerünkön terminálokat akarunk beállítani, akkor ehhez a következõ lépéseket kell megtennünk `root` felhasználóként:
+
+[.procedure]
+====
+. Az [.filename]#/etc/ttys# állományba vegyünk fel egy bejegyzést a soros porthoz tartozó [.filename]#/dev# könyvtárbeli eszközhöz, ha még nem szerepelne benne.
+. A porthoz adjuk meg a `/usr/libexec/getty` programot, majd hozzá az [.filename]#/etc/gettytab# állományból válasszuk ki a megfelelõ _getty_ típust.
+. Adjuk meg a terminál alapértelmezett típusát.
+. Állítsuk a portot "on" (bekapcsolt) állapotúra.
+. Adjuk meg, hogy a port "secure" (biztonságos) legyen-e.
+. Mondjuk meg az `init` programnak, hogy olvassa újra az [.filename]#/etc/ttys# állományt.
+====
+
+A másik lépés kiegészítõ lépéseként az [.filename]#/etc/gettytab# állományban mi magunk is létrehozhatunk egy saját _getty_ típust. A fejezetben ehhez ugyan nem adunk segítséget, de ha érdekel minket a téma, akkor ezzel kapcsolatban a man:gettytab[5] és man:getty[8] man oldalakat érdemes elolvasni.
+
+[[term-etcttys]]
+==== Egy bejegyzés felvétele az [.filename]#/etc/ttys# állományba
+
+Az [.filename]#/etc/ttys# állományban találhatjuk meg az összes portot, ahonnan a FreeBSD rendszerünk engedélyezi a bejelentkezést. Például a [.filename]#ttyv0#, az elsõ virtuális konzol is szerepel benne. Ezen a bejegyzésen keresztül tudunk bejelentkezni a konzolra. Ebben az állományban találjuk meg még a többi virtuális konzol, soros port és pszeudoterminál bejegyzéseit is. A rögzített terminálok esetén egyszerûen csak adjuk meg a soros porthoz tartozó [.filename]#/dev# könyvtárbeli eszközt a [.filename]#/dev# elõtag nélkül (így például a [.filename]#/dev/ttyv0# [.filename]#ttyv0# néven fog megjelenni).
+
+Az alap FreeBSD telepítésben egy olyan [.filename]#/etc/ttys# állomány található, amely tartalmazza az elsõ négy soros portot, a [.filename]##ttyd0## eszköztõl kezdve a [.filename]#ttyd3# eszközig. Ha tehát ezekre a portokra csatlakoztatnunk egy terminált, akkor már nem kell egy újabb bejegyzést felvennünk hozzájuk.
+
+[[ex-etc-ttys]]
+.Terminálok felvétele az [.filename]#/etc/ttys# állományba
+[example]
+====
+Tegyük fel, hogy két eszközt szeretnénk a rendszerünkhöz csatlakoztatni: egy Wyse-50-es terminált és egy régi 286-os IBM PC-t, amelyen a Procomm terminálszoftverrel emulálunk egy VT-100-as terminált. A Wyse terminált a második soros portunkra kötjük, míg a 286-ost a hatodik soros portra (például egy többportos soros vonali kártyán). A nekik megfelelõ [.filename]#/etc/ttys# állománybeli bejegyzések így fognak kinézni:
+
+[.programlisting]
+....
+ttyd1  "/usr/libexec/getty std.38400"  wy50  on  insecure
+ttyd5   "/usr/libexec/getty std.19200"  vt100  on  insecure
+....
+
+* Az elsõ mezõben általában a terminálhoz tartozó eszközt nevezzük meg, amely a [.filename]#/dev# könyvtárban található.
+
+* A második mezõ a vonalhoz tartozó végrehajtandó parancs, ami általában a man:getty[8]. A `getty` mûködésbe helyezi és megnyitja a vonalat, beállítja a sebességét, bekéri a felhasználó nevét, majd elindítja a man:login[1] programot.A `getty` program egy (opcionális) paramétert fogad el a parancssorában, ami a _getty_ típusa. Egy ilyen _getty_ típus szabja meg a terminálhoz tartozó vonal jellemzõit, például az adatátviteli sebességet és a paritást. A `getty` ezeket a jellemzõket az [.filename]#/etc/gettytab# állományból olvassa be.A [.filename]#/etc/gettytab# egyaránt tartalmaz bejegyzéseket a régi és új típusú terminálokhoz. Az `std` szöveggel kezdõdõ bejegyzések szinte majdnem minden esetben mûködnek a hardveres terminálokkal. Az ilyen bejegyzések figyelmen kívül hagyják a paritást. 110 és 115 200 bps között minden adatátviteli sebességhez tartozik egy-egy `std` bejegyzés. Természetesen ebbe az állományba akár a saját bejegyzéseinket is elkészíthetjük. A man:gettytab[5] man oldal nyújt ehhez átfogó segítséget.Amikor az[.filename]##/etc/ttys## állományban megadjuk a _getty_ típusát, akkor ellenõrizzük, hogy a beállításai megfelelnek a terminálénak.A példánknál maradva: a Wyse-50 nem használ paritást és 38 400 bps-en üzemel. A 286-os gép szintén nem dolgozik paritással és 19200 bps-sel kapcsolódik.
+
+* A harmadik mezõben adjuk meg általában a vonalra csatlakozó terminál típusát. Ez a betárcsázós portok esetében többnyire az `unknown` vagy a `dialup`, mivel ezeken keresztül a felhasználók gyakorlatilag szinte bármilyen típusú terminállal vagy szoftverrel be tudnak jelentkezni. A hardveres termináloknál a terminál típusa azonban nem változik, ezért a man:termcap[5] adatbázisban keressük ki a nekik megfelelõt és adjuk meg ebben a mezõben.A példánkban a Wyse-50 egy valós termináltípust használ, miközben a 286-oson futó Procomm egy VT-100-as típusú terminált emulál.
+
+* A negyedik mezõ azt mondja meg, hogy a port engedélyezett-e vagy sem. Ha itt a `on` értéket adjuk meg, akkor az `init` elindítja a második mezõben szereplõ `getty` programot. Ha viszont itt az `off` szerepel, akkor a `getty` nem fog elindulni, így ezen a porton be sem fogunk tudni jelentkezni.
+
+* Az utolsó mezõben a port megbízhatóságát kell megjelölnünk. Ha biztonságosnak (`secure`) állítjuk be a portot, akkor rajta keresztül a `root` (vagy bármelyik nullás felhasználói azonosítóval rendelkezõ) felhasználó be tud jelentkezni. Amikor viszont nem biztonságos (`insecure`), akkor elõször egy normál felhasználóval kell bejelentkeznünk, majd a man:su[1] programmal vagy egy hozzá hasonló megoldással kell rendszeradminisztrátorrá válnunk.Leginkább az `insecure` beállítást javasoljuk, még hét lakat alatt õrzött terminálok esetében is. Valójában sokkal egyszerûbb bejelentkezni, majd kiadni egy `su` parancsot, ha netalán rendszeradminisztrátori jogosultságokra lenne szükségünk.
+
+====
+
+[[term-hup]]
+==== A `init` utasítása az [.filename]#/etc/ttys# újraolvasására
+
+Miután az [.filename]#/etc/ttys# állományban elvégeztük a megfelelõ módosításokat, a konfigurációs állomány újraolvasásához küldjünk egy SIGHUP (bontás) jelzést az `init` programnak. Mint például:
+
+[source,bash]
+....
+# kill -HUP 1
+....
+
+[NOTE]
+====
+Mivel mindig az `init` indul el elsõként a rendszerben, ezért a hozzá tartozó azonosító az 1 lesz.
+====
+
+Ha mindent jól állítottunk be, a kábelek is a helyükön vannak és a terminálokat is bekapcsoltuk, akkor minden terminálhoz elindul egy `getty` program, és mindegyikõjükön megjelenik a bejelentkezõ képernyõ.
+
+[[term-debug]]
+=== A terminálokkal kapcsolatos hibajelenségek
+
+Olykor hiába igyekszünk a lehetõ legaprólékosabban ügyelni minden apró részletre, könnyen elõfordulhat, hogy valamiért a terminál mégsem mûködik rendesen. Következzen most egy lista néhány ismert tünetrõl és azok javasolt gyógymódjairól.
+
+==== Nem jelenik meg a bejelentkezõ képernyõ
+
+Ellenõrizzük, hogy a terminált rendesen csatlakoztattuk és áram alá helyeztük. Amikor egy személyi számítógépet használunk terminálnak, akkor nézzük meg, hogy a terminál emulációs program a megfelelõ soros porton fut.
+
+Vizsgáljuk meg, hogy a kábel mind a két vége pontosan illeszkedik a portokba. Gyõzõdjünk meg róla, hogy valóban a megfelelõ típusú kábelt használjuk.
+
+Nézzük meg, hogy a terminál és a FreeBSD is ugyanazon az adatátviteli sebességen és paritási beállítással megy. Ha képernyõvel rendelkezõ terminálunk van, akkor a kontrasztot és fényerõsséget is ellenõrizzük. Ha nyomtatós terminálunk van, akkor vizsgáljuk meg a papír és a tinta állapotát.
+
+Gyõzõdjünk meg róla, hogy a `getty` valóban fut és rendesen kiszolgálja a terminált. Például a `ps` paranccsal listázzuk ki az összes jelenleg futó programot és keressük meg köztük a `getty` programot:
+
+[source,bash]
+....
+# ps -axww|grep getty
+....
+
+Ekkor látnunk kell a terminálhoz tartozó bejegyzést. Például, ha a `getty` második soros portot jelképezõ [.filename]#ttyd1# eszközön fut, és az [.filename]#/etc/gettytab# állományból az `std.38400` nevû bejegyzést használja, akkor ez jelenik meg:
+
+[source,bash]
+....
+22189  d1  Is+    0:00.03 /usr/libexec/getty std.38400 ttyd1
+....
+
+Amennyiben semmilyen `getty` nem fut, akkor ellenõrizzük, hogy valóban engedélyeztük-e a portot az [.filename]#/etc/ttys# állományban. A [.filename]#ttys# állomány átírása után ne felejtsük el kiadni a `kill -HUP 1` parancsot sem.
+
+Ha a `getty` fut, de a terminálon továbbra sem látjuk a bejelentkezõ képernyõt, vagy megjelenik, de nem tudunk gépelni, akkor elõfordulhat, hogy a terminál vagy kábel nem támogatja a hardveres kézfogást (handshaking). Próbáljuk meg az [.filename]#/etc/ttys# állományban levõ `std.38400` bejegyzést az `3wire.38400` bejegyzésre kicserélni (de utána ne felejtsük el kiadni a `kill -HUP 1` parancsot). A `3wire` nagyon hasonlít az `std` bejegyzéshez, de elhagyja a hardveres kézfogást. A `3wire` alkalmazásakor viszont a puffer telítõdésének megelõzése érdekében próbálkozzunk az adatátviteli sebesség csökkentésével vagy engedélyezzük a szoftveres forgalomirányítást.
+
+==== Amikor mindenféle szemét jelenik meg a képernyõn
+
+Ellenõrizzük, hogy a FreeBSD és a terminál ugyanazt az adatátviteli sebességet és paritási beállítást használja. Nézzük meg a futó `getty` programokat, és hogy a megfelelõ _getty_ típussal mennek-e. Ha nem, módosítsuk az [.filename]#/etc/ttys# állományt és adjuk ki a `kill -HUP 1` parancsot.
+
+==== A karakterek duplán jelennek meg, a jelszó begépelésekor látható
+
+Állítsuk át a terminált (vagy a terminál emulációs szofvert) "half duplex" vagy "local echo" módról "full duplex" módra.
+
+[[dialup]]
+== Betárcsázós szolgáltatások
+
+Amikor egy FreeBSD rendszert akarunk betárcsázós szolgáltatásokhoz beállítani, akkor az nagyon hasonlít a terminálok csatlakoztatásához, azzal a eltéréssel, hogy ilyenkor a terminálok helyett modemekkel kell dolgoznunk.
+
+=== Külsõ kontra belsõ modemek
+
+A külsõ modemek sokkal kényelmesebbnek tûnnek betárcsázás szempontjából, mivel az ilyenek gyakran a statikus memóriájukban tárolt paraméterek révén tulajdonképpen félig elõre be vannak állítva és sok esetben a fontosabb RS-232 jeleket külön lámpácskákkal mutatják. A villogó lámpák könnyen elkápráztatják a laikusokat, de emellett igen fontosak a modem mûködõképességének megállapításában is.
+
+Ezzel szemben a belsõ modemeken nem található statikus memória, ezért a paramétereik csak DIP kapcsolókkal módosíthatóak. Még ha egy belsõ modemem látunk is lámpákat, akkor sem könnyû figyelni rájuk, mert a gépünk burkolata úgyis eltakarja ezeket.
+
+==== Modemek és kábelek
+
+Ha külsõ modemet használunk, akkor mindenképpen szükségünk lesz hozzá még egy megfelelõ kábelre is. Egy szabványos RS-232-es soros kábel erre tökéletesen megfelel egészen addig, amíg a normál jeleket így kötötték be rajta:
+[[serialcomms-signal-names]]
+.A jelek neve
+[cols="1,1", frame="none", options="header"]
+|===
+<| Rövidítés
+<| Elnevezés
+
+|RD
+|Received Data (fogadott adat)
+
+|TD
+|Transmitted Data (küldött adat)
+
+|DTR
+|Data Terminal Ready (adatterminál kész)
+
+|DSR
+|Data Set Ready (adatbeállítás kész)
+
+|DCD
+|Data Carrier Detect (vonal észlése - az RS-232 fogadást érzékelõ vonala)
+
+|SG
+|Signal Ground (föld)
+
+|RTS
+|Request to Send (küldés kérése)
+
+|CTS
+|Clear to Send (küldés engedélyezése)
+|===
+
+A FreeBSD-nek 2400 bps felett a forgalom irányításához az RTS és CTS jelekre van szüksége. A CD jellel állapítja meg, hogy a hívás létrejött vagy a bontották a vonalat, és a DTR jel hozza alapállapotba a modemet a munkamenet befejezése után. Egyes kábelekben nem mindegyik jelet vezették át, így ha például gondjaink akadnak a bejelentkezõ képernyõvel amikor a vonalat bontjuk, akkor érdemes átnéznünk a kábelt.
+
+A többi UNIX(R)-szerû operációs rendszerhez hasonlóan a FreeBSD is hardveres jelek segítségével igyekszik kideríteni, hogy a hívás megvalósult vagy bontották a vonalat, valamint a hívás befejezése után így bontja a vonalat és állítja vissza a modemet. A FreeBSD igyekszik elkerülni a parancsok küldését a modem felé, vagy a modem állapotának folyamatos ellenõrzését. Ha már van némi tapasztalatunk a PC-alapú BBS-ek modemes elérését illetõen, akkor valószínûleg értjük ezek okait.
+
+=== A soros vonali felülettel kapcsolatos megfontolások
+
+A FreeBSD ismeri az NS8250-, NS16450-, NS16550- és NS16550A alapú EIA RS-232C (CCITT V.24) szabványú kommunikációs felületeket. A 8250-es és a 16450-es eszközök egykarakteres pufferrel rendelkeznek. A 16550-es eszközök 16 karakteres puffert tartalmaznak, amellyel jobb teljesítmény érhetõ el. (A sima 16550-esben levõ hibák miatt azonban ez a 16 karakteres puffer nem használható ki rendesen, ezért lehetõleg a 16550A verziót használjuk). Mivel az operációs rendszer részérõl az egykarakteres eszközök jóval több törõdést igényelnek, mint a 16 karakteres eszközök, ezért inkább a 16550A alapú soros felületi kártyákat ajánljuk. Amikor a rendszer egyszerre több soros portot is kezel, vagy erõs terhelés alatt áll, akkor a 16550A alapú kártyákról általában az is elmondható, hogy kisebb hibával dolgoznak.
+
+=== Egy gyors áttekintés
+
+Ahogy arról már a terminálok esetében szó esett, az `init` az összes betárcsázós kapcsolathoz tartozó soros porthoz elindít egy `getty` programot. Például, ha a modemet a [.filename]#/dev/ttyd0# eszközre kapcsoltuk, akkor a `ps ax` parancs kimenetében ezt láthatjuk:
+
+[source,bash]
+....
+4850 ??  I      0:00.09 /usr/libexec/getty V19200 ttyd0
+....
+
+Amikor egy felhasználó felhívja a modemet és az kapcsolódik, akkor a modem egy CD (Carrier Detect) jelet küld. A rendszermag ekkor tudomásul veszi a vonal észlelését és a `getty` segítségével megindítja a kommunikációt. A `getty` egy `login:` szöveget küld át a vonalhoz megadott sebességgel. A `getty` elkezdi figyelni, hogy a értelmes karakterek érkeznek-e vissza, és egy átlagos konfigurációban, ha ezt szemétnek találja (mert például a modem nem a `getty` számára beállított sebességgel csatlakozott), akkor megpróbálja egészen addig hangolni a vonal sebességét, amíg feldolgozásra alkalmas karaktereket nem kap.
+
+Miután a felhasználó megadta a felhasználói nevét, a `getty` elindítja a [.filename]#/usr/bin/login# programot, amely befejezi a beléptetést a felhasználó jelszavának bekérésével és annak elfogadása esetén a hozzá tartozó parancsértelmezõ elindításával.
+
+=== A konfigurációs állományok
+
+FreeBSD rendszerünkben a betárcsázós kapcsolatok engedélyezéséhez az [.filename]#/etc# könyvtárban három állomány módosítására lesz szükségünk. Közülük az elsõ, az [.filename]#/etc/gettytab# a [.filename]#/usr/libexec/getty# démon beállításait tartalmazza. A második, az [.filename]#/etc/ttys# az [.filename]#/sbin/init# számára mondja meg, hogy melyik [.filename]#tty# eszközökhöz tartozik `getty`. Végezetül a portok inicializálásához kötõdõ beállításokat az [.filename]#/etc/rc.d/serial# szkriptben kell megadnunk.
+
+Két "iskola" jött létre aszerint, hogy UNIX(R) alatt hogyan használják a betárcsázós modemeket. Az egyik csoport úgy szereti beállítani a modemeit és rendszerit, hogy a távoli felhasználó által választott sebességtõl függetlenül a számítógép és a modem közti RS-232 felület egy fix sebességen fut. Ennek a beállításnak megvan az az elõnye, hogy a távoli felhasználó ilyenkor szinte azonnal megkapja a bejelentkezõ képernyõt. A hátránya viszont, hogy ebben az esetben a rendszer nem ismeri a felhasználó valódi adatátviteli sebességét, ezért az olyan teljes képernyõs alkalmazások, mint például az Emacs, nem lesznek képesek a lassabb kapcsolatokhoz szabni a megjelenítésüket.
+
+A másik csoport a modemek RS-232-es felületét a távoli felhasználó kapcsolódási sebessége szerint állítja be. Így például egy V.32bis (14,4 Kbps) kapcsolat esetén a modemhez tartozó RS-232 felület 19,2 Kbps-on fog menni, miközben a 2400 bps sebességû kapcsolatokhoz egy vele azonos sebességû RS-232-es felület fog tartozni. Mivel a `getty` nem képes kommunikálni a modemek által lejelentett csatlakozási sebességen, ezért úgy próbálja azt megállapítani, hogy elküldi a `login:` szöveget az alap sebességgel, majd figyeli a válaszul érkezõ karaktereket. Ha a felhasználó ilyenkor szemetet lát, akkor feltételezik, hogy addig fogja nyomkodni az kbd:[Enter] billentyût, amíg valami értelmes szöveget meg nem lát. Amikor az adatátviteli sebesség eltér, akkor a `getty` ebbõl csupán csak annyit vesz észre, hogy a felhasználó "szemetet" küld, ezért egy újabb sebességgel megpróbálja megint elküldeni a `login:` szöveget. Hivatalosan ez a folyamat ismétlõdik orrvérzésig, de általában csak egy-két billentyût kell leütni a megfelelõ beállításokhoz. Nyilvánvaló, hogy ilyenkor a bejelentkezés messze nem olyan zavartalan, mint a "rögzített sebességû" esetben, de így a lassabb kapcsolattal rendelkezõ felhasználók is jobb használatóságot kapnak a teljes képernyõs programokkal.
+
+Ebben a szakaszban egy valamennyire kiegyensúlyozott beállítást igyekszünk bemutatni, de részben elfogunk hajlani abban az irányba, amikor a modem a kapcsolat sebességét követi.
+
+==== [.filename]#/etc/gettytab#
+
+A [.filename]#/etc/gettytab# egy man:termcap[5]-szerû állomány, amely a man:getty[8] beállításait tartalmazza. A man:gettytab[5] man oldalon olvashatunk az állomány pontos felépítésérõl és benne felsorolt beállításokról.
+
+===== A rögzített sebességû beállítás
+
+Ha a modem kommunikációs sebességét rögzíteni akarjuk, akkor ehhez többnyire semmit sem kell megváltoztatnunk az [.filename]#/etc/gettytab# állományban.
+
+===== Az alkalmazkodó sebességû beállítás
+
+Az [.filename]#/etc/gettytab# állományban létre kell hoznunk egy olyan bejegyzést, amelyen keresztül a `getty` tudni fogja, hogy milyen sebességeken akarjuk használni a modemet. Ha egy 2400 bps sebességû modemünk van, akkor hozzá a már meglevõ `D2400`-as bejegyzést kell használnunk.
+
+[.programlisting]
+....
+#
+# A gyors betárcsázós terminálokhoz íme egy 2400/1200/300-as váltás
+# (bárhonnan kezdõdhet):
+#
+D2400|d2400|Fast-Dial-2400:\
+        :nx=D1200:tc=2400-baud:
+3|D1200|Fast-Dial-1200:\
+        :nx=D300:tc=1200-baud:
+5|D300|Fast-Dial-300:\
+        :nx=D2400:tc=300-baud:
+....
+
+Ha ennél gyorsabb modemünk van, akkor már mindenképpen fel kell vennünk hozzá egy új bejegyzést az [.filename]#/etc/gettytab# állományba. Ezzel a beállítással egy 14,4 Kbps sebességû modemet tudunk legfeljebb 19,2 Kbps-en használni:
+
+[.programlisting]
+....
+#
+# Kiegészítések egy V.32bis modemhez:
+#
+um|V300|High Speed Modem at 300,8-bit:\
+        :nx=V19200:tc=std.300:
+un|V1200|High Speed Modem at 1200,8-bit:\
+        :nx=V300:tc=std.1200:
+uo|V2400|High Speed Modem at 2400,8-bit:\
+        :nx=V1200:tc=std.2400:
+up|V9600|High Speed Modem at 9600,8-bit:\
+        :nx=V2400:tc=std.9600:
+uq|V19200|High Speed Modem at 19200,8-bit:\
+        :nx=V9600:tc=std.19200:
+....
+
+Ennek eredménye egy 8 bites, paritásmentes kapcsolat lesz.
+
+A fenti példában a kommunikációt 19,2 Kbps-en (V.32bis kapcsolaton) kezdjük, majd utána haladunk végig a 9600 bps (V.32), 2400 , 1200 bps és 300 bps sebességû kapcsolatokon, majd vissza ismét a 19,2 Kbps-re. Az adatátviteli sebesség ilyen típusú váltogatását az `nx=` ("next table", azaz "következõ táblázat") tulajdonság segítségével valósítják meg. Minden sorban látható még egy `tc=` ("table continuation", vagyis "a táblázat folytatása") bejegyzés is, amivel az adott adatátviteli sebesség "szabványos" beállításait adjuk meg.
+
+Ha egy 28,8 Kbps sebességû modemünk van és/vagy egy 14,4 Kbps sebességû modemen akarunk tömörítést használni, akkor a 19,2 Kbps-nél nagyobb kommunikációs sebességet kell használnunk. Íme egy olyan [.filename]#gettytab#. ami 57,6 Kbps-rõl indít:
+
+[.programlisting]
+....
+#
+# A V.32bis vagy V.34 modemekhez kiegészítés,
+# 57,6 Kbps-rõl indulunk:
+#
+vm|VH300|Very High Speed Modem at 300,8-bit:\
+        :nx=VH57600:tc=std.300:
+vn|VH1200|Very High Speed Modem at 1200,8-bit:\
+        :nx=VH300:tc=std.1200:
+vo|VH2400|Very High Speed Modem at 2400,8-bit:\
+        :nx=VH1200:tc=std.2400:
+vp|VH9600|Very High Speed Modem at 9600,8-bit:\
+        :nx=VH2400:tc=std.9600:
+vq|VH57600|Very High Speed Modem at 57600,8-bit:\
+        :nx=VH9600:tc=std.57600:
+....
+
+Ha lassú a processzorunk, vagy a rendszerünk túlságosan terhelt és nincs 16550A típusú soros portunk, akkor 57,6 Kbps-en ``sio``"silo" hibák keletkezhetnek.
+
+[[dialup-ttys]]
+==== [.filename]#/etc/ttys#
+
+Az [.filename]#/etc/ttys# állomány beállításáról már a <<ex-etc-ttys>> adott képet. Ez a modemek esetében sem tér el különösebben, habár a `getty` programnak más termináltípust és -beállításokat kell átadnunk. Akár rögzített, akár alkalmazkodó sebességet akarunk beállítani, ennek általános alakja az alábbi:
+
+[.programlisting]
+....
+ttyd0   "/usr/libexec/getty xxx"   dialup on
+....
+
+A sorban látható elsõ elem a megfelelõ speciális eszköz neve - jelen esetben ez a [.filename]#ttyd0#, amely a [.filename]#/dev/ttyd0# eszközre vonatkozik és ezt fogja a `getty` figyelni. A második elem, vagyis a `"/usr/libexec/getty xxx"` (ahol a _xxx_ helyére kell beírni a megfelelõ [.filename]#gettytab# állománybeli bejegyzést nevét) lesz az a parancs, amelyet az `init` meghív. A harmadik elem, a `dialup` a terminálok alapértelmezett típusa. A negyedik paraméter, az `on` jelzi az `init` programnak, hogy aktiválja a vonalat. A sorban megjelenhetne továbbá még egy ötödik paraméter is, a `secure`, de ezt csak olyan terminálok esetében érdemes megadni, amelyek fizikailag megbízhatóak (például a rendszerkonzol).
+
+Az alapértelmezett termináltípus (vagyis a fenti példában a `dialup`) a helyi beállításoktól függ. A betárcsázós vonalak esetében hagyományosan a `dialup` a terminál alapértelmezett típusa, amit aztán a felhasználók a bejelentkezéskor lefutó szkriptjeiken keresztül a automatikusan át tudnak állítani a nekik megfelelõ terminálra. A szerzõ saját rendszerében azonban inkább a `vt102` termináltípust volt érdemes megadni alapértelmezettként, mivel ott a felhasználók csak ilyen típusú terminálokat használnak.
+
+Miután az [.filename]#/etc/ttys# állományban elvégeztük a szükséges módosításokat, egy HUP jelzéssel figyelmeztessük az `init` programot az újbóli beolvasására. Ehhez a következõ parancs ajánlott:
+
+[source,bash]
+....
+# kill -HUP 1
+....
+
+Ha még csak állítjuk be elõször a rendszerünket, akkor az `init` figyelmeztetése elõtt legyünk türelmesek, és várjuk meg, amíg a modemek befejezik az inicializálást és kapcsolódnak a vonalakra.
+
+===== A rögzített sebességû beállítás
+
+A rögzített sebesség beállításánál a [.filename]#ttys# állományban a `getty` paramétereként egy szintén rögzített sebességû bejegyzést kell megadnunk. Például az olyan modemeknél, ahol a sebességet 19,2 Kbps-re rögzítjük, a [.filename]#ttys# így fog kinézni:
+
+[.programlisting]
+....
+ttyd0   "/usr/libexec/getty std.19200"   dialup on
+....
+
+Amennyiben a modemünk nem ezen a sebességen üzemelne, akkor az `std.sebesség` paramétert használjuk az `std.19200` helyett. Elõtte azonban ne felejtsük el ellenõrizni, hogy a megadott típus szerepel-e az [.filename]#/etc/gettytab# állományban.
+
+===== Az alkalmazkodó sebességû beállítás
+
+Az alkalmazkodó sebességû beállításnál a [.filename]#ttys# állományban az [.filename]#/etc/gettytab# állományból a megfelelõ "auto-baud" (sic) kell megadnunk. Például, ha modemünk kezdõsebessége 19,2 Kbps (és a [.filename]#gettytab# ehhez tartalmaz egy `V19200` nevû bejegyzést), akkor a [.filename]#ttys# így fog kinézni:
+
+[.programlisting]
+....
+ttyd0   "/usr/libexec/getty V19200"   dialup on
+....
+
+==== [.filename]#/etc/rc.d/serial#
+
+A gyorsabb, mint például a V.32, V.32bis és V.34 modemeknél meg kell adnunk a hardveres forgalomirányítás (`RTS/CTS`) használatát is. Az [.filename]#/etc/rc.d/serial# állományban tudjuk megadni a FreeBSD rendszermagban a vonal használatához szükséges vezérlési beállításokra vonatkozó `stty` parancsokat.
+
+Például állítsuk be az 1-es sorszámú (vagyis a [.filename]#COM2#) soros porton a `crtscts termios` beállítást a behíváshoz és a híváshoz használt eszközök inicializálásakor. Ehhez a következõ sorokat kell felvennünk az [.filename]#/etc/rc.d/serial# állományba:
+
+[.programlisting]
+....
+# A soros portok kezdeti beállításai:
+stty -f /dev/ttyd1.init crtscts
+stty -f /dev/cuad1.init crtscts
+....
+
+=== A modemek beállításai
+
+Ha olyan modemeink vannak, amelyek paramétereit egy statikus memóriában tárolták le, akkor ezek beállításához egy terminálprogramot kell használnunk (amilyen például MS-DOS(R) alatt a Telix vagy FreeBSD alatt a `tip`). A modemet a `getty` programnak megadott kezdeti sebességen csatlakoztassuk és az alábbi elvárások alapján állítsuk be a paramétereit:
+
+* Kapcsolódáskor CD jelzése.
+* Mûködéskor DTR jelzése. A DTR küldésekor bontsa a vonalat és hozza alapállapotba a modemet.
+* CTS vezérlésû kimenõ adatforgalom.
+* A XON/XOFF forgalomvezérlés tiltása.
+* RTS vezérlésû bejövõ adatforgalom.
+* Csendes mód (ne adjon értesítést az eredményekrõl).
+* A parancsokat ne írja vissza.
+
+A modemhez tartozó dokumentációban kell utánajárnunk, hogy milyen parancsok és/vagy DIP kapcsolók átállításával lehet mindezeket elérni.
+
+Például, ha a fenti paramétereket egy U.S. Robotics(R) Sportster(R) 14400-as külsõ modem esetében a következõ neki kiküldött paranccsal lehet beállítani:
+
+[.programlisting]
+....
+ATZ
+AT&C1&D2&H1&I0&R2&W
+....
+
+Ilyenkor még akár más egyéb paramétereket is beállíthatunk, például a V.42bis és/vagy az MNP5 tömörítést.
+
+Az U.S. Robotics(R) Sportster(R) 14400 külsõ modemen ezenkívül még találunk néhány DIP kapcsolót is. Az ilyen modemek esetében például ezeket a beállításokat tudjuk használni:
+
+* 1. kapcsoló: FEL - normális DTR
+* 2. kapcsoló: N/A (verbális/numerikus eredményjelzõ kódok)
+* 3. kapcsoló: FEL - az eredményjelzõ kódok küldésének tiltása
+* 4. kapcsoló: LE - nem küldi vissza a parancsokat
+* 5. kapcsoló: FEL - automatikus válasz
+* 6. kapcsoló: FEL - normális Carrier Detect
+* 7. kapcsoló: FEL - a memóriában tárolt alapértelmezések betöltése
+* 8. kapcsoló: N/A (intelligens/buta mód)
+
+A modemeknél az eredményjelzõ kódok kikapcsolása/letiltása ezért fontos, mert így el tudunk kerülni az olyan problémákat, hogy a `getty` tévesen egy `login:` promptot küld a parancs módban levõ modemnek, amikor az visszaküldi a parancsot és az eredmény kódját. Ennek eredménye egy hosszúra nyúló, zavaros társalgás lesz a `getty` és a modem között.
+
+==== A rögzített sebességû beállítás
+
+A rögzített sebességû konfiguráció használata esetén úgy kell beállítanunk a modemet, hogy a konkrét adatátviteli sebsségtõl függetlenül is egy állandó sebességû kapcsolat álljon fenn a számítógép és a modem között. A U.S. Robotics(R) Sportster(R) 14400-as külsõ modem esetében a most következõ parancsokkal tudjuk rögzíteni a kapcsolat sebességét:
+
+[.programlisting]
+....
+ATZ
+AT&B1&W
+....
+
+==== Az alkalmazkodó sebességû beállítás
+
+Amikor változó sebességû konfigurációval dolgozunk, akkor a modemet úgy kell beállítani, hogy a bejövõ hívásnak megfelelõ adatátviteli sebességre váltson a soros portján. A U.S. Robotics(R) Sportster(R) 14400-as külsõ modem esetében az alábbi parancsokkal rögzítjük a modemnek küldött hibamentesített parancsok sebességét, miközben engedélyezzük, hogy a soros port sebessége változhasson a nem hibamentesített kapcsolatoknál:
+
+[.programlisting]
+....
+ATZ
+AT&B2&W
+....
+
+==== A modem beállításainak ellenõrzése
+
+A legtöbb nagysebességû modem biztosít valamilyen lehetõséget arra, hogy emberi formában is le tudjuk kérdezni a belsõ mûködésének paramétereit. A U.S. Robotics(R) Sportster(R) 14400-as külsõ modem esetében az `ATI5` parancs a statikus memóriában tárolt beállításokat mutatja meg. A modem valós mûködési paramétereit (amit ugyebár befolyásolnak a DIP kapcsolók állásai is) viszont az `ATZ` majd `ATI4` parancsok küldésével tudjuk lekérni.
+
+Ha azonban másmilyen márkájú modemünk lenne, akkor a modem leírásában próbáljunk tájékozódni arról, miként tudjuk a modem beállításait ellenõrizni.
+
+=== Hibaelhárítás
+
+Ebben a szakaszban bemutatunk néhány lépést, amelyeken keresztül ellenõrizhetjük a rendszerünkhöz csatlakoztatott modemet.
+
+==== A FreeBSD rendszer ellenõrzése
+
+Csatlakoztassuk a modemet a FreeBSD rendszerre, indítsuk be a gépet, majd ezután figyeljük a modemünk állapotát jelzõ lámpákat, hogy közülük a DTR világít-e, amikor a `login:` felirat megjelenik a rendszerkonzolon. Amennyiben erre a válasz igen, akkor az arra utal, hogy a FreeBSD a hozzá tartozó kommunikációs porton elindította a megfelelõ `getty` programot és a modem várja a hívásokat.
+
+Amikor viszont a DTR lámpa nem világít, a konzolon keresztül jelentkezzünk be a FreeBSD rendszerbe és adjuk ki egy `ps ax` parancsot, amivel így ellenõrizni tudjuk, hogy a porthoz tartozó `getty` elindult. A futó programok között tehát valami ilyesmit kell majd látnunk:
+
+[source,bash]
+....
+  114 ??  I      0:00.10 /usr/libexec/getty V19200 ttyd0
+  115 ??  I      0:00.10 /usr/libexec/getty V19200 ttyd1
+....
+
+Ha viszont például ezt látjuk:
+
+[source,bash]
+....
+  114 d0  I      0:00.10 /usr/libexec/getty V19200 ttyd0
+....
+
+és modem még nem fogadott hívást, akkor ez azt jelenit, hogy a `getty` megnyitotta a kommunikációs csatornát. Ez utalhat egyaránt egy hibás kábelre vagy a modem helytelen beállítására, mivel a `getty` egészen addig nem lesz képes megnyitni az adott portot, amíg a modem vissza nem küld neki egy CD (Carrier Detect) jelet.
+
+Ha a listában az adott [.filename]#ttydN# eszközhöz semmilyen `getty` programot nem találunk, akkor újra nézzük át az [.filename]#/etc/ttys# állományban szereplõ bejegyzéseket, mert elõfordulhat, hogy azokban vétettünk valamilyen hibát. Emellett még a [.filename]#/var/log/messages# naplóban is érdemes utánanézni, hátha az `init` vagy a `getty` küldött valamilyen hibáról értesítést. Ha még ezek után sem találunk semmit, akkor megint kezdjük el keresni hibákat, hiányzó bejegyzéseket vagy eszközöket az [.filename]#/etc/ttys#, [.filename]#/etc/gettytab# és a megfelelõ [.filename]#/dev/ttydN# állományokban.
+
+==== A betárcsázás kipróbálása
+
+Próbáljunk meg bejutni a rendszerünkbe. Ehhez a távoli rendszeren ne felejtsük el beállítani a 8 bites adatátvitelt és az 1 stopbitet, illetve a paritást kikapcsolni. Ha erre közvetlenül nem kapunk egy bejelentkezési képernyõt vagy csak szemét jelenik meg, akkor kb. másodpercenként egyszer nyomjuk le az kbd:[Enter] billentyût. Ha még ezután sem látjuk a bejelentkezési képernyõt felbukkani, akkor próbáljunk kiküldeni egy `BREAK` parancsot. Ha a híváshoz nagysebességû modemet használunk, akkor próbáljuk meg a modem sebességét rögzíteni és úgy tárcsázni (ezt például a U.S. Robotics(R) Sportster(R) modemnél az `AT&B1` paranccsal tudjuk elérni):
+
+Ha viszont még ezek után sem kapjuk meg a bejelentkezõ képernyõt, akkor a [.filename]#/etc/gettytab# állományban megint nézzük át az összes beállítást:
+
+* Az [.filename]#/etc/ttys# állományban megadott alaptulajdonság neve egyezik az [.filename]#/etc/gettytab# állományban találhatóval.
+* Mindegyik `nx=` bejegyzés után egy másik [.filename]#gettytab# tulajdonság neve jön.
+* Mindegyik `tc=` bejegyzés után egy másik [.filename]#gettytab# tulajdonság neve következik.
+
+Ha hívunk, de a FreeBSD rendszerünkre kapcsolt modem továbbra sem veszi fel, akkor a modem beállításai között ellenõrizzük, hogy a DTR jel küldésekor a modem fogadja-e a hívást. Ha úgy tûnik, hogy a modem minden ezzel kapcsolatos beállítása stimmel, akkor nézzük meg, hogy a modem lámpái közül a DTR világít-e (már ha van ilyen).
+
+Ha mindent többször is végignéztünk és még mindig nem leljük a megoldást, akkor tartsunk egy kis szünetet és térjünk vissza a problémához késõbb. Ha még ezután sem tudjuk mûködésre bírni, akkor küldjünk egy levelet a {freebsd-questions} címére, amelyben leírjuk a modemünket és a vele kapcsolatos problémát, és a lista tagjai majd megpróbálnak nekünk segíteni.
+
+[[dialout]]
+== A betárcsázós szolgáltatások használata
+
+A következõkben arra vonatkozóan igyekszünk tanácsokat adni, amikor mi magunk akarunk modemmel csatlakozni valamilyen számítógéphez. Ezek tehát olyan esetekben hasznosak, amikor egy távoli géppel akarunk terminálkapcsolatot létesíteni.
+
+A BBS-ek használatára is érvényes.
+
+Ez ilyen típusú kapcsolatok kifejezetten hasznosak tudnak lenni olyan esetekben, amikor az interneten el akarunk érni egy állományt, de gondjaink akadtak a PPP használatával. Ha például egy állományt akarunk letölteni, de a PPP valamiért nem mûködik, akkor ezt a terminál alapú kapcsolaton keresztül is meg tudjuk tenni. Ilyenkor egy zmodem segítségével tudjuk áttölteni a számítógépünkre.
+
+[[hayes-unsupported]]
+=== A gyári Hayes-modem erre nem alkalmas, mihez tudunk vele kezdeni?
+
+A `tip` man oldala valójában már nem is teljesen aktuális, ugyanis tartalmaz egy beépített Hayes-tárcsázót. Úgy tudjuk engedélyezni, ha az [.filename]#/etc/remote# állományban megadjuk az `at=hayes` beállítást.
+
+A Hayes-eszközök meghajtója nem elég ügyes ahhoz, hogy felismerje az újabb modemek által felkínált fejlettebb lehetõségeket - például a `BUSY`, `NO DIALTONE` vagy a `CONNECT 115200` üzenetek csak megzavarják. Ezért a `tip` használata során kapcsoljuk ki ezeket az üzeneteket (az `ATXO&W` paranccsal).
+
+Emellett még érdemes tudni, hogy a `tip` a híváskor 60 másodpercig vár. A modemünkön ennél kisebb idõt kell beállítanunk, máskülönben a `tip` azt hiszi, hogy valamilyen kommunikációs probléma merült fel. Ehhez próbálkozzunk az `ATS7=45&W` paranccsal.
+
+[[direct-at]]
+=== Hogyan adjuk meg ezeket az AT parancsokat?
+
+Az [.filename]#/etc/remote# állományban hozzunk létre egy "direct" bejegyzést. Például, ha a modemünk az elsõ soros porton, vagyis a [.filename]#/dev/cuad0# eszközön tanyázik, akkor a következõ sort kell beleírnunk:
+
+[.programlisting]
+....
+cuad0:dv=/dev/cuad0:br#19200:pa=none
+....
+
+A `br` tulajdonságnál a modem által ismert legnagyobb adatátviteli sebességet adjuk meg. Ezután gépeljük be a `tip cuad0` parancsot és már kapcsolódunk is a modemhez.
+
+Vagy `root` felhasználóként a `cu` parancsot is használhatjuk:
+
+[source,bash]
+....
+# cu -lvonal -ssebesség
+....
+
+Itt a _vonal_ a soros port (például [.filename]#/dev/cuad0#) és a _sebesség_ annak sebessége (például `57600`) lesz. Miután befejeztük az AT parancsok kiadását, az `~.` begépelésével tudunk kilépni.
+
+[[gt-failure]]
+=== A pn tulajdonságnál a `@` jel nem használható!
+
+A pn ("phone number") tulajdonság értékében szereplõ `@` jel segítségével az [.filename]#/etc/phones# állományban tudunk hivatkozni egy telefonszámra. A `@` a tulajdonságokat tároló állományok azonban, így például az [.filename]#/etc/remote# állomány esetén is megkülönböztetett jelentéssel bírnak. Ezért itt csak egy visszaper jellel tudjuk beírni:
+
+[.programlisting]
+....
+pn=\@
+....
+
+[[dial-command-line]]
+=== Hogyan hívjunk fel egy számot parancssorból?
+
+Tegyünk egy "általános" bejegyzést az [.filename]#/etc/remote# állományunkba. Például egy ilyet:
+
+[.programlisting]
+....
+tip115200|Dial any phone number at 115200 bps:\
+        :dv=/dev/cuad0:br#115200:at=hayes:pa=none:du:
+tip57600|Dial any phone number at 57600 bps:\
+        :dv=/dev/cuad0:br#57600:at=hayes:pa=none:du:
+....
+
+Ezután már ilyet is tudni fogunk:
+
+[source,bash]
+....
+# tip -115200 5551234
+....
+
+Ha viszont a `tip` helyett inkább a `cu` programot használnánk szívesen, akkor ehhez készítsünk egy általános bejegyzést:
+
+[.programlisting]
+....
+cu115200|Use cu to dial any number at 115200bps:\
+        :dv=/dev/cuad1:br#57600:at=hayes:pa=none:du:
+....
+
+Majd gépeljük be ezt:
+
+[source,bash]
+....
+# cu 5551234 -s 115200
+....
+
+[[set-bps]]
+=== Ehhez minden adandó alkalommal meg kell adnom a sebességet is?
+
+Hozzunk létre egy `tip1200` vagy `cu1200` nevû bejegyzést, de a `br` tulajdonságnál adjuk meg a használni kívánt sebességet. Mivel a `tip` szerint az 1200 bps egy megfelelõ alapértelmezés, ezért alapból a `tip1200` bejegyzést fogja keresni. Ez természetesen nem jelenti azt, hogy ilyen sebsséggel is akarunk dolgozni.
+
+[[terminal-server]]
+=== A terminálszerveren keresztül több más gépet is elérek
+
+Ahelyett, hogy minden alkalommal megvárnánk a kapcsolódás befejezést és begépelnénk a `CONNECT gép` parancsot, használjuk a `cm` tulajdonságát. Például nézzük meg ilyen bejegyzést az [.filename]#/etc/remote# állományban:
+
+[.programlisting]
+....
+pain|pain.deep13.com|Forrester's machine:\
+        :cm=CONNECT pain\n:tc=deep13:
+muffin|muffin.deep13.com|Frank's machine:\
+        :cm=CONNECT muffin\n:tc=deep13:
+deep13:Gizmonics Institute terminal server:\
+        :dv=/dev/cuad2:br#38400:at=hayes:du:pa=none:pn=5551234:
+....
+
+Ennek hatására elég csak annyit megadnunk, hogy `tip pain` vagy `tip muffin`, és már kapcsolódunk is a `pain` vagy `muffin` gépekhez. A `tip deep13` paranccsal pedig egyenesen a terminálszerverhez jutunk el.
+
+[[tip-multiline]]
+=== Több vonalon is lehet egy géphez csatlakozni?
+
+Ez gyakran okoz gondot olyan esetekben, amikor egy egyetemnek több betárcsázó vonala van, és azokon keresztül többezer hallgató próbál meg dolgozni.
+
+Vegyük fel az egyetemet az [.filename]#/etc/remote# állományba és használjuk a `pn` tulajdonság megadásánál a `@` jelet:
+
+[.programlisting]
+....
+nagy-egyetem:\
+        :pn=\@:tc=dialout
+dialout:\
+        :dv=/dev/cuad3:br#9600:at=courier:du:pa=none:
+....
+
+Ezután adjuk hozzá az [.filename]#/etc/phones# állományhoz az egyetem telefonszámait:
+
+[.programlisting]
+....
+nagy-egyetem 5551111
+nagy-egyetem 5551112
+nagy-egyetem 5551113
+nagy-egyetem 5551114
+....
+
+A `tip` mindegyik telefonszámot az adott sorrendben próbálja tárcsázni és végén feladja a próbálkozást. Ha folyamatosan akarjuk ezeket a számokat hívni, akkor `tip` parancsot tegyük egy ciklusba.
+
+[[multi-controlp]]
+=== Miért kell kétszer lenyomni a kbd:[Ctrl+P] gombokat, hogy egyszer elküldje a kbd:[Ctrl+P] kombinációt?
+
+A kbd:[Ctrl+P] billentyûkombináció alapértelmezés szerint a "kikényszerítést" jelenti, amivel a `tip` programnak tudunk szólni, hogy a következõ adat szó szerint értendõ. A `~s` szekvenciával bármelyik másik karakternek át tudjuk adni ezt a szerepet, ami egy változó beállítását jelenti ("set a variable").
+
+Gépeljük be, hogy `~sforce=egyetlen-karakter` és zárjuk le egy újsorral. Az _egyetlen-karakter_ helyére tetszõleges, egykarakteres szimbólumot megadhatunk. Ha itt nem adunk meg semmit, akkor a kikényszerítõ karakter a `nul` lesz, amit a kbd:[Ctrl+2] vagy a kbd:[Ctrl+Szóköz] lenyomásával tudunk elõhozni. Az _egyetlen-karakter_ szerepére például tökéletes a kbd:[Shift+Ctrl+6], amit csak nagyon kevés terminálszerver alkalmaz.
+
+A kikényszerítést végzõ karaktert az [.filename]#$HOME/.tiprc# állományban tetszõleges karakterre át tudjuk állítani:
+
+[.programlisting]
+....
+force=egyetlen-karakter
+....
+
+[[uppercase]]
+=== Miért lett hirtelen minden begépelt betû nagybetûs??
+
+Valószínûleg sikerült lenyomnunk a kbd:[Ctrl+A] gombkombinációt, ami a `tip` "betûmód váltás" funkciójának felel meg. Ezt olyanok számára dolgozták ki, akiknél nem mûködik a kbd:[CapsLock] billentyû. Az elõbb bemutatott `~s` használatával állítsuk át a `raisechar` változót valami másra. Tulajdonképpen akár ugyanarra is állíthatjuk, mint a kikényszerítõ karaktert, ha nem áll szándékunkban használni.
+
+Ebben a példában egy olyan [.filename]#.tiprc# állomány szerepel, amely tökéletesen megfelel azon Emacs felhasználók számára, akik sokat használják a kbd:[Ctrl+2] és kbd:[Ctrl+A] kombinációkat:
+
+[.programlisting]
+....
+force=^^
+raisechar=^^
+....
+
+A `^^` a kbd:[Shift+Ctrl+6] billentyûkombinációt jelenti.
+
+[[tip-filetransfer]]
+=== Hogyan mozgassunk állományokat a `tip` használatával?
+
+Amikor más UNIX(R) rendszerekkel vesszük fel a kapcsolatot, akkor állományokat a `~p` (mint put, vagyis adni) és `~t` (mint take, vagyis venni) használatával tudunk mozgatni. Ezek a parancsok a távoli rendszeren a `cat` és az `echo` felhasználásával fogadnak és küldenek állományokat. Alakjuk a következõ:
+
+`~p` helyi-állomány [ távoli-állomány ]
+
+`~t` távoli-állomány [ helyi-állomány ]
+
+Ilyenkor nincs hibaellenõrzés, ezért inkább egy másik protokollt, például zmodemet érdemes használnunk.
+
+[[zmodem-tip]]
+=== Hogyan lehet zmodemet használni a `tip` programban?
+
+Állományokat úgy tudunk fogadni, ha elõtte a kapcsolat távolabbi végén elindítjuk a küldést végzõ programot. Ezután a `~C rz` parancs kiadásával kezdhetjük meg helyben a fogadását.
+
+Állományokat úgy tudunk küldeni, ha elõtte a kapcsolat másik végén elindítjuk a fogadó programot. Ezután a `~C sz állományok` parancs kiadásával tudjuk megkezdeni a küldést.
+
+[[serialconsole-setup]]
+== A soros vonali konzol beállítása
+
+[[serialconsole-intro]]
+=== Bevezetés
+
+A FreeBSD képes úgy is elindulni, ha konzolként mindössze egy buta terminált kapcsolunk rá soros porton keresztül. Az ilyen típusú konfigurációs alapvetõen két típus számára bizonyul hasznosnak: azon rendszergazdák számára, akik billentyûzettel és monitorral nem rendelkezõ gépekre akarnak FreeBSD-t telepíteni, és olyan fejlesztõk számára, akik a rendszermag vagy különbözõ eszközmeghajtók mûködését akarják nyomon követni.
+
+Ahogy arról már a crossref:boot[boot,A FreeBSD rendszerindítási folyamata]ben is szó esett, a FreeBSD három indítási fokozattal rendelkezik. Az elsõ két fokozat a rendszerindító blokk kódjában foglal helyet, amely pedig a lemezen található FreeBSD slice elején. A rendszer indulásakor ez a blokk betöltõdik és lefuttatja a harmadik fokozatot képviselõ rendszertöltõt (a [.filename]#/boot/loader# állományt).
+
+Ha soros vonali konzol beállításához tehát be kell állítanunk a rendszerindító blokkot, a rendszertöltõt és a rendszermagot.
+
+[[serialconsole-howto-fast]]
+=== A soros konzol beállítása, rövidített változat
+
+Ebben a szakaszban azt feltételezzük, hogy az alap beállításokkal dolgozunk és csupán egy gyors áttekintésre van szükségünk a soros vonali konzolról.
+
+[.procedure]
+====
+. Csatlakoztassunk egy soros kábelt a [.filename]#COM1# portra és a terminálra.
+. Rendszeradminisztrátorként a következõ parancs kell kiadnunk ahhoz, hogy a soros konzolon láthassuk az összes rendszerindításhoz tartozó üzenetet:
++
+[source,bash]
+....
+# echo 'console="comconsole"' >> /boot/loader.conf
+....
++
+. Nyissuk meg az [.filename]#/etc/ttys# állományt, és a [.filename]#ttyd0# eszközhöz tartozó sorban írjuk át az `off` paramétert az `on` értékre és a `dialup` paramétert a `vt100` értékre. Ha nem ezeket állítjuk be, akkor a soros konzol keresztül jelszó megadása nélkül is be tudunk jelentkezni, ami viszont egy biztonsági rés veszélyével fenyeget.
+. A változtatások érvényesítéséhez indítsuk újra a rendszerünket.
+====
+
+Ha ettõl eltérõ beállításokra lenne szükségünk, akkor a folyamat egyes lépéseibe a <<serialconsole-howto>>ban kaphatunk mélyebb betekintést.
+
+[[serialconsole-howto]]
+=== A soros vonali konzol beállítása
+
+[.procedure]
+====
+. Készítsük elõ a soros kábelt.
++ 
+Vagy a null-modem kábelre vagy pedig egy szabványos soros kábelre és egy null-modem átalakítóra lesz szükségünk. A soros kábelekkel kapcsolatosan a <<serial-cables-ports>>t érdemes elolvasni.
+. Húzzuk ki a billentyûzetet.
++ 
+A legtöbb személyi számítógép az indítása (vagyis a Power-On Self-Test, POST) során hibát jelez, ha nem érzékel billentyûzetet. Egyes gépek hangosan panaszolják a billentyûzet hiányát, és nem is hajlandóak egészen addig elindulni, amíg nem csatlakoztatunk egyet.
++ 
+Ha a számítógépünk hibát küld, de ennek ellenére mégis elindul, akkor semmit nem kell csinálnunk. (Némelyik Phonix BIOS-os gépen ilyenkor megjelenik a `Keyboard failed` hibaüzenet, de ettõl még rendesen elindul a gép.)
++ 
+Amennyiben a számítógépünk nem hajlandó billentyûzet nélkül elindulni, állítsuk be a BIOS-ban a "hiba" figyelmen kívül hagyását (már ha ez lehetséges). Az alaplap leírásában találhatjuk meg ennek pontos részleit.
++
+[TIP]
+======
+
+A BIOS paraméterei között a billentyûzetet állítsuk "Not installed" állapotúra. Ilyenkor még továbbra is használható a billentyûzet, ezzel mindössze csak a BIOS számára tiltjuk le az indításkori ellenõrzést, ezért nem fog panaszkodni a hiánya miatt. Tehát a billentyûzetet még a "Not installed" beállítása esetén is nyugodtan csatlakoztatjuk, mert mûködni fog.
+======
++
+[NOTE]
+======
+Ha a rendszerünkön PS/2(R)-es egér is található, akkor jó eséllyel a billentyûzettel együtt az egeret is ki tudjuk húzni. Mivel a PS/2(R)-es egér osztozik a billentyûzettel bizonyos hardvereken, ezért ha nem húzzuk ki az egeret is, akkor az alaplap még továbbra is képes azt gondolni, hogy a billentyûzet ott van. Például az AMI BIOS-os Gateway 2000-as 90 MHz-es Pentium rendszer pontosan így mûködik. Általában véve azonban ez nem szokott gondot okozni, mivel az egér billentyûzet nélkül úgy sem ér túlságosan sokat.
+======
++
+. Csatlakoztassunk egy buta terminált a [.filename]#COM1# ([.filename]#sio0#) portra.
++ 
+Ha nem rendelkezünk buta terminállal, akkor erre célra ugyanúgy alkalmas egy régi XT-s PC valamilyen modemprogrammal vagy egy soros porton csatlakozó másik UNIX(R)-os gép. Ha nincs [.filename]#COM1# ([.filename]#sio0#) portunk, akkor szerezzünk egyet. Jelen pillanatban a rendszerindító blokk újrafordítása nélkül a [.filename]#COM1# porton kívül nem tudunk másikat választani. Ha a [.filename]#COM1# portra már raktunk valamilyen másik eszközt, akkor azt ideiglenesen húzzuk le, majd a FreeBSD telepítése és elindítása után tegyünk fel egy másik rendszerindító blokkot. (Egyébként feltételezzük, hogy a [.filename]#COM1# elérhetõ egy állomány/számító/terminálszerveren - ha valóban valamilyen másik célra szükségünk lenne a [.filename]#COM1# portra (és semmiképpen sem tudjuk átrakni a [.filename]#COM2# ([.filename]#sio1#) portra), akkor valószínûleg nem is ezzel kellene elsõként foglalkoznunk.)
+. Gondoskodjunk róla, hogy a rendszermag beállításait tartalmazó állományban a [.filename]#COM1# ([.filename]#sio0#) eszközhöz megadtuk a megfelelõ paramétereket.
++ 
+Ezek az alábbiak:
++
+`0x10`:::
+A konzolos mûködési mód engedélyezése az adott egységhez. Ha megadjuk ezt a paramétert, akkor a többit a rendszer figyelmen kívül hagyja. Pillanatnyilag legfeljebb egy egység birtokolhatja ezt a beállítást. Ha több ilyet adtunk volna meg, akkor (a felírás sorrendje szerint) az elsõ kap ilyen szerepet. Ez a beállítás önmagában még nem teszi a soros portot konzollá. Ehhez még szükségünk van a következõ beállításra, vagy a `-h` megadására is.
+
+`0x20`:::
+Az egység konzollá nyilvánítása (hacsak nincs egy tõle nagyobb prioritású konzol), függetlenül a lentebb ismertetendõ `-h` opciótól. A `0x20` értéket a `0x10` értékkel együtt kell megadni.
+
+`0x40`:::
+(A `0x10` értékkel együtt) az egységet kivonja a normális elérés alól. Ezt a beállítást ne használjuk, ha soros vonali konzolt akarunk üzemeltetni az adott porton. Ezzel az egységet csak a rendszermag távoli nyomkövetéséhez tudjuk használni. A távoli nyomkövetésrõl a link:{developers-handbook}[fejlesztõk kézikönyvében] olvastunk bõvebben.
++ 
+Példa:
++
+[.programlisting]
+....
+device sio0 at isa? port IO_COM1 flags 0x10 irq 4
+....
++ 
+A további részletekrõl a man:sio[4] man oldal tud felvilágosítást nyújtani.
++ 
+Ha nem állítottuk be a megfelelõ paramétereket, akkor (egy másik konzolon) futtassuk a UserConfig programot vagy fordítsuk újra a rendszermagot.
+. Hozzunk létre egy [.filename]#boot.config# állományt a rendszer indításához használt meghajtó `a` partíciójának gyökerében.
++ 
+Ez az állomány mondja meg a rendszerindító blokkban található kódnak, hogy miként akarjuk indítani a rendszerünket. A soros vonali konzol életrekeltéséhez a most következõ opciók közül kell megadnunk egyet vagy többet - amennyiben többet akarunk megadni, akkor mindegyiket egyetlen sorban szerepeltessük:
++
+`-h`:::
+A belsõ és a soros vonali konzolok közti átkapcsolás. Ezzel tudunk a konzolos eszközök között váltani. Például, ha egy belsõ (video) konzolról indítjuk a rendszert, akkor a rendszertöltõnek és a rendszermagnak átadott `-h` paraméterrel arra tudjuk ezeket utasítani, hogy konzolként a soros portot használják. Vagy ha soros porton keresztül indítjuk a rendszert, akkor `-h` megadásával megkérhetjük a rendszertöltõt és a rendszermagot, hogy ezután már a videokártyát használja konzolként.
+
+`-D`:::
+Az egy- és kétkonzolos beállítások közti váltás. Az egykonzolos konfigurációban a konzol lehet belsõ (video) vagy soros vonali, attól függõen, hogy miként használtuk a fenti `-h` opciót. A kétkonzolos konfigurációban azonban a videokártyán és a soros vonalon keresztül is egyszerre megjelenik a konzol, függetlenül a `-h` hatásától. Ilyenkor viszont vegyük figyelembe, hogy ez a kétkonzolos konfiguráció csak a rendszerindító blokk futása alatt él. Amint a rendszerindító megkapja a vezérlést, a `-h` által megadott konzol válik az egyedülivé.
+
+`-P`:::
+A rendszerindító blokk megpróbálja megkeresni a billentyûzetet. Ha nem találja, akkor magától beállítja a `-D` és `-h` opciókat.
++
+[NOTE]
+======
+Tárbeli korlátozások miatt a rendszerindító blokk jelenlegi változata a `-P` paraméterrel csak a kiterjesztett billentyûzeteket képes kezelni. A 101 gombnál kevesebbel (tehát F11 és F12 gombokkal nem) rendelkezõ billentyûzeteket ezért nem feltétlenül fogja észlelni. Ugyanezen korlátozás miatt egyes laptopokon sem minden esetben sikerül érzékelni a billentyûzetet. Ha ez a rendszerünkön problémához vezetne, akkor egyszerûbb lesz elhagyni a `-P` használatát. Sajnos, jelenleg semmilyen megoldás nincs erre.
+======
++ 
+Vagy a `-P` opcióval állítassuk be automatikusan a konzolt, vagy pedig a `-h` opcióval engedélyezzük a soros vonali konzolt.
++ 
+Természetesen itt a man:boot[8] man oldalon szereplõ összes többi paramétert is megadhatjuk.
++ 
+A `-P` kivételével az összes opció a rendszertöltõnek ([.filename]#/boot/loader#) kerül átadásra. A rendszertöltõ egyedül a `-h` állapotából dönti el, hogy mely belsõ videoeszközön vagy soros porton legyen a konzol. Ez azt jelenti, hogy a [.filename]#/boot.config# állományban ha megadjuk a `-D` opciót, de mellette nem szerepel a `-h`, akkor a soros vonali konzolt csak a rendszerindító blokk futása alatt tudjuk elérni - a rendszertöltõ ugyanis alapból a videokártyát használja konzolként.
+. Kapcsoljuk be a számítógépünket.
++ 
+Amikor elindítjuk a FreeBSD-s gépünket, a rendszerindító blokk kiírja a [.filename]#/boot.config# tartalmát a konzolra. Például így:
++
+[source,bash]
+....
+/boot.config: -P
+Keyboard: no
+....
++ 
+A második sor csak olyankor jelenik meg, ha a [.filename]#/boot.config# állományban a `-P` beállítás is szerepel, és a billentyûzet jelenlétét (yes) vagy hiányát (no) jelzi. A [.filename]#/boot.config# tartalmától függõen ezek az üzenetek vagy a soros vonali vagy a belsõ konzolon jelennek meg, esetleg mind a kettõn.
++
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+<| Beállítás
+<| Ahol megjelenik
+
+|nincs
+|belsõ konzol
+
+|`-h`
+|soros vonali konzol
+
+|`-D`
+|soros vonali és belsõ konzol
+
+|`-Dh`
+|soros vonali és belsõ konzol
+
+|`-P`, van billentyûzet
+|belsõ konzol
+
+|`-P`, nincs billentyûzet
+|soros vonali konzol
+|===
++ 
+Az iménti üzenetek felbukkanása után a további konzolos üzenetek küldésében egy rövid szünet következik, amíg a rendszerindító blokk a rendszertöltõ betöltésével folytatja a rendszer indítását. Normális körülmények között ezt a folyamatot nem kell megszakítanunk, de esetleg olyankor mégis érdemes lehet, ha le akarjuk ellenõrizni a beállításainkat.
++ 
+A rendszerindítási folyamat félbeszakításához az kbd:[Enter] billentyûn kívül nyomjuk le valamelyik másikat. Ekkor a rendszerindító blokk megáll és várja a további parancsokat. Ekkor valami ilyesmit láthatunk:
++
+[source,bash]
+....
+>> FreeBSD/i386 BOOT
+Default: 0:ad(0,a)/boot/loader
+boot:
+....
++ 
+Nézzük meg, hogy [.filename]#/boot.config# beállításainak megfelelõen a fenti üzenet a soros vonali konzolon vagy a belsõ konzolon, illetve mind a kettõn megjelenik-e. Ha az üzenet a megfelelõ konzolon megjelenik, akkor az kbd:[Enter] lenyomásával folytathatjuk a rendszer indítását.
++ 
+Ha nekünk a soros vonali konzolra lenne szükségünk, de semmi nem jelenik meg a soros terminálon, akkor valamit valószínûleg nem jól állítottunk be. A rendszerindító blokktól kapott parancssorban a `-h` begépelésével és az kbd:[Enter] vagy kbd:[Return] lenyomásával (ha lehetséges) jelezzük neki (és így a rendszertöltõnek és a rendszermagnak is) a soros vonali konzol kiválasztását. Miután befejezõdött a rendszer indítása, menjünk vissza és ellenõrizzük a megfelelõ paramétereket.
+====
+
+Ahogy sikerült elindítani a rendszertöltõt és a rendszerindítás harmadik fokozatába léptünk, a rendszertöltõ megfelelõ környezeti változóin keresztül még mindig van lehetõségünk váltani a soros vonali és a belsõ konzol között, lásd <<serialconsole-loader>>.
+
+[[serialconsole-summary]]
+=== Összefoglalás
+
+Itt most röviden összefoglaljuk az eddig tárgyalt különbözõ beállításokat és ténylegesen kiválasztott konzolt.
+
+==== 1. eset: a [.filename]#sio0# eszköznél a 0x10 beállítást adjuk meg
+
+[.programlisting]
+....
+device sio0 at isa? port IO_COM1 flags 0x10 irq 4
+....
+
+[.informaltable]
+[cols="1,1,1,1", frame="none", options="header"]
+|===
+<| A /boot.config beállításai
+<| Konzol a rendszerindító blokk alatt
+<| Konzol a rendszertöltõ alatt
+<| Konzol a rendszermagban
+
+|nincsenek
+|belsõ
+|belsõ
+|belsõ
+
+|`-h`
+|soros vonali
+|soros vonali
+|soros vonali
+
+|`-D`
+|soros vonali és belsõ
+|belsõ
+|belsõ
+
+|`-Dh`
+|soros vonali és belsõ
+|soros vonali
+|soros vonali
+
+|`-P`, van billentyûzet
+|belsõ
+|belsõ
+|belsõ
+
+|`-P`, nincs billentyûzet
+|soros vonali és belsõ
+|soros vonali
+|soros vonali
+|===
+
+==== 2. eset: a [.filename]#sio0# eszköznél 0x30 beállítása
+
+[.programlisting]
+....
+device sio0 at isa? port IO_COM1 flags 0x30 irq 4
+....
+
+[.informaltable]
+[cols="1,1,1,1", frame="none", options="header"]
+|===
+<| A /boot.config beállításai
+<| Konzol a rendszerindító blokk alatt
+<| Konzol a rendszertöltõ alatt
+<| Konzol a rendszermagban
+
+|nincsenek
+|belsõ
+|belsõ
+|soros vonali
+
+|`-h`
+|soros vonali
+|soros vonali
+|soros vonali
+
+|`-D`
+|soros vonali és belsõ
+|belsõ
+|soros vonali
+
+|`-Dh`
+|soros vonali és belsõ
+|soros vonali
+|soros vonali
+
+|`-P`, van billentyûzet
+|belsõ
+|belsõ
+|soros vonali
+
+|`-P`, nincs billentyûzet
+|soros vonali és belsõ
+|soros vonali
+|soros vonali
+|===
+
+[[serialconsole-tips]]
+=== Tanácsok a soros vonali konzol használatához
+
+==== Nagyobb soros vonali sebesség beállítása
+
+A soros port alapértelmezései a következõk: 9600 baud, 8 bites átvitel, paritás nincs és 1 stopbit. Ha a konzol alapsebességét meg akarjuk változtatni, akkor ahhoz a következõket kell tennünk:
+
+* Fordítsuk újra a rendszerindító blokkokat úgy, hogy a `BOOT_COMCONSOLE_SPEED` változóban a konzolnak egy másik sebességet adunk meg. Az új rendszerindító blokkok fordításáról és telepítésérõl a <<serialconsole-com2>>ban kapunk részletes leírást.
++ 
+Ha a soros vonali konzolt nem a `-h` opcióval állítottuk be, vagy ha a rendszermag a rendszerindító blokkoktól eltérõ módon éri el a soros vonali konzolt, akkor a rendszermag beállításai közé még az alábbit is fel kell vennünk, majd újra kell fordítanunk:
++
+[.programlisting]
+....
+options CONSPEED=19200
+....
+
+* A rendszermagnak adjuk át a `-S` rendszerindítási paramétert. A `-S` parancssori opció a [.filename]#/boot.config# állományban is megadható. A man:boot[8] man oldalon tudhatjuk meg, hogy a [.filename]#/boot.config# beállításai közé hogyan tudjuk felvenni és ott milyen további lehetõségeink vannak még.
+* A [.filename]#/boot/loader.conf# állományban engedélyezzük a `comconsole_speed` beállítást.
++ 
+Ez a beállítás a szintén a [.filename]#/boot/loader.conf# állományban megadható `console`, `boot_serial` és `boot_multicons` változóktól függ. A soros vonali konzol sebességét tehát például így tudjuk megváltoztatni a `comconsole_speed` megadásával:
++
+[.programlisting]
+....
+boot_multicons="YES"
+boot_serial="YES"
+comconsole_speed="115200"
+console="comconsole,vidconsole"
+....
+
+[[serialconsole-com2]]
+==== Soros vonali konzol a [.filename]#sio0# porton kívül máshol
+
+Ha valamilyen okból kifolyólag nem a [.filename]#sio0# porton keresztül akarjuk használni a konzolt, akkor ahhoz a rendszerindító blokkok, a rendszertöltõ és a rendszermag forrásait újra kell fordítanunk az alábbiak szerint:
+
+[.procedure]
+====
+
+. Szerezzük be a rendszermag forrását. (Lásd crossref:cutting-edge[updating-upgrading,A FreeBSD frissítése és frissen tartása])
+. Írjuk át a [.filename]#/etc/make.conf# állományban a `BOOT_COMCONSOLE_PORT` címét az általunk használt porthoz tartozóéra (0x3F8, 0x2F8, 0x3E8 vagy 0x2E8). Itt csak a [.filename]#sio0# és [.filename]#sio3# ([.filename]#COM1# és [.filename]#COM4#) közti portok használhatóak - a töbportos soros kártyák címei nem adhatóak meg. A megszakításokat nem kell beállítanunk.
+. Készítsünk egy saját rendszermag beállításait tartalmazó állományt, és vegyük fel bele a használni kívánt soros port megfelelõ paramétereit. Például, ha a [.filename]#sio1# ([.filename]#COM2#) eszközt akarjuk konzolként használni:
++
+[.programlisting]
+....
+device sio1 at isa? port IO_COM2 flags 0x10 irq 3
+....
++ 
+vagy
++
+[.programlisting]
+....
+device sio1 at isa? port IO_COM2 flags 0x30 irq 3
+....
++ 
+A konzolra vonatkozó beállításokat a többi soros portnál ne adjuk meg.
++
+. Fordítsuk újra és telepítsük a rendszerindító blokkot és a rendszertöltõt:
++
+[source,bash]
+....
+# cd /sys/boot
+# make clean
+# make
+# make install
+....
++
+. Fordítsuk és telepítsük újra a rendszermagot.
+. A man:bsdlabel[8] segítségével másoljuk az új rendszerindító blokkot a rendszer indítását végzõ lemezre és töltsük be az új rendszermagot.
+====
+
+[[serialconsole-ddb]]
+==== A DDB elérése a soros vonalról
+
+Ha a soros vonali konzolról akarjuk használni a rendszermagba épített nyomkövetõt (ami hasznos lehet távoli vizsgálódáskor, de egyben veszélyes is, ha a soros porton tévesen kiküldünk egy BREAK jelzést!), akkor a rendszermagot a következõ beállításokkal kell fordítanunk:
+
+[.programlisting]
+....
+options BREAK_TO_DEBUGGER
+options DDB
+....
+
+==== A bejelentkezõ képernyõ elérése a soros vonali konzolról
+
+Habár erre nincs feltétlenül szükségünk, a rendszer üzeneteinek és a rendszermag nyomkövetõjének elérése után akár _be is tudunk jelentkezni_ a soros vonalon keresztül. Íme!
+
+Nyissuk meg az [.filename]#/etc/ttys# állományt a kedvenc szövegszerkesztõnkkel és keressük meg a következõ sorokat:
+
+[.programlisting]
+....
+ttyd0 "/usr/libexec/getty std.9600" unknown off secure
+ttyd1 "/usr/libexec/getty std.9600" unknown off secure
+ttyd2 "/usr/libexec/getty std.9600" unknown off secure
+ttyd3 "/usr/libexec/getty std.9600" unknown off secure
+....
+
+A [.filename]#ttyd0# és [.filename]#ttyd3# közti sorok pontosan a [.filename]#COM1# és [.filename]#COM4# közti portoknak felelnek meg. A használni kívánt port sorában szereplõ `off` paramétert írjuk át az `on` értékre. Ha a soros port sebességét is megváltoztattuk, minden bizonnyal a `std.9600` helyett is az adott sebességhez illeszkedõ paramétert kell megadnunk, például az `std.19200` értékkel.
+
+Érdemes továbbá még az `unknown` helyett megadni az adott terminál típusát.
+
+Az állomány módosítását követõen a változatások érvényesítéséhez ki kell adnunk a `kill -HUP 1` parancsot is.
+
+[[serialconsole-loader]]
+=== A konzol megváltoztatása a rendszertöltõbõl
+
+A korábbi szakaszokban arról beszéltünk, hogy miként állítsuk be a soros vonali konzolt a rendszerindító blokk megpiszkálásával. Ebben a szakaszban viszont azt mutatjuk meg, hogy különbözõ parancsokon és környezeti változókon keresztül miként tudjuk megadni a konzolt a rendszertöltõben. Mivel a rendszertöltõre a rendszerindítás harmadik fokozatában kerül sor, az ott megadott értékekkel felül tudjuk bírálni a rendszerindító blokk beállításait.
+
+==== A soros vonali konzol beállítása
+
+A rendszertöltõ és a rendszermag az [.filename]#/boot/loader.conf# állományon keresztül elég könnyen rávehetõ a soros vonali konzol használatára:
+
+[.programlisting]
+....
+set console="comconsole"
+....
+
+Ez a rendszerindító blokk elõzõ szakaszban tárgyalt beállításaitól függetlenül érvényesül.
+
+A fenti sort a [.filename]#/boot/loader.conf# állomány elejére érdemes tennünk, így a soros vonali konzolon már a lehetõ leghamarabb megjelennek a rendszer üzenetei.
+
+Ehhez hasonló módon a belsõ konzolt is megadhatjuk:
+
+[.programlisting]
+....
+set console="vidconsole"
+....
+
+Ha a rendszertöltõben nem adjuk meg a `console` környezeti változó értékét, akkor a rendszertöltõ, és így a rendszermag is, a rendszerindító blokkban a `-h` opció által meghatározott konzolt fogja használni.
+
+A konzol a [.filename]#/boot/loader.conf.local# vagy a [.filename]#/boot/loader.conf# állományokban adható meg.
+
+A részletekkel kapcsolatban lásd a man:loader.conf[5] man oldalt.
+
+[NOTE]
+====
+Jelen pillanatban a rendszertöltõnek nincs a `-P` paraméterrel ekvivalens értékû beállítása, ezért a billentyûzet jelenléte alapján nem képes magától választani a belsõ és a soros vonali konzol között.
+====
+
+==== Soros vonali konzol a [.filename]#sio0# porton kívül máshol
+
+A rendszertöltõt ne a [.filename]#sio0# eszközzel fordítsuk újra a soros vonali konzolhoz. Ehhez kövessük a <<serialconsole-com2>>ban leírt eljárás lépéseit.
+
+[[serialconsole-caveats]]
+=== Figyelmeztetések
+
+A szakaszban szereplõ ötletek alapján sokan így most már könnyen be tudnak állítani egy billentyûzet és grafikus hardver nélküli dedikált szervert. Sajnos azonban a legtöbb rendszer nem engedi a billentyûzet nélküli indítást, és akad néhány olyan is, amely pedig a grafikus kártya hiányában nem is indul el. Az AMI BIOS-os gépeknél a grafikus kártya nélküli indításhoz elegendõ csupán a beállítások között a grafikus kártyát ("graphics adapter") "Not installed" (nem telepített) állapotúra állítani. Ha ilyen opció nem található a BIOS-ban, akkor helyette keressük a "Halt on Error" (leállás hiba esetén) változatot. Ha ezt a "All but Keyboard" (a billentyûzet kivételével minden) vagy akár a "No Error" (soha) értékre állítjuk, az elõbbi eredményt kapjuk.
+
+Ennek ellenére elõfordulhat azonban, hogy egyes gépeken egyáltalán nem találunk ilyen lehetõséget és videokártya nélkül nem indulnak el. Ezekben az esetekben tegyünk a gépbe valamilyen kártyát (ehhez elég egy egyszerû típus is), de monitort már ne kössünk rá. Esetleg megpróbálkozhatunk még AMI BIOS telepítésével is.

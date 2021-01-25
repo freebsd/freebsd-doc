@@ -1,0 +1,2406 @@
+---
+title: Chapitre 32. Administration réseau avancée
+part: Partie IV. Réseau
+prev: books/handbook/firewalls
+next: books/handbook/partv
+---
+
+[[advanced-networking]]
+= Administration réseau avancée
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Table des matières
+:table-caption: Tableau
+:example-caption: Exemple
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 32
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../../images/books/handbook/advanced-networking/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/advanced-networking/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/advanced-networking/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/fr/mailing-lists.adoc[]
+include::shared/fr/teams.adoc[]
+include::shared/fr/urls.adoc[]
+
+toc::[]
+
+[[advanced-networking-synopsis]]
+== Synopsis
+
+Ce chapitre abordera certains nombre de sujets réseau avancés.
+
+Après la lecture de ce chapitre, vous connaîtrez:
+
+* Les bases sur les passerelles et les routes.
+* Comment configurer les périphériques IEEE 802.11 et Bluetooth(R).
+* Comment utiliser FreeBSD en tant que pont ("bridge").
+* Comment configurer le démarrage via le réseau pour une machine sans disque dur.
+* Comment configurer la translation d'adresse réseau.
+* Comment connecter deux ordinateurs via PLIP.
+* Comment configurer l'IPv6 sur une machine FreeBSD.
+* Comment configurer ATM.
+
+Avant de lire ce chapitre, vous devrez:
+
+* Comprendre les bases des procédures [.filename]#/etc/rc#.
+* Etre familier avec la terminologie réseau de base.
+* Savoir comment configurer et installer un nouveau noyau FreeBSD (crossref:kernelconfig[kernelconfig,Configurer le noyau de FreeBSD]).
+* Savoir comment installer des logiciels tierce-partie (crossref:ports[ports,Installer des applications. les logiciels pré-compilés et les logiciels portés]).
+
+[[network-routing]]
+== Passerelles et routes
+
+Pour qu'une machine soit en mesure d'en contacter une autre, il faut que soit mis en place un mécanisme qui décrive comment aller de l'une à l'autre. C'est ce que l'on appelle le _routage_. Une "route" est définie par une paire d'adresses: une "destination" et une "passerelle". Cette paire signifie que pour atteindre cette _destination_, vous devez passer par cette _passerelle_. Il y a trois sortes de destination: les machines individuelles, les sous-réseaux, et "default"-la destination par défaut. La route par défaut ("default route") est utilisée lorsqu'aucune autre route n'est applicable. Nous parlerons un peu plus des routes par défaut par la suite. Il existe également trois sortes de passerelles: les machines individuelles, les interfaces (aussi appelées "liens"), et les adresses Ethernet matérielles (adresses MAC).
+
+=== Un exemple
+
+Pour illustrer différents aspects du routage, nous utiliserons l'exemple suivant, qui est produit par la commande `netstat`:
+
+[source,bash]
+....
+% netstat -r
+Routing tables
+
+Destination      Gateway            Flags     Refs     Use     Netif Expire
+
+default          outside-gw         UGSc       37      418      ppp0
+localhost        localhost          UH          0      181       lo0
+test0            0:e0:b5:36:cf:4f   UHLW        5    63288       ed0     77
+10.20.30.255     link#1             UHLW        1     2421
+example.com      link#1             UC          0        0
+host1            0:e0:a8:37:8:1e    UHLW        3     4601       lo0
+host2            0:e0:a8:37:8:1e    UHLW        0        5       lo0 =>
+host2.example.com link#1             UC          0        0
+224              link#1             UC          0        0
+....
+
+Les deux premières lignes définissent la route par défaut (dont nous parlerons dans la <<network-routing-default,section suivante>>) et la route `localhost`.
+
+L'interface (colonne `Netif`) qu'il est indiqué d'utiliser pour `localhost` est [.filename]#lo0#, aussi appelée interface "loopback"-en boucle. Ce qui veut dire que tout le trafic vers cette destination doit rester interne, au lieu d'être envoyé sur le réseau local, puisqu'il reviendra de toute façon à son point de départ.
+
+Ce qui se remarque ensuite, ce sont les adresses commençant par `0:e0:`. Ce sont les adresses Ethernet matérielles, qui sont également connues sous le nom d'adresses MAC. FreeBSD reconnaîtra automatiquement toute machine (`test0` dans l'exemple) sur le réseau local Ethernet et ajoutera une route vers cette machine, directement via l'interface Ethernet [.filename]#ed0#. Il y a aussi un délai (colonne `Expire`) associé à ce type de route, qui est utilisé si l'on entend plus parler de cette machine pendant un laps de temps précis. Quand cela arrive, la route vers cette machine est automatiquement supprimée. Ces machines sont identifiées par un mécanisme appelé RIP ("Routing Information Protocol"-protocole d'information de routage), qui met en place des routes vers les machines locales en déterminant le chemin le plus court.
+
+FreeBSD ajoutera également des routes de sous-réseau pour le sous-réseau local (`10.20.30.255` est l'adresse de diffusion pour le sous-réseau `10.20.30`, et `example.com` est le nom de domaine associé à ce sous-réseau). La dénomination `link#1` fait référence à la première carte Ethernet de la machine. Vous constaterez qu'il n'y a pas d'autre interface associée à ces routes.
+
+Ces deux types de routes (vers les machines du réseau local et les sous-réseaux locaux) sont automatiquement configurés par un "daemon" appelé routed. S'il ne tourne pas, alors seules les routes définies comme statiques (i.e. explicitement définies) existeront.
+
+La ligne `host1` fait référence à votre machine, qui est identifiée par l'adresse Ethernet. Puisque nous sommes l'émetteur, FreeBSD sait qu'il faut utiliser l'interface en "boucle" ([.filename]#lo0#) plutôt que d'envoyer les données sur l'interface Ethernet.
+
+Les deux lignes `host2` montrent ce qui se passe quand on utilise un alias avec man:ifconfig[8] (lisez la section sur l'Ethernet pour savoir pour quelles raisons on peut vouloir cela). Le symbole `=` qui suit l'interface [.filename]#lo0# indique que non seulement nous utilisons l'interface en "boucle" (puisque cette adresse correspond également à la machine locale), mais que c'est plus spécifiquement un alias. Ce type de route n'apparaît que sur la machine pour laquelle est défini l'alias; sur toutes les autres machines du réseau local il n'y aura q'une ligne `link#1` pour cette machine.
+
+La dernière ligne (le sous-réseau destinataire `224`) concerne le multicasting (diffusion pour plusieurs destinataires), qui sera abordé dans une autre section.
+
+Et enfin, diverses caractéristiques de chaque route sont indiquées dans la colonne `Flags` (indicateurs). Ci-dessous, une courte table présente certains de ces indicateurs et leur signification:
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|U
+|Active ("Up"): la route est active.
+
+|H
+|Machine ("Host"): la destination de la route est une machine.
+
+|G
+|Passerelle ("Gateway"): envoyer tout ce qui concerne cette destination sur la machine distante indiquée, qui déterminera à qui transmettre ensuite.
+
+|S
+|Statique ("Static"): cette route a été configurée manuellement et non pas générée automatiquement par le système.
+
+|C
+|Clone: génère une nouvelle route sur la base de celle-ci pour les machines auxquelles nous nous connectons. Ce type de route est normalement utilisé pour les réseaux locaux.
+
+|W
+|Clonée ("WasCloned"): cette route a été auto-configurée (Clone) à partir d'une route pour le réseau local.
+
+|L
+|Lien ("Link"): la route fait référence à une adresse matérielle Ethernet.
+|===
+
+[[network-routing-default]]
+=== Routes par défaut
+
+Quand le système local doit établir une connexion avec une machine distante, il consulte la table de routage pour voir s'il existe déjà une route connue. Si la machine distante appartient à un sous-réseau auquel le système sait se connecter (routes clonées), alors le système vérifie s'il peut se connecter via cette interface.
+
+Si toutes les routes connues échouent, il reste alors au système une dernière option: la route par "défaut". Cette route est un type particulier de route passerelle (c'est généralement la seule du système), et est toujours marquée avec un `c` dans le champ des indicateurs. Pour les machines du réseau local, cette passerelle est définie avec la machine qui est directement connectée au monde extérieur (que ce soit par une liaison PPP, DSL, cable, T1, ou toute autre interface réseau).
+
+Si vous configurez la route par défaut sur une machine qui fonctionne comme passerelle vers le monde extérieur, alors la route par défaut sera la passerelle de votre Fournisseur d'Accès à Internet (FAI).
+
+Examinons un exemple de route par défaut. Voici une configuration classique:
+
+image::net-routing.png[]
+
+Les machines `Local1` et `Local2` sont sur votre site. `Local1` est connectée au serveur du FAI via une liaison PPP par modem. Ce serveur PPP est connecté par l'intermédiaire d'un réseau local à un autre ordinateur passerelle relié au point d'entrée Internet du FAI.
+
+Les routes par défaut sur chacune de vos machines seront:
+
+[.informaltable]
+[cols="1,1,1", frame="none", options="header"]
+|===
+| Machine
+| Passerelle par défaut
+| Interface
+
+|Local2
+|Local1
+|Ethernet
+
+|Local1
+|T1-GW
+|PPP
+|===
+
+Une question qui revient souvent est "Pourquoi (ou comment) définir `T1-GW` comme passerelle par défaut pour `Local1`, plutôt que le serveur du FAI auquel elle est connectée?".
+
+Rappelez-vous, puisque l'interface PPP utilise, de votre côté de la connexion, une adresse IP du réseau local du FAI, les routes vers toute autre machine du réseau local du FAI seront automatiquement générées. Par conséquent vous savez déjà comment atteindre la machine `T1-GW`, il n'y a donc pas besoin d'étape intermédiaire qui passe par le serveur du FAI.
+
+Il est habituel d'attribuer l'adresse `X.X.X.1` à la passerelle sur votre réseau local. Donc (dans notre exemple), si votre espace d'adresse de classe C local était `10.20.30` et que votre FAI utilisait l'espace `10.9.9`, alors les routes par défaut seraient:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Machine
+| Route par défaut
+
+|Local2 (10.20.30.2)
+|Local1 (10.20.30.1)
+
+|Local1 (10.20.30.1, 10.9.9.30)
+|T1-GW (10.9.9.1)
+|===
+
+Vous pouvez aisément définir la route par défaut via le fichier [.filename]#/etc/rc.conf#. Dans notre exemple, sur la machine `Local2`, nous avons ajouté la ligne suivante dans [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+defaultrouter="10.20.30.1"
+....
+
+Il est également possible de faire directement cela à partir de la ligne de commande avec la commande man:route[8]:
+
+[source,bash]
+....
+# route add default 10.20.30.1
+....
+
+Pour plus d'informations sur la manipulation à la main des tables de routage réseau, consultez la page de manuel man:route[8].
+
+=== Machines sur deux réseaux
+
+Il y a un autre type de configuration dont il faut parler, c'est celle d'une machine qui est connectée à deux réseaux différents. Techniquement, toute machine servant de passerelle (comme dans l'exemple ci-dessus, en utilisant une connexion PPP) est une machine sur deux réseaux. Mais ce terme n'est normalement utilisé que pour faire référence à une machine qui est sur deux réseaux locaux différents.
+
+Selon le cas, la machine dispose de deux cartes Ethernet, ayant chacune une adresse sur des sous-réseaux séparés. Alternativement, la machine peut ne disposer que d'une seule carte Ethernet, et utiliser des alias avec man:ifconfig[8]. Le premier cas correspond à l'utilisation de deux réseaux Ethernet physiquement séparés, le deuxième cas est employé s'il n'y a qu'un seul réseau physique mais deux sous-réseaux logiquement distincts.
+
+Dans les deux cas, les tables de routage sont définies de telle sorte que chaque sous-réseau sache que cette machine est la passerelle (route entrante) vers l'autre sous-réseau. Cette configuration, où la machine sert de routeur entre les deux sous-réseaux, est souvent utilisée quand il faut mettre en place un dispositif de sécurité: filtrage de paquets ou coupe-feu, dans l'une ou dans les deux directions.
+
+Si vous voulez que cette machine transmette réellement les paquets entre les deux interfaces, vous devez demander à FreeBSD d'activer cette fonctionnalité. Lisez la section suivante pour plus de détails sur comment faire cela.
+
+[[network-dedicated-router]]
+=== Mettre en place un routeur
+
+Un routeur est un système qui transmet les paquets d'une interface à une autre. Les standards de l'Internet et de bons principes d'ingénierie empêchent le projet FreeBSD d'activer cette fonction par défaut sous FreeBSD. Vous pouvez l'activer en positionnant à `YES` la variable suivante du fichier man:rc.conf[5]:
+
+[.programlisting]
+....
+gateway_enable=YES          # Set to YES if this host will be a gateway
+....
+
+Cette option fixera la variable man:sysctl[8] `net.inet.ip.forwarding` à la valeur `1`. Si vous devez arrêter temporairement le routage, vous pouvez positionner la variable momentanément à `0`.
+
+Votre nouveau routeur aura besoin de route pour savoir où envoyer le trafic. Si votre réseau est suffisamment simple vous pouvez utiliser des routes statiques. FreeBSD est également fourni avec le "daemon" de routage BSD standard man:routed[8], qui comprend et utilise les protocoles RIP (version 1 est 2) et IRDP. Le support de BGP v4, OSPF v2, et d'autres protocoles de routage sophistiqué est disponible avec le logiciel package:net/zebra[]. Des produits commerciaux comme GateD(R) sont également disponibles comme solutions avancées de routage.
+
+=== Configurarion des routes statiques
+
+==== Configuration manuelle
+
+Supposons que nous avons un réseau comme celui-ci:
+
+image::static-routes.png[]
+
+Dans ce scénario, `RouteurA` est notre machine FreeBSD qui joue le rôle de routeur pour l'Internet. Elle a une route par défaut vers `10.0.0.1` qui permet de se connecter au reste du monde extérieur. Nous supposerons que la machine `RouteurB` est correctement configurée et sait comment transmettre vers n'importe quelle destination (D'après notre schéma c'est relativement simple. Ajoutez juste une route par défaut sur `RouteurB` en utilisant `192.168.1.1` comme passerelle).
+
+Si nous regardons la table de routage de `RouteurA` nous verrions quelque chose comme:
+
+[source,bash]
+....
+% netstat -nr
+Routing tables
+
+Internet:
+Destination        Gateway            Flags    Refs      Use  Netif  Expire
+default            10.0.0.1           UGS         0    49378    xl0
+127.0.0.1          127.0.0.1          UH          0        6    lo0
+10.0.0/24          link#1             UC          0        0    xl0
+192.168.1/24       link#2             UC          0        0    xl1
+....
+
+Avec la table de routage actuelle, `RouteurA` ne sera pas en mesure d'atteindre notre réseau interne 2. Elle ne dispose pas de route pour `192.168.2.0/24`. Une manière de résoudre cela est d'ajouter manuellement la route. La commande suivante ajouterait le réseau interne 2 à la table de routage de `RouteurA` en utilisant `192.168.1.2` comme point intermédiaire:
+
+[source,bash]
+....
+# route add -net 192.168.2.0/24 192.168.1.2
+....
+
+Maintenant `RouteurA` peut joindre n'importe quelle machine du réseau `192.168.2.0/24`.
+
+==== Configuration persistante
+
+L'exemple précédent est parfait pour configurer une route statique sur un système en fonctionnement. Cependant, le problème est que l'information de routage ne sera pas conservée si vous redémarrez votre machine FreeBSD. L'addition d'une route statique doit se faire dans votre fichier [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+# Add Internal Net 2 as a static route
+static_routes="internalnet2"
+route_internalnet2="-net 192.168.2.0/24 192.168.1.2"
+....
+
+La variable `static_routes` est une liste de chaîne de caractères séparées par une espace. Chaque chaîne fait référence à un nom de route. Dans notre exemple nous avons qu'une seule chaîne dans `static_routes`. Cette chaîne est _internalnet2_. Nous ajoutons ensuite une variable de configuration appelée `route_internalnet2` dans laquelle nous mettons tous les paramètres de configuration que nous passerions à la commande man:route[8]. Pour nous exemple précédent nous aurions utilisé la commande:
+
+[source,bash]
+....
+# route add -net 192.168.2.0/24 192.168.1.2
+....
+
+nous avons donc besoin de `"-net 192.168.2.0/24 192.168.1.2"`.
+
+Comme cela a été précisé, nous pouvons avoir plus d'une chaîne dans la variable `static_routes`. Cela nous permet de créer plusieurs routes statiques. Les lignes suivantes donnent un exemple d'ajout de routes statiques pour les réseaux `192.168.0.0/24` et `192.168.1.0/24` sur un routeur imaginaire:
+
+[.programlisting]
+....
+static_routes="net1 net2"
+route_net1="-net 192.168.0.0/24 192.168.0.1"
+route_net2="-net 192.168.1.0/24 192.168.1.1"
+....
+
+=== Propagation de route
+
+Nous avons déjà expliqué comment définir nos routes vers le monde extérieur, mais pas comment le monde extérieur apprend à nous localiser.
+
+Nous savons déjà que les tables de routages peuvent être renseignées pour que tout le trafic pour un espace d'adresses donné (dans nos exemples, un sous-réseau de classe C) soit envoyé à une machine précise de ce réseau, qui transmettra les paquets entrants.
+
+Lorsqu'il attribue un espace d'adresses à votre site, votre fournisseur d'accès définira ses tables de routage de sorte que tout le trafic destiné à votre sous-réseau vous soit envoyé sur votre liaison PPP. Mais comment les sites à l'autre bout du pays savent-ils qu'ils doivent passer par votre fournisseur d'accès?
+
+Il existe un mécanisme (assez semblable au système d'information distribué du DNS) qui conserve un enregistrement de tous les espaces d'adresses affectés, et définit leur point de connexion à la dorsale Internet ("backbone"). La "dorsale" comprend les liaisons principales qui véhiculent le trafic Internet à travers le pays et le monde entier. Chaque machine de la dorsale dispose d'une copie de l'ensemble des tables maîtresses qui aiguillent le trafic pour un réseau donné vers le transporteur correspondant de la dorsale, et de là par l'intermédiaire de fournisseurs d'accès successifs, jusqu'à atteindre votre réseau.
+
+C'est le rôle de votre fournisseur d'accès d'annoncer aux sites de la dorsale qu'il est le point de connexion (et par conséquent la route entrante) pour votre site. C'est ce que l'on appelle la propagation de route.
+
+=== En cas de problème
+
+Il se peut qu'il y ait parfois un problème avec la propagation de route et que certains sites ne puissent vous atteindre. La commande probablement la plus utile pour déterminer où une route est défaillante est la commande man:traceroute[8]. Elle est également utile si vous n'arrivez pas à vous connecter à une machine distante (i.e. lorsque man:ping[8] échoue).
+
+La commande man:traceroute[8] prend comme paramètre le nom de la machine distante avec laquelle vous essayez d'établir une connexion. Elle vous donnera la liste de passerelles intermédiaires jusqu'à la machine cible, ou jusqu'à ce qu'il n'y ait plus de connexion.
+
+Pour plus d'informations, consultez la page de manuel de man:traceroute[8].
+
+=== Routage multicast
+
+FreeBSD supporte nativement les applications et le routage multicast (diffusion pour plusieurs destinataires). Les applications multicast ne nécessitent pas de configuration spécifique de FreeBSD, généralement, elles fonctionneront directement. Le routage multicast demande à ce que le support soit compilé dans le noyau:
+
+[.programlisting]
+....
+options MROUTING
+....
+
+De plus, le "daemon" de routage multicast, man:mrouted[8] doit être configuré par l'intermédiaire du fichier [.filename]#/etc/mrouted.conf# pour mettre en place des tunnels et le protocole DVMRP. Plus de détails sur la configuration du routage multicast peuvent être trouvés dans la page de manuel de man:mrouted[8].
+
+[[network-wireless]]
+== Réseau sans fil
+
+=== Introduction
+
+Il peut être très utile de pouvoir utiliser un micro-ordinateur sans le désagrément d'être constamment relié à un câble réseau. FreeBSD peut être utilisé comme client sans fil, et même comme "point d'accès" sans fil.
+
+=== Modes de fonctionnement des systèmes sans fils
+
+Il existe deux manières différentes de configurer les périphériques sans fil 802.11: les modes BSS et IBSS.
+
+==== Mode BSS
+
+Le mode BSS est le mode généralement utilisé. Le mode BSS est également appelé mode infrastructure. Dans ce mode, plusieurs points d'accès sans fils sont connectés à un réseau câblé. Chaque réseau sans fil possède son propre nom. Ce nom est ce que l'on appelle le "SSID" du réseau.
+
+Les clients sans fils se connectent à ces points d'accès sans fils. La norme IEEE 802.11 définie le protocole que les réseaux sans fils utilisent pour les connexions. Un client sans fil peut être attaché à un réseau particulier quand un SSID est fixé. Un client peut s'attacher à n'importe quel réseau en ne définissant pas explicitement de SSID.
+
+==== Mode IBSS
+
+Le mode IBSS, également appelé mode "ad-hoc", est conçu pour les connexions point à point. Il existe en fait deux types de mode ad-hoc. Le premier est le mode IBSS, également appelé mode ad-hoc ou IEEE ad-hoc. Ce mode est défini par les normes IEEE 802.11. Le deuxième mode est appelé ad-hoc démo ou encore mode ad-hoc Lucent (et parfois, ce qui prête à confusion, mode ad-hoc). C'est l'ancien mode ad-hoc pré-standard 802.11 et ne devrait être utilisé qu'avec d'anciennes installations. Nous ne parlerons pas des modes ad-hoc dans ce qui suit.
+
+=== Mode infrastructure
+
+==== Points d'accès
+
+Un point d'accès est un périphérique sans fil qui permet à un ou plusieurs clients sans fils d'utiliser ce périphérique comme un hub. Quand ils utilisent un point d'accès, tous les clients communiquent par l'intermédiaire de ce point d'accès. Plusieurs points d'accès sont souvent utilisés pour couvrir l'intégralité d'une zone géographique comme une maison, une entreprise, ou un parc avec un réseau sans fil.
+
+Les points d'accès ont généralement plusieurs connexions réseaux: la carte réseaux sans fil, et une ou plusieurs cartes réseaux Ethernet pour les connexions avec le reste du réseau.
+
+Les points d'accès peuvent être achetés tout fait, ou vous pouvez construire le votre avec FreeBSD et une carte réseau sans fil supportée. De nombreux constructeurs proposent des points d'accès et des cartes réseaux sans fils avec diverses fonctionnalités.
+
+==== Construire un point d'accès avec FreeBSD
+
+===== Pré-requis
+
+En vue de mettre en place un point d'accès sans fil sous FreeBSD, vous avez besoin d'une carte réseau sans fil compatible. Actuellement seule les cartes basées sur le circuit Prism sont supportées. Vous aurez également besoin d'une carte réseau câblée supportée par FreeBSD (cela ne devrait pas être difficile à trouver, FreeBSD supporte de nombreuses cartes). Dans le cadre de cette section, nous supposerons que le trafic passera par un pont entre la carte sans fil et le réseau relié à la carte réseau classique.
+
+Le mode point d'accès implémenté par FreeBSD fonctionne mieux avec certaines versions de firmware. Les cartes utilisant un circuit Prism 2 devraient utiliser un firmware 1.3.4 ou plus récent. Les cartes Prism 2.5 et Prism 3 devraient utiliser la version 1.4.9. Des versions de firmware plus anciennes pourront ne pas fonctionner correctement. Actuellement, la seule manière de mettre à jour vos cartes est d'utiliser les outils de mise à jour du firmware pour Windows(R) disponibles auprès du constructeur de votre carte.
+
+===== Configuration
+
+Assurez-vous tout d'abord que votre système voit la carte réseau sans fil:
+
+[source,bash]
+....
+# ifconfig -a
+wi0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+	inet6 fe80::202:2dff:fe2d:c938%wi0 prefixlen 64 scopeid 0x7
+	inet 0.0.0.0 netmask 0xff000000 broadcast 255.255.255.255
+	ether 00:09:2d:2d:c9:50
+	media: IEEE 802.11 Wireless Ethernet autoselect (DS/2Mbps)
+	status: no carrier
+	ssid ""
+	stationname "FreeBSD Wireless node"
+	channel 10 authmode OPEN powersavemode OFF powersavesleep 100
+	wepmode OFF weptxkey 1
+....
+
+Ne vous préoccupez pas des détails, verifiez juste que s'affiche quelque chose qui vous indique qu'une carte réseau sans fil est installée. Si vous avez des problèmes à voir l'interface réseau sans fil correspondante, et que vous utilisez une carte de type PC Card, vous devriez consultez les pages de manuel man:pccardc[8] et man:pccardd[8] pour plus d'information.
+
+Ensuite, vous devrez charger un module afin de mettre en place la partie de FreeBSD faisant office de pont pour le point d'accès. Pour charger le module man:bridge[4], exécutez la commande suivante:
+
+[source,bash]
+....
+# kldload bridge
+....
+
+Vous ne devriez pas voir apparaître de message d'erreur lors du chargement du module. Si ce n'est pas le cas, vous devrez peut-être compiler le support man:bridge[4] dans votre noyau. La section sur le <<network-bridging,Bridging>> de ce manuel devrait pouvoir vous aider dans cette tâche.
+
+Maintenant que cette partie est assurée, nous devons dire à FreeBSD entre quelles interface le pont doit être installé. Nous effectuons cette configuration en utilisant man:sysctl[8]:
+
+[source,bash]
+....
+# sysctl net.link.ether.bridge.enable=1
+# sysctl net.link.ether.bridge.config="wi0 xl0"
+# sysctl net.inet.ip.forwarding=1
+....
+
+Sous les versions antérieures à la 5.2, vous devez utiliser à la place les options suivantes:
+
+[source,bash]
+....
+# sysctl net.link.ether.bridge=1
+# sysctl net.link.ether.bridge_cfg="wi0,xl0"
+# sysctl net.inet.ip.forwarding=1
+....
+
+Il est maintenant possible de configurer la carte. La commande suivante positionnera la carte en mode point d'accès:
+
+[source,bash]
+....
+# ifconfig wi0 ssid my_net channel 11 media DS/11Mbps mediaopt hostap up stationname "FreeBSD AP"
+....
+
+La ligne man:ifconfig[8] active l'interface [.filename]#wi0#, fixe son paramètre SSID à la valeur _my_net_, et fixe le nom de station à _FreeBSD AP_. L'option `media DS/11Mbps` positionne la carte dans le mode 11Mbps et est nécessaire pour que le paramètre `mediaopt` soit pris en compte. L'option `mediaopt hostap` place l'interface dans le mode point d'accès. L'option `channel 11` fixe le canal 802.11b à employer. La page de manuel man:wicontrol[8] donne les options de canaux valides en fonction de votre zone géographique.
+
+Vous devez maintenant disposer d'un point d'accès opérationnel et en fonctionnement. Vous êtes encouragés à lire les pages de manuel man:wicontrol[8], man:ifconfig[8], et man:wi[4] pour plus d'amples informations.
+
+Il est également conseillé de lire la section qui suit sur le chiffrage.
+
+===== Information d'état
+
+Une fois que le point d'accès est configuré et opérationnel, les opérateurs voudront voir quels clients sont associés avec le point d'accès. A n'importe quel instant, l'opérateur pourra taper:
+
+[source,bash]
+....
+# wicontrol -l
+1 station:
+00:09:b7:7b:9d:16  asid=04c0, flags=3<ASSOC,AUTH>, caps=1<ESS>, rates=f<1M,2M,5.5M,11M>, sig=38/15
+....
+
+Ceci nous montre qu'une station est associée, ainsi que son paramétrage. Les informations indiquées concernant le signal devraient être utilisées uniquement comme une indication relative sur sa puissance. Sa conversion en dBm ou tout autre unité varie en fonction des différentes versions de firmware.
+
+==== Clients
+
+Un client sans fil est un système qui se connecte à un point d'accès ou un autre client directement.
+
+Typiquement, les clients sans fils disposent d'une seule interface réseau, la carte réseau sans fil.
+
+Il existe quelques manières différentes de configurer un client sans fil. Elles sont basées sur les différents modes sans fils, généralement les modes BSS (mode infrastructure, qui nécessite un point d'accès), et IBSS (mode ad-hoc, ou mode point à point). Dans notre exemple, nous utiliserons le plus populaire des deux, le mode BSS, pour discuter avec un point d'accès.
+
+===== Pré-requis
+
+Il n'y a qu'un seul pré-requis pour configurer FreeBSD comme client sans fil. Vous aurez besoin d'une carte sans fil supportée par FreeBSD.
+
+===== Configurer un client sans fil FreeBSD
+
+Avant de commencer, vous aurez besoin de connaître certaines choses concernant le réseau sans fil auquel vous désirez vous connecter. Dans cet exemple, nous rejoignons un réseau ayant pour nom _my_net_, et avec le chiffrage des liaisons désactivé.
+
+[NOTE]
+====
+Dans cet exemple, nous n'utilisons pas le chiffrage des liaisons, ce qui est une situation dangereuse. Dans la section suivante, nous verrons comment activer le chiffrage, pourquoi il est important de le faire, et pourquoi certaines technologies de chiffrage ne vous protégerons pas complètement.
+====
+
+Assurez-vous que votre carte est reconnue par FreeBSD:
+
+[source,bash]
+....
+# ifconfig -a
+wi0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+	inet6 fe80::202:2dff:fe2d:c938%wi0 prefixlen 64 scopeid 0x7
+	inet 0.0.0.0 netmask 0xff000000 broadcast 255.255.255.255
+	ether 00:09:2d:2d:c9:50
+	media: IEEE 802.11 Wireless Ethernet autoselect (DS/2Mbps)
+	status: no carrier
+	ssid ""
+	stationname "FreeBSD Wireless node"
+	channel 10 authmode OPEN powersavemode OFF powersavesleep 100
+	wepmode OFF weptxkey 1
+....
+
+Maintenant, nous pouvons configurer la carte suivant les paramètres de notre réseau:
+
+[source,bash]
+....
+# ifconfig wi0 inet 192.168.0.20 netmask 255.255.255.0 ssid my_net
+....
+
+Remplacez `192.168.0.20` et `255.255.255.0` avec une adresse IP ainsi qu'un masque de sous-réseau valides de votre réseau câblé. Rappelez-vous, notre point d'accès joue le rôle de pont entre le réseau sans fil et le réseau câblé, il apparaîtra aux autres cartes sur votre réseau que vous êtes sur le même réseau câblé.
+
+Une fois cela effectué, vous devriez être en mesure d'utiliser man:ping[8] pour atteindre les machines sur le réseau câblé de la même façon que si vous étiez connecté en utilisant un câble réseau standard.
+
+Si vous rencontrez des problèmes avec votre connexion sans fil, vérifiez que vous êtes associé-"associated" (connecté) avec le point d'accès:
+
+[source,bash]
+....
+# ifconfig wi0
+....
+
+devrait retourner un certain nombre d'information; et vous devriez voir s'afficher:
+
+[source,bash]
+....
+status: associated
+....
+
+Si `associated` n'est pas affiché, alors il se peut que vous soyez hors de portée du point d'accès, que vous ayez le chiffrage activé, ou peut-être que vous ayez un problème de configuration.
+
+==== Chiffrement
+
+L'utilisation du chiffrement sur un réseau sans fil est important parce que vous n'avez plus la possibilité de conserver le réseau dans une zone protégée. Vos données sans fil seront diffusées dans tout le voisinage, et toute personne désirant y accéder pourra le faire. C'est ici que le chiffrement entre en jeu. En chiffrant les données qui sont envoyées par les ondes, vous rendez plus difficile l'interception de celles-ci par quiconque d'intéressé.
+
+Les deux méthodes les plus courantes de chiffrage des données entre un client et un point d'accès sont le protocol WEP et man:ipsec[4].
+
+===== WEP
+
+WEP est l'abbrévation de "Wired Equivalency Protocol". Le protocole de chiffrage WEP est une tentative de rendre les réseaux sans fils aussi sûrs et sécurisés qu'un réseau filaire. Malheureusement, il a été craqué, et est relativement simple à déjouer. Cela signifie que l'on ne doit pas lui faire confiance quand il est nécessaire de chiffrer des données sensibles.
+
+Cela reste mieux que rien du tout, utilisez ce qui suit pour activer WEP sur votre nouveau point d'accès FreeBSD:
+
+[source,bash]
+....
+# ifconfig wi0 inet up ssid my_net wepmode on wepkey 0x1234567890 media DS/11Mbps mediaopt hostap
+....
+
+Et vous pouvez activer WEP sur un client avec la commande:
+
+[source,bash]
+....
+# ifconfig wi0 inet 192.168.0.20 netmask 255.255.255.0 ssid my_net wepmode on wepkey 0x1234567890
+....
+
+Notez que vous devriez remplacer _0x1234567890_ par une clé plus personnelle.
+
+===== IPsec
+
+man:ipsec[4] est un outil bien plus puissant et robuste pour chiffrer des données sur un réseau. C'est la méthode à préférer pour chiffrer les données sur un réseau sans fil. Vous pouvez obtenir plus de détails concernant man:ipsec[4] et comment l'implémenter dans la section <<ipsec,IPsec>> de ce manuel.
+
+==== Outils
+
+Il existe un petit nombre d'outils disponibles pour le débogage et la configuration d'un réseau sans fil, et nous tenterons ici d'en décrire certains ainsi que leurs fonctionnalités.
+
+===== La suite bsd-airtools
+
+La suite bsd-airtools est une trousse à outils complète qui comprend des outils d'audit sans fil pour le craquage du système WEP, la détection de points d'accès, etc.
+
+Les utilitaires bsd-airtools peuvent être installés à partir du logiciel porté package:net-mgmt/bsd-airtools[]. Des instructions sur l'installation des logiciels portés peuvent être trouvées dans le crossref:ports[ports,Installer des applications. les logiciels pré-compilés et les logiciels portés] de ce manuel.
+
+Le programme `dstumbler` est l'outil qui permet la recherche de points d'accès et la mesure du rapport signal sur bruit. Si vous avez des difficultés à mettre en place et à faire fonctionner votre point d'accès, `dstumbler` pourra vous aider dans ce sens.
+
+Pour tester la sécurité de votre réseau sans fil, vous pouvez choisir d'employer les outils "dweputils" (`dwepcrack`, `dwepdump` et `dwepkeygen`) pour vous aider à déterminer si WEP répond à vos besoins en matière de sécurité au niveau de votre réseau sans fil.
+
+===== Les utilitaires `wicontrol`, `ancontrol` et `raycontrol`
+
+Il existe des outils que vous pouvez utiliser pour contrôler le comportement de votre carte réseau sans fil sur le réseau sans fil. Dans les exemples précédents, nous avons choisi d'employer man:wicontrol[8] puisque notre carte sans fil utilise l'interface [.filename]#wi0#. Si vous avez une carte sans fil Cisco, elle apparaîtrait comme [.filename]#an0#, et vous utiliseriez alors le programme man:ancontrol[8].
+
+===== La commande `ifconfig`
+
+La commande man:ifconfig[8] propose plusieurs options identiques à celles de man:wicontrol[8], cependant il manque quelques options. Consultez la page de manuel d'man:ifconfig[8] pour les différents paramètres et options en ligne de commande.
+
+==== Cartes supportées
+
+===== Points d'accès
+
+Les seules cartes actuellement supportées pour le mode BSS (points d'accès) sont celles basées sur les circuits Prism 2, 2.5, ou 3. Pour une liste complète, consultez la page de manuel de man:wi[4].
+
+===== Clients 802.11b
+
+Presque toutes les cartes réseaux sans fil 802.11b sont supportées sous FreeBSD. La plupart des cartes basées sur les circuits Prism, Spectrum24, Hermes, Aironet, et Raylink fonctionneront dans le mode IBSS (ad-hoc, point à point, et BSS).
+
+===== Clients 802.11a 802.11g
+
+Le pilote de périphérique man:ath[4] supporte les normes 802.11a et 802.11g. Si votre carte est basée sur un circuit Atheros, vous devriez être en mesure d'utiliser ce pilote.
+
+Malheureusement il y a toujours de nombreux fabricants qui ne fournissent pas à la communauté des logiciels libres les informations concernant les pilotes pour leurs cartes considérant de telles informations comme des secrets industriels. Par conséquent, il ne reste aux développeurs de FreeBSD et d'autres systèmes d'exploitation libres que deux choix: développer les pilotes en passant par un long et pénible processus de "reverse engineering" ou utiliser les pilotes binaires existants disponibles pour la plateforme Microsoft(R) Windows(R). La plupart des développeurs, y compris ceux impliqués dans FreeBSD, ont choisi cette dernière approche.
+
+Grâce aux contributions de Bill Paul (wpaul), depuis FreeBSD 5.3-RELEASE, il existe un support "natif" pour la spécification d'interface des pilotes de périphérique réseau (Network Driver Interface Specification-NDIS). Le NDISulator FreeBSD (connu également sous le nom de Project Evil) prend un pilote binaire réseau Windows(R) et lui fait penser qu'il est en train de tourner sous Windows(R). Cette fonctionnalité est relativement nouvelle, mais semble fonctionner correctement dans la plupart des tests.
+
+Pour utiliser le NDISulator, vous avez besoin de trois choses:
+
+. les sources du noyau;
+. le pilote binaire Windows(R) XP (extension [.filename]#.SYS#);
+. le fichier de configuration du pilote Windows(R) XP (extension [.filename]#.INF#).
+
+Vous aurez besoin de compiler le module d'interface du mini-pilote man:ndis[4]. En tant que `root`:
+
+[source,bash]
+....
+# cd /usr/src/sys/modules/ndis
+# make  make install
+....
+
+Recherchez les fichiers spécifiques à votre carte. Généralement, ils peuvent être trouvés sur les CDs livrés avec la carte ou sur le site du fabricant. Dans les exemples qui suivent nous utiliseront les fichiers [.filename]#W32DRIVER.SYS# et [.filename]#W32DRIVER.INF#.
+
+L'étape suivante est de compiler le pilote binaire dans un module chargeable du noyau. Pour effectuer cela, en tant que `root`, rendez vous dans le répertoire du module [.filename]#if_ndis# et copiez-y les fichiers du pilote Windows(R):
+
+[source,bash]
+....
+# cd /usr/src/sys/modules/if_ndis
+# cp /path/to/driver/W32DRIVER.SYS ./
+# cp /path/to/driver/W32DRIVER.INF ./
+....
+
+Nous utiliserons maintenant l'utilitaire `ndiscvt` pour générer le fichier d'entête [.filename]#ndis_driver_data.h# du pilote pour la compilation du module:
+
+[source,bash]
+....
+# ndiscvt -i W32DRIVER.INF -s W32DRIVER.SYS -o ndis_driver_data.h
+....
+
+Les options `-i` et `-s` précisent respectivement le fichier de configuration et le fichier binaire. Nous utilisons l'option `-o ndis_driver_data.h` car le [.filename]#Makefile# recherchera ce fichier lors de la compilation du module.
+
+[NOTE]
+====
+Certains pilotes Windows(R) nécessitent des fichiers supplémentaires pour fonctionner. Vous pouvez les ajouter avec `ndiscvt` en utilisant l'option `-f`. Consultez la page de manuel man:ndiscvt[8] pour plus d'information.
+====
+
+Nous pouvons enfin compiler et installer le module du pilote:
+
+[source,bash]
+....
+# make  make install
+....
+
+Pour utiliser le pilote, vous devez charger les modules appropriés:
+
+[source,bash]
+....
+# kldload ndis
+# kldload if_ndis
+....
+
+La première commande charge le pilote d'interface NDIS, la seconde charge l'interface réseau. Contrôlez la sortie de man:dmesg[8] à la recherche d'une quelconque erreur au chargement. Si tout s'est bien passé, vous devriez obtenir une sortie ressemblant à ce qui suit:
+
+[source,bash]
+....
+ndis0: <Wireless-G PCI Adapter> mem 0xf4100000-0xf4101fff irq 3 at device 8.0 on pci1
+      ndis0: NDIS API version: 5.0
+      ndis0: Ethernet address: 0a:b1:2c:d3:4e:f5
+      ndis0: 11b rates: 1Mbps 2Mbps 5.5Mbps 11Mbps
+      ndis0: 11g rates: 6Mbps 9Mbps 12Mbps 18Mbps 36Mbps 48Mbps 54Mbps
+....
+
+A partir de là, vous pouvez traiter le périphérique [.filename]#ndis0# comme n'importe quel périphérique sans fil (e.g. [.filename]#wi0#) et consulter les premières sections de ce chapitre.
+
+[[network-bluetooth]]
+== Bluetooth
+
+=== Introduction
+
+Bluetooth(R) est une technologie sans fil pour créer des réseaux personnels sans fils fonctionnant dans la bande 2.4 GHz ne nécessitant pas d'autorisation, avec une portée de 10 mètres. Les réseaux étant généralement composés de périphériques nomades comme les téléphones portables, les assistants personnels et les ordinateurs portables. Contrairement à l'autre technologie sans fil, Wi-Fi, Bluetooth(R) offre un niveau plus élevé de profils de service, par exemple des serveurs de fichiers semblables à FTP, "file pushing", transport de la voix, émulation de lignes séries, et bien plus.
+
+La pile Bluetooth(R) sous FreeBSD utilise le système Netgraph (voir man:netgraph[4]). Une large gamme d'adaptateurs USB Bluetooth(R) sont supportés par le pilote man:ng_ubt[4]. Les périphériques Bluetooth(R) basés sur le circuit Broadcom BCM2033 sont supportés par les pilotes man:ubtbcmfw[4] et man:ng_ubt[4]. La carte 3Com Bluetooth(R) PC Card 3CRWB60-A demande le pilote man:ng_bt3c[4]. Les périphériques Bluetooth(R) de type série et UART sont supportés via les pilotes man:sio[4], man:ng_h4[4] et man:hcseriald[8]. Cette section décrit l'utilisation d'un adaptateur USB Bluetooth(R). Le support Bluetooth(R) est disponible sur les systèmes 5.0 et suivants.
+
+=== Branchement du périphérique
+
+Par défaut les pilotes de périphériques Bluetooth(R) sont disponibles sous la forme de modules du noyau. Avant de brancher le périphérique, vous devrez charger le pilote dans le noyau:
+
+[source,bash]
+....
+# kldload ng_ubt
+....
+
+Si le périphérique Bluetooth(R) est présent au démarrage du système, chargez le module à partir de [.filename]#/boot/loader.conf#:
+
+[.programlisting]
+....
+ng_ubt_load="YES"
+....
+
+Branchez votre clé USB. Une sortie semblable à celle-ci devrait s'afficher sur la console (ou dans les journaux du système):
+
+[source,bash]
+....
+ubt0: vendor 0x0a12 product 0x0001, rev 1.10/5.25, addr 2
+ubt0: Interface 0 endpoints: interrupt=0x81, bulk-in=0x82, bulk-out=0x2
+ubt0: Interface 1 (alt.config 5) endpoints: isoc-in=0x83, isoc-out=0x3,
+      wMaxPacketSize=49, nframes=6, buffer size=294
+....
+
+[NOTE]
+====
+La pile Bluetooth doit être lancée manuellement sous FreeBSD 6.0, et sous les versions 5.0 antérieures à la 5.5. Ce lancement est automatique à partir de man:devd[8] sous FreeBSD 5.5, 6.1 et versions suivantes.
+
+Copiez [.filename]#/usr/shared/examples/netgraph/bluetooth/rc.bluetooth# à un emplacement adapté, comme [.filename]#/etc/rc.bluetooth#. Cette procédure est utilisée pour démarrer et arrêter la pile Bluetooth(R). C'est une bonne idée d'arrêter la pile avant de débrancher le périphérique, mais ce n'est pas (généralement) fatal. Quand la pile démarre, vous devriez avoir des messages similaires aux suivants:
+
+[source,bash]
+....
+# /etc/rc.bluetooth start ubt0
+BD_ADDR: 00:02:72:00:d4:1a
+Features: 0xff 0xff 0xf 00 00 00 00 00
+<3-Slot> <5-Slot> <Encryption> <Slot offset>
+<Timing accuracy> <Switch> <Hold mode> <Sniff mode>
+<Park mode> <RSSI> <Channel quality> <SCO link>
+<HV2 packets> <HV3 packets> <u-law log> <A-law log> <CVSD>
+<Paging scheme> <Power control> <Transparent SCO data>
+Max. ACL packet size: 192 bytes
+Number of ACL packets: 8
+Max. SCO packet size: 64 bytes
+Number of SCO packets: 8
+....
+
+====
+
+=== Interface de contrôle de l'hôte (HCI)
+
+L'interface de contrôle de l'hôte (HCI) fournit une interface de commande pour le contrôleur de la bande de base et le gestionnaire de liaisons, et l'accès à l'état du matériel et aux registres de contrôle. Cette interface offre une méthode uniforme d'accès aux fonctions de la bande de base Bluetooth(R). La couche HCI de l'hôte échange des données et des commandes avec le firmware HCI du matériel Bluetooth(R). Le pilote de la couche de transport du contrôleur d'hôte (i.e. le bus physique) fournit aux deux couches HCI la possibilité d'échanger des informations entre elles.
+
+Un seul noeud Netgraph de type _hci_ est créé pour un périphérique Bluetooth(R). Le noeud HCI est normalement connecté au noeud du pilote Bluetooth(R) (flux descendant) et au noeud L2CAP (flux montant). Toutes les opérations HCI doivent être effectuées sur le noeud HCI et non pas sur le noeud du pilote de périphérique. Le nom par défaut pour le noeud HCI est "devicehci". Pour plus de détails consultez la page de manuel man:ng_hci[4].
+
+Une des tâches les plus courantes est la recherche de périphériques Bluetooth(R) dans le voisinage hertzien. Cette opération est appelée _inquiry_ (enquête, recherche). Cette recherche et les autres opérations relatives à HCI sont effectuées par l'utilitaire man:hccontrol[8]. L'exemple ci-dessous montre comment déterminer quels périphériques Bluetooth(R) sont dans le voisinage. Vous devriez obtenir une listes de périphériques au bout de quelques secondes. Notez qu'un périphérique distant ne répondra à la recherche que s'il est placé dans le mode _discoverable_.
+
+[source,bash]
+....
+% hccontrol -n ubt0hci inquiry
+Inquiry result, num_responses=1
+Inquiry result #0
+       BD_ADDR: 00:80:37:29:19:a4
+       Page Scan Rep. Mode: 0x1
+       Page Scan Period Mode: 00
+       Page Scan Mode: 00
+       Class: 52:02:04
+       Clock offset: 0x78ef
+Inquiry complete. Status: No error [00]
+....
+
+`BD_ADDR` est l'adresse unique d'un périphérique Bluetooth(R), similaire à l'adresse MAC d'une carte réseau. Cette adresse est nécessaire pour communiquer avec un périphérique. Il est possible d'assigner un nom humainement compréhensible à l'adresse BD_ADDR. Le fichier [.filename]#/etc/bluetooth/hosts# contient des informations concernant les hôtes Bluetooth(R) connus. L'exemple suivant montre comment obtenir le nom qui a été assigné au périphérique distant:
+
+[source,bash]
+....
+% hccontrol -n ubt0hci remote_name_request 00:80:37:29:19:a4
+BD_ADDR: 00:80:37:29:19:a4
+Name: Pav's T39
+....
+
+Si vous effectuez une recherche sur un périphérique Bluetooth(R) distant, vous devriez trouver votre ordinateur en tant que "votre.machine.nom (ubt0)". Le nom affecté au périphérique local peut être modifié à tout moment.
+
+Le système Bluetooth(R) fournit une connexion point à point (seules deux matériels Bluetooth(R) sont concernés), ou une connexion point à multipoints. Dans le cas d'une connexion point à multipoints, la connexion est partagés entre plusieurs périphériques Bluetooth(R). L'exemple suivant montre comment obtenir la liste des connexions en bande de base actives pour le périphérique local:
+
+[source,bash]
+....
+% hccontrol -n ubt0hci read_connection_list
+Remote BD_ADDR    Handle Type Mode Role Encrypt Pending Queue State
+00:80:37:29:19:a4     41  ACL    0 MAST    NONE       0     0 OPEN
+....
+
+Une _manipulation de la connexion_ est utile quand la fin d'une connexion en bande de base est nécessaire. Notez qu'il n'est normalement pas nécessaire de le faire à la main. La pile mettra fin automatiquement aux connexions en bande de base inactives.
+
+[source,bash]
+....
+# hccontrol -n ubt0hci disconnect 41
+Connection handle: 41
+Reason: Connection terminated by local host [0x16]
+....
+
+Référez-vous à la commande `hccontrol help` pour une liste complète des commandes HCI disponibles. La plupart des commandes HCI ne nécessitent pas les privilèges du super-utilisateur.
+
+=== Protocole d'adaptation et de contrôle de lien logique (L2CAP)
+
+Le protocole d'adaptation et de contrôle de lien logique (L2CAP) fournit des services orientés connexion ou non aux protocoles de niveaux supérieurs, et cela avec des possibilités de multiplexage de protocoles, de segmentation et de réassemblage. L2CAP permet aux applications et aux protocoles de niveaux supérieurs de transmettre et recevoir des paquets L2CAP d'une taille allant jusqu'à 64 Ko.
+
+L2CAP est basé sur le concept de _canaux_. Un canal est une connexion logique au sommet de la connexion en bande de base. Chaque canal est attaché à un protocole suivant le schéma plusieurs-vers-un. Plusieurs canaux peuvent être attachés au même protocole, mais un canal ne peut être attachés à plusieurs protocoles. Chaque paquet L2CAP reçu sur un canal est dirigé vers le protocole de niveau supérieur approprié. Plusieurs canaux peuvent partager la même connexion en bande de base.
+
+Un seul noeud Netgraph de type _l2cap_ est créé pour un périphérique Bluetooth(R). Le noeud L2CAP est normalement connecté au noeud HCI Bluetooth(R) (flux descendant) et aux noeuds des "sockets" Bluetooth(R) (flux montant). Le nom par défaut pour le noeud L2CAP est "device2cap". Pour plus de détails consultez la page de manuel man:ng_l2cap[4].
+
+Une commande utile est man:l2ping[8], qui peut être utilisée pour "pinguer" les autres périphériques. Certaines implémentations de Bluetooth(R) peuvent ne pas renvoyer toutes les données qui leur sont envoyées, aussi `0 bytes` dans ce qui suit est normal.
+
+[source,bash]
+....
+# l2ping -a 00:80:37:29:19:a4
+0 bytes from 0:80:37:29:19:a4 seq_no=0 time=48.633 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=1 time=37.551 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=2 time=28.324 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=3 time=46.150 ms result=0
+....
+
+L'utilitaire man:l2control[8] est employé pour effectuer diverses opérations sur les noeuds L2CAP. Cet exemple montre comment obtenir la liste des connexions logiques (canaux) et la liste des connexions en bande de base pour le périphérique local:
+
+[source,bash]
+....
+% l2control -a 00:02:72:00:d4:1a read_channel_list
+L2CAP channels:
+Remote BD_ADDR     SCID/ DCID   PSM  IMTU/ OMTU State
+00:07:e0:00:0b:ca    66/   64     3   132/  672 OPEN
+% l2control -a 00:02:72:00:d4:1a read_connection_list
+L2CAP connections:
+Remote BD_ADDR    Handle Flags Pending State
+00:07:e0:00:0b:ca     41 O           0 OPEN
+....
+
+Un autre outil de diagnostic est man:btsockstat[1]. Il effectue un travail similaire à celui de man:netstat[1], mais relatif aux structures de données réseau Bluetooth(R). L'exemple ci-dessous montre la même connexion logique que man:l2control[8] ci-dessus.
+
+[source,bash]
+....
+% btsockstat
+Active L2CAP sockets
+PCB      Recv-Q Send-Q Local address/PSM       Foreign address   CID   State
+c2afe900      0      0 00:02:72:00:d4:1a/3     00:07:e0:00:0b:ca 66    OPEN
+Active RFCOMM sessions
+L2PCB    PCB      Flag MTU   Out-Q DLCs State
+c2afe900 c2b53380 1    127   0     Yes  OPEN
+Active RFCOMM sockets
+PCB      Recv-Q Send-Q Local address     Foreign address   Chan DLCI State
+c2e8bc80      0    250 00:02:72:00:d4:1a 00:07:e0:00:0b:ca 3    6    OPEN
+....
+
+=== Protocole RFCOMM
+
+Le protocole RFCOMM permet l'émulation du port série au-dessus du protocole L2CAP. Le protocole est basé sur la norme ETSI TS 07.10. RFCOMM est un protocole de transport simple, avec les dispositions supplémentaires pour émuler les 9 circuits (signaux) d'un port série RS232 (EIATIA-232-E). Le protocole RFCOMM supporte jusqu'à 60 connexions simultanées (canaux RFCOMM) entre deux périphériques Bluetooth(R).
+
+Dans le cas de RFCOMM, l'établissement d'une communication implique deux applications tournant sur des périphériques différents (les extrémités de la communication) avec un segment de communication entre eux. RFCOMM est prévu pour couvrir les applications faisant usage des ports séries des périphériques sur lesquels elles résident. Le segment de communication est une liaison Bluetooth(R) d'un périphérique vers un autre (connexion directe).
+
+RFCOMM est seulement concerné par la connexion entre périphériques dans le cas d'un raccordement direct, ou entre le périphérique et un modem dans le cas d'un réseau. RFCOMM peut supporter d'autres configurations, comme les modules qui communiquent par l'intermédiaire de la technologie sans fil Bluetooth(R) d'un côté et utilise une interface câblée de l'autre côté.
+
+Sous FreeBSD, le protocole RFCOMM est implémenté au niveau de la couche des "sockets" Bluetooth(R).
+
+=== Couplage des périphériques
+
+Par défaut, une communication Bluetooth(R) n'est pas authentifiée, et n'importe quel périphérique peut parler avec n'importe quel autre périphérique. Un périphérique Bluetooth(R) (par exemple un téléphone portable) peut choisir de demander une authentification pour fournir un service particulier (par exemple un service de connexion téléphonique). L'authentification Bluetooth(R) est généralement effectuée avec des _codes PIN_. Un code PIN est une chaîne ASCII d'une longueur de 16 caractères. L'utilisateur doit entrer le même code PIN sur les deux périphériques. Une fois que l'utilisateur a entré le code PIN, les deux périphériques génèrent une _clé de liaison_ (link key). Ensuite la clé peut être enregistrée soit dans les périphériques eux-mêmes ou sur un moyen de stockage non-volatile. La fois suivante les deux périphériques utiliseront la clé précédemment générée. La procédure décrite est appelée _couplage_. Si la clé de liaison est perdue par un des périphériques alors l'opération de couplage doit être répétée.
+
+Le "daemon" man:hcsecd[8] est responsable de la gestion de toutes les requêtes d'authentification Bluetooth(R). Le fichier de configuration par défaut est [.filename]#/etc/bluetooth/hcsecd.conf#. Un exemple de section pour un téléphone portable avec un code PIN arbitraire de "1234" est donné ci-dessous:
+
+[.programlisting]
+....
+device {
+        bdaddr  00:80:37:29:19:a4;
+        name    "Pav's T39";
+        key     nokey;
+        pin     "1234";
+      }
+....
+
+Il n'y pas de limitation sur les codes PIN (en dehors de la longueur). Certains périphériques (comme les casques-micro Bluetooth(R)) peuvent avoir un code PIN définitivement fixé. Le paramètre `-d` force le "daemon" man:hcsecd[8] à rester en tâche de fond, il est donc aisé de voir ce qu'il se passe. Configurez le périphérique distant pour recevoir le couplage et initier la connexion Bluetooth(R) vers le périphérique distant. Le périphérique distant devrait annoncer que le couplage a été accepté, et demander le code PIN. Entrez le même code PIN que celui que vous avez dans le fichier [.filename]#hcsecd.conf#. Maintenant votre PC et le périphérique distant sont couplés. Alternativement, vous pouvez initier le couplage sur le périphérique distant.
+
+Sous FreeBSD 5.5, 6.1 et versions suivantes, la ligne suivante peut être ajoutée au fichier [.filename]#/etc/rc.conf# pour obtenir un lancement automatique de hcsecd au démarrage du système:
+
+[.programlisting]
+....
+hcsecd_enable="YES"
+....
+
+Ce qui suit est une partie de la sortie du "daemon" hcsecd:
+
+[.programlisting]
+....
+hcsecd[16484]: Got Link_Key_Request event from 'ubt0hci', remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Found matching entry, remote bdaddr 0:80:37:29:19:a4, name 'Pav's T39', link key doesn't exist
+hcsecd[16484]: Sending Link_Key_Negative_Reply to 'ubt0hci' for remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Got PIN_Code_Request event from 'ubt0hci', remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Found matching entry, remote bdaddr 0:80:37:29:19:a4, name 'Pav's T39', PIN code exists
+hcsecd[16484]: Sending PIN_Code_Reply to 'ubt0hci' for remote bdaddr 0:80:37:29:19:a4
+....
+
+=== Le protocole de découverte de service (SDP)
+
+Le protocole de découverte de service (SDP) offre aux applications clientes les moyens de découvrir l'existence des services fournis par les applications serveurs ainsi que les propriétés (attributs) de ces services. Les attributs d'un service comprennent le type ou la classe du service offert et le mécanisme ou l'information sur le protocole nécessaire pour utiliser le service.
+
+Le SDP implique la communication entre un serveur SDP et un client SDP. Le serveur maintient une liste d'enregistrements de services qui décrit les caractéristiques des services associés avec le serveur. Chaque enregistrement de service contient l'information sur un seul serveur. Un client peut récupérer l'information à partir d'un enregistrement de service maintenu par le serveur SDP en émettant une requête SDP. Si le client, ou une application associée avec le client, décide d'utiliser un service, il doit ouvrir une connexion séparée avec le fournisseur du service afin d'utiliser ce service. Le SDP fournit un mécanisme pour découvrir les services et leur attributs, mais n'offre pas de mécanisme pour utiliser ces services.
+
+Généralement, un client SDP recherche les services sur la base de caractéristiques de services désirées. Cependant, il est parfois désirable de découvrir quel type de services sont décrits par les enregistrements de services d'un serveur SDP sans aucune information préalable sur les services. Ce processus de recherche des services offerts est appelé _navigation_ ("browsing").
+
+Le serveur SDP Bluetooth(R) man:sdpd[8] et le client en ligne de commande man:sdpcontrol[8] font partie de l'installation FreeBSD standard. L'exemple suivant montre comment effectuer un requête de navigation ("browse") SDP:
+
+[source,bash]
+....
+% sdpcontrol -a 00:01:03:fc:6e:ec browse
+Record Handle: 00000000
+Service Class ID List:
+        Service Discovery Server (0x1000)
+Protocol Descriptor List:
+        L2CAP (0x0100)
+                Protocol specific parameter #1: u/int/uuid16 1
+                Protocol specific parameter #2: u/int/uuid16 1
+
+Record Handle: 0x00000001
+Service Class ID List:
+        Browse Group Descriptor (0x1001)
+
+Record Handle: 0x00000002
+Service Class ID List:
+        LAN Access Using PPP (0x1102)
+Protocol Descriptor List:
+        L2CAP (0x0100)
+        RFCOMM (0x0003)
+                Protocol specific parameter #1: u/int8/bool 1
+Bluetooth Profile Descriptor List:
+        LAN Access Using PPP (0x1102) ver. 1.0
+....
+
+... et ainsi de suite. Remarquez que chaque service a une liste d'attributs (canal RFCOMM par exemple). En fonction du service vous pourrez avoir besoin de prendre note de certains de ces attributs. Certaines implémentations Bluetooth(R) ne supportent pas les requêtes de navigation et peuvent renvoyer une liste vide. Dans ce cas il est possible de chercher un service spécifique. L'exemple ci-dessous montre comment chercher le service OBEX Object Push (OPUSH):
+
+[source,bash]
+....
+% sdpcontrol -a 00:01:03:fc:6e:ec search OPUSH
+....
+
+Offrir des services sous FreeBSD aux clients Bluetooth(R) se fait à l'aide du serveur man:sdpd[8]. Sous les versions de FreeBSD 5.5, 6.1 et plus récentes, la ligne suivante peut être ajoutée au fichier [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+sdpd_enable="YES"
+....
+
+Ensuite, le "démon"sdpd peut être démarré avec:
+
+[source,bash]
+....
+# /etc/rc.d/sdpd start
+....
+
+Sous FreeBSD 6.0, et sous les versions FreeBSD 5.X antérieures à 5.5, sdpd n'est pas intégré aux procédures de démarrage du système. Il doit être lancé manuellement:
+
+[source,bash]
+....
+# sdpd
+....
+
+L'application serveur locale qui désire offrir un service Bluetooth(R) à des clients distants enregistrera le service auprès du "daemon" SDP local. Un exemple d'une telle application est man:rfcomm_pppd[8]. Une fois démarré, il enregistrera un service de réseau local Bluetooth(R) auprès du serveur SDP local.
+
+La liste des services enregistrés auprès du serveur SDP local peut être obtenue en émettant une requête de navigation ("browse") SDP par l'intermédiaire du canal de contrôle:
+
+[source,bash]
+....
+# sdpcontrol -l browse
+....
+
+=== Les profils Dial-Up Networking (DUN) et accès au réseau local avec PPP (LAN)
+
+Le profil Dial-Up Networking (DUN) est principalement utilisé avec les modems et les téléphones portables. Les cas de figure couverts par ce profil sont les suivants:
+
+* Utilisation d'un téléphone portable ou d'un modem par un ordinateur comme modem sans fil pour se connecter à un serveur d'accès Internet, ou pour l'utilisation de services accessibles par téléphone;
+* Utilisation d'un téléphone portable ou d'un modem par un ordinateur pour recevoir des appels avec transmission de données.
+
+Le profil d'accès au réseau local avec PPP (LAN) peut être utilisé dans les situations suivantes:
+
+* Accès au réseau local pour un périphérique Bluetooth(R);
+* Accès au réseau local pour plusieurs périphériques Bluetooth(R);
+* Liaison PC à PC (en utilisant le protocole PPP sur une émulation de câble série).
+
+Sous FreeBSD les deux profils sont implémentés par man:ppp[8] et man:rfcomm_pppd[8]-un "wrapper" convertit la connexion Bluetooth(R) RFCOMM en quelque chose d'utilisable par PPP. Avant qu'un profil ne soit utilisable, un nouveau label doit être créé dans le fichier [.filename]#/etc/ppp/ppp.conf#. Consultez la page de manuel man:rfcomm_pppd[8] pour des exemples.
+
+Dans l'exemple suivant man:rfcomm_pppd[8] sera employé pour ouvrir un connexion RFCOMM avec le périphérique distant avec une adresse BD_ADDR 00:80:37:29:19:a4 sur un canal DUN RFCOMM. Le numéro de canal RFCOMM réel sera obtenu du périphérique distant par l'intermédiaire de SDP. Il est possible de préciser le canal RFCOMM à la main, dans ce cas man:rfcomm_pppd[8] n'émettra pas de requête SDP. Utilisez man:sdpcontrol[8] pour trouver le canal RFCOMM sur le périphérique distant.
+
+[source,bash]
+....
+# rfcomm_pppd -a 00:80:37:29:19:a4 -c -C dun -l rfcomm-dialup
+....
+
+Afin de fournir un service d'accès au réseau local avec PPP, le serveur man:sdpd[8] doit être en fonctionnement. Une nouvelle entrée pour les clients du réseau local doit être créée dans le fichier [.filename]#/etc/ppp/ppp.conf#. Consultez la page de manuel man:rfcomm_pppd[8] pour des exemples. Enfin, lancez le serveur RFCOMM PPP sur un numéro de canal RFCOMM valide. Le serveur RFCOMM PPP enregistrera automatiquement un service Bluetooth(R) LAN auprès du "daemon" SDP local. L'exemple ci-dessous montre comment démarrer le serveur RFCOMM PPP:
+
+[source,bash]
+....
+# rfcomm_pppd -s -C 7 -l rfcomm-server
+....
+
+=== Le profil OBEX Object Push (OPUSH)
+
+OBEX (échange d'objets) est un protocole très largement utilisé pour les transferts de fichiers entre périphériques mobiles. Son utilisation principale se trouve dans les communications par infrarouge, où il est utilisé pour le transfert des fichiers entre ordinateurs portables ou PDAs, et pour envoyer des cartes de visite électronique ou des éléments d'agenda entre téléphones portables et d'autres périphériques disposant d'applications de gestion d'informations personnelles (PIM).
+
+Le serveur et le client OBEX sont implémentés dans le logiciel tierce-partie obexapp, qui est disponible sous la forme du logiciel porté package:comms/obexapp[].
+
+Le client OBEX est employé pour "pousser" et/ou "tirer" des objets du serveur OBEX. Un objet peut être, par exemple, une carte de visite ou un rendez-vous. Le client OBEX peut obtenir un numéro de canal RFCOMM d'un périphérique distant par l'intermédiaire de SDP. Cela peut être fait en spécifiant le nom du service plutôt que le numéro du canal RFCOMM. Les noms de service supportés sont: IrMC, FTRN et OPUSH. Il est possible de préciser le canal RFCOMM par un nombre. Un exemple de session OBEX est présenté ci-dessous, où l'objet information du périphérique d'un téléphone portable est récupéré, et un nouvel objet (carte de visite) est envoyé dans le répertoire du téléphone.
+
+[source,bash]
+....
+% obexapp -a 00:80:37:29:19:a4 -C IrMC
+obex> get telecom/devinfo.txt devinfo-t39.txt
+Success, response: OK, Success (0x20)
+obex> put new.vcf
+Success, response: OK, Success (0x20)
+obex> di
+Success, response: OK, Success (0x20)
+....
+
+Afin de fournir le service OBEX Object Push, le serveur man:sdpd[8] doit tourner. Un dossier racine où tous les objets entrant seront stockés doit être créé. Le chemin d'accès par défaut du répertoire racine est [.filename]#/var/spool/obex#. Le serveur OBEX enregistrera automatiquement le service OBEX Object Push auprès du "daemon" SDP local. L'exemple ci-dessous montre comment démarrer le serveur OBEX:
+
+[source,bash]
+....
+# obexapp -s -C 10
+....
+
+=== Le profil port série (SPP)
+
+Le profil port série (SPP) permet aux périphériques Bluetooth(R) d'émuler un câble série RS232 (ou similaire). Ce profil traite avec les applications classiques en utilisant Bluetooth(R) comme un câble de remplacement, à travers une abstraction de port série virtuel.
+
+L'utilitaire man:rfcomm_sppd[1] implémente le profil port série. Un pseudo terminal est utilisé comme abstraction de port série virtuel. L'exemple ci-dessous montre comment se connecter à un service port série d'un périphérique distant. Notez que vous n'avez pas besoin d'indiquer un canal RFCOMM - man:rfcomm_sppd[1] peut l'obtenir auprès du périphérique distant via SDP. Si vous désirez forcer cela, spécifiez un canal RFCOMM sur la ligne de commande.
+
+[source,bash]
+....
+# rfcomm_sppd -a 00:07:E0:00:0B:CA -t /dev/ttyp6
+rfcomm_sppd[94692]: Starting on /dev/ttyp6...
+....
+
+Une fois connecté, le pseudo-terminal peut être utilisé comme un port série:
+
+[source,bash]
+....
+# cu -l ttyp6
+....
+
+=== Dépannage
+
+==== Un périphérique distant ne peut pas se connecter
+
+Certains anciens périphériques Bluetooth(R) ne supportent pas de changement de rôle. Par défaut, quand FreeBSD accepte une nouvelle connexion, il tente d'effectuer un changement de rôle et de devenir maître. Les périphériques qui ne supportent pas cela ne seront pas en mesure de se connecter. Notez qu'un changement de rôle est effectué quand une nouvelle connexion est établie, il n'est donc pas possible de demander au périphérique distant s'il supporte le changement de rôle. Il existe une option HCI pour désactiver le changement de rôle au niveau local:
+
+[source,bash]
+....
+# hccontrol -n ubt0hci write_node_role_switch 0
+....
+
+==== Quelque chose ne va pas, puis-je voir ce qui se passe exactement?
+
+Bien sûr. Utilisez le logiciel tierce-partie hcidump qui est disponible sous package:comms/hcidump[] dans le catalogue des logiciels portés. L'utilitaire hcidump est similaire à man:tcpdump[1]. Il peut être utilisé pour afficher le contenu des paquets Bluetooth(R) à l'écran et les sauvegarder dans un fichier.
+
+[[network-bridging]]
+== Bridging
+
+=== Introduction
+
+Il est parfois utile de diviser un réseau physique (comme un réseau Ethernet) en deux réseaux séparés sans avoir à créer de sous-réseaux IPs et à utiliser un routeur pour connecter ces réseaux entre eux. Le périphérique qui connecte ensemble deux réseaux de cette manière est appelé "bridge"-pont. Un système FreeBSD avec deux cartes réseaux peut faire fonction de pont.
+
+Le pont apprend les adresses MAC (adresses Ethernet) des périphériques branchés sur chacune de ses interfaces réseaux. Il transmet le trafic entre deux réseaux uniquement quand la source et la destination sont sur des réseaux différents.
+
+Sous de nombreux aspects, un pont ressemble à un switch (commutateur) Ethernet avec très peu de ports.
+
+=== Situations où l'utilisation d'un pont est appropriée
+
+Il existe deux situations dans lesquelles un pont est de nos jours utilisé.
+
+==== Trafic important sur un segment
+
+La première situation apparaît quand un segment physique d'un réseau est submergé par le trafic, mais vous ne voulez pas, pour différentes raisons, subdiviser le réseau et interconnecter les sous-réseaux à l'aide d'un routeur.
+
+Prenons comme exemple un journal où les bureaux de la rédaction et de la production sont sur le même sous-réseau. Les utilisateurs de la rédaction utilisent tous le serveur de fichiers `A`, et les utilisateurs de la production le serveur `B`. Un réseau Ethernet est utilisé pour connecter ensemble les utilisateurs, et des surcharges du réseau ralentissent les échanges.
+
+Si les utilisateurs de la rédaction peuvent être cantonné sur un segment, et les utilisateurs de la production sur un autre, les deux réseaux pourront être connectés par un pont. Seul le trafic réseau destiné aux interfaces réseaux situées de l'"autre" côté du pont sera transmis à l'autre réseau, réduisant ainsi les congestions sur chaque segment.
+
+==== Coupe-feu filtrant/régulant le trafic
+
+La deuxième situation est quand un coupe-feu est nécessaire mais sans translation d'adresses (NAT).
+
+Un exemple est une compagnie qui est connectée à son fournisseur d'accès internet par l'intermédiaire d'une connexion ISDN ou DSL. Elle dispose de 13 adresses IP routables fournies par le fournisseur d'accès et dispose de 10 PCs sur son réseau. Dans cette situation, utiliser un coupe-feu/routeur est complexe en raison des problèmes de sous-réseaux.
+
+Un coupe-feu basé sur un pont peut être configuré et positionné dans le flux juste en aval de leur routeur DSL/ISDN sans aucun problème d'adressage IP.
+
+=== Configuration d'un pont
+
+==== Choix des cartes réseaux
+
+Un pont nécessite au moins deux cartes réseaux pour fonctionner. Malheureusement toutes les cartes réseaux ne supportent pas le mode bridging. Lisez la page de manuel man:bridge[4] pour des détails sur les cartes supportées.
+
+Installez et testez les deux cartes réseaux avant de poursuivre.
+
+==== Modification de la configuration du noyau
+
+Pour activer le support nécessaire pour mettre en place un pont ajouter la ligne suivante:
+
+[.programlisting]
+....
+options BRIDGE
+....
+
+à votre fichier de configuration du noyau, et recompilez votre noyau.
+
+==== Support du coupe-feu
+
+Si vous projetez d'utiliser un pont en tant que coupe-feu, vous devrez également ajouter l'option `IPFIREWALL`. Lisez la crossref:firewalls[firewalls,Firewalls] pour des informations générales sur la configuration d'un pont en tant que coupe-feu.
+
+Si vous avez besoin de permettre le passage à travers le pont des paquets non-IP (comme ARP), il existe une option du coupe-feu qui doit être activée. Cette option est `IPFIREWALL_DEFAULT_TO_ACCEPT`. Prennez note que cela modifie le fonctionnement par défaut du coupe-feu, ce dernier acceptera alors tous les paquets. Assurez-vous de savoir ce que ce changement signifie pour votre ensemble de règles de filtrage avant de l'effectuer.
+
+==== Support de la régulation du trafic
+
+Si vous désirez utiliser le pont comme régulateur de trafic, vous devrez ajouter l'option `DUMMYNET` à votre fichier de configuration du noyau. Consultez la page de manuel man:dummynet[4] pour plus d'information.
+
+=== Activer le pont
+
+Ajoutez la ligne:
+
+[.programlisting]
+....
+net.link.ether.bridge.enable=1
+....
+
+au fichier [.filename]#/etc/sysctl.conf# pour activer le pont au démarrage, et la ligne:
+
+[.programlisting]
+....
+net.link.ether.bridge.config=if1,if2
+....
+
+pour activer le mode bridging sur les interfaces spécifiées (remplacez _if1_ et _if2_ par les noms de vos interfaces réseaux). Si vous désirez que les paquets traversant le pont soient filtrés par man:ipfw[8], vous devrez ajouter également la ligne:
+
+[.programlisting]
+....
+net.link.ether.bridge.ipfw=1
+....
+
+Pour les versions antérieures à FreeBSD 5.2-RELEASE, utilisez les lignes suivantes:
+
+[.programlisting]
+....
+net.link.ether.bridge=1
+net.link.ether.bridge_cfg=if1,if2
+net.link.ether.bridge_ipfw=1
+....
+
+=== Informations supplémentaires
+
+Si vous désirez être en mesure de vous connecter au pont par l'intermédiaire de man:ssh[1], il est correct d'ajouter à l'une des cartes réseaux une adresse IP. Il existe un consensus sur le fait qu'assigner une adresse aux deux cartes est une mauvaise idée.
+
+Si vous avez plusieurs ponts sur votre réseau, il ne peut y en avoir plus d'un sur le chemin qui sera emprunté par le trafic entre deux stations de travail. Techniquement, cela signifie qu'il n'y a pas de support pour la gestion du "spanning tree".
+
+Un pont peut ajouter des temps de latence lors de l'utilisation de man:ping[8], et tout particulièrement dans le cas du trafic d'un segment vers un autre.
+
+[[network-diskless]]
+== Système sans disque dur
+
+Une machine FreeBSD peut démarrer via le réseau et fonctionner sans disque dur local, en utilisant des systèmes de fichiers montés à partir d'un serveur NFS. Aucune modification du système n'est nécessaire en dehors des fichiers de configuration standards. Un tel système est facile à mettre en oeuvre comme tous les éléments sont directement disponibles:
+
+* Il y a au moins deux méthodes possibles pour charger un noyau via le réseau:
+
+** PXE: l'environnement d'exécution préalable au démarrage d'Intel(R) (Preboot eXecution Environment) est une sorte de ROM intelligente présente sur certaines cartes réseau ou cartes mère. Consultez la page de manuel man:pxeboot[8] pour plus de détails.
+** Le logiciel porté Etherboot (package:net/etherboot[]) produit un code stockable dans une ROM pour démarrer des noyaux via le réseau. Le code peut être soit implanté dans une PROM de démarrage sur une carte réseau, soit chargé à partir d'une disquette (ou d'un disque dur local), ou à partir d'un système MS-DOS(R) en fonctionnement. De nombreuses cartes réseau sont supportées.
+
+* Une procédure d'exemple ([.filename]#/usr/shared/examples/diskless/clone_root#) facilite la création et la maintenance du système de fichiers racine de la station de travail sur le serveur. La procédure demandera sûrement quelques modifications mais vous permettra de démarrer rapidement.
+* Des fichiers de démarrage du système existent dans le répertoire [.filename]#/etc# pour détecter et supporter le démarrage d'un système sans disque dur.
+* La pagination, si nécessaire, peut être faite par l'intermédiaire d'un fichier NFS ou sur un disque local.
+
+Il existe plusieurs façons de configurer des stations de travail sans disque dur. Plusieurs éléments entrent en oeuvre, et la plupart peuvent être ajustés en fonction des besoins locaux. Ce qui suit décrit des variations sur la configuration d'un système complet, mettant en avant le simplicité et la compatibilité avec les procédures standards de démarrage de FreeBSD. Le système décrit présente les caractéristiques suivantes:
+
+* Les stations de travail sans disque dur utilisent des systèmes de fichiers [.filename]#/# et [.filename]#/usr# partagés et en lecture seule.
++ 
+Le système de fichiers racine est une copie d'une racine FreeBSD standard (généralement celle du serveur), avec certains fichiers de configuration remplacés par des versions spécifiques à un fonctionnement sans disque dur, et parfois à la station de travail auxquels ils appartiennent.
++ 
+Les parties de la racine qui doivent être inscriptibles sont remplacées par des systèmes de fichiers man:mfs[8] (FreeBSD 4.X) ou man:md[4] (FreeBSD 5.X). Toute modification sera perdue au redémarrage du système.
+* Le noyau est transféré et chargé soit à l'aide d'Etherboot soit de PXE comme certaines situations peuvent exiger l'utilisation de l'une ou l'autre méthode.
+
+[CAUTION]
+====
+
+Ainsi décrit, le système n'est pas sécurisé. Il devrait se trouver dans une partie protégée du réseau, et les autres machines ne devraient pas lui faire confiance aveuglément.
+====
+
+Toutes les instructions de cette section ont été testées sous FreeBSD 4.9-RELEASE et 5.2.1-RELEASE. Le texte est destiné à l'origine pour une utilisation sous 4.X. Des notes on été insérées aux endroits nécessaires pour indiquer les modifications concernant la branche 5.X.
+
+=== Information de fond
+
+Mettre en place des stations de travail sans disque dur est à la fois relativement simple et enclin aux erreurs. Ces dernières sont parfois difficiles à diagnostiquer pour de nombreuses raisons. Par exemple:
+
+* Des options de compilation peuvent donner lieu à des comportements différents à l'exécution.
+* Les messages d'erreurs sont souvent cachés ou totalement absents.
+
+Dans ce contexte, avoir quelques connaissances des mécanismes sous-jacents impliqués est très utile pour résoudre les problèmes qui peuvent surgir.
+
+Plusieurs opérations doivent être effectuées pour un amorçage réussi:
+
+* La machine doit obtenir des paramètres de base comme son adresse IP, le nom du fichier exécutable, le nom du serveur, l'emplacement de la racine. Ceci est fait en utilisant le protocole DHCP ou le protocole BOOTP. DHCP est une extension compatible de BOOTP, et utilise les mêmes numéros de ports et son format de paquets basic.
++ 
+Il est possible de configurer un système pour n'utiliser que BOOTP. Le programme serveur man:bootpd[8] fait partie du système de base de FreeBSD.
++ 
+Cependant, DHCP présente plusieurs avantage sur BOOTP (des fichiers de configuration plus lisibles, la possibilité d'utiliser PXE, plus de nombreux autres avantages n'ayant pas de relation directe avec les systèmes sans disque dur), et nous décrirons principalement une configuration DHCP, avec des exemples équivalent utilisant man:bootpd[8] quand cela est possible. L'exemple de configuration utilisera le logiciel ISC DHCP (la version 3.0.1.r12 était installée sur le serveur de test).
+* La machine a besoin de transférer un ou plusieurs programmes en mémoire locale. TFTP ou NFS sont utilisés. Le choix entre TFTP et NFS est à de nombreux endroits une option sélectionnée lors de la compilation. Une source d'erreur courante est d'indiquer des noms de fichiers pour le mauvais protocole: TFTP transfère généralement tous les fichiers à partir d'un seul répertoire sur le serveur, et attendra des noms de fichiers relatifs à ce répertoire. NFS a besoin de chemins d'accès absolus.
+* Les éventuels programmes d'amorce intermédiaires et le noyau doivent être initialisés et exécutés. Il existe plusieurs variations à ce niveau:
+
+** PXE chargera man:pxeboot[8], qui est une version modifiée du chargeur. Le chargeur (man:loader[8]) récupérera la plupart des paramètres nécessaires au démarrage du système, et les transmettra au noyau avant de lui abandonner le contrôle du système. Dans ce cas il est possible d'utiliser un noyau [.filename]#GENERIC#.
+** Etherboot, chargera directement le noyau avec moins de préparation. Vous devrez compiler un noyau avec des options particulières.
++ 
+PXE et Etherboot fonctionnent aussi bien l'un que l'autre avec des systèmes 4.X. Comme le noyau des systèmes 5.X laisse au chargeur (man:loader[8]) un peu plus de travail à effectuer, PXE est préféré pour les systèmes 5.X.
++ 
+Si votre BIOS et vos cartes réseau supportent PXE, vous devriez probablement l'utiliser. Cependant, il est toujours possible de démarrer un système 5.X à l'aide d'Etherboot.
+* Et enfin, la machine a besoin d'accéder à ses systèmes de fichiers. NFS est utilisé dans tous les cas.
+
+Consultez également la page de manuel man:diskless[8].
+
+=== Configuration
+
+==== Configuration utilisant ISC DHCP
+
+Le serveur ISC DHCP peut répondre aux requêtes BOOTP et DHCP.
+
+Avec la version 4.9, ISC DHCP 3.0 ne fait pas partie du système de base. Vous devrez installer le logiciel porté package:net/isc-dhcp3-server[] ou la version pré-compilée correspondante.
+
+Une fois ISC DHCP installé, il nécessite un fichier de configuration pour fonctionner (normalement appelé [.filename]#/usr/local/etc/dhcpd.conf#). Voici un exemple commenté, où la machine `margaux` utilise Etherboot et où la machine `corbieres` emploie PXE:
+
+[.programlisting]
+....
+default-lease-time 600;
+max-lease-time 7200;
+authoritative;
+
+option domain-name "example.com";
+option domain-name-servers 192.168.4.1;
+option routers 192.168.4.1;
+
+subnet 192.168.4.0 netmask 255.255.255.0 {
+  use-host-decl-names on; <.>
+  option subnet-mask 255.255.255.0;
+  option broadcast-address 192.168.4.255;
+
+  host margaux {
+    hardware ethernet 01:23:45:67:89:ab;
+    fixed-address margaux.example.com;
+    next-server 192.168.4.4; <.>
+    filename "/data/misc/kernel.diskless"; <.>
+    option root-path "192.168.4.4:/data/misc/diskless"; <.>
+  }
+  host corbieres {
+    hardware ethernet 00:02:b3:27:62:df;
+    fixed-address corbieres.example.com;
+    next-server 192.168.4.4;
+    filename "pxeboot";
+    option root-path "192.168.4.4:/data/misc/diskless";
+  }
+}
+....
+
+<.> Cette option dit à dhcpd d'envoyer le paramètre des déclarations `host` comme nom de machine pour la machine sans disque dur. Une autre méthode aurait été d'ajouter `option host-name margaux` à l'intérieur des déclarations `host`.
+
+<.> La directive `next-server` désigne le serveur TFTP ou NFS à utiliser pour télécharger le chargeur ou le noyau (le comportement par défaut étant d'utiliser la même machine que le serveur DHCP).
+
+<.> La directive `filename` précise le fichier que chargera Etherboot ou PXE à la prochaine étape. Il doit être défini en fonction de la méthode de transfert utilisée. Etherboot peut être compilé pour utiliser NFS ou TFTP. Le logiciel porté pour FreeBSD utilisera NFS par défaut. PXE emploie TFTP, c'est pourquoi un chemin d'accès relatif est utilisé ici (cela peut dépendre de la configuration du serveur TFTP, mais devrait être plutôt classique). De plus, PXE charge [.filename]#pxeboot#, et non pas le noyau. Il existe d'autres possibilités intéressantes, comme le chargement de [.filename]#pxeboot# à partir du répertoire [.filename]#/boot# d'un CD-ROM FreeBSD (comme man:pxeboot[8] peut charger un noyau [.filename]#GENERIC# cela rend possible l'utilisation de PXE pour démarrer à partir d'un lecteur de CD-ROM distant).
+
+<.> L'option `root-path` définie le chemin d'accès au système de fichiers racine, suivant la notation classique de NFS. En utilisant PXE, il est possible de ne pas préciser l'adresse IP de la machine dès lors que vous n'activez pas l'option BOOTP du noyau. Le serveur NFS sera alors le même que le serveur TFTP.
+
+==== Configuration utilisant BOOTP
+
+Ce qui suit présente une configuration bootpd équivalente (réduite à un seul client). Elle se trouverait sous [.filename]#/etc/bootptab#.
+
+Veuillez noter qu'Etherboot doit être compilé avec l'option `NO_DHCP_SUPPORT` (qui n'est pas activée par défaut) afin d'utiliser BOOTP et que PXE _nécessite_ DHCP. The seul avantage évident de bootpd est qu'il est disponible dans le système de base.
+
+[.programlisting]
+....
+
+.def100:\
+  :hn:ht=1:sa=192.168.4.4:vm=rfc1048:\
+  :sm=255.255.255.0:\
+  :ds=192.168.4.1:\
+  :gw=192.168.4.1:\
+  :hd="/tftpboot":\
+  :bf="/kernel.diskless":\
+  :rp="192.168.4.4:/data/misc/diskless":
+
+margaux:ha=0123456789ab:tc=.def100
+....
+
+==== Préparation d'un programme de démarrage avec Etherboot
+
+Le http://etherboot.sourceforge.net[site Web d'Etherboot] propose une http://etherboot.sourceforge.net/doc/html/userman/t1.html[ documentation importante] principalement destinée aux systèmes Linux, mais contenant néamoins des informations utiles. Ce qui suit présente comment vous utiliseriez Etherboot sur un système FreeBSD.
+
+Vous devez tout d'abord installer le logiciel porté package:net/etherboot[] ou sa version pré-compilée.
+
+Vous pouvez modifier la configuration d'Etherboot (i.e. pour utiliser TFTP au lieu de NFS) en éditant le fichier [.filename]#Config# dans le répertoire des sources d'Etherboot.
+
+Pour notre configuration nous utiliserons une disquette de démarrage. Pour d'autres méthodes (PROM, ou un programme MS-DOS(R)), consultez la documentation d'Etherboot.
+
+Pour créer une disquette de démarrage, insérez une disquette dans le lecteur de la machine où vous avez installé Etherboot, puis rendez-vous dans le répertoire [.filename]#src# de l'arborescence Etherboot et tapez:
+
+[source,bash]
+....
+# gmake bin32/devicetype.fd0
+....
+
+_devicetype_ dépend du type de carte Ethernet se trouvant dans la station de travail sans disque dur. Référez-vous au fichier [.filename]#NIC# dans le même répertoire pour déterminer la valeur _devicetype_ correcte.
+
+==== Démarrer avec PXE
+
+Par défaut le chargeur man:pxeboot[8] charge le noyau via NFS. Il peut être compilé pour utiliser TFTP à la place en spécifiant l'option `LOADER_TFTP_SUPPORT` dans le fichier [.filename]#/etc/make.conf#. Lisez les commentaires dans le fichier [.filename]#/etc/defaults/make.conf# (ou [.filename]#/usr/shared/examples/etc/make.conf# pour les systèmes 5.X) pour plus de détails.
+
+Il existe deux autres options de [.filename]#make.conf# non-documentées qui peuvent être utiles pour la configuration d'une machine faisant fonction de console série sans disque dur: `BOOT_PXELDR_PROBE_KEYBOARD`, et `BOOT_PXELDR_ALWAYS_SERIAL` (cette dernière n'existe que sous FreeBSD 5.X).
+
+Pour utiliser PXE quand la machine démarre, vous aurez normalement besoin de sélectionner l'option `Boot from network` dans votre BIOS, ou d'appuyer sur une touche de fonction lors de l'initialisation du PC.
+
+==== Configuration des serveurs TFTP et NFS
+
+Si vous utilisez PXE ou Etherboot configurés pour employer TFTP, vous devez activer tftpd sur le serveur de fichier:
+
+[.procedure]
+====
+
+. Créez un répertoire à partir duquel tftpd proposera les fichiers, e.g. [.filename]#/tftpboot#.
+. Ajoutez la ligne suivante à votre fichier [.filename]#/etc/inetd.conf#:
++
+[.programlisting]
+....
+tftp	dgram	udp	wait	root	/usr/libexec/tftpd	tftpd -l -s /tftpboot
+....
++
+[NOTE]
+======
+Il apparaît que certaines versions de PXE veulent la version TCP de TFTP. Dans ce cas, ajoutez une seconde ligne, en remplaçant `dgram udp` par `stream tcp`.
+======
++
+. Demandez à inetd de relire son fichier de configuration:
++
+[source,bash]
+....
+# kill -HUP `cat /var/run/inetd.pid`
+....
+====
+
+Le répertoire [.filename]#tftpboot# peut être placé n'importe où sur le serveur. Assurez-vous que son emplacement est défini dans les fichiers [.filename]#inetd.conf# et [.filename]#dhcpd.conf#.
+
+Dans tous les cas, vous devez également activer NFS et exporter le système de fichiers approprié sur le serveur NFS.
+
+[.procedure]
+====
+
+. Ajoutez ce qui suit au fichier [.filename]#/etc/rc.conf#:
++
+[.programlisting]
+....
+nfs_server_enable="YES"
+....
++
+. Exportez le système de fichiers contenant le répertoire racine du système sans disque dur en ajoutant ce qui suit au fichier [.filename]#/etc/exports# (ajustez le point de montage et remplacez _margaux corbieres_ avec les noms des stations de travail sans disque dur):
++
+[.programlisting]
+....
+/data/misc -alldirs -ro margaux corbieres
+....
++
+. Demandez à mountd de relire son fichier de configuration. Si vous avez eu besoin d'activer NFS dans [.filename]#/etc/rc.conf# lors du premier point, vous voudrez probablement plutot redémarrer la machine.
++
+[source,bash]
+....
+# kill -HUP `cat /var/run/mountd.pid`
+....
+====
+
+==== Compilation d'un noyau pour système sans disque dur
+
+Si vous utilisez Etherboot, vous devez créer un fichier de configuration du noyau pour le client sans disque dur avec les options suivantes (en plus des options habituelles):
+
+[.programlisting]
+....
+
+options     BOOTP          # Use BOOTP to obtain IP address/hostname
+options     BOOTP_NFSROOT  # NFS mount root filesystem using BOOTP info
+....
+
+Vous pouvez vouloir également employer les options `BOOTP_NFSV3`, `BOOT_COMPAT` et `BOOTP_WIRED_TO` (référez-vous au fichier [.filename]#LINT# sous 4.X ou [.filename]#NOTES# sous 5.X).
+
+Les noms de ces options sont historiques et légèrement trompeur comme elles activent indifférement l'utilisation de DHCP et BOOTP dans le noyau (il est également possible de forcer une utilisation stricte de BOOTP ou DHCP).
+
+Compilez le noyau (voir crossref:kernelconfig[kernelconfig,Configurer le noyau de FreeBSD]), et copiez-le à l'emplacement indiqué dans [.filename]#dhcpd.conf#.
+
+[NOTE]
+====
+Quand on utilise PXE, la compilation d'un noyau avec les options précédentes n'est pas strictement nécessaire (bien que conseillé). Les activer causera un plus grand nombre de requêtes DHCP générées lors du démarrage du noyau, avec un petit risque d'inconsistance entre les nouvelles valeurs et celles récupérées par man:pxeboot[8] dans certains cas particuliers. L'avantage de leur utilisation est que le nom de la machine sera forcément défini. Sinon vous devrez définir le nom de la machine par une autre méthode, par exemple dans un fichier [.filename]#rc.conf# particulier au client.
+====
+
+[NOTE]
+====
+Afin d'être chargeable par Etherboot, un noyau 5.X doit être compilé avec les "device hints". Vous définirez normalement l'option suivante dans le fichier de configuration (voir le fichier de commentaires sur la configuration: [.filename]#NOTES#):
+
+[.programlisting]
+....
+hints		"GENERIC.hints"
+....
+
+====
+
+==== Préparer le système de fichiers racine
+
+Vous devez créer un système de fichiers racine pour les stations de travail sans disque dur, à l'emplacement défini par `root-path` dans le fichier [.filename]#dhcpd.conf#. Les sections suivantes décrivent deux manières de le faire.
+
+===== Utilisation de la procédure [.filename]#clone_root#
+
+C'est la méthode la plus rapide pour créer un système de fichiers racine, mais elle est, pour le moment, uniquement supportée sous FreeBSD 4.X.. Cette procédure est située à l'emplacement [.filename]#/usr/shared/examples/diskless/clone_root# et demande quelques modifications, pour au moins ajuster l'emplacement du système de fichiers à créer (la variable `DEST`).
+
+Référez-vous aux commentaires situés en début de la procédure pour information. Ils expliquent comment le système de fichiers de base est construit, et comment les fichiers peuvent être remplacés de façon sélective par des versions spécifiques à un fonctionnement sans disque dur, ou à un sous-réseau, ou encore à une station de travail particulière. Ils donnent également des exemples de fichiers [.filename]#/etc/fstab# et [.filename]#/etc/rc.conf# pour un fonctionnement sans disque dur.
+
+Les fichiers [.filename]#README# dans le répertoire [.filename]#/usr/shared/examples/diskless# contiennent beaucoup d'information de fond, mais, avec les autres exemples du répertoire [.filename]#diskless#, ils documentent une méthode de configuration qui est distincte de celle utilisée par [.filename]#clone_root# et les procédures de démarrage du système de [.filename]#/etc#, ce qui est un peu à l'origine de confusions. Utilisez-les comme référence uniquement, à moins que vous préfériez la méthode qu'ils décrivent, dans quel cas vous devrez modifier les procédures [.filename]#rc#.
+
+===== Utilisation de la procédure `make world` standard
+
+Cette méthode s'applique aussi bien à FreeBSD 4.X qu'à FreeBSD 5.X et installera un système complet (et non pas uniquement le système de fichiers racine) dans le répertoire défini par `DESTDIR`. Tout ce dont vous avez besoin de faire est d'exécuter la procédure suivante:
+
+[.programlisting]
+....
+#!/bin/sh
+export DESTDIR=/data/misc/diskless
+mkdir -p ${DESTDIR}
+cd /usr/src; make world  make kernel
+cd /usr/src/etc; make distribution
+....
+
+Une fois cela terminé, vous devrez personaliser vos fichiers [.filename]#/etc/rc.conf# et [.filename]#/etc/fstab# situés dans `DESTDIR` en fonction de vos besoins.
+
+==== Configuration de l'espace de pagination
+
+Si nécessaire, un fichier de pagination situé sur le serveur peut être utilisé via NFS. Une des méthodes couramment utilisées pour cela n'est plus supportée sous 5.X.
+
+===== Pagination via NFS sous FreeBSD 4.X
+
+L'emplacement et la taille du fichier de pagination peuvent être spécifiés avec les options BOOTP/DHCP 128 et 129 spécifiques à FreeBSD. Des exemples de fichiers de configuration pour ISC DHCP 3.0 ou bootpd suivent:
+
+[.procedure]
+====
+
+. Ajoutez les lignes suivantes au fichier [.filename]#dhcpd.conf#:
++
+[.programlisting]
+....
+
+# Global section
+option swap-path code 128 = string;
+option swap-size code 129 = integer 32;
+
+host margaux {
+  ... # Standard lines, see above
+  option swap-path "192.168.4.4:/netswapvolume/netswap";
+  option swap-size 64000;
+}
+....
++ 
+`swap-path` est le chemin d'accès vers un répertoire où les fichiers de pagination sont situés. Chaque fichier sera nommé [.filename]#swap.ip-client#.
++ 
+Les anciennes version de dhcpd utilisaient une syntaxe du type `option option-128 "...`, qui n'est plus supportée.
++ 
+[.filename]#/etc/bootptab# utiliserait la syntaxe suivante à la place:
++
+[.programlisting]
+....
+T128="192.168.4.4:/netswapvolume/netswap":T129=0000fa00
+....
++
+[NOTE]
+======
+Dans le fichier [.filename]#/etc/bootptab#, la taille de l'espace de pagination doit être exprimée en hexadécimal.
+======
++
+. Sur le serveur du fichier de pagination par NFS, créez le(s) fichier(s) de pagination:
++
+[source,bash]
+....
+# mkdir /netswapvolume/netswap
+# cd /netswapvolume/netswap
+# dd if=/dev/zero bs=1024 count=64000 of=swap.192.168.4.6
+# chmod 0600 swap.192.168.4.6
+....
++ 
+_192.168.4.6_ est l'adresse IP du client sans disque dur.
+. Sur le serveur du fichier de pagination par NFS, ajoutez la ligne suivante au fichier [.filename]#/etc/exports#:
++
+[.programlisting]
+....
+
+/netswapvolume  -maproot=0:10 -alldirs margaux corbieres
+....
++ 
+Ensuite demandez à mountd à relire le fichier [.filename]#exports#, comme plus haut.
+====
+
+===== Pagination via NFS sous FreeBSD 5.X
+
+Le noyau ne supporte pas l'activation de la pagination par NFS au démarrage. L'espace de pagination doit être activé par les procédures de démarrage, en montant un système de fichiers accessible en écriture et en créant et en activant un fichier de pagination. Pour créer un fichier de pagination de la taille appropriée, vous pouvez effectuer ce qui suit:
+
+[source,bash]
+....
+# dd if=/dev/zero of=/path/to/swapfile bs=1k count=1 oseek=100000
+....
+
+Pour ensuite l'activer, vous devez ajouter la ligne suivante à votre fichier [.filename]#rc.conf#:
+
+[.programlisting]
+....
+swapfile=/path/to/swapfile
+....
+
+==== Problèmes divers
+
+===== Utilisation d'un [.filename]#/usr# en lecture seule
+
+Si la station de travail sans disque dur est configurée pour exécuter X, you devrez ajuster le fichier de configuration de XDM, qui envoie le journal d'erreurs sur [.filename]#/usr# par défaut.
+
+===== Utilisation d'un serveur non-FreeBSD
+
+Quand le serveur pour le système de fichiers racine ne fait pas tourner FreeBSD, vous devrez créer le système de fichiers racine sur une machine FreeBSD, puis le copier vers sa destination en utilisant `tar` ou `cpio`.
+
+Dans cette situation, il y a parfois des problèmes avec les fichiers spéciaux de périphériques dans [.filename]#/dev#, en raison de différences de taille sur les entiers. Une solution à ce problème est d'exporter un répertoire à partir du serveur non-FreeBSD, de monter ce répertoire sur une machine FreeBSD, et exécuter `MAKEDEV` sur la machine FreeBSD pour créer les entrées de périphériques correctes (FreeBSD 5.X et les versions suivantes utilisent man:devfs[5] pour l'allocation des fichiers spéciaux de périphériques de manière transparente pour l'utilisateur, exécuter `MAKEDEV` sur ces versions est inutile).
+
+[[network-isdn]]
+== ISDN
+
+Une bonne source d'information sur la technologie et le matériel ISDN (RNIS) est http://www.alumni.caltech.edu/~dank/isdn/[la page ISDN de Dan Kegel].
+
+Voici un rapide aperçu à propos de l'ISDN:
+
+* Si vous résidez en Europe, vous devriez étudier la section sur les cartes ISDN.
+* Si vous envisagez d'utiliser l'ISDN avant tout pour vous connecter à l'Internet par l'intermédiaire d'un fournisseur d'accès Internet et d'une ligne téléphonique non dédiée, vous devriez vous intéresser aux Adaptateurs Terminaux. C'est la solution la plus souple, qui vous posera le moins de problèmes si vous changez de fournisseur d'accès.
+* Si vous interconnectez deux réseaux locaux, ou si vous vous connectez à l'Internet avec une liaison ISDN dédiée, vous devriez envisager un pont/routeur autonome.
+
+Le coût est un facteur déterminant de la solution que vous choisirez. Les options suivantes sont listées de la moins chère à la plus chère.
+
+[[network-isdn-cards]]
+=== Cartes ISDN
+
+L'implémentation ISDN de FreeBSD ne supporte que la norme DSS1/Q.931 (ou Euro-ISDN) utilisant des cartes passives. Depuis FreeBSD 4.4, quelques cartes actives sont supportées où le firmware supporte également d'autres protocoles au niveau des signaux, cela inclut les premières cartes supportées du type "Primary Rate ISDN" (PRI).
+
+Le logiciel isdn4bsd vous permet de vous connecter à d'autres routeurs ISDN soit en utilisant l'IP sur de l'HDLC de base, soit en utilisant PPP synchrone: en employant PPP intégré au noyau avec `isppp`, une version modifiée du pilote de périphérique man:sppp[4], ou en employant man:ppp[8] en mode utilisateur. L'utilisation de man:ppp[8] en mode utilisateur rend possible l'agrégation de deux ou plus canaux ISDN de type B. Une application capable de répondre aux appels téléphoniques est également disponible, tout comme de nombreux utilitaires comme un modem logiciel 300 bauds.
+
+Un nombre croissant de cartes ISDN pour PC sont supportées sous FreeBSD et les retours montrent qu'elles sont utilisées avec succès dans toute l'Europe et dans de nombreuses autres parties du monde.
+
+Les cartes ISDN passives supportées sont principalement celles avec le circuit ISDN ISAC/HSCX/IPAC d'Infineon (précédemment Siemens), mais également les cartes avec des circuits en provenance de Cologne Chip (cartes ISA uniquement), les cartes PCI avec les circuits Winbond W6692, quelques cartes avec les circuits Tiger300/320/ISAC et quelques cartes avec des circuits spécifiques comme l'AVM Fritz!Card PCI V.1.0 de l'AVM Fritz!Card PnP.
+
+Actuellement les cartes ISDN actives supportées sont les cartes AVM B1 (ISA et PCI) BRI et les cartes PCI AVM T1 PRI.
+
+Pour de la documentation sur isdn4bsd, consultez le répertoire [.filename]#/usr/shared/examples/isdn/# sur votre système FreeBSD ou sur la http://www.freebsd-support.de/i4b/[page web d'isdn4bsd] qui propose également des astuces, des erratas et bien plus de documentation que le http://people.FreeBSD.org/~hm/[manuel d'isdn4bsd].
+
+Au cas où vous seriez intéressé par l'ajout du support pour un protocole ISDN différent, d'une carte ISDN pour PC non encore supportée ou par l'amélioration d'isdn4bsd, veuillez contacter {hm}.
+
+Pour les questions concernant l'installation, la configuration et le dépannage d'isdn4bsd, une liste de diffusion link:{freebsd-isdn-url}[freebsd-isdn] est disponible.
+
+=== Adaptateurs terminaux ISDN
+
+Les adaptateurs terminaux-"Terminal adapters (TA)"; sont l'équivalent ISDN des modems pour les lignes téléphoniques ordinaires.
+
+La plupart des TA utilisent le jeu de commandes standard des modems Hayes, et peuvent être utilisés en remplacement d'un modem.
+
+Un TA fonctionne essentiellement de la même manière qu'un modem à la différence que la vitesse de la connexion sera plus élevée qu'avec votre vieux modem. Vous devrez configurer crossref:ppp-and-slip[ppp,PPP] de façon exactement identique que pour un modem classique. Assurez-vous de fixer la vitesse de votre port série la plus haute possible.
+
+Le principal avantage d'utiliser un TA pour vous connecter à votre fournisseur d'accès Internet est de pouvoir utiliser PPP en mode dynamic. Comme l'espace d'adressage IP disponible devient de plus en plus restreint, la plupart des fournisseurs d'accès ne désirent plus vous fournir d'adresse IP statique. La plupart des routeurs autonomes ne peuvent pas fonctionner avec une allocation dynamique d'adresse IP.
+
+Les fonctionnalités et la stabilité de la connexion des adaptateurs terminaux reposent complètement sur le "daemon" PPP. Cela vous permet de passer facilement d'un modem classique à l'ISDN sur une machine FreeBSD, si vous avez déjà configuré PPP. Cependant, les problèmes que vous avez éventuellement rencontrés avec PPP persisteront.
+
+Si vous désirez un maximum de stabilité, utilisez crossref:ppp-and-slip[ppp,PPP intégré au noyau], à la place du crossref:ppp-and-slip[userppp,PPP en mode utilisateur].
+
+Les adaptateurs suivants sont connus pour fonctionner avec FreeBSD:
+
+* Motorola BitSurfer et Bitsurfer Pro
+* Adtran
+
+La plupart des adaptateurs terminaux fonctionneront probablement également, les fabricants de TA font en sorte que leurs produits acceptent la plupart du jeu de commandes AT des modems.
+
+Le vrai problème avec les adaptateurs terminaux est que comme pour les modems, il vous faudra une bonne interface série dans votre ordinateur.
+
+Vous devriez lire le document sur link:{serial-uart}[les ports série sous FreeBSD] pour comprendre en détail le fonctionnement des périphériques série et les différences entre les ports séries asynchrones et synchrones.
+
+Un adaptateur terminal sur un port série PC standard (asynchrone) vous limite à 115.2 Kbs, même si vous disposez d'une connexion à 128 Kbs. Pour utiliser complètement les 128 Kbs offert par l'ISDN, vous devez brancher l'adaptateur sur une carte série synchrone.
+
+Ne vous imaginez pas qu'il suffit d'acheter un adaptateur terminal interne pour s'affranchir du problème synchrone/asynchrone. Les adaptateurs internes disposent simplement d'un port série PC standard. Tout ce que vous y gagnerez sera d'économiser un câble série et de libérer une prise électrique.
+
+Une carte synchrone avec un adaptateur terminal est au moins aussi rapide qu'un routeur autonome, piloté par une simple machine FreeBSD, et probablement plus souple.
+
+Le choix entre carte synchrone/adaptateur ou routeur autonome est une question de goût. Ce sujet a été abordé dans les listes de diffusion. Nous vous suggérons de chercher dans les link:https://www.FreeBSD.org/search/[archives] pour obtenir l'intégralité de la discussion.
+
+=== Ponts/Routeurs ISDN autonomes
+
+Les ponts ou routeurs ISDN ne sont pas spécifiques à FreeBSD ou à tout autre système d'exploitation. Pour une description complète de la technologie du routage et des ponts, veuillez vous reportez à un ouvrage de référence sur les réseaux.
+
+Dans le contexte de cette section, les termes de routeur et de pont seront utilisés indifféremment.
+
+Comme le prix des routeurs/ponts ISDN d'entrée de gamme baissent, il est probable qu'ils deviennent un choix de plus en plus populaire. Un routeur ISDN est une petite boîte qui se branche directement sur votre réseau Ethernet, et gère sa propre connexion aux autres ponts/routeurs. Il intègre le logiciel nécessaire au support du protocole PPP et d'autres protocoles.
+
+Un routeur vous offrira un débit plus élevé qu'un adaptateur terminal standard, puisqu'il utilisera une connexion ISDN synchrone.
+
+Le principal problème avec les routeurs et ponts ISDN est que l'intéropérabilité entre les matériels des différents constructeurs n'est pas toujours garantie. Si vous projetez de vous connecter à un fournisseur d'accès Internet, vous devriez discuter de vos besoins avec ce dernier.
+
+Si vous envisagez de connecter ensemble deux réseaux locaux, comme le réseau de votre domicile et celui de votre bureau, c'est la solution la plus simple et celle qui demande le moins de maintenance. Etant donné que vous êtes la personne qui achète les équipements pour les deux extrémités, vous êtes sûr que cela fonctionnera.
+
+Par exemple pour connecter un ordinateur personnel situé à son domicile ou le réseau d'une agence à celui du siège social, la configuration suivante pourra être utilisée:
+
+.Réseau d'agence ou à domicile
+[example]
+====
+Le réseau utilise une topologie en bus avec une connectique Ethernet 10 base 2 ("thinnet"). Connectez le routeur au réseau à l'aide d'un émetteur/récepteur AUI/10BT si nécessaire.
+
+image::isdn-bus.png[Ethernet 10 Base 2]
+
+Si votre réseau de domicile/d'agence n'est constitué que d'un seul ordinateur, vous pouvez utiliser une paire torsadée croisée pour le connecter directement au routeur autonome.
+====
+
+.Siège social ou autre réseau
+[example]
+====
+Le réseau utilise une topologie en étoile avec une connectique Ethernet 10 base T ("paire torsadée").
+
+image::isdn-twisted-pair.png[Architecture du Réseau ISDN]
+
+====
+
+Un des principaux avantages de la plupart des routeurs/ponts est le fait qu'ils permettent d'avoir deux connexions PPP _séparées et indépendantes_ vers deux sites différents et cela en _même_ temps. Ceci n'est pas supporté par la plupart des adaptateurs terminaux, en dehors de modèles spécifiques (en général coûteux) qui disposent de deux ports série. Ne confondez pas cette possibilité avec l'agrégation de canaux, MPP, etc.
+
+Ceci peut être une fonctionnalité très utile si, par exemple, vous disposez d'une connexion ISDN dédiée au bureau et vous voudriez en profiter mais vous ne voulez pas acquérir une nouvelle ligne ISDN. Un routeur au bureau peut gérer un canal B dédié (64 Kbps) vers l'Internet et utiliser l'autre canal B pour une autre connexion. Le deuxième canal B peut être utilisé pour les connexions entrantes, sortantes ou pour l'agrégation de canaux (MPP, etc.) avec le premier canal B pour augmenter la bande passante.
+
+Un pont Ethernet vous permettra de transmettre autre chose que juste du trafic IP. Vous pouvez également faire passer de l'IPX/SPX ou tout autre protocole que vous utilisez.
+
+[[network-natd]]
+== Translation d'adresses
+
+[[network-natoverview]]
+=== Généralités
+
+Le "daemon" de translation d'adresses ("Network Address Translation"-NAT) de FreeBSD, généralement connu sous le nom de man:natd[8] est un "daemon" qui accepte les paquets IP entrants, change l'adresse de la source par celle de la machine locale et ré-injecte les paquets dans le flux sortant des paquets IP. Le programme man:natd[8] effectue cela en changeant l'adresse IP et le port source de sorte quand les données réponse arrivent il soit en mesure de déterminer la provenance des données d'origine et les transférer à l'émetteur original.
+
+L'utilisation classique de NAT est le partage de connexion Internet.
+
+[[network-natsetup]]
+=== Architecture du réseau
+
+En raison de la diminution du nombre d'adresses IP libres sous IPv4, et de l'augmentation du nombre d'utilisateurs de lignes haut-débit comme le câble ou l'ADSL, le besoin d'utiliser une solution de partage de connexion est donc en constante augmentation. La possibilité de connecter plusieurs ordinateurs par l'intermédiaire d'une connexion et d'une adresse IP fait de man:natd[8] une solution de choix.
+
+Plus généralement, un utilisateur dispose d'une machine connecté sur la câble ou une ligne ADSL avec une adresse IP et désire utiliser cet ordinateur connecté pour fournir un accès Internet à d'autres machines du réseau local.
+
+Pour cela, la machine FreeBSD sur Internet doit jouer le rôle de passerelle. Cette machine passerelle doit avoir deux cartes réseaux-l'une pour se connecter au routeur Internet, l'autre est connectée au réseau local. Toutes les machines du réseau local sont connectées par l'intermédiaire d'un hub ou d'un switch.
+
+[NOTE]
+====
+Il existe plusieurs manières pour connecter un réseau local à l'Internet à travers une passerelle FreeBSD. Cet exemple n'abordera que le cas d'une passerelle avec au moins deux cartes réseaux.
+====
+
+image::natd.png[Organisation du réseau]
+
+Une telle configuration est communément utilisée pour partager une connexion Internet. Une des machines du réseau local est connectée à Internet. Le reste des machines accède à Internet par l'intermédiaire de cette machine "passerelle".
+
+[[network-natdkernconfiguration]]
+=== Configuration
+
+Les options suivantes doivent être présentes dans le fichier de configuration du noyau:
+
+[.programlisting]
+....
+options IPFIREWALL
+options IPDIVERT
+....
+
+De plus, les options suivantes peuvent également être utiles:
+
+[.programlisting]
+....
+options IPFIREWALL_DEFAULT_TO_ACCEPT
+options IPFIREWALL_VERBOSE
+....
+
+Ce qui suit doit figurer dans le fichier [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+gateway_enable="YES" <.>
+firewall_enable="YES" <.>
+firewall_type="OPEN" <.>
+natd_enable="YES"
+natd_interface="fxp0" <.>
+natd_flags="" <.>
+....
+
+<.> Configure la machine comme passerelle. Exécuter `sysctl net.inet.ip.forwarding=1` aurait le même effet.
+
+<.> Active au démarrage les règles du coupe-feu se trouvant dans le fichier [.filename]#/etc/rc.firewall#.
+
+<.> Cela spécifie un ensemble de règles prédéfinies pour le coupe-feu qui autorise tous les paquets entrant. Consultez le fichier [.filename]#/etc/rc.firewall# pour d'autres ensembles de régles.
+
+<.> Indique à travers quelle interface transférer les paquets (l'interface connectée à l'Internet).
+
+<.> Toutes options de configuration supplémentaires passées à man:natd[8] au démarrage.
+
+Le fait d'avoir les options précédentes définies dans le fichier [.filename]#/etc/rc.conf# lancera la commande [.filename]#/etc/rc.conf# au démarrage. Cette commande peut être également exécutée à la main.
+
+[NOTE]
+====
+Il est également possible d'utiliser un fichier de configuration pour man:natd[8] quand il y a trop d'options à passer. Dans ce cas, le fichier de configuration doit être défini en ajoutant la ligne suivante au fichier [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+natd_flags="-f /etc/natd.conf"
+....
+
+Le fichier [.filename]#/etc/natd.conf# contiendra une liste d'options de configuration, une par ligne. Par exemple le cas de figure de la section suivante utiliserait le fichier suivant:
+
+[.programlisting]
+....
+redirect_port tcp 192.168.0.2:6667 6667
+redirect_port tcp 192.168.0.3:80 80
+....
+
+Pour plus d'information concernant le fichier de configuration, consultez la page de manuel de man:natd[8] au sujet de l'option `-f`.
+====
+
+A chaque machine et interface derrière le réseau local doit être assigné une adresse IP de l'espace d'adresses privées comme défini par la link:ftp://ftp.isi.edu/in-notes/rfc1918.txt[RFC 1918] et doit disposer d'une passerelle par défaut qui est l'adresse IP interne de la machine man:natd[8].
+
+Par exemple, les clients `A` et `B` du réseau local ont les adresses IP `192.168.0.2` et `192.168.0.3`, tandis que l'interface sur le réseau local de la machine natd a pour adresse IP `192.168.0.1`. La passerelle par défaut des clients `A` et `B` doit être l'adresse `192.168.0.1` de la machine natd. L'interface externe ou Internet de cette dernière ne demande aucune modification spécifique pour que man:natd[8] puisse fonctionner.
+
+[[network-natdport-redirection]]
+=== Redirection de ports
+
+L'inconvénient avec man:natd[8] est que les clients du réseau local ne sont pas accessibles depuis l'Internet. Les clients sur le réseau local peuvent établir des connexions sortantes vers le monde extérieur mais ne peuvent recevoir de connexions entrantes. Cela présente un problème si l'on tente de faire tourner des services Internet sur une des machines du réseau local. Une solution simple à ce problème est de rediriger les ports Internet sélectionnés de la machine natd vers le client sur le réseau local.
+
+Par exemple, un serveur IRC tourne sur le client `A`, et un serveur web sur le client `B`. Pour que cela fonctionne correctement, les connections reçues sur les ports 6667 (IRC) et 80 (web) doivent être redirigées vers les machines correspondantes.
+
+L'option `-redirect_port` doit être passée à man:natd[8] avec les autres options adéquates. La syntaxe est la suivante:
+
+[.programlisting]
+....
+-redirect_port proto targetIP:targetPORT[-targetPORT]
+                 [aliasIP:]aliasPORT[-aliasPORT]
+                 [remoteIP[:remotePORT[-remotePORT]]]
+....
+
+Dans l'exemple précédent, l'argument passé à la commande devrait être:
+
+[.programlisting]
+....
+-redirect_port tcp 192.168.0.2:6667 6667
+-redirect_port tcp 192.168.0.3:80 80
+....
+
+Cela va rediriger les ports _tcp_ voulus vers les machines du réseau local.
+
+L'option `-redirect_port` peut être utilisée pour indiquer une plage de ports plutôt que des ports individuels. Par exemple _tcp 192.168.0.2:2000-3000 2000-3000_ redirigerait toutes les connexions reçues sur les ports 2000 à 3000 vers les ports 2000 à 3000 du client `A`.
+
+Ces options peuvent être utilisées quand on exécute directement man:natd[8], placées dans l'option `natd_flags=""` du fichier [.filename]#/etc/rc.conf#, ou passées par l'intermédiaire d'un fichier de configuration.
+
+Pour plus d'éléments et d'options de configuration consultez la page de manuel man:natd[8]
+
+[[network-natdaddress-redirection]]
+=== Redirection d'adresses
+
+La redirection d'adresses est utile si plusieurs adresses IP sont disponibles mais doivent se trouver sur une seule machine. Avec cela, man:natd[8] peut assigner à chaque client du réseau local sa propre adresse IP externe. Le programme man:natd[8] récrit alors les paquets sortant des clients du réseau local avec l'adresse IP externe correcte et redirige tout le trafic entrant sur une adresse IP particulière vers la machine du réseau local correspondante. Ce principe est également connu sous le nom de translation d'adresses statique. Par exemple, les adresses IP `128.1.1.1`, `128.1.1.2`, et `128.1.1.3` appartiennent à la passerelle natd. L'adresse `128.1.1.1` peut être utilisée comme adresse IP externe de la passerelle natd, tandis que `128.1.1.2` et `128.1.1.3` sont redirigées vers les machines `A` et `B` du réseau local.
+
+La syntaxe de l'option `-redirect_address` est la suivante:
+
+[.programlisting]
+....
+-redirect_address localIP publicIP
+....
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|localIP
+|L'adresse IP interne du client sur le réseau local.
+
+|publicIP
+|L'adresse IP externe correspondant au client sur le réseau local.
+|===
+
+Dans l'exemple, les arguments passés à la commande seraient:
+
+[.programlisting]
+....
+-redirect_address 192.168.0.2 128.1.1.2
+-redirect_address 192.168.0.3 128.1.1.3
+....
+
+Comme pour l'option `-redirect_port`, ces options peuvent être placées dans l'option `natd_flags=""` du fichier [.filename]#/etc/rc.conf#, ou passées par l'intermédiaire d'un fichier de configuration. Avec la redirection d'adresse, il n'y a pas besoin de redirection de ports puisque toutes les données reçues sur une IP particulière sont redirigées.
+
+Les adresses IP sur la machine natd doivent être active et pointer sur l'interface externe. Consultez la page de manuel man:rc.conf[5] pour cela.
+
+[[network-plip]]
+== IP sur liaison parallèle (PLIP)
+
+PLIP nous permet d'utiliser le protocole TCP/IP entre ports parallèles. C'est utile sur des machines sans cartes réseaux, ou pour effectuer une installation sur ordinateur portable. Dans cette section nous aborderons:
+
+* La fabrication d'un câble parallèle ("laplink").
+* La connexion de deux ordinateurs via PLIP.
+
+[[network-create-parallel-cable]]
+=== Fabriquer un câble parallèle
+
+Vous pouvez acheter un câble parallèle auprès de la plupart des vendeurs de matériel informatique. Si ce n'est pas le cas, ou désirez savoir comment est fait un tel câble, le tableau suivant montre comment en faire un à partir d'un câble parallèle d'imprimante.
+
+.Câblage d'un câble parallèle pour réseau
+[cols="1*l,1*l,1*l,1,1*l", frame="none", options="header"]
+|===
+| A-name
+| A-End
+| B-End
+| Descr.
+| Post/Bit
+
+|
+
+....
+DATA0
+-ERROR
+....
+|
+
+....
+2
+15
+....
+|
+
+....
+15
+2
+....
+|Data
+|
+
+....
+0/0x01
+1/0x08
+....
+
+|
+
+....
+DATA1
++SLCT
+....
+|
+
+....
+3
+13
+....
+|
+
+....
+13
+3
+....
+|Data
+|
+
+....
+0/0x02
+1/0x10
+....
+
+|
+
+....
+DATA2
++PE
+....
+|
+
+....
+4
+12
+....
+|
+
+....
+12
+4
+....
+|Data
+|
+
+....
+0/0x04
+1/0x20
+....
+
+|
+
+....
+DATA3
+-ACK
+....
+|
+
+....
+5
+10
+....
+|
+
+....
+10
+5
+....
+|Strobe
+|
+
+....
+0/0x08
+1/0x40
+....
+
+|
+
+....
+DATA4
+BUSY
+....
+|
+
+....
+6
+11
+....
+|
+
+....
+11
+6
+....
+|Data
+|
+
+....
+0/0x10
+1/0x80
+....
+
+|GND
+|18-25
+|18-25
+|GND
+|-
+|===
+
+[[network-plip-setup]]
+=== Configurer PLIP
+
+Tout d'abord procurez-vous un câble "laplink". Vérifiez ensuite que les deux ordinateurs disposent d'un noyau avec le support pour le pilote de périphérique man:lpt[4].
+
+[source,bash]
+....
+# grep lp /var/run/dmesg.boot
+lpt0: <Printer> on ppbus0
+lpt0: Interrupt-driven port
+....
+
+Le port parallèle doit fonctionner sous interruption, sous FreeBSD 4.X vous devriez avoir une ligne semblable à la ligne suivante dans le fichier de configuration du noyau:
+
+[.programlisting]
+....
+device ppc0 at isa? irq 7
+....
+
+Sous FreeBSD 5.X, le fichier [.filename]#/boot/device.hints# devrait contenir les lignes suivantes:
+
+[.programlisting]
+....
+hint.ppc.0.at="isa"
+hint.ppc.0.irq="7"
+....
+
+Ensuite vérifiez si le fichier de configuration du noyau contient une ligne `device plip` ou si le module [.filename]#plip.ko# est chargé. Dans les deux cas l'interface réseau parallèle devrait apparaître quand vous utilisez la commande man:ifconfig[8]:
+
+[source,bash]
+....
+# ifconfig plip0
+plip0: flags=8810<POINTOPOINT,SIMPLEX,MULTICAST> mtu 1500
+....
+
+Branchez le câble "laplink" sur les interfaces parallèles des deux ordinateurs.
+
+Configurez les paramètres de l'interface réseau des deux côtés en tant que `root`. Par exemple, si vous voulez connecter la machine `host1` avec la machine `host2`:
+
+[.programlisting]
+....
+                 host1 ----- host2
+IP Address    10.0.0.1      10.0.0.2
+....
+
+Configurez l'interface sur `host1` en tapant:
+
+[source,bash]
+....
+# ifconfig plip0 10.0.0.1 10.0.0.2
+....
+
+Configurez l'interface sur `host2` en tapant:
+
+[source,bash]
+....
+# ifconfig plip0 10.0.0.2 10.0.0.1
+....
+
+Vous devriez avoir maintenant une connexion qui fonctionne. Veuillez consulter les pages de manuel man:lp[4] et man:lpt[4] pour plus de détails.
+
+Vous devriez également ajouter les deux noms de machines dans le fichier [.filename]#/etc/hosts#:
+
+[.programlisting]
+....
+127.0.0.1               localhost.my.domain localhost
+10.0.0.1                host1.my.domain host1
+10.0.0.2                host2.my.domain
+....
+
+Pour vérifier le bon fonctionnement de la connexion, aller sur les deux machines et effectuez un "ping" vers l'autre machine. Par exemple, sur `host1`:
+
+[source,bash]
+....
+# ifconfig plip0
+plip0: flags=8851<UP,POINTOPOINT,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+        inet 10.0.0.1 --> 10.0.0.2 netmask 0xff000000
+# netstat -r
+Routing tables
+
+Internet:
+Destination        Gateway          Flags     Refs     Use      Netif Expire
+host2              host1              UH          0       0       plip0
+# ping -c 4 host2
+PING host2 (10.0.0.2): 56 data bytes
+64 bytes from 10.0.0.2: icmp_seq=0 ttl=255 time=2.774 ms
+64 bytes from 10.0.0.2: icmp_seq=1 ttl=255 time=2.530 ms
+64 bytes from 10.0.0.2: icmp_seq=2 ttl=255 time=2.556 ms
+64 bytes from 10.0.0.2: icmp_seq=3 ttl=255 time=2.714 ms
+
+--- host2 ping statistics ---
+4 packets transmitted, 4 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 2.530/2.643/2.774/0.103 ms
+....
+
+[[network-ipv6]]
+== IPv6
+
+L'IPv6 (également connu sous le nom de IPng "IP nouvelle génération") est la nouvelle version du très célèbre protocole IP (aussi connu sous le nom d'IPv4). Comme les autres systèmes BSD, FreeBSD utilise l'implémentation IPv6 KAME. Votre système FreeBSD est donc fourni avec tout ce dont vous aurez besoin pour tester l'IPv6. Cette section se concentre sur la configuration et l'utilisation d'IPv6.
+
+Au début des années 90, on a pris conscience de la diminution rapide de l'espace d'adresses IPv4. Etant donné le taux d'expansion de l'Internet, deux problèmes majeurs apparaissaient:
+
+* Le manque d'adresses. Aujourd'hui ce n'est plus vraiment un problème puisque les espaces d'adresses privées RFC1918 (`10.0.0.0/8`, `172.16.0.0/12`, et `192.168.0.0/16`) et la translation d'adresses (NAT) sont utilisés.
+* Les tables des routeurs devenaient trop importantes. C'est toujours un problème actuellement.
+
+L'IPv6 remédie à ces problèmes et à de nombreux autres:
+
+* Espace d'adressage sur 128 bits. Ou plus précisément, il y a 340 282 366 920 938 463 463 374 607 431 768 211 456 adresses disponibles. Cela équivaut à approximativement 6.67 * 10^27 adresses IPv6 par kilomètre-carré de surface de notre planète.
+* Les routeurs ne stockeront que des regroupements d'adresses dans leurs tables de routage réduisant donc l'espace moyen d'une table de routage à 8192 entrées.
+
+IPv6 présente également de nombreuses autres intéressantes fonctionnalités telles que:
+
+* L'autoconfiguration des adresses (http://www.ietf.org/rfc/rfc2462.txt[RFC2462])
+* Adresses unicast ("une parmi plusieurs")
+* Adresses multicast (multidestinataires) obligatoires
+* IPsec (protocole de sécurité IP)
+* Struture d'entête simplifiée
+* IP mobile
+* Mécanismes de transition IPv6-vers-IPv4
+
+Pour plus d'informations consultez les références suivantes:
+
+* Généralités sur l'IPv6 à http://playground.sun.com/pub/ipng/html/ipng-main.html[playground.sun.com]
+* http://www.kame.net[KAME.net]
+* http://www.6bone.net[6bone.net]
+
+=== Les adresses IPv6
+
+Il existe différent types d'adresses IPv6: unicast, anycast et multicast.
+
+Les adresses unicast (mono-destinataire) sont les adresses classiques. Un paquet envoyé à une adresse unicast arrive à l'interface correspondant à l'adresse.
+
+Les adresses anycast ne sont normalement pas distinguables des adresses unicast mais correspondent à un groupe d'interfaces. Un paquet destiné à une adresse anycast arrivera à l'interface la plus proche (en terme d'unité de distance du protocole de routage). Les adresses anycast devraient n'être utilisées que par les routeurs.
+
+Les adresses multicast identifient un groupe d'interfaces. Un paquet destiné à une adresse multicast arrivera sur toutes les interfaces appartenant au groupe multicast.
+
+[NOTE]
+====
+L'adresse de diffusion IPv4 (généralement `xxx.xxx.xxx.255`) est exprimée par des adresses multicast en IPv6.
+====
+
+.Adresses IPv6 réservées
+[cols="1,1,1,1", frame="none", options="header"]
+|===
+| Adresse IPv6
+| Longueur du préfixe (bits)
+| Description
+| Notes
+
+|`::`
+|128 bits
+|non-spécifiée
+|similaire à `0.0.0.0` sous IPv4
+
+|`::1`
+|128 bits
+|adresse de boucle
+|similaire à `127.0.0.1` sous IPv4
+
+|`::00:xx:xx:xx:xx`
+|96 bits
+|IPv4 encapsulé
+|Les 32 bits de poids faible sont l'adresse IPv4. Egalement appelée "adresse IPv6 compatible IPv4".
+
+|`::ff:xx:xx:xx:xx`
+|96 bits
+|adresse IPv6 mappée IPv4
+|Les 32 bits de poids faible sont l'adresse IPv4. Destinées aux machines ne supportant pas l'IPv6.
+
+|`fe80::` - `feb::`
+|10 bits
+|lien-local
+|similaire à l'interface de boucle sous IPv4
+
+|`fec0::` - `fef::`
+|10 bits
+|site-local
+|
+
+|`ff::`
+|8 bits
+|multicast
+|
+
+|`001` (base 2)
+|3 bits
+|unicast globale
+|Toutes les adresses unicast globales sont assignées à partir de ce pool. Les trois premiers bits de l'adresse sont "001".
+|===
+
+=== Lecture des adresses IPv6
+
+La forme canonique est représentée suivant le schéma: `x:x:x:x:x:x:x:x`, où chaque "x" est une valeur héxadécimale sur 16 bits. Par exemple `FEBC:A574:382B:23C1:AA49:4592:4EFE:9982`
+
+Souvent dans une adresse on aura de longues sous-parties constituées de zéros, une telle sous-partie peut être abrégée par "::". Les trois "0"s de poids fort de chaque quartet hexadécimal peuvent également être omis. Par exemple `fe80::1` correspond à la forme canonique `fe80:0000:0000:0000:0000:0000:0000:0001`.
+
+Une troisième forme est d'écrire les derniers 32 bits dans le style IPv4 bien connu (décimal) avec des points "." comme séparateurs. Par exemple `2002::10.0.0.1` correspond à la représentation canonique (hexadécimale) `2002:0000:0000:0000:0000:0000:0a00:0001` qui est à son tour équivalente à l'écriture `2002::a00:1`.
+
+Maintenant le lecteur devrait être en mesure de comprendre ce qui suit:
+
+[source,bash]
+....
+# ifconfig
+....
+
+[.programlisting]
+....
+rl0: flags=8943UP,BROADCAST,RUNNING,PROMISC,SIMPLEX,MULTICAST mtu 1500
+         inet 10.0.0.10 netmask 0xffffff00 broadcast 10.0.0.255
+         inet6 fe80::200:21ff:fe03:8e1%rl0 prefixlen 64 scopeid 0x1
+         ether 00:00:21:03:08:e1
+         media: Ethernet autoselect (100baseTX )
+         status: active
+....
+
+`fe80::200:21ff:fe03:8e1%rl0` est une adresse de lien local configurée automatiquement. Elle est générée à partir de l'adresse MAC dans le cas de l'autoconfiguration.
+
+Pour plus d'informations sur la structure des adresses IPv6 consultez la http://www.ietf.org/rfc/rfc3513.txt[RFC3513].
+
+=== Se connecter
+
+Actuellement, il y a quatre façons de se connecter à des machines et des réseaux utilisant l'IPv6:
+
+* Rejoindre le réseau expérimental 6bone
+* Obtenir un réseau IPv6 auprès de votre fournisseur d'accès. Contactez votre fournisseur d'accès Internet pour plus d'informations.
+* Utilisation d'un tunnel 6-vers-4 (http://www.ietf.org/rfc/rfc3068.txt[RFC3068])
+* Utilisation du logiciel porté package:net/freenet6[] si vous utilisez une connexion par modem.
+
+Ici nous ne parlerons que de la manière de se connecter au réseau 6bone puisque cela semble être aujourd'hui la méthode de connexion la plus populaire.
+
+Consultez tout d'abord le site http://www.6bone.net/[6bone] et recherchez une connexion 6bone proche de vous. Contactez le responsable et avec un peu de chance on vous donnera les instructions à suivre pour configurer votre connexion. Généralement cela implique la mise en place d'un tunnel GRE (gif).
+
+Voici un exemple typique de configuration d'un tunnel man:gif[4]:
+
+[source,bash]
+....
+# ifconfig gif0 create
+# ifconfig gif0
+gif0: flags=8010<POINTOPOINT,MULTICAST> mtu 1280
+# ifconfig gif0 tunnel MON_ADR_IPv4 MON_ADR_IPv4_ASSIGNEE_A_LAUTRE_BOUT_DU_TUNNEL
+# ifconfig gif0 inet6 alias MON_ADR_IPv6_ASSIGNEE_A_LEXTREMITE_DU_TUNNEL MON_ADR_IPv6_ASSIGNEE_A_LAUTRE_BOUT_DU_TUNNEL
+....
+
+Remplacez les mots en majuscules par les informations que vous avez reçues du point d'accès 6bone.
+
+Ceci établit le tunnel. Vérifiez si le tunnel fonctionne en utilisant man:ping6[8] sur l'adresse `ff02::1%gif0`. Vous devriez récevoir les réponses aux requêtes ping.
+
+[NOTE]
+====
+Au cas où vous seriez intrigué par l'adresse `ff02:1%gif0`, sachez que c'est une adresse multicast. `%gif0` précise que l'adresse multicast de l'interface [.filename]#gif0# doit être utilisée. Puisque nous utilisons `ping` sur une adresse multicast, l'autre bout du tunnel devrait également répondre.
+====
+
+Désormais, la mise en place d'une route vers votre lien 6bone devrait être relativement directe:
+
+[source,bash]
+....
+# route add -inet6 default -interface gif0
+# ping6 -n MON_LIEN_MONTANT
+....
+
+[source,bash]
+....
+# traceroute6 www.jp.FreeBSD.org
+(3ffe:505:2008:1:2a0:24ff:fe57:e561) from 3ffe:8060:100::40:2, 30 hops max, 12 byte packets
+     1  atnet-meta6  14.147 ms  15.499 ms  24.319 ms
+     2  6bone-gw2-ATNET-NT.ipv6.tilab.com  103.408 ms  95.072 ms *
+     3  3ffe:1831:0:ffff::4  138.645 ms  134.437 ms  144.257 ms
+     4  3ffe:1810:0:6:290:27ff:fe79:7677  282.975 ms  278.666 ms  292.811 ms
+     5  3ffe:1800:0:ff00::4  400.131 ms  396.324 ms  394.769 ms
+     6  3ffe:1800:0:3:290:27ff:fe14:cdee  394.712 ms  397.19 ms  394.102 ms
+....
+
+La sortie pourra être différente d'une machine à une autre. Maintenant vous devriez être en mesure d'atteindre le site IPv6 http://www.kame.net[www.kame.net] et de voir la tortue dansante - et cela si vous disposez d'un navigateur supportant l'IPv6 comme package:www/mozilla[], Konqueror qui fait partie du logiciel package:x11/kdebase3[], ou package:www/epiphany[].
+
+=== DNS dans le monde IPv6
+
+A l'origine, il existait deux types d'enregistrement DNS pour l'IPv6. L'organisme IETF a déclaré obsolète l'enregistrement A6. Les enregistrements AAAA sont aujourd'hui le standard.
+
+L'utilisation des enregistrements AAAA est assez direct. Assignez votre nom de machine à la nouvelle adresse IPv6 que vous venez d'obtenir en ajoutant:
+
+[.programlisting]
+....
+MYHOSTNAME           AAAA    MYIPv6ADDR
+....
+
+à votre fichier de zone DNS primaire. Dans le cas où vous ne gérez pas vos propres zones DNS contactez le responsable de votre DNS. Les versions actuelles de bind (version 8.3 et 9) et package:dns/djbdns[] (avec le correctif IPv6) supportent les enregistrements AAAA.
+
+=== Effectuer les changements nécessaires dans le fichier [.filename]#/etc/rc.conf#
+
+==== Paramétrage du client IPv6
+
+Ces paramètres vous permettront de configurer une machine qui sera sur votre réseau local et sera un client, non pas un routeur. Pour que man:rtsol[8] configure automatiquement votre interface réseau au démarrage tout ce dont vous avez besoin d'ajouter est:
+
+[.programlisting]
+....
+ipv6_enable="YES"
+....
+
+Pour assigner une adresse IP statique telle que `2001:471:1f11:251:290:27ff:fee0:2093`, à votre interface [.filename]#fxp0#, ajoutez:
+
+[.programlisting]
+....
+ipv6_ifconfig_fxp0="2001:471:1f11:251:290:27ff:fee0:2093"
+....
+
+Pour assigner le routeur par défaut `2001:471:1f11:251::1`, ajoutez ce qui suit au fichier [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ipv6_defaultrouter="2001:471:1f11:251::1"
+....
+
+==== Paramétrage d'un routeur/passerelle IPv6
+
+Ceci vous aidera à mettre en oeuvre les instructions que votre fournisseur de tunnel, tel que http://www.6bone.net/[6bone], vous a donné et à les convertir en paramètres qui seront conservés à chaque démarrage. Pour rétablir votre tunnel au démarrage, utilisez quelque chose comme ce qui suit dans le fichier [.filename]#/etc/rc.conf#:
+
+Listez les interfaces génériques de tunnel qui seront configurées, par exemple [.filename]#gif0#:
+
+[.programlisting]
+....
+gif_interfaces="gif0"
+....
+
+Pour configurer l'interface avec une adresse (extrémité) locale _MY_IPv4_ADDR_ vers une adresse (extrémité) distante _REMOTE_IPv4_ADDR_:
+
+[.programlisting]
+....
+gifconfig_gif0="MY_IPv4_ADDR REMOTE_IPv4_ADDR"
+....
+
+Pour utiliser l'adresse IPv6 que l'on vous a assigné en vue d'être utilisée pour votre extrémité du tunnel IPv6, ajoutez:
+
+[.programlisting]
+....
+ipv6_ifconfig_gif0="MY_ASSIGNED_IPv6_TUNNEL_ENDPOINT_ADDR"
+....
+
+Ensuite tout ce qu'il reste à faire est de définir la route par défaut pour l'IPv6. C'est l'autre extrémité du tunnel IPv6:
+
+[.programlisting]
+....
+ipv6_defaultrouter="MY_IPv6_REMOTE_TUNNEL_ENDPOINT_ADDR"
+....
+
+==== Paramétrage d'un tunnel IPv6
+
+Si le serveur doit router de l'IPv6 entre votre réseau et le reste du monde, le paramètre suivant sera également nécessaire dans votre fichier [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+ipv6_gateway_enable="YES"
+....
+
+=== Annonce du routeur et auto-configuration
+
+Cette section vous aidera à configurer man:rtadvd[8] pour l'annonce de la route IPv6 par défaut.
+
+Pour activer man:rtadvd[8], vous devrez ajouter ce qui suit à votre fichier [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+rtadvd_enable="YES"
+....
+
+Il est important que vous indiquiez l'interface sur laquelle le routeur IPv6 sera sollicité. Par exemple pour que man:rtadvd[8] utilise [.filename]#fxp0#:
+
+[.programlisting]
+....
+rtadvd_interfaces="fxp0"
+....
+
+Nous devons maintenant créer le fichier de configuration [.filename]#/etc/rtadvd.conf#. Voici un exemple:
+
+[.programlisting]
+....
+fxp0:\
+	:addrs#1:addr="2001:471:1f11:246::":prefixlen#64:tc=ether:
+....
+
+Remplacez [.filename]#fxp0# avec l'interface que vous allez utiliser.
+
+Ensuite remplacez `2001:471:1f11:246::` avec votre préfixe.
+
+Si vous êtes un sous-réseau `/64` dédié, il ne sera pas nécessaire de modifier quelque chose d'autre. Sinon, vous devrez modifier `prefixlen#` avec la valeur correcte.
+
+[[network-atm]]
+== ATM ("Asynchronous Transfer Mode")
+
+=== Configuration IP conventionnelle sur ATM (PVCs)
+
+L'IP conventionnelle sur ATM ("Classical IP over ATM"-CLIP) est la méthode la plus simple pour utiliser ATM (Asynchronous Transfer Mode) avec l'IP. Elle peut être utilisée en mode non connecté ("Switched Virtual Connections"-SVCs) et en mode connecté ("Permanent Virtual Connections"-PVCs). Cette section décrit comment configurer un réseau basé sur les PVCs.
+
+==== Configurations en réseau maillé
+
+La première méthode de configuration CLIP avec des PVCs est de connecter entre elles chaque machine du réseau par l'intermédiaire d'une PVC dédiée. Bien que cela soit simple à configurer, cela tend à devenir impraticable avec un nombre important de machines. Notre exemple suppose que nous avons quatre machines sur le réseau, chacune connectée au réseau ATM à l'aide d'une carte réseau ATM. La première étape est d'établir le plan des adresses IP et des connexions ATM entre machines. Nous utilisons le plan suivant:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Machine
+| Adresse IP
+
+|`hostA`
+|`192.168.173.1`
+
+|`hostB`
+|`192.168.173.2`
+
+|`hostC`
+|`192.168.173.3`
+
+|`hostD`
+|`192.168.173.4`
+|===
+
+Pour réaliser un réseau maillé, nous avons besoin d'une connexion ATM entre chaque paire de machines:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Machines
+| Couple VPI.VCI
+
+|`hostA` - `hostB`
+|0.100
+
+|`hostA` - `hostC`
+|0.101
+
+|`hostA` - `hostD`
+|0.102
+
+|`hostB` - `hostC`
+|0.103
+
+|`hostB` - `hostD`
+|0.104
+
+|`hostC` - `hostD`
+|0.105
+|===
+
+Les valeurs VPI et VCI à chaque extrémité de la connexion peuvent bien évidemment être différentes, mais par souci de simplicité nous supposerons quelles sont identiques. Ensuite nous devons configurer les interfaces ATM sur chaque machine:
+
+[source,bash]
+....
+hostA# ifconfig hatm0 192.168.173.1 up
+hostB# ifconfig hatm0 192.168.173.2 up
+hostC# ifconfig hatm0 192.168.173.3 up
+hostD# ifconfig hatm0 192.168.173.4 up
+....
+
+en supposant que l'interface ATM est [.filename]#hatm0# sur toutes les machines. Maintenant les PVCs doivent être configurées sur `hostA` (nous supposons qu'elles sont déjà configurées sur les switches ATM, vous devez consulter le manuel du switch sur comment réaliser cette configuration).
+
+[source,bash]
+....
+hostA# atmconfig natm add 192.168.173.2 hatm0 0 100 llc/snap ubr
+hostA# atmconfig natm add 192.168.173.3 hatm0 0 101 llc/snap ubr
+hostA# atmconfig natm add 192.168.173.4 hatm0 0 102 llc/snap ubr
+
+hostB# atmconfig natm add 192.168.173.1 hatm0 0 100 llc/snap ubr
+hostB# atmconfig natm add 192.168.173.3 hatm0 0 103 llc/snap ubr
+hostB# atmconfig natm add 192.168.173.4 hatm0 0 104 llc/snap ubr
+
+hostC# atmconfig natm add 192.168.173.1 hatm0 0 101 llc/snap ubr
+hostC# atmconfig natm add 192.168.173.2 hatm0 0 103 llc/snap ubr
+hostC# atmconfig natm add 192.168.173.4 hatm0 0 105 llc/snap ubr
+
+hostD# atmconfig natm add 192.168.173.1 hatm0 0 102 llc/snap ubr
+hostD# atmconfig natm add 192.168.173.2 hatm0 0 104 llc/snap ubr
+hostD# atmconfig natm add 192.168.173.3 hatm0 0 105 llc/snap ubr
+....
+
+Bien évidemment des contrats de trafic autres qu'UBR ("Unspecified Bit Rate") peuvent être utilisés dès que la carte ATM les supportent. Dans ce cas le nom du contrat de trafic est suivi par les paramètres du trafic. De l'aide concernant l'outil man:atmconfig[8] peut être obtenue avec:
+
+[source,bash]
+....
+# atmconfig help natm add
+....
+
+ou dans la page de manuel de man:atmconfig[8].
+
+La même configuration peut être faite par l'intermédiaire de [.filename]#/etc/rc.conf#. Pour la machine `hostA` cela ressemblerait à:
+
+[.programlisting]
+....
+network_interfaces="lo0 hatm0"
+ifconfig_hatm0="inet 192.168.173.1 up"
+natm_static_routes="hostB hostC hostD"
+route_hostB="192.168.173.2 hatm0 0 100 llc/snap ubr"
+route_hostC="192.168.173.3 hatm0 0 101 llc/snap ubr"
+route_hostD="192.168.173.4 hatm0 0 102 llc/snap ubr"
+....
+
+L'état de toutes les routes CLIP peut être obtenu avec:
+
+[source,bash]
+....
+hostA# atmconfig natm show
+....

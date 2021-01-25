@@ -1,0 +1,1069 @@
+---
+title: Rozdział 8. Konfiguracja jądra FreeBSD
+part: Część II. Codzienne czynności
+prev: books/handbook/multimedia
+next: books/handbook/printing
+---
+
+[[kernelconfig]]
+= Konfiguracja jądra FreeBSD
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Spis treści
+:table-caption: Tabela
+:figure-caption: Rysunek
+:example-caption: Przykład
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 8
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/kernelconfig/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/kernelconfig/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/kernelconfig/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pl/mailing-lists.adoc[]
+include::shared/pl/urls.adoc[]
+include::shared/pl/teams.adoc[]
+
+toc::[]
+
+[[kernelconfig-synopsis]]
+== Streszczenie
+
+Rdzeniem systemu operacyjnego FreeBSD jest jądro. Odpowiedzialne jest za zarządzanie pamięcią, wymuszanie kontroli bezpieczeństwa, sieć, dostęp do dysków i wiele innych. Podczas, gdy coraz więcej elementów FreeBSD jest konfigurowanych dynamicznie, czasem jeszcze może zajść potrzeba przekonfigurowania i rekompilowania jądra.
+
+Po przeczytaniu tego rozdziału będziemy wiedzieć:
+
+* Dlaczego możemy potrzebować indywidualnego jądra.
+* Jak napisać plik konfiguracyjny lub dostroić istniejący.
+* Jak wykorzystać plik konfiguracyjny jądra do przygotowania i kompilacji nowego jądra.
+* Jak zainstalować nowe jądro.
+* Jak się ratować, jeśli coś pójdzie nie tak.
+
+Wszystkie przykładowe polecenia przedstawione w niniejszym rozdziale powinny być uruchamiane jako użytkownik `root`.
+
+[[kernelconfig-custom-kernel]]
+== Po co budować indywidualne jądro?
+
+Tradycyjnie, system FreeBSD miał coś, co zwie się "monolitycznym" jądrem. Był to jeden duży program, wspierający ustaloną liczbą urządzeń. Jeśli zaszła potrzeba zmiany zachowania jądra, należało skompilować nowe jądro i uruchomić z nim ponownie komputer.
+
+W dzisiejszych czasach, FreeBSD bardzo szybko przechodzi do modelu, w którym funkcjonalność jądra zawiera się w modułach, które można dynamicznie aplikować, lub usuwać, w miarę potrzeb. Umożliwia to jądru szybkie przystosowywanie się zaraz po rozpoznaniu nowego sprzętu (jak karty PCMCIA w laptopach). Pozwala też zwiększyć funkcjonalność, której nie miało oryginalne jądro (któremu nie były dane funkcje potrzebne). Potocznie mówi się o jądrze modularnym.
+
+Pomimo tego, czasem trzeba wprowadzić do jądra statyczne zmiany. Na przykład w sytuacjach, gdy kluczowe funkcje jądra zostają zmieniane, nie jest możliwym załadowanie dynamicznie ładowalnego modułu. Możliwe też, że jeszcze odpowiedni, dynamicznie ładowalny moduł, nie został napisany.
+
+Budowanie indywidualnego jądra jest jednym z najważniejszych rytuałów, których podczas użytkowania systemu BSD trzeba doświadczyć. Ten czasochłonny proces przyniesie naszemu systemowi wiele korzyści. Inaczej niż w przypadku jądra [.filename]#GENERIC# [podstawowego, domyślnego], które musi wspierać wiele rodzajów sprzętu, nasze jądro będzie wspierało tylko _nasz_ sprzęt PC. Ma to wiele zalet:
+
+* Szybszy czas uruchamiania systemu. Od kiedy jądro będzie sprawdzało tylko sprzęt który mamy, czas uruchamiania znacząco się zmniejszy.
+* Mniejsze zużycie pamięci. Indywidualne jądro często zużywa mniej pamięci niż jądro [.filename]#GENERIC#, co jest istotnym faktem, gdyż jądro przez cały czas musi być w pamięci obecne. Z tych powodów, budowanie indywidualnego jądra jest szczególnie przydatne przy pracy z maszynami o małej ilości pamięci RAM'u.
+* Więcej wspieranego sprzętu. Indywidualne jądro może zawierać obsługę np. kart muzycznych, które nie są wspierane przez domyślne jądro [.filename]#GENERIC#.
+
+[[kernelconfig-building]]
+== Budowanie i instalowanie indywidualnego jądra
+
+Omówmy pokrótce katalog kompilacji jądra. Wszystkie wspomniane za chwilę katalogi będą relatywnymi względem [.filename]#/usr/src/sys#, do którego można także dojść przez [.filename]#/sys#. Można tam znaleźć wiele różnych podkatalogów, jednak dla nas najważniejszym będzie [.filename]#arch/conf#. W nim właśnie dokonamy edycji pliku konfiguracyjnego jądra oraz je skompilujemy, będą to kolejne etapy w całym procesie budowy. _arch_ oznacza architekturę, do wyboru: [.filename]#i386#, [.filename]#alpha#, [.filename]#amd64#, [.filename]#ia64#, [.filename]#powerpc#, [.filename]#sparc64#, lub [.filename]#pc98# (alternatywna gałąź sprzętu PC, popularna w Japonii). Wszystko, co znajduje się w katalogu danej architektury dotyczy ściśle tylko jej. Reszta źródeł jest dla wszystkich architektur taka sama. Zwróćmy uwagę na logiczną strukturę katalogów z każdym wspieranym urządzeniem, systemem plików, opcjami dodatkowymi - wszystko posiada swój własny podkatalog.
+
+Przykłady w niniejszym rozdziale zakładają, że wykorzystujemy architekturę i386. Jeśli tak nie jest, będziemy musieli dokonać odpowiednich zmian w nazwach ścieżek dostępu dla architektury naszego systemu.
+
+[NOTE]
+====
+Jeśli _nie_ mamy katalogu [.filename]#/usr/src/sys#, oznacza to, że nie dysponujemy zainstalowanymi źródłami jądra. Najprostszym sposobem na zainstalowanie jest uruchomienie jako `root sysinstall`'a, wybranie [.guimenuitem]#Configure#, następnie [.guimenuitem]#Distributions#, później [.guimenuitem]#src#, a na końcu [.guimenuitem]#sys#. Jeśli jednak jesteśmy osobami mającymi awersję do konfiguratorów możemy zainstalować źródła jądra ręcznie. W poniższym przykładzie instalacja z "oficjalnej" płyty CD FreeBSD:
+
+[source,bash]
+....
+# mount /cdrom
+# mkdir -p /usr/src/sys
+# ln -s /usr/src/sys /sys
+# cat /cdrom/src/ssys.[a-d]* | tar -xzvf -
+....
+
+====
+
+Następnie wchodzimy do katalogu [.filename]#arch/conf# i kopiujemy domyślny plik konfiguracyjny o nazwie [.filename]#GENERIC# tworząc plik z nazwą jaką chcemy nadać swojemu jądru. Na przykład:
+
+[source,bash]
+....
+# cd /usr/src/sys/i386/conf
+# cp GENERIC MYKERNEL
+....
+
+Tradycyjnie nazwa jądra pisana jest wielkimi literami. Dodatkowo dobrym pomysłem jest, by nazywać jądra tak jak komputery, co pomaga rozróżnić jądra, gdy mamy wiele komputerów z różnym sprzętem. Dla potrzeb tego przykładu nazwiemy jądro [.filename]#MYKERNEL#.
+
+[TIP]
+====
+
+Nie jest najlepszym pomysłem trzymanie pliku konfiguracyjnego jądra bezpośrednio w katalogu [.filename]#/usr/src#. Jeśli podczas kompilacji mamy kłopot, czasem może się okazać kuszącym pomysłem po prostu wykasować cały katalog [.filename]#/usr/src# i rozpocząć od początku. Wtedy zwykle, kilka sekund po usunięciu katalogu, przypomina nam się, że usunęliśmy także plik konfiguracyjny jądra. Podobnie, nie powinniśmy edytować bezpośrednio [.filename]#GENERIC#, gdyż może zostać nadpisany przy kolejnej crossref:cutting-edge[cutting-edge,aktualizacji naszego drzewa źródeł] i zmiany, które wprowadziliśmy zostaną utracone.
+
+Możemy chcieć trzymać plik konfiguracyjny jądra gdziekolwiek, a następnie utworzyć symboliczne dowiązanie do pliku w katalogu [.filename]#i386#.
+
+Przykładowo:
+
+[source,bash]
+....
+# cd /usr/src/sys/i386/conf
+# mkdir /root/kernels
+# cp GENERIC /root/kernels/MYKERNEL
+# ln -s /root/kernels/MYKERNEL
+....
+
+====
+
+Przyszedł czas na edycję pliku konfiguracyjnego jądra. W przykładzie nazywa się on [.filename]#MYKERNEL#. Jeśli dopiero zainstalowaliśmy system, jedynym z dostępnych edytorów może być vi. Mimo, że jest dobrze udokumentowany, opisany w wielu crossref:bibliography[bibliography,książkach], dla początkujących wydaje się on nieco zbyt skomplikowany. FreeBSD zaopatrzony jest również w drugi edytor, znacznie prostszy w obsłudze, o nazwie ee. Jeśli dopiero zaczynamy, ee powinien być naszym wyborem. Nie krępujmy się i zmieńmy wartości na górze pliku, szczególnie te, odróżniające nasz własny plik od [.filename]#GENERIC#.
+
+Jeśli już kompilowaliśmy jądro w SunOS(TM) lub innych systemach BSD, duża część pliku konfiguracyjnego powinna być nam znajoma. Jeśli natomiast jesteśmy lepiej zaznajomieni z systemami typu DOS, plik konfiguracyjny może wydać się nam nieco obcy. W tym przypadku przeczytajmy uważnie każdą opcję oraz komentarz w crossref:kernelconfig[kernelconfig-config,pliku konfiguracyjnym].
+
+[NOTE]
+====
+Jeśli crossref:cutting-edge[updating-upgrading,synchronizujemy nasze drzewo źródłowe] z najnowszymi źródłami projektu FreeBSD, należy zawsze, nim rozpoczniemy jakiekolwiek działania aktualizujące, zapoznać się z zawartością pliku [.filename]#/usr/src/UPDATING#. W pliku tym zapisane są wszelkie niezbędne zagadnienia związane z aktualizacją FreeBSD. Plik [.filename]#/usr/src/UPDATING# zawsze pasuje do źródła naszej wersji FreeBSD, jest przez to bardziej odpowiednim źródłem informacji niż Podręcznik.
+====
+
+Musimy teraz skompilować kod źródłowy jądra. Istnieją dwie procedury, za pomocą których można tego dokonać. Wybór zależeć będzie od tego w jakim celu kompilujemy jądro oraz od wykorzystywanej wersji FreeBSD.
+
+* Jeśli zainstalowaliśmy _tylko_ źródła jądra, wykorzystamy procedurę 1.
+* Jeśli budujemy nowe jądro, bez aktualizowania źródeł (na przykład, by dodać dodatkowe opcje, np. `IPFIREWALL`), możemy użyć dowolnej z procedur.
+* Jeśli przebudowujemy jądro jako część procesu `make buildworld`, powinniśmy użyć procedury 2. 
+
+Jeśli _nie_ aktualizowaliśmy naszych źródeł w żaden sposób od ostatniego, zakończonego powodzeniem cyklu `buildworld`-`installworld` (nie uruchamialiśmy CVSup, CTM, ani nie korzystaliśmy z anoncvs), wówczas bezpiecznym jest skorzystać z sekwencji `config`, `make depend`, `make` i `make install`. 
+
+[.procedure]
+====
+*Procedura. Budowanie jądra w "tradycyjny" sposób.*
+
+. By wygenerować kod źródłowy jądra, należy uruchomić man:config[8].
++
+[source,bash]
+....
+# /usr/sbin/config MYKERNEL
+....
++
+. Następnie, przenieśmy się do katalogu w którym dokonuje się budowy. Po ponownym uruchomieniu man:config[8] wyświetlona zostanie nazwa katalogu.
++
+[source,bash]
+....
+# cd ../compile/MYKERNEL
+....
++
+. Skompilujmy jądro.
++
+[source,bash]
+....
+# make depend
+# make
+....
++
+. Zainstalujmy nowe jądro.
++
+[source,bash]
+....
+# make install
+....
+====
+
+[.procedure]
+====
+*Procedura. Budowanie jądra w "nowy" sposób.*
+
+. Wejdźmy do katalogu [.filename]#/usr/src#.
++
+[source,bash]
+....
+# cd /usr/src
+....
++
+. Skompilujmy jądro.
++
+[source,bash]
+....
+# make buildkernel KERNCONF=MYKERNEL
+....
++
+. Zainstalujmy nowe jądro.
++
+[source,bash]
+....
+# make installkernel KERNCONF=MYKERNEL
+....
+====
+
+[NOTE]
+====
+Ta metoda kompilacji jądra wymaga wszystkich plików źródłowych. Jeśli zainstalowaliśmy jedynie źródła jądra, powinniśmy skorzystać z opisanej powyżej metody tradycyjnej.
+====
+
+[TIP]
+====
+
+Domyślnie, podczas kompilacji indywidualnego jądra, _wszystkie_ moduły jądra zostaną również zrekompilowane. Jeśli chcemy zaktualizować jądro szybciej bądź zbudować tylko własne moduły, powinniśmy przed rozpoczęciem kompilacji jądra zmodyfikować plik [.filename]#/etc/make.conf#:
+
+[.programlisting]
+....
+MODULES_OVERRIDE = linux acpi sound/sound sound/driver/ds1 ntfs
+....
+
+Zmienna ta definiuje listę modułów do kompilacji zamiast wszystkich. Inne zmienne przydatne w procesie kompilacji jądra opisane zostały w podręczniku systemowym man:make.conf[5].
+====
+
+Nowe jądro zostanie skopiowane do katalogu [.filename]#/boot/kernel# jako [.filename]#/boot/kernel/kernel# , a dotychczasowe zostanie przeniesione do [.filename]#/boot/kernel.old/kernel#. Teraz należy ponownie uruchomić komputer. W razie jakby coś poszło źle, na końcu tego rozdziału przedstawionych zostało kilka <<kernelconfig-trouble,awaryjnych>> rozwiązań. Przeczytajmy również rozdziały opisujące co zrobić w razie, gdy system <<kernelconfig-noboot,nie chce się ponownie uruchomić>>.
+
+[NOTE]
+====
+Inne pliki związane z procesem uruchamiania, np. takie jak man:loader[8] czy pliki konfiguracyjne są przechowywane w katalogu [.filename]#/boot#. Własne moduły jak i moduły innych producentów, można umieszczać w katalogu [.filename]#/boot/kernel#, jednakże użytkownicy powinni być świadomi, iż synchronizacja modułów ze skompilowanym jądrem jest bardzo ważna. Moduły nie przygotowane do pracy z danym jądrem mogą doprowadzić do niestabilności czy błędów.
+====
+
+[[kernelconfig-config]]
+== Plik konfiguracyjny
+
+Ogólny format pliku konfiguracyjnego jest całkiem prosty. Każda linia zawiera słowo kluczowe i jeden lub więcej argumentów. Dla ułatwienia większość linii zawiera tylko jeden argument. Cokolwiek poprzedzone znakiem `#` jest uważane za komentarz i jest ignorowane. Ten rozdział opisuje każde słowo kluczowe w ogólnym porządku jaki zawiera plik [.filename]##GENERIC##. [[kernelconfig-options]] Wyczerpująca lista opcji i więcej szczegółowych objaśnień zależnych od architektury znaleźć można w pliku [.filename]##NOTES##, znajdującym się w tym samym katalogu co [.filename]##GENERIC##. Opis opcji niezależnych od architektury znajduje się w pliku [.filename]##/usr/src/sys/conf/NOTES##.
+
+[NOTE]
+====
+By skompilować plik zawierający wszystkie dostępne opcje, jak się z reguły robi do celów testowych, należy wpisać jako `root` następujące polecenie:
+
+[source,bash]
+....
+# cd /usr/src/sys/i386/conf && make LINT
+....
+
+====
+
+Poniżej opisany został przykład pliku konfiguracyjnego [.filename]#GENERIC# z licznymi dodatkowymi komentarzami, tam gdzie są potrzebne objaśnienia. Przykład ten powinien odpowiadać naszej kopii pliku [.filename]#/usr/src/sys/i386/conf/GENERIC#.
+
+[.programlisting]
+....
+machine		i386
+....
+
+Jest to architektura komputera. Musi być którymś z: `alpha`, `amd64`, `i386`, `ia64`, `pc98`, `powerpc`, lub `sparc64`.
+
+[.programlisting]
+....
+cpu          I486_CPU
+cpu          I586_CPU
+cpu          I686_CPU
+....
+
+Powyższe wpisy określają typ CPU jaki posiadamy w swoim systemie. Możemy mieć kilka różnych wpisów (np. jeśli nie jesteśmy pewni czy mamy `I586_CPU` czy `I686_CPU`), jednak kiedy konfigurujemy jądro najlepiej pozostawić CPU jakie mamy. Jeśli nie jesteśmy pewni swojego procesora, możemy sprawdzić zawartość pliku [.filename]#/var/run/dmesg.boot#, aby przejrzeć komunikaty startowe.
+
+[.programlisting]
+....
+ident          GENERIC
+....
+
+Jest to identyfikator jądra. Możemy go zmienić na taki jak nazwaliśmy swoje jądro, w naszym poprzednim przykładzie `MYKERNEL`. Wartość jaką pozostawimy we wpisie `ident` będzie wyświetlana podczas startu, więc korzystnie jest dać nowemu jądru inną nazwę, jeśli chcemy go odróżnić od jądra, którego używamy na co dzień (np. chcemy zbudować eksperymentalne jądro).
+
+[.programlisting]
+....
+#To statically compile in device wiring instead of /boot/device.hints
+#hints          "GENERIC.hints"         # Default places to look for devices.
+....
+
+man:device.hints[5] jest wykorzystywany do konfiguracji opcji sterowników urządzeń. Domyślną lokacją sprawdzaną przez man:loader[8] w trakcie uruchamiania systemu jest [.filename]#/boot/device.hints#. Wykorzystując opcję `hints` możemy wkompilować je statycznie w jądro. Tym samym nie będzie potrzeby tworzyć pliku [.filename]#device.hints# w katalogu [.filename]#/boot#.
+
+[.programlisting]
+....
+makeoptions     DEBUG=-g          # Build kernel with gdb(1) debug symbols
+....
+
+Typowy proces kompilacji FreeBSD wyświetla również informacje diagnostyczne w trakcie budowy jądra z użyciem opcji `-g`, która włącza wyświetlanie informacji diagnostycznych w man:gcc[1]. Ten sam efekt można również osiągnąć poprzez opcję `-g` w man:config[8] przy korzystaniu z "tradycyjnej" metody kompilacji jądra (<<kernelconfig-building>> zawiera więcej informacji na temat budowy jądra).
+
+[.programlisting]
+....
+options          SCHED_4BSD         # 4BSD scheduler
+....
+
+Tradycyjny i domyślny systemowy zarządca procesów FreeBSD. Nie zmieniajmy tego.
+
+[.programlisting]
+....
+options          PREEMPTION         # Enable kernel thread preemption
+....
+
+Pozwala na wywłaszczanie wątków w jądrze przez wątki o wyższym priorytecie. Pozwala to na interaktywność i przerywanie wątków, by ukończyć pewne czynności wcześniej i uniknąć oczekiwania.
+
+[.programlisting]
+....
+options          INET              # InterNETworking
+....
+
+Obsługa sieci. Należ pozostawić ten wpis, nawet jeśli nie planujemy podłączyć się do sieci. Większość programów wymaga przynajmniej urządzenia pętli zwrotnej loopback (np. tworzenie połączeń sieciowych wewnątrz naszego PC), więc jest to wpis bardzo istotny.
+
+[.programlisting]
+....
+options          INET6             # IPv6 communications protocols
+....
+
+Umożliwia to obsługę protokołu komunikacyjnego IPv6.
+
+[.programlisting]
+....
+options          FFS               # Berkeley Fast Filesystem
+....
+
+Jest to podstawowy dyskowy system plików. Należy go pozostawić, jeśli startujemy system z dysku twardego.
+
+[.programlisting]
+....
+options          SOFTUPDATES       # Enable FFS Soft Updates support
+....
+
+Opcja ta umożliwia tzw. Soft Updates w jądrze, co potrafi przyspieszyć czas dostępu do dysku przy zapisie. Jednakże, nawet jeśli funkcja ta jest włączona w jądrze, musi zostać aktywowana dla wybranych dysków. Czy opcja ta jest włączona możemy sprawdzić w wyniku polecenia man:mount[8]. Jeśli przy naszym dysku nie ma oznaczenia `soft-updates` oznacza to, że musimy ją włączyć wykorzystując polecenie man:tunefs[8] (dla istniejących systemów plików) bądź man:newfs[8] (dla nowych systemów plików).
+
+[.programlisting]
+....
+options          UFS_ACL           # Support for access control lists
+....
+
+Opcja ta włącza w jądrze obsługę list kontroli dostępu do systemu plików. Polega to na wykorzystaniu rozszerzonych atrybutów oraz systemu plików UFS2. crossref:security[fs-acl,File System Access Control Lists] opisuje dokładniej tę funkcjonalność. Domyślnie listy ACL są włączone i nie powinny być wyłączane w jądrze jeśli były wcześniej wykorzystywane w systemie plików, gdyż usunie to listy kontroli dostępu zmieniając metodę ochrony plików w nieprzewidywalny sposób.
+
+[.programlisting]
+....
+options          UFS_DIRHASH       # Improve performance on big directories
+....
+
+Opcja ta zawiera kod szybszej obsługi dużych katalogów kosztem zużycia dodatkowej pamięci. Możemy pozostawić tę opcję dla dużych serwerów lub dla interaktywnej stacji roboczej, a zablokować ją kiedy system jest mało obciążony i posiada mało pamięci, a dostęp do dysków nie jest taki ważny, np. serwer z zaporą ogniową.
+
+[.programlisting]
+....
+options          MD_ROOT           # MD is a potential root device
+....
+
+Opcja ta włącza obsługę wirtualnego dysku w pamięci RAM, wykorzystywanego jako główne urządzenie.
+
+[.programlisting]
+....
+options          NFSCLIENT         # Network Filesystem Client
+options          NFSSERVER         # Network Filesystem Server
+options          NFS_ROOT          # NFS usable as /, requires NFSCLIENT
+....
+
+Sieciowy system plików. Jeżeli nie planujemy montowania partycji z serwera UNIX(R) poprzez TCP/IP, możemy zablokować te linie.
+
+[.programlisting]
+....
+options          MSDOSFS           # MSDOS Filesystem
+....
+
+System plików MS-DOS(R). Jeśli nie planujemy montowania dysków lub partycji sformatowanych pod DOS-em podczas startowania systemu, dla bezpieczeństwa zablokujmy tę linię. Automatycznie MSDOSFS będzie ładowane kiedy pierwszy raz zamontujemy DOSową partycje jak opisano powyżej. Również wyśmienity program package:emulators/mtools[] umożliwia dostęp do dyskietek DOSowych bez potrzeby ich montowania i odmontowywania (i bynajmniej nie jest potrzebny `MSDOSFS`).
+
+[.programlisting]
+....
+options          CD9660            # ISO 9660 Filesystem
+....
+
+System plików ISO 9660 dla płyt CDROM. Jeśli nie posiadamy napędu CDROM możemy zablokować tę linię, lub gdy montujesz dane z CD okazjonalnie (od kiedy zamontujemy dane z CD po raz pierwszy, CD9660 będzie ładowany automatycznie). Płyty audio CD nie potrzebuje tego systemu plików.
+
+[.programlisting]
+....
+options          PROCFS            # Process filesystem (requires PSEUDOFS)
+....
+
+System plików procesów. Jest to system plików "na niby" montowany w [.filename]#/proc#, który dla takich programów jak man:ps[1] posiada więcej informacji o tym jakie procesy są właśnie uruchomione. W większości przypadków wykorzystanie `PROCFS` nie jest wymagane, gdyż większość narzędzi diagnostycznych i monitorujących zostało zaadaptowanych do pracy bez `PROCFS`: Domyślne instalacje nie montują tego systemu plików.
+
+[.programlisting]
+....
+options          PSEUDOFS          # Pseudo-filesystem framework
+....
+
+Jądra 6.X wykorzystujące `PROCFS` muszą również zawierać obsługę `PSEUDOFS`.
+
+[.programlisting]
+....
+options          GEOM_GPT          # GUID Partition Tables.
+....
+
+Opcja ta umożliwia tworzenie dużej ilości partycji na pojedynczym dysku.
+
+[.programlisting]
+....
+options          COMPAT_43         # Compatible with BSD 4.3 [KEEP THIS!]
+....
+
+Kompatybilność z systemem 4.3BSD. Należy pozostawić ten wpis; niektóre programy będą zachowywać się dziwnie jeśli zablokujemy tę opcję.
+
+[.programlisting]
+....
+options          COMPAT_FREEBSD4   # Compatible with FreeBSD4
+....
+
+Opcja ta potrzebna jest w systemach FreeBSD 5.X i386(TM) i Alpha do obsługi aplikacji skompilowanych w starszych wersjach FreeBSD, wykorzystujących stary interfejs wywołań systemowych. Zaleca się by wykorzystywać tę opcję we wszystkich systemach i386(TM) i Alpha, w których mogą wykorzystywane starsze aplikacje; platformy wspierane dopiero od wersji 5.X, jak np. ia64 i sparc64, nie wymagają ten opcji.
+
+[.programlisting]
+....
+options          SCSI_DELAY=5000  # Delay (in ms) before probing SCSI
+....
+
+Sprawi to, że jądro zatrzyma się na 5 sekund przed rozpoczęciem rozpoznawania w naszym systemie każdego urządzenia SCSI. Jeśli jednak posiadamy tylko urządzenia IDE, możemy ten wpis zignorować. W innym przypadku możemy zmniejszyć tę wartość i w ten sposób przyspieszyć start systemu. Gdy to zrobimy a FreeBSD będzie miał kłopoty z rozpoznawaniem urządzeń SCSI będziemy musieli zmienić tę wartość na większą.
+
+[.programlisting]
+....
+options          KTRACE            # ktrace(1) support
+....
+
+Śledzenie procesów przez jądro, które jest użyteczne w diagnozowaniu.
+
+[.programlisting]
+....
+options          SYSVSHM           # SYSV-style shared memory
+....
+
+Daje to systemom z rodziny V mechanizm współdzielenia pamięci. W działaniu ma to wiele wspólnego z mechanizmem XSHM w X-ach. Znaczna ilość programów obciążająca system graficzny zyska automatycznie na prędkości. Jeśli jesteśmy użytkownikiem X-ów koniecznie pozostawmy tę opcję.
+
+[.programlisting]
+....
+options          SYSVMSG           # SYSV-style message queues
+....
+
+Wsparcie dla mechanizmu komunkatów w Systemach V. Opcja ta dodaje zaledwie kilkaset bajtów do jądra.
+
+[.programlisting]
+....
+options          SYSVSEM           # SYSV-style semaphores
+....
+
+Wsparcie dla mechanizmu semaforów w Systemach V. Mniej przydatne w użyciu ale również dodaje tylko kilkaset bajtów do jądra.
+
+[NOTE]
+====
+Parametr `-p` polecenia man:ipcs[1] wyświetli każdy proces, który używa tych dogodności Sytemów V.
+====
+
+[.programlisting]
+....
+options 	     _KPOSIX_PRIORITY_SCHEDULING # POSIX P1003_1B real-time extensions
+....
+
+Rozszerzenia czasu rzeczywistego dodane w 1993 do POSIX(R). Pewne aplikacje z kolekcji portów używają tego mechanizmu (jak np. StarOffice(TM)).
+
+[.programlisting]
+....
+options          KBD_INSTALL_CDEV  # install a CDEV entry in /dev
+....
+
+Opcja ta związana jest z obsługą klawiatury. Dodaje ona wpis CDEV w [.filename]#/dev#.
+
+[.programlisting]
+....
+options          AHC_REG_PRETTY_PRINT     # Print register bitfields in debug
+                                          # output.  Adds ~128k to driver.
+options          AHD_REG_PRETTY_PRINT     # Print register bitfields in debug
+                                          # output.  Adds ~215k to driver.
+....
+
+Pomaga to w diagnozowaniu, wypisując łatwiejsze do odczytania definicje rejestrów.
+
+[.programlisting]
+....
+options          ADAPTIVE_GIANT    # Giant mutex is adaptive.
+....
+
+Giant jest nazwą mechanizmu wzajemnego wykluczania (uśpiony mutex) chroniącego znaczną grupę zasobów jądra. Obecnie mechanizm ten stanowi niedopuszczalnie wąskie gardło w wydajności systemu, które jest zastępowane przez blokady zabezpieczające indywidualne zasoby. Opcja `ADAPTIVE_GIANT` powoduje, że Giant jest dołączany do zestawu adaptacyjnie zapętlanych muteksów. Co oznacza, że w momencie gdy wątek chce zablokować mutex Giant, który jest już zablokowany przez inny wątek bądź procesor, pierwszy wątek będzie pracował i oczekiwał na zwolnienie blokady. Normalnie, wątek przeszedłby do stanu uśpienia i oczekiwał na kolejną okazję uruchomienia. Jeśli nie jesteśmy przekonani, pozostawmy tę opcję włączoną.
+
+[.programlisting]
+....
+device          apic               # I/O APIC
+....
+
+Urządzenie apic pozwala na wykorzystanie we/wy APIC do dostarczania przerwań. Urządzenie apic może być wykorzystywane zarówno w jądrach UP jak i SMP, przy czym wymagane jest jedynie w przypadku tych drugich. By włączyć obsługę wielu procesorów należy dodać wiersz `options SMP`.
+
+[.programlisting]
+....
+device          eisa
+....
+
+Należy włączyć to jeśli posiadamy płytę główną typu EISA. Umożliwia to autodetekcję i konfigurację dla wszystkich urządzeń pracujących na magistrali EISA.
+
+[.programlisting]
+....
+device          pci
+....
+
+Włączmy to jeśli posiadamy płyte główną typu PCI. Umożliwia to autodetekcję kart PCI i przesyłanie z magistrali PCI do ISA.
+
+[.programlisting]
+....
+# Floppy drives
+device          fdc
+....
+
+Kontroler stacji dyskietek.
+
+[.programlisting]
+....
+# ATA and ATAPI devices
+device          ata
+....
+
+Sterownik ten obsługuje wszystkie urządzenia ATA i ATAPI. Potrzebujemy tylko tej jednej linijki, aby jądro wykrywało wszystkie urządzenia na współczesnych maszynach.
+
+[.programlisting]
+....
+device          atadisk                 # ATA disk drives
+....
+
+Potrzebne jest to razem z `device ata` dla dysków ATA.
+
+[.programlisting]
+....
+device          ataraid                 # ATA RAID drives
+....
+
+Potrzebne jest to razem z `device ata` dla dysków ATA RAID.
+
+[.programlisting]
+....
+
+device          atapicd                 # ATAPI CDROM drives
+....
+
+Potrzebne jest to razem z `device ata` dla napędów CDROM ATAPI.
+
+[.programlisting]
+....
+device          atapifd                 # ATAPI floppy drives
+....
+
+Potrzebne jest to razem z `device ata` dla stacji dyskietek ATAPI.
+
+[.programlisting]
+....
+device          atapist                 # ATAPI tape drives
+....
+
+Potrzebne jest to razem z `device ata` dla urządzeń taśmowych ATAPI.
+
+[.programlisting]
+....
+options         ATA_STATIC_ID           # Static device numbering
+....
+
+Powoduje to przydzielanie przez kontroler statycznego numeru, inaczej liczba dyskowa będzie przydzielana dynamicznie.
+
+[.programlisting]
+....
+# SCSI Controllers
+device          ahb        # EISA AHA1742 family
+device          ahc        # AHA2940 and onboard AIC7xxx devices
+device          ahd        # AHA39320/29320 and onboard AIC79xx devices
+device          amd        # AMD 53C974 (Teckram DC-390(T))
+device          isp        # Qlogic family
+#device         ispfw      # Firmware for QLogic HBAs- normally a module
+device          mpt        # LSI-Logic MPT-Fusion
+#device         ncr        # NCR/Symbios Logic
+device          sym        # NCR/Symbios Logic (newer chipsets)
+device          trm        # Tekram DC395U/UW/F DC315U adapters
+
+device          adv        # Advansys SCSI adapters
+device          adw        # Advansys wide SCSI adapters
+device          aha        # Adaptec 154x SCSI adapters
+device          aic        # Adaptec 15[012]x SCSI adapters, AIC-6[23]60.
+device          bt         # Buslogic/Mylex MultiMaster SCSI adapters
+
+device          ncv        # NCR 53C500
+device          nsp        # Workbit Ninja SCSI-3
+device          stg        # TMC 18C30/18C50
+....
+
+Kontrolery SCSI. Należy zablokować te kontrolery, których nie posiadamy w naszym systemie. Jeśli mamy system oparty tylko na IDE możemy pozbyć się całej listy.
+
+[.programlisting]
+....
+# SCSI peripherals
+device          scbus      # SCSI bus (required for SCSI)
+device          ch         # SCSI media changers
+device          da         # Direct Access (disks)
+device          sa         # Sequential Access (tape etc)
+device          cd         # CD
+device          pass       # Passthrough device (direct SCSI access)
+device          ses        # SCSI Environmental Services (and SAF-TE)
+....
+
+Peryferia SCSI. Ponownie, jeśli nie posiadamy takowych możemy je wyłączyć lub jeśli posiadamy tylko sprzęt IDE możemy wszystkie powyższe wpisy usunąć.
+
+[NOTE]
+====
+Sterownik USB man:umass[4] i kilka innych sterowników wykorzystuje podsystem SCSI chociaż nie są one prawdziwymi urządzeniami SCSI. Tym samym musimy pamiętać by nie usunąć całkowicie obsługi SCSI jeśli którykolwiek z tego typu sterowników został uwzględniony w konfiguracji jądra.
+====
+
+[.programlisting]
+....
+# RAID controllers interfaced to the SCSI subsystem
+device          amr        # AMI MegaRAID
+device          arcmsr     # Areca SATA II RAID
+device          asr        # DPT SmartRAID V, VI and Adaptec SCSI RAID
+device          ciss       # Compaq Smart RAID 5*
+device          dpt        # DPT Smartcache III, IV - See NOTES for options
+device          hptmv      # Highpoint RocketRAID 182x
+device          rr232x     # Highpoint RocketRAID 232x
+device          iir        # Intel Integrated RAID
+device          ips        # IBM (Adaptec) ServeRAID
+device          mly        # Mylex AcceleRAID/eXtremeRAID
+device          twa        # 3ware 9000 series PATA/SATA RAID
+
+# RAID controllers
+device          aac        # Adaptec FSA RAID
+device          aacp       # SCSI passthrough for aac (requires CAM)
+device          ida        # Compaq Smart RAID
+device          mfi        # LSI MegaRAID SAS
+device          mlx        # Mylex DAC960 family
+device          pst        # Promise Supertrak SX6000
+device          twe        # 3ware ATA RAID
+....
+
+Obsługa kontrolerów RAID. Jeśli nie posiadamy żadnych kontrolerów RAID, możemy te wpisy zablokować lub usunąć.
+
+[.programlisting]
+....
+# atkbdc0 controls both the keyboard and the PS/2 mouse
+device          atkbdc     # AT keyboard controller
+....
+
+Sterownik klawiatury (`atkbdc`) obsługujący porty we/wy dla klawiatur AT i dla urządzeń wskazujących PS/2. Wymagany jest przez sterownik klawiatur (`atkbd`) i PS/2 (`psm`).
+
+[.programlisting]
+....
+device          atkbd      # AT keyboard
+....
+
+Sterownik `atkbd` razem z kontrolerem `atkbdc` umożliwiają dostęp do klawiatury AT84 lub do rozszerzonej klawiatury, które podłączone są do kontrolera AT.
+
+[.programlisting]
+....
+device          psm        # PS/2 mouse
+....
+
+Urządzenie to należy wykorzystać jeśli nasza myszka jest podłączona do portu PS/2.
+
+[.programlisting]
+....
+device          kbdmux        # keyboard multiplexer
+....
+
+Podstawowa obsługa multipleksacji klawiatury.
+
+[.programlisting]
+....
+device          vga        # VGA video card driver
+....
+
+Sterownik kart video.
+
+[.programlisting]
+....
+
+device          splash     # Splash screen and screen saver support
+....
+
+Obraz tytułowy w trakcie startu! Wymagany również przez wygaszacze ekranu.
+
+[.programlisting]
+....
+# syscons is the default console driver, resembling an SCO console
+device          sc
+....
+
+`sc` jest domyślnym sterownikiem konsoli, przypominający konsolę SCO. Wiele programów pracujących w trybie pełnoekranowym uzyskują dostęp do konsoli poprzez biblioteki bazy danych terminala takie jak [.filename]#termcap#, nie powinno więc być istotne czy używamy właśnie jego czy `vt`, sterownika zgodnego z `VT220`. Kiedy logujemy się, a nasz program ma kłopoty podczas uruchamiania spod konsoli, należy ustawić zmienną `TERM` na `scoansi`.
+
+[.programlisting]
+....
+# Enable this for the pcvt (VT220 compatible) console driver
+#device          vt
+#options         XSERVER          # support for X server on a vt console
+#options         FAT_CURSOR       # start with block cursor
+....
+
+Sterowniki konsoli kompatybilnej z VT220 i z wcześniejszymi VT100/102. Dobrze pracują na niektórych laptopach nie posiadających sprzętu kompatybilnego z `sc`. Również w takim przypadku należy zmodyfikować zmienną `TERM` na `vt100` lub `vt220`, kiedy się logujemy. Sterownik ten może być również użyteczny kiedy łączymy się z dużą liczbą różnorodnych maszyn w sieci, gdzie [.filename]#termcap# lub [.filename]#terminfo# często nie posiadają wpisów dla urządzeń `sc` - wówczas `vt100` powinien być dostępny praktycznie na wszystkich platformach.
+
+[.programlisting]
+....
+device          agp
+....
+
+Należy włączyć tę opcję jeśli posiadamy kartę AGP w systemie. Włączy to obsługę AGP i AGP GART dla płyt głównych obsługujących te funkcje.
+
+[.programlisting]
+....
+# Power management support (see NOTES for more options)
+#device          apm
+....
+
+Zaawansowane zarządzanie energią. Użyteczne dla laptopów, chociaż we FreeBSD 5.X i późniejszych opcja ta jest domyślnie wyłączona w jądrze [.filename]#GENERIC#.
+
+[.programlisting]
+....
+# Add suspend/resume support for the i8254.
+device           pmtimer
+....
+
+Sterownik urządzenia regulatora czasowego dla zarządzania energią, jak np. APM i ACPI.
+
+[.programlisting]
+....
+# PCCARD (PCMCIA) support
+# PCMCIA and cardbus bridge support
+device          cbb               # cardbus (yenta) bridge
+device          pccard            # PC Card (16-bit) bus
+device          cardbus           # CardBus (32-bit) bus
+....
+
+Obsługa kart PCMCIA. Potrzebna dla laptopów.
+
+[.programlisting]
+....
+# Serial (COM) ports
+device          sio               # 8250, 16[45]50 based serial ports
+....
+
+Są to porty szeregowe nazywane w terminologii MS-DOS(R)/Windows(R) [.filename]#COM#.
+
+[NOTE]
+====
+Jeśli posiadamy wewnętrzny modem na [.filename]#COM4# oraz port szeregowy [.filename]#COM2#, należy zmienić IRQ modemu na 2 (z technicznych pobudek IRQ2 = IRQ9) bo takiej kolejności wymaga FreeBSD. Jeśli posiadamy wieloportową kartę szeregową musimy odwołać się do podręcznika systemowego man:sio[4] po więcej informacji o właściwych ustawieniach w pliku [.filename]#/boot/device.hints#. Niektóre karty wideo (zwłaszcza te bazujące na chipie S3) używają adresów we/wy w postaci `0x*2e8`, a ponieważ wiele tanich kart szeregowych nie dekoduje w pełni 16-bitowej przestrzeni adresowej we/wy, powodują one konflikt sprzętowy czyniąc port [.filename]#COM4# praktycznie niedostępnym.
+
+Każdy port szeregowy wymaga unikalnego IRQ (z wyjątkiem multiportów gdzie współdzielenie przerwania jest obsługiwane) zatem domyślne IRQ dla [.filename]#COM3# i [.filename]#COM4# nie mają zastosowania.
+====
+
+[.programlisting]
+....
+# Parallel port
+device          ppc
+....
+
+Interfejs portu równoległego na magistrali ISA.
+
+[.programlisting]
+....
+device          ppbus      # Parallel port bus (required)
+....
+
+Umożliwia obsługę portów równoległych.
+
+[.programlisting]
+....
+device          lpt        # Printer
+....
+
+Obsługa drukarek na porcie równoległym.
+
+[NOTE]
+====
+Powyższe trzy wpisy są wymagane, by było możliwe korzystanie z drukarek na porcie równoległym.
+====
+
+[.programlisting]
+....
+device          plip       # TCP/IP over parallel
+....
+
+Sterownik dla równoległego interfejsu sieciowego.
+
+[.programlisting]
+....
+device          ppi        # Parallel port interface device
+....
+
+Uniwersalny port we/wy + IEEE1284.
+
+[.programlisting]
+....
+#device         vpo        # Requires scbus and da
+....
+
+Napęd ZIP firmy Iomega. Wymagane sterowniki `scbus` i `da`. Najlepszą wydajność można osiągnąć wykorzystując porty w trybie EPP 1.9.
+
+[.programlisting]
+....
+#device         puc
+....
+
+Opcję tę należy odblokować jeśli posiadamy "niemą" szeregową lub równoległa kartę PCI, obsługiwaną przez sterownik man:puc[4].
+
+[.programlisting]
+....
+# PCI Ethernet NICs.
+device          de         # DEC/Intel DC21x4x (Tulip)
+device          em         # Intel PRO/1000 adapter Gigabit Ethernet Card
+device          ixgb       # Intel PRO/10GbE Ethernet Card
+device          txp        # 3Com 3cR990 (Typhoon)
+device          vx         # 3Com 3c590, 3c595 (Vortex)
+....
+
+Różne karty sieciowe na złączu PCI. Należy zablokować lub usunąć te z nich, które nie są obecne w naszym systemie.
+
+[.programlisting]
+....
+# PCI Ethernet NICs that use the common MII bus controller code.
+# NOTE: Be sure to keep the 'device miibus' line in order to use these NICs!
+device          miibus     # MII bus support
+....
+
+Obsługa szyny MII wymagana dla wielu kart sieciowych 10/100 na złączu PCI, wykorzystujących nadajniki-odbiorniki zgodne z MII lub mają wbudowany nadbiornik pracujący jak MII. Dodanie `device miibus` do jądra pozwoli na obsługę miibus API i wszystkich sterowników PHY, włączając te, które nie wymagają indywidualnych ustawień i sterowników.
+
+[.programlisting]
+....
+device          bce        # Broadcom BCM5706/BCM5708 Gigabit Ethernet
+device          bfe        # Broadcom BCM440x 10/100 Ethernet
+device          bge        # Broadcom BCM570xx Gigabit Ethernet
+device          dc         # DEC/Intel 21143 and various workalikes
+device          fxp        # Intel EtherExpress PRO/100B (82557, 82558)
+device          lge        # Level 1 LXT1001 gigabit ethernet
+device          nge        # NatSemi DP83820 gigabit ethernet
+device          nve        # nVidia nForce MCP on-board Ethernet Networking
+device          pcn        # AMD Am79C97x PCI 10/100 (precedence over 'lnc')
+device          re         # RealTek 8139C+/8169/8169S/8110S
+device          rl         # RealTek 8129/8139
+device          sf         # Adaptec AIC-6915 (Starfire)
+device          sis        # Silicon Integrated Systems SiS 900/SiS 7016
+device          sk         # SysKonnect SK-984x & SK-982x gigabit Ethernet
+device          ste        # Sundance ST201 (D-Link DFE-550TX)
+device          ti         # Alteon Networks Tigon I/II gigabit Ethernet
+device          tl         # Texas Instruments ThunderLAN
+device          tx         # SMC EtherPower II (83c170 EPIC)
+device          vge        # VIA VT612x gigabit ethernet
+device          vr         # VIA Rhine, Rhine II
+device          wb         # Winbond W89C840F
+device          xl         # 3Com 3c90x (Boomerang, Cyclone)
+....
+
+Sterowniki wykorzystujące szynę MII.
+
+[.programlisting]
+....
+# ISA Ethernet NICs.  pccard NICs included.
+device          cs         # Crystal Semiconductor CS89x0 NIC
+# 'device ed' requires 'device miibus'
+device          ed         # NE[12]000, SMC Ultra, 3c503, DS8390 cards
+device          ex         # Intel EtherExpress Pro/10 and Pro/10+
+device          ep         # Etherlink III based cards
+device          fe         # Fujitsu MB8696x based cards
+device          ie         # EtherExpress 8/16, 3C507, StarLAN 10 etc.
+device          lnc        # NE2100, NE32-VL Lance Ethernet cards
+device          sn         # SMC's 9000 series of Ethernet chips
+device          xe         # Xircom pccard Ethernet
+
+# ISA devices that use the old ISA shims
+#device         le
+....
+
+Sterowniki ISA Ethernet. Plik [.filename]#/usr/src/sys/i386/conf/NOTES# zawiera szczegółowy opis, która karta jest obsługiwana przez dany sterownik.
+
+[.programlisting]
+....
+# Wireless NIC cards
+device          wlan       # 802.11 support
+device          an         # Aironet 4500/4800 802.11 wireless NICs.
+device          awi        # BayStack 660 and others
+device          ral        # Ralink Technology RT2500 wireless NICs.
+device          wi         # WaveLAN/Intersil/Symbol 802.11 wireless NICs.
+#device         wl         # Older non 802.11 Wavelan wireless NIC.
+....
+
+Obsługa różnych kart bezprzewodowych.
+
+[.programlisting]
+....
+# Pseudo devices
+device   loop          # Network loopback
+....
+
+Standardowe urządzenie pętli zwrotnej dla TCP/IP. Jeśli łączymy się z `localhost` (a.k.a. `127.0.0.1`) za pomocą telnetu bądź FTP, połączenie powróci do nas za pomocą tego urządzenia. Obecność tego wpisu w konfiguracji jądra jest _niezbędna_.
+
+[.programlisting]
+....
+device   random        # Entropy device
+....
+
+Bezpieczny z kryptograficznego punktu widzenia generator liczb losowych.
+
+[.programlisting]
+....
+device   ether         # Ethernet support
+....
+
+`ether` jest wymagany tylko wówczas, gdy posiadamy kartę Ethernet. Zawiera podstawowy kod protokołu Ethernet.
+
+[.programlisting]
+....
+device   sl            # Kernel SLIP
+....
+
+`sl` służy do obsługi SLIP. Zostało prawie całkowicie wyparte przez PPP, które jest łatwiejsze w obsłudze, lepiej przystosowane do połączeń modem - modem i posiada więcej możliwości.
+
+[.programlisting]
+....
+device   ppp           # Kernel PPP
+....
+
+Wsparcie jądra dla PPP przy połączeniach wdzwanianych. Jest również w niej zaimplementowana wersja PPP, dla wielu aplikacji używających `tun`, oferująca większą elastyczność i funkcjonalności takie jak np. połączenie na żądanie (demand dialing).
+
+[.programlisting]
+....
+device   tun           # Packet tunnel.
+....
+
+Używane przez rodzinę aplikacji korzystających z PPP. Więcej informacji na ten temat zawiera rozdział niniejszego Podręcznika poświęcony właśnie crossref:ppp-and-slip[userppp,PPP].
+
+[.programlisting]
+....
+
+device   pty           # Pseudo-ttys (telnet etc)
+....
+
+Jest to "pseudo-terminal" wykorzystywany przez przychodzące sesje `telnet` i `rlogin`, xterm oraz kilka innych aplikacji, jak np. Emacs.
+
+[.programlisting]
+....
+device   md            # Memory disks
+....
+
+Pseudo urządzenie memory-disk.
+
+[.programlisting]
+....
+device   gif           # IPv6 and IPv4 tunneling
+....
+
+Implementacja tunelowania IPv6 przez IPv4, IPv4 przez IPv6, IPv4 przez IPv4 oraz IPv6 przez IPv6. Urządzenie `gif` posiada cechę "auto-klonowania", co umożliwia tworzenie wymaganych plików urządzeń.
+
+[.programlisting]
+....
+device   faith         # IPv6-to-IPv4 relaying (translation)
+....
+
+To pseudo-urządzenie wyłapuje przesłane do niego pakiety i przekazuje je do demona translacji IPv4/IPv6.
+
+[.programlisting]
+....
+# The `bpf' device enables the Berkeley Packet Filter.
+# Be aware of the administrative consequences of enabling this!
+# Note that 'bpf' is required for DHCP.
+device   bpf           # Berkeley packet filter
+....
+
+Filtr pakietów rodem z Berkeley. To pseudo-urządzenie pozwala interfejsom sieciowym pracować w trybie nasłuchiwania, wyłapując każdy pakiet wysłany w sieci (np w sieci Ethernet). Pakiety te mogą zostać zapisane na dysku i/lub sprawdzane programem man:tcpdump[1].
+
+[NOTE]
+====
+Urządzenie man:bpf[4] jest również wykorzystywane przez man:dhclient[8], by uzyskać adres IP domyślnego rutera (bramki) itp. Jeśli używamy DHCP pozostawmy ten wpis.
+====
+
+[.programlisting]
+....
+# USB support
+device          uhci          # UHCI PCI->USB interface
+device          ohci          # OHCI PCI->USB interface
+#device         ehci          # EHCI PCI->USB interface (USB 2.0)
+device          usb           # USB Bus (required)
+#device         udbp          # USB Double Bulk Pipe devices
+device          ugen          # Generic
+device          uhid          # Human Interface Devices
+device          ukbd          # Keyboard
+device          ulpt          # Printer
+device          umass         # Disks/Mass storage - Requires scbus and da
+device          ums           # Mouse
+device          urio          # Diamond Rio 500 MP3 player
+device          uscanner      # Scanners
+# USB Ethernet, requires mii
+device          aue           # ADMtek USB Ethernet
+device          axe           # ASIX Electronics USB Ethernet
+device          cdce          # Generic USB over Ethernet
+device          cue           # CATC USB Ethernet
+device          kue           # Kawasaki LSI USB Ethernet
+device          rue           # RealTek RTL8150 USB Ethernet
+....
+
+Obsługa wielu urządzeń USB.
+
+[.programlisting]
+....
+# FireWire support
+device          firewire      # FireWire bus code
+device          sbp           # SCSI over FireWire (Requires scbus and da)
+device          fwe           # Ethernet over FireWire (non-standard!)
+....
+
+Obsługa różnorodnych urządzeń Firewire.
+
+Więcej informacji o wymienionych oraz dodatkowych urządzeniach obsługiwanych przez FreeBSD znaleźć można w pliku [.filename]#/usr/src/sys/i386/conf/NOTES#.
+
+=== Konfiguracja dużego rozmiaru pamięci (PAE)
+
+Maszyny dużego rozmiaru pamięci wymagają dostępu do większej ilości pamięci niż 4 gigabajty, do których ograniczona jest przestrzeń wirtualnych adresów użytkowników+jądra (ang. User+Kernel Virtual Address, KVA). Z tego właśnie powodu Intel dodał w procesorach serii Pentium(R) Pro i późniejszych obsługę 36-bitowej przestrzeni adresów pamięci fizycznej.
+
+Rozszerzenie PAE (ang. Physical Address Extension) procesorów Intel(R) Pentium(R) Pro i późniejszych pozwala na instalację do 64 gigabajtów pamięci. FreeBSD potrafi obsługiwać te rozszerzenie poprzez opcję konfiguracji jądra `PAE`, dostępną we wszystkich bieżących wersjach. Z uwagi na ograniczenia występujące w architekturze pamięci Intela, nie istnieje rozróżnienie pomiędzy rozmiarem pamięci poniżej i powyżej 4 gigabajtów. Pamięć znajdująca się powyżej jest po prostu dodawana do puli dostępnej pamięci.
+
+By aktywować obsługę PAE w jądrze, wystarczy dodać poniższy wiersz do pliku konfiguracyjnego naszego jądra:
+
+[.programlisting]
+....
+options		    PAE
+....
+
+[NOTE]
+====
+Obsługa PAE jest dostępna we FreeBSD jedynie dla procesorów Intel(R) IA-32. Należy również zwrócić uwagę, iż obsługa PAE we FreeBSD nie została szeroko przetestowana i powinna być traktowana jako drugiej jakości w porównaniu z innymi stabilnymi funkcjami FreeBSD.
+====
+
+Obsługa PAE we FreeBSD posiada również pewne ograniczenia:
+
+* Dany proces nie ma dostępu do więcej jak 4 gigabajtów przestrzeni pamięci wirtualnej VM.
+* Moduły KLD nie mogą być ładowane do jądra z włączoną opcją PAE, z uwagi na różnice w strukturze skompilowanego modułu i jądra.
+* Sterowniki urządzeń nie wykorzystujące interfejsu man:bus_dma[9] spowodują utratę danych w jądrze z włączoną opcją PAE. Tym samym odradza się ich stosowanie. Z tego właśnie powodu plik konfiguracyjny jądra z opcją [.filename]#PAE# jest dostarczany w wersji FreeBSD nie zawierającej żadnych ze sterowników, o których nie wiadomo, że współpracują poprawnie z jądrem z włączoną opcją PAE.
+* Niektóre narzędzia dostrajania systemu określają wykorzystanie zasobów pamięci na podstawie ilości dostępnej pamięci fizycznej. Takie programy mogą niepotrzebnie przydzielać więcej pamięci niż powinny, z uwag na naturę dużego rozmiaru pamięci systemu PAE. Przykładem może być opcja sysctl `kern.maxvnodes`, która kontroluje maksymalną liczbę dopuszczalnych węzłów w jądrze. Zaleca się modyfikację tych i innych parametrów do rozsądnych wartości.
+* Może być potrzebnym zwiększenie rozmiaru przestrzeni adresów KVA bądź redukcja ilości specyficznych zasobów jądra często wykorzystywanych (patrz wyżej) w celu uniknięcia wyczerpania KVA. Do zwiększenia przestrzeni KVA może być wykorzystania opcja jądra `KVA_PAGES`.
+
+W przypadku uwag odnośnie wydajności i stabilności pracy zaleca się lekturę podręcznika systemowego man:tuning[7]. Podręcznik systemowy man:pae[4] zawiera natomiast aktualne informacje odnośnie obsługi PAE we FreeBSD.
+
+[[kernelconfig-trouble]]
+== Jeśli pojawią się kłopoty
+
+Istnieje pięć kategorii problemów, które możemy napotkać budując jądro. Oto one:
+
+Błąd `config`:::
+Jeśli program man:config[8] zgłosił błąd podczas przetwarzania naszego pliku konfiguracyjnego, najprawdopodobniej popełniliśmy mały błąd w postaci literówki. Na szczęście man:config[8] wyświetli linię, z którą miał problem, dzięki czemu będziemy mogli szybko do niej dotrzeć. Na przykład, jeśli widzimy:
++
+[source,bash]
+....
+config: line 17: syntax error
+....
++
+Upewnijmy się, że słowo kluczowe zostało poprawnie wprowadzone, porównując z oryginalnym plikiem [.filename]#GENERIC# lub z innym wiarygodnym źródłem.
+
+Błąd `make`:::
+Jeśli pojawił się błąd podczas wykonywania polecenia `make`, zwykle wskazuje to na błąd w naszym opisie jądra. Nie jest to jednak błąd na tyle wyraźny, aby wykazał go man:config[8]. Jak poprzednio, musimy przejrzeć plik konfiguracyjny jądra. Jeśli w dalszym ciągu nie możemy rozwiązać problemu, możemy wysłać nasz plik konfiguracyjny na {freebsd-questions} gdzie nasz problem zostanie rozwiązany bardzo szybko.
+
+Jądro nie uruchamia się ponownie:[[kernelconfig-noboot]]::
+Jeśli nasze nowe jądro nie uruchamia się ponownie, bądź nie potrafi rozpoznać urządzeń, nie panikujmy! Na szczęście, FreeBSD jest wyposażone we wspaniały mechanizm przywracania po instalacji niekompatybilnego jądra. Po prostu musimy wybrać w loaderze jądro, które chcemy uruchomić. Możemy to zrobić, gdy system odlicza od 10 w dół. Wybieramy opcję numer sześć: "Escape to a loader prompt". Wpisujemy `unload kernel` a następnie `boot /boot/kernel.old/kernel`, lub jakąkolwiek inną nazwę jądra, które uruchomi się poprawnie. Jeśli rekonfigurujemy jądro, jedno sprawne powinniśmy mieć zawsze pod ręką.
++
+Po uruchomieniu z dobrym jądrem, możemy sprawdzić nasz plik konfiguracyjny, a następnie spróbować zbudować je ponownie. Pomocny jest plik [.filename]#/var/log/messages#, w którym, pośród innych rzeczy, znajdują się również zapisy z uruchomień jądra. Ponadto również man:dmesg[8] wyświetla informacje z jądra, pochodzące z bieżącego uruchomienia.
++
+[NOTE]
+====
+Jeśli mamy problemy ze zbudowaniem jądra, upewnijmy się, że posiadamy jądro [.filename]#GENERIC# lub inne działające jądro nazwane tak, by nie zostało nadpisane po kolejnym procesie budowy. Nie możemy polegać na [.filename]#kernel.old#, ponieważ gdy instalujemy nowe jądro, [.filename]#kernel.old# jest nadpisywane przez ostatnio zainstalowane jądro, które może być niedziałające. Ponadto, powinniśmy tak szybko, jak to tylko możliwe, przenieść działające jądro do właściwej lokalizacji [.filename]#/boot/kernel#, albo komendy takie jak man:ps[1] nie będą działały poprawnie. By to zrobić wystarczy zmienić nazwę katalogu zawierającego właściwe jądro:
+
+[source,bash]
+....
+# mv /boot/kernel /boot/kernel.bad
+# mv /boot/kernel.good /boot/kernel
+....
+
+====
+
+Jądro działa, ale przestało man:ps[1]:::
+Jeśli zainstalowaliśmy inną wersję jądra, niż tą, z którą były budowane narzędzia systemowe, na przykład jądro -CURRENT na systemie -RELEASE, wiele poleceń pokazujących stan systemu, jak man:ps[1], czy man:vmstat[8] nie będzie działało. Musimy dokonać crossref:cutting-edge[makeworld,rekompilacji i instalacji world] zbudowanych na podstawie tej samej wersji źródeł co nasze jądro. Jest to jeden z powodów, przez które nie jest najlepszym pomysłem instalowanie różnych wersji jądra i systemu operacyjnego.

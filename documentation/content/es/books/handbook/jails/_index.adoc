@@ -1,0 +1,525 @@
+---
+title: Capítulo 15. Jaulas
+part: Parte III. Administración del sistema
+prev: books/handbook/security
+next: books/handbook/mac
+---
+
+[[jails]]
+= Jaulas
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tabla de contenidos
+:table-caption: Tabla
+:figure-caption: Figura
+:example-caption: Ejemplo
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 15
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/jails/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/jails/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/jails/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/es/mailing-lists.adoc[]
+include::shared/es/teams.adoc[]
+include::shared/es/urls.adoc[]
+
+toc::[]
+
+[[jails-synopsis]]
+== Sinopsis
+
+En este capítulo se explica qué son las jaulas en FreeBSD y cómo usarlas. Las jaulas, citadas con frecuencia como la nueva generación de _entornos chroot_, son una herramienta muy poderosa que se ha puesto al servicio de los administradores de sistemas, aunque su uso más básico puede ser también de suma utilidad para usuarios avanzados.
+
+Tras leer este capítulo sabrá usted:
+
+* Qué es una jaula y para qué puede usarse en sistemas FreeBSD.
+* Cómo generar, arrancar y parar una jaula.
+* Cómo manejarse con los rudimentos de la administración de las jaulas, tanto desde dentro como desde fuera de la jaula.
+
+Otras fuentes de información útil sobre las jaulas:
+
+* La página de manual man:jail[8]. Es la referencia completa de `jail`, la herramienta administrativa de FreeBSD con la que se arrancan, paran y controlan las jaulas.
+* Las listas de correo y sus respectivos archivos. Los archivos de la {freebsd-questions}, entre otras listas de correo alojadas en el {mailman-lists} contienen una enorme cantidad de información sobre jaulas. La ayuda que está buscando puede obtenerla, por tanto, de una búsqueda en los archivos de las listas o de enviar una pregunta que nadie haya hecho en la lista de correo link:{freebsd-questions-url}[freebsd-questions].
+
+[[jails-terms]]
+== Términos relacionados con las jaulas
+
+Para ayudar a comprender las partes de FreeBSD que intervienen en el funcionamiento de las jaulas, su funcionamiento interno y el modo en que interactuan con el resto de FreeBSD, durante el resto del capítulo se utilizarán los siguientes términos:
+
+man:chroot[2] (comando)::
+Es una llamada al sistema de FreeBSD que restringe el directorio raiz de un proceso y sus hijos.
+
+man:chroot[2] (entorno)::
+Es el entorno de procesos que se ejecutan en un "chroot". Esto incluye recursos como la parte visible del sistema de ficheros, los ID de usuario y grupo disponibles, interfaces de red u otros mecanismos IPC.
+
+man:jail[8] (comando)::
+La herramienta de administración que permite arrancar procesos dentro del entorno de una jaula.
+
+servidor (sistema, proceso, usuario, etc)::
+El sistema que controla una jaula. El servidor tiene acceso a todos los recursos de hardware y puede controlar procesos tanto dentro como fuera de la jaula. Una de las diferencias importantes entre el sistema que aloja la jaula y la jaula propiamente dicha: las limitaciones que afectan a los procesos que se ejecutan con privilegios de superusuario dentro de la jaula no dependen de los procesos del servidor que la aloja.
+
+enjaulado (sistema, proceso, usuario, etc.)::
+Un proceso, usuario u otra entidad, cuyo acceso a los recursos está restringido por una jaula de FreeBSD.
+
+[[jails-intro]]
+== Introducción
+
+Dado lo dificil y desconcertante de la tarea de administrar sistemas se han ido desarrollando poderosas herramientas con el fin de hacer la vida del administrador más sencilla. Dichas herramientas suelen facilitar cierto tipo de mejoras en la instalación, configuración o mantenimiento de los sistemas. Una de las tareas que se espera que cumpla un administrador de sistemas es la configuración adecuada de la seguridad, de modo que pueda dar el servicio para el que se ha destinado sin que pueda verse comprometido.
+
+Una de las herramientas disponibles para mejorar los niveles de seguridad de un sistema FreeBSD es el uso de _jaulas_. Las jaulas fueron introducidas en FreeBSD 4.X por {phk}, pero en FreeBSD 5.X sus capacidades fueron aumentadas hasta hacer de ellas un subsistema poderoso y flexible. Su desarrollo sigue avanzando, aumentando así su utilidad, rendimiento, fiabilidad y seguridad.
+
+[[jails-what]]
+=== Qué es una jaula
+
+Los sistemas tipo BSD disponen de man:chroot[2] desde la época de 4.2BSD. man:chroot[8] permite restringir el directorio raiz de un conjunto de procesos, creando un entorno seguro y separado del resto del sistema. Los procesos creados dentro de un entorno chroot no pueden acceder a ficheros o recursos ubicados fuera del mismo. Por esta razón, si un atacante logra comprometer un servicio que se ejecuta en un entorno chroot no debería automáticamente poder acceder al resto del sistema. man:chroot[8] es una buena herramienta para tareas sencillas que no requieran mucha flexibilidad o características complejas o muy avanzadas. Por desgracia, desde la invención de chroot se han ido encontrando muchas formas de saltarse las barreras que chroot impone y, aunque estén corregidas en las versiones más modernas del kernel de FreeBSD, era evidente que man:chroot[2] no era la solución ideal para ejecutar servicios con seguridad. Había que implementar un nuevo subsistema.
+
+Este es uno de los principales motivos por los que se crearon las _jaulas_.
+
+Las jaulas llevan más allá en muchos sentidos el concepto tradicional de entorno man:chroot[2]. En un entorno man:chroot[2] tradicional los procesos solo ven limitada la parte del sistema de ficheros a la que pueden acceder. El resto de recursos del sistema, es decir, el conjunto de usuarios del sistema, los procesos en ejecución o el subsistema de red están compartidos entre el sistema alojado y el servidor. Las jaulas extienden este modelo virtualizando no solamente el acceso al sistema de ficheros, sino al conjunto de usuarios, al subsistema de red del kernel de FreeBSD y unas cuantas cosas más. En la <<jails-tuning>> se detallan diversas opciones de control exhaustivo para configurar el acceso a recursos de un entorno enjaulado.
+
+Una jaula se caracteriza por disponer de cuatro elementos:
+
+* Un "subárbol" de directorios: el punto desde el que se entra a una jaula. Una vez dentro de la jaula un proceso no puede escapar de dicho "subárbol". Los típicos problemas de seguridad que aparecín una y otra vez en el diseño del man:chroot[2] original no afectan a las jaulas de FreeBSD.
+* Un nombre de máquina ("hostname"), que definirá a la jaula. Las jaulas se usan principalmente para albergar servicios de red, por lo que disponer de un nombre de máquina descriptivo ayuda enormemente al administrador de sistemas.
+* Una dirección IP: debe asignarse a la jaula y no cambiarse durante el ciclo de vida de la jaula. La dirección IP de una jaula suele ser un alias de un interfaz de red, aunque no es imprescindible que así sea.
+* Un comando: La ruta de un ejecutable ubicado dentro de la jaula. La ruta es relativa al directorio raiz de la jaula, por lo que puede ser muy diferentes según el entorno.
+
+Además, las jaulas pueden tener sus propios usuarios e incluso su propio `root`. Es obvio que este usuario `root` tiene su poder para hacer circunscrito a la jaula y, desde el punto de vista del servidor, el usuario `root` de la jaula no es omnipotente. El usuario `root` de la jaula no puede ejecutar tareas críticas fuera de la jaula (man:jail[8]) a la que pertenece. Más adelante, en la <<jails-tuning>>, se dará más información sobre las restricciones del usuario `root`.
+
+[[jails-build]]
+== Creación y gestión de jaulas
+
+Algunos administradores dividen las jaulas en dos tipos: jaulas "completas", que recrean un sistema FreeBSD real, y jaulas "de servicio", que son aquellas que están dedicadas a una sola aplicación o servicio, en muchos casos ejecutándose sin privilegios. Se trata de una división exclusivamente conceptual, por lo que el proceso de generación de una jaula no se ve afectado por ella. La página de manual man:jail[8] explica claramente el procedimiento a seguir para generar una jaula:
+
+[source,bash]
+....
+# setenv D /aquí/está/la/jaula
+# mkdir -p $D <.>
+# cd /usr/src
+# make world DESTDIR=$D <.>
+# cd etc/ [9]
+# make distribution DESTDIR=$D <.>
+# mount_devfs devfs $D/dev <.>
+....
+
+<.> El mejor punto de partida es la elección del punto del sistema de ficheros del servidor donde estará físicamente ubicada la jaula. [.filename]#/usr/jail/nombredelajaula# es un buen sitio. _nombredelajaula_ es el nombre de máquina que identifica a la jaula. El sistema de ficheros [.filename]#/usr/# suele tener espacio suficiente para albergar el sistema de ficheros de la jaula que, cuando se trata de jaulas "completas", es esencialmente lo necesario para alojar todos y cada uno de los sistemas de ficheros en una instalación del sistema base por omisión de FreeBSD.
+
+<.> Este comando creará el contenido necesario (binarios, bibliotecas, páginas de manual, etc.) y lo copiará al "subárbol" elegido como ubicación física de la jaula. Todo se hace al típico estilo FreeBSD: se compila todo y luego se instala en la ruta de destino.
+
+<.> Al pasar el "target" `distribution` a make se instalan todos los ficheros de configuración necesarios. En pocas palabras, instala cada fichero instalable que haya en [.filename]#/usr/src/etc/# en el directorio [.filename]#/etc# de la jaula, es decir, en [.filename]#$D/etc/#.
+
+<.> No es imprescindible montar el sistema de ficheros man:devfs[8] dentro de la jaula aunque por otra parte (casi) todas las aplicaciones necesitan acceso al menos a un dispositivo, dependiendo esto del propósito de la aplicación. Es muy importante el control del acceso a dispositivos desde la jaula, puesto que una configuración descuidada puede permitir que un atacante haga de las suyas. El control sobre man:devfs[8] se gestiona mediante reglas que se detallan en las páginas de manual man:devfs[8] y man:devfs.conf[5].
+
+Una vez instalada la jaula puede arrancarla mediante man:jail[8]. man:jail[8] usa los cuatro argumentos que se detallan en la <<jails-what>>. Puede pasarle otros argumentos además de estos, por ejemplo para ejecutar procesos enjaulados bajo los permisos de un usuario específico. El argumento `_comando_` depende del tipo de jaula; si se trata de un _virtual system_[.filename]#/etc/rc# es una buena elección, puesto que ejecutará la secuencia de arranque de un sistema FreeBSD real. Si se trata de una jaula _de servicio_ depende del servicio o aplicación que se quiera ejecutar mediante la jaula.
+
+Con frecuencia las jaulas se arrancan durante el arranque del servidor que las aloja; el sistema [.filename]#rc# de FreeBSD permite hacerlo de un modo muy sencillo.
+
+[.procedure]
+. Puede crear una lista de jaulas que quiera arrancar en el inicio del sistema en el fichero man:rc.conf[5]:
++
+[.programlisting]
+....
+jail_enable="YES"   # Ponga NO si quiere desactivar el arranque de jaulas
+jail_list="www"     # Lista de nombres de jaulas separados por espacios
+....
+
+. Tendrá que añadir parámetros específicos para cada jaula al fichero man:rc.conf[5]:
++
+[.programlisting]
+....
+jail_www_rootdir="/usr/jail/www"     # directorio raiz de la jaula
+jail_www_hostname="www.example.org"  # nombre de máquina de la jaula
+jail_www_ip="192.168.0.10"           # dirección IP de la jaula
+jail_www_devfs_enable="YES"          # montar devfs en la jaula
+jail_www_devfs_ruleset="www_ruleset" # reglas a aplicar a devfs dentro de la jaula
+....
+
++ 
+El arranque de jaulas por omisión que se configure en man:rc.conf[5] ejecutará el script [.filename]#/etc/rc# de la jaula y asumirá que es un sistema virtual completo. Si se trata de una jaula de servicio el comando de arranque por omisión tendrá que cambiarse configurando la opción `jail__nombredejaula__exec_start` según convenga.
++
+[NOTE]
+====
+Si quiere consultar la lista completa de opciones consulte la página de manual man:rc.conf[5].
+====
+
+Puede arrancar o parar a mano una jaula mediante el script [.filename]#/etc/rc.d/jail# siempre y cuando la jaula aparezca en [.filename]#rc.conf#:
+
+[source,bash]
+....
+# /etc/rc.d/jail start www
+# /etc/rc.d/jail stop www
+....
+
+De momento no hay una forma limpia de apagar una jaula (man:jail[8]) debido a que los comandos que se usan normalmente para producir un apagado limpio del sistema no pueden usarse dentro de una jaula. La mejor forma de parar una jaula es ejecutar el siguiente comando desde dentro de la propia jaula o bien mediante man:jexec[8] desde fuera:
+
+[source,bash]
+....
+# sh /etc/rc.shutdown
+....
+
+Para más información consulte la página de manual man:jail[8].
+
+[[jails-tuning]]
+== Administración y personalización a fondo
+
+Hay diversas opciones que pueden usarse en las jaulas y varios tipos de formas de combinar un sistema FreeBSD servidor y las jaulas y poder disponer de aplicaciones de alto nivel. En esta sección se muestra lo siguiente:
+
+* Algunas de las opciones disponibles para personalizar el comportamiento y las restricciones de seguridad que pueden aplicarse en una jaula.
+* Algunas de las aplicaciones de alto nivel creadas para la administración de jaulas. Estas aplicaciones están en la colección de ports y pueden utilizarse en conjunto para implementar productos basados en jaulas.
+
+[[jails-tuning-utilities]]
+=== Herramientas del sistema para la personalización de jaulas en FreeBSD
+
+La personalización a fondo de las jaulas se hace en su mayor parte mediante la configuración de variables man:sysctl[8]. Hay una subcategoría especial de sysctl para que sea más sencillo organizar las opciones más más importantes: se trata de las opciones de la jerarquía `security.jail.*` del kernel de FreeBSD. A continuación veremos una lista de las principales sysctl relacionadas con las jaulas y los valores que tienen por omisión. Los nombres deberían describir por sí mismos qué función tienen (N. del T.: En inglés, claro) pero si necesita más información sobre ellas consulte las páginas de manual man:jail[8] y man:sysctl[8].
+
+* `security.jail.set_hostname_allowed: 1`
+* `security.jail.socket_unixiproute_only: 1`
+* `security.jail.sysvipc_allowed: 0`
+* `security.jail.enforce_statfs: 2`
+* `security.jail.allow_raw_sockets: 0`
+* `security.jail.chflags_allowed: 0`
+* `security.jail.jailed: 0`
+
+El administrador del _servidor_ puede usar estas variables para añadir o quitar limitaciones impuestas por omisión al usuario `root`. Tenga en cuenta que hay ciertas limitaciones que no pueden quitarse. El usuario `root` no puede montar o desmontar sistemas de ficheros desde su jaula. El usuario `root` no puede cargar o descargar reglas de man:devfs[8], configurar reglas de cortafuegos ni ejecutar muchas otras tareas administrativas que requieran modificaciones o acceso a datos internos del kernel, como cambiar el nivel de seguridad `securelevel` del kernel.
+
+El sistema base de FreeBSD contiene un conjunto básico de herramientas que permiten el acceso a información sobre jaulas activas en el sistema, así como la conexión a una jaula para ejecutar comandos administrativos. man:jls[8] y man:jexec[8] forman parte del sistema base de FreeBSD y permiten ejecutar las siguientes tareas:
+
+* Mostrar una lista de jaulas activas y sus correspondientes identificadores de jaula (JID), dirección IP, nombre de máquina y ruta.
+* Conectarse a una jaula en ejecució desde el servidor y ejecutar un comando dentro de la jaula o realizar tareas administrativas dentro de dicha jaula. Esto es muy útil cuando el usuario `root` quiere apagar la jaula de forma limpia. La herramienta man:jexec[8] permite también arrancar una shell dentro de la jaula para realizar tareas administrativas. Veamos un ejemplo:
++
+
+[source,bash]
+....
+# jexec 1 tcsh
+....
+
+[[jails-tuning-admintools]]
+=== Herramientas para tareas administrativas de alto nivel en la Colección de Ports
+
+Entre las variadas aplicaciones ajenas al Proyecto FreeBSD que han ido apareciendo para administrar jaulas una de las más completas y útiles es package:sysutils/jailutils[]. Es un conjunto de pequeñas aplicaciones de mucha ayuda en la gestión de una jaula (man:jail[8]). Por favor, consulte su página web para más información.
+
+[[jails-application]]
+== Uso de las jaulas
+
+[[jails-service-jails]]
+=== Jaulas "de servicio"
+
+Esta sección está basada en una idea que {simon} presentó por primera vez en http://simon.nitro.dk/service-jails.html[http://simon.nitro.dk/service-jails.html] y en un artículo con contenido adicional escrito por Ken Tom mailto:locals@gmail.com[locals@gmail.com]. En esta sección se detalla cómo configurar un sistema FreeBSD que añade una capa adicional de seguridad mediante el uso de man:jail[8]. Para su verdadero aprovechamiento se asume que el sistema en el que se vaya a aplicar ejecuta al menos RELENG_6_0 y que la información que contienen las secciones previas de este capítulo se ha comprendido totalmente.
+
+[[jails-service-jails-design]]
+==== Diseño
+
+Uno de los mayores problemas de las jaulas es la gestión de su proceso de actualización. Este proceso tiene a ser un problema porque cada jaula tiene que recompilarse íntegramente desde el código fuente cada vez que hay que actualizarla. Esto no es un gran problema si tenemos una sola jaula puesto que el proceso de actualización es bastante simple, pero si hay muchas jaulas será un trabajo largo y tedioso.
+
+[WARNING]
+====
+
+: Esta configuración requiere mucha experiencia con FreeBSD y el uso de sus características. Si los pasos que se detallan a continuación le parecen demasiado complicados puede echar un vistazo a sistemas más sencillos como package:sysutils/ezjail[], que le permitirá acceder a un método de administración de jaulas en FreeBSD más sencillo y no es tan sofisticado como el que le proponemos a continuación.
+====
+
+El origen de esta idea es resolver los problemas antes descritos compartiendo el máximo posible entre distintas jaulas, de un modo seguro (utilizando montajes using read-only man:mount_nullfs[8] mounts) para que la actualización sea más sencilla y el ubicar servicios aislados en jaulas sea más interesante. Además, se presenta una forma sencilla de añadir o borrar jaulas así como una forma de actualizarlas.
+
+[NOTE]
+====
+Los ejemplos de servicios en este contexto son: un servidor HTTP,un servidor DNS, un servidor SMTP, etc.
+====
+
+Los objetivos de la configuración descrita en esta sección son:
+
+* Crear una estructura de jaulas simple y fácil de entender. Esto implica _no_ tener que ejecutar un "installworld" completo en todas y cada una de las jaulas.
+* Facilitar la creación de nuevas jaulas o el borrado de jaulas previamente existentes.
+* Facilitar la actualización de jaulas ya existentes.
+* Hacer posible el uso de una rama de FreeBSD personalizada.
+* Ser paranoico en cuanto a seguridad, reduciendo todo lo posible la posibilidad de que los sistemas se vean comprometidos.
+* Ahorrar todo el espacio e inodos que sea posible.
+
+Como ya se ha dicho, este diseño se basa en gran medida en el disponer de una única plantilla en modo de sólo lectura (a la que llamaremos nullfs) montada en cada jaula y un dispositivo en modo lectura-escritura por cada jaula. El dispositivo puede ser otro disco físico adicional, una partición o un dispositivo man:md[4] basado en un vnode. En este ejemplo utilizaremos montajes nullfs en modo lectura-escritura.
+
+La estructura del sistema de ficheros se detalla en la siguiente lista:
+
+* Cada jaula se montará bajo [.filename]#/home/j#.
+* [.filename]#/home/j/mroot# será la plantilla para cada jaula y la partición de sólo lectura para todas las jaulas.
+* Se creará un directorio vacío para cada jaula bajo el directorio [.filename]#/home/j#.
+* Cada jaula tendrá un directorio [.filename]#/s# que estará enlazado con la parte de lectura-escritura del sistema.
+* Cada jaula tendrá su propio sistema en modo lectura-escritura basado en [.filename]#/home/j/skel#.
+* Cada parte de lectura-escritura correspondiente a cada jaula se creará en [.filename]#/home/js#.
+
+[NOTE]
+====
+Se asume que las jaulas se instalarán bajo la partición [.filename]#/home#. Por supuesto esto no es en absoluto obligatorio, pero hay que tener en cuenta que debe hacerse el mismo cambio en cada uno de los ejemplos que se muestran más adelante.
+====
+
+[[jails-service-jails-template]]
+==== Creación de la plantilla
+
+En esta sección se describen los pasos necesarios para crear la plantilla maestra que conformará la parte de sólo lectura que usarán las jaulas.
+
+Siempre es recomendable actualizar el sistema FreeBSD a la última rama -RELEASE. Consulte el crossref:cutting-edge[makeworld,capítulo] correspondiente de este libro si necesita más información. En caso de que la actualización no sea posible tendrá que usar "buidworld" para poder seguir adelante. También necesitará el paquete package:sysutils/cpdup[]. Usaremos man:portsnap[8] para descargar la Colección de Ports de FreeBSD. El capítulo sobre crossref:ports[portsnap,Portsnap] es siempre una lectura muy recomendable para quienes no tengan experiencia con su funcionamiento.
+
+[.procedure]
+. Lo primero que haremos será crear una estructura de directorios para el sistema de ficheros de sólo lectura que contendrá los binarios de nuestras jaulas, luego iremos al directorio que contiene el árbol de código de FreeBSD e instalaremos el sistema de ficheros de sólo lectura en la plantilla de las jaulas:
++
+[source,bash]
+....
+# mkdir /home/j /home/j/mroot
+# cd /usr/src
+# make installworld DESTDIR=/home/j/mroot
+....
+
+. Una vez hecho esto, prepararemos la Colección de Ports de FreeBSD para nuestras jaulas así como un árbol de código FreeBSD, necesario para usar mergemaster:
++
+[source,bash]
+....
+# cd /home/j/mroot
+# mkdir usr/ports
+# portsnap -p /home/j/mroot/usr/ports fetch extract
+# cpdup /usr/src /home/j/mroot/usr/src
+....
+
+. Crear la estructura de directorios necesaria para la parte de lectura-escritura del sistema:
++
+[source,bash]
+....
+# mkdir /home/j/skel /home/j/skel/home /home/j/skel/usr-X11R6 /home/j/skel/distfiles
+# mv etc /home/j/skel
+# mv usr/local /home/j/skel/usr-local
+# mv tmp /home/j/skel
+# mv var /home/j/skel
+# mv root /home/j/skel
+....
+
+. Usamos mergemaster para instalar los ficheros de configuración que falten. Después nos libramos de los directorios adicionales que haya creado mergemaster:
++
+[source,bash]
+....
+# mergemaster -t /home/j/skel/var/tmp/temproot -D /home/j/skel -i
+# cd /home/j/skel
+# rm -R bin boot lib libexec mnt proc rescue sbin sys usr dev
+....
+
+. Ahora enlazamos simbólicamente el sistema de ficheros de lectura-escritura con el sistema de ficheros de sólo lectura. Por favor, asegúrese de que los enlaces simbólicos se crean en las ubicaciones correctas: [.filename]#s/#. Si se usan directorios reales o directorios erróneos la instalación no funcionará.
++
+[source,bash]
+....
+# cd /home/j/mroot
+# mkdir s
+# ln -s s/etc etc
+# ln -s s/home home
+# ln -s s/root root
+# ln -s ../s/usr-local usr/local
+# ln -s ../s/usr-X11R6 usr/X11R6
+# ln -s ../../s/distfiles usr/ports/distfiles
+# ln -s s/tmp tmp
+# ln -s s/var var
+....
+
+. Como último paso, cree un [.filename]#/home/j/skel/etc/make.conf# genérico con el siguiente contenido:
++
+[.programlisting]
+....
+WRKDIRPREFIX?=  /s/portbuild
+....
++ 
+El tener `WRKDIRPREFIX` configurado de este modo hará posible compilar ports de FreeBSD dentro de cada jaula. Recuerde que el el directorio de los ports es de sólo lectura. La ruta personalizada por `WRKDIRPREFIX` permite ejecutar compilaciones en la parte de sólo lectura de cada jaula.
+
+[[jails-service-jails-creating]]
+==== Creación de las jaulas
+
+Ya tenemos una plantilla de jaulas de FreeBSD completa, así que podemos configurar nuestras jaulas en [.filename]#/etc/rc.conf#. En este ejemplo crearemos 3 jaulas: "NS", "MAIL" y "WWW".
+
+[.procedure]
+====
+
+. Introduzca lassiguientes lineas en el fichero [.filename]#/etc/fstab#; con esto cada jaula tendrá acceso a la plantilla de sólo lectura y al espacio de lectura-escritura:
++
+[.programlisting]
+....
+/home/j/mroot   /home/j/ns     nullfs  ro  0   0
+/home/j/mroot   /home/j/mail   nullfs  ro  0   0
+/home/j/mroot   /home/j/www    nullfs  ro  0   0
+/home/js/ns     /home/j/ns/s   nullfs  rw  0   0
+/home/js/mail   /home/j/mail/s nullfs  rw  0   0
+/home/js/www    /home/j/www/s  nullfs  rw  0   0
+....
++
+[NOTE]
+======
+Las particiones que tienen un 0 en la columna "pass" no serán revisadas por man:fsck[8] durante el arranque y las que tienen un 0 en la columna "dump" no serán copiadas por man:dump[8]. No nos interesa que fsck compruebe la integridad de montajes nullfs ni que dump haga copias de seguridad de montajes nullfs de sólo lectura de las jaulas. Por esta razón el ejemplo de [.filename]#fstab# tiene en las dos últimas columnas "0 0".
+======
+
+. Configure las jaulas en [.filename]#/etc/rc.conf#:
++
+[.programlisting]
+....
+jail_enable="YES"
+jail_set_hostname_allow="NO"
+jail_list="ns mail www"
+jail_ns_hostname="ns.ejemplo.org"
+jail_ns_ip="192.168.3.17"
+jail_ns_rootdir="/usr/home/j/ns"
+jail_ns_devfs_enable="YES"
+jail_mail_hostname="mail.ejemplo.org"
+jail_mail_ip="192.168.3.18"
+jail_mail_rootdir="/usr/home/j/mail"
+jail_mail_devfs_enable="YES"
+jail_www_hostname="www.ejemplo.org"
+jail_www_ip="62.123.43.14"
+jail_www_rootdir="/usr/home/j/www"
+jail_www_devfs_enable="YES"
+....
++
+[WARNING]
+======
+
+: La razón por la que `jail__nombre__rootdir` contiene [.filename]#/usr/home# y no [.filename]#/home# es que la ruta física del directorio [.filename]#/home# en una instalación de FreeBSD por omisión es [.filename]#/usr/home#. La variable `jail__nombre__rootdir` _no_ debe apuntar a una ruta que contenga un enlace simbólico porque sería imposible arrancar las jaulas. Utilice la herramienta man:realpath[1] para asegurarse del valor exacto que debe asignar a la variable. Por favor, consulte el aviso de seguridad FreeBSD-SA-07:01.jail para más información.
+======
+
+. Creamos los puntos de montaje de sistemas de ficheros de sólo lectura correspondientes a cada jaula:
++
+[source,bash]
+....
+# mkdir /home/j/ns /home/j/mail /home/j/www
+....
+
+. Instalamos la plantilla de lectura-escritura dentro de cada jaula. Observe que utilizamos package:sysutils/cpdup[] para asegurarnos de que se hace una copia exacta de cada directorio:
++
+[source,bash]
+....
+# mkdir /home/js
+# cpdup /home/j/skel /home/js/ns
+# cpdup /home/j/skel /home/js/mail
+# cpdup /home/j/skel /home/js/www
+....
+
+. Llegados a este punto las jaulas están configuradas y listas para arrancar. Monte los sistemas de ficheros de cada jaula y luego arránquelas con el script [.filename]#/etc/rc.d/jail#:
++
+[source,bash]
+....
+# mount -a
+# /etc/rc.d/jail start
+....
+====
+
+Las jaulas deberían haber arrancado. Asegúrese de ello con man:jls[8]. La salida que verá debe parecerse a esta:
+
+[source,bash]
+....
+# jls
+   JID  IP Address      Hostname                      Path
+     3  192.168.3.17    ns.ejemplo.org                /home/j/ns
+     2  192.168.3.18    mail.ejemplo.org              /home/j/mail
+     1  62.123.43.14    www.ejemplo.org               /home/j/www
+....
+
+En este punto debería ser posible entrar a cada una de las jaulas, añadir nuevos usuarios o configurar dæmons. La columna `JID` indica el número de identificación de cada jaula que esté funcionando en el sistema. Con el siguiente comando puede ejecutar tareas administrativas en la jaula cuyo `JID` sea 3:
+
+[source,bash]
+....
+# jexec 3 tcsh
+....
+
+[[jails-service-jails-upgrading]]
+==== Actualización
+
+Llegará el momento en el que sea necesario actualizar el sistema, bien por seguridad o porque sea útil para las jaulas disponer de alguna nueva característica del sistema. El diseño de esta configuración facilita una forma fácil de actualizar sus jaulas. Además, minimiza la pérdida de servicio, puesto que las jaulas deben apagarse sólamente al final de todo el proceso. Se ofrece también la posibilidad de volver a la versión anterior en caso de que algo salga mal.
+
+[.procedure]
+====
+
+. El primer paso es actualizar el servidor que aloja las jaulas de la forma habitual. Después creamos una plantilla de sólo lectura temporal en [.filename]#/home/j/mroot2#.
++
+[source,bash]
+....
+# mkdir /home/j/mroot2
+# cd /usr/src
+# make installworld DESTDIR=/home/j/mroot2
+# cd /home/j/mroot2
+# cpdup /usr/src usr/src
+# mkdir s
+....
++ 
+La ejecución de `installworld` crea unos cuantos directorios innecesarios que debemos borrar:
++
+[source,bash]
+....
+# chflags -R 0 var
+# rm -R etc var root usr/local tmp
+....
+
+. Creamos de nuevo los enlaces simbólicos de lectura-escritura del sistema de ficheros principal:
++
+[source,bash]
+....
+# ln -s s/etc etc
+# ln -s s/root root
+# ln -s s/home home
+# ln -s ../s/usr-local usr/local
+# ln -s ../s/usr-X11R6 usr/X11R6
+# ln -s s/tmp tmp
+# ln -s s/var var
+....
+
+. Ha llegado el momento de parar las jaulas:
++
+[source,bash]
+....
+# /etc/rc.d/jail stop
+....
+
+. Desmontamos los sistemas de ficheros originales:
++
+[source,bash]
+....
+# umount /home/j/ns/s
+# umount /home/j/ns
+# umount /home/j/mail/s
+# umount /home/j/mail
+# umount /home/j/www/s
+# umount /home/j/www
+....
++
+[NOTE]
+======
+Los sistemas de ficheros de lectura-escritura cuelgan del sistema de sólo lectura [.filename]#/s# y por tanto deben desmontarse antes.
+======
+
+. Movemos el sistema de ficheros de sólo lectura viejo y lo reemplazamos por el nuevo. Nos servirá de copia de seguridad y como archivo en caso de que haya problemas. Para darle un nombre usamos la fecha en la que se creado una nueva copia del sistema de ficheros de sólo lectura. Movemos también la Colección de Ports de FreeBSD al sistema de ficheros nuevo para ahorrar un poco más de espacio e inodos:
++
+[source,bash]
+....
+# cd /home/j
+# mv mroot mroot.20060601
+# mv mroot2 mroot
+# mv mroot.20060601/usr/ports mroot/usr
+....
+
+. Una vez llegados a este punto la nueva plantilla de sólo lectura está lista, de manera que lo único que nos queda por hacer es montar los sistemas de ficheros y arrancar las jaulas:
++
+[source,bash]
+....
+# mount -a
+# /etc/rc.d/jail start
+....
+====
+
+Compruebe con man:jls[8] si las jaulas han arrancado sin contratiempos. No olvide ejecutar mergemaster en cada jaula. Tendrá que actualizar tanto los ficheros de configuración como los scripts rc.d.

@@ -1,0 +1,3445 @@
+---
+title: 31. Fejezet - Egyéb haladó hálózati témák
+part: IV. Rész Hálózati kommunikáció
+prev: books/handbook/firewalls
+next: books/handbook/partv
+---
+
+[[advanced-networking]]
+= Egyéb haladó hálózati témák
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 31
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../../images/books/handbook/advanced-networking/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/advanced-networking/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/advanced-networking/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[advanced-networking-synopsis]]
+== Áttekintés
+
+Ebben a fejezetben számos komolyabb hálózati témát fogunk tárgyalni.
+
+A fejezet elolvasása során megismerjük:
+
+* az átjárók és az útválasztás alapjait;
+* hogyan állítsunk be IEEE(R) 802.11 és Bluetooth(R) eszközöket;
+* a FreeBSD segítségével hogyan tudunk két hálózatot összekötni hálózati hidakon keresztül;
+* hogyan indítsuk hálózatról egy lemez nélküli gépet;
+* hogyan állítsunk be hálózati címfordítást;
+* hogyan kapcsoljunk össze két számítógépet PLIP használatával;
+* hogyan állítsuk be az IPv6 használatát egy FreeBSD-s gépen
+* hogyan állítsuk be az ATM használatát;
+* hogyan engedélyezzük és használjuk a Közös címredundancia protokollt FreeBSD-ben.
+
+A fejezet elolvasásához ajánlott:
+
+* az [.filename]#/etc/rc# könyvtárban található szkriptek mûködésének ismerete;
+* az alapvetõ hálózati fogalmak ismerete;
+* egy új FreeBSD rendszermag beállításának és telepítésének ismerete (crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]);
+* a külsõ szoftverek telepítésének ismerete (crossref:ports[ports,Alkalmazások telepítése. csomagok és portok]).
+
+[[network-routing]]
+== Átjárók és az útválasztás
+
+Egy gép egy másikat úgy tud megtalálni a hálózaton, ha erre létezik egy olyan mechanizmus, amely leírja, hogyan tudunk eljutni az egyiktõl a másikig. Ezt hívjuk _útválasztásnak_ (routing). Az "útvonal" (route) címek egy párjaként adható meg, egy "céllal" (destination) és egy "átjáróval" (gateway). Ez a páros mondja meg, hogy ha el akarjuk érni ezt a _célt_, akkor ezen az _átjárón_ keresztül kell továbbhaladnunk. A céloknak három típusa lehet: egyéni gépek, alhálózatok és az "alapértelmezett". Az "alapértelmezett útvonalat" (default route) abban az esetben alkalmazzuk, ha semelyik más útvonal nem megfelelõ. Az alapértelmezett útvonalakról a késõbbiekben még beszélni fogunk. Három típusa van az átjáróknak: egyéni gépek, felületek (avagy "linkek") és a hardveres Ethernet címek (MAC-címek).
+
+=== Példa
+
+Az útválasztás különbözõ területeit a következõ `netstat` parancs alapján fogjuk bemutatni:
+
+[source,bash]
+....
+% netstat -r
+Routing tables
+
+Destination      Gateway            Flags     Refs     Use     Netif Expire
+
+default          outside-gw         UGSc       37      418      ppp0
+localhost        localhost          UH          0      181       lo0
+test0            0:e0:b5:36:cf:4f   UHLW        5    63288       ed0     77
+10.20.30.255     link#1             UHLW        1     2421
+example.com      link#1             UC          0        0
+host1            0:e0:a8:37:8:1e    UHLW        3     4601       lo0
+host2            0:e0:a8:37:8:1e    UHLW        0        5       lo0 =>
+host2.example.com link#1             UC          0        0
+224              link#1             UC          0        0
+....
+
+Az elsõ két sorban az alapértelmezett útvonalat (melyrõl részleteiben majd a <<network-routing-default,következõ szakaszban>> fogunk szólni) és a `localhost` útvonalát láthatjuk.
+
+A `localhost` címhez az útválasztási táblázatban a [.filename]#lo0# eszköz tartozik (a `Netif` oszlopban), amelyet loopback eszköznek is neveznek. Ez arra utasítja a rendszert, hogy az ide küldött csomagokat ne a helyi hálózaton küldje keresztül, hanem csak ezen a belsõ felületen, mivel úgyis oda jutnának vissza, ahonnan indultak.
+
+A táblázatban a következõ sor egy `0:e0` kezdetû címet tartalmaz. Ez egy hardveres Ethernet cím, más néven MAC-cím. A FreeBSD magától képes beazonosítani tetszõleges gépet (ebben a példában a `test0` gépet) a helyi Ethernetes hálózaton és felvenni hozzá egy útvonalat, közvetlenül az [.filename]#ed0# Ethernetes csatolófelületen keresztül. Ehhez a típusú útvonalhoz tartozik még egy lejárati idõ is (a `Expire` oszlop), amely akkor kap szerepet, ha ennyi idõ elteltével nem kapunk semmilyen hírt a géprõl. Amikor ilyen történik, az géphez eddig nyilvántartott útvonal automatikusan törlõdik. Ezek a gépek a RIP (útvonal-információs protokoll, Routing Information Protocol) nevû mechanizmuson keresztül azonosítódnak, mely a legrövidebb út kiszámítása alapján határozza meg a helyi gépekhez vezetõ útvonalat.
+
+A FreeBSD a helyi alhálózat (`10.20.30.255` és `example.com`, az alhálózathoz tartozó név) esetében is felvesz útvonalakat. A `link#1` megnevezés a gépben található elsõ Ethernet-kártyát jelöli. Megfigyelhetjük, hogy rajta kívül nincs is több felülete.
+
+Mindegyik csoport (a helyi hálózati gépek és a helyi alhálózatokatok) útvonalait a routed nevû démon tartja automatikusan karban. Ha ez nem fut, akkor csak a statikusan definiált (vagyis az elõre megadott) útvonalak fognak létezni.
+
+A `host1` sor a saját gépünkre vonatkozik, amelyet az Ethernet címe szerint ismerünk. Mivel mi vagyunk küldõ gép, a FreeBSD tudni fogja, hogy ilyenkor az Ethernetes felület helyett a loopback eszközt ([.filename]#lo0#) kell használnia.
+
+A két `host2` sor arra mutat példát, amikor az man:ifconfig[8] paranccsal álneveket hozunk létre (ennek konkrét okait lásd az Ethernetrõl szóló részben). A [.filename]#lo0# felület neve után szereplõ `=>` szimbólum azt jelzi, hogy ez nem csak egy loopback felület (mivel a címe szintén a helyi gépre mutat), hanem a felület egy másik neve. Ilyen útvonalak csak az álneveket ismerõ gépeknél jelennek meg. A helyi hálózaton minden más gépnél egyszerûen csak a `link#1` jelenik meg az ilyen útvonalak esetében.
+
+Az utolsó sor (a `224` céllal rendelkezõ alhálózat) a multicastre (többesküldésre) szolgál, amellyel majd egy másik szakaszban foglalkozunk.
+
+Végezetül az útvonalakhoz tartozó különféle tulajdonságok a `Flags` oszlopban láthatóak. Az alábbi rövid táblázatban összefoglaltunk közülük néhányat:
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|U
+|Up: az útvonal aktív
+
+|H
+|Host: az útvonal egyetlen gépre mutat
+
+|G
+|Gateway: az adott cél felé ezen a gépen keresztül küldjünk, amely majd kitalálja, hogy merre küldje tovább
+
+|S
+|Static: ez az útvonal statikus, nem a rendszer hozta létre automatikusan
+
+|C
+|Clone: ebbõl az útvonalból származtatunk új útvonalat azokhoz a gépekhez, amelyekhez csatlakozunk. Ilyen útvonalakat általában a helyi hálózatokban találhatunk
+
+|W
+|WasCloned: azt jelzi, hogy ezt az útvonalat egy helyi hálózatra mutató (klón, avagy Clone típusú) útvonal alapján hoztuk létre automatikusan
+
+|L
+|Link: az útvonal Ethernetes hardverhez kapcsolódik
+|===
+
+[[network-routing-default]]
+=== Alapértelmezett útvonalak
+
+Amikor a helyi rendszernek fel kell vennie a kapcsolatot egy távoli géppel, ellenõrzi az útválasztási táblázatban, hogy létezik-e már hozzá valamilyen útvonal. Ha a távoli gép egy olyan alhálózatba esik, amelyet már el tudunk érni (klónozott útvonalak), akkor a rendszer megnézi, hogy a hozzá tartozó felületen képes-e kapcsolatot létesíteni.
+
+Ha minden ismert útvonal csõdöt mond, akkor a rendszerünknek marad még egy utolsó esélye: az "alapértelmezett" útvonal használata. Ez az útvonal egy speciális átjáró útvonal (ebbõl általában csak egyetlen egy létezik a rendszerben) és tulajdonságai között mindig szerepel a `c`. A helyi hálózat gépei közül ez az átjáró az legyen, amelyik közvetlenül kapcsolódik a külsõ világhoz (PPP összeköttetéssel, DSL, kábelmodem, T1 vagy bármilyen más hálózati felületen keresztül).
+
+Amikor pedig magát a külsõ világ felé átjáróként szolgáló gépet állítjuk be, az alapértelmezett útvonal az internet-szolgáltatónk által megadott gép címe lesz.
+
+Vegyünk egy példát az alapértelmezett útvonalakra. Egy tipikus konfiguráció:
+
+image::net-routing.png[]
+
+A `Helyi1` és `Helyi2` gépek a hálózatunk tagjai. A `Helyi1` az internet-szolgáltatót éri el egy betárcsázós PPP kapcsolaton keresztül. A PPP szerver a külsõ felületén keresztül a helyi hálózaton pedig egy másik átjáróhoz csatlakozik.
+
+Az egyes gépek alapértelmezett útvonalai így alakulnak:
+
+[.informaltable]
+[cols="1,1,1", frame="none", options="header"]
+|===
+| Gép
+| Alapértelmezett átjáró
+| Felület
+
+|Helyi2
+|Helyi1
+|Ethernet
+
+|Helyi1
+|T1-ÁJ
+|PPP
+|===
+
+Gyakran felmerül a kérdés, hogy "Miért (és hogy-hogy) a `T1-ÁJ` a `Helyi1` gép számára az alapértelmezett átjáró és nem a szolgáltató azon szervere, amelyhez csatlakozott?"
+
+Ne felejtsük el, hogy a PPP felület a szolgáltató helyi hálózatában a mi részünkre kap címet, és a itt az összes többi géphez tartozó útvonal automatikusan létrejön. Emiatt már eleve el tudjuk érni a `T1-ÁJ` gépet, ezért amikor a szolgáltatón keresztül küldünk, nincs szükségünk egy további lépcsõre.
+
+Általában a `X.X.X.1` címet szokták a helyi hálózat átjárójának kiosztani. Ezért (az elõbbi példát újrahasznosítva) ha a helyi hálózatunkon a C osztályú `10.20.30` címtartományt használjuk, és a szolgáltatónkhoz a `10.9.9` címtartomány tartozik, akkor az alapértelmezett útvonalak a következõk lesznek:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Gép
+| Alapértelmezett útvonal
+
+|Helyi2 (10.20.30.2)
+|Helyi1 (10.20.30.1)
+
+|Helyi1 (10.20.30.1, 10.9.9.30)
+|T1-ÁJ (10.9.9.1)
+|===
+
+Az [.filename]#/etc/rc.conf# állományon keresztül könnyen meg tudjuk adni az alapértelmezett útvonalat. A példánkban a `Helyi2` gép [.filename]#/etc/rc.conf# állományába kell felvennünk a következõ sort:
+
+[.programlisting]
+....
+defaultrouter="10.20.30.1"
+....
+
+A man:route[8] parancs használatával viszont akár közvetlenül is megtehetjük mindezt:
+
+[source,bash]
+....
+# route add default 10.20.30.1
+....
+
+A man:route[8] man oldalon olvashatunk arról bõvebben, hogy a hálózati útválasztási táblázatokat kézzel hogyan tudjuk módosítani.
+
+[[network-dual-homed-hosts]]
+=== Kettõs hálózatú gépek
+
+Egy másik típusú konfigurációról is szót kell ejtenünk, ahol a gép egyszerre két hálózatnak is tagja. Gyakorlatilag az átjáróként üzemelõ számítógépek (mint például az, amelyik a fenti példában PPP kapcsolattal csatlakozott) ilyen kettõs hálózatú gépnek tekinthetõek. Ez a kifejezés azonban igazából csak azokra az esetekre illik, ahol a gép egyszerre két helyi hálózatban is megjelenik.
+
+Az egyik esetben a gépben két Ethernet kártya található, melyek mindegyike birtokol egy-egy hálózati címet az egyes alhálózatokon. De elõfordulhat az is, hogy a gépünkben csupán egyetlen Ethernet kártya van és az man:ifconfig[8] segítségével álneveket hoztunk létre hozzá. Az elõbbi általában két fizikailag elkülönölõ Ethernet alapú hálózat esetében történik, míg az utóbbinál csak egyetlen fizikai hálózati szegmensrõl van szó, amely viszont logikailag két külön alhálózatot tartalmaz.
+
+Akármelyiket is vesszük, az útválasztási táblázatok úgy jönnek létre, hogy bennük a gép a másik alhálózat felé átjáróként (bejövõ útvonalként) lesz nyilvántartva. Ebben a konfigurációban a gép a két alhálózat között útválasztóként fog tevékenykedni, és gyakran valamelyik vagy éppen mind a két irányba be kell állítanunk valamilyen csomagszûrést vagy tûzfalazást.
+
+Ha azt szeretnénk, hogy ez a gép a két felület között továbbítson csomagokat, akkor a FreeBSD-ben külön engedélyezni kell ezt a lehetõséget. A következõ szakaszban ennek részleteit tárjuk fel.
+
+[[network-dedicated-router]]
+=== Az útválasztók beállítása
+
+A hálózati útválasztó nem csinál mást, csak továbbküldi az egyik felületén beérkezõ csomagokat egy másik felületére. Az internetes szabványok és a sokéves mérnöki tapasztalat azonban nem engedik, hogy a FreeBSD Projekt alapértelmezés szerint is elérhetõvé tegye ezt a FreeBSD rendszerekben. Ezt a lehetõséget az alábbi változó `YES` értékûre állításával lehet engedélyezni az man:rc.conf[5] állományban:
+
+[.programlisting]
+....
+gateway_enable="YES"          # Ez legyen YES, ha átjáróként akarunk üzemelni
+....
+
+Ezzel lényegében a `net.inet.ip.forwarding` man:sysctl[8] változó értékét állítjuk `1`-re. Ha valamiért egy idõre szüneteltetni akarjuk a csomagok továbbküldését, akkor állítsuk a változó értékét `0`-ra.
+
+Az új útválasztónak nem árt arról sem tudnia, hogy merre továbbítsa a forgalmat. Ha elég egyszerû a hálózatunk, akkor akár statikus útvonalakat is használhatunk. A FreeBSD alapból tartalmazza a BSD-k esetén szabványos man:routed[8] útválasztó démont, amely a RIP (v1 és v2) valamint az IRDP megoldásokat ismeri. A BGP v4, OSPF v2 és a többi fejlettebb útválasztási protokoll a package:net/zebra[] csomagban érhetõ el. Az ettõl bonyolultabb hálózati útválasztási feladatokhoz olyan kereskedelmi termékek is elérhetõek, mint például a GateD(R).
+
+[[network-static-routes]]
+=== Statikus útvonalak beállítása
+
+==== Manuális konfiguráció
+
+Tegyük fel, hogy hálózatunk a következõ:
+
+image::static-routes.png[]
+
+Ebben a forgatókönyvben az `A-utvalaszto` a mi FreeBSD-s gépünk, amely az internet felé vezetõ útválasztó szerepét játssza. Számára az alapértelmezett útvonal a `10.0.0.1`, amelyen keresztül a külsõ világot tudja elérni. Feltételezzük, hogy a `B-utvalaszto` nevû gépet már eleve jól állítottuk be, ezért tudja merre kell mennie. (A kép alapján egyszerû: csak vegyünk fel egy alapértelmezett útvonalat a `B-utvalaszto` géphez, ahol így a `192.168.1.1` lesz az átjáró.)
+
+Ha megnézzük most az `A-utvalaszto` útválasztási táblázatát, akkor nagyjából a következõket fogjuk látni:
+
+[source,bash]
+....
+% netstat -nr
+Routing tables
+
+Internet:
+Destination        Gateway            Flags    Refs      Use  Netif  Expire
+default            10.0.0.1           UGS         0    49378    xl0
+127.0.0.1          127.0.0.1          UH          0        6    lo0
+10.0.0/24          link#1             UC          0        0    xl0
+192.168.1/24       link#2             UC          0        0    xl1
+....
+
+Az `A-utvalaszto` útválasztási táblázata alapján jelen helyzetben nem lehet elérni a 2. belsõ hálózatot. Nincs ugyanis olyan útvonal, amely a `192.168.2.0/24` alhálózat felé vezetne. Ezt például úgy tudjuk megoldani, ha manuálisan felvesszük ezt az útvonalat. Az alábbi paranccsal hozzáadjuk a 2. belsõ hálózat elérését az `A-utvalaszto` útválasztási táblázatához, ahol a `192.168.1.2` lesz a következõ ugrási pont (next hop):
+
+[source,bash]
+....
+# route add -net 192.168.2.0/24 192.168.1.2
+....
+
+Most már az `A-utvalaszto` bármelyik gépet képes elérni a `192.168.2.0/24` hálózaton.
+
+==== Rögzített konfiguráció
+
+A fenti példa tökéletesen szemlélti a statikus útvonalak felvételét egy mûködõ rendszeren. Azonban ezzel az a gond, hogy az így megadott útválasztási információ nem marad meg a gép újraindítása után. Ezért az elõbbihez hasonló statikus útvonalakat inkább az [.filename]#/etc/rc.conf# állományban rögzítsük:
+
+[.programlisting]
+....
+# A 2. belsõ hálózat elérését felvesszük statikus útvonalként
+static_routes="belsohalo2"
+route_belsohalo2="-net 192.168.2.0/24 192.168.1.2"
+....
+
+A `static_routes` konfigurációs változó karakterláncok szóközzel tagolt felsorolását tartalmazza. Mindegyik karakterlánc egy útvonal neve. Az iménti példában csak egyetlen ilyen név szerepelt a `static_routes` értékében, amely a _belsohalo2_ volt. Utána beírtunk még egy konfigurációs változót is, amelynek a neve `route_belsohalo2`. Ide helyeztük a man:route[8] parancsnak átadandó beállítás összes paraméterét. Ez pontosan olyan, mintha a következõ parancsot adtuk volna ki:
+
+[source,bash]
+....
+# route add -net 192.168.2.0/24 192.168.1.2
+....
+
+Ezért kellett a `"-net 192.168.2.0/24 192.168.1.2"`.
+
+Ahogy már korábban is említettük, a `static_routes` értékében több karakterláncot is megadhatunk, aminek segítségével egyszerre több statikus útvonalat is létrehozhatunk. A következõ sorok arra mutatnak példát, hogy a `192.168.0.0/24` és `192.168.1.0/24` hálózatok számára miként állítsunk be statikus útvonalakat a képzeletbeli útválasztónkon:
+
+[.programlisting]
+....
+static_routes="net1 net2"
+route_net1="-net 192.168.0.0/24 192.168.0.1"
+route_net2="-net 192.168.1.0/24 192.168.1.1"
+....
+
+[[network-routing-propagation]]
+=== Az útvonalak terjedése
+
+Azt már tudjuk, hogyan adjuk meg a külvilág felé vezetõ útvonalakat, azonban arról még nem beszéltünk, hogy kívülrõl miként találnak meg bennünket.
+
+Annyit már megismertünk, hogy az útválasztási táblázatokban megadhatjuk a hálózaton azt a gépet, amelyen keresztül az adott címtartomány (a példában egy C osztályú alhálózat) felé küldhetünk, amely pedig továbbküldi a hozzá érkezõ csomagokat.
+
+Amikor a csatlakozunk az internet-szolgáltatónkhoz, a nála levõ útválasztási táblázatok úgy állítódnak be, hogy az alhálózatunk felé igyekvõ adatok a korábban létrejött PPP összeköttetésen keresztül jutnak el hozzánk. A világ többi részén levõ rendszerek viszont honnan fogják tudni, hogy a mi internet-szolgáltatónknak küldjenek?
+
+Van egy rendszer (ez leginkább a névszerverek elosztott információs adatbázisához hasonlít), ami nyilvántartja a pillanatnyilag kiosztott címtartományokat és megadja a csatlakozási pontjukat az internet gerinchálózatán. Ez a "gerinc" tulajdonképpen olyan fõvonalakból áll, amelyen keresztül a világban az országok között mozog az internet forgalma. A gerinchálózat mindegyik gépe tárolja a központi útválasztási táblázatok egy másolatát, ami a forgalmat egy adott hálózatról a megadott gerincbeli hordozóra irányítja át, végig az internet-szolgáltatók láncán egészen addig, amíg az el nem éri a hálózatunkat.
+
+A szolgáltatónk feladata, hogy a gépünk felé leágazásként (és így a felénk vezetõ útként) beregisztálja magát a gerinchálózat gépein. Ezt nevezik az útvonal terjedésének.
+
+[[network-routing-troubleshooting]]
+=== Hibaelhárítás
+
+Néha gondok lehetnek az útvonal terjedésével, és egyes gépek nem képesek elérni minket. A man:traceroute[8] parancs mind közül talán az egyik leghasznosabb ilyen helyzetekben, mivel ezzel fel tudjuk deríteni, hogy az útválasztás hol akad meg. Ugyanilyen jól hasznosítható azokban az esetekben, amikor látszólag nem tudunk elérni egy távoli gépet (tehát a man:ping[8] csõdöt mond).
+
+A man:traceroute[8] parancsnak annak a távoli gépnek a nevét kell megadnunk, amelyhez csatlakozni akarunk. Futása közben megjeleníti azokat az átjárókat, amelyeken keresztül csatlakozni próbál, akár sikerült elérni a célgépet, akár a kapcsolat hiánya miatt kudarcot vall.
+
+A parancs használatáról és mûködésérõl részletesebb információkat a man:traceroute[8] man oldalán találunk.
+
+[[network-routing-multicast]]
+=== Útválasztás multicast esetén
+
+A FreeBSD alapból támogatja mind a multicastet használó alkalmazásokat, mind pedig a multicasthez tartozó útválasztást. Multicast esetében semmilyen speciális beállítás nem szükségeltetik, az ilyen alkalmazások egybõl el tudják érni ezt a lehetõséget. A multicast kérések útválasztásához azonban be kell építenünk némi támogatást a rendszermagba:
+
+[.programlisting]
+....
+options MROUTING
+....
+
+Emellett még el kell indítanunk az man:mrouted[8] démont is, amelyhez az [.filename]#/etc/mrouted.conf# állományban még be kell állítanunk tunneleket és a DVMRP használatát. A multicasthez tartozó további beállításokat az man:mrouted[8] man oldalán találhatjuk.
+
+[NOTE]
+====
+A FreeBSD 7.0 megjelenésével a man:mrouted[8] démont kivették az alaprendszerbõl. Azt a DVMRP többesküldési protokollt valósítja meg, amelyet a legtöbb alkalmazásban mostanság már a man:pim[4] segítségével oldanak meg. Ennek megfelelõen a hozzá tartozó multicast protokollt valósítja meg, amelyet a legtöbb alkalmazásban mostanság már a man:pim[4] segítségével oldanak meg. Ennek megfelelõen a hozzá tartozó man:map-mbone[8] és man:mrinfo[8] segédprogramok is eltávolításra kerültek. Ezek a programok attól a kiadástól kezdõdõen a Portgyûjtemény részeként érhetõek el a package:net/mrouted[] portban.
+====
+
+[[network-wireless]]
+== Vezeték nélküli hálózatok
+
+=== A vezeték nélküli hálózatok alapjai
+
+A legtöbb vezeték nélküli hálózat az IEEE(R) 802.11 szabványon nyugszik. Az alapvetõ vezeték nélküli hálózatokban több olyan állomást találhatunk, amelyek egymással rádiójelek szórásával kommunikálnak a 2,4 GHz vagy 5 GHz frekvenciatartományban (noha ez a helyi viszonyoknak megfelelõen változhat, és a 2,3 GHz, illetve a 4,9 GHz tartományokban is lehetséges a kommunikáció).
+
+A 802.11 szabványú hálózatok kétféleképpen szervezõdnek. Elõször is _infrastrukturálisan_, (infrastructural mode) ahol az egyik állomást kinevezzük a központnak és a többi pedig ehhez fog tartozni. Az ilyen hálózatokat BSS-nek nevezzük és az imént említett központ neve hozzáférési pont (Access Point, AP) lesz. A BSS-ben az összes kommunikáció a hozzáférési pontokon keresztül halad még abban az esetben is, amikor az egyik állomás egy másik vezeték nélküli állomással akarja felvenni a kapcsolatot. Az ilyen jellegû hálózatok másik típusú szervezõdési módjában nincsenek kijelölt központok és a kommunikáció az állomások között közvetlenül zajlik. A hálózat ezen formáját IBBS-nek nevezzük, vagy ismeretebb nevén _ad-hoc hálózatnak_ (ad-hoc network).
+
+A 802.11 alapú hálózatok elsõként a 2,4 GHz-es sávot hódították meg, és az IEEE(R) 802.11 valamint 802.11b szabványokban rögzített protokollokat használták. Ezekben a specifikációkban megtalálhatjuk a mûködési frekvenciát, a közeghozzáférési réteg jellemzõinek leírását, beleértve a keretezést és az átviteli sebességeket (a kommunikáció ugyanis eltérõ sebességekkel is történhet). A késõbb kiadott 802.11a szabvány azt specifikálja, hogy az 5 GHz-es tartományban miként mûködjenek, ahol többek közt megtalálhatjuk a különféle jelkezelési mechanizmusokat és a nagyobb átviteli sebességek használatát. Ezt még a 802.11g szabvány követte, ami a 802.11b hálózatokkal kompatibilis módon lehetõvé tette a 802.11a jelkezelésének és átviteli módszereinek használatát a 2,4 GHz-es sávban.
+
+A 802.11 alapú hálózatok mindenféle átviteli technikáitól eltekintve többféle biztonsági megoldással találkozhatunk. Az korai 802.11 dokumentumok egy nagyon egyszerû biztonsági protokollt, a WEP-et említenek. Ez a protokoll a hálózaton mozgó adatokat egy rögzített és ismert osztott kulccsal kódolja le az RC4 titkosítással. A kommunikációhoz az összes állomásnak elõre meg kell egyeznie ebben a kulcsban. Errõl a sémáról idõközben kiderült, hogy könnyen feltörhetõ és manapság már csak nagyon ritkán alkalmazzák, kivéve talán csak a kóbor felhasználók elijesztésére. A jelenleg érvényes biztonsági elõírásokat az IEEE(R) 802.11i specifikáció adja meg, amely új kriptográfiai titkosításokat definiál valamint egy további protokollt az állomások azonosítására és a kulcsok cseréjére. Emellett a titkosításhoz használt kulcsok idõszakosan frissülnek és külön eszközök állnak rendelkezésre a betörési kísérletek észlelésére (és azok elhárítására). A vezeték nélküli hálózatok esetében másik elterjedt titkosítási protokoll a WPA. Ez igazából 802.11i elõdjének tekinthetõ, amelyet egy ipari csoport definiált, amíg a 802.11i minõsítés alatt állt. A WPA ennek megfelelõen teljesíti a 802.11i szabvány elvárásainak egy részét és kifejezetten a régi hardverek számára készült. A WPA mûködéséhez egyedül a TKIP titkosításra van szükségünk, amely az eredeti WEP titkosításból származik. A 802.11i engedi a TKIP használatát, de az adatok kódolására egy erõsebb titkosítás, az AES-CCM ismeretét is igényli. (Az AES a WPA esetében nem kell, mivel a régi eszközök esetében túlságosan költségesnek ítélték meg a használatát.)
+
+A fenti szabványokon kívül a 802.11e a másik fontos szabvány, amire tekintettel kell lennünk. Ez írja le a 802.11 hálózatokon a multimédiás alkalmazások közvetítéséhez, mint például a videók valós idejû lejátszásához vagy a VoIP (voice over IP) megvalósításához tartozó protokollokat. A 802.11i szabványhoz hasonlóan a 802.11e is magában foglal egy elõzetes specifikációt, amelyet WME (késõbb pedig már WMM)-nek neveznek. Ezt szintén egy ipari csoport definiálta a 802.11e részeként, amivel a 802.11e végsõ elfogadásáig tudják a multimédiás igényeket kiszolgálni. Amit a 802.11e és WME/WMM megoldásaival kapcsolatban érdemes tudnunk: a QoS (Quality of Service) protokoll és más egyéb fejlett közeghozzáférési protokollok segítségével a vezeték nélküli hálózatokban lehetõvé teszik a forgalom prioritás szerinti ütemezését. Ezen protokollok megfelelõ implementációjának segítségével tehát a fontosabb adatok nagy sebességû küldését és áramoltatását vagyunk képesek elérni.
+
+A FreeBSD a 6.0 verzió óta ismeri a 802.11a, 802.11b és 802.11g szabványokon alapján mûködõ hálózatokat. A WPA és 802.11i biztonsági protokollok (a 11a, 11b és 11g szabványok bármelyike esetén) hasonlóképpen támogatottak, valamint a WME/WMM protokollok mûködéséhez szükséges QoS csak bizonyos vezeték nélküli eszközök esetében.
+
+[[network-wireless-basic]]
+=== Kezdeti beállítások
+
+==== A rendszermag beállítása
+
+A vezeték nélküli hálózatok használatához egy vezeték nélküli hálózati kártyára lesz szükségünk, valamint a rendszermagban is be kell állítani ehhez a megfelelõ támogatást. Ez utóbbit több különbözõ modulra szedték szét, és ezek közül csak azokat kell beállítani, amelyeket tényleg használni is fogunk.
+
+Elõször is tehát kell egy vezeték nélküli eszköz. Az elterjedtebb típusaik általában az Atheos által gyártott alkatrészeket tartalmazzák. Az ilyen fajtájú eszközöket az man:ath[4] meghajtó kezeli, melyet úgy tudunk a rendszer indításakor betölteni, ha a [.filename]#/boot/loader.conf# állományba felvesszük a következõ sort:
+
+[.programlisting]
+....
+if_ath_load="YES"
+....
+
+Az Atheos meghajtója három különálló részre oszlik: maga a meghajtó (man:ath[4]), a hardveres réteg, ami a chipfüggõ funkciókat kezeli (man:ath_hal[4]) és a keretek küldésével kapcsolatban az átviteli sebesség megválasztását lehetõvé tevõ algoritmus (ez itt most az ath_rate_sample). Amikor ezt a támogatást modulként töltjük be, ezek a függõségek automatikusan feloldódnak. Ha az Atheos eszközök helyett valamelyik másikhoz tartozó modult szeretnénk használni, akkor például az Intersil Prism esetében a man:wi[4] meghajtót kell megadnunk:
+
+[.programlisting]
+....
+if_wi_load="YES"
+....
+
+[NOTE]
+====
+A leírás további részeiben az man:ath[4] eszközt fogjuk használni, minden más esetben ennek a nevét kell csak lecserélünk a példákban. A rendszerben elérhetõ vezeték nélküli meghajtók és az általuk támogatott kártyák listája a FreeBSD Hardverjegyzetekben található. Ezek a jegyzetek a különbözõ architektúrákra és kiadásokhoz a FreeBSD holnapjáról, a http://www.FreeBSD.org/releases/[Kiadási jegyzetek] oldalról érhetõek el. Ha a vezeték nélküli eszközünkhöz nem létezik natív FreeBSD-s meghajtó, akkor az crossref:config[config-network-ndis,NDIS] meghajtó segítségével akár közvetlenül a Windows(R)-os meghajtóját is használhatjuk.
+====
+
+FreeBSD 7._X_ esetén az eszközmeghajtó beállításával együtt a 802.11 hálózatok támogatását is be kell töltenünk a rendszermagba. Ez az man:ath[4] meghajtó esetében a legalább a man:wlan[4], `wlan_scan_ap` és `wlan_scan_sta` modulok betöltését jelenti. A man:wlan[4] modul a vezetéknélküli eszköz meghajtóprogramjával együtt töltõdik be, míg a többi modult a [.filename]#/boot/loader.conf# állomány használatával kell a rendszerindítás során betöltenünk:
+
+[.programlisting]
+....
+wlan_scan_ap_load="YES"
+wlan_scan_sta_load="YES"
+....
+
+A FreeBSD 8.0 kiadástól kezdõdõen ezek a modulok részei a man:wlan[4] meghajtónak, amely a hálózati kártya meghajtójával együtt mindig automatikusan betöltõdik.
+
+Emellett még azokra a modulokra is szükségünk van, amelyek a használni kívánt biztonsági protokollokhoz nyújtanak kriptográfiai támogatást. Ezek hivatalosan a man:wlan[4] modul kérésére automatikusan betöltõdnek, azonban itt most manuálisan állítjuk be. Erre a célra a következõ modulokat találjuk: man:wlan_wep[4], man:wlan_ccmp[4] és man:wlan_tkip[4]. A man:wlan_ccmp[4] és man:wlan_tkip[4] meghajtók csak akkor fognak kelleni, ha a WPA és/vagy a 802.11i biztonsági protokollokat használjuk. Amennyiben a hálózatunkon nincs titkosítás, akkor még a man:wlan_wep[4] támogatás sem kell. Ezeket a modulok úgy lehet betölteni a rendszerindításnál, ha felvesszük a következõ sorokat a [.filename]#/boot/loader.conf# állományba:
+
+[.programlisting]
+....
+wlan_wep_load="YES"
+wlan_ccmp_load="YES"
+wlan_tkip_load="YES"
+....
+
+Miután ezt megcsináltuk, egyszerûen csak indítsuk újra a gépünket. Ha még nem akarjuk újraindítani a gépet, akkor a man:kldload[8] parancs segítségével akár kézzel is betölthetjük az elõbb felsorolt modulokat.
+
+[NOTE]
+====
+Ha nem akarunk modulokat használni, a mûködéshez szükséges meghajtókat a rendszermagba is be tudjuk építeni a következõ sorok megadásával a rendszermag beállításait tartalmazó állományban:
+
+[.programlisting]
+....
+device wlan                # a 802.11 támogatása
+device wlan_wep            # 802.11 WEP  támogatás
+device wlan_ccmp           # 802.11 CCMP támogatás
+device wlan_tkip           # 802.11 TKIP támogatás
+device wlan_amrr           # AMRR forgalomvezérlési algoritmus
+device ath                 # Atheros IEEE 802.11 vezeték nélküli hálózati meghajtó
+device ath_hal             # az Atheros meghajtó hardveres rétege
+options AH_SUPPORT_AR5416  # az AR5416 tx/rx leírók engedélyezése
+device ath_rate_sample     # SampleRate forgalomvezérlési algoritmus
+....
+
+Hozzátesszük, hogy az alábbi sorok hozzáadása a FreeBSD 7._X_ változatában kötelezõ, más verzióknál viszont nem:
+
+[.programlisting]
+....
+device wlan_scan_ap        # a 802.11 AP módú keresés
+device wlan_scan_sta       # a 802.11 STA módú keresés
+....
+
+Az elõbbiek megadásával fordítsuk újra és telepítsük a rendszermagot, majd indítsuk újra a számítógépünket.
+====
+
+Miután a rendszerünk újra elindult, a rendszer indítás során generált üzenetei között találnunk kell valamennyi információt a felismert vezeték nélküli eszközökrõl. Például:
+
+[source,bash]
+....
+ath0: <Atheros 5212> mem 0x88000000-0x8800ffff irq 11 at device 0.0 on cardbus1
+ath0: [ITHREAD]
+ath0: AR2413 mac 7.9 RF2413 phy 4.5
+....
+
+=== Az infrastrukturális mûködési mód
+
+Általában az infrastrukturális avagy a BBS mód használata a gyakori. Ebben a mûködési módban adott számú vezeték nélküli hozzáférési pont csatlakozik a hagyományos hálózatra. Mindegyik vezeték nélküli hálózatnak saját neve van, amit a hálózat SSID-jének hívunk. A vezeték nélküli kliensek ezekhez a vezeték nélküli hozzáférési pontokhoz kapcsolódnak.
+
+==== A FreeBSD-s kliensek használata
+
+===== Hogyan keressünk hozzáférési pontokat
+
+A hálózatok kereséséhez az `ifconfig` paranccsal tudunk nekifogni. Egy ilyen kérés kiszolgálása eltarthat néhány pillanatig, mivel ekkor a rendszernek végig kell bóklásznia az összes elérhetõ frekvenciát és azokon hozzáférési pontok után kutatni. Egyedül a rendszeradminisztrátor kezdeményezheti ezeket a kereséseket:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 up scan
+SSID/MESH ID    BSSID              CHAN RATE  S:N     INT CAPS
+dlinkap         00:13:46:49:41:76   11   54M -90:96   100 EPS  WPA WME
+freebsdap       00:11:95:c3:0d:ac    1   54M -83:96   100 EPS  WPA
+....
+
+[NOTE]
+====
+Csak `up` jelzésû felületen tudunk hálózatokat keresni. További keresésekre már nincs szükség a felület `up` állapotban tartásához.
+====
+
+[NOTE]
+====
+FreeBSD 7._X_ esetén a [.filename]#wlan0# eszköz helyett közvetlenül az adott eszköz nevét kell megadnunk, például [.filename]#ath0#. Az iménti sorokat ennek megfelelõen tehát ebben az esetben így kell értelmezni:
+
+[source,bash]
+....
+# ifconfig ath0 up scan
+....
+
+A leírás további részében a FreeBSD 7._X_ felhasználóknak ezen séma alapján kell használniuk a parancsokat és a konfigurációs beállításokat.
+====
+
+A keresés során keletkezõ listában láthatjuk megtalált BBS vagy IBBS fajtájú hálózatokat. A hálózatok neve és `SSID`-ja mellett még megjelenik egy `BSSID` oszlop is, ahol a hozzáférési pontok MAC-címe szerepel. A `CAPS` oszlop az egyes állomások tulajdonságait adja meg:
+
+`E`::
+Extended Service Set (ESS): az állomás egy infrastrukturális vagyis BBS hálózat része.
+
+`I`::
+IBSS/ad-hoc hálózat: az állomás egy ad-hoc hálózat része.
+
+`P`::
+Privacy: a BBS-en belül minden keretet titkosítani kell. Tehát a BSS arra kötelezi az állomást, hogy WEP, TKIP vagy AES-CCMP titkosítás használatával kódolja a hálózat tagjai között közlekedõ kereteket.
+
+`S`::
+Short Preamble: a hálózatban rövid bevezetõjeleket használnak (a 802.11b High Rate/DSSS PHY elõírásai szerint), ahol a szokványos 128 bites szinkronizációs mezõ hossza csak 56 bit.
+
+`s`::
+Short Slot Time: a 802.11g hálózat rövid slotidõt használ, mivel nem találhatóak benne régi (802.11b szabványú) állomások.
+
+A jelenleg ismert hálózatok listáját így tudjuk lekérdezni:
+
+[source,bash]
+....
+# ifconfig wlan0 list scan
+....
+
+Ezt az információt maga az adapter automatikusan, vagy a felhasználó tudja frissíteni a `scan` kérés kiadásával. Az elavult adatok maguktól törlõdnek a gyorsítótárból, így idõvel a lista zsugorodni fog, hacsak nem keresünk folyamatosan hálózatokat.
+
+===== Alapvetõ beállítások
+
+Ebben a szakaszban arra mutatunk példákat, hogy miként tudunk FreeBSD alatt titkosítás nélkül használni egy vezeték nélküli hálózati kártyát. Miután elsajátítottuk az itt szereplõ ismereteket, határozottan javasoljuk, hogy a vezeték nélküli hálózatunkat <<network-wireless-wpa,WPA>> használatával állítsuk be.
+
+A vezeték nélküli hálózatok beállítása három elemi lépésbõl épül fel: a hozzáférési pont kiválasztása, az állomásunk hitelesítése és az IP-cím beállítása. A következõkben ezeket a lépéseket vitatjuk meg.
+
+====== A hozzáférési pont kiválasztása
+
+A legtöbb esetben hagyjuk, hogy a rendszer válassza ki magának a különbözõ heurisztikák alapján a leginkább megfelelõ hozzáférési pontot. Ez az alapértelmezett tevékenység, amikor aktiváljuk a felületet vagy valamilyen más módon, például az[.filename]##/etc/rc.conf## állományból hivatkozunk rá:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="DHCP"
+....
+
+[NOTE]
+====
+A korábban említettek szerint a FreeBSD 7._X_ felhasználóknak csak a kártyát kell beállítani:
+
+[.programlisting]
+....
+ifconfig_ath0="DHCP"
+....
+
+====
+
+Ha viszont több hozzáférési pont közül mi magunk akarunk kiválasztani egyet, akkor ezt az SSID megadásával tehetjük meg:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="ssid saját_ssid DHCP"
+....
+
+Amikor olyan környezetben vagyunk, ahol több hozzáférési pontnak is megegyezik az SSID-ja (gyakran így próbálják egyszerûsíteni azt, hogy automatikusan váltani lehessen köztük), akkor szükségünk lehet ezt egy adott eszközhöz hozzárendelni. Ebben az esetben a hozzáférési pont BSSID-ját is definiálni kell (és az SSID-t akár el is hagyhatjuk):
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="ssid saját_ssid bssid xx:xx:xx:xx:xx:xx DHCP"
+....
+
+Más módokon is képesek vagyunk szabályozni a hozzáférési pontok megválasztását, például a rendszerünk által vizsgált frekvenciasávok megadásával. Ez olyankor tud hasznos lenni, ha többsávos vezeték nélküli kártyánk van, és az összes tartomány végigpásztázása túlságosan sok idõt venne el. Ezt a mûvelet a `mode` paraméter megadásával lehet egy konkrét sávra leszûkíteni, például a
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="mode 11g ssid saját_ssid DHCP"
+....
+
+beállítás hatására a kártya 802.11g módban fog üzemelni, ami kizárólag csak 2,4 GHz-es frekvenciákon használható, így az 5 GHz-es csatornákat egyszerûen figyelmen kívül hagyjuk. Ugyanezt a `channel` paraméterrel is meg tudjuk oldani, mivel így a mûködést egy adott frekvenciára korlátozzuk, valamint a `chanlist` paraméterrel, ahol a pásztázandó csatornákat sorolhatjuk fel. Ezekrõl a paraméterekrõl részletesebb leírást az man:ifconfig[8] man oldalon találhatunk.
+
+====== Hitelesítés
+
+Miután sikeresen kiválasztottuk a számunkra megfelelõ hozzáférési pontot, az adatok küldéséhez az állomásunknak valamilyen módon hitelesítenie kell magát. A hitelesítés több módon történhet. Erre a leggyakrabban alkalmazott sémát nyílt hitelesítésnek (open authentication) nevezik, ahol a hálózathoz tetszõleges állomás csatlakozhat és kommunikálhat vele. Ezt a típusú hitelesítést akkor érdemes használni, amikor a vezeték nélküli hálózatunkat teszteljük. Más sémákban az adatfolyam megindításához egy titkosítási kézfogás szükséges, vagy elõre megosztott kulcsok esetleg jelszavak segítségével, vagy bonyolultabb sémák esetében itt még olyan különbözõ háttérszolgáltatások is megjelennek, mint például a RADIUS. A legtöbb felhasználó a nyílt hitelesítést használja, ami egyben az alapértelmezés is. A másik legelterjedtebb beállítás a WPA-PSK, avagy WPA Personal, amelyrõl <<network-wireless-wpa-wpa-psk,lentebb>> még szólni fogunk.
+
+[NOTE]
+====
+Ha Apple(R) AirPort(R) Extreme Base Station típusú hozzáférési pontunk van, akkor az osztott kulcsú hitelesítés mellett egy WEP kulcsot is be állítanunk. Ezt az [.filename]#/etc/rc.conf# állományban vagy a man:wpa_supplicant[8] programban tehetjük meg. Ha egyetlen AirPort(R) bázisállomásunk van, akkor az elérést valahogy így tudjuk beállítani:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="authmode shared wepmode on weptxkey 1 wepkey 01234567 DHCP"
+....
+
+Általánosságban véve elmondhatjuk, hogy az osztott kulcsú hitelesítést inkább kerüljük el, mivel WEP kulcsok használatára alapszik és ráadásul olyan módon, hogy nagyon könnyû feltörni. Ha már mindenképpen a WEP mellett kell döntenünk (például a régebbi eszközökkel így tudunk csak kompatibilisek maradni), akkor jobban járunk, ha a `nyílt` hitelesítéshez alkalmazzuk. A WEP használatát érintõ további információkat a <<network-wireless-wep>>ban találjuk.
+====
+
+====== IP-cím szerzése DHCP használatával
+
+Miután kiválasztottunk egy hozzáférési pontot és beállítottuk a hitelesítés paramétereit, egy IP-cím is kelleni fog a kommunikációhoz. Az esetek túlnyomó részében DHCP-n keresztül kapunk IP-címet a vezeték nélküli kapcsolatunkhoz. Ezt úgy érhetjük el, ha egyszerûen megnyitjuk az [.filename]#/etc/rc.conf# állományt és az alábbihoz hasonló módon felvesszük a `DHCP` paramétert az eszközünk beállításaihoz:
+
+[.programlisting]
+....
+wlans_ath0="DHCP"
+ifconfig_wlan0="DHCP"
+....
+
+Így már készen is állunk a vezeték nélküli felület használatára:
+
+[source,bash]
+....
+# /etc/rc.d/netif start
+....
+
+Ahogy a felület mûködõképessé válik, az `ifconfig` parancs segítségével ellenõrizni is tudjuk az [.filename]#ath0# felület állapotát:
+
+[source,bash]
+....
+# ifconfig wlan0
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+        ether 00:11:95:d5:43:62
+        inet 192.168.1.100 netmask 0xffffff00 broadcast 192.168.1.255
+        media: IEEE 802.11 Wireless Ethernet OFDM/54Mbps mode 11g
+        status: associated
+        ssid dlinkap channel 11 (2462 Mhz 11g) bssid 00:13:46:49:41:76
+        country US ecm authmode OPEN privacy OFF txpower 21.5 bmiss 7
+        scanvalid 60 bgscan bgscanintvl 300 bgscanidle 250 roam:rssi 7
+        roam:rate 5 protmode CTS wme burst
+....
+
+A `status: associated` azt jelenti, hogy sikeresen csatlakoztunk egy vezeték nélküli hálózathoz (jelen esetben ez a `dlinkap`). A `bssid 00:13:46:49:41:76` rész a hozzáférési pont MAC-címét tartalmazza. Az `authmode OPEN` pedig arról számol be, hogy a kommunikáció nem titkosított.
+
+====== Statikus IP-cím
+
+Ha valami okból nem tudjuk az IP-címünket DHCP szerveren keresztül lekérni, beállíthatunk rögzített IP-címet is. Ehhez nem kell mást tennünk, mint a korábban bemutatott `DHCP` kulcsszót kicserélni egy konkrét címmel. A hozzáférési ponthoz megadott többi paramétert azonban feltétlenül hagyjuk meg:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="inet 192.168.1.100 netmask 255.255.255.0ssid saját_ssidi"
+....
+
+[[network-wireless-wpa]]
+===== WPA
+
+A WPA (Wi-Fi Protected Access, vagyis védett wi-fi hozzáférés) a 802.11 szabványokban használatos biztonsági protokoll, amelyet a <<network-wireless-wep,WEP>> gyengeségeinek és megfelelõ hitelesítésének ellensúlyozására dolgoztak ki. A WPA a 802.1X hitelesítési protokolljait erõsíti és az adat sértetlenségének megõrzésére a WEP helyett több titkosítási algoritmust is felhasznál. A WPA által igényelt egyetlen titkosítás a TKIP (Temporary Key Integrity Protocol, vagyis az ideiglenes kulcs integritási protokoll), amely a WEP által az integritás ellenõrzésére és a bejutások észlelésére és azok reagálására szánt alap RC4 titkosítást bõvíti ki. A TKIP a régebbi hardvereken csupán szoftveres módosítással mûködõképessé tehetõ. Ez a kompromisszum a védelmet ugyan növeli, de még mindig kevés a támadások megfelelõ elhárításához. A WPA a TKIP mellett tartalmazza még az AES-CCMP titkosítást is, és ennek a használata javasolt. Ezt a specifikációt gyakran WPA2 (vagy RSN) néven emlegetik.
+
+A WPA definiál hitelesítési és titkosítási protokollokat. A hitelesítés általában a következõ két technika egyike alapján történik: vagy 802.1X és egy háttérszolgáltatás, például a RADIUS segítségével, vagy egy elõre megosztott kulcsot alkalmazó minimális kézfogással az állomás és a hozzáférési pont között. Az elõbbit gyakran WPA Enterprise-nak, míg az utóbbit WPA Personalnak hívják. Mivel a legtöbben nem állítanak be egy komplett RADIUS alapú szervert a vezeték nélküli hálózatukhoz, ezért a WPA-PSK a WPA leginkább elterjedten használt változata.
+
+A vezeték nélküli kapcsolat és a hitelesítés (kulcs alapján vagy szerverrel) vezérlését a man:wpa_supplicant[8] segédprogram végzi. Ennek a programnak mûködéséhez egy konfigurációs állományra van szüksége, amely az [.filename]#/etc/wpa_supplicant.conf# néven érhetõ el. Errõl az állományról bõvebb információt a man:wpa_supplicant.conf[5] man oldalán lelhetünk.
+
+[[network-wireless-wpa-wpa-psk]]
+====== WPA-PSK
+
+A WPA-PSK, más néven WPA-Personal, egy adott jelszó alapján generált elõre megosztott kulcssal (pre-shared key, PSK) mûködik, amit a vezeték nélküli hálózatokban mesterkulcsént használnak. Ez azt jelenti, hogy minden egyes vezeték nélküli felhasználó ugyanazon a kulcson osztozik. A WPA-PSK olyan kis méretû hálózatok esetében megfelelõ, ahol a hitelesítést elvégzõ szerver használata nem lehetséges vagy nem oldható meg.
+
+[WARNING]
+====
+
+Mindig igyekezzünk erõs jelszavakat használni, melyek kellõen hosszúak és sokféle karaktert tartalmaznak, és így nehezebben fejthetõek meg vagy törhetõek fel.
+====
+
+Elõször az [.filename]#/etc/wpa_supplicant.conf# állományban állítsuk be az SSID-t és a hálózatunkhoz tartozó elõre megosztott kulcsot:
+
+[.programlisting]
+....
+network={
+  ssid="freebsdap"
+  psk="freebsdmall"
+}
+....
+
+Ezután az [.filename]#/etc/rc.conf# állományban jelezzük, hogy a vezeték nélküli eszközt a WPA segítségével állítjuk be és az IP-címet a DHCP szervertõl kérjük el:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_ath0="WPA DHCP"
+....
+
+Innentõl már fel is tudjuk éleszteni a felületet:
+
+[source,bash]
+....
+# /etc/rc.d/netif start
+Starting wpa_supplicant.
+DHCPDISCOVER on wlan0 to 255.255.255.255 port 67 interval 5
+DHCPDISCOVER on wlan0 to 255.255.255.255 port 67 interval 6
+DHCPOFFER from 192.168.0.1
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67
+DHCPACK from 192.168.0.1
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet autoselect OFDM/36Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+Kézzel is megpróbálhatjuk elindítani az <<network-wireless-wpa-wpa-psk,elõbb>> elkészített [.filename]#/etc/wpa_supplicant.conf# állomány használatával:
+
+[source,bash]
+....
+# wpa_supplicant -i wlan0 -c /etc/wpa_supplicant.conf
+Trying to associate with 00:11:95:c3:0d:ac (SSID='freebsdap' freq=2412 MHz)
+Associated with 00:11:95:c3:0d:ac
+WPA: Key negotiation completed with 00:11:95:c3:0d:ac [PTK=CCMP GTK=CCMP]
+CTRL-EVENT-CONNECTED - Connection to 00:11:95:c3:0d:ac completed (auth) [id=0 id_str=]
+....
+
+A következõ parancs a `dhclient` indítása legyen, amivel megszerezzük a DHCP szervertõl az IP-címünket:
+
+[source,bash]
+....
+# dhclient wlan0
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67
+DHCPACK from 192.168.0.1
+bound to 192.168.0.254 -- renewal in 300 seconds.
+# ifconfig wlan0
+ath0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet OFDM/36Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+[NOTE]
+====
+Ha az [.filename]#/etc/rc.conf# állományban szerepel a `ifconfig_wlan0="DHCP"` sor, akkor egyáltalán nem szükséges a `dhclient` parancs manuális kiadása, mivel a `dhclient` magától el fog indulni, miután a `wpa_supplicant` egyeztette a kulcsokat.
+====
+
+Amikor a DHCP nem használható, megadhatunk a statikus IP-címet is, miután a `wpa_supplicant` sikeresen lebonyolította a hitelesítést:
+
+[source,bash]
+....
+# ifconfig wlan0 inet 192.168.0.100 netmask 255.255.255.0
+# ifconfig wlan0
+ath0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.100 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet OFDM/36Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+Ha egyáltalán nem használunk DHCP szervert, akkor nekünk kell beállítani az alapértelmezett átjárót és a névszervert is:
+
+[source,bash]
+....
+# route add default alapértelmezett_átjáró
+# echo "nameserver névszerver" >> /etc/resolv.conf
+....
+
+[[network-wireless-wpa-eap-tls]]
+====== WPA és EAP-TLS
+
+A másik mód, ahogy a WPA használható, az a 802.1X hitelesítési szerveren keresztül történik, és ebben az esetben a WPA neve WPA-Enterprise. Ez sokkal biztonságosabb a WPA-Personal elõre kiosztott kulcsaival szemben. A WPA-Enterprise az EAP (Extensible Authentication Protocol, azaz Bõvíthetõ hitelesítési protokoll) használatán alapszik.
+
+Az EAP önmaga nem végez titkosítást, mivel úgy alakították ki, hogy magát az EAP protokollt kell egy titkosított járaton keresztül bújtatni. Az EAP hitelesítési módszereinek több típusát is kidolgozták, melyek közül a legismertebbek az EAP-TLS, EAP-TTLS valamint a EAP-PEAP.
+
+Az EAP-TLS (EAP szállítási rétegbeli védelemmel) a vezeték nélküli világban egy nagyon jól támogatott hitelesítési protokoll, mivel ez volt az elsõ EAP módszer, amit a http://www.wi-fi.org/[Wi-fi szövetség] jóváhagyott. Az EAP-TLS mûködéséhez három tanúsítvány kell: egy hitelesítõ hatóságtól (Certificate Authority, CA), egy a hitelesítést végzõ szervertõl és egy a klienstõl. Ezzel az EAP módszerrel mind a hitelesítõ szerver, mind a vezeték nélküli kliens külön képviselik a saját tanúsítványaikat, és ezeket a szervezetünket hitelesítõ hatóság aláírása alapján ellenõrzik.
+
+A korábbiaknak megfelelõen a beállításokat szintén az [.filename]#/etc/wpa_supplicant.conf# állományon keresztül végezzük el:
+
+[.programlisting]
+....
+network={
+  ssid="freebsdap" <.>
+  proto=RSN  <.>
+  key_mgmt=WPA-EAP <.>
+  eap=TLS <.>
+  identity="loader" <.>
+  ca_cert="/etc/certs/cacert.pem" <.>
+  client_cert="/etc/certs/clientcert.pem" <.>
+  private_key="/etc/certs/clientkey.pem" <.>
+  private_key_passwd="freebsdmallclient" <.>
+}
+....
+
+<.> Ez a mezõ adja meg a hálózat nevét (SSID).
+
+<.> Itt az RSN (IEEE(R) 802.11i), vagyis a WPA2 protokollt használjuk.
+
+<.> A `key_mgmt` sor a kulcskezelési protokollt adja meg. A mi esetünkben ez a WPA lesz, EAP hitelesítéssel: `WPA-EAP`.
+
+<.> Ebben a mezõben az EAP módszert nevezzük meg a kapcsolathoz.
+
+<.> Az `identity` mezõ az EAP esetén használt azonosítót tartalmazza.
+
+<.> A `ca_cert` mezõ a hitelesítõ hatóság tanúsítványát tároló állomány elérési útvonalát adja meg. Ezt a szerver tanúsítványának hitelesítéséhez használjuk.
+
+<.> A `client_cert` sor a kliens tanúsítványát tartalmazó állomány elérési útvonalát adja meg. Ennek a vezeték nélküli hálózat minden egyes kliense esetében egyedinek kell lennie.
+
+<.> A `private_key` mezõ a kliens tanúsítvánáynak privát kulcsát tároló állomány elérési útját adja meg.
+
+<.> A `private_key_passwd` mezõ a privát kulcshoz tartozó jelmondatot rögzíti.
+
+Az [.filename]#/etc/rc.conf# állományba vegyük fel a következõ sorokat:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+....
+
+A következõ lépés a felület felébresztése lesz az [.filename]#rc.d# eszköz segítségével:
+
+[source,bash]
+....
+# /etc/rc.d/netif start
+Starting wpa_supplicant.
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67
+DHCPACK from 192.168.0.20
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet DS/11Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+Természetesen, ahogy azt már az elõbbiekben is megmutattuk, mindezt manuálisan is el tudjuk végezni a `wpa_supplicant` és az `ifconfig` parancsok segítségével.
+
+[[network-wireless-wpa-eap-ttls]]
+====== WPA és EAP-TTLS
+
+Az EAP-TLS használatakor mind a hitelesítést végzõ szervernek és kliensnek is kell tanúsítvány, azonban az EAP-TTLS ( szállítási rétegbeli védelem EAP tunnelen keresztül) esetében a kliensnél ez elhagyható. Ez a módszer nagyjából olyan, mint amit a webes oldalak csinálnak, ahol a webszerverek egy védett SSL tunnelt képeznek még akkor is, amikor a látogatók nem rendelkeznek kliens oldali tanúsítvánnyal. Az EAP-TTLS egy titkosított TLS tunnelen keresztül védi le a hitelesítési adatok forgalmát.
+
+Ezt ismét az [.filename]#/etc/wpa_supplicant.conf# állományon keresztül tudjuk beállítani:
+
+[.programlisting]
+....
+network={
+  ssid="freebsdap"
+  proto=RSN
+  key_mgmt=WPA-EAP
+  eap=TTLS <.>
+  identity="test" <.>
+  password="test" <.>
+  ca_cert="/etc/certs/cacert.pem" <.>
+  phase2="auth=MD5" <.>
+}
+....
+
+<.> Ebben a mezõben az EAP módszert állítjuk be a kapcsolathoz.
+
+<.> Az `identity` mezõ a titkosított TLS tunnelen keresztül az EAP hitelesítésnél felhasznált azonosítót adja meg.
+
+<.> A `password` tartalmazza az EAP hitelesítésnél használt jelmondatot.
+
+<.> A `ca_cert` mezõ hivatkozik a hitelesítõ hatóság tanúsítványát tartalmazó állományra. Ez az állomány kell a szerver tanúsítványának ellenõrzéséhez.
+
+<.> Ebben a mezõben a titkosított TLS tunnelben használt hitelesítési módszer nevezzük meg. Jelen esetünkben ez az EAP MD5-Challenge használatával. A "belsõ hitelesítés" fázisát gyakran csak "phase2"-nak (2. fázisnak) hívják.
+
+Mindezek mellett még a következõ sorokat is vegyük fel az [.filename]#/etc/rc.conf# állományba:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+....
+
+Ezután hozzuk mûködésbe a felületet:
+
+[source,bash]
+....
+# /etc/rc.d/netif start
+Starting wpa_supplicant.
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67
+DHCPACK from 192.168.0.20
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet DS/11Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+[[network-wireless-wpa-eap-peap]]
+====== WPA és EAP-PEAP
+
+A PEAP (Védett EAP) az EAP-TTLS egyik alternatívájaként jött létre. A PEAP módszernek két változata van, melyek közül a leggyakoribb a PEAPv0/EAP-MSCHAPv2. A leírás további részében a PEAP elnevezéssel erre az EAP módszerre fogunk hivatkozni. A PEAP az EAP-TLS után a leginkább alkalmazott szabvány, más szóval, ha a hálózatunkban többféle operációs rendszer is megtalálható, akkor az EAP-TLS után valószínûleg a PEAP lesz a másik, amit mindegyik ismerni fog.
+
+A PEAP hasonló az EAP-TTLS-hez: szerver oldali tanúsítványokkal hitelesíti a klienseket és titkosított TLS tunnelt hoz létre a kliens és a hitelesítést végzõ szerver között, amivel segíti megóvni a hitelesítési információkat. Biztonság szempontjából az EAP-TTLS és a PEAP között az a különbség, hogy a PEAP hitelesítés a felhasználói nevet titkosítatlanul küldi és csak a jelszó megy át a titkosított TLS tunnelen. Az EAP-TTLS egyaránt a TLS tunnelt használja mind a felhasználói név, mind a jelszó esetében.
+
+Az EAP-PEAP beállításait az [.filename]#/etc/wpa_supplicant.conf# állományba kell felvenni:
+
+[.programlisting]
+....
+network={
+  ssid="freebsdap"
+  proto=RSN
+  key_mgmt=WPA-EAP
+  eap=PEAP <.>
+  identity="test" <.>
+  password="test" <.>
+  ca_cert="/etc/certs/cacert.pem" <.>
+  phase1="peaplabel=0" <.>
+  phase2="auth=MSCHAPV2" <.>
+}
+....
+
+<.> Ebben a mezõben megadjuk, az EAP módszert használjuk a kapcsolathoz.
+
+<.> Az `identity` mezõ az EAP hitelesítés során a titkosított TLS tunnelben átküldött azonosítót tartalmazza.
+
+<.> A `password` mezõ az EAP hitelesítés során használt jelmondatot definiálja.
+
+<.> A `ca_cert` mezõ a hitelesítõ hatóság tanúsítványát tartalmazó állomány elérési útját adja meg. Ez az állomány kell a szerver tanúsítványának ellenõrzéséhez.
+
+<.> Ez a mezõ a hitelesítés elsõ fázisának (vagyis a TLS tunnel) paramétereit tartalmazza. A hitelesítést végzõ szervertõl függõen a hitelesítéshez meg kell adnunk bizonyos címkéket. A legtöbb esetben a címke a "kliens oldali EAP titkosítás" lesz, amit a `peaplabel=0` használatával állítunk be. A részleteket a man:wpa_supplicant.conf[5] man oldalon olvashatjuk.
+
+<.> Ebben a mezõben a titkosított TLS tunnelben alkalmazott hitelesítést protokollt nevezzük meg. A PEAP esetében ez az `auth=MSCHAPV2` lesz.
+
+A következõket kell még hozzátennünk az [.filename]#/etc/rc.conf# állományhoz:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+....
+
+Ezután már mûködésbe is hozhatjuk a felületet:
+
+[source,bash]
+....
+# /etc/rc.d/netif start
+Starting wpa_supplicant.
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67
+DHCPACK from 192.168.0.20
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet DS/11Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+[[network-wireless-wep]]
+===== WEP
+
+A WEP (Wired Equivalent Privacy, azaz kábellel egyenértékû titkosság) az eredeti 802.11 szabvány része. Nincs külön hitelesítési mechanizmusa, csupán a hozzáférés-vezérlés egy gyenge formájával találkozhatunk benne, amit azonban könnyen fel lehet törni.
+
+A WEP `ifconfig` parancs használatán keresztül állítható be:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 inet 192.168.1.100 netmask 255.255.255.0 \
+	  ssid saját_hálózat wepmode on weptxkey 3 wepkey 3:0x3456789012
+....
+
+* A `weptxkey` utal arra, hogy a küldés során WEP kulcsot használunk. Itt most egy harmadik kulcsot használtunk, amelynek egyeznie kell a hozzáférési pont beállításaival. Ha nem tudjuk pontosan, hogy milyen kulcsot használ a hozzáférési pont, akkor próbálkozzunk az `1` érték (vagyis az elsõ kulcs) megadásával.
+* A `wepkey` után következik a kiválasztott WEP kulcs. _index:kulcs_ alakban kell megadni, és ha itt nem adunk meg indexet, akkor azzal az `1` indexû kulcsot állítjuk be. Úgyis fogalmazhatnánk, hogy az indexet csak olyankor kell megadni, amikor nem az elsõ kulcsot akarjuk használni.
++
+[NOTE]
+====
+A `0x3456789012` értéket a hozzáférési pontnál beállított kulcsra kell beállítani.
+====
+
+Ha érdekelnek minket a további részletek, akkor bátran lapozzuk fel az man:ifconfig[8] parancs man oldalát.
+
+A `wpa_supplicant` segédprogramot is bevonhatjuk a vezeték nélküli felületek WEP alapú használatába. A fenti példát a következõ módon tudjuk leírni az [.filename]#/etc/wpa_supplicant.conf# állományban:
+
+[.programlisting]
+....
+network={
+  ssid="sajat_halozat"
+  key_mgmt=NONE
+  wep_key3=3456789012
+  wep_tx_keyidx=3
+}
+....
+
+Majd:
+
+[source,bash]
+....
+# wpa_supplicant -i wlan0 -c /etc/wpa_supplicant.conf
+Trying to associate with 00:13:46:49:41:76 (SSID='dlinkap' freq=2437 MHz)
+Associated with 00:13:46:49:41:76
+....
+
+=== Az ad-hoc mûködési mód
+
+Az IBSS vagy más néven ad-hoc módot pont-pont típusú kapcsolatok kialakítására tervezték. Például, ha az `A` és a `B` gépek között egy ad-hoc típusú hálózatot akarunk létesíteni, akkor egyszerûen csak ki kell választanunk két IP-címet és egy SSID-t.
+
+Így állítjuk be az `A` gépet:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0 wlanmode adhoc
+# ifconfig wlan0 inet 192.168.0.1 netmask 255.255.255.0 ssid freebsdap
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:c3:0d:ac
+	  inet 192.168.0.1 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <adhoc>
+	  status: running
+	  ssid freebsdap channel 2 (2417 MHz) bssid 02:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 scanvalid 60
+	  protmode CTS wme burst
+....
+
+Az `adhoc` paraméterrel utalunk arra, hogy a felület most IBSS módban mûködik.
+
+A `B` gépen ezután már képesek vagyunk észlelni az `A` gépet:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0 wlanmode adhoc
+  SSID/MESH ID    BSSID              CHAN RATE  S:N     INT CAPS
+  freebsdap       02:11:95:c3:0d:ac    2   54M -64:-96  100 IS   WME
+....
+
+A kimenetben szereplõ `I` is megerõsíti, hogy az `A` gépet ad-hoc módban érjük el. Így már csak a `B` gépet kell beállítanunk egy másik IP-címmel:
+
+[source,bash]
+....
+# ifconfig wlan0 inet 192.168.0.2 netmask 255.255.255.0 ssid freebsdap
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:d5:43:62
+	  inet 192.168.0.2 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <adhoc>
+	  status: running
+	  ssid freebsdap channel 2 (2417 Mhz 11g) bssid 02:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 scanvalid 60
+	  protmode CTS wme burst
+....
+
+Most már mind az `A` és mind a `B` készen áll az adatok cseréjére.
+
+[[network-wireless-ap]]
+=== FreeBSD alapú hozzáférési pontok
+
+A FreeBSD képes hozzáférési pontként (Access Point, AP) is üzemelni, így nem kell külön hardveres hozzáférési pontot vásárolnunk vagy ad-hoc hálózatot használnunk. Ez különösen akkor hasznos, amikor a FreeBSD gépet egy másik hálózat (például az internet) felé állítottuk be átjárónak.
+
+[[network-wireless-ap-basic]]
+==== Alapvetõ beállítások
+
+Mielõtt nekiállnánk a FreeBSD-s gépünket hozzáférési pontnak beállítani, egy olyan rendszermagra lesz szükségünk, amely tartalmazza a megfelelõ vezeték nélküli támogatást a kártyánkhoz. Emellett az alkalmazni kívánt biztonsági protokollok támogatását is bele kell építenünk. Ennek részleteit lásd a <<network-wireless-basic>>ban.
+
+[NOTE]
+====
+Jelenleg az NDIS meghajtón keresztül használt Windows(R)-os meghajtók nem teszik lehetõvé hozzáférési pontok kialakítását. Egyedül a vezeték nélküli eszközök natív FreeBSD-s meghajtói ismerik a hozzáférési pont módot.
+====
+
+Ahogy betöltöttük a vezeték nélküli hálózatok támogatását, egybõl ellenõrizni is tudjuk, hogy a vezeték nélküli eszközünk használható-e hozzáférési pontként (avagy "hostap" módban):
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 list caps
+drivercaps=6f85edc1<STA,FF,TURBOP,IBSS,HOSTAP,AHDEMO,TXPMGT,SHSLOT,SHPREAMBLE,MONITOR,MBSS,WPA1,WPA2,BURST,WME,WDS,BGSCAN,TXFRA>
+crytocaps=1f<WEP,TKIP,AES,AES_CCM,TKIPMIC>
+....
+
+A fenti kimenetben láthatjuk a kártyánk tulajdonságait. A `HOSTAP` szó arról tanúskodik, hogy a vezeték nélküli kártyánk képes hozzáférési pontként viselkedni. Mellette még a különféle támogatott titkosítási módszerek is láthatóak: WEP, TKIP, AES stb. Ezekbõl az információkból tudjuk kideríteni, hogy a hozzáférési pontunkon milyen titkosítási protokollokat tudunk használni.
+
+A vezeték nélküli eszközünket innentõl már csak hozzáférési pontnak állíthatjuk át a viruális hálózati eszköz létrehozásakor, ezért a korábban létrehozott eszközt ehhez elõször meg kell semmisítenünk:
+
+[source,bash]
+....
+# ifconfig wlan0 destroy
+....
+
+Ezzel létrejön a megfelelõ beállításokkal, majd ezekhez állítjuk még be a többit:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0 wlanmode hostap
+# ifconfig wlan0 inet 192.168.0.1 netmask 255.255.255.0 ssid freebsdap mode 11g channel 1
+....
+
+Az `ifconfig` parancs ismételt használatával le is tudjuk kérdezni az [.filename]#wlan0# felület állapotát:
+
+[source,bash]
+....
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  inet 192.168.0.1 netmask 0xffffff00 broadcast 192.168.0.255
+	  inet6 fe80::211:95ff:fec3:dac%ath0 prefixlen 64 scopeid 0x4
+	  ether 00:11:95:c3:0d:ac
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <hostap>
+	  status: running
+	  ssid freebsdap channel 1 (2412 Mhz) bssid 00:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 scanvalid 60
+	  protmode CTS wme burst dtimperiod 1 -dfs
+....
+
+A `hostap` paraméterbõl kiderül, hogy a felület hozzáférési pont módban van.
+
+Ha az [.filename]#/etc/rc.conf# állományban megadjuk a következõ sorokat, akkor a felület beállítása a rendszer indításakor magától megtörténik:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+create_args_wlan0="wlanmode hostap"
+ifconfig_wlan0="inet 192.168.0.1 netmask 255.255.255.0 ssid freebsdap mode 11g channel 1"
+....
+
+==== Hitelesítés vagy titkosítás nélküli hozzáférési pontok
+
+Habár a hozzáférési pontok mûködtetése nem javasolt hitelesítés vagy titkosítás nélkül, ebben a módban könnyen meg tudunk gyõzõdni a hozzáférési pontunk használhatóságáról. Ez a típusú konfiguráció ezenkívül még fontos szerepet játszik a klienseken felbukkanó hibák kiszûrésében is.
+
+Miután sikerült az elõbbiekben bemutatottak alapján beállítani a hozzáférési pontunkat, egy másik vezeték nélküli géprõl rögtön meg is kezdhetjük a keresését:
+
+[source,bash]
+....
+# ifconfig ath0 up scan
+SSID/MESH ID    BSSID              CHAN RATE   S:N     INT CAPS
+freebsdap       00:11:95:c3:0d:ac    1   54M -66:-96  100 ES   WME
+....
+
+Láthatjuk, hogy a kliens megtalálta a hozzáférési pontot és tudunk is rá kapcsolódni:
+
+[source,bash]
+....
+# ifconfig wlan0 inet 192.168.0.2 netmask 255.255.255.0 ssid freebsdap
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  inet 192.168.0.2 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet OFDM/54Mbps mode 11g
+	  status: associated
+	  ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 bmiss 7
+	  scanvalid 60 bgscan bgscanintvl 300 bgscanidle 250 roam:rssi 7
+	  roam:rate 5 protmode CTS wme burst
+....
+
+==== WPA titkosítást használó hozzáférési pontok
+
+Ebben a szakaszban a FreeBSD-s hozzáférési pontunkat WPA titkosítással állítjuk be. A WPA és a WPA alapú kliensek beállításának részleteit a <<network-wireless-wpa>>ban találjuk.
+
+A WPA titkosítást használó hozzáférési pontokon a hostapd démon foglalkozik a kliensek hitelesítésével és a kulcsok kezelésével.
+
+A továbbiakban az összes beállítást egy olyan FreeBSD-s gépen végezzük el, amely hozzáférési pontként mûködik. Ahogy sikerült beállítanunk a hozzáférési pont módot, az [.filename]#/etc/rc.conf# állományban a következõ sor segítségével könnyen meg tudjuk oldani, hogy az hostapd démon a rendszerrel együtt magától elinduljon:
+
+[.programlisting]
+....
+hostapd_enable="YES"
+....
+
+Mielõtt megpróbálnánk beállítani a hostapd démont, ne felejtsük el elvégezni a <<network-wireless-ap-basic>>ban említett alapvetõ beállításokat sem.
+
+===== WPA-PSK
+
+A WPA-PSK használatát olyan kis méretû hálózatok számára szánják, ahol egy külön hitelesítõ szervert alkalmazása nem lehetséges vagy nem kívánatos.
+
+A konfiguráció az [.filename]#/etc/hostapd.conf# állományon keresztül történik:
+
+[.programlisting]
+....
+interface=wlan0 <.>
+debug=1 <.>
+ctrl_interface=/var/run/hostapd <.>
+ctrl_interface_group=wheel <.>
+ssid=freebsdap <.>
+wpa=1 <.>
+wpa_passphrase=freebsdmall <.>
+wpa_key_mgmt=WPA-PSK <.>
+wpa_pairwise=CCMP TKIP <.>
+....
+
+<.> Ebben a mezõben jelöljük ki a hozzáférési pontként használt vezeték nélküli felületet.
+
+<.> Ebben a mezõben adjuk meg a hostapd futtatása során keletkezõ üzenetek részletességét. A példában szereplõ `1` érték ennek a legkisebb szintjét jelöli.
+
+<.> A `ctrl_interface` mezõ megadja a hostapd által használt könyvtár elérési útvonalát, amiben azokat a tartományokhoz tartozó socketeket tároljuk, amelyeken keresztül olyan programokkal tudunk kommunikálni, mint például a man:hostapd_cli[8]. Itt az alapértelmezett értéket írtuk be.
+
+<.> A `ctrl_interface_group` sor beállítja azt a csoportot (ez jelen esetben a `wheel`), amin keresztül a vezérlõfelület (control interface) állományaihoz hozzá tudunk férni.
+
+<.> Ebben a mezõben a hálózat nevét állítjuk be.
+
+<.> A `wpa` mezõvel engedélyezzük a WPA használatát és megadjuk, hogy melyik WPA hitelesítési protokollt alkalmazzuk. Az itt szereplõ `1` érték a WPA-PSK hitelesítés állítja be a hozzáférési pont számára.
+
+<.> A `wpa_passphrase` mezõ a WPA hitelesítéshez szükséges ASCII jelmondatot tartalmazza.
+
+<.> A `wpa_key_mgmt` sor a kulcsok kezelésére használt protokollt definiálja. Ez a mi esetünk most a WPA-PSK.
+
+<.> A `wpa_pairwise` mezõ a hozzáférési pont által elfogadott titkosítási algoritmusokat határozza meg. A példában a TKIP (WPA) és CCMP (WPA2) titkosítást is támogatjuk. A CCMP titkosítás a TKIP egyik alternatívája, és lehetõség szerint használjuk ezt. A TKIP csak olyan állomások esetében javasolt, amelyek nem támogatják a CCMP használatát.
+
+A következõ lépés a hostapd elindítása:
+
+[source,bash]
+....
+# /etc/rc.d/hostapd forcestart
+....
+
+[source,bash]
+....
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 2290
+	  inet 192.168.0.1 netmask 0xffffff00 broadcast 192.168.0.255
+	  inet6 fe80::211:95ff:fec3:dac%ath0 prefixlen 64 scopeid 0x4
+	  ether 00:11:95:c3:0d:ac
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <hostap>
+	  status: associated
+	  ssid freebsdap channel 1 bssid 00:11:95:c3:0d:ac
+	  authmode WPA2/802.11i privacy MIXED deftxkey 2 TKIP 2:128-bit txpowmax 36 protmode CTS dtimperiod 1 bintval 100
+....
+
+A hozzáférési pont mostantól mûködik, innentõl a kliensek már képesek csatlakozni hozzá, bõvebben lásd a <<network-wireless-wpa>>ban. A hozzáférési ponthoz tartozó állomásokat az `ifconfig wlan0 list sta` paranccsal tudjuk listázni.
+
+==== WEP titkosítást használó hozzáférési pontok
+
+A WEP titkosítást nem javasoljuk a hozzáférési pontok esetében, mivel nem tartalmaz semmilyen hitelesítési mechanizmust és könnyen feltörhetõ. Egyes régebbi vezeték nélküli kártyák azonban csak a WEP által nyújtott védelmet ismerik, ezért az ilyenek csak olyan hozzáférési pontokhoz tudnak csatlakozni, amelyek vagy nem használnank hitelesítést és titkosítást, vagy erre a WEP protokollt használják.
+
+A vezeték nélküli eszközt tegyük hozzáférési pont módba és állítsuk be neki a megfelelõ SSID-t és IP-címet:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0 wlanmode hostap
+# ifconfig wlan0 inet 192.168.0.1 netmask 255.255.255.0 \
+	ssid freebsdap wepmode on weptxkey 3 wepkey 3:0x3456789012 mode 11g
+....
+
+* A `weptxkey` beállítás után adjuk meg a küldéshez használt WEP kulcsot. Itt a harmadik kulcsot adtuk meg (vegyük észre, hogy a kulcsok számozása az `1` értékkel kezdõdik). Ez a paramétert az adatok tényleges titkosításához kell megadni.
+* A `wepkey` a kiválasztott WEP kulcs beállítását jelöli, aminek a formátuma _index:kulcs_. Ha itt nem adunk meg indexet, akkor automatikusan az elsõ kulcsot állítjuk be. Ezért talán mondanunk sem kell, hogy az indexet csak akkor kell megadni, ha nem az elsõ kulcsot akarjuk használni.
+
+A [.filename]#wlan0# felület állapotának megtekintéséhez adjuk ki megint az `ifconfig` parancsot:
+
+[source,bash]
+....
+# ifconfig wlan0
+  ath0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+	  inet 192.168.0.1 netmask 0xffffff00 broadcast 192.168.0.255
+	  ether 00:11:95:c3:0d:ac
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <hostap>
+	  status: running
+	  ssid freebsdap channel 4 (2427 Mhz) bssid 00:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy ON deftxkey 3 wepkey 3:40-bit
+	  txpower 21.5 scanvalid 60 protmode CTS wme burst dtimperiod 1 -dfs
+....
+
+Egy másik vezeték nélküli géprõl most már megpróbálhatjuk megkeresni a hozzáférési pontot:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev ath0
+SSID            BSSID              CHAN RATE  S:N   INT CAPS
+freebsdap       00:11:95:c3:0d:ac    1   54M 22:1   100 EPS
+....
+
+Láthatjuk, hogy a kliens megtalálta a hozzáférési pontot, és a megfelelõ paraméterekkel (kulcs stb.) képes kapcsolódni hozzá a <<network-wireless-wep>>ban leírtak szerint.
+
+=== A vezetékes és vezeték nélküli hálózatok együttes használata
+
+A vezetékes hálózatok általában jobb teljesítményt nyújtanak és megbízhatóbbak, miközben a vezeték nélküli hálózatok pedig nagyobb rugalmasságot és mozgásteret szolgáltatnak. Ezért a hordozható számítógépek tulajdonosaiban felmerülhet az igény, hogy egyszerre mind a kettõt használva, tetszõlegesen és problémamentesen válthassanak a hálózatok között.
+
+FreeBSD rendszereken ún. "hibatûrõ" módon két vagy akár több hálózati interfészt össze tudunk vonni. Ennek köszönhetõen az aktív hálózati kapcsolat megszünésekor rendszerünk önállóan igyekszik mindig a fennmaradó elérhetõ hálózatok közül a leginkább preferáltabbra váltani.
+
+A hálózati összeköttetések összefûzésével és a hibatûrés konkrét megvalósításával az <<network-aggregation>>ban foglalkozunk, ahol a <<networking-lagg-wired-and-wireless>>ban láthatjuk is a vezetékes és vezeték nélküli kapcsolatok együttes használatának beállítását.
+
+=== Hibaelhárítás
+
+Ha valamilyen gondunk lenne a vezeték nélküli hálózatok használatával, akad néhány lépés, amivel esetleg fel tudjuk deríteni a hiba okát.
+
+* Ha nem látjuk a hozzáférési pontot a pásztázás után, ellenõrizzük, hogy a vezeték nélküli eszközt véletlenül nem korlátoztuk-e le bizonyos csatornákra.
+* Ha nem tudunk csatlakozni a hozzáférési ponthoz, akkor egyeztessük vele az állomás egyes paramétereit, beleértve a hitelesítési sémát és a biztonsági protokollokat. Minél jobban egyszerûsítsük le a konfigurációkat. Ha WPA vagy WEP titkosítást használunk, akkor a hozzáférési ponton állítsunk be nyílt hitelesítést és kapcsoljuk ki a titkosítást, majd nézzük meg, hogy így eljut-e hozzánk valamilyen forgalom.
+* Ahogy sikerült csatlakozunk a hozzáférési ponthoz, a biztonsági beállításokat olyan egyszerû eszközökkel próbáljuk meg diagnosztizálni, mint például a man:ping[8].
++ 
+A `wpa_supplicant` segédprogrammal tudunk nyomkövetést végezni. A `-dd` opció megadásával indítsuk el manuálisan és ellenõrizzük a rendszernaplókat.
+* Vannak alacsonyabb szintû nyomkövetési lehetõségek is. A 802.11 protokollt támogató rétegben is tudunk engedélyezni nyomkövetési üzeneteket a [.filename]#/usr/src/tools/tools/net80211# könyvtárban található `wlandebug` program segítségével. Például a
++
+[source,bash]
+....
+# wlandebug -i ath0 +scan+auth+debug+assoc
+  net.wlan.0.debug: 0 => 0xc80000<assoc,auth,scan>
+....
++ 
+paranccsal a hozzáférési pontok kereséséhez és a 802.11 protokollon belül a kapcsolat megszervezéséhez szükséges kézfogásokhoz kapcsolódó konzolüzeneteket tudjuk engedélyezni.
++ 
+A 802.11 rétegben rengeteg hasznos statisztikát találhatunk. Mindezeket a `wlanstats` eszközzel tudjuk kiíratni. Ezeknek a statisztikáknak a 802.11 réteg összes hibáját be kell tudniuk azonosítaniuk. Vigyázzunk azonban, mert az eszközmeghajtókban a 802.11 réteg alatt rejlõ bizonyos hibák ilyenkor nem jelennek meg. Az eszközfüggõ problémák felderítésével kapcsolatban a megfelelõ meghajtó dokumentációját olvassuk át.
+
+Amennyiben a fenti tanácsok mentén sem sikerül orvosolnunk a hibát okát, küldjünk egy hibajelentést és mellékeljük hozzá a fentebb tárgyalt eszközök által gyártott kimeneteket.
+
+[[network-bluetooth]]
+== Bluetooth
+
+=== Bevezetés
+
+A Bluetooth egy olyan vezeték nélküli technológia, amellyel a 2,4 GHz-es frekvenciatartományban tudunk személyi hálózatokat létrehozni 10 méteren belül. Az ilyen típusú hálózatok általában alkalmi jelleggel keletkeznek különféle hordozható eszközök, mint például mobiltelefonok, kézi számítógépek és laptopok között. Eltérõen más népszerû vezeték nélküli technológiáktól, például a wi-fitõl, a Bluetooth magasabb szintû szolgáltási profilokat is felajánl: FTP-szerû állományszervereket, az állományok áttolását, hang átküldését, soros vonali emulációt és még sok minden mást.
+
+A FreeBSD-ben megvalósított Bluetooth protokollkészlet a Netgraph rendszerre építkezik (lásd man:netgraph[4]). A Bluetooth alapú USB-s hardverzárak széles körét támogatja az man:ng_ubt[4] meghajtó. A Broadcom BCM2033 chipre épített Bluetooth eszközöket az man:ubtbcmfw[4] és az man:ng_ubt[4] meghajtók támogatják. A 3Com Bluetooth PC Card 3CRWB60-A eszközt az man:ng_bt3c[4] meghajtó támogatja. A soros és UART alapú Bluetooth eszközöket a man:sio[4], man:ng_h4[4] és man:hcseriald[8] ismeri. Ebben a szakaszban a Bluetooth alapú USB-s hardverzárak használatát mutatjuk be.
+
+=== Az eszköz csatlakoztatása
+
+Alapértelmezés szerint a Bluetooth eszközmeghajtók modulként érhetõek el. Az eszköz csatlakoztatása elõtt a megfelelõ meghajtót be kell töltenünk a rendszermagba:
+
+[source,bash]
+....
+# kldload ng_ubt
+....
+
+Ha a Bluetooth eszköz már a rendszer indításakor is jelen van, akkor a modult az [.filename]#/boot/loader.conf# állományon keresztül is betölthetjük:
+
+[.programlisting]
+....
+ng_ubt_load="YES"
+....
+
+Dugjuk be az USB-s hardverzárunkat. Az alábbihoz hasonló kimenet fog keletkezni a konzolon (vagy a rendszernaplóban):
+
+[source,bash]
+....
+ubt0: vendor 0x0a12 product 0x0001, rev 1.10/5.25, addr 2
+ubt0: Interface 0 endpoints: interrupt=0x81, bulk-in=0x82, bulk-out=0x2
+ubt0: Interface 1 (alt.config 5) endpoints: isoc-in=0x83, isoc-out=0x3,
+      wMaxPacketSize=49, nframes=6, buffer size=294
+....
+
+Az [.filename]#/etc/rc.d/bluetooth# szkript fogja végezni a Bluetooth használatához szükséges protokollkészlet elindítását és leállítását. Jó ötlet leállítani az eszköz eltávolítása elõtt, de ha elhagyjuk, (általában) nem okoz végzetes hibát. Az indításkor a következõ kimenetet kapjuk:
+
+[source,bash]
+....
+# /etc/rc.d/bluetooth start ubt0
+BD_ADDR: 00:02:72:00:d4:1a
+Features: 0xff 0xff 0xf 00 00 00 00 00
+<3-Slot> <5-Slot> <Encryption> <Slot offset>
+<Timing accuracy> <Switch> <Hold mode> <Sniff mode>
+<Park mode> <RSSI> <Channel quality> <SCO link>
+<HV2 packets> <HV3 packets> <u-law log> <A-law log> <CVSD>
+<Paging scheme> <Power control> <Transparent SCO data>
+Max. ACL packet size: 192 bytes
+Number of ACL packets: 8
+Max. SCO packet size: 64 bytes
+Number of SCO packets: 8
+....
+
+=== Host Controller Interface (HCI)
+
+A Host Controller Interface (HCI) egy parancsfelületet nyújt a mûködési sáv vezérlõjéhez (baseband controller) és az összeköttetések kezelõjéhez (link manager), valamint hozzáférést a hardverállapot és -vezérlõ regiszterekhez. Ez a felület egy egységes módszert szolgáltat a Bluetooth mûködési sávjához tartozó tulajdonságok eléréséhez. Az eszközön üzemelõ HCI réteg a Bluetooth hardverben található HCI firmware-rel vált adatokat és parancsokat. A Host Controller Transport Layer (vagyis a fizikai busz) meghajtója mind a két HCI réteget és a kettejük közti információcserét is elérhetõvé teszi.
+
+Az egyes Bluetooth eszközökhöz létrejön egy-egy _hci_ típusú Netgraph-beli csomópont. Ez a HCI csomópont általában a Bluetooth eszközmeghajtó csomópontjához (lefelé) és az L2CAP csomóponthoz (felfelé) csatlakozik. Az összes HCI mûveletet a HCI csomóponton kell elvégezni és nem az eszközmeghajtóhoz tartozón. A HCI csomópont alapértelmezett neve a "devicehci". Ezekrõl többet az man:ng_hci[4] man oldalán tudhatunk meg.
+
+Az egyik legáltalánosabb feladat a Bluetooth eszközök esetében a közelben levõ további eszközök felderítése. Ezt a mûveletet _tudakozódásnak_ ("inquiry") nevezik. A tudakozódást és az összes többi HCI-hez kapcsolódó mûveletet a man:hccontrol[8] segédprogrammal tudjuk elvégezni. A lentebb látható példa azt mutatja meg, hogyan tudunk Bluetooth eszközöket keresni egy adott távolságon belül. Az elérhetõ eszközök listáját néhány másodpercen alatt megkapjuk. A távoli azonban eszközök csak akkor fognak válaszolni, ha _felderíthetõ_ ("discoverable") módban vannak.
+
+[source,bash]
+....
+% hccontrol -n ubt0hci inquiry
+Inquiry result, num_responses=1
+Inquiry result #0
+       BD_ADDR: 00:80:37:29:19:a4
+       Page Scan Rep. Mode: 0x1
+       Page Scan Period Mode: 00
+       Page Scan Mode: 00
+       Class: 52:02:04
+       Clock offset: 0x78ef
+Inquiry complete. Status: No error [00]
+....
+
+A `BD_ADDR` a Bluetooth eszköz egyedi címe, hasonló a hálózati kártyák MAC-címéhez. Erre a címre lesz szükség ahhoz, hogy a továbbiakban kommunikálni tudjunk az eszközzel. Emberek számára értelmezhetõ nevet is hozzá tudunk rendelni a BD_ADDR címhez. Az [.filename]#/etc/bluetooth/hosts# állomány tartalmazza a Bluetooth eszközökre vonatkozó információkat. A következõ példában azt láthatjuk, hogyan tudunk beszédesebb nevet adni egy távoli eszköznek:
+
+[source,bash]
+....
+% hccontrol -n ubt0hci remote_name_request 00:80:37:29:19:a4
+BD_ADDR: 00:80:37:29:19:a4
+Name: Pav T39-ese
+....
+
+Amikor tudakozódni kezdünk a távoli Bluetooth eszközök jelenléte felõl, a gépünket "sajat.gep.nev (ubt0)" néven fogják látni. Ez a helyi eszközhöz rendelt név bármikor megváltoztatható.
+
+A Bluetooth rendszer lehetõség ad pont-pont (természetesen csak két Bluetooth egység között) vagy pont-multipont típusú kapcsolatok kiépítésére. A pont-multipont kapcsolat esetén a kapcsolaton több Bluetooth eszköz osztozik. A most következõ példában megláthatjuk, hogyan kell az aktív mûködési sávban lekérdezni a helyi eszköz létrejött kapcsolatait:
+
+[source,bash]
+....
+% hccontrol -n ubt0hci read_connection_list
+Remote BD_ADDR    Handle Type Mode Role Encrypt Pending Queue State
+00:80:37:29:19:a4     41  ACL    0 MAST    NONE       0     0 OPEN
+....
+
+A _kapcsolat azonosítója_ (connection handle) akkor hasznos, amikor egy sávbeli kapcsolatot akarunk lezárni. Ezt általában nem kell kézzel megcsinálni. A rendszer magától lezárja az inaktív sávbeli kapcsolatokat.
+
+[source,bash]
+....
+# hccontrol -n ubt0hci disconnect 41
+Connection handle: 41
+Reason: Connection terminated by local host [0x16]
+....
+
+A `hccontrol help` paranccsal tudjuk lekérdezni az elérhetõ HCI parancsokat. A legtöbb HCI parancs végrehajtásához nem kellenek rendszeradminisztrátori jogosultságok.
+
+=== Logical Link Control and Adaptation Protocol (L2CAP)
+
+A Logical Link Control and Adaptation Protocol (L2CAP) a kapcsolat-orientált és a kapcsolat nélküli adatszolgáltatásokért felelõs a felsõbb rétegek felé, valamit támogatja a protokollok többszörözését, a darabolást és az összerakást. Az L2CAP a magasabb szintû protokollok és az alkalmazások számára egészen 64 kilobyte méretig lehetõvé teszi az adatcsomagok küldését és fogadását.
+
+A L2CAP a _csatorna_ (channel) fogalmára építkezik. A csatorna egy logikai kapcsolatot képvisel a mûködési sávon belüli kapcsolat felett. Mindegyik csatornához egyetlen protokoll kötõdik, egy a többhöz alapon. Több csatorna is tarthozhat ugyanahhoz a protokollhoz, de egy csatornán nem használhatunk több protokollt. A csatornákon keresztül érkezõ L2CAP csomagok ezután a megfelelõ felsõbb rétegbeli protokollokhoz kerülnek. Több csatorna osztozhat ugyanazon a sávbeli kapcsolaton.
+
+Minden Bluetooth eszközhöz létrejön egy _l2cap_ típusú Netgraph-csomópont. Az L2CAP csomópont általában egy Bluetooth HCI csomóponthoz (lefelé) és egy Bluetooth sockethez (felfelé) kapcsolódik. Az L2CAP csomópont alapértelmezett neve "devicel2cap". Errõl részletesebben az man:ng_l2cap[4] man oldal világosít fel minket.
+
+Ezen a szinten hasznos parancsnak bizonyulhat az man:l2ping[8], amivel más eszközöket tudunk pingelni. Elõfordulhat, hogy egyes Bluetooth implementációk nem válaszolnak semmilyen feléjük küldött adatra, így az alábbi példában is szereplõ `0 bytes` teljesen normális.
+
+[source,bash]
+....
+# l2ping -a 00:80:37:29:19:a4
+0 bytes from 0:80:37:29:19:a4 seq_no=0 time=48.633 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=1 time=37.551 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=2 time=28.324 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=3 time=46.150 ms result=0
+....
+
+Az man:l2control[8] segédprogram használható az L2CAP csomópontok különbözõ mûveleteinek kivitelezésére. Ebben a példában a helyi eszközhöz tartozó logikai kapcsolatokat (csatornák) és sávokat kérdezzük le:
+
+[source,bash]
+....
+% l2control -a 00:02:72:00:d4:1a read_channel_list
+L2CAP channels:
+Remote BD_ADDR     SCID/ DCID   PSM  IMTU/ OMTU State
+00:07:e0:00:0b:ca    66/   64     3   132/  672 OPEN
+% l2control -a 00:02:72:00:d4:1a read_connection_list
+L2CAP connections:
+Remote BD_ADDR    Handle Flags Pending State
+00:07:e0:00:0b:ca     41 O           0 OPEN
+....
+
+Másik ugyanilyen diagnosztikai eszköz a man:btsockstat[1]. Ha a viselkedését tekintjük, akkor leginkább a man:netstat[1] programra hasonlít, de a Bluetooth hálózatban megjelenõ adatszerkezetekkel dolgozik. Az alábbi példa az iménti man:l2control[8] parancs kimenetében szereplõ logikai kapcsolatokat mutatja:
+
+[source,bash]
+....
+% btsockstat
+Active L2CAP sockets
+PCB      Recv-Q Send-Q Local address/PSM       Foreign address   CID   State
+c2afe900      0      0 00:02:72:00:d4:1a/3     00:07:e0:00:0b:ca 66    OPEN
+Active RFCOMM sessions
+L2PCB    PCB      Flag MTU   Out-Q DLCs State
+c2afe900 c2b53380 1    127   0     Yes  OPEN
+Active RFCOMM sockets
+PCB      Recv-Q Send-Q Local address     Foreign address   Chan DLCI State
+c2e8bc80      0    250 00:02:72:00:d4:1a 00:07:e0:00:0b:ca 3    6    OPEN
+....
+
+=== Az RFCOMM protokoll
+
+Az RFCOMM protokoll a soros portok emulációját valósítja meg az L2CAP protokollon keresztül. A protokoll az ETSI TS 07.10. RFCOMM szabványán alapszik, és egy egyszerû átviteli protokoll, amelyet a 9 tûs RS-232 (EIATIA-232-E) soros portok emulációjára készítettek fel. Az RFCOMM protokoll legfeljebb 60 kapcsolat (RFCOMM csatorna) párhuzamos használatát támogatja két Bluetooth eszköz között.
+
+Az RFCOMM számára a teljes kommunikációs útvonal két különbözõ eszközön futó alkalmazást (kommunikációs végpontot) és köztük levõ kommunikációs szegments foglalja magában. Az RFCOMM az adott eszközön a soros portot használó alkalmazások részére készült. A kommunikációs szegmens az egyik eszköztõl a másikig vezetõ Bluetooth alapú összeköttetés (közvetlen kapcsolat).
+
+Közvetlen kapcsolat esetén az RFCOMM csak az eszközök közti kapcsolattal foglalkozik, valamint hálózati kapcsolat esetén az eszköz és a modem közti kapcsolattal. Az RFCOMM más konfigurációkat is támogat, például olyan modulokat, amelyek az egyik oldalon a Bluetooth vezeték nélküli technológián keresztül kommunikálnak, míg a másik oldalon egy vonalas felületet nyújtanak.
+
+A FreeBSD-ben az RFCOMM protokollt Bluetooth foglalatok rétegében valósították meg.
+
+=== Az eszközök párosítása
+
+Alapértelmezés szerint a Bluetooth kommunikáció nem hitelesítõdik és bármelyik eszköz képes bármelyik másikkal felvenni a kapcsolatot. Egy Bluetooth eszköz (például egy mobiltelefon) egy adott szolgáltatáshoz igényelhet hitelesítést (például betárcsázáshoz). A Bluetooth alapú hitelesítés többnyire _PIN kódokkal_ történik. A PIN kód egy legfeljebb 16 karakterbõl álló ASCII karakterlánc. A felhasználóknak mind a két eszközön ugyanazt a PIN kódot kell megadniuk. Miután megadtuk a PIN kódot, az eszközök létrehoznak hozzájuk egy _összekötettésbeli kulcsot_ (link key). Ezután ezt a kulcsot vagy az eszközökön tároljuk vagy pedig valamilyen tartós tárolón. A következõ alkalommal mind a két eszközt ezt a korábban elkészített kulcsot fogja használni. Ezt az eljárást nevezik _párosításnak_ (pairing). Ha valamelyik eszköz elveszti az össszeköttetés kulcsát, akkor a párosítást meg kell ismételni.
+
+A man:hcsecd[8] démon felelõs az összes Bluetooth alapú hitelesítési kérés lekezeléséért. Az alapértelmezett konfigurációs állománya az [.filename]#/etc/bluetooth/hcsecd.conf#. Például így tudjuk benne egy mobiltelefonhoz megadni az "1234" PIN kódot:
+
+[.programlisting]
+....
+device {
+        bdaddr  00:80:37:29:19:a4;
+        name    "Pav T39-ese";
+        key     nokey;
+        pin     "1234";
+      }
+....
+
+Semmilyen korlátozás nincs a PIN kódokra (a méretüktõl eltekintve). Egyes eszközökbe (például a Bluetooth fejhallgatók) elõre rögzített PIN kódot építettek bele. A `-d` kapcsoló hatására a man:hcsecd[8] démont az elõtérben lehet futtatni, így könnyebben láthatjuk mi történik. A távoli eszközt állítsuk be a párosítás elfogadására és kezdeményezzünk felé egy Bluetooth kapcsolatot. A távoli eszköznek erre azt kell válaszolnia, hogy elfogadta a párosítást, majd kérni fogja a PIN kódot. Adjuk meg ugyanazt a PIN kódot, mint amit a [.filename]#hcsecd.conf# állományba is beírtunk. Most már a gépünk és a távoli eszköz párban vannak. A párosítást a távoli eszközrõl is kezdeményezhetjük.
+
+A FreeBSD 5.5, 6.1 és újabb változataiban az [.filename]#/etc/rc.conf# állományba a következõ sort kell felvenni a hcsecd automatikus indításához:
+
+[.programlisting]
+....
+hcsecd_enable="YES"
+....
+
+Ez pedig a hcsecd démon által generált kimenetre példa:
+
+[.programlisting]
+....
+hcsecd[16484]: Got Link_Key_Request event from 'ubt0hci', remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Found matching entry, remote bdaddr 0:80:37:29:19:a4, name 'Pav's T39', link key doesn't exist
+hcsecd[16484]: Sending Link_Key_Negative_Reply to 'ubt0hci' for remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Got PIN_Code_Request event from 'ubt0hci', remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Found matching entry, remote bdaddr 0:80:37:29:19:a4, name 'Pav's T39', PIN code exists
+hcsecd[16484]: Sending PIN_Code_Reply to 'ubt0hci' for remote bdaddr 0:80:37:29:19:a4
+....
+
+=== Service Discovery Protocol (SDP)
+
+A Service Discovery Protocol (SDP) segítségével a kliens alkalmazások képes felderíteni, hogy a szerver alkalmazások részérõl milyen szolgáltatások érhetõek el, valamint ezek a szolgáltatások milyen tulajdonságokkal rendelkeznek. A szolgáltatások tulajdonsági közé soroljuk többek között a felajánlott szolgáltatás típusát vagy osztályát, illetve a szolgáltatás kihasználásához szükséges mechanizmusra vagy protokollra vonatkozó információkat.
+
+Az SDP az SDP szerver és az SDP kliens közti kommunikációt foglalja magában. A szerver karbantart egy listát azokról a szolgáltatási rekordokról, amelyek a szerverhez tartozó szolgáltatások jellemzõit írják le. Mindegyik ilyen szolgáltatási rekord egyetlen szolgáltatás adatait tartalmazza. A kliensek egy SDP kéréssel ezeket a szolgáltatási rekordokat kérhetik el az SDP szervertõl. Amennyiben a kliens, vagy a hozzá tartozó alkalmazás a szolgáltatás használata mellett dönt, akkor a szolgáltatás használatához a megfelelõ szolgáltató felé nyitnia kell egy külön kapcsolatot. Az SDP csak a szolgáltatások és azok tulajdonságainak felderítéséhez ad segítséget, de semmilyen eszközt nem tartalmaz a felhasználásukra.
+
+Általában az SDP kliensek általában valamilyen számunkra kellõ tulajdonság alapján keresnek szolgáltatásokat. Ráadásul adódhatnak olyan alkalmak is, amikor a szolgáltatások elõzetes ismerete nélkül szeretnénk felderíteni a rendelkezésre álló szolgáltatások típusait. A felajánlott szolgáltatások ilyen típusú feldolgozását nevezzük _böngészésnek_ (browsing).
+
+Az man:sdpd[8] Bluetooth SDP szerver és a parancssoros man:sdpcontrol[8] kliens az alap FreeBSD telepítés része. Az alábbi példában egy SDP böngészési kérést adunk ki:
+
+[source,bash]
+....
+% sdpcontrol -a 00:01:03:fc:6e:ec browse
+Record Handle: 00000000
+Service Class ID List:
+        Service Discovery Server (0x1000)
+Protocol Descriptor List:
+        L2CAP (0x0100)
+                Protocol specific parameter #1: u/int/uuid16 1
+                Protocol specific parameter #2: u/int/uuid16 1
+
+Record Handle: 0x00000001
+Service Class ID List:
+        Browse Group Descriptor (0x1001)
+
+Record Handle: 0x00000002
+Service Class ID List:
+        LAN Access Using PPP (0x1102)
+Protocol Descriptor List:
+        L2CAP (0x0100)
+        RFCOMM (0x0003)
+                Protocol specific parameter #1: u/int8/bool 1
+Bluetooth Profile Descriptor List:
+        LAN Access Using PPP (0x1102) ver. 1.0
+....
+
+és így tovább. Mindegyik szolgáltatáshoz hozzátartozik a tulajdonságok egy listája (például RFCOMM csatorna). Lehetséges, hogy szolgáltatástól függõen bizonyos tulajdonságokat kell figyelnünk. Egyes Bluetooth implementációk nem támogatják a szolgáltatások böngészését és ezért egy üres listát adnak vissza. Ebben az esetben egy konkrét szolgáltatásra tudunk rákeresni. A következõ példában az OBEX Object Push (OPUSH) szolgáltatást keressük:
+
+[source,bash]
+....
+% sdpcontrol -a 00:01:03:fc:6e:ec search OPUSH
+....
+
+FreeBSD alatt az man:sdpd[8] szerverrel tudunk szolgáltatásokat felajánlani a Bluetooth klienseknek. A FreeBSD 5.5, 6.1 vagy késõbbi változataiban ehhez a következõ sort kell megadnunk az [.filename]#/etc/rc.conf# állományban:
+
+[.programlisting]
+....
+sdpd_enable="YES"
+....
+
+Ezután az sdpd démon így indítható el:
+
+[source,bash]
+....
+# /etc/rc.d/sdpd start
+....
+
+A távoli kliensek részére Bluetooth szolgáltatásokat felajánlani kívánó helyi szerver alkalmazásoknak regisztrálniuk kell magukat a helyi SDP démonnál. Például az egyik ilyen alkalmazás az man:rfcomm_pppd[8], és elindítása után regisztrálni fogja a Bluetooth LAN szolgáltatást a helyi SDP démonnál.
+
+A helyi SDP szerveren regisztrált szolgáltatásokat a helyi vezérlési csatornán keresztül egy `browse` kéréssel tudjuk lekérdezni:
+
+[source,bash]
+....
+# sdpcontrol -l browse
+....
+
+=== A betárcsázós hálózati és a PPP hálózati hozzáférési (LAN) profilok
+
+A betárcsázós hálózati (Dial-Up Networking, DUN) profil leggyakrabban a modemek és mobiltelefonok között tûnik fel. Ez a profil a következõ forgatókönyveket dolgozza fel:
+
+* A számítógépünkkel egy mobiltelefont vagy modemet vezeték nélküli modemként használunk, amivel az internethez vagy más hálózatokhoz csatlakozunk betárcsázással.
+* A számítógépünkkel egy mobiltelefonon vagy modemen keresztül fogadunk adathívásokat.
+
+A PPP hálózati hozzáférési (LAN) profil a következõ helyezetekben alkalmazható:
+
+* LAN hozzáférés egyetlen Bluetooth eszközhöz
+* LAN hozzáférés több Bluetooth eszközhöz
+* Két gép összekötése (a soros vonali kapcsolat emulációval PPP-n keresztül)
+
+FreeBSD alatt mind a két profilt a man:ppp[8] és az man:rfcomm_pppd[8] valósítja meg - egy olyan wrapper eszköz, amely az RFCOMM Bluetooth kapcsolatokat a PPP számára is értelmessé alakítja át. Mielõtt még bármelyik profilt elkezdenénk használni, egy új PPP címkét kell létrehozni az [.filename]#/etc/ppp/ppp.conf# állományban. Erre példát az man:rfcomm_pppd[8] man oldalon találhatunk.
+
+A következõ példában az man:rfcomm_pppd[8] programot fogjuk használni arra, hogy egy RFCOMM típusú kapcsolatot nyissunk a 00:80:37:29:19:a4 címmel rendelkezõ távoli Bluetooth eszköz felé. A tényleges RFCOMM csatorna számát SDP-n keresztül a távoli eszköztõl kapjuk. Az RFCOMM csatorna kézzel is megadható, és ilyen esetekben az man:rfcomm_pppd[8] nem fog SDP kérést küldeni. A man:sdpcontrol[8] használatával tudjuk lekérdezni a távoli eszközön létrejött RFCOMM csatornát.
+
+[source,bash]
+....
+# rfcomm_pppd -a 00:80:37:29:19:a4 -c -C dun -l rfcomm-dialup
+....
+
+A PPP hálózati elérés (LAN) szolgáltatás beindításához futni kell a man:sdpd[8] szervernek. A helyi hálózaton keresztül csatlakozó kliensekhez létre kell hozni egy új bejegyzést az [.filename]#/etc/ppp/ppp.conf# állományban. Az man:rfcomm_pppd[8] man oldalon találhatunk erre példákat. Végezetül indítsuk el az RFCOMM PPP szervert egy érvényes RFCOMM csatornaszámmal. Az RFCOMM PPP szerver ekkor automatikusan regisztrálja a Bluetooth LAN szolgáltatást a helyi SDP démonnál. A következõ példában megmutatjuk, hogyan lehet elindítani egy RFCOMM PPP szervert:
+
+[source,bash]
+....
+# rfcomm_pppd -s -C 7 -l rfcomm-server
+....
+
+=== Az OBEX Object Push (OPUSH) profil
+
+Az OBEX egy széles körben alkalmazott protokoll a mobileszközök közti egyszerû állományvitelre. Legfõképpen az infravörös kommunikációban alkalmazzák, ahol a laptopok vagy PDA-k közti általános állományátvitelre használják, illetve névjegykártyák vagy naptárbejegyzések átküldésére mobiltelefonok között és egyéb PIM alkalmazást futtató eszközök esetében.
+
+Az OBEX szervert és klienst egy külsõ csomag, az obexapp valósítja meg, amelyet az package:comms/obexapp[] portból érhetünk el.
+
+Az OBEX kliens használható objektumok áttolására vagy lehúzására az OBEX szerverhez. Ez az objektum lehet például egy névjegykártya vagy egy megbeszélt találkozó. Az OBEX kliens SDP-n keresztül tud magának RFCOMM csatornaszámot szerezni. Ezt úgy tehetjük meg, ha a szolgáltatás neve helyett egy RFCOMM csatorna számát adjuk meg. A támogatott szolgáltatások: IrMC, FTRN és OPUSH. Számként RFCOMM csatorna is megadható. Az alábbi példában egy OBEX munkamenetet láthatunk, ahol az eszköz információs objektumát húzzuk le a mobiltelefonról és egy új objektumot (egy névjegykártyát) tolunk fel a telefon könyvtárába.
+
+[source,bash]
+....
+% obexapp -a 00:80:37:29:19:a4 -C IrMC
+obex> get telecom/devinfo.txt devinfo-t39.txt
+Success, response: OK, Success (0x20)
+obex> put new.vcf
+Success, response: OK, Success (0x20)
+obex> di
+Success, response: OK, Success (0x20)
+....
+
+Az OBEX objektumok tologatásának támogatásához az man:sdpd[8] szervernek kell futnia. Továbbá a beérkezõ objektumok tárolásához létre kell hoznunk még egy könyvtárat is. Ez az könyvtár alapértelmezés szerint a [.filename]#/var/spool/obex#. Végül indítsuk el az OBEX szervert egy érvényes RFCOMM csatorna számának megadásával. Az OBEX szerver ezután automatikusan regisztrálja az "OBEX Object Push" nevû szolgáltatást a helyi SDP démonnál. Ebben a példában láthatjuk az OBEX szerver indítását:
+
+[source,bash]
+....
+# obexapp -s -C 10
+....
+
+=== Soros vonali profil (SPP)
+
+A soros vonali profil (Serial Port Profile, SPP) használatával RS232 (vagy ahhoz hasonló) vonali adatátvitelt tudunk emulálni. Ez a profil a régebben fejlesztett alkalmazásokkal birkózik meg, és a Bluetooth technológiával valódi kábel helyett egy virtuális soros portot képez le.
+
+Az man:rfcomm_sppd[1] segédprogram ezt a soros vonali profilt valósítja meg. Így egy pszeudo terminált tudunk virtuális soros portként használni. Ha nem adunk meg RFCOMM csatornát, akkor az man:rfcomm_sppd[1] képes SDP-n keresztül kérni egyet magának a távoli eszköztõl. Ha ezt felül kívánjuk bírálni, akkor a parancssorban megadhatunk akár egy konkrét RFCOMM csatornát is.
+
+[source,bash]
+....
+# rfcomm_sppd -a 00:07:E0:00:0B:CA -t /dev/ttyp6
+rfcomm_sppd[94692]: Starting on /dev/ttyp6...
+....
+
+Miután csatlakoztunk, a pszeudo terminált tudjuk soros portként használni:
+
+[source,bash]
+....
+# cu -l ttyp6
+....
+
+=== Hibaelhárítás
+
+==== Nem tudunk csatlakozni a távoli eszközzel
+
+Egyes Bluetooth eszközök nem támogatják a szerepek cseréjét (role switch). Alapértelmezés szerint amikor a FreeBSD elfogad egy új kapcsolatot, megpróbál rajta szerepet cserélni és mesterré válni. Azok az eszközök, amelyek ezt nem támogatják, nem lesznek képesek emiatt csatlakozni. Ez a szerepváltás az új kapcsolatok felépítése során zajlik le, ezért egy távoli eszköztõl nem lehet megtudni, hogy ismeri-e ezt a lehetõséget. A helyi oldalon a következõ HCI opcióval lehet kikapcsolni a szerepcserét:
+
+[source,bash]
+....
+# hccontrol -n ubt0hci write_node_role_switch 0
+....
+
+==== Valami nem megy. Lehet látni valahogy, pontosan mi is történik?
+
+Persze, igen. Egy külsõ csomag, a hcidump segítségével, amely a package:comms/hcidump[] portból érhetõ el. A hcidump segédprogram a man:tcpdump[1] programhoz hasonlítható. Ezzel lehet a Bluetooth csomagok tartalmát megnézni a terminálon vagy elmenteni ezeket egy állományba.
+
+[[network-bridging]]
+== Hálózati hidak
+
+=== Bevezetés
+
+Gyakran hasznos lehet anélkül felosztani egy fizikai hálózatot (például egy Ethernet szegmenst) két külön hálózati szegmensre, hogy külön IP-alhálózatot kellene létrehozunk és összekötnünk ezeket egy útválasztóval. A két ilyen módon kialakított hálózatot összekötõ eszközt nevezzük "hálózati hídnak" (bridge). A legalább két hálózati felülettel rendelkezõ FreeBSD rendszerek képesek hálózati híd szerepét betölteni.
+
+A hálózati híd az eszközök adatkapcsolati rétegben a hozzá tartozó felületein megjelenõ (vagyis Ethernet) címének megtanulásával mûködik. A két hálózat között csak akkor közvetít forgalmat, amikor a forrás és cél nem ugyanabban a hálózatban található.
+
+A hálózati hidak bizonyos szempontból lényegében nagyon kevés porttal rendelkezõ Ethernet switch-ek.
+
+=== A hálózati hidak tipikus alkalmazásai
+
+Napjainkban akad néhány igen jellemzõ szituáció, ahol szükség van a hálózati hidak alkalmazására.
+
+==== Hálózatok összekötése
+
+A hálózati hidak alapvetõ feladata két vagy több hálózati szegmens összekötése. Az egyszerû hálózati környezet felállítása helyett több okból is felmerülhet a hidak létrehozása: kábelezési megszorítások, tûzfalazás vagy pszeudo hálózatok, például virtuális gépek felületének csatlakoztatása miatt. Egy híd használatával ráadásul össze tudunk kötni egy vezeték nélküli hozzáférési pontként üzemelõ felületet egy vezetékes hálózattal.
+
+==== Szûrés vagy forgalomkorlátozás tûzfallal
+
+Sokszor elõfordulhat, hogy útválasztás vagy hálózati címfordítás (NAT) nélkül szeretnénk tûzfalat használni.
+
+Példaként képzeljünk el egy olyan kis méretû céget, amely egy DSL vagy ISDN vonalon kapcsolódik az internet-szolgáltatójához. A szolgáltatótól 13, mindenki által használható IP-címet kaptak és a hálózatukban 10 gép van. Ebben a helyzetben egy útválasztást végzõ tûzfal mûködtetése nehézkessé válna az alhálózatok problémái miatt.
+
+Egy hídként viselkedõ tûzfallal azonban minden IP számozási probléma nélkül egyszerûen be tudjuk dobni a gépeket a DSL/ISDN útválasztó mögé.
+
+==== A hálózat megcsapolása
+
+Egy hálózati híddal úgy kapcsolunk össze két hálózati szegmenst, hogy közben meg tudjuk vizsgálni a kettejük között mozgó Ethernet kereteket. Ezt a híd felületen a man:bpf[4] valamint a man:tcpdump[1] segítségével tudjuk megoldani, vagy úgy, ha egy másik felületen elküldjük az összes keret másolatát (span, vagyis feszítõ port).
+
+==== VPN az adatkapcsolati rétegben
+
+A két Ethernet hálózatot egy IP alapú összeköttetésen keresztül is össze tudunk kötni, ha a hálózatokat egy EtherIP járaton keresztül kötjük össze híddal, vagy egy OpenVPN-hez hasonló man:tap[4] alapú megoldással.
+
+==== Redundancia az adatkapcsolati rétegben
+
+A hálózatokat több linken keresztül kötjük össze és a redundáns útvonalakat a feszítõfa protokollal (Spanning Tree Protocol, STP). Az Ethernetes hálózatok esetében a megfelelõ mûködéshez a két eszköz között csak egyetlen aktív útvonal létezhet, így a feszítõfa protokoll észleli a hurkokat és a redundáns összeköttetéseket blokkolt állapotba teszi. Amikor azonban az aktív linkek egyike meghibásodik, akkor a protokoll újraszámolja a fát és a hálózati pontjai közti konnektivitást megpróbálja helyreállítani az addig blokkolt linkek ismételt engedélyezésével.
+
+=== A rendszermag beállításai
+
+Ebben a szakaszban az man:if_bridge[4] hálózati híd implementációval foglalkozunk, de a Netgraph segítségével is tudunk hidakat építeni. Ez utóbbiról az man:ng_bridge[4] man oldalon olvashatunk.
+
+Amikor létrehozunk egy hálózati hidat, az man:ifconfig[8] automatikusan betölti a hozzá tartozó meghajtót. Ha viszont a rendszermag beállításait tartalmazó állományba felvesszük a `device if_bridge` sort, akkor akár be is építhetjük a rendszermagba.
+
+A csomagszûrés minden olyan tûzfallal használható, amely a man:pfil[9] rendszerre kapcsolódik. Maga a tûzfal is betölthetõ modulként, vagy belefordítható a rendszermagba.
+
+A hálózati híddal forgalmat is tudunk szabályozni az man:altq[4] vagy a man:dummynet[4] segítségével.
+
+=== A hálózati híd engedélyezése
+
+Hálózati hidak felületek klónozásával hozhatóak létre. A híd létrehozásához használjuk az man:ifconfig[8] programot, és a megfelelõ meghajtó automatikusan betöltõdik, ha nem lenne még elérhetõ a rendszermagban.
+
+[source,bash]
+....
+# ifconfig bridge create
+bridge0
+# ifconfig bridge0
+bridge0: flags=8802<BROADCAST,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        ether 96:3d:4b:f1:79:7a
+        id 00:00:00:00:00:00 priority 32768 hellotime 2 fwddelay 15
+        maxage 20 holdcnt 6 proto rstp maxaddr 100 timeout 1200
+        root id 00:00:00:00:00:00 priority 0 ifcost 0 port 0
+....
+
+Ekkor létrejön a hálózati hídhoz tartozó felület és véletlenszerûen generálódik hozzá egy Ethernetes cím. A `maxaddr` és a `timeout` paraméterek vezérlik, hogy a híd mennyi MAC-címet tartson meg a keretek továbbításáért felelõs táblázatban és mennyi másodperc után töröljön automatikusan egy bejegyzést a legutolsó használat után. A többi paraméter a feszítõfa mûködését irányítja.
+
+Vegyük fel a hídhoz tartozó hálózati tagfelületeket. A híd csak akkor fog a tagfelületek között csomagokat továbbküldeni, amikor a híd és a tagok is `up` állapotban vannak:
+
+[source,bash]
+....
+# ifconfig bridge0 addm fxp0 addm fxp1 up
+# ifconfig fxp0 up
+# ifconfig fxp1 up
+....
+
+A híd most már átküldi az Ethernet kereteket a [.filename]#fxp0# és [.filename]#fxp1# felületek között. Az iméntiekkel megegyezõ konfigurációt az [.filename]#/etc/rc.conf# állományban így alakíthatjuk ki:
+
+[.programlisting]
+....
+cloned_interfaces="bridge0"
+ifconfig_bridge0="addm fxp0 addm fxp1 up"
+ifconfig_fxp0="up"
+ifconfig_fxp1="up"
+....
+
+Ha a hídhoz IP-címet is rendelni akarunk, akkor inkább magánál a hídnál adjuk meg, ne a tagoknál. Ezt statikusan vagy DHCP használatával is megtehetjük:
+
+[source,bash]
+....
+# ifconfig bridge0 inet 192.168.0.1/24
+....
+
+A hídhoz IPv6 címet is hozzá tudunk rendelni.
+
+=== Tûzfalazás
+
+Ha engedélyezzük a csomagszûrést, a hídon áthaladó csomagok elõször a küldõ felület érkezési oldalára kerülnek, majd a hídra, végül a megfelelõ irányban levõ felület küldési oldalára. Bármelyik fázis letiltható. Amikor a csomagok áramlásának iránya fontos számunkra, akkor jobban járunk, ha nem magára a hídra, hanem csak a tagfelületekre állítjuk be a tûzfalat.
+
+A híd számos módosítható beállítással rendelkezik a nem-IP és ARP csomagok átküldésére, valamint arra, hogy az IPFW tûzfal adatkapcsolati réteg szintjén mûködhessen. Az man:if_bridge[4] man oldal ennek részleteit tárja fel.
+
+=== Feszítõfák
+
+A híd meghajtója a gyors feszítõfa protokollt (Rapid Spanning Tree Protocol, RSTP avagy 802.1w) valósítja meg, ami visszafelé kompatibilis a korábban említett feszítõfa protokollal. A feszítõfákat a hálózati topológiában felbukkanó hurkok észlelésére és eltávolítására alkalmazzák. Az RSTP azonban a hagyományos STP-nél valamivel gyorsabb konvergenciát ígér, mivel itt a szomszédos switch-ek kicserélik egymás között az adataikat, és így újabb hurkok létrehozása nélkül képesek viszonylag gyorsan egyik állapotból átváltani a másikba.
+
+Az alábbi táblázat a támogatott mûködési módokat láthatjuk:
+
+[.informaltable]
+[cols="1,1,1", frame="none", options="header"]
+|===
+| Operációs rendszer
+| STP módok
+| Alapértelmezés
+
+|FreeBSD 5.4-FreeBSD 6.2
+|STP
+|STP
+
+|FreeBSD 6.3+
+|RSTP vagy STP
+|STP
+
+|FreeBSD 7.0+
+|RSTP vagy STP
+|RSTP
+|===
+
+A tagfelületeken az `stp` paranccsal tudjuk engedélyezni a feszítõfák használatát. Az [.filename]#fxp0# és [.filename]#fxp1# felületeket összekötõ hídfelület esetében tehát így:
+
+[source,bash]
+....
+# ifconfig bridge0 stp fxp0 stp fxp1
+bridge0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        ether d6:cf:d5:a0:94:6d
+        id 00:01:02:4b:d4:50 priority 32768 hellotime 2 fwddelay 15
+        maxage 20 holdcnt 6 proto rstp maxaddr 100 timeout 1200
+        root id 00:01:02:4b:d4:50 priority 32768 ifcost 0 port 0
+        member: fxp0 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 3 priority 128 path cost 200000 proto rstp
+                role designated state forwarding
+        member: fxp1 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 4 priority 128 path cost 200000 proto rstp
+                role designated state forwarding
+....
+
+Láthatjuk, hogy a híd a feszítõfában megkapta a `00:01:02:4b:d4:50`-es azonosítót és a `32768`-as prioritást. Mivel `root id` értéke is ugyanez, elmondhatjuk, hogy ez a fa gyökereként funkcionáló híd.
+
+Ha a hálózaton már valahol létezik egy másik híd:
+
+[source,bash]
+....
+bridge0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        ether 96:3d:4b:f1:79:7a
+        id 00:13:d4:9a:06:7a priority 32768 hellotime 2 fwddelay 15
+        maxage 20 holdcnt 6 proto rstp maxaddr 100 timeout 1200
+        root id 00:01:02:4b:d4:50 priority 32768 ifcost 400000 port 4
+        member: fxp0 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 4 priority 128 path cost 200000 proto rstp
+                role root state forwarding
+        member: fxp1 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 5 priority 128 path cost 200000 proto rstp
+                role designated state forwarding
+....
+
+A `root id 00:01:02:4b:d4:50 priority 32768 ifcost 400000 port 4` sor mutatja, hogy a fa gyökerét képezõ híd most a `00:01:02:4b:d4:50` azonosítóval rendelkezik, és ezt a hidat `400000`-res költséggel éri el a `port 4` (a 4. porton) keresztül, amely jelen esetben az [.filename]#fxp0# felület.
+
+=== Komolyabb hidak építése
+
+==== A forgalom áramlásának átszerkesztése
+
+A hidak támogatják az ún. megfigyelési módot, ahol a csomagokat a man:bpf[4] feldolgozásuk után eldobja, így nem folytatódik a feldolgozásuk vagy nem haladnak tovább. Ennek kihasználásával a két vagy több felületen érkezõ adatokat egyetlen man:bpf[4] folyammá tudjuk alakítani. Ez olyan hálózati csapok forgalmának átszerkesztésében hasznos, ahol a két különbözõ felületen keresztül küldjük ki az RX/TX (fogadás/küldés) jeleket.
+
+Az alábbi paranccsal tudjuk megoldani, hogy négy felületrõl érkezõ adatot legyünk képesek egyetlen folyamként olvasni:
+
+[source,bash]
+....
+# ifconfig bridge0 addm fxp0 addm fxp1 addm fxp2 addm fxp3 monitor up
+# tcpdump -i bridge0
+....
+
+==== Feszítõ portok
+
+A hídhoz befutó Ethernet keretek mindegyikérõl készül egy másolat, ami egy megadott feszítõ porton keresztül megy tovább. Hidanként végtelen számú ilyen feszítõ port létezhet, és ha egy felületet feszítõ portnak adtunk meg, akkor hagyományos portként már nem használhatjuk. Ez leginkább akkor hasznos, amikor passzívan akarjuk megfigyelni a híddal rendelkezõ hálózatot a híd valamelyik feszítõ portjára csatlakozó géprõl.
+
+Küldessük az összes keretrõl egy másolatot az [.filename]#fxp4# felületre:
+
+[source,bash]
+....
+# ifconfig bridge0 span fxp4
+....
+
+==== Privát felületek
+
+A privát felületek (private interface) csak más privát felületek felé küldenek tovább adatot. Így feltétel nélkül tudjuk korlátozni a forgalmat, és sem Ethernet keretek, sem pedig ARP nem megy keresztül rajtuk. Ha viszont szelektíven akarjuk korlátozni a forgalmat, akkor helyette használjunk tûzfalat.
+
+==== Tapadós felületek
+
+Ha a híd egyik tagfelületét tapadósnak (sticky) adjuk meg, akkor a dinamikusan megtanult címek bejegyzései a gyorsítótárba kerülésük után állandósulnak. A tapadós bejegyzések soha nem évülnek el vagy cserélõdnek le, még abban az esetben sem, ha utána az adott címet egy másik felületrõl látjuk. Így a továbbításra vonatkozó táblázatot nem kell elõre feltöltenünk, és a híd egyik oldalán meglátott kliensek nem képesek átvándorolni egy másik hálózati szegmensbe.
+
+Másik ilyen példa a tapadós címek használatára az lehetne, amikor a hidat VLAN-nal kombináljuk, és így egy olyan útválasztót hozunk létre, ahol az ügyfeleink az IP-címtartomány pocséklása nélkül zárhatóak el egymástól. Tegyük fel, hogy az `A-ugyfel` a `vlan100`, és a `B-ugyfel` a `vlan101` felületen csatlakozik. A híd IP-címe `192.168.0.1`, amely maga is egy internet felé mutató útválasztó.
+
+[source,bash]
+....
+# ifconfig bridge0 addm vlan100 sticky vlan100 addm vlan101 sticky vlan101
+# ifconfig bridge0 inet 192.168.0.1/24
+....
+
+Mind a két kliens a `192.168.0.1` címet látja alapértelmezett átjáróként, és mivel a híd gyorsítótára tapadós bejegyzéseket tartalmaz, a MAC-címeik meghamisításával nem tudják elcsípni a másikuk forgalmát.
+
+A VLAN-ok közti bárminemû kommunikációt privát felületek létrehozásával akadályozzuk meg (vagy egy tûzfallal):
+
+[source,bash]
+....
+# ifconfig bridge0 private vlan100 private vlan101
+....
+
+Ezzel a megoldással az ügyfeleinket teljesen elszigeteljük egymástól úgy, hogy közben az egész `/24` címtartomány külön alhálózatok kialakítása nélkül kiosztható.
+
+==== Címek korlátozása
+
+Korlátozhatóak az egy felület mögül küldeni képes egyedi MAC-címek. Amikor ezen a határon felül érkeznek ismeretlen feladótól csomagok, egészen addig eldobjuk ezeket, amíg egy korábban már regisztrált bejegyzést a rendszer ki nem töröl vagy ki nem veszünk a gyorsítótárból.
+
+A következõ példában az `vlan100` felületen csatlakozó `A-ugyfel` számára korlátozzuk le 10-re az Ethernet eszközök számát:
+
+[source,bash]
+....
+# ifconfig bridge0 ifmaxaddr vlan100 10
+....
+
+==== SNMP felügyelet
+
+A hidak és az STP paraméterei az alap FreeBSD rendszerben megtalálható SNMP démonnal felügyelhetõek. A hídhoz exportált felügyeleti információk (Management Information Base, MIB) megfelelnek az IETF által elõírt szabványoknak, így akár tetszõleges SNMP kliens vagy bármilyen más felügyeleti szoftver alkalmas az olvasásukra.
+
+A hidat mûködtetõ gépen az [.filename]#/etc/snmp.config# állományban engedélyezzük a `begemotSnmpdModulePath."bridge" = "/usr/lib/snmp_bridge.so"` sort és indítsuk el a bsnmpd démont. Itt még szükség lehet más beállítások, például a közösségek nevének (community name) vagy a hozzáférési listák (access list) módosítására is. Ezzel kapcsolatban a man:bsnmpd[1] és az man:snmp_bridge[3] man oldalakat lapozzuk fel.
+
+A következõ példában a Net-SNMP nevû szoftver (package:net-mgmt/net-snmp[]) fogjuk használni a híd elérésére, de ugyanerre a package:net-mgmt/bsnmptools[] port is alkalmas. Az SNMP klienst használó gépen egészítsük ki az [.filename]#$HOME/.snmp/snmp.conf# állományt a híd felügyeleti információinak importálásával az Net-SNMP rendszerébe:
+
+[.programlisting]
+....
+mibdirs +/usr/shared/snmp/mibs
+mibs +BRIDGE-MIB:RSTP-MIB:BEGEMOT-MIB:BEGEMOT-BRIDGE-MIB
+....
+
+Az IETF BRIDGE-MIB (RFC 4188) használatán keresztül így tudjuk elindítani egy híd felügyeletét:
+
+[source,bash]
+....
+% snmpwalk -v 2c -c public bridge1.example.com mib-2.dot1dBridge
+BRIDGE-MIB::dot1dBaseBridgeAddress.0 = STRING: 66:fb:9b:6e:5c:44
+BRIDGE-MIB::dot1dBaseNumPorts.0 = INTEGER: 1 ports
+BRIDGE-MIB::dot1dStpTimeSinceTopologyChange.0 = Timeticks: (189959) 0:31:39.59 centi-seconds
+BRIDGE-MIB::dot1dStpTopChanges.0 = Counter32: 2
+BRIDGE-MIB::dot1dStpDesignatedRoot.0 = Hex-STRING: 80 00 00 01 02 4B D4 50
+...
+BRIDGE-MIB::dot1dStpPortState.3 = INTEGER: forwarding(5)
+BRIDGE-MIB::dot1dStpPortEnable.3 = INTEGER: enabled(1)
+BRIDGE-MIB::dot1dStpPortPathCost.3 = INTEGER: 200000
+BRIDGE-MIB::dot1dStpPortDesignatedRoot.3 = Hex-STRING: 80 00 00 01 02 4B D4 50
+BRIDGE-MIB::dot1dStpPortDesignatedCost.3 = INTEGER: 0
+BRIDGE-MIB::dot1dStpPortDesignatedBridge.3 = Hex-STRING: 80 00 00 01 02 4B D4 50
+BRIDGE-MIB::dot1dStpPortDesignatedPort.3 = Hex-STRING: 03 80
+BRIDGE-MIB::dot1dStpPortForwardTransitions.3 = Counter32: 1
+RSTP-MIB::dot1dStpVersion.0 = INTEGER: rstp(2)
+....
+
+A példában látszik, hogy a `dot1dStpTopChanges.0` értéke kettõ, ami arra utal, hogy az STP híd topológiája kétszer változott. A topológia változása pedig azt jelenti, hogy a hálózaton belül egy vagy több link állapota megváltozott vagy egyszerûen meghibásodott és ezért egy új fát kellett számolni. A `dot1dStpTimeSinceTopologyChange.0` érték adja meg, hogy ez pontosan mikor is történt.
+
+Több híd felületének felügyeletéhez a belsõ BEGEMOT-BRIDGE-MIB parancsot is használhatjuk:
+
+[source,bash]
+....
+% snmpwalk -v 2c -c public bridge1.example.com
+enterprises.fokus.begemot.begemotBridge
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseName."bridge0" = STRING: bridge0
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseName."bridge2" = STRING: bridge2
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseAddress."bridge0" = STRING: e:ce:3b:5a:9e:13
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseAddress."bridge2" = STRING: 12:5e:4d:74:d:fc
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseNumPorts."bridge0" = INTEGER: 1
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseNumPorts."bridge2" = INTEGER: 1
+...
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTimeSinceTopologyChange."bridge0" = Timeticks: (116927) 0:19:29.27 centi-seconds
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTimeSinceTopologyChange."bridge2" = Timeticks: (82773) 0:13:47.73 centi-seconds
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTopChanges."bridge0" = Counter32: 1
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTopChanges."bridge2" = Counter32: 1
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpDesignatedRoot."bridge0" = Hex-STRING: 80 00 00 40 95 30 5E 31
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpDesignatedRoot."bridge2" = Hex-STRING: 80 00 00 50 8B B8 C6 A9
+....
+
+Így tudjuk megadni, hogy a hidat `mib-2.dot1dBridge` részfán keresztül akarjuk megfigyelni:
+
+[source,bash]
+....
+% snmpset -v 2c -c private bridge1.example.com
+BEGEMOT-BRIDGE-MIB::begemotBridgeDefaultBridgeIf.0 s bridge2
+....
+
+[[network-aggregation]]
+== Linkek összefûzése és hibatûrése
+
+=== Bevezetés
+
+A man:lagg[4] felület lehetõvé teszi, hogy több hálózati felületet egyetlen virtuális felületként fûzzünk össze, és ezzel egy hibatûrõ és nagysebességû összeköttetést alakítsunk ki.
+
+=== Mûködési módok
+
+failover::
+Csak az elsõdlegesként kijelölt porton keresztül fogad és küld adatokat. Amikor ez az elsõdleges port elérhetetlenné válik, a következõ aktív portot fogja használni. Az elsõként felvett felület válik automatikusan az elsõdleges porttá, és az utána felvett összes többit pedig csak hiba esetén használjuk.
+
+Cisco(R) Fast EtherChannel(R)::
+A Cisco(R) Fast EtherChannel(R) (FEC) technológia támogatása. Ez egy statikus beállítás, és nem egyezteti az összefûzést a többiekkel vagy a linkek felügyeletéhez nem vált kereteket. Ha a switch támogatja az LACP használatát, akkor inkább azt válasszuk.
++
+A FEC a kimenõ forgalmat a fejlécekben szereplõ protokollok alapján számolt hasítókóddal próbálja szétosztani az aktív portok között, és tetszõleges aktív porton fogad beérkezõ adatokat. Az említett hasítókódban egy Ethernetes forrás- és célcím szerepel, valamint ha elérhetõ, akkor egy VLAN címke, illetve az IPv4/IPv6 forrás- és célcím.
+
+LACP::
+Az IEEE(R) 802.3ad Link Aggregation Control Protocol (LACP) és a Marker Protcol támogatása. Az LACP megpróbálja egyeztetni a többi géppel az összefûzhetõ linkeket egy vagy több csoportban (Link Aggregated Group, LAG). Mindegyik ilyen csoportban ugyanolyan sebességû portokat találunk, full-duplex mûködési módban. A forgalmat így a legnagyobb összsebességgel rendelkezõ csoportban megtalálható portok között osztja el, ami a legtöbb esetben az összes portot magában foglaló csoport. A fizikai konnektivitás megváltozása esetén a linkek összefûzõdése igen gyorsan alkalmazkodik az új konfigurációhoz.
++
+Az LACP a kimenõ forgalmat az aktív portok között osztja szét fejlécekben szereplõ protokollok alapján számolt hasítókóddal, és bármelyik aktív portról fogad bejövõ forgalmat. A hasítókódban megtalálható az Ethernetes forrás- és célcím, valamint ha elérhetõ, akkor a VLAN címke, illetve az IPv4/IPv6 forrás- és célcímek.
+
+Loadbalance::
+Ez a _FEC_ mód másik neve.
+
+Round-Robin::
+A kimenõ forgalmat egy körkörös (Round-Robin) elvû ütemezõvel osztja szét az aktív portok között és tetszõleges aktív portról fogad bejövõ forgalmat. Ez a mûködési mód megsérti az Ethernet keretek rendezését és csak nagy körültekintés mellett alkalmazzuk.
+
+=== Példák
+
+[[networking-lacp-aggregation-cisco]]
+.LACP alapú összefûzés egy Cisco(R) switch-csel
+[example]
+====
+Ebben a példában egy FreeBSD-s gép két felületét kapcsoljuk össze switch-csel egy egyszerû terhelés-kiegyenlítéssel és hibatûréssel beállított linken keresztül. Mivel az Ethernet keretek sorrendje döntõ fontosságú, ezért a két állomás között egyazon fizikai linken zajló forgalom maximális sebességét az adott felület kapacitása korlátozza. A küldési algoritmus a lehetõ legtöbb információ alapján próbálja egymástól megkülönböztetni a forgalmakat és elosztani ezeket a rendelkezésre álló felületek között.
+
+A Cisco(R) switch-en vegyünk fel a _FastEthernet0/1_ és _FastEthernet0/2_ interfészeket az _1_ csoportba (channel group):
+
+[source,bash]
+....
+interface FastEthernet0/1
+ channel-group 1 mode active
+ channel-protocol lacp
+!
+interface FastEthernet0/2
+ channel-group 1 mode active
+ channel-protocol lacp
+....
+
+A FreeBSD-s gépen pedig a _fxp0_ és _fxp1_ használatával hozzunk létre a man:lagg[4] interfészt:
+
+[source,bash]
+....
+# ifconfig lagg0 create
+# ifconfig lagg0 up laggproto lacp laggport fxp0 laggport fxp1
+....
+
+Ellenõrizzük a felület állapotát:
+
+[source,bash]
+....
+# ifconfig lagg0
+....
+
+A _ACTIVE_ jelzésû, vagyis aktív állapotú portok az összefûzéshez kialakított csoport azon tagjai, amelyeknél felépült a kapcsolat a távoli switch felé és készen állnak a küldésre és fogadásra. Ha az man:ifconfig[8] programtól részletesebb kimenetet kérünk, akkor láthatjuk a csoportok azonosítóit is:
+
+[source,bash]
+....
+lagg0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=8<VLAN_MTU>
+        ether 00:05:5d:71:8d:b8
+        media: Ethernet autoselect
+        status: active
+        laggproto lacp
+        laggport: fxp1 flags=1c<ACTIVE,COLLECTING,DISTRIBUTING>
+        laggport: fxp0 flags=1c<ACTIVE,COLLECTING,DISTRIBUTING>
+....
+
+A `show lacp neighbor` paranccsal kérdezhetjük le a portok állapotát:
+
+[source,bash]
+....
+switch# show lacp neighbor
+Flags:  S - Device is requesting Slow LACPDUs
+        F - Device is requesting Fast LACPDUs
+        A - Device is in Active mode       P - Device is in Passive mode
+
+Channel group 1 neighbors
+
+Partner's information:
+
+                  LACP port                        Oper    Port     Port
+Port      Flags   Priority  Dev ID         Age     Key     Number   State
+Fa0/1     SA      32768     0005.5d71.8db8  29s    0x146   0x3      0x3D
+Fa0/2     SA      32768     0005.5d71.8db8  29s    0x146   0x4      0x3D
+....
+
+Részletesebb kijelzést a `show lacp neighbor detail` paranccsal kaphatunk.
+====
+
+[[networking-lagg-failover]]
+.A hibatûrés beállítása
+[example]
+====
+A hibatûrési mód arra alkalmas, hogy amikor az elsõdleges porton elvesztjük a kapcsolatot, helyette egy másodlagos interfész használatára tudunk áttérni. Hozzuk létre és állítsuk be a _lagg0_ interfészt, ahol az _fxp0_ legyen a fõinterfész, az _fxp1_ pedig a tartalék interfész:
+
+[source,bash]
+....
+# ifconfig lagg0 create
+# ifconfig lagg0 up laggproto failover laggport fxp0 laggport fxp1
+....
+
+Az így létrejövõ interfész nagyjából az alábbi lesz, ahol eltérés a MAC-cím és az eszköz neve:
+
+[source,bash]
+....
+# ifconfig lagg0
+lagg0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=8<VLAN_MTU>
+        ether 00:05:5d:71:8d:b8
+        media: Ethernet autoselect
+        status: active
+        laggproto failover
+        laggport: fxp1 flags=0<>
+        laggport: fxp0 flags=5<MASTER,ACTIVE>
+....
+
+A forgalom kezdetben az _fxp0_ felületen keresztül érkezik és távozik. Ha az _fxp0_ felületen valamiért megszakadna a kapcsolat, helyette az _fxp1_ lesz az aktív link. Ha késõbb helyreáll a kapcsolat az elsõdleges felületen, akkor újra az lesz aktív link.
+====
+
+[[networking-lagg-wired-and-wireless]]
+.Hibatûrés beállítása vezetékes és vezeték nélküli hálózatok között
+[example]
+====
+Hordozható számítógépek használata esetén általában érdemesebb a vezeték nélküli kapcsolatot másodlagos interfészként beállítani, így csak akkor használja a rendszer, ha vezetékes hálózat nem érhetõ el. A man:lagg[4] segítségével egyetlen IP-címmel tudjuk használni mind a két interfészt: a teljesítmény és biztonságosság miatt elsõsorban a vezetékes hálózatot használjuk, miközben megmarad a lehetõség az adatok továbbítására a vezeték nélküli kapcsolaton keresztül is.
+
+A beállítás során a vezeték nélküli interfész MAC-címét úgy kell módosítanunk, hogy megegyezzen a man:lagg[4] címével. A man:lagg[4] interfész a saját MAC-címét az elsõdleges interfésztõl örökli, amely jelen esetünkben a vezetékes interfész lesz.
+
+A most következõ példában a vezetékes hálózatunk lesz az elsõdleges interfész (_bge0_), míg a vezeték nélküli (_wlan0_) a másodlagos. A _wlan0_ interfészt az _iwn0_ interfészbõl hoztuk létre, és a vezetékes kapcsolat MAC-címét állítjuk be neki. Elsõ lépésként tehát le kell kérdeznünk a vezetékes interfész MAC-címét:
+
+[source,bash]
+....
+# ifconfig bge0
+bge0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	options=19b<RXCSUM,TXCSUM,VLAN_MTU,VLAN_HWTAGGING,VLAN_HWCSUM,TSO4>
+	ether 00:21:70:da:ae:37
+	inet6 fe80::221:70ff:feda:ae37%bge0 prefixlen 64 scopeid 0x2
+	nd6 options=29<PERFORMNUD,IFDISABLED,AUTO_LINKLOCAL>
+	media: Ethernet autoselect (1000baseT <full-duplex>)
+	status: active
+....
+
+A _bge0_ helyett természetesen a saját vezetékes hálózati interfészünket kell megadni, és az `ether` kezdetû sorban is saját kártyánk MAC-címe fog megjelenni. Ezután már meg is tudjuk változtatni az _iwn0_ címét:
+
+[source,bash]
+....
+# ifconfig iwn0 ether 00:21:70:da:ae:37
+....
+
+Aktiváljuk a vezeték nélküli interfészt, de ne állítsunk be neki semmilyen IP-címet:
+
+[source,bash]
+....
+# ifconfig wlan0 create wlandev iwn0 ssid wlan_hálózat up
+....
+
+Hozzuk létre a man:lagg[4] interfészt a _bge0_ mint elsõdleges interfész megadásával, valamint a _wlan0_ legyen a szükség esetén használható tartalék:
+
+[source,bash]
+....
+# ifconfig lagg0 create
+# ifconfig lagg0 up laggproto failover laggport bge0 laggport wlan0
+....
+
+Az így létrehozott interfész nagyjából így fog megjelenni, egyedüli fontosabb eltérések a MAC-címek és az eszközök nevei:
+
+[source,bash]
+....
+# ifconfig lagg0
+lagg0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=8<VLAN_MTU>
+        ether 00:21:70:da:ae:37
+        media: Ethernet autoselect
+        status: active
+        laggproto failover
+        laggport: wlan0 flags=0<>
+        laggport: bge0 flags=5<MASTER,ACTIVE>
+....
+
+Hogy ne kelljen a rendszer minden egyes indítása után ezt a mûveletet megismételni, vegyük fel a következõ sorokat az [.filename]#/etc/rc.conf# állományba:
+
+[.programlisting]
+....
+ifconfig_bge0="up"
+ifconfig_iwn0="ether 00:21:70:da:ae:37"
+wlans_iwn0="wlan0"
+ifconfig_wlan0="WPA"
+cloned_interfaces="lagg0"
+ifconfig_lagg0="laggproto failover laggport bge0 laggport wlan0 DHCP"
+....
+
+====
+
+[[network-diskless]]
+== Lemez nélküli mûködés
+
+A FreeBSD képes hálózaton keresztül elindulni és helyi lemez nélkül egy NFS szerver által megosztott állományrendszer csatlakoztatásával mûködni. Ehhez a szabványos konfigurációs állományok módosításán kívül semmi másra nincs szükségünk. Egy ilyen rendszert viszonylag könnyû beállítani, mivel az összes hozzávaló szinte készen elérhetõ:
+
+* Rögtön adott legalább két módszer, ha a rendszermagot hálózaton keresztül akarjuk betölteni:
+
+** PXE: az Intel(R) által fejlesztett Preboot eXecution Environment ("indítás elõtti végrehajtási környezet") nevû rendszer a hálózati kártyákba vagy alaplapokba épített ROM segítségével teszi lehetõvé az intelligens rendszerindítást. A man:pxeboot[8] man oldalán olvashatunk errõl részletesebben.
+** Az Etherboot port (package:net/etherboot[]) olyan ROM-ba programozható kódot készít, amellyel rendszermagokat tudunk hálózaton keresztül betölteni. Ez a kód egyaránt felhasználható egy hálózati rendszerindító PROM beégetéséhez, vagy betölthetõ a helyi floppy (esetleg merev)lemezrõl, illetve MS-DOS(R) rendszer alól. Elég sok hálózati kártya támogatja ezt a módot.
+
+* Egy mintaszkript ([.filename]#/usr/shared/examples/diskless/clone_root#) is próbálja megkönnyíteni a szerveren a munkaállomás rendszerindító állományrendszerének létrehozását és karbantartását. Ezt a szkriptet valószínûleg némileg módosítani kell, de így is sokat segít az elindulásban.
+* Az [.filename]#/etc# könyvtárban található szabványos rendszerindításhoz használt állományok, amelyekkel a lemez nélküli indulást lehet detektálni és segíteni.
+* A lapozás, amennyiben szükséges, NFS vagy helyi lemez segítségével oldható meg.
+
+Számos módon állíthatunk be egy lemez nélküli munkaállomást. Rengeteg részbõl tevõdik össze, és ezek legtöbbje remekül testreszabható az igényeinknek. A továbbiakban egy teljes rendszer összeállításának lehetséges variációit ismertetjük, különös hangsúlyt fektetünk arra, hogy egyszerûek és a hagyományos FreeBSD indítószkriptekkel kompatibilisek maradjanak. A bemutatandó rendszer a következõ jellemzõkkel bír:
+
+* A lemez nélküli munkaállomások megosztott [.filename]#/# és [.filename]#/usr# állományrendszereket használnak.
++ 
+A rendszer indításához használt gyökér állományrendszer a szabvány FreeBSD-s gyökér (ez általában a szerveré), ahol néhány állományt felülírtunk a lemez nélküli mûködéshez vagy azért, mert egyszerûen az adott munkaállomáshoz tartozik.
++ 
+A gyökér azon részeit, amelyeket írhatóvá kívánunk tenni, man:md[4] alapú állományrendszerekkel lapoljuk felül. Ilyenkor azonban bármilyen rajtuk ejtett változtatás a rendszer újraindításával elveszik.
+* A rendszermagot vagy az Etherboot vagy a PXE használatával küldessük át és töltsük be, mivel egyes helyzetekben ezekre szükség lesz.
+
+[CAUTION]
+====
+
+A bemutatott rendszer nem biztonságos. Helyezzük a hálózatunk egy jól védett részére, és a többi gép ne tekintse megbízhatónak.
+====
+
+A szakaszban szereplõ összes információt a FreeBSD 5.2.1-RELEASE változatával teszteltük.
+
+=== Háttérinformációk
+
+A lemez nélküli munkaállomások beállítása egyszerre adja magát és könnyen is elvéthetõ. Az elkövetett hibákat olykor számos okból kifolyólag nehéz felismerni. Például:
+
+* A fordítási idõben megadott beállítások mást eredményeznek futási idõben.
+* A hibaüzenetek gyakran titokzatosak vagy esetleg teljesen el is maradnak.
+
+Ezért ha valamennyire tisztában vagyunk a háttérben zajló folyamatokkal, akkor sokkal több eséllyel leszünk képesek megoldani a menet közben felmerülõ problémákat.
+
+A rendszernek a sikeres felkapaszkodáshoz több mûveletet is végre kell hajtania:
+
+* A gépnek szüksége van olyan induló paraméterekhez, mint például az IP-cím, a végrehajtható állomány neve, a szerver neve, a gyökér elérési útja. Ezeket a DHCP vagy a BOOTP protokollok használatával adhatjuk meg. A DHCP a BOOTP kompatibilis kiterjesztése, ezért ugyanazokat a portokat és alapvetõ csomagformátumot alkalmazza.
++ 
+A rendszerüket kizárólag BOOTP használatával is beállíthatjuk. A man:bootpd[8] szerver az alap FreeBSD rendszer része.
++ 
+A DHCP azonban rengeteg elõnnyel rendelkezik a BOOTP protokollal szemben (áttekinthetõbb konfigurációs állományok, a PXE használatának lehetõsége, illetve sok minden más, ami nem csak a lemez nélküli mûködéshez kellhet), ezért itt alapvetõen egy DHCP alapú konfigurációt mutatunk be, de ahol megoldható, megemlítjük a man:bootpd[8] esetén alkalmas példákat is. A mintaként szolgáló konfiguráció az ISC DHCP szoftvercsomagot használja (a tesztszerverre ennek a 3.0.1.r12 verzióját telepítetük fel).
+* A gépnek egy vagy több programot kell a saját memóriájába áttöltenie. Erre vagy a TFTP vagy pedig az NFS alkalmas. A TFTP és az NFS között sok helyen fordítási idõben tudunk választani. Gyakori hibaforrás a protokollhoz rosszul megadott állománynevek használata: a TFTP általában az összes állományt a szerverrõl egyetlen könyvtárból tölti át, ezért arra számít, hogy a neveiket ehhez viszonyítva adjuk meg. Az NFS használata során azonban abszolút elérési utakat kell megadnunk.
+* A rendszer indítását lehetõvé tevõ közbensõ programokat és a rendszermagot valahogy inicializálni kell és elindítani. Ezen a területen több fontos változat kapott helyet:
+
+** A PXE a man:pxeboot[8] kódját fogja betölteni, ez lényegében a FreeBSD betöltõ harmadik fokozatának egy módosított változata. A man:loader[8] a mûködéséhez szükséges paramétereket a rendszer indításakor kapja meg, majd a vezérlés átadása elõtt ezeket a rendszermag környezetében hagyja. Ebben az esetben akár a [.filename]#GENERIC# rendszermag is használható.
+** Az Etherboot kevesebb elõkészítéssel közvetlenül magát a rendszermagot tölti be. Ehhez azonban egy saját rendszermagot kell építeni, külön beállításokkal.
++ 
+A PXE és az Etherboot egyaránt jól használható. Mivel azonban a rendszermagok általában a man:loader[8] kódjára hagyják a munka legnagyobb részét, ezért ahol lehetséges, a PXE megoldását érdemes alkalmazni.
++ 
+Tehát ha az alaplapi BIOS és a hálózati kártya is támogatja a PXE használatát, akkor válasszunk inkább azt.
+* Végezetül a gépnek valamilyen módon hozzá kell tudnia férnie az állományrendszerekhez. Erre többnyire az NFS jöhet szóba.
+
+A további részleket lásd a man:diskless[8] man oldalon.
+
+=== Beállítási útmutató
+
+==== Beállítás a ISC DHCP használatával
+
+Az ISC DHCP szervere képes a BOOTP és DHCP kéréseket is megválaszolni.
+
+Az ISC DHCP 3.0 nem az alaprendszer része, ezért a használatához elõször telepítenünk kell a package:net/isc-dhcp30-server[] portot vagy a neki megfelelõ csomagot.
+
+Ahogy feltelepítettük, le kell futtatnunk az ISC DHCP konfigurációs állományát (ezt általában [.filename]#/usr/local/etc/dhcpd.conf# néven találjuk meg). A most következõ, megjegyzésekkel kiegészített példában egy `margaux` nevû gép az Etherboot, valamint egy `corbieres` nevû gép PXE használatával akar kapcsolódni:
+
+[.programlisting]
+....
+
+default-lease-time 600;
+max-lease-time 7200;
+authoritative;
+
+option domain-name "minta.com";
+option domain-name-servers 192.168.4.1;
+option routers 192.168.4.1;
+
+subnet 192.168.4.0 netmask 255.255.255.0 {
+  use-host-decl-names on; <.>
+  option subnet-mask 255.255.255.0;
+  option broadcast-address 192.168.4.255;
+
+  host margaux {
+    hardware ethernet 01:23:45:67:89:ab;
+    fixed-address margaux.minta.com;
+    next-server 192.168.4.4; <.>
+    filename "/data/misc/kernel.diskless"; <.>
+    option root-path "192.168.4.4:/data/misc/diskless"; <.>
+  }
+  host corbieres {
+    hardware ethernet 00:02:b3:27:62:df;
+    fixed-address corbieres.minta.com;
+    next-server 192.168.4.4;
+    filename "pxeboot";
+    option root-path "192.168.4.4:/data/misc/diskless";
+  }
+}
+....
+
+<.> Ez a beállítás arra utasítja a dhcpd démont, hogy a lemez nélküli gép hálózati neveként a `host` deklarációban megadott értéket küldje el. Ezt úgyis meg lehet csinálni, hogy felvesszünk egy `option host-name margaux` részt a `host` deklarációk közé.
+
+<.> A `next-server` direktíva a betöltõ vagy a rendszermag betöltéséért felelõs TFTP vagy NFS szervert jelöli ki (alapértelmezés szerint ez megegyezik a DHCP szerverrel).
+
+<.> A `filename` direktíva azt az állományt adja meg, amelyet az Etherboot vagy a PXE a következõ végrehajtási lépésben betölt. Ezt a kiválasztott átviteli módnak megfelelõen kell megadni. Az Etherboot lefordítható az NFS vagy a TFTP használatával is. A FreeBSD port alapból az NFS támogatását tartalmazza. A PXE a TFTP protokollt használja, ezért itt relatív állományneveket adunk meg (ez persze a TFTP szerver beállításaitól függ, de általában ez a jellemzõ). Sõt, a PXE a [.filename]#pxeboot# állományt tölti be, nem is a rendszermagot. Léteznek további érdekes lehetõségek is, mint például a [.filename]#pxeboot# állomány betöltése a FreeBSD CD-jén található [.filename]#/boot# könyvtárból (mivel a man:pxeboot[8] a [.filename]#GENERIC# rendszermagot képes betölteni, ezért a PXE használatával akár egy távoli CD-meghajtóról is indíthatjuk a rendszert).
+
+<.> A `root-path` opció a rendszer indításához használt gyökér állományrendszert nevezi meg, amelyet többnyire az NFS jelölési módszere szerint kell megadni. A PXE használata során el lehet hagyni a gép IP-címét egészen addig, amíg nem engedélyezzük a rendszermagban a BOOTP beállítást. Az NFS szerver ekkor megegyzik a TFTP szerverrel.
+
+==== Beállítás a BOOTP használatával
+
+Itt a bootpd (egyetlen kliensre korlátozott) beállítását láthatjuk. Ezt az [.filename]#/etc/bootptab# állományba tegyük.
+
+Ne feledjük, hogy a BOOTP használatához az Etherboot portot a `NO_DHCP_SUPPORT` beállítással kell fordítanunk, miközben a PXE esetében kell a DHCP. Egyébként a bootpd egyedüli nyilvánvaló elõnye csupán annyi, hogy az alaprendszer része.
+
+[.programlisting]
+....
+
+.def100:\
+  :hn:ht=1:sa=192.168.4.4:vm=rfc1048:\
+  :sm=255.255.255.0:\
+  :ds=192.168.4.1:\
+  :gw=192.168.4.1:\
+  :hd="/tftpboot":\
+  :bf="/kernel.diskless":\
+  :rp="192.168.4.4:/data/misc/diskless":
+
+margaux:ha=0123456789ab:tc=.def100
+....
+
+==== A rendszer elõkészítése az Etherboot számára
+
+Az http://etherboot.sourceforge.net[Etherboot honlapján ] találhatunk egy http://etherboot.sourceforge.net/doc/html/userman/t1.html[ minden részletre kiterjedõ dokumentációt (angolul)], amely elsõsorban ugyan a Linux típusú rendszerek számára íródott, de ettõl függetlenül még hasznos információkat tartalmaz. A továbbiakban csak annyit szeretnénk körvonalazni, hogy az Etherboot miként bírható mûködésre FreeBSD rendszerekkel.
+
+Elõször telepítenünk kell a package:net/etherboot[] csomagot vagy portot.
+
+Az Etherboot beállítását (vagyis a TFTP használatának megadását az NFS helyett) az Etherboot forrását tartalmazó könyvtárban található [.filename]#Config# állomány megfelelõ átírásával tudjuk megtenni.
+
+Itt most floppyról fogjuk indítani a rendszert. A többi módszerrel (PROM vagy MS-DOS(R) program) kapcsolatban olvassuk el az Etherboot dokumentációját.
+
+A rendszerindító lemez elkészítéséhez tegyünk egy lemezt annak a gépnek a meghajtójába, ahová az Etherboot felkerült. Váltsunk az Etherboot könyvtárán belül az [.filename]#src# alkönyvtárba és gépeljük be:
+
+[source,bash]
+....
+# gmake bin32/eszköztípus.fd0
+
+....
+
+Az _eszköztípus_ a lemez nélküli munkaállomás Ethernet kártyájától függ. Az ugyanebben a könyvtárban található [.filename]#NIC# állományból tudjuk kiolvasni, hogy az adott kártyához melyik _eszköztípus_ tartozik.
+
+==== A rendszer indítása PXE használatával
+
+Alapértelmezés szerint a man:pxeboot[8] betöltõ a rendszermagot NFS-en keresztül tölti be. Ha az [.filename]#/etc/make.conf# állományban a `LOADER_TFTP_SUPPORT` beállítást adjuk meg, akkor TFTP támogatással is lefordítható. Ezzel kapcsolatban a [.filename]#/usr/shared/examples/etc/make.conf# állományban található megjegyzéseket érdemes elolvasnunk.
+
+A [.filename]#make.conf# állományban még további két másik hasznos opciót is találhatunk a soros vonali konzollal üzemelõ lemez nélküli gépek számára: az egyik a `BOOT_PXELDR_PROBE_KEYBOARD`, a másik pedig a `BOOT_PXELDR_ALWAYS_SERIAL`.
+
+A gép indításakor úgy tudjuk beüzemelni a PXE használatát, ha a BIOS beállításai között a `Boot from network` opciót választjuk ki, vagy a gép bekapcsolása után lenyomjuk hozzá a megfelelõ funkcióbillentyût.
+
+==== A TFTP és NFS szerverek beállítása
+
+Ha a PXE vagy az Etherboot a TFTP protokollt használja, akkor az állományszerveren a tftpd démont kell elindítani:
+
+[.procedure]
+====
+. Készítsünk egy könyvtárat, ahonnan majd a tftpd küldi az állományokat, például legyen ez a [.filename]#/tftpboot#.
+. Vegyük fel a következõ sort az [.filename]#/etc/inetd.conf# állományunkba:
++
+[.programlisting]
+....
+tftp	dgram	udp	wait	root	/usr/libexec/tftpd	tftpd -l -s /tftpboot
+....
++
+[NOTE]
+======
+A tapasztalat szerint egyes PXE verziók a TFTPTCP alapú változatát használják. Ebben az esetben vegyünk fel még egy második sort is, ahol a `dgram udp` részt `stream tcp`-re cseréljük.
+======
++
+. Mondjuk meg az inetd démonnak, hogy olvassa újra a konfigurációs állományát. Az alábbi parancs megfelelõ mûködéséhez Az `inetd_enable="YES"` sornak szerepelnie kell az [.filename]#/etc/rc.conf# állományban:
++
+[source,bash]
+....
+# /etc/rc.d/inetd restart
+....
+====
+
+A [.filename]#tftpboot# könyvtárat bárhova rakhatjuk a szerveren. Viszont az [.filename]#inetd.conf# és [.filename]#dhcpd.conf# állományokban ezt ne felejtsük fel megadni.
+
+Minden esetben engedélyeznünk kell az NFS használatát és vele együtt exportálni az NFS szerverrõl elérni kívánt állományrendszereket.
+
+[.procedure]
+====
+
+. Az [.filename]#/etc/rc.conf# állományba tegyük bele a következõt:
++
+[.programlisting]
+....
+nfs_server_enable="YES"
+....
++
+. Az [.filename]#/etc/exports# állományban a lemez nélküli rendszereknek szánt gyökérkönyvtárat tegyük elérhetõvé (a példában írjuk át a kötet csatlakozási pontját és a _margaux corbieres_ helyére állítsuk be a saját lemez nélküli munkaállomásaink neveit:
++
+[.programlisting]
+....
+/data/misc -alldirs -ro margaux corbieres
+....
++
+. Kérjük meg a mountd démont, hogy olvassa újra a konfigurációs állományát. Elõfordulhat azonban, hogy ehhez elõször az NFS szolgáltatást kell engedélyezni az [.filename]#/etc/rc.conf# állományból és újraindítani a gépet.
++
+[source,bash]
+....
+# /etc/rc.d/mountd restart
+....
+====
+
+==== Lemez nélküli rendszermag fordítása
+
+Ha az Etherboot használata mellett döntünk, akkor a lemez nélküli kliensek számára a rendszermagot a következõ beállítások használatával kell újrafordítani (a megszokottak mellett):
+
+[.programlisting]
+....
+
+options     BOOTP          # BOOTP-n keresztül kérünk IP-címet és hálózati nevet
+options     BOOTP_NFSROOT  # a BOOTP-tõl kapott információk alapján csatoljuk a gyökeret NFS-en keresztül
+....
+
+Ezek mellett valószínûleg szükségünk lesz a `BOOTP_NFSV3`, `BOOT_COMPAT` és `BOOTP_WIRED_TO` beállítások megadására is (lásd a [.filename]#NOTES# állományt).
+
+A beállítások nevei régrõl származnak és némileg félrevezetõek lehetnek, mivel valójában semmit sem változtatnak a rendszermagban levõ DHCP vagy a BOOTP rutinok használatában (egyébként meg lehet adni vagy az egyik vagy a másik protokoll kizárólágos használatát is).
+
+Fordítsuk le a rendszermagot (lásd crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]), és másoljuk a [.filename]#dhcpd.conf# állományban megadott helyre.
+
+[NOTE]
+====
+Amikor a PXE protokollt használjuk, a rendszermagot nem fontos az imént felsorolt paraméterekkel fordítanunk (habár ajánlatos). Az engedélyezésükkel több DHCP kérés keletkezik a rendszermag elindulása közben, ezért kisebb a kockázata annak, hogy a man:pxeboot[8] által bizonyos esetekben megszerzett és az új értékek között valamilyen ellentmondás jön létre. A használatuk egyik elõnye, hogy így mellékhatásként a hálózati nevünket is megkapjuk. Ellenkezõ esetben erre is találnunk kellene valamilyen módot, például fenntartani egy-egy [.filename]#rc.conf# állományt minden kliensen.
+====
+
+[NOTE]
+====
+Az Etherboot csak akkor lesz képes betölteni a rendszermagot, ha device hinteket is beépítünk. Ezt a következõ beállítással tudjuk megoldani (errõl bõvebben lásd a [.filename]#NOTES# állomány megjegyzéseit):
+
+[.programlisting]
+....
+hints		"GENERIC.hints"
+....
+
+====
+
+==== A rendszerindító állományrendszer elõkészítése
+
+A [.filename]#dhcpd.conf# állomány `root-path` beállításának megfelelõen hozzunk létre a rendszer indítására alkalmas gyökér állományrendszert.
+
+===== Az állományrendszer feltöltése a `make world` paranccsal
+
+Ezzel a módszerrel a `DESTDIR` könyvtárba pillanatok alatt telepíteni tudunk egy teljes szûz rendszert (és nem csak a rendszerindító állományrendszert). Ehhez mindössze csak annyit kell tenni, hogy lefuttatjuk a következõ szkriptet:
+
+[.programlisting]
+....
+#!/bin/sh
+export DESTDIR=/data/misc/diskless
+mkdir -p ${DESTDIR}
+cd /usr/src; make buildworld && make buildkernel
+make installworld && make installkernel
+cd /usr/src/etc; make distribution
+....
+
+Miután végzett, már csak a `DESTDIR` könyvtárban található [.filename]#/etc/rc.conf# és [.filename]#/etc/fstab# állományokat kell az igényeinkhez igazítani.
+
+==== A lapozóterület beállítása
+
+Amennyiben szükséges, a szerveren található lapozóállományt NFS-en keresztül el tudjuk érni.
+
+===== Lapozás NFS-sel
+
+A rendszermag maga nem támogatja az NFS alapú lapozás engedélyezését a rendszer indításakor. A lapozóállományt ezért a rendszerindító szkripteken keresztül aktiváljuk, amelyekben csatlakoztatunk egy írható állományrendszert, ahol létrehozzuk és engedélyezzük a lapozóállományt. Tetszõleges méretû lapozóállományt például így tudunk készíteni:
+
+[source,bash]
+....
+# dd if=/dev/zero of=/a/lapozóállomány/helye bs=1k count=1 oseek=100000
+....
+
+Az engedélyezéséhez pedig a következõ sort kell felvenni az [.filename]#rc.conf# állományba:
+
+[.programlisting]
+....
+swapfile=/a/lapozóállomány/helye
+....
+
+==== Egyéb problémák
+
+===== Írásvédett [.filename]#/usr# használata
+
+Ha a lemez nélküli munkaállomáson X szervert akarunk futtatni, akkor az XDM konfigurációs állományait kicsit módosítanunk kell, mert alapértelmezés szerint a [.filename]#/usr# könyvtárban hozza létre a naplókat.
+
+===== Nem FreeBSD-s szerver használata
+
+Amikor a rendszer indításához használt állományrendszert nem egy FreeBSD alapú számítógépen tároljuk, akkor elõször ezt egy FreeBSD-s gépen kell elkészíteni, majd a `tar` vagy `cpio` segítségével átmásolni a megfelelõ helyre.
+
+Ilyen helyzetekben gyakran gondok adódhatnak olyan speciális állományokkal, mint például amelyek a [.filename]#/dev# könyvtárban találhatóak, mivel a fõ- és aleszközazonosítók tárolására szánt méret különbözhet. Ezt úgy oldhatjuk meg, ha exportálunk egy könyvtárat a nem FreeBSD alapú szerveren, ezt csatlakoztatjuk a FreeBSD-s gépen, majd a man:devfs[5] segítségével a eszközleírókat a felhasználó számára észrevétlen módon foglaljuk le.
+
+[[network-isdn]]
+== ISDN
+
+Az ISDN technológiai és hardveres hátterérõl sokat megtudhatunk http://www.alumni.caltech.edu/~dank/isdn/[Dan Kegel ISDN-rõl szóló oldalán (angolul)].
+
+Az ISDN használatát röviden így foglalhatnánk össze:
+
+* Ha Európában élünk, akkor minden bizonnyal az ISDN kártyákkal foglalkozó szakaszt érdemes elolvasnunk.
+* Ha elsõsorban betárcsázós ISDN-nel szeretnénk csatlakozni az internetre egy internet-szolgáltatón keresztül, akkor a terminál adaptereket tárgyaló szakaszt nézzük meg. A szolgáltatók váltásakor ezzel jár a legtöbb rugalmasság és a legkevesebb probléma.
+* Ha két helyi hálózat összekötésére használjuk, vagy az internethez egy bérelt ISDN vonalon keresztül kapcsolódunk, akkor egy önálló útválasztó vagy hálózati híd beállításában érdemes gondolkodnunk.
+
+A költség fontos szerepet játszik az elfogadható megoldás kiválasztásában. A most következõ lehetõségeket a legolcsóbbtól indulva kezdjük el felsorolni egészen a legdrágábbig.
+
+[[network-isdn-cards]]
+=== ISDN kártyák
+
+A FreeBSD-ben megtalálható ISDN implementáció csak a DSS1/Q.931 (más néven Euro-ISDN) szabvány szerint gyártott passzív kártyákat támogatja. Ismer azonban egyes olyan aktív kártyákat is, amelyeknél a firmware további más jelkezelési protokollokat is támogat. Ilyen többek közt az elsõként támogatott Primary Rate (PRI) ISDN kártya.
+
+Az isdn4bsd szoftver segítségével kapcsolódni tudunk más ISDN útválasztókhoz IP-n keresztül a nyers HDLC felett, vagy szinkron PPP használatával. Mindezeket a rendszermagban található PPP-re vagy az `isppp`-re építkezik.
+
+FreeBSD alatt egyre több PC-s ISDN kártyához készül el a támogatás, és a visszajelzések azt mutatják, hogy Európában és a világ minden részén sikerrel használják ezeket.
+
+A passzív ISDN kártyák közül is leginkább az Infineon (korábban Siemens) gyártmányú ISAC/HSCX/IPAC ISDN chipkészletek támogatottak, de a Cologne chippel rendelkezõ (de csak ISA buszos) ISDN kártyák, a Winbond W6692 chipes PCI buszos kártyák, és a Tiger300/320/ISAC chipkészletek egyes változatai, valamint néhány gyártófüggõ chipkészlettel rendelkezõ kártya, mint például az AVM Fritz!Card PCI V.1.0 és az AVM Fritz!Card PnP is remekül mûködik.
+
+Jelenleg a következõ aktív ISDN kártyákat támogatja a rendszer: AVM B1 (ISA és PCI) BRI kártyák és az AVM T1 PCI PRI kártyák.
+
+Az isdn4bsd dokumentációját a rendszerünkön belül a [.filename]#/usr/shared/examples/isdn/# könyvtárban találhatjuk meg, vagy közvetlenül http://www.freebsd-support.de/i4b/[az isdn4bsd honlapján], ahol több hivatkozást is találunk tippekre, hibajegyzékekre és bõségesebb dokumentációra, például http://people.FreeBSD.org/~hm/[az isdn4bsd saját kézikönyvére].
+
+Ha szeretnénk egy másik ISDN protokoll támogatásának kifejlesztésében résztvenni, vagy egy jelenleg még nem támogatott ISDN kártyát használhatóvá tenni, esetleg valamilyen más módon segíteni az isdn4bsd ügyét, vegyük fel a kapcsolatot {hm} fejlesztõvel.
+
+Az isdn4bsd telepítésével, beállításával és hibaelhárításával kapcsolatos kérdéseinket a link:{freebsd-isdn-url}[freebsd-isdn] levelezési listán tehetjük fel.
+
+=== ISDN terminál adapterek
+
+Az ISDN számára olyanok a terminál adapterek, mint a hagyományos telefonvonalak számára a modemek.
+
+A legtöbb terminál adapter a Hayes-modemek szabványos AT parancskészletét használja, és könnyen be lehet iktatni egy modem helyett.
+
+A terminál adapterek alapvetõen ugyanúgy mûködnek, mint a modemek, kivéve, hogy egy átlagos modemnél jóval nagyobb adatátviteli sebességre képesek. Ezért a crossref:ppp-and-slip[ppp,PPP] kapcsolatunkat pontosan ugyanúgy kell beállítani, mint a modemek esetében. Ne felejtsük a soros pont sebességét a maximális értékre állítani.
+
+A terminál adapterek használatának egyik legnagyobb elõnye, hogy segítségükkel dinamikus PPP-n keresztül tudunk az internet-szolgáltatónkhoz kapcsolódni. Mivel az IP-címtartomány egyre inkább szûkösebb, a legtöbb szolgáltató nem szívesen oszt ki bárkinek is statikus IP-címet. A legtöbb önálló útválasztó azonban nem képes alkalmazkodni az IP-címek dinamikus kiosztásához.
+
+A terminál adapter az elérhetõ lehetõségeket és a kapcsolat stabilitását tekintve teljesen a PPP démontól függ. Emiatt egy FreeBSD-s gépet könnyû modemrõl átállítani az ISDN használatára, ha már egyszer beállítottuk a PPP démont. Ezzel együtt azonban a PPP használata során tapasztalt problémák ugyanúgy ismét felmerülnek.
+
+Ha a maximális stabilitásra van szükségünk, akkor a rendszermag crossref:ppp-and-slip[ppp,PPP] beállítását használjuk, és ne a crossref:ppp-and-slip[userppp,felhasználói PPP megoldást].
+
+A FreeBSD hivatalosan az alábbi terminál adaptereket ismeri:
+
+* Motorola BitSurfer és Bitsurfer Pro
+* Adtran
+
+Valószínûleg a többi terminál adapterrel is képes együttmûködni, mivel a terminál adapterek gyártói általában igyekeznek a termékeiket a szabványos modemes AT parancskészletével kompatibilissá tenni.
+
+Az igazi probléma a külsõ terminál adapterekkel adódik, mivel, akárcsak a modemek esetében, egy nagyon jó soros kártyát igényelnek.
+
+A soros eszközök mûködésének részleteit valamint az aszinkron és szinkron soros portok közti különbségeket a link:{serial-uart}[FreeBSD soros hardverekrõl] szóló cikkében olvashatjuk.
+
+A terminál adaptereken keresztül elérhetõ sebességet a PC-kben található szabványos (aszinkron) soros port 115,2 Kb/mp-re korlátozza, még 128 Kb/mp-es adatátvitelû kapcsolatok esetében is. Az ISDN által nyújtott 128 Kb/mp kihasználásához a terminál adaptert egy szinkron soros kártyával kell összekötnünk.
+
+Ne higyjük, hogy egy belsõ terminál adapter megvásárlásával megmenekülünk ettõl a gondtól. A belsõ terminál adapterekbe egyszerûen csak egy sima szabványos PC-s soros portot építettek bele. Mindössze egy soros kábelt és egy konnektort takarítunk meg velük.
+
+A terminál adapterhez csatlakozó szinkron kártyák legalább olyan gyorsak, mint egy önálló útválasztó, és egy egyszerû 386-osra épülõ FreeBSD rendszerrel talán még rugalmasabban is kezelhetõek.
+
+A terminál adapter plusz szinkron kártya kontra önálló útválasztó kérdése már hitkérdéssé fajult, amirõl igen sokat vitatkoztak szerte a levelezési listákon. A teljes okfejtés elolvasásához az link:https://www.FreeBSD.org/search/[archívum] böngészését javasoljuk.
+
+=== Önálló ISDN hálózati hidak és útválasztók
+
+Az ISDN hidak vagy útválasztók nem egészen a FreeBSD vagy operációs rendszerek területéhez tartoznak. Az útválasztás és a hálózatok hidak alapjainak a számítógépes hálózatokról szóló szakirodalomban járhatunk utána.
+
+Ebben a szakaszban a hálózati híd és az útválasztó kifejezéseket egymás szinonímájaként fogjuk használni.
+
+Ahogy az olcsóbb ISDN útválasztók és hidak árai egyre jobban csökkennek, ezért egyre inkább népszerûbbé válnak. Az ISDN útválasztó egy apró doboz, amelyet közvetlenül a helyi Ethernet hálózatunkra tudunk csatlakoztatni, és a többi útválasztóhoz vagy hídhoz kapcsolódik. A benne található szoftverrel képes kommunikálni a PPP vagy más egyéb népszerû protokollokon keresztül.
+
+Az útválasztó egy szabványos terminál adapternél sokkal nagyobb adatátvitelt tesz lehetõvé, mivel a teljes szinkron ISDN kapcsolatot képes kihasználni.
+
+Az ISDN útválasztókkal és hidakkal kapcsolatban az egyik legnagyobb problémát a különbözõ gyártók közti eltérések jelenthetik. Ha egy szolgáltatóhoz akarunk ezen a módon csatlakozni, akkor érdemes elõzetesen egyeztetni az igényeinket velük.
+
+Ha két helyi hálózati szegmenst akarunk összekapcsolni, mint például az otthoni és az irodai hálózatot, akkor ez a megoldás jár a legkevesebb karbantartási költséggel. Mivel ekkor mi magunk vásároljuk a kapcsolat mind a két oldalára a felszerelést, biztosak lehetünk benne, hogy az így létrehozott összekötettés mûködni fog.
+
+Például, ha egy otthon vagy a vállalat egy fiókjánál levõ gépet akarjuk összekötni az igazgatóság hálózatával, akkor a következõ felállást érdemes követnünk:
+
+.Egy otthoni vagy egy fiókbeli hálózat
+[example]
+====
+A hálózat busz topológiájú és 10 Base 2 Ethernetet használ ("thinnet"). Ha szükséges, akkor az útválasztót egy AUI/10BT adó-vevõvel csatlakoztassuk a hálózati kábelre.
+
+image::isdn-buse.png[10 Base 2 Ethernet]
+
+Ha az otthoni vagy fiókbeli számítógép az egyedüli, akkor egy keresztkötésû sodrott érpár kábellel akár közvetlenül is csatlakozhatunk az útválasztóhoz.
+====
+
+.Az igazgatósági iroda vagy egy másik helyi hálózat
+[example]
+====
+A hálózat csillag topológiájú, és 10 Base T Ethernet kábelezésû ("sodrott érpár").
+
+image::isdn-twisted-pair.png[Az ISDN hálózat felépítése]
+
+====
+
+A legtöbb útválasztó/híd elõnye, hogy _egyszerre_ 2 _egymástól független_ PPP kapcsolatot tudunk felépíteni velük 2 egymástól független géppel. Ezt a legtöbb terminál adapter nem támogatja, kivéve azok a (általában drága) típusok, amelyek két soros porttal rendelkeznek. Ezt ne tévesszük össze a csatornák nyalábolásával, az MPP-vel és a többivel.
+
+Ez nagyon hasznos lehet például olyan esetekben, amikor van egy dedikált ISDN kapcsolatunk az irodában, amelyet ugyan szeretnénk megcsapolni, de nem szeretnénk a másik ISDN vonalat is elrabolni. Az irodában levõ A útválasztó képes a dedikált B csatornájú kapcsolaton (64 Kb/mp) keresztül elérni az internetet, miközben a másik B csatornát ettõl független adatkapcsolatra használja. A második B csatorna így használható betárcsázásra, kitárcsázásra vagy a másik B csatornával együtt dinamikus nyalábolásra (MPP stb.) a nagyobb sávszélesség elérése érdekében.
+
+Az Ethernetes híd nem IP alapú forgalmat is képes továbbítani, ezért rajta keresztül akár IPX vagy SPX és más egyéb protokollokat is használni tudunk.
+
+[[network-natd]]
+== Hálózati címfordítás
+
+[[network-natoverview]]
+=== Áttekintés
+
+A FreeBSD hálózati címfordításért felelõs démonprogramja, a man:natd[8] (Network Address Translation daemon), a beérkezõ nyers IP csomagokat dolgozza fel, és a helyi gépek forráscímét kicserélve visszailleszti ezeket a csomagokat a kimenõ folyamba. A man:natd[8] mindezt úgy teszi a forrás IP-címekkel és portokkal, hogy amikor az adat visszaérkezik, akkor képes lesz megmondani a csomag eredeti küldõjét és visszaküldeni neki a választ.
+
+A hálózati címfordítást általában az internet-kapcsolatok megosztásánál alkalmazzuk.
+
+[[network-natsetup]]
+=== A hálózat felépítése
+
+Az IPv4 világában egyre jobban fogyó IP-címek és az egyre növekvõ számú, nagysebességre vágyó, például kábeles vagy DSL-es fogyasztók miatt az igény is egyre nagyobb az internet-kapcsolatok megosztására. Ha több számítógéppel szeretnénk egyetlen kapcsolaton és egy IP-címen keresztül kapcsolódni az internetre, akkor ehhez a man:natd[8] tökéletes választás.
+
+Az esetek többségében a felhasználók egy kábeles vagy DSL vonalra csatlakoznak, melyhez egyetlen IP-cím tartozik, és ezen a gépen keresztül szeretnék elérni az internetet a helyi hálózaton levõ többi géprõl.
+
+Ezt úgy tudjuk elérni, ha az internethez kapcsolódó FreeBSD-s gépet átjárónak állítjuk be. Ebben az átjáróban legalább két hálózati felületnek kell léteznie - az egyikkel az internetes útválasztóhoz, a másikkal pedig a helyi hálózathoz kapcsolódik. A belsõ hálózaton levõ gépek egy hub vagy egy switch segítségével csatlakoznak egymáshoz.
+
+[NOTE]
+====
+Több módon is el tudjuk érni a belsõ hálózatról az internetet egy FreeBSD-s átjárón keresztül. Ebben a példában most csak olyan átjárókkal foglalkozunk, amelyekben legalább két hálózati kártya található.
+====
+
+image::natd.png[A hálózat felosztása]
+
+Egy ehhez hasonló beállítás igen gyakori a megosztott internet-kapcsolatok esetében. A helyi hálózat egyik gépe csatlakozik az internetre. A többi gép ezen az "átjárón" keresztül éri el az internetet.
+
+[[network-netdloaderconfiguration]]
+=== A rendszerbetöltõ beállítása
+
+A man:natd[8] mûködéséhez szükséges címfordítási támogatást a [.filename]#GENERIC# típusú rendszermagok nem tartalmazzák, viszont a [.filename]#/boot/loader.conf# megfelelõ paraméterezésével a rendszer betöltése közben ezt hozzá tudjuk adni:
+
+[.programlisting]
+....
+ipfw_load="YES"
+ipdivert_load="YES"
+....
+
+Valamint a `net.inet.ip.fw.default_to_accept` változót állítsuk az `1` értékre.
+
+[.programlisting]
+....
+net.inet.ip.fw.default_to_accept="1"
+....
+
+[NOTE]
+====
+Ez utóbbi beállítást leginkább a tûzfal és a címfordítást végzõ átjáró próbálgatásakor érdemes alkalmazni. Ilyenkor ugyanis az man:ipfw[8] alapértelmezett módon az `allow ip from any to any` (minden forgalom engedélyezett) szabályt követi, és nem pedig a kevésbé barátságos `deny ip from any to any` (minden forgalom tiltott) szabályt. A rendszer újraindításakor így valamivel nehezebb lesz kizárnunk magunkat a szabályok megadása során.
+====
+
+[[network-natdkernconfiguration]]
+=== A rendszermag beállítása
+
+Amikor viszont nincs lehetõségünk modulok használatára, vagy szeretnénk minden igényelt funkciót beépíteni a rendszermagba, akkor a rendszermag beállításait tartalmazó állományban a következõket kell megadnunk:
+
+[.programlisting]
+....
+options IPFIREWALL
+options IPDIVERT
+....
+
+A fentiek mellett még ezeket a lehetõségeket tudjuk választani:
+
+[.programlisting]
+....
+options IPFIREWALL_DEFAULT_TO_ACCEPT
+options IPFIREWALL_VERBOSE
+....
+
+[[network-natdsystemconfiguration]]
+=== A rendszerindítás beállítása
+
+A tûzfal és a hálózati címfordítás beindításához a következõknek kell az [.filename]#/etc/rc.conf# állományban lennie:
+
+[.programlisting]
+....
+gateway_enable="YES" <.>
+firewall_enable="YES" <.>
+firewall_type="OPEN" <.>
+natd_enable="YES"
+natd_interface="fxp0" <.>
+natd_flags="" <.>
+....
+
+<.> A gépet átjárónak állítja be. Hatása megegyezik a `sysctl net.inet.ip.forwarding=1` parancs kiadásával.
+
+<.> A rendszer indításakor engedélyezi az [.filename]#/etc/rc.firewall# állományban szereplõ tûzfalszabályok használatát.
+
+<.> Egy olyan elõre definiált tûzfalat ad meg, amely alapból mindent beenged. Az [.filename]#/etc/rc.firewall# állományban találhatjuk a többi típust.
+
+<.> Megadja, hogy melyik felületen továbbítsunk csomagokat az internet felé (ez a felület csatlakozik az internetre).
+
+<.> Itt szerepel minden további paraméter, amelyet még az indításkor át kell adnunk a man:natd[8] démonnak.
+
+Amikor megadjuk ezeket a beállításokat az [.filename]#/etc/rc.conf# állományban, pontosan ugyanaz történik, mintha a `natd -interface fxp0` parancsot adtunk volna ki a rendszer indításakor. Ez tehát manuálisan is elindítható.
+
+[NOTE]
+====
+Ha túlságosan sok paramétert akarunk egyszerre beállítani man:natd[8] használatához, akkor akár egy külön konfigurációs állományt is megadhatunk. Ebben az esetben a konfigurációs állományt a következõ módon kell megjelölni az [.filename]#/etc/rc.conf# állományban:
+
+[.programlisting]
+....
+natd_flags="-f /etc/natd.conf"
+....
+
+Ekkor a [.filename]#/etc/natd.conf# állomány fogja tartalmazni a beállításokat, soronként egyet. Például a következõ szakaszban ez lesz a tartalma:
+
+[.programlisting]
+....
+redirect_port tcp 192.168.0.2:6667 6667
+redirect_port tcp 192.168.0.3:80 80
+....
+
+A konfigurációs állományról és az `-f` opció használatával kapcsolatban olvassuk el a man:natd[8] man oldalát.
+====
+
+A helyi hálózaton mindegyik gépnek az link:ftp://ftp.isi.edu/in-notes/rfc1918.txt[RFC 1918] által megadott privát IP-címterekbõl származó címet kell használnia, és az alapértelmezett átjárónak mindenhol a natd démont futtató gép IP-címét kell megadni.
+
+Például a belsõ hálózaton található `A` és `B` kliensek IP-címei rendre `192.168.0.2` és `192.168.0.3`, míg a man:natd[8] démont futtató gép belsõ címe `192.168.0.1`. Az `A` és a `B` kliens alapértelmezett átjáróját a natd gépre, vagyis a `192.168.0.1` címre kell beállítanunk. A natd gép külsõ, avagy internetes felülete semmilyen további módosítást nem igényel a man:natd[8] mûködéséhez.
+
+[[network-natdport-redirection]]
+=== A portok átirányítása
+
+A man:natd[8] alkalmazásának hátránya, hogy a belsõ hálózatra csatlakozó kliensek az internetrõl nem érhetõek el. Tehát a helyi hálózat kliensei képesek elérni a külvilágot, de az visszafelé már nem igaz. Ez akkor jelent igazából problémát, ha az egyik belsõ kliensen szolgáltatásokat akarunk futtatni. A probléma egyik egyszerû megoldása, ha a natd használatával az internet felõl egyszerûen átirányítunk bizonyos portokat a megfelelõ belsõ kliensre.
+
+Például tegyük fel, hogy az `A` kliens egy IRC szervert, míg a `B` kliens egy webszervert futtat. Ez akkor fog mûködni, ha a szolgáltatásokhoz tartozó 6667 (IRC) és 80 (web) portokat átirányítjuk a hozzájuk tartozó gépek felé.
+
+Ehhez a man:natd[8] démonnak a `-redirect_port` paramétert kell átadni. A pontos felírás így néz ki:
+
+[.programlisting]
+....
+     -redirect_port protokoll célIP:célPORT[-célPORT]
+                 [külsõIP:]külsõPORT[-külsõPORT]
+                 [távoliIP[:távoliPORT[-távoliPORT]]]
+....
+
+A fenti példában tehát ezt kell megadnunk:
+
+[.programlisting]
+....
+    -redirect_port tcp 192.168.0.2:6667 6667
+    -redirect_port tcp 192.168.0.3:80 80
+....
+
+Így az egyes külsõ _tcp_ portokat átirányítjuk a belsõ hálózat gépei felé.
+
+A `-redirect_port` paraméternek akár egész porttartományokat is megadhatunk. Például a _tcp 192.168.0.2:2000-3000 2000-3000_ megadásával az összes 2000-tõl 3000-ig terjedõ port csatlakozását leképezzük az `A` kliens 2000 és 3000 közti portjaira.
+
+Ezek a beállítások a man:natd[8] közvetlen futtatásakor adhatóak meg, esetleg az [.filename]#/etc/rc.conf# állományban az `natd_flags=""` opció keresztül, vagy egy külön konfigurációs állományban.
+
+A többi beállítási lehetõséget a man:natd[8] man oldalán ismerhetjük meg.
+
+[[network-natdaddress-redirection]]
+=== A címek átirányítása
+
+A címek átirányítása abban az esetben hasznos, amikor több IP-cím áll rendelkezésünkre, de ezek egy géphez tartoznak. Ilyenkor az man:natd[8] képes a belsõ hálózat egyes gépeihez saját külsõ IP-címet rendelni. A man:natd[8] a belsõ hálózat kliensei által küldött csomagokban kicseréli a címüket a megfelelõ külsõ IP-címmel, illetve az ezekre a címekre érkezõ forgalmat továbbítja a megfelelõ belsõ kliens irányába. Ezt a megoldást statikus hálózati címfordításnak is nevezzük. Például a `128.1.1.2` és a `128.1.1.3` IP-címek a natd démont futtató átjáróhoz tartoznak. A `128.1.1.1` cím használható a natd alapú átjáró külsõ IP-címeként, miközben a `128.1.1.2` és a `128.1.1.3` címeket a belsõ hálózaton elérhetõ `A` és `B` kliensek felé közvetítjük.
+
+A `-redirect_address` felírása tehát a következõ:
+
+[.programlisting]
+....
+-redirect_address helyiIP publikusIP
+....
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|_helyiIP_
+|A helyi hálózaton található kliens saját IP-címe.
+
+|_publikusIP_
+|A klienshez tartozó megfelelõ külsõ IP-cím.
+|===
+
+Az iménti példában a pontos paraméterek ezek lesznek:
+
+[.programlisting]
+....
+-redirect_address 192.168.0.2 128.1.1.2
+-redirect_address 192.168.0.3 128.1.1.3
+....
+
+A `-redirect_port` opcióhoz hasonlóan ez is megadható az [.filename]#/etc/rc.conf# állományban az `natd_flags=""` beállításon keresztül vagy egy külön konfigurációs állományban. A címek átirányításával nincs szüksége a portok átirányítására, mivel az adott IP-címhez tartozó összes forgalmat átirányítjuk.
+
+A natd démont futtató gépen a külsõ IP-címeket aktiválni kell és a külsõ felületéhez kell rendelni. A man:rc.conf[5] man oldalon járhatunk utána, hogy mindezt hogyan is tudjuk megcsinálni.
+
+[[network-plip]]
+== Párhuzamos vonali IP (PLIP)
+
+A párhuzamos vonali IP (Parallel Line IP, PLIP) a TCP/IP protokoll használatát valósítja meg párhuzamos porton keresztül. Olyan gépek számára lehet hasznos, amelyekben nincs hálózati kártya, vagy esetleg laptopoknál. Ebben a szakaszban a következõket tárgyaljuk:
+
+* Párhuzamos (laplink) kábel készítése
+* Két számítógép összekapcsolása a PLIP segítségével
+
+[[network-create-parallel-cable]]
+=== Párhuzamos kábel készítése
+
+Párhuzamos kábelt a legtöbb számítástechnikai boltban tudunk vásárolni. Ha mégsem tudnánk sehol sem beszerezni, vagy egyszerûen tudni szeretnénk, hogyan lehet ilyet készíteni, akkor az alábbi táblázatban láthatjuk, hogy miként tudunk egy hétköznapi nyomtatókábelt átalakítani a céljainkra.
+
+.A párhuzamos kábel hálózati használatra alkalmas bekötése
+[cols="1*l,1*l,1*l,1,1*l", frame="none", options="header"]
+|===
+| A-név
+| A-vég
+| B-vég
+| Leírás
+| Post/Bit
+
+|
+
+....
+DATA0
+-ERROR
+....
+|
+
+....
+2
+15
+....
+|
+
+....
+15
+2
+....
+|Adat
+|
+
+....
+0/0x01
+1/0x08
+....
+
+|
+
+....
+DATA1
++SLCT
+....
+|
+
+....
+3
+13
+....
+|
+
+....
+13
+3
+....
+|Adat
+|
+
+....
+0/0x02
+1/0x10
+....
+
+|
+
+....
+DATA2
++PE
+....
+|
+
+....
+4
+12
+....
+|
+
+....
+12
+4
+....
+|Adat
+|
+
+....
+0/0x04
+1/0x20
+....
+
+|
+
+....
+DATA3
+-ACK
+....
+|
+
+....
+5
+10
+....
+|
+
+....
+10
+5
+....
+|Vál. imp.
+|
+
+....
+0/0x08
+1/0x40
+....
+
+|
+
+....
+DATA4
+BUSY
+....
+|
+
+....
+6
+11
+....
+|
+
+....
+11
+6
+....
+|Adat
+|
+
+....
+0/0x10
+1/0x80
+....
+
+|GND
+|18-25
+|18-25
+|Föld
+|-
+|===
+
+[[network-plip-setup]]
+=== A PLIP beállítása
+
+Elõször is szereznünk kell valahonnan egy laplink kábelt. Ha ez megvan, akkor mind a két gépen ellenõrizzük, hogy a rendszermag tartalmazza az man:lpt[4] meghajtót:
+
+[source,bash]
+....
+# grep lp /var/run/dmesg.boot
+lpt0: <Printer> on ppbus0
+lpt0: Interrupt-driven port
+....
+
+A párhuzamos portnak megszakítással vezéreltnek kell lennie ("interrupt driven"), és az [.filename]#/boot/device.hints# állományban szerepelnie kell nagyjából a következõ soroknak:
+
+[.programlisting]
+....
+hint.ppc.0.at="isa"
+hint.ppc.0.irq="7"
+....
+
+Ezután nézzük meg, hogy a rendszermag beállításait tartalmazó állományban megjelenik-e a `device plip` sor, vagy a [.filename]#plip.ko# modul betöltõdött-e. Akármelyik is történt, a párhuzamos hálózati felület most már a rendelkezésünkre áll, és az man:ifconfig[8] paranccsal ezt meg is tudjuk nézni:
+
+[source,bash]
+....
+# ifconfig plip0
+plip0: flags=8810<POINTOPOINT,SIMPLEX,MULTICAST> mtu 1500
+....
+
+A laplink kábelt csatlakoztassuk mind a két számítógéphez.
+
+Mind a két a hálózati felület paramétereit `root` felhasználóként hangoljuk be. Például, ha az `_egyikgép_` nevû gépet akarjuk a `_másikgép_` nevû géphez csatlakoztatni:
+
+[.programlisting]
+....
+              egyikgép <-----> másikgép
+IP-cím        10.0.0.1      10.0.0.2
+....
+
+Az `_egyikgép_` felületét így állítsuk be:
+
+[source,bash]
+....
+# ifconfig plip0 10.0.0.1 10.0.0.2
+....
+
+A `_másikgép_` felületét így állítsuk be:
+
+[source,bash]
+....
+# ifconfig plip0 10.0.0.2 10.0.0.1
+....
+
+Ezt követõen már egy mûködõ kapcsolatnak kell felépülnie. Az egyéb részletek kapcsán az man:lp[4] és az man:lpt[4] man oldalait nézzük át.
+
+Ezt a két gépet vegyük fel az [.filename]#/etc/hosts# állományba is:
+
+[.programlisting]
+....
+127.0.0.1               localhost.saját.tartomány localhost
+10.0.0.1                egyikgép.saját.tartomány egyikgép
+10.0.0.2                másikgép.saját.tartomány
+....
+
+A kapcsolat mûködõképességérõl úgy tudunk meggyõzõdni, ha az egyik géprõl megpróbáljuk pingelni a másikat. Például az `_egyikgép_` esetében:
+
+[source,bash]
+....
+# ifconfig plip0
+plip0: flags=8851<UP,POINTOPOINT,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+        inet 10.0.0.1 --> 10.0.0.2 netmask 0xff000000
+# netstat -r
+Routing tables
+
+Internet:
+Destination        Gateway          Flags     Refs     Use      Netif Expire
+másikgép           egyikgép         UH          0       0       plip0
+# ping -c 4 másikgép
+PING másikgép (10.0.0.2): 56 data bytes
+64 bytes from 10.0.0.2: icmp_seq=0 ttl=255 time=2.774 ms
+64 bytes from 10.0.0.2: icmp_seq=1 ttl=255 time=2.530 ms
+64 bytes from 10.0.0.2: icmp_seq=2 ttl=255 time=2.556 ms
+64 bytes from 10.0.0.2: icmp_seq=3 ttl=255 time=2.714 ms
+
+--- másikgép ping statistics ---
+4 packets transmitted, 4 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 2.530/2.643/2.774/0.103 ms
+....
+
+[[network-ipv6]]
+== Az IPv6
+
+Az IPv6 (másik néven az IPng, vagy a "az internet következõ generációs protokollja", "IP next generation") a jól ismert IP protokoll (avagy az IPv4) új változata. Hasonlóan a jelenleg mûködõ összes többi BSD rendszerhez, a FreeBSD is tartalmazza a KAME IPv6 referencia implementációt. Ezért ha ezzel szeretnénk kísérletezni, akkor ehhez a FreeBSD minden eszköz biztosít számunkra. Ez a szakasz az IPv6 beállítását és használatát mutatja be.
+
+Az 1990-es évek elején az IPv4-es címterek rohamos mértékû kimerülését figyelték meg. Az internet jelenlegi bõvülési üteme mellett két nagyobb aggodalomnak adott okot:
+
+* A címek elfogyása. Napjainkban efelõl egyre kevesebb a kétség, mivel az RFC 1918 által megfogalmazott privát címterek (`10.0.0.0/8`, `172.16.0.0/12`, és `192.168.0.0/16`), valamint a hálózati címfordítás (Network Address Translation, NAT) használata igen elterjedt.
+* Az útválasztási táblázatok méretének növekedése. Ez még manapság is aggasztó.
+
+Az IPv6 ezeket és még más egyéb problémákat a következõ módon igyekszik megoldani:
+
+* A 128 bites címtér használata. Más szóval, elméletben összesen 340 282 366 920 938 463 463 374 607 431 768 211 456 darab címet képes kiosztani. Ez azt jelenti, hogy bolygónk minden egyes négyzetméterére megközelítõleg 6,67 * 10^27 IPv6 típusú cím jut.
+* Az útválasztók a saját táblázataikban csak a hálózatok összevont címeit tárolják el, ezáltal egy átlagos útválasztási táblázatban található bejegyzések száma 8192 alá csökken.
+
+Az IPv6 emellett még rengeteg más elõnyös lehetõséget is kínál:
+
+* A címek automatikus beállítása (lásd http://www.ietf.org/rfc/rfc2462.txt[RFC 2462])
+* Anycast (bárkiküldés, vagyis "egy a sokból")
+* Kötelezõ (mandatory) multicast
+* IPsec (IP szintû védelem)
+* Egyszerûsített fejléc
+* Mobil IP
+* IPv6-IPv4 közti átjárhatóság
+
+Ha mindezekrõl többet szeretnénk megtudni, akkor erre érdemes továbblépnünk:
+
+* Az IPv6 áttekintése a http://playground.sun.com/pub/ipng/html/ipng-main.html[playground.sun.com] honlapon
+* http://www.kame.net[KAME.net]
+
+=== Az IPv6 címek háttere
+
+Az IPv6 címeknek több típusa létezik: a unicast (egyesküldés), az anycast (bárkiküldés) és a multicast (többesküldés).
+
+A unicasthez használt címek jól ismert címek. Az így elküldött csomag pontosan ahhoz a felülethez érkezik meg, amelyhez az adott cím tartozik.
+
+Az anycasthez használt címek felírásukban tökéletesen megegyeznek a unicast esetével, de valójában felületek egy csoportját címezik. Az anycastre beállított címekre küldött csomagok mindig a(z útválasztó szerinti) legközelebb levõ felülethez érkeznek meg. Az anycastet az útválasztók számára találták ki.
+
+A multicasthez használt címek felületek egy csoportját nevezik meg. A multicast címekre érkezõ csomagokat a csoport minden egyes tagja megkapja.
+
+[NOTE]
+====
+Az IPv4 esetében az üzenetszórásra szánt (általában az `xxx.xxx.xxx.255` formátumú) címeket az IPv6 esetében multicast címekkel fejezzük ki.
+====
+
+.Fenntartott IPv6 címek
+[cols="1,1,1,1", frame="none", options="header"]
+|===
+| IPv6 cím
+| Az elõtag hossza (bitekben)
+| Leírás
+| Megjegyzés
+
+|`::`
+|128 bit
+|nem specifikált
+|Vö. a `0.0.0.0` címmel az IPv4 esetében.
+
+|`::1`
+|128 bit
+|saját cím
+|Vö. a `127.0.0.1` címmel az IPv4 esetében.
+
+|`::00:xx:xx:xx:xx`
+|96 bit
+|IPv4 beágyazása
+|Az alsó 32 bit egy IPv4 formátumú cím. Ezt "IPv4 kompatibilis IPv6 címnek" is nevezik.
+
+|`::ff:xx:xx:xx:xx`
+|96 bit
+|IPv4-re leképzett IPv6 címek
+|Az alsó 32 bit egy IPv4 címet jelöl. Olyan gépeknél használatos, amelyek nem támogatják az IPv6 protokollt.
+
+|`fe80::` - `feb::`
+|10 bit
+|helyi összeköttetés
+|Vö. az IPv4 loopback címeivel.
+
+|`fec0::` - `fef::`
+|10 bit
+|helyi cím
+|
+
+|`ff::`
+|8 bit
+|multicast
+|
+
+|`001` (2-es alapú)
+|3 bit
+|globális unicast
+|Az összes globális unicast címet ebbõl a tartományból osztjuk ki. Az elsõ 3 bit értéke"001".
+|===
+
+=== Az IPv6 címek olvasása
+
+Az IPv6 címek kanonikus formája így ábrázolható: `x:x:x:x:x:x:x:x`, ahol mindegyik "x" egy 16 bites hexadecimális érték. Például: `FEBC:A574:382B:23C1:AA49:4592:4EFE:9982`.
+
+Gyakran a címek hosszú nullákból álló sorozatokat tartalmaznak, ezért mindegyik ilyen sorozatot rövidíteni tudjuk a "::" jelöléssel. Rajtuk kívül még az egyes hexadecimális csoportokban a bevezetõ nullák is elhagyhatóak. Például az `fe80::1` cím kanonikus formája: `fe80:0000:0000:0000:0000:0000:0000:0001`.
+
+A harmadik forma szerint az utolsó 32 bites részt írjuk fel a megszokott (decimális) IPv4 stílusú pontozással, ahol tehát a "." választja el a tagokat. Így például a `2002::10.0.0.1` felírás a `2002:0000:0000:0000:0000:0000:0a00:0001` kanonikus (hexadecimális) ábrázolásnak feleltethetõ meg, ami pedig egyszerûen `2002::a00:1` alakban is megadható.
+
+Mostanra már minden bizonnyal a kedves olvasó érteni fogja a következõt:
+
+[source,bash]
+....
+# ifconfig
+....
+
+[.programlisting]
+....
+rl0: flags=8943<UP,BROADCAST,RUNNING,PROMISC,SIMPLEX,MULTICAST> mtu 1500
+         inet 10.0.0.10 netmask 0xffffff00 broadcast 10.0.0.255
+         inet6 fe80::200:21ff:fe03:8e1%rl0 prefixlen 64 scopeid 0x1
+         ether 00:00:21:03:08:e1
+         media: Ethernet autoselect (100baseTX )
+         status: active
+....
+
+A `fe80::200:21ff:fe03:8e1%rl0` cím az automatikusan beállított helyi összeköttetés címe. Ez az automatikus beállítás részeként a MAC-címbõl jött létre.
+
+Az IPv6 címek szerkezetérõl további részleteket az http://www.ietf.org/rfc/rfc3513.txt[RFC 3513]-ban találunk.
+
+=== Kapcsolódás
+
+Jelenleg négy módon tudunk más IPv6-os géphez és hálózathoz csatlakozni:
+
+* Kérjünk a hálózati elérésünkért felelõs illetékesektõl IPv6 alapú hálózatot. A részletek tekintetében vegyük fel a kapcsolatot az internet-szolgáltatónkkal.
+* A http://www.sixxs.net[SixXS] a világ minden táján kínál végpontokkal rendelkezõ tunneleket.
+* Egy 6-ból-4 (http://www.ietf.org/rfc/rfc3068.txt[RFC 3068]) típusú tunnellel.
+* Ha betárcsázós kapcsolatunk van, akkor használjuk a package:net/freenet6[] portot.
+
+=== A nevek feloldása az IPv6 világában
+
+IPv6 alatt régebben két típusa volt a nevek feloldásáért felelõs rekordoknak. Az IETF az A6 rekordokat idõközben elavultnak nyilvánította. Ezért manapság már az AAAA rekordok tekinthetõek szabványosnak.
+
+Az AAAA rekordok használata magától értetõdik. A hálózati nevükhöz az alábbi módon tudunk IPv6 címet rendelni az elsõdleges zónát leíró állományban:
+
+[.programlisting]
+....
+SAJÁTNÉV           AAAA    SAJÁTIPv6CÍM
+....
+
+Ha nem rendelkezünk saját névfeloldási zónával, akkor erre kérjük meg a névfeloldást végzõ szolgáltatónkat. A bind jelenlegi változatai (8.3 és 9), valamint a package:dns/djbdns[] (IPv6 támogatására vonatkozó javítással) támogatják az AAAA rekordokat.
+
+=== Az [.filename]#/etc/rc.conf# szükséges módosításai
+
+==== Az IPv6 kliensek beállításai
+
+Ezek a beállítások egy helyi hálózaton levõ gépre vonatkoznak, nem pedig egy útválasztóra. Az man:rtsol[8] az alábbi megadásával fogja automatikusan beállítani a felületeinket a rendszer indításakor:
+
+[.programlisting]
+....
+ipv6_enable="YES"
+....
+
+Ha az [.filename]#fxp0# felülethez statikusan akarunk IP-címet rendelni, például a `2001:471:1f11:251:290:27ff:fee0:2093` címet, akkor ehhez a következõt kell megadni:
+
+[.programlisting]
+....
+ipv6_ifconfig_fxp0="2001:471:1f11:251:290:27ff:fee0:2093"
+....
+
+Az [.filename]#/etc/rc.conf# állományban az alapértelmezett átjárót a következõ módon tudjuk a `2001:471:1f11:251::1` címre beállítani:
+
+[.programlisting]
+....
+ipv6_defaultrouter="2001:471:1f11:251::1"
+....
+
+==== Az IPv6 útválasztók és átjárók beállítása
+
+Itt most a tunnelt biztosító szolgáltató által mutatott irányt követjük, és olyan formára alakítjuk, amely megmarad az újraindítás után is. A rendszer indításakor az [.filename]#/etc/rc.conf# állományban valami ilyesmit kell megadni a járat visszaállításához:
+
+Soroljuk fel a beállítandó általános tunnel alapú felületeket, ilyen lehet például a [.filename]#gif0#:
+
+[.programlisting]
+....
+gif_interfaces="gif0"
+....
+
+A felületnek állítsunk be egy helyi végpontot a _SAJÁT_IPv4_CÍM_ megadásával, valamint egy távoli végpontot a _TÁVOLI_IPv4_CÍM_ megadásával:
+
+[.programlisting]
+....
+gifconfig_gif0="SAJÁT_IPv4_CÍM TÁVOLI_IPv4_CÍM"
+....
+
+Az IPv6 tunnelünk végpontjához kapott cím aktiválásához az alábbit kell még megadnunk:
+
+[.programlisting]
+....
+ipv6_ifconfig_gif0="SAJÁT_KAPOTT_IPv6_TUNNEL_VÉGPONTJÁNAK_CÍME"
+....
+
+Ezután már csak az alapértelmezett útvonalat kell beállítani az IPv6 számára. Ez az IPv6 járat másik oldala:
+
+[.programlisting]
+....
+ipv6_defaultrouter="SAJÁT_IPv6_TÁVOLI_TUNNEL_VÉGPONTJÁNAK_CÍME"
+....
+
+==== Az IPv6 tunnel beállításai
+
+Amennyiben a szerver IPv6 alapú forgalmat közvetít a hálózatunk és a világ között, az [.filename]#/etc/rc.conf# állományba a következõt kell felvennünk:
+
+[.programlisting]
+....
+ipv6_gateway_enable="YES"
+....
+
+=== Az útválasztók kihirdetése és automatikus konfigurációja
+
+Ebben a szakaszban az man:rtadvd[8] beállításával fogjuk az alapértelmezett IPv6 útvonalat kihirdetni.
+
+Az man:rtadvd[8] engedélyezéséhez az alábbi sort kell betennünk az [.filename]#/etc/rc.conf# állományba:
+
+[.programlisting]
+....
+rtadvd_enable="YES"
+....
+
+Emellett még fontos megadnunk azt a felületet, ahol az IPv6 útválasztó kérelmezését végezzük. Ha erre a feladatra például az [.filename]#fxp0# felületet választjuk, akkor errõl az man:rtadvd[8] így értesíthetõ:
+
+[.programlisting]
+....
+rtadvd_interfaces="fxp0"
+....
+
+Most pedig készítenünk kell hozzá egy konfigurációt is, vagyis az [.filename]#/etc/rtadvd.conf# állományt. Íme erre egy példa:
+
+[.programlisting]
+....
+fxp0:\
+	:addrs#1:addr="2001:471:1f11:246::":prefixlen#64:tc=ether:
+....
+
+Az [.filename]#fxp0# felületet természetesen cseréljük ki a sajátunkkal.
+
+Ezután a `2001:471:1f11:246::` címre helyére írjuk be a saját kiosztásunk elõtagját.
+
+Egy egész `/64` alhálózat esetén nem is kell többet megadni. Minden más helyezetben az elõtag hosszára `prefixlen#` vonatkozó értéket is be kell még állítanunk.
+
+[[network-atm]]
+== Az Aszinkron adatátviteli mód (ATM)
+
+=== A klasszikus IP-címek beállítása ATM felett (állandó)
+
+A klasszikus IP ATM felett (Classical IP over ATM, CLIP) a legegyszerûbb módszer az IP-címek használatára az Aszinkron adatátviteli móddal (Asynchronous Transfer Mode, ATM) együtt. Kapcsolt és állandó kapcsolatok (Switched Virtual Channel, SVC és Permanent Virtual Channel, PVC) esetén egyaránt megfelelõ. Ebben a szakaszban ez utóbbival fogunk foglalkozni.
+
+==== A teljesen hálószerû konfigurációk
+
+A CLIP beállítását állandó csatornákon például úgy tudjuk megoldani, ha az összes gépet külön ezekre a célokra szánt állandó csatornákkal összekapcsoljuk egymással. Ez az egyszerû megoldás azonban nagyobb számú gép esetében már nem eléggé hatékony. A következõ példában csupán négy gépet kötünk hálózatba, melyik mindegyike egy ATM kártyával csatlakozik az ATM hálózatra. Ehhez elsõként tervezzük meg az IP-címek kiosztását és a gépek közti ATM kapcsolatokat. A példában ez az alábbiak szerint alakul:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Gép
+| IP-cím
+
+|`A-gep`
+|`192.168.173.1`
+
+|`B-gep`
+|`192.168.173.2`
+
+|`C-gep`
+|`192.168.173.3`
+
+|`D-gep`
+|`192.168.173.4`
+|===
+
+A teljes hálózat felépítéséhez minden egyes pár között egy-egy ATM kapcsolatra lesz szükségünk:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Gépek
+| VPI.VCI pár
+
+|`A-gep` - `B-gep`
+|0.100
+
+|`A-gep` - `C-gep`
+|0.101
+
+|`A-gep` - `D-gep`
+|0.102
+
+|`B-gep` - `C-gep`
+|0.103
+
+|`B-gep` - `D-gep`
+|0.104
+
+|`C-gep` - `D-gep`
+|0.105
+|===
+
+A kapcsolatok egyes végein szereplõ VPI és VCI értékek természetesen eltérhetnek, de ezeket mi most az egyszerûség kedvéért egyenlõnek tekintettük. A következõ lépésben minden gépen állítsuk be az ATM felület:
+
+[source,bash]
+....
+A-gep# ifconfig hatm0 192.168.173.1 up
+B-gep# ifconfig hatm0 192.168.173.2 up
+C-gep# ifconfig hatm0 192.168.173.3 up
+D-gep# ifconfig hatm0 192.168.173.4 up
+....
+
+Ha feltételezzük, hogy minden gépen a [.filename]#hatm0# az ATM felület neve. Most pedig az `A-gep`-en állítsuk be az állandó csatornákat. (Itt most feltesszük, hogy az ATM switch-eken mindezt már elvégeztük. A switch kézikönyvében errõl részletesebb leírást is találhatunk.)
+
+[source,bash]
+....
+A-gep# atmconfig natm add 192.168.173.2 hatm0 0 100 llc/snap ubr
+A-gep# atmconfig natm add 192.168.173.3 hatm0 0 101 llc/snap ubr
+A-gep# atmconfig natm add 192.168.173.4 hatm0 0 102 llc/snap ubr
+
+B-gep# atmconfig natm add 192.168.173.1 hatm0 0 100 llc/snap ubr
+B-gep# atmconfig natm add 192.168.173.3 hatm0 0 103 llc/snap ubr
+B-gep# atmconfig natm add 192.168.173.4 hatm0 0 104 llc/snap ubr
+
+C-gep# atmconfig natm add 192.168.173.1 hatm0 0 101 llc/snap ubr
+C-gep# atmconfig natm add 192.168.173.2 hatm0 0 103 llc/snap ubr
+C-gep# atmconfig natm add 192.168.173.4 hatm0 0 105 llc/snap ubr
+
+D-gep# atmconfig natm add 192.168.173.1 hatm0 0 102 llc/snap ubr
+D-gep# atmconfig natm add 192.168.173.2 hatm0 0 104 llc/snap ubr
+D-gep# atmconfig natm add 192.168.173.3 hatm0 0 105 llc/snap ubr
+....
+
+Természetesen nem csak UBR használható, hanem minden más olyan forgalmazási beállítás, amit az ATM kártyáink ismernek. Itt most a forgalmi beállítás nevét a hozzá tartozó konkrét paraméterek követik. Az man:atmconfig[8] segédprogram használatához így kérhetünk segítséget:
+
+[source,bash]
+....
+# atmconfig help natm add
+....
+
+Olvassuk el az man:atmconfig[8] man oldalát.
+
+Ugyanez a beállítás az [.filename]#/etc/rc.conf# állomány használatával is elvégezhetõ. Az `A-gep` esetében mindez így nézne ki:
+
+[.programlisting]
+....
+network_interfaces="lo0 hatm0"
+ifconfig_hatm0="inet 192.168.173.1 up"
+natm_static_routes="B-gep C-gep D-gep"
+route_B-gep="192.168.173.2 hatm0 0 100 llc/snap ubr"
+route_C-gep="192.168.173.3 hatm0 0 101 llc/snap ubr"
+route_D-gep="192.168.173.4 hatm0 0 102 llc/snap ubr"
+....
+
+A CLIP útvonalak pillanatnyi állapota így kérdezhetõ le:
+
+[source,bash]
+....
+A-gep# atmconfig natm show
+....
+
+[[carp]]
+== A Közös cím redundancia protokoll (CARP)
+
+A Közös cím redundancia protokoll (Common Address Redundancy Protocol, avagy CARP) segítségével több gép képes egyazon IP-címen osztozni. Bizonyos konfigurációkban ez a terhelés elosztására (terhelés-kiegyenlítésre) vagy a rendelkezésre állás növelésére (hibatûrésre) alkalmazható. A benne szereplõ gépek akár eltérõ IP-címmel is rendelkezhetnek, ahogy azt majd a példában is láthatjuk.
+
+A CARP támogatásának engedélyezéséhez a FreeBSD rendszermagját a következõ beállítással kell újrafordítanunk:
+
+[.programlisting]
+....
+device	carp
+....
+
+A CARP által biztosított lehetõségek ezután már elérhetõek, és számos `sysctl` változón keresztül állíthatóak:
+
+[.informaltable]
+[cols="1,1", frame="none", options="header"]
+|===
+| Változó
+| Leírás
+
+|`net.inet.carp.allow`
+|A beérkezõ CARP csomagok elfogadása. Alapértelmezés szerint engedélyezett.
+
+|`net.inet.carp.preempt`
+|Ezzel a beállítással az adott gépen az összes CARP felület leáll, ha közülük bármelyik is mûködésképtelenné válik. Alapértelmezés szerint tiltott.
+
+|`net.inet.carp.log`
+|A `0` értékkel kikapcsoljuk a naplózást. Az `1` értékkel a rossz CARP csomagok naplózását engedélyezzük. Az ettõl nagyobb értékek esetén pedig a CARP felületek változásait naplózzuk. Az alapértelmezett értéke az `1`.
+
+|`net.inet.carp.arpbalance`
+|Az ARP protokoll segítségével próbálja meg a helyi hálózati forgalmat mentesíteni a terheléstõl. Alapértelmezés szerint tiltott.
+
+|`net.inet.carp.suppress_preempt`
+|Ez a változó írásvédett, és a megszakítás elnyomásának állapotát mutatja. A megszakítás elnyomható, ha a felület egyik linkje nem mûködik. A `0` érték arra utal, hogy a megszakítást nem nyomták el. Minden probléma növeli ennek a változónak az értékét.
+|===
+
+A CARP eszközök maguk az `ifconfig` paranccsal készíthetõek el:
+
+[source,bash]
+....
+# ifconfig carp0 create
+....
+
+Egy valós környezetben az ilyen felületeknek egy VHID néven ismert egyedi azonosítóval kell rendelkezniük. Ez a VHID vagy más néven a virtuális gépazonosító (azaz Virtual Host Identification) fogja a gépünket a hálózat többi elemétõl megkülönböztetni.
+
+=== A CARP felhasználása a rendelkezésre állás javításában
+
+A CARP használatának egyik módja, ahogy arra már korábban is utaltunk, a szerverek rendelkezésre állásának feljavítása. Ebben a példában három géppel fogunk hibatûrést biztosítani, melyik mindegyike egyedi IP-címmel rendelkezik és ugyanazt a webes tartalmat szolgáltatják. A gépeket egy Round Robin rendszerû (körbejáró) névfeloldással együtt használjuk. A tartalék gépünknek lesz még további két CARP felülete, külön a szerver IP-címeihez tartozó egyes webes tartalmakhoz. Amikor valami meghibásodik, a tartalék szerver átveszi a meghibásodott gép IP-címét. Ilyenkor a hiba teljesen észrevétlen marad a felhasználók számára. A tartalék szerveren a többi szerverrel egyezõ tartalomnak és szolgáltatásoknak kell megjelennie, hogy bármikor át tudja tõlük venni a forgalmat.
+
+A hálózati neveiktõl és a virtuális azonosítóiktól eltekintve a két gépet ugyanúgy kell beállítani. Ebben a példában a gépeket most az `a-gep.minta.org` és `b-gep.minta.org` nevekkel láttuk el. Elõször is a CARP beállításához el kell helyeznünk a megfelelõ hivatkozásokat az [.filename]#rc.conf# állományban. Az `a-gep.minta.org` esetében az [.filename]#rc.conf# állomány a következõ sorokat tartalmazza:
+
+[.programlisting]
+....
+hostname="a-gep.minta.org"
+ifconfig_fxp0="inet 192.168.1.3 netmask 255.255.255.0"
+cloned_interfaces="carp0"
+ifconfig_carp0="vhid 1 pass testpass 192.168.1.50/24"
+....
+
+Miközben a `b-gep.minta.org` az [.filename]#rc.conf# állományában ezeket adjuk meg:
+
+[.programlisting]
+....
+hostname="b-gep.minta.org"
+ifconfig_fxp0="inet 192.168.1.4 netmask 255.255.255.0"
+cloned_interfaces="carp0"
+ifconfig_carp0="vhid 2 pass testpass 192.168.1.51/24"
+....
+
+[NOTE]
+====
+Nagyon fontos, hogy az `ifconfig` parancs `pass` paraméterével megadott jelszavak megegyezzenek. A [.filename]#carp# eszközök csak a megfelelõ jelszót birtokló gépeket fogadják el. A virtuális gépazonosítónak azonban minden esetben el kell térnie.
+====
+
+A harmadik, `szolgaltato.minta.org` címmel rendelkezõ gépet fogjuk felkészíteni az elõbbi gépek meghibásodására felkészíteni. Ennek a gépnek két [.filename]#carp# eszközre lesz szüksége, melyek az egyes gépeket kezelik. Az ehhez illeszkedõ sorok valahogy így fognak kinézni az [.filename]#rc.conf# állományban:
+
+[.programlisting]
+....
+hostname="szolgaltato.minta.org"
+ifconfig_fxp0="inet 192.168.1.5 netmask 255.255.255.0"
+cloned_interfaces="carp0 carp1"
+ifconfig_carp0="vhid 1 advskew 100 pass testpass 192.168.1.50/24"
+ifconfig_carp1="vhid 2 advskew 100 pass testpass 192.168.1.51/24"
+....
+
+Két [.filename]#carp# eszköz használatával a `szolgaltato.minta.org` képes észlelni és átvenni bármelyik olyan gép IP-címét, amely nem válaszol.
+
+[NOTE]
+====
+Az alap FreeBSD rendszermag használata esetén _elõfordulhat_, hogy a megszakítás (a "preemption" opció) engedélyezett. Amennyiben így lenne, a `szolgaltato.minta.org` nem fogja minden esetben fogja rendesen visszaadni az IP-címet az eredeti tulajdonosának. Ilyenkor a rendszergazdának kell ezt manuálisan megtennie. Tehát a következõ parancsot kell kiadnia a `szolgaltato.minta.org` gépen:
+
+[source,bash]
+....
+# ifconfig carp0 down && ifconfig carp0 up
+....
+
+Ezt az adott géphez tartozó [.filename]#carp# felülettel kell megcsinálni.
+====
+
+Innentõl a CARP már teljesen engedélyezhetõ és készen áll a tesztelésre. A teszteléshez vagy a hálózati rendszert kell újraindítani, vagy a gépeket.
+
+További információkat a man:carp[4] man oldalán találhatunk.

@@ -1,0 +1,197 @@
+---
+title: 第 14 章 Newbus
+prev: books/arch-handbook/usb
+next: books/arch-handbook/sound
+---
+
+[[newbus]]
+= Newbus
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:part-signifier: 部分
+:appendix-caption: 附录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 14
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+__特别感谢Matthew N. Dodd, Warner Losh, Bill Paul, Doug Rabson, Mike Smith, Peter Wemm and Scott Long__.
+
+本章详细解释了Newbus设备框架。
+
+[[newbus-devdrivers]]
+== 设备驱动程序
+
+=== 设备驱动程序的目的
+
+设备驱动程序是软件组件，它在内核关于外围设备（例如，磁盘、网络 适配卡）的通用视图和外围设备的实际实现之间提供了接口。 __设备驱动程序接口(DDI)__是内核与设备驱动程序组件 之间定义的接口。 
+
+=== 设备驱动程序的类型
+
+在UNIX(R)那个时代，FreeBSD也从中延续而来，定义了四种类型的 设备：
+
+* 块设备驱动程序
+* 字符设备驱动程序
+* 网络设备驱动程序
+* 伪设备驱动程序
+
+__块设备__以使用固定大小的[数据]块的方式运行。 这种类型的驱动程序依赖所谓的 __缓冲区缓存(buffer cache)__，其目的 是在内存中的专用区域缓存访问过的数据块。这种缓冲区缓存常常基于后台写 (write-behind)，这意味着数据在内存中被修改后，当系统进行其周期性 磁盘刷新时才会被同步到磁盘，从而优化写操作。
+
+=== 字符设备
+
+然而，在FreeBSD 4.0版本以及后续版本中， 块设备和字符设备的区别变得不存在了。
+
+[[newbus-overview]]
+== Newbus概览
+
+__Newbus__实现了一种基于抽象层的新型总线结构， 可以在FreeBSD 3.0中看到这种总线结构的介绍，当时Alpha的移植被导入到 代码树中。直到4.0它才成为设备驱动程序使用的默认系统。其目的是为主机 系统提供给__操作系统__的各种总线和设备的互连提供更加 面向对象的方法。
+
+其主要特性包括：
+
+* 动态连接
+* 驱动程序容易模块化
+* 伪总线
+
+最显著的改变之一是从平面和特殊系统演变为设备树布局。
+
+顶层驻留的是__"根"__设备，它作为 父设备，所有其他设备挂接在它上面。对于每个结构，通常"根" 只有单个孩子，其上连接着诸如__host-to-PCI桥__ 等东西。对于x86，这种"根"设备为 __"nexus"__设备，对于Alpha，Alpha的各种 不同型号有不同的顶层设备，对应不同的硬件芯片组，包括 _lca_，_apecs_， __cia__和__tsunami__。
+
+Newbus上下文中的设备表示系统中的单个硬件实体。例如，每个PCI设备被 表示为一个Newbus设备。系统中的任何设备可以有孩子；有孩子的设备通常被 称为__"bus"__。系统中常用总线的例子就是 ISA和PCI，他们各自管理连接到ISA和PCI总线上的设备列表。
+
+通常，不同类型的总线之间的连接被表示为 __"桥"__设备，它的孩子就是它所连接的 总线。一个例子就是__PCI-to-PCI桥__，它在父PCI总线上被 表示为__[.filename]##pcibN##__，而用它的孩子 -__[.filename]##pciN##__表示连接在它上面的 总线。这种布局简化了PCI总线树的实现，允许公共代码同时用于顶层和桥接的 总线。
+
+Newbus结构中的每个设备请求它的父设备来为其映射资源。父设备接着请求 它的父设备，直到到达nexus。因此，基本上nexus是Newbus系统中唯一知道所有 资源的部分。
+
+[TIP]
+====
+
+ISA设备可能想在``0x230``映射其IO端口，因此它向其 父设备请求，这种情况下是ISA总线。ISA总线将它交给PCI-to-ISA桥，PCI-to-ISA 桥接着请求PCI总线，PCI总线到达host-to-PCI桥，最后到达nexus。这种向上 过渡的优美之处在于可以有空间来变换请求。对``0x230``IO端口 的请求在MIPS机器上可以被PCI桥变成 ``0xb0000230``处的内存映射。
+====
+
+资源分配可以在设备树的任何地方加以控制。例如，在很多Alpha平台上， ISA中断与PCI中断是单独管理的，对ISA中断的资源分配是由Alpha的ISA总线设备 管理的。在IA-32上，ISA和PCI中断都由顶层的nexus设备管理。对于两种移植， 内存和端口地址空间由单个实体管理 - 在IA-32上是nexus，在Alpha（例如，CIA 或tsunami）上是相关的芯片组驱动程序。
+
+为了规范化对内存和端口映射资源的访问，Newbus整合了NetBSD的 `bus_space` API。他们提供了单一的API来代替inb/outb 和直接内存读写。这样做的优势在于单个驱动程序就可以使用内存映射寄存器 或端口映射寄存器（有些硬件支持两者）。
+
+这种支持被合并到了资源分配机制中。分配资源时，驱动程序可以从资源 中检取关联的``bus_space_tag_t``和 `bus_space_handle_t`。
+
+Newbus也允许在专用于此目的的文件中定义接口方法。这些是 [.filename]##.m##文件，可以在[.filename]##src/sys## 目录树中找到。
+
+Newbus系统的核心是可扩展的"基于对象编程(object-based programming)"的模型。系统中的每个设备具有它所支持的一个方法表。 系统和其他设备使用这些方法来控制设备并请求服务。设备所支持的不同方法 被定义为多个"接口"。"接口"只是 设备实现的一组相关的方法。
+
+在Newbus系统中，设备方法是通过系统中的各种设备驱动程序提供的。当 __自动配置(auto-configuration)__期间设备被连接(attach) 到驱动程序，它使用驱动程序声明的方法表。以后设备可以从其驱动程序 __分离(detach)__，并 __重新连接(re-attach)__到具有新方法表的新驱动程序。这就 允许驱动程序的动态替换，而动态替换对于驱动程序的开发非常有用。
+
+接口通过与文件系统中用于定义vnode操作的语言相似的接口定义语言来 描述。接口被保存在方法文件中（通常命名为[.filename]##foo_if.m##）。 
+
+.Newbus的方法
+[example]
+====
+[.programlisting]
+....
+
+      # Foo 子系统/驱动程序（注释...）
+
+	  INTERFACE foo
+
+       	METHOD int doit {
+       		device_t dev;
+       	};
+
+       	# 如果没有通过DEVMETHOD()提供一个方法，则DEFAULT为将会被使用的方法
+
+       	METHOD void doit_to_child {
+       		device_t dev;
+       		driver_t child;
+       	} DEFAULT doit_generic_to_child;
+....
+
+====
+
+当接口被编译后，它产生一个头文件 "[.filename]#foo_if.h#"，其中包含函数声明：
+
+[.programlisting]
+....
+
+      int FOO_DOIT(device_t dev);
+      int FOO_DOIT_TO_CHILD(device_t dev, device_t child);
+....
+
+伴随自动产生的头文件，也会创建一个源文件 "[.filename]#foo_if.c#"；其中包含一些函数的实现， 这些函数用于在对象方法表中查找相关函数的位置并调用那个函数。
+
+系统定义了两个主要接口。第一个基本接口被称为 __"设备(device)"__，并包括与所有设备相关 的方法。__"设备(device)"__接口中的方法 包括__"探测(probe)"__， __"连接(attach)"__和 __"分离(detach)"__，他们用来控制硬件的侦测， 以及__"关闭(shutdown)"__， __"挂起(suspend)"__和 __"恢复(resume)"__，他们用于关键事件通知。 
+
+另一个，更加复杂接口是__"bus"__。 此接口包含的方法适用于带有孩子的设备，包括访问总线特定的每设备信息 ，事件通知 （`child_detached`，`driver_added`）和响应管理 （`alloc_resource`， `activate_resource`， `deactivate_resource`， `release_resource`）。
+
+"bus"接口中的很多方法为总线设备的某些孩子执行服务。 这些方法通常使用前两个参量指定提供服务的总线和请求服务的子设备。为了 简化设备驱动程序代码，这些方法中的很多都有访问者(accessor)函数，访问者 函数用来查找父设备并调用父设备上的方法。例如，方法 `BUS_TEARDOWN_INTR(device_t dev, device_t child, ...)` 可以使用函数 ``bus_teardown_intr(device_t child, ...)``来调用。
+
+系统中的某些总线类型提供了额外接口以提供对总线特定功能的访问。 例如，PCI总线驱动程序定义了"pci"接口，此接口有两个方法 ``read_config``和 ``write_config``，用于访问PCI设备 的配置寄存器。
+
+[[newbus-api]]
+== Newbus API
+
+由于Newbus API非常庞大，本节努力将它文档化。本文档的下一版本会 带来更多信息。
+
+=== 源代码目录树中的重要位置
+
+[.filename]#src/sys/[arch]/[arch]# - 特定机器结构的 内核代码位于这个目录。例如``i386``结构或 ``SPARC64``结构。
+
+[.filename]#src/sys/dev/[bus]# - 支持特定 ``[bus]``的设备位于这个目录。
+
+[.filename]#src/sys/dev/pci# - PCI总线支持代码位于 这个目录。
+
+[.filename]#src/sys/[isa|pci]# - PCI/ISA设备驱动程序 位于这个目录。FreeBSD``4.0``版本中，PCI/ISA支持代码 过去存在于这个目录中。
+
+=== 重要结构和类型定义
+
+`devclass_t` - 这是指向 ``struct devclass``的指针的类型定义。
+
+`device_method_t` - 与 ``kobj_method_t``相同（参看 [.filename]#src/sys/kobj.h#）。
+
+`device_t` - 这是指向 ``struct device``的指针的类型定义。 ``device_t`` 表示系统中的设备。它是内核对象。 实现细节参看[.filename]##src/sys/sys/bus_private.h##。
+
+`driver_t` - 这是一个类型定义，它引用 `struct driver`。 ``driver``结构是一类 ``device(设备)``内核对象；它也保存着驱动程序的私有数据。 
+
+*driver_t实现*
+[.programlisting]
+....
+
+	  struct driver {
+	     	KOBJ_CLASS_FIELDS;
+	      	void	*priv;			/* 驱动程序私有数据 */
+	  };
+....
+
+``device_state_t``是一个枚举类型，即 ``device_state``。它包含Newbus设备在自动配置前后 可能的状态。
+
+*设备状态device_state_t*
+[.programlisting]
+....
+
+	  /*
+	   * src/sys/sys/bus.h
+	   */
+	  typedef enum device_state {
+	  	DS_NOTPRESENT,	/* 未探测或探测失败 */
+	    	DS_ALIVE,		/* 探测成功 */
+	    	DS_ATTACHED,	/* 调用了连接方法 */
+	    	DS_BUSY			/* 设备已打开 */
+	  } device_state_t;
+....

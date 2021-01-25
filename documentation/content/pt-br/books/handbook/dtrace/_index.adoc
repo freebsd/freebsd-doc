@@ -1,0 +1,233 @@
+---
+title: Chapter 24. DTrace
+part: Parte III. Administração do Sistema
+prev: books/handbook/cutting-edge
+next: books/handbook/usb-device-mode
+---
+
+[[dtrace]]
+= DTrace
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Índice
+:table-caption: Tabela
+:figure-caption: Figura
+:example-caption: Exemplo
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 24
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/dtrace/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/dtrace/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/dtrace/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/pt-br/mailing-lists.adoc[]
+include::shared/pt-br/teams.adoc[]
+include::shared/pt-br/urls.adoc[]
+
+toc::[]
+
+[[dtrace-synopsis]]
+== Sinopse
+
+O DTrace, também conhecido como Dynamic Tracing, foi desenvolvido pela Sun(TM) como uma ferramenta para localizar gargalos de desempenho em sistemas de produção e pré-produção. Além de diagnosticar problemas de desempenho, o DTrace pode ser usado para ajudar a investigar e depurar comportamentos inesperados no kernel do FreeBSD e em programas da userland.
+
+O DTrace é uma ferramenta de criação de perfil notável, com uma impressionante variedade de recursos para diagnosticar problemas do sistema. Ele também pode ser usado para executar scripts pré-escritos para aproveitar seus recursos. Os usuários podem criar seus próprios utilitários usando a DTrace D Language, permitindo que eles personalizem seus perfis com base em necessidades específicas.
+
+A implementação do FreeBSD fornece suporte completo para o DTrace do kernel e suporte experimental para o DTrace da userland. O Userland DTrace permite que os usuários executem o rastreio de limite de função para programas de área de trabalho usando o provedor `pid` e insiram investigações estáticas em programas da userland para rastreamento posterior. Alguns ports, como package:databases/postgresql12-server[] e package:lang/php74[], possuem uma opção do DTrace para ativar testes estáticos.
+
+O guia oficial do DTrace é mantido pelo projeto Illumos no http://dtrace.org/guide[Guia do DTrace].
+
+Depois de ler este capítulo, você saberá:
+
+* O que é o DTrace e quais recursos ele fornece.
+* Diferenças entre a implementação do DTrace Solaris(TM) e a fornecida pelo FreeBSD.
+* Como ativar e usar o DTrace no FreeBSD.
+
+Antes de ler este capítulo, você deve:
+
+* Entender os fundamentos do UNIX(TM) e do FreeBSD (crossref:basics[basics, Fundamentos do FreeBSD]).
+* Ter alguma familiaridade com segurança e como ela está presente no FreeBSD (crossref:security[security, Segurança]).
+
+[[dtrace-implementation]]
+== Diferenças de Implementação
+
+Embora o DTrace no FreeBSD seja semelhante ao encontrado no Solaris(TM), existem diferenças. A principal diferença é que no FreeBSD, o DTrace é implementado como um conjunto de módulos do kernel e o DTrace não pode ser usado até que os módulos sejam carregados. Para carregar todos os módulos necessários:
+
+[source,bash]
+....
+# kldload dtraceall
+....
+
+Começando com o FreeBSD 10.0-RELEASE, os módulos são carregados automaticamente quando o `dtrace` é executado.
+
+O FreeBSD usa a opção do kernel `DDB_CTF` para ativar o suporte para carregar dados CTF dos módulos do kernel e do próprio kernel. O CTF é o Solaris(TM) Compact C Type Format, que encapsula uma forma reduzida de informações de depuração semelhantes ao DWARF e aos veneráveis stabs. Os dados do CTF são adicionados aos binários pelas ferramentas de compilação `ctfconvert` e `ctfmerge`. O utilitário `ctfconvert` analisa as seções de depuração do DWARFELF criadas pelo compilador e o `ctfmerge` mescla as seções do ELF do CTF dos objetos em executáveis ou bibliotecas compartilhadas.
+
+Alguns provedores diferentes existem para o FreeBSD não para o Solaris(TM). O mais notável é o provedor `dtmalloc`, que permite rastrear `malloc()` por tipo no kernel do FreeBSD. Alguns dos provedores encontrados no Solaris(TM), como `cpc` e `mib`, não estão presentes no FreeBSD. Estes podem aparecer em futuras versões do FreeBSD. Além disso, alguns dos provedores disponíveis em ambos os sistemas operacionais não são compatíveis, no sentido de que suas sondas têm tipos de argumentos diferentes. Assim, os scripts D escritos em Solaris(TM) podem ou não funcionar sem modificações no FreeBSD, e vice-versa.
+
+Devido as diferenças de segurança, somente o `root` pode usar o DTrace no FreeBSD. O Solaris(TM) possui algumas verificações de segurança de baixo nível que ainda não existem no FreeBSD. Como tal, o [.filename]#/dev/dtrace/dtrace# é estritamente limitado ao `root`.
+
+O DTrace se enquadra na licença Common Development and Distribution License (CDDL). Para ver esta licença no FreeBSD, consulte [.filename]#/usr/src/cddl/contrib/opensolaris/OPENSOLARIS.LICENSE# ou acesse on-line em http://opensource.org/licenses/CDDL-1.0[http://opensource.org/licenses/CDDL-1.0]. Enquanto um kernel do FreeBSD com suporte a DTrace é licenciado sob BSD, o CDDL é usado quando os módulos são distribuídos em formato binário ou quando os binários são carregados.
+
+[[dtrace-enable]]
+== Ativando o Suporte do DTrace
+
+No FreeBSD 9.2 e 10.0, o suporte do DTrace está embutido no kernel [.filename]#GENERIC#. Usuários de versões anteriores do FreeBSD ou que preferem compilar estaticamente o suporte do DTrace devem adicionar as seguintes linhas a um arquivo de configuração de kernel personalizado e recompilar o kernel usando as instruções em crossref:kernelconfig[kernelconfig, Configurando o kernel do FreeBSD]:
+
+[.programlisting]
+....
+options         KDTRACE_HOOKS
+options         DDB_CTF
+makeoptions	DEBUG=-g
+makeoptions	WITH_CTF=1
+....
+
+Os usuários da arquitetura AMD64 também devem adicionar esta linha:
+
+[.programlisting]
+....
+options         KDTRACE_FRAME
+....
+
+Esta opção fornece suporte para FBT. Embora o DTrace funcione sem essa opção, haverá suporte limitado para o rastreamento de limite de função.
+
+Uma vez que o sistema FreeBSD foi reinicializado no novo kernel, ou os módulos de kernel do DTrace foram carregados usando `kldload dtraceall`, o sistema precisará de suporte para o shell Korn, pois o DTrace Toolkit possui vários utilitários escritos em `ksh`. Certifique-se de que o pacote ou port package:shells/ksh93[] esteja instalado. Também é possível rodar estas ferramentas com package:shells/pdksh[] ou package:shells/mksh[].
+
+Por fim, instale o DTrace Toolkit atual, uma coleção de scripts prontos para coletar informações do sistema. Existem scripts para verificar arquivos abertos, memória, uso de CPU e muito mais. O FreeBSD 10 instala alguns desses scripts em [.filename]#/usr/shared/dtrace#. Em outras versões do FreeBSD, ou para instalar o DTrace Toolkit completo, use o pacote ou port package:sysutils/DTraceToolkit[].
+
+[NOTE]
+====
+Os scripts encontrados em [.filename]#/usr/shared/dtrace# foram especificamente portados para o FreeBSD. Nem todos os scripts encontrados no DTrace Toolkit funcionarão no FreeBSD e alguns scripts podem exigir algum esforço para que funcionem no FreeBSD.
+====
+
+O DTrace Toolkit inclui muitos scripts no idioma especial do DTrace. Esta linguagem é chamada de linguagem D e é muito semelhante ao C++. Uma discussão aprofundada da linguagem está além do escopo deste documento. Ele é abordado extensivamente no http://www.dtrace.org/guide[Illumos Dynamic Tracing Guide].
+
+[[dtrace-using]]
+== Usando o DTrace
+
+Os scripts do DTrace consistem em uma lista de um ou mais testes _probes_, ou pontos de instrumentação, em que cada teste é associado a uma ação. Sempre que a condição de uma sonda é atendida, a ação associada é executada. Por exemplo, uma ação pode ocorrer quando um arquivo é aberto, um processo é iniciado ou uma linha de código é executada. A ação pode ser registrar algumas informações ou modificar variáveis de contexto. A leitura e a escrita de variáveis de contexto permitem que os probes compartilhem informações e analisem cooperativa-mente a correlação de diferentes eventos.
+
+Para ver todos os probes, o administrador pode executar o seguinte comando:
+
+[source,bash]
+....
+# dtrace -l | more
+....
+
+Cada probe possui um `ID`, um `PROVIDER` (dtrace ou fbt), um `MODULE` e um `FUNCTION NAME`. Consulte man:dtrace[1] para obter maiores informações sobre este comando.
+
+Os exemplos nesta seção fornecem uma visão geral de como usar dois dos scripts totalmente suportados dos scripts do DTrace Toolkit: o [.filename]#hotkernel# e [.filename]#procsystime#.
+
+O script [.filename]#hotkernel# é projetado para identificar qual função está usando a maior parte do tempo do kernel. Ele produzirá uma saída semelhante à seguinte:
+
+[source,bash]
+....
+# cd /usr/shared/dtrace/toolkit
+# ./hotkernel
+Sampling... Hit Ctrl-C to end.
+....
+
+Conforme instruído, use a combinação de teclas kbd:[Ctrl+C] para interromper o processo. Após o término, o script exibirá uma lista de funções do kernel e informações de tempo, classificando a saída em ordem crescente de tempo:
+
+[source,bash]
+....
+kernel`_thread_lock_flags                                   2   0.0%
+0xc1097063                                                  2   0.0%
+kernel`sched_userret                                        2   0.0%
+kernel`kern_select                                          2   0.0%
+kernel`generic_copyin                                       3   0.0%
+kernel`_mtx_assert                                          3   0.0%
+kernel`vm_fault                                             3   0.0%
+kernel`sopoll_generic                                       3   0.0%
+kernel`fixup_filename                                       4   0.0%
+kernel`_isitmyx                                             4   0.0%
+kernel`find_instance                                        4   0.0%
+kernel`_mtx_unlock_flags                                    5   0.0%
+kernel`syscall                                              5   0.0%
+kernel`DELAY                                                5   0.0%
+0xc108a253                                                  6   0.0%
+kernel`witness_lock                                         7   0.0%
+kernel`read_aux_data_no_wait                                7   0.0%
+kernel`Xint0x80_syscall                                     7   0.0%
+kernel`witness_checkorder                                   7   0.0%
+kernel`sse2_pagezero                                        8   0.0%
+kernel`strncmp                                              9   0.0%
+kernel`spinlock_exit                                       10   0.0%
+kernel`_mtx_lock_flags                                     11   0.0%
+kernel`witness_unlock                                      15   0.0%
+kernel`sched_idletd                                       137   0.3%
+0xc10981a5                                              42139  99.3%
+....
+
+Este script também funcionará com módulos do kernel. Para usar este recurso, execute o script com `-m`:
+
+[source,bash]
+....
+# ./hotkernel -m
+Sampling... Hit Ctrl-C to end.
+^C
+MODULE                                                  COUNT   PCNT
+0xc107882e                                                  1   0.0%
+0xc10e6aa4                                                  1   0.0%
+0xc1076983                                                  1   0.0%
+0xc109708a                                                  1   0.0%
+0xc1075a5d                                                  1   0.0%
+0xc1077325                                                  1   0.0%
+0xc108a245                                                  1   0.0%
+0xc107730d                                                  1   0.0%
+0xc1097063                                                  2   0.0%
+0xc108a253                                                 73   0.0%
+kernel                                                    874   0.4%
+0xc10981a5                                             213781  99.6%
+....
+
+O script [.filename]#procsystime# captura e imprime o uso do tempo de chamada do sistema para um determinado processo ID (PID) ou nome do processo. No exemplo a seguir, uma nova instância de [.filename]#/bin/csh# foi gerada. Então, [.filename]#procsystime# foi executado e permaneceu aguardando enquanto alguns comandos foram digitados na outra instância do `csh`. Estes são os resultados deste teste:
+
+[source,bash]
+....
+# ./procsystime -n csh
+Tracing... Hit Ctrl-C to end...
+^C
+
+Elapsed Times for processes csh,
+
+         SYSCALL          TIME (ns)
+          getpid               6131
+       sigreturn               8121
+           close              19127
+           fcntl              19959
+             dup              26955
+         setpgid              28070
+            stat              31899
+       setitimer              40938
+           wait4              62717
+       sigaction              67372
+     sigprocmask             119091
+    gettimeofday             183710
+           write             263242
+          execve             492547
+           ioctl             770073
+           vfork            3258923
+      sigsuspend            6985124
+            read         3988049784
+....
+
+Como mostrado, a chamada de sistema `read()` usou a maior parte do tempo em nanossegundos enquanto a chamada de sistema `getpid()` usou a menor quantidade de tempo.

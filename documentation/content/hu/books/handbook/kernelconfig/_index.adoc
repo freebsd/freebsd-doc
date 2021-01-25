@@ -1,0 +1,1164 @@
+---
+title: 8. Fejezet - A FreeBSD rendszermag testreszabása
+part: II. Rész Gyakori feladatok
+prev: books/handbook/multimedia
+next: books/handbook/printing
+---
+
+[[kernelconfig]]
+= A FreeBSD rendszermag testreszabása
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 8
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/kernelconfig/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/kernelconfig/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/kernelconfig/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[kernelconfig-synopsis]]
+== Áttekintés
+
+A rendszermag a FreeBSD operációs rendszer lelke. Felelõs a memória kezelésért, a biztonsági szabályozások betartatásáért, a hálózat mûködtetéséért, a lemezhozzáférésért és sok minden másért is. Miközben maga a FreeBSD egyre jobban konfigurálható dinamikusan, addig alkalmanként elegedhetetlen, hogy újrakonfiguráljuk és újrafordítsuk a rendszermagot.
+
+A fejezet elolvasása során megismerjük:
+
+* miért lehet szükségünk egy saját rendszermagra;
+* hogyan készítsünk konfigurációs állományt a rendszermaghoz, vagy hogyan módosítsunk egy már létezõt;
+* hogyan használjuk a rendszermag konfigurációs állományát egy új rendszermag lefordítására és létrehozására;
+* hogyan telepítsük az új rendszermagot;
+* hogyan orvosoljuk a felmerülõ problémákat.
+
+A fejezetben az összes példaként bemutatásra kerülõ parancsot `root` felhasználóként kell kiadni a sikeres végrehajtásukhoz.
+
+[[kernelconfig-custom-kernel]]
+== Miért készítsünk saját rendszermagot?
+
+A FreeBSD eredetileg ún. "monolitikus" rendszermaggal rendelkezett. Ez azt jelenti, hogy a rendszermag egyetlen nagy program volt, ami elõre rögzített eszközöket ismert, és ha meg akartuk változtatni a rendszermag mûködését, akkor új rendszermagot kellett fordítanunk, majd újra kellett indítanunk vele a számítógépet.
+
+Manapság azonban a FreeBSD már inkább afelé a megközelítés felé halad, ahol a rendszermag funkcionalitásának nagy részét mûködés közben az igények szerint betölthetõ és eltávolítható modulok adják. Ezzel lehetõvé válik, hogy a rendszermag gyorsan illeszkedjen az újonnan megjelenõ hardvereszközökhöz (mint például a laptopok PCMCIA-kártyáihoz), vagy olyan új funkciókat tegyünk a rendszermaghoz, amelyek a fordításánál nem voltak feltétlenül szükségesek. Ezt a modellt nevezik moduláris rendszermagnak.
+
+Ennek ellenére még mindig elkerülhetetlen, hogy esetenként ne legyen szükség a rendszermag statikus testreszabására. Ez a legtöbb esetben azzal magyarázható, hogy vannak olyan funkciók, amelyek túlságosan is mélyen helyezkednek el a rendszermagban, ezáltal nem tölthetõek be dinamikusan. Máskor viszont egyszerûen azért nem lehetséges, mert még senki sem szánt idõt az adott funkcióhoz tartozó, dinamikusan betölthetõ modul elkészítésére.
+
+Egy saját rendszermag készítése azon legfontosabb próbatételek egyike, melyet egy haladó BSD felhasználónak ki kell állnia. Ez a folyamat, habár némileg idõigényes, számos elõnyt tartogat FreeBSD rendszerünk számára. Eltérõen egy [.filename]#GENERIC# (általános) rendszermagtól, amely rengeteg hardvert támogat, egy saját rendszermag csak a _saját_ PC-nk hardverét ismeri. Ennek több elõnye is van, például:
+
+* A rendszerünk gyorsabban indul. Mivel a rendszermag csak azokat a hardvereket fogja keresni, melyek a rendszerünkben megtalálhatóak, jelentõs mértékben le tud csökkeni az induláshoz szükséges idõ.
+* Kisebb memóriahasználat. Egy saját rendszermag a szükségtelen részek és eszközmeghajtók elhagyása miatt gyakran kevesebb memóriát emészt fel, mint a [.filename]#GENERIC# rendszermag. Ez azért is fontos, mert a rendszermag mindig benn van a fizikai memóriában, és ezzel az alkalmazások elõl veszi el a helyet. Emiatt egy saját rendszermag elkészítése különösen hasznos lehet egy kevés fizikai memóriával rendelkezõ rendszeren.
+* További hardverek támogatása. A saját rendszermagunkba olyan eszközök támogatását is beletehetjük, amelyek nem szerepelnek a [.filename]#GENERIC# rendszermagban, mint például a hangkártyákét.
+
+[[kernelconfig-devices]]
+== A rendszerünkben levõ hardverek összeszedése
+
+Mielõtt belevetnénk magunkat a rendszermag beállításába, érdemes egy leltárt készíteni a gépünkben található különbözõ eszközökrõl. Ahol a FreeBSD nem elsõdlegesen használt operációs rendszer, ott ehhez elegendõ megnézni a jelenlegi rendszerben található elemeket. Például a Microsoft(R) rendszerek Eszközkezelõjében (Device Manager) általában az összes eszköz fontosabb adatait megtaláljuk. Magát az Eszközkezelõt pedig a Vezérlõpultból (Control Panel) érhetjük el.
+
+[NOTE]
+====
+A Microsoft(R) Windows(R) egyes verzióiban a Rendszer (System) ikonjára kattintva megkapjuk azt a képernyõt, ahonnan közvetlenül el tudjuk érni az Eszközkezelõt.
+====
+
+Ha viszont nincs másik operációs rendszer a gépünkön, akkor magunknak kell mindezeknek utánanéznünk. Erre az egyik alkalmas módszer a man:dmesg[8] és a man:man[1] parancsok használata. A FreeBSD-ben található legtöbb meghajtónak van saját man oldala, ami tartalmazza az általuk kezelt eszközök listáját, illetve így a rendszerindítás során észlelt hardvereket nézhetjük vissza. Például az alábbi sorok arra utalnak, hogy a [.filename]#psm# meghajtó megtalálta a gépünkhöz tartozó egeret:
+
+[.programlisting]
+....
+psm0: <PS/2 Mouse> irq 12 on atkdbc0
+psm0: [GIANT-LOCKED]
+psm0: [ITHREAD]
+psm0: model Generic PS/2 mouse, device ID 0
+....
+
+Ezután ezt a meghajtót vagy a rendszermagba kell beépítenünk, vagy pedig a man:loader.conf[5] állományon keresztül betöltenünk.
+
+Bizonyos esetekben a `dmesg` az eszközök felkutatásának eredményei helyett csak a rendszer üzeneteit mutatja. Ilyen helyzetekben a teljes kimenet a [.filename]#/var/run/dmesg.boot# állományban tekinthetõ meg.
+
+A hardverek manuális felderítésének módja a man:pciconf[8] segédprogram kimenetének böngészése, ami valamivel részletesebb eredményt ad. Mint például:
+
+[.programlisting]
+....
+ath0@pci0:3:0:0:        class=0x020000 card=0x058a1014 chip=0x1014168c rev=0x01 hdr=0x00
+         vendor     = 'Atheros Communications Inc.'
+         device     = 'AR5212 Atheros AR5212 802.11abg wireless'
+         class      = network
+         subclass   = ethernet
+....
+
+A `pciconf -lv` paranccsal kapott kimenet ezen része azt mutatja, hogy az [.filename]#ath# meghajtó talált egy vezeték nélküli Ethernet eszközt. Innen a `man ath` paranccsal érhetjük el a man:ath[4] man oldalát.
+
+A man:man[1] a `-k` paraméter megadásával további hasznos információkkal is tud szolgálni. A fentiekbõl kiindulva például a következõ paranccsal:
+
+[source,bash]
+....
+# man -k Atheros
+....
+
+le tudjuk kérdezni azokat a man oldalakat, amelyek tartalmazzák az adott szót:
+
+[.programlisting]
+....
+ath(4)                   - Atheros IEEE 802.11 wireless network driver
+ath_hal(4)               - Atheros Hardware Access Layer (HAL)
+....
+
+A hardvereszközeink listájával felvértezve most már egy saját rendszermag létrehozása sem lesz annyira ijesztõ.
+
+[[kernelconfig-modules]]
+== Meghajtók, alrendszerek és modulok
+
+Mielõtt új rendszermagot készítenénk, érdemes megfontolnunk, hogy egyáltalán szükségünk lesz-e rá. Ha például valamilyen eszköz támogatásához kell, akkor könnyen elõfordulhat, hogy azt modulként is be tudjuk tölteni.
+
+A rendszermaghoz tartozó modulok a [.filename]#/boot/kernel# könyvtárban találhatóak, és a man:kldload[8] segítségével a rendszer mûködése közben dinamikusan betölthetõek. Ha nem is az összes, de a legtöbb meghajtóhoz tartozik egy modul és egy man oldal. Például az elõzõ szakaszban az [.filename]#ath# vezeték nélküli Ethernet meghajtóval foglalkoztunk. A következõ leírást találjuk a hozzá tartozó man oldalon:
+
+[.programlisting]
+....
+Vagy ha modulként akarjuk betölteni ezt a meghajtót a rendszer indítása
+során, akkor a man:loader.conf[5] állományba vegyük fel a következõ
+sort:
+
+    if_ath_load="YES"
+....
+
+A fentebb leírtak szerint tehát, ha az `if_ath_load="YES"` sort hozzáadjuk a [.filename]#/boot/loader.conf# állományhoz, akkor a rendszer indulásakor ez a modul mindig dinamikusan betöltõdik.
+
+Némely esetben azonban nem áll rendelkezésünkre ilyen modul. Ez különösen igaz bizonyos alrendszerekre és a fontosabb meghajtókra, például az FFS állományrendszerre vonatkozóan, mivel ezeknek kötelezõen a rendszermagban kell lenniük. Ugyanez elmondható a hálózati támogatásra is (INET). Csak úgy tudjuk megmondani, hogy valamelyik meghajtóra szükség van a rendszermagban, ha elõször megpróbáljuk megkeresni hozzá a megfelelõ modult.
+
+[WARNING]
+====
+
+A beépített meghajtók figyelmetlen eltávolításával könnyen lefordíthatatlan állapotba kerülhet a rendszermag. Például, ha az man:ata[4] meghajtót kivesszük a rendszermag konfigurációs állományából, az ATA alrendszert használó meghajtók csak abban az esetben fognak biztosan mûködni, ha egyúttal felvesszük a [.filename]#loader.conf# állományba. Ha nem vagyunk benne biztosak, akkor elõször próbáljuk meg használni a modult, és csak utána hagyjuk el a rendszermagba épített változatát.
+====
+
+[[kernelconfig-building]]
+== Saját rendszermag készítése és telepítése
+
+Elõször is tegyünk egy rövidke sétát a rendszermag könyvtárában. A továbbiakban említendõ összes könyvtár a [.filename]#/usr/src/sys# könyvtáron belül található, amely [.filename]#/sys# néven is elérhetõ. Itt rengeteg alkönyvtár található, mindegyikük a rendszermag különbözõ részeit testesíti meg. Ezek közül most számunkra a legfontosabb az [.filename]#architektúra/conf# lesz, ahol majd létrehozzuk a saját rendszermagunk konfigurációs állományát, valamint a [.filename]#compile#, ahol majd a rendszermagunk fordítása történik. Itt az _architektúra_ lehet [.filename]#i386#, [.filename]#alpha#, [.filename]#amd64#, [.filename]#ia64#, [.filename]#powerpc#, [.filename]#sparc64# vagy [.filename]#pc98# (a PC-k egyik, leginkább Japánban elterjedt változata). Az adott architektúra könyvtárában található összes állomány csak arra az architektúrára vonatkozik, a kód többi része pedig gépfüggetlen és közös az összes többi létezõ és leendõ FreeBSD platformon. Érdemes megfigyelni a könyvtárak logikai elrendezését: minden egyes ismert eszköz, állományrendszer és bõvítmény saját alkönyvtárral rendelkezik.
+
+A példák során ez a fejezet feltételezi, hogy az i386 architektúrát használjuk. Ha ez a mi esetünkben nem így lenne, ne felejtsük el átírni bennük az elérési útvonalakat a rendszerünk architektúrájának megfelelõen.
+
+[NOTE]
+====
+Ha _nem lenne_ [.filename]#/usr/src/sys# könyvtár a rendszerünkben, valószínûleg még nem telepítettük a rendszermag forráskódját. Ezt a legkönnyebben úgy tudjuk megtenni, ha `root` felhasználóként elindítjuk a `sysinstall` programot és ott kiválasztjuk a [.guimenuitem]#Configure# (Beállítások), azon belül [.guimenuitem]#Distributions# (Terjesztések) menüpontot, amiben válasszuk ki a [.guimenuitem]#src#, [.guimenuitem]#base# és [.guimenuitem]#sys# terjesztéseket. Ha nem szeretnénk erre a célra a sysinstall programot használni, de rendelkezésünkre áll a "hivatalos" FreeBSD CD, akkor a forrásokat akár parancssorból is telepíthetjük:
+
+[source,bash]
+....
+# mount /cdrom
+# mkdir -p /usr/src/sys
+# ln -s /usr/src/sys /sys
+# cat /cdrom/src/ssys.[a-d]* | tar -xzvf -
+# cat /cdrom/src/sbase.[a-d]* | tar -xzvf -
+....
+
+====
+
+Ezután lépjünk be az [.filename]#i386/conf# könyvtárba és másoljuk le a [.filename]#GENERIC# konfigurációs állományt a kedvünk szerinti nevûre. Például:
+
+[source,bash]
+....
+# cd /usr/src/sys/i386/conf
+# cp GENERIC SAJÁT
+....
+
+Általában a nevet végig nagybetûkkel írjuk, és ha több FreeBSD-s gépet is üzemeltetünk különbözõ hardverekkel, hasznosnak bizonyulhat megemlíteni benne az adott gép rendszerének nevét is. Ebben a példában ez most a [.filename]#SAJÁT# lesz.
+
+[TIP]
+====
+
+A rendszermagunk konfigurációs állományát nem éppen a legjobb ötlet a [.filename]#/usr/src# könyvtárban tárolni. Ugyanis könnyen elõfordulhat, hogy egy rosszul sikerült fordítás után egyszerûen csak letöröljük az egész [.filename]#/usr/src# könyvtárat és onnan kezdjük újra. Azonban csak ezután juthat eszünkbe, hogy vele együtt bizony letöröltük a saját rendszermagunk konfigurációs állományát is! Ehhez hasonlóan, közvetlenül a [.filename]#GENERIC# konfigurációs állomány szerkesztése sem ajánlott, mivel a források egy esetleges crossref:cutting-edge[updating-upgrading,frissítésénél] könnyen felülíródhat és ezzel együtt elvesznek a módosításaink is.
+
+Tehát érdemes inkább valahol máshol tárolnunk a rendszermagunk konfigurációs állományát, majd létrehozni rá egy szimbolikus linket a [.filename]#i386# könyvtárban.
+
+Valahogy így:
+
+[source,bash]
+....
+# cd /usr/src/sys/i386/conf
+# mkdir /root/kernel
+# cp GENERIC /root/kernel/SAJÁT
+# ln -s /root/kernel/SAJÁT
+....
+
+====
+
+Most pedig a kedvenc szövegszerkesztõnkkel lássunk neki a [.filename]#SAJÁT# átírásának! Ha nemrég telepítettük csak a rendszerünket, az egyetlen elérhetõ szövegszerkesztõnk minden bizonnyal a vi lesz. Róla most túlságosan is bonyolult lenne leírást adnunk, de az crossref:bibliography[bibliography,Irodalomjegyzék]ben található könyvek közül sokban elég jól bemutatják. Ezen kívül a FreeBSD ajánl egy könnyebben megtanulható szövegszerkesztõt is az ee személyében, amely a kezdõk számára az ideális választás. Nyugodtan átírhatjuk az elöl található megjegyzéseket a saját konfigurációnknak megfelelõen, vagy akár azt is rögzíthetjük, hogy miben tértünk el a [.filename]#GENERIC# beállításaitól.
+
+Ha fordítottunk már rendszermagot SunOS(TM) vagy más BSD operációs rendszer alatt, ez az állomány ismerõsnek tûnhet. Ha viszont más operációs rendszerek, mint például a DOS felõl érkezünk, a [.filename]#GENERIC# konfigurációs állomány egy kissé terebélyesnek tûnhet számunkra, ezért <<kernelconfig-config,A konfigurációs állomány>> címû részt figyelmesen és lassan olvassuk át.
+
+[NOTE]
+====
+Amennyiben a forrásfánkat a FreeBSD projekt legfrissebb forrásaival crossref:cutting-edge[updating-upgrading,szinkronizáljuk], mindig olvassuk el a [.filename]#/usr/src/UPDATING# állományt, mielõtt bármilyen frissítéshez is kezdenénk. Itt megtalálhatóak azok a fontos érintett kérdések és területek, amely külön figyelmet igényelnek a frissített forráskód esetén. A [.filename]#/usr/src/UPDATING# mindig a FreeBSD forrásának legfrissebb változatához igazodik, és ezért sokkal naprakészebb információkat tartalmaz, mint ez a kézikönyv.
+====
+
+Most pedig le kell lefordítanunk a rendszermag forráskódját.
+
+[.procedure]
+====
+*Procedure: A rendszermag lefordítása*
+
+. Lépjünk be a [.filename]#/usr/src# könyvtárba:
++
+[source,bash]
+....
+# cd /usr/src
+....
++
+. Fordítsuk le a rendszermagot:
++
+[source,bash]
+....
+# make buildkernel KERNCONF=SAJÁT
+....
++
+. Telepítsük az új rendszermagot:
++
+[source,bash]
+....
+# make installkernel KERNCONF=SAJÁT
+....
+====
+
+[NOTE]
+====
+A FreeBSD teljes forrásfájára szükség van a rendszermag lefordításához.
+====
+
+[TIP]
+====
+
+Amikor egy saját rendszermagot alapértelmezés szerint fordítunk, vele együtt az _összes_ modul is lefordításra kerül. Ha viszont idõt szeretnénk megtakarítani a rendszermag frissítése során, vagy csak a saját moduljainkat akarjuk lefordítani, érdemes átírnunk az [.filename]#/etc/make.conf# állományt a rendszermag fordításának megkezdése elõtt:
+
+[.programlisting]
+....
+MODULES_OVERRIDE = linux acpi sound/sound sound/driver/ds1 ntfs
+....
+
+Ez a változó megadja a ténylegesen lefordítandó modulok listáját.
+
+[.programlisting]
+....
+WITHOUT_MODULES = linux acpi sound ntfs
+....
+
+Ez a változó a fordításból kihagyandó felsõ szintû modulokat sorolja fel. A rendszermag fordításának folyamatában egyéb hasznosnak tekinthetõ változókról a man:make.conf[5] man oldalán olvashatunk.
+====
+
+Ezután az új rendszermag a [.filename]#/boot/kernel# könyvtárba kerül [.filename]#/boot/kernel/kernel# néven, a korábbi rendszermag pedig [.filename]#/boot/kernel.old/kernel# néven õrzõdik meg. Most állítsuk le a rendszert és indítsuk újra az új rendszermag aktiválásához. Ha közben valamilyen hiba történt volna, nézzük meg a fejezet végén található, <<kernelconfig-trouble,hibakeresés>>re vonatkozó utasításokat. Mindenképpen olvassuk el azt a részt, amely leírja, hogyan állítsuk helyre a rendszerünket abban az esetben, ha az új rendszermaggal <<kernelconfig-noboot,nem indul>>.
+
+[NOTE]
+====
+A rendszerindítási folyamathoz tartozó további állományok, mint például a rendszerbetöltõ (man:loader[8]) és annak konfigurációs állománya, a [.filename]#/boot# könyvtárban találhatóak. A külsõ és saját modulok a [.filename]#/boot/kernel# a könyvtárba kerülhetnek, azonban a felhasználóknak nagyon ügyelniük kell rá, hogy az itt található modulok szinkronban legyenek a lefordított rendszermaggal. Ellenkezõ esetben a rendszerben megbízhatatlanságot, hibákat észlelhetünk.
+====
+
+[[kernelconfig-config]]
+== A konfigurációs állomány
+
+A konfigurációs állomány általános formátuma igen egyszerû. Minden sor tartalmaz egy kulcsszót és egy vagy több paramétert. A további egyszerûsítés kedvéért a legtöbb sor csak egyetlen paramétert tartalmaz. Bármi, ami egy `#` (kettõskereszt) jelet követ, megjegyzésnek minõsül és nem számít konfigurációs elemnek. A most következõ részek bemutatják az egyes kulcsszavakat abban a sorrendben, ahogy azokat a [.filename]##GENERIC## állományban is megtalálhatjuk. [[kernelconfig-options]]Az architektúrafüggõ opciók és eszközök teljes listáját a [.filename]##GENERIC## állománnyal egy könyvtárban levõ [.filename]##NOTES## állományban találhatjuk meg. Az architektúrától független opciókat a [.filename]##/usr/src/sys/conf/NOTES## állományban találjuk.
+
+A FreeBSD 5.0 megjelenése óta a konfigurációs állományokban használható az `include` direktíva. Ennek segítségével egy másik konfigurációs állomány tartalma logikailag beilleszthetõ az aktuálisba, így könnyebbé válik egy már meglevõ állományhoz tartozó kisebb mennyiségû változtatás karbantartása. Például ha csupán pár egyszerû kiegészítést szeretnénk hozzáadni a [.filename]#GENERIC# rendszermaghoz, akkor elegendõ a hozzá vett eltéréseket nyilvántartanunk egy külön konfigurációs állományban:
+
+[.programlisting]
+....
+include GENERIC
+ident SAJAT
+
+options         IPFIREWALL
+options         DUMMYNET
+options         IPFIREWALL_DEFAULT_TO_ACCEPT
+options         IPDIVERT
+....
+
+Valószínûleg sok rendszergazda számára jelentõs elõnyt jelent ez a megoldás a konfigurációs állományok korábbról már megszokott újraírásával szemben: a helyi konfigurációs állomány csak a [.filename]#GENERIC# rendszermag helyi rendszerre vonatkozó eltéréseit tartalmazza. Így amikor frissítjük a rendszerünket, a [.filename]#GENERIC# rendszermag összes újítása elérhetõvé válik, kivéve ha explicit módon le nem tiltottuk ezeket a `noptions` vagy a `nodevice` megadásával. A fejezet további részében egy átlagos konfigurációs állománnyal fogunk foglalkozni, mind a beállítások, mind pedig az eszközök tekintetében.
+
+[NOTE]
+====
+Ha olyan állományt akarunk készíteni, amely tartalmazza az összes lehetséges opciót, például teszteléshez, futtassuk le `root` felhasználóként az alábbi parancsot:
+
+[source,bash]
+....
+# cd /usr/src/sys/i386/conf && make LINT
+....
+
+====
+
+Itt a [.filename]#GENERIC# rendszermag-konfigurációs állomány ismertetése következik, az érthetõség kedvéért helyenként megjegyzésekkel kibõvítve. A bemutatott állománynak majdnem pontosan meg kell egyeznie a rendszerünkben található [.filename]#/usr/src/sys/i386/conf/GENERIC# állománnyal.
+
+[.programlisting]
+....
+machine      i386
+....
+
+A számítógépünk architektúráját adja meg. A következõk valamelyikének kell lennie: `alpha`, `amd64`, `i386`, `ia64`, `pc98`, `powerpc`, vagy `sparc64`.
+
+[.programlisting]
+....
+cpu          I486_CPU
+cpu          I586_CPU
+cpu          I686_CPU
+....
+
+A fenti beállítás segítségével megadhatjuk, milyen típusú processzor található a számítógépünkben. Több ilyen sorunk is lehet (ha például nem lennénk biztosak benne, hogy az `I586_CPU` vagy `I686_CPU` értéket kellene megadnunk), de a saját rendszermagunk összeállításához érdemes csak egyet meghagynunk. Ha nem ismerjük pontosan a processzorunk típusát, vessünk egy pillantást a [.filename]#/var/run/dmesg.boot# állományra és keressük ki belõle.
+
+[.programlisting]
+....
+ident          GENERIC
+....
+
+Ez a rendszermag azonosítója. Változtassuk meg rendszermagunk nevére, legyen például `SAJAT`, ha a korábbi utasításokat követtük. Az `ident` után írt sztring fog megjelenni a rendszermag neve mellett a rendszer indítása során, ezért fontos, hogy az új rendszermagunknak más nevet adjunk, ha meg akarjuk különböztetni az általában használttól (például egy tesztelésre szánt rendszermagot akarunk készíteni).
+
+[.programlisting]
+....
+# ha a /boot/device.hints használata helyett statikusan bele akarjuk fordítani
+#hints          "GENERIC.hints"         # itt szerepelnek a device hintek
+....
+
+A man:device.hints[5] használható az eszközmeghajtók beállítására. A man:loader[8] a rendszer indítása során alapértelmezés szerint a [.filename]#/boot/device.hints# állományt olvassa be erre a célra. A `hints` beállítás használatával ezeket a "hinteket" statikusan bele tudjuk építeni a rendszermagba. Ebben az esetben nincs szükségünk külön [.filename]#device.hints# állomány létrehozására a [.filename]#/boot# könyvtárban.
+
+[.programlisting]
+....
+makeoptions     DEBUG=-g          # a nyomkövetéshez szükséges gdb(1) szimbólumok beépítése
+....
+
+A FreeBSD hagyományos fordításának folyamata során a rendszermagot a `-g` használatával készítjük el, aminek köszönhetõen hibakeresési információkat tudunk átadni a man:gcc[1] fordítónak.
+
+[.programlisting]
+....
+options          SCHED_ULE          # ULE ütemezõ
+....
+
+A FreeBSD alapértelmezett rendszerütemezõje. Ne változtassuk meg!
+
+[.programlisting]
+....
+options          PREEMPTION         # a rendszerszálak megszakíthatóságának engedélyezése
+....
+
+Ha engedélyezzük, a rendszermagban futó szálakat meg tudják szakítani más, magasabb prioritású szálak. Ez segít növelni a rendszer válaszadási sebességét és csökkenti a megszakításokat kezelõ szálak várakozását.
+
+[.programlisting]
+....
+options          INET              # hálózatkezelés
+....
+
+A hálózatkezelés támogatása. Ne töröljük ki, még akkor sem, ha nem tervezzük hálózatra kapcsolni a rendszert. Sok programnak szüksége van legalább az ún. loopback típusú hálózat támogatására (vagyis a számítógépünkön belüli hálózati kapcsolatokra), ezért ez feltétlenül kötelezõ!
+
+[.programlisting]
+....
+options          INET6             # IPv6 kommunikációs prokotollok
+....
+
+Engedélyezi az IPv6 kommunikációs protokollok használatát.
+
+[.programlisting]
+....
+options          FFS               # Berkeley Fast Filesystem
+....
+
+Ez a legalapvetõbb merevlemezes állományrendszer. Hagyjuk meg, ha merevlemezrõl akarjuk indítani a rendszerünket.
+
+[.programlisting]
+....
+options          SOFTUPDATES       # az FFS Soft Updates támogatása
+....
+
+Ez a beállítás engedélyezi a rendszermagban a Soft Updates használatát, amely segít felgyorsítani a lemez írási sebességét. Ha már a rendszermag ezt a funkcionalitást ismeri, akkor még külön az egyes lemezeken is engedélyezni kell. Nézzük meg a man:mount[8] kimenetét, hogy lássuk, a rendszerünkben levõ lemezek közül melyiken van ténylegesen engedélyezve a Soft Updates használata. Ha nem látjuk benne sehol sem a `soft-updates` opciót, akkor azt (meglevõ állományrendszerek esetén) a man:tunefs[8] vagy (új állományrendszerek esetén) a man:newfs[8] parancsokkal tudjuk bekapcsolni.
+
+[.programlisting]
+....
+options          UFS_ACL           # a hozzáférés-vezérlési listák (ACL) támogatása
+....
+
+Ezzel a beállítással engedélyezhetjük a rendszermagban a hozzáférés-vezérlési listák támogatását. Ez a kiterjesztett attribútumok és az UFS2 használatára támaszkodik. Ezt a lehetõséget részleteiben a crossref:security[fs-acl,Az állományrendszerek hozzáféréseit vezérlő listák]ban tárgyaljuk. Az ACL alapértelmezés szerint támogatott, és ha korábban már használtuk, akkor semmiképpen se kapcsoljuk ki, mert ezzel az eddig létrehozott hozzáférés-vezérlési listáink érvénytelenné, az állományaink pedig védtelenné válnak.
+
+[.programlisting]
+....
+options          UFS_DIRHASH       # nagyobb könyvtárak esetén gyorsulást hoz
+....
+
+Ezzel a beállítással némi memória feláldozása árán fel tudjuk gyorsítani a nagyobb könyvtárakon végzett lemezmûveletek sebességét, ezért ezt a beállítást érdemes nagyobb szerverekre vagy interaktivitást igénylõ munkaállomásokra tartogatni, és eltávolítani olyan esetekben, amikor a FreeBSD-t olyan kisebb számítógépeken használjuk, ahol a memória kevés és a lemezmûveletek sebessége kevésbé fontos, például egy tûzfalon.
+
+[.programlisting]
+....
+options          MD_ROOT           # tudunk memórialemezrõl is rendszert indítani
+....
+
+Ezzel az opcióval engedélyezni tudjuk a rendszer indítását memóriában tárolt virtuális lemezekrõl.
+
+[.programlisting]
+....
+options          NFSCLIENT         # hálózati állományrendszer (NFS) kliens
+options          NFSSERVER         # NFS szerver
+options          NFS_ROOT          # NFS használható gyökérként is, kell hozzá az NFSCLIENT
+....
+
+A hálózati állományrendszer támogatása. Hacsak nem akarunk TCP/IP-n keresztül állományrendszereket csatlakoztatni egy UNIX(R) állományszerverrõl, kivehetjük.
+
+[.programlisting]
+....
+options          MSDOSFS           # MS-DOS állományrendszer
+....
+
+Az MS-DOS(R) állományrendszer. Hacsak nem akarunk DOS-ra formázott merevlemezes partíciót csatlakoztatni a rendszerindítás során, nyugodtan elhagyhatjuk. A fentebb leírtak szerint az elsõ olyan alkalommal automatikusan betöltõdik, amikor egy DOS partíciót csatlakoztatni akarunk. Sõt, a nagyszerû package:emulators/mtools[] szoftver segítségével külön csatlakoztatás és leválasztás nélkül tudunk DOS-os floppykat olvasni (és az `MSDOSFS`-re egyáltalán nincs is szüksége).
+
+[.programlisting]
+....
+options          CD9660            # ISO 9660 állományrendszer
+....
+
+Az ISO 9660 állományrendszert a CD-k használják. Vegyük ki, ha nincs a számítógépben CD-ROM meghajtó, vagy csak ritkán fogunk CD-ket csatlakoztatni (mivel a hozzá tartozó modul magától betöltõdik az elsõ adat CD csatlakoztatása során). Az audio CD-k nem használják ezt az állományrendszert.
+
+[.programlisting]
+....
+options          PROCFS            # a futó programok állományrendszere (szükséges hozzá a PSEUDOFS)
+....
+
+A futó programok állományrendszere. Ez csak a [.filename]#/proc# könyvtárra csatlakoztatott "színlelt" állományrendszer, amelynek segítségével a man:ps[1] és hozzá hasonló programok képesek több információt adni a futó programokról. A `PROCFS` használata a legtöbb esetben nem indokolt, mivel a különféle nyomkövetõ és felügyeleti eszközök képesek a `PROCFS` használata nélkül is mûködni: alapértelmezés szerint a telepített rendszerek sem csatlakoztatják ezt az állományrendszer.
+
+[.programlisting]
+....
+options          PSEUDOFS          # pszeudo állományrendszerek támogatása
+....
+
+A 6.X verziójú rendszermagokban a `PROCFS` használatához engedélyeznünk kell a `PSEUDOFS` használatát is.
+
+[.programlisting]
+....
+options          GEOM_GPT          # GUID típusú partíciós táblák használata
+....
+
+Ezzel a beállítással engedélyezni tudjuk nagy mennyiségû partíció támogatását egyetlen lemezen.
+
+[.programlisting]
+....
+options          COMPAT_43         # kompatibilitás fenntartása a 4.3 BSD-vel [NE TÖRÖLD!]
+....
+
+Kompatibilitás a 4.3BSD-vel. Ne vegyük ki, mert bizonyos programok furcsán fognak viselkedni a hiánya esetén.
+
+[.programlisting]
+....
+options          COMPAT_FREEBSD4   # kompatibilitás a FreeBSD4-el
+....
+
+Ez a beállítás szükséges a FreeBSD 5.X i386(TM) és Alpha rendszerein a FreeBSD korábbi verzióihoz fordított alkalmazások támogatásához, melyek régebbi rendszerhívásokat használnak. Az összes i386(TM) és Alpha típusú rendszeren ajánlott engedélyezni, mivel itt elõfordulhatnak régebbi alkalmazások. A többi platform, mint például az ia64 vagy a sparc64, támogatása csak az 5.X verzióban jelent meg, ezért ott nincs szükség erre.
+
+[.programlisting]
+....
+options          COMPAT_FREEBSD5   # kompatibilitás a FreeBSD5-el
+....
+
+Ezt a beállítást a FreeBSD 6.X és afeletti verziókban kell használni az olyan FreeBSD 5.X verziókra fordított alkalmazások futtatásának támogatásához, melyek a FreeBSD 5.X rendszerhívásait használják.
+
+[.programlisting]
+....
+options          SCSI_DELAY=5000  # a SCSI eszközök keresése elõtt késleltetés (ezredmásodpercben)
+....
+
+Ezzel a beállítással a rendszermag 5 másodpercig várakozni fog a SCSI eszközök keresése elõtt. Ha kizárólag csak IDE típusú merevlemezeink vannak, nyugodtan kihagyhatjuk, máskülönben érdemes a rendszerindítás gyorsítása érdekében csökkenteni ezt az értéket. Természetesen, ha így teszünk és a FreeBSD nem tudja felismerni a SCSI eszközeinket, akkor növeljük meg valamennyivel.
+
+[.programlisting]
+....
+options          KTRACE            # a ktrace(1) támogatása
+....
+
+Engedélyezi a rendszermagban futó rutinok nyomonkövetését, ami hasznos lehet a hibák keresése során.
+
+[.programlisting]
+....
+options          SYSVSHM           # SYSV-szerû osztott memória
+....
+
+Ezzel a beállítással engedélyezni tudjuk a rendszerben a System V típusú osztott memória használatát. Leggyakrabban az X rendszer XSHM kiterjesztése használja, amelyen keresztül számos mûveletigényes grafikus program mûködését fel lehet gyorsítani. Ha X-et használunk, mindenképpen szükségünk lehet erre.
+
+[.programlisting]
+....
+options          SYSVMSG           # SYSV-szerû üzenetsorok
+....
+
+A System V üzenetek támogatása. Ez a beállítás csupán néhány száz byte-tal növeli a rendszermagot.
+
+[.programlisting]
+....
+options          SYSVSEM           # SYSV-szerû szemaforok
+....
+
+A System V szemaforok támogatása. Nem túl gyakran alkalmazzák ezeket, de ez csak néhány száz byte-ot tesz hozzá a rendszermaghoz.
+
+[NOTE]
+====
+A man:ipcs[1] parancs `-p` paraméterével ki tudjuk listáztatni azokat a futó programokat, amelyek ezen System V eszközöket használják.
+====
+
+[.programlisting]
+....
+options          _KPOSIX_PRIORITY_SCHEDULING # POSIX P1003_1B valósidejû kiterjesztések
+....
+
+A POSIX(R) 1993-as változatában megjelent valósidejû bõvítések. A Portgyûjteményben megjelenõ egyes alkalmazások használják ezeket (mint például a StarOffice(TM)).
+
+[.programlisting]
+....
+options          KBD_INSTALL_CDEV  # CDEV bejegyzés létrehozása a /dev könyvtárban
+....
+
+Ez a beállítás kell ahhoz, hogy a [.filename]#/dev# könyvtárban létre tudjunk hozni eszközleírókat a billentyûzethez.
+
+[.programlisting]
+....
+options          ADAPTIVE_GIANT    # adaptív Giant mutexek
+....
+
+A Giant annak a kölcsönös kizárási mechanizmusnak (blokkolt mutexnek) a neve, amely a rendszermag erõforrásainak jelentõs részét védi. Manapság ez már egy elfogadhatatlanul szûk keresztmetszetet képez a teljesítményben, ezért a fejlesztésben fokozatosan felváltják az egyes erõforrásokat külön-külön védõ zárolások. Az `ADAPTIVE_GIANT` beállítás hatására a Giant a helyzethez igazodóan forgó (spin) mutexek közé kerül. Ez azt jelenti, hogy amikor egy szál zárolni akarja a Giant mutexet, de ezt már megtette elõtte egy másik processzorról futó szál, a szál tovább fut és várakozni fog a zárolás feloldására. Normális esetben ugyanis egy szál továbbra is blokkolt állapotban marad, várakozva a futásra. Ha nem tudunk dönteni, hagyjuk változatlanul.
+
+[NOTE]
+====
+Hozzátesszük, hogy a FreeBSD 8.0-CURRENT és késõbbi változataiban az össszes mutex alapértelmezés szerint adaptív, hacsak meg nem adjuk a `NO_ADAPTIVE_MUTEXES` beállítást. Ennek eredményeképpen a Giant most már alapból adaptív, ezért esetükben az `ADAPTIVE_GIANT` nem szerepel a rendszermag beállításai között.
+====
+
+[.programlisting]
+....
+device          apic               # I/O APIC
+....
+
+Az [.filename]#apic# nevû eszköz engedélyezésével használhatjuk a hardveres APIC-ot a megszakítások vezérlésére. Az [.filename]#apic# alkalmazható egy- és többprocesszoros rendszerek esetén is egyaránt, de az SMP rendszermagoknál szükséges. Több processzor támogatásánál mindenképpen tegyük hozzá az `options SMP` beállítást is.
+
+[NOTE]
+====
+Az apic eszköz csak az i386 architektúrán létezik, ezért a többi architektúrán nem szabad használnunk ezt a beállítást.
+====
+
+[.programlisting]
+....
+device          eisa
+....
+
+Abban az esetben engedélyezzük, ha EISA-s alaplapunk van, ezzel aktiváljuk az EISA buszra csatlakoztatott eszközök automatikus felismerését és beállíthatóságát.
+
+[.programlisting]
+....
+device          pci
+....
+
+Tegyük hozzá a konfigurációs állományhoz, ha PCI-os alaplapuk van. Ezzel engedélyezhetjük a PCI kártyák automatikus felismerését és a PCI és ISA buszok közti átirányítást.
+
+[.programlisting]
+....
+# Hajlékonylemezes meghajtók
+device          fdc
+....
+
+Ez a hajlékonylemezes meghajtó vezérlõje.
+
+[.programlisting]
+....
+# ATA és ATAPI eszközök
+device          ata
+....
+
+Ez az eszközmeghajtó felelõs az összes ATA és ATAPI eszközért. A modern számítógépeken csak egyszer kell megadnunk a `device ata` sort a beállítások között az összes PCI-os ATA/ATAPI eszköz felismeréséhez.
+
+[.programlisting]
+....
+device          atadisk                 # ATA lemezmeghajtók
+....
+
+Az ATA lemezmeghajtók támogatásához erre van még szükség a `device ata` mellett.
+
+[.programlisting]
+....
+device          ataraid                 # ATA RAID-meghajtók
+....
+
+Az ATA RAID-meghajtók kezeléséhez erre a sorra van szükség a `device ata` mellett.
+
+[.programlisting]
+....
+
+device          atapicd                 # ATAPI CD-meghajtók
+....
+
+Az ATAPI CD-meghajtók használatához ezt is tegyük a konfigurációba a `device ata` mellé.
+
+[.programlisting]
+....
+device          atapifd                 # ATAPI floppy meghajtók
+....
+
+A `device ata` használata mellett erre van még szükségünk az ATAPI floppy meghajtók kezeléséhez.
+
+[.programlisting]
+....
+device          atapist                 # ATAPI szalagos meghajtók
+....
+
+Az ATAPI szalagos egységek használatához ezt a sort is tegyük a konfigurációba a `device ata` mellé.
+
+[.programlisting]
+....
+options         ATA_STATIC_ID           # statikus eszközszámozás
+....
+
+Ezzel a beállítással a vezérlõk számozása állandó lesz. Nélküle az eszközszámok dinamikusan kerülnek kiosztásra.
+
+[.programlisting]
+....
+# SCSI vezérlõk
+device          ahb        # EISA AHA1742 család
+device          ahc        # AHA2940 és integrált AIC7xxx eszközök
+options         AHC_REG_PRETTY_PRINT    # a hibák kereséséhez kiíratja a regiszterek
+                                        # bitmezõit.  Kb. 128 KB-al növeli a méretét.
+device          ahd        # AHA39320/29320 és integrált AIC79xx eszközök
+options         AHD_REG_PRETTY_PRINT    # a hibák kereséséhez kiíratja a regiszterek
+                                        # bitmezõit.  Kb. 215 KB-al növeli a méretét.
+device          amd        # AMD 53C974 (Teckram DC-390(T))
+device          isp        # Qlogic család
+#device         ispfw      # a QLogic HBA firmware-e, többnyire modul
+device          mpt        # LSI-Logic MPT-Fusion
+#device         ncr        # NCR/Symbios Logic
+device          sym        # NCR/Symbios Logic (újabb chipsetek, illetve az `ncr' típusúak)
+device          trm        # Tekram DC395U/UW/F DC315U csatolók
+
+device          adv        # Advansys SCSI-csatolók
+device          adw        # Advansys wide SCSI-csatolók
+device          aha        # Adaptec 154x SCSI-csatolók
+device          aic        # Adaptec 15[012]x SCSI-csatolók, AIC-6[23]60.
+device          bt         # Buslogic/Mylex MultiMaster SCSI-csatolók
+
+device          ncv        # NCR 53C500
+device          nsp        # Workbit Ninja SCSI-3
+device          stg        # TMC 18C30/18C50
+....
+
+SCSI-vezérlõk. Vegyük ki azokat, amelyekkel ténylegesen nem rendelkezünk. Ha csak IDE eszközeink vannak a rendszerünkben, az összeset eltávolíthatjuk. A `_REG_PRETTY_PRINT` végzõdésû sorok a megfelelõ meghajtók hibakerési beállításait takarják.
+
+[.programlisting]
+....
+# SCSI-perifériák
+device          scbus      # SCSI-busz (kell a SCSI-hoz)
+device          ch         # SCSI médiumváltók (media changer)
+device          da         # közvetlen hozzáférés (lemezek)
+device          sa         # soros hozzáférés (szalag stb.)
+device          cd         # CD
+device          pass       # áteresztõ eszköz (közvetlen SCSI hozzáférés)
+device          ses        # SCSI környezeti szolgáltatások (és SAF-TE)
+....
+
+SCSI-perifériák. Itt is érvényes, hogy kivehetjük azokat az eszközöket, amelyekkel nem rendelkezünk. De ha csak IDE hardvereink vannak, teljesen eltávolíthatjuk ezeket.
+
+[NOTE]
+====
+Annak ellenére, hogy valójában nem igazi SCSI-eszközök, az USB-s man:umass[4] és még néhány más egyéb meghajtó is használja a SCSI alrendszert. Emiatt semmiképpen se távolítsuk el a SCSI támogatást a rendszerünkõl abban az esetben, ha ilyen meghajtókat is használni szándékozunk.
+====
+
+[.programlisting]
+....
+# a SCSI alrendszerhez kapcsolódó RAID-vezérlõk
+device          amr        # AMI MegaRAID
+device          arcmsr     # Areca SATA II RAID
+device          asr        # DPT SmartRAID V, VI és Adaptec SCSI RAID
+device          ciss       # Compaq Smart RAID 5*
+device          dpt        # DPT Smartcache III, IV - lásd a NOTES állományt
+device          hptmv      # Highpoint RocketRAID 182x
+device          rr232x     # Highpoint RocketRAID 232x
+device          iir        # Intel Integrated RAID
+device          ips        # IBM (Adaptec) ServeRAID
+device          mly        # Mylex AcceleRAID/eXtremeRAID
+device          twa        # 3ware 9000 series PATA/SATA RAID
+
+# RAID vezérlõk
+device          aac        # Adaptec FSA RAID
+device          aacp       # SCSI áteresztõ az aac-hez (kell hozzá a CAM)
+device          ida        # Compaq Smart RAID
+device          mfi        # LSI MegaRAID SAS
+device          mlx        # Mylex DAC960 család
+device          pst        # Promise Supertrak SX6000
+device          twe        # 3ware ATA RAID
+....
+
+Az ismert RAID-vezérlõk. Ha közülük egyikkel sem rendelkezünk, távolítsuk el ezeket a konfigurációból.
+
+[.programlisting]
+....
+# az atkbdc0 vezérli a billentyûzetet és a PS/2-es egeret
+device          atkbdc     # AT billentyûzet vezérlõ
+....
+
+A billentyûzet vezérlõje (`atkbdc`) az AT-s billentyûzet és a PS/2 stílusú pozícionáló eszközök vezérléséhez szükséges I/O szolgáltatásokat biztosítja. Erre a vezérlõre a billentyûzet meghajtójának (`atkbd`) és a PS/2 pozícionáló eszközök eszközmeghajtójának (`psm`) is szüksége van.
+
+[.programlisting]
+....
+device          atkbd      # AT billentyûzet
+....
+
+Az `atkbd` meghajtó, a `atkbdc` vezérlõvel együtt, adja a hozzáférést az AT billentyûzet vezérlõre csatlakoztatott AT 84 és a fejlettebb AT billentyûzetek felé.
+
+[.programlisting]
+....
+device          psm        # PS/2 egér
+....
+
+Használjuk ezt az eszközt, ha az egerünk a PS/2 portra csatlakozik.
+
+[.programlisting]
+....
+device          kbdmux        # billentyûzet multiplexer
+....
+
+A billentyûzet multiplexer alapszintû támogatása. Ha nem kívánunk a jövõben egynél több billentyûzetet csatlakoztatni a rendszerünkre, nyugodt szívvel kivehetjük ezt a sort.
+
+[.programlisting]
+....
+device          vga        # VGA videokártya meghajtó
+....
+
+Videokártya meghajtó.
+
+[.programlisting]
+....
+
+device          splash     # üdvözlõképernyõk és képernyõkímélõk támogatása
+....
+
+Nyissunk egy üdvözlõképernyõvel! A képernyõkímélõknek is szükségük van erre az eszközre.
+
+[.programlisting]
+....
+# a syscons az alapértelmezett konzolmeghajtó, hasonlít a SCO konzolra
+device          sc
+....
+
+Az `sc` az alapértelmezett meghajtó a konzolok számára, és sokban hasonlít a SCO konzolra. Mivel a legtöbb teljesképernyõs program a [.filename]#termcap# termináladatbázis könyvtáron keresztül éri el a konzolt, nem igazán számít, hogy ezt vagy a `VT220`-kompatibilis `vt` konzolmeghajtót használjuk. Ha bármilyen gondunk lenne a teljesképernyõs programok futtatásával ezen a konzolon, a bejelentkezéskor állítsuk a `TERM` környezeti változónkat a `scoansi` értékre.
+
+[.programlisting]
+....
+# ezzel tudjuk engedélyezni a pcvt (VT220-kompatibilis) konzolmeghajtót
+#device          vt
+#options         XSERVER          # az X szerver támogatása vt konzolon
+#options         FAT_CURSOR       # telt kurzor használata
+....
+
+Ez a VT220-kompatibilis konzolmeghajtó, amely visszafelé kompatibilis a VT100/102-vel is. Remekül mûködik olyan laptopokon, ahol a hardver nem használható az `sc` konzollal. Itt ugyanúgy érdemes egyébként a `vt100` értékre vagy a `vt220` értékre állítani a `TERM` környezeti változónkat. Hasznosnak bizonyulhat abban az esetben is, amikor hálózaton keresztül nagy mennyiségû és eltérõ típusú számítógépekhez csatlakozunk, és ahol a [.filename]#termcap# és [.filename]#terminfo# adatbázisokban az `sc` bejegyzései gyakran nem is érhetõek el - a `vt100` viszont virtuálisan az összes platformon elérhetõ.
+
+[.programlisting]
+....
+device          agp
+....
+
+Írjuk bele a konfigurációba, ha van AGP kártya a rendszerünkben. Ezzel engedélyezzük az AGP és az AGP GART támogatását az ezeket ismerõ kártyák számára.
+
+[.programlisting]
+....
+# energiagazdálkodás támogatása (bõvebben lásd: NOTES)
+#device          apm
+....
+
+A fejlett energiagazdálkodás támogatása. Laptopok esetén hasznos, habár ez alapértelmezés szerint nincs engedélyezve a [.filename]#GENERIC# konfigurációban.
+
+[.programlisting]
+....
+# az i8254 készenléti módjának támogatása
+device           pmtimer
+....
+
+Az energiagazdálkodási események, mint például APM és ACPI idõzítõjének eszközmeghajtója.
+
+[.programlisting]
+....
+# PCCARD (PCMCIA) támogatás
+# PCMCIA és cardbus támogatás
+device          cbb               # cardbus (yenta) bridge
+device          pccard            # PC Card (16 bites) busz
+device          cardbus           # CardBus (32 bites) busz
+....
+
+A PCMCIA támogatása. Mindenképpen szükségünk lesz rá, ha laptopunk van.
+
+[.programlisting]
+....
+# soros (COM) portok
+device          sio               # 8250, 16[45]50 alapú soros portok
+....
+
+Ezek azok a soros portok, amelyek az MS-DOS(R)/Windows(R) világban csak [.filename]#COM# portokként ismernek.
+
+[NOTE]
+====
+Ha van egy belsõ modemünk a [.filename]#COM4#-en és egy soros portunk a [.filename]#COM2#-n, a modem IRQ-ját meg kell változtatnunk 2-re (valamilyen homályos mûszaki okból kifolyólag a COM2 = IRQ9), hogy hozzá tudjunk férni FreeBSD-bõl. Ha többportos soros kártyánk lenne, lapozzuk fel a man:sio[4] man oldalát, és ott hozzá megtaláljuk a [.filename]#/boot/device.hints# állományba írandó megfelelõ értékeket. Egyes videokártyák (különösen az S3 chipekre épülõk) az I/O címeket `0x*2e8` alakban használják, és mivel rengeteg olcsó soros kártya nem kódolja vissza egészében a 16 bites I/O címteret, ütközni fognak ezekkel a kártyákkal, és ezáltal a [.filename]#COM4# port gyakorlatilag elérhetetlenné válik.
+
+Minden egyes soros portnak egyedi IRQ-ja kell legyen (hacsak nem használunk olyan többportos kártyát, amely támogatja a megosztott megszakításokat), ezért a [.filename]#COM3# és [.filename]#COM4# esetén alapértelmezett IRQ-k nem használhatóak.
+====
+
+[.programlisting]
+....
+# párhuzamos port
+device          ppc
+....
+
+Ez az ISA busz párhuzamos portjának felülete.
+
+[.programlisting]
+....
+device          ppbus      # a párhuzamos port busza (kell)
+....
+
+A párhuzamos porthoz tartozó busz támogatása.
+
+[.programlisting]
+....
+device          lpt        # nyomtató
+....
+
+A párhuzamos portra csatlakozó nyomtatók támogatása.
+
+[NOTE]
+====
+A fentiek közül mind a három szükséges a párhuzamos porton csatlakozó nyomtatók használatához.
+====
+
+[.programlisting]
+....
+device          plip       # TCP/IP párhuzamos porton keresztül
+....
+
+Ez a párhuzamos port hálózati felületének meghajtója.
+
+[.programlisting]
+....
+device          ppi        # a párhuzamos port felületének eszköze
+....
+
+Általános célú ("geek port") és IEEE1284 I/O.
+
+[.programlisting]
+....
+#device         vpo        # az scbus és a da kell a használatához
+....
+
+Ez az Iomega Zip meghajtóihoz tartozó eszköz. A mûködéséhez szükség van az `scbus` és `da` engedélyezésére. A legjobb teljesítményt EPP 1.9 módban mûködõ portokkal lehet kihozni belõle.
+
+[.programlisting]
+....
+#device         puc
+....
+
+Tegyük bele a konfigurációba ezt az eszközt, ha egy olyan "buta" soros vagy párhuzamos PCI kártyánk van, amelyet a man:puc[4] segédmeghajtó ismer.
+
+[.programlisting]
+....
+# PCI Ethernet kártyák
+device          de         # DEC/Intel DC21x4x (Tulip)
+device          em         # Intel PRO/1000 Gigabit Ethernet kártya
+device          ixgb       # Intel PRO/10GbE Ethernet kártya
+device          txp        # 3Com 3cR990 (Typhoon)
+device          vx         # 3Com 3c590, 3c595 (Vortex)
+....
+
+Különféle PCI hálózati kártyák meghajtói. Vegyük ki azokat, amelyek nem találhatóak meg a rendszerünkben.
+
+[.programlisting]
+....
+# PCI Ethernet kártyák, melyek az MII busz vezérlõkódját használják
+# FIGYELEM: Ne töröljük ki a 'device miibus' sort, ha ilyen kártyánk van!
+device          miibus     # az MII busz támogatása
+....
+
+Az MII busz engedélyezése elengedhetetlen bizonyos 10/100-as PCI Ethernet kártyák használatához, konkrétan azokéhoz, amelyek az MII-vel együttmûködni képes adó-vevõt használnak vagy az MII-höz hasonló adó-vevõ vezérlõ felületet valósítanak meg. A `device miibus` hozzáadása a rendszermaghoz magával vonja az általános miibus API és az összes PHY meghajtó támogatását, beleértve azt az általános PHY eszközt is, amelyet az egyes eszközmeghajtók külön nem támogatnak.
+
+[.programlisting]
+....
+device          bce        # Broadcom BCM5706/BCM5708 Gigabit Ethernet
+device          bfe        # Broadcom BCM440x 10/100 Ethernet
+device          bge        # Broadcom BCM570xx Gigabit Ethernet
+device          dc         # DEC/Intel 21143 és egyéb hasonlóak
+device          fxp        # Intel EtherExpress PRO/100B (82557, 82558)
+device          lge        # Level 1 LXT1001 gigabit ethernet
+device          msk        # Marvell/SysKonnect Yukon II Gigabit Ethernet
+device          nge        # NatSemi DP83820 gigabit ethernet
+device          nve        # nVidia nForce MCP integrált Ethernet hálózat
+device          pcn        # AMD Am79C97x PCI 10/100 (az 'lnc' elõtt)
+device          re         # RealTek 8139C+/8169/8169S/8110S
+device          rl         # RealTek 8129/8139
+device          sf         # Adaptec AIC-6915 (Starfire)
+device          sis        # Silicon Integrated Systems SiS 900/SiS 7016
+device          sk         # SysKonnect SK-984x & SK-982x gigabit Ethernet
+device          ste        # Sundance ST201 (D-Link DFE-550TX)
+device          stge       # Sundance/Tamarack TC9021 gigabit Ethernet
+device          ti         # Alteon Networks Tigon I/II gigabit Ethernet
+device          tl         # Texas Instruments ThunderLAN
+device          tx         # SMC EtherPower II (83c170 EPIC)
+device          vge        # VIA VT612x gigabit ethernet
+device          vr         # VIA Rhine, Rhine II
+device          wb         # Winbond W89C840F
+device          xl         # 3Com 3c90x (Boomerang, Cyclone)
+....
+
+Meghajtók, melyek az MII busz vezérlõkódját használják.
+
+[.programlisting]
+....
+# ISA Ethernet és pccard hálózati kártyák.
+device          cs         # Crystal Semiconductor CS89x0 NIC
+# az 'device ed' eszközhöz kell a 'device miibus'
+device          ed         # NE[12]000, SMC Ultra, 3c503, DS8390 cards
+device          ex         # Intel EtherExpress Pro/10 és Pro/10+
+device          ep         # Etherlink III alapú kártyák
+device          fe         # Fujitsu MB8696x alapú kártyák
+device          ie         # EtherExpress 8/16, 3C507, StarLAN 10 stb.
+device          lnc        # NE2100, NE32-VL Lance Ethernet kártyák
+device          sn         # az SMC 9000-res sorozatú Ethernet chipjei
+device          xe         # Xircom pccard Ethernet
+
+# ISA eszközök, melyek a régi ISA betétet használják
+#device         le
+....
+
+ISA Ethernet meghajtók. A konkrétan támogatott kártyák teljes felsorolását lásd a [.filename]#/usr/src/sys/i386/conf/NOTES# állományban.
+
+[.programlisting]
+....
+# vezeték nélküli hálózati kártyák
+device          wlan            # 802.11 támogatás
+....
+
+Általános 802.11 támogatás. Erre a sorra mindenképpen szükség van a vezeték nélküli hálózatok használatához.
+
+[.programlisting]
+....
+device          wlan_wep        # 802.11 WEP támogatás
+device          wlan_ccmp       # 802.11 CCMP támogatás
+device          wlan_tkip       # 802.11 TKIP támogatás
+....
+
+A 802.11 eszközök esetén a titkosítás támogatása. Ezeket a sorokat akkor adjuk meg, ha titkosítást akarunk használni vagy a 802.11i biztonsági protokolljait.
+
+[.programlisting]
+....
+device          an         # Aironet 4500/4800 802.11 vezeték nélküli hálózati kártyák
+device          ath             # Atheros pci/cardbus hálózati kártyák
+device          ath_hal         # Atheros HAL (Hardware Access Layer)
+device          ath_rate_sample # küldési mintavételi vezérlés az ath-hoz
+device          awi        # BayStack 660 és mások
+device          ral        # Ralink Technology RT2500 vezeték nélküli hálózati kártyák
+device          wi         # WaveLAN/Intersil/Symbol 802.11 vezeték nélküli hálózati kártyák
+#device         wl         # régebbi, nem 802.11 Wavelan vezeték nélküli hálózati kártyák
+....
+
+A különbözõ vezeték nélküli kártyák támogatása.
+
+[.programlisting]
+....
+# Pszeudo eszközök
+device   loop          # hálózati loopback
+....
+
+Ez a TCP/IP általános loopback eszköze. Ha telnettel vagy FTP-vel rácsatlakozunk a `localhost` címére (vagyis a `127.0.0.1`-re), akkor rajta keresztül saját magunkhoz jutunk vissza. Ennek a megléte _kötelezõ_!
+
+[.programlisting]
+....
+device   random        # álvéletlenszám eszköz
+....
+
+Kriptográfiai szempontból biztonságos álvéletlenszám generátor.
+
+[.programlisting]
+....
+device   ether         # Ethernet támogatás
+....
+
+Az `ether` eszközre csak abban az esetben van szükség, ha Ethernet kártyánk van. Ez magában foglalja az általános Ethernet protokoll kódját.
+
+[.programlisting]
+....
+device   sl            # belsõ SLIP
+....
+
+Az `sl` a SLIP használatát engedélyezi. Ez egy régi protokoll, amelyet azóta már szinte teljesen kiszorított a PPP, mivel azt könnyebb beállítani és sokkal jobban is illik a modem-modem kapcsolatokhoz, illetve sokkal erõteljesebb.
+
+[.programlisting]
+....
+device   ppp           # belsõ PPP
+....
+
+Ez a tárcsázós kapcsolatok rendszermagon belüli PPP támogatását adja meg. Van a PPP-nek egy külsõ, a felhasználói programként megvalósított változata is, amely a `tun` eszközt használja és sokkal nagyobb rugalmasságot kínál fel, illetve olyan lehetõségeket, mint például az igény szerinti tárcsázás.
+
+[.programlisting]
+....
+device   tun           # csomag alagút
+....
+
+Ezt a felhasználói PPP szoftver használja. A könyv crossref:ppp-and-slip[userppp,PPP]-rõl szóló részében többet is megtudhatunk róla.
+
+[.programlisting]
+....
+
+device   pty           # Pszeudo terminálok (telnet stb.)
+....
+
+Ezek a "pszeudo terminálok", vagy más néven szimulált bejelentkezési portok. A bejövõ `telnet` és `rlogin` munkamenetek használják, valamint az xterm és a hozzá hasonló alkalmazások, mint például az Emacs.
+
+[.programlisting]
+....
+device   md            # memórialemezek
+....
+
+A memóriában levõ pszeudo lemezes meghajtók.
+
+[.programlisting]
+....
+device   gif           # IPv6 és IPv4 tunnelek használata
+....
+
+Megvalósítja az IPv6 IPv4 feletti, az IPv4 IPv6 feletti, az IPv4 IPv4 feletti és az IPv6 IPv6 feletti közvetítését. A `gif` eszköz "magától másolódik", vagyis szükség szerint hozza létre a megfelelõ eszközleírókat.
+
+[.programlisting]
+....
+device   faith         # IPv6-IPv4 közti továbbítás (fordítás)
+....
+
+Ez a pszeudo eszköz elfogja a hozzá küldött csomagokat és átadja ezeket az IPv4/IPv6 fordítással foglalkozó démonnak.
+
+[.programlisting]
+....
+# a `bpf' eszköz használatával a Berkeley csomagszûrõt (Berkeley Packet Filter) engedélyezzük
+# Legyünk rá tekintettel, hogy ennek komoly következményei lehetnek
+# rendszeradminisztrációs szempontból!
+# A 'bpf'-re szükség van a DHCP-hez.
+device   bpf           # Berkeley csomagszûrõ
+....
+
+A Berkeley csomagszûrõje. Ez egy olyan pszeudo eszköz, amely lehetõvé teszi, hogy a hálózati csatolók forgalmát megfigyeljük, mivel a (pl. Ethernet) hálózatunkon minden csomagot elkap. Ezek a csomagok lemezre is menthetõek vagy kielemezhetõek a man:tcpdump[1] program segítségével.
+
+[NOTE]
+====
+A man:bpf[4] eszközt a man:dhclient[8] is használja többek közt az alapértelmezett átjáró IP-címének megszerzéséhez. Ha DHCP-t akarunk használni, hagyjuk így.
+====
+
+[.programlisting]
+....
+# USB támogatás
+device          uhci          # UHCI PCI->USB felület
+device          ohci          # OHCI PCI->USB felület
+device          ehci          # EHCI PCI->USB felület (USB 2.0)
+device          usb           # USB busz (kell)
+#device         udbp          # USB Double Bulk Pipe eszközök
+device          ugen          # általános
+device          uhid          # Human Interface Devices
+device          ukbd          # billentyûzet
+device          ulpt          # nyomtató
+device          umass         # lemez/háttértároló - kell hozzá az scbus és a da
+device          ums           # egér
+device          ural          # Ralink Technology RT2500USB vezeték nélküli hálózati kártyák
+device          urio          # Diamond Rio 500 MP3 lejátszó
+device          uscanner      # lapolvasók
+# USB Ethernet, kell hozzá az mii
+device          aue           # ADMtek USB Ethernet
+device          axe           # ASIX Electronics USB Ethernet
+device          cdce          # általános USB, Etherneten keresztül
+device          cue           # CATC USB Ethernet
+device          kue           # Kawasaki LSI USB Ethernet
+device          rue           # RealTek RTL8150 USB Ethernet
+....
+
+A különféle USB eszközök támogatása.
+
+[.programlisting]
+....
+# FireWire támogatás
+device          firewire      # FireWire buszkód
+device          sbp           # SCSI FireWire-ön keresztül (kell hozzá az scbus és a da)
+device          fwe           # Ethernet FireWire-ön keresztül (nem szabványos!)
+....
+
+A különféle Firewire eszközök támogatása.
+
+A FreeBSD által ismert további eszközökrõl a [.filename]#/usr/src/sys/i386/conf/NOTES# állományból tájékozódhatunk.
+
+=== Sok memória kezelése (PAE)
+
+A sok memóriával rendelkezõ számítógépek esetén szükség lehet a felhasználói és rendszerszintû virtuális címek (Kernel Virtual Address, KVA) 4 gigabyte feletti használatára. Ennek a korlátozásnak a kiküszöbölésére az Intel(R) külön támogatást épített be a Pentium(R) Pro és az azt követõ processzorok 36 bites fizikai címzésének kialakításához.
+
+A Fizikai Címkiterjesztés (Physical Address Extension, PAE) az Intel(R) Pentium(R) Pro és késõbbi processzoraiban található meg, és lehetõvé teszi egészen 64 gigabyte-ig a memóriahasználatot. A FreeBSD is támogatja ezt a tulajdonságot a `PAE` rendszermag beállítás használatával, és megtalálható a FreeBSD összes jelenlegi verziójában. Az Intel(R) architektúrájú processzorok memóriaszervezésének korlátai miatt nem különböztethetõ meg a 4 gigabyte alatti és feletti memória. A 4 gigabyte felett található memóriaterületek egyszerûen hozzáadódnak a rendelkezésre álló memóriához.
+
+A rendszermagban a PAE támogatását egyszerûen az alábbi sor hozzáadásával tudjuk engedélyezni:
+
+[.programlisting]
+....
+options          PAE
+....
+
+[NOTE]
+====
+A FreeBSD-ben a PAE támogatása csak az Intel(R) IA-32 architektúrájú processzoraihoz érhetõ el. Emellett meg kell említenünk, hogy a FreeBSD-ben található PAE támogatás nem lett szélesebb körben próbára téve, ezért a FreeBSD többi megbízható elemeihez képest csak béta állapotúnak tekinthetõ.
+====
+
+A FreeBSD PAE támogatásának van néhány hiányossága:
+
+* Egy futó program a virtuális memóriában nem képes 4 gigabyte-nál többet elérni.
+* A man:bus_dma[9] felületet nem használó eszközmeghajtók adathibákat okozhatnak a PAE-t támogató rendszermagokban, és emiatt nem ajánljuk a használatukat. Ebbõl a megfontolásból készítettünk egy [.filename]#PAE# nevû konfigurációs állományt a FreeBSD-hez, amelyben nem szerepel egyetlen olyan meghajtó sem, amely ismereteink szerint nem mûködik együtt a PAE-t támogató rendszermagokkal.
+* Bizonyos finomhangolási beállítások a memóriahasználatot a rendelkezésre álló fizikai memória mennyiségébõl számítják ki. A PAE támogatással mûködõ rendszerek esetében megjelenõ sok memória miatt azonban az ilyen eszközök szükségtelenül több területet foglalhatnak le. Erre példa lehet a `kern.maxvnodes` sysctl változó, amely a rendszermag által maximálisan felhasználható virtuális csomópontok számát korlátozza. Ajánlott tehát az ilyen és ehhez hasonló beállítások értelmes értékre történõ visszaállítása.
+* Szükséges lehet a rendszermag virtuális címterének (KVA) növelése vagy a rendszermag által túlságosan nagy méretûre foglalt címterû különféle erõforrások (lásd fentebb) csökkentése a KVA kifogyásának elkerülésére. A KVA területének növelését a `KVA_PAGES` beállításával tehetjük meg.
+
+Ha gondjaink lennének a teljesítménnyel vagy a megbízhatósággal, keressük fel a man:tuning[7] man oldalt. A man:pae[4] man oldalon pedig a FreeBSD PAE támogatásáról találhatunk naprakész információkat.
+
+[[kernelconfig-trouble]]
+== Ha valamilyen hiba történne
+
+Négyféle probléma jelentkezhet egy saját rendszermag készítése során. Ezek:
+
+A `config` hibát jelez:::
+Amikor a man:config[8] parancs hibát jelez vissza a rendszermagunk konfigurációs beállításainak feldolgozása során, akkor minden bizonnyal csak egy apró hibát vétettünk valahol. Szerencsére a man:config[8] kiírja a hibás sor számát, ezért gyorsan fel tudjuk kutatni a hibát tartalmazó sort. Például, ha ezt látjuk:
++
+[source,bash]
+....
+config: line 17: syntax error
+....
++
+Akkor gyõzõdjünk meg róla, hogy helyesen írtuk be az adott sorban szereplõ kulcsszót. Ebben segítségünkre lehet, ha összevetjük a [.filename]#GENERIC# konfigurációs állománnyal vagy más hivatkozásokkal.
+
+A `make` hibát jelez:::
+Ha a `make` jelez hibát, az általában arra utal, hogy az általunk korábban megadott rendszermag konfigurációs állományt a man:config[8] nem értette meg rendesen. Megint azt tudjuk csak javasolni, hogy nézzük át a konfigurációs beállításainkat, és ha ezután sem sikerül megoldani a problémát, akkor mellékeljük egy levélben a rendszermagunk konfigurációs beállításait és küldjük el a {freebsd-questions} címére, ahol a hozzáértõk gyorsan átnézik.
+
+A rendszermag nem indul:[[kernelconfig-noboot]]::
+Ha az új rendszermagunk nem indul vagy nem képes felismerni az eszközeinket, ne essünk kétségbe! Szerencsére a FreeBSD tökéletes megoldással tud szolgálni az összeférhetetlen rendszermagok esetére: a FreeBSD rendszerbetöltõjében egyszerûen válasszuk ki az indítandó rendszermagot. Ezt akkor tudjuk elõhívni, amikor a rendszerindító menü megjelenik. Válasszuk ki a hatos, vagyis az "Escape to a loader prompt" (a betöltõ parancssorának elõhívása) menüpontot. Mikor megjelenik a parancssor, írjuk be, hogy `unload kernel`, majd adjuk ki a `boot /boot/kernel.old/kernel`, parancsot, amiben bármilyen más olyan rendszermagot is megnevezhetünk, ami korábban már mûködött. Ezért amikor beállítunk egy új rendszermagot, mindig érdemes a kezünk ügyében tartani legalább egy olyan rendszermagot, amely mûködik.
++
+Miután sikerült elindítanunk az egyik használható rendszermagot, nézzük át még egyszer a konfigurációs állományt és próbáljuk újra lefordítani a rendszermagot. A probléma megoldását segítheti a [.filename]#/var/log/messages# állomány áttanulmányozása is, ami többek közt rögzíti a rendszermag sikeres indulása során keletkezõ üzeneteket. Ezenkívül a man:dmesg[8] parancs is meg tudja jeleníteni az aktuális rendszerindítás üzeneteit.
++
+[NOTE]
+====
+Ha gondok merülnének fel a rendszermag elkészítése során, mindenképpen tartsuk meg a [.filename]#GENERIC#, vagy bármilyen másik olyan rendszermagot, amelyrõl tudjuk, hogy mûködik. Nevezzük át, így nem fog felülíródni a következõ fordítás és telepítés során. A [.filename]#kernel.old# állományra ugyanis nem minden esetben számíthatunk, mivel az új rendszermagok telepítésénél a [.filename]#kernel.old# mindig felülíródik a legutóbb telepített rendszermaggal, amely azonban nem feltétlenül lesz mûködõképes. Sõt, amint csak lehetséges, rakjuk a mûködõ rendszermagot a [.filename]#/boot/kernel# könyvtárba vagy különben a man:ps[1] és a hozzá hasonló parancsok nem fognak rendesen mûködni. Mindezek elvégzéséhez egyszerûen nevezzük át a jó rendszermagot tartalmazó könyvtárt:
+
+[source,bash]
+....
+# mv /boot/kernel /boot/kernel.rossz
+# mv /boot/kernel.jó /boot/kernel
+....
+
+====
+
+A rendszermag mûködik, a man:ps[1] viszont nem:::
+Ha olyan rendszermagot telepítettünk, aminek a verziója nem egyezik meg a hozzá tartozó segédprogramokéval, tehát például -CURRENT rendszermagot raktunk egy -RELEASE rendszerhez, egyes rendszerállapotjelzõ parancsok, mint például a man:ps[1] vagy a man:vmstat[8] nem fognak mûködni. Ebben az esetben crossref:cutting-edge[makeworld,az egész rendszert újra kell fordítanunk és telepítenünk] a rendszermagunkkal megegyezõ verziójú forrásból. Részben ezért sem különösen ajánlott, hogy az operációs rendszer többi részétõl eltérõ verziójú rendszermagot használjunk.

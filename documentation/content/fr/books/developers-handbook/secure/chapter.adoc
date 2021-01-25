@@ -1,0 +1,201 @@
+---
+title: Chapitre 6. Programmation sécurisée
+authors: 
+  - author: Murray Stokely
+---
+
+[[secure]]
+= Programmation sécurisée
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Table des matières
+:table-caption: Tableau
+:example-caption: Exemple
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+
+Ce chapître a été écrit par Murray Stokely.
+
+== Synopsis
+
+Ce chapître décrit quelques problèmes de sécurité qui ont tourmenté les programmeurs Unix depuis des dizaines d'années et quelques uns des nouveaux outils disponibles pour aider les programmeurs à éviter l'écriture de code non sécurisé. 
+
+[[secure-philosophy]]
+== Méthodologie de développement sécurisé
+
+Ecrire des applications sécurisées demande une très minutieuse et pessimiste vision de la vie. Les applications devrait fonctionner avec le principe du "privilège moindre" de façon à ce qu'aucun processus ne fonctionne avec plus que le strict minimum dont il a besoin pour accomplir sa tâche. Le code pré-testé devrait être réutilisé autant que possible pour éviter les erreurs communes que d'autres peuvent déjà avoir réparées.
+
+Un des pièges de l'environnement Unix est qu'il est facile d'affecter la stabilité de l'environnement. Les applications ne devraient jamais avoir confiance dans la saisie de l'utilisateur (sous toutes ses formes), les ressources système, la communication inter-processus, ou l'enchaînement des évènements. Les processus Unix n'exécutent pas de manière synchrone aussi, logiquement, les opérations sont rarement atomiques.
+
+== Dépassement de capacité
+
+Les dépassements de capacité ("Buffer Overflows") existent depuis les débuts de l'architecture de Von-Neuman <<COD>>. Ils gagnèrent une grande notoriété en 1988 avec le ver pour Internet de Morris. Malheureusement, la même attaque basique reste effective aujourd'hui. Des 17 rapports de sécurité du CERT de 1999, 10 furent causés directement des bogues logiciels de dépassement de capacité. De loin la plus commune de types d'attaques par dépassement de capacité est basée sur la corruption de la pile.
+
+La plupart des systèmes informatiques modernes utilise une pile pour passer les arguments aux procédures et stocker les variables locales Une pile est une zone mémoire dernier entré-premier sorti (Last In-First Out : LIFO) dans la zone de mémoire haute de l'image d'un processus. Quand un programme invoque une fonction une nouvelle structure pile est créée. Cette structure pile consiste dans les arguments passés à la fonction aussi bien que dans une quantité dynamique d'espace pour la variable locale. Le pointeur de pile est un registre qui référence la position courante du sommet de la pile. Etant donné que cette valeur change constamment au fur et à mesure que de nouvelles valeurs sont ajoutées au sommet de la pile, beaucoup d'implémentations fournissent aussi un pointeur de structure qui est positionné dans le voisinage du début de la structure pile de façon à ce que les variables locales soient plus facilement adressables relativement à cette valeur. <<COD>> L'adresse de retour des appels de fonction est aussi stocké dans la pile, et cela est la cause des découvertes des dépassements de pile puisque faire déborder une variable locale dans une fonction peut écraser l'adresse de retour de cette fonction, permettant potentiellement à un utilisateur malveillant d'exécuter le code qu'il ou elle désire.
+
+Bien que les attaques basées sur les dépassements de pile soient de loin les plus communes, il serait aussi possible de faire exploser la pile avec une attaque du tas (malloc/free).
+
+Le langage de programmation C ne réalise pas de vérifications automatiques des limites sur les tableaux ou pointeurs comme d'autres langages le font. De plus, la librairie standard du C est remplie d'une poignée de fonctions très dangereuses.
+
+[.informaltable]
+[cols="1,1"]
+|===
+
+|`strcpy`(char *dest, const char *src)
+|
+
+Peut faire déborder le tampon dest
+
+|`strcat`(char *dest, const char *src)
+|
+
+Peut faire déborder le tampon dest
+
+|`getwd`(char *buf)
+|
+
+Peut faire déborder le tampon buf
+
+|`gets`(char *s)
+|
+
+Peut faire déborder le tampon s
+
+|`[vf]scanf`(const char *format, ...)
+|
+
+Peut faire déborder ses arguments.
+
+|`realpath`(char *path, char resolved_path[])
+|
+
+Peut faire déborder le tampon path
+
+|`[v]sprintf`(char *str, const char *format, ...)
+|
+
+Peut faire déborder le tampon str.
+|===
+
+=== Exemple de dépassement de capacité
+
+L'exemple de code suivant contient un dépassement de capacité conçu pour écraser l'adresse de retour et "sauter" l'instruction suivant immédiatement l'appel de la fonction. (Inspiré par <<Phrack>>)
+
+[.programlisting]
+....
+#include stdio.h
+
+void manipulate(char *buffer) {
+  char newbuffer[80];
+  strcpy(newbuffer,buffer);
+}
+
+int main() {
+  char ch,buffer[4096];
+  int i=0;
+
+  while ((buffer[i++] = getchar()) != '\n') {};
+
+  i=1;
+  manipulate(buffer);
+  i=2;
+  printf("La valeur de i est : %d\n",i);
+  return 0;
+}
+....
+
+Examinons quel serait l'aspect de l'image mémoire de ce processus si nous avions entré 160 espaces dans notre petit programme avant d'appuyer sur kbd:[Entrée].
+
+[XXX Schéma ici!]
+
+Evidemment une entrée plus malveillante pourrait être imaginée pour exécuter des instructions déjà compilées (comme exec(/bin/sh)).
+
+=== Eviter les dépassements de capacité
+
+La solution la plus simple au problème de débordement de pile est de toujours utiliser de la mémoire restreinte en taille et les fonctions de copie de chaîne de caractères. `strncpy` et `strncat` font parties de la libraire standard du C. Ces fonctions acceptent une valeur de longueur comme paramètre qui qui ne devrait pas être plus grande que la taille du tampon de destination. Ces fonctions vont ensuite copier `taille` octets de la source vers la destination. Toutefois, il y a un certain nombre de problèmes avec ces fonctions. Aucune fonction ne garantit une terminaison par le caractère NULL si la taille du tampon d'entrée est aussi grand que celui de destination. Le paramètre taille est aussi utilisé de façon illogique entre `strncpy` et `strncat` aussi il est facile pour les programmeurs d'être déroutés sur leur utilisation convenable. Il y a aussi une perte significative des performances comparé à `strcpy` lorsque l'on copie une courte chaîne dans un grand tampon puisque `strncpy` remplit de caractères NULL jusqu'à la taille spécifiée.
+
+Dans OpenBSD, une autre implémentation de la copie de mémoire a été créée pour contourner ces problèmes. Les fonctions `strlcpy` et `strlcat` garantissent qu'elles termineront toujours le tampon de destination par un caractère NULL losque l'argument de taille est différent de zéro. Pour plus d'informations sur ces fonctions, voir <<OpenBSD>>. Les fonctions `strlcpy` et `strlcat` d'OpenBSD ont été inclues dans FreeBSD depuis la version 3.5.
+
+==== V#233;rifications des limites en fonctionnement basées sur le compilateur
+
+Malheureusement il y a toujours un très important assortiment de code en utilisation publique qui copie aveuglément la mémoire sans utiliser une des routines de copie limitée dont nous venons juste de discuter. Heureusement, il y a une autre solution. Plusieurs produits complémentaires pour compilateur et librairies existent pour faire de la vérification de limites pendant le fonctionnement en C/C++.
+
+StackGuard est un de ces produits qui est implémenté comme un petit correctif ("patch") pour le générateur de code gcc. Extrait du site Internet de StackGuard, http://immunix.org/stackguard.html : 
+
+[.blockquote]
+"StackGuard détecte et fait échouer les attaques par débordement de pile en empêchant l'adresse de retour sur la pile d'être altérée. StackGuard place un mot "canari"  à côté de l'adresse de retour quand la fontion est appelée. Si le mot "canari" a été altéré au retour de la fonction, alors une attaque par débordement de pile a été tentée et le programme répond en envoyant une alerte d'intrusion dans la trace système (syslog) et s'arrête alors."
+
+[.blockquote]
+"StackGuard est implémenté comme un petit correctif au générateur de code gcc, spécifiquement sur les routines function_prolog() et function_epilog(). function_prolog() a été amélioré pour laisser des "canaris" sur la pile quand les fonctions démarrent, et function_epilog vérifie l'intégrité des "canaris" quand la fonction se termine. Tout essai pour corrompre l'adresse de retour est alors détectée avant que la fonction ne retourne."
+
+Recompiler votre application avec StackGuard est un moyen efficace pour stopper la plupart des attques par dépassement de capacité, mais cela peut toujours être compromis.
+
+==== Vérifications des limites en fonctionnement basées sur les librairies
+
+Les mécanismes basés sur le compilateur sont totalement inutiles pour logiciel seulement binaire que vous ne pouvez recompiler. Pour ces situations, il existe un nombre de librairies qui re-implémente les fonctions peu sûres de la librairie C (`strcpy`, `fscanf`, `getwd`, etc..) et assurent que ces fonctions ne peuvent pas écrire plus loin que le pointeur de pile.
+
+* libsafe
+* libverify
+* libparnoia
+
+Malheureusement ces défenses basées sur les librairies possèdent un certain nombre de défauts. Ces librairies protègent seulement d'un très petit ensemble de problèmes liés à la sécurité et oublient de réparer le problème actuel. Ces défenses peuvent échouer si l'application a été compilée avec -fomit-frame-pointer. De même, les variables d'environnement LD_PRELOAD et LD_LIBRARY_PATH peuvent être réécrites/non définies par l'utilisateur.
+
+== Les problèmes liés à SetUID
+
+Il y a au moins 6 differents ID (identifiants) associés à un processus donné. A cause de cela, vous devez être très attentif avec l'accès que votre processus possède à un instant donné. En particulier, toutes les applications ayant reçu des privilèges par seteuid doivent les abandonnés dès qu'ils ne sont plus nécessaires.
+
+L'identifiant de l'utilisateur réel (real user ID) peut seulement être changé par un processus super-utilisateur. Le programme login met celui à jour quand un utilisateur se connecte et il est rarement changé.
+
+L'identifiant de l'utilisateur effectif (effective user ID) est mis à jour par les fonctions `exec()` si un programme possède son bit seteuid placé. Une application peut appeler `seteuid()` à n'importe quel moment pour règler l'identifiant de l'utilisateur effectif sur l'identifiant d'un utilisateur réel ou sur le "set-user-ID" sauvé. Quand l'identifiant de l'utilisateur effectif est placé par les fonctions `exec()`, la valeur précédente est sauvée dans le "set-user-ID" sauvé.
+
+[[chroot]]
+== Limiter l'environnement de votre programme
+
+La méthode traditionnelle pour restreindre l'accès d'un processus se fait avec l'appel système `chroot()`. Cet appel système change le répertoire racine depuis lequel tous les autres chemins sont référencés pour un processus et ses fils. Pour que cet appel réussisse, le processus doit avoir exécuté (recherché) la permission dans le répertoire référencé. Le nouvel environnement environment ne prend pas effet que lorsque vous appelez `chdir()` dans celui-ci. Il doit être aussi noté qu'un processus peut facilement s'échapper d'un environnement chroot s'il a les privilèges du super-utilisateur. Cela devrait être accompli en créant des fichiers spéciaux de périphérique pour la mémoire du noyau, en attachant un dévermineur à un processus depuis l'extérieur de sa "prison", ou par d'autres manières créatrices.
+
+Le comportement de l'appel système `chroot()` peut être un peu contrôlé avec la commande `sysctl` et la variable kern.chroot_allow_open_directories. Quand cette valeur est règlée à 0, `chroot()` échouera avec EPERM s'il y a un répertoire d'ouvert. Si la variable est règlée sur la valeur par défaut 1, alors `chroot()` échouera avec EPERM s'il y a un répertoire d'ouvert et que le processus est déjà sujet à un appel `chroot()`. Pour toute autre valeur, la vérification des répertoires ouverts sera totalement court-circuitée.
+
+=== La fonctionnalité "prison" de FreeBSD
+
+Le concept de Prison ("Jail") étend `chroot()` en limitant les droits du super-utilisateur pour créer un véritable `serveur virtuel`. Une fois qu'une prison est mise en place, toute communication réseau doit avoir lieu au travers de l'adresse IP spécifiée, et le droit du "privilège super-utilisateur" dans cette prison est sévèrement gêné.
+
+Tant qu'il se trouve en prison, tout test avec les droits du super-utilisateur dans le noyau au travers d'un appel à `suser()` échouera. Toutefois, quelques appels à `suser()` ont été changés par la nouvelle interface `suser_xxx()`. Cette fonction est responsable de fournir ou de retirer les accès aux droits du super-utilisateur pour les processus emprisonnés.
+
+Un processus super-utilisateur dans un environnement emprisonné a le pouvoir de : 
+
+* Manipuler les identitifications avec `setuid`, `seteuid`, `setgid`, `setegid`, `setgroups`, `setreuid`, `setregid`, `setlogin`
+* Règler les limites en ressources avec `setrlimit`
+* Modifier quelques variables du noyau par sysctl (kern.hostname)
+* `chroot()`
+* Règler les paramètres d'un noeud virtuel (vnode): `chflags`, `fchflags`
+* Règler les attributs d'un noeud virtuel comme les permissions d'un fichier, le propriétaire, le groupe, la taille, la date d'accès, et la date de modification.
+* Se lier à des ports privilégiés sur Internet (ports < 1024)
+
+`Jail` est un outil très utile pour exécuter des applications dans un environnement sécurisé mais il a des imperfections. Actuellement, les mécanismes IPC (Inter-Process Communications) n'ont pas été convertis pour utiliser `suser_xxx` aussi des applications comme MySQL ne peuvent être exécutée dans une prison. L'accès super-utilisateur peut avoir un sens très limité dans une prison, mais il n'y aucune façon de spécifier exactement ce que très limité veut dire.
+
+=== Les capacitès des processus POSIX.1e
+
+Posix a réalisé un document de travail qui ajoute l'audit d'évènement, les listes de contrôle d'accès, les privilèges fins, l'étiquetage d'information, et le contrôle d'accès mandaté.
+
+Il s'agit d'un travail en cours et c'est l'objectif du projet http://www.trustedbsd.org[TrustedBSD]. Une partie du travail initial a été intégré dans FreeBSD-current (cap_set_proc(3)).
+
+== La confiance
+
+Une application ne devrait jamais supposer que tout est sain dans l'environnement des utilisateurs. Cela inclut (mais n'est certainement pas limité à) : la saisie de l'utilisateur, les signaux, les variables d'environnement, les ressources, les communication inter-processus, les mmaps, le répertoire de travail du système de fichiers, les descripteurs de fichier, le nombre de fichiers ouverts, etc.
+
+Vous ne devriez jamais supposer que vous pouvez gérer toutes les formes de saisie invalide qu'un utilisateur peut entrer. Votre application devrait plutôt utiliser un filtrage positif pour seulement permettre un sous-ensemble spécifique que vous jugez sain. Une mauvaise validation des entrées a été la cause de beaucoup découvertes de bogues, spécialement avec les scripts CGI sur le web. Pour les noms de fichier, vous devez être tout particulièrement attentif aux chemins ("../", "/"), liens symboliques et caractères d'échappement de l'interpréteur de commandes.
+
+Perl possède une caractéristique tès sympathique appelée mode "Taint" qui peut être utilisée pour empêcher les scripts d'utiliser des données externes au programme par un moyen non sûr. Ce mode vérifiera les arguments de la ligne de commandes, les variables d'environnement, les informations localisées (propres aux pays), les résultats de certains appels système (`readdir()`, `readlink()`, `getpwxxx()`) et toute entrée de fichier.
+
+== Les conditions de course
+
+Une condition de course est un comportement anormal causé par une dépendance inattendue sur le séquencement relatif des évènements. En d'autres mots, un programmeur a supposé à tort qu'un évènement particulier se passerait avant un autre.
+
+Quelques causes habituelles de conditions de course sont les signaux, les vérifications d'accès et les fichiers ouverts. Les signaux sont des évènements asynchrones par nature aussi un soin particulier doit être pris pour les utiliser. Vérifier les accès avec `access(2)` puis `open(2)` n'est clairement pas atomique. Les utilisateurs peuvent déplacer des fichiers entre les deux appels. Les applications privilégiées devraient plutôt faire un appel à `seteuid()` puis appeler `open()` directement. Dans le même esprit, une application devrait toujours règler un umask correct avant un appel à `open()` pour prévenir le besoin d'appels non valides à `chmod()`.

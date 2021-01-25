@@ -1,0 +1,148 @@
+---
+title: 第 4 章 复杂的 Porting
+prev: books/porters-handbook/quick-porting
+next: books/porters-handbook/makefile
+---
+
+[[slow]]
+= 复杂的 Porting
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 4
+:toc-title: 目录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-cn/mailing-lists.adoc[]
+include::shared/zh-cn/teams.adoc[]
+include::shared/zh-cn/urls.adoc[]
+
+toc::[]
+
+好了， 也许工作没那么简单， port 需要做些修改才能够在 FreeBSD 上跑起来。 在这一章里， 我们将会一步步举例来介绍应该如何修改来使您的 port 能在 FreeBSD 上面运行。
+
+[[slow-work]]
+== 整个系统是如何运转的?
+
+首先， 这一系列的动作是由用户在您的 port 目录里敲入 `make` 后发生的。 您也许会发现在另外的一个窗口里阅读一下 [.filename]#bsd.port.mk# 将会有助于您的理解。
+
+要是您不是非常明白 [.filename]#bsd.port.mk# 是做什么的话， 也不用太担心， 很多人都不知道的... _:->_
+
+[.procedure]
+====
+. `fetch` 会首先被执行。 `fetch` 将检查在本地的 `DISTDIR` 目录里是否存在 tar 包。 如果 `fetch` 没有找到就会查找 Makefile 中定义的 `MASTER_SITES` URL， 还有我们的主 FTP 站点 link:ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/distfiles/[ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/distfiles/]， 在那里我们备份了所有被认可的 distfile。 假设那个 `MASTER_SITES` 站点是直接连在 Internet 上的， 就会试着用 `FETCH` 指定的程序取回 distfile。 如果成功的话， 文件会被保存在``DISTDIR`` 所指定的目录以备稍后使用。
+. 接下来会执行 `extract`。 它会在 `DISTDIR` 中寻找您的 tar 包 (通常是用 gzip 压缩的 tar 包)，然后解压缩到由 `WRKDIR` 所指定的临时目录里 (默认为[.filename]##work##目录)。
+. 下一步是执行 `patch`。 首先任何在 `PATCHFILES` 中定义的补丁都会被打上。 然后， 在由 `PATCHDIR` 指定的目录 (默认为 [.filename]##files##目录) 中发现的[.filename]##patch-*##， 它们将会以文件名的字母顺序被先后打上。
+. ``configure``会被执行。 这一步骤可能会有以下几种情形。
+.. 如果存在 [.filename]#scripts/configure#， 就会执行它
+.. 如果定义了 `HAS_CONFIGURE` 或者 `GNU_CONFIGURE`， 就会执行 [.filename]#WRKSRC/configure#。
+.. 如果定义了``USE_IMAGE``， 就会执行 `XMKMF` (默认为: `xmkmf -a`)。
+
+. ``build``会被执行。 这一步将会进入ports的工作目录 (``WRKSRC``) 然后进行编译。如果定义了``USE_GMAKE``， 就会使用 GNU ``make``， 反之， 则会使用系统默认的 ``make``。
+====
+
+以上都是系统默认的步骤。 您也可以定义 `pre-_something_` 或者 `post-_something_`， 或者把以此命名的脚本放到 [.filename]#scripts# 目录， 它们会在默认的动作之前或之后被执行。
+
+举个例子， 如果您在您的 [.filename]#Makefile# 里定义了``post-extract``， 并在 [.filename]#script# 目录里放了一个 [.filename]#pre-build# 脚本， 那么在 tar 包解开之后 `post-extract` 将被调用， [.filename]#pre-build# 脚本会在默认的编译之前被执行。 我们推荐您在 [.filename]#Makefile# 定义所有的动作， 如果不是十分复杂的话， 这样， 别人能更容易明白您的 port 需要执行哪些非默认的动作。
+
+默认的行为都是由 [.filename]#bsd.port.mk# 定义的 `do-_something_` 来表示的。 例如， port 中用来解压缩的命令是由 `do-extract` 来定义的。 如果您对默认的设置不满意， 可以通过在 [.filename]#Makefile# 重新定义 `do-_someting_` 来做些改变。
+
+[NOTE]
+====
+"主" 动作 (例如 `extract`、 `configure`， 等等) 仅仅是用来确定所有相应的阶段都完成了， 以及调用真实的动作或脚本， 它们不应被修改。 如果您想要修改解压缩这个动作， 可以修改 `do-extract`， 但永远都不要改变 `extract` 的操作！
+====
+
+我们已经介绍了在用户敲入 `make` 之后会发生哪些事情了。 接下来我们将进行进一步的学习， 来看一看如何创建一个理想的 port。
+
+[[slow-sources]]
+== 获取源代码
+
+获取源代码的 tar 包 (通常是 [.filename]#foo.tar.gz# 或者 [.filename]#foo.tar.Z#) 并把它们放进 `DISTDIR`。 最好使用 _主流_ 的版本。
+
+您需要设置变量 `MASTER_SITES` 来指向原始 tar 包的获取位置。 您可以在 [.filename]#bsd.sites.mk# 里找到一些速度较快的主流站点。 请使用这些站点 - 和相关的定义 - 如果可能的话， 应尽量避免在同一个源代码树里出现大量重复的信息。 这些站点会随着时间而变化， 如果每个人都随意加入的话会使维护变得非常困难。
+
+如果您找不到一个有很好网络连接的 FTP/HTTP 站点， 或者它们使用了非标准的格式， 您也许就会想在您自己的 FTP 或 HTTP 服务器上放上一份副本。
+
+如果您找不到可靠的地方放置 distfiles， 我们也可以提供给您一些空间来保存它。 我们自己的 `ftp.FreeBSD.org`； 然而这只是一个折衷的办法。 distfile 必须放进某人在 `freefall` 上的 [.filename]#~/public_distfiles/# 目录中。 可以要求帮助您 commit port 的人来放这个 distfile， 而这个人也需要把 `MASTER_SITES`、 `MASTER_SITE_LOCAL` 以及 `MASTER_SITE_SUBDIR` 的设置， 改为在 `freefall` 上的用户名。
+
+如果您的 port 的 distfile 一直在变化， 而作者拒绝改变其版本号， 您可以考虑把 distfiles 放在自己的主页， 并在 `MASTER_SITES` 里把原作者的列为首选位置。 如果可能， 试着与 port 的作者沟通一下让他不要这么做， 这将有助于建立对源代码的控制。 在您的主页上放置您自己的 distfile 会避免用户得到 `checksum mismatch` 的错误， 而且能减轻我们 FTP 站点维护人员的工作量。 如果您的port只有一个主站点的话， 我们建议您在自己的网站上做一份备份， 并他列为 ``MASTER_SITES``的第2项。
+
+如果您的 port 需要来自网络上的一些补丁， 请把它们放到 ``DISTDIR``里。 不用担心它们跟源代码不是来自同一站点。 我们有办法处理 (参阅下面的 <<porting-patchfiles,补丁文件>>)。
+
+[[slow-modifying]]
+== 修改 port
+
+解开 tar 包， 对源代码做出合理的修改使得这个 port 能在最新版本的 FreeBSD 上面运行。 一定要 _仔细记录_ 您所做的每处改动， 包括删除、添加、修改的文件等等， 这些修改以后会在您的 port 中以脚本或补丁的方式出现， 并且能通过运行它们来自动完成您对 port 的改动要求。
+
+如果您的 port 要求用与用户交互/配置来完成编译或安装的话， 您可以看一下 Larry Wall 的经典的 Configure 脚本， 适当地模仿一下。 Port collection 的目的， 就是使每个 port 占用最少的空间， 并做到软件的 "即插即用"。
+
+[NOTE]
+====
+除非明确地声明， 否则您提交给 FreeBSD ports collection 的补丁， 脚本和其它的文件都将以标准的 BSD 版权发布。
+====
+
+[[slow-patch]]
+== 打补丁
+
+在您准备制作 port 的过程中， 增加或修改的文件， 都可以通过 man:diff[1] 来做成补丁。 希望应用到源代码上的每个补丁， 都应保存为单独的文件， 并命名为 [.filename]#patch-*#， 其中 _*_ 表示将要修改的文件的完整路径名， 例如 [.filename]#patch-Imakefile# 或 [.filename]#patch-src-config.h#。 这些文件， 都应保存在 `PATCHDIR` (通常是 [.filename]#files/#)， 这里的补丁都会自动应用到源代码上。 所有的补丁必须是相对于 `WRKSRC` 的 (一般而言， 您的 port 会将其 tarball 解压缩在那里， 并完成余下的工作)。 为了让修正和升级更容易， 您应避免使用多个 patch 去修改同一个文件 (例如， [.filename]#patch-file# 以及 [.filename]#patch-file2# 都修改 [.filename]#WRKSRC/foobar.c#) 这种情况。 需要注意的是， 如果修改的文件的路径中包含下划线 (`_`) 字符， 则在补丁文件名中应使用两个下划线来代替。 例如， 如果需要修改名为 [.filename]#src/freeglut_joystick.c# 的文件， 补丁文件的名字应为 [.filename]#patch-src-freeglut__joystick.c#。
+
+只有 `[-+._a-zA-Z0-9]` 这些字符， 可以出现在补丁的文件名中， 请务必不要使用除这些字符以外的其它字符。 不要把您的补丁命名成 [.filename]#patch-aa# 或 [.filename]#patch-ab# 等这样的名字， 最好能在补丁名中提到路径和文件名。
+
+不要把 RCS 字符串放进补丁。 我们把文件放进 ports 树的时候， CVS 会损坏它们， 当我们再 check out 出来的时候， 它们就会和原来的不一样， 从而导致打补丁失败。 RCS 字符串 是由美元符号 (`$`) 围绕的， 通常由 `$Id` 或 `$RCS` 开头。
+
+使用 man:diff[1] 的递归选项(`-r`) 很好， 但是请检查一下最后输出的 patch， 确保没有任何的垃圾信息。 特别地， 有 2 种文件不需要 diff， 并且应该删除： 一种是 [.filename]#Makefile#， 当您的port使用了``Imake``， 或者 GNU `configure` 等等的话。 如果您不得不编辑[.filename]##configure.in## 以使 `autoconf` 去生成 `configure`， 不要使用 `configure` 来做 diff (这常常会有好几千行长!)； 请定义 `USE_AUTOTOOLS=autoconf:261` 并对应 [.filename]#configure.in# 来制作 diff。
+
+另外， 您还应尽量减少补丁中非功能性的空格及空白变动。 在开源世界中， 遵循不同的编码规范的项目共享大量代码是很常见的事情。 如果您从某个项目中提取一部分功能用来修正另一个程序中的问题时， 请务必小心： 补丁中很可能到处都是非功能性的变动行。 这不仅会导致 CVS 库的膨胀， 而且也会让导致问题的故障点， 以及您到底修改了什么变得不甚清晰。
+
+假如需要删除文件， 则应在 `post-extract` target， 而不是作为补丁的一部分来完成。
+
+除此之外， port 的 [.filename]#Makefile# 还可以通过 in-place 模式的 man:sed[1] 来直接进行简单的替换操作。 如果补丁需要使用变量值， 这就非常有用了。 例如：
+
+[.programlisting]
+....
+post-patch:
+	@${REINPLACE_CMD} -e 's|for Linux|for FreeBSD|g' ${WRKSRC}/README
+	@${REINPLACE_CMD} -e 's|-pthread|${PTHREAD_LIBS}|' ${WRKSRC}/configure
+....
+
+往往在移植某些软件的时候会遇到这样一种情况， 特别是这个软件是在 Windows(R) 上开发的时候， 大多数的源代码都需要进行CR/LF的转换。 这很可能会给以后打补丁带来问题， 还可能触发编译警告， 并给脚本的执行带来麻烦 (`/bin/sh^M` not found)， 等等。 要迅速将所有文件中的 CR/LF 改为只用 LF， 可以在 port 的 [.filename]#Makefile# 中加入 `USE_DOS2UNIX=yes`。 除此之外， 还可以指定一个需要执行这种转换操作的文件列表：
+
+[.programlisting]
+....
+USE_DOS2UNIX=    util.c util.h
+....
+
+如果希望转换一系列目录中的一组文件， 也可以使用 `DOS2UNIX_REGEX`。 它的参数是与 `find` 兼容的正则表达式。 关于这种格式的说明， 请参阅 man:re_format[7]。 这个选项对转换所有指定扩展名的文件， 例如只转换源代码文件这样的应用非常有用：
+
+[.programlisting]
+....
+USE_DOS2UNIX=    yes
+DOS2UNIX_REGEX=  .*\.(c|cpp|h)
+....
+
+如果您希望基于现存的文件创建补丁， 可以把文件复制为带 [.filename]#.orig# 扩展名的名字， 然后修改原文件。 然后使用 `makepatch` 目标根据修改在 port 的 [.filename]#files# 目录中生成补丁文件。
+
+[[slow-configure]]
+== 配置
+
+把任何附加的配置命令加进您的 [.filename]#configure# 脚本并把它保存到 [.filename]#scripts# 子目录。 如前面提到的那样， 您也能在 [.filename]#Makefile# 和/或 使用 [.filename]#pre-configure# 或 [.filename]#post-configure# 的脚本来做同样的事情。
+
+[[slow-user-input]]
+== 处理用户输入
+
+如果您的 port 要求用户的输入以便配置编译、 或安装配置过程， 就必须在 [.filename]#Makefile# 里设置 `IS_INTERACTIVE` 变量。 如果用户设置了 `BATCH` 的话， 这将让用户能跳过您的 port 来完成 "通宵编译" (如果用户设置了 ``INTERACTIVE``的话， 那么 _只有_ 那些要求互动的 port 才会被编译) 这将给那些不停编译 ports 的机器省下很多时间。
+
+通常我们还建议， 如果对于那些问题能有合理的缺省答案的话， 应检查一下 `PACKAGE_BUILDING` 变量， 并根据其设置决定是否执行关闭交互脚本。 这将允许我们为 CDROM 和 FTP 来编译 package。

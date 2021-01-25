@@ -1,0 +1,1525 @@
+---
+title: Kapitel 11. Konfiguration und Tuning
+part: Teil III. Systemadministration
+prev: books/handbook/partiii
+next: books/handbook/boot
+---
+
+[[config-tuning]]
+= Konfiguration und Tuning
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:table-caption: Tabelle
+:figure-caption: Abbildung
+:example-caption: Beispiel
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 11
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/x11/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/x11/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/x11/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/de/mailing-lists.adoc[]
+include::shared/de/teams.adoc[]
+include::shared/de/urls.adoc[]
+
+toc::[]
+
+[[config-synopsis]]
+== Übersicht
+
+Die richtige Systemkonfiguration ist einer der wichtigsten Aspekte unter FreeBSD. Dieses Kapitel beschreibt die Konfiguration von FreeBSD sowie Maßnahmen zur Leistungssteigerung von FreeBSD-Systemen.
+
+Nachdem Sie dieses Kapitel durchgearbeitet haben, werden Sie Folgendes wissen:
+
+* Die Grundlagen der Konfiguration von [.filename]#rc.conf# und die Skripte zum Starten von Anwendungen in [.filename]#/usr/local/etc/rc.d#.
+* Wie Sie Netzwerkkarten konfigurieren und testen.
+* Wie Sie virtuelle Hosts und Netzwerkgeräte konfigurieren.
+* Wie Sie die verschiedenen Konfigurationsdateien in [.filename]#/etc# benutzen.
+* Wie Sie mit FreeBSD mit man:sysctl[8]-Variablen einstellen können.
+* Wie Sie die Platten-Performance einstellen und Kernel-Parameter modifizieren können.
+
+Bevor Sie dieses Kapitel lesen, sollten Sie
+
+* die Grundlagen von UNIX(R) und FreeBSD (crossref:basics[basics,Grundlagen des FreeBSD Betriebssystems]) verstehen.
+* Damit vertraut sein, wie Sie einen Kernel konfigurieren und kompilieren (crossref:kernelconfig[kernelconfig,Konfiguration des FreeBSD-Kernels]).
+
+[[configtuning-starting-services]]
+== Start von Diensten
+
+Viele Benutzer installieren Software Dritter auf FreeBSD mithilfe der Ports-Sammlung. Häufig soll die Software bei einem Systemstart mitgestartet werden. Beispielsweise sollen die Dienste package:mail/postfix[] oder package:www/apache22[] nach einem Systemstart laufen. Dieser Abschnitt stellt die Startprozeduren für Software Dritter vor.
+
+Unter FreeBSD werden die meisten der im System enthaltenen Dienste wie man:cron[8] mithilfe von Systemskripten gestartet.
+
+=== Dienste über das [.filename]#rc.d#-System starten
+
+Mit [.filename]#rc.d# lässt sich der Start von Anwendungen besser steuern und es sind mehr Funktionen verfügbar. Mit den in <<configtuning-rcd>> besprochenen Schlüsselwörtern können Anwendungen in einer bestimmten Reihenfolge gestartet werden und Optionen können in [.filename]#rc.conf# statt fest im Startskript der Anwendung festgelegt werden. Ein einfaches Startskript sieht wie folgt aus:
+
+[.programlisting]
+....
+#!/bin/sh
+#
+# PROVIDE: utility
+# REQUIRE: DAEMON
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name=utility
+rcvar=utility_enable
+
+command="/usr/local/sbin/utility"
+
+load_rc_config $name
+
+#
+# DO NOT CHANGE THESE DEFAULT VALUES HERE
+# SET THEM IN THE /etc/rc.conf FILE
+#
+utility_enable=${utility_enable-"NO"}
+pidfile=${utility_pidfile-"/var/run/utility.pid"}
+
+run_rc_command "$1"
+....
+
+Dieses Skript stellt sicher, dass `utility` nach den `DAEMON`-Pseudodiensten gestartet wird. Es stellt auch eine Methode bereit, die Prozess-ID (PID) der Anwendung in einer Datei zu speichern.
+
+In [.filename]#/etc/rc.conf# könnte für diese Anwendung die folgende Zeile stehen:
+
+[.programlisting]
+....
+utility_enable="YES"
+....
+
+Die Methode erleichtert den Umgang mit Kommandozeilenargumenten, bindet Funktionen aus [.filename]#/etc/rc.subr# ein, ist kompatibel zu man:rcorder[8] und lässt sich über [.filename]#rc.conf# leichter konfigurieren.
+
+=== Andere Arten, um Dienste zu starten
+
+Andere Dienste können über man:inetd[8] gestartet werden. Die Konfiguration von man:inetd[8] wird in crossref:network-servers[network-inetd,“Der inetd Super-Server”] ausführlich beschrieben.
+
+Systemdienste können auch mit man:cron[8] gestartet werden. Dieser Ansatz hat einige Vorteile; nicht zuletzt, weil man:cron[8] die Prozesse unter dem Eigentümer der [.filename]#crontab# startet, ist es möglich, dass Dienste von normalen Benutzern gestartet und gepflegt werden können.
+
+Für die Zeitangabe in man:cron[8] kann `@reboot` eingesetzt werden. Damit wird das Kommando gestartet, wenn man:cron[8] kurz nach dem Systemboot gestartet wird.
+
+[[configtuning-cron]]
+== man:cron[8] konfigurieren
+
+Ein sehr nützliches Werkzeug von FreeBSD ist cron. Dieses Programm läuft im Hintergrund und überprüft fortlaufend [.filename]#/etc/crontab# und [.filename]#/var/cron/tabs#. In diesen Dateien wird festgelegt, welche Programme zu welchem Zeitpunkt von cron ausgeführt werden sollen. Jede Zeile in diesen Dateien definiert eine auszuführende Aufgabe, die auch als _Cronjob_ bezeichnet wird.
+
+Das Werkzeug verwendet zwei verschiedene Konfigurationsdateien: die System-crontab, welche nicht verändert werden sollte und die Benutzer-crontabs, die nach Bedarf erstellt und geändert werden können. Das Format, dass von diesen beiden Dateien verwendet wird, ist in man:crontab[5] dokumentiert. Das Format der System-crontab in [.filename]#/etc/crontab# enthält das Feld `who`, das in der Benutzer-crontab nicht existiert. Dieses Feld gibt den Benutzer an, mit dem die Aufgabe ausgeführt wird. Die Aufgaben in den Benutzer-crontabs laufen unter dem Benutzer, der die crontab erstellt hat.
+
+Benutzer-crontabs erlauben es den Benutzern, ihre eigenen Aufgaben zu planen. Der Benutzer `root` kann auch seine eigene Benutzer-crontab haben, um Aufgaben zu planen, die nicht in der System-crontab existieren.
+
+Hier ist ein Beispieleintrag aus der System-crontab, [.filename]#/etc/crontab#:
+
+[.programlisting]
+....
+# /etc/crontab - root's crontab for FreeBSD
+#
+# $FreeBSD$
+# <.>
+SHELL=/bin/sh
+PATH=/etc:/bin:/sbin:/usr/bin:/usr/sbin <.>
+#
+#minute	hour	mday	month	wday	who	command <.>
+#
+*/5	*	*	*	*	root	/usr/libexec/atrun <.>
+....
+
+<.> Das Zeichen `#` am Zeilenanfang leitet einen Kommentar ein. Benutzen Sie Kommentare, um die Funktion eines Eintrags zu erläutern. Kommentare müssen in einer extra Zeile stehen. Sie können nicht in derselben Zeile wie ein Kommando stehen, da sie sonst Teil des Kommandos wären. Leerzeilen in dieser Datei werden ignoriert.
+
+<.> Umgebungsvariablen werden mit dem Gleichheits-Zeichen (`=`) festgelegt. Im Beispiel werden die Variablen `SHELL`, `PATH` und `HOME` definiert. Wenn die Variable `SHELL` nicht definiert wird, benutzt cron die Bourne Shell. Wird die Variable `PATH` nicht gesetzt, müssen alle Pfadangaben absolut sein, da es keinen Vorgabewert für `PATH` gibt.
+
+<.> In dieser Zeile werden sieben Felder der System-crontab beschrieben: `minute`, `hour`, `mday`, `month`, `wday`, `who` und `command`. Das Feld `minute` legt die Minute fest in der die Aufgabe ausgeführt wird, das Feld `hour` die Stunde, das Feld `mday` den Tag des Monats. Im Feld `month` wird der Monat und im Feld `wday` der Wochentag festgelegt. Alle Felder müssen numerische Werte enthalten und die Zeitangaben sind im 24-Stunden-Format. Das Zeichen `*` repräsentiert dabei alle möglichen Werte für dieses Feld. Das Feld `who` gibt es nur in der System-crontab und gibt den Account an, unter dem das Kommando laufen soll. Im letzten Feld wird schließlich das auszuführende Kommando angegeben.
+
+<.> Diese Zeile definiert die Werte für den Cronjob. Die Zeichenfolge `\*/5` gefolgt von mehreren `*`-Zeichen bedeutet, dass `/usr/libexec/atrun` von `root` alle fünf Minuten aufgerufen wird.Bei den Kommandos können beliebig viele Optionen angegeben werden. Wenn das Kommando zu lang ist und auf der nächsten Zeile fortgesetzt werden soll, muss am Ende der Zeile das Fortsetzungszeichen (`\`) angegeben werden.
+
+[[configtuning-installcrontab]]
+=== Eine Benutzer-crontab erstellen
+
+Rufen Sie `crontab` im Editor-Modus auf, um eine Benutzer-crontab zu erstellen:
+
+[source,bash]
+....
+% crontab -e
+....
+
+Dies wird die crontab des Benutzers mit dem voreingestellten Editor öffnen. Wenn der Benutzer diesen Befehl zum ersten Mal ausführt, wird eine leere Datei geöffnet. Nachdem der Benutzer eine crontab erstellt hat, wird die Datei mit diesem Kommando zur Bearbeitung geöffnet.
+
+Es empfiehlt sich, die folgenden Zeilen an den Anfang der crontab-Datei hinzuzufügen, um die Umgebungsvariablen zu setzen und die einzelnen Felder zu beschreiben:
+
+[.programlisting]
+....
+SHELL=/bin/sh
+PATH=/etc:/bin:/sbin:/usr/bin:/usr/sbin
+# Order of crontab fields
+# minute	hour	mday	month	wday	command
+....
+
+Fügen Sie dann für jedes Kommando oder Skript eine Zeile hinzu, mit der Angabe wann das Kommando ausgeführt werden soll. In diesem Beispiel wird ein Bourne Shell Skript täglich um 14:00 Uhr ausgeführt. Da der Pfad zum Skript nicht in `PATH` enthalten ist, wird der vollständige Pfad zum Skript angegeben:
+
+[.programlisting]
+....
+0	14	*	*	*	/usr/home/dru/bin/mycustomscript.sh
+....
+
+[TIP]
+====
+
+Bevor Sie ein eigenes Skript verwenden, stellen Sie sicher, dass es ausführbar ist und dass es mit den wenigen Umgebungsvariablen von cron funktioniert. Um die Umgebung nachzubilden, die der obige cron-Eintrag bei der Ausführung verwenden würde, benutzen Sie dieses Kommando:
+
+[source,bash]
+....
+% env -i SHELL=/bin/sh PATH=/etc:/bin:/sbin:/usr/bin:/usr/sbin HOME=/home/dru LOGNAME=dru /usr/home/dru/bin/mycustomscript.sh
+....
+
+Die Umgebung von cron wird in man:crontab[5] beschrieben. Es ist wichtig, dass sichergestellt wird, dass die Skripte in der Umgebung von cron korrekt arbeiten, besonders wenn Befehle enthalten sind, welche Dateien mit Wildcards löschen.
+====
+
+Wenn Sie mit der Bearbeitung der crontab fertig sind, speichern Sie die Datei. Sie wird automatisch installiert und cron wird die darin enthalten Cronjobs zu den angegebenen Zeiten ausführen. Um die Cronjobs in einer crontab aufzulisten, verwenden Sie diesen Befehl:
+
+[source,bash]
+....
+% crontab -l
+0	14	*	*	*	/usr/home/dru/bin/mycustomscript.sh
+....
+
+Um alle Cronjobs einer Benutzer-crontab zu löschen, verwenden Sie diesen Befehl:
+
+[source,bash]
+....
+% crontab -r
+remove crontab for dru? y
+....
+
+[[configtuning-rcd]]
+== Dienste unter FreeBSD verwalten
+
+FreeBSD verwendet die vom man:rc[8]-System bereit gestellten Startskripten beim Systemstart und für die Verwaltung von Diensten. Die Skripte sind in [.filename]#/etc/rc.d# abgelegt und bieten grundlegende Dienste an, die über die Optionen `start`, `stop` und `restart` des man:service[8] Kommandos kontrolliert werden können. Beispielsweise kann man:sshd[8] mit dem nachstehenden Kommando neu gestartet werden:
+
+[source,bash]
+....
+# service sshd restart
+....
+
+Analog können Sie andere Dienste starten und stoppen. Normalerweise werden die Dienste beim Systemstart über Einträge in der Datei man:rc.conf[5] automatisch gestartet. man:natd[8] wird zum Beispiel mit dem folgenden Eintrag in [.filename]#/etc/rc.conf# aktiviert:
+
+[.programlisting]
+....
+natd_enable="YES"
+....
+
+Wenn dort bereits die Zeile `natd_enable="NO"` existiert, ändern Sie `NO` in `YES`. Die man:rc[8]-Skripten starten, wie unten beschrieben, auch abhängige Dienste.
+
+Da das man:rc[8]-System primär zum automatischen Starten und Stoppen von Systemdiensten dient, funktionieren die Optionen `start`, `stop` und `restart` nur, wenn die entsprechenden Variablen in [.filename]#/etc/rc.conf# gesetzt sind. Beispielsweise funktioniert `sshd restart` nur dann, wenn in [.filename]#/etc/rc.conf# die Variable `sshd_enable` auf `YES` gesetzt wurde. Wenn Sie die Optionen `start`, `stop` oder `restart` unabhängig von den Einstellungen in [.filename]#/etc/rc.conf# benutzen wollen, müssen Sie den Optionen mit dem Präfix "one" verwenden. Um beispielsweise `sshd` unabhängig von den Einstellungen in [.filename]#/etc/rc.conf# neu zu starten, benutzen Sie das nachstehende Kommando:
+
+[source,bash]
+....
+# service sshd onerestart
+....
+
+Ob ein Dienst in [.filename]#/etc/rc.conf# aktiviert ist, können Sie herausfinden, indem Sie das entsprechende man:rc[8]-Skript mit der Option `rcvar` aufrufen. Dieses Beispiel prüft, ob der `sshd`-Dienst in [.filename]#/etc/rc.conf# aktiviert ist:
+
+[source,bash]
+....
+# service sshd rcvar
+# sshd
+#
+sshd_enable="YES"
+#   (default: "")
+....
+
+[NOTE]
+====
+Die Zeile `# sshd` wird von dem Kommando ausgegeben; sie kennzeichnet nicht die Eingabeaufforderung von `root`.
+====
+
+Ob ein Dienst läuft, kann mit `status` abgefragt werden. Das folgende Kommando überprüft, ob `sshd` auch wirklich gestartet wurde:
+
+[source,bash]
+....
+# service sshd status
+sshd is running as pid 433.
+....
+
+Einige Dienste können über die Option `reload` neu initialisiert werden. Dazu wird dem Dienst über ein Signal mitgeteilt, dass er seine Konfigurationsdateien neu einlesen soll. Oft wird dazu das Signal `SIGHUP` verwendet. Beachten Sie aber, dass nicht alle Dienste diese Option unterstützen.
+
+Die meisten Systemdienste werden beim Systemstart vom man:rc[8]-System gestartet. Zum Beispiel aktiviert das Skript [.filename]#/etc/rc.d/bgfsck# die Prüfung von Dateisystemen im Hintergrund. Das Skript gibt die folgende Meldung aus, wenn es gestartet wird:
+
+[source,bash]
+....
+Starting background file system checks in 60 seconds.
+....
+
+Dieses Skript wird während des Systemstarts ausgeführt und führt eine Überprüfung der Dateisysteme im Hintergrund durch.
+
+Viele Systemdienste hängen von anderen Diensten ab. man:yp[8] und andere RPC-basierende Systeme hängen beispielsweise von dem `rpcbind`-Dienst ab. Im Kopf der Startskripten befinden sich die Informationen über Abhängigkeiten von anderen Diensten und weitere Metadaten. Mithilfe dieser Daten bestimmt das Programm man:rcorder[8] beim Systemstart die Startreihenfolge der Dienste.
+
+Folgende Schlüsselwörter müssen im Kopf aller Startskripten verwendet werden, da sie von man:rc.subr[8] zum "Aktivieren" des Startskripts benötigt werden:
+
+* `PROVIDE`: Gibt die Namen der Dienste an, die mit dieser Datei zur Verfügung gestellt werden.
+
+Die folgenden Schlüsselwörter können im Kopf des Startskripts angegeben werden. Sie sind zwar nicht unbedingt notwendig, sind aber hilfreich beim Umgang mit man:rcorder[8]:
+
+* `REQUIRE`: Gibt die Namen der Dienste an, von denen dieser Dienst abhängt. Ein Skript, das dieses Schlüsselwort enthält wird _nach_ den angegebenen Diensten ausgeführt.
+* `BEFORE`: Zählt Dienste auf, die auf diesen Dienst angewiesen sind. Ein Skript, dass dieses Schlüsselwort enthält wird _vor_ den angegebenen Diensten ausgeführt.
+
+Durch das Verwenden dieser Schlüsselwörter kann ein Administrator die Startreihenfolge von Systemdiensten feingranuliert steuern, ohne mit den Schwierigkeiten des "runlevel"-Systems anderer UNIX(R) Systeme kämpfen zu müssen.
+
+Weitere Informationen über das man:rc[8]-System finden Sie in man:rc[8] und man:rc.subr[8]. Wenn Sie eigene [.filename]#rc.d#-Skripte schreiben wollen, sollten Sie link:{rc-scripting}[diesen Artikel] lesen.
+
+[[configtuning-core-configuration]]
+=== Systemspezifische Konfiguration
+
+Informationen zur Systemkonfiguration sind hauptsächlich in [.filename]#/etc/rc.conf#, die meist beim Start des Systems verwendet wird, abgelegt. Sie enthält die Konfigurationen für die [.filename]#rc*# Dateien.
+
+In [.filename]#rc.conf# werden die Vorgabewerte aus [.filename]#/etc/defaults/rc.conf# überschrieben. Die Vorgabedatei sollte nicht editiert werden. Stattdessen sollten alle systemspezifischen Änderungen in [.filename]#rc.conf# vorgenommen werden.
+
+Um den administrativen Aufwand gering zu halten, existieren in geclusterten Anwendungen mehrere Strategien, globale Konfigurationen von systemspezifischen Konfigurationen zu trennen. Der empfohlene Weg hält die globale Konfiguration in einer separaten Datei z.B. [.filename]#/etc/rc.conf.local#. Zum Beispiel so:
+
+* [.filename]#/etc/rc.conf#:
++
+[.programlisting]
+....
+sshd_enable="YES"
+keyrate="fast"
+defaultrouter="10.1.1.254"
+....
+
+* [.filename]#/etc/rc.conf.local#:
++
+[.programlisting]
+....
+hostname="node1.example.org"
+ifconfig_fxp0="inet 10.1.1.1/8"
+....
+
+[.filename]#/etc/rc.conf# kann dann auf jedes System mit rsync oder puppet verteilt werden, während [.filename]#/etc/rc.conf.local# dabei systemspezifisch bleibt.
+
+Bei einem Upgrade des Systems wird [.filename]#/etc/rc.conf# nicht überschrieben, so dass die Systemkonfiguration erhalten bleibt.
+
+[TIP]
+====
+
+[.filename]#/etc/rc.conf# und [.filename]#/etc/rc.conf.local# werden von man:sh[1] gelesen. Dies erlaubt es dem Systemadministrator, komplexe Konfigurationsszenarien zu erstellen. Lesen Sie man:rc.conf[5], um weitere Informationen zu diesem Thema zu erhalten.
+====
+
+[[config-network-setup]]
+== Einrichten von Netzwerkkarten
+
+Die Konfiguration einer Netzwerkkarte gehört zu den alltäglichen Aufgaben eines FreeBSD Administrators.
+
+=== Bestimmen des richtigen Treibers
+
+Ermitteln Sie zunächst das Modell der Netzwerkkarte und den darin verwendeten Chip. FreeBSD unterstützt eine Vielzahl von Netzwerkkarten. Prüfen Sie die Hardware-Kompatibilitätsliste für das FreeBSD Release, um zu sehen ob die Karte unterstützt wird.
+
+Wenn die Karte unterstützt wird, müssen Sie den Treiber für die Karte bestimmen. [.filename]#/usr/src/sys/conf/NOTES# und [.filename]#/usr/src/sys/arch/conf/NOTES# enthalten eine Liste der verfügbaren Treiber mit Informationen zu den unterstützten Chipsätzen. Wenn Sie sich nicht sicher sind, ob Sie den richtigen Treiber ausgewählt haben, lesen Sie die Hilfeseite des Treibers. Sie enthält weitere Informationen über die unterstützten Geräte und bekannte Einschränkungen des Treibers.
+
+Die Treiber für gebräuchliche Netzwerkkarten sind schon im [.filename]#GENERIC#-Kernel enthalten, so dass die Karte während des Systemstarts erkannt werden sollte. Die Systemmeldungen können Sie sich mit `more /var/run/dmesg.boot` ansehen. Mit der Leertaste können Sie durch den Text blättern. In diesem Beispiel findet das System zwei Karten, die den man:dc[4]-Treiber benutzen:
+
+[source,bash]
+....
+dc0: <82c169 PNIC 10/100BaseTX> port 0xa000-0xa0ff mem 0xd3800000-0xd38
+000ff irq 15 at device 11.0 on pci0
+miibus0: <MII bus> on dc0
+bmtphy0: <BCM5201 10/100baseTX PHY> PHY 1 on miibus0
+bmtphy0:  10baseT, 10baseT-FDX, 100baseTX, 100baseTX-FDX, auto
+dc0: Ethernet address: 00:a0:cc:da:da:da
+dc0: [ITHREAD]
+dc1: <82c169 PNIC 10/100BaseTX> port 0x9800-0x98ff mem 0xd3000000-0xd30
+000ff irq 11 at device 12.0 on pci0
+miibus1: <MII bus> on dc1
+bmtphy1: <BCM5201 10/100baseTX PHY> PHY 1 on miibus1
+bmtphy1:  10baseT, 10baseT-FDX, 100baseTX, 100baseTX-FDX, auto
+dc1: Ethernet address: 00:a0:cc:da:da:db
+dc1: [ITHREAD]
+....
+
+Ist der Treiber für die Netzwerkkarte nicht in [.filename]#GENERIC# enthalten, muss zunächst ein Treiber geladen werden, um die Karte konfigurieren und benutzen zu können. Dafür gibt es zwei Methoden:
+
+* Am einfachsten ist es, das Kernelmodul für die Karte mit man:kldload[8] zu laden. Um den Treiber automatisch beim Systemstart zu laden, fügen Sie die entsprechende Zeile in [.filename]#/boot/loader.conf# ein. Es gibt nicht für alle Karten Kernelmodule.
+* Alternativ kann der Treiber für die Karte fest in den Kernel eingebunden werden. Lesen Sie dazu [.filename]#/usr/src/sys/conf/NOTES#, [.filename]#/usr/src/sys/arch/conf/NOTES# und die Hilfeseite des Treibers, den Sie in den Kernel einbinden möchten, an. Die Übersetzung des Kernels wird in crossref:kernelconfig[kernelconfig,Konfiguration des FreeBSD-Kernels] beschrieben. Wenn die Karte während des Systemstarts vom Kernel erkannt wurde, muss der Kernel nicht neu übersetzt werden.
+
+[[config-network-ndis]]
+==== Windows(R)-NDIS-Treiber einsetzen
+
+Leider stellen nach wie vor viele Unternehmen die Spezifikationen ihrer Treiber der Open Source Gemeinde nicht zur Verfügung, weil sie diese Informationen als Geschäftsgeheimnisse betrachten. Daher haben die Entwickler von FreeBSD und anderen Betriebssystemen nur zwei Möglichkeiten. Entweder versuchen sie in einem aufwändigen Prozess den Treiber durch Reverse Engineering nachzubauen, oder sie versuchen, die vorhandenen Binärtreiber der Microsoft(R) Windows(R)-Plattform zu verwenden.
+
+FreeBSD bietet "native" Unterstützung für die Network Driver Interface Specification (NDIS). man:ndisgen[8] wird benutzt, um einen Windows(R) XP-Treiber in ein Format zu konvertieren, das von FreeBSD verwendet werden kann. Da der man:ndis[4]-Treiber einen Windows(R) XP-Binärtreiber nutzt, kann er nur auf i386(TM)- und amd64-Systemen verwendet werden. Unterstützt werden PCI, CardBus, PCMCIA und USB-Geräte.
+
+Um den NDISulator zu verwenden, benötigen Sie drei Dinge:
+
+. Die FreeBSD Kernelquellen
+. Den Windows(R) XP-Binärtreiber mit der Erweiterung [.filename]#.SYS#
+. Die Konfigurationsdatei des Windows(R) XP-Treibers mit der Erweiterung [.filename]#.INF#
+
+Laden Sie die [.filename]#.SYS#- und [.filename]#.INF#-Dateien für die Karte. Diese befinden sich meistens auf einer beigelegten CD-ROM, oder können von der Internetseite des Herstellers heruntergeladen werden. In den folgenden Beispielen werden die Dateien [.filename]#W32DRIVER.SYS# und [.filename]#W32DRIVER.INF# verwendet.
+
+Die Architektur des Treibers muss zur jeweiligen Version von FreeBSD passen. Benutzen Sie einen Windows(R) 32-bit Treiber für FreeBSD/i386. Für FreeBSD/amd64 wird ein Windows(R) 64-bit Treiber benötigt.
+
+Als Nächstes kompilieren Sie den binären Treiber, um ein Kernelmodul zu erzeugen. Dazu rufen Sie als `root` man:ndisgen[8] auf:
+
+[source,bash]
+....
+# ndisgen /path/to/W32DRIVER.INF /path/to/W32DRIVER.SYS
+....
+
+Dieses Kommando arbeitet interaktiv, benötigt es weitere Informationen, so fragt es Sie danach. Das Ergebnis ist ein neu erzeugtes Kernelmodul im aktuellen Verzeichnis. Benutzen Sie man:kldload[8] um das neue Modul zu laden:
+
+[source,bash]
+....
+# kldload ./W32DRIVER.ko
+....
+
+Neben dem erzeugten Kernelmodul müssen auch die Kernelmodule [.filename]#ndis.ko# und [.filename]#if_ndis.ko# geladen werden. Dies passiert automatisch, wenn Sie ein von man:ndis[4] abhängiges Modul laden. Andernfalls können die Module mit den folgenden Kommandos manuell geladen werden:
+
+[source,bash]
+....
+# kldload ndis
+# kldload if_ndis
+....
+
+Der erste Befehl lädt den man:ndis[4]-Miniport-Treiber, der zweite das tatsächliche Netzwerkgerät.
+
+Überprüfen Sie die Ausgabe von man:dmesg[8] auf eventuelle Fehler während des Ladevorgangs. Gab es dabei keine Probleme, sollte die Ausgabe wie folgt aussehen:
+
+[source,bash]
+....
+ndis0: <Wireless-G PCI Adapter> mem 0xf4100000-0xf4101fff irq 3 at device 8.0 on pci1
+ndis0: NDIS API version: 5.0
+ndis0: Ethernet address: 0a:b1:2c:d3:4e:f5
+ndis0: 11b rates: 1Mbps 2Mbps 5.5Mbps 11Mbps
+ndis0: 11g rates: 6Mbps 9Mbps 12Mbps 18Mbps 36Mbps 48Mbps 54Mbps
+....
+
+Ab jetzt kann das Gerät [.filename]#ndis0# wie jede andere Netzwerkkarte konfiguriert werden.
+
+Um die man:ndis[4]-Module automatisch beim Systemstart zu laden, kopieren Sie das erzeugte Modul [.filename]#W32DRIVER_SYS.ko# nach [.filename]#/boot/modules#. Danach fügen Sie die folgende Zeile in [.filename]#/boot/loader.conf# ein:
+
+[.programlisting]
+....
+W32DRIVER_SYS_load="YES"
+....
+
+=== Konfiguration von Netzwerkkarten
+
+Nachdem der richtige Treiber für die Karte geladen ist, muss die Karte konfiguriert werden. Unter Umständen ist die Karte schon während der Installation mit man:bsdinstall[8] konfiguriert worden.
+
+Das nachstehende Kommando zeigt die Konfiguration der Netzwerkkarten an:
+
+[source,bash]
+....
+% ifconfig
+dc0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=80008<VLAN_MTU,LINKSTATE>
+        ether 00:a0:cc:da:da:da
+        inet 192.168.1.3 netmask 0xffffff00 broadcast 192.168.1.255
+        media: Ethernet autoselect (100baseTX <full-duplex>)
+        status: active
+dc1: flags=8802<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=80008<VLAN_MTU,LINKSTATE>
+        ether 00:a0:cc:da:da:db
+        inet 10.0.0.1 netmask 0xffffff00 broadcast 10.0.0.255
+        media: Ethernet 10baseT/UTP
+        status: no carrier
+lo0: flags=8049<UP,LOOPBACK,RUNNING,MULTICAST> metric 0 mtu 16384
+        options=3<RXCSUM,TXCSUM>
+        inet6 fe80::1%lo0 prefixlen 64 scopeid 0x4
+        inet6 ::1 prefixlen 128
+        inet 127.0.0.1 netmask 0xff000000
+        nd6 options=3<PERFORMNUD,ACCEPT_RTADV>
+....
+
+Im Beispiel werden Informationen zu den folgenden Geräten angezeigt:
+
+* [.filename]#dc0#: Der erste Ethernet-Adapter.
+* [.filename]#dc1#: Der zweite Ethernet-Adapter.
+* [.filename]#lo0#: Das Loopback-Gerät.
+
+Der Name der Netzwerkkarte wird aus dem Namen des Treibers und einer Zahl zusammengesetzt. Die Zahl gibt die Reihenfolge an, in der die Geräte beim Systemstart erkannt wurden. Die dritte Karte, die den man:sis[4] Treiber benutzt, würde beispielsweise [.filename]#sis2# heißen.
+
+Der Adapter [.filename]#dc0# aus dem Beispiel ist aktiv. Sie erkennen das an den folgenden Hinweisen:
+
+. `UP` bedeutet, dass die Karte konfiguriert und aktiv ist.
+. Der Karte wurde die Internet-Adresse (`inet`) `192.168.1.3` zugewiesen.
+. Die Subnetzmaske ist richtig (`0xffffff00` entspricht `255.255.255.0`).
+. Die Broadcast-Adresse `192.168.1.255` ist richtig.
+. Die MAC-Adresse der Karte (`ether`) lautet `00:a0:cc:da:da:da`.
+. Die automatische Medienerkennung ist aktiviert (`media: Ethernet autoselect (100baseTX <full-duplex>)`). Der Adapter [.filename]#dc1# benutzt das Medium `10baseT/UTP`. Weitere Informationen über die einstellbaren Medien entnehmen Sie der Hilfeseite des Treibers.
+. Der Verbindungsstatus (`status`) ist `active`, das heißt es wurde ein Trägersignal entdeckt. Für [.filename]#dc1# wird `status: no carrier` angezeigt. Das ist normal, wenn kein Kabel an der Karte angeschlossen ist.
+
+Wäre die Karte nicht konfiguriert, würde die Ausgabe von man:ifconfig[8] so aussehen:
+
+[source,bash]
+....
+dc0: flags=8843<BROADCAST,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=80008<VLAN_MTU,LINKSTATE>
+        ether 00:a0:cc:da:da:da
+        media: Ethernet autoselect (100baseTX <full-duplex>)
+        status: active
+....
+
+Die Karte muss als Benutzer `root` konfiguriert werden. Die Konfiguration kann auf der Kommandozeile mit man:ifconfig[8] erfolgen. Allerdings gehen diese Informationen bei einem Neustart verloren. Tragen Sie stattdessen die Konfiguration in [.filename]#/etc/rc.conf# ein. Wenn es im LAN einen DHCP-Server gibt, fügen Sie einfach folgende Zeile hinzu:
+
+[.programlisting]
+....
+ifconfig_dc0="DHCP"
+....
+
+Ersetzen Sie _>dc0_ durch die richtigen Werte für das System.
+
+Nachdem Sie die Zeile hinzugefügt haben, folgen Sie den Anweisungen in <<config-network-testing>>.
+
+[NOTE]
+====
+Wenn das Netzwerk während der Installation konfiguriert wurde, existieren vielleicht schon Einträge für die Netzwerkkarte(n). Überprüfen Sie [.filename]#/etc/rc.conf# bevor Sie weitere Zeilen hinzufügen.
+====
+
+Falls kein DHCP-Server zur Verfügung steht, müssen die Netzwerkkarten manuell konfiguriert werden. Fügen Sie für jede Karte im System eine Zeile hinzu, wie in diesem Beispiel zu sehen:
+
+[.programlisting]
+....
+ifconfig_dc0="inet 192.168.1.3 netmask 255.255.255.0"
+ifconfig_dc1="inet 10.0.0.1 netmask 255.255.255.0 media 10baseT/UTP"
+....
+
+Ersetzen Sie [.filename]#dc0# und [.filename]#dc1# und die IP-Adressen durch die richtigen Werte für das System. Die Manualpages des Treibers, man:ifconfig[8] und man:rc.conf[5] enthalten weitere Einzelheiten über verfügbare Optionen und die Syntax von [.filename]#/etc/rc.conf#.
+
+Wenn das Netzwerk kein DNS benutzt, können Sie in [.filename]#/etc/hosts# die Namen und IP-Adressen der Rechner des LANs eintragen. Weitere Informationen entnehmen Sie man:hosts[5] und [.filename]#/usr/shared/examples/etc/hosts#.
+
+[NOTE]
+====
+Falls kein DHCP-Server zur Verfügung steht, Sie aber Zugang zum Internet benötigen, müssen Sie das Standard-Gateway und die Nameserver manuell konfigurieren:
+
+[source,bash]
+....
+# echo 'defaultrouter="Ihr_Default_Gateway"' >> /etc/rc.conf
+# echo 'nameserver Ihr_DNS_Server' >> /etc/resolv.conf
+....
+
+====
+
+[[config-network-testing]]
+=== Test und Fehlersuche
+
+Nachdem die notwendigen Änderungen in [.filename]#/etc/rc.conf# gespeichert wurden, kann das System neu gestartet werden, um die Konfiguration zu testen und zu überprüfen, ob das System ohne Fehler neu gestartet wurde. Alternativ können Sie mit folgenden Befehl die Netzwerkeinstellungen neu initialisieren:
+
+[source,bash]
+....
+# service netif restart
+....
+
+[NOTE]
+====
+Falls in [.filename]#/etc/rc.conf# ein Default-Gateway definiert wurde, müssen Sie auch den folgenden Befehl ausführen:
+
+[source,bash]
+....
+# service routing restart
+....
+
+====
+
+Wenn das System gestartet ist, sollten Sie die Netzwerkkarten testen.
+
+==== Test der Ethernet-Karte
+
+Um zu prüfen, ob die Ethernet-Karte richtig konfiguriert ist, testen Sie zunächst mit man:ping[8] den Adapter selbst und sprechen Sie dann eine andere Maschine im LAN an.
+
+Zuerst, der Test des Adapters:
+
+[source,bash]
+....
+% ping -c5 192.168.1.3
+PING 192.168.1.3 (192.168.1.3): 56 data bytes
+64 bytes from 192.168.1.3: icmp_seq=0 ttl=64 time=0.082 ms
+64 bytes from 192.168.1.3: icmp_seq=1 ttl=64 time=0.074 ms
+64 bytes from 192.168.1.3: icmp_seq=2 ttl=64 time=0.076 ms
+64 bytes from 192.168.1.3: icmp_seq=3 ttl=64 time=0.108 ms
+64 bytes from 192.168.1.3: icmp_seq=4 ttl=64 time=0.076 ms
+
+--- 192.168.1.3 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 0.074/0.083/0.108/0.013 ms
+....
+
+[source,bash]
+....
+% ping -c5 192.168.1.2
+PING 192.168.1.2 (192.168.1.2): 56 data bytes
+64 bytes from 192.168.1.2: icmp_seq=0 ttl=64 time=0.726 ms
+64 bytes from 192.168.1.2: icmp_seq=1 ttl=64 time=0.766 ms
+64 bytes from 192.168.1.2: icmp_seq=2 ttl=64 time=0.700 ms
+64 bytes from 192.168.1.2: icmp_seq=3 ttl=64 time=0.747 ms
+64 bytes from 192.168.1.2: icmp_seq=4 ttl=64 time=0.704 ms
+
+--- 192.168.1.2 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 0.700/0.729/0.766/0.025 ms
+....
+
+Um die Namensauflösung zu testen, verwenden Sie den Namen der Maschine anstelle der IP-Adresse. Wenn kein DNS-Server im Netzwerk vorhanden ist, muss [.filename]#/etc/hosts# entsprechend eingerichtet sein. Fügen Sie dazu die Namen und IP-Adressen der Rechner im LAN in [.filename]#/etc/hosts# hinzu, falls sie nicht bereits vorhanden sind. Weitere Informationen finden Sie in man:hosts[5] und [.filename]#/usr/shared/examples/etc/hosts#.
+
+==== Fehlersuche
+
+Fehler zu beheben, ist immer sehr mühsam. Indem Sie die einfachen Sachen zuerst prüfen, erleichtern Sie sich die Aufgabe. Steckt das Netzwerkkabel? Sind die Netzwerkdienste richtig konfiguriert? Funktioniert die Firewall? Wird die Netzwerkkarte von FreeBSD unterstützt? Lesen Sie immer die Hardware-Informationen des Releases, bevor Sie einen Fehlerbericht einsenden. Aktualisieren Sie die FreeBSD-Version auf die neueste -STABLE Version. Suchen Sie in den Archiven der Mailinglisten und im Internet nach bekannten Lösungen.
+
+Wenn die Karte funktioniert, die Verbindungen aber zu langsam sind, sollten Sie man:tuning[7] lesen. Prüfen Sie auch die Netzwerkkonfiguration, da falsche Einstellungen die Ursache für langsame Verbindungen sein können.
+
+Wenn Sie viele `device timeout` Meldungen in den Systemprotokollen finden, prüfen Sie, dass es keinen Konflikt zwischen der Netzwerkkarte und anderen Geräten des Systems gibt. Überprüfen Sie nochmals die Verkabelung. Unter Umständen benötigen Sie eine andere Netzwerkkarte.
+
+Bei `watchdog timeout` Fehlermeldungen, kontrollieren Sie zuerst die Verkabelung. Überprüfen Sie dann, ob der PCI-Steckplatz der Karte Bus Mastering unterstützt. Auf einigen älteren Motherboards ist das nur für einen Steckplatz (meistens Steckplatz 0) der Fall. Lesen Sie in der Dokumentation der Karte und des Motherboards nach, ob das vielleicht die Ursache des Problems sein könnte.
+
+Die Meldung `No route to host` erscheint, wenn das System ein Paket nicht zustellen kann. Das kann vorkommen weil beispielsweise keine Default-Route gesetzt wurde oder das Netzwerkkabel nicht richtig steckt. Schauen Sie in der Ausgabe von `netstat -rn` nach, ob eine gültige Route zu dem Zielsystem existiert. Wenn nicht, lesen Sie crossref:advanced-networking[network-routing,“Gateways und Routen”].
+
+Die Meldung `ping: sendto: Permission denied` wird oft von einer falsch konfigurierten Firewall verursacht. Wenn keine Regeln definiert wurden, blockiert eine aktivierte Firewall alle Pakete, selbst einfache man:ping[8]-Pakete. Weitere Informationen erhalten Sie in crossref:firewalls[firewalls,Firewalls].
+
+Falls die Leistung der Karte schlecht ist, setzen Sie die Medienerkennung von `autoselect` (automatisch) auf das richtige Medium. In vielen Fällen löst diese Maßnahme Leistungsprobleme. Wenn nicht, prüfen Sie nochmal die Netzwerkeinstellungen und lesen Sie man:tuning[7].
+
+[[configtuning-virtual-hosts]]
+== Virtual Hosts
+
+Ein gebräuchlicher Zweck von FreeBSD ist das virtuelle Hosting, bei dem ein Server im Netzwerk wie mehrere Server aussieht. Dies wird dadurch erreicht, dass einem Netzwerkinterface mehrere Netzwerk-Adressen zugewiesen werden.
+
+Ein Netzwerkinterface hat eine "echte" Adresse und kann beliebig viele "alias" Adressen haben. Die Aliase werden durch entsprechende alias Einträge in [.filename]#/etc/rc.conf# festgelegt, wie in diesem Beispiel zu sehen ist:
+
+[.programlisting]
+....
+ifconfig_fxp0_alias0="inet xxx.xxx.xxx.xxx netmask xxx.xxx.xxx.xxx"
+....
+
+Beachten Sie, dass die Alias-Einträge mit `alias_0_` anfangen müssen und weiter hochgezählt werden, das heißt `alias1`, `alias2`, und so weiter. Die Konfiguration der Aliase hört bei der ersten fehlenden Zahl auf.
+
+Die Berechnung der Alias-Netzwerkmasken ist wichtig. Für jedes Interface muss es eine Adresse geben, die die Netzwerkmaske des Netzwerkes richtig beschreibt. Alle anderen Adressen in diesem Netzwerk haben dann eine Netzwerkmaske, die mit `1` gefüllt ist, also `255.255.255.255` oder hexadezimal `0xffffffff`.
+
+Als Beispiel betrachten wir den Fall, in dem [.filename]#fxp0# mit zwei Netzwerken verbunden ist: dem Netzwerk `10.1.1.0` mit der Netzwerkmaske `255.255.255.0` und dem Netzwerk `202.0.75.16` mit der Netzwerkmaske `255.255.255.240`. Das System soll die Adressen `10.1.1.1` bis `10.1.1.5` und `202.0.75.17` bis `202.0.75.20` belegen. Nur die erste Adresse in einem Netzwerk sollte die richtige Netzwerkmaske haben. Alle anderen Adressen (`10.1.1.2` bis `10.1.1.5` und `202.0.75.18` bis `202.0.75.20`) müssen die Maske `255.255.255.255` erhalten.
+
+Die folgenden Einträge in [.filename]#/etc/rc.conf# konfigurieren den Adapter entsprechend dem Beispiel:
+
+[.programlisting]
+....
+ifconfig_fxp0="inet 10.1.1.1 netmask 255.255.255.0"
+ifconfig_fxp0_alias0="inet 10.1.1.2 netmask 255.255.255.255"
+ifconfig_fxp0_alias1="inet 10.1.1.3 netmask 255.255.255.255"
+ifconfig_fxp0_alias2="inet 10.1.1.4 netmask 255.255.255.255"
+ifconfig_fxp0_alias3="inet 10.1.1.5 netmask 255.255.255.255"
+ifconfig_fxp0_alias4="inet 202.0.75.17 netmask 255.255.255.240"
+ifconfig_fxp0_alias5="inet 202.0.75.18 netmask 255.255.255.255"
+ifconfig_fxp0_alias6="inet 202.0.75.19 netmask 255.255.255.255"
+ifconfig_fxp0_alias7="inet 202.0.75.20 netmask 255.255.255.255"
+....
+
+Dies kann mit einer durch Leerzeichen getrennten Liste von IP-Adressbereichen auch einfacher ausgedrückt werden. Die erste Adresse hat wieder die angegebene Netzwerkmaske und die zusätzlichen Adressen haben die Netzwerkmaske `255.255.255.255`.
+
+[.programlisting]
+....
+ifconfig_fxp0_aliases="inet 10.1.1.1-5/24 inet 202.0.75.17-20/28"
+....
+
+[[configtuning-syslog]]
+== Konfiguration der Systemprotokollierung
+
+Die Aufzeichnung und Kontrolle von Log-Meldungen ist ein wichtiger Aspekt der Systemadministration. Die Informationen werden nicht nur verwendet um Hard- und Softwarefehler ausfindig zu machen, auch zur Überwachung der Sicherheit und der Reaktion bei einem Zwischenfall spielen diese Aufzeichnungen eine wichtige Rolle. Die meisten Systemdienste und Anwendungen erzeugen Log-Meldungen.
+
+FreeBSD stellt mit syslogd ein Werkzeug zur Verwaltung von Protokollen bereit. In der Voreinstellung wird syslogd beim Booten automatisch gestartet. Dieses Verhalten wird über die Variable `syslogd_enable` in [.filename]#/etc/rc.conf# gesteuert. Dazu gibt es noch zahlreiche Argumente, die in der Variable `syslogd_flags` in [.filename]#/etc/rc.conf# gesetzt werden können. Lesen Sie man:syslogd[8] für weitere Informationen über die verfügbaren Argumente.
+
+Dieser Abschnitt beschreibt die Konfiguration und Verwendung des FreeBSD Protokollservers, und diskutiert auch die Log-Rotation und das Management von Logdateien.
+
+=== Konfiguration der lokalen Protokollierung
+
+Die Konfigurationsdatei [.filename]#/etc/syslog.conf# steuert, was syslogd mit Log-Meldungen macht, sobald sie empfangen werden. Es gibt verschiedene Parameter, die das Verhalten bei eingehenden Ereignissen kontrollieren. facility beschreibt das Subsystem, welches das Ereignis generiert hat. Beispielsweise der Kernel, oder ein Daemon. level hingegen beschreibt den Schweregrad des aufgetretenen Ereignisses. Dies macht es möglich, Meldungen in verschiedenen Logdateien zu protokollieren, oder Meldungen zu verwerfen, je nach Konfiguration von facility und level. Ebenfalls besteht die Möglichkeit auf Meldungen zu reagieren, die von einer bestimmten Anwendung stammen, oder von einem spezifischen Host erzeugt wurden.
+
+Die Konfigurationsdatei von man:syslogd[8] enthält für jede Aktion eine Zeile. Die Syntax besteht aus einem Auswahlfeld, gefolgt von einem Aktionsfeld. Die Syntax für das Auswahlfeld ist _facility.level_. Dies entspricht Log-Meldungen von _facility_ mit einem Level von _level_ oder höher. Um noch präziser festzulegen was protokolliert wird, kann dem Level optional ein Vergleichsflag vorangestellt werden. Mehrere Auswahlen können, durch Semikolon (`;`) getrennt, für die gleiche Aktion verwendet werden. `*` wählt dabei alles aus. Das Aktionsfeld definiert, wohin die Log-Meldungen gesendet werden, beispielsweise in eine Datei oder zu einem entfernten Log-Server. Als Beispiel dient hier [.filename]#/etc/syslog.conf# aus FreeBSD:
+
+[.programlisting]
+....
+# $FreeBSD$
+#
+#       Spaces ARE valid field separators in this file. However,
+#       other *nix-like systems still insist on using tabs as field
+#       separators. If you are sharing this file between systems, you$
+#       may want to use only tabs as field separators here.
+#       Consult the syslog.conf(5) manpage.
+*.err;kern.warning;auth.notice;mail.crit                /dev/console
+*.notice;authpriv.none;kern.debug;lpr.info;mail.crit;news.err   /var/log/messages
+security.*                                      /var/log/security
+auth.info;authpriv.info                         /var/log/auth.log
+mail.info                                       /var/log/maillog
+lpr.info                                        /var/log/lpd-errs
+ftp.info                                        /var/log/xferlog
+cron.*                                          /var/log/cron
+!-devd
+*.=debug                                        /var/log/debug.log
+*.emerg                                         *
+# uncomment this to log all writes to /dev/console to /var/log/console.log
+#console.info                                   /var/log/console.log
+# uncomment this to enable logging of all log messages to /var/log/all.log
+# touch /var/log/all.log and chmod it to mode 600 before it will work
+#*.*                                            /var/log/all.log
+# uncomment this to enable logging to a remote loghost named loghost
+#*.*                                            @loghost
+# uncomment these if you're running inn
+# news.crit                                     /var/log/news/news.crit
+# news.err                                      /var/log/news/news.err
+# news.notice                                   /var/log/news/news.notice
+# Uncomment this if you wish to see messages produced by devd
+# !devd
+# *.>=info
+!ppp
+*.*                                             /var/log/ppp.log
+!*
+....
+
+In diesem Beispiel:
+
+* Zeile 8 selektiert alle Meldungen vom Level `err`, sowie `kern.warning`, `auth.notice` und `mail.crit` und schickt diese zur Konsole ([.filename]#/dev/console#).
+* Zeile 12 selektiert alle Meldungen von `mail` ab dem Level `info` oder höher und schreibt diese in [.filename]#/var/log/maillog#.
+* Zeile 17 benutzt ein Vergleichsflag (`=`), um nur Meldungen vom Level `debug` zu selektieren und schreibt diese in [.filename]#/var/log/debug.log#.
+* Zeile 33 zeigt ein Beispiel für die Nutzung einer Programmspezifikation. Die nachfolgenden Regeln sind dann nur für Programme gültig, welche der Programmspezifikation stehen. In diesem Fall werden alle Meldungen von ppp (und keinem anderen Programm) in [.filename]#/var/log/ppp.log# geschrieben.
+
+Die verfügbaren level, beginnend mit den höchst kritischen, hin zu den weniger kritischen, sind: `emerg`, `alert`, `crit`, `err`, `warning`, `notice`, `info` und `debug`.
+
+Die facilities, in beliebiger Reihenfolge, sind: `auth`, `authpriv`, `console`, `cron`, `daemon`, `ftp`, `kern`, `lpr`, `mail`, `mark`, `news`, `security`, `syslog`, `user`, `uucp`, sowie `local0` bis `local7`. Beachten Sie, dass andere Betriebssysteme hiervon abweichende facilities haben können.
+
+Um alle Meldungen vom Level `notice` und höher in [.filename]#/var/log/daemon.log# zu protokollieren, fügen Sie folgenden Eintrag hinzu:
+
+[.programlisting]
+....
+daemon.notice                                        /var/log/daemon.log
+....
+
+Für weitere Informationen zu verschiedenen Level und faclilities, lesen Sie man:syslog[3] und man:syslogd[8]. Weitere Informationen zu [.filename]#/etc/syslog.conf#, dessen Syntax und erweiterten Anwendungsbeispielen, finden Sie in man:syslog.conf[5].
+
+=== Management und Rotation von Logdateien
+
+Logdateien können schnell wachsen und viel Speicherplatz belegen, was es schwieriger macht, nützliche Informationen zu finden. Log-Management versucht, diesen Effekt zu mildern. FreeBSD verwendet newsyslog für die Verwaltung von Logdateien. Dieses in FreeBSD integrierte Programm rotiert und komprimiert in regelmäßigen Abständen Logdateien. Optional kann es auch fehlende Logdateien erstellen und Programme benachrichtigen, wenn Logdateien verschoben wurden. Die Logdateien können von syslogd oder einem anderen Programm generiert werden. Obwohl newsyslog normalerweise von man:cron[8] aufgerufen wird, ist es kein Systemdämon. In der Standardkonfiguration wird dieser Job jede Stunde ausgeführt.
+
+Um zu wissen, welche Maßnahmen zu ergreifen sind, liest newsyslog seine Konfigurationsdatei [.filename]#/etc/newsyslog.conf#. Diese Konfigurationsdatei enthält eine Zeile für jede Datei, die von newsyslog verwaltet wird. Jede Zeile enthält Informationen über den Besitzer der Datei, die Dateiberechtigungen, wann die Datei rotiert wird, optionale Flags, welche die Log-Rotation beeinflussen (bspw. Komprimierung) und Programme, denen ein Signal geschickt wird, wenn Logdateien rotiert werden. Hier folgt die Standardkonfiguration in FreeBSD:
+
+[.programlisting]
+....
+# configuration file for newsyslog
+# $FreeBSD$
+#
+# Entries which do not specify the '/pid_file' field will cause the
+# syslogd process to be signalled when that log file is rotated.  This
+# action is only appropriate for log files which are written to by the
+# syslogd process (ie, files listed in /etc/syslog.conf).  If there
+# is no process which needs to be signalled when a given log file is
+# rotated, then the entry for that file should include the 'N' flag.
+#
+# The 'flags' field is one or more of the letters: BCDGJNUXZ or a '-'.
+#
+# Note: some sites will want to select more restrictive protections than the
+# defaults.  In particular, it may be desirable to switch many of the 644
+# entries to 640 or 600.  For example, some sites will consider the
+# contents of maillog, messages, and lpd-errs to be confidential.  In the
+# future, these defaults may change to more conservative ones.
+#
+# logfilename          [owner:group]    mode count size when  flags [/pid_file] [sig_num]
+/var/log/all.log                        600  7     *    @T00  J
+/var/log/amd.log                        644  7     100  *     J
+/var/log/auth.log                       600  7     100  @0101T JC
+/var/log/console.log                    600  5     100  *     J
+/var/log/cron                           600  3     100  *     JC
+/var/log/daily.log                      640  7     *    @T00  JN
+/var/log/debug.log                      600  7     100  *     JC
+/var/log/kerberos.log                   600  7     100  *     J
+/var/log/lpd-errs                       644  7     100  *     JC
+/var/log/maillog                        640  7     *    @T00  JC
+/var/log/messages                       644  5     100  @0101T JC
+/var/log/monthly.log                    640  12    *    $M1D0 JN
+/var/log/pflog                          600  3     100  *     JB    /var/run/pflogd.pid
+/var/log/ppp.log        root:network    640  3     100  *     JC
+/var/log/devd.log                       644  3     100  *     JC
+/var/log/security                       600  10    100  *     JC
+/var/log/sendmail.st                    640  10    *    168   B
+/var/log/utx.log                        644  3     *    @01T05 B
+/var/log/weekly.log                     640  5     1    $W6D0 JN
+/var/log/xferlog                        600  7     100  *     JC
+....
+
+Jede Zeile beginnt mit dem Namen der Protokolldatei, die rotiert werden soll, optional gefolgt von Besitzer und Gruppe für rotierende, als auch für neu erstellte Dateien. Das Feld `mode` definiert die Zugriffsrechte der Datei. `count` gibt an, wie viele rotierte Dateien aufbewahrt werden sollen. Anhand der `size`- und `when`-Flags erkennt newsyslog, wann die Datei rotiert werden muss. Eine Logdatei wird rotiert, wenn ihre Größe den Wert von `size` überschreitet, oder wenn die Zeit im `when`-Feld abgelaufen ist. Ein `*` bedeutet, dass dieses Feld ignoriert wird. Das _flags_-Feld gibt newsyslog weitere Instruktionen, zum Beispiel wie eine Datei zu rotieren ist, oder eine Datei zu erstellen falls diese nicht existiert. Die letzten beiden Felder sind optional und bestimmen die PID-Datei und wann die Datei rotiert wird.
+
+Weitere Informationen zu allen Feldern, gültigen Flags und wie Sie die Rotationszeit angeben können, finden Sie in man:newsyslog.conf[5]. Denken Sie daran, dass newsyslog von man:cron[8] aufgerufen wird und somit Dateien auch nur dann rotiert, wenn es von man:cron[8] aufgerufen wird, und nicht häufiger.
+
+[[network-syslogd]]
+=== Protokollierung von anderen Hosts
+
+Die Überwachung der Protokolldateien kann bei steigender Anzahl von Rechnern sehr unhandlich werden. Eine zentrale Protokollierung kann manche administrativen Belastungen bei der Verwaltung von Protokolldateien reduzieren.
+
+Die Aggregation, Zusammenführung und Rotation von Protokolldateien kann in FreeBSD mit syslogd und newsyslog konfiguriert werden. In der folgenden Beispielkonfiguration sammelt Host `A`, genannt `logserv.example.com`, Protokollinformationen für das lokale Netzwerk. Host `B`, genannt `logclient.example.com` wird seine Protokollinformationen an den Server weiterleiten.
+
+==== Konfiguration des Protokollservers
+
+Ein Protokollserver ist ein System, welches Protokollinformationen von anderen Hosts akzeptiert. Bevor Sie diesen Server konfigurieren, prüfen Sie folgendes:
+
+* Falls eine Firewall zwischen dem Protokollserver und den -Clients steht, muss das Regelwerk der Firewall UDP auf Port 514 sowohl auf Client- als auch auf Serverseite freigegeben werden.
+* Der `syslogd`-Server und alle Clientrechner müssen gültige Einträge für sowohl Vorwärts- als auch Umkehr-DNS besitzen. Falls im Netzwerk kein DNS-Server vorhanden ist, muss auf jedem System die Datei [.filename]#/etc/hosts# mit den richtigen Einträgen gepflegt werden. Eine funktionierende Namensauflösung ist zwingend erforderlich, ansonsten würde der Server die Protokollnachrichten ablehnen.
+
+Bearbeiten Sie [.filename]#/etc/syslog.conf# auf dem Server. Tragen Sie den Namen des Clients ein, den Verbindungsweg und den Namen der Protokolldatei. Dieses Beispiel verwendet den Rechnernamen `B`, alle Verbindungswege, und die Protokolle werden in [.filename]#/var/log/logclient.log# gespeichert.
+
+.Einfache Server Konfiguration
+[example]
+====
+[.programlisting]
+....
++logclient.example.com
+*.*     /var/log/logclient.log
+....
+
+====
+
+Fügen Sie für jeden Client zwei Zeilen hinzu, falls Sie mehrere Clients in diese Datei aufnehmen. Weitere Informationen über die verfügbaren Verbindungswege finden Sie in man:syslog.conf[5].
+
+Konfigurieren Sie als nächstes [.filename]#/etc/rc.conf#:
+
+[.programlisting]
+....
+syslogd_enable="YES"
+syslogd_flags="-a logclient.example.com -v -v"
+....
+
+Der erste Eintrag startet `syslogd` während des Bootens. Der zweite Eintrag erlaubt es, Daten von dem spezifizierten Client auf diesem Server zu akzeptieren. Die Verwendung von `-v -v` erhöht die Anzahl von Protokollnachrichten. Dies ist hilfreich für die Feineinstellung der Verbindungswege, da Administratoren auf diese Weise erkennen, welche Arten von Nachrichten von welchen Verbindungswegen protokolliert werden.
+
+Mehrere `-a`-Optionen können angegeben werden, um die Protokollierung von mehreren Clients zu erlauben. IP-Adressen und ganze Netzblöcke können ebenfalls spezifiziert werden. Eine vollständige Liste der Optionen finden Sie in man:syslogd[8].
+
+Zum Schluss muss die Protokolldatei erstellt werden:
+
+[source,bash]
+....
+# touch /var/log/logclient.log
+....
+
+Zu diesem Zeitpunkt sollte `syslogd` neu gestartet und überprüft werden:
+
+[source,bash]
+....
+# service syslogd restart
+# pgrep syslog
+....
+
+Wenn eine PID zurückgegeben wird, wurde der Server erfolgreich neu gestartet und die Clientkonfiguration kann beginnen. Wenn der Server nicht neu gestartet wurde, suchen Sie in [.filename]#/var/log/messages# nach dem Fehler.
+
+==== Konfiguration des Protokollclients
+
+Ein Protokollclient sendet Protokollinformationen an einen Protokollserver. Zusätzlich behält er eine lokale Kopie seiner eigenen Protokolle.
+
+Sobald der Server konfiguriert ist, bearbeiten Sie [.filename]#/etc/rc.conf# auf dem Client:
+
+[.programlisting]
+....
+syslogd_enable="YES"
+syslogd_flags="-s -v -v"
+....
+
+Der erste Eintrag aktiviert den `syslogd`-Dienst während des Systemstarts. Der zweite Eintrag erhöht die Anzahl der Protokollnachrichten. Die Option `-s` verhindert, dass dieser Client Protokolle von anderen Hosts akzeptiert.
+
+Als nächstes muss der Protokollserver in der [.filename]#/etc/syslog.conf# des Clients eingetragen werden. In diesem Beispiel wird das `@`-Symbol benutzt, um sämtliche Protokolldaten an einen bestimmten Server zu senden:
+
+[.programlisting]
+....
+*.*               @logserv.example.com
+....
+
+Nachdem die Änderungs gespeichert wurden, muss `syslogd` neu gestartet werden, damit die Änderungen wirksam werden:
+
+[source,bash]
+....
+# service syslogd restart
+....
+
+Um zu testen, ob Protokollnachrichten über das Netzwerk gesendet werden, kann man:logger[1] auf dem Client benutzt werden, um eine Nachricht an syslogd zu schicken:
+
+[source,bash]
+....
+# logger "Test message from logclient"
+....
+
+Diese Nachricht sollte jetzt sowohl in [.filename]#/var/log/messages# auf dem Client, als auch in [.filename]#/var/log/logclient.log# auf dem Server vorhanden sein.
+
+==== Fehlerbehebung beim Protokollserver
+
+Wenn der Server keine Nachrichten empfängt, ist die Ursache wahrscheinlich ein Netzwerkproblem, ein Problem bei der Namensauflösung oder ein Tippfehler in einer Konfigurationsdatei. Um die Ursache zu isolieren, müssen Sie sicherstellen, dass sich Server und Client über den in [.filename]#/etc/rc.conf# konfigurierten Hostnamen mit `ping` erreichen lässt. Falls dies nicht gelingt sollten Sie die Netzwerkverkabelung überprüfen, außerdem Firewallregeln sowie die Einträge für Hosts im DNS und [.filename]#/etc/hosts#. Überprüfen Sie diese Dinge auf dem Server und dem Client, bis der `ping` von beiden Hosts erfolgreich ist.
+
+Wenn sich die Hosts gegenseitig mit `ping` erreichen können, der Server aber immer noch keine Nachrichten empfängt, können Sie vorübergehend die Ausführlichkeit der Protokollierung erhöhen, um die Ursache für das Problem weiter einzugrenzen. In dem folgenden Beispiel ist auf dem Server die Datei [.filename]#/var/log/logclient.log# leer und in der Datei [.filename]#/var/log/messages# auf dem Client ist keine Ursache für das Problem erkennbar. Um nun die Ausführlichkeit der Protokollierung zu erhöhen, passen Sie auf dem Server den Eintrag `syslogd_flags` an. Anschließend starten Sie den Dienst neu:
+
+[.programlisting]
+....
+syslogd_flags="-d -a logclient.example.com -v -v"
+....
+
+[source,bash]
+....
+# service syslogd restart
+....
+
+Informationen wie diese werden sofort nach dem Neustart auf der Konsole erscheinen:
+
+[source,bash]
+....
+logmsg: pri 56, flags 4, from logserv.example.com, msg syslogd: restart
+syslogd: restarted
+logmsg: pri 6, flags 4, from logserv.example.com, msg syslogd: kernel boot file is /boot/kernel/kernel
+Logging to FILE /var/log/messages
+syslogd: kernel boot file is /boot/kernel/kernel
+cvthname(192.168.1.10)
+validate: dgram from IP 192.168.1.10, port 514, name logclient.example.com;
+rejected in rule 0 due to name mismatch.
+....
+
+In diesem Beispiel werden die Nachrichten aufgrund eines fehlerhaften Namens abgewiesen. Der Hostname sollte `logclient` und nicht `logclien` sein. Beheben Sie den Tippfehler, starten Sie den Dienst neu und überprüfen Sie das Ergebnis:
+
+[source,bash]
+....
+# service syslogd restart
+logmsg: pri 56, flags 4, from logserv.example.com, msg syslogd: restart
+syslogd: restarted
+logmsg: pri 6, flags 4, from logserv.example.com, msg syslogd: kernel boot file is /boot/kernel/kernel
+syslogd: kernel boot file is /boot/kernel/kernel
+logmsg: pri 166, flags 17, from logserv.example.com,
+msg Dec 10 20:55:02 <syslog.err> logserv.example.com syslogd: exiting on signal 2
+cvthname(192.168.1.10)
+validate: dgram from IP 192.168.1.10, port 514, name logclient.example.com;
+accepted in rule 0.
+logmsg: pri 15, flags 0, from logclient.example.com, msg Dec 11 02:01:28 trhodes: Test message 2
+Logging to FILE /var/log/logclient.log
+Logging to FILE /var/log/messages
+....
+
+Zu diesem Zeitpunkt werden die Nachrichten korrekt empfangen und in die richtige Datei geschrieben.
+
+==== Sicherheitsbedenken
+
+Wie mit jedem Netzwerkdienst, müssen Sicherheitsanforderungen in Betracht gezogen werden, bevor ein Protokollserver eingesetzt wird. Manchmal enthalten Protokolldateien sensitive Daten über aktivierte Dienste auf dem lokalen Rechner, Benutzerkonten und Konfigurationsdaten. Daten, die vom Client an den Server geschickt werden, sind weder verschlüsselt noch mit einem Passwort geschützt. Wenn ein Bedarf für Verschlüsselung besteht, ist es möglich package:security/stunnel[] zu verwenden, welches die Protokolldateien über einen verschlüsselten Tunnel versendet.
+
+Lokale Sicherheit ist ebenfalls ein Thema. Protokolldateien sind während der Verwendung oder nach ihrer Rotation nicht verschlüsselt. Lokale Benutzer versuchen vielleicht, auf diese Dateien zuzugreifen, um zusätzliche Einsichten in die Systemkonfiguration zu erlangen. Es ist absolut notwendig, die richtigen Berechtigungen auf diesen Dateien zu setzen. Das Werkzeug newsyslog unterstützt das Setzen von Berechtigungen auf gerade erstellte oder rotierte Protokolldateien. Protokolldateien mit Zugriffsmodus `600` sollten verhindern, dass lokale Benutzer darin herumschnüffeln. Zusätzliche Informationen finden Sie in man:newsyslog.conf[5].
+
+[[configtuning-configfiles]]
+== Konfigurationsdateien
+
+=== [.filename]#/etc# Layout
+
+Konfigurationsdateien finden sich in einigen Verzeichnissen unter anderem in:
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|[.filename]#/etc#
+|Enthält generelle systemspezifische Konfigurationsinformationen.
+
+|[.filename]#/etc/defaults#
+|Default Versionen der Konfigurationsdateien.
+
+|[.filename]#/etc/mail#
+|Enthält die man:sendmail[8] Konfiguration und weitere MTA Konfigurationsdateien.
+
+|[.filename]#/etc/ppp#
+|Hier findet sich die Konfiguration für die User- und Kernel-ppp Programme.
+
+|[.filename]#/usr/local/etc#
+|Installierte Anwendungen legen hier ihre Konfigurationsdateien ab. Dieses Verzeichnis kann Unterverzeichnisse für bestimmte Anwendungen enthalten.
+
+|[.filename]#/usr/local/etc/rc.d#
+|man:rc[8]-Skripten installierter Anwendungen.
+
+|[.filename]#/var/db#
+|Automatisch generierte systemspezifische Datenbanken, wie die Paket-Datenbank oder die man:locate[1]-Datenbank.
+|===
+
+=== Hostnamen
+
+==== [.filename]#/etc/resolv.conf#
+
+Wie ein FreeBSD-System auf das Internet Domain Name System (DNS) zugreift, wird in [.filename]#/etc/resolv.conf# festgelegt.
+
+Die gebräuchlichsten Einträge in [.filename]#/etc/resolv.conf# sind:
+
+[.informaltable]
+[cols="1,1", frame="none"]
+|===
+
+|`nameserver`
+|Die IP-Adresse eines Nameservers, den der Resolver abfragen soll. Bis zu drei Server werden in der Reihenfolge, in der sie aufgezählt sind, abgefragt.
+
+|`search`
+|Suchliste mit Domain-Namen zum Auflösen von Hostnamen. Die Liste wird normalerweise durch den Domain-Teil des lokalen Hostnamens festgelegt.
+
+|`domain`
+|Der lokale Domain-Name.
+|===
+
+Beispiel für eine typische [.filename]#/etc/resolv.conf#:
+
+[.programlisting]
+....
+search example.com
+nameserver 147.11.1.11
+nameserver 147.11.100.30
+....
+
+[NOTE]
+====
+Nur eine der Anweisungen `search` oder `domain` sollte benutzt werden.
+====
+
+Wenn Sie DHCP benutzen, überschreibt man:dhclient[8] für gewöhnlich [.filename]#/etc/resolv.conf# mit den Informationen vom DHCP-Server.
+
+==== [.filename]#/etc/hosts#
+
+[.filename]#/etc/hosts# ist eine einfache textbasierte Datenbank. Zusammen mit DNS und NIS stellt sie eine Abbildung zwischen Namen und IP-Adressen zur Verfügung. Anstatt man:named[8] zu konfigurieren, können hier lokale Rechner, die über ein LAN verbunden sind, eingetragen werden. Lokale Einträge für gebräuchliche Internet-Adressen in [.filename]#/etc/hosts# verhindern die Abfrage eines externen Servers und beschleunigen die Namensauflösung.
+
+[.programlisting]
+....
+# $FreeBSD$
+#
+#
+# Host Database
+#
+# This file should contain the addresses and aliases for local hosts that
+# share this file.  Replace 'my.domain' below with the domainname of your
+# machine.
+#
+# In the presence of the domain name service or NIS, this file may
+# not be consulted at all; see /etc/nsswitch.conf for the resolution order.
+#
+#
+::1         localhost localhost.my.domain
+127.0.0.1       localhost localhost.my.domain
+#
+# Imaginary network.
+#10.0.0.2       myname.my.domain myname
+#10.0.0.3       myfriend.my.domain myfriend
+#
+# According to RFC 1918, you can use the following IP networks for
+# private nets which will never be connected to the Internet:
+#
+#   10.0.0.0    -   10.255.255.255
+#   172.16.0.0  -   172.31.255.255
+#   192.168.0.0 -   192.168.255.255
+#
+# In case you want to be able to connect to the Internet, you need
+# real official assigned numbers.  Do not try to invent your own network
+# numbers but instead get one from your network provider (if any) or
+# from your regional registry (ARIN, APNIC, LACNIC, RIPE NCC, or AfriNIC.)
+#
+....
+
+[.filename]#/etc/hosts# hat das folgende Format:
+
+[.programlisting]
+....
+[Internet Adresse] [Offizieller Hostname] [Alias1] [Alias2] ...
+....
+
+Zum Beispiel:
+
+[.programlisting]
+....
+10.0.0.1 myRealHostname.example.com myRealHostname foobar1 foobar2
+....
+
+Weitere Informationen entnehmen Sie bitte man:hosts[5].
+
+[[configtuning-sysctl]]
+== Einstellungen mit man:sysctl[8]
+
+Mit man:sysctl[8] können Sie Änderungen an einem laufenden FreeBSD-System vornehmen. Unter anderem können Optionen des TCP/IP-Stacks oder des virtuellen Speichermanagements verändert werden. Unter der Hand eines erfahrenen Systemadministrators kann dies die Systemperformance erheblich verbessern. Über 500 Variablen können mit man:sysctl[8] gelesen und gesetzt werden.
+
+Der Hauptzweck von man:sysctl[8] besteht darin, Systemeinstellungen zu lesen und zu verändern.
+
+Alle auslesbaren Variablen werden wie folgt angezeigt:
+
+[source,bash]
+....
+% sysctl -a
+....
+
+Um eine spezielle Variable zu lesen, geben Sie den Namen an:
+
+[source,bash]
+....
+% sysctl kern.maxproc
+kern.maxproc: 1044
+....
+
+Um eine Variable zu setzen, benutzen Sie die Syntax _Variable_= _Wert_:
+
+[source,bash]
+....
+# sysctl kern.maxfiles=5000
+kern.maxfiles: 2088 -> 5000
+....
+
+Mit sysctl können Strings, Zahlen oder Boolean-Werte gesetzt werden. Bei Boolean-Werten steht `1` für wahr und `0` für falsch.
+
+Um die Variablen automatisch während des Systemstarts zu setzen, fügen Sie sie in [.filename]#/etc/sysctl.conf# ein. Weitere Informationen finden Sie in der Hilfeseite man:sysctl.conf[5] und in <<configtuning-sysctlconf>>.
+
+[[configtuning-sysctlconf]]
+=== [.filename]#sysctl.conf#
+
+[.filename]#/etc/sysctl.conf# sieht ähnlich wie [.filename]#/etc/rc.conf# aus. Werte werden in der Form `Variable=Wert` gesetzt. Die angegebenen Werte werden gesetzt, nachdem sich das System bereits im Mehrbenutzermodus befindet. Allerdings lassen sich im Mehrbenutzermodus nicht alle Werte setzen.
+
+Um das Protokollieren von fatalen Signalen abzustellen und Benutzer daran zu hindern, von anderen Benutzern gestartete Prozesse zu sehen, können Sie in [.filename]#/etc/sysctl.conf# die folgenden Variablen setzen:
+
+[.programlisting]
+....
+# Do not log fatal signal exits (e.g. sig 11)
+kern.logsigexit=0
+
+# Prevent users from seeing information about processes that
+# are being run under another UID.
+security.bsd.see_other_uids=0
+....
+
+[[sysctl-readonly]]
+=== Schreibgeschützte Variablen
+
+Wenn schreibgeschützte man:sysctl[8]-Variablen verändert werden, ist ein Neustart des Systems erforderlich.
+
+Beispielsweise hat man:cardbus[4] auf einigen Laptops Schwierigkeiten, Speicherbereiche zu erkennen. Es treten dann Fehlermeldungen wie die folgende auf:
+
+[source,bash]
+....
+cbb0: Could not map register memory
+device_probe_and_attach: cbb0 attach returned 12
+....
+
+Um dieses Problem zu lösen, muss eine schreibgeschützte man:sysctl[8]-Variable verändert werden. Fügen Sie `hw.pci.allow_unsupported_io_range=1` in [.filename]#/boot/loader.conf# hinzu und starten Sie das System neu. Danach sollte man:cardbus[4] fehlerfrei funktionieren.
+
+[[configtuning-disk]]
+== Tuning von Laufwerken
+
+Der folgende Abschnitt beschreibt die verschiedenen Methoden zur Feinabstimmung der Laufwerke. Oft sind mechanische Teile in Laufwerken, wie SCSI-Laufwerke, verbaut. Diese können einen Flaschenhals bei der Gesamtleistung des Systems darstellen. Sie können zwar auch ein Laufwerk ohne mechanische Teile einbauen, wie z.B. ein Solid-State-Drive, aber Laufwerke mit mechanischen Teilen werden auch in naher Zukunft nicht vom Markt verschwinden. Bei der Feinabstimmung ist es ratsam, die Funktionen von man:iostat[8] zu verwenden, um verschiedene Änderungen zu testen und um nützliche IO-Informationen des Systems zu erhalten.
+
+=== Sysctl Variablen
+
+==== `vfs.vmiodirenable`
+
+Die man:sysctl[8]-Variable `vfs.vmiodirenable` besitzt in der Voreinstellung den Wert `1`. Die Variable kann auf den Wert `0` (deaktiviert) oder `1` (aktiviert) gesetzt werden. Sie steuert, wie Verzeichnisse vom System zwischengespeichert werden. Die meisten Verzeichnisse sind klein und benutzen nur ein einzelnes Fragment, typischerweise 1 kB, im Dateisystem und 512 Bytes im Buffer-Cache. Ist die Variable deaktiviert, wird der Buffer-Cache nur eine limitierte Anzahl Verzeichnisse zwischenspeichern, auch wenn das System über sehr viel Speicher verfügt. Ist die Variable aktiviert, kann der Buffer-Cache den VM-Page-Cache benutzen, um Verzeichnisse zwischenzuspeichern. Der ganze Speicher steht damit zum Zwischenspeichern von Verzeichnissen zur Verfügung. Der Nachteil bei dieser Vorgehensweise ist, dass zum Zwischenspeichern eines Verzeichnisses mindestens eine physikalische Seite im Speicher, die normalerweise 4 kB groß ist, anstelle von 512 Bytes gebraucht wird. Es wird empfohlen, diese Option aktiviert zu lassen, wenn Sie Dienste zur Verfügung stellen, die viele Dateien manipulieren. Beispiele für solche Dienste sind Web-Caches, große Mail-Systeme oder Netnews. Die aktivierte Variable vermindert, trotz des verschwendeten Speichers, in aller Regel nicht die Leistung des Systems, obwohl Sie das nachprüfen sollten.
+
+==== `vfs.write_behind`
+
+In der Voreinstellung besitzt die man:sysctl[8]-Variable `vfs.write_behind` den Wert `1` (aktiviert). Mit dieser Einstellung schreibt das Dateisystem anfallende vollständige Cluster, die besonders beim sequentiellen Schreiben großer Dateien auftreten, direkt auf das Medium aus. Dies verhindert, dass sich im Buffer-Cache veränderte Puffer (dirty buffers) ansammeln, die die I/O-Verarbeitung nicht mehr beschleunigen würden. Unter bestimmten Umständen blockiert diese Funktion allerdings Prozesse. Setzen Sie in diesem Fall die Variable `vfs.write_behind` auf den Wert `0`.
+
+==== `vfs.hirunningspace`
+
+Die man:sysctl[8]-Variable `vfs.hirunningspace` bestimmt systemweit die Menge ausstehender Schreiboperationen, die dem Platten-Controller zu jedem beliebigen Zeitpunkt übergeben werden können. Normalerweise können Sie den Vorgabewert verwenden. Auf Systemen mit vielen Platten kann der Wert aber auf 4 bis 5 _Megabyte_ erhöht werden. Ein zu hoher Wert (größer als der Schreib-Schwellwert des Buffer-Caches) kann zu Leistungsverlusten führen. Setzen Sie den Wert daher nicht zu hoch! Hohe Werte können auch Leseoperationen verzögern, die gleichzeitig mit Schreiboperationen ausgeführt werden.
+
+Es gibt weitere man:sysctl[8]-Variablen, mit denen Sie den Buffer-Cache und den VM-Page-Cache beeinflussen können. Es wird nicht empfohlen, diese Variablen zu verändern, da das VM-System den virtuellen Speicher selbst sehr gut verwaltet.
+
+==== `vm.swap_idle_enabled`
+
+Die man:sysctl[8]-Variable `vm.swap_idle_enabled` ist für große Mehrbenutzer-Systeme gedacht, auf denen sich viele Benutzer an- und abmelden und auf denen es viele Prozesse im Leerlauf (idle) gibt. Solche Systeme fragen kontinuierlich freien Speicher an. Wenn Sie die Variable `vm.swap_idle_enabled` aktivieren, können Sie die Auslagerungs-Hysterese von Seiten mit den Variablen `vm.swap_idle_threshold1` und `vm.swap_idle_threshold2` einstellen. Die Schwellwerte beider Variablen geben die Zeit in Sekunden an, in denen sich ein Prozess im Leerlauf befinden muss. Wenn die Werte so eingestellt sind, dass Seiten früher als nach dem normalen Algorithmus ausgelagert werden, verschafft das dem Auslagerungs-Prozess mehr Luft. Aktivieren Sie diese Funktion nur, wenn Sie sie wirklich benötigen: Die Speicherseiten werden eher früher als später ausgelagert. Der Platz im Swap-Bereich wird dadurch schneller verbraucht und die Plattenaktivitäten steigen an. Auf kleinen Systemen hat diese Funktion spürbare Auswirkungen. Auf großen Systemen, die sowieso schon Seiten auslagern müssen, können ganze Prozesse leichter in den Speicher geladen oder ausgelagert werden.
+
+==== `hw.ata.wc`
+
+Obwohl das Abstellen des IDE-Schreib-Zwischenspeichers die Bandbreite zum Schreiben auf die IDE-Festplatte verringert, kann es aus Gründen der Datenkonsistenz als notwendig angesehen werden. Das Problem ist, dass IDE-Platten keine zuverlässige Aussage über das Ende eines Schreibvorgangs treffen. Wenn der Schreib-Zwischenspeicher aktiviert ist, werden die Daten nicht in der Reihenfolge ihres Eintreffens geschrieben. Es kann sogar passieren, dass das Schreiben mancher Blöcke im Fall von starker Plattenaktivität auf unbefristete Zeit verzögert wird. Ein Absturz oder Stromausfall zu dieser Zeit kann die Dateisysteme erheblich beschädigen. Sie sollten den Wert der man:sysctl[8]-Variable `hw.ata.wc` auf dem System überprüfen. Wenn der Schreib-Zwischenspeicher abgestellt ist, können Sie ihn beim Systemstart aktivieren, indem Sie die Variable in [.filename]#/boot/loader.conf# auf den Wert `1` setzen.
+
+Weitere Informationen finden Sie in man:ata[4].
+
+==== `SCSI_DELAY` (`kern.cam.scsi_delay`)
+
+Mit der Kerneloption `SCSI_DELAY` kann die Dauer des Systemstarts verringert werden. Der Vorgabewert ist recht hoch und er verzögert den Systemstart um `15` oder mehr Sekunden. Normalerweise kann dieser Wert, insbesondere mit modernen Laufwerken, mit der man:sysctl[8]-Variable `kern.cam.scsi_delay` auf `5` Sekunden heruntergesetzt werden. Die Variable sowie die Kerneloption verwenden für die Zeitangabe Millisekunden und _nicht_ Sekunden.
+
+[[soft-updates]]
+=== Soft Updates
+
+Mit man:tunefs[8] lassen sich Feineinstellungen an Dateisystemen vornehmen. Das Programm hat verschiedene Optionen. Soft Updates werden wie folgt ein- und ausgeschaltet:
+
+[source,bash]
+....
+# tunefs -n enable /filesystem
+# tunefs -n disable /filesystem
+....
+
+Ein eingehängtes Dateisystem kann nicht mit man:tunefs[8] modifiziert werden. Soft Updates werden am besten im Single-User Modus aktiviert, bevor Partitionen eingehangen sind.
+
+Durch Einsatz eines Zwischenspeichers wird die Performance im Bereich der Metadaten, vorwiegend beim Anlegen und Löschen von Dateien, gesteigert. Es wird empfohlen, Soft Updates auf allen UFS-Dateisystemen zu aktivieren. Allerdings sollten Sie sich über die zwei Nachteile von Soft Updates bewusst sein: Erstens garantieren Soft Updates zwar die Konsistenz der Daten im Fall eines Absturzes, aber es kann passieren, dass das Dateisystem über mehrere Sekunden oder gar eine Minute nicht synchronisiert wurde. Nicht geschriebene Daten gehen dann vielleicht verloren. Zweitens verzögern Soft Updates die Freigabe von Datenblöcken. Eine größere Aktualisierung eines fast vollen Dateisystems, wie dem Root-Dateisystem, z.B. während eines `make installworld`, kann das Dateisystem vollaufen lassen. Dadurch würde die Aktualisierung fehlschlagen.
+
+==== Details über Soft Updates
+
+Bei einem Metadaten-Update werden die Inodes und Verzeichniseinträge aktualisiert auf die Platte zurückgeschrieben. Es gibt zwei klassische Ansätze, um die Metadaten des Dateisystems auf die Platte zu schreiben.
+
+Das historisch übliche Verfahren waren synchrone Updates der Metadaten, d. h. wenn eine Änderung an einem Verzeichnis nötig war, wurde anschließend gewartet, bis diese Änderung tatsächlich auf die Platte zurückgeschrieben worden war. Der _Inhalt_ der Dateien wurde im "Buffer Cache" zwischengespeichert und später asynchron auf die Platte geschrieben. Der Vorteil dieser Implementierung ist, dass sie sicher funktioniert. Wenn während eines Updates ein Ausfall erfolgt, haben die Metadaten immer einen konsistenten Zustand. Eine Datei ist entweder komplett angelegt oder gar nicht. Wenn die Datenblöcke einer Datei im Fall eines Absturzes noch nicht den Weg aus dem "Buffer Cache" auf die Platte gefunden haben, kann man:fsck[8] das Dateisystem reparieren, indem es die Dateilänge einfach auf `0` setzt. Außerdem ist die Implementierung einfach und überschaubar. Der Nachteil ist, dass Änderungen der Metadaten sehr langsam vor sich gehen. Ein `rm -r` beispielsweise fasst alle Dateien eines Verzeichnisses der Reihe nach an, aber jede dieser Änderungen am Verzeichnis (Löschen einer Datei) wird einzeln synchron auf die Platte geschrieben. Gleiches beim Auspacken großer Hierarchien mit `tar -x`.
+
+Der zweite Ansatz sind asynchrone Metadaten-Updates. Das ist der Standard, wenn UFS-Dateisysteme mit `mount -o async` eingehängt werden. Man schickt die Updates der Metadaten einfach auch noch über den "Buffer Cache", sie werden also zwischen die Updates der normalen Daten eingeschoben. Vorteil ist, dass man nun nicht mehr auf jeden Update warten muss, Operationen, die zahlreiche Metadaten ändern, werden also viel schneller. Auch hier ist die Implementierung sehr einfach und wenig anfällig für Fehler. Nachteil ist, dass keinerlei Konsistenz des Dateisystems mehr gesichert ist. Wenn mitten in einer Operation, die viele Metadaten ändert, ein Ausfall erfolgt (Stromausfall, drücken des Reset-Schalters), dann ist das Dateisystem anschließend in einem unbestimmten Zustand. Niemand kann genau sagen, was noch geschrieben worden ist und was nicht mehr; die Datenblöcke einer Datei können schon auf der Platte stehen, während die inode Tabelle oder das zugehörige Verzeichnis nicht mehr aktualisiert worden ist. Man kann praktisch kein man:fsck[8] mehr implementieren, das diesen Zustand wieder reparieren kann, da die dazu nötigen Informationen einfach auf der Platte fehlen. Wenn ein Dateisystem irreparabel beschädigt wurde, hat man nur noch die Möglichkeit es neu zu erzeugen und die Daten vom Backup zurückspielen.
+
+Der Ausweg aus diesem Dilemma ist ein _dirty region logging_, was auch als _Journalling_ bezeichnet wird. Man schreibt die Metadaten-Updates zwar synchron, aber nur in einen kleinen Plattenbereich, die _logging area_. Von da aus werden sie dann asynchron auf ihre eigentlichen Bereiche verteilt. Da die _logging area_ ein kleines zusammenhängendes Stückchen ist, haben die Schreibköpfe der Platte bei massiven Operationen auf Metadaten keine allzu großen Wege zurückzulegen, so dass alles ein ganzes Stück schneller geht als bei klassischen synchronen Updates. Die Komplexität der Implementierung hält sich ebenfalls in Grenzen, somit auch die Anfälligkeit für Fehler. Als Nachteil ergibt sich, dass Metadaten zweimal auf die Platte geschrieben werden müssen (einmal in die _logging area_, einmal an die richtige Stelle), so dass das im Falle regulärer Arbeit (also keine gehäuften Metadatenoperationen) eine "Pessimisierung" des Falls der synchronen Updates eintritt, es wird alles langsamer. Dafür hat man als Vorteil, dass im Falle eines Absturzes der konsistente Zustand dadurch erzielbar ist, dass die angefangenen Operationen aus dem _dirty region log_ entweder zu Ende ausgeführt oder komplett verworfen werden, wodurch das Dateisystem schnell wieder zur Verfügung steht.
+
+Die Lösung von Kirk McKusick, dem Schöpfer von Berkeley FFS, waren _Soft Updates_: die notwendigen Updates der Metadaten werden im Speicher gehalten und dann sortiert auf die Platte geschrieben ("ordered metadata updates"). Dadurch hat man den Effekt, dass im Falle massiver Metadaten-Änderungen spätere Operationen die vorhergehenden, noch nicht auf die Platte geschriebenen Updates desselben Elements im Speicher "einholen". Alle Operationen, auf ein Verzeichnis beispielsweise, werden also in der Regel noch im Speicher abgewickelt, bevor der Update überhaupt auf die Platte geschrieben wird (die dazugehörigen Datenblöcke werden natürlich auch so sortiert, dass sie nicht vor ihren Metadaten auf der Platte sind). Im Fall eines Absturzes hat man ein implizites "log rewind": alle Operationen, die noch nicht den Weg auf die Platte gefunden haben, sehen danach so aus, als hätten sie nie stattgefunden. Man hat so also den konsistenten Zustand von ca. 30 bis 60 Sekunden früher sichergestellt. Der verwendete Algorithmus garantiert dabei, dass alle tatsächlich benutzten Ressourcen auch in den entsprechenden Bitmaps (Block- und inode Tabellen) als belegt markiert sind. Der einzige Fehler, der auftreten kann, ist, dass Ressourcen noch als "belegt" markiert sind, die tatsächlich "frei" sind. man:fsck[8] erkennt dies und korrigiert diese nicht mehr belegten Ressourcen. Die Notwendigkeit eines Dateisystem-Checks darf aus diesem Grunde auch ignoriert und das Dateisystem mittels `mount -f` zwangsweise eingebunden werden. Um noch allozierte Ressourcen freizugeben muss später ein man:fsck[8] nachgeholt werden. Das ist dann auch die Idee des _background fsck_: beim Starten des Systems wird lediglich ein _Schnappschuss_ des Dateisystems gemacht, mit dem man:fsck[8] dann später arbeiten kann. Alle Dateisysteme dürfen "unsauber" eingebunden werden und das System kann sofort in den Multiuser-Modus gehen. Danach wird ein Hintergrund-man:fsck[8] für die Dateisysteme gestartet, die dies benötigen, um möglicherweise irrtümlich belegte Ressourcen freizugeben. Dateisysteme ohne _Soft Updates_ benötigen natürlich immer noch den üblichen Vordergrund-man:fsck[8], bevor sie eingebunden werden können.
+
+Der Vorteil ist, dass die Metadaten-Operationen beinahe so schnell ablaufen wie im asynchronen Fall, also auch schneller als beim _logging_, das die Metadaten immer zweimal schreiben muss. Als Nachteil stehen dem die Komplexität des Codes, ein erhöhter Speicherverbrauch und einige spezielle Eigenheiten entgegen. Nach einem Absturz ist ein etwas "älterer" Stand auf der Platte - statt einer leeren, aber bereits angelegten Datei, wie nach einem herkömmlichen man:fsck[8] Lauf, ist auf einem Dateisystem mit _Soft Updates_ keine Spur der entsprechenden Datei mehr zu sehen, da weder die Metadaten noch der Dateiinhalt je auf die Platte geschrieben wurden. Weiterhin kann der Platz nach einem man:rm[1] nicht sofort wieder als verfügbar markiert werden, sondern erst dann, wenn der Update auch auf die Platte vermittelt worden ist. Dies kann besonders dann Probleme bereiten, wenn große Datenmengen in einem Dateisystem installiert werden, das nicht genügend Platz hat, um alle Dateien zweimal unterzubringen.
+
+[[configtuning-kernel-limits]]
+== Einstellungen von Kernel Limits
+
+[[file-process-limits]]
+=== Datei und Prozeß Limits
+
+[[kern-maxfiles]]
+==== `kern.maxfiles`
+
+Abhängig von den Anforderungen an das System kann die man:sysctl[8]-Variable `kern.maxfiles` erhöht oder gesenkt werden. Die Variable legt die maximale Anzahl von Dateideskriptoren auf dem System fest. Wenn die Dateideskriptoren aufgebraucht sind, werden Sie die Meldung `file: table is full` wiederholt im Puffer für Systemmeldungen sehen. Den Inhalt des Puffers können Sie sich mit man:dmesg[8] anzeigen lassen.
+
+Jede offene Datei, jedes Socket und jede FIFO verbraucht einen Dateideskriptor. Auf "dicken" Produktionsservern können leicht Tausende Dateideskriptoren benötigt werden, abhängig von der Art und Anzahl der gleichzeitig laufenden Dienste.
+
+In älteren FreeBSD-Versionen wurde die Voreinstellung von `kern.maxfile` aus der Kernelkonfigurationsoption `maxusers` bestimmt. `kern.maxfiles` wächst proportional mit dem Wert von `maxusers`. Wenn Sie einen angepassten Kernel kompilieren, empfiehlt es sich diese Option entsprechend der maximalen Benutzerzahl des Systems einzustellen. Obwohl auf einer Produktionsmaschine vielleicht nicht 256 Benutzer gleichzeitig angemeldet sind, können die benötigten Ressourcen ähnlich hoch wie bei einem großen Webserver sein.
+
+Die nur lesbare man:sysctl[8]-Variable `kern.maxusers` wird beim Systemstart automatisch aus dem zur Verfügung stehenden Hauptspeicher bestimmt. Im laufenden Betrieb kann dieser Wert aus `kern.maxusers` ermittelt werden. Einige Systeme benötigen für diese Variable einen anderen Wert, wobei `64`, `128` und `256` gewöhnliche Werte darstellen. Es wird nicht empfohlen, die Anzahl der Dateideskriptoren auf einen Wert größer `256` zu setzen, es sei denn, Sie benötigen wirklich eine riesige Anzahl von ihnen. Viele der von `kern.maxusers` auf einen Standardwert gesetzten Parameter können beim Systemstart oder im laufenden Betrieb in [.filename]#/boot/loader.conf# angepasst werden. In man:loader.conf[5] und [.filename]#/boot/defaults/loader.conf# finden Sie weitere Details und Hinweise.
+
+Ältere FreeBSD-Versionen setzen diesen Wert selbst, wenn Sie in der Konfigurationsdatei den Wert `0` angeben. Wenn Sie den Wert selbst bestimmen wollen, sollten Sie `maxusers` mindestens auf `4` setzen. Dies gilt insbesondere dann, wenn Sie beabsichtigen, Xorg zu benutzen oder Software zu kompilieren. Der wichtigste Wert, der durch `maxusers` bestimmt wird, die maximale Anzahl an Prozessen ist, die auf `20 + 16 * maxusers` gesetzt wird. Wird `maxusers` auf `1` setzen, können gleichzeitig nur `36` Prozesse laufen, von denen ungefähr `18` schon beim Booten des Systems gestartet werden. Dazu kommen nochmals etwa `15` Prozesse beim Start von Xorg. Selbst eine einfache Aufgabe wie das Lesen einer Manualpage benötigt neun Prozesse zum Filtern, Dekomprimieren und Betrachten der Datei. Für die meisten Benutzer sollte es ausreichen, `maxusers` auf `64` zu setzen, womit `1044` gleichzeitige Prozesse zur Verfügung stehen. Wenn Sie allerdings den Fehler  beim Start eines Programms oder auf einem Server mit einer großen Benutzerzahl sehen, dann sollten Sie den Wert nochmals erhöhen und den Kernel neu bauen.
+
+[NOTE]
+====
+Die Anzahl der Benutzer, die sich auf einem Rechner anmelden kann, wird durch `maxusers` _nicht_ begrenzt. Der Wert dieser Variablen legt neben der möglichen Anzahl der Prozesse eines Benutzers weitere sinnvolle Größen für bestimmte Systemtabellen fest.
+====
+
+==== `kern.ipc.soacceptqueue`
+
+Die man:sysctl[8]-Variable `kern.ipc.soacceptqueue` beschränkt die Größe der Warteschlange (Listen-Queue) für neue TCP-Verbindungen. Der Vorgabewert von `128` ist normalerweise zu klein, um neue Verbindungen auf einem stark ausgelasteten Webserver zuverlässig zu handhaben. Auf solchen Servern sollte der Wert auf `1024` oder höher gesetzt werden. Dienste wie man:sendmail[8] oder Apache können die Größe der Queue selbst einschränken. Oft gibt es die Möglichkeit, die Größe der Listen-Queue in einer Konfigurationsdatei einzustellen. Eine große Listen-Queue übersteht vielleicht auch einen Denial of Service Angriff ().
+
+[[nmbclusters]]
+=== Netzwerk Limits
+
+Die Kerneloption `NMBCLUSTERS` schreibt die Anzahl der Netzwerkpuffer (Mbufs) fest, die das System besitzt. Eine zu geringe Anzahl Mbufs auf einem Server mit viel Netzwerkverkehr verringert die Leistung von FreeBSD. Jeder Mbuf-Cluster nimmt ungefähr 2 kB Speicher in Anspruch, so dass ein Wert von `1024` insgesamt 2 Megabyte Speicher für Netzwerkpuffer im System reserviert. Wie viele Cluster benötigt werden, lässt sich durch eine einfache Berechnung herausfinden. Ein Webserver, der maximal `1000` gleichzeitige Verbindungen servieren soll, wobei jede der Verbindungen einen 6 kB großen Sendepuffer und einen 16 kB großen Empfangspuffer benötigt, braucht ungefähr 32 MB Speicher für Netzwerkpuffer. Als Daumenregel verdoppeln Sie diese Zahl, so dass sich für `NMBCLUSTERS` der Wert 2x32 MB / 2 kB= 64 MB / 2 kB= `32768` ergibt. Für Maschinen mit viel Speicher werden Werte zwischen `4096` und `32768` empfohlen. Unter keinen Umständen sollten Sie diesen Wert willkürlich erhöhen, da dies zu einem Absturz beim Systemstart führen kann. Verwenden Sie man:netstat[1] mit `-m` um den Gebrauch der Netzwerkpuffer zu kontrollieren.
+
+Die Netzwerkpuffer können beim Systemstart mit der Loader-Variablen `kern.ipc.nmbclusters` eingestellt werden. Nur auf älteren FreeBSD-Systemen müssen Sie die Kerneloption `NMBCLUSTERS` verwenden.
+
+Die Anzahl der man:sendfile[2] Puffer muss auf ausgelasteten Servern, die den Systemaufruf man:sendfile[2] oft verwenden, vielleicht erhöht werden. Dazu können Sie die Kerneloption `NSFBUFS` verwenden oder die Anzahl der Puffer in [.filename]#/boot/loader.conf# (siehe man:loader[8]) setzen. Die Puffer sollten erhöht werden, wenn Sie Prozesse im Zustand `sfbufa` sehen. Die schreibgeschützte man:sysctl[8]-Variable `kern.ipc.nsfbufs` zeigt die Anzahl eingerichteten Puffer im Kernel. Der Wert dieser Variablen wird normalerweise von `kern.maxusers` bestimmt. Manchmal muss die Pufferanzahl jedoch manuell eingestellt werden.
+
+[IMPORTANT]
+====
+Auch wenn ein Socket nicht blockierend angelegt wurde, kann der Aufruf von man:sendfile[2] blockieren, um auf freie `struct sf_buf` Puffer zu warten.
+====
+
+==== `net.inet.ip.portrange.*`
+
+Die man:sysctl[8]-Variable `net.inet.ip.portrange.*` legt die Portnummern für TCP- und UDP-Sockets fest. Es gibt drei Bereiche: den niedrigen Bereich, den normalen Bereich und den hohen Bereich. Die meisten Netzprogramme benutzen den normalen Bereich. Dieser Bereich umfasst in der Voreinstellung die Portnummern `1024` bis `5000` und wird durch die Variablen `net.inet.ip.portrange.first` und `net.inet.ip.portrange.last` festgelegt. Die festgelegten Bereiche für Portnummern werden von ausgehenden Verbindungen benutzt. Unter bestimmten Umständen, beispielsweise auf stark ausgelasteten Proxy-Servern, sind alle Portnummern für ausgehende Verbindungen belegt. Bereiche für Portnummern spielen auf Servern keine Rolle, die hauptsächlich eingehende Verbindungen verarbeiten (wie ein normaler Webserver) oder nur eine begrenzte Anzahl ausgehender Verbindungen öffnen (beispielsweise ein Mail-Relay). Wenn keine freien Portnummern mehr vorhanden sind, sollte die Variable `net.inet.ip.portrange.last` langsam erhöht werden. Ein Wert von `10000`, `20000` oder `30000` ist angemessen. Beachten Sie auch eine vorhandene Firewall, wenn Sie die Bereiche für Portnummern ändern. Einige Firewalls sperren große Bereiche (normalerweise aus den kleinen Portnummern) und erwarten, dass hohe Portnummern für ausgehende Verbindungen verwendet werden. Daher kann es erforderlich sein, den Wert von `net.inet.ip.portrange.first` zu erhöhen.
+
+==== `TCP` Bandwidth Delay Product Begrenzung
+
+Die `TCP` Bandwidth Delay Product Begrenzung wird aktiviert, indem die man:sysctl[8]-Variable `net.inet.tcp.inflight.enable` auf den Wert `1` gesetzt wird. Das System wird dadurch angewiesen, für jede Verbindung, das Produkt aus der Übertragungsrate und der Verzögerungszeit zu bestimmen. Dieses Produkt begrenzt die Datenmenge, die für einen optimalen Durchsatz zwischengespeichert werden muss.
+
+Diese Begrenzung ist nützlich, wenn Sie Daten über Verbindungen mit einem hohen Produkt aus Übertragungsrate und Verzögerungszeit wie Modems, Gigabit-Ethernet oder schnellen WANs, zur Verfügung stellen. Insbesondere wirkt sich die Begrenzung aus, wenn die Verbindung die Option Window-scaling verwendet oder große Sende-Fenster (send window) benutzt. Schalten Sie die Debug-Meldungen aus, wenn Sie die Begrenzung aktiviert haben. Dazu setzen Sie die Variable `net.inet.tcp.inflight.debug` auf `0`. Auf Produktions-Systemen sollten Sie zudem die Variable `net.inet.tcp.inflight.min` mindestens auf den Wert `6144` setzen. Allerdings kann ein zu hoher Wert, abhängig von der Verbindung, die Begrenzungsfunktion unwirksam machen. Die Begrenzung reduziert die Datenmenge in den Queues von Routern und Switches, sowie die Datenmenge in der Queue der lokalen Netzwerkkarte. Die Verzögerungszeit (Round Trip Time) für interaktive Anwendungen sinkt, da weniger Pakete zwischengespeichert werden. Dies gilt besonders für Verbindungen über langsame Modems. Die Begrenzung wirkt sich allerdings nur auf das Versenden von Daten aus (Uploads, Server). Auf den Empfang von Daten (Downloads) hat die Begrenzung keine Auswirkungen.
+
+Die Variable `net.inet.tcp.inflight.stab` sollte _nicht_ angepasst werden. Der Vorgabewert der Variablen beträgt `20`, das heißt es werden maximal zwei Pakete zu dem Produkt aus Übertragungsrate und Verzögerungszeit addiert. Dies stabilisiert den Algorithmus und verbessert die Reaktionszeit auf Veränderungen. Bei langsamen Verbindungen können sich aber die Laufzeiten der Pakete erhöhen (ohne diesen Algorithmus wären sie allerdings noch höher). In solchen Fällen können Sie versuchen, den Wert der Variablen auf `15`, `10` oder `5` herabzusetzen. Gleichzeitig müssen Sie vielleicht auch `net.inet.tcp.inflight.min` auf einen kleineren Wert (beispielsweise `3500`) setzen. Ändern Sie diese Variablen nur ab, wenn Sie keine anderen Möglichkeiten mehr haben.
+
+=== Virtueller Speicher (Virtual Memory)
+
+==== `kern.maxvnodes`
+
+Ein vnode ist die interne Darstellung einer Datei oder eines Verzeichnisses. Die Erhöhung der Anzahl der für das Betriebssystem verfügbaren vnodes verringert also die Schreib- und Lesezugriffe auf der Festplatte. vnodes werden im Normalfall vom Betriebssystem automatisch vergeben und müssen nicht manuell angepasst werden. In einigen Fällen stellt der Zugriff auf eine Platte allerdings einen Flaschenhals dar, daher sollten Sie in diesem Fall die Anzahl der möglichen vnodes erhöhen, um dieses Problem zu beheben. Beachten Sie dabei aber die Größe des inaktiven und freien Hauptspeichers.
+
+Um die Anzahl der derzeit verwendeten vnodes zu sehen, geben Sie Folgendes ein:
+
+[source,bash]
+....
+# sysctl vfs.numvnodes
+vfs.numvnodes: 91349
+....
+
+Die maximal mögliche Anzahl der vnodes erhalten Sie durch die Eingabe von:
+
+[source,bash]
+....
+# sysctl kern.maxvnodes
+kern.maxvnodes: 100000
+....
+
+Wenn sich die Anzahl der genutzten vnodes dem maximal möglichen Wert nähert, sollten Sie den Wert `kern.maxvnodes` zuerst um etwa `1000` erhöhen. Beobachten Sie danach die Anzahl der vom System genutzten `vfs.numvnodes`. Nähert sich der Wert wiederum dem definierten Maximum, müssen Sie `kern.maxvnodes` nochmals erhöhen. Sie sollten nun eine Änderung des Speicherverbrauches über man:top[1] registrieren können und über mehr aktiven Speicher verfügen.
+
+[[adding-swap-space]]
+== Hinzufügen von Swap-Bereichen
+
+Manchmal benötigt ein System mehr Swap-Bereiche. Dieser Abschnitt beschreibt zwei Methoden, um Swap-Bereiche hinzuzufügen: auf einer bestehenden Partition oder auf einem neuen Laufwerk, und das Hinzufügen einer Swap-Datei auf einer existierenden Partition.
+
+Für Informationen zur Verschlüsselung von Swap-Partitionen, zu den dabei möglichen Optionen sowie zu den Gründen für eine Verschlüsselung des Auslagerungsspeichers lesen Sie crossref:disks[swap-encrypting,“Den Auslagerungsspeicher verschlüsseln”].
+
+[[new-drive-swap]]
+=== Swap auf einer neuen Festplatte oder einer existierenden Partition
+
+Das Hinzufügen einer neuen Festplatte für den Swap-Bereich bietet eine bessere Leistung, als die Verwendung einer Partition auf einem vorhandenem Laufwerk. Die Einrichtung von Partitionen und Laufwerken wird in crossref:disks[disks-adding,“Hinzufügen von Laufwerken“] beschrieben. crossref:bsdinstall[configtuning-initial,“Ein Partitionslayout entwerfen“] diskutiert Aspekte über die Anordnung und Größe von Swap-Bereichen.
+
+Benutzen Sie `swapon` um eine Swap-Partition zum System hinzuzufügen. Zum Beispiel:
+
+[source,bash]
+....
+# swapon /dev/ada1s1b
+....
+
+[WARNING]
+====
+
+Sie können jede Partition verwenden, sofern sie nicht schon eingehangen ist. Das gilt auch dann, wenn die Partition bereits Daten enthält. Wird `swapon` auf einer Partition ausgeführt die Daten enthält, werden die vorhandenen Daten überschrieben und sind unweigerlich verloren. Stellen Sie sicher, dass die Partition, die Sie als Swap-Bereich hinzufügen möchten, wirklich die gewünschte Partition ist, bevor Sie `swapon` ausführen.
+====
+
+Um diese Swap-Partition automatisch beim Systemstart hinzuzufügen, fügen Sie einen Eintrag in [.filename]#/etc/fstab# hinzu:
+
+[.programlisting]
+....
+/dev/ada1s1b	none	swap	sw	0	0
+....
+
+Die einzelnen Einträge von [.filename]#/etc/fstab# werden in man:fstab[5] erläutert. Weitere Informationen zu `swapon` finden Sie in man:swapon[8].
+
+[[create-swapfile]]
+=== Swap-Dateien erstellen
+
+Anstatt eine Partition zu verwenden, erstellen diese Beispiele eine 512 MB große Swap-Datei mit dem Namen [.filename]#/usr/swap0#.
+
+Die Verwendung von Swap-Dateien macht es erforderlich, dass das Modul man:md[4] entweder im Kernel vorhanden oder geladen wird, bevor Swap aktiviert ist. crossref:kernelconfig[kernelconfig,Konfiguration des FreeBSD-Kernels] enthält Informationen zum Bau eines angepassten Kernels.
+
+[[swapfile-10-and-later]]
+.Erstellen einer Swap-Datei
+[example]
+====
+[.procedure]
+. Erstellen Sie die Swap-Datei:
++
+[source,bash]
+....
+# dd if=/dev/zero of=/usr/swap0 bs=1024k count=512
+....
+
+. Setzen Sie die richtigen Berechtigungen für die neue Datei:
++
+[source,bash]
+....
+# chmod 0600 /usr/swap0
+....
+
+. Fügen Sie einen Eintrag in [.filename]#/etc/fstab# hinzu:
++
+[.programlisting]
+....
+md99	none	swap	sw,file=/usr/swap0,late	0	0
+....
++ 
+Das man:md[4] Gerät [.filename]#md99# wird verwendet, damit die niedrigeren Gerätenummer für die interaktive Benutzung frei bleiben.
+
+. Der Swap-Speicher wird nun automatisch beim Systemstart hinzugefügt. Benutzen Sie man:swapon[8] um den Swap-Speicher direkt zu aktivieren:
++
+[source,bash]
+....
+# swapon -aL
+....
+
+====
+
+[[acpi-overview]]
+== Energie- und Ressourcenverwaltung
+
+Es ist wichtig, Hardware effizient einzusetzen. Energie- und Ressourcenverwaltung ermöglicht es dem System auf verschiedene Ereignisse, beispielsweise einen unerwarteten Temperaturanstieg, reagieren zu können. Eine frühe Spezifikation für die Energieverwaltung war das Advanced Power Management (APM). APM steuert den Energieverbrauch eines Systems auf Basis der Systemaktivität. Ursprünglich konnten Stromverbrauch und Wärmeabgabe eines Systems nur schlecht von Betriebssystemen gesteuert werden. Die Hardware wurde vom BIOS gesteuert, was die Kontrolle der Energieverwaltung für den Anwender erschwerte. Das APM-BIOS wird von dem Hersteller des Systems zur Verfügung gestellt und ist auf die spezielle Hardware angepasst. Der APM-Treiber des Betriebssystems greift auf das _APM Software Interface_ zu, das den Energieverbrauch regelt.
+
+APM hat hauptsächlich vier Probleme. Erstens läuft die Energieverwaltung unabhängig vom Betriebssystem in einem herstellerspezifischen BIOS. Beispielsweise kann das APM-BIOS die Festplatten nach einer konfigurierbaren Zeit ohne die Zustimmung des Betriebssystems herunterfahren. Zweitens befindet sich die ganze APM-Logik im BIOS; das Betriebssystem hat gar keine APM-Komponenten. Bei Problemen mit dem APM-BIOS muss das Flash-ROM aktualisiert werden. Diese Prozedur ist gefährlich, da sie im Fehlerfall das System unbrauchbar machen kann. Zum Dritten ist APM eine Technik, die herstellerspezifisch ist und nicht koordiniert wird. Fehler im BIOS eines Herstellers werden nicht unbedingt im BIOS anderer Hersteller korrigiert. Das letzte Problem ist, dass im APM-BIOS nicht genügend Platz vorhanden ist, um eine durchdachte oder eine auf den Zweck der Maschine zugeschnittene Energieverwaltung zu implementieren.
+
+Das _Plug and Play BIOS (PNPBIOS)_ war in vielen Situationen ebenfalls unzureichend. Das PNPBIOS verwendet eine 16-Bit-Technik. Damit das Betriebssystem das PNPBIOS ansprechen kann, muss es in einer 16-Bit-Emulation laufen. FreeBSD stellt einen APM-Treiber zur Verfügung, welcher für Systeme benutzt werden sollte, die vor dem Jahr 2000 hergestellt wurden. Der Treiber wird in man:apm[4] beschrieben.
+
+Der Nachfolger von APM ist das _Advanced Configuration and Power Interface_ (ACPI). ACPI ist ein Standard verschiedener Hersteller, welcher die Verwaltung von Hardware und Energiesparfunktionen festlegt. Die ACPI-Funktionen, die mehr Kontrolle und Flexibilität bieten, können vom Betriebssystem gesteuert werden.
+
+Dieser Abschnitt zeigt die Konfiguration von ACPI unter FreeBSD. Zudem werden einige Tipps zur Fehlersuche vorgestellt und wie Sie Problemberichte einreichen können, sodass Entwickler ACPI-Probleme erfassen und beheben können.
+
+[[acpi-config]]
+=== Konfiguration des ACPI
+
+Der man:acpi[4]-Treiber wird standardmäßig beim Systemstart vom man:loader[8] geladen und sollte daher _nicht_ fest in den Kernel eingebunden werden. Der Treiber kann im laufenden Betrieb nicht entfernt werden, da er zur Kommunikation mit der Hardware verwendet wird. Falls jedoch Probleme auftreten, kann ACPI auch komplett deaktiviert werden. Dazu muss `hint.acpi.0.disabled="1"` in [.filename]#/boot/loader.conf# gesetzt und anschließend das System neu gestartet werden. Alternativ können Sie diese Variable auch am man:loader[8]-Prompt eingeben, wie in crossref:boot[boot-loader,“Phase Drei”] beschrieben.
+
+[NOTE]
+====
+ACPI und APM können nicht zusammen verwendet werden. Das zuletzt geladene Modul beendet sich, sobald es bemerkt, dass das andere Modul geladen ist.
+====
+
+Mit `acpiconf` können Sie das System in einen Ruhemodus (sleep mode) versetzen. Es gibt verschiedene Modi (von `1` bis `5`), die Sie auf der Kommandozeile mit `-s` angeben können. Für die meisten Anwender sind die Modi `1` und `3` völlig ausreichend. Der Modus `5` schaltet das System aus (Soft-off) und entspricht dem Befehl `halt -p`.
+
+Verschiedene Optionen können mit `sysctl` gesetzt werden. Lesen Sie dazu man:acpi[4] sowie man:acpiconf[8].
+
+[[ACPI-comprob]]
+=== Häufige Probleme
+
+ACPI gibt es in allen modernen Rechnern der ia32- (x86) und amd64- (AMD) Architektur. Der vollständige Standard bietet Funktionen zur Steuerung und Verwaltung der CPU-Leistung, der Stromversorgung, von Wärmebereichen, Batterien, eingebetteten Controllern und Bussen. Auf den meisten Systemen wird nicht der vollständige Standard implementiert. Arbeitsplatzrechner besitzen meist nur Funktionen zur Verwaltung der Busse, während Notebooks Funktionen zur Temperaturkontrolle und Ruhezustände besitzen.
+
+Ein ACPI konformes System besitzt verschiedene Komponenten. Die BIOS- und Chipsatz-Hersteller stellen mehrere statische Tabellen bereit, zum Beispiel die Fixed-ACPI-Description-Table (FADT). Die Tabellen enthalten beispielsweise die mit SMP-Systemen benutzte APIC-Map, Konfigurationsregister und einfache Konfigurationen. Zusätzlich gibt es die _Differentiated-System-Description-Table_ (DSDT), die Bytecode enthält. Die Tabelle ordnet Geräte und Methoden in einem baumartigen Namensraum an.
+
+Ein ACPI-Treiber muss die statischen Tabellen einlesen, einen Interpreter für den Bytecode bereitstellen und die Gerätetreiber im Kernel so modifizieren, dass sie mit dem ACPI-Subsystem kommunizieren. Für FreeBSD, Linux(R) und NetBSD hat Intel(R) den Interpreter ACPI-CA, zur Verfügung gestellt. Der Quelltext zu ACPI-CA befindet sich im Verzeichnis [.filename]#src/sys/contrib/dev/acpica#. Die Schnittstelle von ACPI-CA zu FreeBSD befindet sich unter [.filename]#src/sys/dev/acpica/Osd#. Treiber, die verschiedene ACPI-Geräte implementieren, befinden sich im Verzeichnis [.filename]#src/sys/dev/acpica#.
+
+Damit ACPI richtig funktioniert, müssen alle Teile funktionieren. Im Folgenden finden Sie eine Liste mit Problemen und möglichen Abhilfen oder Korrekturen. Die Liste ist nach der Häufigkeit, mit der die Probleme auftreten, sortiert. Wenn eine Korrektur das Problem nicht behebt, finden Sie in <<ACPI-submitdebug>> Anweisungen, wie Sie einen Problembericht einreichen können.
+
+==== Mausprobleme
+
+Es kann vorkommen, dass die Maus nicht mehr funktioniert, wenn Sie nach einem Suspend weiterarbeiten wollen. Ist dies bei Ihnen der Fall, reicht es meistens aus, den Eintrag `hint.psm.0.flags="0x3000"` in [.filename]#/boot/loader.conf# aufzunehmen.
+
+==== Suspend/Resume
+
+ACPI kennt drei Suspend-to-RAM-Zustände (STR), `S1`-`S3` sowie einen Suspend-to-Disk-Zustand (STD) `S4`. STD kann auf zwei Arten implementiert werden: ``S4``BIOS und ``S4``OS. Im ersten Fall wird der Suspend-to-Disk-Zustand durch das BIOS hergestellt im zweiten Fall alleine durch das Betriebssystem. Der Zustand `S5` wird "Soft off" genannt. In diesem Zustand befindet sich ein Rechner, wenn die Stromversorgung angeschlossen ist, der Rechner aber nicht hochgefahren ist.
+
+Benutzen Sie `sysctl hw.acpi` um die Suspend-Zustände zu ermitteln. Diese Beispielausgabe stammt von einem Thinkpad:
+
+[source,bash]
+....
+hw.acpi.supported_sleep_state: S3 S4 S5
+hw.acpi.s4bios: 0
+....
+
+Diese Ausgabe besagt, dass mit dem Befehl `acpiconf -s` die Zustände `S3`, `S4` und `S5` eingestellt werden können. Hätte `s4bios` den Wert `1`, gäbe es den Zustand ``S4``BIOS anstelle von `S4`.
+
+Wenn Sie die Suspend- und Resume-Funktionen testen, fangen Sie mit dem `S1`-Zustand an, wenn er angeboten wird. Dieser Zustand wird am ehesten funktionieren, da der Zustand wenig Treiber-Unterstützung benötigt. Der Zustand `S2` ist ähnlich wie `S1`, allerdings hat ihn noch niemand implementiert. Als nächstes sollten Sie den Zustand `S3` ausprobieren. Dies ist der tiefste STR-Schlafzustand. Dieser Zustand ist auf massive Treiber-Unterstützung angewiesen, um die Geräte wieder richtig zu initialisieren.
+
+Ein häufiges Problem mit Suspend/Resume ist, dass viele Gerätetreiber ihre Firmware, Register und Gerätespeicher nicht korrekt speichern, wiederherstellen und/oder reinitialisieren. Um dieses Problem zu lösen, sollten Sie zuerst die folgenden Befehle ausführen:
+
+[source,bash]
+....
+# sysctl debug.bootverbose=1
+# sysctl debug.acpi.suspend_bounce=1
+# acpiconf -s 3
+....
+
+Dieser Test emuliert einen Suspend/Resume-Zyklus für alle Geräte (ohne dass diese dabei wirklich in den Status `S3` wechseln). In vielen Fällen reicht dies bereits aus, um Probleme (beispielsweise verlorener Firmware-Status, Timeouts, hängende Geräte) zu entdecken. Beachten Sie dabei, dass das Gerät bei diesem Test nicht wirklich in den Status `S3` wechseln. Es kann also vorkommen, dass manche Geräte weiterhin mit Strom versorgt werden (dies wäre bei einem wirklichen Wechsel in den Status `S3` NICHT möglich. Andere Geräte werden normal weiterarbeiten, weil sie über keine Suspend/Resume-Funktionen verfügen.
+
+Schwierigere Fälle können den Einsatz zusätzlicher Hardware (beispielsweise serielle Ports/Kabel für die Verbindung über eine serielle Konsole oder Firewire-Ports/Kabel für man:dcons[4]) sowie Kenntnisse im Bereich Kerneldebugging erforderlich machen.
+
+Um das Problem einzugrenzen, entladen Sie soviele Treiber wie möglich. Wenn das funktioniert, laden Sie einen Treiber nach dem anderen, bis der Fehler wieder auftritt. Typischerweise verursachen binäre Treiber wie [.filename]#nvidia.ko#, Grafiktreiber und USB-Treiber die meisten Fehler, hingegen laufen Ethernet-Treiber für gewöhnlich sehr zuverlässig. Wenn ein Treiber zuverlässig geladen und entfernt werden kann, können Sie den Vorgang automatisieren, indem Sie die entsprechenden Kommandos in [.filename]#/etc/rc.suspend# und [.filename]#/etc/rc.resume# einfügen. In den Dateien finden Sie ein deaktiviertes Beispiel, das einen Treiber lädt und wieder entfernt. Ist die Bildschirmanzeige bei der Wiederaufnahme des Betriebs gestört, setzen Sie die Variable `hw.acpi.reset_video` auf `1`. Versuchen Sie auch, die Variable `hw.acpi.sleep_delay` auf kürzere Zeitspannen zu setzen.
+
+Die Suspend- und Resume-Funktionen können Sie auch auf einer neuen Linux(R)-Distribution mit ACPI testen. Wenn es mit Linux(R) funktioniert, liegt das Problem wahrscheinlich bei einem FreeBSD-Treiber. Es hilft uns, das Problem zu lösen, wenn Sie feststellen können, welcher Treiber das Problem verursacht. Beachten Sie bitte, dass die ACPI-Entwickler normalerweise keine anderen Treiber pflegen (beispielsweise Sound- oder ATA-Treiber). Es ist wohl das beste, die Ergebnisse der Fehlersuche an die Mailingliste {freebsd-current} und den Entwickler des Treibers zu schicken. Erfahrene Benutzer können versuchen, den Fehler in der Resume-Funktion zu finden, indem sie einige man:printf[3]-Anweisungen in den Code des fehlerhaften Treibers einfügen.
+
+Schließlich können Sie ACPI noch abschalten und stattdessen APM verwenden. Wenn die Suspend- und Resume-Funktionen mit APM funktionieren, sollten Sie besser APM verwenden (insbesondere mit alter Hardware von vor dem Jahr 2000). Die Hersteller benötigten einige Zeit, um ACPI korrekt zu implementieren, daher gibt es mit älterer Hardware oft ACPI-Probleme.
+
+==== Systemhänger
+
+Die meisten Systemhänger entstehen durch verlorene Interrupts oder einen Interrupt-Sturm. Probleme werden verursacht durch die Art, in der das BIOS Interrupts vor dem Systemstart konfiguriert, durch eine fehlerhafte APIC-Tabelle und durch die Zustellung des System-Control-Interrupts (SCI).
+
+Anhand der Ausgabe des Befehls `vmstat -i` können Sie verlorene Interrupts von einem Interrupt-Sturm unterscheiden. Untersuchen Sie die Ausgabezeile, die `acpi0` enthält. Ein Interrupt-Sturm liegt vor, wenn der Zähler öfter als ein paar Mal pro Sekunde hochgezählt wird. Wenn sich das System aufgehangen hat, versuchen Sie mit der Tastenkombination kbd:[Ctrl+Alt+Esc] in den Debugger DDB zu gelangen. Geben Sie dort den Befehl `show interrupts` ein.
+
+Wenn Sie Interrupt-Probleme haben, ist es vorerst wohl am besten, APIC zu deaktivieren. Tragen Sie dazu die Zeile `hint.apic.0.disabled="1"` in [.filename]#/boot/loader.conf# ein.
+
+==== Abstürze (Panics)
+
+Panics werden so schnell wie möglich behoben; mit ACPI kommt es aber selten dazu. Zuerst sollten Sie die Panic reproduzieren und dann versuchen einen backtrace (eine Rückverfolgung der Funktionsaufrufe) zu erstellen. Richten Sie dazu den DDB über die serielle Schnittstelle (siehe crossref:serialcomms[serialconsole-ddb,“DDB Debugger über die serielle Schnittstelle”]) oder eine gesonderte man:dump[8]-Partition ein. In DDB können Sie den backtrace mit dem Kommando `tr` erstellen. Falls Sie den backtrace vom Bildschirm abschreiben müssen, schreiben Sie bitte mindestens die fünf ersten und die fünf letzten Zeile der Ausgabe auf.
+
+Versuchen Sie anschließend, das Problem durch einen Neustart ohne ACPI zu beseitigen. Wenn das funktioniert hat, können Sie versuchen, das verantwortliche ACPI-Subsystem durch Setzen der Variablen `debug.acpi.disable` herauszufinden. Die Hilfeseite man:acpi[4] enthält dazu einige Beispiele.
+
+==== Nach einem Suspend oder einem Stopp startet das System wieder
+
+Setzen Sie zuerst `hw.acpi.disable_on_poweroff="0"` in [.filename]#/boot/loader.conf#. Damit wird verhindert, dass ACPI während des Systemabschlusses die Bearbeitung verschiedener Ereignisse deaktiviert. Auf manchen Systemen muss die Variable den Wert `1` besitzen (die Voreinstellung). Normalerweise wird der unerwünschte Neustart des Systems durch Setzen dieser Variablen behoben.
+
+[[ACPI-aslanddump]]
+==== BIOS mit fehlerhaftem Bytecode
+
+Einige BIOS-Hersteller liefern einen fehlerhaften Bytecode aus. Dies erkennen Sie an Kernelmeldungen wie diesen:
+
+[source,bash]
+....
+ACPI-1287: *** Error: Method execution failed [\\_SB_.PCI0.LPC0.FIGD._STA] \\
+(Node 0xc3f6d160), AE_NOT_FOUND
+....
+
+Oft können Sie das Problem dadurch lösen, dass Sie eine aktuelle BIOS-Version einspielen. Die meisten Meldungen auf der Konsole sind harmlos, wenn aber beispielsweise der Batteriestatus falsch angezeigt wird, können Sie in den Meldungen nach Problemen suchen.
+
+=== Die voreingestellte ASL überschreiben
+
+Der BIOS-Bytecode, bekannt als ACPI Maschine Language (AML) wird aus der Sprache namens ACPI Source Language (ASL) übersetzt. Die AML ist in einer Tabelle, bekannt als Differentiated System Description Table (DSDT), abgelegt.
+
+Es ist das Ziel von FreeBSD, dass ACPI ohne Eingriffe des Benutzers läuft. Zurzeit werden allerdings noch Abhilfen für Fehler der BIOS-Hersteller entwickelt. Der Microsoft(R)-Interpreter ([.filename]#acpi.sys# und [.filename]#acpiec.sys#) prüft die ASL nicht streng gegen den Standard. Daher reparieren BIOS-Hersteller, die ACPI nur unter Windows(R) testen, ihre ASL nicht. Die FreeBSD Entwickler hoffen, dass sie das vom Standard abweichende Verhalten des Microsoft(R)-Interpreters dokumentieren und in FreeBSD replizieren können. Dadurch müssen Benutzer ihre ASL nicht selbst reparieren.
+
+Um bei der Fehlersuche zu helfen und das Problem möglicherweise zu beheben, kann eine Kopie der ASL gemacht werden. Dazu nutzen Sie `acpidump` zusammen mit `-t`, um den Inhalt der Tabelle anzuzeigen und `-d`, um die AML zu zerlegen:
+
+[source,bash]
+....
+# acpidump -td > my.asl
+....
+
+Einige AMLs gehen davon aus, dass der Anwender eine Windows(R)-Versionen benutzt. Versuchen Sie das Betriebssystem, das Sie in der ASL finden, in [.filename]#/boot/loader.conf# anzugeben: `hw.acpi.osname=_"Windows 2009"_`.
+
+Manche Abhilfen erfordern eine Anpassung von [.filename]#my.asl#. Wenn diese Datei bearbeitet wird, erstellen Sie die neue ASL mit dem folgenden Befehl. Warnung können meistens ignoriert werden, aber Fehler verhindern die ordnungsgemäße Funktion von ACPI.
+
+[source,bash]
+....
+# iasl -f my.asl
+....
+
+Die Option `-f` erzwingt das Erstellen der AML auch dann, wenn während der Übersetzung Fehler auftreten. Einige Fehler, wie fehlende Return-Anweisungen, werden automatisch vom FreeBSD Interpreter umgangen.
+
+Die voreingestellte Ausgabedatei von `iasl` ist [.filename]#DSDT.aml#. Wenn Sie diese Datei anstelle der fehlerhaften Kopie des BIOS laden wollen, editieren Sie [.filename]#/boot/loader.conf# wie folgt:
+
+[.programlisting]
+....
+acpi_dsdt_load="YES"
+acpi_dsdt_name="/boot/DSDT.aml"
+....
+
+Stellen Sie bitte sicher, dass sich [.filename]#DSDT.aml# in [.filename]#/boot# befindet und starten Sie das System neu. Wenn dadurch das Problem behoben wird, schicken Sie einen man:diff[1] der alten und der neuen ASL an {freebsd-acpi}, damit die Entwickler das Problem in [.filename]#acpica# umgehen können.
+
+[[ACPI-submitdebug]]
+=== Abrufen und Einreichen von Informationen zur Fehlersuche
+
+Der ACPI-Treiber besitzt flexible Möglichkeiten zur Fehlersuche. Sie können sowohl die zu untersuchenden Subsysteme als auch die zu erzeugenden Ausgaben festlegen. Die zu untersuchenden Subsysteme werden als "layer" angegeben und in Komponenten (`ACPI_ALL_COMPONENTS`) und ACPI-Hardware (`ACPI_ALL_DRIVERS`) aufgeteilt. Welche Meldungen ausgegeben werden, wird über "level" gesteuert. Die Level reichen von von `ACPI_LV_ERROR` (es werden nur Fehler ausgegeben) bis zu `ACPI_LV_VERBOSE` (alles wird ausgegeben). Das Level ist eine Bitmaske, sodass verschiedene Stufen auf einmal (durch Leerzeichen getrennt) angegeben werden können. Die erzeugte Ausgabemenge passt vielleicht nicht in den Konsolenpuffer. In diesem Fall sollte die Ausgabe mithilfe einer seriellen Konsole gesichert werden. Die möglichen Werte für "layers" und "level" werden in man:acpi[4] beschrieben.
+
+Die Ausgaben zur Fehlersuche sind in der Voreinstellung nicht aktiviert. Wenn ACPI im Kernel enthalten ist, fügen Sie `options ACPI_DEBUG` zur Kernelkonfigurationsdatei hinzu. Sie können die Ausgaben zur Fehlersuche global aktivieren, indem Sie in der Datei [.filename]#/etc/make.conf# die Zeile `ACPI_DEBUG=1` einfügen. Das Modul [.filename]#acpi.ko# können Sie wie folgt neu übersetzen:
+
+[source,bash]
+....
+# cd /sys/modules/acpi/acpi && make clean && make ACPI_DEBUG=1
+....
+
+Kopieren Sie anschließend [.filename]#acpi.ko# ins Verzeichnis [.filename]#/boot/kernel#. In [.filename]#/boot/loader.conf# stellen Sie "level" und "layer" ein. Das folgende Beispiel aktiviert die Ausgabe von Fehlern für alle ACPI-Komponenten und alle Hardwaretreiber:
+
+[.programlisting]
+....
+debug.acpi.layer="ACPI_ALL_COMPONENTS ACPI_ALL_DRIVERS"
+debug.acpi.level="ACPI_LV_ERROR"
+....
+
+Wenn ein Problem durch ein bestimmtes Ereignis, beispielsweise den Start nach einem Ruhezustand, hervorgerufen wird, können Sie die Einstellungen für "level" und "layer" auch mit dem Kommando `sysctl` vornehmen. In diesem Fall müssen Sie [.filename]#/boot/loader.conf# nicht editieren. Auf der Kommandozeile geben Sie über `sysctl` dieselben Variablennamen wie in [.filename]#/boot/loader.conf# an.
+
+Sobald Sie die Fehlerinformationen gesammelt haben, schicken Sie diese an {freebsd-acpi}, sodass die Betreuer des FreeBSD-ACPI-Subsystems diese Informationen zur Analyse und für die Entwicklung einer Lösung verwenden können.
+
+[NOTE]
+====
+Bevor Sie einen Fehlerbericht an diese Mailingliste einreichen, stellen Sie bitte sicher, dass das BIOS und die Firmware des Controllers aktuell sind.
+====
+
+Wenn Sie einen Fehlerbericht einsenden, fügen Sie bitte die folgenden Informationen ein:
+
+* Beschreiben Sie den Fehler und alle Umstände, unter denen der Fehler auftritt. Geben Sie ebenfalls den Typ und das Modell Ihres Systems an. Wenn Sie einen neuen Fehler entdeckt haben, versuchen Sie möglichst genau zu beschreiben, wann der Fehler das erste Mal aufgetreten ist.
+* Die Ausgabe von `dmesg` nach der Eingabe von `boot -v`. Geben Sie auch alle Fehlermeldungen an, die erscheinen, wenn Sie den Fehler provozieren.
+* Die Ausgabe von `dmesg` nach der Eingabe von `boot -v` und mit deaktiviertem ACPI, wenn das Problem ohne ACPI nicht auftritt.
+* Die Ausgabe von `sysctl hw.acpi`. Dieses Kommando zeigt die vom System unterstützten ACPI-Funktionen an.
+* Die URL, unter der die ASL liegt. Schicken Sie bitte _nicht_ die ASL an die Mailingliste, da die ASL sehr groß sein kann. Eine Kopie der ASL erstellen Sie mit dem nachstehenden Befehl:
++
+[source,bash]
+....
+# acpidump -td > name-system.asl
+....
++ 
+Setzen Sie für _name_ den Namen des Kontos und für _system_ den Hersteller und das Modell des Systems ein. Zum Beispiel: [.filename]#njl-FooCo6000.asl#.
+
+Obwohl die meisten Entwickler die Mailingliste {freebsd-current} lesen, sollten Sie Fehlerberichte an die Liste {freebsd-acpi} schicken. Seien Sie bitte geduldig; wir haben alle Arbeit außerhalb des Projekts. Wenn der Fehler nicht offensichtlich ist, bitten wir Sie vielleicht, einen offiziellen Fehlerbericht (PR) einzusenden. Geben Sie im Fehlerbericht bitte dieselben Informationen wie oben an. Mithilfe der PRs verfolgen und lösen wir Probleme. Senden Sie bitte keinen PR ein, ohne vorher den Fehlerbericht an die Liste {freebsd-acpi} zu senden. Es kann sein, dass der Fehler schon von jemand anderem gemeldet wurde.
+
+[[ACPI-References]]
+=== Referenzen
+
+Weitere Informationen über ACPI finden Sie hier:
+
+* Die FreeBSD ACPI Mailingliste (https://lists.freebsd.org/pipermail/freebsd-acpi/[https://lists.freebsd.org/pipermail/freebsd-acpi/])
+* Die ACPI 2.0 Spezifikation (http://acpi.info/spec.htm[http://acpi.info/spec.htm])
+* man:acpi[4], man:acpi_thermal[4], man:acpidump[8], man:iasl[8] und man:acpidb[8]

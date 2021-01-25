@@ -1,0 +1,529 @@
+---
+title: Chapter 10. Testing the Port
+prev: books/porters-handbook/pkg-files
+next: books/porters-handbook/upgrading
+---
+
+[[testing]]
+= Testing the Port
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: 目录
+:part-signifier: 部分
+:chapter-signifier: 第
+:appendix-caption: 附录
+:table-caption: 表
+:figure-caption: 图
+:example-caption: 例 
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 10
+
+include::shared/mirrors.adoc[]
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/zh-tw/mailing-lists.adoc[]
+include::shared/zh-tw/urls.adoc[]
+
+toc::[]
+
+[[make-describe]]
+== Running `make describe`
+
+Several of the FreeBSD port maintenance tools, such as man:portupgrade[1], rely on a database called [.filename]#/usr/ports/INDEX# which keeps track of such items as port dependencies. [.filename]#INDEX# is created by the top-level [.filename]#ports/Makefile# via `make index`, which descends into each port subdirectory and executes `make describe` there. Thus, if `make describe` fails in any port, no one can generate [.filename]#INDEX#, and many people will quickly become unhappy.
+
+[NOTE]
+====
+It is important to be able to generate this file no matter what options are present in [.filename]#make.conf#, so please avoid doing things such as using `.error` statements when (for instance) a dependency is not satisfied. (See <<dads-dot-error>>.)
+====
+
+If `make describe` produces a string rather than an error message, everything is probably safe. See [.filename]#bsd.port.mk# for the meaning of the string produced.
+
+Also note that running a recent version of `portlint` (as specified in the next section) will cause `make describe` to be run automatically.
+
+[[testing-portlint]]
+== Portlint
+
+Do check the port with <<porting-portlint,`portlint`>> before submitting or committing it. `portlint` warns about many common errors, both functional and stylistic. For a new (or repocopied) port, `portlint -A` is the most thorough; for an existing port, `portlint -C` is sufficient.
+
+Since `portlint` uses heuristics to try to figure out errors, it can produce false positive warnings. In addition, occasionally something that is flagged as a problem really cannot be done in any other way due to limitations in the ports framework. When in doubt, the best thing to do is ask on {freebsd-ports}.
+
+[[testing-porttools]]
+== Port Tools
+
+The package:ports-mgmt/porttools[] program is part of the Ports Collection.
+
+`port` is the front-end script, which can help simplify the testing job. Whenever a new port or an update to an existing one needs testing, use `port test` to test the port, including the <<testing-portlint,`portlint`>> checking. This command also detects and lists any files that are not listed in [.filename]#pkg-plist#. For example:
+
+[source,bash]
+....
+# port test /usr/ports/net/csup
+....
+
+[[porting-prefix]]
+== `PREFIX` and `DESTDIR`
+
+`PREFIX` determines where the port will be installed. It defaults to [.filename]#/usr/local#, but can be set by the user to a custom path like [.filename]#/opt#. The port must respect the value of this variable.
+
+`DESTDIR`, if set by the user, determines the complete alternative environment, usually a jail or an installed system mounted somewhere other than [.filename]#/#. A port will actually install into [.filename]#DESTDIR/PREFIX#, and register with the package database in [.filename]#DESTDIR/var/db/pkg#. As `DESTDIR` is handled automatically by the ports infrastructure with man:chroot[8]. There is no need for modifications or any extra care to write `DESTDIR`-compliant ports.
+
+The value of `PREFIX` will be set to `LOCALBASE` (defaulting to [.filename]#/usr/local#). If `USE_LINUX_PREFIX` is set, `PREFIX` will be `LINUXBASE` (defaulting to [.filename]#/compat/linux#).
+
+Avoiding hard-coded [.filename]#/usr/local# paths in the source makes the port much more flexible and able to cater to the needs of other sites. Often, this can be accomplished by replacing occurrences of [.filename]#/usr/local# in the port's various [.filename]##Makefile##s with `${PREFIX}`. This variable is automatically passed down to every stage of the build and install processes.
+
+Make sure the application is not installing things in [.filename]#/usr/local# instead of `PREFIX`. A quick test for such hard-coded paths is:
+
+[source,bash]
+....
+% make clean; make package PREFIX=/var/tmp/`make -V PORTNAME`
+....
+
+If anything is installed outside of `PREFIX`, the package creation process will complain that it cannot find the files.
+
+In addition, it is worth checking the same with the stage directory support (see <<staging>>):
+
+[source,bash]
+....
+% make stage && make check-plist && make stage-qa && make package
+....
+
+* `check-plist` checks for files missing from the plist, and files in the plist that are not installed by the port.
+* `stage-qa` checks for common problems like bad shebang, symlinks pointing outside the stage directory, setuid files, and non-stripped libraries...
+
+These tests will not find hard-coded paths inside the port's files, nor will it verify that `LOCALBASE` is being used to correctly refer to files from other ports. The temporarily-installed port in [.filename]#/var/tmp/`make -V PORTNAME`# must be tested for proper operation to make sure there are no problems with paths.
+
+`PREFIX` must not be set explicitly in a port's [.filename]#Makefile#. Users installing the port may have set `PREFIX` to a custom location, and the port must respect that setting.
+
+Refer to programs and files from other ports with the variables mentioned above, not explicit pathnames. For instance, if the port requires a macro `PAGER` to have the full pathname of `less`, do not use a literal path of [.filename]#/usr/local/bin/less#. Instead, use `${LOCALBASE}`:
+
+[.programlisting]
+....
+-DPAGER=\"${LOCALBASE}/bin/less\"
+....
+
+The path with `LOCALBASE` is more likely to still work if the system administrator has moved the whole [.filename]#/usr/local# tree somewhere else.
+
+[TIP]
+====
+
+All these tests are done automatically when running `poudriere testport` or `poudriere bulk -t`. It is highly recommended that every ports contributor install and test their ports with it. See <<testing-poudriere>> for more information.
+====
+
+[[testing-poudriere]]
+== Poudriere
+
+For a ports contributor, Poudriere is one of the most important and helpful testing and build tools. Its main features include:
+
+* Bulk building of the entire ports tree, specific subsets of the ports tree, or a single port including its dependencies
+* Automatic packaging of build results
+* Generation of build log files per port
+* Providing a signed man:pkg[8] repository
+* Testing of port builds before submitting a patch to the FreeBSD bug tracker or committing to the ports tree
+* Testing for successful ports builds using different options
+
+Because Poudriere performs its building in a clean man:jail[8] environment and uses man:zfs[8] features, it has several advantages over traditional testing on the host system:
+
+* No pollution of the host environment: No leftover files, no accidental removals, no changes of existing configuration files.
+* Verify [.filename]#pkg-plist# for missing or superfluous entries
+* Ports committers sometimes ask for a Poudriere log alongside a patch submission to assess whether the patch is ready for integration into the ports tree
+
+It is also quite straightforward to set up and use, has no dependencies, and will run on any supported FreeBSD release. This section shows how to install, configure, and run Poudriere as part of the normal workflow of a ports contributor.
+
+The examples in this section show a default file layout, as standard in FreeBSD. Substitute any local changes accordingly. The ports tree, represented by `${PORTSDIR}`, is located in [.filename]#/usr/ports#. Both `${LOCALBASE}` and `${PREFIX}` are [.filename]#/usr/local# by default.
+
+[[testing-poudriere-installing]]
+=== Installing Poudriere
+
+Poudriere is available in the ports tree in package:ports-mgmt/poudriere[]. It can be installed using man:pkg[8] or from ports:
+
+[source,bash]
+....
+# pkg install poudriere
+....
+
+or
+
+[source,bash]
+....
+# make -C /usr/ports/ports-mgmt/poudriere install clean
+....
+
+There is also a work-in-progress version of Poudriere which will eventually become the next release. It is available in package:ports-mgmt/poudriere-devel[]. This development version is used for the official FreeBSD package builds, so it is well tested. It often has newer interesting features. A ports committer will want to use the development version because it is what is used in production, and has all the new features that will make sure everything is exactly right. A contributor will not necessarily need those as the most important fixes are backported to released version. The main reason for the use of the development version to build the official package is because it is faster, in a way that will shorten a full build from 18 hours to 17 hours when using a high end 32 CPU server with 128GB of RAM. Those optimizations will not matter a lot when building ports on a desktop machine.
+
+[[testing-poudriere-setup]]
+=== Setting Up Poudriere
+
+The port installs a default configuration file, [.filename]#/usr/local/etc/poudriere.conf#. Each parameter is documented in the configuration file and in man:poudriere[8]. Here is a minimal example config file:
+
+[.programlisting]
+....
+ZPOOL=tank
+ZROOTFS=/poudriere
+BASEFS=/poudriere
+DISTFILES_CACHE=/usr/ports/distfiles
+RESOLV_CONF=/etc/resolv.conf
+FREEBSD_HOST=ftp://ftp.freebsd.org
+SVN_HOST=svn.FreeBSD.org
+....
+
+`ZPOOL`::
+The name of the ZFS storage pool which Poudriere shall use. Must be listed in the output of `zpool status`.
+
+`ZROOTFS`::
+The root of Poudriere-managed file systems. This entry will cause Poudriere to create man:zfs[8] file systems under `tank/poudriere`.
+
+`BASEFS`::
+The root mount point for Poudriere file systems. This entry will cause Poudriere to mount `tank/poudriere` to `/poudriere`.
+
+`DISTFILES_CACHE`::
+Defines where distfiles are stored. In this example, Poudriere and the host share the distfiles storage directory. This avoids downloading tarballs which are already present on the system. Please create this directory if it does not already exist so that Poudriere can find it.
+
+`RESOLV_CONF`::
+Use the host [.filename]#/etc/resolv.conf# inside jails for DNS. This is needed so jails can resolve the URLs of distfiles when downloading. It is not needed when using a proxy. Refer to the default configuration file for proxy configuration.
+
+`FREEBSD_HOST`::
+The FTP/HTTP server to use when the jails are installed from FreeBSD releases and updated with man:freebsd-update[8]. Choose a server location which is close, for example if the machine is located in Australia, use `ftp.au.freebsd.org`.
+
+`SVN_HOST`::
+The server from where jails are installed and updated when using Subversion. Also used for ports tree when not using man:portsnap[8]. Again, choose a nearby location. A list of official Subversion mirrors can be found in the link:{handbook}#svn-mirrors[FreeBSD Handbook Subversion section].
+
+[[testing-poudriere-create-jails]]
+=== Creating Poudriere Jails
+
+Create the base jails which Poudriere will use for building:
+
+[source,bash]
+....
+# poudriere jail -c -j 113Ramd64 -v 11.3-RELEASE -a amd64
+....
+
+Fetch a `11.3-RELEASE` for `amd64` from the FTP server given by `FREEBSD_HOST` in [.filename]#poudriere.conf#, create the zfs file system `tank/poudriere/jails/113Ramd64`, mount it on [.filename]#/poudriere/jails/113Ramd64# and extract the `11.3-RELEASE` tarballs into this file system.
+
+[source,bash]
+....
+# poudriere jail -c -j 11i386 -v stable/11 -a i386 -m svn+https
+....
+
+Create `tank/poudriere/jails/11i386`, mount it on [.filename]#/poudriere/jails/11i386#, then check out the tip of the Subversion branch of `FreeBSD-11-STABLE` from `SVN_HOST` in [.filename]#poudriere.conf# into [.filename]#/poudriere/jails/11i386/usr/src#, then complete a `buildworld` and install it into [.filename]#/poudriere/jails/11i386#.
+
+[TIP]
+====
+
+If a specific Subversion revision is needed, append it to the version string. For example:
+
+[source,bash]
+....
+# poudriere jail -c -j 11i386 -v stable/11@123456 -a i386 -m svn+https
+....
+
+====
+
+[NOTE]
+====
+While it is possible to build a newer version of FreeBSD on an older version, most of the time it will not run. For example, if a `stable/11` jail is needed, the host will have to run `stable/11` too. Running `11.3-RELEASE` is not enough.
+====
+
+[NOTE]
+====
+To create a Poudriere jail for `13.0-CURRENT`:
+
+[source,bash]
+....
+# poudriere jail -c -j 13amd64 -v head -a amd64 -m svn+https
+....
+
+In order to run a `13.0-CURRENT` Poudriere jail you must be running `13.0-CURRENT`. In general, newer kernels can build and run older jails. For instance, a `13.0-CURRENT` kernel can build and run a `11.3-STABLE` Poudriere jail if the `COMPAT_FREEBSD11` kernel option was compiled in (on by default in `13.0-CURRENT`[.filename]#GENERIC# kernel config).
+====
+
+[CAUTION]
+====
+
+The default `svn` protocol works but is not very secure. Using `svn+https` along with verifying the remote server's SSL fingerprint is advised. It will ensure that the files used for building the jail are from a trusted source.
+====
+
+A list of jails currently known to Poudriere can be shown with `poudriere jail -l`:
+
+[source,bash]
+....
+# poudriere jail -l
+JAILNAME             VERSION              ARCH    METHOD
+113Ramd64            11.3-RELEASE         amd64   ftp
+11i386               11.3-STABLE          i386    svn+https
+....
+
+[[testing-poudriere-maintaining-jails]]
+=== Keeping Poudriere Jails Updated
+
+Managing updates is very straightforward. The command:
+
+[source,bash]
+....
+# poudriere jail -u -j JAILNAME
+....
+
+updates the specified jail to the latest version available. For FreeBSD releases, update to the latest patchlevel with man:freebsd-update[8]. For FreeBSD versions built from source, update to the latest Subversion revision in the branch.
+
+[TIP]
+====
+
+For jails employing a `svn+*` method, it is helpful to add `-J _NumberOfParallelBuildJobs_` to speed up the build by increasing the number of parallel compile jobs used. For example, if the building machine has 6 CPUs, use:
+
+[source,bash]
+....
+# poudriere jail -u -J 6 -j JAILNAME
+....
+
+====
+
+[[testing-poudriere-ports-tree]]
+=== Setting Up Ports Trees for Use with Poudriere
+
+There are multiple ways to use ports trees in Poudriere. The most straightforward way is to have Poudriere create a default ports tree for itself, using either man:portsnap[8] (if running FreeBSD {rel121-current} or {rel114-current}) or Subversion (if running FreeBSD-CURRENT):
+
+[source,bash]
+....
+# poudriere ports -c -m portsnap
+....
+
+or
+
+[source,bash]
+....
+# poudriere ports -c -m svn+https
+....
+
+These commands create `tank/poudriere/ports/default`, mount it on [.filename]#/poudriere/ports/default#, and populate it using either man:portsnap[8] or Subversion. Afterward it is included in the list of known ports trees:
+
+[source,bash]
+....
+# poudriere ports -l
+PORTSTREE METHOD    TIMESTAMP           PATH
+default   svn+https 2020-07-20 04:23:56 /poudriere/ports/default
+....
+
+[NOTE]
+====
+Note that the "default" ports tree is special. Each of the build commands explained later will implicitly use this ports tree unless specifically specified otherwise. To use another tree, add `-p _treename_` to the commands.
+====
+
+While useful for regular bulk builds, having this default ports tree with the man:portsnap[8] method may not be the best way to deal with local modifications for a ports contributor. As with the creation of jails, it is possible to use a different method for creating the ports tree. To add an additional ports tree for testing local modifications and ports development, checking out the tree via Subversion (as described above) is preferable.
+
+[NOTE]
+====
+The http and https methods need package:devel/subversion[] built with the `SERF` option enabled. It is enabled by default.
+====
+
+[TIP]
+====
+
+The `svn` method allows extra qualifiers to tell Subversion exactly how to fetch data. This is explained in man:poudriere[8]. For instance, `poudriere ports -c -m svn+ssh -p subversive` uses SSH for the checkout.
+====
+
+[[testing-poudriere-ports-tree-manual]]
+=== Using Manually Managed Ports Trees with Poudriere
+
+Depending on the workflow, it can be extremely helpful to use ports trees which are maintained manually. For instance, if there is a local copy of the ports tree in [.filename]#/work/ports#, point Poudriere to the location:
+
+* For Poudriere older than version 3.1.20:
++
+[source,bash]
+....
+# poudriere ports -c -F -f none -M /work/ports -p development
+....
+
+* For Poudriere version 3.1.20 and later:
++
+[source,bash]
+....
+# poudriere ports -c -m null -M /work/ports -p development
+....
+
+This will be listed in the table of known trees:
+
+[source,bash]
+....
+# poudriere ports -l
+PORTSTREE   METHOD    TIMESTAMP           PATH
+development null      2020-07-20 05:06:33 /work/ports
+....
+
+[NOTE]
+====
+The dash or `null` in the `METHOD` column means that Poudriere will not update or change this ports tree, ever. It is completely up to the user to maintain this tree, including all local modifications that may be used for testing new ports and submitting patches.
+====
+
+[[testing-poudriere-ports-tree-updating]]
+=== Keeping Poudriere Ports Trees Updated
+
+As straightforward as with jails described earlier:
+
+[source,bash]
+....
+# poudriere ports -u -p PORTSTREE
+....
+
+Will update the given _PORTSTREE_, one tree given by the output of `poudriere -l`, to the latest revision available on the official servers.
+
+[NOTE]
+====
+Ports trees without a method, see <<testing-poudriere-ports-tree-manual>>, cannot be updated like this. They must be updated manually by the porter.
+====
+
+[[testing-poudriere-testing-ports]]
+=== Testing Ports
+
+After jails and ports trees have been set up, the result of a contributor's modifications to the ports tree can be tested.
+
+For example, local modifications to the package:www/firefox[] port located in [.filename]#/work/ports/www/firefox# can be tested in the previously created 11.3-RELEASE jail:
+
+[source,bash]
+....
+# poudriere testport -j 113Ramd64 -p development -o www/firefox
+....
+
+This will build all dependencies of Firefox. If a dependency has been built previously and is still up-to-date, the pre-built package is installed. If a dependency has no up-to-date package, one will be built with default options in a jail. Then Firefox itself is built.
+
+The complete build of every port is logged to [.filename]#/poudriere/data/logs/bulk/113Ri386-development/build-time/logs#.
+
+The directory name `113Ri386-development` is derived from the arguments to `-j` and `-p`, respectively. For convenience, a symbolic link [.filename]#/poudriere/data/logs/bulk/113Ri386-development/latest# is also maintained. The link points to the latest _build-time_ directory. Also in this directory is an [.filename]#index.html# for observing the build process with a web browser.
+
+By default, Poudriere cleans up the jails and leaves log files in the directories mentioned above. To ease investigation, jails can be kept running after the build by adding `-i` to `testport`:
+
+[source,bash]
+....
+# poudriere testport -j 113Ramd64 -p development -i -o www/firefox
+....
+
+After the build completes, and regardless of whether it was successful, a shell is provided within the jail. The shell is used to investigate further. Poudriere can be told to leave the jail running after the build finishes with `-I`. Poudriere will show the command to run when the jail is no longer needed. It is then possible to man:jexec[8] into it:
+
+[source,bash]
+....
+# poudriere testport -j 113Ramd64 -p development -I -o www/firefox
+[...]
+====>> Installing local Pkg repository to /usr/local/etc/pkg/repos
+====>> Leaving jail 113Ramd64-development-n running, mounted at /poudriere/data/.m/113Ramd64-development/ref for interactive run testing
+====>> To enter jail: jexec 113Ramd64-development-n env -i TERM=$TERM /usr/bin/login -fp root
+====>> To stop jail: poudriere jail -k -j 113Ramd64 -p development
+# jexec 113Ramd64-development-n env -i TERM=$TERM /usr/bin/login -fp root
+# [do some stuff in the jail]
+# exit
+# poudriere jail -k -j 113Ramd64 -p development
+====>> Umounting file systems
+....
+
+An integral part of the FreeBSD ports build infrastructure is the ability to tweak ports to personal preferences with options. These can be tested with Poudriere as well. Adding the `-c`:
+
+[source,bash]
+....
+# poudriere testport -c -o www/firefox
+....
+
+Presents the port configuration dialog before the port is built. The ports given after `-o` in the format `_category_/_portname_` will use the specified options, all dependencies will use the default options. Testing dependent ports with non-default options can be accomplished using sets, see <<testing-poudriere-sets>>.
+
+[TIP]
+====
+
+When testing ports where [.filename]#pkg-plist# is altered during build depending on the selected options, it is recommended to perform a test run with all options selected _and_ one with all options deselected.
+====
+
+[[testing-poudriere-sets]]
+=== Using Sets
+
+For all actions involving builds, a so-called _set_ can be specified using `-z _setname_`. A set refers to a fully independent build. This allows, for instance, usage of `testport` with non-standard options for the dependent ports.
+
+To use sets, Poudriere expects an existing directory structure similar to `PORT_DBDIR`, defaults to [.filename]#/var/db/ports# in its configuration directory. This directory is then man:nullfs[5]-mounted into the jails where the ports and their dependencies are built. Usually a suitable starting point can be obtained by recursively copying the existing `PORT_DBDIR` to [.filename]#/usr/local/etc/poudriere.d/jailname-portname-setname-options#. This is described in detail in man:poudriere[8]. For instance, testing package:www/firefox[] in a specific set named `devset`, add the `-z devset` parameter to the testport command:
+
+[source,bash]
+....
+# poudriere testport -j 113Ramd64 -p development -z devset -o www/firefox
+....
+
+This will look for the existence of these directories in this order:
+
+* [.filename]#/usr/local/etc/poudriere.d/113Ramd64-development-devset-options#
+* [.filename]#/usr/local/etc/poudriere.d/113Ramd64-devset-options#
+* [.filename]#/usr/local/etc/poudriere.d/113Ramd64-development-options#
+* [.filename]#/usr/local/etc/poudriere.d/devset-options#
+* [.filename]#/usr/local/etc/poudriere.d/development-options#
+* [.filename]#/usr/local/etc/poudriere.d/113Ramd64-options#
+* [.filename]#/usr/local/etc/poudriere.d/options#
+
+From this list, Poudriere man:nullfs[5]-mounts the _first existing_ directory tree into the [.filename]#/var/db/ports# directory of the build jails. Hence, all custom options are used for all the ports during this run of `testport`.
+
+After the directory structure for a set is provided, the options for a particular port can be altered. For example:
+
+[source,bash]
+....
+# poudriere options -c www/firefox -z devset
+....
+
+The configuration dialog for package:www/firefox[] is shown, and options can be edited. The selected options are saved to the `devset` set.
+
+[NOTE]
+====
+Poudriere is very flexible in the option configuration. They can be set for particular jails, ports trees, and for multiple ports by one command. Refer to man:poudriere[8] for details.
+====
+
+[[testing-poudriere-make-conf]]
+=== Providing a Custom [.filename]#make.conf# File
+
+Similar to using sets, Poudriere will also use a custom [.filename]#make.conf# if it is provided. No special command line argument is necessary. Instead, Poudriere looks for existing files matching a name scheme derived from the command line. For instance:
+
+[source,bash]
+....
+# poudriere testport -j 113Ramd64 -p development -z devset -o www/firefox
+....
+
+causes Poudriere to check for the existence of these files in this order:
+
+* [.filename]#/usr/local/etc/poudriere.d/make.conf#
+* [.filename]#/usr/local/etc/poudriere.d/devset-make.conf#
+* [.filename]#/usr/local/etc/poudriere.d/development-make.conf#
+* [.filename]#/usr/local/etc/poudriere.d/113Ramd64-make.conf#
+* [.filename]#/usr/local/etc/poudriere.d/113Ramd64-development-make.conf#
+* [.filename]#/usr/local/etc/poudriere.d/113Ramd64-devset-make.conf#
+* [.filename]#/usr/local/etc/poudriere.d/113Ramd64-development-devset-make.conf#
+
+Unlike with sets, all of the found files will be appended, _in that order_, into one [.filename]#make.conf# inside the build jails. It is hence possible to have general make variables, intended to affect all builds in [.filename]#/usr/local/etc/poudriere.d/make.conf#. Special variables, intended to affect only certain jails or sets can be set in specialised [.filename]#make.conf# files, such as [.filename]#/usr/local/etc/poudriere.d/113Ramd64-development-devset-make.conf#.
+
+[[testing-poudriere-sets-perl]]
+.Using [.filename]#make.conf# to Change Default Perl
+[example]
+====
+
+To build a set with a non default Perl version, for example, `5.20`, using a set named `perl5-20`, create a [.filename]#perl5-20-make.conf# with this line:
+
+[.programlisting]
+....
+DEFAULT_VERSIONS+= perl=5.20
+....
+[NOTE]
+****
+Note the use of `+=` so that if the variable is already set in the default [.filename]#make.conf# its content will not be overwritten.
+****
+
+====
+
+[[testing-poudriere-pruning-distfiles]]
+=== Pruning no Longer Needed Distfiles
+
+Poudriere comes with a built-in mechanism to remove outdated distfiles that are no longer used by any port of a given tree. The command
+
+[source,bash]
+....
+# poudriere distclean -p portstree
+....
+
+will scan the distfiles folder, `DISTFILES_CACHE` in [.filename]#poudriere.conf#, versus the ports tree given by the `-p _portstree_` argument and prompt for removal of those distfiles. To skip the prompt and remove all unused files unconditionally, the `-y` argument can be added:
+
+[source,bash]
+....
+# poudriere distclean -p portstree -y
+....

@@ -1,0 +1,1167 @@
+---
+title: Hoofdstuk 9. De FreeBSD-kernel instellen
+part: Deel II. Algemene taken
+prev: books/handbook/multimedia
+next: books/handbook/printing
+---
+
+[[kernelconfig]]
+= De FreeBSD-kernel instellen
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Inhoudsopgave
+:table-caption: Tabel
+:figure-caption: Afbeelding
+:example-caption: Voorbeeld
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 9
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/kernelconfig/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/kernelconfig/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/kernelconfig/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/nl/mailing-lists.adoc[]
+include::shared/nl/teams.adoc[]
+include::shared/nl/urls.adoc[]
+
+toc::[]
+
+[[kernelconfig-synopsis]]
+== Samenvatting
+
+De kernel is de kern van het FreeBSD-besturingssysteem en is verantwoordelijk voor het geheugenbeheer, het opleggen van beveiligingsregels, het aansturen van het netwerk, de toegang tot schijven en nog veel meer. Hoewel steeds meer in FreeBSD dynamisch instelbaar wordt, is het af en toe nodig om de kernel opnieuw in te stellen en te compileren.
+
+Na het lezen van dit hoofdstuk weet de lezer:
+
+* Waarom het nodig is om een aangepaste kernel te bouwen;
+* Hoe een nieuw kernelinstellingenbestand te schrijven of een bestaand kernelinstellingenbestand aan te passen;
+* Hoe het kernelinstellingenbestand te gebruiken om een nieuwe kernel aan te maken en te bouwen;
+* Hoe een nieuwe kernel te installeren;
+* Hoe problemen op te lossen als er iets verkeerd gaat.
+
+Alle opdrachten die in dit hoofdstuk als voorbeeld zijn gegeven moeten als `root` uitgevoerd worden om te slagen.
+
+[[kernelconfig-custom-kernel]]
+== Redenen om een aangepaste kernel te bouwen
+
+Traditioneel heeft FreeBSD zoals dat heet een "monolitische" kernel gehad. Dit betekent dat de kernel één groot programma was, een vaste lijst van apparaten ondersteunde en als het gewenst was om het gedrag van de kernel te veranderen, moest er een nieuwe kernel gecompileerd worden en moest daarna de computer opnieuw gestart worden met de nieuwe kernel.
+
+Vandaag de dag beweegt FreeBSD zich snel naar een model waar veel van de functionaliteit van de kernel in modules zit die dynamisch in en uit de kernel kunnen worden geladen, naargelang dat noodzakelijk is. Dit stelt de kernel in staat om zich aan nieuwe hardware aan te passen die plotseling beschikbaar komt (zoals PCMCIA-kaarten in een laptop) of om nieuwe functionaliteit in zich op te nemen die niet noodzakelijk was toen de kernel oorspronkelijk werd gecompileerd. Dit staat bekend als een modulaire kernel.
+
+Desondanks is het nog steeds nodig om enkele dingen van de kernel statisch in te stellen. In sommige gevallen komt dit doordat de functionaliteit zo diep geworteld zit in de kernel dat het niet dynamisch laadbaar gemaakt kan worden. In andere gevallen kan het simpelweg komen doordat nog niemand de tijd heeft genomen om een dynamisch laadbare kernelmodule voor die functionaliteit te schrijven.
+
+Het bouwen van een aangepaste kernel is een van de meest belangrijke beproevingen die geavanceerde BSD-gebruikers moet doorstaan. Hoewel dit proces veel tijd in beslag neemt, levert het veel voordelen op voor een FreeBSD systeem. In tegenstelling tot de [.filename]#GENERIC#-kernel, die vele typen hardware moet ondersteunen, ondersteunt een aangepaste kernel alleen de hardware van de computer waar hij voor gemaakt is. Dit biedt een aantal voordelen, zoals:
+
+* Een snellere opstarttijd. Aangezien de kernel alleen de hardware zoekt die zich in het systeem bevindt, kan de tijd die het systeem nodig heeft om op te starten aanzienlijk korter worden;
+* Minder geheugengebruik. Een aangepaste kernel gebruikt vaak minder geheugen dan de [.filename]#GENERIC#-kernel door ongebruikte mogelijkheden en apparaatstuurprogramma's weg te laten. Dit is van belang aangezien de kernelcode altijd in het fysieke geheugen aanwezig blijft, waardoor dit geheugen niet door applicaties gebruikt kan worden. Om deze reden is een aangepaste kernel geknipt voor een systeem met een kleine hoeveelheid RAM;
+* Aanvullende hardware-ondersteuning. Een aangepaste kernel kan ingebouwde ondersteuning bieden voor apparaten die zich niet in de [.filename]#GENERIC#-kernel bevinden, zoals geluidskaarten.
+
+[[kernelconfig-devices]]
+== De systeemhardware vinden
+
+Alvorens in de kernelconfiguratie te duiken, zou het verstandig zijn om een inventarisatie van de hardware van de machine te maken. In het geval dat FreeBSD niet het primaire besturingssysteem is, kan de inventarisatielijst eenvoudig worden gemaakt door de configuratie van het huidige besturingssysteem te bekijken. De Device Manager van Microsoft(R) bijvoorbeeld bevat normaliter belangrijke informatie over geïnstalleerde apparaten. De Device Manager bevindt zich in het controlepaneel.
+
+[NOTE]
+====
+Sommige versies van Microsoft(R) Windows(R) hebben een icoon System dat een scherm weer zal geven waarmee Device Manager kan worden benaderd.
+====
+
+Als er geen ander besturingssysteem op de machine staat, moet de beheerder deze informatie handmatig vinden. Eén manier is om de gereedschappen man:dmesg[8] en man:man[1] te gebruiken. De meeste apparaatstuurprogramma's van FreeBSD hebben een handleiding, die de ondersteunde hardware noemen, en tijdens het opstarten wordt gevonden hardware getoond. De volgende regels geven bijvoorbeeld aan dat het stuurprogramma voor [.filename]#psm# een muis heeft gevonden:
+
+[.programlisting]
+....
+psm: <PS/2 Mouse> irq 12 on atkbdc0
+psm0: [GIANT-LOCKED]
+psm0: [ITHREAD]
+psm0: model Generic PS/2 mouse, device ID 0
+....
+
+Dit stuurprogramma zal in het eigen kernelinstellingenbestand opgenomen moeten worden of worden geladen met man:loader.conf[5].
+
+Soms geven de gegevens van `dmesg` alleen de systeemboodschappen weer in plaats van de uitvoer van de opstartonderzoeken. In deze gevallen kan de uitvoer worden verkregen door het bestand [.filename]#/var/run/dmesg.boot# te bekijken.
+
+Een andere methode om hardware te vinden is door man:pciconf[8] te gebruiken welke meer gedetailleerde uitvoer geeft. Bijvoorbeeld:
+
+[.programlisting]
+....
+ath0@pci0:3:0:0:        class=0x20000 card=0x058a1014 chip=0x1014168c rev=0x01 hdr=0x00
+    vendor     = 'Atheros Communications Inc.'
+    device     = 'AR5212 Atheros AR5212 802.11abg wireless'
+    class      = network
+    subclass   = ethernet
+....
+
+Dit beetje uitvoer, verkregen met `pciconf -lv` geeft aan dat het stuurprogramma [.filename]#ath# een draadloos Ethernetapparaat heeft gevonden. Het gebruik van `man ath` zal de handleiding voor man:ath[4] teruggeven.
+
+Wanneer de vlag `-k` aan man:man[1] wordt gegeven kan deze nuttige informatie geven. Met het bovenstaande kan dit gedaan worden:
+
+[source,bash]
+....
+# man -k Atheros
+....
+
+om een lijst handleidingen te krijgen die dat ene woord bevatten:
+
+[.programlisting]
+....
+ath(4)                   - Atheros IEEE 802.11 wireless network driver
+ath_hal(4)               - Atheros Hardware Access Layer (HAL)
+....
+
+Gewapend met een inventarisatielijst van de hardware zou het proces van het bouwen van een eigen kernel minder angstaanjagend moeten lijken.
+
+[[kernelconfig-modules]]
+== Kernel stuurprogramma's, subsystemen, en modules
+
+Bekijk, voordat er een eigen kernel gebouwd wordt, de redenen om dit te doen. Als er de noodzaak is voor specifieke hardwareondersteuning, kan dit reeds beschikbaar zijn als een module.
+
+Kernelmodules staan in de map [.filename]#/boot/kernel# en kunnen dynamisch in de draaiende kernel worden geladen met man:kldload[8]. De meeste, als niet alle, kernelstuurprogramma's hebben een specifieke module en een handleiding. De laatste sectie merkte bijvoorbeeld het draadloze Ethernetstuurprogramma [.filename]#ath# op. Van dit stuurprogramma staat de volgende informatie in de handleiding:
+
+[.programlisting]
+....
+Plaats de volgende regel in man:loader.conf[5] om
+      het stuurprogramma tijdens het opstarten als een module te laden:
+
+           if_ath_load="YES"
+....
+
+Zoals aangegeven, zal het toevoegen van de regel `if_ath_load="YES"` aan [.filename]#/boot/loader.conf# deze module dynamisch laden tijdens het opstarten.
+
+In sommige gevallen is er geen geassocieerde module. Dit geldt het vaakst voor bepaalde subsystemen en zeer belangrijke stuurprogramma's, het fast file system (FFS) bijvoorbeeld is een verplichte optie in de kernel, net zoals netwerkondersteuning (INET). Helaas is de enige manier om te zien of een stuurprogramma nodig is naar de module zelf zoeken.
+
+[WARNING]
+====
+
+Het is eenvoudig om ondersteuning voor een apparaat of optie te verwijderen en met een kapotte kernel opgezadeld te zitten. Als bijvoorbeeld het stuurprogramma man:ata[4] uit het kernelinstellingenbestand gehaald wordt, zal een systeem dat ATA schijfstuurprogramma's gebruikt niet opstarten zonder de module aan [.filename]#loader.conf# toe te voegen. Kijk bij twijfel of de module aanwezig is en laat ondersteuning dan gewoon in de kernel.
+====
+
+[[kernelconfig-building]]
+== Bouwen en installeren van een aangepaste kernel
+
+[NOTE]
+====
+Het is noodzakelijk om de volledige broncode van FreeBSD geïnstalleerd te hebben om de kernel te bouwen.
+====
+
+Eerst wordt er een overzicht gegeven van de mappen waarin de kernel gebouwd wordt. Alle genoemde mappen staan onder de map [.filename]#/usr/src/sys#, die ook toegankelijk is via de padnaam [.filename]#/sys#. Er zijn hier een aantal mappen aanwezig die de verschillende delen van de kernel representeren, maar de meest belangrijke hiervan zijn [.filename]#arch/conf#, waarin de kernelinstellingen bewerkt worden en [.filename]#compile#, waarin de aangepaste kernel gebouwd wordt. _arch_ representeert hier één van [.filename]#i386#, [.filename]#amd64#, [.filename]#ia64#, [.filename]#powerpc#, [.filename]#sparc64# of [.filename]#pc98# (een alternatieve ontwikkelingstak van PC-hardware die populair is in Japan). Alles binnen de map van een bepaalde architectuur is er alleen voor die architectuur. De rest van de code is machine-onafhankelijk en hetzelfde op alle platformen waarnaar FreeBSD eventueel overgezet kan worden. De indeling van de mapstructuur is logisch: alle ondersteunde apparaten, bestandssystemen en opties staan in een eigen submap.
+
+Dit voorbeelden in dit hoofdstuk veronderstellen dat de i386-architectuur gebruikt wordt. Als dit voor de lezer anders is, moeten de bijhorende aanpassingen aan de padnamen worden gemaakt.
+
+[NOTE]
+====
+Als de map [.filename]#/usr/src/# _niet_ aanwezig is op een systeem (of als het leeg is), dan is de broncode niet geïnstalleerd. De eenvoudigste manier om de volledige broncode te installeren is man:csup[1] te gebruiken zoals beschreven in crossref:cutting-edge[synching,Broncode synchroniseren]. U dient tevens een symbolische link naar [.filename]#/usr/src/sys/# aan te maken:
+
+[source,bash]
+....
+# ln -s /usr/src/sys /sys
+....
+
+====
+
+Daarna kan vanuit de map [.filename]#arch/conf# het instellingenbestand [.filename]#GENERIC# naar de naam voor de aangepaste kernel gekopieerd worden. Bijvoorbeeld:
+
+[source,bash]
+....
+# cd /usr/src/sys/i386/conf
+# cp GENERIC MIJNKERNEL
+....
+
+Traditioneel bestaat deze naam geheel uit hoofdletters en als er meerdere FreeBSD-machines worden beheerd met verschillende hardware is het een goed idee om het te vernoemen naar de hostnaam van de machine. Omwille van dit voorbeeld wordt het [.filename]#MIJNKERNEL# genoemd.
+
+[TIP]
+====
+
+Het kernelinstellingenbestand direct onder [.filename]#/usr/src# opslaan kan een slecht idee zijn. In geval van problemen kan het verleidelijk zijn om [.filename]#/usr/src# te verwijderen en opnieuw te beginnen. Nadat dit gedaan is kost het vaak maar enkele seconden om te realiseren dat het instellingenbestand voor de aangepaste kernel verwijderd is. Ook moet [.filename]#GENERIC# niet gewijzigd worden, omdat het tijdens de volgende keer dat de crossref:cutting-edge[updating-upgrading, broncodeboom bijgewerkt wordt], overschreven kan worden waarbij de wijzigingen in de kernelinstellingen verloren gaan.
+
+Het kan gewenst zijn om het kernelinstellingenbestand ergens anders op te slaan en een symbolische link naar het bestand in de map [.filename]#i386# aan te maken:
+
+[source,bash]
+....
+# cd /usr/src/sys/i386/conf
+# mkdir /root/kernels
+# cp GENERIC /root/kernels/MIJNKERNEL
+# ln -s /root/kernels/MIJNKERNEL
+....
+
+====
+
+Nu moet [.filename]#MIJNKERNEL# met de favoriete tekstverwerker bewerkt worden. Voor beginners is waarschijnlijk alleen de tekstverwerker vi beschikbaar, die te ingewikkeld is om hier te beschrijven, maar goed is beschreven in vele boeken in de crossref:bibliography[bibliography,bibliografie]. FreeBSD biedt ook de eenvoudigere tekstverwerker ee, die voor een beginner de keuze bij uitstek is. De commentaarregels in het begin kunnen gewijzigd worden om de persoonlijke instellingen of de veranderingen die gemaakt zijn ten opzichte van [.filename]#GENERIC# weer te geven.
+
+Voor degenen die een kernel op SunOS(TM) of een andere BSD hebben gebouwd zal veel van dit bestand bekend voorkomen. Echter, voor degenen die van een ander besturingssysteem zoals DOS komen, kan het instellingenbestand [.filename]#GENERIC# overdonderend overkomen, dus moeten de beschrijvingen in de sectie <<kernelconfig-config,Het Instellingenbestand>> zorgvuldig opgevolgd worden.
+
+[NOTE]
+====
+Als de crossref:cutting-edge[updating-upgrading,broncodeboom gesynchroniseerd] is met de nieuwste broncode van het FreeBSD-project, moet altijd [.filename]#/usr/src/UPDATING# gelezen worden voordat enige bijwerkstappen worden genomen. Dit bestand beschrijft alle belangrijke zaken en gebieden binnen de broncodestructuur die speciale aandacht nodig hebben. [.filename]#/usr/src/UPDATING# komt altijd overeen met de lokale versie van de FreeBSD-broncode en is daarom meer bijgewerkt met nieuwe informatie dan dit handboek.
+====
+
+Nu moet de broncode voor de kernel gecompileerd worden.
+
+[.procedure]
+====
+*Procedure: Een kernel bouwen*
+
+[NOTE]
+======
+Het is noodzakelijk om de volledige broncode van FreeBSD geïnstalleerd te hebben om te kernel te bouwen.
+======
+
+. Ga naar de map [.filename]#/usr/src#:
++
+[source,bash]
+....
+# cd /usr/src
+....
++
+. Compileer de kernel:
++
+[source,bash]
+....
+# make buildkernel KERNCONF=MIJNKERNEL
+....
++
+. Installeer de nieuwe kernel:
++
+[source,bash]
+....
+% make installkernel KERNCONF=MIJNKERNEL
+....
+====
+
+[TIP]
+====
+
+Bij het bouwen van een aangepaste kernel worden standaard _alle_ kernelmodules ook herbouwd. Om de kernel sneller bij te werken en alleen de aangepaste modules te bouwen kan [.filename]#/etc/make.conf# aangepast worden voordat de kernel wordt gebouwd:
+
+[.programlisting]
+....
+MODULES_OVERRIDE = linux acpi sound/sound sound/driver/ds1 ntfs
+....
+
+Met deze variabele wordt een lijst van te bouwen modules ingesteld die gebouwd moeten worden in plaats van allen.
+
+[.programlisting]
+....
+WITHOUT_MODULES = linux acpi sound ntfs
+....
+
+Deze variabele stelt een lijst in van modules op het topniveau die moeten worden uitgesloten van het bouwproces. Andere variabelen die mogelijk ook nuttig zijn in het proces van het bouwen van een kernel staan beschreven in de handleiding voor man:make.conf[5].
+====
+
+De nieuwe kernel wordt naar de map [.filename]#/boot/kernel# gekopieerd als [.filename]#/boot/kernel/kernel# en de oude kernel wordt verplaatst naar [.filename]#/boot/kernel.old/kernel#. Nu moet het systeem afgesloten worden en opnieuw worden opgestart om gebruik te maken van de nieuwe kernel. Er zijn wat instructies voor <<kernelconfig-trouble,problemen oplossen>> aan het einde van dit hoofdstuk, die erg nuttig kunnen zijn als er iets misgaat. Vergeet niet om het gedeelte te lezen waarin staat uitgelegd hoe te herstellen als de nieuwe kernel <<kernelconfig-noboot,niet opstart>>.
+
+[NOTE]
+====
+Andere bestanden die te maken hebben met het opstartproces, zoals de boot man:loader[8] en instellingen worden opgeslagen in [.filename]#/boot#. Modules van derde partijen of eigen modules kunnen in [.filename]#/boot/kernel# opgeslagen worden, alhoewel gebruikers erop bedacht moeten zijn dat het erg belangrijk is dat de modules synchroon worden gehouden met de gecompileerde kernel. Modules die niet bedoeld zijn om met de gecompileerde kernel te draaien kunnen voor instabiliteit of onjuistheden zorgen.
+====
+
+[[kernelconfig-config]]
+== Het instellingenbestand
+
+Het algemene formaat van een instellingenbestand is vrij eenvoudig. Elke regel bevat een sleutelwoord en één of meer argumenten. Omwille van de eenvoud bevatten de meeste regels maar één argument. Alles wat na een `#` komt, wordt als commentaar beschouwd en genegeerd. De volgende gedeelten beschrijven elk sleutelwoord, in het algemeen in dezelfde volgorde als [.filename]##GENERIC##, alhoewel sommige samenhangende sleutelwoorden gegroepeerd zijn in een enkel gedeelte (zoals Netwerken) zelfs al staan ze verspreid in het bestand [.filename]##GENERIC##. [[kernelconfig-options]] Een uitputtende lijst van architectuurafhankelijke opties en apparaten staat in het bestand [.filename]##NOTES##, dat in dezelfde map staat als het bestand [.filename]##GENERIC##. Architectuuronafhankelijke opties staan in [.filename]##/usr/src/sys/conf/NOTES##.
+
+Een nieuwe directief `include` is beschikbaar om te gebruiken in instellingenbestanden. Hiermee kan een ander instellingenbestand logisch in het huidige worden opgenomen, waardoor het eenvoudig wordt om kleine veranderingen relatief aan een bestaand bestand te onderhouden. Als u bijvoorbeeld een [.filename]#GENERIC# kernel nodig heeft met slechts een klein aantal aanvullende opties of stuurprogramma's, hoeft u hiermee slechts een delta ten opzichte van GENERIC te onderhouden:
+
+[.programlisting]
+....
+include GENERIC
+ident MIJNKERNEL
+
+options		IPFIREWALL
+options		DUMMYNET
+options		IPFIREWALL_DEFAULT_TO_ACCEPT
+options		IPDIVERT
+....
+
+Veel beheerders zullen aanzienlijke voordelen in dit model zien vergeleken met de vroegere gewoonte om instellingenbestanden vanuit het niets te schrijven: het lokale instellingenbestand zal alleen lokale verschillen uitdrukken ten opzichte van een [.filename]#GENERIC# kernel en wanneer upgrades worden uitgevoerd zullen nieuwe mogelijkheden die aan [.filename]#GENERIC# zijn toegevoegd ook aan de lokale kernel worden toegevoegd tenzij dit expliciet verhinderd wordt met `nooptions` of `nodevice`. De rest van dit hoofdstuk behandelt de inhoud van een typisch instellingenbestand en de verschillende rollen die opties en apparaten spelen.
+
+[NOTE]
+====
+Draai het volgende commando als `root` om een bestand te bouwen dat alle beschikbare opties bevat, wat normaliter voor testdoeleinden gedaan wordt:
+
+[source,bash]
+....
+# cd /usr/src/sys/i386/conf && make LINT
+....
+
+====
+
+Het volgende is een voorbeeld van het kernelinstellingenbestand [.filename]#GENERIC# met aanvullend commentaar omwille van de helderheid. Dit voorbeeld is redelijk gelijk aan de versie in [.filename]#/usr/src/sys/i386/conf/GENERIC#.
+
+[.programlisting]
+....
+machine   i386
+....
+
+Dit is de architectuur van de machine. Het moet één van `amd64`, `i386`, `ia64`, `pc98`, `powerpc` of `sparc64` zijn.
+
+[.programlisting]
+....
+cpu   I486_CPU
+cpu   I586_CPU
+cpu   I686_CPU
+....
+
+Bovenstaande optie geeft het type CPU aan dat in een systeem zit. De CPU-regel kan meerdere keren voorkomen (als bijvoorbeeld onbekend is of `I586_CPU` of `I686_CPU` gebruikt moet worden), maar voor een aangepaste kernel is het beter om alleen de aanwezige CPU aan te geven. Als er twijfel bestaat over het type CPU, kan het bestand [.filename]#/var/run/dmesg.boot# worden bekeken voor de opstartberichten.
+
+[.programlisting]
+....
+ident   GENERIC
+....
+
+Dit is de identificatie van de kernel. Dit moet veranderd worden in de naam van de kernel, dus `MIJNKERNEL` als de instructies van de voorgaande voorbeelden gevolgd zijn. De waarde in de string `ident` wordt afgebeeld wanneer de kernel opstart, dus is het handig om de nieuwe kernel een andere naam te geven als deze apart moet worden gehouden van de gebruikelijke kernel (als er bijvoorbeeld een experimentele kernel gebouwd wordt).
+
+[.programlisting]
+....
+#Om apparaatbindingen statisch in te compileren in plaats van via /boot/device.hints.
+#hints    "GENERIC.hints"     # Standaardlocatie voor devices.
+....
+
+man:device.hints[5] wordt gebruikt om opties van de programma's die de apparaten aansturen in te stellen. De standaardplaats die man:loader[8] controleert tijdens het opstarten is [.filename]#/boot/device.hints#. Met de optie `hints` is het mogelijk om deze aanwijzingen statisch in de kernel te compileren, waardoor er geen noodzaak is om een bestand [.filename]#device.hints# in [.filename]#/boot# aan te maken.
+
+[.programlisting]
+....
+makeoptions        DEBUG=-g  # Bouw kernel met gdb(1) debugsymbolen.
+....
+
+Het normale bouwproces van FreeBSD voegt debuginformatie toe wanneer de kernel met de optie `-g` gebouwd wordt, wat debuginformatie doorgeeft aan man:gcc[1].
+
+[.programlisting]
+....
+options   SCHED_ULE    # ULE taakplanner
+....
+
+De standaard taakplanner voor FreeBSD. Laat dit staan.
+
+[.programlisting]
+....
+options   PREEMPTION # Zet kernelthreadpreëmptie aan
+....
+
+Sta toe dat threads in de kernel worden gepreëmpt door threads met een hogere prioriteit. Het help bij interactiviteit en staat toe dat interruptthreads eerder draaien in plaats van te moeten wachten.
+
+[.programlisting]
+....
+options   INET      # internetwerken
+....
+
+Netwerkondersteuning. Laat dit aanstaan, zelfs als een verbinding met een netwerk niet gepland is. De meeste programma's hebben tenminste een teruglusnetwerk nodig (dat wil zeggen het maken van netwerkverbindingen binnen de PC), dus dit is eigenlijk verplicht.
+
+[.programlisting]
+....
+options   INET6     # IPv6 communicatieprotocollen
+....
+
+Dit zet de IPv6-communicatieprotocollen aan.
+
+[.programlisting]
+....
+options   FFS       # Berkeley Fast Bestandssysteem
+....
+
+Dit is het basisbestandssysteem voor de harde schijf. Laat dit erin staan als er vanaf de harde schijf wordt opgestart.
+
+[.programlisting]
+....
+options   SOFTUPDATES   # Schakel FFS Softupdates ondersteuning in
+....
+
+Deze optie zet softupdates in de kernel aan en helpt om de schijftoegang voor schrijven te verhogen. Zelfs als deze functionaliteit door de kernel geleverd wordt, moet die voor specifieke schijven worden aangezet. Bekijk de uitvoer van man:mount[8] om te zien of softupdates aanstaat voor de systeemschijven. Als de optie `soft-updates` niet zichtbaar is, dient deze geactiveerd te worden met behulp van man:tunefs[8] voor bestaande bestandssystemen of man:newfs[8] voor nieuwe bestandssystemen.
+
+[.programlisting]
+....
+options   UFS_ACL   # Ondersteuning voor toegangscontrolelijsten
+....
+
+Met deze optie wordt de ondersteuning voor toegangscontrolelijsten aangezet. Hiervoor zijn uitgebreide attributen en UFS2 nodig. Een en ander wordt in detail beschreven in crossref:security[fs-acl,Bestandssysteem toegangscontrolelijsten (ACLs)]. ACL's staan standaard aan en moeten niet uitgezet worden in de kernel als ze al eerder op een bestandssysteem zijn gebruikt, omdat dit de toegangscontrolelijsten verwijdert en hierdoor de manier waarop bestanden beschermd worden op onvoorspelbare wijze verandert.
+
+[.programlisting]
+....
+options   UFS_DIRHASH   # Verbeter prestaties in grote mappen
+....
+
+Deze optie bevat functionaliteit om schijfoperaties op grote mappen te versnellen, ten koste van extra geheugen. Deze staat normaalgesproken, zoals voor een grote server of interactief werkstation, aan en wordt uitgezet als FreeBSD op een kleiner systeem wordt gebruikt waar geheugen het belangrijkste en schijfsnelheid minder belangrijk is, zoals voor een firewall.
+
+[.programlisting]
+....
+options   MD_ROOT   # MD is een potentieel rootapparaat
+....
+
+Deze optie zet ondersteuning aan voor een virtuële schijf die in het geheugen wordt geïmplementeerd en als rootapparaat wordt gebruikt.
+
+[.programlisting]
+....
+options   NFSCLIENT    # Netwerk Bestandssysteem Client
+options   NFSSERVER    # Netwerk Bestandssysteem Server
+options   NFS_ROOT     # NFS bruikbaar als /, NFSCLIENT nodig
+....
+
+Het netwerkbestandssysteem. Dit kan weggelaten worden tenzij er gepland is om partities te aan te koppelen van een UNIX(R) bestandsserver over TCP/IP.
+
+[.programlisting]
+....
+options   MSDOSFS   # MSDOS Bestandssysteem
+....
+
+Het MS-DOS(R) bestandssysteem. Dit kan veilig weggelaten worden, tenzij er gepland is om een DOS-geformatteerde partitie van de harde schijf tijdens het opstarten aan te koppelen. Het wordt automatisch geladen als er voor de eerste keer een DOS-partitie wordt aangekoppeld, zoals boven beschreven. Bovendien geeft de uitstekende software package:emulators/mtools[] toegang tot DOS-floppies zonder dat ze aangekoppeld en afgekoppeld moeten worden en heeft het `MSDOSFS` helemaal niet nodig.
+
+[.programlisting]
+....
+options   CD9660    # ISO 9660 Bestandssysteem
+....
+
+Het ISO 9960-bestandssysteem voor CD-ROMs. Commentarieer dit uit als er geen CD-ROM drive aanwezig is of als er slechts af en toe gegevens-CD-ROMs aangekoppeld worden (aangezien het dynamisch geladen wordt als er voor de eerste keer een gegevens-CD-ROM aangekoppeld wordt). Audio-CD's hebben dit bestandssysteem niet nodig.
+
+[.programlisting]
+....
+options   PROCFS    # Procesbestandssysteem (vereist PSEUDOFS)
+....
+
+Het procesbestandssysteem. Dit is een "als-of" bestandssysteem, aangekoppeld op [.filename]#/proc#, dat programma's als man:ps[1] in staat stelt om meer informatie over de draaiende processen te geven. Het is in de meeste omstandigheden niet nodig om `PROCFS` te gebruiken, omdat de meeste debug- en monitorgereedschappen zijn aangepast om zonder `PROCFS` te draaien: installaties koppelen dit bestandssysteem standaard niet aan.
+
+[.programlisting]
+....
+options   PSEUDOFS  # Pseudo-bestandssysteem raamwerk
+....
+
+Kernels die `PROCFS` gebruiken moeten ook ondersteuning voor `PSEUDOFS` opnemen.
+
+[.programlisting]
+....
+options   GEOM_PART_GPT  # GUID Partitietabellen.
+....
+
+Voegt ondersteuning voor http://en.wikipedia.org/wiki/GUID_Partition_Table[GUID Partitietabellen] toe. GPT biedt de mogelijkheid om een groot aantal partities per schijf te hebben, 128 is de standaardconfiguratie.
+
+[.programlisting]
+....
+options   COMPAT_43 # Compatibel met BSD 4.3 [ERIN HOUDEN!]
+....
+
+Compatibiliteit met 4.3BSD. Laat dit aanstaan. Sommige programma's gedragen zich vreemd als dit uitgecommentarieerd wordt.
+
+[.programlisting]
+....
+options   COMPAT_FREEBSD4     # Compatibel met FreeBSD 4
+....
+
+Deze optie is nodig om ondersteuning te bieden aan applicaties die gecompileerd zijn op oudere versies van FreeBSD en gebruik maken van oudere systeemaanroep-interfaces. Het is aanbevolen dat deze optie gebruikt wordt op alle i386(TM) systemen die mogelijk oudere applicaties draaien. Voor platformen die pas in 5.X ondersteuning verwierven, zoals ia64 en sparc64, is deze optie niet nodig.
+
+[.programlisting]
+....
+options   COMPAT_FREEBSD5     # Compatibel met FreeBSD5
+....
+
+Deze optie is vereist om ondersteuning te geven aan applicaties die gecompileerd zijn op FreeBSD 5.X die gebruik maken van de systeemaanroepinterfaces van FreeBSD 5.X.
+
+[.programlisting]
+....
+options   COMPAT_FREEBSD6     # Compatibel met FreeBSD5
+....
+
+Deze optie is vereist om ondersteuning te geven aan applicaties die gecompileerd zijn op FreeBSD 6.X die gebruik maken van de systeemaanroepinterfaces van FreeBSD 6.X.
+
+[.programlisting]
+....
+options   COMPAT_FREEBSD7     # Compatibel met FreeBSD5
+....
+
+Deze optie is vereist om ondersteuning te geven aan applicaties die gecompileerd zijn op FreeBSD 7.X die gebruik maken van de systeemaanroepinterfaces van FreeBSD 7.X.
+
+[.programlisting]
+....
+options   SCSI_DELAY=5000    # Vertraging (in ms) voordat SCSI wordt ondergezocht.
+....
+
+Dit zorgt ervoor dat de kernel vijf seconden wacht voordat die elk SCSI-apparaat in het systeem onderzoekt. Als er alleen IDE-harde schijven zijn, kan deze optie genegeerd worden, anders kan geprobeerd worden dit getal te verlagen, om het opstarten te versnellen. Uiteraard moet deze waarde weer verhoogd worden als FreeBSD problemen heeft om de SCSI-apparaten te herkennen.
+
+[.programlisting]
+....
+options   KTRACE    # ktrace(1) ondersteuning
+....
+
+Dit schakelt kernelondersteuning voor het volgen processen in, wat handig is tijdens debuggen.
+
+[.programlisting]
+....
+options   SYSVSHM   # SYSV-stijl gedeeld geheugen
+....
+
+Deze optie biedt System V gedeeld geheugen. Meestal wordt dit wegens de XSHM-uitbreiding in X gebruikt, waar door vele grafische programma's automatisch gebruik van wordt gemaakt voor extra snelheid. Als X gebruik wordt, is het raadzaam om dit op te nemen.
+
+[.programlisting]
+....
+options   SYSVMSG   # SYSV-stijl berichtwachtrijen
+....
+
+Dit biedt ondersteuning voor System V berichten. Ook deze optie voegt slechts een paar honderd bytes aan de kernel toe.
+
+[.programlisting]
+....
+options   SYSVSEM   # SYSV-stijl semaforen
+....
+
+Dit biedt ondersteuning voor System V semaforen. Het wordt minder vaak gebruikt, maar voegt slechts een paar honderd bytes aan de kernel toe.
+
+[NOTE]
+====
+De optie `-p` van het commando man:ipcs[1] geeft een lijst van alle processen die een van deze System V faciliteiten gebruikt.
+====
+
+[.programlisting]
+....
+options   _KPOSIX_PRIORITY_SCHEDULING   # POSIX P1003_1B real-time extensies
+....
+
+Dit biedt real-time-uitbreidingen die in de 1993 POSIX(R) zijn toegevoegd. Bepaalde applicaties in de Portscollectie gebruiken deze (zoals StarOffice(TM)).
+
+[.programlisting]
+....
+options   KBD_INSTALL_CDEV    # installeer een CDEV-ingang in /dev
+....
+
+Deze optie is nodig om apparaatknooppunten voor het toetsenbord aan te maken in [.filename]#/dev#.
+
+[.programlisting]
+....
+options   ADAPTIVE_GIANT      # Giant mutex is adaptief.
+....
+
+Giant is de naam van een wederzijds uitsluitingsmechanisme (een sleep mutex) dat een grote verzameling kernelbronnen beschermt. Vandaag de dag is dit een onacceptabele prestatie-bottleneck die actief door sloten wordt vervangen die individuele bronnen beschermen. De optie `ADAPTIVE_GIANT` zorgt ervoor dat Giant in de verzamelingen van mutexen wordt opgenomen waar actief wordt opgespind. Dit betekent dat wanneer een thread de Giant-mutex wil nemen, maar die reeds door een thread op een andere CPU genomen is, de eerste thread blijft draaien en wacht tot er een slot vrijkomt. Normaalgesproken zou de thread weer gaan slapen en wachten op de volgende kans om te draaien. Laat dit er in geval van twijfel instaan.
+
+[NOTE]
+====
+Merk op dat in FreeBSD 8.0-RELEASE en later alle mutexen standaard adaptief zijn, tenzij ze expliciet op niet-adaptief zijn gezet door met de optie `NO_ADAPTIVE_MUTEXES` te compileren. Een gevolg is dat Giant nu standaard adaptief is, en dat de optie `ADAPTIVE_GIANT` uit de kernelinstellingen is verwijderd.
+====
+
+[.programlisting]
+....
+device    apic      # I/O APIC
+....
+
+Het apic-apparaat zet de ondersteuning voor I/O-APIC voor het afleveren van interrupts aan. Het apic-apparaat kan zowel in UP- als in SMP-kernels gebruikt worden, maar is noodzakelijk voor SMP-kernels. Voeg `options SMP` toe om ondersteuning voor meerdere processoren op te nemen.
+
+[NOTE]
+====
+Het apic-apparaat bestaat alleen in de i386-architectuur, deze instelregel dient niet op andere architecturen gebruikt te worden.
+====
+
+[.programlisting]
+....
+device    eisa
+....
+
+Neem dit op voor een EISA-moederbord. Dit zet ondersteuning voor zelfdetectie en -instelling aan voor alle apparaten op de EISA-bus.
+
+[.programlisting]
+....
+device    pci
+....
+
+Neem dit op voor een PCI-moederbord. Dit zet ondersteuning voor zelfdetectie van PCI-kaarten en gatewaying van PCI-naar-ISA-bus aan.
+
+[.programlisting]
+....
+# Floppy drives
+device	  fdc
+....
+
+Dit is de controller voor de floppydrive.
+
+[.programlisting]
+....
+# ATA- en ATAPI-apparaten
+device	  ata
+....
+
+Dit stuurprogramma biedt ondersteuning aan alle ATA- en ATAPI-apparaten. Er is slechts één `device ata`-regel nodig om de kernel alle PCI ATA/ATAPI-apparaten te laten ontdekken op moderne machines.
+
+[.programlisting]
+....
+device    atadisk   # ATA schijven
+....
+
+Dit is samen met `device ata` nodig voor ATA schijven.
+
+[.programlisting]
+....
+device    ataraid   # ATA RAID schijven
+....
+
+Dit is samen met `device ata` nodig voor ATA RAID-schijven.
+
+[.programlisting]
+....
+
+device	  atapicd   # ATAPI CD-ROM drives
+....
+
+Dit is samen met `device ata` nodig voor ATAPI CD-ROM drives.
+
+[.programlisting]
+....
+device   atapifd    # ATAPI floppy drives
+....
+
+Dit is samen met `device ata` nodig voor ATAPI floppydrives.
+
+[.programlisting]
+....
+device    atapist   # ATAPI tape drives
+....
+
+Dit is samen met `device ata` nodig voor ATAPI tapedrives.
+
+[.programlisting]
+....
+options   ATA_STATIC_ID   # Statische apparaatnummering
+....
+
+Dit zorgt ervoor dat de controller statisch nummert. Zonder deze optie worden nummers dynamisch toegewezen.
+
+[.programlisting]
+....
+# SCSI Controllers
+device          ahb        # EISA AHA1742 familie
+device          ahc        # AHA2940 en onboard AIC7xxx apparaten
+options         AHC_REG_PRETTY_PRINT    # Print registerbitvelden in
+                                        # debuguitvoer.  Voegt ~128k
+                                        # aan stuurprogramma toe.
+device          ahd        # AHA39320/29320 en onboard AIC79xx apparaten
+options         AHD_REG_PRETTY_PRINT    # Print registerbitvelden in
+                                        # debuguitvoer.  Voegt ~215k
+                                        # aan stuurprogramma toe.
+device          amd        # AMD 53C974 (Teckram DC-390(T))
+device          isp        # Qlogic familie
+#device         ispfw      # Firmware voor QLogic HBAs- normaliter een module
+device          mpt        # LSI-Logic MPT-Fusion
+#device         ncr        # NCR/Symbios Logic
+device          sym        # NCR/Symbios Logic (nieuwere chipsets + die van `ncr')
+device          trm        # Tekram DC395U/UW/F DC315U adapters
+
+device          adv        # Advansys SCSI adapters
+device          adw        # Advansys wide SCSI adapters
+device          aha        # Adaptec 154x SCSI adapters
+device          aic        # Adaptec 15[012]x SCSI adapters, AIC-6[23]60.
+device          bt         # Buslogic/Mylex MultiMaster SCSI adapters
+
+device          ncv        # NCR 53C500
+device          nsp        # Workbit Ninja SCSI-3
+device          stg        # TMC 18C30/18C50
+....
+
+SCSI controllers. Commentarieer de regels uit voor apparaten die niet in het systeem aanwezig zijn. Als het een systeem met alleen IDE apparaten betreft, kunnen ze allemaal weggelaten worden. De regels met `*_REG_PRETTY_PRINT` zijn debugopties voor hun respectievelijke stuurprogramma's.
+
+[.programlisting]
+....
+# SCSI randapparaten
+device          scbus      # SCSI bus (nodig voor SCSI)
+device          ch         # SCSI media changers
+device          da         # Direct Access (schijven)
+device          sa         # Sequential Access (tape, enzovoort)
+device          cd         # CD
+device          pass       # Passthrough apparaat (directe SCSI-toegang)
+device          ses        # SCSI Omgevingsdiensten (en SAF-TE)
+....
+
+SCSI-aanhangsels. Ook hier geldt dat apparaten die niet aanwezig zijn uitgecommentarieerd kunnen worden, of als alleen IDE-hardware aanwezig is, ze allemaal weggelaten kunnen worden.
+
+[NOTE]
+====
+Het USB-stuurprogramma man:umass[4] en enkele andere stuurprogramma's gebruiken het SCSI-subsysteem, alhoewel ze geen echte SCSI-apparaten zijn. Daarom mag SCSI-ondersteuning niet verwijderd worden als dit soort stuurprogramma's in de kernelinstellingen worden opgenomen.
+====
+
+[.programlisting]
+....
+# RAID controllers met interfaces naar het SCSI subsysteem
+device          amr        # AMI MegaRAID
+device          arcmsr     # Areca SATA II RAID
+device          asr        # DPT SmartRAID V, VI en Adaptec SCSI RAID
+device          ciss       # Compaq Smart RAID 5*
+device          dpt        # DPT Smartcache III, IV - Zie NOTES voor opties
+device          hptmv      # Highpoint RocketRAID 182x
+device          hptrr      # Highpoint RocketRAID 17xx, 22xx, 23xx, 25xx
+device          iir        # Intel Integrated RAID
+device          ips        # IBM (Adaptec) ServeRAID
+device          mly        # Mylex AcceleRAID/eXtremeRAID
+device          twa        # 3ware 9000 series PATA/SATA RAID
+
+# RAID controllers
+device          aac        # Adaptec FSA RAID
+device          aacp       # SCSI passthrough voor aac (heeft CAM nodig)
+device          ida        # Compaq Smart RAID
+device          mfi        # LSI MegaRAID SAS
+device          mlx        # Mylex DAC960 famile
+device          pst        # Promise Supertrak SX6000
+device          twe        # 3ware ATA RAID
+....
+
+Ondersteunde RAID-controllers. Als een van deze niet aanwezig is, kan deze uitgecommentarieerd of verwijderd worden.
+
+[.programlisting]
+....
+# atkbdc0 bestuurt het toetsenbord en de PS/2 muis
+device    atkbdc    # AT toetsenbordcontroller
+....
+
+De toetsenbordcontroller (`atkbdc`) biedt I/O-diensten aan voor het AT-toetsenbord en het PS/2-type van aanwijsapparaten. Deze controller is noodzakelijk voor het toetsenbordstuurprogramma (`atkbd`) en het PS/2-aanwijsapparaatstuurprogramma (`psm`).
+
+[.programlisting]
+....
+device    atkbd     # AT toetsenbord
+....
+
+Het stuurprogramma `atkbd` biedt samen met de controller `atkbdc` toegang tot het AT84-toetsenbord of het uitgebreide AT-toetsenbord dat verbonden is met de controller voor het AT-toetsenbord.
+
+[.programlisting]
+....
+device    psm       # PS/2 muis
+....
+
+Dit apparaat kan gebruikt worden als de muis in de PS/2-muispoort wordt geplugd.
+
+[.programlisting]
+....
+device    kbdmux    # toetsenbordmultiplexer
+....
+
+Basisondersteuning voor multiplexing van toetsenborden. Als u niet van plan bent om meerdere toetsenborden op het systeem te gebruiken, kunt u deze regel veilig verwijderen.
+
+[.programlisting]
+....
+device    vga       # VGA videokaart stuurprogramma
+....
+
+Het stuurprogramma voor de videokaart.
+
+[.programlisting]
+....
+device    splash    # Splash screen en screensaver ondersteuning
+....
+
+Een splash-scherm tijdens het opstarten! Screensavers hebben deze optie ook nodig.
+
+[.programlisting]
+....
+# syscons is het standaard consolestuurprogramma, lijkt op een SCO console
+device	  sc
+....
+
+`sc` is het standaard consolestuurprogramma en lijkt op een SCO-console. Aangezien de meeste programma's die met een volledig scherm werken de console via een terminaldatabase zoals [.filename]#termcap# benaderen, moet het niet uitmaken of dit of `vt`, het `VT220`-compatibele consolestuurprogramma, gebruikt wordt. Wanneer er aangemeld wordt, dient de variabele `TERM` op `scoansi` gezet worden indien programma's die met een volledig scherm werken problemen hebben om met dit console te draaien.
+
+[.programlisting]
+....
+# Schakel dit in voor het pcvt (VT220 compatibele) consolestuurprogramma
+#device     vt
+#options    XSERVER     # ondersteuning voor X server op een vt console
+#options    FAT_CURSOR  # begin met een blokcursor
+....
+
+Dit is een VT220-compatibel consolestuurprogramma, achterwaarts compatibel met de VT100/102. Het werkt goed op enkele laptops die hardware-incompatibiliteiten hebben met `sc`. Ook dient de variabele `TERM` op `vt100` of `vt220` gezet te worden bij het aanmelden. Dit stuurprogramma kan ook nuttig zijn wanneer er verbinding wordt gemaakt met een groot aantal verschillende machines in een netwerk, waarbij de ingangen [.filename]#termcap# of [.filename]#terminfo# voor het apparaat `sc` vaak niet beschikbaar zijn. `vt100` is op bijna elk platform beschikbaar.
+
+[.programlisting]
+....
+device    agp
+....
+
+Neem dit op als er een AGP-kaart in het systeem aanwezig is. Dit zet ondersteuning voor AGP aan, en ondersteuning voor AGP GART voor borden die deze mogelijkheden hebben.
+
+[.programlisting]
+....
+# Ondersteuning voor energiebeheer (zie NOTES voor meer opties)
+#device	  apm
+....
+
+Ondersteuning voor geavanceerd energiebeheer (Advanced Power Management). Dit is nuttig voor laptops, alhoewel dit standaard uitgeschakeld is in [.filename]#GENERIC#.
+
+[.programlisting]
+....
+# Schakel suspend/resume ondersteuning voor de i8254 in.
+device	  pmtimer
+....
+
+Het stuurprogramma voor het timerapparaat voor energiebeheergebeurtenissen, zoals APM en ACPI.
+
+[.programlisting]
+....
+# PCCARD (PCMCIA) ondersteuning.
+# PCMCIA en cardbus bridge ondersteuning.
+device    cbb       # cardbus (yenta) bridge
+device    pccard    # PC Card (16-bit) bus
+device    cardbus   # CardBus (32-bit) bus
+....
+
+Ondersteuning voor PCMCIA. Dit is wenselijk voor laptopgebruikers.
+
+[.programlisting]
+....
+# Serial (COM) poorten
+device    sio       # 8250, 16[45]50-gebaseerde seriële poorten
+....
+
+Dit zijn de seriële poorten waarnaar in de wereld van MS-DOS(R)/Windows(R) verwezen wordt als [.filename]#COM#-poorten.
+
+[NOTE]
+====
+Als er een intern modem op [.filename]#COM4# en een seriële poort op [.filename]#COM2# aanwezig is, moet het IRQ van het modem in 2 worden veranderd (om duistere technische redenen geldt dat IRQ2 = IRQ9) om er vanuit FreeBSD toegang toe te krijgen. Als er een multipoort seriële kaart aanwezig is, staat in man:sio[4] meer informatie over de juiste waarden die aan [.filename]#/boot/device.hints# toegevoegd moeten worden. Sommige videokaarten (vaak gebaseerd op S3 chips) gebruiken IO-adressen van de vorm `0x*2e8`, en omdat vele goedkope serieële kaarten de 16-bits IO-adresruimte niet volledig decoderen, botsen ze met deze kaarten waardoor de [.filename]#COM4#-poort praktisch onbruikbaar is.
+
+Elke serieële poort moet een uniek IRQ hebben (tenzij er gebruik wordt gemaakt van een van de multipoortkaarten waarbij gedeelde interrupts ondersteund worden), dus kunnen de standaard IRQ's voor [.filename]#COM3# en [.filename]#COM4# niet gebruikt worden.
+====
+
+[.programlisting]
+....
+# Parallelle poort
+device    ppc
+....
+
+Dit is de interface voor de parallelle poort op de ISA-bus.
+
+[.programlisting]
+....
+device    ppbus     # Parallelle poortbus (verplicht)
+....
+
+Biedt ondersteuning voor de parallelle poortbus.
+
+[.programlisting]
+....
+device    lpt       # Printer
+....
+
+Ondersteuning voor parallelle poort-printers.
+
+[NOTE]
+====
+Alle van de bovenstaande drie zijn noodzakelijk om ondersteuning voor parallelle printers aan te zetten.
+====
+
+[.programlisting]
+....
+device    ppi       # Parallelle poort interface apparaat
+....
+
+De algemene I/O ("geek-poort") + IEEE1284 I/O.
+
+[.programlisting]
+....
+#device   vpo       # scbus en da verplicht
+....
+
+Dit is voor een Iomega Zipdrive. Hiervoor is ondersteuning voor `scbus` en `da` nodig. De beste prestaties worden gehaald met poorten in EPP 1.9-modus.
+
+[.programlisting]
+....
+#device   puc
+....
+
+Dit dient uitgecommentarieerd te worden indien er een "domme" seriële of parallelle PCI-kaart aanwezig is die ondersteund wordt door het man:puc[4] verbindingsstuurprogramma.
+
+[.programlisting]
+....
+# PCI Ethernet NIC's.
+device    de        # DEC/Intel DC21x4x (Tulip)
+device    em        # Intel PRO/1000 adapter Gigabit Ethernet Card
+device    ixgb      # Intel PRO/10GbE Ethernet Card
+device    txp       # 3Com 3cR990 (Typhoon)
+device    vx        # 3Com 3c590, 3c595 (Vortex)
+....
+
+Verscheidene PCI-netwerkkaartstuurprogramma's. Degenen die niet in het systeem aanwezig zijn kunnen uitgecommentarieerd of verwijderd worden.
+
+[.programlisting]
+....
+# PCI Ethernet NIC's die de MII bus controller code gebruiken.
+# NB: 'device miibus' moet behouden blijven om deze NIC's te kunnen gebruiken!
+device    miibus    # MII bus ondersteuning
+....
+
+Ondersteuning voor MII-bus is noodzakelijk voor sommige PCI 10/100 Ethernet-NICs, namelijk voor diegenen die MII-geldige transceivers gebruiken of interfaces voor transceiverbesturing implementeren die als een MII werken. Door `device miibus` aan de kernelinstellingen toe te voegen wordt de ondersteuning voor de generieke miibus-API en voor alle PHY-stuurprogramma's opgenomen, waaronder een generieke voor PHYs die niet specifiek door een individueel stuurprogramma worden behandeld.
+
+[.programlisting]
+....
+device    bce       # Broadcom BCM5706/BCM5708 Gigabit Ethernet
+device    bfe       # Broadcom BCM440x 10/100 Ethernet
+device    bge       # Broadcom BCM570xx Gigabit Ethernet
+device    dc        # DEC/Intel 21143 en verschillende gelijkwerkenden
+device    fxp       # Intel EtherExpress PRO/100B (82557, 82558)
+device    lge       # Level 1 LXT1001 gigabit Ethernet
+device    msk       # Marvell/SysKonnect Yukon II Gigabit Ethernet
+device    nge       # NatSemi DP83820 gigabit Ethernet
+device    nve       # nVidia MCP on-board Ethernet Networking
+device    pcn       # AMD Am79C97x PCI 10/100 (voorrang op 'lnc')
+device    re        # RealTek 8139C+/8169/8169S/8110S
+device    rl        # RealTek 8129/8139
+device    sf        # Adaptec AIC-6915 (Starfire)
+device    sis       # Silicon Integrated Systems SiS 900/SiS 7016
+device    sk        # SysKonnect SK-984x & SK-982x gigabit Ethernet
+device    ste       # Sundance ST201 (D-Link DFE-550TX)
+device    stge      # Sundance/Tamarack TC9021 gigabit Ethernet
+device    ti        # Alteon Networks Tigon I/II gigabit Ethernet
+device    tl        # Texas Instruments ThunderLAN
+device    tx        # SMC EtherPower II (83c170 EPIC)
+device    ge        # VIA VT612x gigabit Ethernet
+device    vr        # VIA Rhine, Rhine II
+device    wb        # Winbond W89C840F
+device    xl        # 3Com 3c90x (Boomerang, Cyclone)
+....
+
+Stuurprogramma's die gebruik maken van de MII bus-controllercode.
+
+[.programlisting]
+....
+# ISA Ethernet NIC's.  Inclusief pccard NIC's.
+device    cs        # Crystal Semiconductor CS89x0 NIC
+# 'device ed' heeft 'device miibus' nodig
+device    ed        # NE[12]000, SMC Ultra, 3c503, DS8390 kaarten
+device    ex        # Intel EtherExpress Pro/10 en Pro/10+
+device    ep        # Etherlink III-gebaseerde kaarten
+device    fe        # Fujitsu MB8696x-gebaseerde kaarten
+device    ie        # EtherExpress 8/16, 3C507, StarLAN 10, etc.
+device    lnc       # NE2100, NE32-VL Lance Ethernet kaarten
+device    sn        # SMC's 9000 serie Ethernet chips
+device    xe        # Xircom pccard Ethernet
+
+# ISA apparaten die de oude ISA shims gebruiken
+#device   le
+....
+
+ISA Ethernetstuurprogramma's. In [.filename]#/usr/src/sys/i386/conf/NOTES# staan details over welke kaarten door welk stuurprogramma ondersteund worden.
+
+[.programlisting]
+....
+# Draadloze NIC kaarten
+device    wlan      # 802.11 ondersteuning
+....
+
+Generieke 802.11 ondersteuning. Deze regel is vereist voor draadloos netwerken.
+
+[.programlisting]
+....
+device          wlan_wep  # 802.11 WEP-ondersteuning
+device          wlan_ccmp   # 802.11 CCMP-ondersteuning
+device          wlan_tkip   # 802.11 TKIP-ondersteuning
+....
+
+Crypto-ondersteuning voor 802.11-apparaten. Deze regels zijn nodig als u van plan bent om versleuteling en 802.11i-beveiligingsprotocollen te gebruiken.
+
+[.programlisting]
+....
+device          an              # Aironet 4500/4800 802.11 draadloze NIC's.
+device          ath             # Atheros PCI/CardBus NICs
+device          ath_hal         # Atheros HAL (Hardware Access Layer)
+device          ath_rate_sample # SampleRate verzendsnelheidbeheer voor ath
+device          awi        # BayStack 660 en anderen
+device          ral        # Ralink Technologies RT2500 draadloze NICs.
+device          wi         # WaveLAN/Intersil/Symbol 802.11 draadloze NIC's.
+#device         wl         # Oudere niet-802.11 Wavelan draadloze NIC.
+....
+
+Ondersteuning voor verscheidene draadloze kaarten.
+
+[.programlisting]
+....
+# Pseudo-apparaten
+device    loop      # Netwerk teruglussen
+....
+
+Dit is het generieke teruglusapparaat voor TCP/IP. Als telnet of FTP op `localhost` (ook bekend als `127.0.0.1`) gebruikt wordt, loopt dat via dit apparaat. Dit is _verplicht_.
+
+[.programlisting]
+....
+device    random    # Entropy apparaat
+....
+
+Cryptografisch veilige willekeurige getallengenerator.
+
+[.programlisting]
+....
+device    ether     # Ethernet ondersteuning
+....
+
+`ether` is allen noodzakelijk als er een Ethernetkaart aanwezig is. Het bevat code voor het generieke Ethernetprotocol.
+
+[.programlisting]
+....
+device    sl        # Kernel SLIP
+....
+
+`sl` dient voor SLIP-ondersteuning. Dit is bijna geheel overgenomen door PPP, wat eenvoudiger is op te zetten, beter geschikt is voor modem-naar-modem-verbindingen en krachtiger is.
+
+[.programlisting]
+....
+device    ppp       # Kernel PPP
+....
+
+Dit dient voor PPP-ondersteuning van inbelverbindingen door de kernel. Er is ook een versie van PPP als gebruikersapplicatie geïmplementeerd die `tun` gebruikt en meer flexibiliteit en mogelijkheden biedt zoals demand-bellen.
+
+[.programlisting]
+....
+device    tun       # Packet tunnel.
+....
+
+Dit wordt gebruikt door de gebruikers-PPP-software. In crossref:ppp-and-slip[userppp,PPP] staat meer informatie.
+
+[.programlisting]
+....
+
+device    pty       # Pseudo-ttys (telnet, etc.)
+....
+
+Dit is een "pseudo-terminal" of gesimuleerde aanmeldpoort. Die wordt gebruikt door binnenkomende sessies van `telnet` en `rlogin`, door xterm en voor sommige andere applicaties zoals Emacs.
+
+[.programlisting]
+....
+device    md        # Geheugenschijven
+....
+
+Pseudo-apparaten die een schijf in het geheugen implementeren.
+
+[.programlisting]
+....
+device    gif       # IPv6 en IPv4 tunnelen
+....
+
+Dit implementeert IPv6-over-IPv4-tunneling, IPv4-over-IPv6-tunneling, IPv4-over-IPv4-tunneling en IPv6-over-IPv6-tunneling. Het apparaat `gif` is "zelfklonend" en zal naar behoefte apparaatknooppunten aanmaken.
+
+[.programlisting]
+....
+device    faith     # IPv6-naar-IPv4-relay (vertaling)
+....
+
+Dit pseudo-apparaat onderschept pakketten die ernaar verzonden worden en leidt ze om naar het IPv4/IPv6-vertaaldaemon.
+
+[.programlisting]
+....
+# Het `bpf' apparaat schakelt de Berkeley Pakketfilter in.
+# Wees bewust van de administratieve consequenties die dit heeft!
+# 'bpf' is nodig bij gebruik van DHCP.
+device    bpf       # Berkeley pakketfilter
+....
+
+Dit is het Berkeley Pakketfilter. Dit pseudo-apparaat staat netwerkinterfaces toe om in luistermodus gezet te worden, zodat elk pakket op een uitzendnetwerk (bijvoorbeeld een Ethernet) onderschept wordt. Deze pakketten kunnen naar schijf onderschept en/of onderzocht worden met het programma man:tcpdump[1].
+
+[NOTE]
+====
+Het apparaat man:bpf[4] wordt ook gebruikt door man:dhclient[8] om het IP-adres van de standaardrouter (gateway) te verkrijgen, enzovoorts. Als DHCP gebruikt wordt, dient dit ingeschakeld te blijven.
+====
+
+[.programlisting]
+....
+# USB-ondersteuning
+device          uhci          # UHCI PCI->USB interface
+device          ohci          # OHCI PCI->USB interface
+device          ehci          # EHCI PCI->USB interface (USB 2.0)
+device          usb           # USB Bus (verplicht)
+#device         udbp          # USB Double Bulk Pipe apparaten
+device          ugen          # Generic
+device          uhid          # Human Interface Devices
+device          ukbd          # Toetsenbord
+device          ulpt          # Printer
+device          umass         # Schijven/Massaopslag - heeft scbus en da nodig
+device          ums           # Muis
+device          ural          # Ralink Technology RT2500USB draadloze NICs
+device          urio          # Diamond Rio 500 MP3 speler
+device          uscanner      # Scanners
+# USB Ethernet, heeft mii nodig
+device          aue           # ADMtek USB Ethernet
+device          axe           # ASIX Electronics USB Ethernet
+device          cdce          # Generic USB over Ethernet
+device          cue           # CATC USB Ethernet
+device          kue           # Kawasaki LSI USB Ethernet
+device          rue           # RealTek RTL8150 USB Ethernet
+....
+
+Ondersteuning voor verscheidene USB-apparaten.
+
+[.programlisting]
+....
+# FireWire ondersteuning
+device    firewire  # FireWire bus code
+device    sbp       # SCSI over FireWire (scbus en da nodig)
+device    fwe       # Ethernet over FireWire (niet-standaard!)
+....
+
+Ondersteuning voor verscheidene Firewire-apparaten.
+
+Meer informatie en aanvullende apparaten die door FreeBSD ondersteund worden staan in [.filename]#/usr/src/sys/i386/conf/NOTES#.
+
+=== Instellingen bij veel geheugen (PAE)
+
+Sommige machines (PAE) hebben meer geheugen nodig dan limiet van 4 gigabyte op User+Kernel Virtual Adress (KVA) ruimte. Vanwege deze limiet voegde Intel ondersteuning toe voor toegang tot 36-bits fysieke adresruimte in de Pentium(R) Pro en nieuwere lijn van CPU's.
+
+De Physical Address Extension (PAE) mogelijkheden van de Intel(R) Pentium(R) Pro en nieuwere CPU's staan geheugenhoeveelheden toe tot 64 gigabyte. FreeBSD biedt ondersteuning voor deze mogelijkheid via de kernelinsteloptie `PAE`, die beschikbaar is in alle recent uitgegeven versies van FreeBSD. Vanwege de beperkingen van de geheugenarchitectuur van Intel wordt er geen onderscheid gemaakt tussen geheugen boven of beneden 4 gigabytes. Geheugen dat boven de 4 gigabytes is toegewezen wordt gewoon bij het beschikbare gevoegd.
+
+Om ondersteuning voor PAE in de kernel aan te zetten, dient de volgende regel aan het kernelinstellingenbestand te worden toegevoegd:
+
+[.programlisting]
+....
+options   PAE
+....
+
+[NOTE]
+====
+De ondersteuning voor PAE in FreeBSD is alleen beschikbaar voor Intel(R) IA-32-processoren. Ook dient opgemerkt te worden dat ondersteuning voor PAE nog niet wijdverbreid getest is en als betakwaliteit beschouwd dient te worden vergeleken met andere stabiele kenmerken van FreeBSD.
+====
+
+Ondersteuning voor PAE in FreeBSD heeft enige beperkingen:
+
+* Een proces kan niet meer dan 4 gigabyte VM-ruimte krijgen;
+* Apparaatstuurprogramma's die geen gebruik maken van de man:bus_dma[9]-interface zullen gegevenscorruptie veroorzaken in een kernel die PAE aan heeft staan en hun gebruik wordt afgeraden. Om deze reden wordt er de kernelinstellingenbestand voor de PAE-kernel geleverd met FreeBSD, dat alle stuurprogramma's uitsluit waarvan niet bekend is dat ze werken in een kernel die PAE aan heeft staan;
+* Sommige systeeminstellingen bepalen het geheugenbronverbruik aan de hand van de hoeveelheid beschikbaar fysiek geheugen. Zulke instellingen kunnen onnodig veel toewijzen vanwege de grote hoeveelheid geheugen in een PAE systeem. Een voorbeeld hiervan is de sysctl `kern.maxvnodes`, die het maximum aantal vnodes dat in de kernel aanwezig mag zijn beheert. Het is aan te raden om deze en andere van dit soort instellingen aan te passen aan een redelijke waarde;
+* Het kan nodig zijn om de virtuele kerneladresruimte (KVA) te vergroten of om het aantal kernelbronnen dat veel gebruikt wordt (zie boven) te verminderen om zo uitputting van KVA te voorkomen. De kerneloptie `KVA_PAGES` kan gebruikt worden om de KVA-ruimte te vergroten.
+
+Om prestatie- en stabiliteitsredenen is het aan te raden om man:tuning[7] te raadplegen. man:pae[4] bevat bijgewerkte informatie over de ondersteuning voor PAE in FreeBSD.
+
+[[kernelconfig-trouble]]
+== Problemen oplossen
+
+Er zijn vier probleemcategoriën die op kunnen treden tijdens het bouwen van een aangepaste kernel:
+
+`config` faalt::
+Als het commando man:config[8] faalt bij het verwerken van de kernelbeschrijving, is er waarschijnlijk ergens een eenvoudige fout gemaakt. Gelukkig geeft man:config[8] het nummer van de regel weer waarmee het problemen had, dus kan snel de regel gevonden worden waarin de fout zit. In het onderstaande voorbeeld dient gecontroleerd te worden of het sleutelwoord juist is ingevoerd door het met de kernel [.filename]#GENERIC# of een andere referentie te vergelijken:
++
+[source,bash]
+....
+config: line 17: syntax error
+....
+
+`make` faalt::
+Als `make` faalt, duidt dit meestal op een fout in de kernelbeschrijving die niet erg genoeg is om door man:config[8] opgemerkt te worden. De instellingen dienen nogmaals nagekeken te worden. Als het probleem nog steeds niet is op te lossen, stuur dan een mail naar de {freebsd-questions} met de kernelinstellingen. Dat leidt meestal snel tot een diagnose.
+
+De kernel start niet op[[kernelconfig-noboot]]::
+Als de nieuwe kernel niet opstart of de apparaten niet herkent is kalmte geboden. FreeBSD heeft een uitstekend mechanisme om van niet-compatibele kernels te herstellen. De gewenste kernel om mee op te starten kan vanuit de FreeBSD boot loader gekozen worden. Als het systeemopstartmenu verschijnt, kan deze gekozen worden. Selecteer de optie "Escape to a loader prompt", nummer zes. Typ op de prompt `boot kernel.old` of de naam van een andere kernel die correct opstart. Als de kernelinstellingen gewijzigd worden, is het altijd aan te raden om een kernel bij de hand te houden waarvan bekend is dat die juist werkt.
++
+Nadat er met een goede kernel is opgestart, kan het instellingenbestand gecontroleerd worden en geprobeerd worden om de kernel nogmaals te bouwen. Een behulpzame bron is het bestand [.filename]#/var/log/messages#, dat onder andere alle kernelberichten van alle keren dat er succesvol is opgestart vastlegt. Ook geeft man:dmesg[8] alle kernelberichten weer van de huidige opstartprocedure.
++
+[NOTE]
+====
+Als er problemen zijn met het bouwen van een kernel, dient een [.filename]#GENERIC#, of een andere kernel waarvan bekend is dat die werkt, bewaard te worden onder een andere naam die niet verwijderd wordt als de volgende kernel gebouwd wordt. Er kan niet op [.filename]#kernel.old# vertrouwd worden omdat bij de installatie van een nieuwe kernel [.filename]#kernel.old# overschreven wordt met de laatst geïnstalleerde kernel, die niet hoeft te werken. Ook dient de werkende kernel zo snel mogelijk naar de juiste plaats [.filename]#/boot/kernel# verplaatst te worden, omdat anders commando's als man:ps[1] eventueel onjuist werken. Hiervoor dient simpelweg de map met de goede kernel hernoemd te worden:
+
+[source,bash]
+....
+# mv /boot/kernel /boot/kernel.slecht
+# mv /boot/kernel.goed /boot/kernel
+....
+
+====
+
+De kernel werkt, maar man:ps[1] werkt niet meer::
+Als er een andere versie van de kernel is geïnstalleerd dan degene waarmee de systeemgereedschappen gebouwd zijn, bijvoorbeeld een kernel voor -CURRENT op een -RELEASE-systeem, werken vele systeemstatuscommando's als man:ps[1] en man:vmstat[8] niet langer. De wereld moet opnieuw gecompileerd en geïnstalleerd worden en met dezelfde broncodestructuur als de kernel zijn gebouwd. Dit is een van de redenen waarom het normaliter geen goed idee is om een afwijkende versie van de kernel ten opzichte van de rest van de wereld te gebruiken.

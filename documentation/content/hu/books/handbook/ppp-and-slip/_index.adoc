@@ -1,0 +1,1915 @@
+---
+title: 27. Fejezet - A PPP és a SLIP
+part: IV. Rész Hálózati kommunikáció
+prev: books/handbook/serialcomms
+next: books/handbook/mail
+---
+
+[[ppp-and-slip]]
+= A PPP és a SLIP
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:skip-front-matter:
+:toc-title: Tartalom
+:table-caption: Táblázat
+:figure-caption: Ábra
+:example-caption: Példa
+:xrefstyle: basic
+:relfileprefix: ../
+:outfilesuffix:
+:sectnumoffset: 27
+
+ifeval::["{backend}" == "html5"]
+:imagesdir: ../../../images/books/handbook/ppp-and-slip/
+endif::[]
+
+ifeval::["{backend}" == "pdf"]
+:imagesdir: ../../../../static/images/books/handbook/ppp-and-slip/
+endif::[]
+
+ifeval::["{backend}" == "epub3"]
+:imagesdir: ../../../../static/images/books/handbook/ppp-and-slip/
+endif::[]
+
+include::shared/authors.adoc[]
+include::shared/releases.adoc[]
+include::shared/hu/mailing-lists.adoc[]
+include::shared/hu/teams.adoc[]
+include::shared/hu/urls.adoc[]
+
+toc::[]
+
+[[ppp-and-slip-synopsis]]
+== Áttekintés
+
+A FreeBSD számos módon képes összekötni két számítógépet. Ha betárcsázós modemmel akarunk hálózati vagy internetes kapcsolatot felépíteni, esetleg azt szeretnénk, hogy mások képesek legyenek minket ilyen módon elérni, akkor ahhoz PPP-t, illetve SLIP-et kell használnunk. Ebben a fejezetben a modemes kommunikáció beállításait mutatjuk be részletesebben.
+
+A fejezet elolvasása során megismerjük:
+
+* hogyan állítsunk be felhasználói PPP-t;
+* hogyan állítsunk be rendszerszintû PPP-t (csak FreeBSD 7._X_);
+* hogyan állítsunk be egy PPPoE (PPP over Ethernet, vagyis "PPP Ethernet felett") kapcsolatot;
+* hogyan állítsunk be egy PPPoA (PPP over ATM, vagyis "PPP ATM felett") kapcsolatot;
+* hogyan állítsunk be SLIP klienst és szervert (csak FreeBSD 7._X_).
+
+A fejezet elolvasásához ajánlott:
+
+* az alapvetõ hálózati technológiák ismerete;
+* a betárcsázós kapcsolatok, a PPP és/vagy SLIP alapjainak és céljainak megértése.
+
+Talán érdekli a kedves olvasót, hogy mi az alapvetõ különbség a felhasználói és a rendszerszintû PPP között. A válasz egyszerû: a felhasználói PPP a beérkezõ és kimenõ adatokat nem a rendszermagban, hanem a felhasználói szinten dolgozza fel. Ez költséges abból a szempontból, hogy emiatt adatokat kell másolgatni a rendszer és a felhasználói szint között, azonban egy sokkal többet tudó PPP implementációnak ad ezzel utat. A felhasználói PPP a [.filename]#tun# eszközön keresztül kommunikál a külvilággal, miközben a rendszermagban található PPP mindezt a [.filename]#ppp# eszközzel valósítja meg.
+
+[NOTE]
+====
+A fejezetben a felhasználói PPP-t egyszerûen csak ppp néven fogjuk hivatkozni, hacsak nem lesz szükséges különbséget tennünk közte és más PPP szoftverek, mint például a pppd között. Ha mást nem mondunk, akkor a fejezetben ismertetett összes parancsot `root` felhasználóként kell kiadni.
+====
+
+[[userppp]]
+== A felhasználói PPP alkalmazása
+
+[WARNING]
+====
+
+A FreeBSD 8.0 változatától kezdõdõen a soros portokhoz tartozó eszközök nevei [.filename]#/dev/cuadN# helyett [.filename]#/dev/cuauN#, illetve [.filename]#/dev/ttydN# helyett [.filename]#/dev/ttyuN# lettek. A FreeBSD 7._X_ felhasználóknak ezeknek a változásoknak megfelelõen kell olvasniuk az itt szereplõ dokumentációt. 
+====
+
+=== A felhasználói PPP
+
+==== Elõfeltételek
+
+A leírás feltételezi, hogy rendelkezünk a következõkkel:
+
+* Olyan internet-elõfizetés, ahol PPP-n keresztül csatlakozunk
+* Egy modem vagy más olyan rendszerünkhöz csatlakozó eszköz, amelyen keresztül el tudjuk érni az internet-szolgáltatónkat
+* Az internet-elõfizetés betárcsázásához szükséges telefonszámok
+* A bejelentkezési nevünk és jelszavunk. (Vagy a megszokott UNIX(R)-os felhasználói név és jelszó páros, vagy egy PAP esetleg CHAP bejelentkezési név és jelszó.)
+* Egy vagy több névszerver IP-címe. Ehhez az internet-szolgáltatók általában két IP-címet adnak meg. Ha egyet sem kaptunk, akkor a [.filename]#ppp.conf# állományban erre a célra használhatjuk az `enable dns` parancsot, és ekkor a ppp majd automatikusan be fogja állítani nekünk a névszervereket. Ezt a lehetõséget az befolyásolja, hogy az internet-szolgáltató oldalán mûködõ PPP implementáció támogatja-e a névfeloldás egyeztetését (DNS negotiation).
+
+A következõ információkat is megkaphatjuk az internet-elõfizetésünkhöz, de nem feltétlenül szükségesek:
+
+* Az internet-szolgáltató átjárójának IP-címe. Az átjáró az a gép, amelyen keresztül a gépünk csatlakozik és számára ez lesz az _alapértelmezett átjáró_. Ha nem rendelkezünk ezzel az információval, akkor csak állítsunk be valamit, és majd a csatlakozáskor a szolgáltató PPP szervere felülírja a megfelelõ beállításokkal.
++ 
+Erre a címre a ppp `HISADDR` néven hivatkozik.
+* A használandó hálózati maszk. Amennyiben a szolgáltató ezt nem adta meg, nyugodtan használjuk erre a `255.255.255.255` értéket.
+* Ha a szolgáltatónk statikus IP-címet és rögzített hálózati nevet is biztosít nekünk, ezt is megadhatjuk. Minden más esetben egyszerûen csak hagyjuk, hogy a rendszer automatikusan válasszon nekünk egyet.
+
+Ha a szükséges információknak nem vagyunk birtokában, akkor vegyük fel a kapcsolatot az internet-szolgáltatókkal.
+
+[NOTE]
+====
+Ebben a szakaszban a példákban szereplõ konfigurációs állományok sorait számozva láthatjuk. Ezek a sorszámok a bemutatás és a tárgyalás megkönnyítése érdekében szerepelnek, és nem az eredeti állományok részei. Mindezek mellett a tabulátorok és szóközök megfelelõ használata is fontos.
+====
+
+==== A PPP automatikus beállítása
+
+A `ppp` és a `pppd` (a PPP rendszerszintû megvalósítása) egyaránt az [.filename]#/etc/ppp# könyvtárban található konfigurációs állományokat használja. A felhasználói PPP-hez ezenkívül még a [.filename]#/usr/shared/examples/ppp/# könyvtárban vannak példák.
+
+A `ppp` parancs beállítása az igényeinktõl függõen számos állomány módosítását igényelheti. A tartalmukat nagyban befolyásolja, hogy a szolgáltatónk részérõl a címeket kiosztása statikus (vagyis egy adott címet kapunk és folyamatosan azt használjuk) esetleg dinamikus (vagyis az IP-címünk minden egyes kapcsolódáskor más és más).
+
+[[userppp-staticIP]]
+===== PPP statikus IP-címmel
+
+Ebben az esetben az [.filename]#/etc/ppp/ppp.conf# konfigurációs állományt kell átszerkesztenünk. Tartalma az alábbi példához hasonlítható.
+
+[NOTE]
+====
+A `:` karakterrel végzõdõ sorok mindig az elsõ oszlopban kezdõdnek (tehát a sor elején), míg az összes többi sort tabulátorok vagy szóközök használatával bentebb kell raknunk.
+====
+
+[.programlisting]
+....
+1     default:
+2       set log Phase Chat LCP IPCP CCP tun command
+3       ident user-ppp VERSION (built COMPILATIONDATE)
+4       set device /dev/cuau0
+5       set speed 115200
+6       set dial "ABORT BUSY ABORT NO\\sCARRIER TIMEOUT 5 \
+7                 \"\" AT OK-AT-OK ATE1Q0 OK \\dATDT\\T TIMEOUT 40 CONNECT"
+8       set timeout 180
+9       enable dns
+10
+11    szolgaltato:
+12      set phone "(123) 456 7890"
+13      set authname ize
+14      set authkey mize
+15      set login "TIMEOUT 10 \"\" \"\" gin:--gin: \\U word: \\P col: ppp"
+16      set timeout 300
+17      set ifaddr x.x.x.x y.y.y.y 255.255.255.255 0.0.0.0
+18      add default HISADDR
+....
+
+1- sor:::
+Ez azonosítja be az alapértelmezett bejegyzést. Az itt szereplõ parancsok a `ppp` minden egyes futásakor magukból végrehajtódnak.
+
+2- sor:::
+Beállítja a naplózás paramétereit. Amikor a beállításaink már kifogástalanul mûködnek, akkor ezt a sort érdemes átírni a következõre:
++
+[.programlisting]
+....
+set log phase tun
+....
++
+Ezzel jelentõs mértékben vissza tudjuk fogni a naplózás mértékét.
+
+3- sor:::
+Ezzel mondjuk meg a PPP-nek, hogy a többiek felé miként azonosítsa magát. A PPP akkor azonosítja magát a társak felé, ha valamilyen gondja akad az egyeztetésekkel és a kapcsolat beállításával. Az így továbbított információk a másik oldal rendszergazdái számára nyújthatnak segítséget az ilyen jellegû problémák felderítésében.
+
+4- sor:::
+Itt adjuk meg az eszközt, amelyre a modem csatlakozik. A [.filename]#COM1# neve [.filename]#/dev/cuau0#, a [.filename]#COM2# neve pedig [.filename]#/dev/cuau1#.
+
+5- sor:::
+A csatlakozás sebességét adjuk meg. Ha a 115 200-as érték itt nem mûködne (ez egyébként minden újabb gyártmányú modem esetében elfogadható), akkor helyette használjuk a 38400-as beállítást.
+
+6- és 7- sorok:::
+A híváshoz használt karakterlánc. A felhasználói PPP a man:chat[8] programhoz hasonló "küldök-várok" típusú szerkesztést alkalmaz. A kihasználható lehetõségekrõl a man oldalán olvashatunk részletesebben.
++
+Az olvashatóság kedvéért a parancs a következõ sorban folytatódik. A [.filename]#ppp.conf# állományban bármelyik parancs, ahol a `\` karakterrel zárjuk a sort, az ugyanígy folytatható a következõben.
+
+8- sor:::
+A kapcsolathoz tartozó üresjárati idõt állítja be. Ennek értéke alapból 180 másodperc, így ez a sor pusztán csak az érthetõséget szolgálja.
+
+9- sor:::
+Arra utasítja a PPP-t, hogy a többiektõl kérdezze le a helyi névfeloldó beállításait. Ha saját névszervert futtatunk, akkor ezt a sort tegyük inkább megjegyzésbe vagy töröljük ki.
+
+10- sor:::
+Ez az üres sor az átláthatóság kedvéért került bele. A PPP az összes üres sort figyelmen kívül hagyja.
+
+11- sor:::
+Itt kezdõdik a "szolgaltato" nevû szolgáltatóhoz tartozó bejegyzés. Ezt késõbb akár ki is cserélhetjük az internet-szolgáltatónk nevére, így a `load _szolgáltató_` beállítással tudjuk majd beindítani a kapcsolatot.
+
+12- sor:::
+Beállítjuk a szolgáltatóhoz tartozó telefonszámot. A kettõspont (`:`) vagy a csõvezeték (`|`) karakterekkel elválasztva több telefonszámot is meg tudunk adni. A man:ppp[8] oldalon olvashatunk a két elválasztó közti különbségekrõl. Röviden ezeket úgy foglalhatnánk össze, hogy ha váltogatni akarunk a számok között, akkor használjuk a kettõspontot. Ha mindig az elsõként megadott számot akarjuk hívni és a többit csak akkor, ha ez nem mûködik, akkor a csõvezeték karakterre lesz szükségünk. Ahogy a példa is mutatja, az összes telefonszámot tegyük mindig idézõjelek közé.
++
+Ha a telefonszámban egyébként is szerepelnek szóközök, akkor is idézõjelek (`"`) közé kell tennünk. Ennek elhagyásával egy egyszerû, ámde kényes hibát ejtünk.
+
+13- és 14- sor:::
+A felhasználói nevet és jelszót tartalmazza. Amikor egy UNIX(R) fajtájú bejelentkezést kapunk, akkor ezekre az értékekre a `set login` parancsban \U és \P változókkal tudunk hivatkozni. Ha PAP vagy CHAP használatával jelentkezünk be, akkor ezek az értékek a hitelesítéskor kerülnek felhasználásra.
+
+15- sor:::
+Ha a PAP vagy CHAP protokollok valamelyikét használjuk, akkor nem lesz szükségünk a login változóra, ezért ezt megjegyzésbe is tehetjük, vagy akár ki is törölhetjük. A <<userppp-PAPnCHAP,PAP és CHAP hitelesítésrõl>> szóló részben olvashatjuk ennek további részleteit.
++
+A bejelentkezéshez használt karakterlánc hasonlít a behíváshoz használt, chat-szerû felépítéssel rendelkezõ karakterlánchoz. A példában látható karakterlánc egy olyan szolgáltatáshoz illeszkedik, ahol a bejelentkezés valahogy így néz ki:
++
+[source,bash]
+....
+A Világ Legjobb Szolgáltatója
+login: izé
+password: mizé
+protocol: ppp
+....
++
+Ezt a szkriptet alakítsuk a saját igényeinkhez. Ha elõször próbálkozunk ilyen szkript írásával, akkor lehetõleg kapcsoljuk be a rendszerek között lezajló "beszélgetés" naplózását, hogy ellenõrizni tudjuk minden a megfelelõen módon történik-e.
+
+16- sor:::
+Beállítjuk a kapcsolathoz tartozó alapértelmezett idõkorlátot (másodpercben). Itt a kapcsolat automatikusan lezárul 300 másodperc tétlenséget követõen. Ha nem akarunk ilyen korlátot szabni, akkor ezt az értéket állítsuk nullára vagy használjuk a `-ddial` paranccsori kapcsolót.
+
+17- sor:::
+A felülethez tartozó címeket állítja be. A _x.x.x.x_ helyére a szolgáltató által kiosztott IP-címet kell beírnunk. A _y.y.y.y_ helyett pedig a szolgáltató átjárója kerül be (lényegében az a gép, amelyhez csatlakozunk). Amennyiben az internet-szolgáltatónk nem adott meg semmilyen átjárót, erre a célra a `10.0.0.2/0` címet is használhatjuk. Amikor "nekünk kell kitalálnunk" ezeket a címeket, akkor ne felejtsünk el létrehozni hozzájuk egy bejegyzést az [.filename]#/etc/ppp/ppp.linkup# állományban a <<userppp-dynamicIP,PPP dinamikus IP-címmel >> szakaszban szereplõek szerint. Ha nem adjuk meg ezt a sort, akkor a `ppp` parancs nem képes `-auto` módban mûködni.
+
+18- sor:::
+A szolgáltató átjárójához felvesz egy alapértelmezett útvonalat. A `HISADDR` kulcsszót a 17. sorban megadott átjáró címével helyettesítjük. Ezért fontos, hogy ez a 17. sor után szerepeljen, különben a `HISADDR` nem lesz képes inicializálódni.
++
+Ha a `ppp` parancsot nem akarjuk `-auto` módban futtatni, akkor ezt a sort a [.filename]#ppp.linkup# állományba is átrakhatjuk.
+
+Ha statikus IP-címmel rendelkezünk és a `ppp -auto` módban fut, akkor a [.filename]#ppp.linkup# állományba egészen addig nem kell semmit sem írnunk, amíg a csatlakozás elõtt az útválasztási táblázatokban a megfelelõ adatok találhatóak. Olyankor is jól jöhet, amikor a csatlakozást követõen meg akarunk hívni bizonyos programokat. Ezt majd a sendmailes példában fogjuk bõvebben kifejteni.
+
+Erre példákat a [.filename]#/usr/shared/examples/ppp/# könyvtárban találhatunk.
+
+[[userppp-dynamicIP]]
+===== PPP dinamikus IP-címmel
+
+Ha az internet-szolgáltatónktól nem kaptunk statikus IP-címet, akkor a `ppp` paranccsal is be tudjuk állítani a helyi és távoli címeket. Ez az IP-címek "kitalálásával" történik, valamint úgy, hogy a `ppp` számára a csatlakozás után lehetõvé tesszük az IP konfigurációs protocol (IP Configuration Protocol, IPCP) használatát. A [.filename]#ppp.conf# tartalma szinte teljesen megegyezik a <<userppp-staticIP,PPP statikus IP-címmel>> részben szereplõvel, egyetlen apró különbséggel:
+
+[.programlisting]
+....
+17      set ifaddr 10.0.0.1/0 10.0.0.2/0 255.255.255.255
+....
+
+Ismét szeretnénk elmondani, hogy a sorszámot ne írjuk bele, hiszen az csak hivatkozási céllal szerepel. Legalább egy szóközzel kezdjünk bentebb.
+
+17- sor:::
+A `/` után megjelenõ szám azoknak a biteknek a számát adja meg, amire a ppp támaszkodik. A környezetünknek jobban megfelelõ IP-címeket is megadhatunk, de a fenti példa minden esetben mûködni fog.
++
+Az utolsó paraméterrel (`0.0.0.0`) azt mondjuk a PPP-nek, hogy az egyeztetést ne a `10.0.0.1`, hanem a `0.0.0.0` címmel kezdje meg, amire egyes szolgáltatók esetén szükségünk is lesz. A `set ifaddr` elsõ paramétereként azonban soha ne adjuk meg a `0.0.0.0` címet, mivel ezzel a PPP `-auto` módban nem tudja beállítani a kezdeti útvonalat.
+
+Ha nem `-auto` módban indítjuk, akkor az [.filename]#/etc/ppp/ppp.linkup# állományban meg kell adnunk még egy bejegyzést is. A [.filename]#ppp.linkup# állományt a kapcsolat létrejötte után dolgozzuk fel. Itt már a `ppp` megkapta a felülethez tartozó címeket, így az útválasztási táblázatba fel tudjuk venni hozzájuk a megfelelõ bejegyzéseket:
+
+[.programlisting]
+....
+1     szolgaltato:
+2      add default HISADDR
+....
+
+1- sor:::
+A kapcsolat felépítése során a `ppp` a [.filename]#ppp.linkup# állományban a következõ szabályok szerint fogja keresni a bejegyzéseket: elõször a [.filename]#ppp.conf# állományban megadott címkét próbálja megtalálni. Ha ez nem sikerül, akkor az átjárónknak megfelelõ bejegyzést kezdi el keresni. Ez egy négy byte-ból álló, felírásában az IP-címekhez hasonlító címke. Ha még ez a címke sem található, akkor a `MYADDR` bejegyzést keresi.
+
+2- sor:::
+Ez a sor mondja meg a `ppp` programnak, hogy vegyen fel egy `HISADDR` címre vonatkozó alapértelmezett útvonalat. A `HISADDR` címet az IPCP által egyeztetett átjáró IP-címére cseréljük ki.
+
+Ha erre a részletesebb példát akarunk látni, akkor a [.filename]#/usr/shared/examples/ppp/ppp.conf.sample# és [.filename]#/usr/shared/examples/ppp/ppp.linkup.sample# állományokban a `pmdemand` bejegyzést nézzük meg.
+
+===== A bejövõ hívások fogadása
+
+Amikor egy helyi hálózathoz csatlakozó gépen akarjuk a ppp programot beállítani a bejövõ hívások fogadására, akkor azt is el kell döntenünk, hogy engedélyezzük-e a csomagok továbbküldését a belsõ hálózat felé. Amennyiben igen, akkor a becsatlakozó gépenek a belsõ hálózatunkon ki kell osztani egy külön címet és az [.filename]#/etc/ppp/ppp.conf# állományban, és meg kell adnunk az `enable proxy` parancsot. Emellett még az [.filename]#/etc/rc.conf# állományban se feleljtsük el megadni a következõ sort:
+
+[.programlisting]
+....
+gateway_enable="YES"
+....
+
+===== Melyik getty?
+
+<<dialup,A FreeBSD beállítása betárcsázós kapcsolatokhoz>> nagyon jól bemutatja a betárcsázós szolgáltatások beállítását a man:getty[8] segítségével.
+
+A `getty` helyett egyébként az http://mgetty.greenie.net/[mgetty], a `getty` egy ügyesebb változata is használható (a package:comms/mgetty+sendfax[] portból), amely kifejezetten a betárcsázós vonalakhoz készült.
+
+A `mgetty` használatának többek közt az egyik elõnye, hogy _aktívan tartja a kapcsolatot_ a modemekkel, tehát hogy ha az [.filename]#/etc/ttys# állományban letiltjuk a modemet, akkor nem is fog válaszolni a hívásokra.
+
+Emellett az `mgetty` késõbbi változatai (a 0.99 beta változatától kezdve) még a PPP folyamok automatikus észlelését is támogatják, ezáltal a kliensek szkriptek nélkül is képesek elérni a szerverünket.
+
+Ha errõl többet akarunk megtudni, akkor az `mgetty` paranccsal kapcsolatban olvassuk el <<userppp-mgetty,Az mgetty és az AutoPPP>> címû szakaszt.
+
+===== A PPP engedélyei
+
+A `ppp` parancsot általában `root` felhasználóként kell futtatni. Ha viszont a `ppp` parancsot tetszõleges felhasználóval akarjuk szerver módban futtatni az iméntiek szerint, akkor ahhoz fel kell vennünk az [.filename]#/etc/group# állományban szereplõ `network` csoportba.
+
+Ezeken kívül még az `allow` paranccsal is engedélyeznünk kell konfigurációs állomány egy vagy több részének elérését is:
+
+[.programlisting]
+....
+allow users fred mary
+....
+
+Ha ezt a parancsot a `default` bejegyzésnél adjuk meg, akkor az így megadott felhasználók mindenhez hozzá tudnak férni.
+
+===== PPP shellek a dinamikus IP-címek használóinak
+
+Hozzunk létre egy [.filename]#/etc/ppp/ppp-shell# nevû állományt, amelyben a következõk szerepelnek:
+
+[.programlisting]
+....
+#!/bin/sh
+IDENT=`echo $0 | sed -e 's/^.*-\(.*\)$/\1/'`
+CALLEDAS="$IDENT"
+TTY=`tty`
+
+if [ x$IDENT = xdialup ]; then
+        IDENT=`basename $TTY`
+fi
+
+echo "PPP for $CALLEDAS on $TTY"
+echo "Starting PPP for $IDENT"
+
+exec /usr/sbin/ppp -direct $IDENT
+....
+
+Ez a szkript legyen végrehajtható. Ezután az alábbi paranccsal [.filename]#ppp-dialup# néven készítsünk egy szimbolikus linket erre a szkriptre:
+
+[source,bash]
+....
+# ln -s ppp-shell /etc/ppp/ppp-dialup
+....
+
+Ez a szkript lesz az összes betárcsázó felhasználónk _shellje_. A most következõ példa az [.filename]#/etc/passwd# állományban szereplõ, `pchilds` nevû PPP felhasználó bejegyzését mutatja be (ne felejtsük el, hogy soha ne közvetlenül szerkesszük a jelszavakat tároló állományt, hanem a man:vipw[8] segítségével).
+
+[.programlisting]
+....
+pchilds:*:1011:300:Peter Childs PPP:/home/ppp:/etc/ppp/ppp-dialup
+....
+
+Hozzunk létre egy [.filename]#/home/ppp# nevû könyvtárat a következõ bárki által olvasható 0 byte-os állományokkal:
+
+[source,bash]
+....
+-r--r--r--   1 root     wheel           0 May 27 02:23 .hushlogin
+-r--r--r--   1 root     wheel           0 May 27 02:22 .rhosts
+....
+
+Ezek hatására az [.filename]#/etc/motd# állomány tartalma nem jelenik meg.
+
+===== PPP shellek a statikus IP-címek használóinak
+
+Az iméntiekhez hasonló módon készítsük el a [.filename]#ppp-shell# állományt, és mindegyik statikus IP-vel rendelkezõ hozzáféréshez csináljunk egy szimbolikus linket a [.filename]#ppp-shell# szkriptre.
+
+Például, ha három betárcsázós ügyfelünk van, `fred`, `sam` és `mary`, feléjük 24 bites CIDR hálózatokat közvetítünk, akkor a következõket kell begépelnünk:
+
+[source,bash]
+....
+# ln -s /etc/ppp/ppp-shell /etc/ppp/ppp-fred
+# ln -s /etc/ppp/ppp-shell /etc/ppp/ppp-sam
+# ln -s /etc/ppp/ppp-shell /etc/ppp/ppp-mary
+....
+
+A fentebb szereplõ betárcsázós felhasználók eléréseihez tartozó shelleket állítsuk be az itt létrehozott szimbolikus linkekre (így tehát `mary` shellje az [.filename]#/etc/ppp/ppp-mary# lesz).
+
+===== A [.filename]#ppp.conf# beállítása a dinamikus IP-címek használóinak
+
+Az [.filename]#/etc/ppp/ppp.conf# állományban a következõ sorok valamelyikének kellene szerepelnie:
+
+[.programlisting]
+....
+default:
+  set debug phase lcp chat
+  set timeout 0
+
+ttyu0:
+  set ifaddr 203.14.100.1 203.14.100.20 255.255.255.255
+  enable proxy
+
+ttyu1:
+  set ifaddr 203.14.100.1 203.14.100.21 255.255.255.255
+  enable proxy
+....
+
+[NOTE]
+====
+A bentebb kezdett sorokat mi is kezdjünk bentebb.
+====
+
+A `default:` szakasz minden kapcsolat esetén betöltõdik. Az [.filename]#/etc/ttys# állományban engedélyezett mindegyik betárcsázós vonal létrehoz a fenti `ttyu0:` szakaszhoz hasonló bejegyzést. Minden vonal kap egy egyedi IP-címet a dinamikus felhasználók számára szánt címtartományból.
+
+===== A [.filename]#ppp.conf# beállítása a statikus IP-vel rendelkezõk számára
+
+A [.filename]#/usr/shared/examples/ppp/ppp.conf# állományban szereplõ tartalom mellett az összes statikus kiosztású IP-címmel rendelkezõ betárcsázó felhasználóhoz még hozzá kell tennünk egy szakaszt. A példánkban ezek továbbra is `fred`, `sam` és `mary`.
+
+[.programlisting]
+....
+fred:
+  set ifaddr 203.14.100.1 203.14.101.1 255.255.255.255
+
+sam:
+  set ifaddr 203.14.100.1 203.14.102.1 255.255.255.255
+
+mary:
+  set ifaddr 203.14.100.1 203.14.103.1 255.255.255.255
+....
+
+Amennyiben szükséges, az [.filename]#/etc/ppp/ppp.linkup# tartalmazhat további útválasztási információkat is az egyes statikus IP-címmel rendelkezõ felhasználókhoz. A lentebb bemutatott sor a kliens ppp összekötettésén keresztül vesz fel egy útvonalat a `203.14.101.0/24` hálózat felé.
+
+[.programlisting]
+....
+fred:
+  add 203.14.101.0 netmask 255.255.255.0 HISADDR
+
+sam:
+  add 203.14.102.0 netmask 255.255.255.0 HISADDR
+
+mary:
+  add 203.14.103.0 netmask 255.255.255.0 HISADDR
+....
+
+[[userppp-mgetty]]
+===== Az `mgetty` és az AutoPPP
+
+Az package:comms/mgetty+sendfax[] port alapértelmezés szerint az `AUTO_PPP` beállítással érkezik, amely lehetõvé teszi, hogy az `mgetty` képessé legyen a PPP kapcsolatok LCP fázisát észlelni és magától létrehozni hozzá egy ppp shellt. Mivel az alapértelmezett név/jelszó páros azonban ilyenkor nem jelenik meg, a felhasználókat a PAP vagy a CHAP protokollon keresztül lehet hitelesíteni.
+
+Ez a szakasz most feltételezi, hogy a sikeresen beállítottuk, lefordítottuk és telepítettük az package:comms/mgetty+sendfax[] portot.
+
+Az [.filename]#/usr/local/etc/mgetty+sendfax/login.config# állományban ne felejtsük ellenõrizni, hogy szerepel a következõ:
+
+[.programlisting]
+....
+/AutoPPP/ -     -		      /etc/ppp/ppp-pap-dialup
+....
+
+Ezzel utasítjuk az `mgetty` programot arra, hogy az észlelt PPP kapcsolatokhoz futtassa le a [.filename]#ppp-pap-dialup# szkriptet.
+
+Hozzunk létre az [.filename]#/etc/ppp/ppp-pap-dialup# nevû állományt, amelyben majd a következõk fognak szerepelni (az állomány legyen végrehajtható):
+
+[.programlisting]
+....
+#!/bin/sh
+exec /usr/sbin/ppp -direct pap$IDENT
+....
+
+Az [.filename]#/etc/ttys# állományban engedélyezett összes betárcsázós vonalhoz készítsük el a megfelelõ bejegyzést az [.filename]#/etc/ppp/ppp.conf# állományban. Ezek remekül meg fognak férni az imént készített definíciókkal.
+
+[.programlisting]
+....
+pap:
+  enable pap
+  set ifaddr 203.14.100.1 203.14.100.20-203.14.100.40
+  enable proxy
+....
+
+Minden olyan felhasználónak, aki ezzel a módszerrel jelentkezik be, szüksége lesz egy név/jelszó kombinációra az [.filename]#/etc/ppp/ppp.secret# állományban, vagy az alábbi beállítás megadásával választhatjuk azt is, hogy a felhasználókat az [.filename]#/etc/passwd# állományon keresztül a PAP protokoll segítségével azonosítjuk.
+
+[.programlisting]
+....
+enable passwdauth
+....
+
+Ha statikus IP-címet akarunk kiosztani némely felhasználóknak, akkor az [.filename]#/etc/ppp/ppp.secret# állományban ezt megadhatjuk a harmadik paraméternek. Errõl bõvebben a [.filename]#/usr/shared/examples/ppp/ppp.secret.sample# állományban láthatunk példát.
+
+===== A Microsoft kiterjesztései
+
+A PPP úgy is beállítható, hogy kérésre DNS és NetBIOS típusú névfeloldáshoz is szolgáltasson információkat.
+
+A PPP 1.x változatával úgy lehet engedélyezni ezeket a kiterjesztéseket, ha az [.filename]#/etc/ppp/ppp.conf# állomány megfelelõ részeibe felvesszük a következõ sorokat:
+
+[.programlisting]
+....
+enable msext
+set ns 203.14.100.1 203.14.100.2
+set nbns 203.14.100.5
+....
+
+A PPP második és késõbbi változataiban pedig:
+
+[.programlisting]
+....
+accept dns
+set dns 203.14.100.1 203.14.100.2
+set nbns 203.14.100.5
+....
+
+Ezzel a kliens megkapja az elsõdleges és másodlagos névszerverek címeit, valamint a NetBIOS névszervert.
+
+Ha a második és az azt követõ verziókban a `set dns` sort elhagyjuk, akkor a PPP az [.filename]#/etc/resolv.conf# állományban található értékeket fogja használni.
+
+[[userppp-PAPnCHAP]]
+===== A PAP és CHAP hitelesítés
+
+Egyes internet-szolgáltatók úgy állítják be a rendszerüket, hogy a kapcsolat felépítése során a hitelesítés a PAP vagy CHAP mechanizmusok valamelyikével történik. Ilyenkor a szolgáltató nem egy `login:` sorral fogja bekérni a szükséges adatokat, hanem közvetlenül a PPP kapcsolatot kezdi el használni.
+
+A PAP nem olyan biztonságos, mint a CHAP, de itt a biztonság nem is annyira fontos, mivel a jelszavak, amelyeket ugyan a PAP titkosítatlan formában küld tovább, csak egy soros vonalon haladnak át. A rossz indulatú támadók itt nem sok mindent tudnak "lehallgatni".
+
+A <<userppp-staticIP,PPP statikus IP-címmel>> és a <<userppp-dynamicIP,PPP dinamikus IP címmel>> címû szakaszokhoz képest a következõ módosításokat kell elvégeznünk:
+
+[.programlisting]
+....
+13      set authname AFelhasználóiNevem
+14      set authkey AJelszavam
+15      set login
+....
+
+13- sor:::
+Ebben a sorban adjuk meg a PAP/CHAP felhasználói nevünket, amelyet _AFelhasználóiNevem_ helyett kell beírni.
+
+14- sor:::
+Ebben a sorban adjuk meg a PAP/CHAP jelszavunkat, _AJelszavam_ helyett. Szándénkunk egyértelmûsítése érdekében ezek mellett még egy további sort is érdemes felvennünk, tehát:
++
+[.programlisting]
+....
+16      accept PAP
+....
++
+vagy
++
+[.programlisting]
+....
+16      accept CHAP
+....
++
+Alapértelmezés szerint a PAP és CHAP is egyaránt elfogadott.
+
+15- sor:::
+A PAP és CHAP alkalmazásakor általában nem is kell bejelentkeznünk a szolgáltató szerverére. Ezért a "set login" parancsnál használt karakterláncot le is kell tiltanunk.
+
+===== A `ppp` beállításainak megváltoztatása menet közben
+
+A háttérben futó `ppp` programhoz menet közben is tudunk beszélni, de csak olyankor, amikor az ehhez szükséges portot megadtuk. Ezt úgy tudjuk megtenni, ha beállítások közé felvesszük az alábbit:
+
+[.programlisting]
+....
+set server /var/run/ppp-tun%d DiagnosticPassword 0177
+....
+
+Így a PPP az elõre megadott UNIX(R) tartománybeli socketen keresztül fogja várni a kapcsolódásunkat, és a konkrét hozzáféréshez jelszót kér. A névben szereplõ `%d` a használatban levõ [.filename]#tun# eszköz sorszámát jelöli.
+
+Miután a csatlakozás beállítódott, a szkriptekben a man:pppctl[8] program használható a futó program vezérléséhez.
+
+[[userppp-nat]]
+==== A PPP hálózati címfordítási képességének kihasználása
+
+A PPP képes a rendszermag rásegítése nélkül képes hálózati címfordítást végezni. Ezt a lehetõséget a következõ sor hozzáadásával tudjuk aktiválni az [.filename]#/etc/ppp/ppp.conf# állományban:
+
+[.programlisting]
+....
+nat enable yes
+....
+
+A PPP-be épített hálózati címfordítás a `-nat` parancssori paraméterrel is bekapcsolható. Az [.filename]#/etc/rc.conf# állományban is található hozzá egy `ppp_nat` változó, amely alapértelmezés szerint engedélyezett.
+
+Amikor használjuk ezt a lehetõséget, az [.filename]#/etc/ppp/ppp.conf# állományban a következõ opciókkal engedélyezhetjük a bejövõ kapcsolatok továbbítását:
+
+[.programlisting]
+....
+nat port tcp 10.0.0.2:ftp ftp
+nat port tcp 10.0.0.2:http http
+....
+
+vagy egyáltalán ne bízzunk meg a külvilágban:
+
+[.programlisting]
+....
+nat deny_incoming yes
+....
+
+[[userppp-final]]
+==== A rendszer végsõ beállítása
+
+Mostanra ugyan már beállítottuk a `ppp` programot, azonban még néhány dolgot be kell állítanunk, mielõtt ténylegesen nekilátnánk használni. Ezek mindegyike az [.filename]#/etc/rc.conf# állomány módosítását igényli.
+
+Az állományt fentrõl lefelé fogjuk feldolgozni, de elõtte ne felejtsünk el értéket adni a `hostname=` változónak, például:
+
+[.programlisting]
+....
+hostname="ize.minta.com"
+....
+
+Amennyiben a szolgáltatónk statikus IP-címet és nevet biztosít számunkra, az lesz a legjobb, ha itt a tõle kapott nevet adjuk meg.
+
+Keressük meg a `network_interfaces` változót. Ha a rendszerünkben kérésre akarjuk tárcsázni a szolgáltatónkat, akkor a [.filename]#tun0# eszközt mindenképpen vegyük fel az értékébe, minden más esetben pedig távolítsuk el.
+
+[.programlisting]
+....
+network_interfaces="lo0 tun0"
+ifconfig_tun0=
+....
+
+[NOTE]
+====
+Az `ifconfig_tun0` változónak üres értéket kell megadnunk, és létre kell hoznunk egy [.filename]#/etc/start_if.tun0# nevû állományt. Ebben a következõ sornak kell szerepelnie:
+
+[.programlisting]
+....
+ppp -auto arendszerem
+....
+
+Ez a szkript a hálózat beállításakor fut le, és a ppp démont automatikus módban indítja el. Ha az adott gép egy helyi hálózat átjárója is egyben, akkor az `-alias` kapcsolót is érdemes megadnunk mellette. A pontosabb részletek tekintetében olvassuk el a megfelelõ man oldalt.
+====
+
+Az [.filename]#/etc/rc.conf# állományban a `NO` érték megadásával tiltsuk le az útválasztást végzõ program használatát:
+
+[.programlisting]
+....
+router_enable="NO"
+....
+
+Fontos, hogy a `routed` démon ne induljon el, mivel `routed` hajlamos törölni a `ppp` által létrehozott alapértelmezett útválasztási bejegyzéseket.
+
+Ezenkívül még a `sendmail_flags` változóról szóló sorból is érdemes kivenni a `-q` opciót, máskülönben a `sendmail` minden mûvelet megkezdése elõtt nekiáll felderíteni a hálózatot, és ezzel megindítja a tárcsázást. Próbáljuk meg így átírni az értékét:
+
+[.programlisting]
+....
+sendmail_flags="-bd"
+....
+
+Ezért cserébe viszont a `sendmail` programot a ppp kapcsolat létrejöttekor mindig utasítanunk kell, hogy újból ellenõrizze a levelezési sort. Ezt a következõk begépelésével érhetjük el:
+
+[source,bash]
+....
+# /usr/sbin/sendmail -q
+....
+
+Ugyanezt automatikusan is meg tudjuk tenni a `!bg` paranccsal a [.filename]#ppp.linkup# állományban:
+
+[.programlisting]
+....
+1     szolgaltato:
+2       delete ALL
+3       add 0 0 HISADDR
+4       !bg sendmail -bd -q30m
+....
+
+Ha nem felelne meg ez a megoldás, akkor egy "dfilter" is beállítható az SMTP forgalom szûrésére. A példák között megtaláljuk ennek pontos minkéntjét.
+
+Ezután már csak a gépünk újraindítása maradt hátra. Az újraindítás után már be is gépelhetjük:
+
+[source,bash]
+....
+# ppp
+....
+
+ahol a `dial szolgaltato` parancs kiadásával meg tudjuk kezdeni a PPP kapcsolat felépítését, vagy a `ppp` programot megkérhetjük arra, hogy automatikusan kezdje el, amint van kimenõ forgalom (és nem készítettük el a [.filename]#start_if.tun0# szkriptet). Ekkor gépeljük be ezt:
+
+[source,bash]
+....
+# ppp -auto szolgaltato
+....
+
+==== Összefoglalás
+
+Gyorsan foglaljuk össze, hogy az ppp beállításához milyen lépések megtétele szükséges az elsõ alkalommal:
+
+A kliens oldalán:
+
+[.procedure]
+====
+. Gyõzõdjünk meg róla, hogy a [.filename]#tun# eszköz benne van a rendszermagban.
+. Ellenõrizzük, hogy a [.filename]#tunN# eszközhöz tartozó állomány rendelkezésre áll a [.filename]#/dev# könyvtárban.
+. Hozzunk létre egy bejegyzést az [.filename]#/etc/ppp/ppp.conf# állományban. A [.filename]#pmdemand# példából a legtöbb szolgáltató esetében ki tudunk indulni.
+. Ha dinamikus IP-címet kapunk, akkor az [.filename]#/etc/ppp/ppp.linkup# állományba is vegyünk fel egy bejegyzést.
+. Frissítsük az [.filename]#/etc/rc.conf# állományunkat.
+. Ha igény szerint akarunk tárcsázni, akkor hozzunk létre [.filename]#start_if.tun0# néven egy szkriptet.
+====
+
+A szerver oldalán:
+
+[.procedure]
+====
+. Gondoskodjunk róla, hogy a [.filename]#tun# eszköz támogatása szerepel rendszermagban.
+. Gyõzõdjünk meg róla, hogy a [.filename]#tunN# eszköz megtalálható a [.filename]#/dev# könyvtárban.
+. Az [.filename]#/etc/passwd# állományban (a man:vipw[8] program használatával) hozzunk létre bejegyzéseket.
+. A felhasználók könyvtáraiban hozzunk létre egy olyan profilt, amely `ppp -direct direct-server` vagy egy ehhez hasonló parancsot futtat le.
+. Az [.filename]#/etc/ppp/ppp.conf# állományban adjuk meg egy bejegyzést. A [.filename]#direct-server# példa ehhez egy remek alapot biztosít.
+. Az [.filename]#/etc/ppp/ppp.linkup# állományban hozzunk létre egy bejegyzést.
+. Frissítsük az [.filename]#/etc/rc.conf# állományunkat.
+====
+
+[[ppp]]
+== A rendszerszintû PPP alkalmazása
+
+[WARNING]
+====
+
+Ez a szakasz csak FreeBSD 7._X_ esetén érvényes.
+====
+
+=== A rendszerszintû PPP beállítása
+
+Mielõtt a gépünkön nekikezdünk a PPP beállításának, ellenõrizzük, hogy a `pppd` megtalálható a [.filename]#/usr/sbin# könyvtárban és az [.filename]#/etc/ppp# könyvtár létezik.
+
+A `pppd` két módban képes mûködni:
+
+. "kliensként" - a gépünket soros vonali vagy modemes PPP kapcsolaton keresztül csatlakoztatjuk a külvilághoz
+. "szerverként" - a számítógépünk egy hálózat része, ahol a többieket a PPP használatával kapcsoljuk össze
+
+Mind a két esetben egy konfigurációs állomány tartalmát kell összeállítanunk (ez az [.filename]#/etc/ppp/options# vagy a [.filename]#~/.ppprc#, ha a gépünkön több felhasználó is PPP-t akar használni).
+
+Egy modemes vagy soros vonali szoftverre is szükségünk lesz (ez többnyire a package:comms/kermit[]), amellyel távoli gépeket tudunk felhívni és feléjük kapcsolatot felépíteni.
+
+=== A `pppd` mint kliens
+
+A most következõ [.filename]#/etc/ppp/options# állománnyal egy Cisco terminál szerverhez tudunk kapcsolódni egy PPP vonalon keresztül.
+
+[.programlisting]
+....
+crtscts         # a hardveres forgalomirányítás engedélyezése
+modem           # modem vezérlõvonal
+noipdefault     # a távoli PPP szervernek kell IP-címet adnia
+                # ha az IPCP alapú egyeztetés során a távoli gép nem küld
+                # nekünk IP-címet, akkor vegyük ki ezt a beállítást
+passive         # LCP csomagokat várunk
+domain ppp.ize.com      # ide írjuk be a hálózati nevünket
+
+:távoli_ip    # ide kell írni a távoli PPP szerver IP-címét
+                # a PPP kapcsolaton keresztül erre fogjuk továbbküldeni a csomagokat
+                # ha nem adtuk meg "noipdefault" beállítást, akkor ezt a sort
+                # írjuk át helyi_ip:távoli_ip alakúra
+
+defaultroute    # adjuk meg ezt a sort is, ha a PPP szerverünket egyben az
+                # alapértelmezett átjárónak is be akarjuk állítani
+....
+
+Így kapcsolódunk:
+
+[.procedure]
+====
+. Tárcsázzuk a távoli gépet a Kermit (vagy bármilyen más modemes program) elindításával, majd adjuk meg a felhasználói nevünket és jelszavunkat (vagy bármi mást, amivel a távoli gépen engedélyezni tudjuk a PPP használatát).
+. Lépjünk ki a Kermit programból (anélkül, hogy bontanánk a vonalat).
+. Írjuk be a következõket:
++
+[source,bash]
+....
+# /usr/sbin/pppd /dev/tty01 19200
+....
++ 
+Ne felejtsük el megadni a megfelelõ sebességet és eszközt.
+====
+
+A számítógépünk most már PPP-n keresztül csatlakozik. Ha valamilyen okból nem sikerülne felépíteni a kapcsolatot, akkor vegyük fel a `debug` beállítást is az [.filename]#/etc/ppp/options# állományba, majd a konzolra érkezõ üzenetek segítségével próbáljuk meg felderíteni a probléma okát.
+
+Az alábbi [.filename]#/etc/ppp/pppup# szkript mind a három fázist automatikussá teszi:
+
+[.programlisting]
+....
+#!/bin/sh
+pgrep -l pppd
+pid=`pgrep pppd`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill ${pid}
+fi
+pgrep -l kermit
+pid=`pgrep kermit`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+kermit -y /etc/ppp/kermit.dial
+pppd /dev/tty01 19200
+....
+
+Az [.filename]#/etc/ppp/kermit.dial# egy olyan Kermit szkript, amivel tárcsázni tudunk és a távoli gépen elvégezni az összes szükséges hitelesítést (a leírás végén találhatunk is egy ilyen szkriptet példaként).
+
+Az alábbi [.filename]#/etc/ppp/pppdown# szkripttel tudjuk bontani a PPP vonalat:
+
+[.programlisting]
+....
+#!/bin/sh
+pid=`pgrep pppd`
+if [ X${pid} != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill -TERM ${pid}
+fi
+
+pgrep -l kermit
+pid=`pgrep kermit`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+/sbin/ifconfig ppp0 down
+/sbin/ifconfig ppp0 delete
+kermit -y /etc/ppp/kermit.hup
+/etc/ppp/ppptest
+....
+
+A [.filename]#/usr/etc/ppp/ppptest# elindításával ellenõrizni tudjuk, hogy a `pppd` még mindig fut. Ez valahogy így néz ki:
+
+[.programlisting]
+....
+#!/bin/sh
+pid=`pgrep pppd`
+if [ X${pid} != "X" ] ; then
+        echo 'pppd running: PID=' ${pid-NONE}
+else
+        echo 'No pppd running.'
+fi
+set -x
+netstat -n -I ppp0
+ifconfig ppp0
+....
+
+A vonal bontásához az [.filename]#/etc/ppp/kermit.hup# szkriptet kell elindítanunk, amiben a következõ szerepelnek:
+
+[.programlisting]
+....
+set line /dev/tty01	; ide írjuk be a saját modemünket
+set speed 19200
+set file type binary
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+
+pau 1
+out +++
+inp 5 OK
+out ATH0\13
+echo \13
+exit
+....
+
+A `kermit` helyett a `chat` programot is használhatjuk:
+
+A következõ két állomány már elég egy kapcsolat létrehozásához `pppd` használatával:
+
+[.filename]#/etc/ppp/options#:
+
+[.programlisting]
+....
+/dev/cuad1 115200
+
+crtscts		# a hardveres forgalomirányítás engedélyezése
+modem		# modemes vezérlõvonal
+connect "/usr/bin/chat -f /etc/ppp/login.chat.script"
+noipdefault	# a távoli PPP kiszolgálónak adnia kell egy IP-címet
+	        # ha a távoli gép nem küldi az IP-címünk az IPCP alapú egyeztetés során
+                # akkor távolítsuk el ezt a beállítást
+passive         # LCP csomagokat várunk
+domain sajat.tartomany	# ide írjuk be a saját tartománynevünket
+
+:		# a távoli PPP kiszolgáló IP-címét tegyük ide
+	        # ezen keresztül fogjuk továbbküldeni a PPP kapcsolaton áthaladó csomagokat
+                # nem adtuk meg a "noipdefault" beállítást, akkor ezt
+                # sort írjuk át helyi_ip:távoli_ip alakúra
+
+defaultroute	# ez a sor akkor kell, ha a PPP szerver lesz az
+	        # alapértelmezett átjárónk is
+....
+
+[.filename]#/etc/ppp/login.chat.script#:
+
+[NOTE]
+====
+A most következõt egyetlen sorba kell írnunk.
+====
+
+[.programlisting]
+....
+ABORT BUSY ABORT 'NO CARRIER' "" AT OK ATDTtelefon.szám
+  CONNECT "" TIMEOUT 10 ogin:-\\r-ogin: bejelentkezési-azonosító
+  TIMEOUT 5 sword: jelszó
+....
+
+Miután ezeket telepítettük és a megfelelõképpen módosítottuk, már csak a `pppd` parancsot kell kiadnunk, valahogy így:
+
+[source,bash]
+....
+# pppd
+....
+
+=== A `pppd` mint szerver
+
+Az [.filename]#/etc/ppp/options# állományban nagyjából a következõknek kell szerepelnie:
+
+[.programlisting]
+....
+crtscts                         # hardveres forgalomirányítás
+netmask 255.255.255.0           # hálózati maszk (nem kötelezõ)
+192.114.208.20:192.114.208.165  # a helyi és távoli gépek IP-címei
+                                # a helyi IP-nek el kell térnie az Ethernet
+                                # (vagy más egyéb) felülethez tartozó címtõl.
+                                # a távoli IP a távoli géphez rendelt IP-cím
+domain ppp.ize.com              # a saját tartományunk
+passive                         # az LCP csomagok várása
+modem                           # modemes vonal
+....
+
+Az alábbi [.filename]#/etc/ppp/pppserv# szkript a pppd démont szervernek állítja be:
+
+[.programlisting]
+....
+#!/bin/sh
+pgrep -l pppd
+pid=`pgrep pppd`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill ${pid}
+fi
+pgrep -l kermit
+pid=`pgrep kermit`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+
+# reset ppp interface
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+# enable autoanswer mode
+kermit -y /etc/ppp/kermit.ans
+
+# run ppp
+pppd /dev/tty01 19200
+....
+
+A szerver leállítására a következõ [.filename]#/etc/ppp/pppservdown# szkriptet kell használnunk:
+
+[.programlisting]
+....
+#!/bin/sh
+pgrep -l pppd
+pid=`pgrep pppd`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing pppd, PID=' ${pid}
+        kill ${pid}
+fi
+pgrep -l kermit
+pid=`pgrep kermit`
+if [ "X${pid}" != "X" ] ; then
+        echo 'killing kermit, PID=' ${pid}
+        kill -9 ${pid}
+fi
+ifconfig ppp0 down
+ifconfig ppp0 delete
+
+kermit -y /etc/ppp/kermit.noans
+....
+
+A következõ Kermit szkript ([.filename]#/etc/ppp/kermit.ans#) engedélyezi vagy tiltja le a modem automatikus válaszadását. Körülbelül így épül fel:
+
+[.programlisting]
+....
+set line /dev/tty01
+set speed 19200
+set file type binary
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+
+pau 1
+out +++
+inp 5 OK
+out ATH0\13
+inp 5 OK
+echo \13
+out ATS0=1\13   ; "ATS0=0\13"-ra írjuk át, ha le akarjuk tiltani az
+                ; automatikus válaszadást
+inp 5 OK
+echo \13
+exit
+....
+
+Az [.filename]#/etc/ppp/kermit.dial# elnevezésû szkriptet használhatjuk arra, hogy tárcsázzunk távoli gépeket és hitelesítsük magunkat rajtuk. Írjuk át az igényeinknek megfelelõen, tegyük bele a bejelentkezéshez szükséges azonosítót és jelszót, illetve a modemünk és a távoli gép válaszai szerint módosítsuk az `input` utasításokat.
+
+[.programlisting]
+....
+;
+; írjuk ide azt a com vonalat, amire a modemünk csatlakozik:
+;
+set line /dev/tty01
+;
+; ide kerül a modem sebessége:
+;
+set speed 19200
+set file type binary            ; teljes 8 bites állomány-átvitel
+set file names literal
+set win 8
+set rec pack 1024
+set send pack 1024
+set block 3
+set term bytesize 8
+set command bytesize 8
+set flow none
+set modem hayes
+set dial hangup off
+set carrier auto                ; adjuk meg a SET CARRIER utasítást is, ha kell
+set dial display on             ; adjuk meg a SET DIAL utasítást is, ha kell
+set input echo on
+set input timeout proceed
+set input case ignore
+def \%x 0                       ; a bejelentkezés számlálója
+goto slhup
+
+:slcmd                          ; tegyük a modemet parancs módba
+echo Tegyuk a modemet parancs modba.
+clear                           ; töröljük a be nem olvasott karaktereket a bemeneti pufferbõl
+pause 1
+output +++                      ; a Hayes-féle helyettesítési szekvenciák használata
+input 1 OK\13\10                ; várjuk meg az OK jelzést
+if success goto slhup
+output \13
+pause 1
+output at\13
+input 1 OK\13\10
+if fail goto slcmd              ; ha a modem nem válaszol OK-val, akkor próbálkozzunk újra
+
+:slhup                          ; bontsuk a vonalat
+clear                           ; töröljük ki a be nem olvasott karaktereket a bemeneti pufferbõl
+pause 1
+echo A vonal bontasa.
+output ath0\13                  ; a kapcsolat létrejöttét jelzõ Hayes-parancs
+input 2 OK\13\10
+if fail goto slcmd              ; ha nincs OK válasz, akkor tegyük a modemet parancs módba
+
+:sldial                         ; tárcsázzuk a számot
+pause 1
+echo Dialing.
+output atdt9,550311\13\10       ; ide írjuk a telefonszámot
+assign \%x 0                    ; nullázzuk le az idõzítõt
+
+:look
+clear                           ; töröljük az olvasatlan karaktereket a bemeneti pufferbõl
+increment \%x                   ; számoljuk a másodperceket
+input 1 {CONNECT }
+if success goto sllogin
+reinput 1 {NO CARRIER\13\10}
+if success goto sldial
+reinput 1 {NO DIALTONE\13\10}
+if success goto slnodial
+reinput 1 {\255}
+if success goto slhup
+reinput 1 {\127}
+if success goto slhup
+if < \%x 60 goto look
+else goto slhup
+
+:sllogin                        ; bejelentkezés
+assign \%x 0                    ; nullázzuk le az idõzítõt
+pause 1
+echo A bejelentkezes keresese.
+
+:slloop
+increment \%x                   ; számoljuk a másodperceket
+clear                           ; töröljük az olvasatlan karaktereket a bemeneti pufferbõl
+output \13
+;
+; ide írjuk be a várható bejelentkezési sablont:
+;
+input 1 {Felhasznaloi nev: }
+if success goto sluid
+reinput 1 {\255}
+if success goto slhup
+reinput 1 {\127}
+if success goto slhup
+if < \%x 10 goto slloop      ; tízszer próbálkozzunk a bejelentkezéssel
+else goto slhup                 ; 10 sikertelen próbálkozás után bontsuk a vonalat és kezdjük újra
+
+:sluid
+;
+; ide írjuk be a felhasználói azonosítónkat:
+;
+output ppp-login\13
+input 1 {Jelszo: }
+;
+; ide tegyük a hozzá tartozó jelszót:
+;
+output ppp-password\13
+input 1 {Atvaltas SLIP modba.}
+echo
+quit
+
+:slnodial
+echo \7Nincs vonal.  Ellenorizzuk a telefonvonalat!\7
+exit 1
+
+; local variables:
+; mode: csh
+; comment-start: "; "
+; comment-start-skip: "; "
+; end:
+....
+
+[[ppp-troubleshoot]]
+== PPP kapcsolatok hibaelhárítása
+
+[WARNING]
+====
+
+A FreeBSD 8.0 kiadásától kezdõdõen a man:sio[4] meghajtó szerepét a man:uart[4] veszi át. Emiatt a soros vonali eszközöket [.filename]#/dev/cuadN# és [.filename]#/dev/cuauN# helyett [.filename]#/dev/ttydN# és [.filename]#/dev/ttyuN# néven lehet elérni. A FreeBSD 7._X_ változatok felhasználóinak ennek megfelelõen kell olvasniuk ezt a leírást.
+====
+
+Ebben a szakaszban összefoglalunk néhány olyan problémát, ami a PPP modemen keresztüli használata során keletkezhet. Például pontosan tisztában kell lennünk azzal, hogy a tárcsázott rendszer milyen adatokat és hogyan fog tõlünk bekérni. Egyes szolgáltatók egy `ssword` promptot, míg mások egy `password` promptot adnak. Ha a `ppp` szkript nem illeszkedik ezekhez az elvárásokhoz, akkor nem tudunk bejelentkezni. A `ppp` csatlakozások nyomonkövetésének egyik leggyakoribb módja a manuális kapcsolódás. A következõkben ezért a manuális csatlakozásokra vonatkozó legszükségesebb ismereteket mutatjuk be lépésrõl lépésre.
+
+=== Az eszközleírók ellenõrzése
+
+Ha saját rendszermagot használunk, ne felejtsük el felvenni a következõ sort a konfigurációs állományba:
+
+[.programlisting]
+....
+device   uart
+....
+
+A `GENERIC` rendszermag az [.filename]#uart# eszközt már alapértelmezés szerint tartalmazza, ezért ilyenkor már nincs több teendõnk. Egyszerûen csak a `dmesg` parancs kimenetében keressük meg a modemes eszközhöz tartozó adatokat:
+
+[source,bash]
+....
+# dmesg | grep uart
+....
+
+Ennek eredményeképpen kapunk egy rövid összefoglalást a [.filename]#uart# típusú eszközökrõl. Ezek lesznek a számunkra fontos COM portok. Amennyiben a modemünk egy szabványos soros portként mûködik, akkor a [.filename]#uart1# vagy [.filename]#COM2# néven kell keresnünk. Ha megtaláltuk, akkor nem kell új rendszermagot fordítanunk. Amikor a soros vonali modemünk a [.filename]#uart1# vagy [.filename]#COM2# porton csatlakozik DOS-ban, akkor itt a neki megfelelõ eszköz a [.filename]#/dev/cuau1# lesz.
+
+=== Kapcsolódás manuálisan
+
+A `ppp` kézi irányításával gyorsan, egyszerûen és minden fájdalomtól mentesen tudunk csatlakozni az internethez, de olyankor is hasznos, ha ki akarjuk deríteni, hogy az internet-szolgáltatónk milyen módon kezeli a kliensek `ppp` csatlakozásait. Nos, akkor ehhez indítsuk is el a PPP alkalmazást a paranccsorból. Az alábbi példákban rendre a _pelda_ névvel hivatkozunk a PPP-t mûködtetõ gépre. A `ppp` tehát a `ppp` parancs begépelésével indítható:
+
+[source,bash]
+....
+# ppp
+....
+
+Ezzel elindítottuk a `ppp` programot.
+
+[source,bash]
+....
+ppp ON pelda> set device /dev/cuau1
+....
+
+Beállítjuk a modemünket, ami ebben az esetben a [.filename]#cuau1#.
+
+[source,bash]
+....
+ppp ON pelda> set speed 115200
+....
+
+Beállítjuk a csatlakozás sebességét, ami ebben az esetben 115 200 kbit/mp.
+
+[source,bash]
+....
+ppp ON pelda> enable dns
+....
+
+Azt mondjuk a `ppp` programnak, hogy állítsa be a névfeloldót és az [.filename]#/etc/resolv.conf# állományt egészítse ki a megfelelõ névszerverekkel. Ha a `ppp` nem képes megállapítani a gépünk nevét, akkor késõbb ezt még kézzel is be tudjuk állítani.
+
+[source,bash]
+....
+ppp ON pelda> term
+....
+
+Váltsunk "terminál" módba, így mi irányítjuk a modemet.
+
+[.programlisting]
+....
+deflink: Entering terminal mode on /dev/cuau1
+type '~h' for help
+....
+
+[source,bash]
+....
+at
+OK
+atdt123456789
+....
+
+Az `at` paranccsal hozzuk alaphelyzetbe a modemet, majd a `atdt` paranccsal és egy telefonszám megadásával megkezdjük a szolgáltató tárcsázását.
+
+[source,bash]
+....
+CONNECT
+....
+
+Ezzel jelez vissza a kapcsolódás megkezdésérõl. Ha itt bármilyen hardvertõl független csatlakozási probléma merülne fel, akkor ezen a ponton tudunk ellene tenni valamit.
+
+[source,bash]
+....
+ISP Login:felhasznalonev
+....
+
+Itt kell megadnunk a felhasználói nevünket, ami megegyezik a szolgáltató által adott azonosítónkkal.
+
+[source,bash]
+....
+ISP Pass:jelszo
+....
+
+Ezúttal a jelszavunkat kell megadni, amit szintén a szolgáltató bocsátott rendelkezésünkre az azonosító mellett. Akárcsak amikor bejelentkezünk a FreeBSD-be, itt sem fog látszódni a jelszavunk.
+
+[source,bash]
+....
+Shell or PPP:ppp
+....
+
+Szolgáltatótól függõen elõfordulhat, hogy ez a sor soha nem is jelenik meg. Itt kérdezik meg, hogy a szolgáltatónál egy shellt akarunk használni, vagy csak elindítani egy `ppp` kapcsolatot. Ebben a példában természetesen a `ppp` opciót választjuk, mivel egy internet-elõfizetés birtokosai vagyunk.
+
+[source,bash]
+....
+Ppp ON pelda>
+....
+
+Figyeljük meg, hogy az elsõ `p` nagybetûssé vált. Ezzel jelzi a program, hogy sikeresen csatlakoztunk a szolgáltatónkhoz.
+
+[source,bash]
+....
+PPp ON pelda>
+....
+
+Sikeresen azonosítottuk magunkat a szolgáltató felé és várjuk az IP-címünket.
+
+[source,bash]
+....
+PPP ON pelda>
+....
+
+Megkaptuk az IP-címünket és ezzel sikeresen felépült a kapcsolat.
+
+[source,bash]
+....
+PPP ON pelda>add default HISADDR
+....
+
+Itt adjuk hozzá az alapértelmezett útvonalat, amire mindenképpen szükségünk van ahhoz, hogy a külvilággal is kapcsolatban tudjunk lépni, mivel jelenleg csak a vonal másik végén lévõ gépet érjük el. Ha ezt bizonyos, már meglevõ útvonalak miatt nem sikerül felvenni, akkor az `add` elé tegyünk egy `!` jelet. Ezt viszont a kapcsolat felépítése elõtt is megtehetjük, így menet közben az új útvonalat felveszi a többi közé.
+
+Ha eddig minden remekül ment, akkor ezen ponton már egy élõ internet-kapcsolattal rendelkezünk, és a programot a kbd:[CTRL+z] lenyomásával a háttérbe is tehetjük. Ha a `PPP` felirat ismét a `ppp` feliratra váltana, akkor az arra utal, hogy elvesztettük a kapcsolatot. Erre nem árt figyelni, mivel ezzel jelzi az aktuális kapcsolat állapotát. A nagybetûs P-k jelölik, hogy az adott szinten megvan a kapcsolat a szolgáltató felé, a kisbetûs p-k pedig arra utalnak, hogy azon a szinten a kapcsolat valamiért megszûnt. A `ppp` csak ezt a két állapotot ismeri.
+
+==== Nyomkövetés
+
+Ha közvetlen vonalunk van és mégsem sikerül kapcsolatot létesíteni, akkor tiltsuk le a hardveres CTS/RTS forgalomirányítást a `set ctsrts off` paranccsal. Ez leginkább akkor fordul elõ, ha csatlakoztunk egy olyan terminálszerverhez, amely valamennyire képes kezelni a PPP kapcsolatokat, de a PPP megáll, mikor adatot próbál írni a kommunikációs csatornára, mivel arra a CTS (Clear To Send - "lehet küldeni") jelzésre vár, amely soha nem fog megérkezni. Ha mégis ezt a beállítást akarjuk használni, akkor a `set accmap` beállításra is szükségünk lesz, mivel ez kell bizonyos karakterek hardverfüggõ átküldésének felülbírálásához, legtöbb esetben a XON/XOFF miatt. A man:ppp[8] man oldalon találhatunk errõl és ennek használatáról részletesebb leírást.
+
+Ha egy régebbi gyártmányú modemünk van, akkor a `set parity even` beállítás alkalmazása is javasolt. Alapértelmezés szerint ugyanis nincs paritás, de a régebbi modemek és (a forgalom növekedésével) egyes szolgáltatók még használják hibaellenõrzésre. Ha Compuserve elõfizetésünk van, mindenképpen kapcsoljuk be.
+
+Amikor a PPP nem tér vissza parancs módba, akkor gyaníthatóan az egyeztetésben lesz valahol probléma, mivel a szolgáltató a kliensüktõl várja a kezdeményezését. Ezen a ponton a `~p` paranccsal utasíthatjuk a ppp programot a konfigurációs információk átküldésének megkezdésére.
+
+Ha egyáltalán nem kapunk promptot a bejelentkezéshez, akkor nagy a alószínûsége, hogy az iménti UNIX(R) stílusú hitelesítés helyett PAP vagy CHAP protokollt kell használnunk. A PAP vagy CHAP használatához mindössze a következõ beállításokat kell megadnunk PPP programnak a terminál mód aktiválása elõtt:
+
+[source,bash]
+....
+ppp ON pelda>set authname felhasznalonev
+....
+
+ahol a _felhasznalonev_ helyett a szolgáltatótól kapott azonosítót kell beírnunk.
+
+[source,bash]
+....
+ppp ON pelda>set authkey jelszo
+....
+
+ahol a _jelszo_ helyett a szolgáltatótól kapott jelszót kell megadnunk.
+
+Ha sikeresen csatlakoztunk, de még nem találunk semmilyen tartománynevet, akkor a man:ping[8] és IP-cím segítségével tudjuk megvizsgálni, hogy mûködõképes-e a kapcsolat. Ha 100 százalékos (100%) csomagvesztést (packet loss) tapasztalunk, akkor szinte biztos, hogy nincs meg az alapértelmezett útvonal. Nézzük meg újra, hogy az `add default HISADDR` beállítást megadtuk-e a kapcsolat felépítésekor. Ha viszont már el tudunk érni egy távoli IP-címet, akkor nagyon valószínû, hogy az [.filename]#/etc/resolv.conf# állományba nem került bele a megfelelõ névfeloldó címe. Az említett állománynak valahogy így kellene kinéznie:
+
+[.programlisting]
+....
+domain minta.com
+nameserver x.x.x.x
+nameserver y.y.y.y
+....
+
+Ahol az _x.x.x.x_ és _y.y.y.y_ címeket a szolgáltatónk névszervereinek címével kell behelyettesíteni. Ez nem minden esetben található meg az elõfizetõi szerzõdésben, de ha felhívjuk a szolgáltatónkat, akkor minden bizonnyal elárulják ezeket a címeket.
+
+A man:syslog[3] is alkalmas a PPP kapcsolatok naplózására. Ehhez csupán ennyit kell megadnunk az [.filename]#/etc/syslog.conf# állományban:
+
+[.programlisting]
+....
+!ppp
+*.*     /var/log/ppp.log
+....
+
+A legtöbb esetben ez a lehetõség már eleve adott.
+
+[[pppoe]]
+== A PPP használata Ethernet felett (PPPoE)
+
+Ebben a szakaszban azt ismertetjük, hogyan állítsuk be a PPP-t Ethernet felett (PPP over Ethernet, PPPoE).
+
+=== A rendszermag beállítása
+
+A PPPoE mûködéséhez most már semmilyen módosításra nincs szükség a rendszermag beállításaiban. Amennyiben a hozzá szükséges Netgraph támogatás nem található a rendszermagban, akkor azt a ppp önmûködõen betölti.
+
+=== A [.filename]#ppp.conf# beállítása
+
+Íme egy mûködõ [.filename]#ppp.conf# állomány:
+
+[.programlisting]
+....
+default:
+  set log Phase tun command # itt akár egy részletesebb naplózást is be tudunk állítani
+  set ifaddr 10.0.0.1/0 10.0.0.2/0
+
+a_szolgaltato_neve:
+  set device PPPoE:xl1 # az xl1 helyére írjuk be a saját Ethernet eszközünket
+  set authname FELHASZNALONEV
+  set authkey JELSZO
+  set dial
+  set login
+  add default HISADDR
+....
+
+=== A ppp futtatása
+
+`root` felhasználóként adjuk ki az alábbi parancsot:
+
+[source,bash]
+....
+# ppp -ddial a_szolgaltato_neve
+....
+
+=== A ppp indítása a rendszerindítás során
+
+Az [.filename]#/etc/rc.conf# állományba vegyük fel a következõket:
+
+[.programlisting]
+....
+ppp_enable="YES"
+ppp_mode="ddial"
+ppp_nat="YES"	# csak akkor, ha címfordítás kell a helyi hálózaton, máskülönben "NO"
+ppp_profile="a_szolgaltato_neve"
+....
+
+=== A szolgáltatási címkék használata
+
+Bizonyos esetekben szolgáltatási címkét (service tag) is használnunk kell a kapcsolat létrehozásához. A szolgáltatási címkék segítségével tudjuk megkülönböztetni az adott hálózaton elérhetõ különbözõ PPPoE szervereket.
+
+A szolgáltatótól kapott dokumentációban szerepelnie kell minden ehhez kapcsolódó információnak. Amennyiben nem találjuk, érdeklõdjünk a szolgáltatónál.
+
+Utolsó reményként megpróbálhatjuk a crossref:ports[ports,Portgyûjteményben] található http://www.roaringpenguin.com/pppoe/[Roaring Penguin PPPoE] nevû program által javasolt módszert. Ennél vegyük azonban számításba, hogy félre tudja programozni a modemünket, amitõl akár használhatatlanná is válhat, ezért kétszer is gondoljuk meg, mielõtt használni kezdjük. Egyszerûen csak tegyük fel a szolgáltatótól a modemünk mellé kapott szoftvert. Ezután lépjünk be a program menu:System[] menüjébe. Itt kell lennie a megfelelõ profilnak, ami általában az _ISP_.
+
+A profil neve (a szolgáltatás címkéje) a [.filename]#ppp.conf# állományban a PPPoE bejegyzés részeként jelenik meg a `set device` parancsban (ennek pontos részleteit lásd a man:ppp[8] man oldalon). Tehát nagyjából így néz ki:
+
+[.programlisting]
+....
+set device PPPoE:xl1:ISP
+....
+
+Az _xl1_ eszköz nevét ne felejtsük el a megfelelõ Ethernet kártyához tartozó eszköz nevére kicserélni.
+
+Az _ISP_ helyett pedig írjuk be az imént kiderített profil nevét.
+
+A témával kapcsolatban az alábbi helyeken találhatunk további információkat:
+
+* http://renaud.waldura.com/doc/freebsd/pppoe/[Cheaper Broadband with FreeBSD on DSL], írta: Renaud Waldura (angolul).
+* http://www.ruhr.de/home/nathan/FreeBSD/tdsl-freebsd.html[ Nutzung von T-DSL und T-Online mit FreeBSD], írta: Udo Erdelhoff (németül).
+
+[[ppp-3com]]
+=== PPPoE és a 3Com(R) HomeConnect(TM) ADSL Modem Dual Link
+
+Ez a modem nem felel meg az http://www.faqs.org/rfcs/rfc2516.html[RFC 2516] elõírásainak (_A Method for transmitting PPP over Ethernet (PPPoE)_, írta: L. Mamakos, K. Lidl, J. Evarts, D. Carrel, D. Simone és R. Wheeler). Helyette az Ethernet keretekben eltérõ csomagtípus kódokat használ. A http://www.3com.com/[3Com-nál] panaszkodjunk, ha szerintünk is be kellene tartaniuk a PPPoE specifikációját.
+
+A FreeBSD is csak akkor lesz képes együttmûködni ezzel az eszközzel, ha beállítjuk a megfelelõ sysctl változót. Ezt a rendszerindítás során automatikusan meg tudjuk tenni az [.filename]#/etc/sysctl.conf# módosításával:
+
+[.programlisting]
+....
+net.graph.nonstandard_pppoe=1
+....
+
+vagy közvetlenül az alábbi paranccsal:
+
+[source,bash]
+....
+# sysctl net.graph.nonstandard_pppoe=1
+....
+
+Sajnos, mivel ez egy rendszerszintû beállítás, ezért a 3Com(R) HomeConnect(TM) ADSL Modem és más normális PPPoE kliens vagy szerver egyszerre nem használható.
+
+[[pppoa]]
+== PPP ATM felett (PPPoA)
+
+Most a PPP ATM feletti (PPP over ATM, PPPoA) beállítását fogjuk bemutatni. A PPPoA az európai DSL szolgáltatók körében igen nagy népszerûségnek örvend.
+
+=== PPPoA használata az Alcatel SpeedTouch(TM) USB-vel
+
+Az ilyen eszközökhöz tartozó PPPoA támogatás a FreeBSD-ben portként áll rendelkezésre, mivel az ehhez szükséges firmware csak az http://www.speedtouchdsl.com/disclaimer_lx.htm[Alcatel licencelési feltételei szerint] terjeszthetõ, ezért nem lehet része az alap FreeBSD rendszernek.
+
+A szoftver telepítéséhez ezért a crossref:ports[ports,Portgyûjteményt] kell használnunk. Telepítsük a package:net/pppoa[] portot és kövessük a mellékelt utasításokat.
+
+Sok más USB-s eszközhöz hasonlóan az Alcatel SpeedTouch(TM) USB-nek a gépünkrõl kell letöltenie a mûködéséhez szükséges firmware-t. Ez a folyamat FreeBSD alatt automatizálható, tehát ez a másolás minden esetben megtörténik, amikor az eszközt az USB portra csatlakoztatjuk. Ehhez az [.filename]#/etc/usbd.conf# állományba a következõ adatokat kell beletennünk. Az állományt `root` felhasználóként tudjuk csak szerkeszteni.
+
+[.programlisting]
+....
+device "Alcatel SpeedTouch USB"
+    devname "ugen[0-9]+"
+    vendor 0x06b9
+    product 0x4061
+    attach "/usr/local/sbin/modem_run -f /usr/local/libdata/mgmt.o"
+....
+
+Az usbd, vagyis az USB démon engedélyezéséhez az [.filename]#/etc/rc.conf# állományba tegyük bele az alábbit:
+
+[.programlisting]
+....
+usbd_enable="YES"
+....
+
+Emellett még a ppp kapcsolatot is be tudjuk állítani az indítás során. Ehhez mindössze a következõ sort kell megadnunk az [.filename]#/etc/rc.conf# állományban. Ismét megemlítjük, hogy ezt a mûveletet csak a `root` felhasználóval tudjuk végrehajtani.
+
+[.programlisting]
+....
+ppp_enable="YES"
+ppp_mode="ddial"
+ppp_profile="adsl"
+....
+
+Ezután úgy tudjuk szóra bírni a kapcsolatot, ha a package:net/pppoa[] porthoz mellékelt [.filename]#ppp.conf# állományt használjuk fel kiindulásként.
+
+=== Az mpd használata
+
+Az mpd segítségével többféle szolgáltatáshoz, köztük a PPTP-hez hozzá tudunk férni. Az mpd a Portgyûjteményben package:net/mpd[] néven található meg. Sok ADSL modemnek szüksége van egy PPTP tunnelre közte és gép között. Ilyen modem például az Alcatel SpeedTouch(TM) Home is.
+
+Elõször magát a portot kell telepítenünk, majd ezután már be tudjuk állítani az mpd-t a saját és a szolgáltatónk igényei szerint. A port a rengeteg leírással megtûzdelt minta konfigurációs állományait a [.filename]#PREFIX/etc/mpd/# könyvtárba teszi. Itt a _PREFIX_ azt a könyvtárat jelöli, ahova a portok kerülnek. Ez alapból a [.filename]#/usr/local/#. Az mpd beállításáról szóló teljes dokumentáció a telepítés után elérhetõ HTML formátumban a [.filename]#PREFIX/shared/doc/mpd/# könyvtárban. Íme egy példa az mpd beállítására ADSL kapcsolatok esetében. Az ezzel kapcsolatos beállításaink két állományra bomlanak, melyek közül az elsõ az [.filename]#mpd.conf#:
+
+[.programlisting]
+....
+default:
+    load adsl
+
+adsl:
+    new -i ng0 adsl adsl
+    set bundle authname felhasználónév <.>
+    set bundle password jelszó <.>
+    set bundle disable multilink
+
+    set link no pap acfcomp protocomp
+    set link disable chap
+    set link accept chap
+    set link keep-alive 30 10
+
+    set ipcp no vjcomp
+    set ipcp ranges 0.0.0.0/0 0.0.0.0/0
+
+    set iface route default
+    set iface disable on-demand
+    set iface enable proxy-arp
+    set iface idle 0
+
+    open
+....
+
+<.> A felhasználói azonosító, amellyel a szolgáltató felé hitelesítjük magunkat.
+<.> Az azonosítóhoz tartozó jelszó, amelyet szintén a szolgáltatól kaptunk.
+
+Az [.filename]#mpd.links# állomány tartalmazza a felépítendõ kapcsolatra vagy kapcsolatokra vonatkozó információkat. Például az elõbbiekhez tartozó [.filename]#mpd.links# tartalma ez:
+
+[.programlisting]
+....
+adsl:
+    set link type pptp
+    set pptp mode active
+    set pptp enable originate outcall
+    set pptp self 10.0.0.1 <.>
+    set pptp peer 10.0.0.138 <.>
+....
+
+<.> A FreeBSD-s számítógépünk címe, ahonnan az mpd indul.
+<.> Az ADSL modemünk IP-címe. Az Alcatel SpeedTouch(TM) Home esetén ez a cím alapértelmezés szerint a `10.0.0.138`.
+
+A kapcsolat ezek után pillanatok alatt felépíthetõ, ha a `root` felhasználóval kiadjuk a következõ parancsot:
+
+[source,bash]
+....
+# mpd -b adsl
+....
+
+A kapcsolat állapotát a következõ paranccsal tudjuk ezután ellenõrizni:
+
+[source,bash]
+....
+% ifconfig ng0
+ng0: flags=88d1<UP,POINTOPOINT,RUNNING,NOARP,SIMPLEX,MULTICAST> mtu 1500
+     inet 216.136.204.117 --> 204.152.186.171 netmask 0xffffffff
+....
+
+FreeBSD alatt az mpd használata ajánlott az ADSL szolgáltatások eléréséhez.
+
+=== A pptpclient használata
+
+FreeBSD alatt a package:net/pptpclient[] segítségével is tudunk PPPoA típusú szolgáltatásokhoz kapcsolódni.
+
+A package:net/pptpclient[] felhasználásával úgy tudunk DSL szolgáltatásokat elérni, ha feltelepítjük a hozzá tartozó portot vagy csomagot, majd módosítjuk az [.filename]#/etc/ppp/ppp.conf# állományt. Mind a két mûveletet csak `root` felhasználóként tudjuk lebonyolítani. Ehhez egy [.filename]#ppp.conf# állományt lentebb adtunk meg. A [.filename]#ppp.conf# állományban található további beállítási lehetõségekrõl a man:ppp[8] man oldalon olvashatunk.
+
+[.programlisting]
+....
+adsl:
+ set log phase chat lcp ipcp ccp tun command
+ set timeout 0
+ enable dns
+ set authname felhasználónév <.>
+ set authkey jelszó <.>
+ set ifaddr 0 0
+ add default HISADDR
+....
+
+<.> A DSL szolgáltatónktól kapott felhasználói név.
+<.> Az elõfizetéshez tartozó jelszó.
+
+[WARNING]
+====
+
+Mivel az elõfizetéshez tartozó jelszót a [.filename]#ppp.conf# állományba titkosítatlan formában kell szerepeltetnünk, ezért gondoskodjunk róla, hogy senki sem képes olvasni a tartalmát. A most következõ parancsokkal beállítjuk, hogy ez az állomány csak a `root` felhasználó számára legyen olvasható. A részletekért lásd a man:chmod[1] és man:chown[8] man oldalakat.
+
+[source,bash]
+....
+# chown root:wheel /etc/ppp/ppp.conf
+# chmod 600 /etc/ppp/ppp.conf
+....
+
+====
+
+Ezzel a paranccsal a DSL útválasztónk felé nyitunk egy tunnelt a PPP kapcsolathoz. Az Ethernetes DSL modemek általában egy elõre beállított helyi hálózati IP-címmel rendelkeznek, amelyhez tudunk csatlakozni. Az Alcatel SpeedTouch(TM) Home esetében ez a cím a `10.0.0.138`. Az útválasztóhoz adott dokumentációban keressük meg, hogy az eszközünkhöz konkrétan milyen cím tartozik. A tunnel megnyitásához és a PPP kapcsolat megindításához a következõ parancsot kell kiadnunk:
+
+[source,bash]
+....
+# pptp cím adsl
+....
+
+[TIP]
+====
+
+Az iménti parancs végére még érdemes odatenni az "et" jelet ("&") is, mivel így a pptp mûködését a háttérben folytatja.
+====
+
+A parancs hatására a virtuális tunnelt megtestesítõ [.filename]#tun# eszköz jön létre a pptp és ppp programok között. Miután visszakaptuk a parancssort, vagy a pptp program megerõsítette a kapcsolódás sikerességét, a keletkezett járatot így tudjuk ellenõrizni:
+
+[source,bash]
+....
+% ifconfig tun0
+tun0: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 1500
+        inet 216.136.204.21 --> 204.152.186.171 netmask 0xffffff00
+        Opened by PID 918
+....
+
+Ha nem tudnánk valamiért csatlakozni, akkor elõször nézzük meg az útválasztónk beállításait, ami általában a telnet vagy egy böngészõ segítségével elérhetõ. Ha még mindig nem vagyunk képesek csatlakozni, akkor a `pptp` parancs kimenetében és ppp [.filename]#/var/log/ppp.log# néven elérhetõ naplójában kereshetünk árulkodó nyomokat.
+
+[[slip]]
+== A SLIP használata
+
+[WARNING]
+====
+
+Ez a szakasz csak FreeBSD 7._X_ rendszerekre érvényes.
+====
+
+[[slipc]]
+=== A SLIP kliensek beállítása
+
+A következõkben azt mutatjuk be, hogy egy FreeBSD-s gépet miként tudunk egy hálózaton statikus névvel beállítani a SLIP használatával. A dinamikus hálózati nevek használatakor (vagyis amikor a címünk minden egyes tárcsázáskor megváltozhat) egy valamivel bonyolultabb beállításra van szükségünk.
+
+Elõször is állapítsuk meg, hogy a modemünk melyik soros portra csatlakozik. Sokan [.filename]#/dev/modem# néven egy szimbolikus linket hoznak létre a valódi eszközre, például a [.filename]#/dev/cuadN# leíróra. Ennek köszönhetõen az eszköz tényleges névetõl el tudunk vonatkoztatni és soha nem kell módosítanunk semmit, ha a modemet például egy másik portra kell átraknunk. Ugyanis könnyedén kacifántossá tud válni a helyzet, amikor egyszerre kell megváltoztatnunk egy rakat dolgot az [.filename]#/etc# könyvtárban és módosítanunk az összes [.filename]#.kermrc# állományt!
+
+[NOTE]
+====
+A [.filename]#/dev/cuad0# a [.filename]#COM1# port, a [.filename]#/dev/cuad1# a [.filename]#COM2# és így tovább.
+====
+
+A rendszermag beállításait tartalmazó állományban a következõnek mindenképpen szerepelnie kell:
+
+[.programlisting]
+....
+device   sl
+....
+
+Mivel ez általában a [.filename]#GENERIC# rendszermagban megtalálható, így ez nem okoz semmilyen gondot, kivéve, hogy ha korábban már kitöröltük.
+
+==== Amit csak egyszer kell megtenni
+
+[.procedure]
+====
+. Vegyük fel az otthoni gépünket, az átjárónkat és a névszervereket az [.filename]#/etc/hosts# állományba. Erre álljon itt egy konkrét példa:
++
+[.programlisting]
+....
+127.0.0.1               localhost loghost
+136.152.64.181          water.CS.Example.EDU water.CS water
+136.152.64.1            inr-3.CS.Example.EDU inr-3 slip-gateway
+128.32.136.9            ns1.Example.EDU ns1
+128.32.136.12           ns2.Example.EDU ns2
+....
++
+. Figyeljünk oda, hogy az [.filename]#/etc/nsswitch.conf# állományban szereplõ `hosts` szakaszban a `dns` szó elõtt a `files` szónak kell megjelennie. Ezek nélkül mókás dolgok tudnak történni rendszerünkben.
+. Szerkesszük át az [.filename]#/etc/rc.conf# állományt.
+.. A hálózati nevünket a következõ sorban tudjuk megadni:
++
+[.programlisting]
+....
+hostname="az.en.nevem"
+....
++ 
+Ide a gépünk teljes internetes hálózati nevét kell beírnunk.
+.. Az alapértelmezett átjárót az alábbi sor módosításával tudjuk beállítani úgy, hogy a
++
+[.programlisting]
+....
+defaultrouter="NO"
+....
++ 
+változó értékét átírjuk:
++
+[.programlisting]
+....
+defaultrouter="slip-gateway"
+....
++
+. Készítsük el az [.filename]#/etc/resolv.conf# állományt, amelyben majd a következõk legyenek:
++
+[.programlisting]
+....
+domain CS.Example.EDU
+nameserver 128.32.136.9
+nameserver 128.32.136.12
+....
++ 
+Látható, hogy ezek a névfeloldásért felelõs szerverek címei. Természetesen a ténylegesen beírandó tartomány (domain) neve és a névszerverek címei mindig az adott környezetünktõl függenek.
+. Állítsuk be egy jelszót a `root` és `toor` felhasználóknak (és mindenki másnak, akinek még nem lenne).
+. Indítsuk újra a számítógépünket és utána gyõzõdjünk meg róla, hogy a megfelelõ hálózati névvel rendelkezik.
+====
+
+==== A SLIP kapcsolatok felépítése
+
+[.procedure]
+====
+
+. Tárcsázzunk és gépeljük be a `slip` parancsot, majd ezt követõen a gépünk nevét és a jelszót. Ez leginkább a konkrét környezettõl függ. Ha a Kermit nevû programot használjuk, akkor egy ilyen szkripttel is próbálkozhatunk:
++
+[.programlisting]
+....
+# a kermit beállítása
+set modem hayes
+set line /dev/modem
+set speed 115200
+set parity none
+set flow rts/cts
+set terminal bytesize 8
+set file type binary
+# a következõ makró felelõs a tárcsázásért és a bejelentkezésért
+define slip dial 643-9600, input 10 =>, if failure stop, -
+output slip\x0d, input 10 Azonosito:, if failure stop, -
+output silvia\x0d, input 10 Jelszo:, if failure stop, -
+output ***\x0d, echo \x0aCONNECTED\x0a
+....
++ 
+Természetesen a felhasználói nevet és a jelszót a sajátunkra kell benne kicserélnünk. Miután ezzel is megvagyunk, a Kermit paranccsorában a csatlakozáshoz egyszerûen csak írjuk be, hogy `slip`.
++
+[NOTE]
+======
+_Nem_ javasoljuk, hogy az állományrendszeren a jelszavakat titkosítatlan formában tároljuk. Mindeki csak a saját felelõsségére tegyen ilyet.
+======
++
+. Hagyjuk el a Kermit programot (a kbd:[Ctrl+z] billentyûkombinációval bármikor fel tudjuk függeszteni a futását) és `root` felhasználóként írjuk be a következõt:
++
+[source,bash]
+....
+# slattach -h -c -s 115200 /dev/modem
+....
++ 
+Ha ezután már képesek vagyunk a `ping` paranccsal elérni az útválasztó másik oldalán található gépet, akkor az azt jelenti, hogy sikerült csatlakoznunk! Ha viszont itt még nem járnánk sikerrel, akkor az `slattach` parancsnak ne a `-c` paramétert adjuk meg, hanem a `-a` paramétert.
+====
+
+==== Hogyan bontsunk egy kapcsolatot
+
+Tegyük a következõket:
+
+[source,bash]
+....
+# kill -INT `cat /var/run/slattach.modem.pid`
+....
+
+Ez leállítja az `slattach` programot. Ne felejtsük el azonban, hogy ezt csak a `root` felhasználóval tudjuk végrehajtani. Ezután térjünk vissza a `kermit` programhoz (ha felfüggesztettük volna, akkor ehhez a `fg` parancsra lesz szükségünk), és lépjünk ki belõle (kbd:[q]).
+
+Az man:slattach[8] man oldala ehhez a `ifconfig sl0 down` parancsot javasolja, amellyel lényegében leállítjuk a hozzá tartozó felületet. Igazából a kettõ között nincs semmilyen komolyabb eltérés (mivel az (`ifconfig sl0` is ugyanezt eredményezi.)
+
+Néha elõfordulhat, hogy a modem egyszerûen nem hajlandó eldobni a vonalat. Ilyen esetekben indítsuk el a `kermit` programot és lépjünk ki megint. Másodjára általában már sikerül.
+
+==== Hibaelhárítás
+
+Ha valamiért ez mégsem válna be, akkor csak nyugodtan kérdezõsködjünk a link:{freebsd-net-url}[freebsd-net] levelezési listán. A tapasztalatok szerint az embereknek eddig a következõkkel voltak problémáik:
+
+* Az `slattach` meghívásakor sem a `-c`, sem pedig a `-a` paramétert nem adták meg. (Ez ugyan nem végzetes hiba, de egyes felhasználók szerint ez segített megoldani a gondokat.)
+* Az `sl0` helyett `s10`-et írtak be (egyes betûtípusoknál könnyen össze lehet téveszteni ezeket).
+* Az `ifconfig sl0` segítségével ellenõrizhetõ a felület állapota. Például ilyet láthatunk:
++
+[source,bash]
+....
+# ifconfig sl0
+sl0: flags=10<POINTOPOINT>
+        inet 136.152.64.181 --> 136.152.64.1 netmask ffffff00
+....
+
+* Ha a man:ping[8] `no route to host` hibaüzenetet ad, akkor az útválasztási táblázattal van a gond. A `netstat -r` paranccsal gyorsan ki tudjuk listázni a rendszerünkben jelenleg nyilvántartott utakat:
++
+[source,bash]
+....
+# netstat -r
+Routing tables
+Destination      Gateway            Flags     Refs     Use  IfaceMTU    Rtt    Netmasks:
+
+(root node)
+(root node)
+
+Route Tree for Protocol Family inet:
+(root node) =>
+default          inr-3.Example.EDU  UG          8   224515  sl0 -      -
+localhost.Exampl localhost.Example. UH          5    42127  lo0 -       0.438
+inr-3.Example.ED water.CS.Example.E UH          1        0  sl0 -      -
+water.CS.Example localhost.Example. UGH        34 47641234  lo0 -       0.438
+(root node)
+....
++ 
+Az elõzõ példákat egy viszonylag forgalmas rendszerbõl ragadtuk ki. A rendszerünkön megjelenõ számok a hálózati aktivitás mértékének függvényei.
+
+[[slips]]
+=== A SLIP szerverek beállítása
+
+Ebben a leírásban igyekszünk bemutatni hogyan kell egy FreeBSD típusú rendszer alatt SLIP szervert beállítani, ami általában annyit jelent, hogy a rendszerünben a távoli SLIP kliensek csatlakozásakor automatikusan elindítjuk a kapcsolatokat.
+
+[[slips-prereqs]]
+==== Elõfeltételek
+
+Ez a szakasz igen szakmai jellegû, ezért az olvasó részérõl feltételezünk a témában némi alapismeretet. Ez alatt alapvetõen a TPC/IP hálózati protokollt értjük, különös hangsúllyal a hálózatok és hálózati csomópontok címzéséen, a hálózati maszkokon, alhálózatokon, útválasztáson, az olyan útválasztási protokollokon, mint például a RIP. A SLIP beállítása egy betárcsázós szerveren mindezen fogalmak ismeretét igényli, és ha ezekkel még nem lennénk tisztában, akkor olvassuk el például Craig Hunt _TCP/IP Network Administration_ címû könyvét (O'Reilly & Associates, Inc.; ISBN: 0-937175-82-X) vagy Douglas Comer TCP/IP protokollról szóló könyveit.
+
+Mindezek mellett még feltételezzük, hogy már beállítottuk a modem(ek)et és a rajtuk keresztüli bejelentkezéshez szükséges állományokat. Ha még nem készítettük volna fel erre a rendszerünket, akkor a crossref:serialcomms[dialup,Betárcsázós szolgáltatások] ad részletes tájékoztatást a betárcsázós szolgáltatások beállításáról. A soros vonali eszközmeghajtóval kapcsolatban továbbá érdemes átolvasni a man:sio[4] oldalt, valamint a man:ttys[5], man:gettytab[5], man:getty[8] és man:init[8] oldalakat a bejelentkezések modemen keresztüli fogadásáról, illetve talán az man:stty[1] oldalt a soros port paramétereinek megfelelõ beállításáról (mint például a `clocal` a közvetlenül csatlakozó soros felületek esetében).
+
+==== Gyors áttekintés
+
+A FreeBSD SLIP szerverként általában a következõ módon üzemel: a SLIP felhasználó tárcsázza a FreeBSD-s SLIP szerverünket, majd bejelentkezik egy specális SLIP bejelentkezési azonosító használatával, amely a [.filename]#/usr/sbin/sliplogin# shellt használja. A `sliplogin` program az [.filename]#/etc/sliphome/slip.hosts# állományban megkeresi a speciális felhasználóhoz tartozó sort, és ha talál egy ilyet, akkor csatlakoztatja a soros vonalat egy rendelkezésre álló SLIP felületre, amelyen aztán a SLIP felültet beállításához lefuttatja az [.filename]#/etc/sliphome/slip.login# shell szkriptet.
+
+===== Példa SLIP szerveren keresztüli bejelentkezésre
+
+Például, ha a SLIP felhasználó azonosítója `Shelmerg`, akkor az [.filename]#/etc/master.passwd# állományban a hozzá tartozó bejegyzést nagyjából ilyen:
+
+[.programlisting]
+....
+Shelmerg:password:1964:89::0:0:Guy Helmer - SLIP:/usr/users/Shelmerg:/usr/sbin/sliplogin
+....
+
+Amikor `Shelmerg` bejelentkezik, a `sliplogin` az [.filename]#/etc/sliphome/slip.hosts# állományban keresni fog egy felhasználó azonosítójához illeszkedõ sort. Például tegyük fel, hogy az [.filename]#/etc/sliphome/slip.hosts# állományban szerepel egy ilyen sor:
+
+[.programlisting]
+....
+Shelmerg        dc-slip sl-helmer       0xfffffc00		  autocomp
+....
+
+A `sliplogin` ezt a sor fogja megtalálni, majd a soros vonalat a következõ elérhetõ SLIP felülethez kapcsolja, amelyen ezután végrehajtja az [.filename]#/etc/sliphome/slip.login# szkriptet a következõ módon:
+
+[.programlisting]
+....
+/etc/sliphome/slip.login 0 19200 Shelmerg dc-slip sl-helmer 0xfffffc00 autocomp
+....
+
+Ha minden jól megy, akkor az [.filename]#/etc/sliphome/slip.login# kiad egy `ifconfig` parancsot azon a SLIP felületen, amelyre a `sliplogin` magát csatlakoztatta (amely a fenti példában a 0. SLIP felület volt, és amelyet meg is adtunk [.filename]#slip.login# elsõ paramétereként), és így beállítja a helyi IP-címet (`dc-slip`), a távoli IP-címet (`sl-helmer`), a SLIP felülethez tartozó hálózati maszkot (`0xfffffc00`) valamint a további opciókat (`autocomp`). Ha valami rosszul sülne el, akkor a `sliplogin` ezekrõl általában nagyon jó minõségû, információdús üzeneteket készít, amelyeket a syslogd démon pedig a [.filename]#/var/log/messages# állományba rögzít. (A man:syslogd[8] és man:syslog.conf[5] man oldalak és talán maga az [.filename]#/etc/syslog.conf# segíthet kideríteni, hogy a syslogd jelenleg naplóz-e, és ha igen, akkor hova.)
+
+==== A rendszermag beállítása
+
+A FreeBSD alap (vagyis a [.filename]#GENERIC#) rendszermagja támogatja a SLIP (man:sl[4]) használatát. Ha viszont saját rendszermagunk van, akkor elõfordulhat, hogy beállítások közé fel kell vennünk a következõ sort is:
+
+[.programlisting]
+....
+device   sl
+....
+
+Alapértelmezés szerint a FreeBSD nem továbbít semmilyen csomagot. Amennyiben a FreeBSD SLIP szerverünket útválasztóként is mûködtetni akarjuk, úgy az [.filename]#/etc/rc.conf# állományban a `gateway_enable` változót át kell állítanunk a `YES` értékre. Ennek hatására az újraindítás után is megmarad a csomagok továbbítása.
+
+A változtatások azonnali életbeléptetéséhez adjuk ki `root` felhasználóként a következõ parancsot:
+
+[source,bash]
+....
+# /etc/rc.d/routing start
+....
+
+Ha a FreeBSD rendszermag beállítása során segítségre szorulnánk, akkor olvassuk el crossref:kernelconfig[kernelconfig,A FreeBSD rendszermag testreszabása]et.
+
+==== A sliplogin beállítása
+
+Ahogy arra már korábban is utaltunk, az [.filename]#/etc/sliphome# könyvtárban három állomány felelõs a [.filename]#/usr/sbin/sliplogin# beállításáért (lásd man:sliplogin[8]): a [.filename]#slip.hosts#, amelyekben a SLIP felhasználókat és a hozzájuk tartozó IP-címeket adjuk meg; a [.filename]#slip.login#, amely általában csak a SLIP felületet állítja be; (az elhagyható) [.filename]#slip.logout#, amely a soros vonal bontásakor a [.filename]#slip.login# hatását igyekszik visszafordítani.
+
+===== A [.filename]#slip.hosts# beállítása
+
+Az [.filename]#/etc/sliphome/slip.hosts# soraiban whitespace karakterekkel tagoltan legalább négy elem szerepel:
+
+* a SLIP felhasználó bejelentkezési azonosítója
+* a SLIP kapcsolat helyi címe (a SLIP szerveréhez képest)
+* a SLIP kapcsolat távoli címe
+* hálózati maszk
+
+A helyi és távoli címek lehetnek hálózati nevek is (amelyeket vagy az [.filename]#/etc/hosts#, vagy pedig az [.filename]#/etc/nsswitch.conf# állományban szereplõ beállítások alapján tudunk feloldani IP-címre), illetve a hálózati maszk is lehet egy olyan név, amelyet az [.filename]#/etc/networks# fel tud oldani. A példaként bemutatott rendszerünkben az [.filename]#/etc/sliphome/slip.hosts# állomány nagyjából így épül fel:
+
+[.programlisting]
+....
+#
+# login helyi-cím       távoli-cím      maszk            opc1    opc2
+#                                               (normal,compress,noicmp)
+#
+Shelmerg  dc-slip       sl-helmerg      0xfffffc00      autocomp
+....
+
+A sorok végén az alábbi opciók közül egy vagy több szerepelhet:
+
+* `normal` - a fejléceket nem tömörítjük
+* `compress` - a fejlécek tömörítése
+* `autocomp` - ha a távoli végpont engedi, akkor tömörítsük a fejléceket
+* `noicmp` - az ICMP csomagok tiltása (így például a "ping" által generált csomagok is eldobódnak a sávszélesség felemésztese helyett)
+
+A SLIP kapcsolathoz tartozó helyi és távoli címek megválasztása függ attól, hogy egy külön TCP/IP alhálózatot szentelünk-e neki, vagy a SLIP szerverünkön egy "ARP proxy"-t használunk (amely tulajdonképpen nem egy "valódi" ARP proxy, de ebben a szakaszban így fogunk rá hivatkozni). Ha nem vagyunk biztosak benne, hogy melyik módszert válasszuk vagy hogy miként osszuk ki az IP-címeket, akkor nézzünk utána ezekenek a SLIP használatával kapcsolatos elõfeltételek között megemlített könyvekben (<<slips-prereqs>>) és/vagy konzultáljunk a hálózatunk karbantartójával.
+
+Ha a SLIP klienseknek külön alhálózatokat osztunk ki, akkor a saját IP-címünkbõl kell létrehoznunk és kiadnunk ezeket. Ezután valószínûleg a SLIP szerverünkön keresztül még meg kell adnunk egy statikus útvonalat legközelebbi IP útválasztó felé.
+
+Minden más esetben az "ARP proxy" módszert kell alkalmaznunk, ahol a SLIP kliensek IP-címeit a SLIP szerver Ethernet alhálózatából osztjuk ki, és ennek megfelelõen az [.filename]#/etc/sliphome/slip.login# és [.filename]#/etc/sliphome/slip.logout# szkripteket módosítanunk kell úgy, hogy az man:arp[8] segítségével képesek legyenek a SLIP szerver ARP táblázatában kezelni a "proxy ARP" bejegyzéseket.
+
+===== A [.filename]#slip.login# beállítása
+
+Egy átlagos [.filename]#/etc/sliphome/slip.login# állomány körülbelül ilyen:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       @(#)slip.login  5.1 (Berkeley) 7/1/90
+
+#
+# Egy általános slip vonali bejelentkezési állomány. A sliplogin ezt az alábbi
+# paraméterekkel hívja meg:
+#      1        2         3        4          5         6     7-n
+#   slipegys. ttyseb.  azonosító helyi-cím távoli-cím maszk egyéb-pmek.
+#
+/sbin/ifconfig sl$1 inet $4 $5 netmask $6
+....
+
+Ez a [.filename]#slip.login# állomány az `ifconfig` segítségével pusztán beállítja a megfelelõ SLIP felülethez tartozó helyi, valamint távoli címet és a hálózati maszkot.
+
+Ha ehelyett azonban az "ARP proxy" módszerét választottuk volna (tehát a SLIP kliensekenek nem akarunk egész alhálózatokat kiutalni), akkor az [.filename]#/etc/sliphome/slip.login# állomány eképpen alakul:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       @(#)slip.login  5.1 (Berkeley) 7/1/90
+
+#
+# Egy általános slip vonali bejelentkezési állomány. A sliplogin ezt az alábbi
+# paraméterekkel hívja meg:
+#      1        2         3        4          5         6     7-n
+#   slipegys. ttyseb.  azonosító helyi-cím távoli-cím maszk egyéb-pmek.
+#
+/sbin/ifconfig sl$1 inet $4 $5 netmask $6
+# A SLIP kliensre vonatkozó ARP kéréseket a mi Ethernet címünkkel
+# válaszoljuk meg:
+/usr/sbin/arp -s $5 00:11:22:33:44:55 pub
+....
+
+Láthatjuk, hogy az elõbbi [.filename]#slip.login# állomány egy `arp -s $5 00:11:22:33:44:55 pub` paranccsal egészült ki, ami a SLIP szerver ARP táblázatában hoz létre egy ARP bejegyzést. Ez az ARP bejegyzés gondoskodik róla, hogy a SLIP szerver válaszoljon a saját Ethernetes MAC-címével, amikor egy másik IP csomópont a SLIP kliens IP-címe felõl érdeklõdik.
+
+Amikor a fenti példából indulunk ki, a benne megadott MAC-címet (`00:11:22:33:44:55`) feltétlenül cseréljük a rendszerünk Ethernet kártyájának MAC-címével, mert különben az "ARP proxy" egyáltalán nem fog mûködni! A SLIP szerverünk MAC-címét a `netstat -i` paranccsal deríthetjük ki, amelynek a kimenetében a második sor valahogy így néz ki:
+
+[source,bash]
+....
+ed0   1500  <Link>0.2.c1.28.5f.4a         191923	0   129457     0   116
+....
+
+Ebbõl derül ki, hogy az adott rendszer valódi MAC-címe a `00:02:c1:28:5f:4a` - az man:arp[8] számára azonban a `netstat -i` kimenetében szereplõ pontokat kettõspontokra kell cserélni, és a tagokat ki kell egészíteni kétkarakteres hexadecimális számokká. Az man:arp[8] man oldalán tudhatunk meg ennek részleteirõl többet.
+
+[NOTE]
+====
+Amikor létrehozzuk az [.filename]#/etc/sliphome/slip.login# és [.filename]#/etc/sliphome/slip.logout# állományokat, akkor ne felejtsük el hozzájuk beállítani a "végrehajtást" engedélyezõ bitet sem (tehát ilyenkor mindig adjuk ki a `chmod 755 /etc/sliphome/slip.login /etc/sliphome/slip.logout` parancsokat is), különben a `sliplogin` ezeket nem tudja majd elindítani.
+====
+
+===== A [.filename]#slip.logout# beállítása
+
+Az [.filename]#/etc/sliphome/slip.logout# állományra nincs feltétlenül szükségünk (hacsak nem egy "ARP proxy"-t akarunk csinálni), de ha valamiért mégis el akarjuk készíteni, akkor ehhez a következõ alapvetõ [.filename]#slip.logout# szkript használható:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       slip.logout
+
+#
+# Egy logout állomány a slip vonalhoz. A sliplogin ezt a szkriptet a
+# következõ paraméterekkel hívja:
+#      1        2         3        4          5         6     7-n
+#   slipegys. ttyseb.   login helyi-cím  távoli-cím   maszk opc-pmek.
+#
+/sbin/ifconfig sl$1 down
+....
+
+Ha az "ARP proxy" módszert használjuk, és az [.filename]#/etc/sliphome/slip.logout# felhasználásával akarjuk a SLIP klienshez tartozó ARP bejegyzést törölni, akkor ebbõl induljunk ki:
+
+[.programlisting]
+....
+#!/bin/sh -
+#
+#       @(#)slip.logout
+
+#
+# Egy logout állomány a slip vonalhoz. A sliplogin ezt a szkriptet a
+# következõ paraméterekkel hívja:
+#      1        2         3        4          5         6     7-n
+#   slipegys. ttyseb.   login helyi-cím  távoli-cím   maszk opc-pmek.
+#
+sbin/ifconfig sl$1 down
+# Ne válaszoljunk többet a SLIP kliensre vonatkozó ARP kérésekre
+/usr/sbin/arp -d $5
+....
+
+Az `arp -d $5` parancs eltávolítja az "ARP proxy" mûködéséhez bejegyzést, amelyet még a [.filename]#slip.login# szkripttel vettünk fel a SLIP kliens bejelentkezésekor.
+
+Talán felesleges ismételgetésnek tûnhet: az [.filename]#/etc/sliphome/slip.logout# állománynak létrehozása után állítsuk be a végrehajtásra szóló bitet (vagyis adjuk ki a `chmod 755 /etc/sliphome/slip.logout` parancsot).
+
+==== Az útválasztással kapcsolatos megfontolások
+
+Ha a hálózatunk többi része (lényegében az internet) és a SLIP klienseink között nem az "ARP proxy" módszerrel közvetítjük a csomagokat, akkor a legközelebbi alapértelmezett átjárókhoz minden bizonnyal fel kell vennünk statikus útvonalakat, így a SLIP kliensek alhálózatai a SLIP szerverünkön keresztül ki tudnak jutni.
+
+===== Statikus útvonalak
+
+A legközelebbi alapértelmezett átjárók felé nem minden esetben könnyû felvenni statikus útvonalakat (vagy egyes esetekben pedig egyenesen lehetetlen, mivel nincsenek meg hozzá a jogaink). Ha az intézményünkön belül több átjáró is megtalálható, akkor bizonyos útválasztók, például a Cisco és Proteon gyártmányúak esetében nem csak a SLIP alhálózatok felé kell beállítanunk statikus útvonalakat, hanem azt is meg kell mondanunk, hogy ezekrõl milyen más útválasztók is tudjanak. Pontosan emiatt a statikus útválasztás beüzemeléséhez szükségünk lesz egy kis utánajárásra és próbálgatásra.
