@@ -8,7 +8,7 @@ $yr += 1900;
 $mo += 1;
 $timestamp = "$mo-$md-$yr";
 
-if (!defined($hsty_base)) {
+if (!defined($hsty_base)) { 
     # $hsty_base should be relative if possible, so that mirrors
     # serve their local copy instead of going to the main site.
     # However, if we aren't running as a cgi, or if we're
@@ -217,10 +217,10 @@ $html
 <meta http-equiv='content-type' content='text/html; charset=$hsty_charset' $endslash>
 <meta name='robots' content='nofollow' $endslash>
     <link rel="stylesheet" media="screen"
-    href="$hsty_base/css/fixed.css" type="text/css"
+    href="$hsty_base/layout/css/fixed.css" type="text/css"
     title="Normal Text" $endslash>
     <link rel="alternate stylesheet" media="screen"
-    href="$hsty_base/css/fixed_large.css" type="text/css"
+    href="$hsty_base/layout/css/fixed_large.css" type="text/css"
     title="Large Text" $endslash>
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
     <link rel="apple-touch-icon" href="/favicon.ico" type="image/x-icon" />
@@ -254,7 +254,7 @@ sub html_footer {
 sub get_the_source {
     return if $ENV{'PATH_INFO'} ne '/get_the_source';
 
-    open(R, $0) || do {
+    open(R, $0) || do { 
 	print "Oops! open $0: $!\n";  # should not reached
 	exit;
     };
