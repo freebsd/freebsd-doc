@@ -18,18 +18,18 @@ HUGO_CMD =	/usr/local/bin/hugo
 .ORDER: generate-books-toc build
 
 all: starting-message generate-releases run
-generate: starting-message generate-releases build
+generate: starting-message generate-releases build .PHONY
 
-starting-message:
+starting-message: .PHONY
 	@echo ---------------------------------------------------------------
 	@echo                   Building the website
 	@echo ---------------------------------------------------------------
 
-generate-releases:
+generate-releases: .PHONY
 	${PYTHON_CMD} ./tools/releases-toml.py -p ./shared/releases.adoc
 
-run:
+run: .PHONY
 	${HUGO_CMD} server -D
 
-build:
+build: .PHONY
 	${HUGO_CMD}
