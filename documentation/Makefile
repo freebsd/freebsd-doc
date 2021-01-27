@@ -14,6 +14,10 @@ PYTHON_CMD =	/usr/local/bin/python3.7
 HUGO_CMD =	/usr/local/bin/hugo
 LANGUAGES =	en,es,pt-br,de,ja,zh-cn,zh-tw,ru,el,hu,it,mn,nl,pl,fr
 
+.ORDER: starting-message generate-books-toc
+.ORDER: starting-message build
+.ORDER: generate-books-toc build
+
 all: starting-message generate-books-toc run
 generate: starting-message generate-books-toc build
 
