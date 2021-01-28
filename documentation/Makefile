@@ -7,7 +7,6 @@
 #
 # all (default)	-	generate the books TOC and compile all the documentation
 # generate	-	generate the books TOC and build all the documentation
-# copy-shared	-	move the shared AsciiDoc entities to the folder project
 
 MAINTAINER=carlavilla@FreeBSD.org
 
@@ -17,7 +16,6 @@ LANGUAGES =	en,es,pt-br,de,ja,zh-cn,zh-tw,ru,el,hu,it,mn,nl,pl,fr
 
 all: starting-message generate-books-toc run
 generate: starting-message generate-books-toc build
-copy-shared: move-shared
 
 starting-message:
 	@echo ---------------------------------------------------------------
@@ -36,6 +34,3 @@ run:
 
 build:
 	${HUGO_CMD} --minify
-
-move-shared:
-	cp -R ../shared ./shared

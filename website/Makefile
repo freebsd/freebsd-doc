@@ -7,7 +7,6 @@
 #
 # all (default)	-	generate the releases.toml and compile all the website
 # generate	-	generate the releases.toml and build all the website
-# copy-shared	-	move the shared AsciiDoc entities to the folder project
 
 MAINTAINER=carlavilla@FreeBSD.org
 
@@ -16,7 +15,6 @@ HUGO_CMD =	/usr/local/bin/hugo
 
 all: starting-message generate-releases run
 generate: starting-message generate-releases build
-copy-shared: move-shared
 
 starting-message:
 	@echo ---------------------------------------------------------------
@@ -31,6 +29,3 @@ run:
 
 build:
 	${HUGO_CMD}
-
-move-shared:
-	cp -R ../shared ./shared
