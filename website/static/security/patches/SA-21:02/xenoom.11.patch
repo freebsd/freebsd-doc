@@ -1,0 +1,255 @@
+--- sys/dev/xen/balloon/balloon.c.orig
++++ sys/dev/xen/balloon/balloon.c
+@@ -310,7 +310,8 @@
+ 
+ static struct xs_watch target_watch =
+ {
+-	.node = "memory/target"
++	.node = "memory/target",
++	.max_pending = 1,
+ };
+ 
+ /* React to a change in the target key */
+--- sys/dev/xen/blkback/blkback.c.orig
++++ sys/dev/xen/blkback/blkback.c
+@@ -3767,6 +3767,12 @@
+ 	xbb->hotplug_watch.callback = xbb_attach_disk;
+ 	KASSERT(xbb->hotplug_watch.node == NULL, ("watch node already setup"));
+ 	xbb->hotplug_watch.node = strdup(sbuf_data(watch_path), M_XENBLOCKBACK);
++	/*
++	 * We don't care about the path updated, just about the value changes
++	 * on that single node, hence there's no need to queue more that one
++	 * event.
++	 */
++	xbb->hotplug_watch.max_pending = 1;
+ 	sbuf_delete(watch_path);
+ 	error = xs_register_watch(&xbb->hotplug_watch);
+ 	if (error != 0) {
+--- sys/dev/xen/control/control.c.orig
++++ sys/dev/xen/control/control.c
+@@ -432,6 +432,12 @@
+ 	xctrl->xctrl_watch.node = "control/shutdown";
+ 	xctrl->xctrl_watch.callback = xctrl_on_watch_event;
+ 	xctrl->xctrl_watch.callback_data = (uintptr_t)xctrl;
++	/*
++	 * We don't care about the path updated, just about the value changes
++	 * on that single node, hence there's no need to queue more that one
++	 * event.
++	 */
++	xctrl->xctrl_watch.max_pending = 1;
+ 	xs_register_watch(&xctrl->xctrl_watch);
+ 
+ 	if (xen_pv_domain())
+--- sys/dev/xen/xenstore/xenstore.c.orig
++++ sys/dev/xen/xenstore/xenstore.c
+@@ -668,12 +668,17 @@
+ 		mtx_lock(&xs.registered_watches_lock);
+ 		msg->u.watch.handle = find_watch(
+ 		    msg->u.watch.vec[XS_WATCH_TOKEN]);
+-		if (msg->u.watch.handle != NULL) {
+-			mtx_lock(&xs.watch_events_lock);
++		mtx_lock(&xs.watch_events_lock);
++		if (msg->u.watch.handle != NULL &&
++		    (!msg->u.watch.handle->max_pending ||
++		    msg->u.watch.handle->pending <
++		    msg->u.watch.handle->max_pending)) {
++			msg->u.watch.handle->pending++;
+ 			TAILQ_INSERT_TAIL(&xs.watch_events, msg, list);
+ 			wakeup(&xs.watch_events);
+ 			mtx_unlock(&xs.watch_events_lock);
+ 		} else {
++			mtx_unlock(&xs.watch_events_lock);
+ 			free(msg->u.watch.vec, M_XENSTORE);
+ 			free(msg, M_XENSTORE);
+ 		}
+@@ -1045,8 +1050,10 @@
+ 
+ 		mtx_lock(&xs.watch_events_lock);
+ 		msg = TAILQ_FIRST(&xs.watch_events);
+-		if (msg)
++		if (msg) {
+ 			TAILQ_REMOVE(&xs.watch_events, msg, list);
++			msg->u.watch.handle->pending--;
++		}
+ 		mtx_unlock(&xs.watch_events_lock);
+ 
+ 		if (msg != NULL) {
+@@ -1629,6 +1636,7 @@
+ 	char token[sizeof(watch) * 2 + 1];
+ 	int error;
+ 
++	watch->pending = 0;
+ 	sprintf(token, "%lX", (long)watch);
+ 
+ 	sx_slock(&xs.suspend_mutex);
+--- sys/xen/xenbus/xenbus.c.orig
++++ sys/xen/xenbus/xenbus.c
+@@ -102,48 +102,6 @@
+ 	return ((state < (XenbusStateClosed + 1)) ? name[state] : "INVALID");
+ }
+ 
+-int 
+-xenbus_watch_path(device_t dev, char *path, struct xs_watch *watch, 
+-    xs_watch_cb_t *callback, uintptr_t callback_data)
+-{
+-	int error;
+-
+-	watch->node = path;
+-	watch->callback = callback;
+-	watch->callback_data = callback_data;
+-
+-	error = xs_register_watch(watch);
+-
+-	if (error) {
+-		watch->node = NULL;
+-		watch->callback = NULL;
+-		xenbus_dev_fatal(dev, error, "adding watch on %s", path);
+-	}
+-
+-	return (error);
+-}
+-
+-int
+-xenbus_watch_path2(device_t dev, const char *path,
+-    const char *path2, struct xs_watch *watch, 
+-    xs_watch_cb_t *callback, uintptr_t callback_data)
+-{
+-	int error;
+-	char *state = malloc(strlen(path) + 1 + strlen(path2) + 1,
+-	   M_XENBUS, M_WAITOK);
+-
+-	strcpy(state, path);
+-	strcat(state, "/");
+-	strcat(state, path2);
+-
+-	error = xenbus_watch_path(dev, state, watch, callback, callback_data);
+-	if (error) {
+-		free(state,M_XENBUS);
+-	}
+-
+-	return (error);
+-}
+-
+ void
+ xenbus_dev_verror(device_t dev, int err, const char *fmt, va_list ap)
+ {
+--- sys/xen/xenbus/xenbusb.c.orig
++++ sys/xen/xenbus/xenbusb.c
+@@ -702,10 +702,21 @@
+ 		ivars->xd_otherend_watch.node = statepath;
+ 		ivars->xd_otherend_watch.callback = xenbusb_otherend_watch_cb;
+ 		ivars->xd_otherend_watch.callback_data = (uintptr_t)ivars;
++		/*
++		 * Other end state node watch, limit to one pending event
++		 * to prevent frontends from queuing too many events that
++		 * could cause resource starvation.
++		 */
++		ivars->xd_otherend_watch.max_pending = 1;
+ 
+ 		ivars->xd_local_watch.node = ivars->xd_node;
+ 		ivars->xd_local_watch.callback = xenbusb_local_watch_cb;
+ 		ivars->xd_local_watch.callback_data = (uintptr_t)ivars;
++		/*
++		 * Watch our local path, only writable by us or a privileged
++		 * domain, no need to limit.
++		 */
++		ivars->xd_local_watch.max_pending = 0;
+ 
+ 		mtx_lock(&xbs->xbs_lock);
+ 		xbs->xbs_connecting_children++;
+@@ -764,6 +775,12 @@
+ 	xbs->xbs_device_watch.node = bus_node;
+ 	xbs->xbs_device_watch.callback = xenbusb_devices_changed;
+ 	xbs->xbs_device_watch.callback_data = (uintptr_t)xbs;
++	/*
++	 * Allow for unlimited pending watches, as those are local paths
++	 * either controlled by the guest or only writable by privileged
++	 * domains.
++	 */
++	xbs->xbs_device_watch.max_pending = 0;
+ 
+ 	TASK_INIT(&xbs->xbs_probe_children, 0, xenbusb_probe_children_cb, dev);
+ 
+--- sys/xen/xenbus/xenbusvar.h.orig
++++ sys/xen/xenbus/xenbusvar.h
+@@ -123,62 +123,6 @@
+ 	return (xenbus_read_driver_state(xenbus_get_otherend_path(dev)));
+ }
+ 
+-/**
+- * Initialize and register a watch on the given path (client suplied storage).
+- *
+- * \param dev       The XenBus device requesting the watch service.
+- * \param path      The XenStore path of the object to be watched.  The
+- *                  storage for this string must be stable for the lifetime
+- *                  of the watch.
+- * \param watch     The watch object to use for this request.  This object
+- *                  must be stable for the lifetime of the watch.
+- * \param callback  The function to call when XenStore objects at or below
+- *                  path are modified.
+- * \param cb_data   Client data that can be retrieved from the watch object
+- *                  during the callback.
+- *
+- * \return  On success, 0. Otherwise an errno value indicating the
+- *          type of failure.
+- *
+- * \note  On error, the device 'dev' will be switched to the XenbusStateClosing
+- *        state and the returned error is saved in the per-device error node
+- *        for dev in the XenStore.
+- */
+-int xenbus_watch_path(device_t dev, char *path,
+-		      struct xs_watch *watch, 
+-		      xs_watch_cb_t *callback,
+-		      uintptr_t cb_data);
+-
+-/**
+- * Initialize and register a watch at path/path2 in the XenStore.
+- *
+- * \param dev       The XenBus device requesting the watch service.
+- * \param path      The base XenStore path of the object to be watched.
+- * \param path2     The tail XenStore path of the object to be watched.
+- * \param watch     The watch object to use for this request.  This object
+- *                  must be stable for the lifetime of the watch.
+- * \param callback  The function to call when XenStore objects at or below
+- *                  path are modified.
+- * \param cb_data   Client data that can be retrieved from the watch object
+- *                  during the callback.
+- *
+- * \return  On success, 0. Otherwise an errno value indicating the
+- *          type of failure.
+- *
+- * \note  On error, \a dev will be switched to the XenbusStateClosing
+- *        state and the returned error is saved in the per-device error node
+- *        for \a dev in the XenStore.
+- *
+- * Similar to xenbus_watch_path, however the storage for the path to the
+- * watched object is allocated from the heap and filled with "path '/' path2".
+- * Should a call to this function succeed, it is the callers responsibility
+- * to free watch->node using the M_XENBUS malloc type.
+- */
+-int xenbus_watch_path2(device_t dev, const char *path,
+-		       const char *path2, struct xs_watch *watch, 
+-		       xs_watch_cb_t *callback,
+-		       uintptr_t cb_data);
+-
+ /**
+  * Grant access to the given ring_mfn to the peer of the given device.
+  *
+--- sys/xen/xenstore/xenstorevar.h.orig
++++ sys/xen/xenstore/xenstorevar.h
+@@ -72,6 +72,15 @@
+ 
+ 	/* Callback client data untouched by the XenStore watch mechanism. */
+ 	uintptr_t callback_data;
++
++	/* Maximum number of pending watch events to be delivered. */
++	unsigned int max_pending;
++
++	/*
++	 * Private counter used by xenstore to keep track of the pending
++	 * watches. Protected by xs.watch_events_lock.
++	 */
++	unsigned int pending;
+ };
+ LIST_HEAD(xs_watch_list, xs_watch);
+ 

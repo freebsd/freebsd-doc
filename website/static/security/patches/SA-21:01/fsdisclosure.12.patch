@@ -1,0 +1,166 @@
+--- sys/fs/autofs/autofs_vnops.c.orig
++++ sys/fs/autofs/autofs_vnops.c
+@@ -369,6 +369,7 @@
+ 		return (EINVAL);
+ 
+ 	dirent.d_fileno = fileno;
++	dirent.d_off = uio->uio_offset + reclen;
+ 	dirent.d_reclen = reclen;
+ 	dirent.d_type = DT_DIR;
+ 	dirent.d_namlen = namlen;
+--- sys/fs/msdosfs/msdosfs_vnops.c.orig
++++ sys/fs/msdosfs/msdosfs_vnops.c
+@@ -1687,6 +1687,7 @@
+ 			dirbuf.d_reclen = GENERIC_DIRSIZ(&dirbuf);
+ 			/* NOTE: d_off is the offset of the *next* entry. */
+ 			dirbuf.d_off = offset + sizeof(struct direntry);
++			dirent_terminate(&dirbuf);
+ 			if (uio->uio_resid < dirbuf.d_reclen) {
+ 				brelse(bp);
+ 				goto out;
+--- sys/fs/smbfs/smbfs_io.c.orig
++++ sys/fs/smbfs/smbfs_io.c
+@@ -103,6 +103,7 @@
+ 		    (np->n_parent ? np->n_parentino : 2);
+ 		if (de.d_fileno == 0)
+ 			de.d_fileno = 0x7ffffffd + offset;
++		de.d_off = offset + 1;
+ 		de.d_namlen = offset + 1;
+ 		de.d_name[0] = '.';
+ 		de.d_name[1] = '.';
+@@ -153,6 +154,7 @@
+ 		bzero((caddr_t)&de, DE_SIZE);
+ 		de.d_reclen = DE_SIZE;
+ 		de.d_fileno = ctx->f_attr.fa_ino;
++		de.d_off = offset + 1;
+ 		de.d_type = (ctx->f_attr.fa_attr & SMB_FA_DIR) ? DT_DIR : DT_REG;
+ 		de.d_namlen = ctx->f_nmlen;
+ 		bcopy(ctx->f_name, de.d_name, de.d_namlen);
+--- sys/fs/tmpfs/tmpfs_subr.c.orig
++++ sys/fs/tmpfs/tmpfs_subr.c
+@@ -1188,6 +1188,7 @@
+ 	MPASS(uio->uio_offset == TMPFS_DIRCOOKIE_DOT);
+ 
+ 	dent.d_fileno = node->tn_id;
++	dent.d_off = TMPFS_DIRCOOKIE_DOTDOT;
+ 	dent.d_type = DT_DIR;
+ 	dent.d_namlen = 1;
+ 	dent.d_name[0] = '.';
+@@ -1213,7 +1214,7 @@
+  */
+ static int
+ tmpfs_dir_getdotdotdent(struct tmpfs_mount *tm, struct tmpfs_node *node,
+-    struct uio *uio)
++    struct uio *uio, off_t next)
+ {
+ 	struct tmpfs_node *parent;
+ 	struct dirent dent;
+@@ -1234,6 +1235,7 @@
+ 	dent.d_fileno = parent->tn_id;
+ 	TMPFS_NODE_UNLOCK(parent);
+ 
++	dent.d_off = next;
+ 	dent.d_type = DT_DIR;
+ 	dent.d_namlen = 2;
+ 	dent.d_name[0] = '.';
+@@ -1263,7 +1265,7 @@
+     struct uio *uio, int maxcookies, u_long *cookies, int *ncookies)
+ {
+ 	struct tmpfs_dir_cursor dc;
+-	struct tmpfs_dirent *de;
++	struct tmpfs_dirent *de, *nde;
+ 	off_t off;
+ 	int error;
+ 
+@@ -1284,18 +1286,19 @@
+ 		error = tmpfs_dir_getdotdent(tm, node, uio);
+ 		if (error != 0)
+ 			return (error);
+-		uio->uio_offset = TMPFS_DIRCOOKIE_DOTDOT;
++		uio->uio_offset = off = TMPFS_DIRCOOKIE_DOTDOT;
+ 		if (cookies != NULL)
+-			cookies[(*ncookies)++] = off = uio->uio_offset;
++			cookies[(*ncookies)++] = off;
+ 		/* FALLTHROUGH */
+ 	case TMPFS_DIRCOOKIE_DOTDOT:
+-		error = tmpfs_dir_getdotdotdent(tm, node, uio);
++		de = tmpfs_dir_first(node, &dc);
++		off = tmpfs_dirent_cookie(de);
++		error = tmpfs_dir_getdotdotdent(tm, node, uio, off);
+ 		if (error != 0)
+ 			return (error);
+-		de = tmpfs_dir_first(node, &dc);
+-		uio->uio_offset = tmpfs_dirent_cookie(de);
++		uio->uio_offset = off;
+ 		if (cookies != NULL)
+-			cookies[(*ncookies)++] = off = uio->uio_offset;
++			cookies[(*ncookies)++] = off;
+ 		/* EOF. */
+ 		if (de == NULL)
+ 			return (0);
+@@ -1310,13 +1313,17 @@
+ 			off = tmpfs_dirent_cookie(de);
+ 	}
+ 
+-	/* Read as much entries as possible; i.e., until we reach the end of
+-	 * the directory or we exhaust uio space. */
++	/*
++	 * Read as much entries as possible; i.e., until we reach the end of the
++	 * directory or we exhaust uio space.
++	 */
+ 	do {
+ 		struct dirent d;
+ 
+-		/* Create a dirent structure representing the current
+-		 * tmpfs_node and fill it. */
++		/*
++		 * Create a dirent structure representing the current tmpfs_node
++		 * and fill it.
++		 */
+ 		if (de->td_node == NULL) {
+ 			d.d_fileno = 1;
+ 			d.d_type = DT_WHT;
+@@ -1360,20 +1367,27 @@
+ 		MPASS(de->td_namelen < sizeof(d.d_name));
+ 		(void)memcpy(d.d_name, de->ud.td_name, de->td_namelen);
+ 		d.d_reclen = GENERIC_DIRSIZ(&d);
+-		dirent_terminate(&d);
+ 
+-		/* Stop reading if the directory entry we are treating is
+-		 * bigger than the amount of data that can be returned. */
++		/*
++		 * Stop reading if the directory entry we are treating is bigger
++		 * than the amount of data that can be returned.
++		 */
+ 		if (d.d_reclen > uio->uio_resid) {
+ 			error = EJUSTRETURN;
+ 			break;
+ 		}
+ 
+-		/* Copy the new dirent structure into the output buffer and
+-		 * advance pointers. */
++		nde = tmpfs_dir_next(node, &dc);
++		d.d_off = tmpfs_dirent_cookie(nde);
++		dirent_terminate(&d);
++
++		/*
++		 * Copy the new dirent structure into the output buffer and
++		 * advance pointers.
++		 */
+ 		error = uiomove(&d, d.d_reclen, uio);
+ 		if (error == 0) {
+-			de = tmpfs_dir_next(node, &dc);
++			de = nde;
+ 			if (cookies != NULL) {
+ 				off = tmpfs_dirent_cookie(de);
+ 				MPASS(*ncookies < maxcookies);
+--- sys/kern/uipc_mqueue.c.orig
++++ sys/kern/uipc_mqueue.c
+@@ -1426,6 +1426,7 @@
+ 		if (!pn->mn_fileno)
+ 			mqfs_fileno_alloc(mi, pn);
+ 		entry.d_fileno = pn->mn_fileno;
++		entry.d_off = offset + entry.d_reclen;
+ 		for (i = 0; i < MQFS_NAMELEN - 1 && pn->mn_name[i] != '\0'; ++i)
+ 			entry.d_name[i] = pn->mn_name[i];
+ 		entry.d_namlen = i;
