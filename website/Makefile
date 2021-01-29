@@ -20,9 +20,9 @@ HUGO_CMD =	/usr/local/bin/hugo
 
 .ORDER: all run
 
-.ORDER: starting-message generate-books-toc
+.ORDER: starting-message generate-releases
 .ORDER: starting-message build
-.ORDER: generate-books-toc build
+.ORDER: generate-releases build
 
 all: starting-message generate-releases build
 
