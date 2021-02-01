@@ -114,39 +114,22 @@ fi
 keyfile="${me}.key"
 info "Generating ${keyfile}..."
 (
-    echo '<!--'
-    echo "sh ${progname} ${me}" ${keyids} ";"
-    echo '-->'
-    echo '<programlisting xmlns="http://docbook.org/ns/docbook" role="pgpfingerprint"><![CDATA['
+    echo "// sh ${progname} ${me}" ${keyids} ";"
+    echo ''
+    echo '[.literal-block-margin]'
+    echo '....'
     gpg --fingerprint ${keyids}
-    echo ']]></programlisting>'
-    echo '<programlisting xmlns="http://docbook.org/ns/docbook" role="pgpkey"><![CDATA['
+    echo '....'
+    echo ''
+    echo '[.literal-block-margin]'
+    echo '....'
     gpg --no-version --armor --export ${keyids}
-    echo ']]></programlisting>'
+    echo '....'
 ) >"${keyfile}"
-
-info "Adding key to entity list..."
-if ! grep -qwF "pgpkey.${me}" pgpkeys.ent ; then
-	mv pgpkeys.ent pgpkeys.ent.orig || exit 1
-	(
-		cat pgpkeys.ent.orig
-		echo "<!ENTITY pgpkey.${me} SYSTEM \"${keyfile}\">"
-	) | sort -u >pgpkeys.ent
-fi
 
 cat <<EOF
 
-Unless you are already listed there, you should now add the following
-text to pgpkeys-developers.xml.  Remember to keep the list sorted by
-last name!
-
-    <sect2 xmlns="http://docbook.org/ns/docbook" xml:id="pgpkey-${me}">
-      <title>&a.${me}.email;</title>
-      &pgpkey.${me};
-    </sect2>
-
-If this is a role key or you are a core member, you should add it to
-either pgpkeys-officers.xml or pgpkeys-core.xml instead.
+Remember to move ${keyfile} to /static/pgpkeys/
 
 If this is a new entry, don't forget to run the following commands
 before committing:
