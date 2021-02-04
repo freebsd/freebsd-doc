@@ -77,154 +77,225 @@ Ultimately, however, it comes down to the people actually doing the work. If usi
 Because it makes it harder to import future versions minor, trivial and/or cosmetic changes are _strongly discouraged_ on files that are still tracking the vendor branch.
 ====
 
-[[vendor-import-svn]]
-=== Vendor Imports with SVN
+[[vendor-import-git]]
+=== Vendor Imports with Git
 
-This section describes the vendor import procedure with Subversion in details.
+This section describes the vendor import procedure with Git in detail.
+
+[.conventions]
+==== Branch naming convention
+All vendor branches and tags start with `vendor/`. These branches and
+tags are visible by default.
+
+[NOTE]
+====
+This chapter follows the convention that the `freebsd` origin is the source of truth. If you use a different convention, replace `freebsd` with your name as appopriate.
+====
+
+
+We'll explore an example for updating NetBSD's mtree that's in our
+tree. The vendor branch for this is `vendor/NetBSD/mtree`.
 
 [.procedure]
-. *Preparing the Tree*
-+ 
-If this is your first import after the switch to SVN, you will have to flatten and clean up the vendor tree, and bootstrap merge history in the main tree. If not, you can safely omit this step.
-+ 
-During the conversion from CVS to SVN, vendor branches were imported with the same layout as the main tree. For example, the foo vendor sources ended up in [.filename]#vendor/foo/dist/contrib/foo#, but it is pointless and rather inconvenient. What we really want is to have the vendor source directly in [.filename]#vendor/foo/dist#, like this:
-+
+==== Updating an old vendor import
+Since the trees we have in vendor branches are usually a tiny subset of
+the FreeBSD, it's best to do them with work trees since the process is
+quite fast. Make sure that whatever directory you choose (the
+`../mtree`) argument is empty and doesn't conflict.
 [source,bash]
 ....
-% cd vendor/foo/dist/contrib/foo
-% svn move $(svn list) ../..
-% cd ../..
-% svn remove contrib
-% svn propdel -R svn:mergeinfo
-% svn commit
+% git worktree add ../mtree vendor/NetBSD/mtree
 ....
-+ 
-Note that, the `propdel` bit is necessary because starting with 1.5, Subversion will automatically add `svn:mergeinfo` to any directory you copy or move. In this case, you will not need this information, since you are not going to merge anything from the tree you deleted.
+==== Update the Sources in the Vendor Branch
+
+Prepare a full, clean tree of the vendor sources. Import everything but merge only what is needed.
+
+I have my copy of NetBSD checked out from their GitHub mirror in
+`~/git/NetBSD`, so I'll update from there: Note that "upstream" might
+have added or removed files, so we want to make sure deletions are
+propagated as well. rsync(1) is commonly installed, so I'll use that.
+[source,bash]
+....
+% cd ../mtree
+% rsync -va --del --exclude=".git" ~/git/NetBSD/usr.sbin/mtree/ .
+% git add -A
+% git status
+...
+% git diff --staged
+...
+% git commit -m"Vendor import of NetBSD's mtree at 2020-12-11"
+[vendor/NetBSD/mtree 8e7aa25fcf1] Vendor import of NetBSD's mtree at 2020-12-11
+ 7 files changed, 114 insertions(+), 82 deletions(-)
+% git tag -a vendor/NetBSD/mtree/20201211
+....
+
+Note: I run the `git diff` and `git status` commands to make sure nothing weird
+was present. Also I used `-m` to illustrate, but you should compose a proper
+message in an editor (using a commit message template).
+
+It's also important to create an annotated tag, otherwise the push
+will be rejected. Only annotated tags are allowed to be pushed. The
+annoated tag gives you a chance to enter a commit message. Enter
+the version you are importing, along with any salient new features
+or fixes in that version.
+==== Updating the FreeBSD Copy
+At this point you can push the import to vendor into our repo.
+[source,bash]
+....
+% git push --follow-tags freebsd vendor/NetBSD/mtree
+....
+
+`--follow-tags` tells `git push` to also push tags associated with the locally committed revision.
+==== Updating the FreeBSD source tree
+Now you need to update the mtree in FreeBSD. The sources live in
+`contrib/mtree` since it is upstream software.
+[source,bash]
+....
+% cd ../src
+% git subtree merge -P contrib/mtree vendor/NetBSD/mtree
+....
+This would generate a subtree merge commit of `contrib/mtree` against the local `vendor/NetBSD/mtree` branch. If there were conflicts, you would need to fix them before committing.
+
+==== Rebasing your change against latest FreeBSD source tree
+Because the current policy recommends against using merges, if the upstream FreeBSD `main` moved forward
+before you get a chance to push, you would have to redo the merge.
+
+Regular `git rebase` or `git pull --rebase` doesn't know how to rebase a merge commit **as a merge commit**,
+so instead of that you would have to recreate the commit.
+
+The easiest way to do this would be to create a side branch with the **contents** of the merged tree:
+
+[source,bash]
+....
+% cd ../src
+% git fetch freebsd
+% git checkout -b merge_result
+% git merge freebsd/main
+....
+
+Typically, there would be no merge conflicts here (because developers tends to work on different components).
+In the worst case scenario, you would still have to resolve merge conflicts, if there was any, but this
+should be really rare.
+
+Now, checkout `freebsd/main` again as `new_merge`, and redo the merge:
+[source,bash]
+....
+% git checkout -b new_merge freebsd/main
+% git subtree merge -P contrib/mtree vendor/NetBSD/mtree
+....
+Instead of resolving the conflicts, perform this instead:
+[source,bash]
+....
+% git checkout merge_result .
+....
+Which will overwrite the files with conflicts with the version found in `merge_result`.
+
+Examine the tree against `merge_result` to make sure that you haven't missed deleted files:
+[source,bash]
+....
+% git diff merge_result
+....
+==== Pushing the changes
+Once you are sure that you have a set of deltas you think is good, you can push it to
+a fork off github or gitlab for others to review. Once nice thin about Git is that it
+allows you to publish rough drafts of your work for others to review.
+
+After review, when you are sure it is a good change, you can push it to the FreeBSD repo:
+[source,bash]
+....
+% git push freebsd main
+....
+
+=== Creating a new vendor branch
+There's a number of ways to create a new vendor branch. The recommended way is
+to create a new repository and then merge that with FreeBSD. Let's say
+we're importing `glorbnitz` into the FreeBSD tree, release 3.1415. For
+the sake of simplicity, we'll not trim this release. It's a user
+command that puts the nitz device into different magical glorb states.
+
+==== Create the repo
+[source,bash]
+....
+% cd /some/where
+% mkdir glorbnitz
+% cd glorbnitz
+% git init
+% git checkout -b vendor/glorbnitz
+....
+At this point, you have a new repo, where all new commits will go on
+the `vendor/glorbnitz` branch.
+
+(Git professionals can also do this right in their FreeBSD clone, if they know
+how to create a new root commit that's not attached to anything, e.g.
+`git checkout --orphan vendor/glorbnitz`)
+
+==== Copy the sources in
+Since this is a new import, you can just cp the sources in, or use tar or
+even rsync as shown above. And we'll add everything, assuming no dot files.
+[source,bash]
+....
+% cp -r ~/glorbnitz/* .
+% git add *
+....
+
+At this point, you should have a pristine copy of glorbnitz ready to commit.
+
+[source,bash]
+....
+% git commit -m"Import GlorbNitz frobnosticator revision 3.1415"
+....
+As above, I used `-m` for simplicity, but you should likely create a
+commit message that explains what a Glorb is and why you'd use a Nitz
+to get it. Not everybody will know.
+
+==== Now import it into our repository
+Now you need to import the branch into our repository.
+[source,bash]
+....
+% cd /path/to/freebsd/repo/src
+% git remote add glorbnitz /some/where/glorbnitz
+% git fetch glorbnitz vendor/glorbnitz
+....
+Note the vendor/glorbnitz branch is in the repo. At this point the
+`/some/where/glorbnitz` can be deleted, if you like. It was only a means
+to an end.
+
+==== Tag and push
+Steps from here on out are much the same as they are in the case of
+updating a vendor branch, though w/o the updating the vendor
+branch step.
+[source,bash]
+....
+% git worktree add ../glorbnitz vendor/glorbnitz
+% cd ../glorbnitz
+% git tag --annotate vendor/glorbnitz/3.1415
+# Make sure it's good
+% git push --follow-tags freebsd vendor/glorbnitz
+....
+By 'good' we mean:
+1. All the right files are present
+2. None of the wrong files are present
+3. The vendor branch points at something sensible
+4. The tag looks good, and is annotated.
+
+==== Time to finally merge it into the base tree*
+[source,bash]
+....
+% cd ../src
+% git subtree add -P contrib/glorbnitz vendor/glorbnitz
+# Make sure it's good
+% git push freebsd
+....
+Here 'good' means:
+1. All the right files, and none of the wrong ones, were merged into contrib/glorbnitz.
+2. No other changes are in the tree
+3. The commit messages look good.
 +
 [NOTE]
 ====
-You may want to flatten the tags as well. The procedure is exactly the same. If you do this, put off the commit until the end.
+This hasn't connected `glorbnitz` to the build yet. How to do
+that hasn't changed and is beyond the scope of this article.
 ====
-+ 
-Check the [.filename]#dist# tree and perform any cleanup that is deemed to be necessary. You may want to disable keyword expansion, as it makes no sense on unmodified vendor code. In some cases, it can be even be harmful.
-+
-[source,bash]
-....
-% svn propdel svn:keywords -R .
-% svn commit
-....
-+ 
-Bootstrapping of `svn:mergeinfo` on the target directory (in the main tree) to the revision that corresponds to the last change was made to the vendor tree prior to importing new sources is also needed:
-+
-[source,bash]
-....
-% cd head/contrib/foo
-% svn merge --record-only ^/vendor/foo/dist@12345678 .
-% svn commit
-....
-+ 
-With some shells, the `^` in the above command may need to be escaped with a backslash.
-. *Importing New Sources*
-+ 
-Prepare a full, clean tree of the vendor sources. With SVN, we can keep a full distribution in the vendor tree without bloating the main tree. Import everything but merge only what is needed.
-+ 
-Note that you will need to add any files that were added since the last vendor import, and remove any that were removed. To facilitate this, you should prepare sorted lists of the contents of the vendor tree and of the sources you are about to import:
-+
-[source,bash]
-....
-% cd vendor/foo/dist
-% svn list -R | grep -v '/$' | sort > ../old
-% cd ../foo-9.9
-% find . -type f | cut -c 3- | sort > ../new
-....
-+ 
-With these two files, the following command will list removed files (files only in [.filename]#old#):
-+
-[source,bash]
-....
-% comm -23 ../old ../new
-....
-+ 
-While the command below will list added files (files only in [.filename]#new#):
-+
-[source,bash]
-....
-% comm -13 ../old ../new
-....
-+ 
-Let us put this together:
-+
-[source,bash]
-....
-% cd vendor/foo/foo-9.9
-% tar cf - . | tar xf - -C ../dist
-% cd ../dist
-% comm -23 ../old ../new | xargs svn remove
-% comm -13 ../old ../new | xargs svn add
-....
-+
-[WARNING]
-====
-
-If there are new directories in the new distribution, the last command will fail. You will have to add the directories, and run it again. Conversely, if any directories were removed, you will have to remove them manually.
-====
-+ 
-Check properties on any new files:
-
-** All text files should have `svn:eol-style` set to `native`.
-** All binary files should have `svn:mime-type` set to `application/octet-stream`, unless there is a more appropriate media type.
-** Executable files should have `svn:executable` set to `*`.
-** There should be no other properties on any file in the tree.
-+
-[NOTE]
-====
-You are ready to commit, but you should first check the output of `svn stat` and `svn diff` to make sure everything is in order.
-====
-+ 
-Once you have committed the new vendor release, you should tag it for future reference. The best and quickest way is to do it directly in the repository:
-+
-[source,bash]
-....
-% svn copy ^/vendor/foo/dist svn_base/vendor/foo/9.9
-....
-+ 
-To get the new tag, you can update your working copy of [.filename]#vendor/foo#.
-+
-[NOTE]
-====
-If you choose to do the copy in the checkout instead, do not forget to remove the generated `svn:mergeinfo` as described above.
-====
-
-. *Merging to __-HEAD__*
-+ 
-After you have prepared your import, it is time to merge. Option `--accept=postpone` tells SVN not to handle merge conflicts yet, because they will be taken care of manually:
-+
-[source,bash]
-....
-% cd head/contrib/foo
-% svn update
-% svn merge --accept=postpone ^/vendor/foo/dist
-....
-+ 
-Resolve any conflicts, and make sure that any files that were added or removed in the vendor tree have been properly added or removed in the main tree. It is always a good idea to check differences against the vendor branch:
-+
-[source,bash]
-....
-% svn diff --no-diff-deleted --old=^/vendor/foo/dist --new=.
-....
-+ 
-`--no-diff-deleted` tells SVN not to check files that are in the vendor tree but not in the main tree.
-+
-[NOTE]
-====
-With SVN, there is no concept of on or off the vendor branch. If a file that previously had local modifications no longer does, just remove any left-over cruft, such as FreeBSD version tags, so it no longer shows up in diffs against the vendor tree.
-====
-+ 
-If any changes are required for the world to build with the new sources, make them now - and test until you are satisfied that everything build and runs correctly.
-. *Commit*
-+ 
-Now, you are ready to commit. Make sure you get everything in one go. Ideally, you would have done all steps in a clean tree, in which case you can just commit from the top of that tree. That is the best way to avoid surprises. If you do it properly, the tree will move atomically from a consistent state with the old code to a consistent state with the new code.
-
 [[policies-encumbered]]
 == Encumbered Files
 
