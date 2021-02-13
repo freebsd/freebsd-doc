@@ -26,6 +26,7 @@ LANGUAGES =	en,es,pt-br,de,ja,zh-cn,zh-tw,ru,el,hu,it,mn,nl,pl,fr
 .ORDER: generate-books-toc build
 
 all: starting-message generate-books-toc build
+run: starting-message generate-books-toc run-local
 
 starting-message: .PHONY
 	@echo ---------------------------------------------------------------
@@ -39,7 +40,7 @@ generate-books-toc: .PHONY
 	${PYTHON_CMD} ./tools/books-toc-tables-creator.py -l ${LANGUAGES}
 	${PYTHON_CMD} ./tools/books-toc-examples-creator.py -l ${LANGUAGES}
 
-run: .PHONY
+run-local: .PHONY
 	${HUGO_CMD} server -D
 
 build: .PHONY
