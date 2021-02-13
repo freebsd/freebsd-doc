@@ -25,6 +25,7 @@ HUGO_CMD =	/usr/local/bin/hugo
 .ORDER: generate-releases build
 
 all: starting-message generate-releases build
+run: starting-message generate-releases run-local
 
 starting-message: .PHONY
 	@echo ---------------------------------------------------------------
@@ -34,7 +35,7 @@ starting-message: .PHONY
 generate-releases: .PHONY
 	${PYTHON_CMD} ./tools/releases-toml.py -p ./shared/releases.adoc
 
-run: .PHONY
+run-local: .PHONY
 	${HUGO_CMD} server -D
 
 build: .PHONY
