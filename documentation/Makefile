@@ -19,6 +19,12 @@ PYTHON_CMD =	/usr/local/bin/python3.7
 HUGO_CMD =	/usr/local/bin/hugo
 LANGUAGES =	en,es,pt-br,de,ja,zh-cn,zh-tw,ru,el,hu,it,mn,nl,pl,fr
 
+.ifndef HOSTNAME
+.HOST+=localhost
+.else
+.HOST+=$(HOSTNAME)
+.endif
+
 .ORDER: all run
 
 .ORDER: starting-message generate-books-toc
@@ -41,7 +47,7 @@ generate-books-toc: .PHONY
 	${PYTHON_CMD} ./tools/books-toc-examples-creator.py -l ${LANGUAGES}
 
 run-local: .PHONY
-	${HUGO_CMD} server -D
+	${HUGO_CMD} server -D --baseURL="http://$(.HOST):1313"
 
 build: .PHONY
 	${HUGO_CMD} --minify

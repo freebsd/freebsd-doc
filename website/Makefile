@@ -18,6 +18,12 @@ MAINTAINER=carlavilla@FreeBSD.org
 PYTHON_CMD =	/usr/local/bin/python3.7
 HUGO_CMD =	/usr/local/bin/hugo
 
+.ifndef HOSTNAME
+.HOST+=localhost
+.else
+.HOST+=$(HOSTNAME)
+.endif
+
 .ORDER: all run
 
 .ORDER: starting-message generate-releases
@@ -36,7 +42,7 @@ generate-releases: .PHONY
 	${PYTHON_CMD} ./tools/releases-toml.py -p ./shared/releases.adoc
 
 run-local: .PHONY
-	${HUGO_CMD} server -D
+	${HUGO_CMD} server -D --baseURL="http://$(.HOST):1313"
 
 build: .PHONY
 	${HUGO_CMD}
