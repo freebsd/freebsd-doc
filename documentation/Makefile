@@ -15,7 +15,7 @@
 
 MAINTAINER=carlavilla@FreeBSD.org
 
-PYTHON_CMD =	/usr/local/bin/python3.7
+PYTHON_CMD =	/usr/local/bin/python3
 HUGO_CMD =	/usr/local/bin/hugo
 LANGUAGES =	en,es,pt-br,de,ja,zh-cn,zh-tw,ru,el,hu,it,mn,nl,pl,fr
 
