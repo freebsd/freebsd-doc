@@ -1,0 +1,98 @@
+--- lib/libc/sys/jail.2.orig
++++ lib/libc/sys/jail.2
+@@ -25,7 +25,7 @@
+ .\"
+ .\" $FreeBSD$
+ .\"
+-.Dd February 8, 2012
++.Dd February 19, 2021
+ .Dt JAIL 2
+ .Os
+ .Sh NAME
+@@ -228,6 +228,9 @@
+ system call attaches the current process to an existing jail,
+ identified by
+ .Fa jid .
++It changes the process's root and current directories to the jail's
++.Va path
++directory.
+ .Pp
+ The
+ .Fn jail_remove
+--- sys/kern/kern_descrip.c.orig
++++ sys/kern/kern_descrip.c
+@@ -3242,10 +3242,9 @@
+ }
+ 
+ /*
+- * Common routine for kern_chroot() and jail_attach().  The caller is
+- * responsible for invoking priv_check() and mac_vnode_check_chroot() to
+- * authorize this operation.
+- */
++* The caller is responsible for invoking priv_check() and
++* mac_vnode_check_chroot() to authorize this operation.
++*/
+ int
+ pwd_chroot(struct thread *td, struct vnode *vp)
+ {
+@@ -3291,6 +3290,39 @@
+ 	vrele(oldvp);
+ }
+ 
++/*
++ * jail_attach(2) changes both root and working directories.
++ */
++int
++pwd_chroot_chdir(struct thread *td, struct vnode *vp)
++{
++	struct filedesc *fdp;
++	struct vnode *oldvrp, *oldvcp;
++	int error;
++
++	fdp = td->td_proc->p_fd;
++	FILEDESC_XLOCK(fdp);
++	error = chroot_refuse_vdir_fds(fdp);
++	if (error != 0) {
++		FILEDESC_XUNLOCK(fdp);
++		return (error);
++	}
++	oldvrp = fdp->fd_rdir;
++	vrefact(vp);
++	fdp->fd_rdir = vp;
++	oldvcp = fdp->fd_cdir;
++	vrefact(vp);
++	fdp->fd_cdir = vp;
++	if (fdp->fd_jdir == NULL) {
++		vrefact(vp);
++		fdp->fd_jdir = vp;
++	}
++	FILEDESC_XUNLOCK(fdp);
++	vrele(oldvrp);
++	vrele(oldvcp);
++	return (0);
++}
++
+ /*
+  * Scan all active processes and prisons to see if any of them have a current
+  * or root directory of `olddp'. If so, replace them with the new mount point.
+--- sys/kern/kern_jail.c.orig
++++ sys/kern/kern_jail.c
+@@ -2437,7 +2437,7 @@
+ 		goto e_unlock;
+ #endif
+ 	VOP_UNLOCK(pr->pr_root, 0);
+-	if ((error = pwd_chroot(td, pr->pr_root)))
++	if ((error = pwd_chroot_chdir(td, pr->pr_root)))
+ 		goto e_revert_osd;
+ 
+ 	newcred = crget();
+--- sys/sys/filedesc.h.orig
++++ sys/sys/filedesc.h
+@@ -243,6 +243,7 @@
+ /* cdir/rdir/jdir manipulation functions. */
+ void	pwd_chdir(struct thread *td, struct vnode *vp);
+ int	pwd_chroot(struct thread *td, struct vnode *vp);
++int	pwd_chroot_chdir(struct thread *td, struct vnode *vp);
+ void	pwd_ensure_dirs(void);
+ 
+ #endif /* _KERNEL */

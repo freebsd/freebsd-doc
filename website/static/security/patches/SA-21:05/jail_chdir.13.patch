@@ -1,0 +1,103 @@
+--- lib/libc/sys/jail.2.orig
++++ lib/libc/sys/jail.2
+@@ -25,7 +25,7 @@
+ .\"
+ .\" $FreeBSD$
+ .\"
+-.Dd February 8, 2012
++.Dd February 19, 2021
+ .Dt JAIL 2
+ .Os
+ .Sh NAME
+@@ -228,6 +228,9 @@
+ system call attaches the current process to an existing jail,
+ identified by
+ .Fa jid .
++It changes the process's root and current directories to the jail's
++.Va path
++directory.
+ .Pp
+ The
+ .Fn jail_remove
+--- sys/kern/kern_descrip.c.orig
++++ sys/kern/kern_descrip.c
+@@ -3795,9 +3795,8 @@
+ }
+ 
+ /*
+-* Common routine for kern_chroot() and jail_attach().  The caller is
+-* responsible for invoking priv_check() and mac_vnode_check_chroot() to
+-* authorize this operation.
++* The caller is responsible for invoking priv_check() and
++* mac_vnode_check_chroot() to authorize this operation.
+ */
+ int
+ pwd_chroot(struct thread *td, struct vnode *vp)
+@@ -3859,6 +3858,46 @@
+ 	pwd_drop(oldpwd);
+ }
+ 
++/*
++ * jail_attach(2) changes both root and working directories.
++ */
++int
++pwd_chroot_chdir(struct thread *td, struct vnode *vp)
++{
++	struct pwddesc *pdp;
++	struct filedesc *fdp;
++	struct pwd *newpwd, *oldpwd;
++	int error;
++
++	fdp = td->td_proc->p_fd;
++	pdp = td->td_proc->p_pd;
++	newpwd = pwd_alloc();
++	FILEDESC_SLOCK(fdp);
++	PWDDESC_XLOCK(pdp);
++	oldpwd = PWDDESC_XLOCKED_LOAD_PWD(pdp);
++	error = chroot_refuse_vdir_fds(fdp);
++	FILEDESC_SUNLOCK(fdp);
++	if (error != 0) {
++		PWDDESC_XUNLOCK(pdp);
++		pwd_drop(newpwd);
++		return (error);
++	}
++
++	vrefact(vp);
++	newpwd->pwd_rdir = vp;
++	vrefact(vp);
++	newpwd->pwd_cdir = vp;
++	if (oldpwd->pwd_jdir == NULL) {
++		vrefact(vp);
++		newpwd->pwd_jdir = vp;
++	}
++	pwd_fill(oldpwd, newpwd);
++	pwd_set(pdp, newpwd);
++	PWDDESC_XUNLOCK(pdp);
++	pwd_drop(oldpwd);
++	return (0);
++}
++
+ void
+ pwd_ensure_dirs(void)
+ {
+--- sys/kern/kern_jail.c.orig
++++ sys/kern/kern_jail.c
+@@ -2495,7 +2495,7 @@
+ 		goto e_unlock;
+ #endif
+ 	VOP_UNLOCK(pr->pr_root);
+-	if ((error = pwd_chroot(td, pr->pr_root)))
++	if ((error = pwd_chroot_chdir(td, pr->pr_root)))
+ 		goto e_revert_osd;
+ 
+ 	newcred = crget();
+--- sys/sys/filedesc.h.orig
++++ sys/sys/filedesc.h
+@@ -333,6 +333,7 @@
+ 
+ void	pwd_chdir(struct thread *td, struct vnode *vp);
+ int	pwd_chroot(struct thread *td, struct vnode *vp);
++int	pwd_chroot_chdir(struct thread *td, struct vnode *vp);
+ void	pwd_ensure_dirs(void);
+ void	pwd_set_rootvnode(void);
+ 

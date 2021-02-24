@@ -1,0 +1,95 @@
+--- sys/kern/kern_fork.c.orig
++++ sys/kern/kern_fork.c
+@@ -1126,6 +1126,12 @@
+ 		PROC_UNLOCK(p);
+ 	}
+ 
++	/*
++	 * If the prison was killed mid-fork, die along with it.
++	 */
++	if (!prison_isalive(td->td_ucred->cr_prison))
++		exit1(td, 0, SIGKILL);
++
+ 	userret(td, frame);
+ 
+ #ifdef KTRACE
+--- sys/kern/kern_jail.c.orig
++++ sys/kern/kern_jail.c
+@@ -1764,6 +1764,7 @@
+ 		}
+ 	}
+ 	pr->pr_flags = (pr->pr_flags & ~ch_flags) | pr_flags;
++	pr->pr_flags &= ~PR_REMOVE;
+ 	mtx_unlock(&pr->pr_mtx);
+ 	drflags &= ~PD_LOCKED;
+ 
+@@ -2368,6 +2369,12 @@
+ 
+ 	drflags = PD_DEREF | PD_LOCKED | PD_LIST_XLOCKED;
+ 
++	/*
++	 * Mark the prison as doomed, so it doesn't accidentally come back
++	 * to life.  It may still be explicitly brought back by jail_set(2).
++	 */
++	pr->pr_flags |= PR_REMOVE;
++
+ 	/* If the prison was persistent, it is not anymore. */
+ 	if (pr->pr_flags & PR_PERSIST) {
+ 		refcount_release(&pr->pr_ref);
+@@ -2508,6 +2515,17 @@
+ #endif
+ 	prison_deref(oldcred->cr_prison, PD_DEREF | PD_DEUREF);
+ 	crfree(oldcred);
++
++	/*
++	 * If the prison was killed while changing credentials, die along
++	 * with it.
++	 */
++	if (!prison_isalive(pr)) {
++		PROC_LOCK(p);
++		kern_psignal(p, SIGKILL);
++		PROC_UNLOCK(p);
++	}
++
+ 	return (0);
+ 
+  e_unlock:
+@@ -3038,17 +3056,18 @@
+ 
+ /*
+  * Return true if the prison is currently alive.  A prison is alive if it is
+- * valid and it holds user references.
++ * valid and holds user references, and it isn't being removed.
+  */
+ bool
+ prison_isalive(struct prison *pr)
+ {
+ 
+-	mtx_assert(&pr->pr_mtx, MA_OWNED);
+ 	if (__predict_false(refcount_load(&pr->pr_ref) == 0))
+ 		return (false);
+ 	if (__predict_false(refcount_load(&pr->pr_uref) == 0))
+ 		return (false);
++	if (__predict_false(pr->pr_flags & PR_REMOVE))
++		return (false);
+ 	return (true);
+ }
+ 
+@@ -3061,7 +3080,6 @@
+ prison_isvalid(struct prison *pr)
+ {
+ 
+-	mtx_assert(&pr->pr_mtx, MA_OWNED);
+ 	if (__predict_false(refcount_load(&pr->pr_ref) == 0))
+ 		return (false);
+ 	return (true);
+--- sys/sys/jail.h.orig
++++ sys/sys/jail.h
+@@ -216,6 +216,7 @@
+ 					/* primary jail address. */
+ 
+ /* Internal flag bits */
++#define	PR_REMOVE	0x01000000	/* In process of being removed */
+ #define	PR_IP4		0x02000000	/* IPv4 restricted or disabled */
+ 					/* by this jail or an ancestor */
+ #define	PR_IP6		0x04000000	/* IPv6 restricted or disabled */
