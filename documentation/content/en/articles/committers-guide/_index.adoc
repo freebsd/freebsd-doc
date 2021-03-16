@@ -233,6 +233,234 @@ Committers are encouraged to seek review for their work as part of the normal de
 * Committers can acquire an additional bit by the usual process of finding a mentor who will propose them to core, doceng, or portmgr, as appropriate. When approved, they will be added to 'access' and the normal mentoring period will ensue, which will involve a continuing of "Approved by" for some period.
 * "Approved by" is only acceptable from non-mentored src committers -- mentored committers can provide a "Reviewed by" but not an "Approved by".
 
+[[git-primer]]
+== Git Primer
+
+[NOTE]
+====
+this section is a work in progress...
+====
+
+[[vendor-import-git]]
+=== Vendor Imports with Git
+
+This section describes the vendor import procedure with Git in detail.
+
+==== Branch naming convention
+All vendor branches and tags start with `vendor/`. These branches and
+tags are visible by default.
+
+[NOTE]
+====
+This chapter follows the convention that the `freebsd` origin is the source of truth. If you use a different convention, replace `freebsd` with your name as appopriate.
+====
+
+
+We'll explore an example for updating NetBSD's mtree that's in our
+tree. The vendor branch for this is `vendor/NetBSD/mtree`.
+
+==== Updating an old vendor import
+Since the trees we have in vendor branches are usually a tiny subset of
+the FreeBSD, it's best to do them with work trees since the process is
+quite fast. Make sure that whatever directory you choose (the
+`../mtree`) argument is empty and doesn't conflict.
+[source,shell]
+....
+% git worktree add ../mtree vendor/NetBSD/mtree
+....
+==== Update the Sources in the Vendor Branch
+
+Prepare a full, clean tree of the vendor sources. Import everything but merge only what is needed.
+
+I have my copy of NetBSD checked out from their GitHub mirror in
+`~/git/NetBSD`, so I'll update from there: Note that "upstream" might
+have added or removed files, so we want to make sure deletions are
+propagated as well. rsync(1) is commonly installed, so I'll use that.
+[source,shell]
+....
+% cd ../mtree
+% rsync -va --del --exclude=".git" ~/git/NetBSD/usr.sbin/mtree/ .
+% git add -A
+% git status
+...
+% git diff --staged
+...
+% git commit -m"Vendor import of NetBSD's mtree at 2020-12-11"
+[vendor/NetBSD/mtree 8e7aa25fcf1] Vendor import of NetBSD's mtree at 2020-12-11
+ 7 files changed, 114 insertions(+), 82 deletions(-)
+% git tag -a vendor/NetBSD/mtree/20201211
+....
+
+Note: I run the `git diff` and `git status` commands to make sure nothing weird
+was present. Also I used `-m` to illustrate, but you should compose a proper
+message in an editor (using a commit message template).
+
+It's also important to create an annotated tag, otherwise the push
+will be rejected. Only annotated tags are allowed to be pushed. The
+annoated tag gives you a chance to enter a commit message. Enter
+the version you are importing, along with any salient new features
+or fixes in that version.
+
+==== Updating the FreeBSD Copy
+At this point you can push the import to vendor into our repo.
+[source,shell]
+....
+% git push --follow-tags freebsd vendor/NetBSD/mtree
+....
+
+`--follow-tags` tells `git push` to also push tags associated with the locally committed revision.
+==== Updating the FreeBSD source tree
+Now you need to update the mtree in FreeBSD. The sources live in
+`contrib/mtree` since it is upstream software.
+[source,shell]
+....
+% cd ../src
+% git subtree merge -P contrib/mtree vendor/NetBSD/mtree
+....
+This would generate a subtree merge commit of `contrib/mtree` against the local `vendor/NetBSD/mtree` branch. If there were conflicts, you would need to fix them before committing.
+
+==== Rebasing your change against latest FreeBSD source tree
+Because the current policy recommends against using merges, if the upstream FreeBSD `main` moved forward
+before you get a chance to push, you would have to redo the merge.
+
+Regular `git rebase` or `git pull --rebase` doesn't know how to rebase a merge commit **as a merge commit**,
+so instead of that you would have to recreate the commit.
+
+The easiest way to do this would be to create a side branch with the **contents** of the merged tree:
+
+[source,shell]
+....
+% cd ../src
+% git fetch freebsd
+% git checkout -b merge_result
+% git merge freebsd/main
+....
+
+Typically, there would be no merge conflicts here (because developers tends to work on different components).
+In the worst case scenario, you would still have to resolve merge conflicts, if there was any, but this
+should be really rare.
+
+Now, checkout `freebsd/main` again as `new_merge`, and redo the merge:
+[source,shell]
+....
+% git checkout -b new_merge freebsd/main
+% git subtree merge -P contrib/mtree vendor/NetBSD/mtree
+....
+Instead of resolving the conflicts, perform this instead:
+[source,shell]
+....
+% git checkout merge_result .
+....
+Which will overwrite the files with conflicts with the version found in `merge_result`.
+
+Examine the tree against `merge_result` to make sure that you haven't missed deleted files:
+[source,shell]
+....
+% git diff merge_result
+....
+==== Pushing the changes
+Once you are sure that you have a set of deltas you think is good, you can push it to
+a fork off github or gitlab for others to review. Once nice thin about Git is that it
+allows you to publish rough drafts of your work for others to review.
+
+After review, when you are sure it is a good change, you can push it to the FreeBSD repo:
+[source,shell]
+....
+% git push freebsd main
+....
+
+=== Creating a new vendor branch
+There's a number of ways to create a new vendor branch. The recommended way is
+to create a new repository and then merge that with FreeBSD. Let's say
+we're importing `glorbnitz` into the FreeBSD tree, release 3.1415. For
+the sake of simplicity, we'll not trim this release. It's a user
+command that puts the nitz device into different magical glorb states.
+
+==== Create the repo
+[source,shell]
+....
+% cd /some/where
+% mkdir glorbnitz
+% cd glorbnitz
+% git init
+% git checkout -b vendor/glorbnitz
+....
+At this point, you have a new repo, where all new commits will go on
+the `vendor/glorbnitz` branch.
+
+(Git professionals can also do this right in their FreeBSD clone, if they know
+how to create a new root commit that's not attached to anything, e.g.
+`git checkout --orphan vendor/glorbnitz`)
+
+==== Copy the sources in
+Since this is a new import, you can just cp the sources in, or use tar or
+even rsync as shown above. And we'll add everything, assuming no dot files.
+[source,shell]
+....
+% cp -r ~/glorbnitz/* .
+% git add *
+....
+
+At this point, you should have a pristine copy of glorbnitz ready to commit.
+
+[source,shell]
+....
+% git commit -m"Import GlorbNitz frobnosticator revision 3.1415"
+....
+As above, I used `-m` for simplicity, but you should likely create a
+commit message that explains what a Glorb is and why you'd use a Nitz
+to get it. Not everybody will know.
+
+==== Now import it into our repository
+Now you need to import the branch into our repository.
+[source,shell]
+....
+% cd /path/to/freebsd/repo/src
+% git remote add glorbnitz /some/where/glorbnitz
+% git fetch glorbnitz vendor/glorbnitz
+....
+Note the vendor/glorbnitz branch is in the repo. At this point the
+`/some/where/glorbnitz` can be deleted, if you like. It was only a means
+to an end.
+
+==== Tag and push
+Steps from here on out are much the same as they are in the case of
+updating a vendor branch, though w/o the updating the vendor
+branch step.
+[source,shell]
+....
+% git worktree add ../glorbnitz vendor/glorbnitz
+% cd ../glorbnitz
+% git tag --annotate vendor/glorbnitz/3.1415
+# Make sure it's good
+% git push --follow-tags freebsd vendor/glorbnitz
+....
+By 'good' we mean:
+
+. All the right files are present
+. None of the wrong files are present
+. The vendor branch points at something sensible
+. The tag looks good, and is annotated.
+
+==== Time to finally merge it into the base tree*
+[source,shell]
+....
+% cd ../src
+% git subtree add -P contrib/glorbnitz vendor/glorbnitz
+# Make sure it's good
+% git push freebsd
+....
+Here 'good' means:
+
+. All the right files, and none of the wrong ones, were merged into contrib/glorbnitz.
+. No other changes are in the tree
+. The commit messages look good.
+
+[NOTE]
+====
+This hasn't connected `glorbnitz` to the build yet. How so do that is specific to the software being imported.
+====
+
 [[subversion-primer]]
 == Subversion Primer
 
