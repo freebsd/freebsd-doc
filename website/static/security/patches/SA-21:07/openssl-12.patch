@@ -1,0 +1,281 @@
+--- crypto/openssl/crypto/x509/x509_vfy.c.orig
++++ crypto/openssl/crypto/x509/x509_vfy.c
+@@ -526,15 +526,19 @@
+                 ret = 1;
+             break;
+         }
+-        if ((ctx->param->flags & X509_V_FLAG_X509_STRICT) && num > 1) {
++        if (ret > 0
++            && (ctx->param->flags & X509_V_FLAG_X509_STRICT) && num > 1) {
+             /* Check for presence of explicit elliptic curve parameters */
+             ret = check_curve(x);
+-            if (ret < 0)
++            if (ret < 0) {
+                 ctx->error = X509_V_ERR_UNSPECIFIED;
+-            else if (ret == 0)
++                ret = 0;
++            } else if (ret == 0) {
+                 ctx->error = X509_V_ERR_EC_KEY_EXPLICIT_PARAMS;
++            }
+         }
+-        if ((x->ex_flags & EXFLAG_CA) == 0
++        if (ret > 0
++            && (x->ex_flags & EXFLAG_CA) == 0
+             && x->ex_pathlen != -1
+             && (ctx->param->flags & X509_V_FLAG_X509_STRICT)) {
+             ctx->error = X509_V_ERR_INVALID_EXTENSION;
+--- crypto/openssl/ssl/s3_lib.c.orig
++++ crypto/openssl/ssl/s3_lib.c
+@@ -4638,6 +4638,7 @@
+ 
+         OPENSSL_clear_free(s->s3->tmp.psk, psklen);
+         s->s3->tmp.psk = NULL;
++        s->s3->tmp.psklen = 0;
+         if (!s->method->ssl3_enc->generate_master_secret(s,
+                     s->session->master_key, pskpms, pskpmslen,
+                     &s->session->master_key_length)) {
+@@ -4667,8 +4668,10 @@
+         else
+             OPENSSL_cleanse(pms, pmslen);
+     }
+-    if (s->server == 0)
++    if (s->server == 0) {
+         s->s3->tmp.pms = NULL;
++        s->s3->tmp.pmslen = 0;
++    }
+     return ret;
+ }
+ 
+--- crypto/openssl/ssl/ssl_lib.c.orig
++++ crypto/openssl/ssl/ssl_lib.c
+@@ -779,8 +779,10 @@
+         s->ext.ecpointformats =
+             OPENSSL_memdup(ctx->ext.ecpointformats,
+                            ctx->ext.ecpointformats_len);
+-        if (!s->ext.ecpointformats)
++        if (!s->ext.ecpointformats) {
++            s->ext.ecpointformats_len = 0;
+             goto err;
++        }
+         s->ext.ecpointformats_len =
+             ctx->ext.ecpointformats_len;
+     }
+@@ -789,8 +791,10 @@
+             OPENSSL_memdup(ctx->ext.supportedgroups,
+                            ctx->ext.supportedgroups_len
+                                 * sizeof(*ctx->ext.supportedgroups));
+-        if (!s->ext.supportedgroups)
++        if (!s->ext.supportedgroups) {
++            s->ext.supportedgroups_len = 0;
+             goto err;
++        }
+         s->ext.supportedgroups_len = ctx->ext.supportedgroups_len;
+     }
+ #endif
+@@ -800,8 +804,10 @@
+ 
+     if (s->ctx->ext.alpn) {
+         s->ext.alpn = OPENSSL_malloc(s->ctx->ext.alpn_len);
+-        if (s->ext.alpn == NULL)
++        if (s->ext.alpn == NULL) {
++            s->ext.alpn_len = 0;
+             goto err;
++        }
+         memcpy(s->ext.alpn, s->ctx->ext.alpn, s->ctx->ext.alpn_len);
+         s->ext.alpn_len = s->ctx->ext.alpn_len;
+     }
+@@ -2834,6 +2840,7 @@
+     OPENSSL_free(ctx->ext.alpn);
+     ctx->ext.alpn = OPENSSL_memdup(protos, protos_len);
+     if (ctx->ext.alpn == NULL) {
++        ctx->ext.alpn_len = 0;
+         SSLerr(SSL_F_SSL_CTX_SET_ALPN_PROTOS, ERR_R_MALLOC_FAILURE);
+         return 1;
+     }
+@@ -2853,6 +2860,7 @@
+     OPENSSL_free(ssl->ext.alpn);
+     ssl->ext.alpn = OPENSSL_memdup(protos, protos_len);
+     if (ssl->ext.alpn == NULL) {
++        ssl->ext.alpn_len = 0;
+         SSLerr(SSL_F_SSL_SET_ALPN_PROTOS, ERR_R_MALLOC_FAILURE);
+         return 1;
+     }
+--- crypto/openssl/ssl/statem/extensions.c.orig
++++ crypto/openssl/ssl/statem/extensions.c
+@@ -1136,6 +1136,7 @@
+     /* Clear any signature algorithms extension received */
+     OPENSSL_free(s->s3->tmp.peer_sigalgs);
+     s->s3->tmp.peer_sigalgs = NULL;
++    s->s3->tmp.peer_sigalgslen = 0;
+ 
+     return 1;
+ }
+@@ -1145,6 +1146,7 @@
+     /* Clear any signature algorithms extension received */
+     OPENSSL_free(s->s3->tmp.peer_cert_sigalgs);
+     s->s3->tmp.peer_cert_sigalgs = NULL;
++    s->s3->tmp.peer_cert_sigalgslen = 0;
+ 
+     return 1;
+ }
+--- crypto/openssl/ssl/statem/extensions_clnt.c.orig
++++ crypto/openssl/ssl/statem/extensions_clnt.c
+@@ -816,6 +816,7 @@
+         OPENSSL_free(s->psksession_id);
+         s->psksession_id = OPENSSL_memdup(id, idlen);
+         if (s->psksession_id == NULL) {
++            s->psksession_id_len = 0;
+             SSLfatal(s, SSL_AD_INTERNAL_ERROR,
+                      SSL_F_TLS_CONSTRUCT_CTOS_EARLY_DATA, ERR_R_INTERNAL_ERROR);
+             return EXT_RETURN_FAIL;
+@@ -1375,6 +1376,7 @@
+         OPENSSL_free(s->ext.peer_ecpointformats);
+         s->ext.peer_ecpointformats = OPENSSL_malloc(ecpointformats_len);
+         if (s->ext.peer_ecpointformats == NULL) {
++            s->ext.peer_ecpointformats_len = 0;
+             SSLfatal(s, SSL_AD_INTERNAL_ERROR,
+                      SSL_F_TLS_PARSE_STOC_EC_PT_FORMATS, ERR_R_INTERNAL_ERROR);
+             return 0;
+@@ -1492,8 +1494,13 @@
+         s->ext.scts_len = (uint16_t)size;
+         if (size > 0) {
+             s->ext.scts = OPENSSL_malloc(size);
+-            if (s->ext.scts == NULL
+-                    || !PACKET_copy_bytes(pkt, s->ext.scts, size)) {
++            if (s->ext.scts == NULL) {
++                s->ext.scts_len = 0;
++                SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_TLS_PARSE_STOC_SCT,
++                         ERR_R_MALLOC_FAILURE);
++                return 0;
++            }
++            if (!PACKET_copy_bytes(pkt, s->ext.scts, size)) {
+                 SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_TLS_PARSE_STOC_SCT,
+                          ERR_R_INTERNAL_ERROR);
+                 return 0;
+@@ -1592,6 +1599,7 @@
+     OPENSSL_free(s->ext.npn);
+     s->ext.npn = OPENSSL_malloc(selected_len);
+     if (s->ext.npn == NULL) {
++        s->ext.npn_len = 0;
+         SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_TLS_PARSE_STOC_NPN,
+                  ERR_R_INTERNAL_ERROR);
+         return 0;
+@@ -1632,6 +1640,7 @@
+     OPENSSL_free(s->s3->alpn_selected);
+     s->s3->alpn_selected = OPENSSL_malloc(len);
+     if (s->s3->alpn_selected == NULL) {
++        s->s3->alpn_selected_len = 0;
+         SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_TLS_PARSE_STOC_ALPN,
+                  ERR_R_INTERNAL_ERROR);
+         return 0;
+@@ -1663,6 +1672,7 @@
+         s->session->ext.alpn_selected =
+             OPENSSL_memdup(s->s3->alpn_selected, s->s3->alpn_selected_len);
+         if (s->session->ext.alpn_selected == NULL) {
++            s->session->ext.alpn_selected_len = 0;
+             SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_TLS_PARSE_STOC_ALPN,
+                      ERR_R_INTERNAL_ERROR);
+             return 0;
+--- crypto/openssl/ssl/statem/statem_clnt.c.orig
++++ crypto/openssl/ssl/statem/statem_clnt.c
+@@ -2461,6 +2461,7 @@
+         s->s3->tmp.ctype_len = 0;
+         OPENSSL_free(s->pha_context);
+         s->pha_context = NULL;
++        s->pha_context_len = 0;
+ 
+         if (!PACKET_get_length_prefixed_1(pkt, &reqctx) ||
+             !PACKET_memdup(&reqctx, &s->pha_context, &s->pha_context_len)) {
+@@ -2770,16 +2771,17 @@
+     }
+     s->ext.ocsp.resp = OPENSSL_malloc(resplen);
+     if (s->ext.ocsp.resp == NULL) {
++        s->ext.ocsp.resp_len = 0;
+         SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_TLS_PROCESS_CERT_STATUS_BODY,
+                  ERR_R_MALLOC_FAILURE);
+         return 0;
+     }
++    s->ext.ocsp.resp_len = resplen;
+     if (!PACKET_copy_bytes(pkt, s->ext.ocsp.resp, resplen)) {
+         SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_F_TLS_PROCESS_CERT_STATUS_BODY,
+                  SSL_R_LENGTH_MISMATCH);
+         return 0;
+     }
+-    s->ext.ocsp.resp_len = resplen;
+ 
+     return 1;
+ }
+@@ -3349,9 +3351,11 @@
+  err:
+     OPENSSL_clear_free(s->s3->tmp.pms, s->s3->tmp.pmslen);
+     s->s3->tmp.pms = NULL;
++    s->s3->tmp.pmslen = 0;
+ #ifndef OPENSSL_NO_PSK
+     OPENSSL_clear_free(s->s3->tmp.psk, s->s3->tmp.psklen);
+     s->s3->tmp.psk = NULL;
++    s->s3->tmp.psklen = 0;
+ #endif
+     return 0;
+ }
+@@ -3426,6 +3430,7 @@
+  err:
+     OPENSSL_clear_free(pms, pmslen);
+     s->s3->tmp.pms = NULL;
++    s->s3->tmp.pmslen = 0;
+     return 0;
+ }
+ 
+--- crypto/openssl/ssl/statem/statem_srvr.c.orig
++++ crypto/openssl/ssl/statem/statem_srvr.c
+@@ -2178,6 +2178,7 @@
+             OPENSSL_free(s->s3->alpn_selected);
+             s->s3->alpn_selected = OPENSSL_memdup(selected, selected_len);
+             if (s->s3->alpn_selected == NULL) {
++                s->s3->alpn_selected_len = 0;
+                 SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_TLS_HANDLE_ALPN,
+                          ERR_R_INTERNAL_ERROR);
+                 return 0;
+@@ -2853,9 +2854,16 @@
+         if (s->post_handshake_auth == SSL_PHA_REQUEST_PENDING) {
+             OPENSSL_free(s->pha_context);
+             s->pha_context_len = 32;
+-            if ((s->pha_context = OPENSSL_malloc(s->pha_context_len)) == NULL
+-                    || RAND_bytes(s->pha_context, s->pha_context_len) <= 0
+-                    || !WPACKET_sub_memcpy_u8(pkt, s->pha_context, s->pha_context_len)) {
++            if ((s->pha_context = OPENSSL_malloc(s->pha_context_len)) == NULL) {
++                s->pha_context_len = 0;
++                SSLfatal(s, SSL_AD_INTERNAL_ERROR,
++                         SSL_F_TLS_CONSTRUCT_CERTIFICATE_REQUEST,
++                         ERR_R_INTERNAL_ERROR);
++                return 0;
++            }
++            if (RAND_bytes(s->pha_context, s->pha_context_len) <= 0
++                    || !WPACKET_sub_memcpy_u8(pkt, s->pha_context,
++                                              s->pha_context_len)) {
+                 SSLfatal(s, SSL_AD_INTERNAL_ERROR,
+                          SSL_F_TLS_CONSTRUCT_CERTIFICATE_REQUEST,
+                          ERR_R_INTERNAL_ERROR);
+@@ -2969,6 +2977,7 @@
+     OPENSSL_cleanse(psk, psklen);
+ 
+     if (s->s3->tmp.psk == NULL) {
++        s->s3->tmp.psklen = 0;
+         SSLfatal(s, SSL_AD_INTERNAL_ERROR,
+                  SSL_F_TLS_PROCESS_CKE_PSK_PREAMBLE, ERR_R_MALLOC_FAILURE);
+         return 0;
+@@ -3508,6 +3517,7 @@
+ #ifndef OPENSSL_NO_PSK
+     OPENSSL_clear_free(s->s3->tmp.psk, s->s3->tmp.psklen);
+     s->s3->tmp.psk = NULL;
++    s->s3->tmp.psklen = 0;
+ #endif
+     return MSG_PROCESS_ERROR;
+ }
+@@ -4117,6 +4127,7 @@
+             s->session->ext.alpn_selected =
+                 OPENSSL_memdup(s->s3->alpn_selected, s->s3->alpn_selected_len);
+             if (s->session->ext.alpn_selected == NULL) {
++                s->session->ext.alpn_selected_len = 0;
+                 SSLfatal(s, SSL_AD_INTERNAL_ERROR,
+                          SSL_F_TLS_CONSTRUCT_NEW_SESSION_TICKET,
+                          ERR_R_MALLOC_FAILURE);
