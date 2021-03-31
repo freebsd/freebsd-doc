@@ -17,6 +17,8 @@ MAINTAINER=carlavilla@FreeBSD.org
 
 PYTHON_CMD =	/usr/local/bin/python3
 HUGO_CMD =	/usr/local/bin/hugo
+RUBYLIB =	../shared/lib
+.export	RUBYLIB
 
 .ifndef HOSTNAME
 .HOST+=localhost
