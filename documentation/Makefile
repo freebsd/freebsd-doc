@@ -49,7 +49,7 @@ generate-books-toc: .PHONY
 	${PYTHON_CMD} ./tools/books-toc-examples-creator.py -l ${LANGUAGES}
 
 run-local: .PHONY
-	${HUGO_CMD} server -D --baseURL="http://$(.HOST):1313"
+	${HUGO_CMD} server -D $(BIND:D--bind=$(BIND)) --baseURL="http://$(.HOST):1313"
 
 build: .PHONY
 	${HUGO_CMD} --minify
