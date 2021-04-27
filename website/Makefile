@@ -44,7 +44,7 @@ generate-releases: .PHONY
 	${PYTHON_CMD} ./tools/releases-toml.py -p ./shared/releases.adoc
 
 run-local: .PHONY
-	${HUGO_CMD} server -D --baseURL="http://$(.HOST):1313"
+	${HUGO_CMD} server -D $(BIND:D--bind=$(BIND)) --baseURL="http://$(.HOST):1313"
 
 build: .PHONY
 	${HUGO_CMD}
