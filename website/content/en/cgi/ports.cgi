@@ -110,7 +110,7 @@ sub init_variables {
     $remotePrefixHtml = "$hsty_base/ports";
 
     # Web interface for the Ports tree
-    $remotePrefixRepo = 'https://svnweb.FreeBSD.org/ports/head';
+    $remotePrefixRepo = 'https://cgit.FreeBSD.org/ports';
 
     # Ports documentation
     $portsDesc = "$hsty_base/ports/";
@@ -317,7 +317,7 @@ sub out {
         if ( !$out_sec || $1 ne $out_sec ) {
             print "</dl>\n" if $counter > 0;
             print qq{\n<h3>}
-              . qq{<a href="$remotePrefixHtml/$1.html">Category $1</a>}
+              . qq{<a href="$remotePrefixRepo/tree/$1">Category $1</a>}
               . "</h3>\n<dl>\n";
             $out_sec = $1;
         }
@@ -335,11 +335,13 @@ sub out {
     #$version =~ s/[\+,]/X/g;
 
     local ($l) = $path;
-    $l =~ s%^$remotePrefixFtp%$remotePrefixRepo%o;
-    $descfile =~ s%^$remotePrefixFtp%$remotePrefixRepo%o;
+    $l =~ s%^$remotePrefixFtp%$remotePrefixRepo/log%o;
+    local ($t) = $path;
+    $t =~ s%^$remotePrefixFtp%$remotePrefixRepo/tree%o;
+    $descfile =~ s%^$remotePrefixFtp%$remotePrefixRepo/plain%o;
 
     print
-      qq{<dt><b><a name="$version"></a><a href="$l">$version</a></b></dt>\n};
+      qq{<dt><b><a name="$version"></a><a href="$t">$version</a></b></dt>\n};
     print qq{<dd>}, &escapeHTML($comment), qq{<br />\n};
 
     print qq[<a href="$descfile?revision=HEAD">Description</a> <b>:</b>\n];
@@ -350,7 +352,7 @@ sub out {
 qq[<a href="$remotePrefixFtpPackages{$remotePrefixFtpPackagesDefault}/$version.$packageExt">Package</a> <b>:</b>\n];
     }
 
-    print qq[<a href="$l/?view=log">Changes</a> <br />\n];
+    print qq[<a href="$l">Changes</a> <br />\n];
 
     print qq{<i>Maintained by:</i> <a href="mailto:$email}
       . (
@@ -364,7 +366,7 @@ qq[<a href="$remotePrefixFtpPackages{$remotePrefixFtpPackagesDefault}/$version.$
     if ( $#s > 0 ) {
         print qq{<i>Also listed in:</i> };
         foreach (@s) {
-            print qq{<a href="$remotePrefixHtml/$_.html">$_</a> }
+            print qq{<a href="$remotePrefixRepo/tree/$_">$_</a> }
               if $_ ne $out_sec;
         }
         print "<br />\n";
