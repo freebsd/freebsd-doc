@@ -16,7 +16,7 @@ var h = document.location.hostname;
  * Check that the hosting domain is actually a FreeBSD.org domain, so
  * we don't accidentally obtain data from mirrors.
  */
-var fbsdregex = /((docs|security|svnweb|wiki|www)\.freebsd\.org|google\.com)$/i;
+var fbsdregex = /((docs|security|svnweb|cgit|wiki|www)\.freebsd\.org|google\.com)$/i;
 
 if (typeof navigator.doNotTrack !== "undefined" && (navigator.doNotTrack == "yes" || navigator.doNotTrack == "1")) {
 	allow_track = false;
