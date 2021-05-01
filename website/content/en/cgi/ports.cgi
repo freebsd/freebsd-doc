@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2017 Wolfram Schneider <wosch@FreeBSD.ORG>
+# Copyright (c) 1996-2021 Wolfram Schneider <wosch@FreeBSD.ORG>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -496,7 +496,7 @@ sub footer {
 
     print qq{
 <img align="right" src="$hsty_base/gifs/powerlogo.gif" alt="Powered by FreeBSD" />
-&copy; 1996-2017 by Wolfram Schneider. All rights reserved.<br />
+&copy; 1996-2021 by Wolfram Schneider. All rights reserved.<br />
 };
 
 #print q{$FreeBSD$} . "<br />\n";
