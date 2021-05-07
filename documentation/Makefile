@@ -15,11 +15,18 @@
 
 MAINTAINER=carlavilla@FreeBSD.org
 
-PYTHON_CMD =	/usr/local/bin/python3
-HUGO_CMD =	/usr/local/bin/hugo
+LOCALBASE?=	/usr/local
+
+PYTHON_CMD =	${LOCALBASE}/bin/python3
+HUGO_CMD =	${LOCALBASE}/bin/hugo
 LANGUAGES =	en,es,pt-br,de,ja,zh-cn,zh-tw,ru,el,hu,it,mn,nl,pl,fr
 RUBYLIB =	../shared/lib
 .export	RUBYLIB
+
+RUN_DEPENDS=	${PYTHON_CMD} \
+		${HUGO_CMD} \
+		${LOCALBASE}/bin/asciidoctor \
+		${LOCALBASE}/bin/rougify
 
 .ifndef HOSTNAME
 .HOST+=localhost
@@ -29,12 +36,20 @@ RUBYLIB =	../shared/lib
 
 .ORDER: all run
 
+.ORDER: requirements
 .ORDER: starting-message generate-books-toc
 .ORDER: starting-message build
 .ORDER: generate-books-toc build
 
-all: starting-message generate-books-toc build
-run: starting-message generate-books-toc run-local
+all: requirements starting-message generate-books-toc build
+run: requirements starting-message generate-books-toc run-local
+
+requirements:
+.for dep in ${RUN_DEPENDS}
+.if !exists(${dep})
+	@(echo ${dep} not found, please run 'pkg install docproj'; exit 1)
+.endif
+.endfor
 
 starting-message: .PHONY
 	@echo ---------------------------------------------------------------
