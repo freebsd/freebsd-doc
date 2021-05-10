@@ -907,17 +907,17 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 12.2-RELEASE',
-    'freebsd-release', 'FreeBSD 12.2-RELEASE',
+    'freebsd',         'FreeBSD 13.0-RELEASE',
+    'freebsd-release', 'FreeBSD 13.0-RELEASE',
 
-    'freebsd-stable', 'FreeBSD 12.2-stable',
+    'freebsd-stable',   'FreeBSD 13.0-stable',
+    'freebsd-stable13', 'FreeBSD 13.0-stable',
     'freebsd-stable12', 'FreeBSD 12.2-stable',
-    'freebsd-stable11', 'FreeBSD 11.3-stable',
-    'freebsd-stable10', 'FreeBSD 10.4-stable',
+    'freebsd-stable11', 'FreeBSD 11.4-stable',
 
-    'freebsd-current',       'FreeBSD 13.0-current',
-    'freebsd-release-ports', 'FreeBSD 12.2-RELEASE and Ports',
-    'freebsd-ports', 'FreeBSD Ports 12.2',
+    'freebsd-current',       'FreeBSD 14.0-current',
+    'freebsd-release-ports', 'FreeBSD 13.0-RELEASE and Ports',
+    'freebsd-ports', 'FreeBSD Ports 13.0',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat 9',
