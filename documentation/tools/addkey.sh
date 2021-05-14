@@ -129,10 +129,11 @@ info "Generating ${keyfile}..."
 
 cat <<EOF
 
-Remember to move ${keyfile} to /static/pgpkeys/
+Remember to move ${keyfile} to documentation/static/pgpkeys/
 
-If this is a new entry, don't forget to run the following commands
-before committing:
+If this is a new entry, add a relevant entry to
+documentation/content/en/articles/pgpkeys/_index.adoc and
+don't forget to run the following commands before committing:
 
 % git add ${keyfile}
 
