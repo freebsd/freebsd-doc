@@ -18,6 +18,7 @@ MAINTAINER=carlavilla@FreeBSD.org
 LOCALBASE?=	/usr/local
 
 PYTHON_CMD =	${LOCALBASE}/bin/python3
+RUBY_CMD =	${LOCALBASE}/bin/ruby
 HUGO_CMD =	${LOCALBASE}/bin/hugo
 LANGUAGES =	en,es,pt-br,de,ja,zh-cn,zh-tw,ru,el,hu,it,mn,nl,pl,fr
 RUBYLIB =	../shared/lib
@@ -41,8 +42,8 @@ RUN_DEPENDS=	${PYTHON_CMD} \
 .ORDER: starting-message build
 .ORDER: generate-books-toc build
 
-all: requirements starting-message generate-books-toc build
-run: requirements starting-message generate-books-toc run-local
+all: requirements starting-message generate-books-toc generate-pgpkeys-txt build
+run: requirements starting-message generate-books-toc generate-pgpkeys-txt run-local
 
 requirements:
 .for dep in ${RUN_DEPENDS}
@@ -62,6 +63,9 @@ generate-books-toc: .PHONY
 	${PYTHON_CMD} ./tools/books-toc-figures-creator.py -l ${LANGUAGES}
 	${PYTHON_CMD} ./tools/books-toc-tables-creator.py -l ${LANGUAGES}
 	${PYTHON_CMD} ./tools/books-toc-examples-creator.py -l ${LANGUAGES}
+
+generate-pgpkeys-txt: .PHONY
+	${RUBY_CMD} ./tools/global-pgpkeys-creator.rb
 
 run-local: .PHONY
 	${HUGO_CMD} server -D $(BIND:D--bind=$(BIND)) --baseURL="http://$(.HOST):1313"
