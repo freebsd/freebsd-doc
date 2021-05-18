@@ -1,4 +1,4 @@
-#!/usr/bin/perl -T
+#!/usr/local/bin/perl -T
 #
 # Copyright (c) 1996-2020 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
