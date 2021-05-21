@@ -20,6 +20,7 @@ print qq{<h1>FreeBSD HTTPS/SSL/TLS Server Certificate Fingerprints</h1>\n};
 print qq{<p>The FreeBSD Project makes use of <a href="https://letsencrypt.org">Let's Encrypt</a> certificates for many of its HTTPS/SSL/TLS services.  These certificates are automatically updated every 60 days.  The current certificate fingerprints of significant services are listed below.</p>\n};
 
 # Note: These are all case sensitive.  Use lower case to match the file names.
+&Fingerprint('git.freebsd.org');
 &Fingerprint('svn.freebsd.org');
 &Fingerprint('download.freebsd.org');
 &Fingerprint('pkg.freebsd.org');
