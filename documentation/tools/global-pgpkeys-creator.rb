@@ -22,7 +22,9 @@ end
 
 def processPGPKey(keyFile, pgpKeysFile)
   File.readlines(keyFile).each do |line|
-    pgpKeysFile.puts(line)
+    if not line.include? "// sh addkey.sh" and not line.include? "[.literal-block-margin]"
+      pgpKeysFile.puts(line)
+    end
   end
 end
 
