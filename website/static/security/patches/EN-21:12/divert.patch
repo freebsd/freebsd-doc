@@ -1,0 +1,94 @@
+    divert: Fix mbuf ownership confusion in div_output()
+    
+    div_output_outbound() and div_output_inbound() relied on the caller to
+    free the mbuf if an error occurred.  However, this is contrary to the
+    semantics of their callees, ip_output(), ip6_output() and
+    netisr_queue_src(), which always consume the mbuf.  So, if one of these
+    functions returned an error, that would get propagated up to
+    div_output(), resulting in a double free.
+    
+    Fix the problem by making div_output_outbound() and div_output_inbound()
+    responsible for freeing the mbuf in all cases.
+    
+    Reported by:    Michael Schmiedgen <schmiedgen@gmx.net>
+    Tested by:      Michael Schmiedgen
+    Reviewed by:    donner
+    Sponsored by:   The FreeBSD Foundation
+    Differential Revision:  https://reviews.freebsd.org/D30129
+    
+    (cherry picked from commit a1fadf7de25b973a308b86d04c4ada4fa8be193f)
+--- sys/netinet/ip_divert.c.orig
++++ sys/netinet/ip_divert.c
+@@ -402,17 +402,13 @@
+ 	}
+ 	NET_EPOCH_EXIT(et);
+ 
+-	if (error != 0)
+-		m_freem(m);
+-
+ 	return (error);
+ }
+ 
+ /*
+  * Sends mbuf @m to the wire via ip[6]_output().
+  *
+- * Returns 0 on success, @m is consumed.
+- * On failure, returns error code. It is caller responsibility to free @m.
++ * Returns 0 on success or an errno value on failure.  @m is always consumed.
+  */
+ static int
+ div_output_outbound(int family, struct socket *so, struct mbuf *m)
+@@ -435,6 +431,7 @@
+ 		    inp->inp_options != NULL) ||
+ 		    ((u_short)ntohs(ip->ip_len) > m->m_pkthdr.len)) {
+ 			INP_RUNLOCK(inp);
++			m_freem(m);
+ 			return (EINVAL);
+ 		}
+ 		break;
+@@ -446,6 +443,7 @@
+ 		/* Don't allow packet length sizes that will crash */
+ 		if (((u_short)ntohs(ip6->ip6_plen) > m->m_pkthdr.len)) {
+ 			INP_RUNLOCK(inp);
++			m_freem(m);
+ 			return (EINVAL);
+ 		}
+ 		break;
+@@ -485,6 +483,7 @@
+ 		options = m_dup(inp->inp_options, M_NOWAIT);
+ 		if (options == NULL) {
+ 			INP_RUNLOCK(inp);
++			m_freem(m);
+ 			return (ENOBUFS);
+ 		}
+ 	}
+@@ -512,8 +511,7 @@
+ /*
+  * Schedules mbuf @m for local processing via IPv4/IPv6 netisr queue.
+  *
+- * Returns 0 on success, @m is consumed.
+- * Returns error code on failure. It is caller responsibility to free @m.
++ * Returns 0 on success or an errno value on failure.  @m is always consumed.
+  */
+ static int
+ div_output_inbound(int family, struct socket *so, struct mbuf *m,
+@@ -533,8 +531,10 @@
+ 		bzero(sin->sin_zero, sizeof(sin->sin_zero));
+ 		sin->sin_port = 0;
+ 		ifa = ifa_ifwithaddr((struct sockaddr *) sin);
+-		if (ifa == NULL)
++		if (ifa == NULL) {
++			m_freem(m);
+ 			return (EADDRNOTAVAIL);
++		}
+ 		m->m_pkthdr.rcvif = ifa->ifa_ifp;
+ 	}
+ #ifdef MAC
+@@ -560,6 +560,7 @@
+ 		break;
+ #endif
+ 	default:
++		m_freem(m);
+ 		return (EINVAL);
+ 	}
+ 

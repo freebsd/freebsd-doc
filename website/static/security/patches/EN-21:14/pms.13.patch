@@ -1,0 +1,81 @@
+--- sys/dev/pms/freebsd/driver/ini/src/agdef.h.orig
++++ sys/dev/pms/freebsd/driver/ini/src/agdef.h
+@@ -62,7 +62,7 @@
+ #define AGTIAPI_MAX_DEVICE_7H       256 /*Max devices per channel in 7H */
+ #define AGTIAPI_MAX_DEVICE_8H       512 /*Max devices per channel in 8H*/
+ #define AGTIAPI_MAX_CAM_Q_DEPTH     1024
+-#define AGTIAPI_NSEGS               (btoc(maxphys) + 1)
++#define AGTIAPI_NSEGS               (MIN(btoc(maxphys), 64) + 1)
+ /*
+ ** Adapter specific defines 
+ */
+--- sys/dev/pms/freebsd/driver/ini/src/agtiapi.c.orig
++++ sys/dev/pms/freebsd/driver/ini/src/agtiapi.c
+@@ -1834,7 +1834,7 @@
+     cpi->max_target = maxTargets - 1;
+     cpi->max_lun = AGTIAPI_MAX_LUN;
+     /* Max supported I/O size, in bytes. */
+-    cpi->maxio = ulmin(1024 * 1024, maxphys);
++    cpi->maxio = ctob(AGTIAPI_NSEGS - 1);
+     cpi->initiator_id = 255;
+     strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+     strlcpy(cpi->hba_vid, "PMC", HBA_IDLEN);
+@@ -2629,9 +2629,11 @@
+     {
+       AGTIAPI_PRINTK("agtiapi_PrepareSGListCB: error status 0x%x\n", error);
+       bus_dmamap_unload(pmcsc->buffer_dmat, pccb->CCB_dmamap);
+-      bus_dmamap_destroy(pmcsc->buffer_dmat, pccb->CCB_dmamap);
+       agtiapi_FreeCCB(pmcsc, pccb);
+-      ccb->ccb_h.status = CAM_REQ_CMP;
++      if (error == EFBIG)
++        ccb->ccb_h.status = CAM_REQ_TOO_BIG;
++      else
++        ccb->ccb_h.status = CAM_REQ_CMP_ERR;
+       xpt_done(ccb);
+       return;
+     }
+@@ -2643,9 +2645,8 @@
+                     " AGTIAPI_MAX_DMA_SEGS %d\n", 
+                     nsegs, AGTIAPI_MAX_DMA_SEGS );
+     bus_dmamap_unload(pmcsc->buffer_dmat, pccb->CCB_dmamap);
+-    bus_dmamap_destroy(pmcsc->buffer_dmat, pccb->CCB_dmamap);
+     agtiapi_FreeCCB(pmcsc, pccb);
+-    ccb->ccb_h.status = CAM_REQ_CMP;
++    ccb->ccb_h.status = CAM_REQ_TOO_BIG;
+     xpt_done(ccb);   
+     return;
+   }
+@@ -3689,9 +3690,11 @@
+       AGTIAPI_PRINTK( "agtiapi_PrepareSMPSGListCB: error status 0x%x\n",
+                       error );
+       bus_dmamap_unload( pmcsc->buffer_dmat, pccb->CCB_dmamap );
+-      bus_dmamap_destroy( pmcsc->buffer_dmat, pccb->CCB_dmamap );
+       agtiapi_FreeCCB( pmcsc, pccb );
+-      ccb->ccb_h.status = CAM_REQ_CMP;
++      if (error == EFBIG)
++        ccb->ccb_h.status = CAM_REQ_TOO_BIG;
++      else
++        ccb->ccb_h.status = CAM_REQ_CMP_ERR;
+       xpt_done( ccb );
+       return;
+     }
+@@ -3703,9 +3706,8 @@
+                     "AGTIAPI_MAX_DMA_SEGS %d\n",
+                     nsegs, AGTIAPI_MAX_DMA_SEGS );
+     bus_dmamap_unload( pmcsc->buffer_dmat, pccb->CCB_dmamap );
+-    bus_dmamap_destroy( pmcsc->buffer_dmat, pccb->CCB_dmamap );
+     agtiapi_FreeCCB( pmcsc, pccb );
+-    ccb->ccb_h.status = CAM_REQ_CMP;
++    ccb->ccb_h.status = CAM_REQ_TOO_BIG;
+     xpt_done( ccb );
+     return;
+   }
+@@ -4410,7 +4412,7 @@
+   if ((pccb = agtiapi_GetCCB(pmcsc)) == NULL)
+   {
+     AGTIAPI_PRINTK("agtiapi_QueueSMP: GetCCB ERROR\n");
+-    ccb->ccb_h.status = CAM_REQ_CMP;
++    ccb->ccb_h.status = CAM_REQ_CMP_ERR;
+     xpt_done(ccb);
+     return tiBusy;
+   }
