@@ -36,7 +36,7 @@ require "./cgi-style.pl";
 $t_style = qq`<style type="text/css">
 h3 { font-size: 1.2em; border-bottom: thin solid black; }
 </style>
-<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/search/opensearch/ports.xml" title="FreeBSD Ports" />
+<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/ports.xml" title="FreeBSD Ports" />
 `;
 
 sub init_variables {
