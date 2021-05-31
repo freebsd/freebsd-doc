@@ -20,7 +20,7 @@ LOCALBASE?=	/usr/local
 PYTHON_CMD =	${LOCALBASE}/bin/python3
 RUBY_CMD =	${LOCALBASE}/bin/ruby
 HUGO_CMD =	${LOCALBASE}/bin/hugo
-ASCIIDOCTORPDF_CMD=	/usr/local/bin/asciidoctor-pdf
+ASCIIDOCTORPDF_CMD=	${LOCALBASE}/bin/asciidoctor-pdf
 .if defined(DOC_LANG) && !empty(DOC_LANG)
 LANGUAGES =	${DOC_LANG}
 .else
