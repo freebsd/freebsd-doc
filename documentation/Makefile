@@ -6,7 +6,8 @@
 # Targets intended for use on the command line
 #
 # all (default)	-	generate the books TOC and compile all the documentation
-# run	-			serves the built documentation site for local browsing
+# run		-	serves the built documentation site for local browsing
+# pdf		-	build PDF versions of the articles and books.
 #
 # The run target uses hugo's built-in webserver to make the documentation site
 # available for local browsing.  The documentation should have been built prior
