@@ -72,7 +72,9 @@ generate-books-toc: .PHONY
 	${PYTHON_CMD} ./tools/books-toc-tables-creator.py -l ${LANGUAGES}
 	${PYTHON_CMD} ./tools/books-toc-examples-creator.py -l ${LANGUAGES}
 
-generate-pgpkeys-txt: .PHONY
+generate-pgpkeys-txt: static/pgpkeys/pgpkeys.txt
+
+static/pgpkeys/pgpkeys.txt: static/pgpkeys/*key
 	${RUBY_CMD} ./tools/global-pgpkeys-creator.rb
 
 run-local: .PHONY
