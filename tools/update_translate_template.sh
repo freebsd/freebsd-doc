@@ -69,7 +69,7 @@ for component in $COMPONENTS; do
 			po4a-updatepo \
 				--format asciidoc \
 				--option compat=asciidoctor \
-				--option yfm_keys=title,part \
+				--option yfm_keys=title,part,description \
 				--master "$document" \
 				--master-charset "UTF-8" \
 				--copyright-holder "The FreeBSD Project" \
@@ -82,7 +82,7 @@ for component in $COMPONENTS; do
 			po4a-gettextize \
 				--format asciidoc \
 				--option compat=asciidoctor \
-				--option yfm_keys=title,part \
+				--option yfm_keys=title,part,description \
 				--master "$document" \
 				--master-charset "UTF-8" \
 				--copyright-holder "The FreeBSD Project" \

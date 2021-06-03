@@ -66,7 +66,7 @@ for pofile in $(find "$COMPONENT/content/$LANGUAGE/" -name "*.po" ); do
 	po4a-translate \
 		--format asciidoc \
 		--option compat=asciidoctor \
-		--option yfm_keys=title,part \
+		--option yfm_keys=title,part,description \
 		--master "$adoc_orig" \
 		--master-charset "UTF-8" \
 		--po "$pofile" \
