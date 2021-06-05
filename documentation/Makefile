@@ -39,9 +39,13 @@ RUN_DEPENDS=	${PYTHON_CMD} \
 		${LOCALBASE}/bin/rougify
 
 .ifndef HOSTNAME
-.HOST+=localhost
+.  ifdef BIND
+.HOST=$(BIND)
+.  else
+.HOST=localhost
+.  endif
 .else
-.HOST+=$(HOSTNAME)
+.HOST=$(HOSTNAME)
 .endif
 
 .ORDER: all run

@@ -22,9 +22,13 @@ RUBYLIB =	../shared/lib
 .export	RUBYLIB
 
 .ifndef HOSTNAME
-.HOST+=localhost
+.  ifdef BIND
+.HOST=$(BIND)
+.  else
+.HOST=localhost
+.  endif
 .else
-.HOST+=$(HOSTNAME)
+.HOST=$(HOSTNAME)
 .endif
 
 .ORDER: all run
