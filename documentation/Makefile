@@ -21,6 +21,7 @@ LOCALBASE?=	/usr/local
 PYTHON_CMD =	${LOCALBASE}/bin/python3
 RUBY_CMD =	${LOCALBASE}/bin/ruby
 HUGO_CMD =	${LOCALBASE}/bin/hugo
+HUGO_ARGS?=	--verbose --minify
 ASCIIDOCTORPDF_CMD=	${LOCALBASE}/bin/asciidoctor-pdf
 .if defined(DOC_LANG) && !empty(DOC_LANG)
 LANGUAGES =	${DOC_LANG}
@@ -78,10 +79,10 @@ static/pgpkeys/pgpkeys.txt: static/pgpkeys/*key
 	${RUBY_CMD} ./tools/global-pgpkeys-creator.rb
 
 run-local: .PHONY
-	${HUGO_CMD} server -D $(BIND:D--bind=$(BIND)) --baseURL="http://$(.HOST):1313"
+	${HUGO_CMD} server ${HUGO_ARGS} -D $(BIND:D--bind=$(BIND)) --baseURL="http://$(.HOST):1313"
 
 build: .PHONY
-	${HUGO_CMD} --minify
+	${HUGO_CMD} ${HUGO_ARGS}
 
 #
 # PDF targets

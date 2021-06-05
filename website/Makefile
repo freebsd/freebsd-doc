@@ -17,6 +17,7 @@ MAINTAINER=carlavilla@FreeBSD.org
 
 PYTHON_CMD =	/usr/local/bin/python3
 HUGO_CMD =	/usr/local/bin/hugo
+HUGO_ARGS?=	--verbose
 RUBYLIB =	../shared/lib
 .export	RUBYLIB
 
@@ -51,10 +52,10 @@ generate-releases: .PHONY
 	${PYTHON_CMD} ./tools/releases-toml.py -p ./shared/releases.adoc
 
 run-local: .PHONY
-	${HUGO_CMD} server -D $(BIND:D--bind=$(BIND)) --baseURL="http://$(.HOST):1313"
+	${HUGO_CMD} server ${HUGO_ARGS} -D $(BIND:D--bind=$(BIND)) --baseURL="http://$(.HOST):1313"
 
 build: .PHONY
-	${HUGO_CMD}
+	${HUGO_CMD} ${HUGO_ARGS}
 
 post-build: cgi-permissions
 
