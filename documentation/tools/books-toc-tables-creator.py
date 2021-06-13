@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 BSD 2-Clause License
@@ -5,9 +6,8 @@ BSD 2-Clause License
 Copyright (c) 2020-2021, The FreeBSD Project
 Copyright (c) 2020-2021, Sergio Carlavilla <carlavilla@FreeBSD.org>
 
-This script will generate the Table of Contents of the Handbook
+This script will generate the Table of Contents for tables in the books.
 """
-#!/usr/bin/env python3
 
 import sys, getopt
 import re
@@ -54,19 +54,28 @@ def setTOCTitle(language):
 
 def main(argv):
 
+  justPrintOutput = False
+  langargs= []
   try:
-    opts, args = getopt.getopt(argv,"hl:",["language="])
+    opts, args = getopt.gnu_getopt(argv,"hl:o",["language="])
   except getopt.GetoptError:
-    print('books-toc-tables-creator.py -l <language>')
+    print('books-toc-tables-creator.py [-o] -l <language>')
     sys.exit(2)
   for opt, arg in opts:
     if opt == '-h':
-      print('books-toc-tables-creator.py -l <language>')
+      print('books-toc-tables-creator.py [-o] -l <language>')
       sys.exit()
+    if opt == '-o':
+      justPrintOutput = True
     elif opt in ("-l", "--language"):
-      languages = arg.split(',')
+      langargs = arg.replace(" ",",").split(',')
 
-  for language in languages:
+  # treat additional arguments as languages, but check if they
+  #  contain ','
+  for l in args:
+    langargs.extend(l.replace(" ",",").split(','))
+
+  for language in langargs:
 
     with open('./content/{}/books/books.adoc'.format(language), 'r', encoding = 'utf-8') as booksFile:
       books = [line.strip() for line in booksFile]
@@ -114,8 +123,11 @@ def main(argv):
 
         toc += "--\n"
 
-        with open('./content/{0}/books/{1}/toc-tables.adoc'.format(language, book), 'w', encoding = 'utf-8') as tocFile:
-          tocFile.write(toc)
+        if justPrintOutput == False:
+          with open('./content/{0}/books/{1}/toc-tables.adoc'.format(language, book), 'w', encoding = 'utf-8') as tocFile:
+            tocFile.write(toc)
+        else:
+          print('./content/{0}/books/{1}/toc-tables.adoc'.format(language, book))
 
 if __name__ == "__main__":
   main(sys.argv[1:])
