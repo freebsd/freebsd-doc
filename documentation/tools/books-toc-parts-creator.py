@@ -144,6 +144,11 @@ def main(argv):
 
   for language in langargs:
 
+    if not os.path.exists('./content/{}/books/books.adoc'.format(language)):
+      if not justPrintOutput:
+        print('Warning: no books found for language "{0}"'.format(language))
+      continue
+
     with open('./content/{}/books/books.adoc'.format(language), 'r', encoding = 'utf-8') as booksFile:
       books = [line.strip() for line in booksFile]
 
