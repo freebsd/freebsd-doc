@@ -16,6 +16,9 @@
 
 MAINTAINER=carlavilla@FreeBSD.org
 
+# List of languages without book translations
+ARTICLEONLY_LANGS=	bd da ko tr
+
 LOCALBASE?=	/usr/local
 
 PYTHON_CMD =	${LOCALBASE}/bin/python3
@@ -24,9 +27,9 @@ HUGO_CMD =	${LOCALBASE}/bin/hugo
 HUGO_ARGS?=	--verbose --minify
 ASCIIDOCTORPDF_CMD=	${LOCALBASE}/bin/asciidoctor-pdf
 .if defined(DOC_LANG) && !empty(DOC_LANG)
-LANGUAGES =	${DOC_LANG}
+LANGUAGES=	${DOC_LANG:S/,/ /g}
 .else
-LANGUAGES =	en,es,pt-br,de,ja,zh-cn,zh-tw,ru,el,hu,it,mn,nl,pl,fr
+LANGUAGES=	bd da de el en es fr hu it ja ko mn nl pl pt-br ru tr zh-cn zh-tw
 .endif
 
 RUBYLIB =	../shared/lib
@@ -47,6 +50,13 @@ RUN_DEPENDS=	${PYTHON_CMD} \
 .else
 .HOST=$(HOSTNAME)
 .endif
+
+# Strip the languages without articles from the list of languages we
+#  will use to build books.
+BOOK_LANGS= ${LANGUAGES}
+.for a in ${ARTICLEONLY_LANGS}
+BOOK_LANGS:=	${BOOK_LANGS:N${a}}
+.endfor
 
 .ORDER: all run
 
@@ -71,11 +81,11 @@ starting-message: .PHONY
 	@echo ---------------------------------------------------------------
 
 generate-books-toc: .PHONY
-	${PYTHON_CMD} ./tools/books-toc-parts-creator.py -l ${LANGUAGES}
-	${PYTHON_CMD} ./tools/books-toc-creator.py -l ${LANGUAGES}
-	${PYTHON_CMD} ./tools/books-toc-figures-creator.py -l ${LANGUAGES}
-	${PYTHON_CMD} ./tools/books-toc-tables-creator.py -l ${LANGUAGES}
-	${PYTHON_CMD} ./tools/books-toc-examples-creator.py -l ${LANGUAGES}
+	${PYTHON_CMD} ./tools/books-toc-parts-creator.py -l    ${BOOK_LANGS}
+	${PYTHON_CMD} ./tools/books-toc-creator.py -l          ${BOOK_LANGS}
+	${PYTHON_CMD} ./tools/books-toc-figures-creator.py -l  ${BOOK_LANGS}
+	${PYTHON_CMD} ./tools/books-toc-tables-creator.py -l   ${BOOK_LANGS}
+	${PYTHON_CMD} ./tools/books-toc-examples-creator.py -l ${BOOK_LANGS}
 
 generate-pgpkeys-txt: static/pgpkeys/pgpkeys.txt
 
@@ -90,7 +100,7 @@ build: .PHONY
 
 #
 # PDF targets
-# Use DOC_LANG to choose the language, e.g., make DOC_LANG="en,fr" pdf-books
+# Use DOC_LANG to choose the language, e.g., make DOC_LANG="en fr" pdf-books
 #
 pdf: pdf-articles pdf-books
 
