@@ -83,7 +83,7 @@ $i_topbar = qq`
               <div id="search">
 		<form method="get" id="search-form" action="https://duckduckgo.com/">
 		  <h2 class="blockhide"><label for="words">Search</label></h2>
-		  <input type="hidden" name="sites" value="www.FreeBSD.org,docs.FreeBSD.org,lists.FreeBSD.org,wiki.FreeBSD.org,forums.FreeBSD.org" />
+		  <input type="hidden" name="sites" value="FreeBSD.org" />
 		  <input type="hidden" name="ka" value="v" />
 		  <input type="hidden" name="kt" value="v" />
 		  <input type="hidden" name="kh" value="1" />
