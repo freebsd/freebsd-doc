@@ -41,6 +41,7 @@ RUBYLIB =	../shared/lib
 
 all: starting-message generate-releases build post-build end-message
 run: starting-message generate-releases run-local
+clean: hugo-clean releases-clean
 
 starting-message: .PHONY
 	@echo "---------------------------------------------------------------"
@@ -52,7 +53,9 @@ end-message: .PHONY
 	@echo "Building the website completed on $$(date)"
 	@echo "---------------------------------------------------------------"
 
-generate-releases: .PHONY
+generate-releases: data/releases.toml
+
+data/releases.toml:
 	${PYTHON_CMD} ./tools/releases-toml.py -p ./shared/releases.adoc
 
 run-local: .PHONY
@@ -66,3 +69,8 @@ post-build: cgi-permissions
 cgi-permissions:
 	@chmod 555 ./public/cgi/*.cgi
 
+hugo-clean:
+	rm -fr public resources
+
+releases-clean:
+	rm -f data/releases.toml

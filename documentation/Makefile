@@ -6,6 +6,7 @@
 # Targets intended for use on the command line
 #
 # all (default)	-	generate the books TOC and compile all the documentation
+# clean		- 	removes generated files
 # run		-	serves the built documentation site for local browsing
 # pdf		-	build PDF versions of the articles and books.
 #
@@ -68,6 +69,9 @@ BOOK_LANGS:=	${BOOK_LANGS:N${a}}
 all: requirements starting-message generate-books-toc generate-pgpkeys-txt build
 run: requirements starting-message generate-books-toc generate-pgpkeys-txt run-local
 
+# clean does not call pdf-clean as that is a subset of hugo-clean
+clean: hugo-clean pgp-clean toc-clean
+
 requirements:
 .for dep in ${RUN_DEPENDS}
 .if !exists(${dep})
@@ -97,6 +101,19 @@ run-local: .PHONY
 
 build: .PHONY
 	${HUGO_CMD} ${HUGO_ARGS}
+
+toc-clean: .PHONY
+	rm -f $$(${PYTHON_CMD} ./tools/books-toc-parts-creator.py    -l ${BOOK_LANGS} -o)
+	rm -f $$(${PYTHON_CMD} ./tools/books-toc-creator.py          -l ${BOOK_LANGS} -o)
+	rm -f $$(${PYTHON_CMD} ./tools/books-toc-figures-creator.py  -l ${BOOK_LANGS} -o)
+	rm -f $$(${PYTHON_CMD} ./tools/books-toc-tables-creator.py   -l ${BOOK_LANGS} -o)
+	rm -f $$(${PYTHON_CMD} ./tools/books-toc-examples-creator.py -l ${BOOK_LANGS} -o)
+
+pgp-clean: .PHONY
+	rm -f static/pgpkeys/pgpkeys.txt
+
+hugo-clean: .PHONY
+	rm -rf resources public
 
 #
 # PDF targets
@@ -189,10 +206,9 @@ pdf-articles: pdf-articles-target
 
 pdf-clean: pdf-articles-clean pdf-books-clean
 
-pdf-books-clean: pdf-books-target
+pdf-books-clean: pdf-books-target toc-clean
 .for _curpdf in ${BOOKSDIR}
-	rm -f ${.CURDIR}/public${_curpdf:S|^${.CURDIR}/content||}book.pdf ${_curpdf}toc*.adoc
-	rm -fr ${.CURDIR}/public${_curpdf:S|^${.CURDIR}/content||}
+	rm -f ${.CURDIR}/public${_curpdf:S|^${.CURDIR}/content||}book.pdf
 .endfor
 .for _lang in ${LANGUAGES:S|,| |g}
 	rm -fr ${.CURDIR}/public/${_lang}/books
@@ -209,7 +225,6 @@ pdf-books-clean: pdf-books-target
 pdf-articles-clean: pdf-articles-target
 .for _curpdf in ${ARTICLESDIR}
 	rm -f ${.CURDIR}/public${_curpdf:S|^${.CURDIR}/content||}article.pdf
-	rm -fr ${.CURDIR}/public${_curpdf:S|^${.CURDIR}/content||}
 .endfor
 .for _lang in ${LANGUAGES:S|,| |g}
 	rm -fr ${.CURDIR}/public/${_lang}/articles
@@ -222,3 +237,4 @@ pdf-articles-clean: pdf-articles-target
 			rm -fr ${.CURDIR}/public; \
 		fi;	\
 	fi
+
