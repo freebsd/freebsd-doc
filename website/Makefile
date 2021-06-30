@@ -15,6 +15,9 @@
 
 MAINTAINER=carlavilla@FreeBSD.org
 
+# List of all languages we have content for
+ALL_LANGUAGES=	de el en es fr hu it ja nl ru tr zh-cn zh-tw
+
 PYTHON_CMD =	/usr/local/bin/python3
 HUGO_CMD =	/usr/local/bin/hugo
 HUGO_ARGS?=	--verbose
@@ -31,6 +34,25 @@ RUBYLIB =	../shared/lib
 .HOST=$(HOSTNAME)
 .endif
 
+.if defined(DOC_LANG) && !empty(DOC_LANG)
+LANGUAGES=      ${DOC_LANG:S/,/ /g}
+.if  ${LANGUAGES:Men} == ""
+.warning "Warning: cannot skip 'en'; adding it back"
+LANGUAGES+=	en
+.endif
+.else
+LANGUAGES=	${ALL_LANGUAGES}
+.endif
+
+# Take the list of all languages, and take out the ones we have been
+#   asked for via DOC_LANG.  We'll feed this to hugo.
+SKIP_LANGS=
+.for a in ${ALL_LANGUAGES}
+.if ${LANGUAGES:M${a}} == ""
+SKIP_LANGS+=	${a}
+.endif
+.endfor
+
 .ORDER: all run
 
 .ORDER: starting-message generate-releases
@@ -46,6 +68,8 @@ clean: hugo-clean releases-clean
 starting-message: .PHONY
 	@echo "---------------------------------------------------------------"
 	@echo "Building the website started on $$(date)"
+	@echo " included languages: ${LANGUAGES}"
+	@echo " excluded languages: ${SKIP_LANGS}"
 	@echo "---------------------------------------------------------------"
 
 end-message: .PHONY
@@ -59,10 +83,11 @@ data/releases.toml:
 	${PYTHON_CMD} ./tools/releases-toml.py -p ./shared/releases.adoc
 
 run-local: .PHONY
-	${HUGO_CMD} server ${HUGO_ARGS} -D $(BIND:D--bind=$(BIND)) --baseURL="http://$(.HOST):1313"
+	HUGO_DISABLELANGUAGES="${SKIP_LANGS}" ${HUGO_CMD} server \
+	    ${HUGO_ARGS} -D $(BIND:D--bind=$(BIND)) --baseURL="http://$(.HOST):1313"
 
 build: .PHONY
-	${HUGO_CMD} ${HUGO_ARGS}
+	HUGO_DISABLELANGUAGES="${SKIP_LANGS}" ${HUGO_CMD} ${HUGO_ARGS}
 
 post-build: cgi-permissions
 

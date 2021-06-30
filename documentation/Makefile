@@ -20,6 +20,9 @@ MAINTAINER=carlavilla@FreeBSD.org
 # List of languages without book translations
 ARTICLEONLY_LANGS=	bd da ko tr
 
+# List of all languages we have content for
+ALL_LANGUAGES=	bd da de el en es fr hu it ja ko mn nl pl pt-br ru tr zh-cn zh-tw
+
 LOCALBASE?=	/usr/local
 
 PYTHON_CMD =	${LOCALBASE}/bin/python3
@@ -27,10 +30,15 @@ RUBY_CMD =	${LOCALBASE}/bin/ruby
 HUGO_CMD =	${LOCALBASE}/bin/hugo
 HUGO_ARGS?=	--verbose --minify
 ASCIIDOCTORPDF_CMD=	${LOCALBASE}/bin/asciidoctor-pdf
+
 .if defined(DOC_LANG) && !empty(DOC_LANG)
 LANGUAGES=	${DOC_LANG:S/,/ /g}
+.if  ${LANGUAGES:Men} == ""
+.warning "Warning: cannot skip 'en'; adding it back"
+LANGUAGES+=	en
+.endif
 .else
-LANGUAGES=	bd da de el en es fr hu it ja ko mn nl pl pt-br ru tr zh-cn zh-tw
+LANGUAGES=	${ALL_LANGUAGES}
 .endif
 
 RUBYLIB =	../shared/lib
@@ -59,6 +67,16 @@ BOOK_LANGS= ${LANGUAGES}
 BOOK_LANGS:=	${BOOK_LANGS:N${a}}
 .endfor
 
+
+# Take the list of all languages, and take out the ones we have been
+#   asked for.  We'll feed this to hugo.
+SKIP_LANGS=
+.for a in ${ALL_LANGUAGES}
+.if  ${LANGUAGES:M${a}} == ""
+SKIP_LANGS+=    ${a}
+.endif
+.endfor
+
 .ORDER: all run
 
 .ORDER: requirements
@@ -82,6 +100,8 @@ requirements:
 starting-message: .PHONY
 	@echo ---------------------------------------------------------------
 	@echo                   Building the documentation
+	@echo  included languages: ${LANGUAGES}
+	@echo  excluded languages: ${SKIP_LANGS}
 	@echo ---------------------------------------------------------------
 
 generate-books-toc: .PHONY
@@ -97,10 +117,11 @@ static/pgpkeys/pgpkeys.txt: static/pgpkeys/*key
 	${RUBY_CMD} ./tools/global-pgpkeys-creator.rb
 
 run-local: .PHONY
-	${HUGO_CMD} server ${HUGO_ARGS} -D $(BIND:D--bind=$(BIND)) --baseURL="http://$(.HOST):1313"
+	HUGO_DISABLELANGUAGES="${SKIP_LANGS}" ${HUGO_CMD} server \
+		${HUGO_ARGS} -D $(BIND:D--bind=$(BIND)) --baseURL="http://$(.HOST):1313"
 
 build: .PHONY
-	${HUGO_CMD} ${HUGO_ARGS}
+	HUGO_DISABLELANGUAGES="${SKIP_LANGS}" ${HUGO_CMD} ${HUGO_ARGS}
 
 toc-clean: .PHONY
 	rm -f $$(${PYTHON_CMD} ./tools/books-toc-parts-creator.py    -l ${BOOK_LANGS} -o)
