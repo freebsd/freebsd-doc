@@ -1,0 +1,181 @@
+    libcasper: fix descriptors numbers
+    
+    Casper services expect that the first 3 descriptors (stdin/stdout/stderr)
+    will point to /dev/null. Which Casper will ensure later. The Casper
+    services are forked from the original process. If the initial process
+    closes one of those descriptors, Casper may reuse one of them for it on
+    purpose. If this is the case, then renumarate the descriptors used by
+    Casper to higher numbers. This is done already after the fork, so it
+    doesn't break the parent process.
+    
+    Approved by:    so
+    Security:       EN-21:12.libcasper
+    PR:             255339
+    Reported by:    Borja Marcos <borjam (at) sarenet.es>
+    Tested by:      jkim@
+    
+    (cherry picked from commit aa310ebfba3d49a0b6b03a103b969731a8136a73)
+    (cherry picked from commit 4e2ae05c3ae8c470829b4c3a78aa8c34a7f0b617)
+--- lib/libcasper/libcasper/libcasper_impl.c.orig
++++ lib/libcasper/libcasper/libcasper_impl.c
+@@ -32,8 +32,10 @@
+  * $FreeBSD$
+  */
+ 
++#include <err.h>
+ #include <errno.h>
+ #include <fcntl.h>
++#include <paths.h>
+ #include <stdlib.h>
+ 
+ #include "libcasper_impl.h"
+@@ -44,3 +46,28 @@
+ 
+ 	return (fcntl(fd, F_GETFL) != -1 || errno != EBADF);
+ }
++
++void
++fd_fix_environment(int *fdp)
++{
++	int nullfd, nfd;
++
++	if (*fdp > STDERR_FILENO)
++		return;
++
++	nullfd = open(_PATH_DEVNULL, O_RDWR);
++	if (nullfd == -1)
++		errx(1, "Unable to open %s", _PATH_DEVNULL);
++
++	while (*fdp <= STDERR_FILENO) {
++		nfd = dup(*fdp);
++		if (nfd == -1)
++			errx(1, "Unable to secure fd");
++		if (dup2(nullfd, *fdp) == -1)
++			errx(1, "Unable to secure fd");
++		*fdp = nfd;
++	}
++
++	close(nullfd);
++}
++
+--- lib/libcasper/libcasper/libcasper_impl.h.orig
++++ lib/libcasper/libcasper/libcasper_impl.h
+@@ -44,6 +44,7 @@
+ struct service_connection;
+ 
+ bool fd_is_valid(int fd);
++void fd_fix_environment(int *fdp);
+ 
+ /* Private service functions. */
+ struct service	*service_alloc(const char *name,
+--- lib/libcasper/libcasper/service.c.orig
++++ lib/libcasper/libcasper/service.c
+@@ -386,24 +386,27 @@
+ }
+ 
+ static void
+-service_clean(int sock, int procfd, uint64_t flags)
++service_clean(int *sockp, int *procfdp, uint64_t flags)
+ {
+ 	int fd, maxfd, minfd;
+ 
+-	assert(sock > STDERR_FILENO);
+-	assert(procfd > STDERR_FILENO);
+-	assert(sock != procfd);
++	fd_fix_environment(sockp);
++	fd_fix_environment(procfdp);
++
++	assert(*sockp > STDERR_FILENO);
++	assert(*procfdp > STDERR_FILENO);
++	assert(*sockp != *procfdp);
+ 
+ 	if ((flags & CASPER_SERVICE_STDIO) == 0)
+ 		stdnull();
+ 
+ 	if ((flags & CASPER_SERVICE_FD) == 0) {
+-		if (procfd > sock) {
+-			maxfd = procfd;
+-			minfd = sock;
++		if (*procfdp > *sockp) {
++			maxfd = *procfdp;
++			minfd = *sockp;
+ 		} else {
+-			maxfd = sock;
+-			minfd = procfd;
++			maxfd = *sockp;
++			minfd = *procfdp;
+ 		}
+ 
+ 		for (fd = STDERR_FILENO + 1; fd < maxfd; fd++) {
+@@ -424,7 +427,7 @@
+ 	assert(service != NULL);
+ 	assert(service->s_magic == SERVICE_MAGIC);
+ 	setproctitle("%s", service->s_name);
+-	service_clean(sock, procfd, service->s_flags);
++	service_clean(&sock, &procfd, service->s_flags);
+ 
+ 	if (service_connection_add(service, sock, NULL) == NULL)
+ 		_exit(1);
+--- lib/libcasper/libcasper/zygote.c.orig
++++ lib/libcasper/libcasper/zygote.c
+@@ -52,6 +52,7 @@
+ #include <strings.h>
+ #include <unistd.h>
+ 
++#include "libcasper_impl.h"
+ #include "zygote.h"
+ 
+ /* Zygote info. */
+@@ -104,7 +105,7 @@
+  * between sandbox and its owner.
+  */
+ static void
+-zygote_main(int sock)
++zygote_main(int *sockp)
+ {
+ 	int error, procfd;
+ 	int chanfd[2];
+@@ -113,12 +114,14 @@
+ 	zygote_func_t *func;
+ 	pid_t pid;
+ 
+-	assert(sock > STDERR_FILENO);
++	fd_fix_environment(sockp);
++
++	assert(*sockp > STDERR_FILENO);
+ 
+ 	setproctitle("zygote");
+ 
+ 	for (;;) {
+-		nvlin = nvlist_recv(sock, 0);
++		nvlin = nvlist_recv(*sockp, 0);
+ 		if (nvlin == NULL) {
+ 			if (errno == ENOTCONN) {
+ 				/* Casper exited. */
+@@ -157,7 +160,7 @@
+ 			break;
+ 		case 0:
+ 			/* Child. */
+-			close(sock);
++			close(*sockp);
+ 			close(chanfd[0]);
+ 			func(chanfd[1]);
+ 			/* NOTREACHED */
+@@ -179,7 +182,7 @@
+ 			nvlist_move_descriptor(nvlout, "chanfd", chanfd[0]);
+ 			nvlist_move_descriptor(nvlout, "procfd", procfd);
+ 		}
+-		(void)nvlist_send(sock, nvlout);
++		(void)nvlist_send(*sockp, nvlout);
+ 		nvlist_destroy(nvlout);
+ 	}
+ 	/* NOTREACHED */
+@@ -206,7 +209,7 @@
+ 	case 0:
+ 		/* Child. */
+ 		close(sp[0]);
+-		zygote_main(sp[1]);
++		zygote_main(&sp[1]);
+ 		/* NOTREACHED */
+ 		abort();
+ 	default:

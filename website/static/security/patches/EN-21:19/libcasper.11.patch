@@ -1,0 +1,165 @@
+--- lib/libcasper/libcasper/libcasper_impl.c.orig
++++ lib/libcasper/libcasper/libcasper_impl.c
+@@ -30,9 +30,12 @@
+  * $FreeBSD$
+  */
+ 
++#include <err.h>
+ #include <errno.h>
+ #include <fcntl.h>
++#include <paths.h>
+ #include <stdlib.h>
++#include <unistd.h>
+ 
+ #include "libcasper_impl.h"
+ 
+@@ -42,3 +45,28 @@
+ 
+ 	return (fcntl(fd, F_GETFL) != -1 || errno != EBADF);
+ }
++
++void
++fd_fix_environment(int *fdp)
++{
++	int nullfd, nfd;
++
++	if (*fdp > STDERR_FILENO)
++		return;
++
++	nullfd = open(_PATH_DEVNULL, O_RDWR);
++	if (nullfd == -1)
++		errx(1, "Unable to open %s", _PATH_DEVNULL);
++
++	while (*fdp <= STDERR_FILENO) {
++		nfd = dup(*fdp);
++		if (nfd == -1)
++			errx(1, "Unable to secure fd");
++		if (dup2(nullfd, *fdp) == -1)
++			errx(1, "Unable to secure fd");
++		*fdp = nfd;
++	}
++
++	close(nullfd);
++}
++
+--- lib/libcasper/libcasper/libcasper_impl.h.orig
++++ lib/libcasper/libcasper/libcasper_impl.h
+@@ -42,6 +42,7 @@
+ struct service_connection;
+ 
+ bool fd_is_valid(int fd);
++void fd_fix_environment(int *fdp);
+ 
+ /* Private service functions. */
+ struct service	*service_alloc(const char *name,
+--- lib/libcasper/libcasper/service.c.orig
++++ lib/libcasper/libcasper/service.c
+@@ -365,24 +365,27 @@
+ }
+ 
+ static void
+-service_clean(int sock, int procfd, uint64_t flags)
++service_clean(int *sockp, int *procfdp, uint64_t flags)
+ {
+ 	int fd, maxfd, minfd;
+ 
+-	assert(sock > STDERR_FILENO);
+-	assert(procfd > STDERR_FILENO);
+-	assert(sock != procfd);
++	fd_fix_environment(sockp);
++	fd_fix_environment(procfdp);
++
++	assert(*sockp > STDERR_FILENO);
++	assert(*procfdp > STDERR_FILENO);
++	assert(*sockp != *procfdp);
+ 
+ 	if ((flags & CASPER_SERVICE_STDIO) == 0)
+ 		stdnull();
+ 
+ 	if ((flags & CASPER_SERVICE_FD) == 0) {
+-		if (procfd > sock) {
+-			maxfd = procfd;
+-			minfd = sock;
++		if (*procfdp > *sockp) {
++			maxfd = *procfdp;
++			minfd = *sockp;
+ 		} else {
+-			maxfd = sock;
+-			minfd = procfd;
++			maxfd = *sockp;
++			minfd = *procfdp;
+ 		}
+ 
+ 		for (fd = STDERR_FILENO + 1; fd < maxfd; fd++) {
+@@ -403,7 +406,7 @@
+ 	assert(service != NULL);
+ 	assert(service->s_magic == SERVICE_MAGIC);
+ 	setproctitle("%s", service->s_name);
+-	service_clean(sock, procfd, service->s_flags);
++	service_clean(&sock, &procfd, service->s_flags);
+ 
+ 	if (service_connection_add(service, sock, NULL) == NULL)
+ 		exit(1);
+--- lib/libcasper/libcasper/zygote.c.orig
++++ lib/libcasper/libcasper/zygote.c
+@@ -45,6 +45,7 @@
+ #include <strings.h>
+ #include <unistd.h>
+ 
++#include "libcasper_impl.h"
+ #include "zygote.h"
+ 
+ /* Zygote info. */
+@@ -88,7 +89,7 @@
+  * between sandbox and its owner.
+  */
+ static void
+-zygote_main(int sock)
++zygote_main(int *sockp)
+ {
+ 	int error, procfd;
+ 	int chanfd[2];
+@@ -96,12 +97,14 @@
+ 	zygote_func_t *func;
+ 	pid_t pid;
+ 
+-	assert(sock > STDERR_FILENO);
++	fd_fix_environment(sockp);
++
++	assert(*sockp > STDERR_FILENO);
+ 
+ 	setproctitle("zygote");
+ 
+ 	for (;;) {
+-		nvlin = nvlist_recv(sock, 0);
++		nvlin = nvlist_recv(*sockp, 0);
+ 		if (nvlin == NULL) {
+ 			if (errno == ENOTCONN) {
+ 				/* Casper exited. */
+@@ -133,7 +136,7 @@
+ 			break;
+ 		case 0:
+ 			/* Child. */
+-			close(sock);
++			close(*sockp);
+ 			close(chanfd[0]);
+ 			func(chanfd[1]);
+ 			/* NOTREACHED */
+@@ -155,7 +158,7 @@
+ 			nvlist_move_descriptor(nvlout, "chanfd", chanfd[0]);
+ 			nvlist_move_descriptor(nvlout, "procfd", procfd);
+ 		}
+-		(void)nvlist_send(sock, nvlout);
++		(void)nvlist_send(*sockp, nvlout);
+ 		nvlist_destroy(nvlout);
+ 	}
+ 	/* NOTREACHED */
+@@ -182,7 +185,7 @@
+ 	case 0:
+ 		/* Child. */
+ 		close(sp[0]);
+-		zygote_main(sp[1]);
++		zygote_main(&sp[1]);
+ 		/* NOTREACHED */
+ 		abort();
+ 	default:
