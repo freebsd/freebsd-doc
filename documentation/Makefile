@@ -33,7 +33,7 @@ ASCIIDOCTORPDF_CMD=	${LOCALBASE}/bin/asciidoctor-pdf
 
 .if defined(DOC_LANG) && !empty(DOC_LANG)
 LANGUAGES=	${DOC_LANG:S/,/ /g}
-.if  ${LANGUAGES:Men} == ""
+.if  ${LANGUAGES:Men} == "" && ${.TARGETS:Mpdf*} == ""
 .warning "Warning: cannot skip 'en'; adding it back"
 LANGUAGES+=	en
 .endif
