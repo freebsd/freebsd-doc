@@ -137,11 +137,13 @@ build: .PHONY
 	HUGO_DISABLELANGUAGES="${SKIP_LANGS}" ${HUGO_CMD} ${HUGO_ARGS}
 
 toc-clean: .PHONY
+.if !empty(BOOK_LANGS)
 	rm -f $$(${PYTHON_CMD} ./tools/books-toc-parts-creator.py    -l ${BOOK_LANGS} -o)
 	rm -f $$(${PYTHON_CMD} ./tools/books-toc-creator.py          -l ${BOOK_LANGS} -o)
 	rm -f $$(${PYTHON_CMD} ./tools/books-toc-figures-creator.py  -l ${BOOK_LANGS} -o)
 	rm -f $$(${PYTHON_CMD} ./tools/books-toc-tables-creator.py   -l ${BOOK_LANGS} -o)
 	rm -f $$(${PYTHON_CMD} ./tools/books-toc-examples-creator.py -l ${BOOK_LANGS} -o)
+.endif
 
 pgp-clean: .PHONY
 	rm -f static/pgpkeys/pgpkeys.txt
