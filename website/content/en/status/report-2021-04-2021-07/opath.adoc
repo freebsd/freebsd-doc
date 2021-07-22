@@ -1,0 +1,44 @@
+=== VFS path descriptors API
+
+Contact: Konstantin Belousov <kib@FreeBSD.org>
+
+Unix VFS API, from a very high point of view, provides two kinds of interfaces.
+One is the path-based operations, typically manipulating metadata, like remove, rename, change permissions and similar.
+The second is the file-descriptor operations, typical are read, write, truncate, and other.
+The well-known open(2) syscall returns a file descriptor from the path.
+
+The file descriptor is a reliable handle for the file targeted by operations.
+Whatever other action was performed on the file meanwhile, rename, even delete, file descriptor still references the same file, and any operation done on it, affects that file.
+
+Until recently, there was no similar reliable way to take a handle on the file path, and then reliably use it for the operations of the first kind.
+Now, Linux introduced some facilities that make it possible, and FreeBSD tried to provide a compatible API.
+
+First, there is a way to get the file descriptor for a path.
+It is created with the open(2) syscall, when the O_PATH flag is specified.
+The returned descriptor cannot be used for normal file operations, it only designates a place in the filesystem namespace.
+Attempts to e.g. read or write using it results in EBADF.
+But the system also does not check the access rights on the target file while opening.
+It is enough for the process to read the content of the directory with the file name for open(O_PATH) to succeed.
+
+To actually use such descriptor, there is a new flag AT_EMPTY_PATH, understood by the \*at(2) set of syscalls.
+When supplied, and the path argument set to "" (empty path), \*at(2) syscalls operate on the file designated by the dirfd argument.
+
+It is not too exciting for e.g. fstatat(2), where already available fstat(2) operates on any kind of file descriptor.
+But consider linkat(2), which in combination with AT_EMPTY_PATH now allows to re-link any opened file descriptor to a named file (this requires root privilege).
+Other examples of available operations are chownat(2), chmodat(2), and others; see man pages.
+When a file descriptor and AT_EMPTY_PATH are supplied, the program knows for sure that the corresponding operation was done on the specific file, not subject to a race when our file was renamed, and some other file replaced it, providing a different file on the same path.
+With O_PATH, we get the same access rules as for normal chmod, not needing to have read or write permission for the file content.
+
+A way to translate the path descriptor to a normal file descriptor that can be read from or written to is to use openat(2) with O_EMPTY_PATH flag.
+The syscall checks the current access permissions and grants the requested mode by returning a normal descriptor.
+
+In Linux, there is no equivalent of the O_EMPTY_PATH flag.
+It seems, instead, that its implementation of our equivalent of fdescfs opens the underlying file on open(2) of /dev/fd/N name.
+This behavior is incompatible with the existing FreeBSD fdescfs exposed operation, so it cannot be changed for the default mount of fdescfs on /dev/fd.
+A new mount flag "nodup" was added for fdescfs which emulates Linux for descriptors backed by vnodes.
+See the fdescfs(5) man page for details.
+
+The described new Unix VFS API is used by Samba.
+Adding it to FreeBSD should allow our system to be still the first-grade platform for Samba, and was requested by Samba porters.
+
+Sponsor: The FreeBSD Foundation
