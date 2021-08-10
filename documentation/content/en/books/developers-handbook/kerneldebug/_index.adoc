@@ -533,32 +533,64 @@ Remember that it is hard to read the on-line manual while single-stepping the ke
 [[kerneldebug-online-gdb]]
 == On-Line Kernel Debugging Using Remote GDB
 
+The FreeBSD kernel provides a second KDB backend for on-line debugging: man:gdb[4].
 This feature has been supported since FreeBSD 2.2, and it is actually a very neat one.
 
-GDB has already supported _remote debugging_ for a long time.
+GDB has supported _remote debugging_ for a long time.
 This is done using a very simple protocol along a serial line.
-Unlike the other methods described above, you will need two machines for doing this.
-One is the host providing the debugging environment, including all the sources, and a copy of the kernel binary with all the symbols in it,
-and the other one is the target machine that simply runs a similar copy of the very same kernel (but stripped of the debugging information).
+Unlike the other debugging methods described above, you will need two machines for doing this.
+One is the host providing the debugging environment, including all the sources, and a copy of the kernel binary with all the symbols in it.
+The other is the target machine that runs a copy of the very same kernel (optionally stripped of the debugging information).
 
-You should configure the kernel in question with `config -g` if building the "traditional" way.
-If building the "new" way, make sure that `makeoptions DEBUG=-g` is in the configuration.
-In both cases, include `DDB` in the configuration, and compile it as usual.
-This gives a large binary, due to the debugging information.
-Copy this kernel to the target machine, strip the debugging symbols off with `strip -x`, and boot it using the `-d` boot option.
+In order to use remote GDB, ensure that the following options are present in your kernel configuration:
+[.programlisting]
+....
+makeoptions     DEBUG=-g
+options         KDB
+options         GDB
+....
+
+Note that the `GDB` option is turned off by default in `GENERIC` kernels on -STABLE and -RELEASE branches, but enabled on -CURRENT.
+
+Once built, copy the kernel to the target machine, and boot it.
 Connect the serial line of the target machine that has "flags 080" set on its uart device to any serial line of the debugging host.
-See man:uart[4] for information on how to set the flags on an uart device.
-Now, on the debugging machine, go to the compile directory of the target kernel, and start `gdb`:
+See man:uart[4] for information on how to set the flags on a uart device.
+
+The target machine must be made to enter the GDB backend, either due to a panic or by taking a purposeful trap into the debugger.
+Before doing this, select the GDB debugger backend:
+[source,bash]
+....
+# sysctl debug.kdb.current=gdb
+debug.kdb.current: ddb -> gdb
+....
+
+[NOTE]
+====
+The supported backends can be listed by the `debug.kdb.available` sysctl.
+If the kernel configuration includes `options DDB`, then man:ddb[4] will be selected by default.
+If `gdb` does not appear in the list of available backends, then the debug serial port may not have been configured correctly.
+====
+
+Then, force entry to the debugger:
+[source,bash]
+....
+# sysctl debug.kdb.enter=1
+debug.kdb.enter: 0KDB: enter: sysctl debug.kdb.enter
+....
+
+The target machine now awaits connection from a remote GDB client.
+On the debugging machine, go to the compile directory of the target kernel, and start `gdb`:
 
 [source,bash]
 ....
-% kgdb kernel
-GDB is free software and you are welcome to distribute copies of it
- under certain conditions; type "show copying" to see the conditions.
-There is absolutely no warranty for GDB; type "show warranty" for details.
-GDB 4.16 (i386-unknown-freebsd),
-Copyright 1996 Free Software Foundation, Inc...
-(kgdb) 
+# cd /usr/obj/usr/src/amd64.amd64/sys/GENERIC/
+# kgdb kernel
+GNU gdb (GDB) 10.2 [GDB v10.2 for FreeBSD]
+Copyright (C) 2021 Free Software Foundation, Inc.
+...
+Reading symbols from kernel...
+Reading symbols from /usr/obj/usr/src/amd64.amd64/sys/GENERIC/kernel.debug...
+(kgdb)
 ....
 
 Initialize the remote debugging session (assuming the first serial port is being used) by:
@@ -568,33 +600,23 @@ Initialize the remote debugging session (assuming the first serial port is being
 (kgdb) target remote /dev/cuau0
 ....
 
-Now, on the target host (the one that entered DDB right before even starting the device probe), type:
-
-[source,bash]
-....
-Debugger("Boot flags requested debugger")
-Stopped at Debugger+0x35: movb	$0, edata+0x51bc
-db> gdb
-....
-
-DDB will respond with:
-
-[source,bash]
-....
-Next trap will enter GDB remote protocol mode
-....
-
-Every time you type `gdb`, the mode will be toggled between remote GDB and local DDB
-In order to force a next trap immediately, simply type `s` (step).
 Your hosting GDB will now gain control over the target kernel:
 
 [source,bash]
 ....
 Remote debugging using /dev/cuau0
-Debugger (msg=0xf01b0383 "Boot flags requested debugger")
-    at ../../i386/i386/db_interface.c:257
+kdb_enter (why=<optimized out>, msg=<optimized out>) at /usr/src/sys/kern/subr_kdb.c:506
+506                     kdb_why = KDB_WHY_UNSET;
 (kgdb)
 ....
+
+[TIP]
+====
+Depending on the compiler used, some local variables may appear as `<optimized out>`, preventing them from being inspected directly by `gdb`.
+If this causes problems while debugging, it is possible to build the kernel at a decreased optimization level, which may improve the visibility of some variables.
+This can be done by passing `COPTFLAGS=-O1` to man:make[1].
+However, certain classes of kernel bugs may manifest differently (or not at all) when the optimization level is changed.
+====
 
 You can use this session almost as any other GDB session, including full access to the source,
 running it in gud-mode inside an Emacs window (which gives you an automatic source code display in another Emacs window), etc.
