@@ -39,6 +39,13 @@ toc-3.adoc
 toc-4.adoc
 toc-5.adoc"
 
+IGNORE_FILES="contrib-386bsd
+contrib-additional
+contrib-committers
+contrib-corealumni
+contrib-develalumni
+contrib-portmgralumni"
+
 for remove_file in $GIT_IGNORE_FILES; do
 	find documentation/content/en/ -name "$remove_file" -delete -print || exit 1
 done
@@ -59,6 +66,10 @@ for component in $COMPONENTS; do
 		fi
 
 		if [ "$document" = "documentation/content/en/books/books.adoc" ]; then
+			continue
+		fi
+
+		if echo "$IGNORE_FILES" | grep -q -w "$name"; then
 			continue
 		fi
 
