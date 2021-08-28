@@ -104,7 +104,7 @@ clean: hugo-clean pgp-clean toc-clean
 requirements:
 .for dep in ${RUN_DEPENDS}
 .if !exists(${dep})
-	@(echo ${dep} not found, please run 'pkg install docproj'; exit 1)
+	@(echo ${dep} not found, please run 'pkg install docproj python3'; exit 1)
 .endif
 .endfor
 
