@@ -1,6 +1,7 @@
 #!/bin/sh
 #
 # Copyright (c) 2021 Danilo G. Baio <dbaio@FreeBSD.org>
+# Copyright (c) 2021 Fernando Apesteguia <fernape@FreeBSD.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -23,6 +24,34 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#########################################################
+# This is a temporary fix for po4a-translate command	#
+# po4a: Fix YAML Front Matter / tags and trademarks	#
+# https://wiki.freebsd.org/Doc/IdeaList#Translation	#
+# $1: File to fix					#
+#########################################################
+fixup_lists()
+{
+	sed -i '' -E -e "s/(tags|trademarks).*'\[(.*)]'/\1: [\2]/g" "${1}"
+}
+
+#########################################################
+# Fix includes. In a few cases we want to include the	#
+# master (aka English) version of the includes		#
+# S1: file to fix					#
+# $2: language						#
+#########################################################
+fixup_includes()
+{
+	# Replace ...shared/en/... with shared/$LANGUAGE
+	# content/en with content/$LANGUAGE in includes
+	sed -i '' -E -e "s,include::(.*)shared/en/,include::\1shared/${2}/," \
+		-e "s,\{include-path\}(contrib*),content/en/articles/contributors/\1," \
+		-e "s,include-path: content/en/,include-path: content/${2}/," \
+		-e "s,(include::.*)contrib-develinmemoriam(.*),include::{include-path}contrib-develinmemoriam\2," \
+		-e "s,(:chapters-path: |include::)content/en/books,\1content/${2}/books," \
+		"${1}"
+}
 
 if [ "$1" = "" ] || [ "$2" = "" ]; then
 	echo "Need to inform which component and|or language."
@@ -73,6 +102,8 @@ for pofile in $(find "$COMPONENT/content/$LANGUAGE/" -name "*.po" ); do
 		--localized "$adoc_lang" \
 		--localized-charset "UTF-8" \
 		--keep "$KEEP"
-
+	
+	fixup_lists "${adoc_lang}"
+	fixup_includes "${adoc_lang}" "${LANGUAGE}"
 done
 
