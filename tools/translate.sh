@@ -38,7 +38,7 @@ fixup_lists()
 #########################################################
 # Fix includes. In a few cases we want to include the	#
 # master (aka English) version of the includes		#
-# S1: file to fix					#
+# $1: file to fix					#
 # $2: language						#
 #########################################################
 fixup_includes()
@@ -102,7 +102,7 @@ for pofile in $(find "$COMPONENT/content/$LANGUAGE/" -name "*.po" ); do
 		--localized "$adoc_lang" \
 		--localized-charset "UTF-8" \
 		--keep "$KEEP"
-	
+
 	fixup_lists "${adoc_lang}"
 	fixup_includes "${adoc_lang}" "${LANGUAGE}"
 done
