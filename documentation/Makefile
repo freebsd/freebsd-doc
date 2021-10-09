@@ -52,7 +52,6 @@ RUBYLIB =	../shared/lib
 RUN_DEPENDS=	${PYTHON_CMD} \
 		${HUGO_CMD} \
 		${LOCALBASE}/bin/asciidoctor \
-		${LOCALBASE}/bin/asciidoctor-pdf \
 		${LOCALBASE}/bin/rougify
 
 .ifndef HOSTNAME
@@ -107,6 +106,12 @@ requirements:
 	@(echo ${dep} not found, please run 'pkg install docproj python3'; exit 1)
 .endif
 .endfor
+
+requirements-pdf:
+.if !exists(${LOCALBASE}/bin/asciidoctor-pdf)
+	@(echo ${LOCALBASE}/bin/asciidoctor-pdf not found, please run 'pkg install rubygem-asciidoctor-pdf'; exit 1)
+.endif
+
 
 starting-message: .PHONY
 	@echo ---------------------------------------------------------------
@@ -169,7 +174,7 @@ TTMP += ${.CURDIR}/content/${_lang}/articles/*/
 .endfor
 ARTICLESDIR != echo ${TTMP}
 
-pdf-books: pdf-books-target generate-books-toc
+pdf-books: requirements-pdf pdf-books-target generate-books-toc
 
 # Books build
 #
@@ -213,7 +218,7 @@ pdf-books: pdf-books-target generate-books-toc
 .endif
 .endfor
 
-pdf-articles: pdf-articles-target
+pdf-articles: requirements-pdf pdf-articles-target
 
 # Articles build
 .for _curpdf in ${ARTICLESDIR}
