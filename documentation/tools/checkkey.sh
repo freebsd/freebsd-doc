@@ -88,10 +88,10 @@ if echo "${id}" | egrep -q '^[0-9A-F]{16}$'; then
 elif echo "${id}" | egrep -q '^[0-9A-F]{8}$'; then
 	id_type="keyid"
 	set -- "${id}" $@
-elif echo "${id}" | egrep -iq '^[a-z][-0-9a-z_]*@([-0-9a-z]+\.)[-0-9a-z]+$'; then
+elif echo "${id}" | egrep -iq '^[0-9a-z][-0-9a-z_]*@([-0-9a-z]+\.)[-0-9a-z]+$'; then
 	id_type="email"
 	email="${id}"
-elif echo "${id}" | egrep -iq '^[a-z][-0-9a-z_]*$'; then
+elif echo "${id}" | egrep -iq '^[0-9a-z][-0-9a-z_]*$'; then
 	id_type="login"
 	login="${id}"
 	email="${id}@FreeBSD.org"
