@@ -80,8 +80,8 @@ fi
 # Now let's try to figure out what kind of thing we have as an ID.
 #  We'll check for a keyid first, as it's readily distinguishable
 #  from other things, but if we see that we have one, we push it back
-#  onto the argument list for later processing (becasue we may have
-#  been given a list of keyods).
+#  onto the argument list for later processing (because we may have
+#  been given a list of keys).
 if echo "${id}" | egrep -q '^[0-9A-F]{16}$'; then
 	id_type="keyid"
 	set -- "${id}" $@
