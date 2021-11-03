@@ -126,17 +126,20 @@ def checkIsAppendix(chapterContent):
 def main(argv):
 
   justPrintOutput = False
+  offline = False
   langargs = []
   try:
-    opts, args = getopt.gnu_getopt(argv,"hl:o",["language="])
+    opts, args = getopt.gnu_getopt(argv,"hl:o:p",["language="])
   except getopt.GetoptError:
-    print('books-toc-creator.py [-o] -l <language>')
+    print('books-toc-creator.py [-o] [-p] -l <language>')
     sys.exit(2)
   for opt, arg in opts:
     if opt == '-h':
-      print('books-toc-creator.py [-o] -l <language>')
+      print('books-toc-creator.py [-o] [-p] -l <language>')
       sys.exit()
     elif opt == '-o':
+      offline = True
+    elif opt == '-p':
       justPrintOutput = True
     elif opt in ("-l", "--language"):
       langargs = arg.replace(" ",",").split(',')
@@ -175,7 +178,10 @@ def main(argv):
           with open('./content/{0}/books/{1}/{2}'.format(language, book, chapter), 'r', encoding = 'utf-8') as chapterFile:
             chapterContent = chapterFile.read().splitlines()
             chapterFile.close()
-            chapter = chapter.replace("/_index.adoc", "").replace(".adoc", "")
+            if offline:
+              chapter = chapter.replace("/_index.adoc", "/index.html").replace(".adoc", ".html")
+            else:
+               chapter = chapter.replace("/_index.adoc", "").replace(".adoc", "")
 
             if checkIsPart(chapter):
               for lineNumber, chapterLine in enumerate(chapterContent, 1):
@@ -197,7 +203,7 @@ def main(argv):
                   toc += "** link:{0}[{1} {2}]\n".format(chapter, setAppendixTitle(language), chapterLine.replace("=", "").strip())
 
                 elif re.match(r"^={2} [^\n]+", chapterLine):
-                  toc += "*** link:{0}/#{1}[{2}]\n".format(chapter, chapterContent[lineNumber-2].replace("[[", "").replace("]]", ""), chapterLine.replace("==", "").lstrip())
+                  toc += "*** link:{0}#{1}[{2}]\n".format(chapter, chapterContent[lineNumber-2].replace("[[", "").replace("]]", ""), chapterLine.replace("==", "").lstrip())
 
             else: # Normal chapter
               for lineNumber, chapterLine in enumerate(chapterContent, 1):
@@ -206,7 +212,7 @@ def main(argv):
                   toc += "** link:{0}[{1} {2}. {3}]\n".format(chapter, setChapterTitle(language), chapterCounter, chapterLine.replace("=", "").strip())
 
                 elif re.match(r"^={2} [^\n]+", chapterLine):
-                  toc += "*** link:{0}/#{1}[{2}.{3}. {4}]\n".format(chapter, chapterContent[lineNumber-2].replace("[[", "").replace("]]", ""), chapterCounter, subChapterCounter, chapterLine.replace("==", "").lstrip())
+                  toc += "*** link:{0}#{1}[{2}.{3}. {4}]\n".format(chapter, chapterContent[lineNumber-2].replace("[[", "").replace("]]", ""), chapterCounter, subChapterCounter, chapterLine.replace("==", "").lstrip())
                   subChapterCounter += 1
 
               chapterCounter += 1
