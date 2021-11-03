@@ -1,0 +1,138 @@
+--- sys/dev/vmware/vmci/vmci.c.orig
++++ sys/dev/vmware/vmci/vmci.c
+@@ -242,8 +242,10 @@
+ 
+ 	vmci_components_cleanup();
+ 
+-	taskqueue_drain(taskqueue_thread, &sc->vmci_delayed_work_task);
+-	mtx_destroy(&sc->vmci_delayed_work_lock);
++	if mtx_initialized(&sc->vmci_spinlock) {
++		taskqueue_drain(taskqueue_thread, &sc->vmci_delayed_work_task);
++		mtx_destroy(&sc->vmci_delayed_work_lock);
++	}
+ 
+ 	if (sc->vmci_res0 != NULL)
+ 		bus_space_write_4(sc->vmci_iot0, sc->vmci_ioh0,
+@@ -254,7 +256,8 @@
+ 
+ 	vmci_unmap_bars(sc);
+ 
+-	mtx_destroy(&sc->vmci_spinlock);
++	if mtx_initialized(&sc->vmci_spinlock)
++		mtx_destroy(&sc->vmci_spinlock);
+ 
+ 	pci_disable_busmaster(dev);
+ 
+--- sys/dev/vmware/vmci/vmci_event.c.orig
++++ sys/dev/vmware/vmci/vmci_event.c
+@@ -593,6 +593,9 @@
+ {
+ 	struct vmci_subscription *s;
+ 
++	if (!vmci_initialized_lock(&subscriber_lock))
++		return NULL;
++
+ 	vmci_grab_lock_bh(&subscriber_lock);
+ 	s = vmci_event_find(sub_id);
+ 	if (s != NULL) {
+--- sys/dev/vmware/vmci/vmci_kernel_if.c.orig
++++ sys/dev/vmware/vmci/vmci_kernel_if.c
+@@ -70,7 +70,8 @@
+ vmci_cleanup_lock(vmci_lock *lock)
+ {
+ 
+-	mtx_destroy(lock);
++	if mtx_initialized(lock)
++		mtx_destroy(lock);
+ }
+ 
+ /*
+@@ -165,6 +166,29 @@
+ 	mtx_unlock(lock);
+ }
+ 
++/*
++ *------------------------------------------------------------------------------
++ *
++ * vmci_initialized_lock
++ *
++ *     Returns whether a lock has been initialized.
++ *
++ * Results:
++ *     Return 1 if initialized or 0 if unininitialized.
++ *
++ * Side effects:
++ *     None
++ *
++ *------------------------------------------------------------------------------
++ */
++
++int
++vmci_initialized_lock(vmci_lock *lock)
++{
++
++	return mtx_initialized(lock);
++}
++
+ /*
+  *------------------------------------------------------------------------------
+  *
+@@ -446,6 +470,28 @@
+ 	mtx_unlock(mutex);
+ }
+ 
++/*
++ *------------------------------------------------------------------------------
++ *
++ * vmci_mutex_initialized
++ *
++ *     Returns whether a mutex has been initialized.
++ *
++ * Results:
++ *     Return 1 if initialized or 0 if unininitialized.
++ *
++ * Side effects:
++ *     None
++ *
++ *------------------------------------------------------------------------------
++ */
++
++int
++vmci_mutex_initialized(vmci_mutex *mutex)
++{
++
++	return mtx_initialized(mutex);
++}
+ /*
+  *------------------------------------------------------------------------------
+  *
+--- sys/dev/vmware/vmci/vmci_kernel_if.h.orig
++++ sys/dev/vmware/vmci/vmci_kernel_if.h
+@@ -48,6 +48,7 @@
+ void	vmci_release_lock(vmci_lock *lock);
+ void	vmci_grab_lock_bh(vmci_lock *lock);
+ void	vmci_release_lock_bh(vmci_lock *lock);
++int	vmci_initialized_lock(vmci_lock *lock);
+ 
+ void	*vmci_alloc_kernel_mem(size_t size, int flags);
+ void	vmci_free_kernel_mem(void *ptr, size_t size);
+@@ -72,6 +73,7 @@
+ void	vmci_mutex_destroy(vmci_mutex *mutex);
+ void	vmci_mutex_acquire(vmci_mutex *mutex);
+ void	vmci_mutex_release(vmci_mutex *mutex);
++int	vmci_mutex_initialized(vmci_mutex *mutex);
+ 
+ void	*vmci_alloc_queue(uint64_t size, uint32_t flags);
+ void	vmci_free_queue(void *q, uint64_t size);
+--- sys/dev/vmware/vmci/vmci_queue_pair.c.orig
++++ sys/dev/vmware/vmci/vmci_queue_pair.c
+@@ -338,6 +338,9 @@
+ {
+ 	struct qp_guest_endpoint *entry;
+ 
++	if (!vmci_mutex_initialized(&qp_guest_endpoints.mutex))
++		return;
++
+ 	vmci_mutex_acquire(&qp_guest_endpoints.mutex);
+ 
+ 	while ((entry =
