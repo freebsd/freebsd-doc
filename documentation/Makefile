@@ -10,7 +10,10 @@
 # run		-	serves the built documentation site for local browsing
 # pdf		-	build PDF versions of the articles and books.
 # html		-	build HTML versions of the articles and books for
-# offline use
+#			offline use.
+#			If variable DOC_HTML_ARCHIVE is set, all documents will be
+#			archived/compressed, and only these files will be kept in the public
+#			directory.
 #
 # The run target uses hugo's built-in webserver to make the documentation site
 # available for local browsing.  The documentation should have been built prior
@@ -205,7 +208,7 @@ pdf-articles-clean:
 #
 # HTML targets
 #
-html: generate-books-toc-offline build-offline html-clean-global html-clean-articles html-clean-books
+html: generate-books-toc-offline build-offline html-clean-global html-clean-articles html-clean-books html-archive html-archive-clean-files
 
 html-clean: hugo-clean
 
@@ -223,3 +226,19 @@ html-clean-books:
 .for _lang in ${BOOK_LANGS}
 	rm -fr ${.CURDIR}/public/${_lang}/books/index.html
 .endfor
+
+html-archive:
+.if defined(DOC_HTML_ARCHIVE)
+.for _lang in ${ARTICLE_LANGS}
+	./tools/asciidoctor.sh articles ${_lang} archive
+.endfor
+.for _lang in ${BOOK_LANGS}
+	./tools/asciidoctor.sh books ${_lang} archive
+.endfor
+.endif
+
+html-archive-clean-files:
+.if defined(DOC_HTML_ARCHIVE)
+	find ${.CURDIR}/public/ ! -name '*.pdf' ! -name '*.tar.gz' -type f -delete
+	find ${.CURDIR}/public/ -type d -empty -delete
+.endif

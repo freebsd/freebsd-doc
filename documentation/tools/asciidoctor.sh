@@ -69,7 +69,7 @@ build_pdf() {
 		-r ./shared/lib/cross-document-references-macro.rb \
 		--doctype="$asciidoctor_type" \
 		-a skip-front-matter \
-		-a lang=${doc_lang} \
+		-a lang="$doc_lang" \
 		-a isonline=1 \
 		-a env-beastie=1 \
 		-a pdf-theme=default-with-fallback-font \
@@ -79,6 +79,49 @@ build_pdf() {
 
 
 # build_epub()
+
+
+archive() {
+	if [ "$1" = "" ] || [ "$2" = "" ] || [ "$3" = "" ]; then
+		exit 1
+	fi
+
+	local doc_type="$1"
+	local doc_lang="$2"
+	local doc_name="$3"
+
+	if [ -d "public/$doc_lang" ]; then
+		local pub_dir="public/$doc_lang/$doc_type/$doc_name/"
+	elif [ -d "public/$doc_type" ]; then
+		# single language build
+		local pub_dir="public/$doc_type/$doc_name/"
+	fi
+
+	if [ -f "${pub_dir}${doc_name}_${doc_lang}.tar.gz" ]; then
+		rm -f "${pub_dir}${doc_name}_${doc_lang}.tar.gz"
+	fi
+
+	local source_doc_dir=""
+	if [ -d "public/source/$doc_type/$doc_name/" ]; then
+		source_doc_dir="public/source/$doc_type/$doc_name/"
+	fi
+
+	local image_doc_dir=""
+	if [ -d "public/images/$doc_type/$doc_name/" ]; then
+		image_doc_dir="public/images/$doc_type/$doc_name/"
+	fi
+
+	tar -czf "public/${doc_name}_${doc_lang}.tar.gz" \
+		"$pub_dir" \
+		public/css/ \
+		public/fonts/ \
+		public/js/ \
+		$source_doc_dir \
+		$image_doc_dir
+
+	mv -f "public/${doc_name}_${doc_lang}.tar.gz" "$pub_dir"
+
+}
 
 
 main() {
@@ -97,22 +140,27 @@ main() {
 		exit 1
 	fi
 
-	if [ ! "$doc_format" = "pdf" ]; then
-		# Default pdf
-		doc_format="pdf"
-	fi
-
-	for document in $(find "content/$doc_lang/$doc_type/" -type d -mindepth 1 -maxdepth 1 | awk -F '/' '{ print $4 }' | sort -n); do
-		if [ "$doc_format" = "pdf" ] && [ "$document" = "pgpkeys" ]; then
-			continue
-		fi
-
-		if [ "$doc_format" = "pdf" ]; then
-			echo "asciidoctor build_pdf: $doc_type $doc_lang $document $doc_format"
-			build_pdf "$doc_type" "$doc_lang" "$document"
-		fi
-
-	done
+	case "$doc_format" in
+		pdf)
+			for document in $(find "content/$doc_lang/$doc_type/" -type d -mindepth 1 -maxdepth 1 | awk -F '/' '{ print $4 }' | sort -n); do
+				if [ "$document" = "pgpkeys" ]; then
+					continue
+				fi
+				echo "asciidoctor build_pdf: $doc_type $doc_lang $document"
+				build_pdf "$doc_type" "$doc_lang" "$document"
+			done
+			;;
+		archive)
+			for document in $(find "content/$doc_lang/$doc_type/" -type d -mindepth 1 -maxdepth 1 | awk -F '/' '{ print $4 }' | sort -n); do
+				echo "generate archive: $doc_type $doc_lang $document"
+				archive "$doc_type" "$doc_lang" "$document"
+			done
+			;;
+		*)
+			echo "Formats available: archive, pdf"
+			exit 1
+			;;
+	esac
 }
 
 main "$@"
