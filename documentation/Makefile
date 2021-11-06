@@ -251,7 +251,7 @@ html-archive-clean-files:
 
 #
 # EPUB targets
-# Use DOC_LANG to choose the language, e.g., make DOC_LANG="en fr" pdf-books
+# Use DOC_LANG to choose the language, e.g., make DOC_LANG="en fr" epub-books
 #
 epub: epub-articles epub-books
 
