@@ -14,6 +14,7 @@
 #			If variable DOC_HTML_ARCHIVE is set, all documents will be
 #			archived/compressed, and only these files will be kept in the public
 #			directory.
+# epub		-	build EPUB versions of the articles and books (Experimental).
 #
 # The run target uses hugo's built-in webserver to make the documentation site
 # available for local browsing.  The documentation should have been built prior
@@ -114,6 +115,11 @@ requirements:
 requirements-pdf:
 .if !exists(${LOCALBASE}/bin/asciidoctor-pdf)
 	@(echo ${LOCALBASE}/bin/asciidoctor-pdf not found, please run 'pkg install rubygem-asciidoctor-pdf'; exit 1)
+.endif
+
+requirements-epub:
+.if !exists(${LOCALBASE}/bin/asciidoctor-epub3)
+	@(echo ${LOCALBASE}/bin/asciidoctor-epub3 not found, please run 'pkg install rubygem-asciidoctor-epub3'; exit 1)
 .endif
 
 starting-message: .PHONY
@@ -242,3 +248,54 @@ html-archive-clean-files:
 	find ${.CURDIR}/public/ ! -name '*.pdf' ! -name '*.tar.gz' -type f -delete
 	find ${.CURDIR}/public/ -type d -empty -delete
 .endif
+
+#
+# EPUB targets
+# Use DOC_LANG to choose the language, e.g., make DOC_LANG="en fr" pdf-books
+#
+epub: epub-articles epub-books
+
+epub-books: requirements-epub generate-books-toc
+	@echo ---------------------------------------------------------------
+	@echo !!! EPUB output is experimental !!!
+	@echo
+	@echo Asciidoctor EPUB3 is currently alpha software. Use accordingly. Although the
+	@echo bulk of AsciiDoc content is converted, there’s still work needed to fill in
+	@echo gaps where conversion is incomplete or unstyled.
+	@echo https://docs.asciidoctor.org/epub3-converter/latest/#project-status
+	@echo ---------------------------------------------------------------
+.for _lang in ${BOOK_LANGS}
+	./tools/asciidoctor.sh books ${_lang} epub
+.endfor
+
+epub-articles: requirements-epub
+	@echo ---------------------------------------------------------------
+	@echo !!! EPUB output is experimental !!!
+	@echo
+	@echo Asciidoctor EPUB3 is currently alpha software. Use accordingly. Although the
+	@echo bulk of AsciiDoc content is converted, there’s still work needed to fill in
+	@echo gaps where conversion is incomplete or unstyled.
+	@echo https://docs.asciidoctor.org/epub3-converter/latest/#project-status
+	@echo ---------------------------------------------------------------
+.for _lang in ${ARTICLE_LANGS}
+	./tools/asciidoctor.sh articles ${_lang} epub
+.endfor
+
+epub-clean: epub-articles-clean epub-books-clean
+
+epub-books-clean:
+.for _lang in ${BOOK_LANGS}
+	rm -fr ${.CURDIR}/public/${_lang}/books
+	-rmdir ${.CURDIR}/public/${_lang}
+.endfor
+	-rmdir ${.CURDIR}/public/
+
+epub-articles-clean:
+.for _lang in ${ARTICLE_LANGS}
+	rm -fr ${.CURDIR}/public/${_lang}/articles
+.if !exists(${.CURDIR}/public/${_lang}/books)
+	rm -fr ${.CURDIR}/public/${_lang}
+.endif
+.endfor
+	-rmdir ${.CURDIR}/public
+

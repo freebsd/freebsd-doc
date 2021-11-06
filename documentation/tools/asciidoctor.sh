@@ -28,6 +28,7 @@
 
 LOCALBASE="/usr/local"
 ASCIIDOCTORPDF_CMD="${LOCALBASE}/bin/asciidoctor-pdf"
+ASCIIDOCTOREPUB_CMD="${LOCALBASE}/bin/asciidoctor-epub3"
 
 build_pdf() {
 	if [ "$1" = "" ] || [ "$2" = "" ] || [ "$3" = "" ]; then
@@ -78,7 +79,52 @@ build_pdf() {
 }
 
 
-# build_epub()
+build_epub() {
+	if [ "$1" = "" ] || [ "$2" = "" ] || [ "$3" = "" ]; then
+		exit 1
+	fi
+
+	local doc_type="$1"
+	local doc_lang="$2"
+	local doc_name="$3"
+
+	local cur_dir_source="content/$doc_lang/$doc_type/$doc_name/"
+	local cur_dir_output="public/$doc_lang/$doc_type/$doc_name/"
+
+	if [ ! -d "$cur_dir_output" ]; then
+		mkdir -p "$cur_dir_output"
+	fi
+
+	if [ "$doc_type" = "books" ]; then
+		local asciidoctor_type="book"
+
+		if [ -f "${cur_dir_source}book.adoc" ]; then
+			local asciidoctor_file_name="book.adoc"
+		else
+			local asciidoctor_file_name="_index.adoc"
+		fi
+	fi
+
+	if [ "$doc_type" = "articles" ]; then
+		local asciidoctor_type="article"
+		local asciidoctor_file_name="_index.adoc"
+	fi
+
+	$ASCIIDOCTOREPUB_CMD \
+		-r ./shared/lib/man-macro.rb \
+		-r ./shared/lib/git-macro.rb \
+		-r ./shared/lib/packages-macro.rb \
+		-r ./shared/lib/inter-document-references-macro.rb \
+		-r ./shared/lib/sectnumoffset-treeprocessor.rb \
+		-r ./shared/lib/cross-document-references-macro.rb \
+		--doctype="$asciidoctor_type" \
+		-a skip-front-matter \
+		-a lang="$doc_lang" \
+		-a isonline=1 \
+		-a env-beastie=1 \
+		-o "${cur_dir_output}${doc_name}_${doc_lang}_POC_.epub" \
+		"${cur_dir_source}${asciidoctor_file_name}"
+}
 
 
 archive() {
@@ -156,8 +202,17 @@ main() {
 				archive "$doc_type" "$doc_lang" "$document"
 			done
 			;;
+		epub)
+			for document in $(find "content/$doc_lang/$doc_type/" -type d -mindepth 1 -maxdepth 1 | awk -F '/' '{ print $4 }' | sort -n); do
+				if [ "$document" = "pgpkeys" ]; then
+					continue
+				fi
+				echo "asciidoctor epub: $doc_type $doc_lang $document"
+				build_epub "$doc_type" "$doc_lang" "$document"
+			done
+			;;
 		*)
-			echo "Formats available: archive, pdf"
+			echo "Formats available: archive, pdf, epub"
 			exit 1
 			;;
 	esac
