@@ -1,0 +1,78 @@
+=== Improved amd64 UEFI boot
+
+Contact: Konstantin Belousov <kib@FreeBSD.org>
+
+UEFI BIOS on PC provides a much richer and more streamlined environment
+for pre-OS programs, but also imposes some requirements on the
+programs that are executed there, OS loaders in particular.  One
+such requirement is that the loader must coordinate its memory use with
+the BIOS, only using memory that was allocated for it.  Even after the loader
+handoff to the operating system kernel, there are still some memory
+regions that are reserved by the BIOS for different reasons.  Examples
+are runtime services code and data.
+
+On the other hand, legacy/CSM BIOS boot works with memory completely
+differently; there are known memory regions that hold BIOS data and
+must be avoided.  Otherwise, the memory is considered free for loader
+and OS to use. (Of course it is not that straightforward, the
+definition of known regions is up to the vendor and there are a lot of
+workarounds there.)
+
+The BIOS boot puts the kernel and preloaded data (like modules, memory
+disk, CPU microcode update etc) at the contigous physical memory block
+starting at 2M.  This algorithm goes back to how the i386 kernel boots.
+
+Also, when preparing to pass control to the kernel, the loader
+creates very special temporary mappings, where the low 1G of physical
+address space is mapped 1:1 into virtual address space, and then
+repeated for each 1G until the virtual memory end.  The kernel knows about
+its physical location and the temporary mapping, and constructs kernel
+page tables assuming that the physical address of the text is at 2M.
+
+This mechanism of loader to kernel handoff was left unchanged when
+the loader gained support for the UEFI environment.  The loader prepares kernel and
+auxiliary preload data in a so-called staging area while UEFI boot
+services are active, and after EFI_BOOT_SERVICES.ExitBootServices(),
+the temporary mapping is activated and the staging area is copied at 2M.
+
+An advantage at that time was that no changes to the kernel were
+needed.  But there are issues; the biggest is that memory at 2M might
+be not free for reuse.  For instance, BIOS runtime code or data might
+be located there.  Or there might be no memory at 2M at all.  Or
+trampoline page table or code, or even some parts of the staging area
+overlapping with the 2M region where staging area is copied.  The
+outcome was a hard to diagnose boot time failure, typically a hard hang
+when the loader started the kernel.
+
+Another limitation is the 1G transient mapping, which due to copying
+means that the total size of preloaded data cannot exceed around 400M for
+everything, including kernel, memory disks, and anything else.  Also
+the code to grow the staging area on demand was quite unflexible, only
+able to grow the staging area in place.
+
+The work described in this report allows the UEFI loader on amd64 to start
+the kernel from the staging area without copying.  Kernel assumptions
+about the hand-off were explicitly identified and documented.  The kernel
+only requires the staging area to be located below 4G together with
+the trampoline page table (this is a consequence of CPU architecture
+requiring 32bit protected mode to enter long mode), be 2M aligned and
+the whole low 4G mapped 1:1 at hand-off.  The kernel computes its physical
+address and builds kernel page tables accordingly.
+
+Making the kernel boot with staging area in-place required identifying
+all places where the amd64 kernel had a dependency on its physical
+location.  The most complicated part was application processors startup,
+which required rewriting initialization code, which we were able to
+streamline as result.  In particular, when an AP enters paging mode, it
+does so straight into the correct kernel page table, without loading
+intermediate trampoline page table.
+
+The updated loader automatically detects if the loaded kernel can handle
+in-place staging area ('non-copying mode').  If needed, this can be
+overridden with the loader's copy_staging command.  For instance,
+'copy_staging enable' tells the loader to unconditionally copy the staging
+area to 2M regardless of kernel capabilities (default is 'copy_staging auto').
+Also, the code to grow the staging area was made much more robust,
+allowing it to grow without hand-tuning and recompiling the loader.
+
+Sponsor: The FreeBSD Foundation

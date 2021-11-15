@@ -1,0 +1,99 @@
+===  -CURRENT compilation time analysis
+
+Links: +
+link:https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=257141[Bug 257141] URL: link:https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=257141[https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=257141] +
+link:https://lists.freebsd.org/archives/freebsd-current/2021-September/index.html#msg511[Discussion on freebsd-current] URL: link:https://lists.freebsd.org/archives/freebsd-current/2021-September/index.html#msg511[https://lists.freebsd.org/archives/freebsd-current/2021-September/index.html#msg511] +
+link:https://people.freebsd.org/~wosch/build-time/buildworld/[Visual chart of buildworld by stages] URL: link:https://people.freebsd.org/~wosch/build-time/buildworld/[https://people.freebsd.org/~wosch/build-time/buildworld/]
+
+Contact: Wolfram Schneider <wosch@FreeBSD.org>
+
+Re-building FreeBSD from source takes a lot of CPU resources.
+Depending on your machine it takes between 20min and several hours.
+At the end of `make buildworld' we log the real time and which
+parameters are used for parallel build. E.g.
+
+--------------------------------------------------------------
+time make -j $(sysctl -n hw.ncpu) buildworld > buildworld.log 2>&1
+tail buildworld.log
+>>> World build completed on Sat Sep  4 20:58:00 UTC 2021
+>>> World built in 7235 seconds, ncpu: 3, make -j3
+     7235.61 real     20527.30 user       915.88 sys
+--------------------------------------------------------------
+
+
+The build process runs in several steps.
+It would be great to know which step takes most of the time,
+and what are the effects of special build parameters.
+With a small patch in Aug 2021 we get this information now:
+
+
+--------------------------------------------------------------
+egrep '>>> stage| real ' buildworld.log
+>>> stage 1.1: legacy release compatibility shims
+        0.28 real         0.18 user         0.10 sys
+>>> stage 1.2: bootstrap tools
+      165.99 real       472.58 user        11.56 sys
+>>> stage 2.1: cleaning up the object tree
+       21.47 real        36.96 user        14.14 sys
+       15.87 real        29.14 user        11.87 sys
+>>> stage 2.3: build tools
+        2.42 real         3.79 user         0.62 sys
+>>> stage 3: cross tools
+        9.92 real        18.49 user         1.75 sys
+>>> stage 3.1: recording build metadata
+        0.07 real         0.01 user         0.06 sys
+>>> stage 4.1: building includes
+       16.62 real        36.46 user         9.48 sys
+>>> stage 4.2: building libraries
+     5440.89 real     15724.60 user       482.58 sys
+>>> stage 4.3: building lib32 shim libraries
+      615.91 real      1654.77 user       164.58 sys
+>>> stage 4.4: building everything
+      937.23 real      2540.06 user       205.47 sys
+--------------------------------------------------------------
+
+In this example, we spent most of the time in "stage 4.2: building libraries",
+77% of the CPU time and 75% of the real time.
+Now running the buildworld with the parameter WITHOUT_TOOLCHAIN=yes
+we get a 3.3x faster build. Instead of 2h it will be done in 36 minutes!
+
+--------------------------------------------------------------
+time make -j $(sysctl -n hw.ncpu) WITHOUT_TOOLCHAIN=yes buildworld > buildworld.log 2>&1
+>>> World build completed on Fri Sep 17 12:31:41 UTC 2021
+>>> World built in 2207 seconds, ncpu: 3, make -j3
+     2207.44 real      5710.83 user       676.16 sys
+--------------------------------------------------------------
+
+--------------------------------------------------------------
+egrep '>>> stage| real ' buildworld.log
+>>> stage 1.1: legacy release compatibility shims
+        0.35 real         0.20 user         0.16 sys
+>>> stage 1.2: bootstrap tools
+       20.47 real        51.98 user         5.12 sys
+>>> stage 2.1: cleaning up the object tree
+       20.92 real        34.45 user        13.57 sys
+       16.33 real        28.59 user        12.33 sys
+>>> stage 2.3: build tools
+        2.59 real         3.90 user         0.86 sys
+>>> stage 3: cross tools
+       10.46 real        18.62 user         2.35 sys
+>>> stage 3.1: recording build metadata
+        0.07 real         0.03 user         0.05 sys
+        0.08 real         0.03 user         0.05 sys
+>>> stage 4.1: building includes
+       15.50 real        33.03 user         9.29 sys
+>>> stage 4.2: building libraries
+      750.31 real      1962.43 user       218.60 sys
+>>> stage 4.3: building lib32 shim libraries
+      684.05 real      1780.35 user       213.22 sys
+>>> stage 4.4: building everything
+      677.87 real      1787.13 user       186.82 sys
+--------------------------------------------------------------
+
+Using WITHOUT_TOOLCHAIN=yes is fine as long as there
+are no major LLVM compiler changes.
+
+If you dislike this feature or suspect it is causing
+trouble you can disable it with the variable TIME_ENV=""
+
+Next task: get more detailed timing information for the long-running stages (4.2, 4.3, 4.4)
