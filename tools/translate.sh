@@ -54,13 +54,16 @@ fixup_includes()
 }
 
 if [ "$1" = "" ] || [ "$2" = "" ]; then
-	echo "Need to inform which component and|or language."
-	echo "$0 documentation|website pt_BR|es"
+	echo "Need to inform component and language:"
+	echo "  $0 documentation es"
+	echo "A third (optional) argument can be informed to translate only a specific document:"
+	echo "  $0 documentation pt-br articles/bsdl-gpl"
 	exit 1
 fi
 
 COMPONENT="$1"
 LANGUAGE="$2"
+SEARCH_RESTRICT="$3"
 
 # po4a-translate option: -k, --keep
 #   Minimal threshold for translation percentage to keep (i.e. write)
@@ -79,7 +82,7 @@ if [ ! -d "$COMPONENT/content/$LANGUAGE" ]; then
 	exit 1
 fi
 
-for pofile in $(find "$COMPONENT/content/$LANGUAGE/" -name "*.po" ); do
+for pofile in $(find "$COMPONENT/content/$LANGUAGE/$SEARCH_RESTRICT" -name "*.po"); do
 	name=$(basename -s .po "$pofile")
 	if [ "$name" = "chapters-order" ]; then
 		continue
@@ -91,6 +94,19 @@ for pofile in $(find "$COMPONENT/content/$LANGUAGE/" -name "*.po" ); do
 
 	echo "....."
 	echo "$pofile"
+
+	po4a-updatepo \
+		--format asciidoc \
+		--option compat=asciidoctor \
+		--option yfm_keys=title,part,description \
+		--master "$adoc_orig" \
+		--master-charset "UTF-8" \
+		--copyright-holder "The FreeBSD Project" \
+		--package-name "FreeBSD Documentation" \
+		--po "$pofile"
+	if [ -f "${pofile}~" ]; then
+		rm -f "${pofile}~"
+	fi
 
 	po4a-translate \
 		--format asciidoc \
