@@ -10,7 +10,7 @@ class PackagesMacro < Asciidoctor::Extensions::InlineMacroProcessor
   def process parent, target, attrs
     packagename = target
 
-    target = %(https://www.freebsd.org/cgi/url.cgi?ports/#{packagename}/pkg-descr)
+    target = %(https://cgit.freebsd.org/ports/tree/#{target}/pkg-descr)
     parent.document.register :links, target
 
     %(<a class="package" href="#{target}">#{packagename}</a>)
