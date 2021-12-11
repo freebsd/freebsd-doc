@@ -33,7 +33,6 @@ ALL_LANGUAGES=	bn-bd da de el en es fr hu it ja ko mn nl pl pt-br ru tr zh-cn zh
 
 LOCALBASE?=	/usr/local
 
-PYTHON_CMD =	${LOCALBASE}/bin/python3
 RUBY_CMD =	${LOCALBASE}/bin/ruby
 HUGO_CMD =	${LOCALBASE}/bin/hugo
 HUGO_ARGS?=	--verbose --minify
@@ -54,8 +53,7 @@ LANGUAGES=	${ALL_LANGUAGES}
 RUBYLIB =	../shared/lib
 .export	RUBYLIB
 
-RUN_DEPENDS=	${PYTHON_CMD} \
-		${HUGO_CMD} \
+RUN_DEPENDS=	${HUGO_CMD} \
 		${LOCALBASE}/bin/asciidoctor \
 		${LOCALBASE}/bin/rougify
 
@@ -95,20 +93,20 @@ SKIP_LANGS+=    ${a}
 .ORDER: all run
 
 .ORDER: requirements
-.ORDER: starting-message generate-books-toc
+.ORDER: starting-message
 .ORDER: starting-message build
-.ORDER: generate-books-toc build
+.ORDER: build
 
-all: requirements starting-message generate-books-toc generate-pgpkeys-txt build
-run: requirements starting-message generate-books-toc generate-pgpkeys-txt run-local
+all: requirements starting-message generate-pgpkeys-txt build
+run: requirements starting-message generate-pgpkeys-txt run-local
 
 # clean does not call pdf-clean as that is a subset of hugo-clean
-clean: hugo-clean pgp-clean toc-clean
+clean: hugo-clean pgp-clean
 
 requirements:
 .for dep in ${RUN_DEPENDS}
 .if !exists(${dep})
-	@(echo ${dep} not found, please run 'pkg install docproj python3'; exit 1)
+	@(echo ${dep} not found, please run 'pkg install docproj'; exit 1)
 .endif
 .endfor
 
@@ -129,24 +127,6 @@ starting-message: .PHONY
 	@echo  excluded languages: ${SKIP_LANGS}
 	@echo ---------------------------------------------------------------
 
-generate-books-toc: .PHONY
-.if !empty(BOOK_LANGS)
-	${PYTHON_CMD} ./tools/books-toc-parts-creator.py -l    ${BOOK_LANGS}
-	${PYTHON_CMD} ./tools/books-toc-creator.py -l          ${BOOK_LANGS}
-	${PYTHON_CMD} ./tools/books-toc-figures-creator.py -l  ${BOOK_LANGS}
-	${PYTHON_CMD} ./tools/books-toc-tables-creator.py -l   ${BOOK_LANGS}
-	${PYTHON_CMD} ./tools/books-toc-examples-creator.py -l ${BOOK_LANGS}
-.endif
-
-generate-books-toc-offline: .PHONY
-.if !empty(BOOK_LANGS)
-	${PYTHON_CMD} ./tools/books-toc-parts-creator.py -o -l    ${BOOK_LANGS}
-	${PYTHON_CMD} ./tools/books-toc-creator.py -o -l          ${BOOK_LANGS}
-	${PYTHON_CMD} ./tools/books-toc-figures-creator.py -o -l  ${BOOK_LANGS}
-	${PYTHON_CMD} ./tools/books-toc-tables-creator.py -o -l   ${BOOK_LANGS}
-	${PYTHON_CMD} ./tools/books-toc-examples-creator.py -o -l ${BOOK_LANGS}
-.endif
-
 generate-pgpkeys-txt: static/pgpkeys/pgpkeys.txt
 
 static/pgpkeys/pgpkeys.txt: static/pgpkeys/*key
@@ -162,15 +142,6 @@ build: .PHONY
 build-offline: .PHONY
 	HUGO_DISABLELANGUAGES="${SKIP_LANGS}" ${HUGO_CMD} ${HUGO_OFFLINE_ARGS}
 
-toc-clean: .PHONY
-.if !empty(BOOK_LANGS)
-	rm -f $$(${PYTHON_CMD} ./tools/books-toc-parts-creator.py    -l ${BOOK_LANGS} -p)
-	rm -f $$(${PYTHON_CMD} ./tools/books-toc-creator.py          -l ${BOOK_LANGS} -p)
-	rm -f $$(${PYTHON_CMD} ./tools/books-toc-figures-creator.py  -l ${BOOK_LANGS} -p)
-	rm -f $$(${PYTHON_CMD} ./tools/books-toc-tables-creator.py   -l ${BOOK_LANGS} -p)
-	rm -f $$(${PYTHON_CMD} ./tools/books-toc-examples-creator.py -l ${BOOK_LANGS} -p)
-.endif
-
 pgp-clean: .PHONY
 	rm -f static/pgpkeys/pgpkeys.txt
 
@@ -183,7 +154,7 @@ hugo-clean: .PHONY
 #
 pdf: pdf-articles pdf-books
 
-pdf-books: requirements-pdf generate-books-toc
+pdf-books: requirements-pdf
 .for _lang in ${BOOK_LANGS}
 	./tools/asciidoctor.sh books ${_lang} pdf
 .endfor
@@ -214,7 +185,7 @@ pdf-articles-clean:
 #
 # HTML targets
 #
-html: generate-books-toc-offline build-offline html-clean-global html-clean-articles html-clean-books html-archive html-archive-clean-files
+html: build-offline html-clean-global html-clean-articles html-clean-books html-archive html-archive-clean-files
 
 html-clean: hugo-clean
 
@@ -255,7 +226,7 @@ html-archive-clean-files:
 #
 epub: epub-articles epub-books
 
-epub-books: requirements-epub generate-books-toc
+epub-books: requirements-epub
 	@echo ---------------------------------------------------------------
 	@echo !!! EPUB output is experimental !!!
 	@echo
