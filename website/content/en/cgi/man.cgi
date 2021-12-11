@@ -1979,11 +1979,9 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id =
-      '$FreeBSD$';
     return qq{\
 <pre>
-Copyright (c) 1996-2020 <a href="$mailtoURL">Wolfram Schneider</a>
+Copyright (c) 1996-2021 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE
@@ -1992,7 +1990,6 @@ the University of California, Massachusetts Institute of
 Technology, Free Software Foundation, The FreeBSD Project, and others.
 
 </pre>\n
-This script has the revsion: $id
 <p />
 
 Copyright (c) for man pages by OS vendors.
