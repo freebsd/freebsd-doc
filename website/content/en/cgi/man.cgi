@@ -309,6 +309,8 @@ $manPathDefault = 'FreeBSD 13.0-RELEASE and Ports';
 
     'FreeBSD 12.3-stable',
 "$manLocalDir/FreeBSD-12.3-stable/man:$manLocalDir/FreeBSD-12.3-stable/openssl/man",
+    'FreeBSD 12.3-RELEASE',
+"$manLocalDir/FreeBSD-12.3-RELEASE/man:$manLocalDir/FreeBSD-12.3-RELEASE/openssl/man",
     'FreeBSD 12.2-RELEASE',
 "$manLocalDir/FreeBSD-12.2-RELEASE/man:$manLocalDir/FreeBSD-12.2-RELEASE/openssl/man",
     'FreeBSD 12.1-RELEASE',
