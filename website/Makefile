@@ -18,8 +18,10 @@ MAINTAINER=carlavilla@FreeBSD.org
 # List of all languages we have content for
 ALL_LANGUAGES=	de el en es fr hu it ja nl ru tr zh-cn zh-tw
 
-PYTHON_CMD =	/usr/local/bin/python3
-HUGO_CMD =	/usr/local/bin/hugo
+LOCALBASE?=	/usr/local
+
+RUBY_CMD =	${LOCALBASE}/bin/ruby
+HUGO_CMD =	${LOCALBASE}/bin/hugo
 HUGO_ARGS?=	--verbose
 RUBYLIB =	../shared/lib
 .export	RUBYLIB
@@ -80,7 +82,7 @@ end-message: .PHONY
 generate-releases: data/releases.toml
 
 data/releases.toml:
-	${PYTHON_CMD} ./tools/releases-toml.py -p ./shared/releases.adoc
+	${RUBY_CMD} ./tools/releases-toml.rb
 
 run-local: .PHONY
 	HUGO_DISABLELANGUAGES="${SKIP_LANGS}" ${HUGO_CMD} server \
