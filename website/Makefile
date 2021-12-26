@@ -101,3 +101,23 @@ hugo-clean:
 
 releases-clean:
 	rm -f data/releases.toml
+
+generate-release:
+.if empty(RELEASE) && empty(MAIN)
+	@echo "Specify a release or use main. Example RELEASE=14.1 MAIN=true"
+.else
+.if exists(./tmp)
+	rm -fr ./tmp
+.endif
+	@echo "---------------------------------------------------------------"
+	@echo "Generating the release, be patience"
+	@echo "---------------------------------------------------------------"
+.if !empty(MAIN)
+	git clone --depth 1 --branch main https://git.FreeBSD.org/src.git tmp
+.elif !empty(RELEASE)
+	git clone --depth 1 --branch release/${RELEASE}.0 https://git.FreeBSD.org/src.git tmp
+.endif
+	${HUGO_CMD} new --kind release releases/${RELEASE}R/
+	${RUBY_CMD} ./tools/hardware-notes-processor.rb content/en/releases/${RELEASE}R/hardware.adoc
+	rm -fr ./tmp
+.endif
