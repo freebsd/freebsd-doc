@@ -1098,8 +1098,8 @@ sub html_header {
     my $html_meta = q|
 <meta name="robots" content="nofollow" />
 <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />
-<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/man.xml" title="FreeBSD Manpages" />
-<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/man-freebsd-release-ports.xml" title="FreeBSD + Ports Manpages" />
+<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/man.xml" title="FreeBSD Manual Pages" />
+<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/man-freebsd-release-ports.xml" title="FreeBSD + Ports Manual Pages" />
 <style type="text/css">
 <!--
 b { color: #996600; }
