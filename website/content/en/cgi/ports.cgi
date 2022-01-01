@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2021 Wolfram Schneider <wosch@FreeBSD.ORG>
+# Copyright (c) 1996-2022 Wolfram Schneider <wosch@FreeBSD.ORG>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -46,11 +46,11 @@ sub init_variables {
     $portsDatabaseHeadDir = "/usr/local/www/ports";
 
     # Ports database file to use
-    if ( -f "$portsDatabaseHeadDir/INDEX-12" ) {
-        $ports_database = 'INDEX-12';
+    if ( -f "$portsDatabaseHeadDir/INDEX-13" ) {
+        $ports_database = 'INDEX-13';
     }
-    elsif ( -f "$portsDatabaseHeadDir/INDEX-11" ) {
-        $ports_database = 'INDEX-11';
+    elsif ( -f "$portsDatabaseHeadDir/INDEX-12" ) {
+        $ports_database = 'INDEX-12';
     }
     else {
         $ports_database = 'INDEX';
@@ -496,7 +496,7 @@ sub footer {
 
     print qq{
 <img align="right" src="$hsty_base/gifs/powerlogo.gif" alt="Powered by FreeBSD" />
-&copy; 1996-2021 by Wolfram Schneider. All rights reserved.<br />
+&copy; 1996-2022 by Wolfram Schneider. All rights reserved.<br />
 };
 
 #print q{$FreeBSD$} . "<br />\n";
