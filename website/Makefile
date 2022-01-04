@@ -115,7 +115,7 @@ generate-release:
 .if !empty(MAIN)
 	git clone --depth 1 --branch main https://git.FreeBSD.org/src.git tmp
 .elif !empty(RELEASE)
-	git clone --depth 1 --branch release/${RELEASE}.0 https://git.FreeBSD.org/src.git tmp
+	git clone --depth 1 --branch releng/${RELEASE} https://git.FreeBSD.org/src.git tmp
 .endif
 	${HUGO_CMD} new --kind release releases/${RELEASE}R/
 	${RUBY_CMD} ./tools/hardware-notes-processor.rb content/en/releases/${RELEASE}R/hardware.adoc
