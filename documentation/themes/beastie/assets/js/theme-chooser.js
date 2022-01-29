@@ -30,7 +30,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (function () {
   var theme = localStorage.getItem('theme');
   var themeChooser = document.querySelector('#theme-chooser');
-  
+  var themeContainer = document.querySelector('.theme-container');
+  themeContainer.style.display = "block";
+
   if (theme === "theme-dark") {
     setTheme('theme-dark');
     themeChooser.value = 'theme-dark';
@@ -47,7 +49,7 @@ var themeChooser = document.querySelector('#theme-chooser');
 
 themeChooser.addEventListener('change', function() {
   var theme = this.value;
-  
+
   if (theme === "theme-dark") {
     setTheme('theme-dark');
   } else if (theme === "theme-high-contrast") {
