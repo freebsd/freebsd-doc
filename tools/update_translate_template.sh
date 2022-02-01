@@ -80,6 +80,7 @@ for component in $COMPONENTS; do
 			po4a-updatepo \
 				--format asciidoc \
 				--option compat=asciidoctor \
+				--option tablecells=1 \
 				--option yfm_keys=title,part,description \
 				--master "$document" \
 				--master-charset "UTF-8" \
@@ -93,6 +94,7 @@ for component in $COMPONENTS; do
 			po4a-gettextize \
 				--format asciidoc \
 				--option compat=asciidoctor \
+				--option tablecells=1 \
 				--option yfm_keys=title,part,description \
 				--master "$document" \
 				--master-charset "UTF-8" \

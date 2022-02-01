@@ -98,6 +98,7 @@ for pofile in $(find "$COMPONENT/content/$LANGUAGE/$SEARCH_RESTRICT" -name "*.po
 	po4a-updatepo \
 		--format asciidoc \
 		--option compat=asciidoctor \
+		--option tablecells=1 \
 		--option yfm_keys=title,part,description \
 		--master "$adoc_orig" \
 		--master-charset "UTF-8" \
@@ -111,6 +112,7 @@ for pofile in $(find "$COMPONENT/content/$LANGUAGE/$SEARCH_RESTRICT" -name "*.po
 	po4a-translate \
 		--format asciidoc \
 		--option compat=asciidoctor \
+		--option tablecells=1 \
 		--option yfm_keys=title,part,description \
 		--master "$adoc_orig" \
 		--master-charset "UTF-8" \
