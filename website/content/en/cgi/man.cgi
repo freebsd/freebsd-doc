@@ -1625,7 +1625,7 @@ s/([a-z0-9_\-\.]+\@[a-z0-9\-\.]+\.[a-z]+)/<a href="mailto:$1">$1<\/A>/gi;
         }
 
         # detect URLs in manpages
-        if (m%tp://%) {
+        if (m,\b(ftp|http|https)://,) {
             s,((ftp|http|https)://[^\s<>\)]+),<a href="$1">$1</a>,gi;
         }
 
