@@ -1616,8 +1616,11 @@ qq{Please try a <a href="$BASE?apropos=1&amp;manpath=freebsd-release-ports&amp;q
             ( $regexp = $match ) =~ s/\./\\\./;
             s,$regexp,\<a href=\"$BASE/usr/include/$match\"\>$match\</A\>,;
         }
-        /^\s/ &&    # skip headers
-s,((<[IB]>)?[\w\_\.\-]+\s*(</[IB]>)?\s*\(([1-9ln][a-zA-Z]*)\)),&mlnk($1),oige;
+
+	# detect references to other manual pages and set link
+	if (/^\s/) {  # skip man headers / first line
+	    s,((<[IB]>)?[\w\_\.\-]+(</[IB]>)?\(([1-9ln][a-zA-Z]*)\)),&mlnk($1),oige;
+        }
 
         # detect E-Mail Addreses in manpages
         if ( $enable_mailto_links && /\@/ ) {
