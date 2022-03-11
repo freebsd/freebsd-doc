@@ -1,0 +1,103 @@
+=== sched_getcpu(2), membarrier(2), and rseq(2) syscalls
+
+Contact: Konstantin Belousov <kib@FreeBSD.org>
+
+Links: +
+link:https://kib.kiev.ua/kib/membarrier.pdf[Linux manpage for membarrier(2)] URL: link:https://kib.kiev.ua/kib/membarrier.pdf[https://kib.kiev.ua/kib/membarrier.pdf] +
+link:https://reviews.freebsd.org/D32360[membarrier(2) implementation] URL: link:https://reviews.freebsd.org/D32360[https://reviews.freebsd.org/D32360] +
+link:https://kib.kiev.ua/kib/rseq.pdf[Linux manpage for rseq(2)] URL: link:https://kib.kiev.ua/kib/rseq.pdf[https://kib.kiev.ua/kib/rseq.pdf] +
+link:https://reviews.freebsd.org/D32505[rseq(2) and userspace bindings implementation] URL: link:https://reviews.freebsd.org/D32505[https://reviews.freebsd.org/D32505]
+
+Linux provides a set of syscalls that allow to develop mostly
+syscall-less scalable algorithms in userspace.  The mechanisms are
+based on optimistic execution using CPU-local data with the assumption that
+rare events like context switches or signal delivery do not occur
+for the given calculation, and if they do occur, rollback and restart
+is performed.  This very high-level approach is used, as I understand,
+for implementation of tools like URCU, fast malloc allocators
+(tcmalloc) and other userspace infrastructure projects aimed at
+large partitioned machines.
+
+For instance, sched_getcpu(2) syscall returns the CPU id of the CPU
+where the current thread is currently executing.  On amd64, if
+available, we use a RDTSCP or RDPID instruction to query the CPU id without
+changing CPU mode, otherwise this is a light-weight syscall.  Of
+course, the answer provided is obsolete the moment it is created,
+even before it is returned to userspace.  But it allows seeding values
+in some structures that are valid for a long time (at the
+CPU speed scale) and are automatically corrected on exceptional
+control flow events like context switches, and userspace can either detect
+and rollback or sync and rollback with the exceptions.
+
+There are two cornerstone syscalls that allow userspace to implement
+these efficient algorithms: membarrier(2) and rseq(2).
+
+Membarrier is a facility that helps implementing fast CPU ordering
+barriers, typically used for asymmetric/biased locking.  In these lock
+implementation schemes, the owner of the object often assumes that there
+are contenders/parallel threads that need coordinating with.  If some
+thread starts accessing the same resource, then it is its duty to
+ensure correctness.  Examples of 'traps' that fast code path
+utilize are reads from a dedicated page that is unmapped by contenders,
+to switch the fast path to the slow one.  Or we could send a signal to all
+threads that potentially have access to that object, to insert a
+barrier.  Or we can use the membarrier(2) facility, which incurs
+significantly less overhead than signalling all threads.
+
+Membarrier(2) inserts a barrier, which is the typical underlying
+hardware operation to ensure ordering, into the specified set of CPUs,
+if these CPUs are executing the specified thread.  If these CPUs are not executing
+the targeted threads, it is assumed that sequential consistency guarantees
+from the context switch are enough to fulfill the requirement of
+membarrier(2).  Overall, the fast path can be implemented without slow
+instructions, and the slow path injects required fences into the fast path at
+the cost of IPI.
+
+The facility to detect exceptional conditions in the userspace thread
+execution was developed in Linux and called rseq(2).  It is a feature
+often called Restartable Atomic Sequences, which explains the acronym.
+The ability to cheaply do that allows code longer than a single
+instruction to execute atomically, without the need to propose and
+implement unsafe operations like disabling preemption, which is not
+feasible for userspace.  For instance, code might use CPU-local
+resources, which otherwise does not cope well with context switches.
+There cannot be an analog of critical_enter(9) in userspace.  (A
+facility to cheaply block signal delivery exists in FreeBSD, see
+sigfastblock(2), but correctly using it is provably too hard to
+implement in general-purpose code, esp. because it requires
+version-dependent coordination with rtdl and libthr.)
+
+rseq(2) takes per-thread block of memory, where the thread writes the
+current CPU id (see sched_getcpu(2)) and specifies the block of
+critical code that must be unwound if an exceptional situation like a
+context switch occurred while the block was executing.  The fast code
+path uses per-cpu data and typically does not need any corrections,
+but would a context switch occur, transfer of control to the abort
+handler informs userspace about the event.  So instead of disabling
+context switches, code can cheaply check for one after the calculation
+and retry if needed.
+
+An interesting rseq(2) implementation detail is that it is
+impossible (and not needed) to access/update rseq structures from
+kernel during the actual context switch, because we cannot access
+userspace from under a spinlock.  In other words,
+threads using rseq do not incur any performance cost from
+system-global context switches.  Instead, if the process registered for
+rseq(2), on any return to user mode we check if any exceptional
+events happened while the thread was in the kernel (context switches may happen
+only while the thread is in kernel mode), and if a context switch indeed
+occured, we fire an ast to check whether the program counter is inside the
+critical section and jump to the abort handler if it is.
+
+The implementations of membarrier(2) and rseq(2) are clean-room: I used
+Linux manual pages as the reference and public discussions of the
+features for clarifying corner cases.  On Linux/glibc, there was no
+stable glibc interface to the rseq facility.  One proposed integration was
+committed then reverted from glibc.  It might be prudent to wait
+some more for the rseq(2) interface to stabilize in glibc before providing
+it in our libc or to rely on tight integration between kernel
+and userspace in our base system, and use ABI tricks like symbol
+versioning to evolve the interface.  There is no goal to be 100%
+compatible with Linux anyway.
+
+Sponsor: The FreeBSD Foundation
