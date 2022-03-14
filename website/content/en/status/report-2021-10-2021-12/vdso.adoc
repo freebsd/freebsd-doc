@@ -1,0 +1,82 @@
+=== VDSO on amd64
+
+Contact: Konstantin Belousov <kib@FreeBSD.org>  
+
+A VDSO, or Virtual Dynamic Shared Object, is a shared object (more
+commonly called dynamic library) that is inserted into the executed
+image by a joint effort of the kernel and the dynamic linker.  It does
+not exists on disk as a standalone .so, and there are no instructions
+in the ELF format that cause the insertion.  It is done by the system
+to implement some functionality for the C runtime implementation
+components.
+
+FreeBSD already has a lot of features typically done using VDSO (in
+Linux), but really not requiring that complication.  The main reason
+why it is possible is the often mentioned co-evolution of the kernel
+and C runtime.  We can naturally introduce features that require
+implementation both in kernel, and support in the userspace parts,
+since FreeBSD is developed as a whole.  Surprisingly, it also allows
+the kernel and dynamic linker to know much less (and not enforce
+anything) about userspace consumers of interfaces.
+
+For instance, a syscall-less wall clock was implemented long ago, by
+the kernel providing a time hands blob in the shared page, and the C
+library knowing about its location and the supported algorithms.
+There is no need for a VDSO that interposes some libc symbols or
+provides services that are named by known symbols to userland.
+
+From all the years of experience with this pseudo-VDSO approach, the
+only feature that was impossible to implement without providing real
+VDSO support was the signal trampoline DWARF annotations, for the
+benefit of stack unwinders.
+
+When the kernel delivers signal to userland, it changes some key
+registers (like the instruction pointer, the stack pointer, and
+whatever else is needed by the architecture) and pushes the saved
+image of the whole usermode CPU state (context) onto the user stack.
+Then, control is passed to a small piece of code located in the shared
+page (signal trampoline), which calls the user handler function and on
+return from the handler issues a sigreturn(2) syscall to reload the
+old context.
+
+From this description, it is clear that the state of the machine
+during trampoline execution is quite different from the normal C
+calling frames.  Unwinders that handle things like C++ exceptions,
+Rust panics, or other similar mechanisms in specific language
+runtimes, need to understand the specialness of the trampoline frame.
+The current approach is to hardcode the detection of the trampoline,
+e.g. by matching the instruction pointer against sysctl
+kern.proc.sigtramp.
+
+DWARF annotations are enough to provide the required information to
+unwinders to make the trampoline frame not special anymore, but the
+problem is that there is no way for unwinders to find the annotation
+without introducing even more specialness.  Instead, we can insert a
+VDSO that only serves to appear in the enumeration of DSOs loaded into
+the process, with either dl_iterate_phdr(3) (in-process) or r_debug
+(remote), with PT_GNU_EH_FRAME header pointing to the root of DWARF
+info.
+
+This is exactly what the VDSO on FreeBSD does: it wraps signal
+trampoline bits and their DWARF annotation (.cfi) into a shared
+object, which is put into the shared page and linked by rtld(1) into
+the set of preloaded objects upon image activation.
+
+Efforts were made to strip as many unneeded structures and as much
+padding as possible from the VDSO image, because it consumes space in
+the shared page.  It was pushed as far as the common denominator of
+lld and ld.bfd allowed, with several tricks done by linker scripts and
+some use of seemingly undocumented linker options.
+
+We need at least two VDSOs for amd64: a 64-bit one for native binaries
+and a 32-bit one for ia32 binaries.  With the size of each VDSO around
+1.5KB, space becomes really tight in the shared page, which needs
+space for other stuff as well, like timehands or random generator
+seeds.
+
+Build scripts enforce that VDSOs do not grow larger than 2K; if they
+do, we need to extend shared page to become at least two shared pages.
+Scripts also enforce that VDSO are pure position-independent, not
+requiring relocations for either code or metadata (.cfi).
+
+Sponsor: The FreeBSD Foundation
