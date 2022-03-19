@@ -24,12 +24,12 @@
 MAINTAINER=carlavilla@FreeBSD.org
 
 # List of languages without book translations
-ARTICLEONLY_LANGS=	bn-bd da ko tr
+ARTICLEONLY_LANGS=	bn-bd da id ko tr
 # List of languages without article translations
 BOOKONLY_LANGS=		mn
 
 # List of all languages we have content for
-ALL_LANGUAGES=	bn-bd da de el en es fr hu it ja ko mn nl pl pt-br ru tr zh-cn zh-tw
+ALL_LANGUAGES=	bn-bd da de el en es fr hu id it ja ko mn nl pl pt-br ru tr zh-cn zh-tw
 
 LOCALBASE?=	/usr/local
 
