@@ -8,7 +8,7 @@ $yr += 1900;
 $mo += 1;
 $timestamp = "$mo-$md-$yr";
 
-if (!defined($hsty_base)) { 
+if (!defined($hsty_base)) {
     # $hsty_base should be relative if possible, so that mirrors
     # serve their local copy instead of going to the main site.
     # However, if we aren't running as a cgi, or if we're
@@ -225,8 +225,6 @@ $html
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
     <link rel="apple-touch-icon" href="/favicon.ico" type="image/x-icon" />
 $csshack
-<script type="text/javascript" src="$hsty_base/layout/js/google.js">
-</script>
 $t_style
 </head>
 <body>
@@ -254,7 +252,7 @@ sub html_footer {
 sub get_the_source {
     return if $ENV{'PATH_INFO'} ne '/get_the_source';
 
-    open(R, $0) || do { 
+    open(R, $0) || do {
 	print "Oops! open $0: $!\n";  # should not reached
 	exit;
     };
