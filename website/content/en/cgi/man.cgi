@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl -T
 #
-# Copyright (c) 1996-2021 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 1996-2022 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -1219,7 +1219,7 @@ sub do_man {
         $name    = $1;
         $section = $2;
     }
-    if ( $name =~ /^([\w\-:\.]+)$/ ) {
+    if ( $name =~ /^([\w\-:\.\+]+)$/ ) {
         $name = $1;
     }
     else { $name = ''; }
@@ -1985,7 +1985,7 @@ sub faq {
 
     return qq{\
 <pre>
-Copyright (c) 1996-2021 <a href="$mailtoURL">Wolfram Schneider</a>
+Copyright (c) 1996-2022 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE
