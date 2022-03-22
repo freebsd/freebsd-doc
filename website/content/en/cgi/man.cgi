@@ -419,6 +419,7 @@ $manPathDefault = 'FreeBSD 13.0-RELEASE and Ports';
     'FreeBSD Ports 12.0', "$manLocalDir/FreeBSD-ports-12.0-RELEASE/man:$manLocalDir/FreeBSD-ports-12.0-RELEASE/misc",
     'FreeBSD Ports 12.1', "$manLocalDir/FreeBSD-ports-12.1-RELEASE/man:$manLocalDir/FreeBSD-ports-12.1-RELEASE/misc",
     'FreeBSD Ports 12.2', "$manLocalDir/FreeBSD-ports-12.2-RELEASE/man:$manLocalDir/FreeBSD-ports-12.2-RELEASE/misc",
+    'FreeBSD Ports 12.3', "$manLocalDir/FreeBSD-ports-12.3-RELEASE/man:$manLocalDir/FreeBSD-ports-12.3-RELEASE/misc",
     'FreeBSD Ports 13.0', "$manLocalDir/FreeBSD-ports-13.0-RELEASE/man:$manLocalDir/FreeBSD-ports-13.0-RELEASE/misc",
 
 
