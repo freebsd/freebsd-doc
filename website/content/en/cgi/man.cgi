@@ -1763,6 +1763,7 @@ sub encode_url {
     # greater than(>), and non-US-ASCII characters (binary data),
     # and white space.  Whew.
 s/([\000-\032\;\/\?\:\@\&\=\%\'\"\`\<\>\177-\377 ])/sprintf('%%%02x',ord($1))/eg;
+    s/\+/%2B/g;
     s/%20/+/g;
     $_;
 }
