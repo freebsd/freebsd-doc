@@ -63,8 +63,8 @@ SKIP_LANGS+=	${a}
 .ORDER: build post-build
 .ORDER: post-build end-message
 
-all: starting-message generate-releases build post-build end-message
-run: starting-message generate-releases run-local
+all: starting-message generate-releases cgi-pre-permissions build post-build end-message
+run: starting-message generate-releases cgi-pre-permissions run-local
 clean: hugo-clean releases-clean
 
 starting-message: .PHONY
@@ -92,6 +92,11 @@ build: .PHONY
 	HUGO_DISABLELANGUAGES="${SKIP_LANGS}" ${HUGO_CMD} ${HUGO_ARGS}
 
 post-build: cgi-permissions
+
+cgi-pre-permissions:
+.if exists(./public/cgi)
+	@chmod 755 ./public/cgi/*.cgi
+.endif
 
 cgi-permissions:
 	@chmod 555 ./public/cgi/*.cgi
