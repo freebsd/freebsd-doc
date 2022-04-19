@@ -626,7 +626,7 @@ if ($query) {
 if ( !$counter ) {
     print "Sorry, nothing found.\n";
     print qq{You may look for other }
-      . qq{<a href="/search/search.html">FreeBSD Search Services</a>.\n};
+      . qq{<a href="/search/">FreeBSD Search Services</a>.\n};
 }
 else {
     print "</dl>\n";

@@ -117,7 +117,7 @@ sub get_id {
 
 sub midheader {
     return &short_html_header("FreeBSD Message-ID Mail Archives") .
-	qq{<p><a href="$hsty_base/search/search.html">Back to the search interface</a></p>\n};
+	qq{<p><a href="$hsty_base/search/">Back to the search interface</a></p>\n};
 }
 
 sub foot { return &html_footer; }
