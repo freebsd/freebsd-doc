@@ -32,7 +32,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
   var searchBookInput = document.querySelector("#search-book");
   var menuContents = document.querySelector("#MenuContents");
-  searchBookInput.addEventListener('keyup', search);
+
+  if (searchBookInput) {
+    searchBookInput.addEventListener('keyup', search);
+  }
 
   function search() {
     var menuElements = menuContents.children[0];

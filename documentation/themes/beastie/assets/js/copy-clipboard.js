@@ -27,7 +27,9 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-(function () {
+;(function () {
+  'use strict'
+
   document.querySelectorAll(".rouge, .highlight").forEach(function(codeItem) {
     var sourceCode = codeItem.textContent;
 
@@ -51,16 +53,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     button.addEventListener('click', copyToClipboard.bind(button, sourceCode));
   });
-})();
 
-function copyToClipboard(text, item) {
-  const tooltip = item.target.nextElementSibling;
-  window.navigator.clipboard.writeText(text).then(function() {
-    if (tooltip) {
-      tooltip.classList.add("show-tooltip");
-      setTimeout(function(){
-        tooltip.classList.remove("show-tooltip");
-      }, 1200);
-    }
-  });
-}
+  function copyToClipboard(text, item) {
+    const tooltip = item.target.nextElementSibling;
+    window.navigator.clipboard.writeText(text).then(function() {
+      if (tooltip) {
+        tooltip.classList.add("show-tooltip");
+        setTimeout(function(){
+          tooltip.classList.remove("show-tooltip");
+        }, 1200);
+      }
+    });
+  }
+
+})();
