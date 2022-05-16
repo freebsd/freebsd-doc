@@ -27,7 +27,9 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-(function () {
+;(function () {
+  'use strict'
+
   var theme = localStorage.getItem('theme');
   var themeChooser = document.querySelector('#theme-chooser');
   var themeContainer = document.querySelector('.theme-container');
@@ -43,23 +45,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     setTheme('theme-light');
     themeChooser.value = 'theme-light';
   }
-})();
 
-var themeChooser = document.querySelector('#theme-chooser');
+  themeChooser.addEventListener('change', function() {
+    var theme = this.value;
 
-themeChooser.addEventListener('change', function() {
-  var theme = this.value;
+    if (theme === "theme-dark") {
+      setTheme('theme-dark');
+    } else if (theme === "theme-high-contrast") {
+      setTheme('theme-high-contrast');
+    } else {
+      setTheme('theme-light');
+    }
+  });
 
-  if (theme === "theme-dark") {
-    setTheme('theme-dark');
-  } else if (theme === "theme-high-contrast") {
-    setTheme('theme-high-contrast');
-  } else {
-    setTheme('theme-light');
+  function setTheme(themeName) {
+    localStorage.setItem('theme', themeName);
+    document.documentElement.className = themeName;
   }
-});
-
-function setTheme(themeName) {
-  localStorage.setItem('theme', themeName);
-  document.documentElement.className = themeName;
-}
+})();
