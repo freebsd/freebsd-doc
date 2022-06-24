@@ -439,7 +439,7 @@ sub search_ports {
 
 sub forms {
     print qq{<p>
-FreeBSD Ports [short description <a href="$portsDesc">followed</a> ...]
+The FreeBSD Ports and Packages Collection offers a simple way for users and administrators to install applications.
 <a href="$script_name?stype=faq">FAQ</a>
 </p>
 };
