@@ -439,7 +439,7 @@ sub search_ports {
 
 sub forms {
     print qq{<p>
-FreeBSD Ports [short description <a href="$portsDesc">followed</a> ...]
+The FreeBSD Ports and Packages Collection offers a simple way for users and administrators to install applications.
 <a href="$script_name?stype=faq">FAQ</a>
 </p>
 };
@@ -545,7 +545,7 @@ sub faq {
 <p>
 The script ports.cgi use the file
 <a href="$hsty_base/ports/$ports_database.xz">$ports_database</a>
-as database for it's operations. $ports_database is updated automatically every
+as database for its operations. $ports_database is updated automatically every
 two hours.</p>
 
 <p>
