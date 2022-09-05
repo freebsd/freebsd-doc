@@ -115,7 +115,7 @@ generate-release:
 	rm -fr ./tmp
 .endif
 	@echo "---------------------------------------------------------------"
-	@echo "Generating the release, be patience"
+	@echo "Generating the release, be patient"
 	@echo "---------------------------------------------------------------"
 .if !empty(MAIN)
 	git clone --depth 1 --branch main https://git.FreeBSD.org/src.git tmp
