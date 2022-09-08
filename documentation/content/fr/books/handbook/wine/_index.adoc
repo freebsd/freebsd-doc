@@ -1,0 +1,898 @@
+---
+title: Chapitre 11. WINE
+part: Partie II. Tâches courantes
+prev: books/handbook/linuxemu
+next: books/handbook/partiii
+description: Ce chapitre décrira comment installer WINE sur un système FreeBSD et comment configurer WINE
+tags: ["WINE", "emulation", "guide", "tutorial"]
+showBookMenu: true
+weight: 14
+path: "/books/handbook/"
+---
+
+[[wine]]
+= WINE
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:sectnumoffset: 11
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/handbook/wine/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+[[wine-synopsis]]
+== Synopsis
+
+https://www.winehq.org/[WINE], qui signifie Wine Is Not an Emulator, car c'est en fait un programme faisant office de surcouche d'interprétation des instructions système.
+Celui-ci permet l'installation et l'utilisation de programmes à l'origine prévus pour fonctionner sous Windows(R) sur FreeBSD (mais aussi sous d'autres systèmes d'exploitation).
+
+Il fonctionne par l'interception des appels systèmes, ou des requêtes venant d'un programme vers le système d'exploitation, et transforme les appels systèmes Windows(R) en appels systèmes que FreeBSD peut comprendre.
+Il fera également en sorte de traduire dans le sens inverse les nouvelles instructions afin que le programme Windows(R) fonctionne comme espéré.
+Alors oui dans un certain sens, il _émule_ bien un environnement Windows(R), car il fournit bons nombres des ressources nécessaires au bon fonctionnement des applications Windows(R).
+
+Cependant, il ne s'agit pas d'un émulateur au sens strict du terme.
+En effet, dans la plupart des émulateurs, le fonctionnement est sensiblement différent. Ces derniers simulent des composants physiques informatiques afin de faire tourner des logiciels. C'est le cas notamment des solutions de virtualisation (comme: package:emulators/qemu[]).
+L'un des bénéfices notables de cette approche est la capacité d'installation d'un système d'exploitation entier.
+Cela signifie, que du point de vue des applications exécutées au sein de cet émulateur, tout se passe comme sur un véritable système non émulé. De cette manière les programmes ont de bonnes chances de fonctionner comme escomptés.
+Le mauvais côté inhérent à cette approche est tout simplement qu'un programme simulant du matériel informatique est forcément plus lent que ledit matériel qu'il tente de reproduire.
+Le système émulé (appelé _invité_) a besoin des ressources de la machine physique (appelée _hôte_), et réserve ces ressources tant qu'il fonctionne.
+
+D'un autre côté, le projet WINE, est plus économe en ressources système.
+Il fera en sorte de traduire des instructions systèmes à la volée. Ce n'est en théorie pas aussi rapide qu'un véritable système Windows(R), mais la différence de vitesse d'exécution reste minime.
+D'un autre côté, WINE essaie d'interpréter au mieux les différentes évolutions des systèmes Windows(R) pour rester compatible avec les applications originellement conçues pour ces systèmes.
+C'est une tâche complexe, ce qui veut dire qu'il faut garder en tête le fait que de nombreuses applications puissent ne pas fonctionner comme espéré sous WINE, ne marchent pas du tout, voire ne s'installent même pas.
+
+De cette manière, WINE constitue une autre option dans le but d'essayer de faire fonctionner un programme Windows(R) sous FreeBSD.
+Il peut servir de première solution, si cela fonctionne, car cela peut permettre de lancer l'application escomptée sans pour autant monopoliser toutes les ressources du système hôte FreeBSD.
+
+Ce chapitre va décrire:
+
+* Comment installer WINE sur système un FreeBSD.
+* Comment WINE fonctionne et quelles sont ses différences vis-à-vis des autres alternatives comme la virtualisation.
+* Comment adapter WINE aux besoins spécifiques de certaines applications.
+* Comment installer des interfaces graphiques pour assister à la configuration de WINE.
+* Des astuces et des solutions à utiliser sous FreeBSD.
+* La prise en compte de WINE au sein d'un environnement multi-utilisateur.
+
+Avant de lire ce chapitre, il serait utile de:
+
+* Comprendre crossref:basics[basics,quelques bases d'UNIX(R)].
+* Savoir crossref:bsdinstall[bsdinstall,installer FreeBSD].
+* Savoir crossref:advanced-networking[advanced-networking,configurer une connexion réseau].
+* Savoir crossref:ports[ports,installer des applications].
+
+[[wine-overview-concepts]]
+== WINE généralités et concepts
+
+WINE est un système complexe, avant de pouvoir s'en servir au mieux sur FreeBSD, il convient de comprendre ce que c'est et comment il fonctionne.
+
+[[what-is-wine]]
+=== WINE qu'est-ce que c'est?
+
+Comme nous l'avons déjà vu dans le <<wine-synopsis,Synopsis>> de ce chapitre, WINE constitue une surcouche de compatibilité logicielle permettant l'utilisation d'applications Windows(R) sur d'autres systèmes d'exploitation.
+En théorie, cela signifie que ces programmes pourront être exécutés sous des systèmes comme FreeBSD, macOS et Android.
+
+Lorsque WINE lance un exécutable Windows(R), il se passe deux choses:
+
+* Tout d'abord, WINE implémente un environnement qui imite celui de diverses versions de Windows(R). Par exemple, si une application demande l'accès à une ressource de la machine comme la RAM, WINE possède une interface mémoire qui ressemble et se comporte (en tout cas pour l'application en question) comme Windows(R).
+* Ensuite, une fois que l'application utilise cette interface, WINE reçoit les requêtes d'adressage mémoire et les transforme en instructions compatibles avec le système hôte. À l'inverse, lorsque l'application sous WINE veut obtenir des données, elles sont converties pour être exploitées par cette application Windows(R).
+
+[[wine-and-the-os-system]]
+=== WINE et le système FreeBSD
+
+L'installation de WINE sur un système FreeBSD entraînera celle de différents composants:
+
+* Les applications FreeBSD permettant l'exécution de tâches comme lancer un exécutable Windows(R), configurer le sous-système WINE, ou compiler un programme avec une compatibilité WINE.
+* Un grand nombre de dépendances implémentant les fonctionnalités centrales de Windows(R) (par exemple [.filename]#/lib/wine/api-ms-core-memory-l1-1-1.dll.so#, qui fait partie de l'interface mémoire mentionnée un petit peu plus haut).
+* Un certain nombre d'exécutables Windows(R), qui sont (ou en tout cas imitent) les programmes courants (comme [.filename]#/lib/wine/notepad.exe.so#, qui fournit l'éditeur de texte standard de Windows(R)).
+* Des composants additionnels de Windows(R), en particulier les polices de caractères (comme Tahoma, qui se trouve [.filename]#share/wine/fonts/tahoma.ttf# à la racine de l'installation).
+
+[[graphical-versus-text-modeterminal-programs-in-wine]]
+=== Programmes avec interface graphique et programmes en mode texte/terminal sous WINE
+
+Comme dans le monde de FreeBSD, les terminaux sont extrêmement courants, il est naturel de penser que WINE possède une excellente prise en charge des programmes en mode texte.
+Cependant, la majorité des applications pour Windows(R), surtout les applications les plus populaires, sont conçues pour une utilisation avec une interface utilisateur graphique.
+De ce fait, les outils de WINE sont conçus pour lancer par défaut des programmes possédant une interface graphique.
+
+Néanmoins, il existe trois méthodes disponibles pour lancer ces programmes en interface utilisateur console:
+
+* L'approche _sortie directe_ qui affichera directement sur la sortie standard d'un terminal.
+* La _wineconsole_ qui est un outil qui peut être utilisé avec les options _user_ ou _curses_ afin d'utiliser certaines améliorations que fournit le système de WINE pour les applications consoles.
+
+Ces méthodes sont détaillées en profondeur sur cette page : https://wiki.winehq.org/Wine_User%27s_Guide#Text_mode_programs_.28CUI:_Console_User_Interface.29[Wiki du projet WINE].
+
+[[wine-derivative-projects]]
+=== Projets dérivés de WINE
+
+WINE est en lui-même un projet open source mature, de ce fait, ce n'est pas étonnant qu'il serve de base à d'autres solutions logicielles plus complexes.
+
+[[commercial-wine-implementations]]
+==== Implémentations commerciales de WINE
+
+Un certain nombre d'entreprises ont utilisé WINE comme base centrale d'un de leur propre produit propriétaire (sachant que la licence LGPL permet ceci).
+Voici deux solutions populaires basées sur le projet WINE:
+
+* CrossOver de Codeweavers
+
+Cette solution propose des installations en un clic de différentes versions de WINE contenant différentes améliorations et optimisations (l'entreprise contribue au projet WINE en partageant certaines de ses améliorations).
+La principale préoccupation de Codeweavers est de faire en sorte que la plupart des applications les plus populaires puissent s'installer et s'exécuter parfaitement.
+
+Bien que l'entreprise ait par le passé produit une version native de CrossOver pour FreeBSD, ce n'est plus le cas depuis longtemps.
+Certaines références en ligne sont encore disponibles (comme ici sur un https://www.codeweavers.com/compatibility/crossover/forum/freebsd[forum dédié]), cela fait cependant un certains temps qu'elles ne sont plus mises à jour.
+
+* Proton de Steam
+
+Steam qui distribue principalement des jeux vidéo utilise aussi WINE afin de permettre l'installation et l'exécution de jeux prévus pour Windows(R) sur d'autres systèmes d'exploitation.
+Cela vise surtout à la base les systèmes de type Linux, bien qu'une certaine prise en charge de macOS existe également.
+
+Tandis que Steam ne propose pas de version FreeBSD de leur client, il existe plusieurs options pour utiliser la versions Linux(R) du client en utilisant la surcouche de compatibilité Linux de FreeBSD.
+
+[[wine-companion-programs]]
+==== Programmes d'accompagnement de WINE
+
+Aux solutions propriétaires, nous pouvons ajouter d'autres projet ayant publié des applications conçues pour fonctionner en tandem avec la version standard et open source de WINE.
+Le but de ces solutions va de rendre l'installation de WINE plus facile à la simplification de l'installation des programmes les plus populaires.
+
+Ces solutions sont abordées avec plus de détails dans une partie ultérieure de ce chapitre: <<wine-management-guis,interfaces graphiques pour la gestion de WINE >>, avec notamment:
+
+* winetricks
+* Homura
+
+[[alternatives-to-wine]]
+=== Les alternatives à WINE
+
+Pour les utilisateurs de FreeBSD, certaines alternatives à WINE existent:
+
+* Le double-amorçage: Une solution évidente est de directement lancer les programmes conçus pour Windows(R) sur ce dernier. Cela veut bien sûr dire qu'il faudra quitter FreeBSD afin de démarrer sous Windows(R), aussi cette méthode n'est pas envisageable si l'accès aux programmes des deux systèmes en simultané est nécessaire.
+* Les machines virtuelles: les machines virtuelles (ou VMs), comme mentionné plus tôt dans ce chapitre, sont des procédés logiciels qui émulent un ensemble complet de matériels informatiques, sur lequel un autre système d'exploitation (comprenant Windows(R)) peut être installé et utilisé. Les outils modernes rendent les VMs simples à créer et à gérer, mais cette méthode a un coût. En effet, une bonne portion des ressources du système hôte doit être allouée à chaque VM, sachant que ces ressources ne pourront pas être libérées tant que la VM est en fonctionnement. Il existe plusieurs solutions de gestion de machines virtuelles disponibles sous FreeBSD, les solutions open source comme qemu, bhyve et VirtualBox en sont un bon exemple. Voir le chapitre sur la <<virtualization,Virtualisation>> pour plus de détails.
+* L'accès distant: Comme beaucoup d'autres systèmes de type UNIX(R), FreeBSD est capable d'utiliser un ensemble d'applications permettant aux utilisateurs d'accéder à des ordinateurs Windows(R) à distance afin d'utiliser leurs programmes et données. En plus des clients comme xrdp qui sont compatibles avec le protocole de bureau distant (RDP) standard de Windows(R), il existe d'autres standards open source comme vnc pouvant aussi être utilisé (si un serveur compatible est présent à l'autre bout).
+
+[[installing-wine-on-freebsd]]
+== Installer WINE sur FreeBSD
+
+WINE peut être installé grâce à l'outil de gestion de logiciels pré-compilés de FreeBSD (pkg), ou bien en compilant le programme depuis le catalogue de logiciels portés.
+
+[[wine-prerequistes]]
+=== WINE les prérequis
+
+Avant de procéder à l'installation de WINE lui-même, il convient d'avoir préinstallé ce qui suit:
+
+* Une interface utilisateur graphique
+
+La plupart des programmes Windows(R) s'attendent à pouvoir interagir avec une interface graphique.
+Si WINE est installé sans une interface graphique déjà présente, ses dépendances comprendront également le compositeur Wayland, et de ce fait, une interface graphique sera effectivement installée aux côtés de WINE.
+Cela dit, il vaut mieux installer au préalable une interface graphique de votre choix, configurée et fonctionnelle avant de procéder à l'installation de WINE.
+
+* wine-gecko
+
+Pendant une longue période Windows(R) avait, par défaut, pré-installé le navigateur Web: Internet Explorer.
+Par conséquent, certaines applications s'exécuteront en partant du principe qu'il y aura toujours quelque chose capable d'afficher des pages Web.
+Dans le but de fournir cette fonctionnalité, la surcouche logicielle de WINE inclue un navigateur Internet basique utilisant le moteur de rendu Web Gecko issu du projet Mozilla.
+Lorsque WINE sera lancé pour la première fois, une fenêtre de dialogue apparaîtra pour proposer le téléchargement et l'installation de Gecko. Il existe un certain nombre de raisons pour vouloir procéder ainsi (cela sera abordé plus loin).
+Mais, il peut aussi être installé avant même d'installer WINE ou en parallèle de l'installation de ce dernier.
+
+Pour installer ce programme en version pré-compilée, il faut procéder comme ce qui suit:
+
+[source,shell]
+....
+# pkg install wine-gecko
+....
+
+ou alors, il est aussi possible de le compiler depuis le catalogue de logiciels portés:
+
+[source,shell]
+....
+# cd /usr/ports/emulator/wine-gecko
+# make install
+....
+
+* wine-mono
+
+MONO est une implémentation open source de la plateforme de développement .NET de Microsoft.
+Installer MONO devrait rendre plus facile l'installation et l'utilisation des applications écrites en .NET sous FreeBSD.
+
+Pour l'installer la version pré-compilée:
+
+[source,shell]
+....
+# pkg install wine-mono
+....
+
+Pour compiler MONO à partir du catalogue de logiciels portés:
+
+[source,shell]
+....
+# cd /usr/ports/emulator/wine-mono
+# make install
+....
+
+[[installing-wine]]
+=== Installer WINE depuis le dépôt de paquets de FreeBSD
+
+Une fois les prérequis installés, il suffit de procéder à l'installation de WINE via la commande suivante:
+
+[source,shell]
+....
+# pkg install wine
+....
+
+ou alors, WINE peut être compilé depuis le catalogue de logiciels portés avec les commandes suivantes:
+
+[source,shell]
+....
+# cd /usr/ports/emulator/wine
+# make install
+....
+
+[[thirtytwo-vs-sixtyfour-bit-wine]]
+=== Préoccupations concernant les différences entre les versions 32 et 64 bits de WINE
+
+Comme la plupart des applications, les programmes Windows(R), sont, eux aussi, passés de l'ancienne architecture 32 bits à l'architecture 64 bits.
+La plupart des logiciels récents sont écrits pour des systèmes d'exploitation 64 bits, cependant, les systèmes d'exploitation modernes peuvent parfois continuer d'utiliser des programmes plus anciens en 32 bits.
+FreeBSD ne diffère en rien sur ce point, il supporte effectivement les architectures 64 bits depuis les versions 5.X du système.
+
+Ainsi, le fait que les programmes les plus anciens ne soient plus pris en charge, peut justifier l'emploi d'émulateurs. Les utilisateurs se tournent bien souvent vers WINE afin de pouvoir jouer à des jeux et utiliser divers programmes qui ne fonctionnent plus correctement sur du matériel moderne.
+Heureusement, FreeBSD prend en charge les trois cas de figures:
+
+* Pour une machine moderne 64 bits sur laquelle vous désirez lancer une application 64 bits Windows(R), il suffit de procéder à l'installation des outils WINE comme détaillés dans les rubriques précédentes. En procédant ainsi, le système installera automatiquement la version 64 bits de Wine.
+* Si jamais, un utilisateur possède une vieille machine prenant en charge exclusivement les architectures 32 bits, il peut installer une version 32 bits de FreeBSD et ensuite procéder à l'installation de WINE comme indiqué précédemment.
+
+[[running-first-wine-program]]
+== Lancer un premier programme WINE sous FreeBSD
+
+Maintenant que WINE est installé, la prochaine étape est d'essayer WINE en tentant de lancer un programme simple.
+Une manière simple de faire cela est de télécharger une application autonome, par exemple, un programme qu'il suffit d'extraire de son archive et de lancer directement sans aucun autre processus d'installation plus complexe.
+
+Ces applications de types "portables" constituent de bons choix pour procéder à ce genre de tests, tout comme les programmes pouvant s'exécuter en s'appuyant sur un unique fichier exécutable.
+
+[[running-a-program-from-the-command-line]]
+=== Lancer un programme WINE en ligne de commande
+
+Il existe deux méthodes différentes pour lancer des programmes Windows depuis un émulateur de terminal.
+La première et la plus directe, est de naviguer dans le répertoire contenant l'exécutable du programme en question ([.filename]#.EXE#) et de taper ce qui suit:
+
+[source,shell]
+....
+% wine program.exe
+....
+
+Pour les applications qui acceptent des arguments en ligne de commande, il suffit de les ajouter après l'exécutable comme habituellement:
+
+[source,shell]
+....
+% wine program2.exe -file file.txt
+....
+
+Il est aussi possible de fournir le chemin complet vers l'exécutable afin de l'utiliser dans un script, par exemple:
+
+[source,shell]
+....
+% wine /home/user/bin/program.exe
+....
+
+[[running-a-program-from-a-gui]]
+=== Lancer un programme WINE depuis une interface graphique
+
+Après l'installation de WINE, les environnements graphiques doivent être configurés pour associer les fichiers exécutables Windows(R) ([.filename]#.EXE#) avec WINE.
+Il sera ensuite possible de parcourir le système avec un gestionnaire de fichiers, puis de lancer une application Windows(R) de la même manière que n'importe quel autre programme (avec un clic ou en double-cliquant selon la manière dont est configurée l'interface graphique).
+
+Sur la plupart des environnements de bureau, il suffit de vérifier que l'association est correcte en faisant un clic droit sur le fichier, puis de chercher une option de lancement correspondante dans le menu.
+Une des options (normalement celle par défaut) devrait être lancer avec *Wine - Chargeur de programmes Windows*, comme dans la capture d'écran ci-dessous:
+
+image::wine-run-np++-1.png[]
+
+Dans l'éventualité où le programme ne se lancerait pas comme escompté, essayez de le lancer depuis un terminal afin de voir si un éventuel message d'erreur apparaît, vous donnant ainsi un indice pour débloquer la situation.
+Dans le cas où WINE ne serait pas l'application par défaut pour ouvrir les fichiers [.filename]#.EXE# après l'installation, veuillez vérifier les associations MIME pour cette extension de fichier dans l'environnement de bureau courant, l'interface système ou bien le gestionnaire de fichiers.
+
+[[configuring-wine-installation]]
+== Configurer WINE après installation
+
+Après avoir compris ce qu'était WINE et comment il fonctionne dans les grandes lignes, la prochaine étape consiste savoir l'utiliser de manière efficiente sur FreeBSD et de s'habituer à ses configurations.
+Ce qui va suivre détaillera le concept clé de _préfixe WINE_, et comment il est utilisé pour contrôler la façon dont les applications fonctionnent via WINE.
+
+[[wine-prefixes]]
+=== Les préfixes WINE
+
+Un _préfixe_ WINE est un répertoire, il se trouve généralement (par défaut) ici: [.filename]#$HOME/.wine# mais peut aussi se situer ailleurs.
+Le préfixe est un ensemble de configurations et de fichiers utilisés par WINE pour configurer et utiliser l'environnement Windows(R) dont a besoin une application donnée.
+Par défaut, une installation toute fraîche de WINE va mettre en place la structure suivante lors de la première utilisation par un utilisateur:
+
+* [.filename]#.update-timestamp#: contient la date de la dernière modification de [.filename]#file /usr/share/wine/wine.inf#. WINE utilise cela pour déterminer si un préfixe n'est plus à jour et le met à jour automatiquement si besoin.
+* [.filename]#dosdevices/#: contient la correspondance entre les ressources de Windows(R) et les ressources du système hôte (FreeBSD) afin de rendre possible les interactions entre les deux systèmes.
+Par exemple, après une nouvelle installation de WINE, ce répertoire devrait contenir au moins deux éléments permettant l'accès au système de fichiers de FreeBSD en utilisant le modèle de Windows(R), c'est-à-dire avec les lecteurs associés à des lettres:
+
+** [.filename]#c:@# : un lien vers [.filename]#drive_c# décrit juste après.
+** [.filename]#z:@# : un lien vers le répertoire racine du système hôte.
+
+* [.filename]#drive_c/#: émule le disque principal d'un système Windows(R) (c'est-à-dire: [.filename]#C:#). Il contient une arborescence de répertoires et fichiers imitant celui d'un système Windows(R) standard. Un préfixe WINE fraîchement créé devrait contenir les répertoires Windows(R) 10 comme _Users_ et _Windows_ qui contiennent le système d'exploitation lui-même. Par la suite, les applications qui seront installées au sein de ce préfixe se situeront soit dans _Program Files_ ou _Program Files (x86)_, en fonction de leurs architectures respectives.
+* [.filename]#system.reg#: Ce fichier de registres contient les informations sur l'installation de Windows(R), qui est dans le cas de WINE, l'environnement se trouvant dans [.filename]#drive_c#.
+* [.filename]#user.reg#: Ce fichier de registres contient les configurations personnelles de l'utilisateur courant, générées par divers programmes ou bien via l'utilisation de l'éditeur de registres.
+* [.filename]#userdef.reg#: Ce fichier de registres comprends un ensemble de configurations par défaut pour les utilisateurs nouvellement crées.
+
+[[creating-and-using-wine-prefixes]]
+=== Créer et utiliser un préfixe WINE
+
+Alors que WINE créera par défaut un préfixe dans le répertoire utilisateur [.filename]#$HOME/.wine/#, il est possible de mettre en place plusieurs préfixes.
+Il existe plusieurs raisons de procéder ainsi:
+
+* La raison la plus courante à cela est d'émuler différentes versions de Windows(R), en fonctions des besoins en compatibilité de divers logiciels.
+* Il est également courant de rencontrer certaines applications ne fonctionnant pas correctement dans un environnement WINE par défaut, nécessitant ainsi une configuration spéciale. Il est généralement pratique d'isoler ce genre de programmes dans leur propre préfixe taillé sur mesure, de cette manière cela n'impactera pas le fonctionnement d'autres applications Windows(R).
+* De façon similaire, cela peut aussi servir dans l'optique de tests. En effet, on peut très bien dupliquer le préfixe par défaut pour réaliser divers tests de compatibilité sans risquer de compromettre le préfixe principal.
+
+Pour créer un préfixe depuis le terminal, tapez la commande suivante:
+
+[source,shell]
+....
+% WINEPREFIX="/home/username/.wine-new" winecfg
+....
+
+Ce qui lancera l'utilitaire de configuration des préfixes `winecfg` (nous verrons ceci de façon plus approfondie dans la section ultérieure).
+En définissant un chemin de répertoire pour la variable `WINEPREFIX`, un nouveau préfixe sera créé à cet endroit, à supposer qu'un préfixe ayant un nom identique ne se trouve pas déjà là.
+
+En fournissant la même variable au programme principal de WINE, le logiciel Windows(R) s'exécutera au sein de ce nouveau préfixe :
+[source,shell]
+....
+% WINEPREFIX="/home/username/.wine-new" wine program.exe
+....
+
+[[configuring-wine-prefixes-with-winecfg]]
+=== Configuration des préfixes WINE à l'aide de winecfg
+
+Comme expliqué plus haut, WINE inclut `winecfg` un outil qui permet la configuration des préfixes depuis une interface graphique.
+Il comprend plusieurs fonctionnalités qui sont détaillées dans les sections suivantes.
+Quand `winecfg` est lancé depuis un préfixe, ou bien lancé en combinaison avec l'emplacement d'un préfixe dans la variable `WINEPREFIX`, cela autorisera la configuration de préfixe ainsi sélectionné comme décrit plus loin.
+
+Les sélections faites dans l'onglet _Applications_ affecterons la portée des changements effectués dans les onglets _Libraries_ et _Graphics_, cela signifie que les changements apportés seront cantonnés aux applications sélectionnées.
+Voir https://wiki.winehq.org/Wine_User%27s_Guide#Using_Winecfg[Utiliser Winecfg] sur le Wiki de WINE pour plus d'informations.
+
+[[applications]]
+==== Applications
+
+image::wine-config-1.png[]
+
+L'onglet _Applications_ permet d'associer des programmes avec une version particulière de Windows(R).
+Au premier démarrage de WINE, cet onglet contiendra simplement une seule entrée: _Default Settings_.
+Cela correspond à toutes les configurations par défaut du préfixe, cette entrée (comme l'implique le bouton _Remove application_ désactivé) ne peut être pas supprimée du préfixe.
+
+Mais, des applications additionnelles peuvent être ajoutées en suivant le procédé ci-dessous:
+
+. Cliquez sur le bouton _Add application_;
+. Utilisez la fenêtre qui apparaît alors pour sélectionner l'exécutable du programme voulu;
+. Sélectionnez la version de Windows(R) qui sera utilisée pour le programme sélectionné.
+
+[[libraries]]
+==== Bibliothèques (onglet _Libraries_)
+
+image::wine-config-2.png[]
+
+WINE fourni par défaut un ensemble de bibliothèques open source reproduisant les mêmes fonctionnalités que leurs équivalent Windows(R).
+Cependant, comme vu précédemment dans ce chapitre, le projet WINE fait en sorte de s'adapter au rythme des mise à jour de ces bibliothèques.
+De ce fait, les versions fournies avec WINE peuvent ne pas disposer de certaines fonctionnalités attendues par les programmes Windows(R) les plus récents.
+
+Il est toutefois possible, grâce à `winecfg`, de remplacer spécifiquement les bibliothèques de bases de WINE, tout particulièrement si une installation de Windows(R) est disponible sur la machine hôte.
+Pour chaque dépendance ayant besoin d'être remplacée, il suffit de procéder comme indiqué en dessous:
+
+. Ouvrez le menu déroulant _New override for library_ et sélectionnez la bibliothèque à remplacer;
+. Cliquez sur le bouton _Add_;
+. Le nouveau remplacement apparaîtra dans la liste _Existing overrides_, notez les mentions _native, builtin_ entre parenthèses;
+. Cliquez pour sélectionner une bibliothèque;
+. Cliquez sur le bouton _Edit_;
+. Servez-vous de la fenêtre de dialogue pour sélectionner la bibliothèque à utiliser à la place de celle intégrée par défaut dans WINE.
+
+Faites attention à bien sélectionner un fichier qui correspond à la version de la bibliothèque intégrée à WINE, dans le cas contraire, les programmes pourraient ne pas fonctionner comme attendu.
+
+[[graphics]]
+==== Configuration graphique (onglet _Graphics_)
+
+image::wine-config-3.png[]
+
+L'onglet _Graphics_ fournit des options permettant à la fenêtre du programme lancé via WINE de fonctionner avec des performances optimales sous FreeBSD:
+
+* Capture automatique de la souris lorsqu'il s'agit d'une fenêtre en plein écran;
+* Autoriser le gestionnaire de fenêtre de FreeBSD à prendre en charge la décoration des fenêtres, comme la barre de titre des applications WINE par exemple;
+* Autoriser le gestionnaire de fenêtre de FreeBSD à contrôler les fenêtres des applications WINE, cela concerne les fonctionnalités telles que redimensionner une fenêtre;
+* Créer un bureau virtuel émulé dans lequel seront lancés tous les programmes WINE.
+Une fois cette option cochée, il est possible de définir la taille de ce bureau virtuel via les zones de saisie en face de _Desktop size_;
+* Définir la définition de l'écran pour les programmes lancés via WINE.
+
+[[desktop-integration]]
+==== Intégration avec l'environnement de bureau (onglet _Desktop Integration_)
+
+image::wine-config-4.png[]
+
+Cet onglet permet la configuration des éléments suivants:
+
+* Les paramètres de thème et d'aspect visuel pour les programmes lancés via WINE;
+* Si le sous-système WINE doit gérer les associations MIME (utilisé pour déterminer quelle application ouvre tel type de fichier particulier) de manière interne ou non;
+* La correspondance des répertoires de la machine FreeBSD hôte avec les répertoires utiles au sein de l'environnement Windows(R).
+Afin de changer les associations présentes par défaut, sélectionnez l'élément voulu et cliquez sur _Browse_, puis sélectionnez un répertoire dans la fenêtre qui apparaît.
+
+[[drives]]
+==== Disques (onglet _Drives_)
+
+image::wine-config-5.png[]
+
+L'onglet _Drives_ permet de créer un lien d'un répertoire du système hôte FreeBSD vers une lettre de lecteurs de l'environnement Windows(R).
+Les valeurs par défaut devraient être familières, car elles affichent le contenu de [.filename]#dosdevices/# dans le préfixe WINE courant.
+Les changements effectués dans cet onglet se répercuteront dans [.filename]#dosdevices#, et les liens correctement formatés présents dans ce répertoire apparaîtront dans cet onglet également.
+
+Pour créer une nouvelle entrée, par exemple pour un CD-ROM (monté dans [.filename]#/mnt/cdrom#), il suffit réaliser les étapes suivantes:
+
+. Cliquez sur le bouton _Add_;
+. Dans la nouvelle fenêtre, choisissez une lettre de lecteur disponible;
+. Cliquez sur _OK_;
+. Remplissez la zone de saisie _Path_ soit en tapant le chemin vers la ressource, soit en cliquant sur _Browse_ pour sélectionner la ressource en question.
+
+Par défaut, WINE détecte le type de ressource liée, mais cela peut être changé manuellement si besoin.
+Voir https://wiki.winehq.org/Wine_User%27s_Guide#Drive_Settings[la section correspondante dans le Wiki de WINE] pour plus de détails sur les options avancées.
+
+[[audio]]
+==== Audio
+
+image::wine-config-6.png[]
+
+Cet onglet comprend des options configurable afin de router le son depuis les programmes Windows(R) vers le système de son natif de FreeBSD, notamment:
+
+* La sélection du pilote;
+* La sélection du périphérique audio par défaut;
+* Un test audio.
+
+[[about]]
+==== A propos (onglet _About_)
+
+image::wine-config-7.png[]
+
+Le dernier onglet contient des informations à propos du projet WINE, comme un lien vers le site Web.
+Cet onglet contient par ailleurs des champs de saisies pour les informations de l'utilisateur (complètement optionnel), bien que ces informations ne soient envoyées absolument nulle part au contraire d'autres systèmes d'exploitation.
+
+[[wine-management-guis]]
+== Interfaces graphiques de gestion de WINE
+
+Bien que WINE soit fourni avec `winecfg`, un outil de configuration par interface graphique, ce dernier sert surtout à: configurer dans les grandes ligne un préfixe WINE existant.
+Cependant, il existe des applications plus avancées qui pourront assister les installations de certaines applications de même qu'optimiser leur environnement WINE lié.
+La section qui suit, inclut une sélection des outils de ce type les plus populaires.
+
+[[winetricks]]
+=== Winetricks
+
+Le programme `winetricks` est un assistant multiplate-forme et complet pour WINE.
+Il n'est pas développé par le projet WINE, mais est maintenu par un groupe de contributeurs sur https://github.com/Winetricks/winetricks[Github].
+Il contient "recettes" automatisées pour faire fonctionner un certain nombre d'applications communes sous WINE, en optimisant à la fois les paramètres et en installant certaines DLL automatiquement.
+
+[[installing-winetricks]]
+==== Installer winetricks
+
+Pour installer winetricks sur FreeBSD en version pré-compilée, utilisez la commande suivante (notez que cela nécessite que le paquet i386-wine ou bien i386-wine-devel soit installé, par conséquent ils seront installés automatiquement avec d'autres dépendances):
+
+[source,shell]
+....
+# pkg install i386-wine winetricks
+....
+
+Pour compiler `winetricks` depuis les sources, tapez les commandes suivantes:
+
+[source,shell]
+....
+# cd /usr/ports/emulators/i386-wine
+# make install
+# cd /usr/ports/emulators/winetricks
+# make install
+....
+
+Si une installation manuelle est requise, référez-vous la page suivante pour des instructions: https://github.com/Winetricks/winetricks[Github].
+
+[[using-winetricks]]
+==== Utiliser winetricks
+
+Lancer `winetricks` avec la commande suivante:
+
+[source,shell]
+....
+% winetricks
+....
+
+Notez qu'un préfixe WINE en 32 bits doit être présent pour lancer effectivement `winetricks`.
+Lancer `winetricks` aura pour effet de faire apparaître une fenêtre proposant un certain nombre de choix, comme celle-ci:
+
+image::winetricks-run-1.png[]
+
+Sélectionner soit _Install an application_, soit _Install a benchmark_, ou encore _Install a game_ affichera une liste avec une liste d'options prises en charge, comme ci-dessous pour les applications:
+
+image::winetricks-run-2.png[]
+
+Sélectionner un ou plusieurs éléments et cliquer sur _OK_ démarrera automatiquement leur(s) processus d'installation.
+Au début, certains messages qui ont l'air d'être des erreurs peuvent apparaître, mais il s'agit en fait d'informations et d'alertes mentionnant la manière de contourner certains problèmes éventuels pour certaines applications:
+
+image::winetricks-app-install-1.png[]
+
+Une fois ces messages contournés, l'installation des applications en question sera effectivement lancée:
+
+image::winetricks-app-install-2.png[]
+
+Une fois l'installation terminée, le nouveau logiciel Windows(R) devrait être disponible depuis le menu de l'environnement de bureau (comme ici, avec l'environnement de bureau LXQT):
+
+image::winetricks-menu-1.png[]
+
+Pour supprimer l'application, lancez de nouveau `winetricks` et sélectionnez _Run an uninstaller_:
+
+image::winetricks-uninstall-1.png[]
+
+Une fenêtre Windows(R) apparaîtra pour lister tous les programmes et composants installés au sein de ce préfixe.
+Choisissez l'application à supprimer, puis cliquez sur le bouton _Modify/Remove_:
+
+image::winetricks-uninstall-2.png[]
+
+Cela lancera l'installateur interne de l'application en question, qui devrait également comprendre une option pour la désinstallation:
+
+image::winetricks-uninstall-3.png[]
+
+[[homura]]
+=== Homura
+
+Homura est une application qui ressemble à `winetricks`, mais ce dernier s'inspire surtout de https://lutris.net/[Lutris], qui est un système axé sur le jeu vidéo pour les plateformes Linux.
+Bien que cela soit centré sur le jeu vidéo, il y a aussi des applications n'étant pas des jeux qui sont disponibles pour l'installation au sein d'Homura.
+
+[[installing-homura]]
+==== Installer Homura
+
+Pour installer la version compilée d'Homura, tapez la commande suivante:
+
+[source,shell]
+....
+# pkg install homura
+....
+
+Homura est aussi disponible via le catalogue de logiciels portés de FreeBSD.
+Cependant, au contraire de WINE ou `winetricks`, il se trouve dans la section _games_ plutôt que dans la section _emulators_.
+
+[source,shell]
+....
+# cd /usr/ports/games/homura
+# make install
+....
+
+[[using-homura]]
+==== Utiliser Homura
+
+L'utilisation d'Homura est relativement similaire à celle de `winetricks`.
+Lorsque vous le lancez pour la première fois, via une ligne de commande (ou via un lanceur de votre environnement de bureau):
+
+[source,shell]
+....
+% Homura
+....
+
+Cela devrait afficher le message d'accueil du programme.
+Cliquez sur _OK_ pour continuer.
+
+image::homura-launch-1.png[]
+
+Le logiciel proposera la création d'un raccourci dans le menu des environnements de bureaux compatibles:
+
+image::homura-run-2.png[]
+
+En fonction de la configuration de la machine FreeBSD hôte, il se peut qu'Homura affiche un message vous incitant à rapidement installer les pilotes natifs pour votre carte graphique.
+
+image::homura-run-3.png[]
+
+La fenêtre principale de l'application devrait désormais apparaître, elle correspond plus ou moins à une sorte de menu principal avec toutes ses options.
+Nombre de ces éléments sont identiques à ceux trouvés dans `winetricks`, néanmoins, Homura en propose également des nouveaux, comme une option utile pour ouvrir le répertoire des données (_Open Homura Folder_) ou de lancer un programme particulier au sein du préfixe (_Run a executable in prefix_).
+
+image::homura-install-1.png[]
+
+Pour choisir une application prise en charge et l'installer, sélectionnez _Installation_, puis cliquez sur _OK_.
+Cela affichera une liste d'applications qu'Homura pourra installer automatiquement.
+Choisissez-en une, puis cliquez sur _OK_ pour en commencer l'installation.
+
+image::homura-install-2.png[]
+
+Homura commencera d'abord par télécharger l'application en question.
+Dans un environnement de bureau le prenant en charge, une notification est susceptible d'apparaître.
+
+image::homura-install-3.png[]
+
+De plus, le programme se chargera de générer un nouveau préfixe pour l'application.
+Une fenêtre standard de WINE devrait apparaître avec ce message:
+
+image::homura-install-4.png[]
+
+Ensuite, Homura se chargera d'installer tous les prérequis pour ledit programme.
+Ce qui peut impliquer le téléchargement et l'extraction d'un certain nombre de fichiers, les détails de ces actions apparaîtront dans une fenêtre comme ceci:
+
+image::homura-install-5.png[]
+
+Les paquets téléchargés seront automatiquement extraits et installés en fonction des besoins.
+
+image::homura-install-6.png[]
+
+L'installation peut se solder par une simple notification de bureau ou un message dans le terminal, en fonction de la manière dont Homura a été lancé.
+Mais dans tous les cas, Homura devrait de nouveau afficher son écran principal.
+Afin de vérifier si l'installation a effectivement été menée à bien, choisissez _Launcher_, puis cliquez sur _OK_.
+
+image::homura-install-7.png[]
+
+Cela affichera une liste des programmes installés.
+
+image::homura-install-8.png[]
+
+Pour lancer le nouveau programme, sélectionnez le depuis la liste, puis cliquez sur _OK_.
+Afin de procéder à la désinstallation d'une application, choisissez _Uninstallation_ depuis le menu principal, ce qui devrait afficher une liste similaire.
+Choisissez un programme à supprimer, puis cliquez sur _OK_.
+
+image::homura-uninstall-1.png[]
+
+[[running-multiple-management-guis]]
+=== Utiliser plusieurs outils graphiques de gestion
+
+Il est à noter que l'installation d'un outil n'exclut pas l'utilisation d'un autre.
+Il est totalement possible, et même intéressant, d'avoir plusieurs outils installés en même temps, comme ils offrent le support de différents programmes.
+
+Cependant, assurez-vous au préalable qu'ils n'accèdent pas au même préfixe WINE.
+Chacun de ces logiciels applique des solutions de contournement et appliquent des changements aux registres en fonction de problèmes connus au sein de WINE afin de permettre la bonne exécution d'un programme.
+Utiliser `wintricks` et Homura sur le même préfixe WINE pourrait compromettre ces changements et rendre ainsi certaines applications instables.
+
+[[wine-in-multi-user-os-installations]]
+== WINE sur un système FreeBSD avec plusieurs utilisateurs
+
+[[issues-with-using-a-common-wine-prefix]]
+=== Problèmes avec l'utilisation d'un préfixe WINE commun
+
+Comme la plupart des systèmes d'exploitation de type UNIX(R), FreeBSD est conçu de sorte que plusieurs utilisateurs puissent être connectés et peuvent travailler sur la même machine en même temps.
+D'un autre côté, Windows(R) est aussi un système multi-utilisateurs, mais dans le sens où il peut y avoir plusieurs comptes utilisateur sur un même système.
+Mais, l'objectif est qu'un seul utilisateur à la fois se serve de la machine physique (ordinateur portable ou fixe).
+
+Les récentes versions grand public de Windows(R) ont amélioré l'utilisation du système dans le cas d'un scénario multi-utilisateurs.
+Mais le système reste largement structuré pour une utilisation mono-utilisateur.
+De plus, les mesures prises par le projet WINE afin de créer un environnement compatible Windows(R) impliquent, contrairement à aux applications FreeBSD (y compris WINE lui-même), qu'il s'approchera d'un environnement mono-utilisateur.
+
+Ce qui veut dire, dans cette optique, que chaque utilisateur devra gérer son propre ensemble de configurations, ce qui est potentiellement une bonne chose.
+Cela dit, il peut être avantageux d'installer certaines applications une seule fois, notamment les plus lourdes, comme les suites de bureautique ou les jeux vidéo.
+Deux raisons évidentes pour vouloir procéder ainsi: la maintenance (les mises à jour ne devront être effectuées qu'une seule fois) et l'efficacité en termes d'espace disque (pas de duplications de fichiers).
+
+Il existe deux stratégies dans le but de minimiser l'impact de plusieurs utilisateurs WINE sur le système.
+
+[[installing-applications-to-a-common-drivesettings]]
+=== Installer des applications sur un disque dur commun
+
+Comme montré dans la section sur la configuration de WINE, ce dernier fourni la possibilité d'intégrer des disques supplémentaires à un préfixe donné.
+De cette manière, les applications peuvent être installées à un endroit commun, alors que les utilisateurs pourront toujours avoir un préfixe avec leurs configurations propres (selon le programme).
+C'est un bon choix, s'il y a peu d'applications devant être partagées entre les utilisateurs, et s'il y a des programmes qui n'ont besoin que de configurations minimes de leur préfixe pour leur permettre de fonctionner.
+
+Les étapes pour procéder comme ceci sont les suivantes:
+
+. Premièrement, mettre en place un répertoire partagé sur le système avec lequel seront stockés les fichiers, comme [.filename]#/mnt/windows-drive_d/#.
+Créer un nouveau dossier, cela est détaillé dans la page de manuel de man:mkdir[1].
+. Puis, définir les permissions pour ce nouveau répertoire afin d'autoriser l'accès uniquement aux utilisateurs voulus.
+Une manière de procéder est de créer un nouveau groupe, "windows" par exemple, ajouter les utilisateurs en question à ce groupe (voir la sous-section sur les groupes dans la section crossref:basics[users-groups,Gestion des comptes et des utilisateurs] de ce manuel), puis définir les permissions du répertoire sur `770` (la section sur les crossref:basics[permissions,permissions] sous FreeBSD illustre ce processus).
+. Enfin, ajouter ce répertoire au préfixe de l'utilisateur en utilisant `winecfg` comme décrit plus haut, dans la section sur la configuration de WINE.
+
+Une fois ceci terminé, les applications pourrons être installées à cet emplacement, et ensuite être lancées en utilisant la lettre de lecteur assignée (ou bien en utilisant le chemin standard façon UNIX(R).
+Cependant, comme noté plus haut, un seul utilisateur devrait utiliser ces applications (qui pourraient accéder à des fichiers dans leur répertoire d'installation) à la fois.
+Il se peut que certaines applications présentent un comportement inattendu lorsqu'elles seront exécutées par un utilisateur qui n'en n'est pas le propriétaire, malgré le fait que ce dernier appartienne bien au groupe ayant les permissions "lecture/écriture/exécution" pour tout le répertoire.
+
+[[using-a-common-installation-of-wine]]
+=== Utiliser une installation commune de WINE
+
+Si jamais beaucoup d'applications doivent être partagées, ou bien qu'elles nécessitent des réglages spéciaux pour fonctionner correctement, une autre approche peut être requise.
+Dans cette méthode, un autre utilisateur est créé tout spécialement dans le but de stocker les préfixes WINE et les applications installées.
+Chaque utilisateur voulu sera autorisé à lancer les programmes en tant que ce nouvel utilisateur en utilisant la commande man:sudo[8].
+Cela a pour résultat, que ces utilisateurs peuvent désormais lancer une application WINE comme ils le feraient en temps normal, cela agira simplement comme si cette dernière était lancée par l'utilisateur nouvellement crée, et donc utilisera le préfixe centralisé contenant les configurations ainsi que les programmes.
+Pour parvenir à cela, il faut suivre les étapes suivantes:
+
+Créez un nouvel utilisateur avec la commande suivante en tant que `root`:
+
+[source,shell]
+....
+# adduser
+....
+
+Entrez le nom d'utilisateur (par exemple _windows_) et le nom complet ("Microsoft Windows").
+Ensuite acceptez les options par défauts pour les questions restantes.
+Puis, installez l'utilitaire `sudo` en version pré-compilé avec la commande suivante:
+
+[source,shell]
+....
+# pkg install sudo
+....
+
+Une fois l'installation terminée, éditez [.filename]#/etc/sudoers# comme ce qui suit:
+
+[.programlisting]
+....
+# User alias specification
+
+# define which users can run the wine/windows programs
+User_Alias WINDOWS_USERS = user1,user2
+
+# define which users can administrate (become root)
+User_Alias ADMIN = user1
+
+# Cmnd alias specification
+
+# define which commands the WINDOWS_USERS may run
+Cmnd_Alias WINDOWS = /usr/bin/wine,/usr/bin/winecfg
+
+# Defaults
+Defaults:WINDOWS_USERS env_reset
+Defaults:WINDOWS_USERS env_keep += DISPLAY
+Defaults:WINDOWS_USERS env_keep += XAUTHORITY
+Defaults    !lecture,tty_tickets,!fqdn
+
+# User privilege specification
+root    ALL=(ALL) ALL
+
+# Members of the admin user_alias, defined above, may gain root privileges
+ADMIN ALL=(ALL) ALL
+
+# The WINDOWS_USERS may run WINDOWS programs as user windows without a password
+WINDOWS_USERS ALL = (windows) NOPASSWD: WINDOWS
+....
+
+Cela permet aux utilisateurs nommés dans la section _User_Alias_ de lancer les programmes listés à la section _Cmnd Alias_ en utilisant les ressources listées dans la section _Defaults_ (sur l'affichage en cours d'utilisation) comme s'il s'agissait de l'utilisateur listé dans la dernière ligne du fichier.
+Autrement dit, les utilisateurs désignés comme _WINDOWS_USERS_ peuvent lancer les applications WINE et `winecfg` comme étant l'utilisateur _windows_.
+De plus, cette configuration signifie que les utilisateurs membres de ce groupe n'auront pas à entrer le mot de passe pour l'utilisateur _windows_.
+
+Ensuite, il faut donner l'accès à l'affichage pour l'utilisateur _windows_, sachant que c'est sous cet utilisateur que les programmes WINE seront lancés:
+
+[source,shell]
+....
+% xhost +local:windows
+....
+
+C'est une commande qui devrait être ajoutée à la liste des commandes lancées à la connexion ou au démarrage de l'environnement de bureau.
+Une fois que tout ceci est prêt, un utilisateur configuré comme un de `WINDOW_USERS` dans [.filename]#sudoers# peut lancer les programmes en utilisant le préfixe en commun avec la commande suivante:
+
+[source,shell]
+....
+% sudo -u windows wine program.exe
+....
+
+Il faut noter cela dit, que si plusieurs utilisateurs accèdent à cet environnement partagé en même temps, cela présente toujours un risque.
+Cependant, il faut aussi garder en tête que cet environnement partagé peut contenir plusieurs préfixes WINE.
+De cette manière, un administrateur peut créer, tester et vérifier un ensemble de programmes, chacun dans son propre préfixe.
+Dans le même temps, un utilisateur peut jouer à un jeu pendant qu'un autre utilise une suite bureautique sans pour autant multiplier des installations redondantes.
+
+[[wine-on-os-faq]]
+== WINE sur FreeBSD Foire Aux Questions
+
+La section suivante détaille les questions posées fréquemment, les trucs et astuces, ou bien les problèmes souvent rencontrés avec WINE sur FreeBSD, avec leurs réponses respectives.
+
+[[basic-installation-and-usage]]
+=== Installation et utilisation basique
+
+[[how-to-install-32-bit-and-64-bit-wine-on-the-same-system]]
+==== Comment installer la version 32 bits et la versions 64 bits sur le même système?
+
+
+Comme déjà mentionné, les paquets wine et i386-wine entrent en conflit s'ils sont installés normalement sur le même système.
+Néanmoins, plusieurs types d'installations peuvent être mis en place en utilisant des mécanismes comme chroots/jails, ou en compilant WINE directement depuis les sources (hors catalogue de logiciels portés de FreeBSD).
+
+[[can-dos-programs-be-run-on-wine]]
+==== Peut-on utiliser un programme DOS sous WINE ?
+
+Théoriquement oui, car ce sont des programmes en interfaces console comme nous l'avons vu plus haut.
+Cela dit, il existe une méthode plus adaptée à cela, il suffit d'utiliser package:emulators/dosbox[DOSBox].
+Bien sûr, cela ne coûte rien d'essayer.
+Créez simplement un nouveau préfixe WINE, installez le programme et si cela ne marche pas, supprimez le préfixe.
+
+[[should-the-wine-devel-packageport-be-installed-to-use-the-development-version-of-wine-instead-of-stable]]
+==== Est-ce que le paquet package:emulators/wine-devel[] doit être installé pour pouvoir utiliser la version en développement de WINE à la place de la version stable?
+
+Oui, cette version installe la version développement de WINE.
+Comme avec les versions 32 et 64 bits de WINE, la version développement ne peux pas être installée en même temps que la version stable sans mesures additionnelles.
+
+Notez qu'il existait aussi une version "Staging" de WINE, contenant les mises à jour les plus récentes du projet.
+Cette version était disponible dans le catalogue de logiciels portés de FreeBSD, mais a depuis été supprimée.
+Cette version est toujours compilable depuis les sources cela dit.
+
+[[install-optimization]]
+=== Optimisation de l'installation
+
+[[how-should-windows-hardware-graphics-drivers-be-handled]]
+==== Comment les pilotes (de carte graphique par exemple) Windows(R) sont pris en charge?
+
+Les pilotes de périphériques se chargent de transférer des commandes depuis une application vers le matériel de la machine.
+WINE émule un environnement Windows(R), ce qui inclut les pilotes, qui utilisent ensuite les pilotes natifs de FreeBSD pour effectuer ce transfert.
+Il n'est pas recommandé d'installer des pilotes Windows(R), car WINE est conçu de manière à interagir avec les pilotes du système hôte.
+Si par exemple, des pilotes de cartes graphiques améliorent ses performances, veuillez plutôt installer la version FreeBSD et non leur équivalent Windows(R).
+
+[[is-there-a-way-to-make-windows-fonts-look-better]]
+==== Est-il possible d'améliorer l'apparence des polices de caractères Windows(R)?
+
+Un utilisateur sur le forum FreeBSD propose cette configuration pour régler l'apparence des polices Windows(R) qui sont par défaut légèrement pixélisées.
+
+Selon https://forums.freebsd.org/threads/make-wine-ui-fonts-look-good.68273/[ce post sur le forum FreeBSD], ajouter ce qui suit au fichier [.filename]#.config/fontconfig/fonts.conf# devrait ajouter de l'anti-crenélage et rendre le texte plus lisible.
+
+[.programlisting]
+....
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd>"
+
+<fontconfig>
+
+  <!-- antialias all fonts -->
+  <match target="font">
+    <edit name="antialias" mode="assign"><bool>true</bool></edit>>
+    <edit name="hinting" mode="assign"><bool>true</bool></edit>>
+    <edit name="hintstyle" mode="assign"><const>hintslight</const></edit>>
+    <edit name="rgba" mode="assign"><const>rgb</const></edit>>
+  </match>
+</fontconfig>
+....
+
+
+[[does-having-windows-installed-elsewhere-on-a-system-help-wine-operate]]
+==== Installer Windows(R) ailleurs sur le système peut-il aider WINE à fonctionner?
+
+C'est possible, en fonction de l'application devant être exécutée.
+Comme mentionné dans la section sur `winecfg`, certaines DLLs intégrées par défaut avec WINE et d'autres bibliothèques peuvent être remplacés en fournissant le chemin de versions alternatives.
+Si la partition ou le disque Windows(R) est montée et accessible pour l'utilisateur sous FreeBSD, il est alors possible de remplacer certaines DLL de WINE par les versions natives du système Windows(R), diminuant potentiellement le risque de fonctionnement inattendus de certaines applications.
+
+[[application-specific]]
+=== Spécifique à une application
+
+[[where-is-the-best-place-to-see-if-application-x-works-on-wine]]
+==== Quel est le meilleur endroit pour savoir si une application fonctionne sous WINE?
+
+La première étape pour savoir si une application est compatible doit être le site https://appdb.winehq.org/[WINE AppDB].
+Il s'agit d'un site qui répertorie les programmes fonctionnant ou non sous WINE sur toutes les plateformes supportées, et les solutions pour les faire fonctionner, solutions qui sont souvent applicables sur d'autres plateformes.
+
+[[is-there-anything-that-will-help-games-run-better]]
+==== Y a-t-il quelque chose permettant à un jeu vidéo de mieux fonctionner?
+
+Peut-être.
+Beaucoup de jeux Windows(R) se basent sur DirectX, une surcouche graphique propriétaire de Microsoft.
+Cependant, il existe des projets open source qui tentent d'implémenter une prise en charge pour cette technologie.
+
+Le projet _dxvk_, est une tentative d'implémenter DirectX en utilisant le sous-système graphique Vulkan compatible avec FreeBSD.
+Bien que ce système soit avant tout conçu pour fonctionner pour la version Linux de WINE; il est apparemment possible d'utiliser ce système sur FreeBSD https://forums.freebsd.org/threads/what-about-gaming-on-freebsd.723/page-9[selon certains utilisateurs du forum FreeBSD].
+
+De plus, des initiatives sont en cours pour intégrer https://www.freshports.org/emulators/wine-proton/[WINE Proton].
+Cela devrait amener la version de Valve, développeur de la plateforme de jeux vidéo Steam, sur FreeBSD.
+Proton est une version de WINE spécialement conçue pour que nombre de jeux Windows(R) puissent tourner avec un minimum de manipulation de la part de l'utilisateur.
+
+[[is-there-anywhere-freebsd-wine-users-gather-to-exchange-tips-and-tricks]]
+==== Où les utilisateurs de WINE sous FreeBSD se ressemblent pour échanger des conseils et astuces?
+
+Il existe pas mal d'endroits où les utilisateurs FreeBSD discutent de problèmes liés à WINE, qui peuvent être utilisés pour rechercher des solutions:
+
+* https://forums.freebsd.org/[Le forum FreeBSD], tout particulièrement les sections _Installation and Maintenance of Ports or Packages_ ou _Emulation and virtualization_.
+* https://wiki.freebsd.org/IRC/Channels[Les canaux IRC de FreeBSD], dont #freebsd (pour un support général), #freebsd-games, ou autres.
+* https://discord.gg/2CCuhCt[Le serveur discord: The BSD World], notamment les canaux _bsd-desktop_, _bsd-gaming_, _bsd-wine_, et autres.
+
+[[other-os-resources]]
+=== Les ressource provenant d'autres systèmes d'exploitation
+
+Il existe un certain nombre de ressources relatives au fonctionnement de WINE sous d'autres systèmes d'exploitation qui peuvent cependant s'avérer utiles pour les utilisateurs de FreeBSD:
+
+* https://wiki.winehq.org/[Le Wiki de WINE] sur lequel se trouve des tonnes d'informations relatives à l'utilisation de WINE, qui sont bien souvent applicables à tous les systèmes d'exploitation pris en charge par WINE;
+* De plus, la documentation d'autre systèmes d'exploitation peut aussi s'avérer utile comme https://wiki.archlinux.org/index.php/wine[la page WINE] sur le Wiki de la distribution Arch Linux, bien que certaines applications tierces (i.e., "companion applications") ne soient bien évidemment pas disponibles sous FreeBSD;
+* Enfin, Codeweavers (le développeur d'une version commerciale de WINE) est un contributeur actif au projet WINE. Souvent, les réponses aux questions https://www.codeweavers.com/support/forums[sur leur forum] peuvent également être utiles pour dépanner des problèmes avec la version open source de WINE.
