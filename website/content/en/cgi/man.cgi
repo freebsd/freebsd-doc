@@ -59,6 +59,13 @@ my $download_streaming_caching = 0;
 #$command{'man'} = '/usr/bin/man';    # 8Bit clean man
 $command{'man'} = '/usr/local/www/bin/man.wrapper';    # set CPU limits
 
+# First look in the FreeBSD base manual pages (aka /usr/share/man) and then
+# in FreeBSD ports (aka /usr/local/man). This avoids confusion when manual pages have
+# have the same name, but are in different sections. In this case, a ports manual
+# pages would win because of the higher section priority. Now, searching for "socket"
+# will always show socket(2) from the base system and not socket(1) from ports
+my $freebsd_base_manpages_first = 1;
+
 # Config Options
 # map sections to their man command argument(s)
 %sections = (
@@ -1395,6 +1402,18 @@ sub to_filename {
     return $filename;
 }
 
+# strip ports manual pages from path
+sub manpath_without_ports {
+    my $path = shift;
+
+    my @list;
+    foreach my $p (split(/:/, $path)) {
+	push @list, $p if $p !~ /-ports-/;
+    }
+
+    return join(":", @list);
+}
+
 sub man {
     local ( $name, $section, $arch ) = @_;
     local ( $_, $title, $head, *MAN );
@@ -1502,13 +1521,15 @@ sub man {
     }
 
     @manargs = split( / /, $section );
+    my $manpath_m = "";
+
     if ($manpath) {
         if ( $manPath{$manpath} ) {
-            unshift( @manargs, ( '-M', $manPath{$manpath} ) );
+            $manpath_m = $manPath{$manpath};
             &groff_path( $manPath{$manpath} );
         }
         elsif ( $manpath{ &dec($manpath) } ) {
-            unshift( @manargs, ( '-M', $manPath{ &dec($manpath) } ) );
+            $manpath_m = $manPath{ &dec($manpath) };
             &groff_path( $manPath{ &dec($manpath) } );
         }
         else {
@@ -1524,12 +1545,31 @@ sub man {
         push( @manargs, '-t' );
     }
 
-    warn "X $command{'man'} @manargs -- x $name x\n" if $debug >= 3;
 
     push( @manargs, ( "-m", $arch ) ) if $arch;
 
-    &proc( *MAN, $command{'man'}, @manargs, "--", $name )
-      || &mydie("$0: open of $command{'man'} command failed: $!\n");
+    # search first for base manual pages, and maybe later in ports
+    if ($freebsd_base_manpages_first && $section eq "" && $manpath =~ m/ and Ports$/) {
+        warn "search for base pages first: $name\n" if $debug >= 2;
+	my @m = ("-M", &manpath_without_ports($manpath_m));
+        warn "X $command{'man'} @m @manargs -- x $name x\n" if $debug >= 3;
+        &proc( *MAN, $command{'man'}, @m,  @manargs, "--", $name )
+      	    || &mydie("$0: open of $command{'man'} command failed: $!\n");
+
+        if ( eof(MAN) ) {
+            warn "search for ports pages as well: $name\n" if $debug >= 2;
+	    @m = ("-M", $manpath_m);
+            warn "X $command{'man'} @m @manargs -- x $name x\n" if $debug >= 3;
+            &proc( *MAN, $command{'man'}, @m, @manargs, "--", $name )
+      	    	|| &mydie("$0: open of $command{'man'} command failed: $!\n");
+	}
+    } else {
+        my @m = $manpath_m ? ("-M", $manpath_m) : ();
+        warn "X $command{'man'} @m @manargs -- x $name x\n" if $debug >= 3;
+    	&proc( *MAN, $command{'man'}, @m, @manargs, "--", $name )
+      	    || &mydie("$0: open of $command{'man'} command failed: $!\n");
+    }
+
     if ( eof(MAN) ) {
         if ( $format eq "ascii" ) {
             print "Sorry, no data found for '$html_name'\n";
