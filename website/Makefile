@@ -19,9 +19,11 @@ MAINTAINER=carlavilla@FreeBSD.org
 ALL_LANGUAGES=	de el en es fr hu it ja nl ru tr zh-cn zh-tw
 
 LOCALBASE?=	/usr/local
+RUBY_PATH?=	${LOCALBASE}/bin
 
-RUBY_CMD =	${LOCALBASE}/bin/ruby
-HUGO_CMD =	${LOCALBASE}/bin/hugo
+RUBY_CMD?=	${RUBY_PATH}/ruby
+HUGO_CMD?=	${LOCALBASE}/bin/hugo
+
 HUGO_ARGS?=	--verbose
 RUBYLIB =	../shared/lib
 .export	RUBYLIB

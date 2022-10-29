@@ -26,9 +26,9 @@
 # shellcheck disable=SC3043
 
 
-LOCALBASE="/usr/local"
-ASCIIDOCTORPDF_CMD="${LOCALBASE}/bin/asciidoctor-pdf"
-ASCIIDOCTOREPUB_CMD="${LOCALBASE}/bin/asciidoctor-epub3"
+: "${GEM_PATH:="${LOCAL_BASE}/bin"}"
+: "${ASCIIDOCTORPDF_CMD:="${GEM_PATH}/asciidoctor-pdf"}"
+: "${ASCIIDOCTOREPUB3_CMD:="${GEM_PATH}/asciidoctor-epub3"}"
 
 build_pdf() {
 	if [ "$1" = "" ] || [ "$2" = "" ] || [ "$3" = "" ]; then
@@ -110,7 +110,7 @@ build_epub() {
 		local asciidoctor_file_name="_index.adoc"
 	fi
 
-	$ASCIIDOCTOREPUB_CMD \
+	$ASCIIDOCTOREPUB3_CMD \
 		-r ./shared/lib/man-macro.rb \
 		-r ./shared/lib/git-macro.rb \
 		-r ./shared/lib/packages-macro.rb \
