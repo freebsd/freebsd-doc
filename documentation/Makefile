@@ -32,13 +32,23 @@ BOOKONLY_LANGS=		mn
 ALL_LANGUAGES=	bn-bd da de el en es fr hu id it ja ko mn nl pl pt-br ru tr zh-cn zh-tw
 
 LOCALBASE?=	/usr/local
+USE_RUBYGEMS?=	NO
+GEM_PATH?=
 
-RUBY_CMD =	${LOCALBASE}/bin/ruby
+.if ${USE_RUBYGEMS} == "YES"
+GEMBASE?= 	${GEM_PATH}
+.else
+GEMBASE?= 	${LOCALBASE}
+.endif
+
+RUBY_CMD =	${GEMBASE}/bin/ruby
 HUGO_CMD =	${LOCALBASE}/bin/hugo
 HUGO_ARGS?=	--verbose --minify
 HUGO_OFFLINE_ARGS?= 	--environment offline --verbose --minify
-ASCIIDOCTOR_CMD=	${LOCALBASE}/bin/asciidoctor
-ASCIIDOCTORPDF_CMD=	${LOCALBASE}/bin/asciidoctor-pdf
+ROUGIFY_CMD=	${GEMBASE}/bin/rougify
+ASCIIDOCTOR_CMD=	${GEMBASE}/bin/asciidoctor
+ASCIIDOCTORPDF_CMD=	${GEMBASE}/bin/asciidoctor-pdf
+ASCIIDOCTOREPUB3_CMD= ${GEMBASE}/bin/asciidoctor-epub3
 
 .if defined(DOC_LANG) && !empty(DOC_LANG)
 LANGUAGES=	${DOC_LANG:S/,/ /g}
@@ -54,8 +64,8 @@ RUBYLIB =	../shared/lib
 .export	RUBYLIB
 
 RUN_DEPENDS=	${HUGO_CMD} \
-		${LOCALBASE}/bin/asciidoctor \
-		${LOCALBASE}/bin/rougify
+				${ASCIIDOCTOR_CMD} \
+				${ROUGIFY_CMD}
 
 .ifndef HOSTNAME
 .  ifdef BIND
@@ -111,13 +121,13 @@ requirements:
 .endfor
 
 requirements-pdf:
-.if !exists(${LOCALBASE}/bin/asciidoctor-pdf)
-	@(echo ${LOCALBASE}/bin/asciidoctor-pdf not found, please run 'pkg install rubygem-asciidoctor-pdf'; exit 1)
+.if !exists(${ASCIIDOCTORPDF_CMD})
+	@(echo ${ASCIIDOCTOR_CMD} not found, please install rubygem-asciidoctor-pdf; exit 1)
 .endif
 
 requirements-epub:
-.if !exists(${LOCALBASE}/bin/asciidoctor-epub3)
-	@(echo ${LOCALBASE}/bin/asciidoctor-epub3 not found, please run 'pkg install rubygem-asciidoctor-epub3'; exit 1)
+.if !exists(${ASCIIDOCTOREPUB3_CMD})
+	@(echo ${ASCIIDOCTOREPUB3_CMD} not found, please install rubygem-asciidoctor-epub3; exit 1)
 .endif
 
 starting-message: .PHONY
