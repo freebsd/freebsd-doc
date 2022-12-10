@@ -253,7 +253,7 @@ $manLocalDir    = '/usr/local/www/bsddoc/man';
 $manPathDefault = 'FreeBSD 13.1-RELEASE and Ports';
 
 %manPath = (
-    # supported releases / stable / current 
+    # supported RELEASES / STABLE / CURRENT 
     'FreeBSD 13.1-RELEASE and Ports',
 "$manLocalDir/FreeBSD-13.1-RELEASE/man:$manLocalDir/FreeBSD-13.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-13.1-RELEASE/man:$manLocalDir/FreeBSD-ports-13.1-RELEASE/misc",
     'FreeBSD 13.0-RELEASE and Ports',
@@ -317,8 +317,8 @@ $manPathDefault = 'FreeBSD 13.1-RELEASE and Ports';
     'FreeBSD 14.0-CURRENT',
 "$manLocalDir/FreeBSD-14.0-CURRENT/man:$manLocalDir/FreeBSD-14.0-CURRENT/openssl/man",
 
-    'FreeBSD 13.1-stable',
-"$manLocalDir/FreeBSD-13.1-stable/man:$manLocalDir/FreeBSD-13.1-stable/openssl/man",
+    'FreeBSD 13.1-STABLE',
+"$manLocalDir/FreeBSD-13.1-STABLE/man:$manLocalDir/FreeBSD-13.1-STABLE/openssl/man",
     'FreeBSD 13.1-RELEASE',
 "$manLocalDir/FreeBSD-13.1-RELEASE/man:$manLocalDir/FreeBSD-13.1-RELEASE/openssl/man",
     'FreeBSD 13.0-RELEASE',
