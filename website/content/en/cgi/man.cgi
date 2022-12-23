@@ -1189,6 +1189,10 @@ sub do_man {
     $form{'query'} =~ s/\s+$//;
     $form{'query'} =~ s/^\s+//;
 
+    # not supported query characters
+    $form{'query'} =~ s/"//g;
+    $form{'query'} =~ s/=//g;
+
     $name = $query = $form{'query'};
     $section  = $form{'sektion'};
     $apropos  = $form{'apropos'};
