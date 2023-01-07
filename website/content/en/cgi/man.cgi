@@ -1193,6 +1193,14 @@ sub do_man {
     $form{'query'} =~ s/"//g;
     $form{'query'} =~ s/=//g;
 
+    # Firefox opensearch autocomplete workaround
+    if ($form{'sourceid'} eq 'opensearch') {
+        # remove space between double colon
+        $form{'query'} =~ s/: :/::/g;
+        # remove space before a dot 
+        $form{'query'} =~ s/ \./\./g;
+    }
+
     $name = $query = $form{'query'};
     $section  = $form{'sektion'};
     $apropos  = $form{'apropos'};
