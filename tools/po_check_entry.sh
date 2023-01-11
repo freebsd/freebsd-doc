@@ -50,7 +50,7 @@ done
 
 filter=$(echo "${filter}" | sed -e 's/|$//g')
 
-# Hilight the translation in the text providing the user with some context about
+# Highlight the translation in the text providing the user with some context about
 # where the reported words are used.
 if [ -n "${filter}" ]; then
 	echo "----------- translation -----------" 
