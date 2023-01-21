@@ -22,7 +22,7 @@ LOCALBASE?=	/usr/local
 
 RUBY_CMD =	${LOCALBASE}/bin/ruby
 HUGO_CMD =	${LOCALBASE}/bin/hugo
-HUGO_ARGS?=	--verbose
+HUGO_ARGS?=
 RUBYLIB =	../shared/lib
 .export	RUBYLIB
 
