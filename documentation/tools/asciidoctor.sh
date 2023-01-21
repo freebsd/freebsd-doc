@@ -77,7 +77,7 @@ build_pdf() {
 				echo "  font not found, skipping pdf build"
 				return
 			fi
-			theme_font="-a scripts=cjk -a pdf-theme=./shared/zh-cn/zh-cn-theme.yml -a pdf-fontsdir=$LOCALBASE/share/docproj-fonts-cjk"
+			theme_font="-a pdf-theme=./shared/zh-cn/zh-cn-theme.yml -a pdf-fontsdir=$LOCALBASE/share/docproj-fonts-cjk"
 			;;
 		zh-tw)
 			if [ ! -f "$LOCALBASE/share/docproj-fonts-cjk/NotoSansTC-Medium.otf" ]; then
