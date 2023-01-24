@@ -106,6 +106,7 @@ sub Fetch
     else
     {
     	$message = "<p>The specified message cannot be accessed.</p>\n";
+	warn "$0: error open '$file' $!\n";
     }
 
     print &short_html_header("FreeBSD Mail Archives");
