@@ -51,6 +51,8 @@ sub Fetch
     $file =~ s|/+|/|;
     $file =~ s|^archive/|$messagepath/|;
 
+    my $valid_list_name = '^current/(ctm|cvs|dev|freebsd|netperf|p4|soc|svn|trustedbsd|vendors)(-[a-z0-9-]+)?$';
+
     # read the full archive 
     if ($type eq 'archive') {
 	# from the FreeBSD ftp server
@@ -61,7 +63,7 @@ sub Fetch
 	}
 	
 	# from the local mail archive for current mails
-	elsif ($file =~ m%^current/(cvs|svn|freebsd|p4|trustedbsd)-[a-z0-9-]+$% &&
+	elsif ($file =~ /$valid_list_name/ &&
 	       open(DATA, "$messagepathcurrent$file")) {
 	    print "Content-type: text/plain\n\n"; 
 	    while(<DATA>) {
@@ -73,7 +75,7 @@ sub Fetch
     }
 
     if (($file =~ /^$messagepath/ && -f $file && open(DATA, $file)) ||
-	($file =~ m%^current/(cvs|svn|freebsd|p4|trustedbsd)-[a-z0-9-]+$% &&
+	($file =~ /$valid_list_name/ &&
 	 open(DATA, "$messagepathcurrent$file")))
     {
 	@finfo = stat DATA;
