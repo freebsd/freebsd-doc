@@ -51,7 +51,7 @@ sub Fetch
     $file =~ s|/+|/|;
     $file =~ s|^archive/|$messagepath/|;
 
-    my $valid_list_name = '^current/(ctm|cvs|dev|freebsd|netperf|p4|soc|svn|trustedbsd|vendors)(-[a-z0-9-]+)?$';
+    my $valid_list_name = '^current/(aic7xxx|archbsd|ctm|cvs|dev|freebsd|netperf|oi|p4|soc|svn|trustedbsd|vendors)(-[a-z0-9-]+)?$';
 
     # read the full archive 
     if ($type eq 'archive') {
