@@ -14,7 +14,7 @@ if (!defined($hsty_base)) {
     # However, if we aren't running as a cgi, or if we're
     # running on cgi, hub, docs or people, use the absolute home path.
     if (!defined($ENV{'HTTP_HOST'}) ||
-	$ENV{'HTTP_HOST'} =~ /(docs|man|man-dev|people|ports|mailarchive.ysv).freebsd.org/i) {
+	$ENV{'HTTP_HOST'} =~ /(docs|man|man-dev|people|ports).freebsd.org/i) {
 
 	$hsty_base = '//www.FreeBSD.org'
     } else {
