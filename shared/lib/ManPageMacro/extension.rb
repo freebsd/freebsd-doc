@@ -15,7 +15,7 @@ class ManPageMacro < Asciidoctor::Extensions::InlineMacroProcessor
     else
       ""
     end
-    url = %(https://www.freebsd.org/cgi/man.cgi?query=#{manname}&sektion=#{section}&format=html)
+    url = %(https://man.freebsd.org/cgi/man.cgi?query=#{manname}&sektion=#{section}&format=html)
     %(<a href="#{url}">#{manname}(#{section})</a>)
   end
 end
