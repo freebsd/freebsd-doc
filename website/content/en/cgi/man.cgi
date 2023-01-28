@@ -1075,7 +1075,7 @@ $sections = join( "|", @sections );    # sections regexp
 $mailto                    = 'wosch@FreeBSD.org';
 $mailtoURL                 = 'https://wolfram.schneider.org';
 $mailtoURL                 = "mailto:$mailto" if !$mailtoURL;
-$full_url                  = 'https://www.freebsd.org/cgi/man.cgi';
+$full_url                  = 'https://man.freebsd.org/cgi/man.cgi';
 $want_to_link_to_this_page = 1;
 
 &secure_env;
