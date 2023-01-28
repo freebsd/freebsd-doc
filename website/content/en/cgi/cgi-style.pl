@@ -16,7 +16,7 @@ if (!defined($hsty_base)) {
     if (!defined($ENV{'HTTP_HOST'}) ||
 	$ENV{'HTTP_HOST'} =~ /(docs|man|man-dev|people|ports).freebsd.org/i) {
 
-	$hsty_base = '//www.FreeBSD.org'
+	$hsty_base = 'https://www.FreeBSD.org'
     } else {
 	$hsty_base = '..';
     }
