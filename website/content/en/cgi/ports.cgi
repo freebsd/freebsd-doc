@@ -568,7 +568,7 @@ two hours.</p>
 
 <p>
 You may also search the
-<a href="https://man.FreeBSD.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.</p>
+<a href="https://man.FreeBSD.org/cgi/man.cgi?manpath=freebsd-ports">ports manual pages</a>.</p>
 
 <p>
 <a href="$script_name">Back to the search engine</a></p>
