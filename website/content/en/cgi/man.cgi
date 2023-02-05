@@ -2089,7 +2089,7 @@ and OpenBSD. In this case it is not possible to create Postscript
 and troff output.</li>
 <li>The <a href="https://cgit.freebsd.org/src/tree/share/misc/bsd-family-tree">
 Unix family tree, BSD part</a>.</li>
-<li>The <a href="https://www.freebsd.org/cgi/ports.cgi">
+<li>The <a href="https://ports.freebsd.org/cgi/ports.cgi">
 FreeBSD Ports Changes</a> script.</li>
 <li>Copyright (c) and download for man pages by 
 OS vendors</li>
