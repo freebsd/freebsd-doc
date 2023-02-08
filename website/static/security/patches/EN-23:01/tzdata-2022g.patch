@@ -1,0 +1,804 @@
+--- contrib/tzdata/Makefile.orig
++++ contrib/tzdata/Makefile
+@@ -196,6 +196,7 @@
+ UTF8_LOCALE=	en_US.utf8
+ 
+ # Non-default libraries needed to link.
++# On some hosts, this should have -lintl unless CFLAGS has -DHAVE_GETTEXT=0.
+ LDLIBS=
+ 
+ # Add the following to the end of the "CFLAGS=" line as needed to override
+@@ -208,14 +209,18 @@
+ #	For example, N is 252460800 on AmigaOS.
+ #  -DHAVE_DECL_ASCTIME_R=0 if <time.h> does not declare asctime_r
+ #  -DHAVE_DECL_ENVIRON if <unistd.h> declares 'environ'
++#  -DHAVE_DECL_TIMEGM=0 if <time.h> does not declare timegm
+ #  -DHAVE_DIRECT_H if mkdir needs <direct.h> (MS-Windows)
+-#  -DHAVE_GENERIC=0 if _Generic does not work
+-#  -DHAVE_GETRANDOM if getgrandom works (e.g., GNU/Linux)*
+-#  -DHAVE_GETTEXT if 'gettext' works (e.g., GNU/Linux, FreeBSD, Solaris)*
++#  -DHAVE_GENERIC=0 if _Generic does not work*
++#  -DHAVE_GETRANDOM if getrandom works (e.g., GNU/Linux),
++#	-DHAVE_GETRANDOM=0 to avoid using getrandom
++#  -DHAVE_GETTEXT if gettext works (e.g., GNU/Linux, FreeBSD, Solaris),
++#	where LDLIBS also needs to contain -lintl on some hosts;
++#	-DHAVE_GETTEXT=0 to avoid using gettext
+ #  -DHAVE_INCOMPATIBLE_CTIME_R if your system's time.h declares
+ #	ctime_r and asctime_r incompatibly with the POSIX standard
+ #	(Solaris when _POSIX_PTHREAD_SEMANTICS is not defined).
+-#  -DHAVE_INTTYPES_H if you have a non-C99 compiler with <inttypes.h>
++#  -DHAVE_INTTYPES_H=0 if <inttypes.h> does not work*
+ #  -DHAVE_LINK=0 if your system lacks a link function
+ #  -DHAVE_LOCALTIME_R=0 if your system lacks a localtime_r function
+ #  -DHAVE_LOCALTIME_RZ=0 if you do not want zdump to use localtime_rz
+@@ -225,15 +230,17 @@
+ #	functions like 'link' or variables like 'tzname' required by POSIX
+ #  -DHAVE_SETENV=0 if your system lacks the setenv function
+ #  -DHAVE_SNPRINTF=0 if your system lacks the snprintf function
+-#  -DHAVE_STDINT_H if you have a non-C99 compiler with <stdint.h>*
++#  -DHAVE_STDCKDINT_H=0 if neither <stdckdint.h> nor substitutes like
++#	__builtin_add_overflow work*
++#  -DHAVE_STDINT_H=0 if <stdint.h> does not work*
+ #  -DHAVE_STRFTIME_L if <time.h> declares locale_t and strftime_l
+ #  -DHAVE_STRDUP=0 if your system lacks the strdup function
+ #  -DHAVE_STRTOLL=0 if your system lacks the strtoll function
+ #  -DHAVE_SYMLINK=0 if your system lacks the symlink function
+-#  -DHAVE_SYS_STAT_H=0 if your compiler lacks a <sys/stat.h>*
++#  -DHAVE_SYS_STAT_H=0 if <sys/stat.h> does not work*
+ #  -DHAVE_TZSET=0 if your system lacks a tzset function
+-#  -DHAVE_UNISTD_H=0 if your compiler lacks a <unistd.h>*
+-#  -DHAVE_UTMPX_H=0 if your compiler lacks a <utmpx.h>*
++#  -DHAVE_UNISTD_H=0 if <unistd.h> does not work*
++#  -DHAVE_UTMPX_H=0 if <utmpx.h> does not work*
+ #  -Dlocale_t=XXX if your system uses XXX instead of locale_t
+ #  -DRESERVE_STD_EXT_IDS if your platform reserves standard identifiers
+ #	with external linkage, e.g., applications cannot define 'localtime'.
+@@ -280,7 +287,7 @@
+   -Wdeclaration-after-statement -Wdouble-promotion \
+   -Wduplicated-branches -Wduplicated-cond \
+   -Wformat=2 -Wformat-overflow=2 -Wformat-signedness -Wformat-truncation \
+-  -Winit-self -Wlogical-op \
++  -Wimplicit-fallthrough=5 -Winit-self -Wlogical-op \
+   -Wmissing-declarations -Wmissing-prototypes -Wnested-externs \
+   -Wnull-dereference \
+   -Wold-style-definition -Woverlength-strings -Wpointer-arith \
+@@ -293,7 +300,7 @@
+   -Wtrampolines -Wundef -Wuninitialized -Wunused-macros -Wuse-after-free=3 \
+   -Wvariadic-macros -Wvla -Wwrite-strings \
+   -Wno-address -Wno-format-nonliteral -Wno-sign-compare \
+-  -Wno-type-limits -Wno-unused-parameter
++  -Wno-type-limits
+ #
+ # If your system has a "GMT offset" field in its "struct tm"s
+ # (or if you decide to add such a field in your system's "time.h" file),
+@@ -340,14 +347,11 @@
+ # If you want functions that were inspired by early versions of X3J11's work,
+ # add
+ #	-DSTD_INSPIRED
+-# to the end of the "CFLAGS=" line.  This arranges for the functions
+-# "offtime", "timelocal", "timegm", "timeoff",
+-# "posix2time", and "time2posix" to be added to the time conversion library.
++# to the end of the "CFLAGS=" line.  This arranges for the following
++# functions to be added to the time conversion library.
+ # "offtime" is like "gmtime" except that it accepts a second (long) argument
+ # that gives an offset to add to the time_t when converting it.
+ # "timelocal" is equivalent to "mktime".
+-# "timegm" is like "timelocal" except that it turns a struct tm into
+-# a time_t using UT (rather than local time as "timelocal" does).
+ # "timeoff" is like "timegm" except that it accepts a second (long) argument
+ # that gives an offset to use when converting to a time_t.
+ # "posix2time" and "time2posix" are described in an included manual page.
+@@ -495,6 +499,11 @@
+ # Flags to give 'gzip' when making a distribution.
+ GZIPFLAGS=	-9n
+ 
++# When comparing .tzs files, use GNU diff's -F'^TZ=' option if supported.
++# This makes it easier to see which Zone has been affected.
++DIFF_TZS=	 diff -u$$(! diff -u -F'^TZ=' - - <>/dev/null >&0 2>&1 \
++			   || echo ' -F^TZ=')
++
+ ###############################################################################
+ 
+ #MAKE=		make
+@@ -773,7 +782,8 @@
+ 		chmod +x $@.out
+ 		mv $@.out $@
+ 
+-check:		check_character_set check_white_space check_links \
++check: check_back check_mild
++check_mild:	check_character_set check_white_space check_links \
+ 		  check_name_lengths check_slashed_abbrs check_sorted \
+ 		  check_tables check_web check_ziguard check_zishrink check_tzs
+ 
+@@ -824,16 +834,19 @@
+ CHECK_CC_LIST = { n = split($$1,a,/,/); for (i=2; i<=n; i++) print a[1], a[i]; }
+ 
+ check_sorted: backward backzone iso3166.tab zone.tab zone1970.tab
+-		$(AWK) '/^Link/ {printf "%.5d %s\n", g, $$3} /^$$/ {g++}' \
++		$(AWK) '/^Link/ {printf "%.5d %s\n", g, $$3} !/./ {g++}' \
+ 		  backward | LC_ALL=C sort -cu
+ 		$(AWK) '/^Zone/ {print $$2}' backzone | LC_ALL=C sort -cu
+ 		touch $@
+ 
+-check_links:	checklinks.awk $(TDATA_TO_CHECK) tzdata.zi
++check_back:	checklinks.awk $(TDATA_TO_CHECK)
+ 		$(AWK) \
+ 		  -v DATAFORM=$(DATAFORM) \
+ 		  -v backcheck=backward \
+ 		  -f checklinks.awk $(TDATA_TO_CHECK)
++		touch $@
++
++check_links:	checklinks.awk tzdata.zi
+ 		$(AWK) \
+ 		  -v DATAFORM=$(DATAFORM) \
+ 		  -f checklinks.awk tzdata.zi
+@@ -849,7 +862,7 @@
+ 
+ check_tzs:	$(TZS) $(TZS_NEW)
+ 		if test -s $(TZS); then \
+-		  diff -u $(TZS) $(TZS_NEW); \
++		  $(DIFF_TZS) $(TZS) $(TZS_NEW); \
+ 		else \
+ 		  cp $(TZS_NEW) $(TZS); \
+ 		fi
+@@ -1050,7 +1063,7 @@
+ 		      TZS_YEAR="$$range" TZS_CUTOFF_FLAG="-t $$range" \
+ 			D=$$wd/$@.dir \
+ 		      to$$range.tzs) && \
+-		  diff -u $(TIME_T_ALTERNATIVES_HEAD).dir/to$$range.tzs \
++		  $(DIFF_TZS) $(TIME_T_ALTERNATIVES_HEAD).dir/to$$range.tzs \
+ 			  $@.dir/to$$range.tzs && \
+ 		  if diff -q Makefile Makefile 2>/dev/null; then \
+ 		    quiet_option='-q'; \
+@@ -1220,7 +1233,7 @@
+ zic.o:		private.h tzfile.h version.h
+ 
+ .PHONY: ALL INSTALL all
+-.PHONY: check check_time_t_alternatives
++.PHONY: check check_mild check_time_t_alternatives
+ .PHONY: check_web check_zishrink
+ .PHONY: clean clean_misc dummy.zd force_tzs
+ .PHONY: install install_data maintainer-clean names
+--- contrib/tzdata/NEWS.orig
++++ contrib/tzdata/NEWS
+@@ -1,5 +1,91 @@
+ News for the tz database
+ 
++Release 2022g - 2022-11-29 08:58:31 -0800
++
++  Briefly:
++    The northern edge of Chihuahua changes to US timekeeping.
++    Much of Greenland stops changing clocks after March 2023.
++    Fix some pre-1996 timestamps in northern Canada.
++    C89 is now deprecated; please use C99 or later.
++    Portability fixes for AIX, libintl, MS-Windows, musl, z/OS
++    In C code, use more C23 features if available.
++    C23 timegm now supported by default
++    Fixes for unlikely integer overflows
++
++  Changes to future timestamps
++
++    In the Mexican state of Chihuahua, the border strip near the US
++    will change to agree with nearby US locations on 2022-11-30.
++    The strip's western part, represented by Ciudad Juárez, switches
++    from -06 all year to -07/-06 with US DST rules, like El Paso, TX.
++    The eastern part, represented by Ojinaga, will observe US DST next
++    year, like Presidio, TX.  (Thanks to Heitor David Pinto.)
++    A new Zone America/Ciudad_Juarez splits from America/Ojinaga.
++
++    Much of Greenland, represented by America/Nuuk, stops observing
++    winter time after March 2023, so its daylight saving time becomes
++    standard time.  (Thanks to Jonas Nyrup and Jürgen Appel.)
++
++  Changes to past timestamps
++
++    Changes for pre-1996 northern Canada (thanks to Chris Walton):
++
++      Merge America/Iqaluit and America/Pangnirtung into the former,
++      with a backward compatibility link for the latter name.
++      There is no good evidence the two locations differ since 1970.
++      This change affects pre-1996 America/Pangnirtung timestamps.
++
++      Cambridge Bay, Inuvik, Iqaluit, Rankin Inlet, Resolute and
++      Yellowknife did not observe DST in 1965, and did observe DST
++      from 1972 through 1979.
++
++      Whitehorse moved from -09 to -08 on 1966-02-27, not 1967-05-28.
++
++    Colombia's 1993 fallback was 02-06 24:00, not 04-04 00:00.
++    (Thanks to Alois Treindl.)
++
++    Singapore's 1981-12-31 change was at 16:00 UTC (23:30 local time),
++    not 24:00 local time.  (Thanks to Geoff Clare via Robert Elz.)
++
++  Changes to code
++
++    Although tzcode still works with C89, bugs found in recent routine
++    maintenance indicate that bitrot has set in and that in practice
++    C89 is no longer used to build tzcode.  As it is a maintenance
++    burden, support for C89 is planned to be removed soon.  Instead,
++    please use compilers compatible with C99, C11, C17, or C23.
++
++    timegm, which tzcode implemented in 1989, will finally be
++    standardized 34 years later as part of C23, so timegm is now
++    supported even if STD_INSPIRED is not defined.
++
++    Fix bug in zdump's tzalloc emulation on hosts that lack tm_zone.
++    (Problem reported by Đoàn Trần Công Danh.)
++
++    Fix bug in zic on hosts where malloc(0) yields NULL on success.
++    (Problem reported by Tim McBrayer for AIX 6.1.)
++
++    Fix zic configuration to avoid linkage failures on some platforms.
++    (Problems reported by Gilmore Davidson and Igor Ivanov.)
++
++    Work around MS-Windows nmake incompatibility with POSIX.
++    (Problem reported by Manuela Friedrich.)
++
++    Port mktime and strftime to debugging platforms where accessing
++    uninitialized data has undefined behavior (strftime problem
++    reported by Robert Elz).
++
++    Check more carefully for unlikely integer overflows, preferring
++    C23 <stdckdint.h> to overflow checking by hand, as the latter has
++    had obscure bugs.
++
++  Changes to build procedure
++
++    New Makefile rule check_mild that skips checking whether Link
++    lines are in the file 'backward'.  (Inspired by a suggestion from
++    Stephen Colebourne.)
++
++
+ Release 2022f - 2022-10-28 18:04:57 -0700
+ 
+   Briefly:
+@@ -16,7 +102,7 @@
+     In C code, use some C23 features if available.
+     Remove no-longer-needed workaround for Qt bug 53071.
+ 
+-  Changes to future timestamps.
++  Changes to future timestamps
+ 
+     Mexico will no longer observe DST after 2022, except for areas
+     near the US border that continue to observe US DST rules.
+@@ -24,6 +110,7 @@
+     from -07 (-06 with DST) to year-round -06, thus not changing
+     its clocks that day.  The new law states that Chihuahua
+     near the US border no longer observes US DST.
++    (Thanks to gera for the heads-up about Chihuahua.)
+ 
+     Fiji will not observe DST in 2022/3.  (Thanks to Shalvin Narayan.)
+     For now, assume DST is suspended indefinitely.
+--- contrib/tzdata/africa.orig
++++ contrib/tzdata/africa
+@@ -588,6 +588,10 @@
+ # Agalega Is, Rodriguez
+ # no information; probably like Indian/Mauritius
+ 
++
++# Morocco
++# See Africa/Ceuta for Spanish Morocco.
++
+ # From Alex Krivenyshev (2008-05-09):
+ # Here is an article that Morocco plan to introduce Daylight Saving Time between
+ # 1 June, 2008 and 27 September, 2008.
+--- contrib/tzdata/asia.orig
++++ contrib/tzdata/asia
+@@ -3585,7 +3585,7 @@
+ 			7:20	-	+0720	1941 Sep  1
+ 			7:30	-	+0730	1942 Feb 16
+ 			9:00	-	+09	1945 Sep 12
+-			7:30	-	+0730	1982 Jan  1
++			7:30	-	+0730	1981 Dec 31 16:00u
+ 			8:00	-	+08
+ 
+ # Spratly Is
+--- contrib/tzdata/backward.orig
++++ contrib/tzdata/backward
+@@ -267,6 +267,7 @@
+ Link	America/Indiana/Indianapolis	America/Fort_Wayne
+ Link	America/Toronto		America/Montreal
+ Link	America/Toronto		America/Nipigon
++Link	America/Iqaluit		America/Pangnirtung
+ Link	America/Rio_Branco	America/Porto_Acre
+ Link	America/Winnipeg	America/Rainy_River
+ Link	America/Argentina/Cordoba	America/Rosario
+--- contrib/tzdata/backzone.orig
++++ contrib/tzdata/backzone
+@@ -7,6 +7,10 @@
+ # tz@iana.org for general use in the future).  For more, please see
+ # the file CONTRIBUTING in the tz distribution.
+ 
++# When proposing changes to this file, please use 'git format-patch'
++# format, either by attaching the resulting .patch file to your email,
++# or by using 'git send-email'.  This will help maintainers save time.
++
+ 
+ # From Paul Eggert (2014-10-31):
+ 
+@@ -750,6 +754,55 @@
+ 			-5:00	1:00	EDT	1942 Feb  9  2:00s
+ 			-5:00	Canada	E%sT
+ 
++# From Rives McDow (1999-11-08):
++# On October 31, when the rest of Nunavut went to Central time,
++# Pangnirtung wobbled.  Here is the result of their wobble:
++#
++# The following businesses and organizations in Pangnirtung use Central Time:
++#
++#	First Air, Power Corp, Nunavut Construction, Health Center, RCMP,
++#	Eastern Arctic National Parks, A & D Specialist
++#
++# The following businesses and organizations in Pangnirtung use Eastern Time:
++#
++#	Hamlet office, All other businesses, Both schools, Airport operator
++#
++# This has made for an interesting situation there, which warranted the news.
++# No one there that I spoke with seems concerned, or has plans to
++# change the local methods of keeping time, as it evidently does not
++# really interfere with any activities or make things difficult locally.
++# They plan to celebrate New Year's turn-over twice, one hour apart,
++# so it appears that the situation will last at least that long.
++# The Nunavut Intergovernmental Affairs hopes that they will "come to
++# their senses", but the locals evidently don't see any problem with
++# the current state of affairs.
++
++# From Michaela Rodrigue, writing in the
++# Nunatsiaq News (1999-11-19):
++# http://www.nunatsiaqonline.ca/archives/nunavut991130/nvt91119_17.html
++# Clyde River, Pangnirtung and Sanikiluaq now operate with two time zones,
++# central - or Nunavut time - for government offices, and eastern time
++# for municipal offices and schools....  Igloolik [was similar but then]
++# made the switch to central time on Saturday, Nov. 6.
++
++# From Chris Walton (2022-11-06):
++# The implication is that Pangnirtung and Qikiqtarjuaq have observed Eastern
++# Time as far back as 1984 (and likely even further back than that).
++# It is possible that these communities never actually observed Atlantic
++# Time, but that would be difficult to prove.
++# From Paul Eggert (2022-11-06):
++# This is in 'backzone' as we have no good evidence that Pangnirtung differs
++# from America/Iqaluit since 1970.  A Google Books snippet view of
++# volume 2, page 186 of "Pilot of Arctic Canada", published 1959 by
++# the Canadian Hydrographic Service, suggests (though does not state)
++# that Pangnirtung observed EST then.
++#
++# aka Panniqtuuq
++Zone America/Pangnirtung 0	-	-00	1921 # trading post est.
++			-5:00	NT_YK	E%sT	1999 Oct 31  2:00
++			-6:00	Canada	C%sT	2000 Oct 29  2:00
++			-5:00	Canada	E%sT
++
+ # United States
+ #
+ # From Paul Eggert (2018-03-18):
+@@ -1043,7 +1096,7 @@
+ 			7:20	-	+0720	1941 Sep  1
+ 			7:30	-	+0730	1942 Feb 16
+ 			9:00	-	+09	1945 Sep 12
+-			7:30	-	+0730	1982 Jan  1
++			7:30	-	+0730	1981 Dec 31 16:00u
+ 			8:00	-	+08
+ 
+ # Kuwait
+--- contrib/tzdata/europe.orig
++++ contrib/tzdata/europe
+@@ -1103,7 +1103,30 @@
+ # "National Park" by Executive Order:
+ # http://naalakkersuisut.gl/~/media/Nanoq/Files/Attached%20Files/Engelske-tekster/Legislation/Executive%20Order%20National%20Park.rtf
+ # It is their only National Park.
+-#
++
++# From Jonas Nyrup (2022-11-24):
++# On last Saturday in October 2023 when DST ends America/Nuuk will switch
++# from -03/-02 to -02/-01
++# https://sermitsiaq.ag/forslagtidsforskel-danmark-mindskes-sommertid-beholdes
++# ...
++# https://sermitsiaq.ag/groenland-skifte-tidszone-trods-bekymringer
++#
++# From Jürgen Appel (2022-11-25):
++# https://ina.gl/samlinger/oversigt-over-samlinger/samling/dagsordener/dagsorden.aspx?lang=da&day=24-11-2022
++# If I understand this correctly, from the next planned switch to
++# summer time, Greenland will permanently stay at that time, i.e. no
++# switch back to winter time in 2023 will occur.
++#
++# From Paul Eggert (2022-11-28):
++# The official document in Danish
++# https://naalakkersuisut.gl/-/media/naalakkersuisut/filer/kundgoerelser/2022/11/2511/31_da_inatsisartutlov-om-tidens-bestemmelse.pdf?la=da&hash=A33597D8A38CC7038465241119EF34F3
++# says standard time for Greenland is -02, that Naalakkersuisut can lay down
++# rules for DST and can require some areas to use a different time zone,
++# and that this all takes effect 2023-03-25 22:00.  The abovementioned
++# "bekymringer" URL says the intent is no transition March 25, that
++# Greenland will not go back to winter time in fall 2023, and that
++# only America/Nuuk is affected (though further changes may occur).
++
+ # Rule	NAME	FROM	TO	-	IN	ON	AT	SAVE	LETTER/S
+ Rule	Thule	1991	1992	-	Mar	lastSun	2:00	1:00	D
+ Rule	Thule	1991	1992	-	Sep	lastSun	2:00	0	S
+@@ -1126,7 +1149,8 @@
+ 			-1:00	EU	-01/+00
+ Zone America/Nuuk	-3:26:56 -	LMT	1916 Jul 28 # Godthåb
+ 			-3:00	-	-03	1980 Apr  6  2:00
+-			-3:00	EU	-03/-02
++			-3:00	EU	-03/-02	2023 Mar 25 22:00
++			-2:00	-	-02
+ Zone America/Thule	-4:35:08 -	LMT	1916 Jul 28 # Pituffik
+ 			-4:00	Thule	A%sT
+ 
+--- contrib/tzdata/northamerica.orig
++++ contrib/tzdata/northamerica
+@@ -1969,6 +1969,37 @@
+ 
+ # Northwest Territories, Nunavut, Yukon
+ 
++# From Chris Walton (2022-11-06):
++# Whitehorse Star - Thursday April 22, 1965 - page 1
++# title: DST Starts Monday ...
++# https://www.newspapers.com/image/578587481/
++# The title of this first article is wrong and/or misleading.
++# Also, the start time shown in the  article is vague; it simply says "after
++# midnight" when it probably should have stated 2:00a.m....
++#
++# Whitehorse Star - Monday October 25, 1965 - page 15 ...
++# https://www.newspapers.com/image/578589147/
++# The 1965 Yukon Council minutes can be found here:
++# http://assets.yukonarchives.ca/PER_YG_06_1965_C20_S02_v1.pdf
++# ... I do not currently believe that NWT touched any of its clocks in 1965....
++#
++# Whitehorse Star - Thursday Feb 24,1966 - page 2
++# title: It's Time for YDT ...
++# https://www.newspapers.com/image/578575979/ ...
++# America/Whitehorse as a permanent change from UTC-9(YST) to
++# UTC-8(PST) at 00:00 on Sunday February 27, 1966....
++#
++# Whitehorse Star - Friday April 28,1972 - page 6
++# title: Daylight Saving Time for N.W.T....
++# https://www.newspapers.com/image/578701610/ ...
++# Nunavut and NWT zones ... DST starting in 1972.... Start and End ...
++# should be the same as the rest of Canada
++#
++#
++# From Paul Eggert (2022-11-06):
++# For now, assume Yukon's 1965-04-22 spring forward was 00:00 -> 02:00, as this
++# seems likely than 02:00 -> 04:00 and matches "after midnight".
++
+ # From Paul Eggert (2006-03-22):
+ # Dawson switched to PST in 1973.  Inuvik switched to MST in 1979.
+ # Mathew Englander (1996-10-07) gives the following refs:
+@@ -2083,6 +2114,13 @@
+ # * Interpretation Act, RSY 2002, c 125
+ # https://www.canlii.org/en/yk/laws/stat/rsy-2002-c-125/latest/rsy-2002-c-125.html
+ 
++# From Chris Walton (2022-11-06):
++# The 5th edition of the Atlas of Canada contains a time zone map that
++# shows both legislated and observed time zone boundaries.
++# All communities on Baffin Island are shown to be observing Eastern time.
++# The date on the map is 1984.
++# https://ftp.maps.canada.ca/pub/nrcan_rncan/raster/atlas_5_ed/eng/other/referencemaps/mcr4056.pdf
++
+ # From Rives McDow (1999-09-04):
+ # Nunavut ... moved ... to incorporate the whole territory into one time zone.
+ # Nunavut moves to single time zone Oct. 31
+@@ -2095,40 +2133,7 @@
+ # From Paul Eggert (1999-09-20):
+ # Basic Facts: The New Territory
+ # http://www.nunavut.com/basicfacts/english/basicfacts_1territory.html
+-# (1999) reports that Pangnirtung operates on eastern time,
+-# and that Coral Harbour does not observe DST.  We don't know when
+-# Pangnirtung switched to eastern time; we'll guess 1995.
+-
+-# From Rives McDow (1999-11-08):
+-# On October 31, when the rest of Nunavut went to Central time,
+-# Pangnirtung wobbled.  Here is the result of their wobble:
+-#
+-# The following businesses and organizations in Pangnirtung use Central Time:
+-#
+-#	First Air, Power Corp, Nunavut Construction, Health Center, RCMP,
+-#	Eastern Arctic National Parks, A & D Specialist
+-#
+-# The following businesses and organizations in Pangnirtung use Eastern Time:
+-#
+-#	Hamlet office, All other businesses, Both schools, Airport operator
+-#
+-# This has made for an interesting situation there, which warranted the news.
+-# No one there that I spoke with seems concerned, or has plans to
+-# change the local methods of keeping time, as it evidently does not
+-# really interfere with any activities or make things difficult locally.
+-# They plan to celebrate New Year's turn-over twice, one hour apart,
+-# so it appears that the situation will last at least that long.
+-# The Nunavut Intergovernmental Affairs hopes that they will "come to
+-# their senses", but the locals evidently don't see any problem with
+-# the current state of affairs.
+-
+-# From Michaela Rodrigue, writing in the
+-# Nunatsiaq News (1999-11-19):
+-# http://www.nunatsiaqonline.ca/archives/nunavut991130/nvt91119_17.html
+-# Clyde River, Pangnirtung and Sanikiluaq now operate with two time zones,
+-# central - or Nunavut time - for government offices, and eastern time
+-# for municipal offices and schools....  Igloolik [was similar but then]
+-# made the switch to central time on Saturday, Nov. 6.
++# (1999) reports that ... Coral Harbour does not observe DST.
+ 
+ # From Paul Eggert (2000-10-02):
+ # Matthews and Vincent (1998) say the following, but we lack histories
+@@ -2287,18 +2292,12 @@
+ Rule	NT_YK	1942	only	-	Feb	 9	2:00	1:00	W # War
+ Rule	NT_YK	1945	only	-	Aug	14	23:00u	1:00	P # Peace
+ Rule	NT_YK	1945	only	-	Sep	30	2:00	0	S
+-Rule	NT_YK	1965	only	-	Apr	lastSun	0:00	2:00	DD
+-Rule	NT_YK	1965	only	-	Oct	lastSun	2:00	0	S
+-Rule	NT_YK	1980	1986	-	Apr	lastSun	2:00	1:00	D
+-Rule	NT_YK	1980	2006	-	Oct	lastSun	2:00	0	S
++Rule	NT_YK	1972	1986	-	Apr	lastSun	2:00	1:00	D
++Rule	NT_YK	1972	2006	-	Oct	lastSun	2:00	0	S
+ Rule	NT_YK	1987	2006	-	Apr	Sun>=1	2:00	1:00	D
++Rule	Yukon	1965	only	-	Apr	lastSun	0:00	2:00	DD
++Rule	Yukon	1965	only	-	Oct	lastSun	2:00	0	S
+ # Zone	NAME		STDOFF	RULES	FORMAT	[UNTIL]
+-# aka Panniqtuuq
+-Zone America/Pangnirtung 0	-	-00	1921 # trading post est.
+-			-4:00	NT_YK	A%sT	1995 Apr Sun>=1  2:00
+-			-5:00	Canada	E%sT	1999 Oct 31  2:00
+-			-6:00	Canada	C%sT	2000 Oct 29  2:00
+-			-5:00	Canada	E%sT
+ # formerly Frobisher Bay
+ Zone America/Iqaluit	0	-	-00	1942 Aug # Frobisher Bay est.
+ 			-5:00	NT_YK	E%sT	1999 Oct 31  2:00
+@@ -2331,13 +2330,15 @@
+ 			-7:00	NT_YK	M%sT	1980
+ 			-7:00	Canada	M%sT
+ Zone America/Whitehorse	-9:00:12 -	LMT	1900 Aug 20
+-			-9:00	NT_YK	Y%sT	1967 May 28  0:00
+-			-8:00	NT_YK	P%sT	1980
++			-9:00	NT_YK	Y%sT	1965
++			-9:00	Yukon	Y%sT	1966 Feb 27  0:00
++			-8:00	-	PST	1980
+ 			-8:00	Canada	P%sT	2020 Nov  1
+ 			-7:00	-	MST
+ Zone America/Dawson	-9:17:40 -	LMT	1900 Aug 20
+-			-9:00	NT_YK	Y%sT	1973 Oct 28  0:00
+-			-8:00	NT_YK	P%sT	1980
++			-9:00	NT_YK	Y%sT	1965
++			-9:00	Yukon	Y%sT	1973 Oct 28  0:00
++			-8:00	-	PST	1980
+ 			-8:00	Canada	P%sT	2020 Nov  1
+ 			-7:00	-	MST
+ 
+@@ -2559,6 +2560,14 @@
+ # This abolishes DST except where US DST rules are observed,
+ # and in addition changes all of Chihuahua to -06 with no DST.
+ 
++# From Heitor David Pinto (2022-11-28):
++# Now the northern municipalities want to have the same time zone as the
++# respective neighboring cities in the US, for example Juárez in UTC-7 with
++# DST, matching El Paso, and Ojinaga in UTC-6 with DST, matching Presidio....
++# the president authorized the publication of the decree for November 29,
++# so the time change would occur on November 30 at 0:00.
++# http://puentelibre.mx/noticia/ciudad_juarez_cambio_horario_noviembre_2022/
++
+ # Rule	NAME	FROM	TO	-	IN	ON	AT	SAVE	LETTER/S
+ Rule	Mexico	1931	only	-	May	1	23:00	1:00	D
+ Rule	Mexico	1931	only	-	Oct	1	0:00	0	S
+@@ -2590,14 +2599,12 @@
+ 			-6:00	Mexico	C%sT
+ # Coahuila, Nuevo León, Tamaulipas (near US border)
+ # This includes the following municipalities:
+-#   in Coahuila: Ocampo, Acuña, Zaragoza, Jiménez, Piedras Negras, Nava,
+-#     Guerrero, Hidalgo.
+-#   in Nuevo León: Anáhuac, Los Aldama.
++#   in Coahuila: Acuña, Allende, Guerrero, Hidalgo, Jiménez, Morelos, Nava,
++#     Ocampo, Piedras Negras, Villa Unión, Zaragoza
++#   in Nuevo León: Anáhuac
+ #   in Tamaulipas: Nuevo Laredo, Guerrero, Mier, Miguel Alemán, Camargo,
+ #     Gustavo Díaz Ordaz, Reynosa, Río Bravo, Valle Hermoso, Matamoros.
+-# See: Inicia mañana Horario de Verano en zona fronteriza, El Universal,
+-# 2016-03-12
+-# http://www.eluniversal.com.mx/articulo/estados/2016/03/12/inicia-manana-horario-de-verano-en-zona-fronteriza
++# https://www.dof.gob.mx/nota_detalle.php?codigo=5670045&fecha=28/10/2022
+ Zone America/Matamoros	-6:30:00 -	LMT	1922 Jan  1  6:00u
+ 			-6:00	-	CST	1988
+ 			-6:00	US	C%sT	1989
+@@ -2616,10 +2623,24 @@
+ 			-6:00	Mexico	C%sT	2001 Sep 30  2:00
+ 			-6:00	-	CST	2002 Feb 20
+ 			-6:00	Mexico	C%sT
+-# Chihuahua (near US border)
++# Chihuahua (near US border - western side)
+ # This includes the municipalities of Janos, Ascensión, Juárez, Guadalupe,
+-# Práxedis G Guerrero, Coyame del Sotol, Ojinaga, and Manuel Benavides.
+-# (See the 2016-03-12 El Universal source mentioned above.)
++# and Práxedis G Guerrero.
++# http://gaceta.diputados.gob.mx/PDF/65/2a022/nov/20221124-VII.pdf
++Zone America/Ciudad_Juarez -7:05:56 -	LMT	1922 Jan  1  7:00u
++			-7:00	-	MST	1927 Jun 10 23:00
++			-6:00	-	CST	1930 Nov 15
++			-7:00	Mexico	M%sT	1932 Apr  1
++			-6:00	-	CST	1996
++			-6:00	Mexico	C%sT	1998
++			-6:00	-	CST	1998 Apr Sun>=1  3:00
++			-7:00	Mexico	M%sT	2010
++			-7:00	US	M%sT	2022 Oct 30  2:00
++			-6:00	-	CST	2022 Nov 30  0:00
++			-7:00	US	M%sT
++# Chihuahua (near US border - eastern side)
++# The municipalities of Coyame del Sotol, Ojinaga, and Manuel Benavides.
++# http://gaceta.diputados.gob.mx/PDF/65/2a022/nov/20221124-VII.pdf
+ Zone America/Ojinaga	-6:57:40 -	LMT	1922 Jan  1  7:00u
+ 			-7:00	-	MST	1927 Jun 10 23:00
+ 			-6:00	-	CST	1930 Nov 15
+@@ -2629,7 +2650,8 @@
+ 			-6:00	-	CST	1998 Apr Sun>=1  3:00
+ 			-7:00	Mexico	M%sT	2010
+ 			-7:00	US	M%sT	2022 Oct 30  2:00
+-			-6:00	-	CST
++			-6:00	-	CST	2022 Nov 30  0:00
++			-6:00	US	C%sT
+ # Chihuahua (away from US border)
+ Zone America/Chihuahua	-7:04:20 -	LMT	1922 Jan  1  7:00u
+ 			-7:00	-	MST	1927 Jun 10 23:00
+@@ -2651,6 +2673,18 @@
+ 			-7:00	Mexico	M%sT	1999
+ 			-7:00	-	MST
+ 
++# Baja California Sur, Nayarit (except Bahía de Banderas), Sinaloa
++Zone America/Mazatlan	-7:05:40 -	LMT	1922 Jan  1  7:00u
++			-7:00	-	MST	1927 Jun 10 23:00
++			-6:00	-	CST	1930 Nov 15
++			-7:00	Mexico	M%sT	1932 Apr  1
++			-6:00	-	CST	1942 Apr 24
++			-7:00	-	MST	1949 Jan 14
++			-8:00	-	PST	1970
++			-7:00	Mexico	M%sT
++
++# Bahía de Banderas
++
+ # From Alexander Krivenyshev (2010-04-21):
+ # According to news, Bahía de Banderas (Mexican state of Nayarit)
+ # changed time zone UTC-7 to new time zone UTC-6 on April 4, 2010 (to
+@@ -2678,17 +2712,6 @@
+ # From Arthur David Olson (2010-05-01):
+ # Use "Bahia_Banderas" to keep the name to fourteen characters.
+ 
+-# Mazatlán
+-Zone America/Mazatlan	-7:05:40 -	LMT	1922 Jan  1  7:00u
+-			-7:00	-	MST	1927 Jun 10 23:00
+-			-6:00	-	CST	1930 Nov 15
+-			-7:00	Mexico	M%sT	1932 Apr  1
+-			-6:00	-	CST	1942 Apr 24
+-			-7:00	-	MST	1949 Jan 14
+-			-8:00	-	PST	1970
+-			-7:00	Mexico	M%sT
+-
+-# Bahía de Banderas
+ Zone America/Bahia_Banderas -7:01:00 -	LMT	1922 Jan  1  7:00u
+ 			-7:00	-	MST	1927 Jun 10 23:00
+ 			-6:00	-	CST	1930 Nov 15
+--- contrib/tzdata/southamerica.orig
++++ contrib/tzdata/southamerica
+@@ -1418,9 +1418,14 @@
+ # Milne gives 4:56:16.4 for Bogotá time in 1899.  He writes,
+ # "A variation of fifteen minutes in the public clocks of Bogota is not rare."
+ 
++# From Alois Treindl (2022-11-10):
++# End of time change in Colombia 1993 ... should be 6 February 24h ...
++# DECRETO 267 DE 1993
++# https://www.suin-juriscol.gov.co/viewDocument.asp?ruta=Decretos/1061335
++
+ # Rule	NAME	FROM	TO	-	IN	ON	AT	SAVE	LETTER/S
+-Rule	CO	1992	only	-	May	 3	0:00	1:00	-
+-Rule	CO	1993	only	-	Apr	 4	0:00	0	-
++Rule	CO	1992	only	-	May	 3	 0:00	1:00	-
++Rule	CO	1993	only	-	Feb	 6	24:00	0	-
+ # Zone	NAME		STDOFF	RULES	FORMAT	[UNTIL]
+ 		#STDOFF	-4:56:16.4
+ Zone	America/Bogota	-4:56:16 -	LMT	1884 Mar 13
+--- contrib/tzdata/theory.html.orig
++++ contrib/tzdata/theory.html
+@@ -60,7 +60,6 @@
+ American mountain time zone can choose from the timezones
+ <code>America/Denver</code> which observes US-style daylight saving
+ time (<abbr>DST</abbr>),
+-<code>America/Mazatlan</code> which observes Mexican-style <abbr>DST</abbr>,
+ and <code>America/Phoenix</code> which does not observe <abbr>DST</abbr>.
+ Applications that also deal with past timestamps in the mountain time
+ zone can choose from over a dozen timezones, such as
+--- contrib/tzdata/version.orig
++++ contrib/tzdata/version
+@@ -1 +1 @@
+-2022f
++2022g
+--- contrib/tzdata/zone.tab.orig
++++ contrib/tzdata/zone.tab
+@@ -114,8 +114,7 @@
+ CA	+5320-06025	America/Goose_Bay	Atlantic - Labrador (most areas)
+ CA	+5125-05707	America/Blanc-Sablon	AST - QC (Lower North Shore)
+ CA	+4339-07923	America/Toronto	Eastern - ON, QC (most areas)
+-CA	+6344-06828	America/Iqaluit	Eastern - NU (most east areas)
+-CA	+6608-06544	America/Pangnirtung	Eastern - NU (Pangnirtung)
++CA	+6344-06828	America/Iqaluit	Eastern - NU (most areas)
+ CA	+484531-0913718	America/Atikokan	EST - ON (Atikokan); NU (Coral H)
+ CA	+4953-09709	America/Winnipeg	Central - ON (west); Manitoba
+ CA	+744144-0944945	America/Resolute	Central - NU (Resolute)
+@@ -277,17 +276,18 @@
+ MU	-2010+05730	Indian/Mauritius
+ MV	+0410+07330	Indian/Maldives
+ MW	-1547+03500	Africa/Blantyre
+-MX	+1924-09909	America/Mexico_City	Central Time
+-MX	+2105-08646	America/Cancun	Eastern Standard Time - Quintana Roo
+-MX	+2058-08937	America/Merida	Central Time - Campeche, Yucatan
+-MX	+2540-10019	America/Monterrey	Central Time - Durango; Coahuila, Nuevo Leon, Tamaulipas (most areas)
+-MX	+2550-09730	America/Matamoros	Central Time US - Coahuila, Nuevo Leon, Tamaulipas (US border)
+-MX	+2313-10625	America/Mazatlan	Mountain Time - Baja California Sur, Nayarit, Sinaloa
+-MX	+2838-10605	America/Chihuahua	Mountain Time - Chihuahua (most areas)
+-MX	+2934-10425	America/Ojinaga	Mountain Time US - Chihuahua (US border)
+-MX	+2904-11058	America/Hermosillo	Mountain Standard Time - Sonora
+-MX	+3232-11701	America/Tijuana	Pacific Time US - Baja California
+-MX	+2048-10515	America/Bahia_Banderas	Central Time - Bahia de Banderas
++MX	+1924-09909	America/Mexico_City	Central Mexico
++MX	+2105-08646	America/Cancun	Quintana Roo
++MX	+2058-08937	America/Merida	Campeche, Yucatan
++MX	+2540-10019	America/Monterrey	Durango; Coahuila, Nuevo Leon, Tamaulipas (most areas)
++MX	+2550-09730	America/Matamoros	Coahuila, Nuevo Leon, Tamaulipas (US border)
++MX	+2838-10605	America/Chihuahua	Chihuahua (most areas)
++MX	+3144-10629	America/Ciudad_Juarez	Chihuahua (US border - west)
++MX	+2934-10425	America/Ojinaga	Chihuahua (US border - east)
++MX	+2313-10625	America/Mazatlan	Baja California Sur, Nayarit (most areas), Sinaloa
++MX	+2048-10515	America/Bahia_Banderas	Bahia de Banderas
++MX	+2904-11058	America/Hermosillo	Sonora
++MX	+3232-11701	America/Tijuana	Baja California
+ MY	+0310+10142	Asia/Kuala_Lumpur	Malaysia (peninsula)
+ MY	+0133+11020	Asia/Kuching	Sabah, Sarawak
+ MZ	-2558+03235	Africa/Maputo
+--- contrib/tzdata/zone1970.tab.orig
++++ contrib/tzdata/zone1970.tab
+@@ -103,8 +103,7 @@
+ CA	+4606-06447	America/Moncton	Atlantic - New Brunswick
+ CA	+5320-06025	America/Goose_Bay	Atlantic - Labrador (most areas)
+ CA,BS	+4339-07923	America/Toronto	Eastern - ON, QC (most areas), Bahamas
+-CA	+6344-06828	America/Iqaluit	Eastern - NU (most east areas)
+-CA	+6608-06544	America/Pangnirtung	Eastern - NU (Pangnirtung)
++CA	+6344-06828	America/Iqaluit	Eastern - NU (most areas)
+ CA	+4953-09709	America/Winnipeg	Central - ON (west); Manitoba
+ CA	+744144-0944945	America/Resolute	Central - NU (Resolute)
+ CA	+624900-0920459	America/Rankin_Inlet	Central - NU (central)
+@@ -215,17 +214,18 @@
+ MT	+3554+01431	Europe/Malta
+ MU	-2010+05730	Indian/Mauritius
+ MV,TF	+0410+07330	Indian/Maldives	Maldives, Kerguelen, St Paul I, Amsterdam I
+-MX	+1924-09909	America/Mexico_City	Central Time
+-MX	+2105-08646	America/Cancun	Eastern Standard Time - Quintana Roo
+-MX	+2058-08937	America/Merida	Central Time - Campeche, Yucatán
+-MX	+2540-10019	America/Monterrey	Central Time - Durango; Coahuila, Nuevo León, Tamaulipas (most areas)
+-MX	+2550-09730	America/Matamoros	Central Time US - Coahuila, Nuevo León, Tamaulipas (US border)
+-MX	+2313-10625	America/Mazatlan	Mountain Time - Baja California Sur, Nayarit, Sinaloa
+-MX	+2838-10605	America/Chihuahua	Mountain Time - Chihuahua (most areas)
+-MX	+2934-10425	America/Ojinaga	Mountain Time US - Chihuahua (US border)
+-MX	+2904-11058	America/Hermosillo	Mountain Standard Time - Sonora
+-MX	+3232-11701	America/Tijuana	Pacific Time US - Baja California
+-MX	+2048-10515	America/Bahia_Banderas	Central Time - Bahía de Banderas
++MX	+1924-09909	America/Mexico_City	Central Mexico
++MX	+2105-08646	America/Cancun	Quintana Roo
++MX	+2058-08937	America/Merida	Campeche, Yucatán
++MX	+2540-10019	America/Monterrey	Durango; Coahuila, Nuevo León, Tamaulipas (most areas)
++MX	+2550-09730	America/Matamoros	Coahuila, Nuevo León, Tamaulipas (US border)
++MX	+2838-10605	America/Chihuahua	Chihuahua (most areas)
++MX	+3144-10629	America/Ciudad_Juarez	Chihuahua (US border - west)
++MX	+2934-10425	America/Ojinaga	Chihuahua (US border - east)
++MX	+2313-10625	America/Mazatlan	Baja California Sur, Nayarit (most areas), Sinaloa
++MX	+2048-10515	America/Bahia_Banderas	Bahía de Banderas
++MX	+2904-11058	America/Hermosillo	Sonora
++MX	+3232-11701	America/Tijuana	Baja California
+ MY,BN	+0133+11020	Asia/Kuching	Sabah, Sarawak, Brunei
+ MZ,BI,BW,CD,MW,RW,ZM,ZW	-2558+03235	Africa/Maputo	Central Africa Time
+ NA	-2234+01706	Africa/Windhoek
+--- tools/build/mk/OptionalObsoleteFiles.inc.orig
++++ tools/build/mk/OptionalObsoleteFiles.inc
+@@ -9798,6 +9798,7 @@
+ OLD_FILES+=usr/share/zoneinfo/America/Cayman
+ OLD_FILES+=usr/share/zoneinfo/America/Chicago
+ OLD_FILES+=usr/share/zoneinfo/America/Chihuahua
++OLD_FILES+=usr/share/zoneinfo/America/Ciudad_Juarez
+ OLD_FILES+=usr/share/zoneinfo/America/Costa_Rica
+ OLD_FILES+=usr/share/zoneinfo/America/Creston
+ OLD_FILES+=usr/share/zoneinfo/America/Cuiaba
