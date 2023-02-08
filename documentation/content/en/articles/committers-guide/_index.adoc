@@ -805,15 +805,14 @@ Could not apply 646e0f9cda11... no color ls
 which looks scary.
 If you bring up an editor, you will see it is a typical 3-way merge conflict resolution that you may be familiar with from other source code systems (the rest of ls.c has been omitted):
 [source,shell]
-....
-<<<<<<< HEAD
-#ifdef COLORLS_NEW
-#include <terminfo.h>
-=======
-#undef COLORLS
-#ifdef COLORLS
-#include <termcap.h>
->>>>>>> 646e0f9cda11... no color ls
+ <<<<<<< HEAD
+ #ifdef COLORLS_NEW
+ #include <terminfo.h>
+ =======
+ #undef COLORLS
+ #ifdef COLORLS
+ #include <termcap.h>
+ >>>>>>> 646e0f9cda11... no color ls
 ....
 The new code is first, and your code is second.
 The right fix here is to just add a #undef COLORLS_NEW before #ifdef and then delete the old changes:
@@ -1181,46 +1180,49 @@ Because the current policy recommends against using merges, if the upstream Free
 Regular `git rebase` or `git pull --rebase` doesn't know how to rebase a merge commit **as a merge commit**,
 so instead of that you would have to recreate the commit.
 
-The easiest way to do this would be to create a side branch with the **contents** of the merged tree:
+The following steps should be taken to easily recreate the merge commit as if `git rebase --merge-commits` worked properly:
+* cd to the top of the repo
+* Create a side branch `XXX` with the **contents** of the merged tree.
+* Update this side branch `XXX` to be merged and up-to-date with FreeBSD's `main` branch.
+** In the worst case scenario, you would still have to resolve merge conflicts, if there was any, but this  should be really rare.
+** Resolve conflicts, and collapse multiple commits down to 1 if need be (without conflicts, there's no collapse needed)
+* checkout main
+* create a branch `YYY` (allows for easier unwinding if things go wrong)
+* Re-do the subtree merge
+* Instead of resolving any conflicts from the subtree merge, checkout the contents of XXX on top of it.
+** The trailing '.' is important, as is being at the top level of the repo.
+** Rather than switching branches to XXX, it splats the contents of XXX onto of the repo
+* Commit the results with the prior commit message (the example assumes there's only one merge on the XXX branch).
+* Make sure the branches are the same.
+* Do whatever review you need, including having others check it out if you think that's needed.
+* Push the commit, if you 'lost the race' again, just redo these steps again (see below for a recipe)
+* Delete the branches once the commit is upstream. They are throw-a-way.
+
+The commands one would use, following the above example of mtree, would be like so (the `#` starts a comment help line commands to descriptions above):
 
 [source,shell]
 ....
-% cd ../src
-% git fetch freebsd
-% git checkout -b merge_result
-% git merge freebsd/main
+% cd ../src			# CD to top of tree
+% git checkout -b XXX		# create new throw-away XXX branch for merge
+% git fetch freebsd		# Get changes from upstream from upstream
+% git merge freebsd/main	# Merge the changes and resolve conflicts
+% git checkout -b YYY freebsd/main # Create new throw-away YYY branch for redo
+% git subtree merge -P contrib/mtree vendor/NetBSD/mtree # Redo subtree merge
+% git checkout XXX .		# XXX branch has the conflict resolution
+% git commit -c XXX~1		# -c reuses the commit message from commit before rebase
+% git diff XXX YYY		# Should be empty
+% git show YYY			# Should only have changes you want, and be a merge commit from vendor branch
 ....
 
-Typically, there would be no merge conflicts here (because developers tend to work on different components).
-In the worst case scenario, you would still have to resolve merge conflicts, if there was any, but this  should be really rare.
-
-Now, checkout `freebsd/main` again as `new_merge`, and redo the merge:
-
+Note: if things go wrong with the commit, you can reset the `YYY` branch by reissuing the checkout command that created it with -B to start over:
 [source,shell]
 ....
-% git checkout -b new_merge freebsd/main
-% git subtree merge -P contrib/mtree vendor/NetBSD/mtree
-....
-
-Instead of resolving the conflicts, perform this instead:
-
-[source,shell]
-....
-% git checkout merge_result .
-....
-
-Which will overwrite the files with conflicts with the version found in `merge_result`.
-
-Examine the tree against `merge_result` to make sure that you haven't missed deleted files:
-
-[source,shell]
-....
-% git diff merge_result
+% git checkout -B YYY freebsd/main # Create new throw-away YYY branch if starting over is just going to be easier
 ....
 
 ==== Pushing the changes
 
-Once you are sure that you have a set of deltas you think is good, you can push it to a fork off GitHub or GitLab(TM) for others to review.
+Once you think you have a set of changes that are good, you can push it to a fork off GitHub or GitLab for others to review.
 One nice thing about Git is that it allows you to publish rough drafts of your work for others to review.
 While Phabricator is good for content review, publishing the updated vendor branch and merge commits lets others check the details as they will eventually appear in the repository.
 
@@ -1228,8 +1230,33 @@ After review, when you are sure it is a good change, you can push it to the Free
 
 [source,shell]
 ....
-% git push freebsd HEAD:main
+% git push freebsd YYY:main	# put the commit on upstream's main branch
+% git branch -D XXX		# Throw away the throw-a-way branches.
+% git branch -D YYY
 ....
+
+Note: I used `XXX` and `YYY` to make it obvious they are terrible names and should not leave your machine.
+If you use such names for other work, then you'll need to pick different names, or risk losing the other work.
+There is nothing magic about these names.
+Upstream will not allow you to push them, but never the less, please pay attention to the exact commands above.
+Some commands use syntax that differs only slightly from typical uses and that different behavior is critical to this recipe working.
+
+==== How to redo the if need be
+
+If you've tried to do the push in the previous section and it fails, then you should do the following to 'redo' things.
+This sequence keeps the commit with the commit message always at XXX~1 to make committing easier.
+
+[source,shell]
+....
+% git checkout -B XXX YYY	# recreate that throw-away-branch XXX and switch to it
+% git merge freebsd/main	# Merge the changes and resolve conflicts
+% git checkout -B YYY freebsd/main # Recreate new throw-away YYY branch for redo
+% git subtree merge -P contrib/mtree vendor/NetBSD/mtree # Redo subtree merge
+% git checkout XXX .		# XXX branch has the conflict resolution
+% git commit -c XXX~1		# -c reuses the commit message from commit before rebase
+....
+
+Then go check it out as above and push as above when ready.
 
 === Creating a new vendor branch
 
