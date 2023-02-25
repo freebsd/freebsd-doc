@@ -18,4 +18,7 @@ SUBDIR+=	website
 
 SUBDIR_PARALLEL=	yes
 
+run:
+	@(echo The 'run' target is only valid in a subdirectory; exit 1)
+
 .include <bsd.subdir.mk>

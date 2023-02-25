@@ -43,7 +43,7 @@ GEMBASE?= 	${LOCALBASE}
 
 RUBY_CMD =	${GEMBASE}/bin/ruby
 HUGO_CMD =	${LOCALBASE}/bin/hugo
-HUGO_ARGS?=	--verbose --minify
+HUGO_ARGS?=	--minify
 HUGO_OFFLINE_ARGS?= 	--environment offline --verbose --minify
 ROUGIFY_CMD=	${GEMBASE}/bin/rougify
 ASCIIDOCTOR_CMD=	${GEMBASE}/bin/asciidoctor

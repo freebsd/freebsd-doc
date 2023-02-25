@@ -12,11 +12,11 @@ if (!defined($hsty_base)) {
     # $hsty_base should be relative if possible, so that mirrors
     # serve their local copy instead of going to the main site.
     # However, if we aren't running as a cgi, or if we're
-    # running on cgi, hub, docs or people, use the absolute home path.
+    # running on one of the subdomains listed below, use the absolute home path.
     if (!defined($ENV{'HTTP_HOST'}) ||
-	$ENV{'HTTP_HOST'} =~ /(cgi|hub|docs|people|mailarchive.ysv).freebsd.org/i) {
+	$ENV{'HTTP_HOST'} =~ /(docs|docs-archive|mail-archive|man|man-dev|people|ports).freebsd.org/i) {
 
-	$hsty_base = '//www.FreeBSD.org'
+	$hsty_base = 'https://www.FreeBSD.org'
     } else {
 	$hsty_base = '..';
     }
@@ -236,7 +236,7 @@ sub html_footer {
     return qq`
 	</div>
         <div id="footer">
-          <a href="$hsty_base/copyright/">Legal Notices</a> | &copy; 1995-2022
+          <a href="$hsty_base/copyright/">Legal Notices</a> | &copy; 1995-2023
           The FreeBSD Project. All rights reserved.<br />
 	  <address>$hsty_author<br />$hsty_date</address>
         </div>

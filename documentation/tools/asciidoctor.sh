@@ -49,6 +49,8 @@ build_pdf() {
 	local cur_dir_source="content/$doc_lang/$doc_type/$doc_name/"
 	local cur_dir_output="public/$doc_lang/$doc_type/$doc_name/"
 
+	local theme_font=""
+
 	if [ ! -d "$cur_dir_output" ]; then
 		mkdir -p "$cur_dir_output"
 	fi
@@ -68,6 +70,27 @@ build_pdf() {
 		local asciidoctor_file_name="_index.adoc"
 	fi
 
+	# Check non default fonts
+	case "$doc_lang" in
+		zh-cn)
+			if [ ! -f "$LOCALBASE/share/docproj-fonts-cjk/NotoSansSC-Medium.otf" ]; then
+				echo "  font not found, skipping pdf build"
+				return
+			fi
+			theme_font="-a pdf-theme=./shared/zh-cn/zh-cn-theme.yml -a pdf-fontsdir=$LOCALBASE/share/docproj-fonts-cjk"
+			;;
+		zh-tw)
+			if [ ! -f "$LOCALBASE/share/docproj-fonts-cjk/NotoSansTC-Medium.otf" ]; then
+				echo "  font not found, skipping pdf build"
+				return
+			fi
+			theme_font="-a pdf-theme=./shared/zh-tw/zh-tw-theme.yml -a pdf-fontsdir=$LOCALBASE/share/docproj-fonts-cjk/"
+			;;
+		*)
+			theme_font="-a pdf-theme=default-with-fallback-font"
+			;;
+	esac
+
 	$ASCIIDOCTORPDF_CMD \
 		-r ./shared/lib/man-macro.rb \
 		-r ./shared/lib/git-macro.rb \
@@ -80,7 +103,7 @@ build_pdf() {
 		-a lang="$doc_lang" \
 		-a isonline=1 \
 		-a env-beastie=1 \
-		-a pdf-theme=default-with-fallback-font \
+		${theme_font} \
 		-o "${cur_dir_output}${doc_name}_${doc_lang}.pdf" \
 		"${cur_dir_source}${asciidoctor_file_name}"
 }

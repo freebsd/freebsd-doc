@@ -317,8 +317,8 @@ $manPathDefault = 'FreeBSD 13.1-RELEASE and Ports';
     'FreeBSD 14.0-CURRENT',
 "$manLocalDir/FreeBSD-14.0-CURRENT/man:$manLocalDir/FreeBSD-14.0-CURRENT/openssl/man",
 
-    'FreeBSD 13.1-STABLE',
-"$manLocalDir/FreeBSD-13.1-STABLE/man:$manLocalDir/FreeBSD-13.1-STABLE/openssl/man",
+    'FreeBSD 13.2-STABLE',
+"$manLocalDir/FreeBSD-13.2-STABLE/man:$manLocalDir/FreeBSD-13.2-STABLE/openssl/man",
     'FreeBSD 13.1-RELEASE',
 "$manLocalDir/FreeBSD-13.1-RELEASE/man:$manLocalDir/FreeBSD-13.1-RELEASE/openssl/man",
     'FreeBSD 13.0-RELEASE',
@@ -939,8 +939,8 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd',         'FreeBSD 13.1-RELEASE',
     'freebsd-release', 'FreeBSD 13.1-RELEASE',
 
-    'freebsd-stable',   'FreeBSD 13.1-STABLE',
-    'freebsd-stable13', 'FreeBSD 13.1-STABLE',
+    'freebsd-stable',   'FreeBSD 13.2-STABLE',
+    'freebsd-stable13', 'FreeBSD 13.2-STABLE',
     'freebsd-stable12', 'FreeBSD 12.4-STABLE',
 
     'freebsd-current',       'FreeBSD 14.0-CURRENT',
@@ -1075,7 +1075,7 @@ $sections = join( "|", @sections );    # sections regexp
 $mailto                    = 'wosch@FreeBSD.org';
 $mailtoURL                 = 'https://wolfram.schneider.org';
 $mailtoURL                 = "mailto:$mailto" if !$mailtoURL;
-$full_url                  = 'https://www.freebsd.org/cgi/man.cgi';
+$full_url                  = 'https://man.freebsd.org/cgi/man.cgi';
 $want_to_link_to_this_page = 1;
 
 &secure_env;
@@ -1117,8 +1117,8 @@ sub html_header {
     my $html_meta = q|
 <meta name="robots" content="nofollow" />
 <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />
-<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/man.xml" title="FreeBSD Manual Pages" />
-<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/man-freebsd-release-ports.xml" title="FreeBSD + Ports Manual Pages" />
+<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/man.xml" title="FreeBSD Man" />
+<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/man-freebsd-release-ports.xml" title="FreeBSD Man+P" />
 <style type="text/css">
 <!--
 b { color: #996600; }
@@ -1188,6 +1188,18 @@ sub do_man {
     # remove trailing spaces for dumb users
     $form{'query'} =~ s/\s+$//;
     $form{'query'} =~ s/^\s+//;
+
+    # not supported query characters
+    $form{'query'} =~ s/"//g;
+    $form{'query'} =~ s/=//g;
+
+    # Firefox opensearch autocomplete workaround
+    if ($form{'sourceid'} eq 'opensearch') {
+        # remove space between double colon
+        $form{'query'} =~ s/: :/::/g;
+        # remove space before a dot 
+        $form{'query'} =~ s/ \./\./g;
+    }
 
     $name = $query = $form{'query'};
     $section  = $form{'sektion'};
@@ -2077,7 +2089,7 @@ and OpenBSD. In this case it is not possible to create Postscript
 and troff output.</li>
 <li>The <a href="https://cgit.freebsd.org/src/tree/share/misc/bsd-family-tree">
 Unix family tree, BSD part</a>.</li>
-<li>The <a href="https://www.freebsd.org/cgi/ports.cgi">
+<li>The <a href="https://ports.freebsd.org/cgi/ports.cgi">
 FreeBSD Ports Changes</a> script.</li>
 <li>Copyright (c) and download for man pages by 
 OS vendors</li>

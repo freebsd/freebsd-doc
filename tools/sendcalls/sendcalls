@@ -1,0 +1,308 @@
+#!/usr/bin/env perl
+#
+# Copyright (c) 2020-2023 Lorenzo Salvadore <salvadore@FreeBSD.org>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+
+use strict;
+use warnings;
+
+use Getopt::Std;
+
+# -------------------------------------------------------
+# Global variables declaration
+# -------------------------------------------------------
+
+# Variables used to compute the time coordinates of the call (see below)
+#
+# They can be computed based on present date or given on the command line
+# through options (see --help).
+my $day;
+my $month;
+my $year;
+
+# Time coordinates of the call
+#
+# - $quarter is the number of the quarter for which we are sending the
+#   calls.
+# - $urgency_tag indicates the urgency with which we are requesting the
+#   reports. It will be included in the subject of the calling mail. It
+#   can be empty, [2 WEEKS LEFT REMINDER] or [LAST OFFICIAL REMINDER].
+my $quarter;
+my $urgency_tag;
+
+# Variables related to the contacts of the last status reports
+#
+# $year_last, $month_last_start, %month_last_stop and $quarter_last are
+# the year, the initial month, the last month and the number of the
+# quarter of the last quarterly status reports. They are used to compute
+# $quarter_last_directory, the directory where the reports for last
+# quarter can be found.
+my $year_last;
+my $month_last_start;
+my $month_last_stop;
+my $quarter_last;
+my $quarter_last_directory;
+
+# Variables related to the calls mail we are sending
+#
+# - $subject is the subject of the mail we send.
+# - $send_command is the command we run to send the mail.
+# - @bcc_recipients and @cc_recipients are the array of all the addresses
+#   we want to put in the BCC and CC field respectively. The To field
+#   contains freebsd-status-calls@FreeBSD.org.
+my $subject;
+my $send_command;
+my @bcc_recipients;
+my @cc_recipients;
+
+# Other variables
+# - %quarter_specific_recipients is a hash that contains lists of
+#   addresses. The addresses of each list should be contacted only for the
+#   quarter specified by the list's the keys.
+# - %template_substitutions is a hash that specifies for each quarter how
+#   the variabes in the call.template file should be substituted.
+# - %options is a hash used for registering option. See --help to list all
+#   available options.
+my %quarter_specific_recipients;
+my %template_substitutions;
+my %options;
+
+# -------------------------------------------------------
+# Variables initialization
+# -------------------------------------------------------
+
+@bcc_recipients = ();
+@cc_recipients = (	'freebsd-current@FreeBSD.org',
+			'freebsd-hackers@FreeBSD.org',
+			'devsummit@FreeBSD.org'	);
+
+$quarter_specific_recipients{1} = [	'secretary@asiabsdcon.org'	];
+$quarter_specific_recipients{2} = [	'info@bsdcan.org',
+					'soc-students@FreeBSD.org',
+					'soc-mentors@FreeBSD.org'	];
+$quarter_specific_recipients{3} = [	'soc-students@FreeBSD.org',
+					'soc-mentors@FreeBSD.org'	];
+$quarter_specific_recipients{4} = [];
+
+$template_substitutions{1}{'%%START%%'}	=	'January';
+$template_substitutions{1}{'%%STOP%%'}	=	'March';
+$template_substitutions{1}{'%%START_NUM%%'}	=	'01';
+$template_substitutions{1}{'%%STOP_NUM%%'}	=	'03';
+$template_substitutions{1}{'%%DEADLINE%%'}	=	'March, 31st';
+$template_substitutions{2}{'%%START%%'}	=	'April';
+$template_substitutions{2}{'%%STOP%%'}	=	'June';
+$template_substitutions{2}{'%%START_NUM%%'}	=	'04';
+$template_substitutions{2}{'%%STOP_NUM%%'}	=	'06';
+$template_substitutions{2}{'%%DEADLINE%%'}	=	'June, 30th';
+$template_substitutions{3}{'%%START%%'}	=	'July';
+$template_substitutions{3}{'%%STOP%%'}	=	'September';
+$template_substitutions{3}{'%%START_NUM%%'}	=	'07';
+$template_substitutions{3}{'%%STOP_NUM%%'}	=	'09';
+$template_substitutions{3}{'%%DEADLINE%%'}	=	'September, 30th';
+$template_substitutions{4}{'%%START%%'}	=	'October';
+$template_substitutions{4}{'%%STOP%%'}	=	'December';
+$template_substitutions{4}{'%%DEADLINE%%'}	=	'December, 31st';
+$template_substitutions{4}{'%%START_NUM%%'}	=	'10';
+$template_substitutions{4}{'%%STOP_NUM%%'}	=	'12';
+
+$main::VERSION = "[not versioned]";
+$Getopt::Std::STANDARD_HELP_VERSION = 1;
+
+# -------------------------------------------------------
+# Subroutines definition
+# -------------------------------------------------------
+
+sub main::HELP_MESSAGE
+{
+	print <<EOT;
+Usage: ./sendcalls [-d day] [-m month] [-y year] [-t] -s signature
+
+Options:
+	-d day		Day of the month: [1-31].
+	-m month	Month: [1-12].
+	-y year		Year: >= 1970
+			(I think you are unlikely to send calls before
+			the Unix epoch. And I am writing it in 2020.)
+	-t		Testing flag. Set it it you want to test the
+			script without actually send mails.
+	-s signature	Name to use for signing the status reports calls mail.
+
+Example:
+	./sendcalls -d 31 -m 2 -y 2000 -s 'Lorenzo Salvadore'
+	(Yes, you can send calls even on inexistent days such as
+	2020 February, 31st.)
+EOT
+	exit 1;
+}
+
+# -------------------------------------------------------
+# Execution starts here
+# -------------------------------------------------------
+getopts('d:m:y:s:t', \%options);
+
+main::HELP_MESSAGE if(not $options{'s'});
+
+# -------------------------------------------------------
+# Compute time coordinates (see global variables declaration)
+# -------------------------------------------------------
+
+(undef, undef, undef, $day, $month, $year, undef, undef, undef) = localtime();
+$year = $year + 1900;
+
+$day = $options{'d'} if($options{'d'});
+$month = $options{'m'} - 1 if($options{'m'});
+$year = $options{'y'} if($options{'y'});
+
+die "Choosen date does not seem plausibile: year is $year, month is $month and day is $day"
+if(	$day < 1 or
+	$day > 31 or
+	$month < 1 or
+	$month > 12 or
+	$year < 1970	);
+
+if($day < 14)
+{
+	$urgency_tag = '';
+}
+elsif($day < 23)
+{
+	$urgency_tag = '[2 WEEKS LEFT REMINDER] ';
+}
+else
+{
+	$urgency_tag = '[LAST OFFICIAL REMINDER] ';
+}
+
+$quarter = int($month / 3) + 1;
+
+# -------------------------------------------------------
+# Compute @bcc_recipients and @cc_recipients
+# -------------------------------------------------------
+$year_last = $year;
+$month_last_start = sprintf("%02d",int((($month - 3) % 12) / 3) * 3 + 1);
+$month_last_stop = sprintf("%02d",$month_last_start + 2);
+$quarter_last = $quarter - 1;
+if($quarter_last == 0)
+{
+	$year_last = $year_last - 1;
+	$quarter_last = 4;
+}
+$quarter_last_directory =	'../../website/content/en/status/report-'.
+				$year_last.
+				'-'.
+				$month_last_start.
+				'-'.
+				$year_last.
+				'-'.
+				$month_last_stop;
+foreach(`ls $quarter_last_directory`)
+{
+	$_ =~ tr/\n//d;
+	open(quarterly_report, '<', $quarter_last_directory.'/'.$_) or
+	die "Could not open $quarter_last_directory/$_: $!";
+	while(<quarterly_report>)
+	{
+		if($_ =~ m/^Contact:.*(<.*@.*>)/)
+		{
+			my $address = $1;
+			$address =~ tr/<>//d;
+			push @bcc_recipients, $address if(not $address =~ m/\@FreeBSD.org$/i);
+		}
+	}
+	close(quarterly_report);
+}
+
+{
+	my %tmp = map {$_ => 0} @bcc_recipients;
+	@bcc_recipients = keys %tmp;
+}
+
+push @cc_recipients, @{ $quarter_specific_recipients{$quarter} };
+
+# -------------------------------------------------------
+# Compute missing %template_substitutions elements
+# -------------------------------------------------------
+$template_substitutions{$quarter}{'%%QUARTER%%'} = $quarter;
+$template_substitutions{$quarter}{'%%YEAR%%'} = $year;
+$template_substitutions{$quarter}{'%%SIGNATURE%%'} = $options{'s'};
+$template_substitutions{$quarter}{'%%DEADLINE%%'} =
+$template_substitutions{$quarter}{'%%DEADLINE%%'}.' '.$year;
+
+# -------------------------------------------------------
+# Generate mail text
+# -------------------------------------------------------
+open(call_template, '<', 'call.txt.template') or
+die "Could not open call.txt.template: $!";
+open(call_mail, '>', 'call.txt') or
+die "Could not open call.txt: $!";
+while(<call_template>)
+{
+	my $line = $_;
+	$line =~ s/$_/$template_substitutions{$quarter}{$_}/g
+		foreach(keys %{ $template_substitutions{$quarter} });
+	print call_mail $line;
+}
+close(call_template);
+close(call_mail);
+
+# -------------------------------------------------------
+# Compute $subject and $send_command
+# -------------------------------------------------------
+$subject = $urgency_tag."Call for ".$year."Q".$quarter." status reports";
+
+$send_command = "cat call.txt | mail -s \"".$subject."\"";
+# @bcc_recipients should never be empty as we have reports with mail
+# contacts every quarter, but we test it anyway: we do not want to
+# assume that this will be true forever
+$send_command = $send_command.' -b '.(join ',', @bcc_recipients) if(@bcc_recipients);
+# @cc_recipients should never be empty as we initialize it not empty
+# and never remove addresses from there, but we test it anyway: we do
+# not want to assume that this will be true forever
+$send_command = $send_command.' -c '.(join ',', @cc_recipients) if(@cc_recipients);
+$send_command = $send_command.' freebsd-status-calls@FreeBSD.org';
+
+# -------------------------------------------------------
+# Send mail or show testing information 
+# -------------------------------------------------------
+if($options{'t'})
+{
+	print <<EOT;
+send_command: $send_command
+subject: $subject
+call.txt:
+EOT
+	open(call_mail, '<', 'call.txt') or
+	die "Could not open call.txt: $!";
+	print <call_mail>;
+	close(call_mail);
+}
+else
+{
+	system $send_command;
+}
+
+# -------------------------------------------------------
+# Clean environment
+# -------------------------------------------------------
+unlink "call.txt";

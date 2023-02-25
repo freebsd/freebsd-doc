@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2022 Wolfram Schneider <wosch@FreeBSD.ORG>
+# Copyright (c) 1996-2023 Wolfram Schneider <wosch@FreeBSD.ORG>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -496,7 +496,7 @@ sub footer {
 
     print qq{
 <img align="right" src="$hsty_base/gifs/powerlogo.gif" alt="Powered by FreeBSD" />
-&copy; 1996-2022 by Wolfram Schneider. All rights reserved.<br />
+&copy; 1996-2023 by Wolfram Schneider. All rights reserved.<br />
 };
 
 #print q{$FreeBSD$} . "<br />\n";
@@ -505,6 +505,24 @@ sub footer {
       . qq{<i>$mailtoList</i></a><br />\n};
     print &last_update_message;
     print qq{<hr noshade="noshade" />\n<p />\n};
+}
+
+sub check_query {
+    my ($query, $sourceid) = @_;
+
+    $query =~ s/"/ /g;
+    $query =~ s/^\s+//;
+    $query =~ s/\s+$//;
+
+    # XXX: Firefox opensearch autocomplete workarounds
+    if ($sourceid eq 'opensearch') {
+	# remove space before a dot 
+	$query =~ s/ \././g;
+	# remove space between double colon
+	$query =~ s/: :/::/g;
+    }
+
+    return $query;
 }
 
 sub check_input {
@@ -550,7 +568,7 @@ two hours.</p>
 
 <p>
 You may also search the
-<a href="https://www.FreeBSD.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.</p>
+<a href="https://man.FreeBSD.org/cgi/man.cgi?manpath=freebsd-ports">ports manual pages</a>.</p>
 
 <p>
 <a href="$script_name">Back to the search engine</a></p>
@@ -571,6 +589,7 @@ $section     = $form{'sektion'};
 $section     = 'all' if ( !$section );
 $query       = $form{'query'};
 $stype       = $form{'stype'};
+$sourceid    = $form{'sourceid'} // "";
 $script_name = &env('SCRIPT_NAME');
 
 if ( $path_info eq "/source" ) {
@@ -602,9 +621,7 @@ if ( !$query && $query_string =~ /^([^=&]+)$/ ) {
 # automatically read collections, need only 0.2 sec on a pentium
 @sec = &readcoll;
 
-$query =~ s/"/ /g;
-$query =~ s/^\s+//;
-$query =~ s/\s+$//;
+$query = &check_query($query, $sourceid);
 &forms;
 
 if ( $query_string eq "" || !$query ) {
