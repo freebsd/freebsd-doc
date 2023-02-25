@@ -12,9 +12,9 @@ if (!defined($hsty_base)) {
     # $hsty_base should be relative if possible, so that mirrors
     # serve their local copy instead of going to the main site.
     # However, if we aren't running as a cgi, or if we're
-    # running on cgi, hub, docs or people, use the absolute home path.
+    # running on one of the subdomains listed below, use the absolute home path.
     if (!defined($ENV{'HTTP_HOST'}) ||
-	$ENV{'HTTP_HOST'} =~ /(docs|man|man-dev|people|ports).freebsd.org/i) {
+	$ENV{'HTTP_HOST'} =~ /(docs|docs-archive|mail-archive|man|man-dev|people|ports).freebsd.org/i) {
 
 	$hsty_base = 'https://www.FreeBSD.org'
     } else {

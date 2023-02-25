@@ -338,6 +338,7 @@ There are many primers for Git on the web, but the https://git-scm.com/book/en/v
 
 This section describes the read-write access for committers to push the commits from developers or contributors.
 
+[[git-mini-daily-use]]
 ===== Daily use
 
 * Clone the repository:
@@ -1047,16 +1048,7 @@ Instead, when this document refers to "merge commits", it means a commit origina
 Git provides some built-in support for this via the `git cherry` and `git log --cherry` commands.
 These commands compare the raw diffs of commits (but not other metadata such as log messages) to determine if two commits are identical.
 This works well when each commit from head is landed as a single commit to a stable branch, but it falls over if multiple commits from main are squashed together as a single commit to a stable branch.
-
-There are a few options for resolving this:
-
-1. We could ban squashing of commits and instead require that committers stage all of the fixup / follow-up commits to stable into a single push.
-This would still achieve the goal of stability in stable and releng branches since pushes are atomic and users doing a simple pull will never end up with a tree that has the main commit without the fixup(s).
-`git bisect` is also able to cope with this model via `git bisect skip`.
-
-2. We could adopt a consistent style for describing MFCs and write our own tooling to wrap around `git cherry` to determine the list of eligible commits.
-A simple approach here might be to use the syntax from `git cherry-pick -x`, but require that a squashed commit list all of the hashes (one line per hash) at the end of the commit message.
-Developers could do this by using `git cherry-pick -x` of each individual commit into a branch and then use `git rebase` to squash the commits down into a single commit, but collecting the `-x` annotations at the end of the landed commit log.
+The project makes extensive use of `git cherry-pick -x` with all lines preserved to work around these difficulties and is working on automated tooling to take advantage of this.
 
 ==== Commit message standards
 ===== Marking MFCs
@@ -1086,7 +1078,7 @@ This new metadata will have to be added via `git commit --amend` or similar afte
 We may also want to reserve some metadata fields in MFC commits such as Phabricator URLs for use by re@ in the future.
 
 Preserving existing metadata provides a very simple workflow.
-Developers can just use `git cherry-pick -x` without having to edit the log message.
+Developers use `git cherry-pick -x` without having to edit the log message.
 
 If instead we choose to adjust metadata in MFCs, developers will have to edit log messages explicitly via the use of `git cherry-pick --edit` or `git commit --amend`.
 However, as compared to svn, at least the existing commit message can be pre-populated and metadata fields can be added or removed without having to re-enter the entire commit message.
@@ -1094,259 +1086,6 @@ However, as compared to svn, at least the existing commit message can be pre-pop
 The bottom line is that developers will likely need to curate their commit message for MFCs that are non-trivial.
 
 ==== Examples
-
-===== Merging a Single Subversion Commit
-
-This walks through the process of merging a commit to stable/12 that was originally committed to head in Subversion.
-In this case, the original commit is r368685.
-
-The first step is to map the Subversion commit to a Git hash.
-Once you have fetched refs/notes/commits, you can pass the revision number to `git log --grep`:
-
-[source,shell]
-....
-% git log main --grep 368685
-commit ce8395ecfda2c8e332a2adf9a9432c2e7f35ea81
-Author: John Baldwin <jhb@FreeBSD.org>
-Date:   Wed Dec 16 00:11:30 2020 +0000
-
-    Use the 't' modifier to print a ptrdiff_t.
-
-    Reviewed by:    imp
-    Obtained from:  CheriBSD
-    Sponsored by:   DARPA
-    Differential Revision:  https://reviews.freebsd.org/D27576
-
-Notes:
-    svn path=/head/; revision=368685
-....
-
-Next, MFC the commit to a `stable/12` checkout:
-
-[source,shell]
-....
-git checkout stable/12
-git cherry-pick -x ce8395ecfda2c8e332a2adf9a9432c2e7f35ea81 --edit
-....
-
-Git will invoke the editor.
-Use this to remove the metadata that only applied to the original commit (Phabricator URL and Reviewed by).
-After the editor saves the updated log message, Git completes the commit:
-
-[source,shell]
-....
-[stable/12 3e3a548c4874] Use the 't' modifier to print a ptrdiff_t.
- Date: Wed Dec 16 00:11:30 2020 +0000
- 1 file changed, 1 insertion(+), 1 deletion(-)
-....
-
-The contents of the MFCd commit can be examined via `git show`:
-
-[source,shell]
-....
-% git show
-commit 3e3a548c487450825679e4bd63d8d1a67fd8bd2d (HEAD -> stable/12)
-Author: John Baldwin <jhb@FreeBSD.org>
-Date:   Wed Dec 16 00:11:30 2020 +0000
-
-    Use the 't' modifier to print a ptrdiff_t.
-
-    Obtained from:  CheriBSD
-    Sponsored by:   DARPA
-
-    (cherry picked from commit ce8395ecfda2c8e332a2adf9a9432c2e7f35ea81)
-
-diff --git a/sys/compat/linuxkpi/common/include/linux/printk.h b/sys/compat/linuxkpi/common/include/linux/printk.h
-index 31802bdd2c99..e6510e9e9834 100644
---- a/sys/compat/linuxkpi/common/include/linux/printk.h
-+++ b/sys/compat/linuxkpi/common/include/linux/printk.h
-@@ -68,7 +68,7 @@ print_hex_dump(const char *level, const char *prefix_str,
-                        printf("[%p] ", buf);
-                        break;
-                case DUMP_PREFIX_OFFSET:
--                       printf("[%p] ", (const char *)((const char *)buf -
-+                       printf("[%#tx] ", ((const char *)buf -
-                            (const char *)buf_old));
-                        break;
-                default:
-....
-
-The MFC commit can now be published via `git push`
-
-[source,shell]
-....
-% git push freebsd
-Enumerating objects: 17, done.
-Counting objects: 100% (17/17), done.
-Delta compression using up to 4 threads
-Compressing objects: 100% (7/7), done.
-Writing objects: 100% (9/9), 817 bytes | 204.00 KiB/s, done.
-Total 9 (delta 5), reused 1 (delta 1), pack-reused 0
-To gitrepo-dev.FreeBSD.org:src.git
-   525bd9c9dda7..3e3a548c4874  stable/12 -> stable/12
-....
-
-===== Merging a Single Subversion Commit with a Conflict
-
-This example is similar to the previous example except that the commit in question encounters a merge conflict.
-In this case, the original commit is r368314.
-
-As above, the first step is to map the Subversion commit to a Git hash:
-
-[source,shell]
-....
-% git log main --grep 368314
-commit 99963f5343a017e934e4d8ea2371a86789a46ff9
-Author: John Baldwin <jhb@FreeBSD.org>
-Date:   Thu Dec 3 22:01:13 2020 +0000
-
-    Don't transmit mbufs that aren't yet ready on TOE sockets.
-
-    This includes mbufs waiting for data from sendfile() I/O requests, or
-    mbufs awaiting encryption for KTLS.
-
-    Reviewed by:    np
-    MFC after:      2 weeks
-    Sponsored by:   Chelsio Communications
-    Differential Revision:  https://reviews.freebsd.org/D27469
-
-Notes:
-    svn path=/head/; revision=368314
-....
-
-Next, MFC the commit to a `stable/12` checkout:
-
-[source,shell]
-....
-% git checkout stable/12
-% git cherry-pick -x 99963f5343a017e934e4d8ea2371a86789a46ff9 --edit
-Auto-merging sys/dev/cxgbe/tom/t4_cpl_io.c
-CONFLICT (content): Merge conflict in sys/dev/cxgbe/tom/t4_cpl_io.c
-warning: inexact rename detection was skipped due to too many files.
-warning: you may want to set your merge.renamelimit variable to at least 7123 and retry the command.
-error: could not apply 99963f5343a0... Don't transmit mbufs that aren't yet ready on TOE sockets.
-hint: after resolving the conflicts, mark the corrected paths
-hint: with 'git add <paths>' or 'git rm <paths>'
-hint: and commit the result with 'git commit'
-....
-
-In this case, the commit encountered a merge conflict in sys/dev/cxge/tom/t4_cpl_io.c as kernel TLS is not present in stable/12.
-Note that Git does not invoke an editor to adjust the commit message due to the conflict.
-`git status` confirms that this file has merge conflicts:
-
-[source,shell]
-....
-% git status
-On branch stable/12
-Your branch is up to date with 'upstream/stable/12'.
-
-You are currently cherry-picking commit 99963f5343a0.
-  (fix conflicts and run "git cherry-pick --continue")
-  (use "git cherry-pick --skip" to skip this patch)
-  (use "git cherry-pick --abort" to cancel the cherry-pick operation)
-
-Unmerged paths:
-  (use "git add <file>..." to mark resolution)
-        both modified:   sys/dev/cxgbe/tom/t4_cpl_io.c
-
-no changes added to commit (use "git add" and/or "git commit -a")
-....
-
-After editing the file to resolve the conflict, `git status` shows the conflict as resolved:
-
-[source,shell]
-....
-% git status
-On branch stable/12
-Your branch is up to date with 'upstream/stable/12'.
-
-You are currently cherry-picking commit 99963f5343a0.
-  (all conflicts fixed: run "git cherry-pick --continue")
-  (use "git cherry-pick --skip" to skip this patch)
-  (use "git cherry-pick --abort" to cancel the cherry-pick operation)
-
-Changes to be committed:
-        modified:   sys/dev/cxgbe/tom/t4_cpl_io.c
-....
-
-The cherry-pick can now be completed:
-
-[source,shell]
-....
-% git cherry-pick --continue
-....
-
-Since there was a merge conflict, Git invokes the editor to adjust the commit message.
-Trim the metadata fields from the commit log from the original commit to head and save the updated log message.
-
-The contents of the MFC commit can be examined via `git show`:
-
-[source,shell]
-....
-% git show
-commit 525bd9c9dda7e7c7efad2d4570c7fd8e1a8ffabc (HEAD -> stable/12)
-Author: John Baldwin <jhb@FreeBSD.org>
-Date:   Thu Dec 3 22:01:13 2020 +0000
-
-    Don't transmit mbufs that aren't yet ready on TOE sockets.
-
-    This includes mbufs waiting for data from sendfile() I/O requests, or
-    mbufs awaiting encryption for KTLS.
-
-    Sponsored by:   Chelsio Communications
-
-    (cherry picked from commit 99963f5343a017e934e4d8ea2371a86789a46ff9)
-
-diff --git a/sys/dev/cxgbe/tom/t4_cpl_io.c b/sys/dev/cxgbe/tom/t4_cpl_io.c
-index 8e8c2b8639e6..43861f10b689 100644
---- a/sys/dev/cxgbe/tom/t4_cpl_io.c
-+++ b/sys/dev/cxgbe/tom/t4_cpl_io.c
-@@ -746,6 +746,8 @@ t4_push_frames(struct adapter *sc, struct toepcb *toep, int drop)
-                for (m = sndptr; m != NULL; m = m->m_next) {
-                        int n;
-
-+                       if ((m->m_flags & M_NOTAVAIL) != 0)
-+                               break;
-                        if (IS_AIOTX_MBUF(m))
-                                n = sglist_count_vmpages(aiotx_mbuf_pages(m),
-                                    aiotx_mbuf_pgoff(m), m->m_len);
-@@ -821,8 +823,9 @@ t4_push_frames(struct adapter *sc, struct toepcb *toep, int drop)
-
-                /* nothing to send */
-                if (plen == 0) {
--                       KASSERT(m == NULL,
--                           ("%s: nothing to send, but m != NULL", __func__));
-+                       KASSERT(m == NULL || (m->m_flags & M_NOTAVAIL) != 0,
-+                           ("%s: nothing to send, but m != NULL is ready",
-+                           __func__));
-                        break;
-                }
-
-@@ -910,7 +913,7 @@ t4_push_frames(struct adapter *sc, struct toepcb *toep, int drop)
-                toep->txsd_avail--;
-
-                t4_l2t_send(sc, wr, toep->l2te);
--       } while (m != NULL);
-+       } while (m != NULL && (m->m_flags & M_NOTAVAIL) == 0);
-
-        /* Send a FIN if requested, but only if there's no more data to send */
-        if (m == NULL && toep->flags & TPF_SEND_FIN)
-....
-
-The MFC commit can now be published via `git push`
-
-[source,shell]
-....
-git push freebsd
-Enumerating objects: 13, done.
-Counting objects: 100% (13/13), done.
-Delta compression using up to 4 threads
-Compressing objects: 100% (7/7), done.
-Writing objects: 100% (7/7), 819 bytes | 117.00 KiB/s, done.
-Total 7 (delta 6), reused 0 (delta 0), pack-reused 0
-To gitrepo.FreeBSD.org:src.git
-   f4d0bc6aa6b9..525bd9c9dda7  stable/12 -> stable/12
-....
 
 [[vendor-import-git]]
 === Vendor Imports with Git
@@ -1596,90 +1335,6 @@ This hasn't connected `glorbnitz` to the build yet.
 How so do that is specific to the software being imported and is beyond the scope of this tutorial.
 ====
 
-=== FreeBSD Src Committer Transition Guide
-
-This section is designed to walk people through the conversion process from Subversion to Git, written from the source committer's point of view.
-
-==== Migrating from a Subversion tree
-
-This section will cover a couple of common scenarios for migrating from using the FreeBSD Subversion repo to the FreeBSD source Git repo.
-The FreeBSD Git conversion is still in beta status, so some minor things may change between this and going into production.
-
-The first thing to do is install Git. Any version of Git will do, though the latest one in ports / packages generally will be good.
-Either build it from ports, or install it using pkg (though some folks might use `su` or `doas` instead of `sudo`):
-
-[source,shell]
-....
-% sudo pkg install git
-....
-
-===== No staged changes migration
-
-If you have no changes pending, the migration is straightforward.
-In this, you abandon the Subversion tree and clone the Git repository.
-It's likely best to retain your Subversion tree, in case there's something you've forgotten about there.
-First, let's clone the repository:
-
-[source,shell]
-....
-% git clone -o freebsd --config remote.freebsd.fetch='+refs/notes/*:refs/notes/*' https://git.freebsd.org/src.git freebsd-src
-....
-
-will create a clone of the FreeBSD src repository into a subdirectory called `freebsd-src` and include the 'notes' about the revisions.
-We are currently mirroring the source repository to https://github.com/freebsd/freebsd-src.git as well.
-https://github.com/freebsd/freebsd-legacy.git has the old GitHub mirror with the old hashes should you need that for your migration.
-The GitHub `master` branch has been frozen.
-As the default in Git has changed, we've shifted from `master` to `main`; the new repository uses `main`.
-We also mirror the repository to GitLab at https://gitlab.com/FreeBSD/src.git .
-
-It's useful to have the old Subversion revisions available.
-This data is stored using Git notes, but Git doesn't fetch those by default.
-The --config and the argument above changed the default to fetch the notes.
-If you've cloned the repository without this, or wish to add notes to a previously cloned repository, use the following commands:
-
-[source,shell]
-....
-% git config --add remote.freebsd.fetch "+refs/notes/*:refs/notes/*"
-% git fetch
-....
-
-At this point you have the src checked out into a Git tree, ready to do other things.
-
-===== But I have changes that I've not committed
-
-If you are migrating from a tree that has changes you've not yet committed to FreeBSD, you'll need to follow the steps from the previous section first, and then follow these.
-
-[source,shell]
-....
-% cd path-to-svn-checkout-tree
-% svn diff > /tmp/src.diff
-% cd _mumble_/freebsd-src
-% git checkout -b working
-....
-
-This will create a diff of your current changes.
-The last command creates a branch called `working` though you can call it whatever you want.
-
-[source,shell]
-....
-% git apply /tmp/src.diff
-....
-
-this will apply all your pending changes to the working tree.
-This doesn't commit the change, so you'll need to make this permanent:
-
-[source,shell]
-....
-% git add _files_
-% git commit
-....
-
-The last command will commit these changes to the branch.
-The editor will prompt you for a commit message.
-Enter one as if you were committing to FreeBSD.
-
-At this point, your work is preserved, and in the Git repository.
-
 ===== Keeping current
 
 So, time passes.
@@ -1798,7 +1453,7 @@ Note: merging vendor branch commits will not work with this technique.
 
 ===== Finding the Subversion Revision
 
-You'll need to make sure that you've fetched the notes (see the `No staged changes migration` section above for details.
+You'll need to make sure that you've fetched the notes (see the <<git-mini-daily-use>> for details).
 Once you have these, notes will show up in the git log command like so:
 
 [source,shell]
@@ -1815,51 +1470,6 @@ If you have a specific version in mind, you can use this construct:
 
 to find the specific revision.
 The hex number after 'commit' is the hash you can use to refer to this commit.
-
-==== Migrating from GitHub fork
-
-Note: as of this writing, https://github.com/freebsd/freebsd-src is mirroring all official branches, along with a `master` branch which is the legacy svn2git result.
-The `master` branch will not be updated anymore, and the link:https://github.com/freebsd/freebsd-src/commit/de1aa3dab23c06fec962a14da3e7b4755c5880cf[last commit] contains the instructions for migrating to the new `main` branch.
-We'll retain the `master` branch for a certain time, but in the future it will only be kept in the link:https://github.com/freebsd/freebsd-legacy[freebsd-legacy] repository.
-In addition, link:https://github.com/freebsd/git_conv/wiki/Migrating-merge-based-project-from-legacy-git-tree[this article] has an earlier version of the last commit instructions that may be helpful.
-
-When migrating branches from a GitHub fork from the old GitHub mirror to the official repo, the process is straight forward.
-This assumes that you have a `freebsd` upstream pointing to GitHub, adjust if necessary.
-This also assumes a clean tree before starting...
-
-===== Add the new `freebsd` upstream repository:
-
-[source,shell]
-....
-% git remote add freebsd https://git.freebsd.org/src.git
-% git fetch freebsd
-% git checkout --track freebsd/main
-....
-
-===== Rebase all your WIP branches.
-
-For each branch FOO, do the following after fetching the `freebsd` sources and creating a local `main` branch with the above checkout:
-
-[source,shell]
-....
-% git rebase -i freebsd/master FOO --onto main
-....
-
-And you'll now be tracking the official repository.
-You can then follow the `Keeping Current` section above to stay up to date.
-
-If you need to then commit work to FreeBSD, you can do so following the `Time to push changes upstream` instructions.
-You'll need to do the following once to update the push URL if you are a FreeBSD committer:
-
-[source,shell]
-....
-% git remote set-url --push freebsd ssh://git@gitrepo.freebsd.org/src.git
-....
-
-(Note that gitrepo.freebsd.org now points to the same addresses as repo.freebsd.org.)
-
-You will also need to add `freebsd` as the location to push to.
-The author recommends that your upstream GitHub repository remain the default push location so that you only push things into FreeBSD you intend to by making it explicit.
 
 [[git-faq]]
 === Git FAQ
@@ -3505,10 +3115,6 @@ In an effort to make it easier to keep FreeBSD portable across the platforms we 
 [.blockquote]
 Our 32-bit reference platform is i386, and our 64-bit reference platform is amd64.
 Major design work (including major API and ABI changes) must prove itself on at least one 32-bit and at least one 64-bit platform, preferably the primary reference platforms, before it may be committed to the source tree.
-
-The i386 and amd64 platforms were chosen due to being more readily available to developers and as representatives of more diverse processor and system designs - big versus little endian, register file versus register stack, different DMA and cache implementations, hardware page tables versus software TLB management etc.
-
-We will continue to re-evaluate this policy as cost and availability of the 64-bit platforms change.
 
 Developers should also be aware of our Tier Policy for the long term support of hardware architectures.
 The rules here are intended to provide guidance during the development process, and are distinct from the requirements for features and architectures listed in that section.
