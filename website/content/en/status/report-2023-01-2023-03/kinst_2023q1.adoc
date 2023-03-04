@@ -1,0 +1,71 @@
+=== Improve the kinst DTrace provider
+
+Links: +
+link:https://reviews.freebsd.org/D38825[libdtrace: implement inline function tracing] URL: link:https://reviews.freebsd.org/D38825[https://reviews.freebsd.org/D38825] +
+link:https://reviews.freebsd.org/D38732[dtrace(1): add -d flag to dump D script post-dt_sugar] URL: link:https://reviews.freebsd.org/D38732[https://reviews.freebsd.org/D38732]
+
+Contact: Christos Margiolis <christos@FreeBSD.org> +
+Contact: Mark Johnston <markj@FreeBSD.org>
+
+kinst is a new DTrace provider created by christos@ and markj@ that allows for
+arbitrary instruction tracing in a kernel function. kinst has been added to the
+base system in FreeBSD 14.0.
+
+link:https://www.freebsd.org/status/report-2022-07-2022-09/#_dtrace_instruction_level_dynamic_tracing[The 2022Q3 status report gives a brief introduction to kinst.]
+We're now working on inline function tracing (see review D38825 above) -- a much-requested DTrace feature -- by using kernel DWARF and ELF info to find the call sites of each inline copy and use that information to transform D syntax by turning kinst probes of the form:
+
+....
+	kinst::<inline_func>:<entry/return>
+....
+
+To:
+
+....
+	kinst::<caller_func1>:<offset>
+	kinst::<caller_func2>:<offset>
+	...
+....
+
+For example:
+
+....
+	# dtrace -dn 'kinst::cam_iosched_has_more_trim:entry { printf("\t%d\t%s", pid, execname); }'
+	dtrace:::ERROR
+	{
+		((self->%error) = 0x1);
+	}
+
+	kinst::cam_iosched_get_trim:13
+	{
+		printf("\t%d\t%s", pid, execname);
+	}
+
+	kinst::cam_iosched_next_bio:13
+	{
+		printf("\t%d\t%s", pid, execname);
+	}
+
+	kinst::cam_iosched_schedule:40
+	{
+		printf("\t%d\t%s", pid, execname);
+	}
+
+	dtrace: description 'kinst::cam_iosched_has_more_trim:entry ' matched 4 probes
+	CPU     ID                    FUNCTION:NAME
+	  0  81502          cam_iosched_schedule:40     2       clock
+	  0  81501          cam_iosched_next_bio:13     2       clock
+	  2  81502          cam_iosched_schedule:40     2       clock
+	  1  81502          cam_iosched_next_bio:13     0	kernel
+	  1  81503          cam_iosched_schedule:40     0	kernel
+	^C
+....
+
+A new `-d` flag has also been added to man:dtrace[1] which dumps the D script after libdtrace has applied syntactic transformations.
+
+Further goals include:
+
+* Implement a `locals` structure in D which stores the local variables of the traced function.
+  For example with `kinst::foo:<x>`, we could print the local variable `bar` by doing `print(locals->bar)` inside a D script.
+* Port kinst to riscv and/or arm64.
+
+Sponsor: The FreeBSD Foundation
