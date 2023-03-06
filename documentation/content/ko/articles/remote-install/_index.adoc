@@ -1,0 +1,395 @@
+---
+title: Remote Installation of the FreeBSD Operating System Without a Remote Console
+authors:
+  - author: Daniel Gerzo
+    email: danger@FreeBSD.org
+copyright: 2008-2021 The FreeBSD Documentation Project
+description: Describes the remote installation of the FreeBSD operating system when the console of the remote system is unavailable
+trademarks: ["freebsd", "general"]
+tags: ["Remote", "Installation", "FreeBSD"]
+---
+
+= Remote Installation of the FreeBSD Operating System Without a Remote Console
+:doctype: article
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:images-path: articles/remote-install/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+:imagesdir: ../../../images/{images-path}
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+[.abstract-title]
+Abstract
+
+This article documents the remote installation of the FreeBSD operating system when the console of the remote system is unavailable.
+The main idea behind this article is the result of a collaboration with `{mm}` with valuable input provided by `{pjd}`.
+
+'''
+
+toc::[]
+
+[[background]]
+== Background
+
+There are many server hosting providers in the world, but very few of them are officially supporting FreeBSD.
+They usually provide support for a Linux(R) distribution to be installed on the servers they offer.
+
+In some cases, these companies will install your preferred Linux(R) distribution if you request it.
+Using this option, we will attempt to install FreeBSD. In other cases, they may offer a rescue system which would be used in an emergency.
+It is possible to use this for our purposes as well.
+
+This article covers the basic installation and configuration steps required to bootstrap a remote installation of FreeBSD with RAID-1 and ZFS capabilities.
+
+[[intro]]
+== Introduction
+
+This section will summarize the purpose of this article and better explain what is covered herein.
+The instructions included in this article will benefit those using services provided by colocation facilities not supporting FreeBSD.
+
+[.procedure]
+====
+. As we have mentioned in the <<background>> section, many of the reputable server hosting companies provide some kind of rescue system, which is booted from their LAN and accessible over SSH. They usually provide this support in order to help their customers fix broken operating systems. As this article will explain, it is possible to install FreeBSD with the help of these rescue systems.
++
+. The next section of this article will describe how to configure, and build minimalistic FreeBSD on the local machine. That version will eventually be running on the remote machine from a ramdisk, which will allow us to install a complete FreeBSD operating system from an FTP mirror using the sysinstall utility.
+. The rest of this article will describe the installation procedure itself, as well as the configuration of the ZFS file system.
+====
+
+[[requirements]]
+=== Requirements
+
+To continue successfully, you must:
+
+* Have a network accessible operating system with SSH access
+* Understand the FreeBSD installation process
+* Be familiar with the man:sysinstall[8] utility
+* Have the FreeBSD installation SO image or CD handy
+
+[[preparation]]
+== Preparation - mfsBSD
+
+Before FreeBSD may be installed on the target system, it is necessary to build the minimal FreeBSD operating system image which will boot from the hard drive.
+This way the new system can be accessed from the network, and the rest of the installation can be done without remote access to the system console.
+
+The mfsBSD tool-set can be used to build a tiny FreeBSD image.
+As the name of mfsBSD suggests ("mfs" means "memory file system"), the resulting image runs entirely from a ramdisk.
+Thanks to this feature, the manipulation of hard drives will not be limited, therefore it will be possible to install a complete FreeBSD operating system.
+The mfsBSD http://mfsbsd.vx.sk/[home page] includes pointers to the latest release of the toolset.
+
+Please note that the internals of mfsBSD and how it all fits together is beyond the scope of this article.
+The interested reader should consult the original documentation of mfsBSD for more details.
+
+Download and extract the latest mfsBSD release and change your working directory to the directory where the mfsBSD scripts will reside:
+
+[source,shell]
+....
+# fetch http://mfsbsd.vx.sk/release/mfsbsd-2.1.tar.gz
+# tar xvzf mfsbsd-2.1.tar.gz
+# cd mfsbsd-2.1/
+....
+
+[[mfsbsd-config]]
+=== Configuration of mfsBSD
+
+Before booting mfsBSD, a few important configuration options have to be set.
+The most important that we have to get right is, naturally, the network setup.
+The most suitable method to configure networking options depends on whether we know beforehand the type of the network interface we will use, and the network interface driver to be loaded for our hardware.
+We will see how mfsBSD can be configured in either case.
+
+Another important thing to set is the `root` password.
+This can be done by editing [.filename]#conf/loader.conf#.
+Please see the included comments.
+
+==== The [.filename]#conf/interfaces.conf# method
+
+When the installed network interface card is unknown, it is possible to use the auto-detection features of mfsBSD.
+The startup scripts of mfsBSD can detect the correct driver to use, based on the MAC address of the interface, if we set the following options in [.filename]#conf/interfaces.conf#:
+
+[.programlisting]
+....
+mac_interfaces="ext1"
+ifconfig_ext1_mac="00:00:00:00:00:00"
+ifconfig_ext1="inet 192.168.0.2/24"
+....
+
+Do not forget to add the `defaultrouter` information to [.filename]#conf/rc.conf#:
+
+[.programlisting]
+....
+defaultrouter="192.168.0.1"
+....
+
+==== The [.filename]#conf/rc.conf# Method
+
+When the network interface driver is known, it is more convenient to use [.filename]#conf/rc.conf# for networking options.
+The syntax of this file is the same as the one used in the standard man:rc.conf[5] file of FreeBSD.
+
+For example, if you know that a man:re[4] network interface is going to be available, you can set the following options in [.filename]#conf/rc.conf#:
+
+[.programlisting]
+....
+defaultrouter="192.168.0.1"
+ifconfig_re0="inet 192.168.0.2/24"
+....
+
+[[mfsbsd-build]]
+=== Building an mfsBSD Image
+
+The process of building an mfsBSD image is pretty straightforward.
+
+The first step is to mount the FreeBSD installation CD, or the installation ISO image to [.filename]#/cdrom#.
+For the sake of example, in this article we will assume that you have downloaded the FreeBSD 10.1-RELEASE ISO.
+Mounting this ISO image to the [.filename]#/cdrom# directory is easy with the man:mdconfig[8] utility:
+
+[source,shell]
+....
+# mdconfig -a -t vnode -u 10 -f FreeBSD-10.1-RELEASE-amd64-disc1.iso
+# mount_cd9660 /dev/md10 /cdrom
+....
+
+Since the recent FreeBSD releases do not contain regular distribution sets, it is required to extract the FreeBSD distribution files from the distribution archives located on the ISO image:
+
+[source,shell]
+....
+# mkdir DIST
+# tar -xvf /cdrom/usr/freebsd-dist/base.txz -C DIST
+# tar -xvf /cdrom/usr/freebsd-dist/kernel.txz -C DIST
+....
+
+Next, build the bootable mfsBSD image:
+
+[source,shell]
+....
+# make BASE=DIST
+....
+
+[NOTE]
+====
+The above `make` has to be run from the top level of the mfsBSD directory tree, for example [.filename]#~/mfsbsd-2.1/#.
+====
+
+=== Booting mfsBSD
+
+Now that the mfsBSD image is ready, it must be uploaded to the remote system running a live rescue system or pre-installed Linux(R) distribution.
+The most suitable tool for this task is scp:
+
+[source,shell]
+....
+# scp disk.img root@192.168.0.2:.
+....
+
+To boot mfsBSD image properly, it must be placed on the first (bootable) device of the given machine.
+This may be accomplished using this example providing that [.filename]#sda# is the first bootable disk device:
+
+[source,shell]
+....
+# dd if=/root/disk.img of=/dev/sda bs=1m
+....
+
+If all went well, the image should now be in the MBR of the first device and the machine can be rebooted.
+Watch for the machine to boot up properly with the man:ping[8] tool.
+Once it has came back on-line, it should be possible to access it over man:ssh[1] as user `root` with the configured password.
+
+[[installation]]
+== Installation of the FreeBSD Operating System
+
+The mfsBSD has been successfully booted and it should be possible to log in through man:ssh[1].
+This section will describe how to create and label slices, set up `gmirror` for RAID-1, and how to use `sysinstall` to install a minimal distribution of the FreeBSD operating system.
+
+=== Preparation of Hard Drives
+
+The first task is to allocate disk space for FreeBSD, i.e.: to create slices and partitions.
+Obviously, the currently running system is fully loaded in system memory and therefore there will be no problems with manipulating hard drives.
+To complete this task, it is possible to use either `sysinstall` or man:fdisk[8] in conjunction to man:bsdlabel[8].
+
+At the start, mark all system disks as empty.
+Repeat the following command for each hard drive:
+
+[source,shell]
+....
+# dd if=/dev/zero of=/dev/ad0 count=2
+....
+
+Next, create slices and label them with your preferred tool.
+While it is considered easier to use `sysinstall`, a powerful and also probably less buggy method will be to use standard text-based UNIX(R) tools, such as man:fdisk[8] and man:bsdlabel[8], which will also be covered in this section.
+The former option is well documented in the extref:{handbook}[Installing FreeBSD, install-steps] chapter of the FreeBSD Handbook.
+As it was mentioned in the introduction, this article will present how to set up a system with RAID-1 and ZFS capabilities.
+Our set up will consist of a small man:gmirror[8] mirrored [.filename]#/# (root), [.filename]#/usr# and [.filename]#/var# dataset, and the rest of the disk space will be allocated for a man:zpool[8] mirrored ZFS file system.
+Please note, that the ZFS file system will be configured after the FreeBSD operating system is successfully installed and booted.
+
+The following example will describe how to create slices and labels, initialize man:gmirror[8] on each partition and how to create a UFS2 file system in each mirrored partition:
+
+[source,shell]
+....
+# fdisk -BI /dev/ad0 <.>
+# fdisk -BI /dev/ad1
+# bsdlabel -wB /dev/ad0s1 <.>
+# bsdlabel -wB /dev/ad1s1
+# bsdlabel -e /dev/ad0s1 <.>
+# bsdlabel /dev/ad0s1 > /tmp/bsdlabel.txt && bsdlabel -R /dev/ad1s1 /tmp/bsdlabel.txt <.>
+# gmirror label root /dev/ad[01]s1a <.>
+# gmirror label var /dev/ad[01]s1d
+# gmirror label usr /dev/ad[01]s1e
+# gmirror label -F swap /dev/ad[01]s1b <.>
+# newfs /dev/mirror/root <.>
+# newfs /dev/mirror/var
+# newfs /dev/mirror/usr
+....
+
+<.> Create a slice covering the entire disk and initialize the boot code contained in sector 0 of the given disk. Repeat this command for all hard drives in the system.
+
+<.> Write a standard label for each disk including the bootstrap code.
+
+<.> Now, manually edit the label of the given disk. Refer to the man:bsdlabel[8] manual page in order to find out how to create partitions. Create partitions `a` for [.filename]#/# (root) file system, `b` for swap, `d` for [.filename]#/var#, `e` for [.filename]#/usr# and finally `f` which will later be used for ZFS.
+
+<.> Import the recently created label for the second hard drive, so both hard drives will be labeled in the same way.
+
+<.> Initialize man:gmirror[8] on each partition.
+
+<.> Note that `-F` is used for the swap partition. This instructs man:gmirror[8] to assume that the device is in the consistent state after the power/system failure.
+
+<.> Create a UFS2 file system on each mirrored partition.
+
+=== System Installation
+
+This is the most important part.
+This section will describe how to actually install the minimal distribution of FreeBSD on the hard drives that we have prepared in the previous section.
+To accomplish this goal, all file systems need to be mounted so `sysinstall` may write the contents of FreeBSD to the hard drives:
+
+[source,shell]
+....
+# mount /dev/mirror/root /mnt
+# mkdir /mnt/var /mnt/usr
+# mount /dev/mirror/var /mnt/var
+# mount /dev/mirror/usr /mnt/usr
+....
+
+When you are done, start man:sysinstall[8].
+Select the [.guimenuitem]#Custom# installation from the main menu.
+Select [.guimenuitem]#Options# and press kbd:[Enter].
+With the help of arrow keys, move the cursor on the `Install Root` item, press kbd:[Space] and change it to [.filename]#/mnt#.
+Press kbd:[Enter] to submit your changes and exit the [.guimenuitem]#Options# menu by pressing kbd:[q].
+
+[WARNING]
+====
+Note that this step is very important and if skipped, `sysinstall` will be unable to install FreeBSD.
+====
+
+Go to the [.guimenuitem]#Distributions# menu, move the cursor with the arrow keys to `Minimal`, and check it by pressing kbd:[Space].
+This article uses the Minimal distribution in order to save network traffic, because the system itself will be installed over ftp.
+Exit this menu by choosing `Exit`.
+
+[NOTE]
+====
+The [.guimenuitem]#Partition# and [.guimenuitem]#Label# menus will be skipped, as these are useless now.
+====
+
+In the [.guimenuitem]#Media# menu, select `FTP`.
+Select the nearest mirror and let `sysinstall` assume that the network is already configured.
+You will be returned back to the [.guimenuitem]#Custom# menu.
+
+Finally, perform the system installation by selecting the last option, [.guimenuitem]#Commit#.
+Exit `sysinstall` when it finishes the installation.
+
+=== Post Installation Steps
+
+The FreeBSD operating system should be installed now; however, the process is not finished yet.
+It is necessary to perform some post installation steps in order to allow FreeBSD to boot in the future and to be able to log in to the system.
+
+You must now man:chroot[8] into the freshly installed system in order to finish the installation.
+Use the following command:
+
+[source,shell]
+....
+# chroot /mnt
+....
+
+To complete our goal, perform these steps:
+
+* Copy the `GENERIC` kernel to the [.filename]#/boot/kernel# directory:
++
+[source,shell]
+....
+# cp -Rp /boot/GENERIC/* /boot/kernel
+....
+
+* Create the [.filename]#/etc/rc.conf#, [.filename]#/etc/resolv.conf# and [.filename]#/etc/fstab# files. Do not forget to properly set the network information and to enable sshd in [.filename]#/etc/rc.conf#. The contents of [.filename]#/etc/fstab# will be similar to the following:
++
+[.programlisting]
+....
+# Device                Mountpoint      FStype  Options         Dump    Pass#
+/dev/mirror/swap        none            swap    sw              0       0
+/dev/mirror/root        /               ufs     rw              1       1
+/dev/mirror/usr         /usr            ufs     rw              2       2
+/dev/mirror/var         /var            ufs     rw              2       2
+/dev/cd0                /cdrom          cd9660  ro,noauto       0       0
+....
+* Create [.filename]#/boot/loader.conf# with the following contents:
++
+[.programlisting]
+....
+geom_mirror_load="YES"
+zfs_load="YES"
+....
+* Perform the following command, which will make ZFS available on the next boot:
++
+[source,shell]
+....
+# sysrc zfs_enable="YES"
+....
+
+* Add additional users to the system using the man:adduser[8] tool. Do not forget to add a user to the `wheel` group so you may obtain root access after the reboot.
+* Double-check all your settings.
+
+The system should now be ready for the next boot.
+Use the man:reboot[8] command to reboot your system.
+
+[[zfs]]
+== ZFS
+
+If your system survived the reboot, it should now be possible to log in.
+Welcome to the fresh FreeBSD installation, performed remotely without the use of a remote console!
+
+The only remaining step is to configure man:zpool[8] and create some man:zfs[8] file systems.
+Creating and administering ZFS is very straightforward. First, create a mirrored pool:
+
+[source,shell]
+....
+# zpool create tank mirror /dev/ad[01]s1f
+....
+
+Next, create some file systems:
+
+[source,shell]
+....
+# zfs create tank/ports
+# zfs create tank/src
+# zfs set compression=gzip tank/ports
+# zfs set compression=on tank/src
+# zfs set mountpoint=/usr/ports tank/ports
+# zfs set mountpoint=/usr/src tank/src
+....
+
+That is all.
+If you are interested in more details about ZFS on FreeBSD, please refer to the https://wiki.freebsd.org/ZFS[ZFS] section of the FreeBSD Wiki.

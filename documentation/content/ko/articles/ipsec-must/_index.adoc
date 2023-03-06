@@ -1,0 +1,294 @@
+---
+title: Independent Verification of IPsec Functionality in FreeBSD
+authors:
+  - author: David Honig
+    email: honig@sprynet.com
+description: Independent Verification of IPsec Functionality in FreeBSD
+trademarks: ["freebsd", "opengroup", "general"]
+tags: ["IPsec", "verification", "FreeBSD"]
+---
+
+= Independent Verification of IPsec Functionality in FreeBSD
+:doctype: article
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:images-path: articles/ipsec-must/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+:imagesdir: ../../../images/{images-path}
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+[.abstract-title]
+Abstract
+
+You installed IPsec and it seems to be working.
+How do you know? I describe a method for experimentally verifying that IPsec is working.
+
+'''
+
+toc::[]
+
+[[problem]]
+== The Problem
+
+First, lets assume you have <<ipsec-install>>.
+How do you know it is <<caveat>>? Sure, your connection will not work if it is misconfigured, and it will work when you finally get it right.
+man:netstat[1] will list it. But can you independently confirm it?
+
+[[solution]]
+== The Solution
+
+First, some crypto-relevant info theory:
+
+. Encrypted data is uniformly distributed, i.e., has maximal entropy per symbol;
+. Raw, uncompressed data is typically redundant, i.e., has sub-maximal entropy.
+
+Suppose you could measure the entropy of the data to- and from- your network interface.
+Then you could see the difference between unencrypted data and encrypted data.
+This would be true even if some of the data in "encrypted mode" was not encrypted---as the outermost IP header must be if the packet is to be routable.
+
+[[MUST]]
+=== MUST
+
+Ueli Maurer's "Universal Statistical Test for Random Bit Generators"(https://web.archive.org/web/20011115002319/http://www.geocities.com/SiliconValley/Code/4704/universal.pdf[MUST]) quickly measures the entropy of a sample.
+It uses a compression-like algorithm.
+<<code>> for a variant which measures successive (~quarter megabyte) chunks of a file.
+
+[[tcpdump]]
+=== Tcpdump
+
+We also need a way to capture the raw network data.
+A program called man:tcpdump[1] lets you do this, if you have enabled the _Berkeley Packet Filter_ interface in your <<kernel>>.
+
+The command:
+
+[source,shell]
+....
+ tcpdump -c 4000 -s 10000 -w dumpfile.bin
+....
+
+will capture 4000 raw packets to _dumpfile.bin_.
+Up to 10,000 bytes per packet will be captured in this example.
+
+[[experiment]]
+== The Experiment
+
+Here is the experiment:
+
+[.procedure]
+====
+. Open a window to an IPsec host and another window to an insecure host.
+. Now start <<tcpdump>>.
+. In the "secure" window, run the UNIX(R) command man:yes[1], which will stream the `y` character. After a while, stop this. Switch to the insecure window, and repeat. After a while, stop.
+. Now run <<code>> on the captured packets. You should see something like the following. The important thing to note is that the secure connection has 93% (6.7) of the expected value (7.18), and the "normal" connection has 29% (2.1) of the expected value.
++
+[source,shell]
+....
+% tcpdump -c 4000 -s 10000 -w ipsecdemo.bin
+% uliscan ipsecdemo.bin
+Uliscan 21 Dec 98
+L=8 256 258560
+Measuring file ipsecdemo.bin
+Init done
+Expected value for L=8 is 7.1836656
+6.9396 --------------------------------------------------------
+6.6177 -----------------------------------------------------
+6.4100 ---------------------------------------------------
+2.1101 -----------------
+2.0838 -----------------
+2.0983 -----------------
+....
+====
+
+[[caveat]]
+== Caveat
+
+This experiment shows that IPsec _does_ seem to be distributing the payload data __uniformly__, as encryption should.
+However, the experiment described here _cannot_ detect many possible flaws in a system (none of which do I have any evidence for).
+These include poor key generation or exchange, data or keys being visible to others, use of weak algorithms, kernel subversion, etc.
+Study the source; know the code.
+
+[[IPsec]]
+== IPsec---Definition
+
+Internet Protocol security extensions to IPv4; required for IPv6.
+A protocol for negotiating encryption and authentication at the IP (host-to-host) level.
+SSL secures only one application socket; SSH secures only a login; PGP secures only a specified file or message.
+IPsec encrypts everything between two hosts.
+
+[[ipsec-install]]
+== Installing IPsec
+
+Most of the modern versions of FreeBSD have IPsec support in their base source.
+So you will need to include the `IPSEC` option in your kernel config and, after kernel rebuild and reinstall, configure IPsec connections using man:setkey[8] command.
+
+A comprehensive guide on running IPsec on FreeBSD is provided in extref:{handbook}[FreeBSD Handbook, ipsec].
+
+[[kernel]]
+== src/sys/i386/conf/KERNELNAME
+
+This needs to be present in the kernel config file in order to capture network data with man:tcpdump[1].
+Be sure to run man:config[8] after adding this, and rebuild and reinstall.
+
+[.programlisting]
+....
+device	bpf
+....
+
+[[code]]
+== Maurer's Universal Statistical Test (for block size=8 bits)
+
+You can find the same code at https://web.archive.org/web/20031204230654/http://www.geocities.com:80/SiliconValley/Code/4704/uliscanc.txt[this link].
+
+[.programlisting]
+....
+/*
+  ULISCAN.c   ---blocksize of 8
+
+  1 Oct 98
+  1 Dec 98
+  21 Dec 98       uliscan.c derived from ueli8.c
+
+  This version has // comments removed for Sun cc
+
+  This implements Ueli M Maurer's "Universal Statistical Test for Random
+  Bit Generators" using L=8
+
+  Accepts a filename on the command line; writes its results, with other
+  info, to stdout.
+
+  Handles input file exhaustion gracefully.
+
+  Ref: J. Cryptology v 5 no 2, 1992 pp 89-105
+  also on the web somewhere, which is where I found it.
+
+  -David Honig
+  honig@sprynet.com
+
+  Usage:
+  ULISCAN filename
+  outputs to stdout
+*/
+
+#define L 8
+#define V (1<<L)
+#define Q (10*V)
+#define K (100   *Q)
+#define MAXSAMP (Q + K)
+
+#include <stdio.h>
+#include <math.h>
+
+int main(argc, argv)
+int argc;
+char **argv;
+{
+  FILE *fptr;
+  int i,j;
+  int b, c;
+  int table[V];
+  double sum = 0.0;
+  int iproduct = 1;
+  int run;
+
+  extern double   log(/* double x */);
+
+  printf("Uliscan 21 Dec 98 \nL=%d %d %d \n", L, V, MAXSAMP);
+
+  if (argc < 2) {
+    printf("Usage: Uliscan filename\n");
+    exit(-1);
+  } else {
+    printf("Measuring file %s\n", argv[1]);
+  }
+
+  fptr = fopen(argv[1],"rb");
+
+  if (fptr == NULL) {
+    printf("Can't find %s\n", argv[1]);
+    exit(-1);
+  }
+
+  for (i = 0; i < V; i++) {
+    table[i] = 0;
+  }
+
+  for (i = 0; i < Q; i++) {
+    b = fgetc(fptr);
+    table[b] = i;
+  }
+
+  printf("Init done\n");
+
+  printf("Expected value for L=8 is 7.1836656\n");
+
+  run = 1;
+
+  while (run) {
+    sum = 0.0;
+    iproduct = 1;
+
+    if (run)
+      for (i = Q; run && i < Q + K; i++) {
+        j = i;
+        b = fgetc(fptr);
+
+        if (b < 0)
+          run = 0;
+
+        if (run) {
+          if (table[b] > j)
+            j += K;
+
+          sum += log((double)(j-table[b]));
+
+          table[b] = i;
+        }
+      }
+
+    if (!run)
+      printf("Premature end of file; read %d blocks.\n", i - Q);
+
+    sum = (sum/((double)(i - Q))) /  log(2.0);
+    printf("%4.4f ", sum);
+
+    for (i = 0; i < (int)(sum*8.0 + 0.50); i++)
+      printf("-");
+
+    printf("\n");
+
+    /* refill initial table */
+    if (0) {
+      for (i = 0; i < Q; i++) {
+        b = fgetc(fptr);
+        if (b < 0) {
+          run = 0;
+        } else {
+          table[b] = i;
+        }
+      }
+    }
+  }
+}
+....
