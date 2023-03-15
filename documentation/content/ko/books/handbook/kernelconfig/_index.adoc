@@ -1,0 +1,303 @@
+---
+description: '이 장에서는 FreeBSD 커널을 구성하는 방법을 다룹니다. 커스텀 커널을 빌드하는 시기, 하드웨어 인벤토리를 가져오는 방법, 커널 구성 파일을 커스터마이징하는 방법 등을 설명합니다'
+next: books/handbook/printing
+part: '파트 II. 일반적인 작업'
+path: /books/handbook/
+prev: books/handbook/multimedia
+showBookMenu: 'true'
+tags: ["configuring", "kernel", "custom kernel", "hardware requirements", "pciconf"]
+title: '9장. FreeBSD 커널 구성하기'
+weight: 12
+---
+
+[[kernelconfig]]
+= FreeBSD 커널 구성하기
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:sectnumoffset: 9
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/handbook/kernelconfig/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+[[kernelconfig-synopsis]]
+== 요약
+
+커널은 FreeBSD 운영 체제의 핵심입니다. 커널은 메모리 관리, 보안 제어, 네트워킹, 디스크 액세스 등을 담당합니다. FreeBSD의 대부분은 동적으로 구성할 수 있지만, 커스텀 커널을 구성하고 컴파일해야 하는 경우도 있습니다.
+
+이 챕터를 읽고 나면, 여러분은:
+
+* 커스텀 커널을 빌드할 시기.
+* 하드웨어 인벤토리를 작성하는 방법.
+* 커널 구성 파일을 커스터마이징 하는 방법.
+* 커널 구성 파일을 사용하여 새 커널을 생성하고 빌드하는 방법.
+* 새 커널을 설치하는 방법.
+* 문제를 해결하는 방법.
+
+이 장의 예제에 나열된 모든 명령은 `root`로 실행해야 합니다.
+
+[[kernelconfig-custom-kernel]]
+== 커스텀 커널을 빌드하는 이유는 무엇인가요?
+
+전통적으로 FreeBSD는 모놀리식 커널(단일 커널)을 사용했습니다. 커널은 하나의 큰 프로그램으로 고정된 장치 목록을 지원했으며, 커널의 동작을 변경하려면 컴파일한 다음 새 커널로 재부팅해야 했습니다.
+
+오늘날 FreeBSD 커널의 대부분의 기능은 필요에 따라 커널에서 동적으로 로드 및 언로드할 수 있는 모듈에 포함되어 있습니다. 이를 통해 실행 중인 커널이 새로운 하드웨어에 즉시 적응하고 새로운 기능을 커널로 가져올 수 있습니다. 이를 모듈형 커널이라고 합니다.
+
+때때로 정적 커널 구성을 해야 하는 경우도 있습니다. 때로는 필요한 기능이 커널에 너무 많이 묶여 있어 동적으로 로드할 수 없는 경우도 있습니다. 일부 보안 환경에서는 커널 모듈의 로딩 및 언로딩을 방지하고 필요한 기능만 커널에 정적으로 컴파일해야 합니다.
+
+커스텀 커널을 빌드하는 것은 종종 고급 BSD 사용자들에겐 통과의례 같은 것입니다. 이 과정은 시간이 많이 걸리지만 FreeBSD 시스템에 이점을 제공할 수 있습니다. 광범위한 하드웨어를 지원해야 하는 [.filename]#GENERIC# 커널과 달리, 커스텀 커널은 해당 컴퓨터의 하드웨어만 지원하도록 커널을 재편성할 수 있습니다. 여기에는 다음과 같은 여러 가지 이점이 있습니다:
+
+* 부팅 시간이 빨라집니다. 커널이 시스템의 하드웨어만 검사하기 때문에 시스템 부팅에 걸리는 시간이 단축될 수 있습니다.
+* 메모리 사용량 감소. 사용자 지정 커널은 사용하지 않는 기능과 장치 드라이버를 생략하여 [.filename]#GENERIC# 커널보다 메모리를 적게 사용하는 경우가 많습니다. 커널 코드는 항상 실제 메모리에 상주하여 애플리케이션에서 해당 메모리를 사용하지 못하도록 하기 때문에 이 점이 중요합니다. 이러한 이유로 커스텀 커널은 RAM 용량이 적은 시스템에서 유용합니다.
+* 추가 하드웨어 지원. 사용자 지정 커널은 [.filename]#GENERIC# 커널에 없는 장치에 대한 지원을 추가할 수 있습니다.
+
+커스텀 커널을 빌드하기 전에 커널을 빌드하는 이유를 고려하세요. 특정 하드웨어 지원이 필요한 경우 이미 모듈로 존재할 수 있습니다.
+
+커널 모듈은 [.filename]#/boot/kernel#에 존재하며 man:kldload[8]를 사용하여 실행 중인 커널에 동적으로 로드할 수 있습니다. 대부분의 커널 드라이버에는 로드 가능한 모듈과 매뉴얼 페이지가 있습니다. 예를 들어, man:ath[4] 무선 네트워크 드라이버는 매뉴얼 페이지에 다음과 같은 정보가 있습니다:
+
+[source, shell, subs="macros"]
+....
+Alternatively, to load the driver as a module at boot time, place the
+following line in man:loader.conf[5]:
+
+    if_ath_load="YES"
+....
+
+`if_ath_load=“YES”`를 [.filename]#/boot/loader.conf#에 추가하기만 하면 부팅 시 이 모듈을 동적으로 로드할 수 있습니다.
+
+경우에 따라 [.filename]#/boot/kernel#에 관련 모듈이 없는 경우도 있습니다. 이는 몇몇 서브시스템에서 주로 발생합니다.
+
+[[kernelconfig-devices]]
+== 시스템 하드웨어 찾기
+
+커널 구성 파일을 편집하기 전에 머신의 하드웨어 인벤토리를 준비하는 것이 좋습니다. 듀얼 부팅 시스템에서는 다른 운영 체제에서 인벤토리를 생성할 수 있습니다. 예를 들어 Microsoft(R)의 장치 관리자에는 설치된 장치에 대한 정보가 포함되어 있습니다.
+
+[NOTE]
+====
+일부 Microsoft(R) Windows(R) 버전에는 장치 관리자에 액세스하는 데 사용할 수 있는 시스템 아이콘이 있습니다.
+====
+
+설치된 운영체제가 FreeBSD뿐인 경우, man:dmesg[8]를 사용하여 부팅 프로브 중에 발견되어 나열된 하드웨어를 확인합니다. FreeBSD의 대부분의 장치 드라이버에는 해당 드라이버가 지원하는 하드웨어를 나열하는 설명서 페이지가 있습니다. 예를 들어, 다음 줄은 man:psm[4] 드라이버가 마우스를 찾았음을 나타냅니다:
+
+[source, shell]
+....
+psm0: <PS/2 Mouse> irq 12 on atkbdc0
+psm0: [GIANT-LOCKED]
+psm0: [ITHREAD]
+psm0: model Generic PS/2 mouse, device ID 0
+....
+
+이 하드웨어가 존재하므로 사용자 정의 커널 구성 파일에서 이 드라이버를 제거해서는 안 됩니다.
+
+`dmesg`의 출력에 부팅 프로브 출력 결과가 표시되지 않는 경우, 대신 [.filename]#/var/run/dmesg.boot#의 내용을 확인합니다.
+
+하드웨어를 찾는 또 다른 도구로는 man:pciconf[8]가 있는데, 이 도구는 더 자세한 출력을 제공합니다. 예를 들어:
+
+[source, shell]
+....
+% pciconf -lv
+ath0@pci0:3:0:0:        class=0x020000 card=0x058a1014 chip=0x1014168c rev=0x01 hdr=0x00
+    vendor     = 'Atheros Communications Inc.'
+    device     = 'AR5212 Atheros AR5212 802.11abg wireless'
+    class      = network
+    subclass   = ethernet
+....
+
+이 출력은 [.filename]#ath# 드라이버가 무선 이더넷 장치를 찾았음을 보여줍니다.
+
+Man:man[1]의 `-k` 플래그는 유용한 정보를 제공하는 데 사용할 수 있습니다. 예를 들어 특정 기기 브랜드나 이름이 포함된 매뉴얼 페이지 목록을 표시하는 데 사용할 수 있습니다:
+
+[source, shell]
+....
+# man -k Atheros
+ath(4)                   - Atheros IEEE 802.11 wireless network driver
+ath_hal(4)               - Atheros Hardware Access Layer (HAL)
+....
+
+하드웨어 인벤토리 목록이 생성되면 이를 참조하여 사용자 지정 커널 구성을 편집할 때 설치된 하드웨어의 드라이버가 제거되지 않도록 합니다.
+
+[[kernelconfig-config]]
+== 구성 파일
+
+커스텀 커널 구성 파일을 생성하고 커스텀 커널을 빌드하려면 먼저 전체 FreeBSD 소스 트리를 설치해야 합니다.
+
+[.filename]#/usr/src/#이 존재하지 않거나 비어 있으면 소스가 설치되지 않은 것입니다. crossref:mirrors[git,“Using Git”]의 지침에 따라 Git으로 소스를 설치할 수 있습니다.
+
+소스가 설치되면 [.filename]#/usr/src/sys#의 내용을 검토합니다. 이 디렉토리에는 다음과 같이 지원되는 아키텍처를 나타내는 하위 디렉터리가 다수 포함되어 있습니다: [.filename]#amd64#, [.filename]#i386#, [.filename]#powerpc#, [.filename]#sparc64#. 특정 아키텍처의 디렉터리 안에 있는 모든 코드는 해당 아키텍처만 다루며 나머지 코드는 모든 플랫폼에 공통으로 적용되는 머신 독립적인 코드입니다. 지원되는 각 아키텍처에는 [.filename]#conf# 하위 디렉터리가 있으며, 이 디렉터리에는 해당 아키텍처에 대한 [.filename]#GENERIC# 커널 구성 파일이 포함되어 있습니다.
+
+[.filename]#GENERIC#을 수정하지 마세요. 대신 파일을 다른 이름으로 복사하고 복사본을 수정합니다. 전부 대문자로 된 이름을 사용하는 것이 규칙입니다. 하드웨어가 다른 여러 대의 FreeBSD 머신을 유지 관리할 때는 머신의 호스트 이름을 따서 이름을 지정하는 것이 좋습니다. 이 예는 `amd64` 아키텍처에 대한 [.filename]#MYKERNEL# 구성 파일의 [.filename]#GENERIC# 복사본을 만듭니다:
+
+[source, shell]
+....
+# cd /usr/src/sys/amd64/conf
+# cp GENERIC MYKERNEL
+....
+
+이제 `ASCII` 텍스트 편집기를 사용하여 [.filename]#MYKERNEL#을 사용자 지정할 수 있습니다. 기본 편집기는 vi이지만, 초보자를 위한 더 쉬운 편집기인 ee도 FreeBSD와 함께 설치되어 있습니다.
+
+커널 구성 파일의 형식은 간단합니다. 각 줄에는 장치 또는 하위 시스템을 나타내는 키워드, 인수 및 간단한 설명이 포함됩니다. `+#+`이후의 텍스트는 주석으로 간주되어 무시됩니다. 장치 또는 하위 시스템에 대한 커널 지원을 제거하려면 해당 장치 또는 하위 시스템을 나타내는 줄의 시작 부분에 `+#+`를 넣습니다. 잘 모르는 내용에 `+#+`를 추가하거나 제거하지 마세요.
+
+[WARNING]
+====
+장치 또는 옵션에 대한 지원을 제거하면 커널이 손상되기 쉽습니다. 예를 들어 커널 구성 파일에서 man:ata[4] 드라이버가 제거되면 `ATA` 디스크 드라이버를 사용하는 시스템이 부팅되지 않을 수 있습니다. 확실하지 않은 경우 커널에 지원을 남겨두세요.
+====
+
+이 파일에 제공된 간략한 설명 외에도 해당 아키텍처의 [.filename]#GENERIC#과 같은 디렉터리에서 찾을 수 있는 [.filename]#NOTES#에 추가 설명이 포함되어 있습니다. 아키텍처 독립적인 옵션은 [.filename]#/usr/src/sys/conf/NOTES#를 참조하세요.
+
+[TIP]
+====
+커널 구성 파일 사용자 지정이 완료되면 백업 복사본을 [.filename]#/usr/src# 외부 위치에 저장합니다.
+
+또는 커널 구성 파일을 다른 곳에 보관하고 파일에 대한 심볼릭 링크를 생성하세요:
+
+[source, shell]
+....
+# cd /usr/src/sys/amd64/conf
+# mkdir /root/kernels
+# cp GENERIC /root/kernels/MYKERNEL
+# ln -s /root/kernels/MYKERNEL
+....
+
+====
+
+`include` 지시어를 설정파일에 사용할 수 있습니다. 이렇게 하면 다른 설정 파일을 현재 설정 파일에 포함시킬 수 있으므로 기존 파일과 관련된 작은 변경 사항을 쉽게 유지할 수 있습니다. 소수의 추가 옵션이나 드라이버만 필요한 경우 이 예제에서 볼 수 있듯이 [.filename]#GENERIC#에 대한 델타를 유지 관리할 수 있습니다:
+
+[.programlisting]
+....
+include GENERIC
+ident MYKERNEL
+
+options         IPFIREWALL
+options         DUMMYNET
+options         IPFIREWALL_DEFAULT_TO_ACCEPT
+options         IPDIVERT
+....
+
+이 방법을 사용하면 로컬 구성 파일은 [.filename]#GENERIC# 커널과의 로컬 차이점을 표현합니다. 업그레이드가 수행될 때, `nooptions` 또는 `nodevice`를 사용하여 특별히 차단하지 않는 한, [.filename]#GENERIC#에 추가된 새로운 기능도 로컬 커널에 추가됩니다. 구성 지시어의 포괄적인 목록과 설명은 man:config[5]에서 찾을 수 있습니다.
+
+[NOTE]
+====
+사용 가능한 모든 옵션이 포함된 파일을 빌드하려면 다음 명령을 `root`로 실행합니다:
+
+[source, shell]
+....
+# cd /usr/src/sys/arch/conf && make LINT
+....
+
+====
+
+[[kernelconfig-building]]
+== 커스텀 커널 빌드 및 설치하기
+
+사용자 지정 구성 파일에 대한 편집 내용을 저장한 후에는 다음 단계에 따라 커널의 소스 코드를 컴파일할 수 있습니다:
+
+[.procedure]
+====
+*절차: 커널 빌드*
+
+. 이 디렉토리로 변경합니다:
++
+[source, shell]
+....
+# cd /usr/src
+....
++
+. 사용자 지정 커널 구성 파일의 이름을 지정하여 새 커널을 컴파일합니다:
++
+[source, shell]
+....
+# make buildkernel KERNCONF=MYKERNEL
+....
++
+. 지정된 커널 구성 파일과 연결된 새 커널을 설치합니다. 이 명령은 새 커널을 [.filename]#/boot/kernel/kernel#에 복사하고 이전 커널을 [.filename]#/boot/kernel.old/kernel#에 저장합니다:
++
+[source, shell]
+....
+# make installkernel KERNCONF=MYKERNEL
+....
++
+. 시스템을 종료하고 새 커널로 재부팅합니다. 문제가 발생하면 <<kernelconfig-noboot, The kernel does not boot>>을 참조하세요.
+====
+
+기본적으로 커스텀 커널을 컴파일하면 모든 커널 모듈이 다시 빌드됩니다. 커널을 더 빠르게 업데이트하거나 커스텀 모듈만 빌드하려면 커널 빌드를 시작하기 전에 [.filename]#/etc/make.conf#을 편집하세요.
+
+예를 들어 다음 변수는 모든 모듈을 빌드하는 기본값을 사용하는 대신, 빌드할 모듈 목록을 지정합니다:
+
+[.programlisting]
+....
+MODULES_OVERRIDE = linux acpi
+....
+
+또는 다음 변수는 빌드 프로세스에서 제외할 모듈을 나열합니다:
+
+[.programlisting]
+....
+WITHOUT_MODULES = linux acpi sound
+....
+
+추가 변수를 사용할 수도 있습니다. 자세한 내용은 man:make.conf[5]를 참조하세요.
+
+[[kernelconfig-trouble]]
+== 문제가 발생했을 때
+
+사용자 정의 커널을 빌드할 때 발생할 수 있는 문제에는 네 가지 범주가 있습니다:
+
+`config` 실패::
+`config`가 실패하면 잘못된 줄 번호가 인쇄됩니다. 예를 들어 다음 메시지의 경우 17번 줄을 [.filename]#GENERIC# 또는 [.filename]#NOTES#와 비교하여 올바르게 입력되었는지 확인합니다:
++
+[source, shell]
+....
+config: line 17: syntax error
+....
+
+`make` 실패::
+`make`가 실패하는 경우 일반적으로 커널 구성 파일에 `config`가 포착할 수 있을 만큼 심각하지 않은 오류가 있기 때문일 수 있습니다. 구성을 검토하고 문제가 명확하지 않은 경우 커널 구성 파일이 포함된 {freebsd-questions}으로 이메일을 보내세요.
+
+[[kernelconfig-noboot]]
+커널이 부팅되지 않음::
+새 커널이 부팅되지 않거나 장치를 인식하지 못하더라도 당황하지 마세요! 다행히도 FreeBSD에는 호환되지 않는 커널에서 복구할 수 있는 훌륭한 메커니즘이 있습니다. FreeBSD 부트 로더에서 부팅할 커널을 선택하기만 하면 됩니다. 시스템 부팅 메뉴가 나타날 때 “Escape to a loader prompt”옵션을 선택하면 이 메뉴에 액세스할 수 있습니다. 프롬프트에서 `boot _kernel.old_` 또는 제대로 부팅되는 것으로 알려진 다른 커널의 이름을 입력합니다.
++
+정상 커널로 부팅한 후 구성 파일을 확인하고 다시 빌드를 시도하세요. 부팅에 성공할 때마다 커널 메시지를 기록하는 [.filename]#/var/log/messages#가 유용한 리소스 중 하나입니다. 또한 man:dmesg[8]는 현재 부팅의 커널 메시지를 인쇄합니다.
++
+[NOTE]
+====
+커널 문제를 해결할 때는 [.filename]#GENERIC#과 같이 작동하는 것으로 알려진 커널의 사본을 보관하세요. 새 커널이 설치될 때마다 [.filename]#kernel.old#는 마지막으로 설치된 커널로 덮어쓰기 때문에 부팅이 가능하거나 불가능할 수 있으므로 이 점이 중요합니다. 가능한 한 빨리 정상 커널이 포함된 디렉터리의 이름을 변경하여 작업 중인 커널을 이동하세요:
+
+[source, shell]
+....
+# mv /boot/kernel /boot/kernel.bad
+# mv /boot/kernel.good /boot/kernel
+....
+
+====
+
+커널은 작동하지만 man:ps[1]가 작동하지 않습니다::
+커널 버전이 시스템 유틸리티가 빌드된 버전과 다른 경우(예: -CURRENT 소스로 빌드된 커널이 -RELEASE 시스템에 설치되어 있는 경우) man:ps[1] 및 man:vmstat[8] 같은 많은 시스템 상태 명령이 작동하지 않습니다. 이 문제를 해결하려면 커널과 동일한 버전의 소스 트리로 구축된 crossref:cutting-edge[makeworld,recompile and install a world]를 사용하십시오. 운영 체제의 다른 버전과 다른 버전의 커널을 사용하는 것은 결코 좋은 생각이 아닙니다.
