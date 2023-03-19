@@ -1861,6 +1861,9 @@ sub encode_data {
     s/\</\&lt\;/g;
     s/\>/\&gt\;/g;
 
+    # bold bullet
+    s,\+\010\+\010o\010o,<b>o</b>,g;
+
     # underline: _^H.^H(.)
     s,((_\010[^_]\010.)+),($str = $1) =~ s/_\010..//g; "<I>$str</I>";,ge;
 
