@@ -191,7 +191,10 @@ archive() {
 		"$pub_dir" \
 		public/css/ \
 		public/fonts/ \
+		public/images/FreeBSD-colors.svg \
+		public/images/FreeBSD-monochromatic.svg \
 		public/js/ \
+		public/styles/ \
 		$source_doc_dir \
 		$image_doc_dir
 
