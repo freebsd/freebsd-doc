@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl -T
 #
-# Copyright (c) 1996-2022 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 1996-2023 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -437,6 +437,7 @@ $manPathDefault = 'FreeBSD 13.1-RELEASE and Ports';
     'FreeBSD Ports 12.4', "$manLocalDir/FreeBSD-ports-12.4-RELEASE/man:$manLocalDir/FreeBSD-ports-12.4-RELEASE/misc",
     'FreeBSD Ports 13.0', "$manLocalDir/FreeBSD-ports-13.0-RELEASE/man:$manLocalDir/FreeBSD-ports-13.0-RELEASE/misc",
     'FreeBSD Ports 13.1', "$manLocalDir/FreeBSD-ports-13.1-RELEASE/man:$manLocalDir/FreeBSD-ports-13.1-RELEASE/misc",
+    'FreeBSD Ports 13.2', "$manLocalDir/FreeBSD-ports-13.2-RELEASE/man:$manLocalDir/FreeBSD-ports-13.2-RELEASE/misc",
 
 
     # FreeBSD Releases + Ports
@@ -945,7 +946,7 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'freebsd-current',       'FreeBSD 14.0-CURRENT',
     'freebsd-release-ports', 'FreeBSD 13.1-RELEASE and Ports',
-    'freebsd-ports', 'FreeBSD Ports 13.1',
+    'freebsd-ports', 'FreeBSD Ports 13.2',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat 9',
