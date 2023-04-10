@@ -6,7 +6,8 @@ BSD 2-Clause License
 Copyright (c) 2020-2023, The FreeBSD Project
 Copyright (c) 2020-2023, Sergio Carlavilla <carlavilla@FreeBSD.org>
 
-This script will merge all the pgpkeys into one single file
+This script converts common variables sourced from shared/releases.adoc
+ to the toml format and stores them in data/releases.toml
 
 =end
 
