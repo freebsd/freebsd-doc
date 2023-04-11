@@ -250,10 +250,12 @@ foreach my $os ( keys %$sectionpath ) {
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
 # this should be the latest "release and ports"
-$manPathDefault = 'FreeBSD 13.1-RELEASE and Ports';
+$manPathDefault = 'FreeBSD 13.2-RELEASE and Ports';
 
 %manPath = (
     # supported RELEASES / STABLE / CURRENT 
+    'FreeBSD 13.2-RELEASE and Ports',
+"$manLocalDir/FreeBSD-13.2-RELEASE/man:$manLocalDir/FreeBSD-13.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-13.2-RELEASE/man:$manLocalDir/FreeBSD-ports-13.2-RELEASE/misc",
     'FreeBSD 13.1-RELEASE and Ports',
 "$manLocalDir/FreeBSD-13.1-RELEASE/man:$manLocalDir/FreeBSD-13.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-13.1-RELEASE/man:$manLocalDir/FreeBSD-ports-13.1-RELEASE/misc",
     'FreeBSD 13.0-RELEASE and Ports',
@@ -317,8 +319,10 @@ $manPathDefault = 'FreeBSD 13.1-RELEASE and Ports';
     'FreeBSD 14.0-CURRENT',
 "$manLocalDir/FreeBSD-14.0-CURRENT/man:$manLocalDir/FreeBSD-14.0-CURRENT/openssl/man",
 
-    'FreeBSD 13.2-STABLE',
+    'FreeBSD 13.3-STABLE',
 "$manLocalDir/FreeBSD-13.2-STABLE/man:$manLocalDir/FreeBSD-13.2-STABLE/openssl/man",
+    'FreeBSD 13.2-RELEASE',
+"$manLocalDir/FreeBSD-13.2-RELEASE/man:$manLocalDir/FreeBSD-13.2-RELEASE/openssl/man",
     'FreeBSD 13.1-RELEASE',
 "$manLocalDir/FreeBSD-13.1-RELEASE/man:$manLocalDir/FreeBSD-13.1-RELEASE/openssl/man",
     'FreeBSD 13.0-RELEASE',
@@ -937,15 +941,15 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 13.1-RELEASE',
-    'freebsd-release', 'FreeBSD 13.1-RELEASE',
+    'freebsd',         'FreeBSD 13.2-RELEASE',
+    'freebsd-release', 'FreeBSD 13.2-RELEASE',
 
-    'freebsd-stable',   'FreeBSD 13.2-STABLE',
-    'freebsd-stable13', 'FreeBSD 13.2-STABLE',
+    'freebsd-stable',   'FreeBSD 13.3-STABLE',
+    'freebsd-stable13', 'FreeBSD 13.3-STABLE',
     'freebsd-stable12', 'FreeBSD 12.4-STABLE',
 
     'freebsd-current',       'FreeBSD 14.0-CURRENT',
-    'freebsd-release-ports', 'FreeBSD 13.1-RELEASE and Ports',
+    'freebsd-release-ports', 'FreeBSD 13.2-RELEASE and Ports',
     'freebsd-ports', 'FreeBSD Ports 13.2',
 
     'slackware',  'Linux Slackware 3.1',
