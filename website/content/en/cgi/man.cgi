@@ -182,6 +182,7 @@ $sectionpath = {
     'OpenBSD 7.0' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 7.1' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 7.2' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 7.3' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 
     'CentOS 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
@@ -250,10 +251,12 @@ foreach my $os ( keys %$sectionpath ) {
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
 # this should be the latest "release and ports"
-$manPathDefault = 'FreeBSD 13.1-RELEASE and Ports';
+$manPathDefault = 'FreeBSD 13.2-RELEASE and Ports';
 
 %manPath = (
     # supported RELEASES / STABLE / CURRENT 
+    'FreeBSD 13.2-RELEASE and Ports',
+"$manLocalDir/FreeBSD-13.2-RELEASE/man:$manLocalDir/FreeBSD-13.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-13.2-RELEASE/man:$manLocalDir/FreeBSD-ports-13.2-RELEASE/misc",
     'FreeBSD 13.1-RELEASE and Ports',
 "$manLocalDir/FreeBSD-13.1-RELEASE/man:$manLocalDir/FreeBSD-13.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-13.1-RELEASE/man:$manLocalDir/FreeBSD-ports-13.1-RELEASE/misc",
     'FreeBSD 13.0-RELEASE and Ports',
@@ -319,6 +322,8 @@ $manPathDefault = 'FreeBSD 13.1-RELEASE and Ports';
 
     'FreeBSD 13.2-STABLE',
 "$manLocalDir/FreeBSD-13.2-STABLE/man:$manLocalDir/FreeBSD-13.2-STABLE/openssl/man",
+    'FreeBSD 13.2-RELEASE',
+"$manLocalDir/FreeBSD-13.2-RELEASE/man:$manLocalDir/FreeBSD-13.2-RELEASE/openssl/man",
     'FreeBSD 13.1-RELEASE',
 "$manLocalDir/FreeBSD-13.1-RELEASE/man:$manLocalDir/FreeBSD-13.1-RELEASE/openssl/man",
     'FreeBSD 13.0-RELEASE',
@@ -608,6 +613,7 @@ $manPathDefault = 'FreeBSD 13.1-RELEASE and Ports';
     'OpenBSD 7.0', "$manLocalDir/OpenBSD-7.0",
     'OpenBSD 7.1', "$manLocalDir/OpenBSD-7.1",
     'OpenBSD 7.2', "$manLocalDir/OpenBSD-7.2",
+    'OpenBSD 7.3', "$manLocalDir/OpenBSD-7.3",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
     'NetBSD 1.0',   "$manLocalDir/NetBSD-1.0",
@@ -917,6 +923,7 @@ my %arch = (
 'OpenBSD 7.0' => { 'arch' => [qw/alpha amd64 arm64 armv7 hppa i386 landisk loongson luna88k macppc octeon powerpc64 riscv64 sparc64/] }, 
 'OpenBSD 7.1' => { 'arch' => [qw/alpha amd64 arm64 armv7 hppa i386 landisk loongson luna88k macppc octeon powerpc64 riscv64 sparc64/] }, 
 'OpenBSD 7.2' => { 'arch' => [qw/alpha amd64 arm64 armv7 hppa i386 landisk loongson luna88k macppc octeon powerpc64 riscv64 sparc64/] }, 
+'OpenBSD 7.3' => { 'arch' => [qw/alpha amd64 arm64 armv7 hppa i386 landisk loongson luna88k macppc octeon powerpc64 riscv64 sparc64/] }, 
 );
 
 # delete not existing releases
@@ -937,15 +944,15 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 13.1-RELEASE',
-    'freebsd-release', 'FreeBSD 13.1-RELEASE',
+    'freebsd',         'FreeBSD 13.2-RELEASE',
+    'freebsd-release', 'FreeBSD 13.2-RELEASE',
 
     'freebsd-stable',   'FreeBSD 13.2-STABLE',
     'freebsd-stable13', 'FreeBSD 13.2-STABLE',
     'freebsd-stable12', 'FreeBSD 12.4-STABLE',
 
     'freebsd-current',       'FreeBSD 14.0-CURRENT',
-    'freebsd-release-ports', 'FreeBSD 13.1-RELEASE and Ports',
+    'freebsd-release-ports', 'FreeBSD 13.2-RELEASE and Ports',
     'freebsd-ports', 'FreeBSD Ports 13.2',
 
     'slackware',  'Linux Slackware 3.1',
@@ -959,7 +966,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'macosx',     'Darwin 8.0.1/ppc',
 
     'netbsd',        'NetBSD 9.3',
-    'openbsd',       'OpenBSD 7.2',
+    'openbsd',       'OpenBSD 7.3',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
     'x11',           'X11R7.4',
