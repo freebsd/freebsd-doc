@@ -76,31 +76,18 @@ for component in $COMPONENTS; do
 		dirbase=$(dirname "$document")
 		echo "$document"
 
-		if [ -f "$dirbase/$name.po" ]; then
-			po4a-updatepo \
-				--format asciidoc \
-				--option compat=asciidoctor \
-				--option tablecells=1 \
-				--option yfm_keys=title,part,description \
-				--master "$document" \
-				--master-charset "UTF-8" \
-				--copyright-holder "The FreeBSD Project" \
-				--package-name "FreeBSD Documentation" \
-				--po "$dirbase/$name.po"
-			if [ -f "$dirbase/$name.po~" ]; then
-				rm -f "$dirbase/$name.po~"
-			fi
-		else
-			po4a-gettextize \
-				--format asciidoc \
-				--option compat=asciidoctor \
-				--option tablecells=1 \
-				--option yfm_keys=title,part,description \
-				--master "$document" \
-				--master-charset "UTF-8" \
-				--copyright-holder "The FreeBSD Project" \
-				--package-name "FreeBSD Documentation" \
-				--po "$dirbase/$name.po"
+		po4a-updatepo \
+			--format asciidoc \
+			--option compat=asciidoctor \
+			--option tablecells=1 \
+			--option yfm_keys=title,part,description \
+			--master "$document" \
+			--master-charset "UTF-8" \
+			--copyright-holder "The FreeBSD Project" \
+			--package-name "FreeBSD Documentation" \
+			--po "$dirbase/$name.po"
+		if [ -f "$dirbase/$name.po~" ]; then
+			rm -f "$dirbase/$name.po~"
 		fi
 	done
 done
