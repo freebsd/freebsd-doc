@@ -1,0 +1,236 @@
+---
+description: '이 장에서는 FreeBSD에서 DTrace를 사용하는 방법을 설명합니다'
+next: books/handbook/usb-device-mode
+part: '파트 III. 시스템 관리'
+path: /books/handbook/
+prev: books/handbook/cutting-edge
+showBookMenu: 'true'
+tags: ["DTrace", "features", "guide", "tutorial", "kldload"]
+title: '26장. DTrace'
+weight: 30
+---
+
+[[dtrace]]
+= DTrace
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:sectnumoffset: 26
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/handbook/dtrace/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+[[dtrace-synopsis]]
+== 요약
+
+동적 추적(Dynamic Tracing)이라고도 하는 DTrace는 프로덕션 및 프리 프로덕션 시스템에서 성능 병목 현상을 찾기 위한 도구로 Sun(TM)에서 개발했습니다. 성능 문제를 진단하는 것 외에도 DTrace는 FreeBSD 커널과 사용자 프로그램 모두에서 예기치 않은 동작을 조사하고 디버깅하는 데 사용할 수 있습니다.
+
+DTrace는 시스템 문제 진단을 위한 인상적인 기능을 갖춘 뛰어난 프로파일링 도구입니다. 또한 미리 작성된 스크립트를 실행하여 기능을 활용하는 데 사용할 수도 있습니다. 사용자는 DTrace D 언어를 사용하여 자체 유틸리티를 작성할 수 있으므로 특정 요구 사항에 따라 프로파일링을 사용자 지정할 수 있습니다.
+
+FreeBSD 구현은 커널 DTrace에 대한 완전한 지원과 사용자공간 DTrace에 대한 실험적 지원을 제공합니다. 사용자공간 DTrace를 사용하면 `pid` 제공자를 사용하여 사용자공간 프로그램에 대한 함수 경계 추적(function boundary tracing)을 수행하고, 나중에 추적하기 위해 사용자공간 프로그램에 정적 프로브를 삽입할 수 있습니다. package:databases/postgresql12-server[] 및 package:lang/php74[]와 같은 일부 포트에는 정적 프로브를 활성화하는 DTrace 옵션이 있습니다.
+
+DTrace에 대한 공식 가이드는 Illumos 프로젝트의 http://dtrace.org/guide[DTrace 가이드]에서 확인할 수 있습니다.
+
+이 챕터를 읽고 나면, 여러분은:
+
+* DTrace란 무엇이며 어떤 기능을 제공하는지.
+* Solaris(TM) DTrace 구현과 FreeBSD에서 제공하는 구현의 차이점.
+* FreeBSD에서 DTrace를 활성화하고 사용하는 방법.
+
+이 챕터를 읽기 전에 여러분은:
+
+* UNIX(R) 및 FreeBSD 기본 사항을 이해합니다(crossref:basics[basics,FreeBSD Basics]).
+* 보안과 그것이 FreeBSD와 어떻게 관련되어 있는지 어느 정도 알고 있어야 합니다(crossref:security[security,Security]).
+
+[[dtrace-implementation]]
+== 구현의 차이점
+
+FreeBSD의 DTrace는 Solaris(TM)에서 볼 수 있는 것과 유사하지만 차이점이 존재합니다. 가장 큰 차이점은 FreeBSD의 DTrace는 커널 모듈 집합으로 구현되며 모듈이 로드될 때까지 DTrace를 사용할 수 없다는 점입니다. 필요한 모든 모듈을 로드하려면:
+
+[source, shell]
+....
+# kldload dtraceall
+....
+
+FreeBSD 10.0-RELEASE부터, `dtrace`를 실행하면 모듈이 자동으로 로드됩니다.
+
+FreeBSD는 커널 모듈과 커널 자체에서 `CTF` 데이터를 로드하는 것을 지원하기 위해 `DDB_CTF` 커널 옵션을 사용합니다. `CTF`는 Solaris(TM)의 컴팩트 C 타입 포맷으로, `DWARF` 및 유서 깊은 stabs와 유사한 디버깅 정보의 축소된 형태로 캡슐화합니다. `CTF` 데이터는 `ctfconvert` 및 `ctfmerge` 빌드 도구에 의해 바이너리에 추가됩니다. `ctfconvert` 유틸리티는 컴파일러가 생성한 `DWARF` `ELF` 디버그 섹션을 구문 분석하고 `ctfmerge`는 객체에서 `CTF` `ELF` 섹션을 실행 파일 또는 공유 라이브러리로 병합합니다.
+
+FreeBSD에는 Solaris(TM)와는 다른 몇 가지 프로바이더가 존재합니다. 가장 주목할 만한 것은 `dtmalloc` 제공자로, FreeBSD 커널에서 유형별로 `malloc()`을 추적할 수 있습니다. Solaris(TM)에 있는 `cpc`와 `mib`와 같은 일부 제공자는 FreeBSD에는 없습니다. 이 제공자들은 향후 FreeBSD 버전에 나타날 수 있습니다. 또한, 두 운영 체제에서 사용할 수 있는 일부 프로바이더는 프로브의 인자 유형이 다르다는 점에서 호환되지 않습니다. 따라서 Solaris(TM)에서 작성된 `D` 스크립트는 FreeBSD에서 수정되지 않은 채로 작동할 수도 있고, 그 반대의 경우도 마찬가지입니다.
+
+보안상의 차이로 인해, FreeBSD에서는 `root`만 DTrace를 사용할 수 있습니다. Solaris(TM)에는 FreeBSD에는 아직 존재하지 않는 몇 가지 낮은 수준의 보안 검사가 있습니다. 따라서 [.filename]#/dev/dtrace/dtrace#는 `root`로 엄격하게 제한됩니다.
+
+DTrace는 일반 개발 및 배포 허가서(`CDDL`) 라이선스에 속합니다. FreeBSD에서 이 라이선스를 보려면 [.filename]#/usr/src/cddl/contrib/opensolaris/OPENSOLARIS.LICENSE#를 참조하거나 http://opensource.org/licenses/CDDL-1.0[http://opensource.org/licenses/CDDL-1.0]에서 온라인으로 확인하세요. DTrace를 지원하는 FreeBSD 커널은 `BSD` 라이선스를 사용하지만, 모듈을 바이너리 형태로 배포하거나 바이너리를 로드할 때는 `CDDL`을 사용합니다.
+
+[[dtrace-enable]]
+== DTrace 지원 활성화하기
+
+FreeBSD 9.2와 10.0에서, DTrace 지원은 [.filename]#GENERIC# 커널에 내장되어 있습니다. 이전 버전의 FreeBSD 사용자 또는 DTrace 지원에서 정적으로 컴파일하는 것을 선호하는 사용자는 커스텀 커널 구성 파일에 다음 줄을 추가하고 crossref:kernelconfig[kernelconfig,Configuring the FreeBSD Kernel]의 지침을 사용하여 커널을 다시 컴파일해야 합니다:
+
+[.programlisting]
+....
+options         KDTRACE_HOOKS
+options         DDB_CTF
+makeoptions	DEBUG=-g
+makeoptions	WITH_CTF=1
+....
+
+AMD64 아키텍처 사용자도 이 줄을 추가해야 합니다:
+
+[.programlisting]
+....
+options         KDTRACE_FRAME
+....
+
+이 옵션은 'FBT'를 지원합니다. 이 옵션이 없어도 DTrace는 작동하지만 함수 경계 추적에 대한 지원이 제한됩니다.
+
+FreeBSD 시스템을 새 커널로 재부팅하거나 `kldload dtraceall`을 사용하여 DTrace 커널 모듈을 로드한 후에는, DTrace 툴킷에 `ksh`로 작성된 여러 유틸리티가 있으므로 시스템이 Korn 셸을 지원해야 합니다. package:shells/ksh93[] 패키지 또는 포트가 설치되어 있는지 확인합니다. 이러한 도구는 package:shells/pdksh[] 또는 package:shells/mksh[] 아래에서 실행할 수도 있습니다.
+
+마지막으로, 시스템 정보 수집을 위한 기성 스크립트 모음인 현재 DTrace 툴킷을 설치합니다. 여기에는 열린 파일, 메모리, `CPU` 사용량 등을 확인하는 스크립트가 있습니다. FreeBSD 10은 이러한 스크립트 중 몇 가지를 [.filename]#/usr/share/dtrace#에 설치합니다. 다른 FreeBSD 버전에서 또는 전체 DTrace 툴킷을 설치하려면 package:sysutils/dtrace-toolkit[] 패키지 또는 포트를 사용하세요.
+
+[NOTE]
+====
+[.filename]#/usr/share/dtrace#에 있는 스크립트들은 특별히 FreeBSD로 포팅되었습니다. DTrace 툴킷에 있는 모든 스크립트가 FreeBSD에서 그대로 작동하는 것은 아니며, 일부 스크립트는 FreeBSD에서 작동하기 위해 약간의 노력이 필요할 수 있습니다.
+====
+
+DTrace 툴킷에는 DTrace의 특수 언어로 된 많은 스크립트가 포함되어 있습니다. 이 언어를 D 언어라고 하며 C++와 매우 유사합니다. 이 언어에 대한 자세한 설명은 이 문서의 범위를 벗어납니다. 자세한 내용은 http://www.dtrace.org/guide[Illumos Dynamic Tracing Guide]에서 확인할 수 있습니다.
+
+[[dtrace-using]]
+== DTrace 사용하기
+
+DTrace 스크립트는 하나 이상의 _프로브_ 또는 계측 포인트 목록으로 구성되며, 각 프로브는 액션과 연관되어 있습니다. 프로브의 조건이 충족될 때마다 연결된 액션이 실행됩니다. 예를 들어, 파일이 열리거나 프로세스가 시작되거나 코드 줄이 실행될 때 액션이 발생할 수 있습니다. 액션은 일부 정보를 기록하거나 컨텍스트 변수를 수정하는 것일 수 있습니다. 컨텍스트 변수의 읽기 및 쓰기를 통해 프로브는 정보를 공유하고 서로 다른 이벤트의 상관 관계를 협력적으로 분석할 수 있습니다.
+
+모든 프로브를 보려면 관리자가 다음 명령을 실행하면 됩니다:
+
+[source, shell]
+....
+# dtrace -l | more
+....
+
+각 프로브에는 `ID`, `PROVIDER`(dtrace 또는 fbt), `MODULE` 그리고 `FUNCTION NAME`이 있습니다. 이 명령에 대한 자세한 내용은 man:dtrace[1]을 참조하세요.
+
+이 섹션의 예제에서는 DTrace 툴킷에서 완전히 지원되는 두 가지 스크립트, 즉 [.filename]#hotkernel# 및 [.filename]#procsystime# 스크립트를 사용하는 방법에 대한 개요를 제공합니다.
+
+[.filename]#hotkernel# 스크립트는 커널 시간을 가장 많이 사용하는 함수를 식별하도록 설계되었습니다. 다음과 유사한 출력을 생성합니다:
+
+[source, shell]
+....
+# cd /usr/local/share/dtrace-toolkit
+# ./hotkernel
+Sampling... Hit Ctrl-C to end.
+....
+
+지시에 따라 kbd:[Ctrl+C] 키 조합을 사용하여 프로세스를 중지합니다. 종료되면 스크립트에 커널 함수 목록과 타이밍 정보가 표시되고 출력이 시간이 지남에 따라 정렬됩니다:
+
+[source, shell]
+....
+kernel`_thread_lock_flags                                   2   0.0%
+0xc1097063                                                  2   0.0%
+kernel`sched_userret                                        2   0.0%
+kernel`kern_select                                          2   0.0%
+kernel`generic_copyin                                       3   0.0%
+kernel`_mtx_assert                                          3   0.0%
+kernel`vm_fault                                             3   0.0%
+kernel`sopoll_generic                                       3   0.0%
+kernel`fixup_filename                                       4   0.0%
+kernel`_isitmyx                                             4   0.0%
+kernel`find_instance                                        4   0.0%
+kernel`_mtx_unlock_flags                                    5   0.0%
+kernel`syscall                                              5   0.0%
+kernel`DELAY                                                5   0.0%
+0xc108a253                                                  6   0.0%
+kernel`witness_lock                                         7   0.0%
+kernel`read_aux_data_no_wait                                7   0.0%
+kernel`Xint0x80_syscall                                     7   0.0%
+kernel`witness_checkorder                                   7   0.0%
+kernel`sse2_pagezero                                        8   0.0%
+kernel`strncmp                                              9   0.0%
+kernel`spinlock_exit                                       10   0.0%
+kernel`_mtx_lock_flags                                     11   0.0%
+kernel`witness_unlock                                      15   0.0%
+kernel`sched_idletd                                       137   0.3%
+0xc10981a5                                              42139  99.3%
+....
+
+이 스크립트는 커널 모듈에서도 작동합니다. 이 기능을 사용하려면 `-m`과 함께 스크립트를 실행하세요:
+
+[source, shell]
+....
+# ./hotkernel -m
+Sampling... Hit Ctrl-C to end.
+^C
+MODULE                                                  COUNT   PCNT
+0xc107882e                                                  1   0.0%
+0xc10e6aa4                                                  1   0.0%
+0xc1076983                                                  1   0.0%
+0xc109708a                                                  1   0.0%
+0xc1075a5d                                                  1   0.0%
+0xc1077325                                                  1   0.0%
+0xc108a245                                                  1   0.0%
+0xc107730d                                                  1   0.0%
+0xc1097063                                                  2   0.0%
+0xc108a253                                                 73   0.0%
+kernel                                                    874   0.4%
+0xc10981a5                                             213781  99.6%
+....
+
+[.filename]#procsystime# 스크립트는 지정된 프로세스 `ID`(`PID`) 또는 프로세스 이름에 대한 시스템 호출 시간 사용량을 캡처하여 인쇄합니다. 다음 예제에서는 [.filename]#/bin/csh#의 새 인스턴스가 생성되었습니다. 그런 다음 [.filename]#procsystime#이 실행되고 대기 상태로 유지되는 동안 다른 `csh` 인스턴스에 몇 가지 명령이 입력되었습니다. 이것이 이 테스트의 결과입니다:
+
+[source, shell]
+....
+# ./procsystime -n csh
+Tracing... Hit Ctrl-C to end...
+^C
+
+Elapsed Times for processes csh,
+
+         SYSCALL          TIME (ns)
+          getpid               6131
+       sigreturn               8121
+           close              19127
+           fcntl              19959
+             dup              26955
+         setpgid              28070
+            stat              31899
+       setitimer              40938
+           wait4              62717
+       sigaction              67372
+     sigprocmask             119091
+    gettimeofday             183710
+           write             263242
+          execve             492547
+           ioctl             770073
+           vfork            3258923
+      sigsuspend            6985124
+            read         3988049784
+....
+
+표시된 바와 같이 `read()` 시스템 호출이 나노초 단위로 가장 많은 시간을 사용한 반면 `getpid()` 시스템 호출은 가장 적은 시간을 사용했습니다.

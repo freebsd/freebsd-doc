@@ -1,0 +1,2802 @@
+---
+description: 'FreeBSD의 고급 네트워킹: 게이트웨이와 라우팅의 기본, CARP, FreeBSD에서 다중 VLAN을 구성하는 방법 등'
+next: books/handbook/partv
+part: 'IV. 네트워크 통신'
+path: /books/handbook/
+prev: books/handbook/firewalls
+showBookMenu: 'true'
+tags: ["Advanced Networking", "Handbook", "gateway", "routes", "wireless", "tethering", "bluetooth", "bridging", "ipv6", "CARP", "VLAN"]
+title: '33장. 고급 네트워킹'
+weight: 38
+---
+
+[[advanced-networking]]
+= 고급 네트워킹
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:sectnumoffset: 33
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/handbook/advanced-networking/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+[[advanced-networking-synopsis]]
+== 요약
+
+이 장에서는 여러 가지 고급 네트워킹 주제를 다룹니다.
+
+이 챕터를 읽고 나면, 여러분은:
+
+* 게이트웨이와 라우팅의 기본.
+* USB 테더링 설정 방법.
+* IEEE(R) 802.11 및 Bluetooth(R) 장치를 설정하는 방법.
+* FreeBSD를 브릿지로 작동시키는 방법.
+* 네트워크 PXE 부팅을 설정하는 방법.
+* FreeBSD 머신에서 IPv6를 설정하는 방법.
+* FreeBSD에서 공통 주소 중복 프로토콜(Common Address Redundancy Protocol, CARP)의 기능을 활성화하고 활용하는 방법.
+* FreeBSD에서 다중 VLAN을 구성하는 방법.
+* 블루투스 헤드셋 구성.
+
+이 챕터를 읽기 전에 여러분은:
+
+* [.filename]#/etc/rc# 스크립트의 기초를 알고 있어야 합니다.
+* 네트워크 용어에 익숙해야 합니다.
+* 새 FreeBSD 커널을 구성하고 설치하는 방법을 알고 있어야 합니다(crossref:kernelconfig[kernelconfig,Configuring the FreeBSD Kernel]).
+* 타사 소프트웨어를 추가로 설치하는 방법을 알고 있어야 합니다(crossref:ports[ports,Installing Applications: Packages and Ports]).
+
+[[network-routing]]
+== 게이트웨이와 라우트
+
+_라우팅_은 시스템이 다른 시스템에 대한 네트워크 경로를 찾을 수 있도록 하는 메커니즘입니다. _라우팅_은 "목적지"와 "게이트웨이"를 나타내는 정의된 주소 쌍입니다. 라우팅은 지정된 목적지에 도달하려고 할 때 지정된 게이트웨이를 통해 패킷을 보내도록 지시합니다. 목적지에는 개별 호스트, 서브넷 및 "기본값(default)"의 세 가지 유형이 있습니다. 다른 경로가 적용되지 않는 경우 "기본 경로"가 사용됩니다. 게이트웨이에는 개별 호스트, 인터페이스라고도 하는 링크, 이더넷 하드웨어(MAC) 주소의 세 가지 유형도 있습니다. 알려진 경로는 라우팅 테이블에 저장됩니다.
+
+이 섹션에서는 라우팅 기본 사항에 대한 개요를 제공합니다. 그런 다음 FreeBSD 시스템을 라우터로 구성하는 방법을 시연하고 몇 가지 문제 해결 팁을 제공합니다.
+
+[[network-routing-default]]
+=== 라우팅 기초
+
+FreeBSD 시스템의 라우팅 테이블을 보려면 man:netstat[1]을 사용하세요:
+
+[source, shell]
+....
+% netstat -r
+Routing tables
+
+Internet:
+Destination      Gateway            Flags     Refs     Use     Netif Expire
+default          outside-gw         UGS        37      418       em0
+localhost        localhost          UH          0      181       lo0
+test0            0:e0:b5:36:cf:4f   UHLW        5    63288       re0     77
+10.20.30.255     link#1             UHLW        1     2421
+example.com      link#1             UC          0        0
+host1            0:e0:a8:37:8:1e    UHLW        3     4601       lo0
+host2            0:e0:a8:37:8:1e    UHLW        0        5       lo0 =>
+host2.example.com link#1            UC          0        0
+224              link#1             UC          0        0
+....
+
+이 예의 항목은 다음과 같습니다:
+
+default::
+이 표의 첫 번째 경로는 `default` 경로를 지정합니다. 로컬 시스템이 원격 호스트에 연결해야 할 때 라우팅 테이블을 확인하여 알려진 경로가 존재하는지 확인합니다. 원격 호스트가 테이블의 항목과 일치하면 시스템은 해당 항목에 지정된 인터페이스를 사용하여 연결할 수 있는지 확인합니다.
++
+목적지가 항목과 일치하지 않거나 알려진 모든 경로가 실패하면 시스템은 기본 경로의 항목을 사용합니다. 로컬 영역 네트워크에 있는 호스트의 경우 기본 경로의 `Gateway` 필드는 인터넷에 직접 연결되어 있는 시스템으로 설정됩니다. 이 항목을 읽을 때 `Flags` 열에 게이트웨이가 사용 가능(`UG`)함을 나타내는지 확인합니다.
++
+외부 세계로 향하는 게이트웨이 역할을 하는 머신의 기본 경로는 인터넷 서비스 제공업체(ISP)의 게이트웨이 머신이 됩니다.
+
+localhost::
+두 번째 경로는 `localhost` 경로입니다. `localhost`의 `Netif` 열에 지정된 인터페이스는 루프백 장치라고도 하는 [.filename]#lo0#입니다. 이는 이 대상에 대한 모든 트래픽이 네트워크를 통해 전송되지 않고 내부에 있어야 함을 나타냅니다.
+
+MAC address::
+`0:e0:`로 시작하는 주소는 MAC 어드레스입니다. FreeBSD는 로컬 이더넷에 있는 호스트(예제에서는 `test0`)를 자동으로 식별하고 이더넷 인터페이스를 통해 해당 호스트에 대한 경로인 [.filename]#re0#을 추가합니다. 이 유형의 경로에는 `Expire` 열에 표시된 시간 제한이 있으며, 호스트가 특정 시간 내에 응답하지 않는 경우에 사용됩니다. 이 경우 이 호스트에 대한 경로가 자동으로 삭제됩니다. 이러한 호스트는 최단 경로 결정을 기반으로 로컬 호스트에 대한 경로를 계산하는 RIP(라우팅 정보 프로토콜)를 사용하여 식별됩니다.
+
+subnet::
+FreeBSD는 로컬 서브넷에 대한 서브넷 경로를 자동으로 추가합니다. 이 예에서 `10.20.30.255`는 서브넷 `10.20.30`의 브로드캐스트 주소이고 `example.com`은 해당 서브넷과 연결된 도메인 이름입니다. `link#1`은 머신의 첫 번째 이더넷 카드를 나타냅니다.
++
+로컬 네트워크 호스트와 로컬 서브넷은 man:routed[8]라는 데몬에 의해 경로가 자동으로 구성됩니다. 이 데몬이 실행되지 않으면 관리자가 정적으로 정의한 경로만 존재합니다.
+
+host::
+`host1` 줄은 이더넷 주소로 호스트를 나타냅니다. 이 호스트는 보내는 호스트이므로, FreeBSD는 이더넷 인터페이스가 아닌 루프백 인터페이스([.filename]#lo0#)를 사용한다는 것을 알고 있습니다.
++
+두 개의 `host2` 줄은 man:ifconfig[8]을 사용하여 생성된 별칭(alias)을 나타냅니다. [.filename]#lo0# 인터페이스 뒤의 `=>` 기호는 루프백 주소 외에 별칭이 설정되었음을 나타냅니다. 이러한 경로는 별칭을 지원하는 호스트에만 표시되며 로컬 네트워크의 다른 모든 호스트에는 해당 경로에 대한 `link#1` 줄이 있습니다.
+
+224::
+마지막 줄(destination subnet `224`)은 멀티캐스팅을 처리합니다.
+
+각 경로의 다양한 속성은 `Flags` 열에서 확인할 수 있습니다. <<routeflags>>에는 이러한 플래그 중 일부와 그 의미가 요약되어 있습니다:
+
+[[routeflags]]
+.흔히 볼 수 있는 라우팅 테이블 플래그
+[cols="1,1", frame="none", options="header"]
+|===
+| Command
+| Purpose
+
+|U
+|The route is active (up).
+
+|H
+|The route destination is a single host.
+
+|G
+|Send anything for this destination on to this gateway, which will figure out from there where to send it.
+
+|S
+|This route was statically configured.
+
+|C
+|Clones a new route based upon this route for machines to connect to. This type of route is normally used for local networks.
+
+|W
+|The route was auto-configured based upon a local area network (clone) route.
+
+|L
+|Route involves references to Ethernet (link) hardware.
+|===
+
+FreeBSD 시스템에서는 기본 게이트웨이의 IP 주소를 지정하여 [.filename]#/etc/rc.conf#에서 기본 경로를 정의할 수 있습니다:
+
+[.programlisting]
+....
+defaultrouter="10.20.30.1"
+....
+
+`route`를 사용하여 수동으로 경로를 추가할 수도 있습니다:
+
+[source, shell]
+....
+# route add default 10.20.30.1
+....
+
+수동으로 추가한 경로는 재부팅 후에 살아남지 못한다는 점에 유의하세요. 네트워크 라우팅 테이블의 수동 조작에 대한 자세한 내용은 man:route[8]을 참조하세요.
+
+[[network-static-routes]]
+=== 정적 경로로 라우터 구성하기
+
+듀얼 홈 시스템인 경우 FreeBSD 시스템을 네트워크의 기본 게이트웨이 또는 라우터로 구성할 수 있습니다. 듀얼 홈 시스템은 적어도 두 개의 다른 네트워크에 상주하는 호스트입니다. 일반적으로 각 네트워크는 별도의 네트워크 인터페이스에 연결되지만, IP 앨리어싱을 사용하여 각각 다른 서브넷에 있는 여러 주소를 하나의 물리적 인터페이스에 바인딩할 수 있습니다.
+
+시스템이 인터페이스 간 패킷을 전달하기 위해서는 FreeBSD를 라우터로 구성해야 합니다. 인터넷 표준과 좋은 엔지니어링 관행으로 인해 FreeBSD 프로젝트는 이 기능을 기본적으로 활성화하지 않지만, [.filename]#/etc/rc.conf#에 다음 줄을 추가하여 부팅 시 시작되도록 구성할 수 있습니다:
+
+[.programlisting]
+....
+gateway_enable="YES"          # Set to YES if this host will be a gateway
+....
+
+지금 라우팅을 활성화하려면 man:sysctl[8] 변수 `net.inet.ip.forwarding`을 `1`로 설정합니다. 라우팅을 중지하려면 이 변수를 `0`으로 재설정합니다.
+
+라우터의 라우팅 테이블에는 다른 네트워크에 연결하는 방법을 알 수 있도록 추가 경로가 필요합니다. 경로는 정적 경로를 사용하여 수동으로 추가하거나 라우팅 프로토콜을 사용하여 경로를 자동으로 학습할 수 있습니다. 정적 경로는 소규모 네트워크에 적합하며, 이 섹션에서는 소규모 네트워크에 정적 라우팅 항목을 추가하는 방법을 설명합니다.
+
+[NOTE]
+====
+대규모 네트워크의 경우, 정적 경로는 빠르게 확장할 수 없게 됩니다. FreeBSD는 라우팅 프로토콜인 RIP, 버전 1과 2, 그리고 IRDP를 제공하는 표준 BSD 라우팅 데몬 man:routed[8]와 함께 제공됩니다. BGP 및 OSPF 라우팅 프로토콜에 대한 지원은 package:net/quagga[] 패키지 또는 포트를 사용하여 설치할 수 있습니다.
+====
+
+다음 네트워크를 생각해 보세요:
+
+image::static-routes.png[]
+
+이 시나리오에서 `RouterA`는 나머지 인터넷에 대한 라우터 역할을 하는 FreeBSD 머신입니다. 기본 경로는 외부와 연결할 수 있도록 `10.0.0.1`로 설정되어 있습니다. `RouterB`는 이미 `192.168.1.1`을 기본 게이트웨이로 사용하도록 구성되어 있습니다.
+
+정적 경로를 추가하기 전 `RouterA`의 라우팅 테이블은 다음과 같습니다:
+
+[source, shell]
+....
+% netstat -nr
+Routing tables
+
+Internet:
+Destination        Gateway            Flags    Refs      Use  Netif  Expire
+default            10.0.0.1           UGS         0    49378    xl0
+127.0.0.1          127.0.0.1          UH          0        6    lo0
+10.0.0.0/24        link#1             UC          0        0    xl0
+192.168.1.0/24     link#2             UC          0        0    xl1
+....
+
+현재 라우팅 테이블을 사용하면 `RouterA`에 `192.168.2.0/24` 네트워크에 대한 경로가 없습니다. 다음 명령은 `192.168.1.2`를 다음 홉으로 사용하여 ``RouterA``의 라우팅 테이블에 `Internal Net 2` 네트워크를 추가합니다:
+
+[source, shell]
+....
+# route add -net 192.168.2.0/24 192.168.1.2
+....
+
+이제 `RouterA`는 `192.168.2.0/24` 네트워크의 모든 호스트에 연결할 수 있습니다. 그러나, 라우팅 정보는 FreeBSD 시스템이 재부팅되면 지속되지 않습니다. 정적 경로를 영구적으로 유지해야 하는 경우 [.filename]#/etc/rc.conf#에 추가합니다:
+
+[.programlisting]
+....
+# Add Internal Net 2 as a persistent static route
+static_routes="internalnet2"
+route_internalnet2="-net 192.168.2.0/24 192.168.1.2"
+....
+
+`static_routes` 구성 변수는 공백으로 구분된 문자열 목록으로, 각 문자열은 경로 이름을 참조합니다. `route_internalnet2` 변수는 해당 경로 이름에 대한 정적 경로를 포함합니다.
+
+`static_routes`에 둘 이상의 문자열을 사용하면 여러 개의 고정 경로가 생성됩니다. 다음은 `192.168.0.0/24` 및 `192.168.1.0/24` 네트워크에 대한 정적 경로를 추가하는 예제입니다:
+
+[.programlisting]
+....
+static_routes="net1 net2"
+route_net1="-net 192.168.0.0/24 192.168.0.1"
+route_net2="-net 192.168.1.0/24 192.168.1.1"
+....
+
+[[network-routing-troubleshooting]]
+=== 문제 해결
+
+주소 공간이 네트워크에 할당되면 서비스 제공업체는 네트워크의 모든 트래픽이 해당 사이트의 링크로 전송되도록 라우팅 테이블을 구성합니다. 하지만 외부 사이트는 어떻게 네트워크의 ISP로 패킷을 전송할지 알 수 있을까요?
+
+할당된 모든 주소 공간을 추적하고 인터넷 백본 또는 전국 및 전 세계로 인터넷 트래픽을 전송하는 주요 간선 회선에 대한 연결 지점을 정의하는 시스템이 있습니다. 각 백본 머신에는 특정 네트워크의 트래픽을 특정 백본 캐리어로, 그리고 특정 네트워크에 도달할 때까지 서비스 제공업체의 체인을 따라 내려가는 마스터 테이블 세트의 사본이 있습니다.
+
+서비스 제공업체는 백본 사이트가 사이트의 연결 지점, 즉 내부 경로임을 백본 사이트에 알리는 역할을 합니다. 이를 경로 전파(route propagation)라고 합니다.
+
+때때로 경로 전파에 문제가 발생하여 일부 사이트에 연결할 수 없는 경우가 있습니다. 라우팅이 고장난 위치를 파악하는 데 가장 유용한 명령은 아마도 `traceroute`일 것입니다. `ping`이 실패할 때 유용합니다.
+
+`traceroute`를 사용할 때는 연결할 원격 호스트의 주소를 포함시키세요. 출력에는 시도 경로를 따라 게이트웨이 호스트가 표시되며, 결국 대상 호스트에 도달하거나 연결 부족으로 인해 종료됩니다. 자세한 내용은 man:traceroute[8]를 참조하세요.
+
+[[network-routing-multicast]]
+=== 멀티캐스트 고려사항
+
+FreeBSD는 기본적으로 멀티캐스트 애플리케이션과 멀티캐스트 라우팅을 모두 지원합니다. 멀티캐스트 애플리케이션은 FreeBSD에서 실행하기 위해 특별한 구성이 필요하지 않습니다. 멀티캐스트 라우팅을 지원하려면 다음 옵션을 커스텀 커널에 컴파일해야 합니다:
+
+[.programlisting]
+....
+options MROUTING
+....
+
+멀티캐스트 라우팅 데몬인 mrouted는 package:net/mrouted[] 패키지 또는 포트를 사용하여 설치할 수 있습니다. 이 데몬은 DVMRP 멀티캐스트 라우팅 프로토콜을 구현하며, 터널과 DVMRP를 설정하기 위해 [.filename]#/usr/local/etc/mrouted.conf#을 편집하여 구성합니다. mrouted를 설치하면 map-mbone 및 mrinfo와 관련 매뉴얼 페이지도 설치됩니다. 구성 예제는 이를 참조하세요.
+
+[NOTE]
+====
+많은 멀티캐스트 설치에서 DVMRP는 대부분 PIM 프로토콜로 대체되었습니다. 자세한 내용은 man:pim[4]을 참조하세요.
+====
+
+[[network-wireless]]
+== 무선 네트워킹
+
+=== 무선 네트워킹 기초
+
+대부분의 무선 네트워크는 IEEE(R) 802.11 표준을 기반으로 합니다. 기본 무선 네트워크는 2.4GHz 또는 5GHz 대역에서 브로드캐스팅하는 라디오와 통신하는 여러 개의 스테이션으로 구성되지만, 지역에 따라 다르며 2.3GHz 및 4.9GHz 범위에서도 통신할 수 있도록 변경되고 있습니다.
+
+802.11 네트워크는 두 가지 방식으로 구성됩니다. _infrastructure mode_에서는 한 스테이션이 다른 모든 스테이션을 연결하는 마스터 역할을 하며, 이 네트워크를 BSS라고 하고, 마스터 스테이션을 액세스 포인트(AP)라고 합니다. BSS에서는 모든 통신이 AP를 통과하며, 한 스테이션이 다른 무선 스테이션과 통신하려는 경우에도 메시지는 AP를 거쳐야 합니다. 두 번째 형태의 네트워크에서는 마스터가 없으며 스테이션이 직접 통신합니다. 이러한 형태의 네트워크를 IBSS라고 하며 일반적으로 _ad-hoc network_라고 합니다.
+
+802.11 네트워크는 IEEE(R) 802.11 및 802.11b 표준에 정의된 프로토콜을 사용하여 2.4GHz 대역에 처음 배포되었습니다. 이러한 사양에는 다양한 속도로 통신이 이루어질 수 있으므로 작동 주파수와 프레이밍 및 전송 속도를 포함한 MAC 계층 특성이 포함됩니다. 이후 802.11a 표준은 다양한 신호 메커니즘과 더 높은 전송 속도를 포함하여 5GHz 대역에서의 작동을 정의했습니다. 그 후 802.11g 표준에서는 802.11b 네트워크와 역호환이 가능하도록 2.4GHz 대역에서 802.11a 신호 및 전송 메커니즘을 사용하도록 정의했습니다.
+
+기본 전송 기술과는 별개로 802.11 네트워크에는 다양한 보안 메커니즘이 있습니다. 원래 802.11 사양은 WEP라는 간단한 보안 프로토콜을 정의했습니다. 이 프로토콜은 미리 공유된 고정 키와 RC4 암호화 암호를 사용하여 네트워크에서 전송되는 데이터를 인코딩합니다. 통신을 위해서는 모든 스테이션이 고정 키에 동의해야 합니다. 이 방식은 쉽게 깨질 수 있는 것으로 밝혀져 현재는 일시적인 사용자의 네트워크 참여를 막는 경우를 제외하고는 거의 사용되지 않습니다. 현재 보안 관행은 새로운 암호화 암호와 액세스 포인트에 대한 스테이션 인증 및 데이터 통신을 위한 키 교환을 위한 추가 프로토콜을 정의하는 IEEE(R) 802.11i 사양에 의해 제공됩니다. 암호화 키는 주기적으로 새로 고쳐지며 침입 시도를 감지하고 대응하는 메커니즘이 있습니다. 무선 네트워크에서 일반적으로 사용되는 또 다른 보안 프로토콜 사양은 802.11i의 전신인 WPA라고 합니다. WPA는 802.11i에서 발견되는 요구 사항의 하위 집합을 지정하며 레거시 하드웨어에서 구현하도록 설계되었습니다. 특히, WPA는 원래 WEP 암호에서 파생된 TKIP 암호만 필요합니다. 802.11i는 TKIP 사용을 허용하지만 데이터 암호화를 위해 더 강력한 암호인 AES-CCM에 대한 지원도 필요합니다. AES 암호는 레거시 하드웨어에서 구현하기에는 계산 비용이 너무 많이 드는 것으로 간주되었기 때문에 WPA에서는 요구되지 않았습니다.
+
+알아두어야 할 또 다른 표준은 802.11e입니다. 이 표준은 802.11 네트워크에서 스트리밍 비디오 및 VoIP(Voice over IP)와 같은 멀티미디어 애플리케이션을 배포하기 위한 프로토콜을 정의합니다. 802.11i와 마찬가지로 802.11e에는 802.11e의 최종 승인을 기다리는 동안 멀티미디어 애플리케이션을 활성화하기 위해 지금 배포할 수 있는 802.11e의 하위 집합으로 업계 그룹에서 정의한 WME(나중에 WMM으로 이름 변경)라는 전구 사양도 있습니다. 802.11e와 WME/WMM에 대해 알아야 할 가장 중요한 점은 서비스 품질(QoS) 프로토콜과 향상된 미디어 액세스 프로토콜을 통해 무선 네트워크에서 트래픽의 우선순위를 지정할 수 있다는 것입니다. 이러한 프로토콜을 올바르게 구현하면 데이터의 고속 버스팅과 트래픽 흐름의 우선순위를 지정할 수 있습니다.
+
+FreeBSD는 802.11a, 802.11b 및 802.11g를 사용하여 작동하는 네트워크를 지원합니다. WPA 및 802.11i 보안 프로토콜도 마찬가지로 지원되며(11a, 11b, 11g 중 하나와 함께), WME/WMM 프로토콜에 필요한 QoS 및 트래픽 우선 순위 지정은 제한된 무선 장치 세트에 대해 지원됩니다.
+
+[[network-wireless-quick-start]]
+=== 빠른 시작
+
+컴퓨터를 기존 무선 네트워크에 연결하는 것은 매우 일반적인 상황입니다. 이 절차는 필요한 단계를 보여줍니다.
+
+[.procedure]
+. 네트워크 관리자로부터 무선 네트워크의 SSID(Service Set Identifier) 및 PSK(사전 공유 키)를 받습니다.
+. 무선 어댑터를 확인합니다. FreeBSD [.filename]#GENERIC# 커널에는 많은 일반적인 무선 어댑터용 드라이버가 포함되어 있습니다. 무선 어댑터가 이러한 모델 중 하나인 경우, man:sysctl[8] `net.wlan.devices` 변수에 나열됩니다:
++
+[source, shell]
+....
+% sysctl net.wlan.devices
+....
++
+무선 어댑터가 목록에 없다면, 추가 커널 모듈이 필요하거나 FreeBSD에서 지원하지 않는 모델일 수 있습니다.
++
+이 예는 Atheros `ath0` 무선 어댑터를 보여줍니다.
+. 이 네트워크에 대한 항목을 [.filename]#/etc/wpa_supplicant.conf#에 추가합니다. 파일이 없는 경우 파일을 생성합니다. _myssid_ 및 _mypsk_를 네트워크 관리자가 제공한 SSID 및 PSK로 바꿉니다.
++
+[.programlisting]
+....
+network={
+	ssid="myssid"
+	psk="mypsk"
+}
+....
+
+. 시작 시 네트워크를 구성하려면 [.filename]#/etc/rc.conf#에 항목을 추가하세요:
++
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA SYNCDHCP"
+....
+
+. 컴퓨터를 다시 시작하거나 네트워크 서비스를 다시 시작하여 네트워크에 연결합니다:
++
+[source, shell]
+....
+# service netif restart
+....
+
+[[network-wireless-basic]]
+=== 기본 설정
+
+==== 커널 구성
+
+무선 네트워킹을 사용하려면 무선 네트워킹 카드가 필요하며 커널을 적절한 무선 네트워킹 지원으로 구성해야 합니다. 커널은 여러 모듈로 분리되어 있으므로 필요한 지원만 구성하면 됩니다.
+
+가장 일반적으로 사용되는 무선 장치는 Atheros에서 만든 부품을 사용하는 장치입니다. 이러한 장치는 man:ath[4]에서 지원되며 [.filename]#/boot/loader.conf#에 다음 줄을 추가해야 합니다:
+
+[.programlisting]
+....
+if_ath_load="YES"
+....
+
+Atheros 드라이버는 드라이버(man:ath[4]), 칩별 기능을 처리하는 하드웨어 지원 계층(man:ath_hal[4]), 프레임 전송 속도를 선택하는 알고리즘의 세 부분으로 나뉘어져 있습니다. 이 지원이 커널 모듈로 로드되면 모든 종속성이 자동으로 처리됩니다. 다른 유형의 무선 장치에 대한 지원을 로드하려면 해당 장치에 대한 모듈을 지정합니다. 이 예는 Intersil Prism 부품(man:wi[4]) 드라이버를 기반으로 하는 장치에 대한 것입니다:
+
+[.programlisting]
+....
+if_wi_load="YES"
+....
+
+[NOTE]
+====
+이 섹션의 예제에서는 man:ath[4] 장치를 사용하며, 예제에서 장치 이름은 구성에 따라 변경해야 합니다. 사용 가능한 무선 드라이버 및 지원되는 어댑터 목록은 FreeBSD 웹 사이트의 https://www.FreeBSD.org/releases/[릴리즈 정보] 페이지에서 제공되는 FreeBSD 하드웨어 노트에서 찾을 수 있습니다. 무선 장치에 대한 기본 FreeBSD 드라이버가 없는 경우, crossref:config[config-network-ndis,NDIS] 드라이버 래퍼를 사용하여 Windows(R) 드라이버를 사용할 수 있습니다.
+====
+
+또한 사용할 보안 프로토콜에 대한 암호화 지원을 구현하는 모듈을 로드해야 합니다. 이러한 모듈은 man:wlan[4] 모듈에 의해 요청 시 동적으로 로드되도록 설계되었지만 현재로서는 수동으로 구성해야 합니다. 다음 모듈을 사용할 수 있습니다: man:wlan_wep[4], man:wlan_ccmp[4], man:wlan_tkip[4]. man:wlan_ccmp[4] 및 man:wlan_tkip[4] 드라이버는 WPA 또는 802.11i 보안 프로토콜을 사용할 때만 필요합니다. 네트워크에서 암호화를 사용하지 않는 경우 man:wlan_wep[4] 지원이 필요하지 않습니다. 부팅 시 이러한 모듈을 로드하려면 [.filename]#/boot/loader.conf#에 다음 줄을 추가합니다:
+
+[.programlisting]
+....
+wlan_wep_load="YES"
+wlan_ccmp_load="YES"
+wlan_tkip_load="YES"
+....
+
+이 정보를 [.filename]#/boot/loader.conf#에 추가한 후, FreeBSD 박스를 재부팅합니다. 또는 man:kldload[8]를 사용하여 수동으로 모듈을 로드합니다.
+
+[NOTE]
+====
+모듈을 사용하지 않으려는 사용자의 경우 커스텀 커널 구성 파일에 다음 줄을 추가하여 이러한 드라이버를 커널에 컴파일할 수 있습니다:
+
+[.programlisting]
+....
+device wlan                 # 802.11 support
+device wlan_wep             # 802.11 WEP support
+device wlan_ccmp            # 802.11 CCMP support
+device wlan_tkip            # 802.11 TKIP support
+device wlan_amrr            # AMRR transmit rate control algorithm
+device ath                  # Atheros pci/cardbus NIC's
+device ath_hal              # pci/cardbus chip support
+options AH_SUPPORT_AR5416   # enable AR5416 tx/rx descriptors
+device ath_rate_sample      # SampleRate tx rate control for ath
+....
+
+커널 구성 파일에 있는 이 정보를 사용하여 커널을 다시 컴파일하고 FreeBSD 머신을 재부팅합니다.
+====
+
+부팅 메시지에 다음과 같이 무선 장치에 대한 정보가 표시되어야 합니다:
+
+[source, shell]
+....
+ath0: <Atheros 5212> mem 0x88000000-0x8800ffff irq 11 at device 0.0 on cardbus1
+ath0: [ITHREAD]
+ath0: AR2413 mac 7.9 RF2413 phy 4.5
+....
+
+==== 올바른 지역 설정하기
+
+전 세계 여러 지역의 규제 상황이 다르기 때문에 사용할 수 있는 채널에 대한 정확한 정보를 얻으려면 해당 지역에 적용되는 도메인을 올바르게 설정해야 합니다.
+
+사용 가능한 지역 정의는 [.filename]#/etc/regdomain.xml#에서 찾을 수 있습니다. 런타임에 데이터를 설정하려면 `ifconfig`를 사용합니다:
+
+[source, shell]
+....
+# ifconfig wlan0 regdomain ETSI country AT
+....
+
+설정을 유지하려면 [.filename]#/etc/rc.conf#에 추가하세요:
+
+[source, shell]
+....
+# sysrc create_args_wlan0="country AT regdomain ETSI"
+....
+
+=== Infrastructure 모드
+
+Infrastructure(BSS) 모드는 일반적으로 사용되는 모드입니다. 이 모드에서는 여러 무선 액세스 포인트가 유선 네트워크에 연결됩니다. 각 무선 네트워크에는 SSID라고 하는 고유한 이름이 있습니다. 무선 클라이언트는 무선 액세스 포인트에 연결합니다.
+
+==== FreeBSD 클라이언트
+
+===== 액세스 포인트 찾는 방법
+
+사용 가능한 네트워크를 검색하려면 man:ifconfig[8]를 사용합니다. 이 요청은 시스템이 사용 가능한 각 무선 주파수로 전환하여 사용 가능한 액세스 포인트를 검색해야 하므로 완료하는 데 몇 분 정도 걸릴 수 있습니다. 수퍼유저만 스캔을 시작할 수 있습니다:
+
+[source, shell]
+....
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 up
+# ifconfig wlan0 scan
+SSID/MESH ID    BSSID              CHAN RATE   S:N     INT CAPS
+dlinkap         00:13:46:49:41:76   11   54M -90:96   100 EPS  WPA WME
+freebsdap       00:11:95:c3:0d:ac    1   54M -83:96   100 EPS  WPA
+....
+
+[NOTE]
+====
+스캔하려면 인터페이스가 `up`상태여야 합니다. 이후 스캔 요청 시 인터페이스를 다시 `up`으로 표시할 필요가 없습니다.
+====
+
+스캔 요청의 출력에는 발견된 각 BSS/IBSS 네트워크가 나열됩니다. 출력에는 네트워크 이름인 `SSID` 외에도 액세스 포인트의 MAC 주소인 `BSSID`도 표시됩니다. `CAPS` 필드는 각 네트워크의 유형과 해당 네트워크에서 작동하는 스테이션의 기능을 식별합니다(자세한 내용은 man:ifconfig[8]에서 `list scan`의 정의를 참조하세요).
+
+알려진 네트워크의 현재 목록을 표시할 수도 있습니다:
+
+[source, shell]
+....
+# ifconfig wlan0 list scan
+....
+
+이 정보는 어댑터에 의해 자동으로 업데이트되거나 `scan` 요청을 통해 수동으로 업데이트될 수 있습니다. 오래된 데이터는 캐시에서 자동으로 제거되므로 시간이 지남에 따라 더 많은 스캔을 수행하지 않으면 이 목록이 줄어들 수 있습니다.
+
+===== 기본 설정
+
+이 섹션에서는 암호화 없이 FreeBSD에서 무선 네트워크 어댑터를 작동시키는 방법에 대한 간단한 예를 제공합니다. 이러한 개념에 익숙해지면, <<network-wireless-wpa,WPA>>를 사용하여 무선 네트워크를 설정할 것을 강력히 권장합니다.
+
+무선 네트워크를 구성하는 데는 액세스 포인트 선택, 스테이션 인증, IP 주소 구성의 세 가지 기본 단계가 있습니다. 다음 섹션에서는 각 단계에 대해 설명합니다.
+
+====== 액세스 포인트 선택하기
+
+대부분의 경우 시스템이 내장된 휴리스틱을 사용하여 액세스 포인트를 선택하도록 하는 것으로 충분합니다. 인터페이스가 위로 표시되어 있거나 [.filename]#/etc/rc.conf#에 나열되어 있는 경우 기본 동작입니다:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="DHCP"
+....
+
+액세스 포인트가 여러 개 있는 경우, 해당 SSID로 특정 액세스 포인트를 선택할 수 있습니다:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="ssid your_ssid_here DHCP"
+....
+
+로밍을 간소화하기 위해 동일한 SSID를 사용하는 액세스 포인트가 여러 개 있는 환경에서는 하나의 특정 장치에 연결해야 할 수 있습니다. 이 경우 SSID를 포함하거나 포함하지 않고 액세스 포인트의 BSSID를 지정할 수 있습니다:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="ssid your_ssid_here bssid xx:xx:xx:xx:xx:xx DHCP"
+....
+
+시스템에서 스캔할 주파수 세트를 제한하는 등 액세스 포인트 선택을 제한하는 다른 방법도 있습니다. 가능한 모든 채널을 스캔하는 데 시간이 많이 소요될 수 있으므로 다중 대역 무선 카드에 유용할 수 있습니다. 특정 대역으로 작동을 제한하려면 `mode` 매개변수를 사용합니다:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="mode 11g ssid your_ssid_here DHCP"
+....
+
+이 예에서는 카드가 2.4GHz 주파수로만 정의된 802.11g에서 작동하도록 강제하므로 5GHz 채널은 고려되지 않습니다. 특정 주파수로 작동을 고정하는 `channel` 매개변수와 스캔할 채널 목록을 지정하는 `chanlist` 매개변수를 사용하여 이 작업을 수행할 수도 있습니다. 이러한 매개변수에 대한 자세한 내용은 man:ifconfig[8]에서 확인할 수 있습니다.
+
+====== 인증
+
+액세스 포인트를 선택하면 스테이션이 데이터를 전달하기 전에 인증을 받아야 합니다. 인증은 여러 가지 방법으로 이루어질 수 있습니다. 가장 일반적인 방식인 개방형 인증은 모든 스테이션이 네트워크에 참여하여 통신할 수 있도록 허용합니다. 이 인증은 무선 네트워크를 처음 설정할 때 테스트 목적으로 사용하는 인증입니다. 다른 방식은 데이터 트래픽이 흐르기 전에 미리 공유된 키 또는 비밀을 사용하거나 RADIUS와 같은 백엔드 서비스를 포함하는 더 복잡한 방식을 사용하여 암호화 핸드셰이크를 완료해야 합니다. 기본 설정은 개방형 인증입니다. 다음으로 가장 일반적인 설정은 <<network-wireless-wpa-wpa-psk>>에 설명된 WPA 개인이라고도 하는 WPA-PSK입니다.
+
+[NOTE]
+====
+Apple(R) AirPort(R) Extreme 베이스 스테이션을 액세스 포인트에 사용하는 경우, WEP 키와 함께 공유 키 인증을 구성해야 합니다. 이 구성은 [.filename]#/etc/rc.conf#에서 구성하거나 man:wpa_supplicant[8]를 사용하여 구성할 수 있습니다. 단일 AirPort(R) 베이스 스테이션의 경우 다음을 사용하여 액세스를 구성할 수 있습니다:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="authmode shared wepmode on weptxkey 1 wepkey 01234567 DHCP"
+....
+
+일반적으로 공유 키 인증은 WEP 키 자료를 매우 제한적인 방식으로 사용하므로 키를 더 쉽게 해독할 수 있으므로 피해야 합니다. 레거시 장치와의 호환성을 위해 WEP를 사용해야 하는 경우 `open` 인증과 함께 WEP를 사용하는 것이 좋습니다. WEP에 대한 자세한 내용은 <<network-wireless-wep>>에서 확인할 수 있습니다.
+====
+
+====== DHCP로 IP 주소 얻기
+
+액세스 포인트를 선택하고 인증 매개변수를 설정한 후에는 통신을 위해 IP 주소를 얻어야 합니다. 대부분의 경우 IP 주소는 DHCP를 통해 얻습니다. 이를 위해 [.filename]#/etc/rc.conf#를 편집하고 장치 구성에 `DHCP`를 추가합니다:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="DHCP"
+....
+
+이제 무선 인터페이스를 불러올 준비가 되었습니다:
+
+[source, shell]
+....
+# service netif start
+....
+
+인터페이스가 실행 중이면 man:ifconfig[8]을 사용하여 인터페이스 [.filename]#ath0#의 상태를 확인합니다:
+
+[source, shell]
+....
+# ifconfig wlan0
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+        ether 00:11:95:d5:43:62
+        inet 192.168.1.100 netmask 0xffffff00 broadcast 192.168.1.255
+        media: IEEE 802.11 Wireless Ethernet OFDM/54Mbps mode 11g
+        status: associated
+        ssid dlinkap channel 11 (2462 Mhz 11g) bssid 00:13:46:49:41:76
+        country US ecm authmode OPEN privacy OFF txpower 21.5 bmiss 7
+        scanvalid 60 bgscan bgscanintvl 300 bgscanidle 250 roam:rssi 7
+        roam:rate 5 protmode CTS wme burst
+....
+
+`status: associated` 줄은 무선 네트워크에 연결되어 있음을 의미합니다. `bssid 00:13:46:49:41:76`은 액세스 포인트의 MAC 주소이며, `authmode OPEN`은 통신이 암호화되지 않았음을 나타냅니다.
+
+====== 고정 IP 주소
+
+DHCP 서버에서 IP 주소를 얻을 수 없는 경우 고정 IP 주소를 설정합니다. 위에 표시된 `DHCP` 키워드를 주소 정보로 바꿉니다. 액세스 포인트 선택을 위한 다른 매개변수는 그대로 유지하세요:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="inet 192.168.1.100 netmask 255.255.255.0 ssid your_ssid_here"
+....
+
+[[network-wireless-wpa]]
+===== WPA
+
+WPA(Wi-Fi Protected Access)는 802.11 네트워크와 함께 사용되는 보안 프로토콜로, 적절한 인증이 부족하고 WEP의 취약점을 해결하기 위해 사용됩니다. WPA는 802.1X 인증 프로토콜을 활용하며 데이터 무결성을 위해 WEP 대신 여러 암호 중 하나를 사용합니다. WPA에서 요구하는 유일한 암호는 임시 키 무결성 프로토콜(Temporary Key Integrity Protocol, TKIP)입니다. TKIP는 무결성 검사, 변조 감지 및 감지된 침입에 대응하기 위한 조치를 추가하여 WEP에서 사용하는 기본 RC4 암호를 확장한 암호입니다. TKIP는 소프트웨어 수정만으로 레거시 하드웨어에서 작동하도록 설계되었습니다. 이는 보안을 개선하기 위한 절충안이지만 여전히 공격으로부터 완전히 자유롭지는 않습니다. WPA는 또한 TKIP의 대안으로 AES-CCMP 암호를 지정하고 있으며, 가능한 경우 이 암호를 선호합니다. 이 사양에서는 WPA2 또는 RSN이라는 용어가 일반적으로 사용됩니다.
+
+WPA는 인증 및 암호화 프로토콜을 정의합니다. 인증은 802.1X 및 RADIUS와 같은 백엔드 인증 서비스 또는 미리 공유한 암호를 사용하여 스테이션과 액세스 포인트 간 최소한의 핸드셰이크를 사용하는 두 가지 기술 중 하나를 사용하여 수행됩니다. 전자는 일반적으로 WPA 엔터프라이즈라고 하고 후자는 WPA 개인이라고 합니다. 대부분의 사람들이 무선 네트워크에 RADIUS 백엔드 서버를 설정하지 않기 때문에 WPA-PSK가 가장 일반적으로 사용되는 WPA 구성입니다.
+
+무선 연결 제어와 서버와의 키 협상 또는 인증은 man:wpa_supplicant[8]를 사용하여 수행합니다. 이 프로그램을 실행하려면 구성 파일인 [.filename]#/etc/wpa_supplicant.conf#가 필요합니다. 이 파일에 대한 자세한 정보는 man:wpa_supplicant.conf[5]에서 확인할 수 있습니다.
+
+[[network-wireless-wpa-wpa-psk]]
+====== WPA-PSK
+
+WPA 개인이라고도 하는 WPA-PSK는 주어진 비밀번호로 생성되어 무선 네트워크에서 마스터 키로 사용되는 사전 공유 키(PSK)를 기반으로 합니다. 즉, 모든 무선 사용자가 동일한 키를 공유하게 됩니다. WPA-PSK는 인증 서버를 사용할 수 없거나 원치 않는 소규모 네트워크를 위한 것입니다.
+
+[WARNING]
+====
+항상 충분히 길고 다양한 알파벳으로 구성된 강력한 비밀번호를 사용하여 쉽게 추측하거나 공격당하지 않도록 하세요.
+====
+
+첫 번째 단계는 네트워크의 SSID와 미리 공유한 키를 사용하여 [.filename]#/etc/wpa_supplicant.conf#을 구성하는 것입니다:
+
+[.programlisting]
+....
+network={
+  ssid="freebsdap"
+  psk="freebsdmall"
+}
+....
+
+그리고 나서 [.filename]#/etc/rc.conf#에서 무선 장치 구성은 WPA로, IP 주소는 DHCP로 가져올 것을 지정합니다:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+....
+
+이제 인터페이스를 불러옵니다:
+
+[source, shell]
+....
+# service netif start
+Starting wpa_supplicant.
+DHCPDISCOVER on wlan0 to 255.255.255.255 port 67 interval 5
+DHCPDISCOVER on wlan0 to 255.255.255.255 port 67 interval 6
+DHCPOFFER from 192.168.0.1
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67
+DHCPACK from 192.168.0.1
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet OFDM/36Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+또는 [.filename]#/etc/wpa_supplicant.conf#의 정보를 사용하여 인터페이스를 수동으로 구성해 보세요:
+
+[source, shell]
+....
+# wpa_supplicant -i wlan0 -c /etc/wpa_supplicant.conf
+Trying to associate with 00:11:95:c3:0d:ac (SSID='freebsdap' freq=2412 MHz)
+Associated with 00:11:95:c3:0d:ac
+WPA: Key negotiation completed with 00:11:95:c3:0d:ac [PTK=CCMP GTK=CCMP]
+CTRL-EVENT-CONNECTED - Connection to 00:11:95:c3:0d:ac completed (auth) [id=0 id_str=]
+....
+
+다음 작업은 man:dhclient[8]를 실행하여 DHCP 서버에서 IP 주소를 가져오는 것입니다:
+
+[source, shell]
+....
+# dhclient wlan0
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67
+DHCPACK from 192.168.0.1
+bound to 192.168.0.254 -- renewal in 300 seconds.
+# ifconfig wlan0
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet OFDM/36Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+[NOTE]
+====
+[.filename]#/etc/rc.conf#에 `ifconfig_wlan0="DHCP"` 항목이 있는 경우, man:wpa_supplicant[8]가 액세스 포인트와 연결되면 man:dhclient[8]가 자동으로 시작됩니다.
+====
+
+DHCP를 사용할 수 없거나 원하지 않는 경우, man:wpa_supplicant[8]가 스테이션을 인증한 후 고정 IP 주소를 설정합니다:
+
+[source, shell]
+....
+# ifconfig wlan0 inet 192.168.0.100 netmask 255.255.255.0
+# ifconfig wlan0
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.100 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet OFDM/36Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+DHCP를 사용하지 않는 경우 기본 게이트웨이와 네임서버도 수동으로 설정해야 합니다:
+
+[source, shell]
+....
+# route add default your_default_router
+# echo "nameserver your_DNS_server" >> /etc/resolv.conf
+....
+
+[[network-wireless-wpa-eap-tls]]
+====== EAP-TLS를 사용한 WPA
+
+두 번째 WPA 사용 방법은 802.1X 백엔드 인증 서버를 사용하는 것입니다. 이 경우 보안 수준이 낮은 WPA 개인과 구분하기 위해 WPA를 WPA 엔터프라이즈라고 합니다. WPA Enterprise의 인증은 확장 가능한 인증 프로토콜(Extensible Authentication Protocol, EAP)을 기반으로 합니다.
+
+EAP에는 암호화 방법이 제공되지 않습니다. 대신 EAP는 암호화된 터널 안에 내장되어 있습니다. EAP 인증 방법에는 여러 가지가 있지만 EAP-TLS, EAP-TTLS 및 EAP-PEAP가 가장 일반적입니다.
+
+EAP-TLS(전송 계층 보안을 사용한 EAP)는 http://www.wi-fi.org/[Wi-Fi Alliance]에서 인증한 최초의 EAP 방법이기 때문에 널리 지원되는 무선 인증 프로토콜입니다. EAP-TLS를 실행하려면 모든 컴퓨터에 설치된 CA(인증 기관)의 인증서, 인증 서버에 대한 서버 인증서, 각 무선 클라이언트에 대한 클라이언트 인증서 등 세 개의 인증서가 필요합니다. 이 EAP 방식에서는 인증 서버와 무선 클라이언트가 각각의 인증서를 제시하여 서로를 인증한 다음, 이 인증서가 조직의 CA에 의해 서명되었는지 확인합니다.
+
+이전과 마찬가지로 [.filename]#/etc/wpa_supplicant.conf#를 통해 구성을 수행합니다:
+
+[.programlisting]
+....
+network={
+  ssid="freebsdap" <.>
+  proto=RSN  <.>
+  key_mgmt=WPA-EAP <.>
+  eap=TLS <.>
+  identity="loader" <.>
+  ca_cert="/etc/certs/cacert.pem" <.>
+  client_cert="/etc/certs/clientcert.pem" <.>
+  private_key="/etc/certs/clientkey.pem" <.>
+  private_key_passwd="freebsdmallclient" <.>
+}
+....
+
+<.> 이 필드는 네트워크 이름(SSID)을 나타냅니다.
+<.> 이 예에서는 WPA2라고도 하는 RSN IEEE(R) 802.11i 프로토콜을 사용합니다.
+<.> `key_mgmt` 줄은 사용할 키 관리 프로토콜을 나타냅니다. 이 예에서는 EAP 인증을 사용하는 WPA입니다.
+<.> 이 필드는 EAP 연결방법을 나타냅니다.
+<.> `identity` 필드에는 EAP의 ID 문자열이 포함됩니다.
+<.> `ca_cert` 필드는 CA 인증서 파일의 경로명을 나타냅니다. 이 파일은 서버 인증서를 확인하는 데 필요합니다.
+<.> `client_cert` 줄은 클라이언트 인증서 파일의 경로명을 제공합니다. 이 인증서는 네트워크의 각 무선 클라이언트마다 고유합니다.
+<.> `private_key 필드는 클라이언트 인증서 개인 키 파일의 경로 이름입니다.
+<.> `private_key_passwd` 필드에는 개인키의 비밀번호가 입력됩니다.
+
+다음으로, [.filename]#/etc/rc.conf#에 다음 줄을 추가합니다:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+....
+
+다음 단계는 인터페이스를 불러오는 것입니다:
+
+[source, shell]
+....
+# service netif start
+Starting wpa_supplicant.
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 7
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 15
+DHCPACK from 192.168.0.20
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet DS/11Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+man:wpa_supplicant[8] 및 man:ifconfig[8]를 사용하여 수동으로 인터페이스를 불러올 수도 있습니다.
+
+[[network-wireless-wpa-eap-ttls]]
+====== EAP-TTLS를 사용한 WPA
+
+EAP-TLS를 사용하면 인증 서버와 클라이언트 모두 인증서가 필요합니다. EAP-TTLS를 사용하면 클라이언트 인증서는 선택 사항입니다. 이 방법은 방문자에게 클라이언트 측 인증서가 없는 경우에도 안전한 SSL 터널을 생성하는 웹 서버와 유사합니다. EAP-TTLS는 인증 데이터의 안전한 전송을 위해 암호화된 TLS 터널을 사용합니다.
+
+필요한 구성은 [.filename]#/etc/wpa_supplicant.conf#에 추가할 수 있습니다:
+
+[.programlisting]
+....
+network={
+  ssid="freebsdap"
+  proto=RSN
+  key_mgmt=WPA-EAP
+  eap=TTLS <.>
+  identity="test" <.>
+  password="test" <.>
+  ca_cert="/etc/certs/cacert.pem" <.>
+  phase2="auth=MD5" <.>
+}
+....
+
+<.> 이 필드는 EAP에 대한 연결방법을 지정합니다.
+<.> `identity` 필드에는 암호화된 TLS 터널 내부의 EAP 인증을 위한 ID 문자열이 포함되어 있습니다.
+<.> `password` 필드에는 EAP 인증을 위한 비밀번호가 입력됩니다.
+<.> `ca_cert` 필드는 CA 인증서 파일의 경로명을 나타냅니다. 이 파일은 서버 인증서를 확인하는 데 필요합니다.
+<.> 이 필드는 암호화된 TLS 터널에 사용되는 인증 방법을 지정합니다. 이 예에서는 MD5-Challenge가 포함된 EAP가 사용됩니다. "내부 인증(inner authentication)" 단계는 종종 "2 단계(phase 2)"라고 합니다.
+
+그런 다음 [.filename]#/etc/rc.conf#에 다음 줄을 추가합니다:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+....
+
+다음 단계는 인터페이스를 불러오는 것입니다:
+
+[source, shell]
+....
+# service netif start
+Starting wpa_supplicant.
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 7
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 15
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 21
+DHCPACK from 192.168.0.20
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet DS/11Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+[[network-wireless-wpa-eap-peap]]
+====== EAP-PEAP를 사용한 WPA
+
+[NOTE]
+====
+PEAPv0/EAP-MSCHAPv2는 가장 일반적인 PEAP 방법입니다. 이 장에서는 PEAP라는 용어를 사용하여 해당 방법을 지칭합니다.
+====
+
+PEAP(Protected EAP)은 EAP-TTLS의 대안으로 설계되었으며 EAP-TLS 다음으로 가장 많이 사용되는 EAP 표준입니다. 운영 체제가 혼합된 네트워크에서는 PEAP이 EAP-TLS 다음으로 가장 많이 지원되는 표준이어야 합니다.
+
+PEAP은 서버 측 인증서를 사용하여 클라이언트와 인증 서버 사이에 암호화된 TLS 터널을 생성하여 클라이언트를 인증하고, 이후 인증 정보 교환을 보호한다는 점에서 EAP-TTLS와 유사합니다. PEAP 인증은 사용자 이름을 그대로 브로드캐스트하고 암호화된 TLS 터널에서 비밀번호만 전송한다는 점에서 EAP-TTLS와 다릅니다. EAP-TTLS는 사용자 이름과 비밀번호 모두에 TLS 터널을 사용합니다.
+
+[.filename]#/etc/wpa_supplicant.conf#에 다음 줄을 추가하여 EAP-PEAP 관련 설정을 구성합니다:
+
+[.programlisting]
+....
+network={
+  ssid="freebsdap"
+  proto=RSN
+  key_mgmt=WPA-EAP
+  eap=PEAP <.>
+  identity="test" <.>
+  password="test" <.>
+  ca_cert="/etc/certs/cacert.pem" <.>
+  phase1="peaplabel=0" <.>
+  phase2="auth=MSCHAPV2" <.>
+}
+....
+
+<.> 이 필드는 EAP에 대한 연결방법을 지정합니다.
+<.> `identity` 필드에는 암호화된 TLS 터널 내부의 EAP 인증을 위한 ID 문자열이 포함되어 있습니다.
+<.> `password` 필드에는 EAP 인증을 위한 비밀번호가 입력됩니다.
+<.> `ca_cert` 필드는 CA 인증서 파일의 경로명을 나타냅니다. 이 파일은 서버 인증서를 확인하는 데 필요합니다.
+<.> 이 필드에는 인증의 첫 번째 단계인 TLS 터널에 대한 매개변수가 포함되어 있습니다. 사용하는 인증 서버에 따라 인증에 사용할 특정 레이블을 지정합니다. 대부분의 경우 레이블은 `peaplabel=0`을 사용하여 설정하는 "client EAP encryption"이 됩니다. 자세한 내용은 man:wpa_supplicant.conf[5]에서 확인할 수 있습니다.
+<.> 이 필드는 암호화된 TLS 터널에서 사용되는 인증 프로토콜을 지정합니다. PEAP의 경우 `auth=MSCHAPV2`입니다.
+
+[.filename]#/etc/rc.conf#에 다음을 추가합니다:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+....
+
+이제 인터페이스를 불러옵니다:
+
+[source, shell]
+....
+# service netif start
+Starting wpa_supplicant.
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 7
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 15
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 21
+DHCPACK from 192.168.0.20
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet DS/11Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+....
+
+[[network-wireless-wep]]
+===== WEP
+
+WEP(Wired Equivalent Privacy)는 원래 802.11 표준의 일부입니다. 인증 메커니즘이 없으며, 쉽게 뚫릴 수 있는 약한 형태의 액세스 제어만 있습니다.
+
+WEP는 man:ifconfig[8]를 사용하여 설정할 수 있습니다:
+
+[source, shell]
+....
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 inet 192.168.1.100 netmask 255.255.255.0 \
+	    ssid my_net wepmode on weptxkey 3 wepkey 3:0x3456789012
+....
+
+* `weptxkey`는 전송에 사용할 WEP 키를 지정합니다. 이 예에서는 세 번째 키를 사용합니다. 이 키는 액세스 포인트의 설정과 일치해야 합니다. 액세스 포인트에서 어떤 키를 사용하는지 확실하지 않은 경우 이 값에 `1`(첫 번째 키)을 사용해 보십시오.
+* `wepkey`는 WEP 키 중 하나를 선택합니다. 색인은 _index:key_ 형식이어야 합니다. 기본적으로 `1` 키가 사용되며, 첫 번째 키가 아닌 다른 키를 사용할 때만 인덱스를 설정하면 됩니다.
++
+[NOTE]
+====
+`0x3456789012`를 액세스 포인트에서 사용하도록 구성된 키로 바꿉니다.
+====
+
+자세한 내용은 man:ifconfig[8]을 참조하세요.
+
+man:wpa_supplicant[8] 기능을 사용하여 WEP로 무선 인터페이스를 구성할 수 있습니다. 위의 예는 [.filename]#/etc/wpa_supplicant.conf#에 다음 줄을 추가하여 설정할 수 있습니다:
+
+[.programlisting]
+....
+network={
+  ssid="my_net"
+  key_mgmt=NONE
+  wep_key3=3456789012
+  wep_tx_keyidx=3
+}
+....
+
+다음으로:
+
+[source, shell]
+....
+# wpa_supplicant -i wlan0 -c /etc/wpa_supplicant.conf
+Trying to associate with 00:13:46:49:41:76 (SSID='dlinkap' freq=2437 MHz)
+Associated with 00:13:46:49:41:76
+....
+
+=== Ad-hoc 모드
+
+ad-hoc 모드라고도 하는 IBSS 모드는 지점 간 연결을 위해 설계되었습니다. 예를 들어, 머신 `A`와 `B` 사이에 ad-hoc 네트워크를 설정하려면 두 개의 IP 주소와 하나의 SSID를 선택합니다.
+
+`A`에서:
+
+[source, shell]
+....
+# ifconfig wlan0 create wlandev ath0 wlanmode adhoc
+# ifconfig wlan0 inet 192.168.0.1 netmask 255.255.255.0 ssid freebsdap
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:c3:0d:ac
+	  inet 192.168.0.1 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <adhoc>
+	  status: running
+	  ssid freebsdap channel 2 (2417 Mhz 11g) bssid 02:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 scanvalid 60
+	  protmode CTS wme burst
+....
+
+`adhoc` 매개 변수는 인터페이스가 IBSS 모드에서 실행 중임을 나타냅니다.
+
+이제 `B`는 `A`를 감지할 수 있어야 합니다:
+
+[source, shell]
+....
+# ifconfig wlan0 create wlandev ath0 wlanmode adhoc
+# ifconfig wlan0 up scan
+  SSID/MESH ID    BSSID              CHAN RATE   S:N     INT CAPS
+  freebsdap       02:11:95:c3:0d:ac    2   54M -64:-96  100 IS   WME
+....
+
+출력의 `I`는 `A`가 ad-hoc 모드에 있음을 확인합니다. 이제 `B`를 다른 IP 주소로 구성합니다:
+
+[source, shell]
+....
+# ifconfig wlan0 inet 192.168.0.2 netmask 255.255.255.0 ssid freebsdap
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:d5:43:62
+	  inet 192.168.0.2 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <adhoc>
+	  status: running
+	  ssid freebsdap channel 2 (2417 Mhz 11g) bssid 02:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 scanvalid 60
+	  protmode CTS wme burst
+....
+
+이제 `A`와 `B` 모두 정보를 교환할 준비가 되었습니다.
+
+[[network-wireless-ap]]
+=== FreeBSD 호스트 액세스 포인트
+
+FreeBSD는 하드웨어 AP를 구입하거나 ad-hoc 네트워크를 실행할 필요 없이 액세스 포인트(AP) 역할을 할 수 있습니다. 이는 FreeBSD 머신이 인터넷과 같은 다른 네트워크의 게이트웨이 역할을 할 때 특히 유용할 수 있습니다.
+
+[[network-wireless-ap-basic]]
+==== 기본 설정
+
+FreeBSD 머신을 AP로 구성하기 전에, 커널은 무선 카드에 대한 적절한 네트워킹 지원과 사용 중인 보안 프로토콜로 구성해야 합니다. 자세한 내용은 <<network-wireless-basic>>을 참조하십시오.
+
+[NOTE]
+====
+Windows(R) 드라이버용 NDIS 드라이버 래퍼는 현재 AP 작동을 지원하지 않습니다. 네이티브 FreeBSD 무선 드라이버만 AP 모드를 지원합니다.
+====
+
+무선 네트워킹 지원이 로드되면 무선 장치가 호스트 기반 액세스 포인트 모드(hostap 모드라고도 함)를 지원하는지 확인합니다:
+
+[source, shell]
+....
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 list caps
+drivercaps=6f85edc1<STA,FF,TURBOP,IBSS,HOSTAP,AHDEMO,TXPMGT,SHSLOT,SHPREAMBLE,MONITOR,MBSS,WPA1,WPA2,BURST,WME,WDS,BGSCAN,TXFRAG>
+cryptocaps=1f<WEP,TKIP,AES,AES_CCM,TKIPMIC>
+....
+
+이 출력은 카드의 기능을 표시합니다. `HOSTAP` 단어는 이 무선 카드가 AP로 작동할 수 있음을 확인합니다. 지원되는 다양한 암호도 나열됩니다: WEP, TKIP 및 AES. 이 정보는 AP에서 사용할 수 있는 보안 프로토콜을 나타냅니다.
+
+무선 디바이스는 네트워크 의사 디바이스를 생성하는 동안에만 hostap 모드로 전환할 수 있으므로 이전에 생성한 디바이스를 먼저 삭제해야 합니다:
+
+[source, shell]
+....
+# ifconfig wlan0 destroy
+....
+
+그리고 나서 다른 매개변수를 설정하기 전에 올바른 옵션으로 다시 생성합니다:
+
+[source, shell]
+....
+# ifconfig wlan0 create wlandev ath0 wlanmode hostap
+# ifconfig wlan0 inet 192.168.0.1 netmask 255.255.255.0 ssid freebsdap mode 11g channel 1
+....
+
+man:ifconfig[8]을 다시 사용하여 [.filename]#wlan0# 인터페이스의 상태를 확인합니다:
+
+[source, shell]
+....
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:c3:0d:ac
+	  inet 192.168.0.1 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <hostap>
+	  status: running
+	  ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 scanvalid 60
+	  protmode CTS wme burst dtimperiod 1 -dfs
+....
+
+`hostap` 매개 변수는 인터페이스가 호스트 기반 액세스 포인트 모드에서 실행 중임을 나타냅니다.
+
+인터페이스 구성은 [.filename]#/etc/rc.conf#에 다음 줄을 추가하여 부팅 시 자동으로 수행할 수 있습니다:
+
+[.programlisting]
+....
+wlans_ath0="wlan0"
+create_args_wlan0="wlanmode hostap"
+ifconfig_wlan0="inet 192.168.0.1 netmask 255.255.255.0 ssid freebsdap mode 11g channel 1"
+....
+
+==== 인증 또는 암호화가 없는 호스트 기반 액세스 포인트
+
+인증이나 암호화 없이 AP를 실행하는 것은 권장하지 않지만, AP가 작동하는지 간단하게 확인할 수 있는 방법입니다. 이 구성은 클라이언트 문제를 디버깅하는 데에도 중요합니다.
+
+AP가 구성되면 다른 무선 기기에서 스캔을 시작하여 AP를 찾습니다:
+
+[source, shell]
+....
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 up scan
+SSID/MESH ID    BSSID              CHAN RATE   S:N     INT CAPS
+freebsdap       00:11:95:c3:0d:ac    1   54M -66:-96  100 ES   WME
+....
+
+클라이언트 컴퓨터가 AP를 발견하여 연결할 수 있습니다:
+
+[source, shell]
+....
+# ifconfig wlan0 inet 192.168.0.2 netmask 255.255.255.0 ssid freebsdap
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:d5:43:62
+	  inet 192.168.0.2 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet OFDM/54Mbps mode 11g
+	  status: associated
+	  ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 bmiss 7
+	  scanvalid 60 bgscan bgscanintvl 300 bgscanidle 250 roam:rssi 7
+	  roam:rate 5 protmode CTS wme burst
+....
+
+[[network-wireless-ap-wpa]]
+==== WPA2 호스트 기반 액세스 포인트
+
+이 섹션에서는 WPA2 보안 프로토콜을 사용하여 FreeBSD 액세스 포인트를 설정하는 데 중점을 둡니다. WPA와 WPA 기반 무선 클라이언트의 구성에 대한 자세한 내용은 <<network-wireless-wpa>>에서 확인할 수 있습니다.
+
+man:hostapd[8] 데몬은 WPA2 지원 AP에서 클라이언트 인증 및 키 관리를 처리하는 데 사용됩니다.
+
+다음 구성 작업은 AP 역할을 하는 FreeBSD 머신에서 수행됩니다. AP가 올바르게 작동하면 부팅 시 [.filename]#/etc/rc.conf#에 있는 이 줄을 사용하여 man:hostapd[8]를 자동으로 시작할 수 있습니다:
+
+[.programlisting]
+....
+hostapd_enable="YES"
+....
+
+man:hostapd[8]를 구성하기 전에 먼저 <<network-wireless-ap-basic>에 소개된 기본 설정을 구성합니다.
+
+===== WPA2-PSK
+
+WPA2-PSK는 백엔드 인증 서버를 사용할 수 없거나 원하지 않는 소규모 네트워크를 위한 것입니다.
+
+구성은 [.filename]#/etc/hostapd.conf#에서 합니다:
+
+[.programlisting]
+....
+interface=wlan0                  <.>
+debug=1                          <.>
+ctrl_interface=/var/run/hostapd  <.>
+ctrl_interface_group=wheel       <.>
+ssid=freebsdap                   <.>
+wpa=2                            <.>
+wpa_passphrase=freebsdmall       <.>
+wpa_key_mgmt=WPA-PSK             <.>
+wpa_pairwise=CCMP                <.>
+....
+
+<.> 액세스 포인트에 사용되는 무선 인터페이스.
+<.> man:hostapd[8]를 실행하는 동안 사용되는 상세도 수준입니다. 값이 `1`이면 최소 수준을 나타냅니다.
+<.> man:hostapd_cli[8]와 같은 외부 프로그램과의 통신을 위해 도메인 소켓 파일을 저장하는 데 man:hostapd[8]가 사용하는 디렉터리의 경로명입니다. 이 예제에서는 기본값이 사용됩니다.
+<.> 제어 인터페이스 파일에 액세스할 수 있는 그룹.
+<.> 무선 스캔에 표시되는 무선 네트워크 이름 또는 SSID입니다.
+<.> WPA를 활성화하고 필요한 WPA 인증 프로토콜을 지정합니다. 값이 `2`이면 AP가 WPA2를 사용하도록 구성되며 권장설정입니다. 더 이상 사용되지 않는 WPA가 필요한 경우에만 `1`로 설정합니다.
+<.> WPA 인증용 ASCII 암호 구문.
+<.> 사용할 키 관리 프로토콜입니다. 이 예에서는 WPA-PSK를 설정합니다.
+<.> 액세스 포인트에서 허용하는 암호화 알고리즘으로 이 예에서는 CCMP(AES) 암호만 허용됩니다. CCMP는 TKIP의 대안이며 가능한 경우 강력히 권장됩니다. CCMP를 사용할 수 없는 스테이션이 있는 경우에만 TKIP를 허용해야 합니다.
+
+다음 단계는 man:hostapd[8]를 실행하는 것입니다:
+
+[source, shell]
+....
+# service hostapd forcestart
+....
+
+[source, shell]
+....
+# ifconfig wlan0
+wlan0: flags=8943<UP,BROADCAST,RUNNING,PROMISC,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	ether 04:f0:21:16:8e:10
+	inet6 fe80::6f0:21ff:fe16:8e10%wlan0 prefixlen 64 scopeid 0x9
+	nd6 options=21<PERFORMNUD,AUTO_LINKLOCAL>
+	media: IEEE 802.11 Wireless Ethernet autoselect mode 11na <hostap>
+	status: running
+	ssid No5ignal channel 36 (5180 MHz 11a ht/40+) bssid 04:f0:21:16:8e:10
+	country US ecm authmode WPA2/802.11i privacy MIXED deftxkey 2
+	AES-CCM 2:128-bit AES-CCM 3:128-bit txpower 17 mcastrate 6 mgmtrate 6
+	scanvalid 60 ampdulimit 64k ampdudensity 8 shortgi wme burst
+	dtimperiod 1 -dfs
+	groups: wlan
+....
+
+AP가 실행되면 클라이언트가 AP에 연결할 수 있습니다. 자세한 내용은 <<network-wireless-wpa>>을 참조하세요. `ifconfig _wlan0_ list sta`를 사용하여 AP와 연결된 스테이션을 확인할 수 있습니다.
+
+==== WEP 호스트 기반 액세스 포인트
+
+인증 메커니즘이 없고 암호화가 쉽게 해독되므로 AP 설정에 WEP를 사용하는 것은 권장하지 않습니다. 일부 레거시 무선 카드는 WEP만 지원하며 이러한 카드는 인증이나 암호화 없는 AP만 지원합니다.
+
+이제 무선 장치를 호스트 모드로 전환하고 올바른 SSID 및 IP 주소로 구성할 수 있습니다:
+
+[source, shell]
+....
+# ifconfig wlan0 create wlandev ath0 wlanmode hostap
+# ifconfig wlan0 inet 192.168.0.1 netmask 255.255.255.0 \
+	ssid freebsdap wepmode on weptxkey 3 wepkey 3:0x3456789012 mode 11g
+....
+
+* `weptxkey`는 전송에 사용할 WEP 키를 나타냅니다. 이 예에서는 키 번호가 `1`로 시작하므로 세 번째 키를 사용합니다. 데이터를 암호화하려면 이 매개변수를 지정해야 합니다.
+* `wepkey`는 선택한 WEP 키를 설정합니다. _index:key_ 형식이어야 합니다. 인덱스가 지정되지 않으면 키 `1`이 설정됩니다. 첫 번째 키가 아닌 다른 키를 사용할 때는 인덱스를 설정해야 합니다.
+
+man:ifconfig[8]을 사용하여 [.filename]#wlan0# 인터페이스의 상태를 확인합니다:
+
+[source, shell]
+....
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:c3:0d:ac
+	  inet 192.168.0.1 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <hostap>
+	  status: running
+	  ssid freebsdap channel 4 (2427 Mhz 11g) bssid 00:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy ON deftxkey 3 wepkey 3:40-bit
+	  txpower 21.5 scanvalid 60 protmode CTS wme burst dtimperiod 1 -dfs
+....
+
+이제 다른 무선 기기에서 스캔을 시작하여 AP를 찾을 수 있습니다:
+
+[source, shell]
+....
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 up scan
+SSID            BSSID              CHAN RATE  S:N   INT CAPS
+freebsdap       00:11:95:c3:0d:ac    1   54M 22:1   100 EPS
+....
+
+이 예제에서는 클라이언트 컴퓨터가 AP를 찾았고 올바른 매개변수를 사용하여 AP와 연결할 수 있습니다. 자세한 내용은 <<network-wireless-wep>>을 참조하세요.
+
+=== 유선 및 무선 연결 모두 사용하기
+
+유선 연결은 더 나은 성능과 안정성을 제공하는 반면, 무선 연결은 유연성과 이동성을 제공합니다. 노트북 사용자는 일반적으로 두 가지 유형의 연결 사이를 원활하게 이동하기를 원합니다.
+
+FreeBSD에서는 두 개 이상의 네트워크 인터페이스를 "failover" 방식으로 결합할 수 있습니다. 이 유형의 구성은 네트워크 인터페이스 그룹에서 가장 선호되고 사용 가능한 연결을 사용하며, 링크 상태가 변경되면 운영 체제가 자동으로 전환됩니다.
+
+링크 집계 및 장애 조치에 대해서는 <<network-aggregation>>에서 다루고 있으며, 유선 및 무선 연결을 모두 사용하는 예제는 <<networking-lagg-wired-and-wireless>>에서 제공됩니다.
+
+=== 문제 해결
+
+이 섹션에서는 일반적인 무선 네트워킹 문제를 해결하는 데 도움이 되는 여러 단계에 대해 설명합니다.
+
+* 스캔할 때 액세스 포인트가 나열되지 않으면 구성에서 무선 장치를 한정된 채널 집합으로 제한하지 않았는지 확인하세요.
+* 장치가 액세스 포인트에 연결할 수 없는 경우 구성이 액세스 포인트의 설정과 일치하는지 확인합니다. 여기에는 인증 체계 및 모든 보안 프로토콜이 포함됩니다. 가능한 한 구성을 단순화하세요. WPA 또는 WEP와 같은 보안 프로토콜을 사용하는 경우, 액세스 포인트를 개방형 인증 및 보안 없음으로 구성하여 트래픽이 통과되는지 확인하세요.
++
+디버깅 지원은 man:wpa_supplicant[8]에서 제공합니다. 이 유틸리티를 `-dd`로 수동 실행하고 시스템 로그를 살펴보세요.
+* 시스템이 액세스 포인트에 연결할 수 있으면 man:ping[8]과 같은 도구를 사용하여 네트워크 구성을 진단합니다.
+* 더 낮은 수준의 디버깅 도구가 많이 있습니다. 802.11 프로토콜 지원 계층에서 man:wlandebug[8]를 사용하여 디버깅 메시지를 활성화할 수 있습니다. 예를 들어, 액세스 포인트 검색과 관련된 콘솔 메시지 및 통신을 준비하는 데 필요한 802.11 프로토콜 핸드셰이크와 관련된 메시지를 활성화할 수 있습니다:
++
+[source, shell]
+....
+# wlandebug -i wlan0 +scan+auth+debug+assoc
+  net.wlan.0.debug: 0 => 0xc80000<assoc,auth,scan>
+....
++
+802.11 계층에서 많은 유용한 통계를 유지 관리하며, [.filename]#/usr/src/tools/tools/net80211#에 있는 `wlanstats`가 이 정보를 덤프합니다. 이 통계에는 802.11 계층에서 식별된 모든 오류가 표시되어야 합니다. 그러나 일부 오류는 802.11 계층 아래에 있는 장치 드라이버에서 식별되므로 표시되지 않을 수 있습니다. 디바이스별 문제를 진단하려면 드라이버 설명서를 참조하세요.
+
+위의 정보로 문제를 명확히 파악하는 데 도움이 되지 않는 경우 문제 보고서를 제출하고 위의 도구에서 출력한 내용을 포함하세요.
+
+[[network-usb-tethering]]
+== USB 테더링
+
+대부분의 휴대폰은 USB를 통해 데이터 연결을 공유하는 옵션을 제공합니다("테더링"이라고도 함). 이 기능은 RNDIS, CDC 또는 사용자 지정 Apple(R) iPhone(R)/iPad(R) 프로토콜 중 하나를 사용합니다.
+
+* Android(TM) 장치는 일반적으로 man:urndis[4] 드라이버를 사용합니다.
+* Apple(R) 장치는 man:ipheth[4] 드라이버를 사용합니다.
+* 구형 디바이스에서는 man:cdce[4] 드라이버를 사용하는 경우가 많습니다.
+
+장치를 연결하기 전에 적절한 드라이버를 커널에 로드합니다:
+
+[source, shell]
+....
+# kldload if_urndis
+# kldload if_cdce
+# kldload if_ipheth
+....
+
+장치가 연결되면 ``ue``_0_을 일반 네트워크 장치처럼 사용할 수 있습니다. 장치에서 'USB 테더링' 옵션이 활성화되어 있는지 확인하세요.
+
+이 변경 사항을 영구적으로 적용하고 부팅 시 드라이버를 모듈로 로드하려면 [.filename]#/boot/loader.conf#에 다음 중 적절한 줄을 배치합니다:
+
+[source, shell]
+....
+if_urndis_load="YES"
+if_cdce_load="YES"
+if_ipheth_load="YES"
+....
+
+[[network-bluetooth]]
+== 블루투스
+
+블루투스는 2.4GHz 비면허 대역에서 작동하는 10미터 범위의 개인 네트워크를 생성하기 위한 무선 기술입니다. 네트워크는 일반적으로 휴대폰, 핸드헬드, 랩톱과 같은 휴대용 장치에서 임시로 형성됩니다. Wi-Fi 무선 기술과 달리 Bluetooth는 FTP와 같은 파일 서버, 파일 푸시, 음성 전송, 직렬 회선 에뮬레이션 등과 같은 더 높은 수준의 서비스 프로필을 제공합니다.
+
+이 섹션에서는 FreeBSD 시스템에서 USB 블루투스 동글을 사용하는 방법을 설명합니다. 그런 다음 다양한 블루투스 프로토콜과 유틸리티에 대해 설명합니다.
+
+=== 블루투스 지원을 로딩하기
+
+FreeBSD의 블루투스 스택은 man:netgraph[4] 프레임워크를 사용하여 구현됩니다. 다양한 블루투스 USB 동글은 man:ng_ubt[4]에 의해 지원됩니다. 브로드컴 BCM2033 기반 블루투스 장치는 man:ubtbcmfw[4] 및 man:ng_ubt[4] 드라이버에 의해 지원됩니다. 3Com Bluetooth PC 카드 3CRWB60-A는 man:ng_bt3c[4] 드라이버에 의해 지원됩니다. 직렬 및 UART 기반 블루투스 장치는 man:sio[4], man:ng_h4[4], man:hcseriald[8]에서 지원됩니다.
+
+장치를 연결하기 전에 위의 드라이버 중 어떤 드라이버를 사용하는지 확인한 다음 해당 드라이버를 로드합니다. 예를 들어 장치가 man:ng_ubt[4] 드라이버를 사용하는 경우:
+
+[source, shell]
+....
+# kldload ng_ubt
+....
+
+시스템 시작 시 Bluetooth 장치가 시스템에 연결되는 경우, [.filename]#/boot/loader.conf#에 드라이버를 추가하여 부팅 시 모듈을 로드하도록 시스템을 구성할 수 있습니다:
+
+[.programlisting]
+....
+ng_ubt_load="YES"
+....
+
+드라이버가 로드되면 USB 동글을 연결합니다. 드라이버 로드에 성공하면 콘솔과 [.filename]#/var/log/messages#에 다음과 유사한 출력이 나타납니다:
+
+[source, shell]
+....
+ubt0: vendor 0x0a12 product 0x0001, rev 1.10/5.25, addr 2
+ubt0: Interface 0 endpoints: interrupt=0x81, bulk-in=0x82, bulk-out=0x2
+ubt0: Interface 1 (alt.config 5) endpoints: isoc-in=0x83, isoc-out=0x3,
+      wMaxPacketSize=49, nframes=6, buffer size=294
+....
+
+Bluetooth 스택을 시작 및 중지하려면 시작 스크립트를 사용합니다. 장치의 플러그를 뽑기 전에 스택을 중지하는 것이 좋습니다. 블루투스 스택을 시작하려면 man:hcsecd[8]를 시작해야 할 수 있습니다. 스택을 시작할 때 출력은 다음과 비슷해야 합니다:
+
+[source, shell]
+....
+# service bluetooth start ubt0
+BD_ADDR: 00:02:72:00:d4:1a
+Features: 0xff 0xff 0xf 00 00 00 00 00
+<3-Slot> <5-Slot> <Encryption> <Slot offset>
+<Timing accuracy> <Switch> <Hold mode> <Sniff mode>
+<Park mode> <RSSI> <Channel quality> <SCO link>
+<HV2 packets> <HV3 packets> <u-law log> <A-law log> <CVSD>
+<Paging scheme> <Power control> <Transparent SCO data>
+Max. ACL packet size: 192 bytes
+Number of ACL packets: 8
+Max. SCO packet size: 64 bytes
+Number of SCO packets: 8
+....
+
+=== 다른 Bluetooth 장치 찾기
+
+호스트 컨트롤러 인터페이스(HCI)는 블루투스 베이스밴드 기능에 액세스하기 위한 통일된 방법을 제공합니다. FreeBSD에서는 각 블루투스 장치에 대해 netgraph HCI 노드가 생성됩니다. 자세한 내용은 man:ng_hci[4]를 참조하십시오.
+
+가장 일반적인 작업 중 하나는 RF 근접 거리 내에서 Bluetooth 장치를 검색하는 것입니다. 이 작업을 _inquiry_라고 합니다. 조회 및 기타 HCI 관련 작업은 man:hccontrol[8]을 사용하여 수행됩니다. 아래 예는 범위 내에 있는 블루투스 장치를 찾는 방법을 보여줍니다. 몇 초 후에 장치 목록이 표시됩니다. 원격 장치가 _discoverable_ 모드로 설정된 경우에만 문의에 응답한다는 점에 유의하세요.
+
+[source, shell]
+....
+% hccontrol -n ubt0hci inquiry
+Inquiry result, num_responses=1
+Inquiry result #0
+       BD_ADDR: 00:80:37:29:19:a4
+       Page Scan Rep. Mode: 0x1
+       Page Scan Period Mode: 00
+       Page Scan Mode: 00
+       Class: 52:02:04
+       Clock offset: 0x78ef
+Inquiry complete. Status: No error [00]
+....
+
+`BD_ADDR`은 네트워크 카드의 MAC 주소와 유사한 블루투스 장치의 고유 주소입니다. 이 주소는 장치와의 추가 통신에 필요하며 사람이 읽을 수 있는 이름을 `BD_ADDR`에 할당할 수 있습니다. 알려진 블루투스 호스트에 관한 정보는 [.filename]#/etc/bluetooth/hosts#에 포함되어 있습니다. 다음 예는 원격 장치에 할당된 사람이 읽을 수 있는 이름을 얻는 방법을 보여줍니다:
+
+[source, shell]
+....
+% hccontrol -n ubt0hci remote_name_request 00:80:37:29:19:a4
+BD_ADDR: 00:80:37:29:19:a4
+Name: Pav's T39
+....
+
+원격 Bluetooth 장치에서 조회를 수행하면 해당 컴퓨터가 "your.host.name (ubt0)"으로 검색됩니다. 로컬 장치에 할당된 이름은 언제든지 변경할 수 있습니다.
+
+원격 장치에 별칭을 지정할 수 있는 위치는 [.filename]#/etc/bluetooth/hosts#입니다. [.filename]#/etc/bluetooth/hosts# 파일에 대한 자세한 정보는 man:bluetooth.hosts[5]에서 확인할 수 있습니다.
+
+블루투스 시스템은 두 개의 블루투스 장치 간의 지점 간 연결 또는 여러 블루투스 장치 간에 공유되는 지점 간 다중 지점 연결을 제공합니다. 다음 예는 원격 장치에 대한 연결을 만드는 방법을 보여줍니다:
+
+[source, shell]
+....
+% hccontrol -n ubt0hci create_connection BT_ADDR
+....
+
+`create_connection`은 `BT_ADDR`과 [.filename]#/etc/bluetooth/hosts#의 호스트 별칭을 허용합니다.
+
+다음 예는 로컬 디바이스에 대한 활성 베이스밴드 연결 목록을 가져오는 방법을 보여줍니다:
+
+[source, shell]
+....
+% hccontrol -n ubt0hci read_connection_list
+Remote BD_ADDR    Handle Type Mode Role Encrypt Pending Queue State
+00:80:37:29:19:a4     41  ACL    0 MAST    NONE       0     0 OPEN
+....
+
+_connection handle_은 베이스밴드 연결을 종료해야 할 때 유용하지만, 일반적으로는 직접 종료할 필요는 없습니다. 스택은 비활성 베이스밴드 연결을 자동으로 종료합니다.
+
+[source, shell]
+....
+# hccontrol -n ubt0hci disconnect 41
+Connection handle: 41
+Reason: Connection terminated by local host [0x16]
+....
+
+사용 가능한 HCI 명령의 전체 목록을 보려면 `hccontrol help`를 입력하세요. 대부분의 HCI 명령에는 수퍼유저 권한이 필요하지 않습니다.
+
+=== 디바이스 페어링
+
+기본적으로 Bluetooth 통신은 인증되지 않으며, 어떤 장치든 다른 장치와 통신할 수 있습니다. 휴대폰과 같은 블루투스 장치는 특정 서비스를 제공하기 위해 인증이 필요하도록 선택할 수 있습니다. 블루투스 인증은 일반적으로 최대 16자 길이의 아스키 문자열인 _PIN 코드_를 사용하여 수행됩니다. 사용자는 두 장치에 동일한 PIN 코드를 입력해야 합니다. 사용자가 PIN 코드를 입력하면 두 장치 모두 _link key_를 생성합니다. 그 후 링크 키는 장치 또는 영구 저장소에 저장할 수 있습니다. 다음 번에는 두 장치 모두 이전에 생성된 링크 키를 사용합니다. 이 절차를 _페어링_이라고 합니다. 어느 한 쪽 장치에서 링크 키를 분실하면 페어링을 반복해야 합니다.
+
+man:hcsecd[8] 데몬은 블루투스 인증 요청 처리를 담당합니다. 기본 구성 파일은 [.filename]#/etc/bluetooth/hcsecd.conf#입니다. PIN 코드가 `1234`로 설정된 휴대폰에 대한 예제 섹션은 아래와 같습니다:
+
+[.programlisting]
+....
+device {
+        bdaddr  00:80:37:29:19:a4;
+        name    "Pav's T39";
+        key     nokey;
+        pin     "1234";
+      }
+....
+
+PIN 코드에 대한 유일한 제한은 길이입니다. 블루투스 헤드셋과 같은 일부 장치에는 고정 PIN 코드가 내장되어 있을 수 있습니다. `-d` 스위치를 사용하면 man:hcsecd[8]가 전면에 표시되므로 무슨 일이 일어나고 있는지 쉽게 확인할 수 있습니다. 원격 장치가 페어링을 수신하도록 설정하고 원격 장치에 대한 블루투스 연결을 시작합니다. 원격 장치에서 페어링이 수락되었음을 표시하고 PIN 코드를 요청해야 합니다. [.filename]#hcsecd.conf#에 나열된 것과 동일한 PIN 코드를 입력합니다. 이제 컴퓨터와 원격 장치가 페어링되었습니다. 또는 원격 장치에서 페어링을 시작할 수도 있습니다.
+
+다음 줄을 [.filename]#/etc/rc.conf#에 추가하여 시스템 시작 시 man:hcsecd[8]가 자동으로 시작되도록 구성할 수 있습니다:
+
+[.programlisting]
+....
+hcsecd_enable="YES"
+....
+
+다음은 man:hcsecd[8] 데몬 출력의 샘플입니다:
+
+[.programlisting]
+....
+hcsecd[16484]: Got Link_Key_Request event from 'ubt0hci', remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Found matching entry, remote bdaddr 0:80:37:29:19:a4, name 'Pav's T39', link key doesn't exist
+hcsecd[16484]: Sending Link_Key_Negative_Reply to 'ubt0hci' for remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Got PIN_Code_Request event from 'ubt0hci', remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Found matching entry, remote bdaddr 0:80:37:29:19:a4, name 'Pav's T39', PIN code exists
+hcsecd[16484]: Sending PIN_Code_Reply to 'ubt0hci' for remote bdaddr 0:80:37:29:19:a4
+....
+
+=== PPP 프로필을 통한 네트워크 액세스
+
+전화 접속 네트워킹(DUN) 프로필을 사용하여 휴대폰을 전화 접속 인터넷 액세스 서버에 연결하기 위한 무선 모뎀으로 구성할 수 있습니다. 또한 휴대폰에서 데이터 전화를 수신하도록 컴퓨터를 구성하는 데 사용할 수도 있습니다.
+
+PPP 프로필을 통한 네트워크 액세스는 단일 Bluetooth 장치 또는 여러 Bluetooth 장치에 대한 LAN 액세스를 제공하는 데 사용할 수 있습니다. 또한 직렬 케이블 에뮬레이션을 통해 PPP 네트워킹을 사용하여 PC 간 연결을 제공할 수도 있습니다.
+
+FreeBSD에서, 이러한 프로파일은 블루투스 연결을 PPP가 사용할 수 있는 것으로 변환하는 man:ppp[8] 및 man:rfcomm_pppd[8] 래퍼를 사용하여 구현됩니다. 프로파일을 사용하려면 [.filename]#/etc/ppp/ppp.conf#에 새 PPP 레이블을 만들어야 합니다. 예제는 man:rfcomm_pppd[8]를 참조하세요.
+
+이 예제에서는 man:rfcomm_pppd[8]을 사용하여 `BD_ADDR`이 `00:80:37:29:19:a4`인 DUNRFCOMM 채널에서 원격 장치에 대한 연결을 엽니다:
+
+[source, shell]
+....
+# rfcomm_pppd -a 00:80:37:29:19:a4 -c -C dun -l rfcomm-dialup
+....
+
+실제 채널 번호는 SDP 프로토콜을 사용하여 원격 장치에서 얻습니다. 수동으로 RFCOMM 채널을 지정할 수 있으며, 이 경우 man:rfcomm_pppd[8]는 SDP 쿼리를 수행하지 않습니다. 원격 장치에서 RFCOMM 채널을 찾으려면 man:sdpcontrol[8]을 사용합니다.
+
+PPPLAN 서비스로 네트워크 액세스를 제공하려면 man:sdpd[8]가 실행 중이어야 하고 [.filename]#/etc/ppp/ppp.conf#에 LAN 클라이언트를 위한 새 항목을 만들어야 합니다. 예제는 man:rfcomm_pppd[8]을 참조하세요. 마지막으로, 유효한 RFCOMM 채널 번호에서 RFCOMMPPP 서버를 시작합니다. RFCOMMPPP 서버는 로컬 SDP 데몬에 블루투스 LAN 서비스를 자동으로 등록합니다. 아래 예제는 RFCOMMPPP 서버를 시작하는 방법을 보여줍니다.
+
+[source, shell]
+....
+# rfcomm_pppd -s -C 7 -l rfcomm-server
+....
+
+=== 블루투스 프로토콜
+
+이 섹션에서는 다양한 Bluetooth 프로토콜, 해당 기능 및 관련 유틸리티에 대한 개요를 제공합니다.
+
+==== 논리적 링크 제어 및 적응 프로토콜(Logical Link Control and Adaptation Protocol, L2CAP)
+
+L2CAP(Logical Link Control and Adaptation Protocol)은 상위 계층 프로토콜에 연결 지향적이고 연결이 필요 없는 데이터 서비스를 제공합니다. L2CAP를 사용하면 상위 계층 프로토콜과 애플리케이션이 최대 64킬로바이트 길이의 L2CAP 데이터 패킷을 송수신할 수 있습니다.
+
+L2CAP은 _채널_이라는 개념을 기반으로 합니다. 채널은 베이스밴드 연결 위에 있는 논리적 연결로, 각 채널은 다대일 방식으로 단일 프로토콜에 바인딩됩니다. 여러 채널이 동일한 프로토콜에 바인딩될 수는 있지만, 하나의 채널이 여러 프로토콜에 바인딩될 수는 없습니다. 채널에서 수신되는 각 L2CAP 패킷은 적절한 상위 레벨 프로토콜로 전달됩니다. 여러 채널이 동일한 베이스밴드 연결을 공유할 수 있습니다.
+
+FreeBSD에서는 각 블루투스 장치에 대해 netgraph L2CAP 노드가 생성됩니다. 이 노드는 일반적으로 다운스트림 블루투스 HCI 노드 및 업스트림 블루투스 소켓 노드에 연결됩니다. L2CAP 노드의 기본 이름은 "devicel2cap"입니다. 자세한 내용은 man:ng_l2cap[4]를 참조하세요.
+
+유용한 명령은 man:l2ping[8]으로, 다른 장치를 핑하는 데 사용할 수 있습니다. 일부 블루투스 구현은 전송된 모든 데이터를 반환하지 않을 수 있으므로 다음 예제에서 `0 bytes`는 정상입니다.
+
+[source, shell]
+....
+# l2ping -a 00:80:37:29:19:a4
+0 bytes from 0:80:37:29:19:a4 seq_no=0 time=48.633 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=1 time=37.551 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=2 time=28.324 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=3 time=46.150 ms result=0
+....
+
+man:l2control[8] 유틸리티는 L2CAP 노드에서 다양한 작업을 수행하는 데 사용됩니다. 이 예는 로컬 장치에 대한 논리적 연결(채널) 목록과 베이스밴드 연결 목록을 가져오는 방법을 보여줍니다:
+
+[source, shell]
+....
+% l2control -a 00:02:72:00:d4:1a read_channel_list
+L2CAP channels:
+Remote BD_ADDR     SCID/ DCID   PSM  IMTU/ OMTU State
+00:07:e0:00:0b:ca    66/   64     3   132/  672 OPEN
+% l2control -a 00:02:72:00:d4:1a read_connection_list
+L2CAP connections:
+Remote BD_ADDR    Handle Flags Pending State
+00:07:e0:00:0b:ca     41 O           0 OPEN
+....
+
+또 다른 진단 도구는 man:btsockstat[1]입니다. man:netstat[1]과 유사하지만 블루투스 네트워크 관련 데이터 구조에 대한 것입니다. 아래 예는 위의 man:l2control[8]과 동일한 논리적 연결을 보여줍니다.
+
+[source, shell]
+....
+% btsockstat
+Active L2CAP sockets
+PCB      Recv-Q Send-Q Local address/PSM       Foreign address   CID   State
+c2afe900      0      0 00:02:72:00:d4:1a/3     00:07:e0:00:0b:ca 66    OPEN
+Active RFCOMM sessions
+L2PCB    PCB      Flag MTU   Out-Q DLCs State
+c2afe900 c2b53380 1    127   0     Yes  OPEN
+Active RFCOMM sockets
+PCB      Recv-Q Send-Q Local address     Foreign address   Chan DLCI State
+c2e8bc80      0    250 00:02:72:00:d4:1a 00:07:e0:00:0b:ca 3    6    OPEN
+....
+
+==== 무선 주파수 통신(RFCOMM)
+
+RFCOMM 프로토콜은 L2CAP 프로토콜을 통해 직렬 포트 에뮬레이션을 제공합니다. RFCOMM은 간단한 전송 프로토콜로, RS-232(EIATIA-232-E) 직렬 포트의 9개 회로를 에뮬레이션하기 위한 추가 조항이 있습니다. 두 개의 Bluetooth 장치 간에 최대 60개의 동시 연결(RFCOMM 채널)을 지원합니다.
+
+RFCOMM의 목적상, 완전한 통신 경로에는 통신 엔드포인트에서 실행되는 두 개의 애플리케이션과 그 사이에 통신 세그먼트가 포함됩니다. RFCOMM은 해당 애플리케이션이 상주하는 장치의 직렬 포트를 사용하는 애플리케이션을 다루기 위한 것입니다. 통신 세그먼트는 한 장치에서 다른 장치로 직접 연결되는 Bluetooth 링크입니다.
+
+RFCOMM은 직접 연결 케이스의 장치 간 연결 또는 네트워크 케이스의 장치와 모뎀 간 연결에만 관련됩니다. RFCOMM은 한쪽에서는 블루투스 무선 기술을 통해 통신하고 다른 쪽에서는 유선 인터페이스를 제공하는 모듈과 같은 다른 구성을 지원할 수 있습니다.
+
+FreeBSD에서 RFCOMM은 블루투스 소켓 계층에서 구현됩니다.
+
+==== 서비스 검색 프로토콜 (Service Discovery Protocol, SDP)
+
+서비스 검색 프로토콜(SDP)은 클라이언트 애플리케이션이 서버 애플리케이션이 제공하는 서비스의 존재와 해당 서비스의 속성을 검색할 수 있는 수단을 제공합니다. 서비스의 속성에는 제공되는 서비스의 유형 또는 클래스, 서비스를 활용하는 데 필요한 메커니즘 또는 프로토콜 정보가 포함됩니다.
+
+SDP는 SDP 서버와 SDP 클라이언트 간의 통신을 포함합니다. 서버는 서버와 관련된 서비스의 특성을 설명하는 서비스 레코드 목록을 유지 관리합니다. 각 서비스 레코드에는 단일 서비스에 대한 정보가 포함되어 있습니다. 클라이언트는 SDP 요청을 실행하여 SDP 서버가 유지 관리하는 서비스 레코드에서 정보를 검색할 수 있습니다. 클라이언트 또는 클라이언트와 연결된 애플리케이션이 서비스를 이용하고자 하는 경우, 해당 서비스를 이용하기 위해서는 서비스 제공업체에 별도의 연결을 개설해야 합니다. SDP는 서비스 및 해당 속성을 검색하는 메커니즘을 제공하지만 해당 서비스를 활용하는 메커니즘은 제공하지 않습니다.
+
+일반적으로 SDP 클라이언트는 원하는 서비스 특성을 기반으로 서비스를 검색합니다. 그러나 서비스에 대한 사전 정보 없이 SDP 서버의 서비스 레코드에 기술된 서비스 유형을 검색하는 것이 바람직한 경우가 있습니다. 제공되는 서비스를 찾는 이 과정을 _브라우징_이라고 합니다.
+
+블루투스 SDP 서버인 man:sdpd[8]와 명령줄 클라이언트인 man:sdpcontrol[8]은 표준 FreeBSD 설치에 포함되어 있습니다. 다음 예제는 SDP 찾아보기 쿼리를 수행하는 방법을 보여줍니다.
+
+[source, shell]
+....
+% sdpcontrol -a 00:01:03:fc:6e:ec browse
+Record Handle: 00000000
+Service Class ID List:
+        Service Discovery Server (0x1000)
+Protocol Descriptor List:
+        L2CAP (0x0100)
+                Protocol specific parameter #1: u/int/uuid16 1
+                Protocol specific parameter #2: u/int/uuid16 1
+
+Record Handle: 0x00000001
+Service Class ID List:
+        Browse Group Descriptor (0x1001)
+
+Record Handle: 0x00000002
+Service Class ID List:
+        LAN Access Using PPP (0x1102)
+Protocol Descriptor List:
+        L2CAP (0x0100)
+        RFCOMM (0x0003)
+                Protocol specific parameter #1: u/int8/bool 1
+Bluetooth Profile Descriptor List:
+        LAN Access Using PPP (0x1102) ver. 1.0
+....
+
+각 서비스에는 RFCOMM 채널과 같은 속성 목록이 있다는 점에 유의하세요. 서비스에 따라 사용자가 일부 속성을 메모해 두어야 할 수도 있습니다. 일부 블루투스 구현은 서비스 검색을 지원하지 않으며 빈 목록을 반환할 수 있습니다. 이 경우 특정 서비스를 검색할 수 있습니다. 아래 예는 OBEX 객체 푸시(OPUSH) 서비스를 검색하는 방법을 보여줍니다:
+
+[source, shell]
+....
+% sdpcontrol -a 00:01:03:fc:6e:ec search OPUSH
+....
+
+FreeBSD에서 블루투스 클라이언트에 서비스를 제공하는 것은 man:sdpd[8] 서버를 사용하여 수행합니다. 다음 줄을 [.filename]#/etc/rc.conf#에 추가할 수 있습니다:
+
+[.programlisting]
+....
+sdpd_enable="YES"
+....
+
+이제 다음 명령으로 man:sdpd[8] 데몬을 시작할 수 있습니다:
+
+[source, shell]
+....
+# service sdpd start
+....
+
+원격 클라이언트에 블루투스 서비스를 제공하려는 로컬 서버 애플리케이션은 로컬 SDP 데몬에 서비스를 등록합니다. 이러한 애플리케이션의 예는 man:rfcomm_pppd[8]입니다. 일단 시작되면 로컬 SDP 데몬에 블루투스 LAN 서비스를 등록합니다.
+
+로컬 SDP 서버에 등록된 서비스 목록은 로컬 제어 채널을 통해 SDP 찾아보기 쿼리를 실행하여 얻을 수 있습니다:
+
+[source, shell]
+....
+# sdpcontrol -l browse
+....
+
+==== OBEX Object Push (OPUSH)
+
+OBEX(Object Exchange)는 모바일 장치 간의 간단한 파일 전송을 위해 널리 사용되는 프로토콜입니다. 주로 적외선 통신에 사용되며, 노트북이나 PDA 간의 일반적인 파일 전송과 개인 정보 관리자(PIM) 애플리케이션이 설치된 휴대폰과 기타 장치 간에 명함이나 캘린더 항목을 전송하는 데 사용됩니다.
+
+OBEX 서버와 클라이언트는 obexapp에 의해 구현되며, package:comms/obexapp[] 패키지 또는 포트를 사용하여 설치할 수 있습니다.
+
+OBEX 클라이언트는 OBEX 서버에서 개체를 푸시 및/또는 풀링하는 데 사용됩니다. 객체의 예로는 명함이나 약속이 있습니다. OBEX 클라이언트는 SDP를 통해 원격 장치에서 RFCOMM 채널 번호를 가져올 수 있습니다. 이 작업은 RFCOMM 채널 번호 대신 서비스 이름을 지정하여 수행할 수 있습니다. 지원되는 서비스 이름은 다음과 같습니다: `IrMC`, `FTRN`, `OPUSH`입니다. RFCOMM 채널을 숫자로 지정할 수도 있습니다. 아래는 휴대폰에서 장치 정보 개체를 가져오고 새 개체인 명함을 휴대폰의 디렉토리에 푸시하는 OBEX 세션의 예시입니다.
+
+[source, shell]
+....
+% obexapp -a 00:80:37:29:19:a4 -C IrMC
+obex> get telecom/devinfo.txt devinfo-t39.txt
+Success, response: OK, Success (0x20)
+obex> put new.vcf
+Success, response: OK, Success (0x20)
+obex> di
+Success, response: OK, Success (0x20)
+....
+
+OPUSH 서비스를 제공하려면 man:sdpd[8]를 실행하고 들어오는 모든 오브젝트가 저장될 루트 폴더를 만들어야 합니다. 루트 폴더의 기본 경로는 [.filename]#/var/spool/obex#입니다. 마지막으로 유효한 RFCOMM 채널 번호에서 OBEX 서버를 시작합니다. OBEX 서버는 로컬 SDP 데몬에 OPUSH 서비스를 자동으로 등록합니다. 아래 예시는 OBEX 서버를 시작하는 방법을 보여줍니다.
+
+[source, shell]
+....
+# obexapp -s -C 10
+....
+
+==== Serial Port Profile (SPP)
+
+직렬 포트 프로파일(SPP)을 사용하면 Bluetooth 장치에서 직렬 케이블 에뮬레이션을 수행할 수 있습니다. 이 프로파일을 사용하면 레거시 애플리케이션에서 가상 직렬 포트 추상화를 통해 케이블을 대체하는 방식으로 Bluetooth를 사용할 수 있습니다.
+
+FreeBSD에서는 man:rfcomm_sppd[1]가 SPP를 구현하고 가상 직렬 포트 추상화로 의사 tty가 사용됩니다. 아래 예제는 원격 장치의 직렬 포트 서비스에 연결하는 방법을 보여줍니다. man:rfcomm_sppd[1]가 SDP를 통해 원격 장치에서 가져올 수 있으므로 RFCOMM 채널을 지정할 필요가 없습니다. 이를 재정의하려면 명령줄에서 RFCOMM 채널을 지정하세요.
+
+[source, shell]
+....
+# rfcomm_sppd -a 00:07:E0:00:0B:CA -t
+rfcomm_sppd[94692]: Starting on /dev/pts/6...
+/dev/pts/6
+....
+
+연결되면 의사 tty를 직렬 포트로 사용할 수 있습니다:
+
+[source, shell]
+....
+# cu -l /dev/pts/6
+....
+
+의사 tty는 stdout에 출력되며 래퍼 스크립트에서 읽을 수 있습니다:
+
+[.programlisting]
+....
+PTS=`rfcomm_sppd -a 00:07:E0:00:0B:CA -t`
+cu -l $PTS
+....
+
+=== 문제 해결
+
+기본적으로 FreeBSD는 새 연결을 수락할 때 역할 전환(role switch)을 수행하여 마스터가 되려고 시도합니다. 역할 전환을 지원하지 않는 일부 구형 Bluetooth 장치는 연결할 수 없습니다. 역할 전환은 새 연결이 설정될 때 수행되므로 원격 장치에 역할 전환을 지원하는지 여부를 물어볼 수 없습니다. 그러나 로컬 측에서 역할 전환을 비활성화하는 HCI 옵션이 있습니다:
+
+[source, shell]
+....
+# hccontrol -n ubt0hci write_node_role_switch 0
+....
+
+블루투스 패킷을 표시하려면 package:comms/hcidump[] 패키지 또는 포트를 사용하여 설치할 수 있는 타사 패키지 hcidump를 사용합니다. 이 유틸리티는 man:tcpdump[1]와 유사하며 터미널에 블루투스 패킷의 내용을 표시하고 블루투스 패킷을 파일로 덤프하는 데 사용할 수 있습니다.
+
+[[network-bridging]]
+== 브릿징
+
+이더넷 세그먼트와 같은 네트워크를 IP 서브넷을 생성하지 않고도 네트워크 세그먼트로 나누고 라우터를 사용하여 세그먼트를 서로 연결하는 것이 유용할 때가 있습니다. 이러한 방식으로 두 네트워크를 함께 연결하는 장치를 "브리지"라고 합니다.
+
+브리지는 각 네트워크 인터페이스에 있는 장치의 MAC 주소를 학습하여 작동합니다. 브릿지는 소스 및 대상 MAC 주소가 서로 다른 네트워크에 있는 경우에만 네트워크 간 트래픽을 전달합니다. 여러 측면에서 브리지는 포트 수가 매우 적은 이더넷 스위치와 같습니다. 여러 네트워크 인터페이스가 있는 FreeBSD 시스템은 브리지 역할을 하도록 구성할 수 있습니다.
+
+브리징은 다음과 같은 상황에서 유용할 수 있습니다:
+
+네트워크 연결하기::
+브리지의 기본 작동은 두 개 이상의 네트워크 세그먼트를 연결하는 것입니다. 케이블 연결 제약이나 방화벽과 같이 네트워킹 장비 대신 호스트 기반 브리지를 사용하는 데는 여러 가지 이유가 있습니다. 브리지는 호스트 모드에서 실행되는 무선 인터페이스를 유선 네트워크에 연결하여 액세스 포인트 역할을 할 수도 있습니다.
+
+필터링/트래픽 셰이핑 방화벽::
+라우팅이나 NAT(네트워크 주소 변환) 없이 방화벽 기능이 필요한 경우 브리지를 사용할 수 있습니다.
++
+예를 들어 DSL 또는 ISDN을 통해 ISP에 연결된 소규모 회사가 있습니다. 네트워크에는 ISP의 13개의 공용 IP 주소와 10대의 컴퓨터가 있습니다. 이 경우 라우터 기반 방화벽은 서브넷 문제 때문에 사용하기 어렵습니다. 브리지 기반 방화벽은 IP 주소 지정 문제 없이 구성할 수 있습니다.
+
+네트워크 탭::
+브리지는 두 네트워크 세그먼트를 연결하여 브리지 인터페이스에서 man:bpf[4] 및 man:tcpdump[1]를 사용하거나 span port라는 추가 인터페이스로 모든 프레임의 복사본을 전송하여 그 사이를 통과하는 모든 이더넷 프레임을 검사할 수 있습니다.
+
+Layer 2 VPN::
+두 개의 이더넷 네트워크는 EtherIP 터널 또는 OpenVPN과 같은 man:tap[4] 기반 솔루션으로 네트워크를 연결하여 IP 링크를 통해 연결할 수 있습니다.
+
+Layer 2 Redundancy::
+네트워크를 여러 개의 링크로 연결하고 스패닝 트리 프로토콜(Spanning Tree Protocol, STP)을 사용하여 중복 경로를 차단할 수 있습니다.
+
+이 섹션에서는 man:if_bridge[4]를 사용하여 FreeBSD 시스템을 브리지로 구성하는 방법을 설명합니다. netgraph bridging driver도 사용할 수 있으며, man:ng_bridge[4]에 설명되어 있습니다.
+
+[NOTE]
+====
+패킷 필터링은 man:pfil[9] 프레임워크에 연결되는 모든 방화벽 패키지와 함께 사용할 수 있습니다. 브리지는 man:altq[4] 또는 man:dummynet[4]과 함께 트래픽 셰이퍼로 사용할 수 있습니다.
+====
+
+=== 브리지 활성화하기
+
+FreeBSD에서, man:if_bridge[4]는 커널 모듈로, 브리지 인터페이스를 만들 때 man:ifconfig[8]에 의해 자동으로 로드됩니다. 커스텀 커널 구성 파일에 `device if_bridge`를 추가하여 커스텀 커널에 브리지 지원을 컴파일할 수도 있습니다.
+
+브리지는 인터페이스 복제를 사용하여 만들어집니다. 브리지 인터페이스를 만들려면 다음과 같이 하세요:
+
+[source, shell]
+....
+# ifconfig bridge create
+bridge0
+# ifconfig bridge0
+bridge0: flags=8802<BROADCAST,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        ether 96:3d:4b:f1:79:7a
+        id 00:00:00:00:00:00 priority 32768 hellotime 2 fwddelay 15
+        maxage 20 holdcnt 6 proto rstp maxaddr 100 timeout 1200
+        root id 00:00:00:00:00:00 priority 0 ifcost 0 port 0
+....
+
+브리지 인터페이스가 생성되면 무작위로 생성된 이더넷 주소가 자동으로 할당됩니다. `maxaddr` 및 `timeout`` 매개 변수는 브리지가 포워딩 테이블에 보관할 MAC 주소의 수와 각 항목이 마지막으로 표시된 후 제거되기까지의 시간(초)을 제어합니다. 다른 매개변수는 STP 작동 방식을 제어합니다.
+
+다음으로 브리지의 멤버로 추가할 네트워크 인터페이스를 지정합니다. 브리지가 패킷을 전달하려면 모든 멤버 인터페이스와 브리지가 가동 중이어야 합니다:
+
+[source, shell]
+....
+# ifconfig bridge0 addm fxp0 addm fxp1 up
+# ifconfig fxp0 up
+# ifconfig fxp1 up
+....
+
+이제 브리지가 [.filename]#fxp0#와 [.filename]#fxp1# 간에 이더넷 프레임을 전달할 수 있습니다. 부팅 시 브리지가 생성되도록 [.filename]#/etc/rc.conf#에 다음 줄을 추가하세요:
+
+[.programlisting]
+....
+cloned_interfaces="bridge0"
+ifconfig_bridge0="addm fxp0 addm fxp1 up"
+ifconfig_fxp0="up"
+ifconfig_fxp1="up"
+....
+
+브리지 호스트에 IP 주소가 필요한 경우 구성원 인터페이스가 아닌 브리지 인터페이스에서 설정하세요. 주소는 정적으로 또는 DHCP를 통해 설정할 수 있습니다. 이 예에서는 고정 IP 주소를 설정합니다:
+
+[source, shell]
+....
+# ifconfig bridge0 inet 192.168.0.1/24
+....
+
+브리지 인터페이스에 IPv6 주소를 할당할 수도 있습니다. 변경 사항을 영구적으로 적용하려면 [.filename]#/etc/rc.conf#에 주소 지정 정보를 추가하세요.
+
+[NOTE]
+====
+패킷 필터링이 활성화되면 브리지 패킷은 브리지 인터페이스의 원본 인터페이스에서 인바운드 필터를 통과하고 해당 인터페이스에서 아웃바운드 필터를 통과합니다. 어느 단계든 비활성화할 수 있습니다. 패킷 흐름의 방향이 중요한 경우 브리지 자체보다는 멤버 인터페이스에서 방화벽을 사용하는 것이 가장 좋습니다.
+
+브리지에는 non-IP 및 IP 패킷을 전달하기 위한 몇 가지 구성 가능한 설정과 man:ipfw[8]로 레이어2 방화벽을 설정할 수 있습니다. 자세한 내용은 man:if_bridge[4]를 참조하세요.
+====
+
+=== Spanning Tree 활성화하기
+
+이더넷 네트워크가 제대로 작동하려면 두 장치 사이에 활성 경로가 하나만 존재해야 할 수 있습니다. STP 프로토콜은 루프를 감지하고 중복 링크를 차단 상태로 전환합니다. 활성 링크 중 하나에 장애가 발생하면 STP는 다른 트리를 계산하고 차단된 경로 중 하나를 활성화하여 네트워크의 모든 지점에 대한 연결을 복원합니다.
+
+RSTP(Rapid Spanning Tree Protocol 또는 802.1w)는 레거시 STP와의 역호환성을 제공합니다. RSTP는 더 빠른 컨버전스를 제공하고 인접 스위치와 정보를 교환하여 루프를 만들지 않고 포워딩 모드로 빠르게 전환합니다. FreeBSD는 RSTP와 STP를 작동 모드로 지원하며, 기본 모드는 RSTP입니다.
+
+man:ifconfig[8]을 사용하여 멤버 인터페이스에서 STP를 활성화할 수 있습니다. 현재 인터페이스가 [.filename]#fxp0# 및 [.filename]#fxp1#인 브리지의 경우, STP를 다음으로 활성화합니다:
+
+[source, shell]
+....
+# ifconfig bridge0 stp fxp0 stp fxp1
+bridge0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        ether d6:cf:d5:a0:94:6d
+        id 00:01:02:4b:d4:50 priority 32768 hellotime 2 fwddelay 15
+        maxage 20 holdcnt 6 proto rstp maxaddr 100 timeout 1200
+        root id 00:01:02:4b:d4:50 priority 32768 ifcost 0 port 0
+        member: fxp0 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 3 priority 128 path cost 200000 proto rstp
+                role designated state forwarding
+        member: fxp1 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 4 priority 128 path cost 200000 proto rstp
+                role designated state forwarding
+....
+
+이 브리지의 스패닝 트리 ID는 `00:01:02:4b:d4:50`이고 우선 순위는 `32768`입니다. `root id`가 동일하므로 이 브리지가 트리의 루트 브리지임을 나타냅니다.
+
+네트워크의 다른 브리지에도 STP가 활성화되어 있습니다:
+
+[source, shell]
+....
+bridge0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        ether 96:3d:4b:f1:79:7a
+        id 00:13:d4:9a:06:7a priority 32768 hellotime 2 fwddelay 15
+        maxage 20 holdcnt 6 proto rstp maxaddr 100 timeout 1200
+        root id 00:01:02:4b:d4:50 priority 32768 ifcost 400000 port 4
+        member: fxp0 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 4 priority 128 path cost 200000 proto rstp
+                role root state forwarding
+        member: fxp1 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 5 priority 128 path cost 200000 proto rstp
+                role designated state forwarding
+....
+
+`root id 00:01:02:4b:d4:50 priority 32768 ifcost 400000 port 4` 줄은 루트 브리지가 `00:01:02:4B:D4:50`이고 이 브리지의 경로 비용이 `400000`임을 보여줍니다. 루트 브리지로의 경로는 `port 4`인 [.filename]#fxp0#를 경유합니다.
+
+=== 브리지 인터페이스 매개변수
+
+브리지 인터페이스에는 몇 가지 `ifconfig` 고유한 매개변수가 있습니다. 이 섹션에서는 이러한 매개 변수의 일반적인 용도를 요약합니다. 사용 가능한 매개변수의 전체 목록은 man:ifconfig[8]에 설명되어 있습니다.
+
+private::
+Private 인터페이스는 private 인터페이스로 지정된 다른 포트로 트래픽을 전달하지 않습니다. 트래픽은 무조건 차단되므로 ARP 패킷을 포함한 이더넷 프레임이 전달되지 않습니다. 트래픽을 선택적으로 차단해야 하는 경우 방화벽을 대신 사용해야 합니다.
+
+span::
+Span 포트는 브리지에서 수신한 모든 이더넷 프레임의 복사본을 전송합니다. 브리지에 구성된 span 포트의 수는 무제한이지만 인터페이스가 span 포트로 지정되면 일반 브리지 포트로도 사용할 수 없습니다. 이 기능은 브리지의 span 포트 중 하나에 연결된 다른 호스트에서 브리지 네트워크를 수동적으로 스누핑하는 데 가장 유용합니다. 예를 들어 모든 프레임의 복사본을 [.filename]#fxp4#라는 인터페이스로 보내려면:
++
+[source, shell]
+....
+# ifconfig bridge0 span fxp4
+....
+
+sticky::
+브리지 멤버 인터페이스가 sticky로 표시된 경우 동적으로 학습된 주소 항목은 전달 캐시에서 정적 항목으로 취급됩니다. 고정 항목은 주소가 다른 인터페이스에 표시되더라도 캐시에서 에이징되거나 교체되지 않습니다. 따라서 전달 테이블을 미리 채울 필요 없이 정적 주소 항목의 이점을 누릴 수 있습니다. 브리지의 특정 세그먼트에서 학습한 클라이언트는 다른 세그먼트로 로밍할 수 없습니다.
++
+Sticky 주소를 사용하는 한 가지 예는 IP 주소 공간을 낭비하지 않고 고객 네트워크를 분리하기 위해 브리지를 VLAN과 결합하는 것입니다. `CustomerA`는 `vlan100`에, `CustomerB`는 `vlan101`에 있으며 브리지의 주소는 `192.168.0.1`이라고 가정해 보겠습니다:
++
+[source, shell]
+....
+# ifconfig bridge0 addm vlan100 sticky vlan100 addm vlan101 sticky vlan101
+# ifconfig bridge0 inet 192.168.0.1/24
+....
++
+이 예제에서는 두 클라이언트 모두 `192.168.0.1`을 기본 게이트웨이로 인식합니다. 브리지 캐시는 고정되어 있으므로 한 호스트가 다른 고객의 트래픽을 가로채기 위해 다른 고객의 MAC 주소를 스푸핑할 수 없습니다.
++
+방화벽을 사용하거나 이 예제에서 볼 수 있듯 사설 인터페이스를 사용하여 VLAN 간의 모든 통신을 차단할 수 있습니다:
++
+[source, shell]
+....
+# ifconfig bridge0 private vlan100 private vlan101
+....
++
+고객은 서로 완전히 격리되어 있으며 서브넷 없이 전체 `/24` 주소 범위를 할당할 수 있습니다.
++
+인터페이스 뒤에 있는 고유 소스 MAC 주소의 수는 제한될 수 있습니다. 제한에 도달하면 소스 주소를 알 수 없는 패킷은 기존 호스트 캐시 항목이 만료되거나 제거될 때까지 삭제됩니다.
++
+다음 예에서는 `vlan100`에서 `CustomerA`의 이더넷 장치 최대 수를 10개로 설정합니다:
++
+[source, shell]
+....
+# ifconfig bridge0 ifmaxaddr vlan100 10
+....
+
+브리지 인터페이스는 man:bpf[4] 처리 후 패킷이 폐기되고 더 이상 처리되거나 전달되지 않는 모니터 모드도 지원합니다. 이 모드는 두 개 이상의 인터페이스 입력을 단일 man:bpf[4] 스트림으로 멀티플렉싱하는 데 사용할 수 있습니다. 이는 두 개의 개별 인터페이스를 통해 RX/TX 신호를 전송하는 네트워크 탭의 트래픽을 재구성하는 데 유용합니다. 예를 들어, 4개의 네트워크 인터페이스에서 하나의 스트림으로 입력을 읽을 수 있습니다:
+
+[source, shell]
+....
+# ifconfig bridge0 addm fxp0 addm fxp1 addm fxp2 addm fxp3 monitor up
+# tcpdump -i bridge0
+....
+
+=== SNMP 모니터링
+
+브리지 인터페이스와 STP 매개변수는 FreeBSD 기본 시스템에 포함된 man:bsnmpd[1]를 통해 모니터링할 수 있습니다. 내보낸 브리지 MIB는 IETF 표준을 준수하므로 모든 SNMP 클라이언트 또는 모니터링 패키지를 사용하여 데이터를 검색할 수 있습니다.
+
+브리지에서 모니터링을 사용하려면 [.filename]#/etc/snmpd.config#에서 앞부분의 `+#+` 기호를 제거하여 이 줄의 주석을 해제합니다:
+
+[.programlisting]
+....
+begemotSnmpdModulePath."bridge" = "/usr/lib/snmp_bridge.so"
+....
+
+커뮤니티 이름 및 액세스 목록과 같은 다른 구성 설정은 이 파일에서 수정해야 할 수 있습니다. 자세한 내용은 man:bsnmpd[1] 및 man:snmp_bridge[3]를 참조하세요. 이러한 편집 내용을 저장한 후 [.filename]#/etc/rc.conf#에 다음 줄을 추가합니다:
+
+[.programlisting]
+....
+bsnmpd_enable="YES"
+....
+
+그리고 나서, man:bsnmpd[1]를 시작합니다:
+
+[source, shell]
+....
+# service bsnmpd start
+....
+
+다음 예는 클라이언트 시스템에서 브리지를 쿼리하기 위해 Net-SNMP 소프트웨어(package:net-mgmt/net-snmp[])를 사용합니다. package:net-mgmt/bsnmptools[] 포트도 사용할 수 있습니다. Net-SNMP를 실행하는 SNMP 클라이언트에서 [.filename]#$HOME/.snmp/snmp.conf#에 다음 줄을 추가하여 브리지 MIB 정의를 가져옵니다:
+
+[.programlisting]
+....
+mibdirs +/usr/share/snmp/mibs
+mibs +BRIDGE-MIB:RSTP-MIB:BEGEMOT-MIB:BEGEMOT-BRIDGE-MIB
+....
+
+IETF BRIDGE-MIB(RFC4188)를 사용하여 단일 브리지를 모니터링 하려면:
+
+[source, shell]
+....
+% snmpwalk -v 2c -c public bridge1.example.com mib-2.dot1dBridge
+BRIDGE-MIB::dot1dBaseBridgeAddress.0 = STRING: 66:fb:9b:6e:5c:44
+BRIDGE-MIB::dot1dBaseNumPorts.0 = INTEGER: 1 ports
+BRIDGE-MIB::dot1dStpTimeSinceTopologyChange.0 = Timeticks: (189959) 0:31:39.59 centi-seconds
+BRIDGE-MIB::dot1dStpTopChanges.0 = Counter32: 2
+BRIDGE-MIB::dot1dStpDesignatedRoot.0 = Hex-STRING: 80 00 00 01 02 4B D4 50
+...
+BRIDGE-MIB::dot1dStpPortState.3 = INTEGER: forwarding(5)
+BRIDGE-MIB::dot1dStpPortEnable.3 = INTEGER: enabled(1)
+BRIDGE-MIB::dot1dStpPortPathCost.3 = INTEGER: 200000
+BRIDGE-MIB::dot1dStpPortDesignatedRoot.3 = Hex-STRING: 80 00 00 01 02 4B D4 50
+BRIDGE-MIB::dot1dStpPortDesignatedCost.3 = INTEGER: 0
+BRIDGE-MIB::dot1dStpPortDesignatedBridge.3 = Hex-STRING: 80 00 00 01 02 4B D4 50
+BRIDGE-MIB::dot1dStpPortDesignatedPort.3 = Hex-STRING: 03 80
+BRIDGE-MIB::dot1dStpPortForwardTransitions.3 = Counter32: 1
+RSTP-MIB::dot1dStpVersion.0 = INTEGER: rstp(2)
+....
+
+`dot1dStpTopChanges.0` 값은 2로, STP 브리지 토폴로지가 두 번 변경되었음을 나타냅니다. 토폴로지 변경은 네트워크에서 하나 이상의 링크가 변경되거나 실패하여 새 트리가 계산되었음을 의미합니다. 토폴로지 변경이 발생한 시점은 `dot1dStpTimeSinceTopologyChange.0` 값에 표시됩니다.
+
+여러 브리지 인터페이스를 모니터링하려면 비공개 BEGEMOT-BRIDGE-MIB를 사용할 수 있습니다:
+
+[source, shell]
+....
+% snmpwalk -v 2c -c public bridge1.example.com
+enterprises.fokus.begemot.begemotBridge
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseName."bridge0" = STRING: bridge0
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseName."bridge2" = STRING: bridge2
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseAddress."bridge0" = STRING: e:ce:3b:5a:9e:13
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseAddress."bridge2" = STRING: 12:5e:4d:74:d:fc
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseNumPorts."bridge0" = INTEGER: 1
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseNumPorts."bridge2" = INTEGER: 1
+...
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTimeSinceTopologyChange."bridge0" = Timeticks: (116927) 0:19:29.27 centi-seconds
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTimeSinceTopologyChange."bridge2" = Timeticks: (82773) 0:13:47.73 centi-seconds
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTopChanges."bridge0" = Counter32: 1
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTopChanges."bridge2" = Counter32: 1
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpDesignatedRoot."bridge0" = Hex-STRING: 80 00 00 40 95 30 5E 31
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpDesignatedRoot."bridge2" = Hex-STRING: 80 00 00 50 8B B8 C6 A9
+....
+
+`mib-2.dot1dBridge` 서브트리를 통해 모니터링 중인 브리지 인터페이스를 변경하려면:
+
+[source, shell]
+....
+% snmpset -v 2c -c private bridge1.example.com
+BEGEMOT-BRIDGE-MIB::begemotBridgeDefaultBridgeIf.0 s bridge2
+....
+
+[[network-aggregation]]
+== 링크 집계 및 장애 조치
+
+FreeBSD는 장애 조치 및 링크 집계를 제공하기 위해 여러 네트워크 인터페이스를 하나의 가상 인터페이스로 집계하는 데 사용할 수 있는 man:lagg[4] 인터페이스를 제공합니다. 장애 조치를 통해 하나 이상의 집계된 네트워크 인터페이스에 링크가 설정되어 있는 한 트래픽이 계속 흐르도록 할 수 있습니다. 이 프로토콜은 개별 링크의 장애에 대응하면서 트래픽을 양방향으로 분산하므로 링크 집계는 LACP를 지원하는 스위치에서 가장 잘 작동합니다.
+
+Lagg 인터페이스에서 지원하는 집계 프로토콜은, 나가는 트래픽에 사용되는 포트와 특정 포트가 들어오는 트래픽을 허용할지 여부를 결정합니다. 다음 프로토콜은 man:lagg[4]에서 지원됩니다:
+
+failover::
+이 모드는 마스터 포트를 통해서만 트래픽을 송수신합니다. 마스터 포트를 사용할 수 없게 되면 다음 활성 포트가 사용됩니다. 가상 인터페이스에 추가된 첫 번째 인터페이스가 마스터 포트이며 이후에 추가된 모든 인터페이스가 장애 조치 장치로 사용됩니다. 마스터 포트가 아닌 포트에 대한 장애 조치가 발생하면 원래 포트를 다시 사용할 수 있게 될 때까지 원래 포트가 마스터 포트가 됩니다.
+
+loadbalance::
+이 설정은 정적 설정을 제공하며 피어와 집계를 협상하거나 링크를 모니터링하기 위해 프레임을 교환하지 않습니다. 스위치가 LACP를 지원하는 경우 이를 대신 사용해야 합니다.
+
+lacp::
+IEEE(R) 802.3ad 링크 집계 제어 프로토콜(Link Aggregation Control Protocol, LACP)은 피어와 집계 가능한 링크 집합을 하나 이상의 링크 집계 그룹(LAG)으로 협상합니다. 각 LAG는 풀 듀플렉스 작동으로 설정된 동일한 속도의 포트로 구성되며, 트래픽은 총 속도가 가장 빠른 LAG의 포트 간에 균형을 이룹니다. 일반적으로 모든 포트를 포함하는 LAG는 하나뿐입니다. 물리적 연결이 변경되는 경우 LACP는 새로운 구성으로 빠르게 수렴합니다.
++
+LACP는 해시된 프로토콜 헤더 정보를 기반으로 활성 포트에서 나가는 트래픽의 균형을 맞추고 모든 활성 포트에서 들어오는 트래픽을 허용합니다. 해시에는 이더넷 소스 및 대상 주소, 사용 가능한 경우 VLAN 태그, IPv4 또는 IPv6 소스 및 대상 주소가 포함됩니다.
+
+roundrobin::
+이 모드는 모든 활성 포트를 통해 라운드 로빈 스케줄러를 사용하여 나가는 트래픽을 분배하고 모든 활성 포트에서 들어오는 트래픽을 허용합니다. 이 모드는 이더넷 프레임 순서를 위반하므로 주의해서 사용해야 합니다.
+
+broadcast::
+이 모드는 지연 인터페이스에 구성된 모든 포트에 발신 트래픽을 보내고 모든 포트에서 프레임을 수신합니다.
+
+=== 구성 예시
+
+이 섹션에서는 LACP 로드 밸런싱을 위해 Cisco(R) 스위치와 FreeBSD 시스템을 구성하는 방법을 설명합니다. 그런 다음 두 개의 이더넷 인터페이스를 페일오버 모드로 구성하는 방법과 이더넷과 무선 인터페이스 간에 페일오버 모드를 구성하는 방법을 보여 줍니다.
+
+[[networking-lacp-aggregation-cisco]]
+.Cisco(R) 스위치를 사용한 LACP 통합
+[example]
+====
+이 예는 FreeBSD 머신에 두 개의 man:fxp[4] 이더넷 인터페이스를 Cisco(R) 스위치의 처음 두 이더넷 포트에 단일 로드 밸런싱 및 내결함성 링크로 연결합니다. 처리량과 내결함성을 높이기 위해 더 많은 인터페이스를 추가할 수 있습니다. 예제에 표시된 Cisco(R) 포트, 이더넷 장치, 채널 그룹 번호 및 IP 주소의 이름을 로컬 구성과 일치하도록 바꾸십시오.
+
+이더넷 링크에서는 프레임 순서가 필수이며 두 스테이션 간의 모든 트래픽은 항상 동일한 물리적 링크를 통해 흐르기 때문에 최대 속도가 한 인터페이스의 속도로 제한됩니다. 전송 알고리즘은 가능한 한 많은 정보를 사용하여 서로 다른 트래픽 흐름을 구분하고 사용 가능한 인터페이스 간에 흐름의 균형을 맞추려고 시도합니다.
+
+Cisco(R) 스위치에서 채널 그룹 _1_에 _FastEthernet0/1_ 및 _FastEthernet0/2_ 인터페이스를 추가합니다:
+
+[source, shell]
+....
+interface FastEthernet0/1
+ channel-group 1 mode active
+ channel-protocol lacp
+!
+interface FastEthernet0/2
+ channel-group 1 mode active
+ channel-protocol lacp
+....
+
+FreeBSD 시스템에서 물리적 인터페이스 _fxp0_ 및 _fxp1_을 사용하여 man:lagg[4] 인터페이스를 생성하고 IP 주소 _10.0.0.3/24_로 인터페이스를 가져옵니다:
+
+[source, shell]
+....
+# ifconfig fxp0 up
+# ifconfig fxp1 up
+# ifconfig lagg0 create
+# ifconfig lagg0 up laggproto lacp laggport fxp0 laggport fxp1 10.0.0.3/24
+....
+
+다음으로 가상 인터페이스의 상태를 확인합니다:
+
+[source, shell]
+....
+# ifconfig lagg0
+lagg0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=8<VLAN_MTU>
+        ether 00:05:5d:71:8d:b8
+        inet 10.0.0.3 netmask 0xffffff00 broadcast 10.0.0.255
+        media: Ethernet autoselect
+        status: active
+        laggproto lacp
+        laggport: fxp1 flags=1c<ACTIVE,COLLECTING,DISTRIBUTING>
+        laggport: fxp0 flags=1c<ACTIVE,COLLECTING,DISTRIBUTING>
+....
+
+`ACTIVE`으로 표시된 포트는 원격 스위치와 협상된 LAG의 일부입니다. 트래픽은 이러한 활성 포트를 통해 송수신됩니다. 위의 명령에 `-v`를 추가하면 LAG 식별자를 볼 수 있습니다.
+
+Cisco(R) 스위치의 포트 상태를 확인하려면:
+
+[source, shell]
+....
+switch# show lacp neighbor
+Flags:  S - Device is requesting Slow LACPDUs
+        F - Device is requesting Fast LACPDUs
+        A - Device is in Active mode       P - Device is in Passive mode
+
+Channel group 1 neighbors
+
+Partner's information:
+
+                  LACP port                        Oper    Port     Port
+Port      Flags   Priority  Dev ID         Age     Key     Number   State
+Fa0/1     SA      32768     0005.5d71.8db8  29s    0x146   0x3      0x3D
+Fa0/2     SA      32768     0005.5d71.8db8  29s    0x146   0x4      0x3D
+....
+
+자세한 내용을 보려면 `show lacp neighbor detail`를 입력합니다.
+
+재부팅 시에도 이 구성을 유지하려면 FreeBSD 시스템에서 [.filename]#/etc/rc.conf#에 다음 항목을 추가하세요:
+
+[.programlisting]
+....
+ifconfig_fxp0="up"
+ifconfig_fxp1="up"
+cloned_interfaces="lagg0"
+ifconfig_lagg0="laggproto lacp laggport fxp0 laggport fxp1 10.0.0.3/24"
+....
+
+====
+
+[[networking-lagg-failover]]
+.장애 조치 모드 (Failover Mode)
+[example]
+====
+
+장애 조치 모드는 마스터 인터페이스에서 링크가 끊어진 경우 보조 인터페이스로 전환하는 데 사용할 수 있습니다. 장애 조치를 구성하려면 기본 물리적 인터페이스가 가동 중인지 확인한 다음 man:lagg[4] 인터페이스를 만듭니다. 이 예제에서 _fxp0_은 마스터 인터페이스, _fxp1_은 보조 인터페이스이며 가상 인터페이스에는 _10.0.0.15/24_의 IP 주소가 할당됩니다:
+
+[source, shell]
+....
+# ifconfig fxp0 up
+# ifconfig fxp1 up
+# ifconfig lagg0 create
+# ifconfig lagg0 up laggproto failover laggport fxp0 laggport fxp1 10.0.0.15/24
+....
+
+가상 인터페이스는 다음과 같이 표시되어야 합니다:
+
+[source, shell]
+....
+# ifconfig lagg0
+lagg0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=8<VLAN_MTU>
+        ether 00:05:5d:71:8d:b8
+        inet 10.0.0.15 netmask 0xffffff00 broadcast 10.0.0.255
+        media: Ethernet autoselect
+        status: active
+        laggproto failover
+        laggport: fxp1 flags=0<>
+        laggport: fxp0 flags=5<MASTER,ACTIVE>
+....
+
+트래픽은 _fxp0_에서 송수신됩니다. _fxp0_에서 링크가 끊어지면 _fxp1_이 활성 링크가 됩니다. 마스터 인터페이스에서 링크가 복원되면 다시 한 번 활성 링크가 됩니다.
+
+재부팅 시에도 이 구성을 유지하려면 [.filename]#/etc/rc.conf#에 다음 항목을 추가하세요:
+
+[.programlisting]
+....
+ifconfig_fxp0="up"
+ifconfig_fxp1="up"
+cloned_interfaces="lagg0"
+ifconfig_lagg0="laggproto failover laggport fxp0 laggport fxp1 10.0.0.15/24"
+....
+
+====
+
+[[networking-lagg-wired-and-wireless]]
+.이더넷과 무선 인터페이스 간 장애 조치 모드
+[example]
+====
+
+노트북 사용자의 경우 일반적으로 이더넷 연결을 사용할 수 없을 때만 무선 장치를 구성하는 것이 바람직합니다. man:lagg[4]를 사용하면 무선 연결을 통해 데이터를 전송하는 기능을 유지하면서 성능 및 보안상의 이유로 이더넷 연결을 선호하는 장애 조치를 구성할 수 있습니다.
+
+이는 이더넷 인터페이스의 MAC 주소를 무선 인터페이스의 MAC 주소로 재정의하면 됩니다.
+
+[NOTE]
+****
+이론적으로는 이더넷 또는 무선 MAC 주소를 서로 일치하도록 변경할 수 있습니다. 하지만 일부 인기 있는 무선 인터페이스는 MAC 주소 재정의 기능을 지원하지 않습니다. 따라서 이더넷 MAC 주소를 재정의하는 것이 좋습니다.
+****
+
+[NOTE]
+****
+무선 인터페이스용 드라이버가 `GENERIC` 또는 커스텀 커널에 로드되어 있지 않고 컴퓨터가 FreeBSD {rel121-current}를 실행 중인 경우, 해당 파일에 `*driver_load="YES"*`를 추가하고 재부팅하여 [.filename]#/boot/loader.conf#에 해당 [.filename]#.ko#를 로드합니다. 또 다른 더 좋은 방법은 해당 파일의 `kld_list`(자세한 내용은 man:rc.conf[5] 참조)에 드라이버를 추가하고 재부팅하여 [.filename]#/etc/rc.conf#에 드라이버를 로드하는 것입니다. 그렇지 않으면 man:lagg[4] 인터페이스가 설정될 때 드라이버가 아직 로드되지 않기 때문에 이 작업이 필요합니다.
+****
+
+이 예제에서는 이더넷 인터페이스 _re0_가 마스터이고 무선 인터페이스 _wlan0_이 페일오버입니다. _wlan0_ 인터페이스는 _ath0_ 물리적 무선 인터페이스로부터 생성되었으며, 이더넷 인터페이스는 무선 인터페이스의 MAC 주소로 구성됩니다. 먼저 무선 인터페이스를 불러오되(_FR_을 자신의 2글자 국가 코드로 바꾸세요), IP 주소는 설정하지 마세요. 시스템의 무선 인터페이스 이름과 일치하도록 _wlan0_을 바꿉니다:
+
+[source, shell]
+....
+# ifconfig wlan0 create wlandev ath0 country FR ssid my_router up
+....
+
+이제 무선 인터페이스의 MAC 주소를 확인할 수 있습니다:
+
+[source, shell]
+....
+# ifconfig wlan0
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	ether b8:ee:65:5b:32:59
+	groups: wlan
+	ssid Bbox-A3BD2403 channel 6 (2437 MHz 11g ht/20) bssid 00:37:b7:56:4b:60
+	regdomain ETSI country FR indoor ecm authmode WPA2/802.11i privacy ON
+	deftxkey UNDEF AES-CCM 2:128-bit txpower 30 bmiss 7 scanvalid 60
+	protmode CTS ampdulimit 64k ampdudensity 8 shortgi -stbctx stbcrx
+	-ldpc wme burst roaming MANUAL
+	media: IEEE 802.11 Wireless Ethernet MCS mode 11ng
+	status: associated
+	nd6 options=29<PERFORMNUD,IFDISABLED,AUTO_LINKLOCAL>
+....
+
+`ether` 줄에는 지정된 인터페이스의 MAC 주소가 포함됩니다. 이제 이더넷 인터페이스의 MAC 주소를 일치하도록 변경합니다:
+
+[source, shell]
+....
+# ifconfig re0 ether b8:ee:65:5b:32:59
+....
+
+_re0_ 인터페이스가 가동 중인지 확인한 다음, _wlan0_로 장애 조치하고 _re0_를 마스터로 하여 man:lagg[4] 인터페이스를 생성합니다:
+
+[source, shell]
+....
+# ifconfig re0 up
+# ifconfig lagg0 create
+# ifconfig lagg0 up laggproto failover laggport re0 laggport wlan0
+....
+
+가상 인터페이스는 다음과 같이 표시되어야 합니다:
+
+[source, shell]
+....
+# ifconfig lagg0
+lagg0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=8<VLAN_MTU>
+        ether b8:ee:65:5b:32:59
+        laggproto failover lagghash l2,l3,l4
+        laggport: re0 flags=5<MASTER,ACTIVE>
+        laggport: wlan0 flags=0<>
+        groups: lagg
+        media: Ethernet autoselect
+        status: active
+....
+
+그런 다음 DHCP 클라이언트를 시작하여 IP 주소를 얻습니다:
+
+[source, shell]
+....
+# dhclient lagg0
+....
+
+재부팅 시에도 이 구성을 유지하려면 [.filename]#/etc/rc.conf#에 다음 항목을 추가하세요:
+
+[.programlisting]
+....
+ifconfig_re0="ether b8:ee:65:5b:32:59"
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA"
+create_args_wlan0="country FR"
+cloned_interfaces="lagg0"
+ifconfig_lagg0="up laggproto failover laggport re0 laggport wlan0 DHCP"
+....
+
+====
+
+[[network-diskless]]
+== PXE를 사용한 무 디스크 운영
+
+인텔(R) 사전 부팅 실행 환경(Preboot eXecution Environment, PXE)을 사용하면 네트워크를 통해 운영 체제를 부팅할 수 있습니다. 예를 들어, FreeBSD 시스템은 네트워크를 통해 부팅하고 로컬 디스크 없이 NFS 서버에서 마운트된 파일 시스템을 사용하여 작동할 수 있습니다. PXE 지원은 일반적으로 BIOS에서 사용할 수 있습니다. 시스템을 시작할 때 PXE를 사용하려면 BIOS 설정에서 `Boot from network` 옵션을 선택하거나 시스템 초기화 중에 기능 키를 입력합니다.
+
+운영 체제가 네트워크를 통해 부팅하는 데 필요한 파일을 제공하기 위해 PXE 설정에는 DHCP, TFTP 및 NFS 서버가 올바르게 구성되어 있어야 합니다:
+
+* IP 주소, 실행 가능한 부팅 파일 이름 및 위치, 서버 이름 및 루트 경로와 같은 초기 매개 변수는 DHCP 서버에서 가져옵니다.
+* 운영 체제 로더 파일은 TFTP를 사용하여 부팅됩니다.
+* 파일 시스템은 NFS를 사용하여 로드됩니다.
+
+컴퓨터 PXE가 부팅되면 DHCP를 통해 초기 부트 로더 파일을 얻을 수 있는 위치에 대한 정보를 수신합니다. 호스트 컴퓨터는 이 정보를 수신한 후 TFTP를 통해 부트 로더를 다운로드한 다음 부트 로더를 실행합니다. FreeBSD에서 부트 로더 파일은 [.filename]#/boot/pxeboot#입니다. [.filename]#/boot/pxeboot#이 실행되고 나면 FreeBSD 커널이 로드되고 나머지 FreeBSD 부팅 시퀀스는 crossref:boot[boot,The FreeBSD Booting Process]에 설명된 대로 진행됩니다.
+
+이 섹션에서는 다른 시스템이 FreeBSD로 PXE 부팅할 수 있도록 FreeBSD 시스템에서 이러한 서비스를 구성하는 방법을 설명합니다. 자세한 내용은 man:diskless[8]를 참조하십시오.
+
+[CAUTION]
+====
+설명한 대로 이러한 서비스를 제공하는 시스템은 안전하지 않습니다. 네트워크의 보호된 영역에 있어야 하며 다른 호스트가 신뢰하지 않아야 합니다.
+====
+
+[[network-pxe-nfs]]
+=== PXE 환경 설정하기
+
+이 섹션에 표시된 단계는 기본 제공 NFS 및 TFTP 서버를 구성합니다. 다음 섹션에서는 DHCP 서버를 설치하고 구성하는 방법을 설명합니다. 이 예에서 PXE 사용자가 사용하는 파일이 들어 있는 디렉터리는 [.filename]#/b/tftpboot/FreeBSD/install#입니다. 이 디렉터리가 존재해야 하며 [.filename]#/etc/inetd.conf#와 [.filename]#/usr/local/etc/dhcpd.conf#에 동일한 디렉터리 이름이 설정되어 있어야 합니다.
+
+[NOTE]
+====
+아래 명령 예제는 man:sh[1] 셸을 사용한다고 가정합니다. man:csh[1] 및 man:tcsh[1] 사용자는 man:sh[1] 셸을 시작하거나 명령을 man:csh[1] 구문에 맞게 조정해야 합니다.
+====
+
+[.procedure]
+. NFS를 마운트할 FreeBSD 설치가 포함될 루트 디렉터리를 생성합니다:
++
+[source, shell]
+....
+# export NFSROOTDIR=/b/tftpboot/FreeBSD/install
+# mkdir -p ${NFSROOTDIR}
+....
+
+. 이 줄을 [.filename]#/etc/rc.conf#에 추가하여 NFS 서버를 활성화합니다:
++
+[.programlisting]
+....
+nfs_server_enable="YES"
+....
+
+. [.filename]#/etc/exports#에 다음을 추가하여 NFS를 통해 디스크 없는 루트 디렉터리를 내보냅니다:
++
+[.programlisting]
+....
+/b -ro -alldirs -maproot=root
+....
+
+. NFS server를 시작합니다:
++
+[source, shell]
+....
+# service nfsd start
+....
+
+. [.filename]#/etc/rc.conf#에 다음 줄을 추가하여 man:inetd[8]을 활성화합니다:
++
+[.programlisting]
+....
+inetd_enable="YES"
+....
+
+. [.filename]#/etc/inetd.conf#의 다음 줄이 `+#+` 기호로 시작하지 않는지 확인하여 주석 처리를 해제합니다:
++
+[.programlisting]
+....
+tftp dgram udp wait root /usr/libexec/tftpd tftpd -l -s /b/tftpboot
+....
++
+[NOTE]
+====
+일부 PXE 버전은 TFTP의 TCP 버전이 필요합니다. 이 경우 `stream tcp`가 포함된 두 번째 `tftp` 줄의 주석 처리를 해제합니다.
+====
+
+. man:inetd[8]를 시작합니다:
++
+[source, shell]
+....
+# service inetd start
+....
+
+. 공식 아카이브의 압축을 풀거나 FreeBSD 커널과 사용자 공간을 다시 빌드하여 [.filename]#${NFSROOTDIR}#에 기본 시스템을 설치합니다(자세한 지침은 crossref:cutting-edge[makeworld,“Updating FreeBSD from Source”]를 참고하되, `make installkernel` 및 `make installworld` 명령을 실행할 때 `DESTDIR=_${NFSROOTDIR}_`를 추가하는 것을 잊지 마세요).
+. TFTP 서버가 작동하고 PXE를 통해 얻을 수 있는 부트 로더를 다운로드할 수 있는지 테스트합니다:
++
+[source, shell]
+....
+# tftp localhost
+tftp> get FreeBSD/install/boot/pxeboot
+Received 264951 bytes in 0.1 seconds
+....
+
+. [.filename]#${NFSROOTDIR}/etc/fstab#을 편집하고 NFS를 통해 루트 파일 시스템을 마운트하는 항목을 만듭니다:
++
+[.programlisting]
+....
+# Device                                         Mountpoint    FSType   Options  Dump Pass
+myhost.example.com:/b/tftpboot/FreeBSD/install       /         nfs      ro        0    0
+....
++
+_myhost.example.com_을 NFS 서버의 호스트 이름 또는 IP 주소로 바꿉니다. 이 예제에서는 루트 파일 시스템을 읽기 전용으로 마운트하여 NFS 클라이언트가 루트 파일 시스템의 내용을 삭제할 가능성을 방지합니다.
+. PXE 부팅 중인 클라이언트 머신의 PXE 환경에서 루트 암호를 설정합니다:
++
+[source, shell]
+....
+# chroot ${NFSROOTDIR}
+# passwd
+....
+
+. 필요한 경우 [.filename]#${NFSROOTDIR}/etc/ssh/sshd_config#를 편집하고 `PermitRootLogin`을 활성화하여 PXE 부팅 중인 클라이언트 시스템에 대해 man:ssh[1] 루트 로그인을 사용하도록 설정합니다. 이 옵션은 man:sshd_config[5]에 문서화되어 있습니다.
+. [.filename]#${NFSROOTDIR}#에서 필요한 기타 PXE 환경 사용자 지정을 수행합니다. 이러한 사용자 지정에는 패키지 설치 또는 man:vipw[8]를 사용한 비밀번호 파일 편집 등이 포함될 수 있습니다.
+
+NFS 루트 볼륨에서 부팅할 때 [.filename]#/etc/rc#는 NFS 부팅을 감지하고 [.filename]#/etc/rc.initdiskless#를 실행합니다. 이 경우 [.filename]#/etc# 및 [.filename]#/var#는 메모리 백업 파일 시스템이어야 하므로 이러한 디렉터리는 쓰기 가능하지만 NFS 루트 디렉터리는 읽기 전용이 됩니다:
+
+[source, shell]
+....
+# chroot ${NFSROOTDIR}
+# mkdir -p conf/base
+# tar -c -v -f conf/base/etc.cpio.gz --format cpio --gzip etc
+# tar -c -v -f conf/base/var.cpio.gz --format cpio --gzip var
+....
+
+시스템이 부팅되면 [.filename]#/etc# 및 [.filename]#/var#에 대한 메모리 파일 시스템이 생성되어 마운트되고 [.filename]#cpio.gz# 파일의 내용이 여기에 복사됩니다. 기본적으로 이러한 파일 시스템의 최대 용량은 5메가바이트입니다. 바이너리 패키지가 설치된 [.filename]#/var#의 경우처럼 아카이브가 맞지 않는 경우, 필요한 512바이트 섹터 수를 입력하여 더 큰 크기를 요청하세요(예, 5메가바이트는 10240개의 섹터) [.filename]#/etc# 및 [.filename]#/var# 파일 시스템에 대해 각각 [.filename]#${NFSROOTDIR}/conf/base/etc/md_size# 및 [.filename]#${NFSROOTDIR}/conf/base/var/md_size# 파일에 넣어서 요청하세요.
+
+[[network-pxe-setting-up-dhcp]]
+=== DHCP 서버 구성하기
+
+DHCP 서버는 TFTP 및 NFS 서버와 동일한 컴퓨터일 필요는 없지만 네트워크에서 액세스할 수 있어야 합니다.
+
+DHCP는 FreeBSD 기본 시스템의 일부가 아니지만 package:net/isc-dhcp44-server[] 포트 또는 패키지를 사용하여 설치할 수 있습니다.
+
+설치가 완료되면 구성 파일인 [.filename]#/usr/local/etc/dhcpd.conf#를 편집합니다. 이 예제와 같이 `next-server`, `filename`, `root-path` 설정을 구성합니다:
+
+[.programlisting]
+....
+subnet 192.168.0.0 netmask 255.255.255.0 {
+   range 192.168.0.2 192.168.0.3 ;
+   option subnet-mask 255.255.255.0 ;
+   option routers 192.168.0.1 ;
+   option broadcast-address 192.168.0.255 ;
+   option domain-name-servers 192.168.35.35, 192.168.35.36 ;
+   option domain-name "example.com";
+
+   # IP address of TFTP server
+   next-server 192.168.0.1 ;
+
+   # path of boot loader obtained via tftp
+   filename "FreeBSD/install/boot/pxeboot" ;
+
+   # pxeboot boot loader will try to NFS mount this directory for root FS
+   option root-path "192.168.0.1:/b/tftpboot/FreeBSD/install/" ;
+
+}
+....
+
+`next-server` 지시어는 TFTP 서버의 IP 주소를 지정하는 데 사용됩니다.
+
+`filename` 지시어는 [.filename]#/boot/pxeboot# 경로를 정의합니다. 상대 파일명이 사용되므로 [.filename]#/b/tftpboot#는 경로에 포함되지 않습니다.
+
+`root-path` 옵션은 NFS 루트 파일 시스템의 경로를 정의합니다.
+
+편집 내용을 저장한 후 [.filename]#/etc/rc.conf#에 다음 줄을 추가하여 부팅 시 DHCP를 사용하도록 설정합니다:
+
+[.programlisting]
+....
+dhcpd_enable="YES"
+....
+
+그런 다음 DHCP 서비스를 시작합니다:
+
+[source, shell]
+....
+# service isc-dhcpd start
+....
+
+=== PXE 문제 디버깅하기
+
+모든 서비스가 구성되고 시작되면, PXE 클라이언트가 네트워크를 통해 자동으로 FreeBSD를 로드할 수 있어야 합니다. 특정 클라이언트가 연결할 수 없는 경우, 해당 클라이언트 머신이 부팅될 때 BIOS 구성 메뉴로 들어가서 네트워크에서 부팅하도록 설정되어 있는지 확인합니다.
+
+이 섹션에서는 클라이언트가 PXE 부팅할 수 없는 경우 구성 문제의 원인을 격리하기 위한 몇 가지 문제 해결 팁에 대해 설명합니다.
+
+[.procedure]
+****
+. package:net/wireshark[] 패키지 또는 포트를 사용하여 아래 그림과 같이 PXE 부팅 프로세스 중에 관련된 네트워크 트래픽을 디버깅합니다.
++
+.NFS 루트 마운트를 사용한 PXE 부팅 프로세스
+image::pxe-nfs.png[]
++
+1. 클라이언트가 DHCPDISCOVER 메시지를 브로드캐스트합니다.
++
+2. DHCP 서버는 IP 주소, 다음 서버, 파일 이름 및 루트 경로 값으로 응답합니다.
++
+3. 클라이언트는 다음 서버에 파일 이름 검색을 요청하는 TFTP 요청을 보냅니다.
++
+4. TFTP 서버가 응답하여 파일 이름을 클라이언트로 보냅니다.
++
+5. 클라이언트는 파일 이름(pxeboot(8))을 실행한 다음 커널을 로드합니다. 커널이 실행되면 root-path로 지정된 루트 파일 시스템이 NFS를 통해 마운트됩니다.
++
+. TFTP 서버에서 [.filename]#/var/log/xferlog#를 읽어 [.filename]#pxeboot#가 올바른 위치에서 검색되고 있는지 확인합니다. 이 예제 구성을 테스트하려면:
++
+[source, shell]
+....
+# tftp 192.168.0.1
+tftp> get FreeBSD/install/boot/pxeboot
+Received 264951 bytes in 0.1 seconds
+....
++
+man:tftpd[8] 및 man:tftp[1]의 `BUGS` 섹션은 TFTP의 몇 가지 제한 사항을 설명합니다.
+. 루트 파일 시스템을 NFS를 통해 마운트할 수 있는지 확인합니다. 이 예제 구성을 테스트하려면:
++
+[source, shell]
+....
+# mount -t nfs 192.168.0.1:/b/tftpboot/FreeBSD/install /mnt
+....
+****
+
+[[network-ipv6]]
+== IPv6
+
+IPv6는 IPv4로 잘 알려진 IP 프로토콜의 새로운 버전입니다. IPv6는 IPv4에 비해 여러 가지 장점과 새로운 기능을 제공합니다:
+
+* 128비트 주소 공간은 340,282,366,920,938,463,463,374,607,431,768,211,456개의 주소를 허용합니다. 이를 통해 IPv4 주소 부족과 궁극적인 IPv4 주소 고갈 문제를 해결할 수 있습니다.
+* 라우터는 라우팅 테이블에 네트워크 집계 주소만 저장하므로 라우팅 테이블의 평균 공간을 8192개 항목으로 줄일 수 있습니다. 이는 할당된 모든 IPv4 주소 블록을 인터넷 라우터 간에 교환해야 하므로 라우팅 테이블이 너무 커져 효율적인 라우팅이 불가능했던 IPv4와 관련된 확장성 문제를 해결합니다.
+
+* 주소 자동 구성(http://www.ietf.org/rfc/rfc2462.txt[RFC2462]).
+* 필수 멀티캐스트 주소.
+* 내장형 IPsec(IP 보안).
+* 간소화된 헤더 구조.
+* 모바일 IP 지원.
+* IPv6에서 IPv4로의 전환 메커니즘.
+
+FreeBSD에는 http://www.kame.net/[http://www.kame.net/] IPv6 레퍼런스 구현이 포함되어 있으며, IPv6를 사용하는 데 필요한 모든 것을 함께 제공합니다. 이 섹션에서는 IPv6를 구성하고 실행하는 데 중점을 둡니다.
+
+=== IPv6 주소의 배경
+
+IPv6 주소에는 세 가지 유형이 있습니다:
+
+Unicast::
+유니캐스트 주소로 전송된 패킷은 해당 주소에 속한 인터페이스에 도착합니다.
+
+Anycast::
+이러한 주소는 구문상 유니캐스트 주소와 구별할 수 없지만 인터페이스 그룹을 주소로 지정합니다. 애니캐스트 주소로 향하는 패킷은 가장 가까운 라우터 인터페이스에 도착합니다. 애니캐스트 주소는 라우터에서만 사용됩니다.
+
+Multicast::
+이러한 주소는 인터페이스 그룹을 식별합니다. 멀티캐스트 주소로 향하는 패킷은 멀티캐스트 그룹에 속한 모든 인터페이스에 도착합니다. IPv4 브로드캐스트 주소(일반적으로 `xxx.xxx.xxx.255`)는 IPv6에서 멀티캐스트 주소로 표현됩니다.
+
+IPv6 주소를 읽을 때 표준 형식은 `x:x:x:x:x:x:x:x:x`로 표시되며, 여기서 각 `x`는 16비트 16진수 값을 나타냅니다. 예를 들어 `FEBC:A574:382B:23C1:AA49:4592:4EFE:9982`가 있습니다.
+
+주소에 0이 모두 포함된 긴 하위 문자열이 있는 경우가 많습니다. `::`(이중 콜론)을 사용하여 주소당 하나의 하위 문자열을 대체할 수 있습니다. 또한 16진수 값당 선행 ``0``을 최대 3개까지 생략할 수 있습니다. 예를 들어 `fe80::1`은 표준 형식인 `fe80:0000:0000:0000:0000:0000:0000:0000:0001`에 해당합니다.
+
+세 번째 형식은 잘 알려진 IPv4 표기법을 사용하여 마지막 32비트를 작성하는 것입니다. 예를 들어, `2002::10.0.0.1`은 16진수 정식 표현인 `2002:0000:0000:0000:0000:0000:0a00:0001`에 해당하며, 이는 다시 `2002::a00:1`과 동일합니다.
+
+FreeBSD 시스템의 IPv6 주소를 보려면, man:ifconfig[8]을 사용합니다:
+
+[source, shell]
+....
+# ifconfig
+....
+
+[.programlisting]
+....
+rl0: flags=8943<UP,BROADCAST,RUNNING,PROMISC,SIMPLEX,MULTICAST> mtu 1500
+         inet 10.0.0.10 netmask 0xffffff00 broadcast 10.0.0.255
+         inet6 fe80::200:21ff:fe03:8e1%rl0 prefixlen 64 scopeid 0x1
+         ether 00:00:21:03:08:e1
+         media: Ethernet autoselect (100baseTX )
+         status: active
+....
+
+이 예제에서 [.filename]#rl0# 인터페이스는 MAC 주소에서 자동으로 생성된 자동 구성된 링크-로컬 주소인 `fe80::200:21ff:fe03:8e1%rl0`을 사용하고 있습니다.
+
+일부 IPv6 주소는 예약되어 있습니다. 이러한 예약된 주소의 요약은 <<reservedip6>>에서 확인할 수 있습니다:
+
+[[reservedip6]]
+.예약된 IPv6 주소
+[cols="1,1,1,1", frame="none", options="header"]
+|===
+| IPv6 address
+| Prefixlength (Bits)
+| Description
+| Notes
+
+|`::`
+|128 bits
+|unspecified
+|Equivalent to `0.0.0.0` in IPv4.
+
+|`::1`
+|128 bits
+|loopback address
+|Equivalent to `127.0.0.1` in IPv4.
+
+|`::00:xx:xx:xx:xx`
+|96 bits
+|embedded IPv4
+|The lower 32 bits are the compatible IPv4 address.
+
+|`::ff:xx:xx:xx:xx`
+|96 bits
+|IPv4 mapped IPv6 address
+|The lower 32 bits are the IPv4 address for hosts which do not support IPv6.
+
+|`fe80::/10`
+|10 bits
+|link-local
+|Equivalent to 169.254.0.0/16 in IPv4.
+
+|`fc00::/7`
+|7 bits
+|unique-local
+|Unique local addresses are intended for local communication and are only routable within a set of cooperating sites.
+
+|`ff00::`
+|8 bits
+|multicast
+|
+
+|``2000::-3fff::``
+|3 bits
+|global unicast
+|All global unicast addresses are assigned from this pool. The first 3 bits are `001`.
+|===
+
+IPv6 주소의 구조에 대한 자세한 내용은 http://www.ietf.org/rfc/rfc3513.txt[RFC3513]을 참조하세요.
+
+=== IPv6 구성하기
+
+FreeBSD 시스템을 IPv6 클라이언트로 구성하려면 [.filename]#rc.conf#에 다음 두 줄을 추가합니다:
+
+[.programlisting]
+....
+ifconfig_rl0_ipv6="inet6 accept_rtadv"
+rtsold_enable="YES"
+....
+
+첫 번째 줄은 지정된 인터페이스가 라우터 광고 메시지를 수신할 수 있도록 합니다. 두 번째 줄은 라우터 요청 데몬인 man:rtsol[8]을 활성화합니다.
+
+인터페이스에 정적으로 할당된 IPv6 주소가 필요한 경우 항목을 추가하여 정적 주소 및 관련 접두사 길이를 지정합니다:
+
+[.programlisting]
+....
+ifconfig_rl0_ipv6="inet6 2001:db8:4672:6565:2026:5043:2d42:5344 prefixlen 64"
+....
+
+기본 라우터를 지정하려면 주소를 지정합니다:
+
+[.programlisting]
+....
+ipv6_defaultrouter="2001:db8:4672:6565::1"
+....
+
+=== 서비스 공급업체에 연결하기
+
+다른 IPv6 네트워크에 연결하려면 IPv6를 지원하는 공급자 또는 터널이 있어야 합니다:
+
+* 인터넷 서비스 제공업체에 문의하여 IPv6를 제공하는지 확인하세요.
+* http://www.tunnelbroker.net[Hurricane Electric]은 전 세계 곳곳에 엔드포인트가 있는 터널을 제공합니다.
+
+[NOTE]
+====
+package:net/freenet6[] 패키지 또는 전화 접속 연결을 위한 포트를 설치합니다.
+====
+
+이 섹션에서는 터널 제공업체의 지침을 가져와 재부팅 시에도 유지되는 [.filename]#/etc/rc.conf# 설정으로 변환하는 방법을 설명합니다.
+
+첫 번째 [.filename]#/etc/rc.conf# 항목은 일반 터널링 인터페이스 [.filename]#gif0#을 생성합니다:
+
+[.programlisting]
+....
+cloned_interfaces="gif0"
+....
+
+다음으로, 로컬 및 원격 엔드포인트의 IPv4 주소로 해당 인터페이스를 구성합니다. `_MY_IPv4_ADDR_` 및 `_REMOTE_IPv4_ADDR_`을 실제 IPv4 주소로 바꿉니다:
+
+[.programlisting]
+....
+create_args_gif0="tunnel MY_IPv4_ADDR REMOTE_IPv4_ADDR"
+....
+
+IPv6 터널 엔드포인트로 사용하도록 할당된 IPv6 주소를 적용하려면 이 줄을 추가하고 `_MY_ASSIGNED_IPv6_TUNNEL_ENDPOINT_ADDR_`을 할당된 주소로 바꿉니다:
+
+[.programlisting]
+....
+ifconfig_gif0_ipv6="inet6 MY_ASSIGNED_IPv6_TUNNEL_ENDPOINT_ADDR"
+....
+
+그런 다음 IPv6 터널의 반대편에 대한 기본 경로를 설정합니다. `_MY_IPv6_REMOTE_TUNNEL_ENDPOINT_ADDR_`을 공급자가 지정한 기본 게이트웨이 주소로 바꿉니다:
+
+[.programlisting]
+....
+ipv6_defaultrouter="MY_IPv6_REMOTE_TUNNEL_ENDPOINT_ADDR"
+....
+
+FreeBSD 시스템이 나머지 네트워크와 전 세계 간에 IPv6 패킷을 라우팅하는 경우, 이 회선을 사용하여 게이트웨이를 활성화합니다:
+
+[.programlisting]
+....
+ipv6_gateway_enable="YES"
+....
+
+=== 라우터 광고 및 호스트 자동 구성
+
+이 섹션에서는 IPv6 기본 경로를 알리기 위해 man:rtadvd[8]를 설정하는 방법을 설명합니다.
+
+man:rtadvd[8]를 활성화하려면 [.filename]#/etc/rc.conf#에 다음을 추가합니다:
+
+[.programlisting]
+....
+rtadvd_enable="YES"
+....
+
+IPv6 라우터 광고를 수행할 인터페이스를 지정하는 것이 중요합니다. 예를 들어, man:rtadvd[8]에 [.filename]#rl0#을 사용하도록 지시합니다:
+
+[.programlisting]
+....
+rtadvd_interfaces="rl0"
+....
+
+그런 다음, 이 예시와 같이 구성 파일인 [.filename]#/etc/rtadvd.conf#를 만듭니다:
+
+[.programlisting]
+....
+rl0:\
+	:addrs#1:addr="2001:db8:1f11:246::":prefixlen#64:tc=ether:
+....
+
+사용할 인터페이스를 [.filename]#rl0#으로 바꾸고 `2001:db8:1f11:246::`을 할당 접두사로 바꿉니다.
+
+전용 `/64` 서브넷의 경우 다른 것은 변경할 필요가 없습니다. 그렇지 않으면 `prefixlen#`을 올바른 값으로 변경하세요.
+
+=== IPv6 및 IPv4 주소 매핑
+
+서버에서 IPv6를 사용하도록 설정한 경우, IPv4 매핑된 IPv6 주소 통신을 사용하도록 설정해야 할 수 있습니다. 이 호환성 옵션을 사용하면 IPv4 주소가 IPv6 주소로 표시될 수 있습니다. IPv6 애플리케이션이 IPv4와 통신하거나 그 반대로 통신하도록 허용하면 보안 문제가 발생할 수 있습니다.
+
+이 옵션은 대부분의 경우 필요하지 않을 수 있으며 호환성을 위해서만 사용할 수 있습니다. 이 옵션을 선택하면 IPv6 전용 애플리케이션이 듀얼 스택 환경에서 IPv4와 함께 작동할 수 있습니다. 이 옵션은 IPv6 전용 환경을 지원하지 않을 수 있는 타사 애플리케이션에 가장 유용합니다. 이 기능을 사용하려면 [.filename]#/etc/rc.conf#에 다음을 추가하세요:
+
+[.programlisting]
+....
+ipv6_ipv4mapping="YES"
+....
+
+RFC 3493, 섹션 3.6 및 3.7과 RFC 4038 섹션 4.2의 정보를 검토하는 것이 일부 관리자에게 유용할 수 있습니다.
+
+[[carp]]
+== 공통 주소 중복 프로토콜(Common Address Redundancy Protocol, CARP)
+
+Common Address Redundancy Protocol (CARP)을 사용하면 여러 호스트가 동일한 IP 주소와 가상 호스트 ID(VHID)를 공유하여 하나 이상의 서비스에 대해 고가용성을 제공할 수 있습니다. 즉, 하나 이상의 호스트에 장애가 발생해도 다른 호스트가 투명하게 인계하여 사용자에게 서비스 장애가 표시되지 않도록 할 수 있습니다.
+
+공유 IP 주소 외에도 각 호스트에는 관리 및 구성을 위한 자체 IP 주소가 있습니다. IP 주소를 공유하는 모든 머신은 동일한 VHID를 갖습니다. 각 가상 IP 주소의 VHID는 네트워크 인터페이스의 브로드캐스트 도메인 전체에서 고유해야 합니다.
+
+CARP를 사용하는 고가용성은 FreeBSD에 기본 제공되지만 구성 단계는 FreeBSD 버전에 따라 약간 다릅니다. 이 섹션에서는 FreeBSD 10 이전 버전과 동일하거나 그 이후 버전에 대해 동일한 구성 예제를 제공합니다.
+
+이 예에서는 모두 고유한 IP 주소를 가지고 있지만 동일한 웹 콘텐츠를 제공하는 세 개의 호스트로 장애 조치 지원을 구성합니다. 이 예제에는 `hosta.example.org` 및 `hostb.example.org`라는 두 개의 서로 다른 마스터와 `hostc.example.org`라는 공유 백업이 있습니다.
+
+이러한 머신은 라운드 로빈 DNS 구성으로 로드 밸런싱됩니다. 마스터 머신과 백업 머신은 호스트 이름과 관리 IP 주소를 제외하고 동일하게 구성됩니다. 이러한 서버는 동일한 구성을 가져야 하며 동일한 서비스를 실행해야 합니다. 장애 조치 발생 시 백업 서버가 동일한 콘텐츠에 액세스할 수 있는 경우에만 공유 IP 주소의 서비스에 대한 요청에 올바르게 응답할 수 있습니다. 백업 머신에는 마스터 콘텐츠 서버의 각 IP 주소에 대해 하나씩 두 개의 추가 CARP 인터페이스가 있습니다. 장애가 발생하면 백업 서버는 장애가 발생한 마스터 머신의 IP 주소를 선택합니다.
+
+[[carp-10x]]
+=== FreeBSD 10 이상에서 CARP 사용하기
+
+[.filename]#/boot/loader.conf#에 [.filename]#carp.ko# 커널 모듈 항목을 추가하여 CARP에 대한 부팅 시 지원을 사용하도록 설정합니다:
+
+[.programlisting]
+....
+carp_load="YES"
+....
+
+재부팅하지 않고 지금 모듈을 로드하려면:
+
+[source, shell]
+....
+# kldload carp
+....
+
+커스텀 커널을 사용하려는 사용자의 경우 커스텀 커널 구성 파일에 다음 줄을 포함시키고 crossref:kernelconfig[kernelconfig,Configuring the FreeBSD Kernel]에 설명된 대로 커널을 컴파일하세요:
+
+[.programlisting]
+....
+device	carp
+....
+
+호스트 이름, 관리 IP 주소 및 서브넷 마스크, 공유 IP 주소, VHID는 모두 [.filename]#/etc/rc.conf#에 항목을 추가하여 설정할 수 있습니다. 이 예는 `hosta.example.org`에 대한 것입니다:
+
+[.programlisting]
+....
+hostname="hosta.example.org"
+ifconfig_em0="inet 192.168.1.3 netmask 255.255.255.0"
+ifconfig_em0_alias0="inet vhid 1 pass testpass alias 192.168.1.50/32"
+....
+
+다음 항목 세트는 `hostb.example.org`에 대한 항목입니다. 두 번째 마스터를 나타내므로 다른 공유 IP 주소와 VHID를 사용합니다. 그러나 `pass`로 지정된 비밀번호는 동일해야 하며, CARP는 올바른 비밀번호를 가진 컴퓨터의 광고만 수신하고 수락하기 때문입니다.
+
+[.programlisting]
+....
+hostname="hostb.example.org"
+ifconfig_em0="inet 192.168.1.4 netmask 255.255.255.0"
+ifconfig_em0_alias0="inet vhid 2 pass testpass alias 192.168.1.51/32"
+....
+
+세 번째 머신인 `hostc.example.org`는 두 마스터 중 하나에서 장애 조치를 처리하도록 구성됩니다. 이 머신은 각 마스터 호스트의 가상 IP 주소를 처리하기 위해 두 개의 CARPVHID로 구성됩니다. 백업 서버가 여러 대일 때 우선 순위를 제어하는 `advskew`는 백업 호스트가 마스터 호스트보다 늦게 광고를 하도록 설정되어 있습니다.
+
+[.programlisting]
+....
+hostname="hostc.example.org"
+ifconfig_em0="inet 192.168.1.5 netmask 255.255.255.0"
+ifconfig_em0_alias0="inet vhid 1 advskew 100 pass testpass alias 192.168.1.50/32"
+ifconfig_em0_alias1="inet vhid 2 advskew 100 pass testpass alias 192.168.1.51/32"
+....
+
+두 개의 CARPVHID를 구성하면 마스터 서버 중 하나를 사용할 수 없게 되면 `hostc.example.org`가 이를 알 수 있습니다. 마스터 서버가 백업 서버보다 먼저 알리는 데 실패하면 마스터 서버가 다시 사용할 수 있게 될 때까지 백업 서버가 공유 IP 주소를 선택합니다.
+
+[NOTE]
+====
+원래 마스터 서버를 다시 사용할 수 있게 되면 `hostc.example.org`는 가상 IP 주소를 자동으로 다시 해제하지 않습니다. 이렇게 하려면 선점 기능을 활성화해야 합니다. 이 기능은 기본적으로 비활성화되어 있으며, man:sysctl[8] 변수 `net.inet.carp.preempt`를 통해 제어됩니다. 관리자는 백업 서버가 마스터에게 IP 주소를 반환하도록 강제할 수 있습니다:
+
+[source, shell]
+....
+# ifconfig em0 vhid 1 state backup
+....
+
+====
+
+구성이 완료되면 네트워킹을 다시 시작하거나 각 시스템을 재부팅합니다. 이제 고가용성이 활성화되었습니다.
+
+CARP 기능은 man:carp[4] 매뉴얼 페이지에 설명된 여러 man:sysctl[8] 변수를 통해 제어할 수 있습니다. man:devd[8]를 사용하여 CARP 이벤트에서 다른 작업을 트리거할 수 있습니다.
+
+[[carp-9x]]
+=== FreeBSD 9 및 이전 버전에서 CARP 사용하기
+
+이러한 버전의 FreeBSD에 대한 구성은 이전 섹션에서 설명한 구성과 유사하지만, 먼저 CARP 장치를 생성하고 구성에서 참조해야 한다는 점이 다릅니다.
+
+[.filename]#/boot/loader.conf#에 [.filename]#if_carp.ko# 커널 모듈을 로드하여 CARP에 대한 부팅 시간 지원을 사용하도록 설정합니다:
+
+[.programlisting]
+....
+if_carp_load="YES"
+....
+
+재부팅하지 않고 지금 모듈을 로드하려면:
+
+[source, shell]
+....
+# kldload carp
+....
+
+커스텀 커널을 사용하려는 사용자의 경우 커스텀 커널 구성 파일에 다음 줄을 포함시키고 crossref:kernelconfig[kernelconfig,Configuring the FreeBSD Kernel]에 설명된 대로 커널을 컴파일하세요:
+
+[.programlisting]
+....
+device	carp
+....
+
+그런 다음 각 호스트에서 CARP 장치를 생성합니다:
+
+[source, shell]
+....
+# ifconfig carp0 create
+....
+
+[.filename]#/etc/rc.conf#에 필요한 줄을 추가하여 호스트 이름, 관리 IP 주소, 공유 IP 주소 및 VHID를 설정합니다. 별칭 대신 가상 CARP 장치가 사용되므로 실제 서브넷 마스크는 `/32` 대신 `/24`가 사용됩니다. 다음은 `hosta.example.org`에 대한 항목입니다:
+
+[.programlisting]
+....
+hostname="hosta.example.org"
+ifconfig_fxp0="inet 192.168.1.3 netmask 255.255.255.0"
+cloned_interfaces="carp0"
+ifconfig_carp0="vhid 1 pass testpass 192.168.1.50/24"
+....
+
+`hostb.example.org`에서:
+
+[.programlisting]
+....
+hostname="hostb.example.org"
+ifconfig_fxp0="inet 192.168.1.4 netmask 255.255.255.0"
+cloned_interfaces="carp0"
+ifconfig_carp0="vhid 2 pass testpass 192.168.1.51/24"
+....
+
+세 번째 머신인 `hostc.example.org`는 마스터 호스트 중 하나에서 장애 조치를 처리하도록 구성되어 있습니다:
+
+[.programlisting]
+....
+hostname="hostc.example.org"
+ifconfig_fxp0="inet 192.168.1.5 netmask 255.255.255.0"
+cloned_interfaces="carp0 carp1"
+ifconfig_carp0="vhid 1 advskew 100 pass testpass 192.168.1.50/24"
+ifconfig_carp1="vhid 2 advskew 100 pass testpass 192.168.1.51/24"
+....
+
+[NOTE]
+====
+[.filename]#GENERIC# FreeBSD 커널에서는 선점 기능이 비활성화되어 있습니다. 사용자 정의 커널에서 선점을 사용하도록 설정한 경우 `hostc.example.org`가 IP 주소를 원래 콘텐츠 서버로 다시 릴리스하지 못할 수 있습니다. 관리자는 명령을 사용하여 백업 서버가 IP 주소를 마스터에게 반환하도록 강제할 수 있습니다:
+
+[source, shell]
+....
+# ifconfig carp0 down && ifconfig carp0 up
+....
+
+이 작업은 올바른 호스트에 해당하는 [.filename]#carp# 인터페이스에서 수행해야 합니다.
+====
+
+구성이 완료되면 네트워킹을 다시 시작하거나 각 시스템을 재부팅합니다. 이제 고가용성이 활성화되었습니다.
+
+[[network-vlan]]
+== VLANs
+
+VLAN은 네트워크를 가상으로 여러 개의 하위 네트워크로 분할하는 방법으로, 세그멘테이션이라고도 합니다. 각 세그먼트는 자체 브로드캐스트 도메인을 가지며 다른 VLAN으로부터 격리됩니다.
+
+FreeBSD에서는 네트워크 카드 드라이버가 VLAN을 지원해야 합니다. 어떤 드라이버가 VLAN을 지원하는지 확인하려면 man:vlan[4] 매뉴얼 페이지를 참조하십시오.
+
+VLAN을 구성할 때 몇 가지 정보를 알아야 합니다. 첫째, 어떤 네트워크 인터페이스인가요? 둘째, VLAN 태그는 무엇인가요?
+
+런타임에 NIC가 `em0`이고 VLAN 태그가 `5`인 VLAN을 구성하려면 명령은 다음과 같습니다:
+
+[source, shell]
+....
+# ifconfig em0.5 create vlan 5 vlandev em0 inet 192.168.20.20/24
+....
+
+[NOTE]
+====
+인터페이스 이름에 마침표로 구분된 NIC 드라이버 이름과 VLAN 태그가 어떻게 포함되는지 보셨나요? 이는 한 머신에 많은 VLAN이 있을 때 VLAN 구성을 쉽게 유지 관리할 수 있는 모범 사례입니다.
+====
+
+부팅 시 VLAN을 구성하려면 [.filename]#/etc/rc.conf#을 업데이트해야 합니다. 위의 구성을 복제하려면 다음을 추가해야 합니다:
+
+[.programlisting]
+....
+vlans_em0="5"
+ifconfig_em0_5="inet 192.168.20.20/24"
+....
+
+`vlans_em0` 필드에 태그를 추가하고 해당 VLAN 태그의 인터페이스에 네트워크를 구성하는 추가 줄을 추가하면 추가 VLAN을 추가할 수 있습니다.
+
+인터페이스에 기호 이름을 할당하면 관련 하드웨어가 변경될 때 몇 가지 구성 변수만 업데이트하면 됩니다. 예를 들어, 보안 카메라는 `em0`에서 VLAN 1을 통해 실행되어야 합니다. 나중에 `em0` 카드가 man:ixgb[4] 드라이버를 사용하는 카드로 교체되면 `em0.1`에 대한 모든 참조를 `ixgb0.1`로 변경할 필요가 없습니다.
+
+VLAN `5`를 구성하려면 NIC `em0`에서 인터페이스 이름 `cameras`를 할당하고 인터페이스에 `24`비트 접두사가 있는 `_192.168.20.20_`의 IP 주소를 할당하고 이 명령을 사용합니다:
+
+[source, shell]
+....
+# ifconfig em0.5 create vlan 5 vlandev em0 name cameras inet 192.168.20.20/24
+....
+
+`video`라는 이름의 인터페이스의 경우 다음을 사용합니다:
+
+[source, shell]
+....
+# ifconfig video.5 create vlan 5 vlandev video name cameras inet 192.168.20.20/24
+....
+
+부팅 시 변경 사항을 적용하려면 [.filename]#/etc/rc.conf#에 다음 줄을 추가합니다:
+
+[.programlisting]
+....
+vlans_video="cameras"
+create_args_cameras="vlan 5"
+ifconfig_cameras="inet 192.168.20.20/24"
+....

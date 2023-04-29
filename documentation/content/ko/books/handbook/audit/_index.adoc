@@ -1,0 +1,405 @@
+---
+description: 'FreeBSD 보안 이벤트 감사는 로그인, 구성 변경, 파일 및 네트워크 액세스 등 다양한 보안 관련 시스템 이벤트에 대한 안정적이고 세밀하며 구성 가능한 로깅을 지원합니다'
+next: books/handbook/disks
+part: '파트 III. 시스템 관리'
+path: /books/handbook/
+prev: books/handbook/mac
+showBookMenu: 'true'
+tags: ["audit", "terms", "configuration", "guide", "audit trails"]
+title: '18장. 보안 이벤트 감사'
+weight: 22
+---
+
+[[audit]]
+= 보안 이벤트 감사
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:sectnumoffset: 18
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/handbook/audit/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+[[audit-synopsis]]
+== 요약
+
+FreeBSD 운영 체제는 보안 이벤트 감사를 지원합니다. 이벤트 감사는 로그인, 구성 변경, 파일 및 네트워크 액세스 등 다양한 보안 관련 시스템 이벤트에 대한 안정적이고 세밀하며 구성 가능한 로깅을 지원합니다. 이러한 로그 기록은 실시간 시스템 모니터링, 침입 탐지 및 사후 분석에 매우 유용할 수 있습니다. FreeBSD는 Sun(TM)의 공개된 기본 보안 모듈(BSM) 애플리케이션 프로그래밍 인터페이스(API) 및 파일 형식을 구현하며 Solaris(TM) 및 Mac OS(R) X 감사 구현과 상호 운용이 가능합니다.
+
+이 장에서는 이벤트 감사 설치 및 구성에 중점을 둡니다. 감사 정책을 설명하고 감사 구성 예제를 제공합니다.
+
+이 챕터를 읽고 나면, 여러분은:
+
+* 이벤트 감사란 무엇이며 어떻게 작동하는지.
+* 사용자 및 프로세스에 대해 FreeBSD에서 이벤트 감사를 구성하는 방법.
+* 감사 축소 및 검토 도구를 사용하여 감사 추적을 검토하는 방법.
+
+이 챕터를 읽기 전에 여러분은:
+
+* UNIX(R) 및 FreeBSD 기본 사항을 이해합니다(crossref:basics[basics,FreeBSD Basics]).
+* 커널 구성/컴파일의 기본 사항에 익숙해야 합니다 (crossref:kernelconfig[kernelconfig,Configuring the FreeBSD Kernel]).
+* 보안과 그것이 FreeBSD와 어떻게 관련되어 있는지 어느 정도 알고 있어야 합니다(crossref:security[security,Security]).
+
+[WARNING]
+====
+감사 기능에는 몇 가지 알려진 제한 사항이 있습니다. 모든 보안 관련 시스템 이벤트를 감사할 수 있는 것은 아니며, Xorg 기반 디스플레이 관리자 및 타사 데몬과 같은 일부 로그인 메커니즘은 사용자 로그인 세션에 대한 감사를 제대로 구성하지 못합니다.
+
+보안 이벤트 감사 기능은 시스템 활동에 대한 매우 상세한 로그를 생성할 수 있습니다. 사용량이 많은 시스템에서 세밀하게 구성하면 추적 파일 데이터가 매우 커질 수 있으며, 일부 구성에서는 일주일에 기가바이트를 초과할 수도 있습니다. 관리자는 대용량 감사 구성과 관련된 디스크 공간 요구 사항을 고려해야 합니다. 예를 들어, 감사 파일 시스템이 꽉 차더라도 다른 파일 시스템이 영향을 받지 않도록 [.filename]#/var/audit#에 파일 시스템을 전용으로 지정하는 것이 바람직할 수 있습니다.
+====
+
+[[audit-inline-glossary]]
+== 핵심 용어
+
+다음 용어는 보안 이벤트 감사와 관련된 용어입니다:
+
+* _event_: 감사 가능한 이벤트는 감사 하위 시스템을 사용하여 기록할 수 있는 모든 이벤트입니다. 보안 관련 이벤트의 예로는 파일 생성, 네트워크 연결 구축, 사용자 로그인 등이 있습니다. 이벤트는 인증된 사용자로 추적할 수 있는 "attributable" 이벤트이거나 "non-attributable"이벤트입니다. Non-attributable의 예로는 잘못된 비밀번호 시도와 같이 로그인 프로세스에서 인증 전에 발생하는 모든 이벤트가 있습니다.
+* _class_: 선택 표현식에 사용되는 관련 이벤트의 명명된 집합입니다. 일반적으로 사용되는 이벤트 클래스로는 "file creation" (fc), "exec" (ex), "login_logout" (lo) 등이 있습니다.
+* _record_: 보안 이벤트를 설명하는 감사 로그 항목. 레코드에는 레코드 이벤트 유형, 작업을 수행하는 주체(사용자)에 대한 정보, 날짜 및 시간 정보, 모든 개체 또는 인수에 대한 정보, 성공 또는 실패 조건이 포함됩니다.
+* _trail_: 보안 이벤트를 설명하는 일련의 감사 레코드로 구성된 로그 파일입니다. 트레일은 이벤트가 완료된 시간을 기준으로 대략 시간순으로 정렬됩니다. 권한이 있는 프로세스만 감사 추적에 레코드를 커밋할 수 있습니다.
+* _selection expression_: 이벤트를 일치시키는 데 사용되는 접두사 및 감사 이벤트 클래스 이름 목록이 포함된 문자열입니다.
+* _preselection_: 시스템이 관리자가 관심을 가질 만한 이벤트를 식별하는 프로세스입니다. 사전 선택 구성은 일련의 선택 표현식을 사용하여 인증된 프로세스와 인증되지 않은 프로세스 모두에 적용되는 전역 설정뿐만 아니라 어떤 이벤트 클래스를 어떤 사용자에 대해 감사할지 식별합니다.
+* _reduction_: 기존 감사 추적에서 보존, 인쇄 또는 분석을 위해 레코드가 선택되는 프로세스입니다. 마찬가지로, 원치 않는 감사 레코드가 감사 추적에서 제거되는 프로세스입니다. 관리자는 축소를 사용하여 감사 데이터 보존을 위한 정책을 구현할 수 있습니다. 예를 들어, 자세한 감사 추적은 한 달 동안 보관하지만 그 이후에는 보관 목적으로 로그인 정보만 보존하기 위해 추적을 축소할 수 있습니다.
+
+[[audit-config]]
+== 감사 구성
+
+이벤트 감사를 위한 사용자 공간 지원은 기본 FreeBSD 운영 체제의 일부로 설치됩니다. 커널 지원은 기본적으로 [.filename]#GENERIC# 커널에서 사용할 수 있으며, [.filename]#/etc/rc.conf#에 다음 줄을 추가하여 man:auditd[8]를 사용하도록 설정할 수 있습니다:
+
+[.programlisting]
+....
+auditd_enable="YES"
+....
+
+그런 다음 감사 데몬을 시작합니다:
+
+[source, shell]
+....
+# service auditd start
+....
+
+사용자 정의 커널을 컴파일하려는 사용자는 사용자 정의 커널 구성 파일에 다음 줄을 포함해야 합니다:
+
+[.programlisting]
+....
+options	AUDIT
+....
+
+=== 이벤트 선택 표현식
+
+선택 표현식은 감사 구성의 여러 위치에서 감사할 이벤트를 결정하기 위해 사용됩니다. 표현식에는 일치시킬 이벤트 클래스 목록이 포함되어 있습니다. 선택 표현식은 왼쪽에서 오른쪽으로 평가되며, 두 표현식은 다른 표현식에 하나를 추가하여 결합됩니다.
+
+<<event-selection>>에는 기본 감사 이벤트 클래스가 요약되어 있습니다:
+
+[[event-selection]]
+.기본 감사 이벤트 클래스
+[cols="1,1,1", frame="none", options="header"]
+|===
+| Class Name
+| Description
+| Action
+
+|all
+|all
+|Match all event classes.
+
+|aa
+|authentication and authorization
+|
+
+|ad
+|administrative
+|Administrative actions performed on the system as a whole.
+
+|ap
+|application
+|Application defined action.
+
+|cl
+|file close
+|Audit calls to the `close` system call.
+
+|ex
+|exec
+|Audit program execution. Auditing of command line arguments and environmental variables is controlled via man:audit_control[5] using the `argv` and `envv` parameters to the `policy` setting.
+
+|fa
+|file attribute access
+|Audit the access of object attributes such as man:stat[1] and man:pathconf[2].
+
+|fc
+|file create
+|Audit events where a file is created as a result.
+
+|fd
+|file delete
+|Audit events where file deletion occurs.
+
+|fm
+|file attribute modify
+|Audit events where file attribute modification occurs, such as by man:chown[8], man:chflags[1], and man:flock[2].
+
+|fr
+|file read
+|Audit events in which data is read or files are opened for reading.
+
+|fw
+|file write
+|Audit events in which data is written or files are written or modified.
+
+|io
+|ioctl
+|Audit use of the `ioctl` system call.
+
+|ip
+|ipc
+|Audit various forms of Inter-Process Communication, including POSIX pipes and System V IPC operations.
+
+|lo
+|login_logout
+|Audit man:login[1] and man:logout[1] events.
+
+|na
+|non attributable
+|Audit non-attributable events.
+
+|no
+|invalid class
+|Match no audit events.
+
+|nt
+|network
+|Audit events related to network actions such as man:connect[2] and man:accept[2].
+
+|ot
+|other
+|Audit miscellaneous events.
+
+|pc
+|process
+|Audit process operations such as man:exec[3] and man:exit[3].
+|===
+
+이러한 감사 이벤트 클래스는 [.filename]#audit_class# 및 [.filename]#audit_event# 구성 파일을 수정하여 사용자 지정할 수 있습니다.
+
+각 감사 이벤트 클래스는 성공/실패한 작업의 일치 여부와 항목이 클래스 및 유형에 대한 일치를 추가 또는 제거하는지를 나타내는 접두사와 결합할 수 있습니다. <<event-prefixes>>에는 사용 가능한 접두사가 요약되어 있습니다:
+
+[[event-prefixes]]
+.감사 이벤트 클래스의 접두사
+[cols="1,1", frame="none", options="header"]
+|===
+| Prefix
+| Action
+
+|+
+|Audit successful events in this class.
+
+|-
+|Audit failed events in this class.
+
+|^
+|Audit neither successful nor failed events in this class.
+
+|^+
+|Do not audit successful events in this class.
+
+|^-
+|Do not audit failed events in this class.
+|===
+
+접두사가 없는 경우 이벤트의 성공 및 실패 인스턴스 모두 감사합니다.
+
+다음 예제 선택 문자열은 성공 및 실패 로그인/로그아웃 이벤트를 모두 선택하지만 실행 성공 이벤트만 감사합니다:
+
+[.programlisting]
+....
+lo,+ex
+....
+
+=== 구성 파일
+
+보안 이벤트 감사를 위한 다음 구성 파일은 [.filename]#/etc/security#에 있습니다:
+
+* [.filename]#audit_class#: 감사 클래스의 정의가 포함되어 있습니다.
+* [.filename]#audit_control#: 기본 감사 클래스, 감사 로그 볼륨에 남겨둘 최소 디스크 공간, 최대 감사 추적 크기 등 감사 서브시스템의 측면을 제어합니다.
+* [.filename]#audit_event#: 시스템 감사 이벤트의 텍스트 이름 및 설명과 각 이벤트가 속한 클래스 목록입니다.
+* [.filename]#audit_user#: 로그인 시 글로벌 기본값과 결합할 사용자별 감사 요구 사항입니다.
+* [.filename]#audit_warn#: 감사 기록 공간이 부족하거나 감사 추적 파일이 회전된 경우와 같은 예외적인 상황에서 경고 메시지를 생성하기 위해 man:auditd[8]가 사용하는 사용자 지정 가능한 셸 스크립트입니다.
+
+[WARNING]
+====
+구성 오류로 인해 이벤트가 제대로 기록되지 않을 수 있으므로 감사 구성 파일을 신중하게 편집하고 유지 관리해야 합니다.
+====
+
+대부분의 경우 관리자는 [.filename]#audit_control# 및 [.filename]#audit_user#만 수정하면 됩니다. 첫 번째 파일은 시스템 전체 감사 속성 및 정책을 제어하고 두 번째 파일은 사용자별로 감사를 세부 조정하는 데 사용할 수 있습니다.
+
+[[audit-auditcontrol]]
+==== [.filename]#audit_control# 파일
+
+감사 하위 시스템에 대한 여러 가지 기본값은 [.filename]#audit_control#에 지정되어 있습니다:
+
+[.programlisting]
+....
+dir:/var/audit
+dist:off
+flags:lo,aa
+minfree:5
+naflags:lo,aa
+policy:cnt,argv
+filesz:2M
+expire-after:10M
+....
+
+`dir` 항목은 감사 로그를 저장할 디렉터리를 하나 이상 설정하는 데 사용됩니다. 디렉터리 항목이 두 개 이상 나타나면 채워지는 순서대로 사용됩니다. 파일 시스템이 가득 차면 감사 하위 시스템과 다른 하위 시스템 간의 간섭을 방지하기 위해 감사 로그가 전용 파일 시스템에 저장되도록 감사를 구성하는 것이 일반적입니다.
+
+`dist` 필드가 `on` 또는 `yes`로 설정되어 있으면 [.filename]#/var/audit/dist#에 있는 모든 트레일 파일에 대한 하드 링크가 만들어집니다.
+
+`flags` 필드는 어트리뷰션 이벤트에 대한 시스템 전반의 기본 사전 선택 마스크를 설정합니다. 위의 예에서는 모든 사용자에 대해 인증 및 권한 부여뿐만 아니라 로그인/로그아웃 이벤트의 성공 및 실패를 감사합니다.
+
+`minfree` 항목은 감사 추적이 저장되는 파일 시스템의 최소 여유 공간 비율을 정의합니다.
+
+`naflags` 항목은 로그인/로그아웃 프로세스, 인증 및 권한 부여와 같이 어트리뷰션되지 않은 이벤트에 대해 감사할 감사 클래스를 지정합니다.
+
+`policy` 항목은 감사 동작의 다양한 측면을 제어하는 정책 플래그의 쉼표로 구분된 목록을 지정합니다. `cnt`는 감사 실패에도 불구하고 시스템이 계속 실행되어야 함을 나타냅니다(이 플래그를 적극 권장합니다). 다른 플래그인 `argv`는 명령 실행의 일부로 man:execve[2] 시스템 호출에 대한 명령줄 인수를 감사하도록 합니다.
+
+`filesz` 항목은 추적 파일을 자동으로 종료하고 회전하기 전에 감사 추적의 최대 크기를 지정합니다. 값이 `0`이면 자동 로그 로테이션이 비활성화됩니다. 요청된 파일 크기가 최소 512k보다 작으면 무시되고 로그 메시지가 생성됩니다.
+
+`expire-after` 필드는 감사 로그 파일이 만료되어 제거되는 시기를 지정합니다.
+
+[[audit-audituser]]
+==== [.filename]#audit_user# 파일
+
+관리자는 [.filename]#audit_user#에서 특정 사용자에 대한 추가 감사 요구 사항을 지정할 수 있습니다. 각 줄은 두 개의 필드를 통해 사용자에 대한 감사를 구성합니다. `alwaysaudit` 필드는 사용자에 대해 항상 감사해야 하는 이벤트 집합을 지정하고 `neveraudit` 필드는 사용자에 대해 절대 감사하지 말아야 하는 이벤트 집합을 지정합니다.
+
+다음 예는 `root`에 대한 로그인/로그아웃 이벤트와 성공적인 명령 실행을 감사하고 `www`에 대한 파일 생성 및 성공적인 명령 실행을 감사하는 항목입니다. 기본값인 [.filename]#audit_control#와 함께 사용하면 `root`에 대한 `lo` 항목이 중복되며, `www`에 대한 로그인/로그아웃 이벤트도 감사됩니다.
+
+[.programlisting]
+....
+root:lo,+ex:no
+www:fc,+ex:no
+....
+
+[[audit-administration]]
+== 감사 추적 작업하기
+
+감사 추적은 BSM 바이너리 형식으로 저장되므로 이러한 추적을 수정하거나 텍스트로 변환할 수 있는 몇 가지 기본 제공 도구를 사용합니다. 추적 파일을 간단한 텍스트 형식으로 변환하려면 `praudit`을 사용합니다. 분석, 보관 또는 인쇄 목적으로 감사 추적 파일을 축소하려면 `auditreduce`를 사용합니다. 이 유틸리티는 이벤트 유형, 이벤트 클래스, 사용자, 이벤트 날짜 또는 시간, 작업한 파일 경로 또는 개체 등 다양한 선택 매개변수를 지원합니다.
+
+예를 들어, 지정된 감사 로그의 전체 내용을 일반 텍스트로 덤프할 수 있습니다:
+
+[source, shell]
+....
+# praudit /var/audit/AUDITFILE
+....
+
+여기서 _AUDITFILE_은 덤프할 감사 로그입니다.
+
+감사 추적은 토큰으로 구성된 일련의 감사 레코드로 구성되며, `praudit`은 한 줄당 하나씩 순차적으로 인쇄합니다. 각 토큰은 `header`(감사 레코드 헤더) 또는 `path`(이름 조회의 파일 경로)와 같은 특정 유형입니다. 다음은 `execve` 이벤트의 예입니다:
+
+[.programlisting]
+....
+header,133,10,execve(2),0,Mon Sep 25 15:58:03 2006, + 384 msec
+exec arg,finger,doug
+path,/usr/bin/finger
+attribute,555,root,wheel,90,24918,104944
+subject,robert,root,wheel,root,wheel,38439,38032,42086,128.232.9.100
+return,success,0
+trailer,133
+....
+
+이 감사는 `finger doug` 명령이 실행된 성공적인 `execve` 호출을 나타냅니다. `exec arg` 토큰에는 셸이 커널에 제공한 처리된 명령줄이 포함되어 있습니다. `path` 토큰은 커널이 조회한 실행 파일의 경로를 보유합니다. `attribute` 토큰은 바이너리를 설명하며 파일 모드를 포함합니다. `subject` 토큰은 감사 사용자 ID, 유효 사용자 ID 및 그룹 ID, 실제 사용자 ID 및 그룹 ID, 프로세스 ID, 세션 ID, 포트 ID 및 로그인 주소를 저장합니다. 이 명령을 실행하기 전에 사용자 `robert`가 `root` 계정으로 전환되었기 때문에 감사 사용자 ID와 실제 사용자 ID가 다르지만 원래 인증된 사용자를 사용하여 감사됩니다. `return` 토큰은 성공적인 실행을 나타내며 `trailer`는 기록을 종료합니다.
+
+XML 출력 형식도 지원되며 `-x`를 포함하여 선택할 수 있습니다.
+
+감사 로그는 매우 클 수 있으므로 `auditreduce`를 사용하여 레코드의 하위 집합을 선택할 수 있습니다. 이 예에서는 [.filename]#AUDITFILE#에 저장된 사용자 `trhodes`에 대해 생성된 모든 감사 기록을 선택합니다:
+
+[source, shell]
+....
+# auditreduce -u trhodes /var/audit/AUDITFILE | praudit
+....
+
+`audit` 그룹의 구성원은 [.filename]#/var/audit#에서 감사 추적을 읽을 수 있는 권한을 가집니다. 기본적으로 이 그룹은 비어 있으므로 `root` 사용자만 감사 추적을 읽을 수 있습니다. 감사 검토 권한을 위임하기 위해 `audit` 그룹에 사용자를 추가할 수 있습니다. 감사 로그 내용을 추적하는 기능은 사용자와 프로세스의 행동에 대한 중요한 인사이트를 제공하므로 감사 검토 권한 위임은 신중하게 수행하는 것이 좋습니다.
+
+=== 감사 파이프를 사용한 실시간 모니터링
+
+감사 파이프는 애플리케이션이 실시간 감사 레코드 스트림을 탭할 수 있도록 하는 의사 장치를 복제하는 것입니다. 이는 주로 침입 탐지 및 시스템 모니터링 애플리케이션 작성자가 관심을 가질 만한 기능입니다. 그러나 감사 파이프 장치는 관리자가 이벤트 스트림을 방해하는 감사 추적 파일 소유권이나 로그 로테이션 문제 없이 실시간 모니터링을 허용할 수 있는 편리한 방법입니다. 실시간 감사 이벤트 스트림을 추적하려면 다음과 같이 하세요:
+
+[source, shell]
+....
+# praudit /dev/auditpipe
+....
+
+기본적으로 감사 파이프 장치 노드는 `root` 사용자만 액세스할 수 있습니다. `audit` 그룹의 구성원도 액세스할 수 있도록 하려면 [.filename]#/etc/devfs.rules#에 `devfs` 규칙을 추가하세요:
+
+[.programlisting]
+....
+add path 'auditpipe*' mode 0440 group audit
+....
+
+devfs 파일 시스템 구성에 대한 자세한 내용은 man:devfs.rules[5]를 참조하세요.
+
+[WARNING]
+====
+각 감사 이벤트를 보면 더 많은 감사 이벤트가 생성되는 감사 이벤트 피드백 주기를 쉽게 생성할 수 있습니다. 예를 들어, 모든 네트워크 I/O를 감사하고 SSH 세션에서 `praudit`을 실행하면, 인쇄되는 각 이벤트가 다른 이벤트를 생성하기 때문에 감사 이벤트의 연속 스트림이 빠른 속도로 생성됩니다. 따라서 세분화된 I/O 감사가 없는 세션에서 감사 파이프 장치에서 `praudit`을 실행하는 것이 좋습니다.
+====
+
+=== 감사 추적 파일 회전 및 압축하기
+
+감사 추적은 커널에 의해 쓰여지고 감사 데몬인 man:auditd[8]에 의해 관리됩니다. 관리자는 man:newsyslog.conf[5] 또는 다른 도구를 사용하여 감사 로그를 직접 회전하려고 시도해서는 안 됩니다. 대신 `audit`를 사용하여 감사를 종료하고, 감사 시스템을 재구성하고, 로그 로테이션을 수행해야 합니다. 다음 명령은 감사 데몬이 새 감사 로그를 생성하고 커널이 새 로그를 사용하도록 전환하도록 신호를 보냅니다. 이전 로그는 종료되고 이름이 변경되며, 이 시점에서 관리자가 로그를 조작할 수 있습니다:
+
+[source, shell]
+....
+# audit -n
+....
+
+man:auditd[8]가 현재 실행되고 있지 않으면 이 명령은 실패하고 오류 메시지가 생성됩니다.
+
+[.filename]#/etc/crontab#에 다음 줄을 추가하면 12시간마다 이 로테이션을 예약할 수 있습니다:
+
+[.programlisting]
+....
+0     */12       *       *       *       root    /usr/sbin/audit -n
+....
+
+변경 사항은 [.filename]#/etc/crontab#을 저장하면 적용됩니다.
+
+<<audit-auditcontrol>>에 설명된 대로 [.filename]#audit_control#의 `filesz`를 사용하여 파일 크기에 따라 감사 추적 파일을 자동으로 회전할 수 있습니다.
+
+감사 추적 파일은 매우 커질 수 있으므로 감사 데몬에 의해 종료된 후에는 추적 파일을 압축하거나 다른 방법으로 보관하는 것이 바람직할 때가 많습니다. [.filename]#audit_warn# 스크립트를 사용하여 감사 추적이 회전될 때 깨끗하게 종료하는 등 다양한 감사 관련 이벤트에 대해 사용자 지정 작업을 수행할 수 있습니다. 예를 들어, [.filename]#/etc/security/audit_warn#에 다음을 추가하여 닫을 때 감사 추적을 압축할 수 있습니다:
+
+[.programlisting]
+....
+#
+# Compress audit trail files on close.
+#
+if [ "$1" = closefile ]; then
+        gzip -9 $2
+fi
+....
+
+다른 아카이빙 활동에는 중앙 서버에 추적 파일 복사, 오래된 추적 파일 삭제, 불필요한 레코드를 제거하기 위한 감사 추적 축소 등이 포함될 수 있습니다. 이 스크립트는 감사 추적 파일이 깨끗하게 종료된 경우에만 실행됩니다. 부적절한 종료 후 종료되지 않은 상태로 남겨진 트레일에서는 실행되지 않습니다.
