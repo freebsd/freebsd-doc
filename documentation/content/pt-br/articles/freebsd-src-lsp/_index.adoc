@@ -1,0 +1,268 @@
+---
+authors:
+  - 
+    author: 'Ka Ho Ng'
+    email: khng@FreeBSD.org
+copyright: '2021 The FreeBSD Foundation'
+description: 'Utilize servidores de linguagem para o desenvolvimento na árvore src do FreeBSD para obter resultados precisos e completos ao buscar a definição de um termo no código fonte.'
+tags: ["FreeBSD", "Language Server", "LSP"]
+title: 'Utilize Servidores de Linguagem para o Desenvolvimento na Árvore Src do FreeBSD'
+trademarks: ["freebsd"]
+---
+
+= Utilize Servidores de Linguagem para o Desenvolvimento na Árvore Src do FreeBSD
+:doctype: article
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:images-path: articles/freebsd-src-lsp/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+:imagesdir: ../../../images/{images-path}
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+toc::[]
+
+[[intro]]
+== Introdução
+
+Este guia é sobre como configurar uma árvore src do FreeBSD com servidores de linguagem realizando a indexação de código fonte. O guia descreve os passos para o Vim/NeoVim e o VSCode. Se você usar um editor de texto diferente, pode usar este guia como referência e procurar os comandos equivalentes para o seu editor preferido.
+
+[[requirements]]
+== Requisitos
+
+Para seguir este guia, precisamos instalar certos requisitos. Precisamos de um servidor de linguagem, `ccls` ou `clangd`, e opcionalmente um banco de dados de compilação.
+
+A instalação do servidor de linguagem pode ser realizada via `pkg` ou via ports. Se escolhermos `clangd`, precisaremos instalar o `llvm`.
+
+Usando o `pkg` para instalar o `ccls`:
+
+[source, shell]
+....
+# pkg install ccls
+....
+
+Se quisermos usar o `clangd`, precisaremos instalar o `llvm` (O comando de exemplo usa o `llvm15`, mas escolha a versão que desejar):
+
+[source, shell]
+....
+# pkg install llvm15
+....
+
+Para instalar via ports, escolha a sua combinação favorita de ferramentas de cada categoria abaixo:
+
+* Implementações de servidores de linguagem
+** package:devel/ccls[]
+** package:devel/llvm12[] (Outras versões também são aceitáveis, mas as mais novas são melhores. Substitua `clangd12` por `clangdN` no caso de outras versões serem usadas.)
+* Editores
+** package:editors/vim[]
+** package:editors/neovim[]
+** package:editors/vscode[]
+* Gerador de banco de dados de compilação
+** package:devel/python[] (Para a implementação do scan-build-py do llvm)
+** package:devel/py-pip[] (Para a implementação do scan-build do rizsotto)
+** package:devel/bear[]
+
+[[editor-settings]]
+== Configurações do editor
+
+[[settings-vim]]
+=== Vim/Neovim
+
+==== Plugins de cliente LSP
+
+O gerenciador de plugin integrado é usado para ambos os editores neste exemplo. O plugin do cliente LSP usado é o link:https://github.com/prabirshrestha/vim-lsp[prabirshrestha/vim-lsp].
+
+Para configurar o plugin do cliente LSP para o Neovim:
+
+[source, shell]
+....
+# mkdir -p ~/.config/nvim/pack/lsp/start
+# git clone https://github.com/prabirshrestha/vim-lsp ~/.config/nvim/pack/lsp/start/vim-lsp
+....
+
+e para o Vim:
+
+[source, shell]
+....
+# mkdir -p ~/.vim/pack/lsp/start
+# git clone https://github.com/prabirshrestha/vim-lsp ~/.vim/pack/lsp/start/vim-lsp
+....
+
+Para habilitar o plugin do cliente LSP no editor, adicione o seguinte trecho em [.filepath]#~/.config/nvim/init.vim# ao usar o Neovim, ou [.filepath]#~/.vim/vimrc# ao usar o Vim:
+
+.Para o ccls
+[source, vim]
+....
+au User lsp_setup call lsp#register_server({
+    \ 'name': 'ccls',
+    \ 'cmd': {server_info->['ccls']},
+    \ 'allowlist': ['c', 'cpp', 'objc'],
+    \ 'initialization_options': {
+    \     'cache': {
+    \         'hierarchicalPath': v:true
+    \     }
+    \ }})
+....
+
+.Para o clangd
+[source, vim]
+....
+au User lsp_setup call lsp#register_server({
+    \ 'name': 'clangd',
+    \ 'cmd': {server_info->['clangd15', '--background-index', '--header-insertion=never']},
+    \ 'allowlist': ['c', 'cpp', 'objc'],
+    \ 'initialization_options': {},
+    \ })
+....
+
+Dependendo da versão que você instalou para o `clangd`, pode ser necessário atualizar o `server-info` para apontar para o binário correto.
+
+Por favor, consulte link:https://github.com/prabirshrestha/vim-lsp/blob/master/README.md#registering-servers[] para aprender sobre como configurar atalhos e as funções para autocompletar o código. O site oficial do clangd é link:https://clangd.llvm.org[], e o repositório do ccls é link:https://github.com/MaskRay/ccls/[].
+
+Abaixo estão as configurações de referência para atalhos de teclado e o autocomplemento de código. Insira o seguinte trecho em [.filepath]#~/.config/nvim/init.vim# ou [.filepath]#~/.vim/vimrc# para que usuários do Vim possam utilizá-las:
+
+[source, vim]
+....
+function! s:on_lsp_buffer_enabled() abort
+    setlocal omnifunc=lsp#complete
+    setlocal completeopt-=preview
+    setlocal keywordprg=:LspHover
+
+    nmap <buffer> <C-]> <plug>(lsp-definition)
+    nmap <buffer> <C-W>] <plug>(lsp-peek-definition)
+    nmap <buffer> <C-W><C-]> <plug>(lsp-peek-definition)
+    nmap <buffer> gr <plug>(lsp-references)
+    nmap <buffer> <C-n> <plug>(lsp-next-reference)
+    nmap <buffer> <C-p> <plug>(lsp-previous-reference)
+    nmap <buffer> gI <plug>(lsp-implementation)
+    nmap <buffer> go <plug>(lsp-document-symbol)
+    nmap <buffer> gS <plug>(lsp-workspace-symbol)
+    nmap <buffer> ga <plug>(lsp-code-action)
+    nmap <buffer> gR <plug>(lsp-rename)
+    nmap <buffer> gm <plug>(lsp-signature-help)
+endfunction
+
+augroup lsp_install
+    au!
+    autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+augroup END
+....
+
+[[settings-vscode]]
+=== VSCode
+
+==== Plugins de cliente LSP
+
+Plugins de cliente LSP são necessários para iniciar o daemon do servidor de linguagem. Pressione `Ctrl+Shift+X` para exibir o painel de pesquisa de extensões online. Digite `llvm-vs-code-extensions.vscode-clangd` quando estiver usando o clangd, ou `ccls-project.ccls` quando estiver usando o ccls.
+
+Em seguida, pressione `Ctrl+Shift+P` para exibir a paleta de comandos do editor. Digite `Preferences: Open Settings (JSON)` na paleta e pressione `Enter` para abrir o [.filepath]#settings.json#. Dependendo das implementações do servidor de linguagem, adicione um dos seguintes pares chave/valor JSON em [.filepath]#settings.json#:
+
+.Para o clangd
+[source, json]
+....
+[
+    /* Begin of your existing configurations */
+    ...
+    /* End of your existing configurations */
+    "clangd.arguments": [
+        "--background-index",
+        "--header-insertion=never"
+    ],
+    "clangd.path": "clangd12"
+]
+....
+
+.Para o ccls
+[source, json]
+....
+[
+    /* Begin of your existing configurations */
+    ...
+    /* End of your existing configurations */
+    "ccls.cache.hierarchicalPath": true
+]
+....
+
+[[cdb]]
+== Banco de dados de compilação
+
+Um banco de dados de compilação contém um array de objetos de comando de compilação. Cada objeto especifica uma maneira de compilar um arquivo de origem. O arquivo de banco de dados de compilação geralmente é chamado de [.filename]#compile_commands.json#. O banco de dados é usado por implementações de servidores de linguagem para fins de indexação.
+
+Por favor, consulte link:https://clang.llvm.org/docs/JSONCompilationDatabase.html#format[] para obter detalhes sobre o formato do arquivo do banco de dados de compilação.
+
+[[cdb-generators]]
+=== Geradores
+
+[[generators-scan-build-py]]
+==== Usando scan-build-py
+
+===== Instalação
+
+A ferramenta `intercept-build` do scan-build-py é usada para gerar o banco de dados de compilação.
+
+Primeiro instale o package:devel/python[] para obter o interpretador Python. Para obter o `intercept-build` do LLVM:
+
+[source, shell]
+....
+# git clone https://github.com/llvm/llvm-project /path/to/llvm-project
+....
+
+onde [.filename]#/path/to/llvm-project/# é o caminho desejado para o repositório. Crie um alias no arquivo de configuração do shell para conveniência:
+
+[source, shell]
+....
+alias intercept-build='/path/to/llvm-project/clang/tools/scan-build-py/bin/intercept-build'
+....
+
+Você também pode usar o link:https://github.com/rizsotto/scan-build[rizsotto/scan-build] em vez do scan-build-py do LLVM. O scan-build-py do LLVM foi incorporado ao repositório do LLVM. Essa implementação pode ser instalada com o comando `pip install --user scan-build`. O script `intercept-build` é instalado por padrão em [.filename]#~/.local/bin#.
+
+===== Uso
+
+No diretório raiz da árvore src do FreeBSD, gere o banco de dados de compilação com o `intercept-build`:
+
+[source, shell]
+....
+# intercept-build --append make buildworld buildkernel -j`sysctl -n hw.ncpu`
+....
+
+A opção `--append` instrui o `intercept-build` a ler um banco de dados de compilação existente (se existir) e adicionar os resultados ao banco de dados. As entradas com chaves de comando duplicadas são mescladas. O banco de dados de compilação gerado por padrão é salvo no diretório de trabalho atual como [.filename]#compile_commands.json#.
+
+[[generators-bear]]
+==== Usando o devel/bear
+
+===== Uso
+
+No diretório raiz da árvore src do FreeBSD, para gerar o banco de dados de compilação com o `bear`:
+
+[source, shell]
+....
+# bear --append -- make buildworld buildkernel -j`sysctl -n hw.ncpu`
+....
+
+A opção `--append` instrui o `bear` a ler um banco de dados de compilação existente, se estiver presente, e adicionar os resultados ao banco de dados. As entradas com chave de comando duplicada são mescladas. O banco de dados de compilação gerado por padrão é salvo no diretório de trabalho atual como [.filename]#compile_commands.json#.
+
+[[final]]
+== Finalizando
+
+Depois que o banco de dados de compilação for gerado, abra qualquer arquivo de código fonte na árvore src do FreeBSD e o daemon do servidor LSP será lançado em segundo plano. Abrir arquivos de código fonte na árvore src pela primeira vez leva significativamente mais tempo antes que o servidor LSP seja capaz de fornecer um resultado completo, devido à indexação de segundo plano inicial pelo servidor LSP compilando todas as entradas listadas no banco de dados de compilação. No entanto, o daemon do servidor de linguagem não indexa os arquivos de origem que não aparecem no banco de dados de compilação, portanto, nenhum resultado completo é mostrado em arquivos de origem que não estão sendo compilados durante o `make`.
