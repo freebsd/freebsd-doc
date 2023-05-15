@@ -1,8 +1,11 @@
 ---
-title: Implementando o UFS Journaling em um Desktop PC
 authors:
-  - author: Manolis Kiagias
+  - 
+    author: 'Manolis Kiagias'
     email: manolis@FreeBSD.org
+description: 'Implementando o UFS Journaling em um Desktop PC'
+tags: ["UFS", "Journaling" , "Desktop", "FreeBSD"]
+title: 'Implementando o UFS Journaling em um Desktop PC'
 trademarks: ["freebsd", "general"]
 ---
 
@@ -40,7 +43,7 @@ endif::[]
 [.abstract-title]
 Resumo
 
-Um sistema de arquivos com journaling usa um log para registrar todas as transações que ocorrem no sistema de arquivos e preserva sua integridade em caso de falha do sistema ou falta de energia. Embora ainda seja possível perder as alterações não salvas nos arquivos, o journaling elimina quase completamente a possibilidade de corrupção do sistema de arquivos causada por um desligamento abrupto. Ele também reduz ao mínimo o tempo necessário para a verificação do sistema de arquivos após a falha. Embora o sistema de arquivos UFS empregado pelo FreeBSD não implemente o journaling em si, a nova classe de journal do framework GEOM no FreeBSD 7._X_ pode ser usada para fornecer journaling independente do sistema de arquivos. Este artigo explica como implementar o UFS journaling em um cenário típico de PC de mesa.
+Um sistema de arquivos com journaling utiliza um log para registrar todas as transações que ocorrem no sistema de arquivos e preserva sua integridade em caso de falha do sistema ou queda de energia. Embora ainda seja possível perder alterações não salvas em arquivos, o journaling quase elimina completamente a possibilidade de corrupção do sistema de arquivos causada por uma desligamento incorreto. Ele também reduz ao mínimo o tempo necessário para a verificação do sistema de arquivos após uma falha. Embora o sistema de arquivos UFS utilizado pelo FreeBSD não implemente o journaling por si só, a nova classe de journaling do framework GEOM no FreeBSD 7._X_ pode ser usada para fornecer o journaling independente do sistema de arquivos. Este artigo explica como implementar o journaling do UFS em um cenário típico de um PC desktop.
 
 '''
 
@@ -49,91 +52,91 @@ toc::[]
 [[introduction]]
 == Introdução
 
-Embora os servidores profissionais estejam geralmente bem protegidos contra desligamentos imprevistos, um desktop típico fica à mercê de falhas de energia, reinicializações acidentais e outros incidentes relacionados ao usuário que podem levar a paradas abruptas. Os soft updates costumam proteger o sistema de arquivos de maneira eficiente nestes casos, embora na maioria das vezes seja necessária uma longa verificação em background. Em raras ocasiões, a corrupção do sistema de arquivos atinge um ponto em que a intervenção do usuário é necessária e os dados podem ser perdidos.
+Enquanto servidores profissionais geralmente estão bem protegidos contra desligamentos imprevistos, os desktops típicos estão sujeitos a quedas de energia, reinicializações acidentais e outros incidentes relacionados ao usuário que podem levar a desligamentos incorretos. As Soft Updates geralmente protegem o sistema de arquivos de forma eficiente nesses casos, embora na maioria das vezes seja necessária uma verificação em segundo plano demorada. Em raras ocasiões, a corrupção do sistema de arquivos atinge um ponto em que é necessária a intervenção do usuário e dados podem ser perdidos.
 
 O novo recurso de journaling fornecido pela GEOM pode ajudar bastante nesses cenários, praticamente eliminando o tempo necessário para a verificação do sistema de arquivos e garantindo que o sistema de arquivos seja rapidamente restaurado para um estado consistente.
 
-Este artigo descreve um procedimento para implementar o journaling do UFS em um cenário típico de PC de mesa (um único disco rígido usado para o sistema operacional e para os dados). Deve ser seguido durante uma nova instalação do FreeBSD. As etapas são simples o suficiente e não requerem interação excessivamente complexa com a linha de comando.
+Este artigo descreve um procedimento para implementar o journaling do UFS em um cenário típico de um PC desktop (um disco rígido usado tanto para o sistema operacional quanto para os dados). Ele deve ser seguido durante uma nova instalação do FreeBSD. Os passos são simples o suficiente e não exigem interações excessivamente complexas com a linha de comando.
 
 Depois de ler este artigo, você saberá:
 
 * Como reservar espaço para o journaling durante uma nova instalação do FreeBSD.
-* Como carregar e ativar o módulo `geom_journal` (ou como compilar o suporte para ele em seu kernel customizado).
-* Como converter seus sistemas de arquivos existentes para utilizar o journaling e quais opções usar em [.filename]#/etc/fstab# para montá-los.
+* Como carregar e ativar o módulo `geom_journal` (ou compilar o suporte para ele em seu kernel personalizado).
+* Como converter seus sistemas de arquivos existentes para utilizar journaling e quais opções usar no arquivo [.filename]#/etc/fstab# para montá-los.
 * Como implementar o journaling em novas partições (vazias).
 * Como solucionar problemas comuns associados ao journaling.
 
 Antes de ler este artigo, você deve ser capaz de:
 
 * Entender os conceitos básicos do UNIX(R) e do FreeBSD.
-* Estar familiarizado com o procedimento de instalação do FreeBSD e com o utilitário sysinstall.
+* Estar familiarizado com o procedimento de instalação do FreeBSD e com a ferramenta sysinstall.
 
 [WARNING]
 ====
-O procedimento descrito aqui é destinado a preparar uma nova instalação na qual ainda não temos nenhum dado real do usuário é armazenado no disco. Embora seja possível modificar e estender este procedimento para sistemas já em produção, você deve efetuar o _backup_ de todos os dados importantes antes de fazer isso. Mexer com discos e partições em um baixo nível pode levar a erros fatais e a perda de dados.
+A procedimento descrito aqui destina-se a preparar uma nova instalação na qual ainda não existe nenhum dado do usuário armazenado no disco. Embora seja possível modificar e estender este procedimento para sistemas já em produção, você deve fazer um _backup_ de todos os dados importantes antes de fazê-lo. Mexer com discos e partições em um nível baixo pode levar a erros fatais e a perda de dados.
 ====
 
 [[understanding-journaling]]
 == Compreendendo o journaling no FreeBSD
 
-O journaling fornecido pelo GEOM no FreeBSD 7._X_ não é específico do sistema de arquivos (diferentemente do sistema de arquivos ext3 no Linux(R)), funcionando a nível de bloco. Embora isso signifique que ele possa ser aplicado a sistemas de arquivos diferentes, no FreeBSD 7.0-RELEASE, ele só pode ser usado com o UFS2.
+O journaling fornecido pelo GEOM no FreeBSD 7._X_ não é específico do sistema de arquivos (ao contrário do sistema de arquivos ext3 no Linux(R)), mas funciona no nível de bloco. Embora isso signifique que ele possa ser aplicado a diferentes sistemas de arquivos, no FreeBSD 7.0-RELEASE, ele só pode ser usado no UFS2.
 
-Esta funcionalidade é fornecida pelo carregamento do módulo [.filename]#geom_journal.ko# no kernel (ou através da compilação de um kernel personalizado) e pelo uso do comando `gjournal` para configurar os sistemas de arquivos. Em geral, você gostaria de utilizar o journal em grandes sistemas de arquivos, como o [.filename]#/usr#. Você precisará no entanto (veja a seção seguinte) reservar algum espaço livre em disco para isso.
+Essa funcionalidade é fornecida carregando o módulo [.filename]#geom_journal.ko# no kernel (ou compilando-o em um kernel personalizado) e usando o comando `gjournal` para configurar os sistemas de arquivos. Em geral, você gostaria de registrar grandes sistemas de arquivos, como o [.filename]#/usr#. No entanto, você precisará reservar algum espaço livre em disco (consulte a próxima seção).
 
-Quando um sistema de arquivos é "journaled", é necessário algum espaço em disco para manter o próprio journal. O espaço em disco que contém os dados reais é chamado de __data provider__, enquanto o que contém o journal é chamado de __journal provider__. Os provedores de dados e de journal precisam estar em partições diferentes ao fazer o journaling de uma partição existente (não vazia). Ao fazer o journaling de uma nova partição, você tem a opção de usar um único provedor para os dados e o journal. Em todo caso, o comando `gjournal` combina os dois provedores para criar o sistema de arquivos journaled final. Por exemplo:
+Quando um sistema de arquivos é jornalizado, é necessário um espaço em disco para armazenar o próprio journal. O espaço em disco que contém os dados reais é chamado de __provedor de dados__ (data provider), enquanto o que contém o journal é chamado de __provedor de journal__ (journal provider). Os provedores de dados e de journal precisam estar em partições diferentes ao jornalizar uma partição existente (não vazia). Ao jornalizar uma nova partição, você tem a opção de usar um único provedor para ambos os dados e o journal. Em qualquer caso, o comando `gjournal` combina ambos os provedores para criar o sistema de arquivos final com journaling. Por exemplo:
 
-* Você deseja fazer o journaling do seu sistema de arquivos [.filename]#/usr#, armazenado em [.filename]#/dev/ad0s1f# (que já contém dados).
-* Você reservou algum espaço livre no disco, na partição [.filename]#/dev/ad0s1g#.
-* Usando o comando `gjournal`, um novo dispositivo [.filename]#/dev/ad0s1f.journal# é criado no qual o [.filename]#/dev/ad0s1f# é o data provider, e o [.filename]#/dev/ad0s1g# é o journal provider. Este novo dispositivo é então usado para todas as operações de arquivo posteriores.
+* Você deseja fazer o journaling do sistema de arquivos [.filename]#/usr#, armazenado em [.filename]#/dev/ad0s1f# (que já contém dados).
+* Você reservou um espaço livre em disco em uma partição em [/dev/ad0s1g].
+* Usando `gjournal`, um novo dispositivo [.filename]#/dev/ad0s1f.journal# é criado, onde [.filename]#/dev/ad0s1f# é o provedor de dados e [.filename]#/dev/ad0s1g# é o provedor de journal. Esse novo dispositivo é então usado para todas as operações de arquivo subsequentes.
 
-A quantidade de espaço em disco que você precisa reservar para o journal provider depende da carga de uso do sistema de arquivos e não do tamanho do data provider. Por exemplo, em um desktop típico de escritório, um journal provider de 1 GB para o sistema de arquivos [.filename]#/usr# será suficiente, enquanto uma máquina que lida com I/O de disco pesado (por exemplo, edição de vídeo) pode precisar de mais. Um kernel panic ocorrerá se o espaço do journal estiver esgotado antes de ter a chance de ser committed.
+A quantidade de espaço em disco que você precisa reservar para o provedor de journal depende da carga de uso do sistema de arquivos e não do tamanho do provedor de dados. Por exemplo, em um desktop de escritório típico, um provedor de journal de 1 GB para o sistema de arquivos [.filename]#/usr# será suficiente, enquanto uma máquina que lida com intensas operações E/S de disco (por exemplo, edição de vídeo) pode precisar de mais espaço. Ocorrerá um kernel panic se o espaço do journal for esgotado antes que ele tenha a chance de ser confirmado (committed).
 
 [NOTE]
 ====
-É improvável que os tamanhos de journal sugeridos aqui causem problemas no uso típico de um desktop (como navegação na Web, processamento de texto e reprodução de arquivos de mídia). Se sua carga de trabalho incluir intensa atividade de disco, use a regra a seguir para obter a confiabilidade máxima: o tamanho da RAM deve caber em 30% do espaço do journal provider. Por exemplo, se o seu sistema tiver 1 GB de RAM, crie um journal provider de aproximadamente 3,3 GB. (Multiplique o tamanho total da sua RAM por 3.3 para obter o tamanho do journal).
+Os tamanhos de journal sugeridos aqui são altamente improváveis de causar problemas em uso típico de desktop, como navegação na web, processamento de texto e reprodução de arquivos de mídia. Se a sua carga de trabalho inclui atividade intensa de disco, utilize a seguinte regra para obter máxima confiabilidade: o tamanho da sua memória RAM deve caber em 30% do espaço do provedor de journal. Por exemplo, se o seu sistema possui 1 GB de RAM, crie um provedor de journal de aproximadamente 3,3 GB (multiplique o tamanho da sua RAM por 3,3 para obter o tamanho do journal).
 ====
 
-Para mais informações sobre journaling, leia a página de manual do man:gjournal[8].
+Para obter mais informações sobre o journaling, por favor, leia a página do manual man:gjournal[8].
 
 [[reserve-space]]
 == Etapas durante a instalação do FreeBSD
 
 === Reservando espaço para o journaling
 
-Normalmente, um desktop típico tem um disco rígido que armazena o sistema operacional e os dados do usuário. Indiscutivelmente, o esquema de particionamento padrão selecionado pelo sysinstall é mais ou menos adequado: Um desktop não precisa de uma grande partição [.filename]#/var#, enquanto o [.filename]#/usr# é alocado com a maior parte do espaço em disco, já que os dados do usuário e muitos pacotes são instalados em seus subdiretórios.
+Uma máquina desktop típica geralmente possui um único disco rígido que armazena tanto o sistema operacional quanto os dados do usuário. Argumentavelmente, o esquema de particionamento padrão selecionado pelo sysinstall é mais ou menos adequado: uma máquina desktop não precisa de uma partição [.filename]#/var# grande, enquanto a partição [.filename]#/usr# é alocada para a maior parte do espaço em disco, uma vez que os dados do usuário e muitos pacotes são instalados em seus subdiretórios.
 
-O particionamento padrão (aquele obtido pressionando kbd:[A] no editor de partições do FreeBSD, chamado Disklabel) não deixa nenhum espaço não alocado. Cada partição que será journaled, requer outra partição para journal. Como a partição [.filename]#/usr# é a maior, faz sentido reduzir ligeiramente essa partição, para obter o espaço necessário para o journaling.
+A partição padrão (aquela obtida ao pressionar kbd:[A] no editor de partição do FreeBSD, chamado Disklabel) não deixa nenhum espaço não alocado. Cada partição que será jornalizada requer outra partição para o journal. Como a partição [.filename]#/usr# é a maior, faz sentido reduzir levemente essa partição para obter o espaço necessário para o journaling.
 
-No nosso exemplo, um disco de 80 GB é usado. A captura de tela a seguir mostra as partições padrões criadas por Disklabel durante a instalação:
+No nosso exemplo, um disco de 80 GB está sendo utilizado. A captura de tela a seguir mostra as partições padrões criadas pelo Disklabel durante a instalação:
 
 image::disklabel1.png[]
 
-Se isso é mais ou menos o que você precisa, é muito fácil se ajustar ao journaling. Simplesmente use as teclas de seta para mover o realce para a partição [.filename]#/usr# e pressione kbd:[D] para excluí-la.
+Se isso é mais ou menos o que você precisa, é muito fácil ajustar para o journaling. Basta usar as teclas de seta para mover o destaque para a partição [.filename]#/usr# e pressionar kbd:[D] para excluí-la.
 
-Agora, mova o realce para o nome do disco na parte superior da tela e pressione kbd:[C] para criar uma nova partição para [.filename]#/usr#. Esta nova partição deve ser menor em 1 GB (se você pretende registrar apenas [.filename]#/usr#), ou 2 GB (se você pretende registrar ambos [.filename]#/usr# e [.filename]#/var#). No pop-up exibido, opte por criar um sistema de arquivos e digite [.filename]#/usr# como o ponto de montagem.
+Agora, mova o destaque para o nome do disco no topo da tela e pressione kbd:[C] para criar uma nova partição para [.filename]#/usr#. Essa nova partição deve ser menor em 1 GB (se você pretende jornalizar apenas [.filename]#/usr#) ou 2 GB (se você pretende jornalizar tanto [.filename]#/usr# quanto [.filename]#/var#). No pop-up que aparece, opte por criar um sistema de arquivos e digite [.filename]#/usr# como ponto de montagem.
 
 [NOTE]
 ====
-Você deve fazer o journal da partição [.filename]#/var#? Normalmente, o journaling faz sentido em partições grandes. Você pode decidir não fazer o journal do [.filename]#/var#, embora fazê-lo em um desktop típico não cause nenhum dano. Se o sistema de arquivos é usado levemente (bastante provável para um desktop) você pode querer alocar menos espaço em disco para o seu journal.
+Você deve jornalizar a partição [.filename]#/var#? Normalmente, o journaling faz sentido em partições bastante grandes. Você pode optar por não jornalizar [.filename]#/var#, embora fazê-lo em um desktop típico não cause problemas. Se o sistema de arquivos tiver um uso leve (o que é bastante provável para um desktop), você pode desejar alocar menos espaço em disco para o seu journal.
 
-Em nosso exemplo, nós fizemos o journal em ambos [.filename]#/usr# e [.filename]#/var#. Você pode, naturalmente, ajustar o procedimento às suas próprias necessidades.
+No nosso exemplo, nós aplicamos o journaling nas partições [.filename]#/usr# e [.filename]#/var#. Você pode, é claro, ajustar o procedimento de acordo com suas próprias necessidades.
 ====
 
-Para manter as coisas o mais fáceis o possível, vamos usar o sysinstall para criar as partições necessárias para o journaling. No entanto, durante a instalação, o sysinstall insiste em pedir um ponto de montagem para cada partição criada. Neste ponto, você não tem nenhum ponto de montagem para as partições que irão manter os journals, e na realidade você __nem precisa deles__. Estas não são partições que iremos montar em algum lugar.
+Para facilitar o processo o máximo possível, vamos usar o sysinstall para criar as partições necessárias para o journaling. No entanto, durante a instalação, o sysinstall insiste em solicitar um ponto de montagem para cada partição que você cria. Neste momento, você não possui nenhum ponto de montagem para as partições que irão armazenar os journals e, na realidade, você nem mesmo precisa deles. Essas não são partições que serão montadas em algum lugar.
 
-Para evitar esses problemas com o sysinstall, vamos criar as partições de journal como espaço de troca. O swap nunca é montado, e o sysinstall não tem problemas para criar tantas partições de troca quantas forem necessárias. Após a primeira reinicialização, o [.filename]#/etc/fstab# terá que ser editado, e as entradas extras do espaço de troca serão removidas.
+Para evitar esses problemas com o sysinstall, vamos criar as partições de journal como espaço de swap. O swap nunca é montado, e o sysinstall não tem problemas em criar quantas partições de swap forem necessárias. Após o primeiro reinício, será necessário editar o arquivo [.filename]#/etc/fstab# e remover as entradas de espaço de swap adicionais.
 
-Para criar o swap, use novamente as teclas de seta para mover o realce para a parte superior da tela do Disklabel, para que o nome do disco seja realçado. Em seguida, pressione kbd:[N], insira o tamanho desejado (_1024M_) e selecione "swap space" no menu pop-up exibido. Repita para cada journal que você deseja criar. Em nosso exemplo, criamos duas partições para fornecer os diários de [.filename]#/usr# e [.filename]#/var#. O resultado final é mostrado na seguinte captura de tela:
+Para criar a partição de swap, novamente use as teclas de seta para mover o destaque para o topo da tela do Disklabel, de modo que o próprio nome do disco seja destacado. Em seguida, pressione kbd:[N], insira o tamanho desejado (_1024M_) e selecione "swap space" no menu pop-up que aparece. Repita esse processo para cada journal que você deseja criar. No nosso exemplo, criaremos duas partições para fornecer os journals de [.filename]#/usr# e [.filename]#/var#. O resultado final é mostrado na captura de tela a seguir:
 
 image::disklabel2.png[]
 
-Quando tiver concluído a criação das partições, sugerimos que você anote os nomes das partições e os pontos de montagem, para que possa consultar facilmente essas informações durante a fase de configuração. Isso ajudará a reduzir os erros que podem danificar sua instalação. A tabela a seguir mostra nossas anotações para a configuração de exemplo:
+Quando você tiver concluído a criação das partições, sugerimos que anote os nomes das partições e os pontos de montagem para que você possa se referir facilmente a essas informações durante a fase de configuração. Isso ajudará a evitar erros que possam danificar sua instalação. A tabela a seguir mostra nossas anotações para a configuração de exemplo:
 
 .Partições e Journals
 [cols="1,1,1", options="header"]
 |===
-| Partições
-| Ponto de montagem
+| Partição
+| Ponto de Montagem
 | Journal
 
 |ad0s1d
@@ -145,12 +148,12 @@ Quando tiver concluído a criação das partições, sugerimos que você anote o
 |ad0s1g
 |===
 
-Continue a instalação como faria normalmente. No entanto, sugerimos que você adie a instalação de softwares de terceiros (pacotes) até que você configure completamente o journaling.
+Continue a instalação como você normalmente faria. No entanto, sugerimos que você adie a instalação de softwares de terceiros (pacotes) até ter configurado completamente o journaling.
 
 [[first-boot]]
 === Inicializando pela primeira vez
 
-Seu sistema irá iniciar normalmente, mas você precisará editar o [.filename]#/etc/fstab# para remover as partições extras de swap que você criou para os journals. Normalmente, a partição swap que você irá usar é aquela com o sufixo "b" (por exemplo, ad0s1b no nosso exemplo). Remova todas as outras entradas de espaço swap e reinicialize para que o FreeBSD pare de usá-las.
+Seu sistema inicializará normalmente, mas você precisará editar o arquivo [.filename]#/etc/fstab# e remover as partições de swap extras que você criou para os journals. Normalmente, a partição de swap que você realmente usará é aquela com o sufixo "b" (por exemplo, ad0s1b em nosso exemplo). Remova todas as outras entradas de espaço de swap e reinicie para que o FreeBSD deixe de usá-las.
 
 Quando o sistema voltar a funcionar, estaremos prontos para configurar o journaling.
 
@@ -158,32 +161,32 @@ Quando o sistema voltar a funcionar, estaremos prontos para configurar o journal
 == Configurando o journaling
 
 [[running-gjournal]]
-=== Executando o `gjournal`
+=== Executando o comando `gjournal`
 
-Tendo preparado todas as partições requeridas, é bastante fácil configurar o journaling. Nós precisaremos mudar para o modo de single user, então entre como `root` e digite:
+Depois de preparar todas as partições necessárias, é bastante fácil configurar o journaling. Será necessário mudar para o modo de usuário único (single user mode). Para isso, faça o login como `root` e digite o seguinte comando:
 
-[source,shell]
+[source, shell]
 ....
 # shutdown now
 ....
 
-Pressione kbd:[Enter] para obter o shell padrão. Nós precisaremos desmontar as partições que serão registradas no diário, no nosso exemplo [.filename]#/usr# e [.filename]#/var#:
+Pressione kbd:[Enter] para obter o shell padrão. Agora, você precisará desmontar as partições que serão jornalizadas, no nosso exemplo [.filename]#/usr# e [.filename]#/var#:
 
-[source,shell]
+[source, shell]
 ....
 # umount /usr /var
 ....
 
 Carregue o módulo necessário para o journaling:
 
-[source,shell]
+[source, shell]
 ....
 # gjournal load
 ....
 
-Agora, use suas anotações para determinar qual partição será usada para cada diário. Em nosso exemplo, [.filename]#/usr# é [.filename]#ad0s1f# e seu journal será [.filename]#ad0s1g#, enquanto [.filename]#/var# é [.filename]#ad0s1d# e será journaled para [.filename]#ad0s1h#. Os seguintes comandos são necessários:
+Agora, use suas anotações para determinar qual partição será usada para cada journal. No nosso exemplo, [.filename]#/usr# é [.filename]#ad0s1f# e seu journal será [.filename]#ad0s1g#, enquanto [.filename]#/var# é [.filename]#ad0s1d# e será jornalizada em [.filename]#ad0s1h#. Os seguintes comandos são necessários:
 
-[source,shell]
+[source, shell]
 ....
 # gjournal label ad0s1f ad0s1g
 GEOM_JOURNAL: Journal 2948326772: ad0s1f contains data.
@@ -196,9 +199,9 @@ GEOM_JOURNAL: Journal 3193218002: ad0s1h contains journal.
 
 [NOTE]
 ====
-Se o último setor de qualquer partição for usado, o `gjournal` retornará um erro. Você terá que executar o comando usando o sinalizador `-f` para forçar uma substituição, ou seja:
+Se o último setor de qualquer uma das partições estiver em uso, o `gjournal` retornará um erro. Nesse caso, você precisará executar o comando usando a opção `-f` para forçar a sobrescrita. Por exemplo:
 
-[source,shell]
+[source, shell]
 ....
 # gjournal label -f ad0s1d ad0s1h
 ....
@@ -206,9 +209,9 @@ Se o último setor de qualquer partição for usado, o `gjournal` retornará um 
 Como esta é uma nova instalação, é altamente improvável que qualquer coisa seja realmente sobrescrita.
 ====
 
-Neste ponto, dois novos dispositivos são criados, a saber [.filename]#ad0s1d.journal# e [.filename]#ad0s1f.journal#. Os quais representam as partições [.filename]#/var# e [.filename]#/usr# que temos que montar. Antes de montar, devemos definir o flag de Journal e limpar o flag de Soft Updates:
+Neste ponto, dois novos dispositivos são criados, chamados [.filename]#ad0s1d.journal# e [.filename]#ad0s1f.journal#. Eles representam as partições [.filename]#/var# e [.filename]#/usr# que devemos montar. No entanto, antes de montá-los, precisamos definir a flag de journaling neles e desativar a flag de Soft Updates:
 
-[source,shell]
+[source, shell]
 ....
 # tunefs -J enable -n disable ad0s1d.journal
 tunefs: gjournal set
@@ -219,15 +222,15 @@ tunefs: gjournal set
 tunefs: soft updates cleared
 ....
 
-Agora, monte os novos dispositivos manualmente em seus respectivos locais (note que agora podemos usar a opção de montagem `async`):
+Agora, monte manualmente os novos dispositivos em seus respectivos locais (observe que agora podemos usar a opção de montagem `async`):
 
-[source,shell]
+[source, shell]
 ....
 # mount -o async /dev/ad0s1d.journal /var
 # mount -o async /dev/ad0s1f.journal /usr
 ....
 
-Edite o [.filename]#/etc/fstab# e atualize as entradas para [.filename]#/usr# e [.filename]#/var#:
+Edite o arquivo [.filename]#/etc/fstab# e atualize as entradas para [.filename]#/usr# e [.filename]#/var#:
 
 [.programlisting]
 ....
@@ -240,16 +243,16 @@ Edite o [.filename]#/etc/fstab# e atualize as entradas para [.filename]#/usr# e 
 Certifique-se de que as entradas acima estão corretas ou você terá problemas para inicializar normalmente após o reboot!
 ====
 
-Finalmente, edite o [.filename]#/boot/loader.conf# e adicione a seguinte linha para que o módulo man:gjournal[8] seja carregado em cada boot:
+Por fim, edite o arquivo [.filename]#/boot/loader.conf# e adicione a seguinte linha para carregar o módulo man:gjournal[8] em cada inicialização do sistema:
 
 [.programlisting]
 ....
 geom_journal_load="YES"
 ....
 
-Parabéns! Seu sistema está agora configurado para journaling. Você pode digitar `exit` para retornar ao modo multiusuário ou reinicializar para testar sua configuração (recomendado). Durante a inicialização, você verá mensagens como as seguintes:
+Parabéns! Seu sistema está agora configurado para o journaling. Você pode digitar `exit` para retornar ao modo multiusuário ou reiniciar para testar sua configuração (recomendado). Durante a inicialização, você verá mensagens como as seguintes:
 
-[source,shell]
+[source, shell]
 ....
 ad0: 76293MB XEC XE800JD-00HBC0 08.02D08 at ata0-master SATA150
 GEOM_JOURNAL: Journal 2948326772: ad0s1g contains journal.
@@ -262,35 +265,35 @@ GEOM_JOURNAL: Journal ad0s1f clean.
 
 Após um encerramento não limpo, as mensagens variam ligeiramente, ou seja:
 
-[source,shell]
+[source, shell]
 ....
 GEOM_JOURNAL: Journal ad0s1d consistent.
 ....
 
-Isso geralmente significa que o man:gjournal[8] usou as informações no journal provider para retornar o sistema de arquivos a um estado consistente.
+Isso geralmente significa que o man:gjournal[8] utilizou as informações no journal provider para restaurar o sistema de arquivos a um estado consistente.
 
 [[gjournal-new]]
 === Fazendo journaling de partições recém-criadas
 
-Embora o procedimento acima seja necessário para partições que fazem uso de journaling e que já contêm dados, o journaling de uma partição vazia é um pouco mais fácil, uma vez que os dados e o journal provider podem ser armazenados na mesma partição. Por exemplo, suponha que um novo disco tenha sido instalado e uma nova partição [.filename]#/dev/ad1s1d# tenha sido criada. Criar o journal seria tão simples quanto:
+Enquanto o procedimento acima é necessário para jornalizar partições que já contêm dados, jornalizar uma partição vazia é um pouco mais fácil, pois tanto o provedor de dados quanto o provedor de journal podem ser armazenados na mesma partição. Por exemplo, suponha que um novo disco tenha sido instalado e uma nova partição [.filename]#/dev/ad1s1d# tenha sido criada. Criar o journal seria tão simples quanto:
 
-[source,shell]
+[source, shell]
 ....
 # gjournal label ad1s1d
 ....
 
-O tamanho do journal será 1 GB por padrão. Você pode ajustá-lo usando a opção `-s`. O valor pode ser dado em bytes, ou acrescentado por `K`, `M` ou `G` para indicar Kilobytes, Megabytes ou Gigabytes, respectivamente. Note que o comando `gjournal` não permitirá que você crie journals de tamanhos pequenos e inadequados.
+O tamanho do journal será de 1 GB por padrão. Você pode ajustá-lo usando a opção `-s`. O valor pode ser dado em bytes, ou pode ser seguido por `K`, `M` ou `G` para representar Kilobytes, Megabytes ou Gigabytes, respectivamente. Note que o `gjournal` não permitirá que você crie tamanhos de journal excessivamente pequenos e inadequados.
 
 Por exemplo, para criar um journal de 2 GB, você poderia usar o seguinte comando:
 
-[source,shell]
+[source, shell]
 ....
 # gjournal label -s 2G ad1s1d
 ....
 
-Você pode criar um sistema de arquivos em sua nova partição e ativar o journaling usando a opção `-J`:
+Em seguida, você pode criar um sistema de arquivos na sua nova partição e habilitar o journaling usando a opção `-J`:
 
-[source,shell]
+[source, shell]
 ....
 # newfs -J /dev/ad1s1d.journal
 ....
@@ -298,17 +301,18 @@ Você pode criar um sistema de arquivos em sua nova partição e ativar o journa
 [[configure-kernel]]
 === Adicionando suporte ao journaling no seu kernel personalizado
 
-Se você não deseja carregar o `geom_journal` como um módulo, você pode construir suas funções diretamente em seu kernel. Edite seu arquivo de configuração do kernel personalizado e verifique se ele inclui estas duas linhas:
+Se você não deseja carregar `geom_journal` como um módulo, você pode incorporar suas funções diretamente no seu kernel. Edite o arquivo de configuração do seu kernel personalizado e verifique se ele inclui as seguintes linhas:
 
 [.programlisting]
 ....
 options UFS_GJOURNAL # Note: This is already in GENERIC
+
 options GEOM_JOURNAL # You will have to add this one
 ....
 
-Recompile e reinstale seu kernel seguindo as instruções extref:{handbook}kernelconfig[relevantes no Handbook do FreeBSD, kernelconfig].
+Recompile e reinstale o seu kernel seguindo as instruções relevantes no Handbook do FreeBSD
 
-Não se esqueça de remover a entrada relevante "load" do [.filename]#/boot/loader.conf# se você a usou anteriormente.
+Não se esqueça de remover a entrada relevante de "load" do arquivo [.filename]#/boot/loader.conf# se você a tiver usado anteriormente.
 
 [[troubleshooting-gjournal]]
 == Solução de problemas com journaling
@@ -317,22 +321,23 @@ A seção a seguir aborda as perguntas mais frequentes relacionadas a problemas 
 
 === Estou recebendo um kernel panic durante períodos de alta atividade de disco. Como isso está relacionado ao journaling?
 
-O journal provavelmente se enche antes que ele tenha a chance de ser enviado (descarregado) para o disco. Lembre-se de que o tamanho do journal depende da carga de uso e não do tamanho do provedor de dados. Se a atividade do disco for alta, você precisará de uma partição maior para o journal. Veja a nota na seção <<understanding-journaling>>.
+O journal provavelmente fica cheio antes de ter a chance de ser confirmado (gravado) no disco. Lembre-se de que o tamanho do journal depende da carga de uso e não do tamanho do provedor de dados. Se a atividade do disco for intensa, será necessário uma partição maior para o journal. Consulte a nota na seção <<understanding-journaling,Compreendendo o Journaling>> para mais informações.
 
 === Eu cometi algum erro durante a configuração e não consigo inicializar normalmente agora. Isso pode ser resolvido de alguma forma?
 
-Você esqueceu (ou escreveu incorretamente) a entrada em [.filename]#/boot/loader.conf#, ou existem erros no seu arquivo [.filename]#/etc/fstab#. Estes erros geralmente são fáceis de corrigir. Pressione kbd:[Enter] para acessar o shell padrão do modo single user. Em seguida, localize a raiz do problema:
+Parece que você esqueceu (ou digitou incorretamente) a entrada no arquivo [.filename]#/boot/loader.conf# ou existem erros no arquivo [.filename]#/etc/fstab#. Esses erros geralmente são fáceis de corrigir. Pressione kbd:[Enter] para acessar o shell do sistema no modo de usuário unico. Em seguida, localize a raiz do problema:
 
-[source,shell]
+[source, shell]
 ....
 # cat /boot/loader.conf
 ....
 
-Se a entrada `geom_journal_load` estiver ausente ou incorreta, os dispositivos registrados nunca serão criados. Carregue o módulo manualmente, monte todas as partições e continue com a inicialização do modo multi usuário:
+Se a entrada `geom_journal_load` estiver ausente ou digitada incorretamente, os dispositivos com journaling não serão criados. Carregue o módulo manualmente, monte todas as partições e continue com a inicialização em modo multiusuário:
 
-[source,shell]
+[source, shell]
 ....
 # gjournal load
+
 GEOM_JOURNAL: Journal 2948326772: ad0s1g contains journal.
 GEOM_JOURNAL: Journal 3193218002: ad0s1h contains journal.
 GEOM_JOURNAL: Journal 3193218002: ad0s1d contains data.
@@ -345,36 +350,36 @@ GEOM_JOURNAL: Journal ad0s1f clean.
 (boot continues)
 ....
 
-Se, por outro lado, esta entrada estiver correta, dê uma olhada em [.filename]#/etc/fstab#. Você provavelmente encontrará uma entrada incorreta ou faltando. Nesse caso, monte todas as partições restantes manualmente e continue com o boot em modo multi-usuários.
+Por outro lado, se essa entrada estiver correta, verifique o arquivo [.filename]#/etc/fstab#. Provavelmente você encontrará uma entrada ausente ou digitada incorretamente. Nesse caso, monte todas as partições restantes manualmente e continue com a inicialização em modo multiusuário.
 
 === Posso remover o registro no journal e retornar ao meu sistema de arquivos padrão com o Soft Updates?
 
-Certo. Use o procedimento a seguir, que inverte as alterações. As partições que você criou para os provedores de journal podem ser usadas para outros propósitos, se você desejar.
+Claro. Use o seguinte procedimento, que reverte as alterações. As partições que você criou para os provedores de journal podem ser usadas para outros fins, se desejar.
 
-Faça login como `root` e alterne para o modo de usuário único:
+Faça login como `root` e altere para o modo de usuário único:
 
-[source,shell]
+[source, shell]
 ....
 # shutdown now
 ....
 
 Desmonte as partições journaled:
 
-[source,shell]
+[source, shell]
 ....
 # umount /usr /var
 ....
 
 Sincronize os journals:
 
-[source,shell]
+[source, shell]
 ....
 # gjournal sync
 ....
 
 Pare os provedores de journaling:
 
-[source,shell]
+[source, shell]
 ....
 # gjournal stop ad0s1d.journal
 # gjournal stop ad0s1f.journal
@@ -382,7 +387,7 @@ Pare os provedores de journaling:
 
 Limpe os metadados de journaling de todos os dispositivos usados:
 
-[source,shell]
+[source, shell]
 ....
 # gjournal clear ad0s1d
 # gjournal clear ad0s1f
@@ -392,7 +397,7 @@ Limpe os metadados de journaling de todos os dispositivos usados:
 
 Limpe o sinalizador de journaling do sistema de arquivos e restaure a flag do Soft Updates:
 
-[source,shell]
+[source, shell]
 ....
 # tunefs -J disable -n enable ad0s1d
 tunefs: gjournal cleared
@@ -405,13 +410,13 @@ tunefs: soft updates set
 
 Remonte os dispositivos antigos à mão:
 
-[source,shell]
+[source, shell]
 ....
 # mount -o rw /dev/ad0s1d /var
 # mount -o rw /dev/ad0s1f /usr
 ....
 
-Edite o [.filename]#/etc/fstab# e restaure-o ao seu estado original:
+Edite o arquivo [.filename]#/etc/fstab# e restaure-o para seu estado original:
 
 [.programlisting]
 ....
@@ -419,14 +424,14 @@ Edite o [.filename]#/etc/fstab# e restaure-o ao seu estado original:
 /dev/ad0s1d     /var            ufs     rw      2       2
 ....
 
-Finalmente, edite o [.filename]#/boot/loader.conf#, remova a entrada que carrega o módulo `geom_journal` e reinicie.
+Finalmente, edite o arquivo [.filename]#/boot/loader.conf#, remova a entrada que carrega o módulo `geom_journal` e reinicie o sistema.
 
 [[further-reading]]
 == Leitura Adicional
 
-Journaling é um recurso relativamente novo do FreeBSD e, como tal, ainda não está muito bem documentado. Você pode, no entanto, encontrar as seguintes referências adicionais úteis:
+O journaling é um recurso relativamente novo no FreeBSD e, portanto, ainda não está muito bem documentado. No entanto, você pode encontrar as seguintes referências adicionais úteis:
 
-* Uma extref:{handbook}geom[nova seção sobre journaling, geom-gjournal] agora faz parte do Handbook do FreeBSD.
-* https://lists.freebsd.org/pipermail/freebsd-current/2006-June/064043.html[Este post] em http://lists.FreeBSD.org/mailman/listinfo/freebsd-current[freebsd-current] pelo desenvolvedor do man:gjournal[8], Paweł Jakub Dawidek mailto:pjd@FreeBSD.org[pjd@FreeBSD.org].
-* https://lists.freebsd.org/pipermail/freebsd-questions/2008-April/173501.html[Este post] em http://lists.FreeBSD.org/mailman/listinfo/freebsd-questions[freebsd-questions] por Ivan Voras mailto:ivoras@FreeBSD.org[ivoras@FreeBSD.org].
-* As páginas de manual do man:gjournal[8] e man:geom[8].
+* A extref:{handbook}[nova seção sobre journaling, geom-gjournal] agora faz parte do FreeBSD Handbook.
+* https://lists.freebsd.org/pipermail/freebsd-current/2006-June/064043.html[Esta mensagem] na {freebsd-current} enviada por um desenvolvedor do man:gjournal[8]'s, `{pjd}`.
+* https://lists.freebsd.org/pipermail/freebsd-questions/2008-April/173501.html[Esta mensagem] na {freebsd-questions} enviada por `{ivoras}`.
+* As páginas de manual man:gjournal[8] e man:geom[8].
