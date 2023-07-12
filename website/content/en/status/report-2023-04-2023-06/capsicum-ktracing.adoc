@@ -1,0 +1,230 @@
+=== Security Sandboxing Using man:ktrace[1]
+
+Links: +
+link:https://github.com/jakesfreeland/freebsd-src/tree/ff/ktrace[ktrace branch] URL: link:https://github.com/jakesfreeland/freebsd-src/tree/ff/ktrace[] +
+
+Contact: Jake Freeland <jfree@FreeBSD.org>
+
+==== Capsicumization With man:ktrace[1]
+
+This report introduces an extension to man:ktrace[1] that logs capability violations for programs that have not been Capsicumized.
+
+The first logical step in Capsicumization is determining where your program is raising capability violations.
+You could approach this issue by looking through the source and removing Capsicum-incompatible code, but this can be tedious and requires the developer to be familiar with everything that is not allowed in capability mode.
+
+An alternative to finding violations manually is to use man:ktrace[1].
+The man:ktrace[1] utility logs kernel activity for a specified process.
+Capsicum violations occur inside of the kernel, so man:ktrace[1] can record and return extra information about your program's violations with the `-t p` option.
+
+Programs traditionally need to be put into capability mode before they will report violations.
+When a restricted system call is entered, it will fail and return with `ECAPMODE: Not permitted in capability mode`.
+If the developer is doing error checking, then it is likely that their program will terminate with that error.
+This behavior made violation tracing inconvenient because man:ktrace[1] would only report the first capability violation, and then the program would terminate.
+
+Luckily, a new extension to man:ktrace[1] can record violations when a program is **NOT** in capability mode.
+This means that any developer can run capability violation tracing on their program with no modification to see where it is raising violations.
+Since the program is never actually put into capability mode, it will still acquire resources and execute normally.
+
+==== Violation Tracing Examples
+
+The `cap_violate` program, shown below, attempts to raise every type of violation that man:ktrace[1] can capture:
+
+[source, shell]
+----
+# ktrace -t p ./cap_violate
+# kdump
+1603 ktrace   CAP   system call not allowed: execve
+1603 foo      CAP   system call not allowed: open
+1603 foo      CAP   system call not allowed: open
+1603 foo      CAP   system call not allowed: open
+1603 foo      CAP   system call not allowed: open
+1603 foo      CAP   system call not allowed: readlink
+1603 foo      CAP   system call not allowed: open
+1603 foo      CAP   cpuset_setaffinity: restricted cpuset operation
+1603 foo      CAP   openat: restricted VFS lookup: AT_FDCWD
+1603 foo      CAP   openat: restricted VFS lookup: /
+1603 foo      CAP   system call not allowed: bind
+1603 foo      CAP   sendto: restricted address lookup: struct sockaddr { AF_INET, 0.0.0.0:5000 }
+1603 foo      CAP   socket: protocol not allowed: IPPROTO_ICMP
+1603 foo      CAP   kill: signal delivery not allowed: SIGCONT
+1603 foo      CAP   system call not allowed: chdir
+1603 foo      CAP   system call not allowed: fcntl, cmd: F_KINFO
+1603 foo      CAP   operation requires CAP_WRITE, descriptor holds CAP_READ
+1603 foo      CAP   attempt to increase capabilities from CAP_READ to CAP_READ,CAP_WRITE
+----
+
+The first 7 `system call not allowed` entries did not explicitly originate from the `cap_violate` program code.
+Instead, they were raised by FreeBSD's C runtime libraries.
+This becomes apparent when you trace namei translations alongside capability violations using the `-t np` option:
+
+[source, shell]
+----
+# ktrace -t np ./cap_violate
+# kdump
+1632 ktrace   CAP   system call not allowed: execve
+1632 ktrace   NAMI  "./cap_violate"
+1632 ktrace   NAMI  "/libexec/ld-elf.so.1"
+1632 foo      CAP   system call not allowed: open
+1632 foo      NAMI  "/etc/libmap.conf"
+1632 foo      CAP   system call not allowed: open
+1632 foo      NAMI  "/usr/local/etc/libmap.d"
+1632 foo      CAP   system call not allowed: open
+1632 foo      NAMI  "/var/run/ld-elf.so.hints"
+1632 foo      CAP   system call not allowed: open
+1632 foo      NAMI  "/lib/libc.so.7"
+1632 foo      CAP   system call not allowed: readlink
+1632 foo      NAMI  "/etc/malloc.conf"
+1632 foo      CAP   system call not allowed: open
+1632 foo      NAMI  "/dev/pvclock"
+1632 foo      CAP   cpuset_setaffinity: restricted cpuset operation
+1632 foo      NAMI  "ktrace.out"
+1632 foo      CAP   openat: restricted VFS lookup: AT_FDCWD
+1632 foo      NAMI  "/"
+1632 foo      CAP   openat: restricted VFS lookup: /
+1632 foo      CAP   system call not allowed: bind
+1632 foo      CAP   sendto: restricted address lookup: struct sockaddr { AF_INET, 0.0.0.0:5000 }
+1632 foo      CAP   socket: protocol not allowed: IPPROTO_ICMP
+1632 foo      CAP   kill: signal delivery not allowed: SIGCONT
+1632 foo      CAP   system call not allowed: chdir
+1632 foo      NAMI  "."
+1632 foo      CAP   system call not allowed: fcntl, cmd: F_KINFO
+1632 foo      CAP   operation requires CAP_WRITE, descriptor holds CAP_READ
+1632 foo      CAP   attempt to increase capabilities from CAP_READ to CAP_READ,CAP_WRITE
+----
+
+In practice, capability mode is always entered following the initialization of the C runtime libraries, so a program would never trigger those those first 7 violations.
+We are only seeing them because man:ktrace[1] starts recording violations before the program starts.
+
+This demonstration makes it clear that violation tracing is not always perfect.
+It is a helpful guide for detecting restricted system calls, but may not always parody your program's actual behavior in capability mode.
+In capability mode, violations are equivalent to errors; they are an indication to stop execution.
+Violation tracing is ignoring this suggestion and continuing execution anyway, so invalid violations may be reported.
+
+The next example traces violations from the man:unzip[1] utility (pre-Capsicumization):
+
+[source, shell]
+----
+# ktrace -t np unzip foo.zip
+Archive:  foo.zip
+creating: bar/
+extracting: bar/bar.txt
+creating: baz/
+extracting: baz/baz.txt
+# kdump
+1926 ktrace   CAP   system call not allowed: execve
+1926 ktrace   NAMI  "/usr/bin/unzip"
+1926 ktrace   NAMI  "/libexec/ld-elf.so.1"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/etc/libmap.conf"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/usr/local/etc/libmap.d"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/var/run/ld-elf.so.hints"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/lib/libarchive.so.7"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/usr/lib/libarchive.so.7"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/lib/libc.so.7"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/lib/libz.so.6"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/lib/libbz2.so.4"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/usr/lib/libbz2.so.4"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/lib/liblzma.so.5"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/usr/lib/liblzma.so.5"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/lib/libbsdxml.so.4"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/lib/libprivatezstd.so.5"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/usr/lib/libprivatezstd.so.5"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/lib/libcrypto.so.111"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/lib/libmd.so.6"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/lib/libthr.so.3"
+1926 unzip    CAP   system call not allowed: readlink
+1926 unzip    NAMI  "/etc/malloc.conf"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/dev/pvclock"
+1926 unzip    NAMI  "foo.zip"
+1926 unzip    CAP   openat: restricted VFS lookup: AT_FDCWD
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/etc/localtime"
+1926 unzip    NAMI  "bar"
+1926 unzip    CAP   fstatat: restricted VFS lookup: AT_FDCWD
+1926 unzip    CAP   system call not allowed: mkdir
+1926 unzip    NAMI  "bar"
+1926 unzip    NAMI  "bar"
+1926 unzip    CAP   fstatat: restricted VFS lookup: AT_FDCWD
+1926 unzip    NAMI  "bar/bar.txt"
+1926 unzip    CAP   fstatat: restricted VFS lookup: AT_FDCWD
+1926 unzip    NAMI  "bar/bar.txt"
+1926 unzip    CAP   openat: restricted VFS lookup: AT_FDCWD
+1926 unzip    NAMI  "baz"
+1926 unzip    CAP   fstatat: restricted VFS lookup: AT_FDCWD
+1926 unzip    CAP   system call not allowed: mkdir
+1926 unzip    NAMI  "baz"
+1926 unzip    NAMI  "baz"
+1926 unzip    CAP   fstatat: restricted VFS lookup: AT_FDCWD
+1926 unzip    NAMI  "baz/baz.txt"
+1926 unzip    CAP   fstatat: restricted VFS lookup: AT_FDCWD
+1926 unzip    NAMI  "baz/baz.txt"
+1926 unzip    CAP   openat: restricted VFS lookup: AT_FDCWD
+----
+
+The violation tracing output for man:unzip[1] is more akin to what a developer would see when tracing their own program for the first time.
+Most programs link against libraries.
+In this case, man:unzip[1] is linking against man:libarchive[3], which is reflected here:
+
+[source, shell]
+----
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/lib/libarchive.so.7"
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/usr/lib/libarchive.so.7"
+----
+
+The violations for man:unzip[1] can be found below the C runtime violations:
+
+[source, shell]
+----
+1926 unzip    NAMI  "foo.zip"
+1926 unzip    CAP   openat: restricted VFS lookup: AT_FDCWD
+1926 unzip    CAP   system call not allowed: open
+1926 unzip    NAMI  "/etc/localtime"
+1926 unzip    NAMI  "bar"
+1926 unzip    CAP   fstatat: restricted VFS lookup: AT_FDCWD
+1926 unzip    CAP   system call not allowed: mkdir
+1926 unzip    NAMI  "bar"
+1926 unzip    NAMI  "bar"
+1926 unzip    CAP   fstatat: restricted VFS lookup: AT_FDCWD
+1926 unzip    NAMI  "bar/bar.txt"
+1926 unzip    CAP   fstatat: restricted VFS lookup: AT_FDCWD
+1926 unzip    NAMI  "bar/bar.txt"
+1926 unzip    CAP   openat: restricted VFS lookup: AT_FDCWD
+1926 unzip    NAMI  "baz"
+1926 unzip    CAP   fstatat: restricted VFS lookup: AT_FDCWD
+1926 unzip    CAP   system call not allowed: mkdir
+1926 unzip    NAMI  "baz"
+1926 unzip    NAMI  "baz"
+1926 unzip    CAP   fstatat: restricted VFS lookup: AT_FDCWD
+1926 unzip    NAMI  "baz/baz.txt"
+1926 unzip    CAP   fstatat: restricted VFS lookup: AT_FDCWD
+1926 unzip    NAMI  "baz/baz.txt"
+1926 unzip    CAP   openat: restricted VFS lookup: AT_FDCWD
+----
+
+In this instance, man:unzip[1] is recreating the file structure contained in the zip archive.
+Violations are being raised because the `AT_FDCWD` value cannot be used in capability mode.
+The bulk of these violations can be fixed by opening `AT_FDCWD` (the current directory) before entering capability mode and passing that descriptor into man:openat[2], man:fstatat[2], and man:mkdirat[2] as a relative reference.
+
+Violation tracing may not automatically Capsicumize programs, but it is another tool in the developer's toolbox.
+It only takes a few seconds to run a program under man:ktrace[1] and the result is almost always a decent starting point for sandboxing your program using Capsicum.
+
+Sponsor: FreeBSD Foundation
