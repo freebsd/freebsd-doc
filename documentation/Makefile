@@ -41,7 +41,7 @@ GEMBASE?= 	${GEM_PATH}
 GEMBASE?= 	${LOCALBASE}
 .endif
 
-RUBY_CMD =	${GEMBASE}/bin/ruby
+RUBY_CMD ?=	${LOCALBASE}/bin/ruby
 HUGO_CMD =	${LOCALBASE}/bin/hugo
 HUGO_ARGS?=	--minify
 HUGO_OFFLINE_ARGS?= 	--environment offline --verbose --minify
