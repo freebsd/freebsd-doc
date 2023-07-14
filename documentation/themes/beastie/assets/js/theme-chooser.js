@@ -41,9 +41,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   } else if (theme === "theme-high-contrast") {
     setTheme('theme-high-contrast');
     themeChooser.value = 'theme-high-contrast';
-  } else {
+  } else if (theme === "theme-light") {
     setTheme('theme-light');
     themeChooser.value = 'theme-light';
+  } else {
+    setTheme('theme-system');
+    themeChooser.value = 'theme-system';
   }
 
   themeChooser.addEventListener('change', function() {
@@ -53,13 +56,24 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       setTheme('theme-dark');
     } else if (theme === "theme-high-contrast") {
       setTheme('theme-high-contrast');
-    } else {
+    } else if (theme === "theme-light") {
       setTheme('theme-light');
+    } else {
+      setTheme('theme-system');
     }
   });
 
   function setTheme(themeName) {
     localStorage.setItem('theme', themeName);
-    document.documentElement.className = themeName;
+
+    if (themeName === 'theme-system') {
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.className = 'theme-dark';
+      } else {
+        document.documentElement.className = 'theme-light';
+      }
+    } else {
+      document.documentElement.className = themeName;
+    }
   }
 })();
