@@ -1,0 +1,189 @@
+--- crypto/openssh/ssh-agent.1.orig
++++ crypto/openssh/ssh-agent.1
+@@ -1,1 +1,1 @@
+-.\" $OpenBSD: ssh-agent.1,v 1.73 2022/03/31 17:27:27 naddy Exp $
++.\" $OpenBSD: ssh-agent.1,v 1.75 2022/10/07 06:00:58 jmc Exp $
+@@ -35,7 +35,7 @@
+ .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ .\"
+-.Dd $Mdocdate: March 31 2022 $
++.Dd $Mdocdate: October 7 2022 $
+ .Dt SSH-AGENT 1
+ .Os
+ .Sh NAME
+@@ -47,11 +47,13 @@
+ .Op Fl \&Ddx
+ .Op Fl a Ar bind_address
+ .Op Fl E Ar fingerprint_hash
++.Op Fl O Ar option
+ .Op Fl P Ar allowed_providers
+ .Op Fl t Ar life
+ .Nm ssh-agent
+ .Op Fl a Ar bind_address
+ .Op Fl E Ar fingerprint_hash
++.Op Fl O Ar option
+ .Op Fl P Ar allowed_providers
+ .Op Fl t Ar life
+ .Ar command Op Ar arg ...
+@@ -103,6 +105,45 @@
+ Kill the current agent (given by the
+ .Ev SSH_AGENT_PID
+ environment variable).
++.It Fl O Ar option
++Specify an option when starting
++.Nm .
++Currently two options are supported:
++.Cm allow-remote-pkcs11
++and
++.Cm no-restrict-websafe .
++.Pp
++The
++.Cm allow-remote-pkcs11
++option allows clients of a forwarded
++.Nm
++to load PKCS#11 or FIDO provider libraries.
++By default only local clients may perform this operation.
++Note that signalling that a
++.Nm
++client remote is performed by
++.Xr ssh 1 ,
++and use of other tools to forward access to the agent socket may circumvent
++this restriction.
++.Pp
++The
++.Cm no-restrict-websafe ,
++instructs
++.Nm
++to permit signatures using FIDO keys that might be web authentication
++requests.
++By default,
++.Nm
++refuses signature requests for FIDO keys where the key application string
++does not start with
++.Dq ssh:
++and when the data to be signed does not appear to be a
++.Xr ssh 1
++user authentication request or a
++.Xr ssh-keygen 1
++signature.
++The default behaviour prevents forwarded access to a FIDO key from also
++implicitly forwarding the ability to authenticate to websites.
+ .It Fl P Ar allowed_providers
+ Specify a pattern-list of acceptable paths for PKCS#11 provider and FIDO
+ authenticator middleware shared libraries that may be used with the
+--- crypto/openssh/ssh-agent.c.orig
++++ crypto/openssh/ssh-agent.c
+@@ -1,4 +1,4 @@
+-/* $OpenBSD: ssh-agent.c,v 1.292 2022/09/17 10:11:29 djm Exp $ */
++/* $OpenBSD: ssh-agent.c,v 1.293 2022/10/07 06:00:58 jmc Exp $ */
+ /*
+  * Author: Tatu Ylonen <ylo@cs.hut.fi>
+  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
+@@ -172,6 +172,12 @@
+ /* Pattern-list of allowed PKCS#11/Security key paths */
+ static char *allowed_providers;
+ 
++/*
++ * Allows PKCS11 providers or SK keys that use non-internal providers to
++ * be added over a remote connection (identified by session-bind@openssh.com).
++ */
++static int remote_add_provider;
++
+ /* locking */
+ #define LOCK_SIZE	32
+ #define LOCK_SALT_SIZE	16
+@@ -1249,6 +1255,12 @@
+ 		if (strcasecmp(sk_provider, "internal") == 0) {
+ 			debug_f("internal provider");
+ 		} else {
++			if (e->nsession_ids != 0 && !remote_add_provider) {
++				verbose("failed add of SK provider \"%.100s\": "
++				    "remote addition of providers is disabled",
++				    sk_provider);
++				goto out;
++			}
+ 			if (realpath(sk_provider, canonical_provider) == NULL) {
+ 				verbose("failed provider \"%.100s\": "
+ 				    "realpath: %s", sk_provider,
+@@ -1412,6 +1424,11 @@
+ 		error_f("failed to parse constraints");
+ 		goto send;
+ 	}
++	if (e->nsession_ids != 0 && !remote_add_provider) {
++		verbose("failed PKCS#11 add of \"%.100s\": remote addition of "
++		    "providers is disabled", provider);
++		goto send;
++	}
+ 	if (realpath(provider, canonical_provider) == NULL) {
+ 		verbose("failed PKCS#11 add of \"%.100s\": realpath: %s",
+ 		    provider, strerror(errno));
+@@ -2015,9 +2032,9 @@
+ {
+ 	fprintf(stderr,
+ 	    "usage: ssh-agent [-c | -s] [-Ddx] [-a bind_address] [-E fingerprint_hash]\n"
+-	    "                 [-P allowed_providers] [-t life]\n"
+-	    "       ssh-agent [-a bind_address] [-E fingerprint_hash] [-P allowed_providers]\n"
+-	    "                 [-t life] command [arg ...]\n"
++	    "                 [-O option] [-P allowed_providers] [-t life]\n"
++	    "       ssh-agent [-a bind_address] [-E fingerprint_hash] [-O option]\n"
++	    "                 [-P allowed_providers] [-t life] command [arg ...]\n"
+ 	    "       ssh-agent [-c | -s] -k\n");
+ 	exit(1);
+ }
+@@ -2077,7 +2094,9 @@
+ 			break;
+ 		case 'O':
+ 			if (strcmp(optarg, "no-restrict-websafe") == 0)
+-				restrict_websafe  = 0;
++				restrict_websafe = 0;
++			else if (strcmp(optarg, "allow-remote-pkcs11") == 0)
++				remote_add_provider = 1;
+ 			else
+ 				fatal("Unknown -O option");
+ 			break;
+--- crypto/openssh/ssh-pkcs11.c.orig
++++ crypto/openssh/ssh-pkcs11.c
+@@ -1537,10 +1537,8 @@
+ 		error("dlopen %s failed: %s", provider_id, dlerror());
+ 		goto fail;
+ 	}
+-	if ((getfunctionlist = dlsym(handle, "C_GetFunctionList")) == NULL) {
+-		error("dlsym(C_GetFunctionList) failed: %s", dlerror());
+-		goto fail;
+-	}
++	if ((getfunctionlist = dlsym(handle, "C_GetFunctionList")) == NULL)
++		fatal("dlsym(C_GetFunctionList) failed: %s", dlerror());
+ 	p = xcalloc(1, sizeof(*p));
+ 	p->name = xstrdup(provider_id);
+ 	p->handle = handle;
+--- crypto/openssh/sshd_config.orig
++++ crypto/openssh/sshd_config
+@@ -106,7 +106,7 @@
+ #PermitTunnel no
+ #ChrootDirectory none
+ #UseBlacklist no
+-#VersionAddendum FreeBSD-20221019
++#VersionAddendum FreeBSD-20230719
+ 
+ # no default banner path
+ #Banner none
+--- crypto/openssh/sshd_config.5.orig
++++ crypto/openssh/sshd_config.5
+@@ -1822,7 +1822,7 @@
+ Optionally specifies additional text to append to the SSH protocol banner
+ sent by the server upon connection.
+ The default is
+-.Qq FreeBSD-20221019 .
++.Qq FreeBSD-20230719 .
+ The value
+ .Cm none
+ may be used to disable this.
+--- crypto/openssh/version.h.orig
++++ crypto/openssh/version.h
+@@ -6,4 +6,4 @@
+ #define SSH_PORTABLE	"p1"
+ #define SSH_RELEASE	SSH_VERSION SSH_PORTABLE
+ 
+-#define SSH_VERSION_FREEBSD	"FreeBSD-20221019"
++#define SSH_VERSION_FREEBSD	"FreeBSD-20230719"
