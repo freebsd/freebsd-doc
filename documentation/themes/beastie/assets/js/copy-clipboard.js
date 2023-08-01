@@ -1,8 +1,8 @@
 /*
 BSD 2-Clause License
 
-Copyright (c) 1994-2022, The FreeBSD Documentation Project
-Copyright (c) 2021-2022, Sergio Carlavilla
+Copyright (c) 1994-2023, The FreeBSD Documentation Project
+Copyright (c) 2021-2023, Sergio Carlavilla
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
