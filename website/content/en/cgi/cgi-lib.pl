@@ -35,8 +35,6 @@
 # If a variable-glob parameter (e.g., *cgi_input) is passed to ReadParse,
 # information is stored there, rather than in $in, @in, and %in.
 #
-# $FreeBSD$
-#
 
 sub ReadParse {
   local (*in) = @_ if @_;

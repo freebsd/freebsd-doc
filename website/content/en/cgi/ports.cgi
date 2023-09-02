@@ -24,10 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
-#
 # ports.cgi - search engine for FreeBSD ports
-#             	o search for a port by name or description
 
 use POSIX qw(strftime);
 use Time::Local;
@@ -499,7 +496,6 @@ sub footer {
 &copy; 1996-2023 by Wolfram Schneider. All rights reserved.<br />
 };
 
-#print q{$FreeBSD$} . "<br />\n";
     print qq{General questions about FreeBSD ports should be sent to }
       . qq{<a href="mailto:$mailtoList">}
       . qq{<i>$mailtoList</i></a><br />\n};

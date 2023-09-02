@@ -1,4 +1,3 @@
-# $FreeBSD$
 #
 # Perl routines to encapsulate various elements of HTML page style.
 

@@ -33,7 +33,6 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $FreeBSD$
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
