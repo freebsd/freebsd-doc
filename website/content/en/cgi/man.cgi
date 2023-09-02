@@ -317,8 +317,8 @@ $manPathDefault = 'FreeBSD 13.2-RELEASE and Ports';
     'FreeBSD 6.4-RELEASE and Ports',
 "$manLocalDir/FreeBSD-6.4-RELEASE/man:$manLocalDir/FreeBSD-6.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-6.2-RELEASE",
 
-    'FreeBSD 14.0-CURRENT',
-"$manLocalDir/FreeBSD-14.0-CURRENT/man:$manLocalDir/FreeBSD-14.0-CURRENT/openssl/man",
+    'FreeBSD 15.0-CURRENT',
+"$manLocalDir/FreeBSD-15.0-CURRENT/man:$manLocalDir/FreeBSD-15.0-CURRENT/openssl/man",
 
     'FreeBSD 14.0-STABLE',
 "$manLocalDir/FreeBSD-14.0-STABLE/man:$manLocalDir/FreeBSD-14.0-STABLE/openssl/man",
@@ -955,7 +955,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-stable13', 'FreeBSD 13.2-STABLE',
     'freebsd-stable12', 'FreeBSD 12.4-STABLE',
 
-    'freebsd-current',       'FreeBSD 14.0-CURRENT',
+    'freebsd-current',       'FreeBSD 15.0-CURRENT',
     'freebsd-release-ports', 'FreeBSD 13.2-RELEASE and Ports',
     'freebsd-ports', 'FreeBSD Ports 13.2',
 
