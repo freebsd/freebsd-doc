@@ -762,6 +762,8 @@ $manPathDefault = 'FreeBSD 13.2-RELEASE and Ports';
     # alias SunOS 0.4, apparently released in April 1983 based on 4.2BSD beta
     'Sun UNIX 0.4', "$manLocalDir/Sun-UNIX-0.4",
 
+    'macOS 13.5',   "$manLocalDir/macOS-13.5",
+    'macOS 12.6.8', "$manLocalDir/macOS-12.6.8",
 
     #'XFree86 3.2',      "$manLocalDir/XFree86-3.2",
     'XFree86 2.1',      "$manLocalDir/XFree86-2.1",
@@ -981,6 +983,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'sunos5',        'SunOS 5.10',
     'sunos4',        'SunOS 4.1.3',
     'sunos',         'SunOS 4.1.3',
+    'macos',         'macOS 13.5',
     'freebsd ports', 'FreeBSD Ports',
     'ports',         'FreeBSD Ports',
     'plan9',         'Plan 9',
