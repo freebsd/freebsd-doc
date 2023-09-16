@@ -56,65 +56,8 @@ sub init_variables {
     # URL of ports tree for browsing
     $remotePrefixFtp = 'ports';
 
-    # 'ftp://ftp.FreeBSD.org/pub/FreeBSD/branches/-current/ports';
-
-    # where to get -current packages
-    local ($p)        = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/i386';
-    local ($palpha)   = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/alpha';
-    local ($pamd64)   = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/amd64';
-    local ($pia64)    = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/ia64';
-    local ($psparc64) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/sparc64';
-
-    $remotePrefixFtpPackagesDefault = '6-STABLE/i386';
-
-    # This is currently unused
-    %remotePrefixFtpPackages = (
-        '7-CURRENT/i386', "$p/packages-7-current/All",
-        '6-STABLE/i386',  " $p/packages-6-stable/All",
-        '5-STABLE/i386',  " $p/packages-5-stable/All",
-        '4-STABLE/i386',  " $p/packages-4-stable/All",
-
-        '6.0-RELEASE/i386',  "$p/packages-6.0-release/All",
-        '5.4-RELEASE/i386',  "$p/packages-5.4-release/All",
-        '4.11-RELEASE/i386', "$p/packages-4.11-release/All",
-
-        '4-STABLE/alpha', "$palpha/packages-4-stable/All",
-
-        '5.4-RELEASE/alpha',  "$palpha/packages-5.4-release/All",
-        '4.11-RELEASE/alpha', "$palpha/packages-4.11-release/All",
-
-        '7-CURRENT/amd64', "$pamd64/packages-7-current/All",
-        '6-STABLE/amd64',  "$pamd64/packages-6-stable/All",
-        '5-STABLE/amd64',  "$pamd64/packages-5-stable/All",
-
-        '6.0-RELEASE/amd64', "$pamd64/packages-6.0-release/All",
-        '5.4-RELEASE/amd64', "$pamd64/packages-5.4-release/All",
-
-        '7-CURRENT/ia64', "$pia64/packages-7-current/All",
-        '6-STABLE/ia64',  "$pia64/packages-6-stable/All",
-
-        '6.0-RELEASE/ia64', "$pia64/packages-6.0-release/All",
-        '5.4-RELEASE/ia64', "$pia64/packages-5.4-release/All",
-
-        '7-CURRENT/sparc64', "$psparc64/packages-7-current/All",
-        '6-STABLE/sparc64',  "$psparc64/packages-6-stable/All",
-        '5-STABLE/sparc64',  "$psparc64/packages-5-stable/All",
-
-        '6.0-RELEASE/sparc64', "$psparc64/packages-6.0-release/All",
-        '5.4-RELEASE/sparc64', "$psparc64/packages-5.4-release/All",
-    );
-
-    $remotePrefixHtml = "$hsty_base/ports";
-
     # Web interface for the Ports tree
     $remotePrefixRepo = 'https://cgit.FreeBSD.org/ports';
-
-    # Ports documentation
-    $portsDesc = "$hsty_base/ports/";
-
-    # location of the tiny BSD daemon
-    $daemonGif =
-"<img src='$hsty_base/gifs/littlelogo.gif' alt='Really small BSD Daemon'>";
 
     # visible E-Mail address, plain text
     $mailto = 'www@FreeBSD.org';
@@ -130,13 +73,6 @@ sub init_variables {
 
     # security
     $ENV{'PATH'} = '/bin:/usr/bin';
-
-    # extension type for packages
-    $packageExt = 'tbz';
-
-    local ($packageDB) = '../ports/packages.exists';
-    &packages_exist( $packageDB, *packages ) if -f $packageDB;
-
 }
 
 sub packages_exist {
@@ -321,7 +257,6 @@ sub out {
     }
 
     $counter++;
-    $pathDownload = $path;
     $pathB        = $path;
     $pathB =~ s/^$localPrefix/ports/o;
 
@@ -342,12 +277,6 @@ sub out {
     print qq{<dd>}, &escapeHTML($comment), qq{<br />\n};
 
     print qq[<a href="$descfile?revision=HEAD">Description</a> <b>:</b>\n];
-
-  # Link package in "default" arch/release. Verify it's existence on ftp-master.
-    if ( $packages{"$version.$packageExt"} ) {
-        print
-qq[<a href="$remotePrefixFtpPackages{$remotePrefixFtpPackagesDefault}/$version.$packageExt">Package</a> <b>:</b>\n];
-    }
 
     print qq[<a href="$l">Changes</a> <br />\n];
 
@@ -535,7 +464,7 @@ sub check_input {
           )
         {
             &warn(
-"unknown search type ``$type'', use `all', `text', `name', 'requires', or `maintainer'\n"
+"unknown search type ``$stype'', use `all', `text', `name', 'requires', or `maintainer'\n"
             );
             &exit(0);
         }
