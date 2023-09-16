@@ -1365,7 +1365,7 @@ sub apropos {
 
     &http_header("text/html");
     print &html_header("Apropos $title");
-    print "<h1>", $www{'head'}, "</h1>\n\n";
+    print "<br/>\n<h1>$www{'head'}</h1>\n\n";
     &formquery;
 
     local ($mpath) = $manPath{$manpath};
@@ -1469,7 +1469,7 @@ sub man {
     if ( $format eq "html" ) {
         &http_header("text/html");
         print &html_header("$title");
-        print "<h1>", $www{'head'}, "</h1>\n\n";
+        print "<br/>\n<h1>$www{'head'}</h1>\n\n";
         &formquery;
         print "<pre>\n";
     }
@@ -1895,8 +1895,9 @@ sub encode_data {
 
 sub indexpage {
     &http_header("text/html");
-    print &html_header("$www{'title'}") . "<h1><br/>", $www{'head'},
-      "</h1>\n\n"; 
+    print &html_header("$www{'title'}");
+    print "<br/>\n<h1>$www{'head'}</h1>\n\n"; 
+
     # print &intro;
     &formquery;
 
@@ -2066,7 +2067,7 @@ sub faq {
 
     return qq{\
 <pre>
-Copyright (c) 1996-2022 <a href="$mailtoURL">Wolfram Schneider</a>
+Copyright (c) 1996-2023 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE
@@ -2169,8 +2170,9 @@ sub faq_output {
     $base = 'https://www.freebsd.org/cgi/';    # XXX
 
     &http_header("text/html");
-    print &html_header( "FreeBSD manual page help", $base ) . "<h1>",
-      $www{'head'}, "</h1>\n" . &faq . qq{<br />\n};
+    print &html_header( "FreeBSD manual page help", $base );
+    print "<br/>\n<h1>$www{'head'}</h1>\n";
+    print &faq . "<br/>\n";
     &html_footer;
 }
 
