@@ -241,7 +241,7 @@ sub readindex {
         chop;
 
         @tmp            = split(/\|/);
-        $var{"$tmp[1]"} = $_;
+        $var{"$tmp[0]"} = $_;
         @s              = split( /\s+/, $tmp[6] );
         foreach (@s) {
             $msec{"$tmp[1],$_"} = 1;
