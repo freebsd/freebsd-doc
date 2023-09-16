@@ -186,7 +186,7 @@ if (!defined($hsty_home)) {
 sub html_header {
     local ($title, $xhtml) = @_;
 
-    return short_html_header($title, $xhtml) . "<h1>$title</h1>\n";
+    return short_html_header($title, $xhtml) . "<br/>\n<h1>$title</h1>\n";
 }
 
 sub short_html_header {
