@@ -611,8 +611,10 @@ You may look for other <a href="https://www.freebsd.org/search/">FreeBSD Search 
 </p>
 EOF
 }
+
 else {
     print "</dl>\n";
+    print "<p>Number of hits: $counter\n</p>\n";
     print &footer_links;
 }
 
