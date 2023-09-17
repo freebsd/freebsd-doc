@@ -591,10 +591,15 @@ if ( $query_string eq "" || !$query ) {
 &check_input;
 $counter = 0;
 
+# no prefix search for requires supported yet
+$query =~ s/^\^// if $stype eq 'requires'; 
+
+# quote non characters
+$query =~ s/([^\w\^])/\\$1/g;
+
 # search
 if ($query) {
     &readindex( *today, *msec );
-    $query =~ s/([^\w\^])/\\$1/g;
     &search_ports;
 }
 
