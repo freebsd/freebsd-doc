@@ -32,6 +32,7 @@ use Time::Local;
 require "./cgi-style.pl";
 $t_style = qq`<style type="text/css">
 h3 { font-size: 1.2em; border-bottom: thin solid black; }
+span.footer_links { font-size: small; }
 </style>
 <link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/ports.xml" title="FreeBSD Ports" />
 `;
@@ -109,7 +110,7 @@ sub last_update {
 }
 
 sub last_update_message {
-    return "<p>Last database update: " . &last_update . "</p>\n";
+    return "<p>Last database update: @{[ &last_update ]}</p>\n";
 }
 
 sub dec {
@@ -366,7 +367,6 @@ sub search_ports {
 sub forms {
     print qq{<p>
 The FreeBSD Ports and Packages Collection offers a simple way for users and administrators to install applications.
-<a href="$script_name?stype=faq">FAQ</a>
 </p>
 };
 
@@ -410,9 +410,11 @@ Search for:
           . qq{value="$_">$_</option>\n};
     }
 
-    print q{</select>
+    print qq{</select>
 <input type="submit" value="Submit" />
 </form>
+<br/>
+@{[ &footer_links ]}
 <hr noshade="noshade" />
 };
 
@@ -420,16 +422,20 @@ Search for:
 
 sub footer {
 
-    print qq{
-<img align="right" src="$hsty_base/gifs/powerlogo.gif" alt="Powered by FreeBSD" />
-&copy; 1996-2023 by Wolfram Schneider. All rights reserved.<br />
-};
+print <<EOF;
+<span class="footer_links">
+  <img align="right" src="$hsty_base/gifs/powerlogo.gif" alt="Powered by FreeBSD"/>
+  &copy; 1996-2023 by Wolfram Schneider. All rights reserved.<br/>
 
-    print qq{General questions about FreeBSD ports should be sent to }
-      . qq{<a href="mailto:$mailtoList">}
-      . qq{<i>$mailtoList</i></a><br />\n};
-    print &last_update_message;
-    print qq{<hr noshade="noshade" />\n<p />\n};
+  General questions about FreeBSD ports should be sent to 
+  <a href="mailto:$mailtoList"><i>$mailtoList</i></a><br/>
+
+  @{[ &last_update_message ]}
+</span>
+<hr noshade="noshade" />
+<p/>
+
+EOF
 }
 
 sub check_query {
@@ -475,30 +481,51 @@ sub check_input {
 }
 
 sub faq {
-    print qq{<H1>FreeBSD Ports Search FAQ</h1>
+    print <<EOF
+<br/>
+<h1>FreeBSD Ports Search Help</h1>
 
 <h2>Keywords</h2>
 <dl>
-<dt><b>Description</b><dd>A more detailed description.
-<dt><b>Changes</b><dd>Read the latest changes.
+  <dt><b>Description</b></dt>
+  <dd>A more detailed description (text).</dd>
+
+  <dt><b>Changes</b></dt>
+  <dd>Read the latest changes via the git repo</dd>
 </dl>
 
-<h2>Misc</h2>
+<h2>Documentation</h2>
+<p>
+Handbook: <a href="https://docs.freebsd.org/en/books/handbook/ports/#ports-using">Using the Ports Collection</a>
+</p>
+
+<p>
+You may also search the
+<a href="https://man.FreeBSD.org/cgi/man.cgi?manpath=freebsd-ports">ports manual pages</a>.
+</p>
+
+<h2>Updates</h2>
 
 <p>
 The script ports.cgi use the file
 <a href="https://download.FreeBSD.org/ports/index/$ports_database.xz">$ports_database</a>
 as database for its operations. $ports_database is updated automatically every
-two hours.</p>
+two hours.
+</p>
 
-<p>
-You may also search the
-<a href="https://man.FreeBSD.org/cgi/man.cgi?manpath=freebsd-ports">ports manual pages</a>.</p>
 
-<p>
-<a href="$script_name">Back to the search engine</a></p>
+@{[ &footer_links ]}
 <hr noshade="noshade" />
-};
+EOF
+}
+
+sub footer_links {
+    return <<EOF;
+<span class="footer_links">
+  <a href="$script_name">home</a>
+  @{[ $stype eq "faq" ? "" : qq, | <a href="$script_name?stype=faq">help</a>, ]}
+</span>
+EOF
 }
 
 #
@@ -528,7 +555,7 @@ if ( $path_info eq "/source" ) {
 }
 
 if ( $stype eq "faq" ) {
-    print &short_html_header( "FreeBSD Ports Search FAQ", 1 );
+    print &short_html_header( "FreeBSD Ports Search Help", 1 );
     &faq;
     &footer;
     print &html_footer;
@@ -566,12 +593,16 @@ if ($query) {
 }
 
 if ( !$counter ) {
-    print "Sorry, nothing found.\n";
-    print qq{You may look for other }
-      . qq{<a href="/search/">FreeBSD Search Services</a>.\n};
+    print <<EOF;
+<p>
+Sorry, nothing found.
+You may look for other <a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>
+</p>
+EOF
 }
 else {
     print "</dl>\n";
+    print &footer_links;
 }
 
 print qq{<hr noshade="noshade" />\n};
