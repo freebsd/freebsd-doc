@@ -30,10 +30,16 @@ use POSIX qw(strftime);
 use Time::Local;
 
 require "./cgi-style.pl";
-$t_style = qq`<style type="text/css">
+$t_style = qq`
+<style type="text/css">
 h3 { font-size: 1.2em; border-bottom: thin solid black; }
 span.footer_links { font-size: small; }
+
+form#ports > input[name='query'] { text-align: center; }
+form#ports > input[name='query'] { width: 14em; }
+form#ports > input, form#ports > button, form#ports > select { font-size: large; }
 </style>
+
 <link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/ports.xml" title="FreeBSD Ports" />
 `;
 
@@ -377,9 +383,9 @@ The FreeBSD Ports and Packages Collection offers a simple way for users and admi
 description about the port.
 </p>
 
-<form method="get" action="$script_name">
+<form id="ports" method="get" action="$script_name">
 Search for:
-<input name="query" value="$query" type="text" autocapitalize="none" />
+<input name="query" value="$query" type="text" autocapitalize="none" autofocus />
 <select name="stype">
 };
 
