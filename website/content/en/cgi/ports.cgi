@@ -43,6 +43,13 @@ form#ports > input, form#ports > button, form#ports > select { font-size: large;
 <link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/ports.xml" title="FreeBSD Ports" />
 `;
 
+# No unlimited result set. A HTML page with 1000 results can be 10MB big.
+my $max_hits = 1000;
+my $max_hits_default = 250;
+my $max;
+
+my $debug = 1;
+
 sub init_variables {
     $localPrefix = '/usr/ports';    # ports prefix
 
@@ -337,6 +344,7 @@ sub search_ports {
 
     foreach $key ( sort keys %today ) {
         next if $today{$key} !~ /$query/oi;
+        next if $counter >= $max;
 
         @a    = split( /\|/, $today{$key} );
         $name = $a[0];                         #$name =~ s/(\W)/\\$1/g;
@@ -480,9 +488,12 @@ sub check_input {
             );
             &exit(0);
         }
-        else {
-            return;
-        }
+    }
+
+    $max = int($max);
+    if ($max <= 0 || $max > $max_hits) {
+        warn "reset max=$max to $max_hits_default\n";
+        $max = $max_hits_default;
     }
 }
 
@@ -549,6 +560,7 @@ $query       = $form{'query'};
 $stype       = $form{'stype'};
 $sourceid    = $form{'sourceid'} // "";
 $script_name = &env('SCRIPT_NAME');
+$max         = $form{'max'} // $max_hits_default;
 
 if ( $path_info eq "/source" ) {
 
@@ -614,7 +626,12 @@ EOF
 
 else {
     print "</dl>\n";
-    print "<p>Number of hits: $counter\n</p>\n";
+    my $counter_message = $counter;
+    if ($counter >= $max) {
+        $counter_message .= " (max hit limit reached)";
+        warn "$counter_message: query=$query stype=$stype section=$section\n" if $debug >= 1;
+    }
+    print "<p>Number of hits: $counter_message\n</p>\n";
     print &footer_links;
 }
 
