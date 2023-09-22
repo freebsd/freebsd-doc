@@ -764,6 +764,7 @@ $manPathDefault = 'FreeBSD 13.2-RELEASE and Ports';
 
     'macOS 13.5',   "$manLocalDir/macOS-13.5",
     'macOS 12.6.8', "$manLocalDir/macOS-12.6.8",
+    'macOS 10.13.6', "$manLocalDir/macOS-10.13.6",
 
     #'XFree86 3.2',      "$manLocalDir/XFree86-3.2",
     'XFree86 2.1',      "$manLocalDir/XFree86-2.1",
