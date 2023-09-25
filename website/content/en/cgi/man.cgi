@@ -1134,24 +1134,27 @@ sub html_header {
 <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />
 <link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/man.xml" title="FreeBSD Man" />
 <link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/man-freebsd-release-ports.xml" title="FreeBSD Man+P" />
+
 <style type="text/css">
-<!--
-b { color: #996600; }
-i { color: #008000; }
--->
 span.footer_links { font-size: small; }
 span.space { font-size: xx-small; }
 form#man > input, form#man > button { font-size: large; }
 form#man > input[name='query'] { text-align: center; }
 
 @media only screen and (max-height: 640px), (max-width: 760px) {
-div#header, div#menu { display: none !important; }
-div#content { padding-top: 4.9em; }
-form#man > input, button { font-size: 200%; }
-form#man > button { font-size: 200%; }
-form#man > input[name='query'] { width: 12em; }
-form#man > select { font-size: 140%; }
-span.spaces { display: none; }
+  /* hide logo color top */
+  body { background: #fff !important; } 
+
+  /* hide menu top */
+  div#header, div#menu { display: none !important; }
+  // div#content { padding-top: 4.9em; }
+  span.spaces { display: none; }
+
+  /* larger search form */
+  form#man > input, button { font-size: 200%; }
+  form#man > button { font-size: 200%; }
+  form#man > input[name='query'] { width: 12em; }
+  form#man > select { font-size: 140%; }
 }
 </style>
 |;
