@@ -16,7 +16,7 @@
 MAINTAINER=carlavilla@FreeBSD.org
 
 # List of all languages we have content for
-ALL_LANGUAGES=	de el en es fr it ja nl ru tr zh-cn zh-tw
+ALL_LANGUAGES=	de el en fr it ja nl ru tr zh-cn zh-tw
 
 LOCALBASE?=	/usr/local
 
