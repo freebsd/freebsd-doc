@@ -5,15 +5,16 @@
 #
 # Targets intended for use on the command line
 #
-# all (default)	-	generate the books TOC and compile all the documentation
+# all (default)	-	generate books and articles without generating the
+#				PDFs or EPUBs
 # clean		- 	removes generated files
 # run		-	serves the built documentation site for local browsing
 # pdf		-	build PDF versions of the articles and books.
 # html		-	build HTML versions of the articles and books for
-#			offline use.
-#			If variable DOC_HTML_ARCHIVE is set, all documents will be
-#			archived/compressed, and only these files will be kept in the public
-#			directory.
+#				offline use.
+#				If variable DOC_HTML_ARCHIVE is set, all documents will be
+#				archived/compressed, and only these files will be kept in the
+#				public directory.
 # epub		-	build EPUB versions of the articles and books (Experimental).
 #
 # The run target uses hugo's built-in webserver to make the documentation site
