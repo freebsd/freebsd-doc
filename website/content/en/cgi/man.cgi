@@ -50,10 +50,14 @@ package main;
 $debug        = 2;
 $www{'title'} = 'FreeBSD Manual Pages';
 $www{'home'}  = 'https://www.FreeBSD.org';
+$www{'home_man'}  = 'https://man.FreeBSD.org';
 $www{'head'}  = $www{'title'};
 
 # set to zero if your front-end cache has low memory
 my $download_streaming_caching = 0;
+
+# enable to download the manual pages as a tarball
+my $enable_download = 1;
 
 #$command{'man'} = '/usr/bin/man';    # 8Bit clean man
 $command{'man'} = '/usr/local/www/bin/man.wrapper';    # set CPU limits
@@ -1113,9 +1117,14 @@ my $enable_intro = 0;
 sub html_footer {
     my %args = @_;
 
-    print
-qq{<span class="footer_links"><a href="$BASE?manpath=$m">home</a> | <a href="$BASE/help.html">help</a></span>\n}
-      if !$args{'no_home_link'};
+    if (!$args{'no_home_link'}) {
+    print <<EOF;
+<span class="footer_links">
+  <a href="">home</a> |
+  <a href="help.html">help1</a>
+</span>
+EOF
+    }
 
     if (cgi_style::HAS_FREEBSD_CGI_STYLE) {
         print q{<hr noshade="noshade" />};
@@ -1300,9 +1309,11 @@ sub get_the_sources {
 # download a manual directory as gzip'd tar archive
 sub download {
 
+    if (!$enable_download) {
     # 2019-05-31: allanjude: Disable downloading as it is being abused.
     print qq{Status: 418 No Downloads For You\n\n};
     exit(0);
+    }
 
     $| = 1;
     my $filename = $manpath;
@@ -2038,12 +2049,14 @@ ETX
 </form>
 
 <br/>
-<span class="footer_links"><a href="$BASE?manpath=$m">home</a> | <a href="$BASE/help.html">help</a></span>
+<span class="footer_links">
+  <a href="">home</a> |
+  <a href="help.html">help2</a>
+</span>
 ETX
     if ($query) {
 	print "<hr/>\n";
     }
-    0;
 }
 
 sub faq {
@@ -2052,21 +2065,17 @@ sub faq {
     local ($url);
     foreach ( &freebsd_first (sort { &sort_versions } keys %manPath )) {
         $url = &encode_url($_);
-        push( @list,
-                qq{<li><a href="$BASE?apropos=2&amp;manpath=$url">[download]}
-              . qq{</a> "$_" -> $BASE?manpath=$url}
-              . qq{</li>\n} );
+        my $download_link = $enable_download ? qq[<a href="/cgi/man.cgi?apropos=2&amp;manpath=$url">[download]</a> ] : '';
+        push( @list, qq{<li>$download_link $_" -> $BASE?manpath=$url</li>\n} );
     }
 
     foreach ( &freebsd_first (sort { &sort_versions } keys %manPathAliases )) {
+        next if !$manPathAliases{$_};
+
+        my $encode_url = &encode_url($_);
         push( @list2,
-                qq[<li>"$_" -> "$manPathAliases{$_}" -> ]
-              . qq{<a href="$BASE?manpath=}
-              . &encode_url($_)
-              . qq{">$BASE?manpath=}
-              . &encode_url($_)
-              . "</a></li>\n" )
-          if $manPathAliases{$_};
+                qq[<li>"$_" -> "$manPathAliases{$_}" -> ] . 
+                qq[<a href="$www{'home_man'}/cgi/man.cgi?manpath=$encode_url">$www{'home_man'}/cgi/man.cgi?manpath=$encode_url</a></li>\n] )
     }
 
     return qq{\
@@ -2145,8 +2154,11 @@ for private use. A tarball is usually 5MB big.
 </ul>
 
 <h2>Releases Aliases</h2>
+<p>
 Release aliases are for lazy people. Plus, they have a longer
 lifetime, eg. 'openbsd' points always to the latest OpenBSD release.
+</p>
+
 <ul>
 @list2
 </ul>
