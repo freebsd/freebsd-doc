@@ -51,6 +51,7 @@ $debug        = 2;
 $www{'title'} = 'FreeBSD Manual Pages';
 $www{'home'}  = 'https://www.FreeBSD.org';
 $www{'home_man'}  = 'https://man.FreeBSD.org';
+$www{'cgi_man'}  = '/cgi/man.cgi';
 $www{'head'}  = $www{'title'};
 
 # set to zero if your front-end cache has low memory
@@ -1117,14 +1118,10 @@ my $enable_intro = 0;
 sub html_footer {
     my %args = @_;
 
-    if (!$args{'no_home_link'}) {
-    print <<EOF;
-<span class="footer_links">
-  <a href="">home</a> |
-  <a href="/cgi/man.cgi/help.html">help</a>
-</span>
-EOF
-    }
+    print qq[<span class="footer_links">\n];
+    print qq[  <a href="$www{'cgi_man'}">home</a>\n] if !$args{'no_home_link'};
+    print qq[| <a href="$www{'cgi_man'}/help.html">help</a>\n] if !$args{'no_help_link'};
+    print qq[</span>\n\n];
 
     if (cgi_style::HAS_FREEBSD_CGI_STYLE) {
         print q{<hr noshade="noshade" />};
@@ -1958,7 +1955,7 @@ ETX
     if ($enable_section_indexes || $enable_intro) {
         print "<br />\n";
     }
-    &html_footer( 'no_home_link' => 1 );
+    &html_footer( 'no_home_link' => 1, 'no_help_link' => 1 );
 }
 
 sub formquery {
@@ -2050,8 +2047,8 @@ ETX
 
 <br/>
 <span class="footer_links">
-  <a href="">home</a> |
-  <a href="/cgi/man.cgi/help.html">help</a>
+  <a href="$www{'cgi_man'}">home</a> |
+  <a href="$www{'cgi_man'}/help.html">help</a>
 </span>
 ETX
     if ($query) {
@@ -2189,7 +2186,7 @@ sub faq_output {
     print &html_header( "FreeBSD manual page help", $base );
     print "<br/>\n<h1>$www{'head'}</h1>\n";
     print &faq . "<br/>\n";
-    &html_footer;
+    &html_footer('no_help_link' => 1);
 }
 
 sub html_header2 {
@@ -2232,10 +2229,6 @@ sub mydie {
     print &html_header("Error");
     print $message;
 
-    print qq{
-<p />
-<a href="$BASE">home</a>
-};
     &html_footer;
     exit(0);
 }
