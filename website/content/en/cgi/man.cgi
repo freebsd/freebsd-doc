@@ -2127,8 +2127,8 @@ OS vendors</li>
 <p />
 
 <ul>
-<li>which manpage: <a href="$BASE?which">$full_url?which</a></li>
-<li>socket(2) manpage: <a href="$BASE?socket(2)">$full_url?socket(2)</a></li>
+<li>which manpage: <a href="$full_url?which">$full_url?which</a></li>
+<li>socket(2) manpage: <a href="$full_url?socket(2)">$full_url?socket(2)</a></li>
 </ul>
 
 
