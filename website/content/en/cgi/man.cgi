@@ -1121,7 +1121,7 @@ sub html_footer {
     print <<EOF;
 <span class="footer_links">
   <a href="">home</a> |
-  <a href="help.html">help</a>
+  <a href="/cgi/man.cgi/help.html">help</a>
 </span>
 EOF
     }
@@ -2051,7 +2051,7 @@ ETX
 <br/>
 <span class="footer_links">
   <a href="">home</a> |
-  <a href="help.html">help</a>
+  <a href="/cgi/man.cgi/help.html">help</a>
 </span>
 ETX
     if ($query) {
