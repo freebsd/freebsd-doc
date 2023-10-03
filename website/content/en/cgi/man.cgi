@@ -2178,12 +2178,8 @@ sections.
 }
 
 sub faq_output {
-    my $base = $BASE;
-    $base =~ s,[^/]*$,,;
-    $base = 'https://www.freebsd.org/cgi/';    # XXX
-
     &http_header("text/html");
-    print &html_header( "FreeBSD manual page help", $base );
+    print &html_header( "FreeBSD manual page help", '/cgi/' );
     print "<br/>\n<h1>$www{'head'}</h1>\n";
     print &faq . "<br/>\n";
     &html_footer('no_help_link' => 1);
