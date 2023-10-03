@@ -24,7 +24,7 @@ if (!defined($hsty_email)) {
     $hsty_email = 'Contact';
 }
 if (!defined($hsty_author)) {
-    $hsty_author = "<a href='$hsty_base/mailto.html'>$hsty_email</a>";
+    $hsty_author = "<a href='$hsty_base/mailto/'>$hsty_email</a>";
 }
 
 if (!defined($hsty_date)) {
