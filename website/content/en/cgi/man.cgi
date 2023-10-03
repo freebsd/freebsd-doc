@@ -2090,20 +2090,20 @@ Technology, Free Software Foundation, The FreeBSD Project, and others.
 
 Copyright (c) for man pages by OS vendors.
 <p/>
-<a href="ftp://ftp.2bsd.com">2.11 BSD</a>,
+<a href="https://en.wikipedia.org/wiki/History_of_the_Berkeley_Software_Distribution">2.11 BSD</a>,
 <a href="https://www.apple.com">Apple</a>,
 <a href="https://www.hp.com">HP</a>,
 <a href="https://www.freebsd.org">FreeBSD</a>,
-<a href="http://www.minix3.org">Minix</a>,
+<a href="https://www.minix3.org">Minix</a>,
 <a href="https://www.netbsd.org">NetBSD</a>,
 <a href="https://www.openbsd.org">OpenBSD</a>,
 <a href="https://9p.io/plan9/">Plan 9</a>,
 <a href="https://www.redhat.com">Red Hat</a>,
 <a href="https://www.slackware.com">Slackware Linux</a>,
-<a href="https://www.sun.com">SunOS</a>,
+<a href="https://www.oracle.com/solaris/technologies/">SunOS</a>,
 <a href="https://www.suse.com">SuSE</a>,
 <a href="https://en.wikipedia.org/wiki/Ultrix">ULTRIX</a>,
-<a href="http://www.plan9.bell-labs.com/7thEdMan/">Unix Seventh Edition</a>,
+<a href="https://en.wikipedia.org/wiki/Version_7_Unix">Unix Seventh Edition</a>,
 <a href="https://www.xfree86.org">XFree86</a>,
 <a href="https://www.x.org">X11R6</a>
 
