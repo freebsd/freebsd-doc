@@ -50,10 +50,15 @@ package main;
 $debug        = 2;
 $www{'title'} = 'FreeBSD Manual Pages';
 $www{'home'}  = 'https://www.FreeBSD.org';
+$www{'home_man'}  = 'https://man.FreeBSD.org';
+$www{'cgi_man'}  = '/cgi/man.cgi';
 $www{'head'}  = $www{'title'};
 
 # set to zero if your front-end cache has low memory
 my $download_streaming_caching = 0;
+
+# enable to download the manual pages as a tarball
+my $enable_download = 1;
 
 #$command{'man'} = '/usr/bin/man';    # 8Bit clean man
 $command{'man'} = '/usr/local/www/bin/man.wrapper';    # set CPU limits
@@ -1113,9 +1118,10 @@ my $enable_intro = 0;
 sub html_footer {
     my %args = @_;
 
-    print
-qq{<span class="footer_links"><a href="$BASE?manpath=$m">home</a> | <a href="$BASE/help.html">help</a></span>\n}
-      if !$args{'no_home_link'};
+    print qq[<span class="footer_links">\n];
+    print qq[  <a href="$www{'cgi_man'}">home</a>\n] if !$args{'no_home_link'};
+    print qq[| <a href="$www{'cgi_man'}/help.html">help</a>\n] if !$args{'no_help_link'};
+    print qq[</span>\n\n];
 
     if (cgi_style::HAS_FREEBSD_CGI_STYLE) {
         print q{<hr noshade="noshade" />};
@@ -1300,9 +1306,11 @@ sub get_the_sources {
 # download a manual directory as gzip'd tar archive
 sub download {
 
+    if (!$enable_download) {
     # 2019-05-31: allanjude: Disable downloading as it is being abused.
     print qq{Status: 418 No Downloads For You\n\n};
     exit(0);
+    }
 
     $| = 1;
     my $filename = $manpath;
@@ -1947,7 +1955,7 @@ ETX
     if ($enable_section_indexes || $enable_intro) {
         print "<br />\n";
     }
-    &html_footer( 'no_home_link' => 1 );
+    &html_footer( 'no_home_link' => 1, 'no_help_link' => 1 );
 }
 
 sub formquery {
@@ -2038,12 +2046,14 @@ ETX
 </form>
 
 <br/>
-<span class="footer_links"><a href="$BASE?manpath=$m">home</a> | <a href="$BASE/help.html">help</a></span>
+<span class="footer_links">
+  <a href="$www{'cgi_man'}">home</a> |
+  <a href="$www{'cgi_man'}/help.html">help</a>
+</span>
 ETX
     if ($query) {
 	print "<hr/>\n";
     }
-    0;
 }
 
 sub faq {
@@ -2052,21 +2062,17 @@ sub faq {
     local ($url);
     foreach ( &freebsd_first (sort { &sort_versions } keys %manPath )) {
         $url = &encode_url($_);
-        push( @list,
-                qq{<li><a href="$BASE?apropos=2&amp;manpath=$url">[download]}
-              . qq{</a> "$_" -> $BASE?manpath=$url}
-              . qq{</li>\n} );
+        my $download_link = $enable_download ? qq[<a href="/cgi/man.cgi?apropos=2&amp;manpath=$url">[download]</a> ] : '';
+        push( @list, qq{<li>$download_link $_" -> $BASE?manpath=$url</li>\n} );
     }
 
     foreach ( &freebsd_first (sort { &sort_versions } keys %manPathAliases )) {
+        next if !$manPathAliases{$_};
+
+        my $encode_url = &encode_url($_);
         push( @list2,
-                qq[<li>"$_" -> "$manPathAliases{$_}" -> ]
-              . qq{<a href="$BASE?manpath=}
-              . &encode_url($_)
-              . qq{">$BASE?manpath=}
-              . &encode_url($_)
-              . "</a></li>\n" )
-          if $manPathAliases{$_};
+                qq[<li>"$_" -> "$manPathAliases{$_}" -> ] . 
+                qq[<a href="$www{'home_man'}/cgi/man.cgi?manpath=$encode_url">$www{'home_man'}/cgi/man.cgi?manpath=$encode_url</a></li>\n] )
     }
 
     return qq{\
@@ -2084,20 +2090,20 @@ Technology, Free Software Foundation, The FreeBSD Project, and others.
 
 Copyright (c) for man pages by OS vendors.
 <p/>
-<a href="ftp://ftp.2bsd.com">2.11 BSD</a>,
+<a href="https://en.wikipedia.org/wiki/History_of_the_Berkeley_Software_Distribution">2.11 BSD</a>,
 <a href="https://www.apple.com">Apple</a>,
 <a href="https://www.hp.com">HP</a>,
 <a href="https://www.freebsd.org">FreeBSD</a>,
-<a href="http://www.minix3.org">Minix</a>,
+<a href="https://www.minix3.org">Minix</a>,
 <a href="https://www.netbsd.org">NetBSD</a>,
 <a href="https://www.openbsd.org">OpenBSD</a>,
 <a href="https://9p.io/plan9/">Plan 9</a>,
 <a href="https://www.redhat.com">Red Hat</a>,
 <a href="https://www.slackware.com">Slackware Linux</a>,
-<a href="https://www.sun.com">SunOS</a>,
+<a href="https://www.oracle.com/solaris/technologies/">SunOS</a>,
 <a href="https://www.suse.com">SuSE</a>,
 <a href="https://en.wikipedia.org/wiki/Ultrix">ULTRIX</a>,
-<a href="http://www.plan9.bell-labs.com/7thEdMan/">Unix Seventh Edition</a>,
+<a href="https://en.wikipedia.org/wiki/Version_7_Unix">Unix Seventh Edition</a>,
 <a href="https://www.xfree86.org">XFree86</a>,
 <a href="https://www.x.org">X11R6</a>
 
@@ -2127,8 +2133,8 @@ OS vendors</li>
 <p />
 
 <ul>
-<li>which manpage: <a href="$BASE?which">$full_url?which</a></li>
-<li>socket(2) manpage: <a href="$BASE?socket(2)">$full_url?socket(2)</a></li>
+<li>which manpage: <a href="$full_url?which">$full_url?which</a></li>
+<li>socket(2) manpage: <a href="$full_url?socket(2)">$full_url?socket(2)</a></li>
 </ul>
 
 
@@ -2145,8 +2151,11 @@ for private use. A tarball is usually 5MB big.
 </ul>
 
 <h2>Releases Aliases</h2>
+<p>
 Release aliases are for lazy people. Plus, they have a longer
 lifetime, eg. 'openbsd' points always to the latest OpenBSD release.
+</p>
+
 <ul>
 @list2
 </ul>
@@ -2169,15 +2178,11 @@ sections.
 }
 
 sub faq_output {
-    my $base = $BASE;
-    $base =~ s,[^/]*$,,;
-    $base = 'https://www.freebsd.org/cgi/';    # XXX
-
     &http_header("text/html");
-    print &html_header( "FreeBSD manual page help", $base );
+    print &html_header( "FreeBSD manual page help", '/cgi/' );
     print "<br/>\n<h1>$www{'head'}</h1>\n";
     print &faq . "<br/>\n";
-    &html_footer;
+    &html_footer('no_help_link' => 1);
 }
 
 sub html_header2 {
@@ -2220,10 +2225,6 @@ sub mydie {
     print &html_header("Error");
     print $message;
 
-    print qq{
-<p />
-<a href="$BASE">home</a>
-};
     &html_footer;
     exit(0);
 }

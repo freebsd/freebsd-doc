@@ -24,7 +24,7 @@ if (!defined($hsty_email)) {
     $hsty_email = 'Contact';
 }
 if (!defined($hsty_author)) {
-    $hsty_author = "<a href='$hsty_base/mailto.html'>$hsty_email</a>";
+    $hsty_author = "<a href='$hsty_base/mailto/'>$hsty_email</a>";
 }
 
 if (!defined($hsty_date)) {
@@ -150,7 +150,7 @@ $i_topbar = qq`
 	      <li><a href="$hsty_base/projects/index.html">Developers</a>
 		<ul>
 		  <li><a href="$hsty_base/projects/ideas/ideas.html">Project Ideas</a></li>
-		  <li><a href="//cgit.FreeBSD.org">GIT Repository</a></li>
+		  <li><a href="https://cgit.FreeBSD.org">GIT Repository</a></li>
 		</ul>
 	      </li>
 	    </ul>
@@ -158,16 +158,16 @@ $i_topbar = qq`
 	      <li><a href="$hsty_base/support.html">Support</a>
 		<ul>
 		  <li><a href="$hsty_base/commercial/commercial.html">Vendors</a></li>
-		  <li><a href="//security.FreeBSD.org/">Security Information</a></li>
+		  <li><a href="https://security.FreeBSD.org/">Security Information</a></li>
 		  <li><a href="https://bugs.freebsd.org/search/">Bug Reports</a></li>
 		  <li><a href="$hsty_base/support.html">Submit Bug-report</a></li>
 		</ul>
 	      </li>
 	    </ul>
 	    <ul>
-	      <li><a href="//www.freebsdfoundation.org/">Foundation</a>
+	      <li><a href="https://www.freebsdfoundation.org/">Foundation</a>
 		<ul>
-		  <li><a href="//www.freebsdfoundation.org/donate/">Donate</a></li>
+		  <li><a href="https://www.freebsdfoundation.org/donate/">Donate</a></li>
 		</ul>
 	      </li>
 	    </ul>
