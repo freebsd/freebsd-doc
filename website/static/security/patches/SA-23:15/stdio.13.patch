@@ -1,0 +1,125 @@
+--- lib/libc/stdio/fflush.c.orig
++++ lib/libc/stdio/fflush.c
+@@ -105,11 +105,11 @@
+ int
+ __sflush(FILE *fp)
+ {
+-	unsigned char *p, *old_p;
+-	int n, t, old_w;
++	unsigned char *p;
++	int n, f, t;
+ 
+-	t = fp->_flags;
+-	if ((t & __SWR) == 0)
++	f = fp->_flags;
++	if ((f & __SWR) == 0)
+ 		return (0);
+ 
+ 	if ((p = fp->_bf._base) == NULL)
+@@ -121,26 +121,19 @@
+ 	 * Set these immediately to avoid problems with longjmp and to allow
+ 	 * exchange buffering (via setvbuf) in user write function.
+ 	 */
+-	old_p = fp->_p;
+ 	fp->_p = p;
+-	old_w = fp->_w;
+-	fp->_w = t & (__SLBF|__SNBF) ? 0 : fp->_bf._size;
++	fp->_w = f & (__SLBF|__SNBF) ? 0 : fp->_bf._size;
+ 
+ 	for (; n > 0; n -= t, p += t) {
+ 		t = _swrite(fp, (char *)p, n);
+ 		if (t <= 0) {
+-			/* Reset _p and _w. */
+-			if (p > fp->_p) {
++			if (p > fp->_p)
+ 				/* Some was written. */
+ 				memmove(fp->_p, p, n);
+-				fp->_p += n;
+-				if ((fp->_flags & (__SLBF | __SNBF)) == 0)
+-					fp->_w -= n;
+-			/* conditional to handle setvbuf */
+-			} else if (p == fp->_p && errno == EINTR) {
+-				fp->_p = old_p;
+-				fp->_w = old_w;
+-			}
++			/* Reset _p and _w. */
++			fp->_p += n;
++			if ((fp->_flags & __SNBF) == 0)
++				fp->_w -= n;
+ 			fp->_flags |= __SERR;
+ 			return (EOF);
+ 		}
+--- lib/libc/stdio/fvwrite.c.orig
++++ lib/libc/stdio/fvwrite.c
+@@ -38,7 +38,6 @@
+ #include <sys/cdefs.h>
+ __FBSDID("$FreeBSD$");
+ 
+-#include <errno.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -55,7 +54,6 @@
+ __sfvwrite(FILE *fp, struct __suio *uio)
+ {
+ 	size_t len;
+-	unsigned char *old_p;
+ 	char *p;
+ 	struct __siov *iov;
+ 	int w, s;
+@@ -139,12 +137,8 @@
+ 				COPY(w);
+ 				/* fp->_w -= w; */ /* unneeded */
+ 				fp->_p += w;
+-				old_p = fp->_p;
+-				if (__fflush(fp) == EOF) {
+-					if (old_p == fp->_p && errno == EINTR)
+-						fp->_p -= w;
++				if (__fflush(fp))
+ 					goto err;
+-				}
+ 			} else if (len >= (w = fp->_bf._size)) {
+ 				/* write directly */
+ 				w = _swrite(fp, p, w);
+@@ -183,12 +177,8 @@
+ 				COPY(w);
+ 				/* fp->_w -= w; */
+ 				fp->_p += w;
+-				old_p = fp->_p;
+-				if (__fflush(fp) == EOF) {
+-					if (old_p == fp->_p && errno == EINTR)
+-						fp->_p -= w;
++				if (__fflush(fp))
+ 					goto err;
+-				}
+ 			} else if (s >= (w = fp->_bf._size)) {
+ 				w = _swrite(fp, p, w);
+ 				if (w <= 0)
+--- lib/libc/stdio/wbuf.c.orig
++++ lib/libc/stdio/wbuf.c
+@@ -52,7 +52,6 @@
+ int
+ __swbuf(int c, FILE *fp)
+ {
+-	unsigned char *old_p;
+ 	int n;
+ 
+ 	/*
+@@ -88,15 +87,8 @@
+ 	}
+ 	fp->_w--;
+ 	*fp->_p++ = c;
+-	old_p = fp->_p;
+-	if (++n == fp->_bf._size || (fp->_flags & __SLBF && c == '\n')) {
+-		if (__fflush(fp) != 0) {
+-			if (fp->_p == old_p && errno == EINTR) {
+-				fp->_p--;
+-				fp->_w++;
+-			}
++	if (++n == fp->_bf._size || (fp->_flags & __SLBF && c == '\n'))
++		if (__fflush(fp) != 0)
+ 			return (EOF);
+-		}
+-	}
+ 	return (c);
+ }
