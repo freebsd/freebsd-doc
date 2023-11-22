@@ -256,7 +256,7 @@ foreach my $os ( keys %$sectionpath ) {
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
 # this should be the latest "release and ports"
-$manPathDefault = 'FreeBSD 13.2-RELEASE and Ports';
+$manPathDefault = 'FreeBSD 14.0-RELEASE and Ports';
 
 %manPath = (
     # supported RELEASES / STABLE / CURRENT 
@@ -963,8 +963,8 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 13.2-RELEASE',
-    'freebsd-release', 'FreeBSD 13.2-RELEASE',
+    'freebsd',         'FreeBSD 14.0-RELEASE',
+    'freebsd-release', 'FreeBSD 14.0-RELEASE',
 
     'freebsd-stable',   'FreeBSD 14.0-STABLE',
     'freebsd-stable14', 'FreeBSD 14.0-STABLE',
@@ -972,8 +972,8 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-stable12', 'FreeBSD 12.4-STABLE',
 
     'freebsd-current',       'FreeBSD 15.0-CURRENT',
-    'freebsd-release-ports', 'FreeBSD 13.2-RELEASE and Ports',
-    'freebsd-ports', 'FreeBSD Ports 13.2',
+    'freebsd-release-ports', 'FreeBSD 14.0-RELEASE and Ports',
+    'freebsd-ports', 'FreeBSD Ports 14.0',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat 9',
