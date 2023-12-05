@@ -1,0 +1,112 @@
+--- sys/contrib/openzfs/include/os/freebsd/spl/sys/vfs.h.orig
++++ sys/contrib/openzfs/include/os/freebsd/spl/sys/vfs.h
+@@ -101,7 +101,7 @@
+ void vfs_clearmntopt(vfs_t *vfsp, const char *name);
+ int vfs_optionisset(const vfs_t *vfsp, const char *opt, char **argp);
+ int mount_snapshot(kthread_t *td, vnode_t **vpp, const char *fstype,
+-    char *fspath, char *fspec, int fsflags);
++    char *fspath, char *fspec, int fsflags, vfs_t *parent_vfsp);
+ 
+ typedef	uint64_t	vfs_feature_t;
+ 
+--- sys/contrib/openzfs/module/os/freebsd/spl/spl_vfs.c.orig
++++ sys/contrib/openzfs/module/os/freebsd/spl/spl_vfs.c
+@@ -120,7 +120,7 @@
+ 
+ int
+ mount_snapshot(kthread_t *td, vnode_t **vpp, const char *fstype, char *fspath,
+-    char *fspec, int fsflags)
++    char *fspec, int fsflags, vfs_t *parent_vfsp)
+ {
+ 	struct vfsconf *vfsp;
+ 	struct mount *mp;
+@@ -220,6 +220,13 @@
+ 	mp->mnt_opt = mp->mnt_optnew;
+ 	(void) VFS_STATFS(mp, &mp->mnt_stat);
+ 
++#ifdef VFS_SUPPORTS_EXJAIL_CLONE
++	/*
++	 * Clone the mnt_exjail credentials of the parent, as required.
++	 */
++	vfs_exjail_clone(parent_vfsp, mp);
++#endif
++
+ 	/*
+ 	 * Prevent external consumers of mount options from reading
+ 	 * mnt_optnew.
+--- sys/contrib/openzfs/module/os/freebsd/zfs/zfs_ctldir.c.orig
++++ sys/contrib/openzfs/module/os/freebsd/zfs/zfs_ctldir.c
+@@ -1026,7 +1026,8 @@
+ 	    "%s/" ZFS_CTLDIR_NAME "/snapshot/%s",
+ 	    dvp->v_vfsp->mnt_stat.f_mntonname, name);
+ 
+-	err = mount_snapshot(curthread, vpp, "zfs", mountpoint, fullname, 0);
++	err = mount_snapshot(curthread, vpp, "zfs", mountpoint, fullname, 0,
++	    dvp->v_vfsp);
+ 	kmem_free(mountpoint, mountpoint_len);
+ 	if (err == 0) {
+ 		/*
+--- sys/kern/vfs_mount.c.orig
++++ sys/kern/vfs_mount.c
+@@ -3119,6 +3119,41 @@
+ 	mtx_unlock(&mountlist_mtx);
+ }
+ 
++/*
++ * Clone the mnt_exjail field to a new mount point.
++ */
++void
++vfs_exjail_clone(struct mount *inmp, struct mount *outmp)
++{
++	struct ucred *cr;
++	struct prison *pr;
++
++	MNT_ILOCK(inmp);
++	cr = inmp->mnt_exjail;
++	if (cr != NULL) {
++		crhold(cr);
++		MNT_IUNLOCK(inmp);
++		pr = cr->cr_prison;
++		sx_slock(&allprison_lock);
++		if (!prison_isalive(pr)) {
++			sx_sunlock(&allprison_lock);
++			crfree(cr);
++			return;
++		}
++		MNT_ILOCK(outmp);
++		if (outmp->mnt_exjail == NULL) {
++			outmp->mnt_exjail = cr;
++			atomic_add_int(&pr->pr_exportcnt, 1);
++			cr = NULL;
++		}
++		MNT_IUNLOCK(outmp);
++		sx_sunlock(&allprison_lock);
++		if (cr != NULL)
++			crfree(cr);
++	} else
++		MNT_IUNLOCK(inmp);
++}
++
+ void
+ resume_all_fs(void)
+ {
+--- sys/sys/mount.h.orig
++++ sys/sys/mount.h
+@@ -980,6 +980,9 @@
+  * exported vnode operations
+  */
+ 
++/* Define this to indicate that vfs_exjail_clone() exists for ZFS to use. */
++#define	VFS_SUPPORTS_EXJAIL_CLONE	1
++
+ int	dounmount(struct mount *, uint64_t, struct thread *);
+ 
+ int	kernel_mount(struct mntarg *ma, uint64_t flags);
+@@ -1016,6 +1019,7 @@
+ 	    (struct mount *, struct netexport *, struct export_args *);
+ void	vfs_periodic(struct mount *, int);
+ int	vfs_busy(struct mount *, int);
++void	vfs_exjail_clone(struct mount *, struct mount *);
+ void	vfs_exjail_delete(struct prison *);
+ int	vfs_export			 /* process mount export info */
+ 	    (struct mount *, struct export_args *, bool);
