@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2023 Wolfram Schneider <wosch@FreeBSD.ORG>
+# Copyright (c) 1996-2024 Wolfram Schneider <wosch@FreeBSD.ORG>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -439,7 +439,7 @@ sub footer {
 print <<EOF;
 <span class="footer_links">
   <img align="right" src="$hsty_base/gifs/powerlogo.gif" alt="Powered by FreeBSD"/>
-  &copy; 1996-2023 by Wolfram Schneider. All rights reserved.<br/>
+  &copy; 1996-2024 by Wolfram Schneider. All rights reserved.<br/>
 
   General questions about FreeBSD ports should be sent to 
   <a href="mailto:$mailtoList"><i>$mailtoList</i></a><br/>
