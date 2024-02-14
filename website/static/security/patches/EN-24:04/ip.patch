@@ -1,0 +1,150 @@
+--- sys/netinet/in_pcb.c.orig
++++ sys/netinet/in_pcb.c
+@@ -1403,26 +1403,6 @@
+ }
+ #endif /* INET */
+ 
+-/*
+- * in_pcbdetach() is responsibe for disassociating a socket from an inpcb.
+- * For most protocols, this will be invoked immediately prior to calling
+- * in_pcbfree().  However, with TCP the inpcb may significantly outlive the
+- * socket, in which case in_pcbfree() is deferred.
+- */
+-void
+-in_pcbdetach(struct inpcb *inp)
+-{
+-
+-	KASSERT(inp->inp_socket != NULL, ("%s: inp_socket == NULL", __func__));
+-
+-#ifdef RATELIMIT
+-	if (inp->inp_snd_tag != NULL)
+-		in_pcbdetach_txrtlmt(inp);
+-#endif
+-	inp->inp_socket->so_pcb = NULL;
+-	inp->inp_socket = NULL;
+-}
+-
+ /*
+  * inpcb hash lookups are protected by SMR section.
+  *
+@@ -1733,19 +1713,30 @@
+ #endif
+ 
+ 	INP_WLOCK_ASSERT(inp);
+-	KASSERT(inp->inp_socket == NULL, ("%s: inp_socket != NULL", __func__));
++	KASSERT(inp->inp_socket != NULL, ("%s: inp_socket == NULL", __func__));
+ 	KASSERT((inp->inp_flags & INP_FREED) == 0,
+ 	    ("%s: called twice for pcb %p", __func__, inp));
+ 
+-	inp->inp_flags |= INP_FREED;
++	/*
++	 * in_pcblookup_local() and in6_pcblookup_local() may return an inpcb
++	 * from the hash without acquiring inpcb lock, they rely on the hash
++	 * lock, thus in_pcbremhash() should be the first action.
++	 */
++	if (inp->inp_flags & INP_INHASHLIST)
++		in_pcbremhash(inp);
+ 	INP_INFO_WLOCK(pcbinfo);
+ 	inp->inp_gencnt = ++pcbinfo->ipi_gencnt;
+ 	pcbinfo->ipi_count--;
+ 	CK_LIST_REMOVE(inp, inp_list);
+ 	INP_INFO_WUNLOCK(pcbinfo);
+ 
+-	if (inp->inp_flags & INP_INHASHLIST)
+-		in_pcbremhash(inp);
++#ifdef RATELIMIT
++	if (inp->inp_snd_tag != NULL)
++		in_pcbdetach_txrtlmt(inp);
++#endif
++	inp->inp_flags |= INP_FREED;
++	inp->inp_socket->so_pcb = NULL;
++	inp->inp_socket = NULL;
+ 
+ 	RO_INVALIDATE_CACHE(&inp->inp_route);
+ #ifdef MAC
+--- sys/netinet/in_pcb.h.orig
++++ sys/netinet/in_pcb.h
+@@ -670,7 +670,6 @@
+ 	    bool);
+ int	in_pcbconnect_setup(struct inpcb *, struct sockaddr_in *, in_addr_t *,
+ 	    u_short *, in_addr_t *, u_short *, struct ucred *);
+-void	in_pcbdetach(struct inpcb *);
+ void	in_pcbdisconnect(struct inpcb *);
+ void	in_pcbdrop(struct inpcb *);
+ void	in_pcbfree(struct inpcb *);
+--- sys/netinet/raw_ip.c.orig
++++ sys/netinet/raw_ip.c
+@@ -860,7 +860,6 @@
+ 		ip_rsvp_force_done(so);
+ 	if (so == V_ip_rsvpd)
+ 		ip_rsvp_done();
+-	in_pcbdetach(inp);
+ 	in_pcbfree(inp);
+ }
+ 
+--- sys/netinet/tcp_syncache.c.orig
++++ sys/netinet/tcp_syncache.c
+@@ -803,7 +803,6 @@
+ 	}
+ 	inp = sotoinpcb(so);
+ 	if ((tp = tcp_newtcpcb(inp)) == NULL) {
+-		in_pcbdetach(inp);
+ 		in_pcbfree(inp);
+ 		sodealloc(so);
+ 		goto allocfail;
+@@ -1051,7 +1050,6 @@
+ 	return (NULL);
+ 
+ abort:
+-	in_pcbdetach(inp);
+ 	in_pcbfree(inp);
+ 	sodealloc(so);
+ 	if ((s = tcp_log_addrs(&sc->sc_inc, NULL, NULL, NULL))) {
+--- sys/netinet/tcp_usrreq.c.orig
++++ sys/netinet/tcp_usrreq.c
+@@ -175,7 +175,6 @@
+ 	tp = tcp_newtcpcb(inp);
+ 	if (tp == NULL) {
+ 		error = ENOBUFS;
+-		in_pcbdetach(inp);
+ 		in_pcbfree(inp);
+ 		goto out;
+ 	}
+@@ -213,7 +212,6 @@
+ 	    ("%s: inp %p not dropped or embryonic", __func__, inp));
+ 
+ 	tcp_discardcb(tp);
+-	in_pcbdetach(inp);
+ 	in_pcbfree(inp);
+ }
+ 
+--- sys/netinet/udp_usrreq.c.orig
++++ sys/netinet/udp_usrreq.c
+@@ -1641,7 +1641,6 @@
+ 	KASSERT(inp->inp_faddr.s_addr == INADDR_ANY,
+ 	    ("udp_detach: not disconnected"));
+ 	INP_WLOCK(inp);
+-	in_pcbdetach(inp);
+ 	in_pcbfree(inp);
+ }
+ 
+--- sys/netinet6/raw_ip6.c.orig
++++ sys/netinet6/raw_ip6.c
+@@ -687,7 +687,6 @@
+ 	/* xxx: RSVP */
+ 	INP_WLOCK(inp);
+ 	free(inp->in6p_icmp6filt, M_PCB);
+-	in_pcbdetach(inp);
+ 	in_pcbfree(inp);
+ }
+ 
+--- sys/netinet6/udp6_usrreq.c.orig
++++ sys/netinet6/udp6_usrreq.c
+@@ -1201,7 +1201,6 @@
+ 	KASSERT(inp != NULL, ("udp6_detach: inp == NULL"));
+ 
+ 	INP_WLOCK(inp);
+-	in_pcbdetach(inp);
+ 	in_pcbfree(inp);
+ }
+ 
