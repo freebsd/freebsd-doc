@@ -814,7 +814,14 @@ $manPathDefault = 'FreeBSD 14.0-RELEASE and Ports';
 
     'Inferno 4th Edition',         "$manLocalDir/Inferno",
     'Plan 9',                      "$manLocalDir/plan9",
-    'Minix 2.0',                   "$manLocalDir/Minix-2.0",
+    'Minix 2.0.0',                 "$manLocalDir/Minix-2.0.0",
+    'Minix 3.1.5',                 "$manLocalDir/Minix-3.1.5",
+    'Minix 3.1.6',                 "$manLocalDir/Minix-3.1.6",
+    'Minix 3.1.7',                 "$manLocalDir/Minix-3.1.7",
+    'Minix 3.1.7',                 "$manLocalDir/Minix-3.1.8",
+    'Minix 3.2.0',                 "$manLocalDir/Minix-3.2.0",
+    'Minix 3.2.1',                 "$manLocalDir/Minix-3.2.1",
+    'Minix 3.3.0',                 "$manLocalDir/Minix-3.3.0",
     'Unix Seventh Edition',        "$manLocalDir/v7man",
 
     "Darwin 1.3.1/x86",            "$manLocalDir/Darwin-1.3.1-x86",
@@ -1006,6 +1013,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'plan9',         'Plan 9',
     'osf1',          'OSF1 V5.1/alpha',
     'true64',        'OSF1 V5.1/alpha',
+    'minix',         'Minix 3.3.0',
 );
 
 #
