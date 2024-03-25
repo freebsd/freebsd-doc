@@ -1302,7 +1302,7 @@ sub do_man {
     }
     else { $section = ''; }
 
-    $apropos ? &apropos($query) : &man( $name, $section, $arch );
+    $apropos ? &apropos($query, $section) : &man( $name, $section, $arch );
 }
 
 # --------------------- support routines ------------------------
@@ -1378,7 +1378,7 @@ sub http_header {
 sub env { defined( $main'ENV{ $_[0] } ) ? $main'ENV{ $_[0] } : undef; }
 
 sub apropos {
-    local ($query) = @_;
+    local ($query, $sektion) = @_;
     local ( $_,     $title,   $head, *APROPOS );
     local ( $names, $section, $msg,  $key );
     local ($prefix);
@@ -1397,6 +1397,8 @@ sub apropos {
     &http_header("text/html");
     print &html_header("Apropos $title");
     print "<br/>\n<h1>$www{'head'}</h1>\n\n";
+
+    $section = $sektion;
     &formquery;
 
     local ($mpath) = $manPath{$manpath};
@@ -1421,6 +1423,8 @@ sub apropos {
     print qq{<dl>\n};
     while (<APROPOS>) {
         next if !/$q/oi;
+        next if $sektion && !/\($sektion\)/oi;
+
         $acounter++;
 
         # matches whatis.db lines: name[, name ...] (sect) - msg
