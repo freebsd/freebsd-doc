@@ -779,7 +779,7 @@ $manPathDefault = 'FreeBSD 14.0-RELEASE and Ports';
     'Sun UNIX 0.4', "$manLocalDir/Sun-UNIX-0.4",
 
     'macOS 13.6.5', "$manLocalDir/macOS-13.6.5/man:$manLocalDir/macOS-13.6.5/developer-man:$manLocalDir/macOS-13.6.5/developer-platform-man:$manLocalDir/macOS-13.6.5/developer-platform-sdk-man:$manLocalDir/macOS-13.6.5/xctoolchain-man",  
-    'macOS 12.6.8', "$manLocalDir/macOS-12.6.8",
+    'macOS 12.7.3', "$manLocalDir/macOS-12.7.3/man:$manLocalDir/macOS-12.7.3/developer-man:$manLocalDir/macOS-12.7.3/developer-platform-man:$manLocalDir/macOS-12.7.3/developer-platform-sdk-man:$manLocalDir/macOS-12.7.3/xctoolchain-man",
     'macOS 10.13.6', "$manLocalDir/macOS-10.13.6",
 
     #'XFree86 3.2',      "$manLocalDir/XFree86-3.2",
