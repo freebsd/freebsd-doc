@@ -1,0 +1,203 @@
+--- crypto/heimdal/lib/kadm5/create_s.c.orig
++++ crypto/heimdal/lib/kadm5/create_s.c
+@@ -169,6 +169,10 @@
+     ent.entry.keys.len = 0;
+     ent.entry.keys.val = NULL;
+ 
++    ret = fbsd_ossl_provider_load();
++    if (ret)
++	goto out;
++
+     ret = _kadm5_set_keys(context, &ent.entry, password);
+     if (ret)
+ 	goto out;
+--- crypto/heimdal/lib/kadm5/kadm5_locl.h.orig
++++ crypto/heimdal/lib/kadm5/kadm5_locl.h
+@@ -79,5 +79,6 @@
+ #include <der.h>
+ #include <parse_units.h>
+ #include "private.h"
++#include "fbsd_ossl_provider.h"
+ 
+ #endif /* __KADM5_LOCL_H__ */
+--- crypto/heimdal/lib/krb5/context.c.orig
++++ crypto/heimdal/lib/krb5/context.c
+@@ -392,6 +392,10 @@
+     }
+     HEIMDAL_MUTEX_init(p->mutex);
+ 
++    ret = fbsd_ossl_provider_load();
++    if(ret)
++	goto out;
++
+     p->flags |= KRB5_CTX_F_HOMEDIR_ACCESS;
+ 
+     ret = krb5_get_default_config_files(&files);
+--- crypto/heimdal/lib/krb5/crypto.c.orig
++++ crypto/heimdal/lib/krb5/crypto.c
+@@ -2054,6 +2054,9 @@
+ 	*crypto = NULL;
+ 	return ret;
+     }
++    ret = fbsd_ossl_provider_load();
++    if (ret)
++	return ret;
+     (*crypto)->key.schedule = NULL;
+     (*crypto)->num_key_usage = 0;
+     (*crypto)->key_usage = NULL;
+--- crypto/heimdal/lib/krb5/salt.c.orig
++++ crypto/heimdal/lib/krb5/salt.c
+@@ -43,6 +43,8 @@
+     struct _krb5_encryption_type *e;
+     struct salt_type *st;
+ 
++    (void) fbsd_ossl_provider_load();
++
+     e = _krb5_find_enctype (etype);
+     if (e == NULL) {
+ 	krb5_set_error_message(context, KRB5_PROG_ETYPE_NOSUPP,
+@@ -75,6 +77,8 @@
+     struct _krb5_encryption_type *e;
+     struct salt_type *st;
+ 
++    (void) fbsd_ossl_provider_load();
++
+     e = _krb5_find_enctype (etype);
+     if (e == NULL) {
+ 	krb5_set_error_message(context, KRB5_PROG_ETYPE_NOSUPP,
+@@ -196,6 +200,7 @@
+ 			       enctype);
+ 	return KRB5_PROG_ETYPE_NOSUPP;
+     }
++    (void) fbsd_ossl_provider_load();
+     for(st = et->keytype->string_to_key; st && st->type; st++)
+ 	if(st->type == salt.salttype)
+ 	    return (*st->string_to_key)(context, enctype, password,
+--- crypto/heimdal/lib/roken/version-script.map.orig
++++ crypto/heimdal/lib/roken/version-script.map
+@@ -13,6 +13,7 @@
+ 		ct_memcmp;
+ 		err;
+ 		errx;
++		fbsd_ossl_provider_load;
+ 		free_getarg_strings;
+ 		get_default_username;
+ 		get_window_size;
+--- kerberos5/include/crypto-headers.h.orig
++++ kerberos5/include/crypto-headers.h
+@@ -17,5 +17,9 @@
+ #include <openssl/ec.h>
+ #include <openssl/ecdsa.h>
+ #include <openssl/ecdh.h>
++#if defined(OPENSSL_VERSION_MAJOR) && (OPENSSL_VERSION_MAJOR >= 3)
++#include <openssl/provider.h>
++#include "fbsd_ossl_provider.h"
++#endif
+ 
+ #endif /* __crypto_headers_h__ */
+--- /dev/null
++++ kerberos5/include/fbsd_ossl_provider.h
+@@ -0,0 +1,4 @@
++#ifndef __fbsd_ossl_provider_h
++#define __fbsd_ossl_provider_h
++int  fbsd_ossl_provider_load(void);
++#endif
+--- kerberos5/lib/libroken/Makefile.orig
++++ kerberos5/lib/libroken/Makefile
+@@ -74,9 +74,13 @@
+ 	vis.c \
+ 	warnerr.c \
+ 	write_pid.c \
+-	xfree.c
++	xfree.c \
++	fbsd_ossl_provider_load.c
+ 
+-CFLAGS+=-I${KRB5DIR}/lib/roken -I.
++CFLAGS+=-I${KRB5DIR}/lib/roken \
++	-I${SRCTOP}/kerberos5/include \
++	-I${KRB5DIR}/lib/krb5 \
++	-I${SRCTOP}/crypto/openssl/include -I.
+ 
+ CLEANFILES= roken.h
+ 
+--- /dev/null
++++ kerberos5/lib/libroken/fbsd_ossl_provider_load.c
+@@ -0,0 +1,78 @@
++#include <dlfcn.h>
++#include <errno.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <openssl/provider.h>
++
++#if defined(OPENSSL_VERSION_MAJOR) && (OPENSSL_VERSION_MAJOR >= 3)
++#define CRYPTO_LIBRARY "/lib/libcrypto.so.30"
++static void fbsd_ossl_provider_unload(void);
++static void print_dlerror(char *);
++static OSSL_PROVIDER *legacy;
++static OSSL_PROVIDER *deflt;
++static int providers_loaded = 0;
++static OSSL_PROVIDER * (*ossl_provider_load)(OSSL_LIB_CTX *, const char*) = NULL;
++static int (*ossl_provider_unload)(OSSL_PROVIDER *) = NULL;
++static void *crypto_lib_handle = NULL;
++
++static void
++fbsd_ossl_provider_unload(void)
++{
++	if (ossl_provider_unload == NULL) {
++		if (!(ossl_provider_unload = (int (*)(OSSL_PROVIDER*)) dlsym(crypto_lib_handle, "OSSL_PROVIDER_unload"))) {
++			print_dlerror("Unable to link OSSL_PROVIDER_unload");
++			return;
++		}
++	}
++	if (providers_loaded == 1) {
++		(*ossl_provider_unload)(legacy);
++		(*ossl_provider_unload)(deflt);
++		providers_loaded = 0;
++	}
++}
++
++static void
++print_dlerror(char *message)
++{
++	char *errstr;
++
++	if ((errstr = dlerror()) != NULL)
++		fprintf(stderr, "%s: %s\n",
++			message, errstr);
++}
++#endif
++
++int
++fbsd_ossl_provider_load(void)
++{
++#if defined(OPENSSL_VERSION_MAJOR) && (OPENSSL_VERSION_MAJOR >= 3)
++	if (crypto_lib_handle == NULL) {
++		if (!(crypto_lib_handle = dlopen(CRYPTO_LIBRARY,
++		    RTLD_LAZY|RTLD_GLOBAL))) {
++			print_dlerror("Unable to load libcrypto.so");
++			return (EINVAL);
++		}
++	}
++	if (ossl_provider_load == NULL) {
++		if (!(ossl_provider_load = (OSSL_PROVIDER * (*)(OSSL_LIB_CTX*, const char *)) dlsym(crypto_lib_handle, "OSSL_PROVIDER_load"))) {
++			print_dlerror("Unable to link OSSL_PROVIDER_load");
++			return(ENOENT);
++		}
++	}
++
++	if (providers_loaded == 0) {
++		if ((legacy = (*ossl_provider_load)(NULL, "legacy")) == NULL)
++			return (EINVAL);
++		if ((deflt = (*ossl_provider_load)(NULL, "default")) == NULL) {
++			(*ossl_provider_unload)(legacy);
++			return (EINVAL);
++		}
++		if (atexit(fbsd_ossl_provider_unload)) {
++			fbsd_ossl_provider_unload();
++			return (errno);
++		}
++		providers_loaded = 1;
++	}
++#endif
++	return (0);
++}

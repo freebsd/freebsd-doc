@@ -778,8 +778,9 @@ $manPathDefault = 'FreeBSD 14.0-RELEASE and Ports';
     # alias SunOS 0.4, apparently released in April 1983 based on 4.2BSD beta
     'Sun UNIX 0.4', "$manLocalDir/Sun-UNIX-0.4",
 
-    'macOS 13.5',   "$manLocalDir/macOS-13.5",
-    'macOS 12.6.8', "$manLocalDir/macOS-12.6.8",
+    'macOS 14.3.1', "$manLocalDir/macOS-14.3.1/man:$manLocalDir/macOS-14.3.1/developer-man:$manLocalDir/macOS-14.3.1/developer-platform-man:$manLocalDir/macOS-14.3.1/developer-platform-sdk-man:$manLocalDir/macOS-14.3.1/xctoolchain-man",  
+    'macOS 13.6.5', "$manLocalDir/macOS-13.6.5/man:$manLocalDir/macOS-13.6.5/developer-man:$manLocalDir/macOS-13.6.5/developer-platform-man:$manLocalDir/macOS-13.6.5/developer-platform-sdk-man:$manLocalDir/macOS-13.6.5/xctoolchain-man",  
+    'macOS 12.7.3', "$manLocalDir/macOS-12.7.3/man:$manLocalDir/macOS-12.7.3/developer-man:$manLocalDir/macOS-12.7.3/developer-platform-man:$manLocalDir/macOS-12.7.3/developer-platform-sdk-man:$manLocalDir/macOS-12.7.3/xctoolchain-man",
     'macOS 10.13.6', "$manLocalDir/macOS-10.13.6",
 
     #'XFree86 3.2',      "$manLocalDir/XFree86-3.2",
@@ -814,7 +815,14 @@ $manPathDefault = 'FreeBSD 14.0-RELEASE and Ports';
 
     'Inferno 4th Edition',         "$manLocalDir/Inferno",
     'Plan 9',                      "$manLocalDir/plan9",
-    'Minix 2.0',                   "$manLocalDir/Minix-2.0",
+    'Minix 2.0.0',                 "$manLocalDir/Minix-2.0.0",
+    'Minix 3.1.5',                 "$manLocalDir/Minix-3.1.5",
+    'Minix 3.1.6',                 "$manLocalDir/Minix-3.1.6",
+    'Minix 3.1.7',                 "$manLocalDir/Minix-3.1.7",
+    'Minix 3.1.7',                 "$manLocalDir/Minix-3.1.8",
+    'Minix 3.2.0',                 "$manLocalDir/Minix-3.2.0",
+    'Minix 3.2.1',                 "$manLocalDir/Minix-3.2.1",
+    'Minix 3.3.0',                 "$manLocalDir/Minix-3.3.0",
     'Unix Seventh Edition',        "$manLocalDir/v7man",
 
     "Darwin 1.3.1/x86",            "$manLocalDir/Darwin-1.3.1-x86",
@@ -1000,12 +1008,13 @@ while ( ( $key, $val ) = each %manPath ) {
     'sunos5',        'SunOS 5.10',
     'sunos4',        'SunOS 4.1.3',
     'sunos',         'SunOS 4.1.3',
-    'macos',         'macOS 13.5',
+    'macos',         'macOS 14.3.1',
     'freebsd ports', 'FreeBSD Ports',
     'ports',         'FreeBSD Ports',
     'plan9',         'Plan 9',
     'osf1',          'OSF1 V5.1/alpha',
     'true64',        'OSF1 V5.1/alpha',
+    'minix',         'Minix 3.3.0',
 );
 
 #
@@ -1294,7 +1303,7 @@ sub do_man {
     }
     else { $section = ''; }
 
-    $apropos ? &apropos($query) : &man( $name, $section, $arch );
+    $apropos ? &apropos($query, $section) : &man( $name, $section, $arch );
 }
 
 # --------------------- support routines ------------------------
@@ -1370,7 +1379,7 @@ sub http_header {
 sub env { defined( $main'ENV{ $_[0] } ) ? $main'ENV{ $_[0] } : undef; }
 
 sub apropos {
-    local ($query) = @_;
+    local ($query, $sektion) = @_;
     local ( $_,     $title,   $head, *APROPOS );
     local ( $names, $section, $msg,  $key );
     local ($prefix);
@@ -1389,6 +1398,8 @@ sub apropos {
     &http_header("text/html");
     print &html_header("Apropos $title");
     print "<br/>\n<h1>$www{'head'}</h1>\n\n";
+
+    $section = $sektion;
     &formquery;
 
     local ($mpath) = $manPath{$manpath};
@@ -1413,6 +1424,8 @@ sub apropos {
     print qq{<dl>\n};
     while (<APROPOS>) {
         next if !/$q/oi;
+        next if $sektion && !/\($sektion\)/oi;
+
         $acounter++;
 
         # matches whatis.db lines: name[, name ...] (sect) - msg

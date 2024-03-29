@@ -108,6 +108,13 @@ releases-clean:
 	rm -f data/releases.toml
 
 generate-release:
+.if empty(RELEASE)
+	@echo "Specify a release. Example RELEASE=14.1"
+.else
+	${HUGO_CMD} new --kind release releases/${RELEASE}R/
+.endif
+
+generate-hardware-notes:
 .if empty(RELEASE) && empty(MAIN)
 	@echo "Specify a release or use main. Example RELEASE=14.1 MAIN=true"
 .else
@@ -122,7 +129,6 @@ generate-release:
 .elif !empty(RELEASE)
 	git clone --depth 1 --branch releng/${RELEASE} https://git.FreeBSD.org/src.git tmp
 .endif
-	${HUGO_CMD} new --kind release releases/${RELEASE}R/
 	${RUBY_CMD} ./tools/hardware-notes-processor.rb content/en/releases/${RELEASE}R/hardware.adoc
 	rm -fr ./tmp
 .endif
