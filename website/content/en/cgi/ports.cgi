@@ -57,11 +57,11 @@ sub init_variables {
     $portsDatabaseHeadDir = "/usr/local/www/ports";
 
     # Ports database file to use
-    if ( -f "$portsDatabaseHeadDir/INDEX-13" ) {
-        $ports_database = 'INDEX-13';
+    if ( -f "$portsDatabaseHeadDir/INDEX-14" ) {
+        $ports_database = 'INDEX-14';
     }
-    elsif ( -f "$portsDatabaseHeadDir/INDEX-12" ) {
-        $ports_database = 'INDEX-12';
+    elsif ( -f "$portsDatabaseHeadDir/INDEX-13" ) {
+        $ports_database = 'INDEX-13';
     }
     else {
         $ports_database = 'INDEX';
