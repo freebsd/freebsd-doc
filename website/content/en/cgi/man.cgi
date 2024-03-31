@@ -2088,8 +2088,8 @@ sub faq {
     local ($url);
     foreach ( &freebsd_first (sort { &sort_versions } keys %manPath )) {
         $url = &encode_url($_);
-        my $download_link = $enable_download ? qq[<a href="/cgi/man.cgi?apropos=2&amp;manpath=$url">[download]</a> ] : '';
-        push( @list, qq{<li>$download_link $_" -> $BASE?manpath=$url</li>\n} );
+        my $download_link = $enable_download ? qq[<a href="/cgi/man.cgi?apropos=2&amp;manpath=$url">tarball</a>] : '';
+        push( @list, qq{<li>$_: <a href="$BASE?manpath=$url">permalink</a> | $download_link</li>\n} );
     }
 
     foreach ( &freebsd_first (sort { &sort_versions } keys %manPathAliases )) {
@@ -2165,22 +2165,28 @@ FreeBSD Ports Search</a> script.</li>
 </ul>
 
 
-<h2>Releases</h2>
+<h2>Release Permalinks and tarballs</h2>
 
-Releases and Releases Aliases are information how 
+<p>
+Releases and releases aliases permalinks are information how 
 to make a link to this script to the right OS version.
-<p />
+</p>
+
+<p>
 You may download the manual pages as gzip'd tar archive for private or educational purposes.
 A tarball is normally 5-25 MB in size.
-<p />
+</p>
+
 <ul>
 @list
 </ul>
 
-<h2>Releases Aliases</h2>
+
+<h2>Releases Aliases Permalinks</h2>
+
 <p>
 Release aliases are for lazy people. Plus, they have a longer
-lifetime, eg. 'openbsd' points always to the latest OpenBSD release.
+lifetime, eg. 'netbsd' points always to the latest NetBSD release.
 </p>
 
 <ul>
