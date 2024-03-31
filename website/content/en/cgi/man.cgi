@@ -2102,6 +2102,7 @@ sub faq {
     }
 
     return qq{\
+<h2>Copyright</h2>
 <pre>
 Copyright (c) 1996-2024 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
@@ -2135,20 +2136,6 @@ Copyright (c) for manual pages by OS vendors:
 <a href="https://www.xfree86.org">XFree86</a>,
 <a href="https://www.x.org">X11R6</a>
 
-<h2>FAQ</h2>
-
-<ul>
-<li>Get the <a href="$BASE/source">source</a> of the man.cgi script</li>
-<li>Troff macros works only if defined in FreeBSD/groff. OS specific
-macros like `appeared in NetBSD version 1.2' are not supported.</li>
-<li>Some OSs provide only formatted manual pages (catpages), e.g., 
-older NetBSD and OpenBSD releases. In this case it is not possible to create Postscript
-and troff output.</li>
-<li>The <a href="https://cgit.freebsd.org/src/tree/share/misc/bsd-family-tree">
-Unix family tree, BSD part</a>.</li>
-<li>The <a href="https://ports.freebsd.org/cgi/ports.cgi">
-FreeBSD Ports Search</a> script.</li>
-</ul>
 
 <h2>Shortcuts for FreeBSD manual pages</h2>
 
@@ -2192,7 +2179,23 @@ lifetime, eg. 'netbsd' points always to the latest NetBSD release.
 <ul>
 @list2
 </ul>
+
+<h2>FAQ</h2>
+
+<ul>
+<li>Get the <a href="$BASE/source">source</a> of the man.cgi script</li>
+<li>Troff macros works only if defined in FreeBSD/groff. OS specific
+macros like `appeared in NetBSD version 1.2' are not supported.</li>
+<li>Some OSs provide only formatted manual pages (catpages), e.g., 
+older NetBSD and OpenBSD releases. In this case it is not possible to create Postscript
+and troff output.</li>
+<li>The <a href="https://cgit.freebsd.org/src/tree/share/misc/bsd-family-tree">
+Unix family tree, BSD part</a>.</li>
+<li>The <a href="https://ports.freebsd.org/cgi/ports.cgi">
+FreeBSD Ports Search</a> script.</li>
+</ul>
 };
+
 }
 
 sub intro {
