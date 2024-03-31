@@ -2108,7 +2108,7 @@ Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 </pre>
 <p/>
 
-Copyright (c) for man pages by OS vendors.
+Copyright (c) for manual pages by OS vendors:
 <p/>
 <a href="https://en.wikipedia.org/wiki/History_of_the_Berkeley_Software_Distribution">2.11 BSD</a>,
 <a href="https://www.apple.com">Apple</a>,
@@ -2136,19 +2136,18 @@ Copyright (c) for man pages by OS vendors.
 <a href="https://www.x.org">X11R6</a>
 
 <h2>FAQ</h2>
+
 <ul>
 <li>Get the <a href="$BASE/source">source</a> of the man.cgi script</li>
 <li>Troff macros works only if defined in FreeBSD/groff. OS specific
 macros like `appeared in NetBSD version 1.2' are not supported.</li>
-<li>Some OSs provide only formatted manual pages (catpages), e.g., NetBSD
-and OpenBSD. In this case it is not possible to create Postscript
+<li>Some OSs provide only formatted manual pages (catpages), e.g., 
+older NetBSD and OpenBSD releases. In this case it is not possible to create Postscript
 and troff output.</li>
 <li>The <a href="https://cgit.freebsd.org/src/tree/share/misc/bsd-family-tree">
 Unix family tree, BSD part</a>.</li>
 <li>The <a href="https://ports.freebsd.org/cgi/ports.cgi">
-FreeBSD Ports Changes</a> script.</li>
-<li>Copyright (c) and download for man pages by 
-OS vendors</li>
+FreeBSD Ports Search</a> script.</li>
 </ul>
 
 <h2>Shortcuts for FreeBSD manual pages</h2>
@@ -2171,8 +2170,8 @@ OS vendors</li>
 Releases and Releases Aliases are information how 
 to make a link to this script to the right OS version.
 <p />
-You may download the manpages as gzip'd tar archive
-for private use. A tarball is usually 5MB big.
+You may download the manual pages as gzip'd tar archive for private or educational purposes.
+A tarball is normally 5-25 MB in size.
 <p />
 <ul>
 @list
