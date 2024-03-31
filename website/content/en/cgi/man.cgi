@@ -2105,14 +2105,8 @@ sub faq {
 <pre>
 Copyright (c) 1996-2024 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
-
-This data is part of a licensed program from BERKELEY SOFTWARE
-DESIGN, INC.  Portions are copyrighted by BSDI, The Regents of
-the University of California, Massachusetts Institute of
-Technology, Free Software Foundation, The FreeBSD Project, and others.
-
-</pre>\n
-<p />
+</pre>
+<p/>
 
 Copyright (c) for man pages by OS vendors.
 <p/>
