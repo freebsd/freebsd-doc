@@ -191,6 +191,7 @@ $sectionpath = {
 
     'CentOS 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
+
     'CentOS 5.3' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
     'CentOS 5.4' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
     'CentOS 5.5' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
@@ -200,6 +201,7 @@ $sectionpath = {
     'CentOS 5.9' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
     'CentOS 5.10' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
     'CentOS 5.11' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+
     'CentOS 6.0' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
     'CentOS 6.1' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
     'CentOS 6.2' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
@@ -207,6 +209,11 @@ $sectionpath = {
     'CentOS 6.4' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
     'CentOS 6.5' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
     'CentOS 6.6' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS 6.7' => { 'path' => '0p:1:1p:2:3:3p:3t:4:5:6:7:8:9:n' },
+    'CentOS 6.8' => { 'path' => '0p:1:1p:2:3:3p:3t:4:5:6:7:8:9:n' },
+    'CentOS 6.9' => { 'path' => '0p:1:1p:2:3:3p:3t:4:5:6:7:8:9:n' },
+    'CentOS 6.10' => { 'path' => '0p:1:1p:2:3:3p:3t:4:5:6:7:8:9:n' },
+
     'CentOS 7.0' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3t:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:n' },
     'CentOS 7.1' => { 'path' => '0p:1:1p:2:3:3p:3t:4:5:6:7:8:9:n' },
     'CentOS 7.2' => { 'path' => '0p:1:1p:2:3:3p:3t:4:5:6:7:8:9:n' },
@@ -720,6 +727,7 @@ $manPathDefault = 'FreeBSD 14.0-RELEASE and Ports';
 
     'CentOS 3.9', "$manLocalDir/CentOS-3.9",
     'CentOS 4.8', "$manLocalDir/CentOS-4.8",
+
     'CentOS 5.4', "$manLocalDir/CentOS-5.4",
     'CentOS 5.5', "$manLocalDir/CentOS-5.5",
     'CentOS 5.6', "$manLocalDir/CentOS-5.6",
@@ -728,6 +736,7 @@ $manPathDefault = 'FreeBSD 14.0-RELEASE and Ports';
     'CentOS 5.9', "$manLocalDir/CentOS-5.9",
     'CentOS 5.10', "$manLocalDir/CentOS-5.10",
     'CentOS 5.11', "$manLocalDir/CentOS-5.11",
+
     'CentOS 6.0', "$manLocalDir/CentOS-6.0",
     'CentOS 6.1', "$manLocalDir/CentOS-6.1",
     'CentOS 6.2', "$manLocalDir/CentOS-6.2",
@@ -735,6 +744,11 @@ $manPathDefault = 'FreeBSD 14.0-RELEASE and Ports';
     'CentOS 6.4', "$manLocalDir/CentOS-6.4",
     'CentOS 6.5', "$manLocalDir/CentOS-6.5",
     'CentOS 6.6', "$manLocalDir/CentOS-6.6",
+    'CentOS 6.7', "$manLocalDir/CentOS-6.7",
+    'CentOS 6.8', "$manLocalDir/CentOS-6.8",
+    'CentOS 6.9', "$manLocalDir/CentOS-6.9",
+    'CentOS 6.10', "$manLocalDir/CentOS-6.10",
+
     'CentOS 7.0', "$manLocalDir/CentOS-7.0",
     'CentOS 7.1', "$manLocalDir/CentOS-7.1",
     'CentOS 7.2', "$manLocalDir/CentOS-7.2",
