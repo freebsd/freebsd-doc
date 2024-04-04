@@ -1080,8 +1080,6 @@ while ( ( $key, $val ) = each %manPath ) {
     'sunos4',        'SunOS 4.1.3',
     'sunos',         'SunOS 4.1.3',
     'macos',         'macOS 14.3.1',
-    'freebsd ports', 'FreeBSD Ports',
-    'ports',         'FreeBSD Ports',
     'plan9',         'Plan 9',
     'osf1',          'OSF1 V5.1/alpha',
     'true64',        'OSF1 V5.1/alpha',
