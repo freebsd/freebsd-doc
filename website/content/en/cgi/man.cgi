@@ -814,6 +814,7 @@ $manPathDefault = 'FreeBSD 14.0-RELEASE and Ports';
     'Debian 10.13.0', "$manLocalDir/Debian-10.13.0/man:$manLocalDir/Debian-10.13.0/misc",
     'Debian 11.9.0', "$manLocalDir/Debian-11.9.0/man:$manLocalDir/Debian-11.9.0/misc",
     'Debian 12.5.0', "$manLocalDir/Debian-12.5.0/man:$manLocalDir/Debian-12.5.0/misc",
+    'Debian 13.0 unstable', "$manLocalDir/Debian-unstable/man:$manLocalDir/Debian-unstable/misc",
 
     'Ubuntu 20.04 jammy', "$manLocalDir/Ubuntu-jammy-20.04/man:$manLocalDir/Ubuntu-jammy-20.04/misc",
 
