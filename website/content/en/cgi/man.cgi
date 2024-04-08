@@ -816,6 +816,8 @@ $manPathDefault = 'FreeBSD 14.0-RELEASE and Ports';
     'Debian 12.5.0', "$manLocalDir/Debian-12.5.0/man:$manLocalDir/Debian-12.5.0/misc",
     'Debian 13.0 unstable', "$manLocalDir/Debian-unstable/man:$manLocalDir/Debian-unstable/misc",
 
+    'Ubuntu 23.10 mantic', "$manLocalDir/Ubuntu-mantic-23.10/man:$manLocalDir/Ubuntu-mantic-23.10/misc",
+
     'Ubuntu 22.04 jammy', "$manLocalDir/Ubuntu-jammy-22.04/man:$manLocalDir/Ubuntu-jammy-22.04/misc",
     'Ubuntu 20.04 focal', "$manLocalDir/Ubuntu-focal-20.04/man:$manLocalDir/Ubuntu-focal-20.04/misc",
     'Ubuntu 18.04 bionic', "$manLocalDir/Ubuntu-bionic-18.04/man:$manLocalDir/Ubuntu-bionic-18.04/misc",
