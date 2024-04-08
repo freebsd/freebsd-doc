@@ -815,6 +815,8 @@ $manPathDefault = 'FreeBSD 14.0-RELEASE and Ports';
     'Debian 11.9.0', "$manLocalDir/Debian-11.9.0/man:$manLocalDir/Debian-11.9.0/misc",
     'Debian 12.5.0', "$manLocalDir/Debian-12.5.0/man:$manLocalDir/Debian-12.5.0/misc",
 
+    'Ubuntu 20.04 jammy', "$manLocalDir/Ubuntu-jammy-20.04/man:$manLocalDir/Ubuntu-jammy-20.04/misc",
+
     'DragonFly 6.4.0',  "$manLocalDir/DragonFly-6.4.0",
     'DragonFly 5.8.3',  "$manLocalDir/DragonFly-5.8.3",
     'DragonFly 4.8.1',  "$manLocalDir/DragonFly-4.8.1",
@@ -1061,6 +1063,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'redhat',     'Red Hat 9',
     'suse',       'SuSE 11.3',
     'debian',     'Debian 12.5.0',
+    'ubuntu',     'Ubuntu 20.04 jammy',
     'dragonfly',  'DragonFly 6.4.0',
     'centos',     'CentOS 7.9',
     'rocky',      'Rocky 9.3',
