@@ -816,7 +816,11 @@ $manPathDefault = 'FreeBSD 14.0-RELEASE and Ports';
     'Debian 12.5.0', "$manLocalDir/Debian-12.5.0/man:$manLocalDir/Debian-12.5.0/misc",
     'Debian 13.0 unstable', "$manLocalDir/Debian-unstable/man:$manLocalDir/Debian-unstable/misc",
 
-    'Ubuntu 20.04 jammy', "$manLocalDir/Ubuntu-jammy-20.04/man:$manLocalDir/Ubuntu-jammy-20.04/misc",
+    'Ubuntu 22.04 jammy', "$manLocalDir/Ubuntu-jammy-22.04/man:$manLocalDir/Ubuntu-jammy-22.04/misc",
+    'Ubuntu 20.04 focal', "$manLocalDir/Ubuntu-focal-20.04/man:$manLocalDir/Ubuntu-focal-20.04/misc",
+    'Ubuntu 18.04 bionic', "$manLocalDir/Ubuntu-bionic-18.04/man:$manLocalDir/Ubuntu-bionic-18.04/misc",
+    'Ubuntu 16.04 xenial', "$manLocalDir/Ubuntu-xenial-16.04/man:$manLocalDir/Ubuntu-xenial-16.04/misc",
+    'Ubuntu 14.04 trusty', "$manLocalDir/Ubuntu-trusty-14.04/man:$manLocalDir/Ubuntu-trusty-14.04/misc",
 
     'DragonFly 6.4.0',  "$manLocalDir/DragonFly-6.4.0",
     'DragonFly 5.8.3',  "$manLocalDir/DragonFly-5.8.3",
@@ -1064,7 +1068,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'redhat',     'Red Hat 9',
     'suse',       'SuSE 11.3',
     'debian',     'Debian 12.5.0',
-    'ubuntu',     'Ubuntu 20.04 jammy',
+    'ubuntu',     'Ubuntu 22.04 jammy',
     'dragonfly',  'DragonFly 6.4.0',
     'centos',     'CentOS 7.9',
     'rocky',      'Rocky 9.3',
