@@ -1099,6 +1099,32 @@ while ( ( $key, $val ) = each %manPath ) {
     'minix',         'Minix 3.3.0',
 );
 
+# pre-build a hash to get relevant information for sorting
+my $sort_manpath_hash;
+sub sort_manpath {
+    my $manpath = shift;
+    my @list = keys %$manpath;
+
+    $sort_manpath_hash = {};
+    foreach my $name (@list) {
+        my $name_lc = lc($name);
+        my $os_lc;
+
+        # a release has at least 2 numbers seperated by a dot:
+        # FreeBSD 11.1-RELEASE ports
+        # X11R7.4
+        my ($os, $version, $ports) = ( $name =~ m,^(.*?)(\d+\.[\d\.]+)(.*)$, );
+        $os //= $name;
+        $os_lc = lc($os);
+        $version //= "0.0";
+        $ports //= "";
+
+        $sort_manpath_hash->{$name} = { 'os' => $os, 'os_lc' => $os_lc, 'version' => $version, 'ports' => $ports };
+    } 
+
+    return sort { &sort_versions } keys %$manpath;
+}
+
 #
 # sort by OS release number, highest version first
 #
@@ -1114,24 +1140,17 @@ while ( ( $key, $val ) = each %manPath ) {
 # XFree86 10.0
 #
 sub sort_versions {
-
-    # a release has at least 2 numbers seperated by a dot:
-    # FreeBSD 11.1-RELEASE ports
-    # X11R7.4
-    my @a = ( lc($a) =~ m,^(.*?)(\d+\.[\d\.]+)(.*)$, );
-    my @b = ( lc($b) =~ m,^(.*?)(\d+\.[\d\.]+)(.*)$, );
-
-    if (@a and @b) {
-	return $a[0] cmp $b[0]   || # FreeBDS <=> IRIX
-	  &version($a[1], $b[1]) || # 6.5.30 <=> 6.5.31  
-	  $a[2] cmp $a[2] ||        # RELEASE <=> ports 
-	  $a cmp $b;		    # rest
-    } else {
-    	# for the rest: basic string compare
-    	return $a cmp $b;
-    }
+   my $h = $sort_manpath_hash;
+  
+   return 
+     $h->{$a}->{'os_lc'} cmp $h->{$b}->{'os_lc'} ||            # freebsd <=> irix
+     $h->{$a}->{'os'} cmp $h->{$b}->{'os'} ||                  # FreeBSD <=> freebsd
+     &version($h->{$a}->{'version'}, $h->{$b}->{'version'}) || # 6.5.30 <=> 6.5.31  
+     $h->{$a}->{'ports'} cmp $h->{$b}->{'ports'} ||            # RELEASE <=> ports (release first)
+     $a cmp $b;                                                # for the rest: basic string compare
 }
 
+# reverse order, newest release first
 sub version {
     return &version_compare(@_) * -1;
 }
@@ -1172,7 +1191,7 @@ sub freebsd_first {
     return @data;
 }
 
-foreach ( sort { &sort_versions } keys %manPathAliases ) {
+foreach ( &sort_manpath(\%manPathAliases) ) {
 
     # delete non-existing aliases
     if ( !defined( $manPath{ $manPathAliases{$_} } ) ) {
@@ -1625,8 +1644,6 @@ sub man {
     $html_name    = &encode_data($name);
     $html_section = &encode_data($section);
 
-    #print Dumper($sectionpath);
-    #print "yy $section yy $manpath\n";
     if ( $name =~ /^\s*$/ ) {
 	print "</pre><hr/>";
         print "Empty input. Please type a manual page and search again.\n";
@@ -2098,7 +2115,7 @@ ETX
     print qq{</select>\n<select name="manpath">\n};
 
     local ($l) = ( $manpath ? $manpath : $manPathDefault );
-    foreach ( &freebsd_first( sort { &sort_versions } keys %manPath) ) {
+    foreach ( &freebsd_first( &sort_manpath(\%manPath)) ) {
         $key = $_;
         print "<option"
           . ( ( $key eq $l ) ? ' selected="selected" ' : ' ' )
@@ -2166,13 +2183,13 @@ sub faq {
 
     local ( @list, @list2 );
     local ($url);
-    foreach ( &freebsd_first (sort { &sort_versions } keys %manPath )) {
+    foreach ( &freebsd_first (&sort_manpath(\%manPath) )) {
         $url = &encode_url($_);
         my $download_link = $enable_download ? qq[<a href="/cgi/man.cgi?apropos=2&amp;manpath=$url">tarball</a>] : '';
         push( @list, qq{<li>$_: <a href="$BASE?manpath=$url">permalink</a> | $download_link</li>\n} );
     }
 
-    foreach ( &freebsd_first (sort { &sort_versions } keys %manPathAliases )) {
+    foreach ( &freebsd_first (&sort_manpath(\%manPathAliases) )) {
         next if !$manPathAliases{$_};
 
         my $encode_url = &encode_url($_);
