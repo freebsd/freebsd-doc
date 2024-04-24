@@ -1,0 +1,316 @@
+--- sys/contrib/openzfs/include/os/linux/zfs/sys/zpl.h.orig
++++ sys/contrib/openzfs/include/os/linux/zfs/sys/zpl.h
+@@ -52,7 +52,7 @@
+ extern const struct file_operations zpl_dir_file_operations;
+ 
+ /* zpl_super.c */
+-extern void zpl_prune_sb(int64_t nr_to_scan, void *arg);
++extern void zpl_prune_sb(uint64_t nr_to_scan, void *arg);
+ 
+ extern const struct super_operations zpl_super_operations;
+ extern const struct export_operations zpl_export_operations;
+--- sys/contrib/openzfs/include/sys/arc.h.orig
++++ sys/contrib/openzfs/include/sys/arc.h
+@@ -81,7 +81,7 @@
+ typedef void arc_read_done_func_t(zio_t *zio, const zbookmark_phys_t *zb,
+     const blkptr_t *bp, arc_buf_t *buf, void *priv);
+ typedef void arc_write_done_func_t(zio_t *zio, arc_buf_t *buf, void *priv);
+-typedef void arc_prune_func_t(int64_t bytes, void *priv);
++typedef void arc_prune_func_t(uint64_t bytes, void *priv);
+ 
+ /* Shared module parameters */
+ extern int zfs_arc_average_blocksize;
+--- sys/contrib/openzfs/include/sys/arc_impl.h.orig
++++ sys/contrib/openzfs/include/sys/arc_impl.h
+@@ -994,7 +994,6 @@
+ 
+ extern void arc_lowmem_init(void);
+ extern void arc_lowmem_fini(void);
+-extern void arc_prune_async(int64_t);
+ extern int arc_memory_throttle(spa_t *spa, uint64_t reserve, uint64_t txg);
+ extern uint64_t arc_free_memory(void);
+ extern int64_t arc_available_memory(void);
+--- sys/contrib/openzfs/module/os/freebsd/zfs/arc_os.c.orig
++++ sys/contrib/openzfs/module/os/freebsd/zfs/arc_os.c
+@@ -51,11 +51,6 @@
+ #include <sys/vm.h>
+ #include <sys/vmmeter.h>
+ 
+-#if __FreeBSD_version >= 1300139
+-static struct sx arc_vnlru_lock;
+-static struct vnode *arc_vnlru_marker;
+-#endif
+-
+ extern struct vfsops zfs_vfsops;
+ 
+ uint_t zfs_arc_free_target = 0;
+@@ -151,53 +146,6 @@
+ 	return (MAX(allmem * 5 / 8, size));
+ }
+ 
+-/*
+- * Helper function for arc_prune_async() it is responsible for safely
+- * handling the execution of a registered arc_prune_func_t.
+- */
+-static void
+-arc_prune_task(void *arg)
+-{
+-	int64_t nr_scan = (intptr_t)arg;
+-
+-#ifndef __ILP32__
+-	if (nr_scan > INT_MAX)
+-		nr_scan = INT_MAX;
+-#endif
+-
+-#if __FreeBSD_version >= 1300139
+-	sx_xlock(&arc_vnlru_lock);
+-	vnlru_free_vfsops(nr_scan, &zfs_vfsops, arc_vnlru_marker);
+-	sx_xunlock(&arc_vnlru_lock);
+-#else
+-	vnlru_free(nr_scan, &zfs_vfsops);
+-#endif
+-}
+-
+-/*
+- * Notify registered consumers they must drop holds on a portion of the ARC
+- * buffered they reference.  This provides a mechanism to ensure the ARC can
+- * honor the arc_meta_limit and reclaim otherwise pinned ARC buffers.  This
+- * is analogous to dnlc_reduce_cache() but more generic.
+- *
+- * This operation is performed asynchronously so it may be safely called
+- * in the context of the arc_reclaim_thread().  A reference is taken here
+- * for each registered arc_prune_t and the arc_prune_task() is responsible
+- * for releasing it once the registered arc_prune_func_t has completed.
+- */
+-void
+-arc_prune_async(int64_t adjust)
+-{
+-
+-#ifndef __LP64__
+-	if (adjust > INTPTR_MAX)
+-		adjust = INTPTR_MAX;
+-#endif
+-	taskq_dispatch(arc_prune_taskq, arc_prune_task,
+-	    (void *)(intptr_t)adjust, TQ_SLEEP);
+-	ARCSTAT_BUMP(arcstat_prune);
+-}
+-
+ uint64_t
+ arc_all_memory(void)
+ {
+@@ -248,10 +196,6 @@
+ {
+ 	arc_event_lowmem = EVENTHANDLER_REGISTER(vm_lowmem, arc_lowmem, NULL,
+ 	    EVENTHANDLER_PRI_FIRST);
+-#if __FreeBSD_version >= 1300139
+-	arc_vnlru_marker = vnlru_alloc_marker();
+-	sx_init(&arc_vnlru_lock, "arc vnlru lock");
+-#endif
+ }
+ 
+ void
+@@ -259,12 +203,6 @@
+ {
+ 	if (arc_event_lowmem != NULL)
+ 		EVENTHANDLER_DEREGISTER(vm_lowmem, arc_event_lowmem);
+-#if __FreeBSD_version >= 1300139
+-	if (arc_vnlru_marker != NULL) {
+-		vnlru_free_marker(arc_vnlru_marker);
+-		sx_destroy(&arc_vnlru_lock);
+-	}
+-#endif
+ }
+ 
+ void
+--- sys/contrib/openzfs/module/os/freebsd/zfs/zfs_vfsops.c.orig
++++ sys/contrib/openzfs/module/os/freebsd/zfs/zfs_vfsops.c
+@@ -2097,6 +2097,26 @@
+ #endif
+ }
+ 
++#if __FreeBSD_version >= 1300139
++static struct sx zfs_vnlru_lock;
++static struct vnode *zfs_vnlru_marker;
++#endif
++static arc_prune_t *zfs_prune;
++
++static void
++zfs_prune_task(uint64_t nr_to_scan, void *arg __unused)
++{
++	if (nr_to_scan > INT_MAX)
++		nr_to_scan = INT_MAX;
++#if __FreeBSD_version >= 1300139
++	sx_xlock(&zfs_vnlru_lock);
++	vnlru_free_vfsops(nr_to_scan, &zfs_vfsops, zfs_vnlru_marker);
++	sx_xunlock(&zfs_vnlru_lock);
++#else
++	vnlru_free(nr_to_scan, &zfs_vfsops);
++#endif
++}
++
+ void
+ zfs_init(void)
+ {
+@@ -2123,11 +2143,23 @@
+ 	dmu_objset_register_type(DMU_OST_ZFS, zpl_get_file_info);
+ 
+ 	zfsvfs_taskq = taskq_create("zfsvfs", 1, minclsyspri, 0, 0, 0);
++
++#if __FreeBSD_version >= 1300139
++	zfs_vnlru_marker = vnlru_alloc_marker();
++	sx_init(&zfs_vnlru_lock, "zfs vnlru lock");
++#endif
++	zfs_prune = arc_add_prune_callback(zfs_prune_task, NULL);
+ }
+ 
+ void
+ zfs_fini(void)
+ {
++	arc_remove_prune_callback(zfs_prune);
++#if __FreeBSD_version >= 1300139
++	vnlru_free_marker(zfs_vnlru_marker);
++	sx_destroy(&zfs_vnlru_lock);
++#endif
++
+ 	taskq_destroy(zfsvfs_taskq);
+ 	zfsctl_fini();
+ 	zfs_znode_fini();
+--- sys/contrib/openzfs/module/os/linux/zfs/arc_os.c.orig
++++ sys/contrib/openzfs/module/os/linux/zfs/arc_os.c
+@@ -491,57 +491,6 @@
+ }
+ #endif /* _KERNEL */
+ 
+-/*
+- * Helper function for arc_prune_async() it is responsible for safely
+- * handling the execution of a registered arc_prune_func_t.
+- */
+-static void
+-arc_prune_task(void *ptr)
+-{
+-	arc_prune_t *ap = (arc_prune_t *)ptr;
+-	arc_prune_func_t *func = ap->p_pfunc;
+-
+-	if (func != NULL)
+-		func(ap->p_adjust, ap->p_private);
+-
+-	zfs_refcount_remove(&ap->p_refcnt, func);
+-}
+-
+-/*
+- * Notify registered consumers they must drop holds on a portion of the ARC
+- * buffered they reference.  This provides a mechanism to ensure the ARC can
+- * honor the arc_meta_limit and reclaim otherwise pinned ARC buffers.  This
+- * is analogous to dnlc_reduce_cache() but more generic.
+- *
+- * This operation is performed asynchronously so it may be safely called
+- * in the context of the arc_reclaim_thread().  A reference is taken here
+- * for each registered arc_prune_t and the arc_prune_task() is responsible
+- * for releasing it once the registered arc_prune_func_t has completed.
+- */
+-void
+-arc_prune_async(int64_t adjust)
+-{
+-	arc_prune_t *ap;
+-
+-	mutex_enter(&arc_prune_mtx);
+-	for (ap = list_head(&arc_prune_list); ap != NULL;
+-	    ap = list_next(&arc_prune_list, ap)) {
+-
+-		if (zfs_refcount_count(&ap->p_refcnt) >= 2)
+-			continue;
+-
+-		zfs_refcount_add(&ap->p_refcnt, ap->p_pfunc);
+-		ap->p_adjust = adjust;
+-		if (taskq_dispatch(arc_prune_taskq, arc_prune_task,
+-		    ap, TQ_SLEEP) == TASKQID_INVALID) {
+-			zfs_refcount_remove(&ap->p_refcnt, ap->p_pfunc);
+-			continue;
+-		}
+-		ARCSTAT_BUMP(arcstat_prune);
+-	}
+-	mutex_exit(&arc_prune_mtx);
+-}
+-
+ /* BEGIN CSTYLED */
+ ZFS_MODULE_PARAM(zfs_arc, zfs_arc_, shrinker_limit, INT, ZMOD_RW,
+ 	"Limit on number of pages that ARC shrinker can reclaim at once");
+--- sys/contrib/openzfs/module/os/linux/zfs/zpl_super.c.orig
++++ sys/contrib/openzfs/module/os/linux/zfs/zpl_super.c
+@@ -334,7 +334,7 @@
+ }
+ 
+ void
+-zpl_prune_sb(int64_t nr_to_scan, void *arg)
++zpl_prune_sb(uint64_t nr_to_scan, void *arg)
+ {
+ 	struct super_block *sb = (struct super_block *)arg;
+ 	int objects = 0;
+--- sys/contrib/openzfs/module/zfs/arc.c.orig
++++ sys/contrib/openzfs/module/zfs/arc.c
+@@ -868,6 +868,8 @@
+ static void l2arc_hdr_arcstats_update(arc_buf_hdr_t *hdr, boolean_t incr,
+     boolean_t state_only);
+ 
++static void arc_prune_async(uint64_t adjust);
++
+ #define	l2arc_hdr_arcstats_increment(hdr) \
+ 	l2arc_hdr_arcstats_update((hdr), B_TRUE, B_FALSE)
+ #define	l2arc_hdr_arcstats_decrement(hdr) \
+@@ -6521,6 +6523,56 @@
+ 	kmem_free(p, sizeof (*p));
+ }
+ 
++/*
++ * Helper function for arc_prune_async() it is responsible for safely
++ * handling the execution of a registered arc_prune_func_t.
++ */
++static void
++arc_prune_task(void *ptr)
++{
++	arc_prune_t *ap = (arc_prune_t *)ptr;
++	arc_prune_func_t *func = ap->p_pfunc;
++
++	if (func != NULL)
++		func(ap->p_adjust, ap->p_private);
++
++	zfs_refcount_remove(&ap->p_refcnt, func);
++}
++
++/*
++ * Notify registered consumers they must drop holds on a portion of the ARC
++ * buffers they reference.  This provides a mechanism to ensure the ARC can
++ * honor the metadata limit and reclaim otherwise pinned ARC buffers.
++ *
++ * This operation is performed asynchronously so it may be safely called
++ * in the context of the arc_reclaim_thread().  A reference is taken here
++ * for each registered arc_prune_t and the arc_prune_task() is responsible
++ * for releasing it once the registered arc_prune_func_t has completed.
++ */
++static void
++arc_prune_async(uint64_t adjust)
++{
++	arc_prune_t *ap;
++
++	mutex_enter(&arc_prune_mtx);
++	for (ap = list_head(&arc_prune_list); ap != NULL;
++	    ap = list_next(&arc_prune_list, ap)) {
++
++		if (zfs_refcount_count(&ap->p_refcnt) >= 2)
++			continue;
++
++		zfs_refcount_add(&ap->p_refcnt, ap->p_pfunc);
++		ap->p_adjust = adjust;
++		if (taskq_dispatch(arc_prune_taskq, arc_prune_task,
++		    ap, TQ_SLEEP) == TASKQID_INVALID) {
++			zfs_refcount_remove(&ap->p_refcnt, ap->p_pfunc);
++			continue;
++		}
++		ARCSTAT_BUMP(arcstat_prune);
++	}
++	mutex_exit(&arc_prune_mtx);
++}
++
+ /*
+  * Notify the arc that a block was freed, and thus will never be used again.
+  */
