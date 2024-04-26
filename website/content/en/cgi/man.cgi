@@ -818,6 +818,7 @@ $manPathDefault = 'FreeBSD 14.0-RELEASE and Ports';
 
     'Ubuntu 23.10 mantic', "$manLocalDir/Ubuntu-mantic-23.10/man:$manLocalDir/Ubuntu-mantic-23.10/misc",
 
+    'Ubuntu 24.04 noble', "$manLocalDir/Ubuntu-noble-24.04/man:$manLocalDir/Ubuntu-noble-24.04/misc",
     'Ubuntu 22.04 jammy', "$manLocalDir/Ubuntu-jammy-22.04/man:$manLocalDir/Ubuntu-jammy-22.04/misc",
     'Ubuntu 20.04 focal', "$manLocalDir/Ubuntu-focal-20.04/man:$manLocalDir/Ubuntu-focal-20.04/misc",
     'Ubuntu 18.04 bionic', "$manLocalDir/Ubuntu-bionic-18.04/man:$manLocalDir/Ubuntu-bionic-18.04/misc",
@@ -1070,7 +1071,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'redhat',     'Red Hat 9',
     'suse',       'SuSE 11.3',
     'debian',     'Debian 12.5.0',
-    'ubuntu',     'Ubuntu 22.04 jammy',
+    'ubuntu',     'Ubuntu 24.04 noble',
     'dragonfly',  'DragonFly 6.4.0',
     'centos',     'CentOS 7.9',
     'rocky',      'Rocky 9.3',
