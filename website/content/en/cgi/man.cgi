@@ -1999,34 +1999,154 @@ sub encode_attribute {
     $_;
 }
 
+sub escape_word {
+    my $word = shift;
+
+    return join( '', map { escape_char($_) } @$word );
+}
+
+sub escape_char {
+    my $c = shift;
+
+    return
+        $c eq '&'             ? "&amp;"
+      : $c eq '<'             ? "&lt;"
+      : $c eq '>'             ? "&gt;"
+      : $c eq '_BULLET_ITEM_' ? "&bull;"
+      :                         $c;
+}
+
+sub tag_ib {
+    my $tag  = shift;
+    my $word = shift;
+
+    my $data = escape_word($word);
+
+    return
+        $tag eq 'ib' ? "<i><b>$data</b></i>"
+      : $tag eq 'b'  ? "<b>$data</b>"
+      : $tag eq 'i'  ? "<i>$data</i>"
+      :                $data;
+}
+
 # encode unknown text data for using as HTML,
 # treats ^H as overstrike ala nroff.
 sub encode_data {
-    local ($_) = @_;
-    local ($str);
+    my $line = shift;
 
-    # Escape &, < and >
-    s,\010[><&],,g;
-    s/\&/\&amp\;/g;
-    s/\</\&lt\;/g;
-    s/\>/\&gt\;/g;
+    # optimize for speed: most lines have no special characters
+    if ($line !~ /[<>&\010]/) {
+      return $line;
+    }
 
-    # bold bullet
-    s,\+\010\+\010o\010o,<b>o</b>,g;
+    # work on a list of characters
+    my @l = split( '', $line );
 
-    # underline: _^H.^H(.)
-    s,((_\010[^_]\010.)+),($str = $1) =~ s/_\010..//g; "<I>$str</I>";,ge;
+    my $data = "";
+    my $flag = "";
+    my @word = ();
 
-    # italic:  _^H(.)
-    s,((_\010[^_])+),($str = $1) =~ s/.\010//g; "<i>$str</i>";,ge;
+    my $end_of_word = sub {
+        my $new_flag = shift;
 
-    # bold: .^H(.) 
-    s,(([^_]\010.)+),($str = $1) =~ s/.\010//g; "<b>$str</b>";,ge;
+        return if !scalar(@word);
 
-    # cleanup all the rest
-    s,.\010,,g;
+        # a tag ended, and a new started immediately
+        if ( $flag ne "" && $new_flag ne $flag ) {
+            $data .= tag_ib( $flag, \@word );
+            @word = ();
+        }
+    };
 
-    $_;
+    for ( my $i = 0 ; $i <= $#l ; $i++ ) {
+
+        # 7 characters: +^H+^Ho^Ho - bullet list
+        if (   $i <= ( $#l - 6 )
+            && $l[$i] eq "+"
+            && $l[ $i + 1 ] eq "\010"
+            && $l[ $i + 2 ] eq "+"
+            && $l[ $i + 3 ] eq "\010"
+            && $l[ $i + 4 ] eq "o"
+            && $l[ $i + 5 ] eq "\010"
+            && $l[ $i + 6 ] eq "o" )
+        {
+            push @word, '_BULLET_ITEM_';
+            $i += 6;
+            $flag = 'b';
+        }
+
+        # 2 characters: +^Ho - bullet list
+        elsif (   $i <= ( $#l - 2 )
+            && $l[$i] eq "+"
+            && $l[ $i + 1 ] eq "\010"
+            && $l[ $i + 2 ] eq "o" )
+        {
+            push @word, '_BULLET_ITEM_';
+            $i += 2;
+            $flag = 'b';
+        }
+
+        # 5 characters: _\010x\010x - bold and italic
+        elsif ($i <= ( $#l - 4 )
+            && $l[ $i + 1 ] eq "\010"
+            && $l[ $i + 3 ] eq "\010"
+            && $l[ $i + 2 ] eq $l[ $i + 4 ] )
+        {
+            $end_of_word->('ib');
+            push @word, $l[ $i + 2 ];
+            $i += 4;
+            $flag = 'ib';
+        }
+
+        # 3 characters: _\010 - bold or italic
+        elsif ( $i <= ( $#l - 2 ) && $l[ $i + 1 ] eq "\010" ) {
+
+            # bold
+            # take care of links with underlines, which are alwasy italic
+            if ( $l[$i] eq $l[ $i + 2 ] && $flag ne 'i' ) {
+                $end_of_word->('b');
+                push @word, $l[$i];
+                $i += 2;
+                $flag = 'b';
+
+                #printf STDERR 'B';
+            }
+
+            # italic
+            elsif ( $l[$i] eq "_" && $i + 2 <= $#l ) {
+                $end_of_word->('i');
+                push @word, $l[ $i + 2 ];
+                $i += 2;
+                $flag = 'i';
+
+                #printf STDERR 'I';
+            }
+        }
+
+        # other, one or two characters
+        else {
+            # italic/bold ends here
+            $end_of_word->('ANY');
+
+            # simple backslash
+            if ( $l[$i] eq "\010" ) {
+
+                # just ignore
+            }
+            elsif ( $i <= ( $#l - 1 ) && $l[ $i + 1 ] eq "\010" ) {
+                $i++;
+            }
+            else {
+                $data .= escape_char( $l[$i] );
+            }
+            $flag = "";
+        }
+    }
+
+    # last character
+    $end_of_word->('ANY');
+
+    return $data;
 }
 
 sub indexpage {
