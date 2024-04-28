@@ -1579,6 +1579,18 @@ sub manpath_without_ports {
     return join(":", @list);
 }
 
+# strip trailing dots, comma etc. from an URL
+sub url_strip {
+    my $url = shift;
+    my $part = shift;
+
+    if ($url =~ m/(.+)([,\.])$/) {
+       return ($1, $1, $2);
+    } else {
+       return ($url, $url, "");
+    }
+}
+
 sub man {
     local ( $name, $section, $arch ) = @_;
     local ( $_, $title, $head, *MAN );
@@ -1842,8 +1854,8 @@ s/([a-z0-9_\-\.]+\@[a-z0-9\-\.]+\.[a-z]+)/<a href="mailto:$1">$1<\/A>/gi;
         }
 
         # detect URLs in manpages
-        if (m,\b(ftp|http|https)://,) {
-            s,((ftp|http|https)://[^\s<>\)]+),<a href="$1">$1</a>,gi;
+        if (m,\b(http|https)://,) {
+            s|(https?://[^\s\)&<>'`";\]\[]+)|sprintf("<a href=\"%s\">%s</a>%s", &url_strip($1))|egi;
         }
 
         if (s%^(<b>.*?</b>)+\n?$% ($str = $1) =~ s,(<b>|</b>),,g; $str%ge) {
