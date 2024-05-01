@@ -1226,13 +1226,6 @@ $want_to_link_to_this_page = 1;
 &do_man( &env('SCRIPT_NAME'), &env('PATH_INFO'), &env('QUERY_STRING') )
   unless defined($main'plexus_configured);
 
-$enable_include_links = 0;
-$enable_mailto_links  = 0;
-
-my $enable_section_indexes = 0;
-my $enable_intro = 0;
-
-
 #
 # end of config
 #######################################################################################
@@ -1307,9 +1300,6 @@ sub do_man {
 
     return &faq_output($u)  if ( $path =~ /\/(faq|help)\.html$/ );
     return &get_the_sources if ( $path =~ /source$/ );
-
-    return &include_output($path)
-      if ( $enable_include_links && $path =~ m%^/usr/include/% && -f $path );
 
     return &indexpage if ( $form eq "" );
 
@@ -1835,22 +1825,10 @@ qq{Please try a <a href="$BASE?apropos=1&amp;manpath=freebsd-release-ports&amp;q
         }
 
         $_ = &encode_data($_);
-        if ( $enable_include_links
-            && m,(<b>)?\#include(</b>)?\s+(<b>)?\&lt\;(.*\.h)\&gt\;(</b>)?, )
-        {
-            $match = $4;
-            ( $regexp = $match ) =~ s/\./\\\./;
-            s,$regexp,\<a href=\"$BASE/usr/include/$match\"\>$match\</A\>,;
-        }
 
 	# detect references to other manual pages and set link
 	if (/^\s/) {  # skip man headers / first line
 	    s,((<[IB]>)?[\w\_\.\-]+(</[IB]>)?\(([1-9ln][a-zA-Z]*)\)),&mlnk($1),oige;
-        }
-
-        # detect E-Mail Addreses in manpages
-        if ( $enable_mailto_links && /\@/ ) {
-s/([a-z0-9_\-\.]+\@[a-z0-9\-\.]+\.[a-z]+)/<a href="mailto:$1">$1<\/A>/gi;
         }
 
         # detect URLs in manpages
@@ -2120,8 +2098,6 @@ sub encode_data {
                 push @word, $l[$i];
                 $i += 2;
                 $flag = 'b';
-
-                #printf STDERR 'B';
             }
 
             # italic
@@ -2130,8 +2106,6 @@ sub encode_data {
                 push @word, $l[ $i + 2 ];
                 $i += 2;
                 $flag = 'i';
-
-                #printf STDERR 'I';
             }
         }
 
@@ -2172,45 +2146,6 @@ sub indexpage {
     local ($m) = ( $manpath ? $manpath : $manPathDefault );
     $m = &encode_url($m);
 
-    if ($enable_section_indexes) {
-    print "<b><i>Section Indexes</i></b>:\n";
-    foreach ( '1', '2', '3', '4', '5', '6', '7', '8', '9', 'n' ) {
-        print qq{&#164; } if $_ ne '1';
-        print
-qq{<a href="$BASE?query=($_)&amp;sektion=&amp;apropos=1&amp;manpath=$m&amp;title=Section%20$_Index">$_</a>\n};
-    }
-    }
-
-    if ($enable_intro) {
-    print "<br /><b><i>Explanations of Man Sections:</i></b>\n";
-    foreach ( '1', '2', '3', '4', '5', '6', '7', '8', '9' ) {
-        print qq{&#164; } if $_ ne '1';
-        print
-qq{<a href="$BASE?query=intro&amp;sektion=$_&amp;apropos=0&amp;manpath=$m&amp;title=Introduction%20Section%20$_">intro($_)</a>\n};
-    }
-    }
-
-    if (0) {
-        print "<br />\n<b><i>Quick Reference Categories:</i></b>\n";
-        foreach (
-            'database', 'disk',   'driver', 'ethernet',  'mail',
-            'net',      'nfs',    'nis',    'protocol',  'ppp',
-            'roff',     'string', 'scsi',   'statistic', 'tcl',
-            'tcp',      'time'
-          )
-        {
-            print
-qq{&#164; <a href="$BASE?query=$_&amp;sektion=&amp;apropos=1&amp;manpath=$m&amp;title=Quick%20Ref%20$_">$_</a>\n};
-        }
-    }
-
-    print <<ETX if 0 && $mailto;
-URL:  <a href="$BASE" target="_parent">$www{'home'}$BASE</a><br />
-ETX
-
-    if ($enable_section_indexes || $enable_intro) {
-        print "<br />\n";
-    }
     &html_footer( 'no_home_link' => 1, 'no_help_link' => 1 );
 }
 
