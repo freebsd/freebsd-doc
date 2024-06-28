@@ -56,7 +56,7 @@ $i_topbar = qq`
 
             <div id="headerlogoleft">
               <a href="$hsty_base" title="FreeBSD"><img
-              src="$hsty_base/layout/images/logo-red.png" width="457"
+              src="$hsty_base/layout/images/banner-red.png" width="457"
               height="75" alt="FreeBSD" /></a>
             </div>
 
