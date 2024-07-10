@@ -730,7 +730,7 @@ $manPathDefault = 'FreeBSD 14.1-RELEASE and Ports';
     'Red Hat 7.2', "$manLocalDir/RedHat-7.2-i386",
     'Red Hat 7.3', "$manLocalDir/RedHat-7.3-i386",
     'Red Hat 8.0', "$manLocalDir/RedHat-8.0-i386",
-    'Red Hat 9',   "$manLocalDir/RedHat-9-i386",
+    'Red Hat 9.0', "$manLocalDir/RedHat-9.0-i386",
 
     'CentOS 3.9', "$manLocalDir/CentOS-3.9",
     'CentOS 4.8', "$manLocalDir/CentOS-4.8",
