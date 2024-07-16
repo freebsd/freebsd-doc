@@ -185,7 +185,9 @@ That is, each [.filename]#rc.d# script _must_ set `name` before it calls man:rc.
 
 Now it is the right time to choose a unique name for our script once and for all.
 We will use it in a number of places while developing the script.
-For a start, let us give the same name to the script file, too.
+The content of the name variable needs to match the script name,
+some parts of FreeBSD (e.g. <<rcng-service-jails, service jails>> and the cpuset feature of the rc framework) depend upon this.
+As such the filename shall also not contain characters which may be troublesome in scripting (e.g. do not use a hyphen "-" and others).
 
 [NOTE]
 ====
@@ -905,6 +907,107 @@ run_rc_command "$1"
 ....
 
 &#10122; The disabling needs to happen after the ``load_rc_config`` call, else a man:rc.conf[5] setting may override it.
+
+[[rcng-instancing]]
+== Advanced rc-scripting: Instancing
+
+Sometimes it is useful to run several instances of a service.
+Typically you want ot be able to start/stop such instances independently,
+and you want to have a separate config file for each instance.
+Each instance should be started at boot,
+survive updates,
+and benefit from updates.
+
+Here is an example of a rc script which supports this:
+
+[.programlisting]
+....
+#!/bin/sh
+
+#
+# PROVIDE: dummy
+# REQUIRE: NETWORKING SERVERS
+# KEYWORD: shutdown
+#
+# Add these following line to /etc/rc.conf.local or /etc/rc.conf
+# to enable this service:
+#
+# dummy_enable (bool):	Set it to YES to enable dummy on startup.
+#			Default: NO
+# dummy_user (string):	User account to run with.
+#			Default: www
+#
+
+. /etc/rc.subr
+
+case $0 in <.>
+/etc/rc*)
+	# during boot (shutdown) $0 is /etc/rc (/etc/rc.shutdown),
+	# so get the name of the script from $_file
+	name=$_file
+	;;
+*)
+	name=$0
+	;;
+esac
+ 
+name=${name##*/} <.>
+rcvar="${name}_enable" <.>
+desc="Short description of this service"
+command="/usr/local/sbin/dummy"
+
+load_rc_config "$name"
+ 
+eval "${rcvar}=\${${rcvar}:-'NO'}" <.>
+eval "${name}_svcj_options=\${${name}_svcj_options:-'net_basic'}" <.>
+eval "_dummy_user=\${${name}_user:-'www'}" <.>
+
+_dummy_configname=/usr/local/etc/${name}.cfg <.>
+pidfile=/var/run/dummy/${name}.pid
+required_files ${_dummy_configname}
+command_args="-u ${_dummy_user} -c ${_dummy_configfile} -p ${pidfile}"
+
+run_rc_command "$1"
+....
+
+&#10122; and &#10123; make sure to set the name variable to the man:basename[1] of the script name.
+If the filename is [.filename]#/usr/local/etc/rc.d/dummy#,
+name is set to [.filename]#dummy#.
+This way changing the filename of the rc script changes automatically the content of the name variable.
+
+&#10124; specifies the variable name which is used in [.filename]#rc.conf# to enable this service based upon the filename of this script.
+In this example this resolves to dummy_enable.
+
+&#10125; makes sure the default for the _enable variable is NO.
+
+&#10126; is an example of having some defaults for service specific framework variables,
+in this case the service jails options.
+
+&#10127; and &#10128; set variables internal to the script (pay attention to the underscore in front of _dummy_user to make it different from dummy_user which can be set in [.filename]#rc.conf#).
+
+The part in &#10126; is for variables which are not used inside the script itself but in the rc framework.
+All the variables which are used as parameters somewhere in the script are assigned to a generic variable like in &#10128; to make it more easy to reference them (no need to eval them at each place of use).
+
+This script will now behave differently if the start script has a different name.
+This allows to creaty symlinks to it:
+
+[source,shell]
+....
+# ln -s dummy /usr/local/etc/rc.d/dummy_foo
+# sysrc dummy_foo_enable=YES
+# service dummy_foo start
+....
+
+The above creates an instance of the dummy service with the name dummy_foo.
+It does not use the config file [.filename]#/usr/local/etc/dummy.cfg# but the config file [.filename]#/usr/local/etc/dummy_foo.cfg# (&#10128;),
+and it uses the PID file [.filename]#/var/run/dummy/dummy_foo.pid# instead of [.filename]#/var/run/dummy/dummy.pid#.
+
+The services dummy and dummy_foo can be managend indepently of each other,
+while having the start script update itself on package update (due to the symlink).
+This does not update the REQUIRE line,
+as such there is no easy way of depending on a specific instance.
+To depend upon a specific instance in the startup order a copy needs to be made instead of using a symlink.
+This prevents the automatic pick-up of changes to the start script when an update is installed.
 
 [[rcng-furthur]]
 == Further reading
