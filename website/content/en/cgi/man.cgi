@@ -2287,7 +2287,7 @@ Copyright (c) for manual pages by OS vendors:
 <a href="https://en.wikipedia.org/wiki/History_of_the_Berkeley_Software_Distribution">2.11 BSD</a>,
 <a href="https://www.apple.com">Apple</a>,
 <a href="https://www.centos.org">CentOS</a>,
-<a href="https://www.dell.comm">Dell</a>,
+<a href="https://www.dell.com">Dell</a>,
 <a href="https://www.debian.org">Debian</a>,
 <a href="https://www.dragonflybsd.org">DragonFly BSD</a>,
 <a href="https://www.freebsd.org">FreeBSD</a>,
