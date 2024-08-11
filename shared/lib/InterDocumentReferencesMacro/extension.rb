@@ -5,30 +5,36 @@ include ::Asciidoctor
 class InterDocumentReferencesMacro < Asciidoctor::Extensions::InlineMacroProcessor
   use_dsl
 
+  # Macro to handle cross references to different files in the same book.
   named :crossref
-  name_positional_attributes 'attributes'
 
   def process parent, target, attrs
-    destination = target
     anchor = attrs[1]
     text = attrs[2]
 
     doc = parent.document
 
-    if doc.attributes['book'] == "true"
-      if doc.attributes['isonline'] == "1"
-        (create_anchor parent, text, type: :link, target: %(./##{anchor})).render
+    if doc.backend == 'html5'
+      if doc.attributes['book'] == "true"
+        if doc.attributes['isonline'] == "1"
+          (create_anchor parent, text, type: :link, target: %(./##{anchor})).render
+        else
+          (create_anchor parent, text, type: :link, target: %(./index.html##{anchor})).render
+        end
       else
-        (create_anchor parent, text, type: :link, target: %(./index.html##{anchor})).render
+        if doc.attributes['isonline'] == "1"
+          (create_anchor parent, text, type: :link, target: %(../#{target}/##{anchor})).render
+        else
+          (create_anchor parent, text, type: :link, target: %(../#{target}/index.html##{anchor})).render
+        end
       end
     else
-      if doc.attributes['isonline'] == "1"
-        (create_anchor parent, text, type: :link, target: %(../#{destination}/##{anchor})).render
-      else
-        (create_anchor parent, text, type: :link, target: %(../#{destination}/index.html##{anchor})).render
-      end
+      xref_attrs = { 'refid' => anchor }
+      xref_node = create_anchor parent, text, type: :xref, target: target, attributes: xref_attrs
+      # Return the node
+      xref_node
     end
+  end # process
 
-  end
-end
+end # class
 
