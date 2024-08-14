@@ -351,7 +351,7 @@ sub search_ports {
         $text = $a[3];                         #$text =~ s/(\W)/\\$1/g;
 
         if ( $section ne "all" ) {
-            next if $a[6] !~ /^$section(\s|$)/;
+            next if $a[6] !~ /\b$section\b/;
         }
 
         #warn "$stype:$query: $name $text\n";
