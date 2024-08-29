@@ -263,6 +263,14 @@ $sectionpath = {
     'SuSE 11.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
     'SuSE 11.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
     'SuSE 11.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+
+    'OpenSuse 10.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'OpenSuse 10.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'OpenSuse 11.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'OpenSuse 11.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'OpenSuse 11.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'OpenSuse 11.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'OpenSuse 11.4' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
 };
 
 foreach my $os ( keys %$sectionpath ) {
@@ -806,6 +814,14 @@ $manPathDefault = 'FreeBSD 14.1-RELEASE and Ports';
     'SuSE 11.3', "$manLocalDir/SuSE-11.3",
 
     'SuSE ES 10 SP1', "$manLocalDir/SLES-10-SP1-i386",
+
+    'OpenSuse 10.2', "$manLocalDir/OpenSuse-10.2",
+    'OpenSuse 10.3', "$manLocalDir/OpenSuse-10.3",
+    #'OpenSuse 11.0', "$manLocalDir/OpenSuse-11.0",
+    #'OpenSuse 11.1', "$manLocalDir/OpenSuse-11.1",
+    'OpenSuse 11.2', "$manLocalDir/OpenSuse-11.2",
+    'OpenSuse 11.3', "$manLocalDir/OpenSuse-11.3",
+    'OpenSuse 11.4', "$manLocalDir/OpenSuse-11.4",
 
     'Debian 2.0.0', "$manLocalDir/Debian-2.0r0/man:$manLocalDir/Debian-2.0r0/misc",
     'Debian 2.2.7', "$manLocalDir/Debian-2.2r7/man:$manLocalDir/Debian-2.2r7/misc",
@@ -2304,6 +2320,7 @@ Copyright (c) for manual pages by OS vendors:
 <a href="https://9p.io/plan9/">Plan 9</a>,
 <a href="https://en.wikipedia.org/wiki/Rhapsody_(operating_system)">Rhapsody</a>,
 <a href="https://www.oracle.com/solaris/technologies/">SunOS</a>,
+<a href="https://www.opensuse.org">OpenSuse</a>,
 <a href="https://rockylinux.org/">Rocky</a>,
 <a href="https://www.suse.com">SuSE</a>,
 <a href="https://ubuntu.com">Ubuntu</a>,
