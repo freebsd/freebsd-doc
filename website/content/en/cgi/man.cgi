@@ -2382,7 +2382,7 @@ to make a link to this script to the right OS version.
 
 <p>
 You may download the manual pages as gzip'd tar archive for private or educational purposes.
-A tarball is normally 5-25 MB in size.
+A tarball is normally 15-50 MB in size, but can be up to 350 MB for FreeBSD ports.
 </p>
 
 <ul>
