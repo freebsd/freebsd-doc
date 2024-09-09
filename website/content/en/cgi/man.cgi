@@ -263,6 +263,29 @@ $sectionpath = {
     'SuSE 11.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
     'SuSE 11.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
     'SuSE 11.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+
+    'openSUSE 10.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 10.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 11.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 11.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 11.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 11.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 11.4' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 12.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 12.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 12.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 13.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 13.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 42.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 42.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 42.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 15.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 15.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 15.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 15.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 15.4' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 15.5' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 15.6' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
 };
 
 foreach my $os ( keys %$sectionpath ) {
@@ -807,6 +830,26 @@ $manPathDefault = 'FreeBSD 14.1-RELEASE and Ports';
 
     'SuSE ES 10 SP1', "$manLocalDir/SLES-10-SP1-i386",
 
+    'openSUSE 10.2', "$manLocalDir/openSUSE-10.2",
+    'openSUSE 10.3', "$manLocalDir/openSUSE-10.3",
+    #'openSUSE 11.0', "$manLocalDir/openSUSE-11.0",
+    #'openSUSE 11.1', "$manLocalDir/openSUSE-11.1",
+    'openSUSE 11.2', "$manLocalDir/openSUSE-11.2",
+    'openSUSE 11.3', "$manLocalDir/openSUSE-11.3",
+    'openSUSE 11.4', "$manLocalDir/openSUSE-11.4",
+    'openSUSE 13.1', "$manLocalDir/openSUSE-13.1",
+    'openSUSE 13.2', "$manLocalDir/openSUSE-13.2",
+    'openSUSE 42.1', "$manLocalDir/openSUSE-42.1",
+    'openSUSE 42.2', "$manLocalDir/openSUSE-42.2",
+    'openSUSE 42.3', "$manLocalDir/openSUSE-42.3",
+    'openSUSE 15.0', "$manLocalDir/openSUSE-15.0",
+    'openSUSE 15.1', "$manLocalDir/openSUSE-15.1",
+    'openSUSE 15.2', "$manLocalDir/openSUSE-15.2",
+    'openSUSE 15.3', "$manLocalDir/openSUSE-15.3-3",
+    'openSUSE 15.4', "$manLocalDir/openSUSE-15.4",
+    'openSUSE 15.5', "$manLocalDir/openSUSE-15.5",
+    'openSUSE 15.6', "$manLocalDir/openSUSE-15.6",
+
     'Debian 2.0.0', "$manLocalDir/Debian-2.0r0/man:$manLocalDir/Debian-2.0r0/misc",
     'Debian 2.2.7', "$manLocalDir/Debian-2.2r7/man:$manLocalDir/Debian-2.2r7/misc",
     'Debian 3.1.8', "$manLocalDir/Debian-31r8/man:$manLocalDir/Debian-31r8/misc",
@@ -1090,6 +1133,7 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'netbsd',        'NetBSD 10.0',
     'openbsd',       'OpenBSD 7.5',
+    'opensuse',      'openSUSE 15.6',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
     'x11',           'X11R7.4',
@@ -2304,6 +2348,7 @@ Copyright (c) for manual pages by OS vendors:
 <a href="https://9p.io/plan9/">Plan 9</a>,
 <a href="https://en.wikipedia.org/wiki/Rhapsody_(operating_system)">Rhapsody</a>,
 <a href="https://www.oracle.com/solaris/technologies/">SunOS</a>,
+<a href="https://www.opensuse.org">openSUSE</a>,
 <a href="https://rockylinux.org/">Rocky</a>,
 <a href="https://www.suse.com">SuSE</a>,
 <a href="https://ubuntu.com">Ubuntu</a>,
@@ -2337,7 +2382,7 @@ to make a link to this script to the right OS version.
 
 <p>
 You may download the manual pages as gzip'd tar archive for private or educational purposes.
-A tarball is normally 5-25 MB in size.
+A tarball is normally 15-50 MB in size, but can be up to 350 MB for FreeBSD ports.
 </p>
 
 <ul>
