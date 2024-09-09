@@ -1589,7 +1589,7 @@ sub apropos {
     if ( !$acounter ) {
         print "Sorry, no data found for `$query'.\n";
         print qq{You may look for other }
-          . qq{<a href="../../search/">FreeBSD Search Services</a>.<br/><br/>\n};
+          . qq{<a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>.<br/><br/>\n};
     }
     &html_footer;
 }
@@ -1800,7 +1800,7 @@ sub man {
         print
 qq{Please try a <a href="$BASE?apropos=1&amp;manpath=freebsd-release-ports&amp;query=$html_name">keyword search</a>.\n};
         print qq{<p>You may look for other }
-          . qq{<a href="../../search/">FreeBSD Search Services</a>.</p>\n};
+          . qq{<a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>.</p>\n};
         &html_footer;
         return;
     }
