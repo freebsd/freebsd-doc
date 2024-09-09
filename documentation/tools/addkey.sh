@@ -73,19 +73,20 @@ if [ $# -ne 0 ] ; then
 		case $(expr "${arg}" : '^[0-9A-Fa-f]\{8,16\}$') in
 		8)
 			warning "${arg}: recommend using 16-digit keyid"
-			;&
+			;;
 		16)
-			keyid=$(getkeybyid "${arg}")
-			if [ -n "${keyid}" ] ; then
-				keyids="${keyids} ${keyid}"
-			else
-				warning "${arg} not found"
-			fi
 			;;
 		*)
 			warning "${arg} does not appear to be a valid key ID"
+			continue
 			;;
 		esac
+		keyid=$(getkeybyid "${arg}")
+		if [ -n "${keyid}" ] ; then
+			keyids="${keyids} ${keyid}"
+		else
+			warning "${arg} not found"
+		fi
 	done
 else
 	# Search for keys by freebsd.org email
