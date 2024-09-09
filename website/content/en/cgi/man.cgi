@@ -2372,6 +2372,14 @@ Copyright (c) for manual pages by OS vendors:
 <li>socket(2) manpage: <a href="$full_url?socket(2)">$full_url?socket(2)</a></li>
 </ul>
 
+<h2>Updates</h2>
+<p>
+The FreeBSD stable/NN, current, and ports manual pages are updated 
+every 3 months, usually around the time a new FreeBSD version is released.
+</p>
+<p>
+Other operating system manual pages are updated as needed.
+</p>
 
 <h2>Release Permalinks and tarballs</h2>
 
