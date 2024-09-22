@@ -316,6 +316,8 @@ $manPathDefault = 'FreeBSD 14.1-RELEASE and Ports';
     'FreeBSD 14.0-RELEASE and Ports',
 "$manLocalDir/FreeBSD-14.0-RELEASE/man:$manLocalDir/FreeBSD-14.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-14.0-RELEASE/man:$manLocalDir/FreeBSD-ports-14.0-RELEASE/misc",
 
+    'FreeBSD 13.4-RELEASE and Ports',
+"$manLocalDir/FreeBSD-13.4-RELEASE/man:$manLocalDir/FreeBSD-13.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-13.4-RELEASE/man:$manLocalDir/FreeBSD-ports-13.4-RELEASE/misc",
     'FreeBSD 13.3-RELEASE and Ports',
 "$manLocalDir/FreeBSD-13.3-RELEASE/man:$manLocalDir/FreeBSD-13.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-13.3-RELEASE/man:$manLocalDir/FreeBSD-ports-13.3-RELEASE/misc",
     'FreeBSD 13.2-RELEASE and Ports',
@@ -390,8 +392,10 @@ $manPathDefault = 'FreeBSD 14.1-RELEASE and Ports';
     'FreeBSD 14.0-RELEASE',
 "$manLocalDir/FreeBSD-14.0-RELEASE/man:$manLocalDir/FreeBSD-14.0-RELEASE/openssl/man",
 
-    'FreeBSD 13.3-STABLE',
-"$manLocalDir/FreeBSD-13.3-STABLE/man:$manLocalDir/FreeBSD-13.3-STABLE/openssl/man",
+    'FreeBSD 13.4-STABLE',
+"$manLocalDir/FreeBSD-13.4-STABLE/man:$manLocalDir/FreeBSD-13.4-STABLE/openssl/man",
+    'FreeBSD 13.4-RELEASE',
+"$manLocalDir/FreeBSD-13.4-RELEASE/man:$manLocalDir/FreeBSD-13.4-RELEASE/openssl/man",
     'FreeBSD 13.3-RELEASE',
 "$manLocalDir/FreeBSD-13.3-RELEASE/man:$manLocalDir/FreeBSD-13.3-RELEASE/openssl/man",
     'FreeBSD 13.2-RELEASE',
@@ -514,6 +518,7 @@ $manPathDefault = 'FreeBSD 14.1-RELEASE and Ports';
     'FreeBSD Ports 13.1', "$manLocalDir/FreeBSD-ports-13.1-RELEASE/man:$manLocalDir/FreeBSD-ports-13.1-RELEASE/misc",
     'FreeBSD Ports 13.2', "$manLocalDir/FreeBSD-ports-13.2-RELEASE/man:$manLocalDir/FreeBSD-ports-13.2-RELEASE/misc",
     'FreeBSD Ports 13.3', "$manLocalDir/FreeBSD-ports-13.3-RELEASE/man:$manLocalDir/FreeBSD-ports-13.3-RELEASE/misc",
+    'FreeBSD Ports 13.4', "$manLocalDir/FreeBSD-ports-13.4-RELEASE/man:$manLocalDir/FreeBSD-ports-13.4-RELEASE/misc",
     'FreeBSD Ports 14.0', "$manLocalDir/FreeBSD-ports-14.0-RELEASE/man:$manLocalDir/FreeBSD-ports-14.0-RELEASE/misc",
     'FreeBSD Ports 14.1', "$manLocalDir/FreeBSD-ports-14.1-RELEASE/man:$manLocalDir/FreeBSD-ports-14.1-RELEASE/misc",
 
@@ -908,6 +913,7 @@ $manPathDefault = 'FreeBSD 14.1-RELEASE and Ports';
     # alias SunOS 0.4, apparently released in April 1983 based on 4.2BSD beta
     'Sun UNIX 0.4', "$manLocalDir/Sun-UNIX-0.4",
 
+    'macOS 15.0',   "$manLocalDir/macOS-15.0/man:$manLocalDir/macOS-15.0/developer-man:$manLocalDir/macOS-15.0/developer-platform-sdk-man:$manLocalDir/macOS-15.0/xctoolchain-man",  
     'macOS 14.3.1', "$manLocalDir/macOS-14.3.1/man:$manLocalDir/macOS-14.3.1/developer-man:$manLocalDir/macOS-14.3.1/developer-platform-man:$manLocalDir/macOS-14.3.1/developer-platform-sdk-man:$manLocalDir/macOS-14.3.1/xctoolchain-man",  
     'macOS 13.6.5', "$manLocalDir/macOS-13.6.5/man:$manLocalDir/macOS-13.6.5/developer-man:$manLocalDir/macOS-13.6.5/developer-platform-man:$manLocalDir/macOS-13.6.5/developer-platform-sdk-man:$manLocalDir/macOS-13.6.5/xctoolchain-man",  
     'macOS 12.7.3', "$manLocalDir/macOS-12.7.3/man:$manLocalDir/macOS-12.7.3/developer-man:$manLocalDir/macOS-12.7.3/developer-platform-man:$manLocalDir/macOS-12.7.3/developer-platform-sdk-man:$manLocalDir/macOS-12.7.3/xctoolchain-man",
@@ -1112,7 +1118,7 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'freebsd-stable',   'FreeBSD 14.1-STABLE',
     'freebsd-stable14', 'FreeBSD 14.1-STABLE',
-    'freebsd-stable13', 'FreeBSD 13.3-STABLE',
+    'freebsd-stable13', 'FreeBSD 13.4-STABLE',
 
     'freebsd-current',       'FreeBSD 15.0-CURRENT',
     'freebsd-release-ports', 'FreeBSD 14.1-RELEASE and Ports',
@@ -1145,7 +1151,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'sunos5',        'SunOS 5.10',
     'sunos4',        'SunOS 4.1.3',
     'sunos',         'SunOS 4.1.3',
-    'macos',         'macOS 14.3.1',
+    'macos',         'macOS 15.0',
     'plan9',         'Plan 9',
     'osf1',          'OSF1 V5.1/alpha',
     'true64',        'OSF1 V5.1/alpha',
@@ -1589,7 +1595,7 @@ sub apropos {
     if ( !$acounter ) {
         print "Sorry, no data found for `$query'.\n";
         print qq{You may look for other }
-          . qq{<a href="../../search/">FreeBSD Search Services</a>.<br/><br/>\n};
+          . qq{<a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>.<br/><br/>\n};
     }
     &html_footer;
 }
@@ -1800,7 +1806,7 @@ sub man {
         print
 qq{Please try a <a href="$BASE?apropos=1&amp;manpath=freebsd-release-ports&amp;query=$html_name">keyword search</a>.\n};
         print qq{<p>You may look for other }
-          . qq{<a href="../../search/">FreeBSD Search Services</a>.</p>\n};
+          . qq{<a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>.</p>\n};
         &html_footer;
         return;
     }
@@ -2372,6 +2378,14 @@ Copyright (c) for manual pages by OS vendors:
 <li>socket(2) manpage: <a href="$full_url?socket(2)">$full_url?socket(2)</a></li>
 </ul>
 
+<h2>Updates</h2>
+<p>
+The FreeBSD stable/NN, current, and ports manual pages are updated 
+every 3 months, usually around the time a new FreeBSD version is released.
+</p>
+<p>
+Other operating system manual pages are updated as needed.
+</p>
 
 <h2>Release Permalinks and tarballs</h2>
 
