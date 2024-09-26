@@ -12,6 +12,10 @@ class InterDocumentReferencesMacro < Asciidoctor::Extensions::InlineMacroProcess
     anchor = attrs[1]
     text = attrs[2]
 
+    if text.nil? || text.empty?
+      warn "Crossref '#{anchor}' needs a description."
+    end
+
     doc = parent.document
 
     if doc.backend == 'html5'

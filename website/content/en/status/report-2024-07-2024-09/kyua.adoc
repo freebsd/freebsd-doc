@@ -1,0 +1,40 @@
+=== Kyua Jail Support
+
+Contact: Igor Ostapenko <igoro@FreeBSD.org>
+
+The FreeBSD test suite is executed by the man:kyua[1] utility.
+Kyua supports parallel execution of tests with `kyua -v parallelism=<n> test`, however many network tests leverage man:jail[8] features like man:VNET[9] and have conflicts with jail naming and network configuration.
+As a result they are marked with the `is_exclusive=true` metadata property to prevent them from running at the same time and interfering with each other.
+It creates a dilemma when a project aims to increase test coverage, but the accumulation of exclusive tests proportionally increases the time required to run them.
+This, in turn, affects the development process from multiple angles.
+
+Kyua has recently got a change in 15-CURRENT to support a new concept called "execution environment".
+By default, tests run in the so-called "host" execution environment, where they are executed as before.
+A test can opt-in to use a brand new execution environment, the "jail" one.
+In this case, kyua creates a jail before running the test, and then executes the test within the jail.
+That opens up the opportunity to run more tests in parallel due to the extra isolation provided by the jail concept itself, and specifically by the VNET.
+It depends on hardware and configuration, but there are reports that having the same environment [.filename]#netpfil/pf# tests can be run around 4 times faster -- a few minutes instead of half an hour.
+
+The following Makefile change is a quick demo of how [.filename]#netpfil/pf# tests were switched to run in parallel with jail execution environment:
+
+  -# Tests reuse jail names and so cannot run in parallel.
+  -TEST_METADATA+=        is_exclusive=true
+  +# Allow tests to run in parallel in their own jails
+  +TEST_METADATA+= execenv="jail"
+  +TEST_METADATA+= execenv_jail_params="vnet allow.raw_sockets"
+
+More details:
+
+* The key commit with detailed description: link:https://cgit.freebsd.org/src/commit/?id=257e70f1d5ee61037c8c59b116538d3b6b1427a2[257e70f1d5ee61037c8c59b116538d3b6b1427a2]
+* The man pages covering the "execenv" feature: man:kyuafile[5], man:kyua.conf[5]
+
+This change also brings new sysctl read-only variables, which expose more details about current jail, and may be generally useful:
+
+* `security.jail.children.max: Maximum number of child jails`
+* `security.jail.children.cur: Current number of child jails`
+
+A hint: the `sysctl -n security.jail.children.cur` run from `prison0` provides the number of all jails in the system.
+
+Further improvements to Kyua, such as requirements definition and automatic resolution, are currently in the design phase.
+Potentially new metadata properties like `required_klds` and `required_pkgs` provide a clue to these topics.
+Please contact Igor to discuss ideas and use cases that can help shape these upcoming Kyua enhancements.
