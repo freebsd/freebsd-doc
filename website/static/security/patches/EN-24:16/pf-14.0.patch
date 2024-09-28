@@ -1,0 +1,486 @@
+--- sys/net/pfvar.h.orig
++++ sys/net/pfvar.h
+@@ -359,8 +359,8 @@
+ 		mtx_unlock(_s->lock);					\
+ 	} while (0)
+ #else
+-#define	PF_STATE_LOCK(s)	mtx_lock(s->lock)
+-#define	PF_STATE_UNLOCK(s)	mtx_unlock(s->lock)
++#define	PF_STATE_LOCK(s)	mtx_lock((s)->lock)
++#define	PF_STATE_UNLOCK(s)	mtx_unlock((s)->lock)
+ #endif
+ 
+ #ifdef INVARIANTS
+@@ -2482,8 +2482,8 @@
+ 			    struct pf_addr *, struct pf_addr *,
+ 			    uint16_t, uint16_t, struct pf_kanchor_stackframe *);
+ 
+-struct pf_state_key	*pf_state_key_setup(struct pf_pdesc *, struct pf_addr *,
+-			    struct pf_addr *, u_int16_t, u_int16_t);
++struct pf_state_key	*pf_state_key_setup(struct pf_pdesc *, struct mbuf *, int,
++			    struct pf_addr *, struct pf_addr *, u_int16_t, u_int16_t);
+ struct pf_state_key	*pf_state_key_clone(struct pf_state_key *);
+ void			 pf_rule_to_actions(struct pf_krule *,
+ 			    struct pf_rule_actions *);
+--- sys/netpfil/pf/pf.c.orig
++++ sys/netpfil/pf/pf.c
+@@ -292,6 +292,9 @@
+ 			    u_int16_t, u_int16_t, int *, struct pfi_kkif *,
+ 			    struct pf_kstate **, int, u_int16_t, u_int16_t,
+ 			    int, struct pf_krule_slist *);
++static int		 pf_state_key_addr_setup(struct pf_pdesc *, struct mbuf *,
++			    int, struct pf_state_key_cmp *, int, struct pf_addr *,
++			    int, struct pf_addr *, int);
+ static int		 pf_test_fragment(struct pf_krule **, struct pfi_kkif *,
+ 			    struct mbuf *, void *, struct pf_pdesc *,
+ 			    struct pf_krule **, struct pf_kruleset **);
+@@ -308,8 +311,8 @@
+ 			    void *, struct pf_pdesc *);
+ int			 pf_icmp_state_lookup(struct pf_state_key_cmp *,
+ 			    struct pf_pdesc *, struct pf_kstate **, struct mbuf *,
+-			    int, struct pfi_kkif *, u_int16_t, u_int16_t,
+-			    int, int *, int);
++			    int, int, struct pfi_kkif *, u_int16_t, u_int16_t,
++			    int, int *, int, int);
+ static int		 pf_test_state_icmp(struct pf_kstate **,
+ 			    struct pfi_kkif *, struct mbuf *, int,
+ 			    void *, struct pf_pdesc *, u_short *);
+@@ -359,7 +362,7 @@
+ 
+ VNET_DEFINE(struct pf_limit, pf_limits[PF_LIMIT_MAX]);
+ 
+-enum { PF_ICMP_MULTI_NONE, PF_ICMP_MULTI_SOLICITED, PF_ICMP_MULTI_LINK };
++enum { PF_ICMP_MULTI_NONE, PF_ICMP_MULTI_LINK };
+ 
+ #define	PACKET_UNDO_NAT(_m, _pd, _off, _s)		\
+ 	do {								\
+@@ -1418,9 +1421,66 @@
+ 	return (0);
+ }
+ 
++static int
++pf_state_key_addr_setup(struct pf_pdesc *pd, struct mbuf *m, int off,
++    struct pf_state_key_cmp *key, int sidx, struct pf_addr *saddr,
++    int didx, struct pf_addr *daddr, int multi)
++{
++#ifdef INET6
++	struct nd_neighbor_solicit nd;
++	struct pf_addr *target;
++	u_short action, reason;
++
++	if (pd->af == AF_INET || pd->proto != IPPROTO_ICMPV6)
++		goto copy;
++
++	switch (pd->hdr.icmp6.icmp6_type) {
++	case ND_NEIGHBOR_SOLICIT:
++		if (multi)
++			return (-1);
++		if (!pf_pull_hdr(m, off, &nd, sizeof(nd), &action, &reason, pd->af))
++			return (-1);
++		target = (struct pf_addr *)&nd.nd_ns_target;
++		daddr = target;
++		break;
++	case ND_NEIGHBOR_ADVERT:
++		if (multi)
++			return (-1);
++		if (!pf_pull_hdr(m, off, &nd, sizeof(nd), &action, &reason, pd->af))
++			return (-1);
++		target = (struct pf_addr *)&nd.nd_ns_target;
++		saddr = target;
++		if (IN6_IS_ADDR_MULTICAST(&pd->dst->v6)) {
++			key->addr[didx].addr32[0] = 0;
++			key->addr[didx].addr32[1] = 0;
++			key->addr[didx].addr32[2] = 0;
++			key->addr[didx].addr32[3] = 0;
++			daddr = NULL; /* overwritten */
++		}
++		break;
++	default:
++		if (multi == PF_ICMP_MULTI_LINK) {
++			key->addr[sidx].addr32[0] = IPV6_ADDR_INT32_MLL;
++			key->addr[sidx].addr32[1] = 0;
++			key->addr[sidx].addr32[2] = 0;
++			key->addr[sidx].addr32[3] = IPV6_ADDR_INT32_ONE;
++			saddr = NULL; /* overwritten */
++		}
++	}
++copy:
++#endif
++	if (saddr)
++		PF_ACPY(&key->addr[sidx], saddr, pd->af);
++	if (daddr)
++		PF_ACPY(&key->addr[didx], daddr, pd->af);
++
++	return (0);
++}
++
+ struct pf_state_key *
+-pf_state_key_setup(struct pf_pdesc *pd, struct pf_addr *saddr,
+-	struct pf_addr *daddr, u_int16_t sport, u_int16_t dport)
++pf_state_key_setup(struct pf_pdesc *pd, struct mbuf *m, int off,
++    struct pf_addr *saddr, struct pf_addr *daddr, u_int16_t sport,
++    u_int16_t dport)
+ {
+ 	struct pf_state_key *sk;
+ 
+@@ -1428,8 +1488,12 @@
+ 	if (sk == NULL)
+ 		return (NULL);
+ 
+-	PF_ACPY(&sk->addr[pd->sidx], saddr, pd->af);
+-	PF_ACPY(&sk->addr[pd->didx], daddr, pd->af);
++	if (pf_state_key_addr_setup(pd, m, off, (struct pf_state_key_cmp *)sk,
++	    pd->sidx, pd->src, pd->didx, pd->dst, 0)) {
++		uma_zfree(V_pf_state_key_z, sk);
++		return (NULL);
++	}
++
+ 	sk->port[pd->sidx] = sport;
+ 	sk->port[pd->didx] = dport;
+ 	sk->proto = pd->proto;
+@@ -5110,7 +5174,7 @@
+ 	if (nr == NULL) {
+ 		KASSERT((sk == NULL && nk == NULL), ("%s: nr %p sk %p, nk %p",
+ 		    __func__, nr, sk, nk));
+-		sk = pf_state_key_setup(pd, pd->src, pd->dst, sport, dport);
++		sk = pf_state_key_setup(pd, m, off, pd->src, pd->dst, sport, dport);
+ 		if (sk == NULL)
+ 			goto csfailed;
+ 		nk = sk;
+@@ -6090,8 +6154,9 @@
+ 
+ int
+ pf_icmp_state_lookup(struct pf_state_key_cmp *key, struct pf_pdesc *pd,
+-    struct pf_kstate **state, struct mbuf *m, int direction, struct pfi_kkif *kif,
+-    u_int16_t icmpid, u_int16_t type, int icmp_dir, int *iidx, int multi)
++    struct pf_kstate **state, struct mbuf *m, int off, int direction,
++    struct pfi_kkif *kif, u_int16_t icmpid, u_int16_t type, int icmp_dir,
++    int *iidx, int multi, int inner)
+ {
+ 	key->af = pd->af;
+ 	key->proto = pd->proto;
+@@ -6104,31 +6169,19 @@
+ 		key->port[pd->sidx] = type;
+ 		key->port[pd->didx] = icmpid;
+ 	}
+-	if (pd->af == AF_INET6 && multi != PF_ICMP_MULTI_NONE) {
+-		switch (multi) {
+-		case PF_ICMP_MULTI_SOLICITED:
+-			key->addr[pd->sidx].addr32[0] = IPV6_ADDR_INT32_MLL;
+-			key->addr[pd->sidx].addr32[1] = 0;
+-			key->addr[pd->sidx].addr32[2] = IPV6_ADDR_INT32_ONE;
+-			key->addr[pd->sidx].addr32[3] = pd->src->addr32[3];
+-			key->addr[pd->sidx].addr8[12] = 0xff;
+-			break;
+-		case PF_ICMP_MULTI_LINK:
+-			key->addr[pd->sidx].addr32[0] = IPV6_ADDR_INT32_MLL;
+-			key->addr[pd->sidx].addr32[1] = 0;
+-			key->addr[pd->sidx].addr32[2] = 0;
+-			key->addr[pd->sidx].addr32[3] = IPV6_ADDR_INT32_ONE;
+-			break;
+-		}
+-	} else
+-		PF_ACPY(&key->addr[pd->sidx], pd->src, key->af);
+-	PF_ACPY(&key->addr[pd->didx], pd->dst, key->af);
++	if (pf_state_key_addr_setup(pd, m, off, key, pd->sidx, pd->src,
++	    pd->didx, pd->dst, multi))
++		return (PF_DROP);
+ 
+ 	STATE_LOOKUP(kif, key, *state, pd);
+ 
++	if ((*state)->state_flags & PFSTATE_SLOPPY)
++		return (-1);
++
+ 	/* Is this ICMP message flowing in right direction? */
+ 	if ((*state)->rule.ptr->type &&
+-	    (((*state)->direction == direction) ?
++	    (((!inner && (*state)->direction == direction) ||
++	    (inner && (*state)->direction != direction)) ?
+ 	    PF_IN : PF_OUT) != icmp_dir) {
+ 		if (V_pf_status.debug >= PF_DEBUG_MISC) {
+ 			printf("pf: icmp type %d in wrong direction (%d): ",
+@@ -6136,6 +6189,8 @@
+ 			pf_print_state(*state);
+ 			printf("\n");
+ 		}
++		PF_STATE_UNLOCK(*state);
++		*state = NULL;
+ 		return (PF_DROP);
+ 	}
+ 	return (-1);
+@@ -6184,19 +6239,20 @@
+ 		 * ICMP query/reply message not related to a TCP/UDP packet.
+ 		 * Search for an ICMP state.
+ 		 */
+-		ret = pf_icmp_state_lookup(&key, pd, state, m, pd->dir,
++		ret = pf_icmp_state_lookup(&key, pd, state, m, off, pd->dir,
+ 		    kif, virtual_id, virtual_type, icmp_dir, &iidx,
+-		    PF_ICMP_MULTI_NONE);
++		    PF_ICMP_MULTI_NONE, 0);
+ 		if (ret >= 0) {
++			MPASS(*state == NULL);
+ 			if (ret == PF_DROP && pd->af == AF_INET6 &&
+ 			    icmp_dir == PF_OUT) {
+-				if (*state != NULL)
+-					PF_STATE_UNLOCK((*state));
+-				ret = pf_icmp_state_lookup(&key, pd, state, m,
++				ret = pf_icmp_state_lookup(&key, pd, state, m, off,
+ 				    pd->dir, kif, virtual_id, virtual_type,
+-				    icmp_dir, &iidx, multi);
+-				if (ret >= 0)
++				    icmp_dir, &iidx, multi, 0);
++				if (ret >= 0) {
++					MPASS(*state == NULL);
+ 					return (ret);
++				}
+ 			} else
+ 				return (ret);
+ 		}
+@@ -6278,6 +6334,7 @@
+ 		int		off2 = 0;
+ 
+ 		pd2.af = pd->af;
++		pd2.dir = pd->dir;
+ 		/* Payload packet is from the opposite direction. */
+ 		pd2.sidx = (pd->dir == PF_IN) ? 1 : 0;
+ 		pd2.didx = (pd->dir == PF_IN) ? 0 : 1;
+@@ -6585,9 +6642,9 @@
+ 		}
+ #ifdef INET
+ 		case IPPROTO_ICMP: {
+-			struct icmp		iih;
++			struct icmp	*iih = &pd2.hdr.icmp;
+ 
+-			if (!pf_pull_hdr(m, off2, &iih, ICMP_MINLEN,
++			if (!pf_pull_hdr(m, off2, iih, ICMP_MINLEN,
+ 			    NULL, reason, pd2.af)) {
+ 				DPFPRINTF(PF_DEBUG_MISC,
+ 				    ("pf: ICMP error message too short i"
+@@ -6595,15 +6652,17 @@
+ 				return (PF_DROP);
+ 			}
+ 
+-			icmpid = iih.icmp_id;
+-			pf_icmp_mapping(&pd2, iih.icmp_type,
++			icmpid = iih->icmp_id;
++			pf_icmp_mapping(&pd2, iih->icmp_type,
+ 			    &icmp_dir, &multi, &virtual_id, &virtual_type);
+ 
+-			ret = pf_icmp_state_lookup(&key, &pd2, state, m,
+-			    pd->dir, kif, virtual_id, virtual_type,
+-			    icmp_dir, &iidx, PF_ICMP_MULTI_NONE);
+-			if (ret >= 0)
++			ret = pf_icmp_state_lookup(&key, &pd2, state, m, off,
++			    pd2.dir, kif, virtual_id, virtual_type,
++			    icmp_dir, &iidx, PF_ICMP_MULTI_NONE, 1);
++			if (ret >= 0) {
++				MPASS(*state == NULL);
+ 				return (ret);
++			}
+ 
+ 			/* translate source/destination address, if necessary */
+ 			if ((*state)->key[PF_SK_WIRE] !=
+@@ -6614,10 +6673,10 @@
+ 				if (PF_ANEQ(pd2.src,
+ 				    &nk->addr[pd2.sidx], pd2.af) ||
+ 				    (virtual_type == htons(ICMP_ECHO) &&
+-				    nk->port[iidx] != iih.icmp_id))
++				    nk->port[iidx] != iih->icmp_id))
+ 					pf_change_icmp(pd2.src,
+ 					    (virtual_type == htons(ICMP_ECHO)) ?
+-					    &iih.icmp_id : NULL,
++					    &iih->icmp_id : NULL,
+ 					    daddr, &nk->addr[pd2.sidx],
+ 					    (virtual_type == htons(ICMP_ECHO)) ?
+ 					    nk->port[iidx] : 0, NULL,
+@@ -6633,7 +6692,7 @@
+ 
+ 				m_copyback(m, off, ICMP_MINLEN, (caddr_t)&pd->hdr.icmp);
+ 				m_copyback(m, ipoff2, sizeof(h2), (caddr_t)&h2);
+-				m_copyback(m, off2, ICMP_MINLEN, (caddr_t)&iih);
++				m_copyback(m, off2, ICMP_MINLEN, (caddr_t)iih);
+ 			}
+ 			return (PF_PASS);
+ 			break;
+@@ -6641,9 +6700,9 @@
+ #endif /* INET */
+ #ifdef INET6
+ 		case IPPROTO_ICMPV6: {
+-			struct icmp6_hdr	iih;
++			struct icmp6_hdr	*iih = &pd2.hdr.icmp6;
+ 
+-			if (!pf_pull_hdr(m, off2, &iih,
++			if (!pf_pull_hdr(m, off2, iih,
+ 			    sizeof(struct icmp6_hdr), NULL, reason, pd2.af)) {
+ 				DPFPRINTF(PF_DEBUG_MISC,
+ 				    ("pf: ICMP error message too short "
+@@ -6651,22 +6710,24 @@
+ 				return (PF_DROP);
+ 			}
+ 
+-			pf_icmp_mapping(&pd2, iih.icmp6_type,
++			pf_icmp_mapping(&pd2, iih->icmp6_type,
+ 			    &icmp_dir, &multi, &virtual_id, &virtual_type);
+-			ret = pf_icmp_state_lookup(&key, &pd2, state, m,
++
++			ret = pf_icmp_state_lookup(&key, &pd2, state, m, off,
+ 			    pd->dir, kif, virtual_id, virtual_type,
+-			    icmp_dir, &iidx, PF_ICMP_MULTI_NONE);
++			    icmp_dir, &iidx, PF_ICMP_MULTI_NONE, 1);
+ 			if (ret >= 0) {
+-				if (ret == PF_DROP && pd->af == AF_INET6 &&
++				MPASS(*state == NULL);
++				if (ret == PF_DROP && pd2.af == AF_INET6 &&
+ 				    icmp_dir == PF_OUT) {
+-					if (*state != NULL)
+-						PF_STATE_UNLOCK((*state));
+-					ret = pf_icmp_state_lookup(&key, pd,
+-					    state, m, pd->dir, kif,
++					ret = pf_icmp_state_lookup(&key, &pd2,
++					    state, m, off, pd->dir, kif,
+ 					    virtual_id, virtual_type,
+-					    icmp_dir, &iidx, multi);
+-					if (ret >= 0)
++					    icmp_dir, &iidx, multi, 1);
++					if (ret >= 0) {
++						MPASS(*state == NULL);
+ 						return (ret);
++					}
+ 				} else
+ 					return (ret);
+ 			}
+@@ -6680,10 +6741,10 @@
+ 				if (PF_ANEQ(pd2.src,
+ 				    &nk->addr[pd2.sidx], pd2.af) ||
+ 				    ((virtual_type == htons(ICMP6_ECHO_REQUEST)) &&
+-				    nk->port[pd2.sidx] != iih.icmp6_id))
++				    nk->port[pd2.sidx] != iih->icmp6_id))
+ 					pf_change_icmp(pd2.src,
+ 					    (virtual_type == htons(ICMP6_ECHO_REQUEST))
+-					    ? &iih.icmp6_id : NULL,
++					    ? &iih->icmp6_id : NULL,
+ 					    daddr, &nk->addr[pd2.sidx],
+ 					    (virtual_type == htons(ICMP6_ECHO_REQUEST))
+ 					    ? nk->port[iidx] : 0, NULL,
+@@ -6701,7 +6762,7 @@
+ 				    (caddr_t)&pd->hdr.icmp6);
+ 				m_copyback(m, ipoff2, sizeof(h2_6), (caddr_t)&h2_6);
+ 				m_copyback(m, off2, sizeof(struct icmp6_hdr),
+-				    (caddr_t)&iih);
++				    (caddr_t)iih);
+ 			}
+ 			return (PF_PASS);
+ 			break;
+--- sys/netpfil/pf/pf_lb.c.orig
++++ sys/netpfil/pf/pf_lb.c
+@@ -633,7 +633,7 @@
+ 		return (NULL);
+ 	}
+ 
+-	*skp = pf_state_key_setup(pd, saddr, daddr, sport, dport);
++	*skp = pf_state_key_setup(pd, m, off, saddr, daddr, sport, dport);
+ 	if (*skp == NULL)
+ 		return (NULL);
+ 	*nkp = pf_state_key_clone(*skp);
+--- tests/sys/netpfil/pf/Makefile.orig
++++ tests/sys/netpfil/pf/Makefile
+@@ -13,6 +13,7 @@
+ 		fragmentation_pass \
+ 		get_state \
+ 		icmp \
++		icmp6 \
+ 		killstate \
+ 		macro \
+ 		map_e \
+--- /dev/null
++++ tests/sys/netpfil/pf/icmp6.sh
+@@ -0,0 +1,89 @@
++#
++# SPDX-License-Identifier: BSD-2-Clause
++#
++# Copyright (c) 2024 Rubicon Communications, LLC (Netgate)
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions
++# are met:
++# 1. Redistributions of source code must retain the above copyright
++#    notice, this list of conditions and the following disclaimer.
++# 2. Redistributions in binary form must reproduce the above copyright
++#    notice, this list of conditions and the following disclaimer in the
++#    documentation and/or other materials provided with the distribution.
++#
++# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
++# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
++# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
++# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
++# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
++# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
++# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
++# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
++# SUCH DAMAGE.
++
++. $(atf_get_srcdir)/utils.subr
++
++common_dir=$(atf_get_srcdir)/../common
++
++atf_test_case "zero_id" "cleanup"
++zero_id_head()
++{
++	atf_set descr 'Test ICMPv6 echo with ID 0 keep being blocked'
++	atf_set require.user root
++	atf_set require.progs scapy
++}
++
++zero_id_body()
++{
++	pft_init
++
++	epair=$(vnet_mkepair)
++	ifconfig ${epair}a inet6 2001:db8::2/64 up no_dad
++
++	vnet_mkjail alcatraz ${epair}b
++	jexec alcatraz ifconfig ${epair}b inet6 2001:db8::1/64 up no_dad
++
++	# Sanity check
++	atf_check -s exit:0 -o ignore \
++	    ping -c 1 2001:db8::1
++
++	jexec alcatraz pfctl -e
++	pft_set_rules alcatraz \
++		"set block-policy drop" \
++		"antispoof quick for { egress ${epair}b }" \
++		"block all" \
++		"pass out" \
++		"pass in quick inet6 proto IPV6-ICMP icmp6-type 135" \
++		"pass in quick inet6 proto IPV6-ICMP icmp6-type 136" \
++		"pass out quick inet6 proto IPV6 from self to any"
++
++	# Now we can't ping
++	atf_check -s exit:2 -o ignore \
++	    ping -c 1 2001:db8::1
++
++	# Force neighbour discovery
++	ndp -d 2001:db8::1
++
++	# Verify that we don't confuse echo request with ID 0 for neighbour discovery
++	atf_check -s exit:1 -o ignore \
++	     ${common_dir}/pft_ping.py \
++	         --sendif ${epair}a \
++	         --to 2001:db8::1 \
++	         --replyif ${epair}a
++
++	jexec alcatraz pfctl -ss -vv
++	jexec alcatraz pfctl -sr -vv
++}
++
++zero_id_cleanup()
++{
++	pft_cleanup
++}
++
++atf_init_test_cases()
++{
++	atf_add_test_case "zero_id"
++}
