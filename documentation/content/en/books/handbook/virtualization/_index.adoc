@@ -4,7 +4,7 @@ part: Part III. System Administration
 prev: books/handbook/filesystems
 next: books/handbook/l10n
 description: Virtualization software allows multiple operating systems to run simultaneously on the same computer
-tags: ["virtualization", "Parallels", "VMware", "VirtualBox", "bhyve", "XEN"]
+tags: ["virtualization", "Parallels", "VMware", "VirtualBox", "QEMU", "bhyve", "XEN"]
 showBookMenu: true
 weight: 28
 path: "/books/handbook/virtualization/"
@@ -61,6 +61,7 @@ After reading this chapter, you will know:
 ** Parallels Desktop(Apple(R) macOS(R))
 ** VMware Fusion(Apple(R) macOS(R))
 ** VirtualBox(TM)(Microsoft(R) Windows(R), Intel(R)-based Apple(R) macOS(R), Linux)
+** QEMU(FreeBSD)
 ** bhyve(FreeBSD)
 * How to tune a FreeBSD system for best performance under virtualization.
 
@@ -496,6 +497,797 @@ perm pass* 0660
 # service devfs restart
 ....
 
+[[qemu-virtualization-host-guest]]
+== Virtualization with QEMU on FreeBSD
+
+link:https://www.qemu.org[QEMU] is a generic machine emulator and virtualizer that is completely open source software.
+It is developed by a large, active community and provides support for FreeBSD, OpenBSD, and NetBSD as well as other operating systems.
+
+From the link:https://www.qemu.org/docs/master/[QEMU documentation]:
+
+* QEMU can be used in several different ways.
+The most common is for System Emulation, where it provides a virtual model of an entire machine (CPU, memory, and emulated devices) to run a guest OS.
+In this mode the CPU may be fully emulated, or it may work with a hypervisor such as `KVM`, `Xen` or `Hypervisor.Framework` to allow the guest to run directly on the host CPU.
+
+* The second supported way to use QEMU is User Mode Emulation, where QEMU can launch processes compiled for one CPU on another CPU.
+In this mode the CPU is always emulated.
+
+* QEMU also provides a number of standalone command line utilities, such as the man:qemu-img[1] disk image utility that allows one to create, convert, and modify disk images.
+
+QEMU can emulate a wide number of architectures including `Arm(TM)`, `i386`, `x86_64`, `MIPS(TM)`, `s390X`, `SPARC(TM)` (Sparc(TM) and Sparc64(TM)), and others.
+The list of link:https://www.qemu.org/docs/master/system/targets.html#system-targets-ref[QEMU System Emulator Targets] is regularly kept up to date.
+
+This section describes how to use QEMU for both System Emulation and User Mode Emulation on FreeBSD, and provides examples of using QMEU commands and command line utilities.
+
+[[qemu-installing-qemu-software]]
+=== Installing QEMU Software
+QEMU is available as a FreeBSD package or as a port in package:emulators/qemu[].
+The package build includes sane options and defaults for most users and is the recommended method of installation.
+
+[source,shell]
+....
+# pkg install qemu
+....
+
+The package installation includes several dependencies.
+Once the installation is complete, create a link to the host version of QEMU that will be used most often.
+If the host is an Intel(TM) or AMD(TM) 64 bit system that will be:
+
+[source,shell]
+....
+# ln -s /usr/local/bin/qemu-system-x86_64 /usr/local/bin/qemu
+....
+
+Test the installation by running the following command as a non-root user:
+
+[source,shell]
+....
+% qemu
+....
+This brings up a window with QEMU actively trying to boot from hard disk, floppy disk, DVD/CD, and PXE.
+Nothing has been set up yet, so the command will produce several errors and end
+with "No bootable device" as shown in
+crossref:virtualization[qemu-nullboot,Figure {counter:figure}].
+However, it does show that the QEMU software has been installed correctly.
+
+[[qemu-nullboot]]
+.QEMU with no bootable image
+image::qemu-freebsd01.png[QEMU with no bootable image]
+
+[[qemu-virtual-machine-install]]
+=== Virtual Machine Install
+
+[NOTE]
+====
+QEMU is under very active development.
+Features and command options can change from one version to the next.
+This section provides examples developed with QEMU version 9.0.1 (Summer, 2024).
+When in doubt, always consult the link:https://www.qemu.org/docs/master/[QEMU Documentation] particularly the link:https://www.qemu.org/docs/master/about/index.html[About QEMU] page which has links to supported build platforms, emulation, deprecated features, and removed features.
+====
+
+Follow the steps below to create two virtual machines named "*left*", and "*right*".
+Most commands can be performed without root privileges.
+
+. Create a test environment to work with QEMU:
++
+[source,shell]
+....
+% mkdir -p ~/QEMU  ~/QEMU/SCRIPTS  ~/QEMU/ISO  ~/QEMU/VM
+....
++
+The [.filename]#SCRIPTS# directory is for startup scripts and utilities.
+The [.filename]#ISO# directory is for the guest ISO boot images.
+The [.filename]#VM# directory is where the virtual machine images (`VMs`) will reside.
+
+. Download a recent copy of FreeBSD into [.filename]#~/QEMU/ISO#:
++
+[source,shell]
+....
+% cd ~/QEMU/ISO
+% fetch https://download.freebsd.org/releases/ISO-IMAGES/14.1/FreeBSD-14.1-RELEASE-amd64-bootonly.iso
+....
++
+Once the download is complete create a shorthand link.
+This shorthand link is used in the startup scripts below.
++
+[source,shell]
+....
+% ln -s FreeBSD-14.1-RELEASE-amd64-bootonly.iso  fbsd.iso
+....
+. Change directory to the location for virtual machines ([.filename]#~/QEMU/VM#).
+Run man:qemu-img[1] to create the disk images for the “left” VM:
++
+[source,shell]
+....
+% cd ~/QEMU/VM
+% qemu-img create -f raw  left.img   15G
+....
++
+The QEMU `raw` format is designed for performance.
+The format is straightforward and has no overhead which makes it faster, especially for high performance or high throughput scenarios.
+The use case is for maximum performance where no additional features, such as snapshots, are needed.
+This format is used in the script for the "left" VM below.
++
+A separate format is `qcow2` which uses QEMU's "copy on write" technique for managing disk space.
+This technique does not require a complete 15G disk, just a stub version that is managed directly by the VM.
+The disk grows dynamically as the VM writes to it.
+This format supports snapshots, compression, and encryption.
+The use case for this format is for development, testing, and scenarios with the need of these advanced features.
+This format is used in the script for the "right" VM below.
++
+Run man:qemu-img[1] again to create the disk image for the "right" VM using `qcow2`:
++
+[source,shell]
+....
+% qemu-img create -f qcow2 -o preallocation=full,cluster_size=512K,lazy_refcounts=on right.qcow2 20G
+....
++
+To see the actual size of the file use:
++
+[source,shell]
+....
+% du -Ah right.qcow2
+....
++
+. Set up networking for both virtual machines with the following commands.
+In this example the host network interface is `em0`.
+If necessary, change it to fit the interface for the host system.
+This must be done after every host machine restart to enable the QEMU guest VMs to communicate.
++
+[source,shell]
+....
+# ifconfig tap0 create
+# ifconfig tap1 create
+# sysctl net.link.tap.up_on_open=1
+net.link.tap.up_on_open: 0 -> 1
+# sysctl net.link.tap.user_open=1
+net.link.tap.user_open: 0 -> 1
+# ifconfig bridge0 create
+# ifconfig bridge0 addm tap0 addm tap1 addm em0
+# ifconfig bridge0 up
+....
++
+The above commands create two man:tap[4] devices (`tap0`, `tap1`) and one man:if_bridge[4] device (`bridge0`).
+Then, they add the `tap` devices and the local host interface (`em0`) to the `bridge`, and set two man:sysctl[8] entries to allow for normal users to open the tap device.
+These commands will allow the virtual machines to talk to the network stack on the host.
++
+. Change to [.filename]#~/QEMU/SCRIPTS#,  use the following script to start the first virtual machine, "left".
+This script uses the QEMU raw disk format.
++
+[.programlisting]
+....
+/usr/local/bin/qemu-system-x86_64  -monitor none \
+  -cpu qemu64 \
+  -vga std \
+  -m 4096 \
+  -smp 4   \
+  -cdrom ../ISO/fbsd.iso \
+  -boot order=cd,menu=on \
+  -blockdev driver=file,aio=threads,node-name=imgleft,filename=../VM/left.img \
+  -blockdev driver=raw,node-name=drive0,file=imgleft \
+  -device virtio-blk-pci,drive=drive0,bootindex=1  \
+  -netdev tap,id=nd0,ifname=tap0,script=no,downscript=no,br=bridge0 \
+  -device e1000,netdev=nd0,mac=02:20:6c:65:66:74 \
+  -name \"left\"
+....
+
+[TIP]
+====
+Save the above into a file (for example `left.sh`) and simply run: % `/bin/sh left.sh`
+====
+
+QEMU will start up a virtual machine in a separate window and boot the FreeBSD
+iso as shown in crossref:virtualization[qemu-newboot-loader-menu,Figure {counter:figure}].
+All command options such as `-cpu` and `-boot` are fully described in the QEMU man page man:qemu[1].
+
+[[qemu-newboot-loader-menu]]
+.FreeBSD Boot Loader Menu
+image::qemu-freebsd02.png[The FreeBSD loader menu.]
+
+[TIP]
+====
+If the mouse is clicked in the QEMU console window, QEMU will “grab” the mouse
+as shown in crossref:virtualization[qemu-grab,Figure {counter:figure}].
+Type kbd:[Ctl]+kbd:[Alt]+kbd:[G]” to release the mouse.
+====
+
+[[qemu-grab]]
+.When QEMU Has Grabbed the Mouse
+image::qemu-freebsd03.png[When QEMU has grabbed the mouse]
+
+[NOTE]
+====
+On FreeBSD, an initial QEMU installation can be somewhat slow.
+This is because the emulator writes filesystem formatting and metadata during the disk first use.
+Subsequent operations are generally much faster.
+====
+
+During the installation there are several points to note:
+
+* Select to use UFS as the filesystem.
+ZFS does not perform well with small memory sizes.
+* For networking use DHCP.
+If desired, configure IPv6 if supported by the local LAN.
+* When adding the default user, ensure they are a member of the *wheel* group.
+
+Once the installation completes, the virtual machine reboots into the newly installed FreeBSD image.
+
+Login as `root` and update the system as follows:
+
+[source,shell]
+....
+# freebsd-update fetch install
+# reboot
+....
+
+[NOTE]
+====
+After a successful installation, QEMU will boot the operating system installed on the disk, and not the installation program.
+====
+
+[NOTE]
+====
+QEMU supports a ```-runas``` option.
+For added security, include the option "-runas your_user_name" in the script listing above.
+See man:qemu[1] for details.
+====
+
+Login as `root` again and add any packages desired.
+To utilize the X Window system in the guest, see the  section "Using the X Window System" below.
+
+This completes the setup of the "left" VM.
+
+To install the "right" VM, run the following script.
+This script has the modifications needed for tap1, format=qcow2, the image filename, the MAC address, and the terminal window name.
+If desired, include the "-runas" parameter as described in the above note.
+
+[.programlisting]
+....
+
+/usr/local/bin/qemu-system-x86_64  -monitor none \
+  -cpu qemu64 \
+  -vga cirrus \
+  -m 4096  -smp 4   \
+  -cdrom ../ISO/fbsd.iso \
+  -boot order=cd,menu=on \
+  -drive if=none,id=drive0,cache=writeback,aio=threads,format=qcow2,discard=unmap,file=../VM/right.qcow2 \
+  -device virtio-blk-pci,drive=drive0,bootindex=1  \
+  -netdev tap,id=nd0,ifname=tap1,script=no,downscript=no,br=bridge0 \
+  -device e1000,netdev=nd0,mac=02:72:69:67:68:74 \
+  -name \"right\"
+....
+
+Once the installation  is complete, the "left" and "right" machines can communicate with each other and with the host.
+If there are strict firewall rules on the host, consider adding or modifying rules to allow the bridge and tap devices to communicate with each other.
+
+[[qemu-usage-tips]]
+=== Usage Tips
+[[qemu-setting-up-x-windows]]
+==== Using the X Window System
+
+crossref:x11[x-install,Installing Xorg] describes how to set up the `X Window` system.
+Refer to that guide for initial `X Window` setup then consult crossref:desktop[desktop,Desktop Environments] on how to set up a complete desktop.
+
+This section demonstrates use of the XFCE desktop.
+
+Once the installation is complete, login as a regular user, then type:
+
+[source,shell]
+....
+% startx
+....
+
+The XFCE4 window manager should start up and present a functioning graphical
+desktop as in crossref:virtualization[qemu-two-qemu,Figure {counter:figure}].
+On initial startup, it may take up to a minute to display the desktop.
+See the documentation at the link:https://www.xfce.org[XFCE website] for usage details.
+[[qemu-two-qemu]]
+.Both QEMU VMs
+image::qemu-freebsd04.png[Both QEMU VMs]
+
+[TIP]
+====
+Adding more memory to the guest system may speed up the graphical user interface.
+====
+
+Here, the "left" VM has had the `X Window` system installed, while the "right" VM is still in text mode.
+
+[[qemu-using-qemu-window]]
+==== Using the QEMU Window
+
+The QEMU window functions as a full FreeBSD console, and is capable of running multiple virtual terminals, just like a bare-metal system.
+
+To switch to another virtual console, click into the QEMU window and type kbd:[Alt+F2] or kbd:[Alt+F3].
+FreeBSD should switch to another virtual console.
+crossref:virtualization[qemu-console-ttyv3,Figure {counter:figure}] shows the "left" VM displaying the virtual console on `ttyv3`.
+[[qemu-console-ttyv3]]
+.Switching to Another Virtual Console in the QEMU Window
+image::qemu-freebsd05.png[Switching to Another Virtual Console in the QEMU Window]
+
+[TIP]
+====
+The host current desktop manager or window manager may be already setup for another function with the kbd:[Alt+F1], kbd:[Alt+F2] key sequences.
+If so, try typing kbd:[Ctl+Alt+F1], kbd:[Ctl+Alt+F2], or some other similar key combination.
+Check the window manager or desktop manager documentation for details.
+====
+
+[[qemu-using-qemu-window-menus]]
+==== Using the QEMU Window Menus
+
+Another feature of the QEMU window is the `View` menu and the Zoom controls.
+The most useful is `Zoom to Fit`.
+When this menu selection is clicked, it is then possible to resize the QEMU window by clicking the window corner controls and resizing the window.
+crossref:virtualization[qemu-zoom-to-fit,Figure {counter:figure}] shows the effect of resizing the "left" window while in graphics mode.
+
+[[qemu-zoom-to-fit]]
+.Using the View Menu `Zoom to Fit` Option
+image::qemu-freebsd06.png[Using the View Menu `Zoom to Fit` Option]
+
+[[qemu-other-qemu-window-menu-options]]
+==== Other QEMU Window Menu Options
+
+Also shown in the `View` menu are
+
+* `cirrus-vga`, `serial0`, and `parallel0` options.
+These allow for switching input/output to the selected device.
+
+The QEMU window `Machine` menu allows for four types of control over the guest VM:
+
+* `Pause` allows for pausing the QEMU virtual machine.
+This may be helpful in freezing a fast scrolling window.
+* `Reset` immediately resets the virtual machine back at cold "power on" state.
+As with a real machine, it is not recommended unless absolutely necessary.
+* `Power Down` simulates an ACPI shutdown signal and the operating system goes through a graceful shutdown.
+* `Quit` powers off the virtual machine immediately - also not recommended unless necessary.
+
+[[qemu-adding-serial-port-to-guest-vm]]
+=== Adding a Serial Port Interface to a Guest VM
+
+To implement a serial console, a guest VM running FreeBSD needs to insert
+[.programlisting]
+....
+console="comconsole"
+....
+in [.filename]#/boot/loader.conf# to allow the use of the FreeBSD serial console.
+
+The updated configuration below shows how to implement the serial console on the guest VM.
+Run the script to start the VM.
+[.programlisting]
+....
+# left+serial.sh
+echo
+echo "NOTE: telnet startup server running on guest VM!"
+echo "To start QEMU, start another session and telnet to localhost port 4410"
+echo
+
+/usr/local/bin/qemu-system-x86_64  -monitor none \
+  -serial telnet:localhost:4410,server=on,wait=on\
+  -cpu qemu64 \
+  -vga std \
+  -m 4096 \
+  -smp 4   \
+  -cdrom ../ISO/fbsd.iso \
+  -boot order=cd,menu=on \
+  -blockdev driver=file,aio=threads,node-name=imgleft,filename=../VM/left.img \
+  -blockdev driver=raw,node-name=drive0,file=imgleft \
+  -device virtio-blk-pci,drive=drive0,bootindex=1  \
+  -netdev tap,id=nd0,ifname=tap0,script=no,downscript=no,br=bridge0 \
+  -device e1000,netdev=nd0,mac=02:20:6c:65:66:74 \
+  -name \"left\"
+....
+[[qemu-left-serial-port]]
+.Enabling a Serial Port over TCP
+image::qemu-freebsd07.png[]
+
+In crossref:virtualization[qemu-notes-on-serial-console,Figure {counter:figure}], the serial port is redirected to a TCP port on the host system at VM startup and the QEMU monitor waits (`wait=on`) to activate the guest VM until a man:telnet[1] connection occurs on the indicated localhost port.
+After receiving a connection from a separate session, the FreeBSD system starts booting and looks for a console directive in [.filename]#/boot/loader.conf#.
+With the directive "console=comconsole", FreeBSD starts up a console session on a serial port.
+The QEMU monitor detects this and directs the necessary character I/O on that serial port to the telnet session on the host.
+The system boots and once finished, login prompts are enabled on the serial port (`ttyu0`) and on the console (`ttyv0`).
+
+It is important to note that the this serial redirect over TCP takes place outside the virtual machine.
+There is no interaction with any network on the virtual machine and therefore it is not subject to any firewall rules.
+Think of it like a dumb terminal sitting on an RS-232 or USB port on a real machine.
+
+[[qemu-notes-on-serial-console]]
+==== Notes on Using the Serial Console
+
+On the serial console, if the window is resized, execute man:resizewin[1] to update the terminal size.
+
+It may be desirable (even necessary) to stop syslog message from being sent to the console (both the QEMU console and the serial port).
+Consult man:syslog.conf[5] for details on redirecting console messages.
+
+[NOTE]
+====
+Once the [.filename]#/boot.loader.conf# has been updated to permit a serial console,
+the guest VM will attempt to boot from the serial port every time.
+Ensure that the serial port is enabled as shown in the listing above, or update the [.filename]#/boot/loader.conf# file to not require a serial console.
+====
+
+[[qemu-user-mode-emulation]]
+=== QEMU User Mode Emulation
+
+QEMU also supports running applications that are precompiled on an architecture different from the host CPU.
+For example, it is possible to run a Sparc64 architecture operating system on an x86_64 host.
+This is demonstrated in the next section.
+
+[[qemu-sparc64-user-mode-emulation]]
+==== Setting up a SPARC64 Guest VM on an x86_64 Host
+
+Setting up a new VM with an architecture different from the host involves several steps:
+
+* Getting the software that will run on the guest VM
+* Creating a new disk image for the guest VM
+* Setting up a new QEMU script with the new architecture
+* Performing the install
+
+In the following procedure a copy of OpenBSD 6.8 SPARC64 software is used for this QEMU User Mode Emulation exercise.
+
+[NOTE]
+====
+Not all versions of OpenBSD Sparc64 work on QEMU.
+OpenBSD version 6.8 is known to work and was selected as the example for this section.
+====
+
+. Download OpenBSD 6.8 Sparc64 from an OpenBSD archive.
++
+On the OpenBSD download sites, only the most current versions are maintained.
+It is necessary to search an archive to obtain past releases.
++
+[source,shell]
+....
+% cd ~/QEMU/ISO
+% fetch https://mirror.planetunix.net/pub/OpenBSD-archive/6.8/sparc64/install68.iso
+....
+
+. Creating a new disk image for the Sparc64 VM is similar to the "right" VM above.
+This case uses the QEMU qcow2 format for the disk:
++
+[source,shell]
+....
+% cd ~/QEMU/VM
+qemu-img create -f qcow2 -o preallocation=full,lazy_refcounts=on sparc64.qcow2 16G
+....
+
+. Use the script below for the new Sparc64 architecture.
+As with the above example, run the script, then start a new session and `telnet` to localhost on the port indicated:
++
+[.programlisting]
+....
+echo
+echo "NOTE: telnet startup server running on guest VM!"
+echo "To start QEMU, start another session and telnet to localhost port 4410"
+echo
+
+/usr/local/bin/qemu-system-sparc64 \
+  -serial telnet:localhost:4410,server=on,wait=on \
+  -machine sun4u,usb=off \
+  -smp 1,sockets=1,cores=1,threads=1 \
+  -rtc base=utc \
+  -m 1024 \
+  -boot d \
+  -drive file=../VM/sparc64.qcow2,if=none,id=drive-ide0-0-1,format=qcow2,cache=none \
+  -cdrom ../ISO/install68.iso \
+  -device ide-hd,bus=ide.0,unit=0,drive=drive-ide0-0-1,id=ide0-0-1 \
+  -msg timestamp=on \
+  -net nic,model=sunhme -net user \
+  -nographic \
+  -name \"sparc64\"
+....
+
+Note the following:
+
+* The `-boot d` option boots from the QEMU CDROM device which is set as `-cdrom ../ISO/install68.iso`.
+* As before, the `telnet` server option is set to wait for a separate connection on port 4410.
+Start up another session and use man:telnet[1] to connect to localhost on port 4410.
+* The script sets the `-nographic` option meaning there is only serial port I/O.
+There is no graphical interface.
+* Networking is not set up through the man:tap[4] / man:if_bridge[4] combination.
+This example uses a separate method of QEMU networking known as "Serial Line Internet Protocol" (SLIRP), sometimes referred to as "User Mode Networking".
+Documentation on this and other QEMU networking methods is here: link:https://wiki.qemu.org/Documentation/Networking[QEMU Networking Documentation]
+
+If everything is set correctly, the system will boot as shown in
+crossref:virtualization[qemu-sparc64-boot-cdrom-installation,Figure {counter:figure}].
+[[qemu-sparc64-boot-cdrom-installation]]
+.QEMU Booting OpenBSD 6.8 Sparc64 from CDROM During User Mode Emulation
+image::qemu-freebsd08.png[]
+
+Once the system is installed, modify the script and change the boot parameter to `-boot c`.
+This will indicate to QEMU to boot from the supplied hard disk, not the CDROM.
+
+The installed system can be used just like any other guest virtual machine.
+However, the underlying architecture of the guest is Sparc64, not x86_64.
+
+[TIP]
+====
+If the system is halted  at the OpenBios console prompt `0 >`, enter `power-off` to exit the system.
+====
+crossref:virtualization[qemu-sparc64-login-to-installed-system,Figure {counter:figure}] shows a root login to the installed system and running man:uname[1].
+
+[[qemu-sparc64-login-to-installed-system]]
+.QEMU Booting from CDROM During User Mode Emulation
+image::qemu-freebsd09.png[]
+
+[[qemu-using-qemu-monitor]]
+=== Using the QEMU Monitor
+
+The link:https://www.qemu.org/docs/master/system/monitor.html[QEMU monitor] controls a running QEMU emulator (guest VM).
+
+Using the monitor, it is possible to:
+
+* Dynamically remove or insert devices, including disks, network interfaces, CD-ROMs, or floppies
+* Freeze/unfreeze the guest VM, and save or restore its state from a disk file
+* Gather information about the state of the VM and devices
+* Change device settings on the fly
+
+As well as many other operations.
+
+The most common uses of the monitor are to examine the state of the VM, and to add, delete, or change devices.
+Some operations such as migrations are only available under hypervisor accelerators such as KVM, Xen, etc. and are not supported on FreeBSD hosts.
+
+When using a graphical desktop environment, the simplest way to use the QEMU monitor is the `-monitor stdio` option when launching QEMU from a terminal session.
+
+[.programlisting]
+....
+# /usr/local/bin/qemu-system-x86_64  -monitor stdio \
+  -cpu qemu64 \
+  -vga cirrus \
+  -m 4096  -smp 4   \
+  ...
+....
+
+This results in a new prompt `(qemu)` in the terminal window as shown in
+crossref:virtualization[qemu-monitor-operation,Figure {counter:figure}].
+
+[[qemu-monitor-operation]]
+.QEMU Monitor Prompt and "stop" Command
+image::qemu-freebsd13.png[]
+
+The image also shows the `stop` command freezing the system during the FreeBSD boot sequence.
+The system will remain frozen until the `cont` command is entered in the monitor.
+
+[[qemu-adding-new-disk]]
+==== Adding a New Disk to the VM
+
+To add a new disk to a running VM, the disk needs to be prepared as above:
+
+[source, shell]
+....
+% cd ~/QEMU/VM
+% qemu-img create -f raw  new10G.img  10G
+....
+
+crossref:virtualization[qemu-add-new-disk-figure,Figure {counter:figure}] shows the monitor command sequence needed to add a new disk in the VM.
+Once the device has been added with the `device_add` command in the monitor it shows up on the FreeBSD system console shown in the lower part of the figure.
+The disk can be configured as needed.
+
+Note that the new disk must be added to the startup script if it is to be used after a VM reboot.
+
+[[qemu-add-new-disk-figure]]
+.QEMU Monitor Commands to Add a New Disk
+image::qemu-freebsd14.png[]
+
+[[qemu-using-monitor-manage-snapshots]]
+==== Using the QEMU Monitor to Manage Snapshots
+
+QEMU's documentation describes several similar concepts when using the term *snapshot*.
+There is the `-snapshot` option on the command line which refers to using a drive or portion of a drive to contain a copy of a device.
+Then there are the monitor commands `snapshot_blkdev` and `snapshot_blkdev_internal` which describe the actual act of copying the blockdev device.
+Finally, there are the monitor commands `savevm`, `loadvm`, and `delvm` commands which refer to creating and saving, loading, or deleting a copy of an entire virtual machine.
+Along with the latter, the monitor `info snapshots` command lists out details of recent snapshots.
+
+This section will focus on creating, saving, and loading a complete VM image and will use the term *snapshot* for this purpose.
+
+To start, recreate the "left" VM from scratch, this time using the `qcow2` format.
+
+[source, shell]
+....
+% cd ~/QEMU/VM
+% rm left.img
+% qemu-img create -f qcow2 left.qcow2 16G  # Clean file for a new FreeBSD installation.
+% cd ../SCRIPTS
+# /bin/sh left.sh                     # See the below program listing.
+....
+
+Once the installation is complete, reboot, this time using the  `-monitor stdio` option to allow use of the monitor.
+
+[.programlisting]
+....
+# left VM script.
+/usr/local/bin/qemu-system-x86_64  -monitor stdio \
+  -cpu qemu64 \
+  -vga std \
+  -m 4096 \
+  -smp 4   \
+  -cdrom ../ISO/fbsd.iso \
+  -boot order=cd,menu=on \
+  -blockdev driver=file,aio=threads,node-name=imgleft,filename=../VM/left.qcow2 \
+  -blockdev driver=qcow2,node-name=drive0,file=imgleft \
+  -device virtio-blk-pci,drive=drive0,bootindex=1  \
+  -netdev tap,id=nd0,ifname=tap0,script=no,downscript=no,br=bridge0 \
+  -device e1000,netdev=nd0,mac=02:20:6c:65:66:74 \
+  -name \"left\"
+....
+
+To demonstrate snapshots, the following procedure can be used:
+
+. Install FreeBSD from scratch
+. Prepare the environment and take a snapshot with the `savevm` monitor command
+. Install several packages
+. Shut down the system
+. Restart a bare QEMU instance and utilize the monitor command `loadvm` to restore the VM
+. Observe that the restored VM does not have any packages
+
+During the "Prepare the environment" step, in a separate virtual console (ttyv1), an editing session with man:vi[1] is initiated simulating user activity.
+Additional programs may be started if desired.
+The snapshot should account for the state of all applications running at the time the snapshot is taken.
+
+crossref:virtualization[qemu-using-monitor-snapshots,Figure {counter:figure}] shows the newly installed FreeBSD system with no packages, and separately, the editing session on ttyv1.
+The man:vi[1] editor is currently in  `insert` mode with the typist typing the word "broadcast".
+
+[[qemu-using-monitor-snapshots]]
+.QEMU VM Before First Snapshot
+image::qemu-freebsd15.png[]
+
+To generate the snapshot, enter `savevm`  in the monitor.
+Be sure to give it a tag (such as `original_install`).
+
+[source,shell]
+....
+QEMU 9.0.1 monitor - type 'help' for more information
+(qemu)
+(qemu) savevm original_install
+....
+
+Next, in the main console window, install a package, such as man:zip[1] which has no dependencies.
+Once that completes, renter the monitor and create another snapshot (`snap1_pkg+zip`).
+
+crossref:virtualization[qemu-after-monitor-snapshots,Figure {counter:figure}] shows the results of the above commands and the output of the `info shapshots` command.
+
+[[qemu-after-monitor-snapshots]]
+.QEMU Using Monitor Commands for Snapshots
+image::qemu-freebsd16.png[]
+
+Reboot the system, and before FreeBSD starts up, switch to the monitor and enter `stop`.
+The VM will stop.
+
+Enter `loadvm` with the tag you used above (here `original_install`).
+
+[source, shell]
+....
+QEMU 9.0.1 monitor - type 'help' for more information
+(qemu) stop
+(qemu) loadvm original_install
+(qemu) cont
+....
+
+Immediately, the VM screen will switch to the exact moment the `savevm` command was entered above.
+Note that the VM is still stopped.
+
+Enter `cont` to start the VM, switch to the editing session on `ttyv1`, and type one letter on the keyboard.
+The editor, still in insert mode, should respond accordingly.
+Any other programs running at the time the snapshot was taken should be unaffected.
+
+The above steps show how a snapshot can be taken, the system modified, and then "rolled back" by restoring the previous snapshot.
+
+By default QEMU stores snapshot data in the same file as the image.
+View the list of snapshots with  man:qemu-img[1] as shown below in
+crossref:virtualization[qemu-examine-monitor-snapshots,Figure {counter:figure}].
+
+[[qemu-examine-monitor-snapshots]]
+.QEMU Using man:qemu-img[1] to Examine Snapshots
+image::qemu-freebsd17.png[]
+
+[[qemu-using-qemu-usb-devices]]
+=== Using QEMU USB Devices
+
+QEMU supports the creation of virtual USB devices that are backed by an image file.
+These are virtual USB devices that can be partitioned, formatted, mounted, and used just like a real USB device.
+
+[.programlisting]
+....
+/usr/local/bin/qemu-system-x86_64  -monitor stdio \
+  -cpu qemu64 \
+  -vga cirrus \
+  -m 4096  -smp 4   \
+  -cdrom ../ISO/fbsd.iso \
+  -boot order=cd,menu=on \
+  -drive if=none,id=usbstick,format=raw,file=../VM/foo.img \
+  -usb \
+  -device usb-ehci,id=ehci \
+  -device usb-storage,bus=ehci.0,drive=usbstick \
+  -device usb-mouse \
+  -blockdev driver=file,node-name=img1,filename=../VM/right.qcow2 \
+  -blockdev driver=qcow2,node-name=drive0,file=img1 \
+  -device virtio-blk-pci,drive=drive0,bootindex=1  \
+  -netdev tap,id=nd0,ifname=tap1,script=no,downscript=no,br=bridge0 \
+  -device e1000,netdev=nd0,mac=02:72:69:67:68:74 \
+  -name \"right\"
+....
+
+This configuration includes a `-drive` specification with the `id=usbstick`, raw format, and an image file (must be created by man:qemu-img[1]).
+The next line contains the  `-device usb-ehci` specification for a USB EHCI controller, with `id=ehci`.
+Finally, a `-device usb-storage` specification ties the above drive to the EHCI USB bus.
+
+When the system is booted, FreeBSD will recognize a USB hub, add the attached
+USB device, and assign it to `da0` as shown in
+crossref:virtualization[qemu-usb-internal-storage,Figure {counter:figure}].
+
+[[qemu-usb-internal-storage]]
+.QEMU Created USB Hub and Mass Storage Device
+image::qemu-freebsd12.png[]
+
+The device is ready to be partitioned with man:gpart[8], and formatted with man:newfs[8].
+Because the USB device is backed by a man:qemu-img[1] created file, data written to the device will persist across reboots.
+
+[[qemu-using-host-usb-devices]]
+=== Using Host USB Devices via Passthrough
+
+QEMU USB passthrough support is listed as experimental in version 9.0.1 (Summer, 2024).
+However, the following steps show how a USB stick mounted on the host can be used by the guest VM.
+
+For more information and examples, see:
+
+* link:https://www.qemu.org/docs/master/system/devices/usb.html[]
+
+The upper part of crossref:virtualization[qemu-usb-passthrough,Figure {counter:figure}] shows the QEMU monitor commands:
+
+* `info usbhost` shows information about all USB devices on the host system.
+Find the desired USB device on the host system and note the two hexadecimal values on that line.
+(In the example below the host USB device is a Memorex Mini, with vendorid 0718, and productid 0619.)
+Use the two values shown by the `info usbhost` command in the `device_add` step below.
+* `device_add` adds a USB device to the guest VM.
+
+[[qemu-usb-passthrough]]
+.QEMU Monitor Commands to Access a USB Device on the Host
+image::qemu-freebsd18.png[]
+
+As before, once `device_add` completes, the FreeBSD kernel recognizes a new USB device, as shown in the lower half of the .
+
+Using the new device is shown in
+crossref:virtualization[qemu-usb-passthrough2,Figure {counter:figure}].
+
+[[qemu-usb-passthrough2]]
+.Using the Host USB Device via Passthrough
+image::qemu-freebsd19.png[]
+
+If the USB device is formatted as a FAT16 or FAT32 filesystem it can be mounted as an MS-DOS(TM) filesystem with man:mount_msdosfs[8] as in the example shown.
+The `/etc/hosts` file is copied to the newly mounted drive and checksums are taken to verify the integrity of the file on the USB device.
+The device is then unmounted with man:umount[8].
+
+If the USB device is formatted with NTFS it is necessary to install the `fusefs-ntfs` package and use man:ntfs-3g[8] to access the device:
+
+[source, shell]
+....
+# pkg install fusefs-ntfs
+# kldload fusefs
+# gpart show da1
+# ntfs-3g /dev/da1s1 /mnt
+
+Access the drive as needed.  When finished:
+
+# umount /mnt
+....
+
+Change the above device identifiers to match the installed hardware.
+Consult man:ntfs-3g[8] for additional information on working with NTFS filesystems.
+
+[[qemu-summary]]
+=== QEMU on FreeBSD Summary
+
+As noted above, QEMU works with several different hypervisor accelerators.
+
+The list of link:https://www.qemu.org/docs/master/system/introduction.html#virtualisation-accelerators[Virtualization Accelerators] supported by QEMU includes:
+
+* `KVM` on Linux supporting 64 bit Arm, MIPS, PPC, RISC-V, s390x, and x86
+* `Xen` on Linux as dom0 supporting Arm, x86
+* `Hypervisor Framework (hvf)` on MacOS supporting x86 and Arm (both 64 bit only)
+* `Windows Hypervisor Platform (whpx)` on Windows supporting x86
+* `NetBSD Virutal Machine Monitor (nvmm)` on NetBSD supporting x86
+* `Tiny Code Generator (tcg)` on Linux and other POSIX, Windows, MacOS supporting Arm, x86, Loongarch64, MIPS, PPC, s390x, and Sparc64.
+
+All the examples in this section used the `Tiny Code Generator (tcg)` accelerator as that is the only supported accelerator on FreeBSD at present.
+
 [[virtualization-host-bhyve]]
 == FreeBSD as a Host with bhyve
 
@@ -602,7 +1394,7 @@ Now the guest can be started from the virtual disk:
 [[virtualization-bhyve-linux]]
 === Creating a Linux(R) Guest
 
-Linux guests can be booted either like any other regular crossref:virtualization[virtualization-bhyve-uefi,"UEFI-based guest"] virtual machine, or alternatively, you can make use of the package:sysutils/grub2-bhyve[] port. 
+Linux guests can be booted either like any other regular crossref:virtualization[virtualization-bhyve-uefi,"UEFI-based guest"] virtual machine, or alternatively, you can make use of the package:sysutils/grub2-bhyve[] port.
 
 To do this, first ensure that the port is installed, then create a file to use as the virtual disk for the guest machine:
 
