@@ -189,6 +189,7 @@ $sectionpath = {
     'OpenBSD 7.3' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 7.4' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 7.5' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 7.6' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 
     'CentOS 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
@@ -694,6 +695,7 @@ $manPathDefault = 'FreeBSD 14.1-RELEASE and Ports';
     'OpenBSD 7.3', "$manLocalDir/OpenBSD-7.3",
     'OpenBSD 7.4', "$manLocalDir/OpenBSD-7.4",
     'OpenBSD 7.5', "$manLocalDir/OpenBSD-7.5",
+    'OpenBSD 7.6', "$manLocalDir/OpenBSD-7.6",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
     'NetBSD 1.0',   "$manLocalDir/NetBSD-1.0",
@@ -1093,6 +1095,7 @@ my %arch = (
 'OpenBSD 7.3' => { 'arch' => [qw/alpha amd64 arm64 armv7 hppa i386 landisk loongson luna88k macppc octeon powerpc64 riscv64 sparc64/] }, 
 'OpenBSD 7.4' => { 'arch' => [qw/alpha amd64 arm64 armv7 hppa i386 landisk loongson luna88k macppc octeon powerpc64 riscv64 sparc64/] }, 
 'OpenBSD 7.5' => { 'arch' => [qw/alpha amd64 arm64 armv7 hppa i386 landisk loongson luna88k macppc octeon powerpc64 riscv64 sparc64/] }, 
+'OpenBSD 7.6' => { 'arch' => [qw/alpha amd64 arm64 armv7 hppa i386 landisk loongson luna88k macppc octeon powerpc64 riscv64 sparc64/] }, 
 );
 
 # delete not existing releases
@@ -1138,7 +1141,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'macosx',     'Darwin 8.0.1/ppc',
 
     'netbsd',        'NetBSD 10.0',
-    'openbsd',       'OpenBSD 7.5',
+    'openbsd',       'OpenBSD 7.6',
     'opensuse',      'openSUSE 15.6',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
