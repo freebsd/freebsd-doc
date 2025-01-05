@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl -T
 #
-# Copyright (c) 1996-2024 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 1996-2025 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -227,10 +227,13 @@ $sectionpath = {
     'CentOS 7.8' => { 'path' => '0p:1:1p:2:3:3p:3t:4:5:6:7:8:9:n' },
     'CentOS 7.9' => { 'path' => '0p:1:1p:2:3:3p:3t:4:5:6:7:8:9:n' },
 
+    'Rocky 9.5' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
+    'Rocky 9.4' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
     'Rocky 9.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
     'Rocky 9.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
     'Rocky 9.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
     'Rocky 9.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
+    'Rocky 8.10' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
     'Rocky 8.9' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
     'Rocky 8.8' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
     'Rocky 8.7' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
@@ -802,10 +805,13 @@ $manPathDefault = 'FreeBSD 14.2-RELEASE and Ports';
     'CentOS 7.8', "$manLocalDir/CentOS-7.8",
     'CentOS 7.9', "$manLocalDir/CentOS-7.9",
 
+    'Rocky 9.5', "$manLocalDir/Rocky-9.5",
+    'Rocky 9.4', "$manLocalDir/Rocky-9.4",
     'Rocky 9.3', "$manLocalDir/Rocky-9.3",
     'Rocky 9.2', "$manLocalDir/Rocky-9.2",
     'Rocky 9.1', "$manLocalDir/Rocky-9.1",
     'Rocky 9.0', "$manLocalDir/Rocky-9.0",
+    'Rocky 8.10', "$manLocalDir/Rocky-8.10",
     'Rocky 8.9', "$manLocalDir/Rocky-8.9",
     'Rocky 8.8', "$manLocalDir/Rocky-8.8",
     'Rocky 8.7', "$manLocalDir/Rocky-8.7",
@@ -1139,7 +1145,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'ubuntu',     'Ubuntu 24.04 noble',
     'dragonfly',  'DragonFly 6.4.0',
     'centos',     'CentOS 7.9',
-    'rocky',      'Rocky 9.3',
+    'rocky',      'Rocky 9.5',
     'linux',      'Debian 12.7.0',
     'darwin',     'Darwin 8.0.1/ppc',
     'opendarwin', 'OpenDarwin 7.2.1',
@@ -2335,7 +2341,7 @@ sub faq {
     return qq{\
 <h2>Copyright</h2>
 <pre>
-Copyright (c) 1996-2024 <a href="$mailtoURL">Wolfram Schneider</a>
+Copyright (c) 1996-2025 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 </pre>
 <p/>
