@@ -3,8 +3,8 @@
 =begin
 
 BSD 2-Clause License
-Copyright (c) 2020-2023, The FreeBSD Project
-Copyright (c) 2020-2023, Sergio Carlavilla <carlavilla@FreeBSD.org>
+Copyright (c) 2020-2025, The FreeBSD Project
+Copyright (c) 2020-2025, Sergio Carlavilla <carlavilla@FreeBSD.org>
 
 This script will merge all the pgpkeys into one single file
 

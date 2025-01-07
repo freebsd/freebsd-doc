@@ -1,7 +1,7 @@
 # Generate the FreeBSD website
 #
-# Copyright (c) 2020-2023, The FreeBSD Documentation Project
-# Copyright (c) 2020-2023, Sergio Carlavilla <carlavilla@FreeBSD.org>
+# Copyright (c) 2020-2025, The FreeBSD Documentation Project
+# Copyright (c) 2020-2025, Sergio Carlavilla <carlavilla@FreeBSD.org>
 #
 # Targets intended for use on the command line
 #
