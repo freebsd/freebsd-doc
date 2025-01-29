@@ -1,0 +1,929 @@
+--- contrib/tzdata/Makefile.orig
++++ contrib/tzdata/Makefile
+@@ -137,7 +137,7 @@
+   uint_least64_t.ck
+ 
+ # What kind of TZif data files to generate.  (TZif is the binary time
+-# zone data format that zic generates; see Internet RFC 8536.)
++# zone data format that zic generates; see Internet RFC 9636.)
+ # If you want only POSIX time, with time values interpreted as
+ # seconds since the epoch (not counting leap seconds), use
+ #	REDO=		posix_only
+@@ -255,6 +255,7 @@
+ #  -DHAVE_UNISTD_H=0 if <unistd.h> does not work*
+ #  -DHAVE_UTMPX_H=0 if <utmpx.h> does not work*
+ #  -Dlocale_t=XXX if your system uses XXX instead of locale_t
++#  -DMKTIME_MIGHT_OVERFLOW if mktime might fail due to time_t overflow
+ #  -DPORT_TO_C89 if tzcode should also run on mostly-C89 platforms+
+ #	Typically it is better to use a later standard.  For example,
+ #	with GCC 4.9.4 (2016), prefer '-std=gnu11' to '-DPORT_TO_C89'.
+@@ -262,7 +263,7 @@
+ #	feature (integers at least 64 bits wide) and maybe more.
+ #  -DRESERVE_STD_EXT_IDS if your platform reserves standard identifiers
+ #	with external linkage, e.g., applications cannot define 'localtime'.
+-#  -Dssize_t=long on hosts like MS-Windows that lack ssize_t
++#  -Dssize_t=int on hosts like MS-Windows that lack ssize_t
+ #  -DSUPPORT_C89=0 if the tzcode library should not support C89 callers
+ #	Although -DSUPPORT_C89=0 might work around latent bugs in callers,
+ #	it does not conform to POSIX.
+@@ -285,7 +286,7 @@
+ #	This mishandles some past timestamps, as US DST rules have changed.
+ #	It also mishandles settings like TZ='EET-2EEST' for eastern Europe,
+ #	as Europe and US DST rules differ.
+-#  -DTZNAME_MAXIMUM=N to limit time zone abbreviations to N bytes (default 255)
++#  -DTZNAME_MAXIMUM=N to limit time zone abbreviations to N bytes (default 254)
+ #  -DUNINIT_TRAP if reading uninitialized storage can cause problems
+ #	other than simply getting garbage data
+ #  -DUSE_LTZ=0 to build zdump with the system time zone library
+@@ -319,7 +320,8 @@
+   $(GCC_INSTRUMENT) \
+   -Wall -Wextra \
+   -Walloc-size-larger-than=100000 -Warray-bounds=2 \
+-  -Wbad-function-cast -Wbidi-chars=any,ucn -Wcast-align=strict -Wdate-time \
++  -Wbad-function-cast -Wbidi-chars=any,ucn -Wcast-align=strict -Wcast-qual \
++  -Wdate-time \
+   -Wdeclaration-after-statement -Wdouble-promotion \
+   -Wduplicated-branches -Wduplicated-cond -Wflex-array-member-not-at-end \
+   -Wformat=2 -Wformat-overflow=2 -Wformat-signedness -Wformat-truncation \
+@@ -336,7 +338,7 @@
+   -Wsuggest-attribute=noreturn -Wsuggest-attribute=pure \
+   -Wtrampolines -Wundef -Wunused-macros -Wuse-after-free=3 \
+   -Wvariadic-macros -Wvla -Wwrite-strings \
+-  -Wno-format-nonliteral -Wno-sign-compare
++  -Wno-format-nonliteral -Wno-sign-compare -Wno-type-limits
+ #
+ # If your system has a "GMT offset" field in its "struct tm"s
+ # (or if you decide to add such a field in your system's "time.h" file),
+@@ -614,8 +616,8 @@
+ TZS_CUTOFF_FLAG=	-c $(TZS_YEAR)
+ TZS=		to$(TZS_YEAR).tzs
+ TZS_NEW=	to$(TZS_YEAR)new.tzs
+-TZS_DEPS=	$(YDATA) asctime.c localtime.c \
+-			private.h tzfile.h zdump.c zic.c
++TZS_DEPS=	$(YDATA) localtime.c private.h \
++			strftime.c tzfile.h zdump.c zic.c
+ TZDATA_DIST = $(COMMON) $(DATA) $(MISC)
+ # EIGHT_YARDS is just a yard short of the whole ENCHILADA.
+ EIGHT_YARDS = $(TZDATA_DIST) $(DOCS) $(SOURCES) tzdata.zi
+@@ -855,10 +857,10 @@
+ 		chmod +x $@.out
+ 		mv $@.out $@
+ 
+-check: check_mild back.ck
++check: check_mild back.ck now.ck
+ check_mild: check_web check_zishrink \
+   character-set.ck white-space.ck links.ck mainguard.ck \
+-  name-lengths.ck now.ck slashed-abbrs.ck sorted.ck \
++  name-lengths.ck slashed-abbrs.ck sorted.ck \
+   tables.ck ziguard.ck tzs.ck
+ 
+ # True if UTF8_LOCALE does not work;
+@@ -1103,7 +1105,7 @@
+ 		   touch -md @1 test.out; then \
+ 		  rm -f test.out && \
+ 		  for file in $$files; do \
+-		    if git diff --quiet $$file; then \
++		    if git diff --quiet HEAD $$file; then \
+ 		      time=$$(TZ=UTC0 git log -1 \
+ 			--format='tformat:%cd' \
+ 			--date='format:%Y-%m-%dT%H:%M:%SZ' \
+@@ -1354,13 +1356,13 @@
+ zonenames:	tzdata.zi
+ 		@$(AWK) '/^Z/ { print $$2 } /^L/ { print $$3 }' tzdata.zi
+ 
+-asctime.o:	private.h tzfile.h
++asctime.o:	private.h
+ date.o:		private.h
+ difftime.o:	private.h
+-localtime.o:	private.h tzfile.h tzdir.h
+-strftime.o:	private.h tzfile.h
+-zdump.o:	version.h
+-zic.o:		private.h tzfile.h tzdir.h version.h
++localtime.o:	private.h tzdir.h tzfile.h
++strftime.o:	localtime.c private.h tzdir.h tzfile.h
++zdump.o:	private.h version.h
++zic.o:		private.h tzdir.h tzfile.h version.h
+ 
+ .PHONY: ALL INSTALL all
+ .PHONY: check check_mild check_time_t_alternatives
+--- contrib/tzdata/NEWS.orig
++++ contrib/tzdata/NEWS
+@@ -1,5 +1,83 @@
+ News for the tz database
+ 
++Release 2025a - 2025-01-15 10:47:24 -0800
++
++  Briefly:
++    Paraguay adopts permanent -03 starting spring 2024.
++    Improve pre-1991 data for the Philippines.
++    Etc/Unknown is now reserved.
++
++  Changes to future timestamps
++
++    Paraguay will stop changing its clocks after the spring-forward
++    transition on 2024-10-06, so it is now permanently at -03.
++    (Thanks to Heitor David Pinto and Even Scharning.)
++    This affects timestamps starting 2025-03-22, as well as the
++    obsolescent tm_isdst flags starting 2024-10-15.
++
++  Changes to past timestamps
++
++    Correct timestamps for the Philippines before 1900, and from 1937
++    through 1990.  (Thanks to P Chan for the heads-up and citations.)
++    This includes adjusting local mean time before 1899; fixing
++    transitions in September 1899, January 1937, and June 1954; adding
++    transitions in December 1941, November 1945, March and September
++    1977, and May and July 1990; and removing incorrect transitions in
++    March and September 1978.
++
++  Changes to data
++
++    Add zone1970.tab lines for the Concordia and Eyre Bird Observatory
++    research stations.  (Thanks to Derick Rethans and Jule Dabars.)
++
++  Changes to code
++
++    strftime %s now generates the correct numeric string even when the
++    represented number does not fit into time_t.  This is better than
++    generating the numeric equivalent of (time_t) -1, as strftime did
++    in TZDB releases 96a (when %s was introduced) through 2020a and in
++    releases 2022b through 2024b.  It is also better than failing and
++    returning 0, as strftime did in releases 2020b through 2022a.
++
++    strftime now outputs an invalid conversion specifier as-is,
++    instead of eliding the leading '%', which confused debugging.
++
++    An invalid TZ now generates the time zone abbreviation "-00", not
++    "UTC", to help the user see that an error has occurred.  (Thanks
++    to Arthur David Olson for suggesting a "wrong result".)
++
++    mktime and timeoff no longer incorrectly fail merely because a
++    struct tm component near INT_MIN or INT_MAX overflows when a
++    lower-order component carries into it.
++
++    TZNAME_MAXIMUM, the maximum number of bytes in a proleptic TZ
++    string's time zone abbreviation, now defaults to 254 not 255.
++    This helps reduce the size of internal state from 25480 to 21384
++    on common platforms.  This change should not be a problem, as
++    nobody uses such long "abbreviations" and the longstanding tzcode
++    maximum was 16 until release 2023a.  For those who prefer no
++    arbitrary limits, you can now specify TZNAME_MAXIMUM values up to
++    PTRDIFF_MAX, a limit forced by C anyway; formerly tzcode silently
++    misbehaved unless TZNAME_MAXIMUM was less than INT_MAX.
++
++    tzset and related functions no longer leak a file descriptor if
++    another thread forks or execs at about the same time and if the
++    platform has O_CLOFORK and O_CLOEXEC respectively.  Also, the
++    functions no longer let a TZif file become a controlling terminal.
++
++    'zdump -' now reads TZif data from /dev/stdin.
++    (From a question by Arthur David Olson.)
++
++  Changes to documentation
++
++    The name Etc/Unknown is now reserved: it will not be used by TZDB.
++    This is for compatibility with CLDR, which uses the string
++    "Etc/Unknown" for an unknown or invalid timezone.  (Thanks to
++    Justin Grant, Mark Davis, and Guy Harris.)
++
++    Cite Internet RFC 9636, which obsoletes RFC 8536 for TZif format.
++
++
+ Release 2024b - 2024-09-04 12:27:47 -0700
+ 
+   Briefly:
+@@ -116,7 +194,7 @@
+   Changes to commentary
+ 
+     Commentary about historical transitions in Portugal and her former
+-    colonies has been expanded with links to many relevant legislation.
++    colonies has been expanded with links to relevant legislation.
+     (Thanks to Tim Parenti.)
+ 
+ 
+@@ -204,10 +282,10 @@
+     changing its time zone from -01/+00 to -02/-01 at the same moment
+     as the spring-forward transition.  Its clocks will therefore not
+     spring forward as previously scheduled.  The time zone change
+-    reverts to its common practice before 1981.
++    reverts to its common practice before 1981.  (Thanks to Jule Dabars.)
+ 
+     Fix predictions for DST transitions in Palestine in 2072-2075,
+-    correcting a typo introduced in 2023a.
++    correcting a typo introduced in 2023a.  (Thanks to Jule Dabars.)
+ 
+   Changes to past and future timestamps
+ 
+--- contrib/tzdata/antarctica.orig
++++ contrib/tzdata/antarctica
+@@ -174,6 +174,8 @@
+ 
+ # France & Italy - year-round base
+ # Concordia, -750600+1232000, since 2005
++# https://en.wikipedia.org/wiki/Concordia_Station
++# Can use Asia/Singapore, which it has agreed with since inception.
+ 
+ # Germany - year-round base
+ # Neumayer III, -704080-0081602, since 2009
+--- contrib/tzdata/asia.orig
++++ contrib/tzdata/asia
+@@ -3665,21 +3665,70 @@
+ # be immediately followed by 1845-01-01; see R.H. van Gent's
+ # History of the International Date Line
+ # https://webspace.science.uu.nl/~gent0113/idl/idl_philippines.htm
+-# The rest of the data entries are from Shanks & Pottenger.
+-
+-# From Jesper Nørgaard Welen (2006-04-26):
+-# ... claims that Philippines had DST last time in 1990:
+-# http://story.philippinetimes.com/p.x/ct/9/id/145be20cc6b121c0/cid/3e5bbccc730d258c/
+-# [a story dated 2006-04-25 by Cris Larano of Dow Jones Newswires,
+-# but no details]
+-
+-# From Paul Eggert (2014-08-14):
+-# The following source says DST may be instituted November-January and again
+-# March-June, but this is not definite.  It also says DST was last proclaimed
+-# during the Ramos administration (1992-1998); but again, no details.
+-# Carcamo D. PNoy urged to declare use of daylight saving time.
+-# Philippine Star 2014-08-05
+-# http://www.philstar.com/headlines/2014/08/05/1354152/pnoy-urged-declare-use-daylight-saving-time
++
++# From P Chan (2021-05-10):
++# Here's a fairly comprehensive article in Japanese:
++#	https://wiki.suikawiki.org/n/Philippine%20Time
++# (2021-05-16):
++# According to the references listed in the article,
++# the periods that the Philippines (Manila) observed DST or used +9 are:
++#
++# 1936-10-31 24:00 to 1937-01-15 24:00
++#	(Proclamation No. 104, Proclamation No. 126)
++# 1941-12-15 24:00 to 1945-11-30 24:00
++#	(Proclamation No. 789, Proclamation No. 20)
++# 1954-04-11 24:00 to 1954-06-04 24:00
++#	(Proclamation No. 13, Proclamation No. 33)
++# 1977-03-27 24:00 to 1977-09-21 24:00
++#	(Proclamation No. 1629, Proclamation No. 1641)
++# 1990-05-21 00:00 to 1990-07-28 24:00
++#	(National Emergency Memorandum Order No. 17, Executive Order No. 415)
++#
++# Proclamation No. 104 ... October 30, 1936
++#  https://www.officialgazette.gov.ph/1936/10/30/proclamation-no-104-s-1936/
++# Proclamation No. 126 ... January 15, 1937
++#  https://www.officialgazette.gov.ph/1937/01/15/proclamation-no-126-s-1937/
++# Proclamation No. 789 ... December 13, 1941
++#  https://www.officialgazette.gov.ph/1941/12/13/proclamation-no-789-s-1941/
++# Proclamation No. 20 ... November 11, 1945
++#  https://www.officialgazette.gov.ph/1945/11/11/proclamation-no-20-s-1945/
++# Proclamation No. 13 ... April 6, 1954
++#  https://www.officialgazette.gov.ph/1954/04/06/proclamation-no-13-s-1954/
++# Proclamation No. 33 ... June 3, 1954
++#  https://www.officialgazette.gov.ph/1954/06/03/proclamation-no-33-s-1954/
++# Proclamation No. 1629 ... March 25, 1977
++#  https://www.officialgazette.gov.ph/1977/03/25/proclamation-no-1629-s-1977/
++# Proclamation No. 1641 ...May 26, 1977
++#  https://www.officialgazette.gov.ph/1977/05/26/proclamation-no-1641-s-1977/
++# National Emergency Memorandum Order No. 17 ... May 2, 1990
++#  https://www.officialgazette.gov.ph/1990/05/02/national-emergency-memorandum-order-no-17-s-1990/
++# Executive Order No. 415 ... July 20, 1990
++#  https://www.officialgazette.gov.ph/1990/07/20/executive-order-no-415-s-1990/
++#
++# During WWII, Proclamation No. 789 fixed two periods of DST. The first period
++# was set to continue only until January 31, 1942. But Manila was occupied by
++# the Japanese earlier in the month....
++#
++# For the date of the adoption of standard time, Shank[s] gives 1899-05-11.
++# The article is not able to state the basis of that. I guess it was based on
++# a US War Department Circular issued on that date.
++#	https://books.google.com/books?id=JZ1PAAAAYAAJ&pg=RA3-PA8
++#
++# However, according to other sources, standard time was adopted on
++# 1899-09-06.  Also, the LMT was GMT+8:03:52
++#	https://books.google.com/books?id=MOYIAQAAIAAJ&pg=PA521
++#	https://books.google.com/books?id=lSnqqatpYikC&pg=PA21
++#
++# From Paul Eggert (2024-09-05):
++# The penultimate URL in P Chan's email refers to page 521 of
++# Selga M, The Time Service in the Philippines.
++# Proc Pan-Pacific Science Congress. Vol. 1 (1923), 519-532.
++# It says, "The change from the meridian 120° 58' 04" to the 120th implied a
++# change of 3 min. 52s.26 in time; consequently on 6th September, 1899,
++# Manila Observatory gave the noon signal 3 min. 52s.26 later than before".
++#
++# Wikipedia says the US declared Manila liberated on March 4, 1945;
++# this doesn't affect clocks, just our time zone abbreviation and DST flag.
+ 
+ # From Paul Goyette (2018-06-15) with URLs updated by Guy Harris (2024-02-15):
+ # In the Philippines, there is a national law, Republic Act No. 10535
+@@ -3697,24 +3746,26 @@
+ # influence of the sources.  There is no current abbreviation for DST,
+ # so use "PDT", the usual American style.
+ 
+-# From P Chan (2021-05-10):
+-# Here's a fairly comprehensive article in Japanese:
+-# https://wiki.suikawiki.org/n/Philippine%20Time
+-# From Paul Eggert (2021-05-10):
+-# The info in the Japanese table has not been absorbed (yet) below.
+-
+ # Rule	NAME	FROM	TO	-	IN	ON	AT	SAVE	LETTER/S
+-Rule	Phil	1936	only	-	Nov	1	0:00	1:00	D
+-Rule	Phil	1937	only	-	Feb	1	0:00	0	S
+-Rule	Phil	1954	only	-	Apr	12	0:00	1:00	D
+-Rule	Phil	1954	only	-	Jul	1	0:00	0	S
+-Rule	Phil	1978	only	-	Mar	22	0:00	1:00	D
+-Rule	Phil	1978	only	-	Sep	21	0:00	0	S
++Rule	Phil	1936	only	-	Oct	31	24:00	1:00	D
++Rule	Phil	1937	only	-	Jan	15	24:00	0	S
++Rule	Phil	1941	only	-	Dec	15	24:00	1:00	D
++# The following three rules were canceled by Japan:
++#Rule	Phil	1942	only	-	Jan	31	24:00	0	S
++#Rule	Phil	1942	only	-	Mar	 1	 0:00	1:00	D
++#Rule	Phil	1942	only	-	Jun	30	24:00	0	S
++Rule	Phil	1945	only	-	Nov	30	24:00	0	S
++Rule	Phil	1954	only	-	Apr	11	24:00	1:00	D
++Rule	Phil	1954	only	-	Jun	 4	24:00	0	S
++Rule	Phil	1977	only	-	Mar	27	24:00	1:00	D
++Rule	Phil	1977	only	-	Sep	21	24:00	0	S
++Rule	Phil	1990	only	-	May	21	 0:00	1:00	D
++Rule	Phil	1990	only	-	Jul	28	24:00	0	S
+ # Zone	NAME		STDOFF	RULES	FORMAT	[UNTIL]
+-Zone	Asia/Manila	-15:56:00 -	LMT	1844 Dec 31
+-			8:04:00 -	LMT	1899 May 11
+-			8:00	Phil	P%sT	1942 May
+-			9:00	-	JST	1944 Nov
++Zone	Asia/Manila	-15:56:08 -	LMT	1844 Dec 31
++			8:03:52 -	LMT	1899 Sep  6  4:00u
++			8:00	Phil	P%sT	1942 Feb 11 24:00
++			9:00	-	JST	1945 Mar  4
+ 			8:00	Phil	P%sT
+ 
+ # Bahrain
+--- contrib/tzdata/australasia.orig
++++ contrib/tzdata/australasia
+@@ -1239,10 +1239,10 @@
+ # The 1992 ending date used in the rules is a best guess;
+ # it matches what was used in the past.
+ 
+-# The Australian Bureau of Meteorology FAQ
+-# http://www.bom.gov.au/faq/faqgen.htm
+-# (1999-09-27) writes that Giles Meteorological Station uses
+-# South Australian time even though it's located in Western Australia.
++# From Christopher Hunt (2006-11-21), after an advance warning
++# from Jesper Nørgaard Welen (2006-11-01):
++# WA are trialing DST for three years.
++# http://www.parliament.wa.gov.au/parliament/bills.nsf/9A1B183144403DA54825721200088DF1/$File/Bill175-1B.pdf
+ 
+ # From Paul Eggert (2018-04-01):
+ # The Guardian Express of Perth, Australia reported today that the
+@@ -1254,54 +1254,10 @@
+ # https://www.communitynews.com.au/guardian-express/news/exclusive-daylight-savings-coming-wa-summer-2018/
+ # [The article ends with "Today's date is April 1."]
+ 
+-# Queensland
+-
+-# From Paul Eggert (2018-02-26):
+-# I lack access to the following source for Queensland DST:
+-# Pearce C. History of daylight saving time in Queensland.
+-# Queensland Hist J. 2017 Aug;23(6):389-403
+-# https://search.informit.com.au/documentSummary;dn=994682348436426;res=IELHSS
+-
+-# From George Shepherd via Simon Woodhead via Robert Elz (1991-03-06):
+-# #   The state of QUEENSLAND.. [ Courtesy Qld. Dept Premier Econ&Trade Devel ]
+-# #						[ Dec 1990 ]
+-# ...
+-# Zone	Australia/Queensland	10:00	AQ	%sST
+-# ...
+-# Rule	AQ	1971	only	-	Oct	lastSun	2:00	1:00	D
+-# Rule	AQ	1972	only	-	Feb	lastSun	3:00	0	E
+-# Rule	AQ	1989	max	-	Oct	lastSun	2:00	1:00	D
+-# Rule	AQ	1990	max	-	Mar	Sun>=1	3:00	0	E
+-
+-# From Bradley White (1989-12-24):
+-# "Australia/Queensland" now observes daylight time (i.e. from
+-# October 1989).
+-
+-# From Bradley White (1991-03-04):
+-# A recent excerpt from an Australian newspaper...
+-# ...Queensland...[has] agreed to end daylight saving
+-# at 3am tomorrow (March 3)...
+-
+-# From John Mackin (1991-03-06):
+-# I can certainly confirm for my part that Daylight Saving in NSW did in fact
+-# end on Sunday, 3 March.  I don't know at what hour, though.  (It surprised
+-# me.)
+-
+-# From Bradley White (1992-03-08):
+-# ...there was recently a referendum in Queensland which resulted
+-# in the experimental daylight saving system being abandoned. So, ...
+-# ...
+-# Rule	QLD	1989	1991	-	Oct	lastSun	2:00	1:00	D
+-# Rule	QLD	1990	1992	-	Mar	Sun>=1	3:00	0	S
+-# ...
+-
+-# From Arthur David Olson (1992-03-08):
+-# The chosen rules the union of the 1971/1972 change and the 1989-1992 changes.
+-
+-# From Christopher Hunt (2006-11-21), after an advance warning
+-# from Jesper Nørgaard Welen (2006-11-01):
+-# WA are trialing DST for three years.
+-# http://www.parliament.wa.gov.au/parliament/bills.nsf/9A1B183144403DA54825721200088DF1/$File/Bill175-1B.pdf
++# The Australian Bureau of Meteorology FAQ
++# http://www.bom.gov.au/faq/faqgen.htm
++# (1999-09-27) writes that Giles Meteorological Station uses
++# South Australian time even though it's located in Western Australia.
+ 
+ # From Rives McDow (2002-04-09):
+ # The most interesting region I have found consists of three towns on the
+@@ -1359,6 +1315,59 @@
+ # For lack of better info, assume the tradition dates back to the
+ # introduction of standard time in 1895.
+ 
++# From Stuart Bishop (2024-11-12):
++# An article discussing the in-use but technically unofficial timezones
++# in the Western Australian portion of the Nullarbor Plain.
++# https://www.abc.net.au/news/2024-11-22/outback-wa-properties-strange-time-zones/104542494
++# From Paul Eggert (2024-11-12):
++# As the article says, the Eyre Bird Observatory and nearby sheep stations
++# can use Tokyo time.  Other possibilities include Asia/Chita, Asia/Seoul,
++# and Asia/Jayapura.
++
++# Queensland
++
++# From Paul Eggert (2018-02-26):
++# I lack access to the following source for Queensland DST:
++# Pearce C. History of daylight saving time in Queensland.
++# Queensland Hist J. 2017 Aug;23(6):389-403
++# https://search.informit.com.au/documentSummary;dn=994682348436426;res=IELHSS
++
++# From George Shepherd via Simon Woodhead via Robert Elz (1991-03-06):
++# #   The state of QUEENSLAND.. [ Courtesy Qld. Dept Premier Econ&Trade Devel ]
++# #						[ Dec 1990 ]
++# ...
++# Zone	Australia/Queensland	10:00	AQ	%sST
++# ...
++# Rule	AQ	1971	only	-	Oct	lastSun	2:00	1:00	D
++# Rule	AQ	1972	only	-	Feb	lastSun	3:00	0	E
++# Rule	AQ	1989	max	-	Oct	lastSun	2:00	1:00	D
++# Rule	AQ	1990	max	-	Mar	Sun>=1	3:00	0	E
++
++# From Bradley White (1989-12-24):
++# "Australia/Queensland" now observes daylight time (i.e. from
++# October 1989).
++
++# From Bradley White (1991-03-04):
++# A recent excerpt from an Australian newspaper...
++# ...Queensland...[has] agreed to end daylight saving
++# at 3am tomorrow (March 3)...
++
++# From John Mackin (1991-03-06):
++# I can certainly confirm for my part that Daylight Saving in NSW did in fact
++# end on Sunday, 3 March.  I don't know at what hour, though.  (It surprised
++# me.)
++
++# From Bradley White (1992-03-08):
++# ...there was recently a referendum in Queensland which resulted
++# in the experimental daylight saving system being abandoned. So, ...
++# ...
++# Rule	QLD	1989	1991	-	Oct	lastSun	2:00	1:00	D
++# Rule	QLD	1990	1992	-	Mar	Sun>=1	3:00	0	S
++# ...
++
++# From Arthur David Olson (1992-03-08):
++# The chosen rules the union of the 1971/1972 change and the 1989-1992 changes.
++
+ 
+ # southeast Australia
+ #
+--- contrib/tzdata/checknow.awk.orig
++++ contrib/tzdata/checknow.awk
+@@ -44,7 +44,7 @@
+ END {
+  for (zone in zone_data) {
+     data = zone_data[zone]
+-    if (!zonenow[data]) {
++    if (data && !zonenow[data]) {
+       printf "Zone table should have one of:%s\n", zones[data]
+       zonenow[data] = zone # This suppresses duplicate diagnostics.
+       status = 1
+--- contrib/tzdata/checktab.awk.orig
++++ contrib/tzdata/checktab.awk
+@@ -9,6 +9,19 @@
+ 	if (!zone_table) zone_table = "zone1970.tab"
+ 	if (!want_warnings) want_warnings = -1
+ 
++	monthabbr["Jan"] = 1
++	monthabbr["Feb"] = 1
++	monthabbr["Mar"] = 1
++	monthabbr["Apr"] = 1
++	monthabbr["May"] = 1
++	monthabbr["Jun"] = 1
++	monthabbr["Jul"] = 1
++	monthabbr["Aug"] = 1
++	monthabbr["Sep"] = 1
++	monthabbr["Oct"] = 1
++	monthabbr["Nov"] = 1
++	monthabbr["Dec"] = 1
++
+ 	while (getline <iso_table) {
+ 		iso_NR++
+ 		if ($0 ~ /^#/) continue
+@@ -65,6 +78,12 @@
+ 		split(ccs, cca, /,/)
+ 		cc = cca[1]
+ 
++		if (tztab[tz]) {
++		  printf "%s:%d: %s: duplicate Zone from line %d\n", \
++		    zone_table, zone_NR, tz, tz2NR[tz]
++		  status = 1
++		}
++
+ 		# Don't complain about a special case for Crimea in zone.tab.
+ 		# FIXME: zone.tab should be removed, since it is obsolete.
+ 		# Or at least put just "XX" in its country-code column.
+@@ -128,12 +147,14 @@
+ $1 ~ /^#/ { next }
+ 
+ {
+-	tz = rules = ""
++	tz = rules = stdoff = ""
+ 	if ($1 == "Zone") {
+ 		tz = $2
++		stdoff = $3
+ 		ruleUsed[$4] = 1
+ 		if ($5 ~ /%/) rulePercentUsed[$4] = 1
+-	} else if ($1 == "Link" && zone_table == "zone.tab") {
++	} else if ($1 == "Link") {
++	    if (zone_table == "zone.tab") {
+ 		# Ignore Link commands if source and destination basenames
+ 		# are identical, e.g. Europe/Istanbul versus Asia/Istanbul.
+ 		src = $2
+@@ -141,13 +162,27 @@
+ 		while ((i = index(src, "/"))) src = substr(src, i+1)
+ 		while ((i = index(dst, "/"))) dst = substr(dst, i+1)
+ 		if (src != dst) tz = $3
++	    }
+ 	} else if ($1 == "Rule") {
+ 		ruleDefined[$2] = 1
+ 		if ($10 != "-") ruleLetters[$2] = 1
++		if (!monthabbr[$6]) {
++		  printf "%s:%d: tricky month: %s\n", FILENAME, FNR, $6 \
++			  >>"/dev/stderr"
++		  status = 1
++		}
+ 	} else {
++		stdoff = $1
+ 		ruleUsed[$2] = 1
+ 		if ($3 ~ /%/) rulePercentUsed[$2] = 1
+ 	}
++
++	if (stdoff && stdoff !~ /^\-?1?[0-9](:[0-5][0-9](:[0-5][0-9])?)?$/) {
++		printf "%s:%d: unlikely STDOFF: %s\n", FILENAME, FNR, stdoff \
++			>>"/dev/stderr"
++		status = 1
++	}
++
+ 	if (tz && tz ~ /\// && tz !~ /^Etc\//) {
+ 		if (!tztab[tz] && FILENAME != "backward" \
+ 		    && zone_table != "zonenow.tab") {
+--- contrib/tzdata/etcetera.orig
++++ contrib/tzdata/etcetera
+@@ -51,6 +51,10 @@
+ # so we moved the names into the Etc subdirectory.
+ # Also, the time zone abbreviations are now compatible with %z.
+ 
++# There is no "Etc/Unknown" entry, as CLDR says that "Etc/Unknown"
++# corresponds to an unknown or invalid time zone, and things would get
++# confusing if Etc/Unknown were made valid here.
++
+ Zone	Etc/GMT-14	14	-	%z
+ Zone	Etc/GMT-13	13	-	%z
+ Zone	Etc/GMT-12	12	-	%z
+--- contrib/tzdata/europe.orig
++++ contrib/tzdata/europe
+@@ -1147,7 +1147,7 @@
+ # However, Greenland will change to Daylight Saving Time again in 2024
+ # and onwards.
+ 
+-# From a contributor who wishes to remain anonymous for now (2023-10-29):
++# From Jule Dabars (2023-10-29):
+ # https://www.dr.dk/nyheder/seneste/i-nat-skal-uret-stilles-en-time-tilbage-men-foerste-gang-sker-det-ikke-i-groenland
+ # with a link to that page:
+ # https://naalakkersuisut.gl/Nyheder/2023/10/2710_sommertid
+--- contrib/tzdata/factory.orig
++++ contrib/tzdata/factory
+@@ -8,5 +8,15 @@
+ # time zone abbreviation "-00", indicating that the actual time zone
+ # is unknown.
+ 
++# TZ="Factory" was added to TZDB in 1989, and in 2016 its abbreviation
++# was changed to "-00" from a longish English-language error message.
++# Around 2010, CLDR added "Etc/Unknown" for use with TZDB, to stand
++# for an unknown or invalid time zone.  These two notions differ:
++# TZ="Factory" is a valid timezone, so tzalloc("Factory") succeeds, whereas
++# TZ="Etc/Unknown" is invalid and tzalloc("Etc/Unknown") fails.
++# Also, a downstream distributor could modify Factory to be a
++# default timezone suitable for the devices it manufactures,
++# whereas that cannot happen for Etc/Unknown.
++
+ # Zone	NAME	STDOFF	RULES	FORMAT
+ Zone	Factory	0	- "Local time zone must be set--use tzsetup"
+--- contrib/tzdata/leap-seconds.list.orig
++++ contrib/tzdata/leap-seconds.list
+@@ -60,15 +60,15 @@
+ #
+ #	The following line shows the last update of this file in NTP timestamp:
+ #
+-#$	3929093563
++#$	3945196800
+ #
+ #	2) Expiration date of the file given on a semi-annual basis: last June or last December
+ #
+-#	File expires on 28 June 2025
++#	File expires on 28 December 2025
+ #
+ #	Expire date in NTP timestamp:
+ #
+-#@	3960057600
++#@	3975868800
+ #
+ #
+ #	LIST OF LEAP SECONDS
+@@ -117,4 +117,4 @@
+ #	please see the readme file in the 'source' directory :
+ #	https://hpiers.obspm.fr/iers/bul/bulc/ntp/sources/README
+ #
+-#h	be738595 57b0cf1b b0218343 fb77062f 5a775e7
++#h	848434d5 570f7ea8 d79ba227 a00fc821 f608e2d4
+--- contrib/tzdata/leapseconds.orig
++++ contrib/tzdata/leapseconds
+@@ -69,11 +69,11 @@
+ # Any additional leap seconds will come after this.
+ # This Expires line is commented out for now,
+ # so that pre-2020a zic implementations do not reject this file.
+-#Expires 2025	Jun	28	00:00:00
++#Expires 2025	Dec	28	00:00:00
+ 
+ # POSIX timestamps for the data in this file:
+-#updated 1720104763 (2024-07-04 14:52:43 UTC)
+-#expires 1751068800 (2025-06-28 00:00:00 UTC)
++#updated 1736208000 (2025-01-07 00:00:00 UTC)
++#expires 1766880000 (2025-12-28 00:00:00 UTC)
+ 
+ #	Updated through IERS Bulletin C (https://hpiers.obspm.fr/iers/bul/bulc/bulletinc.dat)
+-#	File expires on 28 June 2025
++#	File expires on 28 December 2025
+--- contrib/tzdata/northamerica.orig
++++ contrib/tzdata/northamerica
+@@ -27,9 +27,12 @@
+ # in New York City (1869-10).  His 1870 proposal was based on Washington, DC,
+ # but in 1872-05 he moved the proposed origin to Greenwich.
+ 
+-# From Paul Eggert (2018-03-20):
++# From Paul Eggert (2024-11-18):
+ # Dowd's proposal left many details unresolved, such as where to draw
+-# lines between time zones.  The key individual who made time zones
++# lines between time zones.  Sandford Fleming of the Canadian Pacific Railway
++# argued for Dowd's proposal in 1876, and Cleveland Abbe of the American
++# Meteorology Society published a report in 1879 recommending four US time
++# zones based on GMT.  However, the key individual who made time zones
+ # work in the US was William Frederick Allen - railway engineer,
+ # managing editor of the Travelers' Guide, and secretary of the
+ # General Time Convention, a railway standardization group.  Allen
+@@ -2631,7 +2634,7 @@
+ # http://puentelibre.mx/noticia/ciudad_juarez_cambio_horario_noviembre_2022/
+ 
+ # Rule	NAME	FROM	TO	-	IN	ON	AT	SAVE	LETTER/S
+-Rule	Mexico	1931	only	-	April	30	0:00	1:00	D
++Rule	Mexico	1931	only	-	Apr	30	0:00	1:00	D
+ Rule	Mexico	1931	only	-	Oct	1	0:00	0	S
+ Rule	Mexico	1939	only	-	Feb	5	0:00	1:00	D
+ Rule	Mexico	1939	only	-	Jun	25	0:00	0	S
+--- contrib/tzdata/southamerica.orig
++++ contrib/tzdata/southamerica
+@@ -1687,7 +1687,7 @@
+ # and that on the first Sunday of the month of October, it is to be set
+ # forward 60 minutes, in all the territory of the Paraguayan Republic.
+ # ...
+-Rule	Para	2010	max	-	Oct	Sun>=1	0:00	1:00	-
++Rule	Para	2010	2024	-	Oct	Sun>=1	0:00	1:00	-
+ Rule	Para	2010	2012	-	Apr	Sun>=8	0:00	0	-
+ #
+ # From Steffen Thorsen (2013-03-07):
+@@ -1706,14 +1706,35 @@
+ # https://www.abc.com.py/politica/2023/07/12/promulgacion-el-cambio-de-hora-sera-por-ley/
+ # From Carlos Raúl Perasso (2023-07-27):
+ # http://silpy.congreso.gov.py/descarga/ley-144138
+-Rule	Para	2013	max	-	Mar	Sun>=22	0:00	0	-
++Rule	Para	2013	2024	-	Mar	Sun>=22	0:00	0	-
++#
++# From Heitor David Pinto (2024-09-24):
++# Today the Congress of Paraguay passed a bill to observe UTC-3 permanently....
++# The text of the bill says that it would enter into force on the first
++# Sunday in October 2024, the same date currently scheduled to start DST....
++# https://silpy.congreso.gov.py/web/expediente/132531
++# (2024-10-14):
++# The president approved the law on 11 October 2024,
++# and it was officially published on 14 October 2024.
++# https://www.gacetaoficial.gov.py/index/detalle_publicacion/89723
++# The text of the law says that it enters into force on the first
++# Sunday in October 2024 (6 October 2024).  But the constitution
++# prohibits retroactive effect, and the civil code says that laws
++# enter into force on the day after their publication or on the day
++# that they specify, and it also says that they don't have retroactive
++# effect.  So I think that the time change on 6 October 2024 should
++# still be considered as DST according to the previous law, and
++# permanently UTC-3 from 15 October 2024 according to the new law....
++# https://www.constituteproject.org/constitution/Paraguay_2011
++# https://www.oas.org/dil/esp/codigo_civil_paraguay.pdf
+ 
+ # Zone	NAME		STDOFF	RULES	FORMAT	[UNTIL]
+ Zone America/Asuncion	-3:50:40 -	LMT	1890
+ 			-3:50:40 -	AMT	1931 Oct 10 # Asunción Mean Time
+ 			-4:00	-	%z	1972 Oct
+ 			-3:00	-	%z	1974 Apr
+-			-4:00	Para	%z
++			-4:00	Para	%z	2024 Oct 15
++			-3:00	-	%z
+ 
+ # Peru
+ #
+--- contrib/tzdata/theory.html.orig
++++ contrib/tzdata/theory.html
+@@ -123,8 +123,9 @@
+ locate the user on a timezone map or prioritize names that are
+ geographically close. For an example selection interface, see the
+ <code>tzselect</code> program in the <code><abbr>tz</abbr></code> code.
+-The <a href="https://cldr.unicode.org">Unicode Common Locale Data
+-Repository</a> contains data that may be useful for other selection
++Unicode's <a href="https://cldr.unicode.org">Common Locale Data
++Repository (<abbr>CLDR</abbr>)</a>
++contains data that may be useful for other selection
+ interfaces; it maps timezone names like <code>Europe/Prague</code> to
+ locale-dependent strings like "Prague", "Praha", "Прага", and "布拉格".
+ </p>
+@@ -200,6 +201,8 @@
+   <li>
+     A name must not be empty, or contain '<code>//</code>', or
+     start or end with '<code>/</code>'.
++    Also, a name must not be '<code>Etc/Unknown</code>', as
++    <abbr>CLDR</abbr> uses that string for an unknown or invalid timezone.
+   </li>
+   <li>
+     Do not use names that differ only in case.
+@@ -220,10 +223,18 @@
+     do not need locations, since local time is not defined there.
+   </li>
+   <li>
+-    If all the clocks in a timezone have agreed since 1970,
+-    do not bother to include more than one timezone
+-    even if some of the clocks disagreed before 1970.
++    If all clocks in a region have agreed since 1970,
++    give them just one name even if some of the clocks disagreed before 1970,
++    or reside in different countries or in notable or faraway locations.
+     Otherwise these tables would become annoyingly large.
++    For example, do not create a name <code>Indian/Crozet</code>
++    as a near-duplicate or alias of <code>Asia/Dubai</code>
++    merely because they are different countries or territories,
++    or their clocks disagreed before 1970, or the
++    <a href="https://en.wikipedia.org/wiki/Crozet_Islands">Crozet Islands</a>
++    are notable in their own right,
++    or the Crozet Islands are not adjacent to other locations
++    that use <code>Asia/Dubai</code>.
+   </li>
+   <li>
+     If boundaries between regions are fluid, such as during a war or
+@@ -579,10 +590,10 @@
+     locations while uninhabited.
+     The leading '<code>-</code>' is a flag that the <abbr>UT</abbr> offset is in
+     some sense undefined; this notation is derived
+-    from <a href="https://datatracker.ietf.org/doc/html/rfc3339">Internet
++    from <a href="https://www.rfc-editor.org/rfc/rfc3339">Internet
+     <abbr title="Request For Comments">RFC</abbr> 3339</a>.
+     (The abbreviation 'Z' that
+-    <a href="https://datatracker.ietf.org/doc/html/rfc9557">Internet
++    <a href="https://www.rfc-editor.org/rfc/rfc9557">Internet
+     <abbr>RFC</abbr> 9557</a> uses for this concept
+     would violate the POSIX requirement
+     of at least three characters in an abbreviation.)
+@@ -1115,8 +1126,8 @@
+     the name of a file from which time-related information is read.
+     The file's format is <dfn><abbr>TZif</abbr></dfn>,
+     a timezone information format that contains binary data; see
+-    <a href="https://datatracker.ietf.org/doc/html/8536">Internet
+-    <abbr>RFC</abbr> 8536</a>.
++    <a href="https://www.rfc-editor.org/rfc/9636">Internet
++    <abbr>RFC</abbr> 9636</a>.
+     The daylight saving time rules to be used for a
+     particular timezone are encoded in the
+     <abbr>TZif</abbr> file; the format of the file allows <abbr>US</abbr>,
+@@ -1201,12 +1212,15 @@
+     The <code>tm_isdst</code> member is almost never needed and most of
+     its uses should be discouraged in favor of the abovementioned
+     <abbr>API</abbr>s.
++    It was intended as an index into the <code>tzname</code> variable,
++    but as mentioned previously that usage is obsolete.
+     Although it can still be used in arguments to
+     <code>mktime</code> to disambiguate timestamps near
+     a <abbr>DST</abbr> transition when the clock jumps back on
+     platforms lacking <code>tm_gmtoff</code>, this
+-    disambiguation does not work when standard time itself jumps back,
+-    which can occur when a location changes to a time zone with a
++    disambiguation works only for proleptic <code>TZ</code> strings;
++    it does not work in general for geographical timezones,
++    such as when a location changes to a time zone with a
+     lesser <abbr>UT</abbr> offset.
+   </li>
+ </ul>
+@@ -1223,8 +1237,8 @@
+     Programs that in the past used the <code>timezone</code> function
+     may now examine <code>localtime(&amp;clock)-&gt;tm_zone</code>
+     (if <code>TM_ZONE</code> is defined) or
+-    <code>tzname[localtime(&amp;clock)-&gt;tm_isdst]</code>
+-    (if <code>HAVE_TZNAME</code> is nonzero) to learn the correct time
++    use <code>strftime</code> with a <code>%Z</code> conversion specification
++    to learn the correct time
+     zone abbreviation to use.
+   </li>
+   <li>
+--- contrib/tzdata/version.orig
++++ contrib/tzdata/version
+@@ -1 +1 @@
+-2024b
++2025a
+--- contrib/tzdata/zone.tab.orig
++++ contrib/tzdata/zone.tab
+@@ -310,7 +310,7 @@
+ PF	-2308-13457	Pacific/Gambier	Gambier Islands
+ PG	-0930+14710	Pacific/Port_Moresby	most of Papua New Guinea
+ PG	-0613+15534	Pacific/Bougainville	Bougainville
+-PH	+1435+12100	Asia/Manila
++PH	+143512+1205804	Asia/Manila
+ PK	+2452+06703	Asia/Karachi
+ PL	+5215+02100	Europe/Warsaw
+ PM	+4703-05620	America/Miquelon
+--- contrib/tzdata/zone1970.tab.orig
++++ contrib/tzdata/zone1970.tab
+@@ -184,7 +184,7 @@
+ IT,SM,VA	+4154+01229	Europe/Rome
+ JM	+175805-0764736	America/Jamaica
+ JO	+3157+03556	Asia/Amman
+-JP	+353916+1394441	Asia/Tokyo
++JP,AU	+353916+1394441	Asia/Tokyo	Eyre Bird Observatory
+ KE,DJ,ER,ET,KM,MG,SO,TZ,UG,YT	-0117+03649	Africa/Nairobi
+ KG	+4254+07436	Asia/Bishkek
+ KI,MH,TV,UM,WF	+0125+17300	Pacific/Tarawa	Gilberts, Marshalls, Wake
+@@ -247,7 +247,7 @@
+ PF	-2308-13457	Pacific/Gambier	Gambier Islands
+ PG,AQ,FM	-0930+14710	Pacific/Port_Moresby	Papua New Guinea (most areas), Chuuk, Yap, Dumont d'Urville
+ PG	-0613+15534	Pacific/Bougainville	Bougainville
+-PH	+1435+12100	Asia/Manila
++PH	+143512+1205804	Asia/Manila
+ PK	+2452+06703	Asia/Karachi
+ PL	+5215+02100	Europe/Warsaw
+ PM	+4703-05620	America/Miquelon
+@@ -294,7 +294,7 @@
+ SA,AQ,KW,YE	+2438+04643	Asia/Riyadh	Syowa
+ SB,FM	-0932+16012	Pacific/Guadalcanal	Pohnpei
+ SD	+1536+03232	Africa/Khartoum
+-SG,MY	+0117+10351	Asia/Singapore	peninsular Malaysia
++SG,AQ,MY	+0117+10351	Asia/Singapore	peninsular Malaysia, Concordia
+ SR	+0550-05510	America/Paramaribo
+ SS	+0451+03137	Africa/Juba
+ ST	+0020+00644	Africa/Sao_Tome
+--- contrib/tzdata/zonenow.tab.orig
++++ contrib/tzdata/zonenow.tab
+@@ -97,9 +97,6 @@
+ # -04/-03 (Chile DST)
+ XX	-3327-07040	America/Santiago	most of Chile
+ #
+-# -04/-03 (Paraguay DST)
+-XX	-2516-05740	America/Asuncion	Paraguay
+-#
+ # -04/-03 - AST/ADT (North America DST)
+ XX	+4439-06336	America/Halifax	Atlantic ("AST/ADT") - Canada; Bermuda
+ #
+@@ -224,7 +221,7 @@
+ XX	-0610+10648	Asia/Jakarta	Indonesia ("WIB")
+ #
+ # +08
+-XX	+0117+10351	Asia/Singapore	Russia; Brunei; Malaysia; Singapore
++XX	+0117+10351	Asia/Singapore	Russia; Brunei; Malaysia; Singapore; Concordia
+ #
+ # +08 - AWST
+ XX	-3157+11551	Australia/Perth	Western Australia ("AWST")
+@@ -236,7 +233,7 @@
+ XX	+2217+11409	Asia/Hong_Kong	Hong Kong ("HKT")
+ #
+ # +08 - PHT
+-XX	+1435+12100	Asia/Manila	Philippines ("PHT")
++XX	+143512+1205804	Asia/Manila	Philippines ("PHT")
+ #
+ # +08 - WITA
+ XX	-0507+11924	Asia/Makassar	Indonesia ("WITA")
+@@ -248,7 +245,7 @@
+ XX	+5203+11328	Asia/Chita	Russia; Palau; East Timor
+ #
+ # +09 - JST
+-XX	+353916+1394441	Asia/Tokyo	Japan ("JST")
++XX	+353916+1394441	Asia/Tokyo	Japan ("JST"); Eyre Bird Observatory
+ #
+ # +09 - KST
+ XX	+3733+12658	Asia/Seoul	Korea ("KST")
