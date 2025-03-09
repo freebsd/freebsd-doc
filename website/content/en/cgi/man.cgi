@@ -332,6 +332,8 @@ $manPathDefault = 'FreeBSD 14.2-RELEASE and Ports';
     'FreeBSD 14.0-RELEASE and Ports',
 "$manLocalDir/FreeBSD-14.0-RELEASE/man:$manLocalDir/FreeBSD-14.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-14.0-RELEASE/man:$manLocalDir/FreeBSD-ports-14.0-RELEASE/misc",
 
+    'FreeBSD 13.5-RELEASE and Ports',
+"$manLocalDir/FreeBSD-13.5-RELEASE/man:$manLocalDir/FreeBSD-13.5-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-13.5-RELEASE/man:$manLocalDir/FreeBSD-ports-13.5-RELEASE/misc",
     'FreeBSD 13.4-RELEASE and Ports',
 "$manLocalDir/FreeBSD-13.4-RELEASE/man:$manLocalDir/FreeBSD-13.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-13.4-RELEASE/man:$manLocalDir/FreeBSD-ports-13.4-RELEASE/misc",
     'FreeBSD 13.3-RELEASE and Ports',
@@ -410,8 +412,10 @@ $manPathDefault = 'FreeBSD 14.2-RELEASE and Ports';
     'FreeBSD 14.0-RELEASE',
 "$manLocalDir/FreeBSD-14.0-RELEASE/man:$manLocalDir/FreeBSD-14.0-RELEASE/openssl/man",
 
-    'FreeBSD 13.4-STABLE',
-"$manLocalDir/FreeBSD-13.4-STABLE/man:$manLocalDir/FreeBSD-13.4-STABLE/openssl/man",
+    'FreeBSD 13.5-STABLE',
+"$manLocalDir/FreeBSD-13.5-STABLE/man:$manLocalDir/FreeBSD-13.5-STABLE/openssl/man",
+    'FreeBSD 13.5-RELEASE',
+"$manLocalDir/FreeBSD-13.5-RELEASE/man:$manLocalDir/FreeBSD-13.5-RELEASE/openssl/man",
     'FreeBSD 13.4-RELEASE',
 "$manLocalDir/FreeBSD-13.4-RELEASE/man:$manLocalDir/FreeBSD-13.4-RELEASE/openssl/man",
     'FreeBSD 13.3-RELEASE',
@@ -537,6 +541,7 @@ $manPathDefault = 'FreeBSD 14.2-RELEASE and Ports';
     'FreeBSD Ports 13.2', "$manLocalDir/FreeBSD-ports-13.2-RELEASE/man:$manLocalDir/FreeBSD-ports-13.2-RELEASE/misc",
     'FreeBSD Ports 13.3', "$manLocalDir/FreeBSD-ports-13.3-RELEASE/man:$manLocalDir/FreeBSD-ports-13.3-RELEASE/misc",
     'FreeBSD Ports 13.4', "$manLocalDir/FreeBSD-ports-13.4-RELEASE/man:$manLocalDir/FreeBSD-ports-13.4-RELEASE/misc",
+    'FreeBSD Ports 13.5', "$manLocalDir/FreeBSD-ports-13.5-RELEASE/man:$manLocalDir/FreeBSD-ports-13.5-RELEASE/misc",
     'FreeBSD Ports 14.0', "$manLocalDir/FreeBSD-ports-14.0-RELEASE/man:$manLocalDir/FreeBSD-ports-14.0-RELEASE/misc",
     'FreeBSD Ports 14.1', "$manLocalDir/FreeBSD-ports-14.1-RELEASE/man:$manLocalDir/FreeBSD-ports-14.1-RELEASE/misc",
     'FreeBSD Ports 14.2', "$manLocalDir/FreeBSD-ports-14.2-RELEASE/man:$manLocalDir/FreeBSD-ports-14.2-RELEASE/misc",
@@ -1147,7 +1152,7 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'freebsd-stable',   'FreeBSD 14.2-STABLE',
     'freebsd-stable14', 'FreeBSD 14.2-STABLE',
-    'freebsd-stable13', 'FreeBSD 13.4-STABLE',
+    'freebsd-stable13', 'FreeBSD 13.5-STABLE',
 
     'freebsd-current',       'FreeBSD 15.0-CURRENT',
     'freebsd-release-ports', 'FreeBSD 14.2-RELEASE and Ports',
