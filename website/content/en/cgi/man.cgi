@@ -353,10 +353,12 @@ foreach my $os ( keys %$sectionpath ) {
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
 # this should be the latest "release and ports"
-$manPathDefault = 'FreeBSD 14.2-RELEASE and Ports';
+$manPathDefault = 'FreeBSD 14.3-RELEASE and Ports';
 
 %manPath = (
     # supported RELEASES / STABLE / CURRENT 
+    'FreeBSD 14.3-RELEASE and Ports',
+"$manLocalDir/FreeBSD-14.3-RELEASE/man:$manLocalDir/FreeBSD-14.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-14.3-RELEASE/man:$manLocalDir/FreeBSD-ports-14.3-RELEASE/misc",
     'FreeBSD 14.2-RELEASE and Ports',
 "$manLocalDir/FreeBSD-14.2-RELEASE/man:$manLocalDir/FreeBSD-14.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-14.2-RELEASE/man:$manLocalDir/FreeBSD-ports-14.2-RELEASE/misc",
     'FreeBSD 14.1-RELEASE and Ports',
@@ -435,8 +437,10 @@ $manPathDefault = 'FreeBSD 14.2-RELEASE and Ports';
     'FreeBSD 15.0-CURRENT',
 "$manLocalDir/FreeBSD-15.0-CURRENT/man:$manLocalDir/FreeBSD-15.0-CURRENT/openssl/man",
 
-    'FreeBSD 14.2-STABLE',
-"$manLocalDir/FreeBSD-14.2-STABLE/man:$manLocalDir/FreeBSD-14.2-STABLE/openssl/man",
+    'FreeBSD 14.3-STABLE',
+"$manLocalDir/FreeBSD-14.3-STABLE/man:$manLocalDir/FreeBSD-14.3-STABLE/openssl/man",
+    'FreeBSD 14.3-RELEASE',
+"$manLocalDir/FreeBSD-14.3-RELEASE/man:$manLocalDir/FreeBSD-14.3-RELEASE/openssl/man",
     'FreeBSD 14.2-RELEASE',
 "$manLocalDir/FreeBSD-14.2-RELEASE/man:$manLocalDir/FreeBSD-14.2-RELEASE/openssl/man",
     'FreeBSD 14.1-RELEASE',
@@ -577,6 +581,7 @@ $manPathDefault = 'FreeBSD 14.2-RELEASE and Ports';
     'FreeBSD Ports 14.0', "$manLocalDir/FreeBSD-ports-14.0-RELEASE/man:$manLocalDir/FreeBSD-ports-14.0-RELEASE/misc",
     'FreeBSD Ports 14.1', "$manLocalDir/FreeBSD-ports-14.1-RELEASE/man:$manLocalDir/FreeBSD-ports-14.1-RELEASE/misc",
     'FreeBSD Ports 14.2', "$manLocalDir/FreeBSD-ports-14.2-RELEASE/man:$manLocalDir/FreeBSD-ports-14.2-RELEASE/misc",
+    'FreeBSD Ports 14.3', "$manLocalDir/FreeBSD-ports-14.3-RELEASE/man:$manLocalDir/FreeBSD-ports-14.3-RELEASE/misc",
 
 
     # FreeBSD Releases + Ports
@@ -1193,16 +1198,16 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 14.2-RELEASE',
-    'freebsd-release', 'FreeBSD 14.2-RELEASE',
+    'freebsd',         'FreeBSD 14.3-RELEASE',
+    'freebsd-release', 'FreeBSD 14.3-RELEASE',
 
-    'freebsd-stable',   'FreeBSD 14.2-STABLE',
-    'freebsd-stable14', 'FreeBSD 14.2-STABLE',
+    'freebsd-stable',   'FreeBSD 14.3-STABLE',
+    'freebsd-stable14', 'FreeBSD 14.3-STABLE',
     'freebsd-stable13', 'FreeBSD 13.5-STABLE',
 
     'freebsd-current',       'FreeBSD 15.0-CURRENT',
-    'freebsd-release-ports', 'FreeBSD 14.2-RELEASE and Ports',
-    'freebsd-ports', 'FreeBSD Ports 14.2',
+    'freebsd-release-ports', 'FreeBSD 14.3-RELEASE and Ports',
+    'freebsd-ports', 'FreeBSD Ports 14.3',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat 9',
