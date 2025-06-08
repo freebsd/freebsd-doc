@@ -1208,7 +1208,7 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'freebsd-current',       'FreeBSD 15.0-CURRENT',
     'freebsd-release-ports', 'FreeBSD 14.3-RELEASE and Ports',
-    'freebsd-ports', 'FreeBSD Ports 14.quarterly',
+    'freebsd-ports', 'FreeBSD Ports 14.3.quarterly',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat 9',
