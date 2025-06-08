@@ -358,7 +358,7 @@ $manPathDefault = 'FreeBSD 14.3-RELEASE and Ports';
 %manPath = (
     # supported RELEASES / STABLE / CURRENT 
     'FreeBSD 14.3-RELEASE and Ports',
-"$manLocalDir/FreeBSD-14.3-RELEASE/man:$manLocalDir/FreeBSD-14.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-14.3-RELEASE/man:$manLocalDir/FreeBSD-ports-14.3-RELEASE/misc",
+"$manLocalDir/FreeBSD-14.3-RELEASE/man:$manLocalDir/FreeBSD-14.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/man:$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/misc",
     'FreeBSD 14.2-RELEASE and Ports',
 "$manLocalDir/FreeBSD-14.2-RELEASE/man:$manLocalDir/FreeBSD-14.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-14.2-RELEASE/man:$manLocalDir/FreeBSD-ports-14.2-RELEASE/misc",
     'FreeBSD 14.1-RELEASE and Ports',
@@ -582,6 +582,7 @@ $manPathDefault = 'FreeBSD 14.3-RELEASE and Ports';
     'FreeBSD Ports 14.1', "$manLocalDir/FreeBSD-ports-14.1-RELEASE/man:$manLocalDir/FreeBSD-ports-14.1-RELEASE/misc",
     'FreeBSD Ports 14.2', "$manLocalDir/FreeBSD-ports-14.2-RELEASE/man:$manLocalDir/FreeBSD-ports-14.2-RELEASE/misc",
     'FreeBSD Ports 14.3', "$manLocalDir/FreeBSD-ports-14.3-RELEASE/man:$manLocalDir/FreeBSD-ports-14.3-RELEASE/misc",
+    'FreeBSD Ports 14.quarterly', "$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/man:$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/misc",
 
 
     # FreeBSD Releases + Ports
@@ -1207,7 +1208,7 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'freebsd-current',       'FreeBSD 15.0-CURRENT',
     'freebsd-release-ports', 'FreeBSD 14.3-RELEASE and Ports',
-    'freebsd-ports', 'FreeBSD Ports 14.3',
+    'freebsd-ports', 'FreeBSD Ports 14.quarterly',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat 9',
