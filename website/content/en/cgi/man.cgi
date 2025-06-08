@@ -582,7 +582,7 @@ $manPathDefault = 'FreeBSD 14.3-RELEASE and Ports';
     'FreeBSD Ports 14.1', "$manLocalDir/FreeBSD-ports-14.1-RELEASE/man:$manLocalDir/FreeBSD-ports-14.1-RELEASE/misc",
     'FreeBSD Ports 14.2', "$manLocalDir/FreeBSD-ports-14.2-RELEASE/man:$manLocalDir/FreeBSD-ports-14.2-RELEASE/misc",
     'FreeBSD Ports 14.3', "$manLocalDir/FreeBSD-ports-14.3-RELEASE/man:$manLocalDir/FreeBSD-ports-14.3-RELEASE/misc",
-    'FreeBSD Ports 14.quarterly', "$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/man:$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/misc",
+    'FreeBSD Ports 14.3.quarterly', "$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/man:$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/misc",
 
 
     # FreeBSD Releases + Ports
