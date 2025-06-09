@@ -1406,6 +1406,7 @@ span.footer_links { font-size: small; }
 span.space { font-size: xx-small; }
 form#man > input, form#man > button { font-size: large; }
 form#man > input[name='query'] { text-align: center; }
+p#section_links { max-width: 50em; }
 
 @media only screen and (max-height: 640px), (max-width: 760px) {
   /* hide logo color top */
@@ -1993,6 +1994,7 @@ qq{Please try a <a href="$BASE?apropos=1&amp;manpath=freebsd-release-ports&amp;q
     close(MAN);
     print qq{</pre>\n<a name="end" />\n<hr />\n};
 
+    print qq{\n<p id="section_links">\n};
     for ( $i = 0 ; $i <= $#sect ; $i++ ) {
         $j = &encode_url( $sect[$i] );
         $j =~ s/\+/_/g;
@@ -2001,6 +2003,7 @@ qq{Please try a <a href="$BASE?apropos=1&amp;manpath=freebsd-release-ports&amp;q
           . qq{">$sect[$i]</a>}
           . ( $i < $#sect ? " |\n" : "\n" );
     }
+    print qq{</p>\n\n};
 
     if ($want_to_link_to_this_page) {
         my $url = qq{$full_url?query=$html_name};
