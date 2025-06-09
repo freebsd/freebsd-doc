@@ -2407,7 +2407,10 @@ sub faq {
     }
 
     foreach ( &freebsd_first (&sort_manpath(\%manPathAliases) )) {
-        next if !$manPathAliases{$_};
+        if (!$manPathAliases{$_}) {
+            warn "missing release alias '$_'\n" if $debug >= 2;
+            next;        
+        }
 
         my $encode_url = &encode_url($_);
         push( @list2,
