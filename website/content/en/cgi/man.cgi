@@ -1407,6 +1407,7 @@ span.space { font-size: xx-small; }
 form#man > input, form#man > button { font-size: large; }
 form#man > input[name='query'] { text-align: center; }
 p#section_links { max-width: 50em; }
+hr { margin-left: 0em; max-width: 50em; }
 
 @media only screen and (max-height: 640px), (max-width: 760px) {
   /* hide logo color top */
