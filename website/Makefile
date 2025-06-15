@@ -115,8 +115,8 @@ generate-release:
 .endif
 
 generate-hardware-notes:
-.if empty(RELEASE) && empty(MAIN)
-	@echo "Specify a release or use main. Example RELEASE=14.1 MAIN=true"
+.if empty(RELEASE) && empty(STABLE) && empty(MAIN)
+	@echo "Specify a release or use stable or main. Example RELEASE=14.1 MAIN=true"
 .else
 .if exists(./tmp)
 	rm -fr ./tmp
@@ -126,6 +126,8 @@ generate-hardware-notes:
 	@echo "---------------------------------------------------------------"
 .if !empty(MAIN)
 	git clone --depth 1 --branch main https://git.FreeBSD.org/src.git tmp
+.elif !empty(STABLE)
+	git clone --depth 1 --branch stable/${RELEASE:R} https://git.FreeBSD.org/src.git tmp
 .elif !empty(RELEASE)
 	git clone --depth 1 --branch releng/${RELEASE} https://git.FreeBSD.org/src.git tmp
 .endif
