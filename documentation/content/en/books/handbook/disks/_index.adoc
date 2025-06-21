@@ -1728,176 +1728,11 @@ File permissions and crossref:mac[mac,Mandatory Access Control] (MAC) help preve
 However, the permissions enforced by the operating system are irrelevant if an attacker has physical access to a computer and can move the computer's hard drive to another system to copy and analyze the data.
 
 Regardless of how an attacker may have come into possession of a hard drive or powered-down computer, the GEOM-based cryptographic subsystems built into FreeBSD are able to protect the data on the computer's file systems against even highly-motivated attackers with significant resources.
-Unlike encryption methods that encrypt individual files, the built-in `gbde` and `geli` utilities can be used to transparently encrypt entire file systems.
+Unlike encryption methods that encrypt individual files, the built-in `geli` utilities can be used to transparently encrypt entire file systems.
 No cleartext ever touches the hard drive's platter.
 
 This chapter demonstrates how to create an encrypted file system on FreeBSD.
-It first demonstrates the process using `gbde` and then demonstrates the same example using `geli`.
-
-=== Disk Encryption with gbde
-
-The objective of the man:gbde[4] facility is to provide a formidable challenge for an attacker to gain access to the contents of a _cold_ storage device.
-However, if the computer is compromised while up and running and the storage device is actively attached, or the attacker has access to a valid passphrase, it offers no protection to the contents of the storage device.
-Thus, it is important to provide physical security while the system is running and to protect the passphrase used by the encryption mechanism.
-
-This facility provides several barriers to protect the data stored in each disk sector.
-It encrypts the contents of a disk sector using 128-bit AES in CBC mode.
-Each sector on the disk is encrypted with a different AES key.
-For more information on the cryptographic design, including how the sector keys are derived from the user-supplied passphrase, refer to man:gbde[4].
-
-FreeBSD provides a kernel module for gbde which can be loaded with this command:
-
-[source,shell]
-....
-# kldload geom_bde
-....
-
-If using a custom kernel configuration file, ensure it contains this line:
-
-`options GEOM_BDE`
-
-The following example demonstrates adding a new hard drive to a system that will hold a single encrypted partition that will be mounted as [.filename]#/private#.
-
-[.procedure]
-.Procedure: Encrypting a Partition with gbde
-. Add the New Hard Drive
-+
-Install the new drive to the system as explained in crossref:disks[disks-adding, Adding Disks].
-For the purposes of this example, a new hard drive partition has been added as [.filename]#/dev/ad4s1c# and [.filename]#/dev/ad0s1*# represents the existing standard FreeBSD partitions.
-+
-[source,shell]
-....
-# ls /dev/ad*
-/dev/ad0        /dev/ad0s1b     /dev/ad0s1e     /dev/ad4s1
-/dev/ad0s1      /dev/ad0s1c     /dev/ad0s1f     /dev/ad4s1c
-/dev/ad0s1a     /dev/ad0s1d     /dev/ad4
-....
-
-. Create a Directory to Hold `gbde` Lock Files
-+
-[source,shell]
-....
-# mkdir /etc/gbde
-....
-+
-The gbde lock file contains information that gbde requires to access encrypted partitions.
-Without access to the lock file, gbde will not be able to decrypt the data contained in the encrypted partition without significant manual intervention which is not supported by the software.
-Each encrypted partition uses a separate lock file.
-. Initialize the `gbde` Partition
-+
-A gbde partition must be initialized before it can be used.
-This initialization needs to be performed only once.
-This command will open the default editor, in order to set various configuration options in a template.
-For use with the UFS file system, set the sector_size to 2048:
-+
-[source,shell]
-....
-# gbde init /dev/ad4s1c -i -L /etc/gbde/ad4s1c.lock
-#
-# Sector size is the smallest unit of data which can be read or written.
-# Making it too small decreases performance and decreases available space.
-# Making it too large may prevent filesystems from working.  512 is the
-# minimum and always safe.  For UFS, use the fragment size
-#
-sector_size	=	2048
-[...]
-....
-+
-Once the edit is saved, the user will be asked twice to type the passphrase used to secure the data.
-The passphrase must be the same both times.
-The ability of gbde to protect data depends entirely on the quality of the passphrase.
-For tips on how to select a secure passphrase that is easy to remember, see http://world.std.com/\~reinhold/diceware.html[http://world.std.com/~reinhold/diceware.htm].
-+
-This initialization creates a lock file for the gbde partition.
-In this example, it is stored as [.filename]#/etc/gbde/ad4s1c.lock#.
-Lock files must end in ".lock" in order to be correctly detected by the [.filename]#/etc/rc.d/gbde# start up script.
-+
-[CAUTION]
-====
-Lock files _must_ be backed up together with the contents of any encrypted partitions.
-Without the lock file, the legitimate owner will be unable to access the data on the encrypted partition.
-====
-
-. Attach the Encrypted Partition to the Kernel
-+
-[source,shell]
-....
-# gbde attach /dev/ad4s1c -l /etc/gbde/ad4s1c.lock
-....
-+
-This command will prompt to input the passphrase that was selected during the initialization of the encrypted partition.
-The new encrypted device will appear in [.filename]#/dev# as [.filename]#/dev/device_name.bde#:
-+
-[source,shell]
-....
-# ls /dev/ad*
-/dev/ad0        /dev/ad0s1b     /dev/ad0s1e     /dev/ad4s1
-/dev/ad0s1      /dev/ad0s1c     /dev/ad0s1f     /dev/ad4s1c
-/dev/ad0s1a     /dev/ad0s1d     /dev/ad4        /dev/ad4s1c.bde
-....
-
-. Create a File System on the Encrypted Device
-+
-Once the encrypted device has been attached to the kernel, a file system can be created on the device.
-This example creates a UFS file system with soft updates enabled.
-Be sure to specify the partition which has a [.filename]#*.bde# extension:
-+
-[source,shell]
-....
-# newfs -U /dev/ad4s1c.bde
-....
-
-. Mount the Encrypted Partition
-+
-Create a mount point and mount the encrypted file system:
-+
-[source,shell]
-....
-# mkdir /private
-# mount /dev/ad4s1c.bde /private
-....
-
-. Verify That the Encrypted File System is Available
-+
-The encrypted file system should now be visible and available for use:
-+
-[source,shell]
-....
-% df -H
-Filesystem        Size   Used  Avail Capacity  Mounted on
-/dev/ad0s1a      1037M    72M   883M     8%    /
-/devfs            1.0K   1.0K     0B   100%    /dev
-/dev/ad0s1f       8.1G    55K   7.5G     0%    /home
-/dev/ad0s1e      1037M   1.1M   953M     0%    /tmp
-/dev/ad0s1d       6.1G   1.9G   3.7G    35%    /usr
-/dev/ad4s1c.bde   150G   4.1K   138G     0%    /private
-....
-
-After each boot, any encrypted file systems must be manually re-attached to the kernel, checked for errors, and mounted, before the file systems can be used.
-To configure these steps, add the following lines to [.filename]#/etc/rc.conf#:
-
-[.programlisting]
-....
-gbde_autoattach_all="YES"
-gbde_devices="ad4s1c"
-gbde_lockdir="/etc/gbde"
-....
-
-This requires that the passphrase be entered at the console at boot time.
-After typing the correct passphrase, the encrypted partition will be mounted automatically.
-Additional gbde boot options are available and listed in man:rc.conf[5].
-
-[NOTE]
-====
-sysinstall is incompatible with gbde-encrypted devices.
-All [.filename]#*.bde# devices must be detached from the kernel before starting sysinstall or it will crash during its initial probing for devices.
-To detach the encrypted device used in the example, use the following command:
-
-[source,shell]
-....
-# gbde detach /dev/ad4s1c
-....
-====
+It demonstrates the process using `geli`.
 
 [[disks-encrypting-geli]]
 === Disk Encryption with `geli`
@@ -2052,7 +1887,7 @@ As long as these passwords stay in physical memory, they are not written to disk
 However, if FreeBSD starts swapping out memory pages to free space, the passwords may be written to the disk unencrypted.
 Encrypting swap space can be a solution for this scenario.
 
-This section demonstrates how to configure an encrypted swap partition using man:gbde[8] or man:geli[8] encryption.
+This section demonstrates how to configure an encrypted swap partition using man:geli[8] encryption.
 It assumes that [.filename]#/dev/ada0s1b# is the swap partition.
 
 === Configuring Encrypted Swap
@@ -2065,13 +1900,6 @@ To overwrite the current swap partition with random garbage, execute the followi
 # dd if=/dev/random of=/dev/ada0s1b bs=1m
 ....
 
-To encrypt the swap partition using man:gbde[8], add the `.bde` suffix to the swap line in [.filename]#/etc/fstab#:
-
-[.programlisting]
-....
-# Device		Mountpoint	FStype	Options		Dump	Pass#
-/dev/ada0s1b.bde	none		swap	sw		0	0
-....
 
 To instead encrypt the swap partition using man:geli[8], use the `.eli` suffix:
 
@@ -2113,15 +1941,6 @@ This example configures an encrypted swap partition using the AES-XTS algorithm 
 === Encrypted Swap Verification
 
 Once the system has rebooted, proper operation of the encrypted swap can be verified using `swapinfo`.
-
-If man:gbde[8] is being used:
-
-[source,shell]
-....
-% swapinfo
-Device          1K-blocks     Used    Avail Capacity
-/dev/ada0s1b.bde   542720        0   542720     0
-....
 
 If man:geli[8] is being used:
 
