@@ -269,6 +269,8 @@ $sectionpath = {
     'CentOS 7.8' => { 'path' => '0p:1:1p:2:3:3p:3t:4:5:6:7:8:9:n' },
     'CentOS 7.9' => { 'path' => '0p:1:1p:2:3:3p:3t:4:5:6:7:8:9:n' },
 
+    'Rocky 10.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
+    'Rocky 9.6' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
     'Rocky 9.5' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
     'Rocky 9.4' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
     'Rocky 9.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
@@ -861,6 +863,8 @@ $manPathDefault = 'FreeBSD 14.3-RELEASE and Ports';
     'CentOS 7.8', "$manLocalDir/CentOS-7.8",
     'CentOS 7.9', "$manLocalDir/CentOS-7.9",
 
+    'Rocky 10.0', "$manLocalDir/Rocky-10.0",
+    'Rocky 9.6', "$manLocalDir/Rocky-9.6",
     'Rocky 9.5', "$manLocalDir/Rocky-9.5",
     'Rocky 9.4', "$manLocalDir/Rocky-9.4",
     'Rocky 9.3', "$manLocalDir/Rocky-9.3",
@@ -1217,7 +1221,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'ubuntu',     'Ubuntu 24.04 noble',
     'dragonfly',  'DragonFly 6.4.0',
     'centos',     'CentOS 7.9',
-    'rocky',      'Rocky 9.5',
+    'rocky',      'Rocky 10.0',
     'linux',      'Debian 12.11.0',
     'darwin',     'Darwin 8.0.1/ppc',
     'opendarwin', 'OpenDarwin 7.2.1',
