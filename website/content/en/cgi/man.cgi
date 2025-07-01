@@ -269,6 +269,8 @@ $sectionpath = {
     'CentOS 7.8' => { 'path' => '0p:1:1p:2:3:3p:3t:4:5:6:7:8:9:n' },
     'CentOS 7.9' => { 'path' => '0p:1:1p:2:3:3p:3t:4:5:6:7:8:9:n' },
 
+    'Rocky 10.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
+    'Rocky 9.6' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
     'Rocky 9.5' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
     'Rocky 9.4' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
     'Rocky 9.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n', },
@@ -861,6 +863,8 @@ $manPathDefault = 'FreeBSD 14.3-RELEASE and Ports';
     'CentOS 7.8', "$manLocalDir/CentOS-7.8",
     'CentOS 7.9', "$manLocalDir/CentOS-7.9",
 
+    'Rocky 10.0', "$manLocalDir/Rocky-10.0",
+    'Rocky 9.6', "$manLocalDir/Rocky-9.6",
     'Rocky 9.5', "$manLocalDir/Rocky-9.5",
     'Rocky 9.4', "$manLocalDir/Rocky-9.4",
     'Rocky 9.3', "$manLocalDir/Rocky-9.3",
@@ -1217,7 +1221,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'ubuntu',     'Ubuntu 24.04 noble',
     'dragonfly',  'DragonFly 6.4.0',
     'centos',     'CentOS 7.9',
-    'rocky',      'Rocky 9.5',
+    'rocky',      'Rocky 10.0',
     'linux',      'Debian 12.11.0',
     'darwin',     'Darwin 8.0.1/ppc',
     'opendarwin', 'OpenDarwin 7.2.1',
@@ -1369,7 +1373,7 @@ $want_to_link_to_this_page = 1;
 
 # CGI Interface -- runs at load time
 &do_man( &env('SCRIPT_NAME'), &env('PATH_INFO'), &env('QUERY_STRING') )
-  unless defined($main'plexus_configured);
+  unless defined($main::plexus_configured);
 
 #
 # end of config
@@ -1607,15 +1611,15 @@ sub http_header {
     print qq{Content-disposition: inline; filename="$filename"\n}
       if $filename;
 
-    if ( defined($main'plexus_configured) ) {
-        &main'MIME_header( 'ok', $content_type );
+    if ( defined($main::plexus_configured) ) {
+        &main::MIME_header( 'ok', $content_type );
     }
     else {
         print "Content-type: $content_type\n\n";
     }
 }
 
-sub env { defined( $main'ENV{ $_[0] } ) ? $main'ENV{ $_[0] } : undef; }
+sub env { defined( $main::ENV{ $_[0] } ) ? $main::ENV{ $_[0] } : undef; }
 
 sub apropos {
     local ($query, $sektion) = @_;
@@ -2098,7 +2102,7 @@ sub dec {
 
 #
 # Splits up a query request, returns an array of items.
-# usage: @items = &main'splitquery($query);
+# usage: @items = &main::splitquery($query);
 #
 sub splitquery {
     local ($query) = @_;
@@ -2566,13 +2570,13 @@ $head
 }
 
 sub secure_env {
-    $main'ENV{'PATH'}    = '/bin:/usr/bin';
-    $main'ENV{'MANPATH'} = $manPath{$manPathDefault};
-    $main'ENV{'IFS'}     = " \t\n";
-    $main'ENV{'PAGER'}   = 'cat';
-    $main'ENV{'SHELL'}   = '/bin/sh';
-    $main'ENV{'LANG'}    = 'C';
-    undef $main'ENV{'DISPLAY'};
+    $main::ENV{'PATH'}    = '/bin:/usr/bin';
+    $main::ENV{'MANPATH'} = $manPath{$manPathDefault};
+    $main::ENV{'IFS'}     = " \t\n";
+    $main::ENV{'PAGER'}   = 'cat';
+    $main::ENV{'SHELL'}   = '/bin/sh';
+    $main::ENV{'LANG'}    = 'C';
+    undef $main::ENV{'DISPLAY'};
 }
 
 sub include_output {
