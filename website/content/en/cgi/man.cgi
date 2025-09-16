@@ -999,6 +999,7 @@ $manPathDefault = 'FreeBSD 14.3-RELEASE and Ports';
     # alias SunOS 0.4, apparently released in April 1983 based on 4.2BSD beta
     'Sun UNIX 0.4', "$manLocalDir/Sun-UNIX-0.4",
 
+    'macOS 26.0',   "$manLocalDir/macOS-26.0/man:$manLocalDir/macOS-26.0/developer-man:$manLocalDir/macOS-26.0/developer-platform-sdk-man:$manLocalDir/macOS-26.0/xctoolchain-man",  
     'macOS 15.6',   "$manLocalDir/macOS-15.6/man:$manLocalDir/macOS-15.6/developer-man:$manLocalDir/macOS-15.6/developer-platform-sdk-man:$manLocalDir/macOS-15.6/xctoolchain-man",  
     'macOS 14.7.7', "$manLocalDir/macOS-14.7.7/man:$manLocalDir/macOS-14.7.7/developer-man:$manLocalDir/macOS-14.7.7/developer-platform-man:$manLocalDir/macOS-14.7.7/developer-platform-sdk-man:$manLocalDir/macOS-14.7.7/xctoolchain-man",  
     'macOS 13.6.5', "$manLocalDir/macOS-13.6.5/man:$manLocalDir/macOS-13.6.5/developer-man:$manLocalDir/macOS-13.6.5/developer-platform-man:$manLocalDir/macOS-13.6.5/developer-platform-sdk-man:$manLocalDir/macOS-13.6.5/xctoolchain-man",  
@@ -1246,7 +1247,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'sunos5',        'SunOS 5.10',
     'sunos4',        'SunOS 4.1.3',
     'sunos',         'SunOS 4.1.3',
-    'macos',         'macOS 15.6',
+    'macos',         'macOS 26.0',
     'plan9',         'Plan 9',
     'osf1',          'OSF1 V5.1/alpha',
     'true64',        'OSF1 V5.1/alpha',
