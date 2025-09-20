@@ -1000,8 +1000,8 @@ $manPathDefault = 'FreeBSD 14.3-RELEASE and Ports';
     'Sun UNIX 0.4', "$manLocalDir/Sun-UNIX-0.4",
 
     'macOS 26.0',   "$manLocalDir/macOS-26.0/man:$manLocalDir/macOS-26.0/developer-man:$manLocalDir/macOS-26.0/developer-platform-sdk-man:$manLocalDir/macOS-26.0/xctoolchain-man",  
-    'macOS 15.6',   "$manLocalDir/macOS-15.6/man:$manLocalDir/macOS-15.6/developer-man:$manLocalDir/macOS-15.6/developer-platform-sdk-man:$manLocalDir/macOS-15.6/xctoolchain-man",  
-    'macOS 14.7.7', "$manLocalDir/macOS-14.7.7/man:$manLocalDir/macOS-14.7.7/developer-man:$manLocalDir/macOS-14.7.7/developer-platform-man:$manLocalDir/macOS-14.7.7/developer-platform-sdk-man:$manLocalDir/macOS-14.7.7/xctoolchain-man",  
+    'macOS 15.7',   "$manLocalDir/macOS-15.7/man:$manLocalDir/macOS-15.7/developer-man:$manLocalDir/macOS-15.7/developer-platform-sdk-man:$manLocalDir/macOS-15.7/xctoolchain-man",  
+    'macOS 14.8',   "$manLocalDir/macOS-14.8/man:$manLocalDir/macOS-14.8/developer-man:$manLocalDir/macOS-14.8/developer-platform-man:$manLocalDir/macOS-14.8/developer-platform-sdk-man:$manLocalDir/macOS-14.8/xctoolchain-man",  
     'macOS 13.6.5', "$manLocalDir/macOS-13.6.5/man:$manLocalDir/macOS-13.6.5/developer-man:$manLocalDir/macOS-13.6.5/developer-platform-man:$manLocalDir/macOS-13.6.5/developer-platform-sdk-man:$manLocalDir/macOS-13.6.5/xctoolchain-man",  
     'macOS 12.7.3', "$manLocalDir/macOS-12.7.3/man:$manLocalDir/macOS-12.7.3/developer-man:$manLocalDir/macOS-12.7.3/developer-platform-man:$manLocalDir/macOS-12.7.3/developer-platform-sdk-man:$manLocalDir/macOS-12.7.3/xctoolchain-man",
     'macOS 11.1',    "$manLocalDir/macOS-11.1",
