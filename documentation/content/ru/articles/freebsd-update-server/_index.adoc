@@ -1,0 +1,610 @@
+---
+authors:
+  - 
+    author: 'Jason Helfman'
+    email: jgh@FreeBSD.org
+copyright: '2009-2011, 2013 Jason Helfman'
+description: 'Создание собственного сервера freebsd-update позволяет системному администратору выполнять быстрые обновления для множества машин из локального зеркала'
+tags: ["FreeBSD", "Update", "Server", "internal"]
+title: 'Создайте свой собственный сервер обновлений FreeBSD'
+trademarks: ["freebsd", "amd", "intel", "general"]
+---
+
+= Создайте свой собственный сервер обновлений FreeBSD
+:doctype: article
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:images-path: articles/freebsd-update-server/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+:imagesdir: ../../../images/{images-path}
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+
+[WARNING]
+====
+Инструкции в этой статье относятся к более старой версии FreeBSD и могут не работать корректно в последних версиях ОС. В связи с появлением pkgbase, утилита freebsd-update планируется к удалению из FreeBSD в будущем. Когда это произойдет, статья будет либо обновлена с учетом новых процедур, либо полностью удалена.
+====
+
+[.abstract-title]
+Аннотация
+
+В этой статье описывается создание внутреннего сервера обновлений FreeBSD. https://github.com/freebsd/freebsd-update-build/[freebsd-update-server] написан `{cperciva}`, почетным руководителем безопасности FreeBSD. Для пользователей, которым удобно обновлять свои системы через официальный сервер обновлений, создание собственного сервера обновлений FreeBSD может помочь расширить его функциональность, поддерживая вручную модифицированные выпуски FreeBSD или предоставляя локальное зеркало, которое позволит ускорить обновления для множества машин.
+
+'''
+
+toc::[]
+
+[[acknowledgments]]
+== Благодарности
+
+Эта статья была впоследствии опубликована в онлайн издании https://people.freebsd.org/~jgh/files/fus/BSD_03_2010_EN.pdf[BSD Magazine].
+
+[[introduction]]
+== Введение
+
+Опытные пользователи или администраторы часто отвечают за несколько машин или окружений. Они понимают сложные требования и вызовы, связанные с поддержанием такой инфраструктуры. Запуск сервера обновлений FreeBSD упрощает развертывание исправлений безопасности и программного обеспечения на выбранных тестовых машинах перед их внедрением в рабочую среду. Это также означает, что множество систем могут быть обновлены из локальной сети, а не через потенциально медленное интернет-соединение. В этой статье описаны шаги, необходимые для создания внутреннего сервера обновлений FreeBSD.
+
+[[prerequisites]]
+== Предварительные требования
+
+Для создания внутреннего сервера обновлений FreeBSD необходимо выполнить некоторые требования.
+
+* Работающая система FreeBSD.
++
+[NOTE]
+====
+Минимальное требование для обновлений — сборка на версии FreeBSD, которая не меньше целевой версии для распространения.
+====
+* Пользовательская учётная запись с как минимум 4 ГБ свободного места. Это позволит создавать обновления для версий 7.1 и 7.2, но точные требования к месту могут меняться от версии к версии.
+* Учетная запись man:ssh[1] на удаленной машине для загрузки распределенных обновлений.
+* Веб-сервер, например extref:{handbook}[Apache, network-apache], с более чем половиной пространства, необходимого для сборки. Например, тестовые сборки для версий 7.1 и 7.2 занимают в общей сложности 4 ГБ, а пространство веб-сервера, необходимое для распространения этих обновлений, составляет 2.6 ГБ.
+* Базовые знания написания скриптов для оболочки Bourne shell, man:sh[1].
+
+[[Configuration]]
+== Конфигурация: установка и настройка
+
+Загрузите программное обеспечение https://github.com/freebsd/freebsd-update-build/[freebsd-update-server], установив пакеты package:devel/git[] и package:security/ca_root_nss[], и выполните:
+
+[source, shell]
+....
+% git clone https://github.com/freebsd/freebsd-update-build.git freebsd-update-server
+....
+
+Обновите соответствующим образом файл [.filename]#scripts/build.conf#. Он используется во всех операциях сборки.
+
+Вот стандартный [.filename]#build.conf#, который следует изменить в соответствии с вашим окружением.
+
+[.programlisting]
+....
+# Main configuration file for FreeBSD Update builds.  The
+# release-specific configuration data is lower down in
+# the scripts tree.
+
+# Location from which to fetch releases
+export FTP=ftp://ftp2.freebsd.org/pub/FreeBSD/releases <.>
+
+# Host platform
+export HOSTPLATFORM=`uname -m`
+
+# Host name to use inside jails
+export BUILDHOSTNAME=${HOSTPLATFORM}-builder.daemonology.net <.>
+
+# Location of SSH key
+export SSHKEY=/root/.ssh/id_dsa <.>
+
+# SSH account into which files are uploaded
+MASTERACCT=builder@wadham.daemonology.net <.>
+
+# Directory into which files are uploaded
+MASTERDIR=update-master.freebsd.org <.>
+....
+
+Учтите возможные варианты следующих настроек:
+
+<.> Это место, откуда загружаются образы ISO (с помощью подпрограммы `fetchiso()` из файла [.filename]#scripts/build.subr#). Настроенное расположение не ограничивается URI FTP. Должны работать любые схемы URI, поддерживаемые стандартной утилитой man:fetch[1]. Пользовательские изменения кода `fetchiso()` можно установить, скопировав скрипт [.filename]#build.subr# по умолчанию в область, специфичную для выпуска и архитектуры, по пути [.filename]#scripts/РЕЛИЗ/АРХИТЕКТУРА/build.subr#, и применив локальные изменения.
+
+<.> Имя хоста для сборки. Эта информация будет отображаться на обновленных системах при выполнении команды:
++
+[source, shell]
+....
+% uname -v
+....
++
+<.> Ключ SSH для загрузки файлов на сервер обновлений. Пару ключей можно создать, выполнив команду `ssh-keygen -t dsa`. Этот параметр необязателен; стандартная аутентификация по паролю будет использоваться в качестве резервного метода, если `SSHKEY` не определён. Более подробную информацию о SSH и соответствующих шагах по созданию и использованию ключей можно найти на man:ssh-keygen[1].
+
+<.> Учетная запись для загрузки файлов на сервер обновлений.
+
+<.> Каталог на сервере обновлений, в который загружаются файлы.
+
+В стандартном файле [.filename]#build.conf#, поставляемом с исходниками freebsd-update-server, задана сборка релизов FreeBSD для архитектуры i386. В качестве примера настройки сервера обновлений для других архитектур ниже приведены шаги с необходимыми изменениями конфигурации для amd64:
+
+[.procedure]
+====
+. Создайте среду сборки для amd64:
++
+[source, shell]
+....
+% mkdir -p /usr/local/freebsd-update-server/scripts/7.2-RELEASE/amd64
+....
+
+. Установите файл [.filename]#build.conf# в только что созданный каталог сборки. Параметры конфигурации сборки для FreeBSD 7.2-RELEASE на amd64 должны быть примерно такими:
++
+[.programlisting]
+....
+# SHA256 hash of RELEASE disc1.iso image.
+export RELH=1ea1f6f652d7c5f5eab7ef9f8edbed50cb664b08ed761850f95f48e86cc71ef5 <.>
+# Components of the world, source, and kernels
+export WORLDPARTS="base catpages dict doc games info manpages proflibs lib32"
+export SOURCEPARTS="base bin contrib crypto etc games gnu include krb5  \
+                lib libexec release rescue sbin secure share sys tools  \
+                ubin usbin cddl"
+export KERNELPARTS="generic"
+
+# EOL date
+export EOL=1275289200 <.>
+....
++
+<.> Хеш-ключ man:sha256[1] для желаемого выпуска опубликован в соответствующем link:https://www.FreeBSD.org/releases/[анонсе выпуска].
+<.> Для получения номера "End of Life" для файла [.filename]#build.conf# обратитесь к "Estimated EOL" на сайте link:https://www.FreeBSD.org/security/security/[FreeBSD Security Website]. Значение `EOL` можно вывести из даты, указанной на веб-сайте, используя утилиту man:date[1], например:
++
+[source, shell]
+....
+% date -j -f '%Y%m%d-%H%M%S' '20090401-000000' '+%s'
+....
+====
+
+[[build]]
+== Сборка кода обновления
+
+Первым шагом является запуск [.filename]#scripts/make.sh#. Это приведёт к сборке некоторых бинарных файлов, созданию каталогов и генерации RSA-ключа подписи, используемого для подтверждения сборок. На этом этапе потребуется ввести парольную фразу для окончательного создания ключа подписи.
+
+[source, shell]
+....
+# sh scripts/make.sh
+cc -O2 -fno-strict-aliasing -pipe   findstamps.c  -o findstamps
+findstamps.c: In function 'usage':
+findstamps.c:45: warning: incompatible implicit declaration of built-in function 'exit'
+cc -O2 -fno-strict-aliasing -pipe   unstamp.c  -o unstamp
+install findstamps ../bin
+install unstamp ../bin
+rm -f findstamps unstamp
+Generating RSA private key, 4096 bit long modulus
+................................................................................++
+...................++
+e is 65537 (0x10001)
+
+Public key fingerprint:
+27ef53e48dc869eea6c3136091cc6ab8589f967559824779e855d58a2294de9e
+
+Encrypting signing key for root
+enter aes-256-cbc encryption password:
+Verifying - enter aes-256-cbc encryption password:
+....
+
+[NOTE]
+====
+Сохраните сгенерированный отпечаток ключа. Это значение требуется в [.filename]#/etc/freebsd-update.conf# для бинарных обновлений.
+====
+
+На этом этапе мы готовы к подготовке сборки.
+
+[source, shell]
+....
+# cd /usr/local/freebsd-update-server
+# sh scripts/init.sh amd64 7.2-RELEASE
+....
+
+Ниже приведён пример _первоначальной_ сборки.
+
+[source, shell]
+....
+# sh scripts/init.sh amd64 7.2-RELEASE
+Mon Aug 24 16:04:36 PDT 2009 Starting fetch for FreeBSD/amd64 7.2-RELEASE
+/usr/local/freebsd-update-server/work/7.2-RELE100 of  588 MB  359 kBps 00m00s
+Mon Aug 24 16:32:38 PDT 2009 Verifying disc1 hash for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 16:32:44 PDT 2009 Extracting components for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 16:34:05 PDT 2009 Constructing world+src image for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 16:35:57 PDT 2009 Extracting world+src for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 23:36:24 UTC 2009 Building world for FreeBSD/amd64 7.2-RELEASE
+Tue Aug 25 00:31:29 UTC 2009 Distributing world for FreeBSD/amd64 7.2-RELEASE
+Tue Aug 25 00:32:36 UTC 2009 Building and distributing kernels for FreeBSD/amd64 7.2-RELEASE
+Tue Aug 25 00:44:44 UTC 2009 Constructing world components for FreeBSD/amd64 7.2-RELEASE
+Tue Aug 25 00:44:56 UTC 2009 Distributing source for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 17:46:18 PDT 2009 Moving components into staging area for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 17:46:33 PDT 2009 Identifying extra documentation for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 17:47:13 PDT 2009 Extracting extra docs for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 17:47:18 PDT 2009 Indexing release for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 17:50:44 PDT 2009 Indexing world0 for FreeBSD/amd64 7.2-RELEASE
+
+Files built but not released:
+Files released but not built:
+Files which differ by more than contents:
+Files which differ between release and build:
+kernel|generic|/GENERIC/hptrr.ko
+kernel|generic|/GENERIC/kernel
+src|sys|/sys/conf/newvers.sh
+world|base|/boot/loader
+world|base|/boot/pxeboot
+world|base|/etc/mail/freebsd.cf
+world|base|/etc/mail/freebsd.submit.cf
+world|base|/etc/mail/sendmail.cf
+world|base|/etc/mail/submit.cf
+world|base|/lib/libcrypto.so.5
+world|base|/usr/bin/ntpq
+world|base|/usr/lib/libalias.a
+world|base|/usr/lib/libalias_cuseeme.a
+world|base|/usr/lib/libalias_dummy.a
+world|base|/usr/lib/libalias_ftp.a
+...
+....
+
+Затем выполняется сборка world с применением патчей world. Более подробное объяснение можно найти в [.filename]#scripts/build.subr#.
+
+[WARNING]
+====
+В течение этого второго цикла сборки демон протокола сетевого времени, man:ntpd[8], отключен. По словам `{cperciva}`, почетного офицера безопасности FreeBSD, "код сборки https://github.com/freebsd/freebsd-update-build/[freebsd-update-server] должен идентифицировать временные метки, хранящиеся в файлах, чтобы их можно было игнорировать при сравнении сборок для определения того, какие файлы нуждаются в обновлении. Этот поиск временных меток работает путем выполнения двух сборок с интервалом в 400 дней и сравнения результатов."
+====
+
+[source, shell]
+....
+Mon Aug 24 17:54:07 PDT 2009 Extracting world+src for FreeBSD/amd64 7.2-RELEASE
+Wed Sep 29 00:54:34 UTC 2010 Building world for FreeBSD/amd64 7.2-RELEASE
+Wed Sep 29 01:49:42 UTC 2010 Distributing world for FreeBSD/amd64 7.2-RELEASE
+Wed Sep 29 01:50:50 UTC 2010 Building and distributing kernels for FreeBSD/amd64 7.2-RELEASE
+Wed Sep 29 02:02:56 UTC 2010 Constructing world components for FreeBSD/amd64 7.2-RELEASE
+Wed Sep 29 02:03:08 UTC 2010 Distributing source for FreeBSD/amd64 7.2-RELEASE
+Tue Sep 28 19:04:31 PDT 2010 Moving components into staging area for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 19:04:46 PDT 2009 Extracting extra docs for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 19:04:51 PDT 2009 Indexing world1 for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 19:08:04 PDT 2009 Locating build stamps for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 19:10:19 PDT 2009 Cleaning staging area for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 19:10:19 PDT 2009 Preparing to copy files into staging area for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 19:10:20 PDT 2009 Copying data files into staging area for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 12:16:57 PDT 2009 Copying metadata files into staging area for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 12:16:59 PDT 2009 Constructing metadata index and tag for FreeBSD/amd64 7.2-RELEASE
+
+Files found which include build stamps:
+kernel|generic|/GENERIC/hptrr.ko
+kernel|generic|/GENERIC/kernel
+world|base|/boot/loader
+world|base|/boot/pxeboot
+world|base|/etc/mail/freebsd.cf
+world|base|/etc/mail/freebsd.submit.cf
+world|base|/etc/mail/sendmail.cf
+world|base|/etc/mail/submit.cf
+world|base|/lib/libcrypto.so.5
+world|base|/usr/bin/ntpq
+world|base|/usr/include/osreldate.h
+world|base|/usr/lib/libalias.a
+world|base|/usr/lib/libalias_cuseeme.a
+world|base|/usr/lib/libalias_dummy.a
+world|base|/usr/lib/libalias_ftp.a
+...
+....
+
+Наконец, сборка завершена.
+
+[source, shell]
+....
+Values of build stamps, excluding library archive headers:
+v1.2 (Aug 25 2009 00:40:36)
+v1.2 (Aug 25 2009 00:38:22)
+@()FreeBSD 7.2-RELEASE 0: Tue Aug 25 00:38:29 UTC 2009
+FreeBSD 7.2-RELEASE 0: Tue Aug 25 00:38:29 UTC 2009
+    root@server.myhost.com:/usr/obj/usr/src/sys/GENERIC
+7.2-RELEASE
+Mon Aug 24 23:55:25 UTC 2009
+Mon Aug 24 23:55:25 UTC 2009
+ built by root@server.myhost.com on Tue Aug 25 00:16:15 UTC 2009
+ built by root@server.myhost.com on Tue Aug 25 00:16:15 UTC 2009
+ built by root@server.myhost.com on Tue Aug 25 00:16:15 UTC 2009
+ built by root@server.myhost.com on Tue Aug 25 00:16:15 UTC 2009
+Mon Aug 24 23:46:47 UTC 2009
+ntpq 4.2.4p5-a Mon Aug 24 23:55:53 UTC 2009 (1)
+ * Copyright (c) 1992-2009 The FreeBSD Project.
+Mon Aug 24 23:46:47 UTC 2009
+Mon Aug 24 23:55:40 UTC 2009
+Aug 25 2009
+ntpd 4.2.4p5-a Mon Aug 24 23:55:52 UTC 2009 (1)
+ntpdate 4.2.4p5-a Mon Aug 24 23:55:53 UTC 2009 (1)
+ntpdc 4.2.4p5-a Mon Aug 24 23:55:53 UTC 2009 (1)
+Tue Aug 25 00:21:21 UTC 2009
+Tue Aug 25 00:21:21 UTC 2009
+Tue Aug 25 00:21:21 UTC 2009
+Mon Aug 24 23:46:47 UTC 2009
+
+FreeBSD/amd64 7.2-RELEASE initialization build complete.  Please
+review the list of build stamps printed above to confirm that
+they look sensible, then run
+ sh -e approve.sh amd64 7.2-RELEASE
+to sign the release.
+....
+
+Одобрите сборку, если всё правильно. Дополнительную информацию о том, как это определить, можно найти в распределённом исходном файле с именем [.filename]#USAGE#. Выполните [.filename]#scripts/approve.sh#, как указано. Это подпишет релиз и переместит компоненты в промежуточную область, подходящую для загрузки.
+
+[source, shell]
+....
+# cd /usr/local/freebsd-update-server
+# sh scripts/mountkey.sh
+....
+
+[source, shell]
+....
+# sh -e scripts/approve.sh amd64 7.2-RELEASE
+Wed Aug 26 12:50:06 PDT 2009 Signing build for FreeBSD/amd64 7.2-RELEASE
+Wed Aug 26 12:50:06 PDT 2009 Copying files to patch source directories for FreeBSD/amd64 7.2-RELEASE
+Wed Aug 26 12:50:06 PDT 2009 Copying files to upload staging area for FreeBSD/amd64 7.2-RELEASE
+Wed Aug 26 12:50:07 PDT 2009 Updating databases for FreeBSD/amd64 7.2-RELEASE
+Wed Aug 26 12:50:07 PDT 2009 Cleaning staging area for FreeBSD/amd64 7.2-RELEASE
+....
+
+После завершения процесса утверждения можно начать процедуру загрузки.
+
+[source, shell]
+....
+# cd /usr/local/freebsd-update-server
+# sh scripts/upload.sh amd64 7.2-RELEASE
+....
+
+[NOTE]
+====
+В случае необходимости повторной загрузки кода обновления, это можно сделать, перейдя в публичный каталог дистрибутивов для целевого выпуска и обновив атрибуты файла _uploaded_.
+
+[source, shell]
+....
+# cd /usr/local/freebsd-update-server/pub/7.2-RELEASE/amd64
+# touch -t 200801010101.01 uploaded
+....
+
+====
+
+Загруженные файлы должны находиться в корневом каталоге веб-сервера, чтобы обновления могли распространяться. Точная конфигурация будет зависеть от используемого веб-сервера. Для веб-сервера Apache обратитесь к разделу extref:{handbook}[Настройка серверов Apache, network-apache] в Руководстве.
+
+Обновите `KeyPrint` и `ServerName` клиента в [.filename]#/etc/freebsd-update.conf# и выполните обновления, как указано в разделе extref:{handbook}[Обновление FreeBSD, updating-upgrading-freebsdupdate] Руководства.
+
+[IMPORTANT]
+====
+Для корректной работы сервера обновлений FreeBSD Update необходимо собирать обновления как для текущего релиза, так и для релиза, _на который планируется обновление_. Это необходимо для определения различий в файлах между релизами. Например, при обновлении системы FreeBSD с 7.1-RELEASE до 7.2-RELEASE потребуется собрать и загрузить на сервер распространения обновления для обеих версий.
+====
+
+Для справки, полный текст выполнения link:../../source/articles/freebsd-update-server/init.txt[init.sh] прилагается.
+
+[[patch]]
+== Построение патча
+
+Каждый раз, когда объявляется link:https://www.FreeBSD.org/security/advisories/[консультативный документ по безопасности] или link:https://www.FreeBSD.org/security/notices/[уведомление о безопасности], можно собрать обновление с исправлением.
+
+Для этого примера будет использоваться версия 7.1-RELEASE.
+
+Несколько предположений сделано для другой сборки выпуска:
+
+* Настройка правильной структуры каталогов для первоначальной сборки.
+* Выполните первоначальную сборку для 7.1-RELEASE.
+
+Создайте каталог с патчами соответствующего выпуска в [.filename]#/usr/local/freebsd-update-server/patches/#.
+
+[source, shell]
+....
+% mkdir -p /usr/local/freebsd-update-server/patches/7.1-RELEASE/
+% cd /usr/local/freebsd-update-server/patches/7.1-RELEASE
+....
+
+В качестве примера возьмем патч для man:named[8]. Прочтите рекомендации и загрузите необходимый файл с link:https://www.FreeBSD.org/security/advisories/[FreeBSD Security Advisories]. Дополнительную информацию о том, как интерпретировать рекомендации, можно найти в extref:{handbook}[FreeBSD Handbook, security-advisories].
+
+В https://security.freebsd.org/advisories/FreeBSD-SA-09:12.bind.asc[кратком обзоре безопасности] этот совет называется `SA-09:12.bind`. После загрузки файла необходимо переименовать его в соответствии с уровнем исправления. Рекомендуется сохранять это в соответствии с официальными уровнями исправлений FreeBSD, но имя может быть выбрано свободно. Для данной сборки давайте последуем текущей установленной практике FreeBSD и назовем его `p7`. Переименуйте файл:
+
+[source, shell]
+....
+% cd /usr/local/freebsd-update-server/patches/7.1-RELEASE/; mv bind.patch 7-SA-09:12.bind
+....
+
+[NOTE]
+====
+При выполнении сборки уровня патча предполагается, что предыдущие патчи уже установлены. При запуске сборки патча будут выполнены все патчи, содержащиеся в каталоге патчей.
+
+В сборку могут быть добавлены пользовательские патчи. Используйте ноль или любое другое число.
+====
+
+[WARNING]
+====
+
+Задача администратора сервера FreeBSD Update — принимать соответствующие меры для проверки подлинности каждого патча.
+====
+
+На этом этапе _diff_ готов к сборке. Программное обеспечение сначала проверяет, был ли запущен [.filename]#scripts/init.sh# для соответствующего выпуска перед выполнением сборки diff.
+
+[source, shell]
+....
+# cd /usr/local/freebsd-update-server
+# sh scripts/diff.sh amd64 7.1-RELEASE 7
+....
+
+Вот пример выполнения _дифференциальной_ сборки.
+
+[source, shell]
+....
+# sh -e scripts/diff.sh amd64 7.1-RELEASE 7
+Wed Aug 26 10:09:59 PDT 2009 Extracting world+src for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 17:10:25 UTC 2009 Building world for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 18:05:11 UTC 2009 Distributing world for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 18:06:16 UTC 2009 Building and distributing kernels for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 18:17:50 UTC 2009 Constructing world components for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 18:18:02 UTC 2009 Distributing source for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 11:19:23 PDT 2009 Moving components into staging area for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 11:19:37 PDT 2009 Extracting extra docs for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 11:19:42 PDT 2009 Indexing world0 for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 11:23:02 PDT 2009 Extracting world+src for FreeBSD/amd64 7.1-RELEASE-p7
+Thu Sep 30 18:23:29 UTC 2010 Building world for FreeBSD/amd64 7.1-RELEASE-p7
+Thu Sep 30 19:18:15 UTC 2010 Distributing world for FreeBSD/amd64 7.1-RELEASE-p7
+Thu Sep 30 19:19:18 UTC 2010 Building and distributing kernels for FreeBSD/amd64 7.1-RELEASE-p7
+Thu Sep 30 19:30:52 UTC 2010 Constructing world components for FreeBSD/amd64 7.1-RELEASE-p7
+Thu Sep 30 19:31:03 UTC 2010 Distributing source for FreeBSD/amd64 7.1-RELEASE-p7
+Thu Sep 30 12:32:25 PDT 2010 Moving components into staging area for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:32:39 PDT 2009 Extracting extra docs for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:32:43 PDT 2009 Indexing world1 for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:35:54 PDT 2009 Locating build stamps for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:36:58 PDT 2009 Reverting changes due to build stamps for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:37:14 PDT 2009 Cleaning staging area for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:37:14 PDT 2009 Preparing to copy files into staging area for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:37:15 PDT 2009 Copying data files into staging area for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:43:23 PDT 2009 Copying metadata files into staging area for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:43:25 PDT 2009 Constructing metadata index and tag for FreeBSD/amd64 7.1-RELEASE-p7
+...
+Files found which include build stamps:
+kernel|generic|/GENERIC/hptrr.ko
+kernel|generic|/GENERIC/kernel
+world|base|/boot/loader
+world|base|/boot/pxeboot
+world|base|/etc/mail/freebsd.cf
+world|base|/etc/mail/freebsd.submit.cf
+world|base|/etc/mail/sendmail.cf
+world|base|/etc/mail/submit.cf
+world|base|/lib/libcrypto.so.5
+world|base|/usr/bin/ntpq
+world|base|/usr/include/osreldate.h
+world|base|/usr/lib/libalias.a
+world|base|/usr/lib/libalias_cuseeme.a
+world|base|/usr/lib/libalias_dummy.a
+world|base|/usr/lib/libalias_ftp.a
+...
+Values of build stamps, excluding library archive headers:
+v1.2 (Aug 26 2009 18:13:46)
+v1.2 (Aug 26 2009 18:11:44)
+@()FreeBSD 7.1-RELEASE-p7 0: Wed Aug 26 18:11:50 UTC 2009
+FreeBSD 7.1-RELEASE-p7 0: Wed Aug 26 18:11:50 UTC 2009
+    root@server.myhost.com:/usr/obj/usr/src/sys/GENERIC
+7.1-RELEASE-p7
+Wed Aug 26 17:29:15 UTC 2009
+Wed Aug 26 17:29:15 UTC 2009
+ built by root@server.myhost.com on Wed Aug 26 17:49:58 UTC 2009
+ built by root@server.myhost.com on Wed Aug 26 17:49:58 UTC 2009
+ built by root@server.myhost.com on Wed Aug 26 17:49:58 UTC 2009
+ built by root@server.myhost.com on Wed Aug 26 17:49:58 UTC 2009
+Wed Aug 26 17:20:39 UTC 2009
+ntpq 4.2.4p5-a Wed Aug 26 17:29:42 UTC 2009 (1)
+ * Copyright (c) 1992-2009 The FreeBSD Project.
+Wed Aug 26 17:20:39 UTC 2009
+Wed Aug 26 17:29:30 UTC 2009
+Aug 26 2009
+ntpd 4.2.4p5-a Wed Aug 26 17:29:41 UTC 2009 (1)
+ntpdate 4.2.4p5-a Wed Aug 26 17:29:42 UTC 2009 (1)
+ntpdc 4.2.4p5-a Wed Aug 26 17:29:42 UTC 2009 (1)
+Wed Aug 26 17:55:02 UTC 2009
+Wed Aug 26 17:55:02 UTC 2009
+Wed Aug 26 17:55:02 UTC 2009
+Wed Aug 26 17:20:39 UTC 2009
+...
+....
+
+Обновления выводятся на экран, и запрашивается подтверждение.
+
+[source, shell]
+....
+New updates:
+kernel|generic|/GENERIC/kernel.symbols|f|0|0|0555|0|7c8dc176763f96ced0a57fc04e7c1b8d793f27e006dd13e0b499e1474ac47e10|
+kernel|generic|/GENERIC/kernel|f|0|0|0555|0|33197e8cf15bbbac263d17f39c153c9d489348c2c534f7ca1120a1183dec67b1|
+kernel|generic|/|d|0|0|0755|0||
+src|base|/|d|0|0|0755|0||
+src|bin|/|d|0|0|0755|0||
+src|cddl|/|d|0|0|0755|0||
+src|contrib|/contrib/bind9/bin/named/update.c|f|0|10000|0644|0|4d434abf0983df9bc47435670d307fa882ef4b348ed8ca90928d250f42ea0757|
+src|contrib|/contrib/bind9/lib/dns/openssldsa_link.c|f|0|10000|0644|0|c6805c39f3da2a06dd3f163f26c314a4692d4cd9a2d929c0acc88d736324f550|
+src|contrib|/contrib/bind9/lib/dns/opensslrsa_link.c|f|0|10000|0644|0|fa0f7417ee9da42cc8d0fd96ad24e7a34125e05b5ae075bd6e3238f1c022a712|
+...
+FreeBSD/amd64 7.1-RELEASE update build complete.  Please review
+the list of build stamps printed above and the list of updated
+files to confirm that they look sensible, then run
+ sh -e approve.sh amd64 7.1-RELEASE
+to sign the build.
+....
+
+Следуйте той же процедуре, что и ранее, для подтверждения сборки:
+
+[source, shell]
+....
+# sh -e scripts/approve.sh amd64 7.1-RELEASE
+Wed Aug 26 12:50:06 PDT 2009 Signing build for FreeBSD/amd64 7.1-RELEASE
+Wed Aug 26 12:50:06 PDT 2009 Copying files to patch source directories for FreeBSD/amd64 7.1-RELEASE
+Wed Aug 26 12:50:06 PDT 2009 Copying files to upload staging area for FreeBSD/amd64 7.1-RELEASE
+Wed Aug 26 12:50:07 PDT 2009 Updating databases for FreeBSD/amd64 7.1-RELEASE
+Wed Aug 26 12:50:07 PDT 2009 Cleaning staging area for FreeBSD/amd64 7.1-RELEASE
+
+The FreeBSD/amd64 7.1-RELEASE update build has been signed and is
+ready to be uploaded.  Remember to run
+ sh -e umountkey.sh
+to unmount the decrypted key once you have finished signing all
+the new builds.
+....
+
+После утверждения сборки загрузите программное обеспечение:
+
+[source, shell]
+....
+# cd /usr/local/freebsd-update-server
+# sh scripts/upload.sh amd64 7.1-RELEASE
+....
+
+Для справки, полный запуск скрипта link:../../source/articles/freebsd-update-server/diff.txt[diff.sh] прилагается.
+
+[[tips]]
+== Советы
+
+* Если пользовательская сборка создана с использованием стандартной процедуры `make release` extref:{releng}[procedure, release-build], код freebsd-update-server будет работать с вашей сборкой. Например, сборка без портов или документации может быть создана путем отключения функциональности, относящейся к подпрограммам документации `findextradocs ()`, `addextradocs ()`, и изменения места загрузки в `fetchiso ()` соответственно в файле [.filename]#scripts/build.subr#. В завершение измените хеш man:sha256[1] в файле [.filename]#build.conf# для соответствующей сборки и архитектуры, после чего можно приступать к сборке вашей пользовательской версии.
++
+[.programlisting]
+....
+# Compare ${WORKDIR}/release and ${WORKDIR}/$1, identify which parts
+# of the world|doc subcomponent are missing from the latter, and
+# build a tarball out of them.
+findextradocs () {
+}
+# Add extra docs to ${WORKDIR}/$1
+addextradocs () {
+}
+....
+
+* Добавление флагов `-j _ЧИСЛО_` к целям `buildworld` и `obj` в скрипте [.filename]#scripts/build.subr# может ускорить обработку в зависимости от используемого оборудования, однако это не обязательно. Использование этих флагов в других целях не рекомендуется, так как это может привести к ненадёжности сборки.
++
+[.programlisting]
+....
+              # Build the world
+		   log "Building world"
+		   cd /usr/src &&
+		   make -j 2 ${COMPATFLAGS} buildworld 2>&1
+		# Distribute the world
+		   log "Distributing world"
+		   cd /usr/src/release &&
+		   make -j 2 obj &&
+		   make ${COMPATFLAGS} release.1 release.2 2>&1
+....
+
+* Создайте соответствующий extref:{handbook}[DNS, network-dns] SRV-запись для сервера обновлений и разместите остальные за ним с переменными весами. Использование этой возможности обеспечит зеркала для обновлений, однако данный совет не обязателен, если вы не хотите предоставлять избыточный сервис.
++
+[.programlisting]
+....
+_http._tcp.update.myserver.com.		IN SRV   0 2 80   host1.myserver.com.
+					IN SRV   0 1 80   host2.myserver.com.
+					IN SRV   0 0 80   host3.myserver.com.
+....
