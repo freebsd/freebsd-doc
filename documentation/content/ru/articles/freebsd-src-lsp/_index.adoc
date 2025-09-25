@@ -1,0 +1,268 @@
+---
+authors:
+  - 
+    author: 'Ka Ho Ng'
+    email: khng@FreeBSD.org
+copyright: '2021 The FreeBSD Foundation'
+description: 'Используйте языковые серверы для разработки в дереве исходного кода FreeBSD, чтобы получать точные результаты при переходах к определениям функций и переменных и при автодополнениях.'
+tags: ["FreeBSD", "Language Server", "LSP"]
+title: 'Использование разработчиками языковых серверов в дереве исходного кода FreeBSD'
+trademarks: ["freebsd"]
+---
+
+= Использование разработчиками языковых серверов в дереве исходного кода FreeBSD
+:doctype: article
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:source-highlighter: rouge
+:experimental:
+:images-path: articles/freebsd-src-lsp/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+:imagesdir: ../../../images/{images-path}
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+toc::[]
+
+[[intro]]
+== Введение
+
+Это руководство посвящено настройке дерева исходных кодов FreeBSD с использованием языковых серверов для индексации исходного кода. В руководстве описаны шаги для Vim/NeoVim и VSCode. Если вы используете другой текстовый редактор, вы можете использовать это руководство в качестве справочника и найти эквивалентные команды для вашего любимого редактора.
+
+[[requirements]]
+== Требования
+
+Для следования этому руководству необходимо установить определённые требования. Нам понадобится языковой сервер, `ccls` или `clangd`, а также, опционально, база данных компиляции.
+
+Установка языкового сервера может быть выполнена через `pkg` или через порты. Если мы выберем `clangd`, нам нужно установить `llvm`.
+
+Использование `pkg` для установки `ccls`:
+
+[source, shell]
+....
+# pkg install ccls
+....
+
+Если мы хотим использовать `clangd`, нам необходимо установить `llvm` (в примере команды используется `llvm15`, но вы можете выбрать нужную версию):
+
+[source, shell]
+....
+# pkg install llvm15
+....
+
+Для установки через порты выберите предпочтительную комбинацию инструментов из каждой категории ниже:
+
+* Реализации языковых серверов
+** package:devel/ccls[]
+** package:devel/llvm12[] (Другие версии также подходят, но чем новее, тем лучше. Замените `clangd12` на clangdN в случае использования других версий.)
+* Редакторы
+** package:editors/vim[]
+** package:editors/neovim[]
+** package:editors/vscode[]
+* Генератор базы данных компиляции
+** package:devel/python[] (Для реализации scan-build-py из llvm)
+** package:devel/py-pip[] (Для реализации scan-build от rizsotto)
+** package:devel/bear[]
+
+[[editor-settings]]
+== Настройки редактора
+
+[[settings-vim]]
+=== Vim/Neovim
+
+==== Плагины клиента LSP
+
+Встроенный менеджер плагинов используется для обоих редакторов в этом примере. Плагин LSP-клиента, который используется, — это link:https://github.com/prabirshrestha/vim-lsp[prabirshrestha/vim-lsp].
+
+Для настройки клиентского плагина LSP для Neovim:
+
+[source, shell]
+....
+# mkdir -p ~/.config/nvim/pack/lsp/start
+# git clone https://github.com/prabirshrestha/vim-lsp ~/.config/nvim/pack/lsp/start/vim-lsp
+....
+
+и для Vim:
+
+[source, shell]
+....
+# mkdir -p ~/.vim/pack/lsp/start
+# git clone https://github.com/prabirshrestha/vim-lsp ~/.vim/pack/lsp/start/vim-lsp
+....
+
+Чтобы включить плагин LSP-клиента в редакторе, добавьте следующий фрагмент в [.filepath]#~/.config/nvim/init.vim# при использовании Neovim или в [.filepath]#~/.vim/vimrc# при использовании Vim:
+
+.Для ccls
+[source, vim]
+....
+au User lsp_setup call lsp#register_server({
+    \ 'name': 'ccls',
+    \ 'cmd': {server_info->['ccls']},
+    \ 'allowlist': ['c', 'cpp', 'objc'],
+    \ 'initialization_options': {
+    \     'cache': {
+    \         'hierarchicalPath': v:true
+    \     }
+    \ }})
+....
+
+.Для clangd
+[source, vim]
+....
+au User lsp_setup call lsp#register_server({
+    \ 'name': 'clangd',
+    \ 'cmd': {server_info->['clangd15', '--background-index', '--header-insertion=never']},
+    \ 'allowlist': ['c', 'cpp', 'objc'],
+    \ 'initialization_options': {},
+    \ })
+....
+
+В зависимости от установленной версии `clangd` может потребоваться обновить `server-info`, чтобы указать на правильный бинарный файл.
+
+Обратитесь к link:https://github.com/prabirshrestha/vim-lsp/blob/master/README.md#registering-servers[], чтобы узнать о настройке сочетаний клавиш и автодополнения кода. Официальный сайт clangd находится по ссылке link:https://clangd.llvm.org[], а репозиторий ccls — link:https://github.com/MaskRay/ccls/[].
+
+Ниже приведены эталонные настройки сочетаний клавиш и автодополнения кода. Поместите следующий фрагмент в [.filepath]#~/.config/nvim/init.vim# или [.filepath]#~/.vim/vimrc# для пользователей Vim, чтобы использовать его:
+
+[source, vim]
+....
+function! s:on_lsp_buffer_enabled() abort
+    setlocal omnifunc=lsp#complete
+    setlocal completeopt-=preview
+    setlocal keywordprg=:LspHover
+
+    nmap <buffer> <C-]> <plug>(lsp-definition)
+    nmap <buffer> <C-W>] <plug>(lsp-peek-definition)
+    nmap <buffer> <C-W><C-]> <plug>(lsp-peek-definition)
+    nmap <buffer> gr <plug>(lsp-references)
+    nmap <buffer> <C-n> <plug>(lsp-next-reference)
+    nmap <buffer> <C-p> <plug>(lsp-previous-reference)
+    nmap <buffer> gI <plug>(lsp-implementation)
+    nmap <buffer> go <plug>(lsp-document-symbol)
+    nmap <buffer> gS <plug>(lsp-workspace-symbol)
+    nmap <buffer> ga <plug>(lsp-code-action)
+    nmap <buffer> gR <plug>(lsp-rename)
+    nmap <buffer> gm <plug>(lsp-signature-help)
+endfunction
+
+augroup lsp_install
+    au!
+    autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+augroup END
+....
+
+[[settings-vscode]]
+=== VSCode
+
+==== Плагины клиента LSP
+
+Для работы демона языкового сервера необходимы клиентские плагины LSP. Нажмите `Ctrl+Shift+X`, чтобы открыть панель поиска расширений в сети. Введите `llvm-vs-code-extensions.vscode-clangd` при использовании clangd или `ccls-project.ccls` при использовании ccls.
+
+Затем нажмите `Ctrl+Shift+P`, чтобы открыть палитру команд редактора. Введите `Preferences: Open Settings (JSON)` в палитру и нажмите `Enter`, чтобы открыть [.filepath]#settings.json#. В зависимости от реализации языкового сервера, добавьте одну из следующих пар ключ/значение JSON в [.filepath]#settings.json#:
+
+.Для clangd
+[source, json]
+....
+[
+    /* Begin of your existing configurations */
+    ...
+    /* End of your existing configurations */
+    "clangd.arguments": [
+        "--background-index",
+        "--header-insertion=never"
+    ],
+    "clangd.path": "clangd12"
+]
+....
+
+.Для ccls
+[source, json]
+....
+[
+    /* Begin of your existing configurations */
+    ...
+    /* End of your existing configurations */
+    "ccls.cache.hierarchicalPath": true
+]
+....
+
+[[cdb]]
+== База данных компиляции
+
+База данных компиляции содержит массив объектов команд компиляции. Каждый объект определяет способ компиляции исходного файла. Файл базы данных компиляции обычно называется [.filename]#compile_commands.json#. База данных используется реализациями языковых серверов для целей индексирования.
+
+Пожалуйста, обратитесь к link:https://clang.llvm.org/docs/JSONCompilationDatabase.html#format[] для получения подробностей о формате файла базы данных компиляции.
+
+[[cdb-generators]]
+=== Генераторы
+
+[[generators-scan-build-py]]
+==== Использование scan-build-py
+
+===== Установка
+
+Инструмент `intercept-build` из scan-build-py используется для создания базы данных компиляции.
+
+Установите пакет package:devel/python[], чтобы получить интерпретатор python. Для получения `intercept-build` из LLVM:
+
+[source, shell]
+....
+# git clone https://github.com/llvm/llvm-project /path/to/llvm-project
+....
+
+где [.filename]#/path/to/llvm-project/# — это желаемый путь для репозитория. Для удобства создайте алиас в файле конфигурации оболочки:
+
+[source, shell]
+....
+alias intercept-build='/path/to/llvm-project/clang/tools/scan-build-py/bin/intercept-build'
+....
+
+link:https://github.com/rizsotto/scan-build[rizsotto/scan-build] можно использовать вместо LLVM's scan-build-py. LLVM's scan-build-py был объединён в дерево LLVM из rizsotto/scan-build. Эту реализацию можно установить с помощью `pip install --user scan-build`. Скрипт `intercept-build` по умолчанию находится в [.filename]#~/.local/bin#.
+
+===== Использование
+
+В корневом каталоге исходного кода FreeBSD создайте базу данных компиляции с помощью `intercept-build`:
+
+[source, shell]
+....
+# intercept-build --append make buildworld buildkernel -j`sysctl -n hw.ncpu`
+....
+
+Флаг `--append` указывает `intercept-build` прочитать существующую базу данных компиляции (если она существует) и добавить результаты в базу данных. Записи с дублирующимися ключами команд объединяются. Сгенерированная база данных компиляции по умолчанию сохраняется в текущей рабочей директории как [.filename]#compile_commands.json#.
+
+[[generators-bear]]
+==== Использование devel/bear
+
+===== Использование
+
+В корневом каталоге исходного кода FreeBSD, чтобы создать базу данных компиляции с помощью `bear`:
+
+[source, shell]
+....
+# bear --append -- make buildworld buildkernel -j`sysctl -n hw.ncpu`
+....
+
+Флаг `--append` указывает `bear` прочитать существующую базу данных компиляции, если она есть, и добавить результаты в неё. Записи с дублирующимися ключами команд объединяются. Сгенерированная база данных компиляции по умолчанию сохраняется в текущей рабочей директории как [.filename]#compile_commands.json#.
+
+[[final]]
+== Последние шаги
+
+После создания базы данных компиляции откройте любой исходный файл в дереве исходного кода FreeBSD, и серверный демон LSP также запустится в фоновом режиме. Первое открытие исходных файлов в дереве src занимает значительно больше времени, прежде чем сервер LSP сможет предоставить полный результат, из-за первоначального фонового индексирования сервером LSP, который компилирует все перечисленные записи в базе данных компиляции. Однако демон языкового сервера не индексирует исходные файлы, отсутствующие в базе данных компиляции, поэтому полные результаты не отображаются для исходных файлов, которые не компилировались во время выполнения `make`.
