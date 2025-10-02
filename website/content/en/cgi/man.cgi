@@ -334,6 +334,7 @@ $sectionpath = {
     'openSUSE 15.4' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
     'openSUSE 15.5' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
     'openSUSE 15.6' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
+    'openSUSE 16.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
 };
 
 foreach my $os ( keys %$sectionpath ) {
@@ -929,6 +930,7 @@ $manPathDefault = 'FreeBSD 14.3-RELEASE and Ports';
     'openSUSE 15.4', "$manLocalDir/openSUSE-15.4",
     'openSUSE 15.5', "$manLocalDir/openSUSE-15.5",
     'openSUSE 15.6', "$manLocalDir/openSUSE-15.6",
+    'openSUSE 16.0', "$manLocalDir/openSUSE-16.0",
 
     'Debian 2.0.0', "$manLocalDir/Debian-2.0r0/man:$manLocalDir/Debian-2.0r0/misc",
     'Debian 2.2.7', "$manLocalDir/Debian-2.2r7/man:$manLocalDir/Debian-2.2r7/misc",
