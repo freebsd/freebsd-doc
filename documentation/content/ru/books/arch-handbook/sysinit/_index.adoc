@@ -1,0 +1,165 @@
+---
+description: 'Фреймворк SYSINIT'
+next: books/arch-handbook/mac
+params:
+  path: /books/arch-handbook/sysinit/
+prev: books/arch-handbook/jail
+showBookMenu: true
+tags: ["SYSINIT", "framework", "Terminology"]
+title: 'Глава 5. Фреймворк SYSINIT'
+weight: 6
+---
+
+[[sysinit]]
+= Фреймворк SYSINIT
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:sectnumoffset: 5
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/arch-handbook/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+SYSINIT — это фреймворк для общего механизма сортировки и диспетчеризации вызовов. В настоящее время FreeBSD использует его для динамической инициализации ядра. SYSINIT позволяет изменять порядок, добавлять, удалять и заменять подсистемы ядра FreeBSD во время линковки ядра при загрузке ядра или его модулей, без необходимости редактировать статически упорядоченные маршруты инициализации и перекомпилировать ядро. Эта система также позволяет модулям ядра (в настоящее время называемым _KLD_) компилироваться, линковаться и инициализироваться отдельно во время загрузки, а также загружаться позже, когда система уже работает. Это достигается с помощью «компоновщика ядра» (kernel linker) и «наборов компоновщика» (linker sets).
+
+[[sysinit-term]]
+== Терминология
+
+Набор компоновщика (Linker Set)::
+Техника компоновщика, при которой компоновщик собирает статически объявленные данные из всех исходных файлов программы в единый непрерывно адресуемый блок данных.
+
+[[sysinit-operation]]
+== Работа механизма SYSINIT
+
+SYSINIT полагается на способность компоновщика объединять статические данные, объявленные в нескольких местах исходного кода программы, в единый непрерывный блок данных. Этот метод компоновщика называется "набором компоновщика" (linker set). SYSINIT использует два набора компоновщика для поддержки двух наборов данных, содержащих порядок вызова, функцию и указатель на данные, передаваемые этой функции для каждого члена этих наборов данных.
+
+SYSINIT использует два приоритета для упорядочивания функций при выполнении. Первый приоритет — это идентификатор подсистемы, задающий общий порядок вызова функций SYSINIT. Предварительно объявленные идентификаторы находятся в [.filename]#<sys/kernel.h># в перечислении `sysinit_sub_id`. Второй используемый приоритет — это порядок элементов внутри подсистемы. Предварительно объявленные порядки элементов подсистемы находятся в [.filename]#<sys/kernel.h># в перечислении `sysinit_elem_order`.
+
+В настоящее время существует два варианта использования `SYSINIT`: вызов функций при загрузке системы и загрузке модулей ядра, а также вызов функций при завершении работы системы и выгрузке модулей ядра. Подсистемы ядра часто используют `SYSINIT` при старте системы для инициализации структур данных. Например, подсистема планирования процессов использует `SYSINIT` для инициализации структуры данных очереди выполнения. Драйверы устройств должны избегать прямого использования `SYSINIT()`. Вместо этого драйверы реальных устройств, входящих в структуру шины, должны использовать `DRIVER_MODULE()`, который предоставляет функцию для обнаружения устройства и, если оно присутствует, его инициализации. Этот макрос выполняет несколько действий, специфичных для устройств, а затем вызывает `SYSINIT()` самостоятельно. Для псевдоустройств, которые не входят в структуру шины, следует использовать `DEV_MODULE()`.
+
+[[sysinit-using]]
+== Использование SYSINIT
+
+=== Интерфейс
+
+==== Заголовки
+
+[.programlisting]
+....
+<sys/kernel.h>
+....
+
+==== Макросы
+
+[.programlisting]
+....
+SYSINIT(uniquifier, subsystem, order, func, ident)
+SYSUNINIT(uniquifier, subsystem, order, func, ident)
+....
+
+=== Запуск
+
+Макрос `SYSINIT()` создает необходимые данные SYSINIT в наборе данных инициализации системы, чтобы SYSINIT мог отсортировать и выполнить функцию при запуске системы и загрузке модуля. `SYSINIT()` принимает уникальный идентификатор, который SYSINIT использует для идентификации конкретных данных вызова функции, порядок подсистемы, порядок элемента подсистемы, функцию для вызова и данные для передачи в функцию. Все функции должны принимать аргумент в виде константного указателя.
+
+.Пример `SYSINIT()`
+[example]
+====
+[.programlisting]
+....
+#include <sys/kernel.h>
+
+void foo_null(void *unused)
+{
+        foo_doo();
+}
+SYSINIT(foo, SI_SUB_FOO, SI_ORDER_FOO, foo_null, NULL);
+
+struct foo foo_voodoo = {
+        FOO_VOODOO;
+}
+
+void foo_arg(void *vdata)
+{
+        struct foo *foo = (struct foo *)vdata;
+        foo_data(foo);
+}
+SYSINIT(bar, SI_SUB_FOO, SI_ORDER_FOO, foo_arg, &foo_voodoo);
+....
+====
+
+Обратите внимание, что `SI_SUB_FOO` и `SI_ORDER_FOO` должны быть в перечислениях `sysinit_sub_id` и `sysinit_elem_order`, как упоминалось выше. Можно использовать существующие значения или добавить свои в эти перечисления. Также можно использовать математические операции для точной настройки порядка выполнения SYSINIT. В этом примере показан SYSINIT, который должен выполняться непосредственно перед SYSINIT, обрабатывающими настройку параметров ядра.
+
+.Пример настройки порядка `SYSINIT()`
+[example]
+====
+[.programlisting]
+....
+static void
+mptable_register(void *dummy __unused)
+{
+
+	apic_register_enumerator(&mptable_enumerator);
+}
+
+SYSINIT(mptable_register, SI_SUB_TUNABLES - 1, SI_ORDER_FIRST,
+    mptable_register, NULL);
+....
+
+====
+
+=== Выключение системы
+
+Макрос `SYSUNINIT()` ведет себя аналогично макросу `SYSINIT()`, за исключением того, что добавляет данные SYSINIT в набор данных завершения работы SYSINIT.
+
+.Пример `SYSUNINIT()`
+[example]
+====
+[.programlisting]
+....
+#include <sys/kernel.h>
+
+void foo_cleanup(void *unused)
+{
+        foo_kill();
+}
+SYSUNINIT(foobar, SI_SUB_FOO, SI_ORDER_FOO, foo_cleanup, NULL);
+
+struct foo_stack foo_stack = {
+        FOO_STACK_VOODOO;
+}
+
+void foo_flush(void *vdata)
+{
+}
+SYSUNINIT(barfoo, SI_SUB_FOO, SI_ORDER_FOO, foo_flush, &foo_stack);
+....
+
+====

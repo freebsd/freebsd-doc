@@ -1,0 +1,1983 @@
+# SOME DESCRIPTIVE TITLE
+# Copyright (C) YEAR The FreeBSD Project
+# This file is distributed under the same license as the FreeBSD Documentation package.
+# Vladlen Popolitov <vladlenpopolitov@list.ru>, 2025.
+msgid ""
+msgstr ""
+"Project-Id-Version: FreeBSD Documentation VERSION\n"
+"POT-Creation-Date: 2025-10-14 22:43+0300\n"
+"PO-Revision-Date: 2025-08-26 04:45+0000\n"
+"Last-Translator: Vladlen Popolitov <vladlenpopolitov@list.ru>\n"
+"Language-Team: Russian <https://translate-dev.freebsd.org/projects/"
+"documentation/booksarch-handbooksmp_index/ru/>\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
+"X-Generator: Weblate 4.17\n"
+
+#. type: Title =
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:1
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:14
+#, no-wrap
+msgid "SMPng Design Document"
+msgstr "Документ по архитектуре SMPng"
+
+#. type: Yaml Front Matter Hash Value: title
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:1
+#, no-wrap
+msgid "Chapter 8. SMPng Design Document"
+msgstr "Глава 8. Документ по архитектуре SMPng"
+
+#. type: Title ==
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:52
+#, no-wrap
+msgid "Introduction"
+msgstr "Введение"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:55
+msgid ""
+"This document presents the current design and implementation of the SMPng "
+"Architecture. First, the basic primitives and tools are introduced. Next, a "
+"general architecture for the FreeBSD kernel's synchronization and execution "
+"model is laid out. Then, locking strategies for specific subsystems are "
+"discussed, documenting the approaches taken to introduce fine-grained "
+"synchronization and parallelism for each subsystem. Finally, detailed "
+"implementation notes are provided to motivate design choices, and make the "
+"reader aware of important implications involving the use of specific "
+"primitives."
+msgstr ""
+"В этом документе представлены текущая архитектура и реализация SMPng. "
+"Сначала вводятся основные примитивы и инструменты. Затем излагается общая "
+"архитектура модели синхронизации и выполнения ядра FreeBSD. Далее "
+"обсуждаются стратегии блокировок для конкретных подсистем, описывающие "
+"подходы к внедрению детализированной синхронизации и параллелизма для каждой "
+"подсистемы. В заключение приводятся подробные заметки по реализации, "
+"объясняющие выбор проектных решений и информирующие читателя о важных "
+"последствиях использования конкретных примитивов."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:57
+msgid ""
+"This document is a work-in-progress, and will be updated to reflect on-going "
+"design and implementation activities associated with the SMPng Project. Many "
+"sections currently exist only in outline form, but will be fleshed out as "
+"work proceeds. Updates or suggestions regarding the document may be directed "
+"to the document editors."
+msgstr ""
+"Этот документ находится в стадии разработки и будет обновляться в "
+"соответствии с текущими проектированием и реализацией, связанными с проектом "
+"SMPng. Многие разделы в настоящее время существуют только в виде набросков, "
+"но будут дополняться по мере продвижения работы. Обновления или предложения "
+"по документу могут быть направлены редакторам документа."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:63
+msgid ""
+"The goal of SMPng is to allow concurrency in the kernel. The kernel is "
+"basically one rather large and complex program. To make the kernel multi-"
+"threaded we use some of the same tools used to make other programs multi-"
+"threaded. These include mutexes, shared/exclusive locks, semaphores, and "
+"condition variables. For the definitions of these and other SMP-related "
+"terms, please see the crossref:smp[smp-glossary, Glossary] section of this "
+"article."
+msgstr ""
+"Цель SMPng — обеспечить параллелизм в ядре. Ядро представляет собой одну "
+"довольно большую и сложную программу. Чтобы сделать ядро многопоточным, мы "
+"используем те же инструменты, что и для многопоточности других программ. К "
+"ним относятся мьютексы, разделяемые/монопольные блокировки, семафоры и "
+"условные переменные. Для определений этих и других терминов, связанных с "
+"SMP, см. раздел crossref:smp[smp-glossary, Глоссарий] в этой статье."
+
+#. type: Title ==
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:65
+#, no-wrap
+msgid "Basic Tools and Locking Fundamentals"
+msgstr "Основные инструменты и основы блокировки"
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:67
+#, no-wrap
+msgid "Atomic Instructions and Memory Barriers"
+msgstr "Атомарные инструкции и барьеры памяти"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:70
+msgid ""
+"There are several existing treatments of memory barriers and atomic "
+"instructions, so this section will not include a lot of detail. To put it "
+"simply, one can not go around reading variables without a lock if a lock is "
+"used to protect writes to that variable. This becomes obvious when you "
+"consider that memory barriers simply determine relative order of memory "
+"operations; they do not make any guarantee about timing of memory "
+"operations. That is, a memory barrier does not force the contents of a CPU's "
+"local cache or store buffer to flush. Instead, the memory barrier at lock "
+"release simply ensures that all writes to the protected data will be visible "
+"to other CPU's or devices if the write to release the lock is visible. The "
+"CPU is free to keep that data in its cache or store buffer as long as it "
+"wants. However, if another CPU performs an atomic instruction on the same "
+"datum, the first CPU must guarantee that the updated value is made visible "
+"to the second CPU along with any other operations that memory barriers may "
+"require."
+msgstr ""
+"Можно найти много описаний барьеров памяти и атомарных инструкций, поэтому в "
+"этом разделе не будет много деталей. Проще говоря, нельзя читать переменные "
+"без блокировки, если блокировка используется для защиты записи в эту "
+"переменную. Это становится очевидным, если учесть, что барьеры памяти лишь "
+"определяют относительный порядок операций с памятью; они не дают никаких "
+"гарантий относительно времени выполнения этих операций. То есть, барьер "
+"памяти не принуждает к сбросу содержимого локального кэша или буфера записи "
+"процессора. Вместо этого, барьер памяти при освобождении блокировки просто "
+"гарантирует, что все записи в защищённые данные будут видны другим "
+"процессорам или устройствам, если видна запись, освобождающая блокировку. "
+"Процессор может хранить эти данные в своём кэше или буфере записи сколько "
+"угодно долго. Однако, если другой процессор выполняет атомарную инструкцию "
+"над тем же данным, первый процессор должен гарантировать, что обновлённое "
+"значение будет видно второму процессору, наряду с любыми другими операциями, "
+"которые могут потребоваться согласно барьерам памяти."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:72
+msgid ""
+"For example, assuming a simple model where data is considered visible when "
+"it is in main memory (or a global cache), when an atomic instruction is "
+"triggered on one CPU, other CPU's store buffers and caches must flush any "
+"writes to that same cache line along with any pending operations behind a "
+"memory barrier."
+msgstr ""
+"Например, предполагая простую модель, в которой данные считаются видимыми, "
+"когда они находятся в основной памяти (или в глобальном кэше), когда "
+"начинается выполнение атомарной инструкции на одном процессоре, буферы "
+"записи и кэши других процессоров должны выполнить все записи в ту же строку "
+"кэша вместе с любыми ожидающими операциями за барьером памяти."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:74
+msgid ""
+"This requires one to take special care when using an item protected by "
+"atomic instructions. For example, in the sleep mutex implementation, we have "
+"to use an `atomic_cmpset` rather than an `atomic_set` to turn on the "
+"`MTX_CONTESTED` bit. The reason is that we read the value of `mtx_lock` into "
+"a variable and then make a decision based on that read. However, the value "
+"we read may be stale, or it may change while we are making our decision. "
+"Thus, when the `atomic_set` executed, it may end up setting the bit on "
+"another value than the one we made the decision on. Thus, we have to use an "
+"`atomic_cmpset` to set the value only if the value we made the decision on "
+"is up-to-date and valid."
+msgstr ""
+"Это требует особой осторожности при использовании элемента, защищённого "
+"атомарными инструкциями. Например, в реализации мьютекса сна мы должны "
+"использовать `atomic_cmpset` вместо `atomic_set` для установки бита "
+"`MTX_CONTESTED`. Причина в том, что мы считываем значение `mtx_lock` в "
+"переменную и затем принимаем решение на основе этого чтения. Однако "
+"значение, которое мы ранее прочитали, может быть устаревшим или измениться, "
+"пока мы принимаем решение. Таким образом, когда выполняется `atomic_set`, "
+"это может привести к установке бита на другом значении, отличном от того, на "
+"котором мы основывали своё решение. Поэтому мы должны использовать "
+"`atomic_cmpset`, чтобы установить значение только в том случае, если "
+"значение, на котором мы приняли решение, актуально и действительно."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:76
+msgid ""
+"Finally, atomic instructions only allow one item to be updated or read. If "
+"one needs to atomically update several items, then a lock must be used "
+"instead. For example, if two counters must be read and have values that are "
+"consistent relative to each other, then those counters must be protected by "
+"a lock rather than by separate atomic instructions."
+msgstr ""
+"Наконец, атомарные инструкции позволяют обновить или прочитать только один "
+"элемент. Если необходимо атомарно обновить несколько элементов, вместо этого "
+"следует использовать блокировку. Например, если требуется прочитать два "
+"счётчика и получить их значения, согласованные друг с другом, то эти "
+"счётчики должны быть защищены блокировкой, а не отдельными атомарными "
+"инструкциями."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:77
+#, no-wrap
+msgid "Read Locks Versus Write Locks"
+msgstr "Блокировки на чтение и блокировки на запись"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:80
+msgid ""
+"Read locks do not need to be as strong as write locks. Both types of locks "
+"need to ensure that the data they are accessing is not stale. However, only "
+"write access requires exclusive access. Multiple threads can safely read a "
+"value. Using different types of locks for reads and writes can be "
+"implemented in a number of ways."
+msgstr ""
+"Блокировки на чтение не требуют такой же строгости, как блокировки на "
+"запись. Оба типа блокировок должны гарантировать, что данные, к которым они "
+"обращаются, не устарели. Однако запись требует монопольного доступа. "
+"Несколько потоков могут безопасно читать значение. Использование разных "
+"типов блокировок для чтения и записи может быть реализовано несколькими "
+"способами."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:82
+msgid ""
+"First, sx locks can be used in this manner by using an exclusive lock when "
+"writing and a shared lock when reading. This method is quite straightforward."
+msgstr ""
+"Во-первых, блокировки sx могут использоваться таким образом: монопольная "
+"блокировка при записи и разделяемая блокировка при чтении. Этот метод "
+"достаточно прост."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:84
+msgid ""
+"A second method is a bit more obscure. You can protect a datum with multiple "
+"locks. Then for reading that data you simply need to have a read lock of one "
+"of the locks. However, to write to the data, you need to have a write lock "
+"of all of the locks. This can make writing rather expensive but can be "
+"useful when data is accessed in various ways. For example, the parent "
+"process pointer is protected by both the `proctree_lock` sx lock and the per-"
+"process mutex. Sometimes the proc lock is easier as we are just checking to "
+"see who a parent of a process is that we already have locked. However, other "
+"places such as `inferior` need to walk the tree of processes via parent "
+"pointers and locking each process would be prohibitive as well as a pain to "
+"guarantee that the condition you are checking remains valid for both the "
+"check and the actions taken as a result of the check."
+msgstr ""
+"Второй метод несколько менее очевиден. Вы можете защитить данные несколькими "
+"блокировками. Для чтения данных достаточно получить блокировку на чтение "
+"одной из блокировок. Однако для записи данных необходимо получить блокировку "
+"на запись всех блокировок. Это может сделать запись довольно затратной, но "
+"может быть полезно, когда данные доступны различными способами. Например, "
+"указатель на родительский процесс защищён как `proctree_lock` sx-"
+"блокировкой, так и мьютексом процесса. Иногда блокировка процесса удобнее, "
+"так как мы просто проверяем, кто является родителем уже заблокированного "
+"процесса. Однако в других случаях, таких как `inferior`, необходимо обходить "
+"дерево процессов через указатели на родителя, и блокировка каждого процесса "
+"была бы слишком затратной, а также сложной для гарантии того, что "
+"проверяемое условие остаётся верным как во время проверки, так и при "
+"выполнении действий, основанных на этой проверке."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:85
+#, no-wrap
+msgid "Locking Conditions and Results"
+msgstr "Условия и результаты блокировки"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:88
+msgid ""
+"If you need a lock to check the state of a variable so that you can take an "
+"action based on the state you read, you can not just hold the lock while "
+"reading the variable and then drop the lock before you act on the value you "
+"read. Once you drop the lock, the variable can change rendering your "
+"decision invalid. Thus, you must hold the lock both while reading the "
+"variable and while performing the action as a result of the test."
+msgstr ""
+"Если вам нужна блокировка для проверки состояния переменной, чтобы можно "
+"было выполнить действие на основе прочитанного состояния, вы не можете "
+"просто удерживать блокировку во время чтения переменной, а затем снять "
+"блокировку перед выполнением действия на основе прочитанного значения. Как "
+"только вы снимаете блокировку, переменная может измениться, что сделает ваше "
+"решение недействительным. Таким образом, вы должны удерживать блокировку как "
+"во время чтения переменной, так и во время выполнения действия в результате "
+"проверки."
+
+#. type: Title ==
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:90
+#, no-wrap
+msgid "General Architecture and Design"
+msgstr "Общая Архитектура и Дизайн"
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:92
+#, no-wrap
+msgid "Interrupt Handling"
+msgstr "Обработка прерываний"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:95
+msgid ""
+"Following the pattern of several other multi-threaded UNIX(R) kernels, "
+"FreeBSD deals with interrupt handlers by giving them their own thread "
+"context. Providing a context for interrupt handlers allows them to block on "
+"locks. To help avoid latency, however, interrupt threads run at real-time "
+"kernel priority. Thus, interrupt handlers should not execute for very long "
+"to avoid starving other kernel threads. In addition, since multiple handlers "
+"may share an interrupt thread, interrupt handlers should not sleep or use a "
+"sleepable lock to avoid starving another interrupt handler."
+msgstr ""
+"Следуя примеру нескольких других многопоточных ядер UNIX(R), FreeBSD "
+"реализрвала обработчики прерываний, предоставив им собственный контекст "
+"потока. Предоставление контекста для обработчиков прерываний позволяет им "
+"блокироваться на блокировках. Однако, чтобы избежать задержек, потоки "
+"обработки прерываний выполняются с приоритетом реального времени в ядре. "
+"Таким образом, обработчики прерываний не должны выполняться слишком долго, "
+"чтобы не лишать ресурсов другие потоки ядра. Кроме того, поскольку несколько "
+"обработчиков могут использовать один поток прерываний, обработчики "
+"прерываний не должны переходить в режим сна или использовать блокировки, "
+"допускающие сон, чтобы не лишать ресурсов другие обработчики прерываний."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:97
+msgid ""
+"The interrupt threads currently in FreeBSD are referred to as heavyweight "
+"interrupt threads. They are called this because switching to an interrupt "
+"thread involves a full context switch. In the initial implementation, the "
+"kernel was not preemptive and thus interrupts that interrupted a kernel "
+"thread would have to wait until the kernel thread blocked or returned to "
+"userland before they would have an opportunity to run."
+msgstr ""
+"Текущие потоки обработки прерываний в FreeBSD называются тяжеловесными "
+"потоками обработки прерываний. Они получили такое название, потому что "
+"переключение на поток обработки прерывания включает в себя полное "
+"переключение контекста. В первоначальной реализации ядро не было "
+"вытесняющим, поэтому прерывания, которые прерывали поток ядра, должны были "
+"ждать, пока поток ядра не заблокируется или не вернётся в пользовательское "
+"пространство, прежде чем у них появится возможность выполниться."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:99
+msgid ""
+"To deal with the latency problems, the kernel in FreeBSD has been made "
+"preemptive. Currently, we only preempt a kernel thread when we release a "
+"sleep mutex or when an interrupt comes in. However, the plan is to make the "
+"FreeBSD kernel fully preemptive as described below."
+msgstr ""
+"Для решения проблем с задержками ядро FreeBSD стало вытесняющим. В настоящее "
+"время вытеснение потока ядра происходит только при освобождении мьютекса сна "
+"или при поступлении прерывания. Однако планируется сделать ядро FreeBSD "
+"полностью вытесняющим, как описано ниже."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:101
+msgid ""
+"Not all interrupt handlers execute in a thread context. Instead, some "
+"handlers execute directly in primary interrupt context. These interrupt "
+"handlers are currently misnamed \"fast\" interrupt handlers since the "
+"`INTR_FAST` flag used in earlier versions of the kernel is used to mark "
+"these handlers. The only interrupts which currently use these types of "
+"interrupt handlers are clock interrupts and serial I/O device interrupts. "
+"Since these handlers do not have their own context, they may not acquire "
+"blocking locks and thus may only use spin mutexes."
+msgstr ""
+"Не все обработчики прерываний выполняются в контексте потока. Вместо этого, "
+"некоторые обработчики выполняются непосредственно в основном контексте "
+"прерывания. Эти обработчики прерываний в настоящее время ошибочно называются "
+"\"быстрыми\" обработчиками прерываний, поскольку для их обозначения "
+"применяется флаг `INTR_FAST`, использовавшийся в более ранних версиях ядра. "
+"Единственные прерывания, которые в настоящее время используют такие "
+"обработчики прерываний, — это прерывания от часов и последовательных "
+"устройств ввода-вывода. Поскольку эти обработчики не имеют собственного "
+"контекста, они не могут захватывать блокирующие блокировки и, следовательно, "
+"могут использовать только спин-мьютексы."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:103
+msgid ""
+"Finally, there is one optional optimization that can be added in MD code "
+"called lightweight context switches. Since an interrupt thread executes in a "
+"kernel context, it can borrow the vmspace of any process. Thus, in a "
+"lightweight context switch, the switch to the interrupt thread does not "
+"switch vmspaces but borrows the vmspace of the interrupted thread. In order "
+"to ensure that the vmspace of the interrupted thread does not disappear out "
+"from under us, the interrupted thread is not allowed to execute until the "
+"interrupt thread is no longer borrowing its vmspace. This can happen when "
+"the interrupt thread either blocks or finishes. If an interrupt thread "
+"blocks, then it will use its own context when it is made runnable again. "
+"Thus, it can release the interrupted thread."
+msgstr ""
+"Наконец, существует одна дополнительная оптимизация, которую можно добавить "
+"в код MD, называемая легковесными переключениями контекста. Поскольку поток "
+"обработки прерывания выполняется в контексте ядра, он может заимствовать "
+"vmspace любого процесса. Таким образом, при легковесном переключении "
+"контекста переход к потоку обработки прерывания не меняет vmspace, а "
+"заимствует vmspace прерванного потока. Чтобы гарантировать, что vmspace "
+"прерванного потока не исчезнет во время работы, прерванному потоку "
+"запрещается выполнение до тех пор, пока поток обработки прерывания больше не "
+"использует его vmspace. Это может произойти, когда поток обработки "
+"прерывания либо блокируется, либо завершается. Если поток обработки "
+"прерывания блокируется, то при повторном запуске он будет использовать свой "
+"собственный контекст. Таким образом, он может освободить прерванный поток."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:105
+msgid ""
+"The cons of this optimization are that they are very machine specific and "
+"complex and thus only worth the effort if their is a large performance "
+"improvement. At this point it is probably too early to tell, and in fact, "
+"will probably hurt performance as almost all interrupt handlers will "
+"immediately block on Giant and require a thread fix-up when they block. "
+"Also, an alternative method of interrupt handling has been proposed by Mike "
+"Smith that works like so:"
+msgstr ""
+"Недостатки этой оптимизации заключаются в том, что они очень специфичны для "
+"конкретной машины и сложны, поэтому стоят усилий только в случае "
+"значительного улучшения производительности. На данный момент, вероятно, ещё "
+"рано делать выводы, и, фактически, это может даже ухудшить "
+"производительность, так как почти все обработчики прерываний будут "
+"немедленно блокироваться на Giant и потребуют исправления потока при "
+"блокировке. Кроме того, Майк Смит предложил альтернативный метод обработки "
+"прерываний, который работает следующим образом:"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:107
+msgid ""
+"Each interrupt handler has two parts: a predicate which runs in primary "
+"interrupt context and a handler which runs in its own thread context."
+msgstr ""
+"Каждый обработчик прерывания состоит из двух частей: предиката, который "
+"выполняется в основном контексте прерывания, и обработчика, который "
+"выполняется в контексте собственного потока."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:108
+msgid ""
+"If an interrupt handler has a predicate, then when an interrupt is "
+"triggered, the predicate is run. If the predicate returns true then the "
+"interrupt is assumed to be fully handled and the kernel returns from the "
+"interrupt. If the predicate returns false or there is no predicate, then the "
+"threaded handler is scheduled to run."
+msgstr ""
+"Если у обработчика прерывания есть предикат, то при срабатывании прерывания "
+"этот предикат выполняется. Если предикат возвращает значение `true`, "
+"прерывание считается полностью обработанным, и ядро возвращается из "
+"прерывания. Если предикат возвращает `false` или предиката нет, то "
+"запланированный обработчик запускается."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:110
+msgid ""
+"Fitting light weight context switches into this scheme might prove rather "
+"complicated. Since we may want to change to this scheme at some point in the "
+"future, it is probably best to defer work on light weight context switches "
+"until we have settled on the final interrupt handling architecture and "
+"determined how light weight context switches might or might not fit into it."
+msgstr ""
+"Встраивание легковесных переключений контекста в эту схему может оказаться "
+"довольно сложным. Поскольку мы, возможно, захотим перейти на эту схему в "
+"будущем, вероятно, лучше отложить работу над легковесными переключениями "
+"контекста до тех пор, пока мы не определимся с окончательной архитектурой "
+"обработки прерываний и не выясним, как легковесные переключения контекста "
+"могут (или не могут) в неё вписаться."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:111
+#, no-wrap
+msgid "Kernel Preemption and Critical Sections"
+msgstr "Ядро с вытеснением и критические секции"
+
+#. type: Title ====
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:113
+#, no-wrap
+msgid "Kernel Preemption in a Nutshell"
+msgstr "Ядро и вытеснение вкратце"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:116
+msgid ""
+"Kernel preemption is fairly simple. The basic idea is that a CPU should "
+"always be doing the highest priority work available. Well, that is the ideal "
+"at least. There are a couple of cases where the expense of achieving the "
+"ideal is not worth being perfect."
+msgstr ""
+"Вытеснение ядра довольно просто. Основная идея заключается в том, что "
+"процессор всегда должен выполнять наиболее приоритетную доступную работу. "
+"Ну, это в идеале, по крайней мере. Есть несколько случаев, когда затраты на "
+"достижение идеала не стоят совершенства."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:118
+msgid ""
+"Implementing full kernel preemption is very straightforward: when you "
+"schedule a thread to be executed by putting it on a run queue, you check to "
+"see if its priority is higher than the currently executing thread. If so, "
+"you initiate a context switch to that thread."
+msgstr ""
+"Реализация полной вытесняющей многозадачности в ядре очень проста: когда вы "
+"планируете выполнение потока, помещая его в очередь выполнения, вы "
+"проверяете, является ли его приоритет выше, чем у текущего выполняемого "
+"потока. Если да, вы инициируете переключение контекста на этот поток."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:120
+msgid ""
+"While locks can protect most data in the case of a preemption, not all of "
+"the kernel is preemption safe. For example, if a thread holding a spin mutex "
+"preempted and the new thread attempts to grab the same spin mutex, the new "
+"thread may spin forever as the interrupted thread may never get a chance to "
+"execute. Also, some code such as the code to assign an address space number "
+"for a process during `exec` on the Alpha needs to not be preempted as it "
+"supports the actual context switch code. Preemption is disabled for these "
+"code sections by using a critical section."
+msgstr ""
+"Хотя блокировки могут защитить большинство данных в случае вытеснения, не "
+"все части ядра безопасны для вытеснения. Например, если поток, удерживающий "
+"спин-блокировку, будет вытеснен, а новый поток попытается захватить ту же "
+"спин-блокировку, новый поток может вращаться вечно, так как прерванный поток "
+"может никогда не получить шанс на выполнение. Кроме того, некоторый код, "
+"такой как код для назначения номера адресного пространства процессу во время "
+"`exec` на Alpha, не должен быть вытеснен, так как он поддерживает "
+"фактический код переключения контекста. Для таких участков кода вытеснение "
+"отключается с использованием критической секции."
+
+#. type: Title ====
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:121
+#, no-wrap
+msgid "Critical Sections"
+msgstr "Критические Секции"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:124
+msgid ""
+"The responsibility of the critical section API is to prevent context "
+"switches inside of a critical section. With a fully preemptive kernel, every "
+"`setrunqueue` of a thread other than the current thread is a preemption "
+"point. One implementation is for `critical_enter` to set a per-thread flag "
+"that is cleared by its counterpart. If `setrunqueue` is called with this "
+"flag set, it does not preempt regardless of the priority of the new thread "
+"relative to the current thread. However, since critical sections are used in "
+"spin mutexes to prevent context switches and multiple spin mutexes can be "
+"acquired, the critical section API must support nesting. For this reason the "
+"current implementation uses a nesting count instead of a single per-thread "
+"flag."
+msgstr ""
+"Ответственность API критической секции заключается в предотвращении "
+"переключения контекста внутри критической секции. В полностью вытесняющем "
+"ядре каждый вызов `setrunqueue` для потока, отличного от текущего, является "
+"точкой вытеснения. Одна из реализаций заключается в том, что "
+"`critical_enter` устанавливает флаг для каждого потока, который сбрасывается "
+"его парной функцией. Если `setrunqueue` вызывается, когда этот флаг "
+"установлен, вытеснение не происходит, независимо от приоритета нового потока "
+"относительно текущего. Однако, поскольку критические секции используются в "
+"спин-блокировках для предотвращения переключения контекста и может быть "
+"захвачено несколько спин-блокировок, API критической секции должен "
+"поддерживать вложенность. По этой причине текущая реализация использует "
+"счетчик вложенности вместо одиночного флага для каждого потока."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:126
+msgid ""
+"In order to minimize latency, preemptions inside of a critical section are "
+"deferred rather than dropped. If a thread that would normally be preempted "
+"to is made runnable while the current thread is in a critical section, then "
+"a per-thread flag is set to indicate that there is a pending preemption. "
+"When the outermost critical section is exited, the flag is checked. If the "
+"flag is set, then the current thread is preempted to allow the higher "
+"priority thread to run."
+msgstr ""
+"Для минимизации задержек прерывания внутри критической секции откладываются, "
+"а не отбрасываются. Если поток, который в обычных условиях должен быть "
+"вытеснен, становится готовым к выполнению, пока текущий поток находится в "
+"критической секции, то устанавливается флаг для данного потока, указывающий "
+"на ожидающее прерывание. При выходе из самой внешней критической секции флаг "
+"проверяется. Если флаг установлен, текущий поток вытесняется, чтобы "
+"позволить выполниться потоку с более высоким приоритетом."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:128
+msgid ""
+"Interrupts pose a problem with regards to spin mutexes. If a low-level "
+"interrupt handler needs a lock, it needs to not interrupt any code needing "
+"that lock to avoid possible data structure corruption. Currently, providing "
+"this mechanism is piggybacked onto critical section API by means of the "
+"`cpu_critical_enter` and `cpu_critical_exit` functions. Currently this API "
+"disables and re-enables interrupts on all of FreeBSD's current platforms. "
+"This approach may not be purely optimal, but it is simple to understand and "
+"simple to get right. Theoretically, this second API need only be used for "
+"spin mutexes that are used in primary interrupt context. However, to make "
+"the code simpler, it is used for all spin mutexes and even all critical "
+"sections. It may be desirable to split out the MD API from the MI API and "
+"only use it in conjunction with the MI API in the spin mutex implementation. "
+"If this approach is taken, then the MD API likely would need a rename to "
+"show that it is a separate API."
+msgstr ""
+"Прерывания создают проблему для спин-мьютексов. Если обработчик "
+"низкоуровневого прерывания требует блокировки, он не должен прерывать любой "
+"код, которому нужна эта блокировка, чтобы избежать возможного повреждения "
+"структур данных. В настоящее время этот механизм реализован через API "
+"критических секций с помощью функций `cpu_critical_enter` и "
+"`cpu_critical_exit`. Сейчас этот API отключает и снова включает прерывания "
+"на всех текущих платформах FreeBSD. Такой подход может быть не идеально "
+"оптимальным, но он прост для понимания и надежен в реализации. Теоретически, "
+"этот второй API нужен только для спин-мьютексов, используемых в основном "
+"контексте прерываний. Однако, для упрощения кода, он используется для всех "
+"спин-мьютексов и даже для всех критических секций. Возможно, стоит отделить "
+"MD API от MI API и использовать его только совместно с MI API в реализации "
+"спин-мьютексов. Если будет принят такой подход, то MD API, вероятно, "
+"потребуется переименовать, чтобы показать, что это отдельный API."
+
+#. type: Title ====
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:129
+#, no-wrap
+msgid "Design Tradeoffs"
+msgstr "Компромиссы проектирования"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:132
+msgid ""
+"As mentioned earlier, a couple of trade-offs have been made to sacrifice "
+"cases where perfect preemption may not always provide the best performance."
+msgstr ""
+"Как упоминалось ранее, были сделаны некоторые компромиссы, чтобы "
+"пожертвовать случаями, когда идеальная вытесняющая многозадачность не всегда "
+"обеспечивает наилучшую производительность."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:134
+msgid ""
+"The first trade-off is that the preemption code does not take other CPUs "
+"into account. Suppose we have a two CPU's A and B with the priority of A's "
+"thread as 4 and the priority of B's thread as 2. If CPU B makes a thread "
+"with priority 1 runnable, then in theory, we want CPU A to switch to the new "
+"thread so that we will be running the two highest priority runnable threads. "
+"However, the cost of determining which CPU to enforce a preemption on as "
+"well as actually signaling that CPU via an IPI along with the "
+"synchronization that would be required would be enormous. Thus, the current "
+"code would instead force CPU B to switch to the higher priority thread. Note "
+"that this still puts the system in a better position as CPU B is executing a "
+"thread of priority 1 rather than a thread of priority 2."
+msgstr ""
+"Первый компромисс заключается в том, что код вытеснения не учитывает другие "
+"процессоры. Предположим, у нас есть два процессора A и B, где приоритет "
+"потока A равен 4, а приоритет потока B равен 2. Если процессор B делает "
+"поток с приоритетом 1 готовым к выполнению, то теоретически мы хотим, чтобы "
+"процессор A переключился на новый поток, чтобы выполнялись два потока с "
+"наивысшим приоритетом. Однако стоимость определения, на какой процессор "
+"нужно применить вытеснение, а также фактическая сигнализация этому "
+"процессору через IPI вместе с необходимой синхронизацией были бы огромными. "
+"Таким образом, текущий код вместо этого заставит процессор B переключиться "
+"на поток с более высоким приоритетом. Заметим, что это всё равно улучшает "
+"состояние системы, так как процессор B выполняет поток с приоритетом 1, а не "
+"поток с приоритетом 2."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:136
+msgid ""
+"The second trade-off limits immediate kernel preemption to real-time "
+"priority kernel threads. In the simple case of preemption defined above, a "
+"thread is always preempted immediately (or as soon as a critical section is "
+"exited) if a higher priority thread is made runnable. However, many threads "
+"executing in the kernel only execute in a kernel context for a short time "
+"before either blocking or returning to userland. Thus, if the kernel "
+"preempts these threads to run another non-realtime kernel thread, the kernel "
+"may switch out the executing thread just before it is about to sleep or "
+"execute. The cache on the CPU must then adjust to the new thread. When the "
+"kernel returns to the preempted thread, it must refill all the cache "
+"information that was lost. In addition, two extra context switches are "
+"performed that could be avoided if the kernel deferred the preemption until "
+"the first thread blocked or returned to userland. Thus, by default, the "
+"preemption code will only preempt immediately if the higher priority thread "
+"is a real-time priority thread."
+msgstr ""
+"Второй компромисс ограничивает немедленное вытеснение ядра только потоками "
+"ядра с реальным временем. В простом случае вытеснения, описанном выше, поток "
+"всегда вытесняется немедленно (или как только будет покинута критическая "
+"секция), если становится доступным поток с более высоким приоритетом. Однако "
+"многие потоки, выполняющиеся в ядре, работают в контексте ядра лишь короткое "
+"время перед тем, как либо заблокироваться, либо вернуться в пользовательское "
+"пространство. Таким образом, если ядро вытеснит эти потоки для выполнения "
+"другого потока ядра без реального времени, оно может переключиться с "
+"выполняемого потока как раз перед тем, как тот собирается завершиться или "
+"перейти в режим ожидания. Кэш процессора должен затем адаптироваться к "
+"новому потоку. Когда ядро возвращается к вытесненному потоку, оно должно "
+"восстановить все потерянные кэшированные данные. Кроме того, выполняются два "
+"дополнительных переключения контекста, которых можно было бы избежать, если "
+"бы ядро отложило вытеснение до момента, пока первый поток не заблокируется "
+"или не вернётся в пользовательское пространство. Таким образом, по умолчанию "
+"код вытеснения будет немедленно вытеснять поток только в том случае, если "
+"поток с более высоким приоритетом имеет приоритет реального времени."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:138
+msgid ""
+"Turning on full kernel preemption for all kernel threads has value as a "
+"debugging aid since it exposes more race conditions. It is especially useful "
+"on UP systems were many races are hard to simulate otherwise. Thus, there is "
+"a kernel option `FULL_PREEMPTION` to enable preemption for all kernel "
+"threads that can be used for debugging purposes."
+msgstr ""
+"Включение полной вытесняющей многозадачности для всех потоков ядра полезно в "
+"качестве средства отладки, так как позволяет выявить больше состояний гонки. "
+"Это особенно полезно на однопроцессорных системах (UP), где многие гонки "
+"сложно воспроизвести другими способами. Таким образом, существует опция ядра "
+"`FULL_PREEMPTION` для включения вытеснения для всех потоков ядра, которая "
+"может использоваться для целей отладки."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:139
+#, no-wrap
+msgid "Thread Migration"
+msgstr "Миграция потоков"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:142
+msgid ""
+"Simply put, a thread migrates when it moves from one CPU to another. In a "
+"non-preemptive kernel this can only happen at well-defined points such as "
+"when calling `msleep` or returning to userland. However, in the preemptive "
+"kernel, an interrupt can force a preemption and possible migration at any "
+"time. This can have negative affects on per-CPU data since with the "
+"exception of `curthread` and `curpcb` the data can change whenever you "
+"migrate. Since you can potentially migrate at any time this renders "
+"unprotected per-CPU data access rather useless. Thus it is desirable to be "
+"able to disable migration for sections of code that need per-CPU data to be "
+"stable."
+msgstr ""
+"Простыми словами, поток мигрирует, когда переходит с одного CPU на другой. В "
+"неперемещаемом ядре это может происходить только в определённых точках, "
+"например, при вызове `msleep` или возврате в пользовательское пространство. "
+"Однако в перемещаемом ядре прерывание может вызвать вытеснение и возможную "
+"миграцию в любой момент. Это может негативно сказаться на данных, "
+"специфичных для CPU, поскольку, за исключением `curthread` и `curpcb`, "
+"данные могут изменяться при любой миграции. Поскольку потенциально миграция "
+"может произойти в любой момент, это делает незащищённый доступ к данным, "
+"специфичным для CPU, практически бесполезным. Поэтому желательно иметь "
+"возможность отключать миграцию для участков кода, где требуется стабильность "
+"данных, специфичных для CPU."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:144
+msgid ""
+"Critical sections currently prevent migration since they do not allow "
+"context switches. However, this may be too strong of a requirement to "
+"enforce in some cases since a critical section also effectively blocks "
+"interrupt threads on the current processor. As a result, another API has "
+"been provided to allow the current thread to indicate that if it preempted "
+"it should not migrate to another CPU."
+msgstr ""
+"Критические секции в настоящее время предотвращают миграцию, поскольку они "
+"не допускают переключения контекстов. Однако это может быть слишком строгим "
+"требованием в некоторых случаях, так как критическая секция также эффективно "
+"блокирует потоки прерываний на текущем процессоре. В результате был "
+"предоставлен другой API, позволяющий текущему потоку указать, что если он "
+"будет вытеснен, он не должен мигрировать на другой CPU."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:146
+msgid ""
+"This API is known as thread pinning and is provided by the scheduler. The "
+"API consists of two functions: `sched_pin` and `sched_unpin`. These "
+"functions manage a per-thread nesting count `td_pinned`. A thread is pinned "
+"when its nesting count is greater than zero and a thread starts off unpinned "
+"with a nesting count of zero. Each scheduler implementation is required to "
+"ensure that pinned threads are only executed on the CPU that they were "
+"executing on when the `sched_pin` was first called. Since the nesting count "
+"is only written to by the thread itself and is only read by other threads "
+"when the pinned thread is not executing but while `sched_lock` is held, then "
+"`td_pinned` does not need any locking. The `sched_pin` function increments "
+"the nesting count and `sched_unpin` decrements the nesting count. Note that "
+"these functions only operate on the current thread and bind the current "
+"thread to the CPU it is executing on at the time. To bind an arbitrary "
+"thread to a specific CPU, the `sched_bind` and `sched_unbind` functions "
+"should be used instead."
+msgstr ""
+"Этот API известен как закрепление потока и предоставляется планировщиком. "
+"API состоит из двух функций: `sched_pin` и `sched_unpin`. Эти функции "
+"управляют счетчиком вложенности `td_pinned` для каждого потока. Поток "
+"считается закрепленным, когда его счетчик вложенности больше нуля, и "
+"прекрашает быть закрепленным с нулевым счетчиком вложенности. Каждая "
+"реализация планировщика должна гарантировать, что закрепленные потоки "
+"выполняются только на том CPU, на котором они выполнялись при первом вызове "
+"`sched_pin`. Поскольку счетчик вложенности изменяется только самим потоком и "
+"читается другими потоками только тогда, когда закрепленный поток не "
+"выполняется, но удерживается `sched_lock`, то `td_pinned` не требует "
+"блокировки. Функция `sched_pin` увеличивает счетчик вложенности, а "
+"`sched_unpin` уменьшает его. Обратите внимание, что эти функции работают "
+"только с текущим потоком и привязывают текущий поток к CPU, на котором он "
+"выполняется в данный момент. Для привязки произвольного потока к "
+"определенному CPU следует использовать функции `sched_bind` и `sched_unbind`."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:147
+#, no-wrap
+msgid "Callouts"
+msgstr "Обратные вызовы"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:150
+msgid ""
+"The `timeout` kernel facility permits kernel services to register functions "
+"for execution as part of the `softclock` software interrupt. Events are "
+"scheduled based on a desired number of clock ticks, and callbacks to the "
+"consumer-provided function will occur at approximately the right time."
+msgstr ""
+"Функция ядра `timeout` позволяет службам ядра регистрировать функции для "
+"выполнения в рамках программного прерывания `softclock`. События планируются "
+"на основе заданного количества тактов часов, и вызовы предоставленной "
+"потребителем функции будут происходить приблизительно в нужное время."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:152
+msgid ""
+"The global list of pending timeout events is protected by a global spin "
+"mutex, `callout_lock`; all access to the timeout list must be performed with "
+"this mutex held. When `softclock` is woken up, it scans the list of pending "
+"timeouts for those that should fire. In order to avoid lock order reversal, "
+"the `softclock` thread will release the `callout_lock` mutex when invoking "
+"the provided `timeout` callback function. If the `CALLOUT_MPSAFE` flag was "
+"not set during registration, then Giant will be grabbed before invoking the "
+"callout, and then released afterwards. The `callout_lock` mutex will be re-"
+"grabbed before proceeding. The `softclock` code is careful to leave the list "
+"in a consistent state while releasing the mutex. If `DIAGNOSTIC` is enabled, "
+"then the time taken to execute each function is measured, and a warning is "
+"generated if it exceeds a threshold."
+msgstr ""
+"Глобальный список ожидающих событий с таймаутом защищен глобальной спин-"
+"блокировкой `callout_lock`; любой доступ к списку таймаутов должен "
+"выполняться с удержанием этой блокировки. Когда `softclock` пробуждается, он "
+"сканирует список ожидающих таймаутов на предмет тех, которые должны "
+"сработать. Чтобы избежать инверсии блокировок, поток `softclock` освобождает "
+"блокировку `callout_lock` при вызове предоставленной функции обратного "
+"вызова `timeout`. Если флаг `CALLOUT_MPSAFE` не был установлен во время "
+"регистрации, то `Giant` будет захвачен перед вызовом обратного вызова, а "
+"затем освобожден после него. Блокировка `callout_lock` будет повторно "
+"захвачена перед продолжением работы. Код `softclock` аккуратно поддерживает "
+"список в согласованном состоянии во время освобождения блокировки. Если "
+"включен `DIAGNOSTIC`, то измеряется время выполнения каждой функции, и если "
+"оно превышает пороговое значение, генерируется предупреждение."
+
+#. type: Title ==
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:154
+#, no-wrap
+msgid "Specific Locking Strategies"
+msgstr "Конкретные стратегии блокировки"
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:156
+#, no-wrap
+msgid "Credentials"
+msgstr "Учетные данные"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:159
+msgid ""
+"`struct ucred` is the kernel's internal credential structure, and is "
+"generally used as the basis for process-driven access control within the "
+"kernel. BSD-derived systems use a \"copy-on-write\" model for credential "
+"data: multiple references may exist for a credential structure, and when a "
+"change needs to be made, the structure is duplicated, modified, and then the "
+"reference replaced. Due to wide-spread caching of the credential to "
+"implement access control on open, this results in substantial memory "
+"savings. With a move to fine-grained SMP, this model also saves "
+"substantially on locking operations by requiring that modification only "
+"occur on an unshared credential, avoiding the need for explicit "
+"synchronization when consuming a known-shared credential."
+msgstr ""
+"`struct ucred` — это внутренняя структура учетных данных ядра, которая "
+"обычно используется в качестве основы для управления доступом на уровне "
+"процессов внутри ядра. Системы, производные от BSD, используют модель "
+"«копирования при записи» для учетных данных: могут существовать "
+"множественные ссылки на структуру учетных данных, и когда требуется внести "
+"изменение, структура дублируется, изменяется, а затем ссылка заменяется. "
+"Благодаря широко распространенному кэшированию учетных данных для реализации "
+"контроля доступа при открытии, это приводит к значительной экономии памяти. "
+"С переходом на детализированную SMP (симметричную многопроцессорность), эта "
+"модель также существенно экономит на операциях блокировки, требуя, чтобы "
+"модификации выполнялись только для неразделяемых учетных данных, избегая "
+"необходимости явной синхронизации при использовании известных разделяемых "
+"учетных данных."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:161
+msgid ""
+"Credential structures with a single reference are considered mutable; shared "
+"credential structures must not be modified or a race condition is risked. A "
+"mutex, `cr_mtxp` protects the reference count of `struct ucred` so as to "
+"maintain consistency. Any use of the structure requires a valid reference "
+"for the duration of the use, or the structure may be released out from under "
+"the illegitimate consumer."
+msgstr ""
+"Структуры учетных данных с единственной ссылкой считаются изменяемыми; "
+"разделяемые структуры учетных данных не должны изменяться, иначе возникает "
+"риск состояния гонки. Мьютекс `cr_mtxp` защищает счетчик ссылок структуры "
+"`struct ucred` для поддержания согласованности. Любое использование "
+"структуры требует действительной ссылки на протяжении всего времени "
+"использования, иначе структура может быть освобождена из-под нелегитимного "
+"потребителя."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:163
+msgid ""
+"The `struct ucred` mutex is a leaf mutex and is implemented via a mutex pool "
+"for performance reasons."
+msgstr ""
+"Мьютекс `struct ucred` является листовым мьютексом и реализован через пул "
+"мьютексов по соображениям производительности."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:165
+msgid ""
+"Usually, credentials are used in a read-only manner for access control "
+"decisions, and in this case `td_ucred` is generally preferred because it "
+"requires no locking. When a process' credential is updated the `proc` lock "
+"must be held across the check and update operations thus avoid races. The "
+"process credential `p_ucred` must be used for check and update operations to "
+"prevent time-of-check, time-of-use races."
+msgstr ""
+"Обычно учетные данные используются в режиме только для чтения для принятия "
+"решений по контролю доступа, и в этом случае `td_ucred`, как правило, "
+"предпочтительнее, поскольку не требует блокировки. Когда учетные данные "
+"процесса обновляются, блокировка `proc` должна удерживаться на протяжении "
+"операций проверки и обновления, чтобы избежать состояний гонки. Учетные "
+"данные процесса `p_ucred` должны использоваться для операций проверки и "
+"обновления, чтобы предотвратить гонки между временем проверки и временем "
+"использования."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:167
+msgid ""
+"If system call invocations will perform access control after an update to "
+"the process credential, the value of `td_ucred` must also be refreshed to "
+"the current process value. This will prevent use of a stale credential "
+"following a change. The kernel automatically refreshes the `td_ucred` "
+"pointer in the thread structure from the process `p_ucred` whenever a "
+"process enters the kernel, permitting use of a fresh credential for kernel "
+"access control."
+msgstr ""
+"Если при системных вызовах будет выполняться контроль доступа после "
+"обновления учетных данных процесса, значение `td_ucred` также должно быть "
+"обновлено до текущего значения процесса. Это предотвратит использование "
+"устаревших учетных данных после изменения. Ядро автоматически обновляет "
+"указатель `td_ucred` в структуре потока из `p_ucred` процесса всякий раз, "
+"когда процесс входит в ядро, что позволяет использовать свежие учетные "
+"данные для контроля доступа в ядре."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:168
+#, no-wrap
+msgid "File Descriptors and File Descriptor Tables"
+msgstr "Дескрипторы файлов и таблицы дескрипторов файлов"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:171
+msgid "Details to follow."
+msgstr "Подробности будут позже."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:172
+#, no-wrap
+msgid "Jail Structures"
+msgstr "Структуры клеток"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:175
+msgid ""
+"`struct prison` stores administrative details pertinent to the maintenance "
+"of jails created using the man:jail[2] API. This includes the per-jail "
+"hostname, IP address, and related settings. This structure is reference-"
+"counted since pointers to instances of the structure are shared by many "
+"credential structures. A single mutex, `pr_mtx` protects read and write "
+"access to the reference count and all mutable variables inside the struct "
+"jail. Some variables are set only when the jail is created, and a valid "
+"reference to the `struct prison` is sufficient to read these values. The "
+"precise locking of each entry is documented via comments in [.filename]#sys/"
+"jail.h#."
+msgstr ""
+"`struct prison` хранит административные данные, связанные с обслуживанием "
+"клеток, созданных с использованием API man:jail[2]. Это включает имя хоста "
+"для каждой клетки, IP-адрес и связанные настройки. Эта структура имеет "
+"счетчик ссылок, так как указатели на её экземпляры разделяются многими "
+"структурами учётных данных. Один мьютекс, `pr_mtx`, защищает чтение и запись "
+"счётчика ссылок и всех изменяемых переменных внутри `struct jail`. Некоторые "
+"переменные устанавливаются только при создании клетки, и действительной "
+"ссылки на `struct prison` достаточно для чтения этих значений. Точная "
+"блокировка каждой записи документирована в комментариях файла "
+"[.filename]#sys/jail.h#."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:176
+#, no-wrap
+msgid "MAC Framework"
+msgstr "MAC Framework"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:179
+msgid ""
+"The TrustedBSD MAC Framework maintains data in a variety of kernel objects, "
+"in the form of `struct label`. In general, labels in kernel objects are "
+"protected by the same lock as the remainder of the kernel object. For "
+"example, the `v_label` label in `struct vnode` is protected by the vnode "
+"lock on the vnode."
+msgstr ""
+"Фреймворк TrustedBSD MAC поддерживает данные в различных объектах ядра в "
+"виде `struct label`. Как правило, метки в объектах ядра защищаются тем же "
+"механизмом блокировки, что и остальная часть объекта ядра. Например, метка "
+"`v_label` в `struct vnode` защищается блокировкой vnode."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:181
+msgid ""
+"In addition to labels maintained in standard kernel objects, the MAC "
+"Framework also maintains a list of registered and active policies. The "
+"policy list is protected by a global mutex (`mac_policy_list_lock`) and a "
+"busy count (also protected by the mutex). Since many access control checks "
+"may occur in parallel, entry to the framework for a read-only access to the "
+"policy list requires holding the mutex while incrementing (and later "
+"decrementing) the busy count. The mutex need not be held for the duration of "
+"the MAC entry operation--some operations, such as label operations on file "
+"system objects--are long-lived. To modify the policy list, such as during "
+"policy registration and de-registration, the mutex must be held and the "
+"reference count must be zero, to prevent modification of the list while it "
+"is in use."
+msgstr ""
+"В дополнение к меткам, поддерживаемым в стандартных объектах ядра, MAC "
+"Framework также поддерживает список зарегистрированных и активных политик. "
+"Список политик защищен глобальной мьютекс-блокировкой "
+"(`mac_policy_list_lock`) и счетчиком использования (также защищенным "
+"мьютексом). Поскольку множество проверок контроля доступа может выполняться "
+"параллельно, вход в framework для доступа только на чтение к списку политик "
+"требует удержания мьютекса во время увеличения (и последующего уменьшения) "
+"счетчика использования. Мьютекс не обязательно удерживать на протяжении всей "
+"операции входа в MAC — некоторые операции, такие как операции с метками на "
+"объектах файловой системы, выполняются длительное время. Для изменения "
+"списка политик, например во время регистрации и отмены регистрации политик, "
+"мьютекс должен быть удержан, а счетчик ссылок должен быть равен нулю, чтобы "
+"предотвратить изменение списка во время его использования."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:183
+msgid ""
+"A condition variable, `mac_policy_list_not_busy`, is available to threads "
+"that need to wait for the list to become unbusy, but this condition variable "
+"must only be waited on if the caller is holding no other locks, or a lock "
+"order violation may be possible. The busy count, in effect, acts as a form "
+"of shared/exclusive lock over access to the framework: the difference is "
+"that, unlike with an sx lock, consumers waiting for the list to become "
+"unbusy may be starved, rather than permitting lock order problems with "
+"regards to the busy count and other locks that may be held on entry to (or "
+"inside) the MAC Framework."
+msgstr ""
+"Условная переменная `mac_policy_list_not_busy` доступна для потоков, которым "
+"необходимо дождаться освобождения списка, но ожидание на этой условной "
+"переменной допустимо только если вызывающий поток не удерживает других "
+"блокировок, иначе может возникнуть нарушение порядка блокировок. Фактически, "
+"счетчик занятости действует как форма разделяемой/исключающей блокировки "
+"доступа к фреймворку: отличие в том, что, в отличие от sx-блокировки, "
+"потребители, ожидающие освобождения списка, могут подвергаться голоданию, "
+"вместо того чтобы допускать проблемы порядка блокировок в отношении счетчика "
+"занятости и других блокировок, которые могут удерживаться при входе в (или "
+"внутри) MAC Framework."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:184
+#, no-wrap
+msgid "Modules"
+msgstr "Модули"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:187
+msgid ""
+"For the module subsystem there exists a single lock that is used to protect "
+"the shared data. This lock is a shared/exclusive (SX) lock and has a good "
+"chance of needing to be acquired (shared or exclusively), therefore there "
+"are a few macros that have been added to make access to the lock more easy. "
+"These macros can be located in [.filename]#sys/module.h# and are quite basic "
+"in terms of usage. The main structures protected under this lock are the "
+"`module_t` structures (when shared) and the global `modulelist_t` structure, "
+"modules. One should review the related source code in [.filename]#kern/"
+"kern_module.c# to further understand the locking strategy."
+msgstr ""
+"Для подсистемы модулей существует единая блокировка, которая используется "
+"для защиты общих данных. Эта блокировка является shared/exclusive (SX) и с "
+"высокой вероятностью потребует захвата (разделяемого или исключительного), "
+"поэтому были добавлены несколько макросов для упрощения работы с ней. Эти "
+"макросы можно найти в [.filename]#sys/module.h#, и их использование довольно "
+"простое. Основные структуры, защищаемые этой блокировкой, — это структуры "
+"`module_t` (при разделяемом доступе) и глобальная структура `modulelist_t` "
+"modules. Для более глубокого понимания стратегии блокировок рекомендуется "
+"изучить соответствующий исходный код в [.filename]#kern/kern_module.c#."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:188
+#, no-wrap
+msgid "Newbus Device Tree"
+msgstr "Дерево устройств Newbus"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:191
+msgid ""
+"The newbus system will have one sx lock. Readers will hold a shared (read) "
+"lock (man:sx_slock[9]) and writers will hold an exclusive (write) lock "
+"(man:sx_xlock[9]). Internal functions will not do locking at all. Externally "
+"visible ones will lock as needed. Those items that do not matter if the race "
+"is won or lost will not be locked, since they tend to be read all over the "
+"place (e.g., man:device_get_softc[9]). There will be relatively few changes "
+"to the newbus data structures, so a single lock should be sufficient and not "
+"impose a performance penalty."
+msgstr ""
+"Система newbus будет использовать одну блокировку sx. Читатели будут "
+"удерживать разделяемую (read) блокировку (man:sx_slock[9]), а писатели — "
+"эксклюзивную (write) блокировку (man:sx_xlock[9]). Внутренние функции не "
+"будут выполнять блокировку вообще. Внешне видимые функции будут "
+"блокироваться по мере необходимости. Элементы, для которых не важно, "
+"выиграна гонка или проиграна, не будут блокироваться, так как они обычно "
+"читаются во многих местах (например, man:device_get_softc[9]). Изменения в "
+"структурах данных newbus будут относительно редкими, поэтому одной "
+"блокировки должно быть достаточно, и это не приведёт к снижению "
+"производительности."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:192
+#, no-wrap
+msgid "Pipes"
+msgstr "Каналы (pipe)"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:195
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:217
+msgid "..."
+msgstr "..."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:196
+#, no-wrap
+msgid "Processes and Threads"
+msgstr "Процессы и потоки"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:199
+msgid "process hierarchy"
+msgstr "иерархия процессов"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:201
+msgid "proc locks, references"
+msgstr "блокировки и ссылки proc"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:203
+msgid ""
+"thread-specific copies of proc entries to freeze during system calls, "
+"including td_ucred"
+msgstr ""
+"потокоспецифичные копии записей proc для заморозки во время системных "
+"вызовов, включая td_ucred"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:205
+msgid "inter-process operations"
+msgstr "межпроцессные операции"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:207
+msgid "process groups and sessions"
+msgstr "группы процессов и сеансы"
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:208
+#, no-wrap
+msgid "Scheduler"
+msgstr "Планировщик"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:211
+msgid ""
+"Lots of references to `sched_lock` and notes pointing at specific primitives "
+"and related magic elsewhere in the document."
+msgstr ""
+"Множество ссылок на `sched_lock` и примечания, указывающие на конкретные "
+"примитивы и связанные с ними особенности в других частях документа."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:212
+#, no-wrap
+msgid "Select and Poll"
+msgstr "Select и Poll"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:215
+msgid ""
+"The `select` and `poll` functions permit threads to block waiting on events "
+"on file descriptors--most frequently, whether or not the file descriptors "
+"are readable or writable."
+msgstr ""
+"Функции `select` и `poll` позволяют потокам блокироваться в ожидании событий "
+"на файловых дескрипторах — чаще всего, доступности файловых дескрипторов для "
+"чтения или записи."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:218
+#, no-wrap
+msgid "SIGIO"
+msgstr "SIGIO"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:221
+msgid ""
+"The SIGIO service permits processes to request the delivery of a SIGIO "
+"signal to its process group when the read/write status of specified file "
+"descriptors changes. At most one process or process group is permitted to "
+"register for SIGIO from any given kernel object, and that process or group "
+"is referred to as the owner. Each object supporting SIGIO registration "
+"contains pointer field that is `NULL` if the object is not registered, or "
+"points to a `struct sigio` describing the registration. This field is "
+"protected by a global mutex, `sigio_lock`. Callers to SIGIO maintenance "
+"functions must pass in this field \"by reference\" so that local register "
+"copies of the field are not made when unprotected by the lock."
+msgstr ""
+"Служба SIGIO позволяет процессам запрашивать доставку сигнала SIGIO своей "
+"группе процессов при изменении статуса чтения/записи указанных файловых "
+"дескрипторов. Не более одного процесса или группы процессов может "
+"зарегистрироваться для получения SIGIO от любого заданного объекта ядра, и "
+"такой процесс или группа называется владельцем. Каждый объект, "
+"поддерживающий регистрацию SIGIO, содержит поле-указатель, которое имеет "
+"значение `NULL`, если объект не зарегистрирован, или указывает на структуру "
+"`struct sigio`, описывающую регистрацию. Это поле защищено глобальным "
+"мьютексом `sigio_lock`. Вызывающие функции обслуживания SIGIO должны "
+"передавать это поле «по ссылке», чтобы локальные копии регистра не "
+"создавались без защиты блокировкой."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:223
+msgid ""
+"One `struct sigio` is allocated for each registered object associated with "
+"any process or process group, and contains back-pointers to the object, "
+"owner, signal information, a credential, and the general disposition of the "
+"registration. Each process or progress group contains a list of registered "
+"`struct sigio` structures, `p_sigiolst` for processes, and `pg_sigiolst` for "
+"process groups. These lists are protected by the process or process group "
+"locks respectively. Most fields in each `struct sigio` are constant for the "
+"duration of the registration, with the exception of the `sio_pgsigio` field "
+"which links the `struct sigio` into the process or process group list. "
+"Developers implementing new kernel objects supporting SIGIO will, in "
+"general, want to avoid holding structure locks while invoking SIGIO "
+"supporting functions, such as `fsetown` or `funsetown` to avoid defining a "
+"lock order between structure locks and the global SIGIO lock. This is "
+"generally possible through use of an elevated reference count on the "
+"structure, such as reliance on a file descriptor reference to a pipe during "
+"a pipe operation."
+msgstr ""
+"Один `struct sigio` выделяется для каждого зарегистрированного объекта, "
+"связанного с любым процессом или группой процессов, и содержит обратные "
+"ссылки на объект, владельца, информацию о сигнале, учетные данные и общее "
+"состояние регистрации. Каждый процесс или группа процессов содержит список "
+"зарегистрированных структур `struct sigio`: `p_sigiolst` для процессов и "
+"`pg_sigiolst` для групп процессов. Эти списки защищены блокировками процесса "
+"или группы процессов соответственно. Большинство полей в каждой `struct "
+"sigio` остаются постоянными на протяжении регистрации, за исключением поля "
+"`sio_pgsigio`, которое связывает `struct sigio` со списком процесса или "
+"группы процессов. Разработчикам, реализующим новые объекты ядра с поддержкой "
+"SIGIO, как правило, следует избегать удержания блокировок структур при "
+"вызове функций поддержки SIGIO, таких как `fsetown` или `funsetown`, чтобы "
+"не определять порядок блокировок между блокировками структур и глобальной "
+"блокировкой SIGIO. Обычно это возможно за счет использования повышенного "
+"счетчика ссылок на структуру, например, путем опоры на ссылку файлового "
+"дескриптора на канал во время операции с каналом."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:224
+#, no-wrap
+msgid "Sysctl"
+msgstr "Sysctl"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:227
+msgid ""
+"The `sysctl` MIB service is invoked from both within the kernel and from "
+"userland applications using a system call. At least two issues are raised in "
+"locking: first, the protection of the structures maintaining the namespace, "
+"and second, interactions with kernel variables and functions that are "
+"accessed by the sysctl interface. Since sysctl permits the direct export "
+"(and modification) of kernel statistics and configuration parameters, the "
+"sysctl mechanism must become aware of appropriate locking semantics for "
+"those variables. Currently, sysctl makes use of a single global sx lock to "
+"serialize use of `sysctl`; however, it is assumed to operate under Giant and "
+"other protections are not provided. The remainder of this section speculates "
+"on locking and semantic changes to sysctl."
+msgstr ""
+"Сервис `sysctl` MIB вызывается как из ядра, так и из пользовательских "
+"приложений с использованием системного вызова. По крайней мере, два вопроса "
+"возникают в отношении блокировок: во-первых, защита структур, поддерживающих "
+"пространство имен, и во-вторых, взаимодействие с переменными и функциями "
+"ядра, к которым обращается интерфейс `sysctl`. Поскольку `sysctl` позволяет "
+"прямое экспортирование (и изменение) статистики ядра и параметров "
+"конфигурации, механизм `sysctl` должен учитывать соответствующие семантики "
+"блокировок для этих переменных. В настоящее время `sysctl` использует единую "
+"глобальную sx-блокировку для сериализации использования `sysctl`; однако "
+"предполагается, что он работает под защитой Giant, и другие защиты не "
+"предоставляются. Оставшаяся часть этого раздела рассматривает возможные "
+"изменения в блокировках и семантике `sysctl`."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:229
+msgid ""
+"Need to change the order of operations for sysctl's that update values from "
+"read old, copyin and copyout, write new to copyin, lock, read old and write "
+"new, unlock, copyout. Normal sysctl's that just copyout the old value and "
+"set a new value that they copyin may still be able to follow the old model. "
+"However, it may be cleaner to use the second model for all of the sysctl "
+"handlers to avoid lock operations."
+msgstr ""
+"Необходимо изменить порядок операций для sysctl, которые обновляют значения "
+"из чтения старого, copyin и copyout, записи нового на copyin, блокировку, "
+"чтение старого и запись нового, разблокировку, copyout. Обычные sysctl, "
+"которые просто копируют старое значение и устанавливают новое, которое они "
+"копируют, могут по-прежнему следовать старой модели. Однако, возможно, будет "
+"чище использовать вторую модель для всех обработчиков sysctl, чтобы избежать "
+"операций блокировки."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:231
+msgid ""
+"To allow for the common case, a sysctl could embed a pointer to a mutex in "
+"the SYSCTL_FOO macros and in the struct. This would work for most sysctl's. "
+"For values protected by sx locks, spin mutexes, or other locking strategies "
+"besides a single sleep mutex, SYSCTL_PROC nodes could be used to get the "
+"locking right."
+msgstr ""
+"Для упрощения распространённого случая, sysctl может включать указатель на "
+"мьютекс в макросах SYSCTL_FOO и в структуре. Это будет работать для "
+"большинства sysctl. Для значений, защищённых sx-блокировками, спин-"
+"мьютексами или другими стратегиями синхронизации, отличными от одиночного "
+"мьютекса сна, можно использовать узлы SYSCTL_PROC для обеспечения корректной "
+"блокировки."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:232
+#, no-wrap
+msgid "Taskqueue"
+msgstr "Очередь задач"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:235
+msgid ""
+"The taskqueue's interface has two basic locks associated with it in order to "
+"protect the related shared data. The `taskqueue_queues_mutex` is meant to "
+"serve as a lock to protect the `taskqueue_queues` TAILQ. The other mutex "
+"lock associated with this system is the one in the `struct taskqueue` data "
+"structure. The use of the synchronization primitive here is to protect the "
+"integrity of the data in the `struct taskqueue`. It should be noted that "
+"there are no separate macros to assist the user in locking down his/her own "
+"work since these locks are most likely not going to be used outside of "
+"[.filename]#kern/subr_taskqueue.c#."
+msgstr ""
+"Интерфейс `taskqueue` имеет две основные блокировки, связанные с ним, для "
+"защиты соответствующих общих данных. Мьютекс `taskqueue_queues_mutex` "
+"предназначен для защиты TAILQ `taskqueue_queues`. Другая блокировка "
+"мьютекса, связанная с этой системой, находится в структуре данных `struct "
+"taskqueue`. Использование примитива синхронизации здесь необходимо для "
+"защиты целостности данных в `struct taskqueue`. Следует отметить, что нет "
+"отдельных макросов, помогающих пользователю заблокировать свою собственную "
+"работу, поскольку эти блокировки, скорее всего, не будут использоваться за "
+"пределами [.filename]#kern/subr_taskqueue.c#."
+
+#. type: Title ==
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:237
+#, no-wrap
+msgid "Implementation Notes"
+msgstr "Заметки о реализации"
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:239
+#, no-wrap
+msgid "Sleep Queues"
+msgstr "Очереди сна"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:242
+msgid ""
+"A sleep queue is a structure that holds the list of threads asleep on a wait "
+"channel. Each thread that is not asleep on a wait channel carries a sleep "
+"queue structure around with it. When a thread blocks on a wait channel, it "
+"donates its sleep queue structure to that wait channel. Sleep queues "
+"associated with a wait channel are stored in a hash table."
+msgstr ""
+"Очередь сна — это структура, которая содержит список потоков, ожидающих на "
+"канале ожидания. Каждый поток, который не находится в состоянии ожидания на "
+"канале ожидания, хранит структуру очереди сна при себе. Когда поток "
+"блокируется на канале ожидания, он передаёт свою структуру очереди сна этому "
+"каналу. Очереди сна, связанные с каналом ожидания, хранятся в хеш-таблице."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:244
+msgid ""
+"The sleep queue hash table holds sleep queues for wait channels that have at "
+"least one blocked thread. Each entry in the hash table is called a "
+"sleepqueue chain. The chain contains a linked list of sleep queues and a "
+"spin mutex. The spin mutex protects the list of sleep queues as well as the "
+"contents of the sleep queue structures on the list. Only one sleep queue is "
+"associated with a given wait channel. If multiple threads block on a wait "
+"channel than the sleep queues associated with all but the first thread are "
+"stored on a list of free sleep queues in the master sleep queue. When a "
+"thread is removed from the sleep queue it is given one of the sleep queue "
+"structures from the master queue's free list if it is not the only thread "
+"asleep on the queue. The last thread is given the master sleep queue when it "
+"is resumed. Since threads may be removed from the sleep queue in a different "
+"order than they are added, a thread may depart from a sleep queue with a "
+"different sleep queue structure than the one it arrived with."
+msgstr ""
+"Хеш-таблица очередей сна содержит очереди сна для каналов ожидания, у "
+"которых есть хотя бы один заблокированный поток. Каждая запись в хеш-таблице "
+"называется цепочкой очереди сна. Цепочка содержит связанный список очередей "
+"сна и спин-мьютекс. Спин-мьютекс защищает список очередей сна, а также "
+"содержимое структур очередей сна в списке. С каждым каналом ожидания связана "
+"только одна очередь сна. Если несколько потоков блокируются на одном канале "
+"ожидания, то очереди сна, связанные со всеми потоками, кроме первого, "
+"хранятся в списке свободных очередей сна в главной очереди сна. Когда поток "
+"удаляется из очереди сна, он получает одну из структур очереди сна из "
+"свободного списка главной очереди, если он не является единственным потоком "
+"в очереди. Последний поток получает главную очередь сна при возобновлении. "
+"Поскольку потоки могут удаляться из очереди сна в порядке, отличном от "
+"порядка добавления, поток может покинуть очередь сна с другой структурой "
+"очереди сна, чем та, с которой он в неё попал."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:246
+msgid ""
+"The `sleepq_lock` function locks the spin mutex of the sleep queue chain "
+"that maps to a specific wait channel. The `sleepq_lookup` function looks in "
+"the hash table for the master sleep queue associated with a given wait "
+"channel. If no master sleep queue is found, it returns `NULL`. The "
+"`sleepq_release` function unlocks the spin mutex associated with a given "
+"wait channel."
+msgstr ""
+"Функция `sleepq_lock` блокирует спин-мьютес цепи очереди сна, "
+"соответствующей определённому каналу ожидания. Функция `sleepq_lookup` "
+"выполняет поиск в хеш-таблице главной очереди сна, связанной с заданным "
+"каналом ожидания. Если главная очередь сна не найдена, функция возвращает "
+"`NULL`. Функция `sleepq_release` разблокирует спин-мьютес, связанный с "
+"заданным каналом ожидания."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:248
+msgid ""
+"A thread is added to a sleep queue via the `sleepq_add`. This function "
+"accepts the wait channel, a pointer to the mutex that protects the wait "
+"channel, a wait message description string, and a mask of flags. The sleep "
+"queue chain should be locked via `sleepq_lock` before this function is "
+"called. If no mutex protects the wait channel (or it is protected by Giant), "
+"then the mutex pointer argument should be `NULL`. The flags argument "
+"contains a type field that indicates the kind of sleep queue that the thread "
+"is being added to and a flag to indicate if the sleep is interruptible "
+"(`SLEEPQ_INTERRUPTIBLE`). Currently there are only two types of sleep "
+"queues: traditional sleep queues managed via the `msleep` and `wakeup` "
+"functions (`SLEEPQ_MSLEEP`) and condition variable sleep queues "
+"(`SLEEPQ_CONDVAR`). The sleep queue type and lock pointer argument are used "
+"solely for internal assertion checking. Code that calls `sleepq_add` should "
+"explicitly unlock any interlock protecting the wait channel after the "
+"associated sleepqueue chain has been locked via `sleepq_lock` and before "
+"blocking on the sleep queue via one of the waiting functions."
+msgstr ""
+"Поток добавляется в очередь ожидания с помощью `sleepq_add`. Эта функция "
+"принимает канал ожидания, указатель на мьютекс, защищающий канал ожидания, "
+"строку описания сообщения ожидания и маску флагов. Цепь очереди ожидания "
+"должна быть заблокирована с помощью `sleepq_lock` перед вызовом этой "
+"функции. Если канал ожидания не защищен мьютексом (или защищен мьютексом "
+"Giant), то аргумент указателя на мьютекс должен быть `NULL`. Аргумент флагов "
+"содержит поле типа, указывающее на вид очереди ожидания, в которую "
+"добавляется поток, и флаг, указывающий, является ли ожидание прерываемым "
+"(`SLEEPQ_INTERRUPTIBLE`). В настоящее время существует только два типа "
+"очередей ожидания: традиционные очереди, управляемые через функции `msleep` "
+"и `wakeup` (`SLEEPQ_MSLEEP`), и очереди ожидания условных переменных "
+"(`SLEEPQ_CONDVAR`). Тип очереди ожидания и аргумент указателя на блокировку "
+"используются исключительно для внутренних проверок утверждений. Код, "
+"вызывающий `sleepq_add`, должен явно разблокировать любой блокировочный "
+"механизм, защищающий канал ожидания, после того как связанная цепь очереди "
+"ожидания будет заблокирована через `sleepq_lock` и перед блокировкой в "
+"очереди ожидания с помощью одной из функций ожидания."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:250
+msgid ""
+"A timeout for a sleep is set by invoking `sleepq_set_timeout`. The function "
+"accepts the wait channel and the timeout time as a relative tick count as "
+"its arguments. If a sleep should be interrupted by arriving signals, the "
+"`sleepq_catch_signals` function should be called as well. This function "
+"accepts the wait channel as its only parameter. If there is already a signal "
+"pending for this thread, then `sleepq_catch_signals` will return a signal "
+"number; otherwise, it will return 0."
+msgstr ""
+"Таймаут для сна устанавливается вызовом `sleepq_set_timeout`. Функция "
+"принимает канал ожидания и время таймаута в виде относительного количества "
+"тиков в качестве аргументов. Если сон должен быть прерван поступающими "
+"сигналами, следует также вызвать функцию `sleepq_catch_signals`. Эта функция "
+"принимает канал ожидания в качестве единственного параметра. Если для "
+"данного потока уже есть ожидающий сигнал, то `sleepq_catch_signals` вернёт "
+"номер сигнала; в противном случае она вернёт 0."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:252
+msgid ""
+"Once a thread has been added to a sleep queue, it blocks using one of the "
+"`sleepq_wait` functions. There are four wait functions depending on whether "
+"or not the caller wishes to use a timeout or have the sleep aborted by "
+"caught signals or an interrupt from the userland thread scheduler. The "
+"`sleepq_wait` function simply waits until the current thread is explicitly "
+"resumed by one of the wakeup functions. The `sleepq_timedwait` function "
+"waits until either the thread is explicitly resumed or the timeout set by an "
+"earlier call to `sleepq_set_timeout` expires. The `sleepq_wait_sig` function "
+"waits until either the thread is explicitly resumed or its sleep is aborted. "
+"The `sleepq_timedwait_sig` function waits until either the thread is "
+"explicitly resumed, the timeout set by an earlier call to "
+"`sleepq_set_timeout` expires, or the thread's sleep is aborted. All of the "
+"wait functions accept the wait channel as their first parameter. In "
+"addition, the `sleepq_timedwait_sig` function accepts a second boolean "
+"parameter to indicate if the earlier call to `sleepq_catch_signals` found a "
+"pending signal."
+msgstr ""
+"После добавления потока в очередь ожидания он блокируется с использованием "
+"одной из функций `sleepq_wait`. Существует четыре функции ожидания в "
+"зависимости от того, хочет ли вызывающий код использовать таймаут, "
+"прерывание сна перехваченными сигналами или прерывание от планировщика "
+"потоков пользовательского пространства. Функция `sleepq_wait` просто "
+"ожидает, пока текущий поток не будет явно возобновлён одной из функций "
+"пробуждения. Функция `sleepq_timedwait` ожидает, пока поток не будет явно "
+"возобновлён или пока не истечёт таймаут, установленный предыдущим вызовом "
+"`sleepq_set_timeout`. Функция `sleepq_wait_sig` ожидает, пока поток не будет "
+"явно возобновлён или его сон не будет прерван. Функция "
+"`sleepq_timedwait_sig` ожидает, пока поток не будет явно возобновлён, не "
+"истечёт таймаут, установленный предыдущим вызовом `sleepq_set_timeout`, или "
+"сон потока не будет прерван. Все функции ожидания принимают канал ожидания в "
+"качестве первого параметра. Кроме того, функция `sleepq_timedwait_sig` "
+"принимает второй логический параметр, указывающий, обнаружил ли предыдущий "
+"вызов `sleepq_catch_signals` ожидающий сигнал."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:254
+msgid ""
+"If the thread is explicitly resumed or is aborted by a signal, then a value "
+"of zero is returned by the wait function to indicate a successful sleep. If "
+"the thread is resumed by either a timeout or an interrupt from the userland "
+"thread scheduler then an appropriate errno value is returned instead. Note "
+"that since `sleepq_wait` can only return 0 it does not return anything and "
+"the caller should assume a successful sleep. Also, if a thread's sleep times "
+"out and is aborted simultaneously then `sleepq_timedwait_sig` will return an "
+"error indicating that a timeout occurred. If an error value of 0 is returned "
+"and either `sleepq_wait_sig` or `sleepq_timedwait_sig` was used to block, "
+"then the function `sleepq_calc_signal_retval` should be called to check for "
+"any pending signals and calculate an appropriate return value if any are "
+"found. The signal number returned by the earlier call to "
+"`sleepq_catch_signals` should be passed as the sole argument to "
+"`sleepq_calc_signal_retval`."
+msgstr ""
+"Если поток явно возобновлен или прерван сигналом, функция ожидания "
+"возвращает ноль, указывая на успешное завершение сна. Если поток возобновлен "
+"по таймауту или прерыванию от планировщика потоков в пользовательском "
+"пространстве, вместо этого возвращается соответствующее значение errno. "
+"Обратите внимание, что поскольку `sleepq_wait` может возвращать только 0, "
+"она ничего не возвращает, и вызывающая сторона должна считать сон успешным. "
+"Также, если сон потока прерывается одновременно по таймауту и другим "
+"причинам, `sleepq_timedwait_sig` вернет ошибку, указывающую на срабатывание "
+"таймаута. Если возвращено значение ошибки 0 и для блокировки использовались "
+"`sleepq_wait_sig` или `sleepq_timedwait_sig`, следует вызвать функцию "
+"`sleepq_calc_signal_retval` для проверки ожидающих сигналов и вычисления "
+"соответствующего возвращаемого значения, если таковые обнаружены. Номер "
+"сигнала, полученный при предыдущем вызове `sleepq_catch_signals`, должен "
+"быть передан в качестве единственного аргумента в "
+"`sleepq_calc_signal_retval`."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:256
+msgid ""
+"Threads asleep on a wait channel are explicitly resumed by the "
+"`sleepq_broadcast` and `sleepq_signal` functions. Both functions accept the "
+"wait channel from which to resume threads, a priority to raise resumed "
+"threads to, and a flags argument to indicate which type of sleep queue is "
+"being resumed. The priority argument is treated as a minimum priority. If a "
+"thread being resumed already has a higher priority (numerically lower) than "
+"the priority argument then its priority is not adjusted. The flags argument "
+"is used for internal assertions to ensure that sleep queues are not being "
+"treated as the wrong type. For example, the condition variable functions "
+"should not resume threads on a traditional sleep queue. The "
+"`sleepq_broadcast` function resumes all threads that are blocked on the "
+"specified wait channel while `sleepq_signal` only resumes the highest "
+"priority thread blocked on the wait channel. The sleep queue chain should "
+"first be locked via the `sleepq_lock` function before calling these "
+"functions."
+msgstr ""
+"Потоки, находящиеся в состоянии ожидания на канале ожидания, явно "
+"возобновляются функциями `sleepq_broadcast` и `sleepq_signal`. Обе функции "
+"принимают канал ожидания, с которого нужно возобновить потоки, приоритет, на "
+"который нужно поднять возобновлённые потоки, и аргумент флагов, указывающий "
+"тип очереди ожидания, которую нужно возобновить. Аргумент приоритета "
+"трактуется как минимальный приоритет. Если у возобновляемого потока уже есть "
+"более высокий приоритет (численно меньший), чем указанный в аргументе, его "
+"приоритет не изменяется. Аргумент флагов используется для внутренних "
+"проверок, чтобы гарантировать, что очереди ожидания не обрабатываются как "
+"неправильный тип. Например, функции условных переменных не должны "
+"возобновлять потоки на традиционной очереди ожидания. Функция "
+"`sleepq_broadcast` возобновляет все потоки, заблокированные на указанном "
+"канале ожидания, тогда как `sleepq_signal` возобновляет только поток с "
+"наивысшим приоритетом, заблокированный на канале ожидания. Перед вызовом "
+"этих функций цепочка очереди ожидания должна быть заблокирована с помощью "
+"функции `sleepq_lock`."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:258
+msgid ""
+"A sleeping thread may have its sleep interrupted by calling the "
+"`sleepq_abort` function. This function must be called with `sched_lock` held "
+"and the thread must be queued on a sleep queue. A thread may also be removed "
+"from a specific sleep queue via the `sleepq_remove` function. This function "
+"accepts both a thread and a wait channel as an argument and only awakens the "
+"thread if it is on the sleep queue for the specified wait channel. If the "
+"thread is not on a sleep queue or it is on a sleep queue for a different "
+"wait channel, then this function does nothing."
+msgstr ""
+"Спящий поток может быть прерван с помощью вызова функции `sleepq_abort`. Эта "
+"функция должна вызываться с удержанием `sched_lock`, а поток должен "
+"находиться в очереди сна. Поток также может быть удалён из определённой "
+"очереди сна с помощью функции `sleepq_remove`. Эта функция принимает как "
+"поток, так и канал ожидания в качестве аргументов и пробуждает поток только "
+"в том случае, если он находится в очереди сна для указанного канала "
+"ожидания. Если поток не находится в очереди сна или находится в очереди сна "
+"для другого канала ожидания, эта функция ничего не делает."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:259
+#, no-wrap
+msgid "Turnstiles"
+msgstr "Турникеты"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:262
+msgid "Compare/contrast with sleep queues."
+msgstr "Сравнение/сопоставление с очередями сна."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:264
+msgid "Lookup/wait/release. - Describe TDF_TSNOBLOCK race."
+msgstr "Поиск/ожидание/освобождение. - Описать состояние гонки TDF_TSNOBLOCK."
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:266
+msgid "Priority propagation."
+msgstr "Приоритетное распространение."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:267
+#, no-wrap
+msgid "Details of the Mutex Implementation"
+msgstr "Подробности реализации мьютекса"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:270
+msgid ""
+"Should we require mutexes to be owned for mtx_destroy() since we can not "
+"safely assert that they are unowned by anyone else otherwise?"
+msgstr ""
+"Должны ли мы требовать владения мьютексами для `mtx_destroy()`, так как "
+"иначе мы не можем безопасно утверждать, что они не принадлежат кому-либо ещё?"
+
+#. type: Title ====
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:271
+#, no-wrap
+msgid "Spin Mutexes"
+msgstr "Вращающиеся мьютексы"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:274
+msgid "Use a critical section..."
+msgstr "Использование критической секции..."
+
+#. type: Title ====
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:275
+#, no-wrap
+msgid "Sleep Mutexes"
+msgstr "Мьютексы сна (Sleep Mutexes)"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:278
+msgid "Describe the races with contested mutexes"
+msgstr "Опишите гонки с оспариваемыми мьютексами"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:280
+msgid ""
+"Why it is safe to read mtx_lock of a contested mutex when holding the "
+"turnstile chain lock."
+msgstr ""
+"Почему безопасно читать mtx_lock оспариваемой мьютекса при удержании "
+"блокировки цепочки турникета."
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:281
+#, no-wrap
+msgid "Witness"
+msgstr "Witness"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:284
+msgid "What does it do"
+msgstr "Что это делает"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:286
+msgid "How does it work"
+msgstr "Как это работает"
+
+#. type: Title ==
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:288
+#, no-wrap
+msgid "Miscellaneous Topics"
+msgstr "Разные темы"
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:290
+#, no-wrap
+msgid "Interrupt Source and ICU Abstractions"
+msgstr "Источники прерываний и абстракции ICU"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:293
+msgid "struct isrc"
+msgstr "struct isrc"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:295
+msgid "pic drivers"
+msgstr "pic драйверы"
+
+#. type: Title ===
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:296
+#, no-wrap
+msgid "Other Random Questions/Topics"
+msgstr "Другие случайные вопросы/темы"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:299
+msgid "Should we pass an interlock into `sema_wait`?"
+msgstr "Передавать ли блокировку в `sema_wait`?"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:301
+msgid "Should we have non-sleepable sx locks?"
+msgstr "Должны ли мы иметь sx блокировки без возможности сна?"
+
+#. type: Plain text
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:303
+msgid "Add some info about proper use of reference counts."
+msgstr ""
+"Добавить некоторую информацию о правильном использовании счетчиков ссылок."
+
+#. type: Title ==
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:308
+#, no-wrap
+msgid "Glossary"
+msgstr "Глоссарий"
+
+#. type: Labeled list
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:311
+#, no-wrap
+msgid "atomic"
+msgstr "atomic (атомарный)"
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:313
+msgid ""
+"An operation is atomic if all of its effects are visible to other CPUs "
+"together when the proper access protocol is followed. In the degenerate case "
+"are atomic instructions provided directly by machine architectures. At a "
+"higher level, if several members of a structure are protected by a lock, "
+"then a set of operations are atomic if they are all performed while holding "
+"the lock without releasing the lock in between any of the operations."
+msgstr ""
+"Операция является атомарной, если все её эффекты видны другим процессорам "
+"одновременно при соблюдении соответствующего протокола доступа. В простейшем "
+"случае атомарные инструкции предоставляются непосредственно архитектурой "
+"процессора. На более высоком уровне, если несколько элементов структуры "
+"защищены блокировкой, то набор операций является атомарным, если все они "
+"выполняются при удержании блокировки без её освобождения между любыми из "
+"операций."
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:315
+msgid "See Also operation."
+msgstr "См. также operation (операция)."
+
+#. type: Labeled list
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:316
+#, no-wrap
+msgid "block"
+msgstr "block (блокировать)"
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:318
+msgid ""
+"A thread is blocked when it is waiting on a lock, resource, or condition. "
+"Unfortunately this term is a bit overloaded as a result."
+msgstr ""
+"Поток блокируется, когда он ожидает блокировку, ресурс или условие. К "
+"сожалению, этот термин в результате немного перегружен."
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:320
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:357
+msgid "See Also sleep."
+msgstr "См. также sleep (спать)."
+
+#. type: Labeled list
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:321
+#, no-wrap
+msgid "critical section"
+msgstr "critical section (критическая секция)"
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:323
+msgid ""
+"A section of code that is not allowed to be preempted. A critical section is "
+"entered and exited using the man:critical_enter[9] API."
+msgstr ""
+"Фрагмент кода, который не может быть вытеснен. Критическая секция начинается "
+"и завершается с использованием API man:critical_enter[9]."
+
+#. type: Labeled list
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:324
+#, no-wrap
+msgid "MD"
+msgstr "MD"
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:326
+msgid "Machine dependent."
+msgstr "Машинозависимый (machine dependent)."
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:328
+msgid "See Also MI."
+msgstr "Смотри также MI."
+
+#. type: Labeled list
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:329
+#, no-wrap
+msgid "memory operation"
+msgstr "memory operation (операция с памятью)"
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:331
+msgid "A memory operation reads and/or writes to a memory location."
+msgstr "Операция с памятью выполняет чтение и/или запись в ячейку памяти."
+
+#. type: Labeled list
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:332
+#, no-wrap
+msgid "MI"
+msgstr "MI"
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:334
+msgid "Machine independent."
+msgstr "Машинно-независимый (machine independent)."
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:336
+msgid "See Also MD."
+msgstr "См. также MD."
+
+#. type: Labeled list
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:337
+#, no-wrap
+msgid "operation"
+msgstr "operation (операция)"
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:339
+msgid "See memory operation."
+msgstr "См. memory operation (операция с памятью)."
+
+#. type: Labeled list
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:340
+#, no-wrap
+msgid "primary interrupt context"
+msgstr "primary interrupt context (основной контекст прерывания)"
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:342
+msgid ""
+"Primary interrupt context refers to the code that runs when an interrupt "
+"occurs. This code can either run an interrupt handler directly or schedule "
+"an asynchronous interrupt thread to execute the interrupt handlers for a "
+"given interrupt source."
+msgstr ""
+"Основной контекст прерывания относится к коду, который выполняется при "
+"возникновении прерывания. Этот код может либо напрямую запускать обработчик "
+"прерывания, либо планировать выполнение асинхронного потока прерывания для "
+"обработчиков прерываний данного источника."
+
+#. type: Labeled list
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:343
+#, no-wrap
+msgid "realtime kernel thread"
+msgstr "realtime kernel thread (поток ядра реального времени)"
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:345
+msgid ""
+"A high priority kernel thread. Currently, the only realtime priority kernel "
+"threads are interrupt threads."
+msgstr ""
+"Высокоприоритетный поток ядра. В настоящее время единственными потоками ядра "
+"с реальным приоритетом являются потоки обработки прерываний."
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:347
+msgid "See Also thread."
+msgstr "См. также thread (поток)."
+
+#. type: Labeled list
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:348
+#, no-wrap
+msgid "sleep"
+msgstr "sleep (спать)"
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:350
+msgid ""
+"A thread is asleep when it is blocked on a condition variable or a sleep "
+"queue via msleep or tsleep."
+msgstr ""
+"Поток находится в состоянии сна, когда он заблокирован на условной "
+"переменной или в очереди сна через `msleep` или `tsleep`."
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:352
+msgid "See Also block."
+msgstr "См. также block (блокировать)."
+
+#. type: Labeled list
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:353
+#, no-wrap
+msgid "sleepable lock"
+msgstr "sleepable lock (блокировка с возможностью сна)"
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:355
+msgid ""
+"A sleepable lock is a lock that can be held by a thread which is asleep. "
+"Lockmgr locks and sx locks are currently the only sleepable locks in "
+"FreeBSD. Eventually, some sx locks such as the allproc and proctree locks "
+"may become non-sleepable locks."
+msgstr ""
+"блокировка с возможностью сна — это блокировка, которая может удерживаться "
+"потоком, находящимся в состоянии сна. В настоящее время в FreeBSD "
+"единственными блокировками с возможностью сна являются lockmgr и sx. В "
+"будущем некоторые sx-блокировки, такие как allproc и proctree, могут стать "
+"блокировками с возможностью сна."
+
+#. type: Labeled list
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:358
+#, no-wrap
+msgid "thread"
+msgstr "thread (поток)"
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:360
+msgid ""
+"A kernel thread represented by a struct thread. Threads own locks and hold a "
+"single execution context."
+msgstr ""
+"Поток ядра, представленный структурой `struct thread`. Потоки владеют "
+"блокировками и содержат единственный на поток контекст выполнения."
+
+#. type: Labeled list
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:361
+#, no-wrap
+msgid "wait channel"
+msgstr "wait channel (канал ожидания)"
+
+#. type: .glosslist
+#: documentation/content/en/books/arch-handbook/smp/_index.adoc:363
+msgid "A kernel virtual address that threads may sleep on."
+msgstr ""
+"Виртуальный адрес ядра, на котором потоки могут переходить в режим ожидания."

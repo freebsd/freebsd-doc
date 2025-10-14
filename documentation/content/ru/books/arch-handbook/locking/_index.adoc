@@ -1,0 +1,145 @@
+---
+description: 'Заметки о блокировках'
+next: books/arch-handbook/kobj
+params:
+  path: /books/arch-handbook/locking/
+prev: books/arch-handbook/boot
+showBookMenu: true
+tags: ["locking", "notes", "SMP", "Mutexes"]
+title: 'Глава 2. Заметки о блокировках'
+weight: 3
+---
+
+[[locking]]
+= Заметки о блокировках
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:sectnumoffset: 2
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/arch-handbook/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+_Эта глава сопровождается и поддерживается проектом FreeBSD SMP Next Generation._
+
+Этот документ описывает механизмы блокировки, используемые в ядре FreeBSD для эффективной многопроцессорной обработки. Блокировка может быть достигнута несколькими способами. Структуры данных могут защищаться мьютексами или блокировками (lock) из man:lockmgr[9]. Некоторые переменные защищаются просто за счёт использования атомарных операций для доступа к ним.
+
+[[locking-mutexes]]
+== Mutexes
+
+Мьютекс — это просто блокировка, используемая для обеспечения взаимного исключения. Конкретно, мьютекс может принадлежать только одному объекту в один момент времени. Если другой объект хочет получить мьютекс, который уже принадлежит кому-то, он должен ждать, пока мьютекс не будет освобожден. В ядре FreeBSD мьютексы принадлежат процессам.
+
+Мьютексы могут быть получены рекурсивно, но предполагается, что они удерживаются в течение короткого периода времени. В частности, нельзя переходить в режим сна, удерживая мьютекс. Если необходимо удерживать блокировку во время сна, используйте блокировку man:lockmgr[9].
+
+Каждый мьютекс обладает несколькими важными свойствами:
+
+Имя переменной::
+Имя переменной struct mtx в исходном коде ядра.
+
+Логическое имя::
+Имя мьютекса, назначенное ему с помощью `mtx_init`. Это имя отображается в сообщениях трассировки KTR, ошибках и предупреждениях witness, а также используется для различения мьютексов в коде witness.
+
+Тип::
+Тип мьютекса в терминах флагов `MTX_*`. Значение каждого флага связано с его значением, как описано в man:mutex[9].
+
+`MTX_DEF`:::
+Мьютекс блокировки с ожиданием
+
+`MTX_SPIN`:::
+Мьютекс с вращающейся блокировкой (spin mutex)
+
+`MTX_RECURSE`:::
+Этот мьютекс допускает рекурсию.
+
+Защищаемые системы::
+Список структур данных или членов структур данных, которые защищает эта запись. Для членов структур данных имя будет указано в формате `имя структуры`.`имя члена`.
+
+Зависимые функции::
+Функции, которые могут быть вызваны только при удержании этого мьютекса.
+
+.Список мьютексов
+[cols="15%,10%,10%,55%,20%", frame="all", options="header"]
+|===
+| Имя переменной
+| Логическое имя
+| Тип
+| Защищаемые системы
+| Зависимые функции
+
+|sched_lock
+|"sched lock"
+|`MTX_SPIN` \| `MTX_RECURSE`
+|`_gmonparam`, `cnt.v_swtch`, `cp_time`, `curpriority`, `mtx`.`mtx_blocked`, `mtx`.`mtx_contested`, `proc`.`p_procq`, `proc`.`p_slpq`, `proc`.`p_sflag`, `proc`.`p_stat`, `proc`.`p_estcpu`, `proc`.`p_cpticks` `proc`.`p_pctcpu`, `proc`.`p_wchan`, `proc`.`p_wmesg`, `proc`.`p_swtime`, `proc`.`p_slptime`, `proc`.`p_runtime`, `proc`.`p_uu`, `proc`.`p_su`, `proc`.`p_iu`, `proc`.`p_uticks`, `proc`.`p_sticks`, `proc`.`p_iticks`, `proc`.`p_oncpu`, `proc`.`p_lastcpu`, `proc`.`p_rqindex`, `proc`.`p_heldmtx`, `proc`.`p_blocked`, `proc`.`p_mtxname`, `proc`.`p_contested`, `proc`.`p_priority`, `proc`.`p_usrpri`, `proc`.`p_nativepri`, `proc`.`p_nice`, `proc`.`p_rtprio`, `pscnt`, `slpque`, `itqueuebits`, `itqueues`, `rtqueuebits`, `rtqueues`, `queuebits`, `queues`, `idqueuebits`, `idqueues`, `switchtime`, `switchticks`
+|`setrunqueue`, `remrunqueue`, `mi_switch`, `chooseproc`, `schedclock`, `resetpriority`, `updatepri`, `maybe_resched`, `cpu_switch`, `cpu_throw`, `need_resched`, `resched_wanted`, `clear_resched`, `aston`, `astoff`, `astpending`, `calcru`, `proc_compare`
+
+|vm86pcb_lock
+|"vm86pcb lock"
+|`MTX_DEF`
+|`vm86pcb`
+|`vm86_bioscall`
+
+|Giant
+|"Giant"
+|`MTX_DEF` \| `MTX_RECURSE`
+|почти всё
+|много
+
+|callout_lock
+|"callout lock"
+|`MTX_SPIN` \| `MTX_RECURSE`
+|`callfree`, `callwheel`, `nextsoftcheck`, `proc`.`p_itcallout`, `proc`.`p_slpcallout`, `softticks`, `ticks`
+| 
+|===
+
+[[locking-sx]]
+== Разделяемые эксклюзивные блокировки
+
+Эти блокировки обеспечивают базовую функциональность типа читатель-писатель и могут удерживаться спящим процессом. В настоящее время они реализованы через man:lockmgr[9].
+
+.Список разделяемых эксклюзивных блокировок
+[cols="20%,80%", options="header"]
+|===
+| Имя переменной
+| Защищаемые системы
+
+|`allproc_lock`
+|`allproc` `zombproc` `pidhashtbl` `proc`.`p_list` `proc`.`p_hash` `nextpid`
+
+|`proctree_lock`
+|`proc`.`p_children` `proc`.`p_sibling`
+|===
+
+[[locking-atomic]]
+== Атомарно защищённые переменные
+
+Переменная с атомарной защитой — это специальная переменная, которая не защищена явной блокировкой. Вместо этого все операции доступа к данным этой переменной используют специальные атомарные операции, как описано в man:atomic[9]. Очень немногие переменные обрабатываются таким образом, хотя другие примитивы синхронизации, такие как мьютексы, реализованы с использованием переменных с атомарной защитой.
+
+* `mtx`.`mtx_lock`

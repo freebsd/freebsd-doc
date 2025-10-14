@@ -1,0 +1,424 @@
+---
+description: 'Устройства PCI'
+next: books/arch-handbook/scsi
+params:
+  path: /books/arch-handbook/pci/
+prev: books/arch-handbook/isa
+showBookMenu: true
+tags: ["PCI", "Devices", "example", "guide"]
+title: 'Глава 11. Устройства PCI'
+weight: 13
+---
+
+[[pci]]
+= Устройства PCI
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:sectnumoffset: 11
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/arch-handbook/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+Эта глава расскажет о механизмах FreeBSD для написания драйвера устройства на шине PCI.
+
+[[pci-probe]]
+== Обнаружение и подключение
+
+Информация о том, как код шины PCI перебирает неприсоединённые устройства и проверяет, сможет ли только что загруженный kld присоединиться к любому из них.
+
+=== Пример исходного кода драйвера ([.filename]#mypci.c#)
+
+[.programlisting]
+....
+/*
+ * Simple KLD to play with the PCI functions.
+ *
+ * Murray Stokely
+ */
+
+#include <sys/param.h>		/* defines used in kernel.h */
+#include <sys/module.h>
+#include <sys/systm.h>
+#include <sys/errno.h>
+#include <sys/kernel.h>		/* types used in module initialization */
+#include <sys/conf.h>		/* cdevsw struct */
+#include <sys/uio.h>		/* uio struct */
+#include <sys/malloc.h>
+#include <sys/bus.h>		/* structs, prototypes for pci bus stuff and DEVMETHOD macros! */
+
+#include <machine/bus.h>
+#include <sys/rman.h>
+#include <machine/resource.h>
+
+#include <dev/pci/pcivar.h>	/* For pci_get macros! */
+#include <dev/pci/pcireg.h>
+
+/* The softc holds our per-instance data. */
+struct mypci_softc {
+	device_t	my_dev;
+	struct cdev	*my_cdev;
+};
+
+/* Function prototypes */
+static d_open_t		mypci_open;
+static d_close_t	mypci_close;
+static d_read_t		mypci_read;
+static d_write_t	mypci_write;
+
+/* Character device entry points */
+
+static struct cdevsw mypci_cdevsw = {
+	.d_version =	D_VERSION,
+	.d_open =	mypci_open,
+	.d_close =	mypci_close,
+	.d_read =	mypci_read,
+	.d_write =	mypci_write,
+	.d_name =	"mypci",
+};
+
+/*
+ * In the cdevsw routines, we find our softc by using the si_drv1 member
+ * of struct cdev.  We set this variable to point to our softc in our
+ * attach routine when we create the /dev entry.
+ */
+
+int
+mypci_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
+{
+	struct mypci_softc *sc;
+
+	/* Look up our softc. */
+	sc = dev->si_drv1;
+	device_printf(sc->my_dev, "Opened successfully.\n");
+	return (0);
+}
+
+int
+mypci_close(struct cdev *dev, int fflag, int devtype, struct thread *td)
+{
+	struct mypci_softc *sc;
+
+	/* Look up our softc. */
+	sc = dev->si_drv1;
+	device_printf(sc->my_dev, "Closed.\n");
+	return (0);
+}
+
+int
+mypci_read(struct cdev *dev, struct uio *uio, int ioflag)
+{
+	struct mypci_softc *sc;
+
+	/* Look up our softc. */
+	sc = dev->si_drv1;
+	device_printf(sc->my_dev, "Asked to read %zd bytes.\n", uio->uio_resid);
+	return (0);
+}
+
+int
+mypci_write(struct cdev *dev, struct uio *uio, int ioflag)
+{
+	struct mypci_softc *sc;
+
+	/* Look up our softc. */
+	sc = dev->si_drv1;
+	device_printf(sc->my_dev, "Asked to write %zd bytes.\n", uio->uio_resid);
+	return (0);
+}
+
+/* PCI Support Functions */
+
+/*
+ * Compare the device ID of this device against the IDs that this driver
+ * supports.  If there is a match, set the description and return success.
+ */
+static int
+mypci_probe(device_t dev)
+{
+
+	device_printf(dev, "MyPCI Probe\nVendor ID : 0x%x\nDevice ID : 0x%x\n",
+	    pci_get_vendor(dev), pci_get_device(dev));
+
+	if (pci_get_vendor(dev) == 0x11c1) {
+		printf("We've got the Winmodem, probe successful!\n");
+		device_set_desc(dev, "WinModem");
+		return (BUS_PROBE_DEFAULT);
+	}
+	return (ENXIO);
+}
+
+/* Attach function is only called if the probe is successful. */
+
+static int
+mypci_attach(device_t dev)
+{
+	struct mypci_softc *sc;
+
+	printf("MyPCI Attach for : deviceID : 0x%x\n", pci_get_devid(dev));
+
+	/* Look up our softc and initialize its fields. */
+	sc = device_get_softc(dev);
+	sc->my_dev = dev;
+
+	/*
+	 * Create a /dev entry for this device.  The kernel will assign us
+	 * a major number automatically.  We use the unit number of this
+	 * device as the minor number and name the character device
+	 * "mypci<unit>".
+	 */
+	sc->my_cdev = make_dev(&mypci_cdevsw, device_get_unit(dev),
+	    UID_ROOT, GID_WHEEL, 0600, "mypci%u", device_get_unit(dev));
+	sc->my_cdev->si_drv1 = sc;
+	printf("Mypci device loaded.\n");
+	return (0);
+}
+
+/* Detach device. */
+
+static int
+mypci_detach(device_t dev)
+{
+	struct mypci_softc *sc;
+
+	/* Teardown the state in our softc created in our attach routine. */
+	sc = device_get_softc(dev);
+	destroy_dev(sc->my_cdev);
+	printf("Mypci detach!\n");
+	return (0);
+}
+
+/* Called during system shutdown after sync. */
+
+static int
+mypci_shutdown(device_t dev)
+{
+
+	printf("Mypci shutdown!\n");
+	return (0);
+}
+
+/*
+ * Device suspend routine.
+ */
+static int
+mypci_suspend(device_t dev)
+{
+
+	printf("Mypci suspend!\n");
+	return (0);
+}
+
+/*
+ * Device resume routine.
+ */
+static int
+mypci_resume(device_t dev)
+{
+
+	printf("Mypci resume!\n");
+	return (0);
+}
+
+static device_method_t mypci_methods[] = {
+	/* Device interface */
+	DEVMETHOD(device_probe,		mypci_probe),
+	DEVMETHOD(device_attach,	mypci_attach),
+	DEVMETHOD(device_detach,	mypci_detach),
+	DEVMETHOD(device_shutdown,	mypci_shutdown),
+	DEVMETHOD(device_suspend,	mypci_suspend),
+	DEVMETHOD(device_resume,	mypci_resume),
+
+	DEVMETHOD_END
+};
+
+static devclass_t mypci_devclass;
+
+DEFINE_CLASS_0(mypci, mypci_driver, mypci_methods, sizeof(struct mypci_softc));
+DRIVER_MODULE(mypci, pci, mypci_driver, mypci_devclass, 0, 0);
+....
+
+=== [.filename]#Makefile# для примера драйвера
+
+[.programlisting]
+....
+# Makefile for mypci driver
+
+KMOD=	mypci
+SRCS=	mypci.c
+SRCS+=	device_if.h bus_if.h pci_if.h
+
+.include <bsd.kmod.mk>
+....
+
+Если вы поместите исходный файл выше и [.filename]#Makefile# в каталог, вы можете запустить `make` для компиляции примера драйвера. Дополнительно можно выполнить `make load` для загрузки драйвера в текущее ядро и `make unload` для выгрузки драйвера после его загрузки.
+
+=== Дополнительные ресурсы
+
+* http://www.pcisig.org/[Группа по стандартам PCI]
+* PCI System Architecture, Fourth Edition by Tom Shanley, et al.
+
+[[pci-bus]]
+== Ресурсы шины
+
+FreeBSD предоставляет объектно-ориентированный механизм для запроса ресурсов от родительской шины. Почти все устройства будут дочерними элементами какого-либо типа шины (PCI, ISA, USB, SCSI и т.д.), и этим устройствам необходимо получать ресурсы от своей родительской шины (такие как сегменты памяти, линии прерываний или каналы DMA).
+
+=== Регистры базовых адресов
+
+Для выполнения каких-либо полезных действий с устройством PCI необходимо получить _регистры базовых адресов_ (BAR) из конфигурационного пространства PCI. Специфичные для PCI детали получения BAR абстрагированы в функции `bus_alloc_resource()`.
+
+Например, типичный драйвер может содержать что-то подобное в функции `attach()`:
+
+[.programlisting]
+....
+    sc->bar0id = PCIR_BAR(0);
+    sc->bar0res = bus_alloc_resource(dev, SYS_RES_MEMORY, &sc->bar0id,
+				  0, ~0, 1, RF_ACTIVE);
+    if (sc->bar0res == NULL) {
+        printf("Memory allocation of PCI base register 0 failed!\n");
+        error = ENXIO;
+        goto fail1;
+    }
+
+    sc->bar1id = PCIR_BAR(1);
+    sc->bar1res = bus_alloc_resource(dev, SYS_RES_MEMORY, &sc->bar1id,
+				  0, ~0, 1, RF_ACTIVE);
+    if (sc->bar1res == NULL) {
+        printf("Memory allocation of PCI base register 1 failed!\n");
+        error =  ENXIO;
+        goto fail2;
+    }
+    sc->bar0_bt = rman_get_bustag(sc->bar0res);
+    sc->bar0_bh = rman_get_bushandle(sc->bar0res);
+    sc->bar1_bt = rman_get_bustag(sc->bar1res);
+    sc->bar1_bh = rman_get_bushandle(sc->bar1res);
+....
+
+Дескрипторы для каждого регистра базовых адресов хранятся в структуре `softc`, чтобы их можно было использовать для записи на устройство в дальнейшем.
+
+Эти дескрипторы затем могут быть использованы для чтения или записи из регистров устройства с помощью функций `bus_space_*`. Например, драйвер может содержать сокращённую функцию для чтения из специфичного для платы регистра, как показано ниже:
+
+[.programlisting]
+....
+uint16_t
+board_read(struct ni_softc *sc, uint16_t address)
+{
+    return bus_space_read_2(sc->bar1_bt, sc->bar1_bh, address);
+}
+....
+
+Аналогично, можно записать в регистры с помощью:
+
+[.programlisting]
+....
+void
+board_write(struct ni_softc *sc, uint16_t address, uint16_t value)
+{
+    bus_space_write_2(sc->bar1_bt, sc->bar1_bh, address, value);
+}
+....
+
+Эти функции существуют в 8-битных, 16-битных и 32-битных версиях, и вам следует использовать `bus_space_{read|write}_{1|2|4}` соответственно.
+
+[NOTE]
+====
+В FreeBSD 7.0 и более поздних версиях вы можете использовать функции `bus_*` вместо `bus_space_*`. Функции `bus_*` принимают указатель на структуру resource * вместо тега шины и дескриптора. Таким образом, вы можете удалить тег шины и дескриптор шины из `softc` и переписать функцию `board_read()` как:
+
+[.programlisting]
+....
+uint16_t
+board_read(struct ni_softc *sc, uint16_t address)
+{
+	return (bus_read(sc->bar1res, address));
+}
+....
+
+====
+
+=== Прерывания
+
+Прерывания выделяются объектно-ориентированным кодом шины аналогично ресурсам памяти. Сначала ресурс IRQ должен быть выделен из родительской шины, а затем должен быть настроен обработчик прерывания для работы с этим IRQ.
+
+Вот пример из функции `attach()` устройства, который скажет больше, чем слова.
+
+[.programlisting]
+....
+/* Get the IRQ resource */
+
+    sc->irqid = 0x0;
+    sc->irqres = bus_alloc_resource(dev, SYS_RES_IRQ, &(sc->irqid),
+				  0, ~0, 1, RF_SHAREABLE | RF_ACTIVE);
+    if (sc->irqres == NULL) {
+	printf("IRQ allocation failed!\n");
+	error = ENXIO;
+	goto fail3;
+    }
+
+    /* Now we should set up the interrupt handler */
+
+    error = bus_setup_intr(dev, sc->irqres, INTR_TYPE_MISC,
+			   my_handler, sc, &(sc->handler));
+    if (error) {
+	printf("Couldn't set up irq\n");
+	goto fail4;
+    }
+....
+
+Некоторые меры предосторожности должны быть приняты в процедуре отключения драйвера. Необходимо остановить поток прерываний устройства и удалить обработчик прерываний. Как только `bus_teardown_intr()` завершится, можно быть уверенным, что обработчик прерываний больше не будет вызываться и все потоки, которые могли выполнять этот обработчик, завершили работу. Поскольку эта функция может засыпать, нельзя удерживать какие-либо мьютексы при её вызове.
+
+=== DMA
+
+Этот раздел устарел и приведён только в исторических целях. Правильный способ решения этих проблем — использование функций `bus_space_dma*()`. Этот абзац можно удалить, когда раздел будет обновлён с учётом данного подхода. Однако на данный момент API находится в состоянии изменения, поэтому, когда он стабилизируется, будет полезно обновить этот раздел соответствующим образом.
+
+На ПК периферийные устройства, которые хотят использовать DMA с управлением шиной, должны работать с физическими адресами. Это проблема, поскольку FreeBSD использует виртуальную память и работает почти исключительно с виртуальными адресами. К счастью, существует функция `vtophys()`, которая поможет.
+
+[.programlisting]
+....
+#include <vm/vm.h>
+#include <vm/pmap.h>
+
+#define vtophys(virtual_address) (...)
+....
+
+Однако решение немного отличается на alpha, и на самом деле нам нужна функция под названием `vtobus()`.
+
+[.programlisting]
+....
+#if defined(__alpha__)
+#define vtobus(va)      alpha_XXX_dmamap((vm_offset_t)va)
+#else
+#define vtobus(va)      vtophys(va)
+#endif
+....
+
+=== Освобождение ресурсов
+
+Очень важно освободить все ресурсы, которые были выделены во время `attach()`. Необходимо внимательно следить за освобождением правильных ресурсов даже в случае ошибки, чтобы система оставалась работоспособной при завершении работы вашего драйвера.

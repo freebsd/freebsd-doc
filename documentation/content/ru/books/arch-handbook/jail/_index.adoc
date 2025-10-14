@@ -1,0 +1,529 @@
+---
+description: 'Подсистема клеток'
+next: books/arch-handbook/sysinit
+params:
+  path: /books/arch-handbook/jail/
+prev: books/arch-handbook/kobj
+showBookMenu: true
+tags: ["jail", "architecture", "networking", "kernel"]
+title: 'Глава 4. Подсистема клеток'
+weight: 5
+---
+
+[[jail]]
+= Подсистема клеток
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:sectnumoffset: 4
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/arch-handbook/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+На большинстве систем UNIX(R) пользователь `root` обладает неограниченной властью. Это не способствует безопасности. Если злоумышленник получит права `root` в системе, у него окажутся все функции под рукой. В FreeBSD существуют sysctl-параметры, которые ограничивают власть `root`, чтобы минимизировать ущерб от действий злоумышленника. В частности, одна из таких функций называется `уровни безопасности`. Аналогично, другая функция, доступная начиная с FreeBSD 4.0, — это утилита man:jail[8] — клетка. Клетка создает chroot-окружение и накладывает определенные ограничения на процессы, запущенные внутри `клетки`. Например, процесс в `клетке` не может влиять на процессы вне её, использовать определенные системные вызовы или наносить какой-либо ущерб основной системе.
+
+Клетка становится новой моделью безопасности. Пользователи запускают потенциально уязвимые серверы, такие как Apache, BIND и sendmail, внутри клеток, так что если злоумышленник получит права `root` внутри клетки, это будет лишь неудобством, а не катастрофой. Данная статья в основном сосредоточена на внутреннем устройстве (исходном коде) клетки. Для получения информации о настройке клетки см. extref:{handbook} jails/[раздел о клетках Руководства FreeBSD, jails-synopsis].
+
+[[jail-arch]]
+== Архитектура
+
+`Клетка` состоит из двух областей: пользовательской программы man:jail[8] и кода, реализованного в ядре: системного вызова man:jail[2] и связанных с ним ограничений. Я расскажу о пользовательской программе, а затем о том, как `клетка` реализована в ядре.
+
+=== Код в пользовательском пространстве
+
+Исходный код пользовательской части `клетки` находится в [.filename]#/usr/src/usr.sbin/jail# и состоит из одного файла [.filename]#jail.c#. Программа принимает следующие аргументы: путь к `клетке`, имя хоста, IP-адрес и команду для выполнения.
+
+==== Структуры данных
+
+В файле [.filename]#jail.c# первое, на что я бы обратил внимание, это объявление важной структуры `struct jail j;`, которая была включена из [.filename]#/usr/include/sys/jail.h#.
+
+Определение структуры `jail` выглядит следующим образом:
+
+[.programlisting]
+....
+/usr/include/sys/jail.h:
+
+struct jail {
+        u_int32_t       version;
+        char            *path;
+        char            *hostname;
+        u_int32_t       ip_number;
+};
+....
+
+Как видно, существует запись для каждого из аргументов, переданных программе man:jail[8], и действительно, они устанавливаются во время её выполнения.
+
+[.programlisting]
+....
+/usr/src/usr.sbin/jail/jail.c
+char path[PATH_MAX];
+...
+if (realpath(argv[0], path) == NULL)
+    err(1, "realpath: %s", argv[0]);
+if (chdir(path) != 0)
+    err(1, "chdir: %s", path);
+memset(&j, 0, sizeof(j));
+j.version = 0;
+j.path = path;
+j.hostname = argv[1];
+....
+
+==== Сетевое взаимодействие
+
+Один из аргументов, передаваемых программе man:jail[8], — это IP-адрес, по которому можно получить доступ к клетке через сеть. man:jail[8] преобразует указанный IP-адрес в порядок байтов хоста и сохраняет его в `j` (структура `jail`).
+
+[.programlisting]
+....
+/usr/src/usr.sbin/jail/jail.c:
+struct in_addr in;
+...
+if (inet_aton(argv[2], &in) == 0)
+    errx(1, "Could not make sense of ip-number: %s", argv[2]);
+j.ip_number = ntohl(in.s_addr);
+....
+
+Функция man:inet_aton[3] "интерпретирует указанную строку символов как интернет-адрес, помещая адрес в предоставленную структуру." Член структуры `ip_number` в структуре `jail` устанавливается только тогда, когда IP-адрес, помещённый в структуру `in` функцией man:inet_aton[3], преобразуется в порядок байтов хоста с помощью man:ntohl[3].
+
+==== Процесс в клетке
+
+Наконец, пользовательская программа помещает процесс в `клетку`. Теперь `клетка` становится самим заключенным процессом и выполняет команду, используя man:execv[3].
+
+[.programlisting]
+....
+/usr/src/usr.sbin/jail/jail.c
+i = jail(&j);
+...
+if (execv(argv[3], argv + 3) != 0)
+    err(1, "execv: %s", argv[3]);
+....
+
+Как видно, вызывается функция `jail()`, и её аргументом является структура `jail`, заполненная аргументами, переданными программе. В конце выполняется указанная вами программа. Теперь я расскажу о том, как `клетка` реализована в ядре.
+
+=== Пространство ядра системы
+
+Мы сейчас рассмотрим файл [.filename]#/usr/src/sys/kern/kern_jail.c#. В этом файле определены системный вызов man:jail[2], соответствующие sysctls и сетевые функции.
+
+==== Управляемые переменные ядра sysctl
+
+В файле [.filename]#kern_jail.c# определены следующие параметры sysctl:
+
+[.programlisting]
+....
+/usr/src/sys/kern/kern_jail.c:
+int     jail_set_hostname_allowed = 1;
+SYSCTL_INT(_security_jail, OID_AUTO, set_hostname_allowed, CTLFLAG_RW,
+    &jail_set_hostname_allowed, 0,
+    "Processes in jail can set their hostnames");
+
+int     jail_socket_unixiproute_only = 1;
+SYSCTL_INT(_security_jail, OID_AUTO, socket_unixiproute_only, CTLFLAG_RW,
+    &jail_socket_unixiproute_only, 0,
+    "Processes in jail are limited to creating UNIX/IPv4/route sockets only");
+
+int     jail_sysvipc_allowed = 0;
+SYSCTL_INT(_security_jail, OID_AUTO, sysvipc_allowed, CTLFLAG_RW,
+    &jail_sysvipc_allowed, 0,
+    "Processes in jail can use System V IPC primitives");
+
+static int jail_enforce_statfs = 2;
+SYSCTL_INT(_security_jail, OID_AUTO, enforce_statfs, CTLFLAG_RW,
+    &jail_enforce_statfs, 0,
+    "Processes in jail cannot see all mounted file systems");
+
+int    jail_allow_raw_sockets = 0;
+SYSCTL_INT(_security_jail, OID_AUTO, allow_raw_sockets, CTLFLAG_RW,
+    &jail_allow_raw_sockets, 0,
+    "Prison root can create raw sockets");
+
+int    jail_chflags_allowed = 0;
+SYSCTL_INT(_security_jail, OID_AUTO, chflags_allowed, CTLFLAG_RW,
+    &jail_chflags_allowed, 0,
+    "Processes in jail can alter system file flags");
+
+int     jail_mount_allowed = 0;
+SYSCTL_INT(_security_jail, OID_AUTO, mount_allowed, CTLFLAG_RW,
+    &jail_mount_allowed, 0,
+    "Processes in jail can mount/unmount jail-friendly file systems");
+....
+
+Каждый из этих параметров sysctl может быть доступен пользователю через программу man:sysctl[8]. В ядре эти конкретные параметры sysctl распознаются по их именам. Например, имя первого параметра sysctl — `security.jail.set_hostname_allowed`.
+
+==== Системный вызов man:jail[2]
+
+Как и все системные вызовы, системный вызов man:jail[2] принимает два аргумента: `struct thread *td` и `struct jail_args *uap`. `td` — это указатель на структуру `thread`, которая описывает вызывающий поток. В данном контексте `uap` — это указатель на структуру, в которой содержится указатель на структуру `jail`, переданную из пользовательского пространства [.filename]#jail.c#. Ранее, когда я описывал пользовательскую программу, вы видели, что системному вызову man:jail[2] была передана структура `jail` в качестве собственного аргумента.
+
+[.programlisting]
+....
+/usr/src/sys/kern/kern_jail.c:
+/*
+ * struct jail_args {
+ *  struct jail *jail;
+ * };
+ */
+int
+jail(struct thread *td, struct jail_args *uap)
+....
+
+Следовательно, `uap->jail` можно использовать для доступа к структуре `jail`, которая была передана системному вызову. Далее системный вызов копирует структуру `клетка` в пространство ядра с помощью функции man:copyin[9]. man:copyin[9] принимает три аргумента: адрес данных, которые нужно скопировать в пространство ядра (`uap->jail`), место для записи данных (`j`) и размер хранилища. Структура `jail`, на которую указывает `uap->jail`, копируется в пространство ядра и сохраняется в другой структуре `клетка` — `j`.
+
+[.programlisting]
+....
+/usr/src/sys/kern/kern_jail.c:
+error = copyin(uap->jail, &j, sizeof(j));
+....
+
+В [.filename]#jail.h# определена ещё одна важная структура — `prison`. Структура `prison` используется исключительно в пространстве ядра. Вот определение структуры `prison`.
+
+[.programlisting]
+....
+/usr/include/sys/jail.h:
+struct prison {
+        LIST_ENTRY(prison) pr_list;                     /* (a) all prisons */
+        int              pr_id;                         /* (c) prison id */
+        int              pr_ref;                        /* (p) refcount */
+        char             pr_path[MAXPATHLEN];           /* (c) chroot path */
+        struct vnode    *pr_root;                       /* (c) vnode to rdir */
+        char             pr_host[MAXHOSTNAMELEN];       /* (p) jail hostname */
+        u_int32_t        pr_ip;                         /* (c) ip addr host */
+        void            *pr_linux;                      /* (p) linux abi */
+        int              pr_securelevel;                /* (p) securelevel */
+        struct task      pr_task;                       /* (d) destroy task */
+        struct mtx       pr_mtx;
+      void            **pr_slots;                     /* (p) additional data */
+};
+....
+
+Системный вызов man:jail[2] затем выделяет память для структуры `prison` и копирует данные между структурой `клетка` и структурой `prison`.
+
+[.programlisting]
+....
+/usr/src/sys/kern/kern_jail.c:
+MALLOC(pr, struct prison *, sizeof(*pr), M_PRISON, M_WAITOK | M_ZERO);
+...
+error = copyinstr(j.path, &pr->pr_path, sizeof(pr->pr_path), 0);
+if (error)
+    goto e_killmtx;
+...
+error = copyinstr(j.hostname, &pr->pr_host, sizeof(pr->pr_host), 0);
+if (error)
+     goto e_dropvnref;
+pr->pr_ip = j.ip_number;
+....
+
+Далее мы рассмотрим ещё один важный системный вызов man:jail_attach[2], который реализует функцию помещения процесса в клетку.
+
+[.programlisting]
+....
+/usr/src/sys/kern/kern_jail.c:
+/*
+ * struct jail_attach_args {
+ *      int jid;
+ * };
+ */
+int
+jail_attach(struct thread *td, struct jail_attach_args *uap)
+....
+
+Этот системный вызов вносит изменения, которые позволяют отличить процесс в клетке от процессов вне клетки. Чтобы понять, что делает man:jail_attach[2], необходима некоторая справочная информация.
+
+В FreeBSD каждый видимый ядром поток идентифицируется своей структурой `thread`, а процессы описываются их структурами `proc`. Определения структур `thread` и `proc` можно найти в [.filename]#/usr/include/sys/proc.h#. Например, аргумент `td` в любом системном вызове на самом деле является указателем на структуру `thread` вызывающего потока, как было указано ранее. Член `td_proc` в структуре `thread`, на которую указывает `td`, является указателем на структуру `proc`, представляющую процесс, содержащий поток, представленный структурой `td`. Структура `proc` содержит члены, которые могут описывать идентификацию владельца (`p_ucred`), ограничения ресурсов процесса (`p_limit`) и так далее. В структуре `ucred`, на которую указывает член `p_ucred` в структуре `proc`, есть указатель на структуру `prison` (`cr_prison`).
+
+[.programlisting]
+....
+/usr/include/sys/proc.h:
+struct thread {
+    ...
+    struct proc *td_proc;
+    ...
+};
+struct proc {
+    ...
+    struct ucred *p_ucred;
+    ...
+};
+/usr/include/sys/ucred.h
+struct ucred {
+    ...
+    struct prison *cr_prison;
+    ...
+};
+....
+
+В файле [.filename]#kern_jail.c# функция `jail()` вызывает функцию `jail_attach()` с заданным `jid`. Затем `jail_attach()` вызывает функцию `change_root()` для изменения корневого каталога вызывающего процесса. Функция `jail_attach()` создает новую структуру `ucred` и присоединяет её к вызывающему процессу после успешного присоединения структуры `prison` к структуре `ucred`. С этого момента вызывающий процесс считается находящимся в клетке. Когда в ядре вызывается функция `jailed()` с вновь созданной структурой `ucred` в качестве аргумента, она возвращает 1, указывая, что учётные данные связаны с клеткой. Общим родительским процессом для всех процессов, созданных внутри клетки, является процесс, запускающий man:jail[8], так как он вызывает системный вызов man:jail[2]. При выполнении программы через man:execve[2] она наследует свойство клетки из структуры `ucred` родительского процесса, следовательно, у нее структура `ucred` тоже со свойством клетки.
+
+[.programlisting]
+....
+/usr/src/sys/kern/kern_jail.c
+int
+jail(struct thread *td, struct jail_args *uap)
+{
+...
+    struct jail_attach_args jaa;
+...
+    error = jail_attach(td, &jaa);
+    if (error)
+        goto e_dropprref;
+...
+}
+
+int
+jail_attach(struct thread *td, struct jail_attach_args *uap)
+{
+    struct proc *p;
+    struct ucred *newcred, *oldcred;
+    struct prison *pr;
+...
+    p = td->td_proc;
+...
+    pr = prison_find(uap->jid);
+...
+    change_root(pr->pr_root, td);
+...
+    newcred->cr_prison = pr;
+    p->p_ucred = newcred;
+...
+}
+....
+
+Когда процесс создается из родительского процесса, системный вызов man:fork[2] использует `crhold()` для поддержания учетных данных нового процесса. Это автоматически сохраняет учетные данные нового дочернего процесса согласованными с родительским, поэтому дочерний процесс также остается в клетке.
+
+[.programlisting]
+....
+/usr/src/sys/kern/kern_fork.c:
+p2->p_ucred = crhold(td->td_ucred);
+...
+td2->td_ucred = crhold(p2->p_ucred);
+....
+
+[[jail-restrictions]]
+== Ограничения
+
+В ядре существуют ограничения доступа, связанные с процессами в клетках. Обычно эти ограничения просто проверяют, находится ли процесс в клетке, и если да, возвращают ошибку. Например:
+
+[.programlisting]
+....
+if (jailed(td->td_ucred))
+    return (EPERM);
+....
+
+=== SysV IPC
+
+System V IPC основан на сообщениях. Процессы могут отправлять друг другу эти сообщения, которые указывают им, как действовать. Функции, работающие с сообщениями: man:msgctl[3], man:msgget[3], man:msgsnd[3] и man:msgrcv[3]. Ранее я упоминал, что существуют определённые sysctl, которые можно включать или выключать для изменения поведения клетки. Один из таких sysctl — `security.jail.sysvipc_allowed`. По умолчанию этот sysctl установлен в 0. Если бы он был установлен в 1, это бы свело на нет весь смысл клетки: привилегированные пользователи внутри клетки смогли бы влиять на процессы за её пределами. Разница между сообщением и сигналом заключается в том, что сообщение состоит только из номера сигнала.
+
+[.filename]#/usr/src/sys/kern/sysv_msg.c#:
+
+* `msgget(key, msgflg)`: `msgget` возвращает (и, возможно, создаёт) дескриптор сообщения, который обозначает очередь сообщений для использования в других функциях.
+* `msgctl(msgid, cmd, buf)`: С помощью этой функции процесс может запросить статус дескриптора сообщения.
+* `msgsnd(msgid, msgp, msgsz, msgflg)`: `msgsnd` отправляет сообщение процессу.
+* `msgrcv(msgid, msgp, msgsz, msgtyp, msgflg)`: процесс получает сообщения с помощью этой функции
+
+В каждом из системных вызовов, соответствующих этим функциям, присутствует следующее условие:
+
+[.programlisting]
+....
+/usr/src/sys/kern/sysv_msg.c:
+if (!jail_sysvipc_allowed && jailed(td->td_ucred))
+    return (ENOSYS);
+....
+
+Системные вызовы семафоров позволяют процессам синхронизировать выполнение, атомарно выполняя набор операций над набором семафоров. По сути, семафоры предоставляют ещё один способ для процессов блокировать ресурсы. Однако процесс, ожидающий семафор, который уже используется, будет находиться в состоянии сна до тех пор, пока ресурсы не будут освобождены. Следующие системные вызовы семафоров блокируются внутри клетки: man:semget[2], man:semctl[2] и man:semop[2].
+
+[.filename]#/usr/src/sys/kern/sysv_sem.c#:
+
+* `semctl(semid, semnum, cmd, ...)`: `semctl` выполняет указанную команду `cmd` для очереди семафоров, указанной в `semid`.
+* `semget(key, nsems, flag)`: `semget` создает массив семафоров, соответствующих `key`.
++
+`key и flag имеют то же значение, как и в msgget.`
+* `semop(semid, array, nops)`: `semop` выполняет набор операций, указанных в `array`, для набора семафоров, идентифицируемых `semid`.
+
+Система IPC System V позволяет процессам использовать общую память. Процессы могут взаимодействовать напрямую друг с другом, разделяя части своего виртуального адресного пространства и затем читая и записывая данные в общей памяти. Эти системные вызовы заблокированы в среде _клетки_: man:shmdt[2], man:shmat[2], man:shmctl[2] и man:shmget[2].
+
+[.filename]#/usr/src/sys/kern/sysv_shm.c#:
+
+* `shmctl(shmid, cmd, buf)`: `shmctl` выполняет различные управляющие операции над областью разделяемой памяти, идентифицируемой `shmid`.
+* `shmget(key, size, flag)`: `shmget` обращается к существующей или создает новую область разделяемой памяти размером `size` байт.
+* `shmat(shmid, addr, flag)`: `shmat` присоединяет область разделяемой памяти, идентифицируемую `shmid`, к адресному пространству процесса.
+* `shmdt(addr)`: `shmdt` отсоединяет ранее присоединенную область разделяемой памяти по адресу `addr`.
+
+=== Сокеты
+
+Клетка обрабатывает системный вызов man:socket[2] и связанные низкоуровневые функции сокетов особым образом. Для определения, разрешено ли создание определённого сокета, сначала проверяется значение sysctl `security.jail.socket_unixiproute_only`. Если оно установлено, сокеты разрешено создавать только в случае, если указанное семейство равно `PF_LOCAL`, `PF_INET` или `PF_ROUTE`. В противном случае возвращается ошибка.
+
+[.programlisting]
+....
+/usr/src/sys/kern/uipc_socket.c:
+int
+socreate(int dom, struct socket **aso, int type, int proto,
+    struct ucred *cred, struct thread *td)
+{
+    struct protosw *prp;
+...
+    if (jailed(cred) && jail_socket_unixiproute_only &&
+        prp->pr_domain->dom_family != PF_LOCAL &&
+        prp->pr_domain->dom_family != PF_INET &&
+        prp->pr_domain->dom_family != PF_ROUTE) {
+        return (EPROTONOSUPPORT);
+    }
+...
+}
+....
+
+=== Berkeley Packet Filter
+
+Берклиевский фильтр пакетов (BPF) предоставляет низкоуровневый интерфейс к канальному уровню, независимый от протокола. В настоящее время BPF управляется через man:devfs[8], который определяет возможность его использования в клетке.
+
+=== Протоколы
+
+Существуют определенные протоколы, которые очень распространены, такие как TCP, UDP, IP и ICMP. IP и ICMP находятся на одном уровне: сетевом уровне 2. Принимаются определенные меры предосторожности, чтобы предотвратить привязку протокола к определенному адресу процессом в клетке, только если установлен параметр `nam`. `nam` является указателем на структуру `sockaddr`, которая описывает адрес, к которому привязывается служба. Более точное определение заключается в том, что `sockaddr` "может использоваться как шаблон для ссылки на идентификационный тег и длину каждого адреса". В функции `in_pcbbind_setup()`, `sin` — это указатель на структуру `sockaddr_in`, которая содержит порт, адрес, длину и семейство доменов сокета, который должен быть привязан. В основном, это запрещает любым процессам из клетки указывать адрес, который не принадлежит клетке, в которой существует вызывающий процесс.
+
+[.programlisting]
+....
+/usr/src/sys/netinet/in_pcb.c:
+int
+in_pcbbind_setup(struct inpcb *inp, struct sockaddr *nam, in_addr_t *laddrp,
+    u_short *lportp, struct ucred *cred)
+{
+    ...
+    struct sockaddr_in *sin;
+    ...
+    if (nam) {
+        sin = (struct sockaddr_in *)nam;
+        ...
+        if (sin->sin_addr.s_addr != INADDR_ANY)
+            if (prison_ip(cred, 0, &sin->sin_addr.s_addr))
+                return(EINVAL);
+        ...
+        if (lport) {
+            ...
+            if (prison && prison_ip(cred, 0, &sin->sin_addr.s_addr))
+                return (EADDRNOTAVAIL);
+            ...
+        }
+    }
+    if (lport == 0) {
+        ...
+        if (laddr.s_addr != INADDR_ANY)
+            if (prison_ip(cred, 0, &laddr.s_addr))
+                return (EINVAL);
+        ...
+    }
+...
+    if (prison_ip(cred, 0, &laddr.s_addr))
+        return (EINVAL);
+...
+}
+....
+
+Вы можете задаться вопросом, какую функцию выполняет `prison_ip()`. `prison_ip()` принимает три аргумента: указатель на учетные данные (представленные как `cred`), любые флаги и IP-адрес. Она возвращает 1, если IP-адрес НЕ принадлежит клетке, и 0 в противном случае. Как видно из кода, если это действительно IP-адрес, не принадлежащий клетке, протоколу не разрешается привязываться к этому адресу.
+
+[.programlisting]
+....
+/usr/src/sys/kern/kern_jail.c:
+int
+prison_ip(struct ucred *cred, int flag, u_int32_t *ip)
+{
+    u_int32_t tmp;
+
+    if (!jailed(cred))
+        return (0);
+    if (flag)
+        tmp = *ip;
+    else
+        tmp = ntohl(*ip);
+    if (tmp == INADDR_ANY) {
+        if (flag)
+            *ip = cred->cr_prison->pr_ip;
+        else
+            *ip = htonl(cred->cr_prison->pr_ip);
+        return (0);
+    }
+    if (tmp == INADDR_LOOPBACK) {
+        if (flag)
+            *ip = cred->cr_prison->pr_ip;
+        else
+            *ip = htonl(cred->cr_prison->pr_ip);
+        return (0);
+    }
+    if (cred->cr_prison->pr_ip != tmp)
+        return (1);
+    return (0);
+}
+....
+
+=== Файловая система
+
+Даже пользователи с правами `root` внутри `клетки` не могут снять или изменить любые флаги файлов, такие как неизменяемый, только для добавления и неудаляемый, если уровень безопасности (`securelevel`) больше 0.
+
+[.programlisting]
+....
+/usr/src/sys/ufs/ufs/ufs_vnops.c:
+static int
+ufs_setattr(ap)
+    ...
+{
+    ...
+        if (!priv_check_cred(cred, PRIV_VFS_SYSFLAGS, 0)) {
+            if (ip->i_flags
+                & (SF_NOUNLINK | SF_IMMUTABLE | SF_APPEND)) {
+                    error = securelevel_gt(cred, 0);
+                    if (error)
+                        return (error);
+            }
+            ...
+        }
+}
+/usr/src/sys/kern/kern_priv.c
+int
+priv_check_cred(struct ucred *cred, int priv, int flags)
+{
+    ...
+    error = prison_priv_check(cred, priv);
+    if (error)
+        return (error);
+    ...
+}
+/usr/src/sys/kern/kern_jail.c
+int
+prison_priv_check(struct ucred *cred, int priv)
+{
+    ...
+    switch (priv) {
+    ...
+    case PRIV_VFS_SYSFLAGS:
+        if (jail_chflags_allowed)
+            return (0);
+        else
+            return (EPERM);
+    ...
+    }
+    ...
+}
+....
