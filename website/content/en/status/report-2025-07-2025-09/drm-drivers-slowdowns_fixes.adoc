@@ -1,0 +1,40 @@
+=== DRM Drivers Slowdowns and Freezes Fixes
+
+Links: +
+link:https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=277476[Main PR] URL: https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=277476 +
+link:https://github.com/freebsd/drm-kmod/issues/302[drm-kmod GitHub issue] URL: https://github.com/freebsd/drm-kmod/issues/302
+
+Contact: Olivier Certner <olce.freebsd.statusreports@certner.fr>
+
+Owners of AMD GPUs using the amdgpu DRM driver from the `drm-kmod` ports, especially starting with v5.15 (`drm-515-kmod`), have been experiencing gradual slowdowns and freezes since at least May 2024.
+Code analysis suggests that recent Intel-based GPUs (gen 13+) may also be affected.
+We are pleased to announce that, to the best of our knowledge, all these problems have been fixed.
+
+We encourage people to test the latest FreeBSD code on branches `main`, `stable/15` or `stable/14`.
+The fixes will be included in the upcoming 15.0 and 14.4 releases.
+Errata notices and patches may be issued for 14.3 in order for people not to have to wait until 14.4 (whose release should tentatively happen next March).
+An additional fix will find its way in the `drm-kmod` ports (see below).
+
+Investigations revealed that the crux of all these problems has been bad handling of too frequent, and generally not really necessary, physically contiguous memory allocation requests in fast paths.
+Basically, the DRM's TTM component tries to allocate pools of graphics memory pages that are as much as possible physically contiguous in order to reduce the number of corresponding TLB entries.
+It does it in a loop that first tries to allocate pages of higher order with the `__GFP_NORETRY` flag, gradually falling back to smallest ones (see `ttm_pool_alloc()`).
+
+The first problem is that our LinuxKPI did not handle Linux's `__GFP_NORETRY` flag and would try hard to fulfill the first requests, i.e., those with highest order pages, using expensive mechanisms to obtain or produce contiguous memory if not readily available.
+A first fix by Mathieu (`sigsys` at `gmail` with regular company suffix) removed memory compaction from this process (foregoing calls to `vm_page_reclaim_contig()`).
+This fix was then completed by stopping the VM system from trying to break memory reservations, which are pieces of a speculative mechanism that tries to automatically provoke the use of superpages.
+
+Another problem came from evolutions of our LinuxKPI.
+In order to better comply with what Linux does, `kmalloc()` was changed to always return physically contiguous memory.
+Unfortunately, `kvzalloc()`, which relied on `kmalloc()` in our implementation (which was conceptually wrong, but initially harmless in practice), was not switched to rely on `kvmalloc()` in the process, effectively turning large memory allocations of zeroed pages into costly physically contiguous ones.
+
+Some rough profiling of slowdowns was done using `dtrace`.
+It revealed that a fair amount of execution time of the failing allocations came from attempting multiple allocation on the same NUMA domain, and that of succeeding ones came from useless changes to page attributes, triggering expensive TLB shootdowns.
+An analysis of the VM domainset iterators code revealed multiple flaws, in particular leading to re-examining the same domain multiple times (up to 4 times for the common case of machines with a single domain) without any additional guarantees of success for new attemps.
+Some other VM domainset problems have been fixed in the process, such as ensuring that allocation requests prefer domains not on a low memory condition in all situations.
+
+Finally, concerning specifically the amdgpu driver and affecting only Carrizo, Polaris and Vega M based AMD GPUs, a temporary allocation that was unnecessarily physically contiguous was replaced with a regular one, making the remaining, relatively short but noticeable freezes disappear.
+By contrast with those evoked above, this change is to the `drm-kmod` ports' code, and is to be included at the ports' next version bump in the ports tree (expected ports versions: `5.10.163_9`, `5.15.160_6`, `6.1.128_6` and `6.6.25_7` respectively for `drm-510-kmod`, `drm-515-kmod`, `drm-61-kmod` and `drm-66-kmod`).
+
+This work was sponsored by the FreeBSD Foundation as part of the Laptop Project.
+
+Sponsor: The FreeBSD Foundation
