@@ -1,0 +1,44 @@
+=== Process Credentials' Groups-Related Changes in FreeBSD 15
+
+Links: +
+link:https://www.freebsd.org/status/report-2025-04-2025-06/#_ucred_group_changes_in_freebsd_15_0[T2 2025 Status Report] URL: https://www.freebsd.org/status/report-2025-04-2025-06/#_ucred_group_changes_in_freebsd_15_0 +
+link:https://cgit.freebsd.org/src/commit/?id=9dc1ac869196[initgroups(3): Backwards-compatible implementation and manual page update ] URL: https://cgit.freebsd.org/src/commit/?id=9dc1ac869196 +
+link:https://cgit.freebsd.org/src/commit/?id=4be38acc826f[Main commit changing getgroups(2)'s manual page] URL: https://cgit.freebsd.org/src/commit/?id=4be38acc826f +
+link:https://cgit.freebsd.org/src/commit/?id=6d22cd6b5f8b[Main commit changing setgroups(2)'s manual page] URL: https://cgit.freebsd.org/src/commit/?id=6d22cd6b5f8b
+
+Contact: Olivier Certner <olce@FreeBSD.org> +
+Contact: Kyle Evans <kevans@FreeBSD.org>
+
+Starting with FreeBSD 15:
+
+. [[setgroups_getgroups]]The behavior of the man:setgroups[2] and man:getgroups[2] system calls function has slightly changed.
++
+Out of caution, even if almost all existing applications will continue to work undisturbed, we advise auditing those that you are maintaining or using as explained below.
+. [[initgroups]]How processes' group membership is derived from the password and group databases on login has slightly changed: The login user's initial numerical group ID from the password database is now automatically added to the supplementary groups set, even if that user is not explicitly listed as a member of the corresponding group in the group database.
+. [[kernel]]The kernel stores the effective group ID in a new specific field of `struct ucred` (`cr_gid`) instead of in the same array as supplementary groups (`cr_ngroups[]`).
+
+The man:setgroups[2] and man:getgroups[2] system calls will operate only on the calling process' supplementary groups, not featuring the effective group ID as the first element of their array argument.
+The man:initgroups[3] function's implementation is unchanged and still relies on man:setgroups[2], with the consequence that it **does not** set the process' effective group ID **anymore**, instead including its `basegid` argument in the supplementary groups set.
+
+One of the reasons for these changes is to have FreeBSD behave exactly like GNU/Linux systems, NetBSD, OpenBSD and illumos-based operating systems.
+Consequently, almost all portable applications should already be compliant with FreeBSD's new behavior and will continue to work correctly or even get fixed in the process (see the previous status report linked above for an example with OpenSSH).
+However, porters, system administrators and users are advised to audit their applications that are using man:setgroups[2], man:getgroups[2] and man:initgroups[3], watching out for the following points:
+
+* Applications should already be using man:setgid[2] or man:setegid[2] in addition to man:setgroups[2] or man:initgroups[3] to set the effective group ID.
++
+If this is not the case, these calls must be added, as otherwise affected applications will stop setting the effective group ID starting from FreeBSD 15.
+* Applications using man:getgroups[2] should not be treating the first element of the returned array specially, but as any other supplementary group.
++
+If nonetheless they do, they have to be modified to obtain the effective group ID via man:getegid[2] instead and to treat all groups returned by man:getgroups[2] as supplementary groups only.
+
+Manual pages of all changed functions have been modified in `stable/14` and `stable/15` to describe and contrast the old and new behaviors, and have grown new `SECURITY CONSIDERATIONS` sections stating the reasons for the changes and the points to watch out for.
+
+Backwards-compatible implementations of changed functions are provided so that applications compiled on FreeBSD 14 or earlier continue to see the old behaviors and work as before.
+They are available if and only if the kernel was compiled with `COMPAT_FREEBSD14`, which is the case of the default `GENERIC` kernel.
+
+We have normally fixed all unwanted impacts of storing the effective group ID separately from the supplementary groups in the kernel, such as:
+
+* Some security policies or access checks would either ignore the effective group ID or the first supplementary group (with lowest numerical ID), affecting process visibility restrictions based on group IDs, the "can debug" and "can export KTLS keys" checks, the man:mac_do[4] and man:mac_bsdextended[4] security policies, and access crontrol to some hardware facilities (tracing: man:hwt[4]; performance monitoring: man:hwpmc[4]) and to NFS-served shares.
+* Reporting of process' credentials would omit the effective group ID, affecting all variants of `procstat -s` (on live processes, core files, or system core dump), man:ddb[4].
+
+Sponsor: The FreeBSD Foundation
