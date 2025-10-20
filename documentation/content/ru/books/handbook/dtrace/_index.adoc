@@ -1,0 +1,247 @@
+---
+description: 'Эта глава объясняет, как использовать DTrace в FreeBSD'
+next: books/handbook/usb-device-mode
+params:
+  path: /books/handbook/dtrace/
+part: 'Часть III. Администрирование системы'
+prev: books/handbook/cutting-edge
+showBookMenu: true
+tags: ["DTrace", "features", "guide", "tutorial", "kldload"]
+title: 'Глава 27. DTrace'
+weight: 31
+---
+
+[[dtrace]]
+= DTrace
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:sectnumoffset: 27
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/handbook/dtrace/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+[[dtrace-synopsis]]
+== Обзор
+
+DTrace, также известный как Dynamic Tracing, был разработан Sun(TM) в качестве инструмента для выявления узких мест в производительности рабочих и предпроизводственных систем. Помимо диагностики проблем с производительностью, DTrace можно использовать для исследования и отладки неожиданного поведения как в ядре FreeBSD, так и в пользовательских программах.
+
+DTrace — это выдающийся инструмент для профилирования, обладающий впечатляющим набором возможностей для диагностики проблем в системе. Его также можно использовать для запуска предварительно написанных скриптов, чтобы воспользоваться его функциональностью. Пользователи могут создавать собственные утилиты, используя язык DTrace D, что позволяет настраивать профилирование в соответствии с конкретными потребностями.
+
+Реализация FreeBSD обеспечивает полную поддержку DTrace в ядре и экспериментальную поддержку DTrace в пользовательском пространстве. DTrace в пользовательском пространстве позволяет пользователям выполнять трассировку границ функций для программ пользовательского пространства с использованием провайдера `pid`, а также вставлять статические зонды в программы пользовательского пространства для последующей трассировки. Некоторые порты, такие как package:databases/postgresql12-server[] и package:lang/php74[], имеют опцию DTrace для включения статических зондов.
+
+Официальное руководство по DTrace поддерживается проектом illumos по адресу https://illumos.org/books/dtrace/bookinfo.html[illumos Dynamic Tracing Guide].
+
+Прочитав эту главу, вы будете знать:
+
+* Что такое DTrace и какие возможности он предоставляет.
+* Различия между реализацией DTrace в Solaris(TM) и реализацией, предоставляемой FreeBSD.
+* Как включить и использовать DTrace в FreeBSD.
+
+Прежде чем читать эту главу, вы должны:
+
+* Понимать основы UNIX(R) и FreeBSD (crossref:basics[basics,Основы FreeBSD]).
+* Иметь некоторое представление о безопасности и о том, как она относится к FreeBSD (crossref:security[security,Безопасность]).
+
+[[dtrace-implementation]]
+== Различия в реализациях
+
+В то время как DTrace в FreeBSD схож с тем, что представлен в Solaris(TM), различия существуют. Основное различие заключается в том, что в FreeBSD DTrace реализован в виде набора модулей ядра, и DTrace нельзя использовать до загрузки этих модулей. Чтобы загрузить все необходимые модули:
+
+[source, shell]
+....
+# kldload dtraceall
+....
+
+Начиная с FreeBSD 10.0-RELEASE, модули автоматически загружаются при запуске man:dtrace[1].
+
+FreeBSD использует параметр ядра `DDB_CTF` для включения поддержки загрузки данных man:ctf[5] из модулей ядра и самого ядра. `CTF` — это Compact C Type Format от Solaris(TM), который инкапсулирует упрощённую форму отладочной информации, аналогичную `DWARF` и устаревшему stabs. Данные `CTF` добавляются в бинарные файлы с помощью инструментов сборки man:ctfconvert[1] и man:ctfmerge[1]. Утилита `ctfconvert` обрабатывает отладочные секции `DWARF``ELF`, созданные компилятором, а `ctfmerge` объединяет секции `CTF``ELF` из объектных файлов в исполняемые файлы или разделяемые библиотеки.
+
+В FreeBSD есть некоторые провайдеры, которых нет в Solaris(TM). Наиболее примечательным является провайдер `dtmalloc`, который позволяет трассировать man:malloc[9] по типам в ядре FreeBSD. Некоторые провайдеры, присутствующие в Solaris(TM), такой как `cpc`, отсутствуют в FreeBSD. Они могут появиться в будущих версиях FreeBSD. Кроме того, некоторые провайдеры, доступные в обеих операционных системах, несовместимы в том смысле, что их пробы имеют разные типы аргументов. Таким образом, скрипты `D`, написанные для Solaris(TM), могут работать или не работать без изменений в FreeBSD, и наоборот.
+
+Из-за различий в безопасности, только пользователь `root` может использовать DTrace в FreeBSD. В Solaris(TM) есть несколько проверок безопасности низкого уровня, которые пока отсутствуют в FreeBSD. Поэтому доступ к [.filename]#/dev/dtrace/dtrace# строго ограничился только пользователем `root`.
+
+DTrace распространяется под лицензией Common Development and Distribution License (`CDDL`). Чтобы ознакомиться с текстом этой лицензии в FreeBSD, см. [.filename]#/usr/src/cddl/contrib/opensolaris/OPENSOLARIS.LICENSE# или просмотрите её онлайн по адресу http://opensource.org/licenses/CDDL-1.0[http://opensource.org/licenses/CDDL-1.0]. Хотя ядро FreeBSD с поддержкой DTrace лицензировано под `BSD`, лицензия `CDDL` применяется при распространении модулей в бинарной форме или при загрузке бинарных файлов.
+
+[[dtrace-enable]]
+== Включение поддержки DTrace
+
+В FreeBSD 9.2 и 10.0 поддержка DTrace встроена в ядро [.filename]#GENERIC#. Пользователям более ранних версий FreeBSD или тем, кто предпочитает статически компилировать поддержку DTrace, следует добавить следующие строки в пользовательский конфигурационный файл ядра и перекомпилировать ядро, следуя инструкциям в crossref:kernelconfig[kernelconfig,Настройка ядра FreeBSD]:
+
+[.programlisting]
+....
+options         KDTRACE_HOOKS
+options         DDB_CTF
+makeoptions	DEBUG=-g
+makeoptions	WITH_CTF=1
+....
+
+Пользователи архитектуры AMD64 также должны добавить эту строку:
+
+[.programlisting]
+....
+options         KDTRACE_FRAME
+....
+
+Эта опция обеспечивает поддержку man:dtrace_fbt[4]. Хотя DTrace будет работать без этой опции, поддержка трассировки входов и выходов функций будет ограничена.
+
+После перезагрузки системы FreeBSD с новым ядром или загрузки модулей DTrace с помощью `kldload dtraceall`, установите текущий DTrace Toolkit (package:sysutils/dtrace-toolkit[]) — набор готовых скриптов для сбора системной информации. Включает скрипты для проверки открытых файлов, использования памяти, загрузки CPU и многое другое. Некоторые скрипты также присутствуют в базовой системе FreeBSD — см. [.filename]#/usr/share/dtrace#.
+
+[NOTE]
+====
+Скрипты в каталоге [.filename]#/usr/share/dtrace# были специально портированы для FreeBSD. Не все скрипты из DTrace Toolkit будут работать на FreeBSD без изменений, и для некоторых может потребоваться доработка.
+====
+
+Набор инструментов DTrace включает множество скриптов на специальном языке DTrace. Этот язык называется D и очень похож на C++. Подробное обсуждение языка выходит за рамки данного документа. Обратитесь к странице man:d[7] для обзора языка D в FreeBSD. Язык D также подробно рассмотрен в https://www.illumos.org/books/dtrace/bookinfo.html[illumos Dynamic Tracing Guide].
+
+[[dtrace-out-of-kernel]]
+== Включение DTrace во внешних модулях ядра
+
+Чтобы добавить поддержку DTrace во внешний модуль ядра, что полезно для разработки и отладки, включите следующую строку в Makefile модуля:
+
+[.programlisting]
+....
+CFLAGS+= -DKDTRACE_HOOKS
+....
+
+Этот флаг включает DTrace-хуки во время компиляции, позволяя проводить расширенную отладку и мониторинг модуля. Убедитесь, что модуль перекомпилирован после этого изменения, чтобы активировать функциональность DTrace.
+
+[[dtrace-using]]
+== Использование DTrace
+
+Скрипты DTrace состоят из списка одного или нескольких _проб_ (точек инструментирования), где каждая проба связана с действием. Когда условие для пробы выполняется, запускается соответствующее действие. Например, действие может происходить при открытии файла, запуске процесса или выполнении строки кода. Действие может заключаться в записи некоторой информации или изменении контекстных переменных. Чтение и запись контекстных переменных позволяют пробам обмениваться информацией и совместно анализировать взаимосвязь различных событий.
+
+Для просмотра всех проб администратор может выполнить следующую команду:
+
+[source, shell]
+....
+# dtrace -l | more
+....
+
+У каждого зонда есть `ID`, `PROVIDER` (например, `dtrace` или `fbt`), `MODULE` и `FUNCTION NAME`. Дополнительную информацию об этой команде можно найти в man:dtrace[1].
+
+Примеры в этом разделе дают общее представление о том, как использовать два полностью поддерживаемых скрипта из DTrace Toolkit: [.filename]#hotkernel# и [.filename]#procsystime#.
+
+Скрипт [.filename]#hotkernel# предназначен для определения функции, которая использует наибольшее время ядра. Он выводит информацию, похожую на следующую:
+
+[source, shell]
+....
+# cd /usr/local/share/dtrace-toolkit
+# ./hotkernel
+Sampling... Hit Ctrl-C to end.
+....
+
+Как указано, используйте комбинацию клавиш kbd:[Ctrl+C], чтобы остановить процесс. После завершения скрипт отобразит список функций ядра и информацию о времени, сортируя вывод в порядке возрастания времени:
+
+[source, shell]
+....
+kernel`_thread_lock_flags                                   2   0.0%
+0xc1097063                                                  2   0.0%
+kernel`sched_userret                                        2   0.0%
+kernel`kern_select                                          2   0.0%
+kernel`generic_copyin                                       3   0.0%
+kernel`_mtx_assert                                          3   0.0%
+kernel`vm_fault                                             3   0.0%
+kernel`sopoll_generic                                       3   0.0%
+kernel`fixup_filename                                       4   0.0%
+kernel`_isitmyx                                             4   0.0%
+kernel`find_instance                                        4   0.0%
+kernel`_mtx_unlock_flags                                    5   0.0%
+kernel`syscall                                              5   0.0%
+kernel`DELAY                                                5   0.0%
+0xc108a253                                                  6   0.0%
+kernel`witness_lock                                         7   0.0%
+kernel`read_aux_data_no_wait                                7   0.0%
+kernel`Xint0x80_syscall                                     7   0.0%
+kernel`witness_checkorder                                   7   0.0%
+kernel`sse2_pagezero                                        8   0.0%
+kernel`strncmp                                              9   0.0%
+kernel`spinlock_exit                                       10   0.0%
+kernel`_mtx_lock_flags                                     11   0.0%
+kernel`witness_unlock                                      15   0.0%
+kernel`sched_idletd                                       137   0.3%
+0xc10981a5                                              42139  99.3%
+....
+
+Этот скрипт также работает с модулями ядра. Чтобы использовать эту возможность, запустите скрипт с ключом `-m`:
+
+[source, shell]
+....
+# ./hotkernel -m
+Sampling... Hit Ctrl-C to end.
+^C
+MODULE                                                  COUNT   PCNT
+0xc107882e                                                  1   0.0%
+0xc10e6aa4                                                  1   0.0%
+0xc1076983                                                  1   0.0%
+0xc109708a                                                  1   0.0%
+0xc1075a5d                                                  1   0.0%
+0xc1077325                                                  1   0.0%
+0xc108a245                                                  1   0.0%
+0xc107730d                                                  1   0.0%
+0xc1097063                                                  2   0.0%
+0xc108a253                                                 73   0.0%
+kernel                                                    874   0.4%
+0xc10981a5                                             213781  99.6%
+....
+
+Скрипт [.filename]#procsystime# захватывает и выводит время использования системных вызовов для заданного идентификатора процесса (`PID`) или имени процесса. В следующем примере был создан новый экземпляр [.filename]#/bin/csh#. Затем был запущен [.filename]#procsystime#, который оставался в ожидании, пока в другом экземпляре `csh` было набрано несколько команд. Вот результаты этого теста:
+
+[source, shell]
+....
+# ./procsystime -n csh
+Tracing... Hit Ctrl-C to end...
+^C
+
+Elapsed Times for processes csh,
+
+         SYSCALL          TIME (ns)
+          getpid               6131
+       sigreturn               8121
+           close              19127
+           fcntl              19959
+             dup              26955
+         setpgid              28070
+            stat              31899
+       setitimer              40938
+           wait4              62717
+       sigaction              67372
+     sigprocmask             119091
+    gettimeofday             183710
+           write             263242
+          execve             492547
+           ioctl             770073
+           vfork            3258923
+      sigsuspend            6985124
+            read         3988049784
+....
+
+Как показано, системный вызов man:read[2] использовал наибольшее время в наносекундах, тогда как системный вызов man:getpid[2] использовал наименьшее количество времени.
