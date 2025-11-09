@@ -2054,7 +2054,7 @@ qq{Please try a <a href="$BASE?apropos=1&amp;manpath=freebsd-release-ports&amp;q
 # and then in your cgi script itself set the GROFF_TMAC_PATH as appropriate
 # like:
 #
-# GROFF_TMAC_PATH=$manLocalDir/NetBSD-1.4.2/tmac:/usr/share/tmac/
+# GROFF_TMAC_PATH=$manLocalDir/NetBSD-1.4.2/tmac
 #
 sub groff_path {
     local $manpath = shift;
@@ -2064,7 +2064,7 @@ sub groff_path {
         push( @groff_path, $_ . '/tmac' );
     }
 
-    $ENV{'GROFF_TMAC_PATH'} = join( ':', @groff_path, '/usr/share/tmac' );
+    $ENV{'GROFF_TMAC_PATH'} = join( ':', @groff_path );
 }
 
 sub mlnk {
