@@ -1455,7 +1455,7 @@ hr { margin-left: 0em; max-width: 50em; }
       if !cgi_style::HAS_FREEBSD_CGI_STYLE;
 
     ( my $header = &cgi_style::short_html_header( $title, 1 ) ) =~
-      s,<head>,<head>\n$html_meta,s;
+      s,</head>,$html_meta\n</head>,s;
 
     $header =~ s,^Content-type:\s+\S+\s+,,s;
     $header =~ s,<head>,<head>\n<base href="$base" />,s if $base;
