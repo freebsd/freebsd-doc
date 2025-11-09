@@ -1432,6 +1432,8 @@ form#man > input, form#man > button { font-size: large; }
 form#man > input[name='query'] { text-align: center; }
 p#section_links, div#footer { max-width: 50em; }
 hr { margin-left: 0em; max-width: 50em; }
+a:link  { text-decoration:none; }
+a:hover { text-decoration:underline; }
 
 @media only screen and (max-height: 640px), (max-width: 760px) {
   /* hide logo color top */
