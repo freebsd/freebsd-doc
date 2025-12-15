@@ -357,10 +357,13 @@ foreach my $os ( keys %$sectionpath ) {
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
 # this should be the latest "release and ports"
-$manPathDefault = 'FreeBSD 14.3-RELEASE and Ports';
+$manPathDefault = 'FreeBSD 15.0-RELEASE and Ports';
 
 %manPath = (
     # supported RELEASES / STABLE / CURRENT 
+    'FreeBSD 15.0-RELEASE and Ports',
+"$manLocalDir/FreeBSD-15.0-RELEASE/man:$manLocalDir/FreeBSD-15.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-15.0-RELEASE/man:$manLocalDir/FreeBSD-ports-15.0-RELEASE/misc",
+
     'FreeBSD 14.3-RELEASE and Ports',
 "$manLocalDir/FreeBSD-14.3-RELEASE/man:$manLocalDir/FreeBSD-14.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/man:$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/misc",
     'FreeBSD 14.2-RELEASE and Ports',
@@ -440,6 +443,9 @@ $manPathDefault = 'FreeBSD 14.3-RELEASE and Ports';
 
     'FreeBSD 16.0-CURRENT',
 "$manLocalDir/FreeBSD-16.0-CURRENT/man:$manLocalDir/FreeBSD-16.0-CURRENT/openssl/man",
+
+    'FreeBSD 15.0-RELEASE',
+"$manLocalDir/FreeBSD-15.0-RELEASE/man:$manLocalDir/FreeBSD-15.0-RELEASE/openssl/man",
 
     'FreeBSD 15.0-STABLE',
 "$manLocalDir/FreeBSD-15.0-STABLE/man:$manLocalDir/FreeBSD-15.0-STABLE/openssl/man",
@@ -589,6 +595,7 @@ $manPathDefault = 'FreeBSD 14.3-RELEASE and Ports';
     'FreeBSD Ports 14.2', "$manLocalDir/FreeBSD-ports-14.2-RELEASE/man:$manLocalDir/FreeBSD-ports-14.2-RELEASE/misc",
     'FreeBSD Ports 14.3', "$manLocalDir/FreeBSD-ports-14.3-RELEASE/man:$manLocalDir/FreeBSD-ports-14.3-RELEASE/misc",
     'FreeBSD Ports 14.3.quarterly', "$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/man:$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/misc",
+    'FreeBSD Ports 15.0', "$manLocalDir/FreeBSD-ports-15.0-RELEASE/man:$manLocalDir/FreeBSD-ports-15.0-RELEASE/misc",
 
 
     # FreeBSD Releases + Ports
@@ -1014,7 +1021,7 @@ $manPathDefault = 'FreeBSD 14.3-RELEASE and Ports';
     'macOS 13.6.5', "$manLocalDir/macOS-13.6.5/man:$manLocalDir/macOS-13.6.5/developer-man:$manLocalDir/macOS-13.6.5/developer-platform-man:$manLocalDir/macOS-13.6.5/developer-platform-sdk-man:$manLocalDir/macOS-13.6.5/xctoolchain-man",  
     'macOS 12.7.3', "$manLocalDir/macOS-12.7.3/man:$manLocalDir/macOS-12.7.3/developer-man:$manLocalDir/macOS-12.7.3/developer-platform-man:$manLocalDir/macOS-12.7.3/developer-platform-sdk-man:$manLocalDir/macOS-12.7.3/xctoolchain-man",
     'macOS 11.1',    "$manLocalDir/macOS-11.1",
-    'macOS 10.15.0', "$manLocalDir/macOS-10.15.0",
+    'macOS 10.15.7', "$manLocalDir/macOS-10.15.7/man:$manLocalDir/macOS-10.15.7/developer-man:$manLocalDir/macOS-10.15.7/developer-platform-man:$manLocalDir/macOS-10.15.7/developer-platform-sdk-man:$manLocalDir/macOS-10.15.7/xctoolchain-man",
     'macOS 10.13.6', "$manLocalDir/macOS-10.13.6",
     'macOS 10.12.0', "$manLocalDir/macOS-10.12.0",
 
@@ -1222,8 +1229,8 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 14.3-RELEASE',
-    'freebsd-release', 'FreeBSD 14.3-RELEASE',
+    'freebsd',         'FreeBSD 15.0-RELEASE',
+    'freebsd-release', 'FreeBSD 15.0-RELEASE',
 
     'freebsd-stable',   'FreeBSD 15.0-STABLE',
     'freebsd-stable15', 'FreeBSD 15.0-STABLE',
@@ -1231,8 +1238,8 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-stable13', 'FreeBSD 13.5-STABLE',
 
     'freebsd-current',       'FreeBSD 16.0-CURRENT',
-    'freebsd-release-ports', 'FreeBSD 14.3-RELEASE and Ports',
-    'freebsd-ports', 'FreeBSD Ports 14.3.quarterly',
+    'freebsd-release-ports', 'FreeBSD 15.0-RELEASE and Ports',
+    'freebsd-ports', 'FreeBSD Ports 15.0',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat 9',
