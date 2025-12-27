@@ -970,7 +970,7 @@ $manPathDefault = 'FreeBSD 15.0-RELEASE and Ports';
     'Ubuntu 16.04 xenial', "$manLocalDir/Ubuntu-xenial-16.04/man:$manLocalDir/Ubuntu-xenial-16.04/misc",
     'Ubuntu 14.04 trusty', "$manLocalDir/Ubuntu-trusty-14.04/man:$manLocalDir/Ubuntu-trusty-14.04/misc",
 
-    'DragonFly 6.4.0',  "$manLocalDir/DragonFly-6.4.0",
+    'DragonFly 6.4.2',  "$manLocalDir/DragonFly-6.4.2/man:$manLocalDir/DragonFly-6.4.2/local/man",
     'DragonFly 5.8.3',  "$manLocalDir/DragonFly-5.8.3",
     'DragonFly 4.8.1',  "$manLocalDir/DragonFly-4.8.1",
     'DragonFly 3.8.2',  "$manLocalDir/DragonFly-3.8.2",
@@ -1246,7 +1246,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'suse',       'SuSE 11.3',
     'debian',     'Debian 13.1.0',
     'ubuntu',     'Ubuntu 24.04 noble',
-    'dragonfly',  'DragonFly 6.4.0',
+    'dragonfly',  'DragonFly 6.4.2',
     'centos',     'CentOS 7.9',
     'rocky',      'Rocky 10.0',
     'linux',      'Debian 13.1.0',
