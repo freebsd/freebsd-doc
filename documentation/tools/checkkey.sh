@@ -176,6 +176,7 @@ for key in ${keyids} ; do
 		"17")	algo="DSA" ;;
 		"18")	algo="ECC" ;;
 		"19")	algo="ECDSA" ;;
+		"22")	algo="EDDSA" ;;
 		*)	algo="*UNKNOWN*" ;;
 	esac
 
@@ -189,6 +190,7 @@ for key in ${keyids} ; do
 		DSA)	if [ "${bitlen}" -le 1024 ]; then \
 				badkey "DSA, but not DSA-2"; \
 			fi ;;
+		EDDSA)	;;
 		*)	badkey "non-preferred algorithm"
 	esac
 
