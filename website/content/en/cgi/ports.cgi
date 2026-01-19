@@ -485,9 +485,8 @@ sub check_input {
             )
           )
         {
-            &warn(
-"unknown search type ``$stype'', use `all', `text', `name', 'requires', or `maintainer'\n"
-            );
+            print "unknown search type, use `all', `text', `name', 'requires', or `maintainer'\n";
+            warn "unknown search type ``", escapeHTML($stype), "'', use `all', `text', `name', 'requires', or `maintainer'\n" if $debug >= 1;
             &exit(0);
         }
     }
