@@ -117,7 +117,7 @@ sub last_update {
 }
 
 sub last_update_message {
-    return "<p>Last database update: @{[ &last_update ]}</p>\n";
+    return "Last database update: @{[ &last_update ]}\n";
 }
 
 sub dec {
