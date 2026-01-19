@@ -36,12 +36,19 @@ require "./cgi-style.pl";
 
 our $t_style = qq`
 <style type="text/css">
-h3 { font-size: 1.2em; border-bottom: thin solid black; }
-span.footer_links { font-size: small; }
+h3 { font-size: 1.20em; border-bottom: thin solid black; max-width: 42em; }
 
 form#ports > input[name='query'] { text-align: center; }
-form#ports > input[name='query'] { width: 14em; }
+form#ports > input[name='query'] { width: 20em; }
 form#ports > input, form#ports > button, form#ports > select { font-size: large; }
+
+span.footer_links { font-size: small; }
+span.space { font-size: xx-small; }
+
+p#section_links, div#footer { max-width: 50em; }
+hr { margin-left: 0em; max-width: 50em; }
+a:link  { text-decoration:none; }
+a:hover { text-decoration:underline; }
 </style>
 
 <link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/ports.xml" title="FreeBSD Ports" />
