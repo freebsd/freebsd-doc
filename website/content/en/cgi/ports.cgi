@@ -487,15 +487,31 @@ sub check_input {
     }
 }
 
-sub faq {
+sub help {
     print <<EOF;
 <br/>
 <h1>FreeBSD Ports Search Help</h1>
 
-<h2>Keywords</h2>
+<p>
+The FreeBSD Ports and Packages Collection offers a simple way for
+users and administrators to install applications.
+</p>
+
+<p>
+<b>Package Name</b> searches for the name of a port or distribution.
+<b>Description</b> searches case-insensitive in a short comment about the port.
+<b>All</b> searches case-insensitive for the package name and in the
+description about the port.
+<b>Maintainer</b> searches for the email address of the port maintainer.
+<b>Requires</b> searches for ports which depends on this port.
+
+</p>
+
+<h2>External Links</h2>
+
 <dl>
   <dt><b>Description</b></dt>
-  <dd>A more detailed description (text).</dd>
+  <dd>A more detailed description (text) via the git repo</dd>
 
   <dt><b>Changes</b></dt>
   <dd>Read the latest changes via the git repo</dd>
@@ -520,6 +536,16 @@ as database for its operations. $ports_database is updated automatically every
 two hours.
 </p>
 
+<p>
+@{[ &last_update_message ]}
+</p>
+
+<h2>Copyright</h2>
+<pre>
+Copyright (c) 1996-2026 <a href="https://wolfram.schneider.org">Wolfram Schneider</a> &lt;wosch\@FreeBSD.org&gt;
+</pre>
+<p/>
+
 
 @{[ &footer_links ]}
 <hr noshade="noshade" />
@@ -530,7 +556,7 @@ sub footer_links {
     return <<EOF;
 <span class="footer_links">
   <a href="$script_name">home</a>
-  @{[ $stype eq "faq" ? "" : qq, | <a href="$script_name?stype=faq">help</a>, ]}
+  @{[ $stype eq "help" ? "" : qq, | <a href="$script_name?stype=help">help</a>, ]}
 </span>
 EOF
 }
@@ -562,9 +588,9 @@ if ( $path_info eq "/source" ) {
     &exit;
 }
 
-if ( $stype eq "faq" ) {
+if ( $stype eq "help" ) {
     print &short_html_header( "FreeBSD Ports Search Help", 1 );
-    &faq;
+    &help;
     &footer;
     print &html_footer;
     &exit(0);
