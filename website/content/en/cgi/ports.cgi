@@ -1,4 +1,4 @@
-#!/usr/bin/perl -T
+#!/usr/local/bin/perl -T
 #
 # SPDX-License-Identifier: BSD-2-Clause
 # Copyright (c) 1996-2026 Wolfram Schneider <wosch@FreeBSD.ORG>
