@@ -30,8 +30,10 @@
 use POSIX qw(strftime);
 use Time::Local;
 
+our $hsty_base;
 require "./cgi-style.pl";
-$t_style = qq`
+
+our $t_style = qq`
 <style type="text/css">
 h3 { font-size: 1.2em; border-bottom: thin solid black; }
 span.footer_links { font-size: small; }
@@ -173,7 +175,6 @@ s/([\000-\032\;\/\?\:\@\&\=\%\'\"\`\<\>\177-\377 ])/sprintf('%%%02x',ord($1))/eg
     $_;
 }
 
-sub warn { print "$_[0]" }
 sub env  { defined( $ENV{ $_[0] } ) ? $ENV{ $_[0] } : undef; }
 sub exit { exit 0 }
 
@@ -256,7 +257,7 @@ sub readcoll {
 # basic function for HTML output
 sub out {
     local ($line) = @_;
-    local (
+    my (
         $version, $path,     $local,    $comment,  $descfile,
         $email,   $sections, $bdepends, $rdepends, @rest
     ) = split( /\|/, $line );
