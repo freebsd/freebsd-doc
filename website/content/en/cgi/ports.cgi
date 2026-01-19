@@ -29,6 +29,7 @@
 
 use POSIX qw(strftime);
 use Time::Local;
+use warnings;
 
 our $hsty_base;
 require "./cgi-style.pl";
