@@ -81,7 +81,7 @@ sub init_variables {
     $mailto = 'www@FreeBSD.org';
 
     # Mailinglist for FreeBSD Ports
-    $mailtoList = 'ports@FreeBSD.org';
+    $mailtoList = 'freebsd-ports@FreeBSD.org';
 
     # use mailto:email?subject
     $mailtoAdvanced = 'yes';
@@ -420,24 +420,6 @@ Search for:
 
 }
 
-sub footer {
-
-    print <<EOF;
-<span class="footer_links">
-  <img align="right" src="$hsty_base/gifs/powerlogo.gif" alt="Powered by FreeBSD"/>
-  &copy; 1996-2026 by Wolfram Schneider. All rights reserved.<br/>
-
-  General questions about FreeBSD ports should be sent to 
-  <a href="mailto:$mailtoList"><i>$mailtoList</i></a><br/>
-
-  @{[ &last_update_message ]}
-</span>
-<hr noshade="noshade" />
-<p/>
-
-EOF
-}
-
 sub check_query {
     my ( $query, $sourceid ) = @_;
 
@@ -546,6 +528,11 @@ Copyright (c) 1996-2026 <a href="https://wolfram.schneider.org">Wolfram Schneide
 </pre>
 <p/>
 
+<h2>Questions</h2>
+<p>
+General questions about FreeBSD ports should be sent to 
+<a href="mailto:$mailtoList">$mailtoList</a>
+</p>
 
 @{[ &footer_links ]}
 <hr noshade="noshade" />
@@ -591,7 +578,6 @@ if ( $path_info eq "/source" ) {
 if ( $stype eq "help" ) {
     print &short_html_header( "FreeBSD Ports Search Help", 1 );
     &help;
-    &footer;
     print &html_footer;
     &exit(0);
 }
@@ -611,7 +597,6 @@ $query = &check_query( $query, $sourceid );
 &forms;
 
 if ( $query_string eq "" || !$query ) {
-    &footer;
     print &html_footer;
     &exit(0);
 }
@@ -653,5 +638,4 @@ else {
 }
 
 print qq{<hr noshade="noshade" />\n};
-&footer;
 print &html_footer;
