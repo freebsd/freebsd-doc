@@ -47,7 +47,7 @@ form#ports > input, form#ports > button, form#ports > select { font-size: large;
 `;
 
 # No unlimited result set. A HTML page with 1000 results can be 10MB big.
-my $max_hits = 1000;
+my $max_hits         = 1000;
 my $max_hits_default = 250;
 my $max;
 
@@ -211,7 +211,7 @@ sub readcoll {
             open( C, $localportsdb ) || do {
                 warn "Cannot open ports database $localportsdb: $!\n";
                 &exit;
-              }
+            }
         }
 
         while (<C>) {
@@ -256,10 +256,10 @@ sub out {
     }
 
     $counter++;
-    $pathB        = $path;
+    $pathB = $path;
     $pathB =~ s/^$localPrefix/ports/o;
 
-    $path         =~ s/^$localPrefix/$remotePrefixFtp/o;
+    $path     =~ s/^$localPrefix/$remotePrefixFtp/o;
     $descfile =~ s/^$localPrefix/$remotePrefixFtp/o;
     $version = &encode_url($version);
 
@@ -268,7 +268,7 @@ sub out {
     local ($l) = $path;
     $l =~ s%^$remotePrefixFtp%$remotePrefixRepo/log%o;
     local ($t) = $path;
-    $t =~ s%^$remotePrefixFtp%$remotePrefixRepo/tree%o;
+    $t        =~ s%^$remotePrefixFtp%$remotePrefixRepo/tree%o;
     $descfile =~ s%^$remotePrefixFtp%$remotePrefixRepo/plain%o;
 
     print
@@ -384,9 +384,9 @@ Search for:
 
     local (%d);
     %d = (
-        'name',       'Package Name',     'all',      'All',
-        'maintainer', 'Maintainer',       'text',     'Description',
-        'requires', 'Requires',
+        'name',       'Package Name', 'all',  'All',
+        'maintainer', 'Maintainer',   'text', 'Description',
+        'requires',   'Requires',
     );
 
     foreach ( 'all', 'name', 'text', 'maintainer', 'requires' ) {
@@ -421,7 +421,7 @@ Search for:
 
 sub footer {
 
-print <<EOF;
+    print <<EOF;
 <span class="footer_links">
   <img align="right" src="$hsty_base/gifs/powerlogo.gif" alt="Powered by FreeBSD"/>
   &copy; 1996-2026 by Wolfram Schneider. All rights reserved.<br/>
@@ -438,18 +438,20 @@ EOF
 }
 
 sub check_query {
-    my ($query, $sourceid) = @_;
+    my ( $query, $sourceid ) = @_;
 
     $query =~ s/"/ /g;
     $query =~ s/^\s+//;
     $query =~ s/\s+$//;
 
     # XXX: Firefox opensearch autocomplete workarounds
-    if ($sourceid eq 'opensearch') {
-	# remove space before a dot 
-	$query =~ s/ \././g;
-	# remove space between double colon
-	$query =~ s/: :/::/g;
+    if ( $sourceid eq 'opensearch' ) {
+
+        # remove space before a dot
+        $query =~ s/ \././g;
+
+        # remove space between double colon
+        $query =~ s/: :/::/g;
     }
 
     return $query;
@@ -468,21 +470,24 @@ sub check_input {
             )
           )
         {
-            print "unknown search type, use `all', `text', `name', 'requires', or `maintainer'\n";
-            warn "unknown search type ``", escapeHTML($stype), "'', use `all', `text', `name', 'requires', or `maintainer'\n" if $debug >= 1;
+            print
+"unknown search type, use `all', `text', `name', 'requires', or `maintainer'\n";
+            warn "unknown search type ``", escapeHTML($stype),
+              "'', use `all', `text', `name', 'requires', or `maintainer'\n"
+              if $debug >= 1;
             &exit(0);
         }
     }
 
     $max = int($max);
-    if ($max <= 0 || $max > $max_hits) {
+    if ( $max <= 0 || $max > $max_hits ) {
         warn "reset max=$max to $max_hits_default\n";
         $max = $max_hits_default;
     }
 }
 
 sub faq {
-    print <<EOF
+    print <<EOF;
 <br/>
 <h1>FreeBSD Ports Search Help</h1>
 
@@ -575,7 +580,7 @@ if ( !$query && $query_string =~ /^([^=&]+)$/ ) {
 # automatically read collections, need only 0.2 sec on a pentium
 @sec = &readcoll;
 
-$query = &check_query($query, $sourceid);
+$query = &check_query( $query, $sourceid );
 &forms;
 
 if ( $query_string eq "" || !$query ) {
@@ -588,7 +593,7 @@ if ( $query_string eq "" || !$query ) {
 $counter = 0;
 
 # no prefix search for requires supported yet
-$query =~ s/^\^// if $stype eq 'requires'; 
+$query =~ s/^\^// if $stype eq 'requires';
 
 # quote non characters
 $query =~ s/([^\w\^])/\\$1/g;
@@ -611,9 +616,10 @@ EOF
 else {
     print "</dl>\n";
     my $counter_message = $counter;
-    if ($counter >= $max) {
+    if ( $counter >= $max ) {
         $counter_message .= " (max hit limit reached)";
-        warn "$counter_message: query=$query stype=$stype section=$section\n" if $debug >= 1;
+        warn "$counter_message: query=$query stype=$stype section=$section\n"
+          if $debug >= 1;
     }
     print "<p>Number of hits: $counter_message\n</p>\n";
     print &footer_links;
