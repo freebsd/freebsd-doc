@@ -524,6 +524,12 @@ Copyright (c) 1996-2026 <a href="https://wolfram.schneider.org">Wolfram Schneide
 </pre>
 <p/>
 
+<h2>Misc</h2>
+<ul>
+<li><a href="https://forums.freebsd.org/categories/ports-and-packages.21/">FreeBSD Forums: Ports and Packages</a></li>
+<li><a href="https://www.freshports.org/">FreshPorts -- The Place For Ports - Most recent commits</a></li>
+</ul>
+
 <h2>Questions</h2>
 <p>
 General questions about FreeBSD ports should be sent to 
