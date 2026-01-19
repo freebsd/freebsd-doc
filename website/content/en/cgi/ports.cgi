@@ -92,23 +92,6 @@ sub init_variables {
     $ENV{'PATH'} = '/bin:/usr/bin';
 }
 
-sub packages_exist {
-    local ( $file, *p ) = @_;
-
-    open( P, $file ) || do {
-        warn "open $file: $!\n";
-        warn "Cannot create packages links\n";
-        return 1;
-    };
-
-    while (<p>) {
-        chop;
-        $p{$_} = 1;
-    }
-    close P;
-    return 0;
-}
-
 # return the date of the last ports database update
 sub last_update {
     local ($file) = "$portsDatabaseHeadDir/$ports_database";
