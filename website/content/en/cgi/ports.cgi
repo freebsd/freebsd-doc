@@ -365,20 +365,9 @@ sub search_ports {
 }
 
 sub forms {
-    print qq{<p>
-The FreeBSD Ports and Packages Collection offers a simple way for users and administrators to install applications.
-</p>
-};
 
-    print qq{<p>
-"Package Name" searches for the name of a port or distribution.
-"Description" searches case-insensitive in a short comment about the port.
-"All" searches case-insensitive for the package name and in the
-description about the port.
-</p>
-
+    print qq{
 <form id="ports" method="get" action="$script_name">
-Search for:
 <input name="query" value="$query" type="text" autocapitalize="none" autofocus />
 <select name="stype">
 };
