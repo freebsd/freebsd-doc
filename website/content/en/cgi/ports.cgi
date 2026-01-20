@@ -556,22 +556,20 @@ EOF
 
 &init_variables;
 $query_string = &env('QUERY_STRING');
-$path_info    = &env('PATH_INFO');
+$path_info    = &env('PATH_INFO') // "";
 &decode_form( $query_string, *form );
 
 $section     = $form{'sektion'};
 $section     = 'all' if ( !$section );
-$query       = $form{'query'};
-$stype       = $form{'stype'};
+$query       = $form{'query'}    // "";
+$stype       = $form{'stype'}    // "";
 $sourceid    = $form{'sourceid'} // "";
 $script_name = &env('SCRIPT_NAME');
 $max         = $form{'max'} // $max_hits_default;
 
 if ( $path_info eq "/source" ) {
-
-    # XXX
     print "Content-type: text/plain\n\n";
-    open( R, $0 ) || do { print "ick!\n"; &exit; };
+    open( R, $0 ) || do { warn "open $0: $!!\n"; &exit; };
     while (<R>) { print }
     close R;
     &exit;
