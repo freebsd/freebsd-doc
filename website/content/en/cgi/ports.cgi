@@ -263,6 +263,7 @@ sub out {
         }
     }
 
+    $rdepends //= "";
     $counter++;
     $pathB = $path;
     $pathB =~ s/^$localPrefix/ports/o;
