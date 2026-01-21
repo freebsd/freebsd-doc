@@ -363,8 +363,11 @@ sub search_ports {
         elsif ( $stype eq 'maintainer' && $a[5] =~ /$query/io ) {
             &out( $today{$key} );
         }
-        elsif ( $stype eq 'requires'
-            && ( $a[7] =~ /$query/io || $a[8] =~ /$query/io ) )
+        elsif (
+            $stype eq 'requires'
+            && ( defined $a[7] && $a[7] =~ /$query/io
+                || ( defined $a[8] && $a[8] =~ /$query/io ) )
+          )
         {
             &out( $today{$key} );
         }
