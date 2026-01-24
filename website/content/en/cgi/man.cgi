@@ -958,7 +958,7 @@ $manPathDefault = 'FreeBSD 15.0-RELEASE and Ports';
     'Debian 9.13.0', "$manLocalDir/Debian-9.13.0/man:$manLocalDir/Debian-9.13.0/misc",
     'Debian 10.13.0', "$manLocalDir/Debian-10.13.0/man:$manLocalDir/Debian-10.13.0/misc",
     'Debian 11.11.0', "$manLocalDir/Debian-11.11.0/man:$manLocalDir/Debian-11.11.0/misc",
-    'Debian 12.12.0', "$manLocalDir/Debian-12.12.0/man:$manLocalDir/Debian-12.12.0/misc",
+    'Debian 12.13.0', "$manLocalDir/Debian-12.13.0/man:$manLocalDir/Debian-12.13.0/misc",
     'Debian 13.3.0', "$manLocalDir/Debian-13.3.0/man:$manLocalDir/Debian-13.3.0/misc",
     'Debian 14.0 unstable', "$manLocalDir/Debian-unstable/man:$manLocalDir/Debian-unstable/misc",
 
