@@ -29,6 +29,8 @@
 
 use POSIX qw(strftime);
 use Time::Local;
+use JSON;
+
 use warnings;
 
 our $hsty_base;
@@ -49,6 +51,8 @@ p#section_links, div#footer { max-width: 50em; }
 hr { margin-left: 0em; max-width: 50em; }
 a:link  { text-decoration:none; }
 a:hover { text-decoration:underline; }
+table, th, td { border: 1px solid black; border-collapse: collapse; }
+th, td { padding-left: 0.5em; padding-right: 0.5em; }
 </style>
 
 <link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/ports.xml" title="FreeBSD Ports" />
@@ -60,6 +64,9 @@ my $max_hits_default = 250;
 my $max;
 
 my $debug = 1;
+
+# feature flags
+my $enable_packages_link = 1;
 
 sub init_variables {
     $localPrefix = '/usr/ports';    # ports prefix
@@ -129,20 +136,18 @@ sub dec {
     return ($_);
 }
 
-# $indent is a bit of optional data processing I put in for
-# formatting the data nicely when you are emailing it.
-# This is derived from code by Denis Howe <dbh@doc.ic.ac.uk>
-# and Thomas A Fine <fine@cis.ohio-state.edu>
 sub decode_form {
-    local ( $form, *data, $indent, $key, $_ ) = @_;
-    foreach $_ ( split( /&/, $form ) ) {
-        ( $key, $_ ) = split( /=/, $_, 2 );
-        $_   =~ s/\+/ /g;                                 # + -> space
+    local ( $form, *data ) = @_;
+
+    foreach my $line ( split( /&/, $form ) ) {
+        my ( $key, $val ) = split( /=/, $line, 2 );
+        $val = "" if !defined $val;
+
+        $val =~ s/\+/ /g;                                 # + -> space
         $key =~ s/\+/ /g;                                 # + -> space
-        $_   =~ s/%([\da-f]{1,2})/pack(C,hex($1))/eig;    # undo % escapes
+        $val =~ s/%([\da-f]{1,2})/pack(C,hex($1))/eig;    # undo % escapes
         $key =~ s/%([\da-f]{1,2})/pack(C,hex($1))/eig;    # undo % escapes
-        $_   =~ s/[\r\n]+/\n\t/g if defined($indent);     # indent data after \n
-        $data{$key} = $_;
+        $data{$key} = $val;
     }
 }
 
@@ -266,6 +271,9 @@ sub out {
     $rdepends //= "";
     $counter++;
     $pathB = $path;
+    my $port_path = $path;
+    $port_path =~ s,/usr/ports/,,;
+
     $pathB =~ s/^$localPrefix/ports/o;
 
     $path     =~ s/^$localPrefix/$remotePrefixFtp/o;
@@ -284,9 +292,14 @@ sub out {
       qq{<dt><b><a name="$version"></a><a href="$t">$version</a></b></dt>\n};
     print qq{<dd>}, &escapeHTML($comment), qq{<br />\n};
 
-    print qq[<a href="$descfile?revision=HEAD">Description</a> <b>:</b>\n];
+    print qq[<a href="$descfile?revision=HEAD">Description</a>\n];
 
-    print qq[<a href="$l">Changes</a> <br />\n];
+    print qq[<b>:</b> <a href="$l">Changes</a>\n];
+    print qq[<b>:</b> <a href="?stype=pkg&amp;query=], escapeHTML($port_path),
+      qq[">Packages</a>\n]
+      if $enable_packages_link;
+
+    print qq[<br />\n];
 
     print qq{<i>Maintained by:</i> <a href="mailto:$email}
       . (
@@ -329,6 +342,136 @@ sub out {
     print qq[<dd>&nbsp;</dd>];
     print qq[\n\n];
 
+}
+
+# search and output
+sub package_links {
+    my $q      = shift;
+    my $filter = shift;
+
+    my @system = (
+        qw[env packagesize_dir=/usr/local/www/ports/packages /usr/local/www/bin/pkg-search.sh],
+    );
+    push @system, $q;
+
+    if ( !open( PKG_IN, '-|' ) ) {
+        if ( !exec(@system) ) {
+            die join( " ", @system ) . " $!\n";
+        }
+    }
+    binmode( PKG_IN, ":bytes" );
+
+    my $hash;
+    my $counter = 0;
+    while (<PKG_IN>) {
+        chomp;
+        next if !(m,^(.*?)-(.*?)\.yaml:(.*),);
+
+        my $arch     = $1;
+        my $rel      = $1;
+        my $snapshot = $2;
+        my $path     = "$1/$2";
+        my $perl     = decode_json($3);
+
+        $arch =~ s,.*%3A,,;
+        if ( $rel =~ /^FreeBSD%3A(\d+)%3A/ ) {
+            $rel = ":$1:";
+        }
+
+        if ( $. == 1 ) {
+            print qq[<h2>$perl->{"name"}: $perl->{"comment"}</h2>\n];
+
+            print qq[homepage: <a href="], $perl->{"www"},
+              qq[">] . $perl->{"www"} . "</a><br/>\n";
+            print qq[FreeBSD ports git: <a href="$remotePrefixRepo/tree/]
+              . $perl->{"origin"} . qq[">]
+              . $perl->{"origin"}
+              . qq[</a><br/>\n];
+            print qq[maintainer: ], $perl->{"maintainer"}, "<br/>\n";
+
+            print qq[<h3>Description</h3>\n];
+            print "<pre>", $perl->{"desc"}, "</pre>\n";
+            print qq[<h3>Download packages in *.pkg format</h3>\n];
+            print qq{<table>\n};
+            print qq{<thead>\n};
+            print
+qq{<tr><th>Release</th><th>Version</th><th>Build Time</th></tr>\n};
+            print qq{</thead>\n};
+            print qq{<tbody>\n};
+        }
+
+        my $release  = $perl->{"abi"} . " " . $snapshot;
+        my $time     = $perl->{"annotations"}->{"build_timestamp"} // "";
+        my $version  = $perl->{"version"};
+        my $repopath = $perl->{"repopath"};
+
+        $time =~ s/\+\d{4}$//;
+        $time =~ s/T(\d\d):(\d\d):(\d\d)$/ $1:$2/;
+
+        my $pkg_opt = $repopath;
+        $pkg_opt =~ s,.*/,,;
+        $pkg_opt =~ s,\~.*,,;
+
+        if ($filter) {
+            next
+              if index( $release, $filter ) < 0
+              && index( $pkg_opt, $filter ) < 0
+              && index( $version, $filter ) < 0
+              && index( $time,    $filter ) < 0;
+        }
+
+        $counter++;
+
+        my $info =
+          $time
+          ? qq[pkg: $pkg_opt\n size: $perl->{"pkgsize"} bytes\n git_hash: $perl->{"annotations"}->{"port_git_hash"}\n ]
+          . qq[ports_top_git_hash: $perl->{"annotations"}->{"ports_top_git_hash"}\nchecksum: $perl->{"sum"}\n]
+          : "";
+
+        print "<tr>\n";
+        print "<td>", qq[<a href="https://pkg.freebsd.org/], escapeHTML($path),
+          "/", escapeHTML($repopath), qq[">$release</a></td>\n];
+        print "<td>",                       $version, "</td>\n";
+        print qq[<td><span title="$info">], $time,    "</span></td>\n";
+
+        print "</tr>\n";
+
+        $hash->{'version'}->{$version}++;
+        $hash->{'arch'}->{$arch}++;
+        $hash->{'release'}->{$rel}++;
+        $hash->{'snapshot'}->{$snapshot}++
+          if $snapshot eq 'latest' || $snapshot eq 'quarterly';
+    }
+
+    if ( $counter || $. >= 1 ) {
+        print <<EOF;
+  </tbody>
+</table>
+<br/>
+EOF
+
+        foreach my $key ( sort keys %$hash ) {
+            print "<b>", escapeHTML($key), "</b>: \n";
+            my $flag = 0;
+            foreach my $k ( sort keys %{ $hash->{$key} } ) {
+                print " - " if $flag++;
+                print qq[<a title="counter=], $hash->{$key}->{$k},
+                  qq[" href="?stype=pkg&amp;query=], escapeHTML($q),
+                  qq[&amp;pkg_filter=], escapeHTML($k), qq[">], escapeHTML($k),
+                  "</a>\n";
+            }
+            print "<br/>\n";
+        }
+
+        if ( $filter ne "" ) {
+            print escapeHTML(">>>"), qq[ <a href="?stype=pkg&amp;query=],
+              escapeHTML($q),
+              qq[">reset filter</a> ], escapeHTML("<<<"), "\n";
+        }
+
+    }
+
+    return $counter;
 }
 
 # search and output
@@ -450,6 +593,7 @@ sub check_input {
                 || $stype eq "maintainer"
                 || $stype eq "requires"
                 || $stype eq "all"
+                || $stype eq "pkg"
             )
           )
         {
@@ -497,6 +641,9 @@ description about the port.
 
   <dt><b>Changes</b></dt>
   <dd>Read the latest changes via the git repo</dd>
+
+  <dt><b>Packages</b></dt>
+  <dd>List of available packages for all supported releases and branches</dd>
 </dl>
 
 <h2>Documentation</h2>
@@ -537,7 +684,7 @@ Copyright (c) 1996-2026 <a href="https://wolfram.schneider.org">Wolfram Schneide
 <h2>Questions</h2>
 <p>
 General questions about FreeBSD ports should be sent to 
-<a href="mailto:$mailtoList">$mailtoList</a>
+the <a href="https://lists.freebsd.org/subscription/freebsd-ports">$mailtoList</a> mailing list.
 </p>
 
 @{[ &footer_links ]}
@@ -565,9 +712,10 @@ $path_info    = &env('PATH_INFO') // "";
 
 $section     = $form{'sektion'};
 $section     = 'all' if ( !$section );
-$query       = $form{'query'}    // "";
-$stype       = $form{'stype'}    // "";
-$sourceid    = $form{'sourceid'} // "";
+$query       = $form{'query'}      // "";
+$stype       = $form{'stype'}      // "";
+$sourceid    = $form{'sourceid'}   // "";
+$pkg_filter  = $form{'pkg_filter'} // "";
 $script_name = &env('SCRIPT_NAME');
 $max         = $form{'max'} // $max_hits_default;
 
@@ -598,7 +746,13 @@ if ( !$query && $query_string =~ /^([^=&]+)$/ ) {
 @sec = &readcoll;
 
 $query = &check_query( $query, $sourceid );
-&forms;
+
+# no search menu for packages links
+if ( $enable_packages_link && $stype eq 'pkg' ) {
+}
+else {
+    &forms;
+}
 
 if ( $query_string eq "" || !$query ) {
     print &html_footer;
@@ -616,8 +770,19 @@ $query =~ s/([^\w\^])/\\$1/g;
 
 # search
 if ($query) {
-    &readindex( *today, *msec );
-    &search_ports;
+    my $q = "";
+    if ( $query =~ m,^([A-Za-z0-9\-]+)(\\/)([A-Za-z0-9\-_\+\.\\]+)$, ) {
+        $q = "$1$2$3";
+        $q =~ s,\\,,g;
+    }
+
+    if ( $q ne "" && $enable_packages_link && $stype eq 'pkg' ) {
+        $counter = &package_links( $q, $pkg_filter );
+    }
+    else {
+        &readindex( *today, *msec );
+        &search_ports;
+    }
 }
 
 if ( !$counter ) {
@@ -626,18 +791,19 @@ if ( !$counter ) {
 Sorry, nothing found.
 You may look for other <a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>
 </p>
+@{[ &footer_links ]}
 EOF
 }
 
-else {
-    print "</dl>\n";
+if ($counter) {
+    print "</dl>\n" if $stype ne 'pkg';
     my $counter_message = $counter;
     if ( $counter >= $max ) {
         $counter_message .= " (max hit limit reached)";
         warn "$counter_message: query=$query stype=$stype section=$section\n"
           if $debug >= 1;
     }
-    print "<p>Number of hits: $counter_message\n</p>\n";
+    print "<p>Number of results: $counter_message\n</p>\n";
     print &footer_links;
 }
 
