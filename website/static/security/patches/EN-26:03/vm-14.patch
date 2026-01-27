@@ -1,0 +1,62 @@
+--- sys/vm/vm_fault.c.orig
++++ sys/vm/vm_fault.c
+@@ -139,6 +139,7 @@
+ 	vm_object_t	object;
+ 	vm_pindex_t	pindex;
+ 	vm_page_t	m;
++	bool		m_needs_zeroing;
+ 
+ 	/* Top-level map object. */
+ 	vm_object_t	first_object;
+@@ -265,6 +266,7 @@
+ vm_fault_deallocate(struct faultstate *fs)
+ {
+ 
++	fs->m_needs_zeroing = true;
+ 	vm_fault_page_release(&fs->m_cow);
+ 	vm_fault_page_release(&fs->m);
+ 	vm_object_pip_wakeup(fs->object);
+@@ -1172,7 +1174,7 @@
+ 	/*
+ 	 * Zero the page if necessary and mark it valid.
+ 	 */
+-	if ((fs->m->flags & PG_ZERO) == 0) {
++	if (fs->m_needs_zeroing) {
+ 		pmap_zero_page(fs->m);
+ 	} else {
+ 		VM_CNT_INC(v_ozfod);
+@@ -1286,6 +1288,7 @@
+ 			vm_waitpfault(dset, vm_pfault_oom_wait * hz);
+ 		return (FAULT_RESTART);
+ 	}
++	fs->m_needs_zeroing = (fs->m->flags & PG_ZERO) == 0;
+ 	fs->oom_started = false;
+ 
+ 	return (FAULT_CONTINUE);
+@@ -1553,6 +1556,7 @@
+ 	fs.fault_flags = fault_flags;
+ 	fs.map = map;
+ 	fs.lookup_still_valid = false;
++	fs.m_needs_zeroing = true;
+ 	fs.oom_started = false;
+ 	fs.nera = -1;
+ 	fs.can_read_lock = true;
+--- sys/vm/vm_object.c.orig
++++ sys/vm/vm_object.c
+@@ -2088,7 +2088,7 @@
+ 	    (options & (OBJPR_CLEANONLY | OBJPR_NOTMAPPED)) == OBJPR_NOTMAPPED,
+ 	    ("vm_object_page_remove: illegal options for object %p", object));
+ 	if (object->resident_page_count == 0)
+-		return;
++		goto remove_pager;
+ 	vm_object_pip_add(object, 1);
+ again:
+ 	p = vm_page_find_least(object, start);
+@@ -2164,6 +2164,7 @@
+ 	}
+ 	vm_object_pip_wakeup(object);
+ 
++remove_pager:
+ 	vm_pager_freespace(object, start, (end == 0 ? object->size : end) -
+ 	    start);
+ }

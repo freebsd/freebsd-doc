@@ -1,0 +1,550 @@
+--- sys/fs/cd9660/cd9660_lookup.c.orig
++++ sys/fs/cd9660/cd9660_lookup.c
+@@ -134,7 +134,7 @@
+ 	char *name;
+ 	struct vnode **vpp = ap->a_vpp;
+ 	struct componentname *cnp = ap->a_cnp;
+-	int flags = cnp->cn_flags;
++	uint64_t flags = cnp->cn_flags;
+ 	int nameiop = cnp->cn_nameiop;
+ 
+ 	ep2 = ep = NULL;
+--- sys/fs/fuse/fuse_vnops.c.orig
++++ sys/fs/fuse/fuse_vnops.c
+@@ -1433,9 +1433,9 @@
+ 	struct timespec now;
+ 
+ 	int nameiop = cnp->cn_nameiop;
+-	int flags = cnp->cn_flags;
+-	int wantparent = flags & (LOCKPARENT | WANTPARENT);
+-	int islastcn = flags & ISLASTCN;
++	bool wantparent = cnp->cn_flags & (LOCKPARENT | WANTPARENT);
++	bool isdotdot = cnp->cn_flags & ISDOTDOT;
++	bool islastcn = cnp->cn_flags & ISLASTCN;
+ 	struct mount *mp = vnode_mount(dvp);
+ 	struct fuse_data *data = fuse_get_mpdata(mp);
+ 	int default_permissions = data->dataflags & FSESS_DEFAULT_PERMISSIONS;
+@@ -1468,8 +1468,7 @@
+ 		return err;
+ 
+ 	is_dot = cnp->cn_namelen == 1 && *(cnp->cn_nameptr) == '.';
+-	if ((flags & ISDOTDOT) && !(data->dataflags & FSESS_EXPORT_SUPPORT))
+-	{
++	if (isdotdot && !(data->dataflags & FSESS_EXPORT_SUPPORT)) {
+ 		if (!(VTOFUD(dvp)->flag & FN_PARENT_NID)) {
+ 			/*
+ 			 * Since the file system doesn't support ".." lookups,
+@@ -1590,7 +1589,7 @@
+ 		}
+ 	} else {
+ 		/* Entry was found */
+-		if (flags & ISDOTDOT) {
++		if (isdotdot) {
+ 			struct fuse_lookup_alloc_arg flaa;
+ 
+ 			flaa.nid = nid;
+--- sys/fs/nullfs/null_vnops.c.orig
++++ sys/fs/nullfs/null_vnops.c
+@@ -389,7 +389,7 @@
+ {
+ 	struct componentname *cnp = ap->a_cnp;
+ 	struct vnode *dvp = ap->a_dvp;
+-	int flags = cnp->cn_flags;
++	uint64_t flags = cnp->cn_flags;
+ 	struct vnode *vp, *ldvp, *lvp;
+ 	struct mount *mp;
+ 	int error;
+@@ -407,17 +407,25 @@
+ 
+ 	/*
+ 	 * Renames in the lower mounts might create an inconsistent
+-	 * configuration where lower vnode is moved out of the
+-	 * directory tree remounted by our null mount.  Do not try to
+-	 * handle it fancy, just avoid VOP_LOOKUP() with DOTDOT name
+-	 * which cannot be handled by VOP, at least passing over lower
+-	 * root.
++	 * configuration where lower vnode is moved out of the directory tree
++	 * remounted by our null mount.
++	 *
++	 * Do not try to handle it fancy, just avoid VOP_LOOKUP() with DOTDOT
++	 * name which cannot be handled by the VOP.
+ 	 */
+-	if ((ldvp->v_vflag & VV_ROOT) != 0 && (flags & ISDOTDOT) != 0) {
+-		KASSERT((dvp->v_vflag & VV_ROOT) == 0,
+-		    ("ldvp %p fl %#x dvp %p fl %#x flags %#x",
+-		    ldvp, ldvp->v_vflag, dvp, dvp->v_vflag, flags));
+-		return (ENOENT);
++	if ((flags & ISDOTDOT) != 0) {
++		struct nameidata *ndp;
++
++		if ((ldvp->v_vflag & VV_ROOT) != 0) {
++			KASSERT((dvp->v_vflag & VV_ROOT) == 0,
++			    ("ldvp %p fl %#x dvp %p fl %#x flags %#jx",
++			    ldvp, ldvp->v_vflag, dvp, dvp->v_vflag,
++			    (uintmax_t)flags));
++			return (ENOENT);
++		}
++		ndp = lookup_nameidata(cnp);
++		if (ndp != NULL && lookup_isroot(ndp, ldvp))
++			return (ENOENT);
+ 	}
+ 
+ 	/*
+--- sys/fs/smbfs/smbfs_vnops.c.orig
++++ sys/fs/smbfs/smbfs_vnops.c
+@@ -1044,7 +1044,7 @@
+ 	struct smbfattr fattr, *fap;
+ 	struct smb_cred *scred;
+ 	char *name = cnp->cn_nameptr;
+-	int flags = cnp->cn_flags;
++	uint64_t flags = cnp->cn_flags;
+ 	int nameiop = cnp->cn_nameiop;
+ 	int nmlen = cnp->cn_namelen;
+ 	int error, islastcn, isdot;
+--- sys/fs/unionfs/union_vnops.c.orig
++++ sys/fs/unionfs/union_vnops.c
+@@ -76,14 +76,30 @@
+ 	KASSERT(((vp)->v_op == &unionfs_vnodeops), \
+ 	    ("unionfs: it is not unionfs-vnode"))
+ 
++static bool
++unionfs_lookup_isroot(struct componentname *cnp, struct vnode *dvp)
++{
++	struct nameidata *ndp;
++
++	if (dvp == NULL)
++		return (false);
++	if ((dvp->v_vflag & VV_ROOT) != 0)
++		return (true);
++	ndp = lookup_nameidata(cnp);
++	if (ndp == NULL)
++		return (false);
++	return (lookup_isroot(ndp, dvp));
++}
++
+ static int
+ unionfs_lookup(struct vop_cachedlookup_args *ap)
+ {
+ 	int		iswhiteout;
+ 	int		lockflag;
+ 	int		error , uerror, lerror;
++	uint64_t	cnflags;
+ 	u_long		nameiop;
+-	u_long		cnflags, cnflagsbk;
++	u_long		cnflagsbk;
+ 	struct unionfs_node *dunp;
+ 	struct vnode   *dvp, *udvp, *ldvp, *vp, *uvp, *lvp, *dtmpvp;
+ 	struct vattr	va;
+@@ -124,6 +140,10 @@
+ 		if (LOOKUP != nameiop && udvp == NULLVP)
+ 			return (EROFS);
+ 
++		if (unionfs_lookup_isroot(cnp, udvp) ||
++		    unionfs_lookup_isroot(cnp, ldvp))
++			return (ENOENT);
++
+ 		if (udvp != NULLVP) {
+ 			dtmpvp = udvp;
+ 			if (ldvp != NULLVP)
+--- sys/kern/uipc_mqueue.c.orig
++++ sys/kern/uipc_mqueue.c
+@@ -846,7 +846,8 @@
+ 	struct mqfs_node *pd;
+ 	struct mqfs_node *pn;
+ 	struct mqfs_info *mqfs;
+-	int nameiop, flags, error, namelen;
++	uint64_t flags;
++	int nameiop, error, namelen;
+ 	char *pname;
+ 	struct thread *td;
+ 
+--- sys/kern/vfs_cache.c.orig
++++ sys/kern/vfs_cache.c
+@@ -4006,7 +4006,7 @@
+  */
+ struct nameidata_outer {
+ 	size_t ni_pathlen;
+-	int cn_flags;
++	uint64_t cn_flags;
+ };
+ 
+ struct nameidata_saved {
+@@ -4292,7 +4292,7 @@
+ 	(NC_NOMAKEENTRY | NC_KEEPPOSENTRY | LOCKLEAF | LOCKPARENT | WANTPARENT | \
+ 	 FAILIFEXISTS | FOLLOW | EMPTYPATH | LOCKSHARED | SAVENAME | SAVESTART | \
+ 	 WILLBEDIR | ISOPEN | NOMACCHECK | AUDITVNODE1 | AUDITVNODE2 | NOCAPCHECK | \
+-	 WANTIOCTLCAPS)
++	 WANTIOCTLCAPS | NAMEILOOKUP)
+ 
+ #define CACHE_FPL_INTERNAL_CN_FLAGS \
+ 	(ISDOTDOT | MAKEENTRY | ISLASTCN)
+@@ -5126,30 +5126,19 @@
+ cache_fplookup_dotdot(struct cache_fpl *fpl)
+ {
+ 	struct nameidata *ndp;
+-	struct componentname *cnp;
+ 	struct namecache *ncp;
+ 	struct vnode *dvp;
+-	struct prison *pr;
+ 	u_char nc_flag;
+ 
+ 	ndp = fpl->ndp;
+-	cnp = fpl->cnp;
+ 	dvp = fpl->dvp;
+ 
+-	MPASS(cache_fpl_isdotdot(cnp));
++	MPASS(cache_fpl_isdotdot(fpl->cnp));
+ 
+ 	/*
+ 	 * XXX this is racy the same way regular lookup is
+ 	 */
+-	for (pr = cnp->cn_cred->cr_prison; pr != NULL;
+-	    pr = pr->pr_parent)
+-		if (dvp == pr->pr_root)
+-			break;
+-
+-	if (dvp == ndp->ni_rootdir ||
+-	    dvp == ndp->ni_topdir ||
+-	    dvp == rootvnode ||
+-	    pr != NULL) {
++	if (lookup_isroot(ndp, dvp)) {
+ 		fpl->tvp = dvp;
+ 		fpl->tvp_seqc = vn_seqc_read_any(dvp);
+ 		if (seqc_in_modify(fpl->tvp_seqc)) {
+--- sys/kern/vfs_lookup.c.orig
++++ sys/kern/vfs_lookup.c
+@@ -530,12 +530,12 @@
+ 	cnp->cn_origflags = cnp->cn_flags;
+ #endif
+ 	ndp->ni_cnd.cn_cred = ndp->ni_cnd.cn_thread->td_ucred;
+-	KASSERT(ndp->ni_resflags == 0, ("%s: garbage in ni_resflags: %x\n",
++	KASSERT(ndp->ni_resflags == 0, ("%s: garbage in ni_resflags: %x",
+ 	    __func__, ndp->ni_resflags));
+ 	KASSERT(cnp->cn_cred && td->td_proc, ("namei: bad cred/proc"));
+ 	KASSERT((cnp->cn_flags & NAMEI_INTERNAL_FLAGS) == 0,
+-	    ("namei: unexpected flags: %" PRIx64 "\n",
+-	    cnp->cn_flags & NAMEI_INTERNAL_FLAGS));
++	    ("namei: unexpected flags: %#jx",
++	    (uintmax_t)(cnp->cn_flags & NAMEI_INTERNAL_FLAGS)));
+ 	if (cnp->cn_flags & NOCACHE)
+ 		KASSERT(cnp->cn_nameiop != LOOKUP,
+ 		    ("%s: NOCACHE passed with LOOKUP", __func__));
+@@ -761,6 +761,31 @@
+ _Static_assert(MAXNAMLEN == NAME_MAX,
+     "MAXNAMLEN and NAME_MAX have different values");
+ 
++
++struct nameidata *
++lookup_nameidata(struct componentname *cnp)
++{
++	if ((cnp->cn_flags & NAMEILOOKUP) == 0)
++		return (NULL);
++	return (__containerof(cnp, struct nameidata, ni_cnd));
++}
++
++/*
++ * Would a dotdot lookup relative to dvp cause this lookup to cross a jail or
++ * chroot boundary?
++ */
++bool
++lookup_isroot(struct nameidata *ndp, struct vnode *dvp)
++{
++	for (struct prison *pr = ndp->ni_cnd.cn_cred->cr_prison; pr != NULL;
++	    pr = pr->pr_parent) {
++		if (dvp == pr->pr_root)
++			return (true);
++	}
++	return (dvp == ndp->ni_rootdir || dvp == ndp->ni_topdir ||
++	    dvp == rootvnode);
++}
++
+ /*
+  * Search a pathname.
+  * This is a very central and rather complicated routine.
+@@ -808,7 +833,6 @@
+ 	struct vnode *dp = NULL;	/* the directory we are searching */
+ 	struct vnode *tdp;		/* saved dp */
+ 	struct mount *mp;		/* mount table entry */
+-	struct prison *pr;
+ 	size_t prev_ni_pathlen;		/* saved ndp->ni_pathlen */
+ 	int docache;			/* == 0 do not cache last component */
+ 	int wantparent;			/* 1 => wantparent or lockparent flag */
+@@ -1008,15 +1032,11 @@
+ 			goto bad;
+ 		}
+ 		for (;;) {
+-			for (pr = cnp->cn_cred->cr_prison; pr != NULL;
+-			     pr = pr->pr_parent)
+-				if (dp == pr->pr_root)
+-					break;
+-			bool isroot = dp == ndp->ni_rootdir ||
+-			    dp == ndp->ni_topdir || dp == rootvnode ||
+-			    pr != NULL;
+-			if (isroot && (ndp->ni_lcf &
+-			    NI_LCF_STRICTRELATIVE) != 0) {
++			bool isroot;
++
++			isroot = lookup_isroot(ndp, dp);
++			if (__predict_false(isroot && (ndp->ni_lcf &
++			    NI_LCF_STRICTRELATIVE) != 0)) {
+ 				error = ENOTCAPABLE;
+ 				goto capdotdot;
+ 			}
+--- sys/kern/vfs_vnops.c.orig
++++ sys/kern/vfs_vnops.c
+@@ -195,21 +195,26 @@
+ }
+ 
+ static uint64_t
+-open2nameif(int fmode, u_int vn_open_flags)
++open2nameif(int fmode, u_int vn_open_flags, uint64_t cn_flags)
+ {
+ 	uint64_t res;
+ 
+-	res = ISOPEN | LOCKLEAF;
++	res = ISOPEN | LOCKLEAF | cn_flags;
+ 	if ((fmode & O_RESOLVE_BENEATH) != 0)
+ 		res |= RBENEATH;
+ 	if ((fmode & O_EMPTY_PATH) != 0)
+ 		res |= EMPTYPATH;
++	if ((fmode & O_NOFOLLOW) != 0)
++		res &= ~FOLLOW;
+ 	if ((vn_open_flags & VN_OPEN_NOAUDIT) == 0)
+ 		res |= AUDITVNODE1;
++	else
++		res &= ~AUDITVNODE1;
+ 	if ((vn_open_flags & VN_OPEN_NOCAPCHECK) != 0)
+ 		res |= NOCAPCHECK;
+ 	if ((vn_open_flags & VN_OPEN_WANTIOCTLCAPS) != 0)
+ 		res |= WANTIOCTLCAPS;
++
+ 	return (res);
+ }
+ 
+@@ -242,7 +247,9 @@
+ 		return (EINVAL);
+ 	else if ((fmode & (O_CREAT | O_DIRECTORY)) == O_CREAT) {
+ 		ndp->ni_cnd.cn_nameiop = CREATE;
+-		ndp->ni_cnd.cn_flags = open2nameif(fmode, vn_open_flags);
++		ndp->ni_cnd.cn_flags = open2nameif(fmode, vn_open_flags,
++		    ndp->ni_cnd.cn_flags);
++
+ 		/*
+ 		 * Set NOCACHE to avoid flushing the cache when
+ 		 * rolling in many files at once.
+@@ -251,8 +258,8 @@
+ 		 * exist despite NOCACHE.
+ 		 */
+ 		ndp->ni_cnd.cn_flags |= LOCKPARENT | NOCACHE | NC_KEEPPOSENTRY;
+-		if ((fmode & O_EXCL) == 0 && (fmode & O_NOFOLLOW) == 0)
+-			ndp->ni_cnd.cn_flags |= FOLLOW;
++		if ((fmode & O_EXCL) != 0)
++			ndp->ni_cnd.cn_flags &= ~FOLLOW;
+ 		if ((vn_open_flags & VN_OPEN_INVFS) == 0)
+ 			bwillwrite();
+ 		if ((error = namei(ndp)) != 0)
+@@ -320,9 +327,8 @@
+ 		}
+ 	} else {
+ 		ndp->ni_cnd.cn_nameiop = LOOKUP;
+-		ndp->ni_cnd.cn_flags = open2nameif(fmode, vn_open_flags);
+-		ndp->ni_cnd.cn_flags |= (fmode & O_NOFOLLOW) != 0 ? NOFOLLOW :
+-		    FOLLOW;
++		ndp->ni_cnd.cn_flags = open2nameif(fmode, vn_open_flags,
++		    ndp->ni_cnd.cn_flags);
+ 		if ((fmode & FWRITE) == 0)
+ 			ndp->ni_cnd.cn_flags |= LOCKSHARED;
+ 		if ((error = namei(ndp)) != 0)
+--- sys/sys/namei.h.orig
++++ sys/sys/namei.h
+@@ -154,6 +154,7 @@
+ #define	LOCKSHARED	0x0100	/* Shared lock leaf */
+ #define	NOFOLLOW	0x0000	/* do not follow symbolic links (pseudo) */
+ #define	RBENEATH	0x100000000ULL /* No escape, even tmp, from start dir */
++#define	NAMEILOOKUP	0x200000000ULL /* cnp is embedded in nameidata */
+ #define	MODMASK		0xf000001ffULL	/* mask of operational modifiers */
+ 
+ /*
+@@ -254,7 +255,7 @@
+ 	NDINIT_PREFILL(_ndp);							\
+ 	NDINIT_DBG(_ndp);							\
+ 	_ndp->ni_cnd.cn_nameiop = op;						\
+-	_ndp->ni_cnd.cn_flags = flags;						\
++	_ndp->ni_cnd.cn_flags = (flags) | NAMEILOOKUP;				\
+ 	_ndp->ni_segflg = segflg;						\
+ 	_ndp->ni_dirp = namep;							\
+ 	_ndp->ni_dirfd = dirfd;							\
+@@ -271,6 +272,7 @@
+ 	filecaps_free(&_ndp->ni_filecaps);					\
+ 	_ndp->ni_resflags = 0;							\
+ 	_ndp->ni_startdir = NULL;						\
++	_ndp->ni_cnd.cn_flags &= ~NAMEI_INTERNAL_FLAGS;				\
+ } while (0)
+ 
+ #define	NDPREINIT(ndp) do {							\
+@@ -312,6 +314,8 @@
+ 
+ int	namei(struct nameidata *ndp);
+ int	lookup(struct nameidata *ndp);
++bool	lookup_isroot(struct nameidata *ndp, struct vnode *dvp);
++struct nameidata *lookup_nameidata(struct componentname *cnp);
+ int	relookup(struct vnode *dvp, struct vnode **vpp,
+ 	    struct componentname *cnp);
+ #endif
+--- tests/sys/kern/Makefile.orig
++++ tests/sys/kern/Makefile
+@@ -13,6 +13,7 @@
+ ATF_TESTS_C+=	kern_copyin
+ ATF_TESTS_C+=	kern_descrip_test
+ ATF_TESTS_C+=	fdgrowtable_test
++ATF_TESTS_C+=	jail_lookup_root
+ ATF_TESTS_C+=	kill_zombie
+ .if ${MK_OPENSSL} != "no"
+ ATF_TESTS_C+=	ktls_test
+@@ -58,6 +59,10 @@
+ PROGS+=		pdeathsig_helper
+ PROGS+=		sendfile_helper
+ 
++.PATH: ${SRCTOP}/sbin/mount
++SRCS.jail_lookup_root+=			jail_lookup_root.c getmntopts.c
++CFLAGS.jail_lookup_root+=		-I${SRCTOP}/sbin/mount
++LIBADD.jail_lookup_root+=		jail util
+ CFLAGS.sys_getrandom+=			-I${SRCTOP}/sys/contrib/zstd/lib
+ LIBADD.sys_getrandom+=			zstd
+ LIBADD.sys_getrandom+=			c
+--- /dev/null
++++ tests/sys/kern/jail_lookup_root.c
+@@ -0,0 +1,133 @@
++/*-
++ * SPDX-License-Identifier: BSD-2-Clause
++ *
++ * Copyright (c) 2025 Mark Johnston <markj@FreeBSD.org>
++ */
++
++#include <sys/param.h>
++#include <sys/jail.h>
++#include <sys/mount.h>
++#include <sys/stat.h>
++
++#include <err.h>
++#include <errno.h>
++#include <fcntl.h>
++#include <jail.h>
++#include <mntopts.h>
++#include <stdio.h>
++#include <stdlib.h>
++
++#include <atf-c.h>
++
++static void
++mkdir_checked(const char *dir, mode_t mode)
++{
++	int error;
++
++	error = mkdir(dir, mode);
++	ATF_REQUIRE_MSG(error == 0 || errno == EEXIST,
++	    "mkdir %s: %s", dir, strerror(errno));
++}
++
++static void __unused
++mount_nullfs(const char *dir, const char *target)
++{
++	struct iovec *iov;
++	char errmsg[1024];
++	int error, iovlen;
++
++	iov = NULL;
++	iovlen = 0;
++
++	build_iovec(&iov, &iovlen, __DECONST(char *, "fstype"),
++	    __DECONST(char *, "nullfs"), (size_t)-1);
++	build_iovec(&iov, &iovlen, __DECONST(char *, "fspath"),
++	    __DECONST(char *, target), (size_t)-1);
++	build_iovec(&iov, &iovlen, __DECONST(char *, "from"),
++	    __DECONST(char *, dir), (size_t)-1);
++	build_iovec(&iov, &iovlen, __DECONST(char *, "errmsg"),
++	    errmsg, sizeof(errmsg));
++
++	errmsg[0] = '\0';
++	error = nmount(iov, iovlen, 0);
++	ATF_REQUIRE_MSG(error == 0, "nmount: %s",
++	    errmsg[0] != '\0' ? errmsg : strerror(errno));
++
++	free_iovec(&iov, &iovlen);
++}
++
++ATF_TC_WITH_CLEANUP(jail_root);
++ATF_TC_HEAD(jail_root, tc)
++{
++	atf_tc_set_md_var(tc, "require.user", "root");
++}
++ATF_TC_BODY(jail_root, tc)
++{
++	int error, fd, jid;
++
++	mkdir_checked("./root", 0755);
++	mkdir_checked("./root/a", 0755);
++	mkdir_checked("./root/b", 0755);
++	mkdir_checked("./root/a/c", 0755);
++
++	jid = jail_setv(JAIL_CREATE | JAIL_ATTACH,
++	    "name", "nullfs_jail_root_test",
++	    "allow.mount", "true",
++	    "allow.mount.nullfs", "true",
++	    "enforce_statfs", "1",
++	    "path", "./root",
++	    "persist", NULL,
++	    NULL);
++	ATF_REQUIRE_MSG(jid >= 0, "jail_setv: %s", jail_errmsg);
++
++	mount_nullfs("/a", "/b");
++
++	error = chdir("/b/c");
++	ATF_REQUIRE(error == 0);
++
++	error = rename("/a/c", "/c");
++	ATF_REQUIRE(error == 0);
++
++	/* Descending to the jail root should be ok. */
++	error = chdir("..");
++	ATF_REQUIRE(error == 0);
++
++	/* Going beyond the root will trigger an error. */
++	error = chdir("..");
++	ATF_REQUIRE_ERRNO(ENOENT, error != 0);
++	fd = open("..", O_RDONLY | O_DIRECTORY);
++	ATF_REQUIRE_ERRNO(ENOENT, fd < 0);
++}
++ATF_TC_CLEANUP(jail_root, tc)
++{
++	struct statfs fs;
++	fsid_t fsid;
++	int error, jid;
++
++	error = statfs("./root/b", &fs);
++	if (error != 0)
++		err(1, "statfs ./b");
++	fsid = fs.f_fsid;
++	error = statfs("./root", &fs);
++	if (error != 0)
++		err(1, "statfs ./root");
++	if (fsid.val[0] != fs.f_fsid.val[0] ||
++	    fsid.val[1] != fs.f_fsid.val[1]) {
++		error = unmount("./root/b", 0);
++		if (error != 0)
++			err(1, "unmount ./root/b");
++	}
++
++	jid = jail_getid("nullfs_jail_root_test");
++	if (jid >= 0) {
++		error = jail_remove(jid);
++		if (error != 0)
++			err(1, "jail_remove");
++	}
++}
++
++ATF_TP_ADD_TCS(tp)
++{
++	ATF_TP_ADD_TC(tp, jail_root);
++	return (atf_no_error());
++}
