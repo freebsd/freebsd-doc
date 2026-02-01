@@ -53,10 +53,54 @@ a:link  { text-decoration:none; }
 a:hover { text-decoration:underline; }
 table, th, td { border: 1px solid black; border-collapse: collapse; }
 th, td { padding-left: 0.5em; padding-right: 0.5em; }
+
+span#noscript { color: red; font-size: normal; font-weight: bold; }
 </style>
 
 <link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/ports.xml" title="FreeBSD Ports" />
 `;
+
+my $no_javascript_warning = <<'EOF';
+<span id="noscript">
+<noscript>
+<p>Please enable JavaScript in your browser for sorting columns. Thanks!</p>
+</noscript>
+</span>
+EOF
+
+my $pkg_javascript = <<'EOF';
+
+<script type="text/javascript">
+let sort_directions = {}; // remember asc/desc per column
+
+function sort_table(column_index) {
+    const table = document.getElementById("pkg-result");
+    const tbody = table.tBodies[0];
+    const rows = Array.from(tbody.rows);
+
+    // toggle direction
+    const current = sort_directions[column_index] || "asc";
+    const direction = current === "asc" ? "desc" : "asc";
+    sort_directions[column_index] = direction;
+
+    rows.sort((a, b) => {
+        const a_text = a.cells[column_index].textContent.trim();
+        const b_text = b.cells[column_index].textContent.trim();
+
+        cmp = a_text.localeCompare(b_text, undefined, {
+            numeric: true,
+            sensitivity: "base"
+        });
+
+        return direction === "asc" ? cmp : -cmp;
+    });
+
+    // re-append in sorted order
+    rows.forEach(row => tbody.appendChild(row));
+}
+</script>
+
+EOF
 
 # No unlimited result set. A HTML page with 1000 results can be 10MB big.
 my $max_hits         = 1000;
@@ -359,6 +403,7 @@ sub package_links {
             die join( " ", @system ) . " $!\n";
         }
     }
+
     binmode( PKG_IN, ":bytes" );
 
     my $hash;
@@ -379,6 +424,7 @@ sub package_links {
         }
 
         if ( $. == 1 ) {
+
             print qq[<h2>$perl->{"name"}: $perl->{"comment"}</h2>\n];
 
             print qq[homepage: <a href="], $perl->{"www"},
@@ -392,10 +438,18 @@ sub package_links {
             print qq[<h3>Description</h3>\n];
             print "<pre>", $perl->{"desc"}, "</pre>\n";
             print qq[<h3>Download packages in *.pkg format</h3>\n];
-            print qq{<table>\n};
+
+            print $no_javascript_warning, $pkg_javascript;
+            print qq{<table id="pkg-result">\n};
             print qq{<thead>\n};
+            print qq{<tr>\n};
             print
-qq{<tr><th>Release</th><th>Version</th><th>Build Time</th></tr>\n};
+qq{ <th onclick="sort_table(0)" title="click to sort asc/desc by release">Release &lt;&gt;</th>\n};
+            print
+qq{ <th onclick="sort_table(1)" title="click to sort asc/desc by version">Version &lt;&gt;</th>\n};
+            print
+qq{ <th onclick="sort_table(2)" title="click to sort asc/desc by build time">Build Time &lt;&gt;</th>\n};
+            print qq{</tr>\n};
             print qq{</thead>\n};
             print qq{<tbody>\n};
         }
