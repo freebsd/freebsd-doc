@@ -98,6 +98,9 @@ function sort_table(column_index) {
     // re-append in sorted order
     rows.forEach(row => tbody.appendChild(row));
 }
+
+// always sort by release
+document.addEventListener("DOMContentLoaded", function() { sort_table(0) });
 </script>
 
 EOF
