@@ -462,6 +462,12 @@ qq{ <th onclick="sort_table(2)" title="click to sort asc/desc by build time">Bui
         my $time     = $perl->{"annotations"}->{"build_timestamp"} // "";
         my $version  = $perl->{"version"};
         my $repopath = $perl->{"repopath"};
+        my $flavor   = $perl->{"annotations"}->{"flavor"} // "";
+
+        # show flavor
+        if ($flavor) {
+            $release = $release . " (" . $flavor . ")";
+        }
 
         $time =~ s/\+\d{4}$//;
         $time =~ s/T(\d\d):(\d\d):(\d\d)$/ $1:$2/;
@@ -475,7 +481,8 @@ qq{ <th onclick="sort_table(2)" title="click to sort asc/desc by build time">Bui
               if index( $release, $filter ) < 0
               && index( $pkg_opt, $filter ) < 0
               && index( $version, $filter ) < 0
-              && index( $time,    $filter ) < 0;
+              && index( $time,    $filter ) < 0
+              && index( $flavor,  $filter ) < 0;
         }
 
         next if $counter >= $max;
@@ -498,6 +505,7 @@ qq{ <th onclick="sort_table(2)" title="click to sort asc/desc by build time">Bui
         $hash->{'version'}->{$version}++;
         $hash->{'arch'}->{$arch}++;
         $hash->{'release'}->{$rel}++;
+        $hash->{'flavor'}->{$flavor}++ if $flavor ne "";
         $hash->{'snapshot'}->{$snapshot}++
           if $snapshot eq 'latest' || $snapshot eq 'quarterly';
     }
