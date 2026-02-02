@@ -108,6 +108,7 @@ EOF
 # No unlimited result set. A HTML page with 1000 results can be 10MB big.
 my $max_hits         = 1000;
 my $max_hits_default = 250;
+my $max_hits_pkg     = 400;
 my $max;
 
 my $debug = 1;
@@ -427,7 +428,6 @@ sub package_links {
         }
 
         if ( $. == 1 ) {
-
             print qq[<h2>$perl->{"name"}: $perl->{"comment"}</h2>\n];
 
             print qq[homepage: <a href="], $perl->{"www"},
@@ -477,6 +477,7 @@ qq{ <th onclick="sort_table(2)" title="click to sort asc/desc by build time">Bui
               && index( $time,    $filter ) < 0;
         }
 
+        next if $counter >= $max;
         $counter++;
 
         my $info =
@@ -665,8 +666,10 @@ sub check_input {
 
     $max = int($max);
     if ( $max <= 0 || $max > $max_hits ) {
-        warn "reset max=$max to $max_hits_default\n";
-        $max = $max_hits_default;
+        my $old_max = $max;
+        $max = $enable_packages_link
+          && $stype eq 'pkg' ? $max_hits_pkg : $max_hits_default;
+        warn "reset max=$old_max to $max\n";
     }
 }
 
@@ -774,7 +777,8 @@ $stype       = $form{'stype'}      // "";
 $sourceid    = $form{'sourceid'}   // "";
 $pkg_filter  = $form{'pkg_filter'} // "";
 $script_name = &env('SCRIPT_NAME');
-$max         = $form{'max'} // $max_hits_default;
+$max         = $form{'max'} // ( $enable_packages_link
+      && $stype eq 'pkg' ? $max_hits_pkg : $max_hits_default );
 
 if ( $path_info eq "/source" ) {
     print "Content-type: text/plain\n\n";
