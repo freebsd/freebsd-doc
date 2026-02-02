@@ -428,7 +428,8 @@ sub package_links {
         }
 
         if ( $. == 1 ) {
-            print qq[<h2>$perl->{"name"}: $perl->{"comment"}</h2>\n];
+            print qq[<h2>$perl->{"name"}: ], escapeHTML( $perl->{"comment"} ),
+              qq[</h2>\n];
 
             print qq[homepage: <a href="], $perl->{"www"},
               qq[">] . $perl->{"www"} . "</a><br/>\n";
@@ -439,7 +440,7 @@ sub package_links {
             print qq[maintainer: ], $perl->{"maintainer"}, "<br/>\n";
 
             print qq[<h3>Description</h3>\n];
-            print "<pre>", $perl->{"desc"}, "</pre>\n";
+            print "<pre>", escapeHTML( $perl->{"desc"} ), "</pre>\n";
             print qq[<h3>Download packages in *.pkg format</h3>\n];
 
             print $no_javascript_warning, $pkg_javascript;
