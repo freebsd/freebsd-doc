@@ -732,11 +732,15 @@ The script ports.cgi use the file
 <a href="https://download.FreeBSD.org/ports/index/$ports_database.xz">$ports_database</a>
 as database for its operations. $ports_database is updated automatically every
 two hours.
+
+For other FreeBSD Releases INDEX files, please look at
+<a href="https://download.freebsd.org/ports/index/">https://download.freebsd.org/ports/index/</a>
 </p>
 
 <p>
 @{[ &last_update_message ]}
 </p>
+
 
 <h2>Copyright</h2>
 <pre>
