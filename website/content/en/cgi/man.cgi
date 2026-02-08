@@ -61,6 +61,13 @@ my $download_streaming_caching = 0;
 # enable to download the manual pages as a tarball
 my $enable_download = 1;
 
+# show the drop-down menu for architectures
+my $enable_architectures = 1;
+
+# show the drop-down menu for architectures even if there are no know architectures
+my $enable_architectures_none = 0;
+
+
 #$command{'man'} = '/usr/bin/man';    # 8Bit clean man
 $command{'man'} = '/usr/local/www/bin/man.wrapper';    # set CPU limits
 
@@ -1506,6 +1513,8 @@ sub do_man {
         $arch = "";
     }
 
+    $arch = "" if !$enable_architectures;
+
     # remove trailing spaces for dumb users
     $form{'query'} =~ s/\s+$//;
     $form{'query'} =~ s/^\s+//;
@@ -2379,8 +2388,10 @@ ETX
 
     print qq{</select>\n};
 
-    print qq{<select name="arch">\n};
     my @arch = exists $arch{$l} ? @{ $arch{$l}->{'arch'} } : $default_arch;
+    if ($enable_architectures && (scalar(@arch) > 1 || $enable_architectures_none)) {
+
+    print qq{<select name="arch">\n};
     unshift @arch, 'default';
 
     my $a;
@@ -2403,6 +2414,7 @@ ETX
     }
 
     print qq{</select>\n\n};
+    }
 
     local ($m) = &encode_url($l);
 
