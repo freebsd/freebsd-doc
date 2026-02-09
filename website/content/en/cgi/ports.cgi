@@ -365,8 +365,7 @@ sub out {
     if ( $#s > 0 ) {
         print qq{<i>Also listed in:</i> };
         foreach (@s) {
-            print qq{<a href="$remotePrefixRepo/tree/$_">$_</a> }
-              if $_ ne $out_sec;
+            print qq{$_ } if $_ ne $out_sec;
         }
         print "<br />\n";
     }
