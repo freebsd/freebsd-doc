@@ -3,6 +3,8 @@ title: Implementing UFS Journaling on a Desktop PC
 authors:
   - author: Manolis Kiagias
     email: manolis@FreeBSD.org
+  - author: Vladlen Popolitov
+    email: vladlen@FreeBSD.org
 description: Implementing UFS Journaling on a Desktop PC
 trademarks: ["freebsd", "general"]
 tags: ["UFS", "Journaling" , "Desktop", "FreeBSD"]
@@ -11,7 +13,7 @@ tags: ["UFS", "Journaling" , "Desktop", "FreeBSD"]
 = Implementing UFS Journaling on a Desktop PC
 :doctype: article
 :toc: macro
-:toclevels: 1
+:toclevels: 2
 :icons: font
 :sectnums:
 :sectnumlevels: 6
@@ -42,11 +44,11 @@ endif::[]
 [.abstract-title]
 Abstract
 
-A journaling file system uses a log to record all transactions that take place in the file system, and preserves its integrity in the event of a system crash or power failure.
-Although it is still possible to lose unsaved changes to files, journaling almost completely eliminates the possibility of file system corruption caused by an unclean shutdown.
-It also shortens to a minimum the time required for after-failure file system checking.
-Although the UFS file system employed by FreeBSD does not implement journaling itself, the new journal class of the GEOM framework in FreeBSD 7._X_ can be used to provide file system independent journaling.
-This article explains how to implement UFS journaling on a typical desktop PC scenario.
+A journaling file system uses a log to record file system updates and preserves consistency in the event of a system crash or power failure.
+Although unsaved changes to files may still be lost, journaling greatly reduces the risk of file system corruption caused by an unclean shutdown and significantly shortens recovery time.
+While the UFS file system employed by FreeBSD does not implement journaling as an inherent on-disk feature, FreeBSD provides journaling support through file system-level mechanisms (Soft Updates with journaling) as well as through the GEOM framework (`gjournal`).
+This article describes the available UFS journaling mechanisms and explains their appropriate use on modern FreeBSD systems.
+_The content has been reviewed and updated for FreeBSD versions 13 through 15_.
 
 '''
 
@@ -55,240 +57,435 @@ toc::[]
 [[introduction]]
 == Introduction
 
-While professional servers are usually well protected from unforeseen shutdowns, the typical desktop is at the mercy of power failures, accidental resets, and other user related incidents that can lead to unclean shutdowns.
-Soft Updates usually protect the file system efficiently in such cases, although most of the times a lengthy background check is required.
+While professional servers are usually well protected from unforeseen shutdowns, the typical desktop is at the mercy of power failures, accidental resets, and other user related incidents that can lead to unclean shutdowns and leave a file system in an inconsistent state.
+Traditionally, this required running `fsck`, which on large file systems could take a significant amount of time.
 On rare occasions, file system corruption reaches a point where user intervention is required and data may be lost.
 
-The new journaling capability provided by GEOM can greatly assist in such scenarios, by virtually eliminating the time required for file system checking, and ensuring that the file system is quickly restored to a consistent state.
+FreeBSD provides two distinct journaling mechanisms for the UFS file system:
 
-This article describes a procedure for implementing UFS journaling on a typical desktop PC scenario (one hard disk used for both operating system and data).
-It should be followed during a fresh installation of FreeBSD.
-The steps are simple enough and do not require overly complex interaction with the command line.
+* Soft Updates with journaling
+* GEOM journaling (`gjournal`)
 
-After reading this article, you will know:
+These mechanisms operate at different layers of the system and have different performance and semantic characteristics.
 
-* How to reserve space for journaling during a new installation of FreeBSD.
-* How to load and enable the `geom_journal` module (or build support for it in your custom kernel).
-* How to convert your existing file systems to utilize journaling, and what options to use in [.filename]#/etc/fstab# to mount them.
-* How to implement journaling in new (empty) partitions.
-* How to troubleshoot common problems associated with journaling.
+[IMPORTANT]
+====
+For most modern FreeBSD systems, including desktops and general-purpose servers, *Soft Updates with journaling* is the recommended solution.
 
-Before reading this article, you should be able to:
+GEOM journaling is a legacy and specialized mechanism and should only be used when its specific semantics are required.
+====
+
+This article explains both mechanisms, their differences, and correct modern usage.
+
+Read this chapter to learn:
+
+* The journaling mechanisms available for the UFS file system in FreeBSD and how they differ.
+* When to use file system-level Soft Updates journaling and when GEOM journaling may be appropriate.
+* How to enable or disable Soft Updates journaling on existing UFS file systems.
+* How to configure GEOM journaling on new or existing partitions, including required kernel support and journal sizing considerations.
+* What configuration changes are required to mount journaled file systems and how journaling affects system behavior.
+* How to diagnose and resolve common issues related to UFS journaling.
+
+Before reading this article:
 
 * Understand basic UNIX(R) and FreeBSD concepts.
-* Be familiar with the installation procedure of FreeBSD and the sysinstall utility.
+* Be familiar with the FreeBSD installation process using bsdinstall.
+* Have basic knowledge of disk partitioning and file systems, including tools such as gpart(8), newfs(8), and mount(8).
 
 [WARNING]
 ====
-The procedure described here is intended for preparing a new installation where no actual user data is stored on the disk yet.
-While it is possible to modify and extend this procedure for systems already in production, you should _backup_ all important data before doing so.
-Messing around with disks and partitions at a low level can lead to fatal mistakes and data loss.
+Some of the procedures described in this article involve modifying file system or disk configuration and may require unmounting file systems or changing on-disk metadata.
+Before making such changes on a system in production, ensure that reliable _backups_ of all important data are available.
+
+Enabling file system-level Soft Updates journaling is generally safe and does not require disk repartitioning.
+However, configuring GEOM journaling involves low-level disk operations and should be attempted only by experienced administrators who fully understand the implications.
 ====
 
 [[understanding-journaling]]
 == Understanding Journaling in FreeBSD
 
-The journaling provided by GEOM in FreeBSD 7._X_ is not file system specific (unlike for example the ext3 file system in Linux(R)) but is functioning at the block level.
-Though this means it can be applied to different file systems, for FreeBSD 7.0-RELEASE, it can only be used on UFS2.
+=== Soft Updates with Journaling (Recommended)
+Soft Updates is the default UFS consistency mechanism in FreeBSD. When combined with journaling, it provides *metadata journaling* within the file system itself.
+
+Advantages of Soft Updates with journaling include:
+
+* Very fast crash recovery (typically seconds)
+* Normal `sync(2)` and `fsync(2)` semantics
+* No additional partitions or GEOM layers
+* Simple configuration and maintenance
+
+From `tunefs(8)`:
+
+____
+Enabling journaling reduces the time spent by fsck_ffs(8) cleaning up a file system after a crash to a few seconds from minutes to hours.
+____
+
+This mechanism is suitable for nearly all UFS-based systems and is the default recommendation.
+
+=== GEOM Journaling (`gjournal`)
+
+GEOM journaling operates at the block level, below the file system. It journals all block writes, including *both metadata and file data*.
+
+Key characteristics of GEOM journaling:
+
+* Implemented as a GEOM class (`geom_journal`)
+* Journals all block I/O, not just metadata
+* Requires explicit cooperation from UFS using the `-J` flag
+* Disables Soft Updates
+* Alters the semantics of `sync(2)` and `fsync(2)`
+
+[WARNING]
+====
+On GEOM-journaled file systems, `sync(2)` and `fsync(2)` do not guarantee that data has been committed to stable storage. To ensure persistence, `gjournal sync` must be used.
+====
+
+Because of these differences, GEOM journaling is not recommended for general-purpose desktop or server use.
+
+== Choosing the Appropriate Journaling Method
+
+The following table summarizes recommended usage:
+
+[cols="1,1", options="header"]
+|===
+| Use case | Recommended mechanism
+
+| Desktop or laptop system
+| Soft Updates with journaling
+
+| General-purpose server
+| Soft Updates with journaling
+
+| Legacy UFS systems
+| Soft Updates with journaling
+
+| File system-independent journaling requirements
+| GEOM journaling
+
+| Specialized block-level logging needs
+| GEOM journaling
+|===
+
+== Using Soft Updates with Journaling
+
+Soft Updates with journaling provide file system-level journaling for UFS.
+This mechanism preserves file system consistency while retaining the allocation and ordering optimizations of Soft Updates.
+Unlike GEOM journaling, no separate journal device or partition is required.
+
+=== Overview
+
+Soft Updates with journaling record file system metadata changes in a journal stored inside the file system itself, implemented as a hidden file named
+[.filename]#.sujournal# in the root of the file system.
+In the event of a crash or power failure, pending metadata operations are replayed from the journal, allowing the file system to be mounted quickly without a full consistency check.
+
+This form of journaling applies to file system metadata only.
+File data integrity remains the responsibility of applications.
+
+=== Enabling Journaling on an Existing File System
+
+The file system must be unmounted or mounted read-only before changing journaling settings.
+
+[source,shell]
+----
+# umount /usr
+# tunefs -n enable -j enable /dev/ada0p2
+# mount /usr
+----
+
+No additional configuration is required. Standard mount options may be used.
+
+=== Journal Storage and Size
+
+A default journal size is selected automatically when journaling is enabled.
+In most cases, the default size is sufficient and does not require adjustment.
+
+If necessary, the journal size in bytes can be specified explicitly using the `-S` option to `tunefs(8)`:
+
+[source,shell]
+----
+# tunefs -S 64000000 /dev/ada0p2
+----
+
+Journal size tuning is rarely required and should be considered only for file systems with unusually high metadata update rates.
+
+=== Checking Soft Updates with Journaling
+
+The journaling status of a UFS file system using Soft Updates can be verified with `tunefs(8)` or `dumpfs(8)`.
+
+To display the current file system settings, run:
+
+[source,shell]
+----
+# tunefs -p /dev/ada0p2 | grep -i journal
+tunefs: soft updates journaling: (-j)   enabled
+tunefs: gjournal: (-J)                  disabled
+----
+
+Look for the following indicators in the output:
+
+* Soft Updates enabled
+* Soft Updates journaling enabled
+
+Alternatively, `dumpfs(8)` can be used to inspect the file system superblock:
+
+[source,shell]
+----
+# dumpfs /dev/ada0p2 | grep -i journal
+flags   soft-updates+journal
+----
+
+These commands are read-only and do not modify file system state.
+
+=== File System Checks and Maintenance
+
+Although journaling dramatically reduces recovery time after a crash, it does not eliminate the need for periodic full file system checks.
+
+* Journaling guarantees consistency, not correctness
+* Media errors are not repaired by journaling
+* Periodic `fsck` should still be scheduled
+* Background `fsck` can be used on live file systems
+
+== Using GEOM Journaling (Advanced)
+
+[WARNING]
+====
+This section is intended for advanced users who understand the implications of block-level journaling and altered sync semantics.
+====
+
+=== Overview
 
 This functionality is provided by loading the [.filename]#geom_journal.ko# module into the kernel (or building it into a custom kernel) and using the `gjournal` command to configure the file systems.
 In general, you would like to journal large file systems, like [.filename]#/usr#.
 You will need however (see the following section) to reserve some free disk space.
 
-When a file system is journaled, some disk space is needed to keep the journal itself.
-The disk space that holds the actual data is referred to as the __data provider__, while the one that holds the journal is referred to as the __journal provider__.
-The data and journal providers need to be on different partitions when journaling an existing (non-empty) partition.
-When journaling a new partition, you have the option to use a single provider for both data and journal.
-In any case, the `gjournal` command combines both providers to create the final journaled file system.
+GEOM journaling is implemented by the `geom_journal` kernel module and is configured using the `gjournal(8)` utility.
+It provides block-level journaling below the file system layer and requires explicit cooperation from UFS.
+
+When GEOM journaling is used, some disk space is needed to keep the journal itself.
+The provider that contains the file system data is referred to as the _data provider_, while the provider that stores the journal is referred to as the _journal provider_.
+
+When journaling an existing (non-empty) file system, the data and journal providers must be separate.
+When journaling a new, empty file system, a single provider may be used to store both data and journal information.
+In both cases, `gjournal(8)` combines the data and journal providers to create a new journaled provider, which is then mounted by the file system.
 For example:
 
-* You wish to journal your [.filename]#/usr# file system, stored in [.filename]#/dev/ad0s1f# (which already contains data).
-* You reserved some free disk space in a partition in [.filename]#/dev/ad0s1g#.
-* Using `gjournal`, a new [.filename]#/dev/ad0s1f.journal# device is created where [.filename]#/dev/ad0s1f# is the data provider, and [.filename]#/dev/ad0s1g# is the journal provider. This new device is then used for all subsequent file operations.
+* The `/usr` file system resides on `/dev/ada0p2` and already contains data.
+* Free disk space has been allocated in a separate partition, `/dev/ada0p4`, to hold the journal.
+* After configuring GEOM journaling, a new provider `/dev/ada0p2.journal` is created.
+  This journaled provider combines `/dev/ada0p2` as the data provider and `/dev/ada0p4` as the journal provider and is used for all subsequent file system operations.
 
-The amount of disk space you need to reserve for the journal provider depends on the usage load of the file system and not on the size of the data provider.
-For example on a typical office desktop, a 1 GB journal provider for the [.filename]#/usr# file system will suffice, while a machine that deals with heavy disk I/O (i.e. video editing) may need more.
-A kernel panic will occur if the journal space is exhausted before it has a chance to be committed.
+The amount of disk space required for the journal depends primarily on the write workload of the file system rather than on the size of the data provider.
+Systems with sustained or bursty write activity require larger journals to avoid excessive journal switching or write throttling.
 
-[NOTE]
-====
-The journal sizes suggested here, are highly unlikely to cause problems in typical desktop use (such as web browsing, word processing and playback of media files).
-If your workload includes intense disk activity, use the following rule for maximum reliability: Your RAM size should fit in 30% of the journal provider's space.
-For example, if your system has 1 GB RAM, create an approximately 3.3 GB journal provider.
-(Multiply your RAM size with 3.3 to obtain the size of the journal).
-====
+From the man page `gjournal(8)`:
+
+* The default journal size is 1 GB.
+* The recommended minimum journal size is twice the amount of installed physical memory.
+* The journal size should be chosen based on expected write load, not file system size.
+
+An undersized journal may result in degraded performance or forced journal switches under heavy write load.
 
 For more information about journaling, please read the manual page of man:gjournal[8].
 
 [[reserve-space]]
-== Steps During the Installation of FreeBSD
+=== Steps During the Installation of FreeBSD
 
-=== Reserving Space for Journaling
+This section describes optional installation-time preparation for systems that are configured to use GEOM journaling.
+The goal is to reserve disk space for journal providers that will later be associated with the `/usr` and `/var` file systems.
 
-A typical desktop machine usually has one hard disk that stores both the OS and user data.
-Arguably, the default partitioning scheme selected by sysinstall is more or less suitable: A desktop machine does not need a large [.filename]#/var# partition, while [.filename]#/usr# is allocated the bulk of the disk space, since user data and a lot of packages are installed into its subdirectories.
+==== Reserving Space for Journaling
 
-The default partitioning (the one obtained by pressing kbd:[A] at the FreeBSD partition editor, called Disklabel) does not leave any unallocated space.
-Each partition that will be journaled, requires another partition for the journal.
-Since the [.filename]#/usr# partition is the largest, it makes sense to shrink this partition slightly, to obtain the space required for journaling.
+On a typical system with a single disk, the operating system, installed software, and user data all reside on the same device.
+The default automatic partitioning performed by the FreeBSD installer allocates most available space to `/usr`, with smaller partitions for `/var` and other mount points.
 
-In our example, an 80 GB disk is used.
-The following screenshot shows the default partitions created by Disklabel during installation:
+By default, the installer allocates all available disk space to file systems and does not leave unused space.
+When GEOM journaling is planned for existing (non-empty) file systems, additional disk space must be reserved to hold journal providers.
+Each file system that will be journaled requires its own journal provider.
 
-image::disklabel1.png[]
+Since `/usr` typically occupies the largest portion of the disk, it is usually the most practical partition to reduce slightly in order to make room for journal providers.
 
-If this is more or less what you need, it is very easy to adjust for journaling.
-Simply use the arrow keys to move the highlight to the [.filename]#/usr# partition and press kbd:[D] to delete it.
+In our example GEOM journaling is planned for both `/usr` and `/var`.
 
-Now, move the highlight to the disk name at the top of the screen and press kbd:[C] to create a new partition for [.filename]#/usr#.
-This new partition should be smaller by 1 GB (if you intend to journal [.filename]#/usr# only), or 2 GB (if you intend to journal both [.filename]#/usr# and [.filename]#/var#).
-From the pop-up that appears, opt to create a file system, and type [.filename]#/usr# as the mount point.
+==== Partitioning Strategy
 
-[NOTE]
-====
-Should you journal the [.filename]#/var# partition? Normally, journaling makes sense on quite large partitions.
-You may decide not to journal [.filename]#/var#, although doing so on a typical desktop will cause no harm.
-If the file system is lightly used (quite probable for a desktop) you may wish to allocate less disk space for its journal.
+During installation, use the manual partitioning mode provided by the installer.
+Create any supported file system type for `/`, and create standard UFS partitions for `/usr` and `/var`, but reduce the size of `/usr` to leave sufficient unallocated space at the end of the disk.
 
-In our example, we journal both [.filename]#/usr# and [.filename]#/var#.
-You may of course adjust the procedure to your own needs.
-====
+From the remaining unallocated space, create two additional partitions that will be used exclusively as journal providers:
 
-To keep things as easy going as possible, we are going to use sysinstall to create the partitions required for journaling.
-However, during installation, sysinstall insists on asking a mount point for each partition you create.
-At this point, you do not have any mount points for the partitions that will hold the journals, and in reality you __do not even need them__.
-These are not partitions that we are ever going to mount somewhere.
+* One partition for the `/usr` journal
+* One partition for the `/var` journal
 
-To avoid these problems with sysinstall, we are going to create the journal partitions as swap space.
-Swap is never mounted, and sysinstall has no problem creating as many swap partitions as needed.
-After the first reboot, [.filename]#/etc/fstab# will have to be edited, and the extra swap space entries removed.
+These partitions must not be assigned mount points and must not be used for swap.
+They will remain unused until they are explicitly associated with their corresponding data providers using `gjournal(8)` after installation.
 
-To create the swap, again use the arrow keys to move the highlight to the top of Disklabel screen, so that the disk name itself is highlighted.
-Then press kbd:[N], enter the desired size (_1024M_), and select "swap space" from the pop-up menu that appears.
-Repeat for every journal you wish to create.
-In our example, we create two partitions to provide for the journals of [.filename]#/usr# and [.filename]#/var#.
-The final result is shown in the following screenshot:
+A typical layout may look like the following:
 
-image::disklabel2.png[]
-
-When you have completed creating the partitions, we suggest you write down the partition names, and mount points, so you can easily refer to this information during the configuration phase.
-This will help alleviate mistakes that may damage your installation.
-The following table shows our notes for the sample configuration:
-
-.Partitions and Journals
-[cols="1,1,1", options="header"]
+.Partitions Reserved for GEOM Journaling
+[cols="1,1,2", options="header"]
 |===
-| Partition
-| Mount Point
-| Journal
+| Provider
+| Intended Use
+| Notes
 
-|ad0s1d
+|/dev/ada0p2
 |/var
-|ad0s1h
+|UFS file system (data provider)
 
-|ad0s1f
+|/dev/ada0p3
 |/usr
-|ad0s1g
+|UFS file system (data provider)
+
+|/dev/ada0p4
+|Journal for /var
+|Unformatted, unused partition
+
+|/dev/ada0p5
+|Journal for /usr
+|Unformatted, unused partition
 |===
 
-Continue the installation as you would normally do.
-We would however suggest you postpone installation of third party software (packages) until you have completely setup journaling.
+The exact device names will vary depending on the disk layout and partitioning scheme.
+It is strongly recommended to record the provider names during installation, as they will be required during journal configuration.
+
+==== Journal Size Considerations
+
+Journal size depends on the expected write workload rather than on the size of the file system.
+For general-purpose systems, journal sizes of 1–2 GB are commonly sufficient.
+Systems with sustained or bursty write activity may require larger journals.
+
+Allocate journal space conservatively during installation, as resizing partitions later may require additional downtime.
+
+==== Completing the Installation
+
+After reserving the required partitions, complete the FreeBSD installation normally.
+It is recommended to postpone the installation of third-party software and additional system configuration until GEOM journaling has been fully configured.
+
+At this stage, the system will boot using the standard UFS file systems.
+The reserved journal partitions will remain unused until journaling is explicitly enabled.
 
 [[first-boot]]
-=== Booting for the first time
+==== First Boot After Installation
 
-Your system will come up normally, but you will need to edit [.filename]#/etc/fstab# and remove the extra swap partitions you created for the journals.
-Normally, the swap partition you will actually use is the one with the "b" suffix (i.e. ad0s1b in our example).
-Remove all other swap space entries and reboot so that FreeBSD will stop using them.
+After the first successful boot, no immediate configuration changes are required.
+The system should be verified to boot and operate normally before proceeding.
 
-When the system comes up again, we will be ready to configure journaling.
+Once the base system is confirmed to be functional, the next steps involve:
+
+* Loading or enabling GEOM journaling support
+* Associating journal providers with their corresponding data providers
+* Updating `/etc/fstab` to mount the journaled devices
+
+These steps are described in the following section.
 
 [[configure-journal]]
-== Setting Up Journaling
+=== Setting Up Journaling
 
 [[running-gjournal]]
-=== Executing `gjournal`
+==== Enabling GEOM Journaling on Existing File Systems
 
-Having prepared all the required partitions, it is quite easy to configure journaling.
-We will need to switch to single user mode, so login as `root` and type:
+This section describes how to enable GEOM journaling on the `/usr` and `/var` file systems using the partitions prepared during installation.
+
+Once the required journal providers have been reserved, GEOM journaling can be configured.
+Because the file systems to be journaled must not be mounted, the system must be switched to single-user mode.
+
+Log in as `root` and enter:
 
 [source,shell]
 ....
 # shutdown now
 ....
 
-Press kbd:[Enter] to get the default shell.
-We will need to unmount the partitions that will be journaled, in our example [.filename]#/usr# and [.filename]#/var#:
+Press kbd:[Enter] to obtain a root shell.
+Unmount the file systems that will be journaled.
+In this example, `/usr` and `/var`:
 
 [source,shell]
 ....
 # umount /usr /var
 ....
 
-Load the module required for journaling:
+Load the GEOM journaling kernel module:
 
 [source,shell]
 ....
 # gjournal load
 ....
 
-Now, use your notes to determine which partition will be used for each journal.
-In our example, [.filename]#/usr# is [.filename]#ad0s1f# and its journal will be [.filename]#ad0s1g#, while [.filename]#/var# is [.filename]#ad0s1d# and will be journaled to [.filename]#ad0s1h#.
-The following commands are required:
+Next, associate each data provider with its corresponding journal provider.
+Use your notes to determine which partition will be used for each journal.
+
+In this example:
+
+* `/usr` resides on `/dev/ada0p3` and its journal provider is `/dev/ada0p5`
+* `/var` resides on `/dev/ada0p2` and its journal provider is `/dev/ada0p4`
+
+Create the journaled providers using `gjournal(8)`:
 
 [source,shell]
 ....
-# gjournal label ad0s1f ad0s1g
-GEOM_JOURNAL: Journal 2948326772: ad0s1f contains data.
-GEOM_JOURNAL: Journal 2948326772: ad0s1g contains journal.
+# gjournal label ada0p3 ada0p5
+GEOM_JOURNAL: Journal 2948326772: ada0p5 contains journal.
+GEOM_JOURNAL: Journal 2948326772: ada0p3 contains data.
+GEOM_JOURNAL: Journal ada0p3 clean.
 
-# gjournal label ad0s1d ad0s1h
-GEOM_JOURNAL: Journal 3193218002: ad0s1d contains data.
-GEOM_JOURNAL: Journal 3193218002: ad0s1h contains journal.
+# gjournal label ada0p2 ada0p4
+GEOM_JOURNAL: Journal 3193218002: ada0p4 contains journal.
+GEOM_JOURNAL: Journal 3193218002: ada0p2 contains data.
+GEOM_JOURNAL: Journal ada0p2 clean.
 ....
+
 
 [NOTE]
 ====
-If the last sector of either partition is used, `gjournal` will return an error.
-You will have to run the command using the `-f` flag to force an overwrite, i.e.:
+If `gjournal` reports that the last sector of a provider is in use, the command will fail.
+On freshly created or unused partitions, it is safe to retry the operation with the `-f` flag to force initialization:
 
 [source,shell]
 ....
-# gjournal label -f ad0s1d ad0s1h
+# gjournal label -f /dev/ada0p2 /dev/ada0p4
 ....
-
-Since this is a new installation, it is highly unlikely that anything will be actually overwritten.
 ====
 
-At this point, two new devices are created, namely [.filename]#ad0s1d.journal# and [.filename]#ad0s1f.journal#.
-These represent the [.filename]#/var# and [.filename]#/usr# partitions we have to mount.
+After labeling, two new journaled providers are created:
+
+* `/dev/ada0p3.journal` for `/usr`
+* `/dev/ada0p2.journal` for `/var`
+
+These devices will replace the original data providers when mounting the file systems.
+
 Before mounting, we must however set the journal flag on them and clear the Soft Updates flag:
 
 [source,shell]
 ....
-# tunefs -J enable -n disable ad0s1d.journal
+# tunefs -J enable -n disable -j disable /dev/ada0p3.journal
+tunefs: soft updates journaling cleared but soft updates still set
+tunefs: remove .sujournal to reclaim space
 tunefs: gjournal set
 tunefs: soft updates cleared
 
-# tunefs -J enable -n disable ad0s1f.journal
+# tunefs -J enable -n disable -j disable /dev/ada0p2.journal
+tunefs: soft updates journaling cleared but soft updates still set
+tunefs: remove .sujournal to reclaim space
 tunefs: gjournal set
 tunefs: soft updates cleared
 ....
 
-Now, mount the new devices manually at their respective places (note that we can now use the `async` mount option):
+Now, mount the new devices manually at their respective places to verify correct operation (note that we can now use the `async` mount option) and remove [.filename]#.sujournal# to reclaim space:
 
 [source,shell]
 ....
-# mount -o async /dev/ad0s1d.journal /var
-# mount -o async /dev/ad0s1f.journal /usr
+# mount -o async /dev/ada0p2.journal /var
+# rm /var/.sujournal
+# mount -o async /dev/ada0p3.journal /usr
+# rm /usr/.sujournal
 ....
 
 Edit [.filename]#/etc/fstab# and update the entries for [.filename]#/usr# and [.filename]#/var#:
 
 [.programlisting]
 ....
-/dev/ad0s1f.journal     /usr            ufs     rw,async      2       2
-/dev/ad0s1d.journal     /var            ufs     rw,async      2       2
+/dev/ada0p3.journal    /usr    ufs     rw,async      2       2
+/dev/ada0p2.journal    /var    ufs     rw,async      2       2
 ....
 
 [WARNING]
@@ -305,38 +502,50 @@ geom_journal_load="YES"
 
 Congratulations! Your system is now set for journaling.
 You can either type `exit` to return to multi-user mode, or reboot to test your configuration (recommended).
+
+[source,shell]
+....
+# shutdown -r now
+....
+
 During the boot you will see messages like the following:
 
 [source,shell]
 ....
-ad0: 76293MB XEC XE800JD-00HBC0 08.02D08 at ata0-master SATA150
-GEOM_JOURNAL: Journal 2948326772: ad0s1g contains journal.
-GEOM_JOURNAL: Journal 3193218002: ad0s1h contains journal.
-GEOM_JOURNAL: Journal 3193218002: ad0s1d contains data.
-GEOM_JOURNAL: Journal ad0s1d clean.
-GEOM_JOURNAL: Journal 2948326772: ad0s1f contains data.
-GEOM_JOURNAL: Journal ad0s1f clean.
+# dmesg | grep GEOM_JOURNAL
+GEOM_JOURNAL: Journal 2948326772: ada0p4 contains journal.
+GEOM_JOURNAL: Journal 3193218002: ada0p5 contains journal.
+GEOM_JOURNAL: Journal 2948326772: ada0p2 contains data.
+GEOM_JOURNAL: Journal ada0p2 clean.
+GEOM_JOURNAL: Journal 3193218002: ada0p3 contains data.
+GEOM_JOURNAL: Journal ada0p3 clean.
 ....
 
 After an unclean shutdown, the messages will vary slightly, i.e.:
 
 [source,shell]
 ....
-GEOM_JOURNAL: Journal ad0s1d consistent.
+GEOM_JOURNAL: Journal ada0p2 consistent.
 ....
 
 This usually means that man:gjournal[8] used the information in the journal provider to return the file system to a consistent state.
 
 [[gjournal-new]]
-=== Journaling Newly Created Partitions
+==== Enabling GEOM Journaling on Newly Created Partitions
+
+The procedure described earlier is required when enabling GEOM journaling on file systems that already contain data.
+When journaling a newly created, empty partition, the process is simpler because both the data and journal providers can reside within the same partition.
+
+This approach is typically used for new disks or newly allocated partitions that have not yet been formatted with a file system.
+
 
 While the above procedure is necessary for journaling partitions that already contain data, journaling an empty partition is somewhat easier, since both the data and the journal provider can be stored in the same partition.
-For example, assume a new disk was installed, and a new partition [.filename]#/dev/ad1s1d# was created.
+For example, assume a new disk was installed, and a new partition [.filename]#/dev/ada1p1# was created.
 Creating the journal would be as simple as:
 
 [source,shell]
 ....
-# gjournal label ad1s1d
+# gjournal label /dev/ada1p1
 ....
 
 The journal size will be 1 GB by default.
@@ -348,15 +557,39 @@ For example, to create a 2 GB journal, you could use the following command:
 
 [source,shell]
 ....
-# gjournal label -s 2G ad1s1d
+# gjournal label -s 2G /dev/ada1p1
 ....
 
-You can then create a file system on your new partition, and enable journaling using the `-J` option:
+You can then initialyze a UFS file system on your new partition, enable journaling using `newfs(8)` on the `.journal` device, and disable Soft Updates using `tunefs(8)`:
 
 [source,shell]
 ....
-# newfs -J /dev/ad1s1d.journal
+# newfs -J /dev/ada1p1.journal
+# tunefs -n disable -j disable /dev/ada1p1.journal
 ....
+
+After the file system has been created, it can be mounted normally.
+For example, to mount it at `/data`:
+
+[source,shell]
+....
+# mount /dev/ada1p1.journal /data
+....
+
+To ensure the file system is mounted automatically at boot, add an entry to [.filename]#/etc/fstab#:
+
+[.programlisting]
+....
+/dev/ada1p1.journal    /data   ufs     rw,async      2       2
+....
+
+===== Notes on Usage
+
+When using a single provider for both data and journal storage:
+
+* The partition must be empty before labeling
+* The journal space is allocated from within the partition
+* The file system size will be reduced by the size of the journal
 
 [[configure-kernel]]
 === Building Journaling into Your Custom Kernel
@@ -366,37 +599,87 @@ Edit your custom kernel configuration file, and make sure it includes these two 
 
 [.programlisting]
 ....
-options UFS_GJOURNAL # Note: This is already in GENERIC
+options UFS_GJOURNAL <1>
 
-options GEOM_JOURNAL # You will have to add this one
+options GEOM_JOURNAL <2>
 ....
+
+<.> Note: This is already in GENERIC
+<.> You will have to add this one
+
 
 Rebuild and reinstall your kernel following the relevant extref:{handbook}kernelconfig[instructions in the FreeBSD Handbook., kernelconfig]
 
 Do not forget to remove the relevant "load" entry from [.filename]#/boot/loader.conf# if you have previously used it.
 
+=== Checking GEOM Journaling
+
+GEOM journaling status can be verified by inspecting active GEOM providers.
+
+To list all active GEOM journal devices, run:
+
+[source,shell]
+----
+# gjournal list
+----
+
+Or to view a summary of journal status:
+
+[source,shell]
+----
+# gjournal status
+----
+
+Journaled file systems are identified by device names ending in `.journal`.
+The presence of these providers indicates that GEOM journaling is active.
+
+Additional information about GEOM device stacking can be obtained with:
+
+[source,shell]
+----
+# geom -t
+----
+
+Alternatively, `dumpfs(8)` can be used to inspect the file system superblock:
+
+[source,shell]
+----
+# dumpfs /dev/ada0p2.journal | grep -i journal
+flags   gjournal
+----
+
+[[troubleshooting-journaling]]
 [[troubleshooting-gjournal]]
 == Troubleshooting Journaling
 
 The following section covers frequently asked questions regarding problems related to journaling.
 
-=== I am getting kernel panics during periods of high disk activity. How is this related to journaling?
+=== I am experiencing kernel panics during periods of high disk activity. Is this related to GEOM journaling?
 
-The journal probably fills up before it has a chance to get committed (flushed) to disk.
-Keep in mind the size of the journal depends on the usage load, and not the size of the data provider.
-If your disk activity is high, you need a larger partition for the journal.
-See the note in the crossref:gjournal-desktop[understanding-journaling, Understanding Journaling in FreeBSD] section.
+On modern FreeBSD systems, kernel panics caused solely by an undersized GEOM journal are rare.
+
+Under sustained or burst-heavy write workloads, an undersized journal typically results in write throttling or temporary I/O stalls while the journal is flushed to the data provider.
+A kernel panic may occur only in exceptional cases, usually in combination with additional problems such as I/O errors or resource exhaustion, where continuing operation could risk file system integrity.
+
+If panics are observed during heavy write activity, increasing the size of the journal provider for the affected file system is recommended.
 
 === I made some mistake during configuration, and I cannot boot normally now. Can this be fixed some way?
 
 You either forgot (or misspelled) the entry in [.filename]#/boot/loader.conf#, or there are errors in your [.filename]#/etc/fstab# file.
 These are usually easy to fix.
-Press kbd:[Enter] to get to the default single user shell.
+During system startup, when the boot process stops and prompts for single-user mode (for example after a failed mount or `fsck` error), press kbd:[Enter] to get to the default single user shell.
 Then locate the root of the problem:
 
 [source,shell]
 ....
 # cat /boot/loader.conf
+....
+
+Ensure that the following line exists and is spelled correctly:
+
+[.programlisting]
+....
+geom_journal_load="YES"
 ....
 
 If the `geom_journal_load` entry is missing or misspelled, the journaled devices are never created.
@@ -406,12 +689,12 @@ Load the module manually, mount all partitions, and continue with multi-user boo
 ....
 # gjournal load
 
-GEOM_JOURNAL: Journal 2948326772: ad0s1g contains journal.
-GEOM_JOURNAL: Journal 3193218002: ad0s1h contains journal.
-GEOM_JOURNAL: Journal 3193218002: ad0s1d contains data.
-GEOM_JOURNAL: Journal ad0s1d clean.
-GEOM_JOURNAL: Journal 2948326772: ad0s1f contains data.
-GEOM_JOURNAL: Journal ad0s1f clean.
+GEOM_JOURNAL: Journal 2948326772: ada0p4 contains journal.
+GEOM_JOURNAL: Journal 3193218002: ada0p5 contains journal.
+GEOM_JOURNAL: Journal 2948326772: ada0p2 contains data.
+GEOM_JOURNAL: Journal ada0p2 clean.
+GEOM_JOURNAL: Journal 3193218002: ada0p3 contains data.
+GEOM_JOURNAL: Journal ada0p3 clean.
 
 # mount -a
 # exit
@@ -453,29 +736,53 @@ Stop the journaling providers:
 
 [source,shell]
 ....
-# gjournal stop ad0s1d.journal
-# gjournal stop ad0s1f.journal
+# gjournal stop ada0p2.journal
+# gjournal stop ada0p3.journal
 ....
 
-Clear journaling metadata from all the devices used:
+Next step should be done with unloaded gjournal kernel module.
+If the following command fails:
+
+[source,shell]
+...
+# gjournal unload
+...
+
+ensure that the following line exists in [.filename]#/boot/loader.conf# and is spelled correctly:
+
+[.programlisting]
+....
+geom_journal_load="NO"
+....
+
+Reboot your desktop without gjournal kernel module:
 
 [source,shell]
 ....
-# gjournal clear ad0s1d
-# gjournal clear ad0s1f
-# gjournal clear ad0s1g
-# gjournal clear ad0s1h
+# shutdown -r now
 ....
 
-Clear the file system journaling flag, and restore the Soft Updates flag:
+Boot into single-user mode again. Clear the journaling metadata from all the devices used:
 
 [source,shell]
 ....
-# tunefs -J disable -n enable ad0s1d
+# gjournal clear ada0p2
+# gjournal clear ada0p3
+# gjournal clear ada0p4
+# gjournal clear ada0p5
+....
+
+Clear the file system journaling flag, and restore the Soft Updates flags:
+
+[source,shell]
+....
+# tunefs -J disable -n enable -j enable ada0p2
+tunefs: soft updates journaling set
 tunefs: gjournal cleared
 tunefs: soft updates set
 
-# tunefs -J disable -n enable ad0s1f
+# tunefs -J disable -n enable -j enable ada0p3
+tunefs: soft updates journaling set
 tunefs: gjournal cleared
 tunefs: soft updates set
 ....
@@ -484,19 +791,168 @@ Remount the old devices by hand:
 
 [source,shell]
 ....
-# mount -o rw /dev/ad0s1d /var
-# mount -o rw /dev/ad0s1f /usr
+# mount -o rw /dev/ada0p2 /var
+# mount -o rw /dev/ada0p3 /usr
 ....
 
 Edit [.filename]#/etc/fstab# and restore it to its original state:
 
 [.programlisting]
 ....
-/dev/ad0s1f     /usr            ufs     rw      2       2
-/dev/ad0s1d     /var            ufs     rw      2       2
+/dev/ada0p2     /usr            ufs     rw      2       2
+/dev/ada0p3     /var            ufs     rw      2       2
 ....
 
-Finally, edit [.filename]#/boot/loader.conf#, remove the entry that loads the `geom_journal` module and reboot.
+Finally, edit [.filename]#/boot/loader.conf#, remove the entry that loads the `geom_journal` module (or re-enable it if gjournal is still required for other partitions), and reboot.
+
+=== How do I temporarily boot without GEOM journaling?
+
+To boot the system without GEOM journaling, prevent the journal module from loading during startup.
+
+Comment out or remove the following line from [.filename]#/boot/loader.conf# and reboot:
+
+[.programlisting]
+....
+geom_journal_load="YES"
+....
+
+After booting without GEOM journaling, journaled devices (`*.journal`) will not be created.
+File Systems must be mounted using their original (non-journaled) providers, or mounted manually as needed for recovery or maintenance.
+
+This method does not modify on-disk journal metadata and can be safely used for troubleshooting.
+
+=== Can I resize a GEOM journal after it has been created?
+
+No. A GEOM journal cannot be resized in place after it has been created.
+
+The journal size is fixed at the time the journal is labeled.
+To change the journal size, GEOM journaling must be removed and reconfigured with a new journal provider of the desired size.
+For file systems containing data, this requires unmounting the file system and recreating the journal using appropriately sized providers, as described earlier in this article.
+
+Plan journal sizes conservatively to accommodate peak write activity, as resizing requires reinitialization of the journal configuration.
+
+=== What happens after an unclean shutdown or power failure?
+
+After an unclean shutdown or power failure, GEOM journaling and Soft Updates with journaling replay the pending journal records during the next boot to return the file system to a consistent state.
+
+If the journal replay completes successfully, the file system is mounted normally and no full file system check is required.
+Journal replay typically takes only a few seconds and depends on the amount of recent write activity rather than the size of the file system.
+
+A full file system check may still be required in rare cases, such as when underlying storage errors are detected or the journal itself is inconsistent.
+
+=== How does GEOM journaling interact with fsck?
+
+GEOM journaling and Soft Updates with journaling interact with `fsck_ffs(8)` in different ways, reflecting their different integration levels in the FreeBSD storage stack.
+
+For GEOM journaling, crash recovery is performed by the GEOM framework itself.
+During system startup, the `geom_journal` class detects journal metadata and replays any pending journal records while the provider is being tasted by GEOM, before the journaled device becomes visible to higher layers of the system.
+If journal replay completes successfully, the file system is returned to a consistent state and the UFS superblock is updated to indicate that no file system check is required.
+When `fsck_ffs(8)` is later invoked during boot, it reads this state from the superblock and skips the file system check.
+
+For Soft Updates with journaling, recovery is initiated by `fsck_ffs(8)` itself.
+During the file system check phase at boot time, `fsck_ffs(8)` detects that the files ystem supports Soft Updates with journaling and invokes the journal replay logic.
+If journal replay reports that the file system is consistent, `fsck_ffs(8)` terminates early without performing a full check.
+If journal replay cannot complete successfully, a traditional file system check is performed.
+
+As a result, the recovery path during system startup depends on the journaling mechanism in use, as illustrated by the following boot sequence:
+
+----
+Firmware / Boot Loader
+        |
+        v
+Kernel initialization
+        |
+        v
+GEOM framework (provider tasting)
+        |
+        +--> GEOM journaling (gjournal)
+        |       - Journal replay occurs here
+        |       - Filesystem consistency is restored
+        |       - Superblock is updated
+        |
+        v
+Filesystem check phase (fsck_ffs)
+        |
+        +--> Soft Updates with journaling
+        |       - Journal replay initiated by fsck
+        |       - fsck exits early if consistent
+        |
+        v
+Filesystem mount
+        |
+        v
+Normal system operation
+----
+
+`fsck_ffs(8)` is still used when journal replay cannot be completed, when underlying storage errors are detected, or during periodic manual or scheduled file system checks.
+GEOM journaling reduces recovery time after crashes but does not replace `fsck_ffs(8)` entirely.
+
+=== Why does `gjournal clear` report "Operation not permitted" even in single-user mode?
+
+In GEOM, the same underlying storage can be exposed through multiple provider names at the same time.
+For example, a partition may be visible both under its disk-based name (e.g. `vtbd0p7`) and under a GPT label (e.g. `/dev/gpt/labelname`).
+These are different GEOM providers referring to the same physical storage.
+
+When `gjournal stop` or `gjournal clear` is executed on one provider name, the GEOM framework may immediately detect the journal metadata again through another provider name during the tasting process.
+As a result, the journal is re-attached automatically, and attempts to clear its metadata fail with an "Operation not permitted" error.
+
+It is technically possible to suppress this behavior by disabling GEOM tasting or by preventing the creation of alternative provider names, but doing so is strongly discouraged.
+Such changes may negatively affect other GEOM classes and system components that rely on normal provider discovery.
+
+For this reason, the recommended and safe procedure is to unload the `geom_journal` module entirely before removing journal metadata, as described earlier in this article.
+With the module unloaded, no tasting occurs and the journal cannot be re-attached, allowing `gjournal clear` to complete successfully.
+
+=== Can GEOM journaling be used on the root file system?
+
+Yes. GEOM journaling can be used on the root file system, but it requires additional care during system configuration.
+
+The GEOM journal module must be loaded early during the boot process so that the journaled root device is available before the root file system is mounted.
+Misconfiguration may prevent the system from booting normally, so this setup is generally recommended only for experienced users who fully understand the boot sequence and recovery procedures.
+
+For these reasons, GEOM journaling is more commonly applied to non-root file systems such as `/usr` and `/var`.
+
+=== What are the performance implications of using GEOM journaling?
+
+GEOM journaling introduces additional write I/O because all write operations are first recorded in the journal before being committed to the data provider.
+This results in increased write latency and higher overall write amplification compared to non-journaled file systems.
+
+Read performance is typically unaffected.
+The performance impact is most noticeable on write-heavy workloads and depends on journal size, placement, and the speed of the underlying storage.
+Using a sufficiently sized journal and fast storage for the journal provider minimizes performance penalties.
+
+=== Can GEOM journaling be used together with other GEOM classes?
+
+Yes. GEOM journaling can be stacked with other GEOM classes.
+
+When used together, GEOM journaling typically operates on top of providers created by other GEOM classes such as `gmirror(8)` or `graid3(8)`.
+The order of stacking is important and should follow the documented layering requirements of the involved GEOM classes.
+
+GEOM journaling maintains file system consistency across the stacked providers, but it does not replace redundancy or error detection provided by other GEOM classes.
+
+=== Can GEOM journaling and Soft Updates be enabled at the same time?
+
+No. GEOM journaling and Soft Updates must not be enabled at the same time on the same file system.
+
+GEOM journaling requires exclusive control over write ordering and consistency guarantees.
+If Soft Updates are enabled together with GEOM journaling, the file system may behave unpredictably and data integrity cannot be guaranteed.
+
+When using GEOM journaling, Soft Updates must be disabled on the affected file system, as described earlier in this article.
+
+[[soft-updates]]
+=== What is the difference between Soft Updates and Soft Updates with Journaling?
+
+Both Soft Updates and Soft Updates with Journaling are designed to maintain file system consistency, but they use different mechanisms and behave differently after a system crash.
+
+_Soft Updates_ ensure consistency by carefully ordering metadata writes in memory so that only safe states are written to disk.
+If a crash occurs, any metadata updates that have not yet been written are simply lost, leaving the file system in a consistent but possibly older state.
+However, resource accounting may be temporarily inaccurate, and a full `fsck_ffs(8)` run is required to reclaim unused blocks and inodes.
+
+_Soft Updates with Journaling_ build on top of _Soft Updates_ by adding a metadata journal stored within the file system.
+Metadata changes are first recorded in the journal and are replayed automatically during the next boot after an unclean shutdown.
+This allows the file system to be restored to a consistent state quickly, usually without requiring a full `fsck_ffs(8)` run.
+
+In short, _Soft Updates_ provide consistency without a journal, while _Soft Updates with Journaling_ add fast and automatic recovery after crashes at the cost of additional disk space and minor performance overhead.
+
 
 [[further-reading]]
 == Further Reading
@@ -504,7 +960,9 @@ Finally, edit [.filename]#/boot/loader.conf#, remove the entry that loads the `g
 Journaling is a fairly new feature of FreeBSD, and as such, it is not very well documented yet.
 You may however find the following additional references useful:
 
-* A extref:{handbook}geom[new section on journaling, geom-gjournal] is now part of the FreeBSD Handbook.
+* A extref:{handbook}geom[section on journaling, geom-gjournal] is now part of the FreeBSD Handbook.
 * https://lists.freebsd.org/pipermail/freebsd-current/2006-June/064043.html[This post] in {freebsd-current} by man:gjournal[8]'s developer, `{pjd}`.
 * https://lists.freebsd.org/pipermail/freebsd-questions/2008-April/173501.html[This post] in {freebsd-questions} by `{ivoras}`.
-* The manual pages of man:gjournal[8] and man:geom[8].
+* https://www.youtube.com/watch?v=_NuhRkiInvA[Journaled Soft-Updates, Dr. Kirk McKusick, BSDCan 2010] on YouTube
+* https://www.youtube.com/watch?v=xMpmOezBJZo[GEOM - in Infrastructure We Trust, Pawel Jakub Dawidek, AsiaBSDCon 2008] on YouTube
+* The manual pages of man:gjournal[8], man:geom[8], and man:tunefs[8].
