@@ -420,14 +420,20 @@ sub package_links {
         next if !(m,^(.*?)-(.*?)\.yaml:(.*),);
 
         my $arch     = $1;
-        my $rel      = $1;
+        my $rel_major = $1;
+        my $rel_minor = "$1/$2";
         my $snapshot = $2;
         my $path     = "$1/$2";
         my $perl     = decode_json($3);
 
         $arch =~ s,.*%3A,,;
-        if ( $rel =~ /^FreeBSD%3A(\d+)%3A/ ) {
-            $rel = ":$1:";
+        if ( $rel_major =~ /^FreeBSD%3A(\d+)%3A/ ) {
+            $rel_major = ":$1:";
+        }
+        if ( $rel_minor =~ /^FreeBSD%3A(\d+)%3A.*release_(\d+)$/ ) {
+            $rel_minor = ":$1:$2";
+        } else {
+            $rel_minor = "";
         }
 
         if ( $. == 1 ) {
@@ -486,6 +492,7 @@ qq{ <th onclick="sort_table(2)" title="click to sort asc/desc by build time">Bui
             next
               if index( $release, $filter ) < 0
               && index( $pkg_opt, $filter ) < 0
+              && index( $rel_minor, $filter ) < 0
               && index( $version, $filter ) < 0
               && index( $time,    $filter ) < 0
               && index( $flavor,  $filter ) < 0;
@@ -510,7 +517,8 @@ qq{ <th onclick="sort_table(2)" title="click to sort asc/desc by build time">Bui
 
         $hash->{'version'}->{$version}++;
         $hash->{'arch'}->{$arch}++;
-        $hash->{'release'}->{$rel}++;
+        $hash->{'release_major'}->{$rel_major}++;
+        $hash->{'release_minor'}->{$rel_minor}++;
         $hash->{'flavor'}->{$flavor}++ if $flavor ne "";
         $hash->{'snapshot'}->{$snapshot}++
           if $snapshot eq 'latest' || $snapshot eq 'quarterly';
