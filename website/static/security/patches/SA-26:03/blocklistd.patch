@@ -1,0 +1,173 @@
+--- contrib/blocklist/bin/blacklistd.c.orig
++++ contrib/blocklist/bin/blacklistd.c
+@@ -191,7 +191,7 @@
+ 	}
+ 
+ 	if (getremoteaddress(bi, &rss, &rsl) == -1)
+-		return;
++		goto out;
+ 
+ 	if (debug || bi->bi_msg[0]) {
+ 		sockaddr_snprintf(rbuf, sizeof(rbuf), "%a:%p", (void *)&rss);
+@@ -204,12 +204,12 @@
+ 
+ 	if (conf_find(bi->bi_fd, bi->bi_uid, &rss, &c) == NULL) {
+ 		(*lfun)(LOG_DEBUG, "no rule matched");
+-		return;
++		goto out;
+ 	}
+ 
+ 
+ 	if (state_get(state, &c, &dbi) == -1)
+-		return;
++		goto out;
+ 
+ 	if (debug) {
+ 		char b1[128], b2[128];
+@@ -269,6 +269,8 @@
+ 	state_put(state, &c, &dbi);
+ 
+ out:
++	close(bi->bi_fd);
++
+ 	if (debug) {
+ 		char b1[128], b2[128];
+ 		(*lfun)(LOG_DEBUG, "%s: final db state for %s: count=%d/%d "
+--- contrib/blocklist/bin/blocklistd.c.orig
++++ contrib/blocklist/bin/blocklistd.c
+@@ -191,7 +191,7 @@
+ 	}
+ 
+ 	if (getremoteaddress(bi, &rss, &rsl) == -1)
+-		return;
++		goto out;
+ 
+ 	if (debug || bi->bi_msg[0]) {
+ 		sockaddr_snprintf(rbuf, sizeof(rbuf), "%a:%p", (void *)&rss);
+@@ -204,12 +204,12 @@
+ 
+ 	if (conf_find(bi->bi_fd, bi->bi_uid, &rss, &c) == NULL) {
+ 		(*lfun)(LOG_DEBUG, "no rule matched");
+-		return;
++		goto out;
+ 	}
+ 
+ 
+ 	if (state_get(state, &c, &dbi) == -1)
+-		return;
++		goto out;
+ 
+ 	if (debug) {
+ 		char b1[128], b2[128];
+@@ -269,6 +269,8 @@
+ 	state_put(state, &c, &dbi);
+ 
+ out:
++	close(bi->bi_fd);
++
+ 	if (debug) {
+ 		char b1[128], b2[128];
+ 		(*lfun)(LOG_DEBUG, "%s: final db state for %s: count=%d/%d "
+--- contrib/blocklist/port/popenve.c.orig
++++ contrib/blocklist/port/popenve.c
+@@ -111,11 +111,25 @@
+ #endif
+ 	}
+ 
+-	if ((cur = malloc(sizeof(*cur))) != NULL)
+-		return cur;
++	if ((cur = malloc(sizeof(*cur))) != NULL) {
++		if (**type == 'r') {
++			cur->fp = fdopen(pdes[0], *type);
++#ifdef _REENTRANT
++			cur->fd = pdes[0];
++#endif
++		} else {
++			cur->fp = fdopen(pdes[1], *type);
++#ifdef _REENTRANT
++			cur->fd = pdes[1];
++#endif
++		}
++		if (cur->fp != NULL)
++			return cur;
++	}
+ 	serrno = errno;
+ 	(void)close(pdes[0]);
+ 	(void)close(pdes[1]);
++	free(cur);
+ 	errno = serrno;
+ 	return NULL;
+ }
+@@ -125,16 +139,6 @@
+ {
+ 	struct pid *old;
+ 
+-	/* POSIX.2 B.3.2.2 "popen() shall ensure that any streams
+-	   from previous popen() calls that remain open in the 
+-	   parent process are closed in the new child process. */
+-	for (old = pidlist; old; old = old->next)
+-#ifdef _REENTRANT
+-		(void)close(old->fd); /* don't allow a flush */
+-#else
+-		(void)close(fileno(old->fp)); /* don't allow a flush */
+-#endif
+-
+ 	if (type[0] == 'r') {
+ 		(void)close(pdes[0]);
+ 		if (pdes[1] != STDOUT_FILENO) {
+@@ -150,31 +154,30 @@
+ 			(void)close(pdes[0]);
+ 		}
+ 	}
++
++	/* POSIX.2 B.3.2.2 "popen() shall ensure that any streams
++	   from previous popen() calls that remain open in the
++	   parent process are closed in the new child process. */
++	for (old = pidlist; old; old = old->next) {
++#ifdef _REENTRANT
++		(void)close(old->fd); /* don't allow a flush */
++#else
++		(void)close(fileno(old->fp)); /* don't allow a flush */
++#endif
++	}
+ }
+ 
+ static void
+ pdes_parent(int *pdes, struct pid *cur, pid_t pid, const char *type)
+ {
+-	FILE *iop;
+-
+-	/* Parent; assume fdopen can't fail. */
+-	if (*type == 'r') {
+-		iop = fdopen(pdes[0], type);
+-#ifdef _REENTRANT
+-		cur->fd = pdes[0];
+-#endif
++	/* Parent */
++	if (*type == 'r')
+ 		(void)close(pdes[1]);
+-	} else {
+-		iop = fdopen(pdes[1], type);
+-#ifdef _REENTRANT
+-		cur->fd = pdes[1];
+-#endif
++	else
+ 		(void)close(pdes[0]);
+-	}
+ 
+ 	/* Link into list of file descriptors. */
+-	cur->fp = iop;
+-	cur->pid =  pid;
++	cur->pid = pid;
+ 	cur->next = pidlist;
+ 	pidlist = cur;
+ }
+@@ -200,7 +203,7 @@
+ #ifdef _REENTRANT
+ 	(void)rwlock_rdlock(&pidlist_lock);
+ #endif
+-	switch (pid = vfork()) {
++	switch (pid = fork()) {
+ 	case -1:			/* Error. */
+ 		serrno = errno;
+ #ifdef _REENTRANT

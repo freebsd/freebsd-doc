@@ -1,0 +1,40 @@
+=== mac_do(4), setcred(2), mdo(1)
+
+Contact: Olivier Certner <olce.freebsd.statusreports@certner.fr>
+Contact: Baptiste Daroussin <bapt@FreeBSD.org>
+
+This project aims at allowing controlled process credentials transitions without using setuid executables but instead leveraging our MAC framework.
+
+Traditional programs for credentials change have to execute preliminary operations as root (if not as the effective UID, at a minimum as the saved UID).
+Some of these programs (e.g., man:sudo[8]) have lots of lines of codes and comprise features (e.g., loadable security modules) that can be dangerous from a security standpoint.
+Thus, they have a non-negligible attack surface and are difficult to prove correct.
+Additionally, in most scenarios, the extra features they bring are not necessary.
+
+More generally, the threat model for the man:mac_do[4] kernel module part is that of compromised userland programs, be they credentials changers or credentials providers ones.
+This stance implies that calls to the kernel's credentials-changing API must be monitored by the kernel without upcalls to userland.
+In practice, man:mac_do[4] must be configured beforehand by the administrator to indicate which transitions of credentials are valid (through a man:sysctl[8] knob, `security.mac.do.rules`).
+
+Currently, the companion userland program, man:mdo[1], is the only one that can be authorized to proceed by man:mac_do[4] (for now, based on the executable path).
+This tiny program simply establishes the new credentials via calls to man:setuid[2], and optionally man:initgroups[3] (calling man:setgroups[2]) and man:setgid[2] (if `-i` was not passed).
+
+The resulting set of groups is either that of the target UID based on the password database, or that before the change in UID (when using `-i`).
+The second alternative can be a security hazard in some cases (as the effective GID is not changed either), whereas the first contradicts the threat model above.
+The current man:mac_do[4] rules specification indeed only allows to express simple UID transitions towards explicit UIDs from other explicit UIDs or GIDs, without taking into account groups.
+Consequently, the kernel module currently cannot check the content of man:setgroups[2] and man:setgid[2] system calls' parameters, relying completely on man:mdo[1] passing the right information.
+
+A new version of man:mac_do[4] has been in the works for approximately a month.
+Besides fixing concurrency, per-jail settings and MAC policies composition problems, it features a revamp of the rules specification in order to make it possible to finely control which groups are allowed in the resulting credentials.
+Notably, primary and secondary groups can now be specified independently, and for the latter, GIDs can be tagged as allowed, mandatory or forbidden.
+A special alias, `.`, can be used to indicate the current process' UIDs or GIDs depending on the context.
+
+These new features imply that the man:mac_do[4] module is able to apply credentials change at once, since the allowed final credentials depend on the initial ones through the configured rules.
+The traditional userland interface (e.g., man:setuid[2], man:setuid[2], man:setgroups[2], etc.) is at odds with this requirement as it necessitates multiple calls to reach the desired final credentials, making the process pass by several successive states that themselves may not be allowed by man:mac_do[4]'s rules.
+We overcome this limitation by introducing a new system call, man:setcred[2], which allows to request arbitrary transitions of credentials at once.
+Beside its usefulness in conjunction with man:mac_do[4], it has the benefit of simplifying coding of credentials change in userland.
+Since it is also extensible, it may have the potential to be adopted later by other systems.
+
+Pre-requisite changes are currently under review (see in particular revisions link:https://reviews.freebsd.org/D46886[D46886] to link:https://reviews.freebsd.org/D46889[D46889] and link:https://reviews.freebsd.org/D46896[D46896] to link:https://reviews.freebsd.org/D46923[D46923]).
+The bulk of changes in man:mac_do[4]/man:mdo[1] proper will soon be pushed under review as well.
+An older version of the full series can be seen on link:https://github.com/OlCe2/freebsd-src/tree/oc-mac_do[GitHub].
+
+Sponsor: The FreeBSD Foundation

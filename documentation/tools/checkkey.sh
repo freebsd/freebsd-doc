@@ -105,20 +105,20 @@ if [ $# -ne 0 ] ; then
 		case $(expr "${arg}" : '^[0-9A-Fa-f]\{8,16\}$') in
 		8)
 			warning "${arg}: recommend using 16-digit keyid"
-			;&
+			;;
 		16)
-			keyid=$(getkeybyid "${arg}")
-			if [ -n "${keyid}" ] ; then
-				keyids="${keyids} ${keyid}"
-			else
-				warning "${arg} not found"
-			fi
 			;;
 		*)
 			warning "${arg} does not appear to be a valid key ID"
+			continue
 			;;
 		esac
-		shift
+		keyid=$(getkeybyid "${arg}")
+		if [ -n "${keyid}" ] ; then
+			keyids="${keyids} ${keyid}"
+		else
+			warning "${arg} not found"
+		fi
 	done
 else
 	# Search for keys by freebsd.org email
@@ -176,6 +176,7 @@ for key in ${keyids} ; do
 		"17")	algo="DSA" ;;
 		"18")	algo="ECC" ;;
 		"19")	algo="ECDSA" ;;
+		"22")	algo="EDDSA" ;;
 		*)	algo="*UNKNOWN*" ;;
 	esac
 
@@ -189,6 +190,7 @@ for key in ${keyids} ; do
 		DSA)	if [ "${bitlen}" -le 1024 ]; then \
 				badkey "DSA, but not DSA-2"; \
 			fi ;;
+		EDDSA)	;;
 		*)	badkey "non-preferred algorithm"
 	esac
 

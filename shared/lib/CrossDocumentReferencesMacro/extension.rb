@@ -5,6 +5,7 @@ include ::Asciidoctor
 class CrossDocumentReferencesMacro < Asciidoctor::Extensions::InlineMacroProcessor
   use_dsl
 
+  # Macro to handle cross references to a different book.
   named :extref
   name_positional_attributes 'attributes'
 

@@ -39,6 +39,12 @@ ifndef::env-beastie[]
 include::../../../../../shared/asciidoctor.adoc[]
 endif::[]
 
+[NOTE]
+====
+This document is outdated and some sections do not accurately describe the current state of the VM system.
+It is retained for historical purposes and may be updated over time.
+====
+
 [.abstract-title]
 Abstract
 
@@ -283,25 +289,6 @@ FreeBSD is trying to maximize the advantage of a potentially sparse active-mappi
 FreeBSD generally has the performance advantage here at the cost of wasting a little extra memory, but FreeBSD breaks down in the case where a large file is massively shared across hundreds of processes.
 Linux, on the other hand, breaks down in the case where many processes are sparsely-mapping the same shared library and also runs non-optimally when trying to determine whether a page can be reused or not.
 
-[[page-coloring-optimizations]]
-== Page Coloring
-
-We will end with the page coloring optimizations.
-Page coloring is a performance optimization designed to ensure that accesses to contiguous pages in virtual memory make the best use of the processor cache.
-In ancient times (i.e. 10+ years ago) processor caches tended to map virtual memory rather than physical memory.
-This led to a huge number of problems including having to clear the cache on every context switch in some cases, and problems with data aliasing in the cache.
-Modern processor caches map physical memory precisely to solve those problems.
-This means that two side-by-side pages in a processes address space may not correspond to two side-by-side pages in the cache.
-In fact, if you are not careful side-by-side pages in virtual memory could wind up using the same page in the processor cache-leading to cacheable data being thrown away prematurely and reducing CPU performance.
-This is true even with multi-way set-associative caches (though the effect is mitigated somewhat).
-
-FreeBSD's memory allocation code implements page coloring optimizations, which means that the memory allocation code will attempt to locate free pages that are contiguous from the point of view of the cache.
-For example, if page 16 of physical memory is assigned to page 0 of a process's virtual memory and the cache can hold 4 pages, the page coloring code will not assign page 20 of physical memory to page 1 of a process's virtual memory.
-It would, instead, assign page 21 of physical memory.
-The page coloring code attempts to avoid assigning page 20 because this maps over the same cache memory as page 16 and would result in non-optimal caching.
-This code adds a significant amount of complexity to the VM memory allocation subsystem as you can well imagine, but the result is well worth the effort. 
-Page Coloring makes VM memory as deterministic as physical memory in regards to cache performance.
-
 [[conclusion]]
 == Conclusion
 
@@ -380,44 +367,3 @@ This can be fixed easily enough by bumping up the number of `pv_entry` structure
 In regards to the memory overhead of a page table verses the `pv_entry` scheme: Linux uses "permanent" page tables that are not throw away, but does not need a `pv_entry` for each potentially mapped pte.
 FreeBSD uses "throw away" page tables but adds in a `pv_entry` structure for each actually-mapped pte.
 I think memory utilization winds up being about the same, giving FreeBSD an algorithmic advantage with its ability to throw away page tables at will with very low overhead.
-
-=== Finally, in the page coloring section, it might help to have a little more description of what you mean here. I did not quite follow it.
-
-Do you know how an L1 hardware memory cache works? I will explain: Consider a machine with 16MB of main memory but only 128K of L1 cache.
-Generally the way this cache works is that each 128K block of main memory uses the _same_ 128K of cache.
-If you access offset 0 in main memory and then offset 128K in main memory you can wind up throwing away the cached data you read from offset 0!
-
-Now, I am simplifying things greatly.
-What I just described is what is called a "direct mapped" hardware memory cache.
-Most modern caches are what are called 2-way-set-associative or 4-way-set-associative caches.
-The set-associatively allows you to access up to N different memory regions that overlap the same cache memory without destroying the previously cached data.
-But only N.
-
-So if I have a 4-way set associative cache I can access offset 0, offset 128K, 256K and offset 384K and still be able to access offset 0 again and have it come from the L1 cache.
-If I then access offset 512K, however, one of the four previously cached data objects will be thrown away by the cache.
-
-It is extremely important... _extremely_ important for most of a processor's memory accesses to be able to come from the L1 cache, because the L1 cache operates at the processor frequency.
-The moment you have an L1 cache miss and have to go to the L2 cache or to main memory, the processor will stall and potentially sit twiddling its fingers for _hundreds_ of instructions worth of time waiting for a read from main memory to complete.
-Main memory (the dynamic ram you stuff into a computer) is __slow__, when compared to the speed of a modern processor core.
-
-Ok, so now onto page coloring: All modern memory caches are what are known as _physical_ caches.
-They cache physical memory addresses, not virtual memory addresses.
-This allows the cache to be left alone across a process context switch, which is very important.
-
-But in the UNIX(R) world you are dealing with virtual address spaces, not physical address spaces.
-Any program you write will see the virtual address space given to it.
-The actual _physical_ pages underlying that virtual address space are not necessarily physically contiguous!
-In fact, you might have two pages that are side by side in a processes address space which wind up being at offset 0 and offset 128K in _physical_ memory.
-
-A program normally assumes that two side-by-side pages will be optimally cached.
-That is, that you can access data objects in both pages without having them blow away each other's cache entry.
-But this is only true if the physical pages underlying the virtual address space are contiguous (insofar as the cache is concerned).
-
-This is what Page coloring does.
-Instead of assigning _random_ physical pages to virtual addresses, which may result in non-optimal cache performance, Page coloring assigns _reasonably-contiguous_ physical pages to virtual addresses.
-Thus programs can be written under the assumption that the characteristics of the underlying hardware cache are the same for their virtual address space as they would be if the program had been run directly in a physical address space.
-
-Note that I say "reasonably" contiguous rather than simply "contiguous".
-From the point of view of a 128K direct mapped cache, the physical address 0 is the same as the physical address 128K.
-So two side-by-side pages in your virtual address space may wind up being offset 128K and offset 132K in physical memory, but could also easily be offset 128K and offset 4K in physical memory and still retain the same cache performance characteristics.
-So page-coloring does _not_ have to assign truly contiguous pages of physical memory to contiguous pages of virtual memory, it just needs to make sure it assigns contiguous pages from the point of view of cache performance and operation.
