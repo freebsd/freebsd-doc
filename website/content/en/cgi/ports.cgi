@@ -878,14 +878,14 @@ $counter = 0;
 $query =~ s/^\^// if $stype eq 'requires';
 
 # quote non characters
+my $query2 = $query;
 $query =~ s/([^\w\^])/\\$1/g;
 
 # search
 if ($query) {
     my $q = "";
-    if ( $query =~ m,^([A-Za-z0-9\-]+)(\\/)([A-Za-z0-9\-_\+\.\\]+)$, ) {
-        $q = "$1$2$3";
-        $q =~ s,\\,,g;
+    if ( $query2 =~ m,^([A-Za-z0-9\-]+)/([A-Za-z0-9\-_\+\.\\]+)$, ) {
+        $q = "$1/$2";
     }
 
     if ( $q ne "" && $enable_packages_link && $stype eq 'pkg' ) {
