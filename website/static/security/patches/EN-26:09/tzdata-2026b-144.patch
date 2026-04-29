@@ -1,0 +1,681 @@
+--- contrib/tzdata/Makefile.orig
++++ contrib/tzdata/Makefile
+@@ -66,28 +66,6 @@
+ 
+ LOCALTIME=	Factory
+ 
+-# The POSIXRULES macro controls interpretation of POSIX-like TZ
+-# settings like TZ='EET-2EEST' that lack DST transition rules.
+-# If POSIXRULES is '-', no template is installed; this is the default.
+-# Any other value for POSIXRULES is obsolete and should not be relied on, as:
+-# * It does not work correctly in popular implementations such as GNU/Linux.
+-# * It does not work even in tzcode, except for historical timestamps
+-#   that precede the last explicit transition in the POSIXRULES file.
+-#   Hence it typically does not work for current and future timestamps.
+-# If, despite the above, you want a template for handling these settings,
+-# you can change the line below (after finding the timezone you want in the
+-# one of the $(TDATA) source files, or adding it to a source file).
+-# Alternatively, if you discover you've got the wrong timezone, you can just
+-# 'zic -p -' to remove it, or 'zic -p rightzone' to change it.
+-# Use the command
+-#	make zonenames
+-# to get a list of the values you can use for POSIXRULES.
+-
+-POSIXRULES=	-
+-
+-# Also see TZDEFRULESTRING below, which takes effect only
+-# if POSIXRULES is '-' or if the template file cannot be accessed.
+-
+ 
+ # Installation locations.
+ #
+@@ -170,7 +148,7 @@
+ # applications that are not leap second aware, and is closer to unsmeared
+ # "right" time than unsmeared POSIX time is (e.g., 0.5 vs 1.0 s max error).
+ 
+-REDO=		posix_right
++REDO=		posix_only
+ 
+ # Whether to put an "Expires" line in the leapseconds file.
+ # Use EXPIRES_LINE=1 to put the line in, 0 to omit it.
+@@ -284,7 +262,10 @@
+ #  -DHAVE_STRDUP=0 if your system lacks the strdup function
+ #  -DHAVE_STRNLEN=0 if your system lacks the strnlen function+
+ #  -DHAVE_STRTOLL=0 if your system lacks the strtoll function+
+-#  -DHAVE_STRUCT_STAT_ST_CTIM=0 if struct stat lacks a member st_ctim+
++#  -DHAVE_STRUCT_STAT_ST_CTIM=0 if struct stat lacks a status-change member
++#	of type struct timespec, so code should use st_ctime instead;
++#	but if the status-change member name is st_ctimespec,
++#	use -Dst_ctim=st_ctimespec instead (default is guessed)+
+ #  -DHAVE_STRUCT_TIMESPEC=0 if your system lacks struct timespec+
+ #  -DHAVE_SYMLINK=0 if your system lacks the symlink function
+ #  -DHAVE_SYS_STAT_H=0 if <sys/stat.h> does not work*
+@@ -322,13 +303,13 @@
+ #		variable, 0 otherwise (default is guessed)
+ #	      -DHAVE_SYS_SINGLE_THREADED_H=0 if <sys/single_threaded.h> works,
+ #		0 otherwise (default is guessed)
+-#	  -DTHREAD_RWLOCK to use read-write locks intead of mutexes.
+-#	    This can improve paralellism and thus save real time
++#	  -DTHREAD_RWLOCK to use read-write locks instead of mutexes.
++#	    This can improve parallelism and thus save real time
+ #	    if many threads call tzcode functions simultaneously.
+ #	    It also costs CPU time and thus energy.
+ #	  -DTHREAD_TM_MULTI to have gmtime, localtime, and offtime
+ #	    return different struct tm * addresses in different threads.
+-#	    This supports unportable programs that call
++#	    This supports nonportable programs that call
+ #	    gmtime/localtime/offtime when they should call
+ #	    gmtime_r/localtime_r/offtime_r to avoid races.
+ #	    Because the corresponding storage is freed on thread exit,
+@@ -347,10 +328,13 @@
+ #  -DTZ_DOMAIN=\"foo\" to use "foo" for gettext domain name; default is "tz"
+ #  -DTZ_DOMAINDIR=\"/path\" to use "/path" for gettext directory;
+ #	the default is system-supplied, typically "/usr/lib/locale"
++#  -DTZ_RUNTIME_LEAPS=0 to disable runtime support for leap seconds.
++#	This conforms to POSIX, shrinks tzcode's attack surface,
++#	and is more efficient.  However, it fails to support Internet
++#	RFC 9636's leap seconds.
+ #  -DTZDEFRULESTRING=\",date/time,date/time\" to default to the specified
+-#	DST transitions for proleptic format TZ strings lacking them,
+-#	in the usual case where POSIXRULES is '-'.  If not specified,
+-#	TZDEFRULESTRING defaults to US rules for future DST transitions.
++#	DST transitions for proleptic format TZ strings lacking them.
++#	If not specified, it defaults to US rules for future DST transitions.
+ #	This mishandles some past timestamps, as US DST rules have changed.
+ #	It also mishandles settings like TZ='EET-2EEST' for eastern Europe,
+ #	as Europe and US DST rules differ.
+@@ -400,12 +384,13 @@
+   -Wold-style-definition -Woverlength-strings -Wpointer-arith \
+   -Wshadow -Wshift-overflow=2 -Wstrict-overflow \
+   -Wstrict-prototypes -Wstringop-overflow=4 \
+-  -Wstringop-truncation -Wsuggest-attribute=cold \
++  -Wsuggest-attribute=cold \
+   -Wsuggest-attribute=const -Wsuggest-attribute=format \
+   -Wsuggest-attribute=malloc \
+   -Wsuggest-attribute=noreturn -Wsuggest-attribute=pure \
+   -Wtrampolines -Wundef -Wunused-macros -Wuse-after-free=3 \
+   -Wvariadic-macros -Wvla -Wwrite-strings \
++  -Wzero-as-null-pointer-constant \
+   -Wno-format-nonliteral -Wno-sign-compare -Wno-type-limits
+ #
+ # If your system has a "GMT offset" field in its "struct tm"s
+@@ -723,7 +708,6 @@
+ 			'$(DESTDIR)$(MANDIR)/man3' '$(DESTDIR)$(MANDIR)/man5' \
+ 			'$(DESTDIR)$(MANDIR)/man8'
+ 		$(ZIC_INSTALL) -l $(LOCALTIME) \
+-			-p $(POSIXRULES) \
+ 			-t '$(DESTDIR)$(TZDEFAULT)'
+ 		cp -f $(TABDATA) '$(DESTDIR)$(TZDIR)/.'
+ 		cp tzselect '$(DESTDIR)$(BINDIR)/.'
+--- contrib/tzdata/NEWS.orig
++++ contrib/tzdata/NEWS
+@@ -1,5 +1,137 @@
+ News for the tz database
+ 
++Release 2026a - 2026-04-22 23:06:43 -0700
++
++  Briefly:
++    British Columbia moved to permanent -07 on 2026-03-09.
++    Some more overflow bugs have been fixed in zic.
++
++  Changes to future timestamps
++
++    British Columbia’s 2026-03-08 spring forward was its last
++    foreseeable clock change, as it moved to permanent -07 thereafter.
++    (Thanks to Arthur David Olson.)  Although the change to permanent
++    -07 legally took place on 2026-03-09, temporarily model the change
++    to occur on 2026-11-01 at 02:00 instead.  This works around a
++    limitation in CLDR v48.2 (2026-03-17).  This temporary hack is
++    planned to be removed after CLDR is fixed.
++
++  Changes to code
++
++    zic no longer mishandles a last transition to a new time type.
++
++    zic no longer overflows a buffer when generating a TZ string like
++    "PST-167:59:58PDT-167:59:59,M11.5.6/-167:59:59,M12.5.6/-167:59:59",
++    which can occur with adversarial input.  (Thanks to Naveed Khan.)
++
++    zic no longer generates a longer TZif file than necessary when
++    an earlier time zone abbreviation is a suffix of a later one.
++    As a nice side effect, zic no longer overflows a buffer when given
++    a long series of abbreviations, each a suffix of the next.
++    (Buffer overflow reported by Arthur Chan.)
++
++    zic no longer overflows an int when processing input like ‘Zone
++    Ouch 2147483648:00:00 - LMT’.  The int overflow can lead to buffer
++    overflow in adversarial cases.  (Thanks to Naveed Khan.)
++
++    zic now checks for signals more often.
++
++
++Release 2026a - 2026-03-01 22:59:49 -0800
++
++  Briefly:
++    Moldova has used EU transition times since 2022.
++    The “right” TZif files are no longer installed by default.
++    -DTZ_RUNTIME_LEAPS=0 disables runtime support for leap seconds.
++    TZif files are no longer limited to 50 bytes of abbreviations.
++    zic is no longer limited to 50 leap seconds.
++    Several integer overflow bugs have been fixed.
++
++  Changes to past and future timestamps
++
++    Since 2022 Moldova has observed EU transition times, that is, it
++    has sprung forward at 03:00, not 02:00, and has fallen back at
++    04:00, not 03:00.  (Thanks to Heitor David Pinto.)
++
++  Changes to data
++
++    Remove Europe/Chisinau from zonenow.tab, as it now agrees with
++    Europe/Athens for future timestamps.
++
++  Changes to build procedure
++
++    The Makefile no longer by default installs an alternate set
++    of TZif files for system clocks that count leap seconds.
++    Install with ‘make REDO=posix_right’ to get the old default,
++    which is rarely used in major downstream distributions.
++    If your system clock counts leap seconds (contrary to POSIX),
++    it is better to install with ‘make REDO=right_only’.
++    This change does not affect the leapseconds file, which is still
++    installed as before.
++
++    The Makefile’s POSIXRULES option, which was declared obsolete in
++    release 2019b, has been removed.  The Makefile’s build procedure
++    thus no longer optionally installs the obsolete posixrules file.
++
++  Changes to code
++
++    Compiling with the new option -DTZ_RUNTIME_LEAPS=0 disables
++    runtime support for leap seconds.  Although this conforms to
++    POSIX, shrinks tzcode’s attack surface, and is more efficient,
++    it fails to support Internet RFC 9636’s leap seconds.
++
++    zic now can generate, and localtime.c can now use, TZif files that
++    hold up to 256 bytes of abbreviations, counting trailing NULs.
++    The previous limit was 50 bytes, and some tzdata TZif files were
++    already consuming 40 bytes.  zic -v warns if it generates a file
++    that exceeds the old 50-byte limit.
++
++    zic -L can now generate TZif files with more than 50 leap seconds.
++    This helps test TZif readers not limited to 50 leap seconds, as
++    tzcode’s localtime.c is; it has little immediate need for
++    practical timekeeping as there have been only 27 leap seconds and
++    possibly there will be no more, due to planned changes to UTC.
++    zic -v warns if its output exceeds the old 50-second limit.
++
++    localtime.c no longer accesses the posixrules file generated by
++    zic -p.  Hence for obsolete and nonconforming settings like
++    TZ="AST4ADT" it now typically falls back on US DST rules, rather
++    than attempting to override this fallback with the contents of the
++    posixrules file.  This removes library support that was declared
++    obsolete in release 2019b, and fixes some undefined behavior.
++    (Undefined behavior reported by GitHub user Naveed8951.)
++
++    The posix2time, posix2time_z, time2posix, and time2posix_z
++    functions now set errno=EOVERFLOW and return ((time_t) -1) if the
++    result is not representable.  Formerly they had undefined behavior
++    that could in practice result in crashing, looping indefinitely,
++    or returning an incorrect result.  As before, these functions are
++    defined only when localtime.c is compiled with the -DSTD_INSPIRED
++    option.
++
++    Some other undefined behavior, triggered by TZif files containing
++    outlandish but conforming UT offsets or leap second corrections,
++    has also been fixed.  (Some of these bugs reported by Naveed8951.)
++
++    localtime.c no longer rejects TZif files that exactly fit in its
++    internal structures, fixing off-by-one typos introduced in 2014g.
++
++    zic no longer generates a no-op transition when
++    simultaneous Rule and Zone changes cancel each other out.
++    This occurs in tzdata only in Asia/Tbilisi on 1997-03-30.
++    (Thanks to Renchunhui for a test case showing the bug.)
++
++    zic no longer assumes you can fflush a read-only stream.
++    (Problem reported by Christos Zoulas.)
++
++    zic no longer generates UT offsets equal to -2**31 and localtime.c
++    no longer accepts them, as they can cause trouble in both
++    localtime.c and its callers.  RFC 9636 prohibits such offsets.
++
++    zic -p now warns that the -p option is obsolete and likely
++    ineffective.
++
++
+ Release 2025c - 2025-12-10 14:42:37 -0800
+ 
+   Briefly:
+@@ -69,6 +201,8 @@
+     The new CFLAGS options -DHAVE_STRUCT_STAT_ST_CTIM=0 and
+     -DHAVE_STRUCT_TIMESPEC=0 port to non-POSIX.1-2008 platforms
+     that lack st_ctim and struct timespec, respectively.
++    On these platforms, the code falls back on st_ctime to
++    implement -DTZ_CHANGE_INTERVAL=N.
+ 
+     tzset etc. now treat ' ' like '_' in time zone abbreviations,
+     just as they treat other invalid bytes.  This continues the
+@@ -89,7 +223,7 @@
+ 
+     The new CFLAGS option -TTHREAD_TM_MULTI causes localtime to return
+     a pointer to thread-specific memory, as FreeBSD does, instead of
+-    to the same memory in all threads.  This supports unportable
++    to the same memory in all threads.  This supports nonportable
+     programs that incorrectly use localtime instead of localtime_r.
+     This option affects gmtime and offtime similarly to localtime.
+     Because the corresponding storage is freed on thread exit, this
+--- contrib/tzdata/backzone.orig
++++ contrib/tzdata/backzone
+@@ -1757,13 +1757,12 @@
+ # Midway
+ #
+ # From Mark Brader (2005-01-23):
+-# [Fallacies and Fantasies of Air Transport History, by R.E.G. Davies,
+-# published 1994 by Paladwr Press, McLean, VA, USA; ISBN 0-9626483-5-3]
++# [<https://www.timetableimages.com/ttimages/pa/pa36/pa36.pdf>]
+ # reproduced a Pan American Airways timetable from 1936, for their weekly
+ # "Orient Express" flights between San Francisco and Manila, and connecting
+ # flights to Chicago and the US East Coast.  As it uses some time zone
+ # designations that I've never seen before:....
+-# Fri. 6:30A Lv. HONOLOLU (Pearl Harbor), H.I.   H.L.T. Ar. 5:30P Sun.
++# Fri. 6:30A Lv. HONOLULU (Pearl Harbor), H.I. . H.L.T. Ar. 5:30P Sun.
+ #  "   3:00P Ar. MIDWAY ISLAND . . . . . . . . . M.L.T. Lv. 6:00A  "
+ #
+ Zone Pacific/Midway	-11:49:28 -	LMT	1901
+--- contrib/tzdata/etcetera.orig
++++ contrib/tzdata/etcetera
+@@ -20,7 +20,8 @@
+ # which load the "UTC" file to handle seconds properly.
+ Zone	Etc/UTC		0	-	UTC
+ 
+-# Functions like gmtime load the "GMT" file to handle leap seconds properly.
++# If leap second support is enabled, functions like gmtime
++# load the "GMT" file to handle leap seconds properly.
+ # Vanguard section, which works with most .zi parsers.
+ #Zone	GMT		0	-	GMT
+ # Rearguard section, for TZUpdater 2.3.2 and earlier.
+--- contrib/tzdata/europe.orig
++++ contrib/tzdata/europe
+@@ -1041,9 +1041,19 @@
+ 
+ # Greenland
+ #
+-# From Paul Eggert (2004-10-31):
++# From Paul Eggert (2026-01-22):
++# During World War II, Greenland was effectively independent of Denmark and
++# observed daylight saving time.  TIME, volume 37, page 23 (1941-04-21)
++# <https://time.com/archive/6770243/war-peace-greenlands-icy-mountains/> says,
++# "Penfield and West made their way to the U.S.'s most northerly consulate.
++# They were astonished to find that Greenlanders, with almost 24 hours of
++# sunlight a day during the summer, have daylight saving time."
++# As the details are unknown they are omitted from the data for now.
++#
+ # During World War II, Germany maintained secret manned weather stations in
+ # East Greenland and Franz Josef Land, but we don't know their time zones.
++# Also, they're likely out of scope for the database
++# as we lack resources to track every bit of military activity.
+ # My source for this is Wilhelm Dege's book mentioned under Svalbard.
+ #
+ # From Paul Eggert (2017-12-10):
+@@ -1957,7 +1967,6 @@
+ 
+ # From Stepan Golosunov (2016-03-07):
+ # the act of the government of the Republic of Moldova Nr. 132 from 1990-05-04
+-# http://lex.justice.md/viewdoc.php?action=view&view=doc&id=298782&lang=2
+ # ... says that since 1990-05-06 on the territory of the Moldavian SSR
+ # time would be calculated as the standard time of the second time belt
+ # plus one hour of the "summer" time. To implement that clocks would be
+@@ -2012,9 +2021,61 @@
+ # says the 2014-03-30 spring-forward transition was at 02:00 local time.
+ # Guess that since 1997 Moldova has switched one hour before the EU.
+ 
++# From Heitor David Pinto (2026-02-22):
++# Soviet Moldovan resolution 132 of 1990 defined the summer time period from
++# the last Sunday in March at 2:00 to the last Sunday in September at 3:00,
++# matching the dates used in most of Europe at the time:
++# https://web.archive.org/web/20211107050832/http://lex.justice.md/viewdoc.php?action=view&view=doc&id=298782&lang=1
++#
++# It seems that in 1996 Moldova changed the end date to October like most of
++# Europe, but kept the transitions at 2:00 and 3:00 rather than 1:00 UTC,
++# which would have been locally 3:00 and 4:00....
++#
++# The notices in the Moldovan government website and broadcaster showed the
++# transitions at 2:00 and 3:00 until 2021:
++# 2015 https://old.gov.md/en/node/7304
++# 2016 https://old.gov.md/en/node/12587
++# 2017 https://old.gov.md/en/node/20654
++# 2017 https://old.gov.md/en/content/moldova-upholds-winter-time-night-28-29-october
++# 2018 https://old.gov.md/en/content/moldova-switch-summer-time
++# 2018 https://old.gov.md/en/content/cabinet-ministers-informs-about-switch-winter-time-28-october
++# 2019 https://old.gov.md/en/content/moldova-switch-summer-time-31-march
++# 2019 https://old.gov.md/en/node/31122
++# 2020 https://old.gov.md/en/node/32771
++# 2020 https://old.gov.md/en/node/34497
++# 2021 https://trm.md/ro/social/moldova-trece-in-aceasta-noapte-la-ora-de-vara
++# 2021 https://trm.md/en/social/republica-moldova-trece-la-ora-de-iarna1
++#
++# However, since 2022, the notices showed the transitions at 3:00 and 4:00,
++# matching the EU rule at 1:00 UTC:
++# 2022 https://trm.md/en/social/in-acest-weekend-republica-moldova-trece-la-ora-de-vara
++# 2022 https://old.gov.md/en/content/moldova-switch-winter-time
++# 2023 https://moldova1.md/p/6587/ora-de-vara-2023-cum-schimbam-acele-ceasornicelor-si-cand-trecem-la-ora-de-vara
++# 2023 https://old.gov.md/en/node/46662
++# 2024 https://moldova1.md/p/26535/republica-moldova-trece-la-ora-de-vara-in-acest-weekend
++# 2024 https://moldova1.md/p/37768/republica-moldova-trece-in-aceasta-noapte-la-ora-de-iarna
++# 2025 https://moldova1.md/p/46349/republica-moldova-trece-la-ora-de-vara-pe-30-martie-cum-ne-afecteaza-si-ce-recomanda-medicii
++# 2025 https://moldova1.md/p/60469/republica-moldova-trece-la-ora-de-iarna-ceasurile-se-dau-inapoi-cu-o-ora
++#
++# It seems that the changes to the end date and transition times were just
++# done in practice without formally changing the resolution. In late 2025, the
++# government said that the Soviet resolution was still in force, and proposed
++# a new resolution to replace it and formally establish the EU rule:
++# ... based on the notices, it seems that in practice Moldova already
++# uses the EU rule since 2022. This was also the year when Moldova applied to
++# join the EU.
++#
++# From Robert Bastian (2026-02-26):
++# This has been approved and published in the government gazette:
++# https://monitorul.gov.md/ro/monitorul/view/pdf/3234/part/2#page=27
++#
++# From Paul Eggert (2026-02-24):
++# Also see Svetlana Rudenko, "Moldova abandons the 'Soviet era'", Logos Press,
++# 2026-02-21 <https://logos-pres.md/en/news/moldova-abandons-the-soviet-era/>.
++
+ # Rule	NAME	FROM	TO	-	IN	ON	AT	SAVE	LETTER/S
+-Rule	Moldova	1997	max	-	Mar	lastSun	 2:00	1:00	S
+-Rule	Moldova	1997	max	-	Oct	lastSun	 3:00	0	-
++Rule	Moldova	1997	2021	-	Mar	lastSun	 2:00	1:00	S
++Rule	Moldova	1997	2021	-	Oct	lastSun	 3:00	0	-
+ 
+ # Zone	NAME		STDOFF	RULES	FORMAT	[UNTIL]
+ Zone	Europe/Chisinau	1:55:20 -	LMT	1880
+@@ -2027,7 +2088,8 @@
+ 			2:00	Russia	EE%sT	1992
+ 			2:00	E-Eur	EE%sT	1997
+ # See Romania commentary for the guessed 1997 transition to EU rules.
+-			2:00	Moldova	EE%sT
++			2:00	Moldova	EE%sT	2022
++			2:00	EU	EE%sT
+ 
+ # Poland
+ 
+@@ -2413,7 +2475,7 @@
+ # Nine O'clock <http://www.nineoclock.ro/POL/1778pol.html>
+ # (1998-10-23) reports that the switch occurred at
+ # 04:00 local time in fall 1998.  For lack of better info,
+-# assume that Romania and Moldova switched to EU rules in 1997,
++# assume that Romania switched to EU rules in 1997,
+ # the same year as Bulgaria.
+ #
+ # Rule	NAME	FROM	TO	-	IN	ON	AT	SAVE	LETTER/S
+--- contrib/tzdata/leap-seconds.list.orig
++++ contrib/tzdata/leap-seconds.list
+@@ -60,15 +60,15 @@
+ #
+ #	The following line shows the last update of this file in NTP timestamp:
+ #
+-#$	3960835200
++#$	3976686858
+ #
+ #	2) Expiration date of the file given on a semi-annual basis: last June or last December
+ #
+-#	File expires on 28 June 2026
++#	File expires on 28 December 2026
+ #
+ #	Expire date in NTP timestamp:
+ #
+-#@	3991593600
++#@	4007404800
+ #
+ #
+ #	LIST OF LEAP SECONDS
+@@ -117,4 +117,4 @@
+ #	please see the readme file in the 'source' directory :
+ #	https://hpiers.obspm.fr/iers/bul/bulc/ntp/sources/README
+ #
+-#h	49db2447 571e5e1b 2f002a53 9c8da8e4 39b8e49e
++#h	2e101270 4e6749f8 2f1792b7 14a0c188 36bb19d6
+--- contrib/tzdata/leapseconds.orig
++++ contrib/tzdata/leapseconds
+@@ -70,7 +70,7 @@
+ # Any additional leap seconds will come after this.
+ # This Expires line is commented out for now,
+ # so that pre-2020a zic implementations do not reject this file.
+-#Expires 2026	Jun	28	00:00:00
++#Expires 2026	Dec	28	00:00:00
+ 
+ # Here are POSIX timestamps for the data in this file.
+ # "#updated" gives the last time the leap seconds data changed
+@@ -79,8 +79,8 @@
+ # "#expires" gives the first time this file might be wrong;
+ # if this file was derived from the IERS leap-seconds.list,
+ # this is typically a bit less than one year after "updated".
+-#updated 1751846400 (2025-07-07 00:00:00 UTC)
+-#expires 1782604800 (2026-06-28 00:00:00 UTC)
++#updated 1767698058 (2026-01-06 11:14:18 UTC)
++#expires 1798416000 (2026-12-28 00:00:00 UTC)
+ 
+ #	Updated through IERS Bulletin C (https://hpiers.obspm.fr/iers/bul/bulc/bulletinc.dat)
+-#	File expires on 28 June 2026
++#	File expires on 28 December 2026
+--- contrib/tzdata/northamerica.orig
++++ contrib/tzdata/northamerica
+@@ -1957,6 +1957,56 @@
+ # https://searcharchives.vancouver.ca/daylight-saving-1918-starts-again-july-7-1941-start-d-s-sept-27-end-of-d-s-1941
+ # We have no further details, so omit them for now.
+ 
++# From Arthur David Olson (2026-03-02):
++# B. C. Gov News: “Adopting permanent daylight saving time: ‘Spring forward’
++# on March 8 will be the last time change, ending twice-yearly clock changes.”
++# https://news.gov.bc.ca/releases/2026AG0013-000209
++#
++# From Paul Eggert (2026-03-07):
++# The law says that 21 hours after the usual 2026-03-08 02:00 switch from
++# PST to PDT, the next day inaugurates the new standard time Pacific Time,
++# i.e., just one clock change but two name changes separated by 21 hours.
++# PT, the obvious abbreviation for Pacific Time, is one letter too short
++# to conform to TZDB’s (and POSIX’s) [-+[:alnum:]]{3,6} requirements.
++# I asked the BC government for advice, with no response. For now, do this:
++#   1.	As a temporary hack, pretend that the BC law takes effect
++#	not on 2026-03-09 at 00:00, but on 2026-11-01 at 02:00.
++#	This pretense works around a limitation in CLDR v48.2 (2026-03-17),
++#	which would otherwise say the interval uses “Pacific Standard Time”.
++#	(Below, this temporary hack is marked “Temporary hack; see above.”)
++#	Strictly speaking this hack is incorrect since the interval uses
++#	standard time, but it does have the right UT offset and it
++#	works around the CLDR limitation.  We should be able to remove
++#	the temporary hack after CLDR is fixed.
++#   2.	After the BC law takes effect, model the time as MST sans DST.
++#	We can change this later if another conforming non-numeric abbreviation
++#	for Pacific Time becomes more popular.  Possibilities include:
++#   MST - the most compatible with existing software and practice,
++#	and already used in parts of BC and in Yukon
++#   PDT - almost as software-friendly, but confusing because it implies
++#	it is DST and is paired with PST, whereas PT is standard time
++#   PST - straightforward but even more confusing,
++#	and will likely break much software that assumes PST is -08
++#   -07 - accurate and clear in itself, but makes BC look odd vs neighbors
++#   CPT, CPST - for Canadian Pacific (Standard) Time,
++#	by analogy with AEST in Australia
++#   P-T - conforming approximation to “PT”
++#   PT+ - like P-T but suggesting one-hour advance over PST
++
++# From Chris Walton (2026-03-15):
++# The Regional District of East Kootenay is planning to move to year-round
++# Mountain Standard Time (MST) on November 1, 2026....
++# https://www.rdek.bc.ca/news/entry/rdek_board_moves_to_transition_to_year_round_mountain_standard_time
++# (2026-03-17):
++# The final decision East Kootenay made a few days ago may turn out not to
++# be final after all. They are going to reopen the debate next month!
++# https://www.cbc.ca/news/canada/british-columbia/what-time-is-it-in-the-east-kootenay-debate-9.7132624
++# From Paul Eggert (2026-03-17):
++# Mayor Steve Fairbairn of Elkford asked the question be called a second time,
++# saying, “Pardon the pun, but this is not a time-sensitive issue.”
++# For now, merely mention the potential change in these comments.
++# If it happens it would likely affect clocks starting 2027-03-14 at 02:00.
++
+ # Rule	NAME	FROM	TO	-	IN	ON	AT	SAVE	LETTER/S
+ Rule	Vanc	1918	only	-	Apr	14	2:00	1:00	D
+ Rule	Vanc	1918	only	-	Oct	27	2:00	0	S
+@@ -1970,7 +2020,11 @@
+ # Zone	NAME		STDOFF	RULES	FORMAT	[UNTIL]
+ Zone America/Vancouver	-8:12:28 -	LMT	1884
+ 			-8:00	Vanc	P%sT	1987
+-			-8:00	Canada	P%sT
++			-8:00	Canada	P%sT	2026 Mar  9
++			# Temporary hack; see above.
++			-8:00	1:00	PDT	2026 Nov  1 02:00
++			# End of temporary hack.
++			-7:00	-	MST
+ Zone America/Dawson_Creek -8:00:56 -	LMT	1884
+ 			-8:00	Canada	P%sT	1947
+ 			-8:00	Vanc	P%sT	1972 Aug 30  2:00
+--- contrib/tzdata/theory.html.orig
++++ contrib/tzdata/theory.html
+@@ -3,14 +3,16 @@
+ <head>
+   <title>Theory and pragmatics of the tz code and data</title>
+   <meta charset="UTF-8">
++  <meta name="viewport" content="width=device-width, initial-scale=1">
+   <style>
+-    pre {margin-left: 2em; white-space: pre-wrap;}
++    dd {margin-left: 1.3rem;}
++    pre {margin-left: 1.3rem; overflow: auto;}
++    ul {padding-left: 1.3rem;}
+   </style>
+ </head>
+ 
+ <body>
+ <h1>Theory and pragmatics of the <code><abbr>tz</abbr></code> code and data</h1>
+-  <h3>Outline</h3>
+   <nav>
+     <ul>
+       <li><a href="#scope">Scope of the <code><abbr>tz</abbr></code>
+@@ -648,14 +650,14 @@
+     should be observed.
+     In her 2015 book
+     <cite><a
+-    href="https://www.hup.harvard.edu/catalog.php?isbn=9780674286146">The
++    href="https://www.hup.harvard.edu/books/9780674286146">The
+     Global Transformation of Time, 1870–1950</a></cite>,
+     Vanessa Ogle writes
+     “Outside of Europe and North America there was no system of time
+     zones at all, often not even a stable landscape of mean times,
+     prior to the middle decades of the twentieth century”.
+     See: Timothy Shenk, <a
+-href="https://www.dissentmagazine.org/blog/booked-a-global-history-of-time-vanessa-ogle">Booked:
++href="https://dissentmagazine.org/blog/booked-a-global-history-of-time-vanessa-ogle/">Booked:
+       A Global History of Time</a>. <cite>Dissent</cite> 2015-12-17.
+   </li>
+   <li>
+@@ -789,7 +791,7 @@
+     calendar with 24-hour days. These divergences range from
+     relatively minor, such as Japanese bars giving times like 24:30 for the
+     wee hours of the morning, to more-significant differences such as <a
+-    href="https://theworld.org/stories/2015-01-30/if-you-have-meeting-ethiopia-you-better-double-check-time">the
++    href="https://theworld.org/stories/2015/01/30/ethiopian-time">the
+     east African practice of starting the day at dawn</a>, renumbering
+     the Western 06:00 to be 12:00. These practices are largely outside
+     the scope of the <code><abbr>tz</abbr></code> code and data, which
+@@ -1126,7 +1128,7 @@
+     the name of a file from which time-related information is read.
+     The file’s format is <dfn><abbr>TZif</abbr></dfn>,
+     a timezone information format that contains binary data; see
+-    <a href="https://www.rfc-editor.org/rfc/9636">Internet
++    <a href="https://www.rfc-editor.org/rfc/rfc9636">Internet
+     <abbr>RFC</abbr> 9636</a>.
+     The daylight saving time rules to be used for a
+     particular timezone are encoded in the
+@@ -1438,7 +1440,7 @@
+ extended the time zone database further into the past.
+ An excellent resource in this area is Edward M. Reingold
+ and Nachum Dershowitz, <cite><a
+-href="https://www.cambridge.org/fr/academic/subjects/computer-science/computing-general-interest/calendrical-calculations-ultimate-edition-4th-edition">Calendrical
++href="https://www.cambridge.org/fr/universitypress/subjects/computer-science/computing-general-interest/calendrical-calculations-ultimate-edition-4th-edition">Calendrical
+ Calculations: The Ultimate Edition</a></cite>, Cambridge University Press (2018).
+ Other information and sources are given in the file "<code>calendars</code>"
+ in the <code><abbr>tz</abbr></code> distribution.
+@@ -1450,13 +1452,13 @@
+   <h2 id="planets">Time and time zones off Earth</h2>
+ <p>
+ The European Space Agency is <a
+-href="https://www.esa.int/Applications/Navigation/Telling_time_on_the_Moon">considering</a>
++href="https://www.esa.int/Applications/Satellite_navigation/Telling_time_on_the_Moon">considering</a>
+ the establishment of a reference timescale for the Moon, which has
+ days roughly equivalent to 29.5 Earth days, and where relativistic
+ effects cause clocks to tick slightly faster than on Earth.
+ Also, <abbr title="National Aeronautics and Space Administration">NASA</abbr>
+ has been <a
+-href="https://www.whitehouse.gov/wp-content/uploads/2024/04/Celestial-Time-Standardization-Policy.pdf">ordered</a>
++href="https://bidenwhitehouse.archives.gov/wp-content/uploads/2024/04/Celestial-Time-Standardization-Policy.pdf">ordered</a>
+ to consider the establishment of Coordinated Lunar Time (<abbr>LTC</abbr>).
+ It is not yet known whether the US and European efforts will result in
+ multiple timescales on the Moon.
+@@ -1576,7 +1578,7 @@
+   </li>
+   <li>
+     Matt Williams,
+-    “<a href="https://www.universetoday.com/37481/days-of-the-planets/">How
++    “<a href="https://www.universetoday.com/articles/days-of-the-planets">How
+     long is a day on the other planets of the solar system?</a>”
+     (2016-01-20).
+   </li>
+--- contrib/tzdata/version.orig
++++ contrib/tzdata/version
+@@ -1 +1 @@
+-2025c
++2026b
+--- contrib/tzdata/zone.tab.orig
++++ contrib/tzdata/zone.tab
+@@ -124,12 +124,12 @@
+ CA	+5333-11328	America/Edmonton	Mountain - AB, BC(E), NT(E), SK(W)
+ CA	+690650-1050310	America/Cambridge_Bay	Mountain - NU (west)
+ CA	+682059-1334300	America/Inuvik	Mountain - NT (west)
++CA	+4916-12307	America/Vancouver	MST - BC (most areas)
+ CA	+4906-11631	America/Creston	MST - BC (Creston)
+ CA	+5546-12014	America/Dawson_Creek	MST - BC (Dawson Cr, Ft St John)
+ CA	+5848-12242	America/Fort_Nelson	MST - BC (Ft Nelson)
+ CA	+6043-13503	America/Whitehorse	MST - Yukon (east)
+ CA	+6404-13925	America/Dawson	MST - Yukon (west)
+-CA	+4916-12307	America/Vancouver	Pacific - BC (most areas)
+ CC	-1210+09655	Indian/Cocos
+ CD	-0418+01518	Africa/Kinshasa	Dem. Rep. of Congo (west)
+ CD	-1140+02728	Africa/Lubumbashi	Dem. Rep. of Congo (east)
+--- contrib/tzdata/zone1970.tab.orig
++++ contrib/tzdata/zone1970.tab
+@@ -116,11 +116,11 @@
+ CA	+5333-11328	America/Edmonton	Mountain - AB, BC(E), NT(E), SK(W)
+ CA	+690650-1050310	America/Cambridge_Bay	Mountain - NU (west)
+ CA	+682059-1334300	America/Inuvik	Mountain - NT (west)
++CA	+4916-12307	America/Vancouver	MST - BC (most areas)
+ CA	+5546-12014	America/Dawson_Creek	MST - BC (Dawson Cr, Ft St John)
+ CA	+5848-12242	America/Fort_Nelson	MST - BC (Ft Nelson)
+ CA	+6043-13503	America/Whitehorse	MST - Yukon (east)
+ CA	+6404-13925	America/Dawson	MST - Yukon (west)
+-CA	+4916-12307	America/Vancouver	Pacific - BC (most areas)
+ CH,DE,LI	+4723+00832	Europe/Zurich	Büsingen
+ CI,BF,GH,GM,GN,IS,ML,MR,SH,SL,SN,TG	+0519-00402	Africa/Abidjan
+ CK	-2114-15946	Pacific/Rarotonga
+--- contrib/tzdata/zonenow.tab.orig
++++ contrib/tzdata/zonenow.tab
+@@ -58,6 +58,9 @@
+ # -08/-07 - PST/PDT (North America DST)
+ XX	+340308-1181434	America/Los_Angeles	Pacific (PST/PDT) - US & Canada; Mexico near US border
+ #
++# -08/-07 - PST/PDT (North America DST) until 2026-11-01 02:00; then MST
++XX	+4916-12307	America/Vancouver	MST - BC (most areas)
++#
+ # -07 - MST
+ XX	+332654-1120424	America/Phoenix	Mountain Standard (MST) - Arizona; western Mexico; Yukon
+ #
+@@ -166,9 +169,6 @@
+ # +02/+03 - EET/EEST (Lebanon DST)
+ XX	+3353+03530	Asia/Beirut	Lebanon
+ #
+-# +02/+03 - EET/EEST (Moldova DST)
+-XX	+4700+02850	Europe/Chisinau	Moldova
+-#
+ # +02/+03 - EET/EEST (Palestine DST)
+ XX	+3130+03428	Asia/Gaza	Palestine
+ #
