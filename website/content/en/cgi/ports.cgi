@@ -114,7 +114,7 @@ my $max;
 my $debug = 1;
 
 # feature flags
-my $enable_packages_link = 1;
+my $enable_packages_link              = 1;
 my $enable_check_freebsd_mailing_list = 1;
 
 my %lists;
@@ -330,7 +330,8 @@ sub out {
     $path     =~ s/^$localPrefix/$remotePrefixFtp/o;
     $descfile =~ s/^$localPrefix/$remotePrefixFtp/o;
     $version = &encode_url($version);
-    $email = &check_freebsd_mailing_list($email) if $enable_check_freebsd_mailing_list;
+    $email   = &check_freebsd_mailing_list($email)
+      if $enable_check_freebsd_mailing_list;
 
     #$version =~ s/[\+,]/X/g;
 
@@ -419,15 +420,22 @@ sub package_links {
         chomp;
         next if !(m,^(.*?)-(.*?)\.yaml:(.*),);
 
-        my $arch     = $1;
-        my $rel      = $1;
-        my $snapshot = $2;
-        my $path     = "$1/$2";
-        my $perl     = decode_json($3);
+        my $arch      = $1;
+        my $rel_major = $1;
+        my $rel_minor = "$1/$2";
+        my $snapshot  = $2;
+        my $path      = "$1/$2";
+        my $perl      = decode_json($3);
 
         $arch =~ s,.*%3A,,;
-        if ( $rel =~ /^FreeBSD%3A(\d+)%3A/ ) {
-            $rel = ":$1:";
+        if ( $rel_major =~ /^FreeBSD%3A(\d+)%3A/ ) {
+            $rel_major = ":$1:";
+        }
+        if ( $rel_minor =~ /^FreeBSD%3A(\d+)%3A.*release_(\d+)$/ ) {
+            $rel_minor = ":$1:$2";
+        }
+        else {
+            $rel_minor = "";
         }
 
         if ( $. == 1 ) {
@@ -442,7 +450,8 @@ sub package_links {
               . qq[</a><br/>\n];
 
             my $maintainer = $perl->{"maintainer"};
-            $maintainer = &check_freebsd_mailing_list($maintainer) if $enable_check_freebsd_mailing_list;
+            $maintainer = &check_freebsd_mailing_list($maintainer)
+              if $enable_check_freebsd_mailing_list;
             print qq[maintainer: $maintainer<br/>\n];
 
             print qq[<h3>Description</h3>\n];
@@ -484,11 +493,12 @@ qq{ <th onclick="sort_table(2)" title="click to sort asc/desc by build time">Bui
 
         if ($filter) {
             next
-              if index( $release, $filter ) < 0
-              && index( $pkg_opt, $filter ) < 0
-              && index( $version, $filter ) < 0
-              && index( $time,    $filter ) < 0
-              && index( $flavor,  $filter ) < 0;
+              if index( $release,   $filter ) < 0
+              && index( $pkg_opt,   $filter ) < 0
+              && index( $rel_minor, $filter ) < 0
+              && index( $version,   $filter ) < 0
+              && index( $time,      $filter ) < 0
+              && index( $flavor,    $filter ) < 0;
         }
 
         next if $counter >= $max;
@@ -510,7 +520,8 @@ qq{ <th onclick="sort_table(2)" title="click to sort asc/desc by build time">Bui
 
         $hash->{'version'}->{$version}++;
         $hash->{'arch'}->{$arch}++;
-        $hash->{'release'}->{$rel}++;
+        $hash->{'release_major'}->{$rel_major}++;
+        $hash->{'release_minor'}->{$rel_minor}++;
         $hash->{'flavor'}->{$flavor}++ if $flavor ne "";
         $hash->{'snapshot'}->{$snapshot}++
           if $snapshot eq 'latest' || $snapshot eq 'quarterly';
@@ -785,10 +796,10 @@ EOF
 sub check_freebsd_mailing_list {
     my $email = shift;
 
-    my ($user, $hostname) = split('@', $email);
+    my ( $user, $hostname ) = split( '@', $email );
 
     # email is a ports section, not a real user
-    if ($lists{$user}) {
+    if ( $lists{$user} ) {
         $user = 'freebsd-' . $user;
     }
 
@@ -841,7 +852,10 @@ if ( !$query && $query_string =~ /^([^=&]+)$/ ) {
 @sec = &readcoll;
 
 # mailing list aliases
-%lists = map { $_ => 1 } qw/apache chromium desktop elastic emulation enlightenment erlang fortran gecko gnome go haskell java multimedia office perl pkg ports python ruby tcltk tex uboot x11 xfce zope/;
+%lists = map { $_ => 1 }
+  qw/apache chromium desktop elastic emulation enlightenment erlang fortran
+  gecko gnome go haskell java multimedia office perl pkg ports python ruby
+  tcltk tex uboot x11 xfce zope/;
 
 $query = &check_query( $query, $sourceid );
 
@@ -864,14 +878,14 @@ $counter = 0;
 $query =~ s/^\^// if $stype eq 'requires';
 
 # quote non characters
+my $query2 = $query;
 $query =~ s/([^\w\^])/\\$1/g;
 
 # search
 if ($query) {
     my $q = "";
-    if ( $query =~ m,^([A-Za-z0-9\-]+)(\\/)([A-Za-z0-9\-_\+\.\\]+)$, ) {
-        $q = "$1$2$3";
-        $q =~ s,\\,,g;
+    if ( $query2 =~ m,^([A-Za-z0-9\-]+)/([A-Za-z0-9\-_\+\.\\]+)$, ) {
+        $q = "$1/$2";
     }
 
     if ( $q ne "" && $enable_packages_link && $stype eq 'pkg' ) {

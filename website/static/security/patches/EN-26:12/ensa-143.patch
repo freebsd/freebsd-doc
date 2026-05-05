@@ -1,0 +1,487 @@
+--- lib/libnv/tests/Makefile.orig
++++ lib/libnv/tests/Makefile
+@@ -1,6 +1,15 @@
++.include <src.opts.mk>
+ 
+ ATF_TESTS_C= \
+ 	nvlist_send_recv_test
++
++.PATH: ${SRCTOP}/lib/libnv
++SRCS.nvlist_send_recv_test= msgio.c nvlist_send_recv_test.c
++CFLAGS.nvlist_send_recv_test+=-I${SRCTOP}/sys/contrib/libnv
++CFLAGS.nvlist_send_recv_test+=-I${SRCTOP}/lib/libnv
++.if ${MK_ASAN} != "yes"
++CFLAGS.nvlist_send_recv_test+=-DNO_ASAN
++.endif
+ 
+ ATF_TESTS_CXX=	\
+ 	cnv_tests \
+--- lib/libnv/tests/nv_array_tests.cc.orig
++++ lib/libnv/tests/nv_array_tests.cc
+@@ -1,6 +1,5 @@
+ /*-
+- * Copyright (c) 2015 Mariusz Zaborski <oshogbo@FreeBSD.org>
+- * All rights reserved.
++ * Copyright (c) 2015-2024 Mariusz Zaborski <oshogbo@FreeBSD.org>
+  *
+  * Redistribution and use in source and binary forms, with or without
+  * modification, are permitted provided that the following conditions
+@@ -28,6 +27,7 @@
+ #include <sys/param.h>
+ #include <sys/types.h>
+ #include <sys/nv.h>
++#include <sys/mman.h>
+ #include <sys/socket.h>
+ 
+ #include <atf-c++.hpp>
+@@ -1162,6 +1162,58 @@
+ 	free(packed);
+ }
+ 
++
++ATF_TEST_CASE_WITHOUT_HEAD(nvlist_string_array_nonull__pack);
++ATF_TEST_CASE_BODY(nvlist_string_array_nonull__pack)
++{
++	nvlist_t *testnvl, *unpacked;
++	const char *somestr[3] = { "a", "b", "XXX" };
++	uint8_t *packed, *twopages, *dataptr, *secondpage;
++	size_t packed_size, page_size;
++	bool found;
++
++	page_size = sysconf(_SC_PAGESIZE);
++	testnvl = nvlist_create(0);
++	ATF_REQUIRE(testnvl != NULL);
++	ATF_REQUIRE_EQ(nvlist_error(testnvl), 0);
++	nvlist_add_string_array(testnvl, "nvl/string", somestr,
++	    nitems(somestr));
++	ATF_REQUIRE_EQ(nvlist_error(testnvl), 0);
++
++	packed = (uint8_t *)nvlist_pack(testnvl, &packed_size);
++	ATF_REQUIRE(packed != NULL);
++
++	twopages = (uint8_t *)mmap(NULL, page_size * 2, PROT_READ | PROT_WRITE,
++	    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
++	ATF_REQUIRE(twopages != MAP_FAILED);
++	dataptr = &twopages[page_size - packed_size];
++	secondpage = &twopages[page_size];
++
++	memset(twopages, 'A', page_size * 2);
++
++	mprotect(secondpage, page_size, PROT_NONE);
++	memcpy(dataptr, packed, packed_size);
++
++	found = false;
++	for (size_t i = 0; i < packed_size - 3; i++) {
++		if (dataptr[i] == 'X' && dataptr[i + 1] == 'X' &&
++		    dataptr[i + 2] == 'X' && dataptr[i + 3] == '\0') {
++			dataptr[i + 3] = 'X';
++			found = true;
++			break;
++		}
++	}
++	ATF_REQUIRE(found == true);
++
++	unpacked = nvlist_unpack(dataptr, packed_size, 0);
++	ATF_REQUIRE(unpacked == NULL);
++
++	nvlist_destroy(testnvl);
++	free(packed);
++	munmap(twopages, page_size * 2);
++}
++
++
+ ATF_INIT_TEST_CASES(tp)
+ {
+ 
+@@ -1191,5 +1243,7 @@
+ 	ATF_ADD_TEST_CASE(tp, nvlist_descriptor_array__pack)
+ 	ATF_ADD_TEST_CASE(tp, nvlist_string_array__pack)
+ 	ATF_ADD_TEST_CASE(tp, nvlist_nvlist_array__pack)
++
++	ATF_ADD_TEST_CASE(tp, nvlist_string_array_nonull__pack)
+ }
+ 
+--- lib/libnv/tests/nvlist_send_recv_test.c.orig
++++ lib/libnv/tests/nvlist_send_recv_test.c
+@@ -1,5 +1,8 @@
+ /*-
++ * SPDX-License-Identifier: BSD-2-Clause
++ *
+  * Copyright (c) 2013 The FreeBSD Foundation
++ * Copyright (c) 2024-2026 Mariusz Zaborski <oshogbo@FreeBSD.org>
+  *
+  * This software was developed by Pawel Jakub Dawidek under sponsorship from
+  * the FreeBSD Foundation.
+@@ -28,6 +31,8 @@
+ 
+ #include <sys/cdefs.h>
+ #include <sys/param.h>
++#include <sys/resource.h>
++#include <sys/select.h>
+ #include <sys/socket.h>
+ #include <sys/sysctl.h>
+ #include <sys/wait.h>
+@@ -44,6 +49,9 @@
+ 
+ #include <atf-c.h>
+ 
++#include <nv_impl.h>
++#include <msgio.h>
++
+ #define	ALPHABET	"abcdefghijklmnopqrstuvwxyz"
+ #define	fd_is_valid(fd)	(fcntl((fd), F_GETFL) != -1 || errno != EBADF)
+ 
+@@ -531,6 +539,59 @@
+ 	nvlist_send_recv__send_nvlist(SOCK_STREAM);
+ }
+ 
++/*
++ * Regression test for fd_wait(): the previous select(2)-based implementation
++ * called FD_SET() unconditionally, which is an out-of-bounds stack write when
++ * the socket fd is >= FD_SETSIZE.  Force the socketpair fds above FD_SETSIZE
++ * and verify a full nvlist round-trip still works.
++ */
++ATF_TC_WITHOUT_HEAD(nvlist_send_recv__highfd);
++ATF_TC_BODY(nvlist_send_recv__highfd, tc)
++{
++	struct rlimit rl;
++	nvlist_t *nvl;
++	int socks[2], hi_send, hi_recv, status;
++	pid_t pid;
++
++	hi_send = FD_SETSIZE + 5;
++	hi_recv = FD_SETSIZE + 6;
++
++	rl.rlim_cur = rl.rlim_max = hi_recv + 1;
++	if (setrlimit(RLIMIT_NOFILE, &rl) != 0)
++		atf_tc_skip("cannot raise RLIMIT_NOFILE: %s", strerror(errno));
++
++	ATF_REQUIRE(socketpair(PF_UNIX, SOCK_STREAM, 0, socks) == 0);
++	ATF_REQUIRE(dup2(socks[0], hi_recv) == hi_recv);
++	ATF_REQUIRE(dup2(socks[1], hi_send) == hi_send);
++	(void)close(socks[0]);
++	(void)close(socks[1]);
++
++	pid = fork();
++	ATF_REQUIRE(pid >= 0);
++	if (pid == 0) {
++		/* Child: send. */
++		(void)close(hi_recv);
++		nvl = nvlist_create(0);
++		nvlist_add_string(nvl, "key", "value");
++		if (nvlist_send(hi_send, nvl) != 0)
++			err(EXIT_FAILURE, "nvlist_send");
++		nvlist_destroy(nvl);
++		_exit(0);
++	}
++
++	(void)close(hi_send);
++	nvl = nvlist_recv(hi_recv, 0);
++	ATF_REQUIRE(nvl != NULL);
++	ATF_REQUIRE(nvlist_error(nvl) == 0);
++	ATF_REQUIRE(nvlist_exists_string(nvl, "key"));
++	ATF_REQUIRE(strcmp(nvlist_get_string(nvl, "key"), "value") == 0);
++	nvlist_destroy(nvl);
++
++	ATF_REQUIRE(waitpid(pid, &status, 0) == pid);
++	ATF_REQUIRE(status == 0);
++	(void)close(hi_recv);
++}
++
+ ATF_TC_WITHOUT_HEAD(nvlist_send_recv__send_closed_fd__dgram);
+ ATF_TC_BODY(nvlist_send_recv__send_closed_fd__dgram, tc)
+ {
+@@ -543,15 +604,260 @@
+ 	nvlist_send_recv__send_closed_fd(SOCK_STREAM);
+ }
+ 
++ATF_TC_WITHOUT_HEAD(nvlist_send_recv__overflow_header_size);
++ATF_TC_BODY(nvlist_send_recv__overflow_header_size, tc)
++{
++	nvlist_t *nvl;
++	void *packed;
++	size_t packed_size;
++	struct nvlist_header *header;
++	int fd, socks[2], status;
++	pid_t pid;
++
++#ifdef NO_ASAN
++	atf_tc_skip("This test requires ASAN");
++#endif
++
++	ATF_REQUIRE_EQ(socketpair(PF_UNIX, SOCK_STREAM, 0, socks), 0);
++
++	pid = fork();
++	ATF_REQUIRE(pid >= 0);
++
++	if (pid == 0) {
++		/* Child. */
++		fd = socks[0];
++		close(socks[1]);
++
++		nvl = nvlist_create(0);
++		ATF_REQUIRE(nvl != NULL);
++		ATF_REQUIRE(nvlist_empty(nvl));
++
++		packed = nvlist_pack(nvl, &packed_size);
++		ATF_REQUIRE(packed != NULL);
++		ATF_REQUIRE(packed_size >= sizeof(struct nvlist_header));
++
++		header = (struct nvlist_header *)packed;
++		header->nvlh_size = SIZE_MAX - sizeof(struct nvlist_header) + 2;
++
++		ATF_REQUIRE_EQ(write(fd, packed, packed_size),
++		    (ssize_t)sizeof(struct nvlist_header));
++
++		nvlist_destroy(nvl);
++		free(packed);
++
++		exit(0);
++	} else {
++		/* Parent */
++		fd = socks[1];
++		close(socks[0]);
++
++		errno = 0;
++		nvl = nvlist_recv(fd, 0);
++		ATF_REQUIRE(nvl == NULL);
++
++		/*
++		 * Make sure it has failed on EINVAL, and not on
++		 * errors returned by malloc or recv.
++		 */
++		ATF_REQUIRE(errno == EINVAL);
++
++		ATF_REQUIRE(waitpid(pid, &status, 0) == pid);
++		ATF_REQUIRE(status == 0);
++		close(fd);
++	}
++}
++
++ATF_TC_WITHOUT_HEAD(nvlist_send_recv__overflow_big_endian_size);
++ATF_TC_BODY(nvlist_send_recv__overflow_big_endian_size, tc)
++{
++	static const unsigned char payload[] = {
++		0x6c,						/* magic */
++		0x00,						/* version */
++		0x80,						/* flags: NV_FLAG_BIG_ENDIAN */
++		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf5,
++	};
++	nvlist_t *nvl;
++	int sv[2];
++
++	ATF_REQUIRE_EQ(socketpair(AF_UNIX, SOCK_STREAM, 0, sv), 0);
++	ATF_REQUIRE_EQ(write(sv[1], payload, sizeof(payload)),
++	    (ssize_t)sizeof(payload));
++	ATF_REQUIRE_EQ(close(sv[1]), 0);
++
++	errno = 0;
++	nvl = nvlist_recv(sv[0], 0);
++	ATF_REQUIRE(nvl == NULL);
++	ATF_REQUIRE_EQ(errno, EINVAL);
++
++	ATF_REQUIRE_EQ(close(sv[0]), 0);
++}
++
++ATF_TC_WITHOUT_HEAD(nvlist_send_recv__overflow_little_endian_size);
++ATF_TC_BODY(nvlist_send_recv__overflow_little_endian_size, tc)
++{
++	static const unsigned char payload[] = {
++		0x6c,						/* magic */
++		0x00,						/* version */
++		0x00,						/* flags */
++		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++		0xf5, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++	};
++	nvlist_t *nvl;
++	int sv[2];
++
++	ATF_REQUIRE_EQ(socketpair(AF_UNIX, SOCK_STREAM, 0, sv), 0);
++	ATF_REQUIRE_EQ(write(sv[1], payload, sizeof(payload)),
++	    (ssize_t)sizeof(payload));
++	ATF_REQUIRE_EQ(close(sv[1]), 0);
++
++	errno = 0;
++	nvl = nvlist_recv(sv[0], 0);
++	ATF_REQUIRE(nvl == NULL);
++	ATF_REQUIRE_EQ(errno, EINVAL);
++
++	ATF_REQUIRE_EQ(close(sv[0]), 0);
++}
++
++ATF_TC_WITHOUT_HEAD(nvlist_send_recv__invalid_fd_size);
++ATF_TC_BODY(nvlist_send_recv__invalid_fd_size, tc)
++{
++	nvlist_t *nvl;
++	void *packed;
++	size_t packed_size;
++	struct nvlist_header *header;
++	int fd, socks[2], status;
++	pid_t pid;
++
++	ATF_REQUIRE_EQ(socketpair(PF_UNIX, SOCK_STREAM, 0, socks), 0);
++
++	pid = fork();
++	ATF_REQUIRE(pid >= 0);
++
++	if (pid == 0) {
++		/* Child. */
++		fd = socks[0];
++		close(socks[1]);
++
++		nvl = nvlist_create(0);
++		ATF_REQUIRE(nvl != NULL);
++		ATF_REQUIRE(nvlist_empty(nvl));
++
++		nvlist_add_string(nvl, "nvl/string", "test");
++		ATF_REQUIRE_EQ(nvlist_error(nvl), 0);
++
++		packed = nvlist_pack(nvl, &packed_size);
++		ATF_REQUIRE(packed != NULL);
++		ATF_REQUIRE(packed_size >= sizeof(struct nvlist_header));
++
++		header = (struct nvlist_header *)packed;
++		header->nvlh_descriptors = 0x20;
++
++		ATF_REQUIRE_EQ(write(fd, packed, packed_size),
++		    (ssize_t)packed_size);
++
++		nvlist_destroy(nvl);
++		free(packed);
++
++		exit(0);
++	} else {
++		/* Parent */
++		fd = socks[1];
++		close(socks[0]);
++
++		nvl = nvlist_recv(fd, 0);
++		ATF_REQUIRE(nvl == NULL);
++
++		ATF_REQUIRE(waitpid(pid, &status, 0) == pid);
++		ATF_REQUIRE(status == 0);
++	}
++
++	close(fd);
++}
++
++ATF_TC_WITHOUT_HEAD(nvlist_send_recv__overflow_fd_size);
++ATF_TC_BODY(nvlist_send_recv__overflow_fd_size, tc)
++{
++	nvlist_t *nvl;
++	void *packed;
++	size_t packed_size;
++	struct nvlist_header *header;
++	int fd, socks[2], fds[1], status;
++	pid_t pid;
++
++	ATF_REQUIRE_EQ(socketpair(PF_UNIX, SOCK_STREAM, 0, socks), 0);
++
++	pid = fork();
++	ATF_REQUIRE(pid >= 0);
++
++	if (pid == 0) {
++		/* Child. */
++		fd = socks[0];
++		close(socks[1]);
++
++		nvl = nvlist_create(0);
++		ATF_REQUIRE(nvl != NULL);
++		ATF_REQUIRE(nvlist_empty(nvl));
++
++		nvlist_add_string(nvl, "nvl/string", "test");
++		ATF_REQUIRE_EQ(nvlist_error(nvl), 0);
++
++		packed = nvlist_pack(nvl, &packed_size);
++		ATF_REQUIRE(packed != NULL);
++		ATF_REQUIRE(packed_size >= sizeof(struct nvlist_header));
++
++		header = (struct nvlist_header *)packed;
++		header->nvlh_descriptors = 0x4000000000000002;
++
++		ATF_REQUIRE_EQ(write(fd, packed, packed_size),
++		    (ssize_t)packed_size);
++
++		fds[0] = dup(STDERR_FILENO);
++		ATF_REQUIRE(fds[0] >= 0);
++		ATF_REQUIRE_EQ(fd_send(fd, fds, 1), 0);
++
++		nvlist_destroy(nvl);
++		free(packed);
++
++		close(fds[0]);
++		close(fd);
++
++		exit(0);
++	} else {
++		/* Parent */
++		fd = socks[1];
++		close(socks[0]);
++
++		nvl = nvlist_recv(fd, 0);
++		ATF_REQUIRE(nvl == NULL);
++
++		/* Make sure that fd was not parsed by nvlist */
++		ATF_REQUIRE(fd_recv(fd, fds, 1) == 0);
++
++		ATF_REQUIRE(waitpid(pid, &status, 0) == pid);
++		ATF_REQUIRE(status == 0);
++
++		close(fds[0]);
++		close(fd);
++	}
++}
++
+ ATF_TP_ADD_TCS(tp)
+ {
+ 
+ 	ATF_TP_ADD_TC(tp, nvlist_send_recv__send_nvlist__dgram);
+ 	ATF_TP_ADD_TC(tp, nvlist_send_recv__send_nvlist__stream);
++	ATF_TP_ADD_TC(tp, nvlist_send_recv__highfd);
+ 	ATF_TP_ADD_TC(tp, nvlist_send_recv__send_closed_fd__dgram);
+ 	ATF_TP_ADD_TC(tp, nvlist_send_recv__send_closed_fd__stream);
+ 	ATF_TP_ADD_TC(tp, nvlist_send_recv__send_many_fds__dgram);
+ 	ATF_TP_ADD_TC(tp, nvlist_send_recv__send_many_fds__stream);
++
++	ATF_TP_ADD_TC(tp, nvlist_send_recv__overflow_header_size);
++	ATF_TP_ADD_TC(tp, nvlist_send_recv__overflow_big_endian_size);
++	ATF_TP_ADD_TC(tp, nvlist_send_recv__overflow_little_endian_size);
++	ATF_TP_ADD_TC(tp, nvlist_send_recv__invalid_fd_size);
++	ATF_TP_ADD_TC(tp, nvlist_send_recv__overflow_fd_size);
+ 
+ 	return (atf_no_error());
+ }
+--- sys/contrib/libnv/nv_impl.h.orig
++++ sys/contrib/libnv/nv_impl.h
+@@ -42,6 +42,14 @@
+ typedef struct nvpair nvpair_t;
+ #endif
+ 
++struct nvlist_header {
++	uint8_t		nvlh_magic;
++	uint8_t		nvlh_version;
++	uint8_t		nvlh_flags;
++	uint64_t	nvlh_descriptors;
++	uint64_t	nvlh_size;
++} __packed;
++
+ #define	NV_TYPE_NVLIST_ARRAY_NEXT	254
+ #define	NV_TYPE_NVLIST_UP		255
+ 
+--- sys/contrib/libnv/nvlist.c.orig
++++ sys/contrib/libnv/nvlist.c
+@@ -118,13 +118,6 @@
+ 
+ #define	NVLIST_HEADER_MAGIC	0x6c
+ #define	NVLIST_HEADER_VERSION	0x00
+-struct nvlist_header {
+-	uint8_t		nvlh_magic;
+-	uint8_t		nvlh_version;
+-	uint8_t		nvlh_flags;
+-	uint64_t	nvlh_descriptors;
+-	uint64_t	nvlh_size;
+-} __packed;
+ 
+ nvlist_t *
+ nvlist_create(int flags)

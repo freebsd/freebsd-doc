@@ -128,6 +128,11 @@ $sectionpath = {
     'IRIX 6.5.30' => { 'path' => '1:1m:2:3:3c:3dm:3n:3x:4:5:7:9' },
 
 
+    'OpenIndiana 2025.10'  => {
+        'path' =>
+'1:1m:1s:1t:2:3:3c:3malloc:3nsl:3socket:3ldap:3resolv:3rpc:3sip:3slp:3proc:3c_db:3elf:3kvm:3kstat:3m:3mp:3mvec:3pam:3bsm:3tsol:3contract:3cpc:3sec:3secdb:3cfgadm:3devid:3devinfo:3lib:3nvpair:7:7d:7i:9:9e:9f:9p:9s:4:5:3gen:3exacct:3stmf:3sysevent:3uuid:3volmgt:3mail:3ext:3fstyp:3picl:3picltree:3pool:3project:3perl:3lgrp:3sasl:3scf:3tecla:3mpapi:3fcoe:3xnet:3curses:3xcurses:3dlpi:3dns_sd:3gss:3tcl:3tk:8:1openssl:3openssl:5openssl:7openssl'
+    },
+
     'OpenIndiana 2024.10'  => {
         'path' =>
 '1:1m:1s:1t:2:3:3c:3malloc:3nsl:3socket:3ldap:3resolv:3rpc:3sip:3slp:3proc:3c_db:3elf:3kvm:3kstat:3m:3mp:3mvec:3pam:3bsm:3tsol:3contract:3cpc:3sec:3secdb:3cfgadm:3devid:3devinfo:3lib:3nvpair:7:7d:7i:9:9e:9f:9p:9s:4:5:3gen:3exacct:3stmf:3sysevent:3uuid:3volmgt:3mail:3ext:3fstyp:3picl:3picltree:3pool:3project:3perl:3lgrp:3sasl:3scf:3tecla:3mpapi:3fcoe:3xnet:3curses:3xcurses:3dlpi:3dns_sd:3gss:3tcl:3tk:8:1openssl:3openssl:5openssl:7openssl'
@@ -367,15 +372,19 @@ foreach my $os ( keys %$sectionpath ) {
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
 # this should be the latest "release and ports"
-$manPathDefault = 'FreeBSD 15.0-RELEASE and Ports';
+$manPathDefault = 'FreeBSD 15.0-RELEASE and Ports.quarterly';
 
 %manPath = (
     # supported RELEASES / STABLE / CURRENT 
+    'FreeBSD 15.0-RELEASE and Ports.quarterly',
+"$manLocalDir/FreeBSD-15.0-RELEASE/man:$manLocalDir/FreeBSD-15.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-15.quarterly-RELEASE/man:$manLocalDir/FreeBSD-ports-15.quarterly-RELEASE/misc",
     'FreeBSD 15.0-RELEASE and Ports',
 "$manLocalDir/FreeBSD-15.0-RELEASE/man:$manLocalDir/FreeBSD-15.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-15.0-RELEASE/man:$manLocalDir/FreeBSD-ports-15.0-RELEASE/misc",
 
+    'FreeBSD 14.4-RELEASE and Ports',
+"$manLocalDir/FreeBSD-14.4-RELEASE/man:$manLocalDir/FreeBSD-14.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-14.4-RELEASE/man:$manLocalDir/FreeBSD-ports-14.4-RELEASE/misc",
     'FreeBSD 14.3-RELEASE and Ports',
-"$manLocalDir/FreeBSD-14.3-RELEASE/man:$manLocalDir/FreeBSD-14.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/man:$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/misc",
+"$manLocalDir/FreeBSD-14.3-RELEASE/man:$manLocalDir/FreeBSD-14.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-14.3-RELEASE/man:$manLocalDir/FreeBSD-ports-14.3-RELEASE/misc",
     'FreeBSD 14.2-RELEASE and Ports',
 "$manLocalDir/FreeBSD-14.2-RELEASE/man:$manLocalDir/FreeBSD-14.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-14.2-RELEASE/man:$manLocalDir/FreeBSD-ports-14.2-RELEASE/misc",
     'FreeBSD 14.1-RELEASE and Ports',
@@ -604,8 +613,9 @@ $manPathDefault = 'FreeBSD 15.0-RELEASE and Ports';
     'FreeBSD Ports 14.1', "$manLocalDir/FreeBSD-ports-14.1-RELEASE/man:$manLocalDir/FreeBSD-ports-14.1-RELEASE/misc",
     'FreeBSD Ports 14.2', "$manLocalDir/FreeBSD-ports-14.2-RELEASE/man:$manLocalDir/FreeBSD-ports-14.2-RELEASE/misc",
     'FreeBSD Ports 14.3', "$manLocalDir/FreeBSD-ports-14.3-RELEASE/man:$manLocalDir/FreeBSD-ports-14.3-RELEASE/misc",
-    'FreeBSD Ports 14.3.quarterly', "$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/man:$manLocalDir/FreeBSD-ports-14.quarterly-RELEASE/misc",
+    'FreeBSD Ports 14.4', "$manLocalDir/FreeBSD-ports-14.4-RELEASE/man:$manLocalDir/FreeBSD-ports-14.4-RELEASE/misc",
     'FreeBSD Ports 15.0', "$manLocalDir/FreeBSD-ports-15.0-RELEASE/man:$manLocalDir/FreeBSD-ports-15.0-RELEASE/misc",
+    'FreeBSD Ports 15.0.quarterly', "$manLocalDir/FreeBSD-ports-15.quarterly-RELEASE/man:$manLocalDir/FreeBSD-ports-15.quarterly-RELEASE/misc",
 
 
     # FreeBSD Releases + Ports
@@ -970,7 +980,7 @@ $manPathDefault = 'FreeBSD 15.0-RELEASE and Ports';
     'Debian 10.13.0', "$manLocalDir/Debian-10.13.0/man:$manLocalDir/Debian-10.13.0/misc",
     'Debian 11.11.0', "$manLocalDir/Debian-11.11.0/man:$manLocalDir/Debian-11.11.0/misc",
     'Debian 12.13.0', "$manLocalDir/Debian-12.13.0/man:$manLocalDir/Debian-12.13.0/misc",
-    'Debian 13.3.0', "$manLocalDir/Debian-13.3.0/man:$manLocalDir/Debian-13.3.0/misc",
+    'Debian 13.4.0', "$manLocalDir/Debian-13.4.0/man:$manLocalDir/Debian-13.4.0/misc",
     'Debian 14.0 unstable', "$manLocalDir/Debian-unstable/man:$manLocalDir/Debian-unstable/misc",
 
     'Ubuntu 23.10 mantic', "$manLocalDir/Ubuntu-mantic-23.10/man:$manLocalDir/Ubuntu-mantic-23.10/misc",
@@ -1004,6 +1014,7 @@ $manPathDefault = 'FreeBSD 15.0-RELEASE and Ports';
 
     'IRIX 6.5.30',  "$manLocalDir/IRIX-6.5.30/catman/a_man:$manLocalDir/IRIX-6.5.30/catman/p_man:$manLocalDir/IRIX-6.5.30/catman/u_man:$manLocalDir/IRIX-6.5.30/dt",
 
+    'OpenIndiana 2025.10',  "$manLocalDir/OpenIndiana-2025.10/share/man",
     'OpenIndiana 2024.10',  "$manLocalDir/OpenIndiana-2024.10/share/man",
     'OpenIndiana 2022.10',  "$manLocalDir/OpenIndiana-2022.10/share/man",
     'OpenIndiana 2020.10',  "$manLocalDir/OpenIndiana-2020.10/share/man",
@@ -1027,9 +1038,9 @@ $manPathDefault = 'FreeBSD 15.0-RELEASE and Ports';
     # alias SunOS 0.4, apparently released in April 1983 based on 4.2BSD beta
     'Sun UNIX 0.4', "$manLocalDir/Sun-UNIX-0.4",
 
-    'macOS 26.3',   "$manLocalDir/macOS-26.3/man:$manLocalDir/macOS-26.3/developer-man:$manLocalDir/macOS-26.3/developer-platform-sdk-man:$manLocalDir/macOS-26.3/xctoolchain-man",  
-    'macOS 15.7.4',   "$manLocalDir/macOS-15.7.4/man:$manLocalDir/macOS-15.7.4/developer-man:$manLocalDir/macOS-15.7.4/developer-platform-sdk-man:$manLocalDir/macOS-15.7.4/xctoolchain-man",  
-    'macOS 14.8.4',   "$manLocalDir/macOS-14.8.4/man:$manLocalDir/macOS-14.8.4/developer-man:$manLocalDir/macOS-14.8.4/developer-platform-man:$manLocalDir/macOS-14.8.4/developer-platform-sdk-man:$manLocalDir/macOS-14.8.4/xctoolchain-man",  
+    'macOS 26.4',   "$manLocalDir/macOS-26.4/man:$manLocalDir/macOS-26.4/developer-man:$manLocalDir/macOS-26.4/developer-platform-sdk-man:$manLocalDir/macOS-26.4/xctoolchain-man",  
+    'macOS 15.7.5',   "$manLocalDir/macOS-15.7.5/man:$manLocalDir/macOS-15.7.5/developer-man:$manLocalDir/macOS-15.7.5/developer-platform-sdk-man:$manLocalDir/macOS-15.7.5/xctoolchain-man",  
+    'macOS 14.8.5',   "$manLocalDir/macOS-14.8.5/man:$manLocalDir/macOS-14.8.5/developer-man:$manLocalDir/macOS-14.8.5/developer-platform-man:$manLocalDir/macOS-14.8.5/developer-platform-sdk-man:$manLocalDir/macOS-14.8.5/xctoolchain-man",  
     'macOS 13.6.5', "$manLocalDir/macOS-13.6.5/man:$manLocalDir/macOS-13.6.5/developer-man:$manLocalDir/macOS-13.6.5/developer-platform-man:$manLocalDir/macOS-13.6.5/developer-platform-sdk-man:$manLocalDir/macOS-13.6.5/xctoolchain-man",  
     'macOS 12.7.3', "$manLocalDir/macOS-12.7.3/man:$manLocalDir/macOS-12.7.3/developer-man:$manLocalDir/macOS-12.7.3/developer-platform-man:$manLocalDir/macOS-12.7.3/developer-platform-sdk-man:$manLocalDir/macOS-12.7.3/xctoolchain-man",
     'macOS 11.1',    "$manLocalDir/macOS-11.1",
@@ -1251,17 +1262,17 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'freebsd-current',       'FreeBSD 16.0-CURRENT',
     'freebsd-release-ports', 'FreeBSD 15.0-RELEASE and Ports',
-    'freebsd-ports', 'FreeBSD Ports 15.0',
+    'freebsd-ports', 'FreeBSD Ports 15.0.quarterly',
 
     'slackware',  'Linux Slackware 3.1',
-    'redhat',     'Red Hat 9',
+    'redhat',     'Red Hat 9.0',
     'suse',       'SuSE 11.3',
-    'debian',     'Debian 13.3.0',
+    'debian',     'Debian 13.4.0',
     'ubuntu',     'Ubuntu 24.04 noble',
     'dragonfly',  'DragonFly 6.4.2',
     'centos',     'CentOS 7.9',
     'rocky',      'Rocky 10.1',
-    'linux',      'Debian 13.3.0',
+    'linux',      'Debian 13.4.0',
     'darwin',     'Darwin 8.0.1/ppc',
     'opendarwin', 'OpenDarwin 7.2.1',
     'macosx',     'Darwin 8.0.1/ppc',
@@ -1269,7 +1280,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'netbsd',        'NetBSD 10.1',
     'openbsd',       'OpenBSD 7.8',
     'opensuse',      'openSUSE 15.6',
-    'openindiana',   'OpenIndiana 2024.10',
+    'openindiana',   'OpenIndiana 2025.10',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
     'x11',           'X11R7.4',
@@ -1281,7 +1292,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'sunos5',        'SunOS 5.10',
     'sunos4',        'SunOS 4.1.3',
     'sunos',         'SunOS 4.1.3',
-    'macos',         'macOS 26.3',
+    'macos',         'macOS 26.4',
     'plan9',         'Plan 9',
     'osf1',          'OSF1 V5.1/alpha',
     'true64',        'OSF1 V5.1/alpha',

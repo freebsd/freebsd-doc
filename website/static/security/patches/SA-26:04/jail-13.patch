@@ -1,0 +1,1132 @@
+--- sys/compat/cloudabi/cloudabi_fd.c.orig
++++ sys/compat/cloudabi/cloudabi_fd.c
+@@ -389,7 +389,7 @@
+ 	int error, oflags;
+ 
+ 	/* Obtain file descriptor properties. */
+-	error = fget_cap(td, uap->fd, cap_rights_init(&rights), &fp,
++	error = fget_cap(td, uap->fd, cap_rights_init(&rights), NULL, &fp,
+ 	    &fcaps);
+ 	if (error != 0)
+ 		return (error);
+--- sys/fs/fdescfs/fdesc_vnops.c.orig
++++ sys/fs/fdescfs/fdesc_vnops.c
+@@ -515,7 +515,7 @@
+ 		    cap_rights_init_one(&rights, CAP_EXTATTR_SET), &fp);
+ 	} else {
+ 		error = getvnode_path(td, fd,
+-		    cap_rights_init_one(&rights, CAP_EXTATTR_SET), &fp);
++		    cap_rights_init_one(&rights, CAP_EXTATTR_SET), NULL, &fp);
+ 	}
+ 	if (error) {
+ 		/*
+@@ -652,7 +652,7 @@
+ 	VOP_UNLOCK(vn);
+ 
+ 	td = curthread;
+-	error = fget_cap(td, fd_fd, &cap_no_rights, &fp, NULL);
++	error = fget_cap(td, fd_fd, &cap_no_rights, NULL, &fp, NULL);
+ 	if (error != 0)
+ 		goto out;
+ 
+--- sys/kern/kern_descrip.c.orig
++++ sys/kern/kern_descrip.c
+@@ -114,7 +114,8 @@
+ static void	fdunused(struct filedesc *fdp, int fd);
+ static void	fdused(struct filedesc *fdp, int fd);
+ static int	fget_unlocked_seq(struct filedesc *fdp, int fd,
+-		    cap_rights_t *needrightsp, struct file **fpp, seqc_t *seqp);
++		    const cap_rights_t *needrightsp, uint8_t *flagsp,
++		    struct file **fpp, seqc_t *seqp);
+ static int	getmaxfd(struct thread *td);
+ static u_long	*filecaps_copy_prep(const struct filecaps *src);
+ static void	filecaps_copy_finish(const struct filecaps *src,
+@@ -470,6 +471,8 @@
+ 	return (error);
+ }
+ 
++#define	FD_RESOLVE_BENEATH	2
++
+ int
+ kern_fcntl(struct thread *td, int fd, int cmd, intptr_t arg)
+ {
+@@ -519,7 +522,9 @@
+ 		fde = fdeget_locked(fdp, fd);
+ 		if (fde != NULL) {
+ 			td->td_retval[0] =
+-			    (fde->fde_flags & UF_EXCLOSE) ? FD_CLOEXEC : 0;
++			    ((fde->fde_flags & UF_EXCLOSE) ? FD_CLOEXEC : 0) |
++			    ((fde->fde_flags & UF_RESOLVE_BENEATH) ?
++			    FD_RESOLVE_BENEATH : 0);
+ 			error = 0;
+ 		}
+ 		FILEDESC_SUNLOCK(fdp);
+@@ -530,8 +535,13 @@
+ 		FILEDESC_XLOCK(fdp);
+ 		fde = fdeget_locked(fdp, fd);
+ 		if (fde != NULL) {
++			/*
++			 * UF_RESOLVE_BENEATH is sticky and cannot be cleared.
++			 */
+ 			fde->fde_flags = (fde->fde_flags & ~UF_EXCLOSE) |
+-			    (arg & FD_CLOEXEC ? UF_EXCLOSE : 0);
++			    ((arg & FD_CLOEXEC) != 0 ? UF_EXCLOSE : 0) |
++			    ((arg & FD_RESOLVE_BENEATH) != 0 ?
++			    UF_RESOLVE_BENEATH : 0);
+ 			error = 0;
+ 		}
+ 		FILEDESC_XUNLOCK(fdp);
+@@ -2158,7 +2168,8 @@
+ 	seqc_write_begin(&fde->fde_seqc);
+ #endif
+ 	fde->fde_file = fp;
+-	fde->fde_flags = (flags & O_CLOEXEC) != 0 ? UF_EXCLOSE : 0;
++	fde->fde_flags = ((flags & O_CLOEXEC) != 0 ? UF_EXCLOSE : 0) |
++	    ((flags & O_RESOLVE_BENEATH) != 0 ? UF_RESOLVE_BENEATH : 0);
+ 	if (fcaps != NULL)
+ 		filecaps_move(fcaps, &fde->fde_caps);
+ 	else
+@@ -2978,7 +2989,7 @@
+ }
+ 
+ int
+-fget_cap_locked(struct filedesc *fdp, int fd, cap_rights_t *needrightsp,
++fget_cap_locked(struct filedesc *fdp, int fd, const cap_rights_t *needrightsp,
+     struct file **fpp, struct filecaps *havecapsp)
+ {
+ 	struct filedescent *fde;
+@@ -3010,8 +3021,8 @@
+ }
+ 
+ int
+-fget_cap(struct thread *td, int fd, cap_rights_t *needrightsp,
+-    struct file **fpp, struct filecaps *havecapsp)
++fget_cap(struct thread *td, int fd, const cap_rights_t *needrightsp,
++    uint8_t *flagsp, struct file **fpp, struct filecaps *havecapsp)
+ {
+ 	struct filedesc *fdp = td->td_proc->p_fd;
+ 	int error;
+@@ -3025,7 +3036,8 @@
+ 
+ 	*fpp = NULL;
+ 	for (;;) {
+-		error = fget_unlocked_seq(fdp, fd, needrightsp, &fp, &seq);
++		error = fget_unlocked_seq(fdp, fd, needrightsp, flagsp, &fp,
++		    &seq);
+ 		if (error != 0)
+ 			return (error);
+ 
+@@ -3089,7 +3101,7 @@
+ 
+ #ifdef CAPABILITIES
+ int
+-fgetvp_lookup_smr(int fd, struct nameidata *ndp, struct vnode **vpp, bool *fsearch)
++fgetvp_lookup_smr(int fd, struct nameidata *ndp, struct vnode **vpp, int *flagsp)
+ {
+ 	const struct filedescent *fde;
+ 	const struct fdescenttbl *fdt;
+@@ -3099,6 +3111,7 @@
+ 	const cap_rights_t *haverights;
+ 	cap_rights_t rights;
+ 	seqc_t seq;
++	int flags;
+ 
+ 	VFS_SMR_ASSERT_ENTERED();
+ 
+@@ -3117,7 +3130,9 @@
+ 		return (EAGAIN);
+ 	if (__predict_false(cap_check_inline_transient(haverights, &rights)))
+ 		return (EAGAIN);
+-	*fsearch = ((fp->f_flag & FSEARCH) != 0);
++	flags = fp->f_flag & FSEARCH;
++	flags |= (fde->fde_flags & UF_RESOLVE_BENEATH) != 0 ?
++	    O_RESOLVE_BENEATH : 0;
+ 	vp = fp->f_vnode;
+ 	if (__predict_false(vp == NULL)) {
+ 		return (EAGAIN);
+@@ -3151,16 +3166,19 @@
+ #endif
+ 	}
+ 	*vpp = vp;
++	*flagsp = flags;
+ 	return (0);
+ }
+ #else
+ int
+-fgetvp_lookup_smr(int fd, struct nameidata *ndp, struct vnode **vpp, bool *fsearch)
++fgetvp_lookup_smr(int fd, struct nameidata *ndp, struct vnode **vpp, int *flagsp)
+ {
++	const struct filedescent *fde;
+ 	const struct fdescenttbl *fdt;
+ 	struct filedesc *fdp;
+ 	struct file *fp;
+ 	struct vnode *vp;
++	int flags;
+ 
+ 	VFS_SMR_ASSERT_ENTERED();
+ 
+@@ -3168,10 +3186,13 @@
+ 	fdt = fdp->fd_files;
+ 	if (__predict_false((u_int)fd >= fdt->fdt_nfiles))
+ 		return (EBADF);
+-	fp = fdt->fdt_ofiles[fd].fde_file;
++	fde = &fdt->fdt_ofiles[fd];
++	fp = fde->fde_file;
+ 	if (__predict_false(fp == NULL))
+ 		return (EAGAIN);
+-	*fsearch = ((fp->f_flag & FSEARCH) != 0);
++	flags = fp->f_flag & FSEARCH;
++	flags |= (fde->fde_flags & UF_RESOLVE_BENEATH) != 0 ?
++	    O_RESOLVE_BENEATH : 0;
+ 	vp = fp->f_vnode;
+ 	if (__predict_false(vp == NULL || vp->v_type != VDIR)) {
+ 		return (EAGAIN);
+@@ -3186,6 +3207,7 @@
+ 		return (EAGAIN);
+ 	filecaps_fill(&ndp->ni_filecaps);
+ 	*vpp = vp;
++	*flagsp = flags;
+ 	return (0);
+ }
+ #endif
+@@ -3199,13 +3221,15 @@
+ 	struct componentname *cnp;
+ 	cap_rights_t rights;
+ 	int error;
++	uint8_t flags;
+ 
+ 	td = curthread;
+ 	rights = *ndp->ni_rightsneeded;
+ 	cap_rights_set_one(&rights, CAP_LOOKUP);
+ 	cnp = &ndp->ni_cnd;
+ 
+-	error = fget_cap(td, ndp->ni_dirfd, &rights, &fp, &ndp->ni_filecaps);
++	error = fget_cap(td, ndp->ni_dirfd, &rights, &flags, &fp,
++	    &ndp->ni_filecaps);
+ 	if (__predict_false(error != 0))
+ 		return (error);
+ 	if (__predict_false(fp->f_ops == &badfileops)) {
+@@ -3223,6 +3247,10 @@
+ 	 */
+ 	if ((fp->f_flag & FSEARCH) != 0)
+ 		cnp->cn_flags |= NOEXECCHECK;
++	if ((flags & UF_RESOLVE_BENEATH) != 0) {
++		cnp->cn_flags |= RBENEATH;
++		ndp->ni_resflags |= NIRES_BENEATH;
++	}
+ 	fdrop(fp, td);
+ 
+ #ifdef CAPABILITIES
+@@ -3256,12 +3284,10 @@
+ }
+ 
+ static int
+-fget_unlocked_seq(struct filedesc *fdp, int fd, cap_rights_t *needrightsp,
+-    struct file **fpp, seqc_t *seqp)
++fget_unlocked_seq(struct filedesc *fdp, int fd, const cap_rights_t *needrightsp,
++    uint8_t *flagsp, struct file **fpp, seqc_t *seqp)
+ {
+-#ifdef CAPABILITIES
+ 	const struct filedescent *fde;
+-#endif
+ 	const struct fdescenttbl *fdt;
+ 	struct file *fp;
+ #ifdef CAPABILITIES
+@@ -3269,6 +3295,7 @@
+ 	cap_rights_t haverights;
+ 	int error;
+ #endif
++	uint8_t flags;
+ 
+ 	fdt = fdp->fd_files;
+ 	if (__predict_false((u_int)fd >= fdt->fdt_nfiles))
+@@ -3287,10 +3314,13 @@
+ 		fde = &fdt->fdt_ofiles[fd];
+ 		haverights = *cap_rights_fde_inline(fde);
+ 		fp = fde->fde_file;
++		flags = fde->fde_flags;
+ 		if (!seqc_consistent(fd_seqc(fdt, fd), seq))
+ 			continue;
+ #else
+-		fp = fdt->fdt_ofiles[fd].fde_file;
++		fde = &fdt->fdt_ofiles[fd];
++		flags = fde->fde_flags;
++		fp = fde->fde_file;
+ #endif
+ 		if (fp == NULL)
+ 			return (EBADF);
+@@ -3323,6 +3353,8 @@
+ 		fdrop(fp, curthread);
+ 	}
+ 	*fpp = fp;
++	if (flagsp != NULL)
++		*flagsp = flags;
+ 	if (seqp != NULL) {
+ #ifdef CAPABILITIES
+ 		*seqp = seq;
+@@ -3339,8 +3371,8 @@
+  * racing with itself.
+  */
+ int
+-fget_unlocked(struct filedesc *fdp, int fd, cap_rights_t *needrightsp,
+-    struct file **fpp)
++fget_unlocked_flags(struct filedesc *fdp, int fd, const cap_rights_t *needrightsp,
++    uint8_t *flagsp, struct file **fpp)
+ {
+ #ifdef CAPABILITIES
+ 	const struct filedescent *fde;
+@@ -3351,6 +3383,7 @@
+ 	seqc_t seq;
+ 	const cap_rights_t *haverights;
+ #endif
++	uint8_t flags;
+ 
+ 	fdt = fdp->fd_files;
+ 	if (__predict_false((u_int)fd >= fdt->fdt_nfiles)) {
+@@ -3362,8 +3395,10 @@
+ 	fde = &fdt->fdt_ofiles[fd];
+ 	haverights = cap_rights_fde_inline(fde);
+ 	fp = fde->fde_file;
++	flags = fde->fde_flags;
+ #else
+ 	fp = fdt->fdt_ofiles[fd].fde_file;
++	flags = fdt->fdt_ofiles[fd].fde_flags;
+ #endif
+ 	if (__predict_false(fp == NULL))
+ 		goto out_fallback;
+@@ -3387,12 +3422,21 @@
+ #endif
+ 		goto out_fdrop;
+ 	*fpp = fp;
++	if (flagsp != NULL)
++		*flagsp = flags;
+ 	return (0);
+ out_fdrop:
+ 	fdrop(fp, curthread);
+ out_fallback:
+ 	*fpp = NULL;
+-	return (fget_unlocked_seq(fdp, fd, needrightsp, fpp, NULL));
++	return (fget_unlocked_seq(fdp, fd, needrightsp, flagsp, fpp, NULL));
++}
++
++int
++fget_unlocked(struct filedesc *fdp, int fd, const cap_rights_t *needrightsp,
++    struct file **fpp)
++{
++	return (fget_unlocked_flags(fdp, fd, needrightsp, NULL, fpp));
+ }
+ 
+ /*
+@@ -3406,7 +3450,7 @@
+  */
+ #ifdef	CAPABILITIES
+ int
+-fget_only_user(struct filedesc *fdp, int fd, cap_rights_t *needrightsp,
++fget_only_user(struct filedesc *fdp, int fd, const cap_rights_t *needrightsp,
+     struct file **fpp)
+ {
+ 	const struct filedescent *fde;
+@@ -3436,7 +3480,7 @@
+ }
+ #else
+ int
+-fget_only_user(struct filedesc *fdp, int fd, cap_rights_t *needrightsp,
++fget_only_user(struct filedesc *fdp, int fd, const cap_rights_t *needrightsp,
+     struct file **fpp)
+ {
+ 	struct file *fp;
+@@ -3472,7 +3516,7 @@
+  */
+ static __inline int
+ _fget(struct thread *td, int fd, struct file **fpp, int flags,
+-    cap_rights_t *needrightsp)
++    const cap_rights_t *needrightsp)
+ {
+ 	struct filedesc *fdp;
+ 	struct file *fp;
+@@ -3520,15 +3564,15 @@
+ }
+ 
+ int
+-fget(struct thread *td, int fd, cap_rights_t *rightsp, struct file **fpp)
++fget(struct thread *td, int fd, const cap_rights_t *rightsp, struct file **fpp)
+ {
+ 
+ 	return (_fget(td, fd, fpp, 0, rightsp));
+ }
+ 
+ int
+-fget_mmap(struct thread *td, int fd, cap_rights_t *rightsp, vm_prot_t *maxprotp,
+-    struct file **fpp)
++fget_mmap(struct thread *td, int fd, const cap_rights_t *rightsp,
++    vm_prot_t *maxprotp, struct file **fpp)
+ {
+ 	int error;
+ #ifndef CAPABILITIES
+@@ -3546,7 +3590,7 @@
+ 	fdp = td->td_proc->p_fd;
+ 	MPASS(cap_rights_is_set(rightsp, CAP_MMAP));
+ 	for (;;) {
+-		error = fget_unlocked_seq(fdp, fd, rightsp, &fp, &seq);
++		error = fget_unlocked_seq(fdp, fd, rightsp, NULL, &fp, &seq);
+ 		if (__predict_false(error != 0))
+ 			return (error);
+ 		if (__predict_false(fp->f_ops == &badfileops)) {
+@@ -3571,22 +3615,24 @@
+ }
+ 
+ int
+-fget_read(struct thread *td, int fd, cap_rights_t *rightsp, struct file **fpp)
++fget_read(struct thread *td, int fd, const cap_rights_t *rightsp,
++    struct file **fpp)
+ {
+ 
+ 	return (_fget(td, fd, fpp, FREAD, rightsp));
+ }
+ 
+ int
+-fget_write(struct thread *td, int fd, cap_rights_t *rightsp, struct file **fpp)
++fget_write(struct thread *td, int fd, const cap_rights_t *rightsp,
++    struct file **fpp)
+ {
+ 
+ 	return (_fget(td, fd, fpp, FWRITE, rightsp));
+ }
+ 
+ int
+-fget_fcntl(struct thread *td, int fd, cap_rights_t *rightsp, int needfcntl,
+-    struct file **fpp)
++fget_fcntl(struct thread *td, int fd, const cap_rights_t *rightsp,
++    int needfcntl, struct file **fpp)
+ {
+ 	struct filedesc *fdp = td->td_proc->p_fd;
+ #ifndef CAPABILITIES
+@@ -3599,7 +3645,7 @@
+ 	*fpp = NULL;
+ 	MPASS(cap_rights_is_set(rightsp, CAP_FCNTL));
+ 	for (;;) {
+-		error = fget_unlocked_seq(fdp, fd, rightsp, &fp, &seq);
++		error = fget_unlocked_seq(fdp, fd, rightsp, NULL, &fp, &seq);
+ 		if (error != 0)
+ 			return (error);
+ 		error = cap_fcntl_check(fdp, fd, needfcntl);
+@@ -3624,7 +3670,7 @@
+  * XXX: what about the unused flags ?
+  */
+ static __inline int
+-_fgetvp(struct thread *td, int fd, int flags, cap_rights_t *needrightsp,
++_fgetvp(struct thread *td, int fd, int flags, const cap_rights_t *needrightsp,
+     struct vnode **vpp)
+ {
+ 	struct file *fp;
+@@ -3646,21 +3692,22 @@
+ }
+ 
+ int
+-fgetvp(struct thread *td, int fd, cap_rights_t *rightsp, struct vnode **vpp)
++fgetvp(struct thread *td, int fd, const cap_rights_t *rightsp,
++    struct vnode **vpp)
+ {
+ 
+ 	return (_fgetvp(td, fd, 0, rightsp, vpp));
+ }
+ 
+ int
+-fgetvp_rights(struct thread *td, int fd, cap_rights_t *needrightsp,
++fgetvp_rights(struct thread *td, int fd, const cap_rights_t *needrightsp,
+     struct filecaps *havecaps, struct vnode **vpp)
+ {
+ 	struct filecaps caps;
+ 	struct file *fp;
+ 	int error;
+ 
+-	error = fget_cap(td, fd, needrightsp, &fp, &caps);
++	error = fget_cap(td, fd, needrightsp, NULL, &fp, &caps);
+ 	if (error != 0)
+ 		return (error);
+ 	if (fp->f_ops == &badfileops) {
+@@ -3685,14 +3732,16 @@
+ }
+ 
+ int
+-fgetvp_read(struct thread *td, int fd, cap_rights_t *rightsp, struct vnode **vpp)
++fgetvp_read(struct thread *td, int fd, const cap_rights_t *rightsp,
++    struct vnode **vpp)
+ {
+ 
+ 	return (_fgetvp(td, fd, FREAD, rightsp, vpp));
+ }
+ 
+ int
+-fgetvp_exec(struct thread *td, int fd, cap_rights_t *rightsp, struct vnode **vpp)
++fgetvp_exec(struct thread *td, int fd, const cap_rights_t *rightsp,
++    struct vnode **vpp)
+ {
+ 
+ 	return (_fgetvp(td, fd, FEXEC, rightsp, vpp));
+@@ -3700,7 +3749,7 @@
+ 
+ #ifdef notyet
+ int
+-fgetvp_write(struct thread *td, int fd, cap_rights_t *rightsp,
++fgetvp_write(struct thread *td, int fd, const cap_rights_t *rightsp,
+     struct vnode **vpp)
+ {
+ 
+--- sys/kern/sys_procdesc.c.orig
++++ sys/kern/sys_procdesc.c
+@@ -121,7 +121,7 @@
+  * died.
+  */
+ int
+-procdesc_find(struct thread *td, int fd, cap_rights_t *rightsp,
++procdesc_find(struct thread *td, int fd, const cap_rights_t *rightsp,
+     struct proc **p)
+ {
+ 	struct procdesc *pd;
+@@ -168,7 +168,8 @@
+  * Retrieve the PID associated with a process descriptor.
+  */
+ int
+-kern_pdgetpid(struct thread *td, int fd, cap_rights_t *rightsp, pid_t *pidp)
++kern_pdgetpid(struct thread *td, int fd, const cap_rights_t *rightsp,
++    pid_t *pidp)
+ {
+ 	struct file *fp;
+ 	int error;
+--- sys/kern/uipc_mqueue.c.orig
++++ sys/kern/uipc_mqueue.c
+@@ -2160,13 +2160,14 @@
+ 	return (error);
+ }
+ 
+-typedef int (*_fgetf)(struct thread *, int, cap_rights_t *, struct file **);
++typedef int (*_fgetf)(struct thread *, int, const cap_rights_t *,
++    struct file **);
+ 
+ /*
+  * Get message queue by giving file slot
+  */
+ static int
+-_getmq(struct thread *td, int fd, cap_rights_t *rightsp, _fgetf func,
++_getmq(struct thread *td, int fd, const cap_rights_t *rightsp, _fgetf func,
+        struct file **fpp, struct mqfs_node **ppn, struct mqueue **pmq)
+ {
+ 	struct mqfs_node *pn;
+--- sys/kern/uipc_sem.c.orig
++++ sys/kern/uipc_sem.c
+@@ -123,8 +123,8 @@
+ 		    semid_t *semidp, mode_t mode, unsigned int value,
+ 		    int flags, int compat32);
+ static void	ksem_drop(struct ksem *ks);
+-static int	ksem_get(struct thread *td, semid_t id, cap_rights_t *rightsp,
+-    struct file **fpp);
++static int	ksem_get(struct thread *td, semid_t id,
++		    const cap_rights_t *rightsp, struct file **fpp);
+ static struct ksem *ksem_hold(struct ksem *ks);
+ static void	ksem_insert(char *path, Fnv32_t fnv, struct ksem *ks);
+ static struct ksem *ksem_lookup(char *path, Fnv32_t fnv);
+@@ -588,7 +588,7 @@
+ }
+ 
+ static int
+-ksem_get(struct thread *td, semid_t id, cap_rights_t *rightsp,
++ksem_get(struct thread *td, semid_t id, const cap_rights_t *rightsp,
+     struct file **fpp)
+ {
+ 	struct ksem *ks;
+--- sys/kern/uipc_syscalls.c.orig
++++ sys/kern/uipc_syscalls.c
+@@ -91,13 +91,13 @@
+  * A reference on the file entry is held upon returning.
+  */
+ int
+-getsock_cap(struct thread *td, int fd, cap_rights_t *rightsp,
++getsock_cap(struct thread *td, int fd, const cap_rights_t *rightsp,
+     struct file **fpp, u_int *fflagp, struct filecaps *havecapsp)
+ {
+ 	struct file *fp;
+ 	int error;
+ 
+-	error = fget_cap(td, fd, rightsp, &fp, havecapsp);
++	error = fget_cap(td, fd, rightsp, NULL, &fp, havecapsp);
+ 	if (error != 0)
+ 		return (error);
+ 	if (fp->f_type != DTYPE_SOCKET) {
+@@ -727,7 +727,7 @@
+ 	struct uio auio;
+ 	struct iovec *iov;
+ 	struct socket *so;
+-	cap_rights_t *rights;
++	const cap_rights_t *rights;
+ #ifdef KTRACE
+ 	struct uio *ktruio = NULL;
+ #endif
+--- sys/kern/uipc_usrreq.c.orig
++++ sys/kern/uipc_usrreq.c
+@@ -57,7 +57,6 @@
+  *	need a proper out-of-band
+  */
+ 
+-#include <sys/cdefs.h>
+ #include "opt_ddb.h"
+ 
+ #include <sys/param.h>
+@@ -67,6 +66,7 @@
+ #include <sys/fcntl.h>
+ #include <sys/file.h>
+ #include <sys/filedesc.h>
++#include <sys/jail.h>
+ #include <sys/kernel.h>
+ #include <sys/lock.h>
+ #include <sys/malloc.h>
+@@ -1993,22 +1993,34 @@
+ 	free(fdep[0], M_FILECAPS);
+ }
+ 
++static bool
++restrict_rights(struct file *fp, struct thread *td)
++{
++	struct prison *prison1, *prison2;
++
++	prison1 = fp->f_cred->cr_prison;
++	prison2 = td->td_ucred->cr_prison;
++	return (prison1 != prison2 && prison1->pr_root != prison2->pr_root &&
++	    prison2 != &prison0);
++}
++
+ static int
+ unp_externalize(struct mbuf *control, struct mbuf **controlp, int flags)
+ {
+ 	struct thread *td = curthread;		/* XXX */
+ 	struct cmsghdr *cm = mtod(control, struct cmsghdr *);
+-	int i;
+ 	int *fdp;
+ 	struct filedesc *fdesc = td->td_proc->p_fd;
+ 	struct filedescent **fdep;
+ 	void *data;
+ 	socklen_t clen = control->m_len, datalen;
+-	int error, newfds;
++	int error, fdflags, newfds;
+ 	u_int newlen;
+ 
+ 	UNP_LINK_UNLOCK_ASSERT();
+ 
++	fdflags = (flags & MSG_CMSG_CLOEXEC) ? O_CLOEXEC : 0;
++
+ 	error = 0;
+ 	if (controlp != NULL) /* controlp == NULL => free control messages */
+ 		*controlp = NULL;
+@@ -2059,11 +2071,14 @@
+ 				*controlp = NULL;
+ 				goto next;
+ 			}
+-			for (i = 0; i < newfds; i++, fdp++) {
+-				_finstall(fdesc, fdep[i]->fde_file, *fdp,
+-				    (flags & MSG_CMSG_CLOEXEC) != 0 ? O_CLOEXEC : 0,
+-				    &fdep[i]->fde_caps);
+-				unp_externalize_fp(fdep[i]->fde_file);
++			for (int i = 0; i < newfds; i++, fdp++) {
++				struct file *fp;
++
++				fp = fdep[i]->fde_file;
++				_finstall(fdesc, fp, *fdp, fdflags |
++				    (restrict_rights(fp, td) ?
++				    O_RESOLVE_BENEATH : 0), &fdep[i]->fde_caps);
++				unp_externalize_fp(fp);
+ 			}
+ 
+ 			/*
+--- sys/kern/vfs_acl.c.orig
++++ sys/kern/vfs_acl.c
+@@ -433,7 +433,7 @@
+ 
+ 	AUDIT_ARG_FD(uap->filedes);
+ 	error = getvnode_path(td, uap->filedes,
+-	    cap_rights_init_one(&rights, CAP_ACL_GET), &fp);
++	    cap_rights_init_one(&rights, CAP_ACL_GET), NULL, &fp);
+ 	if (error == 0) {
+ 		error = vacl_get_acl(td, fp->f_vnode, uap->type, uap->aclp);
+ 		fdrop(fp, td);
+@@ -566,7 +566,7 @@
+ 
+ 	AUDIT_ARG_FD(uap->filedes);
+ 	error = getvnode_path(td, uap->filedes,
+-	    cap_rights_init_one(&rights, CAP_ACL_CHECK), &fp);
++	    cap_rights_init_one(&rights, CAP_ACL_CHECK), NULL, &fp);
+ 	if (error == 0) {
+ 		error = vacl_aclcheck(td, fp->f_vnode, uap->type, uap->aclp);
+ 		fdrop(fp, td);
+--- sys/kern/vfs_cache.c.orig
++++ sys/kern/vfs_cache.c
+@@ -4364,17 +4364,23 @@
+ {
+ 	struct nameidata *ndp;
+ 	struct componentname *cnp;
+-	int error;
+-	bool fsearch;
++	int error, flags;
+ 
+ 	ndp = fpl->ndp;
+ 	cnp = fpl->cnp;
+ 
+-	error = fgetvp_lookup_smr(ndp->ni_dirfd, ndp, vpp, &fsearch);
++	error = fgetvp_lookup_smr(ndp->ni_dirfd, ndp, vpp, &flags);
+ 	if (__predict_false(error != 0)) {
+ 		return (cache_fpl_aborted(fpl));
+ 	}
+-	fpl->fsearch = fsearch;
++	if (__predict_false((flags & O_RESOLVE_BENEATH) != 0)) {
++		_Static_assert((CACHE_FPL_SUPPORTED_CN_FLAGS & RBENEATH) == 0,
++		    "RBENEATH supported by fplookup");
++		cache_fpl_smr_exit(fpl);
++		cache_fpl_aborted(fpl);
++		return (EOPNOTSUPP);
++	}
++	fpl->fsearch = (flags & FSEARCH) != 0;
+ 	if ((*vpp)->v_type != VDIR) {
+ 		if (!((cnp->cn_flags & EMPTYPATH) != 0 && cnp->cn_pnbuf[0] == '\0')) {
+ 			cache_fpl_smr_exit(fpl);
+--- sys/kern/vfs_extattr.c.orig
++++ sys/kern/vfs_extattr.c
+@@ -241,7 +241,7 @@
+ 	AUDIT_ARG_TEXT(attrname);
+ 
+ 	error = getvnode_path(td, uap->fd,
+-	    cap_rights_init_one(&rights, CAP_EXTATTR_SET), &fp);
++	    cap_rights_init_one(&rights, CAP_EXTATTR_SET), NULL, &fp);
+ 	if (error)
+ 		return (error);
+ 
+@@ -408,7 +408,7 @@
+ 	AUDIT_ARG_TEXT(attrname);
+ 
+ 	error = getvnode_path(td, uap->fd,
+-	    cap_rights_init_one(&rights, CAP_EXTATTR_GET), &fp);
++	    cap_rights_init_one(&rights, CAP_EXTATTR_GET), NULL, &fp);
+ 	if (error)
+ 		return (error);
+ 
+@@ -543,7 +543,7 @@
+ 	AUDIT_ARG_TEXT(attrname);
+ 
+ 	error = getvnode_path(td, uap->fd,
+-	    cap_rights_init_one(&rights, CAP_EXTATTR_DELETE), &fp);
++	    cap_rights_init_one(&rights, CAP_EXTATTR_DELETE), NULL, &fp);
+ 	if (error)
+ 		return (error);
+ 
+@@ -689,7 +689,7 @@
+ 	AUDIT_ARG_FD(uap->fd);
+ 	AUDIT_ARG_VALUE(uap->attrnamespace);
+ 	error = getvnode_path(td, uap->fd,
+-	    cap_rights_init_one(&rights, CAP_EXTATTR_LIST), &fp);
++	    cap_rights_init_one(&rights, CAP_EXTATTR_LIST), NULL, &fp);
+ 	if (error)
+ 		return (error);
+ 
+--- sys/kern/vfs_syscalls.c.orig
++++ sys/kern/vfs_syscalls.c
+@@ -373,7 +373,7 @@
+ 	int error;
+ 
+ 	AUDIT_ARG_FD(fd);
+-	error = getvnode_path(td, fd, &cap_fstatfs_rights, &fp);
++	error = getvnode_path(td, fd, &cap_fstatfs_rights, NULL, &fp);
+ 	if (error != 0)
+ 		return (error);
+ 	vp = fp->f_vnode;
+@@ -887,12 +887,17 @@
+ 	struct mount *mp;
+ 	struct file *fp;
+ 	int error;
++	uint8_t fdflags;
+ 
+ 	AUDIT_ARG_FD(uap->fd);
+-	error = getvnode_path(td, uap->fd, &cap_fchdir_rights,
++	error = getvnode_path(td, uap->fd, &cap_fchdir_rights, &fdflags,
+ 	    &fp);
+ 	if (error != 0)
+ 		return (error);
++	if ((fdflags & UF_RESOLVE_BENEATH) != 0) {
++		fdrop(fp, td);
++		return (ENOTCAPABLE);
++	}
+ 	vp = fp->f_vnode;
+ 	vrefact(vp);
+ 	fdrop(fp, td);
+@@ -1243,6 +1248,10 @@
+ 		else
+ #endif
+ 			fcaps = NULL;
++		if ((nd.ni_resflags & NIRES_BENEATH) != 0)
++			flags |= O_RESOLVE_BENEATH;
++		else
++			flags &= ~O_RESOLVE_BENEATH;
+ 		error = finstall_refed(td, fp, &indx, flags, fcaps);
+ 		/* On success finstall_refed() consumes fcaps. */
+ 		if (error != 0) {
+@@ -1933,7 +1942,7 @@
+ 
+ 	fp = NULL;
+ 	if (fd != FD_NONE) {
+-		error = getvnode_path(td, fd, &cap_no_rights, &fp);
++		error = getvnode_path(td, fd, &cap_no_rights, NULL, &fp);
+ 		if (error != 0)
+ 			return (error);
+ 	}
+@@ -4315,13 +4324,14 @@
+  * semantics.
+  */
+ int
+-getvnode_path(struct thread *td, int fd, cap_rights_t *rightsp,
+-    struct file **fpp)
++getvnode_path(struct thread *td, int fd, const cap_rights_t *rightsp,
++    uint8_t *flagsp, struct file **fpp)
+ {
+ 	struct file *fp;
+ 	int error;
+ 
+-	error = fget_unlocked(td->td_proc->p_fd, fd, rightsp, &fp);
++	error = fget_unlocked_flags(td->td_proc->p_fd, fd, rightsp, flagsp,
++	    &fp);
+ 	if (error != 0)
+ 		return (error);
+ 
+@@ -4353,11 +4363,12 @@
+  * A reference on the file entry is held upon returning.
+  */
+ int
+-getvnode(struct thread *td, int fd, cap_rights_t *rightsp, struct file **fpp)
++getvnode(struct thread *td, int fd, const cap_rights_t *rightsp,
++    struct file **fpp)
+ {
+ 	int error;
+ 
+-	error = getvnode_path(td, fd, rightsp, fpp);
++	error = getvnode_path(td, fd, rightsp, NULL, fpp);
+ 
+ 	/*
+ 	 * Filter out O_PATH file descriptors, most getvnode() callers
+--- sys/sys/file.h.orig
++++ sys/sys/file.h
+@@ -251,14 +251,15 @@
+ extern int maxfiles;		/* kernel limit on number of open files */
+ extern int maxfilesperproc;	/* per process limit on number of open files */
+ 
+-int fget(struct thread *td, int fd, cap_rights_t *rightsp, struct file **fpp);
+-int fget_mmap(struct thread *td, int fd, cap_rights_t *rightsp,
++int fget(struct thread *td, int fd, const cap_rights_t *rightsp,
++    struct file **fpp);
++int fget_mmap(struct thread *td, int fd, const cap_rights_t *rightsp,
+     vm_prot_t *maxprotp, struct file **fpp);
+-int fget_read(struct thread *td, int fd, cap_rights_t *rightsp,
++int fget_read(struct thread *td, int fd, const cap_rights_t *rightsp,
+     struct file **fpp);
+-int fget_write(struct thread *td, int fd, cap_rights_t *rightsp,
++int fget_write(struct thread *td, int fd, const cap_rights_t *rightsp,
+     struct file **fpp);
+-int fget_fcntl(struct thread *td, int fd, cap_rights_t *rightsp,
++int fget_fcntl(struct thread *td, int fd, const cap_rights_t *rightsp,
+     int needfcntl, struct file **fpp);
+ int _fdrop(struct file *fp, struct thread *td);
+ int fget_remote(struct thread *td, struct proc *p, int fd, struct file **fpp);
+@@ -281,17 +282,17 @@
+ 
+ void finit(struct file *, u_int, short, void *, struct fileops *);
+ void finit_vnode(struct file *, u_int, void *, struct fileops *);
+-int fgetvp(struct thread *td, int fd, cap_rights_t *rightsp,
++int fgetvp(struct thread *td, int fd, const cap_rights_t *rightsp,
+     struct vnode **vpp);
+-int fgetvp_exec(struct thread *td, int fd, cap_rights_t *rightsp,
++int fgetvp_exec(struct thread *td, int fd, const cap_rights_t *rightsp,
+     struct vnode **vpp);
+-int fgetvp_rights(struct thread *td, int fd, cap_rights_t *needrightsp,
++int fgetvp_rights(struct thread *td, int fd, const cap_rights_t *needrightsp,
+     struct filecaps *havecaps, struct vnode **vpp);
+-int fgetvp_read(struct thread *td, int fd, cap_rights_t *rightsp,
++int fgetvp_read(struct thread *td, int fd, const cap_rights_t *rightsp,
+     struct vnode **vpp);
+-int fgetvp_write(struct thread *td, int fd, cap_rights_t *rightsp,
++int fgetvp_write(struct thread *td, int fd, const cap_rights_t *rightsp,
+     struct vnode **vpp);
+-int fgetvp_lookup_smr(int fd, struct nameidata *ndp, struct vnode **vpp, bool *fsearch);
++int fgetvp_lookup_smr(int fd, struct nameidata *ndp, struct vnode **vpp, int *flagsp);
+ int fgetvp_lookup(int fd, struct nameidata *ndp, struct vnode **vpp);
+ 
+ static __inline __result_use_check bool
+--- sys/sys/filedesc.h.orig
++++ sys/sys/filedesc.h
+@@ -136,6 +136,7 @@
+  * Per-process open flags.
+  */
+ #define	UF_EXCLOSE	0x01		/* auto-close on exec */
++#define	UF_RESOLVE_BENEATH 0x02		/* lookups must be beneath this dir */
+ 
+ #ifdef _KERNEL
+ 
+@@ -267,22 +268,26 @@
+ struct filedesc_to_leader *
+ 	filedesc_to_leader_share(struct filedesc_to_leader *fdtol,
+ 	    struct filedesc *fdp);
+-int	getvnode(struct thread *td, int fd, cap_rights_t *rightsp,
+-	    struct file **fpp);
+-int	getvnode_path(struct thread *td, int fd, cap_rights_t *rightsp,
++int	getvnode(struct thread *td, int fd, const cap_rights_t *rightsp,
+ 	    struct file **fpp);
++int	getvnode_path(struct thread *td, int fd, const cap_rights_t *rightsp,
++	    uint8_t *flagsp, struct file **fpp);
+ void	mountcheckdirs(struct vnode *olddp, struct vnode *newdp);
+ 
+-int	fget_cap_locked(struct filedesc *fdp, int fd, cap_rights_t *needrightsp,
+-	    struct file **fpp, struct filecaps *havecapsp);
+-int	fget_cap(struct thread *td, int fd, cap_rights_t *needrightsp,
+-	    struct file **fpp, struct filecaps *havecapsp);
++int	fget_cap_locked(struct filedesc *fdp, int fd,
++	    const cap_rights_t *needrightsp, struct file **fpp,
++	    struct filecaps *havecapsp);
++int	fget_cap(struct thread *td, int fd, const cap_rights_t *needrightsp,
++	    uint8_t *flagsp, struct file **fpp, struct filecaps *havecapsp);
+ /* Return a referenced file from an unlocked descriptor. */
+-int	fget_unlocked(struct filedesc *fdp, int fd, cap_rights_t *needrightsp,
++int	fget_unlocked(struct filedesc *fdp, int fd,
++	    const cap_rights_t *needrightsp, struct file **fpp);
++int	fget_unlocked_flags(struct filedesc *fdp, int fd,
++	    const cap_rights_t *needrightsp, uint8_t *flagsp,
+ 	    struct file **fpp);
+ /* Return a file pointer without a ref. FILEDESC_IS_ONLY_USER must be true.  */
+-int	fget_only_user(struct filedesc *fdp, int fd, cap_rights_t *needrightsp,
+-	    struct file **fpp);
++int	fget_only_user(struct filedesc *fdp, int fd,
++	    const cap_rights_t *needrightsp, struct file **fpp);
+ #define	fput_only_user(fdp, fp)	({					\
+ 	MPASS(FILEDESC_IS_ONLY_USER(fdp));				\
+ 	MPASS(refcount_load(&fp->f_count) > 0);				\
+--- sys/sys/namei.h.orig
++++ sys/sys/namei.h
+@@ -72,7 +72,7 @@
+ 	 */
+ 	const	char *ni_dirp;		/* pathname pointer */
+ 	enum	uio_seg ni_segflg;	/* location of pathname */
+-	cap_rights_t *ni_rightsneeded;	/* rights required to look up vnode */
++	const cap_rights_t *ni_rightsneeded; /* rights needed to look up vnode */
+ 	/*
+ 	 * Arguments to lookup.
+ 	 */
+@@ -208,6 +208,7 @@
+ #define	NIRES_ABS	0x00000001 /* Path was absolute */
+ #define	NIRES_STRICTREL	0x00000002 /* Restricted lookup result */
+ #define	NIRES_EMPTYPATH	0x00000004 /* EMPTYPATH used */
++#define	NIRES_BENEATH	0x00000008 /* O_RESOLVE_BENEATH is to be inherited */
+ 
+ /*
+  * Flags in ni_lcf, valid for the duration of the namei call.
+@@ -250,7 +251,7 @@
+ #define NDINIT_ALL(ndp, op, flags, segflg, namep, dirfd, startdir, rightsp, td)	\
+ do {										\
+ 	struct nameidata *_ndp = (ndp);						\
+-	cap_rights_t *_rightsp = (rightsp);					\
++	const cap_rights_t *_rightsp = (rightsp);					\
+ 	MPASS(_rightsp != NULL);						\
+ 	NDINIT_PREFILL(_ndp);							\
+ 	NDINIT_DBG(_ndp);							\
+--- sys/sys/procdesc.h.orig
++++ sys/sys/procdesc.h
+@@ -94,8 +94,10 @@
+  * In-kernel interfaces to process descriptors.
+  */
+ int	 procdesc_exit(struct proc *);
+-int	 procdesc_find(struct thread *, int fd, cap_rights_t *, struct proc **);
+-int	 kern_pdgetpid(struct thread *, int fd, cap_rights_t *, pid_t *pidp);
++int	 procdesc_find(struct thread *, int fd, const cap_rights_t *,
++	    struct proc **);
++int	 kern_pdgetpid(struct thread *, int fd, const cap_rights_t *,
++	    pid_t *pidp);
+ void	 procdesc_new(struct proc *, int);
+ void	 procdesc_finit(struct procdesc *, struct file *);
+ pid_t	 procdesc_pid(struct file *);
+--- sys/sys/socketvar.h.orig
++++ sys/sys/socketvar.h
+@@ -418,7 +418,7 @@
+  */
+ int	getsockaddr(struct sockaddr **namp, const struct sockaddr *uaddr,
+ 	    size_t len);
+-int	getsock_cap(struct thread *td, int fd, cap_rights_t *rightsp,
++int	getsock_cap(struct thread *td, int fd, const cap_rights_t *rightsp,
+ 	    struct file **fpp, u_int *fflagp, struct filecaps *havecaps);
+ void	soabort(struct socket *so);
+ int	soaccept(struct socket *so, struct sockaddr **nam);
+--- tests/sys/kern/Makefile.orig
++++ tests/sys/kern/Makefile
+@@ -75,6 +75,7 @@
+ LIBADD.sendfile_helper+=		pthread
+ LIBADD.fdgrowtable_test+=		util pthread kvm procstat
+ LIBADD.sigwait+=			rt
++LIBADD.unix_passfd_test+=		jail
+ 
+ NETBSD_ATF_TESTS_C+=	lockf_test
+ NETBSD_ATF_TESTS_C+=	mqueue_test
+--- tests/sys/kern/unix_passfd_test.c.orig
++++ tests/sys/kern/unix_passfd_test.c
+@@ -25,15 +25,18 @@
+  * SUCH DAMAGE.
+  */
+ 
+-#include <sys/cdefs.h>
+-#include <sys/types.h>
++#include <sys/param.h>
++#include <sys/jail.h>
+ #include <sys/socket.h>
+ #include <sys/stat.h>
+ #include <sys/sysctl.h>
+ #include <sys/un.h>
++#include <sys/wait.h>
+ 
++#include <err.h>
+ #include <errno.h>
+ #include <fcntl.h>
++#include <jail.h>
+ #include <limits.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+@@ -713,6 +716,132 @@
+ 	(void)close(putfd);
+ }
+ 
++ATF_TC_WITH_CLEANUP(cross_jail_dirfd);
++ATF_TC_HEAD(cross_jail_dirfd, tc)
++{
++	atf_tc_set_md_var(tc, "require.user", "root");
++}
++ATF_TC_BODY(cross_jail_dirfd, tc)
++{
++	int error, sock[2], jid1, jid2, status;
++	pid_t pid1, pid2;
++
++	domainsocketpair(sock);
++
++	error = mkdir("./a", 0755);
++	ATF_REQUIRE(error == 0);
++	error = mkdir("./b", 0755);
++	ATF_REQUIRE(error == 0);
++	error = mkdir("./c", 0755);
++	ATF_REQUIRE(error == 0);
++	error = mkdir("./a/c", 0755);
++	ATF_REQUIRE(error == 0);
++
++	jid1 = jail_setv(JAIL_CREATE,
++	    "name", "passfd_test_cross_jail_dirfd1",
++	    "path", "./a",
++	    "persist", NULL,
++	    NULL);
++	ATF_REQUIRE_MSG(jid1 >= 0, "jail_setv: %s", jail_errmsg);
++
++	jid2 = jail_setv(JAIL_CREATE,
++	    "name", "passfd_test_cross_jail_dirfd2",
++	    "path", "./b",
++	    "persist", NULL,
++	    NULL);
++	ATF_REQUIRE_MSG(jid2 >= 0, "jail_setv: %s", jail_errmsg);
++
++	pid1 = fork();
++	ATF_REQUIRE(pid1 >= 0);
++	if (pid1 == 0) {
++		ssize_t len;
++		int dfd, error;
++		char ch;
++
++		error = jail_attach(jid1);
++		if (error != 0)
++			err(1, "jail_attach");
++
++		dfd = open(".", O_RDONLY | O_DIRECTORY);
++		if (dfd < 0)
++			err(1, "open(\".\") in jail %d", jid1);
++
++		ch = 0;
++		len = sendfd_payload(sock[0], dfd, &ch, sizeof(ch));
++		if (len == -1)
++			err(1, "sendmsg");
++
++		_exit(0);
++	}
++
++	pid2 = fork();
++	ATF_REQUIRE(pid2 >= 0);
++	if (pid2 == 0) {
++		int dfd, dfd2, error, fd;
++		char ch;
++
++		error = jail_attach(jid2);
++		if (error != 0)
++			err(1, "jail_attach");
++
++		/* Get a directory from outside the jail root. */
++		recvfd_payload(sock[1], &dfd, &ch, sizeof(ch),
++		    CMSG_SPACE(sizeof(int)), 0);
++
++		if ((fcntl(dfd, F_GETFD) & 2) == 0)
++			errx(1, "dfd does not have FD_RESOLVE_BENEATH set");
++
++		/* Make sure we can't chdir. */
++		error = fchdir(dfd);
++		if (error == 0)
++			errx(1, "fchdir succeeded");
++		if (errno != ENOTCAPABLE)
++			err(1, "fchdir");
++
++		/* Make sure a dotdot access fails. */
++		fd = openat(dfd, "../c", O_RDONLY | O_DIRECTORY);
++		if (fd >= 0)
++			errx(1, "openat(\"../c\") succeeded");
++		if (errno != ENOTCAPABLE)
++			err(1, "openat");
++
++		/* Accesses within the sender's jail root are ok. */
++		fd = openat(dfd, "c", O_RDONLY | O_DIRECTORY);
++		if (fd < 0)
++			err(1, "openat(\"c\")");
++
++		dfd2 = openat(dfd, "", O_EMPTY_PATH | O_RDONLY | O_DIRECTORY);
++		if (dfd2 < 0)
++			err(1, "openat(\"\")");
++		if ((fcntl(dfd2, F_GETFD) & 2) == 0)
++			errx(1, "dfd2 does not have FD_RESOLVE_BENEATH set");
++
++		_exit(0);
++	}
++
++	error = waitpid(pid1, &status, 0);
++	ATF_REQUIRE(error != -1);
++	ATF_REQUIRE(WIFEXITED(status));
++	ATF_REQUIRE(WEXITSTATUS(status) == 0);
++	error = waitpid(pid2, &status, 0);
++	ATF_REQUIRE(error != -1);
++	ATF_REQUIRE(WIFEXITED(status));
++	ATF_REQUIRE(WEXITSTATUS(status) == 0);
++
++	closesocketpair(sock);
++}
++ATF_TC_CLEANUP(cross_jail_dirfd, tc)
++{
++	int jid;
++
++	jid = jail_getid("passfd_test_cross_jail_dirfd1");
++	if (jid >= 0 && jail_remove(jid) != 0)
++		err(1, "jail_remove");
++	jid = jail_getid("passfd_test_cross_jail_dirfd2");
++	if (jid >= 0 && jail_remove(jid) != 0)
++		err(1, "jail_remove");
++}
++
+ ATF_TP_ADD_TCS(tp)
+ {
+ 
+@@ -728,6 +857,7 @@
+ 	ATF_TP_ADD_TC(tp, truncated_rights);
+ 	ATF_TP_ADD_TC(tp, copyout_rights_error);
+ 	ATF_TP_ADD_TC(tp, empty_rights_message);
++	ATF_TP_ADD_TC(tp, cross_jail_dirfd);
+ 
+ 	return (atf_no_error());
+ }

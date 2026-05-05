@@ -1,0 +1,397 @@
+--- lib/libsys/x86/pkru.3.orig
++++ lib/libsys/x86/pkru.3
+@@ -179,6 +179,9 @@
+ argument for
+ .Fn x86_pkru_protect_range
+ has reserved bits set.
++.It Bq Er EINVAL
++The range of the request partially covers a mapping of an object created by
++.Xr shm_create_largepage 3 .
+ .It Bq Er EFAULT
+ The supplied address range does not completely fit into the user-managed
+ address range.
+--- sys/amd64/amd64/pmap.c.orig
++++ sys/amd64/amd64/pmap.c
+@@ -11551,7 +11551,7 @@
+     u_int keyidx)
+ {
+ 	pml4_entry_t *pml4e;
+-	pdp_entry_t *pdpe;
++	pdp_entry_t newpdpe, *pdpe;
+ 	pd_entry_t newpde, ptpaddr, *pde;
+ 	pt_entry_t newpte, *ptep, pte;
+ 	vm_offset_t va, va_next;
+@@ -11577,6 +11577,22 @@
+ 				va_next = eva;
+ 			continue;
+ 		}
++		if ((*pdpe & PG_PS) != 0) {
++			va_next = (va + NBPDP) & ~PDPMASK;
++			if (va_next < va)
++				va_next = eva;
++			KASSERT(va_next <= eva,
++			    ("partial update of non-transparent 1G mapping "
++			    "pdpe %#lx va %#lx eva %#lx va_next %#lx",
++			    *pdpe, va, eva, va_next));
++			newpdpe = (*pdpe & ~X86_PG_PKU_MASK) |
++			    X86_PG_PKU(keyidx);
++			if (newpdpe != *pdpe) {
++				*pdpe = newpdpe;
++				changed = true;
++			}
++			continue;
++		}
+ 
+ 		va_next = (va + NBPDR) & ~PDRMASK;
+ 		if (va_next < va)
+@@ -11629,8 +11645,6 @@
+ 	if (pmap->pm_type != PT_X86 || keyidx > PMAP_MAX_PKRU_IDX ||
+ 	    (flags & ~(AMD64_PKRU_PERSIST | AMD64_PKRU_EXCL)) != 0)
+ 		return (EINVAL);
+-	if (eva <= sva || eva > VM_MAXUSER_ADDRESS)
+-		return (EFAULT);
+ 	if ((cpu_stdext_feature2 & CPUID_STDEXT2_PKU) == 0)
+ 		return (ENOTSUP);
+ 	return (0);
+--- sys/amd64/amd64/sys_machdep.c.orig
++++ sys/amd64/amd64/sys_machdep.c
+@@ -30,7 +30,6 @@
+  * SUCH DAMAGE.
+  */
+ 
+-#include <sys/cdefs.h>
+ #include "opt_capsicum.h"
+ #include "opt_ktrace.h"
+ 
+@@ -369,32 +368,58 @@
+ 		break;
+ 
+ 	case I386_SET_PKRU:
+-	case AMD64_SET_PKRU:
++	case AMD64_SET_PKRU: {
++		vm_offset_t addr, start, end;
++		vm_size_t len;
++
++		addr = (uintptr_t)a64pkru.addr;
++		len = a64pkru.len;
++
+ 		/*
+ 		 * Read-lock the map to synchronize with parallel
+ 		 * pmap_vmspace_copy() on fork.
+ 		 */
+ 		map = &td->td_proc->p_vmspace->vm_map;
+ 		vm_map_lock_read(map);
+-		error = pmap_pkru_set(PCPU_GET(curpmap),
+-		    (vm_offset_t)a64pkru.addr, (vm_offset_t)a64pkru.addr +
+-		    a64pkru.len, a64pkru.keyidx, a64pkru.flags);
++		if (len == 0 || !vm_map_check_boundary(map, addr, addr + len)) {
++			vm_map_unlock_read(map);
++			error = EINVAL;
++			break;
++		}
++		start = trunc_page(addr);
++		end = round_page(addr + len);
++		error = pmap_pkru_set(PCPU_GET(curpmap), start, end,
++		    a64pkru.keyidx, a64pkru.flags);
+ 		vm_map_unlock_read(map);
+ 		break;
++	}
+ 
+ 	case I386_CLEAR_PKRU:
+-	case AMD64_CLEAR_PKRU:
++	case AMD64_CLEAR_PKRU: {
++		vm_offset_t addr, start, end;
++		vm_size_t len;
++
+ 		if (a64pkru.flags != 0 || a64pkru.keyidx != 0) {
+ 			error = EINVAL;
+ 			break;
+ 		}
++
++		addr = (uintptr_t)a64pkru.addr;
++		len = a64pkru.len;
++
+ 		map = &td->td_proc->p_vmspace->vm_map;
+ 		vm_map_lock_read(map);
+-		error = pmap_pkru_clear(PCPU_GET(curpmap),
+-		    (vm_offset_t)a64pkru.addr,
+-		    (vm_offset_t)a64pkru.addr + a64pkru.len);
++		if (len == 0 || !vm_map_check_boundary(map, addr, addr + len)) {
++			vm_map_unlock_read(map);
++			error = EINVAL;
++			break;
++		}
++		start = trunc_page(addr);
++		end = round_page(addr + len);
++		error = pmap_pkru_clear(PCPU_GET(curpmap), start, end);
+ 		vm_map_unlock_read(map);
+ 		break;
++	}
+ 
+ 	case AMD64_DISABLE_TLSBASE:
+ 		clear_pcb_flags(pcb, PCB_TLSBASE);
+--- sys/vm/vm_map.c.orig
++++ sys/vm/vm_map.c
+@@ -4162,6 +4162,38 @@
+ 	return (TRUE);
+ }
+ 
++/*
++ * Check whether the specified range partially overlaps a map entry with
++ * fixed boundaries, and return false if so.
++ *
++ * The map must be locked.
++ */
++bool
++vm_map_check_boundary(vm_map_t map, vm_offset_t start, vm_offset_t end)
++{
++	vm_map_entry_t entry;
++	int bdry_idx;
++
++	if (!vm_map_range_valid(map, start, end))
++		return (false);
++	if (start == end)
++		return (true);
++
++	if (vm_map_lookup_entry(map, start, &entry)) {
++		bdry_idx = MAP_ENTRY_SPLIT_BOUNDARY_INDEX(entry);
++		if (bdry_idx != 0 &&
++		    (start & (pagesizes[bdry_idx] - 1)) != 0)
++			return (false);
++	}
++	if (vm_map_lookup_entry(map, end - 1, &entry)) {
++		bdry_idx = MAP_ENTRY_SPLIT_BOUNDARY_INDEX(entry);
++		if (bdry_idx != 0 &&
++		    (end & (pagesizes[bdry_idx] - 1)) != 0)
++			return (false);
++	}
++	return (true);
++}
++
+ /*
+  *
+  *	vm_map_copy_swap_object:
+--- sys/vm/vm_map.h.orig
++++ sys/vm/vm_map.h
+@@ -479,6 +479,7 @@
+ #endif				/* ! _KERNEL */
+ 
+ #ifdef _KERNEL
++bool vm_map_check_boundary(vm_map_t, vm_offset_t, vm_offset_t);
+ boolean_t vm_map_check_protection (vm_map_t, vm_offset_t, vm_offset_t, vm_prot_t);
+ int vm_map_delete(vm_map_t, vm_offset_t, vm_offset_t);
+ int vm_map_find(vm_map_t, vm_object_t, vm_ooffset_t, vm_offset_t *, vm_size_t,
+--- tests/sys/posixshm/posixshm_test.c.orig
++++ tests/sys/posixshm/posixshm_test.c
+@@ -38,10 +38,17 @@
+ #include <sys/sysctl.h>
+ #include <sys/wait.h>
+ 
++#ifdef __amd64__
++#include <machine/sysarch.h>
++#endif
++
+ #include <ctype.h>
+ #include <errno.h>
+ #include <fcntl.h>
++#include <paths.h>
++#include <setjmp.h>
+ #include <signal.h>
++#include <stdatomic.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -1889,6 +1896,183 @@
+ 	}
+ }
+ 
++#ifdef __amd64__
++static sigjmp_buf jmpbuf;
++static _Atomic(void *) faultaddr;
++static _Atomic(int) faultsig;
++
++#define	KEY_RW	1
++#define	KEY_RO	2
++#define KEY_WO	3
++#define KEY_NO	4
++#define	VAL	0xdeadfacec0debeef
++static void
++set_keys(void)
++{
++	int error;
++
++	error = x86_pkru_set_perm(KEY_RW, 1, 1);
++	ATF_REQUIRE(error == 0);
++	error = x86_pkru_set_perm(KEY_RO, 1, 0);
++	ATF_REQUIRE(error == 0);
++	error = x86_pkru_set_perm(KEY_WO, 0, 1);
++	ATF_REQUIRE(error == 0);
++	error = x86_pkru_set_perm(KEY_NO, 0, 0);
++	ATF_REQUIRE(error == 0);
++}
++
++static void
++sigsegv(int sig, siginfo_t *si, void *uc __unused)
++{
++	faultsig = sig;
++	faultaddr = si->si_addr;
++	siglongjmp(jmpbuf, 1);
++}
++
++static bool
++try_read(volatile uint64_t *p, uint64_t *outp)
++{
++	if (sigsetjmp(jmpbuf, 1) == 0) {
++		*outp = *p;
++		return (true);
++	} else {
++		atomic_signal_fence(memory_order_relaxed);
++		ATF_REQUIRE(faultsig == SIGSEGV);
++		ATF_REQUIRE(faultaddr == p);
++		set_keys(); /* PKRU is not restored by siglongjmp? */
++		return (false);
++	}
++}
++
++static bool
++try_write(volatile uint64_t *p, uint64_t val)
++{
++	if (sigsetjmp(jmpbuf, 1) == 0) {
++		*p = val;
++		return (true);
++	} else {
++		atomic_signal_fence(memory_order_relaxed);
++		ATF_REQUIRE(faultsig == SIGSEGV);
++		ATF_REQUIRE(faultaddr == p);
++		set_keys(); /* PKRU is not restored by siglongjmp? */
++		return (false);
++	}
++}
++
++ATF_TC_WITHOUT_HEAD(largepage_pkru);
++ATF_TC_BODY(largepage_pkru, tc)
++{
++	size_t ps[MAXPAGESIZES];
++	struct sigaction sa;
++	char *addr, *addr1;
++	int error, fd, pscnt;
++
++	memset(&sa, 0, sizeof(sa));
++	sa.sa_sigaction = sigsegv;
++	sa.sa_flags = SA_SIGINFO;
++	sigemptyset(&sa.sa_mask);
++	error = sigaction(SIGSEGV, &sa, NULL);
++	ATF_REQUIRE(error == 0);
++
++	pscnt = pagesizes(ps, true);
++
++	for (int i = 1; i < pscnt; i++) {
++		uint64_t val;
++
++		fd = shm_open_large(i, SHM_LARGEPAGE_ALLOC_DEFAULT, ps[i]);
++		addr = mmap(NULL, ps[i], PROT_READ | PROT_WRITE, MAP_SHARED, fd,
++		    0);
++		ATF_REQUIRE_MSG(addr != MAP_FAILED,
++		    "mmap(%zu bytes) failed; error=%d", ps[i], errno);
++
++		/*
++		 * Ensure that the page is faulted into the pmap.
++		 */
++		memset(addr, 0, ps[i]);
++
++		set_keys();
++
++		/*
++		 * Make sure we can't partially cover a largepage mapping.
++		 */
++		error = x86_pkru_protect_range(addr, PAGE_SIZE, KEY_RW, 0);
++		ATF_REQUIRE_ERRNO(EINVAL, error != 0);
++		error = x86_pkru_protect_range(addr, ps[i] - PAGE_SIZE, KEY_RW,
++		    0);
++		ATF_REQUIRE_ERRNO(EINVAL, error != 0);
++		error = x86_pkru_protect_range(addr + PAGE_SIZE, ps[i] - PAGE_SIZE,
++		    KEY_RW, 0);
++		ATF_REQUIRE_ERRNO(EINVAL, error != 0);
++		error = x86_pkru_protect_range(addr + 1, ps[i], KEY_RW, 0);
++		ATF_REQUIRE_ERRNO(EINVAL, error != 0);
++
++		/*
++		 * Make sure that protections are honoured.
++		 */
++		for (int j = 1; j <= 4; j++) {
++			volatile uint64_t *addr64;
++
++			error = x86_pkru_protect_range(addr, ps[i], 0, 0);
++			ATF_REQUIRE(error == 0);
++
++			addr64 = (volatile uint64_t *)(void *)addr;
++			*addr64 = VAL;
++
++			error = x86_pkru_protect_range(addr, ps[i], j, 0);
++			ATF_REQUIRE(error == 0);
++			switch (j) {
++			case KEY_RW:
++				ATF_REQUIRE(try_write(addr64, VAL));
++				ATF_REQUIRE(try_read(addr64, &val));
++				ATF_REQUIRE(val == VAL);
++				break;
++			case KEY_RO:
++				ATF_REQUIRE(try_read(addr64, &val));
++				ATF_REQUIRE(val == VAL);
++				ATF_REQUIRE(!try_write(addr64, VAL));
++				break;
++			case KEY_WO:
++				/* !access implies !modify */
++			case KEY_NO:
++				ATF_REQUIRE(!try_read(addr64, &val));
++				ATF_REQUIRE(!try_write(addr64, VAL));
++				break;
++			default:
++				__unreachable();
++			}
++		}
++		error = munmap(addr, ps[i]);
++		ATF_CHECK(error == 0);
++
++		/*
++		 * Try mapping a large page in a region partially covered by a
++		 * key.
++		 *
++		 * Rather than detecting the mismatch when the logical mapping
++		 * is created, we currently only fail once pmap_enter() is
++		 * called from the fault handler.  This is not ideal and might
++		 * be improved in the future.
++		 */
++		error = x86_pkru_protect_range(addr, ps[i], 0, 0);
++		ATF_REQUIRE(error == 0);
++		error = x86_pkru_protect_range(addr + PAGE_SIZE,
++		    ps[i] - PAGE_SIZE, KEY_RW, 0);
++		ATF_REQUIRE(error == 0);
++
++		addr1 = mmap(addr, ps[i], PROT_READ | PROT_WRITE,
++		    MAP_SHARED | MAP_FIXED, fd, 0);
++		ATF_REQUIRE(addr1 != MAP_FAILED);
++		ATF_REQUIRE(addr == addr1);
++		ATF_REQUIRE(!try_read((volatile uint64_t *)(void *)addr, &val));
++		ATF_REQUIRE(!try_write((volatile uint64_t *)(void *)addr, VAL));
++	}
++}
++#undef KEY_RW
++#undef KEY_RO
++#undef KEY_WO
++#undef KEY_NO
++#endif
++
+ ATF_TC_WITHOUT_HEAD(largepage_reopen);
+ ATF_TC_BODY(largepage_reopen, tc)
+ {
+@@ -1979,6 +2163,9 @@
+ 	ATF_TP_ADD_TC(tp, largepage_mprotect);
+ 	ATF_TP_ADD_TC(tp, largepage_minherit);
+ 	ATF_TP_ADD_TC(tp, largepage_pipe);
++#ifdef __amd64__
++	ATF_TP_ADD_TC(tp, largepage_pkru);
++#endif
+ 	ATF_TP_ADD_TC(tp, largepage_reopen);
+ 
+ 	return (atf_no_error());
