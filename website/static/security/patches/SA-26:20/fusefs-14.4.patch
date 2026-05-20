@@ -1,0 +1,146 @@
+--- sys/fs/fuse/fuse_ipc.h.orig
++++ sys/fs/fuse/fuse_ipc.h
+@@ -240,6 +240,7 @@
+ #define FSESS_WARN_READLINK_EMBEDDED_NUL 0x1000000 /* corrupt READLINK output */
+ #define FSESS_WARN_DOT_LOOKUP	  0x2000000 /* Inconsistent . LOOKUP response */
+ #define FSESS_WARN_INODE_MISMATCH 0x4000000 /* ino != nodeid */
++#define FSESS_WARN_LSEXTATTR_NUL 0x20000000 /* Non nul-terminated xattr list */
+ #define FSESS_MNTOPTS_MASK	( \
+ 	FSESS_DAEMON_CAN_SPY | FSESS_PUSH_SYMLINKS_IN | \
+ 	FSESS_DEFAULT_PERMISSIONS | FSESS_INTR)
+--- sys/fs/fuse/fuse_vnops.c.orig
++++ sys/fs/fuse/fuse_vnops.c
+@@ -2794,8 +2794,8 @@
+  * bsd_list, bsd_list_len - output list compatible with bsd vfs
+  */
+ static int
+-fuse_xattrlist_convert(char *prefix, const char *list, int list_len,
+-    char *bsd_list, int *bsd_list_len)
++fuse_xattrlist_convert(struct fuse_data *data, char *prefix, const char *list,
++    int list_len, char *bsd_list, int *bsd_list_len)
+ {
+ 	int len, pos, dist_to_next, prefix_len;
+ 
+@@ -2804,7 +2804,13 @@
+ 	prefix_len = strlen(prefix);
+ 
+ 	while (pos < list_len && list[pos] != '\0') {
+-		dist_to_next = strlen(&list[pos]) + 1;
++		dist_to_next = strnlen(&list[pos], list_len - pos - 1) + 1;
++		if (list[pos + dist_to_next - 1] != '\0') {
++			fuse_warn(data, FSESS_WARN_LSEXTATTR_NUL,
++				"The FUSE server returned a non nul-terminated "
++				"LISTXATTR response.");
++			return (EIO);
++		}
+ 		if (bcmp(&list[pos], prefix, prefix_len) == 0 &&
+ 		    list[pos + prefix_len] == extattr_namespace_separator) {
+ 			len = dist_to_next -
+@@ -2860,6 +2866,7 @@
+ 	struct fuse_listxattr_in *list_xattr_in;
+ 	struct fuse_listxattr_out *list_xattr_out;
+ 	struct mount *mp = vnode_mount(vp);
++	struct fuse_data *data = fuse_get_mpdata(mp);
+ 	struct thread *td = ap->a_td;
+ 	struct ucred *cred = ap->a_cred;
+ 	char *prefix;
+@@ -2937,8 +2944,6 @@
+ 	linux_list = fdi.answ;
+ 	/* FUSE doesn't allow the server to return more data than requested */
+ 	if (fdi.iosize > linux_list_len) {
+-		struct fuse_data *data = fuse_get_mpdata(mp);
+-
+ 		fuse_warn(data, FSESS_WARN_LSEXTATTR_LONG,
+ 			"server returned "
+ 			"more extended attribute data than requested; "
+@@ -2955,7 +2960,7 @@
+ 	 * FreeBSD's format before giving it to the user.
+ 	 */
+ 	bsd_list = malloc(linux_list_len, M_TEMP, M_WAITOK);
+-	err = fuse_xattrlist_convert(prefix, linux_list, linux_list_len,
++	err = fuse_xattrlist_convert(data, prefix, linux_list, linux_list_len,
+ 	    bsd_list, &bsd_list_len);
+ 	if (err != 0)
+ 		goto out;
+--- tests/sys/fs/fusefs/xattr.cc.orig
++++ tests/sys/fs/fusefs/xattr.cc
+@@ -448,6 +448,79 @@
+ 	ASSERT_TRUE(WIFSIGNALED(status));
+ }
+ 
++/*
++ * A buggy or malicious server returns a list that isn't nul-terminated.  The
++ * kernel should handle it gracefully.
++ */
++TEST_F(Listxattr, not_nul_terminated)
++{
++	uint64_t ino = 42;
++	int ns = EXTATTR_NAMESPACE_USER;
++	char *data;
++	const char expected[4] = {3, 'f', 'o', 'o'};
++	const char first[255] = "user.foo\0system.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
++	const uint8_t badlist[9] = {'u', 's', 'e', 'r', '.', 'f', 'o', 'o', 'd'};
++	Sequence seq;
++
++	EXPECT_LOOKUP(FUSE_ROOT_ID, RELPATH)
++	.WillRepeatedly(Invoke(
++		ReturnImmediate([=](auto in __unused, auto& out) {
++		SET_OUT_HEADER_LEN(out, entry);
++		out.body.entry.attr.mode = S_IFREG | 0644;
++		out.body.entry.nodeid = ino;
++		out.body.entry.attr.nlink = 1;
++		out.body.entry.attr_valid = UINT64_MAX;
++		out.body.entry.entry_valid = UINT64_MAX;
++	})));
++
++	/* 
++	 * On the first LISTXATTRS call, return a big attribute just to fill
++	 * the heap with non-NUL data.
++	 */
++	expect_listxattr(ino, 0,
++		ReturnImmediate([&](auto in __unused, auto& out) {
++			out.body.listxattr.size = sizeof(first);
++			SET_OUT_HEADER_LEN(out, listxattr);
++		}), &seq
++	);
++	expect_listxattr(ino, sizeof(first),
++		ReturnImmediate([&](auto in __unused, auto& out) {
++			memcpy((void*)out.body.bytes, first, sizeof(first));
++			out.header.len = sizeof(fuse_out_header) + sizeof(first);
++		}), &seq
++	);
++	/*
++	 * On the second LISTXATTRS call, return a malformed list with no NUL
++	 * termination.  The heap might still be full of the data from the
++	 * first call.
++	 */
++	expect_listxattr(ino, 0,
++		ReturnImmediate([&](auto in __unused, auto& out) {
++			out.body.listxattr.size = sizeof(badlist);
++			SET_OUT_HEADER_LEN(out, listxattr);
++		}), &seq
++	);
++	expect_listxattr(ino, sizeof(badlist),
++		ReturnImmediate([&](auto in __unused, auto& out) {
++			memset((void*)out.body.bytes, 'x', sizeof(first));
++			memcpy((void*)out.body.bytes, badlist, sizeof(badlist));
++			out.header.len = sizeof(fuse_out_header) + sizeof(badlist);
++		}), &seq
++	);
++
++	data = new char[1024];
++
++	ASSERT_EQ(static_cast<ssize_t>(sizeof(expected)),
++		extattr_list_file(FULLPATH, ns, data, sizeof(data)))
++		<< strerror(errno);
++	/*
++	 * Receiving this malformed list, the kernel should log it to dmesg and
++	 * report an IO error to the caller.
++	 */
++	ASSERT_EQ(-1, extattr_list_file(FULLPATH, ns, data, sizeof(data)));
++	EXPECT_EQ(EIO, errno);
++}
++
+ /*
+  * Get the size of the list that it would take to list no extended attributes
+  */
