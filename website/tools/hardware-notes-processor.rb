@@ -23,14 +23,16 @@ hardwareNotesContent = ""
 
 File.foreach(hardwareNotesPath).with_index do |line|
   if (line[/&hwlist.\b/])
-    manualPage = line.gsub("&hwlist.", "").gsub(";", "").gsub("\n", "")
+    macro = line.match(/&hwlist\.[^\s;]+;?/)[0]
+    manualPage = macro.gsub("&hwlist.", "").gsub(";", "").gsub("\n", "")
 
     if(File.exist?("tmp/share/man/man4/" + manualPage + ".4"))
       cmd = "mandoc -Tmarkdown tmp/share/man/man4/" + manualPage + ".4 | sed -n '/^# HARDWARE/,/^# /{ /^# /d; p; }'"
       mandocOut, err, s = Open3::capture3(cmd)
       if s.success?
-        #replace \_ to _ in drivers name and description
+        #replace \_ to _ and \[ to [ in drivers name and description
         mandocOut.gsub!(/\\_/, '_')
+        mandocOut.gsub!(/\\\[/, '[')
 
         # extract Nm (real driver name)
         nm_cmd = "grep -m1 '^\\.Nm' tmp/share/man/man4/#{manualPage}.4"
@@ -56,10 +58,20 @@ File.foreach(hardwareNotesPath).with_index do |line|
           end
         end
 
+        if mandocOut.strip.empty?
+          puts "WARNING: No HARDWARE section content for manual page #{manualPage}"
+          hardwareNotesContent << "#{macro}    WARNING: No HARDWARE section content for manual page #{manualPage}\n"
+          next
+        end
+
         hardwareNotesContent << mandocOut
+      else
+        puts "WARNING: The manual page " + manualPage + " without HARDWARE exists or malformed"
+        hardwareNotesContent << "#{macro}    WARNING: The manual page " + manualPage + " without HARDWARE exists or malformed\n"
       end
     else
       puts "WARNING: The manual page " + manualPage + " does not exists"
+      hardwareNotesContent << "#{macro}    WARNING: The manual page " + manualPage + " does not exists\n"
     end
   else
     hardwareNotesContent << line
