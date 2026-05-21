@@ -3,24 +3,24 @@
 # Copyright (c) 2020-2026, The FreeBSD Documentation Project
 # Copyright (c) 2020-2026, Sergio Carlavilla <carlavilla@FreeBSD.org>
 #
-# Targets intended for use on the command line
+# Targets intended for use on the command line:
 #
-# all (default)	-	generate books and articles without generating the
-#				PDFs or EPUBs
-# clean		- 	removes generated files
-# run		-	serves the built documentation site for local browsing
-# pdf		-	build PDF versions of the articles and books.
-# html		-	build HTML versions of the articles and books for
-#				offline use.
-#				If variable DOC_HTML_ARCHIVE is set, all documents will be
-#				archived/compressed, and only these files will be kept in the
-#				public directory.
-# epub		-	build EPUB versions of the articles and books (Experimental).
+# all (default)	-	Generate books and articles without generating
+#			PDFs or EPUBs.
+# clean		- 	Remove generated files.
+# run		-	Serve the built documentation site locally.
+# pdf		-	Build PDF versions of the articles and books.
+# html		-	Build HTML versions of the articles and books.
+#			If the DOC_HTML_ARCHIVE variable is set, all
+#			documents will be archived/compressed, and only
+#			these files will be kept in public/.
+# epub		-	Build EPUB versions of the articles and books
+#			(Experimental).
 #
-# The run target uses hugo's built-in webserver to make the documentation site
-# available for local browsing.  The documentation should have been built prior
-# to attempting to use the `run` target.  By default, hugo will start its
-# webserver on port 1313.
+# The run target uses hugo's built-in webserver to make the doc site
+# available for local browsing.  The documentation should have been
+# built prior to attempting to use the `run` target.  By default, hugo
+# will start its webserver on port 1313.
 
 MAINTAINER=carlavilla@FreeBSD.org
 
@@ -30,41 +30,42 @@ ARTICLEONLY_LANGS=	bn-bd da id ko tr
 BOOKONLY_LANGS=		mn
 
 # List of all languages we have content for
-ALL_LANGUAGES=	bn-bd da de el en es fr hu id it ja ko mn nl pl pt-br ru tr zh-cn zh-tw
+ALL_LANGUAGES=		bn-bd da de el en es fr hu id it ja ko mn nl \
+			pl pt-br ru tr zh-cn zh-tw
 
-LOCALBASE?=	/usr/local
-USE_RUBYGEMS?=	NO
+LOCALBASE?=		/usr/local
+USE_RUBYGEMS?=		NO
 GEM_PATH?=
 
 .if ${USE_RUBYGEMS} == "YES"
-GEMBASE?= 	${GEM_PATH}
+GEMBASE?= 		${GEM_PATH}
 .else
-GEMBASE?= 	${LOCALBASE}
+GEMBASE?= 		${LOCALBASE}
 .endif
 
-RUBY_CMD ?=	${LOCALBASE}/bin/ruby
-HUGO_CMD =	${LOCALBASE}/bin/hugo
-HUGO_ARGS?=	--minify
+RUBY_CMD ?=		${LOCALBASE}/bin/ruby
+HUGO_CMD =		${LOCALBASE}/bin/hugo
+HUGO_ARGS?=		--minify
 HUGO_OFFLINE_ARGS?= 	--environment offline --minify
-ROUGIFY_CMD=	${GEMBASE}/bin/rougify
+ROUGIFY_CMD=		${GEMBASE}/bin/rougify
 ASCIIDOCTOR_CMD=	${GEMBASE}/bin/asciidoctor
 ASCIIDOCTORPDF_CMD=	${GEMBASE}/bin/asciidoctor-pdf
-ASCIIDOCTOREPUB3_CMD= ${GEMBASE}/bin/asciidoctor-epub3
+ASCIIDOCTOREPUB3_CMD=	${GEMBASE}/bin/asciidoctor-epub3
 
 .if defined(DOC_LANG) && !empty(DOC_LANG)
 LANGUAGES=	${DOC_LANG:S/,/ /g}
 .if  ${LANGUAGES:Men} == "" && ${.TARGETS:Mpdf*} == "" && ${.TARGETS:Mhtml*} == ""
 .warning "Warning: cannot skip 'en'; adding it back"
-LANGUAGES+=	en
+LANGUAGES+=		en
 .endif
 .else
-LANGUAGES=	${ALL_LANGUAGES}
+LANGUAGES=		${ALL_LANGUAGES}
 .endif
 
-RUBYLIB =	../shared/lib
+RUBYLIB =		../shared/lib
 .export	RUBYLIB
 
-RUN_DEPENDS=	${HUGO_CMD} \
+RUN_DEPENDS=		${HUGO_CMD} \
 				${ASCIIDOCTOR_CMD} \
 				${ROUGIFY_CMD}
 
@@ -79,25 +80,25 @@ RUN_DEPENDS=	${HUGO_CMD} \
 .endif
 
 # Strip the languages with only articles from the list of languages we
-#  will use to build books.
-BOOK_LANGS= ${LANGUAGES}
+# will use to build books
+BOOK_LANGS=		${LANGUAGES}
 .for a in ${ARTICLEONLY_LANGS}
-BOOK_LANGS:=	${BOOK_LANGS:N${a}}
+BOOK_LANGS:=		${BOOK_LANGS:N${a}}
 .endfor
 
 # Strip the languages with only books from the list of languages we
-#  will use to build articles.
-ARTICLE_LANGS= ${LANGUAGES}
+# will use to build articles
+ARTICLE_LANGS=		${LANGUAGES}
 .for a in ${BOOKONLY_LANGS}
-ARTICLE_LANGS:=	${ARTICLE_LANGS:N${a}}
+ARTICLE_LANGS:=		${ARTICLE_LANGS:N${a}}
 .endfor
 
 # Take the list of all languages, and take out the ones we have been
-#   asked for.  We'll feed this to hugo.
+# asked for. We'll feed this to hugo.
 SKIP_LANGS=
 .for a in ${ALL_LANGUAGES}
 .if  ${LANGUAGES:M${a}} == ""
-SKIP_LANGS+=    ${a}
+SKIP_LANGS+=		${a}
 .endif
 .endfor
 
@@ -161,7 +162,8 @@ hugo-clean: .PHONY
 
 #
 # PDF targets
-# Use DOC_LANG to choose the language, e.g., make DOC_LANG="en fr" pdf-books
+# Use DOC_LANG to choose the language,
+# e.g., make DOC_LANG="en fr" pdf-books
 #
 pdf: pdf-articles pdf-books
 
@@ -196,7 +198,8 @@ pdf-articles-clean:
 #
 # HTML targets
 #
-html: build-offline html-clean-global html-clean-articles html-clean-books html-archive html-archive-clean-files
+html:	build-offline html-clean-global html-clean-articles \
+	html-clean-books html-archive html-archive-clean-files
 
 html-clean: hugo-clean
 
@@ -233,7 +236,8 @@ html-archive-clean-files:
 
 #
 # EPUB targets
-# Use DOC_LANG to choose the language, e.g., make DOC_LANG="en fr" epub-books
+# Use DOC_LANG to choose the language,
+# e.g., make DOC_LANG="en fr" epub-books
 #
 epub: epub-articles epub-books
 
