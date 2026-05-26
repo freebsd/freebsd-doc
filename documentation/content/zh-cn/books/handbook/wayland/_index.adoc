@@ -1,0 +1,196 @@
+---
+title: 第 6 章 FreeBSD 中的 Wayland
+part: 部分 I. 快速开始
+prev: books/handbook/x11
+next: books/handbook/network
+description: 在 FreeBSD 上使用 Wayland 合成器
+tags: ["Wayland", "desktop", "graphics"]
+showBookMenu: true
+weight: 10
+params:
+  path: "/books/handbook/wayland/"
+---
+
+[[wayland]]
+= FreeBSD 中的 Wayland
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:sectnumoffset: 6
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/handbook/wayland/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+本章介绍如何在 FreeBSD 上配置和使用 Wayland 合成器。
+
+[[wayland-overview]]
+== 概述
+
+Wayland 是一种通信协议，可以替代 Xorg 等显示服务器。它与 Xorg 在多个重要方面有所不同。
+
+Wayland 只是一个协议，它通过某种机制在客户端之间充当中介，从而去除了对 X 服务器的依赖。Xorg 同时包含 X11 协议（用于运行远程显示）和 X 服务器（用于接受连接并显示窗口）。而在 Wayland 下，合成器或窗口管理器提供显示服务器，而不是传统的 X 服务器。
+
+由于 Wayland 不是 X 服务器，传统的 X 屏幕连接需要使用其他方法，如 VNC 或 RDP 进行远程桌面管理。Wayland 可以作为一个独立的实体管理客户端与合成器之间的复合通信，而无需支持 X 协议。
+
+Wayland 相对较新，并不是所有软件都已更新为原生运行而无需 `Xwayland` 支持。由于 Wayland 不提供 X 服务器，而是期望合成器提供该支持，因此尚未支持 Wayland 的 X11 窗口管理器需要以不带 `-rootless` 参数的方式启动 Xwayland。移除该参数后，即可恢复对 X11 窗口管理器的支持。
+
+目前，许多软件在 Wayland 上运行时几乎没有问题，包括 Firefox。同时，也有一些桌面环境可供选择，如 Compiz Fusion 替代品 Wayfire 和 i3 窗口管理器替代品 Sway。
+
+> **注意**
+>
+> 当前的 NVIDIA® 驱动程序应该能够与大多数 wlroots 合成器兼容，但可能会略显不稳定，并且可能不支持所有功能。目前正在寻求志愿者帮助开发 NVIDIA® DRM。
+
+> **注意**
+>
+> 截至较新版本，plasma5-kwin 已支持在 FreeBSD 上运行 Wayland。要在 Wayland 下使用 Plasma，请使用 `startplasma-wayland` 参数启动 `ck-launch-session`，并通过以下命令将 dbus 与其关联：`dbus-launch --exit-with-x11 ck-launch-session startplasma-wayland`。
+
+[[wayland-prereq]]
+== 前置条件
+
+在使用 bsdinstall 安装 FreeBSD 时，系统不会自动安装图形用户界面。在阅读本章之前，你应当：
+
+* 知道如何安装额外的第三方软件（参考 crossref:ports[ports]）。
+* 知道如何识别和配置图形硬件的驱动程序（参考 crossref:x11[x11]）。
+
+阅读本章，你将了解：
+
+* 如何配置 FreeBSD 以托管 Wayland 图形环境。
+* 如何安装和配置 Wayland 合成器。
+* 如何运行为旧版 X Window 系统设计的程序。
+* 如何配置远程桌面访问 Wayland 图形环境。
+
+[[wayland-install]]
+== 安装 Wayland 和 seatd
+
+对于合成器，必须有一个支持 evdev(4) 驱动程序的内核，才能利用按键绑定功能。默认情况下，GENERIC 内核已构建此支持；如果内核经过定制并且去除了 evdev 支持，则需要加载 `evdev` 模块。
+
+此外，Wayland 用户需要成为 `video` 组的成员。要快速更改此设置，请使用 `pw` 命令：
+
+[source,shell]
+----
+pw groupmod video -m user
+----
+
+安装 Wayland 非常简单；该协议本身不需要太多配置。大多数合成工作将取决于所选的合成器。首先安装以下软件包：
+
+[source,shell]
+----
+# pkg install wayland seatd
+----
+
+`seatd` 守护进程有助于管理合成器中对共享系统设备的非 root 用户访问，包括显卡。对于传统的 X11 管理器，如 Plasma 和 GNOME，`seatd` 并不需要；但是，对于此处讨论的 Wayland 合成器，需要在系统上启用并在启动合成器环境之前运行。要现在启用并启动 `seatd` 守护进程，并确保在系统初始化时也启用：
+
+[source,shell]
+----
+# sysrc seatd_enable="YES"
+# service seatd start
+----
+
+安装完协议和支持软件包后，需要安装一个合成器来创建用户界面。
+
+[[wayland-runtime-dir]]
+== 配置运行时目录
+
+所有此处说明的合成器都应该能够与 graphics/drm-kmod 开源驱动程序兼容；使用专有驱动程序时，NVIDIA® 显卡可能会遇到一些问题。
+
+自 FreeBSD 14.1 以来，XDG_RUNTIME_DIR 已自动创建和定义。对于较早的版本，可以通过以下命令在 Bourne shell 中创建此目录：
+
+[source,shell]
+----
+% export XDG_RUNTIME_DIR=/var/run/user/`id -u`
+----
+
+需要注意的是，大多数合成器会在 `XDG_RUNTIME_DIR` 目录中搜索配置文件。
+
+> **警告**
+>
+> 有报告称，ZFS 用户可能会遇到一些 Wayland 客户端的问题，因为它们需要访问运行时目录中的 `posix_fallocate()`。推荐的解决方法是不要使用 ZFS 作为运行时目录，而是使用 `tmpfs` 来挂载 `/var/run` 目录。
+>
+> 可以通过命令 `mount -t tmpfs tmpfs /var/run` 挂载 `tmpfs` 文件系统，并通过 `/etc/fstab` 配置使此更改在重启后生效。可以将 `XDG_RUNTIME_DIR` 环境变量配置为使用 `/var/run/user/$UID`，以避免与 ZFS 相关的问题。
+
+[[wayland-compositors]]
+== 常用合成器
+
+=== Wayfire
+
+Wayfire 是一款旨在轻量且可定制的合成器。它提供了多种功能，并恢复了之前发布的 Compiz Fusion 桌面的一些元素，在现代硬件上看起来非常美观。
+
+要安装必要的软件包：
+
+[source,shell]
+----
+# pkg install wayfire wf-shell alacritty swaylock-effects swayidle wlogout kanshi mako wlsunset
+----
+
+Wayfire 配置相对简单，它使用一个文件。首先，将示例文件复制到运行时环境配置目录，然后编辑该文件：
+
+[source,shell]
+----
+% mkdir ~/.config/wayfire
+% cp /usr/local/share/examples/wayfire/wayfire.ini ~/.config/wayfire
+----
+
+默认配置对大多数用户已经足够。配置文件中包含 `cube` 等效果，并有详细说明。
+
+=== Sway
+
+Sway 合成器是一款平铺合成器，旨在替代 i3 窗口管理器。它应当可以与用户当前的 i3 配置兼容，但某些新功能可能需要额外的设置。
+
+要安装 Sway 和有用的组件（全新安装示例）：
+
+[source,shell]
+----
+# pkg install sway swayidle swaylock-effects alacritty dmenu-wayland dmenu
+----
+
+获取基本配置文件：
+
+[source,shell]
+----
+% mkdir ~/.config/sway
+% cp /usr/local/etc/sway/config ~/.config/sway
+----
+
+基本的配置文件包含了许多默认设置。重要更改示例包括设置终端、锁屏和输出模式等。
+
+=== 其他合成器
+
+* Hikari：另一个轻量选择。
+* 更多合成器和配置细节，请参考社区翻译的完整章节。
+
+[[wayland-remote]]
+== 远程访问
+
+由于 Wayland 的设计，传统的 X11 远程显示方法不直接适用。推荐使用 VNC 或 RDP 工具进行远程桌面访问。
+
+更多高级主题和故障排除，请参考 FreeBSD-Ask Handbook 项目或其他资源。
+
+本章节内容将持续从社区项目同步更新。

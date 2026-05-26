@@ -1,0 +1,183 @@
+---
+title: 第 22 章 Z 文件系统 (ZFS)
+part: 部分 III. 系统管理
+prev: books/handbook/geom
+next: books/handbook/filesystems
+description: ZFS 是一个先进的文件系统，旨在解决以前存储子系统软件中的主要问题
+tags: ["ZFS", "filesystem", "administration", "zpool", "features", "terminology", "RAID-Z"]
+showBookMenu: true
+weight: 26
+params:
+  path: "/books/handbook/zfs/"
+---
+
+[[zfs]]
+= Z 文件系统 (ZFS)
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:sectnumoffset: 22
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/handbook/zfs/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+ZFS 是一个先进的文件系统，旨在解决以前存储子系统软件中的主要问题。
+
+ZFS 最初由 Sun™ 开发，持续的开源 ZFS 开发已转移到 http://open-zfs.org[OpenZFS 项目]。
+
+ZFS 有三个主要的设计目标：
+
+* 数据完整性：所有数据都包括数据的 crossref:zfs[zfs-term-checksum,校验和]。ZFS 会计算校验和并将其与数据一起写入。当稍后读取该数据时，ZFS 会重新计算校验和。如果校验和不匹配，表示检测到一个或多个数据错误，ZFS 会在有副本、镜像或奇偶校验块时尝试自动修正错误。
+* 存储池：将物理存储设备添加到池中，并从共享池中分配存储空间。空间对所有文件系统和卷可用，并通过向池中添加新存储设备来增加。
+* 性能：缓存机制提供了更高的性能。crossref:zfs[zfs-term-arc,ARC] 是一个基于内存的高级读取缓存。ZFS 提供了第二级基于磁盘的读取缓存 crossref:zfs[zfs-term-l2arc,L2ARC]，以及一个基于磁盘的同步写入缓存，名为 crossref:zfs[zfs-term-zil,ZIL]。
+
+完整的功能和术语列表请参见 crossref:zfs[zfs-term,ZFS 功能与术语]。
+
+[[zfs-differences]]
+== 是什么使 ZFS 与众不同
+
+ZFS 不仅仅是一个文件系统，它在根本上有别于传统的文件系统。结合了传统上分离的卷管理器和文件系统的角色，使得 ZFS 具有独特的优势。文件系统现在能够意识到底层磁盘的结构。
+
+传统的文件系统通常只能存在于一个磁盘上。如果有两个磁盘，那么就需要创建两个独立的文件系统。传统的硬件 RAID 配置通过向操作系统呈现一个由物理磁盘提供的空间组成的单一逻辑磁盘来避免这个问题，操作系统在其上放置文件系统。即使是像 GEOM 提供的软件 RAID 解决方案，位于 RAID 之上的 UFS 文件系统也认为自己正在处理一个单一的设备。
+
+ZFS 将卷管理器和文件系统结合起来，解决了这个问题，并允许创建共享可用存储池的文件系统。ZFS 识别物理磁盘布局的一个大优势是，随着向池中添加额外磁盘，现有文件系统会自动增长。然后，这个新空间会对文件系统可用。ZFS 还可以对每个文件系统应用不同的属性。这使得创建多个文件系统和数据集比创建一个单一的庞大文件系统更有用。
+
+[[zfs-quickstart]]
+== 快速入门指南
+
+FreeBSD 可以在系统初始化期间挂载 ZFS 存储池和数据集。要启用此功能，请运行：
+
+[source,shell]
+....
+# service zfs enable
+....
+
+或者在 [.filename]#/etc/rc.conf# 文件中添加以下行：
+
+[.programlisting]
+....
+zfs_enable="YES"
+....
+
+然后启动服务：
+
+[source,shell]
+....
+# service zfs start
+....
+
+本节中的示例假设有三块 SCSI 磁盘，设备名称分别为 [.filename]#da0#、[.filename]#da1# 和 [.filename]#da2#。使用 SATA 硬件的用户应使用 [.filename]#ada# 设备名称。
+
+[[zfs-quickstart-single-disk]]
+=== 单磁盘池
+
+要使用单个磁盘设备创建一个简单的非冗余池：
+
+[source,shell]
+....
+# zpool create example /dev/da0
+....
+
+要查看新创建的池，可以查看 `df` 的输出：
+
+[source,shell]
+....
+# df
+Filesystem  1K-blocks    Used    Avail Capacity  Mounted on
+/dev/ad0s1a   2026030  235230  1628718    13%    /
+devfs               1       1        0   100%    /dev
+/dev/ad0s1d  54098308 1032846 48737598     2%    /usr
+example      17547136       0 17547136     0%    /example
+....
+
+此输出显示了创建并挂载了 `example` 池，现在它作为一个文件系统可访问。为用户创建文件以供浏览：
+
+[source,shell]
+....
+# cd /example
+# ls
+# touch testfile
+# ls -al
+....
+
+[[zfs-term]]
+== ZFS 功能与术语
+
+ZFS 有很多术语和功能，本节对常用术语进行说明。
+
+[[zfs-term-storage-pool]]
+=== 存储池 (Storage Pool)
+
+ZFS 使用存储池的概念来管理物理存储。存储池由一个或多个虚拟设备 (vdev) 组成。常见的 vdev 类型包括：
+
+* 磁盘 (disk)：最基本的 vdev 类型，可以是整个磁盘或磁盘上的分区。
+* 文件 (file)：基于文件的 vdev，通常用于测试。
+* 镜像 (mirror)：数据在多个磁盘上完全复制。
+* RAID-Z：ZFS 特有的奇偶校验方案，类似于 RAID-5/6 但解决了“写入空洞”问题。
+
+[[zfs-term-dataset]]
+=== 数据集 (Dataset)
+
+数据集是 ZFS 存储池中的逻辑容器。可以是文件系统、卷、快照或克隆。
+
+[[zfs-term-checksum]]
+=== 校验和 (Checksum)
+
+ZFS 对所有数据和元数据使用校验和来保证数据完整性。支持的校验和算法包括 fletcher4、sha256 等。
+
+[[zfs-term-arc]]
+=== ARC (Adaptive Replacement Cache)
+
+ARC 是 ZFS 的主要内存缓存机制，用于缓存经常访问的数据。
+
+[[zfs-term-l2arc]]
+=== L2ARC
+
+L2ARC 是第二级缓存，通常位于 SSD 上，用于扩展 ARC 的容量。
+
+[[zfs-term-zil]]
+=== ZIL (ZFS Intent Log)
+
+ZIL 用于同步写入的日志，保证数据在断电等情况下的完整性。
+
+[[zfs-term-snapshot]]
+=== 快照 (Snapshot)
+
+快照是数据集在某一时刻的只读副本，创建速度极快且几乎不占用额外空间，直到数据发生变化。
+
+更多高级主题（如 zpool 管理、属性、委托管理、加密等）请参考后续章节或社区翻译资源。
+
+[[zfs-further]]
+== 更多资源
+
+* FreeBSD-Ask 中文手册 ZFS 章节：https://github.com/FreeBSD-Ask/Handbook/tree/main/di-22-zhang-z-wen-jian-xi-tong-zfs
+* OpenZFS 文档：https://openzfs.github.io/openzfs-docs/
+* FreeBSD 手册英文版对应章节
