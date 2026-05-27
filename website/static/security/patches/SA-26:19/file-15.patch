@@ -1,0 +1,467 @@
+--- sys/dev/netmap/netmap_freebsd.c.orig
++++ sys/dev/netmap/netmap_freebsd.c
+@@ -119,6 +119,7 @@
+ 	taskqueue_drain(si->ntfytq, &si->ntfytask);
+ 	taskqueue_free(si->ntfytq);
+ 	si->ntfytq = NULL;
++	seldrain(&si->si);
+ 	knlist_delete(&si->si.si_note, curthread, /*islocked=*/0);
+ 	knlist_destroy(&si->si.si_note);
+ 	/* now we don't need the mutex anymore */
+--- sys/kern/kern_jaildesc.c.orig
++++ sys/kern/kern_jaildesc.c
+@@ -197,10 +197,7 @@
+ 			JAILDESC_LOCK(jd);
+ 			if (hint == NOTE_JAIL_REMOVE) {
+ 				jd->jd_flags |= JDF_REMOVED;
+-				if (jd->jd_flags & JDF_SELECTED) {
+-					jd->jd_flags &= ~JDF_SELECTED;
+-					selwakeup(&jd->jd_selinfo);
+-				}
++				selwakeup(&jd->jd_selinfo);
+ 			}
+ 			KNOTE_LOCKED(&jd->jd_selinfo.si_note, hint);
+ 			JAILDESC_UNLOCK(jd);
+@@ -257,6 +254,7 @@
+ 			}
+ 			prison_free(pr);
+ 		}
++		seldrain(&jd->jd_selinfo);
+ 		knlist_destroy(&jd->jd_selinfo.si_note);
+ 		JAILDESC_LOCK_DESTROY(jd);
+ 		free(jd, M_JAILDESC);
+@@ -276,10 +274,8 @@
+ 	JAILDESC_LOCK(jd);
+ 	if (jd->jd_flags & JDF_REMOVED)
+ 		revents |= POLLHUP;
+-	if (revents == 0) {
++	else
+ 		selrecord(td, &jd->jd_selinfo);
+-		jd->jd_flags |= JDF_SELECTED;
+-	}
+ 	JAILDESC_UNLOCK(jd);
+ 	return (revents);
+ }
+--- sys/kern/sys_procdesc.c.orig
++++ sys/kern/sys_procdesc.c
+@@ -270,6 +270,7 @@
+ 		KASSERT((pd->pd_flags & PDF_CLOSED),
+ 		    ("procdesc_free: !PDF_CLOSED"));
+ 
++		seldrain(&pd->pd_selinfo);
+ 		knlist_destroy(&pd->pd_selinfo.si_note);
+ 		PROCDESC_LOCK_DESTROY(pd);
+ 		free(pd, M_PROCDESC);
+@@ -312,10 +313,7 @@
+ 		procdesc_free(pd);
+ 		return (1);
+ 	}
+-	if (pd->pd_flags & PDF_SELECTED) {
+-		pd->pd_flags &= ~PDF_SELECTED;
+-		selwakeup(&pd->pd_selinfo);
+-	}
++	selwakeup(&pd->pd_selinfo);
+ 	KNOTE_LOCKED(&pd->pd_selinfo.si_note, NOTE_EXIT);
+ 	PROCDESC_UNLOCK(pd);
+ 	return (0);
+@@ -430,10 +428,8 @@
+ 	PROCDESC_LOCK(pd);
+ 	if (pd->pd_flags & PDF_EXITED)
+ 		revents |= POLLHUP;
+-	if (revents == 0) {
++	else
+ 		selrecord(td, &pd->pd_selinfo);
+-		pd->pd_flags |= PDF_SELECTED;
+-	}
+ 	PROCDESC_UNLOCK(pd);
+ 	return (revents);
+ }
+--- sys/sys/jaildesc.h.orig
++++ sys/sys/jaildesc.h
+@@ -71,7 +71,6 @@
+ /*
+  * Flags for the jd_flags field
+  */
+-#define	JDF_SELECTED	0x00000001	/* issue selwakeup() */
+ #define	JDF_REMOVED	0x00000002	/* jail was removed */
+ #define	JDF_OWNING	0x00000004	/* closing descriptor removes jail */
+ 
+--- sys/sys/procdesc.h.orig
++++ sys/sys/procdesc.h
+@@ -86,7 +86,6 @@
+  * Flags for the pd_flags field.
+  */
+ #define	PDF_CLOSED	0x00000001	/* Descriptor has closed. */
+-#define	PDF_SELECTED	0x00000002	/* Issue selwakeup(). */
+ #define	PDF_EXITED	0x00000004	/* Process exited. */
+ #define	PDF_DAEMON	0x00000008	/* Don't exit when procdesc closes. */
+ 
+--- tests/sys/kern/Makefile.orig
++++ tests/sys/kern/Makefile
+@@ -22,6 +22,7 @@
+ ATF_TESTS_C+=	fdgrowtable_test
+ ATF_TESTS_C+=	getdirentries_test
+ ATF_TESTS_C+=	jail_lookup_root
++ATF_TESTS_C+=	jaildesc
+ ATF_TESTS_C+=	inotify_test
+ ATF_TESTS_C+=	kill_zombie
+ .if ${MK_OPENSSL} != "no"
+@@ -31,6 +32,7 @@
+ ATF_TESTS_C+=	listener_wakeup
+ ATF_TESTS_C+=	module_test
+ ATF_TESTS_C+=	prace
++ATF_TESTS_C+=	procdesc
+ ATF_TESTS_C+=	ptrace_test
+ TEST_METADATA.ptrace_test+=		timeout="15"
+ ATF_TESTS_C+=	reaper
+@@ -84,6 +86,7 @@
+ 
+ LIBADD.copy_file_range+=		md
+ LIBADD.jail_lookup_root+=		jail util
++LIBADD.jaildesc+=			pthread
+ CFLAGS.sys_getrandom+=			-I${SRCTOP}/sys/contrib/zstd/lib
+ LIBADD.sys_getrandom+=			zstd
+ LIBADD.sys_getrandom+=			c
+@@ -95,6 +98,7 @@
+ CFLAGS.ktls_test+=			-DOPENSSL_API_COMPAT=0x10100000L
+ LIBADD.ktls_test+=			crypto util
+ LIBADD.listener_wakeup+=		pthread
++LIBADD.procdesc+=			pthread
+ LIBADD.shutdown_dgram+=			pthread
+ LIBADD.socket_msg_waitall+=		pthread
+ LIBADD.socket_splice+=			pthread
+--- /dev/null
++++ tests/sys/kern/jaildesc.c
+@@ -0,0 +1,201 @@
++/*
++ * Copyright (c) 2026 Mark Johnston <markj@FreeBSD.org>
++ *
++ * SPDX-License-Identifier: BSD-2-Clause
++ */
++
++#include <sys/param.h>
++#include <sys/jail.h>
++#include <sys/uio.h>
++
++#include <atf-c.h>
++#include <errno.h>
++#include <poll.h>
++#include <pthread.h>
++#include <pwd.h>
++#include <string.h>
++#include <unistd.h>
++
++/*
++ * Create a persistent jail and return an owning descriptor for it.
++ * The jail is removed when the returned descriptor is closed.
++ */
++static int
++create_jail(const char *name)
++{
++	struct iovec iov[8];
++	int desc, jid, n;
++
++	desc = -1;
++	n = 0;
++	iov[n].iov_base = __DECONST(void *, "name");
++	iov[n++].iov_len = strlen("name") + 1;
++	iov[n].iov_base = __DECONST(void *, name);
++	iov[n++].iov_len = strlen(name) + 1;
++	iov[n].iov_base = __DECONST(void *, "path");
++	iov[n++].iov_len = strlen("path") + 1;
++	iov[n].iov_base = __DECONST(void *, "/");
++	iov[n++].iov_len = strlen("/") + 1;
++	iov[n].iov_base = __DECONST(void *, "persist");
++	iov[n++].iov_len = strlen("persist") + 1;
++	iov[n].iov_base = NULL;
++	iov[n++].iov_len = 0;
++	iov[n].iov_base = __DECONST(void *, "desc");
++	iov[n++].iov_len = strlen("desc") + 1;
++	iov[n].iov_base = &desc;
++	iov[n++].iov_len = sizeof(desc);
++	jid = jail_set(iov, n, JAIL_CREATE | JAIL_OWN_DESC);
++	ATF_REQUIRE_MSG(jid >= 0, "jail_set: %s", strerror(errno));
++	return (desc);
++}
++
++static void *
++poll_jaildesc(void *arg)
++{
++	struct pollfd pfd;
++
++	pfd.fd = *(int *)arg;
++	pfd.events = POLLHUP;
++	(void)poll(&pfd, 1, 5000);
++	return ((void *)(uintptr_t)pfd.revents);
++}
++
++/*
++ * Regression test for the case where a jail descriptor is closed while a
++ * thread is blocking in poll(2) on it.
++ */
++ATF_TC(poll_close_race);
++ATF_TC_HEAD(poll_close_race, tc)
++{
++	atf_tc_set_md_var(tc, "require.user", "root");
++}
++ATF_TC_BODY(poll_close_race, tc)
++{
++	pthread_t thr;
++	uintptr_t revents;
++	int error, jd;
++
++	jd = create_jail("jaildesc_poll_close_race");
++
++	error = pthread_create(&thr, NULL, poll_jaildesc, &jd);
++	ATF_REQUIRE_MSG(error == 0, "pthread_create: %s", strerror(error));
++
++	/* Wait for the thread to block in poll(2). */
++	usleep(250000);
++
++	ATF_REQUIRE_MSG(close(jd) == 0, "close: %s", strerror(errno));
++
++	error = pthread_join(thr, (void *)&revents);
++	ATF_REQUIRE_MSG(error == 0, "pthread_join: %s", strerror(error));
++	ATF_REQUIRE_EQ(revents, POLLNVAL);
++}
++
++/*
++ * Verify that poll(2) of a jail descriptor returns POLLHUP when the jail
++ * is removed.
++ */
++ATF_TC(poll_remove_wakeup);
++ATF_TC_HEAD(poll_remove_wakeup, tc)
++{
++	atf_tc_set_md_var(tc, "require.user", "root");
++}
++ATF_TC_BODY(poll_remove_wakeup, tc)
++{
++	pthread_t thr;
++	uintptr_t revents;
++	int error, jd;
++
++	jd = create_jail("jaildesc_poll_remove_wakeup");
++
++	error = pthread_create(&thr, NULL, poll_jaildesc, &jd);
++	ATF_REQUIRE_MSG(error == 0, "pthread_create: %s", strerror(error));
++
++	/* Wait for the thread to block in poll(2). */
++	usleep(250000);
++
++	ATF_REQUIRE_MSG(jail_remove_jd(jd) == 0,
++	    "jail_remove_jd: %s", strerror(errno));
++
++	error = pthread_join(thr, (void *)&revents);
++	ATF_REQUIRE_MSG(error == 0, "pthread_join: %s", strerror(error));
++	ATF_REQUIRE_EQ(revents, POLLHUP);
++
++	ATF_REQUIRE_MSG(close(jd) == 0, "close: %s", strerror(errno));
++}
++
++static int
++get_jaildesc(const char *name)
++{
++	struct iovec iov[4];
++	char namebuf[MAXHOSTNAMELEN];
++	int desc, jid, n;
++
++	strlcpy(namebuf, name, sizeof(namebuf));
++	desc = -1;
++	n = 0;
++	iov[n].iov_base = __DECONST(void *, "name");
++	iov[n++].iov_len = strlen("name") + 1;
++	iov[n].iov_base = namebuf;
++	iov[n++].iov_len = sizeof(namebuf);
++	iov[n].iov_base = __DECONST(void *, "desc");
++	iov[n++].iov_len = strlen("desc") + 1;
++	iov[n].iov_base = &desc;
++	iov[n++].iov_len = sizeof(desc);
++	jid = jail_get(iov, n, JAIL_GET_DESC);
++	ATF_REQUIRE_MSG(jid >= 0, "jail_get: %s", strerror(errno));
++	return (desc);
++}
++
++/*
++ * Regression test for the same use-after-free as poll_close_race, but with a
++ * non-owning JAIL_GET_DESC descriptor obtained without root privileges.
++ */
++ATF_TC(poll_close_race_get_desc);
++ATF_TC_HEAD(poll_close_race_get_desc, tc)
++{
++	atf_tc_set_md_var(tc, "require.user", "root");
++}
++ATF_TC_BODY(poll_close_race_get_desc, tc)
++{
++	struct passwd *pw;
++	pthread_t thr;
++	uintptr_t revents;
++	int error, jd, owning_jd;
++
++	/* Create the jail as root; keep the owning descriptor for cleanup. */
++	owning_jd = create_jail("jaildesc_poll_close_get_desc");
++
++	/*
++	 * Drop root privileges.  jail_get(2) with JAIL_GET_DESC does not
++	 * require PRIV_JAIL_REMOVE, so a non-root process in the host prison
++	 * can obtain a read-only descriptor for any visible jail.
++	 */
++	pw = getpwnam("nobody");
++	ATF_REQUIRE_MSG(pw != NULL, "getpwnam: %s", strerror(errno));
++	ATF_REQUIRE_MSG(setuid(pw->pw_uid) == 0, "setuid: %s", strerror(errno));
++
++	jd = get_jaildesc("jaildesc_poll_close_get_desc");
++
++	error = pthread_create(&thr, NULL, poll_jaildesc, &jd);
++	ATF_REQUIRE_MSG(error == 0, "pthread_create: %s", strerror(error));
++
++	/* Wait for the thread to block in poll(2). */
++	usleep(250000);
++
++	ATF_REQUIRE_MSG(close(jd) == 0, "close: %s", strerror(errno));
++
++	error = pthread_join(thr, (void *)&revents);
++	ATF_REQUIRE_MSG(error == 0, "pthread_join: %s", strerror(error));
++	ATF_REQUIRE_EQ(revents, POLLNVAL);
++
++	ATF_REQUIRE_MSG(close(owning_jd) == 0, "close: %s", strerror(errno));
++}
++
++ATF_TP_ADD_TCS(tp)
++{
++	ATF_TP_ADD_TC(tp, poll_close_race);
++	ATF_TP_ADD_TC(tp, poll_remove_wakeup);
++	ATF_TP_ADD_TC(tp, poll_close_race_get_desc);
++
++	return (atf_no_error());
++}
+--- /dev/null
++++ tests/sys/kern/procdesc.c
+@@ -0,0 +1,128 @@
++/*-
++ * SPDX-License-Identifier: BSD-2-Clause
++ *
++ * Copyright (c) 2026 ConnectWise
++ * Copyright (c) 2026 Mark Johnston <markj@FreeBSD.org>
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
++ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
++ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
++ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
++ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
++ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
++ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
++ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
++ * SUCH DAMAGE.
++ */
++
++#include <sys/types.h>
++#include <sys/user.h>
++#include <sys/proc.h>
++#include <sys/procdesc.h>
++#include <sys/sysctl.h>
++#include <sys/wait.h>
++
++#include <poll.h>
++#include <pthread.h>
++#include <stdio.h>
++#include <unistd.h>
++
++#include <atf-c.h>
++
++/* Tests for procdesc(4) that aren't specific to any one syscall */
++
++static void *
++poll_procdesc(void *arg)
++{
++	struct pollfd pfd;
++
++	pfd.fd = *(int *)arg;
++	pfd.events = POLLHUP;
++	(void)poll(&pfd, 1, 5000);
++	return ((void *)(uintptr_t)pfd.revents);
++}
++
++/*
++ * Regression test to exercise the case where a procdesc is closed while a
++ * thread is poll()ing it.
++ */
++ATF_TC_WITHOUT_HEAD(poll_close_race);
++ATF_TC_BODY(poll_close_race, tc)
++{
++	pthread_t thr;
++	pid_t pid;
++	uintptr_t revents;
++	int error, pd;
++
++	pid = pdfork(&pd, PD_DAEMON);
++	ATF_REQUIRE_MSG(pid >= 0, "pdfork: %s", strerror(errno));
++	if (pid == 0) {
++		pause();
++		_exit(0);
++	}
++
++	error = pthread_create(&thr, NULL, poll_procdesc, &pd);
++	ATF_REQUIRE_MSG(error == 0, "pthread_create: %s", strerror(error));
++
++	/* Wait for the thread to block in poll(2). */
++	usleep(250000);
++
++	ATF_REQUIRE_MSG(close(pd) == 0, "close: %s", strerror(errno));
++
++	error = pthread_join(thr, (void *)&revents);
++	ATF_REQUIRE_MSG(error == 0, "pthread_join: %s", strerror(error));
++	ATF_REQUIRE_EQ(revents, POLLNVAL);
++}
++
++/*
++ * Verify that poll(2) of a procdesc returns POLLHUP when the process exits.
++ */
++ATF_TC_WITHOUT_HEAD(poll_exit_wakeup);
++ATF_TC_BODY(poll_exit_wakeup, tc)
++{
++	pthread_t thr;
++	uintptr_t revents;
++	pid_t pid;
++	int error, pd;
++
++	pid = pdfork(&pd, PD_DAEMON);
++	ATF_REQUIRE_MSG(pid >= 0, "pdfork: %s", strerror(errno));
++	if (pid == 0) {
++		pause();
++		_exit(0);
++	}
++
++	error = pthread_create(&thr, NULL, poll_procdesc, &pd);
++	ATF_REQUIRE_MSG(error == 0, "pthread_create: %s", strerror(error));
++
++	/* Wait for the thread to block in poll(2). */
++	usleep(250000);
++
++	ATF_REQUIRE_MSG(pdkill(pd, SIGKILL) == 0,
++	    "pdkill: %s", strerror(errno));
++
++	error = pthread_join(thr, (void *)&revents);
++	ATF_REQUIRE_MSG(error == 0, "pthread_join: %s", strerror(error));
++	ATF_REQUIRE_EQ(revents, POLLHUP);
++
++	ATF_REQUIRE_MSG(close(pd) == 0, "close: %s", strerror(errno));
++}
++
++ATF_TP_ADD_TCS(tp)
++{
++	ATF_TP_ADD_TC(tp, poll_close_race);
++	ATF_TP_ADD_TC(tp, poll_exit_wakeup);
++
++	return (atf_no_error());
++}

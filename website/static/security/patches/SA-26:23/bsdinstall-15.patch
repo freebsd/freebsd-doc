@@ -1,0 +1,102 @@
+--- usr.sbin/bsdconfig/share/media/wlan.subr.orig
++++ usr.sbin/bsdconfig/share/media/wlan.subr
+@@ -813,6 +813,7 @@
+ 		[ $nmatches -le ${#DIALOG_MENU_TAGS} ] || break
+ 		f_substr -v tag "$DIALOG_MENU_TAGS" $nmatches 1
+ 
++		f_shell_escape "$wssid" wssid
+ 		f_wireless_describe WIRELESS_$n help
+ 		menu_list1="$menu_list1
+ 			'$tag $wssid' '$wbssid' '$help'
+@@ -1076,6 +1077,7 @@
+ 	while [ $n -lt $nunique ]; do
+ 		n=$(( $n + 1 ))
+ 		menuitem_$n get ssid ssid
++		f_shell_escape "$ssid" ssid
+ 
+ 		menuitem_$n get nconfigs nconfigs
+ 		desc="$nconfigs $msg_configured_lc"
+@@ -1184,6 +1186,7 @@
+ 	while [ $n -lt $nunique ]; do
+ 		n=$(( $n + 1 ))
+ 		menuitem_$n get ssid ssid
++		f_shell_escape "$ssid" ssid
+ 
+ 		desc=
+ 		if [ "$DIALOG_MENU_WLAN_SHOW_ALL" ]; then
+--- usr.sbin/bsdinstall/scripts/wlanconfig.orig
++++ usr.sbin/bsdinstall/scripts/wlanconfig
+@@ -147,6 +147,34 @@
+ 	country_set "$regdomain" "$country"
+ }
+ 
++dialog_network_select()
++{
++	local ssid flags height width rows prompt
++
++	# Avoid using eval on untrusted data.
++	set --
++	while IFS=$'\t' read -r ssid flags; do
++		[ -n "$ssid" ] || continue
++		set -- "$@" "$ssid" "$flags"
++	done <<EOF
++$NETWORKS
++EOF
++
++	f_dialog_title "Network Selection"
++	prompt="Select a wireless network to connect to."
++	f_dialog_menu_size height width rows \
++		"$DIALOG_TITLE" "$DIALOG_BACKTITLE" "$prompt" "" "$@"
++	$DIALOG \
++		--title "$DIALOG_TITLE"         \
++		--backtitle "$DIALOG_BACKTITLE" \
++		--extra-button                  \
++		--extra-label "Rescan"          \
++		--menu "$prompt"                \
++		$height $width $rows            \
++		"$@"                            \
++		2>&1 >&$DIALOG_TERMINAL_PASSTHRU_FD
++}
++
+ ############################################################ MAIN
+ 
+ : > "$BSDINSTALL_TMPETC/wpa_supplicant.conf"
+@@ -213,27 +241,14 @@
+ 
+ 	f_eval_catch -dk SCAN_RESULTS wlanconfig wpa_cli "wpa_cli scan_results"
+ 	NETWORKS=$( echo "$SCAN_RESULTS" | awk -F '\t' '
+-		/..:..:..:..:..:../ && $5 { printf "\"%s\"\t\"%s\"\n", $5, $4 }
++		/..:..:..:..:..:../ && $5 { print $5 "\t" $4 }
+ 	' | sort | uniq )
+ 
+ 	if [ ! "$NETWORKS" ]; then
+ 		f_dialog_title "$msg_error"
+ 		f_yesno "No wireless networks were found. Rescan?" && continue
+ 	else
+-		f_dialog_title "Network Selection"
+-		prompt="Select a wireless network to connect to."
+-		f_dialog_menu_size height width rows "$DIALOG_TITLE" \
+-			"$DIALOG_BACKTITLE" "$prompt" "" $NETWORKS
+-		NETWORK=$( eval $DIALOG \
+-			--title \"\$DIALOG_TITLE\"         \
+-			--backtitle \"\$DIALOG_BACKTITLE\" \
+-			--extra-button                     \
+-			--extra-label \"Rescan\"           \
+-			--menu \"\$prompt\"                \
+-			$height $width $rows               \
+-			$NETWORKS                          \
+-			2>&1 >&$DIALOG_TERMINAL_PASSTHRU_FD
+-		)
++		NETWORK=$( dialog_network_select )
+ 	fi
+ 	retval=$?
+ 	f_dialog_data_sanitize NETWORK
+@@ -270,7 +285,7 @@
+ done
+ 
+ [ "$ENCRYPTION" ] || ENCRYPTION=$( echo "$NETWORKS" |
+-	awk -F '\t' "/^\"$NETWORK\"\t/ { print \$2 }" )
++	awk -F '\t' "/^$NETWORK\t/ { print \$2 }" )
+ 
+ if echo "$ENCRYPTION" | grep -q PSK; then
+ 	PASS=$( $DIALOG \
