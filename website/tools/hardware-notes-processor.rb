@@ -18,13 +18,37 @@ if ARGV.length < 1 || ARGV.length > 1
   exit
 end
 
+# Extract FreeBSD version from newvers.sh
+freebsd_version = nil
+newvers_path = './tmp/sys/conf/newvers.sh'
+if File.exist?(newvers_path)
+  File.foreach(newvers_path) do |line|
+    if line =~ /REVISION="([^"]+)"/
+      freebsd_version = $1
+      break
+    end
+  end
+end
+
+if freebsd_version.nil?
+  puts "WARNING: Could not find FreeBSD version in #{newvers_path}"
+  freebsd_version = 'X.Y'
+end
+
 hardwareNotesPath = ARGV[0]
 hardwareNotesContent = ""
 
-File.foreach(hardwareNotesPath).with_index do |line|
+File.foreach(hardwareNotesPath).with_index do |original_line, idx|
+  line = original_line.dup  # allow modification
+
+  # Replace version placeholders in the first 10 lines
+  if idx < 10
+    line.gsub!(/X\.0/, freebsd_version)
+    line.gsub!(/X\.Y/, freebsd_version)
+  end
+
   if (line[/&hwlist.\b/])
-    macro = line.match(/&hwlist\.[^\s;]+;?/)[0]
-    manualPage = macro.gsub("&hwlist.", "").gsub(";", "").gsub("\n", "")
+    manualPage = line.gsub("&hwlist.", "").gsub(";", "").gsub("\n", "")
 
     if(File.exist?("tmp/share/man/man4/" + manualPage + ".4"))
       cmd = "mandoc -Tmarkdown tmp/share/man/man4/" + manualPage + ".4 | sed -n '/^# HARDWARE/,/^# /{ /^# /d; p; }'"
@@ -60,18 +84,15 @@ File.foreach(hardwareNotesPath).with_index do |line|
 
         if mandocOut.strip.empty?
           puts "WARNING: No HARDWARE section content for manual page #{manualPage}"
-          hardwareNotesContent << "#{macro}    WARNING: No HARDWARE section content for manual page #{manualPage}\n"
           next
         end
 
         hardwareNotesContent << mandocOut
       else
         puts "WARNING: The manual page " + manualPage + " without HARDWARE exists or malformed"
-        hardwareNotesContent << "#{macro}    WARNING: The manual page " + manualPage + " without HARDWARE exists or malformed\n"
       end
     else
       puts "WARNING: The manual page " + manualPage + " does not exists"
-      hardwareNotesContent << "#{macro}    WARNING: The manual page " + manualPage + " does not exists\n"
     end
   else
     hardwareNotesContent << line
