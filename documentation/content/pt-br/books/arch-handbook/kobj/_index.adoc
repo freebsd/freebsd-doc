@@ -1,0 +1,259 @@
+---
+description: 'Objetos do Kernel'
+next: books/arch-handbook/jail
+params:
+  path: /books/arch-handbook/kobj/
+prev: books/arch-handbook/locking
+showBookMenu: 'true'
+tags: ["kernel objects", "kobj", "guide", "FreeBSD"]
+title: 'Capítulo 3. Objetos do Kernel'
+weight: 4
+---
+
+[[kernel-objects]]
+= Objetos do Kernel
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:sectnumoffset: 3
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/arch-handbook/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+O Kernel Objects, ou _Kobj_, fornece um sistema de programação C orientado a objetos para o kernel. Dessa forma, os dados que estão sendo manipulados carregam a descrição de como operar sobre eles. Isso permite que operações sejam adicionadas e removidas de uma interface em tempo de execução, sem quebrar a compatibilidade binária.
+
+[[kernel-objects-term]]
+== Terminologia
+
+Objeto::
+Um conjunto de dados - estrutura de dados - alocação de dados.
+
+Método::
+Uma operação - Função.
+
+Classe::
+Um ou mais métodos.
+
+Interface::
+Um padrão de conjunto de um ou mais métodos.
+
+[[kernel-objects-operation]]
+== Operação Kobj
+
+Kobj funciona gerando descrições de métodos. Cada descrição contém um ID único, bem como uma função padrão. O endereço da descrição é usado para identificar exclusivamente o método dentro da tabela de métodos de uma classe.
+
+Uma classe é construída criando-se uma tabela de métodos que associa uma ou mais funções às suas descrições. Antes de ser utilizada, a classe é compilada. A compilação aloca um cache e o associa à classe. Um ID único é atribuído a cada descrição de método dentro da tabela de métodos da classe, caso ainda não tenha sido atribuído por outra compilação de classe referenciadora. Para cada método a ser utilizado, uma função é gerada por script para qualificar os argumentos e referenciar automaticamente a descrição do método para uma busca. A função gerada busca o método utilizando o ID único associado à descrição do método como um hash no cache associado à classe do objeto. Se o método não estiver em cache, a função gerada utiliza a tabela da classe para encontrar o método. Se o método for encontrado, a função associada dentro da classe é utilizada; caso contrário, a função padrão associada à descrição do método é utilizada.
+
+Essas indireções podem ser visualizadas da seguinte forma:
+
+[.programlisting]
+....
+objeto->cache<->classe
+....
+
+[[kernel-objects-using]]
+== Usando Kobj
+
+=== Estruturas
+
+[.programlisting]
+....
+struct kobj_method
+....
+
+=== Funções
+
+[.programlisting]
+....
+void kobj_class_compile(kobj_class_t cls);
+void kobj_class_compile_static(kobj_class_t cls, kobj_ops_t ops);
+void kobj_class_free(kobj_class_t cls);
+kobj_t kobj_create(kobj_class_t cls, struct malloc_type *mtype, int mflags);
+void kobj_init(kobj_t obj, kobj_class_t cls);
+void kobj_delete(kobj_t obj, struct malloc_type *mtype);
+....
+
+=== Macros
+
+[.programlisting]
+....
+KOBJ_CLASS_FIELDS
+KOBJ_FIELDS
+DEFINE_CLASS(name, methods, size)
+KOBJMETHOD(NAME, FUNC)
+....
+
+=== Cabeçalhos
+
+[.programlisting]
+....
+<sys/param.h>
+<sys/kobj.h>
+....
+
+=== Criando um modelo de interface
+
+O primeiro passo para usar o Kobj é criar uma interface. A criação da interface envolve a criação de um modelo que o script [.filename]#src/sys/kern/makeobjops.pl# pode usar para gerar o cabeçalho e o código para as declarações de métodos e funções de busca de métodos.
+
+Neste modelo, são utilizadas as seguintes palavras-chave: `#include`, `INTERFACE`, `CODE`, `EPILOG`, `HEADER`, `METHOD`, `PROLOG`, `STATICMETHOD` e `DEFAULT`.
+
+A declaração `#include` e o que a segue são copiados literalmente para o cabeçalho do arquivo de código gerado.
+
+Por exemplo:
+
+[.programlisting]
+....
+#include <sys/foo.h>
+....
+
+A palavra-chave `INTERFACE` é usada para definir o nome da interface. Esse nome é concatenado com cada nome de método como [interface name]_[method name]. Sua sintaxe é INTERFACE [interface name];.
+
+Por exemplo:
+
+[.programlisting]
+....
+INTERFACE foo;
+....
+
+A palavra-chave `CODE` copia seus argumentos literalmente para o arquivo de código. Sua sintaxe é `CODE { [qualquer coisa] };`
+
+Por exemplo:
+
+[.programlisting]
+....
+CODE {
+	struct foo * foo_alloc_null(struct bar *)
+	{
+		return NULL;
+	}
+};
+....
+
+A palavra-chave `HEADER` copia seus argumentos literalmente para o arquivo de cabeçalho. Sua sintaxe é `HEADER { [qualquer coisa] };`
+
+Por exemplo:
+
+[.programlisting]
+....
+HEADER {
+        struct mumble;
+        struct grumble;
+};
+....
+
+A palavra-chave `METHOD` descreve um método. Sua sintaxe é `METHOD [tipo de retorno] [nome do método] { [objeto [, argumentos]] };`
+
+Por exemplo:
+
+[.programlisting]
+....
+METHOD int bar {
+	struct object *;
+	struct foo *;
+	struct bar;
+};
+....
+
+A palavra-chave `DEFAULT` pode seguir a palavra-chave `METHOD`. Ela estende a palavra-chave `METHOD` para incluir a função padrão do método. A sintaxe estendida é: `METHOD [tipo de retorno] [nome do método] { [objeto; [outros argumentos]] }DEFAULT [função padrão];`
+
+Por exemplo:
+
+[.programlisting]
+....
+METHOD int bar {
+	struct object *;
+	struct foo *;
+	int bar;
+} DEFAULT foo_hack;
+....
+
+A palavra-chave `STATICMETHOD` é usada de forma semelhante à palavra-chave `METHOD`, exceto pelo fato de que os dados Kobj não estão no início da estrutura do objeto, portanto, a conversão para kobj_t seria incorreta. Em vez disso, `STATICMETHOD` depende da referência aos dados Kobj como 'ops'. Isso também é útil para chamar métodos diretamente da tabela de métodos de uma classe.
+
+Os conjuntos de palavras-chave `PROLOG` e `EPILOG` inserem código imediatamente antes ou diretamente depois do `METHOD` ao qual estão associados. Esse recurso é usado principalmente para criar perfis em situações onde é difícil obter as informações de outra forma.
+
+Outros exemplos completos:
+
+[.programlisting]
+....
+src/sys/kern/bus_if.m
+src/sys/kern/device_if.m
+....
+
+=== Criando uma classe
+
+O segundo passo para usar o Kobj é criar uma classe. Uma classe consiste em um nome, uma tabela de métodos e o tamanho dos objetos, caso os recursos de manipulação de objetos do Kobj sejam utilizados. Para criar a classe, use a macro `DEFINE_CLASS()`. Para criar a tabela de métodos, crie um array de `kobj_method_t` terminado por uma entrada `NULL`. Cada entrada não nula pode ser criada usando a macro `KOBJMETHOD()`.
+
+Por exemplo:
+
+[.programlisting]
+....
+DEFINE_CLASS(fooclass, foomethods, sizeof(struct foodata));
+
+kobj_method_t foomethods[] = {
+	KOBJMETHOD(bar_doo, foo_doo),
+	KOBJMETHOD(bar_foo, foo_foo),
+	{ NULL, NULL}
+};
+....
+
+A classe deve ser "compilada". Dependendo do estado do sistema no momento da inicialização da classe, um cache alocado estaticamente, a "tabela de operações" (ops table), precisa ser utilizado. Isso pode ser feito declarando uma `struct kobj_ops` e usando `kobj_class_compile_static();`; caso contrário, deve-se usar `kobj_class_compile()`.
+
+=== Criando um Objeto
+
+O terceiro passo para usar o Kobj envolve a definição do objeto. As rotinas de criação de objetos Kobj pressupõem que os dados Kobj estejam no início do objeto. Se isso não for apropriado, você terá que alocar o objeto manualmente e, em seguida, usar `kobj_init()` na parte Kobj do objeto; caso contrário, você pode usar `kobj_create()` para alocar e inicializar a parte Kobj do objeto automaticamente. `kobj_init()` também pode ser usado para alterar a classe que um objeto utiliza.
+
+Para integrar Kobj ao objeto, você deve usar a macro KOBJ_FIELDS.
+
+Por exemplo
+
+[.programlisting]
+....
+struct foo_data {
+	KOBJ_FIELDS;
+	foo_foo;
+	foo_bar;
+};
+....
+
+=== Métodos de Chamada
+
+O último passo para usar o Kobj é simplesmente utilizar as funções geradas para acessar o método desejado dentro da classe do objeto. Isso é tão simples quanto usar o nome da interface e o nome do método com algumas modificações. O nome da interface deve ser concatenado com o nome do método, separados por um '_', e ambos devem estar em maiúsculas.
+
+Por exemplo, se o nome da interface fosse foo e o método fosse bar, a chamada seria:
+
+[.programlisting]
+....
+[valor de retorno = ] FOO_BAR(objeto [, outros parâmetros]);
+....
+
+=== Limpando
+
+Quando um objeto alocado através de `kobj_create()` não for mais necessário, `kobj_delete()` poderá ser chamado nele, e quando uma classe não estiver mais sendo usada, `kobj_class_free()` poderá ser chamado nela.
