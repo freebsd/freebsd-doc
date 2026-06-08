@@ -464,13 +464,15 @@ $manPathDefault = 'FreeBSD 15.0-RELEASE and Ports.quarterly';
     'FreeBSD 16.0-CURRENT',
 "$manLocalDir/FreeBSD-16.0-CURRENT/man:$manLocalDir/FreeBSD-16.0-CURRENT/openssl/man",
 
+    'FreeBSD 15.0-STABLE',
+"$manLocalDir/FreeBSD-15.0-STABLE/man:$manLocalDir/FreeBSD-15.0-STABLE/openssl/man",
     'FreeBSD 15.0-RELEASE',
 "$manLocalDir/FreeBSD-15.0-RELEASE/man:$manLocalDir/FreeBSD-15.0-RELEASE/openssl/man",
 
-    'FreeBSD 15.0-STABLE',
-"$manLocalDir/FreeBSD-15.0-STABLE/man:$manLocalDir/FreeBSD-15.0-STABLE/openssl/man",
     'FreeBSD 14.4-STABLE',
 "$manLocalDir/FreeBSD-14.4-STABLE/man:$manLocalDir/FreeBSD-14.4-STABLE/openssl/man",
+    'FreeBSD 14.4-RELEASE',
+"$manLocalDir/FreeBSD-14.4-RELEASE/man:$manLocalDir/FreeBSD-14.4-RELEASE/openssl/man",
     'FreeBSD 14.3-RELEASE',
 "$manLocalDir/FreeBSD-14.3-RELEASE/man:$manLocalDir/FreeBSD-14.3-RELEASE/openssl/man",
     'FreeBSD 14.2-RELEASE',
