@@ -1,0 +1,369 @@
+--- sys/dev/sound/pcm/buffer.c.orig
++++ sys/dev/sound/pcm/buffer.c
+@@ -32,6 +32,7 @@
+ #include "opt_snd.h"
+ #endif
+ 
++#include <sys/refcount.h>
+ #include <dev/sound/pcm/sound.h>
+ 
+ #include "feeder_if.h"
+@@ -46,6 +47,7 @@
+ 	struct snd_dbuf *b;
+ 
+ 	b = malloc(sizeof(*b), M_DEVBUF, M_WAITOK | M_ZERO);
++	refcount_init(&b->refcount, 1);
+ 	snprintf(b->name, SNDBUF_NAMELEN, "%s:%s", drv, desc);
+ 	b->dev = dev;
+ 	b->channel = channel;
+@@ -56,8 +58,30 @@
+ void
+ sndbuf_destroy(struct snd_dbuf *b)
+ {
+-	sndbuf_free(b);
+-	free(b, M_DEVBUF);
++	b->flags |= SNDBUF_F_DETACHED;
++	sndbuf_rele(b);
++}
++
++void
++sndbuf_ref(struct snd_dbuf *b)
++{
++	unsigned int count __diagused;
++
++	CHN_LOCK(b->channel);
++	count = refcount_acquire(&b->refcount);
++	KASSERT(count > 0, ("sndbuf %p refcount 0", b));
++	CHN_UNLOCK(b->channel);
++}
++
++void
++sndbuf_rele(struct snd_dbuf *b)
++{
++	if (refcount_release(&b->refcount)) {
++		sndbuf_free(b);
++		KASSERT(refcount_load(&b->refcount) == 0,
++		    ("sndbuf %p still referenced", b));
++		free(b, M_DEVBUF);
++	}
+ }
+ 
+ bus_addr_t
+@@ -183,6 +207,11 @@
+ 
+ 	if (bufsize > b->allocsize ||
+ 	    bufsize < (b->allocsize >> SNDBUF_CACHE_SHIFT)) {
++		if (refcount_load(&b->refcount) > 1 ||
++		    (b->flags & SNDBUF_F_DETACHED) != 0) {
++			CHN_UNLOCK(b->channel);
++			return (EBUSY);
++		}
+ 		allocsize = round_page(bufsize);
+ 		CHN_UNLOCK(b->channel);
+ 		tmpbuf = malloc(allocsize, M_DEVBUF, M_WAITOK);
+@@ -218,10 +247,15 @@
+ 	if (blkcnt < 2 || blksz < 16)
+ 		return EINVAL;
+ 
++	CHN_LOCKASSERT(b->channel);
++
+ 	bufsize = blksz * blkcnt;
+ 
+ 	if (bufsize > b->allocsize ||
+ 	    bufsize < (b->allocsize >> SNDBUF_CACHE_SHIFT)) {
++		if (refcount_load(&b->refcount) > 1 ||
++		    (b->flags & SNDBUF_F_DETACHED) != 0)
++			return (EBUSY);
+ 		allocsize = round_page(bufsize);
+ 		CHN_UNLOCK(b->channel);
+ 		buf = malloc(allocsize, M_DEVBUF, M_WAITOK);
+--- sys/dev/sound/pcm/buffer.h.orig
++++ sys/dev/sound/pcm/buffer.h
+@@ -27,6 +27,7 @@
+  */
+ 
+ #define	SNDBUF_F_MANAGED	0x00000008
++#define	SNDBUF_F_DETACHED	0x00000010
+ 
+ #define SNDBUF_NAMELEN	48
+ 
+@@ -50,6 +51,7 @@
+ 	bus_dma_tag_t dmatag;
+ 	bus_addr_t buf_addr;
+ 	int dmaflags;
++	unsigned int refcount;
+ 	struct selinfo sel;
+ 	struct pcm_channel *channel;
+ 	char name[SNDBUF_NAMELEN];
+@@ -57,6 +59,8 @@
+ 
+ struct snd_dbuf *sndbuf_create(device_t dev, char *drv, char *desc, struct pcm_channel *channel);
+ void sndbuf_destroy(struct snd_dbuf *b);
++void sndbuf_ref(struct snd_dbuf *b);
++void sndbuf_rele(struct snd_dbuf *b);
+ 
+ void sndbuf_dump(struct snd_dbuf *b, char *s, u_int32_t what);
+ 
+--- sys/dev/sound/pcm/dsp.c.orig
++++ sys/dev/sound/pcm/dsp.c
+@@ -79,7 +79,6 @@
+ static d_write_t dsp_write;
+ static d_ioctl_t dsp_ioctl;
+ static d_poll_t dsp_poll;
+-static d_mmap_t dsp_mmap;
+ static d_mmap_single_t dsp_mmap_single;
+ 
+ struct cdevsw dsp_cdevsw = {
+@@ -89,7 +88,6 @@
+ 	.d_write =	dsp_write,
+ 	.d_ioctl =	dsp_ioctl,
+ 	.d_poll =	dsp_poll,
+-	.d_mmap =	dsp_mmap,
+ 	.d_mmap_single = dsp_mmap_single,
+ 	.d_name =	"dsp",
+ };
+@@ -1931,28 +1929,89 @@
+ 	return (ret);
+ }
+ 
++struct dsp_mmap_handle {
++	struct cdev *cdev;
++	struct snd_dbuf *buf;
++};
++
+ static int
+-dsp_mmap(struct cdev *i_dev, vm_ooffset_t offset, vm_paddr_t *paddr,
+-    int nprot, vm_memattr_t *memattr)
++dsp_dev_pager_ctor(void *handle, vm_ooffset_t size, vm_prot_t prot,
++    vm_ooffset_t foff, struct ucred *cred, u_short *color)
+ {
++	struct dsp_mmap_handle *h = handle;
+ 
+-	/*
+-	 * offset is in range due to checks in dsp_mmap_single().
+-	 * XXX memattr is not honored.
+-	 */
+-	*paddr = vtophys(offset);
++	dev_ref(h->cdev);
++	sndbuf_ref(h->buf);
+ 	return (0);
+ }
+ 
++static void
++dsp_dev_pager_dtor(void *handle)
++{
++	struct dsp_mmap_handle *h = handle;
++
++	sndbuf_rele(h->buf);
++	dev_rel(h->cdev);
++	free(h, M_DEVBUF);
++}
++
++static int
++dsp_dev_pager_fault(vm_object_t object, vm_ooffset_t offset, int prot,
++    vm_page_t *mres)
++{
++	struct dsp_mmap_handle *h = object->handle;
++	vm_page_t m;
++	uintptr_t addr;
++	vm_paddr_t paddr;
++
++	addr = (uintptr_t)offset;
++	if (addr < (uintptr_t)h->buf->buf ||
++	    addr >= (uintptr_t)h->buf->buf + h->buf->allocsize)
++		return (VM_PAGER_ERROR);
++	paddr = vtophys((void *)addr);
++
++	if (((*mres)->flags & PG_FICTITIOUS) != 0) {
++		m = *mres;
++		vm_page_updatefake(m, paddr, object->memattr);
++	} else {
++		VM_OBJECT_WUNLOCK(object);
++		m = vm_page_getfake(paddr, object->memattr);
++		VM_OBJECT_WLOCK(object);
++		vm_page_replace(m, object, (*mres)->pindex, *mres);
++		*mres = m;
++	}
++	m->valid = VM_PAGE_BITS_ALL;
++	return (VM_PAGER_OK);
++}
++
++static void
++dsp_dev_pager_path(void *handle, char *path, size_t len)
++{
++	struct dsp_mmap_handle *h = handle;
++
++	dev_copyname(h->cdev, path, len);
++}
++
++static const struct cdev_pager_ops dsp_dev_pager_ops = {
++	.cdev_pg_ctor = dsp_dev_pager_ctor,
++	.cdev_pg_dtor = dsp_dev_pager_dtor,
++	.cdev_pg_fault = dsp_dev_pager_fault,
++	.cdev_pg_path = dsp_dev_pager_path,
++};
++
+ static int
+-dsp_mmap_single(struct cdev *i_dev, vm_ooffset_t *offset,
++dsp_mmap_single(struct cdev *cdev, vm_ooffset_t *offset,
+     vm_size_t size, struct vm_object **object, int nprot)
+ {
++	struct dsp_mmap_handle *handle;
+ 	struct dsp_cdevpriv *priv;
+ 	struct snddev_info *d;
+ 	struct pcm_channel *wrch, *rdch, *c;
+ 	int err;
+ 
++	if (*offset >= *offset + size)
++		return (EINVAL);
++
+ 	/*
+ 	 * Reject PROT_EXEC by default. It just doesn't makes sense.
+ 	 * Unfortunately, we have to give up this one due to linux_mmap
+@@ -2007,13 +2066,18 @@
+ 
+ 	*offset = (uintptr_t)sndbuf_getbufofs(c->bufsoft, *offset);
+ 	dsp_unlock_chans(priv, FREAD | FWRITE);
+-	*object = vm_pager_allocate(OBJT_DEVICE, i_dev,
+-	    size, nprot, *offset, curthread->td_ucred);
+ 
++	handle = malloc(sizeof(*handle), M_DEVBUF, M_WAITOK);
++	handle->cdev = cdev;
++	handle->buf = c->bufsoft;
++	*object = cdev_pager_allocate(handle, OBJT_DEVICE, &dsp_dev_pager_ops,
++	    size, nprot, *offset, curthread->td_ucred);
+ 	PCM_GIANT_LEAVE(d);
++	if (*object == NULL) {
++		free(handle, M_DEVBUF);
++		return (EINVAL);
++	}
+ 
+-	if (*object == NULL)
+-		 return (EINVAL);
+ 	return (0);
+ }
+ 
+--- tests/sys/sound/Makefile.orig
++++ tests/sys/sound/Makefile
+@@ -2,6 +2,7 @@
+ 
+ TESTSDIR=	${TESTSBASE}/sys/sound
+ 
++ATF_TESTS_C+=	mmap
+ ATF_TESTS_C+=	pcm_read_write
+ ATF_TESTS_C+=	sndstat
+ 
+--- /dev/null
++++ tests/sys/sound/mmap.c
+@@ -0,0 +1,111 @@
++/*-
++ * SPDX-License-Identifier: BSD-2-Clause
++ *
++ * Copyright (c) 2026 The FreeBSD Foundation
++ */
++
++#include <sys/param.h>
++#include <sys/mman.h>
++#include <sys/soundcard.h>
++
++#include <atf-c.h>
++#include <errno.h>
++#include <fcntl.h>
++#include <string.h>
++#include <unistd.h>
++
++#define	FMT_ERR(s)	s ": %s", strerror(errno)
++
++ATF_TC(mmap_offset_overflow);
++ATF_TC_HEAD(mmap_offset_overflow, tc)
++{
++	atf_tc_set_md_var(tc, "descr", "mmap offset overflow test");
++	atf_tc_set_md_var(tc, "require.kmods", "snd_dummy");
++}
++
++ATF_TC_BODY(mmap_offset_overflow, tc)
++{
++	uint8_t *buf;
++	off_t off;
++	size_t len;
++	int fd;
++
++	fd = open("/dev/dsp0", O_RDWR);
++	ATF_REQUIRE_MSG(fd >= 0, FMT_ERR("open"));
++
++	/* off + len will overflow and wrap back to 0. */
++	off = 0xfffffffffffff000;
++	len = 0x1000;
++
++	buf = mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, off);
++	ATF_REQUIRE_MSG(buf == MAP_FAILED, FMT_ERR("mmap"));
++
++	munmap(buf, len);
++
++	close(fd);
++}
++
++/*
++ * Verify that a MAP_SHARED mapping of a DSP device's software buffer remains
++ * valid after the file descriptor is closed.
++ */
++ATF_TC(mmap_buffer_lifetime);
++ATF_TC_HEAD(mmap_buffer_lifetime, tc)
++{
++	atf_tc_set_md_var(tc, "descr", "mmap data survives close()");
++	atf_tc_set_md_var(tc, "require.kmods", "snd_dummy");
++}
++ATF_TC_BODY(mmap_buffer_lifetime, tc)
++{
++	audio_buf_info abi;
++	uint8_t *buf;
++	size_t len;
++	int fd, arg;
++
++	fd = open("/dev/dsp0", O_RDWR);
++	ATF_REQUIRE_MSG(fd >= 0, FMT_ERR("open"));
++
++	arg = (2 << 16) | 14; /* 2*16KB */
++	ATF_REQUIRE_MSG(ioctl(fd, SNDCTL_DSP_SETFRAGMENT, &arg) == 0,
++	    FMT_ERR("SNDCTL_DSP_SETFRAGMENT"));
++	ATF_REQUIRE_MSG(ioctl(fd, SNDCTL_DSP_GETOSPACE, &abi) == 0,
++	    FMT_ERR("SNDCTL_DSP_GETOSPACE"));
++
++	len = abi.bytes;
++	ATF_REQUIRE_MSG(len >= PAGE_SIZE, "buffer too small: %zu", len);
++
++	buf = mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
++	ATF_REQUIRE_MSG(buf != MAP_FAILED, FMT_ERR("mmap"));
++
++	for (size_t i = 0; i < len; i++) {
++		ATF_REQUIRE_MSG(buf[i] == 0,
++		    "mmap data corrupted at offset %zu: want 0 got 0x%02x",
++		    i, buf[i]);
++	}
++
++	memset(buf, 0xa5, len);
++	for (size_t i = 0; i < len; i++) {
++		ATF_REQUIRE_MSG(buf[i] == 0xa5,
++		    "mmap data corrupted at offset %zu: want 0xa5 got 0x%02x",
++		    i, buf[i]);
++	}
++
++	ATF_REQUIRE(close(fd) == 0);
++
++	/* Closing the device causes the buffer to be reset. */
++	for (size_t i = 0; i < len; i++) {
++		ATF_REQUIRE_MSG(buf[i] == 0 || buf[i] == 0xa5,
++		    "mmap data corrupted at offset %zu: got 0x%02x", i, buf[i]);
++	}
++	memset(buf, 0xa5, len);
++
++	ATF_REQUIRE(munmap(buf, len) == 0);
++}
++
++ATF_TP_ADD_TCS(tp)
++{
++	ATF_TP_ADD_TC(tp, mmap_offset_overflow);
++	ATF_TP_ADD_TC(tp, mmap_buffer_lifetime);
++
++	return (atf_no_error());
++}

@@ -1,0 +1,47 @@
+--- contrib/capsicum-test/capmode.cc.orig
++++ contrib/capsicum-test/capmode.cc
+@@ -746,8 +746,8 @@
+   close(thread_pipe[1]);
+ }
+ 
+-static volatile sig_atomic_t had_signal = 0;
+-static void handle_signal(int) { had_signal = 1; }
++static volatile sig_atomic_t signal_cnt = 0;
++static void handle_signal(int) { signal_cnt++; }
+ 
+ FORK_TEST(Capmode, SelfKill) {
+   pid_t me = getpid();
+@@ -765,7 +765,13 @@
+   // Can only kill(2) to own pid.
+   EXPECT_CAPMODE(kill(child, SIGUSR1));
+   EXPECT_OK(kill(me, SIGUSR1));
+-  EXPECT_EQ(1, had_signal);
++  EXPECT_EQ(1, signal_cnt);
++
++  union sigval sv;
++  sv.sival_int = 0x1234;
++  EXPECT_CAPMODE(sigqueue(child, SIGUSR1, sv));
++  EXPECT_OK(sigqueue(me, SIGUSR1, sv));
++  EXPECT_EQ(2, signal_cnt);
+ 
+   signal(SIGUSR1, original);
+ }
+--- sys/kern/kern_sig.c.orig
++++ sys/kern/kern_sig.c
+@@ -2037,6 +2037,16 @@
+ 	if (pid <= 0)
+ 		return (EINVAL);
+ 
++	/*
++	 * A process in capability mode can send signals only to itself.
++	 */
++	if (pid != td->td_proc->p_pid) {
++		if (CAP_TRACING(td))
++			ktrcapfail(CAPFAIL_SIGNAL, &signum);
++		if (IN_CAPABILITY_MODE(td))
++			return (ECAPMODE);
++	}
++
+ 	if ((signumf & __SIGQUEUE_TID) == 0) {
+ 		if ((p = pfind_any(pid)) == NULL)
+ 			return (ESRCH);

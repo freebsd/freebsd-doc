@@ -1,0 +1,1065 @@
+--- crypto/openssl/crypto/asn1/a_mbstr.c.orig
++++ crypto/openssl/crypto/asn1/a_mbstr.c
+@@ -174,11 +174,27 @@
+         break;
+ 
+     case MBSTRING_BMP:
++        if (nchar > INT_MAX / 2) {
++            ERR_raise(ERR_LIB_ASN1, ASN1_R_STRING_TOO_LONG);
++            if (free_out) {
++                ASN1_STRING_free(dest);
++                *out = NULL;
++            }
++            return -1;
++        }
+         outlen = nchar << 1;
+         cpyfunc = cpy_bmp;
+         break;
+ 
+     case MBSTRING_UNIV:
++        if (nchar > INT_MAX / 4) {
++            ERR_raise(ERR_LIB_ASN1, ASN1_R_STRING_TOO_LONG);
++            if (free_out) {
++                ASN1_STRING_free(dest);
++                *out = NULL;
++            }
++            return -1;
++        }
+         outlen = nchar << 2;
+         cpyfunc = cpy_univ;
+         break;
+@@ -186,8 +202,11 @@
+     case MBSTRING_UTF8:
+         outlen = 0;
+         ret = traverse_string(in, len, inform, out_utf8, &outlen);
+-        if (ret < 0) {
+-            ERR_raise(ERR_LIB_ASN1, ASN1_R_INVALID_UTF8STRING);
++        if (ret < 0) { /* error already raised in out_utf8() */
++            if (free_out) {
++                ASN1_STRING_free(dest);
++                *out = NULL;
++            }
+             return -1;
+         }
+         cpyfunc = cpy_utf8;
+@@ -270,9 +289,15 @@
+     int *outlen, len;
+ 
+     len = UTF8_putc(NULL, -1, value);
+-    if (len <= 0)
++    if (len <= 0) {
++        ERR_raise(ERR_LIB_ASN1, ASN1_R_INVALID_UTF8STRING);
+         return len;
++    }
+     outlen = arg;
++    if (*outlen > INT_MAX - len) {
++        ERR_raise(ERR_LIB_ASN1, ASN1_R_STRING_TOO_LONG);
++        return -1;
++    }
+     *outlen += len;
+     return 1;
+ }
+--- crypto/openssl/crypto/asn1/tasn_dec.c.orig
++++ crypto/openssl/crypto/asn1/tasn_dec.c
+@@ -54,7 +54,7 @@
+     const ASN1_ITEM *it,
+     int tag, int aclass, char opt,
+     ASN1_TLC *ctx);
+-static int asn1_ex_c2i(ASN1_VALUE **pval, const unsigned char *cont, int len,
++static int asn1_ex_c2i(ASN1_VALUE **pval, const unsigned char *cont, long len,
+     int utype, char *free_cont, const ASN1_ITEM *it);
+ 
+ /* Table to convert tags to bit values, used for MSTRING type */
+@@ -855,19 +855,24 @@
+ 
+ /* Translate ASN1 content octets into a structure */
+ 
+-static int asn1_ex_c2i(ASN1_VALUE **pval, const unsigned char *cont, int len,
++static int asn1_ex_c2i(ASN1_VALUE **pval, const unsigned char *cont, long len,
+     int utype, char *free_cont, const ASN1_ITEM *it)
+ {
+     ASN1_VALUE **opval = NULL;
+     ASN1_STRING *stmp;
+     ASN1_TYPE *typ = NULL;
+     int ret = 0;
++    int ilen = (int)len;
+     const ASN1_PRIMITIVE_FUNCS *pf;
+     ASN1_INTEGER **tint;
+     pf = it->funcs;
+ 
+-    if (pf && pf->prim_c2i)
+-        return pf->prim_c2i(pval, cont, len, utype, free_cont, it);
++    if (pf && pf->prim_c2i) {
++        if (len == (long)ilen)
++            return pf->prim_c2i(pval, cont, ilen, utype, free_cont, it);
++        ERR_raise(ERR_LIB_ASN1, ASN1_R_TOO_LONG);
++        return 0;
++    }
+     /* If ANY type clear type and set pointer to internal value */
+     if (it->utype == V_ASN1_ANY) {
+         if (*pval == NULL) {
+@@ -885,7 +890,8 @@
+     }
+     switch (utype) {
+     case V_ASN1_OBJECT:
+-        if (!ossl_c2i_ASN1_OBJECT((ASN1_OBJECT **)pval, &cont, len))
++        if (len != (long)ilen
++            || !ossl_c2i_ASN1_OBJECT((ASN1_OBJECT **)pval, &cont, ilen))
+             goto err;
+         break;
+ 
+@@ -940,6 +946,10 @@
+     case V_ASN1_SET:
+     case V_ASN1_SEQUENCE:
+     default:
++        if (len != (long)ilen) {
++            ERR_raise(ERR_LIB_ASN1, ASN1_R_TOO_LONG);
++            goto err;
++        }
+         if (utype == V_ASN1_BMPSTRING && (len & 1)) {
+             ERR_raise(ERR_LIB_ASN1, ASN1_R_BMPSTRING_IS_WRONG_LENGTH);
+             goto err;
+@@ -970,10 +980,10 @@
+         }
+         /* If we've already allocated a buffer use it */
+         if (*free_cont) {
+-            ASN1_STRING_set0(stmp, (unsigned char *)cont /* UGLY CAST! */, len);
++            ASN1_STRING_set0(stmp, (unsigned char *)cont /* UGLY CAST! */, ilen);
+             *free_cont = 0;
+         } else {
+-            if (!ASN1_STRING_set(stmp, cont, len)) {
++            if (!ASN1_STRING_set(stmp, cont, ilen)) {
+                 ERR_raise(ERR_LIB_ASN1, ERR_R_ASN1_LIB);
+                 ASN1_STRING_free(stmp);
+                 *pval = NULL;
+--- crypto/openssl/crypto/cmp/cmp_genm.c.orig
++++ crypto/openssl/crypto/cmp/cmp_genm.c
+@@ -202,7 +202,7 @@
+         for (i = 0; i < sk_X509_num(trust); i++) {
+             issuer = sk_X509_value(trust, i);
+             if ((*check_issued)(store_ctx, cert, issuer)) {
+-                if (X509_add_cert(chain, cert, X509_ADD_FLAG_UP_REF))
++                if (X509_add_cert(chain, issuer, X509_ADD_FLAG_UP_REF))
+                     ok = 1;
+                 break;
+             }
+@@ -235,6 +235,7 @@
+     if ((csc = X509_STORE_CTX_new_ex(libctx, propq)) == NULL
+         || !X509_STORE_CTX_init(csc, ts, target, untrusted))
+         goto err;
++    X509_STORE_CTX_set_flags(csc, X509_V_FLAG_CHECK_SS_SIGNATURE);
+     X509_STORE_CTX_set_verify_cb(csc, selfsigned_verify_cb);
+     ok = X509_verify_cert(csc) > 0;
+ 
+@@ -253,7 +254,8 @@
+     int res = 0;
+ 
+     if (trusted != NULL) {
+-        X509_VERIFY_PARAM *vpm = X509_STORE_get0_param(ts);
++        X509_VERIFY_PARAM *vpm = (ts == NULL) ? NULL
++                                              : X509_STORE_get0_param(ts);
+ 
+         if ((ts = X509_STORE_new()) == NULL)
+             return 0;
+--- crypto/openssl/crypto/cms/cms_enc.c.orig
++++ crypto/openssl/crypto/cms/cms_enc.c
+@@ -109,13 +109,15 @@
+                 goto err;
+             }
+             piv = aparams.iv;
+-            if (ec->taglen > 0
+-                && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG,
+-                       ec->taglen, ec->tag)
+-                    <= 0) {
++
++            if (ec->taglen < 4 || ec->taglen > 16
++                || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, (int)ec->taglen, ec->tag) <= 0) {
+                 ERR_raise(ERR_LIB_CMS, CMS_R_CIPHER_AEAD_SET_TAG_ERROR);
+                 goto err;
+             }
++        } else if (auth) {
++            ERR_raise(ERR_LIB_CMS, CMS_R_UNSUPPORTED_CONTENT_ENCRYPTION_ALGORITHM);
++            goto err;
+         }
+     }
+     len = EVP_CIPHER_CTX_get_key_length(ctx);
+--- crypto/openssl/crypto/cms/cms_env.c.orig
++++ crypto/openssl/crypto/cms/cms_env.c
+@@ -619,13 +619,6 @@
+     if (!ossl_cms_env_asn1_ctrl(ri, 1))
+         goto err;
+ 
+-    if (EVP_PKEY_is_a(pkey, "RSA"))
+-        /* upper layer CMS code incorrectly assumes that a successful RSA
+-         * decryption means that the key matches ciphertext (which never
+-         * was the case, implicit rejection or not), so to make it work
+-         * disable implicit rejection for RSA keys */
+-        EVP_PKEY_CTX_ctrl_str(ktri->pctx, "rsa_pkcs1_implicit_rejection", "0");
+-
+     if (evp_pkey_decrypt_alloc(ktri->pctx, &ek, &eklen, fixlen,
+             ktri->encryptedKey->data,
+             ktri->encryptedKey->length)
+--- crypto/openssl/crypto/cms/cms_pwri.c.orig
++++ crypto/openssl/crypto/cms/cms_pwri.c
+@@ -200,18 +200,18 @@
+     const unsigned char *in, size_t inlen,
+     EVP_CIPHER_CTX *ctx)
+ {
+-    size_t blocklen = EVP_CIPHER_CTX_get_block_size(ctx);
++    int blocklen = EVP_CIPHER_CTX_get_block_size(ctx);
+     unsigned char *tmp;
+     int outl, rv = 0;
+ 
+-    if (blocklen == 0)
++    if (blocklen < 4)
+         return 0;
+ 
+-    if (inlen < 2 * blocklen) {
++    if (inlen < 2 * (size_t)blocklen) {
+         /* too small */
+         return 0;
+     }
+-    if (inlen % blocklen) {
++    if (inlen > INT_MAX || inlen % blocklen) {
+         /* Invalid size */
+         return 0;
+     }
+@@ -367,6 +367,11 @@
+ 
+     /* Finish password based key derivation to setup key in "ctx" */
+ 
++    if (algtmp == NULL) {
++        ERR_raise_data(ERR_LIB_CMS, CMS_R_INVALID_KEY_ENCRYPTION_PARAMETER,
++            "Missing KeyDerivationAlgorithm");
++        goto err;
++    }
+     if (!EVP_PBE_CipherInit_ex(algtmp->algorithm,
+             (char *)pwri->pass, (int)pwri->passlen,
+             algtmp->parameter, kekctx, en_de,
+--- crypto/openssl/crypto/crmf/crmf_lib.c.orig
++++ crypto/openssl/crypto/crmf/crmf_lib.c
+@@ -766,6 +766,7 @@
+     EVP_CIPHER *cipher = NULL; /* used cipher */
+     int cikeysize = 0; /* key size from cipher */
+     unsigned char *iv = NULL; /* initial vector for symmetric encryption */
++    int iv_len; /* iv length */
+     unsigned char *out = NULL; /* decryption output buffer */
+     int n, ret = 0;
+     EVP_PKEY_CTX *pkctx = NULL; /* private key context */
+@@ -820,11 +821,12 @@
+     } else {
+         goto end;
+     }
+-    if ((iv = OPENSSL_malloc(EVP_CIPHER_get_iv_length(cipher))) == NULL)
++    iv_len = EVP_CIPHER_get_iv_length(cipher);
++    if ((iv = OPENSSL_malloc(iv_len)) == NULL)
+         goto end;
+-    if (ASN1_TYPE_get_octetstring(enc->symmAlg->parameter, iv,
+-            EVP_CIPHER_get_iv_length(cipher))
+-        != EVP_CIPHER_get_iv_length(cipher)) {
++    if (enc->symmAlg->parameter == NULL
++        || ASN1_TYPE_get_octetstring(enc->symmAlg->parameter, iv, iv_len)
++            != iv_len) {
+         ERR_raise(ERR_LIB_CRMF, CRMF_R_MALFORMED_IV);
+         goto end;
+     }
+--- crypto/openssl/crypto/pkcs12/p12_mutl.c.orig
++++ crypto/openssl/crypto/pkcs12/p12_mutl.c
+@@ -144,11 +144,13 @@
+     }
+     pbkdf2_salt = pbkdf2_param->salt->value.octet_string;
+ 
+-    /* RFC 9579 specifies missing key length as invalid */
++    /* RFC 9879 specifies missing key length as invalid */
+     if (pbkdf2_param->keylength != NULL)
+         keylen = ASN1_INTEGER_get(pbkdf2_param->keylength);
+-    if (keylen <= 0 || keylen > EVP_MAX_MD_SIZE) {
+-        ERR_raise(ERR_LIB_PKCS12, PKCS12_R_PARSE_ERROR);
++    /* RFC 9879 specifies too short key length as untrustworthy too */
++    if (keylen < 20 || keylen > EVP_MAX_MD_SIZE) {
++        ERR_raise_data(ERR_LIB_PKCS12, PKCS12_R_PARSE_ERROR,
++            "Invalid Key length (%d is not in the range 20..64)", keylen);
+         goto err;
+     }
+ 
+--- crypto/openssl/crypto/pkcs7/pk7_doit.c.orig
++++ crypto/openssl/crypto/pkcs7/pk7_doit.c
+@@ -203,13 +203,6 @@
+     if (EVP_PKEY_decrypt_init(pctx) <= 0)
+         goto err;
+ 
+-    if (EVP_PKEY_is_a(pkey, "RSA"))
+-        /* upper layer pkcs7 code incorrectly assumes that a successful RSA
+-         * decryption means that the key matches ciphertext (which never
+-         * was the case, implicit rejection or not), so to make it work
+-         * disable implicit rejection for RSA keys */
+-        EVP_PKEY_CTX_ctrl_str(pctx, "rsa_pkcs1_implicit_rejection", "0");
+-
+     ret = evp_pkey_decrypt_alloc(pctx, &ek, &eklen, fixlen,
+         ri->enc_key->data, ri->enc_key->length);
+     if (ret <= 0)
+--- crypto/openssl/crypto/pkcs7/pk7_smime.c.orig
++++ crypto/openssl/crypto/pkcs7/pk7_smime.c
+@@ -222,6 +222,7 @@
+     int i, j = 0, k, ret = 0;
+     BIO *p7bio = NULL;
+     BIO *tmpout = NULL;
++    BIO *next = NULL;
+     const PKCS7_CTX *p7_ctx;
+ 
+     if (p7 == NULL) {
+@@ -352,9 +353,11 @@
+         BIO_free(tmpout);
+     X509_STORE_CTX_free(cert_ctx);
+     OPENSSL_free(buf);
+-    if (indata != NULL)
+-        BIO_pop(p7bio);
+-    BIO_free_all(p7bio);
++    while (p7bio != NULL && p7bio != indata) {
++        next = BIO_pop(p7bio);
++        BIO_free(p7bio);
++        p7bio = next;
++    }
+     sk_X509_free(signers);
+     sk_X509_free(untrusted);
+     return ret;
+--- crypto/openssl/doc/man3/CMS_decrypt.pod.orig
++++ crypto/openssl/doc/man3/CMS_decrypt.pod
+@@ -68,7 +68,7 @@
+ recipient encrypted key can be decrypted B<without> generating a random
+ content encryption key. Applications should use this flag with
+ B<extreme caution> especially in automated gateways as it can leave them
+-open to attack.
++open to attack. See L<EVP_PKEY_decrypt(3)> for more details.
+ 
+ It is possible to determine the correct recipient key by other means (for
+ example looking them up in a database) and setting them in the CMS structure
+@@ -103,7 +103,7 @@
+ 
+ =head1 SEE ALSO
+ 
+-L<ERR_get_error(3)>, L<CMS_encrypt(3)>
++L<ERR_get_error(3)>, L<CMS_encrypt(3)>, L<EVP_PKEY_decrypt(3)>
+ 
+ =head1 HISTORY
+ 
+--- crypto/openssl/doc/man3/PKCS7_decrypt.pod.orig
++++ crypto/openssl/doc/man3/PKCS7_decrypt.pod
+@@ -22,6 +22,14 @@
+ Although the recipients certificate is not needed to decrypt the data it is needed
+ to locate the appropriate (of possible several) recipients in the PKCS#7 structure.
+ 
++When RSA PKCS#1 v1.5 Key Transport is in use, the invoked EVP_PKEY_decrypt()
++will use implicit rejection mechanism. It always returns the result of RSA
++decryption of the symmetric key to avoid Marvin attack. This result is
++deterministic and can happen to match the symmetric cipher used for the content
++encryption. In case when the certificate is not provided, the last
++RecipientInfo producing the key looking valid will be used. It may cause
++getting garbage content on decryption.
++
+ The following flags can be passed in the B<flags> parameter.
+ 
+ If the B<PKCS7_TEXT> flag is set MIME headers for type B<text/plain> are deleted
+@@ -43,7 +51,7 @@
+ 
+ =head1 SEE ALSO
+ 
+-L<ERR_get_error(3)>, L<PKCS7_encrypt(3)>
++L<ERR_get_error(3)>, L<PKCS7_encrypt(3)>, L<EVP_PKEY_decrypt(3)>
+ 
+ =head1 COPYRIGHT
+ 
+--- crypto/openssl/include/internal/quic_cfq.h.orig
++++ crypto/openssl/include/internal/quic_cfq.h
+@@ -149,6 +149,7 @@
+ QUIC_CFQ_ITEM *ossl_quic_cfq_item_get_priority_next(const QUIC_CFQ_ITEM *item,
+     uint32_t pn_space);
+ 
++int ossl_quic_cfq_discard_unreliable(QUIC_CFQ *cfq, QUIC_CFQ_ITEM *item);
+ #endif
+ 
+ #endif
+--- crypto/openssl/include/internal/quic_channel.h.orig
++++ crypto/openssl/include/internal/quic_channel.h
+@@ -468,6 +468,7 @@
+     const QUIC_CONN_ID *scid, const QUIC_CONN_ID *dcid,
+     const QUIC_CONN_ID *odcid);
+ 
++void ossl_ch_reset_rx_state(QUIC_CHANNEL *ch);
+ #endif
+ 
+ #endif
+--- crypto/openssl/include/internal/quic_fifd.h.orig
++++ crypto/openssl/include/internal/quic_fifd.h
+@@ -83,6 +83,7 @@
+ void ossl_quic_fifd_set_qlog_cb(QUIC_FIFD *fifd, QLOG *(*get_qlog_cb)(void *arg),
+     void *arg);
+ 
++void ossl_quic_fifd_pkt_discard_unreliable(QUIC_FIFD *fifd, QUIC_TXPIM_PKT *tpkt);
+ #endif
+ 
+ #endif
+--- crypto/openssl/providers/implementations/ciphers/cipher_aes_gcm_siv_hw.c.orig
++++ crypto/openssl/providers/implementations/ciphers/cipher_aes_gcm_siv_hw.c
+@@ -58,6 +58,9 @@
+     memset(&data, 0, sizeof(data));
+     memcpy(&data.block[sizeof(data.counter)], ctx->nonce, NONCE_SIZE);
+ 
++    ctx->generated_tag = 0;
++    memset(ctx->tag, 0, TAG_SIZE);
++
+     /* msg_auth_key is always 16 bytes in size, regardless of AES128/AES256 */
+     /* counter is stored little-endian */
+     for (i = 0; i < BLOCK_SIZE; i += 8) {
+@@ -134,17 +137,6 @@
+     return 1;
+ }
+ 
+-static int aes_gcm_siv_finish(PROV_AES_GCM_SIV_CTX *ctx)
+-{
+-    int ret = 0;
+-
+-    if (ctx->enc)
+-        return ctx->generated_tag;
+-    ret = !CRYPTO_memcmp(ctx->tag, ctx->user_tag, sizeof(ctx->tag));
+-    ret &= ctx->have_user_tag;
+-    return ret;
+-}
+-
+ static int aes_gcm_siv_encrypt(PROV_AES_GCM_SIV_CTX *ctx, const unsigned char *in,
+     unsigned char *out, size_t len)
+ {
+@@ -271,6 +263,19 @@
+     return !error;
+ }
+ 
++static int aes_gcm_siv_finish(PROV_AES_GCM_SIV_CTX *ctx)
++{
++    int ret = 0;
++
++    if (ctx->enc)
++        return ctx->generated_tag;
++    if (!ctx->generated_tag)
++        aes_gcm_siv_decrypt(ctx, NULL, NULL, 0);
++    ret = !CRYPTO_memcmp(ctx->tag, ctx->user_tag, sizeof(ctx->tag));
++    ret &= ctx->have_user_tag;
++    return ret;
++}
++
+ static int aes_gcm_siv_cipher(void *vctx, unsigned char *out,
+     const unsigned char *in, size_t len)
+ {
+--- crypto/openssl/providers/implementations/ciphers/cipher_aes_ocb.c.orig
++++ crypto/openssl/providers/implementations/ciphers/cipher_aes_ocb.c
+@@ -514,6 +514,19 @@
+         return 0;
+     }
+ 
++    /*
++     * Mirror the streaming handler: refuse if the key has not been set,
++     * and push the buffered IV into the OCB context before any data is
++     * processed.  Without this, CRYPTO_ocb128_encrypt/decrypt runs with
++     * Offset_0 = 0 regardless of the caller's IV -- catastrophic
++     * (key, nonce) reuse, and a subsequent EVP_*Final_ex() emits a tag
++     * that is a function of (key, iv) only.
++     */
++    if (!ctx->key_set || !update_iv(ctx)) {
++        ERR_raise(ERR_LIB_PROV, PROV_R_CIPHER_OPERATION_FAILED);
++        return 0;
++    }
++
+     if (!aes_generic_ocb_cipher(ctx, in, out, inl)) {
+         ERR_raise(ERR_LIB_PROV, PROV_R_CIPHER_OPERATION_FAILED);
+         return 0;
+--- crypto/openssl/providers/implementations/ciphers/cipher_aes_siv.c.orig
++++ crypto/openssl/providers/implementations/ciphers/cipher_aes_siv.c
+@@ -192,6 +192,7 @@
+     PROV_AES_SIV_CTX *ctx = (PROV_AES_SIV_CTX *)vctx;
+     const OSSL_PARAM *p;
+     unsigned int speed = 0;
++    SIV128_CONTEXT *sctx = &ctx->siv;
+ 
+     if (ossl_param_is_empty(params))
+         return 1;
+@@ -226,6 +227,8 @@
+         if (keylen != ctx->keylen)
+             return 0;
+     }
++    sctx->final_ret = -1;
++
+     return 1;
+ }
+ 
+--- crypto/openssl/providers/implementations/exchange/dh_exch.c.orig
++++ crypto/openssl/providers/implementations/exchange/dh_exch.c
+@@ -146,12 +146,15 @@
+ static int dh_match_params(DH *priv, DH *peer)
+ {
+     int ret;
++    int ignore_q = 1;
+     FFC_PARAMS *dhparams_priv = ossl_dh_get0_params(priv);
+     FFC_PARAMS *dhparams_peer = ossl_dh_get0_params(peer);
+ 
++    if (dhparams_priv != NULL && dhparams_priv->q != NULL)
++        ignore_q = 0;
+     ret = dhparams_priv != NULL
+         && dhparams_peer != NULL
+-        && ossl_ffc_params_cmp(dhparams_priv, dhparams_peer, 1);
++        && ossl_ffc_params_cmp(dhparams_priv, dhparams_peer, ignore_q);
+     if (!ret)
+         ERR_raise(ERR_LIB_PROV, PROV_R_MISMATCHING_DOMAIN_PARAMETERS);
+     return ret;
+--- crypto/openssl/ssl/quic/quic_cfq.c.orig
++++ crypto/openssl/ssl/quic/quic_cfq.c
+@@ -7,6 +7,7 @@
+  * https://www.openssl.org/source/license.html
+  */
+ 
++#include "internal/quic_channel.h"
+ #include "internal/quic_cfq.h"
+ #include "internal/numbers.h"
+ 
+@@ -307,6 +308,20 @@
+     }
+ }
+ 
++int ossl_quic_cfq_discard_unreliable(QUIC_CFQ *cfq, QUIC_CFQ_ITEM *item)
++{
++    int discarded;
++
++    if (ossl_quic_cfq_item_is_unreliable(item)) {
++        ossl_quic_cfq_release(cfq, item);
++        discarded = 1;
++    } else {
++        discarded = 0;
++    }
++
++    return discarded;
++}
++
+ /*
+  * Releases a CFQ item. The item may be in either state (NEW or TX) prior to the
+  * call. The QUIC_CFQ_ITEM pointer must not be used following this call.
+--- crypto/openssl/ssl/quic/quic_channel.c.orig
++++ crypto/openssl/ssl/quic/quic_channel.c
+@@ -2213,6 +2213,12 @@
+         "forgery limit");
+ }
+ 
++void ossl_ch_reset_rx_state(QUIC_CHANNEL *ch)
++{
++    ch->did_crypto_frame = 0;
++    ch->seen_path_challenge = 0;
++}
++
+ /* Process queued incoming packets and handle frames, if any. */
+ static int ch_rx(QUIC_CHANNEL *ch, int channel_only, int *notify_other_threads)
+ {
+--- crypto/openssl/ssl/quic/quic_channel_local.h.orig
++++ crypto/openssl/ssl/quic/quic_channel_local.h
+@@ -12,6 +12,28 @@
+ #include "internal/quic_stream_map.h"
+ #include "internal/quic_tls.h"
+ 
++/*
++ * This is a part of PATH_CHALLENGE flood [1] mitigation. This limits the
++ * number of PATH_CHALLENGE frames  QUIC stack is willing to process for
++ * connection. Local QUIC stack creates PATH_RESPONSE frame for PATH_CHALLENGE
++ * frame it receives from remote peer. The response frame is put Control Frame
++ * Queue waiting to be dispatched. The PATH_RESPONSE frame is removed from CFQ
++ * after it is dispatched. The QUIC_PATH_RESPONSE_QLEN limits the number of
++ * PATH_RESPONSE frames waiting to be dispatched. No new PATH_RESPONSE frames
++ * are inserted into CFQ if queue limit is exceeded.
++ *
++ * QUIC implementations use different limits for PATH_RESPONSE queue lengths:
++ *    quic-go defines maxPathResponses as 256
++ *    quiche from cloadflare sets DEFAULT_MAX_PATH_CHALLENGE_RX_QUEUE_LEN to 3
++ *    t-quic from tencent chooses MAX_PATH_CHALS_RECV to be 8
++ *
++ * OpenSSL here introduces QUIC_PATH_RESPONSE_QLEN as 32.
++ *
++ * [1] https://www.ietf.org/archive/id/draft-chen-quic-logical-vuln-mitigations-00.txt
++ *     (section 4.2)
++ */
++#define QUIC_PATH_RESPONSE_QLEN 32
++
+ /*
+  * QUIC Channel Structure
+  * ======================
+@@ -457,6 +479,18 @@
+ 
+     /* Has qlog been requested? */
+     unsigned int is_tserver_ch : 1;
++    /*
++     * RFC 9000 Section 9.2.1 says:
++     *      However, an endpoint SHOULD NOT send multiple
++     *      PATH_CHALLENGE frames in a single packet.
++     * The counter here allows us to detect multiple presence
++     * of PATH_CHALLENGE frame in packet. We process only the
++     * first PATH_CHALLENGE frame found in packet. Remaining PATH_CHALLENGE
++     * frames are ignored.
++     * seen_path_challenge flag is always reset before
++     * ossl_quic_handle_frames() gets called.
++     */
++    unsigned int seen_path_challenge : 1;
+ 
+     /* Saved error stack in case permanent error was encountered */
+     ERR_STATE *err_state;
+@@ -467,6 +501,11 @@
+ 
+     /* Title for qlog purposes. We own this copy. */
+     char *qlog_title;
++    /*
++     * number of path responses waiting to be dispatched
++     * from control frame queue (CFQ)
++     */
++    unsigned int path_response_limit;
+ };
+ 
+ #endif
+--- crypto/openssl/ssl/quic/quic_fifd.c.orig
++++ crypto/openssl/ssl/quic/quic_fifd.c
+@@ -310,3 +310,46 @@
+     fifd->get_qlog_cb = get_qlog_cb;
+     fifd->get_qlog_cb_arg = get_qlog_cb_arg;
+ }
++
++static void txpim_pkt_remove_cfq_item(QUIC_TXPIM_PKT *pkt, QUIC_CFQ_ITEM *cfq_item)
++{
++    QUIC_CFQ_ITEM *prev = cfq_item->pkt_prev;
++
++    if (prev != NULL) {
++        prev->pkt_next = cfq_item->pkt_next;
++    } else {
++        pkt->retx_head = cfq_item->pkt_next;
++    }
++
++    if (cfq_item->pkt_next != NULL)
++        cfq_item->pkt_next->pkt_prev = prev;
++
++    cfq_item->pkt_prev = NULL;
++    cfq_item->pkt_next = NULL;
++}
++
++void ossl_quic_fifd_pkt_discard_unreliable(QUIC_FIFD *fifd, QUIC_TXPIM_PKT *pkt)
++{
++    QUIC_CFQ_ITEM *cfq_item, *cfq_next;
++
++    /*
++     * The packet has been written to network. We can discard frames we don't
++     * retransmit when loss is detected.
++     */
++    cfq_item = pkt->retx_head;
++    while (cfq_item != NULL) {
++        /*
++         * Discarded items are moved to free list. If item
++         * got moved to free list we must also remove it from
++         * cfq list kept in pkt, so ACKM does not find it when
++         * receives an ACK for pkt.
++         */
++        if (ossl_quic_cfq_discard_unreliable(fifd->cfq, cfq_item)) {
++            cfq_next = cfq_item->pkt_next;
++            txpim_pkt_remove_cfq_item(pkt, cfq_item);
++            cfq_item = cfq_next;
++        } else {
++            cfq_item = cfq_item->pkt_next;
++        }
++    }
++}
+--- crypto/openssl/ssl/quic/quic_port.c.orig
++++ crypto/openssl/ssl/quic/quic_port.c
+@@ -1666,8 +1666,10 @@
+          * forget qrx so channel can create a new one
+          * with valid initial encryption level keys.
+          */
+-        qrx_src = qrx;
+-        qrx = NULL;
++        if (qrx != NULL) {
++            qrx_src = qrx;
++            qrx = NULL;
++        }
+     }
+ 
+     port_bind_channel(port, &e->peer, &scid, &hdr.dst_conn_id,
+--- crypto/openssl/ssl/quic/quic_rx_depack.c.orig
++++ crypto/openssl/ssl/quic/quic_rx_depack.c
+@@ -931,6 +931,12 @@
+ 
+ static void free_path_response(unsigned char *buf, size_t buf_len, void *arg)
+ {
++    QUIC_CHANNEL *ch = (QUIC_CHANNEL *)arg;
++
++    assert(ch->path_response_limit > 0);
++
++    ch->path_response_limit--;
++
+     OPENSSL_free(buf);
+ }
+ 
+@@ -951,33 +957,39 @@
+         return 0;
+     }
+ 
+-    /*
+-     * RFC 9000 s. 8.2.2: On receiving a PATH_CHALLENGE frame, an endpoint MUST
+-     * respond by echoing the data contained in the PATH_CHALLENGE frame in a
+-     * PATH_RESPONSE frame.
+-     *
+-     * TODO(QUIC FUTURE): We should try to avoid allocation here in the future.
+-     */
+-    encoded_len = sizeof(uint64_t) + 1;
+-    if ((encoded = OPENSSL_malloc(encoded_len)) == NULL)
+-        goto err;
++    if (ch->seen_path_challenge == 0
++        && ch->path_response_limit < QUIC_PATH_RESPONSE_QLEN) {
++        /*
++         * RFC 9000 s. 8.2.2: On receiving a PATH_CHALLENGE frame, an endpoint
++         * MUST respond by echoing the data contained in the PATH_CHALLENGE
++         * frame in a PATH_RESPONSE frame.
++         *
++         * TODO(QUIC FUTURE): We should try to avoid allocation here in the
++         * future.
++         */
++        encoded_len = sizeof(uint64_t) + 1;
++        if ((encoded = OPENSSL_malloc(encoded_len)) == NULL)
++            goto err;
+ 
+-    if (!WPACKET_init_static_len(&wpkt, encoded, encoded_len, 0))
+-        goto err;
++        if (!WPACKET_init_static_len(&wpkt, encoded, encoded_len, 0))
++            goto err;
+ 
+-    if (!ossl_quic_wire_encode_frame_path_response(&wpkt, frame_data)) {
+-        WPACKET_cleanup(&wpkt);
+-        goto err;
+-    }
++        if (!ossl_quic_wire_encode_frame_path_response(&wpkt, frame_data)) {
++            WPACKET_cleanup(&wpkt);
++            goto err;
++        }
+ 
+-    WPACKET_finish(&wpkt);
++        WPACKET_finish(&wpkt);
+ 
+-    if (!ossl_quic_cfq_add_frame(ch->cfq, 0, QUIC_PN_SPACE_APP,
+-            OSSL_QUIC_FRAME_TYPE_PATH_RESPONSE,
+-            QUIC_CFQ_ITEM_FLAG_UNRELIABLE,
+-            encoded, encoded_len,
+-            free_path_response, NULL))
+-        goto err;
++        if (!ossl_quic_cfq_add_frame(ch->cfq, 0, QUIC_PN_SPACE_APP,
++                OSSL_QUIC_FRAME_TYPE_PATH_RESPONSE,
++                QUIC_CFQ_ITEM_FLAG_UNRELIABLE,
++                encoded, encoded_len,
++                free_path_response, ch))
++            goto err;
++        ch->seen_path_challenge = 1;
++        ch->path_response_limit++;
++    }
+ 
+     return 1;
+ 
+@@ -1432,7 +1444,7 @@
+     if (ch == NULL)
+         return 0;
+ 
+-    ch->did_crypto_frame = 0;
++    ossl_ch_reset_rx_state(ch);
+ 
+     /* Initialize |ackm_data| (and reinitialize |ok|)*/
+     memset(&ackm_data, 0, sizeof(ackm_data));
+--- crypto/openssl/ssl/quic/quic_txp.c.orig
++++ crypto/openssl/ssl/quic/quic_txp.c
+@@ -3133,6 +3133,8 @@
+             --probe_info->pto[pn_space];
+     }
+ 
++    ossl_quic_fifd_pkt_discard_unreliable(&txp->fifd, tpkt);
++
+     return rc;
+ }
+ 
+--- crypto/openssl/test/cmsapitest.c.orig
++++ crypto/openssl/test/cmsapitest.c
+@@ -21,6 +21,7 @@
+ static EVP_PKEY *privkey = NULL;
+ static char *derin = NULL;
+ static char *too_long_iv_cms_in = NULL;
++static char *pwri_kek_oob_der_in = NULL;
+ 
+ static int test_encrypt_decrypt(const EVP_CIPHER *cipher)
+ {
+@@ -512,7 +513,48 @@
+     return ret;
+ }
+ 
+-OPT_TEST_DECLARE_USAGE("certfile privkeyfile derfile\n")
++/*
++ * CMS EnvelopedData with a single PasswordRecipientInfo using
++ * id-alg-PWRI-KEK and an AES-128-CFB key encryption cipher
++ * (1-byte effective block size).  The encryptedKey OCTET STRING is
++ * only two bytes long, so the wrapped key buffer is shorter than
++ * the seven octets read by the check-byte test in kek_unwrap_key().
++ * Prior to CVE-2026-9076 this triggered an out-of-bounds heap read;
++ * CMS_decrypt() must now fail cleanly.
++ */
++static int test_pwri_kek_unwrap_short_encrypted_key(void)
++{
++    BIO *in = NULL;
++    CMS_ContentInfo *cms = NULL;
++    unsigned long err = 0;
++    int ret = 0;
++
++    if (!TEST_ptr(in = BIO_new_file(pwri_kek_oob_der_in, "rb"))
++        || !TEST_ptr(cms = d2i_CMS_bio(in, NULL)))
++        goto end;
++
++    /*
++     * The unwrap is attempted eagerly inside CMS_decrypt_set1_password().
++     * It must fail cleanly (no OOB read) and report CMS_R_UNWRAP_FAILURE.
++     */
++    if (!TEST_false(CMS_decrypt_set1_password(cms,
++            (unsigned char *)"password", -1)))
++        goto end;
++
++    err = ERR_peek_last_error();
++    if (!TEST_int_eq(ERR_GET_LIB(err), ERR_LIB_CMS)
++        || !TEST_int_eq(ERR_GET_REASON(err), CMS_R_UNWRAP_FAILURE))
++        goto end;
++
++    ERR_clear_error();
++    ret = 1;
++end:
++    CMS_ContentInfo_free(cms);
++    BIO_free(in);
++    return ret;
++}
++
++OPT_TEST_DECLARE_USAGE("certfile privkeyfile derfile tooLongIVpem pwriKekOobDer\n")
+ 
+ int setup_tests(void)
+ {
+@@ -527,7 +569,8 @@
+     if (!TEST_ptr(certin = test_get_argument(0))
+         || !TEST_ptr(privkeyin = test_get_argument(1))
+         || !TEST_ptr(derin = test_get_argument(2))
+-        || !TEST_ptr(too_long_iv_cms_in = test_get_argument(3)))
++        || !TEST_ptr(too_long_iv_cms_in = test_get_argument(3))
++        || !TEST_ptr(pwri_kek_oob_der_in = test_get_argument(4)))
+         return 0;
+ 
+     certbio = BIO_new_file(certin, "r");
+@@ -564,6 +607,7 @@
+     ADD_TEST(test_encrypted_data_aead);
+     ADD_ALL_TESTS(test_d2i_CMS_decode, 2);
+     ADD_TEST(test_cms_aesgcm_iv_too_long);
++    ADD_TEST(test_pwri_kek_unwrap_short_encrypted_key);
+     return 1;
+ }
+ 
+--- crypto/openssl/test/evp_extra_test.c.orig
++++ crypto/openssl/test/evp_extra_test.c
+@@ -6528,6 +6528,142 @@
+ }
+ #endif
+ 
++static int test_aes_gcm_siv_empty_data(void)
++{
++    unsigned char key[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
++        0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10 };
++    unsigned char nonce[12] = { 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11,
++        0x22, 0x33, 0x44, 0x55 };
++    unsigned char aad[33] = "this AAD was never authenticated";
++    unsigned char zero_tag[16] = { 0 };
++    unsigned char real_tag[16];
++    unsigned char out[16];
++    int outl, ret = 0;
++    EVP_CIPHER_CTX *ctx = NULL;
++    EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-GCM-SIV", NULL);
++
++    if (c == NULL) {
++        return TEST_skip("AES-128-GCM-SIV cipher is not available");
++    }
++
++    /* Compute the CORRECT tag for (key,nonce,aad,pt="") via encrypt */
++    ctx = EVP_CIPHER_CTX_new();
++    if (!TEST_ptr(ctx)
++        || !TEST_true(EVP_EncryptInit_ex2(ctx, c, key, nonce, NULL))
++        || !TEST_true(EVP_EncryptUpdate(ctx, NULL, &outl, aad, sizeof(aad))) /* AAD */
++        || !TEST_true(EVP_EncryptUpdate(ctx, out, &outl, aad, 0)) /* empty PT, out!=NULL */
++        || !TEST_true(EVP_EncryptFinal_ex(ctx, out, &outl))
++        || !TEST_true(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, real_tag)))
++        goto err;
++    EVP_CIPHER_CTX_free(ctx);
++
++    /* SANITY: decrypt with CORRECT tag and an explicit empty-PT Update */
++    ctx = EVP_CIPHER_CTX_new();
++    if (!TEST_ptr(ctx)
++        || !TEST_true(EVP_DecryptInit_ex2(ctx, c, key, nonce, NULL))
++        || !TEST_true(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, real_tag))
++        || !TEST_true(EVP_DecryptUpdate(ctx, NULL, &outl, aad, sizeof(aad)))
++        || !TEST_true(EVP_DecryptUpdate(ctx, out, &outl, aad, 0)) /* force aes_gcm_siv_decrypt(len=0) */
++        || !TEST_true(EVP_DecryptFinal_ex(ctx, out, &outl)))
++        goto err;
++    EVP_CIPHER_CTX_free(ctx);
++
++    /* FORGERY A: AAD only, NO ciphertext Update, ALL-ZERO tag */
++    ctx = EVP_CIPHER_CTX_new();
++    if (!TEST_ptr(ctx)
++        || !TEST_true(EVP_DecryptInit_ex2(ctx, c, key, nonce, NULL))
++        || !TEST_true(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, zero_tag))
++        || !TEST_true(EVP_DecryptUpdate(ctx, NULL, &outl, aad, sizeof(aad))) /* AAD only, out==NULL */
++        || !TEST_false(EVP_DecryptFinal_ex(ctx, out, &outl)))
++        goto err;
++    EVP_CIPHER_CTX_free(ctx);
++
++    /* FORGERY B: no AAD, no Update at all, ALL-ZERO tag */
++    ctx = EVP_CIPHER_CTX_new();
++    if (!TEST_ptr(ctx)
++        || !TEST_true(EVP_DecryptInit_ex2(ctx, c, key, nonce, NULL))
++        || !TEST_true(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, zero_tag))
++        || !TEST_false(EVP_DecryptFinal_ex(ctx, out, &outl)))
++        goto err;
++    EVP_CIPHER_CTX_free(ctx);
++
++    /* CONTROL: AAD only, NO ciphertext Update, CORRECT tag */
++    ctx = EVP_CIPHER_CTX_new();
++    if (!TEST_ptr(ctx)
++        || !TEST_true(EVP_DecryptInit_ex2(ctx, c, key, nonce, NULL))
++        || !TEST_true(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, real_tag))
++        || !TEST_true(EVP_DecryptUpdate(ctx, NULL, &outl, aad, sizeof(aad)))
++        || !TEST_true(EVP_DecryptFinal_ex(ctx, out, &outl)))
++        goto err;
++    EVP_CIPHER_CTX_free(ctx);
++    ctx = NULL;
++
++    ret = 1;
++err:
++    EVP_CIPHER_CTX_free(ctx);
++
++    EVP_CIPHER_free(c);
++    return ret;
++}
++
++/*
++ * AES-SIV reuse-without-rekey:
++ *   msg1: legit non-empty CT, tag verifies, final_ret=0
++ *   msg2: no reinit (or reinit with key=NULL), set forged tag,
++ *         AAD only, DecryptFinal -> does stale final_ret leak through?
++ */
++static int test_aes_siv_ctx_reuse(void)
++{
++    unsigned char key[32] = { 7 }; /* AES-128-SIV => 2*16 */
++    unsigned char pt[9] = "payload!";
++    unsigned char ct[9], tagbuf[16], out[16], zero16[16] = { 0 };
++    unsigned char aad[14] = "forged header";
++    int outl, ret = 0;
++    EVP_CIPHER_CTX *e = NULL, *d = NULL;
++    EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-SIV", NULL);
++
++    if (c == NULL) {
++        return TEST_skip("AES-128-SIV cipher is not available");
++    }
++
++    /* produce a valid (ct,tag) for msg1 */
++    e = EVP_CIPHER_CTX_new();
++    if (!TEST_ptr(e)
++        || !TEST_true(EVP_EncryptInit_ex2(e, c, key, NULL, NULL))
++        || !TEST_true(EVP_EncryptUpdate(e, NULL, &outl, (unsigned char *)"hdr1", 4))
++        || !TEST_true(EVP_EncryptUpdate(e, ct, &outl, pt, sizeof(pt)))
++        || !TEST_true(EVP_EncryptFinal_ex(e, out, &outl))
++        || !TEST_true(EVP_CIPHER_CTX_ctrl(e, EVP_CTRL_AEAD_GET_TAG, 16, tagbuf))) {
++        EVP_CIPHER_CTX_free(e);
++        goto err;
++    }
++    EVP_CIPHER_CTX_free(e);
++
++    /* msg1 decrypt */
++    d = EVP_CIPHER_CTX_new();
++    if (!TEST_ptr(d)
++        || !TEST_true(EVP_DecryptInit_ex2(d, c, key, NULL, NULL))
++        || !TEST_true(EVP_CIPHER_CTX_ctrl(d, EVP_CTRL_AEAD_SET_TAG, 16, tagbuf))
++        || !TEST_true(EVP_DecryptUpdate(d, NULL, &outl, (unsigned char *)"hdr1", 4))
++        || !TEST_true(EVP_DecryptUpdate(d, out, &outl, ct, sizeof(ct)))
++        || !TEST_true(EVP_DecryptFinal_ex(d, out, &outl)))
++        goto err;
++
++    /* msg2 on SAME ctx, reinit with key=NULL => initkey skipped, final_ret should be reset */
++    if (!TEST_true(EVP_DecryptInit_ex2(d, NULL, NULL, NULL, NULL))
++        || !TEST_true(EVP_CIPHER_CTX_ctrl(d, EVP_CTRL_AEAD_SET_TAG, 16, zero16))
++        || !TEST_true(EVP_DecryptUpdate(d, NULL, &outl, aad, sizeof(aad))) /* forged AAD */
++        || !TEST_false(EVP_DecryptFinal_ex(d, out, &outl)))
++        goto err;
++
++    ret = 1;
++
++err:
++    EVP_CIPHER_CTX_free(d);
++    EVP_CIPHER_free(c);
++    return ret;
++}
++
+ static int test_invalid_ctx_for_digest(void)
+ {
+     int ret;
+@@ -6987,6 +7123,10 @@
+     ADD_TEST(test_aes_rc4_keylen_change_cve_2023_5363);
+ #endif
+ 
++    /* Test cases for CVE-2026-45446 */
++    ADD_TEST(test_aes_gcm_siv_empty_data);
++    ADD_TEST(test_aes_siv_ctx_reuse);
++
+     ADD_TEST(test_invalid_ctx_for_digest);
+ 
+     ADD_TEST(test_evp_cipher_negative_length);
+--- crypto/openssl/test/recipes/80-test_cmsapi.t.orig
++++ crypto/openssl/test/recipes/80-test_cmsapi.t
+@@ -19,5 +19,6 @@
+ ok(run(test(["cmsapitest", srctop_file("test", "certs", "servercert.pem"),
+              srctop_file("test", "certs", "serverkey.pem"),
+              srctop_file("test", "recipes", "80-test_cmsapi_data", "encryptedData.der"),
+-             srctop_file("test", "recipes", "80-test_cmsapi_data", "encDataWithTooLongIV.pem")])),
++             srctop_file("test", "recipes", "80-test_cmsapi_data", "encDataWithTooLongIV.pem"),
++             srctop_file("test", "recipes", "80-test_cmsapi_data", "cms_pwri_kek_oob.der")])),
+              "running cmsapitest");
+--- crypto/openssl/test/recipes/80-test_pkcs12.t.orig
++++ crypto/openssl/test/recipes/80-test_pkcs12.t
+@@ -56,7 +56,7 @@
+ 
+ my $no_fips = disabled('fips') || ($ENV{NO_FIPS} // 0);
+ 
+-plan tests => $no_fips ? 53 : 59;
++plan tests => $no_fips ? 55 : 61;
+ 
+ # Test different PKCS#12 formats
+ ok(run(test(["pkcs12_format_test"])), "test pkcs12 formats");
+@@ -205,8 +205,11 @@
+     }
+ }
+ 
+-# Test pbmac1 pkcs12 good files, RFC 9579
+-for my $file ("pbmac1_256_256.good.p12", "pbmac1_512_256.good.p12", "pbmac1_512_512.good.p12")
++# Test pbmac1 pkcs12 good files, RFC 9579, and one extra with shorter key
++# length
++for my $file ("pbmac1_256_256.good.p12", "pbmac1_512_256.good.p12",
++              "pbmac1_512_512.good.p12",
++              "pbmac1_256_256.good-shorter-key-len.p12")
+ {
+     my $path = srctop_file("test", "recipes", "80-test_pkcs12_data", $file);
+     ok(run(app(["openssl", "pkcs12", "-in", $path, "-password", "pass:1234", "-noenc"])),
+@@ -235,12 +238,12 @@
+     }
+ }
+ 
+-# Test pbmac1 pkcs12 bad files, RFC 9579 and CVE-2025-11187
++# Test pbmac1 pkcs12 bad files, RFC 9579, CVE-2025-11187 and CVE-2026-34181
+ for my $file ("pbmac1_256_256.bad-iter.p12", "pbmac1_256_256.bad-salt.p12",
+               "pbmac1_256_256.no-len.p12", "pbmac1_256_256.bad-len.p12",
+               "pbmac1_256_256.bad-salt-type.p12", "pbmac1_256_256.negative-len.p12",
+               "pbmac1_256_256.no-salt.p12", "pbmac1_256_256.very-big-len.p12",
+-              "pbmac1_256_256.zero-len.p12")
++              "pbmac1_256_256.zero-len.p12", "pbmac1_256_256.bad-key-len.p12")
+ {
+     my $path = srctop_file("test", "recipes", "80-test_pkcs12_data", $file);
+     with({ exit_checker => sub { return shift == 1; } },

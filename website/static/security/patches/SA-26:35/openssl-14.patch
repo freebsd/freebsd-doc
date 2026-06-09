@@ -1,0 +1,626 @@
+--- crypto/openssl/crypto/asn1/a_mbstr.c.orig
++++ crypto/openssl/crypto/asn1/a_mbstr.c
+@@ -174,11 +174,27 @@
+         break;
+ 
+     case MBSTRING_BMP:
++        if (nchar > INT_MAX / 2) {
++            ERR_raise(ERR_LIB_ASN1, ASN1_R_STRING_TOO_LONG);
++            if (free_out) {
++                ASN1_STRING_free(dest);
++                *out = NULL;
++            }
++            return -1;
++        }
+         outlen = nchar << 1;
+         cpyfunc = cpy_bmp;
+         break;
+ 
+     case MBSTRING_UNIV:
++        if (nchar > INT_MAX / 4) {
++            ERR_raise(ERR_LIB_ASN1, ASN1_R_STRING_TOO_LONG);
++            if (free_out) {
++                ASN1_STRING_free(dest);
++                *out = NULL;
++            }
++            return -1;
++        }
+         outlen = nchar << 2;
+         cpyfunc = cpy_univ;
+         break;
+@@ -186,8 +202,11 @@
+     case MBSTRING_UTF8:
+         outlen = 0;
+         ret = traverse_string(in, len, inform, out_utf8, &outlen);
+-        if (ret < 0) {
+-            ERR_raise(ERR_LIB_ASN1, ASN1_R_INVALID_UTF8STRING);
++        if (ret < 0) { /* error already raised in out_utf8() */
++            if (free_out) {
++                ASN1_STRING_free(dest);
++                *out = NULL;
++            }
+             return -1;
+         }
+         cpyfunc = cpy_utf8;
+@@ -271,9 +290,15 @@
+     int *outlen, len;
+ 
+     len = UTF8_putc(NULL, -1, value);
+-    if (len <= 0)
++    if (len <= 0) {
++        ERR_raise(ERR_LIB_ASN1, ASN1_R_INVALID_UTF8STRING);
+         return len;
++    }
+     outlen = arg;
++    if (*outlen > INT_MAX - len) {
++        ERR_raise(ERR_LIB_ASN1, ASN1_R_STRING_TOO_LONG);
++        return -1;
++    }
+     *outlen += len;
+     return 1;
+ }
+--- crypto/openssl/crypto/asn1/tasn_dec.c.orig
++++ crypto/openssl/crypto/asn1/tasn_dec.c
+@@ -54,7 +54,7 @@
+     const ASN1_ITEM *it,
+     int tag, int aclass, char opt,
+     ASN1_TLC *ctx);
+-static int asn1_ex_c2i(ASN1_VALUE **pval, const unsigned char *cont, int len,
++static int asn1_ex_c2i(ASN1_VALUE **pval, const unsigned char *cont, long len,
+     int utype, char *free_cont, const ASN1_ITEM *it);
+ 
+ /* Table to convert tags to bit values, used for MSTRING type */
+@@ -855,19 +855,24 @@
+ 
+ /* Translate ASN1 content octets into a structure */
+ 
+-static int asn1_ex_c2i(ASN1_VALUE **pval, const unsigned char *cont, int len,
++static int asn1_ex_c2i(ASN1_VALUE **pval, const unsigned char *cont, long len,
+     int utype, char *free_cont, const ASN1_ITEM *it)
+ {
+     ASN1_VALUE **opval = NULL;
+     ASN1_STRING *stmp;
+     ASN1_TYPE *typ = NULL;
+     int ret = 0;
++    int ilen = (int)len;
+     const ASN1_PRIMITIVE_FUNCS *pf;
+     ASN1_INTEGER **tint;
+     pf = it->funcs;
+ 
+-    if (pf && pf->prim_c2i)
+-        return pf->prim_c2i(pval, cont, len, utype, free_cont, it);
++    if (pf && pf->prim_c2i) {
++        if (len == (long)ilen)
++            return pf->prim_c2i(pval, cont, ilen, utype, free_cont, it);
++        ERR_raise(ERR_LIB_ASN1, ASN1_R_TOO_LONG);
++        return 0;
++    }
+     /* If ANY type clear type and set pointer to internal value */
+     if (it->utype == V_ASN1_ANY) {
+         if (*pval == NULL) {
+@@ -885,7 +890,8 @@
+     }
+     switch (utype) {
+     case V_ASN1_OBJECT:
+-        if (!ossl_c2i_ASN1_OBJECT((ASN1_OBJECT **)pval, &cont, len))
++        if (len != (long)ilen
++            || !ossl_c2i_ASN1_OBJECT((ASN1_OBJECT **)pval, &cont, ilen))
+             goto err;
+         break;
+ 
+@@ -940,6 +946,10 @@
+     case V_ASN1_SET:
+     case V_ASN1_SEQUENCE:
+     default:
++        if (len != (long)ilen) {
++            ERR_raise(ERR_LIB_ASN1, ASN1_R_TOO_LONG);
++            goto err;
++        }
+         if (utype == V_ASN1_BMPSTRING && (len & 1)) {
+             ERR_raise(ERR_LIB_ASN1, ASN1_R_BMPSTRING_IS_WRONG_LENGTH);
+             goto err;
+@@ -964,10 +974,10 @@
+         if (*free_cont) {
+             OPENSSL_free(stmp->data);
+             stmp->data = (unsigned char *)cont; /* UGLY CAST! RL */
+-            stmp->length = len;
++            stmp->length = ilen;
+             *free_cont = 0;
+         } else {
+-            if (!ASN1_STRING_set(stmp, cont, len)) {
++            if (!ASN1_STRING_set(stmp, cont, ilen)) {
+                 ERR_raise(ERR_LIB_ASN1, ERR_R_MALLOC_FAILURE);
+                 ASN1_STRING_free(stmp);
+                 *pval = NULL;
+--- crypto/openssl/crypto/cms/cms_enc.c.orig
++++ crypto/openssl/crypto/cms/cms_enc.c
+@@ -23,7 +23,7 @@
+ /* Return BIO based on EncryptedContentInfo and key */
+ 
+ BIO *ossl_cms_EncryptedContent_init_bio(CMS_EncryptedContentInfo *ec,
+-    const CMS_CTX *cms_ctx)
++    const CMS_CTX *cms_ctx, int auth)
+ {
+     BIO *b;
+     EVP_CIPHER_CTX *ctx;
+@@ -104,14 +104,20 @@
+             goto err;
+         }
+         if ((EVP_CIPHER_get_flags(cipher) & EVP_CIPH_FLAG_AEAD_CIPHER)) {
++            if (!auth) {
++                ERR_raise(ERR_LIB_CMS, CMS_R_CIPHER_AEAD_IN_ENVELOPED_DATA);
++                goto err;
++            }
+             piv = aparams.iv;
+-            if (ec->taglen > 0
+-                && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG,
+-                       ec->taglen, ec->tag)
+-                    <= 0) {
++
++            if (ec->taglen < 4 || ec->taglen > 16
++                || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, (int)ec->taglen, ec->tag) <= 0) {
+                 ERR_raise(ERR_LIB_CMS, CMS_R_CIPHER_AEAD_SET_TAG_ERROR);
+                 goto err;
+             }
++        } else if (auth) {
++            ERR_raise(ERR_LIB_CMS, CMS_R_UNSUPPORTED_CONTENT_ENCRYPTION_ALGORITHM);
++            goto err;
+         }
+     }
+     len = EVP_CIPHER_CTX_get_key_length(ctx);
+@@ -263,5 +269,5 @@
+     if (enc->encryptedContentInfo->cipher && enc->unprotectedAttrs)
+         enc->version = 2;
+     return ossl_cms_EncryptedContent_init_bio(enc->encryptedContentInfo,
+-        ossl_cms_get0_cmsctx(cms));
++        ossl_cms_get0_cmsctx(cms), 0);
+ }
+--- crypto/openssl/crypto/cms/cms_env.c.orig
++++ crypto/openssl/crypto/cms/cms_env.c
+@@ -1099,7 +1099,7 @@
+ {
+     CMS_EncryptedContentInfo *ec = cms->d.envelopedData->encryptedContentInfo;
+     BIO *contentBio = ossl_cms_EncryptedContent_init_bio(ec,
+-        ossl_cms_get0_cmsctx(cms));
++        ossl_cms_get0_cmsctx(cms), 0);
+     EVP_CIPHER_CTX *ctx = NULL;
+ 
+     if (contentBio == NULL)
+@@ -1137,7 +1137,7 @@
+     /* Get BIO first to set up key */
+ 
+     ec = env->encryptedContentInfo;
+-    ret = ossl_cms_EncryptedContent_init_bio(ec, ossl_cms_get0_cmsctx(cms));
++    ret = ossl_cms_EncryptedContent_init_bio(ec, ossl_cms_get0_cmsctx(cms), 0);
+ 
+     /* If error end of processing */
+     if (!ret)
+@@ -1189,7 +1189,7 @@
+         ec->tag = aenv->mac->data;
+         ec->taglen = aenv->mac->length;
+     }
+-    ret = ossl_cms_EncryptedContent_init_bio(ec, ossl_cms_get0_cmsctx(cms));
++    ret = ossl_cms_EncryptedContent_init_bio(ec, ossl_cms_get0_cmsctx(cms), 1);
+ 
+     /* If error or no cipher end of processing */
+     if (ret == NULL || ec->cipher == NULL)
+--- crypto/openssl/crypto/cms/cms_err.c.orig
++++ crypto/openssl/crypto/cms/cms_err.c
+@@ -1,6 +1,6 @@
+ /*
+  * Generated by util/mkerr.pl DO NOT EDIT
+- * Copyright 1995-2025 The OpenSSL Project Authors. All Rights Reserved.
++ * Copyright 1995-2026 The OpenSSL Project Authors. All Rights Reserved.
+  *
+  * Licensed under the Apache License 2.0 (the "License").  You may not use
+  * this file except in compliance with the License.  You can obtain a copy
+@@ -25,6 +25,8 @@
+         "certificate has no keyid" },
+     { ERR_PACK(ERR_LIB_CMS, 0, CMS_R_CERTIFICATE_VERIFY_ERROR),
+         "certificate verify error" },
++    { ERR_PACK(ERR_LIB_CMS, 0, CMS_R_CIPHER_AEAD_IN_ENVELOPED_DATA),
++        "cipher aead in enveloped data" },
+     { ERR_PACK(ERR_LIB_CMS, 0, CMS_R_CIPHER_AEAD_SET_TAG_ERROR),
+         "cipher aead set tag error" },
+     { ERR_PACK(ERR_LIB_CMS, 0, CMS_R_CIPHER_GET_TAG), "cipher get tag" },
+--- crypto/openssl/crypto/cms/cms_local.h.orig
++++ crypto/openssl/crypto/cms/cms_local.h
+@@ -429,7 +429,7 @@
+ int ossl_cms_set1_keyid(ASN1_OCTET_STRING **pkeyid, X509 *cert);
+ 
+ BIO *ossl_cms_EncryptedContent_init_bio(CMS_EncryptedContentInfo *ec,
+-    const CMS_CTX *ctx);
++    const CMS_CTX *ctx, int auth);
+ BIO *ossl_cms_EncryptedData_init_bio(const CMS_ContentInfo *cms);
+ int ossl_cms_EncryptedContent_init(CMS_EncryptedContentInfo *ec,
+     const EVP_CIPHER *cipher,
+--- crypto/openssl/crypto/cms/cms_pwri.c.orig
++++ crypto/openssl/crypto/cms/cms_pwri.c
+@@ -189,14 +189,18 @@
+     const unsigned char *in, size_t inlen,
+     EVP_CIPHER_CTX *ctx)
+ {
+-    size_t blocklen = EVP_CIPHER_CTX_get_block_size(ctx);
++    int blocklen = EVP_CIPHER_CTX_get_block_size(ctx);
+     unsigned char *tmp;
+     int outl, rv = 0;
+-    if (inlen < 2 * blocklen) {
++
++    if (blocklen < 4)
++        return 0;
++
++    if (inlen < 2 * (size_t)blocklen) {
+         /* too small */
+         return 0;
+     }
+-    if (inlen % blocklen) {
++    if (inlen > INT_MAX || inlen % blocklen) {
+         /* Invalid size */
+         return 0;
+     }
+@@ -350,6 +354,11 @@
+ 
+     /* Finish password based key derivation to setup key in "ctx" */
+ 
++    if (algtmp == NULL) {
++        ERR_raise_data(ERR_LIB_CMS, CMS_R_INVALID_KEY_ENCRYPTION_PARAMETER,
++            "Missing KeyDerivationAlgorithm");
++        goto err;
++    }
+     if (!EVP_PBE_CipherInit_ex(algtmp->algorithm,
+             (char *)pwri->pass, (int)pwri->passlen,
+             algtmp->parameter, kekctx, en_de,
+--- crypto/openssl/crypto/err/openssl.txt.orig
++++ crypto/openssl/crypto/err/openssl.txt
+@@ -1,4 +1,4 @@
+-# Copyright 1999-2025 The OpenSSL Project Authors. All Rights Reserved.
++# Copyright 1999-2026 The OpenSSL Project Authors. All Rights Reserved.
+ #
+ # Licensed under the Apache License 2.0 (the "License").  You may not use
+ # this file except in compliance with the License.  You can obtain a copy
+@@ -284,6 +284,7 @@
+ CMS_R_CERTIFICATE_ALREADY_PRESENT:175:certificate already present
+ CMS_R_CERTIFICATE_HAS_NO_KEYID:160:certificate has no keyid
+ CMS_R_CERTIFICATE_VERIFY_ERROR:100:certificate verify error
++CMS_R_CIPHER_AEAD_IN_ENVELOPED_DATA:182:cipher aead in enveloped data
+ CMS_R_CIPHER_AEAD_SET_TAG_ERROR:184:cipher aead set tag error
+ CMS_R_CIPHER_GET_TAG:185:cipher get tag
+ CMS_R_CIPHER_INITIALISATION_ERROR:101:cipher initialisation error
+--- crypto/openssl/crypto/pkcs7/pk7_smime.c.orig
++++ crypto/openssl/crypto/pkcs7/pk7_smime.c
+@@ -218,6 +218,7 @@
+     int i, j = 0, k, ret = 0;
+     BIO *p7bio = NULL;
+     BIO *tmpin = NULL, *tmpout = NULL;
++    BIO *next = NULL;
+     const PKCS7_CTX *p7_ctx;
+ 
+     if (p7 == NULL) {
+@@ -366,11 +367,11 @@
+         BIO_free(tmpout);
+     X509_STORE_CTX_free(cert_ctx);
+     OPENSSL_free(buf);
+-    if (tmpin == indata) {
+-        if (indata)
+-            BIO_pop(p7bio);
++    while (p7bio != NULL && p7bio != indata) {
++        next = BIO_pop(p7bio);
++        BIO_free(p7bio);
++        p7bio = next;
+     }
+-    BIO_free_all(p7bio);
+     sk_X509_free(signers);
+     return ret;
+ }
+--- crypto/openssl/include/crypto/cmserr.h.orig
++++ crypto/openssl/include/crypto/cmserr.h
+@@ -1,6 +1,6 @@
+ /*
+  * Generated by util/mkerr.pl DO NOT EDIT
+- * Copyright 2020-2025 The OpenSSL Project Authors. All Rights Reserved.
++ * Copyright 2020-2026 The OpenSSL Project Authors. All Rights Reserved.
+  *
+  * Licensed under the Apache License 2.0 (the "License").  You may not use
+  * this file except in compliance with the License.  You can obtain a copy
+--- crypto/openssl/include/openssl/cmserr.h.orig
++++ crypto/openssl/include/openssl/cmserr.h
+@@ -1,6 +1,6 @@
+ /*
+  * Generated by util/mkerr.pl DO NOT EDIT
+- * Copyright 1995-2025 The OpenSSL Project Authors. All Rights Reserved.
++ * Copyright 1995-2026 The OpenSSL Project Authors. All Rights Reserved.
+  *
+  * Licensed under the Apache License 2.0 (the "License").  You may not use
+  * this file except in compliance with the License.  You can obtain a copy
+@@ -17,7 +17,6 @@
+ #include <openssl/cryptoerr_legacy.h>
+ 
+ #ifndef OPENSSL_NO_CMS
+-
+ /*
+  * CMS reason codes.
+  */
+@@ -26,6 +25,7 @@
+ #define CMS_R_CERTIFICATE_ALREADY_PRESENT 175
+ #define CMS_R_CERTIFICATE_HAS_NO_KEYID 160
+ #define CMS_R_CERTIFICATE_VERIFY_ERROR 100
++#define CMS_R_CIPHER_AEAD_IN_ENVELOPED_DATA 182
+ #define CMS_R_CIPHER_AEAD_SET_TAG_ERROR 184
+ #define CMS_R_CIPHER_GET_TAG 185
+ #define CMS_R_CIPHER_INITIALISATION_ERROR 101
+--- crypto/openssl/providers/implementations/ciphers/cipher_aes_ocb.c.orig
++++ crypto/openssl/providers/implementations/ciphers/cipher_aes_ocb.c
+@@ -516,6 +516,19 @@
+         return 0;
+     }
+ 
++    /*
++     * Mirror the streaming handler: refuse if the key has not been set,
++     * and push the buffered IV into the OCB context before any data is
++     * processed.  Without this, CRYPTO_ocb128_encrypt/decrypt runs with
++     * Offset_0 = 0 regardless of the caller's IV -- catastrophic
++     * (key, nonce) reuse, and a subsequent EVP_*Final_ex() emits a tag
++     * that is a function of (key, iv) only.
++     */
++    if (!ctx->key_set || !update_iv(ctx)) {
++        ERR_raise(ERR_LIB_PROV, PROV_R_CIPHER_OPERATION_FAILED);
++        return 0;
++    }
++
+     if (!aes_generic_ocb_cipher(ctx, in, out, inl)) {
+         ERR_raise(ERR_LIB_PROV, PROV_R_CIPHER_OPERATION_FAILED);
+         return 0;
+--- crypto/openssl/providers/implementations/ciphers/cipher_aes_siv.c.orig
++++ crypto/openssl/providers/implementations/ciphers/cipher_aes_siv.c
+@@ -203,6 +203,7 @@
+     PROV_AES_SIV_CTX *ctx = (PROV_AES_SIV_CTX *)vctx;
+     const OSSL_PARAM *p;
+     unsigned int speed = 0;
++    SIV128_CONTEXT *sctx = &ctx->siv;
+ 
+     if (params == NULL)
+         return 1;
+@@ -237,6 +238,8 @@
+         if (keylen != ctx->keylen)
+             return 0;
+     }
++    sctx->final_ret = -1;
++
+     return 1;
+ }
+ 
+--- crypto/openssl/providers/implementations/exchange/dh_exch.c.orig
++++ crypto/openssl/providers/implementations/exchange/dh_exch.c
+@@ -113,12 +113,15 @@
+ static int dh_match_params(DH *priv, DH *peer)
+ {
+     int ret;
++    int ignore_q = 1;
+     FFC_PARAMS *dhparams_priv = ossl_dh_get0_params(priv);
+     FFC_PARAMS *dhparams_peer = ossl_dh_get0_params(peer);
+ 
++    if (dhparams_priv != NULL && dhparams_priv->q != NULL)
++        ignore_q = 0;
+     ret = dhparams_priv != NULL
+         && dhparams_peer != NULL
+-        && ossl_ffc_params_cmp(dhparams_priv, dhparams_peer, 1);
++        && ossl_ffc_params_cmp(dhparams_priv, dhparams_peer, ignore_q);
+     if (!ret)
+         ERR_raise(ERR_LIB_PROV, PROV_R_MISMATCHING_DOMAIN_PARAMETERS);
+     return ret;
+--- /dev/null
++++ crypto/openssl/test/cms-msg/enveloped-content-type-for-aes-gcm.pem
+@@ -0,0 +1,7 @@
++-----BEGIN PKCS7-----
++MIAGCSqGSIb3DQEHA6CAMIACAQIxNqI0AgEEMAgEBkMwRkVFMDALBglghkgBZQME
++AQUEGPN0q9rM3neSiY7HIADpnqWym33mRZC4JDCABgkqhkiG9w0BBwEwHgYJYIZI
++AWUDBAEGMBEEDIExQGiHZFSYa0ZBqQIBEKCABGNap+JL1B21Mq7ojKPzVuxtRkg3
++LWt8khnK1EzfmV7e64l5KnTdjq9+gfbwOfbuhTavfBI7VK/ZtpH3HII4fCOe37kV
++mju8/YnYeRq2KcxESmJBySV/veMwxqmHGAw71JyHpg4AAAAAAAAAAAAA
++-----END PKCS7-----
+--- crypto/openssl/test/cmsapitest.c.orig
++++ crypto/openssl/test/cmsapitest.c
+@@ -20,6 +20,7 @@
+ static EVP_PKEY *privkey = NULL;
+ static char *derin = NULL;
+ static char *too_long_iv_cms_in = NULL;
++static char *pwri_kek_oob_der_in = NULL;
+ 
+ static int test_encrypt_decrypt(const EVP_CIPHER *cipher)
+ {
+@@ -45,6 +46,12 @@
+             CMS_TEXT)))
+         goto end;
+ 
++    if (!(EVP_CIPHER_get_flags(cipher) & EVP_CIPH_FLAG_AEAD_CIPHER)
++        && !TEST_ptr(contentbio = CMS_EnvelopedData_decrypt(content->d.envelopedData,
++                         NULL, privkey, cert, NULL,
++                         CMS_TEXT, NULL, NULL)))
++        goto end;
++
+     /* Check we got the message we first started with */
+     if (!TEST_int_eq(BIO_gets(outmsgbio, buf, sizeof(buf)), strlen(msg))
+         || !TEST_int_eq(strcmp(buf, msg), 0))
+@@ -484,7 +491,48 @@
+     return ret;
+ }
+ 
+-OPT_TEST_DECLARE_USAGE("certfile privkeyfile derfile\n")
++/*
++ * CMS EnvelopedData with a single PasswordRecipientInfo using
++ * id-alg-PWRI-KEK and an AES-128-CFB key encryption cipher
++ * (1-byte effective block size).  The encryptedKey OCTET STRING is
++ * only two bytes long, so the wrapped key buffer is shorter than
++ * the seven octets read by the check-byte test in kek_unwrap_key().
++ * Prior to CVE-2026-9076 this triggered an out-of-bounds heap read;
++ * CMS_decrypt() must now fail cleanly.
++ */
++static int test_pwri_kek_unwrap_short_encrypted_key(void)
++{
++    BIO *in = NULL;
++    CMS_ContentInfo *cms = NULL;
++    unsigned long err = 0;
++    int ret = 0;
++
++    if (!TEST_ptr(in = BIO_new_file(pwri_kek_oob_der_in, "rb"))
++        || !TEST_ptr(cms = d2i_CMS_bio(in, NULL)))
++        goto end;
++
++    /*
++     * The unwrap is attempted eagerly inside CMS_decrypt_set1_password().
++     * It must fail cleanly (no OOB read) and report CMS_R_UNWRAP_FAILURE.
++     */
++    if (!TEST_false(CMS_decrypt_set1_password(cms,
++            (unsigned char *)"password", -1)))
++        goto end;
++
++    err = ERR_peek_last_error();
++    if (!TEST_int_eq(ERR_GET_LIB(err), ERR_LIB_CMS)
++        || !TEST_int_eq(ERR_GET_REASON(err), CMS_R_UNWRAP_FAILURE))
++        goto end;
++
++    ERR_clear_error();
++    ret = 1;
++end:
++    CMS_ContentInfo_free(cms);
++    BIO_free(in);
++    return ret;
++}
++
++OPT_TEST_DECLARE_USAGE("certfile privkeyfile derfile tooLongIVpem pwriKekOobDer\n")
+ 
+ int setup_tests(void)
+ {
+@@ -499,7 +547,8 @@
+     if (!TEST_ptr(certin = test_get_argument(0))
+         || !TEST_ptr(privkeyin = test_get_argument(1))
+         || !TEST_ptr(derin = test_get_argument(2))
+-        || !TEST_ptr(too_long_iv_cms_in = test_get_argument(3)))
++        || !TEST_ptr(too_long_iv_cms_in = test_get_argument(3))
++        || !TEST_ptr(pwri_kek_oob_der_in = test_get_argument(4)))
+         return 0;
+ 
+     certbio = BIO_new_file(certin, "r");
+@@ -535,6 +584,7 @@
+     ADD_TEST(test_encrypted_data_aead);
+     ADD_ALL_TESTS(test_d2i_CMS_decode, 2);
+     ADD_TEST(test_cms_aesgcm_iv_too_long);
++    ADD_TEST(test_pwri_kek_unwrap_short_encrypted_key);
+     return 1;
+ }
+ 
+--- crypto/openssl/test/evp_extra_test.c.orig
++++ crypto/openssl/test/evp_extra_test.c
+@@ -5414,6 +5414,64 @@
+ }
+ #endif
+ 
++/*
++ * AES-SIV reuse-without-rekey:
++ *   msg1: legit non-empty CT, tag verifies, final_ret=0
++ *   msg2: no reinit (or reinit with key=NULL), set forged tag,
++ *         AAD only, DecryptFinal -> does stale final_ret leak through?
++ */
++static int test_aes_siv_ctx_reuse(void)
++{
++    unsigned char key[32] = { 7 }; /* AES-128-SIV => 2*16 */
++    unsigned char pt[9] = "payload!";
++    unsigned char ct[9], tagbuf[16], out[16], zero16[16] = { 0 };
++    unsigned char aad[14] = "forged header";
++    int outl, ret = 0;
++    EVP_CIPHER_CTX *e = NULL, *d = NULL;
++    EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-SIV", NULL);
++
++    if (c == NULL) {
++        return TEST_skip("AES-128-SIV cipher is not available");
++    }
++
++    /* produce a valid (ct,tag) for msg1 */
++    e = EVP_CIPHER_CTX_new();
++    if (!TEST_ptr(e)
++        || !TEST_true(EVP_EncryptInit_ex2(e, c, key, NULL, NULL))
++        || !TEST_true(EVP_EncryptUpdate(e, NULL, &outl, (unsigned char *)"hdr1", 4))
++        || !TEST_true(EVP_EncryptUpdate(e, ct, &outl, pt, sizeof(pt)))
++        || !TEST_true(EVP_EncryptFinal_ex(e, out, &outl))
++        || !TEST_true(EVP_CIPHER_CTX_ctrl(e, EVP_CTRL_AEAD_GET_TAG, 16, tagbuf))) {
++        EVP_CIPHER_CTX_free(e);
++        goto err;
++    }
++    EVP_CIPHER_CTX_free(e);
++
++    /* msg1 decrypt */
++    d = EVP_CIPHER_CTX_new();
++    if (!TEST_ptr(d)
++        || !TEST_true(EVP_DecryptInit_ex2(d, c, key, NULL, NULL))
++        || !TEST_true(EVP_CIPHER_CTX_ctrl(d, EVP_CTRL_AEAD_SET_TAG, 16, tagbuf))
++        || !TEST_true(EVP_DecryptUpdate(d, NULL, &outl, (unsigned char *)"hdr1", 4))
++        || !TEST_true(EVP_DecryptUpdate(d, out, &outl, ct, sizeof(ct)))
++        || !TEST_true(EVP_DecryptFinal_ex(d, out, &outl)))
++        goto err;
++
++    /* msg2 on SAME ctx, reinit with key=NULL => initkey skipped, final_ret should be reset */
++    if (!TEST_true(EVP_DecryptInit_ex2(d, NULL, NULL, NULL, NULL))
++        || !TEST_true(EVP_CIPHER_CTX_ctrl(d, EVP_CTRL_AEAD_SET_TAG, 16, zero16))
++        || !TEST_true(EVP_DecryptUpdate(d, NULL, &outl, aad, sizeof(aad))) /* forged AAD */
++        || !TEST_false(EVP_DecryptFinal_ex(d, out, &outl)))
++        goto err;
++
++    ret = 1;
++
++err:
++    EVP_CIPHER_CTX_free(d);
++    EVP_CIPHER_free(c);
++    return ret;
++}
++
+ static int test_invalid_ctx_for_digest(void)
+ {
+     int ret;
+@@ -5637,6 +5695,9 @@
+     ADD_TEST(test_aes_rc4_keylen_change_cve_2023_5363);
+ #endif
+ 
++    /* Test case for CVE-2026-45446 */
++    ADD_TEST(test_aes_siv_ctx_reuse);
++
+     ADD_TEST(test_invalid_ctx_for_digest);
+ 
+     ADD_TEST(test_evp_cipher_negative_length);
+--- crypto/openssl/test/recipes/80-test_cms.t.orig
++++ crypto/openssl/test/recipes/80-test_cms.t
+@@ -51,7 +51,7 @@
+ 
+ $no_rc2 = 1 if disabled("legacy");
+ 
+-plan tests => 23;
++plan tests => 24;
+ 
+ ok(run(test(["pkcs7_test"])), "test pkcs7");
+ 
+@@ -1054,6 +1054,16 @@
+             ])),
+    "issue#19643");
+ 
++# Check that users get error when using incorrect envelope type for AEAD algorithms
++ok(!run(app(['openssl', 'cms', '-decrypt',
++             '-inform', 'PEM', '-stream',
++             '-secretkey', '000102030405060708090A0B0C0D0E0F',
++             '-secretkeyid', 'C0FEE0',
++             '-in', srctop_file("test/cms-msg",
++                                "enveloped-content-type-for-aes-gcm.pem")
++            ])),
++   "Error AES-GCM in enveloped content type");
++
+ # Check that kari encryption with originator does not segfault
+ with({ exit_checker => sub { return shift == 3; } },
+   sub {
+--- crypto/openssl/test/recipes/80-test_cmsapi.t.orig
++++ crypto/openssl/test/recipes/80-test_cmsapi.t
+@@ -19,5 +19,6 @@
+ ok(run(test(["cmsapitest", srctop_file("test", "certs", "servercert.pem"),
+              srctop_file("test", "certs", "serverkey.pem"),
+              srctop_file("test", "recipes", "80-test_cmsapi_data", "encryptedData.der"),
+-             srctop_file("test", "recipes", "80-test_cmsapi_data", "encDataWithTooLongIV.pem")])),
++             srctop_file("test", "recipes", "80-test_cmsapi_data", "encDataWithTooLongIV.pem"),
++             srctop_file("test", "recipes", "80-test_cmsapi_data", "cms_pwri_kek_oob.der")])),
+              "running cmsapitest");
