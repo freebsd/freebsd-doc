@@ -1,0 +1,303 @@
+---
+title: "FreeBSD 15.1-RELEASE Upgrading Instructions"
+sidenav: download
+---
+
+:releaseCurrent: 15.1-RELEASE
+:releasePrev: 15.0-RELEASE
+:releasePrevLegacy: 14.4-RELEASE
+:localRel: 15.1
+
+include::shared/en/urls.adoc[]
+
+= FreeBSD {releaseCurrent} Upgrading Instructions
+
+== Abstract
+
+This note details the procedure for upgrading existing installations to FreeBSD {releaseCurrent}.
+
+[[upgrade]]
+== Introduction
+
+This document explains the procedure for upgrading existing {releasePrevLegacy} or {releasePrev} installations to {releaseCurrent}.
+Systems running older releases must be upgraded incrementally to one of these releases before performing this upgrade.
+
+Before upgrading the operating system, back up _all_ filesystems, read the link:../errata[late-breaking errata] for known issues and workarounds, and the link:../relnotes[release note] for major changes and incompatibilities.
+
+The procedure for binary upgrades depends on the method used to manage the operating system.
+To determine this, run the following command:
+
+[source,shell]
+----
+pkg which /usr/bin/uname
+----
+
+If `/usr/bin/uname was not installed by a package` is shown, see <<upgrade-fu>> below.
+
+If a package name is shown, such as `FreeBSD-runtime-15.0`, see <<upgrade-pkg>> below.
+
+[upgrade-source]
+If upgrading via source, see link:{handbook}cutting-edge/#makeworld[FreeBSD Handbook chapter on Updating FreeBSD from Source].
+
+[[upgrade-fu]]
+== Upgrading with Distribution Sets
+
+Systems deployed via distribution sets are upgraded via man:freebsd-update[8].
+Systems running {releasePrevLegacy} or {releasePrev} can be upgraded as follows:
+
+. **Apply all Pending Patches**:
++
+Always fetch and apply all pending patches to the current system before upgrading:
++
+[source,shell]
+----
+freebsd-update fetch
+freebsd-update install
+----
++
+. **Upgrade the Kernel**
++
+Fetch and install the new kernel:
++
+[source,shell,subs="verbatim,attributes"]
+----
+freebsd-update upgrade -r {localRel}-RELEASE
+freebsd-update install
+----
++
+During this process man:freebsd-update[8] may ask for help in merging configuration files.
++
+. **Reboot into the new Kernel**
++
+Reboot into the new kernel before installing the new userland:
++
+[source,shell]
+----
+shutdown -r +10min "Rebooting for a kernel upgrade"
+----
++
+. **Upgrade the Userland**
++
+After rebooting, run man:freebsd-update[8] again to install the new userland components:
++
+[source,shell]
+----
+freebsd-update install
+----
++
+man:freebsd-update[8] may prompt to rebuild or reinstall all third-party software due to changes in system libraries.
+Follow those instructions as needed.
++
+[TIP]
+====
+If upgrading from {releasePrevLegacy} and reinstalling all third-party software is not possible, install the package:misc/compat14x[] package.
+====
++
+. **Remove Old Files**
++
+Run man:freebsd-update[8] again to remove stale base system files:
++
+[source,shell]
+----
+freebsd-update install
+----
++
+. **Upgrade the Boot Loader**
++
+To determine which boot loader to update on your system, run the following command:
++
+[source,shell]
+----
+sysctl machdep.bootmethod
+----
++
+Continue to <<upgrade-loader-uefi>> or <<upgrade-loader-bios>> below.
+
+[[upgrade-pkg]]
+== Upgrading with Base System Packages
+
+Systems deployed with a packaged base system are upgraded via man:pkg[8].
+Systems running {releasePrevLegacy} or {releasePrev} can be upgraded as follows:
+
+. **Snapshot the Current Installation**
++
+Take a recursive snapshot of the functioning system named with the current date:
++
+[source,shell,subs="verbatim,attributes"]
+----
+bectl create -r pre-{localRel}
+----
++
+The boot loader offers a menu to boot from this if the upgrade needs to be rolled back.
++
+. **Upgrade the Package Manager**
++
+[source,shell]
+----
+pkg upgrade -yr FreeBSD-ports pkg
+----
++
+. **Upgrade the Base System**
++
+[source,shell]
+----
+pkg -oABI=FreeBSD:15:$(uname -p) -oOSVERSION=1501000 upgrade -r FreeBSD-base
+----
++
+After the upgrade, review any messages printed by `pkg(8)`.
+Some packages may require additional configuration steps such as running `service <name> setup`.
+Follow those instructions as needed.
++
+. **Upgrade Third‑party Kernel Modules**
++
+Third party kernel modules must also be upgraded with the base system:
++
+[source,shell]
+----
+pkg upgrade -r FreeBSD-ports-kmods
+----
++
+If the installation is not using these, man:pkg[8] will reply accordingly.
++
+. **Check for Failed Configuration Updates**
++
+If man:pkg[8] is unable to merge configuration file updates, it will install the new configuration as a `.pkgnew` file.
+Check for them with the following command:
++
+[source,shell]
+----
+find /etc /usr/local/etc -name '*.pkgnew' -ls
+----
++
+If they exist, compare them with the deployed version (e.g., `diff /etc/rc.conf /etc/rc.conf.pkgnew`) and merge any necessary changes.
++
+. **Upgrade the Boot Loader**:
++
+To determine which boot loader to update on your system, run the following command:
++
+[source,shell]
+----
+sysctl machdep.bootmethod
+----
++
+Continue to <<upgrade-loader-uefi>> or <<upgrade-loader-bios>> below.
+
+[[upgrade-loader-uefi]]
+== Upgrading the UEFI Boot Loader
+
+[start=7]
+. **Identifying the ESP**
++
+Identify the EFI System Partition (ESP) where the boot loader resides by executing the following command:
++
+[source,shell]
+----
+efibootmgr -v
+----
++
+The output should be similar to the following:
++
+[source,shell]
+----
+ +Boot0000* FreeBSD HD(1,GPT,f859c46d-19ee-4e40-8975-3ad1ab00ac09,0x800,0x82000)/File(\EFI\freebsd\loader.efi)
+                       nda0p1:/EFI/freebsd/loader.efi (null)
+----
++
+The active boot loader entry is preceded with a plus (+) character.
+Note the location of the bootloader, in this case `EFI/freebsd/loader.efi` on `nda0p1`, though systems vary.
++
+. **Mounting the ESP**
++
+If the ESP is not already mounted at [.filename]#/boot/efi#, mount the partition listed in the `efibootmgr` output:
++
+[source,shell]
+----
+mount_msdosfs /dev/nda0p1 /boot/efi
+----
++
+. **Install the Boot Loader**
++
+On AMD64 systems, upgrade the boot loader in the configured and default positions by executing the following commands:
++
+[source,shell]
+----
+cp /boot/loader.efi /boot/efi/efi/freebsd/loader.efi
+cp /boot/loader.efi /boot/efi/efi/boot/bootx64.efi
+----
++
+Note that some installations may not have `freebsd/loader.efi`.
++
+For AArch64 systems, execute the following commands instead:
++
+[source,shell]
+----
+cp /boot/loader.efi /boot/efi/efi/freebsd/loader.efi
+cp /boot/loader.efi /boot/efi/efi/boot/bootaa64.efi
+----
++
+Other architectures vary accordingly; consult man:loader.efi[8] if necessary.
++
+. **Finish**
++
+Reboot after completing the upgrade to FreeBSD {releaseCurrent}:
++
+[source,shell]
+----
+shutdown -r +10min "Rebooting for a system upgrade"
+----
+
+[[upgrade-loader-bios]]
+== Upgrading the BIOS Boot Loader
+
+For systems that boot via BIOS or UEFI CSM and use the GPT partition scheme, bootstrap upgrades are optional unless a ZFS root pool is upgraded (which is discouraged).
+Upgrades are only possible if the `freebsd-boot` partition is at least 180K; 512K is now standard.
+
+[start=7]
+. **Identify the freebsd-boot Partition**
++
+Identify the `freebsd-boot` device name and partition index by executing the following command:
++
+[source,shell]
+----
+gpart show
+----
++
+The output should be similar to the following:
++
+[.screen]
+----
+ =>       34  246162605  ada0  GPT  (224G)
+          34       1024     1  freebsd-boot  (512K)
+----
++
+Note the name (`ada`) and index (`1`) of the `freebsd-boot` partition.
++
+. **Upgrade the Boot Loader**
++
+When using ZFS on BIOS, upgrade the bootcode by running the following command:
++
+[source,shell]
+----
+gpart bootcode -b /boot/pmbr -p /boot/gptzfsboot -i 1 ada0
+----
++
+Where `1` is the index of the `freebsd-boot` partition.
++
+If booting from a storage array, repeat this step for all disks in the pool.
++
+When using UFS on BIOS, execute the following command instead:
++
+[source,shell]
+----
+gpart bootcode -b /boot/pmbr -p /boot/gptboot -i 1 ada0
+----
++
+. **Finish**
++
+Reboot after completing the upgrade to FreeBSD {releaseCurrent}:
++
+[source,shell]
+----
+shutdown -r now
+----
+
