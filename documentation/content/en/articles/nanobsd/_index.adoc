@@ -161,6 +161,12 @@ Sometimes it is not necessary to rebuild everything from sources, especially if 
 * `-p`: do not prepare the image. Skip running customization and early-customization scripts for incremental image refinement from world, kernel, or packages.
 * `-n`: add `-DNO_CLEAN` to `buildworld`, `buildkernel`. Also, all the files that have already been built in a previous run are kept.
 
+Some options change how world and the kernel are produced and installed:
+
+* `-P`: use pre-compiled binaries instead of building from source. Instead of running `buildworld` and `buildkernel`, NanoBSD fetches and installs FreeBSD-base (pkgbase) packages from a FreeBSD package repository; or, when pkgbase is disabled (see `NANO_NOPKGBASE`), it fetches distribution sets such as [.filename]#base.txz# and [.filename]#kernel.txz# from a FreeBSD mirror. This is the fastest way to produce an image, as no compilation is performed.
+* `-X`: build the native cross-tools and install them into the image, by running `make native-xtools`. This is useful when the image is meant to build software for its own architecture.
+* `-U`: perform an unprivileged build by adding `-DNO_ROOT` to `buildworld` and `installworld`. The image can then be built without `root` privileges, with file ownership and permissions recorded in a metalog instead of being applied directly to the files.
+
 A configuration file can be used to tweak as many elements as desired.
 Load it with `-c`
 
@@ -180,20 +186,25 @@ Assuming the script is run with no particular options, this is what will happen.
 . `run_early_customize`: Commands that are defined in a supplied configuration file.
 . `clean_build`: Just cleans the build environment by deleting the previously built files.
 . `make_conf_build`: Assemble make.conf from the `CONF_WORLD` and `CONF_BUILD` variables.
-. `build_world`: Build world.
-. `build_kernel`: Build the kernel files.
+. `build_world`: Build world. Skipped when building from pre-compiled binaries (`-P`).
+. `build_kernel`: Build the kernel files. Skipped when building from pre-compiled binaries (`-P`).
+. `nano_fetch_pkgbase_packages` or `nano_fetch_distsets`: Obtain the base system, either as FreeBSD-base (pkgbase) packages, or as distribution sets such as [.filename]#base.txz# and [.filename]#kernel.txz# fetched from a FreeBSD mirror and verified against `MANIFEST`. For an unprivileged build (`-U`), the matching metalog is generated at this point by `nano_pkgbase_reset_metalog` or `nano_distset_metalog`.
 . `clean_world`: Clean the destination directory.
-. `make_conf_install`: Assemble make.conf from the `CONF_WORLD` and `CONF_INSTALL` variables.
-. `install_world`: Install all files built during `buildworld`.
-. `install_etc`: Install the necessary files in the [.filename]#/etc# directory, based on the `make distribution` command.
+. `make_conf_install`: Assemble make.conf from the `CONF_WORLD` and `CONF_INSTALL` variables. (Only for a source build.)
+. `install_world` or `install_precompiled_world`: Install all files built during `buildworld`, or, with `-P`, unpack the pre-compiled world.
+. `install_etc`: Install the necessary files in the [.filename]#/etc# directory, based on the `make distribution` command. (Only for a source build.)
+. `native_xtools`: With `-X`, build and install the native cross-tools into the image.
 . `setup_nanobsd_etc`: The first configuration specific to NanoBSD takes place at this stage. The [.filename]#/etc/diskless# is created and the root filesystem is defined as read-only.
-. `install_kernel`: The kernel and modules files are installed.
+. `install_kernel` or `install_precompiled_kernel`: The kernel and modules files are installed, either from the build or from the pre-compiled binaries.
+. `patch_precompiled`: When installing pre-compiled distribution sets (`-P` with pkgbase disabled), reconcile the freebsd-update index with the metalog.
 . `run_customize`: All the customizing routines defined by the user will be called.
 . `setup_nanobsd`: A special configuration directory layout is setup. The [.filename]#/usr/local/etc# gets moved to [.filename]#/etc/local# and a symbolic link is created back from [.filename]#/etc/local# to [.filename]#/usr/local/etc#.
 . `prune_usr`: The empty directories from [.filename]#/usr# are removed.
 . `run_late_customize`: The very last custom scripts can be run at this point.
-. `fixup_before_diskimage`: List all installed files in a metalog.
-. `create_diskimage`: Creates the actual disk image, based on the disk geometries provides parameters.
+. `fixup_before_diskimage`: Assemble and deduplicate the metalog of all installed files, normalizing ownership and stripping the `size` and `time` keywords so later customizations do not invalidate it.
+. `calculate_partitioning`: Compute the partition/slice layout (code, configuration, data, and, for the GPT plan, boot and EFI System Partitions) from the configured sizes.
+. `create_code_partition`: Lay out and populate the code partition (or slice) that holds the image.
+. `create_diskimage` or `_create_diskimage`: Creates the actual disk image, based on the disk geometry parameters. The `_create_diskimage` variant is used for unprivileged builds (`-U`), where the image is assembled from the metalog with man:makefs[8] instead of real device nodes.
 . `last_orders`: Does nothing for now.
 
 === Customizing a NanoBSD Image
@@ -225,10 +236,49 @@ The most important directives are:
 * `NANO_NAME` - Name of build (used to construct the workdir names).
 * `NANO_SRC` - Path to the source tree used to build the image.
 * `NANO_KERNEL` - Name of kernel configuration file used to build kernel.
+* `NANO_MODULES` - Which kernel modules to install. If empty, no modules are installed; use `default` to install all the modules that were built.
+* `NANO_ARCH` - Target architecture (`TARGET_ARCH`) to build for. Defaults to the architecture of the build host, and can be set to cross-build an image for another architecture.
+* `NANO_CPUTYPE` - The `CPUTYPE` to build for. Empty by default.
 * `CONF_BUILD` - Options passed to the `buildworld` stage of the build.
 * `CONF_INSTALL` - Options passed to the `installworld` stage of the build.
 * `CONF_WORLD` - Options passed to both the `buildworld` and the `installworld` stage of the build.
 * `FlashDevice` - Defines what type of media to use. Check [.filename]#FlashDevice.sub# for more details.
+
+NanoBSD now supports more than one on-disk layout, selected through a "plan":
+
+* `NANO_PLAN` - Selects the partitioning and boot scheme. When left unset, the legacy man:gpart[8] MBR layout is used (a warning is printed). Calling the `gpt` function in the configuration file switches to a GPT layout. The legacy plan still drives the older variables `NANO_NEWFS`, `NANO_BOOT0CFG`, and `NANO_BOOTLOADER`, while the GPT plan uses `NANO_MAKEFS` and adds the variables below.
+* `NANO_BOOT_TYPE` - For the GPT plan, a space-separated list of boot methods to support: `BIOS`, `UEFI`, or both (the default).
+* `NANO_EFI_BOOTPART_SIZE` - Size, in 512-byte sectors, of the EFI System Partition created for UEFI boot.
+* `NANO_LABEL` - Base man:glabel[8] label used to refer to partitions by name (for example [.filename]#/dev/gpt/code1#) instead of by device.
+* `NANO_LAYOUT` - Optional label appended to the object directory and image names, so several layouts of the same build can coexist.
+
+The base system can be assembled from FreeBSD-base (pkgbase) packages, which is now the default:
+
+* `NANO_NOPKGBASE` - When set to a non-empty value, disables pkgbase and uses distribution sets instead.
+* `NANO_PKGBASE_LIST` - List of base-system packages to install (default `FreeBSD-set-base FreeBSD-kernel-generic`).
+* `NANO_ABI`, `NANO_OSVERSION` - The pkgbase ABI and OS version, queried from man:pkg[8] by default.
+* `NANO_PKGBASE_DIR`, `NANO_PORTS_DIR` - The base and ports repository directories to fetch packages from.
+
+When building from pre-compiled binaries (`-P`) using distribution sets, the download is controlled by:
+
+* `NANO_MIRROR` - The FreeBSD mirror to download from (default `https://download.freebsd.org`).
+* `NANO_BRANCH`, `NANO_REVISION` - The branch and revision, derived from the source tree, used to locate the matching release or snapshot directory.
+* `NANO_DISTRIBUTIONS` - The set of distribution tarballs to install (default `base.txz kernel.txz`).
+
+For unprivileged builds (`-U`):
+
+* `NANO_NOPRIV_BUILD` - Set automatically by `-U`; builds the image without `root` by recording metadata in a metalog.
+* `NANO_METALOG` - Path to the metalog file recording ownership and permissions.
+* `NANO_DEF_UNAME`, `NANO_DEF_GNAME` - Default owner and group (`root`/`wheel`) used for files in the metalog.
+* `NANO_TIMESTAMP` - Timestamp applied to files, by default the time of the last commit in the source tree.
+
+Other frequently useful options:
+
+* `NANO_MAKEFS` - Parameters passed to man:makefs[8] when building the image for the default/GPT plan (default `-o softupdates=1,version=2`). This replaces the older `NANO_NEWFS`, which is now used only by the legacy plan.
+* `NANO_SECTOR_SIZE` - Logical sector size, in bytes, of the target media.
+* `NANO_SWAP_SIZE` - Size of an optional swap partition, in 512-byte sectors (`0` disables it).
+* `NANO_SWAP_ENCRYPTION` - When non-empty, encrypts the swap partition with man:geli[8].
+* `NANO_MD_BACKING` - Backing type for the man:md[4] devices, either `file` or `swap`.
 
 There are many more configuration options that could be relevant depending upon the kind of NanoBSD that is desired.
 
