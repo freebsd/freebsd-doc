@@ -20,6 +20,9 @@ class GitReferencesMacro < Asciidoctor::Extensions::InlineMacroProcessor
       12
     end
     url = %(https://cgit.freebsd.org/#{repository}/commit/?id=#{hash})
-    %(<a href="#{url}">#{hash[0, length]}</a>)
+
+    short_sha = hash[0...length]
+    create_anchor parent, short_sha, type: :link, target: url
+
   end
 end

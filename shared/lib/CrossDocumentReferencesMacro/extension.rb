@@ -21,12 +21,12 @@ class CrossDocumentReferencesMacro < Asciidoctor::Extensions::InlineMacroProcess
     doc = parent.document
 
     if doc.attributes['isonline'] == "1"
-      (create_anchor parent, text, type: :link, target: %(#{destination}#{anchor})).render
+      create_anchor parent, text, type: :link, target: %(#{destination}#{anchor})
     else
       if doc.attributes['doctype'] == "book"
-        (create_anchor parent, text, type: :link, target: %(../#{destination}/index.html#{anchor})).render
+        create_anchor parent, text, type: :link, target: %(../#{destination}/index.html#{anchor})
       else
-        (create_anchor parent, text, type: :link, target: %(#{destination}/index.html#{anchor})).render
+        create_anchor parent, text, type: :link, target: %(#{destination}/index.html#{anchor})
       end
     end
 

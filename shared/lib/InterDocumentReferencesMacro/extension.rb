@@ -21,15 +21,15 @@ class InterDocumentReferencesMacro < Asciidoctor::Extensions::InlineMacroProcess
     if doc.backend == 'html5'
       if doc.attributes['book'] == "true"
         if doc.attributes['isonline'] == "1"
-          (create_anchor parent, text, type: :link, target: %(./##{anchor})).render
+          create_anchor parent, text, type: :link, target: %(./##{anchor})
         else
-          (create_anchor parent, text, type: :link, target: %(./index.html##{anchor})).render
+          create_anchor parent, text, type: :link, target: %(./index.html##{anchor})
         end
       else
         if doc.attributes['isonline'] == "1"
-          (create_anchor parent, text, type: :link, target: %(../#{target}/##{anchor})).render
+          create_anchor parent, text, type: :link, target: %(../#{target}/##{anchor})
         else
-          (create_anchor parent, text, type: :link, target: %(../#{target}/index.html##{anchor})).render
+          create_anchor parent, text, type: :link, target: %(../#{target}/index.html##{anchor})
         end
       end
     else

@@ -16,6 +16,7 @@ class ManPageMacro < Asciidoctor::Extensions::InlineMacroProcessor
       ""
     end
     url = %(https://man.freebsd.org/cgi/man.cgi?query=#{manname}&sektion=#{section}&format=html)
-    %(<a href="#{url}">#{manname}(#{section})</a>)
+    link_text = section.empty? ? manname : "#{manname}(#{section})"
+    create_anchor parent, link_text, type: :link, target: url
   end
 end

@@ -23,6 +23,7 @@ class PackagesMacro < Asciidoctor::Extensions::InlineMacroProcessor
 
     url = %(https://cgit.freebsd.org/ports/tree/#{pkgorigin}/)
 
-    %(<a class="package" href="#{url}">#{pkgname}</a>)
+    create_anchor parent, target, type: :link, target: url
+
   end
 end
