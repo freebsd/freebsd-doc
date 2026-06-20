@@ -9,6 +9,9 @@
 #			PDFs or EPUBs.
 # clean		- 	Remove generated files.
 # run		-	Serve the built documentation site locally.
+# run-tls	-	Serve the built documentation site over TLS.
+#			Note this requires a TLS terminating proxy.
+#
 # pdf		-	Build PDF versions of the articles and books.
 # html		-	Build HTML versions of the articles and books.
 #			If the DOC_HTML_ARCHIVE variable is set, all
@@ -111,6 +114,7 @@ SKIP_LANGS+=		${a}
 
 all: requirements starting-message generate-pgpkeys-txt build
 run: requirements starting-message generate-pgpkeys-txt run-local
+run-tls: requirements starting-message generate-pgpkeys-txt run-tls-local
 
 # clean does not call pdf-clean as that is a subset of hugo-clean
 clean: hugo-clean pgp-clean
@@ -147,6 +151,10 @@ static/pgpkeys/pgpkeys.txt: static/pgpkeys/*key
 run-local: .PHONY
 	HUGO_DISABLELANGUAGES="${SKIP_LANGS}" ${HUGO_CMD} server \
 		${HUGO_ARGS} -D $(BIND:D--bind=$(BIND)) --baseURL="http://$(.HOST):1313"
+
+run-tls-local: .PHONY
+	HUGO_DISABLELANGUAGES="${SKIP_LANGS}" ${HUGO_CMD} server \
+		${HUGO_ARGS} -D $(BIND:D--bind=$(BIND)) --baseURL="https://$(.HOST)"
 
 build: .PHONY
 	HUGO_DISABLELANGUAGES="${SKIP_LANGS}" ${HUGO_CMD} ${HUGO_ARGS}

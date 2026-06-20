@@ -7,6 +7,8 @@
 #
 # all (default)	-	Generate releases.toml and compile the website.
 # run		-	Serve the built website for local browsing.
+# run-tls	-	Serve the built documentation site over TLS.
+# 			Note this requires a TLS terminating proxy.
 #
 # The run target uses hugo's built-in webserver to make the built
 # website available for local browsing. The website should have been
@@ -65,6 +67,7 @@ SKIP_LANGS+=	${a}
 
 all: starting-message generate-releases cgi-pre-permissions build post-build end-message
 run: starting-message generate-releases cgi-pre-permissions run-local
+run-tls: starting-message generate-releases cgi-pre-permissions run-tls-local
 clean: hugo-clean releases-clean
 
 starting-message: .PHONY
@@ -87,6 +90,9 @@ data/releases.toml:
 run-local: .PHONY
 	HUGO_DISABLELANGUAGES="${SKIP_LANGS}" ${HUGO_CMD} server \
 	    ${HUGO_ARGS} -D $(BIND:D--bind=$(BIND)) --baseURL="http://$(.HOST):1313"
+run-tls-local: .PHONY
+	HUGO_DISABLELANGUAGES="${SKIP_LANGS}" ${HUGO_CMD} server \
+	    ${HUGO_ARGS} -D $(BIND:D--bind=$(BIND)) --baseURL="https://$(.HOST)"
 
 build: .PHONY
 	HUGO_DISABLELANGUAGES="${SKIP_LANGS}" ${HUGO_CMD} ${HUGO_ARGS}
