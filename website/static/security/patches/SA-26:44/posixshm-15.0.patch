@@ -1,0 +1,339 @@
+--- sys/kern/uipc_shm.c.orig
++++ sys/kern/uipc_shm.c
+@@ -326,6 +326,7 @@
+ shm_largepage_phys_ctor(vm_object_t object, vm_prot_t prot,
+     vm_ooffset_t foff, struct ucred *cred)
+ {
++	object->flags |= OBJ_PG_DTOR;
+ }
+ 
+ static void
+@@ -333,11 +334,27 @@
+ {
+ 	int psind;
+ 
++	VM_OBJECT_ASSERT_WLOCKED(object);
++
+ 	psind = object->un_pager.phys.data_val;
+ 	if (psind != 0) {
++		struct pctrie_iter pages;
++		vm_page_t m;
++		bool removed __diagused;
++
++		vm_page_iter_init(&pages, object);
++restart:
++		VM_RADIX_FOREACH(m, &pages) {
++			if (!vm_page_busy_acquire(m, VM_ALLOC_WAITFAIL)) {
++				pctrie_iter_reset(&pages);
++				goto restart;
++			}
++			removed = vm_page_iter_remove(&pages, m);
++			KASSERT(!removed, ("%s: page %p not wired", __func__, m));
++			vm_page_unwire(m, PQ_NONE);
++		}
+ 		atomic_subtract_long(&count_largepages[psind],
+ 		    object->size / (pagesizes[psind] / PAGE_SIZE));
+-		vm_wire_sub(object->size);
+ 	} else {
+ 		KASSERT(object->size == 0,
+ 		    ("largepage phys obj %p not initialized bit size %#jx > 0",
+@@ -788,7 +805,7 @@
+ 	vm_pindex_t oldobjsz __unused;
+ 	int aflags, error, i, psind, try;
+ 
+-	KASSERT(length >= 0, ("shm_dotruncate: length < 0"));
++	KASSERT(length >= 0, ("shm_dotruncate_largepage: length < 0"));
+ 	object = shmfd->shm_object;
+ 	VM_OBJECT_ASSERT_WLOCKED(object);
+ 	rangelock_cookie_assert(rl_cookie, RA_WLOCKED);
+@@ -820,7 +837,7 @@
+ 	if ((shmfd->shm_seals & F_SEAL_GROW) != 0)
+ 		return (EPERM);
+ 
+-	aflags = VM_ALLOC_NORMAL | VM_ALLOC_ZERO;
++	aflags = VM_ALLOC_NORMAL | VM_ALLOC_ZERO | VM_ALLOC_WIRED;
+ 	if (shmfd->shm_lp_alloc_policy == SHM_LARGEPAGE_ALLOC_NOWAIT)
+ 		aflags |= VM_ALLOC_WAITFAIL;
+ 	try = 0;
+@@ -868,7 +885,6 @@
+ 		object->size += OFF_TO_IDX(pagesizes[psind]);
+ 		shmfd->shm_size += pagesizes[psind];
+ 		atomic_add_long(&count_largepages[psind], 1);
+-		vm_wire_add(atop(pagesizes[psind]));
+ 	}
+ 	return (0);
+ }
+@@ -1328,15 +1344,13 @@
+ 			if (error == 0 &&
+ 			    (flags & (O_ACCMODE | O_TRUNC)) ==
+ 			    (O_RDWR | O_TRUNC)) {
+-				VM_OBJECT_WLOCK(shmfd->shm_object);
+ #ifdef MAC
+ 				error = mac_posixshm_check_truncate(
+-					td->td_ucred, fp->f_cred, shmfd);
++				    td->td_ucred, fp->f_cred, shmfd);
+ 				if (error == 0)
+ #endif
+-					error = shm_dotruncate_locked(shmfd, 0,
++					error = shm_dotruncate_cookie(shmfd, 0,
+ 					    rl_cookie);
+-				VM_OBJECT_WUNLOCK(shmfd->shm_object);
+ 			}
+ 			if (error == 0) {
+ 				/*
+@@ -2090,11 +2104,14 @@
+ 	    ("shm_fspacectl: non-zero flags"));
+ 	KASSERT(*offset >= 0 && *length > 0 && *length <= OFF_MAX - *offset,
+ 	    ("shm_fspacectl: offset/length overflow or underflow"));
+-	error = EINVAL;
++
+ 	shmfd = fp->f_data;
+ 	off = *offset;
+ 	len = *length;
+ 
++	if (shm_largepage(shmfd))
++		return (ENOTSUP);
++
+ 	rl_cookie = shm_rangelock_wlock(shmfd, off, off + len);
+ 	switch (cmd) {
+ 	case SPACECTL_DEALLOC:
+--- sys/vm/vm_page.c.orig
++++ sys/vm/vm_page.c
+@@ -4254,6 +4254,9 @@
+ {
+ 	u_int old;
+ 
++	KASSERT(nqueue < PQ_COUNT,
++	    ("vm_page_unwire: invalid queue %u request for page %p",
++	    nqueue, m));
+ 	KASSERT((m->oflags & VPO_UNMANAGED) == 0,
+ 	    ("%s: page %p is unmanaged", __func__, m));
+ 
+@@ -4312,17 +4315,15 @@
+ void
+ vm_page_unwire(vm_page_t m, uint8_t nqueue)
+ {
+-
+-	KASSERT(nqueue < PQ_COUNT,
+-	    ("vm_page_unwire: invalid queue %u request for page %p",
+-	    nqueue, m));
++        KASSERT(nqueue < PQ_COUNT || nqueue == PQ_NONE,
++            ("%s: invalid queue %u request for page %p", __func__, nqueue, m));
+ 
+ 	if ((m->oflags & VPO_UNMANAGED) != 0) {
+ 		if (vm_page_unwire_noq(m) && m->ref_count == 0)
+ 			vm_page_free(m);
+-		return;
++	} else {
++		vm_page_unwire_managed(m, nqueue, false);
+ 	}
+-	vm_page_unwire_managed(m, nqueue, false);
+ }
+ 
+ /*
+@@ -4496,13 +4497,15 @@
+ void
+ vm_page_release(vm_page_t m, int flags)
+ {
+-	vm_object_t object;
+-
+-	KASSERT((m->oflags & VPO_UNMANAGED) == 0,
+-	    ("vm_page_release: page %p is unmanaged", m));
++	if ((m->oflags & VPO_UNMANAGED) != 0) {
++		vm_page_unwire(m, PQ_NONE);
++		return;
++	}
+ 
+ 	if ((flags & VPR_TRYFREE) != 0) {
+ 		for (;;) {
++			vm_object_t object;
++
+ 			object = atomic_load_ptr(&m->object);
+ 			if (object == NULL)
+ 				break;
+--- tests/sys/posixshm/posixshm_test.c.orig
++++ tests/sys/posixshm/posixshm_test.c
+@@ -33,6 +33,7 @@
+ #include <sys/ioctl.h>
+ #include <sys/mman.h>
+ #include <sys/resource.h>
++#include <sys/socket.h>
+ #include <sys/stat.h>
+ #include <sys/syscall.h>
+ #include <sys/sysctl.h>
+@@ -1379,6 +1380,27 @@
+ 	ATF_REQUIRE(close(fd) == 0);
+ }
+ 
++ATF_TC_WITHOUT_HEAD(largepage_fspacectl);
++ATF_TC_BODY(largepage_fspacectl, tc)
++{
++	struct spacectl_range range;
++	size_t ps[MAXPAGESIZES];
++	int fd, pscnt;
++
++	pscnt = pagesizes(ps);
++
++	for (int i = 1; i < pscnt; i++) {
++		fd = shm_open_large(i, SHM_LARGEPAGE_ALLOC_DEFAULT, ps[i]);
++
++		range.r_offset = 0;
++		range.r_len = ps[i];
++		ATF_REQUIRE_ERRNO(ENOTSUP,
++		    fspacectl(fd, SPACECTL_DEALLOC, &range, 0, &range) == -1);
++
++		ATF_REQUIRE(close(fd) == 0);
++	}
++}
++
+ ATF_TC_WITHOUT_HEAD(largepage_mmap);
+ ATF_TC_BODY(largepage_mmap, tc)
+ {
+@@ -2129,6 +2151,130 @@
+ 	    "close failed; errno=%d", errno);
+ }
+ 
++static unsigned char
++largepage_sendfile_expected(size_t off)
++{
++
++	return ((unsigned char)(off * 131 + (off >> 8)));
++}
++
++ATF_TC_WITHOUT_HEAD(largepage_sendfile);
++ATF_TC_BODY(largepage_sendfile, tc)
++{
++	static const int flags[] = { 0, SF_NOCACHE };
++	char *addr;
++	off_t sbytes;
++	size_t ps[MAXPAGESIZES];
++	int error, fd, pscnt, sd[2], status;
++	pid_t child;
++
++	pscnt = pagesizes(ps);
++
++	for (int i = 1; i < pscnt; i++) {
++		for (int fi = 0; fi < (int)nitems(flags); fi++) {
++			fd = shm_open_large(i, SHM_LARGEPAGE_ALLOC_DEFAULT,
++			    ps[i]);
++			addr = mmap(NULL, ps[i], PROT_READ | PROT_WRITE,
++			    MAP_SHARED, fd, 0);
++			ATF_REQUIRE_MSG(addr != MAP_FAILED,
++			    "mmap(%zu bytes) failed; error=%d", ps[i], errno);
++
++			/* Fill with a verifiable pattern. */
++			for (size_t j = 0; j < ps[i]; j++)
++				addr[j] = largepage_sendfile_expected(j);
++
++			ATF_REQUIRE(socketpair(PF_LOCAL, SOCK_STREAM, 0,
++			    sd) == 0);
++
++			child = fork();
++			ATF_REQUIRE_MSG(child != -1,
++			    "fork() failed; error=%d", errno);
++			if (child == 0) {
++				char buf[BUFSIZ];
++				ssize_t len;
++				size_t off, resid;
++
++				(void)close(sd[0]);
++				off = 0;
++				for (resid = ps[i]; resid > 0; resid -= len) {
++					len = read(sd[1], buf, sizeof(buf));
++					if (len <= 0)
++						_exit(1);
++					for (ssize_t k = 0; k < len; k++) {
++						if ((unsigned char)buf[k] !=
++						    largepage_sendfile_expected(
++						    off + k))
++							_exit(2);
++					}
++					off += len;
++				}
++				_exit(0);
++			}
++			ATF_REQUIRE(close(sd[1]) == 0);
++
++			sbytes = 0;
++			error = sendfile(fd, sd[0], 0, ps[i], NULL, &sbytes,
++			    flags[fi]);
++			ATF_REQUIRE_MSG(error == 0,
++			    "sendfile() failed; error=%d flags=%#x",
++			    errno, flags[fi]);
++			ATF_REQUIRE_MSG(sbytes == (off_t)ps[i],
++			    "sendfile() short; sbytes=%jd expected=%zu flags=%#x",
++			    (intmax_t)sbytes, ps[i], flags[fi]);
++
++			ATF_REQUIRE(close(sd[0]) == 0);
++
++			ATF_REQUIRE_MSG(waitpid(child, &status, 0) == child,
++			    "waitpid() failed; error=%d", errno);
++			ATF_REQUIRE_MSG(WIFEXITED(status),
++			    "child killed by signal %d", WTERMSIG(status));
++			ATF_REQUIRE_MSG(WEXITSTATUS(status) == 0,
++			    "child exited with status %d (flags=%#x)",
++			    WEXITSTATUS(status), flags[fi]);
++
++			ATF_REQUIRE(munmap(addr, ps[i]) == 0);
++			ATF_REQUIRE(close(fd) == 0);
++		}
++	}
++}
++
++ATF_TC_WITHOUT_HEAD(largepage_truncate);
++ATF_TC_BODY(largepage_truncate, tc)
++{
++	size_t ps[MAXPAGESIZES];
++	int fd, psind;
++
++	(void)pagesizes(ps);
++	psind = 1;
++
++	gen_test_path();
++	fd = shm_create_largepage(test_path, O_CREAT | O_RDWR, psind,
++	    SHM_LARGEPAGE_ALLOC_DEFAULT, 0600);
++	if (fd < 0 && errno == ENOTTY)
++		atf_tc_skip("no large page support");
++	ATF_REQUIRE_MSG(fd >= 0, "shm_create_largepage failed; error=%d", errno);
++
++	ATF_REQUIRE_MSG(ftruncate(fd, ps[psind]) == 0,
++	    "ftruncate failed; error=%d", errno);
++
++	ATF_REQUIRE_MSG(close(fd) == 0, "close failed; error=%d", errno);
++
++	fd = shm_open(test_path, O_RDWR | O_TRUNC, 0);
++	ATF_REQUIRE_MSG(fd == -1, "shm_open(O_TRUNC) should have failed");
++	ATF_REQUIRE_ERRNO(ENOTSUP, fd == -1);
++
++	fd = shm_open(test_path, O_RDWR, 0);
++	ATF_REQUIRE_MSG(fd >= 0, "shm_open failed; error=%d", errno);
++
++	ATF_REQUIRE_MSG(ftruncate(fd, ps[psind]) == 0,
++	    "ftruncate to same size failed; error=%d", errno);
++
++	ATF_REQUIRE_MSG(shm_unlink(test_path) == 0,
++	    "shm_unlink failed; errno=%d", errno);
++	ATF_REQUIRE_MSG(close(fd) == 0,
++	    "close failed; errno=%d", errno);
++}
++
+ ATF_TP_ADD_TCS(tp)
+ {
+ 	ATF_TP_ADD_TC(tp, remap_object);
+@@ -2167,6 +2313,7 @@
+ 	ATF_TP_ADD_TC(tp, mmap_prot);
+ 	ATF_TP_ADD_TC(tp, largepage_basic);
+ 	ATF_TP_ADD_TC(tp, largepage_config);
++	ATF_TP_ADD_TC(tp, largepage_fspacectl);
+ 	ATF_TP_ADD_TC(tp, largepage_mmap);
+ 	ATF_TP_ADD_TC(tp, largepage_munmap);
+ 	ATF_TP_ADD_TC(tp, largepage_madvise);
+@@ -2179,6 +2326,8 @@
+ 	ATF_TP_ADD_TC(tp, largepage_pkru);
+ #endif
+ 	ATF_TP_ADD_TC(tp, largepage_reopen);
++	ATF_TP_ADD_TC(tp, largepage_sendfile);
++	ATF_TP_ADD_TC(tp, largepage_truncate);
+ 
+ 	return (atf_no_error());
+ }
