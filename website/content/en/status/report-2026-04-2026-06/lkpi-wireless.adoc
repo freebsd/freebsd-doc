@@ -1,0 +1,118 @@
+=== LinuxKPI 802.11 and Native Wireless Update
+
+Links: +
+link:https://github.com/FreeBSDFoundation/proj-laptop/issues/66[Support the MediaTek Wireless cards] URL: link:https://github.com/FreeBSDFoundation/proj-laptop/issues/66[] +
+link:https://github.com/FreeBSDFoundation/proj-laptop/issues/99[Support the Realtek Wireless cards] URL: link:https://github.com/FreeBSDFoundation/proj-laptop/issues/99[] +
+link:https://github.com/FreeBSDFoundation/proj-laptop/issues/58[LinuxKPI based WiFi and suspend and resume] URL: link:https://github.com/FreeBSDFoundation/proj-laptop/issues/58[] +
+link:https://bugs.freebsd.org/bugzilla/showdependencytree.cgi?id=277512&hide_resolved=1[Wireless Problem Reports] URL: link:https://bugs.freebsd.org/bugzilla/showdependencytree.cgi?id=277512&hide_resolved=1[]
+
+Contact: Bjoern A. Zeeb <bz@FreeBSD.org> +
+Contact: The FreeBSD wireless mailing list <wireless@FreeBSD.org>
+
+This report focuses on the efforts using permissively licensed Linux wireless drivers, mostly unmodified, on FreeBSD, as well as preparing the native net80211 stack for support of newer standards.
+
+==== 15.1-RELEASE
+
+Due to real life some of the changes I had hoped to have in 15.1-RELEASE did not make it anymore (see below).
+In the end I only updated the man pages for the various drivers shipping.
+We also updated the firmware ports as a change in src.git main had prevented them from building anyway.
+With that man:fwget[8] was also updated for more PCI Ids.
+Finally I helped making sure the already fantastically prepared release notes had some extra notes on known issues.
+
+==== Driver updates
+
+All LinuxKPI based wireless drivers were updated to Linux v7.0 in main and stable/15.
+This was not planned originally but it turned out that it was little churn so it could be done in a good work day.
+The update includes
+
+* the shipping drivers Intel man:iwlwifi[4] mvm/mld, Realtek man:rtw88[4] and man:rtw89[4],
+* the Mediatek mt76 driver which is a work in progress,
+* the three Qualcomm Atheros drivers ath10k, ath11k, and ath12k, which are TODO, as well as
+* the Broadcom brcmfmac, which compiles and loads firmware but is lacking the cfg80211 compat shim and some netdev work.
+
+==== LinuxKPI based 802.11 suspend and resume
+
+With drm-kmod 6.12 allowing one of my laptops to suspend and resume I could finally debug the last bits of LinuxKPI 802.11 suspend and resume and I am happy to announce that automatic suspend and resume for man:iwlwifi[4] is in main and stable/15.
+Feedback, so far, has been overwhelmingly positive.
+Sadly I missed the cut for 15.1-RELEASE so try stable or stay tuned for December.
+
+==== LinuxKPI 802.11 adjustments
+
+As underlying ground works for Realtek and Mediatek various LinuxKPI 802.11 implementation details were improved:
+
+* chandef / chanctx rework: these are definitions on which channel we are operating.
+  Rework chandef emulation and how the contexts are updated; prepare for multiple chanctx, etc.
+* TX hardware crypto: the mt7921 would happily work with software crypto but once hardware crypto offload was enabled we would only receive some packets but not TX any correct frames anymore.
+  It turned out that depending on key type the driver would user a different path to the keys and we would set both keys the same way, essentially overwriting the 1st with the 2nd.
+  Fixed the argument passed down on the set key call to avoid this problem.
+  This may also help rtw8x where we had seen occassional problems related to MC packets but validation is still pending.
+* rates: started to fill in and update most of the LinuxKPI 802.11 rate fields (but one which would only be needed for  mt7615).
+  Part of this work was originally done for rtw8x end of last year with a lot of it supplemented for Mediatek.
+* Fixed a compatibility ordering problem:  it turned out that some of the order of events we had implemented did not fully match the expectations of some drivers.
+  While we were setup and synched various rate related parts from net80211 to LinuxKPI 802.11 to the driver, one update came too late, leaving mt7921 with basic rates.
+  Simply moving the code to be called in a different order solved the problem to get us 11n and 11ac throughput.
+
+==== LinuxKPI changes:
+
+In addition to the 802.11 parts in LinuxKPI, there is also general LinuxKPI infrastructure which needs adjutments.
+
+* PAGE_IS_LKPI_PAGE: this is a project to convert an early day shortcut that a Linux struct page is 1:1 mapped to a native vm_page into a proper Linux struct page with a vm_page backing.
+  This is mostly needed for some Mediatek mt76 drivers, but also drm-kmod can finally undo some FreeBSD specific hacks after this lands.
+* LinuxKPI PCI detach (cleanup) functions: the Mediatek driver would cause a kernel panic on unload or shutdown.
+  It turned out that the various LinuxKPI PCI cleanup routines were not fully correct as a comment had already hinted for one part.
+  We fixed this and also cleaned up some of the file.
+  At the time of writing the reviews are still pending but we hope to have at least the esential parts committed soon.
+* The LinuxKPI IDR code is used by some Mediatek mt76 drivers but is also shared with drm-kmod and a bunch of semi-native drivers.
+  Unfortunately the framework has known problems (as some history showed) and does not match current expectations anymore.
+  Rewriting this is somewhat tricky due to the larger impact but we hope have it ready in early 26Q3.
+* Improved and added some man:lindebugfs[4] code in order to be able to use debugfs for mt7921 debugging.
+
+==== Realtek rtw8x support
+
+After the updates to Linux v7.0 the problems we had with some chipsets not being able to associate increased.
+Both man:rtw88[4] and man:rtw89[4] now show various issues.
+One additional problem was discovered in that the man:rtw88[4] driver for at least one chipset would go off for 6s seconds, essentialy letting authentication run into timeouts.
+It is not understood yet under which circumstances this will not happen, as it clearly does not seem to be a problem under Linux.
+Sadly it was not possible to debug this in time for 15.1-RELEASE.
+We hope to look into this in early 26Q3 in order to evaluate if a EN code be issued before 15.0 becomes EOL and fix the regressions.
+
+==== Mediatek mt76 support
+
+Work is ongoing to support multiple of the Mediatek mt76 drivers, foremost the mt7921 and mt7925.
+After several of the LinuxKPI and LinuxKPI 802.11 improvements I can say that mt7921 passes packets with acceptable throughput for the first cut.
+mt7925 does so equally but at least the outstanding LinuxKPI IDR work leads to instabilities.
+mt7915 likewise needs needs IDR, but also seems to not support hardware scan offloading, which means we do have to fix software scanning for good, which will equally help rtw8x, which have the weird software scan fallback in case hardware scan is not available.
+Further chipsets will be tested once these land and are fully enabled in main.
+
+In addition to the LinuxKPI works, we debugged one driver-triggered panic.
+It turned out that the drivers would re-schedule some work during detach (shutdown) but then free the underlying memory.
+This left a callout being scheduled and once we tried to walk the callout list, we caused a panic.
+
+==== LinuxKPI USB support
+
+In Q1 we reported about a blocker for this.
+I am happy to announce that half of the blocker got sorted, that is the compiler option I originally wanted to add was now completely removed from the source tree in main and stable/15.
+LLVM by now has a newer option which is only a subset of what the problematic original allowed, which will be nice to move to in a year or two once a newer LLVM release and GCC are shipping with it.
+This now leaves me with finding a minimalistic solution to re-introduce it again, rather than spreading it over the entire kernel or a gazillion of individual files.
+There is hope that it will be sorted some time during 26Q3.
+
+==== Native net80211 updates (tech debt)
+
+* Some work last year discovered issues in the way we are presenting RSSI to user space.
+  Due to a possible double wraparound the values may not be correct.
+  The driver and net80211 parts of this problem were fixed.
+  The user space API is not fixed yet in order to avoid breakage (incl. major web browsers).
+* Talks have resumed during the last week of June in order to get ports fixed using lib80211, which will help us to move forward on various issues without constantly breaking user space.
+
+==== Final note
+
+It recently got quiet on issues despite more people using wireless on FreeBSD again.
+I am not sure this is a good sign or not.
+
+We appreciate all the feedback and problem reports we get and if they come in on bugzilla we also try to categorize them into specific groups (see link).
+Some may seem to fall through the cracks but we generally try not to let that happen.
+Sometimes larger works are planned dedicated to the area of your problem and so may not see immedaite help, sometimes other things may be ahead of the queue.
+If the issues are properly documented it will be easier to get back to them at a later time.
+If you have any issues with (LinuxKPI based) wireless please try to use the official channels: check open PRs, send a note to the wireless mailing list, if needed drop me a private email (e.g., if you have a core dump with possible private information), or open a new PR if the issue is not yet known (or seems to fall through the cracks as then it is up for public tracking).
+
+Sponsor: The FreeBSD Foundation
