@@ -1321,7 +1321,7 @@ sub sort_manpath {
         my $name_lc = lc($name);
         my $os_lc;
 
-        # a release has at least 2 numbers seperated by a dot:
+        # a release has at least 2 numbers separated by a dot:
         # FreeBSD 11.1-RELEASE ports
         # X11R7.4
         my ($os, $version, $ports) = ( $name =~ m,^(.*?)(\d+\.[\d\.]+)(.*)$, );
