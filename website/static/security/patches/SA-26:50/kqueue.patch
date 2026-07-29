@@ -1,0 +1,141 @@
+--- sys/kern/kern_event.c.orig
++++ sys/kern/kern_event.c
+@@ -3072,13 +3072,29 @@
+ }
+ 
+ static void
+-kqueue_fork_copy_knote(struct kqueue *kq1, struct knote *kn, struct proc *p1,
+-    struct filedesc *fdp)
++kqueue_fork_copy_knote(struct kqueue *kq, struct kqueue *kq1, struct knote *kn,
++    struct proc *p1, struct filedesc *fdp)
+ {
+ 	struct knote *kn1;
++	struct knlist *knl;
+ 	const struct filterops *fop;
+ 	int error;
++	bool enqueue;
+ 
++	KASSERT(kn->kn_influx != 0,
++	    ("%s: knote %p not in flux", __func__, kn));
++	KASSERT((kn->kn_status & KN_DETACHED) == 0,
++	    ("%s: knote %p not detached", __func__, kn));
++
++	if ((kn->kn_status & KN_MARKER) != 0)
++		return;
++	if ((kn->kn_status & KN_KQUEUE) != 0) {
++		/*
++		 * We cannot hold references to a kqueue outside of the process
++		 * itself, kqueue_close() does not handle this possibility.
++		 */
++		return;
++	}
+ 	fop = kn->kn_fop;
+ 	if (fop->f_copy == NULL || (fop->f_isfd &&
+ 	    fdp->fd_files->fdt_ofiles[kn->kn_kevent.ident].fde_file == NULL))
+@@ -3088,9 +3104,13 @@
+ 		return;
+ 
+ 	kn1 = knote_alloc(M_WAITOK);
++
++	knl = kn_list_lock(kn);
++	KQ_LOCK(kq);
+ 	*kn1 = *kn;
+-	kn1->kn_status |= KN_DETACHED;
+-	kn1->kn_status &= ~KN_QUEUED;
++	KQ_UNLOCK(kq);
++	kn_list_unlock(knl);
++	kn1->kn_status = KN_DETACHED | (kn1->kn_status & KN_CPONFORK);
+ 	kn1->kn_kq = kq1;
+ 	kn1->kn_knlist = NULL;
+ 	error = fop->f_copy(kn1, p1);
+@@ -3105,12 +3125,19 @@
+ 		knote_free(kn1);
+ 		return;
+ 	}
+-	if (kn->kn_knlist != NULL)
+-		knlist_add(kn->kn_knlist, kn1, 0);
++	if (kn->kn_knlist != NULL) {
++		knl = kn_list_lock(kn);
++		knlist_add(kn->kn_knlist, kn1, 1);
++	} else {
++		knl = NULL;
++	}
++	enqueue = kn->kn_fop->f_event(kn1, 0) != 0;
++	kn_list_unlock(knl);
++
+ 	KQ_LOCK(kq1);
+ 	knote_attach(kn1, kq1);
+ 	kn1->kn_influx = 0;
+-	if ((kn->kn_status & KN_QUEUED) != 0)
++	if (enqueue && (kn1->kn_status & KN_QUEUED) == 0)
+ 		knote_enqueue(kn1);
+ 	KQ_UNLOCK(kq1);
+ }
+@@ -3134,7 +3161,7 @@
+ 		kn_enter_flux(kn);
+ 		SLIST_INSERT_AFTER(kn, marker, kn_link);
+ 		KQ_UNLOCK(kq);
+-		kqueue_fork_copy_knote(kq1, kn, p1, fdp);
++		kqueue_fork_copy_knote(kq, kq1, kn, p1, fdp);
+ 		KQ_LOCK(kq);
+ 		kn_leave_flux(kn);
+ 		kn = SLIST_NEXT(marker, kn_link);
+--- sys/sys/event.h.orig
++++ sys/sys/event.h
+@@ -315,6 +315,7 @@
+ #define KN_MARKER	0x20			/* ignore this knote */
+ #define KN_KQUEUE	0x40			/* this knote belongs to a kq */
+ #define	KN_SCAN		0x100			/* flux set in kqueue_scan() */
++#define	KN_CPONFORK	(KN_ACTIVE | KN_DISABLED) /* state preserved by fork */
+ 	int			kn_influx;
+ 	unsigned int		kn_sfflags;	/* saved filter flags */
+ 	int64_t			kn_sdata;	/* saved data field */
+--- tests/sys/kqueue/kqueue_fork.c.orig
++++ tests/sys/kqueue/kqueue_fork.c
+@@ -269,10 +269,46 @@
+ 	cponfork_notes_mask_check(info.si_status, true);
+ }
+ 
++/*
++ * Exercise a rare race: while the kernel is copying knotes during a fork, try
++ * to set things up so that a new knote is activated while the copy is still in
++ * progress.
++ */
++ATF_TC_WITHOUT_HEAD(cponfork_timer_race);
++ATF_TC_BODY(cponfork_timer_race, tc)
++{
++	struct kevent ev;
++	int error, kq, status;
++	pid_t pid;
++
++	for (int i = 0; i < 100; i++) {
++		kq = kqueuex(KQUEUE_CPONFORK);
++		ATF_REQUIRE(kq >= 0);
++
++		EV_SET(&ev, 0, EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_NSECONDS,
++		    1, NULL);
++		error = kevent(kq, &ev, 1, NULL, 0, NULL);
++		ATF_REQUIRE(error == 0);
++
++		pid = fork();
++		ATF_REQUIRE(pid != -1);
++		if (pid == 0)
++			_exit(0);
++
++		error = waitpid(pid, &status, 0);
++		ATF_REQUIRE(error != -1);
++		ATF_REQUIRE(WIFEXITED(status));
++		ATF_REQUIRE_EQ(WEXITSTATUS(status), 0);
++
++		ATF_REQUIRE(close(kq) == 0);
++	}
++}
++
+ ATF_TP_ADD_TCS(tp)
+ {
+ 	ATF_TP_ADD_TC(tp, shared_table_filt_sig);
+ 	ATF_TP_ADD_TC(tp, cponfork_notes);
++	ATF_TP_ADD_TC(tp, cponfork_timer_race);
+ 
+ 	return (atf_no_error());
+ }
