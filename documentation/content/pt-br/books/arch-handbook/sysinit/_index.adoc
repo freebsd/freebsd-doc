@@ -1,0 +1,165 @@
+---
+description: 'O Framework SYSINIT'
+next: books/arch-handbook/mac
+params:
+  path: /books/arch-handbook/sysinit/
+prev: books/arch-handbook/jail
+showBookMenu: 'true'
+tags: ["SYSINIT", "framework", "Terminology"]
+title: 'Capítulo 5. O Framework SYSINIT'
+weight: 6
+---
+
+[[sysinit]]
+= O Framework SYSINIT
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumlevels: 6
+:sectnumoffset: 5
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/arch-handbook/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+SYSINIT é a estrutura para um mecanismo genérico de ordenação e despacho de chamadas. O FreeBSD atualmente o utiliza para a inicialização dinâmica do kernel. O SYSINIT permite que os subsistemas do kernel do FreeBSD sejam reordenados, adicionados, removidos e substituídos durante a vinculação do kernel, quando o kernel ou um de seus módulos é carregado, sem a necessidade de editar um roteamento de inicialização estaticamente ordenado e recompilar o kernel. Este sistema também permite que módulos do kernel, atualmente chamados de _KLDs_, sejam compilados, vinculados e inicializados separadamente durante a inicialização do sistema e carregados posteriormente, enquanto o sistema já está em execução. Isso é realizado utilizando o "linker do kernel" e os "conjuntos de linkers".
+
+[[sysinit-term]]
+== Terminologia
+
+Conjunto de Linkers::
+Uma técnica de vinculação na qual o vinculador reúne dados declarados estaticamente em todos os arquivos de origem de um programa em uma única unidade de dados endereçável de forma contígua.
+
+[[sysinit-operation]]
+== Operação SYSINIT
+
+O SYSINIT depende da capacidade do linker de pegar dados estáticos declarados em vários locais ao longo do código-fonte de um programa e agrupá-los em um único bloco contíguo de dados. Essa técnica do linker é chamada de "conjunto de linker". O SYSINIT usa dois conjuntos de linker para manter dois conjuntos de dados contendo a ordem de chamada de cada consumidor, a função e um ponteiro para os dados a serem passados para essa função.
+
+O SYSINIT utiliza duas prioridades ao ordenar a execução das funções. A primeira prioridade é um ID de subsistema que define a ordem geral de despacho das funções do SYSINIT. Os IDs predefinidos atuais estão em [.filename]#<sys/kernel.h># na lista enum `sysinit_sub_id`. A segunda prioridade utilizada é a ordem dos elementos dentro do subsistema. As ordens de elementos predefinidas atualmente para o subsistema são as seguintes: [.filename]#<sys/kernel.h># na lista enum `sysinit_elem_order`.
+
+Atualmente, o SYSINIT possui duas utilizações: o despacho de funções na inicialização do sistema e o carregamento de módulos do kernel, e o despacho de funções no desligamento do sistema e o descarregamento de módulos do kernel. Subsistemas do kernel frequentemente utilizam o SYSINIT de inicialização do sistema para inicializar estruturas de dados; por exemplo, o subsistema de escalonamento de processos utiliza um SYSINIT para inicializar a estrutura de dados da fila de execução. Drivers de dispositivo devem evitar o uso direto de `SYSINIT()`. Em vez disso, drivers para dispositivos reais que fazem parte de uma estrutura de barramento devem utilizar `DRIVER_MODULE()` para fornecer uma função que detecta o dispositivo e, se presente, o inicializa. Essa função executará algumas operações específicas para dispositivos e, em seguida, chamará o próprio `SYSINIT()`. Para pseudodispositivos, que não fazem parte de uma estrutura de barramento, utilize `DEV_MODULE()`.
+
+[[sysinit-using]]
+== Usando SYSINIT
+
+=== Interface
+
+==== Cabeçalhos
+
+[.programlisting]
+....
+<sys/kernel.h>
+....
+
+==== Macros
+
+[.programlisting]
+....
+SYSINIT(uniquifier, subsystem, order, func, ident)
+SYSUNINIT(uniquifier, subsystem, order, func, ident)
+....
+
+=== Começando
+
+A macro `SYSINIT()` cria os dados necessários no conjunto de dados de inicialização do SYSINIT para que ele possa classificar e despachar uma função na inicialização do sistema e no carregamento de módulos. `SYSINIT()` recebe um identificador único que o SYSINIT usa para identificar os dados de despacho da função específica, a ordem do subsistema, a ordem dos elementos do subsistema, a função a ser chamada e os dados a serem passados para a função. Todas as funções devem receber um ponteiro constante como argumento.
+
+.Exemplo de uma chamada `SYSINIT()`
+[example]
+====
+[.programlisting]
+....
+#include <sys/kernel.h>
+
+void foo_null(void *unused)
+{
+        foo_doo();
+}
+SYSINIT(foo, SI_SUB_FOO, SI_ORDER_FOO, foo_null, NULL);
+
+struct foo foo_voodoo = {
+        FOO_VOODOO;
+}
+
+void foo_arg(void *vdata)
+{
+        struct foo *foo = (struct foo *)vdata;
+        foo_data(foo);
+}
+SYSINIT(bar, SI_SUB_FOO, SI_ORDER_FOO, foo_arg, &foo_voodoo);
+....
+====
+
+Observe que `SI_SUB_FOO` e `SI_ORDER_FOO` precisam estar presentes nas enumerações `sysinit_sub_id` e `sysinit_elem_order`, conforme mencionado anteriormente. Você pode usar valores existentes ou adicionar os seus próprios às enumerações. Também é possível usar cálculos para ajustar a ordem de execução de um SYSINIT. Este exemplo mostra um SYSINIT que precisa ser executado logo antes dos SYSINITs responsáveis pelo ajuste dos parâmetros do kernel.
+
+.Exemplo de ajuste da ordem de `SYSINIT()`
+[example]
+====
+[.programlisting]
+....
+static void
+mptable_register(void *dummy __unused)
+{
+
+	apic_register_enumerator(&mptable_enumerator);
+}
+
+SYSINIT(mptable_register, SI_SUB_TUNABLES - 1, SI_ORDER_FIRST,
+    mptable_register, NULL);
+....
+
+====
+
+=== Desligar
+
+A macro `SYSUNINIT()` comporta-se de forma semelhante à macro `SYSINIT()`, exceto pelo fato de adicionar os dados SYSINIT ao conjunto de dados de desligamento do SYSINIT.
+
+.Exemplo de um `SYSUNINIT()`
+[example]
+====
+[.programlisting]
+....
+#include <sys/kernel.h>
+
+void foo_cleanup(void *unused)
+{
+        foo_kill();
+}
+SYSUNINIT(foobar, SI_SUB_FOO, SI_ORDER_FOO, foo_cleanup, NULL);
+
+struct foo_stack foo_stack = {
+        FOO_STACK_VOODOO;
+}
+
+void foo_flush(void *vdata)
+{
+}
+SYSUNINIT(barfoo, SI_SUB_FOO, SI_ORDER_FOO, foo_flush, &foo_stack);
+....
+
+====
