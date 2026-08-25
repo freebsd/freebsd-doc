@@ -1,0 +1,58 @@
+--- sys/dev/sound/pcm/channel.h.orig
++++ sys/dev/sound/pcm/channel.h
+@@ -57,10 +57,11 @@
+ extern struct mtx snd_pcm_syncgroups_mtx;
+ extern SLIST_HEAD(pcm_synclist, pcmchan_syncgroup) snd_pcm_syncgroups;
+ 
+-#define PCM_SG_LOCK()	    mtx_lock(&snd_pcm_syncgroups_mtx)
+-#define PCM_SG_TRYLOCK()    mtx_trylock(&snd_pcm_syncgroups_mtx)
+-#define PCM_SG_UNLOCK()	    mtx_unlock(&snd_pcm_syncgroups_mtx)
+-#define PCM_SG_LOCKASSERT(arg)	mtx_assert(&snd_pcm_syncgroups_mtx, arg)
++#define PCM_SG_LOCKPTR()	(&snd_pcm_syncgroups_mtx)
++#define PCM_SG_LOCK()		mtx_lock(PCM_SG_LOCKPTR())
++#define PCM_SG_TRYLOCK()	mtx_trylock(PCM_SG_LOCKPTR())
++#define PCM_SG_UNLOCK()		mtx_unlock(PCM_SG_LOCKPTR())
++#define PCM_SG_LOCKASSERT(arg)	mtx_assert(PCM_SG_LOCKPTR(), arg)
+ 
+ /**
+  * @brief Specifies an audio device sync group
+--- sys/dev/sound/pcm/dsp.c.orig
++++ sys/dev/sound/pcm/dsp.c
+@@ -2696,14 +2696,11 @@
+ 	struct pcmchan_syncmember *sm, *sm_tmp;
+ 	struct pcmchan_syncgroup *sg;
+ 	struct pcm_channel *c;
+-	int ret, needlocks;
++	int ret;
+ 
+-	/* Get the synclists lock */
+ 	PCM_SG_LOCK();
+-
+ 	do {
+ 		ret = 0;
+-		needlocks = 0;
+ 
+ 		/* Search for syncgroup by ID */
+ 		SLIST_FOREACH(sg, &snd_pcm_syncgroups, link) {
+@@ -2740,16 +2737,14 @@
+ 				}
+ 
+ 				/** @todo Is PRIBIO correct/ */
+-				ret = msleep(sm, &snd_pcm_syncgroups_mtx,
++				ret = msleep(sm, PCM_SG_LOCKPTR(),
+ 				    PRIBIO | PCATCH, "pcmsg", timo);
+-				if (ret == EINTR || ret == ERESTART)
+-					break;
+-
+-				needlocks = 1;
+-				ret = 0; /* Assumes ret == EAGAIN... */
++				if (ret == EAGAIN)
++					ret = 0;
++				break;
+ 			}
+ 		}
+-	} while (needlocks && ret == 0);
++	} while (ret == 0 && sm != NULL);
+ 
+ 	/* Proceed only if no errors encountered. */
+ 	if (ret == 0) {

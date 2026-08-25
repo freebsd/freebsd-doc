@@ -1,0 +1,456 @@
+--- sys/kern/uipc_usrreq.c.orig
++++ sys/kern/uipc_usrreq.c
+@@ -1389,8 +1389,8 @@
+     struct uio *uio, struct mbuf **mp0, struct mbuf **controlp, int *flagsp)
+ {
+ 	struct sockbuf *sb = &so->so_rcv;
+-	struct mbuf *control, *m, *first, *last, *next;
+-	u_int ctl, space, datalen, mbcnt, lastlen;
++	struct mbuf *control, *m, *first, *part, *next;
++	u_int ctl, space, datalen, mbcnt, partlen;
+ 	int error, flags;
+ 	bool nonblock, waitall, peek;
+ 
+@@ -1461,35 +1461,41 @@
+ 	ctl = 0;
+ 	first = STAILQ_FIRST(&sb->uxst_mbq);
+ 	if (first->m_type == MT_CONTROL) {
++		struct mbuf *prev;
++
+ 		control = first;
++		prev = NULL;
++
++		/*
++		 * Unlink control messages from the socket buffer.  The head of
++		 * the socket buffer queue is updated below.
++		 */
+ 		STAILQ_FOREACH_FROM(first, &sb->uxst_mbq, m_stailq) {
+-			if (first->m_type != MT_CONTROL)
++			if (first->m_type != MT_CONTROL) {
++				if (!peek && prev != NULL)
++					STAILQ_NEXT(prev, m_stailq) = NULL;
+ 				break;
++			}
+ 			ctl += first->m_len;
+ 			mbcnt += MSIZE;
+ 			if (first->m_flags & M_EXT)
+ 				mbcnt += first->m_ext.ext_size;
++			prev = first;
+ 		}
+ 	} else
+ 		control = NULL;
+ 
+ 	/*
+-	 * Find split point for the next copyout.  On exit from the loop:
+-	 * last == NULL - socket to be flushed
+-	 * last != NULL
+-	 *   lastlen > last->m_len - uio to be filled, last to be adjusted
+-	 *   lastlen == 0          - MT_CONTROL, M_EOR or M_NOTREADY encountered
++	 * Find split point for the next copyout.  On exit from the loop,
++	 * 'next' points to the new head of the buffer STAILQ and 'datalen'
++	 * contains the amount of data we will copy out at the end.  The
++	 * copyout is protected by the I/O lock only, as writers can only
++	 * append to the buffer.  We need to record the socket buffer state
++	 * and do all length adjustments before dropping the socket buffer lock.
+ 	 */
+-	space = uio->uio_resid;
+-	datalen = 0;
+-	for (m = first, last = sb->uxst_fnrdy, lastlen = 0;
+-	     m != sb->uxst_fnrdy;
++	for (space = uio->uio_resid, m = next = first, part = NULL, datalen = 0;
++	     space > 0 && m != sb->uxst_fnrdy && m->m_type == MT_DATA;
+ 	     m = STAILQ_NEXT(m, m_stailq)) {
+-		if (m->m_type != MT_DATA) {
+-			last = m;
+-			lastlen = 0;
+-			break;
+-		}
+ 		if (space >= m->m_len) {
+ 			space -= m->m_len;
+ 			datalen += m->m_len;
+@@ -1497,29 +1503,28 @@
+ 			if (m->m_flags & M_EXT)
+ 				mbcnt += m->m_ext.ext_size;
+ 			if (m->m_flags & M_EOR) {
+-				last = STAILQ_NEXT(m, m_stailq);
+-				lastlen = 0;
+ 				flags |= MSG_EOR;
++				next = STAILQ_NEXT(m, m_stailq);
+ 				break;
+ 			}
+ 		} else {
+ 			datalen += space;
+-			last = m;
+-			lastlen = space;
++			partlen = space;
++			if (!peek) {
++				m->m_len -= partlen;
++				m->m_data += partlen;
++			}
++			next = part = m;
+ 			break;
+ 		}
++		next = STAILQ_NEXT(m, m_stailq);
+ 	}
+ 
+-	UIPC_STREAM_SBCHECK(sb);
+ 	if (!peek) {
+-		if (last == NULL)
++		if (next == NULL)
+ 			STAILQ_INIT(&sb->uxst_mbq);
+-		else {
+-			STAILQ_FIRST(&sb->uxst_mbq) = last;
+-			MPASS(last->m_len > lastlen);
+-			last->m_len -= lastlen;
+-			last->m_data += lastlen;
+-		}
++		else
++			STAILQ_FIRST(&sb->uxst_mbq) = next;
+ 		MPASS(sb->sb_acc >= datalen);
+ 		sb->sb_acc -= datalen;
+ 		sb->sb_ccc -= datalen;
+@@ -1570,21 +1575,40 @@
+ 			 */
+ 			error = unp_externalize(control, controlp, flags);
+ 			control = m_free(control);
+-			if (__predict_false(error && control != NULL)) {
++			if (__predict_false(error != 0)) {
+ 				struct mchain cmc;
+ 
+-				mc_init_m(&cmc, control);
++				/*
++				 * Build an mbuf chain containing the remainder
++				 * of the control messages and the subsequent
++				 * data, to be prepended back to the socket
++				 * buffer.
++				 */
++				if (control != NULL)
++					mc_init_m(&cmc, control);
++				else
++					mc_init(&cmc);
++				for (m = first; datalen > 0 && m != part;
++				    m = next) {
++					datalen -= m->m_len;
++					next = STAILQ_NEXT(m, m_stailq);
++					mc_append(&cmc, m);
++				}
+ 
+ 				SOCK_RECVBUF_LOCK(so);
+-				MPASS(!(sb->sb_state & SBS_CANTRCVMORE));
+-
+-				if (__predict_false(cmc.mc_len + sb->sb_ccc +
+-				    sb->sb_ctl > sb->sb_hiwat)) {
++				if (__predict_false(
++				    (sb->sb_state & SBS_CANTRCVMORE) ||
++				    cmc.mc_len + sb->sb_ccc + sb->sb_ctl >
++				    sb->sb_hiwat)) {
+ 					/*
+-					 * Too bad, while unp_externalize() was
+-					 * failing, the other side had filled
+-					 * the buffer and we can't prepend data
+-					 * back. Losing data!
++					 * While the lock was dropped and we
++					 * were failing in unp_externalize(),
++					 * the peer could have a) disconnected,
++					 * b) filled the buffer so that we
++					 * can't prepend data back.
++					 * These are two edge conditions that
++					 * we just can't handle, so lose the
++					 * data and return the error.
+ 					 */
+ 					SOCK_RECVBUF_UNLOCK(so);
+ 					SOCK_IO_RECV_UNLOCK(so);
+@@ -1603,6 +1627,10 @@
+ 				    sb->sb_mbcnt = 0;
+ 				STAILQ_FOREACH(m, &sb->uxst_mbq, m_stailq) {
+ 					if (m->m_type == MT_DATA) {
++						if (m == part) {
++							m->m_len += partlen;
++							m->m_data -= partlen;
++						}
+ 						sb->sb_acc += m->m_len;
+ 						sb->sb_ccc += m->m_len;
+ 					} else {
+@@ -1642,33 +1670,34 @@
+ 		}
+ 	}
+ 
+-	for (m = first; m != last; m = next) {
++	for (m = first; datalen > 0; m = next) {
++		void *data;
++		u_int len;
++
+ 		next = STAILQ_NEXT(m, m_stailq);
+-		error = uiomove(mtod(m, char *), m->m_len, uio);
++		if (m == part) {
++			data = peek ?
++			    mtod(m, char *) : mtod(m, char *) - partlen;
++			len = partlen;
++		} else {
++			data = mtod(m, char *);
++			len = m->m_len;
++		}
++		error = uiomove(data, len, uio);
+ 		if (__predict_false(error)) {
+-			SOCK_IO_RECV_UNLOCK(so);
+ 			if (!peek)
+-				for (; m != last; m = next) {
++				for (; m != part && datalen > 0; m = next) {
+ 					next = STAILQ_NEXT(m, m_stailq);
++					MPASS(datalen >= m->m_len);
++					datalen -= m->m_len;
+ 					m_free(m);
+ 				}
+-			return (error);
+-		}
+-		if (!peek)
+-			m_free(m);
+-	}
+-	if (last != NULL && lastlen > 0) {
+-		if (!peek) {
+-			MPASS(!(m->m_flags & M_PKTHDR));
+-			MPASS(last->m_data - M_START(last) >= lastlen);
+-			error = uiomove(mtod(last, char *) - lastlen,
+-			    lastlen, uio);
+-		} else
+-			error = uiomove(mtod(last, char *), lastlen, uio);
+-		if (__predict_false(error)) {
+ 			SOCK_IO_RECV_UNLOCK(so);
+ 			return (error);
+ 		}
++		datalen -= len;
++		if (!peek && m != part)
++			m_free(m);
+ 	}
+ 	if (waitall && !(flags & MSG_EOR) && uio->uio_resid > 0)
+ 		goto restart;
+--- sys/sys/mbuf.h.orig
++++ sys/sys/mbuf.h
+@@ -1745,6 +1745,13 @@
+ 	}
+ }
+ 
++static inline void
++mc_init(struct mchain *mc)
++{
++	STAILQ_INIT(&mc->mc_q);
++	mc->mc_len = mc->mc_mlen = 0;
++}
++
+ /*
+  * Get mchain from a classic mbuf chain linked by m_next.  Two hacks here:
+  * we use the fact that m_next is alias to m_stailq, we use internal queue(3)
+--- tests/sys/kern/unix_passfd_test.c.orig
++++ tests/sys/kern/unix_passfd_test.c
+@@ -939,6 +939,125 @@
+ 	closesocketpair(fd);
+ }
+ 
++/*
++ * Exercise handling of errors from unp_externalize().
++ */
++ATF_TC_WITHOUT_HEAD(externalize_error_partial_read);
++ATF_TC_BODY(externalize_error_partial_read, tc)
++{
++	struct iovec iovec;
++	struct msghdr msghdr;
++	struct rlimit rl, orl;
++	struct stat sb;
++	char cmsgbuf[CMSG_SPACE(sizeof(int))];
++	char msg1[16];
++	char *fill, *rbuf;
++	size_t fillsz;
++#if TEST_PROTO == SOCK_STREAM
++	size_t got;
++#endif
++	ssize_t len;
++	int fd[2], nfds, putfd;
++
++	memset(msg1, 'A', sizeof(msg1));
++
++	domainsocketpair(fd);
++	devnull(&putfd);
++	dofstat(putfd, &sb);
++	nfds = getnfds();
++
++#if TEST_PROTO == SOCK_STREAM
++	fillsz = (size_t)getrecvspace() * 3 / 5;
++#elif TEST_PROTO == SOCK_DGRAM
++	fillsz = 128;
++#endif
++
++	fill = malloc(fillsz);
++	ATF_REQUIRE(fill != NULL);
++	memset(fill, 'B', fillsz);
++	rbuf = malloc(sizeof(msg1) + fillsz);
++	ATF_REQUIRE(rbuf != NULL);
++
++	/*
++	 * The first message carries the rights and a small payload; the second
++	 * queues more data behind it, so that the read below leaves the receive
++	 * buffer non-empty.
++	 */
++	len = sendfd_payload(fd[0], putfd, msg1, sizeof(msg1));
++	ATF_REQUIRE_MSG(len == (ssize_t)sizeof(msg1),
++	    "sendmsg: %zd bytes sent; expected %zu: %s", len, sizeof(msg1),
++	    strerror(errno));
++	len = send(fd[0], fill, fillsz, 0);
++	ATF_REQUIRE_MSG(len == (ssize_t)fillsz,
++	    "send: %zd bytes sent; expected %zu: %s", len, fillsz,
++	    strerror(errno));
++
++	/*
++	 * Use fd limits to force receive to fail.
++	 */
++	ATF_REQUIRE_MSG(getrlimit(RLIMIT_NOFILE, &orl) == 0,
++	    "getrlimit failed: %s", strerror(errno));
++	rl = orl;
++	rl.rlim_cur = 1;
++	ATF_REQUIRE_MSG(setrlimit(RLIMIT_NOFILE, &rl) == 0,
++	    "setrlimit failed: %s", strerror(errno));
++
++	bzero(&msghdr, sizeof(msghdr));
++	iovec.iov_base = rbuf;
++	iovec.iov_len = sizeof(msg1);
++	msghdr.msg_iov = &iovec;
++	msghdr.msg_iovlen = 1;
++	msghdr.msg_control = cmsgbuf;
++	msghdr.msg_controllen = sizeof(cmsgbuf);
++
++	ATF_REQUIRE_ERRNO(EMFILE, recvmsg(fd[1], &msghdr, 0) == -1);
++
++	ATF_REQUIRE_MSG(setrlimit(RLIMIT_NOFILE, &orl) == 0,
++	    "setrlimit failed: %s", strerror(errno));
++
++	/* The rights must have been disposed of rather than installed. */
++	ATF_REQUIRE_MSG(getnfds() == nfds, "descriptor leaked");
++
++	/*
++	 * The failed read must leave the socket usable with both payloads still
++	 * queued.
++	 */
++#if TEST_PROTO == SOCK_STREAM
++	for (got = 0; got < sizeof(msg1) + fillsz; got += (size_t)len) {
++		len = recv(fd[1], rbuf + got, sizeof(msg1) + fillsz - got, 0);
++		if (len <= 0)
++			break;
++	}
++	ATF_REQUIRE_MSG(got == sizeof(msg1) + fillsz,
++	    "recovered %zu of %zu bytes after the failed read: %s", got,
++	    sizeof(msg1) + fillsz, strerror(errno));
++	ATF_REQUIRE_MSG(memcmp(rbuf, msg1, sizeof(msg1)) == 0,
++	    "first payload corrupted");
++	ATF_REQUIRE_MSG(memcmp(rbuf + sizeof(msg1), fill, fillsz) == 0,
++	    "second payload corrupted");
++#elif TEST_PROTO == SOCK_DGRAM
++	/*
++	 * For datagrams, soreceive_dgram() dequeues the record before
++	 * processing control messages, so the first datagram's payload is
++	 * consumed even when externalize fails.  Only the second datagram
++	 * should remain queued.
++	 */
++	len = recv(fd[1], rbuf, fillsz, 0);
++	ATF_REQUIRE_MSG(len == (ssize_t)fillsz,
++	    "second datagram: got %zd bytes, expected %zu: %s", len, fillsz,
++	    strerror(errno));
++	ATF_REQUIRE_MSG(memcmp(rbuf, fill, fillsz) == 0,
++	    "second payload corrupted");
++#endif
++
++	dofstat(putfd, &sb);
++
++	free(rbuf);
++	free(fill);
++	close(putfd);
++	closesocketpair(fd);
++}
++
+ /*
+  * Verify that we can handle empty rights messages.
+  */
+@@ -1236,6 +1355,7 @@
+ 	ATF_TP_ADD_TC(tp, rights_creds_payload);
+ 	ATF_TP_ADD_TC(tp, truncated_rights);
+ 	ATF_TP_ADD_TC(tp, copyout_rights_error);
++	ATF_TP_ADD_TC(tp, externalize_error_partial_read);
+ 	ATF_TP_ADD_TC(tp, empty_rights_message);
+ 	ATF_TP_ADD_TC(tp, control_creates_records);
+ 	ATF_TP_ADD_TC(tp, cross_jail_dirfd);
+--- tests/sys/kern/unix_seqpacket_test.c.orig
++++ tests/sys/kern/unix_seqpacket_test.c
+@@ -1314,6 +1314,67 @@
+ 	free(params.records);
+ }
+ 
++/* See bug 290658. */
++#define	PEEK_RACE_SIZE	10
++#define	PEEK_RACE_TRIES	10000
++static void *
++peek_race_writer(void *args)
++{
++	struct timespec ts = {};
++	u_short seed[3];
++	char buf[PEEK_RACE_SIZE];
++	int fd = *(int *)args;
++
++	arc4random_buf(seed, sizeof(seed));
++	for (u_int i = 0; i < PEEK_RACE_TRIES; i++) {
++		ATF_REQUIRE_EQ(PEEK_RACE_SIZE,
++		    send(fd, buf, sizeof(buf), MSG_EOR));
++		ts.tv_nsec = nrand48(seed) % 20;
++		(void)clock_nanosleep(CLOCK_MONOTONIC_FAST, 0, &ts, NULL);
++	}
++
++	return (NULL);
++}
++
++static void *
++peek_race_peeker(void *args)
++{
++	char buf[PEEK_RACE_SIZE * 10];
++	int fd = *(int *)args;
++
++	for (u_int i = 0; i < PEEK_RACE_TRIES; i++) {
++		ssize_t rcvd;
++
++		while ((rcvd = recv(fd, buf, sizeof(buf),
++		    MSG_PEEK | MSG_DONTWAIT)) == -1)
++			ATF_REQUIRE(errno == EAGAIN);
++		ATF_REQUIRE(rcvd == PEEK_RACE_SIZE);
++
++		ATF_REQUIRE_EQ(PEEK_RACE_SIZE,
++		    recv(fd, buf, sizeof(buf), 0));
++	}
++
++	return (NULL);
++}
++
++ATF_TC_WITHOUT_HEAD(peek_race);
++ATF_TC_BODY(peek_race, tc)
++{
++	pthread_t peeker, writer;
++	int sv[2];
++
++	do_socketpair(sv);
++
++	ATF_REQUIRE_EQ(0, pthread_create(&writer, NULL, peek_race_writer,
++	    &sv[0]));
++	ATF_REQUIRE_EQ(0, pthread_create(&peeker, NULL, peek_race_peeker,
++	    &sv[1]));
++	ATF_REQUIRE_EQ(0, pthread_join(writer, NULL));
++	ATF_REQUIRE_EQ(0, pthread_join(peeker, NULL));
++	close(sv[0]);
++	close(sv[1]);
++}
++
+ /*
+  * Main.
+  */
+@@ -1370,6 +1431,7 @@
+ 	ATF_TP_ADD_TC(tp, pipe_128k_8k);
+ 	ATF_TP_ADD_TC(tp, pipe_128k_128k);
+ 	ATF_TP_ADD_TC(tp, random_eor_and_waitall);
++	ATF_TP_ADD_TC(tp, peek_race);
+ 
+ 	return atf_no_error();
+ }

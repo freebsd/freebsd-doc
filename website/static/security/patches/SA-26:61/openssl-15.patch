@@ -1,0 +1,1173 @@
+--- crypto/openssl/crypto/cmp/cmp_protect.c.orig
++++ crypto/openssl/crypto/cmp/cmp_protect.c
+@@ -66,7 +66,7 @@
+             ERR_raise(ERR_LIB_CMP, CMP_R_MISSING_PBM_SECRET);
+             return NULL;
+         }
+-        if (ppval == NULL) {
++        if (pptype != V_ASN1_SEQUENCE || ppval == NULL) {
+             ERR_raise(ERR_LIB_CMP, CMP_R_ERROR_CALCULATING_PROTECTION);
+             return NULL;
+         }
+--- crypto/openssl/crypto/cmp/cmp_vfy.c.orig
++++ crypto/openssl/crypto/cmp/cmp_vfy.c
+@@ -732,7 +732,7 @@
+                 "expected sender", expected_sender)) {
+             str = X509_NAME_oneline(actual_sender, NULL, 0);
+             ERR_raise_data(ERR_LIB_CMP, CMP_R_UNEXPECTED_SENDER,
+-                str != NULL ? str : "<unknown>");
++                "%s", str != NULL ? str : "<unknown>");
+             OPENSSL_free(str);
+             return 0;
+         }
+@@ -776,8 +776,13 @@
+     res = 1; /* support more aggressive fuzzing by letting invalid msg pass */
+ #endif
+ 
+-    /* remove extraCerts again if not caching */
+-    if (ctx->noCacheExtraCerts)
++    /*
++     * remove extraCerts again if not caching
++     * or if we failed validation above, lest a remote user
++     * starts sending us lots of certificates in invalid messages
++     * leading to a DOS from unbounded certificate stack growth
++     */
++    if (ctx->noCacheExtraCerts || res != 1)
+         while (num_added-- > 0)
+             X509_free(sk_X509_shift(ctx->untrusted));
+ 
+--- crypto/openssl/crypto/cms/cms_kari.c.orig
++++ crypto/openssl/crypto/cms/cms_kari.c
+@@ -217,6 +217,7 @@
+     int rv = 0;
+     unsigned char *out = NULL;
+     int outlen;
++    size_t outsize;
+ 
+     keklen = EVP_CIPHER_CTX_get_key_length(kari->ctx);
+     if (keklen > EVP_MAX_KEY_LENGTH)
+@@ -230,7 +231,13 @@
+     /* obtain output length of ciphered key */
+     if (!EVP_CipherUpdate(kari->ctx, NULL, &outlen, in, inlen))
+         goto err;
+-    out = OPENSSL_malloc(outlen);
++    /*
++     * On its integrity-failure paths that primitive writes and cleanses up to
++     * inlen bytes of the output buffer. Size the buffer for that worst case so
++     * a failed unwrap cannot write past the allocation.
++     */
++    outsize = (size_t)outlen < inlen ? inlen : (size_t)outlen;
++    out = OPENSSL_malloc(outsize);
+     if (out == NULL)
+         goto err;
+     if (!EVP_CipherUpdate(kari->ctx, out, &outlen, in, inlen))
+--- crypto/openssl/include/internal/quic_ackm.h.orig
++++ crypto/openssl/include/internal/quic_ackm.h
+@@ -129,6 +129,11 @@
+ };
+ 
+ int ossl_ackm_on_tx_packet(OSSL_ACKM *ackm, OSSL_ACKM_TX_PKT *pkt);
++
++/*
++ * Records transmission of a packet containing only ACK frames. The packet
++ */
++int ossl_ackm_on_tx_ack_only_packet(OSSL_ACKM *ackm, OSSL_ACKM_TX_PKT *pkt);
+ int ossl_ackm_on_rx_datagram(OSSL_ACKM *ackm, size_t num_bytes);
+ 
+ #define OSSL_ACKM_ECN_NONE 0
+--- crypto/openssl/include/internal/quic_record_rx.h.orig
++++ crypto/openssl/include/internal/quic_record_rx.h
+@@ -51,8 +51,9 @@
+ OSSL_QRX *ossl_qrx_new(const OSSL_QRX_ARGS *args);
+ 
+ /*
+- * Frees the QRX. All packets obtained using ossl_qrx_read_pkt must already
+- * have been released by calling ossl_qrx_release_pkt.
++ * Frees the QRX/reference to QRX. Frees the QRX object, if all references are
++ * gone. All packets obtained using ossl_qrx_read_pkt must already have been
++ * released by calling ossl_qrx_release_pkt.
+  *
+  * You do not need to call ossl_qrx_remove_dst_conn_id first; this function will
+  * unregister the QRX from the demuxer for all registered destination connection
+@@ -60,6 +61,12 @@
+  */
+ void ossl_qrx_free(OSSL_QRX *qrx);
+ 
++/*
++ * Obtains a new reference to QRX object. Returns NULL if reference can not
++ * be obtained.
++ */
++OSSL_QRX *ossl_qrx_newref(OSSL_QRX *qrx);
++
+ /* Setters for the msg_callback and msg_callback_arg */
+ void ossl_qrx_set_msg_callback(OSSL_QRX *qrx, ossl_msg_cb msg_callback,
+     SSL *msg_callback_ssl);
+--- crypto/openssl/ssl/quic/quic_ackm.c.orig
++++ crypto/openssl/ssl/quic/quic_ackm.c
+@@ -1131,6 +1131,38 @@
+     return 1;
+ }
+ 
++int ossl_ackm_on_tx_ack_only_packet(OSSL_ACKM *ackm, OSSL_ACKM_TX_PKT *pkt)
++{
++    struct tx_pkt_history_st *h;
++    unsigned int pkt_space;
++
++    if (pkt == NULL || pkt->pkt_space >= QUIC_PN_SPACE_NUM)
++        return 0;
++
++    /*
++     * A packet containing only an ACK frame must not be treated as
++     * in-flight or ack-eliciting; if it were, ossl_ackm_on_tx_packet()
++     * below would (correctly) perform bytes-in-flight/timer/CC bookkeeping
++     * for a packet we are about to discard from history, which would be
++     * incorrect.
++     */
++    if (pkt->is_inflight || pkt->is_ack_eliciting)
++        return 0;
++
++    pkt_space = pkt->pkt_space;
++
++    /*
++     * No one can expect ACK for packet which carries ACK frames only
++     * (ack_only packet). The ACKM does not need to keep record for ack_only
++     * packet. For ack_only packet the ACKM manager must be updated by the
++     * highest packet number which got sent.
++     */
++    h = get_tx_history(ackm, pkt_space);
++    h->highest_sent = pkt->pkt_num;
++
++    return 1;
++}
++
+ int ossl_ackm_on_rx_datagram(OSSL_ACKM *ackm, size_t num_bytes)
+ {
+     /* No-op on the client. */
+--- crypto/openssl/ssl/quic/quic_port.c.orig
++++ crypto/openssl/ssl/quic/quic_port.c
+@@ -531,8 +531,10 @@
+      * start by allocation and provisioning as much of the channel as we can
+      */
+     ch = ossl_quic_channel_alloc(&args);
+-    if (ch == NULL)
++    if (ch == NULL) {
++        ossl_qrx_free(qrx);
+         return NULL;
++    }
+ 
+     /*
+      * Fixup the channel tls connection here before we init the channel
+@@ -1488,7 +1490,7 @@
+     QUIC_CHANNEL *ch = NULL, *new_ch = NULL;
+     QUIC_CONN_ID odcid, scid;
+     uint8_t gen_new_token = 0;
+-    OSSL_QRX *qrx = NULL;
++    OSSL_QRX *qrx = NULL, *qrx_ref;
+     OSSL_QRX *qrx_src = NULL;
+     OSSL_QRX_ARGS qrx_args = { 0 };
+     uint64_t cause_flags = 0;
+@@ -1672,8 +1674,22 @@
+         }
+     }
+ 
++    qrx_ref = NULL;
++    if (qrx != NULL) {
++        /*
++         * if we are here, then client is validated via retry packet
++         * (client sent a valid token). In this case the qrx has valid
++         * secrets set for QUIC initial level encryption. We can pass
++         * reference to qrx to newly created channel.
++         *
++         * Note: port_bind_channel()/channel becomes owner of qrx_ref.
++         */
++        qrx_ref = ossl_qrx_newref(qrx);
++        if (qrx_ref == NULL)
++            goto undesirable;
++    }
+     port_bind_channel(port, &e->peer, &scid, &hdr.dst_conn_id,
+-        &odcid, qrx, &new_ch);
++        &odcid, qrx_ref, &new_ch);
+ 
+     /*
+      * if packet validates it gets moved to channel, we've just bound
+@@ -1688,19 +1704,19 @@
+     if (gen_new_token == 1)
+         generate_new_token(new_ch, &e->peer);
+ 
+-    if (qrx != NULL) {
++    if (qrx_src != NULL) {
+         /*
+-         * The qrx belongs to channel now, so don't free it.
+-         */
+-        qrx = NULL;
+-    } else {
+-        /*
+-         * We still need to salvage packets from almost forgotten qrx
+-         * and pass them to channel.
++         * Time to reinject packets from qrx to channel before
++         * qrx will be destroyed here.
+          */
+         while (ossl_qrx_read_pkt(qrx_src, &qrx_pkt) == 1)
+             ossl_quic_channel_inject_pkt(new_ch, qrx_pkt);
+         ossl_qrx_update_pn_space(qrx_src, new_ch->qrx);
++        /*
++         * transfer ownership back to qrx;
++         */
++        qrx = qrx_src;
++        qrx_src = NULL;
+     }
+ 
+     /*
+@@ -1717,7 +1733,7 @@
+      */
+ 
+ undesirable:
+-    ossl_qrx_free(qrx);
++    ossl_qrx_free(qrx); /* releases reference */
+     ossl_qrx_free(qrx_src);
+     ossl_quic_demux_release_urxe(port->demux, e);
+ }
+--- crypto/openssl/ssl/quic/quic_record_rx.c.orig
++++ crypto/openssl/ssl/quic/quic_record_rx.c
+@@ -171,6 +171,8 @@
+     ossl_msg_cb msg_callback;
+     void *msg_callback_arg;
+     SSL *msg_callback_ssl;
++
++    uint32_t refcount;
+ };
+ 
+ static RXE *qrx_ensure_free_rxe(OSSL_QRX *qrx, size_t alloc_len);
+@@ -212,6 +214,7 @@
+     qrx->short_conn_id_len = args->short_conn_id_len;
+     qrx->init_key_phase_bit = args->init_key_phase_bit;
+     qrx->max_deferred = args->max_deferred;
++    qrx->refcount = 1;
+     return qrx;
+ }
+ 
+@@ -247,13 +250,10 @@
+     return;
+ }
+ 
+-void ossl_qrx_free(OSSL_QRX *qrx)
++static void qrx_destroy(OSSL_QRX *qrx)
+ {
+     uint32_t i;
+ 
+-    if (qrx == NULL)
+-        return;
+-
+     /* Free RXE queue data. */
+     qrx_cleanup_rxl(&qrx->rx_free);
+     qrx_cleanup_rxl(&qrx->rx_pending);
+@@ -267,6 +267,30 @@
+     OPENSSL_free(qrx);
+ }
+ 
++void ossl_qrx_free(OSSL_QRX *qrx)
++{
++    if (qrx == NULL)
++        return;
++
++    qrx->refcount--;
++    if (qrx->refcount == 0)
++        qrx_destroy(qrx);
++}
++
++OSSL_QRX *ossl_qrx_newref(OSSL_QRX *qrx)
++{
++    OSSL_QRX *rv_qrx;
++
++    if (qrx != NULL && qrx->refcount != (uint32_t)~0) {
++        qrx->refcount++;
++        rv_qrx = qrx;
++    } else {
++        rv_qrx = NULL;
++    }
++
++    return rv_qrx;
++}
++
+ void ossl_qrx_inject_urxe(OSSL_QRX *qrx, QUIC_URXE *urxe)
+ {
+     /* Initialize our own fields inside the URXE and add to the pending list. */
+--- crypto/openssl/ssl/quic/quic_txp.c.orig
++++ crypto/openssl/ssl/quic/quic_txp.c
+@@ -2935,6 +2935,20 @@
+     return TXP_ERR_INTERNAL;
+ }
+ 
++static int txp_pkt_is_ack_only(const QUIC_TXPIM_PKT *tpkt)
++{
++    return tpkt->had_ack_frame
++        && !tpkt->ackm_pkt.is_inflight
++        && !tpkt->ackm_pkt.is_ack_eliciting
++        && !tpkt->had_handshake_done_frame
++        && !tpkt->had_max_data_frame
++        && !tpkt->had_max_streams_bidi_frame
++        && !tpkt->had_max_streams_uni_frame
++        && !tpkt->had_conn_close
++        && tpkt->retx_head == NULL
++        && ossl_quic_txpim_pkt_get_num_chunks(tpkt) == 0;
++}
++
+ /*
+  * Commits and queues a packet for transmission. There is no backing out after
+  * this.
+@@ -2943,8 +2957,9 @@
+  *
+  *   - Sends the packet to the QTX for encryption and transmission;
+  *
+- *   - Records the packet as having been transmitted in FIFM. ACKM is informed,
+- *     etc. and the TXPIM record is filed.
++ *   - Records non-ACK-only packets as having been transmitted in FIFM. ACKM is
++ *     informed, etc. and the TXPIM record is filed only when later callbacks
++ *     need it.
+  *
+  *   - Informs various subsystems of frames that were sent and clears frame
+  *     wanted flags so that we do not generate the same frames again.
+@@ -2971,7 +2986,7 @@
+     uint32_t archetype,
+     int *txpim_pkt_reffed)
+ {
+-    int rc = 1;
++    int ack_only, rc = 1;
+     uint32_t enc_level = pkt->h.enc_level;
+     uint32_t pn_space = ossl_quic_enc_level_to_pn_space(enc_level);
+     QUIC_TXPIM_PKT *tpkt = pkt->tpkt;
+@@ -3015,28 +3030,35 @@
+                 return 0; /* alloc error */
+         }
+ 
+-    /* Dispatch to FIFD. */
+-    if (!ossl_quic_fifd_pkt_commit(&txp->fifd, tpkt))
++    ack_only = txp_pkt_is_ack_only(tpkt);
++
++    /* Dispatch packets that need loss/retransmit callbacks to FIFD. */
++    if (!ack_only && !ossl_quic_fifd_pkt_commit(&txp->fifd, tpkt))
+         return 0;
+ 
+     /*
+      * Transmission and Post-Packet Generation Bookkeeping
+      * ===================================================
+      *
+-     * No backing out anymore - at this point the ACKM has recorded the packet
+-     * as having been sent, so we need to increment our next PN counter, or
+-     * the ACKM will complain when we try to record a duplicate packet with
+-     * the same PN later. At this point actually sending the packet may still
+-     * fail. In this unlikely event it will simply be handled as though it
+-     * were a lost packet.
++     * No backing out anymore - at this point we need to increment our next PN
++     * counter, or the ACKM will complain when we try to record a duplicate
++     * packet with the same PN later. Non-ACK-only packets have also been
++     * recorded in ACKM, so if QTX write fails they are handled as though they
++     * were lost. ACK-only packets are not recorded and will be cleaned up by
++     * the caller.
+      */
+     ++txp->next_pn[pn_space];
+-    *txpim_pkt_reffed = 1;
++    if (!ack_only)
++        *txpim_pkt_reffed = 1;
+ 
+     /* Send the packet. */
+     if (!ossl_qtx_write_pkt(txp->args.qtx, &txpkt))
+         return 0;
+ 
++    if (ack_only
++        && !ossl_ackm_on_tx_ack_only_packet(txp->args.ackm, &tpkt->ackm_pkt))
++        rc = 0;
++
+     /*
+      * Record FC and stream abort frames as sent; deactivate streams which no
+      * longer have anything to do.
+--- crypto/openssl/ssl/record/methods/dtls_meth.c.orig
++++ crypto/openssl/ssl/record/methods/dtls_meth.c
+@@ -287,7 +287,7 @@
+     pitem *item;
+ 
+     /* Limit the size of the queue to prevent DOS attacks */
+-    if (pqueue_size(queue) >= 100)
++    if (pqueue_size(queue) >= 16)
+         return 0;
+ 
+     rdata = OPENSSL_malloc(sizeof(*rdata));
+@@ -299,29 +299,26 @@
+         return -1;
+     }
+ 
+-    rdata->packet = rl->packet;
++    /*
++     * Take a copy of just this record's on-wire bytes (header + ciphertext)
++     * rather than the whole (much larger) read buffer. The live rl->rbuf is
++     * left untouched and continues to be used for subsequent reads.
++     */
+     rdata->packet_length = rl->packet_length;
+-    memcpy(&(rdata->rbuf), &rl->rbuf, sizeof(TLS_BUFFER));
+-    memcpy(&(rdata->rrec), &rl->rrec[0], sizeof(TLS_RL_RECORD));
+-
+-    item->data = rdata;
+-
+-    rl->packet = NULL;
+-    rl->packet_length = 0;
+-    memset(&rl->rbuf, 0, sizeof(TLS_BUFFER));
+-    memset(&rl->rrec[0], 0, sizeof(rl->rrec[0]));
+-
+-    if (!tls_setup_read_buffer(rl)) {
+-        /* RLAYERfatal() already called */
+-        OPENSSL_free(rdata->rbuf.buf);
++    rdata->packet = OPENSSL_memdup(rl->packet, rl->packet_length);
++    if (rdata->packet == NULL) {
+         OPENSSL_free(rdata);
+         pitem_free(item);
++        RLAYERfatal(rl, SSL_AD_INTERNAL_ERROR, ERR_R_CRYPTO_LIB);
+         return -1;
+     }
++    memcpy(&(rdata->rrec), &rl->rrec[0], sizeof(TLS_RL_RECORD));
++
++    item->data = rdata;
+ 
+     if (pqueue_insert(queue, item) == NULL) {
+         /* Must be a duplicate so ignore it */
+-        OPENSSL_free(rdata->rbuf.buf);
++        OPENSSL_free(rdata->packet);
+         OPENSSL_free(rdata);
+         pitem_free(item);
+     }
+@@ -329,44 +326,6 @@
+     return 1;
+ }
+ 
+-/* copy buffered record into OSSL_RECORD_LAYER structure */
+-static int dtls_copy_rlayer_record(OSSL_RECORD_LAYER *rl, pitem *item)
+-{
+-    DTLS_RLAYER_RECORD_DATA *rdata;
+-
+-    rdata = (DTLS_RLAYER_RECORD_DATA *)item->data;
+-
+-    ossl_tls_buffer_release(&rl->rbuf);
+-
+-    rl->packet = rdata->packet;
+-    rl->packet_length = rdata->packet_length;
+-    memcpy(&rl->rbuf, &(rdata->rbuf), sizeof(TLS_BUFFER));
+-    memcpy(&rl->rrec[0], &(rdata->rrec), sizeof(TLS_RL_RECORD));
+-
+-    /* Set proper sequence number for mac calculation */
+-    memcpy(&(rl->sequence[2]), &(rdata->packet[5]), 6);
+-
+-    return 1;
+-}
+-
+-static int dtls_retrieve_rlayer_buffered_record(OSSL_RECORD_LAYER *rl,
+-    struct pqueue_st *queue)
+-{
+-    pitem *item;
+-
+-    item = pqueue_pop(queue);
+-    if (item) {
+-        dtls_copy_rlayer_record(rl, item);
+-
+-        OPENSSL_free(item->data);
+-        pitem_free(item);
+-
+-        return 1;
+-    }
+-
+-    return 0;
+-}
+-
+ /*-
+  * Call this to get a new input record.
+  * It will return <= 0 if more data is needed, normally due to an error
+@@ -400,12 +359,6 @@
+     }
+ 
+ again:
+-    /* if we're renegotiating, then there may be buffered records */
+-    if (dtls_retrieve_rlayer_buffered_record(rl, rl->processed_rcds)) {
+-        rl->num_recs = 1;
+-        return OSSL_RECORD_RETURN_SUCCESS;
+-    }
+-
+     /* get something from the wire */
+ 
+     /* check if we have the header */
+@@ -607,23 +560,13 @@
+             /* Push to the next record layer */
+             ret &= BIO_write_ex(rl->next, rdata->packet, rdata->packet_length,
+                 &written);
+-            OPENSSL_free(rdata->rbuf.buf);
++            OPENSSL_free(rdata->packet);
+             OPENSSL_free(item->data);
+             pitem_free(item);
+         }
+         pqueue_free(rl->unprocessed_rcds);
+     }
+ 
+-    if (rl->processed_rcds != NULL) {
+-        while ((item = pqueue_pop(rl->processed_rcds)) != NULL) {
+-            rdata = (DTLS_RLAYER_RECORD_DATA *)item->data;
+-            OPENSSL_free(rdata->rbuf.buf);
+-            OPENSSL_free(item->data);
+-            pitem_free(item);
+-        }
+-        pqueue_free(rl->processed_rcds);
+-    }
+-
+     return tls_free(rl) && ret;
+ }
+ 
+@@ -653,10 +596,8 @@
+         return ret;
+ 
+     (*retrl)->unprocessed_rcds = pqueue_new();
+-    (*retrl)->processed_rcds = pqueue_new();
+ 
+-    if ((*retrl)->unprocessed_rcds == NULL
+-        || (*retrl)->processed_rcds == NULL) {
++    if ((*retrl)->unprocessed_rcds == NULL) {
+         dtls_free(*retrl);
+         *retrl = NULL;
+         ERR_raise(ERR_LIB_SSL, ERR_R_SSL_LIB);
+--- crypto/openssl/ssl/record/methods/recmethod_local.h.orig
++++ crypto/openssl/ssl/record/methods/recmethod_local.h
+@@ -344,9 +344,8 @@
+ 
+     size_t taglen;
+ 
+-    /* DTLS received handshake records (processed and unprocessed) */
++    /* DTLS received handshake records awaiting the next epoch */
+     struct pqueue_st *unprocessed_rcds;
+-    struct pqueue_st *processed_rcds;
+ 
+     /* records being received in the current epoch */
+     DTLS_BITMAP bitmap;
+@@ -374,7 +373,6 @@
+ typedef struct dtls_rlayer_record_data_st {
+     unsigned char *packet;
+     size_t packet_length;
+-    TLS_BUFFER rbuf;
+     TLS_RL_RECORD rrec;
+ } DTLS_RLAYER_RECORD_DATA;
+ 
+--- crypto/openssl/ssl/t1_lib.c.orig
++++ crypto/openssl/ssl/t1_lib.c
+@@ -4500,6 +4500,20 @@
+     if (supported <= 0)
+         return 0;
+ 
++    /*
++     * When RPK is negotiated there are no certificate signatures to
++     * constrain, and there may not even be a certificate configured.
++     */
++    if (TLSEXT_cert_type_rpk == (s->server ? s->ext.server_cert_type : s->ext.client_cert_type))
++        return 1;
++
++    /*
++     * RPK was enabled, adding candidate private-key-only slots, but was not
++     * negotiated, so the key-only slot is not usable.
++     */
++    if (x == NULL)
++        return 0;
++
+     /*
+      * The TLS 1.3 signature_algorithms_cert extension places restrictions
+      * on the sigalg with which the certificate was signed (by its issuer).
+--- crypto/openssl/test/build.info.orig
++++ crypto/openssl/test/build.info
+@@ -763,7 +763,7 @@
+   IF[{- !$disabled{cmp} -}]
+     PROGRAMS{noinst}=cmp_asn_test cmp_ctx_test cmp_status_test cmp_hdr_test \
+                      cmp_protect_test cmp_msg_test cmp_vfy_test \
+-                     cmp_server_test cmp_client_test
++                     cmp_server_test cmp_client_test cmp_extracerts_dos_test
+   ENDIF
+ 
+   SOURCE[cmp_asn_test]=cmp_asn_test.c helpers/cmp_testlib.c
+@@ -790,6 +790,10 @@
+   INCLUDE[cmp_msg_test]=.. ../include ../apps/include
+   DEPEND[cmp_msg_test]=../libcrypto.a libtestutil.a
+ 
++  SOURCE[cmp_extracerts_dos_test]=cmp_extracerts_dos_test.c helpers/cmp_testlib.c
++  INCLUDE[cmp_extracerts_dos_test]=.. ../include ../apps/include
++  DEPEND[cmp_extracerts_dos_test]=../libcrypto.a libtestutil.a
++
+   SOURCE[cmp_vfy_test]=cmp_vfy_test.c helpers/cmp_testlib.c
+   INCLUDE[cmp_vfy_test]=.. ../include ../apps/include
+   DEPEND[cmp_vfy_test]=../libcrypto.a libtestutil.a
+--- /dev/null
++++ crypto/openssl/test/cmp_extracerts_dos_test.c
+@@ -0,0 +1,338 @@
++/*
++ * Copyright 2026 The OpenSSL Project Authors. All Rights Reserved.
++ *
++ * Licensed under the Apache License 2.0 (the "License"). You may not use
++ * this file except in compliance with the License. You can obtain a copy
++ * in the file LICENSE in the source distribution or at
++ * https://www.openssl.org/source/license.html
++ */
++
++/*
++ * Regression test for: CMP server unauthenticated memory/CPU DoS via
++ * cached extraCerts on failed protection checks.
++ *
++ * Root cause (crypto/cmp/cmp_vfy.c, ossl_cmp_msg_check_update(), current
++ * master as of this writing):
++ *
++ *   res = ossl_x509_add_certs_new(&ctx->untrusted, msg->extraCerts, ...);
++ *   ...
++ *   res = OSSL_CMP_validate_msg(ctx, msg) || (cb...);   // may be 0 (rejected)
++ *
++ *   if (ctx->noCacheExtraCerts)                          // <-- rollback is
++ *       while (num_added-- > 0)                          //  gated on this
++ *           X509_free(sk_X509_shift(ctx->untrusted));    //  flag only, NOT
++ *                                                          //  on the
++ *                                                          //  validation
++ *                                                          //  result (res)
++ *
++ *   if (!res) { ...; return 0; }   // certs from a REJECTED msg are kept
++ *
++ * This test exercises ossl_cmp_msg_check_update() directly -- no sockets,
++ * no HTTP server, no apps/cmp.c -- and asserts on the resulting size of
++ * ctx->untrusted. It builds a genuinely PBM-protected OSSL_CMP_MSG using
++ * the project's own internal message-creation function
++ * (ossl_cmp_genm_new(), same one exercised in test/cmp_msg_test.c) so the
++ * message is not hand-crafted to "look" rejectable -- it is rejected for a
++ * real reason (the receiving ctx has no matching secret configured), the
++ * same way OSSL_CMP_validate_msg() would reject any unauthenticated CMP
++ * request in the field.
++ *
++ * Expected results:
++ *   - BEFORE the fix: untrusted_count_after == untrusted_count_before + N
++ *     (every rejected message's extraCerts persist)
++ *   - AFTER the fix:  untrusted_count_after == untrusted_count_before
++ *     (rejected messages leave no residue)
++ */
++
++#include "helpers/cmp_testlib.h"
++
++#define NUM_REJECTED_REQUESTS 25 /* "attacker" sends this many distinct certs */
++
++typedef struct test_fixture {
++    const char *test_case_name;
++    OSSL_CMP_CTX *server_ctx; /* long-lived ctx under test, mirrors srv_ctx->ctx */
++} CMP_DOS_TEST_FIXTURE;
++
++static OSSL_LIB_CTX *libctx = NULL;
++
++static CMP_DOS_TEST_FIXTURE *set_up(const char *const test_case_name)
++{
++    CMP_DOS_TEST_FIXTURE *fixture;
++
++    if (!TEST_ptr(fixture = OPENSSL_zalloc(sizeof(*fixture))))
++        return NULL;
++    fixture->test_case_name = test_case_name;
++
++    if (!TEST_ptr(fixture->server_ctx = OSSL_CMP_CTX_new(libctx, NULL))) {
++        OPENSSL_free(fixture);
++        return NULL;
++    }
++    /*
++     * Deliberately do NOT call OSSL_CMP_CTX_set1_secretValue() on the
++     * server ctx. Per OSSL_CMP_validate_msg() (crypto/cmp/cmp_vfy.c):
++     *   case NID_id_PasswordBasedMAC:
++     *     if (ctx->secretValue == NULL) {
++     *         ossl_cmp_info(ctx, "no secret available for verifying..");
++     *         ERR_raise(ERR_LIB_CMP, CMP_R_ERROR_VALIDATING_PROTECTION);
++     *         return 0;
++     *     }
++     * so every PBM-protected message this ctx receives is unconditionally
++     * rejected -- a deterministic, content-independent rejection path that
++     * models "missing or invalid protection" from the report's repro
++     * steps, without needing to forge a bad MAC by hand.
++     * ctx->noCacheExtraCerts is left at its default (0), exactly as in the
++     * vulnerable deployment ("not setting -no_cache_extracerts").
++     */
++    return fixture;
++}
++
++static void tear_down(CMP_DOS_TEST_FIXTURE *fixture)
++{
++    if (fixture == NULL)
++        return;
++    OSSL_CMP_CTX_free(fixture->server_ctx);
++    OPENSSL_free(fixture);
++}
++
++/* Generates a throwaway EC P-256 keypair; cheap, and key strength is
++ * irrelevant to this test. */
++static EVP_PKEY *generate_throwaway_keypair(void)
++{
++    EVP_PKEY_CTX *pctx = NULL;
++    EVP_PKEY *pkey = NULL;
++
++    if (!TEST_ptr(pctx = EVP_PKEY_CTX_new_from_name(libctx, "EC", NULL)))
++        return NULL;
++    if (!TEST_int_gt(EVP_PKEY_keygen_init(pctx), 0)
++        || !TEST_int_gt(EVP_PKEY_CTX_set_group_name(pctx, "P-256"), 0)
++        || !TEST_int_gt(EVP_PKEY_generate(pctx, &pkey), 0))
++        pkey = NULL;
++    EVP_PKEY_CTX_free(pctx);
++    return pkey;
++}
++
++/*
++ * Builds a minimal, self-signed, syntactically valid X509 with a unique
++ * subject/issuer per index, so X509_ADD_FLAG_NO_DUP cannot collapse it
++ * with any other generated cert (matching the report's exploitation
++ * requirement of "unique certificates across requests").
++ */
++static X509 *generate_unique_self_signed_cert(EVP_PKEY *pkey, int index)
++{
++    X509 *cert = NULL;
++    X509_NAME *name = NULL;
++    ASN1_INTEGER *serial = NULL;
++    char cn[64];
++
++    BIO_snprintf(cn, sizeof(cn), "attacker-cert-%d", index);
++
++    if (!TEST_ptr(cert = X509_new())
++        || !TEST_true(X509_set_version(cert, X509_VERSION_3)))
++        goto err;
++
++    if (!TEST_ptr(serial = ASN1_INTEGER_new())
++        || !TEST_true(ASN1_INTEGER_set(serial, 1000L + index))
++        || !TEST_true(X509_set_serialNumber(cert, serial)))
++        goto err;
++
++    if (!TEST_ptr(X509_gmtime_adj(X509_getm_notBefore(cert), 0))
++        || !TEST_ptr(X509_gmtime_adj(X509_getm_notAfter(cert),
++            60L * 60L * 24L * 365L)))
++        goto err;
++
++    if (!TEST_true(X509_set_pubkey(cert, pkey)))
++        goto err;
++
++    if (!TEST_ptr(name = X509_NAME_new())
++        || !TEST_true(X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC,
++            (unsigned char *)"cmp-dos-test",
++            -1, -1, 0))
++        || !TEST_true(X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
++            (unsigned char *)cn,
++            -1, -1, 0))
++        || !TEST_true(X509_set_subject_name(cert, name))
++        || !TEST_true(X509_set_issuer_name(cert, name)))
++        goto err;
++
++    if (!TEST_int_gt(X509_sign(cert, pkey, EVP_sha256()), 0))
++        goto err;
++
++    X509_NAME_free(name);
++    ASN1_INTEGER_free(serial);
++    return cert;
++
++err:
++    X509_NAME_free(name);
++    ASN1_INTEGER_free(serial);
++    X509_free(cert);
++    return NULL;
++}
++
++/*
++ * Builds a real, internally consistent, PBM-protected CMP GenMsg carrying
++ * exactly one never-before-seen self-signed cert as its sole extraCert.
++ * Uses a throwaway *client*-side OSSL_CMP_CTX purely to drive message
++ * creation/protection (ossl_cmp_genm_new() both builds the body and calls
++ * ossl_cmp_msg_protect() internally, same as in test/cmp_msg_test.c). The
++ * client ctx's secret is intentionally never shared with the server ctx
++ * under test, so the message is protected (syntactically well-formed,
++ * non-empty protection field) but NOT verifiable by the receiver -- this
++ * is what "missing or invalid protection" means for a real attacker who
++ * has no credentials, not an empty/garbage protection field.
++ */
++static OSSL_CMP_MSG *build_rejectable_msg_with_unique_cert(int index)
++{
++    OSSL_CMP_CTX *client_ctx = NULL;
++    OSSL_CMP_MSG *msg = NULL;
++    EVP_PKEY *pkey = NULL;
++    X509 *fresh_cert = NULL;
++    STACK_OF(X509) *extra = NULL;
++    unsigned char ref[16], secret[16];
++
++    if (!TEST_ptr(client_ctx = OSSL_CMP_CTX_new(libctx, NULL)))
++        goto err;
++
++    if (!TEST_ptr(pkey = generate_throwaway_keypair())
++        || !TEST_ptr(fresh_cert = generate_unique_self_signed_cert(pkey, index)))
++        goto err;
++
++    if (!TEST_ptr(extra = sk_X509_new_null())
++        || !TEST_true(sk_X509_push(extra, fresh_cert)))
++        goto err;
++    fresh_cert = NULL; /* ownership now with the stack */
++
++    if (!TEST_true(OSSL_CMP_CTX_set1_extraCertsOut(client_ctx, extra)))
++        goto err;
++
++    /* PBM protection with a secret the server ctx will never be given */
++    memset(ref, (unsigned char)(0xA0 + (index & 0x0F)), sizeof(ref));
++    memset(secret, (unsigned char)(0x50 + (index & 0x0F)), sizeof(secret));
++    if (!TEST_true(OSSL_CMP_CTX_set_option(client_ctx,
++            OSSL_CMP_OPT_UNPROTECTED_SEND, 0))
++        || !TEST_true(OSSL_CMP_CTX_set1_referenceValue(client_ctx, ref,
++            sizeof(ref)))
++        || !TEST_true(OSSL_CMP_CTX_set1_secretValue(client_ctx, secret,
++            sizeof(secret))))
++        goto err;
++
++    /* GenMsg is the lightest standard body type for this purpose */
++    if (!TEST_ptr(msg = ossl_cmp_genm_new(client_ctx)))
++        goto err;
++
++    sk_X509_pop_free(extra, X509_free);
++    X509_free(fresh_cert);
++    EVP_PKEY_free(pkey);
++    OSSL_CMP_CTX_free(client_ctx);
++    return msg;
++
++err:
++    sk_X509_pop_free(extra, X509_free);
++    X509_free(fresh_cert);
++    EVP_PKEY_free(pkey);
++    OSSL_CMP_CTX_free(client_ctx);
++    OSSL_CMP_MSG_free(msg);
++    return NULL;
++}
++
++/*
++ * Core assertion: N distinct rejected requests must not grow
++ * server_ctx->untrusted at all.
++ *
++ * Before the fix this fails with e.g.:
++ *   ERROR: untrusted count after (25) != count before (0)
++ */
++static int execute_no_unbounded_growth_test(CMP_DOS_TEST_FIXTURE *fixture)
++{
++    OSSL_CMP_CTX *server_ctx = fixture->server_ctx;
++    int count_before, count_after, i;
++
++    count_before = sk_X509_num(OSSL_CMP_CTX_get0_untrusted(server_ctx));
++    if (count_before < 0)
++        count_before = 0;
++
++    for (i = 0; i < NUM_REJECTED_REQUESTS; i++) {
++        OSSL_CMP_MSG *msg = build_rejectable_msg_with_unique_cert(i);
++        int check_result;
++
++        if (!TEST_ptr(msg))
++            return 0;
++
++        check_result = ossl_cmp_msg_check_update(server_ctx, msg, NULL, 0);
++        OSSL_CMP_MSG_free(msg);
++
++        if (!TEST_int_eq(check_result, 0)) {
++            TEST_note("expected request #%d to be rejected (server ctx has"
++                      " no matching PBM secret) but it was accepted -- test"
++                      " setup is wrong, not exercising the rejection path",
++                i);
++            return 0;
++        }
++    }
++
++    count_after = sk_X509_num(OSSL_CMP_CTX_get0_untrusted(server_ctx));
++    if (count_after < 0)
++        count_after = 0;
++
++    if (!TEST_int_eq(count_after, count_before)) {
++        TEST_note("server_ctx->untrusted grew from %d to %d after %d"
++                  " rejected requests -- failed-request extraCerts caching"
++                  " bug is present (see ossl_cmp_msg_check_update() in"
++                  " crypto/cmp/cmp_vfy.c)",
++            count_before, count_after,
++            NUM_REJECTED_REQUESTS);
++        return 0;
++    }
++    return 1;
++}
++
++/*
++ * Single-request variant of the same check, useful in isolation since it
++ * pins down that even ONE rejected request leaves no residue -- ruling out
++ * X509_ADD_FLAG_NO_DUP coincidentally masking the bug in the N-request test.
++ */
++static int execute_single_rejected_request_test(CMP_DOS_TEST_FIXTURE *fixture)
++{
++    OSSL_CMP_CTX *server_ctx = fixture->server_ctx;
++    OSSL_CMP_MSG *msg = build_rejectable_msg_with_unique_cert(999);
++    int count_before, count_after;
++
++    if (!TEST_ptr(msg))
++        return 0;
++
++    count_before = sk_X509_num(OSSL_CMP_CTX_get0_untrusted(server_ctx));
++    if (count_before < 0)
++        count_before = 0;
++
++    if (!TEST_int_eq(ossl_cmp_msg_check_update(server_ctx, msg, NULL, 0), 0)) {
++        OSSL_CMP_MSG_free(msg);
++        return 0;
++    }
++    OSSL_CMP_MSG_free(msg);
++
++    count_after = sk_X509_num(OSSL_CMP_CTX_get0_untrusted(server_ctx));
++    if (count_after < 0)
++        count_after = 0;
++
++    return TEST_int_eq(count_after, count_before);
++}
++
++static int test_single_rejected_request_leaves_no_residue(void)
++{
++    SETUP_TEST_FIXTURE(CMP_DOS_TEST_FIXTURE, set_up);
++    EXECUTE_TEST(execute_single_rejected_request_test, tear_down);
++    return result;
++}
++
++static int test_no_unbounded_growth_on_rejected_requests(void)
++{
++    SETUP_TEST_FIXTURE(CMP_DOS_TEST_FIXTURE, set_up);
++    EXECUTE_TEST(execute_no_unbounded_growth_test, tear_down);
++    return result;
++}
++
++int setup_tests(void)
++{
++    ADD_TEST(test_single_rejected_request_leaves_no_residue);
++    ADD_TEST(test_no_unbounded_growth_on_rejected_requests);
++    return 1;
++}
+--- crypto/openssl/test/cmp_protect_test.c.orig
++++ crypto/openssl/test/cmp_protect_test.c
+@@ -185,6 +185,38 @@
+     EXECUTE_TEST(execute_calc_protection_pbmac_test, tear_down);
+     return result;
+ }
++
++/*
++ * Regression test for the ossl_cmp_calc_protection() protectionAlg
++ * type-confusion DoS: a PKIMessage whose protectionAlg has the
++ * id-PasswordBasedMAC OID but carries a BOOLEAN parameter instead of the
++ * expected PBMParameter SEQUENCE. X509_ALGOR_get0() then returns the boolean's
++ * union member (0xff) via ppval; the unpatched code took the non-NULL ppval as
++ * a valid ASN1_STRING * and dereferenced 0xff, crashing with a near-NULL
++ * access.  The fixed code must reject the malformed parameter and return NULL.
++ */
++static int test_cmp_calc_protection_pbmac_bad_alg_param(void)
++{
++    unsigned char sec_insta[] = { 'i', 'n', 's', 't', 'a' };
++    X509_ALGOR *alg = NULL;
++
++    SETUP_TEST_FIXTURE(CMP_PROTECT_TEST_FIXTURE, set_up);
++    if (!TEST_true(OSSL_CMP_CTX_set1_secretValue(fixture->cmp_ctx,
++            sec_insta, sizeof(sec_insta)))
++        || !TEST_ptr(fixture->msg = load_pkimsg(ip_PBM_f, libctx))
++        || !TEST_ptr(alg = X509_ALGOR_new())
++        || !TEST_true(X509_ALGOR_set0(alg, OBJ_nid2obj(NID_id_PasswordBasedMAC),
++            V_ASN1_BOOLEAN, (void *)1))) {
++        X509_ALGOR_free(alg);
++        tear_down(fixture);
++        fixture = NULL;
++    } else {
++        X509_ALGOR_free(fixture->msg->header->protectionAlg);
++        fixture->msg->header->protectionAlg = alg;
++    }
++    EXECUTE_TEST(execute_calc_protection_fails_test, tear_down);
++    return result;
++}
+ static int execute_MSG_protect_test(CMP_PROTECT_TEST_FIXTURE *fixture)
+ {
+     return TEST_int_eq(fixture->expected,
+@@ -609,6 +641,7 @@
+     ADD_TEST(test_cmp_calc_protection_pkey_Ed);
+ #endif
+     ADD_TEST(test_cmp_calc_protection_pbmac);
++    ADD_TEST(test_cmp_calc_protection_pbmac_bad_alg_param);
+ 
+     ADD_TEST(test_MSG_protect_with_msg_sig_alg_protection_plus_rsa_key);
+     ADD_TEST(test_MSG_protect_with_certificate_and_key);
+--- crypto/openssl/test/cmp_vfy_test.c.orig
++++ crypto/openssl/test/cmp_vfy_test.c
+@@ -572,6 +572,55 @@
+ }
+ #endif
+ 
++/* Regression test for CVE-2026-63073 */
++static int execute_msg_check_update_malicious_sender(CMP_VFY_TEST_FIXTURE *fixture)
++{
++    const char *data = NULL;
++    unsigned long err;
++
++    if (!TEST_int_eq(ossl_cmp_msg_check_update(fixture->cmp_ctx, fixture->msg, NULL, 0), 0)
++        || !TEST_int_ne((err = ERR_peek_last_error_all(NULL, NULL, NULL, &data, NULL)), 0)
++        || !TEST_int_eq(ERR_GET_LIB(err), ERR_LIB_CMP)
++        || !TEST_int_eq(ERR_GET_REASON(err), CMP_R_UNEXPECTED_SENDER)
++        || !TEST_ptr(data)
++        || !TEST_str_eq(data, "/CN=%n"))
++        return 0;
++    return 1;
++}
++
++static int test_msg_check_update_malicious_sender(void)
++{
++    OSSL_CMP_PKIHEADER *hdr;
++    X509_NAME *expected = X509_NAME_new();
++    X509_NAME *actual = X509_NAME_new();
++
++    if (expected == NULL || actual == NULL) {
++        X509_NAME_free(expected);
++        return 0;
++    }
++
++    SETUP_TEST_FIXTURE(CMP_VFY_TEST_FIXTURE, set_up);
++    if (!TEST_ptr(fixture->msg = load_pkimsg(ir_protected_f, libctx))
++        || !TEST_ptr(hdr = OSSL_CMP_MSG_get0_header(fixture->msg))
++        || !TEST_int_eq(X509_NAME_add_entry_by_txt(expected, "CN", MBSTRING_ASC,
++                            (unsigned char *)"%n", -1, -1, 0),
++            1)
++        || !TEST_int_eq(X509_NAME_add_entry_by_txt(actual, "CN", MBSTRING_ASC,
++                            (unsigned char *)"actual", -1, -1, 0),
++            1)
++        || !TEST_int_eq(ossl_cmp_hdr_set1_sender(hdr, expected), 1)
++        || !TEST_int_eq(OSSL_CMP_CTX_set1_expected_sender(fixture->cmp_ctx, actual), 1)) {
++        X509_NAME_free(expected);
++        X509_NAME_free(actual);
++        tear_down(fixture);
++        return 0;
++    }
++    EXECUTE_TEST(execute_msg_check_update_malicious_sender, tear_down);
++    X509_NAME_free(expected);
++    X509_NAME_free(actual);
++    return result;
++}
++
+ void cleanup_tests(void)
+ {
+     X509_free(srvcert);
+@@ -712,6 +761,7 @@
+ #ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+     ADD_TEST(test_msg_check_recipient_nonce_bad);
+ #endif
++    ADD_TEST(test_msg_check_update_malicious_sender);
+ 
+     return 1;
+ 
+--- crypto/openssl/test/recipes/65-test_cmp_msg.t.orig
++++ crypto/openssl/test/recipes/65-test_cmp_msg.t
+@@ -20,17 +20,22 @@
+ use lib bldtop_dir('.');
+ 
+ my $no_fips = disabled('fips') || ($ENV{NO_FIPS} // 0);
++my $no_ec = disabled('ec');
+ 
+ plan skip_all => "This test is not supported in a no-cmp build"
+     if disabled("cmp");
+ 
+-plan tests => 2 + ($no_fips ? 0 : 1); #fips test
++plan tests => 2 + ($no_fips ? 0 : 1) + ($no_ec ? 0 : 1); #fips test and ec test
+ 
+ my @basic_cmd = ("cmp_msg_test",
+                  data_file("new.key"),
+                  data_file("server.crt"),
+                  data_file("pkcs10.der"));
+ 
++unless ($no_ec) {
++    ok(run(test(["cmp_extracerts_dos_test"])));
++}
++
+ ok(run(test([@basic_cmd, "none"])));
+ 
+ ok(run(test([@basic_cmd, "default", srctop_file("test", "default.cnf")])));
+--- crypto/openssl/test/rpktest.c.orig
++++ crypto/openssl/test/rpktest.c
+@@ -38,6 +38,37 @@
+ static const unsigned char cert_type_rpk[] = { TLSEXT_cert_type_rpk, TLSEXT_cert_type_x509 };
+ static const unsigned char SID_CTX[] = { 'r', 'p', 'k' };
+ 
++/*
++ * Wire form of a SignatureSchemeList that lists rsa_pkcs1_sha256
++ * and ed448 -- between them they cover the issuer signature on
++ * every cert this file loads from test/certs
++ * (sha256WithRSAEncryption for the RSA/ECDSA/Ed25519 leaves and
++ * ED448 for the Ed448 leaf), so the extension is harmless when
++ * the handshake is non-RPK and the server's check_cert_usable()
++ * has to walk the list against a real cert.  When RPK is
++ * negotiated check_cert_usable() returns early without inspecting
++ * the list, and when the slot is an RPK-listed key-only slot but
++ * X509 was negotiated check_cert_usable() returns 0 on the x ==
++ * NULL path -- the inevitable outcome, now discovered earlier.
++ *
++ * Payload: length, rsa_pkcs1_sha256, ed448
++ */
++static const unsigned char sigalgs_cert_payload[] = {
++    0x00, 0x04,
++    0x04, 0x01,
++    0x08, 0x08
++};
++
++static int sigalgs_cert_add_cb(SSL *s, unsigned int ext_type,
++    unsigned int context,
++    const unsigned char **out, size_t *outlen,
++    X509 *x, size_t chainidx, int *al, void *add_arg)
++{
++    *out = sigalgs_cert_payload;
++    *outlen = sizeof(sigalgs_cert_payload);
++    return 1;
++}
++
+ static int rpk_verify_client_cb(int ok, X509_STORE_CTX *ctx)
+ {
+     int err = X509_STORE_CTX_get_error(ctx);
+@@ -255,18 +286,43 @@
+     /* NEW */
+     SSL_CTX_set_verify(cctx, SSL_VERIFY_PEER, rpk_verify_client_cb);
+ 
+-    if (!TEST_true(create_ssl_objects(sctx, cctx, &serverssl, &clientssl,
+-            NULL, NULL)))
++    /*
++     * Send signature_algorithms_cert in every ClientHello, and in
++     * every TLS 1.3 CertificateRequest.  The OpenSSL stack doesn't
++     * construct this extension by default in either direction, so
++     * register a custom add hook on both ends.  This exercises the
++     * three distinct paths through check_cert_usable() on whichever
++     * side receives the extension:
++     *   - RPK was negotiated for this side's cert -- early return 1,
++     *     list contents ignored.
++     *   - RPK was offered but X509 was negotiated and this side's
++     *     slot holds only a private key -- x == NULL, return 0
++     *     (any peer-sent signature_algorithms_cert against a key-only
++     *     slot would otherwise trigger a crash).
++     *   - X509 negotiated with a real cert -- walk the list, find
++     *     a match against the issuer's signature algorithm.
++     * The server's registration only fires on TLS 1.3 connections
++     * where the server requests a client certificate (case 2, 9,
++     * 10 etc.); on TLS 1.2 the sigalgs travel inside the
++     * CertificateRequest body, not as a separate extension.
++     */
++    if (!TEST_true(SSL_CTX_add_custom_ext(cctx,
++            TLSEXT_TYPE_signature_algorithms_cert,
++            SSL_EXT_CLIENT_HELLO,
++            sigalgs_cert_add_cb, NULL, NULL,
++            NULL, NULL))
++        || !TEST_true(SSL_CTX_add_custom_ext(sctx,
++            TLSEXT_TYPE_signature_algorithms_cert,
++            SSL_EXT_TLS1_3_CERTIFICATE_REQUEST,
++            sigalgs_cert_add_cb, NULL, NULL,
++            NULL, NULL))
++        || !TEST_true(create_ssl_objects(sctx, cctx, &serverssl, &clientssl,
++            NULL, NULL))
++        || !TEST_int_gt(SSL_dane_enable(serverssl, NULL), 0)
++        || !TEST_int_gt(SSL_dane_enable(clientssl, "example.com"), 0)
++        || !TEST_int_eq(SSL_use_PrivateKey_file(serverssl, privkey_file, SSL_FILETYPE_PEM), 1))
+         goto end;
+ 
+-    if (!TEST_int_gt(SSL_dane_enable(serverssl, NULL), 0))
+-        goto end;
+-    if (!TEST_int_gt(SSL_dane_enable(clientssl, "example.com"), 0))
+-        goto end;
+-
+-    /* Set private key and certificate */
+-    if (!TEST_int_eq(SSL_use_PrivateKey_file(serverssl, privkey_file, SSL_FILETYPE_PEM), 1))
+-        goto end;
+     /* Only a private key */
+     if (idx == 1) {
+         if (idx_server_server_rpk == 0 || idx_client_server_rpk == 0) {
