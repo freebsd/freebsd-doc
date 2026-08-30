@@ -1292,7 +1292,7 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'netbsd',        'NetBSD 11.0',
     'openbsd',       'OpenBSD 7.9',
-    'opensuse',      'openSUSE 15.6',
+    'opensuse',      'openSUSE 16.0',
     'openindiana',   'OpenIndiana 2025.10',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
