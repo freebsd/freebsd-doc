@@ -1,0 +1,47 @@
+=== Procdesc: debugging API
+
+Contact: Konstantin Belousov <kib@FreeBSD.org>
+
+The process descriptors API enhancements project continued, with the goal to allow complete process control using descriptors, in particular, debugging.
+I wanted to make it possible to stop reference pids as the process identifiers.
+The milestone for it should be a demonstration of enabling the capsicum mode for some non-trivial debugger, I selected man:truss[1] because it does not need neither filesystem nor network namespace accesses after attached to the target.
+
+The semi-obvious solution there is to introduce man:pdptrace[2], which is equivalent to man:ptrace[2] but takes the process descriptor as the process designator.
+We need to be able to obtain the notifications of the process debugging events, which are provided by waitpid[2] syscall family for pid-based controls.
+And, we need a way to obtain the process descriptor for a new child forked from the debuggee, to continue tracing of all descendants.
+
+Previously, the man:pdopenpid[2] system call was added, which allows to get a handle on an arbitrary process.
+Existing operations on the process descriptors are somewhat limited: handle owner can wait for the exit notification using man:kqueue[2], and with some luck retrieve the process exit status.
+
+The last point requires some elaboration.
+Since the man:pdwait[2] call was added recently, there were some amount of hacks in the kernel to allow man:waitpid[2] calls on pid's of processes created with man:pdfork[2].
+As result, the man:waitpid[2] caller might have reaped the process before owner of the process descriptor could call man:pdwait[2].
+Similarly, if there is more than one process descriptor opened on the same process, only the first man:pdwait[2] caller could retrieve the exit status with man:pdwait[2], making other descriptors useless.
+
+The listed set of problems also made it very hard to correctly use the proposed man:pdptrace[2].
+The process being debugged could steal events from process descriptors and vice versa.
+Simply disallowing man:wait[2] on processes with the opened descriptors is not an option for two reasons:
+* backward compatibility, man:waitpid[2] was already allowed and existing binaries relied on it
+* if the debuggee used man:fork[2] to create a child, it expects to get the exit notification (e.g. SIGCHLD) and exit status from man:wait[2]
+
+The solution was manyfold.
+First, we have to postpone reaping if there are either opened process descriptors, or if the process was created with man:fork[2], we should not reap until man:wait[2] is called on pid by the parent.
+Second, the exit status needs to be preserved in the process descriptors private data even after reaping, to allow man:pdwait[2] on any of the descriptors.
+This was implemented by providing a bitmap of the 'zombie refs' on the kernel struct proc.
+Each zombie reference prevents reaping, and cleared by corresponding call to man:waitpid[2] or man:pdwait[2].
+Only when all registered references are cleared, zombie can be reaped.
+If the process is created with man:pdfork[2] or opened with pdopenpid[2], it gets the procdesc zombie reference.
+If the process was created with man:fork[2], it gets the 'parent' zombie reference.
+By default, pdfork[2] also sets the parent reference to allow the man:waitpid[2], for compatibility.
+The new man:pdfork[2] flag PD_NOWAITPID prevents that.
+
+Then, wait-like events must work with the process descriptors.
+The procdesc man:kqueue[2] event filter was extended with NOTE_PDSIGCHLD hints to report that man:pdwait[2] can retrieve tracing or exiting event on the descriptor.
+
+Then, the man:pdptrace[2] was able to usefully control the target.
+A new ptrace call to retrieve the list of the attached processes PT_GET_CHILDREN allowed man:pdptrace[2] to get hold of forks.
+
+With all the features implemented, it was possible to convert man:truss[1] to use only process descriptors to control the traced processes.
+The existing mode of using pids was preserved, and can be selected with the '-y' option as an emergency switch and to easy comparision and debugging of the new mode.
+
+Sponsor: The FreeBSD Foundation
