@@ -386,6 +386,8 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
     'FreeBSD 15.0-RELEASE and Ports',
 "$manLocalDir/FreeBSD-15.0-RELEASE/man:$manLocalDir/FreeBSD-15.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-15.0-RELEASE/man:$manLocalDir/FreeBSD-ports-15.0-RELEASE/misc",
 
+    'FreeBSD 14.5-RELEASE and Ports',
+"$manLocalDir/FreeBSD-14.5-RELEASE/man:$manLocalDir/FreeBSD-14.5-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-14.5-RELEASE/man:$manLocalDir/FreeBSD-ports-14.5-RELEASE/misc",
     'FreeBSD 14.4-RELEASE and Ports',
 "$manLocalDir/FreeBSD-14.4-RELEASE/man:$manLocalDir/FreeBSD-14.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-14.4-RELEASE/man:$manLocalDir/FreeBSD-ports-14.4-RELEASE/misc",
     'FreeBSD 14.3-RELEASE and Ports',
@@ -477,6 +479,8 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
 
     'FreeBSD 14.5-STABLE',
 "$manLocalDir/FreeBSD-14.5-STABLE/man:$manLocalDir/FreeBSD-14.5-STABLE/openssl/man",
+    'FreeBSD 14.5-RELEASE',
+"$manLocalDir/FreeBSD-14.5-RELEASE/man:$manLocalDir/FreeBSD-14.5-RELEASE/openssl/man",
     'FreeBSD 14.4-RELEASE',
 "$manLocalDir/FreeBSD-14.4-RELEASE/man:$manLocalDir/FreeBSD-14.4-RELEASE/openssl/man",
     'FreeBSD 14.3-RELEASE',
@@ -621,6 +625,7 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
     'FreeBSD Ports 14.2', "$manLocalDir/FreeBSD-ports-14.2-RELEASE/man:$manLocalDir/FreeBSD-ports-14.2-RELEASE/misc",
     'FreeBSD Ports 14.3', "$manLocalDir/FreeBSD-ports-14.3-RELEASE/man:$manLocalDir/FreeBSD-ports-14.3-RELEASE/misc",
     'FreeBSD Ports 14.4', "$manLocalDir/FreeBSD-ports-14.4-RELEASE/man:$manLocalDir/FreeBSD-ports-14.4-RELEASE/misc",
+    'FreeBSD Ports 14.5', "$manLocalDir/FreeBSD-ports-14.5-RELEASE/man:$manLocalDir/FreeBSD-ports-14.5-RELEASE/misc",
     'FreeBSD Ports 15.0', "$manLocalDir/FreeBSD-ports-15.0-RELEASE/man:$manLocalDir/FreeBSD-ports-15.0-RELEASE/misc",
     'FreeBSD Ports 15.1', "$manLocalDir/FreeBSD-ports-15.1-RELEASE/man:$manLocalDir/FreeBSD-ports-15.1-RELEASE/misc",
     'FreeBSD Ports 15.1.quarterly', "$manLocalDir/FreeBSD-ports-15.quarterly-RELEASE/man:$manLocalDir/FreeBSD-ports-15.quarterly-RELEASE/misc",
