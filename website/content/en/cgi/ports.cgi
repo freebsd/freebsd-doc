@@ -787,6 +787,8 @@ sub footer_links {
 <span class="footer_links">
   <a href="$script_name">home</a>
   @{[ $stype eq "help" ? "" : qq, | <a href="$script_name?stype=help">help</a>, ]}
+  | <a href="https://cgit.freebsd.org/ports/tree/">git</a>
+  | <a href="https://download.freebsd.org/ports/">ftp</a>
 </span>
 EOF
 }
