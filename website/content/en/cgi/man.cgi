@@ -49,7 +49,7 @@ use constant HAS_FREEBSD_CGI_STYLE => eval { require "./cgi-style.pl"; };
 package main;
 
 $debug        = 2;
-$www{'title'} = 'FreeBSD Manual Pages';
+$www{'title'} = 'Manual Pages Archive';
 $www{'home'}  = 'https://www.FreeBSD.org';
 $www{'home_man'}  = 'https://man.FreeBSD.org';
 $www{'cgi_man'}  = '/cgi/man.cgi';
