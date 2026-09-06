@@ -842,12 +842,18 @@ if ( $stype eq "help" ) {
     &exit(0);
 }
 
-print &html_header( "FreeBSD Ports Search", 1 );
 
 # allow `/ports.cgi?netscape' where 'netscape' is the query port to search
 # this make links to this script shorter
 if ( !$query && $query_string =~ /^([^=&]+)$/ ) {
     $query = $1;
+}
+
+if ($query) {
+    print &short_html_header( "FreeBSD Ports Search", 1 );
+    print "<br/>\n";
+} else {
+    print &html_header( "FreeBSD Ports Search", 1 );
 }
 
 # get all categories
