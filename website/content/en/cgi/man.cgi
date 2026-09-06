@@ -1711,7 +1711,7 @@ sub apropos {
     }
 
     &http_header("text/html");
-    print &html_header("Apropos $title");
+    print &html_header("Apropos $title - $manpath Manual Pages");
     print "<br/>\n";
 
     $section = $sektion;
@@ -1835,7 +1835,7 @@ sub man {
 
     if ( $format eq "html" ) {
         &http_header("text/html");
-        print &html_header("$title");
+        print &html_header("$title - $manpath Manual Pages");
         print "<br/>\n";
         print "<h1>$www{'head'}</h1>\n\n" if !$www{'head'};
         &formquery;
@@ -2629,8 +2629,8 @@ sections.
 
 sub faq_output {
     &http_header("text/html");
-    print &html_header( "FreeBSD manual page help", '/cgi/' );
-    print "<br/>\n<h1>$www{'head'}</h1>\n";
+    print &html_header( "$www{'head'} Help", '/cgi/' );
+    print "<br/>\n<h1>$www{'head'} Help</h1>\n";
     print &faq . "<br/>\n";
     &html_footer('no_help_link' => 1);
 }
@@ -2642,7 +2642,7 @@ sub html_header2 {
 	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
 <head>
-<title>$title</title>
+<title>XXX $title</title>
 $head
 </head> 
 <body>
