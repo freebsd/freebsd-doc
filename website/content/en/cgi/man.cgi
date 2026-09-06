@@ -1495,10 +1495,10 @@ a:hover { text-decoration:underline; }
   span.spaces { display: none; }
 
   /* larger search form */
-  form#man > input, button { font-size: 200%; }
-  form#man > button { font-size: 200%; }
-  form#man > input[name='query'] { width: 12em; }
-  form#man > select { font-size: 140%; }
+  form#man > input, button { font-size: 150%; }
+  form#man > button { font-size: 150%; }
+  form#man > input[name='query'] { width: 20em; }
+  form#man > select { font-size: 120%; }
 }
 </style>
 |;
