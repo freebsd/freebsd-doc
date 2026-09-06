@@ -1712,7 +1712,7 @@ sub apropos {
 
     &http_header("text/html");
     print &html_header("Apropos $title");
-    print "<br/>\n<h1>$www{'head'}</h1>\n\n";
+    print "<br/>\n";
 
     $section = $sektion;
     &formquery;
@@ -1832,7 +1832,8 @@ sub man {
     if ( $format eq "html" ) {
         &http_header("text/html");
         print &html_header("$title");
-        print "<br/>\n<h1>$www{'head'}</h1>\n\n";
+        print "<br/>\n";
+        print "<h1>$www{'head'}</h1>\n\n" if !$www{'head'};
         &formquery;
         print "<pre>\n";
     }
