@@ -770,12 +770,6 @@ For other FreeBSD Releases INDEX files, please look at
 </p>
 
 
-<h2>Copyright</h2>
-<pre>
-Copyright (c) 1996-2026 <a href="https://wolfram.schneider.org">Wolfram Schneider</a> &lt;wosch\@FreeBSD.org&gt;
-</pre>
-<p/>
-
 <h2>Misc</h2>
 <ul>
 <li><a href="https://forums.freebsd.org/categories/ports-and-packages.21/">FreeBSD Forums: Ports and Packages</a></li>
@@ -787,6 +781,13 @@ Copyright (c) 1996-2026 <a href="https://wolfram.schneider.org">Wolfram Schneide
 General questions about FreeBSD ports should be sent to 
 the <a href="https://lists.freebsd.org/subscription/freebsd-ports">$mailtoList</a> mailing list.
 </p>
+
+<h2>Copyright</h2>
+<pre>
+Copyright (c) 1996-2026 <a href="https://wolfram.schneider.org">Wolfram Schneider</a> &lt;wosch\@FreeBSD.org&gt;
+</pre>
+<p/>
+
 
 @{[ &footer_links ]}
 <hr noshade="noshade" />
