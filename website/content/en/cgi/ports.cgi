@@ -743,16 +743,6 @@ description about the port.
   <dd>List of available packages for all supported releases and branches</dd>
 </dl>
 
-<h2>Documentation</h2>
-<p>
-Handbook: <a href="https://docs.freebsd.org/en/books/handbook/ports/#ports-using">Using the Ports Collection</a>
-</p>
-
-<p>
-You may also search the
-<a href="https://man.FreeBSD.org/cgi/man.cgi?manpath=freebsd-ports">ports manual pages</a>.
-</p>
-
 <h2>Updates</h2>
 
 <p>
@@ -770,8 +760,10 @@ For other FreeBSD Releases INDEX files, please look at
 </p>
 
 
-<h2>Misc</h2>
+<h2>Further Reading</h2>
 <ul>
+<li>Handbook: <a href="https://docs.freebsd.org/en/books/handbook/ports/#ports-using">Using the Ports Collection</a></li>
+<li><a href="https://man.FreeBSD.org/cgi/man.cgi?manpath=freebsd-ports">Ports manual pages</a></li>
 <li><a href="https://forums.freebsd.org/categories/ports-and-packages.21/">FreeBSD Forums: Ports and Packages</a></li>
 <li><a href="https://www.freshports.org/">FreshPorts -- The Place For Ports - Most recent commits</a></li>
 </ul>
