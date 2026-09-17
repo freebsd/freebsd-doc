@@ -605,7 +605,7 @@ sub search_ports {
 sub input_autofocus_at_end {
     return <<EOF;
 
-<script>
+<script type="text/javascript">
 const input = document.querySelector('#query'); 
 input.focus();
 input.setSelectionRange(input.value.length, input.value.length);

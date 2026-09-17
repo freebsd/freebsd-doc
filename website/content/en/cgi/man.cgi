@@ -2113,7 +2113,7 @@ qq{Please try a <a href="$BASE?apropos=1&amp;manpath=$manpath&amp;query=$html_na
 sub input_autofocus_at_end {
     return <<EOF;
 
-<script>
+<script type="text/javascript">
 const input = document.querySelector('#query'); 
 input.focus();
 input.setSelectionRange(input.value.length, input.value.length);
