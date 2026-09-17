@@ -727,7 +727,12 @@ users and administrators to install applications.
 description about the port.
 <b>Maintainer</b> searches for the email address of the port maintainer.
 <b>Requires</b> searches for ports which depends on this port.
+</p>
 
+<p>
+@{[ &last_update_message ]} - refreshed automatically every two hours from 
+<a href="https://download.FreeBSD.org/ports/index/$ports_database.xz">$ports_database</a>.
+For other FreeBSD release indexes, see the full <a href="https://download.freebsd.org/ports/index/">index listing</a>.
 </p>
 
 <h2>External Links</h2>
@@ -742,23 +747,6 @@ description about the port.
   <dt><b>Packages</b></dt>
   <dd>List of available packages for all supported releases and branches</dd>
 </dl>
-
-<h2>Updates</h2>
-
-<p>
-The script ports.cgi use the file
-<a href="https://download.FreeBSD.org/ports/index/$ports_database.xz">$ports_database</a>
-as database for its operations. $ports_database is updated automatically every
-two hours.
-
-For other FreeBSD Releases INDEX files, please look at
-<a href="https://download.freebsd.org/ports/index/">https://download.freebsd.org/ports/index/</a>
-</p>
-
-<p>
-@{[ &last_update_message ]}
-</p>
-
 
 <h2>Further Reading</h2>
 <ul>
