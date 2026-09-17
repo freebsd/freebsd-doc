@@ -2565,6 +2565,18 @@ much smaller.
 <li>socket(2) manpage: <a href="$full_url?socket(2)">$full_url?socket(2)</a></li>
 </ul>
 
+<h2>Output formats</h2>
+<p>
+Manual pages can be rendered in three formats: HTML (the default), plain
+ASCII text, or PDF. Choose a format from the drop-down on the query page,
+or select it directly in a URL with the "format" parameter.
+</p>
+
+<p>
+Note that some operating systems only provide preformatted manual pages
+(catpages), e.g., older NetBSD and OpenBSD releases - for these, PDF output is not available.
+</p>
+
 <h2>Updates</h2>
 <p>
 The FreeBSD stable/NN, current, and Ports manual pages are updated 
@@ -2574,16 +2586,12 @@ every three months, usually around the time a new FreeBSD version is released.
 Other operating system manual pages are updated as needed.
 </p>
 
-
 <h2>FAQ</h2>
 
 <ul>
 <li>Get the <a href="https://cgit.freebsd.org/doc/tree/website/content/en/cgi/man.cgi">source</a> of the man.cgi script.</li>
 <li>Troff macros work only if defined in FreeBSD/groff. OS-specific
 macros like "appeared in NetBSD version 1.2" are not supported.</li>
-<li>Some OSs provide only formatted manual pages (catpages), e.g., 
-older NetBSD and OpenBSD releases. In this case it is not possible to create Postscript
-and troff output.</li>
 <li>The <a href="https://cgit.freebsd.org/src/tree/share/misc/bsd-family-tree">
 Unix family tree, BSD part</a>.</li>
 <li>The <a href="https://ports.freebsd.org/cgi/ports.cgi">
