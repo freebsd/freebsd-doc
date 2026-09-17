@@ -2543,6 +2543,13 @@ archive gives you direct, permanent links to the manual pages
 themselves.
 </p>
 
+<p>
+The archive currently contains more than 560 operating-system releases
+and approximately 15 million manual pages. The complete archive
+occupies about 50 GB - individual downloadable tarballs are typically
+much smaller.
+</p>
+
 <h2>Shortcuts for FreeBSD manual pages</h2>
 
 <p>You can use these short URLs to search for FreeBSD man pages:</p>
@@ -2584,8 +2591,8 @@ FreeBSD Ports Search</a> script.</li>
 <li>other <a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>.</li>
 <li><a href="https://www.freebsd.org/search/opensearch/">FreeBSD OpenSearch Plugins</a> for the manual pages and other services.</li>
 </ul>
-<h2>Release Permalinks and tarballs</h2>
 
+<h2>Release Permalinks and tarballs</h2>
 <p>
 Release and release-alias permalinks show how to link to this script for the right OS version.
 </p>
