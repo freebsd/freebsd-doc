@@ -718,21 +718,55 @@ sub help {
 <p>
 The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.
-</p>
-
-<p>
-<b>Package Name</b> searches for the name of a port or distribution.
-<b>Description</b> searches case-insensitive in a short comment about the port.
-<b>All</b> searches case-insensitive for the package name and in the
-description about the port.
-<b>Maintainer</b> searches for the email address of the port maintainer.
-<b>Requires</b> searches for ports which depends on this port.
+Use the search types below to find a port.
 </p>
 
 <p>
 @{[ &last_update_message ]} - refreshed automatically every two hours from 
 <a href="https://download.FreeBSD.org/ports/index/$ports_database.xz">$ports_database</a>.
 For other FreeBSD release indexes, see the full <a href="https://download.freebsd.org/ports/index/">index listing</a>.
+</p>
+
+<h2>Search Types</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>What it searches</th>
+      <th>Example</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>All</strong></td>
+      <td>Package name and description (case-insensitive)</td>
+      <td><code>netcat</code></td>
+    </tr>
+    <tr>
+      <td><strong>Package Name</strong></td>
+      <td>The name of a port or distribution</td>
+      <td><code>neovim</code></td>
+    </tr>
+    <tr>
+      <td><strong>Description</strong></td>
+      <td>The short one-line comment about a port (case-insensitive)</td>
+      <td><code>vim</code></td>
+    </tr>
+    <tr>
+      <td><strong>Maintainer</strong></td>
+      <td>The maintainer's email address</td>
+      <td><code>emacs\@FreeBSD.org</code></td>
+    </tr>
+    <tr>
+      <td><strong>Requires</strong></td>
+      <td>Ports that <em>depend on</em> the given port (not the other way around)</td>
+      <td><code>vim-tiny</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+Note: search is substring-based; wildcards and regular expressions are not supported.
 </p>
 
 <h2>External Links</h2>
