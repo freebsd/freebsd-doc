@@ -1058,8 +1058,8 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
     'Sun UNIX 0.4', "$manLocalDir/Sun-UNIX-0.4",
 
     'macOS 27.0',     "$manLocalDir/macOS-27.0/man:$manLocalDir/macOS-27.0/developer-man:$manLocalDir/macOS-27.0/developer-platform-sdk-man:$manLocalDir/macOS-27.0/xctoolchain-man",  
-    'macOS 26.6.2',   "$manLocalDir/macOS-26.6.2/man:$manLocalDir/macOS-26.6.2/developer-man:$manLocalDir/macOS-26.6.2/developer-platform-sdk-man:$manLocalDir/macOS-26.6.2/xctoolchain-man",  
-    'macOS 15.7.5',   "$manLocalDir/macOS-15.7.5/man:$manLocalDir/macOS-15.7.5/developer-man:$manLocalDir/macOS-15.7.5/developer-platform-sdk-man:$manLocalDir/macOS-15.7.5/xctoolchain-man",  
+    'macOS 26.7',   "$manLocalDir/macOS-26.7/man:$manLocalDir/macOS-26.7/developer-man:$manLocalDir/macOS-26.7/developer-platform-sdk-man:$manLocalDir/macOS-26.7/xctoolchain-man",  
+    'macOS 15.8',   "$manLocalDir/macOS-15.8/man:$manLocalDir/macOS-15.8/developer-man:$manLocalDir/macOS-15.8/developer-platform-sdk-man:$manLocalDir/macOS-15.8/xctoolchain-man",  
     'macOS 14.8.5',   "$manLocalDir/macOS-14.8.5/man:$manLocalDir/macOS-14.8.5/developer-man:$manLocalDir/macOS-14.8.5/developer-platform-man:$manLocalDir/macOS-14.8.5/developer-platform-sdk-man:$manLocalDir/macOS-14.8.5/xctoolchain-man",  
     'macOS 13.6.5', "$manLocalDir/macOS-13.6.5/man:$manLocalDir/macOS-13.6.5/developer-man:$manLocalDir/macOS-13.6.5/developer-platform-man:$manLocalDir/macOS-13.6.5/developer-platform-sdk-man:$manLocalDir/macOS-13.6.5/xctoolchain-man",  
     'macOS 12.7.3', "$manLocalDir/macOS-12.7.3/man:$manLocalDir/macOS-12.7.3/developer-man:$manLocalDir/macOS-12.7.3/developer-platform-man:$manLocalDir/macOS-12.7.3/developer-platform-sdk-man:$manLocalDir/macOS-12.7.3/xctoolchain-man",
