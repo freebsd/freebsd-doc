@@ -2522,6 +2522,26 @@ sub faq {
     }
 
     return qq{\
+<p>
+<a href="https://man.freebsd.org/">man.FreeBSD.org</a>
+is the largest and oldest manual page archive on the internet.</p>
+
+<p>
+Online continuously since 1996, it hosts manual pages from FreeBSD
+since its first release, version 1.0, and dozens of other operating
+systems and Unix variants - spanning decades of computing history,
+from 1970s Unix Seventh Edition and 2.11 BSD through every FreeBSD
+release, NetBSD, OpenBSD, and current releases of Debian, Ubuntu,
+Rocky Linux and macOS.
+</p>
+
+<p>
+Whether you're looking up a command on the system in front of you,
+comparing how a syscall's behavior changed across FreeBSD releases, or
+researching how Unix documentation evolved since the 1970s, this
+archive gives you direct, permanent links to the manual pages
+themselves.
+</p>
 
 <h2>Shortcuts for FreeBSD manual pages</h2>
 
