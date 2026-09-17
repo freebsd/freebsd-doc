@@ -2560,8 +2560,8 @@ themselves.
 
 <h2>Updates</h2>
 <p>
-The FreeBSD stable/NN, current, and ports manual pages are updated 
-every 3 months, usually around the time a new FreeBSD version is released.
+The FreeBSD stable/NN, current, and Ports manual pages are updated 
+every three months, usually around the time a new FreeBSD version is released.
 </p>
 <p>
 Other operating system manual pages are updated as needed.
@@ -2598,11 +2598,12 @@ A tarball is normally 15-50 MB in size, but can be up to 350 MB for FreeBSD port
 </ul>
 
 
-<h2>Releases Aliases Permalinks</h2>
+<h2>Release Alias Permalinks</h2>
 
 <p>
-Release aliases are for lazy people. Plus, they have a longer
-lifetime, e.g. "netbsd" always points to the latest NetBSD release.
+Release aliases are for lazy people.
+They also have a longer lifetime, 
+e.g., "netbsd" always points to the latest NetBSD release.
 </p>
 
 <ul>
