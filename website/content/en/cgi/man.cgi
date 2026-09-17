@@ -2532,7 +2532,7 @@ since its first release, version 1.0, and dozens of other operating
 systems and Unix variants - spanning decades of computing history,
 from 1970s Unix Seventh Edition and 2.11 BSD through every FreeBSD
 release, NetBSD, OpenBSD, and current releases of Debian, Ubuntu,
-Rocky Linux and macOS.
+Rocky Linux, and macOS.
 </p>
 
 <p>
@@ -2547,7 +2547,7 @@ themselves.
 
 <p>You can use these short URLs to search for FreeBSD man pages:</p>
 <ul>
-<li>socket manpage: <a href="https://man.freebsd.org/which">https://man.freebsd.org/socket</a></li>
+<li>socket manpage: <a href="https://man.freebsd.org/socket">https://man.freebsd.org/socket</a></li>
 <li>socket(2) manpage: <a href="https://man.freebsd.org/socket/2">https://man.freebsd.org/socket/2</a></li>
 </ul>
 
@@ -2571,9 +2571,9 @@ Other operating system manual pages are updated as needed.
 <h2>FAQ</h2>
 
 <ul>
-<li>Get the <a href="https://cgit.freebsd.org/doc/tree/website/content/en/cgi/man.cgi">source</a> of the man.cgi script</li>
-<li>Troff macros works only if defined in FreeBSD/groff. OS specific
-macros like `appeared in NetBSD version 1.2' are not supported.</li>
+<li>Get the <a href="https://cgit.freebsd.org/doc/tree/website/content/en/cgi/man.cgi">source</a> of the man.cgi script.</li>
+<li>Troff macros work only if defined in FreeBSD/groff. OS-specific
+macros like "appeared in NetBSD version 1.2" are not supported.</li>
 <li>Some OSs provide only formatted manual pages (catpages), e.g., 
 older NetBSD and OpenBSD releases. In this case it is not possible to create Postscript
 and troff output.</li>
@@ -2585,12 +2585,11 @@ FreeBSD Ports Search</a> script.</li>
 <h2>Release Permalinks and tarballs</h2>
 
 <p>
-Releases and releases aliases permalinks are information how 
-to make a link to this script to the right OS version.
+Release and release-alias permalinks show how to link to this script for the right OS version.
 </p>
 
 <p>
-You may download the manual pages as gzip'd tar archive for private or educational purposes.
+You may download the manual pages as a gzip'd tar archive for private or educational purposes.
 A tarball is normally 15-50 MB in size, but can be up to 350 MB for FreeBSD ports.
 </p>
 
@@ -2603,7 +2602,7 @@ A tarball is normally 15-50 MB in size, but can be up to 350 MB for FreeBSD port
 
 <p>
 Release aliases are for lazy people. Plus, they have a longer
-lifetime, eg. 'netbsd' points always to the latest NetBSD release.
+lifetime, e.g. "netbsd" always points to the latest NetBSD release.
 </p>
 
 <ul>
