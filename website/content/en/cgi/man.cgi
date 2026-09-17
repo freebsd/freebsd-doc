@@ -1458,6 +1458,8 @@ sub html_footer {
     print qq[| <a href="$www{'cgi_man'}/help.html">help</a>\n] if !$args{'no_help_link'};
     print qq[</span>\n\n];
 
+    print &input_autofocus_at_end;
+
     if (cgi_style::HAS_FREEBSD_CGI_STYLE) {
         print q{<hr noshade="noshade" />};
         print &cgi_style::html_footer;
@@ -2103,6 +2105,17 @@ qq{Please try a <a href="$BASE?apropos=1&amp;manpath=freebsd-release-ports&amp;q
 
     # Sleep 0.35 seconds to avoid DoS attacs
     select undef, undef, undef, 0.35;
+}
+
+sub input_autofocus_at_end {
+    return <<EOF;
+
+<script>
+const input = document.querySelector('#query'); 
+input.focus();
+input.setSelectionRange(input.value.length, input.value.length);
+</script>
+EOF
 }
 
 #
