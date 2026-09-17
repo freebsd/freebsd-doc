@@ -2564,15 +2564,16 @@ Copyright (c) for manual pages by OS vendors:
 
 <h2>Shortcuts for FreeBSD manual pages</h2>
 
+<p>You can use these short URLs to search for FreeBSD man pages:</p>
 <ul>
-<li>which manpage: <a href="https://man.freebsd.org/which">https://man.freebsd.org/which</a></li>
+<li>socket manpage: <a href="https://man.freebsd.org/which">https://man.freebsd.org/socket</a></li>
 <li>socket(2) manpage: <a href="https://man.freebsd.org/socket/2">https://man.freebsd.org/socket/2</a></li>
 </ul>
 
 <p />
 
 <ul>
-<li>which manpage: <a href="$full_url?which">$full_url?which</a></li>
+<li>socket manpage: <a href="$full_url?socket">$full_url?socket</a></li>
 <li>socket(2) manpage: <a href="$full_url?socket(2)">$full_url?socket(2)</a></li>
 </ul>
 
