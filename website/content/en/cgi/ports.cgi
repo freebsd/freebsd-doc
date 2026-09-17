@@ -745,7 +745,7 @@ For other FreeBSD release indexes, see the full <a href="https://download.freebs
   <dd>Read the latest changes via the git repo</dd>
 
   <dt><b>Packages</b></dt>
-  <dd>List of available packages for all supported releases and branches</dd>
+  <dd>List of packages available for all releases, branches and architectures</dd>
 </dl>
 
 <h2>Further Reading</h2>
