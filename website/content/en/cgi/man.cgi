@@ -2582,6 +2582,7 @@ Unix family tree, BSD part</a>.</li>
 <li>The <a href="https://ports.freebsd.org/cgi/ports.cgi">
 FreeBSD Ports Search</a> script.</li>
 <li>other <a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>.</li>
+<li><a href="https://www.freebsd.org/search/opensearch/">FreeBSD OpenSearch Plugins</a> for the manual pages and other services.</li>
 </ul>
 <h2>Release Permalinks and tarballs</h2>
 
