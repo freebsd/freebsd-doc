@@ -1766,8 +1766,11 @@ sub apropos {
         if ($query eq '') {
            print "<hr/>Empty input. Please type a manual page and search again.\n<hr/>\n";
         } else {
-           print "Sorry, no data found for `$query'.\n";
-           print qq{You may look for other }
+           my $apropos_query = $query . ($sektion ? "($sektion)" : "");
+           print "Sorry, no apropos results found for `$apropos_query'.\n";
+           print qq{Please try a <a href="$BASE?apropos=1&amp;manpath=$manpath&amp;query=$query">keyword search</a>.\n} if $sektion;
+           print "<br/><br/>\n";
+           print qq{You can start a <a href="$www{'cgi_man'}">new search</a> or look for other }
           . qq{<a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>.<br/><hr/>\n};
         }
     }
@@ -1970,17 +1973,17 @@ sub man {
 
     if ( eof(MAN) ) {
         if ( $format eq "ascii" ) {
-            print "Sorry, no data found for '$html_name'\n";
+            print "Sorry, results found for '$html_name'\n";
 	    return;
         }
 
         # print "X $command{'man'} @manargs -- x $name x\n";
         print qq{</pre>\n};
-        print "Sorry, no data found for `<i>$html_name</i>"
+        print "Sorry, no results found for `<i>$html_name</i>"
           . ( $html_section ? "($html_section)" : '' ) . "'.\n";
         print
-qq{Please try a <a href="$BASE?apropos=1&amp;manpath=freebsd-release-ports&amp;query=$html_name">keyword search</a>.\n};
-        print qq{<p>You may look for other }
+qq{Please try a <a href="$BASE?apropos=1&amp;manpath=$manpath&amp;query=$html_name">keyword search</a>.\n};
+        print qq{<p>You can start a <a href="$www{'cgi_man'}">new search</a> or look for other }
           . qq{<a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>.</p><hr/>\n};
         &html_footer;
         return;
