@@ -442,19 +442,19 @@ sub package_links {
             print qq[<h2>$perl->{"name"}: ], escapeHTML( $perl->{"comment"} ),
               qq[</h2>\n];
 
-            print qq[homepage: <a href="], $perl->{"www"},
+            my $maintainer = $perl->{"maintainer"};
+            $maintainer = &check_freebsd_mailing_list($maintainer)
+              if $enable_check_freebsd_mailing_list;
+            print qq[Maintainer: $maintainer<br/>\n];
+
+            print qq[Homepage <a href="], $perl->{"www"},
               qq[">] . $perl->{"www"} . "</a><br/>\n";
-            print qq[FreeBSD ports git: <a href="$remotePrefixRepo/tree/]
+
+            print qq[Git: <a href="$remotePrefixRepo/tree/]
               . $perl->{"origin"} . qq[">]
               . $perl->{"origin"}
               . qq[</a><br/>\n];
 
-            my $maintainer = $perl->{"maintainer"};
-            $maintainer = &check_freebsd_mailing_list($maintainer)
-              if $enable_check_freebsd_mailing_list;
-            print qq[maintainer: $maintainer<br/>\n];
-
-            print qq[<h3>Description</h3>\n];
             print "<pre>", escapeHTML( $perl->{"desc"} ), "</pre>\n";
             print qq[<h3>Download packages in *.pkg format</h3>\n];
 
