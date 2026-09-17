@@ -602,11 +602,22 @@ sub search_ports {
     }
 }
 
+sub input_autofocus_at_end {
+    return <<EOF;
+
+<script>
+const input = document.querySelector('#query'); 
+input.focus();
+input.setSelectionRange(input.value.length, input.value.length);
+</script>
+EOF
+}
+
 sub forms {
 
     print qq{
 <form id="ports" method="get" action="$script_name">
-<input name="query" value="$query" type="text" autocapitalize="none" autofocus />
+<input name="query" id="query" value="$query" type="text" autocapitalize="none" autofocus />
 <select name="stype">
 };
 
@@ -927,5 +938,6 @@ if ($counter) {
     print &footer_links;
 }
 
+print &input_autofocus_at_end;
 print qq{<hr noshade="noshade" />\n};
 print &html_footer;
