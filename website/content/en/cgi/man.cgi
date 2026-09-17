@@ -2522,45 +2522,6 @@ sub faq {
     }
 
     return qq{\
-<h2>Copyright</h2>
-<pre>
-Copyright (c) 1996-2026 <a href="$mailtoURL">Wolfram Schneider</a>
-Copyright (c) 1993-1995 Berkeley Software Design, Inc.
-</pre>
-<p/>
-
-Copyright (c) for manual pages by OS vendors:
-<p>
-<a href="https://en.wikipedia.org/wiki/History_of_the_Berkeley_Software_Distribution">2.11 BSD</a>,
-<a href="https://www.apple.com">Apple</a>,
-<a href="https://www.centos.org">CentOS</a>,
-<a href="https://www.debian.org">Debian</a>,
-<a href="https://www.dell.com">Dell</a>,
-<a href="https://www.dragonflybsd.org">DragonFly BSD</a>,
-<a href="https://www.freebsd.org">FreeBSD</a>,
-<a href="https://www.hp.com">HP</a>,
-<a href="https://en.wikipedia.org/wiki/IRIX">IRIX</a>,
-<a href="https://www.minix3.org">Minix</a>,
-<a href="https://www.netbsd.org">NetBSD</a>,
-<a href="https://en.wikipedia.org/wiki/NeXTSTEP">NeXTSTEP</a>,
-<a href="https://www.openbsd.org">OpenBSD</a>,
-<a href="https://www.openindiana.org/">OpenIndiana</a>,
-<a href="https://en.wikipedia.org/wiki/OpenSolaris">OpenSolaris</a>,
-<a href="https://www.opensuse.org">openSUSE</a>,
-<a href="https://en.wikipedia.org/wiki/OSF/1">OSF</a>,
-<a href="https://9p.io/plan9/">Plan 9</a>,
-<a href="https://www.redhat.com">Red Hat</a>,
-<a href="https://en.wikipedia.org/wiki/Rhapsody_(operating_system)">Rhapsody</a>,
-<a href="https://rockylinux.org/">Rocky</a>,
-<a href="https://www.slackware.com">Slackware</a>,
-<a href="https://en.wikipedia.org/wiki/SunOS">SunOS</a>,
-<a href="https://www.suse.com">SuSE</a>,
-<a href="https://ubuntu.com">Ubuntu</a>,
-<a href="https://en.wikipedia.org/wiki/Ultrix">ULTRIX</a>,
-<a href="https://en.wikipedia.org/wiki/Version_7_Unix">Unix Seventh Edition</a>,
-<a href="https://www.x.org">X11R6</a>,
-<a href="https://www.xfree86.org">XFree86</a>
-</p>
 
 <h2>Shortcuts for FreeBSD manual pages</h2>
 
@@ -2628,6 +2589,46 @@ Unix family tree, BSD part</a>.</li>
 <li>The <a href="https://ports.freebsd.org/cgi/ports.cgi">
 FreeBSD Ports Search</a> script.</li>
 </ul>
+
+<h2>Copyright</h2>
+<pre>
+Copyright (c) 1996-2026 <a href="$mailtoURL">Wolfram Schneider</a>
+Copyright (c) 1993-1995 Berkeley Software Design, Inc.
+</pre>
+<p/>
+
+Copyright (c) for manual pages by OS vendors:
+<p>
+<a href="https://en.wikipedia.org/wiki/History_of_the_Berkeley_Software_Distribution">2.11 BSD</a>,
+<a href="https://www.apple.com">Apple</a>,
+<a href="https://www.centos.org">CentOS</a>,
+<a href="https://www.debian.org">Debian</a>,
+<a href="https://www.dell.com">Dell</a>,
+<a href="https://www.dragonflybsd.org">DragonFly BSD</a>,
+<a href="https://www.freebsd.org">FreeBSD</a>,
+<a href="https://www.hp.com">HP</a>,
+<a href="https://en.wikipedia.org/wiki/IRIX">IRIX</a>,
+<a href="https://www.minix3.org">Minix</a>,
+<a href="https://www.netbsd.org">NetBSD</a>,
+<a href="https://en.wikipedia.org/wiki/NeXTSTEP">NeXTSTEP</a>,
+<a href="https://www.openbsd.org">OpenBSD</a>,
+<a href="https://www.openindiana.org/">OpenIndiana</a>,
+<a href="https://en.wikipedia.org/wiki/OpenSolaris">OpenSolaris</a>,
+<a href="https://www.opensuse.org">openSUSE</a>,
+<a href="https://en.wikipedia.org/wiki/OSF/1">OSF</a>,
+<a href="https://9p.io/plan9/">Plan 9</a>,
+<a href="https://www.redhat.com">Red Hat</a>,
+<a href="https://en.wikipedia.org/wiki/Rhapsody_(operating_system)">Rhapsody</a>,
+<a href="https://rockylinux.org/">Rocky</a>,
+<a href="https://www.slackware.com">Slackware</a>,
+<a href="https://en.wikipedia.org/wiki/SunOS">SunOS</a>,
+<a href="https://www.suse.com">SuSE</a>,
+<a href="https://ubuntu.com">Ubuntu</a>,
+<a href="https://en.wikipedia.org/wiki/Ultrix">ULTRIX</a>,
+<a href="https://en.wikipedia.org/wiki/Version_7_Unix">Unix Seventh Edition</a>,
+<a href="https://www.x.org">X11R6</a>,
+<a href="https://www.xfree86.org">XFree86</a>
+</p>
 };
 
 }
