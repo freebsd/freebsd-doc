@@ -2571,7 +2571,7 @@ Other operating system manual pages are updated as needed.
 <h2>FAQ</h2>
 
 <ul>
-<li>Get the <a href="$BASE/source">source</a> of the man.cgi script</li>
+<li>Get the <a href="https://cgit.freebsd.org/doc/tree/website/content/en/cgi/man.cgi">source</a> of the man.cgi script</li>
 <li>Troff macros works only if defined in FreeBSD/groff. OS specific
 macros like `appeared in NetBSD version 1.2' are not supported.</li>
 <li>Some OSs provide only formatted manual pages (catpages), e.g., 
