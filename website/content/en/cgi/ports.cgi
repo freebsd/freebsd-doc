@@ -935,8 +935,11 @@ if ( !$counter ) {
     print <<EOF;
 <p>
 Sorry, nothing found.
-You may look for other <a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>
+<p>
+You can start a <a href="$script_name">new search</a> or look for other
+<a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>.
 </p>
+<hr/>
 @{[ &footer_links ]}
 EOF
 }
