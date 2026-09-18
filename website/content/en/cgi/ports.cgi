@@ -55,6 +55,8 @@ table, th, td { border: 1px solid black; border-collapse: collapse; }
 th, td { padding-left: 0.5em; padding-right: 0.5em; }
 
 span#noscript { color: red; font-size: normal; font-weight: bold; }
+
+.dependencies { margin-top: 0.5em; }
 </style>
 
 <link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/ports.xml" title="FreeBSD Ports" />
@@ -313,7 +315,7 @@ sub out {
         if ( !$out_sec || $1 ne $out_sec ) {
             print "</dl>\n" if $counter > 0;
             print qq{\n<h3>}
-              . qq{<a href="$remotePrefixRepo/tree/$1">Category $1</a>}
+              . qq{<a href="$remotePrefixRepo/tree/$1">Category: $1</a>}
               . "</h3>\n<dl>\n";
             $out_sec = $1;
         }
@@ -374,7 +376,8 @@ sub out {
     if ( $bdepends || $rdepends ) {
         local ($flag) = 0;
         local ($last) = '';
-        print qq{<i>Requires:</i> };
+        print qq{<div class="dependencies">\n};
+        print qq{<i>Dependencies:</i> };
         foreach ( sort split( /\s+/, "$bdepends $rdepends" ) ) {
 
             # delete double entries
@@ -385,7 +388,7 @@ sub out {
             $flag++;
             print qq{<a href="$script_name?query=^$_&amp;stype=name">$_</a>};
         }
-        print "<br />\n";
+        print "</div>\n";
     }
 
     print qq[</dd>];
@@ -625,7 +628,7 @@ sub forms {
     %d = (
         'name',       'Package Name', 'all',  'All',
         'maintainer', 'Maintainer',   'text', 'Description',
-        'requires',   'Requires',
+        'requires',   'Dependencies',
     );
 
     foreach ( 'all', 'name', 'text', 'maintainer', 'requires' ) {
@@ -649,7 +652,7 @@ sub forms {
     }
 
     print qq{</select>
-<input type="submit" value="Submit" />
+<input type="submit" value="Search" />
 </form>
 <br/>
 @{[ &footer_links ]}
@@ -758,7 +761,7 @@ For other FreeBSD release indexes, see the full <a href="https://download.freebs
       <td><code>emacs\@FreeBSD.org</code></td>
     </tr>
     <tr>
-      <td><strong>Requires</strong></td>
+      <td><strong>Dependencies</strong></td>
       <td>Ports that <em>depend on</em> the given port (not the other way around)</td>
       <td><code>vim-tiny</code></td>
     </tr>
@@ -946,13 +949,14 @@ EOF
 
 if ($counter) {
     print "</dl>\n" if $stype ne 'pkg';
-    my $counter_message = $counter;
+    my $counter_message = "$counter result";
+    $counter_message .= "s" if $counter > 1;
     if ( $counter >= $max ) {
         $counter_message .= " (max hit limit reached)";
         warn "$counter_message: query=$query stype=$stype section=$section\n"
           if $debug >= 1;
     }
-    print "<p>Number of results: $counter_message\n</p>\n";
+    print "<p>\n$counter_message\n</p>\n";
     print &footer_links;
 }
 
