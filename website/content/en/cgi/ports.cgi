@@ -774,12 +774,17 @@ Note: search is substring-based; wildcards and regular expressions are not suppo
 
 <h2>External Links</h2>
 
+<p>
+Each port listed in the search results includes three links to the
+FreeBSD ports Git repository and package builder, described below.
+</p>
+
 <dl>
   <dt><b>Description</b></dt>
-  <dd>A more detailed description (text) via the git repo</dd>
+  <dd>The port's full description text</dd>
 
   <dt><b>Commit Log</b></dt>
-  <dd>Read the latest changes via the git repo</dd>
+  <dd>Read the latest Git logs</dd>
 
   <dt><b>Packages</b></dt>
   <dd>List of packages available for all releases, branches and architectures</dd>
