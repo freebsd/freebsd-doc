@@ -349,7 +349,7 @@ sub out {
 
     print qq[<a href="$descfile?revision=HEAD">Description</a>\n];
 
-    print qq[<b>:</b> <a href="$l">Changes</a>\n];
+    print qq[<b>:</b> <a href="$l">Commit Log</a>\n];
     print qq[<b>:</b> <a href="?stype=pkg&amp;query=], escapeHTML($port_path),
       qq[">Packages</a>\n]
       if $enable_packages_link;
@@ -778,7 +778,7 @@ Note: search is substring-based; wildcards and regular expressions are not suppo
   <dt><b>Description</b></dt>
   <dd>A more detailed description (text) via the git repo</dd>
 
-  <dt><b>Changes</b></dt>
+  <dt><b>Commit Log</b></dt>
   <dd>Read the latest changes via the git repo</dd>
 
   <dt><b>Packages</b></dt>
