@@ -868,7 +868,6 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
     '4.3BSD NET/2', "$manLocalDir/net2",
     '4.4BSD Lite2', "$manLocalDir/4.4BSD-Lite2",
 
-    'Linux Slackware 3.1',    "$manLocalDir/Slackware-3.1",
     'Red Hat 4.2', "$manLocalDir/RedHat-4.2",
     'Red Hat 5.0', "$manLocalDir/RedHat-5.0",
     'Red Hat 5.2', "$manLocalDir/RedHat-5.2-i386",
@@ -963,12 +962,8 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
     'SuSE 11.2', "$manLocalDir/SuSE-11.2",
     'SuSE 11.3', "$manLocalDir/SuSE-11.3",
 
-    'SuSE ES 10 SP1', "$manLocalDir/SLES-10-SP1-i386",
-
     'openSUSE 10.2', "$manLocalDir/openSUSE-10.2",
     'openSUSE 10.3', "$manLocalDir/openSUSE-10.3",
-    #'openSUSE 11.0', "$manLocalDir/openSUSE-11.0",
-    #'openSUSE 11.1', "$manLocalDir/openSUSE-11.1",
     'openSUSE 11.2', "$manLocalDir/openSUSE-11.2",
     'openSUSE 11.3', "$manLocalDir/openSUSE-11.3",
     'openSUSE 11.4', "$manLocalDir/openSUSE-11.4",
@@ -1000,8 +995,6 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
     'Debian 12.15.0', "$manLocalDir/Debian-12.15.0/man:$manLocalDir/Debian-12.15.0/misc",
     'Debian 13.6.0', "$manLocalDir/Debian-13.6.0/man:$manLocalDir/Debian-13.6.0/misc",
     'Debian 14.0 unstable', "$manLocalDir/Debian-unstable/man:$manLocalDir/Debian-unstable/misc",
-
-    'Ubuntu 23.10 mantic', "$manLocalDir/Ubuntu-mantic-23.10/man:$manLocalDir/Ubuntu-mantic-23.10/misc",
 
     'Ubuntu 26.04 resolute', "$manLocalDir/Ubuntu-resolute-26.04/man:$manLocalDir/Ubuntu-resolute-26.04/misc",
     'Ubuntu 24.04 noble', "$manLocalDir/Ubuntu-noble-24.04/man:$manLocalDir/Ubuntu-noble-24.04/misc",
@@ -1286,7 +1279,6 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-release-ports', 'FreeBSD 15.1-RELEASE and Ports',
     'freebsd-ports', 'FreeBSD Ports 15.1.quarterly',
 
-    'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat 9.0',
     'suse',       'SuSE 11.3',
     'debian',     'Debian 13.6.0',
@@ -2657,7 +2649,6 @@ Copyright (c) for manual pages by OS vendors:
 <a href="https://www.redhat.com">Red Hat</a>,
 <a href="https://en.wikipedia.org/wiki/Rhapsody_(operating_system)">Rhapsody</a>,
 <a href="https://rockylinux.org/">Rocky</a>,
-<a href="https://www.slackware.com">Slackware</a>,
 <a href="https://en.wikipedia.org/wiki/SunOS">SunOS</a>,
 <a href="https://www.suse.com">SuSE</a>,
 <a href="https://ubuntu.com">Ubuntu</a>,
