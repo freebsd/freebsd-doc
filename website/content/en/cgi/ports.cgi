@@ -60,6 +60,22 @@ span#noscript { color: red; font-size: normal; font-weight: bold; }
 </style>
 
 <link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/ports.xml" title="FreeBSD Ports" />
+
+<script>
+function input_autofocus_at_end () {
+  const input = document.querySelector('#query'); 
+  if (input) {
+    // XXX: don't auto-open keyboard on Android
+    input.setAttribute('readonly', 'readonly');
+    input.focus({ preventScroll: true });
+    setTimeout(function () {
+      input.removeAttribute('readonly');
+      input.setSelectionRange(input.value.length, input.value.length);
+    }, 50);
+  }
+}
+document.addEventListener('DOMContentLoaded', input_autofocus_at_end);
+</script>
 `;
 
 my $no_javascript_warning = <<'EOF';
@@ -605,22 +621,11 @@ sub search_ports {
     }
 }
 
-sub input_autofocus_at_end {
-    return <<EOF;
-
-<script type="text/javascript">
-const input = document.querySelector('#query'); 
-input.focus();
-input.setSelectionRange(input.value.length, input.value.length);
-</script>
-EOF
-}
-
 sub forms {
 
     print qq{
 <form id="ports" method="get" action="$script_name">
-<input name="query" id="query" value="$query" type="text" autocapitalize="none" autofocus />
+<input name="query" id="query" value="$query" type="text" autocapitalize="none" />
 <select name="stype">
 };
 
@@ -964,6 +969,5 @@ if ($counter) {
     print &footer_links;
 }
 
-print &input_autofocus_at_end;
 print qq{<hr noshade="noshade" />\n};
 print &html_footer;
