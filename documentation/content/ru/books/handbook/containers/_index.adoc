@@ -1,0 +1,1052 @@
+---
+title: Chapter 18. OCI Containers
+part: Part III. System Administration
+prev: books/handbook/security
+next: books/handbook/mac
+description: OCI Containers provide an industry-standard way to describe, distribute, and run container-based workloads
+tags: ["containers", "oci"]
+showBookMenu: true
+weight: 21
+params:
+  path: "/books/handbook/containers/"
+---
+
+[[containers]]
+= OCI Containers
+:doctype: book
+:toc: macro
+:toclevels: 1
+:icons: font
+:sectnums:
+:sectnumoffset: 18
+:partnums:
+:source-highlighter: rouge
+:experimental:
+:images-path: books/handbook/containers/
+
+ifdef::env-beastie[]
+ifdef::backend-html5[]
+:imagesdir: ../../../../images/{images-path}
+endif::[]
+ifndef::book[]
+include::shared/authors.adoc[]
+include::shared/mirrors.adoc[]
+include::shared/releases.adoc[]
+include::shared/attributes/attributes-{{% lang %}}.adoc[]
+include::shared/{{% lang %}}/teams.adoc[]
+include::shared/{{% lang %}}/mailing-lists.adoc[]
+include::shared/{{% lang %}}/urls.adoc[]
+toc::[]
+endif::[]
+ifdef::backend-pdf,backend-epub3[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+endif::[]
+
+ifndef::env-beastie[]
+toc::[]
+include::../../../../../shared/asciidoctor.adoc[]
+endif::[]
+
+[[containers-synopsis]]
+== Synopsis
+
+The https://opencontainers.org/[Open Container Initiative], commonly referred to as `+OCI+`, provides a vendor and OS-agnostic way to describe, distribute, and run containers.
+The OCI specifications provide these in a way that can be used on many different operating systems, including FreeBSD.
+The underlying virtualization technology is still FreeBSD jails, with the same feature set, but OCI tooling enables additional ways of working, and constructing, container-based workloads.
+https://www.freebsd.org/releases/14.3R/announce/[14.3-RELEASE] and upwards, including https://download.freebsd.org/snapshots/OCI-IMAGES/[snapshots], now include OCI-compatible images, and the https://podman.io/[Podman] toolkit on FreeBSD is ready to use them, on both amd64 and arm64 architectures.
+
+For FreeBSD users familiar with jails, there is a loose analogy:
+
+* FreeBSD's `+base.txz+` tarball is an example of a container image.
+* the `+jail.conf+` file describes the desired container properties, or `+Containerfile+`.
+* use the `+jail ..+` command to run a container, given a filesystem path, with the `+podman+` suite of tools.
+
+By importing this container stack, FreeBSD users both benefit from common tooling, but also enjoy wide support across public and private container registries, and container-specific tooling and services.
+In the https://download.freebsd.org/releases/OCI-IMAGES/{rel-latest}-RELEASE/aarch64/Latest/[aarch64] and https://download.freebsd.org/releases/OCI-IMAGES/{rel-latest}-RELEASE/amd64/Latest/[amd64] download directories, you'll see official OCI-format images.
+The naming may be a little confusing at first, but should make sense once you start using them.
+
+The same images are also available through common public container registries, including https://hub.docker.com/u/freebsd[Docker Hub], and https://github.com/orgs/freebsd/packages[Github Container Registry], but for the strongest chain of trust, you should fetch your image directly from https://download.freebsd.org/releases[Official FreeBSD Releases], and import them to your local system.
+
+Each image comprises a subset of a standard FreeBSD `+base.txz+` release tarball, for various use cases, and the usual FreeBSD `+CHECKSUM.*+` files, that can be verified against the PGP-signed release announcement.
+This gives a very strong chain of provenance, directly verifiable from the FreeBSD release team.
+
+[source,display,subs="verbatim,attributes"]
+----
+CHECKSUM.SHA256
+CHECKSUM.SHA512
+FreeBSD-{rel-latest}-RELEASE-amd64-container-image-static.txz
+FreeBSD-{rel-latest}-RELEASE-amd64-container-image-dynamic.txz
+FreeBSD-{rel-latest}-RELEASE-amd64-container-image-runtime.txz
+FreeBSD-{rel-latest}-RELEASE-amd64-container-image-notoolchain.txz
+FreeBSD-{rel-latest}-RELEASE-amd64-container-image-toolchain.txz
+----
+
+[[containers-naming-tagging]]
+== Container Image Naming and Tagging
+
+=== Introduction
+
+FreeBSD's official container images are built from base system packages, themselves built during the FreeBSD release process, and published to public registries.
+This guide explains how images are named and tagged, helping you choose the right image for your needs, and ensuring you understand the implications of each choice, as new images are published, and in some cases, mutable tags are amended.
+This naming convention aligns with the new base system package naming scheme, giving clear provenance between container images and the corresponding FreeBSD releases.
+
+[[containers-image-types]]
+=== Available Image Types
+
+Five types of FreeBSD container images are available, for `+amd64+` and `+aarch64+` architectures.
+
+[[containers-freebsd-static]]
+==== `+freebsd-static+`
+
+The static image is intended as a base image, for a workload which is entirely statically linked. It contains no libraries, nor binaries, just the supporting files that most applications of this nature require.
+
+* public TLS certificates
+* minimal password file
+* minimal termcap
+* timezone database
+
+Note that it has, by design, a lean footprint, to make a security compromise of the container less useful to the attacker.
+There's no UNIX shell, no command-line tools, no dynamic libraries, nor package manager.
+It is the smallest image provided by the FreeBSD project.
+
+[[containers-freebsd-dynamic]]
+==== `+freebsd-dynamic+`
+
+The dynamic image uses the static image as a parent layer, and supports using shared libraries, including `+libc+`.
+Most FreeBSD software should run without issue with this image, with minor changes.
+It doesn't have a shell, rc system, nor a package manager.
+These limitations are additional security, making it awkward for attackers in a compromised container to move laterally, or make use of tools that were never installed.
+
+[[containers-freebsd-runtime]]
+==== `+freebsd-runtime+`
+
+Again, runtime builds on the preceding dynamic layer, and finally adds the minimum that a user would expect - a UNIX shell, rc system, and the package manager.
+It is the ideal base image for porting existing applications with a minimum of changes.
+Users will need to include additional FreeBSD base system libraries, as well as additional packages from the Ports tree.
+This is the closest to a typical FreeBSD system, including the man:pkg[8] tool, allowing users to install, or do, almost anything, similar to a non-containerised system.
+
+[[containers-freebsd-notoolchain]]
+==== `+freebsd-notoolchain+`
+
+This base image contains almost all tools one would expect on a typical FreeBSD system, excluding those that are directly hardware-related, and thus not generally useful within a container, and the compiler and related toolchain, as it is quite large.
+
+[[containers-freebsd-toolchain]]
+==== `+freebsd-toolchain+`
+
+The Toolchain base image is the sum of all preceding images, including a full compiler and toolchain.
+It is generally possible to compile almost any software for FreeBSD in the same way as a normal non-jailed FreeBSD system.
+All images follow a consistent naming pattern, derived from the FreeBSD release they are based upon.
+
+[[containers-tag-structure]]
+=== Image Tag Structure
+
+[[containers-immutable-tags]]
+==== Immutable Tags
+
+Immutable tags never change and are ideal for production systems where you need stability and predictability.
+These are the most common tags used by the release process.
+They will not change, even after FreeBSD security patches, or errata notices.
+They are ideal for base images for software deployments where a high degree of reproducibility is expected, even as a trade-off against more pro-active security patching.
+
+* `+major.minor+` (e.g., `+14.4+`): Points to a specific FreeBSD RELEASE version
+* `+major.minor.pX+` (e.g., `+14.4p1+`): Points to a specific patch level of a RELEASE
+* `+major.snapYYYYMMDDHHMMSS+` (e.g., `+16.snap20260325035941+`): a snapshot build with timestamp
+
+[[containers-mutable-tags]]
+==== Mutable Tags
+
+Mutable tags are updated over time and are ideal for production, or CI/CD systems that always want the latest updates, but still wish to align with FreeBSD ABI compatibility.
+
+* `+major+` (e.g., `+15+`) will always be the latest support RELEASE version along the 15.x stable ABI
+* `+major.snap+` (e.g., `+15.snap+`) follows the latest developer snapshot along the 15.x stable ABI train, will often be in advance of official releases, and carries a risk of breakage, incompatibility, or other unanticipated issues.
+This is the most mutable tag, and should be used with caution.
+They are exactly the same as using FreeBSD's STABLE or CURRENT snapshots, as they use those images as their source.
+
+=== When to Use Each Tag Type
+
+==== For Production
+
+Use immutable tags to ensure your environment stays consistent:
+
+* `+freebsd-runtime:15.0+` - pinned to FreeBSD 15.0-RELEASE
+
+When security patches are released, you must explicitly rebuild or update with a new image tag.
+
+==== For Continuous Integration and Development
+
+Use mutable tags to automatically get the latest updates:
+
+* `+freebsd-runtime:15+` - always the latest official RELEASE in the 15.x series
+
+These additional mutable tags will follow the regular published snapshots of FreeBSD STABLE and CURRENT.
+Use these if you want to test against what subsequent future releases of FreeBSD may contain, and accept occasional breakage or unanticipated changes.
+
+* `+freebsd-runtime:14.snap+` - always the latest build from 14-STABLE branch
+* `+freebsd-runtime:15.snap+` - always the latest build from 15-STABLE branch
+* `+freebsd-runtime:16.snap+` - always the latest build from 16-CURRENT branch
+
+[[containers-registries]]
+== Official Registry Locations
+
+Architecture-independent images can be downloaded and directly imported into your own registry from the https://download.freebsd.org/releases[Official FreeBSD Releases] site, or alternatively, pulled from the FreeBSD project's https://hub.docker.com/u/freebsd[Docker Hub], or https://github.com/orgs/freebsd/packages[GitHub Container Registry].
+
+Both https://hub.docker.com/_/alpine/[Alpine Linux] and the https://hub.docker.com/_/debian/[Debian] project publish tagged and mutable images, using similar approaches.
+
+[[containers-podman-intro]]
+== Introduction to Podman
+
+The Podman suite comprises three main tools and a number of supporting ones:
+
+* https://podman.io/[podman] is a daemonless container engine using docker-compatible commands
+* https://buildah.io/[buildah] generates OCI formatted container images
+* https://github.com/containers/skopeo[skopeo] works with remote OCI image registries
+
+[[containers-preparing]]
+== Preparing the System for Podman Containers
+
+[WARNING]
+====
+If running commands over SSH, or in a similar remote session, use man:screen[1], man:tmux[1], or similar to avoid losing the connection while restarting the firewall.
+====
+
+If ZFS is not available, switch to UFS storage and skip the ZFS commands below:
+
+[source,shell]
+----
+# sed -I .bak -e 's/driver = "zfs"/driver = "vfs"/' \
+    /usr/local/etc/containers/storage.conf
+----
+
+Otherwise, create the container storage dataset:
+
+[source,shell]
+----
+# zfs create -o mountpoint=/var/db/containers zroot/containers
+# zfs snapshot zroot/containers@empty
+----
+
+The File Descriptor filesystem is required:
+
+[source,shell]
+----
+# mount -t fdescfs fdesc /dev/fd
+----
+
+Podman uses FreeBSD's packet filter to forward container ports to the host network:
+
+[source,shell]
+----
+# test -c /dev/pf || kldload pf
+# sysctl net.pf.filter_local=1
+----
+
+Amend `+/etc/sysctl.conf+` and `+/etc/fstab+` as appropriate, to make these changes permanent.
+
+[[containers-installing]]
+== Installing Podman
+
+Only the `+sysutils/podman-suite+` meta-package is required, but if the additional package:emulators/qemu-user-static[] package is installed, it becomes possible to build or test images for other architectures such as `+arm64+` on an `+amd64+` host.
+
+[source,shell]
+----
+# pkg install -r FreeBSD -y podman-suite emulators/qemu-user-static
+----
+
+Integrate changes from `+/usr/local/etc/containers/pf.conf.sample+` into `+/etc/pf.conf+`, setting egress macros appropriately, then restart the firewall:
+
+[source,shell]
+----
+# service pf restart
+----
+
+The packages install a number of template configuration files, none of which need to be edited immediately.
+Review and amend these as needed:
+
+[source,shell]
+----
+# pkg list buildah podman conmon \
+    ocijail containers-common \
+    containernetworking-plugins \
+    | grep /etc/
+/usr/local/etc/containers/containers.conf.sample
+/usr/local/etc/containers/policy.json.sample
+/usr/local/etc/containers/registries.conf.sample
+/usr/local/etc/containers/storage.conf.sample
+/usr/local/etc/containers/pf.conf.sample
+----
+
+[[containers-terminal-tour]]
+== Importing and Running Containers
+
+[NOTE]
+====
+At present, all Podman containers on FreeBSD must run as root, as FreeBSD jails require this.
+====
+
+With the necessary tools and firewall rules in place, the officially published images can be fetched from https://download.freebsd.org/releases/OCI-IMAGES/[FreeBSD Releases], for https://download.freebsd.org/releases/OCI-IMAGES/{rel-latest}-RELEASE/aarch64/Latest/[aarch64] or https://download.freebsd.org/releases/OCI-IMAGES/{rel-latest}-RELEASE/amd64/Latest/[amd64] as appropriate.
+
+[[containers-importing]]
+=== Importing FreeBSD OCI Images
+
+It is simplest to pull images directly from a public container registry, but for the strongest chain of trust, download them from https://download.freebsd.org/releases[FreeBSD.org] directly, and verify the checksums against the PGP-signed release announcement.
+
+[source,shell,subs="attributes"]
+----
+# export OCIBASE=https://download.freebsd.org/releases/OCI-IMAGES/{rel-latest}-RELEASE/amd64/Latest
+# podman load -i=$OCIBASE/FreeBSD-{rel-latest}-RELEASE-amd64-container-image-static.txz
+Getting image source signatures
+Copying blob 44defc6cee2e done   |
+Copying config 5921c62e76 done   |
+Writing manifest to image destination
+Loaded image: localhost/freebsd-static:{rel-latest}-RELEASE-amd64
+
+# podman load -i=$OCIBASE/FreeBSD-{rel-latest}-RELEASE-amd64-container-image-dynamic.txz
+Getting image source signatures
+Copying blob 6054dffc3887 done   |
+Copying config 33427d59f9 done   |
+Writing manifest to image destination
+Loaded image: localhost/freebsd-dynamic:{rel-latest}-RELEASE-amd64
+
+# podman load -i=$OCIBASE/FreeBSD-{rel-latest}-RELEASE-amd64-container-image-runtime.txz
+Getting image source signatures
+Copying blob dcbbfcb598fe done   |
+Copying config 90c4936754 done   |
+Writing manifest to image destination
+Loaded image: localhost/freebsd-runtime:{rel-latest}-RELEASE-amd64
+
+# podman load -i=$OCIBASE/FreeBSD-{rel-latest}-RELEASE-amd64-container-image-notoolchain.txz
+Getting image source signatures
+Copying blob a16c94176cc3 done   |
+Copying config 086572f35c done   |
+Writing manifest to image destination
+Loaded image: localhost/freebsd-notoolchain:{rel-latest}-RELEASE-amd64
+
+# podman load -i=$OCIBASE/FreeBSD-{rel-latest}-RELEASE-amd64-container-image-toolchain.txz
+Getting image source signatures
+Copying blob b04531b7d93d done   |
+Copying config b927c11b2e done   |
+Writing manifest to image destination
+Loaded image: localhost/freebsd-toolchain:{rel-latest}-RELEASE-amd64
+----
+
+[[containers-listing]]
+=== Listing Images
+
+[source,shell,subs="attributes"]
+----
+# podman images
+REPOSITORY                    TAG                   IMAGE ID      CREATED       SIZE
+localhost/freebsd-toolchain   {rel-latest}-RELEASE-amd64  b927c11b2e8d  13 days ago   660 MB
+localhost/freebsd-notoolchain {rel-latest}-RELEASE-amd64  086572f35cc9  13 days ago   152 MB
+localhost/freebsd-runtime     {rel-latest}-RELEASE-amd64  90c493675429  13 days ago   34.1 MB
+localhost/freebsd-dynamic     {rel-latest}-RELEASE-amd64  33427d59f990  13 days ago   14.5 MB
+localhost/freebsd-static      {rel-latest}-RELEASE-amd64  5921c62e76c1  13 days ago   2.92 MB
+----
+
+Note that the image IDs are reproducible each time, and the `+IMAGE_ID+` column matches the hashes reported when importing the images.
+
+[[containers-listing-layers]]
+=== Listing Layers
+
+It is possible to show the layers that comprise an image, demonstrating how the `+runtime+` image has three components, each one a layer in its own right:
+
+[source,shell]
+----
+# podman image tree ghcr.io/freebsd/freebsd-runtime:14.2
+Image ID: c5f3e77557a9
+Tags:     [ghcr.io/freebsd/freebsd-runtime:14.2]
+Size:     35.07MB
+Image Layers
+├── ID: cd53fb07fb66 Size: 5.449MB Top Layer of: [ghcr.io/freebsd/freebsd-static:14.2]
+├── ID: a01d37f7777b Size:  10.4MB Top Layer of: [ghcr.io/freebsd/freebsd-dynamic:14.2]
+└── ID: 36b0c80ca1f7 Size: 19.21MB Top Layer of: [ghcr.io/freebsd/freebsd-runtime:14.2]
+----
+
+[[containers-public-registries]]
+=== Using Public Registries
+
+While the most secure provenance is downloading from https://download.freebsd.org/releases[Official FreeBSD Releases], there are two public container registries managed by the FreeBSD Release and Cluster Admin teams.
+The images from both registries are identical, but provide a simpler and more container-friendly workflow.
+
+* https://hub.docker.com/u/freebsd[Docker Hub]
+* https://github.com/orgs/freebsd/packages[GitHub Container Registry]
+
+[[containers-fetching]]
+=== Fetching Containers
+
+Images can be fetched from a public registry using `+podman pull+`:
+
+[source,shell,subs="attributes"]
+----
+# podman pull ghcr.io/freebsd/freebsd-notoolchain:{rel-latest}
+Trying to pull ghcr.io/freebsd/freebsd-notoolchain:{rel-latest}...
+Getting image source signatures
+Copying blob 711cf0d3c0ef done   |
+Copying config 086572f35c done   |
+Writing manifest to image destination
+086572f35cc90b1a1d2b7904b63e8a849071b4ba89b15492f6da47a802372aa2
+----
+
+[[containers-running]]
+=== Running a Container
+
+Use `+podman run+` to start a container.
+The `+-it+` flags allocate an interactive terminal, and `+--rm+` removes the container when it exits.
+If no command is specified, the image's default entrypoint is used:
+
+[source,shell,subs="attributes"]
+----
+# podman run -it --rm ghcr.io/freebsd/freebsd-notoolchain:{rel-latest}
+# exit
+----
+
+A specific command can be given as well:
+
+[source,shell,subs="attributes"]
+----
+# podman run -it --rm ghcr.io/freebsd/freebsd-notoolchain:{rel-latest} uname -a
+FreeBSD c0038de70651 {rel-latest}-RELEASE FreeBSD {rel-latest}-RELEASE releng/{rel-latest}-n283562-96841ea08dcf GENERIC amd64
+----
+
+As the container image does not include the kernel, man:freebsd-version[1] shows different results for the running kernel versus the installed userland.
+In this example, a {rel-latest-previous}-RELEASE container runs on a {rel-latest}-RELEASE host:
+
+[source,shell,subs="attributes"]
+----
+# podman run -it --rm ghcr.io/freebsd/freebsd-notoolchain:{rel-latest-previous} /bin/sh
+# freebsd-version -ru
+{rel-latest}-RELEASE
+{rel-latest-previous}-RELEASE
+# exit
+----
+
+[[containers-variations]]
+== Useful Variations and Tips
+
+Almost all of the `+podman run ...+` parameters also apply to `+podman build+`.
+Refer to the man:podman-run[1] and man:podman-build[1] manual pages for details.
+
+Use the `+--rm+` flag to have ephemeral containers clean themselves up afterwards.
+
+Use `+podman images -a+` to show all downloaded images:
+
+[source,shell,subs="attributes"]
+----
+# podman images -a
+REPOSITORY                       TAG            IMAGE ID      CREATED      SIZE
+ghcr.io/freebsd/freebsd-runtime  {rel-latest}   90c493675429  2 weeks ago  34.1 MB
+----
+
+Use `+podman ps -a+` to see running containers:
+
+[source,shell,subs="attributes"]
+----
+# podman ps -a
+CONTAINER ID  IMAGE                                          COMMAND  CREATED        STATUS        NAMES
+3123623bef9b  ghcr.io/freebsd/freebsd-runtime:{rel-latest}   /bin/sh  4 minutes ago  Up 4 minutes  admiring_brattain
+----
+
+[[containers-env-vars]]
+=== Environment Variables
+
+Podman sets a number of default environment variables in each container:
+
+[source,shell,subs="attributes"]
+----
+# podman run -it --rm ghcr.io/freebsd/freebsd-notoolchain:{rel-latest} /usr/bin/env
+container=podman
+TERM=xterm
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+HOME=/root
+HOSTNAME=60bae3343e6b
+----
+
+The `+HOSTNAME+` is set to the container ID by default.
+It can be overridden with `+--hostname+`, which is useful when the application inside the container needs a stable or meaningful hostname.
+
+Arbitrary environment variables can be passed in with `+--env+`:
+
+[source,shell,subs="attributes"]
+----
+# podman run --env FOO=BAR -it --rm ghcr.io/freebsd/freebsd-runtime:{rel-latest}
+# echo $FOO
+BAR
+----
+
+[[containers-volumes]]
+=== Mounting Files and Volumes
+
+Both files and volumes can be passed into containers using `+--volume+`.
+For example, the `+runtime+` image does not contain man:which[1]:
+
+[source,shell,subs="attributes"]
+----
+# podman run -it --rm ghcr.io/freebsd/freebsd-runtime:{rel-latest}
+# which
+/bin/sh: which: not found
+----
+
+It can be mounted into the container from the host:
+
+[source,shell,subs="attributes"]
+----
+# podman run -it --rm --volume /usr/bin/which:/usr/bin/which \
+    ghcr.io/freebsd/freebsd-runtime:{rel-latest}
+# which which
+/usr/bin/which
+----
+
+For a lean image such as `+freebsd-static+`, mount the existing man:pkg-static[8] from the host to bootstrap man:pkg[8] inside the container.
+Sharing the host's package cache via `+--volume /var/cache/pkg+` avoids re-downloading packages that have already been fetched, which is particularly useful when building multiple containers.
+The `+--no-hosts+` flag prevents mounting `+/etc/hosts+`, which would otherwise interfere with package upgrades.
+
+[NOTE]
+====
+Sharing the package cache only works when the host and container run the same FreeBSD major version, as packages are version-specific.
+====
+
+[source,shell,subs="attributes"]
+----
+# podman run -it --rm \
+    --env ASSUME_ALWAYS_YES=true \
+    --no-hosts \
+    --volume /usr/local/sbin/pkg-static:/bin/pkg-static \
+    --volume /var/cache/pkg \
+    ghcr.io/freebsd/freebsd-static:{rel-latest}
+# pkg-static bootstrap -r FreeBSD
+Bootstrapping pkg from pkg+https://pkg.FreeBSD.org/FreeBSD:14:amd64/latest, please wait...
+Verifying signature with trusted certificate pkg.freebsd.org.2013102301... done
+[fd343e182fa5] Installing pkg-2.1.2...
+[fd343e182fa5] Extracting pkg-2.1.2: 100%
+----
+
+Files and directories from the host can also be mounted into containers:
+
+[source,shell,subs="attributes"]
+----
+# podman run -it --rm \
+    --volume /etc/fstab:/etc/fstab \
+    --volume /tmp:/var/tmp \
+    --volume /tmp \
+    ghcr.io/freebsd/freebsd-runtime:{rel-latest}
+----
+
+[[containers-inspecting]]
+=== Inspecting Image Contents
+
+To list all files in any image, including minimal images with no shell or tools, export the container filesystem and list its contents:
+
+[source,shell,subs="attributes"]
+----
+# podman export $(podman create --rm ghcr.io/freebsd/freebsd-static:{rel-latest} /) | tar tf -
+----
+
+The container images do not include man:pkg[8] itself, but man:pkg-static[8] can be mounted from the host to query the installed base system packages.
+Use `+pkg info -q+` to list package names, or `+pkg info -ql+` to show all files owned by packages:
+
+[source,shell,subs="attributes"]
+----
+# podman run --rm \
+    -v /usr/local/sbin/pkg-static:/pkg \
+    ghcr.io/freebsd/freebsd-runtime:{rel-latest} /pkg info -q
+FreeBSD-audit-lib-{rel-latest}
+FreeBSD-bzip2-lib-{rel-latest}
+FreeBSD-certctl-{rel-latest}
+FreeBSD-clibs-{rel-latest}
+FreeBSD-fetch-{rel-latest}
+FreeBSD-kerberos-lib-{rel-latest}
+FreeBSD-libarchive-{rel-latest}
+FreeBSD-libcasper-{rel-latest}
+FreeBSD-libexecinfo-{rel-latest}
+FreeBSD-libucl-{rel-latest}
+FreeBSD-mtree-{rel-latest}
+FreeBSD-ncurses-lib-{rel-latest}
+FreeBSD-openssl-{rel-latest}
+FreeBSD-openssl-lib-{rel-latest}
+FreeBSD-pam-lib-{rel-latest}
+FreeBSD-pkg-bootstrap-{rel-latest}
+FreeBSD-rc-{rel-latest}
+FreeBSD-runtime-{rel-latest}
+FreeBSD-xz-lib-{rel-latest}
+FreeBSD-zlib-{rel-latest}
+FreeBSD-zoneinfo-{rel-latest}
+FreeBSD-zstd-lib-{rel-latest}
+----
+
+When the host and container run different FreeBSD major versions, man:pkg[8] detects the ABI by inspecting `+/bin/sh+` inside the container, and will warn about the mismatch:
+
+[source,shell]
+----
+# podman run -it --rm \
+    --env ASSUME_ALWAYS_YES=true \
+    --no-hosts \
+    --volume /usr/local/sbin/pkg-static:/usr/sbin/pkg \
+    --volume /var/cache/pkg \
+    ghcr.io/freebsd/freebsd-runtime:14.4 /bin/sh
+# pkg bootstrap
+pkg: Warning: Major OS version upgrade detected.  Running "pkg bootstrap -f" recommended
+----
+
+For images without `+/bin/sh+`, such as `+freebsd-dynamic+`, man:pkg-static[8] cannot detect the system ABI at all.
+
+[[containers-networking]]
+== Networking and Name Resolution
+
+By default, the Podman suite of tools will use man:mount_nullfs[8] to mount `+/etc/resolv.conf+` and a modified `+/etc/hosts+` from the jail host, as well as a `+.containerenv+` file in `+/var/run+`.
+
+This hosts file will conflict with base system package upgrades, so it is advised to skip this during `+podman build+` runs, but leave it enabled during production deployment:
+
+[source,shell]
+----
+# podman run --dns 1.2.3.4 ...
+# podman build --no-hosts ...
+----
+
+The `+--dns+` flag specifies a custom DNS server instead of mounting `+/etc/resolv.conf+` from the host.
+The `+--no-hosts+` flag prevents mounting `+/etc/hosts+` from the host.
+
+[[containers-building]]
+== Building Custom Images
+
+Custom images can be built directly from tarballs (for example those from man:poudriere[8], or official release tarballs), from existing tagged images, or bootstrapped from man:pkg[8].
+
+[[containers-building-base]]
+=== Building from Tarballs
+
+A custom image can be made from any FreeBSD root filesystem tarball using man:podman-import[1].
+The tarball can be an official release `+base.txz+`, one produced by man:poudriere-image[8], or your own custom tarball.
+The final tagged image can be pushed to registries, modified, and used for further image creation.
+
+[source,shell,subs="attributes"]
+----
+# podman import --os freebsd \
+    --arch amd64 \
+    --message 'Import FreeBSD {rel-latest}-RELEASE base.txz' \
+    https://download.freebsd.org/releases/amd64/{rel-latest}-RELEASE/base.txz
+Downloading from "https://download.freebsd.org/releases/amd64/{rel-latest}-RELEASE/base.txz"
+Getting image source signatures
+Copying blob 3768988b151c done   |
+Copying config 332bec83a4 done   |
+Writing manifest to image destination
+sha256:332bec83a428efa6c9f7d1f8b3fbd589c5613d938dca7da5125240c89f4f3dcd
+
+# podman image tag 332bec83a428 localhost/freebsd-base:{rel-latest}
+
+# podman image ls
+REPOSITORY              TAG   IMAGE ID      CREATED        SIZE
+localhost/freebsd-base  {rel-latest}  332bec83a428  5 minutes ago  715 MB
+----
+
+[[containers-building-containerfile]]
+=== Building from Containerfiles
+
+Images can be built using a `+Containerfile+`, similar to a Dockerfile.
+In most cases, the `+freebsd-notoolchain+` image is the most convenient base, as it includes nearly all standard system tools.
+For leaner containers, start from `+freebsd-static+`, `+freebsd-dynamic+`, or `+freebsd-runtime+` as appropriate, and add only what is needed:
+
+[source,dockerfile,subs="attributes"]
+----
+# Containerfile
+FROM ghcr.io/freebsd/freebsd-notoolchain:{rel-latest}
+RUN env ASSUME_ALWAYS_YES=yes IGNORE_OS_VERSION=yes pkg bootstrap -r FreeBSD
+RUN pkg update
+RUN pkg upgrade -y
+RUN pkg clean -y
+ENTRYPOINT /bin/sh
+----
+
+Build the image with man:podman-build[1]:
+
+[source,shell,subs="attributes"]
+----
+# podman build --no-hosts --squash \
+    -t localhost/freebsd-base:{rel-latest} \
+    -f ./Containerfile
+----
+
+Further images can be layered on top:
+
+[source,dockerfile,subs="attributes"]
+----
+# Containerfile.webserver
+FROM localhost/freebsd-base:{rel-latest}
+RUN pkg install -y lang/python3
+RUN pkg clean -y
+ENTRYPOINT /usr/local/bin/python3 -m http.server
+----
+
+[source,shell,subs="attributes"]
+----
+# podman build --no-hosts \
+    -t localhost/python-www:{rel-latest} \
+    -f ./Containerfile.webserver
+----
+
+Run the web server in the background with `+--detach+`, and use `+-p+` to map a host port to the container port.
+In this example, the container listens on its default port 8000, which is mapped to port 8888 on the host:
+
+[source,shell,subs="attributes"]
+----
+# c=$(podman run --detach --rm -p 8888:8000 localhost/python-www:{rel-latest})
+----
+
+The port mapping uses man:pf[4] redirect rules.
+These rules redirect traffic arriving over the network, so the mapped port must be accessed from another host, or via the host's network-facing IP address:
+
+[source,shell]
+----
+$ fetch -v http://172.16.2.10:8888/
+resolving server address: 172.16.2.10:8888
+requesting http://172.16.2.10:8888/
+remote size / mtime: 784 / 0
+fetch.out                                              784  B 3791 kBps    00s
+----
+
+To access the container directly from the host, use the container's own IP on its listening port:
+
+[source,shell]
+----
+# podman inspect -f '{{.NetworkSettings.IPAddress}}' $c
+10.88.0.91
+# fetch -v http://10.88.0.91:8000/
+resolving server address: 10.88.0.91:8000
+requesting http://10.88.0.91:8000/
+remote size / mtime: 784 / 0
+fetch.out                                              784  B   25 MBps    00s
+----
+
+[NOTE]
+====
+Port mappings via `+-p+` are handled by man:pf[4] redirect rules and only apply to traffic arriving over the network.
+Traffic originating from the jail host itself to `+localhost+` or `+127.0.0.1+` will not be redirected.
+From the host, use the container's IP address directly instead.
+====
+
+[[containers-advanced]]
+== Advanced Usage
+
+[[containers-daemonising]]
+=== Daemonising Podman
+
+FreeBSD's Podman implementation provides two man:rc[8] services:
+
+* The `+podman+` service runs at boot and ensures that all containers marked with `+restart-policy=always+` are started.
+* The `+podman_service+` service runs the https://docs.podman.io/en/latest/_static/api.html[Podman API service], providing a REST API and listening on `+/var/run/podman/podman.sock+` by default.
+
+Enable them as follows:
+
+[source,shell]
+----
+# sysrc podman_enable=YES
+# sysrc podman_service_enable=YES
+# sysrc podman_service_flags='--time 0'
+# service podman start
+# service podman_service start
+----
+
+Containers that should restart automatically after a host reboot must be run with the `+--restart=always+` option:
+
+[source,shell]
+----
+# podman run --detach --restart=always my-image
+----
+
+[[containers-linux]]
+=== Running Linux Containers
+
+It is possible to run many Linux container images using FreeBSD's Linux emulation:
+
+[source,shell]
+----
+# service linux onestart
+# podman run --rm --os=linux docker.io/alpine cat /etc/os-release | head -1
+Trying to pull docker.io/library/alpine:latest...
+Getting image source signatures
+Copying blob 4abcf2066143 done   |
+Copying config 05455a0888 done   |
+Writing manifest to image destination
+NAME="Alpine Linux"
+----
+
+[NOTE]
+====
+Linux containers that depend on systemd, expect to be PID 1, or rely on Linux-specific kernel interfaces may not work correctly under FreeBSD's Linux emulation.
+====
+
+[[containers-local-registry]]
+=== Running a Local Registry
+
+A registry is a web server for storing and sharing OCI images.
+The https://freshports.org/sysutils/docker-registry[sysutils/docker-registry] port provides a simple registry suitable for local development or a small organisation.
+https://zotregistry.dev/[Zot Registry] is a more comprehensive modern alternative.
+
+[source,shell]
+----
+# pkg install -r FreeBSD sysutils/docker-registry
+# zfs create zroot/var/db/registry
+# chown -R www:www /var/db/registry
+# sysrc docker_registry_enable=YES
+# sysrc docker_registry_user=www
+# sed -i '' -E -e 's,rootdirectory:.+,rootdirectory: /var/db/registry,' \
+    /usr/local/etc/docker-registry/config.yml
+# touch /usr/local/etc/docker-registry/htpasswd
+# chown -R root:www /usr/local/etc/docker-registry/config.yml \
+    /usr/local/etc/docker-registry/htpasswd
+# chmod 0640 /usr/local/etc/docker-registry/config.yml \
+    /usr/local/etc/docker-registry/htpasswd
+----
+
+A sample configuration for `+/usr/local/etc/docker-registry/config.yml+`:
+
+[source,yaml]
+----
+version: 0.1
+log:
+  fields:
+    service: registry
+storage:
+  cache:
+    blobdescriptor: inmemory
+  filesystem:
+    rootdirectory: /var/db/registry
+http:
+  addr: :5000
+  secret: <random-secret>
+  headers:
+    X-Content-Type-Options: [nosniff]
+auth:
+  htpasswd:
+    realm: basic-realm
+    path: /usr/local/etc/docker-registry/htpasswd
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3
+----
+
+Start the registry and verify it is running:
+
+[source,shell]
+----
+# service registry start
+# curl -u admin:passwd http://localhost:5000/v2/
+----
+
+[TIP]
+====
+It is recommended to serve the registry over TLS, behind a reverse proxy such as nginx or haproxy.
+====
+
+[[containers-syncing]]
+=== Synchronising Registries
+
+It is possible to synchronise official FreeBSD images into a local registry using `+skopeo+`.
+The following example replicates all FreeBSD-related images from https://hub.docker.com/u/freebsd[Docker Hub] to a local registry:
+
+[source,yaml]
+----
+# sync.yml
+docker.io:
+  images:
+    freebsd/freebsd-static: []
+    freebsd/freebsd-dynamic: []
+    freebsd/freebsd-runtime: []
+----
+
+[source,shell]
+----
+$ skopeo sync --src yaml --dest docker --all sync.yml cr.example.net/freebsd
+INFO[0000] Processing repo                               repo=freebsd/freebsd-static
+INFO[0000] Querying registry for image tags              repo=freebsd/freebsd-static
+...
+INFO[0771] Synced 42 images from 3 sources
+----
+
+So long as the credentials in `+/root/.config/containers/auth.json+` are up to date, root access is not required to sync images.
+
+[[containers-registries-auth]]
+=== Working with Container Registries
+
+Registries generally require authentication for push operations, and optionally for pull.
+Credentials are saved in `+/root/.config/containers/auth.json+` by default after login:
+
+[source,shell]
+----
+# podman login ghcr.io -u username
+Password:
+Login Succeeded!
+----
+
+Images can then be pushed to a registry:
+
+[source,shell,subs="attributes"]
+----
+# podman push localhost/freebsd-runtime:{rel-latest} \
+    docker://ghcr.io/example/freebsd-runtime:{rel-latest}
+Getting image source signatures
+Copying blob bbacfdfbe140 done   |
+Copying config 786f2592a8 done   |
+Writing manifest to image destination
+----
+
+Public images can be pulled without authentication:
+
+[source,shell,subs="attributes"]
+----
+# podman pull ghcr.io/freebsd/freebsd-runtime:{rel-latest}
+----
+
+[[containers-building-sources]]
+== Building Container Images from Sources
+
+The FreeBSD release tooling provides an `+oci-release+` target to build the necessary images for `+podman load+` to use.
+It requires building world, kernel, and base system packages first, so this can take a while.
+
+The following example builds `+arm64+` images:
+
+[source,shell]
+----
+# cd /usr/src \
+    && make TARGET_ARCH=aarch64 TARGET=arm64 -s -j32 buildworld \
+    && make TARGET_ARCH=aarch64 TARGET=arm64 KERNCONF=GENERIC -s -j32 buildkernel \
+    && make TARGET_ARCH=aarch64 TARGET=arm64 KERNCONF=GENERIC -s -j32 packages \
+    && cd ./release \
+    && make TARGET_ARCH=aarch64 TARGET=arm64 -j32 -s clean \
+    && make KERNCONF=GENERIC TARGET_ARCH=aarch64 TARGET=arm64 WITH_OCIIMAGES=yes \
+      -s oci-release
+----
+
+And similarly for `+amd64+`:
+
+[source,shell]
+----
+# cd /usr/src \
+    && make TARGET_ARCH=amd64 TARGET=amd64 -s -j32 buildworld \
+    && make TARGET_ARCH=amd64 TARGET=amd64 KERNCONF=GENERIC -s -j32 buildkernel \
+    && make TARGET_ARCH=amd64 TARGET=amd64 KERNCONF=GENERIC -s -j32 packages \
+    && cd ./release \
+    && make TARGET_ARCH=amd64 TARGET=amd64 -s -j32 clean \
+    && make KERNCONF=GENERIC TARGET_ARCH=amd64 TARGET=amd64 \
+      WITH_OCIIMAGES=yes -s oci-release
+----
+
+[[containers-cross-arch]]
+== Cross-Architecture Testing
+
+The `+emulators/qemu-user-static+` package allows testing container images built for other architectures.
+After installing the package, enable and start the service to register image activators for all emulated architectures:
+
+[source,shell]
+----
+# pkg install emulators/qemu-user-static
+# service qemu_user_static enable
+# service qemu_user_static start
+----
+
+Then run an `+arm64+` image on an `+amd64+` host by mounting the appropriate QEMU binary:
+
+[source,shell]
+----
+# podman run -it --rm --arch=arm64 \
+    -v /usr/local/bin/qemu-aarch64-static:/usr/local/bin/qemu-aarch64-static \
+    ghcr.io/freebsd/freebsd-runtime:14.snap uname -a
+FreeBSD 73d4049d10b2 14.2-RELEASE-p1 FreeBSD 14.2-RELEASE-p1 GENERIC arm64
+----
+
+[[containers-troubleshooting]]
+== Troubleshooting
+
+[[containers-troubleshooting-hosts]]
+=== Package Upgrades and Mounted Files
+
+Podman mounts `+/etc/resolv.conf+` and `+/etc/hosts+` into containers using man:mount_nullfs[8].
+These mounts can cause errors during man:pkg[8] operations with messages such as `+Cross-device link+`:
+
+[source]
+----
+pkg: Fail to rename /etc/.pkgtemp.hosts.VeIDrHM0sKN5 -> /etc/hosts:Cross-device link
+----
+
+To avoid this, use `+--no-hosts+` and `+--dns+` flags:
+
+[source,shell,subs="attributes"]
+----
+# podman run --no-hosts --dns 1.1.1.1 -it --rm \
+    ghcr.io/freebsd/freebsd-runtime:{rel-latest} /bin/sh
+----
+
+[[containers-troubleshooting-networking]]
+=== Checking Networking
+
+Start with the firewall rules from `+/usr/local/etc/containers/pf.conf.sample+`.
+Test connectivity step by step from within a container:
+
+[source,shell,subs="attributes"]
+----
+# podman run --no-hosts --dns 1.1.1.1 \
+    --env ASSUME_ALWAYS_YES=1 \
+    -it --rm \
+    ghcr.io/freebsd/freebsd-runtime:{rel-latest} \
+    /bin/sh
+
+# route show 1.1.1.1
+   route to: 1.1.1.1
+destination: default
+    gateway: 10.88.0.1
+  interface: eth0
+
+# ping -c 3 10.88.0.1
+PING 10.88.0.1 (10.88.0.1): 56 data bytes
+64 bytes from 10.88.0.1: icmp_seq=0 ttl=64 time=0.083 ms
+...
+
+# ping -c 3 1.1.1.1
+PING 1.1.1.1 (1.1.1.1): 56 data bytes
+64 bytes from 1.1.1.1: icmp_seq=0 ttl=60 time=0.920 ms
+...
+
+# fetch -v http://1.1.1.1/
+...
+
+# pkg -dd bootstrap -r FreeBSD
+----
+
+If man:ping[8] fails, check the firewall rules for blocked ICMP.
+If man:fetch[1] fails, check the firewall rules for blocked TCP on ports 80 and 443.
+If man:pkg[8] fails but ICMP and TCP work, this may be a fragmentation or MTU problem.
+Add `+set reassemble yes no-df+` to `+/etc/pf.conf+` and restart the firewall.
+
+For debugging blocked packets, enable `+log+` on all block rules in `+/etc/pf.conf+` and use man:tcpdump[1] on the man:pflog[4] device:
+
+[source,shell]
+----
+# service pflog onerestart
+# tcpdump -vvveni pflog0 icmp or net 10.88.0.0/16
+----
+
+[[containers-troubleshooting-mtu]]
+=== MTU Consistency
+
+Ensure MTU values are consistent across the primary network interface, the container bridge, and the container itself.
+Mismatched MTU values can cause packet fragmentation and connectivity failures.
+
+In the following example, `+vtnet0+` has MTU 9000, but the bridge and containers have MTU 1500.
+In general, align the internal layout to match the external network:
+
+[source,shell]
+----
+# ifconfig vtnet0 mtu 9000
+# ifconfig cni-podman0 mtu 9000
+----
+
+Inside the container:
+
+[source,shell]
+----
+# ifconfig eth0 mtu 9000
+----
+
+The bridges and epairs used by Podman are ephemeral and will need to be configured for each bridge creation and each container.
+In some cloud environments, adding `+set reassemble yes no-df+` to `+/etc/pf.conf+` may also be required.
