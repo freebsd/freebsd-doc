@@ -805,10 +805,9 @@ the <a href="https://lists.freebsd.org/subscription/freebsd-ports">$mailtoList</
 </p>
 
 <h2>Copyright</h2>
-<pre>
+<p>
 Copyright (c) 1996-2026 <a href="https://wolfram.schneider.org">Wolfram Schneider</a> &lt;wosch\@FreeBSD.org&gt;
-</pre>
-<p/>
+</p>
 
 
 @{[ &footer_links ]}
