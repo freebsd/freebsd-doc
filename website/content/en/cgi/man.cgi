@@ -2620,14 +2620,14 @@ e.g., "netbsd" always points to the latest NetBSD release.
 </ul>
 
 <h2>Copyright</h2>
-<pre>
-Copyright (c) 1996-2026 <a href="$mailtoURL">Wolfram Schneider</a>
-Copyright (c) 1993-1995 Berkeley Software Design, Inc.
-</pre>
-<p/>
-
-Copyright (c) for manual pages by OS vendors:
 <p>
+Copyright (c) 1996-2026 <a href="$mailtoURL">Wolfram Schneider</a><br/>
+Copyright (c) 1993-1995 Berkeley Software Design, Inc.<br/>
+</p>
+
+<p>
+Copyright (c) for manual pages by OS vendors:
+<span id="os_vendoers">
 <a href="https://en.wikipedia.org/wiki/History_of_the_Berkeley_Software_Distribution">2.11 BSD</a>,
 <a href="https://www.apple.com">Apple</a>,
 <a href="https://www.centos.org">CentOS</a>,
@@ -2656,6 +2656,8 @@ Copyright (c) for manual pages by OS vendors:
 <a href="https://en.wikipedia.org/wiki/Version_7_Unix">Unix Seventh Edition</a>,
 <a href="https://www.x.org">X11R6</a>,
 <a href="https://www.xfree86.org">XFree86</a>
+<br/>
+</span>
 </p>
 };
 
