@@ -34,15 +34,18 @@ use JSON;
 use warnings;
 
 our $hsty_base;
-require "./cgi-style.pl";
+require "./cgi-style-responsive.pl";
 
 our $t_style = qq`
 <style type="text/css">
-h3 { font-size: 1.20em; border-bottom: thin solid black; max-width: 42em; }
-
 form#ports > input[name='query'] { text-align: center; }
-form#ports > input[name='query'] { width: 20em; }
-form#ports > input, form#ports > button, form#ports > select { font-size: large; }
+form#ports > input[name='query'] { width: 14em; }
+
+form#ports > input, form#ports > button, form#ports > select { margin-left: 0.2em; }
+form#ports > input, form#ports > button                      { font-size: large; }
+form#ports > button { margin-top: .8em; }
+form#ports > select { margin-top: .8em; font-size: 100%; }
+form#ports { padding-bottom: .7em; margin-top: .5em; }
 
 span.footer_links { font-size: small; }
 span.space { font-size: xx-small; }
@@ -54,9 +57,19 @@ a:hover { text-decoration:underline; }
 table, th, td { border: 1px solid black; border-collapse: collapse; }
 th, td { padding-left: 0.5em; padding-right: 0.5em; }
 
-span#noscript { color: red; font-size: normal; font-weight: bold; }
+h3 { border-bottom: thin solid black; max-width: 42em; padding-top: .2em; }
+div#content { padding-top: 0.4em; }
+
+hr { margin-top: 0px; }
 
 .dependencies { margin-top: 0.5em; }
+
+\@media screen and (max-width: 1300px) {
+    footer { margin-top: -2em; }
+    .logo-menu-bars-container {
+        padding: 0px;
+    }
+}
 </style>
 
 <link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/ports.xml" title="FreeBSD Ports" />
@@ -458,8 +471,8 @@ sub package_links {
         }
 
         if ( $. == 1 ) {
-            print qq[<h2>$perl->{"name"}: ], escapeHTML( $perl->{"comment"} ),
-              qq[</h2>\n];
+            print qq[<h3>$perl->{"name"}: ], escapeHTML( $perl->{"comment"} ),
+              qq[</h3>\n];
 
             my $maintainer = $perl->{"maintainer"};
             $maintainer = &check_freebsd_mailing_list($maintainer)
@@ -626,6 +639,7 @@ sub forms {
     print qq{
 <form id="ports" method="get" action="$script_name">
 <input name="query" id="query" value="$query" type="text" autocapitalize="none" />
+<input type="submit" value="Search" /><br/>
 <select name="stype">
 };
 
@@ -657,11 +671,10 @@ sub forms {
     }
 
     print qq{</select>
-<input type="submit" value="Search" />
+
 </form>
-<br/>
 @{[ &footer_links ]}
-<hr noshade="noshade" />
+<hr/>
 };
 
 }
@@ -720,8 +733,7 @@ sub check_input {
 
 sub help {
     print <<EOF;
-<br/>
-<h1>FreeBSD Ports Search Help</h1>
+<h2>FreeBSD Ports Search Help</h2>
 
 <p>
 The FreeBSD Ports and Packages Collection offers a simple way for
@@ -814,9 +826,8 @@ the <a href="https://lists.freebsd.org/subscription/freebsd-ports">$mailtoList</
 Copyright (c) 1996-2026 <a href="https://wolfram.schneider.org">Wolfram Schneider</a> &lt;wosch\@FreeBSD.org&gt;
 </p>
 
-
 @{[ &footer_links ]}
-<hr noshade="noshade" />
+<hr/>
 EOF
 }
 
@@ -888,10 +899,10 @@ if ( !$query && $query_string =~ /^([^=&]+)$/ ) {
 }
 
 if ($query) {
-    print &short_html_header( "FreeBSD Ports Search", 1 );
-    print "<br/>\n";
+    print &short_html_header( "Ports Search", 1 );
+    #print "<br/>\n";
 } else {
-    print &html_header( "FreeBSD Ports Search", 1 );
+    print &html_header( "Ports Search", 1 );
 }
 
 # get all categories
@@ -969,5 +980,5 @@ if ($counter) {
     print &footer_links;
 }
 
-print qq{<hr noshade="noshade" />\n};
+print qq{<hr/>\n};
 print &html_footer;
