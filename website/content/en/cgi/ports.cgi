@@ -69,6 +69,8 @@ hr { margin-top: 0px; }
     .logo-menu-bars-container {
         padding: 0px;
     }
+
+    pre { white-space: pre-wrap !important; word-wrap: break-word !important; }
 }
 </style>
 
