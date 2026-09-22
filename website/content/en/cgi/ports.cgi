@@ -36,7 +36,7 @@ use warnings;
 our $hsty_base;
 require "./cgi-style-responsive.pl";
 
-our $t_style = qq`
+our $t_style = <<'EOF';
 <style type="text/css">
 form#ports > input[name='query'] { text-align: center; }
 form#ports > input[name='query'] { width: 14em; }
@@ -64,7 +64,14 @@ hr { margin-top: 0px; }
 
 .dependencies { margin-top: 0.5em; }
 
-\@media screen and (max-width: 1300px) {
+@media screen and (orientation: portrait) and (max-width: 950px) {
+}
+
+@media screen and (orientation: landscape) and (max-width: 950px) {
+  header { display: none; }
+}
+
+@media screen and (max-width: 1300px) {
     footer { margin-top: -2em; }
     .logo-menu-bars-container {
         padding: 0px;
@@ -91,7 +98,7 @@ function input_autofocus_at_end () {
 }
 document.addEventListener('DOMContentLoaded', input_autofocus_at_end);
 </script>
-`;
+EOF
 
 my $no_javascript_warning = <<'EOF';
 <span id="noscript">
