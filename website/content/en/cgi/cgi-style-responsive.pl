@@ -484,7 +484,6 @@ sub html_footer {
   </div>
 </footer>
 
-      </div>
     </div>
   </body>
 </html>
