@@ -1535,6 +1535,11 @@ div#content { padding-top: 0.4em; }
   hr { margin-top: 0px; margin-bottom: 0px; }
   h3 { padding-top: .2em; }
 } 
+
+details { margin: .3em 0 .3em 1em; }
+details > summary { cursor: pointer; font-weight: bold; padding: .2em 0; }
+details > ul { margin-top: .2em; }
+
 </style>
 
 <script>
@@ -2531,10 +2536,30 @@ sub faq {
 
     local ( @list, @list2 );
     local ($url);
+
+    my $os = "";
+    my $os_lc = "";
+    my $os_group = "";
+    my $os_group_lc = "";
+    my @l;
     foreach ( &freebsd_first (&sort_manpath(\%manPath) )) {
+        if (/^(\S+)/) {
+           $os = $1;
+        }
+        $os_lc = lc($os);
+
         $url = &encode_url($_);
         my $download_link = $enable_download ? qq[<a href="/cgi/man.cgi?apropos=2&amp;manpath=$url">tarball</a>] : '';
-        push( @list, qq{<li>$_: <a href="$BASE?manpath=$url">permalink</a> | $download_link</li>\n} );
+
+        if ($os_lc ne $os_group_lc && $os_group_lc ne "") {
+           push @list, qq[<details id="$os_group_lc">\n];
+           push @list, qq|<summary>$os_group (@{[ scalar(@l) ]} releases)</summary>\n|;
+           push @list, "<ul>\n", @l, "</ul>\n</details>\n";
+           undef @l;
+        } 
+        push( @l, qq{<li>$_: <a href="$BASE?manpath=$url">permalink</a> | $download_link</li>\n} );
+        $os_group = $os;
+        $os_group_lc = $os_lc;
     }
 
     foreach ( &freebsd_first (&sort_manpath(\%manPathAliases) )) {
@@ -2632,10 +2657,9 @@ You may download the manual pages as a gzip'd tar archive for private or educati
 A tarball is normally 15-50 MB in size, but can be up to 350 MB for FreeBSD ports.
 </p>
 
-<ul>
+<div id="release-permalinks-tarballs">
 @list
-</ul>
-
+</div>
 
 <h2>Release Alias Permalinks</h2>
 
