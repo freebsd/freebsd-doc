@@ -2618,6 +2618,7 @@ Other operating system manual pages are updated as needed.
 
 <ul>
 <li>Get the <a href="https://cgit.freebsd.org/doc/tree/website/content/en/cgi/man.cgi">source</a> of the man.cgi script.</li>
+<li>On small mobile devices, manual pages often look better in landscape mode than in portrait mode.</li>
 <li>Troff macros work only if defined in FreeBSD/groff. OS-specific
 macros like "appeared in NetBSD version 1.2" are not supported.</li>
 <li>The <a href="https://cgit.freebsd.org/src/tree/share/misc/bsd-family-tree">
