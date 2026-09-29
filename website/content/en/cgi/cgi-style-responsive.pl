@@ -480,7 +480,7 @@ sub html_footer {
       </section>
       <section class="copyright-column">
         <p>&copy; 1994-2026 The FreeBSD Project. All rights reserved</p>
-        <span>Made with <span class="heart">❤️</span> by the FreeBSD Community</span>
+        <span>Made with <span class="heart">&#x2764;&#xFE0F;</span> by the FreeBSD Community</span>
       </section>
   </div>
 </footer>
