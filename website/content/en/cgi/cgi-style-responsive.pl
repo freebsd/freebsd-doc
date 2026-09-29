@@ -272,14 +272,14 @@ $i_topbar = qq`
             </li>
           
             <li>
-              <a href="$hsty_base/zh-tw/" lang="zh-tw">繁體中文</a>
+              <a href="$hsty_base/zh-tw/" lang="zh-tw">&#x7E41;&#x9AD4;&#x4E2D;&#x6587;</a>
             </li>
           
         </ul>
       </details>
       <div class="donate">
 	<a href="$hsty_base/donations" class="column-element">
-          <span class="heart">❤️</span>
+          <span class="heart">&#x2764;&#xFE0F;</span>
           Donate
         </a>
       </div>
