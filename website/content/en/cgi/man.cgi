@@ -2664,13 +2664,6 @@ Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 <p>
 Copyright (c) for manual pages by OS vendors:
-<p>
-Copyright (c) 1996-2026 <a href="$mailtoURL">Wolfram Schneider</a><br>
-Copyright (c) 1993-1995 Berkeley Software Design, Inc.<br>
-</p>
-
-<p>
-Copyright (c) for manual pages by OS vendors:
 <span id="os_vendoers">
 <a href="https://en.wikipedia.org/wiki/History_of_the_Berkeley_Software_Distribution">2.11 BSD</a>,
 <a href="https://www.apple.com">Apple</a>,
