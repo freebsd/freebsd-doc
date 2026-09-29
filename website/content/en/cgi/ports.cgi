@@ -382,7 +382,7 @@ sub out {
     $descfile =~ s%^$remotePrefixFtp%$remotePrefixRepo/plain%o;
 
     print
-      qq{<dt><b><a name="$version"></a><a href="$t">$version</a></b></dt>\n};
+      qq{<dt><b><a name="$version" href="$t">$version</a></b></dt>\n};
     print qq{<dd>}, &escapeHTML($comment), qq{<br />\n};
 
     print qq[<a href="$descfile?revision=HEAD">Description</a>\n];
@@ -424,7 +424,7 @@ sub out {
 
             print ", " if $flag;
             $flag++;
-            print qq{<a href="$script_name?query=^$_&amp;stype=name">$_</a>};
+            print qq{<a href="$script_name?query=%5E$_&amp;stype=name">$_</a>};
         }
         print "</div>\n";
     }
