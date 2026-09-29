@@ -2586,13 +2586,6 @@ much smaller.
 <li>socket(2) manpage: <a href="https://man.FreeBSD.org/socket/2">https://man.FreeBSD.org/socket/2</a></li>
 </ul>
 
-<p></p>
-
-<ul>
-<li>socket manpage: <a href="$full_url?socket">$full_url?socket</a></li>
-<li>socket(2) manpage: <a href="$full_url?socket(2)">$full_url?socket(2)</a></li>
-</ul>
-
 <h2>Output formats</h2>
 <p>
 Manual pages can be rendered in three formats: HTML (the default), plain
