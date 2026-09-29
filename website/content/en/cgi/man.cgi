@@ -1431,7 +1431,7 @@ $sections = join( "|", @sections );    # sections regexp
 $mailto                    = 'wosch@FreeBSD.org';
 $mailtoURL                 = 'https://wolfram.schneider.org';
 $mailtoURL                 = "mailto:$mailto" if !$mailtoURL;
-$full_url                  = 'https://man.freebsd.org/cgi/man.cgi';
+$full_url                  = 'https://man.FreeBSD.org/cgi/man.cgi';
 $want_to_link_to_this_page = 1;
 
 &secure_env;
@@ -1466,8 +1466,8 @@ sub html_header {
 
     my $html_meta = <<'EOF';
 <meta name="robots" content="nofollow">
-<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/man.xml" title="FreeBSD Man">
-<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/opensearch/man-freebsd-release-ports.xml" title="FreeBSD Man+P">
+<link rel="search" type="application/opensearchdescription+xml" href="https://www.FreeBSD.org/opensearch/man.xml" title="FreeBSD Man">
+<link rel="search" type="application/opensearchdescription+xml" href="https://www.FreeBSD.org/opensearch/man-freebsd-release-ports.xml" title="FreeBSD Man+P">
 
 <style>
 span.footer_links { font-size: .9em; margin-left: .5em; }
@@ -1818,7 +1818,7 @@ sub apropos {
            print qq{Please try a <a href="$BASE?apropos=1&amp;manpath=$manpath&amp;query=$query">keyword search</a>.\n} if $sektion;
            print "<br><br>\n";
            print qq{You can start a <a href="$www{'cgi_man'}">new search</a> or look for other }
-          . qq{<a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>.<br><hr>\n};
+          . qq{<a href="https://www.FreeBSD.org/search/">FreeBSD Search Services</a>.<br><hr>\n};
         }
     }
     &html_footer;
@@ -2030,7 +2030,7 @@ sub man {
         print
 qq{Please try a <a href="$BASE?apropos=1&amp;manpath=$manpath&amp;query=$html_name">keyword search</a>.\n};
         print qq{<p>You can start a <a href="$www{'cgi_man'}">new search</a> or look for other }
-          . qq{<a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>.</p><hr>\n};
+          . qq{<a href="https://www.FreeBSD.org/search/">FreeBSD Search Services</a>.</p><hr>\n};
         &html_footer;
         return;
     }
@@ -2551,7 +2551,7 @@ sub faq {
 
     return qq{\
 <p>
-<a href="https://man.freebsd.org/">man.FreeBSD.org</a>
+<a href="https://man.FreeBSD.org/">man.FreeBSD.org</a>
 is the largest and oldest manual page archive on the internet.</p>
 
 <p>
@@ -2582,8 +2582,8 @@ much smaller.
 
 <p>You can use these short URLs to search for FreeBSD man pages:</p>
 <ul>
-<li>socket manpage: <a href="https://man.freebsd.org/socket">https://man.freebsd.org/socket</a></li>
-<li>socket(2) manpage: <a href="https://man.freebsd.org/socket/2">https://man.freebsd.org/socket/2</a></li>
+<li>socket manpage: <a href="https://man.FreeBSD.org/socket">https://man.FreeBSD.org/socket</a></li>
+<li>socket(2) manpage: <a href="https://man.FreeBSD.org/socket/2">https://man.FreeBSD.org/socket/2</a></li>
 </ul>
 
 <p></p>
@@ -2617,16 +2617,16 @@ Other operating system manual pages are updated as needed.
 <h2>FAQ</h2>
 
 <ul>
-<li>Get the <a href="https://cgit.freebsd.org/doc/tree/website/content/en/cgi/man.cgi">source</a> of the man.cgi script.</li>
+<li>Get the <a href="https://cgit.FreeBSD.org/doc/tree/website/content/en/cgi/man.cgi">source</a> of the man.cgi script.</li>
 <li>On small mobile devices, manual pages often look better in landscape mode than in portrait mode.</li>
 <li>Troff macros work only if defined in FreeBSD/groff. OS-specific
 macros like "appeared in NetBSD version 1.2" are not supported.</li>
-<li>The <a href="https://cgit.freebsd.org/src/tree/share/misc/bsd-family-tree">
+<li>The <a href="https://cgit.FreeBSD.org/src/tree/share/misc/bsd-family-tree">
 Unix family tree, BSD part</a>.</li>
-<li>The <a href="https://ports.freebsd.org/cgi/ports.cgi">
+<li>The <a href="https://ports.FreeBSD.org/cgi/ports.cgi">
 FreeBSD Ports Search</a> script.</li>
-<li>other <a href="https://www.freebsd.org/search/">FreeBSD Search Services</a>.</li>
-<li><a href="https://www.freebsd.org/search/opensearch/">FreeBSD OpenSearch Plugins</a> for the manual pages and other services.</li>
+<li>other <a href="https://www.FreeBSD.org/search/">FreeBSD Search Services</a>.</li>
+<li><a href="https://www.FreeBSD.org/search/opensearch/">FreeBSD OpenSearch Plugins</a> for the manual pages and other services.</li>
 </ul>
 
 <h2>Release Permalinks and tarballs</h2>
@@ -2671,7 +2671,7 @@ Copyright (c) for manual pages by OS vendors:
 <a href="https://www.debian.org">Debian</a>,
 <a href="https://www.dell.com">Dell</a>,
 <a href="https://www.dragonflybsd.org">DragonFly BSD</a>,
-<a href="https://www.freebsd.org">FreeBSD</a>,
+<a href="https://www.FreeBSD.org">FreeBSD</a>,
 <a href="https://www.hp.com">HP</a>,
 <a href="https://en.wikipedia.org/wiki/IRIX">IRIX</a>,
 <a href="https://www.minix3.org">Minix</a>,
