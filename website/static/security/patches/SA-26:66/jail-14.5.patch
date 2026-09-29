@@ -1,0 +1,598 @@
+--- lib/libc/capability/cap_rights_init.3.orig
++++ lib/libc/capability/cap_rights_init.3
+@@ -35,6 +35,7 @@
+ .Nm cap_rights_is_set ,
+ .Nm cap_rights_is_empty ,
+ .Nm cap_rights_is_valid ,
++.Nm cap_rights_intersect ,
+ .Nm cap_rights_merge ,
+ .Nm cap_rights_remove ,
+ .Nm cap_rights_contains
+@@ -56,6 +57,8 @@
+ .Ft bool
+ .Fn cap_rights_is_valid "const cap_rights_t *rights"
+ .Ft cap_rights_t *
++.Fn cap_rights_intersect "cap_rights_t *dst" "const cap_rights_t *src"
++.Ft cap_rights_t *
+ .Fn cap_rights_merge "cap_rights_t *dst" "const cap_rights_t *src"
+ .Ft cap_rights_t *
+ .Fn cap_rights_remove "cap_rights_t *dst" "const cap_rights_t *src"
+@@ -133,6 +136,14 @@
+ structure is valid.
+ .Pp
+ The
++.Fn cap_rights_intersect
++function clears all capability rights from the
++.Fa dst
++structure that are not present in the
++.Fa src
++structure, leaving only the rights common to both.
++.Pp
++The
+ .Fn cap_rights_merge
+ function merges all capability rights present in the
+ .Fa src
+@@ -173,9 +184,10 @@
+ argument.
+ .Pp
+ The
+-.Fn cap_rights_merge
+-and
++.Fn cap_rights_merge ,
+ .Fn cap_rights_remove
++and
++.Fn cap_rights_intersect
+ functions return pointer to the
+ .Vt cap_rights_t
+ structure given in the
+--- lib/libc/sys/fcntl.2.orig
++++ lib/libc/sys/fcntl.2
+@@ -27,7 +27,7 @@
+ .\"
+ .\"     @(#)fcntl.2	8.2 (Berkeley) 1/12/94
+ .\"
+-.Dd June 5, 2025
++.Dd September 22, 2026
+ .Dt FCNTL 2
+ .Os
+ .Sh NAME
+@@ -150,6 +150,13 @@
+ .Xr openat 2
+ where the directory descriptor has the flag set causes the new directory
+ descriptor to also have the flag set.
++A file descriptor with the
++.Dv FD_RESOLVE_BENEATH
++set cannot be used as either the source or target descriptor in
++.Xr renameat 2
++or
++.Xr renameat2 2
++system calls.
+ .El
+ .It Dv F_SETFD
+ Set flags associated with
+--- sys/fs/fdescfs/fdesc_vnops.c.orig
++++ sys/fs/fdescfs/fdesc_vnops.c
+@@ -289,11 +289,13 @@
+ 	char *pname = cnp->cn_nameptr;
+ 	struct thread *td = curthread;
+ 	struct file *fp;
++	struct filecaps fcaps;
+ 	struct fdesc_get_ino_args arg;
++	struct vnode *fvp;
+ 	int nlen = cnp->cn_namelen;
+ 	u_int fd, fd1;
+ 	int error;
+-	struct vnode *fvp;
++	uint8_t fflags;
+ 
+ 	if ((cnp->cn_flags & ISLASTCN) &&
+ 	    (cnp->cn_nameiop == DELETE || cnp->cn_nameiop == RENAME)) {
+@@ -334,7 +336,8 @@
+ 	/*
+ 	 * No rights to check since 'fp' isn't actually used.
+ 	 */
+-	if ((error = fget(td, fd, &cap_no_rights, &fp)) != 0)
++	if ((error = fget_cap(td, fd, &cap_no_rights, &fflags, &fp,
++	    &fcaps)) != 0)
+ 		goto bad;
+ 
+ 	/*
+@@ -369,6 +372,36 @@
+ 			error = ENOENT;
+ 	}
+ 
++	/*
++	 * Make sure that a nodup mount can't be used to launder away monotonic
++	 * file descriptor metadata, namely UF_RESOLVE_BENEATH and capability
++	 * rights.
++	 */
++	if (error == 0 && fvp->v_mount != dvp->v_mount &&
++	    ((fflags & UF_RESOLVE_BENEATH) != 0 || !filecaps_full(&fcaps))) {
++		struct nameidata *ndp;
++
++		ndp = vfs_lookup_nameidata(cnp);
++		if (ndp == NULL) {
++			vput(fvp);
++			error = ENOTCAPABLE;
++		} else {
++			if ((fflags & UF_RESOLVE_BENEATH) != 0)
++				ndp->ni_resflags |= NIRES_BENEATH;
++			if (!filecaps_full(&fcaps)) {
++				if (cap_rights_is_valid(
++				    &ndp->ni_filecaps.fc_rights))
++					filecaps_intersect(&fcaps,
++					    &ndp->ni_filecaps);
++				else
++					filecaps_move(&fcaps,
++					    &ndp->ni_filecaps);
++				ndp->ni_resflags |= NIRES_STRICTREL;
++			}
++		}
++	}
++	filecaps_free(&fcaps);
++
+ 	if (error)
+ 		goto bad;
+ 	*vpp = fvp;
+--- sys/kern/kern_descrip.c.orig
++++ sys/kern/kern_descrip.c
+@@ -1844,6 +1844,65 @@
+ 	bzero(fcaps, sizeof(*fcaps));
+ }
+ 
++bool
++filecaps_full(const struct filecaps *fcaps)
++{
++	cap_rights_t allrights;
++
++	CAP_ALL(&allrights);
++	return (cap_rights_contains(&fcaps->fc_rights, &allrights) &&
++	    fcaps->fc_fcntls == CAP_FCNTL_ALL && fcaps->fc_nioctls == -1);
++}
++
++/*
++ * Find the intersection of two filecaps structures and store the result in the
++ * first structure.  This is a destructive operation on the src structure.
++ */
++void
++filecaps_intersect(struct filecaps *src, struct filecaps *dst)
++{
++
++	cap_rights_intersect(&dst->fc_rights, &src->fc_rights);
++	dst->fc_fcntls &= src->fc_fcntls;
++	if (dst->fc_nioctls == -1) {
++		dst->fc_ioctls = src->fc_ioctls;
++		dst->fc_nioctls = src->fc_nioctls;
++		src->fc_ioctls = NULL;
++	} else if (src->fc_nioctls != -1) {
++		int count;
++
++		/*
++		 * ioctl lists are usually short, so this dumb merge is fine.
++		 * We could alternately sort both lists and walk them in
++		 * parallel.
++		 */
++		count = 0;
++		for (int i = 0; i < dst->fc_nioctls; i++) {
++			bool found;
++
++			found = false;
++			for (int j = 0; j < src->fc_nioctls; j++) {
++				if (dst->fc_ioctls[i] == src->fc_ioctls[j]) {
++					count++;
++					found = true;
++					break;
++				}
++			}
++			if (!found) {
++				if (i != dst->fc_nioctls - 1)
++					dst->fc_ioctls[i] =
++					    dst->fc_ioctls[dst->fc_nioctls - 1];
++				dst->fc_nioctls--;
++				i--;
++			}
++		}
++		dst->fc_nioctls = count;
++	}
++	if (dst->fc_nioctls == 0)
++		filecaps_free_ioctl(dst);
++	filecaps_free(src);
++}
++
+ static u_long *
+ filecaps_free_prep(struct filecaps *fcaps)
+ {
+@@ -3113,10 +3172,7 @@
+ 	 *
+ 	 * Not yet supported by fast path.
+ 	 */
+-	CAP_ALL(&rights);
+-	if (!cap_rights_contains(&ndp->ni_filecaps.fc_rights, &rights) ||
+-	    ndp->ni_filecaps.fc_fcntls != CAP_FCNTL_ALL ||
+-	    ndp->ni_filecaps.fc_nioctls != -1) {
++	if (!filecaps_full(&ndp->ni_filecaps)) {
+ #ifdef notyet
+ 		ndp->ni_lcf |= NI_LCF_STRICTREL;
+ #else
+@@ -3218,10 +3274,7 @@
+ 	 * all lookups relative to it must also be
+ 	 * strictly relative.
+ 	 */
+-	CAP_ALL(&rights);
+-	if (!cap_rights_contains(&ndp->ni_filecaps.fc_rights, &rights) ||
+-	    ndp->ni_filecaps.fc_fcntls != CAP_FCNTL_ALL ||
+-	    ndp->ni_filecaps.fc_nioctls != -1) {
++	if (!filecaps_full(&ndp->ni_filecaps)) {
+ 		ndp->ni_lcf |= NI_LCF_STRICTREL;
+ 		ndp->ni_resflags |= NIRES_STRICTREL;
+ 	}
+--- sys/kern/subr_capability.c.orig
++++ sys/kern/subr_capability.c
+@@ -312,6 +312,29 @@
+ 	return (true);
+ }
+ 
++cap_rights_t *
++cap_rights_intersect(cap_rights_t *dst, const cap_rights_t *src)
++{
++	unsigned int i, n;
++
++	assert(CAPVER(dst) == CAP_RIGHTS_VERSION_00);
++	assert(CAPVER(src) == CAP_RIGHTS_VERSION_00);
++	assert(CAPVER(dst) == CAPVER(src));
++	assert(cap_rights_is_valid(src));
++	assert(cap_rights_is_valid(dst));
++
++	n = CAPARSIZE(dst);
++	assert(n >= CAPARSIZE_MIN && n <= CAPARSIZE_MAX);
++
++	for (i = 0; i < n; i++)
++		dst->cr_rights[i] &= src->cr_rights[i] | ~0x01FFFFFFFFFFFFFFULL;
++
++	assert(cap_rights_is_valid(src));
++	assert(cap_rights_is_valid(dst));
++
++	return (dst);
++}
++
+ cap_rights_t *
+ cap_rights_merge(cap_rights_t *dst, const cap_rights_t *src)
+ {
+--- sys/kern/vfs_syscalls.c.orig
++++ sys/kern/vfs_syscalls.c
+@@ -3725,6 +3725,15 @@
+ 	}
+ 	tdvp = tond.ni_dvp;
+ 	tvp = tond.ni_vp;
++	if (fvp->v_type == VDIR &&
++	    ((fromnd.ni_resflags | tond.ni_resflags) & NIRES_BENEATH) != 0) {
++		/*
++		 * We must not rename a directory relative to FD_RESOLVE_BENEATH
++		 * descriptors.
++		 */
++		error = ENOTCAPABLE;
++		goto out;
++	}
+ 	error = vn_start_write(fvp, &mp, V_NOWAIT);
+ 	if (error != 0) {
+ 		NDFREE_PNBUF(&fromnd);
+--- sys/sys/capsicum.h.orig
++++ sys/sys/capsicum.h
+@@ -391,6 +391,7 @@
+ bool cap_rights_is_empty(const cap_rights_t *rights);
+ 
+ bool cap_rights_is_valid(const cap_rights_t *rights);
++cap_rights_t *cap_rights_intersect(cap_rights_t *dst, const cap_rights_t *src);
+ cap_rights_t *cap_rights_merge(cap_rights_t *dst, const cap_rights_t *src);
+ cap_rights_t *cap_rights_remove(cap_rights_t *dst, const cap_rights_t *src);
+ 
+--- sys/sys/filedesc.h.orig
++++ sys/sys/filedesc.h
+@@ -244,6 +244,8 @@
+ 	    bool locked);
+ void	filecaps_move(struct filecaps *src, struct filecaps *dst);
+ void	filecaps_free(struct filecaps *fcaps);
++bool	filecaps_full(const struct filecaps *fcaps);
++void	filecaps_intersect(struct filecaps *src, struct filecaps *dst);
+ 
+ int	closef(struct file *fp, struct thread *td);
+ void	closef_nothread(struct file *fp);
+--- tests/sys/fs/Makefile.orig
++++ tests/sys/fs/Makefile
+@@ -8,6 +8,7 @@
+ 
+ TESTSRC=		${SRCTOP}/contrib/netbsd-tests/fs
+ 
++TESTS_SUBDIRS+=		fdescfs
+ #TESTS_SUBDIRS+=	nullfs	# XXX: needs rump
+ # fusefs tests cannot be compiled/used without the googletest infrastructure.
+ .if ${COMPILER_FEATURES:Mc++14} && ${MK_GOOGLETEST} != "no"
+--- /dev/null
++++ tests/sys/fs/fdescfs/Makefile
+@@ -0,0 +1,9 @@
++PACKAGE=	tests
++
++TESTSDIR=	${TESTSBASE}/sys/fs/fdescfs
++
++ATF_TESTS_C+=	fdescfs_test
++
++LIBADD+=	util
++
++.include <bsd.test.mk>
+--- /dev/null
++++ tests/sys/fs/fdescfs/fdescfs_test.c
+@@ -0,0 +1,274 @@
++#include <sys/param.h>
++#include <sys/capsicum.h>
++#include <sys/filio.h>
++#include <sys/mount.h>
++#include <sys/stat.h>
++#include <sys/uio.h>
++
++#include <atf-c.h>
++#include <errno.h>
++#include <fcntl.h>
++#include <stdbool.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++
++static const char *const linrdlnk[] = { "linrdlnk", NULL };
++static const char *const nodup[] = { "nodup", NULL };
++static const char *const nodup_linrdlnk[] = { "nodup", "linrdlnk", NULL };
++
++static void
++build_iovec(struct iovec **iov, int *iovlen, const char *name, void *val,
++	    size_t len)
++{
++	int i;
++
++	if (*iovlen < 0)
++		return;
++	i = *iovlen;
++	*iov = realloc(*iov, sizeof **iov * (i + 2));
++	if (*iov == NULL) {
++		*iovlen = -1;
++		return;
++	}
++	(*iov)[i].iov_base = strdup(name);
++	(*iov)[i].iov_len = strlen(name) + 1;
++	i++;
++	(*iov)[i].iov_base = val;
++	if (len == (size_t)-1) {
++		if (val != NULL)
++			len = strlen(val) + 1;
++		else
++			len = 0;
++	}
++	(*iov)[i].iov_len = (int)len;
++	*iovlen = ++i;
++}
++
++static void
++free_iovec(struct iovec **iov, int *iovlen)
++{
++	int i;
++
++	for (i = 0; i < *iovlen; i += 2)
++		free((*iov)[i].iov_base);
++	free(*iov);
++}
++
++static void
++mount_fdescfs(const char *const *opts)
++{
++	struct iovec *iov;
++	char errmsg[256];
++	int error, iovlen;
++
++	ATF_REQUIRE_EQ(0, mkdir("mnt", 0755));
++	iov = NULL;
++	iovlen = 0;
++	build_iovec(&iov, &iovlen, __DECONST(char *, "fstype"),
++	    __DECONST(char *, "fdescfs"), (size_t)-1);
++	build_iovec(&iov, &iovlen, __DECONST(char *, "fspath"),
++	    __DECONST(char *, "mnt"), (size_t)-1);
++	for (; opts != NULL && *opts != NULL; opts++)
++		build_iovec(&iov, &iovlen, __DECONST(char *, *opts), NULL,
++		    (size_t)-1);
++	build_iovec(&iov, &iovlen, __DECONST(char *, "errmsg"), errmsg,
++	    sizeof(errmsg));
++	errmsg[0] = '\0';
++	error = nmount(iov, iovlen, 0);
++	if (error != 0 && errno == ENODEV)
++		atf_tc_skip("fdescfs is not available");
++	ATF_REQUIRE_MSG(error == 0, "nmount: %s",
++	    errmsg[0] != '\0' ? errmsg : strerror(errno));
++	free_iovec(&iov, &iovlen);
++}
++
++static void
++fdpath(char *path, size_t size, int fd, const char *suffix)
++{
++	int len;
++
++	len = snprintf(path, size, "mnt/%d%s", fd, suffix);
++	ATF_REQUIRE(len > 0 && (size_t)len < size);
++}
++
++static void
++check_cap_rights(const char *const *opts)
++{
++	cap_rights_t expected, actual;
++	char path[64];
++	int copy, fd;
++
++	mount_fdescfs(opts);
++	fd = open("file", O_RDONLY | O_CREAT, 0644);
++	ATF_REQUIRE(fd >= 0);
++	cap_rights_init(&expected, CAP_READ, CAP_FSTAT);
++	ATF_REQUIRE_EQ(0, cap_rights_limit(fd, &expected));
++	fdpath(path, sizeof(path), fd, "");
++	copy = open(path, O_RDONLY);
++	ATF_REQUIRE(copy >= 0);
++	ATF_REQUIRE_EQ(0, cap_rights_get(copy, &actual));
++	ATF_CHECK(cap_rights_contains(&actual, &expected));
++	ATF_CHECK(cap_rights_contains(&expected, &actual));
++	ATF_REQUIRE_EQ(0, close(copy));
++	ATF_REQUIRE_EQ(0, close(fd));
++	ATF_REQUIRE_EQ(0, unmount("mnt", 0));
++}
++
++static void
++check_resolve_beneath(const char *const *opts, int oflags)
++{
++	char path[64];
++	int copy, dirfd, fd;
++
++	mount_fdescfs(opts);
++	ATF_REQUIRE_EQ(0, mkdir("dir", 0755));
++	dirfd = open("dir", O_RDONLY | O_DIRECTORY);
++	ATF_REQUIRE(dirfd >= 0);
++	ATF_REQUIRE_EQ(0, fcntl(dirfd, F_SETFD, FD_RESOLVE_BENEATH));
++	fdpath(path, sizeof(path), dirfd, "");
++	copy = open(path, oflags);
++	ATF_REQUIRE(copy >= 0);
++	fd = openat(copy, ".", O_RDONLY | O_DIRECTORY);
++	ATF_REQUIRE(fd >= 0);
++	ATF_REQUIRE_EQ(0, close(fd));
++	ATF_CHECK_ERRNO(ENOTCAPABLE,
++	    openat(copy, "..", O_RDONLY | O_DIRECTORY) == -1);
++	ATF_REQUIRE_EQ(0, close(copy));
++	ATF_REQUIRE_EQ(0, close(dirfd));
++	ATF_REQUIRE_EQ(0, unmount("mnt", 0));
++}
++
++static void
++check_ioctl_caps(const char *const *opts)
++{
++	cap_ioctl_t cmds[] = { FIOCLEX };
++	char path[64];
++	int copy, fd;
++
++	mount_fdescfs(opts);
++	fd = open("file", O_RDONLY | O_CREAT, 0644);
++	ATF_REQUIRE(fd >= 0);
++	ATF_REQUIRE_EQ(0, cap_ioctls_limit(fd, cmds, nitems(cmds)));
++	fdpath(path, sizeof(path), fd, "");
++	copy = open(path, O_RDONLY);
++	ATF_REQUIRE(copy >= 0);
++	ATF_REQUIRE_EQ(0, ioctl(copy, FIOCLEX, 0));
++	ATF_CHECK_ERRNO(ENOTCAPABLE, ioctl(copy, FIONCLEX, 0) == -1);
++	ATF_REQUIRE_EQ(0, close(copy));
++	ATF_REQUIRE_EQ(0, close(fd));
++	ATF_REQUIRE_EQ(0, unmount("mnt", 0));
++}
++
++#define FDESCFS_TC(name, description)                          \
++	ATF_TC_WITH_CLEANUP(name);                             \
++	ATF_TC_HEAD(name, tc)                                  \
++	{                                                      \
++		atf_tc_set_md_var(tc, "descr", description);   \
++		atf_tc_set_md_var(tc, "require.user", "root"); \
++		atf_tc_set_md_var(tc, "timeout", "30");        \
++	}                                                      \
++	ATF_TC_CLEANUP(name, tc)                               \
++	{                                                      \
++		(void)unmount("mnt", 0);                       \
++	}
++
++FDESCFS_TC(cap_rights, "fdescfs preserves capability rights");
++ATF_TC_BODY(cap_rights, tc)
++{
++	check_cap_rights(NULL);
++}
++
++FDESCFS_TC(nodup_cap_rights, "nodup mounts preserve capability rights");
++ATF_TC_BODY(nodup_cap_rights, tc)
++{
++	check_cap_rights(nodup);
++}
++
++FDESCFS_TC(resolve_beneath, "fdescfs preserves the FD_RESOLVE_BENEATH flag");
++ATF_TC_BODY(resolve_beneath, tc)
++{
++	check_resolve_beneath(NULL, O_RDONLY);
++}
++
++FDESCFS_TC(nodup_resolve_beneath,
++    "nodup mounts preserve the FD_RESOLVE_BENEATH flag");
++ATF_TC_BODY(nodup_resolve_beneath, tc)
++{
++	check_resolve_beneath(nodup, O_RDONLY | O_DIRECTORY);
++}
++
++FDESCFS_TC(ioctl_caps, "fdescfs preserves ioctl capability restrictions");
++ATF_TC_BODY(ioctl_caps, tc)
++{
++	check_ioctl_caps(NULL);
++}
++
++FDESCFS_TC(nodup_ioctl_caps,
++    "nodup mounts preserve ioctl capability restrictions");
++ATF_TC_BODY(nodup_ioctl_caps, tc)
++{
++	check_ioctl_caps(nodup);
++}
++
++FDESCFS_TC(nodup_ioctl_cap_intersection,
++    "nodup mounts intersect ioctl caps from source fd and dirfd");
++ATF_TC_BODY(nodup_ioctl_cap_intersection, tc)
++{
++	cap_ioctl_t fd_cmds[] = { FIOCLEX };
++	cap_ioctl_t both_cmds[] = { FIOCLEX, FIONCLEX };
++	cap_ioctl_t fionclex_cmds[] = { FIONCLEX };
++	char fd_path[16];
++	int copy, fd, len, mntfd;
++
++	mount_fdescfs(nodup);
++	fd = open("file", O_RDONLY | O_CREAT, 0644);
++	ATF_REQUIRE(fd >= 0);
++	ATF_REQUIRE_EQ(0, cap_ioctls_limit(fd, fd_cmds, nitems(fd_cmds)));
++	len = snprintf(fd_path, sizeof(fd_path), "%d", fd);
++	ATF_REQUIRE(len > 0 && (size_t)len < sizeof(fd_path));
++
++	/*
++	 * Non-empty intersection: loop removes FIONCLEX, leaving {FIOCLEX}.
++	 */
++	mntfd = open("mnt", O_RDONLY | O_DIRECTORY);
++	ATF_REQUIRE(mntfd >= 0);
++	ATF_REQUIRE_EQ(0, cap_ioctls_limit(mntfd, both_cmds, nitems(both_cmds)));
++	copy = openat(mntfd, fd_path, O_RDONLY);
++	ATF_REQUIRE(copy >= 0);
++	ATF_REQUIRE_EQ(0, ioctl(copy, FIOCLEX, 0));
++	ATF_CHECK_ERRNO(ENOTCAPABLE, ioctl(copy, FIONCLEX, 0) == -1);
++	ATF_REQUIRE_EQ(0, close(copy));
++	ATF_REQUIRE_EQ(0, close(mntfd));
++
++	/*
++	 * Empty intersection: loop removes FIONCLEX from {FIONCLEX} since fd
++	 * only allows {FIOCLEX}, leaving an empty list.
++	 */
++	mntfd = open("mnt", O_RDONLY | O_DIRECTORY);
++	ATF_REQUIRE(mntfd >= 0);
++	ATF_REQUIRE_EQ(0,
++	    cap_ioctls_limit(mntfd, fionclex_cmds, nitems(fionclex_cmds)));
++	copy = openat(mntfd, fd_path, O_RDONLY);
++	ATF_REQUIRE(copy >= 0);
++	ATF_CHECK_ERRNO(ENOTCAPABLE, ioctl(copy, FIOCLEX, 0) == -1);
++	ATF_CHECK_ERRNO(ENOTCAPABLE, ioctl(copy, FIONCLEX, 0) == -1);
++	ATF_REQUIRE_EQ(0, close(copy));
++	ATF_REQUIRE_EQ(0, close(mntfd));
++
++	ATF_REQUIRE_EQ(0, close(fd));
++	ATF_REQUIRE_EQ(0, unmount("mnt", 0));
++}
++
++ATF_TP_ADD_TCS(tp)
++{
++	ATF_TP_ADD_TC(tp, cap_rights);
++	ATF_TP_ADD_TC(tp, nodup_cap_rights);
++	ATF_TP_ADD_TC(tp, resolve_beneath);
++	ATF_TP_ADD_TC(tp, nodup_resolve_beneath);
++	ATF_TP_ADD_TC(tp, ioctl_caps);
++	ATF_TP_ADD_TC(tp, nodup_ioctl_caps);
++	ATF_TP_ADD_TC(tp, nodup_ioctl_cap_intersection);
++	return (atf_no_error());
++}

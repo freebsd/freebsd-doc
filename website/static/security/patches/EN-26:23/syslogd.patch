@@ -1,0 +1,69 @@
+--- usr.sbin/syslogd/syslogd.c.orig
++++ usr.sbin/syslogd/syslogd.c
+@@ -2495,6 +2495,7 @@
+ closelogfiles(void)
+ {
+ 	struct filed *f;
++	bool defer_free;
+ 
+ 	while (!STAILQ_EMPTY(&fhead)) {
+ 		f = STAILQ_FIRST(&fhead);
+@@ -2504,6 +2505,13 @@
+ 		if (f->f_prevcount)
+ 			fprintlog_successive(f, 0);
+ 
++		/*
++		 * If a piped process is running, then defer the filed
++		 * cleanup until it exits.  close_filed() below sets
++		 * f_type to F_UNUSED, so capture this before calling it.
++		 */
++		defer_free = (f->f_type == F_PIPE && f->f_procdesc != -1);
++
+ 		switch (f->f_type) {
+ 		case F_FILE:
+ 		case F_FORW:
+@@ -2531,11 +2539,7 @@
+ 			free(f->f_prop_filter);
+ 		}
+ 
+-		/*
+-		 * If a piped process is running, then defer the filed
+-		 * cleanup until it exits.
+-		 */
+-		if (f->f_type != F_PIPE || f->f_procdesc == -1)
++		if (!defer_free)
+ 			free(f);
+ 	}
+ }
+--- usr.sbin/syslogd/tests/syslogd_test.sh.orig
++++ usr.sbin/syslogd/tests/syslogd_test.sh
+@@ -313,6 +313,7 @@
+ pipe_action_reload_body()
+ {
+     local pipecmd="${PWD}/pipe_cmd.sh"
++    local pid
+ 
+     cat <<__EOF__ > "${pipecmd}"
+ #!/bin/sh
+@@ -329,15 +330,21 @@
+     syslogd_start
+ 
+     syslogd_log -p user.debug -t "pipe" -h "${SYSLOGD_LOCAL_SOCKET}" "MSG"
++    sleep 0.1
++
++    pid=$(cat "${SYSLOGD_PIDFILE}")
+     atf_check pkill -HUP -F "${1:-${SYSLOGD_PIDFILE}}"
+     sleep 0.1
+     syslogd_check_log_nopoll "END"
++
++    atf_check -o not-match:"[[:space:]]P[[:space:]]" procstat files "${pid}"
+ }
+ pipe_action_reload_cleanup()
+ {
+     syslogd_stop
+ }
+ 
++
+ atf_test_case "jail_noinet" "cleanup"
+ jail_noinet_head()
+ {
