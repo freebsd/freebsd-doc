@@ -2692,22 +2692,24 @@ every three months, usually around the time a new FreeBSD version is released.
 Other operating system manual pages are updated as needed.
 </p>
 
-<h2>FAQ</h2>
+<h2>Notes</h2>
 
+<p>On small mobile devices, manual pages often look better in landscape mode than in portrait mode.</p>
+
+<p>Troff macros work only if they are defined in FreeBSD's groff.
+OS-specific macros, such as "appeared in NetBSD version 1.2", are not supported.
+</p>
+
+<h2>See also</h2>
 <ul>
-<li>Get the <a href="https://cgit.FreeBSD.org/doc/tree/website/content/en/cgi/man.cgi">source</a> of the man.cgi script.</li>
-<li>On small mobile devices, manual pages often look better in landscape mode than in portrait mode.</li>
-<li>Troff macros work only if defined in FreeBSD/groff. OS-specific
-macros like "appeared in NetBSD version 1.2" are not supported.</li>
-<li>The <a href="https://cgit.FreeBSD.org/src/tree/share/misc/bsd-family-tree">
-Unix family tree, BSD part</a>.</li>
-<li>The <a href="https://ports.FreeBSD.org/cgi/ports.cgi">
-FreeBSD Ports Search</a> script.</li>
-<li>other <a href="https://www.FreeBSD.org/search/">FreeBSD Search Services</a>.</li>
-<li><a href="https://www.FreeBSD.org/search/opensearch/">FreeBSD OpenSearch Plugins</a> for the manual pages and other services.</li>
+<li><a href="https://www.FreeBSD.org/search/opensearch/">FreeBSD OpenSearch plugins</a> for the manual pages and other services</li>
+<li><a href="https://ports.FreeBSD.org/cgi/ports.cgi">FreeBSD Ports search</a></li>
+<li>Other <a href="https://www.FreeBSD.org/search/">FreeBSD search services</a></li>
+<li><a href="https://cgit.FreeBSD.org/src/tree/share/misc/bsd-family-tree">Unix family tree (BSD part)</a></li>
+<li><a href="https://cgit.FreeBSD.org/doc/tree/website/content/en/cgi/man.cgi">Source code</a> of the man.cgi script</li>
 </ul>
 
-<h2>Release Permalinks and tarballs</h2>
+<h2>Release permalinks and tarballs</h2>
 <p>
 Release and release-alias permalinks show how to link to this script for the right OS version.
 </p>
@@ -2721,7 +2723,7 @@ A tarball is normally 15-50 MB in size, but can be up to 350 MB for FreeBSD port
 @list
 </div>
 
-<h2>Release Alias Permalinks</h2>
+<h2>Release alias permalinks</h2>
 
 <p>
 Release aliases are for lazy people.
