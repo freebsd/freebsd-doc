@@ -2730,9 +2730,10 @@ A tarball is normally 15-50 MB in size, but can be up to 350 MB for FreeBSD port
 <h2>Release alias permalinks</h2>
 
 <p>
-Release aliases are for lazy people.
-They also have a longer lifetime, 
-e.g., "netbsd" always points to the latest NetBSD release.
+Release aliases are short names that always point to the latest
+release of an operating system, e.g., "netbsd" links to the newest
+NetBSD release. Links using an alias stay valid when a new release
+comes out.
 </p>
 
 <ul>
