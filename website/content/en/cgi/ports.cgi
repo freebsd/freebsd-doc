@@ -51,7 +51,7 @@ span.footer_links { font-size: small; }
 span.space { font-size: xx-small; }
 
 p#section_links, div#footer { max-width: 50em; }
-hr { margin-left: 0em; max-width: 50em; }
+hr { margin-left: 0em; margin-top: .4em; max-width: 50em; }
 a:link  { text-decoration:none; }
 a:hover { text-decoration:underline; }
 table, th, td { border: 1px solid black; border-collapse: collapse; }
@@ -59,8 +59,6 @@ th, td { padding-left: 0.5em; padding-right: 0.5em; }
 
 h3 { border-bottom: thin solid black; max-width: 42em; padding-top: .2em; }
 div#content { padding-top: 0.4em; }
-
-hr { margin-top: 0px; }
 
 .dependencies { margin-top: 0.5em; }
 

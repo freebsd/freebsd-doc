@@ -1515,7 +1515,7 @@ sub html_header {
 span.footer_links { font-size: .9em; margin-left: .5em; }
 
 div#section_links, div#permalink, div#footer { margin-left: 1em; }
-hr { margin-left: 0em; max-width: 50em; margin-top: 0px; }
+hr { margin-left: 0em; max-width: 50em; margin-top: .4em; }
 
 a:link  { text-decoration:none; }
 a:hover { text-decoration:underline; }
@@ -1526,7 +1526,8 @@ form#man > input, form#man > button, form#man > select { margin-left: 0.2em; }
 form#man > input, form#man > button                    { font-size: large; }
 form#man > button { margin-top: .8em; }
 form#man > select { margin-top: .8em; font-size: 100%; }
-form#man { padding-bottom: .7em; margin-top: .2em; }
+form#man { padding-bottom: 0.9em; margin-top: .2em; }
+form#man + span.footer_links { margin-left: .2em; }
 
 div#content { padding-top: 0.4em; }
 
@@ -1574,7 +1575,6 @@ div#content { padding-top: 0.4em; }
   .logo-menu-bars-container { padding: 0px; }
 
   footer { margin-top: -1.2em; }
-  hr { margin-top: 0px; margin-bottom: 0px; }
   h3 { padding-top: .2em; }
 } 
 
