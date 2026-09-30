@@ -1340,6 +1340,48 @@ sub sort_manpath {
     return sort { &sort_versions } keys %$manpath;
 }
 
+sub grouping_os {
+    my $os = shift;
+
+    # FreeBSD 13.5-RELEASE and Ports: "FreeBSD"
+    if ($os =~ /^([A-Za-z0-9\-]+)\s+\d/) {
+        return $1;
+    } 
+
+    # Red Hat 9.0: "Red Hat"
+    elsif ($os =~ /^([A-Za-z]+\s+[A-Za-z]+)\s+\d/) {
+        return $1;
+    }
+
+    # Dell UNIX SVR4 2.2: "Dell UNIX"
+    elsif ($os =~ /^([A-Za-z]+\s+[A-Za-z]+)/) {
+        return $1;
+    }
+
+    # 2.11 BSD: "BSD"
+    elsif ($os =~ /^[\d\.]+\s*([A-Za-z]+)/) {
+        return $1;
+    }
+
+    # X11R7.4: "X11R7"
+    elsif ($os =~ /^([A-Z0-9]+)\.[\d\.]+$/) {
+        return $1;
+    }
+
+    # OSF1 V5.1/alpha: "OSF1"
+    elsif ($os =~ /^([A-Za-z0-1]+\s+[A-Za-z])/) {
+        return $1;
+    }
+
+    # first word
+    elsif ($os =~ /^(\w+)/) {
+        return $1;
+    }
+
+    # XXX
+    return $os;
+}
+
 #
 # sort by OS release number, highest version first
 #
@@ -2532,6 +2574,25 @@ ETX
     }
 }
 
+sub details_id {
+    my $name = shift;
+
+    $name =~ s/\s+/_/g;
+
+    return lc($name);
+}
+
+sub detail_html {
+   my ($os_group, $os_group_lc, @l) = @_;
+
+   my @list;
+   push @list, qq[<details id="$os_group_lc">\n];
+   push @list, qq|<summary>$os_group (@{[ scalar(@l) ]} releases)</summary>\n|;
+   push @list, "<ul>\n", @l, "</ul>\n</details>\n";
+
+   return @list;
+}
+
 sub faq {
 
     local ( @list, @list2 );
@@ -2543,24 +2604,23 @@ sub faq {
     my $os_group_lc = "";
     my @l;
     foreach ( &freebsd_first (&sort_manpath(\%manPath) )) {
-        if (/^(\S+)/) {
-           $os = $1;
-        }
-        $os_lc = lc($os);
+        $os = &grouping_os($_);
+        $os_lc = &details_id($os);
 
         $url = &encode_url($_);
         my $download_link = $enable_download ? qq[<a href="/cgi/man.cgi?apropos=2&amp;manpath=$url">tarball</a>] : '';
 
         if ($os_lc ne $os_group_lc && $os_group_lc ne "") {
-           push @list, qq[<details id="$os_group_lc">\n];
-           push @list, qq|<summary>$os_group (@{[ scalar(@l) ]} releases)</summary>\n|;
-           push @list, "<ul>\n", @l, "</ul>\n</details>\n";
+           push @list, &detail_html($os_group, $os_group_lc, @l);
            undef @l;
         } 
         push( @l, qq{<li>$_: <a href="$BASE?manpath=$url">permalink</a> | $download_link</li>\n} );
         $os_group = $os;
         $os_group_lc = $os_lc;
     }
+
+    # last entry
+    push @list, &detail_html($os_group, $os_group_lc, @l);
 
     foreach ( &freebsd_first (&sort_manpath(\%manPathAliases) )) {
         if (!$manPathAliases{$_}) {
