@@ -1343,8 +1343,13 @@ sub sort_manpath {
 sub grouping_os {
     my $os = shift;
 
+    # Plan 9
+    if ($os =~ /^([A-Za-z]+)\s+\d$/) {
+        return $os;
+    } 
+
     # FreeBSD 13.5-RELEASE and Ports: "FreeBSD"
-    if ($os =~ /^([A-Za-z0-9\-]+)\s+\d/) {
+    elsif ($os =~ /^([A-Za-z0-9\-]+)\s+\d/) {
         return $1;
     } 
 
@@ -1354,7 +1359,7 @@ sub grouping_os {
     }
 
     # Dell UNIX SVR4 2.2: "Dell UNIX"
-    elsif ($os =~ /^([A-Za-z]+\s+[A-Za-z]+)/) {
+    elsif ($os =~ /^([A-Za-z]+\s+[A-Za-z]+)\s.*\d/) {
         return $1;
     }
 
@@ -1365,11 +1370,6 @@ sub grouping_os {
 
     # X11R7.4: "X11R7"
     elsif ($os =~ /^([A-Z0-9]+)\.[\d\.]+$/) {
-        return $1;
-    }
-
-    # OSF1 V5.1/alpha: "OSF1"
-    elsif ($os =~ /^([A-Za-z0-1]+\s+[A-Za-z])/) {
         return $1;
     }
 
@@ -2586,8 +2586,12 @@ sub detail_html {
    my ($os_group, $os_group_lc, @l) = @_;
 
    my @list;
+   my $text = scalar(@l) . " release";
+   # release <-> releases
+   $text .= "s" if scalar(@l) > 1;
+
    push @list, qq[<details id="$os_group_lc">\n];
-   push @list, qq|<summary>$os_group (@{[ scalar(@l) ]} releases)</summary>\n|;
+   push @list, qq|<summary>$os_group ($text)</summary>\n|;
    push @list, "<ul>\n", @l, "</ul>\n</details>\n";
 
    return @list;
