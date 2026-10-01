@@ -2801,7 +2801,7 @@ Copyright (c) for manual pages by OS vendors:
 <a href="https://ubuntu.com">Ubuntu</a>,
 <a href="https://en.wikipedia.org/wiki/Ultrix">ULTRIX</a>,
 <a href="https://en.wikipedia.org/wiki/Version_7_Unix">Unix Seventh Edition</a>,
-<a href="https://www.x.org">X11R6</a>,
+<a href="https://www.x.org">X.Org</a>,
 <a href="https://www.xfree86.org">XFree86</a>
 <br>
 </span>
