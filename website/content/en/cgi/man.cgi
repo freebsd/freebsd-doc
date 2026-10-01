@@ -1297,7 +1297,6 @@ while ( ( $key, $val ) = each %manPath ) {
     'opensuse',      'openSUSE 16.0',
     'openindiana',   'OpenIndiana 2025.10',
     'v7',            'Unix Seventh Edition',
-    'v7man',         'Unix Seventh Edition',
     'x11',           'X11R7.4',
     'xfree86',       'XFree86 4.8.0',
     'ultrix',        'ULTRIX 4.2',
