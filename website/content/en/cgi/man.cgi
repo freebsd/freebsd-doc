@@ -2508,12 +2508,27 @@ ETX
     print qq{</select>\n<select name="manpath">\n};
 
     local ($l) = ( $manpath ? $manpath : $manPathDefault );
+
+    my $os = "";
+    my $os_group = "";
     foreach ( &freebsd_first( &sort_manpath(\%manPath)) ) {
         $key = $_;
-        print "<option"
+        $os = &grouping_os($key);
+
+        if ($os ne $os_group && $os_group ne "") {
+           print join "", &optgroup_html($os_group, @l);
+           undef @l;
+        }
+
+        push @l,  "<option"
           . ( ( $key eq $l ) ? ' selected="selected" ' : ' ' )
           . qq{value="$key">$key</option>\n};
+
+        $os_group = $os;
     }
+
+    # last entry
+    print join "", &optgroup_html($os_group, @l);
 
     print qq{</select>\n};
 
@@ -2593,6 +2608,18 @@ sub detail_html {
    push @list, qq[<details id="$os_group_lc">\n];
    push @list, qq|<summary>$os_group ($text)</summary>\n|;
    push @list, "<ul>\n", @l, "</ul>\n</details>\n";
+
+   return @list;
+}
+
+sub optgroup_html {
+   my ($label, @l) = @_;
+
+   my @list;
+
+   push @list, qq[<optgroup label="$label">\n];
+   push @list, @l;
+   push @list, qq[</optgroup>\n];
 
    return @list;
 }
