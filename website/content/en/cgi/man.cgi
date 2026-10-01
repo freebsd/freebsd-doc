@@ -697,7 +697,7 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
     'FreeBSD 5.3-RELEASE',
 "$manLocalDir/FreeBSD-5.3-RELEASE/man:$manLocalDir/FreeBSD-5.3-RELEASE/openssl/man",
     'FreeBSD 5.2.1-RELEASE',
-"$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
+"$manLocalDir/FreeBSD-5.2.1-RELEASE/man:$manLocalDir/FreeBSD-5.2.1-RELEASE/openssl/man",
     'FreeBSD 5.2-RELEASE',
 "$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
     'FreeBSD 5.1-RELEASE',
@@ -1098,7 +1098,7 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
     'Minix 3.1.5',                 "$manLocalDir/Minix-3.1.5",
     'Minix 3.1.6',                 "$manLocalDir/Minix-3.1.6",
     'Minix 3.1.7',                 "$manLocalDir/Minix-3.1.7",
-    'Minix 3.1.7',                 "$manLocalDir/Minix-3.1.8",
+    'Minix 3.1.8',                 "$manLocalDir/Minix-3.1.8",
     'Minix 3.2.0',                 "$manLocalDir/Minix-3.2.0",
     'Minix 3.2.1',                 "$manLocalDir/Minix-3.2.1",
     'Minix 3.3.0',                 "$manLocalDir/Minix-3.3.0",
@@ -1309,7 +1309,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'macos',         'macOS 27.0',
     'plan9',         'Plan 9',
     'osf1',          'OSF1 V5.1/alpha',
-    'true64',        'OSF1 V5.1/alpha',
+    'tru64',         'OSF1 V5.1/alpha',
     'minix',         'Minix 3.3.0',
 );
 
@@ -1688,10 +1688,10 @@ sub do_man {
     $format = 'html' if $no_pdf_output{$manpath} && $format =~ /^(ps|pdf)$/;
 
     local ($fform) = &dec($form);
-    if ( $fform =~ m%^([a-zA-Z_\-\.:]+)$% ) {
+    if ( $fform =~ m%^([0-9a-zA-Z_\-\.:]+)$% ) {
         return &man( $1, '' );
     }
-    elsif ( $fform =~ m%^([a-zA-Z_\-\.:]+)\(([0-9a-zA-Z]+)\)$% ) {
+    elsif ( $fform =~ m%^([0-9a-zA-Z_\-\.:]+)\(([0-9a-zA-Z]+)\)$% ) {
         return &man( $1, $2 );
     }
 
@@ -1748,7 +1748,7 @@ sub download {
 
     $| = 1;
     my $filename = $manpath;
-    $filename =~ s/\s+/_/;
+    $filename =~ s/\s+/_/g;
     $filename = &encode_url($filename);
     $filename .= '.tgz';
 
@@ -2065,8 +2065,8 @@ sub man {
 
     if ( eof(MAN) ) {
         if ( $format eq "ascii" ) {
-            print "Sorry, results found for '$html_name'\n";
-	    return;
+            print "Sorry, no results found for '$html_name'\n";
+            return;
         }
 
         # print "X $command{'man'} @manargs -- x $name x\n";
@@ -2189,7 +2189,7 @@ qq{Please try a <a href="$BASE?apropos=1&amp;manpath=$manpath&amp;query=$html_na
 
     if ($want_to_link_to_this_page) {
         my $url = qq{$full_url?query=$html_name};
-        $url .= qq{&amp;sektion=$html_section} if $html_section != 0;
+        $url .= qq{&amp;sektion=$html_section} if $html_section ne "0";
         $url .= qq{&amp;manpath=} . &encode_url($manpath);
 
         print qq{<div id="permalink">\n<p>\nWant to link to this manual page? };
