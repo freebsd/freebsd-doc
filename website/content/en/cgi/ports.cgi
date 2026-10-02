@@ -844,7 +844,7 @@ sub footer_links {
   <a href="$script_name">home</a>
   @{[ $stype eq "help" ? "" : qq, | <a href="$script_name?stype=help">help</a>, ]}
   | <a href="https://cgit.FreeBSD.org/ports/tree/">git</a>
-  | <a href="https://download.FreeBSD.org/ports/">ftp</a>
+  | <a href="https://download.FreeBSD.org/ports/" title="Ports tree snapshots and INDEX files">download</a>
 </span>
 EOF
 }
