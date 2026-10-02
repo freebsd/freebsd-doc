@@ -234,15 +234,12 @@ The File Descriptor filesystem is required:
 # mount -t fdescfs fdesc /dev/fd
 ----
 
-Podman uses FreeBSD's packet filter to forward container ports to the host network:
+This should be added to `+/etc/fstab+` to persist across reboots:
 
 [source,shell]
 ----
-# test -c /dev/pf || kldload pf
-# sysctl net.pf.filter_local=1
+fdescfs  /dev/fd  fdescfs  rw  0  0
 ----
-
-Amend `+/etc/sysctl.conf+` and `+/etc/fstab+` as appropriate, to make these changes permanent.
 
 [[containers-installing]]
 == Installing Podman
@@ -254,27 +251,87 @@ Only the `+sysutils/podman-suite+` meta-package is required, but if the addition
 # pkg install -r FreeBSD -y podman-suite emulators/qemu-user-static
 ----
 
-Integrate changes from `+/usr/local/etc/containers/pf.conf.sample+` into `+/etc/pf.conf+`, setting egress macros appropriately, then restart the firewall:
+[[containers-networking]]
+== Configuring Networking
+
+Container networking uses Network Address Translation (NAT) to enable VNET jails to access the host's network. This is done via man:pf[4], so the packet filter kernel module must be loaded.
+
+Integrate changes from `+/usr/local/etc/containers/pf.conf.sample+` into `+/etc/pf.conf+`, setting the egress interface macros to match your default network interface.
+
+[source]
+----
+# Change these to your interface(s) with the default route
+v4egress_if = "vtnet0"
+v6egress_if = "vtnet0"
+
+nat on $v4egress_if inet from <cni-nat> to any -> ($v4egress_if)
+nat on $v6egress_if inet6 from <cni-nat> to !ff00::/8 -> ($v6egress_if)
+
+rdr-anchor "cni-rdr/*"
+nat-anchor "cni-rdr/*"
+table <cni-nat>
+----
+
+The `+rdr-anchor+` and `+nat-anchor "cni-rdr/*"+` lines implement port redirections as anchors nested under `+cni-rdr+`. The `+nat-anchor "cni-rdr/*"+` line in particular is required to redirect connections from the container host to services running inside a container, including when the destination is `+localhost+` (`+127.0.0.1+` or `+::1+`).
+
+Enable and start the firewall:
 
 [source,shell]
 ----
-# service pf restart
+# service pf enable
+# service pf start
 ----
 
-The packages install a number of template configuration files, none of which need to be edited immediately.
-Review and amend these as needed:
+Redirecting connections from the container host itself to services running inside a container also requires enabling support for local redirections:
 
 [source,shell]
 ----
-# pkg list buildah podman conmon \
-    ocijail containers-common \
-    containernetworking-plugins \
-    | grep /etc/
+# sysctl net.pf.filter_local=1
+----
+
+Amend `+/etc/sysctl.conf+` to make this change permanent:
+
+[source]
+----
+net.pf.filter_local=1
+----
+
+[[containers-config-files]]
+== Additional Configuration Files
+
+The packages install a number of template configuration files, none of which need to be edited immediately. Review and amend these as needed:
+
+[source,shell]
+----
+# pkg list | grep /etc/containers/
 /usr/local/etc/containers/containers.conf.sample
 /usr/local/etc/containers/policy.json.sample
 /usr/local/etc/containers/registries.conf.sample
 /usr/local/etc/containers/storage.conf.sample
 /usr/local/etc/containers/pf.conf.sample
+----
+
+[[containers-first]]
+== Running Your First Container
+
+The various flags are described in man:podman-run[1]. This invocation creates a new container, attaching an interactive terminal, and will remove the container on exit:
+
+[source,shell]]
+----
+# podman run -it --rm ghcr.io/freebsd/freebsd-notoolchain:{rel-latest}
+# top -b
+last pid: 24414;  load averages:    0.47,    0.51,    0.53; battery: 23%  up 0+18:48:46    23:30:12
+2 processes:   1 running, 1 sleeping
+CPU:  6.9% user,  0.0% nice,  2.2% system,  0.7% interrupt, 90.2% idle
+Mem: 2619M Active, 6587M Inact, 1813M Laundry, 4552M Wired, 56K Buf, 334M Free
+ARC: 2526M Total, 802M MFU, 1219M MRU, 3586K Anon, 29M Header, 467M Other
+     1625M Compressed, 4234M Uncompressed, 2.61:1 Ratio
+Swap: 10G Total, 219M Used, 10G Free, 2% Inuse
+
+  PID USERNAME    THR PRI NICE   SIZE    RES STATE    C   TIME    WCPU COMMAND
+17963 root          1   1    0    14M  3120K wait     1   0:00   0.44% sh
+24414 root          1   3    0    15M  2992K CPU0     0   0:00   0.00% top
+# exit
 ----
 
 [[containers-terminal-tour]]
@@ -290,7 +347,7 @@ With the necessary tools and firewall rules in place, the officially published i
 [[containers-importing]]
 === Importing FreeBSD OCI Images
 
-It is simplest to pull images directly from a public container registry, but for the strongest chain of trust, download them from https://download.freebsd.org/releases[FreeBSD.org] directly, and verify the checksums against the PGP-signed release announcement.
+As above, while it is most convenient to pull images directly from a public container registry, for the strongest chain of trust, download them from https://download.freebsd.org/releases[FreeBSD.org] directly, and verify the checksums against the PGP-signed release announcement.
 
 [source,shell,subs="attributes"]
 ----
