@@ -383,7 +383,7 @@ sub out {
       qq{<dt><b><a name="$version" href="$t">$version</a></b></dt>\n};
     print qq{<dd>}, &escapeHTML($comment), qq{<br />\n};
 
-    print qq[<a href="$descfile?revision=HEAD">Description</a>\n];
+    print qq[<a href="$descfile">Description</a>\n];
 
     print qq[<b>:</b> <a href="$l">Commit Log</a>\n];
     print qq[<b>:</b> <a href="?stype=pkg&amp;query=], escapeHTML($port_path),
