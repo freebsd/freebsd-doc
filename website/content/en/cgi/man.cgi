@@ -1688,11 +1688,18 @@ sub do_man {
     $format = 'html' if $no_pdf_output{$manpath} && $format =~ /^(ps|pdf)$/;
 
     local ($fform) = &dec($form);
-    if ( $fform =~ m%^([0-9a-zA-Z_\-\.:]+)$% ) {
-        return &man( $1, '' );
+
+    # /cgi/man.cgi/socket.2
+    if (    $fform =~ m%^([0-9a-zA-Z_\-\.:]+)\.([1-9n])$% ) {
+        return &man( $1, $2 );
     }
+    # /cgi/man.cgi/socket(2)
     elsif ( $fform =~ m%^([0-9a-zA-Z_\-\.:]+)\(([0-9a-zA-Z]+)\)$% ) {
         return &man( $1, $2 );
+    }
+    # /cgi/man.cgi/socket
+    elsif ( $fform =~ m%^([0-9a-zA-Z_\-\.:]+)$% ) {
+        return &man( $1, '' );
     }
 
     # download a man hierarchy as gzip'd tar file
