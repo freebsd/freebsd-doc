@@ -39,13 +39,13 @@ require "./cgi-style-responsive.pl";
 our $t_style = <<'EOF';
 <style type="text/css">
 form#ports > input[name='query'] { text-align: center; }
-form#ports > input[name='query'] { width: 14em; }
+form#ports > input[name='query'] { width: 19em; }
 
 form#ports > input, form#ports > button, form#ports > select { margin-left: 0.2em; }
-form#ports > input, form#ports > button                      { font-size: large; }
+form#ports > input, form#ports > button                      { font-size: large; margin-top: 0.8em; }
 form#ports > button { margin-top: .8em; }
 form#ports > select { margin-top: .8em; font-size: 100%; }
-form#ports { padding-bottom: .7em; margin-top: .5em; }
+form#ports { padding-bottom: .7em; }
 
 span.footer_links { font-size: small; }
 span.space { font-size: xx-small; }
