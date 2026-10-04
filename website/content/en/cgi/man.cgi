@@ -2728,7 +2728,7 @@ Other operating system manual pages are updated as needed.
 
 <p>Troff macros work only if they are defined in FreeBSD's groff.
 OS-specific macros, such as "appeared in NetBSD version 1.2", may not be supported.
-</p
+</p>
 
 <h2>See also</h2>
 <ul>
