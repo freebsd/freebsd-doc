@@ -1,0 +1,686 @@
+--- usr.sbin/bhyve/bhyvegc.h.orig
++++ usr.sbin/bhyve/bhyvegc.h
+@@ -43,4 +43,7 @@
+ void bhyvegc_resize(struct bhyvegc *gc, int width, int height);
+ struct bhyvegc_image *bhyvegc_get_image(struct bhyvegc *gc);
+ 
++#define	GC_COLS_MAX	3840
++#define	GC_ROWS_MAX	2160
++
+ #endif /* _BHYVEGC_H_ */
+--- usr.sbin/bhyve/pci_fbuf.c.orig
++++ usr.sbin/bhyve/pci_fbuf.c
+@@ -31,18 +31,20 @@
+ #include <sys/socket.h>
+ #include <sys/un.h>
+ 
+-#include <dev/vmm/vmm_mem.h>
+ #include <machine/vmm.h>
+ #include <machine/vmm_snapshot.h>
+-#include <vmmapi.h>
+ 
++#include <dev/vmm/vmm_mem.h>
++
++#include <errno.h>
++#include <pthread.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+-
+-#include <errno.h>
+ #include <unistd.h>
+ 
++#include <vmmapi.h>
++
+ #include "bhyvegc.h"
+ #include "bhyverun.h"
+ #include "config.h"
+@@ -74,9 +76,8 @@
+ #define	DMEMSZ	128
+ 
+ #define	FB_SIZE		(32*MB)
+-
+-#define COLS_MAX	3840
+-#define ROWS_MAX	2160
++_Static_assert(FB_SIZE >= GC_ROWS_MAX * GC_COLS_MAX * sizeof(uint32_t),
++    "Framebuffer size is too small for maximum resolution");
+ 
+ #define COLS_DEFAULT	1024
+ #define ROWS_DEFAULT	768
+@@ -95,6 +96,8 @@
+ 		uint8_t  reserved[116];
+ 	} __packed memregs;
+ 
++	pthread_mutex_t mtx;
++
+ 	/* rfb server */
+ 	sa_family_t rfb_family;
+ 	char      *rfb_host;
+@@ -137,8 +140,8 @@
+ 		return;
+ 	}
+ 
++	pthread_mutex_lock(&sc->mtx);
+ 	p = (uint8_t *)&sc->memregs + offset;
+-
+ 	switch (size) {
+ 	case 1:
+ 		*p = value;
+@@ -168,6 +171,7 @@
+ 		DPRINTF(DEBUG_INFO, ("switching to VESA mode"));
+ 		sc->gc_image->vgamode = 0;
+ 	}
++	pthread_mutex_unlock(&sc->mtx);
+ }
+ 
+ static uint64_t
+@@ -181,13 +185,13 @@
+ 
+ 	sc = pi->pi_arg;
+ 
+-
+ 	if (offset + size > DMEMSZ) {
+ 		printf("fbuf: read too large, offset %ld size %d\n",
+ 		       offset, size);
+ 		return (0);
+ 	}
+ 
++	pthread_mutex_lock(&sc->mtx);
+ 	p = (uint8_t *)&sc->memregs + offset;
+ 	value = 0;
+ 	switch (size) {
+@@ -207,6 +211,7 @@
+ 		printf("fbuf: read unknown size %d\n", size);
+ 		break;
+ 	}
++	pthread_mutex_unlock(&sc->mtx);
+ 
+ 	DPRINTF(DEBUG_VERBOSE,
+ 	    ("fbuf rd: offset 0x%lx, size: %d, value: 0x%lx",
+@@ -340,9 +345,10 @@
+ 	if (value != NULL)
+ 		sc->memregs.height = strtol(value, NULL, 10);
+ 
+-	if (sc->memregs.width > COLS_MAX ||
+-	    sc->memregs.height > ROWS_MAX) {
+-		EPRINTLN("fbuf: max resolution is %ux%u", COLS_MAX, ROWS_MAX);
++	if (sc->memregs.width > GC_COLS_MAX ||
++	    sc->memregs.height > GC_ROWS_MAX) {
++		EPRINTLN("fbuf: max resolution is %ux%u",
++		    GC_COLS_MAX, GC_ROWS_MAX);
+ 		return (-1);
+ 	}
+ 	if (sc->memregs.width < COLS_MIN ||
+@@ -363,21 +369,32 @@
+ pci_fbuf_render(struct bhyvegc *gc, void *arg)
+ {
+ 	struct pci_fbuf_softc *sc;
++	uint32_t width, height;
+ 
+ 	sc = arg;
+-
++	pthread_mutex_lock(&sc->mtx);
+ 	if (sc->vga_full && sc->gc_image->vgamode) {
+ 		/* TODO: mode switching to vga and vesa should use the special
+ 		 *      EFI-bhyve protocol port.
+ 		 */
++		pthread_mutex_unlock(&sc->mtx);
+ 		vga_render(gc, sc->vgasc);
+ 		return;
+ 	}
+-	if (sc->gc_width != sc->memregs.width ||
+-	    sc->gc_height != sc->memregs.height) {
+-		bhyvegc_resize(gc, sc->memregs.width, sc->memregs.height);
+-		sc->gc_width = sc->memregs.width;
+-		sc->gc_height = sc->memregs.height;
++	width = sc->memregs.width;
++	height = sc->memregs.height;
++	if (sc->gc_width != width || sc->gc_height != height) {
++		if (width > GC_COLS_MAX || height > GC_ROWS_MAX) {
++			/* Ignore an invalid resolution. */
++			pthread_mutex_unlock(&sc->mtx);
++		} else {
++			sc->gc_width = width;
++			sc->gc_height = height;
++			pthread_mutex_unlock(&sc->mtx);
++			bhyvegc_resize(gc, width, height);
++		}
++	} else {
++		pthread_mutex_unlock(&sc->mtx);
+ 	}
+ }
+ 
+@@ -396,6 +413,8 @@
+ 
+ 	pi->pi_arg = sc;
+ 
++	pthread_mutex_init(&sc->mtx, NULL);
++
+ 	/* initialize config space */
+ 	pci_set_cfgdata16(pi, PCIR_DEVICE, 0x40FB);
+ 	pci_set_cfgdata16(pi, PCIR_VENDOR, 0xFB5D);
+@@ -455,8 +474,10 @@
+ 	error = rfb_init(sc->rfb_family, sc->rfb_host, sc->rfb_port,
+ 	    sc->rfb_wait, sc->rfb_password);
+ done:
+-	if (error)
++	if (error) {
++		pthread_mutex_destroy(&sc->mtx);
+ 		free(sc);
++	}
+ 
+ 	return (error);
+ }
+--- usr.sbin/bhyve/pci_hda.c.orig
++++ usr.sbin/bhyve/pci_hda.c
+@@ -28,6 +28,9 @@
+  */
+ 
+ #include <sys/param.h>
++
++#include <machine/atomic.h>
++
+ #include <time.h>
+ 
+ #include "pci_hda.h"
+@@ -81,7 +84,7 @@
+ 	uint32_t addrh;
+ 	uint32_t len;
+ 	uint32_t ioc;
+-} __packed;
++};
+ 
+ struct hda_bdle_desc {
+ 	void *addr;
+@@ -624,8 +627,9 @@
+ 	bdl_paddr = bdpl | (bdpu << 32);
+ 	bdl_vaddr = hda_dma_get_vaddr(sc, bdl_paddr,
+ 	    HDA_BDL_ENTRY_LEN * bdl_cnt);
+-	if (!bdl_vaddr) {
+-		DPRINTF("Fail to get the guest virtual address");
++	if (bdl_vaddr == NULL ||
++	    (uintptr_t)bdl_vaddr % HDA_DMA_ACCESS_LEN != 0) {
++		DPRINTF("Invalid guest virtual address %p", bdl_vaddr);
+ 		return (-1);
+ 	}
+ 
+@@ -636,11 +640,14 @@
+ 
+ 	bdle = (struct hda_bdle *)bdl_vaddr;
+ 	for (size_t i = 0; i < bdl_cnt; i++, bdle++) {
+-		bdle_sz = bdle->len;
+-		assert(!(bdle_sz % HDA_DMA_ACCESS_LEN));
++		bdle_sz = atomic_load_32(&bdle->len);
++		if (bdle_sz % HDA_DMA_ACCESS_LEN != 0 || bdle_sz == 0) {
++			DPRINTF("Invalid BDLE length: 0x%x", bdle_sz);
++			return (-1);
++		}
+ 
+-		bdle_addrl = bdle->addrl;
+-		bdle_addrh = bdle->addrh;
++		bdle_addrl = atomic_load_32(&bdle->addrl);
++		bdle_addrh = atomic_load_32(&bdle->addrh);
+ 
+ 		bdle_paddr = bdle_addrl | (bdle_addrh << 32);
+ 		bdle_vaddr = hda_dma_get_vaddr(sc, bdle_paddr, bdle_sz);
+@@ -652,7 +659,7 @@
+ 		bdle_desc = &st->bdl[i];
+ 		bdle_desc->addr = bdle_vaddr;
+ 		bdle_desc->len = bdle_sz;
+-		bdle_desc->ioc = bdle->ioc;
++		bdle_desc->ioc = atomic_load_32(&bdle->ioc);
+ 
+ 		DPRINTF("bdle: 0x%zx bdle_sz: 0x%x", i, bdle_sz);
+ 	}
+--- usr.sbin/bhyve/pci_xhci.c.orig
++++ usr.sbin/bhyve/pci_xhci.c
+@@ -38,6 +38,8 @@
+ #include <sys/types.h>
+ #include <sys/queue.h>
+ 
++#include <machine/atomic.h>
++
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <stdint.h>
+@@ -79,6 +81,7 @@
+ #define	XHCI_PADDR_SZ		4096	/* paddr_guest2host max size */
+ 
+ #define	XHCI_ERST_MAX		0	/* max 2^entries event ring seg tbl */
++#define	XHCI_EVR_MAX		4096	/* max entries in an event ring */
+ 
+ #define	XHCI_CAPLEN		(4*8)	/* offset of op register space */
+ #define	XHCI_HCCPRAMS2		0x1C	/* offset of HCCPARAMS2 register */
+@@ -234,6 +237,7 @@
+ 	int		er_deq_seg;	/* event ring dequeue segment */
+ 	int		er_enq_idx;	/* event ring enqueue index - xHCI */
+ 	int		er_enq_seg;	/* event ring enqueue segment */
++	uint32_t	er_size;	/* number of entries */
+ 	uint32_t	er_events_cnt;	/* number of events in ER */
+ 	uint32_t	event_pcs;	/* producer cycle state flag */
+ };
+@@ -601,22 +605,22 @@
+ 
+ static struct xhci_trb *
+ pci_xhci_trb_next(struct pci_xhci_softc *sc, struct xhci_trb *curtrb,
+-    uint64_t *guestaddr)
++    uint32_t type, uint64_t *guestaddr)
+ {
+ 	struct xhci_trb *next;
+ 
+-	assert(curtrb != NULL);
+-
+-	if (XHCI_TRB_3_TYPE_GET(curtrb->dwTrb3) == XHCI_TRB_TYPE_LINK) {
+-		if (guestaddr)
+-			*guestaddr = curtrb->qwTrb0 & ~0xFUL;
++	if (type == XHCI_TRB_TYPE_LINK) {
++		uint64_t trb0;
+ 
+-		next = XHCI_GADDR(sc, curtrb->qwTrb0 & ~0xFUL);
++		trb0 = atomic_load_64(&curtrb->qwTrb0) & ~0xFUL;
++		*guestaddr = trb0;
++		next = XHCI_GADDR(sc, trb0);
+ 	} else {
+-		if (guestaddr)
+-			*guestaddr += sizeof(struct xhci_trb) & ~0xFUL;
+-
+-		next = curtrb + 1;
++		*guestaddr += sizeof(struct xhci_trb);
++		if (XHCI_GADDR(sc, *guestaddr) == NULL)
++			next = NULL;
++		else
++			next = curtrb + 1;
+ 	}
+ 
+ 	return (next);
+@@ -764,14 +768,14 @@
+ 	evtrbptr = &rts->erst_p[rts->er_enq_idx];
+ 
+ 	/* TODO: multi-segment table */
+-	if (rts->er_events_cnt >= rts->erstba_p->dwEvrsTableSize) {
++	if (rts->er_events_cnt >= rts->er_size) {
+ 		DPRINTF(("pci_xhci[%d] cannot insert event; ring full",
+ 		         __LINE__));
+ 		err = XHCI_TRB_ERROR_EV_RING_FULL;
+ 		goto done;
+ 	}
+ 
+-	if (rts->er_events_cnt == rts->erstba_p->dwEvrsTableSize - 1) {
++	if (rts->er_events_cnt == rts->er_size - 1) {
+ 		struct xhci_trb	errev;
+ 
+ 		if ((evtrbptr->dwTrb3 & 0x1) == (rts->event_pcs & 0x1)) {
+@@ -788,8 +792,7 @@
+ 			rts->er_events_cnt++;
+ 			memcpy(&rts->erst_p[rts->er_enq_idx], &errev,
+ 			       sizeof(struct xhci_trb));
+-			rts->er_enq_idx = (rts->er_enq_idx + 1) %
+-			                  rts->erstba_p->dwEvrsTableSize;
++			rts->er_enq_idx = (rts->er_enq_idx + 1) % rts->er_size;
+ 			err = XHCI_TRB_ERROR_EV_RING_FULL;
+ 			do_intr = 1;
+ 
+@@ -803,8 +806,7 @@
+ 	evtrb->dwTrb3 |= rts->event_pcs;
+ 
+ 	memcpy(&rts->erst_p[rts->er_enq_idx], evtrb, sizeof(struct xhci_trb));
+-	rts->er_enq_idx = (rts->er_enq_idx + 1) %
+-	                  rts->erstba_p->dwEvrsTableSize;
++	rts->er_enq_idx = (rts->er_enq_idx + 1) % rts->er_size;
+ 
+ 	if (rts->er_enq_idx == 0)
+ 		rts->event_pcs ^= 1;
+@@ -1402,7 +1404,6 @@
+ 	struct xhci_trb	*trb;
+ 	uint64_t	crcr;
+ 	uint32_t	ccs;		/* cycle state (XHCI 4.9.2) */
+-	uint32_t	type;
+ 	uint32_t	slot;
+ 	uint32_t	cmderr;
+ 	int		error;
+@@ -1415,18 +1416,22 @@
+ 	crcr = sc->opregs.crcr & ~0xF;
+ 
+ 	while (1) {
+-		sc->opregs.cr_p = trb;
++		uint32_t trb3, type;
+ 
+-		type = XHCI_TRB_3_TYPE_GET(trb->dwTrb3);
++		sc->opregs.cr_p = trb;
+ 
+-		if ((trb->dwTrb3 & XHCI_TRB_3_CYCLE_BIT) !=
++		if (trb == NULL)
++			break;
++		trb3 = atomic_load_32(&trb->dwTrb3);
++		type = XHCI_TRB_3_TYPE_GET(trb3);
++		if ((trb3 & XHCI_TRB_3_CYCLE_BIT) !=
+ 		    (ccs & XHCI_TRB_3_CYCLE_BIT))
+ 			break;
+ 
+ 		DPRINTF(("pci_xhci: cmd type 0x%x, Trb0 x%016lx dwTrb2 x%08x"
+ 		        " dwTrb3 x%08x, TRB_CYCLE %u/ccs %u",
+-		        type, trb->qwTrb0, trb->dwTrb2, trb->dwTrb3,
+-		        trb->dwTrb3 & XHCI_TRB_3_CYCLE_BIT, ccs));
++		        type, trb->qwTrb0, trb->dwTrb2, trb3,
++		        trb3 & XHCI_TRB_3_CYCLE_BIT, ccs));
+ 
+ 		cmderr = XHCI_TRB_ERROR_SUCCESS;
+ 		evtrb.dwTrb2 = 0;
+@@ -1436,7 +1441,7 @@
+ 
+ 		switch (type) {
+ 		case XHCI_TRB_TYPE_LINK:			/* 0x06 */
+-			if (trb->dwTrb3 & XHCI_TRB_3_TC_BIT)
++			if (trb3 & XHCI_TRB_3_TC_BIT)
+ 				ccs ^= XHCI_CRCR_LO_RCS;
+ 			break;
+ 
+@@ -1445,44 +1450,44 @@
+ 			break;
+ 
+ 		case XHCI_TRB_TYPE_DISABLE_SLOT:		/* 0x0A */
+-			slot = XHCI_TRB_3_SLOT_GET(trb->dwTrb3);
++			slot = XHCI_TRB_3_SLOT_GET(trb3);
+ 			cmderr = pci_xhci_cmd_disable_slot(sc, slot);
+ 			break;
+ 
+ 		case XHCI_TRB_TYPE_ADDRESS_DEVICE:		/* 0x0B */
+-			slot = XHCI_TRB_3_SLOT_GET(trb->dwTrb3);
++			slot = XHCI_TRB_3_SLOT_GET(trb3);
+ 			cmderr = pci_xhci_cmd_address_device(sc, slot, trb);
+ 			break;
+ 
+ 		case XHCI_TRB_TYPE_CONFIGURE_EP:		/* 0x0C */
+-			slot = XHCI_TRB_3_SLOT_GET(trb->dwTrb3);
++			slot = XHCI_TRB_3_SLOT_GET(trb3);
+ 			cmderr = pci_xhci_cmd_config_ep(sc, slot, trb);
+ 			break;
+ 
+ 		case XHCI_TRB_TYPE_EVALUATE_CTX:		/* 0x0D */
+-			slot = XHCI_TRB_3_SLOT_GET(trb->dwTrb3);
++			slot = XHCI_TRB_3_SLOT_GET(trb3);
+ 			cmderr = pci_xhci_cmd_eval_ctx(sc, slot, trb);
+ 			break;
+ 
+ 		case XHCI_TRB_TYPE_RESET_EP:			/* 0x0E */
+ 			DPRINTF(("Reset Endpoint on slot %d", slot));
+-			slot = XHCI_TRB_3_SLOT_GET(trb->dwTrb3);
++			slot = XHCI_TRB_3_SLOT_GET(trb3);
+ 			cmderr = pci_xhci_cmd_reset_ep(sc, slot, trb);
+ 			break;
+ 
+ 		case XHCI_TRB_TYPE_STOP_EP:			/* 0x0F */
+ 			DPRINTF(("Stop Endpoint on slot %d", slot));
+-			slot = XHCI_TRB_3_SLOT_GET(trb->dwTrb3);
++			slot = XHCI_TRB_3_SLOT_GET(trb3);
+ 			cmderr = pci_xhci_cmd_reset_ep(sc, slot, trb);
+ 			break;
+ 
+ 		case XHCI_TRB_TYPE_SET_TR_DEQUEUE:		/* 0x10 */
+-			slot = XHCI_TRB_3_SLOT_GET(trb->dwTrb3);
++			slot = XHCI_TRB_3_SLOT_GET(trb3);
+ 			cmderr = pci_xhci_cmd_set_tr(sc, slot, trb);
+ 			break;
+ 
+ 		case XHCI_TRB_TYPE_RESET_DEVICE:		/* 0x11 */
+-			slot = XHCI_TRB_3_SLOT_GET(trb->dwTrb3);
++			slot = XHCI_TRB_3_SLOT_GET(trb3);
+ 			cmderr = pci_xhci_cmd_reset_device(sc, slot);
+ 			break;
+ 
+@@ -1522,7 +1527,7 @@
+ 			pci_xhci_insert_event(sc, &evtrb, 1);
+ 		}
+ 
+-		trb = pci_xhci_trb_next(sc, trb, &crcr);
++		trb = pci_xhci_trb_next(sc, trb, type, &crcr);
+ 	}
+ 
+ 	sc->opregs.crcr = crcr | (sc->opregs.crcr & XHCI_CRCR_LO_CA) | ccs;
+@@ -1757,7 +1762,6 @@
+ 	struct usb_data_xfer *xfer;
+ 	struct usb_data_xfer_block *xfer_block;
+ 	uint64_t	val;
+-	uint32_t	trbflags;
+ 	int		do_intr, err;
+ 	int		do_retry;
+ 
+@@ -1776,23 +1780,25 @@
+ 	setup_trb = NULL;
+ 
+ 	while (1) {
+-		pci_xhci_dump_trb(trb);
++		uint32_t trb3, type;
+ 
+-		trbflags = trb->dwTrb3;
++		pci_xhci_dump_trb(trb);
+ 
+-		if (XHCI_TRB_3_TYPE_GET(trbflags) != XHCI_TRB_TYPE_LINK &&
+-		    (trbflags & XHCI_TRB_3_CYCLE_BIT) !=
++		trb3 = atomic_load_32(&trb->dwTrb3);
++		type = XHCI_TRB_3_TYPE_GET(trb3);
++		if (type != XHCI_TRB_TYPE_LINK &&
++		    (trb3 & XHCI_TRB_3_CYCLE_BIT) !=
+ 		    (ccs & XHCI_TRB_3_CYCLE_BIT)) {
+ 			DPRINTF(("Cycle-bit changed trbflags %x, ccs %x",
+-			    trbflags & XHCI_TRB_3_CYCLE_BIT, ccs));
++			    trb3 & XHCI_TRB_3_CYCLE_BIT, ccs));
+ 			break;
+ 		}
+ 
+ 		xfer_block = NULL;
+ 
+-		switch (XHCI_TRB_3_TYPE_GET(trbflags)) {
++		switch (type) {
+ 		case XHCI_TRB_TYPE_LINK:
+-			if (trb->dwTrb3 & XHCI_TRB_3_TC_BIT)
++			if (trb3 & XHCI_TRB_3_TC_BIT)
+ 				ccs ^= 0x1;
+ 
+ 			xfer_block = usb_data_xfer_append(xfer, NULL, 0,
+@@ -1801,7 +1807,7 @@
+ 			break;
+ 
+ 		case XHCI_TRB_TYPE_SETUP_STAGE:
+-			if ((trbflags & XHCI_TRB_3_IDT_BIT) == 0 ||
++			if ((trb3 & XHCI_TRB_3_IDT_BIT) == 0 ||
+ 			    XHCI_TRB_2_BYTES_GET(trb->dwTrb2) != 8) {
+ 				DPRINTF(("pci_xhci: invalid setup trb"));
+ 				err = XHCI_TRB_ERROR_TRB;
+@@ -1833,7 +1839,7 @@
+ 
+ 		case XHCI_TRB_TYPE_DATA_STAGE:
+ 			xfer_block = usb_data_xfer_append(xfer,
+-			     (void *)(trbflags & XHCI_TRB_3_IDT_BIT ?
++			     (void *)(trb3 & XHCI_TRB_3_IDT_BIT ?
+ 			         &trb->qwTrb0 : XHCI_GADDR(sc, trb->qwTrb0)),
+ 			     trb->dwTrb2 & 0x1FFFF, (void *)addr, ccs);
+ 			break;
+@@ -1852,21 +1858,19 @@
+ 		case XHCI_TRB_TYPE_EVENT_DATA:
+ 			xfer_block = usb_data_xfer_append(xfer, NULL, 0,
+ 			                                  (void *)addr, ccs);
+-			if ((epid > 1) && (trbflags & XHCI_TRB_3_IOC_BIT)) {
++			if ((epid > 1) && (trb3 & XHCI_TRB_3_IOC_BIT)) {
+ 				xfer_block->processed = 1;
+ 			}
+ 			break;
+ 
+ 		default:
+ 			DPRINTF(("pci_xhci: handle xfer unexpected trb type "
+-			         "0x%x",
+-			         XHCI_TRB_3_TYPE_GET(trbflags)));
++			         "0x%x", type));
+ 			err = XHCI_TRB_ERROR_TRB;
+ 			goto errout;
+ 		}
+ 
+-		trb = pci_xhci_trb_next(sc, trb, &addr);
+-
++		trb = pci_xhci_trb_next(sc, trb, type, &addr);
+ 		DPRINTF(("pci_xhci: next trb: 0x%lx", (uint64_t)trb));
+ 
+ 		if (xfer_block) {
+@@ -1874,13 +1878,13 @@
+ 			xfer_block->streamid = streamid;
+ 		}
+ 
+-		if (!setup_trb && !(trbflags & XHCI_TRB_3_CHAIN_BIT) &&
+-		    XHCI_TRB_3_TYPE_GET(trbflags) != XHCI_TRB_TYPE_LINK) {
++		if (!setup_trb && !(trb3 & XHCI_TRB_3_CHAIN_BIT) &&
++		    type != XHCI_TRB_TYPE_LINK) {
+ 			break;
+ 		}
+ 
+ 		/* handle current batch that requires interrupt on complete */
+-		if (trbflags & XHCI_TRB_3_IOC_BIT) {
++		if (trb3 & XHCI_TRB_3_IOC_BIT) {
+ 			DPRINTF(("pci_xhci: trb IOC bit set"));
+ 			if (epid == 1)
+ 				do_retry = 1;
+@@ -2106,23 +2110,42 @@
+ 
+ 	case 0x14:
+ 		/* ERSTBA high bits */
++	{
++		uint64_t evtap;
++
+ 		rts->intrreg.erstba = (value << 32) |
+ 		    MASK_64_LO(sc->rtsregs.intrreg.erstba);
+ 
+ 		rts->erstba_p = XHCI_GADDR(sc,
+-		                        sc->rtsregs.intrreg.erstba & ~0x3FUL);
+-
+-		rts->erst_p = XHCI_GADDR(sc,
+-		              sc->rtsregs.erstba_p->qwEvrsTablePtr & ~0x3FUL);
++		    sc->rtsregs.intrreg.erstba & ~0x3FUL);
++		if (rts->erstba_p == NULL) {
++			DPRINTF(("pci_xhci: ERSTBA not mapped"));
++			break;
++		}
+ 
+ 		rts->er_enq_idx = 0;
+ 		rts->er_events_cnt = 0;
++		rts->er_size = atomic_load_32(&rts->erstba_p->dwEvrsTableSize) &
++		    0xFFFFUL;
++		if (rts->er_size > XHCI_EVR_MAX) {
++			DPRINTF(("pci_xhci: ERST size %u > max", rts->er_size));
++			rts->er_size = XHCI_EVR_MAX;
++		}
++
++		evtap = atomic_load_64(&rts->erstba_p->qwEvrsTablePtr) &
++		    ~0x3FUL;
++		rts->erst_p = paddr_guest2host(sc->xsc_pi->pi_vmctx,
++		    evtap, rts->er_size * sizeof(struct xhci_trb));
++		if (rts->erst_p == NULL) {
++			DPRINTF(("pci_xhci: ERST table not mapped"));
++			rts->erstba_p = NULL;
++			rts->er_size = 0;
++		}
+ 
+ 		DPRINTF(("pci_xhci: wr erstba erst (%p) ptr 0x%lx, sz %u",
+-		        rts->erstba_p,
+-		        rts->erstba_p->qwEvrsTablePtr,
+-		        rts->erstba_p->dwEvrsTableSize));
++		        rts->erstba_p, evtap, rts->er_size));
+ 		break;
++	}
+ 
+ 	case 0x18:
+ 		/* ERDP low bits */
+@@ -2145,19 +2168,27 @@
+ 		    MASK_64_LO(sc->rtsregs.intrreg.erdp);
+ 
+ 		if (rts->er_events_cnt > 0) {
++			void *trb;
+ 			uint64_t erdp;
+ 			int erdp_i;
+ 
+ 			erdp = rts->intrreg.erdp & ~0xF;
+-			erdp_i = (erdp - rts->erstba_p->qwEvrsTablePtr) /
+-			           sizeof(struct xhci_trb);
++			trb = XHCI_GADDR(sc, erdp);
++			if ((uintptr_t)trb < (uintptr_t)rts->erst_p ||
++			    (uintptr_t)trb >= (uintptr_t)rts->erst_p +
++			    rts->er_size * sizeof(struct xhci_trb)) {
++				DPRINTF(("pci_xhci: ERDP 0x%lx out of range",
++				        erdp));
++				break;
++			}
+ 
++			erdp_i = ((uintptr_t)trb - (uintptr_t)rts->erst_p) /
++			    sizeof(struct xhci_trb);
+ 			if (erdp_i <= rts->er_enq_idx)
+ 				rts->er_events_cnt = rts->er_enq_idx - erdp_i;
+ 			else
+ 				rts->er_events_cnt =
+-				          rts->erstba_p->dwEvrsTableSize -
+-				          (erdp_i - rts->er_enq_idx);
++				    rts->er_size - (erdp_i - rts->er_enq_idx);
+ 
+ 			DPRINTF(("pci_xhci: erdp 0x%lx, events cnt %u",
+ 			        erdp, rts->er_events_cnt));
+@@ -2659,12 +2690,13 @@
+ 
+ 	dev = hci->hci_sc;
+ 	sc = dev->xsc;
++	pthread_mutex_lock(&sc->mtx);
+ 
+ 	/* check if device is ready; OS has to initialise it */
+ 	if (sc->rtsregs.erstba_p == NULL ||
+ 	    (sc->opregs.usbcmd & XHCI_CMD_RS) == 0 ||
+ 	    dev->dev_ctx == NULL)
+-		return (0);
++		goto done;
+ 
+ 	p = XHCI_PORTREG_PTR(sc, hci->hci_port);
+ 
+@@ -2673,7 +2705,7 @@
+ 		p->portsc &= ~XHCI_PS_PLS_MASK;
+ 		p->portsc |= XHCI_PS_PLS_SET(UPS_PORT_LS_RESUME);
+ 		if ((p->portsc & XHCI_PS_PLC) != 0)
+-			return (0);
++			goto done;
+ 
+ 		p->portsc |= XHCI_PS_PLC;
+ 
+@@ -2689,7 +2721,7 @@
+ 	if ((ep_ctx->dwEpCtx0 & 0x7) == XHCI_ST_EPCTX_DISABLED) {
+ 		DPRINTF(("xhci device interrupt on disabled endpoint %d",
+ 		         epid));
+-		return (0);
++		goto done;
+ 	}
+ 
+ 	DPRINTF(("xhci device interrupt on endpoint %d", epid));
+@@ -2697,6 +2729,7 @@
+ 	pci_xhci_device_doorbell(sc, hci->hci_port, epid, 0);
+ 
+ done:
++	pthread_mutex_unlock(&sc->mtx);
+ 	return (error);
+ }
+ 
+@@ -3146,6 +3179,7 @@
+ 	SNAPSHOT_VAR_OR_LEAVE(sc->rtsregs.er_deq_seg, meta, ret, done);
+ 	SNAPSHOT_VAR_OR_LEAVE(sc->rtsregs.er_enq_idx, meta, ret, done);
+ 	SNAPSHOT_VAR_OR_LEAVE(sc->rtsregs.er_enq_seg, meta, ret, done);
++	SNAPSHOT_VAR_OR_LEAVE(sc->rtsregs.er_size, meta, ret, done);
+ 	SNAPSHOT_VAR_OR_LEAVE(sc->rtsregs.er_events_cnt, meta, ret, done);
+ 	SNAPSHOT_VAR_OR_LEAVE(sc->rtsregs.event_pcs, meta, ret, done);
+ 
+--- usr.sbin/bhyve/rfb.c.orig
++++ usr.sbin/bhyve/rfb.c
+@@ -192,9 +192,9 @@
+ 
+ #define	RFB_CLIENTMSG_EXT_KEYEVENT	0
+ 
+-#define	RFB_MAX_WIDTH			2000
+-#define	RFB_MAX_HEIGHT			1200
+-#define	RFB_ZLIB_BUFSZ			RFB_MAX_WIDTH*RFB_MAX_HEIGHT*4
++#define	RFB_MAX_WIDTH			GC_COLS_MAX
++#define	RFB_MAX_HEIGHT			GC_ROWS_MAX
++#define	RFB_ZLIB_BUFSZ			(RFB_MAX_WIDTH * RFB_MAX_HEIGHT * 4)
+ 
+ #define PIXEL_RED_SHIFT		16
+ #define PIXEL_GREEN_SHIFT	8

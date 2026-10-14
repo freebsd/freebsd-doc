@@ -1,0 +1,720 @@
+--- sys/arm/freescale/imx/imx6_ssi.c.orig
++++ sys/arm/freescale/imx/imx6_ssi.c
+@@ -395,7 +395,8 @@
+ 	struct sc_pcminfo *scp = ch->parent;
+ 	struct sc_info *sc = scp->sc;
+ 
+-	sndbuf_resize(ch->buffer, sc->dma_size / blocksize, blocksize);
++	if (sndbuf_resize(ch->buffer, sc->dma_size / blocksize, blocksize) != 0)
++		return (0);
+ 
+ 	setup_dma(scp);
+ 
+--- sys/arm/freescale/vybrid/vf_sai.c.orig
++++ sys/arm/freescale/vybrid/vf_sai.c
+@@ -368,7 +368,8 @@
+ 	struct sc_pcminfo *scp = ch->parent;
+ 	struct sc_info *sc = scp->sc;
+ 
+-	sndbuf_resize(ch->buffer, sc->dma_size / blocksize, blocksize);
++	if (sndbuf_resize(ch->buffer, sc->dma_size / blocksize, blocksize) != 0)
++		return (0);
+ 
+ 	sc->period = sndbuf_getblksz(ch->buffer);
+ 	return (sc->period);
+--- sys/dev/sound/pci/als4000.c.orig
++++ sys/dev/sound/pci/als4000.c
+@@ -267,7 +267,8 @@
+ 	if (blocksize > sc->bufsz / 2) {
+ 		blocksize = sc->bufsz / 2;
+ 	}
+-	sndbuf_resize(ch->buffer, 2, blocksize);
++	if (sndbuf_resize(ch->buffer, 2, blocksize) != 0)
++		return 0;
+ 	return blocksize;
+ }
+ 
+--- sys/dev/sound/pci/atiixp.c.orig
++++ sys/dev/sound/pci/atiixp.c
+@@ -532,6 +532,7 @@
+ {
+ 	struct atiixp_chinfo *ch = data;
+ 	struct atiixp_info *sc = ch->parent;
++	int error;
+ 
+ 	blksz &= ATI_IXP_BLK_ALIGN;
+ 
+@@ -555,9 +556,11 @@
+ 
+ 	if ((sndbuf_getblksz(ch->buffer) != blksz ||
+ 	    sndbuf_getblkcnt(ch->buffer) != blkcnt) &&
+-	    sndbuf_resize(ch->buffer, blkcnt, blksz) != 0)
++	    (error = sndbuf_resize(ch->buffer, blkcnt, blksz)) != 0) {
+ 		device_printf(sc->dev, "%s: failed blksz=%u blkcnt=%u\n",
+ 		    __func__, blksz, blkcnt);
++		return (error);
++	}
+ 
+ 	ch->blksz = sndbuf_getblksz(ch->buffer);
+ 	ch->blkcnt = sndbuf_getblkcnt(ch->buffer);
+@@ -571,7 +574,8 @@
+ 	struct atiixp_chinfo *ch = data;
+ 	struct atiixp_info *sc = ch->parent;
+ 
+-	atiixp_chan_setfragments(obj, data, blksz, sc->blkcnt);
++	if (atiixp_chan_setfragments(obj, data, blksz, sc->blkcnt) != 0)
++		return (0);
+ 
+ 	return (ch->blksz);
+ }
+--- sys/dev/sound/pci/cmi.c.orig
++++ sys/dev/sound/pci/cmi.c
+@@ -470,7 +470,8 @@
+ 	if (blocksize > sc->bufsz / CMI_INTR_PER_BUFFER) {
+ 		blocksize = sc->bufsz / CMI_INTR_PER_BUFFER;
+ 	}
+-	sndbuf_resize(ch->buffer, CMI_INTR_PER_BUFFER, blocksize);
++	if (sndbuf_resize(ch->buffer, CMI_INTR_PER_BUFFER, blocksize) != 0)
++		return 0;
+ 
+ 	return blocksize;
+ }
+--- sys/dev/sound/pci/cs4281.c.orig
++++ sys/dev/sound/pci/cs4281.c
+@@ -346,12 +346,14 @@
+     struct sc_info *sc = ch->parent;
+     u_int32_t go;
+ 
+-    go = adcdac_go(ch, 0);
+-
+     /* 2 interrupts are possible and used in buffer (half-empty,empty),
+      * hence factor of 2. */
+-    ch->blksz = MIN(blocksize, sc->bufsz / 2);
+-    sndbuf_resize(ch->buffer, 2, ch->blksz);
++    blocksize = MIN(blocksize, sc->bufsz / 2);
++    if (sndbuf_resize(ch->buffer, 2, blocksize) != 0)
++	return 0;
++    ch->blksz = blocksize;
++
++    go = adcdac_go(ch, 0);
+     ch->dma_setup = 0;
+     adcdac_prog(ch);
+     adcdac_go(ch, go);
+--- sys/dev/sound/pci/envy24.c.orig
++++ sys/dev/sound/pci/envy24.c
+@@ -1716,7 +1716,7 @@
+ {
+ 	struct sc_chinfo *ch = data;
+ 	/* struct sc_info *sc = ch->parent; */
+-	u_int32_t size, prev;
++	uint32_t blk, size, prev;
+         unsigned int bcnt, bsize;
+ 
+ #if(0)
+@@ -1731,20 +1731,22 @@
+ 			break;
+ 	}
+ 
+-	ch->blk = prev / ch->unit;
++	blk = prev / ch->unit;
+ 	if (ch->dir == PCMDIR_PLAY)
+-		ch->blk *= ENVY24_PLAY_BUFUNIT / 4;
++		blk *= ENVY24_PLAY_BUFUNIT / 4;
+ 	else
+-		ch->blk *= ENVY24_REC_BUFUNIT / 4;
++		blk *= ENVY24_REC_BUFUNIT / 4;
+ 	/* set channel buffer information */
+ 	/* ch->size = ch->unit * ENVY24_SAMPLE_NUM; */
+         if (ch->dir == PCMDIR_PLAY)
+-                bsize = ch->blk * 4 / ENVY24_PLAY_BUFUNIT;
++                bsize = blk * 4 / ENVY24_PLAY_BUFUNIT;
+         else
+-                bsize = ch->blk * 4 / ENVY24_REC_BUFUNIT;
++                bsize = blk * 4 / ENVY24_REC_BUFUNIT;
+         bsize *= ch->unit;
+         bcnt = ch->size / bsize;
+-        sndbuf_resize(ch->buffer, bcnt, bsize);
++        if (sndbuf_resize(ch->buffer, bcnt, bsize) != 0)
++		return 0;
++	ch->blk = blk;
+ 	/* snd_mtxunlock(sc->lock); */
+ 
+ #if(0)
+--- sys/dev/sound/pci/envy24ht.c.orig
++++ sys/dev/sound/pci/envy24ht.c
+@@ -1627,7 +1627,7 @@
+ {
+ 	struct sc_chinfo *ch = data;
+ 	/* struct sc_info *sc = ch->parent; */
+-	u_int32_t size, prev;
++	uint32_t blk, size, prev;
+ 	unsigned int bcnt, bsize;
+ 
+ #if(0)
+@@ -1642,20 +1642,22 @@
+ 			break;
+ 	}
+ 
+-	ch->blk = prev / ch->unit;
++	blk = prev / ch->unit;
+ 	if (ch->dir == PCMDIR_PLAY)
+-		ch->blk *= ENVY24HT_PLAY_BUFUNIT / 4;
++		blk *= ENVY24HT_PLAY_BUFUNIT / 4;
+ 	else
+-		ch->blk *= ENVY24HT_REC_BUFUNIT / 4;
++		blk *= ENVY24HT_REC_BUFUNIT / 4;
+         /* set channel buffer information */
+         /* ch->size = ch->unit * ENVY24HT_SAMPLE_NUM; */
+         if (ch->dir == PCMDIR_PLAY)
+-                bsize = ch->blk * 4 / ENVY24HT_PLAY_BUFUNIT;
++                bsize = blk * 4 / ENVY24HT_PLAY_BUFUNIT;
+         else
+-                bsize = ch->blk * 4 / ENVY24HT_REC_BUFUNIT;
++                bsize = blk * 4 / ENVY24HT_REC_BUFUNIT;
+         bsize *= ch->unit;
+         bcnt = ch->size / bsize;
+-        sndbuf_resize(ch->buffer, bcnt, bsize);
++        if (sndbuf_resize(ch->buffer, bcnt, bsize) != 0)
++		return 0;
++	ch->blk = blk;
+ 	/* snd_mtxunlock(sc->lock); */
+ 
+ #if(0)
+--- sys/dev/sound/pci/es137x.c.orig
++++ sys/dev/sound/pci/es137x.c
+@@ -632,8 +632,9 @@
+ static int
+ eschan_setfragments(kobj_t obj, void *data, uint32_t blksz, uint32_t blkcnt)
+ {
+-  	struct es_chinfo *ch = data;
+-  	struct es_info *es = ch->parent;
++	struct es_chinfo *ch = data;
++	struct es_info *es = ch->parent;
++	int error;
+ 
+ 	blksz &= ES_BLK_ALIGN;
+ 
+@@ -657,9 +658,11 @@
+ 
+ 	if ((sndbuf_getblksz(ch->buffer) != blksz ||
+ 	    sndbuf_getblkcnt(ch->buffer) != blkcnt) &&
+-	    sndbuf_resize(ch->buffer, blkcnt, blksz) != 0)
++	    (error = sndbuf_resize(ch->buffer, blkcnt, blksz)) != 0) {
+ 		device_printf(es->dev, "%s: failed blksz=%u blkcnt=%u\n",
+ 		    __func__, blksz, blkcnt);
++		return (error);
++	}
+ 
+ 	ch->bufsz = sndbuf_getsize(ch->buffer);
+ 	ch->blksz = sndbuf_getblksz(ch->buffer);
+@@ -674,7 +677,8 @@
+   	struct es_chinfo *ch = data;
+   	struct es_info *es = ch->parent;
+ 
+-	eschan_setfragments(obj, data, blksz, es->blkcnt);
++	if (eschan_setfragments(obj, data, blksz, es->blkcnt) != 0)
++		return (0);
+ 
+ 	return (ch->blksz);
+ }
+--- sys/dev/sound/pci/hda/hdaa.c.orig
++++ sys/dev/sound/pci/hda/hdaa.c
+@@ -2053,6 +2053,7 @@
+ 					uint32_t blksz, uint32_t blkcnt)
+ {
+ 	struct hdaa_chan *ch = data;
++	int error;
+ 
+ 	blksz -= blksz % lcm(HDA_DMA_ALIGNMENT, sndbuf_getalign(ch->b));
+ 
+@@ -2076,9 +2077,11 @@
+ 
+ 	if ((sndbuf_getblksz(ch->b) != blksz ||
+ 	    sndbuf_getblkcnt(ch->b) != blkcnt) &&
+-	    sndbuf_resize(ch->b, blkcnt, blksz) != 0)
++	    (error = sndbuf_resize(ch->b, blkcnt, blksz)) != 0) {
+ 		device_printf(ch->devinfo->dev, "%s: failed blksz=%u blkcnt=%u\n",
+ 		    __func__, blksz, blkcnt);
++		return (error);
++	}
+ 
+ 	ch->blksz = sndbuf_getblksz(ch->b);
+ 	ch->blkcnt = sndbuf_getblkcnt(ch->b);
+@@ -2091,7 +2094,9 @@
+ {
+ 	struct hdaa_chan *ch = data;
+ 
+-	hdaa_channel_setfragments(obj, data, blksz, ch->pdevinfo->chan_blkcnt);
++	if (hdaa_channel_setfragments(obj, data, blksz,
++	    ch->pdevinfo->chan_blkcnt) != 0)
++		return (0);
+ 
+ 	return (ch->blksz);
+ }
+--- sys/dev/sound/pci/hdspe-pcm.c.orig
++++ sys/dev/sound/pci/hdspe-pcm.c
+@@ -907,6 +907,11 @@
+ 		}
+ 	}
+ 
++	if (sndbuf_resize(ch->buffer,
++	    (HDSPE_CHANBUF_SIZE * AFMT_CHANNEL(ch->format)) / (hl->period * 4),
++	    (hl->period * 4)) != 0)
++		return (0);
++
+ 	snd_mtxlock(sc->lock);
+ 	sc->ctrl_register &= ~HDSPE_LAT_MASK;
+ 	sc->ctrl_register |= hdspe_encode_latency(hl->n);
+@@ -918,9 +923,6 @@
+ 	device_printf(scp->dev, "New period=%d\n", sc->period);
+ #endif
+ 
+-	sndbuf_resize(ch->buffer,
+-	    (HDSPE_CHANBUF_SIZE * AFMT_CHANNEL(ch->format)) / (sc->period * 4),
+-	    (sc->period * 4));
+ end:
+ 
+ 	return (sndbuf_getblksz(ch->buffer));
+--- sys/dev/sound/pci/ich.c.orig
++++ sys/dev/sound/pci/ich.c
+@@ -294,21 +294,23 @@
+ /* -------------------------------------------------------------------- */
+ /* common routines */
+ 
+-static void
+-ich_filldtbl(struct sc_chinfo *ch)
++static int
++ich_filldtbl(struct sc_chinfo *ch, uint32_t blksz)
+ {
+ 	struct sc_info *sc = ch->parent;
+ 	uint32_t base;
+-	int i;
++	int error, i;
+ 
+ 	base = sndbuf_getbufaddr(ch->buffer);
+-	if ((ch->blksz * ch->blkcnt) > sndbuf_getmaxsize(ch->buffer))
+-		ch->blksz = sndbuf_getmaxsize(ch->buffer) / ch->blkcnt;
+-	if ((sndbuf_getblksz(ch->buffer) != ch->blksz ||
++	if ((blksz * ch->blkcnt) > sndbuf_getmaxsize(ch->buffer))
++		blksz = sndbuf_getmaxsize(ch->buffer) / ch->blkcnt;
++	if ((sndbuf_getblksz(ch->buffer) != blksz ||
+ 	    sndbuf_getblkcnt(ch->buffer) != ch->blkcnt) &&
+-	    sndbuf_resize(ch->buffer, ch->blkcnt, ch->blksz) != 0)
++	    (error = sndbuf_resize(ch->buffer, ch->blkcnt, blksz)) != 0) {
+ 		device_printf(sc->dev, "%s: failed blksz=%u blkcnt=%u\n",
+ 		    __func__, ch->blksz, ch->blkcnt);
++		return (error);
++	}
+ 	ch->blksz = sndbuf_getblksz(ch->buffer);
+ 
+ 	for (i = 0; i < ICH_DTBL_LENGTH; i++) {
+@@ -316,6 +318,7 @@
+ 		ch->dtbl[i].length = ICH_BDC_IOC
+ 				   | (ch->blksz / ch->parent->sample_size);
+ 	}
++	return (0);
+ }
+ 
+ static int
+@@ -496,8 +499,8 @@
+ 	if (blocksize < ICH_MIN_BLKSZ)
+ 		blocksize = ICH_MIN_BLKSZ;
+ 	blocksize &= ~(ICH_MIN_BLKSZ - 1);
+-	ch->blksz = blocksize;
+-	ich_filldtbl(ch);
++	if (ich_filldtbl(ch, blocksize) != 0)
++		return (0);
+ 	ICH_LOCK(sc);
+ 	ich_wr(sc, ch->regbase + ICH_REG_X_LVI, ch->blkcnt - 1, 1);
+ 	ICH_UNLOCK(sc);
+--- sys/dev/sound/pci/t4dwave.c.orig
++++ sys/dev/sound/pci/t4dwave.c
+@@ -538,7 +538,8 @@
+ {
+ 	struct tr_chinfo *ch = data;
+ 
+-	sndbuf_resize(ch->buffer, 2, blocksize);
++	if (sndbuf_resize(ch->buffer, 2, blocksize) != 0)
++		return 0;
+ 	return blocksize;
+ }
+ 
+@@ -659,8 +660,8 @@
+ {
+ 	struct tr_rchinfo *ch = data;
+ 
+-	sndbuf_resize(ch->buffer, 2, blocksize);
+-
++	if (sndbuf_resize(ch->buffer, 2, blocksize) != 0)
++		return 0;
+ 	return blocksize;
+ }
+ 
+--- sys/dev/sound/pci/via8233.c.orig
++++ sys/dev/sound/pci/via8233.c
+@@ -565,6 +565,7 @@
+ {
+ 	struct via_chinfo *ch = data;
+ 	struct via_info *via = ch->parent;
++	int error;
+ 
+ 	blksz &= VIA_BLK_ALIGN;
+ 
+@@ -588,9 +589,11 @@
+ 
+ 	if ((sndbuf_getblksz(ch->buffer) != blksz ||
+ 	    sndbuf_getblkcnt(ch->buffer) != blkcnt) &&
+-	    sndbuf_resize(ch->buffer, blkcnt, blksz) != 0)
++	    (error = sndbuf_resize(ch->buffer, blkcnt, blksz)) != 0) {
+ 		device_printf(via->dev, "%s: failed blksz=%u blkcnt=%u\n",
+ 		    __func__, blksz, blkcnt);
++		return (error);
++	}
+ 
+ 	ch->blksz = sndbuf_getblksz(ch->buffer);
+ 	ch->blkcnt = sndbuf_getblkcnt(ch->buffer);
+@@ -604,7 +607,8 @@
+ 	struct via_chinfo *ch = data;
+ 	struct via_info *via = ch->parent;
+ 
+-	via8233chan_setfragments(obj, data, blksz, via->blkcnt);
++	if (via8233chan_setfragments(obj, data, blksz, via->blkcnt) != 0)
++		return (0);
+ 
+ 	return (ch->blksz);
+ }
+--- sys/dev/sound/pci/via82c686.c.orig
++++ sys/dev/sound/pci/via82c686.c
+@@ -328,8 +328,9 @@
+ {
+ 	struct via_chinfo *ch = data;
+ 
++	if (sndbuf_resize(ch->buffer, SEGS_PER_CHAN, blocksize) != 0)
++		return 0;
+ 	ch->blksz = blocksize;
+-	sndbuf_resize(ch->buffer, SEGS_PER_CHAN, ch->blksz);
+ 
+ 	return ch->blksz;
+ }
+--- sys/dev/sound/pci/vibes.c.orig
++++ sys/dev/sound/pci/vibes.c
+@@ -224,7 +224,8 @@
+ 
+         /* user has requested interrupts every blocksize bytes */
+ 	RANGE(blocksize, SV_MIN_BLKSZ, sc->bufsz / SV_INTR_PER_BUFFER);
+-	sndbuf_resize(ch->buffer, SV_INTR_PER_BUFFER, blocksize);
++	if (sndbuf_resize(ch->buffer, SV_INTR_PER_BUFFER, blocksize) != 0)
++		return 0;
+ 	DEB(printf("svchan_setblocksize: %d\n", blocksize));
+ 	return blocksize;
+ }
+--- sys/dev/sound/pcm/buffer.c.orig
++++ sys/dev/sound/pcm/buffer.c
+@@ -84,12 +84,31 @@
+ 	}
+ }
+ 
++
+ bus_addr_t
+ sndbuf_getbufaddr(struct snd_dbuf *buf)
+ {
+ 	return (buf->buf_addr);
+ }
+ 
++static bool
++sndbuf_busy(struct snd_dbuf *b)
++{
++	CHN_LOCKASSERT(b->channel);
++
++	return (refcount_load(&b->refcount) > 1 ||
++	    (b->flags & SNDBUF_F_DETACHED) != 0 ||
++	    /*
++	     * XXX-MJ CHN_F_MMAP is not reliable, but for software buffers the
++	     * refcount accurately reflects whether the buffer is mapped.
++	     * Ensure that there is no in-flight DMA transfer by checking
++	     * CHN_F_TRIGGERED.  This should really be checked at a higher
++	     * layer, but this is tricky since chn_resizebuf() and
++	     * sndbuf_resize() drop and reacquire the channel lock.
++	     */
++	    (b->channel->flags & (CHN_F_MMAP | CHN_F_TRIGGERED)) != 0);
++}
++
+ static void
+ sndbuf_setmap(void *arg, bus_dma_segment_t *segs, int nseg, int error)
+ {
+@@ -207,8 +226,7 @@
+ 
+ 	if (bufsize > b->allocsize ||
+ 	    bufsize < (b->allocsize >> SNDBUF_CACHE_SHIFT)) {
+-		if (refcount_load(&b->refcount) > 1 ||
+-		    (b->flags & SNDBUF_F_DETACHED) != 0) {
++		if (sndbuf_busy(b)) {
+ 			CHN_UNLOCK(b->channel);
+ 			return (EBUSY);
+ 		}
+@@ -216,6 +234,11 @@
+ 		CHN_UNLOCK(b->channel);
+ 		tmpbuf = malloc(allocsize, M_DEVBUF, M_WAITOK);
+ 		CHN_LOCK(b->channel);
++		if (sndbuf_busy(b)) {
++			CHN_UNLOCK(b->channel);
++			free(tmpbuf, M_DEVBUF);
++			return (EBUSY);
++		}
+ 		if (snd_verbose > 3)
+ 			printf("%s(): b=%p %p -> %p [%d -> %d : %d]\n",
+ 			    __func__, b, b->tmpbuf, tmpbuf,
+@@ -253,8 +276,7 @@
+ 
+ 	if (bufsize > b->allocsize ||
+ 	    bufsize < (b->allocsize >> SNDBUF_CACHE_SHIFT)) {
+-		if (refcount_load(&b->refcount) > 1 ||
+-		    (b->flags & SNDBUF_F_DETACHED) != 0)
++		if (sndbuf_busy(b))
+ 			return (EBUSY);
+ 		allocsize = round_page(bufsize);
+ 		CHN_UNLOCK(b->channel);
+@@ -262,14 +284,17 @@
+ 		tmpbuf = malloc(allocsize, M_DEVBUF, M_WAITOK);
+ 		shadbuf = malloc(allocsize, M_DEVBUF, M_WAITOK);
+ 		CHN_LOCK(b->channel);
+-		if (b->buf != NULL)
+-			free(b->buf, M_DEVBUF);
++		if (sndbuf_busy(b)) {
++			free(buf, M_DEVBUF);
++			free(tmpbuf, M_DEVBUF);
++			free(shadbuf, M_DEVBUF);
++			return (EBUSY);
++		}
++		free(b->buf, M_DEVBUF);
+ 		b->buf = buf;
+-		if (b->tmpbuf != NULL)
+-			free(b->tmpbuf, M_DEVBUF);
++		free(b->tmpbuf, M_DEVBUF);
+ 		b->tmpbuf = tmpbuf;
+-		if (b->shadbuf != NULL)
+-			free(b->shadbuf, M_DEVBUF);
++		free(b->shadbuf, M_DEVBUF);
+ 		b->shadbuf = shadbuf;
+ 		if (snd_verbose > 3)
+ 			printf("%s(): b=%p %d -> %d [%d]\n",
+--- sys/dev/sound/pcm/channel.c.orig
++++ sys/dev/sound/pcm/channel.c
+@@ -1870,12 +1870,12 @@
+ {
+ 	struct snd_dbuf *b, *bs, *pb;
+ 	int sblksz, sblkcnt, hblksz, hblkcnt, limit = 0, nsblksz, nsblkcnt;
+-	int ret;
+ 
+ 	CHN_LOCKASSERT(c);
+ 
+-	if ((c->flags & (CHN_F_MMAP | CHN_F_TRIGGERED)) ||
+-	    !(c->direction == PCMDIR_PLAY || c->direction == PCMDIR_REC))
++	if (!(c->direction == PCMDIR_PLAY || c->direction == PCMDIR_REC))
++		return EINVAL;
++	if ((c->flags & (CHN_F_MMAP | CHN_F_TRIGGERED)) != 0)
+ 		return EINVAL;
+ 
+ 	if (latency == -1) {
+@@ -1932,6 +1932,9 @@
+ 		chn_notify(c->parentchannel, CHN_N_BLOCKSIZE);
+ 		CHN_UNLOCK(c->parentchannel);
+ 		CHN_LOCK(c);
++		/* Revalidate. */
++		if ((c->flags & (CHN_F_MMAP | CHN_F_TRIGGERED)) != 0)
++			return EINVAL;
+ 		if (c->direction == PCMDIR_PLAY) {
+ 			limit = (pb != NULL) ?
+ 			    sndbuf_xbytes(sndbuf_getsize(pb), pb, bs) : 0;
+@@ -1940,6 +1943,8 @@
+ 			    sndbuf_xbytes(sndbuf_getblksz(pb), pb, bs) * 2 : 0;
+ 		}
+ 	} else {
++		int error;
++
+ 		hblkcnt = 2;
+ 		if (c->flags & CHN_F_HAS_SIZE) {
+ 			hblksz = round_blksz(sndbuf_xbytes(sblksz, bs, b),
+@@ -1965,12 +1970,31 @@
+ 		hblksz -= hblksz % sndbuf_getalign(b);
+ 
+ 		CHN_UNLOCK(c);
+-		if (chn_usefrags == 0 ||
+-		    CHANNEL_SETFRAGMENTS(c->methods, c->devinfo,
+-		    hblksz, hblkcnt) != 0)
+-			sndbuf_setblksz(b, CHANNEL_SETBLOCKSIZE(c->methods,
+-			    c->devinfo, hblksz));
++		error = ENOTSUP;
++		if (chn_usefrags) {
++			error = CHANNEL_SETFRAGMENTS(c->methods, c->devinfo,
++			    hblksz, hblkcnt);
++			/* The default implementation returns ENOTSUP. */
++			if (error != 0 && error != ENOTSUP) {
++				CHN_LOCK(c);
++				return error;
++			}
++		}
++		if (error == ENOTSUP) {
++			uint32_t nblksz;
++
++			nblksz = CHANNEL_SETBLOCKSIZE(c->methods, c->devinfo,
++			    hblksz);
++			if (nblksz == 0) {
++				CHN_LOCK(c);
++				return EINVAL;
++			}
++			sndbuf_setblksz(b, nblksz);
++		}
+ 		CHN_LOCK(c);
++		/* Revalidate. */
++		if ((c->flags & (CHN_F_MMAP | CHN_F_TRIGGERED)) != 0)
++			return EINVAL;
+ 
+ 		if (!CHN_EMPTY(c, children)) {
+ 			nsblksz = round_blksz(
+@@ -2008,11 +2032,13 @@
+ 
+ 	if (sndbuf_getblkcnt(bs) != sblkcnt || sndbuf_getblksz(bs) != sblksz ||
+ 	    sndbuf_getsize(bs) != (sblkcnt * sblksz)) {
+-		ret = sndbuf_remalloc(bs, sblkcnt, sblksz);
+-		if (ret != 0) {
++		int error;
++
++		error = sndbuf_remalloc(bs, sblkcnt, sblksz);
++		if (error != 0) {
+ 			device_printf(c->dev, "%s(): Failed: %d %d\n",
+ 			    __func__, sblkcnt, sblksz);
+-			return ret;
++			return error;
+ 		}
+ 	}
+ 
+--- sys/dev/sound/usb/uaudio.c.orig
++++ sys/dev/sound/usb/uaudio.c
+@@ -2733,16 +2733,12 @@
+ int
+ uaudio_chan_set_param_blocksize(struct uaudio_chan *ch, uint32_t blocksize)
+ {
+-	uint32_t temp = 2 * uaudio_get_buffer_size(ch, ch->set_alt);
+-	sndbuf_setup(ch->pcm_buf, ch->buf, temp);
+-	return (temp / 2);
+-}
++	uint32_t temp;
+ 
+-int
+-uaudio_chan_set_param_fragments(struct uaudio_chan *ch, uint32_t blocksize,
+-    uint32_t blockcount)
+-{
+-	return (1);
++	temp = 2 * uaudio_get_buffer_size(ch, ch->set_alt);
++	if (sndbuf_setup(ch->pcm_buf, ch->buf, temp) != 0)
++		return (0);
++	return (temp / 2);
+ }
+ 
+ int
+--- sys/dev/sound/usb/uaudio.h.orig
++++ sys/dev/sound/usb/uaudio.h
+@@ -45,8 +45,6 @@
+ extern int	uaudio_chan_free(struct uaudio_chan *ch);
+ extern int	uaudio_chan_set_param_blocksize(struct uaudio_chan *ch,
+ 		    uint32_t blocksize);
+-extern int	uaudio_chan_set_param_fragments(struct uaudio_chan *ch,
+-		    uint32_t blocksize, uint32_t blockcount);
+ extern int	uaudio_chan_set_param_speed(struct uaudio_chan *ch,
+ 		    uint32_t speed);
+ extern int	uaudio_chan_getptr(struct uaudio_chan *ch);
+--- sys/dev/sound/usb/uaudio_pcm.c.orig
++++ sys/dev/sound/usb/uaudio_pcm.c
+@@ -71,12 +71,6 @@
+ 	return (uaudio_chan_set_param_blocksize(data, blocksize));
+ }
+ 
+-static int
+-ua_chan_setfragments(kobj_t obj, void *data, uint32_t blocksize, uint32_t blockcount)
+-{
+-	return (uaudio_chan_set_param_fragments(data, blocksize, blockcount));
+-}
+-
+ static int
+ ua_chan_trigger(kobj_t obj, void *data, int go)
+ {
+@@ -114,7 +108,6 @@
+ 	KOBJMETHOD(channel_setformat, ua_chan_setformat),
+ 	KOBJMETHOD(channel_setspeed, ua_chan_setspeed),
+ 	KOBJMETHOD(channel_setblocksize, ua_chan_setblocksize),
+-	KOBJMETHOD(channel_setfragments, ua_chan_setfragments),
+ 	KOBJMETHOD(channel_trigger, ua_chan_trigger),
+ 	KOBJMETHOD(channel_getptr, ua_chan_getptr),
+ 	KOBJMETHOD(channel_getcaps, ua_chan_getcaps),
+--- tests/sys/sound/mmap.c.orig
++++ tests/sys/sound/mmap.c
+@@ -102,10 +102,68 @@
+ 	ATF_REQUIRE(munmap(buf, len) == 0);
+ }
+ 
++/*
++ * Verify that an attempt to resize a channel's buffer while it is mmapped
++ * fails.
++ */
++ATF_TC(mmap_resize_fails);
++ATF_TC_HEAD(mmap_resize_fails, tc)
++{
++	atf_tc_set_md_var(tc, "descr",
++	    "Resizing a mmapped channel buffer fails");
++	atf_tc_set_md_var(tc, "require.kmods", "snd_dummy");
++}
++ATF_TC_BODY(mmap_resize_fails, tc)
++{
++	audio_buf_info abi;
++	uint8_t *buf;
++	size_t len;
++	int fd, arg, ret;
++
++	fd = open("/dev/dsp.dummy", O_RDWR);
++	ATF_REQUIRE_MSG(fd >= 0, FMT_ERR("open"));
++
++	arg = (2 << 16) | 14; /* 2 * 16KB */
++	ATF_REQUIRE_MSG(ioctl(fd, SNDCTL_DSP_SETFRAGMENT, &arg) == 0,
++	    FMT_ERR("SNDCTL_DSP_SETFRAGMENT"));
++	ATF_REQUIRE_MSG(ioctl(fd, SNDCTL_DSP_GETOSPACE, &abi) == 0,
++	    FMT_ERR("SNDCTL_DSP_GETOSPACE"));
++
++	len = abi.fragstotal * abi.fragsize;
++	ATF_REQUIRE_MSG(len >= PAGE_SIZE, "buffer too small: %zu", len);
++
++	buf = mmap(NULL, len, PROT_WRITE, MAP_SHARED, fd, 0);
++	ATF_REQUIRE_MSG(buf != MAP_FAILED, FMT_ERR("mmap"));
++
++	/* Try to resize the buffer; this should fail. */
++	arg = (4 << 16) | 12; /* 4 * 4KB */
++	ret = ioctl(fd, SNDCTL_DSP_SETFRAGMENT, &arg);
++	ATF_REQUIRE_MSG(ret != 0, "resize of mmapped buffer should fail");
++	ATF_REQUIRE_MSG(errno == EINVAL,
++	    "expected EINVAL, got %s", strerror(errno));
++
++	ATF_REQUIRE(munmap(buf, len) == 0);
++
++	/*
++	 * CHN_F_MMAP is only cleared when the fd is closed, so resizing still
++	 * fails after munmap.  This is probably a bug, but we can at least
++	 * verify that the resize succeeds after the fd is closed and reopened.
++	 */
++	ATF_REQUIRE(close(fd) == 0);
++	fd = open("/dev/dsp.dummy", O_RDWR);
++	ATF_REQUIRE_MSG(fd >= 0, FMT_ERR("open"));
++	arg = (4 << 16) | 12; /* 4 * 4KB */
++	ATF_REQUIRE_MSG(ioctl(fd, SNDCTL_DSP_SETFRAGMENT, &arg) == 0,
++	    FMT_ERR("SNDCTL_DSP_SETFRAGMENT after reopen"));
++
++	ATF_REQUIRE(close(fd) == 0);
++}
++
+ ATF_TP_ADD_TCS(tp)
+ {
+ 	ATF_TP_ADD_TC(tp, mmap_offset_overflow);
+ 	ATF_TP_ADD_TC(tp, mmap_buffer_lifetime);
++	ATF_TP_ADD_TC(tp, mmap_resize_fails);
+ 
+ 	return (atf_no_error());
+ }
