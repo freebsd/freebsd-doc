@@ -247,6 +247,7 @@ $sectionpath = {
     'OpenBSD 7.7' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 7.8' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 7.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 8.0' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 
     'CentOS 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
@@ -806,6 +807,7 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
     'OpenBSD 7.7', "$manLocalDir/OpenBSD-7.7",
     'OpenBSD 7.8', "$manLocalDir/OpenBSD-7.8",
     'OpenBSD 7.9', "$manLocalDir/OpenBSD-7.9",
+    'OpenBSD 8.0', "$manLocalDir/OpenBSD-8.0",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
     'NetBSD 1.0',   "$manLocalDir/NetBSD-1.0",
@@ -1293,7 +1295,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'macosx',     'Darwin 8.0.1/ppc',
 
     'netbsd',        'NetBSD 11.0',
-    'openbsd',       'OpenBSD 7.9',
+    'openbsd',       'OpenBSD 8.0',
     'opensuse',      'openSUSE 16.0',
     'openindiana',   'OpenIndiana 2025.10',
     'v7',            'Unix Seventh Edition',
