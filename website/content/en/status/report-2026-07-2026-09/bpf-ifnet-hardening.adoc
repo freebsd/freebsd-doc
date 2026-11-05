@@ -1,0 +1,44 @@
+=== BPF/ifnet Contract Hardening: D59140
+
+Links: +
+link:https://reviews.freebsd.org/D59140[Phabricator revision] URL: link:https://reviews.freebsd.org/D59140[] +
+link:https://github.com/LuisCastellanos-dev/vtr-sentinel-kmod/tree/vtr-sentinel-14.5/reproducers/D59140[Reproducer and epistemic record] URL: link:https://github.com/LuisCastellanos-dev/vtr-sentinel-kmod/tree/vtr-sentinel-14.5/reproducers/D59140[Reproducer and epistemic record]
+
+Contact: Luis Castellanos <ing.castellanosdz@gmail.com>
+
+==== Description
+
+During Q3 2026, a review of the `bpf_movein()` path in [.filename]#sys/net/bpf.c# was conducted following an observed failure when writing to a BPF descriptor on `lo0` (FreeBSD 14.4-RELEASE-p8).
+
+The initial observation was a man:write[2] returning `EAFNOSUPPORT` when sending a packet through a BPF descriptor bound to `lo0` (DLT_NULL).
+The original attribution — missing `sa_len` initialization in `if_output` drivers — was not sustained after independent review by mailto:glebius@FreeBSD.org[Gleb Smirnoff].
+
+Review established that the reproducer violated the DLT_NULL contract: a man:write[2] on a BPF descriptor must prepend a 32-bit word in host byte order containing the address family.
+The `sa_len` check proposed in the individual drivers ([.filename]#if_disc.c#, [.filename]#if_gif.c#, [.filename]#if_loop.c#, [.filename]#if_me.c#, [.filename]#if_tuntap.c#) is not required because the existing BPF/ifnet interface contract is already defined at the BPF boundary in `bpf_movein()`.
+
+Following that review, D59140 was updated to add a defensive assertion in `bpf_movein()` per Gleb's suggestion:
+
+[source,c]
+----
+MPASS(hlen <= sizeof(sockp->sa_data));
+----
+
+This makes the existing BPF/ifnet contract explicit through a defensive assertion at the point where the contract is consumed.
+The assertion protects the `sa_data` bounds invariant at the point where the computed header length is consumed.
+
+==== Work Completed
+
+* Identified and reproduced `EAFNOSUPPORT` on `lo0` with BPF man:write[2] on FreeBSD 14.4-RELEASE-p8.
+* Submitted D59140 to Phabricator with initial fix targeting five `if_output` drivers.
+* Received review from Gleb Smirnoff identifying the reproducer defect: missing 32-bit DLT_NULL address-family header in the packet.
+* Corrected the reproducer and verified locally on FreeBSD 14.5-RELEASE.
+* Updated D59140 to replace the driver-level checks with a single `MPASS` assertion in `bpf_movein()` (Diff 186596).
+* Updated Summary and Test Plan in D59140 to document the complete investigation history: observed failure -> initial attribution -> independent falsification -> corrected reproducer -> local verification -> upstream hardening proposal.
+
+==== Work in Progress
+
+* D59140 (Diff 186596) is under upstream review.
+
+==== Open Tasks
+
+* Await upstream review and disposition of Diff 186596.
