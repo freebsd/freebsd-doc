@@ -249,6 +249,9 @@ $sectionpath = {
     'OpenBSD 7.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 8.0' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 
+    'POSIX 1003.1-2003' => { 'path' => '0p:1p:3p' },
+    'POSIX 1003.1-2017' => { 'path' => '0p:1p:3p' },
+
     'CentOS 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
 
@@ -1094,6 +1097,9 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
     'OSF1 V4.0/alpha', "$manLocalDir/OSF1-V4.0-alpha",
     'OSF1 V5.1/alpha', "$manLocalDir/OSF1-V5.1-alpha",
 
+    'POSIX 1003.1-2003',      "$manLocalDir/posix-2003-a",
+    'POSIX 1003.1-2017',      "$manLocalDir/posix-2017",
+
     'Inferno 4th Edition',         "$manLocalDir/Inferno",
     'Plan 9',                      "$manLocalDir/plan9",
     'Minix 2.0.0',                 "$manLocalDir/Minix-2.0.0",
@@ -1302,6 +1308,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'x11',           'X11R7.4',
     'xfree86',       'XFree86 4.8.0',
     'ultrix',        'ULTRIX 4.2',
+    'posix',         'POSIX 1003.1-2017',
     'hpux',          'HP-UX 11.22',
     'irix',          'IRIX 6.5.30',
     'solaris',       'SunOS 5.10',
@@ -2798,6 +2805,7 @@ Copyright (c) for manual pages by OS vendors:
 <a href="https://en.wikipedia.org/wiki/NeXTSTEP">NeXTSTEP</a>,
 <a href="https://www.openbsd.org">OpenBSD</a>,
 <a href="https://www.openindiana.org/">OpenIndiana</a>,
+<a href="https://https://www.opengroup.org/">Open Group</a>,
 <a href="https://en.wikipedia.org/wiki/OpenSolaris">OpenSolaris</a>,
 <a href="https://www.opensuse.org">openSUSE</a>,
 <a href="https://en.wikipedia.org/wiki/OSF/1">OSF</a>,
