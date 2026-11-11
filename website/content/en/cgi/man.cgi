@@ -1464,7 +1464,7 @@ foreach ( &sort_manpath(\%manPathAliases) ) {
         next;
     }
 
-    # add aliases, replases spaces with dashes
+    # add aliases, replaces spaces with dashes
     if (/\s/) {
         local ($key) = $_;
         $key =~ s/\s+/-/g;
@@ -1892,7 +1892,7 @@ sub to_filename {
     my $name = exists $args{'name'} ? $args{'name'} : 'manpage';
     my $section = exists $args{'section'}
       && $args{'section'} ne "" ? $args{'section'} : '0';
-    my $format = exists $args{'format'} ? $args{'format'} : 'unkown';
+    my $format = exists $args{'format'} ? $args{'format'} : 'unknown';
 
     my $filename = qq{$name.$section.$format};
     $filename =~ s/[^\w\-\.]/_/g;
@@ -2214,7 +2214,7 @@ qq{Please try a <a href="$BASE?apropos=1&amp;manpath=$manpath&amp;query=$html_na
 
     &html_footer;
 
-    # Sleep 0.35 seconds to avoid DoS attacs
+    # Sleep 0.35 seconds to avoid DoS attacks
     select undef, undef, undef, 0.35;
 }
 
@@ -2317,7 +2317,7 @@ s/([\000-\032\;\/\?\:\@\&\=\%\'\"\`\<\>\177-\377 ])/sprintf('%%%02x',ord($1))/eg
     $_;
 }
 
-# encode unknown data for use in <TITLE>...</TITILE>
+# encode unknown data for use in <TITLE>...</TITLE>
 sub encode_title {
 
     # like encode_url but less strict (I couldn't find docs on this)
@@ -2438,7 +2438,7 @@ sub encode_data {
         elsif ( $i <= ( $#l - 2 ) && $l[ $i + 1 ] eq "\010" ) {
 
             # bold
-            # take care of links with underlines, which are alwasy italic
+            # take care of links with underlines, which are always italic
             if ( $l[$i] eq $l[ $i + 2 ] && $flag ne 'i' ) {
                 $end_of_word->('b');
                 push @word, $l[$i];
@@ -2790,7 +2790,7 @@ Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 <p>
 Copyright (c) for manual pages by OS vendors:
-<span id="os_vendoers">
+<span id="os_vendors">
 <a href="https://en.wikipedia.org/wiki/History_of_the_Berkeley_Software_Distribution">2.11 BSD</a>,
 <a href="https://www.apple.com">Apple</a>,
 <a href="https://www.centos.org">CentOS</a>,
