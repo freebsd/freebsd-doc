@@ -2028,13 +2028,6 @@ sub man {
             $manpath_m = $manPath{ &dec($manpath) };
             &groff_path( $manPath{ &dec($manpath) } );
         }
-        else {
-
-            # unset invalid manpath
-            print "x $manpath x\n";
-            print "x " . &dec($manpath) . "x\n";
-            undef $manpath;
-        }
     }
 
     if ( $format =~ /^(ps|pdf)$/ ) {
