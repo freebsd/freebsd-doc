@@ -2045,7 +2045,7 @@ sub man {
     push( @manargs, ( "-m", $arch ) ) if $arch;
 
     # search first for base manual pages, and maybe later in ports
-    if ($freebsd_base_manpages_first && $section eq "" && $manpath =~ m/ and Ports$/) {
+    if ($freebsd_base_manpages_first && $section eq "" && $manpath =~ m/ and Ports(\.quarterly)?$/) {
         warn "search for base pages first: $name\n" if $debug >= 2;
 	my @m = ("-M", &manpath_without_ports($manpath_m));
         warn "X $command{'man'} @m @manargs -- x $name x\n" if $debug >= 3;
