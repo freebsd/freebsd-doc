@@ -339,7 +339,6 @@ $sectionpath = {
     'openSUSE 11.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
     'openSUSE 11.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
     'openSUSE 11.4' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
-    'openSUSE 12.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
     'openSUSE 13.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
     'openSUSE 13.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
     'openSUSE 42.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:g:n' },
@@ -641,7 +640,7 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
     'FreeBSD 5.4-RELEASE and Ports', "$manLocalDir/FreeBSD-5.4-RELEASE/man:$manLocalDir/FreeBSD-5.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.4-RELEASE/man:$manLocalDir/FreeBSD-ports-5.4-RELEASE/misc",
     'FreeBSD 5.5-RELEASE and Ports', "$manLocalDir/FreeBSD-5.5-RELEASE/man:$manLocalDir/FreeBSD-5.5-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.5-RELEASE/man:$manLocalDir/FreeBSD-ports-5.5-RELEASE/misc",
     'FreeBSD 6.0-RELEASE and Ports', "$manLocalDir/FreeBSD-6.0-RELEASE/man:$manLocalDir/FreeBSD-6.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-6.0-RELEASE/man:$manLocalDir/FreeBSD-ports-6.0-RELEASE/misc",
-    'FreeBSD 6.2-RELEASE and Ports', "$manLocalDir/FreeBSD-6.2-RELEASE/man:$manLocalDir/FreeBSD-6.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-6.2-RELEASE/man:$manLocalDir/FreeBSD-ports-6.2-RELEASE/misc",
+    'FreeBSD 6.2-RELEASE and Ports', "$manLocalDir/FreeBSD-6.2-RELEASE/man:$manLocalDir/FreeBSD-6.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-6.2-RELEASE",
     'FreeBSD 6.3-RELEASE and Ports', "$manLocalDir/FreeBSD-6.3-RELEASE/man:$manLocalDir/FreeBSD-6.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-6.3-RELEASE/man:$manLocalDir/FreeBSD-ports-6.3-RELEASE/misc",
     'FreeBSD 6.4-RELEASE and Ports', "$manLocalDir/FreeBSD-6.4-RELEASE/man:$manLocalDir/FreeBSD-6.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-6.4-RELEASE/man:$manLocalDir/FreeBSD-ports-6.4-RELEASE/misc",
     'FreeBSD 7.1-RELEASE and Ports', "$manLocalDir/FreeBSD-7.1-RELEASE/man:$manLocalDir/FreeBSD-7.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-7.1-RELEASE/man:$manLocalDir/FreeBSD-ports-7.1-RELEASE/misc",
@@ -1459,10 +1458,6 @@ foreach ( &sort_manpath(\%manPathAliases) ) {
     }
 }
 
-@sections = keys %sections;
-shift @sections;    # all but the "" entry
-$sections = join( "|", @sections );    # sections regexp
-
 # mailto - Author
 # webmaster - who run this service
 $mailto                    = 'wosch@FreeBSD.org';
@@ -2185,7 +2180,7 @@ qq{Please try a <a href="$BASE?apropos=1&amp;manpath=$manpath&amp;query=$html_na
 
     if ($want_to_link_to_this_page) {
         my $url = qq{$full_url?query=$html_name};
-        $url .= qq{&amp;sektion=$html_section} if $html_section ne "0";
+        $url .= qq{&amp;sektion=$html_section} if $html_section;
         $url .= qq{&amp;manpath=} . &encode_url($manpath);
 
         print qq{<div id="permalink">\n<p>\nWant to link to this manual page? };
@@ -2851,7 +2846,7 @@ sub secure_env {
     $main::ENV{'PAGER'}   = 'cat';
     $main::ENV{'SHELL'}   = '/bin/sh';
     $main::ENV{'LANG'}    = 'C';
-    undef $main::ENV{'DISPLAY'};
+    delete $main::ENV{'DISPLAY'};
 }
 
 sub include_output {
