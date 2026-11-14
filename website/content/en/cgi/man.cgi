@@ -128,6 +128,11 @@ $sectionpath = {
     'IRIX 6.5.30' => { 'path' => '1:1m:2:3:3c:3dm:3n:3x:4:5:7:9' },
 
 
+    'OpenIndiana 2026.10'  => {
+        'path' =>
+'1:1m:1s:1t:2:3:3c:3malloc:3nsl:3socket:3ldap:3resolv:3rpc:3sip:3slp:3proc:3c_db:3elf:3kvm:3kstat:3m:3mp:3mvec:3pam:3bsm:3tsol:3contract:3cpc:3sec:3secdb:3cfgadm:3devid:3devinfo:3lib:3nvpair:7:7d:7i:9:9e:9f:9p:9s:4:5:3gen:3exacct:3stmf:3sysevent:3uuid:3volmgt:3mail:3ext:3fstyp:3picl:3picltree:3pool:3project:3perl:3lgrp:3sasl:3scf:3tecla:3mpapi:3fcoe:3xnet:3curses:3xcurses:3dlpi:3dns_sd:3gss:3tcl:3tk:8:1openssl:3openssl:5openssl:7openssl'
+    },
+
     'OpenIndiana 2025.10'  => {
         'path' =>
 '1:1m:1s:1t:2:3:3c:3malloc:3nsl:3socket:3ldap:3resolv:3rpc:3sip:3slp:3proc:3c_db:3elf:3kvm:3kstat:3m:3mp:3mvec:3pam:3bsm:3tsol:3contract:3cpc:3sec:3secdb:3cfgadm:3devid:3devinfo:3lib:3nvpair:7:7d:7i:9:9e:9f:9p:9s:4:5:3gen:3exacct:3stmf:3sysevent:3uuid:3volmgt:3mail:3ext:3fstyp:3picl:3picltree:3pool:3project:3perl:3lgrp:3sasl:3scf:3tecla:3mpapi:3fcoe:3xnet:3curses:3xcurses:3dlpi:3dns_sd:3gss:3tcl:3tk:8:1openssl:3openssl:5openssl:7openssl'
@@ -1018,6 +1023,7 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
 
     'IRIX 6.5.30',  "$manLocalDir/IRIX-6.5.30/catman/a_man:$manLocalDir/IRIX-6.5.30/catman/p_man:$manLocalDir/IRIX-6.5.30/catman/u_man:$manLocalDir/IRIX-6.5.30/dt",
 
+    'OpenIndiana 2026.10',  "$manLocalDir/OpenIndiana-2026.10/share/man",
     'OpenIndiana 2025.10',  "$manLocalDir/OpenIndiana-2025.10/share/man",
     'OpenIndiana 2024.10',  "$manLocalDir/OpenIndiana-2024.10/share/man",
     'OpenIndiana 2022.10',  "$manLocalDir/OpenIndiana-2022.10/share/man",
@@ -1289,7 +1295,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'netbsd',        'NetBSD 11.0',
     'openbsd',       'OpenBSD 8.0',
     'opensuse',      'openSUSE 16.0',
-    'openindiana',   'OpenIndiana 2025.10',
+    'openindiana',   'OpenIndiana 2026.10',
     'v7',            'Unix Seventh Edition',
     'x11',           'X11R7.4',
     'xfree86',       'XFree86 4.8.0',
