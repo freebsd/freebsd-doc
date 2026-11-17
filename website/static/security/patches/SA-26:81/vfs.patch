@@ -1,0 +1,278 @@
+--- sys/fs/nfsserver/nfs_nfsdport.c.orig
++++ sys/fs/nfsserver/nfs_nfsdport.c
+@@ -717,6 +717,7 @@
+ 	ndp->ni_startdir = dp;
+ 	ndp->ni_rootdir = rootvnode;
+ 	ndp->ni_topdir = NULL;
++	ndp->ni_rbeneath_dpp = NULL;
+ 
+ 	if (!lockleaf)
+ 		cnp->cn_flags |= LOCKLEAF;
+--- sys/kern/vfs_lookup.c.orig
++++ sys/kern/vfs_lookup.c
+@@ -258,15 +258,20 @@
+ 		vfs_rel(mp);
+ 		ndp->ni_nctrack_mnt = NULL;
+ 	}
++	if (ndp->ni_rbeneath_dpp != NULL) {
++		vdrop(ndp->ni_rbeneath_dpp);
++		ndp->ni_rbeneath_dpp = NULL;
++	}
+ }
+ 
+ /*
+  * For dotdot lookups in capability mode, disallow walking over the
+- * directory no_rbeneath_dpp that was used as the starting point of
+- * the lookup.  Since we take the mnt_renamelocks of all mounts we
+- * ever walked over during lookup, parallel renames are disabled.
+- * This prevents the situation where we circumvent walk over
+- * ni_rbeneath_dpp following dotdots.
++ * directory ni_rbeneath_dpp that was used as the starting point of
++ * the lookup, or over the directory it covers, see
++ * nameicap_union_fallthrough().  Since we take the mnt_renamelocks
++ * of all mounts we ever walked over during lookup, parallel renames
++ * are disabled.  This prevents the situation where we circumvent
++ * walk over ni_rbeneath_dpp following dotdots.
+  *
+  * Also allow to force failure of dotdot lookups for non-local
+  * filesystems, where external agents might assist local lookups to
+@@ -299,6 +304,29 @@
+ 	return (ENOTCAPABLE);
+ }
+ 
++/*
++ * A name not found in the root of a union mount is looked up in the
++ * covered directory, which is the same directory in the union view.
++ * If the union root is ni_rbeneath_dpp, move ni_rbeneath_dpp to the
++ * covered vnode.  A relative symlink found in the covered directory
++ * is resolved from the covered vnode without crossing back into the
++ * union root, so dotdot from it must be refused as from the starting
++ * directory.  Dotdot from the union root steps over mnt_vnodecovered
++ * in the vfs_lookup() dotdot loop and meets the moved ni_rbeneath_dpp
++ * there.  The mount holds a reference on the covered vnode until it
++ * is unmounted.
++ */
++static void
++nameicap_union_fallthrough(struct nameidata *ndp, struct vnode *rootvp,
++    struct vnode *coveredvp)
++{
++	if (ndp->ni_rbeneath_dpp != rootvp)
++		return;
++	vholdnz(coveredvp);
++	ndp->ni_rbeneath_dpp = coveredvp;
++	vdrop(rootvp);
++}
++
+ static void
+ namei_cleanup_cnp(struct componentname *cnp)
+ {
+@@ -419,8 +447,10 @@
+ 			    NI_LCF_CAP_DOTDOT;
+ 		}
+ 	}
+-	if (error == 0 && (ndp->ni_lcf & NI_LCF_STRICTREL) != 0)
++	if (error == 0 && (ndp->ni_lcf & NI_LCF_STRICTREL) != 0) {
+ 		ndp->ni_rbeneath_dpp = *dpp;
++		vholdnz(*dpp);
++	}
+ 
+ 	/*
+ 	 * If we are auditing the kernel pathname, save the user pathname.
+@@ -925,6 +955,18 @@
+ 	    dvp == rootvnode);
+ }
+ 
++static bool
++vfs_lookup_invalid_boundary(struct nameidata *ndp, struct vnode *dvp)
++{
++	struct vnode *ndpp;
++
++	ndpp = ndp->ni_rbeneath_dpp;
++	/* The doomed check prevents escape through the startdir reclaim. */
++	if (dvp == ndpp || (ndpp != NULL && VN_IS_DOOMED(ndpp)))
++		return (true);
++	return (vfs_lookup_isroot(ndp, dvp));
++}
++
+ /*
+  * FAILIFEXISTS handling.
+  *
+@@ -1270,7 +1312,7 @@
+ 		for (;;) {
+ 			bool isroot;
+ 
+-			isroot = vfs_lookup_isroot(ndp, dp);
++			isroot = vfs_lookup_invalid_boundary(ndp, dp);
+ 			if (__predict_false(isroot && (ndp->ni_lcf &
+ 			    (NI_LCF_STRICTREL | NI_LCF_STRICTREL_KTR)) != 0)) {
+ 				if ((ndp->ni_lcf & NI_LCF_STRICTREL_KTR) != 0)
+@@ -1343,7 +1385,8 @@
+ 		    (dp->v_mount->mnt_flag & MNT_UNION)) {
+ 			tdp = dp;
+ 			dp = dp->v_mount->mnt_vnodecovered;
+-			VREF(dp);
++			vref(dp);
++			nameicap_union_fallthrough(ndp, tdp, dp);
+ 			vput(tdp);
+ 			vn_lock(dp,
+ 			    enforce_lkflags(dp->v_mount, cnp->cn_lkflags |
+--- tests/sys/vfs/lookup_cap_dotdot.c.orig
++++ tests/sys/vfs/lookup_cap_dotdot.c
+@@ -26,8 +26,10 @@
+ 
+ #include <sys/param.h>
+ #include <sys/capsicum.h>
++#include <sys/mount.h>
+ #include <sys/sysctl.h>
+ #include <sys/stat.h>
++#include <sys/uio.h>
+ 
+ #include <atf-c.h>
+ #include <errno.h>
+@@ -255,6 +257,137 @@
+ 	ATF_REQUIRE_ERRNO(ENOTCAPABLE, openat(dfd, "..", O_DIRECTORY));
+ }
+ 
++/*
++ * ".." from a directory that is a mount root: the lookup must not cross
++ * to the covered vnode and leave its starting directory.
++ */
++static char mntpath[MAXPATHLEN];
++
++/* Mount tmpfs over the existing directory "mnt". */
++static void
++mount_tmpfs(bool unionmnt)
++{
++	struct iovec iov[6];
++	char cwd[MAXPATHLEN];
++	u_int iovlen;
++
++	ATF_REQUIRE(getcwd(cwd, sizeof(cwd)) != NULL);
++	snprintf(mntpath, sizeof(mntpath), "%s/mnt", cwd);
++	iov[0].iov_base = __DECONST(char *, "fstype");
++	iov[0].iov_len = sizeof("fstype");
++	iov[1].iov_base = __DECONST(char *, "tmpfs");
++	iov[1].iov_len = sizeof("tmpfs");
++	iov[2].iov_base = __DECONST(char *, "fspath");
++	iov[2].iov_len = sizeof("fspath");
++	iov[3].iov_base = mntpath;
++	iov[3].iov_len = strlen(mntpath) + 1;
++	iovlen = 4;
++	if (unionmnt) {
++		iov[4].iov_base = __DECONST(char *, "union");
++		iov[4].iov_len = sizeof("union");
++		iov[5].iov_base = NULL;
++		iov[5].iov_len = 0;
++		iovlen = 6;
++	}
++	ATF_REQUIRE_MSG(nmount(iov, iovlen, 0) == 0, "nmount: %s",
++	    strerror(errno));
++}
++
++static void
++unmount_tmpfs(void)
++{
++	char cwd[MAXPATHLEN];
++
++	if (getcwd(cwd, sizeof(cwd)) == NULL)
++		return;
++	snprintf(mntpath, sizeof(mntpath), "%s/mnt", cwd);
++	(void)unmount(mntpath, MNT_FORCE);
++}
++
++ATF_TC_WITH_CLEANUP(lookup_cap_dotdot__mountroot);
++ATF_TC_HEAD(lookup_cap_dotdot__mountroot, tc)
++{
++	atf_tc_set_md_var(tc, "descr",
++	    "Validate that .. from a mount root stays beneath it");
++	atf_tc_set_md_var(tc, "require.user", "root");
++}
++
++ATF_TC_BODY(lookup_cap_dotdot__mountroot, tc)
++{
++	int dfd;
++
++	check_capsicum();
++	ATF_REQUIRE(mkdir("mnt", 0777) == 0);
++	mount_tmpfs(false);
++
++	ATF_REQUIRE((dfd = open(mntpath, O_RDONLY | O_DIRECTORY)) >= 0);
++	ATF_REQUIRE(mkdirat(dfd, "sub", 0777) == 0);
++
++	/* A ".." that ends at the start is fine. */
++	ATF_REQUIRE_MSG(openat(dfd, "sub/..", O_RDONLY | O_DIRECTORY |
++	    O_RESOLVE_BENEATH) >= 0, "%s", strerror(errno));
++
++	ATF_REQUIRE_ERRNO(ENOTCAPABLE, openat(dfd, "..", O_RDONLY |
++	    O_DIRECTORY | O_RESOLVE_BENEATH) < 0);
++
++	ATF_REQUIRE(cap_enter() >= 0);
++
++	ATF_REQUIRE_ERRNO(ENOTCAPABLE,
++	    openat(dfd, "..", O_RDONLY | O_DIRECTORY) < 0);
++}
++
++ATF_TC_CLEANUP(lookup_cap_dotdot__mountroot, tc)
++{
++	unmount_tmpfs();
++}
++
++/*
++ * A name missing from the root of a union mount is looked up in the
++ * covered directory.  A relative symlink found there is resolved from
++ * the covered directory, and its ".." must not leave the starting
++ * directory either.
++ */
++ATF_TC_WITH_CLEANUP(lookup_cap_dotdot__union);
++ATF_TC_HEAD(lookup_cap_dotdot__union, tc)
++{
++	atf_tc_set_md_var(tc, "descr",
++	    "Validate that symlinks below a union mount root stay beneath it");
++	atf_tc_set_md_var(tc, "require.user", "root");
++}
++
++ATF_TC_BODY(lookup_cap_dotdot__union, tc)
++{
++	int dfd;
++
++	check_capsicum();
++	touchat(AT_FDCWD, "outside");
++	ATF_REQUIRE(mkdir("mnt", 0777) == 0);
++	touchat(AT_FDCWD, "mnt/lower");
++	ATF_REQUIRE(symlink("lower", "mnt/lnklower") == 0);
++	ATF_REQUIRE(symlink("../outside", "mnt/lnkout") == 0);
++	mount_tmpfs(true);
++
++	ATF_REQUIRE((dfd = open(mntpath, O_RDONLY | O_DIRECTORY)) >= 0);
++
++	/* Entries of the covered directory are still found. */
++	ATF_REQUIRE_MSG(openat(dfd, "lower", O_RDONLY |
++	    O_RESOLVE_BENEATH) >= 0, "%s", strerror(errno));
++	ATF_REQUIRE_MSG(openat(dfd, "lnklower", O_RDONLY |
++	    O_RESOLVE_BENEATH) >= 0, "%s", strerror(errno));
++
++	ATF_REQUIRE_ERRNO(ENOTCAPABLE, openat(dfd, "lnkout", O_RDONLY |
++	    O_RESOLVE_BENEATH) < 0);
++
++	ATF_REQUIRE(cap_enter() >= 0);
++
++	ATF_REQUIRE_ERRNO(ENOTCAPABLE, openat(dfd, "lnkout", O_RDONLY) < 0);
++}
++
++ATF_TC_CLEANUP(lookup_cap_dotdot__union, tc)
++{
++	unmount_tmpfs();
++}
++
+ ATF_TP_ADD_TCS(tp)
+ {
+ 
+@@ -267,6 +400,8 @@
+ 	ATF_TP_ADD_TC(tp, lookup_cap_dotdot__advanced);
+ 	ATF_TP_ADD_TC(tp, lookup_cap_dotdot__negative);
+ 	ATF_TP_ADD_TC(tp, lookup_cap_dotdot__root);
++	ATF_TP_ADD_TC(tp, lookup_cap_dotdot__mountroot);
++	ATF_TP_ADD_TC(tp, lookup_cap_dotdot__union);
+ 
+ 	return (atf_no_error());
+ }

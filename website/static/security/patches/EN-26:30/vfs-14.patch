@@ -1,0 +1,125 @@
+--- sys/kern/vfs_vnops.c.orig
++++ sys/kern/vfs_vnops.c
+@@ -1455,7 +1455,7 @@
+ 	vm_page_t *prev_td_ma;
+ 	vm_prot_t prot;
+ 	vm_offset_t addr, end;
+-	size_t len, resid;
++	size_t len;
+ 	ssize_t adv;
+ 	int error, cnt, saveheld, prev_td_ma_cnt;
+ 
+@@ -1477,7 +1477,6 @@
+ 	 * point using UIO_NOCOPY below.
+ 	 */
+ 	uio_clone = cloneuio(uio);
+-	resid = uio->uio_resid;
+ 
+ 	short_uio.uio_segflg = UIO_USERSPACE;
+ 	short_uio.uio_rw = uio->uio_rw;
+@@ -1487,9 +1486,15 @@
+ 	if (error != EFAULT)
+ 		goto out;
+ 
++	/*
++	 * Advance clone to the redo point.
++	 */
+ 	atomic_add_long(&vn_io_faults_cnt, 1);
+ 	uio_clone->uio_segflg = UIO_NOCOPY;
+-	uiomove(NULL, resid - uio->uio_resid, uio_clone);
++	while (uio_clone->uio_resid > uio->uio_resid) {
++		len = MIN(uio_clone->uio_resid - uio->uio_resid, INT_MAX);
++		uiomove(NULL, len, uio_clone);
++	}
+ 	uio_clone->uio_segflg = uio->uio_segflg;
+ 
+ 	saveheld = curthread_pflags_set(TDP_UIOHELD);
+@@ -1553,6 +1558,7 @@
+ 	curthread_pflags_restore(saveheld);
+ out:
+ 	freeuio(uio_clone);
++	MPASS(uio->uio_resid >= 0);
+ 	return (error);
+ }
+ 
+--- tests/sys/kern/Makefile.orig
++++ tests/sys/kern/Makefile
+@@ -65,6 +65,9 @@
+ ATF_TESTS_C+=	pdeathsig
+ ATF_TESTS_C+=	sigsys
+ TEST_METADATA.sigsys+=	is_exclusive="true"
++.if ${MACHINE_ARCH:M*64*}
++ATF_TESTS_C+=	vn_io_fault1
++.endif
+ 
+ ATF_TESTS_SH+=	coredump_phnum_test
+ ATF_TESTS_SH+=	jailmeta
+--- /dev/null
++++ tests/sys/kern/vn_io_fault1.c
+@@ -0,0 +1,66 @@
++/*-
++ * Copyright (c) 2026 Dag-Erling Smørgrav
++ *
++ * SPDX-License-Identifier: BSD-2-Clause
++ */
++
++#include <sys/mman.h>
++
++#include <atf-c.h>
++#include <fcntl.h>
++#include <limits.h>
++#include <stdint.h>
++#include <stdlib.h>
++#include <unistd.h>
++
++ATF_TC(big_unmapped_read);
++ATF_TC_HEAD(big_unmapped_read, tc)
++{
++	atf_tc_set_md_var(tc, "descr", "Read a large amount of data "
++	    "into a partially unmapped buffer");
++	atf_tc_set_md_var(tc, "require.memory", "4G");
++}
++ATF_TC_BODY(big_unmapped_read, tc)
++{
++	char *buf;
++	size_t len = 3LU << 30;
++	ssize_t ret;
++	int fd;
++
++	/* allocate a large buffer */
++	buf = mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_ANON, -1, 0);
++	if (buf == MAP_FAILED)
++		atf_tc_skip("failed to allocate buffer");
++
++	/* create a large file */
++	fd = open("big", O_RDWR | O_CREAT | O_TRUNC, 0600);
++	ATF_REQUIRE(fd >= 0);
++	ATF_REQUIRE_EQ_MSG(0, ftruncate(fd, len),
++	    "failed to extend file: %m");
++
++	/* read part of the file into the buffer */
++	ATF_REQUIRE_EQ(0, lseek(fd, 0, SEEK_SET));
++	ret = read(fd, buf, INT_MAX);
++	ATF_REQUIRE_MSG(ret >= 0,
++	    "failed to read from file: %m");
++	ATF_REQUIRE_EQ_MSG(INT_MAX, (size_t)ret,
++	    "requested %zu bytes, got %zd", (size_t)INT_MAX, ret);
++
++	/* read the entire file into the buffer */
++	ATF_REQUIRE_EQ(0, lseek(fd, 0, SEEK_SET));
++	ret = read(fd, buf, len);
++	ATF_REQUIRE_MSG(ret >= 0,
++	    "failed to read from file: %m");
++	ATF_REQUIRE_EQ_MSG(len, (size_t)ret,
++	    "requested %zu bytes, got %zd", len, ret);
++
++	/* done */
++	ATF_CHECK_EQ(0, close(fd));
++	ATF_CHECK_EQ(0, munmap(buf, len));
++}
++
++ATF_TP_ADD_TCS(tp)
++{
++	ATF_TP_ADD_TC(tp, big_unmapped_read);
++	return (atf_no_error());
++}

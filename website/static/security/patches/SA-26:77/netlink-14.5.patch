@@ -1,0 +1,200 @@
+--- sys/netlink/ktest_netlink_message_writer.c.orig
++++ sys/netlink/ktest_netlink_message_writer.c
+@@ -145,6 +145,94 @@
+ 	return (0);
+ }
+ 
++struct test_nlbuf_refill_attrs {
++	uint32_t	size;
++	uint32_t	completed;
++	uint32_t	unfinished;
++	uint32_t	attr_len;
++};
++
++#define	_OUT(_field)	offsetof(struct test_nlbuf_refill_attrs, _field)
++static const struct nlattr_parser nla_p_nlbuf_refill[] = {
++	{ .type = 1, .off = _OUT(size), .cb = nlattr_get_uint32 },
++	{ .type = 2, .off = _OUT(completed), .cb = nlattr_get_uint32 },
++	{ .type = 3, .off = _OUT(unfinished), .cb = nlattr_get_uint32 },
++	{ .type = 4, .off = _OUT(attr_len), .cb = nlattr_get_uint32 },
++};
++#undef _OUT
++NL_DECLARE_ATTR_PARSER(nlbuf_refill_parser, nla_p_nlbuf_refill);
++
++static int
++test_nlbuf_refill_parser(struct ktest_test_context *ctx, struct nlattr *nla)
++{
++	struct test_nlbuf_refill_attrs *attrs;
++
++	attrs = npt_alloc(ctx->npt, sizeof(*attrs));
++	ctx->arg = attrs;
++	if (attrs != NULL)
++		return (nl_parse_nested(nla, &nlbuf_refill_parser, ctx->npt,
++		    attrs));
++	return (ENOMEM);
++}
++
++static bool
++test_nlbuf_discard(struct nl_writer *nw, void *buf, int buflen, int count)
++{
++	nw->offset = 0;
++	return (true);
++}
++
++/*
++ * Add an attribute that does not fit into the buffer to an unfinished
++ * message, optionally preceded by a completed one.
++ */
++static int
++test_nlbuf_writer_refill(struct ktest_test_context *ctx)
++{
++	struct test_nlbuf_refill_attrs *attrs = ctx->arg;
++	struct nl_writer nw = {};
++	void *data;
++	u_int expected;
++	int error = 0;
++
++	if (attrs == NULL || attrs->unfinished < sizeof(struct nlmsghdr) ||
++	    (attrs->completed != 0 &&
++	    attrs->completed < sizeof(struct nlmsghdr)))
++		return (EINVAL);
++	if (!nlmsg_get_buf_type_wrapper(&nw, attrs->size, NS_WRITER_TYPE_BUF, true))
++		return (EINVAL);
++	nw.cb = test_nlbuf_discard;
++	data = malloc(attrs->attr_len, M_TEMP, M_WAITOK | M_ZERO);
++
++	if (attrs->completed != 0) {
++		if (!nlmsg_add(&nw, 0, 0, NLMSG_NOOP, 0, 0) ||
++		    nlmsg_reserve_data(&nw, attrs->completed -
++		    sizeof(struct nlmsghdr), void *) == NULL ||
++		    !nlmsg_end(&nw)) {
++			error = EINVAL;
++			goto out;
++		}
++	}
++	if (!nlmsg_add(&nw, 0, 0, NLMSG_NOOP, 0, 0) ||
++	    nlmsg_reserve_data(&nw, attrs->unfinished -
++	    sizeof(struct nlmsghdr), void *) == NULL ||
++	    !nlattr_add(&nw, 1, attrs->attr_len, data)) {
++		error = EINVAL;
++		goto out;
++	}
++
++	expected = NETLINK_ALIGN(attrs->unfinished) +
++	    NLA_ALIGN(attrs->attr_len + sizeof(struct nlattr));
++	KTEST_LOG(ctx, "message of %u bytes in a buffer of %u, expected %u",
++	    nw.offset, nw.alloc_len, expected);
++	if (nw.offset > nw.alloc_len || nw.offset != expected)
++		error = EINVAL;
++out:
++	free(data, M_TEMP);
++
++	return (error);
++}
++
+ static const struct ktest_test_info tests[] = {
+ 	{
+ 		.name = "test_mbuf_writer_allocation",
+@@ -158,5 +246,11 @@
+ 		.func = &test_mbuf_chain_allocation,
+ 		.parse = &test_mbuf_parser,
+ 	},
++	{
++		.name = "test_nlbuf_writer_refill",
++		.desc = "test growing the buffer under an unfinished message",
++		.func = &test_nlbuf_writer_refill,
++		.parse = &test_nlbuf_refill_parser,
++	},
+ };
+ KTEST_MODULE_DECLARE(ktest_netlink_message_writer, tests);
+--- sys/netlink/netlink_message_writer.c.orig
++++ sys/netlink/netlink_message_writer.c
+@@ -603,7 +603,7 @@
+ _nlmsg_refill_buffer(struct nl_writer *nw, int required_len)
+ {
+ 	struct nl_writer ns_new = {};
+-	int completed_len, new_len;
++	size_t completed_len, new_len, last_len;
+ 
+ 	if (nw->enomem)
+ 		return (false);
+@@ -611,8 +611,10 @@
+ 	NL_LOG(LOG_DEBUG3, "no space at offset %d/%d (want %d), trying to reclaim",
+ 	    nw->offset, nw->alloc_len, required_len);
+ 
+-	/* Calculated new buffer size and allocate it s*/
+-	completed_len = (nw->hdr != NULL) ? (char *)nw->hdr - nw->data : nw->offset;
++	/* Calculate new buffer size and allocate it. */
++	completed_len = (nw->hdr != NULL) ?
++	    (char *)nw->hdr - nw->data : nw->offset;
++	last_len = nw->offset - completed_len;
+ 	if (completed_len > 0 && required_len < NLMBUFSIZE) {
+ 		/* We already ran out of space, use the largest effective size */
+ 		new_len = max(nw->alloc_len, NLMBUFSIZE);
+@@ -621,9 +623,10 @@
+ 			new_len = NLMBUFSIZE;
+ 		else
+ 			new_len = nw->alloc_len * 2;
+-		while (new_len < required_len)
+-			new_len *= 2;
+ 	}
++	/* The unfinished message is copied over and needs room as well. */
++	while (new_len < last_len + required_len)
++		new_len *= 2;
+ 	bool waitok = (nw->malloc_flag == M_WAITOK);
+ 	bool is_linux = (nw->writer_type == NS_WRITER_TYPE_LBUF);
+ 	if (!nlmsg_get_buf(&ns_new, new_len, waitok, is_linux)) {
+@@ -639,15 +642,14 @@
+ 	nlmsg_set_callback(&ns_new);
+ 	ns_new.arg = nw->arg;
+ 
+-	/* Copy last (unfinished) header to the new storage */
+-	int last_len = nw->offset - completed_len;
++	/* Copy last (unfinished) header to the new storage. */
+ 	if (last_len > 0) {
+ 		memcpy(ns_new.data, nw->hdr, last_len);
+ 		ns_new.hdr = (struct nlmsghdr *)ns_new.data;
+ 		ns_new.offset = last_len;
+ 	}
+ 
+-	NL_LOG(LOG_DEBUG2, "completed: %d bytes, copied: %d bytes", completed_len, last_len);
++	NL_LOG(LOG_DEBUG2, "completed: %zu bytes, copied: %zu bytes", completed_len, last_len);
+ 
+ 	/* Flush completed headers & switch to the new nw */
+ 	nlmsg_flush(nw);
+--- tests/sys/netlink/test_netlink_message_writer.py.orig
++++ tests/sys/netlink/test_netlink_message_writer.py
+@@ -17,6 +17,8 @@
+ MJUM9BYTES = 9 * 1024
+ MJUM16BYTES = 16 * 1024
+ 
++NLMSG_SMALL = 128
++NLMSG_LARGE = 2048
+ 
+ class TestNetlinkMessageWriter(BaseKernelTest):
+     KTEST_MODULE_NAME = "ktest_netlink_message_writer"
+@@ -77,3 +79,24 @@
+             NlAttrU32(5, malloc_flags),
+         ]
+         self.runtest(test_meta)
++
++    @pytest.mark.parametrize(
++        "sz",
++        [
++            # buffer size, completed message, unfinished message, attribute
++            pytest.param([NLMSG_SMALL, 0, 20, 112], id="small"),
++            pytest.param([NLMSG_SMALL, 0, 20, 8176], id="large_attr"),
++            pytest.param([NLMSG_LARGE, 0, 2000, 4092], id="large_msg"),
++            pytest.param([NLMSG_LARGE, 100, 1900, 196], id="after_completed"),
++        ],
++    )
++    def test_nlbuf_writer_refill(self, sz):
++        """override to parametrize"""
++
++        test_meta = [
++            NlAttrU32(1, sz[0]),  # size
++            NlAttrU32(2, sz[1]),  # completed
++            NlAttrU32(3, sz[2]),  # unfinished
++            NlAttrU32(4, sz[3]),  # attr_len
++        ]
++        self.runtest(test_meta)

@@ -1,0 +1,57 @@
+--- sys/dev/sound/pcm/buffer.c.orig
++++ sys/dev/sound/pcm/buffer.c
+@@ -94,6 +94,7 @@
+ 
+ 	return (refcount_load(&b->refcount) > 1 ||
+ 	    (b->flags & SNDBUF_F_DETACHED) != 0 ||
++	    b->channel->inprog != 0 ||
+ 	    /*
+ 	     * XXX-MJ CHN_F_MMAP is not reliable, but for software buffers the
+ 	     * refcount accurately reflects whether the buffer is mapped.
+--- sys/dev/sound/pcm/channel.c.orig
++++ sys/dev/sound/pcm/channel.c
+@@ -1814,9 +1814,15 @@
+ 	return blksz << blkcnt;
+ }
+ 
++static bool
++chn_may_resizebuf(struct pcm_channel *c)
++{
++	return ((c->flags & (CHN_F_MMAP | CHN_F_TRIGGERED)) == 0 &&
++	    c->inprog == 0);
++}
++
+ static int
+-chn_resizebuf(struct pcm_channel *c, int latency,
+-					int blkcnt, int blksz)
++chn_resizebuf(struct pcm_channel *c, int latency, int blkcnt, int blksz)
+ {
+ 	struct snd_dbuf *b, *bs, *pb;
+ 	int sblksz, sblkcnt, hblksz, hblkcnt, limit = 0, nsblksz, nsblkcnt;
+@@ -1825,7 +1831,7 @@
+ 
+ 	if (!(c->direction == PCMDIR_PLAY || c->direction == PCMDIR_REC))
+ 		return EINVAL;
+-	if ((c->flags & (CHN_F_MMAP | CHN_F_TRIGGERED)) != 0)
++	if (!chn_may_resizebuf(c))
+ 		return EINVAL;
+ 
+ 	if (latency == -1) {
+@@ -1883,7 +1889,7 @@
+ 		CHN_UNLOCK(c->parentchannel);
+ 		CHN_LOCK(c);
+ 		/* Revalidate. */
+-		if ((c->flags & (CHN_F_MMAP | CHN_F_TRIGGERED)) != 0)
++		if (!chn_may_resizebuf(c))
+ 			return EINVAL;
+ 		if (c->direction == PCMDIR_PLAY) {
+ 			limit = (pb != NULL) ?
+@@ -1941,7 +1947,7 @@
+ 		}
+ 		CHN_LOCK(c);
+ 		/* Revalidate. */
+-		if ((c->flags & (CHN_F_MMAP | CHN_F_TRIGGERED)) != 0)
++		if (!chn_may_resizebuf(c))
+ 			return EINVAL;
+ 
+ 		if (!CHN_EMPTY(c, children)) {

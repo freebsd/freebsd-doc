@@ -1,0 +1,346 @@
+--- sys/dev/ocs_fc/ocs_cam.c.orig
++++ sys/dev/ocs_fc/ocs_cam.c
+@@ -607,6 +607,8 @@
+ 		atio->priority = (flags & OCS_SCSI_PRIORITY_MASK) >>
+ 		    OCS_SCSI_PRIORITY_SHIFT;
+ 
++		if (cdb_len > sizeof(atio->cdb_io.cdb_bytes))
++			cdb_len = sizeof(atio->cdb_io.cdb_bytes);
+ 		atio->cdb_len = cdb_len;
+ 		ocs_memcpy(atio->cdb_io.cdb_bytes, cdb, cdb_len);
+ 
+--- sys/dev/ocs_fc/ocs_device.c.orig
++++ sys/dev/ocs_fc/ocs_device.c
+@@ -74,6 +74,8 @@
+ 				FC_EXPL_REQUEST_NOT_SUPPORTED, 0, NULL, NULL);
+ 		node->shutdown_reason = OCS_NODE_SHUTDOWN_DEFAULT;
+ 		ocs_node_transition(node, __ocs_d_initiate_shutdown, NULL);
++		/* Send only one response per PRLI; the LS_RJT owns the IO */
++		return;
+ 	}
+ 
+ 	/* If the back-end doesn't want to talk to this initiator, we send an LS_RJT */
+--- sys/dev/ocs_fc/ocs_hw.c.orig
++++ sys/dev/ocs_fc/ocs_hw.c
+@@ -9736,7 +9736,14 @@
+ ocs_hw_io_lookup(ocs_hw_t *hw, uint32_t xri)
+ {
+ 	uint32_t ioindex;
+-	ioindex = xri - hw->sli.config.extent[SLI_RSRC_FCOE_XRI].base[0];
++	uint32_t base = hw->sli.config.extent[SLI_RSRC_FCOE_XRI].base[0];
++
++	if (xri < base || (xri - base) >= hw->config.n_io) {
++		ocs_log_err(hw->os, "xri %#x out of range (base=%#x n_io=%u)\n",
++		    xri, base, hw->config.n_io);
++		return NULL;
++	}
++	ioindex = xri - base;
+ 	return hw->io[ioindex];
+ }
+ 
+@@ -11346,6 +11353,8 @@
+ 
+ 	for (i = 0; i < xri_count; i++) {
+ 		io = ocs_hw_io_lookup(hw, xri_base + i);
++		if (io == NULL)
++			continue;
+ 
+ 		/*
+ 		 * if this is an auto xfer rdy XRI, then we need to release any
+--- sys/dev/ocs_fc/ocs_hw_queues.c.orig
++++ sys/dev/ocs_fc/ocs_hw_queues.c
+@@ -1873,6 +1873,12 @@
+ 		fc_header_t *fc_hdr = seq->header->dma.virt;
+ 
+ 		seq->hio = ocs_hw_io_lookup(hw, seq->xri);
++		if (seq->hio == NULL) {
++			ocs_log_err(hw->os, "auto_xrdy CQE, invalid xri=%#x\n",
++			    seq->xri);
++			ocs_hw_rqpair_sequence_free(hw, seq);
++			return -1;
++		}
+ 		ocs_lock(&seq->hio->axr_lock);
+ 		axr_lock_taken = 1;
+ 
+@@ -1971,6 +1977,11 @@
+ #endif
+ 	/* Look up the IO */
+ 	io = ocs_hw_io_lookup(hw, opt_wr->xri);
++	if (io == NULL) {
++		ocs_log_err(hw->os, "auto_xrdy data CQE for invalid xri=%#x\n",
++		    opt_wr->xri);
++		return -1;
++	}
+ 	ocs_lock(&io->axr_lock);
+ 	buf = io->axr_buf;
+ 	buf->data_cqe = 1;
+--- sys/dev/ocs_fc/ocs_ioctl.c.orig
++++ sys/dev/ocs_fc/ocs_ioctl.c
+@@ -39,6 +39,9 @@
+ #include <sys/systm.h>
+ #include <sys/linker.h>
+ #include <sys/firmware.h>
++#include <sys/priv.h>
++
++#include <dev/pci/pcireg.h>
+ 
+ static d_open_t		ocs_open;
+ static d_close_t	ocs_close;
+@@ -97,6 +100,11 @@
+ 				sli4_req_common_read_object_t *rdobj =
+ 					(sli4_req_common_read_object_t *)sli_config->payload.embed;
+ 
++				if (mcmd->out_bytes > OCS_MAX_DMA_ALLOC) {
++					device_printf(ocs->dev, "%s: COMMON_READ_OBJECT - %llu exceeds max\n",
++					    __func__, (unsigned long long)mcmd->out_bytes);
++					return EINVAL;
++				}
+ 				if (ocs_dma_alloc(ocs, dma, mcmd->out_bytes, 4096)) {
+ 					device_printf(ocs->dev, "%s: COMMON_READ_OBJECT - %lld allocation failed\n",
+ 							__func__, (unsigned long long)mcmd->out_bytes);
+@@ -116,6 +124,17 @@
+ 			sli4_req_common_write_object_t *wrobj =
+ 				(sli4_req_common_write_object_t *)sli_config->payload.embed;
+ 
++			if (mcmd->in_bytes > wrobj->desired_write_length) {
++				device_printf(ocs->dev, "%s: COMMON_WRITE_OBJECT - in_bytes %llu exceeds desired_write_length %u\n",
++				    __func__, (unsigned long long)mcmd->in_bytes,
++				    wrobj->desired_write_length);
++				return EINVAL;
++			}
++			if (wrobj->desired_write_length > OCS_MAX_DMA_ALLOC) {
++				device_printf(ocs->dev, "%s: COMMON_WRITE_OBJECT - desired_write_length %u exceeds max\n",
++				    __func__, wrobj->desired_write_length);
++				return EINVAL;
++			}
+ 			if (ocs_dma_alloc(ocs, dma, wrobj->desired_write_length, 4096)) {
+ 				device_printf(ocs->dev, "%s: COMMON_WRITE_OBJECT - %d allocation failed\n",
+ 						__func__, wrobj->desired_write_length);
+@@ -144,6 +163,11 @@
+ 				sli4_req_common_read_object_list_t *rdobj =
+ 					(sli4_req_common_read_object_list_t *)sli_config->payload.embed;
+ 
++				if (mcmd->out_bytes > OCS_MAX_DMA_ALLOC) {
++					device_printf(ocs->dev, "%s: COMMON_READ_OBJECT_LIST - %llu exceeds max\n",
++					    __func__, (unsigned long long)mcmd->out_bytes);
++					return EINVAL;
++				}
+ 				if (ocs_dma_alloc(ocs, dma, mcmd->out_bytes, 4096)) {
+ 					device_printf(ocs->dev, "%s: COMMON_READ_OBJECT_LIST - %lld allocation failed\n",
+ 							__func__,(unsigned long long) mcmd->out_bytes);
+@@ -170,10 +194,15 @@
+ 			break;
+ 		}
+ 	} else {
+-		uint32_t max_bytes = max(mcmd->in_bytes, mcmd->out_bytes);
++		uint64_t max_bytes = MAX(mcmd->in_bytes, mcmd->out_bytes);
++		if (max_bytes > OCS_MAX_DMA_ALLOC) {
++			device_printf(ocs->dev, "%s: non-embedded - %llu exceeds max\n",
++			    __func__, (unsigned long long)max_bytes);
++			return EINVAL;
++		}
+ 		if (ocs_dma_alloc(ocs, dma, max_bytes, 4096)) {
+-			device_printf(ocs->dev, "%s: non-embedded - %u allocation failed\n",
+-					__func__, max_bytes);
++			device_printf(ocs->dev, "%s: non-embedded - %llu allocation failed\n",
++					__func__, (unsigned long long)max_bytes);
+ 			return ENXIO;
+ 		}
+ 
+@@ -210,8 +239,17 @@
+ 
+ 	switch(((sli4_mbox_command_header_t *)mcmd->payload)->command) {
+ 	case SLI4_MBOX_COMMAND_SLI_CONFIG:
+-		if (ENXIO == ocs_process_sli_config(ocs, mcmd, &dma))
+-			return ENXIO;
++		error = ocs_process_sli_config(ocs, mcmd, &dma);
++		if (error != 0)
++			goto no_support;
++		/* never copy out more than was allocated for the command */
++		if (mcmd->out_bytes && dma.virt && mcmd->out_bytes > dma.size) {
++			device_printf(ocs->dev, "%s: out_bytes %llu exceeds buffer size %zu\n",
++			    __func__, (unsigned long long)mcmd->out_bytes,
++			    dma.size);
++			error = EINVAL;
++			goto no_support;
++		}
+ 		break;
+ 
+ 	case SLI4_MBOX_COMMAND_READ_REV:
+@@ -263,6 +301,28 @@
+ 	return error;
+ }
+ 
++/**
++ * @brief return the access width in bytes of an ECD helper BAR/config command
++ */
++static uint32_t
++ocs_ecd_helper_width(ocs_ecd_helper_cmd_t cmd)
++{
++	switch (cmd) {
++	case OCS_ECD_HELPER_BAR_READ8:
++	case OCS_ECD_HELPER_BAR_WRITE8:
++	case OCS_ECD_HELPER_CFG_READ8:
++	case OCS_ECD_HELPER_CFG_WRITE8:
++		return (sizeof(uint8_t));
++	case OCS_ECD_HELPER_BAR_READ16:
++	case OCS_ECD_HELPER_BAR_WRITE16:
++	case OCS_ECD_HELPER_CFG_READ16:
++	case OCS_ECD_HELPER_CFG_WRITE16:
++		return (sizeof(uint16_t));
++	default:
++		return (sizeof(uint32_t));
++	}
++}
++
+ /**
+  * @brief perform requested Elx CoreDump helper function
+  *
+@@ -282,6 +342,7 @@
+ 	uint8_t v8;
+ 	uint16_t v16;
+ 	uint32_t v32;
++	uint32_t width;
+ 
+ 	/* Check the BAR read/write commands for valid bar */
+ 	switch(req->cmd) {
+@@ -291,6 +352,7 @@
+ 	case OCS_ECD_HELPER_BAR_WRITE8:
+ 	case OCS_ECD_HELPER_BAR_WRITE16:
+ 	case OCS_ECD_HELPER_BAR_WRITE32:
++		width = ocs_ecd_helper_width(req->cmd);
+ 		if (req->bar >= PCI_MAX_BAR) {
+ 			device_printf(ocs->dev, "Error: bar %d out of range\n", req->bar);
+ 			return -EFAULT;
+@@ -299,6 +361,26 @@
+ 			device_printf(ocs->dev, "Error: bar %d not defined\n", req->bar);
+ 			return -EFAULT;
+ 		}
++		if ((uint64_t)req->offset + width >
++		    rman_get_size(ocs->reg[req->bar].res)) {
++			device_printf(ocs->dev, "Error: bar %d offset 0x%x out of range\n",
++				      req->bar, req->offset);
++			return -EFAULT;
++		}
++		break;
++	case OCS_ECD_HELPER_CFG_READ8:
++	case OCS_ECD_HELPER_CFG_READ16:
++	case OCS_ECD_HELPER_CFG_READ32:
++	case OCS_ECD_HELPER_CFG_WRITE8:
++	case OCS_ECD_HELPER_CFG_WRITE16:
++	case OCS_ECD_HELPER_CFG_WRITE32:
++		width = ocs_ecd_helper_width(req->cmd);
++		if ((uint64_t)req->offset + width - 1 > PCIE_REGMAX) {
++			device_printf(ocs->dev,
++			    "Error: config offset 0x%x out of range\n",
++			    req->offset);
++			return -EFAULT;
++		}
+ 		break;
+ 	default:
+ 		break;
+@@ -359,6 +441,11 @@
+ 	struct ocs_softc *ocs = cdev->si_drv1;
+ 	device_t dev = ocs->dev;
+ 
++	status = priv_check(td, PRIV_DRIVER);
++	if (status) {
++		return (status);
++	}
++
+ 	switch (cmd) {
+ 	case OCS_IOCTL_CMD_ELXU_MBOX: {
+ 		/* "copyin" done by kernel; thus, just dereference addr */
+@@ -1212,7 +1299,7 @@
+ 	}
+ 
+ 	unit = device_get_unit(ocs->dev);
+-	ocs->cdev = make_dev(&ocs_cdevsw, unit, UID_ROOT, GID_OPERATOR, 0640,
++	ocs->cdev = make_dev(&ocs_cdevsw, unit, UID_ROOT, GID_WHEEL, 0600,
+ 			"ocs%d", unit);
+ 	if (ocs->cdev) {
+ 		ocs->cdev->si_drv1 = ocs;
+--- sys/dev/ocs_fc/ocs_mgmt.c.orig
++++ sys/dev/ocs_fc/ocs_mgmt.c
+@@ -2076,7 +2076,8 @@
+ 	ocs_sem_v(&(result->semaphore));
+ }
+ 
+-#define MAX_PROFILE_LENGTH 5
++/* "0x", up to 8 hex digits and a NUL for a uint32_t id */
++#define MAX_PROFILE_LENGTH 11
+ 
+ /**
+  * @brief  Get active profile
+@@ -2107,7 +2108,7 @@
+ 		}
+ 		if (result.status == 0) {
+ 			/* Success. */
+-			sprintf(result_string, "0x%02x", result.active_profile_id);
++			ocs_snprintf(result_string, sizeof(result_string), "0x%02x", result.active_profile_id);
+ 			ocs_mgmt_emit_string(textbuf, MGMT_MODE_RW, "active_profile", result_string);
+ 		} else {
+ 			ocs_log_test(ocs, "getting active profile status 0x%x\n", result.status);
+@@ -2225,7 +2226,8 @@
+ 		}
+ 		if (result.status == 0) {
+ 			/* Success.  Copy wwpn from result struct to result string */
+-			sprintf(result_string, "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x",
++			ocs_snprintf(result_string, sizeof(result_string),
++					"%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x",
+ 					result.wwpn[0], result.wwpn[1], result.wwpn[2],
+ 					result.wwpn[3], result.wwpn[4], result.wwpn[5],
+ 					result.wwpn[6], result.wwpn[7]);
+--- sys/dev/ocs_fc/ocs_os.h.orig
++++ sys/dev/ocs_fc/ocs_os.h
+@@ -1325,11 +1325,14 @@
+ static inline uint32_t
+ ocs_ref_get_unless_zero(ocs_ref_t *ref)
+ {
+-	uint32_t rc = 0;
++	uint32_t rc;
++
+ 	rc = ocs_atomic_read(&ref->count);
+-		if (rc != 0) {
+-			ocs_atomic_add_return(&ref->count, 1);
+-		}
++	do {
++		if (rc == 0)
++			return 0;
++	} while (!atomic_fcmpset_32(&ref->count, &rc, rc + 1));
++
+ 	return rc;
+ }
+ 
+--- sys/dev/ocs_fc/ocs_unsol.c.orig
++++ sys/dev/ocs_fc/ocs_unsol.c
+@@ -788,8 +788,11 @@
+ ocs_validate_fcp_cmd(ocs_t *ocs, ocs_hw_sequence_t *seq)
+ {
+ 	size_t		exp_payload_len = 0;
++	size_t		cdb_len;
+ 	fcp_cmnd_iu_t *cmnd = seq->payload->dma.virt;
+-	exp_payload_len = sizeof(fcp_cmnd_iu_t) - 16 + cmnd->additional_fcp_cdb_length;
++	/* additional_fcp_cdb_length is in 4-byte words */
++	exp_payload_len = sizeof(fcp_cmnd_iu_t) - 16 +
++	    cmnd->additional_fcp_cdb_length * sizeof(uint32_t);
+ 
+ 	/*
+ 	 * If we received less than FCP_CMND_IU bytes, assume that the frame is
+@@ -803,6 +806,16 @@
+ 			      exp_payload_len);
+ 		return -1;
+ 	}
++
++	/* CAM cannot carry a CDB longer than CAM_MAX_CDBLEN; do not truncate */
++	cdb_len = sizeof(cmnd->fcp_cdb) +
++	    cmnd->additional_fcp_cdb_length * sizeof(uint32_t);
++	if (cmnd->task_management_flags == 0 && cdb_len > CAM_MAX_CDBLEN) {
++		fc_header_t	*fchdr = seq->header->dma.virt;
++		ocs_log_debug(ocs, "dropping ox_id %04x with unsupported CDB length (%zd > %d)\n",
++			    ocs_be16toh(fchdr->ox_id), cdb_len, CAM_MAX_CDBLEN);
++		return -1;
++	}
+ 	return 0;
+ 
+ }
