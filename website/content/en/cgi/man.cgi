@@ -990,7 +990,7 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
     'Debian 10.13.0', "$manLocalDir/Debian-10.13.0/man:$manLocalDir/Debian-10.13.0/misc",
     'Debian 11.11.0', "$manLocalDir/Debian-11.11.0/man:$manLocalDir/Debian-11.11.0/misc",
     'Debian 12.15.0', "$manLocalDir/Debian-12.15.0/man:$manLocalDir/Debian-12.15.0/misc",
-    'Debian 13.6.0', "$manLocalDir/Debian-13.6.0/man:$manLocalDir/Debian-13.6.0/misc",
+    'Debian 13.7.0', "$manLocalDir/Debian-13.7.0/man:$manLocalDir/Debian-13.7.0/misc",
     'Debian 14.0 unstable', "$manLocalDir/Debian-unstable/man:$manLocalDir/Debian-unstable/misc",
 
     'Ubuntu 26.04 resolute', "$manLocalDir/Ubuntu-resolute-26.04/man:$manLocalDir/Ubuntu-resolute-26.04/misc",
@@ -1283,7 +1283,7 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'redhat',     'Red Hat 9.0',
     'suse',       'SuSE 11.3',
-    'debian',     'Debian 13.6.0',
+    'debian',     'Debian 13.7.0',
     'ubuntu',     'Ubuntu 26.04 resolute',
     'dragonfly',  'DragonFly 6.4.2',
     'centos',     'CentOS 7.9',
