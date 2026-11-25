@@ -2701,7 +2701,7 @@ much smaller.
 <p>You can use these short URLs to search for FreeBSD man pages:</p>
 <ul>
 <li>socket manpage: <a href="https://man.FreeBSD.org/socket">https://man.FreeBSD.org/socket</a></li>
-<li>socket(2) manpage: <a href="https://man.FreeBSD.org/socket/2">https://man.FreeBSD.org/socket/2</a></li>
+<li>socket(2) manpage: <a href="https://man.FreeBSD.org/socket.2">https://man.FreeBSD.org/socket.2</a></li>
 </ul>
 
 <h2>Output formats</h2>
