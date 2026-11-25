@@ -1102,7 +1102,6 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
     'Minix 3.2.0',                 "$manLocalDir/Minix-3.2.0",
     'Minix 3.2.1',                 "$manLocalDir/Minix-3.2.1",
     'Minix 3.3.0',                 "$manLocalDir/Minix-3.3.0",
-    'Unix Seventh Edition',        "$manLocalDir/v7man",
     'Unix 1th Edition',            "$manLocalDir/unix-v1",
     'Unix 3rd Edition',            "$manLocalDir/unix-v3",
     'Unix 4rd Edition',            "$manLocalDir/unix-v4",
