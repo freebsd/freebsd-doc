@@ -1330,11 +1330,19 @@ sub sort_manpath {
     foreach my $name (@list) {
         my $name_lc = lc($name);
         my $os_lc;
+        my ($os, $version, $ports);
 
         # a release has at least 2 numbers separated by a dot:
         # FreeBSD 11.1-RELEASE ports
         # X11R7.4
-        my ($os, $version, $ports) = ( $name =~ m,^(.*?)(\d+\.[\d\.]+)(.*)$, );
+        # or
+        # at least a digit: Unix 7th Edition
+        if ($name =~ /\d+\.\d+/) {
+          ($os, $version, $ports) = ( $name =~ m,^(.*?)(\d+\.[\d\.]+)(.*)$, );
+        } else {
+          ($os, $version, $ports) = ( $name =~ m,^(.*?)(\d+)(.*)$, );
+        }
+
         $os //= $name;
         $os_lc = lc($os);
         $version //= "0.0";
