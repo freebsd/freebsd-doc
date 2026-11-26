@@ -336,7 +336,7 @@ tr, td {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="  ">
   <meta name="keywords" content="">
-  <meta name="copyright" content="1995-2026 The FreeBSD Project">
+  <meta name="copyright" content="1994-2026 The FreeBSD Project">
   <link rel="canonical" href="https://www.freebsd.org/">
 
   <title>$title</title>
