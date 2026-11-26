@@ -105,7 +105,7 @@ $i_topbar = qq`
               <a href="$hsty_base/releng">Release Engineering</a>
             </li>
             <li>
-              <a href=/ports>Ported Applications</a>
+              <a href="https://ports.freebsd.org">Ported Applications</a>
             </li>
           </ul>
         </li>
