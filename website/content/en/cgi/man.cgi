@@ -1506,7 +1506,7 @@ sub html_footer {
     print qq[</span>\n\n];
 
     if (cgi_style::HAS_FREEBSD_CGI_STYLE) {
-        print q{<hr noshade="noshade">};
+        print q{<hr>};
         print &cgi_style::html_footer;
     }
     else {
@@ -2687,7 +2687,7 @@ is the largest and oldest manual page archive on the internet.</p>
 Online continuously since 1996, it hosts manual pages from FreeBSD
 since its first release, version 1.0, and dozens of other operating
 systems and Unix variants - spanning decades of computing history,
-from 1970s Unix Seventh Edition and 2.11 BSD through every FreeBSD
+from Unix First Edition (1971) and 2.11 BSD through every FreeBSD
 release, NetBSD, OpenBSD, and current releases of Debian, Ubuntu,
 Rocky Linux, and macOS.
 </p>
