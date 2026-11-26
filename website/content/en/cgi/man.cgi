@@ -1128,7 +1128,6 @@ $manPathDefault = 'FreeBSD 15.1-RELEASE and Ports.quarterly';
 );
 
 my @no_html_output = (
-    'IRIX 6.5.30'
 );
 
 my @no_pdf_output = (
