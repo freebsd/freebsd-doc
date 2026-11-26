@@ -1879,7 +1879,8 @@ sub apropos {
         } else {
            my $apropos_query = $query . ($sektion ? "($sektion)" : "");
            print "Sorry, no apropos results found for `$apropos_query'.\n";
-           print qq{Please try a <a href="$BASE?apropos=1&amp;manpath=$manpath&amp;query=$query">keyword search</a>.\n} if $sektion;
+           print qq{Please try a <a href="$BASE?apropos=1&amp;manpath=}, &encode_url($manpath), 
+                 qq{&amp;query=$query">keyword search</a>.\n} if $sektion;
            print "<br><br>\n";
            print qq{You can start a <a href="$www{'cgi_man'}">new search</a> or look for other }
           . qq{<a href="https://www.FreeBSD.org/search/">FreeBSD Search Services</a>.<br><hr>\n};
@@ -2084,8 +2085,8 @@ sub man {
         print qq{</pre>\n};
         print "Sorry, no results found for `<i>$html_name</i>"
           . ( $html_section ? "($html_section)" : '' ) . "'.\n";
-        print
-qq{Please try a <a href="$BASE?apropos=1&amp;manpath=$manpath&amp;query=$html_name">keyword search</a>.\n};
+        print qq{Please try a <a href="$BASE?apropos=1&amp;manpath=}, &encode_url($manpath), 
+              qq{&amp;query=$html_name">keyword search</a>.\n};
         print qq{<p>You can start a <a href="$www{'cgi_man'}">new search</a> or look for other }
           . qq{<a href="https://www.FreeBSD.org/search/">FreeBSD Search Services</a>.</p><hr>\n};
         &html_footer;
