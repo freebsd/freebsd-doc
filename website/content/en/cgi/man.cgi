@@ -1539,6 +1539,7 @@ form#man { padding-bottom: 0.9em; margin-top: .2em; }
 form#man + span.footer_links { margin-left: .2em; }
 
 div#content { padding-top: 0.4em; }
+pre#manpage:empty { padding: 0; }
 
 /* mobile device - portrait mode */
 @media screen and (orientation: portrait) and (max-width: 950px) {
@@ -1956,7 +1957,7 @@ sub man {
         print &html_header("$title - $manpath Manual Pages");
         print "<h3>$www{'head'}</h3>\n\n" if !$www{'head'};
         &formquery;
-        print "<pre>\n";
+        print "<pre id='manpage'>\n";
     }
     else {
 
