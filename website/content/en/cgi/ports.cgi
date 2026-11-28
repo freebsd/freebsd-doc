@@ -377,7 +377,7 @@ sub out {
 
     print
       qq{<dt><b><a name="@{[ &encode_url($version) ]}" href="$t">}, &escapeHTML($version), qq{</a></b></dt>\n};
-    print qq{<dd>}, &escapeHTML($comment), qq{<br />\n};
+    print qq{<dd>}, &escapeHTML($comment), qq{<br>\n};
 
     print qq[<a href="$descfile">Description</a>\n];
 
@@ -386,7 +386,7 @@ sub out {
       qq[">Packages</a>\n]
       if $enable_packages_link;
 
-    print qq[<br />\n];
+    print qq[<br>\n];
 
     print qq{<i>Maintained by:</i> <a href="mailto:$email}
       . (
@@ -394,7 +394,7 @@ sub out {
         ? qq{?cc=$mailtoList&amp;subject=FreeBSD%20Port:%20}
           . &encode_url($version)
         : ''
-      ) . qq{">$email</a><br />\n};
+      ) . qq{">$email</a><br>\n};
 
     local (@s) = split( /\s+/, $sections );
     if ( $#s > 0 ) {
@@ -402,7 +402,7 @@ sub out {
         foreach (@s) {
             print qq{$_ } if $_ ne $out_sec;
         }
-        print "<br />\n";
+        print "<br>\n";
     }
 
     if ( $bdepends || $rdepends ) {
@@ -480,15 +480,15 @@ sub package_links {
             my $maintainer = $perl->{"maintainer"};
             $maintainer = &check_freebsd_mailing_list($maintainer)
               if $enable_check_freebsd_mailing_list;
-            print qq[Maintainer: $maintainer<br/>\n];
+            print qq[Maintainer: $maintainer<br>\n];
 
             print qq[Homepage <a href="], $perl->{"www"},
-              qq[">] . $perl->{"www"} . "</a><br/>\n";
+              qq[">] . $perl->{"www"} . "</a><br>\n";
 
             print qq[Git: <a href="$remotePrefixRepo/tree/]
               . $perl->{"origin"} . qq[">]
               . $perl->{"origin"}
-              . qq[</a><br/>\n];
+              . qq[</a><br>\n];
 
             print "<pre>", escapeHTML( $perl->{"desc"} ), "</pre>\n";
             print qq[<h3>Download packages in *.pkg format</h3>\n];
@@ -566,7 +566,7 @@ qq{ <th onclick="sort_table(2)" title="click to sort asc/desc by build time">Bui
         print <<EOF;
   </tbody>
 </table>
-<br/>
+<br>
 EOF
 
         foreach my $key ( sort keys %$hash ) {
@@ -579,7 +579,7 @@ EOF
                   qq[&amp;pkg_filter=], escapeHTML($k), qq[">], escapeHTML($k),
                   "</a>\n";
             }
-            print "<br/>\n";
+            print "<br>\n";
         }
 
         if ( $filter ne "" ) {
@@ -642,7 +642,7 @@ sub forms {
     print qq{
 <form id="ports" method="get" action="$script_name">
 <input name="query" id="query" value="$query" type="text" autocapitalize="none" />
-<input type="submit" value="Search" /><br/>
+<input type="submit" value="Search" /><br>
 <select name="stype">
 };
 
@@ -677,7 +677,7 @@ sub forms {
 
 </form>
 @{[ &footer_links ]}
-<hr/>
+<hr>
 };
 
 }
@@ -830,7 +830,7 @@ Copyright (c) 1996-2026 <a href="https://wolfram.schneider.org">Wolfram Schneide
 </p>
 
 @{[ &footer_links ]}
-<hr/>
+<hr>
 EOF
 }
 
@@ -903,7 +903,6 @@ if ( !$query && $query_string =~ /^([^=&]+)$/ ) {
 
 if ($query) {
     print &short_html_header( "Ports Search", 1 );
-    #print "<br/>\n";
 } else {
     print &html_header( "Ports Search", 1 );
 }
@@ -965,7 +964,7 @@ Sorry, nothing found.
 You can start a <a href="$script_name">new search</a> or look for other
 <a href="https://www.FreeBSD.org/search/">FreeBSD Search Services</a>.
 </p>
-<hr/>
+<hr>
 @{[ &footer_links ]}
 EOF
 }
@@ -983,5 +982,5 @@ if ($counter) {
     print &footer_links;
 }
 
-print qq{<hr/>\n};
+print qq{<hr>\n};
 print &html_footer;
