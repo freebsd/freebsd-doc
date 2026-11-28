@@ -376,7 +376,7 @@ sub out {
     $descfile =~ s%^$remotePrefixFtp%$remotePrefixRepo/plain%o;
 
     print
-      qq{<dt><b><a name="@{[ &encode_url($version) ]}" href="$t">}, &escapeHTML($version), qq{</a></b></dt>\n};
+      qq{<dt><b><a href="$t">}, &escapeHTML($version), qq{</a></b></dt>\n};
     print qq{<dd>}, &escapeHTML($comment), qq{<br>\n};
 
     print qq[<a href="$descfile">Description</a>\n];
