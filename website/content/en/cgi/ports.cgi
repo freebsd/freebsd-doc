@@ -664,7 +664,7 @@ sub forms {
     print qq{</select>
 
 <select name="sektion">
-<option value="all">All Sections</option>
+<option value="all">All Categories</option>
 };
 
     foreach (@sec) {
