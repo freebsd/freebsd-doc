@@ -409,9 +409,7 @@ sub out {
         local ($last) = '';
         my @list = ();
 
-        print qq{<div class="dependencies">\n};
         foreach ( sort split( /\s+/, "$bdepends $rdepends" ) ) {
-
             # delete double entries
             next if $_ eq $last;
             $last = $_;
@@ -425,7 +423,6 @@ sub out {
         print qq{<summary><i>Dependencies ($flag)</i></summary> };
         print join "", @list;
         print qq{</details>\n};
-        print "</div>\n";
     }
 
     print qq[</dd>];
