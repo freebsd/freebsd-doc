@@ -2703,7 +2703,7 @@ themselves.
 </p>
 
 <p>
-The archive currently contains more than 560 operating-system releases
+The archive currently contains more than 580 operating-system releases
 and approximately 15 million manual pages. The complete archive
 occupies about 50 GB - individual downloadable tarballs are typically
 much smaller.
@@ -2731,7 +2731,7 @@ Note that some operating systems only provide preformatted manual pages
 
 <h2>Updates</h2>
 <p>
-The FreeBSD stable/NN, current, and Ports manual pages are updated 
+The FreeBSD stable/NN, current, and Ports manual pages are updated
 every three months, usually around the time a new FreeBSD version is released.
 </p>
 <p>
@@ -2817,7 +2817,7 @@ Copyright (c) for manual pages by OS vendors:
 <a href="https://www.suse.com">SuSE</a>,
 <a href="https://ubuntu.com">Ubuntu</a>,
 <a href="https://en.wikipedia.org/wiki/Ultrix">ULTRIX</a>,
-<a href="https://en.wikipedia.org/wiki/Version_7_Unix">Unix Seventh Edition</a>,
+<a href="https://en.wikipedia.org/wiki/Research_Unix">Research Unix</a>,
 <a href="https://www.x.org">X.Org</a>,
 <a href="https://www.xfree86.org">XFree86</a>
 <br>
