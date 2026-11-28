@@ -571,7 +571,7 @@ qq{ <th onclick="sort_table(2)" title="click to sort asc/desc by build time">Bui
         $hash->{'version'}->{$version}++;
         $hash->{'arch'}->{$arch}++;
         $hash->{'release_major'}->{$rel_major}++;
-        $hash->{'release_minor'}->{$rel_minor}++;
+        $hash->{'release_minor'}->{$rel_minor}++ if $rel_minor ne "";
         $hash->{'flavor'}->{$flavor}++ if $flavor ne "";
         $hash->{'snapshot'}->{$snapshot}++
           if $snapshot eq 'latest' || $snapshot eq 'quarterly';
