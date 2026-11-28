@@ -334,7 +334,7 @@ tr, td {
   <head>
   <meta charset="$hsty_charset">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="  ">
+  <meta name="description" content="$title | FreeBSD.org">
   <meta name="keywords" content="">
   <meta name="copyright" content="1994-2026 The FreeBSD Project">
   <link rel="canonical" href="https://www.freebsd.org/">
