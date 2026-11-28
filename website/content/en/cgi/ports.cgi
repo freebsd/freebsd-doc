@@ -437,6 +437,15 @@ sub out {
 
 }
 
+sub format_bytes {
+    my $s = shift;
+    for my $u (qw(bytes KB MB GB)) {
+        return ($u eq 'bytes' ? "$s bytes" : sprintf("%.1f %s", $s, $u)) if $s < 1024;
+        $s /= 1024;
+    }
+    return sprintf "%.1f TB", $s;
+}
+
 # search and output
 sub package_links {
     my $q      = shift;
@@ -547,7 +556,7 @@ qq{ <th onclick="sort_table(2)" title="click to sort asc/desc by build time">Bui
 
         my $info =
           $time
-          ? qq[pkg: $pkg_opt\n size: $perl->{"pkgsize"} bytes\n git_hash: $perl->{"annotations"}->{"port_git_hash"}\n ]
+          ? qq[pkg: $pkg_opt\n size: @{[ &format_bytes($perl->{"pkgsize"}) ]}\n git_hash: $perl->{"annotations"}->{"port_git_hash"}\n ]
           . qq[ports_top_git_hash: $perl->{"annotations"}->{"ports_top_git_hash"}\nchecksum: $perl->{"sum"}\n]
           : "";
 
