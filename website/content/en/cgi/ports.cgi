@@ -408,18 +408,24 @@ sub out {
     if ( $bdepends || $rdepends ) {
         local ($flag) = 0;
         local ($last) = '';
+        my @list = ();
+
         print qq{<div class="dependencies">\n};
-        print qq{<i>Dependencies:</i> };
         foreach ( sort split( /\s+/, "$bdepends $rdepends" ) ) {
 
             # delete double entries
             next if $_ eq $last;
             $last = $_;
 
-            print ", " if $flag;
+            push @list, ", " if $flag;
             $flag++;
-            print qq{<a href="$script_name?query=%5E$_&amp;stype=name">$_</a>};
+            push @list,  qq{<a href="$script_name?query=%5E$_&amp;stype=name">$_</a>};
         }
+        my $open = $flag <= 32 ? " open" : "";
+        print qq{<details class="dependencies"$open>\n};
+        print qq{<summary><i>Dependencies ($flag)</i></summary> };
+        print join "", @list;
+        print qq{</details>\n};
         print "</div>\n";
     }
 
