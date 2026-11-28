@@ -125,7 +125,7 @@ function sort_table(column_index) {
         const a_text = a.cells[column_index].textContent.trim();
         const b_text = b.cells[column_index].textContent.trim();
 
-        cmp = a_text.localeCompare(b_text, undefined, {
+        const cmp = a_text.localeCompare(b_text, undefined, {
             numeric: true,
             sensitivity: "base"
         });
@@ -488,7 +488,7 @@ sub package_links {
               if $enable_check_freebsd_mailing_list;
             print qq[Maintainer: $maintainer<br>\n];
 
-            print qq[Homepage <a href="], $perl->{"www"},
+            print qq[Homepage: <a href="], $perl->{"www"},
               qq[">] . $perl->{"www"} . "</a><br>\n";
 
             print qq[Git: <a href="$remotePrefixRepo/tree/]
