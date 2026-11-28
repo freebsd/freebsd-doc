@@ -391,8 +391,7 @@ sub out {
     print qq{<i>Maintained by:</i> <a href="mailto:$email}
       . (
         $mailtoAdvanced
-        ? qq{?cc=$mailtoList&amp;subject=FreeBSD%20Port:%20}
-          . &encode_url($version)
+        ? qq{?subject=FreeBSD%20Port:%20} . &encode_url($version) . ($email ne $mailtoList ? qq{&amp;cc=$mailtoList} : "")
         : ''
       ) . qq{">$email</a><br>\n};
 
